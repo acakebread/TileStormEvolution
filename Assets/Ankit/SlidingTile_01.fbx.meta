@@ -9,6 +9,11 @@ ModelImporter:
       assembly: UnityEngine.CoreModule
       name: Sci_Fi_MetalPanel_04
     second: {fileID: 2100000, guid: b7559732a166122479ffd98de2048d73, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: SlidingTile_Forward_01
+    second: {fileID: 2100000, guid: b7559732a166122479ffd98de2048d73, type: 2}
   materials:
     materialImportMode: 2
     materialName: 0
