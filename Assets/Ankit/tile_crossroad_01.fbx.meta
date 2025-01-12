@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: 25a268cb4310dff42af4536709a7a1ef
+guid: 0d8b8a3303570f748835fa908afef189
 ModelImporter:
   serializedVersion: 22200
   internalIDToNameTable: []
@@ -7,23 +7,8 @@ ModelImporter:
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
-      name: Sci_Fi_MetalPanel_04
-    second: {fileID: 2100000, guid: b7559732a166122479ffd98de2048d73, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: SlidingTile_Forward_01
-    second: {fileID: 2100000, guid: b7559732a166122479ffd98de2048d73, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: Sliding_Tile_01
-    second: {fileID: 2100000, guid: ebaff1e4f3f346f428affe860483864e, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: tile_straight_01
-    second: {fileID: 2100000, guid: ebaff1e4f3f346f428affe860483864e, type: 2}
+      name: tile_crossroad_01
+    second: {fileID: 2100000, guid: e1bf875c585f15e4cb29ae3d49de066e, type: 2}
   materials:
     materialImportMode: 2
     materialName: 0

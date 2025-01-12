@@ -7,7 +7,7 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: tile_straight_01
+  m_Name: tile_crossroad_01
   m_Shader: {fileID: 46, guid: 0000000000000000f000000000000000, type: 0}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
@@ -26,7 +26,7 @@ Material:
     serializedVersion: 3
     m_TexEnvs:
     - _BumpMap:
-        m_Texture: {fileID: 2800000, guid: bbc5902726b6db94cbed3f1a03639dac, type: 3}
+        m_Texture: {fileID: 2800000, guid: 62546530427cfc3439159b8d1fbafaab, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _DetailAlbedoMap:
@@ -46,15 +46,15 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MainTex:
-        m_Texture: {fileID: 2800000, guid: c1caf2a0f7b4f6445b0931bb39085342, type: 3}
+        m_Texture: {fileID: 2800000, guid: 68096787ab539694181e6025544aa03b, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MetallicGlossMap:
-        m_Texture: {fileID: 2800000, guid: e780bd6d4520ffb4bbe0b6989b15fb21, type: 3}
+        m_Texture: {fileID: 2800000, guid: 0d2502bbfee85a344b6a7cd8bf09ea77, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _OcclusionMap:
-        m_Texture: {fileID: 2800000, guid: 777e06df12f50a145b91bbaf998d00d8, type: 3}
+        m_Texture: {fileID: 2800000, guid: f896ef774234d4149bf45fa7a6e9c266, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _ParallaxMap:

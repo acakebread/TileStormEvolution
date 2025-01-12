@@ -1,24 +1,9 @@
 fileFormatVersion: 2
-guid: 25a268cb4310dff42af4536709a7a1ef
+guid: bbd03ab81122add43ad7373cdc41785b
 ModelImporter:
   serializedVersion: 22200
   internalIDToNameTable: []
   externalObjects:
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: Sci_Fi_MetalPanel_04
-    second: {fileID: 2100000, guid: b7559732a166122479ffd98de2048d73, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: SlidingTile_Forward_01
-    second: {fileID: 2100000, guid: b7559732a166122479ffd98de2048d73, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: Sliding_Tile_01
-    second: {fileID: 2100000, guid: ebaff1e4f3f346f428affe860483864e, type: 2}
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
