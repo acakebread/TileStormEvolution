@@ -25,7 +25,6 @@ namespace MassiveHadronLtd
 
 				if (null == EventSystem.current) new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
 				if ((true == Input.GetMouseButtonDown(0) || true == Input.GetMouseButtonDown(1)) && false == EventSystem.current.IsPointerOverGameObject()) dragging = true;
-				//Debug.Log(EventSystem.current);
 
 				float pointer_x = Input.GetAxis("Mouse X");
 				float pointer_y = Input.GetAxis("Mouse Y");
