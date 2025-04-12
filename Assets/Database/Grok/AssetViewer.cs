@@ -9,7 +9,7 @@ namespace AssetViewerNamespace
 	{
 		[SerializeField] private DatabaseLoader databaseLoader;
 		[SerializeField] private string mapName = ""; // Optional: leave empty to use first map
-		[SerializeField] private string geometryPath = "Geometry/";
+		[SerializeField] private string geometryPath = "Geometry/fbx/";
 		[SerializeField] private string texturePath = "Textures/";
 
 		void Start()
@@ -106,7 +106,7 @@ namespace AssetViewerNamespace
 					GameObject tileObj = new GameObject($"{tileDef.name}_{x}_{z}");
 					tileObj.transform.SetParent(mapRoot.transform, false);
 					//tileObj.transform.position = new Vector3(x, 0f, z);
-					tileObj.transform.SetPositionAndRotation(new Vector3(x, 0f, z), Quaternion.Euler(-90, 0, 0));//workaround for problem importing fbx at correct orientation
+					tileObj.transform.SetPositionAndRotation(new Vector3(x - width/2, 0f, z- height/2), Quaternion.Euler(0, 180, 0));//workaround for problem importing obj at correct orientation
 
 					// Load geometry
 					string geomPath = $"{geometryPath}{tileDef.szGeom}".Replace(".x", "");

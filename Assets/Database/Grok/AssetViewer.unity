@@ -297,8 +297,8 @@ Camera:
   m_GameObject: {fileID: 1146321623}
   m_Enabled: 1
   serializedVersion: 2
-  m_ClearFlags: 1
-  m_BackGroundColor: {r: 0.19215687, g: 0.3019608, b: 0.4745098, a: 0}
+  m_ClearFlags: 2
+  m_BackGroundColor: {r: 0.009344964, g: 0.028248498, b: 0.05660379, a: 0}
   m_projectionMatrixMode: 1
   m_GateFitMode: 2
   m_FOVAxisMode: 0
@@ -400,8 +400,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   databaseLoader: {fileID: 654959489}
-  mapName: Industrial 02
-  geometryPath: Geometry/
+  mapName: Industrial 05
+  geometryPath: Geometry/obj/
   texturePath: Textures/
 --- !u!4 &1670644098
 Transform:
