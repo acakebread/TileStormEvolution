@@ -24,7 +24,7 @@ namespace MassiveHadronLtd
 		{
 			transform.parent.Find("label").GetComponent<TMPro.TMP_Text>().text = GetComponent<RawImage>().mainTexture.name;
 
-			GetComponent<Button>().onClick.AddListener(() =>
+			GetComponent<UnityEngine.UI.Button>().onClick.AddListener(() =>
 			{
 				foreach (var matController in FindObjectsOfType<MaterialController>(true))
 				{

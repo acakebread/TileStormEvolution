@@ -14,8 +14,8 @@ public class MapGenerator : MonoBehaviour
 		{
 			for (var x = 0; x < numx; ++x)
 			{
-				var instance = Instantiate(Tiles[Random.Range(0,Tiles.Length)]);
-				instance.transform.position = Vector3.forward * (y - numy / 2) * 2 + Vector3.right * (x - numx / 2) * 2;
+				var instance = Instantiate(Tiles[Random.Range(0, Tiles.Length)]);
+				instance.transform.position = (y - numy / 2) * 2 * Vector3.forward + (x - numx / 2) * 2 * Vector3.right;
 			}
 		}
 

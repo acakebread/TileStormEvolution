@@ -1,0 +1,27 @@
+{
+    "maps": [
+        {
+            "name": "TestMap",
+            "bLightTiles": true,
+            "defs": [
+                {
+                    "szTheme": "Test",
+                    "szType": "Floor"
+                }
+            ],
+            "tiles": {
+                "nWidth": 4,
+                "nHeight": 4,
+                "nTileIndex": {
+                    "nReserved": 0,
+                    "nUncompressedLength": 16,
+                    "nCompression": 0,
+                    "nCompressedLength": 16,
+                    "nAdjust": 0,
+                    "bytes": [],
+                    "unpacked_bytes": [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ]
+                }
+            }
+        }
+    ]
+}
