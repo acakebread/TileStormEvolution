@@ -1,5 +1,4 @@
 using UnityEngine;
-using GameDatabase;
 using System.Linq;
 using System.Collections.Generic;
 using static GameDatabase.DatabaseLoader;
@@ -20,7 +19,7 @@ namespace GamePreviewNamespace
 		private bool isLevelComplete;
 		private List<int> currentPath;
 		private int pathStepIndex;
-		private float moveSpeed = 2f; // Added to control speed
+		private float moveSpeed = 2f;
 
 		public bool IsLevelComplete => isLevelComplete;
 
@@ -30,7 +29,7 @@ namespace GamePreviewNamespace
 			pauseDuration = pause;
 			InitializeEggbot();
 			InitializeWaypoints();
-			Reset(); // Ensure clean state
+			Reset();
 		}
 
 		public void Reset()
@@ -60,7 +59,7 @@ namespace GamePreviewNamespace
 			}
 			else
 			{
-				moveTimer += Time.deltaTime * moveSpeed; // Scaled for faster movement
+				moveTimer += Time.deltaTime * moveSpeed;
 				float t = Mathf.Clamp01(moveTimer);
 				int currentTile = currentPath[pathStepIndex];
 				int nextTile = pathStepIndex + 1 < currentPath.Count ? currentPath[pathStepIndex + 1] : currentTile;
@@ -151,14 +150,13 @@ namespace GamePreviewNamespace
 		private void InitializeWaypoints()
 		{
 			waypoints = new List<int>();
-			if (mapManager.CurrentMap.Waypoints != null && mapManager.CurrentMap.Waypoints.nWaypointCount > 0)
+			if (mapManager.CurrentMap.waypoints != null && mapManager.CurrentMap.waypoints.Length > 0)
 			{
-				Waypoint[] wpArray = new Waypoint[] { mapManager.CurrentMap.Waypoints.WP0, mapManager.CurrentMap.Waypoints.WP1, mapManager.CurrentMap.Waypoints.WP2, mapManager.CurrentMap.Waypoints.WP3 };
-				for (int i = 0; i < mapManager.CurrentMap.Waypoints.nWaypointCount && i < wpArray.Length; i++)
+				foreach (var waypoint in mapManager.CurrentMap.waypoints)
 				{
-					if (wpArray[i] != null)
+					if (waypoint != null)
 					{
-						waypoints.Add(wpArray[i].nTile);
+						waypoints.Add(waypoint.nTile);
 					}
 				}
 			}

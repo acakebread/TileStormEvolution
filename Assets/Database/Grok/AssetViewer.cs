@@ -8,7 +8,7 @@ namespace AssetViewerNamespace
 {
 	public class AssetViewer : MonoBehaviour
 	{
-		[Header("woraround for inverted .obj meshes")]
+		[Header("workaround for inverted .obj meshes")]
 		public bool flip = true;
 		private Vector3 mapCentre = Vector3.zero;
 		private int activeTileCount = 0;
@@ -25,8 +25,8 @@ namespace AssetViewerNamespace
 		private List<WaypointData> cameraWaypoints;
 		private int currentWaypointIndex;
 		private float animationTimer;
-		private float animationDuration = 2f; // Seconds per segment
-		private bool isForward = true; // Track direction for bounce
+		private float animationDuration = 2f;
+		private bool isForward = true;
 
 		private struct WaypointData
 		{
@@ -93,7 +93,7 @@ namespace AssetViewerNamespace
 				return;
 			}
 
-			if (map.tiles == null || map.tiles.nTileIndex == null || map.tiles.nTileIndex.unpacked_bytes == null)
+			if (map.tiles == null || map.tiles.TileData == null || map.tiles.TileData.unpacked_bytes == null)
 			{
 				Debug.LogError($"Invalid tiles data for map {map.name}!");
 				return;
@@ -101,7 +101,7 @@ namespace AssetViewerNamespace
 
 			int width = map.tiles.nWidth;
 			int height = map.tiles.nHeight;
-			int[] tileIndices = map.tiles.nTileIndex.unpacked_bytes;
+			int[] tileIndices = map.tiles.TileData.unpacked_bytes;
 
 			if (tileIndices.Length != width * height)
 			{
@@ -114,16 +114,14 @@ namespace AssetViewerNamespace
 
 			// Collect waypoints
 			cameraWaypoints = new List<WaypointData>();
-			if (map.Waypoints != null && map.Waypoints.nWaypointCount > 0)
+			if (map.waypoints != null && map.waypoints.Length > 0)
 			{
-				Waypoint[] waypoints = new Waypoint[] { map.Waypoints.WP0, map.Waypoints.WP1, map.Waypoints.WP2, map.Waypoints.WP3 };
-				for (int i = 0; i < map.Waypoints.nWaypointCount && i < waypoints.Length; i++)
+				foreach (var wp in map.waypoints)
 				{
-					var wp = waypoints[i];
 					if (wp != null && wp.bCamera)
 					{
 						Vector3 src = new Vector3(wp.vSrc.fX, wp.vSrc.fY, wp.vSrc.fZ);
-						Vector3 dst = new Vector3(wp.vDst.fX, wp.vDst.fY, wp.vDst.fZ);
+						Vector3 dst = wp.vDst?.fX != null ? new Vector3(wp.vDst.fX, wp.vDst.fY, wp.vDst.fZ) : src; // Fallback to src if vDst is null
 						cameraWaypoints.Add(new WaypointData
 						{
 							src = src,
@@ -166,7 +164,7 @@ namespace AssetViewerNamespace
 						continue;
 					}
 
-					GameObject tileObj = new GameObject($"{tileDef.name}_{x}_{z}");
+					GameObject tileObj = new GameObject($"{tileDef.szType}_{x}_{z}");
 					tileObj.transform.SetParent(mapRoot.transform, false);
 					tileObj.transform.position = new Vector3(x, 0f, z);
 					if (flip)
@@ -185,7 +183,7 @@ namespace AssetViewerNamespace
 					}
 					else
 					{
-						Debug.LogWarning($"Geometry not found at {geomPath} for TileDef {tileDef.name}");
+						Debug.LogWarning($"Geometry not found at {geomPath} for TileDef {tileDef.szType}");
 						GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
 						cube.transform.SetParent(tileObj.transform, false);
 						cube.transform.localPosition = Vector3.zero;
@@ -202,7 +200,7 @@ namespace AssetViewerNamespace
 					}
 					else
 					{
-						Debug.LogWarning($"No valid texture set for TileDef {tileDef.name}, szTheme={szTheme}");
+						Debug.LogWarning($"No valid texture set for TileDef {tileDef.szType}, szTheme={szTheme}");
 					}
 				}
 			}
@@ -239,7 +237,7 @@ namespace AssetViewerNamespace
 
 		private float SigmoidEase(float t)
 		{
-			float k = 10f; // Steepness for smooth start/end
+			float k = 10f;
 			return 1f / (1f + Mathf.Exp(-k * (t - 0.5f)));
 		}
 
@@ -253,7 +251,6 @@ namespace AssetViewerNamespace
 
 				int nextIndex = isForward ? currentWaypointIndex + 1 : currentWaypointIndex - 1;
 
-				// Handle bounce boundaries
 				if (isForward && nextIndex >= cameraWaypoints.Count)
 				{
 					isForward = false;
@@ -274,10 +271,7 @@ namespace AssetViewerNamespace
 				var wpCurrent = cameraWaypoints[currentWaypointIndex];
 				var wpNext = cameraWaypoints[nextIndex];
 
-				// Lerp position: vSrc to next/prev vSrc
 				Camera.main.transform.position = Vector3.Lerp(wpCurrent.src, wpNext.src, easedT);
-
-				// Lerp LookAt: vDst to next/prev vDst
 				Vector3 lookAt = Vector3.Lerp(wpCurrent.dst, wpNext.dst, easedT);
 				Camera.main.transform.LookAt(lookAt);
 
@@ -307,21 +301,18 @@ namespace AssetViewerNamespace
 			{
 				var wp = cameraWaypoints[i];
 
-				// Draw sphere at vSrc
 				GameObject srcSphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
 				srcSphere.transform.SetParent(pathRoot.transform, false);
 				srcSphere.transform.position = wp.src;
 				srcSphere.transform.localScale = Vector3.one * 0.3f;
 				srcSphere.GetComponent<Renderer>().material.color = Color.green;
 
-				// Draw sphere at vDst
 				GameObject dstSphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
 				dstSphere.transform.SetParent(pathRoot.transform, false);
 				dstSphere.transform.position = wp.dst;
 				dstSphere.transform.localScale = Vector3.one * 0.3f;
 				dstSphere.GetComponent<Renderer>().material.color = Color.red;
 
-				// Draw line to next vSrc
 				if (i < cameraWaypoints.Count - 1)
 				{
 					var nextWp = cameraWaypoints[i + 1];
@@ -366,7 +357,6 @@ namespace AssetViewerNamespace
 				if (isAnimatingCamera)
 				{
 					isAnimatingCamera = false;
-					// Stay at current position
 					Debug.Log($"Animation stopped at WP {currentWaypointIndex}: pos={Camera.main.transform.position}");
 				}
 				else if (cameraWaypoints != null && cameraWaypoints.Count > 1)
@@ -380,222 +370,3 @@ namespace AssetViewerNamespace
 		}
 	}
 }
-
-
-
-//using UnityEngine;
-//using GameDatabase;
-//using System.Linq;
-//using static GameDatabase.DatabaseLoader;
-
-//namespace AssetViewerNamespace
-//{
-//	public class AssetViewer : MonoBehaviour
-//	{
-//		[Header("woraround for inverted .obj meshes")]
-//		public bool flip = true;
-//		private Vector3 mapCentre = Vector3.zero;
-//		private int activeTileCount = 0;
-
-//		[SerializeField] private DatabaseLoader databaseLoader;
-//		[SerializeField] private string mapName = "";
-//		[SerializeField] private string geometryPath = "Geometry/fbx/";
-//		[SerializeField] private string texturePath = "Textures/";
-
-//		private bool isInitialized = false;
-
-//		void Start()
-//		{
-//			mapCentre = Vector3.zero;
-//			activeTileCount = 0;
-
-//			if (databaseLoader == null)
-//			{
-//				databaseLoader = FindAnyObjectByType<DatabaseLoader>();
-//				if (databaseLoader == null)
-//				{
-//					Debug.LogError("AssetViewer requires a DatabaseLoader!");
-//					return;
-//				}
-//			}
-
-//			Debug.Log($"AssetViewer Start: databaseLoader found, Maps.Count={databaseLoader.Maps.Count}");
-
-//			// Subscribe to event
-//			databaseLoader.OnDatabaseLoaded += Initialize;
-
-//			// Fallback: check if already loaded
-//			if (databaseLoader.Maps.Count > 0)
-//			{
-//				Initialize();
-//			}
-//		}
-
-//		void Initialize()
-//		{
-//			if (isInitialized)
-//				return;
-
-//			isInitialized = true;
-//			Debug.Log($"AssetViewer initialized: Maps.Count={databaseLoader.Maps.Count}");
-//			DisplayMap();
-//		}
-
-//		void OnDestroy()
-//		{
-//			if (databaseLoader != null)
-//			{
-//				databaseLoader.OnDatabaseLoaded -= Initialize;
-//			}
-//		}
-
-//		void DisplayMap()
-//		{
-//			Map map = string.IsNullOrEmpty(mapName)
-//				? databaseLoader.Maps.FirstOrDefault()
-//				: databaseLoader.Maps.FirstOrDefault(m => m.name == mapName);
-
-//			if (map == null)
-//			{
-//				Debug.LogError("No map found!");
-//				return;
-//			}
-
-//			if (map.tiles == null || map.tiles.nTileIndex == null || map.tiles.nTileIndex.unpacked_bytes == null)
-//			{
-//				Debug.LogError($"Invalid tiles data for map {map.name}!");
-//				return;
-//			}
-
-//			int width = map.tiles.nWidth;
-//			int height = map.tiles.nHeight;
-//			int[] tileIndices = map.tiles.nTileIndex.unpacked_bytes;
-
-//			if (tileIndices.Length != width * height)
-//			{
-//				Debug.LogError($"Tile indices length ({tileIndices.Length}) does not match grid size ({width}x{height}) for map {map.name}!");
-//				return;
-//			}
-
-//			GameObject mapRoot = new GameObject($"Map_{map.name}");
-//			mapRoot.transform.SetParent(transform, false);
-
-//			for (int z = 0; z < height; z++)
-//			{
-//				for (int x = 0; x < width; x++)
-//				{
-//					int index = z * width + x;
-//					int defIndex = tileIndices[index];
-
-//					if (defIndex < 0 || defIndex >= map.defs.Length)
-//					{
-//						Debug.LogWarning($"Invalid defIndex {defIndex} at ({x}, {z}) in map {map.name}");
-//						continue;
-//					}
-
-//					string szType = map.defs[defIndex].szType;
-//					if ("tile_empty" == szType || "tile_invisible" == szType)
-//						continue;
-
-//					string szTheme = map.defs[defIndex].szTheme;
-//					if (string.IsNullOrEmpty(szType))
-//					{
-//						Debug.LogWarning($"Null or empty szType at defIndex {defIndex} in map {map.name}");
-//						continue;
-//					}
-
-//					TileDef tileDef = databaseLoader.TileDefs.FirstOrDefault(td => td.szType == szType && td.szTheme == szTheme);
-//					if (tileDef == null)
-//					{
-//						Debug.LogWarning($"TileDef not found for szType={szType}, szTheme={szTheme} at ({x}, {z}) in map {map.name}");
-//						continue;
-//					}
-
-//					GameObject tileObj = new GameObject($"{tileDef.name}_{x}_{z}");
-//					tileObj.transform.SetParent(mapRoot.transform, false);
-//					tileObj.transform.position = new Vector3(x, 0f, z);
-//					if (flip)
-//						tileObj.transform.rotation = Quaternion.AngleAxis(180, Vector3.up);
-
-//					string geomPath = $"{geometryPath}{tileDef.szGeom}".Replace(".x", "");
-//					GameObject geomAsset = Resources.Load<GameObject>(geomPath);
-//					if (geomAsset != null)
-//					{
-//						GameObject geomInstance = Instantiate(geomAsset, tileObj.transform);
-//						geomInstance.transform.localPosition = Vector3.zero;
-//						geomInstance.name = tileDef.szGeom;
-
-//						mapCentre += tileObj.transform.position;
-//						activeTileCount++;
-//					}
-//					else
-//					{
-//						Debug.LogWarning($"Geometry not found at {geomPath} for TileDef {tileDef.name}");
-//						GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
-//						cube.transform.SetParent(tileObj.transform, false);
-//						cube.transform.localPosition = Vector3.zero;
-//						cube.transform.localScale = Vector3.one * 0.1f;
-//						cube.name = "Fallback_Cube";
-//						cube.SetActive(false);
-//					}
-
-//					// Apply texture or animation
-//					TextureSet textureSet = GetTextureForTileDef(tileDef, szTheme);
-//					if (textureSet != null && textureSet.frames != null && textureSet.frames.Length > 0)
-//					{
-//						TileAnimator animator = tileObj.AddComponent<TileAnimator>();
-//						animator.Initialize(textureSet, texturePath);
-//					}
-//					else
-//					{
-//						Debug.LogWarning($"No valid texture set for TileDef {tileDef.name}, szTheme={szTheme}");
-//					}
-//				}
-//			}
-
-//			Debug.Log($"Displayed map {map.name} with {width}x{height} tiles");
-
-//			if (activeTileCount > 0)
-//				mapCentre /= activeTileCount;
-//			Camera.main.transform.position = mapCentre + (Vector3.up - Vector3.forward) * 8;
-//		}
-
-//		private TextureSet GetTextureForTileDef(TileDef tileDef, string szTheme)
-//		{
-//			Theme theme = databaseLoader.Themes.FirstOrDefault(t => t.name == szTheme || t.szTileTextureSet == szTheme);
-//			if (theme != null && !string.IsNullOrEmpty(theme.szTileTextureSet))
-//			{
-//				TextureSet texSet = databaseLoader.TextureSets.FirstOrDefault(ts => ts.name == theme.szTileTextureSet);
-//				if (texSet != null && texSet.frames != null && texSet.frames.Length > 0)
-//				{
-//					Debug.Log($"TextureSet found: {texSet.name}, frames={texSet.frames.Length}");
-//					return texSet;
-//				}
-//			}
-
-//			TextureSet fallbackSet = databaseLoader.TextureSets.FirstOrDefault(ts => ts.name == szTheme);
-//			if (fallbackSet != null && fallbackSet.frames != null && fallbackSet.frames.Length > 0)
-//			{
-//				Debug.Log($"Fallback TextureSet: {fallbackSet.name}, frames={fallbackSet.frames.Length}");
-//				return fallbackSet;
-//			}
-
-//			return null;
-//		}
-
-//		void OnGUI()
-//		{
-//			GUI.skin.label.fontSize = 24;
-//			GUI.color = Color.green;
-//			if (GUI.Button(new Rect(10, 10, 100, 30), "reload"))
-//			{
-//				isInitialized = false;
-//				foreach (Transform child in transform)
-//				{
-//					Destroy(child.gameObject);
-//				}
-//				Initialize();
-//			}
-//		}
-//	}
-//}

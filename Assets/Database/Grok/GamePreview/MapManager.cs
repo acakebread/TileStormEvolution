@@ -142,10 +142,10 @@ namespace GamePreviewNamespace
 			height = currentMap.tiles.nHeight;
 			Debug.Log($"Map {currentMap.name}: width={width}, height={height}, defs.Length={currentMap.defs?.Length}");
 
-			tileMap = currentMap.tiles?.nTileIndex?.unpacked_bytes;
+			tileMap = currentMap.tiles?.TileData?.unpacked_bytes;
 			if (tileMap == null || tileMap.Length != width * height)
 			{
-				Debug.LogError($"Invalid tiles data! tiles={currentMap.tiles != null}, nTileIndex={currentMap.tiles?.nTileIndex != null}, length={(tileMap != null ? tileMap.Length : -1)}, expected={width * height}");
+				Debug.LogError($"Invalid tiles data! tiles={currentMap.tiles != null}, nTileIndex={currentMap.tiles?.TileData != null}, length={(tileMap != null ? tileMap.Length : -1)}, expected={width * height}");
 				return;
 			}
 
@@ -193,7 +193,7 @@ namespace GamePreviewNamespace
 
 					Debug.Log($"Tile at ({x},{z}): szType={szType}, bSlide={tileDef.bSlide}, bRoll={tileDef.bRoll}, bDock={tileDef.bDock}, bStart={tileDef.bStart}, bConsole={tileDef.bConsole}, bEnd={tileDef.bEnd}, bEast={tileDef.bEast}, bWest={tileDef.bWest}, bNorth={tileDef.bNorth}, bSouth={tileDef.bSouth}");
 
-					GameObject tileObj = new GameObject($"{tileDef.name}_{x}_{z}");
+					GameObject tileObj = new GameObject($"{tileDef.szType}_{x}_{z}");
 					tileObj.transform.SetParent(mapRoot.transform, false);
 					tileObj.transform.position = new Vector3(x, 0f, z);
 					if (flip)
@@ -221,7 +221,7 @@ namespace GamePreviewNamespace
 					{
 						if (szType != "tile_invisible")
 						{
-							Debug.LogWarning($"Geometry not found at {geomPath} for TileDef {tileDef.name}");
+							Debug.LogWarning($"Geometry not found at {geomPath} for TileDef {tileDef.szType}");
 							GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
 							cube.transform.SetParent(tileObj.transform, false);
 							cube.transform.localPosition = Vector3.zero;
@@ -238,7 +238,7 @@ namespace GamePreviewNamespace
 					}
 					else
 					{
-						Debug.LogWarning($"No valid texture set for TileDef {tileDef.name}, szTheme={tileDef.szTheme}");
+						Debug.LogWarning($"No valid texture set for TileDef {tileDef.szType}, szTheme={tileDef.szTheme}");
 					}
 
 					mapCentre += new Vector3(x, 0f, z);
