@@ -252,7 +252,10 @@ public class ArrayDatabaseParser : MonoBehaviour
 					sb.Append("    {\n");
 					if (sectionName != "tiledefs" && !string.IsNullOrEmpty(item.Name))
 					{
-						sb.Append($"      \"name\": \"{item.Name}\",\n");
+						sb.Append($"      \"name\": \"{item.Name}\"");
+						if (item.Children != null && item.Children.Count > 0)
+							sb.Append(",");
+						sb.Append("\n");
 					}
 					if (item.Children != null)
 					{
@@ -297,48 +300,47 @@ public class ArrayDatabaseParser : MonoBehaviour
 		{
 			case "struct":
 			case "data":
-				if (element.Name == "defs" || element.Name == "tiledefs" || element.Name == "frames" || element.Name == "Waypoints")
+				if (element.Name == "defs" || element.Name == "tiledefs" || element.Name == "frames" || element.Name.ToLower() == "waypoints")
 				{
 					sb.Append("[\n");
 					if (element.Children != null)
 					{
-						var childrenToProcess = element.Name == "Waypoints"
-							? element.Children.Where(c => c.Name.StartsWith("WP")).ToList()
+						var childrenToProcess = element.Name.ToLower() == "waypoints"
+							? element.Children.Where(c => c.Name.StartsWith("WP")).OrderBy(c => c.Name).ToList()
 							: element.Children;
 
 						for (int i = 0; i < childrenToProcess.Count; i++)
 						{
 							var child = childrenToProcess[i];
 							sb.Append($"{indent}  {{");
-							if (element.Name != "defs" && element.Name != "tiledefs" && !string.IsNullOrEmpty(child.Name))
+							if (element.Name != "defs" && element.Name != "tiledefs")
 							{
-								sb.Append($"\n{indent}    \"name\": \"{child.Name}\"");
-								if (child.Children != null && child.Children.Count > 0)
+								if (!string.IsNullOrEmpty(child.Name))
 								{
-									sb.Append(",");
+									sb.Append($"\n{indent}    \"name\": \"{child.Name}\"");
+									if (child.Children != null && child.Children.Count > 0)
+										sb.Append(",");
 								}
 							}
 							if (child.Children != null)
 							{
+								if (element.Name == "defs" || element.Name == "tiledefs" || child.Children.Count > 0)
+									sb.Append("\n");
 								for (int j = 0; j < child.Children.Count; j++)
 								{
-									if (j == 0 && (element.Name == "defs" || element.Name == "tiledefs"))
-									{
-										sb.Append("\n");
-									}
 									BuildJsonElement(sb, child.Children[j], indentLevel + 2, child);
 									if (j < child.Children.Count - 1)
-									{
 										sb.Append(",");
-									}
 									sb.Append("\n");
 								}
 							}
-							sb.Append($"\n{indent}  }}");
-							if (i < childrenToProcess.Count - 1)
+							else
 							{
-								sb.Append(",");
+								sb.Append("\n");
 							}
+							sb.Append($"{indent}  }}");
+							if (i < childrenToProcess.Count - 1)
+								sb.Append(",");
 							sb.Append("\n");
 						}
 					}
@@ -353,9 +355,7 @@ public class ArrayDatabaseParser : MonoBehaviour
 						{
 							BuildJsonElement(sb, element.Children[i], indentLevel + 1, element);
 							if (i < element.Children.Count - 1)
-							{
 								sb.Append(",");
-							}
 							sb.Append("\n");
 						}
 						if (element.Name == "nTileIndex" && parent != null && (parent.Name == "tiles" || parent.Name == "mixed"))
@@ -368,15 +368,13 @@ public class ArrayDatabaseParser : MonoBehaviour
 								{
 									sb.Append(unpacked[j].ToString());
 									if (j < unpacked.Length - 1)
-									{
 										sb.Append(", ");
-									}
 								}
 								sb.Append("]");
 							}
 						}
 					}
-					sb.Append($"\n{indent}}}");
+					sb.Append($"{indent}}}");
 				}
 				break;
 			case "array":
@@ -401,13 +399,11 @@ public class ArrayDatabaseParser : MonoBehaviour
 						{
 							BuildJsonElement(sb, element.Children[i], indentLevel + 1, element);
 							if (i < element.Children.Count - 1)
-							{
 								sb.Append(",");
-							}
 							sb.Append("\n");
 						}
 					}
-					sb.Append($"\n{indent}}}");
+					sb.Append($"{indent}}}");
 				}
 				else
 				{
@@ -418,9 +414,7 @@ public class ArrayDatabaseParser : MonoBehaviour
 						{
 							BuildJsonElement(sb, element.Children[i], indentLevel + 1, element, true);
 							if (i < element.Children.Count - 1)
-							{
 								sb.Append(",");
-							}
 							sb.Append("\n");
 						}
 					}
@@ -447,9 +441,7 @@ public class ArrayDatabaseParser : MonoBehaviour
 					{
 						sb.Append($"\"{element.BytesValue[i]}\"");
 						if (i < element.BytesValue.Length - 1)
-						{
 							sb.Append(", ");
-						}
 					}
 				}
 				sb.Append("]");
