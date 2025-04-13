@@ -34,9 +34,6 @@ public class EbbgotNavigation : MonoBehaviour
 
 	void Start()
     {
-
-		Debug.Log(GetComponent<Unity.VisualScripting.Variables>());
-
 		//local functions
 		//int Factorial(int n) { var v = n; while (--n > 1) v *= n; return v > 0 ? v : 1; }
 

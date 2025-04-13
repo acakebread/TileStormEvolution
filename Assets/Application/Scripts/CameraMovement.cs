@@ -46,13 +46,28 @@ namespace MassiveHadronLtd
 
 
 				//Zoom in and out with Mouse Wheel
-				transform.Translate(0, 0, Input.GetAxis("Mouse ScrollWheel") * zoomSpeed, Space.Self);
+				if (true == insideWindow()) transform.Translate(0, 0, Input.GetAxis("Mouse ScrollWheel") * zoomSpeed, Space.Self);
 
 				// Translation
 				var translation = GetInputTranslationDirection() * zoomSpeed * Time.deltaTime;
 
 				transform.Translate(translation, Space.Self);
 			}
+		}
+
+		bool insideWindow()
+		{
+			// Get the mouse position in screen coordinates
+			Vector3 mousePosition = Input.mousePosition;
+
+			// Check if the mouse is within the game window bounds
+			if (mousePosition.x >= 0 && mousePosition.x <= Screen.width &&
+				mousePosition.y >= 0 && mousePosition.y <= Screen.height)
+			{
+				// Mouse is inside the game window
+				return true;
+			}
+			return false;
 		}
 
 		//private void Start()
@@ -100,7 +115,7 @@ namespace MassiveHadronLtd
 
 		Vector3 GetInputTranslationDirection()
 		{
-			Vector3 direction = new Vector3();
+			Vector3 direction = Vector3.zero;
 			if (Input.GetKey(KeyCode.W))
 			{
 				direction += Vector3.forward;
@@ -125,6 +140,8 @@ namespace MassiveHadronLtd
 			{
 				direction += Vector3.up;
 			}
+			if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) direction *= 3f;
+
 			return direction;
 		}
 	}

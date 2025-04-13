@@ -295,15 +295,40 @@ public class ArrayDatabaseParser : MonoBehaviour
 		{
 			case "struct":
 			case "data":
-				if (element.Name == "defs" || element.Name == "tiledefs")
+				// Treat 'frames', 'defs', 'tiledefs' as arrays
+				if (element.Name == "defs" || element.Name == "tiledefs" || element.Name == "frames")
 				{
 					sb.Append("[\n");
 					if (element.Children != null)
 					{
 						for (int i = 0; i < element.Children.Count; i++)
 						{
-							BuildJsonElement(sb, element.Children[i], indentLevel + 1, element, true);
-							if (i < element.Children.Count - 1) sb.Append(",");
+							sb.Append($"{indent}  {{");
+							if (!string.IsNullOrEmpty(element.Children[i].Name))
+							{
+								sb.Append($"\n{indent}    \"name\": \"{element.Children[i].Name}\"");
+								if (element.Children[i].Children != null && element.Children[i].Children.Count > 0)
+								{
+									sb.Append(",");
+								}
+							}
+							if (element.Children[i].Children != null)
+							{
+								for (int j = 0; j < element.Children[i].Children.Count; j++)
+								{
+									sb.Append("\n");
+									BuildJsonElement(sb, element.Children[i].Children[j], indentLevel + 2, element.Children[i]);
+									if (j < element.Children[i].Children.Count - 1)
+									{
+										sb.Append(",");
+									}
+								}
+							}
+							sb.Append($"\n{indent}  }}");
+							if (i < element.Children.Count - 1)
+							{
+								sb.Append(",");
+							}
 							sb.Append("\n");
 						}
 					}
@@ -317,7 +342,10 @@ public class ArrayDatabaseParser : MonoBehaviour
 						for (int i = 0; i < element.Children.Count; i++)
 						{
 							BuildJsonElement(sb, element.Children[i], indentLevel + 1, element);
-							if (i < element.Children.Count - 1) sb.Append(",");
+							if (i < element.Children.Count - 1)
+							{
+								sb.Append(",");
+							}
 							sb.Append("\n");
 						}
 						if (element.Name == "nTileIndex" && parent != null && (parent.Name == "tiles" || parent.Name == "mixed"))
@@ -329,7 +357,10 @@ public class ArrayDatabaseParser : MonoBehaviour
 								for (int j = 0; j < unpacked.Length; j++)
 								{
 									sb.Append(unpacked[j].ToString());
-									if (j < unpacked.Length - 1) sb.Append(", ");
+									if (j < unpacked.Length - 1)
+									{
+										sb.Append(", ");
+									}
 								}
 								sb.Append("]");
 							}
@@ -347,7 +378,7 @@ public class ArrayDatabaseParser : MonoBehaviour
 						sb.Append($"{indent}  \"nWidth\": {(int)element.Children[0].NumberValue},\n");
 						sb.Append($"{indent}  \"nHeight\": {(int)element.Children[1].NumberValue},\n");
 						sb.Append($"{indent}  \"nTileIndex\": ");
-						BuildJsonElement(sb, element.Children[2], indentLevel + 1, element, true); // Pass isArrayElement = true
+						BuildJsonElement(sb, element.Children[2], indentLevel + 1, element, true);
 					}
 					sb.Append($"\n{indent}}}");
 				}
@@ -359,7 +390,10 @@ public class ArrayDatabaseParser : MonoBehaviour
 						for (int i = 0; i < element.Children.Count; i++)
 						{
 							BuildJsonElement(sb, element.Children[i], indentLevel + 1, element);
-							if (i < element.Children.Count - 1) sb.Append(",");
+							if (i < element.Children.Count - 1)
+							{
+								sb.Append(",");
+							}
 							sb.Append("\n");
 						}
 					}
@@ -373,7 +407,10 @@ public class ArrayDatabaseParser : MonoBehaviour
 						for (int i = 0; i < element.Children.Count; i++)
 						{
 							BuildJsonElement(sb, element.Children[i], indentLevel + 1, element, true);
-							if (i < element.Children.Count - 1) sb.Append(",");
+							if (i < element.Children.Count - 1)
+							{
+								sb.Append(",");
+							}
 							sb.Append("\n");
 						}
 					}
@@ -399,7 +436,10 @@ public class ArrayDatabaseParser : MonoBehaviour
 					for (int i = 0; i < element.BytesValue.Length; i++)
 					{
 						sb.Append($"\"{element.BytesValue[i]}\"");
-						if (i < element.BytesValue.Length - 1) sb.Append(", ");
+						if (i < element.BytesValue.Length - 1)
+						{
+							sb.Append(", ");
+						}
 					}
 				}
 				sb.Append("]");
