@@ -401,7 +401,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   flip: 1
   databaseLoader: {fileID: 654959489}
-  mapName: Industrial 21
+  mapName: Industrial 22
   geometryPath: Geometry/obj/
   texturePath: Textures/
 --- !u!4 &1670644098
