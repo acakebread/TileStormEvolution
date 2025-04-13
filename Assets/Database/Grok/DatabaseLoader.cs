@@ -185,6 +185,7 @@ namespace GameDatabase
 			public bool bLightTiles;
 			public TileDef[] defs;
 			public Tiles tiles;
+			public Tiles mixed;
 			public Waypoints Waypoints;
 			public Pickups Pickups;
 			public string szButtonID;
