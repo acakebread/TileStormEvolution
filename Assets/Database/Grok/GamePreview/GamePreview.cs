@@ -8,6 +8,9 @@ namespace GamePreviewNamespace
 	{
 		[Header("Workaround for inverted .obj meshes")]
 		public bool flip = true;
+		[Header("load map scrambled or solved")]
+		public bool scramble = true;
+		
 		[SerializeField] private DatabaseLoader databaseLoader;
 		[SerializeField] private string mapName = "Industrial 01";
 		[SerializeField] private string geometryPath = "Geometry/fbx/";
@@ -75,7 +78,7 @@ namespace GamePreviewNamespace
 			tileInteractionController.Initialize(mapManager, tileMoveSpeed, dragThreshold);
 
 			// Initialize in order
-			mapManager.Initialize(databaseLoader, mapName, geometryPath, texturePath, flip);
+			mapManager.Initialize(databaseLoader, mapName, geometryPath, texturePath, flip, scramble);
 			eggbotController.Initialize(mapManager, pauseDuration);
 		}
 

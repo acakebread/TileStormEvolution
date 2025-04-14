@@ -12,6 +12,7 @@ namespace GamePreviewNamespace
 		private string geometryPath;
 		private string texturePath;
 		private bool flip;
+		private bool scramble;
 		private Map currentMap;
 		private int width, height;
 		private int[] tileMap;
@@ -24,13 +25,14 @@ namespace GamePreviewNamespace
 		public GameObject MapRoot => mapRoot;
 		public string CurrentMapName => mapName;
 
-		public void Initialize(DatabaseLoader loader, string name, string geomPath, string texPath, bool flipMeshes)
+		public void Initialize(DatabaseLoader loader, string name, string geomPath, string texPath, bool flipMeshes, bool scrambleMap = false)
 		{
 			databaseLoader = loader;
 			mapName = name;
 			geometryPath = geomPath;
 			texturePath = texPath;
 			flip = flipMeshes;
+			scramble = scrambleMap;
 			InitializeMap();
 		}
 
@@ -166,7 +168,7 @@ namespace GamePreviewNamespace
 				for (int x = 0; x < width; x++)
 				{
 					int index = z * width + x;
-					index += currentMap.mixed.TileData.unpacked_bytes[z * width + x];//apply 'mixed. offsets for pre-scarambled map
+					if (true == scramble) index += currentMap.mixed.TileData.unpacked_bytes[z * width + x];//apply 'mixed. offsets for pre-scarambled map
 					int defIndex = tileMap[index];
 					if (defIndex < 0 || defIndex >= currentMap.defs.Length)
 					{
