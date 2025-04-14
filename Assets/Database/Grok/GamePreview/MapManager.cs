@@ -166,6 +166,7 @@ namespace GamePreviewNamespace
 				for (int x = 0; x < width; x++)
 				{
 					int index = z * width + x;
+					index += currentMap.mixed.TileData.unpacked_bytes[z * width + x];//apply 'mixed. offsets for pre-scarambled map
 					int defIndex = tileMap[index];
 					if (defIndex < 0 || defIndex >= currentMap.defs.Length)
 					{
