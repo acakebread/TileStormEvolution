@@ -1,7 +1,6 @@
 using UnityEngine;
 using System.Linq;
 using System.Collections.Generic;
-using static GameDatabase.DatabaseLoader;
 
 namespace GamePreviewNamespace
 {
@@ -19,7 +18,7 @@ namespace GamePreviewNamespace
 		private bool isLevelComplete;
 		private List<int> currentPath;
 		private int pathStepIndex;
-		private float moveSpeed = 2f;
+		private float moveSpeed = 8f;
 
 		public bool IsLevelComplete => isLevelComplete;
 
@@ -78,8 +77,8 @@ namespace GamePreviewNamespace
 						currentPath = null;
 						if (currentWaypointIndex >= waypoints.Count - 1)
 						{
-							TileDef currentTileDef = mapManager.GetTileDefAt(waypoints[currentWaypointIndex]);
-							if (currentTileDef != null && currentTileDef.bEnd)
+							var currentTileDef = mapManager.GetTileDefAt(waypoints[currentWaypointIndex]);
+							if (currentTileDef != null && currentTileDef.tileDef.bEnd)
 							{
 								Debug.Log("Level complete!");
 								isLevelComplete = true;
@@ -87,8 +86,8 @@ namespace GamePreviewNamespace
 						}
 						else
 						{
-							TileDef currentTileDef = mapManager.GetTileDefAt(waypoints[currentWaypointIndex]);
-							if (currentTileDef != null && currentTileDef.bConsole)
+							var currentTileDef = mapManager.GetTileDefAt(waypoints[currentWaypointIndex]);
+							if (currentTileDef != null && currentTileDef.tileDef.bConsole)
 							{
 								isPuzzleBlocked = !CheckPathToNextWaypoint(out _);
 								if (isPuzzleBlocked)
@@ -109,22 +108,13 @@ namespace GamePreviewNamespace
 		private void InitializeEggbot()
 		{
 			int startTile = -1;
-			for (int i = 0; i < mapManager.TileMap.Length; i++)
+			for (int i = 0; i < mapManager.Width * mapManager.Height; i++)
 			{
-				int defIndex = mapManager.TileMap[i];
-				if (defIndex >= 0 && defIndex < mapManager.CurrentMap.defs.Length)
+				var tileDef = mapManager.GetTileDefAt(i);
+				if (tileDef != null && tileDef.tileDef.bStart)
 				{
-					string szType = mapManager.CurrentMap.defs[defIndex].szType;
-					string szTheme = mapManager.CurrentMap.defs[defIndex].szTheme;
-					if (string.IsNullOrEmpty(szType))
-						continue;
-
-					TileDef tileDef = mapManager.GetTileDefAt(i);
-					if (tileDef != null && tileDef.bStart)
-					{
-						startTile = i;
-						break;
-					}
+					startTile = i;
+					break;
 				}
 			}
 
@@ -199,7 +189,7 @@ namespace GamePreviewNamespace
 					return true;
 				}
 
-				TileDef tileDef = mapManager.GetTileDefAt(tile);
+				var tileDef = mapManager.GetTileDefAt(tile);
 				if (tileDef == null)
 				{
 					Debug.LogWarning($"CheckPathToNextWaypoint: No TileDef at tile {tile}");
@@ -208,52 +198,51 @@ namespace GamePreviewNamespace
 
 				int x = tile % mapManager.Width;
 				int z = tile / mapManager.Width;
-				bool isInvisible = tileDef.szType == "tile_invisible" || tileDef.szType == "tile_empty";
 				List<(int nextTile, string direction)> validNeighbors = new List<(int, string)>();
 
-				if (isInvisible || tileDef.bEast)
+				if (tileDef.tileDef.bEast)
 				{
 					int eastTile = tile + 1;
-					if (x < mapManager.Width - 1 && eastTile < mapManager.TileMap.Length)
+					if (x < mapManager.Width - 1 && eastTile < mapManager.Width * mapManager.Height)
 					{
-						TileDef eastDef = mapManager.GetTileDefAt(eastTile);
-						if (eastDef != null && (eastDef.szType == "tile_invisible" || eastDef.szType == "tile_empty" || eastDef.bWest))
+						var eastDef = mapManager.GetTileDefAt(eastTile);
+						if (eastDef != null && eastDef.tileDef.bWest)
 						{
 							validNeighbors.Add((eastTile, "East"));
 						}
 					}
 				}
-				if (isInvisible || tileDef.bWest)
+				if (tileDef.tileDef.bWest)
 				{
 					int westTile = tile - 1;
 					if (x > 0)
 					{
-						TileDef westDef = mapManager.GetTileDefAt(westTile);
-						if (westDef != null && (westDef.szType == "tile_invisible" || westDef.szType == "tile_empty" || westDef.bEast))
+						var westDef = mapManager.GetTileDefAt(westTile);
+						if (westDef != null && westDef.tileDef.bEast)
 						{
 							validNeighbors.Add((westTile, "West"));
 						}
 					}
 				}
-				if (isInvisible || tileDef.bNorth)
+				if (tileDef.tileDef.bNorth)
 				{
 					int northTile = tile + mapManager.Width;
-					if (z < mapManager.Height - 1 && northTile < mapManager.TileMap.Length)
+					if (z < mapManager.Height - 1 && northTile < mapManager.Width * mapManager.Height)
 					{
-						TileDef northDef = mapManager.GetTileDefAt(northTile);
-						if (northDef != null && (northDef.szType == "tile_invisible" || northDef.szType == "tile_empty" || northDef.bSouth))
+						var northDef = mapManager.GetTileDefAt(northTile);
+						if (northDef != null && northDef.tileDef.bSouth)
 						{
 							validNeighbors.Add((northTile, "North"));
 						}
 					}
 				}
-				if (isInvisible || tileDef.bSouth)
+				if (tileDef.tileDef.bSouth)
 				{
 					int southTile = tile - mapManager.Width;
 					if (z > 0)
 					{
-						TileDef southDef = mapManager.GetTileDefAt(southTile);
-						if (southDef != null && (southDef.szType == "tile_invisible" || southDef.szType == "tile_empty" || southDef.bNorth))
+						var southDef = mapManager.GetTileDefAt(southTile);
+						if (southDef != null && southDef.tileDef.bNorth)
 						{
 							validNeighbors.Add((southTile, "South"));
 						}
@@ -267,7 +256,7 @@ namespace GamePreviewNamespace
 						visited.Add(nextTile);
 						queue.Enqueue(nextTile);
 						parent[nextTile] = tile;
-						traversalLog.Add($"{tile} (x={x}, z={z}, {tileDef.szType}) -> {direction}");
+						traversalLog.Add($"{tile} (x={x}, z={z}, {tileDef.tileDef.szType}) -> {direction}");
 					}
 				}
 			}
@@ -280,12 +269,13 @@ namespace GamePreviewNamespace
 		{
 			if (currentWaypointIndex + 1 >= waypoints.Count)
 			{
-				Debug.Log($"MoveToNextWaypoint: No next waypoint (currentIndex={currentWaypointIndex})");
+				// Finished level
+				// Debug.Log($"MoveToNextWaypoint: No next waypoint (currentIndex={currentWaypointIndex})");
 				return;
 			}
 
-			TileDef currentDef = mapManager.GetTileDefAt(waypoints[currentWaypointIndex]);
-			if (currentDef != null && currentDef.bConsole && isPuzzleBlocked)
+			var currentDef = mapManager.GetTileDefAt(waypoints[currentWaypointIndex]);
+			if (currentDef != null && currentDef.tileDef.bConsole && isPuzzleBlocked)
 			{
 				if (CheckPathToNextWaypoint(out _))
 				{
