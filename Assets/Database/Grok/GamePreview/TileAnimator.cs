@@ -3,7 +3,7 @@ using GameDatabase;
 
 public class TileAnimator : MonoBehaviour
 {
-	private MeshRenderer renderer;
+	private MeshRenderer _renderer;
 	private DatabaseLoader.TextureSet textureSet;
 	private Texture2D[] textures;
 	private float[] durations;
@@ -13,8 +13,8 @@ public class TileAnimator : MonoBehaviour
 	public void Initialize(DatabaseLoader.TextureSet ts, string texturePath)
 	{
 		textureSet = ts;
-		renderer = GetComponentInChildren<MeshRenderer>();
-		if (renderer == null || textureSet == null || textureSet.frames == null || textureSet.frames.Length == 0)
+		_renderer = GetComponentInChildren<MeshRenderer>();
+		if (_renderer == null || textureSet == null || textureSet.frames == null || textureSet.frames.Length == 0)
 		{
 			Destroy(this);
 			return;
@@ -64,13 +64,13 @@ public class TileAnimator : MonoBehaviour
 
 	private void ApplyTexture(int index)
 	{
-		if (renderer != null && textures[index] != null)
+		if (_renderer != null && textures[index] != null)
 		{
-			if (renderer.material == null)
+			if (_renderer.material == null)
 			{
-				renderer.material = new Material(Shader.Find("Standard"));
+				_renderer.material = new Material(Shader.Find("Standard"));
 			}
-			renderer.material.mainTexture = textures[index];
+			_renderer.material.mainTexture = textures[index];
 		}
 	}
 
@@ -90,9 +90,9 @@ public class TileAnimator : MonoBehaviour
 
 	void OnDestroy()
 	{
-		if (renderer != null && renderer.material != null)
+		if (_renderer != null && _renderer.material != null)
 		{
-			Destroy(renderer.material);
+			Destroy(_renderer.material);
 		}
 	}
 }

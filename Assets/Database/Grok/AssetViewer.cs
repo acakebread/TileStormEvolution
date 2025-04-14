@@ -42,12 +42,8 @@ namespace AssetViewerNamespace
 
 			if (databaseLoader == null)
 			{
-				databaseLoader = FindObjectOfType<DatabaseLoader>(true);
-				if (databaseLoader == null)
-				{
-					Debug.LogError("AssetViewer requires a DatabaseLoader!");
-					return;
-				}
+				Debug.LogError("AssetViewer requires a DatabaseLoader!");
+				return;
 			}
 
 			Debug.Log($"AssetViewer Start: databaseLoader found, Maps.Count={databaseLoader.Maps.Count}");

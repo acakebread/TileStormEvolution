@@ -4,8 +4,8 @@ using UnityEngine;
 
 namespace MassiveHadronLtd
 {
-	public class TileNameInit : MonoBehaviour
-	{
-		void Start() => GetComponent<TMPro.TMP_Text>().text = FindObjectOfType<MaterialController>(true).opaque.mainTexture.name;
-	}
+	//public class TileNameInit : MonoBehaviour
+	//{
+	//	void Start() => GetComponent<TMPro.TMP_Text>().text = FindObjectOfType<MaterialController>(true).opaque.mainTexture.name;
+	//}
 }
