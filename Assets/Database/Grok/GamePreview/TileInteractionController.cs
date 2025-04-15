@@ -9,7 +9,6 @@ namespace GamePreviewNamespace
 		private GameObject draggedTile;
 		private Vector3 originalPos;
 		private int dragIndex = -1;
-		private Vector3 dragOffset;
 		private bool isDragging;
 		private float minX, maxX, minZ, maxZ;
 		private int startGridX, startGridZ;
@@ -66,7 +65,6 @@ namespace GamePreviewNamespace
 			dragIndex = tileIndex;
 			draggedTile = mapManager.Tiles[tileIndex];
 			originalPos = draggedTile.transform.position;
-			dragOffset = hitPos - originalPos;
 			GetDragBounds(x, z);
 			startGridX = x;
 			startGridZ = z;
@@ -94,7 +92,6 @@ namespace GamePreviewNamespace
 				{
 					StartDragAtNewPosition(lastMousePos, newGridX, newGridZ);
 					gestureSystem.ConsumeGesture(gesture.mode, gesture.direction);
-					dragOffset = lastMousePos - originalPos;
 					startGridX = newGridX;
 					startGridZ = newGridZ;
 				}
@@ -111,18 +108,20 @@ namespace GamePreviewNamespace
 				return;
 			}
 
-			Vector3 currentPos = ray.GetPoint(distance);
+			//Vector3 currentPos = ray.GetPoint(distance);
+			var currentPos = gestureSystem.GetCurrentPos();
 			Vector3 newPos = originalPos;
 			GestureSystem.GestureMode mode = gestureSystem.GetCurrentMode();
 
+
 			if (mode == GestureSystem.GestureMode.DraggingX)
 			{
-				newPos.x = Mathf.Clamp(currentPos.x - dragOffset.x, minX, maxX);
+				newPos.x = Mathf.Clamp(currentPos.x, minX, maxX);
 				newPos.z = originalPos.z;
 			}
 			else if (mode == GestureSystem.GestureMode.DraggingZ)
 			{
-				newPos.z = Mathf.Clamp(currentPos.z - dragOffset.z, minZ, maxZ);
+				newPos.z = Mathf.Clamp(currentPos.z, minZ, maxZ);
 				newPos.x = originalPos.x;
 			}
 			else
@@ -146,7 +145,7 @@ namespace GamePreviewNamespace
 			{
 				GameObject targetTile = mapManager.Tiles[targetIndex];
 				var targetProps = targetTile?.GetComponent<TileProperties>();
-				return targetTile == null || (targetProps != null && targetProps.tileDef.bDock);
+				return targetTile == null || (targetProps != null && (targetProps.tileDef.bDock || targetProps.tileDef.bRoll));
 			}
 			return true;
 		}
@@ -164,7 +163,7 @@ namespace GamePreviewNamespace
 			{
 				GameObject targetTile = mapManager.Tiles[tileIndex];
 				var targetProps = targetTile?.GetComponent<TileProperties>();
-				if (targetTile != null && (targetProps == null || !targetProps.tileDef.bDock))
+				if (targetTile != null && (targetProps == null || !(targetProps.tileDef.bDock || targetProps.tileDef.bRoll)))
 				{
 					return;
 				}
@@ -191,7 +190,6 @@ namespace GamePreviewNamespace
 
 			dragIndex = tileIndex;
 			originalPos = newTilePos;
-			dragOffset = hitPos - newTilePos;
 			GetDragBounds(gridX, gridZ);
 		}
 
@@ -209,7 +207,7 @@ namespace GamePreviewNamespace
 			{
 				GameObject targetTile = mapManager.Tiles[targetIndex];
 				var targetProps = targetTile?.GetComponent<TileProperties>();
-				if (targetTile == null || (targetProps != null && targetProps.tileDef.bDock))
+				if (targetTile == null || (targetProps != null && (targetProps.tileDef.bDock || targetProps.tileDef.bRoll)))
 				{
 					mapManager.Tiles[targetIndex] = draggedTile;
 					mapManager.Tiles[dragIndex] = targetTile;
@@ -261,7 +259,7 @@ namespace GamePreviewNamespace
 				}
 				int checkIndex = getIndex(i);
 				var props = mapManager.Tiles[checkIndex]?.GetComponent<TileProperties>();
-				if (props == null || !props.tileDef.bDock)
+				if (props == null || !(props.tileDef.bDock || props.tileDef.bRoll))
 				{
 					return getBound(i);
 				}
@@ -281,7 +279,6 @@ namespace GamePreviewNamespace
 			isDragging = false;
 			dragIndex = -1;
 			draggedTile = null;
-			dragOffset = Vector3.zero;
 			lastMousePos = Vector3.zero;
 		}
 	}

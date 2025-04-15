@@ -11,7 +11,7 @@ namespace GamePreviewNamespace
 		public bool hasNav => tileDef.bNorth || tileDef.bSouth || tileDef.bEast || tileDef.bWest;
 		public bool movable => hasNav && (tileDef.bSlide || tileDef.bRoll);
 
-		public bool CanBeDragged => tileDef != null && !tileDef.bDock && tileDef.bSlide;
+		public bool CanBeDragged => tileDef != null && !(tileDef.bDock || tileDef.bRoll) && tileDef.bSlide;
 		public bool IsSlidableTarget => tileDef != null && tileDef.bSlide;
 
 		// Checks if this tile can pair with another (e.g., for adjacent compatibility)

@@ -8,6 +8,7 @@ public class GestureSystem : MonoBehaviour
 
 	private GestureMode currentMode = GestureMode.Inactive;
 	private Vector3 startMousePos;
+	private Vector3 remainderPos;
 	private bool isMouseDown;
 	private List<(GestureMode mode, int direction)> gestureList = new List<(GestureMode, int)>();
 	private const float lockThreshold = 0.1f;
@@ -90,7 +91,7 @@ public class GestureSystem : MonoBehaviour
 		{
 			OnGesturesUpdated?.Invoke(gestureList);
 		}
-
+		remainderPos = currentPos;
 		currentMode = EvaluateMode(currentPos - startMousePos);
 	}
 
@@ -133,13 +134,7 @@ public class GestureSystem : MonoBehaviour
 		}
 	}
 
-	public void ClearGestures()
-	{
-		gestureList.Clear();
-	}
-
-	public GestureMode GetCurrentMode()
-	{
-		return currentMode;
-	}
+	public void ClearGestures() => gestureList.Clear();
+	public GestureMode GetCurrentMode() => currentMode;
+	public Vector3 GetCurrentPos() => remainderPos;
 }
