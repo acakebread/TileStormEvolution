@@ -1,20 +1,21 @@
 using UnityEngine;
 using System;
+using System.Collections.Generic;
 
 public class GestureSystem : MonoBehaviour
 {
 	public enum GestureMode { Inactive, DraggingX, DraggingZ }
 
 	private GestureMode currentMode = GestureMode.Inactive;
-	private Vector3 initialMousePos;
-	private Vector3 thresholdMousePos;
+	private Vector3 startMousePos;
 	private bool isMouseDown;
-	private bool isThresholdDetectionActive;
-	private bool hasLoggedAtThreshold;
+	private List<(GestureMode mode, int direction)> gestureList = new List<(GestureMode, int)>();
 	private const float lockThreshold = 0.1f;
+	private const float gridSize = 1.0f;
 
 	public event Action<Vector3> OnDragStarted;
 	public event Action<Vector3> OnDragEnded;
+	public event Action<List<(GestureMode mode, int direction)>> OnGesturesUpdated;
 
 	private void Update()
 	{
@@ -41,12 +42,11 @@ public class GestureSystem : MonoBehaviour
 			return;
 		}
 
-		initialMousePos = ray.GetPoint(distance);
+		startMousePos = ray.GetPoint(distance);
 		isMouseDown = true;
 		currentMode = GestureMode.Inactive;
-		isThresholdDetectionActive = false;
-		hasLoggedAtThreshold = false;
-		OnDragStarted?.Invoke(initialMousePos);
+		gestureList.Clear();
+		OnDragStarted?.Invoke(startMousePos);
 	}
 
 	private void UpdateDrag()
@@ -59,40 +59,61 @@ public class GestureSystem : MonoBehaviour
 		}
 
 		Vector3 currentPos = ray.GetPoint(distance);
+		int maxIterations = 10;
+		Vector3 tempStartMousePos = startMousePos; // Track pending gestures without modifying startMousePos
+		gestureList.Clear(); // Clear previous gestures
 
-		// Lock initial axis
-		if (currentMode == GestureMode.Inactive)
+		int iteration = 0;
+		while (iteration < maxIterations)
 		{
-			Vector3 delta = currentPos - initialMousePos;
+			Vector3 delta = currentPos - tempStartMousePos;
 			float absX = Mathf.Abs(delta.x);
 			float absZ = Mathf.Abs(delta.z);
-			if (absX > absZ && absX > lockThreshold)
+
+			if (absX > absZ && absX >= gridSize)
 			{
-				currentMode = GestureMode.DraggingX;
+				int direction = delta.x > 0 ? 1 : -1;
+				gestureList.Add((GestureMode.DraggingX, direction));
+				tempStartMousePos.x += direction * gridSize; // Reduce delta for next iteration
+															 //Debug.Log($"Detected axis mode: DraggingX (direction: {direction})");
 			}
-			else if (absZ > lockThreshold)
+			else if (absZ >= gridSize)
 			{
-				currentMode = GestureMode.DraggingZ;
+				int direction = delta.z > 0 ? 1 : -1;
+				gestureList.Add((GestureMode.DraggingZ, direction));
+				tempStartMousePos.z += direction * gridSize; // Reduce delta for next iteration
+															 //Debug.Log($"Detected axis mode: DraggingZ (direction: {direction})");
 			}
+			else
+			{
+				break;
+			}
+
+			iteration++;
 		}
 
-		// Check for new axis detection at threshold
-		if (isThresholdDetectionActive && !hasLoggedAtThreshold)
+		if (gestureList.Count > 0)
 		{
-			Vector3 delta = currentPos - thresholdMousePos;
-			float absX = Mathf.Abs(delta.x);
-			float absZ = Mathf.Abs(delta.z);
-			if (absX > absZ && absX > lockThreshold)
-			{
-				Debug.Log("Detected axis mode: DraggingX");
-				hasLoggedAtThreshold = true;
-			}
-			else if (absZ > lockThreshold)
-			{
-				Debug.Log("Detected axis mode: DraggingZ");
-				hasLoggedAtThreshold = true;
-			}
+			OnGesturesUpdated?.Invoke(gestureList);
 		}
+
+		currentMode = EvaluateMode(currentPos - startMousePos);
+	}
+
+	private GestureMode EvaluateMode(Vector3 delta)
+	{
+		var mode = GestureMode.Inactive;
+		float absX = Mathf.Abs(delta.x);
+		float absZ = Mathf.Abs(delta.z);
+		if (absX > absZ && absX > lockThreshold)
+		{
+			mode = GestureMode.DraggingX;
+		}
+		else if (absZ > lockThreshold)
+		{
+			mode = GestureMode.DraggingZ;
+		}
+		return mode;
 	}
 
 	private void EndDrag()
@@ -104,16 +125,25 @@ public class GestureSystem : MonoBehaviour
 
 		isMouseDown = false;
 		currentMode = GestureMode.Inactive;
-		isThresholdDetectionActive = false;
-		hasLoggedAtThreshold = false;
+		gestureList.Clear();
 		OnDragEnded?.Invoke(finalPos);
 	}
 
-	public void SignalDeadZone(Vector3 currentPos)
+	public void ConsumeGesture(GestureMode mode, int direction)
 	{
-		thresholdMousePos = currentPos;
-		isThresholdDetectionActive = true;
-		hasLoggedAtThreshold = false;
+		if (mode == GestureMode.DraggingX)
+		{
+			startMousePos.x += direction * gridSize;
+		}
+		else if (mode == GestureMode.DraggingZ)
+		{
+			startMousePos.z += direction * gridSize;
+		}
+	}
+
+	public void ClearGestures()
+	{
+		gestureList.Clear();
 	}
 
 	public GestureMode GetCurrentMode()
@@ -121,6 +151,8 @@ public class GestureSystem : MonoBehaviour
 		return currentMode;
 	}
 }
+
+
 
 
 
@@ -133,11 +165,15 @@ public class GestureSystem : MonoBehaviour
 
 //	private GestureMode currentMode = GestureMode.Inactive;
 //	private Vector3 initialMousePos;
+//	private Vector3 thresholdMousePos;
 //	private bool isMouseDown;
+//	private bool isThresholdDetectionActive;
+//	private bool hasLoggedAtThreshold;
 //	private const float lockThreshold = 0.1f;
 
 //	public event Action<Vector3> OnDragStarted;
 //	public event Action<Vector3> OnDragEnded;
+//	public event Action<GestureMode> OnModeChanged;
 
 //	private void Update()
 //	{
@@ -161,14 +197,14 @@ public class GestureSystem : MonoBehaviour
 //		Plane mapPlane = new Plane(Vector3.up, Vector3.zero);
 //		if (!mapPlane.Raycast(ray, out float distance))
 //		{
-//			Debug.LogWarning("GestureSystem: Raycast failed in StartDrag");
 //			return;
 //		}
 
 //		initialMousePos = ray.GetPoint(distance);
 //		isMouseDown = true;
 //		currentMode = GestureMode.Inactive;
-//		Debug.Log($"GestureSystem: StartDrag at {initialMousePos}");
+//		isThresholdDetectionActive = false;
+//		hasLoggedAtThreshold = false;
 //		OnDragStarted?.Invoke(initialMousePos);
 //	}
 
@@ -178,26 +214,52 @@ public class GestureSystem : MonoBehaviour
 //		Plane mapPlane = new Plane(Vector3.up, Vector3.zero);
 //		if (!mapPlane.Raycast(ray, out float distance))
 //		{
-//			Debug.LogWarning("GestureSystem: Raycast failed in UpdateDrag");
 //			return;
 //		}
 
 //		Vector3 currentPos = ray.GetPoint(distance);
-//		Vector3 delta = currentPos - initialMousePos;
 
+//		// Lock initial axis
 //		if (currentMode == GestureMode.Inactive)
 //		{
+//			Vector3 delta = currentPos - initialMousePos;
 //			float absX = Mathf.Abs(delta.x);
 //			float absZ = Mathf.Abs(delta.z);
 //			if (absX > absZ && absX > lockThreshold)
 //			{
 //				currentMode = GestureMode.DraggingX;
-//				Debug.Log($"GestureSystem: Locked DraggingX, delta=({delta.x},{delta.z})");
 //			}
 //			else if (absZ > lockThreshold)
 //			{
 //				currentMode = GestureMode.DraggingZ;
-//				Debug.Log($"GestureSystem: Locked DraggingZ, delta=({delta.x},{delta.z})");
+//			}
+//		}
+
+//		// Check for new axis detection at threshold
+//		if (isThresholdDetectionActive && !hasLoggedAtThreshold)
+//		{
+//			Vector3 delta = currentPos - thresholdMousePos;
+//			float absX = Mathf.Abs(delta.x);
+//			float absZ = Mathf.Abs(delta.z);
+//			if (absX > absZ && absX > lockThreshold)
+//			{
+//				Debug.Log("Detected axis mode: DraggingX");
+//				hasLoggedAtThreshold = true;
+//				if (currentMode != GestureMode.DraggingX)
+//				{
+//					currentMode = GestureMode.DraggingX;
+//					OnModeChanged?.Invoke(currentMode);
+//				}
+//			}
+//			else if (absZ > lockThreshold)
+//			{
+//				Debug.Log("Detected axis mode: DraggingZ");
+//				hasLoggedAtThreshold = true;
+//				if (currentMode != GestureMode.DraggingZ)
+//				{
+//					currentMode = GestureMode.DraggingZ;
+//					OnModeChanged?.Invoke(currentMode);
+//				}
 //			}
 //		}
 //	}
@@ -211,17 +273,16 @@ public class GestureSystem : MonoBehaviour
 
 //		isMouseDown = false;
 //		currentMode = GestureMode.Inactive;
-//		Debug.Log($"GestureSystem: EndDrag at {finalPos}");
+//		isThresholdDetectionActive = false;
+//		hasLoggedAtThreshold = false;
 //		OnDragEnded?.Invoke(finalPos);
 //	}
 
-//	public void SignalDeadZone()
+//	public void SignalDeadZone(Vector3 currentPos)
 //	{
-//		if (currentMode == GestureMode.DraggingX || currentMode == GestureMode.DraggingZ)
-//		{
-//			Debug.Log("GestureSystem: Dead zone signaled");
-//			// No mode change, just acknowledge for grid snap
-//		}
+//		thresholdMousePos = currentPos;
+//		isThresholdDetectionActive = true;
+//		hasLoggedAtThreshold = false;
 //	}
 
 //	public GestureMode GetCurrentMode()
