@@ -261,7 +261,7 @@ namespace GamePreviewNamespace
 				}
 			}
 
-			Debug.Log($"CheckPathToNextWaypoint: No path to waypoint {targetWaypointTile}. Visited: [{string.Join(", ", traversalLog)}]");
+			//Debug.Log($"CheckPathToNextWaypoint: No path to waypoint {targetWaypointTile}. Visited: [{string.Join(", ", traversalLog)}]");
 			return false;
 		}
 
@@ -298,7 +298,7 @@ namespace GamePreviewNamespace
 			}
 			else
 			{
-				Debug.LogWarning($"Failed to move to waypoint {currentWaypointIndex + 1}: tile={waypoints[currentWaypointIndex + 1]}");
+				//Debug.LogWarning($"Failed to move to waypoint {currentWaypointIndex + 1}: tile={waypoints[currentWaypointIndex + 1]}");
 			}
 		}
 	}
