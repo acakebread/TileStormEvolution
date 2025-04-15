@@ -13,6 +13,20 @@ namespace GamePreviewNamespace
 
 		public bool CanBeDragged => tileDef != null && !tileDef.bDock && tileDef.bSlide;
 		public bool IsSlidableTarget => tileDef != null && tileDef.bSlide;
+
+		// Checks if this tile can pair with another (e.g., for adjacent compatibility)
+		public bool CanPairWith(TileProperties other)
+		{
+			if (tileDef == null || other?.tileDef == null)
+				return false;
+
+			// Pairing logic: tiles pair if they have opposing navigation directions
+			// Customize based on your game's rules
+			return (tileDef.bNorth && other.tileDef.bSouth) ||
+				   (tileDef.bSouth && other.tileDef.bNorth) ||
+				   (tileDef.bEast && other.tileDef.bWest) ||
+				   (tileDef.bWest && other.tileDef.bEast);
+		}
 	}
 
 	public class MapManager : MonoBehaviour

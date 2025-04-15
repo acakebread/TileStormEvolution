@@ -10,8 +10,9 @@ namespace GamePreviewNamespace
 		public bool flip = true;
 		[Header("load map scrambled or solved")]
 		public bool scramble = true;
-		
+
 		[SerializeField] private DatabaseLoader databaseLoader;
+		[SerializeField] private GestureSystem gestureSystem;
 		[SerializeField] private string mapName = "Industrial 01";
 		[SerializeField] private string geometryPath = "Geometry/fbx/";
 		[SerializeField] private string texturePath = "Textures/";
@@ -71,7 +72,7 @@ namespace GamePreviewNamespace
 			// Reset all components
 			mapManager.Reset();
 			eggbotController.Reset();
-			tileInteractionController.Initialize(mapManager, tileMoveSpeed, dragThreshold);
+			tileInteractionController.Initialize(mapManager, gestureSystem);//);//, gestureSystem);//, tileMoveSpeed, dragThreshold
 
 			// Initialize in order
 			mapManager.Initialize(databaseLoader, mapName, geometryPath, texturePath, flip, scramble);
@@ -81,7 +82,7 @@ namespace GamePreviewNamespace
 		void Update()
 		{
 			eggbotController.UpdateEggbot();
-			tileInteractionController.UpdateInteractions();
+			//tileInteractionController.UpdateInteractions();
 		}
 
 		void OnGUI()
