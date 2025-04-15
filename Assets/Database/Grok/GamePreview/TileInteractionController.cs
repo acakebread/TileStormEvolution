@@ -75,6 +75,7 @@ namespace GamePreviewNamespace
 
 		private void HandleGesturesUpdated(List<(GestureSystem.GestureMode mode, int direction)> gestures)
 		{
+			if (-1 == dragIndex) return;
 			foreach (var gesture in gestures)
 			{
 				int newGridX = startGridX;
@@ -197,6 +198,7 @@ namespace GamePreviewNamespace
 		private void HandleDragEnded(Vector3 finalPos)
 		{
 			if (!isDragging) return;
+			if (-1 == dragIndex) return;
 
 			Vector3 tilePos = draggedTile.transform.position;
 			int x = Mathf.RoundToInt(Mathf.Clamp(tilePos.x, minX, maxX));
