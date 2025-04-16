@@ -4,7 +4,9 @@ using System.Collections.Generic;
 
 public class GestureSystem : MonoBehaviour
 {
+	public static GestureSystem instance;
 	public enum GestureMode { Inactive, DraggingX, DraggingZ }
+	public bool isDragging => currentMode == GestureMode.DraggingX || currentMode == GestureMode.DraggingZ;
 
 	private GestureMode currentMode = GestureMode.Inactive;
 	private Vector3 startMousePos;
@@ -17,6 +19,8 @@ public class GestureSystem : MonoBehaviour
 	public event Action<Vector3> OnDragStarted;
 	public event Action<Vector3> OnDragEnded;
 	public event Action<List<(GestureMode mode, int direction)>> OnGesturesUpdated;
+
+	private void Awake() => instance = this;
 
 	private void Update()
 	{
@@ -43,10 +47,10 @@ public class GestureSystem : MonoBehaviour
 			return;
 		}
 
-		startMousePos = ray.GetPoint(distance);
-		isMouseDown = true;
 		currentMode = GestureMode.Inactive;
 		gestureList.Clear();
+		startMousePos = ray.GetPoint(distance);
+		isMouseDown = true;
 		OnDragStarted?.Invoke(startMousePos);
 	}
 

@@ -9,17 +9,13 @@ namespace GamePreviewNamespace
 		private GameObject draggedTile;
 		private Vector3 originalPos;
 		private int dragIndex = -1;
-		private bool isDragging;
 		private float minX, maxX, minZ, maxZ;
 		private int startGridX, startGridZ;
-		private GestureSystem gestureSystem;
-		private Vector3 lastMousePos;
+		private GestureSystem gestureSystem => GestureSystem.instance;
 
-		public void Initialize(MapManager manager, GestureSystem gesture)
+		public void Initialize(MapManager manager)
 		{
 			mapManager = manager;
-			gestureSystem = gesture;
-			isDragging = false;
 			dragIndex = -1;
 			gestureSystem.OnDragStarted += HandleDragStarted;
 			gestureSystem.OnDragEnded += HandleDragEnded;
@@ -38,7 +34,7 @@ namespace GamePreviewNamespace
 
 		private void Update()
 		{
-			if (isDragging)
+			if (gestureSystem.isDragging)
 			{
 				UpdateTileVisualPosition();
 			}
@@ -61,14 +57,12 @@ namespace GamePreviewNamespace
 				return;
 			}
 
-			isDragging = true;
 			dragIndex = tileIndex;
 			draggedTile = mapManager.Tiles[tileIndex];
 			originalPos = draggedTile.transform.position;
 			GetDragBounds(x, z);
 			startGridX = x;
 			startGridZ = z;
-			lastMousePos = hitPos;
 		}
 
 		private void HandleGesturesUpdated(List<(GestureSystem.GestureMode mode, int direction)> gestures)
@@ -90,7 +84,7 @@ namespace GamePreviewNamespace
 
 				if (ValidateMove(newGridX, newGridZ))
 				{
-					StartDragAtNewPosition(lastMousePos, newGridX, newGridZ);
+					StartDragAtNewPosition(newGridX, newGridZ);
 					gestureSystem.ConsumeGesture(gesture.mode, gesture.direction);
 					startGridX = newGridX;
 					startGridZ = newGridZ;
@@ -108,7 +102,6 @@ namespace GamePreviewNamespace
 				return;
 			}
 
-			//Vector3 currentPos = ray.GetPoint(distance);
 			var currentPos = gestureSystem.GetCurrentPos();
 			Vector3 newPos = originalPos;
 			GestureSystem.GestureMode mode = gestureSystem.GetCurrentMode();
@@ -130,7 +123,6 @@ namespace GamePreviewNamespace
 			}
 
 			draggedTile.transform.position = newPos;
-			lastMousePos = currentPos;
 		}
 
 		private bool ValidateMove(int gridX, int gridZ)
@@ -150,7 +142,7 @@ namespace GamePreviewNamespace
 			return true;
 		}
 
-		private void StartDragAtNewPosition(Vector3 hitPos, int gridX, int gridZ)
+		private void StartDragAtNewPosition(int gridX, int gridZ)
 		{
 			int tileIndex = gridZ * mapManager.Width + gridX;
 			if (tileIndex < 0 || tileIndex >= mapManager.Tiles.Length)
@@ -195,7 +187,7 @@ namespace GamePreviewNamespace
 
 		private void HandleDragEnded(Vector3 finalPos)
 		{
-			if (!isDragging) return;
+			if (!gestureSystem.isDragging) return;
 			if (-1 == dragIndex) return;
 
 			Vector3 tilePos = draggedTile.transform.position;
@@ -276,10 +268,8 @@ namespace GamePreviewNamespace
 
 		private void ResetDrag()
 		{
-			isDragging = false;
 			dragIndex = -1;
 			draggedTile = null;
-			lastMousePos = Vector3.zero;
 		}
 	}
 }

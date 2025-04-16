@@ -7,7 +7,6 @@ namespace GamePreviewNamespace
 	public class EggbotController : MonoBehaviour
 	{
 		private MapManager mapManager;
-		private float pauseDuration;
 		private GameObject eggbot;
 		private List<int> waypoints;
 		private int currentWaypointIndex;
@@ -19,13 +18,13 @@ namespace GamePreviewNamespace
 		private List<int> currentPath;
 		private int pathStepIndex;
 		private float moveSpeed = 8f;
+		private float pauseDuration = 1f;
 
 		public bool IsLevelComplete => isLevelComplete;
 
-		public void Initialize(MapManager manager, float pause)
+		public void Initialize(MapManager manager)
 		{
 			mapManager = manager;
-			pauseDuration = pause;
 			InitializeEggbot();
 			InitializeWaypoints();
 			Reset();

@@ -1,13 +1,12 @@
 using UnityEngine;
 using GameDatabase;
 using System.Linq;
-using static GameDatabase.DatabaseLoader;
 
 namespace GamePreviewNamespace
 {
 	public class TileProperties : MonoBehaviour
 	{
-		public TileDef tileDef;
+		public DatabaseLoader.TileDef tileDef;
 		public bool hasNav => tileDef.bNorth || tileDef.bSouth || tileDef.bEast || tileDef.bWest;
 		public bool movable => hasNav && (tileDef.bSlide || tileDef.bRoll);
 
@@ -31,33 +30,20 @@ namespace GamePreviewNamespace
 
 	public class MapManager : MonoBehaviour
 	{
-		private DatabaseLoader databaseLoader;
-		private string mapName;
-		private string geometryPath;
-		private string texturePath;
-		private bool flip;
-		private bool scramble;
-		private Map currentMap;
-		private int width, height;
+		private DatabaseLoader.Map currentMap;
 		private GameObject mapRoot;
 		private GameObject[] tiles;
 
-		public Map CurrentMap => currentMap;
-		public int Width => width;
-		public int Height => height;
+		public DatabaseLoader.Map CurrentMap => currentMap;
+		public string CurrentMapName => currentMap.name;
+		public int Width => currentMap.tiles.nWidth;
+		public int Height => currentMap.tiles.nHeight;
 		public GameObject MapRoot => mapRoot;
-		public string CurrentMapName => mapName;
 		public GameObject[] Tiles => tiles; // Public accessor for tiles array
 
-		public void Initialize(DatabaseLoader loader, string name, string geomPath, string texPath, bool flipMeshes, bool scrambleMap = false)
+		public void Initialize(string name)
 		{
-			databaseLoader = loader;
-			mapName = name;
-			geometryPath = geomPath;
-			texturePath = texPath;
-			flip = flipMeshes;
-			scramble = scrambleMap;
-			InitializeMap();
+			InitializeMap(name);
 		}
 
 		public void Reset()
@@ -73,35 +59,31 @@ namespace GamePreviewNamespace
 		public void ResetTileMap()
 		{
 			tiles = null;
-			width = 0;
-			height = 0;
 			currentMap = null;
 		}
 
 		public TileProperties GetTileDefAt(int tileIndex) => tileIndex >= 0 && tileIndex < tiles.Length ? tiles[tileIndex]?.GetComponent<TileProperties>() : null;
 
-		private void InitializeMap()
+		private void InitializeMap(string mapName)
 		{
 			currentMap = string.IsNullOrEmpty(mapName)
-				? databaseLoader.Maps.FirstOrDefault()
-				: databaseLoader.Maps.FirstOrDefault(m => m.name == mapName);
+				? DatabaseLoader.instance.Maps.FirstOrDefault()
+				: DatabaseLoader.instance.Maps.FirstOrDefault(m => m.name == mapName);
 
 			if (currentMap == null)
 			{
-				Debug.LogError($"No map found for mapName={mapName}! Available maps: {string.Join(", ", databaseLoader.Maps.Select(m => m.name))}");
+				Debug.LogError($"No map found for mapName={mapName}! Available maps: {string.Join(", ", DatabaseLoader.instance.Maps.Select(m => m.name))}");
 				return;
 			}
 
-			width = currentMap.tiles.nWidth;
-			height = currentMap.tiles.nHeight;
-			Debug.Log($"Map {currentMap.name}: width={width}, height={height}, defs.Length={currentMap.defs?.Length}");
+			Debug.Log($"Map {currentMap.name}: width={Width}, height={Height}, defs.Length={currentMap.defs?.Length}");
 
-			tiles = new GameObject[width * height];
+			tiles = new GameObject[Width * Height];
 
 			var tileMap = currentMap.tiles?.TileData?.unpacked_bytes;
-			if (tileMap == null || tileMap.Length != width * height)
+			if (tileMap == null || tileMap.Length != Width * Height)
 			{
-				Debug.LogError($"Invalid tiles data! tiles={currentMap.tiles != null}, nTileIndex={currentMap.tiles?.TileData != null}, length={(tileMap != null ? tileMap.Length : -1)}, expected={width * height}");
+				Debug.LogError($"Invalid tiles data! tiles={currentMap.tiles != null}, nTileIndex={currentMap.tiles?.TileData != null}, length={(tileMap != null ? tileMap.Length : -1)}, expected={Width * Height}");
 				return;
 			}
 
@@ -121,10 +103,10 @@ namespace GamePreviewNamespace
 			{
 				tiles[index] = null;
 
-				int x = index % width;
-				int z = index / width;
+				int x = index % Width;
+				int z = index / Width;
 				int scrambledIndex = index;
-				if (scramble)
+				if (PreviewSettings.Scramble)
 					scrambledIndex += currentMap.mixed.TileData.unpacked_bytes[index];
 
 				int defIndex = tileMap[scrambledIndex];
@@ -145,7 +127,7 @@ namespace GamePreviewNamespace
 				if (szType == "tile_empty")
 					continue;
 
-				TileDef tileDef = databaseLoader.TileDefs.FirstOrDefault(td => td.szType == szType && td.szTheme == szTheme);
+				DatabaseLoader.TileDef tileDef = DatabaseLoader.instance.TileDefs.FirstOrDefault(td => td.szType == szType && td.szTheme == szTheme);
 				if (tileDef == null)
 				{
 					Debug.LogWarning($"TileDef not found for szType={szType}, szTheme={szTheme} at ({x}, {z}) in map {currentMap.name}");
@@ -160,7 +142,7 @@ namespace GamePreviewNamespace
 				tiles[index] = tileObj;
 				tileObj.transform.SetParent(mapRoot.transform, false);
 				tileObj.transform.position = new Vector3(x, 0f, z);
-				if (flip)
+				if (PreviewSettings.Flip)
 				{
 					tileObj.transform.rotation = Quaternion.AngleAxis(180, Vector3.up);
 				}
@@ -172,7 +154,7 @@ namespace GamePreviewNamespace
 					collider.center = new Vector3(0f, 0.25f, 0f);
 				}
 
-				string geomPath = $"{geometryPath}{tileDef.szGeom}".Replace(".x", "");
+				string geomPath = $"{PreviewSettings.GeometryPath}{tileDef.szGeom}".Replace(".x", "");
 				Debug.Log($"Loading geometry: {geomPath}");
 				GameObject geomAsset = Resources.Load<GameObject>(geomPath);
 				if (geomAsset != null)
@@ -194,11 +176,11 @@ namespace GamePreviewNamespace
 					}
 				}
 
-				TextureSet textureSet = GetTextureForTileDef(tileDef);
+				DatabaseLoader.TextureSet textureSet = GetTextureForTileDef(tileDef);
 				if (textureSet != null && textureSet.frames != null && textureSet.frames.Length > 0)
 				{
 					TileAnimator animator = tileObj.AddComponent<TileAnimator>();
-					animator.Initialize(textureSet, texturePath);
+					animator.Initialize(textureSet);
 				}
 				else
 				{
@@ -224,12 +206,12 @@ namespace GamePreviewNamespace
 			}
 		}
 
-		private TextureSet GetTextureForTileDef(TileDef tileDef)
+		private DatabaseLoader.TextureSet GetTextureForTileDef(DatabaseLoader.TileDef tileDef)
 		{
-			Theme theme = databaseLoader.Themes.FirstOrDefault(t => t.name == tileDef.szTheme || t.szTileTextureSet == tileDef.szTheme);
+			DatabaseLoader.Theme theme = DatabaseLoader.instance.Themes.FirstOrDefault(t => t.name == tileDef.szTheme || t.szTileTextureSet == tileDef.szTheme);
 			if (theme != null && !string.IsNullOrEmpty(theme.szTileTextureSet))
 			{
-				TextureSet texSet = databaseLoader.TextureSets.FirstOrDefault(ts => ts.name == theme.szTileTextureSet);
+				DatabaseLoader.TextureSet texSet = DatabaseLoader.instance.TextureSets.FirstOrDefault(ts => ts.name == theme.szTileTextureSet);
 				if (texSet != null && texSet.frames != null && texSet.frames.Length > 0)
 				{
 					Debug.Log($"TextureSet found: {texSet.name}, frames={texSet.frames.Length}");

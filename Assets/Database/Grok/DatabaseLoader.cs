@@ -7,6 +7,7 @@ namespace GameDatabase
 {
 	public class DatabaseLoader : MonoBehaviour
 	{
+		public static DatabaseLoader instance { get; private set; }
 		[SerializeField] private TextAsset databaseJsonFile;
 
 		private List<Map> maps = new List<Map>();
@@ -25,6 +26,7 @@ namespace GameDatabase
 
 		void Start()
 		{
+			instance= this;
 			LoadDatabase();
 		}
 

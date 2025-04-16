@@ -192,7 +192,7 @@ namespace AssetViewerNamespace
 					if (textureSet != null && textureSet.frames != null && textureSet.frames.Length > 0)
 					{
 						TileAnimator animator = tileObj.AddComponent<TileAnimator>();
-						animator.Initialize(textureSet, texturePath);
+						animator.Initialize(textureSet);
 					}
 					else
 					{

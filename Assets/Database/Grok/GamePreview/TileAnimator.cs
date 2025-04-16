@@ -10,7 +10,7 @@ public class TileAnimator : MonoBehaviour
 	private int currentFrame;
 	private float timer;
 
-	public void Initialize(DatabaseLoader.TextureSet ts, string texturePath)
+	public void Initialize(DatabaseLoader.TextureSet ts)
 	{
 		textureSet = ts;
 		_renderer = GetComponentInChildren<MeshRenderer>();
@@ -29,7 +29,7 @@ public class TileAnimator : MonoBehaviour
 		{
 			var frame = textureSet.frames[i];
 			durations[i] = frame.fDuration > 0 ? frame.fDuration : 1f; // Default to 1s if 0
-			string texPath = $"{texturePath}{frame.szTexture}".Replace(".tga", "").Replace(".png", "");
+			string texPath = $"{PreviewSettings.TexturePath}{frame.szTexture}".Replace(".tga", "").Replace(".png", "");
 			textures[i] = Resources.Load<Texture2D>(texPath);
 			if (textures[i] != null)
 			{

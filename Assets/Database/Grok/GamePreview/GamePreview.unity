@@ -208,6 +208,54 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   databaseJsonFile: {fileID: 4900000, guid: c2dbdf209993a6b43b19827acfe70fbe, type: 3}
+--- !u!1 &862124735
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 862124737}
+  - component: {fileID: 862124736}
+  m_Layer: 0
+  m_Name: PreviewSettings
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &862124736
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 862124735}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fbf6ebd314ddae74da38abc2292cb56c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  flip: 1
+  scramble: 1
+  geometryPath: Geometry/obj/
+  texturePath: Textures/
+--- !u!4 &862124737
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 862124735}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &868117985
 GameObject:
   m_ObjectHideFlags: 0
@@ -458,22 +506,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 17e4919eca5ba004db3f333e3ff1d7b4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  flip: 1
-  scramble: 1
-  databaseLoader: {fileID: 654959489}
-  gestureSystem: {fileID: 225821751}
-  mapName: Industrial 01
-  geometryPath: Geometry/obj/
-  texturePath: Textures/
-  tileMoveSpeed: 2
-  pauseDuration: 1
-  dragThreshold: 0.5
+  mapName: Industrial 12
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
   - {fileID: 1146321626}
   - {fileID: 868117987}
+  - {fileID: 862124737}
   - {fileID: 654959488}
   - {fileID: 225821752}
   - {fileID: 1555382763}
