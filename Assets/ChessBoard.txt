@@ -1,0 +1,139 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+class ChessBoard
+{
+    private char[,] board;
+    private Dictionary<char, int> pieceOrder;
+
+    public ChessBoard()
+    {
+        board = new char[8, 8];
+        pieceOrder = new Dictionary<char, int>
+        {
+            {'K', 0}, {'Q', 1}, {'R', 2}, {'B', 3}, {'N', 4}, {'P', 5},
+            {'k', 6}, {'q', 7}, {'r', 8}, {'b', 9}, {'n', 10}, {'p', 11}, {'.', 12}
+        };
+        InitializeBoard();
+    }
+
+    private void InitializeBoard()
+    {
+        string[] defaultBoard = {
+            "rnbqkbnr",
+            "pppppppp",
+            "........",
+            "........",
+            "........",
+            "........",
+            "PPPPPPPP",
+            "RNBQKBNR"
+        };
+
+        for (int i = 0; i < 8; i++)
+        {
+            for (int j = 0; j < 8; j++)
+            {
+                board[i, j] = defaultBoard[i][j];
+            }
+        }
+    }
+
+    public int Encode()
+    {
+        List<int> permutation = new List<int>();
+        foreach (char piece in board)
+        {
+            permutation.Add(pieceOrder[piece]);
+        }
+        return PermuradicEncode(permutation);
+    }
+
+    public void Decode(int index)
+    {
+        List<int> permutation = PermuradicDecode(index, 64);
+        char[,] newBoard = new char[8, 8];
+        int count = 0;
+
+        foreach (var kvp in pieceOrder)
+        {
+            for (int i = 0; i < 8; i++)
+            {
+                for (int j = 0; j < 8; j++)
+                {
+                    newBoard[i, j] = pieceOrder.FirstOrDefault(x => x.Value == permutation[count]).Key;
+                    count++;
+                }
+            }
+        }
+        board = newBoard;
+    }
+
+    private int PermuradicEncode(List<int> permutation)
+    {
+        int n = permutation.Count;
+        int index = 0;
+        int factor = 1;
+        for (int i = n - 1; i >= 0; i--)
+        {
+            int rank = permutation[i];
+            index += rank * factor;
+            factor *= (n - i);
+        }
+        return index;
+    }
+
+    private List<int> PermuradicDecode(int index, int size)
+    {
+        List<int> permutation = new List<int>(new int[size]);
+        List<int> elements = Enumerable.Range(0, size).ToList();
+        
+        for (int i = size - 1; i >= 0; i--)
+        {
+            int factor = Factorial(i);
+            int pos = index / factor;
+            permutation[size - 1 - i] = elements[pos];
+            elements.RemoveAt(pos);
+            index %= factor;
+        }
+        return permutation;
+    }
+
+    private int Factorial(int n)
+    {
+        int result = 1;
+        for (int i = 2; i <= n; i++)
+            result *= i;
+        return result;
+    }
+
+    public void PrintBoard()
+    {
+        for (int i = 0; i < 8; i++)
+        {
+            for (int j = 0; j < 8; j++)
+            {
+                Console.Write(board[i, j] + " ");
+            }
+            Console.WriteLine();
+        }
+    }
+}
+
+class Program
+{
+    static void Main()
+    {
+        ChessBoard board = new ChessBoard();
+        Console.WriteLine("Initial Board:");
+        board.PrintBoard();
+        
+        int encoded = board.Encode();
+        Console.WriteLine("\nEncoded Board: " + encoded);
+        
+        board.Decode(encoded);
+        Console.WriteLine("\nDecoded Board:");
+        board.PrintBoard();
+    }
+}

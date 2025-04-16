@@ -4,7 +4,7 @@ public class PreviewSettings : MonoBehaviour
 {
 	[Header("Workaround for inverted .obj meshes")]
 	[SerializeField] private bool flip = true;
-	public static bool Flip => instance.flip;
+	public static bool FlipGeometry => instance.flip;
 
 	[Header("load map scrambled or solved")]
 	[SerializeField] private bool scramble = true;

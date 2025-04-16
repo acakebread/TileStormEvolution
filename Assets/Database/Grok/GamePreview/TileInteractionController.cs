@@ -6,17 +6,15 @@ namespace GamePreviewNamespace
 	public class TileInteractionController : MonoBehaviour
 	{
 		private MapManager mapManager;
-		private GameObject draggedTile;
-		private Vector3 originalPos;
 		private int dragIndex = -1;
-		private float minX, maxX, minZ, maxZ;
-		private int startGridX, startGridZ;
+		private int lastIndex = -1;
 		private GestureSystem gestureSystem => GestureSystem.instance;
 
 		public void Initialize(MapManager manager)
 		{
 			mapManager = manager;
 			dragIndex = -1;
+			lastIndex = -1;
 			gestureSystem.OnDragStarted += HandleDragStarted;
 			gestureSystem.OnDragEnded += HandleDragEnded;
 			gestureSystem.OnGesturesUpdated += HandleGesturesUpdated;
@@ -34,60 +32,35 @@ namespace GamePreviewNamespace
 
 		private void Update()
 		{
-			if (gestureSystem.isDragging)
-			{
-				UpdateTileVisualPosition();
-			}
+			if (gestureSystem.isDragging) UpdateTileVisualPosition();
 		}
 
 		private void HandleDragStarted(Vector3 hitPos)
 		{
 			int x = Mathf.RoundToInt(hitPos.x);
 			int z = Mathf.RoundToInt(hitPos.z);
+			if (x < 0 || x >= mapManager.Width || z < 0 || z >= mapManager.Height) return;
 			int tileIndex = z * mapManager.Width + x;
 
-			if (tileIndex < 0 || tileIndex >= mapManager.Tiles.Length || mapManager.Tiles[tileIndex] == null)
-			{
-				return;
-			}
-
-			var properties = mapManager.Tiles[tileIndex].GetComponent<TileProperties>();
-			if (properties == null || !properties.CanBeDragged)
-			{
-				return;
-			}
+			var properties = mapManager.Tiles[tileIndex]?.GetComponent<TileProperties>();
+			if (properties == null || !properties.CanBeDragged) return;
 
 			dragIndex = tileIndex;
-			draggedTile = mapManager.Tiles[tileIndex];
-			originalPos = draggedTile.transform.position;
-			GetDragBounds(x, z);
-			startGridX = x;
-			startGridZ = z;
+			lastIndex = tileIndex;
 		}
 
 		private void HandleGesturesUpdated(List<(GestureSystem.GestureMode mode, int direction)> gestures)
 		{
-			if (-1 == dragIndex) return;
+			if (dragIndex == -1 || lastIndex == -1) return;
 			foreach (var gesture in gestures)
 			{
-				int newGridX = startGridX;
-				int newGridZ = startGridZ;
-
-				if (gesture.mode == GestureSystem.GestureMode.DraggingX)
+				int stride = gesture.mode == GestureSystem.GestureMode.DraggingX ? 1 : mapManager.Width;
+				int newIndex = lastIndex + stride * gesture.direction;
+				if (ValidateMove(newIndex))
 				{
-					newGridX += gesture.direction;
-				}
-				else if (gesture.mode == GestureSystem.GestureMode.DraggingZ)
-				{
-					newGridZ += gesture.direction;
-				}
-
-				if (ValidateMove(newGridX, newGridZ))
-				{
-					StartDragAtNewPosition(newGridX, newGridZ);
+					StartDragAtNewPosition(newIndex);
 					gestureSystem.ConsumeGesture(gesture.mode, gesture.direction);
-					startGridX = newGridX;
-					startGridZ = newGridZ;
+					lastIndex = newIndex;
 				}
 			}
 			gestureSystem.ClearGestures();
@@ -95,181 +68,367 @@ namespace GamePreviewNamespace
 
 		private void UpdateTileVisualPosition()
 		{
+			if (dragIndex == -1 || mapManager.Tiles[dragIndex] == null) return;
+
 			Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
 			Plane mapPlane = new Plane(Vector3.up, Vector3.zero);
-			if (!mapPlane.Raycast(ray, out float distance))
-			{
-				return;
-			}
+			if (!mapPlane.Raycast(ray, out float distance)) return;
 
 			var currentPos = gestureSystem.GetCurrentPos();
-			Vector3 newPos = originalPos;
-			GestureSystem.GestureMode mode = gestureSystem.GetCurrentMode();
+			int gridX = dragIndex % mapManager.Width;
+			int gridZ = dragIndex / mapManager.Width;
+			Vector3 newPos = new Vector3(gridX, 0f, gridZ);
+			int stride = gestureSystem.GetCurrentMode() == GestureSystem.GestureMode.DraggingX ? 1 : mapManager.Width;
 
+			var (minIndex, maxIndex) = GetDragBoundsIndexes(dragIndex, stride);
+			float minCoord = stride == 1 ? minIndex % mapManager.Width : minIndex / mapManager.Width;
+			float maxCoord = stride == 1 ? maxIndex % mapManager.Width : maxIndex / mapManager.Width;
 
-			if (mode == GestureSystem.GestureMode.DraggingX)
-			{
-				newPos.x = Mathf.Clamp(currentPos.x, minX, maxX);
-				newPos.z = originalPos.z;
-			}
-			else if (mode == GestureSystem.GestureMode.DraggingZ)
-			{
-				newPos.z = Mathf.Clamp(currentPos.z, minZ, maxZ);
-				newPos.x = originalPos.x;
-			}
+			if (stride == 1)
+				newPos.x = Mathf.Clamp(currentPos.x, minCoord, maxCoord);
 			else
-			{
-				newPos = originalPos;
-			}
+				newPos.z = Mathf.Clamp(currentPos.z, minCoord, maxCoord);
 
-			draggedTile.transform.position = newPos;
+			mapManager.Tiles[dragIndex].transform.position = newPos;
 		}
 
-		private bool ValidateMove(int gridX, int gridZ)
+		private void StartDragAtNewPosition(int newIndex)
 		{
-			if (gridX < minX || gridX > maxX || gridZ < minZ || gridZ > maxZ)
+			if (newIndex < 0 || newIndex >= mapManager.Tiles.Length || dragIndex == -1) return;
+			if (!ValidateMove(newIndex)) return;
+
+			int oldX = dragIndex % mapManager.Width;
+			int oldZ = dragIndex / mapManager.Width;
+			int newX = newIndex % mapManager.Width;
+			int newZ = newIndex / mapManager.Width;
+
+			GameObject draggedTile = mapManager.Tiles[dragIndex];
+			GameObject targetTile = mapManager.Tiles[newIndex];
+			mapManager.Tiles[newIndex] = draggedTile;
+			mapManager.Tiles[dragIndex] = targetTile;
+
+			if (targetTile != null)
 			{
-				return false;
+				string tempName = draggedTile.name;
+				draggedTile.name = targetTile.name;
+				targetTile.name = tempName;
+				targetTile.transform.position = new Vector3(oldX, 0f, oldZ);
 			}
 
-			int targetIndex = gridZ * mapManager.Width + gridX;
-			if (targetIndex != dragIndex && targetIndex >= 0 && targetIndex < mapManager.Tiles.Length)
-			{
-				GameObject targetTile = mapManager.Tiles[targetIndex];
-				var targetProps = targetTile?.GetComponent<TileProperties>();
-				return targetTile == null || (targetProps != null && (targetProps.tileDef.bDock || targetProps.tileDef.bRoll));
-			}
-			return true;
-		}
-
-		private void StartDragAtNewPosition(int gridX, int gridZ)
-		{
-			int tileIndex = gridZ * mapManager.Width + gridX;
-			if (tileIndex < 0 || tileIndex >= mapManager.Tiles.Length)
-			{
-				return;
-			}
-
-			Vector3 newTilePos = new Vector3(gridX, 0f, gridZ);
-			if (tileIndex != dragIndex)
-			{
-				GameObject targetTile = mapManager.Tiles[tileIndex];
-				var targetProps = targetTile?.GetComponent<TileProperties>();
-				if (targetTile != null && (targetProps == null || !(targetProps.tileDef.bDock || targetProps.tileDef.bRoll)))
-				{
-					return;
-				}
-
-				mapManager.Tiles[tileIndex] = draggedTile;
-				mapManager.Tiles[dragIndex] = targetTile;
-
-				UpdateTileName(draggedTile, gridX, gridZ);
-
-				if (targetTile != null)
-				{
-					int origX = dragIndex % mapManager.Width;
-					int origZ = dragIndex / mapManager.Width;
-					targetTile.transform.position = new Vector3(origX, 0f, origZ);
-					UpdateTileName(targetTile, origX, origZ);
-				}
-			}
-
-			var properties = draggedTile.GetComponent<TileProperties>();
-			if (properties == null || !properties.CanBeDragged)
-			{
-				return;
-			}
-
-			dragIndex = tileIndex;
-			originalPos = newTilePos;
-			GetDragBounds(gridX, gridZ);
+			mapManager.Tiles[newIndex].transform.position = new Vector3(newX, 0f, newZ);
+			dragIndex = newIndex;
+			lastIndex = newIndex;
 		}
 
 		private void HandleDragEnded(Vector3 finalPos)
 		{
-			if (!gestureSystem.isDragging) return;
-			if (-1 == dragIndex) return;
+			if (dragIndex == -1 || mapManager.Tiles[dragIndex] == null) return;
 
-			Vector3 tilePos = draggedTile.transform.position;
+			var (minIndexX, maxIndexX) = GetDragBoundsIndexes(dragIndex, 1);
+			var (minIndexZ, maxIndexZ) = GetDragBoundsIndexes(dragIndex, mapManager.Width);
+			float minX = minIndexX % mapManager.Width;
+			float maxX = maxIndexX % mapManager.Width;
+			float minZ = minIndexZ / mapManager.Width;
+			float maxZ = maxIndexZ / mapManager.Width;
+
+			Vector3 tilePos = mapManager.Tiles[dragIndex].transform.position;
 			int x = Mathf.RoundToInt(Mathf.Clamp(tilePos.x, minX, maxX));
 			int z = Mathf.RoundToInt(Mathf.Clamp(tilePos.z, minZ, maxZ));
 			int targetIndex = z * mapManager.Width + x;
 
-			if (targetIndex != dragIndex && targetIndex >= 0 && targetIndex < mapManager.Tiles.Length)
+			if (ValidateMove(targetIndex))
 			{
+				int oldX = dragIndex % mapManager.Width;
+				int oldZ = dragIndex / mapManager.Width;
+
+				GameObject draggedTile = mapManager.Tiles[dragIndex];
 				GameObject targetTile = mapManager.Tiles[targetIndex];
-				var targetProps = targetTile?.GetComponent<TileProperties>();
-				if (targetTile == null || (targetProps != null && (targetProps.tileDef.bDock || targetProps.tileDef.bRoll)))
-				{
-					mapManager.Tiles[targetIndex] = draggedTile;
-					mapManager.Tiles[dragIndex] = targetTile;
+				mapManager.Tiles[targetIndex] = draggedTile;
+				mapManager.Tiles[dragIndex] = targetTile;
 
-					draggedTile.transform.position = new Vector3(x, 0f, z);
-					UpdateTileName(draggedTile, x, z);
-
-					if (targetTile != null)
-					{
-						int origX = dragIndex % mapManager.Width;
-						int origZ = dragIndex / mapManager.Width;
-						targetTile.transform.position = new Vector3(origX, 0f, origZ);
-						UpdateTileName(targetTile, origX, origZ);
-					}
-				}
-				else
+				if (targetTile != null)
 				{
-					draggedTile.transform.position = originalPos;
+					string tempName = draggedTile.name;
+					draggedTile.name = targetTile.name;
+					targetTile.name = tempName;
+					targetTile.transform.position = new Vector3(oldX, 0f, oldZ);
 				}
+
+				mapManager.Tiles[targetIndex].transform.position = new Vector3(x, 0f, z);
 			}
 			else
 			{
-				draggedTile.transform.position = originalPos;
+				mapManager.Tiles[dragIndex].transform.position = new Vector3(dragIndex % mapManager.Width, 0f, dragIndex / mapManager.Width);
 			}
 
 			ResetDrag();
 		}
 
-		private void GetDragBounds(int x, int z)
+		private bool ValidateMove(int targetIndex)
 		{
-			minX = 0f;
-			maxX = mapManager.Width - 1;
-			minZ = 0f;
-			maxZ = mapManager.Height - 1;
-
-			minX = FindBoundary(x - 1, -1, -1, i => z * mapManager.Width + i, i => i + 1, 0f);
-			maxX = FindBoundary(x + 1, mapManager.Width, 1, i => z * mapManager.Width + i, i => i - 1, mapManager.Width - 1);
-			minZ = FindBoundary(z - 1, -1, -1, j => j * mapManager.Width + x, j => j + 1, 0f);
-			maxZ = FindBoundary(z + 1, mapManager.Height, 1, j => j * mapManager.Width + x, j => j - 1, mapManager.Height - 1);
-		}
-
-		private float FindBoundary(int start, int limit, int step, System.Func<int, int> getIndex, System.Func<int, float> getBound, float defaultBound)
-		{
-			for (int i = start; step > 0 ? i <= limit : i >= limit; i += step)
-			{
-				if (i == limit)
-				{
-					return defaultBound;
-				}
-				int checkIndex = getIndex(i);
-				var props = mapManager.Tiles[checkIndex]?.GetComponent<TileProperties>();
-				if (props == null || !(props.tileDef.bDock || props.tileDef.bRoll))
-				{
-					return getBound(i);
-				}
-			}
-			return defaultBound;
-		}
-
-		private void UpdateTileName(GameObject tile, int x, int z)
-		{
-			string[] nameParts = tile.name.Split('_');
-			if (nameParts.Length >= 3)
-				tile.name = $"{nameParts[0]}_{x}_{z}";
+			if (targetIndex == dragIndex || targetIndex < 0 || targetIndex >= mapManager.Tiles.Length) return false;
+			var targetTile = mapManager.Tiles[targetIndex];
+			var targetProps = targetTile?.GetComponent<TileProperties>();
+			return targetTile != null && targetProps != null && targetProps.DockOrRoll;
 		}
 
 		private void ResetDrag()
 		{
 			dragIndex = -1;
-			draggedTile = null;
+			lastIndex = -1;
+		}
+
+		private (int minIndex, int maxIndex) GetDragBoundsIndexes(int srcIndex, int stride)
+		{
+			return (WalkMap(srcIndex, -stride), WalkMap(srcIndex, stride));
+
+			int WalkMap(int index, int stride)
+			{
+				int dx = stride % mapManager.Width; // 1 or -1 for X, 0 for Z
+				int dz = stride / mapManager.Width; // 1 or -1 for Z, 0 for X
+				int x = index % mapManager.Width;
+				int z = index / mapManager.Width;
+				while (x >= 0 && x < mapManager.Width && z >= 0 && z < mapManager.Height)
+				{
+					int nextIndex = index + stride;
+					if (nextIndex < 0 || nextIndex >= mapManager.Tiles.Length) break;
+					var props = mapManager.Tiles[nextIndex]?.GetComponent<TileProperties>();
+					if (props == null || !props.DockOrRoll) break;
+					index = nextIndex;
+					x += dx;
+					z += dz;
+				}
+				return index;
+			}
 		}
 	}
 }
+
+
+
+
+//using UnityEngine;
+//using System.Collections.Generic;
+
+//namespace GamePreviewNamespace
+//{
+//	public class TileInteractionController : MonoBehaviour
+//	{
+//		private MapManager mapManager;
+//		private int dragIndex = -1;
+//		private int lastIndex = -1;
+//		private GestureSystem gestureSystem => GestureSystem.instance;
+
+//		public void Initialize(MapManager manager)
+//		{
+//			mapManager = manager;
+//			dragIndex = -1;
+//			lastIndex = -1;
+//			gestureSystem.OnDragStarted += HandleDragStarted;
+//			gestureSystem.OnDragEnded += HandleDragEnded;
+//			gestureSystem.OnGesturesUpdated += HandleGesturesUpdated;
+//		}
+
+//		private void OnDestroy()
+//		{
+//			if (gestureSystem != null)
+//			{
+//				gestureSystem.OnDragStarted -= HandleDragStarted;
+//				gestureSystem.OnDragEnded -= HandleDragEnded;
+//				gestureSystem.OnGesturesUpdated -= HandleGesturesUpdated;
+//			}
+//		}
+
+//		private void Update()
+//		{
+//			if (gestureSystem.isDragging) UpdateTileVisualPosition();
+//		}
+
+//		private void HandleDragStarted(Vector3 hitPos)
+//		{
+//			int x = Mathf.RoundToInt(hitPos.x);
+//			int z = Mathf.RoundToInt(hitPos.z);
+//			if (x < 0 || x >= mapManager.Width || z < 0 || z >= mapManager.Height) return;
+//			int tileIndex = z * mapManager.Width + x;
+//			if (mapManager.Tiles[tileIndex] == null) return;
+
+//			var properties = mapManager.Tiles[tileIndex].GetComponent<TileProperties>();
+//			if (properties == null || !properties.CanBeDragged) return;
+
+//			dragIndex = tileIndex;
+//			lastIndex = tileIndex;
+//		}
+
+//		private void HandleGesturesUpdated(List<(GestureSystem.GestureMode mode, int direction)> gestures)
+//		{
+//			if (dragIndex == -1 || lastIndex == -1) return;
+//			foreach (var gesture in gestures)
+//			{
+//				var newIndex = lastIndex + (gesture.mode == GestureSystem.GestureMode.DraggingX ? 1 : mapManager.Width) * gesture.direction;
+//				if (ValidateTile(newIndex))
+//				{
+//					StartDragAtNewPosition(newIndex % mapManager.Width, newIndex / mapManager.Width);
+//					gestureSystem.ConsumeGesture(gesture.mode, gesture.direction);
+//					lastIndex = newIndex;
+//				}
+//			}
+//			gestureSystem.ClearGestures();
+
+//			//local function
+//			bool ValidateTile(int targetIndex)
+//			{
+//				if (targetIndex == dragIndex) return false;
+//				if (targetIndex >= 0 && targetIndex < mapManager.Tiles.Length && null != mapManager.Tiles[targetIndex])
+//				{
+//					var targetTile = mapManager.Tiles[targetIndex];
+//					var targetProps = targetTile.GetComponent<TileProperties>();
+//					return targetProps != null && (targetProps.tileDef.bDock || targetProps.tileDef.bRoll);
+//				}
+//				return false;
+//			}
+//		}
+
+//		private void UpdateTileVisualPosition()
+//		{
+//			if (dragIndex == -1 || mapManager.Tiles[dragIndex] == null) return;
+
+//			Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+//			Plane mapPlane = new Plane(Vector3.up, Vector3.zero);
+//			if (!mapPlane.Raycast(ray, out float distance)) return;
+
+//			var currentPos = gestureSystem.GetCurrentPos();
+//			int gridX = dragIndex % mapManager.Width;
+//			int gridZ = dragIndex / mapManager.Width;
+//			Vector3 basePos = new Vector3(gridX, 0f, gridZ);
+//			Vector3 newPos = basePos;
+//			GestureSystem.GestureMode mode = gestureSystem.GetCurrentMode();
+
+//			var (min, max) = GetDragBoundsIndexes(dragIndex, mode == GestureSystem.GestureMode.DraggingX ? 1 : mapManager.Width);
+//			newPos.x = Mathf.Clamp(currentPos.x, min % mapManager.Width, max % mapManager.Width);
+//			newPos.z = Mathf.Clamp(currentPos.z, min / mapManager.Width, max / mapManager.Width);
+
+//			mapManager.Tiles[dragIndex].transform.position = newPos;
+//		}
+
+//		private void StartDragAtNewPosition(int gridX, int gridZ)
+//		{
+//			int tileIndex = gridZ * mapManager.Width + gridX;
+//			if (tileIndex < 0 || tileIndex >= mapManager.Tiles.Length || dragIndex == -1)
+//			{
+//				return;
+//			}
+
+//			if (tileIndex != dragIndex)
+//			{
+//				GameObject targetTile = mapManager.Tiles[tileIndex];
+//				var targetProps = targetTile?.GetComponent<TileProperties>();
+//				if (targetTile != null && (targetProps == null || !(targetProps.tileDef.bDock || targetProps.tileDef.bRoll)))  return;
+
+//				GameObject draggedTile = mapManager.Tiles[dragIndex];
+//				mapManager.Tiles[tileIndex] = draggedTile;
+//				mapManager.Tiles[dragIndex] = targetTile;
+
+//				if (targetTile != null)
+//				{
+//					string tempName = draggedTile.name;
+//					draggedTile.name = targetTile.name;
+//					targetTile.name = tempName;
+//					targetTile.transform.position = TileIndexToCoord(dragIndex);
+//				}
+//			}
+
+//			var properties = mapManager.Tiles[tileIndex].GetComponent<TileProperties>();
+//			if (properties == null || !properties.CanBeDragged) return;
+
+//			mapManager.Tiles[tileIndex].transform.position = new Vector3(gridX, 0f, gridZ);
+//			dragIndex = tileIndex;
+//			lastIndex = tileIndex;
+//		}
+
+//		private void HandleDragEnded(Vector3 finalPos)
+//		{
+//			if (dragIndex == -1 || mapManager.Tiles[dragIndex] == null) return;
+
+//			var (minIndexX, maxIndexX) = GetDragBoundsIndexes(dragIndex, 1);
+//			var (minIndexZ, maxIndexZ) = GetDragBoundsIndexes(dragIndex, mapManager.Width);
+//			var minX = minIndexX % mapManager.Width;
+//			var maxX = maxIndexX % mapManager.Width;
+//			var minZ = minIndexZ / mapManager.Width;
+//			var maxZ = maxIndexZ / mapManager.Width;
+
+//			Vector3 tilePos = mapManager.Tiles[dragIndex].transform.position;
+//			int x = Mathf.RoundToInt(Mathf.Clamp(tilePos.x, minX, maxX));
+//			int z = Mathf.RoundToInt(Mathf.Clamp(tilePos.z, minZ, maxZ));
+//			int targetIndex = z * mapManager.Width + x;
+
+//			if (targetIndex != dragIndex && targetIndex >= 0 && targetIndex < mapManager.Tiles.Length)
+//			{
+//				GameObject targetTile = mapManager.Tiles[targetIndex];
+//				var targetProps = targetTile?.GetComponent<TileProperties>();
+//				if (targetTile == null || (targetProps != null && targetProps.DockOrRoll))
+//				{
+//					GameObject draggedTile = mapManager.Tiles[dragIndex];
+//					mapManager.Tiles[targetIndex] = draggedTile;
+//					mapManager.Tiles[dragIndex] = targetTile;
+
+//					if (targetTile != null)
+//					{
+//						string tempName = draggedTile.name;
+//						draggedTile.name = targetTile.name;
+//						targetTile.name = tempName;
+
+//						targetTile.transform.position = TileIndexToCoord(dragIndex);
+//					}
+
+//					mapManager.Tiles[targetIndex].transform.position = new Vector3(x, 0f, z);
+//				}
+//				else
+//				{
+//					mapManager.Tiles[dragIndex].transform.position = TileIndexToCoord(dragIndex);
+//				}
+//			}
+//			else
+//			{
+//				mapManager.Tiles[dragIndex].transform.position = TileIndexToCoord(dragIndex);
+//			}
+
+//			ResetDrag();
+//		}
+
+//		private void ResetDrag()
+//		{
+//			dragIndex = -1;
+//			lastIndex = -1;
+//		}
+
+//		private (int min, int max) GetDragBoundsIndexes(int src_index, int stride)
+//		{
+//			return (WalkMap(src_index, -stride), WalkMap(src_index, stride));
+
+//			int WalkMap(int index, int stride)
+//			{
+//				int dz = stride / mapManager.Width;
+//				int dx = 0 != dz ? 0 : stride;
+//				int x = index % mapManager.Width;
+//				int z = index / mapManager.Width;
+//				while (x >= 0 && x < mapManager.Width && z >= 0 && z < mapManager.Height)
+//				{
+//					var props = mapManager.Tiles[index + stride]?.GetComponent<TileProperties>();
+//					if (props == null || !props.DockOrRoll) return index;
+//					index += stride;
+//					x += dx;
+//					z += dz;
+//				}
+//				return index;
+//			}
+//		}
+
+//		private Vector3 TileIndexToCoord(int index)
+//		{
+//			int origX = index % mapManager.Width;
+//			int origZ = index / mapManager.Width;
+//			return new Vector3(origX, 0f, origZ);
+
+//		}
+//	}
+//}

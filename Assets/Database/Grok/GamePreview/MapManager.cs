@@ -1,33 +1,9 @@
-using UnityEngine;
+﻿using UnityEngine;
 using GameDatabase;
 using System.Linq;
 
 namespace GamePreviewNamespace
 {
-	public class TileProperties : MonoBehaviour
-	{
-		public DatabaseLoader.TileDef tileDef;
-		public bool hasNav => tileDef.bNorth || tileDef.bSouth || tileDef.bEast || tileDef.bWest;
-		public bool movable => hasNav && (tileDef.bSlide || tileDef.bRoll);
-
-		public bool CanBeDragged => tileDef != null && !(tileDef.bDock || tileDef.bRoll) && tileDef.bSlide;
-		public bool IsSlidableTarget => tileDef != null && tileDef.bSlide;
-
-		// Checks if this tile can pair with another (e.g., for adjacent compatibility)
-		public bool CanPairWith(TileProperties other)
-		{
-			if (tileDef == null || other?.tileDef == null)
-				return false;
-
-			// Pairing logic: tiles pair if they have opposing navigation directions
-			// Customize based on your game's rules
-			return (tileDef.bNorth && other.tileDef.bSouth) ||
-				   (tileDef.bSouth && other.tileDef.bNorth) ||
-				   (tileDef.bEast && other.tileDef.bWest) ||
-				   (tileDef.bWest && other.tileDef.bEast);
-		}
-	}
-
 	public class MapManager : MonoBehaviour
 	{
 		private DatabaseLoader.Map currentMap;
@@ -142,7 +118,7 @@ namespace GamePreviewNamespace
 				tiles[index] = tileObj;
 				tileObj.transform.SetParent(mapRoot.transform, false);
 				tileObj.transform.position = new Vector3(x, 0f, z);
-				if (PreviewSettings.Flip)
+				if (PreviewSettings.FlipGeometry)
 				{
 					tileObj.transform.rotation = Quaternion.AngleAxis(180, Vector3.up);
 				}
