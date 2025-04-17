@@ -7,6 +7,19 @@ namespace GamePreviewNamespace
 	{
 		public TileDef tileDef;
 
+		// Return the opposite direction flag for each direction
+		public static int GetOppositeDirection(int dirBit)
+		{
+			switch (dirBit)
+			{
+				case 1: return 2; // North's opposite is South
+				case 2: return 1; // South's opposite is North
+				case 4: return 8; // East's opposite is West
+				case 8: return 4; // West's opposite is East
+				default: return 0;
+			}
+		}
+
 		// Returns navigation bitfield: North=1, South=2, East=4, West=8
 		// If flipped, returns inverse: North→South, South→North, East→West, West→East
 		public int GetNav(bool flipped)

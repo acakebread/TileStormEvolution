@@ -134,26 +134,6 @@ namespace GamePreviewNamespace
             return false;
         }
 
-		private int[] GetTryDirections(int nav, int currentDirBit)
-		{
-			bool isStraightCorridor = (nav == 3 || nav == 12);
-
-			if (isStraightCorridor)
-			{
-				return new[] { currentDirBit };
-			}
-			else if (currentDirBit != 0)
-			{
-				var dir = Directions.FirstOrDefault(d => d.bit == currentDirBit);
-				int filteredNav = nav & ~(currentDirBit | dir.oppositeBit);
-				return new[] { currentDirBit, filteredNav };
-			}
-			else
-			{
-				return new[] { 1, 2, 4, 8 };
-			}
-		}
-
 		public bool FindPath(int startTile, int targetTile, int startDirBit, out List<int> path)
 		{
 			path = new List<int>();
@@ -177,6 +157,8 @@ namespace GamePreviewNamespace
 				return false;
 
 			int nav = currentDef.GetNav(false);
+
+			// Get available directions, ensuring we don't turn left/right at crossroads
 			int[] tryDirs = GetTryDirections(nav, currentDirBit);
 
 			foreach (int dirBit in tryDirs)
@@ -184,23 +166,69 @@ namespace GamePreviewNamespace
 				if (dirBit == 0 || (nav & dirBit) == 0)
 					continue;
 
-				var dir = Directions.FirstOrDefault(d => d.bit == dirBit);
-				int nextTile = currentTile + dir.stride;
+				// Calculate the next tile in the current direction
+				int nextTile = currentTile + GetStrideForDirection(dirBit);
 				if (nextTile < 0 || nextTile >= Tiles?.Length)
 					continue;
 
 				var nextDef = GetTileDefAt(nextTile);
-				if (!TileProperties.CanMoveBetweenTiles(currentDef, nextDef, dirBit, dir.oppositeBit))
+				if (!TileProperties.CanMoveBetweenTiles(currentDef, nextDef, dirBit, GetOppositeDirection(dirBit)))
 					continue;
 
 				if (nextDef?.tileDef.bConsole == true)
 					continue;
 
+				// Recursively call FindPath, continue only in the current direction
 				if (FindPathRecursive(nextTile, targetTile, dirBit, new List<int>(currentPath), out resultPath))
 					return true;
 			}
 
 			return false;
+		}
+
+		private int[] GetTryDirections(int nav, int currentDirBit)
+		{
+			bool isStraightCorridor = (nav == 3 || nav == 12); // If it's a straight corridor, always go straight
+
+			if (isStraightCorridor)
+			{
+				return new[] { currentDirBit }; // Only continue in the current direction
+			}
+			else if (currentDirBit != 0)
+			{
+				int filteredNav = nav & ~(currentDirBit | GetOppositeDirection(currentDirBit)); // Filter out opposite direction
+				return new[] { currentDirBit, filteredNav }; // Try current and filtered directions
+			}
+			else
+			{
+				return new[] { 1, 2, 4, 8 }; // If no direction specified, try all directions (N, S, E, W)
+			}
+		}
+
+		private int GetStrideForDirection(int dirBit)
+		{
+			// Return the stride based on direction flags (N, S, E, W)
+			switch (dirBit)
+			{
+				case 1: return Width;    // North
+				case 2: return -Width;   // South
+				case 4: return 1;        // East
+				case 8: return -1;       // West
+				default: return 0;
+			}
+		}
+
+		private int GetOppositeDirection(int dirBit)
+		{
+			// Return the opposite direction flag for each direction
+			switch (dirBit)
+			{
+				case 1: return 2; // North's opposite is South
+				case 2: return 1; // South's opposite is North
+				case 4: return 8; // East's opposite is West
+				case 8: return 4; // West's opposite is East
+				default: return 0;
+			}
 		}
 
 		private void InitializeMap(string mapName)
