@@ -51,6 +51,7 @@ namespace GamePreviewNamespace
 
 		public void Initialize(string name)
 		{
+			Reset();
 			InitializeMap(name);
 		}
 
@@ -69,6 +70,7 @@ namespace GamePreviewNamespace
 			tiles = null;
 			currentMap = null;
 			waypoints = null;
+			_directions = null;
 		}
 
 		public TileProperties GetTileDefAt(int tileIndex)
