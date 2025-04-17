@@ -134,6 +134,26 @@ namespace GamePreviewNamespace
             return false;
         }
 
+		private int[] GetTryDirections(int nav, int currentDirBit)
+		{
+			bool isStraightCorridor = (nav == 3 || nav == 12);
+
+			if (isStraightCorridor)
+			{
+				return new[] { currentDirBit };
+			}
+			else if (currentDirBit != 0)
+			{
+				var dir = Directions.FirstOrDefault(d => d.bit == currentDirBit);
+				int filteredNav = nav & ~(currentDirBit | dir.oppositeBit);
+				return new[] { currentDirBit, filteredNav };
+			}
+			else
+			{
+				return new[] { 1, 2, 4, 8 };
+			}
+		}
+
 		public bool FindPath(int startTile, int targetTile, int startDirBit, out List<int> path)
 		{
 			path = new List<int>();
@@ -156,12 +176,15 @@ namespace GamePreviewNamespace
 			if (currentDef == null)
 				return false;
 
+			//int nav = currentDef.GetNav(false);
+			//int[] tryDirs = (nav == 3 || nav == 12)
+			//	? new[] { currentDirBit }
+			//	: currentDirBit != 0
+			//		? new[] { currentDirBit, nav & ~(currentDirBit | Directions.FirstOrDefault(d => d.bit == currentDirBit).oppositeBit) }
+			//		: new[] { 1, 2, 4, 8 };
+
 			int nav = currentDef.GetNav(false);
-			int[] tryDirs = (nav == 3 || nav == 12)
-				? new[] { currentDirBit }
-				: currentDirBit != 0
-					? new[] { currentDirBit, nav & ~(currentDirBit | Directions.FirstOrDefault(d => d.bit == currentDirBit).oppositeBit) }
-					: new[] { 1, 2, 4, 8 };
+			int[] tryDirs = GetTryDirections(nav, currentDirBit);
 
 			foreach (int dirBit in tryDirs)
 			{
