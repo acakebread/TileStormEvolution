@@ -20,25 +20,6 @@ namespace GamePreviewNamespace
 		public GameObject[] Tiles => tiles;
 		public IReadOnlyList<DatabaseLoader.Waypoint> Waypoints => waypoints?.AsReadOnly();
 
-		private (int bit, int stride, int oppositeBit)[] _directions;
-		public (int bit, int stride, int oppositeBit)[] Directions
-		{
-			get
-			{
-				if (_directions == null)
-				{
-					_directions = new[]
-					{
-						(1, Width, 2), // North
-                        (2, -Width, 1), // South
-                        (4, 1, 8), // East
-                        (8, -1, 4) // West
-                    };
-				}
-				return _directions;
-			}
-		}
-
 		public Vector3 GetTilePosition(int tileIndex)
 		{
 			if (tileIndex < 0 || tileIndex >= Width * Height || Width == 0)
@@ -70,7 +51,6 @@ namespace GamePreviewNamespace
 			tiles = null;
 			currentMap = null;
 			waypoints = null;
-			_directions = null;
 		}
 
 		public TileProperties GetTileDefAt(int tileIndex)
@@ -104,35 +84,35 @@ namespace GamePreviewNamespace
 			return waypointTiles;
 		}
 
-        public bool CheckPathBetweenWaypoints(int currentWaypointIndex, out List<int> path)
-        {
-            path = new List<int>();
-            if (Waypoints == null || currentWaypointIndex + 1 >= Waypoints.Count)
-            {
-                Debug.Log($"No next waypoint (currentIndex={currentWaypointIndex}, waypoints.Count={Waypoints?.Count ?? 0})");
-                return false;
-            }
+		public bool CheckPathBetweenWaypoints(int currentWaypointIndex, out List<int> path)
+		{
+			path = new List<int>();
+			if (Waypoints == null || currentWaypointIndex + 1 >= Waypoints.Count)
+			{
+				Debug.Log($"No next waypoint (currentIndex={currentWaypointIndex}, waypoints.Count={Waypoints?.Count ?? 0})");
+				return false;
+			}
 
-            int startTile = Waypoints[currentWaypointIndex].nTile;
-            int targetTile = Waypoints[currentWaypointIndex + 1].nTile;
-            var startDef = GetTileDefAt(startTile);
-            if (startDef == null)
-                return false;
+			int startTile = Waypoints[currentWaypointIndex].nTile;
+			int targetTile = Waypoints[currentWaypointIndex + 1].nTile;
+			var startDef = GetTileDefAt(startTile);
+			if (startDef == null)
+				return false;
 
-            int startNav = startDef.GetNav(false);
-            foreach (var dir in Directions)
-            {
-                if ((startNav & dir.bit) == 0)
-                    continue;
-                if (FindPath(startTile, targetTile, dir.bit, out path))
-                {
-                    Debug.Log($"Found path to waypoint {targetTile}: [{string.Join(" -> ", path.Select(t => $"({t % Width},{t / Width})"))}]");
-                    return true;
-                }
-            }
+			int startNav = startDef.GetNav(false);
+			foreach (int dirBit in new[] { 1, 2, 4, 8 }) // North, South, East, West
+			{
+				if ((startNav & dirBit) == 0)
+					continue;
+				if (FindPath(startTile, targetTile, dirBit, out path))
+				{
+					Debug.Log($"Found path to waypoint {targetTile}: [{string.Join(" -> ", path.Select(t => $"({t % Width},{t / Width})"))}]");
+					return true;
+				}
+			}
 
-            return false;
-        }
+			return false;
+		}
 
 		public bool FindPath(int startTile, int targetTile, int startDirBit, out List<int> path)
 		{
@@ -146,6 +126,7 @@ namespace GamePreviewNamespace
 			resultPath = null;
 			currentPath.Add(currentTile);
 
+			// If we have reached the target, return the path
 			if (currentTile == targetTile)
 			{
 				resultPath = new List<int>(currentPath);
@@ -249,7 +230,7 @@ namespace GamePreviewNamespace
 			waypoints = new List<DatabaseLoader.Waypoint>();
 			if (currentMap.waypoints != null)
 			{
-				foreach (var waypoint in currentMap.waypoints)
+				foreach (var waypoint in CurrentMap.waypoints)
 				{
 					if (waypoint != null)
 						waypoints.Add(waypoint);
