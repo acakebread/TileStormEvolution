@@ -169,20 +169,26 @@ namespace GamePreviewNamespace
 
 		private int[] GetTryDirections(int nav, int currentDirBit)
 		{
-			bool isStraightCorridor = (nav == 3 || nav == 12); // If it's a straight corridor, always go straight
+			bool isStraightCorridor = (nav == 3 || nav == 12);
+			bool isCrossroads = (nav >= 7 && currentDirBit != 0 && (nav & currentDirBit) != 0);
 
-			if (isStraightCorridor)
+			if (isStraightCorridor || isCrossroads)
 			{
 				return new[] { currentDirBit }; // Only continue in the current direction
 			}
 			else if (currentDirBit != 0)
 			{
-				int filteredNav = nav & ~(currentDirBit | GetOppositeDirection(currentDirBit)); // Filter out opposite direction
-				return new[] { currentDirBit, filteredNav }; // Try current and filtered directions
+				int filteredNav = nav & ~(currentDirBit | GetOppositeDirection(currentDirBit));
+				List<int> dirs = new List<int> { currentDirBit };
+				if ((filteredNav & 1) != 0) dirs.Add(1);
+				if ((filteredNav & 2) != 0) dirs.Add(2);
+				if ((filteredNav & 4) != 0) dirs.Add(4);
+				if ((filteredNav & 8) != 0) dirs.Add(8);
+				return dirs.ToArray();
 			}
 			else
 			{
-				return new[] { 1, 2, 4, 8 }; // If no direction specified, try all directions (N, S, E, W)
+				return new[] { 1, 2, 4, 8 }; // Try all directions (N, S, E, W)
 			}
 		}
 
@@ -199,17 +205,47 @@ namespace GamePreviewNamespace
 			}
 		}
 
-		private int GetOppositeDirection(int dirBit)
+		private int GetOppositeDirection(int dirBit) => ((dirBit & 0b0010) >> 1) | ((dirBit & 0b0001) << 1) | ((dirBit & 0b1000) >> 1) | ((dirBit & 0b0100) << 1);
+
+		public int FindAdjacentConsole(int nTile)
 		{
-			// Return the opposite direction flag for each direction
-			switch (dirBit)
+			if (nTile < 0 || nTile >= Tiles?.Length)
+				return 0;
+
+			int nTest = 0;
+			// Check adjacent tiles for consoles
+			foreach (int dirBit in new[] { 1, 2, 4, 8 }) // North, South, East, West
 			{
-				case 1: return 2; // North's opposite is South
-				case 2: return 1; // South's opposite is North
-				case 4: return 8; // East's opposite is West
-				case 8: return 4; // West's opposite is East
-				default: return 0;
+				int adjacentTile = nTile + GetStrideForDirection(dirBit);
+				if (adjacentTile >= 0 && adjacentTile < Tiles?.Length)
+				{
+					var adjacentDef = GetTileDefAt(adjacentTile);
+					if (adjacentDef?.tileDef.bConsole == true)
+						nTest |= dirBit;
+				}
 			}
+
+			// Check each direction with a console
+			int[] dirBits = new[] { 1, 2, 4, 8 }; // North, South, East, West
+			for (int i = 0; i < 4; i++)
+			{
+				int dirBit = dirBits[i];
+				if ((nTest & dirBit) != 0)
+				{
+					int nConsole = nTile + GetStrideForDirection(dirBit);
+					var consoleDef = GetTileDefAt(nConsole);
+					if (consoleDef == null)
+						continue;
+					int nConsoleNav = consoleDef.GetNav(false);
+					int backTile = nConsole + GetStrideForDirection(nConsoleNav);
+					if (backTile == nTile)
+					{
+						return dirBit; // Console faces back to Eggbot's tile
+					}
+				}
+			}
+
+			return 0; // No valid console found
 		}
 
 		private void InitializeMap(string mapName)

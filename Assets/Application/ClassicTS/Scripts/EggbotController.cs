@@ -8,17 +8,20 @@ namespace GamePreviewNamespace
 	{
 		private MapManager mapManager;
 		private GameObject eggbot;
-		private int currentWaypointIndex;
-		private bool isMoving;
-		private float moveTimer;
-		private float pauseTimer;
-		private bool isPuzzleBlocked;
-		private bool isLevelComplete;
+
 		private List<int> currentPath;
 		private int pathStepIndex;
+		private int currentWaypointIndex;
+		
+		private bool isMoving;
+		private float moveTimer;
 		private float moveSpeed = 8f;
+
+		private float pauseTimer;
 		private float pauseDuration = 1f;
 
+		private bool isPuzzleBlocked;
+		private bool isLevelComplete;
 		public bool IsLevelComplete => isLevelComplete;
 
 		public void Initialize(MapManager manager)
@@ -30,14 +33,31 @@ namespace GamePreviewNamespace
 
 		public void Reset()
 		{
+			currentPath = null;
+			pathStepIndex = 0;
 			currentWaypointIndex = 0;
+
 			isMoving = false;
 			moveTimer = 0f;
 			pauseTimer = pauseDuration;
+
 			isLevelComplete = false;
 			isPuzzleBlocked = false;
-			currentPath = null;
-			pathStepIndex = 0;
+		}
+
+		private void InitializeEggbot()
+		{
+			int startTile = mapManager.GetStartTile();
+			if (startTile == -1)
+				return;
+
+			if (eggbot != null) Destroy(eggbot);
+			eggbot = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+			eggbot.name = "Eggbot";
+			eggbot.transform.SetParent(mapManager.MapRoot.transform, false);
+			eggbot.transform.localScale = new Vector3(0.3f, 0.5f, 0.3f);
+			eggbot.transform.position = mapManager.GetTilePosition(startTile);
+			Debug.Log($"Eggbot placed at tile {startTile} ({mapManager.GetTilePosition(startTile).x}, {mapManager.GetTilePosition(startTile).z})");
 		}
 
 		public void UpdateEggbot()
@@ -102,32 +122,13 @@ namespace GamePreviewNamespace
 			}
 		}
 
-		private void InitializeEggbot()
-		{
-			int startTile = mapManager.GetStartTile();
-			if (startTile == -1)
-				return;
-
-			if (eggbot != null)
-			{
-				Destroy(eggbot);
-			}
-
-			eggbot = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-			eggbot.name = "Eggbot";
-			eggbot.transform.SetParent(mapManager.MapRoot.transform, false);
-			eggbot.transform.localScale = new Vector3(0.3f, 0.5f, 0.3f);
-			eggbot.transform.position = mapManager.GetTilePosition(startTile);
-			Debug.Log($"Eggbot placed at tile {startTile} ({mapManager.GetTilePosition(startTile).x}, {mapManager.GetTilePosition(startTile).z})");
-		}
-
 		private void MoveToNextWaypoint()
 		{
 			if (currentWaypointIndex + 1 >= mapManager.Waypoints.Count)
 				return;
 
-			var currentDef = mapManager.GetTileDefAt(mapManager.Waypoints[currentWaypointIndex].nTile);
-			if (currentDef?.tileDef.bConsole == true && isPuzzleBlocked)
+			int currentTile = mapManager.Waypoints[currentWaypointIndex].nTile;
+			if (mapManager.FindAdjacentConsole(currentTile) != 0)
 			{
 				if (mapManager.CheckPathBetweenWaypoints(currentWaypointIndex, out _))
 				{
