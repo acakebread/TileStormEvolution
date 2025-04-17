@@ -176,13 +176,6 @@ namespace GamePreviewNamespace
 			if (currentDef == null)
 				return false;
 
-			//int nav = currentDef.GetNav(false);
-			//int[] tryDirs = (nav == 3 || nav == 12)
-			//	? new[] { currentDirBit }
-			//	: currentDirBit != 0
-			//		? new[] { currentDirBit, nav & ~(currentDirBit | Directions.FirstOrDefault(d => d.bit == currentDirBit).oppositeBit) }
-			//		: new[] { 1, 2, 4, 8 };
-
 			int nav = currentDef.GetNav(false);
 			int[] tryDirs = GetTryDirections(nav, currentDirBit);
 
