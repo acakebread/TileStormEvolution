@@ -53,5 +53,15 @@ namespace GamePreviewNamespace
 
 			return true; // Non-slide tiles rely on bounds
 		}
+
+		// Checks if movement is possible between two tiles in the given direction
+		public static bool CanMoveBetweenTiles(TileProperties fromTile, TileProperties toTile, int dirBit, int oppositeBit)
+		{
+			if (fromTile == null || toTile == null) return false;
+
+			int fromNav = fromTile.GetNav(false);
+			int toNav = toTile.GetNav(false);
+			return (fromNav & dirBit) != 0 && (toNav & oppositeBit) != 0;
+		}
 	}
 }

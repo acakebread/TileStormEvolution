@@ -3,6 +3,7 @@ using GameDatabase;
 using System.Linq;
 using System.Collections.Generic;
 using static GameDatabase.DatabaseLoader;
+using GamePreviewNamespace;
 
 namespace AssetViewerNamespace
 {
