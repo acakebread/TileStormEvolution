@@ -12,7 +12,7 @@ namespace GamePreviewNamespace
 		private List<int> currentPath;
 		private int pathStepIndex;
 		private int currentWaypointIndex;
-		
+
 		private bool isMoving;
 		private float moveTimer;
 		private float moveSpeed = 8f;
@@ -36,11 +36,9 @@ namespace GamePreviewNamespace
 			currentPath = null;
 			pathStepIndex = 0;
 			currentWaypointIndex = 0;
-
 			isMoving = false;
 			moveTimer = 0f;
 			pauseTimer = pauseDuration;
-
 			isLevelComplete = false;
 			isPuzzleBlocked = false;
 		}
@@ -57,31 +55,31 @@ namespace GamePreviewNamespace
 			eggbot.transform.SetParent(mapManager.MapRoot.transform, false);
 			eggbot.transform.localScale = new Vector3(0.3f, 0.5f, 0.3f);
 			eggbot.transform.position = mapManager.GetTilePosition(startTile);
-			Debug.Log($"Eggbot placed at tile {startTile} ({mapManager.GetTilePosition(startTile).x}, {mapManager.GetTilePosition(startTile).z})");
+			Debug.Log($"Eggbot at tile {startTile} ({eggbot.transform.position.x}, {eggbot.transform.position.z})");
 		}
 
 		public void UpdateEggbot()
 		{
-			if (mapManager.CurrentMap == null || mapManager.Waypoints == null || mapManager.Waypoints.Count == 0)
+			if (mapManager.Waypoints?.Count == 0)
 				return;
 
 			if (!isMoving)
 			{
 				pauseTimer -= Time.deltaTime;
 				if (pauseTimer <= 0)
-				{
 					MoveToNextWaypoint();
-				}
 			}
 			else
 			{
 				moveTimer += Time.deltaTime * moveSpeed;
 				float t = Mathf.Clamp01(moveTimer);
 				int currentTile = currentPath[pathStepIndex];
-				int nextTile = pathStepIndex + 1 < currentPath.Count ? currentPath[pathStepIndex + 1] : currentTile;
-				Vector3 startPos = mapManager.GetTilePosition(currentTile);
-				Vector3 endPos = mapManager.GetTilePosition(nextTile);
-				eggbot.transform.position = Vector3.Lerp(startPos, endPos, t);
+				int nextTile = currentPath[Mathf.Min(pathStepIndex + 1, currentPath.Count - 1)];
+				eggbot.transform.position = Vector3.Lerp(
+					mapManager.GetTilePosition(currentTile),
+					mapManager.GetTilePosition(nextTile),
+					t
+				);
 
 				if (t >= 1f)
 				{
@@ -92,26 +90,19 @@ namespace GamePreviewNamespace
 						pauseTimer = pauseDuration;
 						currentWaypointIndex++;
 						currentPath = null;
-						if (currentWaypointIndex >= mapManager.Waypoints.Count - 1)
+
+						currentTile = mapManager.Waypoints[currentWaypointIndex].nTile;
+						var tileDef = mapManager.GetTileDefAt(currentTile);
+						if (currentWaypointIndex >= mapManager.Waypoints.Count - 1 && tileDef?.IsEnd == true)
 						{
-							var currentTileDef = mapManager.GetTileDefAt(mapManager.Waypoints[currentWaypointIndex].nTile);
-							if (currentTileDef?.IsEnd == true)
-							{
-								Debug.Log("Level complete!");
-								isLevelComplete = true;
-							}
+							Debug.Log("Level complete!");
+							isLevelComplete = true;
 						}
-						else
+						else if (tileDef?.IsConsole == true)
 						{
-							var currentTileDef = mapManager.GetTileDefAt(mapManager.Waypoints[currentWaypointIndex].nTile);
-							if (currentTileDef?.IsConsole == true)
-							{
-								isPuzzleBlocked = !mapManager.CheckPathBetweenWaypoints(currentWaypointIndex, out _);
-								if (isPuzzleBlocked)
-								{
-									Debug.Log("Waiting at console for puzzle...");
-								}
-							}
+							isPuzzleBlocked = !mapManager.CheckPathBetweenWaypoints(currentWaypointIndex, out _);
+							if (isPuzzleBlocked)
+								Debug.Log("Waiting at console for puzzle...");
 						}
 					}
 					else
@@ -128,22 +119,15 @@ namespace GamePreviewNamespace
 				return;
 
 			int currentTile = mapManager.Waypoints[currentWaypointIndex].nTile;
-			if (mapManager.FindAdjacentConsole(currentTile) != 0)
+			if (mapManager.FindAdjacentConsole(currentTile) != -1 && !mapManager.CheckPathBetweenWaypoints(currentWaypointIndex, out _))
 			{
-				if (mapManager.CheckPathBetweenWaypoints(currentWaypointIndex, out _))
-				{
-					isPuzzleBlocked = false;
-					Debug.Log("Puzzle solved, proceeding...");
-				}
-				else
-				{
-					Debug.Log("Puzzle still blocked at console");
-					return;
-				}
+				Debug.Log("Puzzle blocked at console");
+				return;
 			}
 
 			if (mapManager.CheckPathBetweenWaypoints(currentWaypointIndex, out currentPath))
 			{
+				isPuzzleBlocked = false;
 				isMoving = true;
 				moveTimer = 0f;
 				pathStepIndex = 0;
