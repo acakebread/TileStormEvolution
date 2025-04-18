@@ -99,8 +99,8 @@ namespace GamePreviewNamespace
 			if (startDef == null)
 				return false;
 
-			int startNav = startDef.GetNav(false);
-			foreach (int dirBit in new[] { 1, 2, 4, 8 }) // North, South, East, West
+			int startNav = startDef.Nav;
+			foreach (int dirBit in new[] { TileProperties.North, TileProperties.South, TileProperties.East, TileProperties.West })
 			{
 				if ((startNav & dirBit) == 0)
 					continue;
@@ -136,7 +136,7 @@ namespace GamePreviewNamespace
 			if (currentDef == null)
 				return false;
 
-			int nav = currentDef.GetNav(false);
+			int nav = currentDef.Nav;
 			int[] tryDirs = GetTryDirections(nav, currentDirBit);
 
 			foreach (int dirBit in tryDirs)
@@ -144,12 +144,12 @@ namespace GamePreviewNamespace
 				if (dirBit == 0 || (nav & dirBit) == 0)
 					continue;
 
-				int nextTile = currentTile + GetStrideForDirection(dirBit);
-				if (nextTile < 0 || nextTile >= Tiles?.Length)
+				int nextTile = GetAdjacentTile(currentTile, dirBit);
+				if (-1 == nextTile)
 					continue;
 
 				var nextDef = GetTileDefAt(nextTile);
-				if (!TileProperties.CanMoveBetweenTiles(currentDef, nextDef, dirBit, GetOppositeDirection(dirBit)))
+				if (!TileProperties.CanMoveBetweenTiles(currentDef, nextDef, dirBit))
 					continue;
 
 				if (nextDef?.IsConsole == true)
@@ -163,41 +163,35 @@ namespace GamePreviewNamespace
 
 		private int[] GetTryDirections(int nav, int currentDirBit)
 		{
-			if ((GetOppositeDirection(nav) & nav) == nav) // Straight corridor or crossroads
+			if ((TileProperties.GetOppositeDirection(nav) & nav) == nav) // Straight corridor or crossroads
 			{
 				return new[] { currentDirBit }; // Only continue in current direction
 			}
 			if (currentDirBit != 0)
 			{
-				return new[] { nav & ~GetOppositeDirection(currentDirBit) }; // All directions except opposite
+				return new[] { nav & ~TileProperties.GetOppositeDirection(currentDirBit) }; // All directions except opposite
 			}
-			return new[] { 1, 2, 4, 8 }; // Try all directions
+			return new[] { TileProperties.North, TileProperties.South, TileProperties.East, TileProperties.West }; // Try all directions
 		}
 
-		private int GetStrideForDirection(int dirBit)
+		private int GetAdjacentTile(int nTile, int dirBit)
 		{
-			// Return the stride based on direction flags (N, S, E, W)
-			switch (dirBit)
-			{
-				case 1: return Width;    // North
-				case 2: return -Width;   // South
-				case 4: return 1;        // East
-				case 8: return -1;       // West
-				default: return 0;
-			}
+			var x = nTile % Width;
+			var z = nTile / Width;
+			z += (dirBit & 1) - ((dirBit & 2) >> 1); // North (+1), South (-1)
+			x += ((dirBit & 4) >> 2) - ((dirBit & 8) >> 3); // East (+1), West (-1)
+			return x >= 0 && x < Width && z >= 0 && z < Height ? z * Width + x : -1;
 		}
-
-		private int GetOppositeDirection(int dirBit) => ((dirBit & 0b0010) >> 1) | ((dirBit & 0b0001) << 1) | ((dirBit & 0b1000) >> 1) | ((dirBit & 0b0100) << 1);
 
 		public int FindAdjacentConsole(int nTile)
 		{
 			if (nTile < 0 || nTile >= Tiles?.Length)
 				return 0;
 
-			foreach (int dirBit in new[] { 1, 2, 4, 8 }) // North, South, East, West
+			foreach (int dirBit in new[] { TileProperties.North, TileProperties.South, TileProperties.East, TileProperties.West }) // North, South, East, West
 			{
-				int adjacentTile = nTile + GetStrideForDirection(dirBit);
-				if (adjacentTile >= 0 && adjacentTile < Tiles?.Length)
+				int adjacentTile = GetAdjacentTile(nTile, dirBit);
+				if (-1 != adjacentTile)
 				{
 					var adjacentDef = GetTileDefAt(adjacentTile);
 					if (adjacentDef?.IsConsole == true)
@@ -295,7 +289,7 @@ namespace GamePreviewNamespace
 					tileObj.transform.rotation = Quaternion.AngleAxis(180, Vector3.up);
 				}
 
-				if (properties.movable)
+				if (properties.Movable)
 				{
 					BoxCollider collider = tileObj.AddComponent<BoxCollider>();
 					collider.size = new Vector3(1f, 0.5f, 1f);
