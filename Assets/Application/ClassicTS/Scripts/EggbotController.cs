@@ -1,6 +1,5 @@
 using UnityEngine;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace GamePreviewNamespace
 {
@@ -34,13 +33,10 @@ namespace GamePreviewNamespace
 		public void Reset()
 		{
 			currentPath = null;
-			pathStepIndex = 0;
-			currentWaypointIndex = 0;
-			isMoving = false;
+			pathStepIndex = currentWaypointIndex = 0;
+			isMoving = isLevelComplete = isPuzzleBlocked = false;
 			moveTimer = 0f;
 			pauseTimer = pauseDuration;
-			isLevelComplete = false;
-			isPuzzleBlocked = false;
 		}
 
 		private void InitializeEggbot()
@@ -52,10 +48,11 @@ namespace GamePreviewNamespace
 			if (eggbot != null) Destroy(eggbot);
 			eggbot = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
 			eggbot.name = "Eggbot";
-			eggbot.transform.SetParent(mapManager.MapRoot.transform, false);
-			eggbot.transform.localScale = new Vector3(0.3f, 0.5f, 0.3f);
-			eggbot.transform.position = mapManager.GetTilePosition(startTile);
-			Debug.Log($"Eggbot at tile {startTile} ({eggbot.transform.position.x}, {eggbot.transform.position.z})");
+			var transform = eggbot.transform;
+			transform.SetParent(mapManager.MapRoot.transform, false);
+			transform.localScale = new Vector3(0.3f, 0.5f, 0.3f);
+			transform.position = mapManager.GetTilePosition(startTile);
+			Debug.Log($"Eggbot at tile {startTile} ({transform.position.x}, {transform.position.z})");
 		}
 
 		public void UpdateEggbot()
@@ -91,18 +88,18 @@ namespace GamePreviewNamespace
 						currentWaypointIndex++;
 						currentPath = null;
 
-						currentTile = mapManager.Waypoints[currentWaypointIndex].nTile;
-						var tileDef = mapManager.GetTileDefAt(currentTile);
+						int waypointTile = mapManager.Waypoints[currentWaypointIndex].nTile;
+						var tileDef = mapManager.GetTileDefAt(waypointTile);
 						if (currentWaypointIndex >= mapManager.Waypoints.Count - 1 && tileDef?.IsEnd == true)
 						{
-							Debug.Log("Level complete!");
+							Debug.Log($"Level complete at tile ({waypointTile % mapManager.Width},{waypointTile / mapManager.Width})!");
 							isLevelComplete = true;
 						}
 						else if (tileDef?.IsConsole == true)
 						{
 							isPuzzleBlocked = !mapManager.CheckPathBetweenWaypoints(currentWaypointIndex, out _);
 							if (isPuzzleBlocked)
-								Debug.Log("Waiting at console for puzzle...");
+								Debug.Log($"Waiting at console at tile ({waypointTile % mapManager.Width},{waypointTile / mapManager.Width})...");
 						}
 					}
 					else
@@ -121,7 +118,7 @@ namespace GamePreviewNamespace
 			int currentTile = mapManager.Waypoints[currentWaypointIndex].nTile;
 			if (mapManager.FindAdjacentConsole(currentTile) != -1 && !mapManager.CheckPathBetweenWaypoints(currentWaypointIndex, out _))
 			{
-				Debug.Log("Puzzle blocked at console");
+				Debug.Log($"Puzzle blocked at console at tile ({currentTile % mapManager.Width},{currentTile / mapManager.Width})");
 				return;
 			}
 
@@ -131,7 +128,7 @@ namespace GamePreviewNamespace
 				isMoving = true;
 				moveTimer = 0f;
 				pathStepIndex = 0;
-				Debug.Log($"Moving to waypoint {currentWaypointIndex + 1}: tile={mapManager.Waypoints[currentWaypointIndex + 1].nTile}, path=[{string.Join(" -> ", currentPath.Select(t => $"({t % mapManager.Width},{t / mapManager.Width})"))}]");
+				Debug.Log($"Moving to waypoint {currentWaypointIndex + 1}: tile={mapManager.Waypoints[currentWaypointIndex + 1].nTile}, path=[{mapManager.FormatPath(currentPath)}]");
 			}
 		}
 	}

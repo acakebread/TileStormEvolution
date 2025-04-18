@@ -28,9 +28,11 @@ namespace GamePreviewNamespace
 			return isValid;
 		}
 
-		public TileProperties GetTileDefAt(int tileIndex) => IsValidTileIndex(tileIndex) ? tiles[tileIndex]?.GetComponent<TileProperties>() : null;
+		public TileProperties GetTileDefAt(int tileIndex) =>
+			IsValidTileIndex(tileIndex) ? tiles[tileIndex]?.GetComponent<TileProperties>() : null;
 
-		public Vector3 GetTilePosition(int tileIndex) => IsValidTileIndex(tileIndex) ? new Vector3(tileIndex % Width, 1f, tileIndex / Width) : Vector3.zero;
+		public Vector3 GetTilePosition(int tileIndex) =>
+			IsValidTileIndex(tileIndex) ? new Vector3(tileIndex % Width, 1f, tileIndex / Width) : Vector3.zero;
 
 		public void Reset()
 		{
@@ -76,35 +78,29 @@ namespace GamePreviewNamespace
 				int scrambledIndex = PreviewSettings.Scramble ? index + currentMap.mixed.TileData.unpacked_bytes[index] : index;
 				int defIndex = tileMap[scrambledIndex];
 
-				if (defIndex < 0 || defIndex >= currentMap.defs.Length)
+				if (defIndex < 0 || defIndex >= currentMap.defs.Length ||
+					string.IsNullOrEmpty(currentMap.defs[defIndex].szType) ||
+					currentMap.defs[defIndex].szType == "tile_empty")
 				{
-					Debug.LogWarning($"Invalid defIndex={defIndex} at ({x},{z})");
+					if (defIndex < 0 || defIndex >= currentMap.defs.Length)
+						Debug.LogWarning($"Invalid defIndex={defIndex} at ({x},{z})");
+					else if (string.IsNullOrEmpty(currentMap.defs[defIndex].szType))
+						Debug.LogWarning($"Null szType at defIndex {defIndex}");
 					continue;
 				}
 
 				string szType = currentMap.defs[defIndex].szType;
 				string szTheme = currentMap.defs[defIndex].szTheme;
-				if (string.IsNullOrEmpty(szType))
-				{
-					Debug.LogWarning($"Null szType at defIndex {defIndex}");
-					continue;
-				}
-
-				if (szType == "tile_empty")
-					continue;
-
 				DatabaseLoader.TileDef tileDef = DatabaseLoader.instance.TileDefs.FirstOrDefault(td => td.szType == szType && td.szTheme == szTheme);
 				if (tileDef == null)
 					continue;
 
-				tiles[index] = null; // Set after validation
 				GameObject tileObj = new GameObject($"{tileDef.szType}_{x}_{z}", typeof(TileProperties));
 				var properties = tileObj.GetComponent<TileProperties>();
 				properties.TileDef = tileDef;
 				tiles[index] = tileObj;
 				tileObj.transform.SetParent(mapRoot.transform, false);
 				tileObj.transform.position = new Vector3(x, 0f, z);
-
 				if (PreviewSettings.FlipGeometry)
 					tileObj.transform.rotation = Quaternion.AngleAxis(180, Vector3.up);
 
@@ -169,8 +165,8 @@ namespace GamePreviewNamespace
 		{
 			for (int i = 0; i < Width * Height; i++)
 			{
-				if (GetTileDefAt(i)?.IsStart == true)
-					return i;
+				var def = GetTileDefAt(i);
+				if (def && def.IsStart) return i;
 			}
 			Debug.LogError("No start tile found!");
 			return -1;
@@ -220,9 +216,6 @@ namespace GamePreviewNamespace
 
 			foreach (int dirBit in GetTryDirections(currentDef.Nav, currentDirBit))
 			{
-				if ((currentDef.Nav & dirBit) == 0)
-					continue;
-
 				int nextTile = GetAdjacentTile(currentTile, dirBit);
 				if (nextTile == -1)
 					continue;
@@ -269,6 +262,7 @@ namespace GamePreviewNamespace
 			return -1;
 		}
 
-		private string FormatPath(List<int> path) => string.Join(" -> ", path.Select(t => $"({t % Width},{t / Width})"));
+		public string FormatPath(List<int> path) =>
+			string.Join(" -> ", path.Select(t => $"({t % Width},{t / Width})"));
 	}
 }

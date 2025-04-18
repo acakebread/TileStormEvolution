@@ -19,7 +19,8 @@ namespace GamePreviewNamespace
 			set
 			{
 				tileDef = value;
-				nav = (byte)((value.bNorth ? North : 0) | (value.bSouth ? South : 0) | (value.bEast ? East : 0) | (value.bWest ? West : 0));
+				nav = (byte)((value.bNorth ? North : 0) | (value.bSouth ? South : 0) |
+							 (value.bEast ? East : 0) | (value.bWest ? West : 0));
 			}
 		}
 
@@ -35,13 +36,13 @@ namespace GamePreviewNamespace
 
 		public bool Movable => tileDef.bSlide || tileDef.bRoll;
 		public bool DockOrRoll => tileDef.bDock || tileDef.bRoll;
-		public bool CanBeDragged => !(tileDef.bDock || tileDef.bRoll) && tileDef.bSlide;
+		public bool CanBeDragged => !DockOrRoll && tileDef.bSlide;
 		public bool IsSlidableTarget => tileDef.bSlide;
 
-		// Returns the opposite direction flag
-		public static int GetOppositeDirection(int dirBit) => ((dirBit & South) >> 1) | ((dirBit & North) << 1) | ((dirBit & West) >> 1) | ((dirBit & East) << 1);
+		public static int GetOppositeDirection(int dirBit) =>
+			((dirBit & South) >> 1) | ((dirBit & North) << 1) | ((dirBit & West) >> 1) | ((dirBit & East) << 1);
 
-		// Checks if movement is possible between tiles
-		public static bool CanMoveBetweenTiles(TileProperties fromTile, TileProperties toTile, int dirBit) => ((fromTile?.nav ?? 0) & dirBit) != 0 && ((toTile?.nav ?? 0) & GetOppositeDirection(dirBit)) != 0;
+		public static bool CanMoveBetweenTiles(TileProperties fromTile, TileProperties toTile, int dirBit) =>
+			((fromTile?.nav ?? 0) & dirBit) != 0 && ((toTile?.nav ?? 0) & GetOppositeDirection(dirBit)) != 0;
 	}
 }
