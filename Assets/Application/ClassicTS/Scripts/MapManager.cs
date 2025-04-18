@@ -63,7 +63,7 @@ namespace GamePreviewNamespace
 			for (int i = 0; i < Width * Height; i++)
 			{
 				var tileDef = GetTileDefAt(i);
-				if (tileDef != null && tileDef.tileDef.bStart)
+				if (tileDef != null && tileDef.IsStart)
 					return i;
 			}
 			Debug.LogError("No start tile found!");
@@ -132,14 +132,11 @@ namespace GamePreviewNamespace
 				resultPath = new List<int>(currentPath);
 				return true;
 			}
-
 			var currentDef = GetTileDefAt(currentTile);
 			if (currentDef == null)
 				return false;
 
 			int nav = currentDef.GetNav(false);
-
-			// Get available directions, ensuring we don't turn left/right at crossroads
 			int[] tryDirs = GetTryDirections(nav, currentDirBit);
 
 			foreach (int dirBit in tryDirs)
@@ -147,7 +144,6 @@ namespace GamePreviewNamespace
 				if (dirBit == 0 || (nav & dirBit) == 0)
 					continue;
 
-				// Calculate the next tile in the current direction
 				int nextTile = currentTile + GetStrideForDirection(dirBit);
 				if (nextTile < 0 || nextTile >= Tiles?.Length)
 					continue;
@@ -156,40 +152,26 @@ namespace GamePreviewNamespace
 				if (!TileProperties.CanMoveBetweenTiles(currentDef, nextDef, dirBit, GetOppositeDirection(dirBit)))
 					continue;
 
-				if (nextDef?.tileDef.bConsole == true)
+				if (nextDef?.IsConsole == true)
 					continue;
 
-				// Recursively call FindPath, continue only in the current direction
 				if (FindPathRecursive(nextTile, targetTile, dirBit, new List<int>(currentPath), out resultPath))
 					return true;
 			}
-
 			return false;
 		}
 
 		private int[] GetTryDirections(int nav, int currentDirBit)
 		{
-			bool isStraightCorridor = (nav == 3 || nav == 12);
-			bool isCrossroads = (nav >= 7 && currentDirBit != 0 && (nav & currentDirBit) != 0);
-
-			if (isStraightCorridor || isCrossroads)
+			if ((GetOppositeDirection(nav) & nav) == nav) // Straight corridor or crossroads
 			{
-				return new[] { currentDirBit }; // Only continue in the current direction
+				return new[] { currentDirBit }; // Only continue in current direction
 			}
-			else if (currentDirBit != 0)
+			if (currentDirBit != 0)
 			{
-				int filteredNav = nav & ~(currentDirBit | GetOppositeDirection(currentDirBit));
-				List<int> dirs = new List<int> { currentDirBit };
-				if ((filteredNav & 1) != 0) dirs.Add(1);
-				if ((filteredNav & 2) != 0) dirs.Add(2);
-				if ((filteredNav & 4) != 0) dirs.Add(4);
-				if ((filteredNav & 8) != 0) dirs.Add(8);
-				return dirs.ToArray();
+				return new[] { nav & ~GetOppositeDirection(currentDirBit) }; // All directions except opposite
 			}
-			else
-			{
-				return new[] { 1, 2, 4, 8 }; // Try all directions (N, S, E, W)
-			}
+			return new[] { 1, 2, 4, 8 }; // Try all directions
 		}
 
 		private int GetStrideForDirection(int dirBit)
@@ -212,40 +194,18 @@ namespace GamePreviewNamespace
 			if (nTile < 0 || nTile >= Tiles?.Length)
 				return 0;
 
-			int nTest = 0;
-			// Check adjacent tiles for consoles
 			foreach (int dirBit in new[] { 1, 2, 4, 8 }) // North, South, East, West
 			{
 				int adjacentTile = nTile + GetStrideForDirection(dirBit);
 				if (adjacentTile >= 0 && adjacentTile < Tiles?.Length)
 				{
 					var adjacentDef = GetTileDefAt(adjacentTile);
-					if (adjacentDef?.tileDef.bConsole == true)
-						nTest |= dirBit;
+					if (adjacentDef?.IsConsole == true)
+						return dirBit; // Return first console's direction
 				}
 			}
 
-			// Check each direction with a console
-			int[] dirBits = new[] { 1, 2, 4, 8 }; // North, South, East, West
-			for (int i = 0; i < 4; i++)
-			{
-				int dirBit = dirBits[i];
-				if ((nTest & dirBit) != 0)
-				{
-					int nConsole = nTile + GetStrideForDirection(dirBit);
-					var consoleDef = GetTileDefAt(nConsole);
-					if (consoleDef == null)
-						continue;
-					int nConsoleNav = consoleDef.GetNav(false);
-					int backTile = nConsole + GetStrideForDirection(nConsoleNav);
-					if (backTile == nTile)
-					{
-						return dirBit; // Console faces back to Eggbot's tile
-					}
-				}
-			}
-
-			return 0; // No valid console found
+			return 0; // No console found
 		}
 
 		private void InitializeMap(string mapName)
@@ -321,17 +281,15 @@ namespace GamePreviewNamespace
 
 				DatabaseLoader.TileDef tileDef = DatabaseLoader.instance.TileDefs.FirstOrDefault(td => td.szType == szType && td.szTheme == szTheme);
 				if (tileDef == null)
-				{
-					Debug.LogWarning($"TileDef not found for szType={szType}, szTheme={szTheme} at ({x}, {z}) in map {currentMap.name}");
 					continue;
-				}
 
 				GameObject tileObj = new GameObject($"{tileDef.szType}_{x}_{z}", typeof(TileProperties));
 				var properties = tileObj.GetComponent<TileProperties>();
-				properties.tileDef = tileDef;
+				properties.TileDef = tileDef; // Sets navBits
 				tiles[index] = tileObj;
 				tileObj.transform.SetParent(mapRoot.transform, false);
 				tileObj.transform.position = new Vector3(x, 0f, z);
+
 				if (PreviewSettings.FlipGeometry)
 				{
 					tileObj.transform.rotation = Quaternion.AngleAxis(180, Vector3.up);

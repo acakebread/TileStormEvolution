@@ -95,7 +95,7 @@ namespace GamePreviewNamespace
 						if (currentWaypointIndex >= mapManager.Waypoints.Count - 1)
 						{
 							var currentTileDef = mapManager.GetTileDefAt(mapManager.Waypoints[currentWaypointIndex].nTile);
-							if (currentTileDef?.tileDef.bEnd == true)
+							if (currentTileDef?.IsEnd == true)
 							{
 								Debug.Log("Level complete!");
 								isLevelComplete = true;
@@ -104,7 +104,7 @@ namespace GamePreviewNamespace
 						else
 						{
 							var currentTileDef = mapManager.GetTileDefAt(mapManager.Waypoints[currentWaypointIndex].nTile);
-							if (currentTileDef?.tileDef.bConsole == true)
+							if (currentTileDef?.IsConsole == true)
 							{
 								isPuzzleBlocked = !mapManager.CheckPathBetweenWaypoints(currentWaypointIndex, out _);
 								if (isPuzzleBlocked)
