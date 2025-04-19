@@ -89,13 +89,13 @@ namespace GamePreviewNamespace
 						currentPath = null;
 
 						int waypointTile = mapManager.Waypoints[currentWaypointIndex].nTile;
-						var tileDef = mapManager.GetTileDefAt(waypointTile);
-						if (currentWaypointIndex >= mapManager.Waypoints.Count - 1 && tileDef?.IsEnd == true)
+						var tileProps = mapManager.GetTilePropertiesAt(waypointTile);
+						if (currentWaypointIndex >= mapManager.Waypoints.Count - 1 && tileProps?.IsEnd == true)
 						{
 							Debug.Log($"Level complete at tile ({waypointTile % mapManager.Width},{waypointTile / mapManager.Width})!");
 							isLevelComplete = true;
 						}
-						else if (tileDef?.IsConsole == true)
+						else if (tileProps?.IsConsole == true)
 						{
 							isPuzzleBlocked = !mapManager.CheckPathBetweenWaypoints(currentWaypointIndex, out _);
 							if (isPuzzleBlocked)
