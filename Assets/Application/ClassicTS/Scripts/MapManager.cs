@@ -46,15 +46,8 @@ namespace GamePreviewNamespace
 			return tileData[tileIndex].Properties;
 		}
 
-		public Vector3 GetTilePosition(int tileIndex) =>
-			IsValidTileIndex(tileIndex) ? new Vector3(GetTileCoordinates(tileIndex).x, 1f, GetTileCoordinates(tileIndex).z) : Vector3.zero;
-
-		public (int x, int z) GetTileCoordinates(int tileIndex)
-		{
-			if (!IsValidTileIndex(tileIndex))
-				return (0, 0);
-			return (tileIndex % Width, tileIndex / Width);
-		}
+		public Vector3 GetTilePosition(int tileIndex) => IsValidTileIndex(tileIndex) ? new Vector3(tileIndex % Width, 0f, tileIndex / Width) : Vector3.zero;
+		public (int x, int z) GetTileCoordinates(int tileIndex) => IsValidTileIndex(tileIndex) ? (tileIndex % Width, tileIndex / Width) : (0, 0);
 
 		public void Reset()
 		{
@@ -370,8 +363,8 @@ namespace GamePreviewNamespace
 		private int GetAdjacentTile(int nTile, int dirBit)
 		{
 			var (x, z) = GetTileCoordinates(nTile);
-			z += (dirBit & 1) - ((dirBit & 2) >> 1); // North (+1), South (-1)
-			x += ((dirBit & 4) >> 2) - ((dirBit & 8) >> 3); // East (+1), West (-1)
+			z += (dirBit & TileProperties.North) - ((dirBit & TileProperties.South) >> 1); // North (+1), South (-1)
+			x += ((dirBit & TileProperties.East) >> 2) - ((dirBit & TileProperties.West) >> 3); // East (+1), West (-1)
 			return x >= 0 && x < Width && z >= 0 && z < Height ? z * Width + x : -1;
 		}
 
