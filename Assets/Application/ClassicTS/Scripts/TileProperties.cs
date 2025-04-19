@@ -9,7 +9,7 @@
 
 		public static readonly int[] Directions = { North, South, East, West };
 
-		private GameDatabase.DatabaseLoader.TileDef tileDef;
+		public readonly GameDatabase.DatabaseLoader.TileDef tileDef;
 		public TileProperties(GameDatabase.DatabaseLoader.TileDef def)
 		{
 			tileDef = def;

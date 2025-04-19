@@ -1,12 +1,122 @@
 ﻿using UnityEngine;
-using GameDatabase;
 using System.Linq;
 using System.Collections.Generic;
+using GameDatabase;
 
 namespace GamePreviewNamespace
 {
 	public class MapManager : MonoBehaviour
 	{
+		public readonly struct TileIndex
+		{
+			public int Index { get; }
+			public int X => Index % Width;
+			public int Z => Index / Width;
+			public bool IsValid => Index >= 0 && Index < Width * Height && Width > 0;
+
+			private readonly MapManager mapManager;
+			private int Width => mapManager.Width;
+			private int Height => mapManager.Height;
+
+			public TileIndex(MapManager mapManager, int index)
+			{
+				this.mapManager = mapManager;
+				Index = index;
+			}
+
+			public Vector3 ToPosition() => IsValid ? new Vector3(X, 0f, Z) : Vector3.zero;
+
+			public TileIndex GetAdjacent(int dirBit)
+			{
+				int x = X, z = Z;
+				z += (dirBit & TileProperties.North) - ((dirBit & TileProperties.South) >> 1);
+				x += ((dirBit & TileProperties.East) >> 2) - ((dirBit & TileProperties.West) >> 3);
+				int newIndex = x >= 0 && x < Width && z >= 0 && z < Height ? z * Width + x : -1;
+				return new TileIndex(mapManager, newIndex);
+			}
+
+			public TileProperties GetProperties(TileData[] tileData = null)
+			{
+				if (!IsValid)
+				{
+					Debug.LogWarning($"Invalid tile index: {Index}");
+					return null;
+				}
+				tileData ??= mapManager.Tiles;
+				return tileData[Index].Properties;
+			}
+		}
+
+		private class PathFinder
+		{
+			private readonly MapManager mapManager;
+
+			public PathFinder(MapManager mapManager)
+			{
+				this.mapManager = mapManager;
+			}
+
+			public List<int> FindPath(int startTile, int targetTile, TileData[] tileData = null)
+			{
+				var startProps = mapManager.GetTileIndex(startTile).GetProperties(tileData);
+				if (startProps == null)
+					return null;
+
+				foreach (int dirBit in TileProperties.Directions)
+				{
+					if ((startProps.Nav & dirBit) == 0)
+						continue;
+					var path = FindPathRecursive(startTile, targetTile, dirBit, tileData);
+					if (path != null)
+						return path;
+				}
+				return null;
+			}
+
+			private List<int> FindPathRecursive(int currentTile, int targetTile, int currentDirBit, TileData[] tileData, List<int> path = null)
+			{
+				path ??= new List<int>();
+				path.Add(currentTile);
+
+				if (currentTile == targetTile)
+					return path;
+
+				var currentProps = mapManager.GetTileIndex(currentTile).GetProperties(tileData);
+				if (currentProps == null)
+				{
+					path.RemoveAt(path.Count - 1);
+					return null;
+				}
+
+				foreach (int dirBit in GetTryDirections(currentProps.Nav, currentDirBit))
+				{
+					int nextTile = mapManager.GetTileIndex(currentTile).GetAdjacent(dirBit).Index;
+					if (nextTile == -1)
+						continue;
+
+					var nextProps = mapManager.GetTileIndex(nextTile).GetProperties(tileData);
+					if (!TileProperties.CanMoveBetweenTiles(currentProps, nextProps, dirBit))
+						continue;
+
+					var result = FindPathRecursive(nextTile, targetTile, dirBit, tileData, path);
+					if (result != null)
+						return result;
+				}
+
+				path.RemoveAt(path.Count - 1);
+				return null;
+			}
+
+			private int[] GetTryDirections(int nav, int currentDirBit)
+			{
+				if ((TileProperties.GetOppositeDirection(nav) & nav) == nav)
+					return new[] { currentDirBit };
+				if (currentDirBit != 0)
+					return new[] { nav & ~TileProperties.GetOppositeDirection(currentDirBit) };
+				return TileProperties.Directions;
+			}
+		}
+
 		public struct TileData
 		{
 			public TileProperties Properties;
@@ -17,6 +127,7 @@ namespace GamePreviewNamespace
 		private GameObject mapRoot;
 		private TileData[] tiles;
 		private List<DatabaseLoader.Waypoint> waypoints;
+		private readonly PathFinder pathFinder;
 
 		public DatabaseLoader.Map CurrentMap => currentMap;
 		public string CurrentMapName => currentMap?.name;
@@ -26,28 +137,25 @@ namespace GamePreviewNamespace
 		public TileData[] Tiles => tiles;
 		public IReadOnlyList<DatabaseLoader.Waypoint> Waypoints => waypoints?.AsReadOnly();
 
-		private bool IsValidTileIndex(int tileIndex)
+		public MapManager()
 		{
-			bool isValid = tileIndex >= 0 && tileIndex < tiles?.Length && Width > 0;
-			if (!isValid)
-				Debug.LogWarning($"Invalid tile index: {tileIndex}");
-			return isValid;
+			pathFinder = new PathFinder(this);
 		}
+
+		public TileIndex GetTileIndex(int index) => new TileIndex(this, index);
 
 		public TileProperties GetTilePropertiesAt(int tileIndex, TileData[] tileData = null)
 		{
-			tileData ??= tiles;
-			bool isValid = tileIndex >= 0 && tileIndex < tileData?.Length && Width > 0;
-			if (!isValid)
-			{
-				Debug.LogWarning($"Invalid tile index: {tileIndex}");
-				return null;
-			}
-			return tileData[tileIndex].Properties;
+			return GetTileIndex(tileIndex).GetProperties(tileData);
 		}
 
-		public Vector3 GetTilePosition(int tileIndex) => IsValidTileIndex(tileIndex) ? new Vector3(tileIndex % Width, 0f, tileIndex / Width) : Vector3.zero;
-		public (int x, int z) GetTileCoordinates(int tileIndex) => IsValidTileIndex(tileIndex) ? (tileIndex % Width, tileIndex / Width) : (0, 0);
+		public Vector3 GetTilePosition(int tileIndex) => GetTileIndex(tileIndex).ToPosition();
+
+		public (int x, int z) GetTileCoordinates(int tileIndex)
+		{
+			var tile = GetTileIndex(tileIndex);
+			return (tile.X, tile.Z);
+		}
 
 		public void Reset()
 		{
@@ -56,6 +164,25 @@ namespace GamePreviewNamespace
 			currentMap = null;
 			waypoints = null;
 			tiles = null;
+		}
+
+		private TileData CreateTileData(int tileDefIndex, string szType, string szTheme)
+		{
+			if (tileDefIndex < 0 || tileDefIndex >= currentMap.defs.Length ||
+				string.IsNullOrEmpty(szType) || szType == "tile_empty")
+			{
+				if (tileDefIndex < 0 || tileDefIndex >= currentMap.defs.Length)
+					Debug.LogWarning($"Invalid tileDefIndex={tileDefIndex}");
+				else if (string.IsNullOrEmpty(szType))
+					Debug.LogWarning($"Null szType at tileDefIndex {tileDefIndex}");
+				return default;
+			}
+
+			var tileDef = DatabaseLoader.instance.TileDefs.FirstOrDefault(td => td.szType == szType && td.szTheme == szTheme);
+			if (tileDef == null)
+				return default;
+
+			return new TileData { Properties = new TileProperties(tileDef) };
 		}
 
 		public void Initialize(string mapName)
@@ -87,36 +214,23 @@ namespace GamePreviewNamespace
 
 			for (int index = 0; index < tileMap.Length; index++)
 			{
-				var (x, z) = GetTileCoordinates(index);
+				var tile = GetTileIndex(index);
 				int scrambledIndex = PreviewSettings.Scramble ? index + currentMap.mixed.TileData.unpacked_bytes[index] : index;
 				int tileDefIndex = tileMap[scrambledIndex];
-
-				if (tileDefIndex < 0 || tileDefIndex >= currentMap.defs.Length ||
-					string.IsNullOrEmpty(currentMap.defs[tileDefIndex].szType) ||
-					currentMap.defs[tileDefIndex].szType == "tile_empty")
-				{
-					if (tileDefIndex < 0 || tileDefIndex >= currentMap.defs.Length)
-						Debug.LogWarning($"Invalid tileDefIndex={tileDefIndex} at ({x},{z})");
-					else if (string.IsNullOrEmpty(currentMap.defs[tileDefIndex].szType))
-						Debug.LogWarning($"Null szType at tileDefIndex {tileDefIndex}");
-					continue;
-				}
-
 				string szType = currentMap.defs[tileDefIndex].szType;
 				string szTheme = currentMap.defs[tileDefIndex].szTheme;
-				DatabaseLoader.TileDef tileDef = DatabaseLoader.instance.TileDefs.FirstOrDefault(td => td.szType == szType && td.szTheme == szTheme);
-				if (tileDef == null)
-					continue;
 
-				tiles[index].Properties = new TileProperties(tileDef);
+				tiles[index] = CreateTileData(tileDefIndex, szType, szTheme);
+				if (tiles[index].Properties == null)
+					continue;
 
 				if (szType == "tile_invisible")
 					continue;
 
-				GameObject tileObj = new GameObject($"{tileDef.szType}_{x}_{z}");
+				GameObject tileObj = new GameObject($"{tiles[index].Properties.Type}_{tile.X}_{tile.Z}");
 				tiles[index].GameObject = tileObj;
 				tileObj.transform.SetParent(mapRoot.transform, false);
-				tileObj.transform.position = new Vector3(x, 0f, z);
+				tileObj.transform.position = tile.ToPosition();
 				if (PreviewSettings.FlipGeometry)
 					tileObj.transform.rotation = Quaternion.AngleAxis(180, Vector3.up);
 
@@ -127,19 +241,13 @@ namespace GamePreviewNamespace
 					collider.center = new Vector3(0f, 0.25f, 0f);
 				}
 
-				if (string.IsNullOrEmpty(tileDef.szGeom))
-				{
-					Debug.LogWarning($"Empty szGeom for {szType} at ({x},{z})");
-					continue;
-				}
-
-				string geomPath = $"{PreviewSettings.GeometryPath}{tileDef.szGeom}".Replace(".x", "");
+				string geomPath = $"{PreviewSettings.GeometryPath}{tiles[index].Properties.Geom}".Replace(".x", "");
 				GameObject geomAsset = Resources.Load<GameObject>(geomPath);
 				if (geomAsset != null)
 				{
 					GameObject geomInstance = Object.Instantiate(geomAsset, tileObj.transform);
 					geomInstance.transform.localPosition = Vector3.zero;
-					geomInstance.name = tileDef.szGeom;
+					geomInstance.name = tiles[index].Properties.Geom;
 				}
 				else
 				{
@@ -151,7 +259,7 @@ namespace GamePreviewNamespace
 					cube.name = "Fallback_Cube";
 				}
 
-				DatabaseLoader.TextureSet textureSet = TileAnimator.GetTextureSetForTileDef(tileDef);
+				DatabaseLoader.TextureSet textureSet = TileAnimator.GetTextureSetForTileDef(tiles[index].Properties.tileDef);
 				if (textureSet?.frames?.Length > 0)
 				{
 					var animator = tileObj.AddComponent<TileAnimator>();
@@ -159,10 +267,10 @@ namespace GamePreviewNamespace
 				}
 				else
 				{
-					Debug.LogWarning($"No texture set for {tileDef.szType}, theme={tileDef.szTheme}");
+					Debug.LogWarning($"No texture set for {tiles[index].Properties.Type}, theme={tiles[index].Properties.Theme}");
 				}
 
-				mapCentre += new Vector3(x, 0f, z);
+				mapCentre += tile.ToPosition();
 				activeTileCount++;
 			}
 
@@ -184,10 +292,9 @@ namespace GamePreviewNamespace
 
 		public int GetStartTile(TileData[] tileData = null)
 		{
-			tileData ??= tiles;
 			for (int i = 0; i < Width * Height; i++)
 			{
-				var props = GetTilePropertiesAt(i, tileData);
+				var props = GetTileIndex(i).GetProperties(tileData);
 				if (props != null && props.IsStart)
 					return i;
 			}
@@ -197,10 +304,9 @@ namespace GamePreviewNamespace
 
 		public int GetEndTile(TileData[] tileData = null)
 		{
-			tileData ??= tiles;
 			for (int i = 0; i < Width * Height; i++)
 			{
-				var props = GetTilePropertiesAt(i, tileData);
+				var props = GetTileIndex(i).GetProperties(tileData);
 				if (props != null && props.IsEnd)
 					return i;
 			}
@@ -218,25 +324,14 @@ namespace GamePreviewNamespace
 				return generatedWaypoints;
 			}
 
-			// Create unscrambled tile data
 			TileData[] unscrambledTiles = new TileData[Width * Height];
 			for (int index = 0; index < tileMap.Length; index++)
 			{
-				int tileDefIndex = tileMap[index]; // Use raw (unscrambled) index
-				if (tileDefIndex < 0 || tileDefIndex >= currentMap.defs.Length ||
-					string.IsNullOrEmpty(currentMap.defs[tileDefIndex].szType) ||
-					currentMap.defs[tileDefIndex].szType == "tile_empty")
-				{
-					continue;
-				}
-
+				var tile = GetTileIndex(index);
+				int tileDefIndex = tileMap[index];
 				string szType = currentMap.defs[tileDefIndex].szType;
 				string szTheme = currentMap.defs[tileDefIndex].szTheme;
-				DatabaseLoader.TileDef tileDef = DatabaseLoader.instance.TileDefs.FirstOrDefault(td => td.szType == szType && td.szTheme == szTheme);
-				if (tileDef == null)
-					continue;
-
-				unscrambledTiles[index].Properties = new TileProperties(tileDef);
+				unscrambledTiles[index] = CreateTileData(tileDefIndex, szType, szTheme);
 			}
 
 			int startTile = GetStartTile(unscrambledTiles);
@@ -248,31 +343,15 @@ namespace GamePreviewNamespace
 				return generatedWaypoints;
 			}
 
-			// Add start waypoint
 			generatedWaypoints.Add(new DatabaseLoader.Waypoint { nTile = startTile });
-
-			// Find path from start to end using unscrambled tiles
-			List<int> path = null;
-			var startProps = GetTilePropertiesAt(startTile, unscrambledTiles);
-			if (startProps != null)
-			{
-				foreach (int dirBit in TileProperties.Directions)
-				{
-					if ((startProps.Nav & dirBit) == 0)
-						continue;
-					path = FindPathRecursive(startTile, endTile, dirBit, null, unscrambledTiles);
-					if (path != null)
-						break;
-				}
-			}
+			List<int> path = pathFinder.FindPath(startTile, endTile, unscrambledTiles);
 
 			if (path != null)
 			{
-				// Add waypoints for console-adjacent tiles and end tile
 				foreach (int tile in path)
 				{
 					if (tile == startTile)
-						continue; // Already added
+						continue;
 					if (FindAdjacentConsole(tile, unscrambledTiles) != -1 || tile == endTile)
 					{
 						generatedWaypoints.Add(new DatabaseLoader.Waypoint { nTile = tile });
@@ -299,109 +378,45 @@ namespace GamePreviewNamespace
 
 			int startTile = Waypoints[currentWaypointIndex].nTile;
 			int targetTile = Waypoints[currentWaypointIndex + 1].nTile;
-			var startProps = GetTilePropertiesAt(startTile);
-			if (startProps == null)
-				return false;
-
-			foreach (int dirBit in TileProperties.Directions)
+			path = pathFinder.FindPath(startTile, targetTile);
+			if (path != null)
 			{
-				if ((startProps.Nav & dirBit) == 0)
-					continue;
-				path = FindPathRecursive(startTile, targetTile, dirBit);
-				if (path != null)
-				{
-					Debug.Log($"Found path to waypoint {targetTile}: [{FormatPath(path)}]");
-					return true;
-				}
+				Debug.Log($"Found path to waypoint {targetTile}: [{FormatPath(path)}]");
+				return true;
 			}
 			return false;
 		}
 
-		private List<int> FindPathRecursive(int currentTile, int targetTile, int currentDirBit, List<int> path = null, TileData[] tileData = null)
-		{
-			path ??= new List<int>();
-			path.Add(currentTile);
-
-			if (currentTile == targetTile)
-				return path;
-
-			var currentProps = GetTilePropertiesAt(currentTile, tileData);
-			if (currentProps == null)
-			{
-				path.RemoveAt(path.Count - 1);
-				return null;
-			}
-
-			foreach (int dirBit in GetTryDirections(currentProps.Nav, currentDirBit))
-			{
-				int nextTile = GetAdjacentTile(currentTile, dirBit);
-				if (nextTile == -1)
-					continue;
-
-				var nextProps = GetTilePropertiesAt(nextTile, tileData);
-				if (!TileProperties.CanMoveBetweenTiles(currentProps, nextProps, dirBit))
-					continue;
-
-				var result = FindPathRecursive(nextTile, targetTile, dirBit, path, tileData);
-				if (result != null)
-					return result;
-			}
-
-			path.RemoveAt(path.Count - 1);
-			return null;
-		}
-
-		private int[] GetTryDirections(int nav, int currentDirBit)
-		{
-			if ((TileProperties.GetOppositeDirection(nav) & nav) == nav)
-				return new[] { currentDirBit };
-			if (currentDirBit != 0)
-				return new[] { nav & ~TileProperties.GetOppositeDirection(currentDirBit) };
-			return TileProperties.Directions;
-		}
-
-		private int GetAdjacentTile(int nTile, int dirBit)
-		{
-			var (x, z) = GetTileCoordinates(nTile);
-			z += (dirBit & TileProperties.North) - ((dirBit & TileProperties.South) >> 1); // North (+1), South (-1)
-			x += ((dirBit & TileProperties.East) >> 2) - ((dirBit & TileProperties.West) >> 3); // East (+1), West (-1)
-			return x >= 0 && x < Width && z >= 0 && z < Height ? z * Width + x : -1;
-		}
-
 		public int FindAdjacentConsole(int nTile, TileData[] tileData = null)
 		{
-			if (!IsValidTileIndex(nTile))
+			var tile = GetTileIndex(nTile);
+			if (!tile.IsValid)
 				return -1;
 
 			foreach (int dirBit in TileProperties.Directions)
 			{
-				int consoleTile = GetAdjacentTile(nTile, dirBit);
-				if (consoleTile == -1)
+				var consoleTile = tile.GetAdjacent(dirBit);
+				if (!consoleTile.IsValid)
 					continue;
 
-				var consoleProps = GetTilePropertiesAt(consoleTile, tileData);
+				var consoleProps = consoleTile.GetProperties(tileData);
 				if (consoleProps?.IsConsole != true)
 					continue;
 
-				// Check if console's Nav direction points to nTile
 				int consoleNav = consoleProps.Nav;
 				if (consoleNav == 0)
-					continue; // Invalid console orientation
+					continue;
 
-				int navTile = GetAdjacentTile(consoleTile, consoleNav);
-				if (navTile == nTile)
-					return consoleTile;
+				var navTile = consoleTile.GetAdjacent(consoleNav);
+				if (navTile.Index == nTile)
+					return consoleTile.Index;
 			}
 
 			return -1;
 		}
 
-
 		public string FormatPath(List<int> path) =>
-			string.Join(" -> ", path.Select(t => {
-				var (x, z) = GetTileCoordinates(t);
-				return $"({x},{z})";
-			}));
+			string.Join(" -> ", path.Select(t => $"({GetTileIndex(t).X},{GetTileIndex(t).Z})"));
 	}
 }
 
@@ -442,18 +457,20 @@ namespace GamePreviewNamespace
 //			return isValid;
 //		}
 
-//		public TileProperties GetTilePropertiesAt(int tileIndex) =>
-//			IsValidTileIndex(tileIndex) ? tiles[tileIndex].Properties : null;
-
-//		public Vector3 GetTilePosition(int tileIndex) =>
-//			IsValidTileIndex(tileIndex) ? new Vector3(GetTileCoordinates(tileIndex).x, 1f, GetTileCoordinates(tileIndex).z) : Vector3.zero;
-
-//		public (int x, int z) GetTileCoordinates(int tileIndex)
+//		public TileProperties GetTilePropertiesAt(int tileIndex, TileData[] tileData = null)
 //		{
-//			if (!IsValidTileIndex(tileIndex))
-//				return (0, 0);
-//			return (tileIndex % Width, tileIndex / Width);
+//			tileData ??= tiles;
+//			bool isValid = tileIndex >= 0 && tileIndex < tileData?.Length && Width > 0;
+//			if (!isValid)
+//			{
+//				Debug.LogWarning($"Invalid tile index: {tileIndex}");
+//				return null;
+//			}
+//			return tileData[tileIndex].Properties;
 //		}
+
+//		public Vector3 GetTilePosition(int tileIndex) => IsValidTileIndex(tileIndex) ? new Vector3(tileIndex % Width, 0f, tileIndex / Width) : Vector3.zero;
+//		public (int x, int z) GetTileCoordinates(int tileIndex) => IsValidTileIndex(tileIndex) ? (tileIndex % Width, tileIndex / Width) : (0, 0);
 
 //		public void Reset()
 //		{
@@ -484,7 +501,6 @@ namespace GamePreviewNamespace
 //				return;
 //			}
 
-//			waypoints = currentMap.waypoints?.Where(w => w != null).ToList() ?? new List<DatabaseLoader.Waypoint>();
 //			tiles = new TileData[Width * Height];
 //			mapRoot = new GameObject($"Map_{currentMap.name}");
 //			mapRoot.transform.SetParent(transform, false);
@@ -573,6 +589,12 @@ namespace GamePreviewNamespace
 //				activeTileCount++;
 //			}
 
+//			waypoints = currentMap.waypoints?.Where(w => w != null).ToList();
+//			if (waypoints == null || waypoints.Count == 0)
+//			{
+//				waypoints = SetupWaypoints();
+//			}
+
 //			SetCameraPosition(mapCentre, activeTileCount);
 //		}
 
@@ -583,16 +605,110 @@ namespace GamePreviewNamespace
 //			Debug.Log($"Map {currentMap.name}: width={Width}, height={Height}, defs={currentMap.defs?.Length ?? 0}, waypoints={waypoints.Count}, camera at {Camera.main.transform.position}, tiles={activeTileCount}");
 //		}
 
-//		public int GetStartTile()
+//		public int GetStartTile(TileData[] tileData = null)
 //		{
+//			tileData ??= tiles;
 //			for (int i = 0; i < Width * Height; i++)
 //			{
-//				var props = GetTilePropertiesAt(i);
+//				var props = GetTilePropertiesAt(i, tileData);
 //				if (props != null && props.IsStart)
 //					return i;
 //			}
 //			Debug.LogError("No start tile found!");
 //			return -1;
+//		}
+
+//		public int GetEndTile(TileData[] tileData = null)
+//		{
+//			tileData ??= tiles;
+//			for (int i = 0; i < Width * Height; i++)
+//			{
+//				var props = GetTilePropertiesAt(i, tileData);
+//				if (props != null && props.IsEnd)
+//					return i;
+//			}
+//			Debug.LogError("No end tile found!");
+//			return -1;
+//		}
+
+//		private List<DatabaseLoader.Waypoint> SetupWaypoints()
+//		{
+//			var generatedWaypoints = new List<DatabaseLoader.Waypoint>();
+//			var tileMap = currentMap.tiles?.TileData?.unpacked_bytes;
+//			if (tileMap == null || tileMap.Length != Width * Height)
+//			{
+//				Debug.LogWarning("Cannot setup waypoints: invalid tile data");
+//				return generatedWaypoints;
+//			}
+
+//			// Create unscrambled tile data
+//			TileData[] unscrambledTiles = new TileData[Width * Height];
+//			for (int index = 0; index < tileMap.Length; index++)
+//			{
+//				int tileDefIndex = tileMap[index]; // Use raw (unscrambled) index
+//				if (tileDefIndex < 0 || tileDefIndex >= currentMap.defs.Length ||
+//					string.IsNullOrEmpty(currentMap.defs[tileDefIndex].szType) ||
+//					currentMap.defs[tileDefIndex].szType == "tile_empty")
+//				{
+//					continue;
+//				}
+
+//				string szType = currentMap.defs[tileDefIndex].szType;
+//				string szTheme = currentMap.defs[tileDefIndex].szTheme;
+//				DatabaseLoader.TileDef tileDef = DatabaseLoader.instance.TileDefs.FirstOrDefault(td => td.szType == szType && td.szTheme == szTheme);
+//				if (tileDef == null)
+//					continue;
+
+//				unscrambledTiles[index].Properties = new TileProperties(tileDef);
+//			}
+
+//			int startTile = GetStartTile(unscrambledTiles);
+//			int endTile = GetEndTile(unscrambledTiles);
+
+//			if (startTile == -1 || endTile == -1)
+//			{
+//				Debug.LogWarning("Cannot setup waypoints: missing start or end tile");
+//				return generatedWaypoints;
+//			}
+
+//			// Add start waypoint
+//			generatedWaypoints.Add(new DatabaseLoader.Waypoint { nTile = startTile });
+
+//			// Find path from start to end using unscrambled tiles
+//			List<int> path = null;
+//			var startProps = GetTilePropertiesAt(startTile, unscrambledTiles);
+//			if (startProps != null)
+//			{
+//				foreach (int dirBit in TileProperties.Directions)
+//				{
+//					if ((startProps.Nav & dirBit) == 0)
+//						continue;
+//					path = FindPathRecursive(startTile, endTile, dirBit, null, unscrambledTiles);
+//					if (path != null)
+//						break;
+//				}
+//			}
+
+//			if (path != null)
+//			{
+//				// Add waypoints for console-adjacent tiles and end tile
+//				foreach (int tile in path)
+//				{
+//					if (tile == startTile)
+//						continue; // Already added
+//					if (FindAdjacentConsole(tile, unscrambledTiles) != -1 || tile == endTile)
+//					{
+//						generatedWaypoints.Add(new DatabaseLoader.Waypoint { nTile = tile });
+//					}
+//				}
+//			}
+//			else
+//			{
+//				Debug.LogWarning("Failed to find path from start to end for waypoint setup");
+//			}
+
+//			Debug.Log($"Generated {generatedWaypoints.Count} waypoints: [{string.Join(", ", generatedWaypoints.Select(w => w.nTile))}]");
+//			return generatedWaypoints;
 //		}
 
 //		public bool CheckPathBetweenWaypoints(int currentWaypointIndex, out List<int> path)
@@ -624,7 +740,7 @@ namespace GamePreviewNamespace
 //			return false;
 //		}
 
-//		private List<int> FindPathRecursive(int currentTile, int targetTile, int currentDirBit, List<int> path = null)
+//		private List<int> FindPathRecursive(int currentTile, int targetTile, int currentDirBit, List<int> path = null, TileData[] tileData = null)
 //		{
 //			path ??= new List<int>();
 //			path.Add(currentTile);
@@ -632,7 +748,7 @@ namespace GamePreviewNamespace
 //			if (currentTile == targetTile)
 //				return path;
 
-//			var currentProps = GetTilePropertiesAt(currentTile);
+//			var currentProps = GetTilePropertiesAt(currentTile, tileData);
 //			if (currentProps == null)
 //			{
 //				path.RemoveAt(path.Count - 1);
@@ -645,12 +761,11 @@ namespace GamePreviewNamespace
 //				if (nextTile == -1)
 //					continue;
 
-//				var nextProps = GetTilePropertiesAt(nextTile);
-//				//if (!TileProperties.CanMoveBetweenTiles(currentProps, nextProps, dirBit) || nextProps?.IsConsole == true)
+//				var nextProps = GetTilePropertiesAt(nextTile, tileData);
 //				if (!TileProperties.CanMoveBetweenTiles(currentProps, nextProps, dirBit))
 //					continue;
 
-//				var result = FindPathRecursive(nextTile, targetTile, dirBit, path);
+//				var result = FindPathRecursive(nextTile, targetTile, dirBit, path, tileData);
 //				if (result != null)
 //					return result;
 //			}
@@ -671,22 +786,36 @@ namespace GamePreviewNamespace
 //		private int GetAdjacentTile(int nTile, int dirBit)
 //		{
 //			var (x, z) = GetTileCoordinates(nTile);
-//			z += (dirBit & 1) - ((dirBit & 2) >> 1); // North (+1), South (-1)
-//			x += ((dirBit & 4) >> 2) - ((dirBit & 8) >> 3); // East (+1), West (-1)
+//			z += (dirBit & TileProperties.North) - ((dirBit & TileProperties.South) >> 1); // North (+1), South (-1)
+//			x += ((dirBit & TileProperties.East) >> 2) - ((dirBit & TileProperties.West) >> 3); // East (+1), West (-1)
 //			return x >= 0 && x < Width && z >= 0 && z < Height ? z * Width + x : -1;
 //		}
 
-//		public int FindAdjacentConsole(int nTile)
+//		public int FindAdjacentConsole(int nTile, TileData[] tileData = null)
 //		{
 //			if (!IsValidTileIndex(nTile))
 //				return -1;
 
 //			foreach (int dirBit in TileProperties.Directions)
 //			{
-//				int adjacentTile = GetAdjacentTile(nTile, dirBit);
-//				if (adjacentTile != -1 && GetTilePropertiesAt(adjacentTile)?.IsConsole == true)
-//					return adjacentTile;
+//				int consoleTile = GetAdjacentTile(nTile, dirBit);
+//				if (consoleTile == -1)
+//					continue;
+
+//				var consoleProps = GetTilePropertiesAt(consoleTile, tileData);
+//				if (consoleProps?.IsConsole != true)
+//					continue;
+
+//				// Check if console's Nav direction points to nTile
+//				int consoleNav = consoleProps.Nav;
+//				if (consoleNav == 0)
+//					continue; // Invalid console orientation
+
+//				int navTile = GetAdjacentTile(consoleTile, consoleNav);
+//				if (navTile == nTile)
+//					return consoleTile;
 //			}
+
 //			return -1;
 //		}
 
