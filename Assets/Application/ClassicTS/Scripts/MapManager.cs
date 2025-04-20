@@ -66,6 +66,17 @@ namespace GamePreviewNamespace
 			return GetTileCoordinates(lastIndex);
 		}
 
+		public TileProperties.TileMovementBounds GetMovementBounds(int tileIndex, TileProperties.TileFlags flags)
+		{
+			return new TileProperties.TileMovementBounds
+			{
+				MinWest = GetTileCoordinatesForLast(tileIndex, TileProperties.West, flags),
+				MaxEast = GetTileCoordinatesForLast(tileIndex, TileProperties.East, flags),
+				MinSouth = GetTileCoordinatesForLast(tileIndex, TileProperties.South, flags),
+				MaxNorth = GetTileCoordinatesForLast(tileIndex, TileProperties.North, flags)
+			};
+		}
+
 		public int SearchDirectionForLast(int index, int dirBit, TileProperties.TileFlags flags)
 		{
 			var coord = GetTileCoordinates(index);

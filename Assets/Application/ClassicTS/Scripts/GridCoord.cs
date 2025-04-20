@@ -16,6 +16,9 @@ namespace GamePreviewNamespace
 		// Convert to map index (z * width + x)
 		public int ToIndex(int width) => Z * width + X;
 
+		// Convert to grid coordinate (z * width + x)
+		public static GridCoord FromIndex(int index, int width) => new GridCoord(index % width, index / width);
+
 		// Convert to world position (x, 0, z)
 		public Vector3 ToPosition() => new Vector3(X, 0f, Z);
 

@@ -32,7 +32,6 @@ namespace GamePreviewNamespace
 			if (currentChain.TileIndices != null && currentChain.TileIndices.Count > 0)
 			{
 				movementHandler.HighlightChain(currentChain, false);
-				Debug.Log($"Cleared highlights on destroy for chain: [{string.Join(", ", currentChain.TileIndices)}]");
 			}
 		}
 
@@ -71,7 +70,6 @@ namespace GamePreviewNamespace
 			lastIndex = tileIndex;
 			currentChain = movementHandler.GetTileChain(tileIndex, 0); // No direction yet
 			movementHandler.HighlightChain(currentChain, true);
-			Debug.Log($"Drag started at tile {tileIndex}.");
 		}
 
 		private void OnDragging(List<Vector3> gestures)
@@ -98,7 +96,7 @@ namespace GamePreviewNamespace
 					if (Mathf.Abs(gesture.x) > Mathf.Abs(gesture.z))
 					{
 						z = 0f;
-						currentChain = movementHandler.GetTileChain(dragIndex, x > 0 ? TileProperties.East : TileProperties.West);
+						currentChain = movementHandler.GetTileChain(dragIndex, x > 0 ? TileProperties.East : x < 0 ? TileProperties.West : 0);
 					}
 					else
 					{
@@ -112,7 +110,6 @@ namespace GamePreviewNamespace
 				{
 					movementHandler.HighlightChain(previousChain, false); // Restore previous
 					movementHandler.HighlightChain(currentChain, true); // Highlight new
-					Debug.Log($"Chain updated: [{string.Join(", ", currentChain.TileIndices)}]");
 				}
 
 				if (dirBit != 0)
@@ -133,16 +130,12 @@ namespace GamePreviewNamespace
 					if (Mathf.Abs(gesture.x) > Mathf.Abs(gesture.z)) z = 0f;
 					else x = 0f;
 
-					var flags = TileProperties.TileFlags.Dock | TileProperties.TileFlags.Roll;
-					var minCoordEW = mapManager.GetTileCoordinatesForLast(dragIndex, TileProperties.West, flags);
-					var maxCoordEW = mapManager.GetTileCoordinatesForLast(dragIndex, TileProperties.East, flags);
-					var minCoordNS = mapManager.GetTileCoordinatesForLast(dragIndex, TileProperties.South, flags);
-					var maxCoordNS = mapManager.GetTileCoordinatesForLast(dragIndex, TileProperties.North, flags);
-
+					// Check bounds for both X and Z directions
+					var bounds = mapManager.GetMovementBounds(dragIndex, TileProperties.TileFlags.Dock | TileProperties.TileFlags.Roll);
 					var currentPos = mapManager.GetTilePosition(dragIndex);
 					var dragPos = currentPos + new Vector3(x, 0f, z);
-					currentPos.x = Mathf.Clamp(dragPos.x, minCoordEW.X, maxCoordEW.X);
-					currentPos.z = Mathf.Clamp(dragPos.z, minCoordNS.Z, maxCoordNS.Z);
+					currentPos.x = Mathf.Clamp(dragPos.x, bounds.MinWest.X, bounds.MaxEast.X);
+					currentPos.z = Mathf.Clamp(dragPos.z, bounds.MinSouth.Z, bounds.MaxNorth.Z);
 
 					mapManager.Tiles[dragIndex].GameObject.transform.position = currentPos;
 				}
@@ -179,33 +172,23 @@ namespace GamePreviewNamespace
 				dragIndex = targetIndex;
 				lastIndex = targetIndex;
 			}
-
-			Debug.Log($"Swapped tile {dragIndex} to {targetIndex}");
 		}
 
 		private void OnDragEnd()
 		{
 			if (dragIndex == -1 || mapManager.Tiles[dragIndex].GameObject == null)
 			{
-				Debug.Log($"OnDragEnd: No valid dragIndex or tile GameObject. dragIndex={dragIndex}");
 				return;
 			}
 
 			var tilePos = mapManager.Tiles[dragIndex].GameObject.transform.position;
 
 			// Check bounds for both X and Z directions
-			var flags = TileProperties.TileFlags.Dock | TileProperties.TileFlags.Roll;
-			var minCoordX = mapManager.GetTileCoordinatesForLast(dragIndex, TileProperties.West, flags);
-			var maxCoordX = mapManager.GetTileCoordinatesForLast(dragIndex, TileProperties.East, flags);
-			var minCoordZ = mapManager.GetTileCoordinatesForLast(dragIndex, TileProperties.South, flags);
-			var maxCoordZ = mapManager.GetTileCoordinatesForLast(dragIndex, TileProperties.North, flags);
-
-			int x = Mathf.RoundToInt(Mathf.Clamp(tilePos.x, minCoordX.X, maxCoordX.X));
-			int z = Mathf.RoundToInt(Mathf.Clamp(tilePos.z, minCoordZ.Z, maxCoordZ.Z));
+			var bounds = mapManager.GetMovementBounds(dragIndex, TileProperties.TileFlags.Dock | TileProperties.TileFlags.Roll);
+			int x = Mathf.RoundToInt(Mathf.Clamp(tilePos.x, bounds.MinWest.X, bounds.MaxEast.X));
+			int z = Mathf.RoundToInt(Mathf.Clamp(tilePos.z, bounds.MinSouth.Z, bounds.MaxNorth.Z));
 			var targetCoord = new GridCoord(x, z);
 			int targetIndex = targetCoord.ToIndex(mapManager.Width);
-
-			Debug.Log($"OnDragEnd: dragIndex={dragIndex}, targetIndex={targetIndex}, currentChain=[{string.Join(", ", currentChain.TileIndices ?? new List<int>())}]");
 
 			if (ValidateMove(targetIndex))
 			{
@@ -220,7 +203,6 @@ namespace GamePreviewNamespace
 			if (currentChain.TileIndices != null && currentChain.TileIndices.Count > 0)
 			{
 				movementHandler.HighlightChain(currentChain, false);
-				Debug.Log($"Cleared highlights for chain: [{string.Join(", ", currentChain.TileIndices)}]");
 			}
 
 			// Explicitly clear highlight for the dragged tile's final index
@@ -232,7 +214,6 @@ namespace GamePreviewNamespace
 					DirectionBit = 0
 				};
 				movementHandler.HighlightChain(singleTileChain, false);
-				Debug.Log($"Explicitly cleared highlight for dragged tile at index {dragIndex}");
 			}
 
 			dragIndex = -1;
