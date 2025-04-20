@@ -185,7 +185,11 @@ namespace GamePreviewNamespace
 
 		private void OnDragEnd()
 		{
-			if (dragIndex == -1 || mapManager.Tiles[dragIndex].GameObject == null) return;
+			if (dragIndex == -1 || mapManager.Tiles[dragIndex].GameObject == null)
+			{
+				Debug.Log($"OnDragEnd: No valid dragIndex or tile GameObject. dragIndex={dragIndex}");
+				return;
+			}
 
 			var tilePos = mapManager.Tiles[dragIndex].GameObject.transform.position;
 
@@ -201,6 +205,8 @@ namespace GamePreviewNamespace
 			var targetCoord = new GridCoord(x, z);
 			int targetIndex = targetCoord.ToIndex(mapManager.Width);
 
+			Debug.Log($"OnDragEnd: dragIndex={dragIndex}, targetIndex={targetIndex}, currentChain=[{string.Join(", ", currentChain.TileIndices ?? new List<int>())}]");
+
 			if (ValidateMove(targetIndex))
 			{
 				SwapTiles(targetIndex, false);
@@ -210,15 +216,28 @@ namespace GamePreviewNamespace
 				mapManager.Tiles[dragIndex].GameObject.transform.position = mapManager.GetTilePosition(dragIndex);
 			}
 
-			// Clear chain highlight
+			// Clear highlights for current chain
 			if (currentChain.TileIndices != null && currentChain.TileIndices.Count > 0)
 			{
 				movementHandler.HighlightChain(currentChain, false);
 				Debug.Log($"Cleared highlights for chain: [{string.Join(", ", currentChain.TileIndices)}]");
 			}
 
+			// Explicitly clear highlight for the dragged tile's final index
+			if (dragIndex >= 0 && dragIndex < mapManager.Tiles.Length && mapManager.Tiles[dragIndex].GameObject != null)
+			{
+				var singleTileChain = new TileMovementHandler.TileChain
+				{
+					TileIndices = new List<int> { dragIndex },
+					DirectionBit = 0
+				};
+				movementHandler.HighlightChain(singleTileChain, false);
+				Debug.Log($"Explicitly cleared highlight for dragged tile at index {dragIndex}");
+			}
+
 			dragIndex = -1;
 			lastIndex = -1;
+			currentChain = default;
 		}
 	}
 }
