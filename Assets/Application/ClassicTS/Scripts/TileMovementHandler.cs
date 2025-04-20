@@ -165,12 +165,9 @@ namespace GamePreviewNamespace
 			return ValidateMove(tileIndex, targetIndex);
 		}
 
-		public void SwapTiles(int sourceIndex, int targetIndex, bool updatePositions = true)
+		public void SwapTiles(int sourceIndex, int targetIndex)
 		{
-			if (targetIndex < 0 || targetIndex >= mapManager.Tiles.Length || sourceIndex < 0 || !ValidateMove(sourceIndex, targetIndex))
-			{
-				return;
-			}
+			if (targetIndex < 0 || targetIndex >= mapManager.Tiles.Length || sourceIndex < 0 || !ValidateMove(sourceIndex, targetIndex)) return;
 
 			var oldPosition = mapManager.GetTilePosition(sourceIndex);
 			var newPosition = mapManager.GetTilePosition(targetIndex);
@@ -179,20 +176,17 @@ namespace GamePreviewNamespace
 			mapManager.Tiles[sourceIndex] = mapManager.Tiles[targetIndex];
 			mapManager.Tiles[targetIndex] = temp;
 
-			if (updatePositions)
+			var draggedTile = mapManager.Tiles[targetIndex].GameObject;
+			var targetTile = mapManager.Tiles[sourceIndex].GameObject;
+			if (targetTile != null)
 			{
-				var draggedTile = mapManager.Tiles[targetIndex].GameObject;
-				var targetTile = mapManager.Tiles[sourceIndex].GameObject;
-				if (targetTile != null)
-				{
-					string tempName = draggedTile.name;
-					draggedTile.name = targetTile.name;
-					targetTile.name = tempName;
-					targetTile.transform.position = oldPosition;
-				}
-				if (draggedTile != null)
-					draggedTile.transform.position = newPosition;
+				string tempName = draggedTile.name;
+				draggedTile.name = targetTile.name;
+				targetTile.name = tempName;
+				targetTile.transform.position = oldPosition;
 			}
+			if (draggedTile != null)
+				draggedTile.transform.position = newPosition;
 		}
 	}
 
@@ -200,25 +194,4 @@ namespace GamePreviewNamespace
 	{
 		public Material originalMaterial;
 	}
-
-	//public Vector3 CalculateOffset(int tileIndex, Vector3 currentPos, Vector3 offset)
-	//{
-	//	var dragPos = currentPos + offset;
-	//	var bounds = GetMovementBounds(tileIndex);
-	//	dragPos.x = Mathf.Clamp(dragPos.x, bounds.MinWest.X, bounds.MaxEast.X);
-	//	dragPos.z = Mathf.Clamp(dragPos.z, bounds.MinSouth.Z, bounds.MaxNorth.Z);
-	//	return dragPos;
-	//}
-
-	//// Original single-tile movement methods (unchanged)
-	//public TileProperties.TileMovementBounds GetMovementBounds(int tileIndex, TileProperties.TileFlags flags)
-	//{
-	//	return new TileProperties.TileMovementBounds
-	//	{
-	//		MinWest = mapManager.GetTileCoordinatesForLast(tileIndex, TileProperties.West, flags),
-	//		MaxEast = mapManager.GetTileCoordinatesForLast(tileIndex, TileProperties.East, flags),
-	//		MinSouth = mapManager.GetTileCoordinatesForLast(tileIndex, TileProperties.South, flags),
-	//		MaxNorth = mapManager.GetTileCoordinatesForLast(tileIndex, TileProperties.North, flags)
-	//	};
-	//}
 }

@@ -10,8 +10,7 @@ namespace GamePreviewNamespace
 		private MapManager mapManager;
 		private TileMovementHandler movementHandler;
 		private int dragIndex = -1;
-		private int lastIndex = -1;
-		private TileMovementHandler.TileChain currentChain;
+		private TileMovementHandler.TileChain tileChain;
 
 		public void Start()
 		{
@@ -29,9 +28,9 @@ namespace GamePreviewNamespace
 			gestureSystem.OnDragging -= OnDragging;
 
 			// Clear highlights on destroy
-			if (currentChain.TileIndices != null && currentChain.TileIndices.Count > 0)
+			if (tileChain.TileIndices != null && tileChain.TileIndices.Count > 0)
 			{
-				movementHandler.HighlightChain(currentChain, false);
+				movementHandler.HighlightChain(tileChain, false);
 			}
 		}
 
@@ -40,8 +39,7 @@ namespace GamePreviewNamespace
 			mapManager = manager;
 			movementHandler = new TileMovementHandler(mapManager);
 			dragIndex = -1;
-			lastIndex = -1;
-			currentChain = default;
+			tileChain = default;
 		}
 
 		private bool ValidateMove(int targetIndex)
@@ -67,14 +65,13 @@ namespace GamePreviewNamespace
 			}
 
 			dragIndex = tileIndex;
-			lastIndex = tileIndex;
-			currentChain = movementHandler.GetTileChain(tileIndex, 0); // No direction yet
-			movementHandler.HighlightChain(currentChain, true);
+			tileChain = movementHandler.GetTileChain(tileIndex, 0); // No direction yet
+			movementHandler.HighlightChain(tileChain, true);
 		}
 
 		private void OnDragging(List<Vector3> gestures)
 		{
-			if (dragIndex == -1 || lastIndex == -1) return;
+			if (dragIndex == -1) return;
 			foreach (var gesture in gestures)
 			{
 				int dirBit = 0;
@@ -84,115 +81,74 @@ namespace GamePreviewNamespace
 				if (gesture.x == -1) dirBit |= TileProperties.West;
 
 				// Update chain for visualization only
-				var previousChain = currentChain;
+				var previousChain = tileChain;
 				if (dirBit != 0)
 				{
-					currentChain = movementHandler.GetTileChain(dragIndex, dirBit);
+					tileChain = movementHandler.GetTileChain(dragIndex, dirBit);
 				}
 				else
 				{
-					var x = gesture.x;
-					var z = gesture.z;
 					if (Mathf.Abs(gesture.x) > Mathf.Abs(gesture.z))
-					{
-						z = 0f;
-						currentChain = movementHandler.GetTileChain(dragIndex, x > 0 ? TileProperties.East : x < 0 ? TileProperties.West : 0);
-					}
+						tileChain = movementHandler.GetTileChain(dragIndex, gesture.x > 0 ? TileProperties.East : gesture.x < 0 ? TileProperties.West : 0);
 					else
-					{
-						x = 0f;
-						currentChain = movementHandler.GetTileChain(dragIndex, z > 0 ? TileProperties.North : z < 0 ? TileProperties.South : 0);
-					}
+						tileChain = movementHandler.GetTileChain(dragIndex, gesture.z > 0 ? TileProperties.North : gesture.z < 0 ? TileProperties.South : 0);
 				}
 
 				// Update highlights if chain changed
-				if (!currentChain.TileIndices.SequenceEqual(previousChain.TileIndices))
+				if (!tileChain.TileIndices.SequenceEqual(previousChain.TileIndices))
 				{
 					movementHandler.HighlightChain(previousChain, false); // Restore previous
-					movementHandler.HighlightChain(currentChain, true); // Highlight new
+					movementHandler.HighlightChain(tileChain, true); // Highlight new
 				}
 
 				if (dirBit != 0)
 				{
-					int newIndex = mapManager.GetAdjacentTile(lastIndex, dirBit);
+					int newIndex = mapManager.GetAdjacentTile(dragIndex, dirBit);
 					if (newIndex != -1 && ValidateMove(newIndex))
 					{
-						SwapTiles(newIndex, true);
+						movementHandler.SwapTiles(dragIndex, newIndex);
 						gestureSystem.ConsumeGesture(gesture);
+						dragIndex = newIndex;
 					}
 				}
 				else
 				{
 					// Remainder is partial drag position
-					var x = gesture.x;
-					var z = gesture.z;
-
-					if (Mathf.Abs(gesture.x) > Mathf.Abs(gesture.z)) z = 0f;
-					else x = 0f;
-
-					// Check bounds for both X and Z directions
-					var bounds = mapManager.GetMovementBounds(dragIndex, TileProperties.TileFlags.Dock | TileProperties.TileFlags.Roll);
 					var currentPos = mapManager.GetTilePosition(dragIndex);
-					var dragPos = currentPos + new Vector3(x, 0f, z);
-					currentPos.x = Mathf.Clamp(dragPos.x, bounds.MinWest.X, bounds.MaxEast.X);
-					currentPos.z = Mathf.Clamp(dragPos.z, bounds.MinSouth.Z, bounds.MaxNorth.Z);
+
+					var bounds = mapManager.GetMovementBounds(dragIndex, TileProperties.TileFlags.Dock | TileProperties.TileFlags.Roll);
+					if (Mathf.Abs(gesture.x) > Mathf.Abs(gesture.z))
+					{
+						var dragPos = currentPos + new Vector3(gesture.x, 0f, 0f);
+						currentPos.x = Mathf.Clamp(dragPos.x, bounds.MinWest.X, bounds.MaxEast.X);
+					}
+					else
+					{
+						var dragPos = currentPos + new Vector3(0f, 0f, gesture.z);
+						currentPos.z = Mathf.Clamp(dragPos.z, bounds.MinSouth.Z, bounds.MaxNorth.Z);
+					}
 
 					mapManager.Tiles[dragIndex].GameObject.transform.position = currentPos;
 				}
 			}
 		}
 
-		private void SwapTiles(int targetIndex, bool continueDragging)
-		{
-			if (targetIndex < 0 || targetIndex >= mapManager.Tiles.Length || dragIndex == -1) return;
-			if (!ValidateMove(targetIndex)) return;
-
-			var oldPosition = mapManager.GetTilePosition(dragIndex);
-			var newPosition = mapManager.GetTilePosition(targetIndex);
-
-			// Swap entire TileData
-			var temp = mapManager.Tiles[dragIndex];
-			mapManager.Tiles[dragIndex] = mapManager.Tiles[targetIndex];
-			mapManager.Tiles[targetIndex] = temp;
-
-			// Update GameObject names and positions
-			var draggedTile = mapManager.Tiles[targetIndex].GameObject;
-			var targetTile = mapManager.Tiles[dragIndex].GameObject;
-			if (targetTile != null)
-			{
-				string tempName = draggedTile.name;
-				draggedTile.name = targetTile.name;
-				targetTile.name = tempName;
-				targetTile.transform.position = oldPosition;
-			}
-
-			draggedTile.transform.position = newPosition;
-			if (continueDragging)
-			{
-				dragIndex = targetIndex;
-				lastIndex = targetIndex;
-			}
-		}
-
 		private void OnDragEnd()
 		{
-			if (dragIndex == -1 || mapManager.Tiles[dragIndex].GameObject == null)
-			{
-				return;
-			}
+			if (dragIndex == -1 || mapManager.Tiles[dragIndex].GameObject == null) return;
 
-			var tilePos = mapManager.Tiles[dragIndex].GameObject.transform.position;
+			var currentPos = mapManager.Tiles[dragIndex].GameObject.transform.position;
 
 			// Check bounds for both X and Z directions
 			var bounds = mapManager.GetMovementBounds(dragIndex, TileProperties.TileFlags.Dock | TileProperties.TileFlags.Roll);
-			int x = Mathf.RoundToInt(Mathf.Clamp(tilePos.x, bounds.MinWest.X, bounds.MaxEast.X));
-			int z = Mathf.RoundToInt(Mathf.Clamp(tilePos.z, bounds.MinSouth.Z, bounds.MaxNorth.Z));
+			int x = Mathf.RoundToInt(Mathf.Clamp(currentPos.x, bounds.MinWest.X, bounds.MaxEast.X));
+			int z = Mathf.RoundToInt(Mathf.Clamp(currentPos.z, bounds.MinSouth.Z, bounds.MaxNorth.Z));
 			var targetCoord = new GridCoord(x, z);
 			int targetIndex = targetCoord.ToIndex(mapManager.Width);
 
 			if (ValidateMove(targetIndex))
 			{
-				SwapTiles(targetIndex, false);
+				movementHandler.SwapTiles(dragIndex, targetIndex);
 			}
 			else
 			{
@@ -200,9 +156,9 @@ namespace GamePreviewNamespace
 			}
 
 			// Clear highlights for current chain
-			if (currentChain.TileIndices != null && currentChain.TileIndices.Count > 0)
+			if (tileChain.TileIndices != null && tileChain.TileIndices.Count > 0)
 			{
-				movementHandler.HighlightChain(currentChain, false);
+				movementHandler.HighlightChain(tileChain, false);
 			}
 
 			// Explicitly clear highlight for the dragged tile's final index
@@ -217,8 +173,7 @@ namespace GamePreviewNamespace
 			}
 
 			dragIndex = -1;
-			lastIndex = -1;
-			currentChain = default;
+			tileChain = default;
 		}
 	}
 }
