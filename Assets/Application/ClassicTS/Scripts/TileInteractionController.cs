@@ -11,11 +11,9 @@ namespace GamePreviewNamespace
 		private int dragIndex = -1;
 		private int lastIndex = -1;
 
-		public void Initialize(MapManager manager)
+		public void Start()
 		{
-			mapManager = manager;
-			dragIndex = -1;
-			lastIndex = -1;
+			if (null == gestureSystem) return;
 			gestureSystem.OnDragStart += OnDragStart;
 			gestureSystem.OnDragging += OnDragging;
 			gestureSystem.OnDragEnd += OnDragEnd;
@@ -23,12 +21,17 @@ namespace GamePreviewNamespace
 
 		private void OnDestroy()
 		{
-			if (gestureSystem != null)
-			{
-				gestureSystem.OnDragStart -= OnDragStart;
-				gestureSystem.OnDragEnd -= OnDragEnd;
-				gestureSystem.OnDragging -= OnDragging;
-			}
+			if (null == gestureSystem) return;
+			gestureSystem.OnDragStart -= OnDragStart;
+			gestureSystem.OnDragEnd -= OnDragEnd;
+			gestureSystem.OnDragging -= OnDragging;
+		}
+
+		public void Initialize(MapManager manager)
+		{
+			mapManager = manager;
+			dragIndex = -1;
+			lastIndex = -1;
 		}
 
 		private bool ValidateMove(int targetIndex)

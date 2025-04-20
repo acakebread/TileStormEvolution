@@ -42,10 +42,7 @@ public class GestureSystem : MonoBehaviour
 	{
 		Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
 		Plane mapPlane = new Plane(Vector3.up, Vector3.zero);
-		if (!mapPlane.Raycast(ray, out float distance))
-		{
-			return;
-		}
+		if (!mapPlane.Raycast(ray, out float distance)) return;
 
 		startMousePos = ray.GetPoint(distance);
 		isMouseDown = true;
