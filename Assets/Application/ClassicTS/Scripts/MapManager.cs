@@ -438,6 +438,37 @@ namespace GamePreviewNamespace
 			return -1;
 		}
 
+		public Material GetTileMeshMaterial(int tileIndex)
+		{
+			if (tileIndex < 0 || tileIndex >= tiles.Length || tiles[tileIndex].GameObject == null)
+				return null;
+
+			var meshRenderer = tiles[tileIndex].GameObject.GetComponentInChildren<MeshRenderer>();
+			if (meshRenderer == null)
+			{
+				Debug.LogWarning($"No MeshRenderer found for tile at index {tileIndex}.");
+				return null;
+			}
+
+			// Load the original material based on the tile's geometry
+			string geomPath = $"{PreviewSettings.GeometryPath}{tiles[tileIndex].Properties.Geom}".Replace(".x", "");
+			GameObject geomAsset = Resources.Load<GameObject>(geomPath);
+			if (geomAsset == null)
+			{
+				Debug.LogWarning($"Failed to load geometry asset for {geomPath}.");
+				return null;
+			}
+
+			var assetRenderer = geomAsset.GetComponentInChildren<MeshRenderer>();
+			if (assetRenderer == null || assetRenderer.sharedMaterial == null)
+			{
+				Debug.LogWarning($"No material found for geometry asset {geomPath}.");
+				return null;
+			}
+
+			return assetRenderer.sharedMaterial;
+		}
+
 		public string FormatPath(List<int> path) =>
 			string.Join(" -> ", path.Select(t => GetTileCoordinates(t).ToString()));
 	}
