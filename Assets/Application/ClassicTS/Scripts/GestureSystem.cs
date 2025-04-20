@@ -10,15 +10,13 @@ public class GestureSystem : MonoBehaviour
 
 	private GestureMode currentMode = GestureMode.Inactive;
 	private Vector3 startMousePos;
-	private Vector3 remainderPos;
 	private bool isMouseDown;
-	private List<(GestureMode mode, int direction)> gestureList = new List<(GestureMode, int)>();
 	private const float lockThreshold = 0.1f;
 	private const float gridSize = 1.0f;
 
-	public event Action<Vector3> OnDragStarted;
-	public event Action<Vector3> OnDragEnded;
-	public event Action<List<(GestureMode mode, int direction)>> OnGesturesUpdated;
+	public event Action<Vector3> OnDragStart;
+	public event Action<GestureMode, Vector3> OnDragEnd;
+	public event Action<List<Vector3>> OnDragging;
 
 	private void Awake() => instance = this;
 
@@ -48,10 +46,9 @@ public class GestureSystem : MonoBehaviour
 		}
 
 		currentMode = GestureMode.Inactive;
-		gestureList.Clear();
 		startMousePos = ray.GetPoint(distance);
 		isMouseDown = true;
-		OnDragStarted?.Invoke(startMousePos);
+		OnDragStart?.Invoke(startMousePos);
 	}
 
 	private void UpdateDrag()
@@ -65,7 +62,8 @@ public class GestureSystem : MonoBehaviour
 
 		Vector3 currentPos = ray.GetPoint(distance);
 		Vector3 tempStartMousePos = startMousePos;
-		gestureList.Clear();
+
+		var gestureList = new List<Vector3>();
 
 		for (int i = 0; i < 10; i++)
 		{
@@ -76,26 +74,26 @@ public class GestureSystem : MonoBehaviour
 			if (absX > absZ && absX >= gridSize)
 			{
 				int direction = delta.x > 0 ? 1 : -1;
-				gestureList.Add((GestureMode.DraggingX, direction));
+				gestureList.Add(new Vector3(direction, 0, 0));
 				tempStartMousePos.x += direction * gridSize;
 			}
 			else if (absZ >= gridSize)
 			{
 				int direction = delta.z > 0 ? 1 : -1;
-				gestureList.Add((GestureMode.DraggingZ, direction));
+				gestureList.Add(new Vector3(0, 0, direction));
 				tempStartMousePos.z += direction * gridSize;
 			}
 			else
 			{
+				gestureList.Add(delta);
 				break;
 			}
 		}
 
 		if (gestureList.Count > 0)
 		{
-			OnGesturesUpdated?.Invoke(gestureList);
+			OnDragging?.Invoke(gestureList);
 		}
-		remainderPos = currentPos;
 		currentMode = EvaluateMode(currentPos - startMousePos);
 	}
 
@@ -121,24 +119,7 @@ public class GestureSystem : MonoBehaviour
 		Vector3 finalPos = mapPlane.Raycast(ray, out float distance) ? ray.GetPoint(distance) : Vector3.zero;
 
 		isMouseDown = false;
+		OnDragEnd?.Invoke(currentMode, finalPos);
 		currentMode = GestureMode.Inactive;
-		gestureList.Clear();
-		OnDragEnded?.Invoke(finalPos);
 	}
-
-	public void ConsumeGesture(GestureMode mode, int direction)
-	{
-		if (mode == GestureMode.DraggingX)
-		{
-			startMousePos.x += direction * gridSize;
-		}
-		else if (mode == GestureMode.DraggingZ)
-		{
-			startMousePos.z += direction * gridSize;
-		}
-	}
-
-	public void ClearGestures() => gestureList.Clear();
-	public GestureMode GetCurrentMode() => currentMode;
-	public Vector3 GetCurrentPos() => remainderPos;
 }

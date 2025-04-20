@@ -5,37 +5,40 @@ namespace GamePreviewNamespace
 {
 	public class TileInteractionController : MonoBehaviour
 	{
+		private GestureSystem gestureSystem => GestureSystem.instance;
+
 		private MapManager mapManager;
 		private int dragIndex = -1;
 		private int lastIndex = -1;
-		private GestureSystem gestureSystem => GestureSystem.instance;
 
 		public void Initialize(MapManager manager)
 		{
 			mapManager = manager;
 			dragIndex = -1;
 			lastIndex = -1;
-			gestureSystem.OnDragStarted += HandleDragStarted;
-			gestureSystem.OnDragEnded += HandleDragEnded;
-			gestureSystem.OnGesturesUpdated += HandleGesturesUpdated;
+			gestureSystem.OnDragStart += OnDragStart;
+			gestureSystem.OnDragging += OnDragging;
+			gestureSystem.OnDragEnd += OnDragEnd;
 		}
 
 		private void OnDestroy()
 		{
 			if (gestureSystem != null)
 			{
-				gestureSystem.OnDragStarted -= HandleDragStarted;
-				gestureSystem.OnDragEnded -= HandleDragEnded;
-				gestureSystem.OnGesturesUpdated -= HandleGesturesUpdated;
+				gestureSystem.OnDragStart -= OnDragStart;
+				gestureSystem.OnDragEnd -= OnDragEnd;
+				gestureSystem.OnDragging -= OnDragging;
 			}
 		}
 
-		private void Update()
+		private bool ValidateMove(int targetIndex)
 		{
-			if (gestureSystem.isDragging) UpdateTileVisualPosition();
+			if (targetIndex == dragIndex || targetIndex < 0 || targetIndex >= mapManager.Tiles.Length) return false;
+			var targetProps = mapManager.GetTilePropertiesAt(targetIndex);
+			return targetProps != null && targetProps.DockOrRoll;
 		}
 
-		private void HandleDragStarted(Vector3 hitPos)
+		private void OnDragStart(Vector3 hitPos)
 		{
 			int x = Mathf.RoundToInt(hitPos.x);
 			int z = Mathf.RoundToInt(hitPos.z);
@@ -50,55 +53,44 @@ namespace GamePreviewNamespace
 			lastIndex = tileIndex;
 		}
 
-		private void HandleGesturesUpdated(List<(GestureSystem.GestureMode mode, int direction)> gestures)
+		private void OnDragging(List<Vector3> gestures)
 		{
 			if (dragIndex == -1 || lastIndex == -1) return;
 			foreach (var gesture in gestures)
 			{
-				int dirBit = GetDirectionBit(gesture.mode, gesture.direction);
-				int newIndex = mapManager.GetAdjacentTile(lastIndex, dirBit);
-				if (newIndex != -1 && ValidateMove(newIndex))
+				int dirBit = 0;
+				if (gesture.z == 1) dirBit |= TileProperties.North;
+				if (gesture.z ==-1) dirBit |= TileProperties.South;
+				if (gesture.x == 1) dirBit |= TileProperties.East;
+				if (gesture.x ==-1) dirBit |= TileProperties.West;
+
+				if (dirBit != 0)
 				{
-					StartDragAtNewPosition(newIndex);
-					gestureSystem.ConsumeGesture(gesture.mode, gesture.direction);
-					lastIndex = newIndex;
+					int newIndex = mapManager.GetAdjacentTile(lastIndex, dirBit);
+					if (newIndex != -1 && ValidateMove(newIndex))
+					{
+						StartDragAtNewPosition(newIndex);
+						lastIndex = newIndex;
+					}
 				}
+				else
+				{
+					//remainder is partial drag position
+					var flags = TileProperties.TileFlags.Dock | TileProperties.TileFlags.Roll;
+					var minCoordX = mapManager.GetTileCoordinatesForLast(dragIndex, TileProperties.West, flags);
+					var maxCoordX = mapManager.GetTileCoordinatesForLast(dragIndex, TileProperties.East, flags);
+					var minCoordZ = mapManager.GetTileCoordinatesForLast(dragIndex, TileProperties.South, flags);
+					var maxCoordZ = mapManager.GetTileCoordinatesForLast(dragIndex, TileProperties.North, flags);
+
+					var currentPos = mapManager.GetTilePosition(dragIndex);
+					var dragPos = currentPos + gesture;
+					currentPos.x = Mathf.Clamp(dragPos.x, minCoordX.X, maxCoordX.X);
+					currentPos.z = Mathf.Clamp(dragPos.z, minCoordZ.Z, maxCoordZ.Z);
+
+					mapManager.Tiles[dragIndex].GameObject.transform.position = currentPos;
+
+				}	
 			}
-			gestureSystem.ClearGestures();
-		}
-
-		private int GetDirectionBit(GestureSystem.GestureMode mode, int direction)
-		{
-			if (mode == GestureSystem.GestureMode.DraggingX)
-				return direction > 0 ? TileProperties.East : TileProperties.West;
-			return direction > 0 ? TileProperties.North : TileProperties.South;
-		}
-
-		private void UpdateTileVisualPosition()
-		{
-			if (dragIndex == -1 || mapManager.Tiles[dragIndex].GameObject == null) return;
-
-			Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-			Plane mapPlane = new Plane(Vector3.up, Vector3.zero);
-			if (!mapPlane.Raycast(ray, out float distance)) return;
-
-			var currentPos = gestureSystem.GetCurrentPos();
-			Vector3 newPos = mapManager.GetTilePosition(dragIndex);
-			var mode = gestureSystem.GetCurrentMode();
-
-			int dirBitMin = mode == GestureSystem.GestureMode.DraggingX ? TileProperties.West : TileProperties.South;
-			int dirBitMax = mode == GestureSystem.GestureMode.DraggingX ? TileProperties.East : TileProperties.North;
-			var minCoord = mapManager.GetTileCoordinatesForLast(dragIndex, dirBitMin, TileProperties.TileFlags.Dock | TileProperties.TileFlags.Roll);
-			var maxCoord = mapManager.GetTileCoordinatesForLast(dragIndex, dirBitMax, TileProperties.TileFlags.Dock | TileProperties.TileFlags.Roll);
-			float minValue = mode == GestureSystem.GestureMode.DraggingX ? minCoord.X : minCoord.Z;
-			float maxValue = mode == GestureSystem.GestureMode.DraggingX ? maxCoord.X : maxCoord.Z;
-
-			if (mode == GestureSystem.GestureMode.DraggingX)
-				newPos.x = Mathf.Clamp(currentPos.x, minValue, maxValue);
-			else
-				newPos.z = Mathf.Clamp(currentPos.z, minValue, maxValue);
-
-			mapManager.Tiles[dragIndex].GameObject.transform.position = newPos;
 		}
 
 		private void StartDragAtNewPosition(int newIndex)
@@ -130,20 +122,28 @@ namespace GamePreviewNamespace
 			lastIndex = newIndex;
 		}
 
-		private void HandleDragEnded(Vector3 finalPos)
+		private void OnDragEnd(GestureSystem.GestureMode mode, Vector3 finalPos)
 		{
 			if (dragIndex == -1 || mapManager.Tiles[dragIndex].GameObject == null) return;
 
-			// Check bounds for both X and Z directions
-			var minCoordX = mapManager.GetTileCoordinatesForLast(dragIndex, TileProperties.West, TileProperties.TileFlags.Dock | TileProperties.TileFlags.Roll);
-			var maxCoordX = mapManager.GetTileCoordinatesForLast(dragIndex, TileProperties.East, TileProperties.TileFlags.Dock | TileProperties.TileFlags.Roll);
-			var minCoordZ = mapManager.GetTileCoordinatesForLast(dragIndex, TileProperties.South, TileProperties.TileFlags.Dock | TileProperties.TileFlags.Roll);
-			var maxCoordZ = mapManager.GetTileCoordinatesForLast(dragIndex, TileProperties.North, TileProperties.TileFlags.Dock | TileProperties.TileFlags.Roll);
+			var tilePos = mapManager.Tiles[dragIndex].GameObject.transform.position;
 
-			Vector3 tilePos = mapManager.Tiles[dragIndex].GameObject.transform.position;
-			int x = Mathf.RoundToInt(Mathf.Clamp(tilePos.x, minCoordX.X, maxCoordX.X));
-			int z = Mathf.RoundToInt(Mathf.Clamp(tilePos.z, minCoordZ.Z, maxCoordZ.Z));
-			var targetCoord = new GridCoord(x, z);
+			// Check bounds for both X and Z directions
+			var flags = TileProperties.TileFlags.Dock | TileProperties.TileFlags.Roll;
+			if (mode == GestureSystem.GestureMode.DraggingX)
+			{
+				var minCoord = mapManager.GetTileCoordinatesForLast(dragIndex, TileProperties.West, flags);
+				var maxCoord = mapManager.GetTileCoordinatesForLast(dragIndex, TileProperties.East, flags);
+				tilePos.x = Mathf.RoundToInt(Mathf.Clamp(tilePos.x, minCoord.X, maxCoord.X));
+			}
+			else
+			{
+				var minCoord = mapManager.GetTileCoordinatesForLast(dragIndex, TileProperties.South, flags);
+				var maxCoord = mapManager.GetTileCoordinatesForLast(dragIndex, TileProperties.North, flags);
+				tilePos.z = Mathf.RoundToInt(Mathf.Clamp(tilePos.z, minCoord.Z, maxCoord.Z));
+			}
+
+			var targetCoord = new GridCoord((int)tilePos.x, (int)tilePos.z);
 			int targetIndex = targetCoord.ToIndex(mapManager.Width);
 
 			if (ValidateMove(targetIndex))
@@ -170,21 +170,9 @@ namespace GamePreviewNamespace
 			}
 			else
 			{
-				mapManager.Tiles[dragIndex].GameObject.transform.position = mapManager.GetTilePosition(dragIndex);
+				mapManager.Tiles[dragIndex].GameObject.transform.position = mapManager.GetTilePosition(dragIndex);//snap back to original position
 			}
 
-			ResetDrag();
-		}
-
-		private bool ValidateMove(int targetIndex)
-		{
-			if (targetIndex == dragIndex || targetIndex < 0 || targetIndex >= mapManager.Tiles.Length) return false;
-			var targetProps = mapManager.GetTilePropertiesAt(targetIndex);
-			return targetProps != null && targetProps.DockOrRoll;
-		}
-
-		private void ResetDrag()
-		{
 			dragIndex = -1;
 			lastIndex = -1;
 		}

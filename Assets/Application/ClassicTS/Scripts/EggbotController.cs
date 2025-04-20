@@ -118,7 +118,7 @@ namespace GamePreviewNamespace
 			int currentTile = mapManager.Waypoints[currentWaypointIndex].nTile;
 			if (mapManager.FindAdjacentConsole(currentTile) != -1 && !mapManager.CheckPathBetweenWaypoints(currentWaypointIndex, out _))
 			{
-				Debug.Log($"Puzzle blocked at console at tile ({currentTile % mapManager.Width},{currentTile / mapManager.Width})");
+				//Debug.Log($"Puzzle blocked at console at tile ({currentTile % mapManager.Width},{currentTile / mapManager.Width})");
 				return;
 			}
 
