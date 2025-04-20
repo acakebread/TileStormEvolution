@@ -15,8 +15,8 @@ public class GestureSystem : MonoBehaviour
 	private const float gridSize = 1.0f;
 
 	public event Action<Vector3> OnDragStart;
-	public event Action<GestureMode, Vector3> OnDragEnd;
 	public event Action<List<Vector3>> OnDragging;
+	public event Action OnDragEnd;
 
 	private void Awake() => instance = this;
 
@@ -36,6 +36,8 @@ public class GestureSystem : MonoBehaviour
 		}
 	}
 
+	public void ConsumeGesture(Vector3 gesture) => startMousePos += gesture;
+
 	private void StartDrag()
 	{
 		Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
@@ -45,9 +47,10 @@ public class GestureSystem : MonoBehaviour
 			return;
 		}
 
-		currentMode = GestureMode.Inactive;
 		startMousePos = ray.GetPoint(distance);
 		isMouseDown = true;
+
+		currentMode = GestureMode.Inactive;
 		OnDragStart?.Invoke(startMousePos);
 	}
 
@@ -114,12 +117,8 @@ public class GestureSystem : MonoBehaviour
 
 	private void EndDrag()
 	{
-		Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-		Plane mapPlane = new Plane(Vector3.up, Vector3.zero);
-		Vector3 finalPos = mapPlane.Raycast(ray, out float distance) ? ray.GetPoint(distance) : Vector3.zero;
-
 		isMouseDown = false;
-		OnDragEnd?.Invoke(currentMode, finalPos);
+		OnDragEnd?.Invoke();
 		currentMode = GestureMode.Inactive;
 	}
 }

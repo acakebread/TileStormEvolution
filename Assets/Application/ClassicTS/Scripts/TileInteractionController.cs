@@ -60,22 +60,22 @@ namespace GamePreviewNamespace
 			{
 				int dirBit = 0;
 				if (gesture.z == 1) dirBit |= TileProperties.North;
-				if (gesture.z ==-1) dirBit |= TileProperties.South;
+				if (gesture.z == -1) dirBit |= TileProperties.South;
 				if (gesture.x == 1) dirBit |= TileProperties.East;
-				if (gesture.x ==-1) dirBit |= TileProperties.West;
+				if (gesture.x == -1) dirBit |= TileProperties.West;
 
 				if (dirBit != 0)
 				{
 					int newIndex = mapManager.GetAdjacentTile(lastIndex, dirBit);
 					if (newIndex != -1 && ValidateMove(newIndex))
 					{
-						StartDragAtNewPosition(newIndex);
-						lastIndex = newIndex;
+						SwapTiles(newIndex, true);
+						gestureSystem.ConsumeGesture(gesture);
 					}
 				}
 				else
 				{
-					//remainder is partial drag position
+					// Remainder is partial drag position
 					var flags = TileProperties.TileFlags.Dock | TileProperties.TileFlags.Roll;
 					var minCoordX = mapManager.GetTileCoordinatesForLast(dragIndex, TileProperties.West, flags);
 					var maxCoordX = mapManager.GetTileCoordinatesForLast(dragIndex, TileProperties.East, flags);
@@ -88,26 +88,25 @@ namespace GamePreviewNamespace
 					currentPos.z = Mathf.Clamp(dragPos.z, minCoordZ.Z, maxCoordZ.Z);
 
 					mapManager.Tiles[dragIndex].GameObject.transform.position = currentPos;
-
-				}	
+				}
 			}
 		}
 
-		private void StartDragAtNewPosition(int newIndex)
+		private void SwapTiles(int targetIndex, bool continueDragging)
 		{
-			if (newIndex < 0 || newIndex >= mapManager.Tiles.Length || dragIndex == -1) return;
-			if (!ValidateMove(newIndex)) return;
+			if (targetIndex < 0 || targetIndex >= mapManager.Tiles.Length || dragIndex == -1) return;
+			if (!ValidateMove(targetIndex)) return;
 
 			var oldPosition = mapManager.GetTilePosition(dragIndex);
-			var newPosition = mapManager.GetTilePosition(newIndex);
+			var newPosition = mapManager.GetTilePosition(targetIndex);
 
 			// Swap entire TileData
 			var temp = mapManager.Tiles[dragIndex];
-			mapManager.Tiles[dragIndex] = mapManager.Tiles[newIndex];
-			mapManager.Tiles[newIndex] = temp;
+			mapManager.Tiles[dragIndex] = mapManager.Tiles[targetIndex];
+			mapManager.Tiles[targetIndex] = temp;
 
 			// Update GameObject names and positions
-			var draggedTile = mapManager.Tiles[newIndex].GameObject;
+			var draggedTile = mapManager.Tiles[targetIndex].GameObject;
 			var targetTile = mapManager.Tiles[dragIndex].GameObject;
 			if (targetTile != null)
 			{
@@ -118,59 +117,38 @@ namespace GamePreviewNamespace
 			}
 
 			draggedTile.transform.position = newPosition;
-			dragIndex = newIndex;
-			lastIndex = newIndex;
+			if (continueDragging)
+			{
+				dragIndex = targetIndex;
+				lastIndex = targetIndex;
+			}
 		}
 
-		private void OnDragEnd(GestureSystem.GestureMode mode, Vector3 finalPos)
+		private void OnDragEnd()
 		{
 			if (dragIndex == -1 || mapManager.Tiles[dragIndex].GameObject == null) return;
 
 			var tilePos = mapManager.Tiles[dragIndex].GameObject.transform.position;
+			var flags = TileProperties.TileFlags.Dock | TileProperties.TileFlags.Roll;
 
 			// Check bounds for both X and Z directions
-			var flags = TileProperties.TileFlags.Dock | TileProperties.TileFlags.Roll;
-			if (mode == GestureSystem.GestureMode.DraggingX)
-			{
-				var minCoord = mapManager.GetTileCoordinatesForLast(dragIndex, TileProperties.West, flags);
-				var maxCoord = mapManager.GetTileCoordinatesForLast(dragIndex, TileProperties.East, flags);
-				tilePos.x = Mathf.RoundToInt(Mathf.Clamp(tilePos.x, minCoord.X, maxCoord.X));
-			}
-			else
-			{
-				var minCoord = mapManager.GetTileCoordinatesForLast(dragIndex, TileProperties.South, flags);
-				var maxCoord = mapManager.GetTileCoordinatesForLast(dragIndex, TileProperties.North, flags);
-				tilePos.z = Mathf.RoundToInt(Mathf.Clamp(tilePos.z, minCoord.Z, maxCoord.Z));
-			}
+			var minCoordX = mapManager.GetTileCoordinatesForLast(dragIndex, TileProperties.West, flags);
+			var maxCoordX = mapManager.GetTileCoordinatesForLast(dragIndex, TileProperties.East, flags);
+			var minCoordZ = mapManager.GetTileCoordinatesForLast(dragIndex, TileProperties.South, flags);
+			var maxCoordZ = mapManager.GetTileCoordinatesForLast(dragIndex, TileProperties.North, flags);
 
-			var targetCoord = new GridCoord((int)tilePos.x, (int)tilePos.z);
+			int x = Mathf.RoundToInt(Mathf.Clamp(tilePos.x, minCoordX.X, maxCoordX.X));
+			int z = Mathf.RoundToInt(Mathf.Clamp(tilePos.z, minCoordZ.Z, maxCoordZ.Z));
+			var targetCoord = new GridCoord(x, z);
 			int targetIndex = targetCoord.ToIndex(mapManager.Width);
 
 			if (ValidateMove(targetIndex))
 			{
-				var oldCoord = mapManager.GetTileCoordinates(dragIndex);
-
-				// Swap entire TileData
-				var temp = mapManager.Tiles[dragIndex];
-				mapManager.Tiles[dragIndex] = mapManager.Tiles[targetIndex];
-				mapManager.Tiles[targetIndex] = temp;
-
-				// Update GameObject names and positions
-				var draggedTile = mapManager.Tiles[targetIndex].GameObject;
-				var targetTile = mapManager.Tiles[dragIndex].GameObject;
-				if (targetTile != null)
-				{
-					string tempName = draggedTile.name;
-					draggedTile.name = targetTile.name;
-					targetTile.name = tempName;
-					targetTile.transform.position = oldCoord.ToPosition();
-				}
-
-				draggedTile.transform.position = targetCoord.ToPosition();
+				SwapTiles(targetIndex, false);
 			}
 			else
 			{
-				mapManager.Tiles[dragIndex].GameObject.transform.position = mapManager.GetTilePosition(dragIndex);//snap back to original position
+				mapManager.Tiles[dragIndex].GameObject.transform.position = mapManager.GetTilePosition(dragIndex);
 			}
 
 			dragIndex = -1;
