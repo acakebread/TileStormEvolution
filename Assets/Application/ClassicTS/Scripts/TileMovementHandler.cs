@@ -89,7 +89,7 @@ namespace GamePreviewNamespace
 
 				Debug.Log($"Tile {nextIndex}: CanBeDragged={nextProps.CanBeDragged}, DockOrRoll={nextProps.DockOrRoll}, Coord=({mapManager.GetTileCoordinates(nextIndex).X}, {mapManager.GetTileCoordinates(nextIndex).Z})");
 				// Include tiles that are either DockOrRoll or CanBeDragged
-				if (!nextProps.DockOrRoll && !nextProps.CanBeDragged)
+				if (!nextProps.CanBeDragged)
 				{
 					Debug.Log($"Stopped chain at index {nextIndex}: Non-DockOrRoll and Non-CanBeDragged tile");
 					break;
