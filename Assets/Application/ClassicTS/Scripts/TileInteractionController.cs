@@ -76,16 +76,22 @@ namespace GamePreviewNamespace
 				else
 				{
 					// Remainder is partial drag position
+					var x = gesture.x;
+					var z = gesture.z;
+
+					if (Mathf.Abs(gesture.x) > Mathf.Abs(gesture.z)) z = 0f;
+					else x = 0f;
+
 					var flags = TileProperties.TileFlags.Dock | TileProperties.TileFlags.Roll;
-					var minCoordX = mapManager.GetTileCoordinatesForLast(dragIndex, TileProperties.West, flags);
-					var maxCoordX = mapManager.GetTileCoordinatesForLast(dragIndex, TileProperties.East, flags);
-					var minCoordZ = mapManager.GetTileCoordinatesForLast(dragIndex, TileProperties.South, flags);
-					var maxCoordZ = mapManager.GetTileCoordinatesForLast(dragIndex, TileProperties.North, flags);
+					var minCoordEW = mapManager.GetTileCoordinatesForLast(dragIndex, TileProperties.West, flags);
+					var maxCoordEW = mapManager.GetTileCoordinatesForLast(dragIndex, TileProperties.East, flags);
+					var minCoordNS = mapManager.GetTileCoordinatesForLast(dragIndex, TileProperties.South, flags);
+					var manCoordNS = mapManager.GetTileCoordinatesForLast(dragIndex, TileProperties.North, flags);
 
 					var currentPos = mapManager.GetTilePosition(dragIndex);
-					var dragPos = currentPos + gesture;
-					currentPos.x = Mathf.Clamp(dragPos.x, minCoordX.X, maxCoordX.X);
-					currentPos.z = Mathf.Clamp(dragPos.z, minCoordZ.Z, maxCoordZ.Z);
+					var dragPos = currentPos + new Vector3(x, 0f, z);// gesture;
+					currentPos.x = Mathf.Clamp(dragPos.x, minCoordEW.X, maxCoordEW.X);
+					currentPos.z = Mathf.Clamp(dragPos.z, minCoordNS.Z, manCoordNS.Z);
 
 					mapManager.Tiles[dragIndex].GameObject.transform.position = currentPos;
 				}
@@ -129,9 +135,9 @@ namespace GamePreviewNamespace
 			if (dragIndex == -1 || mapManager.Tiles[dragIndex].GameObject == null) return;
 
 			var tilePos = mapManager.Tiles[dragIndex].GameObject.transform.position;
-			var flags = TileProperties.TileFlags.Dock | TileProperties.TileFlags.Roll;
 
 			// Check bounds for both X and Z directions
+			var flags = TileProperties.TileFlags.Dock | TileProperties.TileFlags.Roll;
 			var minCoordX = mapManager.GetTileCoordinatesForLast(dragIndex, TileProperties.West, flags);
 			var maxCoordX = mapManager.GetTileCoordinatesForLast(dragIndex, TileProperties.East, flags);
 			var minCoordZ = mapManager.GetTileCoordinatesForLast(dragIndex, TileProperties.South, flags);
