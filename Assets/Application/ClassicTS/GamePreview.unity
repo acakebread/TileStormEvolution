@@ -239,6 +239,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   flip: 1
   scramble: 1
+  show_hidden_tiles: 1
   geometryPath: Geometry/obj/
   texturePath: Textures/
 --- !u!4 &862124737
@@ -291,7 +292,7 @@ Light:
   m_CookieSize: 10
   m_Shadows:
     m_Type: 2
-    m_Resolution: -1
+    m_Resolution: 3
     m_CustomResolution: -1
     m_Strength: 1
     m_Bias: 0.05

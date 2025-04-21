@@ -8,9 +8,8 @@ namespace GamePreviewNamespace
 	{
 		private GestureSystem gestureSystem => GestureSystem.instance;
 		private MapManager mapManager;
-		private TileMovementHandler movementHandler;
+		private MapManager.TileStrip tileStrip;
 		private int dragIndex = -1;
-		private TileMovementHandler.TileStrip tileStrip;
 
 		public void Start()
 		{
@@ -29,22 +28,20 @@ namespace GamePreviewNamespace
 
 			// Clear highlights on destroy
 			if (tileStrip.TileIndices != null && tileStrip.TileIndices.Count > 0)
-				movementHandler.HighlightStrip(tileStrip, false);
+				mapManager.HighlightStrip(tileStrip, false);
 		}
 
 		public void Initialize(MapManager manager)
 		{
 			mapManager = manager;
-			movementHandler = new TileMovementHandler(mapManager);
 			dragIndex = -1;
 			tileStrip = default;
 		}
 
-		private bool ValidateMove(int targetIndex)
+		private bool IsDockOrRoll(int targetIndex)
 		{
-			if (targetIndex == dragIndex || targetIndex < 0 || targetIndex >= mapManager.Tiles.Length) return false;
 			var targetProps = mapManager.GetTilePropertiesAt(targetIndex);
-			return targetProps != null && targetProps.DockOrRoll;//TileProperties.TileFlags.Dock | TileProperties.TileFlags.Roll
+			return targetProps != null && (targetProps.IsDock | targetProps.IsRoll);
 		}
 
 		private void OnDragStart(Vector3 hitPos)
@@ -63,8 +60,8 @@ namespace GamePreviewNamespace
 			}
 
 			dragIndex = tileIndex;
-			tileStrip = movementHandler.GetTileStrip(tileIndex, 0); // No direction yet
-			movementHandler.HighlightStrip(tileStrip, true);
+			tileStrip = mapManager.GetTileStrip(tileIndex, 0); // No direction yet
+			mapManager.HighlightStrip(tileStrip, true);
 		}
 
 		private void OnDragging(List<Vector3> gestures)
@@ -82,29 +79,29 @@ namespace GamePreviewNamespace
 				var previousStrip = tileStrip;
 				if (dirBit != 0)
 				{
-					tileStrip = movementHandler.GetTileStrip(dragIndex, dirBit);
+					tileStrip = mapManager.GetTileStrip(dragIndex, dirBit);
 				}
 				else
 				{
 					if (Mathf.Abs(gesture.x) > Mathf.Abs(gesture.z))
-						tileStrip = movementHandler.GetTileStrip(dragIndex, gesture.x > 0 ? TileProperties.East : gesture.x < 0 ? TileProperties.West : 0);
+						tileStrip = mapManager.GetTileStrip(dragIndex, gesture.x > 0 ? TileProperties.East : gesture.x < 0 ? TileProperties.West : 0);
 					else
-						tileStrip = movementHandler.GetTileStrip(dragIndex, gesture.z > 0 ? TileProperties.North : gesture.z < 0 ? TileProperties.South : 0);
+						tileStrip = mapManager.GetTileStrip(dragIndex, gesture.z > 0 ? TileProperties.North : gesture.z < 0 ? TileProperties.South : 0);
 				}
 
 				// Update highlights if strip changed
 				if (!tileStrip.TileIndices.SequenceEqual(previousStrip.TileIndices))
 				{
-					movementHandler.HighlightStrip(previousStrip, false); // Restore previous
-					movementHandler.HighlightStrip(tileStrip, true); // Highlight new
+					mapManager.HighlightStrip(previousStrip, false); // Restore previous
+					mapManager.HighlightStrip(tileStrip, true); // Highlight new
 				}
 
 				if (dirBit != 0)
 				{
 					int newIndex = mapManager.GetAdjacentTile(dragIndex, dirBit);
-					if (newIndex != -1 && ValidateMove(newIndex))
+					if (newIndex != -1 && IsDockOrRoll(newIndex))
 					{
-						movementHandler.SwapTiles(dragIndex, newIndex);
+						mapManager.SwapTiles(dragIndex, newIndex);
 						gestureSystem.ConsumeGesture(gesture);
 						dragIndex = newIndex;
 					}
@@ -144,25 +141,14 @@ namespace GamePreviewNamespace
 			var targetCoord = new GridCoord(x, z);
 			int targetIndex = mapManager.ToIndex(targetCoord);
 
-			if (ValidateMove(targetIndex))
-				movementHandler.SwapTiles(dragIndex, targetIndex);
-			else
-				mapManager.Tiles[dragIndex].GameObject.transform.position = mapManager.GetTilePosition(dragIndex);
-
 			// Clear highlights for current strip
 			if (tileStrip.TileIndices != null && tileStrip.TileIndices.Count > 0)
-				movementHandler.HighlightStrip(tileStrip, false);
+				mapManager.HighlightStrip(tileStrip, false);
 
-			// Explicitly clear highlight for the dragged tile's final index
-			if (dragIndex >= 0 && dragIndex < mapManager.Tiles.Length)
-			{
-				var singleTileStrip = new TileMovementHandler.TileStrip
-				{
-					TileIndices = new List<int> { dragIndex },
-					DirectionBit = 0
-				};
-				movementHandler.HighlightStrip(singleTileStrip, false);
-			}
+			if (IsDockOrRoll(targetIndex))
+				mapManager.SwapTiles(dragIndex, targetIndex);
+			else
+				mapManager.Tiles[dragIndex].GameObject.transform.position = mapManager.GetTilePosition(dragIndex);
 
 			dragIndex = -1;
 			tileStrip = default;

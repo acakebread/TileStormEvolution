@@ -10,6 +10,10 @@ public class PreviewSettings : MonoBehaviour
 	[SerializeField] private bool scramble = true;
 	public static bool Scramble => instance.scramble;
 
+	[Header("show hidden tiles")]
+	[SerializeField] private bool show_hidden_tiles = false;
+	public static bool ShowHiddenTiles => instance.show_hidden_tiles;
+
 	[Header("resource paths")]
 	[SerializeField] private string geometryPath = "Geometry/obj/";
 	public static string GeometryPath => instance.geometryPath;

@@ -56,10 +56,9 @@
 		public string Type => tileDef.szType;
 		public string Geom => tileDef.szGeom;
 		public string Theme => tileDef.szTheme;
-		public int Nav => nav;
-		public bool CanMove => tileDef.bSlide || tileDef.bRoll;
-		public bool DockOrRoll => tileDef.bDock || tileDef.bRoll;
 		public bool Interactive => !(tileDef.bDock || tileDef.bRoll) && tileDef.bSlide;
+
+		public int Nav => nav;
 
 		public static (int dx, int dz) GetDirectionOffset(int dirBit) => (((dirBit & East) >> 2) - ((dirBit & West) >> 3), (dirBit & North) - ((dirBit & South) >> 1));
 		public static int GetOppositeDirection(int dirBit) => ((dirBit & North) << 1) | ((dirBit & South) >> 1) | ((dirBit & East) << 1) | ((dirBit & West) >> 1);
