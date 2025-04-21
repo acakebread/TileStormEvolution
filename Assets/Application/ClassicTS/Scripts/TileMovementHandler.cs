@@ -6,82 +6,53 @@ namespace GamePreviewNamespace
 	public class TileMovementHandler
 	{
 		private readonly MapManager mapManager;
-		private readonly TileProperties.TileFlags movementFlags;
+		public TileMovementHandler(MapManager mapManager) => this.mapManager = mapManager;
 
-		public TileMovementHandler(MapManager mapManager, TileProperties.TileFlags movementFlags = TileProperties.TileFlags.Dock | TileProperties.TileFlags.Roll)
+		public struct TileStrip
 		{
-			this.mapManager = mapManager;
-			this.movementFlags = movementFlags;
-		}
-
-		public struct TileChain
-		{
-			public List<int> TileIndices; // Ordered list of tile indices in the chain (head to tail)
+			public List<int> TileIndices; // Ordered list of tile indices in the strip (head to tail)
 			public int DirectionBit; // Drag direction (North, South, East, West)
 		}
 
-		public TileChain GetTileChain(int startTileIndex, int dragDirectionBit)
+		public TileStrip GetTileStrip(int startTileIndex, int dragDirectionBit)
 		{
-			var chain = new TileChain
+			var strip = new TileStrip
 			{
 				TileIndices = new List<int> { startTileIndex },
 				DirectionBit = dragDirectionBit
 			};
 
 			if (dragDirectionBit == 0)
-			{
-				return chain;
-			}
+				return strip;
 
 			// Validate start tile index
 			if (startTileIndex < 0 || startTileIndex >= mapManager.Tiles.Length)
-			{
-				return chain;
-			}
+				return strip;
 
 			// Get start tile properties
 			var startProps = mapManager.GetTilePropertiesAt(startTileIndex);
-			if (startProps == null || !startProps.CanBeDragged)
-			{
-				return chain;
-			}
+			if (startProps == null || !startProps.Interactive)
+				return strip;
 
 			// Use GetAdjacentTile to find contiguous tiles
 			int currentIndex = startTileIndex;
-			int iteration = 1;
-
 			while (true)
 			{
 				// Get the next tile in the direction
 				int nextIndex = mapManager.GetAdjacentTile(currentIndex, dragDirectionBit);
 
-				// Check if nextIndex is valid
-				if (nextIndex == -1 || nextIndex < 0 || nextIndex >= mapManager.Tiles.Length)
-				{
-					break;
-				}
-
 				// Get next tile properties
 				var nextProps = mapManager.GetTilePropertiesAt(nextIndex);
-				if (nextProps == null)
-				{
-					break;
-				}
+				if (nextProps == null || false == nextProps.Interactive) break;
 
-				if (!nextProps.CanBeDragged)
-				{
-					break;
-				}
-
-				chain.TileIndices.Add(nextIndex);
+				strip.TileIndices.Add(nextIndex);
 				currentIndex = nextIndex;
-				iteration++;
 			}
 
 			// Sort indices by position (ascending for positive direction, descending for negative)
 			bool isHorizontal = (dragDirectionBit & (TileProperties.East | TileProperties.West)) != 0;
 			var (dx, dz) = TileProperties.GetDirectionOffset(dragDirectionBit);
-			chain.TileIndices.Sort((a, b) =>
+			strip.TileIndices.Sort((a, b) =>
 			{
 				var coordA = mapManager.GetTileCoordinates(a);
 				var coordB = mapManager.GetTileCoordinates(b);
@@ -90,47 +61,33 @@ namespace GamePreviewNamespace
 				return isPositiveDir ? comparison : -comparison;
 			});
 
-			return chain;
+			return strip;
 		}
 
-		public void HighlightChain(TileChain chain, bool highlight)
+		public void HighlightStrip(TileStrip strip, bool highlight)
 		{
-			foreach (var tileIndex in chain.TileIndices)
+			foreach (var tileIndex in strip.TileIndices)
 			{
-				if (tileIndex < 0 || tileIndex >= mapManager.Tiles.Length)
-				{
-					continue;
-				}
-
-				var tile = mapManager.Tiles[tileIndex];
-				if (tile.GameObject == null)
-				{
-					continue;
-				}
-
-				var meshRenderer = tile.GameObject.GetComponentInChildren<MeshRenderer>();
-				if (meshRenderer == null)
-				{
-					continue;
-				}
+				var tile = mapManager.Tiles[tileIndex].GameObject;
+				var meshRenderer = tile.GetComponentInChildren<MeshRenderer>();
+				if (meshRenderer == null) continue;
 
 				if (highlight)
 				{
 					// Store original material
-					if (!tile.GameObject.TryGetComponent<OriginalMaterialHolder>(out var holder))
+					if (!tile.TryGetComponent<OriginalMaterialHolder>(out var holder))
 					{
-						holder = tile.GameObject.AddComponent<OriginalMaterialHolder>();
+						holder = tile.AddComponent<OriginalMaterialHolder>();
 						holder.originalMaterial = meshRenderer.material;
 					}
 
-					// Create or reuse red material
-					var redMaterial = new Material(meshRenderer.material) { color = Color.red };
-					meshRenderer.material = redMaterial;
+					// Assign red material
+					meshRenderer.material = new Material(meshRenderer.material) { color = Color.red };
 				}
 				else
 				{
 					// Restore original material
-					if (tile.GameObject.TryGetComponent<OriginalMaterialHolder>(out var holder) && holder.originalMaterial != null)
+					if (tile.TryGetComponent<OriginalMaterialHolder>(out var holder) && holder.originalMaterial != null)
 					{
 						meshRenderer.material = holder.originalMaterial;
 					}
@@ -139,9 +96,7 @@ namespace GamePreviewNamespace
 						// Fallback to MapManager's material
 						var originalMaterial = mapManager.GetTileMeshMaterial(tileIndex);
 						if (originalMaterial != null)
-						{
 							meshRenderer.material = originalMaterial;
-						}
 					}
 				}
 			}
@@ -151,16 +106,16 @@ namespace GamePreviewNamespace
 		{
 			if (targetIndex == sourceIndex || targetIndex < 0 || targetIndex >= mapManager.Tiles.Length) return false;
 			var targetProps = mapManager.GetTilePropertiesAt(targetIndex);
-			return targetProps != null && targetProps.Movable;
+			return targetProps != null && targetProps.CanMove;
 		}
 
 		public bool TrySnapToGrid(int tileIndex, Vector3 currentPos, out int targetIndex)
 		{
-			var bounds = mapManager.GetMovementBounds(tileIndex, movementFlags);
+			var bounds = mapManager.GetMovementBounds(tileIndex, TileProperties.TileFlags.Dock | TileProperties.TileFlags.Roll);
 			int x = Mathf.RoundToInt(Mathf.Clamp(currentPos.x, bounds.MinWest.X, bounds.MaxEast.X));
 			int z = Mathf.RoundToInt(Mathf.Clamp(currentPos.z, bounds.MinSouth.Z, bounds.MaxNorth.Z));
 			var targetCoord = new GridCoord(x, z);
-			targetIndex = targetCoord.ToIndex(mapManager.Width);
+			targetIndex = mapManager.ToIndex(targetCoord);
 
 			return ValidateMove(tileIndex, targetIndex);
 		}
@@ -178,15 +133,11 @@ namespace GamePreviewNamespace
 
 			var draggedTile = mapManager.Tiles[targetIndex].GameObject;
 			var targetTile = mapManager.Tiles[sourceIndex].GameObject;
-			if (targetTile != null)
-			{
-				string tempName = draggedTile.name;
-				draggedTile.name = targetTile.name;
-				targetTile.name = tempName;
-				targetTile.transform.position = oldPosition;
-			}
-			if (draggedTile != null)
-				draggedTile.transform.position = newPosition;
+			string tempName = draggedTile.name;
+			draggedTile.name = targetTile.name;
+			targetTile.name = tempName;
+			draggedTile.transform.position = newPosition;
+			targetTile.transform.position = oldPosition;
 		}
 	}
 

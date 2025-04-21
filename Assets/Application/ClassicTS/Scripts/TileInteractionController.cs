@@ -10,7 +10,7 @@ namespace GamePreviewNamespace
 		private MapManager mapManager;
 		private TileMovementHandler movementHandler;
 		private int dragIndex = -1;
-		private TileMovementHandler.TileChain tileChain;
+		private TileMovementHandler.TileStrip tileStrip;
 
 		public void Start()
 		{
@@ -28,10 +28,8 @@ namespace GamePreviewNamespace
 			gestureSystem.OnDragging -= OnDragging;
 
 			// Clear highlights on destroy
-			if (tileChain.TileIndices != null && tileChain.TileIndices.Count > 0)
-			{
-				movementHandler.HighlightChain(tileChain, false);
-			}
+			if (tileStrip.TileIndices != null && tileStrip.TileIndices.Count > 0)
+				movementHandler.HighlightStrip(tileStrip, false);
 		}
 
 		public void Initialize(MapManager manager)
@@ -39,14 +37,14 @@ namespace GamePreviewNamespace
 			mapManager = manager;
 			movementHandler = new TileMovementHandler(mapManager);
 			dragIndex = -1;
-			tileChain = default;
+			tileStrip = default;
 		}
 
 		private bool ValidateMove(int targetIndex)
 		{
 			if (targetIndex == dragIndex || targetIndex < 0 || targetIndex >= mapManager.Tiles.Length) return false;
 			var targetProps = mapManager.GetTilePropertiesAt(targetIndex);
-			return targetProps != null && targetProps.DockOrRoll;
+			return targetProps != null && targetProps.DockOrRoll;//TileProperties.TileFlags.Dock | TileProperties.TileFlags.Roll
 		}
 
 		private void OnDragStart(Vector3 hitPos)
@@ -55,18 +53,18 @@ namespace GamePreviewNamespace
 			int z = Mathf.RoundToInt(hitPos.z);
 			var coord = new GridCoord(x, z);
 			if (coord.X < 0 || coord.X >= mapManager.Width || coord.Z < 0 || coord.Z >= mapManager.Height) return;
-			int tileIndex = coord.ToIndex(mapManager.Width);
+			int tileIndex = mapManager.ToIndex(coord);
 
 			var properties = mapManager.GetTilePropertiesAt(tileIndex);
-			if (properties == null || !properties.CanBeDragged)
+			if (properties == null || !properties.Interactive)
 			{
 				Debug.LogWarning($"Cannot drag tile at index {tileIndex}: {(properties == null ? "Empty" : "Not draggable")}");
 				return;
 			}
 
 			dragIndex = tileIndex;
-			tileChain = movementHandler.GetTileChain(tileIndex, 0); // No direction yet
-			movementHandler.HighlightChain(tileChain, true);
+			tileStrip = movementHandler.GetTileStrip(tileIndex, 0); // No direction yet
+			movementHandler.HighlightStrip(tileStrip, true);
 		}
 
 		private void OnDragging(List<Vector3> gestures)
@@ -80,25 +78,25 @@ namespace GamePreviewNamespace
 				if (gesture.x == 1) dirBit |= TileProperties.East;
 				if (gesture.x == -1) dirBit |= TileProperties.West;
 
-				// Update chain for visualization only
-				var previousChain = tileChain;
+				// Update strip for visualization only
+				var previousStrip = tileStrip;
 				if (dirBit != 0)
 				{
-					tileChain = movementHandler.GetTileChain(dragIndex, dirBit);
+					tileStrip = movementHandler.GetTileStrip(dragIndex, dirBit);
 				}
 				else
 				{
 					if (Mathf.Abs(gesture.x) > Mathf.Abs(gesture.z))
-						tileChain = movementHandler.GetTileChain(dragIndex, gesture.x > 0 ? TileProperties.East : gesture.x < 0 ? TileProperties.West : 0);
+						tileStrip = movementHandler.GetTileStrip(dragIndex, gesture.x > 0 ? TileProperties.East : gesture.x < 0 ? TileProperties.West : 0);
 					else
-						tileChain = movementHandler.GetTileChain(dragIndex, gesture.z > 0 ? TileProperties.North : gesture.z < 0 ? TileProperties.South : 0);
+						tileStrip = movementHandler.GetTileStrip(dragIndex, gesture.z > 0 ? TileProperties.North : gesture.z < 0 ? TileProperties.South : 0);
 				}
 
-				// Update highlights if chain changed
-				if (!tileChain.TileIndices.SequenceEqual(previousChain.TileIndices))
+				// Update highlights if strip changed
+				if (!tileStrip.TileIndices.SequenceEqual(previousStrip.TileIndices))
 				{
-					movementHandler.HighlightChain(previousChain, false); // Restore previous
-					movementHandler.HighlightChain(tileChain, true); // Highlight new
+					movementHandler.HighlightStrip(previousStrip, false); // Restore previous
+					movementHandler.HighlightStrip(tileStrip, true); // Highlight new
 				}
 
 				if (dirBit != 0)
@@ -135,7 +133,7 @@ namespace GamePreviewNamespace
 
 		private void OnDragEnd()
 		{
-			if (dragIndex == -1 || mapManager.Tiles[dragIndex].GameObject == null) return;
+			if (dragIndex == -1) return;
 
 			var currentPos = mapManager.Tiles[dragIndex].GameObject.transform.position;
 
@@ -144,36 +142,30 @@ namespace GamePreviewNamespace
 			int x = Mathf.RoundToInt(Mathf.Clamp(currentPos.x, bounds.MinWest.X, bounds.MaxEast.X));
 			int z = Mathf.RoundToInt(Mathf.Clamp(currentPos.z, bounds.MinSouth.Z, bounds.MaxNorth.Z));
 			var targetCoord = new GridCoord(x, z);
-			int targetIndex = targetCoord.ToIndex(mapManager.Width);
+			int targetIndex = mapManager.ToIndex(targetCoord);
 
 			if (ValidateMove(targetIndex))
-			{
 				movementHandler.SwapTiles(dragIndex, targetIndex);
-			}
 			else
-			{
 				mapManager.Tiles[dragIndex].GameObject.transform.position = mapManager.GetTilePosition(dragIndex);
-			}
 
-			// Clear highlights for current chain
-			if (tileChain.TileIndices != null && tileChain.TileIndices.Count > 0)
-			{
-				movementHandler.HighlightChain(tileChain, false);
-			}
+			// Clear highlights for current strip
+			if (tileStrip.TileIndices != null && tileStrip.TileIndices.Count > 0)
+				movementHandler.HighlightStrip(tileStrip, false);
 
 			// Explicitly clear highlight for the dragged tile's final index
-			if (dragIndex >= 0 && dragIndex < mapManager.Tiles.Length && mapManager.Tiles[dragIndex].GameObject != null)
+			if (dragIndex >= 0 && dragIndex < mapManager.Tiles.Length)
 			{
-				var singleTileChain = new TileMovementHandler.TileChain
+				var singleTileStrip = new TileMovementHandler.TileStrip
 				{
 					TileIndices = new List<int> { dragIndex },
 					DirectionBit = 0
 				};
-				movementHandler.HighlightChain(singleTileChain, false);
+				movementHandler.HighlightStrip(singleTileStrip, false);
 			}
 
 			dragIndex = -1;
-			tileChain = default;
+			tileStrip = default;
 		}
 	}
 }

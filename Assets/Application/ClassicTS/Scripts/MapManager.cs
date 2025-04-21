@@ -26,44 +26,45 @@ namespace GamePreviewNamespace
 		public TileData[] Tiles => tiles;
 		public IReadOnlyList<DatabaseLoader.Waypoint> Waypoints => waypoints?.AsReadOnly();
 
-		public void Reset()
-		{
-			if (mapRoot != null) Destroy(mapRoot);
-			mapRoot = null;
-			currentMap = null;
-			waypoints = null;
-			tiles = null;
-		}
-
-		private bool IsValidTileIndex(int tileIndex) => tileIndex >= 0 && tileIndex < tiles?.Length && Width > 0;
+		public bool IsValidTileIndex(int tileIndex) => tileIndex >= 0 && tileIndex < tiles?.Length && Width > 0;
 
 		public GridCoord GetTileCoordinates(int tileIndex) => IsValidTileIndex(tileIndex) ? new GridCoord(tileIndex % Width, tileIndex / Width) : new GridCoord(0, 0);
 
 		public Vector3 GetTilePosition(int tileIndex) => GetTileCoordinates(tileIndex).ToPosition();
 
-		public TileProperties GetTilePropertiesAt(int tileIndex)
-		{
-			if (!IsValidTileIndex(tileIndex))
-			{
-				Debug.LogWarning($"Invalid tile index: {tileIndex}");
-				return null;
-			}
-			return tiles[tileIndex].Properties;
-		}
+		public TileProperties GetTilePropertiesAt(int tileIndex) => IsValidTileIndex(tileIndex) ? tiles[tileIndex].Properties : null;
+
+		// Convert to map index (z * width + x)
+		public int ToIndex(GridCoord coord) => coord.Z * Width + coord.X;
+
+		// Convert to grid coordinate (z * width + x)
+		public GridCoord FromIndex(int index) => new GridCoord(index % Width, index / Width);
 
 		public int GetAdjacentTile(int tileIndex, int dirBit)
 		{
-			var coord = GetTileCoordinates(tileIndex);
 			var (dx, dz) = TileProperties.GetDirectionOffset(dirBit);
-			var newCoord = coord.Add(dx, dz);
+			var newCoord = GetTileCoordinates(tileIndex).Add(dx, dz);
 			if (newCoord.X < 0 || newCoord.X >= Width || newCoord.Z < 0 || newCoord.Z >= Height) return -1;
-			return newCoord.ToIndex(Width);
+			return ToIndex(newCoord);
 		}
 
-		public GridCoord GetTileCoordinatesForLast(int index, int dirBit, TileProperties.TileFlags flags)
+		public GridCoord GetTileCoordinatesForLast(int index, int dirBit, TileProperties.TileFlags flags) => GetTileCoordinates(SearchDirectionForLast(index, dirBit, flags));
+
+		public int SearchDirectionForLast(int index, int dirBit, TileProperties.TileFlags flags)
 		{
-			int lastIndex = SearchDirectionForLast(index, dirBit, flags);
-			return GetTileCoordinates(lastIndex);
+			var coord = GetTileCoordinates(index);
+			var (dx, dz) = TileProperties.GetDirectionOffset(dirBit);
+			var nextCoord = coord.Add(dx, dz);
+			while (nextCoord.X >= 0 && nextCoord.X < Width && nextCoord.Z >= 0 && nextCoord.Z < Height)
+			{
+				var nextIndex = ToIndex(nextCoord);
+				var props = GetTilePropertiesAt(nextIndex);
+				if (props == null || (props.Flags & flags) == 0) break;
+				index = nextIndex;
+				coord = nextCoord;
+				nextCoord = coord.Add(dx, dz);
+			}
+			return index;
 		}
 
 		public TileProperties.TileMovementBounds GetMovementBounds(int tileIndex, TileProperties.TileFlags flags)
@@ -77,48 +78,25 @@ namespace GamePreviewNamespace
 			};
 		}
 
-		public int SearchDirectionForLast(int index, int dirBit, TileProperties.TileFlags flags)
+		public void Reset()
 		{
-			var coord = GetTileCoordinates(index);
-			var (dx, dz) = TileProperties.GetDirectionOffset(dirBit);
-			var nextCoord = coord.Add(dx, dz);
-			while (nextCoord.X >= 0 && nextCoord.X < Width && nextCoord.Z >= 0 && nextCoord.Z < Height)
-			{
-				var nextIndex = nextCoord.ToIndex(Width);
-				var props = GetTilePropertiesAt(nextIndex);
-				if (props == null || (props.Flags & flags) == 0) break;
-				index = nextIndex;
-				coord = nextCoord;
-				nextCoord = coord.Add(dx, dz);
-			}
-			return index;
+			if (mapRoot != null) Destroy(mapRoot);
+			mapRoot = null;
+			currentMap = null;
+			waypoints = null;
+			tiles = null;
 		}
 
-		private TileData CreateTileData(int tileDefIndex, string szType, string szTheme)
+		private TileProperties CreateTileProperties(string szType, string szTheme)
 		{
-			if (tileDefIndex < 0 || tileDefIndex >= currentMap.defs.Length ||
-				string.IsNullOrEmpty(szType) || szType == "tile_empty")
-			{
-				if (tileDefIndex < 0 || tileDefIndex >= currentMap.defs.Length)
-					Debug.LogWarning($"Invalid tileDefIndex={tileDefIndex}");
-				else if (string.IsNullOrEmpty(szType))
-					Debug.LogWarning($"Null szType at tileDefIndex {tileDefIndex}");
-				return default;
-			}
-
 			var tileDef = DatabaseLoader.instance.TileDefs.FirstOrDefault(td => td.szType == szType && td.szTheme == szTheme);
-			if (tileDef == null)
-				return default;
-
-			return new TileData { Properties = new TileProperties(tileDef) };
+			return tileDef != null ? new TileProperties(tileDef) : null;
 		}
 
 		public void Initialize(string mapName)
 		{
 			Reset();
-			currentMap = string.IsNullOrEmpty(mapName)
-				? DatabaseLoader.instance.Maps.FirstOrDefault()
-				: DatabaseLoader.instance.Maps.FirstOrDefault(m => m.name == mapName);
+			currentMap = string.IsNullOrEmpty(mapName) ? DatabaseLoader.instance.Maps.FirstOrDefault() : DatabaseLoader.instance.Maps.FirstOrDefault(m => m.name == mapName);
 
 			if (currentMap == null)
 			{
@@ -132,9 +110,7 @@ namespace GamePreviewNamespace
 
 			waypoints = currentMap.waypoints?.Where(w => w != null).ToList();
 			if (waypoints == null || waypoints.Count == 0)
-			{
 				waypoints = SetupWaypoints();
-			}
 
 			if (PreviewSettings.Scramble)
 				Scramble();
@@ -151,9 +127,7 @@ namespace GamePreviewNamespace
 			LoadTileData(currentMap.tiles);
 			waypoints = currentMap.waypoints?.Where(w => w != null).ToList();
 			if (waypoints == null || waypoints.Count == 0)
-			{
 				waypoints = SetupWaypoints();
-			}
 
 			UpdateTileObjectNamesAndPositions();
 		}
@@ -168,71 +142,74 @@ namespace GamePreviewNamespace
 			}
 
 			this.tiles = new TileData[tiles.nWidth * tiles.nHeight];
-			Vector3 mapCentre = Vector3.zero;
-			int activeTileCount = 0;
 
-			for (int index = 0; index < tileMap.Length; index++)
+			for (var index = 0; index < tileMap.Length; index++)
 			{
-				int tileDefIndex = tileMap[index];
-				string szType = currentMap.defs[tileDefIndex].szType;
-				string szTheme = currentMap.defs[tileDefIndex].szTheme;
+				var tileDefIndex = tileMap[index];
+				if (tileDefIndex < 0 || tileDefIndex >= currentMap.defs.Length)
+					Debug.LogWarning($"Invalid tileDefIndex={tileDefIndex}");
 
-				this.tiles[index] = CreateTileData(tileDefIndex, szType, szTheme);
+				var szTheme = currentMap.defs[tileDefIndex].szTheme;
+				if (string.IsNullOrEmpty(szTheme))
+					Debug.LogWarning($"Null szTheme at tileDefIndex {tileDefIndex}");
+
+				var szType = currentMap.defs[tileDefIndex].szType;
+				if (szType == "tile_empty")
+					continue;
+
+				this.tiles[index].Properties = CreateTileProperties(szType, szTheme);
 				if (this.tiles[index].Properties == null)
 					continue;
+
+				var coord = GetTileCoordinates(index);
+				var tileObj = new GameObject($"Tile_{index}_{coord.X}_{coord.Z}");
+				this.tiles[index].GameObject = tileObj;
+				tileObj.transform.SetParent(mapRoot.transform, false);
+				tileObj.transform.position = coord.ToPosition();
 
 				if (szType == "tile_invisible")
 					continue;
 
-				var coord = GetTileCoordinates(index);
-				GameObject tileObj = new GameObject($"{this.tiles[index].Properties.Type}_{coord.X}_{coord.Z}");
-				this.tiles[index].GameObject = tileObj;
-				tileObj.transform.SetParent(mapRoot.transform, false);
-				tileObj.transform.position = coord.ToPosition();
 				if (PreviewSettings.FlipGeometry)
 					tileObj.transform.rotation = Quaternion.AngleAxis(180, Vector3.up);
 
-				if (this.tiles[index].Properties.Movable)
+				if (this.tiles[index].Properties.CanMove)
 				{
 					var collider = tileObj.AddComponent<BoxCollider>();
 					collider.size = new Vector3(1f, 0.5f, 1f);
 					collider.center = new Vector3(0f, 0.25f, 0f);
 				}
 
-				string geomPath = $"{PreviewSettings.GeometryPath}{this.tiles[index].Properties.Geom}".Replace(".x", "");
-				GameObject geomAsset = Resources.Load<GameObject>(geomPath);
+				var geomPath = $"{PreviewSettings.GeometryPath}{this.tiles[index].Properties.Geom}".Replace(".x", "");
+				var geomAsset = Resources.Load<GameObject>(geomPath);
 				if (geomAsset != null)
 				{
-					GameObject geomInstance = Object.Instantiate(geomAsset, tileObj.transform);
+					var geomInstance = Instantiate(geomAsset, tileObj.transform);
 					geomInstance.transform.localPosition = Vector3.zero;
 					geomInstance.name = this.tiles[index].Properties.Geom;
+
+					var textureSet = TileAnimator.GetTextureSetForTileDef(this.tiles[index].Properties.tileDef);
+					if (textureSet?.frames?.Length > 0)
+					{
+						var animator = tileObj.AddComponent<TileAnimator>();
+						animator.Initialize(textureSet);
+					}
+					else
+					{
+						Debug.LogWarning($"No texture set for {this.tiles[index].Properties.Type}, theme={this.tiles[index].Properties.Theme}");
+					}
 				}
 				else
 				{
 					Debug.LogWarning($"Geometry not found: {geomPath}");
-					GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+					var cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
 					cube.transform.SetParent(tileObj.transform, false);
 					cube.transform.localPosition = Vector3.zero;
 					cube.transform.localScale = Vector3.one * 0.1f;
 					cube.name = "Fallback_Cube";
 				}
-
-				DatabaseLoader.TextureSet textureSet = TileAnimator.GetTextureSetForTileDef(this.tiles[index].Properties.tileDef);
-				if (textureSet?.frames?.Length > 0)
-				{
-					var animator = tileObj.AddComponent<TileAnimator>();
-					animator.Initialize(textureSet);
-				}
-				else
-				{
-					Debug.LogWarning($"No texture set for {this.tiles[index].Properties.Type}, theme={this.tiles[index].Properties.Theme}");
-				}
-
-				mapCentre += coord.ToPosition();
-				activeTileCount++;
 			}
-
-			SetCameraPosition(mapCentre, activeTileCount);
+			SetCameraPosition();
 		}
 
 		public void Scramble()
@@ -260,16 +237,29 @@ namespace GamePreviewNamespace
 		{
 			for (int index = 0; index < tiles.Length; index++)
 			{
-				if (tiles[index].GameObject == null) continue;
+				if (null == tiles[index].GameObject) continue;
 				var coord = GetTileCoordinates(index);
 				tiles[index].GameObject.name = $"{tiles[index].Properties?.Type ?? "Empty"}_{coord.X}_{coord.Z}";
 				tiles[index].GameObject.transform.position = coord.ToPosition();
 			}
 		}
 
-		private void SetCameraPosition(Vector3 mapCentre, int activeTileCount)
+		private void SetCameraPosition()
 		{
-			Camera.main.transform.position = activeTileCount > 0 ? (mapCentre / activeTileCount) + Vector3.up * 10f : Vector3.up * 10f;
+			var mapMin = Vector3.one * 1000f;
+			var mapMax = Vector3.zero;
+			var activeTileCount = 0;
+			for (int index = 0; index < tiles.Length; index++)
+			{
+				if (GetTilePropertiesAt(index) != null)
+				{
+					var pos = GetTileCoordinates(index).ToPosition();
+					mapMin = Vector3.Min(mapMin, pos);
+					mapMax = Vector3.Max(mapMax, pos);
+					activeTileCount++;
+				}
+			}
+			Camera.main.transform.position = activeTileCount > 0 ? (mapMin + mapMax) * 0.5f + Vector3.up * (mapMax.z - mapMin.z) : Vector3.up * 10f;
 			Camera.main.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
 		}
 
@@ -451,7 +441,7 @@ namespace GamePreviewNamespace
 
 		public Material GetTileMeshMaterial(int tileIndex)
 		{
-			if (tileIndex < 0 || tileIndex >= tiles.Length || tiles[tileIndex].GameObject == null)
+			if (tileIndex < 0 || tileIndex >= tiles.Length)
 				return null;
 
 			var meshRenderer = tiles[tileIndex].GameObject.GetComponentInChildren<MeshRenderer>();
@@ -480,7 +470,6 @@ namespace GamePreviewNamespace
 			return assetRenderer.sharedMaterial;
 		}
 
-		public string FormatPath(List<int> path) =>
-			string.Join(" -> ", path.Select(t => GetTileCoordinates(t).ToString()));
+		public string FormatPath(List<int> path) => string.Join(" -> ", path.Select(t => GetTileCoordinates(t).ToString()));
 	}
 }
