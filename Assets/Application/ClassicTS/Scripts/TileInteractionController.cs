@@ -1,6 +1,5 @@
 using UnityEngine;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace GamePreviewNamespace
 {
@@ -38,12 +37,6 @@ namespace GamePreviewNamespace
 			tileStrip = default;
 		}
 
-		private bool IsDockOrRoll(int targetIndex)
-		{
-			var targetProps = mapManager.GetTilePropertiesAt(targetIndex);
-			return targetProps != null && (targetProps.IsDock | targetProps.IsRoll);
-		}
-
 		private void OnDragStart(Vector3 hitPos)
 		{
 			int x = Mathf.RoundToInt(hitPos.x);
@@ -69,68 +62,71 @@ namespace GamePreviewNamespace
 			if (dragIndex == -1) return;
 			foreach (var gesture in gestures)
 			{
+				mapManager.HighlightStrip(tileStrip, false);
+
+				// restore all the tiles positions to correct grid location before any displacements are calculated
+				if (null != tileStrip.TileIndices)
+				{
+					foreach (var tileIndex in tileStrip.TileIndices)
+						mapManager.Tiles[tileIndex].GameObject.transform.position = mapManager.GetTilePosition(tileIndex);
+				}
+
 				int dirBit = 0;
 				if (gesture.z == 1) dirBit |= TileProperties.North;
 				if (gesture.z == -1) dirBit |= TileProperties.South;
 				if (gesture.x == 1) dirBit |= TileProperties.East;
 				if (gesture.x == -1) dirBit |= TileProperties.West;
 
-				// Update strip for visualization only
-				var previousStrip = tileStrip;
 				if (dirBit != 0)
 				{
+
 					tileStrip = mapManager.GetTileStrip(dragIndex, dirBit);
-				}
-				else
-				{
-					if (Mathf.Abs(gesture.x) > Mathf.Abs(gesture.z))
-						tileStrip = mapManager.GetTileStrip(dragIndex, gesture.x > 0 ? TileProperties.East : gesture.x < 0 ? TileProperties.West : 0);
-					else
-						tileStrip = mapManager.GetTileStrip(dragIndex, gesture.z > 0 ? TileProperties.North : gesture.z < 0 ? TileProperties.South : 0);
-				}
+					if (true == mapManager.RollStrip(tileStrip))
+						dragIndex = mapManager.GetAdjacentTile(dragIndex, dirBit);
+					tileStrip = mapManager.GetTileStrip(dragIndex, dirBit);
 
-				// Update highlights if strip changed
-				if (!tileStrip.TileIndices.SequenceEqual(previousStrip.TileIndices))
-				{
-					mapManager.HighlightStrip(previousStrip, false); // Restore previous
-					mapManager.HighlightStrip(tileStrip, true); // Highlight new
-				}
-
-				if (dirBit != 0)
-				{
-					int newIndex = mapManager.GetAdjacentTile(dragIndex, dirBit);
-					if (newIndex != -1 && IsDockOrRoll(newIndex))
-					{
-						mapManager.SwapTiles(dragIndex, newIndex);
-						gestureSystem.ConsumeGesture(gesture);
-						dragIndex = newIndex;
-					}
+					gestureSystem.ConsumeGesture(gesture);
 				}
 				else
 				{
 					// Remainder is partial drag position
-					var currentPos = mapManager.GetTilePosition(dragIndex);
 
-					var bounds = mapManager.GetMovementBounds(dragIndex, TileProperties.TileFlags.Dock | TileProperties.TileFlags.Roll);
+					var delta = Vector3.zero;
+
+					tileStrip = new MapManager.TileStrip();
 					if (Mathf.Abs(gesture.x) > Mathf.Abs(gesture.z))
 					{
-						var dragPos = currentPos + new Vector3(gesture.x, 0f, 0f);
-						currentPos.x = Mathf.Clamp(dragPos.x, bounds.MinWest.X, bounds.MaxEast.X);
+						if (Mathf.Abs(gesture.x) > 0f)
+						{
+							tileStrip = mapManager.GetTileStrip(dragIndex, gesture.x > 0f ? TileProperties.East : TileProperties.West);
+							if (mapManager.Tiles[tileStrip.Last].Properties.IsDock | mapManager.Tiles[tileStrip.Last].Properties.IsRoll)
+								delta = new Vector3(gesture.x, 0, 0);
+						}
 					}
 					else
 					{
-						var dragPos = currentPos + new Vector3(0f, 0f, gesture.z);
-						currentPos.z = Mathf.Clamp(dragPos.z, bounds.MinSouth.Z, bounds.MaxNorth.Z);
+						if (Mathf.Abs(gesture.z) > 0f)
+						{
+							tileStrip = mapManager.GetTileStrip(dragIndex, gesture.z > 0f ? TileProperties.North : TileProperties.South);
+							if (mapManager.Tiles[tileStrip.Last].Properties.IsDock | mapManager.Tiles[tileStrip.Last].Properties.IsRoll)
+								delta = new Vector3(0, 0, gesture.z);
+						}
 					}
 
-					mapManager.Tiles[dragIndex].GameObject.transform.position = currentPos;
+					if (null != tileStrip.TileIndices)
+					{
+						foreach (var tileIndex in tileStrip.TileIndices)
+							mapManager.Tiles[tileIndex].GameObject.transform.position += delta;
+					}
 				}
+				mapManager.HighlightStrip(tileStrip, true);
 			}
 		}
 
 		private void OnDragEnd()
 		{
 			if (dragIndex == -1) return;
+			mapManager.HighlightStrip(tileStrip, false);
 
 			var currentPos = mapManager.Tiles[dragIndex].GameObject.transform.position;
 
@@ -141,14 +137,14 @@ namespace GamePreviewNamespace
 			var targetCoord = new GridCoord(x, z);
 			int targetIndex = mapManager.ToIndex(targetCoord);
 
-			// Clear highlights for current strip
-			if (tileStrip.TileIndices != null && tileStrip.TileIndices.Count > 0)
-				mapManager.HighlightStrip(tileStrip, false);
+			if (targetIndex != dragIndex)
+				mapManager.RollStrip(tileStrip);
 
-			if (IsDockOrRoll(targetIndex))
-				mapManager.SwapTiles(dragIndex, targetIndex);
-			else
-				mapManager.Tiles[dragIndex].GameObject.transform.position = mapManager.GetTilePosition(dragIndex);
+			if (null != tileStrip.TileIndices)
+			{
+				foreach (var tileIndex in tileStrip.TileIndices)
+					mapManager.Tiles[tileIndex].GameObject.transform.position = mapManager.GetTilePosition(tileIndex);
+			}
 
 			dragIndex = -1;
 			tileStrip = default;

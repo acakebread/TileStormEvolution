@@ -14,6 +14,10 @@ public class PreviewSettings : MonoBehaviour
 	[SerializeField] private bool show_hidden_tiles = false;
 	public static bool ShowHiddenTiles => instance.show_hidden_tiles;
 
+	[Header("show tile selection")]
+	[SerializeField] private bool show_tile_selection = false;
+	public static bool ShowTileSelection => instance.show_tile_selection;
+
 	[Header("resource paths")]
 	[SerializeField] private string geometryPath = "Geometry/obj/";
 	public static string GeometryPath => instance.geometryPath;

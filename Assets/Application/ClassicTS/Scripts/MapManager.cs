@@ -446,30 +446,73 @@ namespace GamePreviewNamespace
 			return -1;
 		}
 
-		public void SwapTiles(int sourceIndex, int targetIndex)
+		public bool RollStrip(TileStrip strip)
 		{
-			var oldPosition = GetTilePosition(sourceIndex);
-			var newPosition = GetTilePosition(targetIndex);
+			if (strip.TileIndices == null || strip.TileIndices.Count < 2 || strip.DirectionBit == 0)
+			{
+				//Debug.LogWarning($"Invalid strip for rolling: TileIndices={(strip.TileIndices == null ? "null" : strip.TileIndices.Count.ToString())}, DirectionBit={strip.DirectionBit}");
+				return false;
+			}
 
-			var temp = Tiles[sourceIndex];
-			Tiles[sourceIndex] = Tiles[targetIndex];
-			Tiles[targetIndex] = temp;
+			// Validate: last tile must be Slide, others must be Interactive
+			int lastIndex = strip.TileIndices[strip.TileIndices.Count - 1];
+			var lastProps = GetTilePropertiesAt(lastIndex);
+			if (lastProps == null || !lastProps.IsSlide)
+			{
+				Debug.LogWarning($"Last tile in strip (index {lastIndex}) is not a Slide tile. Properties: {(lastProps == null ? "null" : lastProps.Type)}");
+				return false;
+			}
 
-			var draggedTile = Tiles[targetIndex].GameObject;
-			var targetTile = Tiles[sourceIndex].GameObject;
+			for (int i = 0; i < strip.TileIndices.Count - 1; i++)
+			{
+				var props = GetTilePropertiesAt(strip.TileIndices[i]);
+				if (props == null || !props.Interactive)
+				{
+					Debug.LogWarning($"Tile at index {strip.TileIndices[i]} is not Interactive. Properties: {(props == null ? "null" : props.Type)}");
+					return false;
+				}
+			}
 
-			var tempName = draggedTile.name;
-			draggedTile.name = targetTile.name;
-			targetTile.name = tempName;
+			// Store tile data and positions
+			var tileData = new TileData[strip.TileIndices.Count];
+			var positions = new Vector3[strip.TileIndices.Count];
+			for (int i = 0; i < strip.TileIndices.Count; i++)
+			{
+				int index = strip.TileIndices[i];
+				tileData[i] = Tiles[index];
+				positions[i] = GetTilePosition(index);
+			}
 
-			draggedTile.transform.position = newPosition;
-			targetTile.transform.position = oldPosition;
+			// Perform the roll
+			for (int i = 0; i < strip.TileIndices.Count; i++)
+			{
+				int currentIndex = strip.TileIndices[i];
+				if (i == 0)
+				{
+					Tiles[currentIndex] = tileData[strip.TileIndices.Count - 1]; // Slide tile
+					Tiles[currentIndex].GameObject.transform.position = positions[0];
+				}
+				else
+				{
+					Tiles[currentIndex] = tileData[i - 1]; // Previous tile
+					Tiles[currentIndex].GameObject.transform.position = positions[i];
+				}
+
+				var coord = GetTileCoordinates(currentIndex);
+				Tiles[currentIndex].GameObject.name = $"{Tiles[currentIndex].Properties?.Type ?? "Empty"}_{coord.X}_{coord.Z}";
+			}
+
+			Debug.Log($"Rolled strip: [{string.Join(", ", strip.TileIndices)}] in direction {strip.DirectionBit}");
+			return true;
 		}
 
 		public struct TileStrip
 		{
 			public List<int> TileIndices; // Ordered list of tile indices in the strip (head to tail)
 			public int DirectionBit; // Drag direction (North, South, East, West)
+
+			public readonly int First => TileIndices.First();// TileIndices?.Count > 0 ? TileIndices[0] : -1;
+			public readonly int Last => TileIndices.Last();// TileIndices?.Count > 0 ? TileIndices[TileIndices.Count - 1] : -1;
 		}
 
 		public class OriginalMaterialHolder : MonoBehaviour { public Material originalMaterial; }
@@ -523,6 +566,8 @@ namespace GamePreviewNamespace
 
 		public void HighlightStrip(TileStrip strip, bool highlight)
 		{
+			if (false == PreviewSettings.ShowTileSelection) return;
+			if (null == strip.TileIndices) return;
 			foreach (var tileIndex in strip.TileIndices)
 			{
 				var tile = Tiles[tileIndex].GameObject;
