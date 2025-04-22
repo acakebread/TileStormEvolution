@@ -39,6 +39,13 @@ namespace GamePreviewNamespace
 
 		public GridCoord FromIndex(int index) => new GridCoord(index % Width, index / Width);
 
+		public Vector3 GetCentre()
+		{
+			if (Width == 0 || Height == 0)
+				return Vector3.zero;
+			return new Vector3(Width / 2f, 0.5f, Height / 2f); // Approximate map center
+		}
+
 		public int GetAdjacentTile(int tileIndex, int dirBit)
 		{
 			var (dx, dz) = TileProperties.GetDirectionOffset(dirBit);
@@ -394,7 +401,7 @@ namespace GamePreviewNamespace
 			path = null;
 			if (Waypoints == null || currentWaypointIndex < 0 || currentWaypointIndex + 1 >= Waypoints.Count)
 			{
-				Debug.Log($"No next waypoint (currentIndex={currentWaypointIndex}, waypoints.Count={Waypoints?.Count ?? 0})");
+				//Debug.Log($"No next waypoint (currentIndex={currentWaypointIndex}, waypoints.Count={Waypoints?.Count ?? 0})");
 				return false;
 			}
 
@@ -403,7 +410,7 @@ namespace GamePreviewNamespace
 			path = FindPath(startTile, targetTile);
 			if (path != null)
 			{
-				Debug.Log($"Found path to waypoint {targetTile}: [{FormatPath(path)}]");
+				//Debug.Log($"Found path to waypoint {targetTile}: [{FormatPath(path)}]");
 				return true;
 			}
 			return false;

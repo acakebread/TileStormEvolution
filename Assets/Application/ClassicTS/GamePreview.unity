@@ -239,7 +239,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   flip: 1
   scramble: 1
-  show_hidden_tiles: 1
+  show_hidden_tiles: 0
+  show_tile_selection: 0
   geometryPath: Geometry/obj/
   texturePath: Textures/
 --- !u!4 &862124737
@@ -414,7 +415,7 @@ Camera:
     height: 1
   near clip plane: 0.3
   far clip plane: 1000
-  field of view: 60
+  field of view: 35
   orthographic: 0
   orthographic size: 5
   m_Depth: -1
@@ -507,7 +508,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 17e4919eca5ba004db3f333e3ff1d7b4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  mapName: Industrial 02
+  mapName: Industrial 13
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

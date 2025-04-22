@@ -11,6 +11,7 @@ namespace GamePreviewNamespace
 		private MapManager mapManager;
 		private EggbotController eggbotController;
 		private TileInteractionController tileInteractionController;
+		private CameraController cameraController; // New
 		private bool isInitialized;
 
 		void Awake()
@@ -18,10 +19,12 @@ namespace GamePreviewNamespace
 			mapManager = GetComponent<MapManager>();
 			eggbotController = GetComponent<EggbotController>();
 			tileInteractionController = GetComponent<TileInteractionController>();
+			cameraController = GetComponent<CameraController>(); // New
 
 			if (mapManager == null) mapManager = gameObject.AddComponent<MapManager>();
 			if (eggbotController == null) eggbotController = gameObject.AddComponent<EggbotController>();
 			if (tileInteractionController == null) tileInteractionController = gameObject.AddComponent<TileInteractionController>();
+			if (cameraController == null) cameraController = gameObject.AddComponent<CameraController>(); // New
 		}
 
 		void Start()
@@ -47,6 +50,7 @@ namespace GamePreviewNamespace
 			{
 				DatabaseLoader.instance.OnDatabaseLoaded -= Initialize;
 			}
+			if (cameraController == null) cameraController = gameObject.AddComponent<CameraController>(); // New
 		}
 
 		void Initialize()
@@ -65,11 +69,15 @@ namespace GamePreviewNamespace
 			tileInteractionController.Initialize(mapManager);
 			mapManager.Initialize(mapName);
 			eggbotController.Initialize(mapManager);
+			cameraController.Initialize(mapManager, eggbotController); // Initialize and reset together
+			cameraController.ResetCamera(); // Moved after Initialize
 		}
 
 		void Update()
 		{
-			eggbotController.UpdateEggbot();
+			//mapManager?.UpdateMap();
+			eggbotController?.UpdateEggbot();
+			cameraController?.UpdateCamera();
 		}
 
 		void OnGUI()

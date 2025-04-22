@@ -107,11 +107,11 @@ namespace GamePreviewNamespace
 				DatabaseLoader.TextureSet texSet = DatabaseLoader.instance.TextureSets.FirstOrDefault(ts => ts.name == theme.szTileTextureSet);
 				if (texSet != null && texSet.frames != null && texSet.frames.Length > 0)
 				{
-					Debug.Log($"TextureSet found: {texSet.name}, frames={texSet.frames.Length}");
+					//Debug.Log($"TextureSet found: {texSet.name}, frames={texSet.frames.Length}");
 					return texSet;
 				}
 			}
-			Debug.LogWarning($"No TextureSet for theme={tileDef.szTheme}");
+			//Debug.LogWarning($"No TextureSet for theme={tileDef.szTheme}");
 			return null;
 		}
 	}

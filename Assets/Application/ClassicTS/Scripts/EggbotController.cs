@@ -6,7 +6,8 @@ namespace GamePreviewNamespace
 	public class EggbotController : MonoBehaviour
 	{
 		private MapManager mapManager;
-		private GameObject eggbot;
+		private CameraController cameraController;
+		public GameObject eggbot;
 
 		private List<int> currentPath;
 		private int pathStepIndex;
@@ -26,6 +27,7 @@ namespace GamePreviewNamespace
 		public void Initialize(MapManager manager)
 		{
 			mapManager = manager;
+			cameraController = GetComponent<CameraController>();
 			InitializeEggbot();
 			Reset();
 		}
@@ -37,22 +39,7 @@ namespace GamePreviewNamespace
 			isMoving = isLevelComplete = isPuzzleBlocked = false;
 			moveTimer = 0f;
 			pauseTimer = pauseDuration;
-		}
-
-		private void InitializeEggbot()
-		{
-			int startTile = mapManager.GetStartTile();
-			if (startTile == -1)
-				return;
-
-			if (eggbot != null) Destroy(eggbot);
-			eggbot = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-			eggbot.name = "Eggbot";
-			var transform = eggbot.transform;
-			transform.SetParent(mapManager.MapRoot.transform, false);
-			transform.localScale = new Vector3(0.3f, 0.5f, 0.3f);
-			transform.position = mapManager.GetTilePosition(startTile);
-			Debug.Log($"Eggbot at tile {startTile} ({transform.position.x}, {transform.position.z})");
+			// Removed: cameraController?.OnWaypointReached(0); // Handled by CameraController.ResetCamera
 		}
 
 		public void UpdateEggbot()
@@ -88,18 +75,23 @@ namespace GamePreviewNamespace
 						currentWaypointIndex++;
 						currentPath = null;
 
-						int waypointTile = mapManager.Waypoints[currentWaypointIndex].nTile;
-						var tileProps = mapManager.GetTilePropertiesAt(waypointTile);
-						if (currentWaypointIndex >= mapManager.Waypoints.Count - 1 && tileProps?.IsEnd == true)
+						if (currentWaypointIndex < mapManager.Waypoints.Count)
 						{
-							Debug.Log($"Level complete at tile ({waypointTile % mapManager.Width},{waypointTile / mapManager.Width})!");
-							isLevelComplete = true;
-						}
-						else if (tileProps?.IsConsole == true)
-						{
-							isPuzzleBlocked = !mapManager.CheckPathBetweenWaypoints(currentWaypointIndex, out _);
-							if (isPuzzleBlocked)
-								Debug.Log($"Waiting at console at tile ({waypointTile % mapManager.Width},{waypointTile / mapManager.Width})...");
+							int waypointTile = mapManager.Waypoints[currentWaypointIndex].nTile;
+							var tileProps = mapManager.GetTilePropertiesAt(waypointTile);
+							cameraController?.OnWaypointReached(currentWaypointIndex); // Notify for wp1 and beyond
+
+							if (currentWaypointIndex >= mapManager.Waypoints.Count - 1 && tileProps?.IsEnd == true)
+							{
+								//Debug.Log($"Level complete at tile ({waypointTile % mapManager.Width},{waypointTile / mapManager.Width})!");
+								isLevelComplete = true;
+							}
+							else if (tileProps?.IsConsole == true)
+							{
+								isPuzzleBlocked = !mapManager.CheckPathBetweenWaypoints(currentWaypointIndex, out _);
+								//if (isPuzzleBlocked)
+								//	Debug.Log($"Waiting at console at tile ({waypointTile % mapManager.Width},{waypointTile / mapManager.Width})...");
+							}
 						}
 					}
 					else
@@ -118,18 +110,34 @@ namespace GamePreviewNamespace
 			int currentTile = mapManager.Waypoints[currentWaypointIndex].nTile;
 			if (mapManager.FindAdjacentConsole(currentTile) != -1 && !mapManager.CheckPathBetweenWaypoints(currentWaypointIndex, out _))
 			{
-				//Debug.Log($"Puzzle blocked at console at tile ({currentTile % mapManager.Width},{currentTile / mapManager.Width})");
 				return;
 			}
 
 			if (mapManager.CheckPathBetweenWaypoints(currentWaypointIndex, out currentPath))
 			{
 				isPuzzleBlocked = false;
+				cameraController?.OnPuzzleSolved(currentWaypointIndex);
 				isMoving = true;
 				moveTimer = 0f;
 				pathStepIndex = 0;
-				Debug.Log($"Moving to waypoint {currentWaypointIndex + 1}: tile={mapManager.Waypoints[currentWaypointIndex + 1].nTile}, path=[{mapManager.FormatPath(currentPath)}]");
+				//Debug.Log($"Moving to waypoint {currentWaypointIndex + 1}: tile={mapManager.Waypoints[currentWaypointIndex + 1].nTile}, path=[{mapManager.FormatPath(currentPath)}]");
 			}
+		}
+
+		private void InitializeEggbot()
+		{
+			int startTile = mapManager.GetStartTile();
+			if (startTile == -1)
+				return;
+
+			if (eggbot != null) Destroy(eggbot);
+			eggbot = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+			eggbot.name = "Eggbot";
+			var transform = eggbot.transform;
+			transform.SetParent(mapManager.MapRoot.transform, false);
+			transform.localScale = new Vector3(0.3f, 0.5f, 0.3f);
+			transform.position = mapManager.GetTilePosition(startTile);
+			//Debug.Log($"Eggbot at tile {startTile} ({transform.position.x}, {transform.position.z})");
 		}
 	}
 }
