@@ -5,13 +5,8 @@ using System.Collections.Generic;
 public class GestureSystem : MonoBehaviour
 {
 	public static GestureSystem instance;
-	public enum GestureMode { Inactive, DraggingX, DraggingZ }
-	public bool isDragging => currentMode == GestureMode.DraggingX || currentMode == GestureMode.DraggingZ;
-
-	private GestureMode currentMode = GestureMode.Inactive;
 	private Vector3 startMousePos;
 	private bool isMouseDown;
-	private const float lockThreshold = 0.1f;
 	private const float gridSize = 1.0f;
 
 	public event Action<Vector3> OnDragStart;
@@ -22,7 +17,7 @@ public class GestureSystem : MonoBehaviour
 
 	private void Update()
 	{
-		if (Input.GetMouseButtonDown(0) && currentMode == GestureMode.Inactive)
+		if (Input.GetMouseButtonDown(0) && false == isMouseDown)
 		{
 			StartDrag();
 		}
@@ -47,7 +42,6 @@ public class GestureSystem : MonoBehaviour
 		startMousePos = ray.GetPoint(distance);
 		isMouseDown = true;
 
-		currentMode = GestureMode.Inactive;
 		OnDragStart?.Invoke(startMousePos);
 	}
 
@@ -55,10 +49,7 @@ public class GestureSystem : MonoBehaviour
 	{
 		Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
 		Plane mapPlane = new Plane(Vector3.up, Vector3.zero);
-		if (!mapPlane.Raycast(ray, out float distance))
-		{
-			return;
-		}
+		if (!mapPlane.Raycast(ray, out float distance)) return;
 
 		Vector3 currentPos = ray.GetPoint(distance);
 		Vector3 tempStartMousePos = startMousePos;
@@ -94,28 +85,11 @@ public class GestureSystem : MonoBehaviour
 		{
 			OnDragging?.Invoke(gestureList);
 		}
-		currentMode = EvaluateMode(currentPos - startMousePos);
-	}
-
-	private GestureMode EvaluateMode(Vector3 delta)
-	{
-		float absX = Mathf.Abs(delta.x);
-		float absZ = Mathf.Abs(delta.z);
-		if (absX > absZ && absX > lockThreshold)
-		{
-			return GestureMode.DraggingX;
-		}
-		if (absZ > lockThreshold)
-		{
-			return GestureMode.DraggingZ;
-		}
-		return GestureMode.Inactive;
 	}
 
 	private void EndDrag()
 	{
 		isMouseDown = false;
 		OnDragEnd?.Invoke();
-		currentMode = GestureMode.Inactive;
 	}
 }
