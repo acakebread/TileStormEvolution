@@ -26,7 +26,7 @@ namespace GamePreviewNamespace
 			gestureSystem.OnDragging -= OnDragging;
 
 			// Clear highlights on destroy
-			if (tileStrip.TileIndices != null && tileStrip.TileIndices.Count > 0)
+			if (tileStrip.TileIndices != null)
 				mapManager.HighlightStrip(tileStrip, false);
 		}
 
@@ -79,10 +79,9 @@ namespace GamePreviewNamespace
 
 				if (dirBit != 0)
 				{
-
 					tileStrip = mapManager.GetTileStrip(dragIndex, dirBit);
 					if (true == mapManager.RollStrip(tileStrip))
-						dragIndex = mapManager.GetAdjacentTile(dragIndex, dirBit);
+						dragIndex = mapManager.GetAdjacentTile(dragIndex, dirBit);//tileStrip.TileIndices[1];
 					tileStrip = mapManager.GetTileStrip(dragIndex, dirBit);
 
 					gestureSystem.ConsumeGesture(gesture);
@@ -90,27 +89,20 @@ namespace GamePreviewNamespace
 				else
 				{
 					// Remainder is partial drag position
-
 					var delta = Vector3.zero;
 
 					tileStrip = new MapManager.TileStrip();
 					if (Mathf.Abs(gesture.x) > Mathf.Abs(gesture.z))
 					{
-						if (Mathf.Abs(gesture.x) > 0f)
-						{
-							tileStrip = mapManager.GetTileStrip(dragIndex, gesture.x > 0f ? TileProperties.East : TileProperties.West);
-							if (mapManager.Tiles[tileStrip.Last].Properties.IsDock | mapManager.Tiles[tileStrip.Last].Properties.IsRoll)
-								delta = new Vector3(gesture.x, 0, 0);
-						}
+						tileStrip = mapManager.GetTileStrip(dragIndex, gesture.x > 0f ? TileProperties.East : TileProperties.West);
+						if (true == tileStrip.LastIsRollOrDock)
+							delta = new Vector3(gesture.x, 0, 0);
 					}
 					else
 					{
-						if (Mathf.Abs(gesture.z) > 0f)
-						{
-							tileStrip = mapManager.GetTileStrip(dragIndex, gesture.z > 0f ? TileProperties.North : TileProperties.South);
-							if (mapManager.Tiles[tileStrip.Last].Properties.IsDock | mapManager.Tiles[tileStrip.Last].Properties.IsRoll)
-								delta = new Vector3(0, 0, gesture.z);
-						}
+						tileStrip = mapManager.GetTileStrip(dragIndex, gesture.z > 0f ? TileProperties.North : TileProperties.South);
+						if (true == tileStrip.LastIsRollOrDock)
+							delta = new Vector3(0, 0, gesture.z);
 					}
 
 					if (null != tileStrip.TileIndices)
@@ -128,20 +120,19 @@ namespace GamePreviewNamespace
 			if (dragIndex == -1) return;
 			mapManager.HighlightStrip(tileStrip, false);
 
-			var currentPos = mapManager.Tiles[dragIndex].GameObject.transform.position;
-
-			// Check bounds for both X and Z directions
-			var bounds = mapManager.GetMovementBounds(dragIndex, TileProperties.TileFlags.Dock | TileProperties.TileFlags.Roll);
-			int x = Mathf.RoundToInt(Mathf.Clamp(currentPos.x, bounds.MinWest.X, bounds.MaxEast.X));
-			int z = Mathf.RoundToInt(Mathf.Clamp(currentPos.z, bounds.MinSouth.Z, bounds.MaxNorth.Z));
-			var targetCoord = new GridCoord(x, z);
-			int targetIndex = mapManager.ToIndex(targetCoord);
-
-			if (targetIndex != dragIndex)
-				mapManager.RollStrip(tileStrip);
-
 			if (null != tileStrip.TileIndices)
 			{
+				if (true == tileStrip.LastIsRollOrDock)
+				{
+					var currentPos = mapManager.Tiles[dragIndex].GameObject.transform.position;
+					int x = Mathf.RoundToInt(currentPos.x);
+					int z = Mathf.RoundToInt(currentPos.z);
+					var targetCoord = new GridCoord(x, z);
+					int targetIndex = mapManager.ToIndex(targetCoord);
+
+					if (targetIndex != dragIndex)
+						mapManager.RollStrip(tileStrip);
+				}
 				foreach (var tileIndex in tileStrip.TileIndices)
 					mapManager.Tiles[tileIndex].GameObject.transform.position = mapManager.GetTilePosition(tileIndex);
 			}

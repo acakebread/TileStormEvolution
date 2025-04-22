@@ -63,17 +63,6 @@ namespace GamePreviewNamespace
 
 		public GridCoord GetTileCoordinatesForLastType(int index, int dirBit, TileProperties.TileFlags flags) => GetTileCoordinates(SearchDirectionForLastType(index, dirBit, flags));
 
-		public TileProperties.TileMovementBounds GetMovementBounds(int tileIndex, TileProperties.TileFlags flags)
-		{
-			return new TileProperties.TileMovementBounds
-			{
-				MinWest = GetTileCoordinatesForLastType(tileIndex, TileProperties.West, flags),
-				MaxEast = GetTileCoordinatesForLastType(tileIndex, TileProperties.East, flags),
-				MinSouth = GetTileCoordinatesForLastType(tileIndex, TileProperties.South, flags),
-				MaxNorth = GetTileCoordinatesForLastType(tileIndex, TileProperties.North, flags)
-			};
-		}
-
 		public void Reset()
 		{
 			if (mapRoot != null) Destroy(mapRoot);
@@ -448,30 +437,7 @@ namespace GamePreviewNamespace
 
 		public bool RollStrip(TileStrip strip)
 		{
-			if (strip.TileIndices == null || strip.TileIndices.Count < 2 || strip.DirectionBit == 0)
-			{
-				//Debug.LogWarning($"Invalid strip for rolling: TileIndices={(strip.TileIndices == null ? "null" : strip.TileIndices.Count.ToString())}, DirectionBit={strip.DirectionBit}");
-				return false;
-			}
-
-			// Validate: last tile must be Slide, others must be Interactive
-			int lastIndex = strip.TileIndices[strip.TileIndices.Count - 1];
-			var lastProps = GetTilePropertiesAt(lastIndex);
-			if (lastProps == null || !lastProps.IsSlide)
-			{
-				Debug.LogWarning($"Last tile in strip (index {lastIndex}) is not a Slide tile. Properties: {(lastProps == null ? "null" : lastProps.Type)}");
-				return false;
-			}
-
-			for (int i = 0; i < strip.TileIndices.Count - 1; i++)
-			{
-				var props = GetTilePropertiesAt(strip.TileIndices[i]);
-				if (props == null || !props.Interactive)
-				{
-					Debug.LogWarning($"Tile at index {strip.TileIndices[i]} is not Interactive. Properties: {(props == null ? "null" : props.Type)}");
-					return false;
-				}
-			}
+			if (false == strip.LastIsRollOrDock) return false;
 
 			// Store tile data and positions
 			var tileData = new TileData[strip.TileIndices.Count];
@@ -502,7 +468,7 @@ namespace GamePreviewNamespace
 				Tiles[currentIndex].GameObject.name = $"{Tiles[currentIndex].Properties?.Type ?? "Empty"}_{coord.X}_{coord.Z}";
 			}
 
-			Debug.Log($"Rolled strip: [{string.Join(", ", strip.TileIndices)}] in direction {strip.DirectionBit}");
+			//Debug.Log($"Rolled strip: [{string.Join(", ", strip.TileIndices)}] in direction {strip.DirectionBit}");
 			return true;
 		}
 
@@ -510,9 +476,10 @@ namespace GamePreviewNamespace
 		{
 			public List<int> TileIndices; // Ordered list of tile indices in the strip (head to tail)
 			public int DirectionBit; // Drag direction (North, South, East, West)
+			public bool LastIsRollOrDock;
 
-			public readonly int First => TileIndices.First();// TileIndices?.Count > 0 ? TileIndices[0] : -1;
-			public readonly int Last => TileIndices.Last();// TileIndices?.Count > 0 ? TileIndices[TileIndices.Count - 1] : -1;
+			public readonly int First => TileIndices.First();
+			public readonly int Last => TileIndices.Last();
 		}
 
 		public class OriginalMaterialHolder : MonoBehaviour { public Material originalMaterial; }
@@ -522,7 +489,8 @@ namespace GamePreviewNamespace
 			var strip = new TileStrip
 			{
 				TileIndices = new List<int> { startTileIndex },
-				DirectionBit = dragDirectionBit
+				DirectionBit = dragDirectionBit,
+				LastIsRollOrDock = false
 			};
 
 			if (dragDirectionBit == 0)
@@ -533,10 +501,27 @@ namespace GamePreviewNamespace
 			if (startProps == null || !startProps.Interactive)
 				return strip;
 
-			// ToDo search backwards first for 'roll' feature
-
 			// Use GetAdjacentTile to find contiguous tiles
 			int currentIndex = startTileIndex;
+
+			// first, scan all 'non interactive' but 'movable' tiles and then reverse this list
+			var reverseDirection = TileProperties.GetOppositeDirection(dragDirectionBit);
+			while (true)
+			{
+				// Get the next tile in the direction
+				var nextIndex = GetAdjacentTile(currentIndex, reverseDirection);
+
+				// Get next tile properties
+				var nextProps = GetTilePropertiesAt(nextIndex);
+				if (nextProps == null || (false == nextProps.IsDock && false == nextProps.IsRoll)) break;
+
+				strip.TileIndices.Add(nextIndex);
+				currentIndex = nextIndex;
+			}
+			strip.TileIndices.Reverse();
+
+			// next, scan all 'interactive' tiles from startTileIndex
+			currentIndex = startTileIndex;
 			while (true)
 			{
 				// Get the next tile in the direction
@@ -550,18 +535,29 @@ namespace GamePreviewNamespace
 				currentIndex = nextIndex;
 			}
 
-			// final check
-			int finalIndex = GetAdjacentTile(currentIndex, dragDirectionBit);
-			var finalProps = GetTilePropertiesAt(finalIndex);
-			if (null != finalProps && true == finalProps.IsSlide)
+			// next, scan all 'non interactive' but 'movable' tiles
+			while (true)
 			{
-				strip.TileIndices.Add(finalIndex);
-				return strip;
+				// Get the next tile in the direction
+				var nextIndex = GetAdjacentTile(currentIndex, dragDirectionBit);
+
+				// Get next tile properties
+				var nextProps = GetTilePropertiesAt(nextIndex);
+				if (nextProps == null || (false == nextProps.IsDock && false == nextProps.IsRoll)) break;
+
+				strip.TileIndices.Add(nextIndex);
+				currentIndex = nextIndex;
 			}
 
-			// no space to move tiles into - not working yet
-			////return new TileStrip();//emtpy strip - no space to move tiles into - not working yet
-			return new TileStrip{TileIndices = new List<int> { startTileIndex },DirectionBit = dragDirectionBit};
+			// final check
+			var finalProps = GetTilePropertiesAt(currentIndex);
+			if (finalProps.IsDock | finalProps.IsRoll)
+			{
+				strip.LastIsRollOrDock = true;
+				return strip;
+			}
+			
+			return new TileStrip{TileIndices = new List<int> { startTileIndex }, DirectionBit = dragDirectionBit, LastIsRollOrDock = false };//return new TileStrip();//emtpy strip - no space to move tiles into - not working yet but may not be needed after all
 		}
 
 		public void HighlightStrip(TileStrip strip, bool highlight)
