@@ -392,7 +392,7 @@ namespace GamePreviewNamespace
 			if ((TileProperties.GetOppositeDirection(nav) & nav) == nav)
 				return new[] { currentDirBit };
 			if (currentDirBit != 0)
-				return new[] { nav & ~TileProperties.GetOppositeDirection(currentDirBit) };
+				return new[] { nav & ~(currentDirBit | TileProperties.GetOppositeDirection(currentDirBit)) };
 			return TileProperties.Directions;
 		}
 
