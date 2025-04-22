@@ -70,13 +70,14 @@ namespace GamePreviewNamespace
 
 		private void OnDragging(Vector3 screenPos)
 		{
+			mapManager.HighlightStrip(tileStrip, false);
+
 			if (dragIndex == -1) return;
 
 			Vector3 currentPos = ScreenToWorld(screenPos);
 			Vector3 tempStartPos = startWorldPos;
 			var gestureList = new List<Vector3>();
 
-			// Exhaustively quantize the delta until the remainder is less than gridSize
 			while (true)
 			{
 				Vector3 delta = currentPos - tempStartPos;
@@ -97,7 +98,6 @@ namespace GamePreviewNamespace
 				}
 				else
 				{
-					// Remainder is the unquantized delta
 					gestureList.Add(delta);
 					break;
 				}
@@ -105,8 +105,6 @@ namespace GamePreviewNamespace
 
 			foreach (var gesture in gestureList)
 			{
-				mapManager.HighlightStrip(tileStrip, false);
-
 				if (tileStrip.TileIndices != null)
 				{
 					foreach (var tileIndex in tileStrip.TileIndices)
@@ -125,7 +123,7 @@ namespace GamePreviewNamespace
 					if (mapManager.RollStrip(tileStrip))
 						dragIndex = mapManager.GetAdjacentTile(dragIndex, dirBit);
 					tileStrip = mapManager.GetTileStrip(dragIndex, dirBit);
-					startWorldPos += gesture; // Update start position for next gesture
+					startWorldPos += gesture;
 				}
 				else
 				{
@@ -148,16 +146,20 @@ namespace GamePreviewNamespace
 					{
 						foreach (var tileIndex in tileStrip.TileIndices)
 							mapManager.Tiles[tileIndex].GameObject.transform.position += delta;
+						// Update spare tile to fill gap at trailing edge
+						mapManager.UpdateSpareTile(tileStrip, delta, true);
 					}
 				}
-				mapManager.HighlightStrip(tileStrip, true);
 			}
+			mapManager.HighlightStrip(tileStrip, true);
 		}
 
 		private void OnDragEnd()
 		{
 			if (dragIndex == -1) return;
 			mapManager.HighlightStrip(tileStrip, false);
+			// Deactivate spare tile
+			mapManager.UpdateSpareTile(tileStrip, Vector3.zero, false);
 
 			if (tileStrip.TileIndices != null)
 			{
