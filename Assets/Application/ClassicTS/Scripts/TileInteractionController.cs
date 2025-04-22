@@ -76,7 +76,8 @@ namespace GamePreviewNamespace
 			Vector3 tempStartPos = startWorldPos;
 			var gestureList = new List<Vector3>();
 
-			for (int i = 0; i < 10; i++)
+			// Exhaustively quantize the delta until the remainder is less than gridSize
+			while (true)
 			{
 				Vector3 delta = currentPos - tempStartPos;
 				float absX = Mathf.Abs(delta.x);
@@ -96,6 +97,7 @@ namespace GamePreviewNamespace
 				}
 				else
 				{
+					// Remainder is the unquantized delta
 					gestureList.Add(delta);
 					break;
 				}
