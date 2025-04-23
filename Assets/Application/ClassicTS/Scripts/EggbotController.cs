@@ -131,11 +131,12 @@ namespace GamePreviewNamespace
 				return;
 
 			if (eggbot != null) Destroy(eggbot);
-			eggbot = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+
+			var prefabPath = $"{PreviewSettings.PrefabPath}{"eggbot_default"}";
+			eggbot = Instantiate(Resources.Load(prefabPath, typeof(GameObject))) as GameObject;
 			eggbot.name = "Eggbot";
 			var transform = eggbot.transform;
 			transform.SetParent(mapManager.MapRoot.transform, false);
-			transform.localScale = new Vector3(0.3f, 0.5f, 0.3f);
 			transform.position = mapManager.GetTilePosition(startTile);
 			//Debug.Log($"Eggbot at tile {startTile} ({transform.position.x}, {transform.position.z})");
 		}

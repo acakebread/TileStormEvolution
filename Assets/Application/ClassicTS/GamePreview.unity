@@ -243,6 +243,7 @@ MonoBehaviour:
   show_tile_selection: 0
   geometryPath: Geometry/obj/
   texturePath: Textures/
+  prefabPath: Prefabs/
 --- !u!4 &862124737
 Transform:
   m_ObjectHideFlags: 0

@@ -25,6 +25,9 @@ public class PreviewSettings : MonoBehaviour
 	[SerializeField] private string texturePath = "Textures/";
 	public static string TexturePath => instance.texturePath;
 
+	[SerializeField] private string prefabPath = "Prefabs/";
+	public static string PrefabPath => instance.prefabPath;
+
 	public static PreviewSettings instance;
     void Awake() => instance = this;
 }

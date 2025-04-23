@@ -385,15 +385,16 @@ namespace GamePreviewNamespace
 
 			path.RemoveAt(path.Count - 1);
 			return null;
-		}
 
-		private int[] GetTryDirections(int nav, int currentDirBit)
-		{
-			if ((TileProperties.GetOppositeDirection(nav) & nav) == nav)
-				return new[] { currentDirBit };
-			if (currentDirBit != 0)
-				return new[] { nav & ~(currentDirBit | TileProperties.GetOppositeDirection(currentDirBit)) };
-			return TileProperties.Directions;
+			//local function
+			static int[] GetTryDirections(int nav, int currentDirBit)
+			{
+				if ((TileProperties.GetOppositeDirection(nav) & nav) == nav)
+					return new[] { currentDirBit };
+				if (currentDirBit != 0)
+					return new[] { nav & ~(currentDirBit | TileProperties.GetOppositeDirection(currentDirBit)) };
+				return TileProperties.Directions;
+			}
 		}
 
 		public bool CheckPathBetweenWaypoints(int currentWaypointIndex, out List<int> path)
