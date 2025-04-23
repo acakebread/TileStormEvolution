@@ -4,11 +4,11 @@ using GameDatabase;
 
 namespace GamePreviewNamespace
 {
-	public class TilePropertiesManager
+	public static class TilePropertiesManager
 	{
-		private readonly Dictionary<(string Type, string Theme), TileProperties> propertiesCache = new();
+		private static readonly Dictionary<(string Type, string Theme), TileProperties> propertiesCache = new();
 
-		public TileProperties GetOrCreateTileProperties(string szType, string szTheme)
+		public static TileProperties GetOrCreateTileProperties(string szType, string szTheme)
 		{
 			var key = (szType, szTheme);
 			if (propertiesCache.TryGetValue(key, out var properties))

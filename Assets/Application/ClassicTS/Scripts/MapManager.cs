@@ -18,7 +18,6 @@ namespace GamePreviewNamespace
 		private TileData[] tiles;
 		private List<DatabaseLoader.Waypoint> waypoints;
 		private GameObject spareTile;
-		private TilePropertiesManager tilePropertiesManager;
 
 		public DatabaseLoader.Map CurrentMap => currentMap;
 		public string CurrentMapName => currentMap?.name;
@@ -65,7 +64,6 @@ namespace GamePreviewNamespace
 			currentMap = null;
 			waypoints = null;
 			tiles = null;
-			tilePropertiesManager = null;
 		}
 
 		public void Initialize(string mapName)
@@ -79,7 +77,6 @@ namespace GamePreviewNamespace
 				return;
 			}
 
-			tilePropertiesManager = new();
 			mapRoot = new GameObject($"Map_{currentMap.name}");
 			mapRoot.transform.SetParent(transform, false);
 			LoadTileData(currentMap.tiles);
@@ -133,7 +130,7 @@ namespace GamePreviewNamespace
 				if (szType == "tile_empty")
 					continue;
 
-				this.tiles[index].Properties = tilePropertiesManager.GetOrCreateTileProperties(szType, szTheme);
+				this.tiles[index].Properties = TilePropertiesManager.GetOrCreateTileProperties(szType, szTheme);
 				if (this.tiles[index].Properties == null)
 					continue;
 
@@ -485,42 +482,40 @@ namespace GamePreviewNamespace
 			var stride = 0;
 			var (dx, dz) = TileProperties.GetDirectionOffset(dragDirectionBit);
 			if (dx != 0) stride = dx; // Horizontal: +1 (right) or -1 (left)
-			else if (dz != 0) stride = dz * Width; // Vertical: +Width (down) or -Width (up)
+			else if (dz != 0) stride = dz * Width; // Vertical: +Width (up) or -Width (down)
 
 			// Walk backward (opposite direction) to find FirstIndex
-			var currentIndex = startTileIndex;
-			var reverseDirection = TileProperties.GetOppositeDirection(dragDirectionBit);
+			var firstIndex = startTileIndex;
 			while (true)
 			{
-				var nextProps = tiles[currentIndex - stride].Properties;
+				var nextProps = tiles[firstIndex - stride].Properties;
 				if (nextProps == null || (!nextProps.IsDock && !nextProps.IsRoll)) break;
-				currentIndex -= stride;
-				strip.FirstIndex = currentIndex; // Update FirstIndex to the earliest index
+				firstIndex -= stride;
 			}
 
 			// Walk forward to find LastIndex (interactive tiles)
-			currentIndex = startTileIndex;
+			var lastIndex = startTileIndex;
 			while (true)
 			{
-				var nextProps = tiles[currentIndex + stride].Properties;
+				var nextProps = tiles[lastIndex + stride].Properties;
 				if (nextProps == null || !nextProps.Interactive) break;
-				currentIndex += stride;
+				lastIndex += stride;
 			}
 
 			// Continue forward for roll or dock tiles
 			while (true)
 			{
-				var nextProps = tiles[currentIndex + stride].Properties;
+				var nextProps = tiles[lastIndex + stride].Properties;
 				if (nextProps == null || (!nextProps.IsDock && !nextProps.IsRoll)) break;
-				currentIndex += stride;
+				lastIndex += stride;
 			}
 
-			var finalProps = tiles[currentIndex].Properties;
+			var finalProps = tiles[lastIndex].Properties;
 			if (finalProps != null && (finalProps.IsDock || finalProps.IsRoll))
 			{
-				strip.LastIndex = currentIndex; // Update LastIndex
+				strip.FirstIndex = firstIndex; // Update FirstIndex to the earliest index
+				strip.LastIndex = lastIndex; // Update LastIndex to the front index
 				strip.Stride = stride;
-				return strip;
 			}
 
 			return strip;
@@ -530,36 +525,21 @@ namespace GamePreviewNamespace
 		{
 			if (strip.Count <= 1) return false;
 
-			var tileData = new TileData[strip.Count];
-			var positions = new Vector3[strip.Count];
+			var lastTile = tiles[strip.Last];
+			for (var i = strip.Count - 1; i > 0; --i) tiles[strip.Indices[i]] = tiles[strip.Indices[i - 1]];
+			tiles[strip.First] = lastTile;
+
+			for (var i = 0; i < strip.Count; i++) tiles[strip.Indices[i]].GameObject.transform.position = GetTilePosition(strip.Indices[i]);
+
+			//debug
 			for (var i = 0; i < strip.Count; i++)
 			{
-				var index = strip.Indices[i];
-				tileData[i] = Tiles[index];
-				positions[i] = GetTilePosition(index);
-			}
-
-			for (var i = 0; i < strip.Count; i++)
-			{
-				var currentIndex = strip.Indices[i];
-				if (i == 0)
-				{
-					Tiles[currentIndex] = tileData[strip.Count - 1];
-					Tiles[currentIndex].GameObject.transform.position = positions[0];
-				}
-				else
-				{
-					Tiles[currentIndex] = tileData[i - 1];
-					Tiles[currentIndex].GameObject.transform.position = positions[i];
-				}
-
-				var coord = GetTileCoordinates(currentIndex);
-				Tiles[currentIndex].GameObject.name = $"{Tiles[currentIndex].Properties?.Type ?? "Empty"}_{coord.X}_{coord.Z}";
+				var coord = GetTileCoordinates(strip.Indices[i]);
+				tiles[strip.Indices[i]].GameObject.name = $"{tiles[strip.Indices[i]].Properties?.Type ?? "Empty"}_{coord.X}_{coord.Z}";
 			}
 
 			return true;
 		}
-
 
 		public void UpdateSpareTile(TileStrip strip, Vector3 delta, bool active)
 		{
