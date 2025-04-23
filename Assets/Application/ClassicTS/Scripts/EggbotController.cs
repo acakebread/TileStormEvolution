@@ -15,7 +15,7 @@ namespace GamePreviewNamespace
 
 		private bool isMoving;
 		private float moveTimer;
-		private float moveSpeed = 8f;
+		private float moveSpeed = 4f;
 
 		private float pauseTimer;
 		private float pauseDuration = 1f;

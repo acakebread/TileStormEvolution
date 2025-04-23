@@ -110,7 +110,7 @@ namespace GamePreviewNamespace
 			}
 
 			float deltaTime = Time.deltaTime;
-			float targetFPS = 30f;
+			float targetFPS = 60f;
 			float timeScale = deltaTime * targetFPS; // ~0.12 at 250 FPS
 
 			// Update m_fRate with default 1/256 smoothing
