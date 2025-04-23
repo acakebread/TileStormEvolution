@@ -15,17 +15,17 @@ namespace GamePreviewNamespace
 		public void Start()
 		{
 			if (null == gestureSystem) return;
-			gestureSystem.OnDragStart += OnDragStart;
-			gestureSystem.OnDragging += OnDragging;
-			gestureSystem.OnDragEnd += OnDragEnd;
+			gestureSystem.OnBeginDrag += OnBeginDrag;
+			gestureSystem.OnDrag += OnDrag;
+			gestureSystem.OnEndDrag += OnEndDrag;
 		}
 
 		private void OnDestroy()
 		{
 			if (null == gestureSystem) return;
-			gestureSystem.OnDragStart -= OnDragStart;
-			gestureSystem.OnDragging -= OnDragging;
-			gestureSystem.OnDragEnd -= OnDragEnd;
+			gestureSystem.OnBeginDrag -= OnBeginDrag;
+			gestureSystem.OnDrag -= OnDrag;
+			gestureSystem.OnEndDrag -= OnEndDrag;
 
 			mapManager.HighlightStrip(tileStrip, false);
 		}
@@ -37,7 +37,7 @@ namespace GamePreviewNamespace
 			tileStrip = default;
 		}
 
-		private void OnDragStart(Vector3 screenPos)
+		private void OnBeginDrag(Vector3 screenPos)
 		{
 			Vector3 worldPos = mapManager.ScreenToWorld(screenPos);
 			int x = Mathf.RoundToInt(worldPos.x);
@@ -59,7 +59,7 @@ namespace GamePreviewNamespace
 			mapManager.HighlightStrip(tileStrip, true);
 		}
 
-		private void OnDragging(Vector3 screenPos)
+		private void OnDrag(Vector3 screenPos)
 		{
 			mapManager.HighlightStrip(tileStrip, false);
 
@@ -145,7 +145,7 @@ namespace GamePreviewNamespace
 			mapManager.HighlightStrip(tileStrip, true);
 		}
 
-		private void OnDragEnd()
+		private void OnEndDrag()
 		{
 			if (dragIndex == -1) return;
 			mapManager.HighlightStrip(tileStrip, false);
