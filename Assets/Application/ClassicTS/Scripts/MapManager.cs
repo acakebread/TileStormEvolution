@@ -39,6 +39,14 @@ namespace GamePreviewNamespace
 
 		public GridCoord FromIndex(int index) => new GridCoord(index % Width, index / Width);
 
+		public Vector3 ScreenToWorld(Vector3 screenPos)
+		{
+			Ray ray = Camera.main.ScreenPointToRay(screenPos);
+			Plane mapPlane = new Plane(Vector3.up, Vector3.zero);
+			if (!mapPlane.Raycast(ray, out float distance)) return Vector3.zero;
+			return ray.GetPoint(distance);
+		}
+
 		public Vector3 GetCentre()
 		{
 			if (Width == 0 || Height == 0)

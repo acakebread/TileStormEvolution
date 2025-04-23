@@ -27,8 +27,7 @@ namespace GamePreviewNamespace
 			gestureSystem.OnDragging -= OnDragging;
 			gestureSystem.OnDragEnd -= OnDragEnd;
 
-			if (tileStrip.TileIndices != null)
-				mapManager.HighlightStrip(tileStrip, false);
+			mapManager.HighlightStrip(tileStrip, false);
 		}
 
 		public void Initialize(MapManager manager)
@@ -38,17 +37,9 @@ namespace GamePreviewNamespace
 			tileStrip = default;
 		}
 
-		private Vector3 ScreenToWorld(Vector3 screenPos)
-		{
-			Ray ray = Camera.main.ScreenPointToRay(screenPos);
-			Plane mapPlane = new Plane(Vector3.up, Vector3.zero);
-			if (!mapPlane.Raycast(ray, out float distance)) return Vector3.zero;
-			return ray.GetPoint(distance);
-		}
-
 		private void OnDragStart(Vector3 screenPos)
 		{
-			Vector3 worldPos = ScreenToWorld(screenPos);
+			Vector3 worldPos = mapManager.ScreenToWorld(screenPos);
 			int x = Mathf.RoundToInt(worldPos.x);
 			int z = Mathf.RoundToInt(worldPos.z);
 			var coord = new GridCoord(x, z);
@@ -74,7 +65,7 @@ namespace GamePreviewNamespace
 
 			if (dragIndex == -1) return;
 
-			Vector3 currentPos = ScreenToWorld(screenPos);
+			Vector3 currentPos = mapManager.ScreenToWorld(screenPos);
 			Vector3 tempStartPos = startWorldPos;
 			var gestureList = new List<Vector3>();
 
@@ -146,8 +137,8 @@ namespace GamePreviewNamespace
 					{
 						foreach (var tileIndex in tileStrip.TileIndices)
 							mapManager.Tiles[tileIndex].GameObject.transform.position += delta;
-						// Update spare tile to fill gap at trailing edge
-						mapManager.UpdateSpareTile(tileStrip, delta, true);
+						
+						mapManager.UpdateSpareTile(tileStrip, delta, true);// Update spare tile to fill gap at trailing edge
 					}
 				}
 			}
@@ -158,8 +149,8 @@ namespace GamePreviewNamespace
 		{
 			if (dragIndex == -1) return;
 			mapManager.HighlightStrip(tileStrip, false);
-			// Deactivate spare tile
-			mapManager.UpdateSpareTile(tileStrip, Vector3.zero, false);
+			
+			mapManager.UpdateSpareTile(tileStrip, Vector3.zero, false);// Deactivate spare tile
 
 			if (tileStrip.TileIndices != null)
 			{
