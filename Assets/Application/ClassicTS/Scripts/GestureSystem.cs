@@ -1,15 +1,15 @@
-using UnityEngine;
 using System;
+using UnityEngine;
 
 public class GestureSystem : MonoBehaviour
 {
 	public static GestureSystem instance;
-	private Vector3 startMousePos;
-	private bool isMouseDown;
 
 	public event Action<Vector3> OnDragStart;
 	public event Action<Vector3> OnDragging;
 	public event Action OnDragEnd;
+
+	private bool isMouseDown;
 
 	private void Awake() => instance = this;
 
@@ -31,9 +31,8 @@ public class GestureSystem : MonoBehaviour
 
 	private void StartDrag()
 	{
-		startMousePos = Input.mousePosition;
 		isMouseDown = true;
-		OnDragStart?.Invoke(startMousePos);
+		OnDragStart?.Invoke(Input.mousePosition);
 	}
 
 	private void UpdateDrag()
