@@ -21,14 +21,6 @@
 			Console = 1 << 5 // 0b100000
 		}
 
-		public struct TileMovementBounds
-		{
-			public GridCoord MinWest;
-			public GridCoord MaxEast;
-			public GridCoord MinSouth;
-			public GridCoord MaxNorth;
-		}
-
 		public readonly GameDatabase.DatabaseLoader.TileDef tileDef;
 		private readonly int nav;
 		private readonly TileFlags flags;

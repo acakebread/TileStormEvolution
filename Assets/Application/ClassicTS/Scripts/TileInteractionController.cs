@@ -1,5 +1,4 @@
 using UnityEngine;
-using System.Collections.Generic;
 
 namespace GamePreviewNamespace
 {
@@ -65,49 +64,49 @@ namespace GamePreviewNamespace
 
 			if (dragIndex == -1) return;
 
-			Vector3 currentPos = mapManager.ScreenToWorld(screenPos);
-			Vector3 tempStartPos = startWorldPos;
-			var gestureList = new List<Vector3>();
+			var currentPos = mapManager.ScreenToWorld(screenPos);
+			var workingPos = startWorldPos;
 
 			while (true)
 			{
-				Vector3 delta = currentPos - tempStartPos;
-				float absX = Mathf.Abs(delta.x);
-				float absZ = Mathf.Abs(delta.z);
+				var dxyz = currentPos - workingPos;
+				var absX = Mathf.Abs(dxyz.x);
+				var absZ = Mathf.Abs(dxyz.z);
 
+				Vector3 gesture;
+				int dirBit = 0;
+				var delta = Vector3.zero;
+
+				// Compute the gesture
 				if (absX > absZ && absX >= gridSize)
 				{
-					int direction = delta.x > 0 ? 1 : -1;
-					gestureList.Add(new Vector3(direction, 0, 0));
-					tempStartPos.x += direction * gridSize;
+					var direction = dxyz.x > 0 ? 1 : -1;
+					gesture = new Vector3(direction, 0, 0);
+					workingPos.x += direction * gridSize;
+					if (gesture.x == 1) dirBit |= TileProperties.East;
+					if (gesture.x == -1) dirBit |= TileProperties.West;
 				}
 				else if (absZ >= gridSize)
 				{
-					int direction = delta.z > 0 ? 1 : -1;
-					gestureList.Add(new Vector3(0, 0, direction));
-					tempStartPos.z += direction * gridSize;
+					var direction = dxyz.z > 0 ? 1 : -1;
+					gesture = new Vector3(0, 0, direction);
+					workingPos.z += direction * gridSize;
+					if (gesture.z == 1) dirBit |= TileProperties.North;
+					if (gesture.z == -1) dirBit |= TileProperties.South;
 				}
 				else
 				{
-					gestureList.Add(delta);
-					break;
+					gesture = dxyz;
 				}
-			}
 
-			foreach (var gesture in gestureList)
-			{
-				if (tileStrip.TileIndices != null)
+				// Reset tile positions
+				if (tileStrip.TileIndices.Count > 0)
 				{
 					foreach (var tileIndex in tileStrip.TileIndices)
 						mapManager.Tiles[tileIndex].GameObject.transform.position = mapManager.GetTilePosition(tileIndex);
 				}
 
-				int dirBit = 0;
-				if (gesture.z == 1) dirBit |= TileProperties.North;
-				if (gesture.z == -1) dirBit |= TileProperties.South;
-				if (gesture.x == 1) dirBit |= TileProperties.East;
-				if (gesture.x == -1) dirBit |= TileProperties.West;
-
+				// Process the gesture
 				if (dirBit != 0)
 				{
 					tileStrip = mapManager.GetTileStrip(dragIndex, dirBit);
@@ -118,30 +117,34 @@ namespace GamePreviewNamespace
 				}
 				else
 				{
-					var delta = Vector3.zero;
 					tileStrip = new MapManager.TileStrip();
 					if (Mathf.Abs(gesture.x) > Mathf.Abs(gesture.z))
 					{
 						tileStrip = mapManager.GetTileStrip(dragIndex, gesture.x > 0f ? TileProperties.East : TileProperties.West);
-						if (tileStrip.LastIsRollOrDock)
+						if (tileStrip.LastIsDockOrRoll)
 							delta = new Vector3(gesture.x, 0, 0);
 					}
 					else
 					{
 						tileStrip = mapManager.GetTileStrip(dragIndex, gesture.z > 0f ? TileProperties.North : TileProperties.South);
-						if (tileStrip.LastIsRollOrDock)
+						if (tileStrip.LastIsDockOrRoll)
 							delta = new Vector3(0, 0, gesture.z);
 					}
 
-					if (tileStrip.TileIndices != null)
+					if (tileStrip.TileIndices.Count > 0)
 					{
 						foreach (var tileIndex in tileStrip.TileIndices)
 							mapManager.Tiles[tileIndex].GameObject.transform.position += delta;
-						
-						mapManager.UpdateSpareTile(tileStrip, delta, true);// Update spare tile to fill gap at trailing edge
 					}
 				}
+
+				mapManager.UpdateSpareTile(tileStrip, delta, delta != Vector3.zero);
+
+				// Break if this was a partial movement
+				if (dirBit == 0)
+					break;
 			}
+
 			mapManager.HighlightStrip(tileStrip, true);
 		}
 
@@ -152,9 +155,9 @@ namespace GamePreviewNamespace
 			
 			mapManager.UpdateSpareTile(tileStrip, Vector3.zero, false);// Deactivate spare tile
 
-			if (tileStrip.TileIndices != null)
+			if (tileStrip.TileIndices.Count > 0)
 			{
-				if (tileStrip.LastIsRollOrDock)
+				if (tileStrip.LastIsDockOrRoll)
 				{
 					var currentPos = mapManager.Tiles[dragIndex].GameObject.transform.position;
 					int x = Mathf.RoundToInt(currentPos.x);

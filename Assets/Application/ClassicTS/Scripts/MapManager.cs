@@ -460,7 +460,7 @@ namespace GamePreviewNamespace
 
 		public bool RollStrip(TileStrip strip)
 		{
-			if (false == strip.LastIsRollOrDock) return false;
+			if (false == strip.LastIsDockOrRoll) return false;
 
 			var tileData = new TileData[strip.TileIndices.Count];
 			var positions = new Vector3[strip.TileIndices.Count];
@@ -494,23 +494,49 @@ namespace GamePreviewNamespace
 
 		public struct TileStrip
 		{
-			public List<int> TileIndices;
-			public int DirectionBit;
-			public bool LastIsRollOrDock;
+			public int FirstIndex;
+			public int LastIndex;
+			public bool LastIsDockOrRoll;
+			public int Stride;
 
-			public readonly int First => TileIndices.First();
-			public readonly int Last => TileIndices.Last();
+			public readonly int Count => (Stride == 0) ? 1 : Mathf.Abs((LastIndex - FirstIndex) / Stride) + 1;
+			public readonly int First => FirstIndex;
+			public readonly int Last => LastIndex;
+
+			public readonly List<int> TileIndices
+			{
+				get
+				{
+					var indices = new List<int>();
+					if (Stride == 0)
+					{
+						indices.Add(FirstIndex);
+						return indices;
+					}
+
+					var currentIndex = FirstIndex;
+					indices.Add(currentIndex);
+
+					// Increment by Stride until LastIndex is reached
+					while (currentIndex != LastIndex)
+					{
+						currentIndex += Stride;
+						indices.Add(currentIndex);
+					}
+
+					return indices;
+				}
+			}
 		}
-
-		public class OriginalMaterialHolder : MonoBehaviour { public Material originalMaterial; }
 
 		public TileStrip GetTileStrip(int startTileIndex, int dragDirectionBit)
 		{
 			var strip = new TileStrip
 			{
-				TileIndices = new List<int> { startTileIndex },
-				DirectionBit = dragDirectionBit,
-				LastIsRollOrDock = false
+				FirstIndex = startTileIndex,
+				LastIndex = startTileIndex,
+				LastIsDockOrRoll = false,
+				Stride = 0
 			};
 
 			if (dragDirectionBit == 0)
@@ -520,6 +546,13 @@ namespace GamePreviewNamespace
 			if (startProps == null || !startProps.Interactive)
 				return strip;
 
+			// Compute stride based on direction
+			int stride = 0;
+			var (dx, dz) = TileProperties.GetDirectionOffset(dragDirectionBit);
+			if (dx != 0) stride = dx; // Horizontal: +1 (right) or -1 (left)
+			else if (dz != 0) stride = dz * Width; // Vertical: +Width (down) or -Width (up)
+
+			// Walk backward (opposite direction) to find FirstIndex
 			int currentIndex = startTileIndex;
 			var reverseDirection = TileProperties.GetOppositeDirection(dragDirectionBit);
 			while (true)
@@ -527,39 +560,42 @@ namespace GamePreviewNamespace
 				var nextIndex = GetAdjacentTile(currentIndex, reverseDirection);
 				var nextProps = GetTilePropertiesAt(nextIndex);
 				if (nextProps == null || (!nextProps.IsDock && !nextProps.IsRoll)) break;
-				strip.TileIndices.Add(nextIndex);
 				currentIndex = nextIndex;
+				strip.FirstIndex = currentIndex; // Update FirstIndex to the earliest index
 			}
-			strip.TileIndices.Reverse();
 
+			// Walk forward to find LastIndex (interactive tiles)
 			currentIndex = startTileIndex;
 			while (true)
 			{
 				var nextIndex = GetAdjacentTile(currentIndex, dragDirectionBit);
 				var nextProps = GetTilePropertiesAt(nextIndex);
 				if (nextProps == null || !nextProps.Interactive) break;
-				strip.TileIndices.Add(nextIndex);
 				currentIndex = nextIndex;
+				strip.LastIndex = currentIndex; // Update LastIndex
 			}
 
+			// Continue forward for roll or dock tiles
 			while (true)
 			{
 				var nextIndex = GetAdjacentTile(currentIndex, dragDirectionBit);
 				var nextProps = GetTilePropertiesAt(nextIndex);
 				if (nextProps == null || (!nextProps.IsDock && !nextProps.IsRoll)) break;
-				strip.TileIndices.Add(nextIndex);
 				currentIndex = nextIndex;
+				strip.LastIndex = currentIndex; // Update LastIndex
 			}
 
 			var finalProps = GetTilePropertiesAt(currentIndex);
 			if (finalProps != null && (finalProps.IsDock || finalProps.IsRoll))
 			{
-				strip.LastIsRollOrDock = true;
-				return strip;
+				strip.LastIsDockOrRoll = true;
 			}
 
-			return new TileStrip { TileIndices = new List<int> { startTileIndex }, DirectionBit = dragDirectionBit, LastIsRollOrDock = false };
+			strip.Stride = stride;
+			return strip;
 		}
+
+		public class OriginalMaterialHolder : MonoBehaviour { public Material originalMaterial; }
 
 		public void HighlightStrip(TileStrip strip, bool highlight)
 		{
@@ -568,6 +604,7 @@ namespace GamePreviewNamespace
 			foreach (var tileIndex in strip.TileIndices)
 			{
 				var tile = Tiles[tileIndex].GameObject;
+				if (tile == null) continue;
 				var meshRenderer = tile.GetComponentInChildren<MeshRenderer>();
 				if (meshRenderer == null) continue;
 
@@ -622,7 +659,7 @@ namespace GamePreviewNamespace
 				return;
 			}
 
-			if (strip.TileIndices == null || false == strip.LastIsRollOrDock)
+			if (false == strip.LastIsDockOrRoll)
 				return;
 
 			// Identify the leading tile (always the last tile in the strip, which wraps to the front in a roll)
@@ -630,11 +667,8 @@ namespace GamePreviewNamespace
 			var leadingTile = Tiles[leadingTileIndex].GameObject;
 
 			// Identify the trailing position (position of the tile adjacent to the strip in the opposite drag direction)
-			int trailingTileIndex;
-			Vector3 trailingPosition;
-			int oppositeDirection = TileProperties.GetOppositeDirection(strip.DirectionBit);
-			trailingTileIndex = GetAdjacentTile(strip.TileIndices.First(), oppositeDirection);
-			trailingPosition = GetTilePosition(trailingTileIndex);
+			var trailingTileIndex = strip.TileIndices.First() - strip.Stride;
+			var trailingPosition = GetTilePosition(trailingTileIndex);
 
 			// Initialize spare tile if it doesn't exist
 			if (spareTile == null)
@@ -655,14 +689,14 @@ namespace GamePreviewNamespace
 			{
 				spareFilter.sharedMesh = leadingFilter.sharedMesh;
 				spareRenderer.material = leadingRenderer.material; // Use material to preserve instance properties
-																   // Match local transform of the leading tile's mesh (if it's a child object)
+				// Match local transform of the leading tile's mesh (if it's a child object)
 				spareRenderer.transform.localPosition = leadingRenderer.transform.localPosition;
-				spareRenderer.transform.localRotation = leadingRenderer.transform.localRotation;
+				spareRenderer.transform.rotation = leadingRenderer.transform.rotation;
 				spareRenderer.transform.localScale = leadingRenderer.transform.localScale;
 			}
 			else
 			{
-				Debug.LogWarning($"Failed to update spare tile: leading tile (index {leadingTileIndex}) missing MeshRenderer or MeshFilter.");
+				//Debug.LogWarning($"Failed to update spare tile: leading tile (index {leadingTileIndex}) missing MeshRenderer or MeshFilter.");
 				spareTile.SetActive(false);
 				return;
 			}
@@ -674,7 +708,7 @@ namespace GamePreviewNamespace
 				Destroy(animator);
 
 			// Position the spare tile at the trailing edge, moving with the strip
-			spareTile.transform.position = trailingPosition + delta;
+			spareTile.transform.position += trailingPosition + delta;
 			spareTile.SetActive(true);
 		}
 	}
