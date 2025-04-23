@@ -31,7 +31,7 @@ namespace GamePreviewNamespace
 
 		public TileProperties GetTilePropertiesAt(int tileIndex) => IsValidTileIndex(tileIndex) ? tiles[tileIndex].Properties : null;
 
-		public GridCoord GetTileCoordinates(int tileIndex) => new GridCoord(tileIndex % Width, tileIndex / Width);
+		public GridCoord GetTileCoordinates(int tileIndex) => new(tileIndex % Width, tileIndex / Width);
 
 		public Vector3 GetTilePosition(int tileIndex) => GetTileCoordinates(tileIndex).ToPosition();
 
@@ -285,6 +285,32 @@ namespace GamePreviewNamespace
 			return -1;
 		}
 
+		public int FindAdjacentConsole(int nTile)
+		{
+			if (IsValidTileIndex(nTile))
+			{
+				foreach (var dirBit in TileProperties.Directions)
+				{
+					var consoleTile = GetAdjacentTile(nTile, dirBit);
+					if (consoleTile == -1)
+						continue;
+
+					var consoleProps = GetTilePropertiesAt(consoleTile);
+					if (consoleProps?.IsConsole != true)
+						continue;
+
+					var consoleNav = consoleProps.Nav;
+					if (consoleNav == 0)
+						continue;
+
+					var navTile = GetAdjacentTile(consoleTile, consoleNav);
+					if (navTile == nTile)
+						return consoleTile;
+				}
+			}
+			return -1;
+		}
+
 		private List<DatabaseLoader.Waypoint> SetupWaypoints()
 		{
 			var generatedWaypoints = new List<DatabaseLoader.Waypoint>();
@@ -320,6 +346,7 @@ namespace GamePreviewNamespace
 			}
 			else
 			{
+				generatedWaypoints.Add(new DatabaseLoader.Waypoint { nTile = endTile });// just mark the end tile and hope for the best :)
 				Debug.LogWarning("Failed to find path from start to end for waypoint setup");
 			}
 
@@ -410,47 +437,23 @@ namespace GamePreviewNamespace
 			}
 		}
 
-		public int FindAdjacentConsole(int nTile)
-		{
-			if (IsValidTileIndex(nTile))
-			{
-				foreach (var dirBit in TileProperties.Directions)
-				{
-					var consoleTile = GetAdjacentTile(nTile, dirBit);
-					if (consoleTile == -1)
-						continue;
-
-					var consoleProps = GetTilePropertiesAt(consoleTile);
-					if (consoleProps?.IsConsole != true)
-						continue;
-
-					var consoleNav = consoleProps.Nav;
-					if (consoleNav == 0)
-						continue;
-
-					var navTile = GetAdjacentTile(consoleTile, consoleNav);
-					if (navTile == nTile)
-						return consoleTile;
-				}
-			}
-			return -1;
-		}
-
 		public struct TileStrip
 		{
 			public int FirstIndex;
 			public int LastIndex;
 			public int Stride;
 
-			public readonly int Count => (Stride == 0) ? 1 : (LastIndex - FirstIndex) / Stride + 1;
+			public readonly int Count => Stride == 0 ? 1 : (LastIndex - FirstIndex) / Stride + 1;
 			public readonly int First => FirstIndex;
 			public readonly int Last => LastIndex;
 
-			public readonly List<int> Indices
+			private List<int> indices;
+			public List<int> Indices
 			{
 				get
 				{
-					var indices = new List<int>() { FirstIndex };
+					if (null != indices) return indices;
+					indices = new List<int>() { FirstIndex };
 					if (Stride == 0) return indices;
 
 					// Increment by Stride until LastIndex is reached
@@ -532,16 +535,16 @@ namespace GamePreviewNamespace
 
 			var tileData = new TileData[strip.Count];
 			var positions = new Vector3[strip.Count];
-			for (int i = 0; i < strip.Count; i++)
+			for (var i = 0; i < strip.Count; i++)
 			{
-				int index = strip.Indices[i];
+				var index = strip.Indices[i];
 				tileData[i] = Tiles[index];
 				positions[i] = GetTilePosition(index);
 			}
 
-			for (int i = 0; i < strip.Count; i++)
+			for (var i = 0; i < strip.Count; i++)
 			{
-				int currentIndex = strip.Indices[i];
+				var currentIndex = strip.Indices[i];
 				if (i == 0)
 				{
 					Tiles[currentIndex] = tileData[strip.Count - 1];
@@ -560,6 +563,70 @@ namespace GamePreviewNamespace
 			return true;
 		}
 
+
+		public void UpdateSpareTile(TileStrip strip, Vector3 delta, bool active)
+		{
+			if (!active)
+			{
+				if (spareTile != null)
+					spareTile.SetActive(false);
+				return;
+			}
+
+			if (strip.Count <= 1)
+				return;
+
+			// Identify the leading tile (always the last tile in the strip, which wraps to the front in a roll)
+			var leadingTileIndex = strip.Indices.Last(); // Always clone the last tile (e.g., S in [T,U,V,W,S])
+			var leadingTile = Tiles[leadingTileIndex].GameObject;
+
+			// Identify the trailing position (position of the tile adjacent to the strip in the opposite drag direction)
+			var trailingTileIndex = strip.Indices.First() - strip.Stride;
+			var trailingPosition = GetTilePosition(trailingTileIndex);
+
+			// Initialize spare tile if it doesn't exist
+			if (spareTile == null)
+			{
+				spareTile = new GameObject("SpareTile");
+				spareTile.transform.SetParent(mapRoot.transform, false);
+				spareTile.AddComponent<MeshFilter>();
+				spareTile.AddComponent<MeshRenderer>();
+			}
+
+			// Update spare tile's mesh and material to match the leading tile
+			var leadingRenderer = leadingTile.GetComponentInChildren<MeshRenderer>();
+			var leadingFilter = leadingTile.GetComponentInChildren<MeshFilter>();
+			var spareRenderer = spareTile.GetComponent<MeshRenderer>();
+			var spareFilter = spareTile.GetComponent<MeshFilter>();
+
+			if (leadingRenderer != null && leadingFilter != null && spareRenderer != null && spareFilter != null)
+			{
+				spareFilter.sharedMesh = leadingFilter.sharedMesh;
+				spareRenderer.material = leadingRenderer.material; // Use material to preserve instance properties
+																   // Match local transform of the leading tile's mesh (if it's a child object)
+				spareRenderer.transform.localPosition = leadingRenderer.transform.localPosition;
+				spareRenderer.transform.rotation = leadingRenderer.transform.rotation;
+				spareRenderer.transform.localScale = leadingRenderer.transform.localScale;
+			}
+			else
+			{
+				//Debug.LogWarning($"Failed to update spare tile: leading tile (index {leadingTileIndex}) missing MeshRenderer or MeshFilter.");
+				spareTile.SetActive(false);
+				return;
+			}
+
+			// Ensure no interactivity components
+			foreach (var collider in spareTile.GetComponentsInChildren<Collider>())
+				Destroy(collider);
+			foreach (var animator in spareTile.GetComponentsInChildren<TileAnimator>())
+				Destroy(animator);
+
+			// Position the spare tile at the trailing edge, moving with the strip
+			spareTile.transform.position += trailingPosition + delta;
+			spareTile.SetActive(true);
+		}
+
+		//debug utilities
 		public class OriginalMaterialHolder : MonoBehaviour { public Material originalMaterial; }
 		public void HighlightStrip(TileStrip strip, bool highlight)
 		{
@@ -611,68 +678,6 @@ namespace GamePreviewNamespace
 
 				return meshRenderer.sharedMaterial;
 			}
-		}
-
-		public void UpdateSpareTile(TileStrip strip, Vector3 delta, bool active)
-		{
-			if (!active)
-			{
-				if (spareTile != null)
-					spareTile.SetActive(false);
-				return;
-			}
-
-			if (strip.Count <= 1)
-				return;
-
-			// Identify the leading tile (always the last tile in the strip, which wraps to the front in a roll)
-			int leadingTileIndex = strip.Indices.Last(); // Always clone the last tile (e.g., S in [T,U,V,W,S])
-			var leadingTile = Tiles[leadingTileIndex].GameObject;
-
-			// Identify the trailing position (position of the tile adjacent to the strip in the opposite drag direction)
-			var trailingTileIndex = strip.Indices.First() - strip.Stride;
-			var trailingPosition = GetTilePosition(trailingTileIndex);
-
-			// Initialize spare tile if it doesn't exist
-			if (spareTile == null)
-			{
-				spareTile = new GameObject("SpareTile");
-				spareTile.transform.SetParent(mapRoot.transform, false);
-				spareTile.AddComponent<MeshFilter>();
-				spareTile.AddComponent<MeshRenderer>();
-			}
-
-			// Update spare tile's mesh and material to match the leading tile
-			var leadingRenderer = leadingTile.GetComponentInChildren<MeshRenderer>();
-			var leadingFilter = leadingTile.GetComponentInChildren<MeshFilter>();
-			var spareRenderer = spareTile.GetComponent<MeshRenderer>();
-			var spareFilter = spareTile.GetComponent<MeshFilter>();
-
-			if (leadingRenderer != null && leadingFilter != null && spareRenderer != null && spareFilter != null)
-			{
-				spareFilter.sharedMesh = leadingFilter.sharedMesh;
-				spareRenderer.material = leadingRenderer.material; // Use material to preserve instance properties
-				// Match local transform of the leading tile's mesh (if it's a child object)
-				spareRenderer.transform.localPosition = leadingRenderer.transform.localPosition;
-				spareRenderer.transform.rotation = leadingRenderer.transform.rotation;
-				spareRenderer.transform.localScale = leadingRenderer.transform.localScale;
-			}
-			else
-			{
-				//Debug.LogWarning($"Failed to update spare tile: leading tile (index {leadingTileIndex}) missing MeshRenderer or MeshFilter.");
-				spareTile.SetActive(false);
-				return;
-			}
-
-			// Ensure no interactivity components
-			foreach (var collider in spareTile.GetComponentsInChildren<Collider>())
-				Destroy(collider);
-			foreach (var animator in spareTile.GetComponentsInChildren<TileAnimator>())
-				Destroy(animator);
-
-			// Position the spare tile at the trailing edge, moving with the strip
-			spareTile.transform.position += trailingPosition + delta;
-			spareTile.SetActive(true);
 		}
 
 		public string FormatPath(List<int> path) => string.Join(" -> ", path.Select(t => GetTileCoordinates(t).ToString()));
