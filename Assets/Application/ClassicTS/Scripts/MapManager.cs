@@ -679,7 +679,5 @@ namespace GamePreviewNamespace
 				return meshRenderer.sharedMaterial;
 			}
 		}
-
-		public string FormatPath(List<int> path) => string.Join(" -> ", path.Select(t => GetTileCoordinates(t).ToString()));
 	}
 }

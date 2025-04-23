@@ -26,7 +26,7 @@ namespace GamePreviewNamespace
 			gestureSystem.OnDrag -= OnDrag;
 			gestureSystem.OnEndDrag -= OnEndDrag;
 
-			mapManager.HighlightStrip(tileStrip, false);
+			mapManager.HighlightStrip(tileStrip, false);//debug utility
 		}
 
 		public void Initialize(MapManager manager)
@@ -52,17 +52,16 @@ namespace GamePreviewNamespace
 				return;
 			}
 
-			dragIndex = tileIndex;
 			startWorldPos = worldPos;
-			tileStrip = mapManager.GetTileStrip(tileIndex, 0);
-			mapManager.HighlightStrip(tileStrip, true);
+			dragIndex = tileIndex;
+			tileStrip = default;
 		}
 
 		private void OnDrag(Vector3 screenPos)
 		{
-			mapManager.HighlightStrip(tileStrip, false);
-
 			if (dragIndex == -1) return;
+
+			mapManager.HighlightStrip(tileStrip, false);//debug utility
 
 			var currentPos = mapManager.ScreenToWorld(screenPos);
 			var workingPos = startWorldPos;
@@ -145,16 +144,13 @@ namespace GamePreviewNamespace
 					break;
 			}
 
-			mapManager.HighlightStrip(tileStrip, tileStrip.Count > 1);
+			mapManager.HighlightStrip(tileStrip, tileStrip.Count > 1);//debug utility
 		}
 
 		private void OnEndDrag(Vector3 screenPos)
 		{
 			if (dragIndex == -1) return;
-			mapManager.HighlightStrip(tileStrip, false);
 			
-			mapManager.UpdateSpareTile(tileStrip, Vector3.zero, false);// Deactivate spare tile
-
 			if (tileStrip.Count > 1)
 			{
 				var currentPos = mapManager.Tiles[dragIndex].GameObject.transform.position;
@@ -171,6 +167,8 @@ namespace GamePreviewNamespace
 			}
 
 			dragIndex = -1;
+			mapManager.UpdateSpareTile(tileStrip, Vector3.zero, false);// Deactivate spare tile
+			mapManager.HighlightStrip(tileStrip, false);//debug utility
 			tileStrip = default;
 		}
 	}
