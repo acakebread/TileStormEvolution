@@ -458,40 +458,6 @@ namespace GamePreviewNamespace
 			return -1;
 		}
 
-		public bool RollStrip(TileStrip strip)
-		{
-			if (false == strip.LastIsDockOrRoll) return false;
-
-			var tileData = new TileData[strip.TileIndices.Count];
-			var positions = new Vector3[strip.TileIndices.Count];
-			for (int i = 0; i < strip.TileIndices.Count; i++)
-			{
-				int index = strip.TileIndices[i];
-				tileData[i] = Tiles[index];
-				positions[i] = GetTilePosition(index);
-			}
-
-			for (int i = 0; i < strip.TileIndices.Count; i++)
-			{
-				int currentIndex = strip.TileIndices[i];
-				if (i == 0)
-				{
-					Tiles[currentIndex] = tileData[strip.TileIndices.Count - 1];
-					Tiles[currentIndex].GameObject.transform.position = positions[0];
-				}
-				else
-				{
-					Tiles[currentIndex] = tileData[i - 1];
-					Tiles[currentIndex].GameObject.transform.position = positions[i];
-				}
-
-				var coord = GetTileCoordinates(currentIndex);
-				Tiles[currentIndex].GameObject.name = $"{Tiles[currentIndex].Properties?.Type ?? "Empty"}_{coord.X}_{coord.Z}";
-			}
-
-			return true;
-		}
-
 		public struct TileStrip
 		{
 			public int FirstIndex;
@@ -595,8 +561,41 @@ namespace GamePreviewNamespace
 			return strip;
 		}
 
-		public class OriginalMaterialHolder : MonoBehaviour { public Material originalMaterial; }
+		public bool RollStrip(TileStrip strip)
+		{
+			if (false == strip.LastIsDockOrRoll) return false;
 
+			var tileData = new TileData[strip.TileIndices.Count];
+			var positions = new Vector3[strip.TileIndices.Count];
+			for (int i = 0; i < strip.TileIndices.Count; i++)
+			{
+				int index = strip.TileIndices[i];
+				tileData[i] = Tiles[index];
+				positions[i] = GetTilePosition(index);
+			}
+
+			for (int i = 0; i < strip.TileIndices.Count; i++)
+			{
+				int currentIndex = strip.TileIndices[i];
+				if (i == 0)
+				{
+					Tiles[currentIndex] = tileData[strip.TileIndices.Count - 1];
+					Tiles[currentIndex].GameObject.transform.position = positions[0];
+				}
+				else
+				{
+					Tiles[currentIndex] = tileData[i - 1];
+					Tiles[currentIndex].GameObject.transform.position = positions[i];
+				}
+
+				var coord = GetTileCoordinates(currentIndex);
+				Tiles[currentIndex].GameObject.name = $"{Tiles[currentIndex].Properties?.Type ?? "Empty"}_{coord.X}_{coord.Z}";
+			}
+
+			return true;
+		}
+
+		public class OriginalMaterialHolder : MonoBehaviour { public Material originalMaterial; }
 		public void HighlightStrip(TileStrip strip, bool highlight)
 		{
 			if (!PreviewSettings.ShowTileSelection) return;
@@ -631,24 +630,23 @@ namespace GamePreviewNamespace
 					}
 				}
 			}
-		}
 
-		public Material GetTileMeshMaterial(int tileIndex)
-		{
-			if (tileIndex < 0 || tileIndex >= tiles.Length)
-				return null;
-
-			var meshRenderer = tiles[tileIndex].GameObject.GetComponentInChildren<MeshRenderer>();
-			if (meshRenderer == null)
+			//local function
+			Material GetTileMeshMaterial(int tileIndex)
 			{
-				Debug.LogWarning($"No MeshRenderer found for tile at index {tileIndex}.");
-				return null;
+				if (tileIndex < 0 || tileIndex >= tiles.Length)
+					return null;
+
+				var meshRenderer = tiles[tileIndex].GameObject.GetComponentInChildren<MeshRenderer>();
+				if (meshRenderer == null)
+				{
+					Debug.LogWarning($"No MeshRenderer found for tile at index {tileIndex}.");
+					return null;
+				}
+
+				return meshRenderer.sharedMaterial;
 			}
-
-			return meshRenderer.sharedMaterial;
 		}
-
-		public string FormatPath(List<int> path) => string.Join(" -> ", path.Select(t => GetTileCoordinates(t).ToString()));
 
 		public void UpdateSpareTile(TileStrip strip, Vector3 delta, bool active)
 		{
@@ -711,5 +709,7 @@ namespace GamePreviewNamespace
 			spareTile.transform.position += trailingPosition + delta;
 			spareTile.SetActive(true);
 		}
+
+		public string FormatPath(List<int> path) => string.Join(" -> ", path.Select(t => GetTileCoordinates(t).ToString()));
 	}
 }
