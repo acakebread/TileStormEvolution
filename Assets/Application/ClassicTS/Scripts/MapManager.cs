@@ -37,7 +37,7 @@ namespace GamePreviewNamespace
 
 		public int ToIndex(GridCoord coord) => coord.Z * Width + coord.X;
 
-		public GridCoord FromIndex(int index) => new GridCoord(index % Width, index / Width);
+		//public GridCoord FromIndex(int index) => new GridCoord(index % Width, index / Width);
 
 		public Vector3 ScreenToWorld(Vector3 screenPos)
 		{
@@ -47,35 +47,13 @@ namespace GamePreviewNamespace
 			return ray.GetPoint(distance);
 		}
 
-		public Vector3 GetCentre()
-		{
-			if (Width == 0 || Height == 0)
-				return Vector3.zero;
-			return new Vector3(Width / 2f, 0.5f, Height / 2f); // Approximate map center
-		}
-
-		public int GetAdjacentTile(int tileIndex, int dirBit)
+		private int GetAdjacentTile(int tileIndex, int dirBit)
 		{
 			var (dx, dz) = TileProperties.GetDirectionOffset(dirBit);
 			var newCoord = GetTileCoordinates(tileIndex).Add(dx, dz);
 			if (newCoord.X < 0 || newCoord.X >= Width || newCoord.Z < 0 || newCoord.Z >= Height) return -1;
 			return ToIndex(newCoord);
 		}
-
-		public int SearchDirectionForLastType(int index, int dirBit, TileProperties.TileFlags flags)
-		{
-			var nextIndex = GetAdjacentTile(index, dirBit);
-			while (-1 != nextIndex)
-			{
-				var props = GetTilePropertiesAt(nextIndex);
-				if (props == null || (props.Flags & flags) != flags) break;
-				index = nextIndex;
-				nextIndex = GetAdjacentTile(index, dirBit);
-			}
-			return index;
-		}
-
-		public GridCoord GetTileCoordinatesForLastType(int index, int dirBit, TileProperties.TileFlags flags) => GetTileCoordinates(SearchDirectionForLastType(index, dirBit, flags));
 
 		public void Reset()
 		{
@@ -223,6 +201,26 @@ namespace GamePreviewNamespace
 				}
 			}
 			SetCameraPosition();
+
+			//local function
+			void SetCameraPosition()
+			{
+				var mapMin = Vector3.one * 1000f;
+				var mapMax = Vector3.zero;
+				var activeTileCount = 0;
+				for (var index = 0; index < tileMap.Length; index++)
+				{
+					if (GetTilePropertiesAt(index) != null)
+					{
+						var pos = GetTileCoordinates(index).ToPosition();
+						mapMin = Vector3.Min(mapMin, pos);
+						mapMax = Vector3.Max(mapMax, pos);
+						activeTileCount++;
+					}
+				}
+				Camera.main.transform.position = activeTileCount > 0 ? (mapMin + mapMax) * 0.5f + Vector3.up * (mapMax.z - mapMin.z) : Vector3.up * 10f;
+				Camera.main.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+			}
 		}
 
 		public void Scramble()
@@ -255,25 +253,6 @@ namespace GamePreviewNamespace
 				tiles[index].GameObject.name = $"{tiles[index].Properties?.Type ?? "Empty"}_{coord.X}_{coord.Z}";
 				tiles[index].GameObject.transform.position = coord.ToPosition();
 			}
-		}
-
-		private void SetCameraPosition()
-		{
-			var mapMin = Vector3.one * 1000f;
-			var mapMax = Vector3.zero;
-			var activeTileCount = 0;
-			for (var index = 0; index < tiles.Length; index++)
-			{
-				if (GetTilePropertiesAt(index) != null)
-				{
-					var pos = GetTileCoordinates(index).ToPosition();
-					mapMin = Vector3.Min(mapMin, pos);
-					mapMax = Vector3.Max(mapMax, pos);
-					activeTileCount++;
-				}
-			}
-			Camera.main.transform.position = activeTileCount > 0 ? (mapMin + mapMax) * 0.5f + Vector3.up * (mapMax.z - mapMin.z) : Vector3.up * 10f;
-			Camera.main.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
 		}
 
 		public int GetStartTile()
@@ -348,6 +327,26 @@ namespace GamePreviewNamespace
 			return generatedWaypoints;
 		}
 
+		public bool CheckPathBetweenWaypoints(int currentWaypointIndex, out List<int> path)
+		{
+			path = null;
+			if (Waypoints == null || currentWaypointIndex < 0 || currentWaypointIndex + 1 >= Waypoints.Count)
+			{
+				//Debug.Log($"No next waypoint (currentIndex={currentWaypointIndex}, waypoints.Count={Waypoints?.Count ?? 0})");
+				return false;
+			}
+
+			var startTile = Waypoints[currentWaypointIndex].nTile;
+			var targetTile = Waypoints[currentWaypointIndex + 1].nTile;
+			path = FindPath(startTile, targetTile);
+			if (path != null)
+			{
+				//Debug.Log($"Found path to waypoint {targetTile}: [{FormatPath(path)}]");
+				return true;
+			}
+			return false;
+		}
+
 		private List<int> FindPath(int startTile, int targetTile)
 		{
 			var startProps = GetTilePropertiesAt(startTile);
@@ -411,50 +410,29 @@ namespace GamePreviewNamespace
 			}
 		}
 
-		public bool CheckPathBetweenWaypoints(int currentWaypointIndex, out List<int> path)
-		{
-			path = null;
-			if (Waypoints == null || currentWaypointIndex < 0 || currentWaypointIndex + 1 >= Waypoints.Count)
-			{
-				//Debug.Log($"No next waypoint (currentIndex={currentWaypointIndex}, waypoints.Count={Waypoints?.Count ?? 0})");
-				return false;
-			}
-
-			var startTile = Waypoints[currentWaypointIndex].nTile;
-			var targetTile = Waypoints[currentWaypointIndex + 1].nTile;
-			path = FindPath(startTile, targetTile);
-			if (path != null)
-			{
-				//Debug.Log($"Found path to waypoint {targetTile}: [{FormatPath(path)}]");
-				return true;
-			}
-			return false;
-		}
-
 		public int FindAdjacentConsole(int nTile)
 		{
-			if (!IsValidTileIndex(nTile))
-				return -1;
-
-			foreach (var dirBit in TileProperties.Directions)
+			if (IsValidTileIndex(nTile))
 			{
-				var consoleTile = GetAdjacentTile(nTile, dirBit);
-				if (consoleTile == -1)
-					continue;
+				foreach (var dirBit in TileProperties.Directions)
+				{
+					var consoleTile = GetAdjacentTile(nTile, dirBit);
+					if (consoleTile == -1)
+						continue;
 
-				var consoleProps = GetTilePropertiesAt(consoleTile);
-				if (consoleProps?.IsConsole != true)
-					continue;
+					var consoleProps = GetTilePropertiesAt(consoleTile);
+					if (consoleProps?.IsConsole != true)
+						continue;
 
-				var consoleNav = consoleProps.Nav;
-				if (consoleNav == 0)
-					continue;
+					var consoleNav = consoleProps.Nav;
+					if (consoleNav == 0)
+						continue;
 
-				var navTile = GetAdjacentTile(consoleTile, consoleNav);
-				if (navTile == nTile)
-					return consoleTile;
+					var navTile = GetAdjacentTile(consoleTile, consoleNav);
+					if (navTile == nTile)
+						return consoleTile;
+				}
 			}
-
 			return -1;
 		}
 
@@ -462,34 +440,26 @@ namespace GamePreviewNamespace
 		{
 			public int FirstIndex;
 			public int LastIndex;
-			public bool LastIsDockOrRoll;
 			public int Stride;
 
-			public readonly int Count => (Stride == 0) ? 1 : Mathf.Abs((LastIndex - FirstIndex) / Stride) + 1;
+			public readonly int Count => (Stride == 0) ? 1 : (LastIndex - FirstIndex) / Stride + 1;
 			public readonly int First => FirstIndex;
 			public readonly int Last => LastIndex;
 
-			public readonly List<int> TileIndices
+			public readonly List<int> Indices
 			{
 				get
 				{
-					var indices = new List<int>();
-					if (Stride == 0)
-					{
-						indices.Add(FirstIndex);
-						return indices;
-					}
-
-					var currentIndex = FirstIndex;
-					indices.Add(currentIndex);
+					var indices = new List<int>() { FirstIndex };
+					if (Stride == 0) return indices;
 
 					// Increment by Stride until LastIndex is reached
+					var currentIndex = FirstIndex;
 					while (currentIndex != LastIndex)
 					{
 						currentIndex += Stride;
 						indices.Add(currentIndex);
 					}
-
 					return indices;
 				}
 			}
@@ -501,32 +471,30 @@ namespace GamePreviewNamespace
 			{
 				FirstIndex = startTileIndex,
 				LastIndex = startTileIndex,
-				LastIsDockOrRoll = false,
 				Stride = 0
 			};
 
 			if (dragDirectionBit == 0)
 				return strip;
 
-			var startProps = GetTilePropertiesAt(startTileIndex);
+			var startProps = tiles[startTileIndex].Properties;
 			if (startProps == null || !startProps.Interactive)
 				return strip;
 
 			// Compute stride based on direction
-			int stride = 0;
+			var stride = 0;
 			var (dx, dz) = TileProperties.GetDirectionOffset(dragDirectionBit);
 			if (dx != 0) stride = dx; // Horizontal: +1 (right) or -1 (left)
 			else if (dz != 0) stride = dz * Width; // Vertical: +Width (down) or -Width (up)
 
 			// Walk backward (opposite direction) to find FirstIndex
-			int currentIndex = startTileIndex;
+			var currentIndex = startTileIndex;
 			var reverseDirection = TileProperties.GetOppositeDirection(dragDirectionBit);
 			while (true)
 			{
-				var nextIndex = GetAdjacentTile(currentIndex, reverseDirection);
-				var nextProps = GetTilePropertiesAt(nextIndex);
+				var nextProps = tiles[currentIndex - stride].Properties;
 				if (nextProps == null || (!nextProps.IsDock && !nextProps.IsRoll)) break;
-				currentIndex = nextIndex;
+				currentIndex -= stride;
 				strip.FirstIndex = currentIndex; // Update FirstIndex to the earliest index
 			}
 
@@ -534,52 +502,49 @@ namespace GamePreviewNamespace
 			currentIndex = startTileIndex;
 			while (true)
 			{
-				var nextIndex = GetAdjacentTile(currentIndex, dragDirectionBit);
-				var nextProps = GetTilePropertiesAt(nextIndex);
+				var nextProps = tiles[currentIndex + stride].Properties;
 				if (nextProps == null || !nextProps.Interactive) break;
-				currentIndex = nextIndex;
-				strip.LastIndex = currentIndex; // Update LastIndex
+				currentIndex += stride;
 			}
 
 			// Continue forward for roll or dock tiles
 			while (true)
 			{
-				var nextIndex = GetAdjacentTile(currentIndex, dragDirectionBit);
-				var nextProps = GetTilePropertiesAt(nextIndex);
+				var nextProps = tiles[currentIndex + stride].Properties;
 				if (nextProps == null || (!nextProps.IsDock && !nextProps.IsRoll)) break;
-				currentIndex = nextIndex;
-				strip.LastIndex = currentIndex; // Update LastIndex
+				currentIndex += stride;
 			}
 
-			var finalProps = GetTilePropertiesAt(currentIndex);
+			var finalProps = tiles[currentIndex].Properties;
 			if (finalProps != null && (finalProps.IsDock || finalProps.IsRoll))
 			{
-				strip.LastIsDockOrRoll = true;
+				strip.LastIndex = currentIndex; // Update LastIndex
+				strip.Stride = stride;
+				return strip;
 			}
 
-			strip.Stride = stride;
 			return strip;
 		}
 
 		public bool RollStrip(TileStrip strip)
 		{
-			if (false == strip.LastIsDockOrRoll) return false;
+			if (strip.Count <= 1) return false;
 
-			var tileData = new TileData[strip.TileIndices.Count];
-			var positions = new Vector3[strip.TileIndices.Count];
-			for (int i = 0; i < strip.TileIndices.Count; i++)
+			var tileData = new TileData[strip.Count];
+			var positions = new Vector3[strip.Count];
+			for (int i = 0; i < strip.Count; i++)
 			{
-				int index = strip.TileIndices[i];
+				int index = strip.Indices[i];
 				tileData[i] = Tiles[index];
 				positions[i] = GetTilePosition(index);
 			}
 
-			for (int i = 0; i < strip.TileIndices.Count; i++)
+			for (int i = 0; i < strip.Count; i++)
 			{
-				int currentIndex = strip.TileIndices[i];
+				int currentIndex = strip.Indices[i];
 				if (i == 0)
 				{
-					Tiles[currentIndex] = tileData[strip.TileIndices.Count - 1];
+					Tiles[currentIndex] = tileData[strip.Count - 1];
 					Tiles[currentIndex].GameObject.transform.position = positions[0];
 				}
 				else
@@ -599,8 +564,8 @@ namespace GamePreviewNamespace
 		public void HighlightStrip(TileStrip strip, bool highlight)
 		{
 			if (!PreviewSettings.ShowTileSelection) return;
-			if (null == strip.TileIndices) return;
-			foreach (var tileIndex in strip.TileIndices)
+			if (null == strip.Indices) return;
+			foreach (var tileIndex in strip.Indices)
 			{
 				var tile = Tiles[tileIndex].GameObject;
 				if (tile == null) continue;
@@ -657,15 +622,15 @@ namespace GamePreviewNamespace
 				return;
 			}
 
-			if (false == strip.LastIsDockOrRoll)
+			if (strip.Count <= 1)
 				return;
 
 			// Identify the leading tile (always the last tile in the strip, which wraps to the front in a roll)
-			int leadingTileIndex = strip.TileIndices.Last(); // Always clone the last tile (e.g., S in [T,U,V,W,S])
+			int leadingTileIndex = strip.Indices.Last(); // Always clone the last tile (e.g., S in [T,U,V,W,S])
 			var leadingTile = Tiles[leadingTileIndex].GameObject;
 
 			// Identify the trailing position (position of the tile adjacent to the strip in the opposite drag direction)
-			var trailingTileIndex = strip.TileIndices.First() - strip.Stride;
+			var trailingTileIndex = strip.Indices.First() - strip.Stride;
 			var trailingPosition = GetTilePosition(trailingTileIndex);
 
 			// Initialize spare tile if it doesn't exist

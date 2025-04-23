@@ -100,9 +100,9 @@ namespace GamePreviewNamespace
 				}
 
 				// Reset tile positions
-				if (tileStrip.TileIndices.Count > 0)
+				if (tileStrip.Count > 1)
 				{
-					foreach (var tileIndex in tileStrip.TileIndices)
+					foreach (var tileIndex in tileStrip.Indices)
 						mapManager.Tiles[tileIndex].GameObject.transform.position = mapManager.GetTilePosition(tileIndex);
 				}
 
@@ -111,7 +111,7 @@ namespace GamePreviewNamespace
 				{
 					tileStrip = mapManager.GetTileStrip(dragIndex, dirBit);
 					if (mapManager.RollStrip(tileStrip))
-						dragIndex = mapManager.GetAdjacentTile(dragIndex, dirBit);
+						dragIndex += tileStrip.Stride;
 					tileStrip = mapManager.GetTileStrip(dragIndex, dirBit);
 					startWorldPos += gesture;
 				}
@@ -121,19 +121,19 @@ namespace GamePreviewNamespace
 					if (Mathf.Abs(gesture.x) > Mathf.Abs(gesture.z))
 					{
 						tileStrip = mapManager.GetTileStrip(dragIndex, gesture.x > 0f ? TileProperties.East : TileProperties.West);
-						if (tileStrip.LastIsDockOrRoll)
+						if (tileStrip.Count > 1)
 							delta = new Vector3(gesture.x, 0, 0);
 					}
 					else
 					{
 						tileStrip = mapManager.GetTileStrip(dragIndex, gesture.z > 0f ? TileProperties.North : TileProperties.South);
-						if (tileStrip.LastIsDockOrRoll)
+						if (tileStrip.Count > 1)
 							delta = new Vector3(0, 0, gesture.z);
 					}
 
-					if (tileStrip.TileIndices.Count > 0)
+					if (tileStrip.Count > 1)
 					{
-						foreach (var tileIndex in tileStrip.TileIndices)
+						foreach (var tileIndex in tileStrip.Indices)
 							mapManager.Tiles[tileIndex].GameObject.transform.position += delta;
 					}
 				}
@@ -145,7 +145,7 @@ namespace GamePreviewNamespace
 					break;
 			}
 
-			mapManager.HighlightStrip(tileStrip, true);
+			mapManager.HighlightStrip(tileStrip, tileStrip.Count > 1);
 		}
 
 		private void OnEndDrag(Vector3 screenPos)
@@ -155,20 +155,18 @@ namespace GamePreviewNamespace
 			
 			mapManager.UpdateSpareTile(tileStrip, Vector3.zero, false);// Deactivate spare tile
 
-			if (tileStrip.TileIndices.Count > 0)
+			if (tileStrip.Count > 1)
 			{
-				if (tileStrip.LastIsDockOrRoll)
-				{
-					var currentPos = mapManager.Tiles[dragIndex].GameObject.transform.position;
-					int x = Mathf.RoundToInt(currentPos.x);
-					int z = Mathf.RoundToInt(currentPos.z);
-					var targetCoord = new GridCoord(x, z);
-					int targetIndex = mapManager.ToIndex(targetCoord);
+				var currentPos = mapManager.Tiles[dragIndex].GameObject.transform.position;
+				int x = Mathf.RoundToInt(currentPos.x);
+				int z = Mathf.RoundToInt(currentPos.z);
+				var targetCoord = new GridCoord(x, z);
+				int targetIndex = mapManager.ToIndex(targetCoord);
 
-					if (targetIndex != dragIndex)
-						mapManager.RollStrip(tileStrip);
-				}
-				foreach (var tileIndex in tileStrip.TileIndices)
+				if (targetIndex != dragIndex)
+					mapManager.RollStrip(tileStrip);
+
+				foreach (var tileIndex in tileStrip.Indices)
 					mapManager.Tiles[tileIndex].GameObject.transform.position = mapManager.GetTilePosition(tileIndex);
 			}
 
