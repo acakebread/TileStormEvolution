@@ -7,7 +7,7 @@ public class GestureSystem : MonoBehaviour
 
 	public event Action<Vector3> OnBeginDrag;
 	public event Action<Vector3> OnDrag;
-	public event Action OnEndDrag;
+	public event Action<Vector3> OnEndDrag;
 
 	private void Awake() => instance = this;
 
@@ -18,6 +18,6 @@ public class GestureSystem : MonoBehaviour
 		else if (Input.GetMouseButton(0))
 			OnDrag?.Invoke(Input.mousePosition);
 		else if (Input.GetMouseButtonUp(0))
-			OnEndDrag?.Invoke();
+			OnEndDrag?.Invoke(Input.mousePosition);
 	}
 }

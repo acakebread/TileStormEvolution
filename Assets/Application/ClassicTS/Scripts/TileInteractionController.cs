@@ -145,7 +145,7 @@ namespace GamePreviewNamespace
 			mapManager.HighlightStrip(tileStrip, true);
 		}
 
-		private void OnEndDrag()
+		private void OnEndDrag(Vector3 screenPos)
 		{
 			if (dragIndex == -1) return;
 			mapManager.HighlightStrip(tileStrip, false);
