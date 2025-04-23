@@ -9,7 +9,7 @@ public class GestureSystem : MonoBehaviour
 	public event Action<Vector3> OnDragging;
 	public event Action OnDragEnd;
 
-	private bool isMouseDown;
+	private bool isMouseDown = false;
 
 	private void Awake() => instance = this;
 
@@ -17,32 +17,17 @@ public class GestureSystem : MonoBehaviour
 	{
 		if (Input.GetMouseButtonDown(0) && !isMouseDown)
 		{
-			StartDrag();
+			isMouseDown = true;
+			OnDragStart?.Invoke(Input.mousePosition);
 		}
 		else if (Input.GetMouseButton(0) && isMouseDown)
 		{
-			UpdateDrag();
+			OnDragging?.Invoke(Input.mousePosition);
 		}
 		else if (Input.GetMouseButtonUp(0) && isMouseDown)
 		{
-			EndDrag();
+			isMouseDown = false;
+			OnDragEnd?.Invoke();
 		}
-	}
-
-	private void StartDrag()
-	{
-		isMouseDown = true;
-		OnDragStart?.Invoke(Input.mousePosition);
-	}
-
-	private void UpdateDrag()
-	{
-		OnDragging?.Invoke(Input.mousePosition);
-	}
-
-	private void EndDrag()
-	{
-		isMouseDown = false;
-		OnDragEnd?.Invoke();
 	}
 }
