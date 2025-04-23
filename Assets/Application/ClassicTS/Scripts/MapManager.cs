@@ -270,6 +270,9 @@ namespace GamePreviewNamespace
 
 		public int GetStartTile()
 		{
+			if (null != Waypoints && 0 != Waypoints.Count)
+				return Waypoints[0].nTile;
+
 			for (var i = 0; i < Width * Height; i++)
 			{
 				var props = GetTilePropertiesAt(i);
@@ -282,6 +285,9 @@ namespace GamePreviewNamespace
 
 		public int GetEndTile()
 		{
+			if (null != Waypoints && 0 != Waypoints.Count)
+				return Waypoints[Waypoints.Count - 1].nTile;
+
 			for (var i = 0; i < Width * Height; i++)
 			{
 				var props = GetTilePropertiesAt(i);

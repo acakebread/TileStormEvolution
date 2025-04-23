@@ -91,7 +91,16 @@ namespace GamePreviewNamespace
 				Initialize();
 			}
 
-			if (eggbotController.IsLevelComplete && GUI.Button(new Rect(120, 10, 150, 30), "Next Level"))
+			if (GUI.Button(new Rect(120, 10, 150, 30), "Previous Level"))//eggbotController.IsLevelComplete && 
+			{
+				int currentIndex = DatabaseLoader.instance.Maps.ToList().FindIndex(m => m.name == mapManager.CurrentMapName);
+				currentIndex = (DatabaseLoader.instance.Maps.Count + currentIndex - 1) % DatabaseLoader.instance.Maps.Count;
+				mapName = DatabaseLoader.instance.Maps[currentIndex].name;
+				isInitialized = false;
+				Initialize();
+			}
+
+			if (GUI.Button(new Rect(280, 10, 150, 30), "Next Level"))//eggbotController.IsLevelComplete && 
 			{
 				int currentIndex = DatabaseLoader.instance.Maps.ToList().FindIndex(m => m.name == mapManager.CurrentMapName);
 				currentIndex = (currentIndex + 1) % DatabaseLoader.instance.Maps.Count;
