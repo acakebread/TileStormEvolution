@@ -18,6 +18,7 @@ namespace GamePreviewNamespace
 		private TileData[] tiles;
 		private List<DatabaseLoader.Waypoint> waypoints;
 		private GameObject spareTile;
+		private TilePropertiesManager tilePropertiesManager;
 
 		public DatabaseLoader.Map CurrentMap => currentMap;
 		public string CurrentMapName => currentMap?.name;
@@ -64,12 +65,7 @@ namespace GamePreviewNamespace
 			currentMap = null;
 			waypoints = null;
 			tiles = null;
-		}
-
-		private TileProperties CreateTileProperties(string szType, string szTheme)
-		{
-			var tileDef = DatabaseLoader.instance.TileDefs.FirstOrDefault(td => td.szType == szType && td.szTheme == szTheme);
-			return tileDef != null ? new TileProperties(tileDef) : null;
+			tilePropertiesManager = null;
 		}
 
 		public void Initialize(string mapName)
@@ -83,6 +79,7 @@ namespace GamePreviewNamespace
 				return;
 			}
 
+			tilePropertiesManager = new();
 			mapRoot = new GameObject($"Map_{currentMap.name}");
 			mapRoot.transform.SetParent(transform, false);
 			LoadTileData(currentMap.tiles);
@@ -136,7 +133,7 @@ namespace GamePreviewNamespace
 				if (szType == "tile_empty")
 					continue;
 
-				this.tiles[index].Properties = CreateTileProperties(szType, szTheme);
+				this.tiles[index].Properties = tilePropertiesManager.GetOrCreateTileProperties(szType, szTheme);
 				if (this.tiles[index].Properties == null)
 					continue;
 
