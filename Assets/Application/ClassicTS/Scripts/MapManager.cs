@@ -462,19 +462,19 @@ namespace GamePreviewNamespace
 			}
 		}
 
-		public TileStrip GetTileStrip(int startTileIndex, int dragDirectionBit)
+		public TileStrip GetTileStrip(int startIndex, int dragDirectionBit)
 		{
 			var strip = new TileStrip
 			{
-				FirstIndex = startTileIndex,
-				LastIndex = startTileIndex,
+				FirstIndex = startIndex,
+				LastIndex = startIndex,
 				Stride = 0
 			};
 
 			if (dragDirectionBit == 0)
 				return strip;
 
-			var startProps = tiles[startTileIndex].Properties;
+			var startProps = tiles[startIndex].Properties;
 			if (startProps == null || !startProps.Interactive)
 				return strip;
 
@@ -484,23 +484,15 @@ namespace GamePreviewNamespace
 			if (dx != 0) stride = dx; // Horizontal: +1 (right) or -1 (left)
 			else if (dz != 0) stride = dz * Width; // Vertical: +Width (up) or -Width (down)
 
-			// Walk backward (opposite direction) to find FirstIndex
-			var firstIndex = startTileIndex;
-			while (true)
-			{
-				var nextProps = tiles[firstIndex - stride].Properties;
-				if (nextProps == null || (!nextProps.IsDock && !nextProps.IsRoll)) break;
-				firstIndex -= stride;
-			}
-
 			// Walk forward to find LastIndex (interactive tiles)
-			var lastIndex = startTileIndex;
+			var lastIndex = startIndex;
 			while (true)
 			{
 				var nextProps = tiles[lastIndex + stride].Properties;
 				if (nextProps == null || !nextProps.Interactive) break;
 				lastIndex += stride;
 			}
+			var lastInteractive = lastIndex;// record the lastinteractive tile
 
 			// Continue forward for roll or dock tiles
 			while (true)
@@ -510,14 +502,20 @@ namespace GamePreviewNamespace
 				lastIndex += stride;
 			}
 
-			var finalProps = tiles[lastIndex].Properties;
-			if (finalProps != null && (finalProps.IsDock || finalProps.IsRoll))
+			if (lastIndex == lastInteractive)// nowhere to drag strip
+				return strip;
+
+			// Walk backwards (opposite direction) to find FirstIndex
+			while (true)
 			{
-				strip.FirstIndex = firstIndex; // Update FirstIndex to the earliest index
-				strip.LastIndex = lastIndex; // Update LastIndex to the front index
-				strip.Stride = stride;
+				var nextProps = tiles[startIndex - stride].Properties;
+				if (nextProps == null || (!nextProps.IsDock && !nextProps.IsRoll)) break;
+				startIndex -= stride;
 			}
 
+			strip.FirstIndex = startIndex;// Update FirstIndex to the earliest index
+			strip.LastIndex = lastIndex; // Update LastIndex to the front index
+			strip.Stride = stride;
 			return strip;
 		}
 

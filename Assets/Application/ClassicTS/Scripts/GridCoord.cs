@@ -8,6 +8,8 @@ namespace GamePreviewNamespace
 		public int Z { get; }
 
 		public GridCoord(int x, int z) { X = x; Z = z; }
+		public GridCoord(float x, float z) { X = Mathf.RoundToInt(x); Z = Mathf.RoundToInt(z); }
+		public GridCoord(Vector3 v) { X = Mathf.RoundToInt(v.x); Z = Mathf.RoundToInt(v.z); }
 
 		// Convert to world position (x, 0, z)
 		public Vector3 ToPosition() => new(X, 0f, Z);

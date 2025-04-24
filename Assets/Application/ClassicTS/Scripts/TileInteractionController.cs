@@ -6,9 +6,9 @@ namespace GamePreviewNamespace
 	{
 		private GestureSystem gestureSystem => GestureSystem.instance;
 		private MapManager mapManager;
-		private MapManager.TileStrip tileStrip;
+		private MapManager.TileStrip tileStrip;//working selection
 		private Vector3 initialPos;//world ground plane position
-		private int dragIndex = -1;
+		private int dragIndex = -1;//selected tile
 		private const float gridSize = 1.0f;
 
 		public void Start()
@@ -39,11 +39,8 @@ namespace GamePreviewNamespace
 		private void OnBeginDrag(Vector3 screenPos)
 		{
 			initialPos = mapManager.ScreenToWorld(screenPos);
-			var x = Mathf.RoundToInt(initialPos.x);
-			var z = Mathf.RoundToInt(initialPos.z);
-			var coord = new GridCoord(x, z);
-			if (coord.X < 0 || coord.X >= mapManager.Width || coord.Z < 0 || coord.Z >= mapManager.Height) return;
-			var tileIndex = mapManager.ToIndex(coord);
+			if (initialPos.x < 0 || initialPos.x >= mapManager.Width || initialPos.z < 0 || initialPos.z >= mapManager.Height) return;
+			var tileIndex = mapManager.ToIndex(new GridCoord(initialPos));
 
 			var properties = mapManager.GetTilePropertiesAt(tileIndex);
 			if (properties == null || !properties.Interactive) return;//Debug.LogWarning($"Cannot drag tile at index {tileIndex}: {(properties == null ? "Empty" : "Not draggable")}");
@@ -73,7 +70,7 @@ namespace GamePreviewNamespace
 				var dxyz = currentPos - workingPos;// gesture
 				var absX = Mathf.Abs(dxyz.x);
 				var absZ = Mathf.Abs(dxyz.z);
-				var dirBit = 0;
+				var nesw = 0;//direction flag
 
 				// Compute the gesture
 				if (absX > absZ && absX >= gridSize)
@@ -81,26 +78,26 @@ namespace GamePreviewNamespace
 					var direction = dxyz.x > 0 ? 1 : -1;
 					dxyz = new Vector3(direction, 0, 0);// quantised gesture
 					workingPos.x += direction * gridSize;
-					if (dxyz.x == 1) dirBit |= TileProperties.East;
-					if (dxyz.x == -1) dirBit |= TileProperties.West;
+					if (dxyz.x == 1) nesw |= TileProperties.East;
+					if (dxyz.x == -1) nesw |= TileProperties.West;
 				}
 				else if (absZ >= gridSize)
 				{
 					var direction = dxyz.z > 0 ? 1 : -1;
 					dxyz = new Vector3(0, 0, direction);// quantised gesture
 					workingPos.z += direction * gridSize;
-					if (dxyz.z == 1) dirBit |= TileProperties.North;
-					if (dxyz.z == -1) dirBit |= TileProperties.South;
+					if (dxyz.z == 1) nesw |= TileProperties.North;
+					if (dxyz.z == -1) nesw |= TileProperties.South;
 				}
 
 				// Process the gesture
 				var delta = Vector3.zero;
-				if (dirBit != 0)// quantised gesture
+				if (nesw != 0)// quantised gesture
 				{
-					tileStrip = mapManager.GetTileStrip(dragIndex, dirBit);
+					tileStrip = mapManager.GetTileStrip(dragIndex, nesw);
 					if (mapManager.RollStrip(tileStrip))
 						dragIndex += tileStrip.Stride;
-					tileStrip = mapManager.GetTileStrip(dragIndex, dirBit);
+					tileStrip = mapManager.GetTileStrip(dragIndex, nesw);
 					initialPos += dxyz;
 				}
 				else// partial gesture
@@ -129,7 +126,7 @@ namespace GamePreviewNamespace
 				mapManager.UpdateSpareTile(tileStrip, delta, delta != Vector3.zero);
 
 				// Break if this was a partial movement
-				if (dirBit == 0)
+				if (nesw == 0)
 					break;
 			}
 
@@ -139,14 +136,11 @@ namespace GamePreviewNamespace
 		private void OnEndDrag(Vector3 screenPos)
 		{
 			if (dragIndex == -1) return;
-			
+
 			if (tileStrip.Count > 1)
 			{
 				var currentPos = mapManager.Tiles[dragIndex].GameObject.transform.position;
-				var x = Mathf.RoundToInt(currentPos.x);
-				var z = Mathf.RoundToInt(currentPos.z);
-				var targetCoord = new GridCoord(x, z);
-				var targetIndex = mapManager.ToIndex(targetCoord);
+				var targetIndex = mapManager.ToIndex(new GridCoord(currentPos));
 
 				if (targetIndex != dragIndex)
 					mapManager.RollStrip(tileStrip);
