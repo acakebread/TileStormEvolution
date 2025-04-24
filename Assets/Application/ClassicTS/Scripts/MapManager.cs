@@ -450,24 +450,18 @@ namespace GamePreviewNamespace
 			{
 				get
 				{
-					if (null != indices) return indices;
-					indices = new List<int>();
-					if (Stride == 0) return indices;
-
-					// Increment by Stride until LastIndex is reached
-					var index = First;
-					for (var i = 0; i < Count; ++i)
+					if (null == indices && 0 != Stride)
 					{
-						indices.Add(index);
-						index += Stride;
+						indices = new();
+						for (var i = 0; i < Count; ++i) indices.Add(First + Stride * i);
 					}
 					return indices;
 				}
 			}
 		}
 
-		public void ResetStrip(in TileStrip strip, int width) { foreach (var index in strip.Indices) tiles[index].position = new Vector3(index % width, 0f, index / width); }
-		public void TranslateStrip(in TileStrip strip, in Vector3 delta) { foreach (var index in strip.Indices) tiles[index].position += delta; }
+		public void ResetStrip(in TileStrip strip, int width) { if (null == strip.Indices) return; foreach (var index in strip.Indices) tiles[index].position = new Vector3(index % width, 0f, index / width); }
+		public void TranslateStrip(in TileStrip strip, in Vector3 delta) { if (null == strip.Indices) return; foreach (var index in strip.Indices) tiles[index].position += delta; }
 
 		public TileStrip GetTileStrip(int startIndex, int directionFlag)
 		{

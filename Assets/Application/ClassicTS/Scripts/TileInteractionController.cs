@@ -56,14 +56,13 @@ namespace GamePreviewNamespace
 			mapManager.HighlightStrip(tileStrip, false);//debug utility
 
 			var currentPos = mapManager.ScreenToWorld(screenPos);
-			var workingPos = initialPos;
 
 			while (true)
 			{
 				// Reset tile positions
 				mapManager.ResetStrip(tileStrip, mapManager.Width);
 
-				var dxyz = currentPos - workingPos;// gesture
+				var dxyz = currentPos - initialPos;// gesture
 				var absX = Mathf.Abs(dxyz.x);
 				var absZ = Mathf.Abs(dxyz.z);
 				var nesw = 0;//direction flag
@@ -73,7 +72,6 @@ namespace GamePreviewNamespace
 				{
 					var direction = dxyz.x > 0 ? 1 : -1;
 					dxyz = new Vector3(direction, 0, 0);// quantised gesture
-					workingPos.x += direction * gridSize;
 					if (dxyz.x == 1) nesw |= TileProperties.East;
 					if (dxyz.x == -1) nesw |= TileProperties.West;
 				}
@@ -81,7 +79,6 @@ namespace GamePreviewNamespace
 				{
 					var direction = dxyz.z > 0 ? 1 : -1;
 					dxyz = new Vector3(0, 0, direction);// quantised gesture
-					workingPos.z += direction * gridSize;
 					if (dxyz.z == 1) nesw |= TileProperties.North;
 					if (dxyz.z == -1) nesw |= TileProperties.South;
 				}
@@ -94,20 +91,20 @@ namespace GamePreviewNamespace
 					if (mapManager.RollStrip(tileStrip))
 						dragIndex += tileStrip.Stride;
 					tileStrip = mapManager.GetTileStrip(dragIndex, nesw);
-					initialPos += dxyz;
+					initialPos += dxyz;// consume the gesture
 				}
 				else// partial gesture
 				{
 					tileStrip = new MapManager.TileStrip();
 					if (Mathf.Abs(dxyz.x) > Mathf.Abs(dxyz.z))
 					{
-						tileStrip = mapManager.GetTileStrip(dragIndex, dxyz.x > 0f ? TileProperties.East : TileProperties.West);
+						tileStrip = mapManager.GetTileStrip(dragIndex, 0 == dxyz.x ? 0 : dxyz.x > 0f ? TileProperties.East : TileProperties.West);
 						if (tileStrip.Count > 1)
 							delta = new Vector3(dxyz.x, 0, 0);
 					}
 					else
 					{
-						tileStrip = mapManager.GetTileStrip(dragIndex, dxyz.z > 0f ? TileProperties.North : TileProperties.South);
+						tileStrip = mapManager.GetTileStrip(dragIndex, 0 == dxyz.z ? 0 : dxyz.z > 0f ? TileProperties.North : TileProperties.South);
 						if (tileStrip.Count > 1)
 							delta = new Vector3(0, 0, dxyz.z);
 					}
