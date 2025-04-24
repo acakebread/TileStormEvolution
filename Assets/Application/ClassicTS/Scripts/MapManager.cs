@@ -439,13 +439,11 @@ namespace GamePreviewNamespace
 
 		public struct TileStrip
 		{
-			public int FirstIndex;
-			public int LastIndex;
+			public int First;
+			public int Count;
 			public int Stride;
 
-			public readonly int Count => Stride == 0 ? 1 : (LastIndex - FirstIndex) / Stride + 1;
-			public readonly int First => FirstIndex;
-			public readonly int Last => LastIndex;
+			public readonly int Last => First + Stride * (Count - 1);
 
 			private List<int> indices;
 			public List<int> Indices
@@ -453,15 +451,15 @@ namespace GamePreviewNamespace
 				get
 				{
 					if (null != indices) return indices;
-					indices = new List<int>() { FirstIndex };
+					indices = new List<int>();
 					if (Stride == 0) return indices;
 
 					// Increment by Stride until LastIndex is reached
-					var currentIndex = FirstIndex;
-					while (currentIndex != LastIndex)
+					var index = First;
+					for (var i = 0; i < Count; ++i)
 					{
-						currentIndex += Stride;
-						indices.Add(currentIndex);
+						indices.Add(index);
+						index += Stride;
 					}
 					return indices;
 				}
@@ -473,18 +471,17 @@ namespace GamePreviewNamespace
 
 		public TileStrip GetTileStrip(int startIndex, int directionFlag)
 		{
-			var strip = new TileStrip
-			{
-				FirstIndex = startIndex,
-				LastIndex = startIndex,
-				Stride = 0
-			};
-
-			if (directionFlag == 0)
-				return strip;
+			var strip = new TileStrip { First = -1, Count = 0, Stride = 0 };
 
 			var startProps = tiles[startIndex].Properties;
 			if (startProps == null || !startProps.Interactive)
+				return strip;
+
+			// add a single entry = leave Stride at zero for use as flag
+			strip.First = startIndex;
+			strip.Count = 1;
+
+			if (directionFlag == 0)
 				return strip;
 
 			// Compute stride based on direction
@@ -517,13 +514,12 @@ namespace GamePreviewNamespace
 			// Walk backwards (opposite direction) to find FirstIndex
 			while (true)
 			{
-				var nextProps = tiles[startIndex - stride].Properties;
+				var nextProps = tiles[strip.First - stride].Properties;
 				if (nextProps == null || (!nextProps.IsDock && !nextProps.IsRoll)) break;
-				startIndex -= stride;
+				strip.First -= stride;// Update First index to the earliest index
 			}
 
-			strip.FirstIndex = startIndex;// Update FirstIndex to the earliest index
-			strip.LastIndex = lastIndex; // Update LastIndex to the front index
+			strip.Count = (lastIndex - strip.First) / stride + 1; // Update Count to the front index minus rear index
 			strip.Stride = stride;
 			return strip;
 		}
