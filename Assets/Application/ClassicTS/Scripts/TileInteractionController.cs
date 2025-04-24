@@ -61,11 +61,7 @@ namespace GamePreviewNamespace
 			while (true)
 			{
 				// Reset tile positions
-				if (tileStrip.Count > 1)
-				{
-					foreach (var tileIndex in tileStrip.Indices)
-						mapManager.Tiles[tileIndex].GameObject.transform.position = mapManager.GetTilePosition(tileIndex);
-				}
+				mapManager.ResetStrip(tileStrip, mapManager.Width);
 
 				var dxyz = currentPos - workingPos;// gesture
 				var absX = Mathf.Abs(dxyz.x);
@@ -116,18 +112,13 @@ namespace GamePreviewNamespace
 							delta = new Vector3(0, 0, dxyz.z);
 					}
 
-					if (tileStrip.Count > 1)
-					{
-						foreach (var tileIndex in tileStrip.Indices)
-							mapManager.Tiles[tileIndex].GameObject.transform.position += delta;
-					}
+					// apply delta
+					mapManager.TranslateStrip(tileStrip, delta);
 				}
 
 				mapManager.UpdateSpareTile(tileStrip, delta, delta != Vector3.zero);
 
-				// Break if this was a partial movement
-				if (nesw == 0)
-					break;
+				if (nesw == 0) break;// Break if this was a partial movement
 			}
 
 			mapManager.HighlightStrip(tileStrip, tileStrip.Count > 1);//debug utility
@@ -139,14 +130,13 @@ namespace GamePreviewNamespace
 
 			if (tileStrip.Count > 1)
 			{
-				var currentPos = mapManager.Tiles[dragIndex].GameObject.transform.position;
+				var currentPos = mapManager.ScreenToWorld(screenPos);
 				var targetIndex = mapManager.ToIndex(new GridCoord(currentPos));
 
 				if (targetIndex != dragIndex)
 					mapManager.RollStrip(tileStrip);
 
-				foreach (var tileIndex in tileStrip.Indices)
-					mapManager.Tiles[tileIndex].GameObject.transform.position = mapManager.GetTilePosition(tileIndex);
+				mapManager.ResetStrip(tileStrip, mapManager.Width);
 			}
 
 			dragIndex = -1;

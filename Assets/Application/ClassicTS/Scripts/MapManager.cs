@@ -7,10 +7,16 @@ namespace GamePreviewNamespace
 {
 	public class MapManager : MonoBehaviour
 	{
-		public struct TileData
+		private struct TileData
 		{
 			public TileProperties Properties;
 			public GameObject GameObject;
+
+			public readonly Vector3 position 
+			{
+				get => null != GameObject ? GameObject.transform.position : Vector3.zero;
+				set { if (null != GameObject) GameObject.transform.position = value; }
+			}
 		}
 
 		private DatabaseLoader.Map currentMap;
@@ -24,7 +30,6 @@ namespace GamePreviewNamespace
 		public int Width => currentMap?.tiles.nWidth ?? 0;
 		public int Height => currentMap?.tiles.nHeight ?? 0;
 		public GameObject MapRoot => mapRoot;
-		public TileData[] Tiles => tiles;
 		public IReadOnlyList<DatabaseLoader.Waypoint> Waypoints => waypoints?.AsReadOnly();
 
 		private bool IsValidTileIndex(int tileIndex) => tileIndex >= 0 && tileIndex < tiles?.Length && Width > 0;
@@ -38,6 +43,7 @@ namespace GamePreviewNamespace
 		public int ToIndex(GridCoord coord) => coord.Z * Width + coord.X;
 
 		//public GridCoord FromIndex(int index) => new GridCoord(index % Width, index / Width);
+		//public void SnapTileToGrid(int index) => tiles[index].position = GetTilePosition(index);
 
 		public Vector3 ScreenToWorld(Vector3 screenPos)
 		{
@@ -245,7 +251,7 @@ namespace GamePreviewNamespace
 				if (null == tiles[index].GameObject) continue;
 				var coord = GetTileCoordinates(index);
 				tiles[index].GameObject.name = $"{tiles[index].Properties?.Type ?? "Empty"}_{coord.X}_{coord.Z}";
-				tiles[index].GameObject.transform.position = coord.ToPosition();
+				tiles[index].position = coord.ToPosition();
 			}
 		}
 
@@ -462,7 +468,10 @@ namespace GamePreviewNamespace
 			}
 		}
 
-		public TileStrip GetTileStrip(int startIndex, int dragDirectionBit)
+		public void ResetStrip(in TileStrip strip, int width) { foreach (var index in strip.Indices) tiles[index].position = new Vector3(index % width, 0f, index / width); }
+		public void TranslateStrip(in TileStrip strip, in Vector3 delta) { foreach (var index in strip.Indices) tiles[index].position += delta; }
+
+		public TileStrip GetTileStrip(int startIndex, int directionFlag)
 		{
 			var strip = new TileStrip
 			{
@@ -471,7 +480,7 @@ namespace GamePreviewNamespace
 				Stride = 0
 			};
 
-			if (dragDirectionBit == 0)
+			if (directionFlag == 0)
 				return strip;
 
 			var startProps = tiles[startIndex].Properties;
@@ -480,7 +489,7 @@ namespace GamePreviewNamespace
 
 			// Compute stride based on direction
 			var stride = 0;
-			var (dx, dz) = TileProperties.GetDirectionOffset(dragDirectionBit);
+			var (dx, dz) = TileProperties.GetDirectionOffset(directionFlag);
 			if (dx != 0) stride = dx; // Horizontal: +1 (right) or -1 (left)
 			else if (dz != 0) stride = dz * Width; // Vertical: +Width (up) or -Width (down)
 
@@ -527,7 +536,7 @@ namespace GamePreviewNamespace
 			for (var i = strip.Count - 1; i > 0; --i) tiles[strip.Indices[i]] = tiles[strip.Indices[i - 1]];
 			tiles[strip.First] = lastTile;
 
-			for (var i = 0; i < strip.Count; i++) tiles[strip.Indices[i]].GameObject.transform.position = GetTilePosition(strip.Indices[i]);
+			ResetStrip(strip, Width);
 
 			//debug
 			for (var i = 0; i < strip.Count; i++)
@@ -539,7 +548,7 @@ namespace GamePreviewNamespace
 			return true;
 		}
 
-		public void UpdateSpareTile(TileStrip strip, Vector3 delta, bool active)
+		public void UpdateSpareTile(in TileStrip strip, in Vector3 delta, bool active)
 		{
 			if (!active)
 			{
@@ -553,7 +562,7 @@ namespace GamePreviewNamespace
 
 			// Identify the leading tile (always the last tile in the strip, which wraps to the front in a roll)
 			var leadingTileIndex = strip.Indices.Last(); // Always clone the last tile (e.g., S in [T,U,V,W,S])
-			var leadingTile = Tiles[leadingTileIndex].GameObject;
+			var leadingTile = tiles[leadingTileIndex].GameObject;
 
 			// Identify the trailing position (position of the tile adjacent to the strip in the opposite drag direction)
 			var trailingTileIndex = strip.Indices.First() - strip.Stride;
@@ -591,10 +600,8 @@ namespace GamePreviewNamespace
 			}
 
 			// Ensure no interactivity components
-			foreach (var collider in spareTile.GetComponentsInChildren<Collider>())
-				Destroy(collider);
-			foreach (var animator in spareTile.GetComponentsInChildren<TileAnimator>())
-				Destroy(animator);
+			foreach (var collider in spareTile.GetComponentsInChildren<Collider>()) Destroy(collider);
+			foreach (var animator in spareTile.GetComponentsInChildren<TileAnimator>()) Destroy(animator);
 
 			// Position the spare tile at the trailing edge, moving with the strip
 			spareTile.transform.position += trailingPosition + delta;
@@ -603,55 +610,34 @@ namespace GamePreviewNamespace
 
 		//debug utilities
 		public class OriginalMaterialHolder : MonoBehaviour { public Material originalMaterial; }
-		public void HighlightStrip(TileStrip strip, bool highlight)
+		public void HighlightStrip(in TileStrip strip, bool highlight)
 		{
 			if (!PreviewSettings.ShowTileSelection) return;
 			if (null == strip.Indices) return;
-			foreach (var tileIndex in strip.Indices)
-			{
-				var tile = Tiles[tileIndex].GameObject;
-				if (tile == null) continue;
-				var meshRenderer = tile.GetComponentInChildren<MeshRenderer>();
-				if (meshRenderer == null) continue;
+			foreach (var tileIndex in strip.Indices) HighlightTile(tiles[tileIndex].GameObject, highlight);
+			if (null != spareTile) HighlightTile(spareTile, highlight);
 
-				if (highlight)
+			//local functions
+			static void HighlightTile(GameObject tile, bool enable)
+			{
+				if (tile == null) return;
+				var meshRenderer = tile.GetComponentInChildren<MeshRenderer>();
+				if (meshRenderer == null) return;
+
+				if (enable)
 				{
 					if (!tile.TryGetComponent<OriginalMaterialHolder>(out var holder))
 					{
 						holder = tile.AddComponent<OriginalMaterialHolder>();
 						holder.originalMaterial = meshRenderer.material;
 					}
-					meshRenderer.material = new Material(meshRenderer.material) { color = Color.red };
+					meshRenderer.material = new Material(meshRenderer.material) { color = Color.cyan };
 				}
 				else
 				{
 					if (tile.TryGetComponent<OriginalMaterialHolder>(out var holder) && holder.originalMaterial != null)
-					{
 						meshRenderer.material = holder.originalMaterial;
-					}
-					else
-					{
-						var originalMaterial = GetTileMeshMaterial(tileIndex);
-						if (originalMaterial != null)
-							meshRenderer.material = originalMaterial;
-					}
 				}
-			}
-
-			//local function
-			Material GetTileMeshMaterial(int tileIndex)
-			{
-				if (tileIndex < 0 || tileIndex >= tiles.Length)
-					return null;
-
-				var meshRenderer = tiles[tileIndex].GameObject.GetComponentInChildren<MeshRenderer>();
-				if (meshRenderer == null)
-				{
-					Debug.LogWarning($"No MeshRenderer found for tile at index {tileIndex}.");
-					return null;
-				}
-
-				return meshRenderer.sharedMaterial;
 			}
 		}
 	}
