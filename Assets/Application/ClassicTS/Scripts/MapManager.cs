@@ -423,6 +423,20 @@ namespace GamePreviewNamespace
 			return false;
 		}
 
+		public bool CheckPathToWaypoint(int fromWaypointIndex, int toWaypointIndex, out List<int> path)
+		{
+			if (fromWaypointIndex < 0 || fromWaypointIndex >= Waypoints.Count || toWaypointIndex < 0 || toWaypointIndex >= Waypoints.Count)
+			{
+				path = null;
+				return false;
+			}
+			int fromTile = Waypoints[fromWaypointIndex].nTile;
+			int toTile = Waypoints[toWaypointIndex].nTile;
+
+			path = FindPath(fromTile, toTile);
+			return null != path;
+		}
+
 		private List<int> FindPath(int startTile, int targetTile)
 		{
 			var startProps = GetTilePropertiesAt(startTile);
