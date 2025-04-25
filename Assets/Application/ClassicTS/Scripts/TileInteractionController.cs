@@ -32,8 +32,8 @@ namespace GamePreviewNamespace
 		public void Initialize(MapManager manager)
 		{
 			mapManager = manager;
-			dragIndex = -1;
 			tileStrip = default;
+			dragIndex = -1;
 		}
 
 		private void OnBeginDrag(Vector3 screenPos)
@@ -45,8 +45,8 @@ namespace GamePreviewNamespace
 			var properties = mapManager.GetTilePropertiesAt(tileIndex);
 			if (properties == null || !properties.Interactive) return;//Debug.LogWarning($"Cannot drag tile at index {tileIndex}: {(properties == null ? "Empty" : "Not draggable")}");
 
-			dragIndex = tileIndex;
 			tileStrip = default;
+			dragIndex = tileIndex;
 		}
 
 		private void OnDrag(Vector3 screenPos)
@@ -111,11 +111,8 @@ namespace GamePreviewNamespace
 
 					// apply delta
 					mapManager.TranslateStrip(tileStrip, delta);
+					break;// this was a partial movement so break because it is the last
 				}
-
-				mapManager.UpdateSpareTile(tileStrip, delta, delta != Vector3.zero);
-
-				if (nesw == 0) break;// Break if this was a partial movement
 			}
 
 			mapManager.HighlightStrip(tileStrip, tileStrip.Count > 1);//debug utility
@@ -136,10 +133,9 @@ namespace GamePreviewNamespace
 				mapManager.ResetStrip(tileStrip, mapManager.Width);
 			}
 
-			dragIndex = -1;
-			mapManager.UpdateSpareTile(tileStrip, Vector3.zero, false);// Deactivate spare tile
 			mapManager.HighlightStrip(tileStrip, false);//debug utility
 			tileStrip = default;
+			dragIndex = -1;
 		}
 	}
 }

@@ -141,48 +141,48 @@ namespace GamePreviewNamespace
 					continue;
 
 				var coord = GetTileCoordinates(index);
-				var tileObj = new GameObject($"Tile_{index}_{coord.X}_{coord.Z}");
-				this.tiles[index].GameObject = tileObj;
-				tileObj.transform.SetParent(mapRoot.transform, false);
-				tileObj.transform.position = coord.ToPosition();
+				//var tileObj = new GameObject($"Tile_{index}_{coord.X}_{coord.Z}");
+				//this.tiles[index].GameObject = tileObj;
+				//tileObj.transform.SetParent(mapRoot.transform, false);
+				//tileObj.transform.position = coord.ToPosition();
 
 				if (szType == "tile_invisible")
 				{
 					if (PreviewSettings.ShowHiddenTiles)
 					{
-						var cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
-						cube.transform.SetParent(tileObj.transform, false);
-						cube.transform.localPosition = new Vector3(0f, -0.1f, 0f);
-						cube.transform.localScale = new Vector3(1f, 0.1f, 1f);
-						cube.name = "debug tile";
-						var meshRenderer = cube.GetComponentInChildren<MeshRenderer>();
-						if (meshRenderer != null) meshRenderer.material = new Material(meshRenderer.material) { color = Color.white * 0.2f };
+						//var cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+						//cube.transform.SetParent(tileObj.transform, false);
+						////cube.transform.SetParent(mapRoot.transform, false);
+						//cube.transform.localPosition = new Vector3(0f, -0.1f, 0f);
+						//cube.transform.localScale = new Vector3(1f, 0.1f, 1f);
+						//cube.name = "debug tile";
+						//var meshRenderer = cube.GetComponentInChildren<MeshRenderer>();
+						//if (meshRenderer != null) meshRenderer.material = new Material(meshRenderer.material) { color = Color.white * 0.2f };
+
+						var debug_tile = CreateDebugTile();
+						//debug_tile.transform.SetParent(tileObj.transform, false);
+						this.tiles[index].GameObject = debug_tile;
+						debug_tile.transform.SetParent(mapRoot.transform, false);
 					}
 					continue;
-				}
-
-				if (PreviewSettings.FlipGeometry)
-					tileObj.transform.rotation = Quaternion.AngleAxis(180, Vector3.up);
-
-				if (this.tiles[index].Properties.IsSlide)
-				{
-					var collider = tileObj.AddComponent<BoxCollider>();
-					collider.size = new Vector3(1f, 0.3f, 1f);
-					collider.center = new Vector3(0f, -0.05f, 0f);
 				}
 
 				var geomPath = $"{PreviewSettings.GeometryPath}{this.tiles[index].Properties.Geom}".Replace(".x", "");
 				var geomAsset = Resources.Load<GameObject>(geomPath);
 				if (geomAsset != null)
 				{
-					var geomInstance = Instantiate(geomAsset, tileObj.transform);
-					geomInstance.transform.localPosition = Vector3.zero;
+					//var geomInstance = Instantiate(geomAsset, tileObj.transform);
+					var geomInstance = Instantiate(geomAsset, mapRoot.transform);
+					this.tiles[index].GameObject = geomInstance;
+					//geomInstance.transform.localPosition = Vector3.zero;
+					geomInstance.transform.position = coord.ToPosition();
 					geomInstance.name = this.tiles[index].Properties.Geom;
 
 					var textureSet = TileAnimator.GetTextureSetForTileDef(this.tiles[index].Properties.tileDef);
 					if (textureSet?.frames?.Length > 0)
 					{
-						var animator = tileObj.AddComponent<TileAnimator>();
+						//var animator = tileObj.AddComponent<TileAnimator>();
+						var animator = geomInstance.AddComponent<TileAnimator>();
 						animator.Initialize(textureSet);
 					}
 					else
@@ -194,10 +194,23 @@ namespace GamePreviewNamespace
 				{
 					Debug.LogWarning($"Geometry not found: {geomPath}");
 					var cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
-					cube.transform.SetParent(tileObj.transform, false);
-					cube.transform.localPosition = Vector3.zero;
-					cube.transform.localScale = Vector3.one * 0.1f;
+					//cube.transform.SetParent(tileObj.transform, false);
+					cube.transform.SetParent(mapRoot.transform, false);
+					this.tiles[index].GameObject = cube;
+					//cube.transform.localPosition = new Vector3(0f, -0.1f, 0f);
+					cube.transform.position = coord.ToPosition() + new Vector3(0f, -0.1f, 0f);
+					cube.transform.localScale = new Vector3(1f, 0.1f, 1f);
 					cube.name = "Fallback_Cube";
+				}
+
+				if (PreviewSettings.FlipGeometry)
+					this.tiles[index].GameObject.transform.rotation = Quaternion.AngleAxis(180, Vector3.up);
+
+				if (this.tiles[index].Properties.Interactive)
+				{
+					var collider = this.tiles[index].GameObject.AddComponent<BoxCollider>();
+					collider.size = new Vector3(1f, 0.1f, 1f);
+					collider.center = new Vector3(0f, -0.05f, 0f);
 				}
 			}
 			SetCameraPosition();
@@ -220,6 +233,42 @@ namespace GamePreviewNamespace
 				}
 				Camera.main.transform.position = activeTileCount > 0 ? (mapMin + mapMax) * 0.5f + Vector3.up * (mapMax.z - mapMin.z) : Vector3.up * 10f;
 				Camera.main.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+			}
+
+			//create debug Tile
+			GameObject CreateDebugTile()
+			{
+				var primitive = GameObject.CreatePrimitive(PrimitiveType.Cube);
+				//cube.transform.SetParent(tileObj.transform, false);
+				primitive.transform.localPosition = Vector3.zero; // Don't offset via transform
+				primitive.transform.localScale = Vector3.one;     // Use raw mesh modification
+				primitive.name = "debug tile";
+
+				// Get and clone the mesh
+				var meshFilter = primitive.GetComponent<MeshFilter>();
+				if (meshFilter != null)
+				{
+					Mesh originalMesh = meshFilter.sharedMesh;
+					Mesh newMesh = Object.Instantiate(originalMesh);
+
+					Vector3[] vertices = newMesh.vertices;
+					for (int i = 0; i < vertices.Length; i++)
+					{
+						vertices[i].y *= 0.05f;       // Scale Y component
+						vertices[i].y -= 0.05f;       // Translate down by 0.05
+					}
+
+					newMesh.vertices = vertices;
+					newMesh.RecalculateBounds();
+					newMesh.RecalculateNormals(); // Optional, for lighting
+
+					meshFilter.mesh = newMesh;
+				}
+
+				// Set material color
+				var meshRenderer = primitive.GetComponent<MeshRenderer>();
+				if (meshRenderer != null) meshRenderer.material = new Material(meshRenderer.material) { color = new Color(0.2f, 0.3f, 0.15f, 1f) };
+				return primitive;
 			}
 		}
 
@@ -460,8 +509,8 @@ namespace GamePreviewNamespace
 			}
 		}
 
-		public void ResetStrip(in TileStrip strip, int width) { if (null == strip.Indices) return; foreach (var index in strip.Indices) tiles[index].position = new Vector3(index % width, 0f, index / width); }
-		public void TranslateStrip(in TileStrip strip, in Vector3 delta) { if (null == strip.Indices) return; foreach (var index in strip.Indices) tiles[index].position += delta; }
+		public void ResetStrip(in TileStrip strip, int width) { if (null == strip.Indices) return; UpdateSpareTile(strip, Vector3.zero, false); foreach (var index in strip.Indices) tiles[index].position = new Vector3(index % width, 0f, index / width); }
+		public void TranslateStrip(in TileStrip strip, in Vector3 delta) { if (null == strip.Indices) return; UpdateSpareTile(strip, delta, delta != Vector3.zero); foreach (var index in strip.Indices) tiles[index].position += delta; }
 
 		public TileStrip GetTileStrip(int startIndex, int directionFlag)
 		{
@@ -531,6 +580,7 @@ namespace GamePreviewNamespace
 			//debug
 			for (var i = 0; i < strip.Count; i++)
 			{
+				if (null == tiles[strip.Indices[i]].GameObject) continue;
 				var coord = GetTileCoordinates(strip.Indices[i]);
 				tiles[strip.Indices[i]].GameObject.name = $"{tiles[strip.Indices[i]].Properties?.Type ?? "Empty"}_{coord.X}_{coord.Z}";
 			}
@@ -568,17 +618,17 @@ namespace GamePreviewNamespace
 			}
 
 			// Update spare tile's mesh and material to match the leading tile
-			var leadingRenderer = leadingTile.GetComponentInChildren<MeshRenderer>();
-			var leadingFilter = leadingTile.GetComponentInChildren<MeshFilter>();
-			var spareRenderer = spareTile.GetComponent<MeshRenderer>();
-			var spareFilter = spareTile.GetComponent<MeshFilter>();
+			var leadingRenderer = leadingTile?.GetComponentInChildren<MeshRenderer>();
+			var leadingFilter = leadingTile?.GetComponentInChildren<MeshFilter>();
+			var spareRenderer = spareTile?.GetComponent<MeshRenderer>();
+			var spareFilter = spareTile?.GetComponent<MeshFilter>();
 
 			if (leadingRenderer != null && leadingFilter != null && spareRenderer != null && spareFilter != null)
 			{
 				spareFilter.sharedMesh = leadingFilter.sharedMesh;
 				spareRenderer.material = leadingRenderer.material; // Use material to preserve instance properties
-																   // Match local transform of the leading tile's mesh (if it's a child object)
-				spareRenderer.transform.localPosition = leadingRenderer.transform.localPosition;
+				// Match local transform of the leading tile's mesh (if it's a child object)
+				//spareRenderer.transform.localPosition = leadingRenderer.transform.localPosition;
 				spareRenderer.transform.rotation = leadingRenderer.transform.rotation;
 				spareRenderer.transform.localScale = leadingRenderer.transform.localScale;
 			}
@@ -591,10 +641,11 @@ namespace GamePreviewNamespace
 
 			// Ensure no interactivity components
 			foreach (var collider in spareTile.GetComponentsInChildren<Collider>()) Destroy(collider);
-			foreach (var animator in spareTile.GetComponentsInChildren<TileAnimator>()) Destroy(animator);
+			//foreach (var animator in spareTile.GetComponentsInChildren<TileAnimator>()) Destroy(animator);
 
 			// Position the spare tile at the trailing edge, moving with the strip
-			spareTile.transform.position += trailingPosition + delta;
+			//spareTile.transform.position += trailingPosition + delta;
+			spareTile.transform.position = trailingPosition + delta;
 			spareTile.SetActive(true);
 		}
 
