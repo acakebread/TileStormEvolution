@@ -12,6 +12,8 @@ namespace GamePreviewNamespace
 		private List<int> currentPath;
 		private int pathStepIndex;
 		private int currentWaypointIndex;
+		private bool isReturningToStart;
+		private bool hasReachedEnd;
 
 		private bool isMoving;
 		private float moveTimer;
@@ -57,6 +59,7 @@ namespace GamePreviewNamespace
 		{
 			currentPath = null;
 			pathStepIndex = currentWaypointIndex = 0;
+			isReturningToStart = hasReachedEnd = false;
 			isMoving = isLevelComplete = isPuzzleBlocked = false;
 			moveTimer = turnTimer = consoleCheckTimer = spinTimer = 0f;
 			pauseTimer = pauseDuration;
@@ -73,16 +76,19 @@ namespace GamePreviewNamespace
 			{
 				spinTimer += Time.deltaTime;
 				float t = Mathf.Clamp01(spinTimer / spinDuration);
-				float cosT = (1f - Mathf.Cos(t * Mathf.PI)) / 2f; // Sigmoid interpolation (from second script)
+				float cosT = (1f - Mathf.Cos(t * Mathf.PI)) / 2f; // Sigmoid interpolation
 				float angle = cosT * spinAngle;
-				float displayAngle = angle % 360f; // Ensure visual rotation aligns (from second script)
+				float displayAngle = angle % 360f; // Ensure visual rotation aligns
 				eggbot.transform.rotation = Quaternion.Euler(0f, startYaw + displayAngle, 0f);
 
 				if (t >= 1f)
 				{
 					isSpinning = false;
 					spinTimer = 0f;
-					eggbot.transform.rotation = Quaternion.Euler(0f, startYaw + 180f, 0f); // End at 180° offset (from second script)
+					eggbot.transform.rotation = Quaternion.Euler(0f, startYaw + 180f, 0f);
+					isReturningToStart = true; // Begin return to start
+					hasReachedEnd = true;
+					pauseTimer = pauseDuration;
 				}
 				return;
 			}
@@ -154,7 +160,7 @@ namespace GamePreviewNamespace
 
 					if (pathStepIndex >= currentPath.Count - 1)
 					{
-						currentWaypointIndex++;
+						currentWaypointIndex = isReturningToStart ? 0 : currentWaypointIndex + 1;
 						currentPath = null;
 						segmentStartIndex = segmentEndIndex = 0;
 						pauseTimer = pauseDuration;
@@ -166,14 +172,21 @@ namespace GamePreviewNamespace
 							var tileProps = mapManager.GetTilePropertiesAt(waypointTile);
 							cameraController?.OnWaypointReached(currentWaypointIndex);
 
-							if (currentWaypointIndex >= mapManager.Waypoints.Count - 1 && tileProps?.IsEnd == true)
+							if (isReturningToStart && currentWaypointIndex == 0)
+							{
+								isReturningToStart = false;
+								hasReachedEnd = false;
+								isLevelComplete = false;
+								pauseTimer = pauseDuration;
+							}
+							else if (currentWaypointIndex >= mapManager.Waypoints.Count - 1 && tileProps?.IsEnd == true && !isReturningToStart)
 							{
 								isLevelComplete = true;
 								StartSpinning();
 							}
 							else
 							{
-								int consoleTile = mapManager.FindAdjacentConsole(mapManager.Waypoints[currentWaypointIndex].nTile);
+								int consoleTile = mapManager.FindAdjacentConsole(waypointTile);
 								if (consoleTile != -1)
 								{
 									TileProperties consoleProps = mapManager.GetTilePropertiesAt(consoleTile);
@@ -208,41 +221,68 @@ namespace GamePreviewNamespace
 
 		private void MoveToNextWaypoint()
 		{
-			if (currentWaypointIndex + 1 >= mapManager.Waypoints.Count)
+			if (currentWaypointIndex + 1 >= mapManager.Waypoints.Count && !isReturningToStart)
 				return;
 
-			int currentTile = mapManager.Waypoints[currentWaypointIndex].nTile;
-			if (mapManager.FindAdjacentConsole(currentTile) != -1 && !mapManager.CheckPathBetweenWaypoints(currentWaypointIndex, out _))
+			if (isReturningToStart)
 			{
-				if (!isTurning)
+				if (currentWaypointIndex == 0)
 				{
-					int consoleTile = mapManager.FindAdjacentConsole(currentTile);
-					if (consoleTile != -1)
+					isReturningToStart = false;
+					hasReachedEnd = false;
+					isLevelComplete = false;
+					pauseTimer = pauseDuration;
+					return;
+				}
+				// Navigate back to waypoint 0
+				int targetWaypoint = 0;
+				if (mapManager.CheckPathToWaypoint(currentWaypointIndex, targetWaypoint, out currentPath))
+				{
+					isPuzzleBlocked = false;
+					pathStepIndex = 0;
+					segmentStartIndex = segmentEndIndex = 0;
+					PrepareNextSegment();
+				}
+				else
+				{
+					pauseTimer = pauseDuration; // Fallback if no path
+				}
+			}
+			else
+			{
+				int currentTile = mapManager.Waypoints[currentWaypointIndex].nTile;
+				if (mapManager.FindAdjacentConsole(currentTile) != -1 && !mapManager.CheckPathBetweenWaypoints(currentWaypointIndex, out _))
+				{
+					if (!isTurning)
 					{
-						TileProperties consoleProps = mapManager.GetTilePropertiesAt(consoleTile);
-						if (consoleProps?.Nav != 0)
+						int consoleTile = mapManager.FindAdjacentConsole(currentTile);
+						if (consoleTile != -1)
 						{
-							int oppositeDir = TileProperties.GetOppositeDirection(consoleProps.Nav);
-							float consoleYaw = DirToAngle(oppositeDir);
-							float currentYaw = eggbot.transform.eulerAngles.y;
-							if (Mathf.Abs(Mathf.DeltaAngle(currentYaw, consoleYaw)) > 0.1f)
+							TileProperties consoleProps = mapManager.GetTilePropertiesAt(consoleTile);
+							if (consoleProps?.Nav != 0)
 							{
-								StartTurning(consoleYaw, false);
-								isCheckingConsole = true;
+								int oppositeDir = TileProperties.GetOppositeDirection(consoleProps.Nav);
+								float consoleYaw = DirToAngle(oppositeDir);
+								float currentYaw = eggbot.transform.eulerAngles.y;
+								if (Mathf.Abs(Mathf.DeltaAngle(currentYaw, consoleYaw)) > 0.1f)
+								{
+									StartTurning(consoleYaw, false);
+									isCheckingConsole = true;
+								}
 							}
 						}
 					}
+					return;
 				}
-				return;
-			}
 
-			if (mapManager.CheckPathBetweenWaypoints(currentWaypointIndex, out currentPath))
-			{
-				isPuzzleBlocked = false;
-				cameraController?.OnPuzzleSolved(currentWaypointIndex);
-				pathStepIndex = 0;
-				segmentStartIndex = segmentEndIndex = 0;
-				PrepareNextSegment();
+				if (mapManager.CheckPathBetweenWaypoints(currentWaypointIndex, out currentPath))
+				{
+					isPuzzleBlocked = false;
+					cameraController?.OnPuzzleSolved(currentWaypointIndex);
+					pathStepIndex = 0;
+					segmentStartIndex = segmentEndIndex = 0;
+					PrepareNextSegment();
+				}
 			}
 		}
 
