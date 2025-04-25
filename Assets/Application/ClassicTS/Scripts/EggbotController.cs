@@ -171,21 +171,6 @@ namespace GamePreviewNamespace
 								isLevelComplete = true;
 								StartSpinning();
 							}
-							//else if (tileProps?.IsConsole == true)
-							//{
-							//	int consoleTile = mapManager.FindAdjacentConsole(waypointTile);
-							//	if (consoleTile != -1)
-							//	{
-							//		TileProperties consoleProps = mapManager.GetTilePropertiesAt(consoleTile);
-							//		if (consoleProps?.Nav != 0)
-							//		{
-							//			int oppositeDir = TileProperties.GetOppositeDirection(consoleProps.Nav);
-							//			float consoleYaw = DirToAngle(oppositeDir);
-							//			StartTurning(consoleYaw, false);
-							//			isCheckingConsole = true;
-							//		}
-							//	}
-							//}
 							else
 							{
 								int consoleTile = mapManager.FindAdjacentConsole(mapManager.Waypoints[currentWaypointIndex].nTile);
