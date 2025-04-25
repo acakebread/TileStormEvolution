@@ -45,7 +45,7 @@ namespace GamePreviewNamespace
 		private bool isSpinning;
 		private float spinTimer;
 		private float spinDuration = 1f; // Time for spin
-		private float spinAngle = 1260f; // 3.5 rotations (from second script)
+		private float spinAngle = 1260f; // 3.5 rotations
 
 		public void Initialize(MapManager manager)
 		{
@@ -86,9 +86,20 @@ namespace GamePreviewNamespace
 					isSpinning = false;
 					spinTimer = 0f;
 					eggbot.transform.rotation = Quaternion.Euler(0f, startYaw + 180f, 0f);
-					isReturningToStart = true; // Begin return to start
-					hasReachedEnd = true;
-					pauseTimer = pauseDuration;
+					if (hasReachedEnd && isReturningToStart && currentWaypointIndex == 0)
+					{
+						// After celebratory spin at start, reset state
+						isReturningToStart = false;
+						hasReachedEnd = false;
+						isLevelComplete = false;
+						pauseTimer = pauseDuration;
+					}
+					else if (hasReachedEnd && !isReturningToStart)
+					{
+						// After spin at end, begin returning to start
+						isReturningToStart = true;
+						pauseTimer = pauseDuration;
+					}
 				}
 				return;
 			}
@@ -172,17 +183,15 @@ namespace GamePreviewNamespace
 							var tileProps = mapManager.GetTilePropertiesAt(waypointTile);
 							cameraController?.OnWaypointReached(currentWaypointIndex);
 
-							if (isReturningToStart && currentWaypointIndex == 0)
+							if (isReturningToStart && currentWaypointIndex == 0 && hasReachedEnd)
 							{
-								isReturningToStart = false;
-								hasReachedEnd = false;
-								isLevelComplete = false;
-								pauseTimer = pauseDuration;
+								StartSpinning(); // Celebratory spin at start after returning
 							}
 							else if (currentWaypointIndex >= mapManager.Waypoints.Count - 1 && tileProps?.IsEnd == true && !isReturningToStart)
 							{
 								isLevelComplete = true;
-								StartSpinning();
+								hasReachedEnd = true;
+								StartSpinning(); // Spin at end
 							}
 							else
 							{
@@ -228,10 +237,17 @@ namespace GamePreviewNamespace
 			{
 				if (currentWaypointIndex == 0)
 				{
-					isReturningToStart = false;
-					hasReachedEnd = false;
-					isLevelComplete = false;
-					pauseTimer = pauseDuration;
+					if (hasReachedEnd)
+					{
+						StartSpinning(); // Trigger celebratory spin at start
+					}
+					else
+					{
+						isReturningToStart = false;
+						hasReachedEnd = false;
+						isLevelComplete = false;
+						pauseTimer = pauseDuration;
+					}
 					return;
 				}
 				// Navigate back to waypoint 0
