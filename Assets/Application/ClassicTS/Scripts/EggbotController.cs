@@ -15,7 +15,7 @@ namespace GamePreviewNamespace
 
 		private bool isMoving;
 		private float moveTimer;
-		private float moveSpeed = 4f;
+		private float moveDuration;
 
 		private float pauseTimer;
 		private float pauseDuration = 1f;
@@ -23,6 +23,18 @@ namespace GamePreviewNamespace
 		private bool isPuzzleBlocked;
 		private bool isLevelComplete;
 		public bool IsLevelComplete => isLevelComplete;
+
+		private Vector3 startPosition;
+		private Vector3 targetPosition;
+		private float startYaw;
+		private float targetYaw;
+		private float turnTimer;
+		private float turnDuration = 1f / 6f; // Based on gfTurnRate=6.0f
+		private bool isTurning;
+
+		private int segmentStartIndex;
+		private int segmentEndIndex;
+		private float walkSpeed = 6f; // Based on gfWalkRate=6.0f (tiles per second)
 
 		public void Initialize(MapManager manager)
 		{
@@ -37,9 +49,10 @@ namespace GamePreviewNamespace
 			currentPath = null;
 			pathStepIndex = currentWaypointIndex = 0;
 			isMoving = isLevelComplete = isPuzzleBlocked = false;
-			moveTimer = 0f;
+			moveTimer = turnTimer = 0f;
 			pauseTimer = pauseDuration;
-			// Removed: cameraController?.OnWaypointReached(0); // Handled by CameraController.ResetCamera
+			isTurning = false;
+			segmentStartIndex = segmentEndIndex = 0;
 		}
 
 		public void UpdateEggbot()
@@ -47,58 +60,86 @@ namespace GamePreviewNamespace
 			if (mapManager.Waypoints?.Count == 0)
 				return;
 
-			if (!isMoving)
+			if (isTurning)
 			{
-				pauseTimer -= Time.deltaTime;
-				if (pauseTimer <= 0)
-					MoveToNextWaypoint();
-			}
-			else
-			{
-				moveTimer += Time.deltaTime * moveSpeed;
-				float t = Mathf.Clamp01(moveTimer);
-				int currentTile = currentPath[pathStepIndex];
-				int nextTile = currentPath[Mathf.Min(pathStepIndex + 1, currentPath.Count - 1)];
-				eggbot.transform.position = Vector3.Lerp(
-					mapManager.GetTilePosition(currentTile),
-					mapManager.GetTilePosition(nextTile),
-					t
-				);
+				turnTimer += Time.deltaTime;
+				float t = Mathf.Clamp01(turnTimer / turnDuration);
+				float cosT = (1f - Mathf.Cos(t * Mathf.PI)) / 2f;
+				float currentYaw = Mathf.LerpAngle(startYaw, targetYaw, cosT);
+				eggbot.transform.rotation = Quaternion.Euler(0f, currentYaw, 0f);
 
 				if (t >= 1f)
 				{
-					pathStepIndex++;
+					isTurning = false;
+					turnTimer = 0f;
+					if (isMoving)
+					{
+						StartSegmentMovement();
+					}
+				}
+			}
+			else if (isMoving)
+			{
+				moveTimer += Time.deltaTime;
+				float t = moveDuration > 0 ? Mathf.Clamp01(moveTimer / moveDuration) : 1f;
+				float cosT = (1f - Mathf.Cos(t * Mathf.PI)) / 2f;
+				eggbot.transform.position = Vector3.Lerp(startPosition, targetPosition, cosT);
+
+				if (t >= 1f)
+				{
+					eggbot.transform.position = targetPosition;
+					isMoving = false;
+					pathStepIndex = segmentEndIndex;
+
 					if (pathStepIndex >= currentPath.Count - 1)
 					{
-						isMoving = false;
-						pauseTimer = pauseDuration;
 						currentWaypointIndex++;
 						currentPath = null;
+						segmentStartIndex = segmentEndIndex = 0;
+						pauseTimer = pauseDuration;
 
 						if (currentWaypointIndex < mapManager.Waypoints.Count)
 						{
 							int waypointTile = mapManager.Waypoints[currentWaypointIndex].nTile;
+							eggbot.transform.position = mapManager.GetTilePosition(waypointTile);
 							var tileProps = mapManager.GetTilePropertiesAt(waypointTile);
-							cameraController?.OnWaypointReached(currentWaypointIndex); // Notify for wp1 and beyond
+							cameraController?.OnWaypointReached(currentWaypointIndex);
 
 							if (currentWaypointIndex >= mapManager.Waypoints.Count - 1 && tileProps?.IsEnd == true)
 							{
-								//Debug.Log($"Level complete at tile ({waypointTile % mapManager.Width},{waypointTile / mapManager.Width})!");
 								isLevelComplete = true;
 							}
 							else if (tileProps?.IsConsole == true)
 							{
 								isPuzzleBlocked = !mapManager.CheckPathBetweenWaypoints(currentWaypointIndex, out _);
-								//if (isPuzzleBlocked)
-								//	Debug.Log($"Waiting at console at tile ({waypointTile % mapManager.Width},{waypointTile / mapManager.Width})...");
+								if (isPuzzleBlocked)
+								{
+									int consoleTile = mapManager.FindAdjacentConsole(waypointTile);
+									if (consoleTile != -1)
+									{
+										TileProperties consoleProps = mapManager.GetTilePropertiesAt(consoleTile);
+										if (consoleProps?.Nav != 0)
+										{
+											int oppositeDir = TileProperties.GetOppositeDirection(consoleProps.Nav);
+											float consoleYaw = DirToAngle(oppositeDir);
+											StartTurning(consoleYaw, false);
+										}
+									}
+								}
 							}
 						}
 					}
 					else
 					{
-						moveTimer = 0f;
+						PrepareNextSegment();
 					}
 				}
+			}
+			else
+			{
+				pauseTimer -= Time.deltaTime;
+				if (pauseTimer <= 0)
+					MoveToNextWaypoint();
 			}
 		}
 
@@ -110,6 +151,24 @@ namespace GamePreviewNamespace
 			int currentTile = mapManager.Waypoints[currentWaypointIndex].nTile;
 			if (mapManager.FindAdjacentConsole(currentTile) != -1 && !mapManager.CheckPathBetweenWaypoints(currentWaypointIndex, out _))
 			{
+				if (!isTurning)
+				{
+					int consoleTile = mapManager.FindAdjacentConsole(currentTile);
+					if (consoleTile != -1)
+					{
+						TileProperties consoleProps = mapManager.GetTilePropertiesAt(consoleTile);
+						if (consoleProps?.Nav != 0)
+						{
+							int oppositeDir = TileProperties.GetOppositeDirection(consoleProps.Nav);
+							float consoleYaw = DirToAngle(oppositeDir);
+							float currentYaw = eggbot.transform.eulerAngles.y;
+							if (Mathf.Abs(Mathf.DeltaAngle(currentYaw, consoleYaw)) > 0.1f)
+							{
+								StartTurning(consoleYaw, false);
+							}
+						}
+					}
+				}
 				return;
 			}
 
@@ -117,11 +176,106 @@ namespace GamePreviewNamespace
 			{
 				isPuzzleBlocked = false;
 				cameraController?.OnPuzzleSolved(currentWaypointIndex);
-				isMoving = true;
-				moveTimer = 0f;
 				pathStepIndex = 0;
-				//Debug.Log($"Moving to waypoint {currentWaypointIndex + 1}: tile={mapManager.Waypoints[currentWaypointIndex + 1].nTile}, path=[{mapManager.FormatPath(currentPath)}]");
+				segmentStartIndex = segmentEndIndex = 0;
+				PrepareNextSegment();
 			}
+		}
+
+		private void PrepareNextSegment()
+		{
+			if (pathStepIndex >= currentPath.Count - 1)
+			{
+				segmentStartIndex = segmentEndIndex = pathStepIndex;
+				startPosition = mapManager.GetTilePosition(currentPath[pathStepIndex]);
+				targetPosition = startPosition;
+				moveDuration = 0f;
+				StartSegmentMovement();
+				return;
+			}
+
+			segmentStartIndex = pathStepIndex;
+			segmentEndIndex = segmentStartIndex;
+			int prevTile = currentPath[segmentStartIndex];
+			Vector3 prevPos = mapManager.GetTilePosition(prevTile);
+			int currentDir = 0;
+
+			for (int i = segmentStartIndex + 1; i < currentPath.Count; i++)
+			{
+				int nextTile = currentPath[i];
+				Vector3 nextPos = mapManager.GetTilePosition(nextTile);
+				Vector3 direction = (nextPos - prevPos).normalized;
+				int newDir = GetDirectionFlag(direction);
+
+				if (currentDir == 0)
+					currentDir = newDir;
+				else if (newDir != currentDir)
+				{
+					segmentEndIndex = i - 1;
+					break;
+				}
+
+				segmentEndIndex = i;
+				prevTile = nextTile;
+				prevPos = nextPos;
+			}
+
+			startPosition = mapManager.GetTilePosition(currentPath[segmentStartIndex]);
+			targetPosition = mapManager.GetTilePosition(currentPath[segmentEndIndex]);
+			float distance = Vector3.Distance(startPosition, targetPosition);
+			moveDuration = distance / walkSpeed;
+
+			if (moveDuration <= 0f && segmentEndIndex > segmentStartIndex)
+			{
+				moveDuration = (segmentEndIndex - segmentStartIndex) / walkSpeed;
+			}
+
+			if (segmentEndIndex > segmentStartIndex)
+			{
+				Vector3 direction = (targetPosition - startPosition).normalized;
+				targetYaw = Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg;
+				StartTurning(targetYaw, true);
+			}
+			else
+			{
+				StartSegmentMovement();
+			}
+		}
+
+		private void StartSegmentMovement()
+		{
+			moveTimer = 0f;
+			isMoving = true;
+		}
+
+		private void StartTurning(float newTargetYaw, bool continueMoving)
+		{
+			startYaw = eggbot.transform.eulerAngles.y;
+			targetYaw = newTargetYaw;
+			turnTimer = 0f;
+			isTurning = true;
+			isMoving = continueMoving;
+		}
+
+		private int GetDirectionFlag(Vector3 direction)
+		{
+			if (direction.sqrMagnitude < 0.01f)
+				return 0;
+			float angle = Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg;
+			if (Mathf.Abs(angle) <= 45f) return 1; // North (positive Z)
+			if (Mathf.Abs(angle - 180) <= 45f || Mathf.Abs(angle + 180) <= 45f) return 2; // South (negative Z)
+			if (Mathf.Abs(angle - 90) <= 45f) return 4; // East (positive X)
+			if (Mathf.Abs(angle + 90) <= 45f) return 8; // West (negative X)
+			return 0;
+		}
+
+		private float DirToAngle(int dir)
+		{
+			if ((dir & 1) != 0) return 0f;   // North (positive Z)
+			if ((dir & 2) != 0) return 180f; // South (negative Z)
+			if ((dir & 4) != 0) return 90f;  // East (positive X)
+			if ((dir & 8) != 0) return -90f; // West (negative X)
+			return 0f;
 		}
 
 		private void InitializeEggbot()
@@ -132,13 +286,13 @@ namespace GamePreviewNamespace
 
 			if (eggbot != null) Destroy(eggbot);
 
-			var prefabPath = $"{PreviewSettings.PrefabPath}{"eggbot_default"}";
+			var prefabPath = $"{PreviewSettings.PrefabPath}eggbot_default";
 			eggbot = Instantiate(Resources.Load(prefabPath, typeof(GameObject))) as GameObject;
 			eggbot.name = "Eggbot";
 			var transform = eggbot.transform;
 			transform.SetParent(mapManager.MapRoot.transform, false);
 			transform.position = mapManager.GetTilePosition(startTile);
-			//Debug.Log($"Eggbot at tile {startTile} ({transform.position.x}, {transform.position.z})");
+			transform.rotation = Quaternion.identity;
 		}
 	}
 }
