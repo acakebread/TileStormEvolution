@@ -343,11 +343,13 @@ namespace GamePreviewNamespace
 			startPosition = mapManager.GetTilePosition(currentPath[segmentStartIndex]);
 			targetPosition = mapManager.GetTilePosition(currentPath[segmentEndIndex]);
 			float distance = Vector3.Distance(startPosition, targetPosition);
-			moveDuration = distance / walkSpeed;
+			// Add 1.0f to distance to match original game's movement duration
+			moveDuration = (distance + 1.0f) / walkSpeed;
 
 			if (moveDuration <= 0f && segmentEndIndex > segmentStartIndex)
 			{
-				moveDuration = (segmentEndIndex - segmentStartIndex) / walkSpeed;
+				// Use tile count with offset for fallback duration
+				moveDuration = ((segmentEndIndex - segmentStartIndex) + 1.0f) / walkSpeed;
 			}
 
 			if (segmentEndIndex > segmentStartIndex)
