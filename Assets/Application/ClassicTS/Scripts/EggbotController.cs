@@ -36,6 +36,15 @@ namespace GamePreviewNamespace
 		private int segmentEndIndex;
 		private float walkSpeed = 6f; // Based on gfWalkRate=6.0f (tiles per second)
 
+		private bool isCheckingConsole;
+		private float consoleCheckTimer;
+		private float consoleCheckDuration = 0.5f; // Time to face console
+
+		private bool isSpinning;
+		private float spinTimer;
+		private float spinDuration = 1f; // Time for spin
+		private float spinAngle = 1260f; // 3.5 rotations (from second script)
+
 		public void Initialize(MapManager manager)
 		{
 			mapManager = manager;
@@ -49,9 +58,9 @@ namespace GamePreviewNamespace
 			currentPath = null;
 			pathStepIndex = currentWaypointIndex = 0;
 			isMoving = isLevelComplete = isPuzzleBlocked = false;
-			moveTimer = turnTimer = 0f;
+			moveTimer = turnTimer = consoleCheckTimer = spinTimer = 0f;
 			pauseTimer = pauseDuration;
-			isTurning = false;
+			isTurning = isCheckingConsole = isSpinning = false;
 			segmentStartIndex = segmentEndIndex = 0;
 		}
 
@@ -59,6 +68,24 @@ namespace GamePreviewNamespace
 		{
 			if (mapManager.Waypoints?.Count == 0)
 				return;
+
+			if (isSpinning)
+			{
+				spinTimer += Time.deltaTime;
+				float t = Mathf.Clamp01(spinTimer / spinDuration);
+				float cosT = (1f - Mathf.Cos(t * Mathf.PI)) / 2f; // Sigmoid interpolation (from second script)
+				float angle = cosT * spinAngle;
+				float displayAngle = angle % 360f; // Ensure visual rotation aligns (from second script)
+				eggbot.transform.rotation = Quaternion.Euler(0f, startYaw + displayAngle, 0f);
+
+				if (t >= 1f)
+				{
+					isSpinning = false;
+					spinTimer = 0f;
+					eggbot.transform.rotation = Quaternion.Euler(0f, startYaw + 180f, 0f); // End at 180° offset (from second script)
+				}
+				return;
+			}
 
 			if (isTurning)
 			{
@@ -75,6 +102,40 @@ namespace GamePreviewNamespace
 					if (isMoving)
 					{
 						StartSegmentMovement();
+					}
+					else if (isCheckingConsole)
+					{
+						consoleCheckTimer = consoleCheckDuration;
+					}
+				}
+			}
+			else if (isCheckingConsole)
+			{
+				consoleCheckTimer -= Time.deltaTime;
+				if (consoleCheckTimer <= 0)
+				{
+					isCheckingConsole = false;
+					int waypointTile = mapManager.Waypoints[currentWaypointIndex].nTile;
+					bool pathClear = mapManager.CheckPathBetweenWaypoints(currentWaypointIndex, out currentPath);
+
+					if (pathClear)
+					{
+						if (currentPath != null && currentPath.Count > 1)
+						{
+							Vector3 nextPos = mapManager.GetTilePosition(currentPath[1]);
+							Vector3 currentPos = mapManager.GetTilePosition(currentPath[0]);
+							Vector3 direction = (nextPos - currentPos).normalized;
+							float pathYaw = Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg;
+							StartTurning(pathYaw, false);
+						}
+						else
+						{
+							pauseTimer = pauseDuration;
+						}
+					}
+					else
+					{
+						isPuzzleBlocked = true;
 					}
 				}
 			}
@@ -108,22 +169,20 @@ namespace GamePreviewNamespace
 							if (currentWaypointIndex >= mapManager.Waypoints.Count - 1 && tileProps?.IsEnd == true)
 							{
 								isLevelComplete = true;
+								StartSpinning();
 							}
 							else if (tileProps?.IsConsole == true)
 							{
-								isPuzzleBlocked = !mapManager.CheckPathBetweenWaypoints(currentWaypointIndex, out _);
-								if (isPuzzleBlocked)
+								int consoleTile = mapManager.FindAdjacentConsole(waypointTile);
+								if (consoleTile != -1)
 								{
-									int consoleTile = mapManager.FindAdjacentConsole(waypointTile);
-									if (consoleTile != -1)
+									TileProperties consoleProps = mapManager.GetTilePropertiesAt(consoleTile);
+									if (consoleProps?.Nav != 0)
 									{
-										TileProperties consoleProps = mapManager.GetTilePropertiesAt(consoleTile);
-										if (consoleProps?.Nav != 0)
-										{
-											int oppositeDir = TileProperties.GetOppositeDirection(consoleProps.Nav);
-											float consoleYaw = DirToAngle(oppositeDir);
-											StartTurning(consoleYaw, false);
-										}
+										int oppositeDir = TileProperties.GetOppositeDirection(consoleProps.Nav);
+										float consoleYaw = DirToAngle(oppositeDir);
+										StartTurning(consoleYaw, false);
+										isCheckingConsole = true;
 									}
 								}
 							}
@@ -165,6 +224,7 @@ namespace GamePreviewNamespace
 							if (Mathf.Abs(Mathf.DeltaAngle(currentYaw, consoleYaw)) > 0.1f)
 							{
 								StartTurning(consoleYaw, false);
+								isCheckingConsole = true;
 							}
 						}
 					}
@@ -255,6 +315,13 @@ namespace GamePreviewNamespace
 			turnTimer = 0f;
 			isTurning = true;
 			isMoving = continueMoving;
+		}
+
+		private void StartSpinning()
+		{
+			startYaw = eggbot.transform.eulerAngles.y;
+			spinTimer = 0f;
+			isSpinning = true;
 		}
 
 		private int GetDirectionFlag(Vector3 direction)
