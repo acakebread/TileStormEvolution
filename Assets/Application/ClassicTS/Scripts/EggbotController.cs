@@ -8,6 +8,7 @@ namespace GamePreviewNamespace
 		private MapManager mapManager;
 		private CameraController cameraController;
 		public GameObject eggbot;
+		private Transform meshTransform; // Reference to the Mesh child transform
 
 		private List<int> currentPath;
 		private int pathStepIndex;
@@ -47,6 +48,11 @@ namespace GamePreviewNamespace
 		private float spinDuration = 1f; // Time for spin
 		private float spinAngle = 1260f; // 3.5 rotations
 
+		// Wobble variables
+		private float wobble = 0.1f; // Initial wobble amplitude
+		private static float mod1 = 0.0f; // Persistent accumulator for wobble
+		private static float mod2 = 0.0f; // Persistent accumulator for wobble
+
 		public void Initialize(MapManager manager)
 		{
 			mapManager = manager;
@@ -65,12 +71,27 @@ namespace GamePreviewNamespace
 			pauseTimer = pauseDuration;
 			isTurning = isCheckingConsole = isSpinning = false;
 			segmentStartIndex = segmentEndIndex = 0;
+			wobble = 0.1f; // Reset wobble to initial value
+			mod1 = 0.0f;
+			mod2 = 0.0f;
 		}
 
 		public void UpdateEggbot()
 		{
 			if (mapManager.Waypoints?.Count == 0)
 				return;
+
+			// Update wobble accumulators
+			mod1 += 7.8f * Time.deltaTime;
+			mod2 += 1.8f * Time.deltaTime;
+
+			// Update wobble factor based on state
+			bool isIdle = !isMoving && !isTurning && !isSpinning && !isCheckingConsole;
+			float targetWobble = isIdle ? 0.02f : 0.1f;
+			wobble = (wobble * 99.0f + targetWobble) / 100.0f;
+
+			// Calculate pitch for wobble
+			float pitch = wobble * Mathf.Sin(mod1) * Mathf.Sin(mod2);
 
 			if (isSpinning)
 			{
@@ -80,6 +101,10 @@ namespace GamePreviewNamespace
 				float angle = cosT * spinAngle;
 				float displayAngle = angle % 360f; // Ensure visual rotation aligns
 				eggbot.transform.rotation = Quaternion.Euler(0f, startYaw + displayAngle, 0f);
+
+				// Reset mesh transform during spin to avoid wobble
+				meshTransform.localPosition = Vector3.zero;
+				meshTransform.localRotation = Quaternion.identity;
 
 				if (t >= 1f)
 				{
@@ -226,6 +251,15 @@ namespace GamePreviewNamespace
 				if (pauseTimer <= 0)
 					MoveToNextWaypoint();
 			}
+
+			// Apply wobble to the Mesh child transform (offset * pitch)
+			Quaternion pitchRotation = Quaternion.Euler(pitch * Mathf.Rad2Deg, 0f, 0f); // X-axis rotation
+			Vector3 localOffset = new Vector3(0f, 0f, -pitch); // Local Z-offset (forward/backward)
+			Vector3 wobblePos = pitchRotation * localOffset; // offset * pitch in local space
+
+			// Set the Mesh's local transform
+			meshTransform.localPosition = wobblePos;
+			meshTransform.localRotation = pitchRotation;
 		}
 
 		private void MoveToNextWaypoint()
@@ -425,8 +459,11 @@ namespace GamePreviewNamespace
 			mesh.name = "Mesh";
 			var transform = mesh.transform;
 			transform.SetParent(eggbot.transform, false);
-			transform.position = mapManager.GetTilePosition(startTile);
-			transform.rotation = Quaternion.identity;
+			transform.localPosition = Vector3.zero;
+			transform.localRotation = Quaternion.identity;
+
+			// Store reference to the Mesh transform
+			meshTransform = transform;
 		}
 	}
 }
