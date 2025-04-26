@@ -221,22 +221,7 @@ namespace GamePreviewNamespace
 							}
 							else
 							{
-								int consoleTile = mapManager.FindAdjacentConsole(waypointTile);
-								if (consoleTile != -1)
-								{
-									TileProperties consoleProps = mapManager.GetTilePropertiesAt(consoleTile);
-									if (consoleProps?.Nav != 0)
-									{
-										int oppositeDir = TileProperties.GetOppositeDirection(consoleProps.Nav);
-										float consoleYaw = DirToAngle(oppositeDir);
-										float currentYaw = eggbot.transform.eulerAngles.y;
-										if (Mathf.Abs(Mathf.DeltaAngle(currentYaw, consoleYaw)) > 0.1f)
-										{
-											StartTurning(consoleYaw, false);
-											isCheckingConsole = true;
-										}
-									}
-								}
+								CheckAndFaceAdjacentConsole(waypointTile);
 							}
 						}
 					}
@@ -306,22 +291,7 @@ namespace GamePreviewNamespace
 				{
 					if (!isTurning)
 					{
-						int consoleTile = mapManager.FindAdjacentConsole(currentTile);
-						if (consoleTile != -1)
-						{
-							TileProperties consoleProps = mapManager.GetTilePropertiesAt(consoleTile);
-							if (consoleProps?.Nav != 0)
-							{
-								int oppositeDir = TileProperties.GetOppositeDirection(consoleProps.Nav);
-								float consoleYaw = DirToAngle(oppositeDir);
-								float currentYaw = eggbot.transform.eulerAngles.y;
-								if (Mathf.Abs(Mathf.DeltaAngle(currentYaw, consoleYaw)) > 0.1f)
-								{
-									StartTurning(consoleYaw, false);
-									isCheckingConsole = true;
-								}
-							}
-						}
+						CheckAndFaceAdjacentConsole(currentTile);
 					}
 					return;
 				}
@@ -333,6 +303,26 @@ namespace GamePreviewNamespace
 					pathStepIndex = 0;
 					segmentStartIndex = segmentEndIndex = 0;
 					PrepareNextSegment();
+				}
+			}
+		}
+
+		private void CheckAndFaceAdjacentConsole(int tile)
+		{
+			int consoleTile = mapManager.FindAdjacentConsole(tile);
+			if (consoleTile != -1)
+			{
+				TileProperties consoleProps = mapManager.GetTilePropertiesAt(consoleTile);
+				if (consoleProps?.Nav != 0)
+				{
+					int oppositeDir = TileProperties.GetOppositeDirection(consoleProps.Nav);
+					float consoleYaw = DirToAngle(oppositeDir);
+					float currentYaw = eggbot.transform.eulerAngles.y;
+					if (Mathf.Abs(Mathf.DeltaAngle(currentYaw, consoleYaw)) > 0.1f)
+					{
+						StartTurning(consoleYaw, false);
+						isCheckingConsole = true;
+					}
 				}
 			}
 		}
@@ -442,7 +432,7 @@ namespace GamePreviewNamespace
 			return 0f;
 		}
 
-		private void InitializeEggbot(string eggbotCostume = "Eggbot Default")//classic eggbot uses a tiledef for resource ids
+		private void InitializeEggbot(string eggbotCostume = "Eggbot Default")
 		{
 			int startTile = mapManager.GetStartTile();
 			if (startTile == -1)
@@ -468,7 +458,7 @@ namespace GamePreviewNamespace
 			transform.localRotation = Quaternion.identity;
 
 			if (PreviewSettings.FlipGeometry)
-				transform.GetChild(0).transform.localRotation = Quaternion.AngleAxis(180, Vector3.up);//bodge for incorrectly facing eggbot models
+				transform.GetChild(0).transform.localRotation = Quaternion.AngleAxis(180, Vector3.up);
 
 			// Store reference to the Mesh transform
 			meshTransform = transform;
