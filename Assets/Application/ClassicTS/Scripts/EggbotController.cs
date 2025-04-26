@@ -415,11 +415,16 @@ namespace GamePreviewNamespace
 
 			if (eggbot != null) Destroy(eggbot);
 
+			eggbot = new GameObject("Eggbot");
+			eggbot.transform.position = mapManager.GetTilePosition(startTile);
+			eggbot.transform.rotation = Quaternion.identity;
+			eggbot.transform.SetParent(mapManager.transform, false);
+
 			var prefabPath = $"{PreviewSettings.PrefabPath}eggbot_default";
-			eggbot = Instantiate(Resources.Load(prefabPath, typeof(GameObject))) as GameObject;
-			eggbot.name = "Eggbot";
-			var transform = eggbot.transform;
-			transform.SetParent(mapManager.MapRoot.transform, false);
+			var mesh = Instantiate(Resources.Load(prefabPath, typeof(GameObject))) as GameObject;
+			mesh.name = "Mesh";
+			var transform = mesh.transform;
+			transform.SetParent(eggbot.transform, false);
 			transform.position = mapManager.GetTilePosition(startTile);
 			transform.rotation = Quaternion.identity;
 		}
