@@ -32,15 +32,15 @@ namespace GamePreviewNamespace
 			{
 				var frame = textureSet.frames[i];
 				durations[i] = frame.fDuration > 0 ? frame.fDuration : 1f; // Default to 1s if 0
-				string texPath = $"{PreviewSettings.TexturePath}{frame.szTexture}".Replace(".tga", "").Replace(".png", "");
-				textures[i] = Resources.Load<Texture2D>(texPath);
+
+				textures[i] = TextureManager.Get(frame.szTexture);
 				if (textures[i] != null)
 				{
 					hasValidTextures = true;
 				}
 				else
 				{
-					Debug.LogWarning($"Texture not found: {texPath} for frame {frame.name}");
+					Debug.LogWarning($"Texture not found: {frame.name}");
 				}
 			}
 

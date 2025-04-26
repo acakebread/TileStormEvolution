@@ -254,8 +254,8 @@ namespace GameDatabase
 		[System.Serializable]
 		public class Theme
 		{
-			public string name;
-			public string szTileTextureSet;
+			public string name;// this is the dictionary name of the theme, used by defs, including eggbot, to load animating textures
+			public string szTileTextureSet;// this legacy field was actually used for texture file name
 		}
 
 		[System.Serializable]

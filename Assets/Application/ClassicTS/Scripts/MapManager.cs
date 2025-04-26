@@ -141,26 +141,11 @@ namespace GamePreviewNamespace
 					continue;
 
 				var coord = GetTileCoordinates(index);
-				//var tileObj = new GameObject($"Tile_{index}_{coord.X}_{coord.Z}");
-				//this.tiles[index].GameObject = tileObj;
-				//tileObj.transform.SetParent(mapRoot.transform, false);
-				//tileObj.transform.position = coord.ToPosition();
-
 				if (szType == "tile_invisible")
 				{
 					if (PreviewSettings.ShowHiddenTiles)
 					{
-						//var cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
-						//cube.transform.SetParent(tileObj.transform, false);
-						////cube.transform.SetParent(mapRoot.transform, false);
-						//cube.transform.localPosition = new Vector3(0f, -0.1f, 0f);
-						//cube.transform.localScale = new Vector3(1f, 0.1f, 1f);
-						//cube.name = "debug tile";
-						//var meshRenderer = cube.GetComponentInChildren<MeshRenderer>();
-						//if (meshRenderer != null) meshRenderer.material = new Material(meshRenderer.material) { color = Color.white * 0.2f };
-
 						var debug_tile = CreateDebugTile();
-						//debug_tile.transform.SetParent(tileObj.transform, false);
 						this.tiles[index].GameObject = debug_tile;
 						debug_tile.transform.SetParent(mapRoot.transform, false);
 					}
@@ -171,19 +156,16 @@ namespace GamePreviewNamespace
 				var geomAsset = Resources.Load<GameObject>(geomPath);
 				if (geomAsset != null)
 				{
-					//var geomInstance = Instantiate(geomAsset, tileObj.transform);
 					var geomInstance = Instantiate(geomAsset, mapRoot.transform);
 					this.tiles[index].GameObject = geomInstance;
-					//geomInstance.transform.localPosition = Vector3.zero;
 					geomInstance.transform.position = coord.ToPosition();
 					geomInstance.name = this.tiles[index].Properties.Geom;
 
-					var textureSet = TileAnimator.GetTextureSetForTileDef(this.tiles[index].Properties.tileDef);
-					if (textureSet?.frames?.Length > 0)
+					var textureFrames = TextureSetManager.GetTextureFrames(this.tiles[index].Properties.tileDef.szTheme);
+					if (textureFrames?.Length > 0)
 					{
-						//var animator = tileObj.AddComponent<TileAnimator>();
-						var animator = geomInstance.AddComponent<TileAnimator>();
-						animator.Initialize(textureSet);
+						var animator = geomInstance.AddComponent<TextureSetAnimator>();
+						animator.Initialize(textureFrames);
 					}
 					else
 					{
@@ -194,10 +176,8 @@ namespace GamePreviewNamespace
 				{
 					Debug.LogWarning($"Geometry not found: {geomPath}");
 					var cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
-					//cube.transform.SetParent(tileObj.transform, false);
 					cube.transform.SetParent(mapRoot.transform, false);
 					this.tiles[index].GameObject = cube;
-					//cube.transform.localPosition = new Vector3(0f, -0.1f, 0f);
 					cube.transform.position = coord.ToPosition() + new Vector3(0f, -0.1f, 0f);
 					cube.transform.localScale = new Vector3(1f, 0.1f, 1f);
 					cube.name = "Fallback_Cube";
@@ -239,7 +219,6 @@ namespace GamePreviewNamespace
 			GameObject CreateDebugTile()
 			{
 				var primitive = GameObject.CreatePrimitive(PrimitiveType.Cube);
-				//cube.transform.SetParent(tileObj.transform, false);
 				primitive.transform.localPosition = Vector3.zero; // Don't offset via transform
 				primitive.transform.localScale = Vector3.one;     // Use raw mesh modification
 				primitive.name = "debug tile";
@@ -406,21 +385,11 @@ namespace GamePreviewNamespace
 		public bool CheckPathBetweenWaypoints(int currentWaypointIndex, out List<int> path)
 		{
 			path = null;
-			if (Waypoints == null || currentWaypointIndex < 0 || currentWaypointIndex + 1 >= Waypoints.Count)
-			{
-				//Debug.Log($"No next waypoint (currentIndex={currentWaypointIndex}, waypoints.Count={Waypoints?.Count ?? 0})");
-				return false;
-			}
-
+			if (Waypoints == null || currentWaypointIndex < 0 || currentWaypointIndex + 1 >= Waypoints.Count) return false;
 			var startTile = Waypoints[currentWaypointIndex].nTile;
 			var targetTile = Waypoints[currentWaypointIndex + 1].nTile;
 			path = FindPath(startTile, targetTile);
-			if (path != null)
-			{
-				//Debug.Log($"Found path to waypoint {targetTile}: [{FormatPath(path)}]");
-				return true;
-			}
-			return false;
+			return path != null;
 		}
 
 		public bool CheckPathToWaypoint(int fromWaypointIndex, int toWaypointIndex, out List<int> path)
@@ -642,7 +611,6 @@ namespace GamePreviewNamespace
 				spareFilter.sharedMesh = leadingFilter.sharedMesh;
 				spareRenderer.material = leadingRenderer.material; // Use material to preserve instance properties
 				// Match local transform of the leading tile's mesh (if it's a child object)
-				//spareRenderer.transform.localPosition = leadingRenderer.transform.localPosition;
 				spareRenderer.transform.rotation = leadingRenderer.transform.rotation;
 				spareRenderer.transform.localScale = leadingRenderer.transform.localScale;
 			}
@@ -653,13 +621,11 @@ namespace GamePreviewNamespace
 				return;
 			}
 
-			// Ensure no interactivity components
-			foreach (var collider in spareTile.GetComponentsInChildren<Collider>()) Destroy(collider);
+			foreach (var collider in spareTile.GetComponentsInChildren<Collider>()) Destroy(collider);// Ensure no interactivity components
 			//foreach (var animator in spareTile.GetComponentsInChildren<TileAnimator>()) Destroy(animator);
 
 			// Position the spare tile at the trailing edge, moving with the strip
-			//spareTile.transform.position += trailingPosition + delta;
-			spareTile.transform.position = trailingPosition + delta;
+			spareTile.transform.position = trailingPosition + delta;//spareTile.transform.position += trailingPosition + delta;
 			spareTile.SetActive(true);
 		}
 

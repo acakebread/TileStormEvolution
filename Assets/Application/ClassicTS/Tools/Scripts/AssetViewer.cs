@@ -187,11 +187,17 @@ namespace AssetViewerNamespace
 						cube.SetActive(false);
 					}
 
-					TextureSet textureSet = GetTextureForTileDef(tileDef, szTheme);
-					if (textureSet != null && textureSet.frames != null && textureSet.frames.Length > 0)
+					//TextureSet textureSet = GetTextureForTileDef(tileDef, szTheme);
+					//if (textureSet != null && textureSet.frames != null && textureSet.frames.Length > 0)
+					//{
+					//	TileAnimator animator = tileObj.AddComponent<TileAnimator>();
+					//	animator.Initialize(textureSet);
+					//}
+					var textureFrames = TextureSetManager.GetTextureFrames(tileDef.szTheme);
+					if (textureFrames?.Length > 0)
 					{
-						TileAnimator animator = tileObj.AddComponent<TileAnimator>();
-						animator.Initialize(textureSet);
+						var animator = tileObj.AddComponent<TextureSetAnimator>();
+						animator.Initialize(textureFrames);
 					}
 					else
 					{
