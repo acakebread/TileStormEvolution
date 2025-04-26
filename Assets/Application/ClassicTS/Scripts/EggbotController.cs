@@ -464,6 +464,17 @@ namespace GamePreviewNamespace
 
 			// Store reference to the Mesh transform
 			meshTransform = transform;
+
+			var textureFrames = TextureSetManager.GetTextureFrames("Eggbot Default");
+			if (textureFrames?.Length > 0)
+			{
+				var animator = mesh.AddComponent<TextureSetAnimator>();
+				animator.Initialize(textureFrames);
+			}
+			else
+			{
+				Debug.LogWarning($"No texture set for {eggbot}");
+			}
 		}
 	}
 }
