@@ -23,6 +23,7 @@ public class MirroredPassRenderer : MonoBehaviour
 
 		// Create mirror camera
 		GameObject camObj = new GameObject("MirrorCamera");
+		camObj.hideFlags = HideFlags.HideAndDontSave;
 		mirrorCam = camObj.AddComponent<Camera>();
 		mirrorCam.enabled = false; // Disable automatic rendering for explicit control
 
