@@ -31,6 +31,7 @@ namespace GamePreviewNamespace
 		public int Height => currentMap?.tiles.nHeight ?? 0;
 		public GameObject MapRoot => mapRoot;
 		public IReadOnlyList<DatabaseLoader.Waypoint> Waypoints => waypoints?.AsReadOnly();
+		public string EggbotCostume => currentMap?.szEggbotCostume;
 
 		private bool IsValidTileIndex(int tileIndex) => tileIndex >= 0 && tileIndex < tiles?.Length && Width > 0;
 
@@ -152,8 +153,7 @@ namespace GamePreviewNamespace
 					continue;
 				}
 
-				var geomPath = $"{PreviewSettings.GeometryPath}{this.tiles[index].Properties.Geom}".Replace(".x", "");
-				var geomAsset = Resources.Load<GameObject>(geomPath);
+				var geomAsset = GeometryManager.Get(this.tiles[index].Properties.Geom);
 				if (geomAsset != null)
 				{
 					var geomInstance = Instantiate(geomAsset, mapRoot.transform);
@@ -174,7 +174,8 @@ namespace GamePreviewNamespace
 				}
 				else
 				{
-					Debug.LogWarning($"Geometry not found: {geomPath}");
+					//Debug.LogWarning($"Geometry not found: {geomPath}");
+					Debug.LogWarning($"Geometry not found: {this.tiles[index].Properties.Geom}");
 					var cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
 					cube.transform.SetParent(mapRoot.transform, false);
 					this.tiles[index].GameObject = cube;

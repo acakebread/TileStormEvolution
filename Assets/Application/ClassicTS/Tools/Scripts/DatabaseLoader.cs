@@ -175,6 +175,7 @@ namespace GameDatabase
 			public Tiles tiles;
 			public Tiles mixed;
 			public Pickups Pickups;
+			public string szEggbotCostume;
 			public string szButtonID;
 			public string szMusic;
 		}

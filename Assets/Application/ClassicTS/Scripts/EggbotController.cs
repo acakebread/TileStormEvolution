@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace GamePreviewNamespace
 {
@@ -57,7 +58,7 @@ namespace GamePreviewNamespace
 		{
 			mapManager = manager;
 			cameraController = GetComponent<CameraController>();
-			InitializeEggbot();
+			InitializeEggbot(manager.EggbotCostume);
 			Reset();
 		}
 
@@ -441,7 +442,7 @@ namespace GamePreviewNamespace
 			return 0f;
 		}
 
-		private void InitializeEggbot()
+		private void InitializeEggbot(string eggbotCostume = "Eggbot Default")//classic eggbot uses a tiledef for resource ids
 		{
 			int startTile = mapManager.GetStartTile();
 			if (startTile == -1)
@@ -454,18 +455,28 @@ namespace GamePreviewNamespace
 			eggbot.transform.rotation = Quaternion.identity;
 			eggbot.transform.SetParent(mapManager.transform, false);
 
-			var prefabPath = $"{PreviewSettings.PrefabPath}eggbot_default";
-			var mesh = Instantiate(Resources.Load(prefabPath, typeof(GameObject))) as GameObject;
+			var def = GameDatabase.DatabaseLoader.instance.TileDefs.FirstOrDefault(td => td.szType == "Eggbot" && td.szTheme == eggbotCostume);
+			if (def == null || def.szGeom == null) return;
+
+			var prefab = GeometryManager.Get(def.szGeom);
+			var mesh = Instantiate(prefab, eggbot.transform);
 			mesh.name = "Mesh";
+
 			var transform = mesh.transform;
 			transform.SetParent(eggbot.transform, false);
 			transform.localPosition = Vector3.zero;
 			transform.localRotation = Quaternion.identity;
 
+			if (PreviewSettings.FlipGeometry)
+				transform.GetChild(0).transform.localRotation = Quaternion.AngleAxis(180, Vector3.up);//bodge for incorrectly facing eggbot models
+
 			// Store reference to the Mesh transform
 			meshTransform = transform;
 
-			var textureFrames = TextureSetManager.GetTextureFrames("Eggbot Default");
+			GameDatabase.DatabaseLoader.Theme theme = GameDatabase.DatabaseLoader.instance.Themes.FirstOrDefault(t => t.name == def.szTheme);
+			if (theme == null || string.IsNullOrEmpty(theme.szTileTextureSet)) return;
+
+			var textureFrames = TextureSetManager.GetTextureFrames(theme.szTileTextureSet);
 			if (textureFrames?.Length > 0)
 			{
 				var animator = mesh.AddComponent<TextureSetAnimator>();
