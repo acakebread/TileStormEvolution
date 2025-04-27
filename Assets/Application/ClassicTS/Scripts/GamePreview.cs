@@ -91,7 +91,12 @@ namespace GamePreviewNamespace
 				Initialize();
 			}
 
-			if (GUI.Button(new Rect(120, 10, 150, 30), "Previous Level"))//eggbotController.IsLevelComplete && 
+			if (GUI.Button(new Rect(120, 10, 100, 30), "Solve"))
+			{
+				mapManager.Solve();
+			}
+
+			if (GUI.Button(new Rect(230, 10, 150, 30), "Previous Level"))//eggbotController.IsLevelComplete && 
 			{
 				int currentIndex = DatabaseLoader.instance.Maps.ToList().FindIndex(m => m.name == mapManager.CurrentMapName);
 				currentIndex = (DatabaseLoader.instance.Maps.Count + currentIndex - 1) % DatabaseLoader.instance.Maps.Count;
@@ -100,7 +105,7 @@ namespace GamePreviewNamespace
 				Initialize();
 			}
 
-			if (GUI.Button(new Rect(280, 10, 150, 30), "Next Level"))//eggbotController.IsLevelComplete && 
+			if (GUI.Button(new Rect(390, 10, 150, 30), "Next Level"))//eggbotController.IsLevelComplete && 
 			{
 				int currentIndex = DatabaseLoader.instance.Maps.ToList().FindIndex(m => m.name == mapManager.CurrentMapName);
 				currentIndex = (currentIndex + 1) % DatabaseLoader.instance.Maps.Count;

@@ -94,6 +94,28 @@ namespace GamePreviewNamespace
 
 			if (PreviewSettings.Scramble)
 				Scramble();
+
+			SetCameraPosition();
+
+			//local function
+			void SetCameraPosition()
+			{
+				var mapMin = Vector3.one * 1000f;
+				var mapMax = Vector3.zero;
+				var activeTileCount = 0;
+				for (var index = 0; index < tiles.Length; index++)
+				{
+					if (GetTilePropertiesAt(index) != null)
+					{
+						var pos = GetTileCoordinates(index).ToPosition();
+						mapMin = Vector3.Min(mapMin, pos);
+						mapMax = Vector3.Max(mapMax, pos);
+						activeTileCount++;
+					}
+				}
+				Camera.main.transform.position = activeTileCount > 0 ? (mapMin + mapMax) * 0.5f + Vector3.up * (mapMax.z - mapMin.z) : Vector3.up * 10f;
+				Camera.main.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+			}
 		}
 
 		public void Reload()
@@ -194,27 +216,6 @@ namespace GamePreviewNamespace
 					collider.center = new Vector3(0f, -0.05f, 0f);
 				}
 			}
-			SetCameraPosition();
-
-			//local function
-			void SetCameraPosition()
-			{
-				var mapMin = Vector3.one * 1000f;
-				var mapMax = Vector3.zero;
-				var activeTileCount = 0;
-				for (var index = 0; index < tileMap.Length; index++)
-				{
-					if (GetTilePropertiesAt(index) != null)
-					{
-						var pos = GetTileCoordinates(index).ToPosition();
-						mapMin = Vector3.Min(mapMin, pos);
-						mapMax = Vector3.Max(mapMax, pos);
-						activeTileCount++;
-					}
-				}
-				Camera.main.transform.position = activeTileCount > 0 ? (mapMin + mapMax) * 0.5f + Vector3.up * (mapMax.z - mapMin.z) : Vector3.up * 10f;
-				Camera.main.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
-			}
 
 			//create debug Tile
 			GameObject CreateDebugTile()
@@ -271,6 +272,14 @@ namespace GamePreviewNamespace
 
 			tiles = scrambledTiles;
 			UpdateTileObjectNamesAndPositions();
+		}
+
+		public void Solve()
+		{
+			if (mapRoot != null) Destroy(mapRoot);
+			mapRoot = new GameObject($"Map_{currentMap.name}");
+			mapRoot.transform.SetParent(transform, false);
+			LoadTileData(currentMap.tiles);
 		}
 
 		private void UpdateTileObjectNamesAndPositions()
