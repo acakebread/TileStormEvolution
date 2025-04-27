@@ -77,6 +77,9 @@ namespace GamePreviewNamespace
 
 			var firstWaypoint = mapManager.Waypoints[0];
 			Vector3 srcPos = new Vector3(firstWaypoint.vSrc.fX, firstWaypoint.vSrc.fY, firstWaypoint.vSrc.fZ);
+
+			if (Vector3.zero == srcPos) srcPos = new Vector3(0.0f, 14.0f, -14.0f);//fixup for missing waypoint data in original tilestorm data
+
 			if (!IsValidVector(firstWaypoint.vSrc))
 			{
 				if (debugLogging)
