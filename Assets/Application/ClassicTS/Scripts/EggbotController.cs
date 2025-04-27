@@ -445,6 +445,7 @@ namespace GamePreviewNamespace
 			eggbot.transform.rotation = Quaternion.identity;
 			eggbot.transform.SetParent(mapManager.transform, false);
 
+			if (null == eggbotCostume) eggbotCostume = "Eggbot Default";
 			var def = GameDatabase.DatabaseLoader.instance.TileDefs.FirstOrDefault(td => td.szType == "Eggbot" && td.szTheme == eggbotCostume);
 			if (def == null || def.szGeom == null) return;
 
