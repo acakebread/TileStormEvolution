@@ -461,7 +461,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cc35afa67ef541b49a9835bd82019f4f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  yOffset: 0.2
+  planeNormal: {x: 0, y: 1, z: 0}
+  offset: -0.2
   brightness: 0.1
 --- !u!1 &1555382761
 GameObject:

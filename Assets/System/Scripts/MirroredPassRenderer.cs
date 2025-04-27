@@ -4,7 +4,8 @@ using UnityEngine.Rendering;
 [RequireComponent(typeof(Camera))]
 public class MirroredPassRenderer : MonoBehaviour
 {
-	public float yOffset = 0f;
+	public Vector3 planeNormal = Vector3.up; // Normal of the reflection plane
+	public float offset = 0f; // Distance from origin along the normal
 	[Range(float.Epsilon, 1f)]
 	public float brightness = 1f; // Brightness factor (0 = black, 1 = full, 0.5 = 50% blend with black)
 
@@ -38,7 +39,7 @@ public class MirroredPassRenderer : MonoBehaviour
 		mainCamCommandBuffer.SetInvertCulling(false); // Ensure default culling
 		mainCam.AddCommandBuffer(CameraEvent.BeforeDepthTexture, mainCamCommandBuffer);
 
-		// Find all real-time lights in the scene (non-deprecated)
+		// Find all real-time lights in the scene
 		sceneLights = FindObjectsByType<Light>(FindObjectsSortMode.None);
 		originalLightIntensities = new float[sceneLights.Length];
 		for (int i = 0; i < sceneLights.Length; i++)
@@ -60,10 +61,29 @@ public class MirroredPassRenderer : MonoBehaviour
 		mirrorCam.clearFlags = CameraClearFlags.Color;
 		mirrorCam.depth = mainCam.depth - 1;
 
-		// Create reflection matrix for Y=yOffset plane
-		Matrix4x4 scale = Matrix4x4.Scale(new Vector3(1, -1, 1)); // Flip Y-axis
-		Matrix4x4 translate = Matrix4x4.Translate(new Vector3(0, 2 * yOffset, 0)); // Translate by 2 * yOffset
-		Matrix4x4 reflectionMat = scale * translate; // Combine: scale first, then translate
+		// Normalize the plane normal
+		Vector3 normalizedNormal = planeNormal.normalized;
+
+		// Create reflection matrix for an arbitrary plane
+		// Point on plane: p = offset * normalizedNormal
+		Vector3 pointOnPlane = normalizedNormal * offset;
+
+		// Householder reflection matrix: R = I - 2nn^T
+		Matrix4x4 reflectionMat = Matrix4x4.identity;
+		reflectionMat[0, 0] = 1 - 2 * normalizedNormal.x * normalizedNormal.x;
+		reflectionMat[0, 1] = -2 * normalizedNormal.x * normalizedNormal.y;
+		reflectionMat[0, 2] = -2 * normalizedNormal.x * normalizedNormal.z;
+		reflectionMat[1, 0] = -2 * normalizedNormal.y * normalizedNormal.x;
+		reflectionMat[1, 1] = 1 - 2 * normalizedNormal.y * normalizedNormal.y;
+		reflectionMat[1, 2] = -2 * normalizedNormal.y * normalizedNormal.z;
+		reflectionMat[2, 0] = -2 * normalizedNormal.z * normalizedNormal.x;
+		reflectionMat[2, 1] = -2 * normalizedNormal.z * normalizedNormal.y;
+		reflectionMat[2, 2] = 1 - 2 * normalizedNormal.z * normalizedNormal.z;
+
+		// Translation to move plane to origin and back
+		Matrix4x4 translateToOrigin = Matrix4x4.Translate(-pointOnPlane);
+		Matrix4x4 translateBack = Matrix4x4.Translate(pointOnPlane);
+		reflectionMat = translateBack * reflectionMat * translateToOrigin;
 
 		// Get the main camera's world-to-camera matrix
 		Matrix4x4 mainCamViewMatrix = mainCam.worldToCameraMatrix;
@@ -74,7 +94,7 @@ public class MirroredPassRenderer : MonoBehaviour
 		// Reset viewport to default
 		mirrorCam.rect = new Rect(0, 0, 1, 1);
 
-		// Scale light intensities for brightness (include directional lights)
+		// Scale light intensities for brightness
 		for (int i = 0; i < sceneLights.Length; i++)
 		{
 			if (sceneLights[i].enabled)
@@ -113,7 +133,6 @@ public class MirroredPassRenderer : MonoBehaviour
 	{
 		if (mirrorCam != null)
 		{
-			// Remove mirror camera command buffer
 			if (mirrorCommandBuffer != null)
 			{
 				mirrorCam.RemoveCommandBuffer(CameraEvent.BeforeDepthTexture, mirrorCommandBuffer);
@@ -123,7 +142,6 @@ public class MirroredPassRenderer : MonoBehaviour
 		}
 		if (mainCam != null && mainCamCommandBuffer != null)
 		{
-			// Remove main camera command buffer
 			mainCam.RemoveCommandBuffer(CameraEvent.BeforeDepthTexture, mainCamCommandBuffer);
 			mainCamCommandBuffer.Release();
 		}
