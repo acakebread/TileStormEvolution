@@ -360,15 +360,24 @@ public class ArrayDatabaseParser : MonoBehaviour
 					sb.Append("{\n");
 					if (element.Children != null)
 					{
+						// List of properties to skip when includeCompressedBytes is false
+						var skipProperties = new HashSet<string> { "nReserved", "nUncompressedLength", "nCompression", "nCompressedLength", "nAdjust" };
+
+						// Output children, skipping redundant properties for nTileIndex when includeCompressedBytes is false
 						for (int i = 0; i < element.Children.Count; i++)
 						{
-							BuildJsonElement(sb, element.Children[i], indentLevel + 1, element);
-							if (i < element.Children.Count - 1) sb.Append(",\n");
+							var child = element.Children[i];
+							// Skip redundant properties in nTileIndex if includeCompressedBytes is false
+							if (element.Name == "nTileIndex" && !includeCompressedBytes && skipProperties.Contains(child.Name))
+								continue;
+
+							BuildJsonElement(sb, child, indentLevel + 1, element);
+							if (i < element.Children.Count - 1 && !(element.Name == "nTileIndex" && !includeCompressedBytes && skipProperties.Contains(element.Children[i + 1].Name)))
+								sb.Append(",\n");
 						}
 
 						if (element.Name == "nTileIndex" && parent != null && (parent.Name == "tiles" || parent.Name == "mixed"))
 						{
-							var first = true;
 							var compressedBytesElement = element.Children.Find(e => e.Name == "bytes");
 							// Optionally include compressed_bytes
 							if (includeCompressedBytes && compressedBytesElement?.BytesValue != null)
@@ -380,14 +389,12 @@ public class ArrayDatabaseParser : MonoBehaviour
 									if (j < compressedBytesElement.BytesValue.Length - 1)
 										sb.Append(", ");
 								}
-								sb.Append("]");
-								first = false;
+								sb.Append("]\n");
 							}
 							// Always output decompressed bytes as 'bytes'
 							int[] unpacked = DecompressBytes(element, parent);
 							if (unpacked.Length > 0)
 							{
-								if (!first) sb.Append(",\n");
 								sb.Append($"{indent}  \"bytes\": [");
 								for (int j = 0; j < unpacked.Length; j++)
 								{
@@ -396,7 +403,6 @@ public class ArrayDatabaseParser : MonoBehaviour
 										sb.Append(", ");
 								}
 								sb.Append("]");
-								first = false;
 							}
 						}
 					}
