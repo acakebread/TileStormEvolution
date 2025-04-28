@@ -9,9 +9,14 @@ public class ArrayDatabaseParser : MonoBehaviour
 {
 	// Boolean switch to include compressed_bytes in JSON output
 	private static bool includeCompressedBytes = false;
+	private static bool boundMaps = true;
 
 	void Start()
 	{
+		// Ensure includeCompressedBytes is false when boundMaps is true
+		if (boundMaps)
+			includeCompressedBytes = false;
+
 		string filePath = Application.streamingAssetsPath + "/ClassicTS/database.bin";
 		try
 		{
@@ -41,6 +46,12 @@ public class ArrayDatabaseParser : MonoBehaviour
 			if (rootElements.Count != nSize)
 			{
 				Debug.LogWarning($"Expected {nSize} root elements, parsed {rootElements.Count}");
+			}
+
+			// Process maps to bound them if enabled
+			if (boundMaps)
+			{
+				MapBoundsHelper.ProcessMaps(rootElements);
 			}
 
 			return BuildJson(rootElements);
@@ -161,7 +172,7 @@ public class ArrayDatabaseParser : MonoBehaviour
 		}
 	}
 
-	private static int[] DecompressBytes(Element tileData, Element tilesElement)
+	public static int[] DecompressBytes(Element tileData, Element tilesElement)
 	{
 		int nCompression = (int)(tileData.Children.Find(e => e.Name == "nCompression")?.NumberValue ?? 0x20);
 		int nCompressedLength = (int)(tileData.Children.Find(e => e.Name == "nCompressedLength")?.NumberValue ?? 0);
@@ -357,29 +368,36 @@ public class ArrayDatabaseParser : MonoBehaviour
 				}
 				else
 				{
+					sb.Append($"\n{indent}");
 					sb.Append("{\n");
 					if (element.Children != null)
 					{
 						// List of properties to skip when includeCompressedBytes is false
 						var skipProperties = new HashSet<string> { "nReserved", "nUncompressedLength", "nCompression", "nCompressedLength", "nAdjust" };
 
-						// Output children, skipping redundant properties for nTileIndex when includeCompressedBytes is false
+						// Output children, skipping redundant properties and bytes for nTileIndex
 						for (int i = 0; i < element.Children.Count; i++)
 						{
 							var child = element.Children[i];
 							// Skip redundant properties in nTileIndex if includeCompressedBytes is false
 							if (element.Name == "nTileIndex" && !includeCompressedBytes && skipProperties.Contains(child.Name))
 								continue;
+							// Skip bytes element in nTileIndex to avoid duplication (processed in special case below)
+							if (element.Name == "nTileIndex" && child.Name == "bytes")
+								continue;
 
 							BuildJsonElement(sb, child, indentLevel + 1, element);
-							if (i < element.Children.Count - 1 && !(element.Name == "nTileIndex" && !includeCompressedBytes && skipProperties.Contains(element.Children[i + 1].Name)))
-								sb.Append(",\n");
+							if (i < element.Children.Count - 1 &&
+								!(element.Name == "nTileIndex" && !includeCompressedBytes && skipProperties.Contains(element.Children[i + 1].Name)) &&
+								!(element.Name == "nTileIndex" && element.Children[i + 1].Name == "bytes"))
+								sb.Append(",");
+							sb.Append("\n");
 						}
 
+						// Special handling for nTileIndex under tiles or mixed
 						if (element.Name == "nTileIndex" && parent != null && (parent.Name == "tiles" || parent.Name == "mixed"))
 						{
 							var compressedBytesElement = element.Children.Find(e => e.Name == "bytes");
-							// Optionally include compressed_bytes
 							if (includeCompressedBytes && compressedBytesElement?.BytesValue != null)
 							{
 								sb.Append($"{indent}  \"compressed_bytes\": [");
@@ -389,20 +407,37 @@ public class ArrayDatabaseParser : MonoBehaviour
 									if (j < compressedBytesElement.BytesValue.Length - 1)
 										sb.Append(", ");
 								}
-								sb.Append("]\n");
+								sb.Append("]");
 							}
-							// Always output decompressed bytes as 'bytes'
-							int[] unpacked = DecompressBytes(element, parent);
-							if (unpacked.Length > 0)
+
+							// Check for remapped bytes (type array) first, set by MapBoundsHelper
+							var remappedBytesElement = element.Children.Find(e => e.Name == "bytes" && e.Type.ToLower() == "array");
+							if (remappedBytesElement != null && remappedBytesElement.Children != null)
 							{
 								sb.Append($"{indent}  \"bytes\": [");
-								for (int j = 0; j < unpacked.Length; j++)
+								for (int j = 0; j < remappedBytesElement.Children.Count; j++)
 								{
-									sb.Append(unpacked[j].ToString());
-									if (j < unpacked.Length - 1)
+									sb.Append(remappedBytesElement.Children[j].NumberValue.ToString());
+									if (j < remappedBytesElement.Children.Count - 1)
 										sb.Append(", ");
 								}
 								sb.Append("]");
+							}
+							else
+							{
+								// Fall back to decompressing original bytes if no remapped bytes
+								int[] unpacked = DecompressBytes(element, parent);
+								if (unpacked.Length > 0)
+								{
+									sb.Append($"{indent}  \"bytes\": [");
+									for (int j = 0; j < unpacked.Length; j++)
+									{
+										sb.Append(unpacked[j].ToString());
+										if (j < unpacked.Length - 1)
+											sb.Append(", ");
+									}
+									sb.Append("]");
+								}
 							}
 						}
 					}
