@@ -42,7 +42,7 @@ namespace GamePreviewNamespace
 			if (initialPos.x < 0 || initialPos.x >= mapManager.Width || initialPos.z < 0 || initialPos.z >= mapManager.Height) return;
 			var tileIndex = mapManager.ToIndex(new GridCoord(initialPos));
 
-			var properties = mapManager.GetTilePropertiesAt(tileIndex);
+			var properties = mapManager.GetTileProperties(tileIndex);
 			if (properties == null || !properties.Interactive) return;//Debug.LogWarning($"Cannot drag tile at index {tileIndex}: {(properties == null ? "Empty" : "Not draggable")}");
 
 			tileStrip = default;

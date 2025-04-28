@@ -206,7 +206,7 @@ namespace GamePreviewNamespace
 						{
 							int waypointTile = mapManager.Waypoints[currentWaypointIndex].nTile;
 							eggbot.transform.position = mapManager.GetTilePosition(waypointTile);
-							var tileProps = mapManager.GetTilePropertiesAt(waypointTile);
+							var tileProps = mapManager.GetTileProperties(waypointTile);
 							cameraController?.OnWaypointReached(currentWaypointIndex);
 
 							if (isReturningToStart && currentWaypointIndex == 0 && hasReachedEnd)
@@ -312,7 +312,7 @@ namespace GamePreviewNamespace
 			int consoleTile = mapManager.FindAdjacentConsole(tile);
 			if (consoleTile != -1)
 			{
-				TileProperties consoleProps = mapManager.GetTilePropertiesAt(consoleTile);
+				TileProperties consoleProps = mapManager.GetTileProperties(consoleTile);
 				if (consoleProps?.Nav != 0)
 				{
 					int oppositeDir = TileProperties.GetOppositeDirection(consoleProps.Nav);
