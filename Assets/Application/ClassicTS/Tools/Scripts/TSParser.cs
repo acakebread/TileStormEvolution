@@ -7,6 +7,9 @@ using System.Linq;
 
 public class ArrayDatabaseParser : MonoBehaviour
 {
+	// Boolean switch to include compressed_bytes in JSON output
+	private static bool includeCompressedBytes = false;
+
 	void Start()
 	{
 		string filePath = Application.streamingAssetsPath + "/ClassicTS/database.bin";
@@ -52,7 +55,7 @@ public class ArrayDatabaseParser : MonoBehaviour
 		public List<Element> Children;
 		public string StringValue;
 		public float NumberValue;
-		public string[] BytesValue;
+		public string[] BytesValue; // Used for compressed bytes (previously 'bytes')
 	}
 
 	private static Element ParseElement(BinaryReader reader, List<Element> siblings)
@@ -290,6 +293,12 @@ public class ArrayDatabaseParser : MonoBehaviour
 	{
 		string indent = new string(' ', indentLevel * 2);
 
+		// Skip the original 'bytes' element of type 'char' to avoid duplicate output
+		if (element.Type.ToLower() == "char" && element.Name == "bytes")
+		{
+			return; // Do not output this element directly
+		}
+
 		if (!isArrayElement && !string.IsNullOrEmpty(element.Name))
 		{
 			string elementName = element.Name == "Waypoints" ? "waypoints" : element.Name;
@@ -354,16 +363,32 @@ public class ArrayDatabaseParser : MonoBehaviour
 						for (int i = 0; i < element.Children.Count; i++)
 						{
 							BuildJsonElement(sb, element.Children[i], indentLevel + 1, element);
-							if (i < element.Children.Count - 1)
-								sb.Append(",");
-							sb.Append("\n");
+							if (i < element.Children.Count - 1) sb.Append(",\n");
 						}
+
 						if (element.Name == "nTileIndex" && parent != null && (parent.Name == "tiles" || parent.Name == "mixed"))
 						{
+							var first = true;
+							var compressedBytesElement = element.Children.Find(e => e.Name == "bytes");
+							// Optionally include compressed_bytes
+							if (includeCompressedBytes && compressedBytesElement?.BytesValue != null)
+							{
+								sb.Append($"{indent}  \"compressed_bytes\": [");
+								for (int j = 0; j < compressedBytesElement.BytesValue.Length; j++)
+								{
+									sb.Append($"\"{compressedBytesElement.BytesValue[j]}\"");
+									if (j < compressedBytesElement.BytesValue.Length - 1)
+										sb.Append(", ");
+								}
+								sb.Append("]");
+								first = false;
+							}
+							// Always output decompressed bytes as 'bytes'
 							int[] unpacked = DecompressBytes(element, parent);
 							if (unpacked.Length > 0)
 							{
-								sb.Append($",\n{indent}  \"unpacked_bytes\": [");
+								if (!first) sb.Append(",\n");
+								sb.Append($"{indent}  \"bytes\": [");
 								for (int j = 0; j < unpacked.Length; j++)
 								{
 									sb.Append(unpacked[j].ToString());
@@ -371,10 +396,11 @@ public class ArrayDatabaseParser : MonoBehaviour
 										sb.Append(", ");
 								}
 								sb.Append("]");
+								first = false;
 							}
 						}
 					}
-					sb.Append($"{indent}}}");
+					sb.Append($"\n{indent}}}");
 				}
 				break;
 			case "array":
@@ -395,15 +421,15 @@ public class ArrayDatabaseParser : MonoBehaviour
 					sb.Append("{\n");
 					if (element.Children != null)
 					{
+						bool first = true;
 						for (int i = 0; i < element.Children.Count; i++)
 						{
+							if (!first) sb.Append(",\n");
 							BuildJsonElement(sb, element.Children[i], indentLevel + 1, element);
-							if (i < element.Children.Count - 1)
-								sb.Append(",");
-							sb.Append("\n");
+							first = false;
 						}
 					}
-					sb.Append($"{indent}}}");
+					sb.Append($"\n{indent}}}");
 				}
 				else
 				{

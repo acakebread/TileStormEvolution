@@ -150,7 +150,7 @@ namespace GamePreviewNamespace
 
 		private void LoadTileData(DatabaseLoader.Tiles tiles)
 		{
-			var tileMap = tiles.TileData.unpacked_bytes;
+			var tileMap = tiles.TileData.bytes;
 			if (tileMap == null || tileMap.Length != tiles.nWidth * tiles.nHeight)
 			{
 				Debug.LogError($"Invalid tiles data! length={(tileMap?.Length ?? -1)}, expected={tiles.nWidth * tiles.nHeight}");
@@ -278,14 +278,14 @@ namespace GamePreviewNamespace
 
 		public void Scramble()
 		{
-			if (currentMap?.mixed?.TileData?.unpacked_bytes == null || tiles == null)
+			if (currentMap?.mixed?.TileData?.bytes == null || tiles == null)
 			{
 				Debug.LogWarning("Cannot scramble: invalid map or tiles data");
 				return;
 			}
 
 			var scrambledTiles = new int[tiles.Length];
-			var offsets = currentMap.mixed.TileData.unpacked_bytes;
+			var offsets = currentMap.mixed.TileData.bytes;
 			for (var index = 0; index < tiles.Length; index++)
 			{
 				var scrambledIndex = index + offsets[index];

@@ -224,8 +224,8 @@ namespace GameDatabase
 			public int nCompression;
 			public int nCompressedLength;
 			public int nAdjust;
-			public string[] bytes;
-			public int[] unpacked_bytes;
+			public string[] compressed_bytes;
+			public int[] bytes;
 		}
 
 		[System.Serializable]

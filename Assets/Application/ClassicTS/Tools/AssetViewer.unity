@@ -163,7 +163,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 77d0d22ada4ae7e4f9dcaa5e3eee5d9a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  databaseJsonFile: {fileID: 4900000, guid: c2dbdf209993a6b43b19827acfe70fbe, type: 3}
+  databaseJsonFile: {fileID: 4900000, guid: 96c40ca8617a15a4590b9728c168e29a, type: 3}
 --- !u!1 &757022233
 GameObject:
   m_ObjectHideFlags: 0

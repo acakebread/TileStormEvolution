@@ -88,7 +88,7 @@ namespace AssetViewerNamespace
 				return;
 			}
 
-			if (map.tiles == null || map.tiles.TileData == null || map.tiles.TileData.unpacked_bytes == null)
+			if (map.tiles == null || map.tiles.TileData == null || map.tiles.TileData.bytes == null)
 			{
 				Debug.LogError($"Invalid tiles data for map {map.name}!");
 				return;
@@ -96,7 +96,7 @@ namespace AssetViewerNamespace
 
 			int width = map.tiles.nWidth;
 			int height = map.tiles.nHeight;
-			int[] tileIndices = map.tiles.TileData.unpacked_bytes;
+			int[] tileIndices = map.tiles.TileData.bytes;
 
 			if (tileIndices.Length != width * height)
 			{
