@@ -151,19 +151,23 @@ public static class MapBoundsHelper
 					if (newMixedBytes != null)
 					{
 						int value = mixedBytes[oldIndex];
-						int z = value / nWidth;
-						int xCoord = value % nWidth;
-						int newValue = z * newWidth + xCoord;
-						if (xCoord < newWidth)
+						int oldDeltaIndex = y * nWidth + x + value;
+						int oldX = oldDeltaIndex % nWidth;
+						int oldZ = oldDeltaIndex / nWidth;
+						int deltaX = oldX - x;
+						int deltaZ = oldZ - y;
+						int newValue = deltaZ * newWidth + deltaX;
+
+						if (newIndex + newValue >= 0 && newIndex + newValue < newWidth * newHeight)
 						{
 							newMixedBytes[newIndex] = newValue;
 						}
 						else
 						{
 							newMixedBytes[newIndex] = value; // Keep original if out-of-bounds
-							Debug.LogWarning($"Mixed remap map {map.Name}: Out-of-bounds xCoord={xCoord} (newWidth={newWidth}) at oldIndex={oldIndex}, value={value}, keeping original");
+							Debug.LogWarning($"Mixed remap map {map.Name}: Out-of-bounds xCoord={deltaX}  zCoord={deltaZ} (newWidth={newWidth}) at oldIndex={oldIndex}, value={value}, keeping original");
 						}
-						Debug.Log($"Mixed remap map {map.Name}: oldIndex={oldIndex}, value={value}, z={z}, x={xCoord}, newValue={newValue}, newIndex={newIndex}");
+						Debug.Log($"Mixed remap map {map.Name}: oldIndex={oldIndex}, value={value}, x={deltaX}, z={deltaZ}, newValue={newValue}, newIndex={newIndex}");
 					}
 				}
 			}
