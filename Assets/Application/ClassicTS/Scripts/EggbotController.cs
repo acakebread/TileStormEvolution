@@ -24,7 +24,7 @@ namespace GamePreviewNamespace
 		private float pauseTimer;
 		private float pauseDuration = 1f;
 
-		private bool isPuzzleBlocked;
+		public static bool isPuzzleBlocked;
 		private bool isLevelComplete;
 		public bool IsLevelComplete => isLevelComplete;
 
