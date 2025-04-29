@@ -4,12 +4,20 @@ namespace GamePreviewNamespace
 {
 	public class TileInteractionController : MonoBehaviour
 	{
+		enum nDirection
+		{
+			none,
+			north_south,
+			east_west
+		}
+
 		private GestureSystem gestureSystem => GestureSystem.instance;
 		private MapManager mapManager;
 		private MapManager.TileStrip tileStrip;//working selection
 		private Vector3 initialPos;//world ground plane position
 		private int dragIndex = -1;//selected tile
 		private const float gridSize = 1.0f;
+		private nDirection gesture_direction = nDirection.none;
 
 		public void Start()
 		{
@@ -47,6 +55,7 @@ namespace GamePreviewNamespace
 
 			tileStrip = default;
 			dragIndex = tileIndex;
+			gesture_direction = nDirection.none;
 		}
 
 		private void OnDrag(Vector3 screenPos)
@@ -92,21 +101,33 @@ namespace GamePreviewNamespace
 						dragIndex += tileStrip.Stride;
 					tileStrip = mapManager.GetTileStrip(dragIndex, nesw);
 					initialPos += dxyz;// consume the gesture
+					gesture_direction = absZ > absX ? nDirection.north_south : nDirection.east_west;
 				}
 				else// partial gesture
 				{
+					if (nDirection.none == gesture_direction && 0 != absX && 0 != absZ)
+						gesture_direction = absZ > absX ? nDirection.north_south : nDirection.east_west;
+
 					tileStrip = new MapManager.TileStrip();
-					if (Mathf.Abs(dxyz.x) > Mathf.Abs(dxyz.z))
+
+					var evaluation_direction = gesture_direction;
+					var count = 0;
+					while (count < 2 && tileStrip.Count <= 1 && nDirection.none != evaluation_direction)
 					{
-						tileStrip = mapManager.GetTileStrip(dragIndex, 0 == dxyz.x ? 0 : dxyz.x > 0f ? TileProperties.East : TileProperties.West);
-						if (tileStrip.Count > 1)
-							delta = new Vector3(dxyz.x, 0, 0);
-					}
-					else
-					{
-						tileStrip = mapManager.GetTileStrip(dragIndex, 0 == dxyz.z ? 0 : dxyz.z > 0f ? TileProperties.North : TileProperties.South);
-						if (tileStrip.Count > 1)
-							delta = new Vector3(0, 0, dxyz.z);
+						switch (evaluation_direction)
+						{
+							case nDirection.north_south:
+								evaluation_direction = nDirection.east_west;
+								tileStrip = mapManager.GetTileStrip(dragIndex, 0 == dxyz.z ? 0 : dxyz.z > 0f ? TileProperties.North : TileProperties.South);
+								if (tileStrip.Count > 1) delta = new Vector3(0, 0, dxyz.z);
+								break;
+							case nDirection.east_west:
+								evaluation_direction = nDirection.north_south;
+								tileStrip = mapManager.GetTileStrip(dragIndex, 0 == dxyz.x ? 0 : dxyz.x > 0f ? TileProperties.East : TileProperties.West);
+								if (tileStrip.Count > 1) delta = new Vector3(dxyz.x, 0, 0);
+								break;
+						}
+						++count;
 					}
 
 					// apply delta
