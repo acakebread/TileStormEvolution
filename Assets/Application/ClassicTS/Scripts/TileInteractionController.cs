@@ -53,9 +53,9 @@ namespace GamePreviewNamespace
 			var properties = mapManager.GetTileProperties(tileIndex);
 			if (properties == null || !properties.Interactive) return;//Debug.LogWarning($"Cannot drag tile at index {tileIndex}: {(properties == null ? "Empty" : "Not draggable")}");
 
+			gesture_direction = nDirection.none;
 			tileStrip = default;
 			dragIndex = tileIndex;
-			gesture_direction = nDirection.none;
 		}
 
 		private void OnDrag(Vector3 screenPos)
@@ -71,69 +71,96 @@ namespace GamePreviewNamespace
 				// Reset tile positions
 				mapManager.ResetStrip(tileStrip, mapManager.Width);
 
-				var dxyz = currentPos - initialPos;// gesture
-				var absX = Mathf.Abs(dxyz.x);
-				var absZ = Mathf.Abs(dxyz.z);
+				var complete = false;
+				var evaluation_direction = gesture_direction;
 				var nesw = 0;//direction flag
-
-				// Compute the gesture
-				if (absX > absZ && absX >= gridSize)
+				for (var i = 0; i < 2; ++i)
 				{
-					var direction = dxyz.x > 0 ? 1 : -1;
-					dxyz = new Vector3(direction, 0, 0);// quantised gesture
-					if (dxyz.x == 1) nesw |= TileProperties.East;
-					if (dxyz.x == -1) nesw |= TileProperties.West;
-				}
-				else if (absZ >= gridSize)
-				{
-					var direction = dxyz.z > 0 ? 1 : -1;
-					dxyz = new Vector3(0, 0, direction);// quantised gesture
-					if (dxyz.z == 1) nesw |= TileProperties.North;
-					if (dxyz.z == -1) nesw |= TileProperties.South;
-				}
+					var dxyz = currentPos - initialPos;// gesture
+					var absX = Mathf.Abs(dxyz.x);
+					var absZ = Mathf.Abs(dxyz.z);
 
-				// Process the gesture
-				var delta = Vector3.zero;
-				if (nesw != 0)// quantised gesture
-				{
-					tileStrip = mapManager.GetTileStrip(dragIndex, nesw);
-					if (mapManager.RollStrip(tileStrip))
-						dragIndex += tileStrip.Stride;
-					tileStrip = mapManager.GetTileStrip(dragIndex, nesw);
-					initialPos += dxyz;// consume the gesture
-					gesture_direction = absZ > absX ? nDirection.north_south : nDirection.east_west;
-				}
-				else// partial gesture
-				{
-					if (nDirection.none == gesture_direction && 0 != absX && 0 != absZ)
-						gesture_direction = absZ > absX ? nDirection.north_south : nDirection.east_west;
+					// Compute the gesture
+					if (nDirection.none == evaluation_direction) evaluation_direction = absZ > absX ? nDirection.north_south : 0 != absX ? nDirection.east_west : nDirection.none;
 
-					tileStrip = new MapManager.TileStrip();
+					nesw = 0;//direction flag
 
-					var evaluation_direction = gesture_direction;
-					var count = 0;
-					while (count < 2 && tileStrip.Count <= 1 && nDirection.none != evaluation_direction)
+					// Compute the gesture
+					if (nDirection.east_west == evaluation_direction)
 					{
+						if (absX >= gridSize)
+						{
+							var direction = dxyz.x > 0 ? 1 : -1;
+							dxyz = new Vector3(direction, 0, 0);// quantised gesture
+							if (dxyz.x == 1) nesw |= TileProperties.East;
+							if (dxyz.x == -1) nesw |= TileProperties.West;
+						}
+					}
+					else
+					{
+						if (absZ >= gridSize)
+						{
+							var direction = dxyz.z > 0 ? 1 : -1;
+							dxyz = new Vector3(0, 0, direction);// quantised gesture
+							if (dxyz.z == 1) nesw |= TileProperties.North;
+							if (dxyz.z == -1) nesw |= TileProperties.South;
+						}
+					}
+
+					// Process the gesture
+					if (nesw != 0)// quantised gesture
+					{
+						tileStrip = mapManager.GetTileStrip(dragIndex, nesw);
+						if (mapManager.RollStrip(tileStrip))
+						{
+							dragIndex += tileStrip.Stride;
+							tileStrip = mapManager.GetTileStrip(dragIndex, nesw);
+							gesture_direction = evaluation_direction;
+							initialPos = currentPos;// consume the gesture
+						}
+						else
+						{
+							initialPos += dxyz;// consume partial gesture
+							evaluation_direction = nDirection.none; //0 == i ? nDirection.north_south == evaluation_direction ? nDirection.east_west : nDirection.north_south : nDirection.none;
+						}
+					}
+					else// partial gesture
+					{
+						tileStrip = new MapManager.TileStrip();
+
+						var delta = Vector3.zero;
 						switch (evaluation_direction)
 						{
 							case nDirection.north_south:
-								evaluation_direction = nDirection.east_west;
 								tileStrip = mapManager.GetTileStrip(dragIndex, 0 == dxyz.z ? 0 : dxyz.z > 0f ? TileProperties.North : TileProperties.South);
 								if (tileStrip.Count > 1) delta = new Vector3(0, 0, dxyz.z);
+								else
+								{
+									//initialPos.z += dxyz.z;// consume the gesture
+									evaluation_direction = nDirection.east_west;
+								}
 								break;
 							case nDirection.east_west:
-								evaluation_direction = nDirection.north_south;
 								tileStrip = mapManager.GetTileStrip(dragIndex, 0 == dxyz.x ? 0 : dxyz.x > 0f ? TileProperties.East : TileProperties.West);
 								if (tileStrip.Count > 1) delta = new Vector3(dxyz.x, 0, 0);
+								else
+								{
+									//initialPos.x += dxyz.x;// consume the gesture
+									evaluation_direction = nDirection.north_south;
+								}
 								break;
 						}
-						++count;
-					}
 
-					// apply delta
-					mapManager.TranslateStrip(tileStrip, delta);
-					break;// this was a partial movement so break because it is the last
+						// apply delta
+						mapManager.TranslateStrip(tileStrip, delta);
+						if (tileStrip.Count > 1 || i > 0)
+						{
+							complete = true;
+							break;// this was a partial movement so break because it is the last
+						}
+					}
 				}
+				if (true == complete) break;// this was a partial movement so break because a valid partial drag has been detected
 			}
 
 			mapManager.HighlightStrip(tileStrip, tileStrip.Count > 1);//debug utility
@@ -146,15 +173,20 @@ namespace GamePreviewNamespace
 			if (tileStrip.Count > 1)
 			{
 				var currentPos = mapManager.ScreenToWorld(screenPos);
-				var targetIndex = mapManager.ToIndex(new GridCoord(currentPos));
+				var dxyz = currentPos - initialPos;// gesture
+				var absX = Mathf.Abs(dxyz.x);
+				var absZ = Mathf.Abs(dxyz.z);
 
-				if (targetIndex != dragIndex)
+				// Compute the gesture
+				if (nDirection.none == gesture_direction) gesture_direction = absZ > absX ? nDirection.north_south : 0 != absX ? nDirection.east_west : nDirection.none;
+
+				if ((nDirection.north_south == gesture_direction && absZ >= gridSize * 0.5f) || (nDirection.east_west == gesture_direction && absX >= gridSize * 0.5f))
 					mapManager.RollStrip(tileStrip);
-
 				mapManager.ResetStrip(tileStrip, mapManager.Width);
 			}
 
 			mapManager.HighlightStrip(tileStrip, false);//debug utility
+			gesture_direction = nDirection.none;
 			tileStrip = default;
 			dragIndex = -1;
 		}
