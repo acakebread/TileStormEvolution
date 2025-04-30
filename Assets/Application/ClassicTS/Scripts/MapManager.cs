@@ -601,21 +601,45 @@ namespace GamePreviewNamespace
 			return strip;
 		}
 
-		public bool RollStrip(TileStrip strip)
+		//public bool RollStrip(TileStrip strip, int adjust = 1)
+		//{
+		//	if (strip.Count <= 1) return false;
+
+		//	var lastTileIndex = tiles[strip.Last];
+		//	for (var i = strip.Count - 1; i > 0; --i)
+		//		tiles[strip.Indices[i]] = tiles[strip.Indices[i - 1]];
+		//	tiles[strip.First] = lastTileIndex;
+
+		//	ResetStrip(strip, Width);
+
+		//	for (var i = 0; i < strip.Count; i++)
+		//	{
+		//		var gameObject = GetTileGameObject(strip.Indices[i]);
+		//		if (gameObject == null) continue;
+		//		var coord = GetTileCoordinates(strip.Indices[i]);
+		//		gameObject.name = $"{GetTileProperties(strip.Indices[i])?.Type ?? "Empty"}_{coord.X}_{coord.Z}";
+		//	}
+
+		//	return true;
+		//}
+
+		public bool RollStrip(TileStrip strip, int adjust = 1)
 		{
-			if (strip.Count <= 1) return false;
+			if (strip.Count <= 1 || tiles == null || strip.Indices == null)
+				return false;
 
-			var lastTileIndex = tiles[strip.Last];
-			for (var i = strip.Count - 1; i > 0; --i)
-				tiles[strip.Indices[i]] = tiles[strip.Indices[i - 1]];
-			tiles[strip.First] = lastTileIndex;
+			// Roll the indices in the tiles array using RollArray
+			ArrayExtensions.RollArray(tiles, strip.First, strip.Count, adjust, strip.Stride);
 
+			// Reset the strip's position
 			ResetStrip(strip, Width);
 
+			// Update game object names based on new tile positions
 			for (var i = 0; i < strip.Count; i++)
 			{
 				var gameObject = GetTileGameObject(strip.Indices[i]);
-				if (gameObject == null) continue;
+				if (gameObject == null)
+					continue;
 				var coord = GetTileCoordinates(strip.Indices[i]);
 				gameObject.name = $"{GetTileProperties(strip.Indices[i])?.Type ?? "Empty"}_{coord.X}_{coord.Z}";
 			}
