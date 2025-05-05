@@ -1,6 +1,6 @@
 public static class ArrayExtensions
 {
-	public static void RollArray<T>(T[] array, int first, int size, int roll, int stride)
+	public static void RollArray<T>(T[] array, int first, int size, int roll, int stride = 1)
 	{
 		if (array == null || size <= 0 || stride == 0)
 			return;
