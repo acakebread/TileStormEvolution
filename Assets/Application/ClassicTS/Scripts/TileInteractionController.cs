@@ -44,9 +44,9 @@ namespace GamePreviewNamespace
 			if (properties == null || !properties.Interactive) return;
 
 			last = mapManager.ScreenToWorld(screenPos);
-			tileStrip = default;
-			dragIndex = tileIndex;
 			delta = Vector3.zero;
+			dragIndex = tileIndex;
+			tileStrip = default;
 		}
 
 		private void OnDrag(Vector3 screenPos)
@@ -59,9 +59,6 @@ namespace GamePreviewNamespace
 			TryDrag(vert - last);
 			last = vert;
 
-			if (tileStrip.Count > 1)
-				mapManager.TranslateStrip(tileStrip, delta);// apply remainder
-
 			mapManager.HighlightStrip(tileStrip, tileStrip.Count > 1);//debug utility
 		}
 
@@ -71,78 +68,54 @@ namespace GamePreviewNamespace
 
 			mapManager.HighlightStrip(tileStrip, false);//debug utility
 
-			if (tileStrip.Count > 1)
-			{
-				var vert = mapManager.ScreenToWorld(screenPos);
-				TryDrag(vert - last, f => Mathf.Abs(f) >= 0.5f ? (int)Mathf.Sign(f) : 0);
-				mapManager.ResetStrip(tileStrip, mapManager.Width);
-			}
+			TryDrag(mapManager.ScreenToWorld(screenPos) - last, true);
 
-			tileStrip = default;
 			dragIndex = -1;
 		}
 
-		private void TryDrag(Vector3 offset, System.Func<float, int> roundFunc = null)
+		private void TryDrag(Vector3 offset, bool snap = false)
 		{
 			delta += offset;
-			roundFunc ??= (val => (int)(val / gridSize)); // default truncation
 
-			for (var n = 0; n < 2; ++n)
+			for (var axis = 0; axis < 2; ++axis)
 			{
 				mapManager.ResetStrip(tileStrip, mapManager.Width);
 				tileStrip = default;
 
-				if (Mathf.Abs(delta.x) > Mathf.Abs(delta.z))
+				bool isX = Mathf.Abs(delta.x) > Mathf.Abs(delta.z);
+				float val = isX ? delta.x : delta.z;
+				if (Mathf.Approximately(val, 0f))
+					break;
+
+				int direction = val > 0f ? (isX ? TileProperties.East : TileProperties.North) : (isX ? TileProperties.West : TileProperties.South);
+
+				tileStrip = mapManager.GetTileStrip(dragIndex, direction);
+				if (tileStrip.Count <= 1)
 				{
-					var direction = delta.x == 0f ? 0 : delta.x > 0f ? TileProperties.East : TileProperties.West;
-					tileStrip = mapManager.GetTileStrip(dragIndex, direction);
-					if (tileStrip.Count > 1)
-					{
-						var count = roundFunc(delta.x);
-						if (count != 0)
-						{
-							for (var i = 0; i < Mathf.Abs(count); ++i)
-							{
-								if (mapManager.RollStrip(tileStrip))
-								{
-									dragIndex += tileStrip.Stride;
-									tileStrip = mapManager.GetTileStrip(dragIndex, direction);
-								}
-							}
-							delta -= new Vector3(count, 0, 0);
-						}
-						delta.z = 0;
-						break;
-					}
-					else
-						delta.x = 0;
+					if (isX) delta.x = 0;
+					else delta.z = 0;
+					continue;
 				}
+
+				int count = (int)((Mathf.Abs(val) + (snap ? gridSize * 0.5f : 0f)) / gridSize);
+				for (int i = 0; i < count; ++i)
+				{
+					if (false == mapManager.RollStrip(tileStrip)) break;
+					dragIndex += tileStrip.Stride;
+					tileStrip = mapManager.GetTileStrip(dragIndex, direction);
+				}
+
+				if (isX)
+					delta = new Vector3(val % gridSize, 0, 0);
 				else
-				{
-					var direction = delta.z == 0f ? 0 : delta.z > 0f ? TileProperties.North : TileProperties.South;
-					tileStrip = mapManager.GetTileStrip(dragIndex, direction);
-					if (tileStrip.Count > 1)
-					{
-						var count = roundFunc(delta.z);
-						if (count != 0)
-						{
-							for (var i = 0; i < Mathf.Abs(count); ++i)
-							{
-								if (mapManager.RollStrip(tileStrip))
-								{
-									dragIndex += tileStrip.Stride;
-									tileStrip = mapManager.GetTileStrip(dragIndex, direction);
-								}
-							}
-							delta -= new Vector3(0, 0, count);
-						}
-						delta.x = 0;
-						break;
-					}
-					else
-						delta.z = 0;
-				}
+					delta = new Vector3(0, 0, val % gridSize);
+				break;
 			}
+
+			if (snap)
+				mapManager.ResetStrip(tileStrip, mapManager.Width);
+			else
+				mapManager.TranslateStrip(tileStrip, delta);// apply remainder
 		}
 	}
 }
