@@ -57,9 +57,6 @@ namespace GamePreviewNamespace
 
 			while (true)
 			{
-				// Reset tile positions
-				mapManager.ResetStrip(tileStrip, mapManager.Width);
-
 				var dxyz = currentPos - initialPos;// gesture
 				var absX = Mathf.Abs(dxyz.x);
 				var absZ = Mathf.Abs(dxyz.z);
@@ -68,21 +65,23 @@ namespace GamePreviewNamespace
 				// Compute the gesture
 				if (absX > absZ && absX >= gridSize)
 				{
-					var direction = dxyz.x > 0 ? 1 : -1;
+					var direction = dxyz.x > 0 ? gridSize : -gridSize;
 					dxyz = new Vector3(direction, 0, 0);// quantised gesture
-					if (dxyz.x == 1) nesw |= TileProperties.East;
-					if (dxyz.x == -1) nesw |= TileProperties.West;
+					if (dxyz.x == gridSize) nesw |= TileProperties.East;
+					if (dxyz.x == -gridSize) nesw |= TileProperties.West;
 				}
 				else if (absZ >= gridSize)
 				{
-					var direction = dxyz.z > 0 ? 1 : -1;
+					var direction = dxyz.z > 0 ? gridSize : -gridSize;
 					dxyz = new Vector3(0, 0, direction);// quantised gesture
-					if (dxyz.z == 1) nesw |= TileProperties.North;
-					if (dxyz.z == -1) nesw |= TileProperties.South;
+					if (dxyz.z == gridSize) nesw |= TileProperties.North;
+					if (dxyz.z == -gridSize) nesw |= TileProperties.South;
 				}
 
+				// Reset tile positions
+				mapManager.ResetStrip(tileStrip, mapManager.Width);
+
 				// Process the gesture
-				var delta = Vector3.zero;
 				if (nesw != 0)// quantised gesture
 				{
 					tileStrip = mapManager.GetTileStrip(dragIndex, nesw);
@@ -90,12 +89,12 @@ namespace GamePreviewNamespace
 						dragIndex += tileStrip.Stride;
 					tileStrip = mapManager.GetTileStrip(dragIndex, nesw);
 					initialPos += dxyz;// consume the gesture
-
-					//dragIndex = mapManager.ToIndex(new GridCoord(initialPos));// mapManager.ScreenToMapIndex(initialPos);
 				}
 				else// partial gesture
 				{
 					tileStrip = new MapManager.TileStrip();
+
+					var delta = Vector3.zero;
 					if (Mathf.Abs(dxyz.x) > Mathf.Abs(dxyz.z))
 					{
 						tileStrip = mapManager.GetTileStrip(dragIndex, 0 == dxyz.x ? 0 : dxyz.x > 0f ? TileProperties.East : TileProperties.West);
