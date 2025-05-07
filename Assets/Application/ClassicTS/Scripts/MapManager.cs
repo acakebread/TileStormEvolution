@@ -605,26 +605,44 @@ namespace GamePreviewNamespace
 			while (true)
 			{
 				var nextProps = GetTileProperties(lastIndex + stride);
-				if (nextProps == null || !nextProps.Interactive) break;
+				if (nextProps == null || !nextProps.IsSlide || nextProps.IsDock) break;
 				lastIndex += stride;
 			}
-			var lastInteractive = lastIndex;
 
 			while (true)
 			{
 				var nextProps = GetTileProperties(lastIndex + stride);
-				if (nextProps == null || (!nextProps.IsDock && !nextProps.IsRoll)) break;
+				if (nextProps == null || !nextProps.IsDock) break;
 				lastIndex += stride;
 			}
 
-			if (lastIndex == lastInteractive)
-				return strip;
-
 			while (true)
 			{
-				var nextProps = GetTileProperties(strip.First - stride);
-				if (nextProps == null || (!nextProps.IsDock && !nextProps.IsRoll)) break;
-				strip.First -= stride;
+				var nextProps = GetTileProperties(lastIndex + stride);
+				if (nextProps == null || !nextProps.IsRoll) break;
+				lastIndex += stride;
+			}
+
+			if (!GetTileProperties(lastIndex).IsRoll)
+				return strip;
+
+			if (GetTileProperties(lastIndex).IsDock)
+			{
+				while (true)
+				{
+					var nextProps = GetTileProperties(strip.First - stride);
+					if (nextProps == null || !nextProps.IsDock) break;
+					strip.First -= stride;
+				}
+			}
+			else
+			{
+				while (true)
+				{
+					var nextProps = GetTileProperties(strip.First - stride);
+					if (nextProps == null || !nextProps.IsSlide) break;
+					strip.First -= stride;
+				}
 			}
 
 			strip.Count = (lastIndex - strip.First) / stride + 1;
