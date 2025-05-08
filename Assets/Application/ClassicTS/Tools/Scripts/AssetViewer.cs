@@ -1,23 +1,20 @@
 using UnityEngine;
-using GameDatabase;
 using System.Linq;
 using System.Collections.Generic;
-using static GameDatabase.DatabaseLoader;
 using GamePreviewNamespace;
+using GameDatabase;
 
 namespace AssetViewerNamespace
 {
 	public class AssetViewer : MonoBehaviour
 	{
 		[Header("workaround for inverted .obj meshes")]
-		public bool flip = true;
+		public bool flip = false;
 		private Vector3 mapCentre = Vector3.zero;
 		private int activeTileCount = 0;
 
-		[SerializeField] private DatabaseLoader databaseLoader;
-		[SerializeField] private string mapName = "";
+		[SerializeField] private string mapName = "Industrial 01";
 
-		private bool isInitialized = false;
 		private GameObject pathRoot;
 		private bool showCameraPath = false;
 		private bool isAnimatingCamera = false;
@@ -36,40 +33,21 @@ namespace AssetViewerNamespace
 
 		void Start()
 		{
+			DatabaseLoader.Init(PreviewSettings.DatabaseJsonFile); 
+			mapName = PreviewSettings.LoadMapName;
 			mapCentre = Vector3.zero;
 			activeTileCount = 0;
-
-			if (databaseLoader == null)
-			{
-				Debug.LogError("AssetViewer requires a DatabaseLoader!");
-				return;
-			}
-
-			Debug.Log($"AssetViewer Start: databaseLoader found, Maps.Count={databaseLoader.Maps.Count}");
-			databaseLoader.OnDatabaseLoaded += Initialize;
-
-			if (databaseLoader.Maps.Count > 0)
-			{
-				Initialize();
-			}
+			Initialize();
 		}
 
 		void Initialize()
 		{
-			if (isInitialized)
-				return;
-
-			isInitialized = true;
-			Debug.Log($"AssetViewer initialized: Maps.Count={databaseLoader.Maps.Count}");
+			Debug.Log($"AssetViewer initialized: Maps.Count={DatabaseLoader.Maps.Count}");
 			DisplayMap();
 		}
 
 		void OnDestroy()
 		{
-			if (databaseLoader != null)
-			{
-				databaseLoader.OnDatabaseLoaded -= Initialize;
-			}
 			if (pathRoot != null)
 			{
 				Destroy(pathRoot);
@@ -78,9 +56,7 @@ namespace AssetViewerNamespace
 
 		void DisplayMap()
 		{
-			Map map = string.IsNullOrEmpty(mapName)
-				? databaseLoader.Maps.FirstOrDefault()
-				: databaseLoader.Maps.FirstOrDefault(m => m.name == mapName);
+			DatabaseLoader.Map map = string.IsNullOrEmpty(mapName) ? DatabaseLoader.Maps.FirstOrDefault() : DatabaseLoader.Maps.FirstOrDefault(m => m.name == mapName);
 
 			if (map == null)
 			{
@@ -152,7 +128,7 @@ namespace AssetViewerNamespace
 						continue;
 					}
 
-					TileDef tileDef = databaseLoader.TileDefs.FirstOrDefault(td => td.szType == szType && td.szTheme == szTheme);
+					DatabaseLoader.TileDef tileDef = DatabaseLoader.TileDefs.FirstOrDefault(td => td.szType == szType && td.szTheme == szTheme);
 					if (tileDef == null)
 					{
 						Debug.LogWarning($"TileDef not found for szType={szType}, szTheme={szTheme} at ({x}, {z}) in map {map.name}");
@@ -213,12 +189,12 @@ namespace AssetViewerNamespace
 			Camera.main.transform.position = mapCentre + (Vector3.up - Vector3.forward) * 8;
 		}
 
-		private TextureSet GetTextureForTileDef(TileDef tileDef, string szTheme)
+		private DatabaseLoader.TextureSet GetTextureForTileDef(DatabaseLoader.TileDef tileDef, string szTheme)
 		{
-			Theme theme = databaseLoader.Themes.FirstOrDefault(t => t.name == szTheme || t.szTileTextureSet == szTheme);
+			DatabaseLoader.Theme theme = DatabaseLoader.Themes.FirstOrDefault(t => t.name == szTheme || t.szTileTextureSet == szTheme);
 			if (theme != null && !string.IsNullOrEmpty(theme.szTileTextureSet))
 			{
-				TextureSet texSet = databaseLoader.TextureSets.FirstOrDefault(ts => ts.name == theme.szTileTextureSet);
+				DatabaseLoader.TextureSet texSet = DatabaseLoader.TextureSets.FirstOrDefault(ts => ts.name == theme.szTileTextureSet);
 				if (texSet != null && texSet.frames != null && texSet.frames.Length > 0)
 				{
 					Debug.Log($"TextureSet found: {texSet.name}, frames={texSet.frames.Length}");
@@ -226,7 +202,7 @@ namespace AssetViewerNamespace
 				}
 			}
 
-			TextureSet fallbackSet = databaseLoader.TextureSets.FirstOrDefault(ts => ts.name == szTheme);
+			DatabaseLoader.TextureSet fallbackSet = DatabaseLoader.TextureSets.FirstOrDefault(ts => ts.name == szTheme);
 			if (fallbackSet != null && fallbackSet.frames != null && fallbackSet.frames.Length > 0)
 			{
 				Debug.Log($"Fallback TextureSet: {fallbackSet.name}, frames={fallbackSet.frames.Length}");
@@ -339,7 +315,6 @@ namespace AssetViewerNamespace
 
 			if (GUI.Button(new Rect(10, 10, 100, 30), "Reload"))
 			{
-				isInitialized = false;
 				foreach (Transform child in transform)
 				{
 					Destroy(child.gameObject);

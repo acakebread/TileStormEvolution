@@ -17,10 +17,10 @@ namespace GamePreviewNamespace
 
 		public static TextureFrame[] GetTextureFrames(string szTheme)
 		{
-			DatabaseLoader.Theme theme = DatabaseLoader.instance.Themes.FirstOrDefault(t => t.name == szTheme);
+			DatabaseLoader.Theme theme = DatabaseLoader.Themes.FirstOrDefault(t => t.name == szTheme);
 			if (theme == null || string.IsNullOrEmpty(theme.szTileTextureSet)) return null;
 
-			DatabaseLoader.TextureSet textureSet = DatabaseLoader.instance.TextureSets.FirstOrDefault(ts => ts.name == theme.szTileTextureSet);
+			DatabaseLoader.TextureSet textureSet = DatabaseLoader.TextureSets.FirstOrDefault(ts => ts.name == theme.szTileTextureSet);
 			if (textureSet == null || textureSet.frames == null || textureSet.frames.Length <= 0) return null;
 
 			var frames = new TextureFrame[textureSet.frames.Length];

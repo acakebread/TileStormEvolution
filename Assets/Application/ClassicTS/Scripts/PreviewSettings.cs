@@ -6,6 +6,10 @@ public class PreviewSettings : MonoBehaviour
 	//[SerializeField] private bool flip = false;
 	//public static bool FlipGeometry => instance.flip;
 
+	[Header("map to load")]
+	[SerializeField] private string loadMapName = "Industrial 01";
+	public static string LoadMapName => instance.loadMapName;
+
 	[Header("load map scrambled or solved")]
 	[SerializeField] private bool scramble = true;
 	public static bool Scramble => instance.scramble;
@@ -21,6 +25,9 @@ public class PreviewSettings : MonoBehaviour
 	[Header("resource paths")]
 	//[SerializeField] private string databasePath = "ClassicTS/";
 	//public static string DatabasePath => instance.databasePath;
+
+	[SerializeField] private TextAsset databaseJsonFile;
+	public static TextAsset DatabaseJsonFile => instance.databaseJsonFile;
 
 	[SerializeField] private string geometryPath = "ClassicTS/Geometry/";
 	public static string GeometryPath => instance.geometryPath;

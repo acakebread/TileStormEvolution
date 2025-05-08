@@ -16,7 +16,7 @@ namespace GamePreviewNamespace
 				return properties;
 			}
 
-			var tileDef = DatabaseLoader.instance.TileDefs.FirstOrDefault(td => td.szType == szType && td.szTheme == szTheme);
+			var tileDef = DatabaseLoader.TileDefs.FirstOrDefault(td => td.szType == szType && td.szTheme == szTheme);
 			if (tileDef == null)
 			{
 				return null;

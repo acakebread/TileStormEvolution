@@ -89,11 +89,11 @@ namespace GamePreviewNamespace
 		public void Initialize(string mapName)
 		{
 			Reset();
-			currentMap = string.IsNullOrEmpty(mapName) ? DatabaseLoader.instance.Maps.FirstOrDefault() : DatabaseLoader.instance.Maps.FirstOrDefault(m => m.name == mapName);
+			currentMap = string.IsNullOrEmpty(mapName) ? DatabaseLoader.Maps.FirstOrDefault() : DatabaseLoader.Maps.FirstOrDefault(m => m.name == mapName);
 
 			if (currentMap == null)
 			{
-				Debug.LogError($"No map found for mapName={mapName}! Available maps: {string.Join(", ", DatabaseLoader.instance.Maps.Select(m => m.name))}");
+				Debug.LogError($"No map found for mapName={mapName}! Available maps: {string.Join(", ", DatabaseLoader.Maps.Select(m => m.name))}");
 				return;
 			}
 

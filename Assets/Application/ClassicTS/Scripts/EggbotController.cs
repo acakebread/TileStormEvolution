@@ -446,7 +446,7 @@ namespace GamePreviewNamespace
 			eggbot.transform.SetParent(mapManager.transform, false);
 
 			if (null == eggbotCostume) eggbotCostume = "Eggbot Default";
-			var def = GameDatabase.DatabaseLoader.instance.TileDefs.FirstOrDefault(td => td.szType == "Eggbot" && td.szTheme == eggbotCostume);
+			var def = GameDatabase.DatabaseLoader.TileDefs.FirstOrDefault(td => td.szType == "Eggbot" && td.szTheme == eggbotCostume);
 			if (def == null || def.szGeom == null) return;
 
 			var prefab = GeometryManager.Get(def.szGeom);
@@ -464,7 +464,7 @@ namespace GamePreviewNamespace
 			// Store reference to the Mesh transform
 			meshTransform = transform;
 
-			GameDatabase.DatabaseLoader.Theme theme = GameDatabase.DatabaseLoader.instance.Themes.FirstOrDefault(t => t.name == def.szTheme);
+			GameDatabase.DatabaseLoader.Theme theme = GameDatabase.DatabaseLoader.Themes.FirstOrDefault(t => t.name == def.szTheme);
 			if (theme == null || string.IsNullOrEmpty(theme.szTileTextureSet)) return;
 
 			var textureFrames = TextureSetManager.GetTextureFrames(theme.szTileTextureSet);

@@ -6,16 +6,17 @@ namespace GamePreviewNamespace
 {
 	public class GamePreview : MonoBehaviour
 	{
-		[SerializeField] private string mapName = "Industrial 01";
+		private string mapName = "Industrial 01";
 
 		private MapManager mapManager;
 		private EggbotController eggbotController;
 		private TileInteractionController tileInteractionController;
 		private CameraController cameraController; // New
-		private bool isInitialized;
 
 		void Awake()
 		{
+			DatabaseLoader.Init(PreviewSettings.DatabaseJsonFile);
+			mapName = PreviewSettings.LoadMapName;
 			mapManager = GetComponent<MapManager>();
 			eggbotController = GetComponent<EggbotController>();
 			tileInteractionController = GetComponent<TileInteractionController>();
@@ -25,41 +26,18 @@ namespace GamePreviewNamespace
 			if (eggbotController == null) eggbotController = gameObject.AddComponent<EggbotController>();
 			if (tileInteractionController == null) tileInteractionController = gameObject.AddComponent<TileInteractionController>();
 			if (cameraController == null) cameraController = gameObject.AddComponent<CameraController>(); // New
-		}
 
-		void Start()
-		{
-			if (DatabaseLoader.instance == null)
-			{
-				Debug.LogError("GamePreview requires a DatabaseLoader!");
-				return;
-			}
-
-			Debug.Log($"GamePreview Start: databaseLoader found, Maps.Count={DatabaseLoader.instance.Maps.Count}");
-			DatabaseLoader.instance.OnDatabaseLoaded += Initialize;
-
-			if (DatabaseLoader.instance.Maps.Count > 0)
-			{
-				Initialize();
-			}
+			Initialize();
 		}
 
 		void OnDestroy()
 		{
-			if (DatabaseLoader.instance != null)
-			{
-				DatabaseLoader.instance.OnDatabaseLoaded -= Initialize;
-			}
 			if (cameraController == null) cameraController = gameObject.AddComponent<CameraController>(); // New
 		}
 
 		void Initialize()
 		{
-			if (isInitialized)
-				return;
-
-			isInitialized = true;
-			Debug.Log($"GamePreview Initialize: Maps.Count={DatabaseLoader.instance.Maps.Count}, mapName={mapName}");
+			Debug.Log($"GamePreview Initialize: Maps.Count={DatabaseLoader.Maps.Count}, mapName={mapName}");
 
 			// Reset all components
 			mapManager.Reset();
@@ -87,7 +65,6 @@ namespace GamePreviewNamespace
 
 			if (GUI.Button(new Rect(10, 10, 100, 30), "Reload"))
 			{
-				isInitialized = false;
 				Initialize();
 			}
 
@@ -98,19 +75,17 @@ namespace GamePreviewNamespace
 
 			if (GUI.Button(new Rect(230, 10, 150, 30), "Previous Level"))//eggbotController.IsLevelComplete && 
 			{
-				int currentIndex = DatabaseLoader.instance.Maps.ToList().FindIndex(m => m.name == mapManager.CurrentMapName);
-				currentIndex = (DatabaseLoader.instance.Maps.Count + currentIndex - 1) % DatabaseLoader.instance.Maps.Count;
-				mapName = DatabaseLoader.instance.Maps[currentIndex].name;
-				isInitialized = false;
+				int currentIndex = DatabaseLoader.Maps.ToList().FindIndex(m => m.name == mapManager.CurrentMapName);
+				currentIndex = (DatabaseLoader.Maps.Count + currentIndex - 1) % DatabaseLoader.Maps.Count;
+				mapName = DatabaseLoader.Maps[currentIndex].name;
 				Initialize();
 			}
 
 			if (GUI.Button(new Rect(390, 10, 150, 30), "Next Level"))//eggbotController.IsLevelComplete && 
 			{
-				int currentIndex = DatabaseLoader.instance.Maps.ToList().FindIndex(m => m.name == mapManager.CurrentMapName);
-				currentIndex = (currentIndex + 1) % DatabaseLoader.instance.Maps.Count;
-				mapName = DatabaseLoader.instance.Maps[currentIndex].name;
-				isInitialized = false;
+				int currentIndex = DatabaseLoader.Maps.ToList().FindIndex(m => m.name == mapManager.CurrentMapName);
+				currentIndex = (currentIndex + 1) % DatabaseLoader.Maps.Count;
+				mapName = DatabaseLoader.Maps[currentIndex].name;
 				Initialize();
 			}
 		}
