@@ -458,8 +458,8 @@ namespace GamePreviewNamespace
 			transform.localPosition = Vector3.zero;
 			transform.localRotation = Quaternion.identity;
 
-			if (PreviewSettings.FlipGeometry)
-				transform.GetChild(0).transform.localRotation = Quaternion.AngleAxis(180, Vector3.up);
+			//if (PreviewSettings.FlipGeometry)
+			//	transform.GetChild(0).transform.localRotation = Quaternion.AngleAxis(180, Vector3.up);
 
 			// Store reference to the Mesh transform
 			meshTransform = transform;

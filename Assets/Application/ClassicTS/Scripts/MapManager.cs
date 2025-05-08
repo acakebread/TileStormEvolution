@@ -228,8 +228,8 @@ namespace GamePreviewNamespace
 					gameObject.name = "Fallback_Cube";
 				}
 
-				if (PreviewSettings.FlipGeometry)
-					gameObject.transform.rotation = Quaternion.AngleAxis(180, Vector3.up);
+				//if (PreviewSettings.FlipGeometry)
+				//	gameObject.transform.rotation = Quaternion.AngleAxis(180, Vector3.up);
 
 				if (properties.Interactive)
 				{
