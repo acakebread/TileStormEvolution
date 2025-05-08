@@ -6,10 +6,10 @@ namespace GamePreviewNamespace
 	{
 		private GestureSystem gestureSystem => GestureSystem.instance;
 		private MapManager mapManager;
-		private MapManager.TileStrip tileStrip;//working selection
-		private Vector3 last;//last world ground plane position
-		private Vector3 delta;//delta remainder
-		private int dragIndex = -1;//selected tile
+		private TileStripHelper.TileStrip tileStrip;
+		private Vector3 last;
+		private Vector3 delta;
+		private int dragIndex = -1;
 		private const float gridSize = 1.0f;
 
 		public void Start()
@@ -27,7 +27,7 @@ namespace GamePreviewNamespace
 			gestureSystem.OnDrag -= OnDrag;
 			gestureSystem.OnEndDrag -= OnEndDrag;
 
-			mapManager.HighlightStrip(tileStrip, false);//debug utility
+			DebugVisualizationHelper.HighlightStrip(mapManager, tileStrip, false);
 		}
 
 		public void Initialize(MapManager manager)
@@ -53,20 +53,20 @@ namespace GamePreviewNamespace
 		{
 			if (dragIndex == -1) return;
 
-			mapManager.HighlightStrip(tileStrip, false);//debug utility
+			DebugVisualizationHelper.HighlightStrip(mapManager, tileStrip, false);
 
 			var vert = mapManager.ScreenToWorld(screenPos);
 			TryDrag(vert - last);
 			last = vert;
 
-			mapManager.HighlightStrip(tileStrip, tileStrip.Count > 1);//debug utility
+			DebugVisualizationHelper.HighlightStrip(mapManager, tileStrip, tileStrip.Count > 1);
 		}
 
 		private void OnEndDrag(Vector3 screenPos)
 		{
 			if (dragIndex == -1) return;
 
-			mapManager.HighlightStrip(tileStrip, false);//debug utility
+			DebugVisualizationHelper.HighlightStrip(mapManager, tileStrip, false);
 
 			TryDrag(mapManager.ScreenToWorld(screenPos) - last, true);
 
@@ -79,7 +79,7 @@ namespace GamePreviewNamespace
 
 			for (var axis = 0; axis < 2; ++axis)
 			{
-				mapManager.ResetStrip(tileStrip, mapManager.Width);
+				TileStripHelper.ResetStrip(mapManager, tileStrip);
 				tileStrip = default;
 
 				bool isX = Mathf.Abs(delta.x) > Mathf.Abs(delta.z);
@@ -89,7 +89,7 @@ namespace GamePreviewNamespace
 
 				int direction = val > 0f ? (isX ? TileProperties.East : TileProperties.North) : (isX ? TileProperties.West : TileProperties.South);
 
-				tileStrip = mapManager.GetTileStrip(dragIndex, direction);
+				tileStrip = TileStripHelper.GetTileStrip(mapManager, dragIndex, direction);
 				if (tileStrip.Count <= 1)
 				{
 					if (isX) delta.x = 0;
@@ -100,9 +100,9 @@ namespace GamePreviewNamespace
 				int count = (int)((Mathf.Abs(val) + (snap ? gridSize * 0.5f : 0f)) / gridSize);
 				for (int i = 0; i < count; ++i)
 				{
-					if (false == mapManager.RollStrip(tileStrip)) break;
+					if (!TileStripHelper.RollStrip(mapManager, tileStrip)) break;
 					dragIndex += tileStrip.Stride;
-					tileStrip = mapManager.GetTileStrip(dragIndex, direction);
+					tileStrip = TileStripHelper.GetTileStrip(mapManager, dragIndex, direction);
 				}
 
 				if (isX)
@@ -113,9 +113,9 @@ namespace GamePreviewNamespace
 			}
 
 			if (snap)
-				mapManager.ResetStrip(tileStrip, mapManager.Width);
+				TileStripHelper.ResetStrip(mapManager, tileStrip);
 			else
-				mapManager.TranslateStrip(tileStrip, delta);// apply remainder
+				TileStripHelper.TranslateStrip(mapManager, tileStrip, delta);
 		}
 	}
 }

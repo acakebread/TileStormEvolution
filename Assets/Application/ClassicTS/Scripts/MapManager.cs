@@ -5,7 +5,7 @@ using GameDatabase;
 
 namespace GamePreviewNamespace
 {
-	public class MapManager : MonoBehaviour
+	public class MapManager : MonoBehaviour, IMap
 	{
 		private struct TileData
 		{
@@ -21,22 +21,19 @@ namespace GamePreviewNamespace
 
 		private DatabaseLoader.Map currentMap;
 		private GameObject mapRoot;
-		private int[] tiles; // Now stores indices into tileDataArray
-		private TileData[] tileDataArray; // Stores actual TileData
+		private int[] tiles;
+		private TileData[] tileDataArray;
 		private List<DatabaseLoader.Waypoint> waypoints;
-		private GameObject spareTile;
 
-		public DatabaseLoader.Map CurrentMap => currentMap;
 		public string CurrentMapName => currentMap?.name;
 		public int Width => currentMap?.tiles.nWidth ?? 0;
 		public int Height => currentMap?.tiles.nHeight ?? 0;
-		public GameObject MapRoot => mapRoot;
+		public GameObject GetMapRoot() => mapRoot;
 		public IReadOnlyList<DatabaseLoader.Waypoint> Waypoints => waypoints?.AsReadOnly();
 		public string EggbotCostume => currentMap?.szEggbotCostume;
 
-		private bool IsValidTileIndex(int tileIndex) => tileIndex >= 0 && tileIndex < tiles?.Length && Width > 0;
+		public bool IsValidTileIndex(int tileIndex) => tileIndex >= 0 && tileIndex < tiles?.Length && Width > 0;
 
-		// Accessor functions
 		public TileProperties GetTileProperties(int tileIndex)
 		{
 			if (!IsValidTileIndex(tileIndex)) return null;
@@ -57,8 +54,7 @@ namespace GamePreviewNamespace
 
 		public int ToIndex(GridCoord coord) => coord.Z * Width + coord.X;
 
-		//public GridCoord FromIndex(int index) => new GridCoord(index % Width, index / Width);
-		//public void SnapTileToGrid(int index) => tiles[index].position = GetTilePosition(index);
+		public int[] GetTiles() => tiles;
 
 		public Vector3 ScreenToWorld(Vector3 screenPos)
 		{
@@ -75,20 +71,15 @@ namespace GamePreviewNamespace
 			return ToIndex(new GridCoord(worldPos));
 		}
 
-		private int GetAdjacentTile(int tileIndex, int dirBit)
-		{
-			var (dx, dz) = TileProperties.GetDirectionOffset(dirBit);
-			var newCoord = GetTileCoordinates(tileIndex).Add(dx, dz);
-			if (newCoord.X < 0 || newCoord.X >= Width || newCoord.Z < 0 || newCoord.Z >= Height) return -1;
-			return ToIndex(newCoord);
-		}
-
 		public void Reset()
 		{
 			if (mapRoot != null) Destroy(mapRoot);
-			if (spareTile != null) Destroy(spareTile);
+			if (TileStripHelper.SpareTile != null) // Clear static SpareTile
+			{
+				Destroy(TileStripHelper.SpareTile);
+				TileStripHelper.SpareTile = null;
+			}
 			mapRoot = null;
-			spareTile = null;
 			currentMap = null;
 			waypoints = null;
 			tiles = null;
@@ -112,7 +103,7 @@ namespace GamePreviewNamespace
 
 			waypoints = currentMap.waypoints?.Where(w => w != null).ToList();
 			if (waypoints == null || waypoints.Count == 0)
-				waypoints = SetupWaypoints();
+				waypoints = Navigation.SetupWaypoints(this);
 
 			if (PreviewSettings.Scramble)
 				Scramble();
@@ -150,7 +141,7 @@ namespace GamePreviewNamespace
 			LoadTileData(currentMap.tiles);
 			waypoints = currentMap.waypoints?.Where(w => w != null).ToList();
 			if (waypoints == null || waypoints.Count == 0)
-				waypoints = SetupWaypoints();
+				waypoints = Navigation.SetupWaypoints(this);
 
 			UpdateTileObjectNamesAndPositions();
 		}
@@ -173,7 +164,7 @@ namespace GamePreviewNamespace
 				if (tileDefIndex < 0 || tileDefIndex >= currentMap.defs.Length)
 				{
 					Debug.LogWarning($"Invalid tileDefIndex={tileDefIndex}");
-					this.tiles[index] = -1; // Invalid index
+					this.tiles[index] = -1;
 					continue;
 				}
 
@@ -184,7 +175,7 @@ namespace GamePreviewNamespace
 				var szType = currentMap.defs[tileDefIndex].szType;
 				if (szType == "tile_empty")
 				{
-					this.tiles[index] = -1; // No tile data
+					this.tiles[index] = -1;
 					continue;
 				}
 
@@ -201,7 +192,7 @@ namespace GamePreviewNamespace
 				{
 					if (PreviewSettings.ShowHiddenTiles)
 					{
-						gameObject = CreateDebugTile();
+						gameObject = DebugVisualizationHelper.CreateDebugTile();
 						gameObject.transform.SetParent(mapRoot.transform, false);
 					}
 					this.tiles[index] = tileDataList.Count;
@@ -212,7 +203,7 @@ namespace GamePreviewNamespace
 				var geomAsset = GeometryManager.Get(properties.Geom);
 				if (geomAsset != null)
 				{
-					gameObject = Instantiate(geomAsset, mapRoot.transform);
+					gameObject = Object.Instantiate(geomAsset, mapRoot.transform);
 					gameObject.transform.position = coord.ToPosition();
 					gameObject.name = properties.Geom;
 
@@ -252,35 +243,6 @@ namespace GamePreviewNamespace
 			}
 
 			this.tileDataArray = tileDataList.ToArray();
-
-			GameObject CreateDebugTile()
-			{
-				var primitive = GameObject.CreatePrimitive(PrimitiveType.Cube);
-				primitive.transform.localPosition = Vector3.zero;
-				primitive.transform.localScale = Vector3.one;
-				primitive.name = "debug tile";
-
-				var meshFilter = primitive.GetComponent<MeshFilter>();
-				if (meshFilter != null)
-				{
-					Mesh originalMesh = meshFilter.sharedMesh;
-					Mesh newMesh = Object.Instantiate(originalMesh);
-					Vector3[] vertices = newMesh.vertices;
-					for (int i = 0; i < vertices.Length; i++)
-					{
-						vertices[i].y *= 0.05f;// Scale Y component
-						vertices[i].y -= 0.05f;// Translate down by 0.05
-					}
-					newMesh.vertices = vertices;
-					newMesh.RecalculateBounds();
-					newMesh.RecalculateNormals();// Optional, for lighting
-					meshFilter.mesh = newMesh;
-				}
-
-				var meshRenderer = primitive.GetComponent<MeshRenderer>();
-				if (meshRenderer != null) meshRenderer.material = new Material(meshRenderer.material) { color = new Color(0.2f, 0.3f, 0.15f, 1f) };
-				return primitive;
-			}
 		}
 
 		public void Scramble()
@@ -321,415 +283,10 @@ namespace GamePreviewNamespace
 				var gameObject = GetTileGameObject(index);
 				if (gameObject == null) continue;
 				var coord = GetTileCoordinates(index);
+#if DEBUG
 				gameObject.name = $"{GetTileProperties(index)?.Type ?? "Empty"}_{coord.X}_{coord.Z}";
+#endif
 				gameObject.transform.position = coord.ToPosition();
-			}
-		}
-
-		public int GetStartTile()
-		{
-			if (Waypoints != null && Waypoints.Count != 0)
-				return Waypoints[0].nTile;
-
-			for (var i = 0; i < Width * Height; i++)
-			{
-				var props = GetTileProperties(i);
-				if (props != null && props.IsStart)
-					return i;
-			}
-			Debug.LogError("No start tile found!");
-			return -1;
-		}
-
-		public int GetEndTile()
-		{
-			if (Waypoints != null && Waypoints.Count != 0)
-				return Waypoints[Waypoints.Count - 1].nTile;
-
-			for (var i = 0; i < Width * Height; i++)
-			{
-				var props = GetTileProperties(i);
-				if (props != null && props.IsEnd)
-					return i;
-			}
-			Debug.LogError("No end tile found!");
-			return -1;
-		}
-
-		public int FindAdjacentConsole(int nTile)
-		{
-			if (IsValidTileIndex(nTile))
-			{
-				foreach (var dirBit in TileProperties.Directions)
-				{
-					var consoleTile = GetAdjacentTile(nTile, dirBit);
-					if (consoleTile == -1)
-						continue;
-
-					var consoleProps = GetTileProperties(consoleTile);
-					if (consoleProps?.IsConsole != true)
-						continue;
-
-					var consoleNav = consoleProps.Nav;
-					if (consoleNav == 0)
-						continue;
-
-					var navTile = GetAdjacentTile(consoleTile, consoleNav);
-					if (navTile == nTile)
-						return consoleTile;
-				}
-			}
-			return -1;
-		}
-
-		private List<DatabaseLoader.Waypoint> SetupWaypoints()
-		{
-			var generatedWaypoints = new List<DatabaseLoader.Waypoint>();
-			if (tiles == null || tiles.Length != Width * Height)
-			{
-				Debug.LogWarning("Cannot setup waypoints: invalid tile data");
-				return generatedWaypoints;
-			}
-
-			var startTile = GetStartTile();
-			var endTile = GetEndTile();
-
-			if (startTile == -1 || endTile == -1)
-			{
-				Debug.LogWarning("Cannot setup waypoints: missing start or end tile");
-				return generatedWaypoints;
-			}
-
-			generatedWaypoints.Add(new DatabaseLoader.Waypoint { nTile = startTile });
-			var path = FindPath(startTile, endTile);
-
-			if (path != null)
-			{
-				foreach (int tile in path)
-				{
-					if (tile == startTile)
-						continue;
-					if (FindAdjacentConsole(tile) != -1 || tile == endTile)
-					{
-						generatedWaypoints.Add(new DatabaseLoader.Waypoint { nTile = tile });
-					}
-				}
-			}
-			else
-			{
-				generatedWaypoints.Add(new DatabaseLoader.Waypoint { nTile = endTile });
-				Debug.LogWarning("Failed to find path from start to end for waypoint setup");
-			}
-
-			Debug.Log($"Generated {generatedWaypoints.Count} waypoints: [{string.Join(", ", generatedWaypoints.Select(w => w.nTile))}]");
-			return generatedWaypoints;
-		}
-
-		public bool CheckPathBetweenWaypoints(int currentWaypointIndex, out List<int> path)
-		{
-			path = null;
-			if (Waypoints == null || currentWaypointIndex < 0 || currentWaypointIndex + 1 >= Waypoints.Count) return false;
-			var startTile = Waypoints[currentWaypointIndex].nTile;
-			var targetTile = Waypoints[currentWaypointIndex + 1].nTile;
-			path = FindPath(startTile, targetTile);
-			return path != null;
-		}
-
-		public bool CheckPathToWaypoint(int fromWaypointIndex, int toWaypointIndex, out List<int> path)
-		{
-			if (fromWaypointIndex < 0 || fromWaypointIndex >= Waypoints.Count || toWaypointIndex < 0 || toWaypointIndex >= Waypoints.Count)
-			{
-				path = null;
-				return false;
-			}
-			int fromTile = Waypoints[fromWaypointIndex].nTile;
-			int toTile = Waypoints[toWaypointIndex].nTile;
-
-			path = FindPath(fromTile, toTile);
-			return path != null;
-		}
-
-		private List<int> FindPath(int startTile, int targetTile)
-		{
-			var startProps = GetTileProperties(startTile);
-			if (startProps == null)
-				return null;
-
-			foreach (int dirBit in TileProperties.Directions)
-			{
-				if ((startProps.Nav & dirBit) == 0)
-					continue;
-				var path = FindPathRecursive(startTile, targetTile, dirBit);
-				if (path != null)
-					return path;
-			}
-			return null;
-		}
-
-		private List<int> FindPathRecursive(int currentTile, int targetTile, int currentDirBit, List<int> path = null)
-		{
-			path ??= new List<int>();
-			path.Add(currentTile);
-
-			if (currentTile == targetTile)
-				return path;
-
-			var currentProps = GetTileProperties(currentTile);
-			if (currentProps == null)
-			{
-				path.RemoveAt(path.Count - 1);
-				return null;
-			}
-
-			var tryDirections = GetTryDirections(currentProps.Nav, currentDirBit);
-			for (int i = 0; i < tryDirections.Length; i++)
-			{
-				var dirBit = tryDirections[i];
-				var nextTile = GetAdjacentTile(currentTile, dirBit);
-				if (nextTile == -1)
-					continue;
-
-				var nextProps = GetTileProperties(nextTile);
-				if (!TileProperties.CanMoveBetweenTiles(currentProps, nextProps, dirBit))
-					continue;
-
-				var result = FindPathRecursive(nextTile, targetTile, dirBit, path);
-				if (result != null)
-					return result;
-			}
-
-			path.RemoveAt(path.Count - 1);
-			return null;
-
-			static int[] GetTryDirections(int nav, int currentDirBit)
-			{
-				if ((TileProperties.GetOppositeDirection(nav) & nav) == nav)
-					return new[] { currentDirBit };
-				if (currentDirBit != 0)
-					return new[] { nav & ~(currentDirBit | TileProperties.GetOppositeDirection(currentDirBit)) };
-				return TileProperties.Directions;
-			}
-		}
-
-		public struct TileStrip
-		{
-			public int First;
-			public int Count;
-			public int Stride;
-
-			public readonly int Last => First + Stride * (Count - 1);
-
-			private List<int> indices;
-			public List<int> Indices
-			{
-				get
-				{
-					if (indices == null && Stride != 0)
-					{
-						indices = new();
-						for (var i = 0; i < Count; ++i) indices.Add(First + Stride * i);
-					}
-					return indices;
-				}
-			}
-		}
-
-		public void ResetStrip(in TileStrip strip, int width)
-		{
-			if (strip.Indices == null) return;
-			UpdateSpareTile(strip, Vector3.zero, false);
-			foreach (var index in strip.Indices)
-			{
-				var gameObject = GetTileGameObject(index);
-				if (gameObject != null)
-					gameObject.transform.position = new Vector3(index % width, 0f, index / width);
-			}
-		}
-
-		public bool RollStrip(TileStrip strip, int adjust = 1)
-		{
-			if (strip.Count <= 1 || tiles == null || strip.Indices == null)
-				return false;
-
-			// Roll the indices in the tiles array using RollArray
-			ArrayExtensions.RollArray(tiles, strip.First, strip.Count, adjust, strip.Stride);
-
-			// Reset the strip's position
-			ResetStrip(strip, Width);
-
-			// Update game object names based on new tile positions - debug helper
-			for (var i = 0; i < strip.Count; i++)
-			{
-				var gameObject = GetTileGameObject(strip.Indices[i]);
-				if (gameObject == null)
-					continue;
-				var coord = GetTileCoordinates(strip.Indices[i]);
-				gameObject.name = $"{GetTileProperties(strip.Indices[i])?.Type ?? "Empty"}_{coord.X}_{coord.Z}";
-			}
-
-			return true;
-		}
-
-		public void TranslateStrip(in TileStrip strip, in Vector3 delta)
-		{
-			if (strip.Indices == null) return;
-			UpdateSpareTile(strip, delta, delta != Vector3.zero);
-			foreach (var index in strip.Indices)
-			{
-				var gameObject = GetTileGameObject(index);
-				if (gameObject != null)
-					gameObject.transform.position += delta;
-			}
-		}
-
-		public TileStrip GetTileStrip(int startIndex, int directionFlag)
-		{
-			var strip = new TileStrip { First = -1, Count = 0, Stride = 0 };
-
-			var startProps = GetTileProperties(startIndex);
-			if (startProps == null || !startProps.Interactive)
-				return strip;
-
-			strip.First = startIndex;
-			strip.Count = 1;
-
-			if (directionFlag == 0)
-				return strip;
-
-			var stride = 0;
-			var (dx, dz) = TileProperties.GetDirectionOffset(directionFlag);
-			if (dx != 0) stride = dx;
-			else if (dz != 0) stride = dz * Width;
-
-			var lastIndex = startIndex;
-			while (true)
-			{
-				var nextProps = GetTileProperties(lastIndex + stride);
-				if (nextProps == null || !nextProps.IsSlide || nextProps.IsDock) break;
-				lastIndex += stride;
-			}
-
-			while (true)
-			{
-				var nextProps = GetTileProperties(lastIndex + stride);
-				if (nextProps == null || !nextProps.IsDock) break;
-				lastIndex += stride;
-			}
-
-			while (true)
-			{
-				var nextProps = GetTileProperties(lastIndex + stride);
-				if (nextProps == null || !nextProps.IsRoll) break;
-				lastIndex += stride;
-			}
-
-			if (!GetTileProperties(lastIndex).IsRoll)
-				return strip;
-
-			if (GetTileProperties(lastIndex).IsDock)
-			{
-				while (true)
-				{
-					var nextProps = GetTileProperties(strip.First - stride);
-					if (nextProps == null || !nextProps.IsDock) break;
-					strip.First -= stride;
-				}
-			}
-			else
-			{
-				while (true)
-				{
-					var nextProps = GetTileProperties(strip.First - stride);
-					if (nextProps == null || !nextProps.IsSlide) break;
-					strip.First -= stride;
-				}
-			}
-
-			strip.Count = (lastIndex - strip.First) / stride + 1;
-			strip.Stride = stride;
-			return strip;
-		}
-
-		public void UpdateSpareTile(in TileStrip strip, in Vector3 delta, bool active)
-		{
-			if (!active)
-			{
-				if (spareTile != null)
-					spareTile.SetActive(false);
-				return;
-			}
-
-			if (strip.Count <= 1)
-				return;
-
-			var leadingTileIndex = strip.Indices.Last();
-			var leadingTile = GetTileGameObject(leadingTileIndex);
-
-			var trailingTileIndex = strip.Indices.First() - strip.Stride;
-			var trailingPosition = GetTilePosition(trailingTileIndex);
-
-			if (spareTile == null)
-			{
-				spareTile = new GameObject("SpareTile");
-				spareTile.transform.SetParent(mapRoot.transform, false);
-				spareTile.AddComponent<MeshFilter>();
-				spareTile.AddComponent<MeshRenderer>();
-			}
-
-			var leadingRenderer = leadingTile?.GetComponentInChildren<MeshRenderer>();
-			var leadingFilter = leadingTile?.GetComponentInChildren<MeshFilter>();
-			var spareRenderer = spareTile?.GetComponent<MeshRenderer>();
-			var spareFilter = spareTile?.GetComponent<MeshFilter>();
-
-			if (leadingRenderer != null && leadingFilter != null && spareRenderer != null && spareFilter != null)
-			{
-				spareFilter.sharedMesh = leadingFilter.sharedMesh;
-				spareRenderer.material = leadingRenderer.material;
-				spareRenderer.transform.rotation = leadingRenderer.transform.rotation;
-				spareRenderer.transform.localScale = leadingRenderer.transform.localScale;
-			}
-			else
-			{
-				spareTile.SetActive(false);
-				return;
-			}
-
-			foreach (var collider in spareTile.GetComponentsInChildren<Collider>()) Destroy(collider);
-
-			spareTile.transform.position = trailingPosition + delta;
-			spareTile.SetActive(true);
-		}
-
-		//debug helper
-		public class OriginalMaterialHolder : MonoBehaviour { public Material originalMaterial; }
-		public void HighlightStrip(in TileStrip strip, bool highlight)
-		{
-			if (!PreviewSettings.ShowTileSelection) return;
-			if (strip.Indices == null) return;
-			foreach (var tileIndex in strip.Indices)
-				HighlightTile(GetTileGameObject(tileIndex), highlight);
-			if (spareTile != null) HighlightTile(spareTile, highlight);
-
-			static void HighlightTile(GameObject tile, bool enable)
-			{
-				if (tile == null) return;
-				var meshRenderer = tile.GetComponentInChildren<MeshRenderer>();
-				if (meshRenderer == null) return;
-
-				if (enable)
-				{
-					if (!tile.TryGetComponent<OriginalMaterialHolder>(out var holder))
-					{
-						holder = tile.AddComponent<OriginalMaterialHolder>();
-						holder.originalMaterial = meshRenderer.material;
-					}
-					meshRenderer.material = new Material(meshRenderer.material) { color = Color.cyan };
-				}
-				else
-				{
-					if (tile.TryGetComponent<OriginalMaterialHolder>(out var holder) && holder.originalMaterial != null)
-						meshRenderer.material = holder.originalMaterial;
-				}
 			}
 		}
 	}

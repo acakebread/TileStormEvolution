@@ -159,7 +159,7 @@ namespace GamePreviewNamespace
 				{
 					isCheckingConsole = false;
 					int waypointTile = mapManager.Waypoints[currentWaypointIndex].nTile;
-					bool pathClear = mapManager.CheckPathBetweenWaypoints(currentWaypointIndex, out currentPath);
+					bool pathClear = Navigation.CheckPathBetweenWaypoints(mapManager, currentWaypointIndex, out currentPath);
 
 					if (pathClear)
 					{
@@ -272,7 +272,7 @@ namespace GamePreviewNamespace
 				}
 				// Navigate back to waypoint 0
 				int targetWaypoint = 0;
-				if (mapManager.CheckPathToWaypoint(currentWaypointIndex, targetWaypoint, out currentPath))
+				if (Navigation.CheckPathToWaypoint(mapManager, currentWaypointIndex, targetWaypoint, out currentPath))
 				{
 					isPuzzleBlocked = false;
 					pathStepIndex = 0;
@@ -287,7 +287,7 @@ namespace GamePreviewNamespace
 			else
 			{
 				int currentTile = mapManager.Waypoints[currentWaypointIndex].nTile;
-				if (mapManager.FindAdjacentConsole(currentTile) != -1 && !mapManager.CheckPathBetweenWaypoints(currentWaypointIndex, out _))
+				if (Navigation.FindAdjacentConsole(mapManager, currentTile) != -1 && !Navigation.CheckPathBetweenWaypoints(mapManager, currentWaypointIndex, out _))
 				{
 					if (!isTurning)
 					{
@@ -296,7 +296,7 @@ namespace GamePreviewNamespace
 					return;
 				}
 
-				if (mapManager.CheckPathBetweenWaypoints(currentWaypointIndex, out currentPath))
+				if (Navigation.CheckPathBetweenWaypoints(mapManager, currentWaypointIndex, out currentPath))
 				{
 					isPuzzleBlocked = false;
 					cameraController?.OnPuzzleSolved(currentWaypointIndex);
@@ -309,7 +309,7 @@ namespace GamePreviewNamespace
 
 		private void CheckAndFaceAdjacentConsole(int tile)
 		{
-			int consoleTile = mapManager.FindAdjacentConsole(tile);
+			int consoleTile = Navigation.FindAdjacentConsole(mapManager, tile);
 			if (consoleTile != -1)
 			{
 				TileProperties consoleProps = mapManager.GetTileProperties(consoleTile);
@@ -434,7 +434,7 @@ namespace GamePreviewNamespace
 
 		private void InitializeEggbot(string eggbotCostume = "Eggbot Default")
 		{
-			int startTile = mapManager.GetStartTile();
+			int startTile = Navigation.GetStartTile(mapManager);
 			if (startTile == -1)
 				return;
 
