@@ -241,9 +241,8 @@ MonoBehaviour:
   scramble: 1
   show_hidden_tiles: 0
   show_tile_selection: 0
-  geometryPath: Geometry/obj/
-  texturePath: Textures/
-  prefabPath: Prefabs/
+  geometryPath: ClassicTS/Geometry/
+  texturePath: ClassicTS/Textures/
 --- !u!4 &862124737
 Transform:
   m_ObjectHideFlags: 0

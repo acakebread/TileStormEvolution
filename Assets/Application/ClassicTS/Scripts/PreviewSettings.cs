@@ -19,14 +19,17 @@ public class PreviewSettings : MonoBehaviour
 	public static bool ShowTileSelection => instance.show_tile_selection;
 
 	[Header("resource paths")]
-	[SerializeField] private string geometryPath = "Geometry/obj/";
+	//[SerializeField] private string databasePath = "ClassicTS/";
+	//public static string DatabasePath => instance.databasePath;
+
+	[SerializeField] private string geometryPath = "ClassicTS/Geometry/";
 	public static string GeometryPath => instance.geometryPath;
 
-	[SerializeField] private string texturePath = "Textures/";
+	[SerializeField] private string texturePath = "ClassicTS/Textures/";
 	public static string TexturePath => instance.texturePath;
 
-	[SerializeField] private string prefabPath = "Prefabs/";
-	public static string PrefabPath => instance.prefabPath;
+	//[SerializeField] private string prefabPath = "Prefabs/";
+	//public static string PrefabPath => instance.prefabPath;
 
 	public static PreviewSettings instance;
     void Awake() => instance = this;

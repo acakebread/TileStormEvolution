@@ -11,7 +11,6 @@ public class MeshConverter : MonoBehaviour
 		if (null == inputWWMPath) inputWWMPath = Application.streamingAssetsPath + "/ClassicTS/WWM/" + fname;
 		var nullpath = null == outputPath;
 
-		
 		if (true == nullpath) outputPath = Application.persistentDataPath + "/" + fname.Replace(".wwm", ".obj");
 		WWMToOBJConverter.ConvertWWMToOBJ(inputWWMPath, outputPath);
 
