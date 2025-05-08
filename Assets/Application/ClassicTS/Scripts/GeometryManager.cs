@@ -17,7 +17,7 @@ public static class GeometryManager
 	}
 }
 
-// Gork's failed attempt to stremaling it
+// Grok's failed attempt to streamline it
 
 //using UnityEngine;
 //using System.Collections.Generic;

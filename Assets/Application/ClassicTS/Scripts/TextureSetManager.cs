@@ -23,7 +23,6 @@ namespace GamePreviewNamespace
 			DatabaseLoader.TextureSet textureSet = DatabaseLoader.instance.TextureSets.FirstOrDefault(ts => ts.name == theme.szTileTextureSet);
 			if (textureSet == null || textureSet.frames == null || textureSet.frames.Length <= 0) return null;
 
-
 			var frames = new TextureFrame[textureSet.frames.Length];
 
 			for (int i = 0; i < textureSet.frames.Length; i++)

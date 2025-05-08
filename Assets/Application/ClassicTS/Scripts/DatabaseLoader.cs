@@ -1,161 +1,13 @@
 using UnityEngine;
-using System.Collections.Generic;
-using System.Linq;
 using System;
+using System.Linq;
+using System.Collections.Generic;
 
 namespace GameDatabase
 {
 	public class DatabaseLoader : MonoBehaviour
 	{
-		public static DatabaseLoader instance { get; private set; }
-		[SerializeField] private TextAsset databaseJsonFile;
-
-		private List<Map> maps = new List<Map>();
-		private List<Theme> themes = new List<Theme>();
-		private List<TileDef> tileDefs = new List<TileDef>();
-		private List<Button> buttons = new List<Button>();
-		private List<TextureSet> textureSets = new List<TextureSet>();
-
-		internal IReadOnlyList<Map> Maps => maps.AsReadOnly();
-		internal IReadOnlyList<Theme> Themes => themes.AsReadOnly();
-		internal IReadOnlyList<TileDef> TileDefs => tileDefs.AsReadOnly();
-		internal IReadOnlyList<Button> Buttons => buttons.AsReadOnly();
-		internal IReadOnlyList<TextureSet> TextureSets => textureSets.AsReadOnly();
-
-		public event Action OnDatabaseLoaded;
-
-		void Start()
-		{
-			instance= this;
-			LoadDatabase();
-		}
-
-		void LoadDatabase()
-		{
-			if (databaseJsonFile == null)
-			{
-				Debug.LogError("databaseJsonFile is not assigned in the Inspector!");
-				return;
-			}
-
-			try
-			{
-				DatabaseData data = JsonUtility.FromJson<DatabaseData>(databaseJsonFile.text);
-				if (data == null)
-				{
-					Debug.LogError("Failed to parse JSON: DatabaseData is null!");
-					return;
-				}
-
-				maps.Clear();
-				themes.Clear();
-				tileDefs.Clear();
-				buttons.Clear();
-				textureSets.Clear();
-
-				if (data.maps != null && data.maps.Length > 0)
-				{
-					maps.AddRange(data.maps);
-					Debug.Log($"Loaded {maps.Count} maps: {string.Join(", ", maps.Select(m => m.name))}");
-				}
-				else
-				{
-					Debug.LogWarning("No maps found in JSON!");
-				}
-
-				if (data.themes != null && data.themes.Length > 0)
-				{
-					themes.AddRange(data.themes);
-					Debug.Log($"Loaded {themes.Count} themes: {string.Join(", ", themes.Select(t => t.name))}");
-				}
-				else
-				{
-					Debug.LogWarning("No themes found in JSON!");
-				}
-
-				if (data.tiledefs != null && data.tiledefs.Length > 0)
-				{
-					tileDefs.AddRange(data.tiledefs);
-					Debug.Log($"Loaded {tileDefs.Count} tiledefs: {string.Join(", ", tileDefs.Take(5).Select(td => td.szType))}");
-				}
-				else
-				{
-					Debug.LogWarning("No tiledefs found in JSON!");
-				}
-
-				if (data.buttons != null && data.buttons.Length > 0)
-				{
-					buttons.AddRange(data.buttons);
-					Debug.Log($"Loaded {buttons.Count} buttons: {string.Join(", ", buttons.Select(b => b.name))}");
-				}
-				else
-				{
-					Debug.LogWarning("No buttons found in JSON!");
-				}
-
-				if (data.texture_set != null && data.texture_set.Length > 0)
-				{
-					textureSets.AddRange(data.texture_set);
-					Debug.Log($"Loaded {textureSets.Count} texture sets: {string.Join(", ", textureSets.Take(5).Select(ts => ts.name))}");
-				}
-				else
-				{
-					Debug.LogWarning("No texture_set found in JSON!");
-				}
-
-				VerifyData();
-
-				OnDatabaseLoaded?.Invoke();
-			}
-			catch (System.Exception ex)
-			{
-				Debug.LogError($"JSON deserialization failed: {ex.Message}\nStackTrace: {ex.StackTrace}");
-			}
-		}
-
-		void VerifyData()
-		{
-			Debug.Log("Verifying data...");
-
-			if (maps.Count > 0)
-			{
-				var sampleMap = maps[0];
-				Debug.Log($"Sample map: name={sampleMap.name}, bLightTiles={sampleMap.bLightTiles}, defsCount={(sampleMap.defs?.Length ?? 0)}, " +
-						  $"waypointsCount={(sampleMap.waypoints?.Length ?? 0)}, tiles={sampleMap.tiles?.nWidth}x{sampleMap.tiles?.nHeight}");
-			}
-
-			if (themes.Count > 0)
-			{
-				Debug.Log($"Sample theme: name={themes[0].name}, szTileTextureSet={themes[0].szTileTextureSet ?? "null"}");
-			}
-
-			if (tileDefs.Count > 0)
-			{
-				var sampleTileDef = tileDefs[0];
-				Debug.Log($"Sample tiledef: szType={sampleTileDef.szType}, szTheme={sampleTileDef.szTheme}, szGeom={sampleTileDef.szGeom}, " +
-						  $"bSlide={sampleTileDef.bSlide}, bNorth={sampleTileDef.bNorth}");
-			}
-
-			if (buttons.Count > 0)
-			{
-				var sampleButton = buttons[0];
-				Debug.Log($"Sample button: name={sampleButton.name}, szTexture={sampleButton.szTexture}, szButtonText={sampleButton.szButtonText}");
-			}
-
-			if (textureSets.Count > 0)
-			{
-				var sampleTextureSet = textureSets[0];
-				var sampleFrame = sampleTextureSet.frames?.FirstOrDefault();
-				Debug.Log($"Sample texture_set: name={sampleTextureSet.name}, bAlphaTest={sampleTextureSet.bAlphaTest}, " +
-						  $"frameName={sampleFrame?.name ?? "null"}, frameTexture={sampleFrame?.szTexture ?? "null"}, " +
-						  $"frameDuration={sampleFrame?.fDuration}");
-			}
-
-			Debug.Log($"Verification complete: {maps.Count} maps, {themes.Count} themes, {tileDefs.Count} tiledefs, " +
-					  $"{buttons.Count} buttons, {textureSets.Count} texture sets");
-		}
-
-		[System.Serializable]
+		[Serializable]
 		public class DatabaseData
 		{
 			public Map[] maps;
@@ -165,7 +17,7 @@ namespace GameDatabase
 			public TextureSet[] texture_set;
 		}
 
-		[System.Serializable]
+		[Serializable]
 		public class Map
 		{
 			public string name;
@@ -180,14 +32,14 @@ namespace GameDatabase
 			public string szMusic;
 		}
 
-		[System.Serializable]
+		[Serializable]
 		public class MapTileDef
 		{
 			public string szTheme;
 			public string szType;
 		}
 
-		[System.Serializable]
+		[Serializable]
 		public class TileDef
 		{
 			public string szTheme;
@@ -208,7 +60,7 @@ namespace GameDatabase
 			public bool bWest;
 		}
 
-		[System.Serializable]
+		[Serializable]
 		public class Tiles
 		{
 			public int nWidth;
@@ -216,7 +68,7 @@ namespace GameDatabase
 			public TileArray TileData;
 		}
 
-		[System.Serializable]
+		[Serializable]
 		public class TileArray
 		{
 			public int nReserved;
@@ -228,7 +80,7 @@ namespace GameDatabase
 			public int[] bytes;
 		}
 
-		[System.Serializable]
+		[Serializable]
 		public class Waypoint
 		{
 			public string name;
@@ -238,7 +90,7 @@ namespace GameDatabase
 			public VectorData vDst;
 		}
 
-		[System.Serializable]
+		[Serializable]
 		public class VectorData
 		{
 			public float fX;
@@ -246,20 +98,20 @@ namespace GameDatabase
 			public float fZ;
 		}
 
-		[System.Serializable]
+		[Serializable]
 		public class Pickups
 		{
 			public int nPickupCount;
 		}
 
-		[System.Serializable]
+		[Serializable]
 		public class Theme
 		{
 			public string name;// this is the dictionary name of the theme, used by defs, including eggbot, to load animating textures
 			public string szTileTextureSet;// this legacy field was actually used for texture file name
 		}
 
-		[System.Serializable]
+		[Serializable]
 		public class Button
 		{
 			public string name;
@@ -277,7 +129,7 @@ namespace GameDatabase
 			public float fUVdownH;
 		}
 
-		[System.Serializable]
+		[Serializable]
 		public class TextureSet
 		{
 			public string name;
@@ -285,12 +137,107 @@ namespace GameDatabase
 			public TextureFrame[] frames;
 		}
 
-		[System.Serializable]
+		[Serializable]
 		public class TextureFrame
 		{
 			public string name;
 			public string szTexture;
 			public float fDuration;
 		}
-	}
+
+		private DatabaseData data;
+
+        // Expose arrays directly as IReadOnlyList<T> for read-only access
+        internal IReadOnlyList<Map> Maps => data?.maps ?? Array.Empty<Map>();
+        internal IReadOnlyList<Theme> Themes => data?.themes ?? Array.Empty<Theme>();
+        internal IReadOnlyList<TileDef> TileDefs => data?.tiledefs ?? Array.Empty<TileDef>();
+        internal IReadOnlyList<Button> Buttons => data?.buttons ?? Array.Empty<Button>();
+        internal IReadOnlyList<TextureSet> TextureSets => data?.texture_set ?? Array.Empty<TextureSet>();
+
+        [SerializeField] private TextAsset databaseJsonFile;
+        public static DatabaseLoader instance { get; private set; }
+        public event Action OnDatabaseLoaded;
+
+        void Start()
+        {
+            instance = this;
+            LoadDatabase();
+        }
+
+        void LoadDatabase()
+        {
+            if (databaseJsonFile == null)
+            {
+                Debug.LogError("databaseJsonFile is not assigned in the Inspector!");
+                return;
+            }
+
+            try
+            {
+                data = JsonUtility.FromJson<DatabaseData>(databaseJsonFile.text);
+                if (data == null)
+                {
+                    Debug.LogError("Failed to parse JSON: DatabaseData is null!");
+                    return;
+                }
+
+                // Log loaded data counts
+                Debug.Log($"Loaded {data.maps?.Length ?? 0} maps: {string.Join(", ", (data.maps ?? Array.Empty<Map>()).Select(m => m.name))}");
+                Debug.Log($"Loaded {data.themes?.Length ?? 0} themes: {string.Join(", ", (data.themes ?? Array.Empty<Theme>()).Select(t => t.name))}");
+                Debug.Log($"Loaded {data.tiledefs?.Length ?? 0} tiledefs: {string.Join(", ", (data.tiledefs ?? Array.Empty<TileDef>()).Take(5).Select(td => td.szType))}");
+                Debug.Log($"Loaded {data.buttons?.Length ?? 0} buttons: {string.Join(", ", (data.buttons ?? Array.Empty<Button>()).Select(b => b.name))}");
+                Debug.Log($"Loaded {data.texture_set?.Length ?? 0} texture sets: {string.Join(", ", (data.texture_set ?? Array.Empty<TextureSet>()).Take(5).Select(ts => ts.name))}");
+
+                VerifyData();
+
+                OnDatabaseLoaded?.Invoke();
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"JSON deserialization failed: {ex.Message}\nStackTrace: {ex.StackTrace}");
+            }
+        }
+
+        void VerifyData()
+        {
+            Debug.Log("Verifying data...");
+
+            if (data?.maps?.Length > 0)
+            {
+                var sampleMap = data.maps[0];
+                Debug.Log($"Sample map: name={sampleMap.name}, bLightTiles={sampleMap.bLightTiles}, defsCount={(sampleMap.defs?.Length ?? 0)}, " +
+                          $"waypointsCount={(sampleMap.waypoints?.Length ?? 0)}, tiles={sampleMap.tiles?.nWidth}x{sampleMap.tiles?.nHeight}");
+            }
+
+            if (data?.themes?.Length > 0)
+            {
+                Debug.Log($"Sample theme: name={data.themes[0].name}, szTileTextureSet={data.themes[0].szTileTextureSet ?? "null"}");
+            }
+
+            if (data?.tiledefs?.Length > 0)
+            {
+                var sampleTileDef = data.tiledefs[0];
+                Debug.Log($"Sample tiledef: szType={sampleTileDef.szType}, szTheme={sampleTileDef.szTheme}, szGeom={sampleTileDef.szGeom}, " +
+                          $"bSlide={sampleTileDef.bSlide}, bNorth={sampleTileDef.bNorth}");
+            }
+
+            if (data?.buttons?.Length > 0)
+            {
+                var sampleButton = data.buttons[0];
+                Debug.Log($"Sample button: name={sampleButton.name}, szTexture={sampleButton.szTexture}, szButtonText={sampleButton.szButtonText}");
+            }
+
+            if (data?.texture_set?.Length > 0)
+            {
+                var sampleTextureSet = data.texture_set[0];
+                var sampleFrame = sampleTextureSet.frames?.FirstOrDefault();
+                Debug.Log($"Sample texture_set: name={sampleTextureSet.name}, bAlphaTest={sampleTextureSet.bAlphaTest}, " +
+                          $"frameName={sampleFrame?.name ?? "null"}, frameTexture={sampleFrame?.szTexture ?? "null"}, " +
+                          $"frameDuration={sampleFrame?.fDuration}");
+            }
+
+            Debug.Log($"Verification complete: {data?.maps?.Length ?? 0} maps, {data?.themes?.Length ?? 0} themes, " +
+                      $"{data?.tiledefs?.Length ?? 0} tiledefs, {data?.buttons?.Length ?? 0} buttons, {data?.texture_set?.Length ?? 0} texture sets");
+        }
+    }
 }

@@ -4,10 +4,7 @@ namespace GamePreviewNamespace
 {
 	public static class DebugVisualizationHelper
 	{
-		public class OriginalMaterialHolder : MonoBehaviour
-		{
-			public Material originalMaterial;
-		}
+		public class OriginalMaterialHolder : MonoBehaviour { public Material originalMaterial; }
 
 		public static void HighlightStrip(IMap map, in TileStripHelper.TileStrip strip, bool highlight)
 		{

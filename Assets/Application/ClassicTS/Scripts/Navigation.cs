@@ -51,11 +51,7 @@ namespace GamePreviewNamespace
 					if (consoleProps?.IsConsole != true)
 						continue;
 
-					var consoleNav = consoleProps.Nav;
-					if (consoleNav == 0)
-						continue;
-
-					var navTile = GetAdjacentTile(map, consoleTile, consoleNav);
+					var navTile = GetAdjacentTile(map, consoleTile, consoleProps.Nav);
 					if (navTile == nTile)
 						return consoleTile;
 				}
