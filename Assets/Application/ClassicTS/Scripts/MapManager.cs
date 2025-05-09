@@ -70,6 +70,12 @@ namespace ClassicTilestorm
 			return ToIndex(new GridCoord(worldPos));
 		}
 
+		public int WorldToMapIndex(Vector3 worldPos)
+		{
+			if (worldPos.x < 0 || worldPos.x >= Width || worldPos.z < 0 || worldPos.z >= Height) return -1;
+			return ToIndex(new GridCoord(worldPos));
+		}
+
 		public void Reset()
 		{
 			if (mapRoot != null) Destroy(mapRoot);
