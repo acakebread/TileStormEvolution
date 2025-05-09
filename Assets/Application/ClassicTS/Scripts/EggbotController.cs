@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -185,17 +185,12 @@ namespace ClassicTilestorm
 							isReturningToStart = false;
 							hasReachedEnd = false;
 							isLevelComplete = false;
-							SetState(State.Pausing);
 						}
 						else if (hasReachedEnd && !isReturningToStart)
 						{
 							isReturningToStart = true;
-							SetState(State.Pausing);
 						}
-						else
-						{
-							SetState(State.Pausing);
-						}
+						SetState(State.Pausing);
 					}
 					break;
 
