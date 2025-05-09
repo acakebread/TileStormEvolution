@@ -115,7 +115,7 @@ namespace ClassicTilestorm
 			}
 
 			eggbotRoot.position = mapManager.GetTilePosition(startTile);
-			Debug.Log($"InitializeEggbot: Eggbot placed at start tile: {startTile}, position: {eggbotRoot.position}");
+			Debug.Log($"InitializeEggbot: Eggbot placed at tile: {startTile}, position: {eggbotRoot.position}");
 
 			OrientEggbot(startTile);
 			SetState(State.Pausing);
@@ -137,19 +137,17 @@ namespace ClassicTilestorm
 			List<int> path;
 			if (!Navigation.CheckPathBetweenWaypoints(mapManager, fromWaypointIndex, toWaypointIndex, out path) || path == null || path.Count < 2)
 			{
-				Debug.LogWarning($"OrientEggbot: No valid path from waypoint {fromWaypointIndex} (tile {startTile}) to waypoint {toWaypointIndex} (tile {destinationTile})");
+				Debug.LogWarning($"OrientEggbot: No valid path from tile {startTile} to waypoint {toWaypointIndex}");
 				eggbotRoot.rotation = Quaternion.identity;
 				return;
 			}
 
 			var nextTile = path[1];
-			Debug.Log($"OrientEggbot: Path to waypoint {toWaypointIndex}: {string.Join(", ", path)}, nextTile: {nextTile}");
-
 			var direction = Navigation.GetTileOffsetToDirection(mapManager, nextTile - startTile);
 			var yaw = DirToAngle(direction);
 
 			eggbotRoot.rotation = Quaternion.Euler(0f, yaw, 0f);
-			Debug.Log($"OrientEggbot: Eggbot oriented to face direction {direction} (yaw={yaw}) toward tile {nextTile}");
+			Debug.Log($"OrientEggbot: Oriented to yaw {yaw} toward tile {nextTile}");
 		}
 
 		public void UpdateEggbot()
@@ -197,7 +195,6 @@ namespace ClassicTilestorm
 					if (tTurn >= 1f)
 					{
 						eggbotRoot.rotation = Quaternion.Euler(0f, targetYaw, 0f);
-						Debug.Log($"Turning complete: moveDurationTemp={moveDurationTemp}, currentState={currentState}");
 						if (moveDurationTemp > 0)
 						{
 							StartSegmentMovement(moveDurationTemp);
@@ -220,7 +217,7 @@ namespace ClassicTilestorm
 						var waypointTile = mapManager.Waypoints[currentWaypointIndex].nTile;
 						var pathClear = Navigation.CheckPathBetweenWaypoints(mapManager, currentWaypointIndex, currentWaypointIndex + 1, out currentPath);
 
-						Debug.Log($"CheckingConsole: pathClear={pathClear}, currentPath={(currentPath != null ? currentPath.Count : 0)}");
+						Debug.Log($"CheckingConsole: pathClear={pathClear}, pathCount={(currentPath != null ? currentPath.Count : 0)}");
 						if (pathClear && currentPath != null && currentPath.Count > 1)
 						{
 							var nextPos = mapManager.GetTilePosition(currentPath[1]);
@@ -247,8 +244,6 @@ namespace ClassicTilestorm
 					{
 						eggbotRoot.position = targetPosition;
 						pathStepIndex = segmentEndIndex;
-
-						Debug.Log($"Moving complete: stateTimer={stateTimer}, stateDuration={stateDuration}, pathStepIndex={pathStepIndex}");
 
 						if (currentPath == null || pathStepIndex >= currentPath.Count - 1)
 						{
@@ -311,12 +306,11 @@ namespace ClassicTilestorm
 			var wobblePos = pitchRotation * localOffset;
 			eggbotMesh.localPosition = wobblePos;
 			eggbotMesh.localRotation = pitchRotation;
-			//Debug.Log($"UpdateEggbot: State={currentState}, Position={eggbotRoot.position}, Yaw={eggbotRoot.eulerAngles.y}, Waypoint={currentWaypointIndex}, PathStep={pathStepIndex}");
 		}
 
 		private void SetState(State state)
 		{
-			Debug.Log($"SetState: {state}, stateTimer={stateTimer}, stateDuration={stateDuration}, moveDurationTemp={moveDurationTemp}");
+			Debug.Log($"SetState: {state}, duration={stateDuration}");
 			currentState = state;
 
 			switch (state)
@@ -443,7 +437,7 @@ namespace ClassicTilestorm
 		{
 			if (currentPath == null || pathStepIndex >= currentPath.Count - 1)
 			{
-				Debug.Log($"PrepareNextSegment: Path ended or null, setting to current position, pathStepIndex={pathStepIndex}");
+				Debug.Log($"PrepareNextSegment: Path ended or null, pathStepIndex={pathStepIndex}");
 				segmentStartIndex = segmentEndIndex = pathStepIndex;
 				startPosition = mapManager.GetTilePosition(currentPath != null && pathStepIndex < currentPath.Count ? currentPath[pathStepIndex] : mapManager.Waypoints[currentWaypointIndex].nTile);
 				targetPosition = startPosition;
@@ -475,7 +469,7 @@ namespace ClassicTilestorm
 				moveDurationTemp = ((segmentEndIndex - segmentStartIndex) + 1.0f) / walkSpeed;
 			}
 
-			Debug.Log($"PrepareNextSegment: Segment from tile {currentPath[segmentStartIndex]} to {currentPath[segmentEndIndex]}, distance={distance}, moveDurationTemp={moveDurationTemp}");
+			Debug.Log($"PrepareNextSegment: From tile {currentPath[segmentStartIndex]} to {currentPath[segmentEndIndex]}, duration={moveDurationTemp}");
 
 			if (segmentEndIndex > segmentStartIndex)
 			{
@@ -491,7 +485,6 @@ namespace ClassicTilestorm
 
 		private void StartSegmentMovement(float moveDurationTemp)
 		{
-			Debug.Log($"StartSegmentMovement: Moving from {startPosition} to {targetPosition}, stateDuration={moveDurationTemp}");
 			stateDuration = moveDurationTemp;
 			SetState(State.Moving);
 		}
@@ -501,14 +494,12 @@ namespace ClassicTilestorm
 			startYaw = eggbotRoot.eulerAngles.y;
 			targetYaw = newTargetYaw;
 			moveDurationTemp = continueMoving ? moveDurationTemp : 0f;
-			Debug.Log($"StartTurning: From yaw={startYaw} to {targetYaw}, continueMoving={continueMoving}, moveDurationTemp={moveDurationTemp}");
 			SetState(State.Turning);
 		}
 
 		private void StartSpinning()
 		{
 			startYaw = eggbotRoot.eulerAngles.y;
-			Debug.Log($"StartSpinning: Starting at yaw={startYaw}");
 			SetState(State.Spinning);
 		}
 
