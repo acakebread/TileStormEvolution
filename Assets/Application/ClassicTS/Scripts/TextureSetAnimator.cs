@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace GamePreviewNamespace
+namespace ClassicTilestorm
 {
 	public class TextureSetAnimator : MonoBehaviour
 	{

@@ -1,9 +1,8 @@
 using UnityEngine;
-using GameDatabase;
 using System.Linq;
 using System.Collections.Generic;
 
-namespace GamePreviewNamespace
+namespace ClassicTilestorm
 {
 	public struct TextureFrame
 	{

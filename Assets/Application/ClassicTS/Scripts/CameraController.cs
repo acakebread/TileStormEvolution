@@ -1,12 +1,12 @@
 using UnityEngine;
-using static GameDatabase.DatabaseLoader;
+using static ClassicTilestorm.DatabaseLoader;
 
-namespace GamePreviewNamespace
+namespace ClassicTilestorm
 {
 	public class CameraController : MonoBehaviour
 	{
-		private MapManager mapManager;
-		private EggbotController eggbotController;
+		private MapManager mapManager => GamePreview.mapManager;
+		private EggbotController eggbotController => GamePreview.eggbotController;
 		private Camera mainCamera;
 
 		private enum CameraState
@@ -29,10 +29,8 @@ namespace GamePreviewNamespace
 		private float m_fRate; // Smoothing rate
 		private bool debugLogging = false; // Toggle for testing
 
-		public void Initialize(MapManager manager, EggbotController eggbot)
+		public void Initialize()
 		{
-			mapManager = manager;
-			eggbotController = eggbot;
 			mainCamera = Camera.main;
 
 			if (mainCamera == null)
@@ -42,71 +40,72 @@ namespace GamePreviewNamespace
 			}
 
 			ResetCamera();
-		}
 
-		public void ResetCamera()
-		{
-			if (mainCamera == null || mapManager == null)
+			//local function
+			void ResetCamera()
 			{
-				if (debugLogging)
-					Debug.LogWarning("CameraController: Cannot reset camera, dependencies not initialized.");
-				return;
-			}
+				if (mainCamera == null || mapManager == null)
+				{
+					if (debugLogging)
+						Debug.LogWarning("CameraController: Cannot reset camera, dependencies not initialized.");
+					return;
+				}
 
-			currentState = CameraState.Idle;
-			currentWaypointIndex = 0;
-			isAtWaypointSet = false;
-			idleTimer = 0.1f;
-			isLerping = false;
-			isFinalWaypoint = false;
-			currentLookAt = Vector3.zero;
-			m_fRate = 0.00390625f; // 1/256
+				currentState = CameraState.Idle;
+				currentWaypointIndex = 0;
+				isAtWaypointSet = false;
+				idleTimer = 0.1f;
+				isLerping = false;
+				isFinalWaypoint = false;
+				currentLookAt = Vector3.zero;
+				m_fRate = 0.00390625f; // 1/256
 
-			if (mapManager.Waypoints == null || mapManager.Waypoints.Count == 0)
-			{
-				if (debugLogging)
-					Debug.LogWarning("CameraController: No waypoints, defaulting to safe position.");
-				Vector3 defaultPos = new Vector3(5f, 8f, -3f);
-				mainCamera.transform.position = defaultPos;
-				currentLookAt = defaultPos + Vector3.forward;
+				if (mapManager.Waypoints == null || mapManager.Waypoints.Count == 0)
+				{
+					if (debugLogging)
+						Debug.LogWarning("CameraController: No waypoints, defaulting to safe position.");
+					Vector3 defaultPos = new Vector3(5f, 8f, -3f);
+					mainCamera.transform.position = defaultPos;
+					currentLookAt = defaultPos + Vector3.forward;
+					LookAtTarget(mainCamera.transform, currentLookAt);
+					if (debugLogging)
+						Debug.Log($"Camera defaulted: position={mainCamera.transform.position}, looking at={currentLookAt}, up={mainCamera.transform.up}");
+					return;
+				}
+
+				var firstWaypoint = mapManager.Waypoints[0];
+				Vector3 srcPos = new Vector3(firstWaypoint.vSrc.fX, firstWaypoint.vSrc.fY, firstWaypoint.vSrc.fZ);
+
+				if (Vector3.zero == srcPos) srcPos = new Vector3(0.0f, 14.0f, -14.0f);//fixup for missing waypoint data in original tilestorm data
+
+				if (!IsValidVector(firstWaypoint.vSrc))
+				{
+					if (debugLogging)
+						Debug.LogWarning("CameraController: Invalid vSrc in first waypoint, defaulting.");
+					Vector3 defaultPos = new Vector3(5f, 8f, -3f);
+					mainCamera.transform.position = defaultPos;
+					currentLookAt = defaultPos + Vector3.forward;
+					LookAtTarget(mainCamera.transform, currentLookAt);
+					if (debugLogging)
+						Debug.Log($"Camera defaulted: position={mainCamera.transform.position}, looking at={currentLookAt}, up={mainCamera.transform.up}");
+					return;
+				}
+
+				Vector3 lookAtPos = firstWaypoint.vDst != null && IsValidVector(firstWaypoint.vDst)
+					? new Vector3(firstWaypoint.vDst.fX, firstWaypoint.vDst.fY, firstWaypoint.vDst.fZ)
+					: mapManager.GetTilePosition(firstWaypoint.nTile) + new Vector3(0, 0.5f, 0);
+
+				mainCamera.transform.position = srcPos;
+				currentLookAt = lookAtPos;
 				LookAtTarget(mainCamera.transform, currentLookAt);
 				if (debugLogging)
-					Debug.Log($"Camera defaulted: position={mainCamera.transform.position}, looking at={currentLookAt}, up={mainCamera.transform.up}");
-				return;
+					Debug.Log($"Camera initialized at waypoint 0: position={mainCamera.transform.position}, looking at={currentLookAt}, up={mainCamera.transform.up}, vSrc=({firstWaypoint.vSrc.fX}, {firstWaypoint.vSrc.fY}, {firstWaypoint.vSrc.fZ}), vDst={(firstWaypoint.vDst != null ? $"({firstWaypoint.vDst.fX}, {firstWaypoint.vDst.fY}, {firstWaypoint.vDst.fZ})" : "null")}, nTile={firstWaypoint.nTile}");
 			}
-
-			var firstWaypoint = mapManager.Waypoints[0];
-			Vector3 srcPos = new Vector3(firstWaypoint.vSrc.fX, firstWaypoint.vSrc.fY, firstWaypoint.vSrc.fZ);
-
-			if (Vector3.zero == srcPos) srcPos = new Vector3(0.0f, 14.0f, -14.0f);//fixup for missing waypoint data in original tilestorm data
-
-			if (!IsValidVector(firstWaypoint.vSrc))
-			{
-				if (debugLogging)
-					Debug.LogWarning("CameraController: Invalid vSrc in first waypoint, defaulting.");
-				Vector3 defaultPos = new Vector3(5f, 8f, -3f);
-				mainCamera.transform.position = defaultPos;
-				currentLookAt = defaultPos + Vector3.forward;
-				LookAtTarget(mainCamera.transform, currentLookAt);
-				if (debugLogging)
-					Debug.Log($"Camera defaulted: position={mainCamera.transform.position}, looking at={currentLookAt}, up={mainCamera.transform.up}");
-				return;
-			}
-
-			Vector3 lookAtPos = firstWaypoint.vDst != null && IsValidVector(firstWaypoint.vDst)
-				? new Vector3(firstWaypoint.vDst.fX, firstWaypoint.vDst.fY, firstWaypoint.vDst.fZ)
-				: mapManager.GetTilePosition(firstWaypoint.nTile) + new Vector3(0, 0.5f, 0);
-
-			mainCamera.transform.position = srcPos;
-			currentLookAt = lookAtPos;
-			LookAtTarget(mainCamera.transform, currentLookAt);
-			if (debugLogging)
-				Debug.Log($"Camera initialized at waypoint 0: position={mainCamera.transform.position}, looking at={currentLookAt}, up={mainCamera.transform.up}, vSrc=({firstWaypoint.vSrc.fX}, {firstWaypoint.vSrc.fY}, {firstWaypoint.vSrc.fZ}), vDst={(firstWaypoint.vDst != null ? $"({firstWaypoint.vDst.fX}, {firstWaypoint.vDst.fY}, {firstWaypoint.vDst.fZ})" : "null")}, nTile={firstWaypoint.nTile}");
 		}
 
 		public void UpdateCamera()
 		{
-			if (mainCamera == null || mapManager == null || eggbotController == null || eggbotController.eggbot == null)
+			if (mainCamera == null || mapManager == null || eggbotController == null || eggbotController.eggbotRoot == null)
 			{
 				Debug.LogWarning("CameraController: Cannot update, dependencies missing.");
 				return;
@@ -124,10 +123,10 @@ namespace GamePreviewNamespace
 			{
 				case CameraState.Idle:
 					idleTimer -= deltaTime;
-					if (idleTimer <= 0 && eggbotController.eggbot != null)
+					if (idleTimer <= 0 && eggbotController.eggbotRoot != null)
 					{
 						currentState = CameraState.TrackingEggbot;
-						currentLookAt = eggbotController.eggbot.transform.position;
+						currentLookAt = eggbotController.eggbotRoot.position;
 						if (debugLogging)
 							Debug.Log("Camera transitioning to TrackingEggbot");
 					}
@@ -140,7 +139,7 @@ namespace GamePreviewNamespace
 
 					// Compute target position with ScreenToPlaneXZ
 					Vector3 vOld = ScreenToPlaneXZ();
-					Vector3 targetPos = eggbotController.eggbot.transform.position;
+					Vector3 targetPos = eggbotController.eggbotRoot.position;
 					currentLookAt = Vector3.Lerp(vOld, targetPos, m_fRate);
 
 					// Compute ideal position
@@ -210,7 +209,7 @@ namespace GamePreviewNamespace
 			Vector3 srcPos = new Vector3(waypoint.vSrc.fX, waypoint.vSrc.fY, waypoint.vSrc.fZ);
 			Vector3 lookAtPos = waypoint.vDst != null && IsValidVector(waypoint.vDst)
 				? new Vector3(waypoint.vDst.fX, waypoint.vDst.fY, waypoint.vDst.fZ)
-				: eggbotController.eggbot.transform.position;
+				: eggbotController.eggbotRoot.position;
 
 			if (debugLogging)
 				Debug.Log($"Waypoint {waypointIndex} data: vSrc=({waypoint.vSrc.fX}, {waypoint.vSrc.fY}, {waypoint.vSrc.fZ}), vDst={(waypoint.vDst != null ? $"({waypoint.vDst.fX}, {waypoint.vDst.fY}, {waypoint.vDst.fZ})" : "null")}, nTile={waypoint.nTile}, validSrc={IsValidVector(waypoint.vSrc)}, validDst={(waypoint.vDst != null ? IsValidVector(waypoint.vDst) : false)}");
@@ -221,7 +220,7 @@ namespace GamePreviewNamespace
 				currentState = CameraState.TrackingEggbot;
 				currentWaypointIndex = waypointIndex;
 				lerpTargetPos = mainCamera.transform.position;
-				lerpTargetLookAt = eggbotController.eggbot.transform.position;
+				lerpTargetLookAt = eggbotController.eggbotRoot.position;
 				isAtWaypointSet = false;
 				isLerping = false;
 				currentLookAt = lerpTargetLookAt;
@@ -258,7 +257,7 @@ namespace GamePreviewNamespace
 				lerpTargetPos = mainCamera.transform.position;
 				isLerping = false;
 				currentState = CameraState.AtWaypoint;
-				currentLookAt = eggbotController.eggbot.transform.position;
+				currentLookAt = eggbotController.eggbotRoot.position;
 				isAtWaypointSet = false;
 				m_fRate = 0.015625f; // Reset to 1/64
 				if (debugLogging)
@@ -280,7 +279,7 @@ namespace GamePreviewNamespace
 			currentState = CameraState.TrackingEggbot;
 			isAtWaypointSet = false;
 			isLerping = false;
-			currentLookAt = eggbotController.eggbot.transform.position;
+			currentLookAt = eggbotController.eggbotRoot.position;
 			m_fRate = 0.015625f; // Reset to 1/64
 			if (debugLogging)
 				Debug.Log($"Camera resuming tracking Eggbot from waypoint {waypointIndex}: position={mainCamera.transform.position}, looking at={currentLookAt}");
@@ -329,7 +328,7 @@ namespace GamePreviewNamespace
 				return new Vector3(point.x, 0, point.z);
 			}
 			// Fallback: Use Eggbot position projected to y=0
-			Vector3 fallback = eggbotController.eggbot.transform.position;
+			Vector3 fallback = eggbotController.eggbotRoot.position;
 			if (debugLogging)
 				Debug.LogWarning($"ScreenToPlaneXZ failed, using fallback: {fallback}");
 			return new Vector3(fallback.x, 0, fallback.z);

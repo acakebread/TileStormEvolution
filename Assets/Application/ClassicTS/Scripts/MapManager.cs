@@ -1,9 +1,8 @@
 ﻿using UnityEngine;
 using System.Linq;
 using System.Collections.Generic;
-using GameDatabase;
 
-namespace GamePreviewNamespace
+namespace ClassicTilestorm
 {
 	public class MapManager : MonoBehaviour, IMap
 	{
@@ -228,9 +227,6 @@ namespace GamePreviewNamespace
 					gameObject.name = "Fallback_Cube";
 				}
 
-				//if (PreviewSettings.FlipGeometry)
-				//	gameObject.transform.rotation = Quaternion.AngleAxis(180, Vector3.up);
-
 				if (properties.Interactive)
 				{
 					var collider = gameObject.AddComponent<BoxCollider>();
@@ -242,7 +238,7 @@ namespace GamePreviewNamespace
 				tileDataList.Add(new TileData { Properties = properties, GameObject = gameObject });
 			}
 
-			this.tileDataArray = tileDataList.ToArray();
+			tileDataArray = tileDataList.ToArray();
 		}
 
 		public void Scramble()

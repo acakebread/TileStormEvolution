@@ -1,11 +1,11 @@
 using UnityEngine;
 
-namespace GamePreviewNamespace
+namespace ClassicTilestorm
 {
 	public class TileInteractionController : MonoBehaviour
 	{
 		private GestureSystem gestureSystem => GestureSystem.instance;
-		private MapManager mapManager;
+		private MapManager mapManager => GamePreview.mapManager;
 		private TileStripHelper.TileStrip tileStrip;
 		private Vector3 last;
 		private Vector3 delta;
@@ -30,9 +30,8 @@ namespace GamePreviewNamespace
 			DebugVisualizationHelper.HighlightStrip(mapManager, tileStrip, false);
 		}
 
-		public void Initialize(MapManager manager)
+		public void Initialize()
 		{
-			mapManager = manager;
 			tileStrip = default;
 			dragIndex = -1;
 		}

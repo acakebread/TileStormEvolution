@@ -2,7 +2,7 @@ using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace GamePreviewNamespace
+namespace ClassicTilestorm
 {
 	public static class TileStripHelper
 	{

@@ -3,7 +3,7 @@ using System.Linq;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace GameDatabase
+namespace ClassicTilestorm
 {
 	public static class DatabaseLoader
 	{
@@ -166,7 +166,7 @@ namespace GameDatabase
 				databaseJsonFile = jsonFile ?? throw new ArgumentNullException(nameof(jsonFile), "TextAsset cannot be null.");
 				data = null; // Clear existing data
 				isLoaded = false; // Reset loaded flag
-				Debug.Log("DatabaseLoader initialized with new TextAsset.");
+				Debug.Log($"DatabaseLoader initialized with new TextAsset: Maps.Count={Maps.Count}");
 			}
 		}
 

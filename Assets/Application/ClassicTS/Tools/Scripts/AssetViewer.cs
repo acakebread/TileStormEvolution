@@ -1,8 +1,7 @@
 using UnityEngine;
 using System.Linq;
 using System.Collections.Generic;
-using GamePreviewNamespace;
-using GameDatabase;
+using ClassicTilestorm;
 
 namespace AssetViewerNamespace
 {

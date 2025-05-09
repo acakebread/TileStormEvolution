@@ -1,9 +1,8 @@
-using GameDatabase;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
-namespace GamePreviewNamespace
+namespace ClassicTilestorm
 {
 	public static class Navigation
 	{
@@ -51,8 +50,7 @@ namespace GamePreviewNamespace
 					if (consoleProps?.IsConsole != true)
 						continue;
 
-					var navTile = GetAdjacentTile(map, consoleTile, consoleProps.Nav);
-					if (navTile == nTile)
+					if (dirBit == TileProperties.GetOppositeDirection(consoleProps.Nav))
 						return consoleTile;
 				}
 			}
@@ -195,5 +193,28 @@ namespace GamePreviewNamespace
 			if (newCoord.X < 0 || newCoord.X >= map.Width || newCoord.Z < 0 || newCoord.Z >= map.Height) return -1;
 			return map.ToIndex(newCoord);
 		}
+
+		public static int GetTileOffsetToDirection(IMap map, int tileOffset) => TileProperties.GetOffsetDirection(tileOffset % map.Width, tileOffset / map.Width);
 	}
 }
+
+//public static int GetTileOffsetToDirection(IMap map, int tileOffset)
+//{
+//	if (tileOffset == 1) return TileProperties.East;
+//	if (tileOffset == -1) return TileProperties.West;
+//	if (tileOffset == map.Width) return TileProperties.North;
+//	if (tileOffset == -map.Width) return TileProperties.South;
+//	return 0;
+//}
+
+//public static int GetDirectionFlag(Vector3 direction)
+//{
+//	if (direction.sqrMagnitude < 0.01f)
+//		return 0;
+//	var angle = Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg;
+//	if (Mathf.Abs(angle) <= 45f) return 1; // North (positive Z)
+//	if (Mathf.Abs(angle - 180) <= 45f || Mathf.Abs(angle + 180) <= 45f) return 2; // South (negative Z)
+//	if (Mathf.Abs(angle - 90) <= 45f) return 4; // East (positive X)
+//	if (Mathf.Abs(angle + 90) <= 45f) return 8; // West (negative X)
+//	return 0;
+//}

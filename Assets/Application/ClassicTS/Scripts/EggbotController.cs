@@ -2,24 +2,22 @@ using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace GamePreviewNamespace
+namespace ClassicTilestorm
 {
 	public class EggbotController : MonoBehaviour
 	{
-		private MapManager mapManager;
-		private CameraController cameraController;
-		public GameObject eggbot;
-		private Transform meshTransform; // Reference to the Mesh child transform
+		private MapManager mapManager => GamePreview.mapManager;
+		private CameraController cameraController => GamePreview.cameraController;
+
+		[HideInInspector]
+		public Transform eggbotRoot;
+		private Transform eggbotMesh; // Reference to the Mesh child transform
 
 		private List<int> currentPath;
 		private int pathStepIndex;
 		private int currentWaypointIndex;
 		private bool isReturningToStart;
 		private bool hasReachedEnd;
-
-		private bool isMoving;
-		private float moveTimer;
-		private float moveDuration;
 
 		private float pauseTimer;
 		private float pauseDuration = 1f;
@@ -28,21 +26,24 @@ namespace GamePreviewNamespace
 		private bool isLevelComplete;
 		public bool IsLevelComplete => isLevelComplete;
 
-		private Vector3 startPosition;
-		private Vector3 targetPosition;
-		private float startYaw;
-		private float targetYaw;
-		private float turnTimer;
-		private float turnDuration = 1f / 6f; // Based on gfTurnRate=6.0f
-		private bool isTurning;
-
-		private int segmentStartIndex;
-		private int segmentEndIndex;
-		private float walkSpeed = 6f; // Based on gfWalkRate=6.0f (tiles per second)
-
 		private bool isCheckingConsole;
 		private float consoleCheckTimer;
 		private float consoleCheckDuration = 0.5f; // Time to face console
+
+		private bool isMoving;
+		private float moveTimer;
+		private float moveDuration;
+		private float walkSpeed = 6f; // Based on gfWalkRate=6.0f (tiles per second)
+		private Vector3 startPosition;
+		private Vector3 targetPosition;
+		private int segmentStartIndex;
+		private int segmentEndIndex;
+
+		private bool isTurning;
+		private float turnTimer;
+		private float startYaw;
+		private float targetYaw;
+		private float turnDuration = 1f / 6f; // Based on gfTurnRate=6.0f
 
 		private bool isSpinning;
 		private float spinTimer;
@@ -54,24 +55,70 @@ namespace GamePreviewNamespace
 		private static float mod1 = 0.0f; // Persistent accumulator for wobble
 		private static float mod2 = 0.0f; // Persistent accumulator for wobble
 
-		public void Initialize(MapManager manager)
+		public void Initialize()
 		{
-			mapManager = manager;
-			cameraController = GetComponent<CameraController>();
-			InitializeEggbot(manager.EggbotCostume);
 			Reset();
+			InitializeEggbot();
+
+			//local function
+			void InitializeEggbot()
+			{
+				var eggbotCostume = string.IsNullOrEmpty(GamePreview.mapManager.EggbotCostume) ? "Eggbot Default" : GamePreview.mapManager.EggbotCostume;
+				int startTile = Navigation.GetStartTile(mapManager);
+				if (startTile == -1)
+					return;
+
+				if (eggbotRoot != null) Destroy(eggbotRoot.gameObject);
+
+				eggbotRoot = new GameObject("Eggbot").transform;
+				eggbotRoot.position = mapManager.GetTilePosition(startTile);
+				eggbotRoot.rotation = Quaternion.identity;
+				eggbotRoot.SetParent(mapManager.transform, false);
+
+				if (null == eggbotCostume) eggbotCostume = "Eggbot Default";
+				var def = DatabaseLoader.TileDefs.FirstOrDefault(td => td.szType == "Eggbot" && td.szTheme == eggbotCostume);
+				if (def == null || def.szGeom == null) return;
+
+				var prefab = GeometryManager.Get(def.szGeom);
+				var mesh = Instantiate(prefab, eggbotRoot);
+				mesh.name = "Mesh";
+
+				var transform = mesh.transform;
+				transform.SetParent(eggbotRoot, false);
+				transform.localPosition = Vector3.zero;
+				transform.localRotation = Quaternion.identity;
+
+				// Store reference to the Mesh transform
+				eggbotMesh = transform;
+
+				DatabaseLoader.Theme theme = DatabaseLoader.Themes.FirstOrDefault(t => t.name == def.szTheme);
+				if (theme == null || string.IsNullOrEmpty(theme.szTileTextureSet)) return;
+
+				var textureFrames = TextureSetManager.GetTextureFrames(theme.szTileTextureSet);
+				if (textureFrames?.Length > 0)
+				{
+					var animator = mesh.AddComponent<TextureSetAnimator>();
+					animator.Initialize(textureFrames);
+				}
+				else
+				{
+					Debug.LogWarning($"No texture set for {eggbotRoot}");
+				}
+			}
 		}
 
 		public void Reset()
 		{
 			currentPath = null;
 			pathStepIndex = currentWaypointIndex = 0;
+			segmentStartIndex = segmentEndIndex = 0;
+
 			isReturningToStart = hasReachedEnd = false;
 			isMoving = isLevelComplete = isPuzzleBlocked = false;
+			isTurning = isCheckingConsole = isSpinning = false;
+			
 			moveTimer = turnTimer = consoleCheckTimer = spinTimer = 0f;
 			pauseTimer = pauseDuration;
-			isTurning = isCheckingConsole = isSpinning = false;
-			segmentStartIndex = segmentEndIndex = 0;
 			wobble = 0.1f; // Reset wobble to initial value
 			mod1 = 0.0f;
 			mod2 = 0.0f;
@@ -87,8 +134,8 @@ namespace GamePreviewNamespace
 			mod2 += 1.8f * Time.deltaTime;
 
 			// Update wobble factor based on state
-			bool isIdle = !isMoving && !isTurning && !isSpinning && !isCheckingConsole;
-			float targetWobble = isIdle ? 0.02f : 0.1f;
+			var isIdle = !isMoving && !isTurning && !isSpinning && !isCheckingConsole;
+			var targetWobble = isIdle ? 0.02f : 0.1f;
 			wobble = (wobble * 99.0f + targetWobble) / 100.0f;
 
 			// Calculate pitch for wobble
@@ -97,21 +144,21 @@ namespace GamePreviewNamespace
 			if (isSpinning)
 			{
 				spinTimer += Time.deltaTime;
-				float t = Mathf.Clamp01(spinTimer / spinDuration);
-				float cosT = (1f - Mathf.Cos(t * Mathf.PI)) / 2f; // Sigmoid interpolation
-				float angle = cosT * spinAngle;
-				float displayAngle = angle % 360f; // Ensure visual rotation aligns
-				eggbot.transform.rotation = Quaternion.Euler(0f, startYaw + displayAngle, 0f);
+				var t = Mathf.Clamp01(spinTimer / spinDuration);
+				var cosT = (1f - Mathf.Cos(t * Mathf.PI)) / 2f; // Sigmoid interpolation
+				var angle = cosT * spinAngle;
+				var displayAngle = angle % 360f; // Ensure visual rotation aligns
+				eggbotRoot.rotation = Quaternion.Euler(0f, startYaw + displayAngle, 0f);
 
 				// Reset mesh transform during spin to avoid wobble
-				meshTransform.localPosition = Vector3.zero;
-				meshTransform.localRotation = Quaternion.identity;
+				eggbotMesh.localPosition = Vector3.zero;
+				eggbotMesh.localRotation = Quaternion.identity;
 
 				if (t >= 1f)
 				{
 					isSpinning = false;
 					spinTimer = 0f;
-					eggbot.transform.rotation = Quaternion.Euler(0f, startYaw + 180f, 0f);
+					eggbotRoot.rotation = Quaternion.Euler(0f, startYaw + 180f, 0f);
 					if (hasReachedEnd && isReturningToStart && currentWaypointIndex == 0)
 					{
 						// After celebratory spin at start, reset state
@@ -133,10 +180,10 @@ namespace GamePreviewNamespace
 			if (isTurning)
 			{
 				turnTimer += Time.deltaTime;
-				float t = Mathf.Clamp01(turnTimer / turnDuration);
-				float cosT = (1f - Mathf.Cos(t * Mathf.PI)) / 2f;
-				float currentYaw = Mathf.LerpAngle(startYaw, targetYaw, cosT);
-				eggbot.transform.rotation = Quaternion.Euler(0f, currentYaw, 0f);
+				var t = Mathf.Clamp01(turnTimer / turnDuration);
+				var cosT = (1f - Mathf.Cos(t * Mathf.PI)) / 2f;
+				var currentYaw = Mathf.LerpAngle(startYaw, targetYaw, cosT);
+				eggbotRoot.rotation = Quaternion.Euler(0f, currentYaw, 0f);
 
 				if (t >= 1f)
 				{
@@ -158,17 +205,17 @@ namespace GamePreviewNamespace
 				if (consoleCheckTimer <= 0)
 				{
 					isCheckingConsole = false;
-					int waypointTile = mapManager.Waypoints[currentWaypointIndex].nTile;
-					bool pathClear = Navigation.CheckPathBetweenWaypoints(mapManager, currentWaypointIndex, out currentPath);
+					var waypointTile = mapManager.Waypoints[currentWaypointIndex].nTile;
+					var pathClear = Navigation.CheckPathBetweenWaypoints(mapManager, currentWaypointIndex, out currentPath);
 
 					if (pathClear)
 					{
 						if (currentPath != null && currentPath.Count > 1)
 						{
-							Vector3 nextPos = mapManager.GetTilePosition(currentPath[1]);
-							Vector3 currentPos = mapManager.GetTilePosition(currentPath[0]);
-							Vector3 direction = (nextPos - currentPos).normalized;
-							float pathYaw = Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg;
+							var nextPos = mapManager.GetTilePosition(currentPath[1]);
+							var currentPos = mapManager.GetTilePosition(currentPath[0]);
+							var direction = (nextPos - currentPos).normalized;
+							var pathYaw = Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg;
 							StartTurning(pathYaw, false);
 						}
 						else
@@ -185,13 +232,13 @@ namespace GamePreviewNamespace
 			else if (isMoving)
 			{
 				moveTimer += Time.deltaTime;
-				float t = moveDuration > 0 ? Mathf.Clamp01(moveTimer / moveDuration) : 1f;
-				float cosT = (1f - Mathf.Cos(t * Mathf.PI)) / 2f;
-				eggbot.transform.position = Vector3.Lerp(startPosition, targetPosition, cosT);
+				var t = moveDuration > 0 ? Mathf.Clamp01(moveTimer / moveDuration) : 1f;
+				var cosT = (1f - Mathf.Cos(t * Mathf.PI)) / 2f;
+				eggbotRoot.position = Vector3.Lerp(startPosition, targetPosition, cosT);
 
 				if (t >= 1f)
 				{
-					eggbot.transform.position = targetPosition;
+					eggbotRoot.position = targetPosition;
 					isMoving = false;
 					pathStepIndex = segmentEndIndex;
 
@@ -205,7 +252,7 @@ namespace GamePreviewNamespace
 						if (currentWaypointIndex < mapManager.Waypoints.Count)
 						{
 							int waypointTile = mapManager.Waypoints[currentWaypointIndex].nTile;
-							eggbot.transform.position = mapManager.GetTilePosition(waypointTile);
+							eggbotRoot.position = mapManager.GetTilePosition(waypointTile);
 							var tileProps = mapManager.GetTileProperties(waypointTile);
 							cameraController?.OnWaypointReached(currentWaypointIndex);
 
@@ -239,13 +286,13 @@ namespace GamePreviewNamespace
 			}
 
 			// Apply wobble to the Mesh child transform (offset * pitch)
-			Quaternion pitchRotation = Quaternion.Euler(pitch * Mathf.Rad2Deg, 0f, 0f); // X-axis rotation
-			Vector3 localOffset = new Vector3(0f, 0f, -pitch); // Local Z-offset (forward/backward)
-			Vector3 wobblePos = pitchRotation * localOffset; // offset * pitch in local space
+			var pitchRotation = Quaternion.Euler(pitch * Mathf.Rad2Deg, 0f, 0f); // X-axis rotation
+			var localOffset = new Vector3(0f, 0f, -pitch); // Local Z-offset (forward/backward)
+			var wobblePos = pitchRotation * localOffset; // offset * pitch in local space
 
 			// Set the Mesh's local transform
-			meshTransform.localPosition = wobblePos;
-			meshTransform.localRotation = pitchRotation;
+			eggbotMesh.localPosition = wobblePos;
+			eggbotMesh.localRotation = pitchRotation;
 		}
 
 		private void MoveToNextWaypoint()
@@ -271,7 +318,7 @@ namespace GamePreviewNamespace
 					return;
 				}
 				// Navigate back to waypoint 0
-				int targetWaypoint = 0;
+				var targetWaypoint = 0;
 				if (Navigation.CheckPathToWaypoint(mapManager, currentWaypointIndex, targetWaypoint, out currentPath))
 				{
 					isPuzzleBlocked = false;
@@ -286,7 +333,7 @@ namespace GamePreviewNamespace
 			}
 			else
 			{
-				int currentTile = mapManager.Waypoints[currentWaypointIndex].nTile;
+				var currentTile = mapManager.Waypoints[currentWaypointIndex].nTile;
 				if (Navigation.FindAdjacentConsole(mapManager, currentTile) != -1 && !Navigation.CheckPathBetweenWaypoints(mapManager, currentWaypointIndex, out _))
 				{
 					if (!isTurning)
@@ -309,21 +356,30 @@ namespace GamePreviewNamespace
 
 		private void CheckAndFaceAdjacentConsole(int tile)
 		{
-			int consoleTile = Navigation.FindAdjacentConsole(mapManager, tile);
+			var consoleTile = Navigation.FindAdjacentConsole(mapManager, tile);
 			if (consoleTile != -1)
 			{
-				TileProperties consoleProps = mapManager.GetTileProperties(consoleTile);
+				var consoleProps = mapManager.GetTileProperties(consoleTile);
 				if (consoleProps?.Nav != 0)
 				{
-					int oppositeDir = TileProperties.GetOppositeDirection(consoleProps.Nav);
-					float consoleYaw = DirToAngle(oppositeDir);
-					float currentYaw = eggbot.transform.eulerAngles.y;
+					var oppositeDir = TileProperties.GetOppositeDirection(consoleProps.Nav);
+					var consoleYaw = DirToAngle(oppositeDir);
+					var currentYaw = eggbotRoot.eulerAngles.y;
 					if (Mathf.Abs(Mathf.DeltaAngle(currentYaw, consoleYaw)) > 0.1f)
 					{
 						StartTurning(consoleYaw, false);
 						isCheckingConsole = true;
 					}
 				}
+			}
+
+			static float DirToAngle(int dir)
+			{
+				if ((dir & 1) != 0) return 0f;   // North (positive Z)
+				if ((dir & 2) != 0) return 180f; // South (negative Z)
+				if ((dir & 4) != 0) return 90f;  // East (positive X)
+				if ((dir & 8) != 0) return -90f; // West (negative X)
+				return 0f;
 			}
 		}
 
@@ -339,35 +395,23 @@ namespace GamePreviewNamespace
 				return;
 			}
 
-			segmentStartIndex = pathStepIndex;
-			segmentEndIndex = segmentStartIndex;
-			int prevTile = currentPath[segmentStartIndex];
-			Vector3 prevPos = mapManager.GetTilePosition(prevTile);
-			int currentDir = 0;
-
-			for (int i = segmentStartIndex + 1; i < currentPath.Count; i++)
+			var currentDir = 0;
+			segmentEndIndex = pathStepIndex;
+			while (segmentEndIndex < currentPath.Count - 1)
 			{
-				int nextTile = currentPath[i];
-				Vector3 nextPos = mapManager.GetTilePosition(nextTile);
-				Vector3 direction = (nextPos - prevPos).normalized;
-				int newDir = GetDirectionFlag(direction);
+				var direction = Navigation.GetTileOffsetToDirection(mapManager, currentPath[segmentEndIndex + 1] - currentPath[segmentEndIndex]);
 
 				if (currentDir == 0)
-					currentDir = newDir;
-				else if (newDir != currentDir)
-				{
-					segmentEndIndex = i - 1;
+					currentDir = direction;
+				else if (direction != currentDir)
 					break;
-				}
-
-				segmentEndIndex = i;
-				prevTile = nextTile;
-				prevPos = nextPos;
+				segmentEndIndex++;
 			}
 
+			segmentStartIndex = pathStepIndex;
 			startPosition = mapManager.GetTilePosition(currentPath[segmentStartIndex]);
 			targetPosition = mapManager.GetTilePosition(currentPath[segmentEndIndex]);
-			float distance = Vector3.Distance(startPosition, targetPosition);
+			var distance = Vector3.Distance(startPosition, targetPosition);
 			// Add 1.0f to distance to match original game's movement duration
 			moveDuration = (distance + 1.0f) / walkSpeed;
 
@@ -397,7 +441,7 @@ namespace GamePreviewNamespace
 
 		private void StartTurning(float newTargetYaw, bool continueMoving)
 		{
-			startYaw = eggbot.transform.eulerAngles.y;
+			startYaw = eggbotRoot.eulerAngles.y;
 			targetYaw = newTargetYaw;
 			turnTimer = 0f;
 			isTurning = true;
@@ -406,77 +450,9 @@ namespace GamePreviewNamespace
 
 		private void StartSpinning()
 		{
-			startYaw = eggbot.transform.eulerAngles.y;
+			startYaw = eggbotRoot.eulerAngles.y;
 			spinTimer = 0f;
 			isSpinning = true;
-		}
-
-		private int GetDirectionFlag(Vector3 direction)
-		{
-			if (direction.sqrMagnitude < 0.01f)
-				return 0;
-			float angle = Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg;
-			if (Mathf.Abs(angle) <= 45f) return 1; // North (positive Z)
-			if (Mathf.Abs(angle - 180) <= 45f || Mathf.Abs(angle + 180) <= 45f) return 2; // South (negative Z)
-			if (Mathf.Abs(angle - 90) <= 45f) return 4; // East (positive X)
-			if (Mathf.Abs(angle + 90) <= 45f) return 8; // West (negative X)
-			return 0;
-		}
-
-		private float DirToAngle(int dir)
-		{
-			if ((dir & 1) != 0) return 0f;   // North (positive Z)
-			if ((dir & 2) != 0) return 180f; // South (negative Z)
-			if ((dir & 4) != 0) return 90f;  // East (positive X)
-			if ((dir & 8) != 0) return -90f; // West (negative X)
-			return 0f;
-		}
-
-		private void InitializeEggbot(string eggbotCostume = "Eggbot Default")
-		{
-			int startTile = Navigation.GetStartTile(mapManager);
-			if (startTile == -1)
-				return;
-
-			if (eggbot != null) Destroy(eggbot);
-
-			eggbot = new GameObject("Eggbot");
-			eggbot.transform.position = mapManager.GetTilePosition(startTile);
-			eggbot.transform.rotation = Quaternion.identity;
-			eggbot.transform.SetParent(mapManager.transform, false);
-
-			if (null == eggbotCostume) eggbotCostume = "Eggbot Default";
-			var def = GameDatabase.DatabaseLoader.TileDefs.FirstOrDefault(td => td.szType == "Eggbot" && td.szTheme == eggbotCostume);
-			if (def == null || def.szGeom == null) return;
-
-			var prefab = GeometryManager.Get(def.szGeom);
-			var mesh = Instantiate(prefab, eggbot.transform);
-			mesh.name = "Mesh";
-
-			var transform = mesh.transform;
-			transform.SetParent(eggbot.transform, false);
-			transform.localPosition = Vector3.zero;
-			transform.localRotation = Quaternion.identity;
-
-			//if (PreviewSettings.FlipGeometry)
-			//	transform.GetChild(0).transform.localRotation = Quaternion.AngleAxis(180, Vector3.up);
-
-			// Store reference to the Mesh transform
-			meshTransform = transform;
-
-			GameDatabase.DatabaseLoader.Theme theme = GameDatabase.DatabaseLoader.Themes.FirstOrDefault(t => t.name == def.szTheme);
-			if (theme == null || string.IsNullOrEmpty(theme.szTileTextureSet)) return;
-
-			var textureFrames = TextureSetManager.GetTextureFrames(theme.szTileTextureSet);
-			if (textureFrames?.Length > 0)
-			{
-				var animator = mesh.AddComponent<TextureSetAnimator>();
-				animator.Initialize(textureFrames);
-			}
-			else
-			{
-				Debug.LogWarning($"No texture set for {eggbot}");
-			}
 		}
 	}
 }

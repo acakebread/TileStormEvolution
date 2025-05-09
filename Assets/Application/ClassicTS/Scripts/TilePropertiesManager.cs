@@ -1,8 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
-using GameDatabase;
 
-namespace GamePreviewNamespace
+namespace ClassicTilestorm
 {
 	public static class TilePropertiesManager
 	{

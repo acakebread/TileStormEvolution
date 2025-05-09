@@ -1,4 +1,4 @@
-﻿namespace GamePreviewNamespace
+﻿namespace ClassicTilestorm
 {
 	public class TileProperties
 	{
@@ -21,11 +21,11 @@
 			Console = 1 << 5 // 0b100000
 		}
 
-		public readonly GameDatabase.DatabaseLoader.TileDef tileDef;
+		public readonly DatabaseLoader.TileDef tileDef;
 		private readonly int nav;
 		private readonly TileFlags flags;
 
-		public TileProperties(GameDatabase.DatabaseLoader.TileDef def)
+		public TileProperties(DatabaseLoader.TileDef def)
 		{
 			tileDef = def;
 			nav = (byte)((def.bNorth ? North : 0) | (def.bSouth ? South : 0) | (def.bEast ? East : 0) | (def.bWest ? West : 0));
@@ -52,6 +52,7 @@
 
 		public int Nav => nav;
 
+		public static int GetOffsetDirection(int dx, int dz) => (dx > 0 ? East : 0) | (dx < 0 ? West : 0) | (dz > 0 ? North : 0) | (dz < 0 ? South : 0);
 		public static (int dx, int dz) GetDirectionOffset(int dirBit) => (((dirBit & East) >> 2) - ((dirBit & West) >> 3), (dirBit & North) - ((dirBit & South) >> 1));
 		public static int GetOppositeDirection(int dirBit) => ((dirBit & North) << 1) | ((dirBit & South) >> 1) | ((dirBit & East) << 1) | ((dirBit & West) >> 1);
 		public static bool CanMoveBetweenTiles(TileProperties fromTile, TileProperties toTile, int dirBit) => ((fromTile?.nav ?? 0) & dirBit) != 0 && ((toTile?.nav ?? 0) & GetOppositeDirection(dirBit)) != 0;

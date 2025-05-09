@@ -1,8 +1,7 @@
 using UnityEngine;
-using GameDatabase;
 using System.Collections.Generic;
 
-namespace GamePreviewNamespace
+namespace ClassicTilestorm
 {
 	public interface IMap
 	{
