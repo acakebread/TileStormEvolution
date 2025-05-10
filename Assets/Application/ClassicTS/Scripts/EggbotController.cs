@@ -19,9 +19,13 @@ namespace ClassicTilestorm
 		private bool isReturningToStart;
 		private bool hasReachedEnd;
 
-		private float stateTimer; // Combined timer for Pausing, Spinning, Turning, CheckingConsole, and Moving
-		private float stateDuration; // Duration for Pausing, Spinning, Turning, CheckingConsole, and Moving
-		private float moveDurationTemp; // Temporary storage for movement duration set by PrepareNextSegment
+		private float stateTimer; // Combined timer for Pausing, Spinning, Turning, CheckingConsole, Moving, and PendingMove
+		private float stateDuration; // Duration for Pausing, Spinning, Turning, CheckingConsole, Moving, and PendingMove
+		private float pendingMoveDuration; // Stored duration for PendingMove state
+		private Vector3 pendingStartPosition; // Stored start position for PendingMove
+		private Vector3 pendingTargetPosition; // Stored target position for PendingMove
+		private int pendingSegmentStartIndex; // Stored segment start index for PendingMove
+		private int pendingSegmentEndIndex; // Stored segment end index for PendingMove
 
 		public static bool isPuzzleBlocked;
 		private bool isLevelComplete;
@@ -48,7 +52,8 @@ namespace ClassicTilestorm
 			Moving,
 			Turning,
 			CheckingConsole,
-			Spinning
+			Spinning,
+			PendingMove
 		}
 		private State currentState = State.Pausing;
 
@@ -63,13 +68,15 @@ namespace ClassicTilestorm
 			currentPath = null;
 			pathStepIndex = currentWaypointIndex = 0;
 			segmentStartIndex = segmentEndIndex = 0;
+			pendingSegmentStartIndex = pendingSegmentEndIndex = 0;
+			pendingMoveDuration = 0f;
+			pendingStartPosition = pendingTargetPosition = Vector3.zero;
 
 			isReturningToStart = hasReachedEnd = false;
 			isLevelComplete = isPuzzleBlocked = false;
 
 			stateTimer = 0f;
 			stateDuration = 1f; // Initial pause duration
-			moveDurationTemp = 0f;
 			wobble = 0.1f;
 			mod1 = mod2 = 0.0f;
 		}
@@ -108,46 +115,22 @@ namespace ClassicTilestorm
 					var animator = mesh.AddComponent<TextureSetAnimator>();
 					animator.Initialize(textureFrames);
 				}
-				else
-				{
-					Debug.LogWarning($"InitializeEggbot: No texture set for {eggbotRoot}");
-				}
 			}
 
 			eggbotRoot.position = mapManager.GetTilePosition(startTile);
-			Debug.Log($"InitializeEggbot: Eggbot placed at tile: {startTile}, position: {eggbotRoot.position}");
-
 			OrientEggbot(startTile);
 			SetState(State.Pausing);
 		}
 
 		private void OrientEggbot(int startTile)
 		{
-			if (mapManager.Waypoints == null || mapManager.Waypoints.Count < 2)
+			var yaw = 0f;
+			if (mapManager.Waypoints != null && mapManager.Waypoints.Count > 1)
 			{
-				Debug.LogWarning("OrientEggbot: Not enough waypoints to orient Eggbot");
-				eggbotRoot.rotation = Quaternion.identity;
-				return;
+				var dir = Navigation.NavToDest(mapManager, mapManager.Waypoints[0].nTile, mapManager.Waypoints[1].nTile);
+				if (0 != dir) yaw = DirToAngle(dir);
 			}
-
-			var fromWaypointIndex = 0;
-			var toWaypointIndex = 1;
-			var destinationTile = mapManager.Waypoints[toWaypointIndex].nTile;
-
-			List<int> path;
-			if (!Navigation.CheckPathBetweenWaypoints(mapManager, fromWaypointIndex, toWaypointIndex, out path) || path == null || path.Count < 2)
-			{
-				Debug.LogWarning($"OrientEggbot: No valid path from tile {startTile} to waypoint {toWaypointIndex}");
-				eggbotRoot.rotation = Quaternion.identity;
-				return;
-			}
-
-			var nextTile = path[1];
-			var direction = Navigation.GetTileOffsetToDirection(mapManager, nextTile - startTile);
-			var yaw = DirToAngle(direction);
-
 			eggbotRoot.rotation = Quaternion.Euler(0f, yaw, 0f);
-			Debug.Log($"OrientEggbot: Oriented to yaw {yaw} toward tile {nextTile}");
 		}
 
 		public void UpdateEggbot()
@@ -195,9 +178,9 @@ namespace ClassicTilestorm
 					if (tTurn >= 1f)
 					{
 						eggbotRoot.rotation = Quaternion.Euler(0f, targetYaw, 0f);
-						if (moveDurationTemp > 0)
+						if (pendingMoveDuration > 0)
 						{
-							StartSegmentMovement(moveDurationTemp);
+							SetState(State.PendingMove);
 						}
 						else if (currentState == State.CheckingConsole)
 						{
@@ -217,7 +200,6 @@ namespace ClassicTilestorm
 						var waypointTile = mapManager.Waypoints[currentWaypointIndex].nTile;
 						var pathClear = Navigation.CheckPathBetweenWaypoints(mapManager, currentWaypointIndex, currentWaypointIndex + 1, out currentPath);
 
-						Debug.Log($"CheckingConsole: pathClear={pathClear}, pathCount={(currentPath != null ? currentPath.Count : 0)}");
 						if (pathClear && currentPath != null && currentPath.Count > 1)
 						{
 							var nextPos = mapManager.GetTilePosition(currentPath[1]);
@@ -292,6 +274,22 @@ namespace ClassicTilestorm
 						MoveToNextWaypoint();
 					}
 					break;
+
+				case State.PendingMove:
+					stateTimer += Time.deltaTime;
+					if (stateTimer >= stateDuration)
+					{
+						startPosition = pendingStartPosition;
+						targetPosition = pendingTargetPosition;
+						segmentStartIndex = pendingSegmentStartIndex;
+						segmentEndIndex = pendingSegmentEndIndex;
+						stateDuration = pendingMoveDuration;
+						pendingMoveDuration = 0f;
+						pendingStartPosition = pendingTargetPosition = Vector3.zero;
+						pendingSegmentStartIndex = pendingSegmentEndIndex = 0;
+						SetState(State.Moving);
+					}
+					break;
 			}
 
 			mod1 += 7.8f * Time.deltaTime;
@@ -310,31 +308,36 @@ namespace ClassicTilestorm
 
 		private void SetState(State state)
 		{
-			Debug.Log($"SetState: {state}, duration={stateDuration}");
 			currentState = state;
 
 			switch (state)
 			{
 				case State.Pausing:
 					stateTimer = 0f;
-					stateDuration = 1f; // Equivalent to pauseDuration
-					moveDurationTemp = 0f;
+					stateDuration = 1f;
+					pendingMoveDuration = 0f;
+					pendingStartPosition = pendingTargetPosition = Vector3.zero;
+					pendingSegmentStartIndex = pendingSegmentEndIndex = 0;
 					break;
 				case State.Moving:
 					stateTimer = 0f;
-					// stateDuration is set in StartSegmentMovement
+					// stateDuration is set in PendingMove or StartSegmentMovement
 					break;
 				case State.Turning:
 					stateTimer = 0f;
-					stateDuration = 1f / 6f; // Equivalent to turnDuration
+					stateDuration = 1f / 6f;
 					break;
 				case State.CheckingConsole:
 					stateTimer = 0f;
-					stateDuration = 0.5f; // Equivalent to consoleCheckDuration
+					stateDuration = 0.5f;
 					break;
 				case State.Spinning:
 					stateTimer = 0f;
-					stateDuration = 1f; // Equivalent to spinDuration
+					stateDuration = 1f;
+					break;
+				case State.PendingMove:
+					stateTimer = 0f;
+					stateDuration = 0.01f; // Minimal duration to trigger transition
 					break;
 			}
 		}
@@ -343,7 +346,6 @@ namespace ClassicTilestorm
 		{
 			if (currentWaypointIndex + 1 >= mapManager.Waypoints?.Count && !isReturningToStart)
 			{
-				Debug.Log("MoveToNextWaypoint: No more waypoints, pausing");
 				SetState(State.Pausing);
 				return;
 			}
@@ -354,12 +356,10 @@ namespace ClassicTilestorm
 				{
 					if (hasReachedEnd)
 					{
-						Debug.Log("MoveToNextWaypoint: Reached start, spinning");
 						StartSpinning();
 					}
 					else
 					{
-						Debug.Log("MoveToNextWaypoint: Resetting return state");
 						isReturningToStart = false;
 						hasReachedEnd = false;
 						isLevelComplete = false;
@@ -370,7 +370,6 @@ namespace ClassicTilestorm
 				var targetWaypoint = 0;
 				if (Navigation.CheckPathBetweenWaypoints(mapManager, currentWaypointIndex, targetWaypoint, out currentPath))
 				{
-					Debug.Log($"MoveToNextWaypoint: Path found to start, length={currentPath?.Count}");
 					isPuzzleBlocked = false;
 					pathStepIndex = 0;
 					segmentStartIndex = segmentEndIndex = 0;
@@ -378,23 +377,21 @@ namespace ClassicTilestorm
 				}
 				else
 				{
-					Debug.Log("MoveToNextWaypoint: No path to start, pausing");
 					SetState(State.Pausing);
 				}
 			}
 			else
 			{
 				var currentTile = mapManager.Waypoints[currentWaypointIndex].nTile;
-				if (Navigation.FindAdjacentConsole(mapManager, currentTile) != -1 && !Navigation.CheckPathBetweenWaypoints(mapManager, currentWaypointIndex, currentWaypointIndex + 1, out _))
+				var dir = Navigation.NavToDest(mapManager, currentTile, mapManager.Waypoints[currentWaypointIndex + 1].nTile);
+				if (Navigation.FindAdjacentConsole(mapManager, currentTile) != -1 && 0 == dir)
 				{
-					Debug.Log("MoveToNextWaypoint: Adjacent console found, checking");
 					CheckAndFaceAdjacentConsole(currentTile);
 					return;
 				}
 
 				if (Navigation.CheckPathBetweenWaypoints(mapManager, currentWaypointIndex, currentWaypointIndex + 1, out currentPath))
 				{
-					Debug.Log($"MoveToNextWaypoint: Path found to next waypoint, length={currentPath?.Count}");
 					isPuzzleBlocked = false;
 					cameraController?.OnPuzzleSolved(currentWaypointIndex);
 					pathStepIndex = 0;
@@ -403,7 +400,6 @@ namespace ClassicTilestorm
 				}
 				else
 				{
-					Debug.Log("MoveToNextWaypoint: No path to next waypoint, pausing");
 					SetState(State.Pausing);
 				}
 			}
@@ -421,7 +417,6 @@ namespace ClassicTilestorm
 					var consoleYaw = DirToAngle(oppositeDir);
 					var currentYaw = eggbotRoot.eulerAngles.y;
 					var yawDelta = Mathf.Abs(Mathf.DeltaAngle(currentYaw, consoleYaw));
-					Debug.Log($"CheckAndFaceAdjacentConsole: currentYaw={currentYaw}, consoleYaw={consoleYaw}, yawDelta={yawDelta}");
 					if (yawDelta > 0.01f)
 					{
 						StartTurning(consoleYaw, false);
@@ -429,7 +424,6 @@ namespace ClassicTilestorm
 					}
 				}
 			}
-			Debug.Log("CheckAndFaceAdjacentConsole: No turn needed, checking console");
 			SetState(State.CheckingConsole);
 		}
 
@@ -437,12 +431,10 @@ namespace ClassicTilestorm
 		{
 			if (currentPath == null || pathStepIndex >= currentPath.Count - 1)
 			{
-				Debug.Log($"PrepareNextSegment: Path ended or null, pathStepIndex={pathStepIndex}");
 				segmentStartIndex = segmentEndIndex = pathStepIndex;
 				startPosition = mapManager.GetTilePosition(currentPath != null && pathStepIndex < currentPath.Count ? currentPath[pathStepIndex] : mapManager.Waypoints[currentWaypointIndex].nTile);
 				targetPosition = startPosition;
-				moveDurationTemp = 0f;
-				StartSegmentMovement(moveDurationTemp);
+				StartSegmentMovement(0f);
 				return;
 			}
 
@@ -459,33 +451,38 @@ namespace ClassicTilestorm
 			}
 
 			segmentStartIndex = pathStepIndex;
-			startPosition = mapManager.GetTilePosition(currentPath[segmentStartIndex]);
-			targetPosition = mapManager.GetTilePosition(currentPath[segmentEndIndex]);
-			var distance = Vector3.Distance(startPosition, targetPosition);
-			moveDurationTemp = (distance + 1.0f) / walkSpeed;
+			pendingStartPosition = mapManager.GetTilePosition(currentPath[segmentStartIndex]);
+			pendingTargetPosition = mapManager.GetTilePosition(currentPath[segmentEndIndex]);
+			var distance = Vector3.Distance(pendingStartPosition, pendingTargetPosition);
+			pendingMoveDuration = (distance + 1.0f) / walkSpeed;
 
-			if (moveDurationTemp <= 0f && segmentEndIndex > segmentStartIndex)
+			if (pendingMoveDuration <= 0f && segmentEndIndex > segmentStartIndex)
 			{
-				moveDurationTemp = ((segmentEndIndex - segmentStartIndex) + 1.0f) / walkSpeed;
+				pendingMoveDuration = ((segmentEndIndex - segmentStartIndex) + 1.0f) / walkSpeed;
 			}
 
-			Debug.Log($"PrepareNextSegment: From tile {currentPath[segmentStartIndex]} to {currentPath[segmentEndIndex]}, duration={moveDurationTemp}");
+			pendingSegmentStartIndex = segmentStartIndex;
+			pendingSegmentEndIndex = segmentEndIndex;
 
 			if (segmentEndIndex > segmentStartIndex)
 			{
-				Vector3 direction = (targetPosition - startPosition).normalized;
+				Vector3 direction = (pendingTargetPosition - pendingStartPosition).normalized;
 				targetYaw = Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg;
 				StartTurning(targetYaw, true);
 			}
 			else
 			{
-				StartSegmentMovement(moveDurationTemp);
+				startPosition = pendingStartPosition;
+				targetPosition = pendingTargetPosition;
+				segmentStartIndex = pendingSegmentStartIndex;
+				segmentEndIndex = pendingSegmentEndIndex;
+				StartSegmentMovement(pendingMoveDuration);
 			}
 		}
 
-		private void StartSegmentMovement(float moveDurationTemp)
+		private void StartSegmentMovement(float moveDuration)
 		{
-			stateDuration = moveDurationTemp;
+			stateDuration = moveDuration;
 			SetState(State.Moving);
 		}
 
@@ -493,7 +490,12 @@ namespace ClassicTilestorm
 		{
 			startYaw = eggbotRoot.eulerAngles.y;
 			targetYaw = newTargetYaw;
-			moveDurationTemp = continueMoving ? moveDurationTemp : 0f;
+			if (!continueMoving)
+			{
+				pendingMoveDuration = 0f;
+				pendingStartPosition = pendingTargetPosition = Vector3.zero;
+				pendingSegmentStartIndex = pendingSegmentEndIndex = 0;
+			}
 			SetState(State.Turning);
 		}
 

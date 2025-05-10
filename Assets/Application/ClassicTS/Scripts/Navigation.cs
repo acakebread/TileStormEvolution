@@ -124,6 +124,36 @@ namespace ClassicTilestorm
 			return path != null;
 		}
 
+		//Classic TS legacy function - returns direction - ToDo rewrite correctly
+		public static int NavToDest(IMap map, int src, int dst)
+		{
+			var path = FindPath(map, src, dst);
+			if (null == path || path.Count < 2) return 0;
+			return GetTileOffsetToDirection(map, path[1] - path[0]);
+		}
+
+		//Classic TS legacy function - returns Length in direction - ToDo rewrite correctly
+		public static float LengthDir(IMap map, int nSrc, int nDst, int nDir)
+		{
+			int nNav = TileProperties.GetOppositeDirection(nDir);
+			float fRet = 0.0f;
+			while (0!=nDir)
+			{
+				nSrc = GetAdjacentTile(map, nSrc, nDir);
+
+				var props = map.GetTileProperties(nSrc);
+				if (null == props) break;
+
+				int nNew = props.Nav;
+				nNav = nNav & nNew;
+				if (0 == nNav) break;
+				nDir = nDir & nNew;
+				fRet += 1.0f;
+				if (nSrc == nDst) break;
+			}
+			return fRet;
+		}
+
 		public static List<int> FindPath(IMap map, int startTile, int targetTile)
 		{
 			var startProps = map.GetTileProperties(startTile);
