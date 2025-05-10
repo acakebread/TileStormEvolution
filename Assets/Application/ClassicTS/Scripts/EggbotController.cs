@@ -13,16 +13,15 @@ namespace ClassicTilestorm
 		private Transform eggbotMesh;
 
 		private int currentTile; // Tracks current tile index
-		private int dstWaypoint; // Tracks the target waypoint index (replaces currentWaypointIndex)
+		private int dstWaypoint; // Tracks the target waypoint index
 
-		private float stateTimer; // Combined timer for Pausing, Spinning, Turning, CheckingConsole, Moving
-		private float stateDuration; // Duration for Pausing, Spinning, Turning, CheckingConsole, Moving
+		private float stateTimer; // Timer for current state
+		private float stateDuration; // Duration for current state
 
 		private bool isLevelComplete; // ToDo replace with event / action
 		public bool IsLevelComplete => isLevelComplete; // ToDo replace with event / action
 
 		private float walkSpeed = 6f;
-
 		private Vector3 startPosition;
 		private Vector3 targetPosition;
 
@@ -35,18 +34,17 @@ namespace ClassicTilestorm
 		private static float mod1 = 0.0f;
 		private static float mod2 = 0.0f;
 
-		private enum State { IDLE, MOVE, TURN, SPIN }
+		private enum State { IDLE, TEST, TURN, MOVE, SPIN }
 		private State currentState = State.IDLE;
 
 		public void Initialize()
 		{
 			Reset();
 
-			//Initialize Eggbot
-			if (mapManager == null) { Debug.LogError("InitializeEggbot: mapManager is null"); return; }
+			if (mapManager == null) { Debug.LogError("Initialize: mapManager is null"); return; }
 
 			var startTile = Navigation.GetStartTile(mapManager);
-			if (-1 == startTile) { Debug.LogError("InitializeEggbot: No start tile found"); return; }
+			if (startTile == -1) { Debug.LogError("Initialize: No start tile found"); return; }
 
 			currentTile = startTile;
 
@@ -57,10 +55,10 @@ namespace ClassicTilestorm
 
 			var eggbotCostume = string.IsNullOrEmpty(mapManager.EggbotCostume) ? "Eggbot Default" : mapManager.EggbotCostume;
 			var def = DatabaseLoader.TileDefs.FirstOrDefault(td => td.szType == "Eggbot" && td.szTheme == eggbotCostume);
-			if (def == null || def.szGeom == null) { Debug.LogError($"InitializeEggbot: No Eggbot definition found for costume: {eggbotCostume}"); return; }
+			if (def == null || def.szGeom == null) { Debug.LogError($"Initialize: No Eggbot definition found for costume: {eggbotCostume}"); return; }
 
 			var prefab = GeometryManager.Get(def.szGeom);
-			if (prefab == null) { Debug.LogError($"InitializeEggbot: Failed to load prefab for geometry: {def.szGeom}"); return; }
+			if (prefab == null) { Debug.LogError($"Initialize: Failed to load prefab for geometry: {def.szGeom}"); return; }
 			var mesh = Instantiate(prefab, eggbotRoot);
 			mesh.name = "Mesh";
 			eggbotMesh = mesh.transform;
@@ -79,10 +77,7 @@ namespace ClassicTilestorm
 				}
 			}
 
-			//Position Eggbot
 			eggbotRoot.position = mapManager.GetTilePosition(startTile);
-
-			//Orient Eggbot
 			eggbotRoot.rotation = Quaternion.Euler(0f, mapManager.Waypoints != null && mapManager.Waypoints.Count > 1 ? DirToAngle(Navigation.NavToDest(mapManager, mapManager.Waypoints[0].nTile, mapManager.Waypoints[1].nTile)) : 0f, 0f);
 
 			SetState(State.IDLE);
@@ -110,11 +105,18 @@ namespace ClassicTilestorm
 
 		public void UpdateEggbot()
 		{
+			if (mapManager.Waypoints?.Count == 0)
+				return;
+
 			stateTimer += Time.deltaTime;
+
 			switch (currentState)
 			{
-				case State.SPIN:
-					UpdateSpin();
+				case State.IDLE:
+					UpdateIdle();
+					break;
+				case State.TEST:
+					UpdateTest();
 					break;
 				case State.TURN:
 					UpdateTurn();
@@ -122,10 +124,11 @@ namespace ClassicTilestorm
 				case State.MOVE:
 					UpdateMove();
 					break;
-				case State.IDLE:
-					UpdateIdle();
+				case State.SPIN:
+					UpdateSpin();
 					break;
 			}
+
 			UpdateWobble();
 		}
 
@@ -137,13 +140,11 @@ namespace ClassicTilestorm
 			var displayAngle = angle % 360f;
 			eggbotRoot.rotation = Quaternion.Euler(0f, startYaw + displayAngle, 0f);
 
-			eggbotMesh.localPosition = Vector3.zero;
-			eggbotMesh.localRotation = Quaternion.identity;
-
 			if (tSpin >= 1f)
 			{
 				eggbotRoot.rotation = Quaternion.Euler(0f, startYaw + 180f, 0f);
-				SetState(State.IDLE, 0.2f);
+				SetNextDestination(); // Advance to next waypoint after spin
+				SetState(State.TEST, 0.2f);
 			}
 		}
 
@@ -157,7 +158,7 @@ namespace ClassicTilestorm
 			if (tTurn >= 1f)
 			{
 				eggbotRoot.rotation = Quaternion.Euler(0f, targetYaw, 0f);
-				SetState(State.IDLE); // After turning, idle to re-evaluate
+				SetState(State.TEST, 0.2f); // After turning, re-evaluate
 			}
 		}
 
@@ -170,63 +171,44 @@ namespace ClassicTilestorm
 			if (tMove >= 1f)
 			{
 				eggbotRoot.position = targetPosition;
-				int destinationTile = mapManager.Waypoints[dstWaypoint].nTile;
-
-				if (currentTile == destinationTile) // Reached destination waypoint
-				{
-					cameraController?.OnWaypointReached(dstWaypoint);
-
-					if (currentTile == Navigation.GetEndTile(mapManager))
-					{
-						isLevelComplete = true; // ToDo invoke event
-						StartSpinning();
-					}
-					else if (currentTile == Navigation.GetStartTile(mapManager) && dstWaypoint == 0)
-					{
-						StartSpinning();
-					}
-					else
-					{
-						CheckAndFaceAdjacentConsole(currentTile);
-					}
-				}
-				else
-				{
-					PrepareNextSegment();
-				}
-			}
-
-			bool CheckAndFaceAdjacentConsole(int tile)
-			{
-				var consoleTile = Navigation.FindAdjacentConsole(mapManager, tile);
-				if (consoleTile != -1)
-				{
-					var consoleProps = mapManager.GetTileProperties(consoleTile);
-					if (consoleProps?.Nav != 0)
-					{
-						var oppositeDir = TileProperties.GetOppositeDirection(consoleProps.Nav);
-						var consoleYaw = DirToAngle(oppositeDir);
-						var currentYaw = eggbotRoot.eulerAngles.y;
-						var yawDelta = Mathf.Abs(Mathf.DeltaAngle(currentYaw, consoleYaw));
-						if (yawDelta > 0.01f)
-						{
-							StartTurning(consoleYaw);
-							return true;
-						}
-					}
-				}
-				SetState(State.IDLE); // Idle after facing console, re-evaluate in MoveToDestination
-				return false;
+				SetState(State.IDLE); // Re-evaluate after move
 			}
 		}
 
 		private void UpdateIdle()
 		{
 			if (stateTimer >= stateDuration)
-				MoveToDestination();
+				SetState(State.TEST, 0f);
 		}
 
-		private void UpdateWobble()// update Eggbot idle wobble
+		private void UpdateTest()
+		{
+			if (stateTimer >= stateDuration)
+			{
+				// Evaluate behavior
+				var destinationTile = mapManager.Waypoints[dstWaypoint].nTile;
+
+				if (currentTile != destinationTile)
+				{
+					if (MoveToDestination())
+						return;
+					if (FaceConsole())
+						return;
+				}
+				else
+				{
+					if (TestDestination())
+						return;
+					if (FaceConsole())
+						return;
+					SetNextDestination();
+				}
+
+				SetState(State.IDLE); // Default to idle if no action taken
+			}
+		}
+
+		private void UpdateWobble()
 		{
 			mod1 += 7.8f * Time.deltaTime;
 			mod2 += 1.8f * Time.deltaTime;
@@ -242,55 +224,82 @@ namespace ClassicTilestorm
 			eggbotMesh.localRotation = pitchRotation;
 		}
 
-		private void MoveToDestination()
+		private bool FaceConsole()
+		{
+			var consoleTile = Navigation.FindAdjacentConsole(mapManager, currentTile);
+			if (consoleTile == -1)
+				return false;
+
+			var consoleProps = mapManager.GetTileProperties(consoleTile);
+			if (consoleProps?.Nav == 0)
+				return false;
+
+			var oppositeDir = TileProperties.GetOppositeDirection(consoleProps.Nav);
+			var consoleYaw = DirToAngle(oppositeDir);
+			var currentYaw = eggbotRoot.eulerAngles.y;
+			var yawDelta = Mathf.Abs(Mathf.DeltaAngle(currentYaw, consoleYaw));
+			if (yawDelta > 0.01f)
+			{
+				StartTurning(consoleYaw);
+				return true;
+			}
+
+			return false; // Already facing console, no action needed
+		}
+
+		private bool TestDestination()
 		{
 			var destinationTile = mapManager.Waypoints[dstWaypoint].nTile;
-
-			if (currentTile != destinationTile)
+			if (destinationTile == Navigation.GetEndTile(mapManager))
 			{
-				if (0 != Navigation.NavToDest(mapManager, currentTile, destinationTile))
-				{
-					cameraController?.OnPuzzleSolved(dstWaypoint - 1); // Notify previous waypoint solved
-					PrepareNextSegment();
-				}
-				return;
+				isLevelComplete = true; // ToDo invoke event
+				StartSpinning();
+				return true;
 			}
-			SetNextDestination();
-			SetState(State.IDLE);
+			if (destinationTile == Navigation.GetStartTile(mapManager) && dstWaypoint == 0)
+			{
+				StartSpinning();
+				return true;
+			}
+
+			cameraController?.OnWaypointReached(dstWaypoint);
+			return false;
 		}
 
-		private void PrepareNextSegment()
+		private bool MoveToDestination()
 		{
-			var dst = mapManager.Waypoints[dstWaypoint].nTile;
-			var direction = Navigation.NavToDest(mapManager, currentTile, dst);
-			var length = Navigation.LengthDir(mapManager, currentTile, dst, direction);
+			var destinationTile = mapManager.Waypoints[dstWaypoint].nTile;
+			var direction = Navigation.NavToDest(mapManager, currentTile, destinationTile);
+			if (direction == 0)
+				return false;
+
+			var length = Navigation.LengthDir(mapManager, currentTile, destinationTile, direction);
 			targetYaw = DirToAngle(direction);
-			if (targetYaw != eggbotRoot.eulerAngles.y)
+			if (eggbotRoot.eulerAngles.y != targetYaw)
 			{
 				StartTurning(targetYaw);
-				return;
+				return true;
 			}
 
-			if (0 != direction)
-			{
-				// Compute movement parameters
-				startPosition = mapManager.GetTilePosition(currentTile);
-				var (dx, dz) = TileProperties.GetDirectionOffset(direction);
-				var gridCoord = mapManager.GetTileCoordinates(currentTile).Add(dx * (int)length, dz * (int)length);
-				currentTile = mapManager.ToIndex(gridCoord);
-				targetPosition = gridCoord.ToPosition();
-				SetState(State.MOVE, (length + 1.0f) / walkSpeed);
-				return;
-			}
-			SetState(State.IDLE);
+			startPosition = mapManager.GetTilePosition(currentTile);
+			var (dx, dz) = TileProperties.GetDirectionOffset(direction);
+			var gridCoord = mapManager.GetTileCoordinates(currentTile).Add(dx * (int)length, dz * (int)length);
+			currentTile = mapManager.ToIndex(gridCoord);
+			targetPosition = gridCoord.ToPosition();
+			SetState(State.MOVE, (length + 1.0f) / walkSpeed);
+			cameraController?.OnPuzzleSolved(dstWaypoint - 1); // Notify previous waypoint solved
+			return true;
 		}
 
-		private void SetNextDestination() => dstWaypoint = (dstWaypoint + 1) % mapManager.Waypoints.Count;
+		private void SetNextDestination()
+		{
+			dstWaypoint = (dstWaypoint + 1) % mapManager.Waypoints.Count;
+		}
 
 		private void StartTurning(float dstYaw)
 		{
-			targetYaw = dstYaw;
 			startYaw = eggbotRoot.eulerAngles.y;
+			targetYaw = dstYaw;
 			SetState(State.TURN, 1f / 6f);
 		}
 
