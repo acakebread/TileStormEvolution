@@ -100,29 +100,19 @@ namespace ClassicTilestorm
 			return generatedWaypoints;
 		}
 
-		//public static bool CheckPathBetweenWaypoints(IMap map, int currentWaypointIndex, out List<int> path)
+		//public static bool CheckPathBetweenWaypoints(IMap map, int fromWaypointIndex, int toWaypointIndex, out List<int> path)
 		//{
-		//	path = null;
-		//	if (map.Waypoints == null || currentWaypointIndex < 0 || currentWaypointIndex + 1 >= map.Waypoints.Count) return false;
-		//	var startTile = map.Waypoints[currentWaypointIndex].nTile;
-		//	var targetTile = map.Waypoints[currentWaypointIndex + 1].nTile;
-		//	path = FindPath(map, startTile, targetTile);
+		//	if (fromWaypointIndex < 0 || fromWaypointIndex >= map.Waypoints.Count || toWaypointIndex < 0 || toWaypointIndex >= map.Waypoints.Count)
+		//	{
+		//		path = null;
+		//		return false;
+		//	}
+		//	int fromTile = map.Waypoints[fromWaypointIndex].nTile;
+		//	int toTile = map.Waypoints[toWaypointIndex].nTile;
+
+		//	path = FindPath(map, fromTile, toTile);
 		//	return path != null;
 		//}
-
-		public static bool CheckPathBetweenWaypoints(IMap map, int fromWaypointIndex, int toWaypointIndex, out List<int> path)
-		{
-			if (fromWaypointIndex < 0 || fromWaypointIndex >= map.Waypoints.Count || toWaypointIndex < 0 || toWaypointIndex >= map.Waypoints.Count)
-			{
-				path = null;
-				return false;
-			}
-			int fromTile = map.Waypoints[fromWaypointIndex].nTile;
-			int toTile = map.Waypoints[toWaypointIndex].nTile;
-
-			path = FindPath(map, fromTile, toTile);
-			return path != null;
-		}
 
 		//Classic TS legacy function - returns direction - ToDo rewrite correctly
 		public static int NavToDest(IMap map, int src, int dst)
@@ -137,7 +127,7 @@ namespace ClassicTilestorm
 		{
 			int nNav = TileProperties.GetOppositeDirection(nDir);
 			float fRet = 0.0f;
-			while (0!=nDir)
+			while (0 != nDir)
 			{
 				nSrc = GetAdjacentTile(map, nSrc, nDir);
 

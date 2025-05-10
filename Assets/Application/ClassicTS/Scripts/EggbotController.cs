@@ -1,5 +1,4 @@
 ﻿using UnityEngine;
-using System.Collections.Generic;
 using System.Linq;
 
 namespace ClassicTilestorm
@@ -13,8 +12,7 @@ namespace ClassicTilestorm
 		public Transform eggbotRoot;
 		private Transform eggbotMesh;
 
-		private List<int> currentPath;
-		private int pathStepIndex;
+		private int currentTile; // Tracks current tile index
 		private int currentWaypointIndex;
 		private bool isReturningToStart;
 		private bool hasReachedEnd;
@@ -25,9 +23,6 @@ namespace ClassicTilestorm
 		private float pendingMoveDuration; // Stored duration for PendingMove state
 		private Vector3 pendingStartPosition; // Stored start position for PendingMove
 		private Vector3 pendingTargetPosition; // Stored target position for PendingMove
-		private int pendingSegmentEndIndex; // Stored segment end index for PendingMove
-
-		private int segmentEndIndex;// to do get rid of this!
 
 		public static bool isPuzzleBlocked;
 		private bool isLevelComplete;
@@ -65,10 +60,8 @@ namespace ClassicTilestorm
 
 		public void Reset()
 		{
-			currentPath = null;
-			pathStepIndex = currentWaypointIndex = 0;
-			segmentEndIndex = 0;
-			pendingSegmentEndIndex = 0;
+			currentTile = -1;
+			currentWaypointIndex = 0;
 			pendingMoveDuration = 0f;
 			pendingStartPosition = pendingTargetPosition = Vector3.zero;
 
@@ -87,6 +80,8 @@ namespace ClassicTilestorm
 
 			int startTile = Navigation.GetStartTile(mapManager);
 			if (startTile == -1) { Debug.LogError("InitializeEggbot: No start tile found"); return; }
+
+			currentTile = startTile;
 
 			if (eggbotRoot != null) Destroy(eggbotRoot.gameObject);
 
@@ -138,10 +133,11 @@ namespace ClassicTilestorm
 			if (mapManager.Waypoints?.Count == 0)
 				return;
 
+			stateTimer += Time.deltaTime;
+
 			switch (currentState)
 			{
 				case State.Spinning:
-					stateTimer += Time.deltaTime;
 					var tSpin = Mathf.Clamp01(stateTimer / stateDuration);
 					var cosTSpin = (1f - Mathf.Cos(tSpin * Mathf.PI)) / 2f;
 					var angle = cosTSpin * spinAngle;
@@ -169,7 +165,6 @@ namespace ClassicTilestorm
 					break;
 
 				case State.Turning:
-					stateTimer += Time.deltaTime;
 					var tTurn = Mathf.Clamp01(stateTimer / stateDuration);
 					var cosTTurn = (1f - Mathf.Cos(tTurn * Mathf.PI)) / 2f;
 					var currentYaw = Mathf.LerpAngle(startYaw, targetYaw, cosTTurn);
@@ -194,7 +189,6 @@ namespace ClassicTilestorm
 					break;
 
 				case State.CheckingConsole:
-					stateTimer += Time.deltaTime;
 					if (stateTimer >= stateDuration)
 					{
 						var waypointTile = mapManager.Waypoints[currentWaypointIndex].nTile;
@@ -214,7 +208,6 @@ namespace ClassicTilestorm
 					break;
 
 				case State.Moving:
-					stateTimer += Time.deltaTime;
 					var tMove = stateDuration > 0 ? Mathf.Clamp01(stateTimer / stateDuration) : 1f;
 					var cosTMove = (1f - Mathf.Cos(tMove * Mathf.PI)) / 2f;
 					eggbotRoot.position = Vector3.Lerp(startPosition, targetPosition, cosTMove);
@@ -222,18 +215,18 @@ namespace ClassicTilestorm
 					if (tMove >= 1f)
 					{
 						eggbotRoot.position = targetPosition;
-						pathStepIndex = segmentEndIndex;
 
-						if (currentPath == null || pathStepIndex >= currentPath.Count - 1)
+						// Check if we've reached the destination waypoint's tile
+						int destinationTile = isReturningToStart ? mapManager.Waypoints[0].nTile : mapManager.Waypoints[currentWaypointIndex + 1].nTile;
+						if (currentTile == destinationTile)
 						{
 							currentWaypointIndex = isReturningToStart ? 0 : currentWaypointIndex + 1;
-							currentPath = null;
-							segmentEndIndex = 0;
 
 							if (currentWaypointIndex < mapManager.Waypoints?.Count)
 							{
 								int waypointTile = mapManager.Waypoints[currentWaypointIndex].nTile;
 								eggbotRoot.position = mapManager.GetTilePosition(waypointTile);
+								currentTile = waypointTile;
 								var tileProps = mapManager.GetTileProperties(waypointTile);
 								cameraController?.OnWaypointReached(currentWaypointIndex);
 
@@ -265,7 +258,6 @@ namespace ClassicTilestorm
 					break;
 
 				case State.Pausing:
-					stateTimer += Time.deltaTime;
 					if (stateTimer >= stateDuration)
 					{
 						MoveToNextWaypoint();
@@ -273,16 +265,13 @@ namespace ClassicTilestorm
 					break;
 
 				case State.PendingMove:
-					stateTimer += Time.deltaTime;
 					if (stateTimer >= stateDuration)
 					{
 						startPosition = pendingStartPosition;
 						targetPosition = pendingTargetPosition;
-						segmentEndIndex = pendingSegmentEndIndex;
 						stateDuration = pendingMoveDuration;
 						pendingMoveDuration = 0f;
 						pendingStartPosition = pendingTargetPosition = Vector3.zero;
-						pendingSegmentEndIndex = 0;
 						SetState(State.Moving);
 					}
 					break;
@@ -313,7 +302,6 @@ namespace ClassicTilestorm
 					stateDuration = 1f;
 					pendingMoveDuration = 0f;
 					pendingStartPosition = pendingTargetPosition = Vector3.zero;
-					pendingSegmentEndIndex = 0;
 					break;
 				case State.Moving:
 					stateTimer = 0f;
@@ -363,39 +351,40 @@ namespace ClassicTilestorm
 					}
 					return;
 				}
-				var targetWaypoint = 0;
-				if (Navigation.CheckPathBetweenWaypoints(mapManager, currentWaypointIndex, targetWaypoint, out currentPath))
+				var targetWaypoint = mapManager.Waypoints[0].nTile;
+				var direction = Navigation.NavToDest(mapManager, currentTile, targetWaypoint);
+				if (direction != 0)
 				{
 					isPuzzleBlocked = false;
-					pathStepIndex = 0;
-					segmentEndIndex = 0;
 					PrepareNextSegment();
 				}
 				else
 				{
+					isPuzzleBlocked = true;
 					SetState(State.Pausing);
 				}
 			}
 			else
 			{
-				var currentTile = mapManager.Waypoints[currentWaypointIndex].nTile;
-				var dir = Navigation.NavToDest(mapManager, currentTile, mapManager.Waypoints[currentWaypointIndex + 1].nTile);
-				if (Navigation.FindAdjacentConsole(mapManager, currentTile) != -1 && 0 == dir)
+				var currentWaypointTile = mapManager.Waypoints[currentWaypointIndex].nTile;
+				var nextWaypointTile = mapManager.Waypoints[currentWaypointIndex + 1].nTile;
+				var dir = Navigation.NavToDest(mapManager, currentWaypointTile, nextWaypointTile);
+				if (Navigation.FindAdjacentConsole(mapManager, currentWaypointTile) != -1 && 0 == dir)
 				{
-					CheckAndFaceAdjacentConsole(currentTile);
+					CheckAndFaceAdjacentConsole(currentWaypointTile);
 					return;
 				}
 
-				if (Navigation.CheckPathBetweenWaypoints(mapManager, currentWaypointIndex, currentWaypointIndex + 1, out currentPath))
+				if (dir != 0)
 				{
 					isPuzzleBlocked = false;
 					cameraController?.OnPuzzleSolved(currentWaypointIndex);
-					pathStepIndex = 0;
-					segmentEndIndex = 0;
+					currentTile = currentWaypointTile;
 					PrepareNextSegment();
 				}
 				else
 				{
+					isPuzzleBlocked = true;
 					SetState(State.Pausing);
 				}
 			}
@@ -425,20 +414,10 @@ namespace ClassicTilestorm
 
 		private void PrepareNextSegment()
 		{
-			if (currentPath == null || pathStepIndex >= currentPath.Count - 1)
-			{
-				segmentEndIndex = pathStepIndex;
-				targetPosition = startPosition = mapManager.GetTilePosition(currentPath != null && pathStepIndex < currentPath.Count ? currentPath[pathStepIndex] : mapManager.Waypoints[currentWaypointIndex].nTile);
-				StartSegmentMovement(0f);
-				return;
-			}
-
-			var currentTile = currentPath[pathStepIndex];
-			var destinationTile = currentPath[currentPath.Count - 1];
+			int destinationTile = isReturningToStart ? mapManager.Waypoints[0].nTile : mapManager.Waypoints[currentWaypointIndex + 1].nTile;
 			var direction = Navigation.NavToDest(mapManager, currentTile, destinationTile);
 			if (direction == 0)
 			{
-				segmentEndIndex = pathStepIndex;
 				startPosition = mapManager.GetTilePosition(currentTile);
 				targetPosition = startPosition;
 				StartSegmentMovement(0f);
@@ -447,27 +426,25 @@ namespace ClassicTilestorm
 
 			var length = Navigation.LengthDir(mapManager, currentTile, destinationTile, direction);
 
-			pendingSegmentEndIndex = pathStepIndex + (int)length;
-			segmentEndIndex = pendingSegmentEndIndex;
-
 			pendingStartPosition = mapManager.GetTilePosition(currentTile);
-
 			var (dx, dz) = TileProperties.GetDirectionOffset(direction);
-			pendingTargetPosition = mapManager.GetTileCoordinates(currentTile).Add(dx * (int)length, dz * (int)length).ToPosition();
+
+			var gridCoord = mapManager.GetTileCoordinates(currentTile).Add(dx * (int)length, dz * (int)length);
+			pendingTargetPosition = gridCoord.ToPosition();
 			pendingMoveDuration = (length + 1.0f) / walkSpeed;
 
-			pendingSegmentEndIndex = pathStepIndex + (int)length;
+			// Update currentTile to the tile at the end of the segment
+			currentTile = mapManager.ToIndex(gridCoord);
 
 			if (length > 0)
 			{
-				targetYaw = DirToAngle(Navigation.NavToDest(mapManager, currentTile, destinationTile));
+				targetYaw = DirToAngle(direction);
 				StartTurning(targetYaw, true);
 			}
 			else
 			{
 				startPosition = pendingStartPosition;
 				targetPosition = pendingTargetPosition;
-				segmentEndIndex = pendingSegmentEndIndex;
 				StartSegmentMovement(pendingMoveDuration);
 			}
 		}
@@ -486,7 +463,6 @@ namespace ClassicTilestorm
 			{
 				pendingMoveDuration = 0f;
 				pendingStartPosition = pendingTargetPosition = Vector3.zero;
-				pendingSegmentEndIndex = 0;
 			}
 			SetState(State.Turning);
 		}
