@@ -16,13 +16,10 @@ namespace ClassicTilestorm
 		private int currentWaypointIndex;
 		private bool isReturningToStart;
 		private bool hasReachedEnd;
+		private bool continueToMove; // Flag to indicate Turning should transition to Moving
 
 		private float stateTimer; // Combined timer for Pausing, Spinning, Turning, CheckingConsole, Moving
 		private float stateDuration; // Duration for Pausing, Spinning, Turning, CheckingConsole, Moving
-
-		private Vector3 nextStartPosition; // Stored start position for next move during Turning
-		private Vector3 nextTargetPosition; // Stored target position for next move during Turning
-		private float nextMoveDuration; // Stored duration for next move during Turning
 
 		public static bool isPuzzleBlocked;
 		private bool isLevelComplete;
@@ -61,8 +58,7 @@ namespace ClassicTilestorm
 		{
 			currentTile = -1;
 			currentWaypointIndex = 0;
-			nextMoveDuration = 0f;
-			nextStartPosition = nextTargetPosition = Vector3.zero;
+			continueToMove = false;
 
 			isReturningToStart = hasReachedEnd = false;
 			isLevelComplete = isPuzzleBlocked = false;
@@ -172,13 +168,9 @@ namespace ClassicTilestorm
 					if (tTurn >= 1f)
 					{
 						eggbotRoot.rotation = Quaternion.Euler(0f, targetYaw, 0f);
-						if (nextMoveDuration > 0)
+						if (continueToMove)
 						{
-							startPosition = nextStartPosition;
-							targetPosition = nextTargetPosition;
-							stateDuration = nextMoveDuration;
-							nextMoveDuration = 0f;
-							nextStartPosition = nextTargetPosition = Vector3.zero;
+							continueToMove = false;
 							SetState(State.Moving);
 						}
 						else
@@ -197,22 +189,9 @@ namespace ClassicTilestorm
 						var pathClear = 0 != direction;
 						if (pathClear)
 						{
-							// Notify camera that the puzzle is solved
 							cameraController?.OnPuzzleSolved(currentWaypointIndex);
-
-							// Prepare movement parameters like PrepareNextSegment
-							var length = Navigation.LengthDir(mapManager, waypointTile, nextWaypointTile, direction);
-							var startPos = mapManager.GetTilePosition(waypointTile);
-							var (dx, dz) = TileProperties.GetDirectionOffset(direction);
-							var gridCoord = mapManager.GetTileCoordinates(waypointTile).Add(dx * (int)length, dz * (int)length);
-							var targetPos = gridCoord.ToPosition();
-							var moveDuration = (length + 1.0f) / walkSpeed;
-
-							// Update currentTile to the segment's end tile
-							currentTile = mapManager.ToIndex(gridCoord);
-
 							var pathYaw = DirToAngle(direction);
-							StartTurning(pathYaw, true, startPos, targetPos, moveDuration);
+							StartTurning(pathYaw, true);
 						}
 						else
 						{
@@ -303,12 +282,29 @@ namespace ClassicTilestorm
 				case State.Pausing:
 					stateTimer = 0f;
 					stateDuration = 1f;
-					nextMoveDuration = 0f;
-					nextStartPosition = nextTargetPosition = Vector3.zero;
+					continueToMove = false;
 					break;
 				case State.Moving:
 					stateTimer = 0f;
-					// stateDuration is set in Turning or StartSegmentMovement
+					// Compute movement parameters
+					int destinationTile = isReturningToStart ? mapManager.Waypoints[0].nTile : mapManager.Waypoints[currentWaypointIndex + 1].nTile;
+					var direction = Navigation.NavToDest(mapManager, currentTile, destinationTile);
+					if (direction == 0)
+					{
+						startPosition = mapManager.GetTilePosition(currentTile);
+						targetPosition = startPosition;
+						stateDuration = 0f;
+					}
+					else
+					{
+						var length = Navigation.LengthDir(mapManager, currentTile, destinationTile, direction);
+						startPosition = mapManager.GetTilePosition(currentTile);
+						var (dx, dz) = TileProperties.GetDirectionOffset(direction);
+						var gridCoord = mapManager.GetTileCoordinates(currentTile).Add(dx * (int)length, dz * (int)length);
+						targetPosition = gridCoord.ToPosition();
+						stateDuration = (length + 1.0f) / walkSpeed;
+						currentTile = mapManager.ToIndex(gridCoord);
+					}
 					break;
 				case State.Turning:
 					stateTimer = 0f;
@@ -417,57 +413,27 @@ namespace ClassicTilestorm
 			var direction = Navigation.NavToDest(mapManager, currentTile, destinationTile);
 			if (direction == 0)
 			{
-				startPosition = mapManager.GetTilePosition(currentTile);
-				targetPosition = startPosition;
-				StartSegmentMovement(0f);
+				SetState(State.Moving);
 				return;
 			}
 
 			var length = Navigation.LengthDir(mapManager, currentTile, destinationTile, direction);
-
-			var startPos = mapManager.GetTilePosition(currentTile);
-			var (dx, dz) = TileProperties.GetDirectionOffset(direction);
-			var gridCoord = mapManager.GetTileCoordinates(currentTile).Add(dx * (int)length, dz * (int)length);
-			var targetPos = gridCoord.ToPosition();
-			var moveDuration = (length + 1.0f) / walkSpeed;
-
-			// Update currentTile to the tile at the end of the segment
-			currentTile = mapManager.ToIndex(gridCoord);
-
 			if (length > 0)
 			{
 				targetYaw = DirToAngle(direction);
-				StartTurning(targetYaw, true, startPos, targetPos, moveDuration);
+				StartTurning(targetYaw, true);
 			}
 			else
 			{
-				startPosition = startPos;
-				targetPosition = targetPos;
-				StartSegmentMovement(moveDuration);
+				SetState(State.Moving);
 			}
 		}
 
-		private void StartSegmentMovement(float moveDuration)
-		{
-			stateDuration = moveDuration;
-			SetState(State.Moving);
-		}
-
-		private void StartTurning(float newTargetYaw, bool continueMoving, Vector3 startPos = default, Vector3 targetPos = default, float moveDuration = 0f)
+		private void StartTurning(float newTargetYaw, bool continueMoving)
 		{
 			startYaw = eggbotRoot.eulerAngles.y;
 			targetYaw = newTargetYaw;
-			if (continueMoving)
-			{
-				nextStartPosition = startPos;
-				nextTargetPosition = targetPos;
-				nextMoveDuration = moveDuration;
-			}
-			else
-			{
-				nextMoveDuration = 0f;
-				nextStartPosition = nextTargetPosition = Vector3.zero;
-			}
+			continueToMove = continueMoving;
 			SetState(State.Turning);
 		}
 
