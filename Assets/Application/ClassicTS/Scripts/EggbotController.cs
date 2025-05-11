@@ -1,12 +1,12 @@
 ﻿using UnityEngine;
 using System.Linq;
+using System.Collections.Generic;
 
 namespace ClassicTilestorm
 {
 	public class EggbotController : MonoBehaviour
 	{
 		private MapManager mapManager => GamePreview.mapManager;
-		private CameraController cameraController => GamePreview.cameraController;
 
 		[HideInInspector] public Transform eggbotRoot;
 		private Transform eggbotMesh;
@@ -26,12 +26,16 @@ namespace ClassicTilestorm
 		private const float SpinAngle = 1260f;
 
 		private float sway = 0.1f;
-		private static float mod1;
-		private static float mod2;
+		private float mod1, mod2;
 
+		private Queue<System.Action<State>> actionQueue = new();
 		private enum State { IDLE, TURN, MOVE }
 		private State currentState = State.IDLE;
 		private System.Action<State> onActionComplete;
+
+		public event System.Action<int> OnWaypointReached;
+		public event System.Action<int> OnPuzzleSolved;
+		public event System.Action OnLevelCompleted;
 
 		public void Initialize()
 		{
@@ -51,7 +55,6 @@ namespace ClassicTilestorm
 			eggbotMesh = mesh.transform;
 			eggbotMesh.localPosition = Vector3.zero;
 			eggbotMesh.localRotation = Quaternion.identity;
-			Debug.Log($"Eggbot mesh localPosition: {eggbotMesh.localPosition}");
 
 			if (null != DatabaseLoader.Themes.FirstOrDefault(t => t.name == def.szTheme)?.szTileTextureSet)
 				mesh.AddComponent<TextureSetAnimator>().Initialize(TextureSetManager.GetTextureFrames(DatabaseLoader.Themes.FirstOrDefault(t => t.name == def.szTheme).szTileTextureSet));
@@ -71,6 +74,7 @@ namespace ClassicTilestorm
 			mod1 = mod2 = 0f;
 			isLevelComplete = false;
 			onActionComplete = null;
+			actionQueue.Clear();
 		}
 
 		private void SetState(State state, float duration = 1f, System.Action<State> onComplete = null)
@@ -80,6 +84,8 @@ namespace ClassicTilestorm
 			stateDuration = duration;
 			onActionComplete = onComplete ?? onActionComplete;
 		}
+
+		private void QueueAction(System.Action<State> action) => actionQueue.Enqueue(action);
 
 		public void UpdateEggbot()
 		{
@@ -96,6 +102,7 @@ namespace ClassicTilestorm
 		private void UpdateIdle()
 		{
 			if (stateTimer < stateDuration) return;
+			if (actionQueue.Count > 0) { actionQueue.Dequeue()?.Invoke(currentState); return; }
 			var destinationTile = mapManager.Waypoints[dstWaypoint].nTile;
 
 			if (TestSpin(destinationTile)) return;
@@ -105,11 +112,11 @@ namespace ClassicTilestorm
 			bool TestSpin(int destinationTile)
 			{
 				if (currentTile != destinationTile || (destinationTile != Navigation.GetEndTile(mapManager) && destinationTile != Navigation.GetStartTile(mapManager))) return false;
-				if (destinationTile == Navigation.GetEndTile(mapManager)) isLevelComplete = true;
+				if (destinationTile == Navigation.GetEndTile(mapManager)) { isLevelComplete = true; OnLevelCompleted?.Invoke(); }
 				dstWaypoint = (dstWaypoint + 1) % mapManager.Waypoints.Count;
 				startYaw = eggbotRoot.eulerAngles.y;
 				targetYaw = eggbotRoot.eulerAngles.y + SpinAngle;
-				SetState(State.TURN, 1f, state => SetState(State.IDLE, 0.5f));
+				QueueAction(state => SetState(State.TURN, 1f, s => SetState(State.IDLE, 0.5f)));
 				return true;
 			}
 
@@ -117,7 +124,7 @@ namespace ClassicTilestorm
 			{
 				if (currentTile == destinationTile)
 				{
-					cameraController?.OnWaypointReached(dstWaypoint);
+					OnWaypointReached?.Invoke(dstWaypoint);
 					dstWaypoint = (dstWaypoint + 1) % mapManager.Waypoints.Count;
 					return false;
 				}
@@ -129,8 +136,8 @@ namespace ClassicTilestorm
 				var prevCurrentTile = currentTile;
 				currentTile = Navigation.LineOfSight(mapManager, currentTile, destinationTile, direction);
 				targetPosition = mapManager.GetTilePosition(currentTile);
-				SetState(State.MOVE, (mapManager.GetTileDistance(prevCurrentTile, currentTile) + 1.0f) / walkSpeed, state => SetState(State.IDLE, 0f));
-				cameraController?.OnPuzzleSolved(dstWaypoint - 1);
+				QueueAction(state => SetState(State.MOVE, (mapManager.GetTileDistance(prevCurrentTile, currentTile) + 1.0f) / walkSpeed, s => SetState(State.IDLE, 0f)));
+				OnPuzzleSolved?.Invoke(dstWaypoint - 1);
 				return true;
 			}
 
@@ -141,7 +148,7 @@ namespace ClassicTilestorm
 				{
 					startYaw = eggbotRoot.eulerAngles.y;
 					targetYaw = eggbotRoot.eulerAngles.y + Mathf.DeltaAngle(eggbotRoot.eulerAngles.y, DirToAngle(direction));
-					SetState(State.TURN, 1f / 4f, state => SetState(State.IDLE, 0f));
+					QueueAction(state => SetState(State.TURN, 1f / 4f, s => SetState(State.IDLE, 0f)));
 					return true;
 				}
 
@@ -153,7 +160,7 @@ namespace ClassicTilestorm
 					{
 						startYaw = eggbotRoot.eulerAngles.y;
 						targetYaw = eggbotRoot.eulerAngles.y + Mathf.DeltaAngle(eggbotRoot.eulerAngles.y, consoleYaw);
-						SetState(State.TURN, 1f / 4f, state => SetState(State.IDLE, 0.5f));
+						QueueAction(state => SetState(State.TURN, 1f / 4f, s => SetState(State.IDLE, 0.5f)));
 						return true;
 					}
 				}
@@ -193,13 +200,14 @@ namespace ClassicTilestorm
 			eggbotMesh.localRotation = rotation;
 		}
 
-		private static float DirToAngle(int dir)
+		private void OnDestroy()
 		{
-			if ((dir & 1) != 0) return 0f;   // North
-			if ((dir & 2) != 0) return 180f; // South
-			if ((dir & 4) != 0) return 90f;  // East
-			if ((dir & 8) != 0) return -90f; // West
-			return 0f;
+			OnWaypointReached = null;
+			OnPuzzleSolved = null;
+			OnLevelCompleted = null;
 		}
+
+		private static readonly float[] DirAngles = { 0f, 0f, 180f, 0f, 90f, 45f, 135f, 0f, -90f, -45f, -135f };
+		private static float DirToAngle(int dir) => dir >= 0 && dir < DirAngles.Length ? DirAngles[dir] : 0f;
 	}
 }

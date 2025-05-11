@@ -41,6 +41,10 @@ namespace ClassicTilestorm
 
 			ResetCamera();
 
+			eggbotController.OnWaypointReached += OnWaypointReached;
+			eggbotController.OnPuzzleSolved += OnPuzzleSolved;
+			eggbotController.OnLevelCompleted += OnLevelCompleted;
+
 			//local function
 			void ResetCamera()
 			{
@@ -283,6 +287,12 @@ namespace ClassicTilestorm
 			m_fRate = 0.015625f; // Reset to 1/64
 			if (debugLogging)
 				Debug.Log($"Camera resuming tracking Eggbot from waypoint {waypointIndex}: position={mainCamera.transform.position}, looking at={currentLookAt}");
+		}
+
+		public void OnLevelCompleted()
+		{
+			if (debugLogging)
+				Debug.Log($"CameraController: OnLevelCompleted, currentIndex={currentWaypointIndex}, state={currentState}");
 		}
 
 		private bool IsValidVector(VectorData vector)
