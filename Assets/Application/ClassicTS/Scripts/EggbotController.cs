@@ -27,20 +27,22 @@ namespace ClassicTilestorm
 
 		private float startYaw;
 		private float targetYaw;
+		private const float SpinAngle = 1260f;
 
-		private float spinAngle = 1260f;
-
-		private float wobble = 0.1f;
+		private float sway = 0.1f;
 		private static float mod1 = 0.0f;
 		private static float mod2 = 0.0f;
 
-		private enum State { IDLE, TEST, TURN, MOVE }
+		private enum State { IDLE, TURN, MOVE }
 		private State currentState = State.IDLE;
+		private float nextIdleDuration = 0f;
 
 		public void Initialize()
 		{
 			Reset();
 			if (mapManager == null) { Debug.LogError("Initialize: mapManager is null"); return; }
+
+			if (mapManager.Waypoints?.Count == 0) { Debug.LogError("Initialize: No map waypoints"); return; }
 
 			var startTile = Navigation.GetStartTile(mapManager);
 			if (startTile == -1) { Debug.LogError("Initialize: No start tile found"); return; }
@@ -88,7 +90,7 @@ namespace ClassicTilestorm
 			dstWaypoint = 1;
 			stateTimer = 0f;
 			stateDuration = 1f;
-			wobble = 0.1f;
+			sway = 0.1f;
 			mod1 = mod2 = 0.0f;
 			isLevelComplete = false;
 		}
@@ -102,18 +104,12 @@ namespace ClassicTilestorm
 
 		public void UpdateEggbot()
 		{
-			if (mapManager.Waypoints?.Count == 0)
-				return;
-
 			stateTimer += Time.deltaTime;
 
 			switch (currentState)
 			{
 				case State.IDLE:
 					UpdateIdle();
-					break;
-				case State.TEST:
-					UpdateTest();
 					break;
 				case State.TURN:
 					UpdateTurn();
@@ -123,40 +119,21 @@ namespace ClassicTilestorm
 					break;
 			}
 
-			UpdateWobble();
+			UpdateSway();
 		}
 
 		private void UpdateIdle()
 		{
-			if (stateTimer >= stateDuration)
-				SetState(State.TEST, 0f);
-		}
+			if (stateTimer < stateDuration)
+				return;
+			if (TestDestination())
+				return;
+			if (MoveToDestination())
+				return;
+			if (FaceConsole())
+				return;
 
-		private void UpdateTest()
-		{
-			if (stateTimer >= stateDuration)
-			{
-				var destinationTile = mapManager.Waypoints[dstWaypoint].nTile;
-
-				if (currentTile == destinationTile)
-				{
-					if (TestDestination())
-						return;
-				}
-				else
-				{
-					if (MoveToDestination())
-						return;
-				}
-				if (FaceConsole())
-					return;
-
-				if (currentTile == destinationTile)
-					SetNextDestination();
-
-				SetState(State.IDLE);
-			}
-
+			//local functions
 			bool FaceConsole()
 			{
 				var consoleTile = Navigation.FindAdjacentConsole(mapManager, currentTile);
@@ -173,7 +150,9 @@ namespace ClassicTilestorm
 				var yawDelta = Mathf.Abs(Mathf.DeltaAngle(currentYaw, consoleYaw));
 				if (yawDelta > 0.01f)
 				{
-					StartTurn(eggbotRoot.eulerAngles.y + Mathf.DeltaAngle(eggbotRoot.eulerAngles.y, consoleYaw), 1f / 6f);
+					SetNextDestination();
+					nextIdleDuration = 0.5f;
+					StartTurn(eggbotRoot.eulerAngles.y + Mathf.DeltaAngle(eggbotRoot.eulerAngles.y, consoleYaw), 1f / 4f);
 					return true;
 				}
 
@@ -183,23 +162,21 @@ namespace ClassicTilestorm
 			bool TestDestination()
 			{
 				var destinationTile = mapManager.Waypoints[dstWaypoint].nTile;
-				if (destinationTile == Navigation.GetEndTile(mapManager))
-				{
-					isLevelComplete = true;
-					SetNextDestination(); // Advance waypoint before spinning
-					StartTurn(eggbotRoot.eulerAngles.y + spinAngle, 1f);
-					return true;
-				}
-				if (destinationTile == Navigation.GetStartTile(mapManager) && dstWaypoint == 0)
-				{
-					SetNextDestination(); // Advance waypoint before spinning
-					StartTurn(eggbotRoot.eulerAngles.y + spinAngle, 1f);
-					return true;
-				}
-
+				if (currentTile != destinationTile) return false;
 				cameraController?.OnWaypointReached(dstWaypoint);
+
+				if (destinationTile == Navigation.GetEndTile(mapManager)) isLevelComplete = true;
+				if (destinationTile == Navigation.GetEndTile(mapManager) || destinationTile == Navigation.GetStartTile(mapManager))
+				{
+					SetNextDestination();
+					nextIdleDuration = 0.5f;
+					StartTurn(eggbotRoot.eulerAngles.y + SpinAngle, 1f);
+					return true;
+				}
 				return false;
 			}
+
+			void SetNextDestination() => dstWaypoint = (dstWaypoint + 1) % mapManager.Waypoints.Count;
 
 			bool MoveToDestination()
 			{
@@ -213,7 +190,7 @@ namespace ClassicTilestorm
 
 				if (Mathf.DeltaAngle(0, eggbotRoot.eulerAngles.y) != targetYaw)
 				{
-					StartTurn(eggbotRoot.eulerAngles.y + Mathf.DeltaAngle(eggbotRoot.eulerAngles.y, targetYaw), 1f / 6f);
+					StartTurn(eggbotRoot.eulerAngles.y + Mathf.DeltaAngle(eggbotRoot.eulerAngles.y, targetYaw), 1f / 4f);
 					return true;
 				}
 
@@ -225,6 +202,13 @@ namespace ClassicTilestorm
 				SetState(State.MOVE, (length + 1.0f) / walkSpeed);
 				cameraController?.OnPuzzleSolved(dstWaypoint - 1);
 				return true;
+			}
+
+			void StartTurn(float dstYaw, float duration)
+			{
+				startYaw = eggbotRoot.eulerAngles.y;
+				targetYaw = dstYaw;
+				SetState(State.TURN, duration);
 			}
 		}
 
@@ -238,7 +222,8 @@ namespace ClassicTilestorm
 			if (tTurn >= 1f)
 			{
 				eggbotRoot.rotation = Quaternion.Euler(0f, targetYaw % 360f, 0f);
-				SetState(State.TEST, 0.2f);
+				SetState(State.IDLE, nextIdleDuration != 0f ? nextIdleDuration : 0f);// uses console delay as flag for next idle time - must improve this with some sort of 'post action data'
+				nextIdleDuration = 0f;
 			}
 		}
 
@@ -251,33 +236,25 @@ namespace ClassicTilestorm
 			if (tMove >= 1f)
 			{
 				eggbotRoot.position = targetPosition;
-				SetState(State.TEST, 0.2f);
+				SetState(State.IDLE, nextIdleDuration != 0f ? nextIdleDuration : 0f);
+				nextIdleDuration = 0f;
 			}
 		}
 
-		private void UpdateWobble()
+		private void UpdateSway()
 		{
 			mod1 += 7.8f * Time.deltaTime;
 			mod2 += 1.8f * Time.deltaTime;
 
-			var targetWobble = currentState == State.IDLE ? 0.02f : 0.1f;
-			wobble = (wobble * 99.0f + targetWobble) / 100.0f;
+			var targetSway = currentState == State.IDLE ? 0.02f : 0.1f;
+			sway = (sway * 99.0f + targetSway) / 100.0f;
 
-			var pitch = wobble * Mathf.Sin(mod1) * Mathf.Sin(mod2);
+			var pitch = sway * Mathf.Sin(mod1) * Mathf.Sin(mod2);
 			var pitchRotation = Quaternion.Euler(pitch * Mathf.Rad2Deg, 0f, 0f);
 			var localOffset = new Vector3(0f, 0f, -pitch);
-			var wobblePos = pitchRotation * localOffset;
-			eggbotMesh.localPosition = wobblePos;
+			var swayPos = pitchRotation * localOffset;
+			eggbotMesh.localPosition = swayPos;
 			eggbotMesh.localRotation = pitchRotation;
-		}
-
-		private void SetNextDestination() => dstWaypoint = (dstWaypoint + 1) % mapManager.Waypoints.Count;
-
-		private void StartTurn(float dstYaw, float duration)
-		{
-			startYaw = eggbotRoot.eulerAngles.y;
-			targetYaw = dstYaw;
-			SetState(State.TURN, duration);
 		}
 
 		private static float DirToAngle(int dir)
