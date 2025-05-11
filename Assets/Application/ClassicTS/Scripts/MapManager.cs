@@ -51,6 +51,8 @@ namespace ClassicTilestorm
 
 		public Vector3 GetTilePosition(int tileIndex) => GetTileCoordinates(tileIndex).ToPosition();
 
+		public float GetTileDistance(int nSrc, int nDst) => (GetTilePosition(nDst) - GetTilePosition(nSrc)).magnitude;
+
 		public int ToIndex(GridCoord coord) => coord.Z * Width + coord.X;
 
 		public int[] GetTiles() => tiles;

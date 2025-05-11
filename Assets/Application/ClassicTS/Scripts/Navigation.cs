@@ -144,6 +144,25 @@ namespace ClassicTilestorm
 			return fRet;
 		}
 
+		public static int LineOfSight(IMap map, int nSrc, int nDst, int nDir)
+		{
+			int nNav = TileProperties.GetOppositeDirection(nDir);
+			while (0 != nDir)
+			{
+				nSrc = GetAdjacentTile(map, nSrc, nDir);
+
+				var props = map.GetTileProperties(nSrc);
+				if (null == props) break;
+
+				int nNew = props.Nav;
+				nNav = nNav & nNew;
+				if (0 == nNav) break;
+				nDir = nDir & nNew;
+				if (nSrc == nDst) break;
+			}
+			return nSrc;
+		}
+
 		public static List<int> FindPath(IMap map, int startTile, int targetTile)
 		{
 			var startProps = map.GetTileProperties(startTile);

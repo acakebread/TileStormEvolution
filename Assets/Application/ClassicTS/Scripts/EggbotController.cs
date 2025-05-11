@@ -8,30 +8,26 @@ namespace ClassicTilestorm
 		private MapManager mapManager => GamePreview.mapManager;
 		private CameraController cameraController => GamePreview.cameraController;
 
-		[HideInInspector]
-		public Transform eggbotRoot;
+		[HideInInspector] public Transform eggbotRoot;
 		private Transform eggbotMesh;
 
 		private int currentTile;
 		private int dstWaypoint;
-
 		private float stateTimer;
 		private float stateDuration;
-
 		private bool isLevelComplete;
 		public bool IsLevelComplete => isLevelComplete;
 
 		private float walkSpeed = 6f;
 		private Vector3 startPosition;
 		private Vector3 targetPosition;
-
 		private float startYaw;
 		private float targetYaw;
 		private const float SpinAngle = 1260f;
 
 		private float sway = 0.1f;
-		private static float mod1 = 0.0f;
-		private static float mod2 = 0.0f;
+		private static float mod1;
+		private static float mod2;
 
 		private enum State { IDLE, TURN, MOVE }
 		private State currentState = State.IDLE;
@@ -40,47 +36,39 @@ namespace ClassicTilestorm
 		public void Initialize()
 		{
 			Reset();
-			if (mapManager == null) { Debug.LogError("Initialize: mapManager is null"); return; }
+			if (mapManager == null || mapManager.Waypoints?.Count == 0 || Navigation.GetStartTile(mapManager) == -1)
+			{
+				Debug.LogError("Initialize: Invalid mapManager, waypoints, or start tile");
+				return;
+			}
 
-			if (mapManager.Waypoints?.Count == 0) { Debug.LogError("Initialize: No map waypoints"); return; }
-
-			var startTile = Navigation.GetStartTile(mapManager);
-			if (startTile == -1) { Debug.LogError("Initialize: No start tile found"); return; }
-
-			currentTile = startTile;
-
+			currentTile = Navigation.GetStartTile(mapManager);
 			if (eggbotRoot != null) Destroy(eggbotRoot.gameObject);
 
 			eggbotRoot = new GameObject("Eggbot").transform;
 			eggbotRoot.SetParent(mapManager.transform, false);
 
-			var eggbotCostume = string.IsNullOrEmpty(mapManager.EggbotCostume) ? "Eggbot Default" : mapManager.EggbotCostume;
-			var def = DatabaseLoader.TileDefs.FirstOrDefault(td => td.szType == "Eggbot" && td.szTheme == eggbotCostume);
-			if (def == null || def.szGeom == null) { Debug.LogError($"Initialize: No Eggbot definition found for costume: {eggbotCostume}"); return; }
+			var costume = string.IsNullOrEmpty(mapManager.EggbotCostume) ? "Eggbot Default" : mapManager.EggbotCostume;
+			var def = DatabaseLoader.TileDefs.FirstOrDefault(td => td.szType == "Eggbot" && td.szTheme == costume);
+			if (def == null || def.szGeom == null || GeometryManager.Get(def.szGeom) == null)
+			{
+				Debug.LogError($"Initialize: Invalid Eggbot definition or geometry for costume: {costume}");
+				return;
+			}
 
-			var prefab = GeometryManager.Get(def.szGeom);
-			if (prefab == null) { Debug.LogError($"Initialize: Failed to load prefab for geometry: {def.szGeom}"); return; }
-			var mesh = Instantiate(prefab, eggbotRoot);
+			var mesh = Instantiate(GeometryManager.Get(def.szGeom), eggbotRoot);
 			mesh.name = "Mesh";
 			eggbotMesh = mesh.transform;
-			eggbotMesh.SetParent(eggbotRoot, false);
 			eggbotMesh.localPosition = Vector3.zero;
 			eggbotMesh.localRotation = Quaternion.identity;
 
-			DatabaseLoader.Theme theme = DatabaseLoader.Themes.FirstOrDefault(t => t.name == def.szTheme);
-			if (theme != null && !string.IsNullOrEmpty(theme.szTileTextureSet))
-			{
-				var textureFrames = TextureSetManager.GetTextureFrames(theme.szTileTextureSet);
-				if (textureFrames?.Length > 0)
-				{
-					var animator = mesh.AddComponent<TextureSetAnimator>();
-					animator.Initialize(textureFrames);
-				}
-			}
+			var theme = DatabaseLoader.Themes.FirstOrDefault(t => t.name == def.szTheme);
+			var textureFrames = theme?.szTileTextureSet != null ? TextureSetManager.GetTextureFrames(theme.szTileTextureSet) : null;
+			if (textureFrames?.Length > 0)
+				mesh.AddComponent<TextureSetAnimator>().Initialize(textureFrames);
 
-			eggbotRoot.position = mapManager.GetTilePosition(startTile);
-			eggbotRoot.rotation = Quaternion.Euler(0f, mapManager.Waypoints != null && mapManager.Waypoints.Count > 1 ? DirToAngle(Navigation.NavToDest(mapManager, mapManager.Waypoints[0].nTile, mapManager.Waypoints[1].nTile)) : 0f, 0f);
-
+			eggbotRoot.position = mapManager.GetTilePosition(currentTile);
+			eggbotRoot.rotation = Quaternion.Euler(0f, mapManager.Waypoints?.Count > 1 ? DirToAngle(Navigation.NavToDest(mapManager, mapManager.Waypoints[0].nTile, mapManager.Waypoints[1].nTile)) : 0f, 0f);
 			SetState(State.IDLE);
 		}
 
@@ -88,38 +76,30 @@ namespace ClassicTilestorm
 		{
 			currentTile = -1;
 			dstWaypoint = 1;
-			stateTimer = 0f;
-			stateDuration = 1f;
+			stateTimer = stateDuration = 0f;
 			sway = 0.1f;
-			mod1 = mod2 = 0.0f;
+			mod1 = mod2 = 0f;
 			isLevelComplete = false;
 			onActionComplete = null;
 		}
 
-		private void SetState(State state, float duration = 1f)
+		private void SetState(State state, float duration = 1f, System.Action<State> onComplete = null)
 		{
 			currentState = state;
 			stateTimer = 0f;
 			stateDuration = duration;
+			onActionComplete = onComplete ?? onActionComplete;
 		}
 
 		public void UpdateEggbot()
 		{
 			stateTimer += Time.deltaTime;
-
 			switch (currentState)
 			{
-				case State.IDLE:
-					UpdateIdle();
-					break;
-				case State.TURN:
-					UpdateTurn();
-					break;
-				case State.MOVE:
-					UpdateMove();
-					break;
+				case State.IDLE: UpdateIdle(); break;
+				case State.TURN: UpdateTurn(); break;
+				case State.MOVE: UpdateMove(); break;
 			}
-
 			UpdateSway();
 		}
 
@@ -130,148 +110,114 @@ namespace ClassicTilestorm
 
 			var destinationTile = mapManager.Waypoints[dstWaypoint].nTile;
 
-			if (currentTile == destinationTile && TestDestination(destinationTile))
+			if (TestSpin(destinationTile))
 				return;
 
-			if (MoveToDestination(destinationTile))
+			if (TestMove(destinationTile))
 				return;
 
-			FaceConsole();
+			if (TestTurn(destinationTile))
+				return;
 
-			bool TestDestination(int destinationTile)
+			bool TestSpin(int destinationTile)
 			{
-				cameraController?.OnWaypointReached(dstWaypoint);
-
-				if (destinationTile == Navigation.GetEndTile(mapManager))
-				{
-					isLevelComplete = true;
-					SetNextDestination();
-					onActionComplete = (state) => SetState(State.IDLE, 0.5f);
-					StartTurn(eggbotRoot.eulerAngles.y + SpinAngle, 1f);
-					return true;
-				}
-				if (destinationTile == Navigation.GetStartTile(mapManager) && dstWaypoint == 0)
-				{
-					SetNextDestination();
-					onActionComplete = (state) => SetState(State.IDLE, 0.5f);
-					StartTurn(eggbotRoot.eulerAngles.y + SpinAngle, 1f);
-					return true;
-				}
-
-				SetNextDestination();
-				onActionComplete = (state) => SetState(State.IDLE, 0f);
-				return false;
-			}
-
-			bool MoveToDestination(int destinationTile)
-			{
-				var direction = Navigation.NavToDest(mapManager, currentTile, destinationTile);
-				if (direction == 0)
+				if (currentTile != destinationTile || (destinationTile != Navigation.GetEndTile(mapManager) && destinationTile != Navigation.GetStartTile(mapManager)))
 					return false;
 
-				var length = Navigation.LengthDir(mapManager, currentTile, destinationTile, direction);
-				targetYaw = DirToAngle(direction);
+				if (destinationTile == Navigation.GetEndTile(mapManager))
+					isLevelComplete = true;
 
-				if (Mathf.DeltaAngle(0, eggbotRoot.eulerAngles.y) != targetYaw)
+				dstWaypoint = (dstWaypoint + 1) % mapManager.Waypoints.Count;
+				StartTurn(eggbotRoot.eulerAngles.y + SpinAngle, 1f, (state) => SetState(State.IDLE, 0.5f));
+				return true;
+			}
+
+			bool TestMove(int destinationTile)
+			{
+				if (currentTile == destinationTile)
 				{
-					onActionComplete = (state) => SetState(State.IDLE, 0f);
-					StartTurn(eggbotRoot.eulerAngles.y + Mathf.DeltaAngle(eggbotRoot.eulerAngles.y, targetYaw), 1f / 4f);
-					return true;
+					cameraController?.OnWaypointReached(dstWaypoint);
+					dstWaypoint = (dstWaypoint + 1) % mapManager.Waypoints.Count;
+					return false;
 				}
 
+				var direction = Navigation.NavToDest(mapManager, currentTile, destinationTile);
+				if (direction == 0 || Mathf.DeltaAngle(0, eggbotRoot.eulerAngles.y) != DirToAngle(direction))
+					return false;
+
 				startPosition = mapManager.GetTilePosition(currentTile);
-				var (dx, dz) = TileProperties.GetDirectionOffset(direction);
-				var gridCoord = mapManager.GetTileCoordinates(currentTile).Add(dx * (int)length, dz * (int)length);
-				currentTile = mapManager.ToIndex(gridCoord);
-				targetPosition = gridCoord.ToPosition();
-				onActionComplete = (state) => SetState(State.IDLE, 0f);
-				SetState(State.MOVE, (length + 1.0f) / walkSpeed);
+				var prevCurrentTile = currentTile;
+				currentTile = Navigation.LineOfSight(mapManager, currentTile, destinationTile, direction);
+				targetPosition = mapManager.GetTilePosition(currentTile);
+				SetState(State.MOVE, (mapManager.GetTileDistance(prevCurrentTile, currentTile) + 1.0f) / walkSpeed, (state) => SetState(State.IDLE, 0f));
 				cameraController?.OnPuzzleSolved(dstWaypoint - 1);
 				return true;
 			}
 
-			bool FaceConsole()
+			bool TestTurn(int destinationTile)
 			{
-				var consoleTile = Navigation.FindAdjacentConsole(mapManager, currentTile);
-				if (consoleTile == -1)
-					return false;
-
-				var consoleProps = mapManager.GetTileProperties(consoleTile);
-				if (consoleProps?.Nav == 0)
-					return false;
-
-				var oppositeDir = TileProperties.GetOppositeDirection(consoleProps.Nav);
-				var consoleYaw = DirToAngle(oppositeDir);
-				var currentYaw = Mathf.DeltaAngle(0, eggbotRoot.eulerAngles.y);
-				var yawDelta = Mathf.Abs(Mathf.DeltaAngle(currentYaw, consoleYaw));
-				if (yawDelta > 0.01f)
+				var direction = Navigation.NavToDest(mapManager, currentTile, destinationTile);
+				if (direction != 0 && Mathf.Abs(Mathf.DeltaAngle(eggbotRoot.eulerAngles.y, DirToAngle(direction))) > 0.01f)
 				{
-					onActionComplete = (state) => SetState(State.IDLE, 0.5f);
-					StartTurn(eggbotRoot.eulerAngles.y + Mathf.DeltaAngle(eggbotRoot.eulerAngles.y, consoleYaw), 1f / 4f);
+					StartTurn(eggbotRoot.eulerAngles.y + Mathf.DeltaAngle(eggbotRoot.eulerAngles.y, DirToAngle(direction)), 1f / 4f, (state) => SetState(State.IDLE, 0f));
 					return true;
+				}
+
+				var consoleTile = Navigation.FindAdjacentConsole(mapManager, currentTile);
+				if (consoleTile != -1)
+				{
+					var consoleProps = mapManager.GetTileProperties(consoleTile);
+					if (consoleProps?.Nav != 0)
+					{
+						var consoleYaw = DirToAngle(TileProperties.GetOppositeDirection(consoleProps.Nav));
+						if (Mathf.Abs(Mathf.DeltaAngle(eggbotRoot.eulerAngles.y, consoleYaw)) > 0.01f)
+						{
+							StartTurn(eggbotRoot.eulerAngles.y + Mathf.DeltaAngle(eggbotRoot.eulerAngles.y, consoleYaw), 1f / 4f, (state) => SetState(State.IDLE, 0.5f));
+							return true;
+						}
+					}
 				}
 				return false;
 			}
 
-			void StartTurn(float dstYaw, float duration)
+			void StartTurn(float dstYaw, float duration, System.Action<State> onComplete = null)
 			{
 				startYaw = eggbotRoot.eulerAngles.y;
 				targetYaw = dstYaw;
-				SetState(State.TURN, duration);
+				SetState(State.TURN, duration, onComplete);
 			}
-
-			void SetNextDestination() => dstWaypoint = (dstWaypoint + 1) % mapManager.Waypoints.Count;
 		}
 
 		private void UpdateTurn()
 		{
-			var tTurn = Mathf.Clamp01(stateTimer / stateDuration);
-			var cosTTurn = (1f - Mathf.Cos(tTurn * Mathf.PI)) / 2f;
-			var angle = Mathf.Lerp(startYaw, targetYaw, cosTTurn);
-			eggbotRoot.rotation = Quaternion.Euler(0f, angle % 360f, 0f);
-
-			if (tTurn >= 1f)
-			{
-				eggbotRoot.rotation = Quaternion.Euler(0f, targetYaw % 360f, 0f);
-				if (onActionComplete != null)
-					onActionComplete.Invoke(currentState);
-				else
-					SetState(State.IDLE, 0f);
-				onActionComplete = null;
-			}
+			var t = Mathf.Clamp01(stateTimer / stateDuration);
+			eggbotRoot.rotation = Quaternion.Euler(0f, Mathf.Lerp(startYaw, targetYaw, (1f - Mathf.Cos(t * Mathf.PI)) / 2f) % 360f, 0f);
+			if (t >= 1f) CompleteAction();
 		}
 
 		private void UpdateMove()
 		{
-			var tMove = stateDuration > 0 ? Mathf.Clamp01(stateTimer / stateDuration) : 1f;
-			var cosTMove = (1f - Mathf.Cos(tMove * Mathf.PI)) / 2f;
-			eggbotRoot.position = Vector3.Lerp(startPosition, targetPosition, cosTMove);
+			var t = stateDuration > 0 ? Mathf.Clamp01(stateTimer / stateDuration) : 1f;
+			eggbotRoot.position = Vector3.Lerp(startPosition, targetPosition, (1f - Mathf.Cos(t * Mathf.PI)) / 2f);
+			if (t >= 1f) CompleteAction();
+		}
 
-			if (tMove >= 1f)
-			{
-				eggbotRoot.position = targetPosition;
-				if (onActionComplete != null)
-					onActionComplete.Invoke(currentState);
-				else
-					SetState(State.IDLE, 0f);
-				onActionComplete = null;
-			}
+		private void CompleteAction()
+		{
+			onActionComplete?.Invoke(currentState);
+			if (null == onActionComplete) SetState(State.IDLE, 0f);
+			onActionComplete = null;
 		}
 
 		private void UpdateSway()
 		{
 			mod1 += 7.8f * Time.deltaTime;
 			mod2 += 1.8f * Time.deltaTime;
-
-			var targetSway = currentState == State.IDLE ? 0.02f : 0.1f;
-			sway = (sway * 99.0f + targetSway) / 100.0f;
-
+			sway = (sway * 99f + (currentState == State.IDLE ? 0.02f : 0.1f)) / 100f;
 			var pitch = sway * Mathf.Sin(mod1) * Mathf.Sin(mod2);
-			var pitchRotation = Quaternion.Euler(pitch * Mathf.Rad2Deg, 0f, 0f);
-			var localOffset = new Vector3(0f, 0f, -pitch);
-			var swayPos = pitchRotation * localOffset;
-			eggbotMesh.localPosition = swayPos;
-			eggbotMesh.localRotation = pitchRotation;
+			var rotation = Quaternion.Euler(pitch * Mathf.Rad2Deg, 0f, 0f);
+			eggbotMesh.localPosition = rotation * new Vector3(0f, 0f, -pitch);
+			eggbotMesh.localRotation = rotation;
 		}
 
 		private static float DirToAngle(int dir)
