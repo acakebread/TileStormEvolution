@@ -35,7 +35,7 @@ namespace ClassicTilestorm
 
 		private enum State { IDLE, TURN, MOVE }
 		private State currentState = State.IDLE;
-		private float nextIdleDuration = 0f;
+		private System.Action<State> onActionComplete;
 
 		public void Initialize()
 		{
@@ -93,6 +93,7 @@ namespace ClassicTilestorm
 			sway = 0.1f;
 			mod1 = mod2 = 0.0f;
 			isLevelComplete = false;
+			onActionComplete = null;
 		}
 
 		private void SetState(State state, float duration = 1f)
@@ -126,14 +127,69 @@ namespace ClassicTilestorm
 		{
 			if (stateTimer < stateDuration)
 				return;
-			if (TestDestination())
-				return;
-			if (MoveToDestination())
-				return;
-			if (FaceConsole())
+
+			var destinationTile = mapManager.Waypoints[dstWaypoint].nTile;
+
+			if (currentTile == destinationTile && TestDestination(destinationTile))
 				return;
 
-			//local functions
+			if (MoveToDestination(destinationTile))
+				return;
+
+			FaceConsole();
+
+			bool TestDestination(int destinationTile)
+			{
+				cameraController?.OnWaypointReached(dstWaypoint);
+
+				if (destinationTile == Navigation.GetEndTile(mapManager))
+				{
+					isLevelComplete = true;
+					SetNextDestination();
+					onActionComplete = (state) => SetState(State.IDLE, 0.5f);
+					StartTurn(eggbotRoot.eulerAngles.y + SpinAngle, 1f);
+					return true;
+				}
+				if (destinationTile == Navigation.GetStartTile(mapManager) && dstWaypoint == 0)
+				{
+					SetNextDestination();
+					onActionComplete = (state) => SetState(State.IDLE, 0.5f);
+					StartTurn(eggbotRoot.eulerAngles.y + SpinAngle, 1f);
+					return true;
+				}
+
+				SetNextDestination();
+				onActionComplete = (state) => SetState(State.IDLE, 0f);
+				return false;
+			}
+
+			bool MoveToDestination(int destinationTile)
+			{
+				var direction = Navigation.NavToDest(mapManager, currentTile, destinationTile);
+				if (direction == 0)
+					return false;
+
+				var length = Navigation.LengthDir(mapManager, currentTile, destinationTile, direction);
+				targetYaw = DirToAngle(direction);
+
+				if (Mathf.DeltaAngle(0, eggbotRoot.eulerAngles.y) != targetYaw)
+				{
+					onActionComplete = (state) => SetState(State.IDLE, 0f);
+					StartTurn(eggbotRoot.eulerAngles.y + Mathf.DeltaAngle(eggbotRoot.eulerAngles.y, targetYaw), 1f / 4f);
+					return true;
+				}
+
+				startPosition = mapManager.GetTilePosition(currentTile);
+				var (dx, dz) = TileProperties.GetDirectionOffset(direction);
+				var gridCoord = mapManager.GetTileCoordinates(currentTile).Add(dx * (int)length, dz * (int)length);
+				currentTile = mapManager.ToIndex(gridCoord);
+				targetPosition = gridCoord.ToPosition();
+				onActionComplete = (state) => SetState(State.IDLE, 0f);
+				SetState(State.MOVE, (length + 1.0f) / walkSpeed);
+				cameraController?.OnPuzzleSolved(dstWaypoint - 1);
+				return true;
+			}
+
 			bool FaceConsole()
 			{
 				var consoleTile = Navigation.FindAdjacentConsole(mapManager, currentTile);
@@ -150,58 +206,11 @@ namespace ClassicTilestorm
 				var yawDelta = Mathf.Abs(Mathf.DeltaAngle(currentYaw, consoleYaw));
 				if (yawDelta > 0.01f)
 				{
-					SetNextDestination();
-					nextIdleDuration = 0.5f;
+					onActionComplete = (state) => SetState(State.IDLE, 0.5f);
 					StartTurn(eggbotRoot.eulerAngles.y + Mathf.DeltaAngle(eggbotRoot.eulerAngles.y, consoleYaw), 1f / 4f);
 					return true;
 				}
-
 				return false;
-			}
-
-			bool TestDestination()
-			{
-				var destinationTile = mapManager.Waypoints[dstWaypoint].nTile;
-				if (currentTile != destinationTile) return false;
-				cameraController?.OnWaypointReached(dstWaypoint);
-
-				if (destinationTile == Navigation.GetEndTile(mapManager)) isLevelComplete = true;
-				if (destinationTile == Navigation.GetEndTile(mapManager) || destinationTile == Navigation.GetStartTile(mapManager))
-				{
-					SetNextDestination();
-					nextIdleDuration = 0.5f;
-					StartTurn(eggbotRoot.eulerAngles.y + SpinAngle, 1f);
-					return true;
-				}
-				return false;
-			}
-
-			void SetNextDestination() => dstWaypoint = (dstWaypoint + 1) % mapManager.Waypoints.Count;
-
-			bool MoveToDestination()
-			{
-				var destinationTile = mapManager.Waypoints[dstWaypoint].nTile;
-				var direction = Navigation.NavToDest(mapManager, currentTile, destinationTile);
-				if (direction == 0)
-					return false;
-
-				var length = Navigation.LengthDir(mapManager, currentTile, destinationTile, direction);
-				targetYaw = DirToAngle(direction);
-
-				if (Mathf.DeltaAngle(0, eggbotRoot.eulerAngles.y) != targetYaw)
-				{
-					StartTurn(eggbotRoot.eulerAngles.y + Mathf.DeltaAngle(eggbotRoot.eulerAngles.y, targetYaw), 1f / 4f);
-					return true;
-				}
-
-				startPosition = mapManager.GetTilePosition(currentTile);
-				var (dx, dz) = TileProperties.GetDirectionOffset(direction);
-				var gridCoord = mapManager.GetTileCoordinates(currentTile).Add(dx * (int)length, dz * (int)length);
-				currentTile = mapManager.ToIndex(gridCoord);
-				targetPosition = gridCoord.ToPosition();
-				SetState(State.MOVE, (length + 1.0f) / walkSpeed);
-				cameraController?.OnPuzzleSolved(dstWaypoint - 1);
-				return true;
 			}
 
 			void StartTurn(float dstYaw, float duration)
@@ -210,6 +219,8 @@ namespace ClassicTilestorm
 				targetYaw = dstYaw;
 				SetState(State.TURN, duration);
 			}
+
+			void SetNextDestination() => dstWaypoint = (dstWaypoint + 1) % mapManager.Waypoints.Count;
 		}
 
 		private void UpdateTurn()
@@ -222,8 +233,11 @@ namespace ClassicTilestorm
 			if (tTurn >= 1f)
 			{
 				eggbotRoot.rotation = Quaternion.Euler(0f, targetYaw % 360f, 0f);
-				SetState(State.IDLE, nextIdleDuration != 0f ? nextIdleDuration : 0f);// uses console delay as flag for next idle time - must improve this with some sort of 'post action data'
-				nextIdleDuration = 0f;
+				if (onActionComplete != null)
+					onActionComplete.Invoke(currentState);
+				else
+					SetState(State.IDLE, 0f);
+				onActionComplete = null;
 			}
 		}
 
@@ -236,8 +250,11 @@ namespace ClassicTilestorm
 			if (tMove >= 1f)
 			{
 				eggbotRoot.position = targetPosition;
-				SetState(State.IDLE, nextIdleDuration != 0f ? nextIdleDuration : 0f);
-				nextIdleDuration = 0f;
+				if (onActionComplete != null)
+					onActionComplete.Invoke(currentState);
+				else
+					SetState(State.IDLE, 0f);
+				onActionComplete = null;
 			}
 		}
 
