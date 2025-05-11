@@ -132,49 +132,6 @@ namespace ClassicTilestorm
 			UpdateWobble();
 		}
 
-		private void UpdateSpin()
-		{
-			var tSpin = Mathf.Clamp01(stateTimer / stateDuration);
-			var cosTSpin = (1f - Mathf.Cos(tSpin * Mathf.PI)) / 2f;
-			var angle = cosTSpin * spinAngle;
-			var displayAngle = angle % 360f;
-			eggbotRoot.rotation = Quaternion.Euler(0f, startYaw + displayAngle, 0f);
-
-			if (tSpin >= 1f)
-			{
-				eggbotRoot.rotation = Quaternion.Euler(0f, startYaw + 180f, 0f);
-				SetNextDestination(); // Advance to next waypoint after spin
-				SetState(State.TEST, 0.2f);
-			}
-		}
-
-		private void UpdateTurn()
-		{
-			var tTurn = Mathf.Clamp01(stateTimer / stateDuration);
-			var cosTTurn = (1f - Mathf.Cos(tTurn * Mathf.PI)) / 2f;
-			var currentYaw = Mathf.LerpAngle(startYaw, targetYaw, cosTTurn);
-			eggbotRoot.rotation = Quaternion.Euler(0f, currentYaw, 0f);
-
-			if (tTurn >= 1f)
-			{
-				eggbotRoot.rotation = Quaternion.Euler(0f, targetYaw, 0f);
-				SetState(State.TEST, 0.2f); // After turning, re-evaluate
-			}
-		}
-
-		private void UpdateMove()
-		{
-			var tMove = stateDuration > 0 ? Mathf.Clamp01(stateTimer / stateDuration) : 1f;
-			var cosTMove = (1f - Mathf.Cos(tMove * Mathf.PI)) / 2f;
-			eggbotRoot.position = Vector3.Lerp(startPosition, targetPosition, cosTMove);
-
-			if (tMove >= 1f)
-			{
-				eggbotRoot.position = targetPosition;
-				SetState(State.IDLE); // Re-evaluate after move
-			}
-		}
-
 		private void UpdateIdle()
 		{
 			if (stateTimer >= stateDuration)
@@ -188,23 +145,133 @@ namespace ClassicTilestorm
 				// Evaluate behavior
 				var destinationTile = mapManager.Waypoints[dstWaypoint].nTile;
 
-				if (currentTile != destinationTile)
+				if (currentTile == destinationTile)
 				{
-					if (MoveToDestination())
-						return;
-					if (FaceConsole())
+					if (TestDestination())
 						return;
 				}
 				else
 				{
-					if (TestDestination())
+					if (MoveToDestination())
 						return;
-					if (FaceConsole())
-						return;
-					SetNextDestination();
 				}
+				if (FaceConsole())
+					return;
+
+				if (currentTile == destinationTile)
+					SetNextDestination();
 
 				SetState(State.IDLE); // Default to idle if no action taken
+			}
+
+			bool FaceConsole()
+			{
+				var consoleTile = Navigation.FindAdjacentConsole(mapManager, currentTile);
+				if (consoleTile == -1)
+					return false;
+
+				var consoleProps = mapManager.GetTileProperties(consoleTile);
+				if (consoleProps?.Nav == 0)
+					return false;
+
+				var oppositeDir = TileProperties.GetOppositeDirection(consoleProps.Nav);
+				var consoleYaw = DirToAngle(oppositeDir);
+				var currentYaw = Mathf.DeltaAngle(0, eggbotRoot.eulerAngles.y);
+				var yawDelta = Mathf.Abs(Mathf.DeltaAngle(currentYaw, consoleYaw));
+				if (yawDelta > 0.01f)
+				{
+					StartTurning(eggbotRoot.eulerAngles.y + Mathf.DeltaAngle(eggbotRoot.eulerAngles.y, consoleYaw), State.TURN, 1f / 6f);
+					return true;
+				}
+
+				return false; // Already facing console, no action needed
+			}
+
+			bool TestDestination()
+			{
+				var destinationTile = mapManager.Waypoints[dstWaypoint].nTile;
+				if (destinationTile == Navigation.GetEndTile(mapManager))
+				{
+					isLevelComplete = true; // ToDo invoke event
+					StartTurning(eggbotRoot.eulerAngles.y + spinAngle, State.SPIN);
+					return true;
+				}
+				if (destinationTile == Navigation.GetStartTile(mapManager) && dstWaypoint == 0)
+				{
+					StartTurning(eggbotRoot.eulerAngles.y + spinAngle, State.SPIN);
+					return true;
+				}
+
+				cameraController?.OnWaypointReached(dstWaypoint);
+				return false;
+			}
+
+			bool MoveToDestination()
+			{
+				var destinationTile = mapManager.Waypoints[dstWaypoint].nTile;
+				var direction = Navigation.NavToDest(mapManager, currentTile, destinationTile);
+				if (direction == 0)
+					return false;
+
+				var length = Navigation.LengthDir(mapManager, currentTile, destinationTile, direction);
+				targetYaw = DirToAngle(direction);
+
+				if (Mathf.DeltaAngle(0, eggbotRoot.eulerAngles.y) != targetYaw)
+				{
+					StartTurning(eggbotRoot.eulerAngles.y + Mathf.DeltaAngle(eggbotRoot.eulerAngles.y, targetYaw), State.TURN, 1f / 6f);
+					return true;
+				}
+
+				startPosition = mapManager.GetTilePosition(currentTile);
+				var (dx, dz) = TileProperties.GetDirectionOffset(direction);
+				var gridCoord = mapManager.GetTileCoordinates(currentTile).Add(dx * (int)length, dz * (int)length);
+				currentTile = mapManager.ToIndex(gridCoord);
+				targetPosition = gridCoord.ToPosition();
+				SetState(State.MOVE, (length + 1.0f) / walkSpeed);
+				cameraController?.OnPuzzleSolved(dstWaypoint - 1); // Notify previous waypoint solved - this needs modding but the parameter is not currently used so not important
+				return true;
+			}
+		}
+
+		private void UpdateTurn()
+		{
+			var tTurn = Mathf.Clamp01(stateTimer / stateDuration);
+			var cosTTurn = (1f - Mathf.Cos(tTurn * Mathf.PI)) / 2f;
+			var angle = Mathf.Lerp(startYaw, targetYaw, cosTTurn);
+			eggbotRoot.rotation = Quaternion.Euler(0f, angle % 360f, 0f);
+
+			if (tTurn >= 1f)
+			{
+				eggbotRoot.rotation = Quaternion.Euler(0f, targetYaw % 360f, 0f);
+				SetState(State.TEST, 0.2f); // After turning, re-evaluate
+			}
+		}
+
+		private void UpdateMove()
+		{
+			var tMove = stateDuration > 0 ? Mathf.Clamp01(stateTimer / stateDuration) : 1f;
+			var cosTMove = (1f - Mathf.Cos(tMove * Mathf.PI)) / 2f;
+			eggbotRoot.position = Vector3.Lerp(startPosition, targetPosition, cosTMove);
+
+			if (tMove >= 1f)
+			{
+				eggbotRoot.position = targetPosition;
+				SetState(State.TEST, 0.2f); // Re-evaluate after move
+			}
+		}
+
+		private void UpdateSpin()
+		{
+			var tTurn = Mathf.Clamp01(stateTimer / stateDuration);
+			var cosTTurn = (1f - Mathf.Cos(tTurn * Mathf.PI)) / 2f;
+			var angle = Mathf.Lerp(startYaw, targetYaw, cosTTurn);
+			eggbotRoot.rotation = Quaternion.Euler(0f, angle % 360f, 0f);
+
+			if (tTurn >= 1f)
+			{
+				eggbotRoot.rotation = Quaternion.Euler(0f, targetYaw % 360f, 0f);
+				SetNextDestination(); // Advance to next waypoint after spin
+				SetState(State.TEST, 0.2f); // After spinning, re-evaluate
 			}
 		}
 
@@ -224,89 +291,13 @@ namespace ClassicTilestorm
 			eggbotMesh.localRotation = pitchRotation;
 		}
 
-		private bool FaceConsole()
-		{
-			var consoleTile = Navigation.FindAdjacentConsole(mapManager, currentTile);
-			if (consoleTile == -1)
-				return false;
+		private void SetNextDestination() =>  dstWaypoint = (dstWaypoint + 1) % mapManager.Waypoints.Count;
 
-			var consoleProps = mapManager.GetTileProperties(consoleTile);
-			if (consoleProps?.Nav == 0)
-				return false;
-
-			var oppositeDir = TileProperties.GetOppositeDirection(consoleProps.Nav);
-			var consoleYaw = DirToAngle(oppositeDir);
-			var currentYaw = eggbotRoot.eulerAngles.y;
-			var yawDelta = Mathf.Abs(Mathf.DeltaAngle(currentYaw, consoleYaw));
-			if (yawDelta > 0.01f)
-			{
-				StartTurning(consoleYaw);
-				return true;
-			}
-
-			return false; // Already facing console, no action needed
-		}
-
-		private bool TestDestination()
-		{
-			var destinationTile = mapManager.Waypoints[dstWaypoint].nTile;
-			if (destinationTile == Navigation.GetEndTile(mapManager))
-			{
-				isLevelComplete = true; // ToDo invoke event
-				StartSpinning();
-				return true;
-			}
-			if (destinationTile == Navigation.GetStartTile(mapManager) && dstWaypoint == 0)
-			{
-				StartSpinning();
-				return true;
-			}
-
-			cameraController?.OnWaypointReached(dstWaypoint);
-			return false;
-		}
-
-		private bool MoveToDestination()
-		{
-			var destinationTile = mapManager.Waypoints[dstWaypoint].nTile;
-			var direction = Navigation.NavToDest(mapManager, currentTile, destinationTile);
-			if (direction == 0)
-				return false;
-
-			var length = Navigation.LengthDir(mapManager, currentTile, destinationTile, direction);
-			targetYaw = DirToAngle(direction);
-			if (eggbotRoot.eulerAngles.y != targetYaw)
-			{
-				StartTurning(targetYaw);
-				return true;
-			}
-
-			startPosition = mapManager.GetTilePosition(currentTile);
-			var (dx, dz) = TileProperties.GetDirectionOffset(direction);
-			var gridCoord = mapManager.GetTileCoordinates(currentTile).Add(dx * (int)length, dz * (int)length);
-			currentTile = mapManager.ToIndex(gridCoord);
-			targetPosition = gridCoord.ToPosition();
-			SetState(State.MOVE, (length + 1.0f) / walkSpeed);
-			cameraController?.OnPuzzleSolved(dstWaypoint - 1); // Notify previous waypoint solved
-			return true;
-		}
-
-		private void SetNextDestination()
-		{
-			dstWaypoint = (dstWaypoint + 1) % mapManager.Waypoints.Count;
-		}
-
-		private void StartTurning(float dstYaw)
+		private void StartTurning(float dstYaw, State next, float duration = 1f)
 		{
 			startYaw = eggbotRoot.eulerAngles.y;
 			targetYaw = dstYaw;
-			SetState(State.TURN, 1f / 6f);
-		}
-
-		private void StartSpinning()
-		{
-			startYaw = eggbotRoot.eulerAngles.y;
-			SetState(State.SPIN);
+			SetState(next, duration);
 		}
 
 		private static float DirToAngle(int dir)
