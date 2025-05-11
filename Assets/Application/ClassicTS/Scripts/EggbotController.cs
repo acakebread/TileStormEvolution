@@ -12,14 +12,14 @@ namespace ClassicTilestorm
 		public Transform eggbotRoot;
 		private Transform eggbotMesh;
 
-		private int currentTile; // Tracks current tile index
-		private int dstWaypoint; // Tracks the target waypoint index
+		private int currentTile;
+		private int dstWaypoint;
 
-		private float stateTimer; // Timer for current state
-		private float stateDuration; // Duration for current state
+		private float stateTimer;
+		private float stateDuration;
 
-		private bool isLevelComplete; // ToDo replace with event / action
-		public bool IsLevelComplete => isLevelComplete; // ToDo replace with event / action
+		private bool isLevelComplete;
+		public bool IsLevelComplete => isLevelComplete;
 
 		private float walkSpeed = 6f;
 		private Vector3 startPosition;
@@ -34,13 +34,12 @@ namespace ClassicTilestorm
 		private static float mod1 = 0.0f;
 		private static float mod2 = 0.0f;
 
-		private enum State { IDLE, TEST, TURN, MOVE, SPIN }
+		private enum State { IDLE, TEST, TURN, MOVE }
 		private State currentState = State.IDLE;
 
 		public void Initialize()
 		{
 			Reset();
-
 			if (mapManager == null) { Debug.LogError("Initialize: mapManager is null"); return; }
 
 			var startTile = Navigation.GetStartTile(mapManager);
@@ -86,14 +85,12 @@ namespace ClassicTilestorm
 		public void Reset()
 		{
 			currentTile = -1;
-			dstWaypoint = 1; // Start targeting the second waypoint (index 1), as in cDerek
-
+			dstWaypoint = 1;
 			stateTimer = 0f;
-			stateDuration = 1f; // Initial pause duration
+			stateDuration = 1f;
 			wobble = 0.1f;
 			mod1 = mod2 = 0.0f;
-
-			isLevelComplete = false; // ToDo replace with event / action
+			isLevelComplete = false;
 		}
 
 		private void SetState(State state, float duration = 1f)
@@ -124,9 +121,6 @@ namespace ClassicTilestorm
 				case State.MOVE:
 					UpdateMove();
 					break;
-				case State.SPIN:
-					UpdateSpin();
-					break;
 			}
 
 			UpdateWobble();
@@ -142,7 +136,6 @@ namespace ClassicTilestorm
 		{
 			if (stateTimer >= stateDuration)
 			{
-				// Evaluate behavior
 				var destinationTile = mapManager.Waypoints[dstWaypoint].nTile;
 
 				if (currentTile == destinationTile)
@@ -161,7 +154,7 @@ namespace ClassicTilestorm
 				if (currentTile == destinationTile)
 					SetNextDestination();
 
-				SetState(State.IDLE); // Default to idle if no action taken
+				SetState(State.IDLE);
 			}
 
 			bool FaceConsole()
@@ -180,11 +173,11 @@ namespace ClassicTilestorm
 				var yawDelta = Mathf.Abs(Mathf.DeltaAngle(currentYaw, consoleYaw));
 				if (yawDelta > 0.01f)
 				{
-					StartTurning(eggbotRoot.eulerAngles.y + Mathf.DeltaAngle(eggbotRoot.eulerAngles.y, consoleYaw), State.TURN, 1f / 6f);
+					StartTurn(eggbotRoot.eulerAngles.y + Mathf.DeltaAngle(eggbotRoot.eulerAngles.y, consoleYaw), 1f / 6f);
 					return true;
 				}
 
-				return false; // Already facing console, no action needed
+				return false;
 			}
 
 			bool TestDestination()
@@ -192,13 +185,15 @@ namespace ClassicTilestorm
 				var destinationTile = mapManager.Waypoints[dstWaypoint].nTile;
 				if (destinationTile == Navigation.GetEndTile(mapManager))
 				{
-					isLevelComplete = true; // ToDo invoke event
-					StartTurning(eggbotRoot.eulerAngles.y + spinAngle, State.SPIN);
+					isLevelComplete = true;
+					SetNextDestination(); // Advance waypoint before spinning
+					StartTurn(eggbotRoot.eulerAngles.y + spinAngle, 1f);
 					return true;
 				}
 				if (destinationTile == Navigation.GetStartTile(mapManager) && dstWaypoint == 0)
 				{
-					StartTurning(eggbotRoot.eulerAngles.y + spinAngle, State.SPIN);
+					SetNextDestination(); // Advance waypoint before spinning
+					StartTurn(eggbotRoot.eulerAngles.y + spinAngle, 1f);
 					return true;
 				}
 
@@ -218,7 +213,7 @@ namespace ClassicTilestorm
 
 				if (Mathf.DeltaAngle(0, eggbotRoot.eulerAngles.y) != targetYaw)
 				{
-					StartTurning(eggbotRoot.eulerAngles.y + Mathf.DeltaAngle(eggbotRoot.eulerAngles.y, targetYaw), State.TURN, 1f / 6f);
+					StartTurn(eggbotRoot.eulerAngles.y + Mathf.DeltaAngle(eggbotRoot.eulerAngles.y, targetYaw), 1f / 6f);
 					return true;
 				}
 
@@ -228,7 +223,7 @@ namespace ClassicTilestorm
 				currentTile = mapManager.ToIndex(gridCoord);
 				targetPosition = gridCoord.ToPosition();
 				SetState(State.MOVE, (length + 1.0f) / walkSpeed);
-				cameraController?.OnPuzzleSolved(dstWaypoint - 1); // Notify previous waypoint solved - this needs modding but the parameter is not currently used so not important
+				cameraController?.OnPuzzleSolved(dstWaypoint - 1);
 				return true;
 			}
 		}
@@ -243,7 +238,7 @@ namespace ClassicTilestorm
 			if (tTurn >= 1f)
 			{
 				eggbotRoot.rotation = Quaternion.Euler(0f, targetYaw % 360f, 0f);
-				SetState(State.TEST, 0.2f); // After turning, re-evaluate
+				SetState(State.TEST, 0.2f);
 			}
 		}
 
@@ -256,22 +251,7 @@ namespace ClassicTilestorm
 			if (tMove >= 1f)
 			{
 				eggbotRoot.position = targetPosition;
-				SetState(State.TEST, 0.2f); // Re-evaluate after move
-			}
-		}
-
-		private void UpdateSpin()
-		{
-			var tTurn = Mathf.Clamp01(stateTimer / stateDuration);
-			var cosTTurn = (1f - Mathf.Cos(tTurn * Mathf.PI)) / 2f;
-			var angle = Mathf.Lerp(startYaw, targetYaw, cosTTurn);
-			eggbotRoot.rotation = Quaternion.Euler(0f, angle % 360f, 0f);
-
-			if (tTurn >= 1f)
-			{
-				eggbotRoot.rotation = Quaternion.Euler(0f, targetYaw % 360f, 0f);
-				SetNextDestination(); // Advance to next waypoint after spin
-				SetState(State.TEST, 0.2f); // After spinning, re-evaluate
+				SetState(State.TEST, 0.2f);
 			}
 		}
 
@@ -291,13 +271,13 @@ namespace ClassicTilestorm
 			eggbotMesh.localRotation = pitchRotation;
 		}
 
-		private void SetNextDestination() =>  dstWaypoint = (dstWaypoint + 1) % mapManager.Waypoints.Count;
+		private void SetNextDestination() => dstWaypoint = (dstWaypoint + 1) % mapManager.Waypoints.Count;
 
-		private void StartTurning(float dstYaw, State next, float duration = 1f)
+		private void StartTurn(float dstYaw, float duration)
 		{
 			startYaw = eggbotRoot.eulerAngles.y;
 			targetYaw = dstYaw;
-			SetState(next, duration);
+			SetState(State.TURN, duration);
 		}
 
 		private static float DirToAngle(int dir)
