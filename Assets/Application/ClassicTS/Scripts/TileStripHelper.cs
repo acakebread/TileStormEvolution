@@ -137,6 +137,8 @@ namespace ClassicTilestorm
 				if (gameObject != null)
 					gameObject.transform.position = new Vector3(index % map.Width, 0f, index / map.Width);
 			}
+			if (SpareTile != null)
+				SpareTile.SetActive(false);
 		}
 
 		private static void UpdateSpareTile(IMap map, in TileStrip strip, in Vector3 delta, bool active)
