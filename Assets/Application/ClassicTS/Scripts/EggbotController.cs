@@ -125,7 +125,7 @@ namespace ClassicTilestorm
 					}
 
 					var direction = Navigation.NavToDest(mapManager, currentTile, destinationTile);
-					if (0 == direction || false == Mathf.Approximately(Mathf.DeltaAngle(0, eggbotRoot.eulerAngles.y), Mathf.DeltaAngle(0, DirToAngle(direction)))) return false;
+					if (0 == direction || 0 != (int)Mathf.DeltaAngle(eggbotRoot.eulerAngles.y, DirToAngle(direction))) return false;
 
 					isBlocked = false;
 					startPosition = mapManager.GetTilePosition(currentTile);
