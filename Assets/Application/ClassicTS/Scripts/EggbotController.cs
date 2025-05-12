@@ -29,6 +29,7 @@ namespace ClassicTilestorm
 		private Queue<System.Action> actionQueue = new();
 		private enum State { IDLE, TEST, TURN, MOVE }
 		private State currentState = State.IDLE;
+		private bool isBlocked = false;
 
 		public event System.Action<int> OnWaypointReached;
 		public event System.Action<int> OnPuzzleSolved;
@@ -37,8 +38,8 @@ namespace ClassicTilestorm
 		public void Initialize()
 		{
 			dstWaypoint = 1;
-			sway = 0.1f;
 			mod1 = mod2 = 0f;
+			sway = 0.1f;
 			actionQueue.Clear();
 
 			currentTile = Navigation.GetStartTile(mapManager);
@@ -57,13 +58,13 @@ namespace ClassicTilestorm
 			eggbotMesh.localPosition = Vector3.zero;
 			eggbotMesh.localRotation = Quaternion.identity;
 
-			if (null != DatabaseLoader.Themes.FirstOrDefault(t => t.name == def.szTheme)?.szTileTextureSet)
-				mesh.AddComponent<TextureSetAnimator>().Initialize(TextureSetManager.GetTextureFrames(DatabaseLoader.Themes.FirstOrDefault(t => t.name == def.szTheme).szTileTextureSet));
+			var theme = DatabaseLoader.Themes.FirstOrDefault(t => t.name == def.szTheme);
+			if (theme?.szTileTextureSet != null)
+				mesh.AddComponent<TextureSetAnimator>().Initialize(TextureSetManager.GetTextureFrames(theme.szTileTextureSet));
 
 			eggbotRoot.position = mapManager.GetTilePosition(currentTile);
 			var yaw = mapManager.Waypoints?.Count > 1 ? DirToAngle(Navigation.NavToDest(mapManager, mapManager.Waypoints[0].nTile, mapManager.Waypoints[1].nTile)) : 0f;
 			eggbotRoot.rotation = Quaternion.Euler(0f, yaw, 0f);
-			stateTimer = stateDuration = 0f;// not sure this is needed
 			SetState(State.IDLE, 1f);
 		}
 
@@ -95,6 +96,7 @@ namespace ClassicTilestorm
 			void UpdateTest()
 			{
 				if (actionQueue.Count > 0) { actionQueue.Dequeue()?.Invoke(); return; }
+
 				var destinationTile = mapManager.Waypoints[dstWaypoint].nTile;
 				if (TestSpin(destinationTile)) return;
 				if (TestMove(destinationTile)) return;
@@ -108,7 +110,7 @@ namespace ClassicTilestorm
 					dstWaypoint = (dstWaypoint + 1) % mapManager.Waypoints.Count;
 					startYaw = eggbotRoot.eulerAngles.y;
 					targetYaw = eggbotRoot.eulerAngles.y + SpinAngle;
-					actionQueue.Enqueue(() => SetState(State.TURN, 1f));
+					actionQueue.Enqueue(() => SetState(State.TURN, 1.5f));
 					actionQueue.Enqueue(() => SetState(State.IDLE, 0.5f));
 					return true;
 				}
@@ -125,6 +127,7 @@ namespace ClassicTilestorm
 					var direction = Navigation.NavToDest(mapManager, currentTile, destinationTile);
 					if (0 == direction || Mathf.DeltaAngle(0, eggbotRoot.eulerAngles.y) != DirToAngle(direction)) return false;
 
+					isBlocked = false;
 					startPosition = mapManager.GetTilePosition(currentTile);
 					var prevCurrentTile = currentTile;
 					currentTile = Navigation.LineOfSight(mapManager, currentTile, destinationTile, direction);
@@ -148,6 +151,7 @@ namespace ClassicTilestorm
 					var consoleTile = Navigation.FindAdjacentConsole(mapManager, currentTile);
 					if (-1 != consoleTile && null != mapManager.GetTileProperties(consoleTile)?.Nav)
 					{
+						isBlocked = direction == 0;
 						var consoleYaw = DirToAngle(TileProperties.GetOppositeDirection(mapManager.GetTileProperties(consoleTile).Nav));
 						if (Mathf.Abs(Mathf.DeltaAngle(eggbotRoot.eulerAngles.y, consoleYaw)) > 0.01f)
 						{
@@ -157,6 +161,13 @@ namespace ClassicTilestorm
 							actionQueue.Enqueue(() => SetState(State.IDLE, 0.5f));
 							return true;
 						}
+
+						// Queue four BUSY states for jiggling to simulate looking at console
+						float currentYaw = eggbotRoot.eulerAngles.y;
+						float offset = (Random.Range(0f, 8f) - 4f) * 4.3f; // [-17.2, 17.2] degrees
+						actionQueue.Enqueue(() => { startYaw = currentYaw; targetYaw = consoleYaw + offset; SetState(State.TURN, Random.Range(0.25f, 0.75f)); });
+						actionQueue.Enqueue(() => { startYaw = currentYaw + offset; targetYaw = consoleYaw + (Random.Range(0f, 8f) - 4f) * 4.3f; SetState(State.TURN, Random.Range(0.25f, 0.75f)); });
+						return true;
 					}
 					return false;
 				}
@@ -180,7 +191,7 @@ namespace ClassicTilestorm
 			{
 				mod1 += 7.8f * Time.deltaTime;
 				mod2 += 1.8f * Time.deltaTime;
-				sway = (sway * 99f + (State.IDLE == currentState ? 0.02f : 0.1f)) / 100f;
+				sway = (sway * 999f + (isBlocked ? 0.02f : 0.1f)) / 1000f; // 0.02f if blocked, 0.1f otherwise
 				var pitch = sway * Mathf.Sin(mod1) * Mathf.Sin(mod2);
 				var rotation = Quaternion.Euler(pitch * Mathf.Rad2Deg, 0f, 0f);
 				eggbotMesh.localPosition = rotation * new Vector3(0f, 0f, -pitch);

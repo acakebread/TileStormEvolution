@@ -76,50 +76,80 @@ namespace ClassicTilestorm
 			}
 
 			generatedWaypoints.Add(new DatabaseLoader.Waypoint { nTile = startTile });
-			var path = FindPath(map, startTile, endTile);
 
-			if (path != null)
+			int currentTile = startTile;
+			int currentDir = NavToDest(map, currentTile, endTile);
+			if (currentDir != 0)
 			{
-				foreach (int tile in path)
+				while (currentTile != endTile)
 				{
-					if (tile == startTile)
-						continue;
-					if (FindAdjacentConsole(map, tile) != -1 || tile == endTile)
-					{
-						generatedWaypoints.Add(new DatabaseLoader.Waypoint { nTile = tile });
-					}
+					if (FindAdjacentConsole(map, currentTile) != -1)
+						generatedWaypoints.Add(new DatabaseLoader.Waypoint { nTile = currentTile });
+
+					int nextTile = GetAdjacentTile(map, currentTile, currentDir);
+					if (nextTile == -1 || nextTile == startTile)
+						break;
+
+					var nextProps = map.GetTileProperties(nextTile);
+					if (nextProps == null)
+						break;
+
+					currentDir = CalculateNav(currentDir, nextProps.Nav);
+					if (currentDir == 0)
+						break;
+
+					currentTile = nextTile;
 				}
 			}
-			else
-			{
-				generatedWaypoints.Add(new DatabaseLoader.Waypoint { nTile = endTile });
-				Debug.LogWarning("Failed to find path from start to end for waypoint setup");
-			}
+
+			generatedWaypoints.Add(new DatabaseLoader.Waypoint { nTile = endTile });
 
 			Debug.Log($"Generated {generatedWaypoints.Count} waypoints: [{string.Join(", ", generatedWaypoints.Select(w => w.nTile))}]");
 			return generatedWaypoints;
 		}
 
-		//public static bool CheckPathBetweenWaypoints(IMap map, int fromWaypointIndex, int toWaypointIndex, out List<int> path)
-		//{
-		//	if (fromWaypointIndex < 0 || fromWaypointIndex >= map.Waypoints.Count || toWaypointIndex < 0 || toWaypointIndex >= map.Waypoints.Count)
-		//	{
-		//		path = null;
-		//		return false;
-		//	}
-		//	int fromTile = map.Waypoints[fromWaypointIndex].nTile;
-		//	int toTile = map.Waypoints[toWaypointIndex].nTile;
+		//Classic TS legacy function - returns direction to next tile
+		private static int CalculateNav(int currentDir, int nextNav)
+		{
+			int oppositeDir = TileProperties.GetOppositeDirection(currentDir);
+			if ((oppositeDir & nextNav) != 0) // Next tile allows entering from current direction
+			{
+				if ((currentDir & nextNav) != 0)
+					return currentDir; // Continue straight (crossroad or straight path)
+				return nextNav & ~oppositeDir; // Turn at bend (use next tile's nav, exclude opposite)
+			}
+			return 0; // Direction not supported
+		}
 
-		//	path = FindPath(map, fromTile, toTile);
-		//	return path != null;
-		//}
-
-		//Classic TS legacy function - returns direction - ToDo rewrite correctly
+		//Classic TS legacy function - returns direction
 		public static int NavToDest(IMap map, int src, int dst)
 		{
-			var path = FindPath(map, src, dst);
-			if (null == path || path.Count < 2) return 0;
-			return GetTileOffsetToDirection(map, path[1] - path[0]);
+			if (src == dst || src == -1 || dst == -1)
+				return 0;
+
+			foreach (var dirBit in TileProperties.Directions)
+			{
+				int currentTile = src;
+				int currentNav = map.GetTileProperties(src)?.Nav & dirBit ?? 0;
+
+				while (currentNav != 0)
+				{
+					if (currentTile == dst)
+						return dirBit; // Found destination, return initial direction
+
+					int nextTile = GetAdjacentTile(map, currentTile, currentNav);
+					if (nextTile == -1 || nextTile == src) // Invalid tile or loop back
+						break;
+
+					var nextProps = map.GetTileProperties(nextTile);
+					if (nextProps == null)
+						break;
+
+					currentNav = CalculateNav(currentNav, nextProps.Nav);
+					currentTile = nextTile;
+				}
+			}
+			return 0; // No valid direction found
 		}
 
 		//Classic TS legacy function - returns Length in direction - ToDo rewrite correctly
@@ -163,68 +193,6 @@ namespace ClassicTilestorm
 			return nSrc;
 		}
 
-		public static List<int> FindPath(IMap map, int startTile, int targetTile)
-		{
-			var startProps = map.GetTileProperties(startTile);
-			if (startProps == null)
-				return null;
-
-			foreach (int dirBit in TileProperties.Directions)
-			{
-				if ((startProps.Nav & dirBit) == 0)
-					continue;
-				var path = FindPathRecursive(map, startTile, targetTile, dirBit);
-				if (path != null)
-					return path;
-			}
-			return null;
-		}
-
-		private static List<int> FindPathRecursive(IMap map, int currentTile, int targetTile, int currentDirBit, List<int> path = null)
-		{
-			path ??= new List<int>();
-			path.Add(currentTile);
-
-			if (currentTile == targetTile)
-				return path;
-
-			var currentProps = map.GetTileProperties(currentTile);
-			if (currentProps == null)
-			{
-				path.RemoveAt(path.Count - 1);
-				return null;
-			}
-
-			var tryDirections = GetTryDirections(currentProps.Nav, currentDirBit);
-			for (int i = 0; i < tryDirections.Length; i++)
-			{
-				var dirBit = tryDirections[i];
-				var nextTile = GetAdjacentTile(map, currentTile, dirBit);
-				if (nextTile == -1)
-					continue;
-
-				var nextProps = map.GetTileProperties(nextTile);
-				if (!TileProperties.CanMoveBetweenTiles(currentProps, nextProps, dirBit))
-					continue;
-
-				var result = FindPathRecursive(map, nextTile, targetTile, dirBit, path);
-				if (result != null)
-					return result;
-			}
-
-			path.RemoveAt(path.Count - 1);
-			return null;
-
-			static int[] GetTryDirections(int nav, int currentDirBit)
-			{
-				if ((TileProperties.GetOppositeDirection(nav) & nav) == nav)
-					return new[] { currentDirBit };
-				if (currentDirBit != 0)
-					return new[] { nav & ~(currentDirBit | TileProperties.GetOppositeDirection(currentDirBit)) };
-				return TileProperties.Directions;
-			}
-		}
-
 		private static int GetAdjacentTile(IMap map, int tileIndex, int dirBit)
 		{
 			var (dx, dz) = TileProperties.GetDirectionOffset(dirBit);
@@ -236,6 +204,82 @@ namespace ClassicTilestorm
 		public static int GetTileOffsetToDirection(IMap map, int tileOffset) => TileProperties.GetOffsetDirection(tileOffset % map.Width, tileOffset / map.Width);
 	}
 }
+
+//public static List<int> FindPath(IMap map, int startTile, int targetTile)
+//{
+//	var startProps = map.GetTileProperties(startTile);
+//	if (startProps == null)
+//		return null;
+
+//	foreach (int dirBit in TileProperties.Directions)
+//	{
+//		if ((startProps.Nav & dirBit) == 0)
+//			continue;
+//		var path = FindPathRecursive(map, startTile, targetTile, dirBit);
+//		if (path != null)
+//			return path;
+//	}
+//	return null;
+//}
+
+//private static List<int> FindPathRecursive(IMap map, int currentTile, int targetTile, int currentDirBit, List<int> path = null)
+//{
+//	path ??= new List<int>();
+//	path.Add(currentTile);
+
+//	if (currentTile == targetTile)
+//		return path;
+
+//	var currentProps = map.GetTileProperties(currentTile);
+//	if (currentProps == null)
+//	{
+//		path.RemoveAt(path.Count - 1);
+//		return null;
+//	}
+
+//	var tryDirections = GetTryDirections(currentProps.Nav, currentDirBit);
+//	for (int i = 0; i < tryDirections.Length; i++)
+//	{
+//		var dirBit = tryDirections[i];
+//		var nextTile = GetAdjacentTile(map, currentTile, dirBit);
+//		if (nextTile == -1)
+//			continue;
+
+//		var nextProps = map.GetTileProperties(nextTile);
+//		if (!TileProperties.CanMoveBetweenTiles(currentProps, nextProps, dirBit))
+//			continue;
+
+//		var result = FindPathRecursive(map, nextTile, targetTile, dirBit, path);
+//		if (result != null)
+//			return result;
+//	}
+
+//	path.RemoveAt(path.Count - 1);
+//	return null;
+
+//	static int[] GetTryDirections(int nav, int currentDirBit)
+//	{
+//		if ((TileProperties.GetOppositeDirection(nav) & nav) == nav)
+//			return new[] { currentDirBit };
+//		if (currentDirBit != 0)
+//			return new[] { nav & ~(currentDirBit | TileProperties.GetOppositeDirection(currentDirBit)) };
+//		return TileProperties.Directions;
+//	}
+//}
+
+//public static bool CheckPathBetweenWaypoints(IMap map, int fromWaypointIndex, int toWaypointIndex, out List<int> path)
+//{
+//	if (fromWaypointIndex < 0 || fromWaypointIndex >= map.Waypoints.Count || toWaypointIndex < 0 || toWaypointIndex >= map.Waypoints.Count)
+//	{
+//		path = null;
+//		return false;
+//	}
+//	int fromTile = map.Waypoints[fromWaypointIndex].nTile;
+//	int toTile = map.Waypoints[toWaypointIndex].nTile;
+
+//	path = FindPath(map, fromTile, toTile);
+//	return path != null;
+//}
 
 //public static int GetTileOffsetToDirection(IMap map, int tileOffset)
 //{
