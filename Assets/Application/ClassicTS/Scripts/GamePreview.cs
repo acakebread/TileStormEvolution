@@ -41,7 +41,6 @@ namespace ClassicTilestorm
 
 			// Reset all components
 			_mapManager.Reset();
-			_eggbotController.Reset();
 
 			// Initialize in order
 			_mapManager.Initialize(PreviewSettings.LoadMapName);

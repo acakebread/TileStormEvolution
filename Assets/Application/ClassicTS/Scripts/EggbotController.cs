@@ -15,8 +15,6 @@ namespace ClassicTilestorm
 		private int dstWaypoint;
 		private float stateTimer;
 		private float stateDuration;
-		private bool isLevelComplete;
-		public bool IsLevelComplete => isLevelComplete;
 
 		private float walkSpeed = 6f;
 		private Vector3 startPosition;
@@ -28,10 +26,9 @@ namespace ClassicTilestorm
 		private float sway = 0.1f;
 		private float mod1, mod2;
 
-		private Queue<System.Action<State>> actionQueue = new();
-		private enum State { IDLE, TURN, MOVE }
+		private Queue<System.Action> actionQueue = new();
+		private enum State { IDLE, TEST, TURN, MOVE }
 		private State currentState = State.IDLE;
-		private System.Action<State> onActionComplete;
 
 		public event System.Action<int> OnWaypointReached;
 		public event System.Action<int> OnPuzzleSolved;
@@ -39,7 +36,11 @@ namespace ClassicTilestorm
 
 		public void Initialize()
 		{
-			Reset();
+			dstWaypoint = 1;
+			sway = 0.1f;
+			mod1 = mod2 = 0f;
+			actionQueue.Clear();
+
 			currentTile = Navigation.GetStartTile(mapManager);
 			if (null == mapManager || -1 == currentTile) { Debug.LogError("Initialize: Invalid setup"); return; }
 
@@ -62,30 +63,16 @@ namespace ClassicTilestorm
 			eggbotRoot.position = mapManager.GetTilePosition(currentTile);
 			var yaw = mapManager.Waypoints?.Count > 1 ? DirToAngle(Navigation.NavToDest(mapManager, mapManager.Waypoints[0].nTile, mapManager.Waypoints[1].nTile)) : 0f;
 			eggbotRoot.rotation = Quaternion.Euler(0f, yaw, 0f);
-			SetState(State.IDLE);
+			stateTimer = stateDuration = 0f;// not sure this is needed
+			SetState(State.IDLE, 1f);
 		}
 
-		public void Reset()
-		{
-			currentTile = -1;
-			dstWaypoint = 1;
-			stateTimer = stateDuration = 0f;
-			sway = 0.1f;
-			mod1 = mod2 = 0f;
-			isLevelComplete = false;
-			onActionComplete = null;
-			actionQueue.Clear();
-		}
-
-		private void SetState(State state, float duration = 1f, System.Action<State> onComplete = null)
+		private void SetState(State state, float duration = 0f)
 		{
 			currentState = state;
 			stateTimer = 0f;
 			stateDuration = duration;
-			onActionComplete = onComplete ?? onActionComplete;
 		}
-
-		private void QueueAction(System.Action<State> action) => actionQueue.Enqueue(action);
 
 		public void UpdateEggbot()
 		{
@@ -93,111 +80,112 @@ namespace ClassicTilestorm
 			switch (currentState)
 			{
 				case State.IDLE: UpdateIdle(); break;
+				case State.TEST: UpdateTest(); break;
 				case State.TURN: UpdateTurn(); break;
 				case State.MOVE: UpdateMove(); break;
 			}
 			UpdateSway();
-		}
 
-		private void UpdateIdle()
-		{
-			if (stateTimer < stateDuration) return;
-			if (actionQueue.Count > 0) { actionQueue.Dequeue()?.Invoke(currentState); return; }
-			var destinationTile = mapManager.Waypoints[dstWaypoint].nTile;
-
-			if (TestSpin(destinationTile)) return;
-			if (TestMove(destinationTile)) return;
-			if (TestTurn(destinationTile)) return;
-
-			bool TestSpin(int destinationTile)
+			void UpdateIdle()
 			{
-				if (currentTile != destinationTile || (destinationTile != Navigation.GetEndTile(mapManager) && destinationTile != Navigation.GetStartTile(mapManager))) return false;
-				if (destinationTile == Navigation.GetEndTile(mapManager)) { isLevelComplete = true; OnLevelCompleted?.Invoke(); }
-				dstWaypoint = (dstWaypoint + 1) % mapManager.Waypoints.Count;
-				startYaw = eggbotRoot.eulerAngles.y;
-				targetYaw = eggbotRoot.eulerAngles.y + SpinAngle;
-				QueueAction(state => SetState(State.TURN, 1f, s => SetState(State.IDLE, 0.5f)));
-				return true;
+				if (stateTimer < stateDuration) return;
+				SetState(State.TEST);
 			}
 
-			bool TestMove(int destinationTile)
+			void UpdateTest()
 			{
-				if (currentTile == destinationTile)
+				if (actionQueue.Count > 0) { actionQueue.Dequeue()?.Invoke(); return; }
+				var destinationTile = mapManager.Waypoints[dstWaypoint].nTile;
+				if (TestSpin(destinationTile)) return;
+				if (TestMove(destinationTile)) return;
+				if (TestTurn(destinationTile)) return;
+				SetState(State.IDLE, 1f);
+
+				bool TestSpin(int destinationTile)
 				{
-					OnWaypointReached?.Invoke(dstWaypoint);
+					if (currentTile != destinationTile || (destinationTile != Navigation.GetEndTile(mapManager) && destinationTile != Navigation.GetStartTile(mapManager))) return false;
+					if (destinationTile == Navigation.GetEndTile(mapManager)) { OnLevelCompleted?.Invoke(); }
 					dstWaypoint = (dstWaypoint + 1) % mapManager.Waypoints.Count;
-					return false;
-				}
-
-				var direction = Navigation.NavToDest(mapManager, currentTile, destinationTile);
-				if (0 == direction || Mathf.DeltaAngle(0, eggbotRoot.eulerAngles.y) != DirToAngle(direction)) return false;
-
-				startPosition = mapManager.GetTilePosition(currentTile);
-				var prevCurrentTile = currentTile;
-				currentTile = Navigation.LineOfSight(mapManager, currentTile, destinationTile, direction);
-				targetPosition = mapManager.GetTilePosition(currentTile);
-				QueueAction(state => SetState(State.MOVE, (mapManager.GetTileDistance(prevCurrentTile, currentTile) + 1.0f) / walkSpeed, s => SetState(State.IDLE, 0f)));
-				OnPuzzleSolved?.Invoke(dstWaypoint - 1);
-				return true;
-			}
-
-			bool TestTurn(int destinationTile)
-			{
-				var direction = Navigation.NavToDest(mapManager, currentTile, destinationTile);
-				if (0 != direction && Mathf.Abs(Mathf.DeltaAngle(eggbotRoot.eulerAngles.y, DirToAngle(direction))) > 0.01f)
-				{
 					startYaw = eggbotRoot.eulerAngles.y;
-					targetYaw = eggbotRoot.eulerAngles.y + Mathf.DeltaAngle(eggbotRoot.eulerAngles.y, DirToAngle(direction));
-					QueueAction(state => SetState(State.TURN, 1f / 4f, s => SetState(State.IDLE, 0f)));
+					targetYaw = eggbotRoot.eulerAngles.y + SpinAngle;
+					actionQueue.Enqueue(() => SetState(State.TURN, 1f));
+					actionQueue.Enqueue(() => SetState(State.IDLE, 0.5f));
 					return true;
 				}
 
-				var consoleTile = Navigation.FindAdjacentConsole(mapManager, currentTile);
-				if (-1 != consoleTile && null != mapManager.GetTileProperties(consoleTile)?.Nav)
+				bool TestMove(int destinationTile)
 				{
-					var consoleYaw = DirToAngle(TileProperties.GetOppositeDirection(mapManager.GetTileProperties(consoleTile).Nav));
-					if (Mathf.Abs(Mathf.DeltaAngle(eggbotRoot.eulerAngles.y, consoleYaw)) > 0.01f)
+					if (currentTile == destinationTile)
+					{
+						OnWaypointReached?.Invoke(dstWaypoint);
+						dstWaypoint = (dstWaypoint + 1) % mapManager.Waypoints.Count;
+						return false;
+					}
+
+					var direction = Navigation.NavToDest(mapManager, currentTile, destinationTile);
+					if (0 == direction || Mathf.DeltaAngle(0, eggbotRoot.eulerAngles.y) != DirToAngle(direction)) return false;
+
+					startPosition = mapManager.GetTilePosition(currentTile);
+					var prevCurrentTile = currentTile;
+					currentTile = Navigation.LineOfSight(mapManager, currentTile, destinationTile, direction);
+					targetPosition = mapManager.GetTilePosition(currentTile);
+					actionQueue.Enqueue(() => SetState(State.MOVE, (mapManager.GetTileDistance(prevCurrentTile, currentTile) + 1.0f) / walkSpeed));
+					OnPuzzleSolved?.Invoke(dstWaypoint - 1);
+					return true;
+				}
+
+				bool TestTurn(int destinationTile)
+				{
+					var direction = Navigation.NavToDest(mapManager, currentTile, destinationTile);
+					if (0 != direction && Mathf.Abs(Mathf.DeltaAngle(eggbotRoot.eulerAngles.y, DirToAngle(direction))) > 0.01f)
 					{
 						startYaw = eggbotRoot.eulerAngles.y;
-						targetYaw = eggbotRoot.eulerAngles.y + Mathf.DeltaAngle(eggbotRoot.eulerAngles.y, consoleYaw);
-						QueueAction(state => SetState(State.TURN, 1f / 4f, s => SetState(State.IDLE, 0.5f)));
+						targetYaw = eggbotRoot.eulerAngles.y + Mathf.DeltaAngle(eggbotRoot.eulerAngles.y, DirToAngle(direction));
+						actionQueue.Enqueue(() => SetState(State.TURN, 1f / 4f));
 						return true;
 					}
+
+					var consoleTile = Navigation.FindAdjacentConsole(mapManager, currentTile);
+					if (-1 != consoleTile && null != mapManager.GetTileProperties(consoleTile)?.Nav)
+					{
+						var consoleYaw = DirToAngle(TileProperties.GetOppositeDirection(mapManager.GetTileProperties(consoleTile).Nav));
+						if (Mathf.Abs(Mathf.DeltaAngle(eggbotRoot.eulerAngles.y, consoleYaw)) > 0.01f)
+						{
+							startYaw = eggbotRoot.eulerAngles.y;
+							targetYaw = eggbotRoot.eulerAngles.y + Mathf.DeltaAngle(eggbotRoot.eulerAngles.y, consoleYaw);
+							actionQueue.Enqueue(() => SetState(State.TURN, 1f / 4f));
+							actionQueue.Enqueue(() => SetState(State.IDLE, 0.5f));
+							return true;
+						}
+					}
+					return false;
 				}
-				return false;
 			}
-		}
 
-		private void UpdateTurn()
-		{
-			var t = Mathf.Clamp01(stateTimer / stateDuration);
-			eggbotRoot.rotation = Quaternion.Euler(0f, Mathf.Lerp(startYaw, targetYaw, (1f - Mathf.Cos(t * Mathf.PI)) / 2f) % 360f, 0f);
-			if (t >= 1f) CompleteAction();
-		}
+			void UpdateTurn()
+			{
+				var t = Mathf.Clamp01(stateTimer / stateDuration);
+				eggbotRoot.rotation = Quaternion.Euler(0f, Mathf.Lerp(startYaw, targetYaw, (1f - Mathf.Cos(t * Mathf.PI)) / 2f) % 360f, 0f);
+				if (t >= 1f) SetState(State.TEST);
+			}
 
-		private void UpdateMove()
-		{
-			var t = stateDuration > 0 ? Mathf.Clamp01(stateTimer / stateDuration) : 1f;
-			eggbotRoot.position = Vector3.Lerp(startPosition, targetPosition, (1f - Mathf.Cos(t * Mathf.PI)) / 2f);
-			if (t >= 1f) CompleteAction();
-		}
+			void UpdateMove()
+			{
+				var t = stateDuration > 0 ? Mathf.Clamp01(stateTimer / stateDuration) : 1f;
+				eggbotRoot.position = Vector3.Lerp(startPosition, targetPosition, (1f - Mathf.Cos(t * Mathf.PI)) / 2f);
+				if (t >= 1f) SetState(State.TEST);
+			}
 
-		private void CompleteAction()
-		{
-			onActionComplete?.Invoke(currentState);
-			if (null == onActionComplete) SetState(State.IDLE, 0f);
-			onActionComplete = null;
-		}
-
-		private void UpdateSway()
-		{
-			mod1 += 7.8f * Time.deltaTime;
-			mod2 += 1.8f * Time.deltaTime;
-			sway = (sway * 99f + (State.IDLE == currentState ? 0.02f : 0.1f)) / 100f;
-			var pitch = sway * Mathf.Sin(mod1) * Mathf.Sin(mod2);
-			var rotation = Quaternion.Euler(pitch * Mathf.Rad2Deg, 0f, 0f);
-			eggbotMesh.localPosition = rotation * new Vector3(0f, 0f, -pitch);
-			eggbotMesh.localRotation = rotation;
+			void UpdateSway()
+			{
+				mod1 += 7.8f * Time.deltaTime;
+				mod2 += 1.8f * Time.deltaTime;
+				sway = (sway * 99f + (State.IDLE == currentState ? 0.02f : 0.1f)) / 100f;
+				var pitch = sway * Mathf.Sin(mod1) * Mathf.Sin(mod2);
+				var rotation = Quaternion.Euler(pitch * Mathf.Rad2Deg, 0f, 0f);
+				eggbotMesh.localPosition = rotation * new Vector3(0f, 0f, -pitch);
+				eggbotMesh.localRotation = rotation;
+			}
 		}
 
 		private void OnDestroy()
@@ -207,7 +195,6 @@ namespace ClassicTilestorm
 			OnLevelCompleted = null;
 		}
 
-		private static readonly float[] DirAngles = { 0f, 0f, 180f, 0f, 90f, 45f, 135f, 0f, -90f, -45f, -135f };
-		private static float DirToAngle(int dir) => dir >= 0 && dir < DirAngles.Length ? DirAngles[dir] : 0f;
+		private static float DirToAngle(int dir) => dir >= 0 && dir < 11 ? new float[] { 0f, 0f, 180f, 0f, 90f, 45f, 135f, 0f, -90f, -45f, -135f }[dir] : 0f;
 	}
 }
