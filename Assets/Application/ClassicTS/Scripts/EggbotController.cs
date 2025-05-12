@@ -125,7 +125,7 @@ namespace ClassicTilestorm
 					}
 
 					var direction = Navigation.NavToDest(mapManager, currentTile, destinationTile);
-					if (0 == direction || Mathf.DeltaAngle(0, eggbotRoot.eulerAngles.y) != DirToAngle(direction)) return false;
+					if (0 == direction || false == Mathf.Approximately(Mathf.DeltaAngle(0, eggbotRoot.eulerAngles.y), Mathf.DeltaAngle(0, DirToAngle(direction)))) return false;
 
 					isBlocked = false;
 					startPosition = mapManager.GetTilePosition(currentTile);
@@ -143,7 +143,7 @@ namespace ClassicTilestorm
 					if (0 != direction && Mathf.Abs(Mathf.DeltaAngle(eggbotRoot.eulerAngles.y, DirToAngle(direction))) > 0.01f)
 					{
 						startYaw = eggbotRoot.eulerAngles.y;
-						targetYaw = eggbotRoot.eulerAngles.y + Mathf.DeltaAngle(eggbotRoot.eulerAngles.y, DirToAngle(direction));
+						targetYaw = DirToAngle(direction);
 						actionQueue.Enqueue(() => SetState(State.TURN, 1f / 4f));
 						return true;
 					}
@@ -177,7 +177,7 @@ namespace ClassicTilestorm
 			{
 				var t = Mathf.Clamp01(stateTimer / stateDuration);
 				eggbotRoot.rotation = Quaternion.Euler(0f, Mathf.Lerp(startYaw, targetYaw, (1f - Mathf.Cos(t * Mathf.PI)) / 2f) % 360f, 0f);
-				if (t >= 1f) SetState(State.TEST);
+				if (t >= 1f) { eggbotRoot.rotation = Quaternion.Euler(0f, (int)(targetYaw % 360f), 0f); SetState(State.TEST); }
 			}
 
 			void UpdateMove()
