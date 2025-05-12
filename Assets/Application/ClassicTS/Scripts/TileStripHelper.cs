@@ -153,37 +153,32 @@ namespace ClassicTilestorm
 
 			var leadingTileIndex = strip.Indices.Last();
 			var leadingTile = map.GetTileGameObject(leadingTileIndex);
-
 			var trailingTileIndex = strip.Indices.First() - strip.Stride;
 			var trailingPosition = map.GetTileCoordinates(trailingTileIndex).ToPosition();
 
 			if (SpareTile == null)
 			{
-				SpareTile = new GameObject("SpareTile");
-				SpareTile.transform.SetParent(map.GetMapRoot().transform, false);
-				SpareTile.AddComponent<MeshFilter>();
-				SpareTile.AddComponent<MeshRenderer>();
+				SpareTile = GeometryManager.CreateSpareTile(leadingTile, map.GetMapRoot().transform, trailingPosition + delta);
 			}
 
+			var spareRenderer = SpareTile.GetComponent<MeshRenderer>();
+			var spareFilter = SpareTile.GetComponent<MeshFilter>();
 			var leadingRenderer = leadingTile?.GetComponentInChildren<MeshRenderer>();
 			var leadingFilter = leadingTile?.GetComponentInChildren<MeshFilter>();
-			var spareRenderer = SpareTile?.GetComponent<MeshRenderer>();
-			var spareFilter = SpareTile?.GetComponent<MeshFilter>();
 
-			if (leadingRenderer != null && leadingFilter != null && spareRenderer != null && spareFilter != null)
-			{
-				spareFilter.sharedMesh = leadingFilter.sharedMesh;
-				spareRenderer.material = leadingRenderer.material;
-				spareRenderer.transform.rotation = leadingRenderer.transform.rotation;
-				spareRenderer.transform.localScale = leadingRenderer.transform.localScale;
-			}
-			else
+			if (leadingRenderer == null || leadingFilter == null || spareRenderer == null || spareFilter == null)
 			{
 				SpareTile.SetActive(false);
 				return;
 			}
 
-			foreach (var collider in SpareTile.GetComponentsInChildren<Collider>()) Object.Destroy(collider);
+			spareFilter.sharedMesh = leadingFilter.sharedMesh;
+			spareRenderer.material = leadingRenderer.material;
+			spareRenderer.transform.rotation = leadingRenderer.transform.rotation;
+			spareRenderer.transform.localScale = leadingRenderer.transform.localScale;
+
+			foreach (var collider in SpareTile.GetComponentsInChildren<Collider>())
+				Object.Destroy(collider);
 
 			SpareTile.transform.position = trailingPosition + delta;
 			SpareTile.SetActive(true);

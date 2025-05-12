@@ -199,49 +199,15 @@ namespace ClassicTilestorm
 				{
 					if (PreviewSettings.ShowHiddenTiles)
 					{
-						gameObject = DebugVisualizationHelper.CreateDebugTile();
-						gameObject.transform.SetParent(mapRoot.transform, false);
+						gameObject = GeometryManager.CreateDebugTile(mapRoot.transform, coord.ToPosition());
 					}
 					this.tiles[index] = tileDataList.Count;
 					tileDataList.Add(new TileData { Properties = properties, GameObject = gameObject });
 					continue;
 				}
 
-				var geomAsset = GeometryManager.Get(properties.Geom);
-				if (geomAsset != null)
-				{
-					gameObject = Instantiate(geomAsset, mapRoot.transform);
-					gameObject.transform.position = coord.ToPosition();
-					gameObject.name = properties.Geom;
-
-					var textureFrames = TextureSetManager.GetTextureFrames(properties.tileDef.szTheme);
-					if (textureFrames?.Length > 0)
-					{
-						var animator = gameObject.AddComponent<TextureSetAnimator>();
-						animator.Initialize(textureFrames);
-					}
-					else
-					{
-						Debug.LogWarning($"No texture set for {properties.Type}, theme={properties.Theme}");
-					}
-				}
-				else
-				{
-					Debug.LogWarning($"Geometry not found: {properties.Geom}");
-					gameObject = GameObject.CreatePrimitive(PrimitiveType.Cube);
-					gameObject.transform.SetParent(mapRoot.transform, false);
-					gameObject.transform.position = coord.ToPosition() + new Vector3(0f, -0.1f, 0f);
-					gameObject.transform.localScale = new Vector3(1f, 0.1f, 1f);
-					gameObject.name = "Fallback_Cube";
-				}
-
-				if (properties.Interactive)
-				{
-					var collider = gameObject.AddComponent<BoxCollider>();
-					collider.size = new Vector3(1f, 0.1f, 1f);
-					collider.center = new Vector3(0f, -0.05f, 0f);
-				}
-
+				var tileDef = DatabaseLoader.TileDefs.FirstOrDefault(td => td.szType == szType && td.szTheme == szTheme);
+				gameObject = GeometryManager.InstantiateTile(tileDef, mapRoot.transform, coord.ToPosition(), properties.Interactive);
 				this.tiles[index] = tileDataList.Count;
 				tileDataList.Add(new TileData { Properties = properties, GameObject = gameObject });
 			}

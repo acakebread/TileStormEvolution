@@ -52,13 +52,10 @@ namespace ClassicTilestorm
 			var costume = string.IsNullOrEmpty(mapManager.EggbotCostume) ? "Eggbot Default" : mapManager.EggbotCostume;
 			var def = DatabaseLoader.TileDefs.FirstOrDefault(td => td.szType == "Eggbot" && td.szTheme == costume);
 			if (null == def?.szGeom) { Debug.LogError("Initialize: Invalid Eggbot geometry"); return; }
-			var mesh = Instantiate(GeometryManager.Get(def.szGeom), eggbotRoot);
+
+			var mesh = GeometryManager.InstantiateTile(def, eggbotRoot, Vector3.zero);
 			mesh.name = "Mesh";
 			eggbotMesh = mesh.transform;
-
-			var theme = DatabaseLoader.Themes.FirstOrDefault(t => t.name == def.szTheme);
-			if (theme?.szTileTextureSet != null)
-				mesh.AddComponent<TextureSetAnimator>().Initialize(TextureSetManager.GetTextureFrames(theme.szTileTextureSet));
 
 			eggbotRoot.position = mapManager.GetTilePosition(currentTile);
 			var yaw = mapManager.Waypoints?.Count > 1 ? Navigation.DirToAngle(Navigation.NavToDest(mapManager, mapManager.Waypoints[0].nTile, mapManager.Waypoints[1].nTile)) : 0f;
