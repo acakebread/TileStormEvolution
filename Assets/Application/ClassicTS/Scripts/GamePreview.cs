@@ -39,9 +39,6 @@ namespace ClassicTilestorm
 		{
 			Debug.Log($"GamePreview Initialize: mapName={PreviewSettings.LoadMapName}");
 
-			// Reset all components
-			_mapManager.Reset();
-
 			// Initialize in order
 			_mapManager.Initialize(PreviewSettings.LoadMapName);
 			_eggbotController.Initialize();

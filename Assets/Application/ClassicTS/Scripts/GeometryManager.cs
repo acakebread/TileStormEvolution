@@ -9,7 +9,7 @@ namespace ClassicTilestorm
 		private static Dictionary<string, GameObject> prefabCache = new();
 
 		// Loads a prefab from Resources, caching it for performance
-		public static GameObject Get(string geomName)
+		private static GameObject GetPrefab(string geomName)
 		{
 			if (string.IsNullOrEmpty(geomName))
 			{
@@ -32,6 +32,9 @@ namespace ClassicTilestorm
 			return prefab;
 		}
 
+		//workaround for the fact that TileDefs are really prefab definitions
+		public static GameObject InstantiatePrefab(DatabaseLoader.TileDef tileDef, Transform parent, Vector3 position) => InstantiateTile(tileDef, parent, position);
+
 		// Instantiates a GameObject based on TileDef, with optional texture animation and collider
 		public static GameObject InstantiateTile(DatabaseLoader.TileDef tileDef, Transform parent, Vector3 position, bool interactive = false)
 		{
@@ -41,7 +44,7 @@ namespace ClassicTilestorm
 				return CreateFallbackTile(parent, position);
 			}
 
-			var prefab = Get(tileDef.szGeom);
+			var prefab = GetPrefab(tileDef.szGeom);
 			if (prefab == null)
 			{
 				Debug.LogWarning($"GeometryManager: Prefab {tileDef.szGeom} not found for TileDef {tileDef.szType}.");

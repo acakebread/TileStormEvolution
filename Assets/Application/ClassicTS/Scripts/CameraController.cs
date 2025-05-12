@@ -139,7 +139,8 @@ namespace ClassicTilestorm
 				case CameraState.TrackingEggbot:
 					// Target 1/8 smoothing
 					fRate = 0.125f; // 1/8
-					m_fRate = (m_fRate * 63f + fRate * timeScale) / 64f;
+					//m_fRate = (m_fRate * 63f + fRate * timeScale) / 64f;
+					m_fRate = SmoothingUtils.Smooth(m_fRate, fRate * timeScale, 63f, Time.deltaTime);
 
 					// Compute target position with ScreenToPlaneXZ
 					Vector3 vOld = ScreenToPlaneXZ();

@@ -53,7 +53,7 @@ namespace ClassicTilestorm
 			var def = DatabaseLoader.TileDefs.FirstOrDefault(td => td.szType == "Eggbot" && td.szTheme == costume);
 			if (null == def?.szGeom) { Debug.LogError("Initialize: Invalid Eggbot geometry"); return; }
 
-			var mesh = GeometryManager.InstantiateTile(def, eggbotRoot, Vector3.zero);
+			var mesh = GeometryManager.InstantiatePrefab(def, eggbotRoot, Vector3.zero);
 			mesh.name = "Mesh";
 			eggbotMesh = mesh.transform;
 
@@ -186,7 +186,8 @@ namespace ClassicTilestorm
 			{
 				mod1 += 7.8f * Time.deltaTime;
 				mod2 += 1.8f * Time.deltaTime;
-				sway = (sway * 999f + (isBlocked ? 0.02f : 0.1f)) / 1000f; // 0.02f if blocked, 0.1f otherwise
+				//sway = (sway * 999f + (isBlocked ? 0.02f : 0.1f)) / 1000f; // 0.02f if blocked, 0.1f otherwise
+				sway = SmoothingUtils.Smooth(sway, isBlocked ? 0.02f : 0.1f, 99f, Time.deltaTime);
 				var pitch = sway * Mathf.Sin(mod1) * Mathf.Sin(mod2);
 				var rotation = Quaternion.Euler(pitch * Mathf.Rad2Deg, 0f, 0f);
 				eggbotMesh.localPosition = rotation * new Vector3(0f, 0f, -pitch);
