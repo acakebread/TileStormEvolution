@@ -143,7 +143,7 @@ namespace ClassicTilestorm
 					if (0 != direction && Mathf.Abs(Mathf.DeltaAngle(eggbotRoot.eulerAngles.y, DirToAngle(direction))) > 0.01f)
 					{
 						startYaw = eggbotRoot.eulerAngles.y;
-						targetYaw = DirToAngle(direction);
+						targetYaw = (int)eggbotRoot.eulerAngles.y + Mathf.DeltaAngle(eggbotRoot.eulerAngles.y, DirToAngle(direction));
 						actionQueue.Enqueue(() => SetState(State.TURN, 1f / 4f));
 						return true;
 					}
