@@ -1,0 +1,97 @@
+
+//public static List<int> FindPath(IMap map, int startTile, int targetTile)
+//{
+//	var startProps = map.GetTileProperties(startTile);
+//	if (startProps == null)
+//		return null;
+
+//	foreach (int dirBit in TileProperties.Directions)
+//	{
+//		if ((startProps.Nav & dirBit) == 0)
+//			continue;
+//		var path = FindPathRecursive(map, startTile, targetTile, dirBit);
+//		if (path != null)
+//			return path;
+//	}
+//	return null;
+//}
+
+//private static List<int> FindPathRecursive(IMap map, int currentTile, int targetTile, int currentDirBit, List<int> path = null)
+//{
+//	path ??= new List<int>();
+//	path.Add(currentTile);
+
+//	if (currentTile == targetTile)
+//		return path;
+
+//	var currentProps = map.GetTileProperties(currentTile);
+//	if (currentProps == null)
+//	{
+//		path.RemoveAt(path.Count - 1);
+//		return null;
+//	}
+
+//	var tryDirections = GetTryDirections(currentProps.Nav, currentDirBit);
+//	for (int i = 0; i < tryDirections.Length; i++)
+//	{
+//		var dirBit = tryDirections[i];
+//		var nextTile = GetAdjacentTile(map, currentTile, dirBit);
+//		if (nextTile == -1)
+//			continue;
+
+//		var nextProps = map.GetTileProperties(nextTile);
+//		if (!TileProperties.CanMoveBetweenTiles(currentProps, nextProps, dirBit))
+//			continue;
+
+//		var result = FindPathRecursive(map, nextTile, targetTile, dirBit, path);
+//		if (result != null)
+//			return result;
+//	}
+
+//	path.RemoveAt(path.Count - 1);
+//	return null;
+
+//	static int[] GetTryDirections(int nav, int currentDirBit)
+//	{
+//		if ((TileProperties.GetOppositeDirection(nav) & nav) == nav)
+//			return new[] { currentDirBit };
+//		if (currentDirBit != 0)
+//			return new[] { nav & ~(currentDirBit | TileProperties.GetOppositeDirection(currentDirBit)) };
+//		return TileProperties.Directions;
+//	}
+//}
+
+//public static bool CheckPathBetweenWaypoints(IMap map, int fromWaypointIndex, int toWaypointIndex, out List<int> path)
+//{
+//	if (fromWaypointIndex < 0 || fromWaypointIndex >= map.Waypoints.Count || toWaypointIndex < 0 || toWaypointIndex >= map.Waypoints.Count)
+//	{
+//		path = null;
+//		return false;
+//	}
+//	int fromTile = map.Waypoints[fromWaypointIndex].nTile;
+//	int toTile = map.Waypoints[toWaypointIndex].nTile;
+
+//	path = FindPath(map, fromTile, toTile);
+//	return path != null;
+//}
+
+//public static int GetTileOffsetToDirection(IMap map, int tileOffset)
+//{
+//	if (tileOffset == 1) return TileProperties.East;
+//	if (tileOffset == -1) return TileProperties.West;
+//	if (tileOffset == map.Width) return TileProperties.North;
+//	if (tileOffset == -map.Width) return TileProperties.South;
+//	return 0;
+//}
+
+//public static int GetDirectionFlag(Vector3 direction)
+//{
+//	if (direction.sqrMagnitude < 0.01f)
+//		return 0;
+//	var angle = Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg;
+//	if (Mathf.Abs(angle) <= 45f) return 1; // North (positive Z)
+//	if (Mathf.Abs(angle - 180) <= 45f || Mathf.Abs(angle + 180) <= 45f) return 2; // South (negative Z)
+//	if (Mathf.Abs(angle - 90) <= 45f) return 4; // East (positive X)
+//	if (Mathf.Abs(angle + 90) <= 45f) return 8; // West (negative X)
+//	return 0;
+//}

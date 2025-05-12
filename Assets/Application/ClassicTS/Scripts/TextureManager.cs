@@ -1,15 +1,18 @@
 using UnityEngine;
 using System.Collections.Generic;
 
-public static class TextureManager
+namespace ClassicTilestorm
 {
-	private static Dictionary<string, Texture2D> textures = new();
-	public static Texture2D Get(string name)
+	public static class TextureManager
 	{
-		if (true == textures.ContainsKey(name)) return textures[name];
-		string texPath = $"{PreviewSettings.TexturePath}{name}".Replace(".tga", "").Replace(".png", "");
-		textures[name] = Resources.Load<Texture2D>(texPath);
-		if (null == textures[name]) Debug.LogWarning($"Texture not found: {texPath}");
-		return textures[name];
+		private static Dictionary<string, Texture2D> textures = new();
+		public static Texture2D Get(string name)
+		{
+			if (true == textures.ContainsKey(name)) return textures[name];
+			string texPath = $"{PreviewSettings.TexturePath}{name}".Replace(".tga", "").Replace(".png", "");
+			textures[name] = Resources.Load<Texture2D>(texPath);
+			if (null == textures[name]) Debug.LogWarning($"Texture not found: {texPath}");
+			return textures[name];
+		}
 	}
 }

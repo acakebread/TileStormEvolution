@@ -210,7 +210,7 @@ namespace ClassicTilestorm
 				var geomAsset = GeometryManager.Get(properties.Geom);
 				if (geomAsset != null)
 				{
-					gameObject = Object.Instantiate(geomAsset, mapRoot.transform);
+					gameObject = Instantiate(geomAsset, mapRoot.transform);
 					gameObject.transform.position = coord.ToPosition();
 					gameObject.name = properties.Geom;
 

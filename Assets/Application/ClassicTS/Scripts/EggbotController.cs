@@ -55,15 +55,13 @@ namespace ClassicTilestorm
 			var mesh = Instantiate(GeometryManager.Get(def.szGeom), eggbotRoot);
 			mesh.name = "Mesh";
 			eggbotMesh = mesh.transform;
-			eggbotMesh.localPosition = Vector3.zero;
-			eggbotMesh.localRotation = Quaternion.identity;
 
 			var theme = DatabaseLoader.Themes.FirstOrDefault(t => t.name == def.szTheme);
 			if (theme?.szTileTextureSet != null)
 				mesh.AddComponent<TextureSetAnimator>().Initialize(TextureSetManager.GetTextureFrames(theme.szTileTextureSet));
 
 			eggbotRoot.position = mapManager.GetTilePosition(currentTile);
-			var yaw = mapManager.Waypoints?.Count > 1 ? DirToAngle(Navigation.NavToDest(mapManager, mapManager.Waypoints[0].nTile, mapManager.Waypoints[1].nTile)) : 0f;
+			var yaw = mapManager.Waypoints?.Count > 1 ? Navigation.DirToAngle(Navigation.NavToDest(mapManager, mapManager.Waypoints[0].nTile, mapManager.Waypoints[1].nTile)) : 0f;
 			eggbotRoot.rotation = Quaternion.Euler(0f, yaw, 0f);
 			SetState(State.IDLE, 1f);
 		}
@@ -125,7 +123,7 @@ namespace ClassicTilestorm
 					}
 
 					var direction = Navigation.NavToDest(mapManager, currentTile, destinationTile);
-					if (0 == direction || 0 != (int)Mathf.DeltaAngle(eggbotRoot.eulerAngles.y, DirToAngle(direction))) return false;
+					if (0 == direction || 0 != (int)Mathf.DeltaAngle(eggbotRoot.eulerAngles.y, Navigation.DirToAngle(direction))) return false;
 
 					isBlocked = false;
 					startPosition = mapManager.GetTilePosition(currentTile);
@@ -140,10 +138,10 @@ namespace ClassicTilestorm
 				bool TestTurn(int destinationTile)
 				{
 					var direction = Navigation.NavToDest(mapManager, currentTile, destinationTile);
-					if (0 != direction && Mathf.Abs(Mathf.DeltaAngle(eggbotRoot.eulerAngles.y, DirToAngle(direction))) > 0.01f)
+					if (0 != direction && Mathf.Abs(Mathf.DeltaAngle(eggbotRoot.eulerAngles.y, Navigation.DirToAngle(direction))) > 0.01f)
 					{
 						startYaw = eggbotRoot.eulerAngles.y;
-						targetYaw = (int)eggbotRoot.eulerAngles.y + Mathf.DeltaAngle(eggbotRoot.eulerAngles.y, DirToAngle(direction));
+						targetYaw = (int)eggbotRoot.eulerAngles.y + Mathf.DeltaAngle(eggbotRoot.eulerAngles.y, Navigation.DirToAngle(direction));
 						actionQueue.Enqueue(() => SetState(State.TURN, 1f / 4f));
 						return true;
 					}
@@ -152,7 +150,7 @@ namespace ClassicTilestorm
 					if (-1 != consoleTile && null != mapManager.GetTileProperties(consoleTile)?.Nav)
 					{
 						isBlocked = direction == 0;
-						var consoleYaw = DirToAngle(TileProperties.GetOppositeDirection(mapManager.GetTileProperties(consoleTile).Nav));
+						var consoleYaw = Navigation.DirToAngle(TileProperties.GetOppositeDirection(mapManager.GetTileProperties(consoleTile).Nav));
 						if (Mathf.Abs(Mathf.DeltaAngle(eggbotRoot.eulerAngles.y, consoleYaw)) > 0.01f)
 						{
 							startYaw = eggbotRoot.eulerAngles.y;
@@ -205,7 +203,5 @@ namespace ClassicTilestorm
 			OnPuzzleSolved = null;
 			OnLevelCompleted = null;
 		}
-
-		private static float DirToAngle(int dir) => dir >= 0 && dir < 11 ? new float[] { 0f, 0f, 180f, 0f, 90f, 45f, 135f, 0f, -90f, -45f, -135f }[dir] : 0f;
 	}
 }
