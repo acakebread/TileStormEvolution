@@ -1,6 +1,4 @@
 using UnityEngine;
-using ClassicTilestorm; // Only for legacy section
-using static ClassicTilestorm.DatabaseLoader; // Only for legacy section
 
 public class CameraController : MonoBehaviour
 {
@@ -13,7 +11,7 @@ public class CameraController : MonoBehaviour
 
 	// Configuration constants (matched to C++ GameCamera, 60 FPS)
 	private float CurrentRate = 64f; // 1/64 default
-	//private const float DefaultSmoothingN = 256f; // 1/256 (C++: nFollow)
+	//private const float DefaultSmoothingN = 256f; // 1/256 (C++: nFollow) - currently unused
 	private const float FollowSmoothingNa = 8f; // 1/8 (C++: nFollow)
 	private const float FollowSmoothingNb = 64f; // 1/64 (C++: nFollow)
 	private const float PresetSmoothingN = 32; // 1/32 for fast transition
@@ -32,7 +30,7 @@ public class CameraController : MonoBehaviour
 	private void InternalInitialize()
 	{
 		mainCamera = Camera.main;
-		if (mainCamera == null) return;
+		if (null == mainCamera) return;
 
 		originSrc = Vector3.zero;
 		targetSrc = Vector3.zero;
@@ -48,7 +46,7 @@ public class CameraController : MonoBehaviour
 
 	private void InternalUpdate()
 	{
-		if (mainCamera == null) return;
+		if (null == mainCamera) return;
 
 		switch (state)
 		{
@@ -104,8 +102,8 @@ public class CameraController : MonoBehaviour
 
 		SetMode(CameraState.Static);
 
-		var mapManager = GamePreview.mapManager;
-		var eggbotController = GamePreview.eggbotController;
+		var mapManager = ClassicTilestorm.GamePreview.mapManager;
+		var eggbotController = ClassicTilestorm.GamePreview.eggbotController;
 
 		if (mapManager == null || mapManager.Waypoints == null || mapManager.Waypoints.Count == 0)
 		{
@@ -118,8 +116,6 @@ public class CameraController : MonoBehaviour
 			{
 				SetOrigin(new Vector3(0f, 14f, -14f));
 				SetTarget(Vector3.zero);
-				originSrc = new Vector3(0f, 14f, -14f);
-				targetSrc = Vector3.zero;
 			}
 			UpdateCameraTransform();
 			return;
@@ -127,7 +123,7 @@ public class CameraController : MonoBehaviour
 
 
 		var dstPos = new Vector3(mapManager.Width * 0.5f, 0f, mapManager.Height * 0.5f);
-		var srcPos = dstPos + new Vector3(0f, 14f, -14f);
+		var srcPos = dstPos + new Vector3(0f, 14f, -14f);//TS defaults
 
 		var firstWaypoint = mapManager.Waypoints[0];
 		if (true == firstWaypoint.bCamera)
@@ -152,7 +148,7 @@ public class CameraController : MonoBehaviour
 
 	public void UpdateCamera()
 	{
-		var eggbotController = GamePreview.eggbotController;
+		var eggbotController = ClassicTilestorm.GamePreview.eggbotController;
 		if (eggbotController == null || eggbotController.eggbotRoot == null)
 		{
 			InternalUpdate();
@@ -167,8 +163,8 @@ public class CameraController : MonoBehaviour
 
 	public void OnWaypointReached(int waypointIndex)
 	{
-		var mapManager = GamePreview.mapManager;
-		var eggbotController = GamePreview.eggbotController;
+		var mapManager = ClassicTilestorm.GamePreview.mapManager;
+		var eggbotController = ClassicTilestorm.GamePreview.eggbotController;
 		if (mapManager == null || waypointIndex < 0 || waypointIndex >= mapManager.Waypoints.Count)
 		{
 			if (eggbotController?.eggbotRoot != null)
@@ -208,7 +204,7 @@ public class CameraController : MonoBehaviour
 
 	public void OnPuzzleSolved(int waypointIndex)
 	{
-		var eggbotController = GamePreview.eggbotController;
+		var eggbotController = ClassicTilestorm.GamePreview.eggbotController;
 		SetMode(CameraState.Follow);
 		SetTarget(eggbotController?.eggbotRoot.position ?? Vector3.zero);
 	}
@@ -217,7 +213,7 @@ public class CameraController : MonoBehaviour
 
 	private void OnDestroy()
 	{
-		var eggbotController = GamePreview.eggbotController;
+		var eggbotController = ClassicTilestorm.GamePreview.eggbotController;
 		if (eggbotController != null)
 		{
 			eggbotController.OnWaypointReached -= OnWaypointReached;
