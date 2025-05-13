@@ -40,11 +40,11 @@ public class CameraController : MonoBehaviour
 		targetDst = Vector3.forward;
 	}
 
-	public void SetMode(CameraState newState) => state = newState;
+	public void SetMode(CameraState value) => state = value;
 
-	public void SetOrigin(Vector3 position) => originDst = position;
+	public void SetOrigin(Vector3 value) { originDst = value; if (CameraState.Static == state) originSrc = value; }
 
-	public void SetTarget(Vector3 lookAt) => targetDst = lookAt;
+	public void SetTarget(Vector3 value) { targetDst = value; if (CameraState.Static == state) targetSrc = value; }
 
 	private void InternalUpdate()
 	{
@@ -125,19 +125,21 @@ public class CameraController : MonoBehaviour
 			return;
 		}
 
+
+		var dstPos = new Vector3(mapManager.Width * 0.5f, 0f, mapManager.Height * 0.5f);
+		var srcPos = dstPos + new Vector3(0f, 14f, -14f);
+
 		var firstWaypoint = mapManager.Waypoints[0];
-		var srcPos = new Vector3(firstWaypoint.vSrc.fX, firstWaypoint.vSrc.fY, firstWaypoint.vSrc.fZ);
-		if (srcPos == Vector3.zero) srcPos = new Vector3(0f, 14f, -14f);
+		if (true == firstWaypoint.bCamera)
+		{
+			if (true == CameraUtils.IsValidVector(firstWaypoint.vSrc)) srcPos = new Vector3(firstWaypoint.vSrc.fX, firstWaypoint.vSrc.fY, firstWaypoint.vSrc.fZ);
+			if (true == CameraUtils.IsValidVector(firstWaypoint.vDst)) dstPos = new Vector3(firstWaypoint.vDst.fX, firstWaypoint.vDst.fY, firstWaypoint.vDst.fZ);
+		}
 
-		var lookAtPos = firstWaypoint.vDst != null && IsValidVector(firstWaypoint.vDst)
-			? new Vector3(firstWaypoint.vDst.fX, firstWaypoint.vDst.fY, firstWaypoint.vDst.fZ)
-			: mapManager.GetTilePosition(firstWaypoint.nTile) + new Vector3(0f, 0.5f, 0f);
-
-		SetMode(CameraState.Preset);
 		SetOrigin(srcPos);
-		SetTarget(lookAtPos);
-		originSrc = srcPos; // Sync current position to avoid initial lerp
-		targetSrc = lookAtPos; // Sync current target to avoid initial lerp
+		SetTarget(dstPos);
+		SetMode(CameraState.Follow);
+
 		UpdateCameraTransform();
 
 		if (eggbotController != null)
@@ -181,7 +183,7 @@ public class CameraController : MonoBehaviour
 		Vector3 srcPos = new Vector3(waypoint.vSrc.fX, waypoint.vSrc.fY, waypoint.vSrc.fZ);
 		if (srcPos == Vector3.zero) srcPos = new Vector3(0f, 14f, -14f);
 
-		Vector3 lookAtPos = waypoint.vDst != null && IsValidVector(waypoint.vDst)
+		Vector3 lookAtPos = waypoint.vDst != null && CameraUtils.IsValidVector(waypoint.vDst)
 			? new Vector3(waypoint.vDst.fX, waypoint.vDst.fY, waypoint.vDst.fZ)
 			: mapManager.GetTilePosition(waypoint.nTile) + new Vector3(0f, 0.5f, 0f);
 
@@ -192,7 +194,7 @@ public class CameraController : MonoBehaviour
 			return;
 		}
 
-		if (!IsValidVector(waypoint.vSrc))
+		if (!CameraUtils.IsValidVector(waypoint.vSrc))
 		{
 			SetMode(CameraState.Follow);
 			SetTarget(eggbotController?.eggbotRoot.position ?? Vector3.zero);
@@ -212,15 +214,6 @@ public class CameraController : MonoBehaviour
 	}
 
 	public void OnLevelCompleted() { }
-
-	private bool IsValidVector(VectorData vector)
-	{
-		const float maxValue = 100f;
-		if (vector == null) return false;
-		return !float.IsNaN(vector.fX) && !float.IsInfinity(vector.fX) && Mathf.Abs(vector.fX) < maxValue &&
-			   !float.IsNaN(vector.fY) && !float.IsInfinity(vector.fY) && Mathf.Abs(vector.fY) < maxValue &&
-			   !float.IsNaN(vector.fZ) && !float.IsInfinity(vector.fZ) && Mathf.Abs(vector.fZ) < maxValue;
-	}
 
 	private void OnDestroy()
 	{
