@@ -9,13 +9,13 @@ namespace ClassicTilestorm
 
 		public static MapManager mapManager => instance?._mapManager;
 		public static EggbotController eggbotController => instance?._eggbotController;
-		public static TileInteractionController tileInteractionController => instance?._tileInteractionController;
-		public static CameraController cameraController => instance?._cameraController;
+		public static LegacyController cameraController => instance?._cameraController;//wrapper for camera controller
+		public static GestureController gestureController => instance?._gestureController;
 
 		private MapManager _mapManager;
 		private EggbotController _eggbotController;
-		private TileInteractionController _tileInteractionController;
-		private CameraController _cameraController;
+		private GestureController _gestureController;
+		private LegacyController _cameraController;
 
 		void Awake()
 		{
@@ -24,13 +24,13 @@ namespace ClassicTilestorm
 			DatabaseLoader.Init(PreviewSettings.DatabaseJsonFile);
 			_mapManager = GetComponent<MapManager>();
 			_eggbotController = GetComponent<EggbotController>();
-			_cameraController = GetComponent<CameraController>();
-			_tileInteractionController = GetComponent<TileInteractionController>();
+			_cameraController = GetComponent<LegacyController>();
+			_gestureController = GetComponent<GestureController>();
 
 			if (null == _mapManager) _mapManager = gameObject.AddComponent<MapManager>();
 			if (null == _eggbotController) _eggbotController = gameObject.AddComponent<EggbotController>();
-			if (null == _cameraController) _cameraController = gameObject.AddComponent<CameraController>();
-			if (null == _tileInteractionController) _tileInteractionController = gameObject.AddComponent<TileInteractionController>();
+			if (null == _cameraController) _cameraController = gameObject.AddComponent<LegacyController>();
+			if (null == _gestureController) _gestureController = gameObject.AddComponent<GestureController>();
 
 			Initialize();
 		}
@@ -43,7 +43,7 @@ namespace ClassicTilestorm
 			_mapManager.Initialize(PreviewSettings.LoadMapName);
 			_eggbotController.Initialize();
 			_cameraController.Initialize();
-			_tileInteractionController.Initialize();
+			_gestureController.Initialize();
 		}
 
 		void Update()

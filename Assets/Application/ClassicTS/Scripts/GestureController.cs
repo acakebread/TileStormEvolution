@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace ClassicTilestorm
 {
-	public class TileInteractionController : MonoBehaviour
+	public class GestureController : MonoBehaviour
 	{
 		private GestureSystem gestureSystem => GestureSystem.instance;
 		private MapManager mapManager => GamePreview.mapManager;
