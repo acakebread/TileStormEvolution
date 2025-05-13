@@ -1,3 +1,4 @@
+using System.Linq;
 using UnityEngine;
 using static CameraController;
 
@@ -10,6 +11,7 @@ namespace ClassicTilestorm
 		public void Initialize()
 		{
 			CameraController.Initialize();
+			//SetAutoCinema();
 
 			SetMode(CameraState.Static);
 
@@ -21,7 +23,7 @@ namespace ClassicTilestorm
 				if (eggbotController?.eggbotRoot != null)
 				{
 					SetMode(CameraState.Follow);
-					SetTarget(eggbotController.eggbotRoot.position);
+					SetPlayer(eggbotController.eggbotRoot.position);
 				}
 				else
 				{
@@ -32,15 +34,18 @@ namespace ClassicTilestorm
 				return;
 			}
 
+			// Pass waypoints to CameraController
+			var waypoints = mapManager.Waypoints.Select(w => mapManager.GetTilePosition(w.nTile)).ToList();
+			SetWaypoints(waypoints);
 
 			var dstPos = new Vector3(mapManager.Width * 0.5f, 0f, mapManager.Height * 0.5f);
-			var srcPos = dstPos + new Vector3(0f, 14f, -14f);//TS defaults
+			var srcPos = dstPos + new Vector3(0f, 14f, -14f); // TS defaults
 
 			var firstWaypoint = mapManager.Waypoints[0];
-			if (true == firstWaypoint.bCamera)
+			if (firstWaypoint.bCamera)
 			{
-				if (true == CameraUtils.IsValidVector(firstWaypoint.vSrc)) srcPos = new Vector3(firstWaypoint.vSrc.fX, firstWaypoint.vSrc.fY, firstWaypoint.vSrc.fZ);
-				if (true == CameraUtils.IsValidVector(firstWaypoint.vDst)) dstPos = new Vector3(firstWaypoint.vDst.fX, firstWaypoint.vDst.fY, firstWaypoint.vDst.fZ);
+				if (CameraUtils.IsValidVector(firstWaypoint.vSrc)) srcPos = new Vector3(firstWaypoint.vSrc.fX, firstWaypoint.vSrc.fY, firstWaypoint.vSrc.fZ);
+				if (CameraUtils.IsValidVector(firstWaypoint.vDst)) dstPos = new Vector3(firstWaypoint.vDst.fX, firstWaypoint.vDst.fY, firstWaypoint.vDst.fZ);
 			}
 
 			SetOrigin(srcPos);
@@ -66,8 +71,8 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			if (State == CameraState.Follow)
-				SetTarget(eggbotController.eggbotRoot.position);
+			//if (State == CameraState.Follow)
+				SetPlayer(eggbotController.eggbotRoot.position);
 
 			Update();
 		}
@@ -81,7 +86,7 @@ namespace ClassicTilestorm
 				if (eggbotController?.eggbotRoot != null)
 				{
 					SetMode(CameraState.Follow);
-					SetTarget(eggbotController.eggbotRoot.position);
+					SetPlayer(eggbotController.eggbotRoot.position);
 				}
 				return;
 			}
@@ -104,7 +109,7 @@ namespace ClassicTilestorm
 			if (!CameraUtils.IsValidVector(waypoint.vSrc))
 			{
 				SetMode(CameraState.Follow);
-				SetTarget(eggbotController?.eggbotRoot.position ?? Vector3.zero);
+				SetPlayer(eggbotController?.eggbotRoot.position ?? Vector3.zero);
 				return;
 			}
 
@@ -117,7 +122,7 @@ namespace ClassicTilestorm
 		{
 			var eggbotController = GamePreview.eggbotController;
 			SetMode(CameraState.Follow);
-			SetTarget(eggbotController?.eggbotRoot.position ?? Vector3.zero);
+			SetPlayer(eggbotController?.eggbotRoot.position ?? Vector3.zero);
 		}
 
 		public void OnLevelCompleted() { }

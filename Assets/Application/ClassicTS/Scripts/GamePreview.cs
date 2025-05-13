@@ -76,6 +76,8 @@ namespace ClassicTilestorm
 				PreviewSettings.LoadMapName = DatabaseLoader.Maps[currentIndex].name;
 				Initialize();
 			}
+
+			if (GUI.Button(new Rect(570, 10, 150, 30), CameraController.CinemaEnabled ? "Disable cinematic" : "Enable cinematic")) { CameraController.SetAutoCinema(!CameraController.CinemaEnabled); if (false == CameraController.CinemaEnabled) CameraController.Refresh(); }
 		}
 	}
 }

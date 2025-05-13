@@ -122,13 +122,13 @@ namespace ClassicTilestorm
 					var direction = Navigation.NavToDest(mapManager, currentTile, destinationTile);
 					if (0 == direction || 0 != (int)Mathf.DeltaAngle(eggbotRoot.eulerAngles.y, Navigation.DirToAngle(direction))) return false;
 
+					if (true == isBlocked) OnPuzzleSolved?.Invoke(dstWaypoint - 1);
 					isBlocked = false;
 					startPosition = mapManager.GetTilePosition(currentTile);
 					var prevCurrentTile = currentTile;
 					currentTile = Navigation.LineOfSight(mapManager, currentTile, destinationTile, direction);
 					targetPosition = mapManager.GetTilePosition(currentTile);
 					actionQueue.Enqueue(() => SetState(State.MOVE, (mapManager.GetTileDistance(prevCurrentTile, currentTile) + 1.0f) / walkSpeed));
-					OnPuzzleSolved?.Invoke(dstWaypoint - 1);
 					return true;
 				}
 
