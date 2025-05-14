@@ -160,8 +160,8 @@ namespace ClassicTilestorm
 						// Queue four BUSY states for jiggling to simulate looking at console
 						float currentYaw = eggbotRoot.eulerAngles.y;
 						float offset = (Random.Range(0f, 8f) - 4f) * 4.3f; // [-17.2, 17.2] degrees
-						actionQueue.Enqueue(() => { startYaw = currentYaw; targetYaw = consoleYaw + offset; SetState(State.TURN, Random.Range(0.25f, 0.75f)); });
-						actionQueue.Enqueue(() => { startYaw = currentYaw + offset; targetYaw = consoleYaw + (Random.Range(0f, 8f) - 4f) * 4.3f; SetState(State.TURN, Random.Range(0.25f, 0.75f)); });
+						actionQueue.Enqueue(() => { startYaw = Mathf.DeltaAngle(0f, currentYaw); targetYaw = startYaw + offset; SetState(State.TURN, Random.Range(0.25f, 0.75f)); });
+						actionQueue.Enqueue(() => { startYaw = Mathf.DeltaAngle(0f, currentYaw + offset); targetYaw = startYaw + (Random.Range(0f, 8f) - 4f) * 4.3f; SetState(State.TURN, Random.Range(0.25f, 0.75f)); });
 						return true;
 					}
 					return false;
