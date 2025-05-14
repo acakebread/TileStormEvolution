@@ -24,6 +24,7 @@ public static class CameraController
 
 	// Public properties
 	public static bool CinemaEnabled => allowAutoCinema;
+	public static bool CinemaActive => CameraState.Cinema == currentState;
 
 	// Common behavior constants
 	private const float DefaultSmoothingRate = 64f;
@@ -74,9 +75,7 @@ public static class CameraController
 				smoothingRate = DefaultSmoothingRate,
 				fov = mainCamera.fieldOfView
 			};
-			SetAutoCinema(false);
 		}
-
 		Reset();
 	}
 
@@ -133,13 +132,13 @@ public static class CameraController
 	{
 		playerPos = position;
 		if (currentState == CameraState.Follow) currentData.targetDst = position;
-		cinemaController.UpdatePlayerPosition(position, waypoints);
+		cinemaController.UpdatePlayerPosition(position);
 	}
 
 	public static void SetWaypoints(List<Vector3> newWaypoints)
 	{
 		waypoints = newWaypoints?.Where(p => p != Vector3.zero && Vector3.Distance(p, Vector3.zero) > 0.1f).ToList() ?? new List<Vector3>();
-		cinemaController.UpdateMapExtents(playerPos, waypoints);
+		cinemaController.SetWaypoints(waypoints);
 	}
 
 	// Update logic

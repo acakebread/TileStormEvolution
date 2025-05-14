@@ -69,14 +69,14 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			//if (State == CameraState.Follow)
-				SetPlayer(eggbotController.eggbotRoot.position);
-
+			SetPlayer(eggbotController.eggbotRoot.position);
 			Update();
 		}
 
 		public void OnWaypointReached(int waypointIndex)
 		{
+			if (true == CinemaActive) return;
+
 			var mapManager = GamePreview.mapManager;
 			var eggbotController = GamePreview.eggbotController;
 			if (mapManager == null || waypointIndex < 0 || waypointIndex >= mapManager.Waypoints.Count)
@@ -93,9 +93,7 @@ namespace ClassicTilestorm
 			Vector3 srcPos = new Vector3(waypoint.vSrc.fX, waypoint.vSrc.fY, waypoint.vSrc.fZ);
 			if (srcPos == Vector3.zero) srcPos = new Vector3(0f, 14f, -14f);
 
-			Vector3 lookAtPos = waypoint.vDst != null && CameraUtils.IsValidVector(waypoint.vDst)
-				? new Vector3(waypoint.vDst.fX, waypoint.vDst.fY, waypoint.vDst.fZ)
-				: mapManager.GetTilePosition(waypoint.nTile) + new Vector3(0f, 0.5f, 0f);
+			Vector3 lookAtPos = waypoint.vDst != null && CameraUtils.IsValidVector(waypoint.vDst) ? new Vector3(waypoint.vDst.fX, waypoint.vDst.fY, waypoint.vDst.fZ) : mapManager.GetTilePosition(waypoint.nTile) + new Vector3(0f, 0.5f, 0f);
 
 			if (waypointIndex == mapManager.Waypoints.Count - 1)
 			{
@@ -118,9 +116,9 @@ namespace ClassicTilestorm
 
 		public void OnPuzzleSolved(int waypointIndex)
 		{
-			var eggbotController = GamePreview.eggbotController;
+			if (true == CinemaActive) return;
 			SetMode(CameraState.Follow);
-			SetPlayer(eggbotController?.eggbotRoot.position ?? Vector3.zero);
+			SetPlayer(GamePreview.eggbotController?.eggbotRoot.position ?? Vector3.zero);
 		}
 
 		public void OnLevelCompleted() { }
