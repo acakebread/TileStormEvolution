@@ -20,32 +20,9 @@ public static class CameraController
 		public Vector3 targetDst;
 		public float smoothingRate;
 		public float fov;
-
-		public CameraData Copy()
-		{
-			return new CameraData
-			{
-				origin = origin,
-				target = target,
-				originDst = originDst,
-				targetDst = targetDst,
-				smoothingRate = smoothingRate,
-				fov = fov
-			};
-		}
-
-		public void Set(CameraData other)
-		{
-			origin = other.origin;
-			target = other.target;
-			originDst = other.originDst;
-			targetDst = other.targetDst;
-			smoothingRate = other.smoothingRate;
-			fov = other.fov;
-		}
 	}
 
-	public static CameraState State => state;
+	public static CameraState State => currentState;
 
 	// Configuration constants
 	private const float DefaultSmoothingRate = 64f;
@@ -55,6 +32,19 @@ public static class CameraController
 	private const float IdealDistance = 14f;
 	private const float IdealDistanceHorizontalScale = 1.4f;
 	private const float TargetFPS = 60f;
+
+	// Internal state
+	private static CameraState currentState = CameraState.Static;
+	private static CameraState previousState = CameraState.Static;
+	private static CameraData currentData;
+	private static CameraData previousData;
+
+	private static Camera mainCamera;
+	private static Vector3 playerPos;
+	private static float lastRefreshTime;
+	private static bool allowAutoCinema = false;
+
+	// cinema properites and constants
 	private const float CinemaTimeout = 5f;
 	private const float CinemaSequenceDuration = 8f;
 	private const float CinemaPauseDuration = 1f;
@@ -71,16 +61,6 @@ public static class CameraController
 	private const float EllipsoidMinorAxisScale = 1.0f; // Scale perpendicular to target path
 	private const int MaxPositionSampleAttempts = 10; // Max attempts to find valid position
 
-	// Internal state
-	private static CameraState state = CameraState.Static;
-	private static CameraState previousState = CameraState.Static;
-	private static CameraData currentData;
-	private static CameraData previousData;
-	private static Vector3 playerPos;
-	private static Camera mainCamera;
-	private static float defaultFOV;
-	private static float lastRefreshTime;
-	private static bool allowAutoCinema = false;
 	private static float cinemaSequenceTimer;
 	private static float cinemaPauseTimer;
 	private static List<Vector3> waypoints = new List<Vector3>();
@@ -91,26 +71,40 @@ public static class CameraController
 	private static Vector3 cinemaEndTarget;
 	private static float currentCinemaFOVMax;
 
+	public static void SetAutoCinema(bool allow = true) { allowAutoCinema = allow; Debug.Log($"Auto Cinema mode set to: {allowAutoCinema}"); }
+	public static bool CinemaEnabled => allowAutoCinema;
+
 	public static void Initialize()
 	{
 		mainCamera = Camera.main;
 		if (mainCamera == null) return;
 
-		defaultFOV = mainCamera.fieldOfView;
-		currentData = new CameraData
+		if (CameraState.Cinema == currentState)
+			currentData = previousData;
+		else
 		{
-			origin = Vector3.zero,
-			target = Vector3.zero,
-			originDst = Vector3.forward,
-			targetDst = Vector3.forward,
-			smoothingRate = DefaultSmoothingRate,
-			fov = defaultFOV
-		};
-		previousData = currentData.Copy();
+			currentData = new CameraData
+			{
+				origin = Vector3.zero,
+				target = Vector3.zero,
+				originDst = Vector3.forward,
+				targetDst = Vector3.forward,
+				smoothingRate = DefaultSmoothingRate,
+				fov = mainCamera.fieldOfView
+			};
+			allowAutoCinema = false;
+		}
+
+		Reset();
+	}
+
+	public static void Reset()
+	{
 		playerPos = Vector3.zero;
-		lastRefreshTime = Time.time;
 		waypoints.Clear();
 		playerPositions.Clear();
+		lastRefreshTime = Time.time;
+
 		cinemaSequenceTimer = 0f;
 		cinemaPauseTimer = 0f;
 		cinemaStartOrigin = Vector3.zero;
@@ -118,9 +112,85 @@ public static class CameraController
 		cinemaEndOrigin = Vector3.zero;
 		cinemaEndTarget = Vector3.zero;
 		currentCinemaFOVMax = CinemaFOVMax;
-		state = CameraState.Static;
-		previousState = CameraState.Static;
-		allowAutoCinema = false;
+	}
+
+	public static void Refresh(float _time)
+	{
+		lastRefreshTime = _time;
+		if (currentState == CameraState.Cinema)
+			SetMode(previousState);
+	}
+
+	public static void SetMode(CameraState value)
+	{
+		if (value == CameraState.Cinema && currentState != CameraState.Cinema)
+		{
+			previousState = currentState;
+			previousData = currentData;
+			StartNewCinemaSequence();
+		}
+		else if (value != CameraState.Cinema && currentState == CameraState.Cinema)
+		{
+			previousState = currentState;
+			currentData = previousData;
+			mainCamera.fieldOfView = currentData.fov;
+		}
+		currentState = value;
+	}
+
+	public static void SetOrigin(Vector3 value)
+	{
+		currentData.originDst = value;
+		if (currentState == CameraState.Static) currentData.origin = value;
+	}
+
+	public static void SetTarget(Vector3 value)
+	{
+		currentData.targetDst = value;
+		if (currentState == CameraState.Static) currentData.target = value;
+	}
+
+	public static void SetPlayer(Vector3 position)
+	{
+		playerPos = position;
+		if (currentState == CameraState.Follow) currentData.targetDst = position;
+
+		bool isFarEnough = true;
+		foreach (var wp in waypoints)
+		{
+			if (Vector3.Distance(position, wp) < MinDistanceForNewPOI)
+			{
+				isFarEnough = false;
+				break;
+			}
+		}
+		if (isFarEnough)
+		{
+			foreach (var pp in playerPositions)
+			{
+				if (Vector3.Distance(position, pp) < MinDistanceForNewPOI)
+				{
+					isFarEnough = false;
+					break;
+				}
+			}
+		}
+
+		if (isFarEnough)
+		{
+			playerPositions.Add(position);
+			if (playerPositions.Count > MaxPlayerPositions)
+				playerPositions.RemoveAt(0);
+			waypoints.Add(position);
+		}
+
+		UpdateMapExtents();
+	}
+
+	public static void SetWaypoints(List<Vector3> newWaypoints)
+	{
+		waypoints = newWaypoints?.Where(p => p != Vector3.zero && Vector3.Distance(p, Vector3.zero) > 0.1f).ToList() ?? new List<Vector3>();
+		UpdateMapExtents();
 	}
 
 	private static void UpdateMapExtents()
@@ -147,6 +217,101 @@ public static class CameraController
 		}
 	}
 
+	public static void Update()
+	{
+		if (mainCamera == null) return;
+
+		if (allowAutoCinema && currentState != CameraState.Cinema && Time.time - lastRefreshTime > CinemaTimeout)
+		{
+			Debug.Log("Auto-switching to Cinema mode");
+			SetMode(CameraState.Cinema);
+		}
+
+		switch (currentState)
+		{
+			case CameraState.Static:
+				break;
+
+			case CameraState.Follow:
+				currentData.smoothingRate = SmoothingUtils.Smooth(currentData.smoothingRate, FollowSmoothingNa, FollowSmoothingNb, Time.deltaTime, TargetFPS);
+				var followLerp = SmoothingUtils.Smooth(0f, 1f, currentData.smoothingRate, Time.deltaTime, TargetFPS);
+				currentData.target = Vector3.Lerp(currentData.target, currentData.targetDst, followLerp);
+				var delta = currentData.target - currentData.origin;
+				var deltaHorizontal = new Vector3(delta.x, 0, delta.z);
+				if (deltaHorizontal.sqrMagnitude < 0.01f)
+					deltaHorizontal = mainCamera.transform.forward;
+				deltaHorizontal.Normalize();
+				var idealPos = currentData.target - deltaHorizontal * (IdealDistance * IdealDistanceHorizontalScale);
+				idealPos.y = currentData.target.y + IdealDistance;
+				currentData.origin = Vector3.Lerp(currentData.origin, idealPos, followLerp);
+				break;
+
+			case CameraState.Preset:
+				currentData.smoothingRate = SmoothingUtils.Smooth(currentData.smoothingRate, PresetSmoothingN, Time.deltaTime, TargetFPS);
+				var presetLerp = SmoothingUtils.Smooth(0f, 1f, currentData.smoothingRate, Time.deltaTime, TargetFPS);
+				currentData.origin = Vector3.Lerp(currentData.origin, currentData.originDst, presetLerp);
+				currentData.target = Vector3.Lerp(currentData.target, currentData.targetDst, presetLerp);
+				break;
+
+			case CameraState.Cinema:
+				UpdateCinemaMode();
+				break;
+		}
+
+		UpdateCameraTransform();
+	}
+
+	public static void UpdateCameraTransform()
+	{
+		mainCamera.transform.position = currentData.origin;
+		var direction = currentData.target - currentData.origin;
+		if (direction.sqrMagnitude < 0.01f)
+		{
+			Debug.LogWarning("Direction vector too small, skipping rotation update.");
+			return;
+		}
+		mainCamera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
+	}
+
+	private static void UpdateCinemaMode()
+	{
+		if (cinemaPauseTimer > 0)
+		{
+			cinemaPauseTimer -= Time.deltaTime;
+			if (cinemaPauseTimer <= 0) StartNewCinemaSequence();
+			return;
+		}
+
+		cinemaSequenceTimer += Time.deltaTime;
+		if (cinemaSequenceTimer >= CinemaSequenceDuration)
+		{
+			cinemaSequenceTimer = 0f;
+			cinemaPauseTimer = CinemaPauseDuration;
+			return;
+		}
+
+		float t = cinemaSequenceTimer / CinemaSequenceDuration;
+		float easedT = Sigmoid(t, 6f);
+		currentData.origin = Vector3.Lerp(cinemaStartOrigin, cinemaEndOrigin, easedT);
+		currentData.target = Vector3.Lerp(cinemaStartTarget, cinemaEndTarget, easedT);
+
+		// Enforce pitch constraint
+		Vector3 direction = currentData.target - currentData.origin;
+		float angle = Vector3.Angle(direction, Vector3.down);
+		if (angle < (90f - MaxLookAtAngle))
+		{
+			float maxY = currentData.origin.y - (direction.magnitude * Mathf.Tan(MaxLookAtAngle * Mathf.Deg2Rad));
+			currentData.target.y = Mathf.Lerp(currentData.target.y, maxY, 0.5f);
+		}
+
+		// FOV dynamics
+		float fovT = Mathf.PingPong(cinemaSequenceTimer, CinemaSequenceDuration / 2f) / (CinemaSequenceDuration / 2f);
+		currentData.fov = Mathf.Lerp(CinemaFOVMin, currentCinemaFOVMax, fovT);
+		mainCamera.fieldOfView = currentData.fov;
+
+		static float Sigmoid(float t, float k = 6f) => 1f / (1f + Mathf.Exp(-k * (t - 0.5f)));
+	}
+
 	private static void StartNewCinemaSequence()
 	{
 		cinemaSequenceTimer = 0f;
@@ -157,7 +322,6 @@ public static class CameraController
 
 		// Select random POI (waypoints only, never playerPos)
 		List<Vector3> pois = waypoints.Where(p => p != Vector3.zero).ToList();
-		Debug.Log($"Available POIs: [{string.Join(", ", pois.Select(p => p.ToString()))}]");
 
 		Vector3 startPOI;
 		if (pois.Count == 0)
@@ -166,9 +330,7 @@ public static class CameraController
 		}
 		else
 		{
-			var validWaypoints = pois
-				.Where(p => Vector2.Distance(new Vector2(p.x, p.z), new Vector2(playerPos.x, playerPos.z)) >= MinPOIDistanceFromPlayer)
-				.ToList();
+			var validWaypoints = pois.Where(p => Vector2.Distance(new Vector2(p.x, p.z), new Vector2(playerPos.x, playerPos.z)) >= MinPOIDistanceFromPlayer).ToList();
 
 			if (validWaypoints.Count > 0)
 			{
@@ -176,10 +338,7 @@ public static class CameraController
 			}
 			else
 			{
-				var waypointDistances = pois
-					.Select(p => (p, Vector2.Distance(new Vector2(p.x, p.z), new Vector2(playerPos.x, playerPos.z))))
-					.OrderByDescending(d => d.Item2)
-					.ToList();
+				var waypointDistances = pois.Select(p => (p, Vector2.Distance(new Vector2(p.x, p.z), new Vector2(playerPos.x, playerPos.z)))).OrderByDescending(d => d.Item2).ToList();
 				startPOI = waypointDistances.Count > 0 ? waypointDistances[0].p : playerPos;
 			}
 		}
@@ -285,251 +444,56 @@ public static class CameraController
 		Vector3 endLookDir = (cinemaEndTarget - cinemaEndOrigin).normalized;
 		float lookDot = Vector3.Dot(startLookDir, endLookDir);
 		Debug.Log($"New Cinema sequence: startPOI={startPOI}, playerPos={playerPos}, startOrigin={cinemaStartOrigin}, startTarget={cinemaStartTarget}, endOrigin={cinemaEndOrigin}, endTarget={cinemaEndTarget}, startPitch={pitch}, lookDot={lookDot}, fovMax={currentCinemaFOVMax}");
-	}
 
-	private static Vector3 SampleEllipsoidPosition(Vector3 center, Vector3 majorAxisDir, Vector3 minorAxisDir, float majorAxis, float minorAxis, float heightAxis)
-	{
-		// Sample a point within a unit sphere
-		Vector3 unitSpherePoint = Random.insideUnitSphere;
-
-		// Scale by ellipsoid axes
-		float x = unitSpherePoint.x * majorAxis;
-		float y = unitSpherePoint.y * heightAxis / 2f; // Divide by 2 to keep height range reasonable
-		float z = unitSpherePoint.z * minorAxis;
-
-		// Transform to ellipsoid space
-		Vector3 position = center + majorAxisDir * x + Vector3.up * y + minorAxisDir * z;
-
-		// Clamp height within bounds
-		position.y = Mathf.Clamp(position.y, MinCameraHeight, MaxCameraHeight);
-
-		return position;
-	}
-
-	private static bool IsValidStartPosition()
-	{
-		Vector2 startPosXZ = new Vector2(cinemaStartOrigin.x, cinemaStartOrigin.z);
-		Vector2 startTargetXZ = new Vector2(cinemaStartTarget.x, cinemaStartTarget.z);
-		Vector2 endTargetXZ = new Vector2(cinemaEndTarget.x, cinemaEndTarget.z);
-
-		Vector2 toStartTarget = startTargetXZ - startPosXZ;
-		Vector2 toEndTarget = endTargetXZ - startPosXZ;
-		float dot = Vector2.Dot(toStartTarget.normalized, toEndTarget.normalized);
-		return dot >= 0f;
-	}
-
-	private static bool IsValidCameraPath()
-	{
-		Vector3 startLookDir = (cinemaStartTarget - cinemaStartOrigin).normalized;
-		Vector3 endLookDir = (cinemaEndTarget - cinemaEndOrigin).normalized;
-		float dot = Vector3.Dot(startLookDir, endLookDir);
-		return dot >= -0.2f;
-	}
-
-	private static void AdjustHeight(ref Vector3 position, Vector3 target)
-	{
-		Vector3 direction = (target - position).normalized;
-		float pitch = Vector3.Angle(direction, Vector3.down) - 90f;
-		if (pitch > MaxLookAtAngle)
+		static Vector3 SampleEllipsoidPosition(Vector3 center, Vector3 majorAxisDir, Vector3 minorAxisDir, float majorAxis, float minorAxis, float heightAxis)
 		{
-			float distXZ = Vector2.Distance(new Vector2(position.x, position.z), new Vector2(target.x, target.z));
-			float idealHeight = distXZ / Mathf.Tan(MaxLookAtAngle * Mathf.Deg2Rad) + target.y;
-			position.y = Mathf.Min(idealHeight, MaxCameraHeight);
+			// Sample a point within a unit sphere
+			Vector3 unitSpherePoint = Random.insideUnitSphere;
+
+			// Scale by ellipsoid axes
+			float x = unitSpherePoint.x * majorAxis;
+			float y = unitSpherePoint.y * heightAxis / 2f; // Divide by 2 to keep height range reasonable
+			float z = unitSpherePoint.z * minorAxis;
+
+			// Transform to ellipsoid space
+			Vector3 position = center + majorAxisDir * x + Vector3.up * y + minorAxisDir * z;
+
+			// Clamp height within bounds
+			position.y = Mathf.Clamp(position.y, MinCameraHeight, MaxCameraHeight);
+
+			return position;
 		}
-	}
 
-	public static void SetMode(CameraState value)
-	{
-		if (value == CameraState.Cinema && state != CameraState.Cinema)
+		static bool IsValidStartPosition()
 		{
-			Debug.Log($"Switching to Cinema mode from {state}");
-			previousState = state;
-			previousData = currentData.Copy();
-			StartNewCinemaSequence();
+			Vector2 startPosXZ = new Vector2(cinemaStartOrigin.x, cinemaStartOrigin.z);
+			Vector2 startTargetXZ = new Vector2(cinemaStartTarget.x, cinemaStartTarget.z);
+			Vector2 endTargetXZ = new Vector2(cinemaEndTarget.x, cinemaEndTarget.z);
+
+			Vector2 toStartTarget = startTargetXZ - startPosXZ;
+			Vector2 toEndTarget = endTargetXZ - startPosXZ;
+			float dot = Vector2.Dot(toStartTarget.normalized, toEndTarget.normalized);
+			return dot >= 0f;
 		}
-		else if (value != CameraState.Cinema && state == CameraState.Cinema)
+
+		static bool IsValidCameraPath()
 		{
-			Debug.Log($"Exiting Cinema mode to {value}");
-			currentData.fov = defaultFOV;
-			mainCamera.fieldOfView = defaultFOV;
-			currentData.Set(previousData);
+			Vector3 startLookDir = (cinemaStartTarget - cinemaStartOrigin).normalized;
+			Vector3 endLookDir = (cinemaEndTarget - cinemaEndOrigin).normalized;
+			float dot = Vector3.Dot(startLookDir, endLookDir);
+			return dot >= -0.2f;
 		}
-		state = value;
-	}
 
-	public static void SetOrigin(Vector3 value)
-	{
-		currentData.originDst = value;
-		if (state == CameraState.Static) currentData.origin = value;
-	}
-
-	public static void SetTarget(Vector3 value)
-	{
-		currentData.targetDst = value;
-		if (state == CameraState.Static) currentData.target = value;
-	}
-
-	public static void SetPlayer(Vector3 position)
-	{
-		playerPos = position;
-		if (state == CameraState.Follow) currentData.targetDst = position;
-
-		bool isFarEnough = true;
-		foreach (var wp in waypoints)
+		static void AdjustHeight(ref Vector3 position, Vector3 target)
 		{
-			if (Vector3.Distance(position, wp) < MinDistanceForNewPOI)
+			Vector3 direction = (target - position).normalized;
+			float pitch = Vector3.Angle(direction, Vector3.down) - 90f;
+			if (pitch > MaxLookAtAngle)
 			{
-				isFarEnough = false;
-				break;
+				float distXZ = Vector2.Distance(new Vector2(position.x, position.z), new Vector2(target.x, target.z));
+				float idealHeight = distXZ / Mathf.Tan(MaxLookAtAngle * Mathf.Deg2Rad) + target.y;
+				position.y = Mathf.Min(idealHeight, MaxCameraHeight);
 			}
 		}
-		if (isFarEnough)
-		{
-			foreach (var pp in playerPositions)
-			{
-				if (Vector3.Distance(position, pp) < MinDistanceForNewPOI)
-				{
-					isFarEnough = false;
-					break;
-				}
-			}
-		}
-
-		if (isFarEnough)
-		{
-			playerPositions.Add(position);
-			if (playerPositions.Count > MaxPlayerPositions)
-				playerPositions.RemoveAt(0);
-			waypoints.Add(position);
-			Debug.Log($"Added playerPos {position} as new waypoint. Total waypoints: {waypoints.Count}");
-		}
-
-		UpdateMapExtents();
-	}
-
-	public static void SetWaypoints(List<Vector3> newWaypoints)
-	{
-		waypoints = newWaypoints?.Where(p => p != Vector3.zero && Vector3.Distance(p, Vector3.zero) > 0.1f).ToList() ?? new List<Vector3>();
-		Debug.Log($"Waypoints set: Count={waypoints.Count}");
-		UpdateMapExtents();
-	}
-
-	public static void Refresh()
-	{
-		lastRefreshTime = Time.time;
-		if (state == CameraState.Cinema)
-		{
-			SetMode(previousState);
-		}
-	}
-
-	public static void SetAutoCinema(bool allow = true)
-	{
-		allowAutoCinema = allow;
-		Debug.Log($"Auto Cinema mode set to: {allowAutoCinema}");
-	}
-
-	public static bool CinemaEnabled => allowAutoCinema;
-
-	public static void Update()
-	{
-		if (mainCamera == null) return;
-
-		if (allowAutoCinema && state != CameraState.Cinema && Time.time - lastRefreshTime > CinemaTimeout)
-		{
-			Debug.Log("Auto-switching to Cinema mode");
-			SetMode(CameraState.Cinema);
-		}
-
-		switch (state)
-		{
-			case CameraState.Static:
-				break;
-
-			case CameraState.Follow:
-				currentData.smoothingRate = SmoothingUtils.Smooth(currentData.smoothingRate, FollowSmoothingNa, FollowSmoothingNb, Time.deltaTime, TargetFPS);
-				var followLerp = SmoothingUtils.Smooth(0f, 1f, currentData.smoothingRate, Time.deltaTime, TargetFPS);
-				currentData.target = Vector3.Lerp(currentData.target, currentData.targetDst, followLerp);
-				var delta = currentData.target - currentData.origin;
-				var deltaHorizontal = new Vector3(delta.x, 0, delta.z);
-				if (deltaHorizontal.sqrMagnitude < 0.01f)
-					deltaHorizontal = mainCamera.transform.forward;
-				deltaHorizontal.Normalize();
-				var idealPos = currentData.target - deltaHorizontal * (IdealDistance * IdealDistanceHorizontalScale);
-				idealPos.y = currentData.target.y + IdealDistance;
-				currentData.origin = Vector3.Lerp(currentData.origin, idealPos, followLerp);
-				break;
-
-			case CameraState.Preset:
-				currentData.smoothingRate = SmoothingUtils.Smooth(currentData.smoothingRate, PresetSmoothingN, Time.deltaTime, TargetFPS);
-				var presetLerp = SmoothingUtils.Smooth(0f, 1f, currentData.smoothingRate, Time.deltaTime, TargetFPS);
-				currentData.origin = Vector3.Lerp(currentData.origin, currentData.originDst, presetLerp);
-				currentData.target = Vector3.Lerp(currentData.target, currentData.targetDst, presetLerp);
-				break;
-
-			case CameraState.Cinema:
-				UpdateCinemaMode();
-				break;
-		}
-
-		UpdateCameraTransform();
-	}
-
-	private static void UpdateCinemaMode()
-	{
-		if (cinemaPauseTimer > 0)
-		{
-			cinemaPauseTimer -= Time.deltaTime;
-			if (cinemaPauseTimer <= 0)
-			{
-				StartNewCinemaSequence();
-			}
-			return;
-		}
-
-		cinemaSequenceTimer += Time.deltaTime;
-		if (cinemaSequenceTimer >= CinemaSequenceDuration)
-		{
-			cinemaSequenceTimer = 0f;
-			cinemaPauseTimer = CinemaPauseDuration;
-			Debug.Log($"Cinema sequence ended: finalTransform=[position={mainCamera.transform.position}, rotation={mainCamera.transform.rotation}]");
-			return;
-		}
-
-		float t = cinemaSequenceTimer / CinemaSequenceDuration;
-		float easedT = Sigmoid(t, 6f);
-		currentData.origin = Vector3.Lerp(cinemaStartOrigin, cinemaEndOrigin, easedT);
-		currentData.target = Vector3.Lerp(cinemaStartTarget, cinemaEndTarget, easedT);
-
-		// Enforce pitch constraint
-		Vector3 direction = currentData.target - currentData.origin;
-		float angle = Vector3.Angle(direction, Vector3.down);
-		if (angle < (90f - MaxLookAtAngle))
-		{
-			float maxY = currentData.origin.y - (direction.magnitude * Mathf.Tan(MaxLookAtAngle * Mathf.Deg2Rad));
-			currentData.target.y = Mathf.Lerp(currentData.target.y, maxY, 0.5f);
-		}
-
-		// FOV dynamics
-		float fovT = Mathf.PingPong(cinemaSequenceTimer, CinemaSequenceDuration / 2f) / (CinemaSequenceDuration / 2f);
-		currentData.fov = Mathf.Lerp(CinemaFOVMin, currentCinemaFOVMax, fovT);
-		mainCamera.fieldOfView = currentData.fov;
-	}
-
-	private static float Sigmoid(float t, float k = 6f)
-	{
-		return 1f / (1f + Mathf.Exp(-k * (t - 0.5f)));
-	}
-
-	public static void UpdateCameraTransform()
-	{
-		mainCamera.transform.position = currentData.origin;
-		var direction = currentData.target - currentData.origin;
-		if (direction.sqrMagnitude < 0.01f)
-		{
-			Debug.LogWarning("Direction vector too small, skipping rotation update.");
-			return;
-		}
-		mainCamera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
 	}
 }

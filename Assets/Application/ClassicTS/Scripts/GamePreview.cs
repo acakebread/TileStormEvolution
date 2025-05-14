@@ -7,10 +7,10 @@ namespace ClassicTilestorm
 	{
 		private static GamePreview instance;
 
-		public static MapManager mapManager => instance?._mapManager;
-		public static EggbotController eggbotController => instance?._eggbotController;
-		public static LegacyController cameraController => instance?._cameraController;//wrapper for camera controller
-		public static GestureController gestureController => instance?._gestureController;
+		public static MapManager mapManager => null == instance._mapManager ? instance._mapManager = instance.gameObject.AddComponent<MapManager>() : instance._mapManager;
+		public static EggbotController eggbotController => null == instance._eggbotController ? instance._eggbotController = instance.gameObject.AddComponent<EggbotController>() : instance._eggbotController;
+		public static GestureController gestureController => null == instance._gestureController ? instance._gestureController = instance.gameObject.AddComponent<GestureController>() : instance._gestureController;
+		public static LegacyController cameraController => null == instance._cameraController ? instance._cameraController = instance.gameObject.AddComponent<LegacyController>() : instance._cameraController;
 
 		private MapManager _mapManager;
 		private EggbotController _eggbotController;
@@ -20,18 +20,7 @@ namespace ClassicTilestorm
 		void Awake()
 		{
 			instance = this;
-
 			DatabaseLoader.Init(PreviewSettings.DatabaseJsonFile);
-			_mapManager = GetComponent<MapManager>();
-			_eggbotController = GetComponent<EggbotController>();
-			_cameraController = GetComponent<LegacyController>();
-			_gestureController = GetComponent<GestureController>();
-
-			if (null == _mapManager) _mapManager = gameObject.AddComponent<MapManager>();
-			if (null == _eggbotController) _eggbotController = gameObject.AddComponent<EggbotController>();
-			if (null == _cameraController) _cameraController = gameObject.AddComponent<LegacyController>();
-			if (null == _gestureController) _gestureController = gameObject.AddComponent<GestureController>();
-
 			Initialize();
 		}
 
@@ -40,16 +29,16 @@ namespace ClassicTilestorm
 			Debug.Log($"GamePreview Initialize: mapName={PreviewSettings.LoadMapName}");
 
 			// Initialize in order
-			_mapManager.Initialize(PreviewSettings.LoadMapName);
-			_eggbotController.Initialize();
-			_cameraController.Initialize();
-			_gestureController.Initialize();
+			mapManager.Initialize();
+			eggbotController.Initialize();
+			cameraController.Initialize();
+			gestureController.Initialize();
 		}
 
 		void Update()
 		{
-			_eggbotController?.UpdateEggbot();
-			_cameraController?.UpdateCamera();
+			eggbotController?.UpdateEggbot();
+			cameraController?.UpdateCamera();
 		}
 
 		void OnGUI()
@@ -63,7 +52,7 @@ namespace ClassicTilestorm
 
 			if (GUI.Button(new Rect(230, 10, 150, 30), "Previous Level"))//eggbotController.IsLevelComplete && 
 			{
-				var currentIndex = DatabaseLoader.Maps.ToList().FindIndex(m => m.name == _mapManager.CurrentMapName);
+				var currentIndex = DatabaseLoader.Maps.ToList().FindIndex(m => m.name == mapManager.CurrentMapName);
 				currentIndex = (DatabaseLoader.Maps.Count + currentIndex - 1) % DatabaseLoader.Maps.Count;
 				PreviewSettings.LoadMapName = DatabaseLoader.Maps[currentIndex].name;
 				Initialize();
@@ -71,13 +60,13 @@ namespace ClassicTilestorm
 
 			if (GUI.Button(new Rect(390, 10, 150, 30), "Next Level"))//eggbotController.IsLevelComplete && 
 			{
-				var currentIndex = DatabaseLoader.Maps.ToList().FindIndex(m => m.name == _mapManager.CurrentMapName);
+				var currentIndex = DatabaseLoader.Maps.ToList().FindIndex(m => m.name == mapManager.CurrentMapName);
 				currentIndex = (currentIndex + 1) % DatabaseLoader.Maps.Count;
 				PreviewSettings.LoadMapName = DatabaseLoader.Maps[currentIndex].name;
 				Initialize();
 			}
 
-			if (GUI.Button(new Rect(570, 10, 150, 30), CameraController.CinemaEnabled ? "Disable cinematic" : "Enable cinematic")) { CameraController.SetAutoCinema(!CameraController.CinemaEnabled); if (false == CameraController.CinemaEnabled) CameraController.Refresh(); }
+			if (GUI.Button(new Rect(570, 10, 150, 30), CameraController.CinemaEnabled ? "Disable cinematic" : "Enable cinematic")) { CameraController.SetAutoCinema(!CameraController.CinemaEnabled); CameraController.Refresh(Time.time - (CameraController.CinemaEnabled ? 999 : 0)); }
 		}
 	}
 }

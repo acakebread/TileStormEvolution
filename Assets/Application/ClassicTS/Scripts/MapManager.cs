@@ -93,8 +93,11 @@ namespace ClassicTilestorm
 			tileDataArray = null;
 		}
 
-		public void Initialize(string mapName)
+		public void Initialize()
 		{
+			string mapName = PreviewSettings.LoadMapName;
+			if (mapName == null) return;
+
 			Reset();
 			currentMap = string.IsNullOrEmpty(mapName) ? DatabaseLoader.Maps.FirstOrDefault() : DatabaseLoader.Maps.FirstOrDefault(m => m.name == mapName);
 

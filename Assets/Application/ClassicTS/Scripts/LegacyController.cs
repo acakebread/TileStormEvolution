@@ -11,8 +11,6 @@ namespace ClassicTilestorm
 		public void Initialize()
 		{
 			CameraController.Initialize();
-			//SetAutoCinema();
-
 			SetMode(CameraState.Static);
 
 			var mapManager = GamePreview.mapManager;
