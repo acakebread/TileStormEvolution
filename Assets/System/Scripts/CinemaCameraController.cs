@@ -10,7 +10,7 @@ public class CinemaCameraController
 	private const float PauseDuration = 1f;
 	private const float MinCameraHeight = 2f;
 	private const float MaxCameraHeight = 6f;
-	private const float MaxLookAtAngle = 45f;
+	private const float MaxLookAtAngle = 30f; // Maximum pitch angle, allowing pitches below
 	private const float FovMin = 35f;
 	private const float FovMax = 55f;
 	private const int MaxPlayerPositions = 50;
@@ -21,9 +21,10 @@ public class CinemaCameraController
 	private const float EllipsoidMinorAxisScale = 1.0f;
 	private const int MaxPositionSampleAttempts = 10;
 	private const float OrbitRadius = 5f; // Radius for orbiting and endOrigin positioning
-	private const float OrbitTargetDistanceThreshold = 0.5f; // Threshold to detect same target (player)
+	private const float OrbitTargetDistanceThreshold = 0.5f; // Threshold to detect same target
 	private const float TargetFPS = 60f; // Copied from CameraController - should make this common
 	private const float ProjectionSmoothingRate = 16f; // Smoothing rate for dead-reckoned position
+	private const float MinPathLength = 2f; // Minimum path length for non-orbit sampling
 
 	// State
 	private float sequenceTimer;
@@ -43,8 +44,11 @@ public class CinemaCameraController
 	private float orbitStartAngle; // Cached start angle for orbit
 	private float orbitEndAngle; // Cached end angle for orbit
 	private Vector3 lastPlayerPos; // Tracks last player position for delta
-	private Vector3 startPlayerPos; // Tracks last player position for delta
+	private Vector3 startPlayerPos; // Tracks initial player position for sequence
 	private Vector3 smoothedProjectedOffset; // Tracks smoothed dead-reckoned offset
+	private Vector3 orbitCenter; // Tracks orbit center for dynamic updates
+	private float orbitHeightSrc;
+	private float orbitHeightDst;
 
 	// Public properties
 	public float CinemaTimeoutDuration => CinemaTimeout;
@@ -70,6 +74,9 @@ public class CinemaCameraController
 		lastPlayerPos = Vector3.zero;
 		startPlayerPos = Vector3.zero;
 		smoothedProjectedOffset = Vector3.zero;
+		orbitCenter = Vector3.zero;
+		orbitHeightSrc = 0f;
+		orbitHeightDst = 0f;
 	}
 
 	public void SetWaypoints(List<Vector3> newWaypoints)
@@ -125,39 +132,52 @@ public class CinemaCameraController
 		lastPlayerPos = playerPos;
 		startPlayerPos = playerPos;
 		smoothedProjectedOffset = Vector3.zero; // Reset projection offset
+		orbitCenter = Vector3.zero; // Reset orbit center
 
-		// Select start POI
-		Vector3 startPoi = SelectStartPoi(playerPos, waypoints);
+		// Select start POI (66% chance for POI, 33% for player)
+		Vector3 startPoi;
+		if (Random.value < 0.66f && waypoints.Count > 0) // 2/3 chance for POI
+		{
+			var validPois = waypoints.Where(p => Vector2.Distance(new Vector2(p.x, p.z), new Vector2(playerPos.x, playerPos.z)) >= MinPoiDistanceFromPlayer).ToList();
+			startPoi = validPois.Count > 0 ? validPois[Random.Range(0, validPois.Count)] : playerPos;
+		}
+		else
+		{
+			startPoi = playerPos; // 1/3 chance for player
+		}
 
 		// Set targets
 		targetSrc = new Vector3(startPoi.x, Random.Range(0.5f, 1f), startPoi.z);
 		endTargetOffset = Random.insideUnitCircle * 0.5f;
 		targetDst = new Vector3(playerPos.x + endTargetOffset.x, 0.75f, playerPos.z + endTargetOffset.y);
 
-		// Check if both targets are effectively the player (for orbit behavior)
+		// Check if targets are effectively the same (for orbit behavior)
 		isOrbit = Vector2.Distance(new Vector2(targetSrc.x, targetSrc.z), new Vector2(targetDst.x, targetDst.z)) <= OrbitTargetDistanceThreshold;
 
 		if (isOrbit)
 		{
-			// Orbit around the player
-			Vector3 center = (targetSrc + targetDst) / 2f; // Average for stability
+			orbitCenter = targetDst; // Center on targetDst (player position)
+			targetSrc = targetDst; // Both targets on player for orbit
 			orbitStartAngle = Random.Range(0f, 360f);
-			orbitEndAngle = orbitStartAngle + Random.Range(90f, 180f); // Ensure distinct positions
+			orbitEndAngle = orbitStartAngle + Random.Range(90f, 270f); // Ensure distinct positions
 
-			originSrc = SampleOrbitPosition(center, orbitStartAngle);
+			orbitHeightSrc = Random.Range(MinCameraHeight, MaxCameraHeight); // Randomize src orbital height
+			orbitHeightDst = Random.Range(MinCameraHeight, MaxCameraHeight); // Randomize dst orbital height
+
+			originSrc = SampleOrbitPosition(orbitCenter, orbitStartAngle, 0f);
 			AdjustHeight(ref originSrc, targetSrc);
-			EnsureMinimumOffset(ref originSrc, startPoi);
+			EnsureMinimumOffset(ref originSrc, targetSrc);
 
-			originDst = SampleOrbitPosition(center, orbitEndAngle);
+			originDst = SampleOrbitPosition(orbitCenter, orbitEndAngle, 1f);
 			AdjustHeight(ref originDst, targetDst);
-			EnsureMinimumOffset(ref originDst, playerPos);
+			EnsureMinimumOffset(ref originDst, targetDst);
 		}
 		else
 		{
 			// Standard path with ellipsoid sampling
 			Vector3 targetPath = targetDst - targetSrc;
-			float pathLength = targetPath.magnitude;
-			Vector3 pathDir = targetPath.normalized;
+			float pathLength = Mathf.Max(targetPath.magnitude, MinPathLength); // Ensure minimum path length
+			Vector3 pathDir = targetPath.magnitude > 0.1f ? targetPath.normalized : Random.onUnitSphere; // Fallback direction
 			Vector3 midPoint = (targetSrc + targetDst) / 2f;
 			Vector3 perpendicular = new Vector3(-pathDir.z, 0f, pathDir.x).normalized;
 
@@ -201,6 +221,9 @@ public class CinemaCameraController
 		for (int i = 0; i < MaxPositionSampleAttempts; i++)
 		{
 			Vector3 position = SampleEllipsoidPosition(midPoint, pathDir, perpendicular, majorAxis, minorAxis, heightAxis);
+			// Ensure position is not too close to target in XZ plane
+			if (Vector2.Distance(new Vector2(position.x, position.z), new Vector2(target.x, target.z)) < MinXZOffset)
+				continue;
 			if (isStart)
 			{
 				originSrc = position; // Temporarily set for IsValidCameraPath
@@ -215,19 +238,22 @@ public class CinemaCameraController
 			}
 		}
 
-		// Fallback position
-		Vector2 fallbackXZ = new Vector2(midPoint.x, midPoint.z) + new Vector2(perpendicular.x, perpendicular.z) * (pathLength * 0.5f);
-		float fallbackHeight = (MinCameraHeight + MaxCameraHeight) / 2f;
+		// Fallback position: offset from target by OrbitRadius
+		Vector2 targetXZ = new Vector2(target.x, target.z);
+		Vector2 offsetDir = Random.insideUnitCircle.normalized * OrbitRadius;
+		Vector2 fallbackXZ = targetXZ + offsetDir;
+		float fallbackHeight = Random.Range(MinCameraHeight, MaxCameraHeight);
 		return new Vector3(fallbackXZ.x, fallbackHeight, fallbackXZ.y);
 	}
 
-	private Vector3 SampleOrbitPosition(Vector3 center, float angleDegrees)
+	private Vector3 SampleOrbitPosition(Vector3 center, float angleDegrees, float easedT)
 	{
 		// Sample a position on a circular orbit around the center
 		float angleRad = angleDegrees * Mathf.Deg2Rad;
 		Vector3 offset = new Vector3(Mathf.Cos(angleRad), 0f, Mathf.Sin(angleRad)) * OrbitRadius;
 		Vector3 position = center + offset;
-		position.y = (MinCameraHeight + MaxCameraHeight) / 2f; // Fixed height for stability
+		// Interpolate height from orbitHeightSrc to orbitHeightDst
+		position.y = Mathf.Lerp(orbitHeightSrc, orbitHeightDst, SmoothingUtils.Ease(easedT));
 		return position;
 	}
 
@@ -257,8 +283,11 @@ public class CinemaCameraController
 	{
 		Vector3 startLookDir = (targetSrc - originSrc).normalized;
 		Vector3 endLookDir = (targetDst - originDst).normalized;
+		float startPitch = Vector3.Angle(startLookDir, Vector3.down) - 90f;
+		float endPitch = Vector3.Angle(endLookDir, Vector3.down) - 90f;
 		float dot = Vector3.Dot(startLookDir, endLookDir);
-		return dot >= -0.7f; // Relaxed for dynamic updates
+		// Reject near-vertical look directions
+		return dot >= -0.7f && startPitch < 80f && endPitch < 80f;
 	}
 
 	private void EnsureMinimumOffset(ref Vector3 position, Vector3 target)
@@ -297,15 +326,17 @@ public class CinemaCameraController
 		{
 			float distXZ = Vector2.Distance(new Vector2(position.x, position.z), new Vector2(target.x, target.z));
 			float idealHeight = distXZ / Mathf.Tan(MaxLookAtAngle * Mathf.Deg2Rad) + target.y;
-			position.y = Mathf.Min(idealHeight, MaxCameraHeight);
+			position.y = Mathf.Clamp(idealHeight, MinCameraHeight, MaxCameraHeight);
 		}
+		// Ensure minimum height
+		position.y = Mathf.Max(position.y, MinCameraHeight);
 	}
 
 	public CameraController.CameraData GetCinemaData(CameraController.CameraData data)
 	{
 		data.originSrc = originSrc;
 		data.targetSrc = targetSrc;
-		data.smoothingRate = 64f; // ToDo add as constant
+		data.smoothingRate = 64f; // TODO: Define as constant
 		return data;
 	}
 
@@ -346,12 +377,27 @@ public class CinemaCameraController
 		smoothedProjectedOffset.y = SmoothingUtils.Smooth(smoothedProjectedOffset.y, targetProjectionOffset.y, ProjectionSmoothingRate, Time.deltaTime, TargetFPS);
 		smoothedProjectedOffset.z = SmoothingUtils.Smooth(smoothedProjectedOffset.z, targetProjectionOffset.z, ProjectionSmoothingRate, Time.deltaTime, TargetFPS);
 
-		// Calculate dynamic offset based on player movement
+		// Update positions (always tracking player for targetDst)
+		orbitCenter += delta;
 		originDst += delta;
 		targetDst += delta;
 
-		var transOrigin = Vector3.Lerp(originSrc, originDst, easedT);
-		var transTarget = Vector3.Lerp(targetSrc, targetDst + smoothedProjectedOffset, easedT); // Use smoothed projection
+		Vector3 transOrigin;
+		Vector3 transTarget;
+
+		if (isOrbit)
+		{
+			targetSrc = new Vector3(playerPos.x + endTargetOffset.x, 0.75f, playerPos.z + endTargetOffset.y);
+			targetDst = targetSrc;
+			transOrigin = SampleOrbitPosition(orbitCenter, Mathf.Lerp(orbitStartAngle, orbitEndAngle, easedT), easedT);
+			transTarget = Vector3.Lerp(targetSrc, targetDst + smoothedProjectedOffset, easedT);
+		}
+		else
+		{
+			// Non-orbit: Standard path with ellipsoid sampling
+			transOrigin = Vector3.Lerp(originSrc, originDst, easedT);
+			transTarget = Vector3.Lerp(targetSrc, targetDst + smoothedProjectedOffset, easedT);
+		}
 
 		UpdateDataValues(transOrigin, transTarget);
 
