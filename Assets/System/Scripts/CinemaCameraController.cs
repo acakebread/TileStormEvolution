@@ -1,3 +1,5 @@
+
+
 using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,8 +13,8 @@ public class CinemaCameraController
 	private const float MinCameraHeight = 2f;
 	private const float MaxCameraHeight = 6f;
 	private const float MaxLookAtAngle = 45f;
-	private const float FovMin = 40f;
-	private const float FovMax = 50f;
+	private const float FovMin = 35f;
+	private const float FovMax = 55f;
 	private const int MaxPlayerPositions = 50;
 	private const float MinXZOffset = 2f;
 	private const float MinPoiDistanceFromPlayer = 4f;
@@ -30,10 +32,10 @@ public class CinemaCameraController
 	private Vector3 playerPos;
 	private List<Vector3> waypoints = new List<Vector3>(); // Set via SetWaypoints
 	private List<Vector3> playerPositions = new List<Vector3>();
-	private Vector3 startOrigin;
-	private Vector3 startTarget;
-	private Vector3 endOrigin;
-	private Vector3 endTarget;
+	private Vector3 originSrc;//initial calculated values
+	private Vector3 originDst;//initial calculated values
+	private Vector3 targetSrc;//initial calculated values
+	private Vector3 targetDst;//initial calculated values
 	private float currentFovMax;
 	private Vector2 mapExtentsMin;
 	private Vector2 mapExtentsMax;
@@ -44,6 +46,8 @@ public class CinemaCameraController
 	private Vector3 baseStartOrigin; // Cached initial origins for interpolation
 	private Vector3 baseEndOrigin;
 	private Vector3 lastPlayerPos; // Tracks last player position for delta
+	private Vector3 startPlayerPos; // Tracks last player position for delta
+	private const float TargetFPS = 60f;//copied from CameraController - should make this common
 
 	// Public properties
 	public float CinemaTimeoutDuration => CinemaTimeout;
@@ -55,10 +59,10 @@ public class CinemaCameraController
 		playerPos = Vector3.zero;
 		waypoints.Clear();
 		playerPositions.Clear();
-		startOrigin = Vector3.zero;
-		startTarget = Vector3.zero;
-		endOrigin = Vector3.zero;
-		endTarget = Vector3.zero;
+		originSrc = Vector3.zero;
+		targetSrc = Vector3.zero;
+		originDst = Vector3.zero;
+		targetDst = Vector3.zero;
 		currentFovMax = FovMax;
 		mapExtentsMin = new Vector2(float.MaxValue, float.MaxValue);
 		mapExtentsMax = new Vector2(float.MinValue, float.MinValue);
@@ -69,6 +73,7 @@ public class CinemaCameraController
 		baseStartOrigin = Vector3.zero;
 		baseEndOrigin = Vector3.zero;
 		lastPlayerPos = Vector3.zero;
+		startPlayerPos = Vector3.zero;
 	}
 
 	public void SetWaypoints(List<Vector3> newWaypoints)
@@ -115,73 +120,6 @@ public class CinemaCameraController
 		}
 	}
 
-	public CameraController.CameraData UpdateCinemaMode(CameraController.CameraData data, Camera camera)
-	{
-		if (pauseTimer > 0)
-		{
-			pauseTimer -= Time.deltaTime;
-			if (pauseTimer <= 0)
-				StartNewCinemaSequence(playerPos, waypoints);
-			return data;
-		}
-
-		sequenceTimer += Time.deltaTime;
-		if (sequenceTimer >= SequenceDuration)
-		{
-			sequenceTimer = 0f;
-			pauseTimer = PauseDuration;
-			return data;
-		}
-
-		// Compute base interpolation
-		float t = sequenceTimer / SequenceDuration;
-		float easedT = Sigmoid(t, 6f);
-		data.origin = Vector3.Lerp(baseStartOrigin, baseEndOrigin, easedT);
-		data.target = Vector3.Lerp(startTarget, endTarget, easedT);
-
-		// Apply dynamic offset based on player movement
-		Vector3 playerDelta = playerPos - lastPlayerPos;
-		if (isOrbit)
-		{
-			// Update targets to current player position
-			Vector3 center = new Vector3(playerPos.x + endTargetOffset.x, 0.75f, playerPos.z + endTargetOffset.y);
-			startTarget = center;
-			endTarget = center;
-			// Shift interpolated origin and target by player delta
-			data.origin += playerDelta;
-			data.target = center; // Override to ensure focus on player
-								  // Update origins for validation
-			startOrigin = baseStartOrigin + (playerPos - baseEndOrigin);
-			endOrigin = baseEndOrigin + (playerPos - baseEndOrigin);
-		}
-		else
-		{
-			// Update endTarget
-			endTarget = new Vector3(playerPos.x + endTargetOffset.x, 0.75f, playerPos.z + endTargetOffset.y);
-			// Smoothly adjust endOrigin for validation
-			Vector3 newEndOrigin = endTarget + (baseEndOrigin - endTarget).normalized * OrbitRadius;
-			newEndOrigin.y = baseEndOrigin.y; // Retain initial height
-			endOrigin = Vector3.Lerp(endOrigin, newEndOrigin, OriginSmoothingFactor);
-			// Apply delta to origin, scale by easedT to affect end more
-			data.origin += playerDelta * easedT;
-			data.target = Vector3.Lerp(startTarget, endTarget, easedT);
-		}
-
-		// Enforce pitch and offset constraints on final position
-		AdjustHeight(ref data.origin, data.target);
-		EnsureMinimumOffset(ref data.origin, data.target);
-
-		// Update FOV
-		float fovT = Mathf.PingPong(sequenceTimer, SequenceDuration / 2f) / (SequenceDuration / 2f);
-		data.fov = Mathf.Lerp(FovMin, currentFovMax, fovT);
-		camera.fieldOfView = data.fov;
-
-		lastPlayerPos = playerPos;
-		return data;
-
-		static float Sigmoid(float t, float k = 6f) => 1f / (1f + Mathf.Exp(-k * (t - 0.5f)));
-	}
-
 	public void StartNewCinemaSequence(Vector3 playerPos, List<Vector3> waypoints)
 	{
 		sequenceTimer = 0f;
@@ -189,54 +127,55 @@ public class CinemaCameraController
 		this.playerPos = playerPos;
 		this.waypoints = new List<Vector3>(waypoints); // Set waypoints for this sequence
 		lastPlayerPos = playerPos;
+		startPlayerPos = playerPos;
 
 		// Select start POI
 		Vector3 startPoi = SelectStartPoi(playerPos, waypoints);
 
 		// Set targets
-		startTarget = new Vector3(startPoi.x, Random.Range(0.5f, 1f), startPoi.z);
+		targetSrc = new Vector3(startPoi.x, Random.Range(0.5f, 1f), startPoi.z);
 		endTargetOffset = Random.insideUnitCircle * 0.5f;
-		endTarget = new Vector3(playerPos.x + endTargetOffset.x, 0.75f, playerPos.z + endTargetOffset.y);
+		targetDst = new Vector3(playerPos.x + endTargetOffset.x, 0.75f, playerPos.z + endTargetOffset.y);
 
 		// Check if both targets are effectively the player (for orbit behavior)
-		isOrbit = Vector2.Distance(new Vector2(startTarget.x, startTarget.z), new Vector2(endTarget.x, endTarget.z)) <= OrbitTargetDistanceThreshold;
+		isOrbit = Vector2.Distance(new Vector2(targetSrc.x, targetSrc.z), new Vector2(targetDst.x, targetDst.z)) <= OrbitTargetDistanceThreshold;
 
 		if (isOrbit)
 		{
 			// Orbit around the player
-			Vector3 center = (startTarget + endTarget) / 2f; // Average for stability
+			Vector3 center = (targetSrc + targetDst) / 2f; // Average for stability
 			orbitStartAngle = Random.Range(0f, 360f);
 			orbitEndAngle = orbitStartAngle + Random.Range(90f, 180f); // Ensure distinct positions
 
-			startOrigin = SampleOrbitPosition(center, orbitStartAngle);
-			AdjustHeight(ref startOrigin, startTarget);
-			EnsureMinimumOffset(ref startOrigin, startPoi);
+			originSrc = SampleOrbitPosition(center, orbitStartAngle);
+			AdjustHeight(ref originSrc, targetSrc);
+			EnsureMinimumOffset(ref originSrc, startPoi);
 
-			endOrigin = SampleOrbitPosition(center, orbitEndAngle);
-			AdjustHeight(ref endOrigin, endTarget);
-			EnsureMinimumOffset(ref endOrigin, playerPos);
+			originDst = SampleOrbitPosition(center, orbitEndAngle);
+			AdjustHeight(ref originDst, targetDst);
+			EnsureMinimumOffset(ref originDst, playerPos);
 		}
 		else
 		{
 			// Standard path with ellipsoid sampling
-			Vector3 targetPath = endTarget - startTarget;
+			Vector3 targetPath = targetDst - targetSrc;
 			float pathLength = targetPath.magnitude;
 			Vector3 pathDir = targetPath.normalized;
-			Vector3 midPoint = (startTarget + endTarget) / 2f;
+			Vector3 midPoint = (targetSrc + targetDst) / 2f;
 			Vector3 perpendicular = new Vector3(-pathDir.z, 0f, pathDir.x).normalized;
 
-			startOrigin = SampleCameraPosition(midPoint, pathDir, perpendicular, pathLength, startPoi, isStart: true);
-			AdjustHeight(ref startOrigin, startTarget);
-			EnsureMinimumOffset(ref startOrigin, startPoi);
+			originSrc = SampleCameraPosition(midPoint, pathDir, perpendicular, pathLength, startPoi, isStart: true);
+			AdjustHeight(ref originSrc, targetSrc);
+			EnsureMinimumOffset(ref originSrc, startPoi);
 
-			endOrigin = SampleCameraPosition(midPoint, pathDir, perpendicular, pathLength, playerPos, isStart: false);
-			AdjustHeight(ref endOrigin, endTarget);
-			EnsureMinimumOffset(ref endOrigin, playerPos);
+			originDst = SampleCameraPosition(midPoint, pathDir, perpendicular, pathLength, playerPos, isStart: false);
+			AdjustHeight(ref originDst, targetDst);
+			EnsureMinimumOffset(ref originDst, playerPos);
 		}
 
 		// Cache base origins for interpolation
-		baseStartOrigin = startOrigin;
-		baseEndOrigin = endTarget; // Use endTarget as reference for orbit shift
+		baseStartOrigin = originSrc;
+		baseEndOrigin = targetDst; // Use endTarget as reference for orbit shift
 		UpdateMapExtents();
 
 		// Set FOV max (occasionally wider)
@@ -248,17 +187,12 @@ public class CinemaCameraController
 		if (pois.Count == 0)
 			return playerPos != Vector3.zero ? playerPos : Vector3.zero;
 
-		var validPois = pois
-			.Where(p => Vector2.Distance(new Vector2(p.x, p.z), new Vector2(playerPos.x, playerPos.z)) >= MinPoiDistanceFromPlayer)
-			.ToList();
+		var validPois = pois.Where(p => Vector2.Distance(new Vector2(p.x, p.z), new Vector2(playerPos.x, playerPos.z)) >= MinPoiDistanceFromPlayer).ToList();
 
 		if (validPois.Count > 0)
 			return validPois[Random.Range(0, validPois.Count)];
 
-		var farthestPoi = pois
-			.Select(p => (p, Vector2.Distance(new Vector2(p.x, p.z), new Vector2(playerPos.x, playerPos.z))))
-			.OrderByDescending(d => d.Item2)
-			.FirstOrDefault().p;
+		var farthestPoi = pois.Select(p => (p, Vector2.Distance(new Vector2(p.x, p.z), new Vector2(playerPos.x, playerPos.z)))).OrderByDescending(d => d.Item2).FirstOrDefault().p;
 
 		return farthestPoi != Vector3.zero ? farthestPoi : playerPos;
 	}
@@ -275,13 +209,13 @@ public class CinemaCameraController
 			Vector3 position = SampleEllipsoidPosition(midPoint, pathDir, perpendicular, majorAxis, minorAxis, heightAxis);
 			if (isStart)
 			{
-				startOrigin = position; // Temporarily set for IsValidCameraPath
+				originSrc = position; // Temporarily set for IsValidCameraPath
 				if (IsValidStartPosition(position) && IsValidCameraPath())
 					return position;
 			}
 			else
 			{
-				endOrigin = position; // Temporarily set for IsValidCameraPath
+				originDst = position; // Temporarily set for IsValidCameraPath
 				if (IsValidCameraPath())
 					return position;
 			}
@@ -317,8 +251,8 @@ public class CinemaCameraController
 	private bool IsValidStartPosition(Vector3 position)
 	{
 		Vector2 posXZ = new Vector2(position.x, position.z);
-		Vector2 startTargetXZ = new Vector2(startTarget.x, startTarget.z);
-		Vector2 endTargetXZ = new Vector2(endTarget.x, endTarget.z);
+		Vector2 startTargetXZ = new Vector2(targetSrc.x, targetSrc.z);
+		Vector2 endTargetXZ = new Vector2(targetDst.x, targetDst.z);
 		Vector2 toStartTarget = startTargetXZ - posXZ;
 		Vector2 toEndTarget = endTargetXZ - posXZ;
 		float dot = Vector2.Dot(toStartTarget.normalized, toEndTarget.normalized);
@@ -327,8 +261,8 @@ public class CinemaCameraController
 
 	private bool IsValidCameraPath()
 	{
-		Vector3 startLookDir = (startTarget - startOrigin).normalized;
-		Vector3 endLookDir = (endTarget - endOrigin).normalized;
+		Vector3 startLookDir = (targetSrc - originSrc).normalized;
+		Vector3 endLookDir = (targetDst - originDst).normalized;
 		float dot = Vector3.Dot(startLookDir, endLookDir);
 		return dot >= -0.7f; // Relaxed for dynamic updates
 	}
@@ -370,6 +304,79 @@ public class CinemaCameraController
 			float distXZ = Vector2.Distance(new Vector2(position.x, position.z), new Vector2(target.x, target.z));
 			float idealHeight = distXZ / Mathf.Tan(MaxLookAtAngle * Mathf.Deg2Rad) + target.y;
 			position.y = Mathf.Min(idealHeight, MaxCameraHeight);
+		}
+	}
+
+	public CameraController.CameraData GetCinemaData(CameraController.CameraData data)//temporary workaround because UpdateCinemaMode has two entry points
+	{
+		data.originSrc = originSrc;
+		data.targetSrc = targetSrc;
+		data.smoothingRate = 64f;//ToDo add as constant
+		return data;
+	}
+
+	public CameraController.CameraData UpdateCinemaMode(CameraController.CameraData data, Camera camera)
+	{
+		var delta = playerPos - lastPlayerPos;
+		lastPlayerPos = playerPos;
+
+		if (pauseTimer > 0f)
+		{
+			pauseTimer -= Time.deltaTime;
+			if (pauseTimer > 0f)
+				UpdateDataValues(originDst, targetDst);
+			else
+			{
+				StartNewCinemaSequence(playerPos, waypoints);
+				data = GetCinemaData(data);
+			}
+			return data;	 
+		}
+
+		sequenceTimer += Time.deltaTime;
+		if (sequenceTimer >= SequenceDuration)
+		{
+			sequenceTimer = 0f;
+			pauseTimer = PauseDuration;
+			return data;
+		}
+
+		// Compute base interpolation
+		var t = SequenceDuration > 0 ? Mathf.Clamp01(sequenceTimer / SequenceDuration) : 1f;
+		var easedT = SmoothingUtils.Ease(t);
+		if (easedT < 0f) Debug.LogWarning("easedT < 0 !");
+		// Calculate dynamic offset based on player movement
+
+		//originSrc += delta;
+		//targetSrc += delta;
+		originDst += delta;
+		targetDst += delta;
+
+		var transOrigin = Vector3.Lerp(originSrc, originDst, easedT);
+		var transTarget = Vector3.Lerp(targetSrc, targetDst, easedT);
+		//var transTarget = targetSrc;// Vector3.Lerp(targetSrc, targetDst, easedT);
+
+		//var followLerp = SmoothingUtils.Smooth(0f, 1f, data.smoothingRate, Time.deltaTime, TargetFPS);
+		//data.originSrc = Vector3.Lerp(data.originSrc, transOrigin, followLerp);
+		//data.targetSrc = Vector3.Lerp(data.targetSrc, transTarget, followLerp);
+
+		UpdateDataValues(transOrigin, transTarget);
+
+		// Update FOV
+		var fovT = SmoothingUtils.EasePingPong(sequenceTimer / SequenceDuration);// Mathf.PingPong(sequenceTimer, SequenceDuration / 2f) / (SequenceDuration / 2f);
+		data.fov = Mathf.Lerp(FovMin, currentFovMax, fovT);
+		camera.fieldOfView = data.fov;
+
+		data.smoothingRate = SmoothingUtils.Smooth(data.smoothingRate, 16f, SequenceDuration, Time.deltaTime, TargetFPS);
+
+		return data;
+
+		void UpdateDataValues(Vector3 originNew, Vector3 targetNew)
+		{
+			var followLerp = SmoothingUtils.Smooth(0f, 1f, data.smoothingRate, Time.deltaTime, TargetFPS);
+			if (followLerp < 0f) Debug.LogWarning("followLerp < 0 !");
+			data.originSrc = Vector3.Lerp(data.originSrc, originNew, followLerp);
+			data.targetSrc = Vector3.Lerp(data.targetSrc, targetNew, followLerp);
 		}
 	}
 }

@@ -12,6 +12,15 @@ namespace ClassicTilestorm
 		private int dragIndex = -1;
 		private const float gridSize = 1.0f;
 
+		public static GestureController instance;
+		private void Awake() { instance = this; Reset(); }
+
+		public void Reset()
+		{
+			tileStrip = default;
+			dragIndex = -1;
+		}
+
 		public void Start()
 		{
 			if (null == gestureSystem) return;
@@ -22,18 +31,13 @@ namespace ClassicTilestorm
 
 		private void OnDestroy()
 		{
+			instance = null;
+			DebugVisualizationHelper.HighlightStrip(MapManager.instance, tileStrip, false);
 			if (null == gestureSystem) return;
 			gestureSystem.OnBeginDrag -= OnBeginDrag;
 			gestureSystem.OnDrag -= OnDrag;
 			gestureSystem.OnEndDrag -= OnEndDrag;
 
-			DebugVisualizationHelper.HighlightStrip(mapManager, tileStrip, false);
-		}
-
-		public void Initialize()
-		{
-			tileStrip = default;
-			dragIndex = -1;
 		}
 
 		private void OnBeginDrag(Vector3 screenPos)

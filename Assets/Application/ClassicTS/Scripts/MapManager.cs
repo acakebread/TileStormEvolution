@@ -78,30 +78,34 @@ namespace ClassicTilestorm
 			return ToIndex(new GridCoord(worldPos));
 		}
 
+		public static MapManager instance;
+		private void Awake() { instance = this; Reset(); }
+		private void OnDestroy() => instance = null;
+
 		public void Reset()
 		{
-			if (mapRoot != null) Destroy(mapRoot);
+			if (null != mapRoot) Destroy(mapRoot);
+			mapRoot = null;
+			currentMap = null;
+			waypoints = null;
+			tiles = null;
+			tileDataArray = null; 
+			
 			if (TileStripHelper.SpareTile != null) // Clear static SpareTile
 			{
 				Destroy(TileStripHelper.SpareTile);
 				TileStripHelper.SpareTile = null;
 			}
-			mapRoot = null;
-			currentMap = null;
-			waypoints = null;
-			tiles = null;
-			tileDataArray = null;
 		}
 
-		public void Initialize()
+		public void Load(string mapName)
 		{
-			string mapName = PreviewSettings.LoadMapName;
-			if (mapName == null) return;
+			if (null == mapName) return;
 
 			Reset();
 			currentMap = string.IsNullOrEmpty(mapName) ? DatabaseLoader.Maps.FirstOrDefault() : DatabaseLoader.Maps.FirstOrDefault(m => m.name == mapName);
 
-			if (currentMap == null)
+			if (null == currentMap)
 			{
 				Debug.LogError($"No map found for mapName={mapName}! Available maps: {string.Join(", ", DatabaseLoader.Maps.Select(m => m.name))}");
 				return;
@@ -117,41 +121,6 @@ namespace ClassicTilestorm
 
 			if (PreviewSettings.Scramble)
 				Scramble();
-
-			SetCameraPosition();
-
-			void SetCameraPosition()
-			{
-				var mapMin = Vector3.one * 1000f;
-				var mapMax = Vector3.zero;
-				var activeTileCount = 0;
-				for (var index = 0; index < tiles.Length; index++)
-				{
-					if (GetTileProperties(index) != null)
-					{
-						var pos = GetTileCoordinates(index).ToPosition();
-						mapMin = Vector3.Min(mapMin, pos);
-						mapMax = Vector3.Max(mapMax, pos);
-						activeTileCount++;
-					}
-				}
-				Camera.main.transform.position = activeTileCount > 0 ? (mapMin + mapMax) * 0.5f + Vector3.up * (mapMax.z - mapMin.z) : Vector3.up * 10f;
-				Camera.main.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
-			}
-		}
-
-		public void Reload()
-		{
-			if (currentMap?.tiles == null || tiles == null)
-			{
-				Debug.LogWarning("Cannot reload: invalid map or tiles data");
-				return;
-			}
-
-			LoadTileData(currentMap.tiles);
-			waypoints = currentMap.waypoints?.Where(w => w != null).ToList();
-			if (waypoints == null || waypoints.Count == 0)
-				waypoints = Navigation.SetupWaypoints(this);
 
 			UpdateTileObjectNamesAndPositions();
 		}

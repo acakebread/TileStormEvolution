@@ -29,4 +29,7 @@ public static class SmoothingUtils
 		float timeAlpha = Mathf.Clamp01(k * deltaTime);
 		return current * (1f - timeAlpha) + target * timeAlpha;
 	}
+
+	public static float Ease(float t) => (1f - Mathf.Cos(t * Mathf.PI)) / 2f;
+	public static float EasePingPong(float t) => (1f - Mathf.Cos(t * Mathf.PI * 2f)) / 2f;
 }

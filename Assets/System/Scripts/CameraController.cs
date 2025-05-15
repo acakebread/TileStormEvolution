@@ -7,28 +7,28 @@ public static class CameraController
 	public enum CameraState
 	{
 		Static,
-		Follow,
 		Preset,
+		Follow,
 		Cinema
 	}
 
 	public struct CameraData
 	{
-		public Vector3 origin;
-		public Vector3 target;
+		public Vector3 originSrc;
 		public Vector3 originDst;
+		public Vector3 targetSrc;
 		public Vector3 targetDst;
 		public float smoothingRate;
 		public float fov;
 	}
 
 	// Public properties
-	public static bool CinemaEnabled => allowAutoCinema;
+	public static bool CinemaEnabled => enableAutoCinema;
 	public static bool CinemaActive => CameraState.Cinema == currentState;
 
 	// Common behavior constants
-	private const float DefaultSmoothingRate = 64f;
 	private const float TargetFPS = 60f;
+	private const float DefaultSmoothingRate = 64f;
 
 	// State-specific constants
 	private static class FollowConfig
@@ -51,7 +51,7 @@ public static class CameraController
 	private static CameraData previousData;
 	private static Camera mainCamera;
 	private static Vector3 playerPos;
-	private static bool allowAutoCinema;
+	private static bool enableAutoCinema;
 	private static float lastRefreshTime;
 	private static readonly CinemaCameraController cinemaController = new();
 	private static List<Vector3> waypoints = new();
@@ -68,8 +68,8 @@ public static class CameraController
 		{
 			currentData = new CameraData
 			{
-				origin = Vector3.zero,
-				target = Vector3.zero,
+				originSrc = Vector3.zero,
+				targetSrc = Vector3.zero,
 				originDst = Vector3.forward,
 				targetDst = Vector3.forward,
 				smoothingRate = DefaultSmoothingRate,
@@ -88,7 +88,7 @@ public static class CameraController
 	}
 
 	// Cinema controls
-	public static void SetAutoCinema(bool allow = true)  => allowAutoCinema = allow;
+	public static void SetAutoCinema(bool allow = true)  => enableAutoCinema = allow;
 
 	// State management
 	public static void Refresh(float time)
@@ -105,6 +105,8 @@ public static class CameraController
 			previousState = currentState;
 			previousData = currentData;
 			cinemaController.StartNewCinemaSequence(playerPos, waypoints);
+			currentData = cinemaController.GetCinemaData(currentData);
+
 		}
 		else if (value != CameraState.Cinema && currentState == CameraState.Cinema)
 		{
@@ -119,20 +121,20 @@ public static class CameraController
 	public static void SetOrigin(Vector3 value)
 	{
 		currentData.originDst = value;
-		if (currentState == CameraState.Static) currentData.origin = value;
+		if (currentState == CameraState.Static) currentData.originSrc = value;
 	}
 
 	public static void SetTarget(Vector3 value)
 	{
 		currentData.targetDst = value;
-		if (currentState == CameraState.Static) currentData.target = value;
+		if (currentState == CameraState.Static) currentData.targetSrc = value;
 	}
 
 	public static void SetPlayer(Vector3 position)
 	{
 		playerPos = position;
 		if (currentState == CameraState.Follow) currentData.targetDst = position;
-		cinemaController.UpdatePlayerPosition(position);
+		cinemaController.UpdatePlayerPosition(position);//if (currentState == CameraState.Cinema) cinemaController.UpdatePlayerPosition(position);
 	}
 
 	public static void SetWaypoints(List<Vector3> newWaypoints)
@@ -146,7 +148,7 @@ public static class CameraController
 	{
 		if (mainCamera == null) return;
 
-		if (allowAutoCinema && currentState != CameraState.Cinema && Time.time - lastRefreshTime > cinemaController.CinemaTimeoutDuration)
+		if (enableAutoCinema && currentState != CameraState.Cinema && Time.time - lastRefreshTime > cinemaController.CinemaTimeoutDuration)
 		{
 			Debug.Log("Auto-switching to Cinema mode");
 			SetMode(CameraState.Cinema);
@@ -157,12 +159,12 @@ public static class CameraController
 			case CameraState.Static:
 				break;
 
-			case CameraState.Follow:
-				UpdateFollowMode();
-				break;
-
 			case CameraState.Preset:
 				UpdatePresetMode();
+				break;
+
+			case CameraState.Follow:
+				UpdateFollowMode();
 				break;
 
 			case CameraState.Cinema:
@@ -173,33 +175,31 @@ public static class CameraController
 		UpdateCameraTransform();
 	}
 
-	private static void UpdateFollowMode()
-	{
-		currentData.smoothingRate = SmoothingUtils.Smooth(currentData.smoothingRate, FollowConfig.SmoothingNa, FollowConfig.SmoothingNb, Time.deltaTime, TargetFPS);
-		float followLerp = SmoothingUtils.Smooth(0f, 1f, currentData.smoothingRate, Time.deltaTime, TargetFPS);
-		currentData.target = Vector3.Lerp(currentData.target, currentData.targetDst, followLerp);
-		Vector3 delta = currentData.target - currentData.origin;
-		Vector3 deltaHorizontal = new Vector3(delta.x, 0, delta.z);
-		if (deltaHorizontal.sqrMagnitude < 0.01f)
-			deltaHorizontal = mainCamera.transform.forward;
-		deltaHorizontal.Normalize();
-		Vector3 idealPos = currentData.target - deltaHorizontal * (FollowConfig.IdealDistance * FollowConfig.IdealDistanceHorizontalScale);
-		idealPos.y = currentData.target.y + FollowConfig.IdealDistance;
-		currentData.origin = Vector3.Lerp(currentData.origin, idealPos, followLerp);
-	}
-
 	private static void UpdatePresetMode()
 	{
 		currentData.smoothingRate = SmoothingUtils.Smooth(currentData.smoothingRate, PresetConfig.SmoothingN, Time.deltaTime, TargetFPS);
-		float presetLerp = SmoothingUtils.Smooth(0f, 1f, currentData.smoothingRate, Time.deltaTime, TargetFPS);
-		currentData.origin = Vector3.Lerp(currentData.origin, currentData.originDst, presetLerp);
-		currentData.target = Vector3.Lerp(currentData.target, currentData.targetDst, presetLerp);
+		var presetLerp = SmoothingUtils.Smooth(0f, 1f, currentData.smoothingRate, Time.deltaTime, TargetFPS);
+		currentData.originSrc = Vector3.Lerp(currentData.originSrc, currentData.originDst, presetLerp);
+		currentData.targetSrc = Vector3.Lerp(currentData.targetSrc, currentData.targetDst, presetLerp);
+	}
+
+	private static void UpdateFollowMode()
+	{
+		currentData.smoothingRate = SmoothingUtils.Smooth(currentData.smoothingRate, FollowConfig.SmoothingNa, FollowConfig.SmoothingNb, Time.deltaTime, TargetFPS);
+		var followLerp = SmoothingUtils.Smooth(0f, 1f, currentData.smoothingRate, Time.deltaTime, TargetFPS);
+		currentData.targetSrc = Vector3.Lerp(currentData.targetSrc, currentData.targetDst, followLerp);
+		var delta = currentData.targetSrc - currentData.originSrc;
+		var deltaHorizontal = (0f == delta.x && 0f == delta.z) ? mainCamera.transform.forward : new Vector3(delta.x, 0, delta.z);
+		deltaHorizontal.Normalize();
+		var idealPos = currentData.targetSrc - deltaHorizontal * (FollowConfig.IdealDistance * FollowConfig.IdealDistanceHorizontalScale);
+		idealPos.y = currentData.targetSrc.y + FollowConfig.IdealDistance;
+		currentData.originSrc = Vector3.Lerp(currentData.originSrc, idealPos, followLerp);
 	}
 
 	public static void UpdateCameraTransform()
 	{
-		mainCamera.transform.position = currentData.origin;
-		Vector3 direction = currentData.target - currentData.origin;
+		mainCamera.transform.position = currentData.originSrc;
+		var direction = currentData.targetSrc - currentData.originSrc;
 		if (direction.sqrMagnitude < 0.01f)
 		{
 			Debug.LogWarning("Direction vector too small, skipping rotation update.");

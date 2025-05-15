@@ -35,7 +35,10 @@ namespace ClassicTilestorm
 		public event System.Action<int> OnPuzzleSolved;
 		public event System.Action OnLevelCompleted;
 
-		public void Initialize()
+		public static EggbotController instance;
+		private void Awake() { instance = this; Reset(); }
+
+		public void Reset()
 		{
 			dstWaypoint = 1;
 			mod1 = mod2 = 0f;
@@ -170,15 +173,15 @@ namespace ClassicTilestorm
 
 			void UpdateTurn()
 			{
-				var t = Mathf.Clamp01(stateTimer / stateDuration);
-				eggbotRoot.rotation = Quaternion.Euler(0f, Mathf.Lerp(startYaw, targetYaw, (1f - Mathf.Cos(t * Mathf.PI)) / 2f) % 360f, 0f);
+				var t = stateDuration > 0 ? Mathf.Clamp01(stateTimer / stateDuration) : 1f;
+				eggbotRoot.rotation = Quaternion.Euler(0f, Mathf.Lerp(startYaw, targetYaw, SmoothingUtils.Ease(t)) % 360f, 0f);
 				if (t >= 1f) { eggbotRoot.rotation = Quaternion.Euler(0f, (int)(targetYaw % 360f), 0f); SetState(State.TEST); }
 			}
 
 			void UpdateMove()
 			{
 				var t = stateDuration > 0 ? Mathf.Clamp01(stateTimer / stateDuration) : 1f;
-				eggbotRoot.position = Vector3.Lerp(startPosition, targetPosition, (1f - Mathf.Cos(t * Mathf.PI)) / 2f);
+				eggbotRoot.position = Vector3.Lerp(startPosition, targetPosition, SmoothingUtils.Ease(t));
 				if (t >= 1f) SetState(State.TEST);
 			}
 
@@ -186,7 +189,6 @@ namespace ClassicTilestorm
 			{
 				mod1 += 7.8f * Time.deltaTime;
 				mod2 += 1.8f * Time.deltaTime;
-				//sway = (sway * 999f + (isBlocked ? 0.02f : 0.1f)) / 1000f; // 0.02f if blocked, 0.1f otherwise
 				sway = SmoothingUtils.Smooth(sway, isBlocked ? 0.02f : 0.1f, 99f, Time.deltaTime);
 				var pitch = sway * Mathf.Sin(mod1) * Mathf.Sin(mod2);
 				var rotation = Quaternion.Euler(pitch * Mathf.Rad2Deg, 0f, 0f);
@@ -197,6 +199,7 @@ namespace ClassicTilestorm
 
 		private void OnDestroy()
 		{
+			instance = null;
 			OnWaypointReached = null;
 			OnPuzzleSolved = null;
 			OnLevelCompleted = null;

@@ -275,7 +275,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fbf6ebd314ddae74da38abc2292cb56c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  loadMapName: Medieval 12
+  loadMapName: Egypt 10
   scramble: 1
   show_hidden_tiles: 0
   show_tile_selection: 0

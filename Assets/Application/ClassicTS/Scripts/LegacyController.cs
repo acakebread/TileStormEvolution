@@ -8,9 +8,12 @@ namespace ClassicTilestorm
 	public class LegacyController : MonoBehaviour
 	{
 		#region Legacy Compatibility
-		public void Initialize()
+		public static LegacyController instance;
+		private void Awake() { instance = this; Reset(); }
+
+		public void Reset()
 		{
-			CameraController.Initialize();
+			Initialize();
 			SetMode(CameraState.Static);
 
 			var mapManager = GamePreview.mapManager;
@@ -125,8 +128,9 @@ namespace ClassicTilestorm
 
 		private void OnDestroy()
 		{
-			var eggbotController = GamePreview.eggbotController;
-			if (eggbotController != null)
+			instance = null; 
+			var eggbotController = EggbotController.instance;
+			if (null != eggbotController)
 			{
 				eggbotController.OnWaypointReached -= OnWaypointReached;
 				eggbotController.OnPuzzleSolved -= OnPuzzleSolved;
