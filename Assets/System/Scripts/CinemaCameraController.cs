@@ -24,7 +24,6 @@ public class CinemaCameraController
 	private const int MaxPositionSampleAttempts = 10;
 	private const float OrbitRadius = 5f; // Radius for orbiting and endOrigin positioning
 	private const float OrbitTargetDistanceThreshold = 0.5f; // Threshold to detect same target (player)
-	private const float OriginSmoothingFactor = 0.1f; // Smoothing for endOrigin updates
 
 	// State
 	private float sequenceTimer;
@@ -43,8 +42,6 @@ public class CinemaCameraController
 	private Vector2 endTargetOffset; // Cached offset for endTarget
 	private float orbitStartAngle; // Cached start angle for orbit
 	private float orbitEndAngle; // Cached end angle for orbit
-	private Vector3 baseStartOrigin; // Cached initial origins for interpolation
-	private Vector3 baseEndOrigin;
 	private Vector3 lastPlayerPos; // Tracks last player position for delta
 	private Vector3 startPlayerPos; // Tracks last player position for delta
 	private const float TargetFPS = 60f;//copied from CameraController - should make this common
@@ -70,8 +67,6 @@ public class CinemaCameraController
 		endTargetOffset = Vector2.zero;
 		orbitStartAngle = 0f;
 		orbitEndAngle = 0f;
-		baseStartOrigin = Vector3.zero;
-		baseEndOrigin = Vector3.zero;
 		lastPlayerPos = Vector3.zero;
 		startPlayerPos = Vector3.zero;
 	}
@@ -173,9 +168,6 @@ public class CinemaCameraController
 			EnsureMinimumOffset(ref originDst, playerPos);
 		}
 
-		// Cache base origins for interpolation
-		baseStartOrigin = originSrc;
-		baseEndOrigin = targetDst; // Use endTarget as reference for orbit shift
 		UpdateMapExtents();
 
 		// Set FOV max (occasionally wider)
@@ -346,19 +338,11 @@ public class CinemaCameraController
 		var easedT = SmoothingUtils.Ease(t);
 		if (easedT < 0f) Debug.LogWarning("easedT < 0 !");
 		// Calculate dynamic offset based on player movement
-
-		//originSrc += delta;
-		//targetSrc += delta;
 		originDst += delta;
 		targetDst += delta;
 
 		var transOrigin = Vector3.Lerp(originSrc, originDst, easedT);
-		var transTarget = Vector3.Lerp(targetSrc, targetDst, easedT);
-		//var transTarget = targetSrc;// Vector3.Lerp(targetSrc, targetDst, easedT);
-
-		//var followLerp = SmoothingUtils.Smooth(0f, 1f, data.smoothingRate, Time.deltaTime, TargetFPS);
-		//data.originSrc = Vector3.Lerp(data.originSrc, transOrigin, followLerp);
-		//data.targetSrc = Vector3.Lerp(data.targetSrc, transTarget, followLerp);
+		var transTarget = Vector3.Lerp(targetSrc, targetDst + delta * 2f, easedT);//forward project eggbot postion so smmoth util 'dead reckons' future position
 
 		UpdateDataValues(transOrigin, transTarget);
 
