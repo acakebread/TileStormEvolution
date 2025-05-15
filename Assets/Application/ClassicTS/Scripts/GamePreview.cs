@@ -62,6 +62,9 @@ namespace ClassicTilestorm
 			}
 
 			if (GUI.Button(new Rect(550, 10, 150, 30), CameraController.CinemaEnabled ? "Disable Cinematic" : "Enable Cinematic")) { CameraController.SetAutoCinema(!CameraController.CinemaEnabled); CameraController.Refresh(Time.time - (CameraController.CinemaEnabled ? 999 : 0)); }
+
+
+			//if (CameraUtils.unstable) GUI.Label(new Rect(10, 100, 150, 30), "UNSTABLE");//debug feature
 		}
 	}
 }
