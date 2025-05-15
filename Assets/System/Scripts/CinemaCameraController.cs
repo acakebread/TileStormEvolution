@@ -1,5 +1,3 @@
-
-
 using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
@@ -24,6 +22,8 @@ public class CinemaCameraController
 	private const int MaxPositionSampleAttempts = 10;
 	private const float OrbitRadius = 5f; // Radius for orbiting and endOrigin positioning
 	private const float OrbitTargetDistanceThreshold = 0.5f; // Threshold to detect same target (player)
+	private const float TargetFPS = 60f; // Copied from CameraController - should make this common
+	private const float ProjectionSmoothingRate = 16f; // Smoothing rate for dead-reckoned position
 
 	// State
 	private float sequenceTimer;
@@ -31,10 +31,10 @@ public class CinemaCameraController
 	private Vector3 playerPos;
 	private List<Vector3> waypoints = new List<Vector3>(); // Set via SetWaypoints
 	private List<Vector3> playerPositions = new List<Vector3>();
-	private Vector3 originSrc;//initial calculated values
-	private Vector3 originDst;//initial calculated values
-	private Vector3 targetSrc;//initial calculated values
-	private Vector3 targetDst;//initial calculated values
+	private Vector3 originSrc; // Initial calculated values
+	private Vector3 originDst; // Initial calculated values
+	private Vector3 targetSrc; // Initial calculated values
+	private Vector3 targetDst; // Initial calculated values
 	private float currentFovMax;
 	private Vector2 mapExtentsMin;
 	private Vector2 mapExtentsMax;
@@ -44,7 +44,7 @@ public class CinemaCameraController
 	private float orbitEndAngle; // Cached end angle for orbit
 	private Vector3 lastPlayerPos; // Tracks last player position for delta
 	private Vector3 startPlayerPos; // Tracks last player position for delta
-	private const float TargetFPS = 60f;//copied from CameraController - should make this common
+	private Vector3 smoothedProjectedOffset; // Tracks smoothed dead-reckoned offset
 
 	// Public properties
 	public float CinemaTimeoutDuration => CinemaTimeout;
@@ -69,6 +69,7 @@ public class CinemaCameraController
 		orbitEndAngle = 0f;
 		lastPlayerPos = Vector3.zero;
 		startPlayerPos = Vector3.zero;
+		smoothedProjectedOffset = Vector3.zero;
 	}
 
 	public void SetWaypoints(List<Vector3> newWaypoints)
@@ -123,6 +124,7 @@ public class CinemaCameraController
 		this.waypoints = new List<Vector3>(waypoints); // Set waypoints for this sequence
 		lastPlayerPos = playerPos;
 		startPlayerPos = playerPos;
+		smoothedProjectedOffset = Vector3.zero; // Reset projection offset
 
 		// Select start POI
 		Vector3 startPoi = SelectStartPoi(playerPos, waypoints);
@@ -299,11 +301,11 @@ public class CinemaCameraController
 		}
 	}
 
-	public CameraController.CameraData GetCinemaData(CameraController.CameraData data)//temporary workaround because UpdateCinemaMode has two entry points
+	public CameraController.CameraData GetCinemaData(CameraController.CameraData data)
 	{
 		data.originSrc = originSrc;
 		data.targetSrc = targetSrc;
-		data.smoothingRate = 64f;//ToDo add as constant
+		data.smoothingRate = 64f; // ToDo add as constant
 		return data;
 	}
 
@@ -322,7 +324,7 @@ public class CinemaCameraController
 				StartNewCinemaSequence(playerPos, waypoints);
 				data = GetCinemaData(data);
 			}
-			return data;	 
+			return data;
 		}
 
 		sequenceTimer += Time.deltaTime;
@@ -337,17 +339,24 @@ public class CinemaCameraController
 		var t = SequenceDuration > 0 ? Mathf.Clamp01(sequenceTimer / SequenceDuration) : 1f;
 		var easedT = SmoothingUtils.Ease(t);
 		if (easedT < 0f) Debug.LogWarning("easedT < 0 !");
+
+		// Smooth the dead-reckoned projection offset
+		Vector3 targetProjectionOffset = delta * 2f;
+		smoothedProjectedOffset.x = SmoothingUtils.Smooth(smoothedProjectedOffset.x, targetProjectionOffset.x, ProjectionSmoothingRate, Time.deltaTime, TargetFPS);
+		smoothedProjectedOffset.y = SmoothingUtils.Smooth(smoothedProjectedOffset.y, targetProjectionOffset.y, ProjectionSmoothingRate, Time.deltaTime, TargetFPS);
+		smoothedProjectedOffset.z = SmoothingUtils.Smooth(smoothedProjectedOffset.z, targetProjectionOffset.z, ProjectionSmoothingRate, Time.deltaTime, TargetFPS);
+
 		// Calculate dynamic offset based on player movement
 		originDst += delta;
 		targetDst += delta;
 
 		var transOrigin = Vector3.Lerp(originSrc, originDst, easedT);
-		var transTarget = Vector3.Lerp(targetSrc, targetDst + delta * 2f, easedT);//forward project eggbot postion so smmoth util 'dead reckons' future position
+		var transTarget = Vector3.Lerp(targetSrc, targetDst + smoothedProjectedOffset, easedT); // Use smoothed projection
 
 		UpdateDataValues(transOrigin, transTarget);
 
 		// Update FOV
-		var fovT = SmoothingUtils.EasePingPong(sequenceTimer / SequenceDuration);// Mathf.PingPong(sequenceTimer, SequenceDuration / 2f) / (SequenceDuration / 2f);
+		var fovT = SmoothingUtils.EasePingPong(sequenceTimer / SequenceDuration);
 		data.fov = Mathf.Lerp(FovMin, currentFovMax, fovT);
 		camera.fieldOfView = data.fov;
 
