@@ -100,6 +100,7 @@ public static class CameraController
 	// State management
 	public static void SetMode(CameraState value)
 	{
+		//value = CameraState.Static;
 		if (value == CameraState.Cinema && currentState != CameraState.Cinema)
 		{
 			previousState = currentState;
@@ -116,6 +117,7 @@ public static class CameraController
 			mainCamera.fieldOfView = currentData.fov;
 			isCameraShakeEnabled = false; // Disable shake when exiting Cinema mode
 		}
+		//isCameraShakeEnabled = true;
 		currentState = value;
 	}
 
