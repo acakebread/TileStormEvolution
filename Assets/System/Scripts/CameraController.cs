@@ -30,6 +30,9 @@ public static class CameraController
 	private const float TargetFPS = 60f;
 	private const float DefaultSmoothingRate = 64f;
 
+	// Camera shake constants
+	private const float ShakeChance = 1f;//0.33f; // 33% chance to enable shake in Cinema mode
+
 	// State-specific constants
 	private static class FollowConfig
 	{
@@ -55,6 +58,8 @@ public static class CameraController
 	private static float lastRefreshTime;
 	private static readonly CinemaCameraController cinemaController = new();
 	private static List<Vector3> waypoints = new();
+	private static bool isCameraShakeEnabled; // Tracks if camera shake is active
+	private static float shakeSeed; // Seed for Perlin noise
 
 	// Initialization
 	public static void Initialize()
@@ -85,19 +90,14 @@ public static class CameraController
 		waypoints.Clear();
 		lastRefreshTime = Time.time;
 		cinemaController.Reset();
+		isCameraShakeEnabled = false;
+		shakeSeed = 0f;
 	}
 
 	// Cinema controls
-	public static void SetAutoCinema(bool allow = true)  => enableAutoCinema = allow;
+	public static void SetAutoCinema(bool allow = true) => enableAutoCinema = allow;
 
 	// State management
-	public static void Refresh(float time)
-	{
-		lastRefreshTime = time;
-		if (currentState == CameraState.Cinema)
-			SetMode(previousState);
-	}
-
 	public static void SetMode(CameraState value)
 	{
 		if (value == CameraState.Cinema && currentState != CameraState.Cinema)
@@ -106,15 +106,24 @@ public static class CameraController
 			previousData = currentData;
 			cinemaController.StartNewCinemaSequence(playerPos, waypoints);
 			currentData = cinemaController.GetCinemaData(currentData);
-
+			isCameraShakeEnabled = Random.value < ShakeChance; // 33% chance for shake in Cinema mode
+			shakeSeed = Random.value * 100f; // New seed for shake
 		}
 		else if (value != CameraState.Cinema && currentState == CameraState.Cinema)
 		{
 			previousState = currentState;
 			currentData = previousData;
 			mainCamera.fieldOfView = currentData.fov;
+			isCameraShakeEnabled = false; // Disable shake when exiting Cinema mode
 		}
 		currentState = value;
+	}
+
+	public static void Refresh(float time)
+	{
+		lastRefreshTime = time;
+		if (currentState == CameraState.Cinema)
+			SetMode(previousState);
 	}
 
 	// Position setters
@@ -134,7 +143,7 @@ public static class CameraController
 	{
 		playerPos = position;
 		if (currentState == CameraState.Follow) currentData.targetDst = position;
-		cinemaController.UpdatePlayerPosition(position);//if (currentState == CameraState.Cinema) cinemaController.UpdatePlayerPosition(position);
+		cinemaController.UpdatePlayerPosition(position);
 	}
 
 	public static void SetWaypoints(List<Vector3> newWaypoints)
@@ -206,5 +215,8 @@ public static class CameraController
 			return;
 		}
 		mainCamera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
+
+		// Apply camera shake
+		CameraUtils.ApplyCameraShake(mainCamera, isCameraShakeEnabled, shakeSeed);
 	}
 }

@@ -1,44 +1,7 @@
 using UnityEngine;
-using static ClassicTilestorm.DatabaseLoader;
 
 public static class CameraUtils
 {
-	private const float MaxVectorValue = 100f;
-
-	public static bool IsValidVector(VectorData vector)
-	{
-		if (vector == null)
-			return false;
-
-		bool valid = !float.IsNaN(vector.fX) && !float.IsInfinity(vector.fX) && Mathf.Abs(vector.fX) < MaxVectorValue &&
-					 !float.IsNaN(vector.fY) && !float.IsInfinity(vector.fY) && Mathf.Abs(vector.fY) < MaxVectorValue &&
-					 !float.IsNaN(vector.fZ) && !float.IsInfinity(vector.fZ) && Mathf.Abs(vector.fZ) < MaxVectorValue;
-
-		if (!valid)
-			Debug.LogWarning($"Invalid vector: fX={vector?.fX}, fY={vector?.fY}, fZ={vector?.fZ}");
-
-		return valid;
-	}
-
-	public static void LookAtTarget(Transform cameraTransform, Vector3 target)
-	{
-		Vector3 direction = target - cameraTransform.position;
-		if (direction.sqrMagnitude < 0.01f)
-		{
-			Debug.LogWarning("LookAtTarget: Target too close to camera, skipping orientation.");
-			return;
-		}
-
-		if (target.y > cameraTransform.position.y - 0.5f)
-		{
-			target.y = Mathf.Min(target.y, cameraTransform.position.y - 1f);
-			direction = target - cameraTransform.position;
-			Debug.Log($"LookAtTarget: Adjusted target to ensure downward tilt: new target={target}");
-		}
-
-		cameraTransform.rotation = Quaternion.LookRotation(direction, Vector3.up);
-	}
-
 	public static Vector3 ScreenToPlaneXZ(Camera camera, Vector3 fallbackPosition, bool debugLogging = false)
 	{
 		Ray ray = camera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
@@ -53,5 +16,54 @@ public static class CameraUtils
 		if (debugLogging)
 			Debug.LogWarning($"ScreenToPlaneXZ failed, using fallback: {fallback}");
 		return fallback;
+	}
+
+	//public static void LookAtTarget(Transform cameraTransform, Vector3 target)
+	//{
+	//    Vector3 direction = target - cameraTransform.position;
+	//    if (direction.sqrMagnitude < 0.01f)
+	//    {
+	//        Debug.LogWarning("LookAtTarget: Target too close to camera, skipping orientation.");
+	//        return;
+	//    }
+	//
+	//    if (target.y > cameraTransform.position.y - 0.5f)
+	//    {
+	//        target.y = Mathf.Min(target.y, cameraTransform.position.y - 1f);
+	//        direction = target - cameraTransform.position;
+	//        Debug.Log($"LookAtTarget: Adjusted target to ensure downward tilt: new target={target}");
+	//    }
+	//
+	//    cameraTransform.rotation = Quaternion.LookRotation(direction, Vector3.up);
+	//}
+
+	// Camera shake constants
+	private const float ShakePositionAmplitude = 0.02f; // Max position offset (±0.02 units in camera space)
+	private const float ShakeRotationAmplitude = 2.4f; // Max rotation offset (±2.4 degrees)
+	private const float ShakeFrequency = 0.85f; // Frequency of shake (Hz)
+
+	public static void ApplyCameraShake(Camera camera, bool isEnabled, float seed)
+	{
+		if (!isEnabled || camera == null)
+			return;
+
+		float time = Time.time * ShakeFrequency;
+		// Position shake in camera space (X, Y for screen wobble, small Z for depth)
+		Vector3 shakePosOffset = new Vector3(
+			(Mathf.PerlinNoise(time + seed + 0f, 0f) - 0.5f) * 2f * ShakePositionAmplitude,
+			(Mathf.PerlinNoise(time + seed + 1f, 0f) - 0.5f) * 2f * ShakePositionAmplitude,
+			(Mathf.PerlinNoise(time + seed + 2f, 0f) - 0.5f) * 2f * ShakePositionAmplitude * 0.5f // Reduced Z shake
+		);
+		// Transform to world space using camera's local axes
+		shakePosOffset = camera.transform.right * shakePosOffset.x +
+						 camera.transform.up * shakePosOffset.y +
+						 camera.transform.forward * shakePosOffset.z;
+		camera.transform.position += shakePosOffset;
+
+		// Rotation shake (pitch and yaw)
+		float pitchShake = (Mathf.PerlinNoise(time + seed + 10f, 0f) - 0.5f) * 2f * ShakeRotationAmplitude;
+		float yawShake = (Mathf.PerlinNoise(time + seed + 11f, 0f) - 0.5f) * 2f * ShakeRotationAmplitude;
+		Quaternion shakeRot = Quaternion.Euler(pitchShake, yawShake, 0f); // No roll for natural feel
+		camera.transform.rotation = camera.transform.rotation * shakeRot;
 	}
 }

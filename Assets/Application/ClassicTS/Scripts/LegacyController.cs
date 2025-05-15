@@ -45,8 +45,8 @@ namespace ClassicTilestorm
 			var firstWaypoint = mapManager.Waypoints[0];
 			if (firstWaypoint.bCamera)
 			{
-				if (CameraUtils.IsValidVector(firstWaypoint.vSrc)) srcPos = new Vector3(firstWaypoint.vSrc.fX, firstWaypoint.vSrc.fY, firstWaypoint.vSrc.fZ);
-				if (CameraUtils.IsValidVector(firstWaypoint.vDst)) dstPos = new Vector3(firstWaypoint.vDst.fX, firstWaypoint.vDst.fY, firstWaypoint.vDst.fZ);
+				if (IsValidVector(firstWaypoint.vSrc)) srcPos = new Vector3(firstWaypoint.vSrc.fX, firstWaypoint.vSrc.fY, firstWaypoint.vSrc.fZ);
+				if (IsValidVector(firstWaypoint.vDst)) dstPos = new Vector3(firstWaypoint.vDst.fX, firstWaypoint.vDst.fY, firstWaypoint.vDst.fZ);
 			}
 
 			SetOrigin(srcPos);
@@ -96,7 +96,7 @@ namespace ClassicTilestorm
 			Vector3 srcPos = new Vector3(waypoint.vSrc.fX, waypoint.vSrc.fY, waypoint.vSrc.fZ);
 			if (srcPos == Vector3.zero) srcPos = new Vector3(0f, 14f, -14f);
 
-			Vector3 lookAtPos = waypoint.vDst != null && CameraUtils.IsValidVector(waypoint.vDst) ? new Vector3(waypoint.vDst.fX, waypoint.vDst.fY, waypoint.vDst.fZ) : mapManager.GetTilePosition(waypoint.nTile) + new Vector3(0f, 0.5f, 0f);
+			Vector3 lookAtPos = waypoint.vDst != null && IsValidVector(waypoint.vDst) ? new Vector3(waypoint.vDst.fX, waypoint.vDst.fY, waypoint.vDst.fZ) : mapManager.GetTilePosition(waypoint.nTile) + new Vector3(0f, 0.5f, 0f);
 
 			if (waypointIndex == mapManager.Waypoints.Count - 1)
 			{
@@ -105,7 +105,7 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			if (!CameraUtils.IsValidVector(waypoint.vSrc))
+			if (!IsValidVector(waypoint.vSrc))
 			{
 				SetMode(CameraState.Follow);
 				SetPlayer(eggbotController?.eggbotRoot.position ?? Vector3.zero);
@@ -136,6 +136,22 @@ namespace ClassicTilestorm
 				eggbotController.OnPuzzleSolved -= OnPuzzleSolved;
 				eggbotController.OnLevelCompleted -= OnLevelCompleted;
 			}
+		}
+
+		private const float MaxVectorValue = 100f;
+		private static bool IsValidVector(DatabaseLoader.VectorData vector)
+		{
+			if (vector == null)
+				return false;
+
+			bool valid = !float.IsNaN(vector.fX) && !float.IsInfinity(vector.fX) && Mathf.Abs(vector.fX) < MaxVectorValue &&
+						 !float.IsNaN(vector.fY) && !float.IsInfinity(vector.fY) && Mathf.Abs(vector.fY) < MaxVectorValue &&
+						 !float.IsNaN(vector.fZ) && !float.IsInfinity(vector.fZ) && Mathf.Abs(vector.fZ) < MaxVectorValue;
+
+			if (!valid)
+				Debug.LogWarning($"Invalid vector: fX={vector?.fX}, fY={vector?.fY}, fZ={vector?.fZ}");
+
+			return valid;
 		}
 		#endregion
 	}
