@@ -10,17 +10,17 @@ public class CinemaCameraController
 	private const float PauseDuration = 1f;
 	private const float MinCameraHeight = 1.5f;
 	private const float MaxCameraHeight = 4f;
-	private const float MaxLookAtAngle = 20f; // Maximum pitch angle
+	private const float MaxLookAtAngle = 20f;
 	private const float FovMin = 35f;
 	private const float FovMax = 55f;
 	private const int MaxPlayerPositions = 50;
 	private const float MinPoiDistanceFromPlayer = 4f;
 	private const float MinDistanceForNewPoi = 3f;
 	private const float EllipsoidMajorAxisScale = 1.5f;
-	private const float EllipsoidMinorAxisScale = 1.0f;
-	private const int MaxPositionSampleAttempts = 10;
-	private const float MinOrbitRadius = 2f; // Minimum orbit radius
-	private const float MaxOrbitRadius = 8f; // Maximum orbit radius
+	private const float EllipsoidMinorAxisScale = 1.5f;
+	private const float MinOrbitRadius = 2f;
+	private const float MaxOrbitRadius = 8f;
+	private const float OrbitTargetDistanceThreshold = 0.5f;
 	private const float TargetFPS = 60f;
 	private const float ProjectionSmoothingRate = 16f;
 	private const float MinPathLength = 2f;
@@ -57,7 +57,7 @@ public class CinemaCameraController
 	private float CalculateMinOrbitRadius(float cameraHeight, float targetY)
 	{
 		float heightDiff = cameraHeight - (targetY + verticalOffset);
-		if (heightDiff <= 0f) return MaxOrbitRadius; // Avoid division by zero or negative height
+		if (heightDiff <= 0f) return MaxOrbitRadius;
 		float maxPitchRad = MaxLookAtAngle * Mathf.Deg2Rad;
 		return Mathf.Max(MinOrbitRadius, heightDiff / Mathf.Tan(maxPitchRad));
 	}
@@ -155,7 +155,7 @@ public class CinemaCameraController
 		targetDst = new Vector3(playerPos.x + endTargetOffset.x, verticalOffset, playerPos.z + endTargetOffset.y);
 
 		// Check if targets are effectively the same (for orbit behavior)
-		isOrbit = true; // Vector2.Distance(new Vector2(targetSrc.x, targetSrc.z), new Vector2(targetDst.x, targetDst.z)) <= OrbitTargetDistanceThreshold;
+		isOrbit = Vector2.Distance(new Vector2(targetSrc.x, targetSrc.z), new Vector2(targetDst.x, targetDst.z)) <= OrbitTargetDistanceThreshold;
 
 		if (isOrbit)
 		{
@@ -176,23 +176,29 @@ public class CinemaCameraController
 			// Generate positions directly
 			originSrc = SampleOrbitPosition(orbitCenter, orbitStartAngle, 0f);
 			float maxDelta = Mathf.Lerp(360f, 180f, (currentOrbitRadius - MinOrbitRadius) / (MaxOrbitRadius - MinOrbitRadius));
-			float delta = Random.Range(90f, maxDelta) * (Random.value < 0.5f ? 1f : -1f); // Random direction
+			float delta = Random.Range(90f, maxDelta) * (Random.value < 0.5f ? 1f : -1f);
 			orbitEndAngle = orbitStartAngle + delta;
 			originDst = SampleOrbitPosition(orbitCenter, orbitEndAngle, 1f);
 		}
 		else
 		{
-			// Standard path with ellipsoid sampling
+			// Standard path with tangent-based sampling
 			Vector3 targetPath = targetDst - targetSrc;
 			float pathLength = Mathf.Max(targetPath.magnitude, MinPathLength);
 			Vector3 pathDir = targetPath.magnitude > 0.1f ? targetPath.normalized : Random.onUnitSphere;
 			Vector3 midPoint = (targetSrc + targetDst) / 2f;
 			Vector3 perpendicular = new Vector3(-pathDir.z, 0f, pathDir.x).normalized;
 
-			originSrc = SampleCameraPosition(midPoint, pathDir, perpendicular, pathLength, startPoi, true);
-			AdjustHeight(ref originSrc, targetSrc);
+			// Define lozenge ellipsoid
+			float lozengeMajor = (pathLength + 2f * MinOrbitRadius) / 2f;
+			float lozengeMinor = MinOrbitRadius;
 
-			originDst = SampleCameraPosition(midPoint, pathDir, perpendicular, pathLength, playerPos, false);
+			// Sample tangent-based camera positions
+			var (src, dst) = SampleCameraPosition(midPoint, pathDir, perpendicular, lozengeMajor, lozengeMinor, targetSrc, targetDst);
+			originSrc = src;
+			originDst = dst;
+
+			AdjustHeight(ref originSrc, targetSrc);
 			AdjustHeight(ref originDst, targetDst);
 		}
 
@@ -200,72 +206,61 @@ public class CinemaCameraController
 		currentFovMax = Random.value < 0.2f ? 60f : FovMax;
 	}
 
-	private Vector3 SampleCameraPosition(Vector3 midPoint, Vector3 pathDir, Vector3 perpendicular, float pathLength, Vector3 target, bool isStart)
+	private (Vector3 src, Vector3 dst) SampleCameraPosition(Vector3 midPoint, Vector3 pathDir, Vector3 perpendicular, float lozengeMajor, float lozengeMinor, Vector3 targetSrc, Vector3 targetDst)
 	{
-		float majorAxis = pathLength * EllipsoidMajorAxisScale;
-		float minorAxis = pathLength * EllipsoidMinorAxisScale;
-		float heightAxis = MaxCameraHeight - MinCameraHeight;
+		// Pick reference point outside lozenge (in XZ plane)
+		float referenceDist = lozengeMinor * EllipsoidMinorAxisScale + 1f;
+		Vector2 referenceXZ = new Vector2(midPoint.x, midPoint.z) + new Vector2(perpendicular.x, perpendicular.z) * referenceDist * (Random.value < 0.5f ? 1f : -1f);
 
-		for (int i = 0; i < MaxPositionSampleAttempts; i++)
+		// Compute tangent to lozenge ellipse in XZ plane
+		Vector2 midPointXZ = new Vector2(midPoint.x, midPoint.z);
+		Vector2 relativeXZ = referenceXZ - midPointXZ;
+		float a = lozengeMajor;
+		float b = lozengeMinor;
+		// Tangent slope: dy/dx = -(b^2 * x) / (a^2 * y)
+		float x = relativeXZ.x;
+		float y = relativeXZ.y;
+		float tangentSlope = -(b * b * x) / (a * a * y + 0.001f); // Avoid division by zero
+		Vector2 tangentDir = new Vector2(1f, tangentSlope).normalized;
+
+		// Project tangent to world space
+		Vector3 tangent = tangentDir.x * pathDir + tangentDir.y * perpendicular;
+
+		// Generate originSrc and originDst along tangent
+		float offsetRange = lozengeMajor * EllipsoidMajorAxisScale;
+		float offsetSrc = Random.Range(-offsetRange, 0f); // Bias toward targetSrc
+		float offsetDst = Random.Range(0f, offsetRange);  // Bias toward targetDst
+		Vector3 src = new Vector3(referenceXZ.x, 0f, referenceXZ.y) + tangent * offsetSrc;
+		Vector3 dst = new Vector3(referenceXZ.x, 0f, referenceXZ.y) + tangent * offsetDst;
+
+		// Assign random heights
+		src.y = Random.Range(MinCameraHeight, MaxCameraHeight);
+		dst.y = Random.Range(MinCameraHeight, MaxCameraHeight);
+
+		// Ensure minimum radius from targets
+		float minRadiusSrc = CalculateMinOrbitRadius(src.y, targetSrc.y);
+		float minRadiusDst = CalculateMinOrbitRadius(dst.y, targetDst.y);
+		Vector2 srcXZ = new Vector2(src.x, src.z);
+		Vector2 dstXZ = new Vector2(dst.x, dst.z);
+		Vector2 targetSrcXZ = new Vector2(targetSrc.x, targetSrc.z);
+		Vector2 targetDstXZ = new Vector2(targetDst.x, targetDst.z);
+
+		if (Vector2.Distance(srcXZ, targetSrcXZ) < minRadiusSrc)
 		{
-			Vector3 position = SampleEllipsoidPosition(midPoint, pathDir, perpendicular, majorAxis, minorAxis, heightAxis);
-			float minRadius = CalculateMinOrbitRadius(position.y, target.y);
-			if (Vector2.Distance(new Vector2(position.x, position.z), new Vector2(target.x, target.z)) < minRadius)
-				continue;
-
-			if (isStart)
-			{
-				originSrc = position;
-				if (IsValidStartPosition(position) && IsValidCameraPath())
-					return position;
-			}
-			else
-			{
-				originDst = position;
-				if (IsValidCameraPath())
-					return position;
-			}
+			Vector2 dir = (srcXZ - targetSrcXZ).normalized;
+			srcXZ = targetSrcXZ + dir * minRadiusSrc;
+			src.x = srcXZ.x;
+			src.z = srcXZ.y;
+		}
+		if (Vector2.Distance(dstXZ, targetDstXZ) < minRadiusDst)
+		{
+			Vector2 dir = (dstXZ - targetDstXZ).normalized;
+			dstXZ = targetDstXZ + dir * minRadiusDst;
+			dst.x = dstXZ.x;
+			dst.z = dstXZ.y;
 		}
 
-		// Fallback: Offset from target by dynamic radius
-		Vector2 targetXZ = new Vector2(target.x, target.z);
-		float fallbackHeight = Random.Range(MinCameraHeight, MaxCameraHeight);
-		float fallbackRadius = CalculateMinOrbitRadius(fallbackHeight, target.y);
-		Vector2 offsetDir = Random.insideUnitCircle.normalized * fallbackRadius;
-		Vector2 fallbackXZ = targetXZ + offsetDir;
-		return new Vector3(fallbackXZ.x, fallbackHeight, fallbackXZ.y);
-	}
-
-	private Vector3 SampleOrbitPosition(Vector3 center, float angleDegrees, float easedT)
-	{
-		float angleRad = angleDegrees * Mathf.Deg2Rad;
-		Vector3 offset = new Vector3(Mathf.Cos(angleRad), 0f, Mathf.Sin(angleRad)) * currentOrbitRadius;
-		Vector3 position = center + offset;
-		position.y = Mathf.Lerp(orbitHeightSrc, orbitHeightDst, SmoothingUtils.Ease(easedT));
-		position.y = Mathf.Clamp(position.y, MinCameraHeight, MaxCameraHeight);
-		return position;
-	}
-
-	private static Vector3 SampleEllipsoidPosition(Vector3 center, Vector3 majorAxisDir, Vector3 minorAxisDir, float majorAxis, float minorAxis, float heightAxis)
-	{
-		Vector3 unitSpherePoint = Random.insideUnitSphere;
-		float x = unitSpherePoint.x * majorAxis;
-		float y = unitSpherePoint.y * heightAxis / 2f;
-		float z = unitSpherePoint.z * minorAxis;
-		Vector3 position = center + majorAxisDir * x + Vector3.up * y + minorAxisDir * z;
-		position.y = Mathf.Clamp(position.y, MinCameraHeight, MaxCameraHeight);
-		return position;
-	}
-
-	private bool IsValidStartPosition(Vector3 position)
-	{
-		Vector2 posXZ = new Vector2(position.x, position.z);
-		Vector2 startTargetXZ = new Vector2(targetSrc.x, targetSrc.z);
-		Vector2 endTargetXZ = new Vector2(targetDst.x, targetDst.z);
-		Vector2 toStartTarget = startTargetXZ - posXZ;
-		Vector2 toEndTarget = endTargetXZ - posXZ;
-		float dot = Vector2.Dot(toStartTarget.normalized, toEndTarget.normalized);
-		return dot >= 0f;
+		return (src, dst);
 	}
 
 	private bool IsValidCameraPath()
@@ -396,5 +391,15 @@ public class CinemaCameraController
 			data.originSrc = Vector3.Lerp(data.originSrc, originNew, followLerp);
 			data.targetSrc = Vector3.Lerp(data.targetSrc, transTarget, followLerp);
 		}
+	}
+
+	private Vector3 SampleOrbitPosition(Vector3 center, float angleDegrees, float easedT)
+	{
+		float angleRad = angleDegrees * Mathf.Deg2Rad;
+		Vector3 offset = new Vector3(Mathf.Cos(angleRad), 0f, Mathf.Sin(angleRad)) * currentOrbitRadius;
+		Vector3 position = center + offset;
+		position.y = Mathf.Lerp(orbitHeightSrc, orbitHeightDst, SmoothingUtils.Ease(easedT));
+		position.y = Mathf.Clamp(position.y, MinCameraHeight, MaxCameraHeight);
+		return position;
 	}
 }
