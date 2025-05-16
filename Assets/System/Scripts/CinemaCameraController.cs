@@ -231,7 +231,19 @@ public class CinemaCameraController
 		// Pick control point outside lozenge (similar to tangent reference point)
 		float referenceDist = lozengeMinor * EllipsoidMinorAxisScale + 1f;
 		Vector2 referenceXZ = new Vector2(midPoint.x, midPoint.z) + new Vector2(perpendicular.x, perpendicular.z) * referenceDist * (Random.value < 0.5f ? 1f : -1f);
-		Vector3 control = new Vector3(referenceXZ.x, Random.Range(MinCameraHeight, MaxCameraHeight), referenceXZ.y);
+
+		// Compute base height as average of src and dst heights
+		float srcHeight = Random.Range(MinCameraHeight, MaxCameraHeight);
+		float dstHeight = Random.Range(MinCameraHeight, MaxCameraHeight);
+		float baseHeight = (srcHeight + dstHeight) / 2f;
+
+		// Randomize control point height deviation (near zero to max elevation)
+		float maxHeightDeviation = 1.5f; // Max elevation above base height (adjustable)
+		float heightDeviation = Random.Range(0f, maxHeightDeviation); // From flat to elevated
+		float controlHeight = baseHeight + heightDeviation;
+		controlHeight = Mathf.Clamp(controlHeight, MinCameraHeight, MaxCameraHeight);
+
+		Vector3 control = new Vector3(referenceXZ.x, controlHeight, referenceXZ.y);
 
 		// Generate originSrc and originDst (similar to tangent but adjusted for spline)
 		float offsetRange = lozengeMajor * EllipsoidMajorAxisScale;
@@ -260,9 +272,9 @@ public class CinemaCameraController
 		Vector3 src = tangencyPoint + tangent * offsetSrc;
 		Vector3 dst = tangencyPoint + tangent * offsetDst;
 
-		// Assign heights
-		src.y = Random.Range(MinCameraHeight, MaxCameraHeight);
-		dst.y = Random.Range(MinCameraHeight, MaxCameraHeight);
+		// Assign heights to src and dst
+		src.y = srcHeight;
+		dst.y = dstHeight;
 
 		// Ensure minimum radius from targets
 		float minRadiusSrc = CalculateMinOrbitRadius(src.y, targetSrc.y);
