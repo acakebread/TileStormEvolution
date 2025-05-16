@@ -25,6 +25,8 @@ public class CinemaCameraController
 	private const float ProjectionSmoothingRate = 16f;
 	private const float MinPathLength = 2f;
 	private const float verticalOffset = 0.5f;
+	private const bool useSplines = true;
+	private const bool debugVisualizeBezier = true; // NEW: Toggle Bezier path visualization
 
 	// State
 	private float sequenceTimer;
@@ -49,6 +51,7 @@ public class CinemaCameraController
 	private float orbitHeightSrc;
 	private float orbitHeightDst;
 	private float currentOrbitRadius;
+	private Vector3 controlPoint;
 
 	// Public properties
 	public float CinemaTimeoutDuration => CinemaTimeout;
@@ -85,6 +88,7 @@ public class CinemaCameraController
 		orbitCenter = Vector3.zero;
 		orbitHeightSrc = 0f;
 		orbitHeightDst = 0f;
+		controlPoint = Vector3.zero;
 	}
 
 	public void SetWaypoints(List<Vector3> newWaypoints)
@@ -136,18 +140,19 @@ public class CinemaCameraController
 		lastPlayerPos = playerPos;
 		smoothedProjectedOffset = Vector3.zero;
 		orbitCenter = Vector3.zero;
+		controlPoint = Vector3.zero;
 
 		// Select start POI (66% chance for POI, 33% for player)
 		Vector3 startPoi;
-		if (Random.value < 0.66f && waypoints.Count > 0)
+		//if (Random.value < 0.66f && waypoints.Count > 0)
 		{
 			var validPois = waypoints.Where(p => Vector2.Distance(new Vector2(p.x, p.z), new Vector2(playerPos.x, playerPos.z)) >= MinPoiDistanceFromPlayer).ToList();
 			startPoi = validPois.Count > 0 ? validPois[Random.Range(0, validPois.Count)] : playerPos;
 		}
-		else
-		{
-			startPoi = playerPos;
-		}
+		//else
+		//{
+		//	startPoi = playerPos;
+		//}
 
 		// Set targets
 		targetSrc = new Vector3(startPoi.x, verticalOffset, startPoi.z);
@@ -182,7 +187,7 @@ public class CinemaCameraController
 		}
 		else
 		{
-			// Standard path with tangent-based sampling
+			// Standard path with tangent or spline sampling
 			Vector3 targetPath = targetDst - targetSrc;
 			float pathLength = Mathf.Max(targetPath.magnitude, MinPathLength);
 			Vector3 pathDir = targetPath.magnitude > 0.1f ? targetPath.normalized : Random.onUnitSphere;
@@ -193,51 +198,121 @@ public class CinemaCameraController
 			float lozengeMajor = (pathLength + 2f * MinOrbitRadius) / 2f;
 			float lozengeMinor = MinOrbitRadius;
 
-			// Sample tangent-based camera positions
-			var (src, dst) = SampleCameraPosition(midPoint, pathDir, perpendicular, lozengeMajor, lozengeMinor, targetSrc, targetDst);
-			originSrc = src;
-			originDst = dst;
+			if (useSplines)
+			{
+				// Spline-based path
+				var (src, dst, ctrl) = SampleSplineCameraPosition(midPoint, pathDir, perpendicular, lozengeMajor, lozengeMinor, targetSrc, targetDst);
+				originSrc = src;
+				originDst = dst;
+				controlPoint = ctrl;
 
-			AdjustHeight(ref originSrc, targetSrc);
-			AdjustHeight(ref originDst, targetDst);
+				AdjustHeight(ref originSrc, targetSrc);
+				AdjustHeight(ref originDst, targetDst);
+				AdjustHeight(ref controlPoint, (targetSrc + targetDst) / 2f);
+			}
+			else
+			{
+				// Tangent-based path (fallback)
+				var (src, dst) = SampleTangentCameraPosition(midPoint, pathDir, perpendicular, lozengeMajor, lozengeMinor, targetSrc, targetDst);
+				originSrc = src;
+				originDst = dst;
+
+				AdjustHeight(ref originSrc, targetSrc);
+				AdjustHeight(ref originDst, targetDst);
+			}
 		}
 
 		UpdateMapExtents();
 		currentFovMax = Random.value < 0.2f ? 60f : FovMax;
 	}
 
-	private (Vector3 src, Vector3 dst) SampleCameraPosition(Vector3 midPoint, Vector3 pathDir, Vector3 perpendicular, float lozengeMajor, float lozengeMinor, Vector3 targetSrc, Vector3 targetDst)
+	private (Vector3 src, Vector3 dst, Vector3 ctrl) SampleSplineCameraPosition(Vector3 midPoint, Vector3 pathDir, Vector3 perpendicular, float lozengeMajor, float lozengeMinor, Vector3 targetSrc, Vector3 targetDst)
 	{
-		// Pick reference point outside lozenge (in XZ plane)
+		// Pick control point outside lozenge (similar to tangent reference point)
 		float referenceDist = lozengeMinor * EllipsoidMinorAxisScale + 1f;
 		Vector2 referenceXZ = new Vector2(midPoint.x, midPoint.z) + new Vector2(perpendicular.x, perpendicular.z) * referenceDist * (Random.value < 0.5f ? 1f : -1f);
+		Vector3 control = new Vector3(referenceXZ.x, Random.Range(MinCameraHeight, MaxCameraHeight), referenceXZ.y);
 
-		// Compute tangent to lozenge ellipse in XZ plane
+		// Generate originSrc and originDst (similar to tangent but adjusted for spline)
+		float offsetRange = lozengeMajor * EllipsoidMajorAxisScale;
+		Vector2 targetSrcXZ = new Vector2(targetSrc.x, targetSrc.z);
+		Vector2 targetDstXZ = new Vector2(targetDst.x, targetDst.z);
+
+		// Project control point’s XZ to lie on lozenge boundary for tangency
 		Vector2 midPointXZ = new Vector2(midPoint.x, midPoint.z);
 		Vector2 relativeXZ = referenceXZ - midPointXZ;
 		float a = lozengeMajor;
 		float b = lozengeMinor;
-		// Tangent slope: dy/dx = -(b^2 * x) / (a^2 * y)
-		float x = relativeXZ.x;
-		float y = relativeXZ.y;
-		float tangentSlope = -(b * b * x) / (a * a * y + 0.001f); // Avoid division by zero
-		Vector2 tangentDir = new Vector2(1f, tangentSlope).normalized;
+		float scale = Mathf.Sqrt((a * a * b * b) / (b * b * relativeXZ.x * relativeXZ.x + a * a * relativeXZ.y * relativeXZ.y));
+		Vector2 tangencyXZ = midPointXZ + relativeXZ * scale;
+		Vector3 tangencyPoint = new Vector3(tangencyXZ.x, control.y, tangencyXZ.y);
 
-		// Project tangent to world space
+		// Compute tangent direction at tangency point
+		float x = tangencyXZ.x - midPointXZ.x;
+		float y = tangencyXZ.y - midPointXZ.y;
+		float tangentSlope = -(b * b * x) / (a * a * y + 0.001f);
+		Vector2 tangentDir = new Vector2(1f, tangentSlope).normalized;
 		Vector3 tangent = tangentDir.x * pathDir + tangentDir.y * perpendicular;
 
-		// Generate originSrc and originDst along tangent
-		float offsetRange = lozengeMajor * EllipsoidMajorAxisScale;
-		float offsetSrc = Random.Range(-offsetRange, 0f); // Bias toward targetSrc
-		float offsetDst = Random.Range(0f, offsetRange);  // Bias toward targetDst
-		Vector3 src = new Vector3(referenceXZ.x, 0f, referenceXZ.y) + tangent * offsetSrc;
-		Vector3 dst = new Vector3(referenceXZ.x, 0f, referenceXZ.y) + tangent * offsetDst;
+		// Place originSrc and originDst along tangent from tangency point
+		float offsetSrc = Random.Range(-offsetRange, -offsetRange / 2f);
+		float offsetDst = Random.Range(offsetRange / 2f, offsetRange);
+		Vector3 src = tangencyPoint + tangent * offsetSrc;
+		Vector3 dst = tangencyPoint + tangent * offsetDst;
 
-		// Assign random heights
+		// Assign heights
 		src.y = Random.Range(MinCameraHeight, MaxCameraHeight);
 		dst.y = Random.Range(MinCameraHeight, MaxCameraHeight);
 
 		// Ensure minimum radius from targets
+		float minRadiusSrc = CalculateMinOrbitRadius(src.y, targetSrc.y);
+		float minRadiusDst = CalculateMinOrbitRadius(dst.y, targetDst.y);
+		Vector2 srcXZ = new Vector2(src.x, src.z);
+		Vector2 dstXZ = new Vector2(dst.x, dst.z);
+
+		if (Vector2.Distance(srcXZ, targetSrcXZ) < minRadiusSrc)
+		{
+			Vector2 dir = (srcXZ - targetSrcXZ).normalized;
+			srcXZ = targetSrcXZ + dir * minRadiusSrc;
+			src.x = srcXZ.x;
+			src.z = srcXZ.y;
+		}
+		if (Vector2.Distance(dstXZ, targetDstXZ) < minRadiusDst)
+		{
+			Vector2 dir = (dstXZ - targetDstXZ).normalized;
+			dstXZ = targetDstXZ + dir * minRadiusDst;
+			dst.x = dstXZ.x;
+			dst.z = dstXZ.y;
+		}
+
+		return (src, dst, control);
+	}
+
+	private (Vector3 src, Vector3 dst) SampleTangentCameraPosition(Vector3 midPoint, Vector3 pathDir, Vector3 perpendicular, float lozengeMajor, float lozengeMinor, Vector3 targetSrc, Vector3 targetDst)
+	{
+		float referenceDist = lozengeMinor * EllipsoidMinorAxisScale + 1f;
+		Vector2 referenceXZ = new Vector2(midPoint.x, midPoint.z) + new Vector2(perpendicular.x, perpendicular.z) * referenceDist * (Random.value < 0.5f ? 1f : -1f);
+
+		Vector2 midPointXZ = new Vector2(midPoint.x, midPoint.z);
+		Vector2 relativeXZ = referenceXZ - midPointXZ;
+		float a = lozengeMajor;
+		float b = lozengeMinor;
+		float x = relativeXZ.x;
+		float y = relativeXZ.y;
+		float tangentSlope = -(b * b * x) / (a * a * y + 0.001f);
+		Vector2 tangentDir = new Vector2(1f, tangentSlope).normalized;
+
+		Vector3 tangent = tangentDir.x * pathDir + tangentDir.y * perpendicular;
+
+		float offsetRange = lozengeMajor * EllipsoidMajorAxisScale;
+		float offsetSrc = Random.Range(-offsetRange, 0f);
+		float offsetDst = Random.Range(0f, offsetRange);
+		Vector3 src = new Vector3(referenceXZ.x, 0f, referenceXZ.y) + tangent * offsetSrc;
+		Vector3 dst = new Vector3(referenceXZ.x, 0f, referenceXZ.y) + tangent * offsetDst;
+
+		src.y = Random.Range(MinCameraHeight, MaxCameraHeight);
+		dst.y = Random.Range(MinCameraHeight, MaxCameraHeight);
+
 		float minRadiusSrc = CalculateMinOrbitRadius(src.y, targetSrc.y);
 		float minRadiusDst = CalculateMinOrbitRadius(dst.y, targetDst.y);
 		Vector2 srcXZ = new Vector2(src.x, src.z);
@@ -313,6 +388,25 @@ public class CinemaCameraController
 		}
 	}
 
+	private Vector3 EvaluateQuadraticBezier(float t, Vector3 p0, Vector3 p1, Vector3 p2)
+	{
+		float u = 1f - t;
+		return u * u * p0 + 2f * u * t * p1 + t * t * p2;
+	}
+
+	private void VisualizeBezierPath(Vector3 p0, Vector3 p1, Vector3 p2)
+	{
+		const int segments = 20;
+		Vector3 prevPoint = p0;
+		for (int i = 1; i <= segments; i++)
+		{
+			float t = i / (float)segments;
+			Vector3 point = EvaluateQuadraticBezier(t, p0, p1, p2);
+			Debug.DrawLine(prevPoint, point, Color.magenta, 0.1f);
+			prevPoint = point;
+		}
+	}
+
 	public CameraController.CameraData GetCinemaData(CameraController.CameraData data)
 	{
 		data.originSrc = originSrc;
@@ -371,7 +465,30 @@ public class CinemaCameraController
 		}
 		else
 		{
-			transOrigin = Vector3.Lerp(originSrc, originDst, easedT);
+			if (useSplines)
+			{
+				// Move control point with player
+				controlPoint += delta;
+				transOrigin = EvaluateQuadraticBezier(easedT, originSrc, controlPoint, originDst);
+
+				// Visualize Bezier path in Scene view
+				if (debugVisualizeBezier)
+				{
+					VisualizeBezierPath(originSrc, controlPoint, originDst);
+					// Existing debug lines for control points
+					Debug.DrawLine(originSrc, controlPoint, Color.blue, 0.1f);
+					Debug.DrawLine(controlPoint, originDst, Color.blue, 0.1f);
+				}
+			}
+			else
+			{
+				transOrigin = Vector3.Lerp(originSrc, originDst, easedT);
+				// Visualize tangent path
+				if (debugVisualizeBezier)
+				{
+					Debug.DrawLine(originSrc, originDst, Color.blue, 0.1f);
+				}
+			}
 			transTarget = Vector3.Lerp(targetSrc, targetDst + smoothedProjectedOffset, easedT);
 		}
 
