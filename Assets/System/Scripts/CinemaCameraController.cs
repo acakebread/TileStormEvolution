@@ -144,15 +144,15 @@ public class CinemaCameraController
 
 		// Select start POI (66% chance for POI, 33% for player)
 		Vector3 startPoi;
-		//if (Random.value < 0.66f && waypoints.Count > 0)
+		if (Random.value < 0.66f && waypoints.Count > 0)
 		{
 			var validPois = waypoints.Where(p => Vector2.Distance(new Vector2(p.x, p.z), new Vector2(playerPos.x, playerPos.z)) >= MinPoiDistanceFromPlayer).ToList();
 			startPoi = validPois.Count > 0 ? validPois[Random.Range(0, validPois.Count)] : playerPos;
 		}
-		//else
-		//{
-		//	startPoi = playerPos;
-		//}
+		else
+		{
+			startPoi = playerPos;
+		}
 
 		// Set targets
 		targetSrc = new Vector3(startPoi.x, verticalOffset, startPoi.z);
