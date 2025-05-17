@@ -9,16 +9,20 @@ namespace ClassicTilestorm
 		public static string LoadMapName { get => instance.loadMapName; set => instance.loadMapName = value; }// => instance.loadMapName;
 
 		[Header("load map scrambled or solved")]
-		[SerializeField] private bool scramble = true;
-		public static bool Scramble => instance.scramble;
+		[SerializeField] private bool scrambled = true;
+		public static bool Scrambled => instance.scrambled;
 
-		[Header("show hidden tiles")]
-		[SerializeField] private bool show_hidden_tiles = false;
-		public static bool ShowHiddenTiles => instance.show_hidden_tiles;
+		[Header("hidden tiles")]
+		[SerializeField] private bool showHiddenTiles = false;
+		public static bool ShowHiddenTiles => instance.showHiddenTiles;
 
-		[Header("show tile selection")]
-		[SerializeField] private bool show_tile_selection = false;
-		public static bool ShowTileSelection => instance.show_tile_selection;
+		[Header("tile selection")]
+		[SerializeField] private bool showTileSelection = false;
+		public static bool ShowTileSelection => instance.showTileSelection;
+
+		[Header("cinema mode")]
+		[SerializeField] private bool launchInCinemaMode = false;
+		public static bool LaunchInCinemaMode => instance.launchInCinemaMode;
 
 		[Header("resource paths")]
 		[SerializeField] private TextAsset databaseJsonFile;

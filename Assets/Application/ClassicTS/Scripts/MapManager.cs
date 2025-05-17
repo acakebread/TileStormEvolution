@@ -119,7 +119,7 @@ namespace ClassicTilestorm
 			if (waypoints == null || waypoints.Count == 0)
 				waypoints = Navigation.SetupWaypoints(this);
 
-			if (PreviewSettings.Scramble)
+			if (PreviewSettings.Scrambled)
 				Scramble();
 
 			UpdateTileObjectNamesAndPositions();

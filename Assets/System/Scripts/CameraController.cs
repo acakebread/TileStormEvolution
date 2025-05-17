@@ -4,6 +4,8 @@ using System.Linq;
 
 public static class CameraController
 {
+	const float CinemaTimeoutDuration = 5f;
+
 	public enum CameraState
 	{
 		Static,
@@ -57,7 +59,7 @@ public static class CameraController
 	private static bool enableAutoCinema;
 	private static float lastRefreshTime;
 	private static readonly CinemaCameraController cinemaController = new();
-	private static List<Vector3> waypoints = new();
+	private static List<Vector3> focusPoints = new();
 	private static bool isCameraShakeEnabled; // Tracks if camera shake is active
 	private static float shakeSeed; // Seed for Perlin noise
 
@@ -87,7 +89,7 @@ public static class CameraController
 	public static void Reset()
 	{
 		playerPos = Vector3.zero;
-		waypoints.Clear();
+		focusPoints.Clear();
 		lastRefreshTime = Time.time;
 		cinemaController.Reset();
 		isCameraShakeEnabled = false;
@@ -105,7 +107,8 @@ public static class CameraController
 		{
 			previousState = currentState;
 			previousData = currentData;
-			cinemaController.StartNewCinemaSequence(playerPos, waypoints);
+			cinemaController.SetFocusPoints(focusPoints);
+			cinemaController.StartNewCinemaSequence(playerPos);
 			currentData = cinemaController.GetCinemaData(currentData);
 			isCameraShakeEnabled = Random.value < ShakeChance; // 33% chance for shake in Cinema mode
 			shakeSeed = Random.value * 100f; // New seed for shake
@@ -148,10 +151,10 @@ public static class CameraController
 		cinemaController.UpdatePlayerTransform(transform);
 	}
 
-	public static void SetWaypoints(List<Vector3> newWaypoints)
+	public static void SetFocusPoints(List<Vector3> newFocusPoints)
 	{
-		waypoints = newWaypoints?.Where(p => p != Vector3.zero && Vector3.Distance(p, Vector3.zero) > 0.1f).ToList() ?? new List<Vector3>();
-		cinemaController.SetWaypoints(waypoints);
+		focusPoints = newFocusPoints?.Where(p => p != Vector3.zero && Vector3.Distance(p, Vector3.zero) > 0.1f).ToList() ?? new List<Vector3>();
+		cinemaController.SetFocusPoints(focusPoints);
 	}
 
 	// Update logic
@@ -159,7 +162,7 @@ public static class CameraController
 	{
 		if (mainCamera == null) return;
 
-		if (enableAutoCinema && currentState != CameraState.Cinema && Time.time - lastRefreshTime > cinemaController.CinemaTimeoutDuration)
+		if (enableAutoCinema && currentState != CameraState.Cinema && Time.time - lastRefreshTime > CinemaTimeoutDuration)
 		{
 			Debug.Log("Auto-switching to Cinema mode");
 			SetMode(CameraState.Cinema);
@@ -184,6 +187,7 @@ public static class CameraController
 		}
 
 		UpdateCameraTransform();
+		mainCamera.fieldOfView = currentData.fov;
 	}
 
 	private static void UpdatePresetMode()

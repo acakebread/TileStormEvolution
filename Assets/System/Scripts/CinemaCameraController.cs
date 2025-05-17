@@ -3,23 +3,13 @@ using System.Collections.Generic;
 
 public class CinemaCameraController
 {
-	// Enum for cinematic modes
-	public enum CinemaMode
-	{
-		Orbit = 0,
-		PoiStandard = 1,
-		PoiVariation1 = 2,
-		PoiVariation2 = 3,
-		ChiefBrody = 4
-	}
-
 	private CinemaCameraBase controller;
-	private const bool forceChiefBrodyMode = false;
+	public static bool forceDollyZoomMode = false;
 
 	public CinemaCameraController()
 	{
 		// Initialize with appropriate subclass based on mode preference
-		if (forceChiefBrodyMode)
+		if (forceDollyZoomMode)
 		{
 			controller = new CinemaDollyZoom();
 		}
@@ -29,16 +19,14 @@ public class CinemaCameraController
 		}
 	}
 
-	public float CinemaTimeoutDuration => controller.CinemaTimeoutDuration;
-
 	public void Reset()
 	{
 		controller.Reset();
 	}
 
-	public void SetWaypoints(List<Vector3> newWaypoints)
+	public void SetFocusPoints(List<Vector3> points)
 	{
-		controller.SetWaypoints(newWaypoints);
+		controller.SetFocusPoints(points);
 	}
 
 	public void UpdatePlayerTransform(Transform transform)
@@ -46,9 +34,9 @@ public class CinemaCameraController
 		controller.UpdatePlayerTransform(transform);
 	}
 
-	public void StartNewCinemaSequence(Vector3 playerPos, List<Vector3> waypoints)
+	public void StartNewCinemaSequence(Vector3 playerPos)
 	{
-		if (forceChiefBrodyMode)
+		if (forceDollyZoomMode)
 		{
 			if (!(controller is CinemaDollyZoom))
 			{
@@ -62,16 +50,16 @@ public class CinemaCameraController
 				controller = new CinemaMultiMode();
 			}
 		}
-		controller.StartNewCinemaSequence(playerPos, waypoints);
+		controller.StartSequence(playerPos);
 	}
 
 	public CameraController.CameraData GetCinemaData(CameraController.CameraData data)
 	{
-		return controller.GetCinemaData(data);
+		return controller.CreateCameraData(data);
 	}
 
 	public CameraController.CameraData UpdateCinemaMode(CameraController.CameraData data, Camera camera)
 	{
-		return controller.UpdateCinemaMode(data, camera);
+		return controller.UpdateSequence(data, camera);
 	}
 }

@@ -1,48 +1,41 @@
-using System.Collections.Generic;
 using UnityEngine;
-using static CinemaCameraController;
 
 public class CinemaDollyZoom : CinemaCameraBase
 {
 	// Dolly Zoom-specific constants
-	private const float ChiefBrodySequenceDuration = 1f;
-	private const float PauseDuration = 1f;
+	private const float DoolyZoomSequenceDuration = 1f;
 	private const float MaxDollyZoomDistance = 50f;
 	private const float PlayerRadius = 1f;
-	private const bool forceChiefBrodyMode = true;
-	private const float MinFov = 15f; // NEW: Minimum FOV for narrow end
+	private const float MinFov = 15f; // Minimum FOV for narrow end
 
 	// Dolly Zoom-specific state
-	private float pauseTimer;
 	private Vector3 dollyZoomDirection;
 	private float dollyZoomInitialDistance;
 
 	public override void Reset()
 	{
 		base.Reset();
-		pauseTimer = 0f;
 		dollyZoomDirection = Vector3.zero;
 		dollyZoomInitialDistance = 0f;
 	}
 
-	public override void StartNewCinemaSequence(Vector3 playerPos, List<Vector3> waypoints)
+	public override void StartSequence(Vector3 playerPos)
 	{
+		base.StartSequence(playerPos);
+
 		if (playerTransform == null)
 			return;
 
 		sequenceTimer = 0f;
 		pauseTimer = 0f;
-		this.waypoints = new List<Vector3>(waypoints);
 		lastPlayerPos = playerTransform.position;
 		smoothedProjectedOffset = Vector3.zero;
-		orbitCenter = Vector3.zero;
-		controlPoint = Vector3.zero;
 
-		currentMode = CinemaMode.ChiefBrody;
-		currentSequenceDuration = ChiefBrodySequenceDuration;
+		currentMode = CinemaMode.DollyZoom;
+		currentSequenceDuration = DoolyZoomSequenceDuration;
 
 		// Chief Brody (Dolly Zoom) mode
-		targetSrc = new Vector3(playerTransform.position.x, verticalOffset, playerTransform.position.z);
+		targetSrc = new Vector3(playerTransform.position.x, VerticalOffset, playerTransform.position.z);
 		targetDst = targetSrc;
 
 		// Set initial camera position in front of the player
@@ -76,7 +69,7 @@ public class CinemaDollyZoom : CinemaCameraBase
 		return Mathf.Max(fov, MinFov); // Ensure FOV doesn't go below 15°
 	}
 
-	public override CameraController.CameraData UpdateCinemaMode(CameraController.CameraData data, Camera camera)
+	public override CameraController.CameraData UpdateSequence(CameraController.CameraData data, Camera camera)
 	{
 		if (playerTransform == null)
 			return data;
@@ -88,11 +81,11 @@ public class CinemaDollyZoom : CinemaCameraBase
 		{
 			pauseTimer -= Time.deltaTime;
 			if (pauseTimer > 0f)
-				UpdateDataValues(originDst, targetDst);
+				data = UpdateCameraData(data, originDst, targetDst);
 			else
 			{
-				StartNewCinemaSequence(playerTransform.position, waypoints);
-				data = GetCinemaData(data);
+				StartSequence(playerTransform.position);
+				data = CreateCameraData(data);
 			}
 			return data;
 		}
@@ -113,7 +106,7 @@ public class CinemaDollyZoom : CinemaCameraBase
 		smoothedProjectedOffset.y = SmoothingUtils.Smooth(smoothedProjectedOffset.y, targetProjectionOffset.y, ProjectionSmoothingRate, Time.deltaTime, TargetFPS);
 		smoothedProjectedOffset.z = SmoothingUtils.Smooth(smoothedProjectedOffset.z, targetProjectionOffset.z, ProjectionSmoothingRate, Time.deltaTime, TargetFPS);
 
-		targetSrc = new Vector3(playerTransform.position.x, verticalOffset, playerTransform.position.z);
+		targetSrc = new Vector3(playerTransform.position.x, VerticalOffset, playerTransform.position.z);
 		targetDst = targetSrc;
 		originSrc += delta;
 		originDst += delta;
@@ -121,22 +114,14 @@ public class CinemaDollyZoom : CinemaCameraBase
 		Vector3 transOrigin = Vector3.Lerp(originSrc, originDst, easedT);
 		Vector3 transTarget = targetSrc;
 
+		data = UpdateCameraData(data, transOrigin, transTarget);
+		data.smoothingRate = SmoothingUtils.Smooth(data.smoothingRate, 16f, currentSequenceDuration, Time.deltaTime, TargetFPS);
+
 		// Dynamic FOV based on distance
 		float currentDistance = Mathf.Lerp(dollyZoomInitialDistance, dollyZoomInitialDistance * 10f, easedT);
 		currentDistance = Mathf.Min(currentDistance, MaxDollyZoomDistance);
 		float fov = CalculateFovForScreenCoverage(currentDistance);
 		data.fov = fov;
-		camera.fieldOfView = fov;
-
-		UpdateDataValues(transOrigin, transTarget);
-		data.smoothingRate = SmoothingUtils.Smooth(data.smoothingRate, 16f, currentSequenceDuration, Time.deltaTime, TargetFPS);
 		return data;
-
-		void UpdateDataValues(Vector3 originNew, Vector3 transTarget)
-		{
-			var followLerp = SmoothingUtils.Smooth(0f, 1f, data.smoothingRate, Time.deltaTime, TargetFPS);
-			data.originSrc = Vector3.Lerp(data.originSrc, originNew, followLerp);
-			data.targetSrc = Vector3.Lerp(data.targetSrc, transTarget, followLerp);
-		}
 	}
 }

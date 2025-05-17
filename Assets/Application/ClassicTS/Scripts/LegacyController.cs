@@ -37,7 +37,7 @@ namespace ClassicTilestorm
 
 			// Pass waypoints to CameraController
 			var waypoints = mapManager.Waypoints.Select(w => mapManager.GetTilePosition(w.nTile)).ToList();
-			SetWaypoints(waypoints);
+			SetFocusPoints(waypoints);
 
 			var dstPos = new Vector3(mapManager.Width * 0.5f, 0f, mapManager.Height * 0.5f);
 			var srcPos = dstPos + new Vector3(0f, 14f, -14f); // TS defaults
