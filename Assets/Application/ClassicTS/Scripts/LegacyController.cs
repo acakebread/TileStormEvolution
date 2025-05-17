@@ -24,7 +24,7 @@ namespace ClassicTilestorm
 				if (eggbotController?.eggbotRoot != null)
 				{
 					SetMode(CameraState.Follow);
-					SetPlayer(eggbotController.eggbotRoot.position);
+					SetPlayer(eggbotController.eggbotRoot);
 				}
 				else
 				{
@@ -72,7 +72,7 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			SetPlayer(eggbotController.eggbotRoot.position);
+			SetPlayer(eggbotController.eggbotRoot);
 			Update();
 		}
 
@@ -87,7 +87,7 @@ namespace ClassicTilestorm
 				if (eggbotController?.eggbotRoot != null)
 				{
 					SetMode(CameraState.Follow);
-					SetPlayer(eggbotController.eggbotRoot.position);
+					SetPlayer(eggbotController.eggbotRoot);
 				}
 				return;
 			}
@@ -108,7 +108,7 @@ namespace ClassicTilestorm
 			if (!IsValidVector(waypoint.vSrc))
 			{
 				SetMode(CameraState.Follow);
-				SetPlayer(eggbotController?.eggbotRoot.position ?? Vector3.zero);
+				SetPlayer(eggbotController?.eggbotRoot);
 				return;
 			}
 
@@ -121,7 +121,7 @@ namespace ClassicTilestorm
 		{
 			if (true == CinemaActive) return;
 			SetMode(CameraState.Follow);
-			SetPlayer(GamePreview.eggbotController?.eggbotRoot.position ?? Vector3.zero);
+			SetPlayer(GamePreview.eggbotController?.eggbotRoot);
 		}
 
 		public void OnLevelCompleted() { }

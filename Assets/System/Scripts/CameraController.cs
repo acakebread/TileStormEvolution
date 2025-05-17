@@ -141,11 +141,11 @@ public static class CameraController
 		if (currentState == CameraState.Static) currentData.targetSrc = value;
 	}
 
-	public static void SetPlayer(Vector3 position)
+	public static void SetPlayer(Transform transform)
 	{
-		playerPos = position;
-		if (currentState == CameraState.Follow) currentData.targetDst = position;
-		cinemaController.UpdatePlayerPosition(position);
+		playerPos = transform.position;
+		if (currentState == CameraState.Follow) currentData.targetDst = transform.position;
+		cinemaController.UpdatePlayerTransform(transform);
 	}
 
 	public static void SetWaypoints(List<Vector3> newWaypoints)
