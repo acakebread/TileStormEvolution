@@ -19,12 +19,14 @@ namespace ClassicTilestorm
 			var mapManager = GamePreview.mapManager;
 			var eggbotController = GamePreview.eggbotController;
 
+			if (eggbotController?.eggbotRoot != null)
+				SetPlayer(eggbotController.eggbotRoot);
+
 			if (mapManager == null || mapManager.Waypoints == null || mapManager.Waypoints.Count == 0)
 			{
 				if (eggbotController?.eggbotRoot != null)
 				{
 					SetMode(CameraState.Follow);
-					SetPlayer(eggbotController.eggbotRoot);
 				}
 				else
 				{
@@ -66,13 +68,8 @@ namespace ClassicTilestorm
 		public void UpdateCamera()
 		{
 			var eggbotController = GamePreview.eggbotController;
-			if (eggbotController == null || eggbotController.eggbotRoot == null)
-			{
-				Update();
-				return;
-			}
-
-			SetPlayer(eggbotController.eggbotRoot);
+			if (eggbotController != null && eggbotController.eggbotRoot != null)
+				SetPlayer(eggbotController.eggbotRoot);
 			Update();
 		}
 

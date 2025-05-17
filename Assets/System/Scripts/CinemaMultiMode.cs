@@ -39,9 +39,9 @@ public class CinemaMultiMode : CinemaCameraBase
 		currentFovMax = FovMax;
 	}
 
-	public override void StartSequence(Vector3 playerPos)
+	public override void StartSequence()
 	{
-		base.StartSequence(playerPos);
+		base.StartSequence();
 
 		if (playerTransform == null)
 			return;
@@ -152,7 +152,7 @@ public class CinemaMultiMode : CinemaCameraBase
 
 			if (pauseTimer <= 0f)
 			{
-				StartSequence(playerTransform.position);
+				StartSequence();
 				data = CreateCameraData(data);
 			}
 			return data;

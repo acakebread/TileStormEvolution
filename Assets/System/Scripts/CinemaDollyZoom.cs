@@ -19,9 +19,9 @@ public class CinemaDollyZoom : CinemaCameraBase
 		dollyZoomInitialDistance = 0f;
 	}
 
-	public override void StartSequence(Vector3 playerPos)
+	public override void StartSequence()
 	{
-		base.StartSequence(playerPos);
+		base.StartSequence();
 
 		if (playerTransform == null)
 			return;
@@ -84,7 +84,7 @@ public class CinemaDollyZoom : CinemaCameraBase
 				data = UpdateCameraData(data, originDst, targetDst);
 			else
 			{
-				StartSequence(playerTransform.position);
+				StartSequence();
 				data = CreateCameraData(data);
 			}
 			return data;

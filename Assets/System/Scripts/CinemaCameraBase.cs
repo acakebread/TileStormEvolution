@@ -138,7 +138,7 @@ public abstract class CinemaCameraBase
 		smoothedProjectedOffset = Vector3.zero;
 	}
 
-	public virtual void StartSequence(Vector3 playerPos) { }
+	public virtual void StartSequence() { }
 
 	public abstract CameraController.CameraData UpdateSequence(CameraController.CameraData data, Camera camera);
 }

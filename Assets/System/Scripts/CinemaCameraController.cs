@@ -34,7 +34,7 @@ public class CinemaCameraController
 		controller.UpdatePlayerTransform(transform);
 	}
 
-	public void StartNewCinemaSequence(Vector3 playerPos)
+	public void StartNewCinemaSequence()
 	{
 		if (forceDollyZoomMode)
 		{
@@ -50,7 +50,7 @@ public class CinemaCameraController
 				controller = new CinemaMultiMode();
 			}
 		}
-		controller.StartSequence(playerPos);
+		controller.StartSequence();
 	}
 
 	public CameraController.CameraData GetCinemaData(CameraController.CameraData data)

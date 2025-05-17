@@ -55,7 +55,7 @@ public static class CameraController
 	private static CameraData currentData;
 	private static CameraData previousData;
 	private static Camera mainCamera;
-	private static Vector3 playerPos;
+	private static Transform playerTransform;
 	private static bool enableAutoCinema;
 	private static float lastRefreshTime;
 	private static readonly CinemaCameraController cinemaController = new();
@@ -88,7 +88,7 @@ public static class CameraController
 
 	public static void Reset()
 	{
-		playerPos = Vector3.zero;
+		playerTransform = null;
 		focusPoints.Clear();
 		lastRefreshTime = Time.time;
 		cinemaController.Reset();
@@ -107,8 +107,9 @@ public static class CameraController
 		{
 			previousState = currentState;
 			previousData = currentData;
+			cinemaController.UpdatePlayerTransform(playerTransform);
 			cinemaController.SetFocusPoints(focusPoints);
-			cinemaController.StartNewCinemaSequence(playerPos);
+			cinemaController.StartNewCinemaSequence();
 			currentData = cinemaController.GetCinemaData(currentData);
 			isCameraShakeEnabled = Random.value < ShakeChance; // 33% chance for shake in Cinema mode
 			shakeSeed = Random.value * 100f; // New seed for shake
@@ -146,7 +147,7 @@ public static class CameraController
 
 	public static void SetPlayer(Transform transform)
 	{
-		playerPos = transform.position;
+		playerTransform = transform;
 		if (currentState == CameraState.Follow) currentData.targetDst = transform.position;
 		cinemaController.UpdatePlayerTransform(transform);
 	}
