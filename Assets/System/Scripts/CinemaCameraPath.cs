@@ -1,41 +1,28 @@
 using UnityEngine;
 using System.Linq;
 
-public class CinemaMultiMode : CinemaCameraBase
+public class CinemaCameraPath : CinemaCameraBase
 {
 	private const float MinOrbitRadius = 2f;
-	private const float MaxOrbitRadius = 8f;
-	private const float OrbitTargetDistanceThreshold = 0.5f;
-	public static bool DEBUG_USE_SPLINES = true;
-	public static bool DEBUG_VISUALIZE_BEZIER = true;
 	private const float EllipsoidMajorAxisScale = 1.5f;
 	private const float EllipsoidMinorAxisScale = 1.5f;
 	private const float MinFocusPointDistanceFromPlayer = 4f;
 	private const float MinPathLength = 2f;
 	private const float FovMin = 35f;
 	private const float FovMax = 55f;
-	protected const float MaxLookAtAngle = 20f;
+	private const float MaxLookAtAngle = 20f;
 
-	private Vector3 orbitCenter;
-	private float orbitHeightSrc;
-	private float orbitHeightDst;
-	private float currentOrbitRadius;
-	private float orbitStartAngle;
-	private float orbitEndAngle;
-	private float currentFovMax;
+	public static bool DEBUG_USE_SPLINES = true;
+	public static bool DEBUG_VISUALIZE_BEZIER = true;
+
 	private Vector3 controlPoint;
+	private float currentFovMax;
 
 	public override void Reset()
 	{
 		base.Reset();
 		controlPoint = Vector3.zero;
 		currentFovMax = FovMax;
-		orbitCenter = Vector3.zero;
-		orbitHeightSrc = 0f;
-		orbitHeightDst = 0f;
-		currentOrbitRadius = 0f;
-		orbitStartAngle = 0f;
-		orbitEndAngle = 0f;
 	}
 
 	public override void StartSequence()
@@ -47,12 +34,12 @@ public class CinemaMultiMode : CinemaCameraBase
 		pauseTimer = 0f;
 		lastPlayerPos = playerTransform.position;
 		smoothedProjectedOffset = Vector3.zero;
-		orbitCenter = Vector3.zero;
 		controlPoint = Vector3.zero;
 
-		currentMode = Random.value < 0.25f ? CinemaMode.Orbit : CinemaMode.Path;
+		currentMode = CinemaMode.Path;
 		currentSequenceDuration = DefaultSequenceDuration;
 
+		// Select start focus point
 		var startFocusPoint = playerTransform.position;
 		if (focusPoints.Count > 0)
 		{
@@ -60,63 +47,40 @@ public class CinemaMultiMode : CinemaCameraBase
 			if (validFocusPoint.Count > 0) startFocusPoint = validFocusPoint[Random.Range(0, validFocusPoint.Count)];
 		}
 
+		// Set targets
 		targetSrc = new Vector3(startFocusPoint.x, VerticalOffset, startFocusPoint.z);
 		endTargetOffset = Vector3.zero;
 		targetDst = new Vector3(playerTransform.position.x + endTargetOffset.x, VerticalOffset, playerTransform.position.z + endTargetOffset.y);
 
-		if (Vector2.Distance(new Vector2(targetSrc.x, targetSrc.z), new Vector2(targetDst.x, targetDst.z)) <= OrbitTargetDistanceThreshold) currentMode = CinemaMode.Orbit;
+		// Path setup
+		Vector3 targetPath = targetDst - targetSrc;
+		float pathLength = Mathf.Max(targetPath.magnitude, MinPathLength);
+		Vector3 pathDir = targetPath.magnitude > 0.1f ? targetPath.normalized : Random.onUnitSphere;
+		Vector3 midPoint = (targetSrc + targetDst) / 2f;
+		Vector3 perpendicular = new Vector3(-pathDir.z, 0f, pathDir.x).normalized;
 
-		if (currentMode == CinemaMode.Orbit)
+		float lozengeMajor = (pathLength + 2f * MinOrbitRadius) / 2f;
+		float lozengeMinor = MinOrbitRadius;
+
+		if (DEBUG_USE_SPLINES)
 		{
-			orbitCenter = targetDst;
-			targetSrc = targetDst;
-			orbitStartAngle = Random.Range(0f, 360f);
+			var (src, dst, ctrl) = SampleSplineCameraPosition(midPoint, pathDir, perpendicular, lozengeMajor, lozengeMinor, targetSrc, targetDst);
+			originSrc = src;
+			originDst = dst;
+			controlPoint = ctrl;
 
-			orbitHeightSrc = Random.Range(MinCameraHeight, MaxCameraHeight);
-			orbitHeightDst = Random.Range(MinCameraHeight, MaxCameraHeight);
-
-			float minRadiusSrc = CalculateMinOrbitRadius(orbitHeightSrc, targetDst.y);
-			float minRadiusDst = CalculateMinOrbitRadius(orbitHeightDst, targetDst.y);
-			float minRadius = Mathf.Max(minRadiusSrc, minRadiusDst);
-			currentOrbitRadius = Random.Range(Mathf.Max(minRadius, MinOrbitRadius), MaxOrbitRadius);
-
-			originSrc = SampleOrbitPosition(orbitCenter, orbitStartAngle, 0f);
-			float maxDelta = Mathf.Lerp(360f, 180f, (currentOrbitRadius - MinOrbitRadius) / (MaxOrbitRadius - MinOrbitRadius));
-			float delta = Random.Range(90f, maxDelta) * (Random.value < 0.5f ? 1f : -1f);
-			orbitEndAngle = orbitStartAngle + delta;
-			originDst = SampleOrbitPosition(orbitCenter, orbitEndAngle, 1f);
+			AdjustHeight(ref originSrc, targetSrc);
+			AdjustHeight(ref originDst, targetDst);
+			AdjustHeight(ref controlPoint, (targetSrc + targetDst) / 2f);
 		}
 		else
 		{
-			Vector3 targetPath = targetDst - targetSrc;
-			float pathLength = Mathf.Max(targetPath.magnitude, MinPathLength);
-			Vector3 pathDir = targetPath.magnitude > 0.1f ? targetPath.normalized : Random.onUnitSphere;
-			Vector3 midPoint = (targetSrc + targetDst) / 2f;
-			Vector3 perpendicular = new Vector3(-pathDir.z, 0f, pathDir.x).normalized;
+			var (src, dst) = SampleTangentCameraPosition(midPoint, pathDir, perpendicular, lozengeMajor, lozengeMinor, targetSrc, targetDst);
+			originSrc = src;
+			originDst = dst;
 
-			float lozengeMajor = (pathLength + 2f * MinOrbitRadius) / 2f;
-			float lozengeMinor = MinOrbitRadius;
-
-			if (DEBUG_USE_SPLINES)
-			{
-				var (src, dst, ctrl) = SampleSplineCameraPosition(midPoint, pathDir, perpendicular, lozengeMajor, lozengeMinor, targetSrc, targetDst);
-				originSrc = src;
-				originDst = dst;
-				controlPoint = ctrl;
-
-				AdjustHeight(ref originSrc, targetSrc);
-				AdjustHeight(ref originDst, targetDst);
-				AdjustHeight(ref controlPoint, (targetSrc + targetDst) / 2f);
-			}
-			else
-			{
-				var (src, dst) = SampleTangentCameraPosition(midPoint, pathDir, perpendicular, lozengeMajor, lozengeMinor, targetSrc, targetDst);
-				originSrc = src;
-				originDst = dst;
-
-				AdjustHeight(ref originSrc, targetSrc);
-				AdjustHeight(ref originDst, targetDst);
-			}
+			AdjustHeight(ref originSrc, targetSrc);
+			AdjustHeight(ref originDst, targetDst);
 		}
 
 		UpdateMapExtents();
@@ -125,50 +89,33 @@ public class CinemaMultiMode : CinemaCameraBase
 
 	protected override (Vector3 transOrigin, Vector3 transTarget, float fov) ComputeSequencePositionsAndFov(float easedT, Vector3 playerDelta)
 	{
+		originDst += playerDelta;
+		targetDst += playerDelta;
+
 		Vector3 transOrigin;
-		Vector3 transTarget;
-		float fov;
-
-		if (currentMode == CinemaMode.Orbit)
+		if (DEBUG_USE_SPLINES)
 		{
-			targetSrc = new Vector3(playerTransform.position.x + endTargetOffset.x, VerticalOffset, playerTransform.position.z + endTargetOffset.y);
-			targetDst = targetSrc;
-			orbitCenter += playerDelta;
-			transOrigin = SampleOrbitPosition(orbitCenter, Mathf.Lerp(orbitStartAngle, orbitEndAngle, easedT), easedT);
-			transTarget = Vector3.Lerp(targetSrc, targetDst + smoothedProjectedOffset, easedT);
-
-			var fovT = SmoothingUtils.EasePingPong(sequenceTimer / currentSequenceDuration);
-			fov = Mathf.Lerp(FovMin, currentFovMax, fovT);
+			controlPoint += playerDelta;
+			transOrigin = EvaluateQuadraticBezier(easedT, originSrc, controlPoint, originDst);
+			if (DEBUG_VISUALIZE_BEZIER)
+			{
+				VisualizeBezierPath(originSrc, controlPoint, originDst);
+				Debug.DrawLine(originSrc, controlPoint, Color.blue, 0.1f);
+				Debug.DrawLine(controlPoint, originDst, Color.blue, 0.1f);
+			}
 		}
 		else
 		{
-			originDst += playerDelta;
-			targetDst += playerDelta;
-
-			if (DEBUG_USE_SPLINES)
+			transOrigin = Vector3.Lerp(originSrc, originDst, easedT);
+			if (DEBUG_VISUALIZE_BEZIER)
 			{
-				controlPoint += playerDelta;
-				transOrigin = EvaluateQuadraticBezier(easedT, originSrc, controlPoint, originDst);
-				if (DEBUG_VISUALIZE_BEZIER)
-				{
-					VisualizeBezierPath(originSrc, controlPoint, originDst);
-					Debug.DrawLine(originSrc, controlPoint, Color.blue, 0.1f);
-					Debug.DrawLine(controlPoint, originDst, Color.blue, 0.1f);
-				}
+				Debug.DrawLine(originSrc, originDst, Color.blue, 0.1f);
 			}
-			else
-			{
-				transOrigin = Vector3.Lerp(originSrc, originDst, easedT);
-				if (DEBUG_VISUALIZE_BEZIER)
-				{
-					Debug.DrawLine(originSrc, originDst, Color.blue, 0.1f);
-				}
-			}
-
-			transTarget = Vector3.Lerp(targetSrc, targetDst + smoothedProjectedOffset, easedT);
-			var fovT = SmoothingUtils.EasePingPong(sequenceTimer / currentSequenceDuration);
-			fov = Mathf.Lerp(FovMin, currentFovMax, fovT);
 		}
+
+		Vector3 transTarget = Vector3.Lerp(targetSrc, targetDst + smoothedProjectedOffset, easedT);
+		var fovT = SmoothingUtils.EasePingPong(sequenceTimer / currentSequenceDuration);
+		float fov = Mathf.Lerp(FovMin, currentFovMax, fovT);
 
 		return (transOrigin, transTarget, fov);
 	}
@@ -176,7 +123,7 @@ public class CinemaMultiMode : CinemaCameraBase
 	private float CalculateMinOrbitRadius(float cameraHeight, float targetY)
 	{
 		float heightDiff = cameraHeight - (targetY + VerticalOffset);
-		if (heightDiff <= 0f) return MaxOrbitRadius;
+		if (heightDiff <= 0f) return MinOrbitRadius; // Use MinOrbitRadius instead of MaxOrbitRadius for Path mode
 		float maxPitchRad = MaxLookAtAngle * Mathf.Deg2Rad;
 		return Mathf.Max(MinOrbitRadius, heightDiff / Mathf.Tan(maxPitchRad));
 	}
@@ -246,7 +193,7 @@ public class CinemaMultiMode : CinemaCameraBase
 		if (Vector2.Distance(dstXZ, targetDstXZ) < minRadiusDst)
 		{
 			Vector2 dir = (dstXZ - targetDstXZ).normalized;
-			dstXZ = targetDstXZ + dir * minRadiusDst;
+			dstXZ = targetSrcXZ + dir * minRadiusDst;
 			extendedDst.x = dstXZ.x;
 			extendedDst.z = dstXZ.y;
 		}
@@ -305,16 +252,6 @@ public class CinemaMultiMode : CinemaCameraBase
 		return (src, dst);
 	}
 
-	private Vector3 SampleOrbitPosition(Vector3 center, float angleDegrees, float easedT)
-	{
-		float angleRad = angleDegrees * Mathf.Deg2Rad;
-		Vector3 offset = new Vector3(Mathf.Cos(angleRad), 0f, Mathf.Sin(angleRad)) * currentOrbitRadius;
-		Vector3 position = center + offset;
-		position.y = Mathf.Lerp(orbitHeightSrc, orbitHeightDst, SmoothingUtils.Ease(easedT));
-		position.y = Mathf.Clamp(position.y, MinCameraHeight, MaxCameraHeight);
-		return position;
-	}
-
 	private void VisualizeBezierPath(Vector3 p0, Vector3 p1, Vector3 p2)
 	{
 		const int segments = 20;
@@ -359,12 +296,3 @@ public class CinemaMultiMode : CinemaCameraBase
 		return u * u * p0 + 2f * u * t * p1 + t * t * p2;
 	}
 }
-
-//bool IsValidCameraPath()
-//{
-//	Vector3 startLookDir = (targetSrc - originSrc).normalized;
-//	Vector3 endLookDir = (targetDst - originDst).normalized;
-//	float startPitch = Vector3.Angle(startLookDir, Vector3.down) - 90f;
-//	float endPitch = Vector3.Angle(endLookDir, Vector3.down) - 90f;
-//	return startPitch <= MaxLookAtAngle && endPitch <= MaxLookAtAngle;
-//}

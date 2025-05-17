@@ -7,8 +7,7 @@ public abstract class CinemaCameraBase
 	// Shared constants
 	protected const float TargetFPS = 60f;
 	protected const int MaxPlayerPositions = 50;
-
-	protected const float PauseDuration = 1.5f; // Pause duration after sequence
+	protected const float PauseDuration = 1.5f;
 	protected const float DefaultSequenceDuration = 8f;
 	protected const float MinCameraHeight = 1.5f;
 	protected const float MaxCameraHeight = 4f;
@@ -21,7 +20,7 @@ public abstract class CinemaCameraBase
 	{
 		Orbit = 0,
 		Path = 1,
-		DollyZoom = 2//was Chief Brody mode
+		DollyZoom = 2
 	}
 
 	// Shared state - world data
@@ -32,7 +31,7 @@ public abstract class CinemaCameraBase
 	protected Transform playerTransform;
 	protected Vector3 lastPlayerPos;
 
-	//Shared state - camera data
+	// Shared state - camera data
 	protected Vector3 originSrc;
 	protected Vector3 originDst;
 	protected Vector3 targetSrc;
@@ -40,7 +39,7 @@ public abstract class CinemaCameraBase
 	protected Vector2 endTargetOffset;
 	protected Vector3 smoothedProjectedOffset;
 
-	//Shared state - sequence data
+	// Shared state - sequence data
 	protected float pauseTimer;
 	protected CinemaMode currentMode;
 	protected float sequenceTimer;
@@ -140,5 +139,66 @@ public abstract class CinemaCameraBase
 
 	public virtual void StartSequence() { }
 
-	public abstract CameraController.CameraData UpdateSequence(CameraController.CameraData data, Camera camera);
+	public CameraController.CameraData UpdateSequence(CameraController.CameraData data, Camera camera)
+	{
+		bool shouldContinue;
+		return UpdateSequenceCore(data, camera, out shouldContinue);
+	}
+
+	protected virtual CameraController.CameraData UpdateSequenceCore(CameraController.CameraData data, Camera camera, out bool shouldContinue)
+	{
+		shouldContinue = true;
+
+		if (playerTransform == null)
+			return data;
+
+		// Track player movement
+		var delta = playerTransform.position - lastPlayerPos;
+		lastPlayerPos = playerTransform.position;
+
+		// Handle pause state
+		if (pauseTimer > 0f)
+		{
+			pauseTimer -= Time.deltaTime;
+			if (pauseTimer > 0f)
+				return UpdateCameraData(data, originDst, targetDst);
+			else
+			{
+				StartSequence();
+				return CreateCameraData(data);
+			}
+		}
+
+		// Update sequence timer
+		sequenceTimer += Time.deltaTime;
+		if (sequenceTimer >= currentSequenceDuration)
+		{
+			sequenceTimer = 0f;
+			pauseTimer = PauseDuration;
+			shouldContinue = false;
+			return data;
+		}
+
+		// Compute eased time
+		var t = currentSequenceDuration > 0 ? Mathf.Clamp01(sequenceTimer / currentSequenceDuration) : 1f;
+		var easedT = SmoothingUtils.Ease(t);
+
+		// Smooth projected offset
+		Vector3 targetProjectionOffset = delta * 2f;
+		smoothedProjectedOffset.x = SmoothingUtils.Smooth(smoothedProjectedOffset.x, targetProjectionOffset.x, ProjectionSmoothingRate, Time.deltaTime, TargetFPS);
+		smoothedProjectedOffset.y = SmoothingUtils.Smooth(smoothedProjectedOffset.y, targetProjectionOffset.y, ProjectionSmoothingRate, Time.deltaTime, TargetFPS);
+		smoothedProjectedOffset.z = SmoothingUtils.Smooth(smoothedProjectedOffset.z, targetProjectionOffset.z, ProjectionSmoothingRate, Time.deltaTime, TargetFPS);
+
+		// Compute mode-specific positions and FOV
+		(Vector3 transOrigin, Vector3 transTarget, float fov) = ComputeSequencePositionsAndFov(easedT, delta);
+
+		// Update camera data
+		data = UpdateCameraData(data, transOrigin, transTarget);
+		data.smoothingRate = SmoothingUtils.Smooth(data.smoothingRate, 16f, currentSequenceDuration, Time.deltaTime, TargetFPS);
+		data.fov = fov;
+
+		return data;
+	}
+
+	protected abstract (Vector3 transOrigin, Vector3 transTarget, float fov) ComputeSequencePositionsAndFov(float easedT, Vector3 playerDelta);
 }

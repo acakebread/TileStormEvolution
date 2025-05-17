@@ -11,7 +11,7 @@ public class CinemaCameraController
 		// Initialize with appropriate subclass based on mode preference
 		if (forceDollyZoomMode)
 		{
-			controller = new CinemaDollyZoom();
+			controller = new CinemaCameraDollyZoom();
 		}
 		else
 		{
@@ -38,9 +38,9 @@ public class CinemaCameraController
 	{
 		if (forceDollyZoomMode)
 		{
-			if (!(controller is CinemaDollyZoom))
+			if (!(controller is CinemaCameraDollyZoom))
 			{
-				controller = new CinemaDollyZoom();
+				controller = new CinemaCameraDollyZoom();
 			}
 		}
 		else
