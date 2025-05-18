@@ -169,7 +169,10 @@ public abstract class CinemaCameraBase
 			if (pauseTimer > 0f)
 				return UpdateCameraData(data, originDst, targetDst);
 			else
+			{
+				shouldContinue = false;
 				return CreateCameraData(data);
+			}
 		}
 
 		// Update sequence timer
@@ -178,7 +181,6 @@ public abstract class CinemaCameraBase
 		{
 			sequenceTimer = 0f;
 			pauseTimer = PauseDuration;
-			shouldContinue = false;
 			return data;
 		}
 

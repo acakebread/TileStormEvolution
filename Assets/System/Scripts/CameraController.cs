@@ -110,6 +110,7 @@ public static class CameraController
 			shakeSeed = Random.value * 100f; // New seed for shake
 
 			cinemaController.CreateCinemaSequence();
+			cinemaController.Reset();
 			cinemaController.StartCinemaSequence(playerTransform, focusPoints);
 			currentData = cinemaController.GetCinemaData(currentData);
 		}
