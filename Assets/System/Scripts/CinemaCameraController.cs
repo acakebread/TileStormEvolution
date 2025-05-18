@@ -9,12 +9,10 @@ public class CinemaCameraController
 	public CinemaCameraController()
 	{
 		// Initialize with appropriate subclass based on mode preference
-		//if (forceDollyZoomMode)
-		//	controller = new CinemaCameraDollyZoom();
-		//else
-		//	controller = Random.value < 0.25f ? new CinemaCameraOrbit() : new CinemaCameraPath();
-
-		controller = new CinemaCameraPath();
+		if (forceDollyZoomMode)
+			controller = new CinemaCameraDollyZoom();
+		else
+			controller = Random.value < 0.25f ? new CinemaCameraOrbit() : new CinemaCameraPath();
 	}
 
 	public void Reset() => controller.Reset();

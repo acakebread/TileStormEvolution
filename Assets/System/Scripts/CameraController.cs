@@ -93,7 +93,6 @@ public static class CameraController
 				fov = mainCamera.fieldOfView
 			};
 		}
-		//Reset();
 	}
 
 	// Cinema controls
