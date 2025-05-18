@@ -1,6 +1,5 @@
 using System.Linq;
 using UnityEngine;
-using static CameraController;
 
 namespace ClassicTilestorm
 {
@@ -14,33 +13,33 @@ namespace ClassicTilestorm
 		public void Reset()
 		{
 			CameraController.Reset();
-			Initialize();
-			SetMode(CameraState.Static);
+			CameraController.Initialize();
+			CameraController.SetMode(CameraController.CameraState.Static);
 
 			var mapManager = GamePreview.mapManager;
 			var eggbotController = GamePreview.eggbotController;
 
 			if (eggbotController?.eggbotRoot != null)
-				SetPlayer(eggbotController.eggbotRoot);
+				CameraController.SetPlayer(eggbotController.eggbotRoot);
 
 			if (mapManager == null || mapManager.Waypoints == null || mapManager.Waypoints.Count == 0)
 			{
 				if (eggbotController?.eggbotRoot != null)
 				{
-					SetMode(CameraState.Follow);
+					CameraController.SetMode(CameraController.CameraState.Follow);
 				}
 				else
 				{
-					SetOrigin(new Vector3(0f, 14f, -14f));
-					SetTarget(Vector3.zero);
+					CameraController.SetOrigin(new Vector3(0f, 14f, -14f));
+					CameraController.SetTarget(Vector3.zero);
 				}
-				UpdateCameraTransform();
+				CameraController.UpdateCameraTransform();
 				return;
 			}
 
 			// Pass waypoints to CameraController
 			var waypoints = mapManager.Waypoints.Select(w => mapManager.GetTilePosition(w.nTile)).ToList();
-			SetFocusPoints(waypoints);
+			CameraController.SetFocusPoints(waypoints);
 
 			var dstPos = new Vector3(mapManager.Width * 0.5f, 0f, mapManager.Height * 0.5f);
 			var srcPos = dstPos + new Vector3(0f, 14f, -14f); // TS defaults
@@ -52,11 +51,11 @@ namespace ClassicTilestorm
 				if (IsValidVector(firstWaypoint.vDst)) dstPos = new Vector3(firstWaypoint.vDst.fX, firstWaypoint.vDst.fY, firstWaypoint.vDst.fZ);
 			}
 
-			SetOrigin(srcPos);
-			SetTarget(dstPos);
-			SetMode(CameraState.Follow);
+			CameraController.SetOrigin(srcPos);
+			CameraController.SetTarget(dstPos);
+			CameraController.SetMode(CameraController.CameraState.Follow);
 
-			UpdateCameraTransform();
+			CameraController.UpdateCameraTransform();
 
 			if (eggbotController != null)
 			{
@@ -70,13 +69,13 @@ namespace ClassicTilestorm
 		{
 			var eggbotController = GamePreview.eggbotController;
 			if (eggbotController != null && eggbotController.eggbotRoot != null)
-				SetPlayer(eggbotController.eggbotRoot);
-			Update();
+				CameraController.SetPlayer(eggbotController.eggbotRoot);
+			CameraController.Update();
 		}
 
 		public void OnWaypointReached(int waypointIndex)
 		{
-			if (true == CinemaActive) return;
+			if (true == CameraController.CinemaActive) return;
 
 			var mapManager = GamePreview.mapManager;
 			var eggbotController = GamePreview.eggbotController;
@@ -84,8 +83,8 @@ namespace ClassicTilestorm
 			{
 				if (eggbotController?.eggbotRoot != null)
 				{
-					SetMode(CameraState.Follow);
-					SetPlayer(eggbotController.eggbotRoot);
+					CameraController.SetMode(CameraController.CameraState.Follow);
+					CameraController.SetPlayer(eggbotController.eggbotRoot);
 				}
 				return;
 			}
@@ -98,28 +97,28 @@ namespace ClassicTilestorm
 
 			if (waypointIndex == mapManager.Waypoints.Count - 1)
 			{
-				SetMode(CameraState.Follow);
-				SetTarget(lookAtPos);
+				CameraController.SetMode(CameraController.CameraState.Follow);
+				CameraController.SetTarget(lookAtPos);
 				return;
 			}
 
 			if (!IsValidVector(waypoint.vSrc))
 			{
-				SetMode(CameraState.Follow);
-				SetPlayer(eggbotController?.eggbotRoot);
+				CameraController.SetMode(CameraController.CameraState.Follow);
+				CameraController.SetPlayer(eggbotController?.eggbotRoot);
 				return;
 			}
 
-			SetMode(CameraState.Preset);
-			SetOrigin(srcPos);
-			SetTarget(lookAtPos);
+			CameraController.SetMode(CameraController.CameraState.Preset);
+			CameraController.SetOrigin(srcPos);
+			CameraController.SetTarget(lookAtPos);
 		}
 
 		public void OnPuzzleSolved(int waypointIndex)
 		{
-			if (true == CinemaActive) return;
-			SetMode(CameraState.Follow);
-			SetPlayer(GamePreview.eggbotController?.eggbotRoot);
+			if (true == CameraController.CinemaActive) return;
+			CameraController.SetMode(CameraController.CameraState.Follow);
+			CameraController.SetPlayer(GamePreview.eggbotController?.eggbotRoot);
 		}
 
 		public void OnLevelCompleted() { }

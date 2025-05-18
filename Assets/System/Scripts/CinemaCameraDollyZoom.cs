@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public class CinemaCameraDollyZoom : CinemaCameraBase
@@ -19,8 +20,9 @@ public class CinemaCameraDollyZoom : CinemaCameraBase
 		dollyZoomInitialDistance = 0f;
 	}
 
-	public override void StartSequence()
+	public override void StartSequence(Transform transform, List<Vector3> points)
 	{
+		base.StartSequence(transform, points);
 		if (playerTransform == null)
 			return;
 

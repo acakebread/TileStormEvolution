@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System.Linq;
+using System.Collections.Generic;
 
 public class CinemaCameraPath : CinemaCameraBase
 {
@@ -35,9 +36,9 @@ public class CinemaCameraPath : CinemaCameraBase
 		bezierData = default;
 	}
 
-	public override void StartSequence()
+	public override void StartSequence(Transform transform, List<Vector3> points)
 	{
-		base.StartSequence();
+		base.StartSequence(transform, points);
 		if (null == playerTransform)
 			return;
 
@@ -142,7 +143,7 @@ public class CinemaCameraPath : CinemaCameraBase
 		}
 
 		// Sort points so Dst is closer to targetDst if SortDstNearerPlayer is true
-		bool sorted = false;
+		bool sorted = false;//debug
 		if (SortDstNearerPlayer)
 		{
 			float srcDist = Vector2.Distance(srcXZ, targetDstXZ);
@@ -166,7 +167,7 @@ public class CinemaCameraPath : CinemaCameraBase
 
 		// Compute control point (intersection of purple Src and cyan Dst, or cyan Src and purple Dst)
 		Vector3? controlPoint = null;
-		bool colinear = false;
+		bool colinear = false;//debug
 		Vector2? intersection1 = null, intersection2 = null;
 
 		if (tangentPointSrc1.HasValue && tangentPointSrc2.HasValue && tangentPointDst1.HasValue && tangentPointDst2.HasValue)

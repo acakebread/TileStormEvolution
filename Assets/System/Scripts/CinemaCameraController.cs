@@ -6,24 +6,17 @@ public class CinemaCameraController
 	private CinemaCameraBase controller;
 	public static bool forceDollyZoomMode = false;
 
-	public CinemaCameraController()
-	{
-		// Initialize with appropriate subclass based on mode preference
-		if (forceDollyZoomMode)
-			controller = new CinemaCameraDollyZoom();
-		else
-			controller = Random.value < 0.25f ? new CinemaCameraOrbit() : new CinemaCameraPath();
-	}
+	public void CreateCinemaSequence() => controller = forceDollyZoomMode ? new CinemaCameraDollyZoom() : Random.value < 0.25f ? new CinemaCameraOrbit() : new CinemaCameraPath();
 
-	public void Reset() => controller.Reset();
+	public void StartCinemaSequence(Transform playerTransform, List<Vector3> points) => controller.StartSequence(playerTransform, points);
+
+	public void Reset() => controller?.Reset();// todo get initialisation order sorted oout
 
 	public void SetFocusPoints(List<Vector3> points) => controller.SetFocusPoints(points);
 
 	public void UpdatePlayerTransform(Transform transform) => controller.UpdatePlayerTransform(transform);
 
-	public void StartNewCinemaSequence() => controller.StartSequence();
-
 	public CameraController.CameraData GetCinemaData(CameraController.CameraData data) => controller.CreateCameraData(data);
 
-	public CameraController.CameraData UpdateCinemaMode(CameraController.CameraData data, Camera camera) => controller.UpdateSequence(data, camera);
+	public CameraController.CameraData UpdateCinemaMode(CameraController.CameraData data, Camera camera, out bool shouldContinue) => controller.UpdateSequence(data, camera, out shouldContinue);
 }

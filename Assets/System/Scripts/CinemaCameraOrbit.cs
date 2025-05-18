@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Linq;
+using System.Collections.Generic;
 
 public class CinemaCameraOrbit : CinemaCameraBase
 {
@@ -30,9 +31,9 @@ public class CinemaCameraOrbit : CinemaCameraBase
 		orbitEndAngle = 0f;
 	}
 
-	public override void StartSequence()
+	public override void StartSequence(Transform transform, List<Vector3> points)
 	{
-		base.StartSequence();
+		base.StartSequence(transform, points);
 		if (null == playerTransform)
 			return;
 

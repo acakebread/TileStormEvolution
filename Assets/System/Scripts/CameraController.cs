@@ -106,12 +106,12 @@ public static class CameraController
 		{
 			previousState = currentState;
 			previousData = currentData;
-			cinemaController.UpdatePlayerTransform(playerTransform);
-			cinemaController.SetFocusPoints(focusPoints);
-			cinemaController.StartNewCinemaSequence();
-			currentData = cinemaController.GetCinemaData(currentData);
 			isCameraShakeEnabled = Random.value < ShakeChance; // 33% chance for shake in Cinema mode
 			shakeSeed = Random.value * 100f; // New seed for shake
+
+			cinemaController.CreateCinemaSequence();
+			cinemaController.StartCinemaSequence(playerTransform, focusPoints);
+			currentData = cinemaController.GetCinemaData(currentData);
 		}
 		else if (value != CameraState.Cinema && currentState == CameraState.Cinema)
 		{
@@ -148,13 +148,13 @@ public static class CameraController
 	{
 		playerTransform = transform;
 		if (currentState == CameraState.Follow) currentData.targetDst = transform.position;
-		cinemaController.UpdatePlayerTransform(transform);
+		if (currentState == CameraState.Cinema) cinemaController.UpdatePlayerTransform(transform);
 	}
 
 	public static void SetFocusPoints(List<Vector3> newFocusPoints)
 	{
 		focusPoints = newFocusPoints?.Where(p => p != Vector3.zero && Vector3.Distance(p, Vector3.zero) > 0.1f).ToList() ?? new List<Vector3>();
-		cinemaController.SetFocusPoints(focusPoints);
+		if (currentState == CameraState.Cinema) cinemaController.SetFocusPoints(focusPoints);
 	}
 
 	// Update logic
@@ -182,7 +182,15 @@ public static class CameraController
 				break;
 
 			case CameraState.Cinema:
-				currentData = cinemaController.UpdateCinemaMode(currentData, mainCamera);
+				bool shouldContinue;
+				currentData = cinemaController.UpdateCinemaMode(currentData, mainCamera, out shouldContinue);
+				if (false == shouldContinue)
+				{
+					cinemaController.CreateCinemaSequence();
+					cinemaController.Reset();
+					cinemaController.StartCinemaSequence(playerTransform, focusPoints);
+					currentData = cinemaController.GetCinemaData(currentData);
+				}
 				break;
 		}
 

@@ -147,13 +147,9 @@ public abstract class CinemaCameraBase
 		smoothedProjectedOffset = Vector3.zero;
 	}
 
-	public virtual void StartSequence() { if (null != playerTransform) lastPlayerPos = playerTransform.position; }
+	public virtual void StartSequence(Transform transform, List<Vector3> points) { UpdatePlayerTransform(transform); SetFocusPoints(points); }
 
-	public CameraController.CameraData UpdateSequence(CameraController.CameraData data, Camera camera)
-	{
-		bool shouldContinue;
-		return UpdateSequenceCore(data, camera, out shouldContinue);
-	}
+	public CameraController.CameraData UpdateSequence(CameraController.CameraData data, Camera camera, out bool shouldContinue) => UpdateSequenceCore(data, camera, out shouldContinue);
 
 	protected virtual CameraController.CameraData UpdateSequenceCore(CameraController.CameraData data, Camera camera, out bool shouldContinue)
 	{
@@ -173,10 +169,7 @@ public abstract class CinemaCameraBase
 			if (pauseTimer > 0f)
 				return UpdateCameraData(data, originDst, targetDst);
 			else
-			{
-				StartSequence();
 				return CreateCameraData(data);
-			}
 		}
 
 		// Update sequence timer
