@@ -45,6 +45,11 @@ public abstract class CinemaCameraBase
 	protected float sequenceTimer;
 	protected float currentSequenceDuration;
 
+	public CinemaCameraBase() 
+	{
+		Debug.Log("instantiate " + this);
+	}
+
 	public void SetFocusPoints(List<Vector3> points)
 	{
 		focusPoints = points?.Where(p => p != Vector3.zero && Vector3.Distance(p, Vector3.zero) > 0.1f).ToList() ?? new List<Vector3>();

@@ -5,10 +5,10 @@ public class CinemaCameraOrbit : CinemaCameraBase
 {
 	private const float MinOrbitRadius = 2f;
 	private const float MaxOrbitRadius = 8f;
-	private const float OrbitTargetDistanceThreshold = 0.5f;
+	private const float MinFocusPointDistanceFromPlayer = 4f;
 	private const float FovMin = 35f;
 	private const float FovMax = 55f;
-	private const float MaxLookAtAngle = 20f;
+	protected const float MaxLookAtAngle = 20f;
 
 	private Vector3 orbitCenter;
 	private float orbitHeightSrc;
@@ -21,13 +21,13 @@ public class CinemaCameraOrbit : CinemaCameraBase
 	public override void Reset()
 	{
 		base.Reset();
+		currentFovMax = FovMax;
 		orbitCenter = Vector3.zero;
 		orbitHeightSrc = 0f;
 		orbitHeightDst = 0f;
 		currentOrbitRadius = 0f;
 		orbitStartAngle = 0f;
 		orbitEndAngle = 0f;
-		currentFovMax = FovMax;
 	}
 
 	public override void StartSequence()
@@ -44,20 +44,17 @@ public class CinemaCameraOrbit : CinemaCameraBase
 		currentMode = CinemaMode.Orbit;
 		currentSequenceDuration = DefaultSequenceDuration;
 
-		// Select start focus point
 		var startFocusPoint = playerTransform.position;
 		if (focusPoints.Count > 0)
 		{
-			var validFocusPoint = focusPoints.Where(p => Vector2.Distance(new Vector2(p.x, p.z), new Vector2(playerTransform.position.x, playerTransform.position.z)) >= 4f).ToList();
+			var validFocusPoint = focusPoints.Where(p => Vector2.Distance(new Vector2(p.x, p.z), new Vector2(playerTransform.position.x, playerTransform.position.z)) >= MinFocusPointDistanceFromPlayer).ToList();
 			if (validFocusPoint.Count > 0) startFocusPoint = validFocusPoint[Random.Range(0, validFocusPoint.Count)];
 		}
 
-		// Set targets
 		targetSrc = new Vector3(startFocusPoint.x, VerticalOffset, startFocusPoint.z);
 		endTargetOffset = Vector3.zero;
 		targetDst = new Vector3(playerTransform.position.x + endTargetOffset.x, VerticalOffset, playerTransform.position.z + endTargetOffset.y);
 
-		// Orbit setup
 		orbitCenter = targetDst;
 		targetSrc = targetDst;
 		orbitStartAngle = Random.Range(0f, 360f);
@@ -82,14 +79,18 @@ public class CinemaCameraOrbit : CinemaCameraBase
 
 	protected override (Vector3 transOrigin, Vector3 transTarget, float fov) ComputeSequencePositionsAndFov(float easedT, Vector3 playerDelta)
 	{
+		Vector3 transOrigin;
+		Vector3 transTarget;
+		float fov;
+
 		targetSrc = new Vector3(playerTransform.position.x + endTargetOffset.x, VerticalOffset, playerTransform.position.z + endTargetOffset.y);
 		targetDst = targetSrc;
 		orbitCenter += playerDelta;
-		Vector3 transOrigin = SampleOrbitPosition(orbitCenter, Mathf.Lerp(orbitStartAngle, orbitEndAngle, easedT), easedT);
-		Vector3 transTarget = Vector3.Lerp(targetSrc, targetDst + smoothedProjectedOffset, easedT);
+		transOrigin = SampleOrbitPosition(orbitCenter, Mathf.Lerp(orbitStartAngle, orbitEndAngle, easedT), easedT);
+		transTarget = Vector3.Lerp(targetSrc, targetDst + smoothedProjectedOffset, easedT);
 
 		var fovT = SmoothingUtils.EasePingPong(sequenceTimer / currentSequenceDuration);
-		float fov = Mathf.Lerp(FovMin, currentFovMax, fovT);
+		fov = Mathf.Lerp(FovMin, currentFovMax, fovT);
 
 		return (transOrigin, transTarget, fov);
 	}
@@ -110,5 +111,30 @@ public class CinemaCameraOrbit : CinemaCameraBase
 		position.y = Mathf.Lerp(orbitHeightSrc, orbitHeightDst, SmoothingUtils.Ease(easedT));
 		position.y = Mathf.Clamp(position.y, MinCameraHeight, MaxCameraHeight);
 		return position;
+	}
+
+	private void AdjustHeight(ref Vector3 position, Vector3 target)
+	{
+		float minRadius = CalculateMinOrbitRadius(position.y, target.y);
+		Vector2 positionXZ = new Vector2(position.x, position.z);
+		Vector2 targetXZ = new Vector2(target.x, target.z);
+		float distXZ = Vector2.Distance(positionXZ, targetXZ);
+
+		if (distXZ < minRadius)
+		{
+			Vector2 directionXZ = (positionXZ - targetXZ).normalized;
+			positionXZ = targetXZ + directionXZ * minRadius;
+			position.x = positionXZ.x;
+			position.z = positionXZ.y;
+		}
+
+		Vector3 direction = (target - position).normalized;
+		float pitch = Vector3.Angle(direction, Vector3.down) - 90f;
+		if (pitch > MaxLookAtAngle)
+		{
+			float maxPitchRad = MaxLookAtAngle * Mathf.Deg2Rad;
+			float idealHeight = target.y + VerticalOffset + distXZ / Mathf.Tan(maxPitchRad);
+			position.y = Mathf.Clamp(idealHeight, MinCameraHeight, MaxCameraHeight);
+		}
 	}
 }
