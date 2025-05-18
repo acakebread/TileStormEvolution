@@ -6,7 +6,9 @@ public class CinemaCameraController
 	private CinemaCameraBase controller;
 	public static bool forceDollyZoomMode = false;
 
-	public void CreateCinemaSequence() => controller = forceDollyZoomMode ? new CinemaCameraDollyZoom() : Random.value < 0.25f ? new CinemaCameraOrbit() : new CinemaCameraPath();
+	public void CreateCinemaSequence() => controller = forceDollyZoomMode ? new CinemaCameraDollyZoom() : Random.value < 0.33f ? new CinemaCameraOrbit() : new CinemaCameraPath();
+	//public void CreateCinemaSequence() => controller = Random.value < 0.5f ? new CinemaCameraOrbit() : new CinemaCameraPath();
+	//public void CreateCinemaSequence() => controller = new CinemaCameraOrbit();
 
 	public void StartCinemaSequence(Transform playerTransform, List<Vector3> points) => controller.StartSequence(playerTransform, points);
 

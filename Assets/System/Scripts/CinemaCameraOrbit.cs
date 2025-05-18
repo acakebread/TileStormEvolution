@@ -94,6 +94,7 @@ public class CinemaCameraOrbit : CinemaCameraBase
 		var fovT = SmoothingUtils.EasePingPong(sequenceTimer / currentSequenceDuration);
 		fov = Mathf.Lerp(FovMin, currentFovMax, fovT);
 
+		originDst = transOrigin;
 		return (transOrigin, transTarget, fov);
 	}
 
