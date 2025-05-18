@@ -32,7 +32,8 @@ public class CinemaCameraOrbit : CinemaCameraBase
 
 	public override void StartSequence()
 	{
-		if (playerTransform == null)
+		base.StartSequence();
+		if (null == playerTransform)
 			return;
 
 		sequenceTimer = 0f;
@@ -111,30 +112,5 @@ public class CinemaCameraOrbit : CinemaCameraBase
 		position.y = Mathf.Lerp(orbitHeightSrc, orbitHeightDst, SmoothingUtils.Ease(easedT));
 		position.y = Mathf.Clamp(position.y, MinCameraHeight, MaxCameraHeight);
 		return position;
-	}
-
-	private void AdjustHeight(ref Vector3 position, Vector3 target)
-	{
-		float minRadius = CalculateMinOrbitRadius(position.y, target.y);
-		Vector2 positionXZ = new Vector2(position.x, position.z);
-		Vector2 targetXZ = new Vector2(target.x, target.z);
-		float distXZ = Vector2.Distance(positionXZ, targetXZ);
-
-		if (distXZ < minRadius)
-		{
-			Vector2 directionXZ = (positionXZ - targetXZ).normalized;
-			positionXZ = targetXZ + directionXZ * minRadius;
-			position.x = positionXZ.x;
-			position.z = positionXZ.y;
-		}
-
-		Vector3 direction = (target - position).normalized;
-		float pitch = Vector3.Angle(direction, Vector3.down) - 90f;
-		if (pitch > MaxLookAtAngle)
-		{
-			float maxPitchRad = MaxLookAtAngle * Mathf.Deg2Rad;
-			float idealHeight = target.y + VerticalOffset + distXZ / Mathf.Tan(maxPitchRad);
-			position.y = Mathf.Clamp(idealHeight, MinCameraHeight, MaxCameraHeight);
-		}
 	}
 }

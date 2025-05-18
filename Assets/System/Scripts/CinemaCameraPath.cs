@@ -1,90 +1,83 @@
-using UnityEngine;
+﻿using UnityEngine;
 using System.Linq;
 
 public class CinemaCameraPath : CinemaCameraBase
 {
-	private const float MinOrbitRadius = 2f;
-	private const float EllipsoidMajorAxisScale = 1.5f;
-	private const float EllipsoidMinorAxisScale = 1.5f;
+	private const float MinDistance = 1f;
 	private const float MinFocusPointDistanceFromPlayer = 4f;
-	private const float MinPathLength = 2f;
+	private const float MaxLookAtAngle = 20f;
 	private const float FovMin = 35f;
 	private const float FovMax = 55f;
-	private const float MaxLookAtAngle = 20f;
+	private const float DebugDrawDuration = 5f;
+	private const float TangentLineExtension = 2f;
+	private const bool SortDstNearerPlayer = true;
+	private const bool UseAnimationCurve = false; // New: false for direct Bézier, true for AnimationCurve
 
-	public static bool DEBUG_USE_SPLINES = true;
-	public static bool DEBUG_VISUALIZE_BEZIER = true;
+	public static bool DEBUG_VISUALIZE_LOZENGE = true;
 
-	private Vector3 controlPoint;
 	private float currentFovMax;
+	private BezierData bezierData;
+
+	private struct BezierData
+	{
+		public Vector3 P0; // Src
+		public Vector3 P1; // Control point
+		public Vector3 P2; // Dst
+		public AnimationCurve curveX;
+		public AnimationCurve curveY;
+		public AnimationCurve curveZ;
+	}
 
 	public override void Reset()
 	{
 		base.Reset();
-		controlPoint = Vector3.zero;
 		currentFovMax = FovMax;
+		bezierData = default;
 	}
 
 	public override void StartSequence()
 	{
-		if (playerTransform == null)
+		base.StartSequence();
+		if (null == playerTransform)
 			return;
 
-		sequenceTimer = 0f;
-		pauseTimer = 0f;
-		lastPlayerPos = playerTransform.position;
-		smoothedProjectedOffset = Vector3.zero;
-		controlPoint = Vector3.zero;
-
-		currentMode = CinemaMode.Path;
-		currentSequenceDuration = DefaultSequenceDuration;
-
 		// Select start focus point
-		var startFocusPoint = playerTransform.position;
+		Vector3 startFocusPoint = playerTransform.position;
 		if (focusPoints.Count > 0)
 		{
 			var validFocusPoint = focusPoints.Where(p => Vector2.Distance(new Vector2(p.x, p.z), new Vector2(playerTransform.position.x, playerTransform.position.z)) >= MinFocusPointDistanceFromPlayer).ToList();
 			if (validFocusPoint.Count > 0) startFocusPoint = validFocusPoint[Random.Range(0, validFocusPoint.Count)];
 		}
 
-		// Set targets
 		targetSrc = new Vector3(startFocusPoint.x, VerticalOffset, startFocusPoint.z);
-		endTargetOffset = Vector3.zero;
-		targetDst = new Vector3(playerTransform.position.x + endTargetOffset.x, VerticalOffset, playerTransform.position.z + endTargetOffset.y);
+		targetDst = new Vector3(playerTransform.position.x, VerticalOffset, playerTransform.position.z);
 
-		// Path setup
+		// Define lozenge
 		Vector3 targetPath = targetDst - targetSrc;
-		float pathLength = Mathf.Max(targetPath.magnitude, MinPathLength);
 		Vector3 pathDir = targetPath.magnitude > 0.1f ? targetPath.normalized : Random.onUnitSphere;
 		Vector3 midPoint = (targetSrc + targetDst) / 2f;
 		Vector3 perpendicular = new Vector3(-pathDir.z, 0f, pathDir.x).normalized;
+		float lozengeMajor = targetPath.magnitude + 2f * MinDistance;
+		float lozengeMinor = Mathf.Max(lozengeMajor * 0.66f, MinDistance * 2f);
 
-		float lozengeMajor = (pathLength + 2f * MinOrbitRadius) / 2f;
-		float lozengeMinor = MinOrbitRadius;
+		// Generate camera points
+		var (src, dst) = SampleCameraPosition(midPoint, pathDir, perpendicular, lozengeMajor, lozengeMinor);
+		originSrc = src;
+		originDst = dst;
 
-		if (DEBUG_USE_SPLINES)
-		{
-			var (src, dst, ctrl) = SampleSplineCameraPosition(midPoint, pathDir, perpendicular, lozengeMajor, lozengeMinor, targetSrc, targetDst);
-			originSrc = src;
-			originDst = dst;
-			controlPoint = ctrl;
+		AdjustHeight(ref originSrc, targetSrc);
+		AdjustHeight(ref originDst, targetDst);
 
-			AdjustHeight(ref originSrc, targetSrc);
-			AdjustHeight(ref originDst, targetDst);
-			AdjustHeight(ref controlPoint, (targetSrc + targetDst) / 2f);
-		}
-		else
-		{
-			var (src, dst) = SampleTangentCameraPosition(midPoint, pathDir, perpendicular, lozengeMajor, lozengeMinor, targetSrc, targetDst);
-			originSrc = src;
-			originDst = dst;
-
-			AdjustHeight(ref originSrc, targetSrc);
-			AdjustHeight(ref originDst, targetDst);
-		}
-
-		UpdateMapExtents();
+		// Initialize FOV
 		currentFovMax = Random.value < 0.2f ? 60f : FovMax;
+
+		// Visualize focus points
+		if (DEBUG_VISUALIZE_LOZENGE)
+		{
+			Debug.DrawRay(targetSrc, Vector3.up * 5f, Color.red, DebugDrawDuration);
+			Debug.DrawRay(targetDst, Vector3.up * 5f, Color.blue, DebugDrawDuration);
+			//Debug.Log($"TargetSrc={targetSrc}, TargetDst={targetDst}, LozengeMajor={lozengeMajor}, LozengeMinor={lozengeMinor}, PathDir={pathDir}, Perpendicular={perpendicular}");
+		}
 	}
 
 	protected override (Vector3 transOrigin, Vector3 transTarget, float fov) ComputeSequencePositionsAndFov(float easedT, Vector3 playerDelta)
@@ -92,193 +85,298 @@ public class CinemaCameraPath : CinemaCameraBase
 		originDst += playerDelta;
 		targetDst += playerDelta;
 
-		Vector3 transOrigin;
-		if (DEBUG_USE_SPLINES)
-		{
-			controlPoint += playerDelta;
-			transOrigin = EvaluateQuadraticBezier(easedT, originSrc, controlPoint, originDst);
-			if (DEBUG_VISUALIZE_BEZIER)
-			{
-				VisualizeBezierPath(originSrc, controlPoint, originDst);
-				Debug.DrawLine(originSrc, controlPoint, Color.blue, 0.1f);
-				Debug.DrawLine(controlPoint, originDst, Color.blue, 0.1f);
-			}
-		}
-		else
-		{
-			transOrigin = Vector3.Lerp(originSrc, originDst, easedT);
-			if (DEBUG_VISUALIZE_BEZIER)
-			{
-				Debug.DrawLine(originSrc, originDst, Color.blue, 0.1f);
-			}
-		}
+		// Update Bezier P2 (Dst) with player movement
+		bezierData.P2 += playerDelta;
 
+		// Evaluate Bezier curve
+		Vector3 transOrigin = EvaluateBezier(easedT);
 		Vector3 transTarget = Vector3.Lerp(targetSrc, targetDst + smoothedProjectedOffset, easedT);
-		var fovT = SmoothingUtils.EasePingPong(sequenceTimer / currentSequenceDuration);
+		float fovT = SmoothingUtils.EasePingPong(sequenceTimer / currentSequenceDuration);
 		float fov = Mathf.Lerp(FovMin, currentFovMax, fovT);
 
 		return (transOrigin, transTarget, fov);
 	}
 
-	private float CalculateMinOrbitRadius(float cameraHeight, float targetY)
+	private Vector3 EvaluateBezier(float t)
 	{
-		float heightDiff = cameraHeight - (targetY + VerticalOffset);
-		if (heightDiff <= 0f) return MinOrbitRadius; // Use MinOrbitRadius instead of MaxOrbitRadius for Path mode
-		float maxPitchRad = MaxLookAtAngle * Mathf.Deg2Rad;
-		return Mathf.Max(MinOrbitRadius, heightDiff / Mathf.Tan(maxPitchRad));
+		if (UseAnimationCurve && bezierData.curveX != null)
+		{
+			return new Vector3(
+				bezierData.curveX.Evaluate(t),
+				bezierData.curveY.Evaluate(t),
+				bezierData.curveZ.Evaluate(t)
+			);
+		}
+		return QuadraticBezierPoint(t, bezierData.P0, bezierData.P1, bezierData.P2); // Direct evaluation
 	}
 
-	private (Vector3 src, Vector3 dst, Vector3 ctrl) SampleSplineCameraPosition(Vector3 midPoint, Vector3 pathDir, Vector3 perpendicular, float lozengeMajor, float lozengeMinor, Vector3 targetSrc, Vector3 targetDst)
+	private (Vector3 src, Vector3 dst) SampleCameraPosition(Vector3 midPoint, Vector3 pathDir, Vector3 perpendicular, float lozengeMajor, float lozengeMinor)
 	{
-		float referenceDist = lozengeMinor * EllipsoidMinorAxisScale + 1f;
-		Vector2 referenceXZ = new Vector2(midPoint.x, midPoint.z) + new Vector2(perpendicular.x, perpendicular.z) * referenceDist * (Random.value < 0.5f ? 1f : -1f);
-
-		float srcHeight = Random.Range(MinCameraHeight, MaxCameraHeight);
-		float dstHeight = Random.Range(MinCameraHeight, MaxCameraHeight);
-		float baseHeight = (srcHeight + dstHeight) / 2f;
-
-		float maxHeightDeviation = 1.5f;
-		float heightDeviation = Random.Range(0f, maxHeightDeviation);
-		float controlHeight = baseHeight + heightDeviation;
-		controlHeight = Mathf.Clamp(controlHeight, MinCameraHeight, MaxCameraHeight);
-
-		Vector3 control = new Vector3(referenceXZ.x, controlHeight, referenceXZ.y);
-
 		Vector2 midPointXZ = new Vector2(midPoint.x, midPoint.z);
-		Vector2 relativeXZ = referenceXZ - midPointXZ;
-		float a = lozengeMajor;
-		float b = lozengeMinor;
-		float scale = Mathf.Sqrt((a * a * b * b) / (b * b * relativeXZ.x * relativeXZ.x + a * a * relativeXZ.y * relativeXZ.y));
-		Vector2 tangencyXZ = midPointXZ + relativeXZ * scale;
-		Vector3 tangencyPoint = new Vector3(tangencyXZ.x, control.y, tangencyXZ.y);
-
-		float x = tangencyXZ.x - midPointXZ.x;
-		float y = tangencyXZ.y - midPointXZ.y;
-		float tangentSlope = -(b * b * x) / (a * a * y + 0.001f);
-		Vector2 tangentDir = new Vector2(1f, tangentSlope).normalized;
-		Vector3 tangent = tangentDir.x * pathDir + tangentDir.y * perpendicular;
-
-		float offsetRange = lozengeMajor * EllipsoidMajorAxisScale;
-		float offsetSrc = Random.Range(-offsetRange, -offsetRange / 2f);
-		float offsetDst = Random.Range(offsetRange / 2f, offsetRange);
-		Vector3 initialSrc = tangencyPoint + tangent * offsetSrc;
-		Vector3 initialDst = tangencyPoint + tangent * offsetDst;
-
-		initialSrc.y = srcHeight;
-		initialDst.y = dstHeight;
-
-		float extensionFactor = Random.Range(0f, 0.25f);
-		float srcExtension = Mathf.Abs(offsetSrc) * extensionFactor;
-		float dstExtension = offsetDst * extensionFactor;
-		Vector3 extendedSrc = tangencyPoint + tangent * (offsetSrc - srcExtension);
-		Vector3 extendedDst = tangencyPoint + tangent * (offsetDst + dstExtension);
-
-		extendedSrc.y = srcHeight;
-		extendedDst.y = dstHeight;
-
-		float minRadiusSrc = CalculateMinOrbitRadius(extendedSrc.y, targetSrc.y);
-		float minRadiusDst = CalculateMinOrbitRadius(extendedDst.y, targetDst.y);
-		Vector2 srcXZ = new Vector2(extendedSrc.x, extendedSrc.z);
-		Vector2 dstXZ = new Vector2(extendedDst.x, extendedDst.z);
-		Vector2 targetSrcXZ = new Vector2(targetSrc.x, targetSrc.z);
 		Vector2 targetDstXZ = new Vector2(targetDst.x, targetDst.z);
 
-		if (Vector2.Distance(srcXZ, targetSrcXZ) < minRadiusSrc)
-		{
-			Vector2 dir = (srcXZ - targetSrcXZ).normalized;
-			srcXZ = targetSrcXZ + dir * minRadiusSrc;
-			extendedSrc.x = srcXZ.x;
-			extendedSrc.z = srcXZ.y;
-		}
-		if (Vector2.Distance(dstXZ, targetDstXZ) < minRadiusDst)
-		{
-			Vector2 dir = (dstXZ - targetDstXZ).normalized;
-			dstXZ = targetSrcXZ + dir * minRadiusDst;
-			extendedDst.x = dstXZ.x;
-			extendedDst.z = dstXZ.y;
-		}
+		// Generate points
+		var (src, perimeterPointSrc, tangentSrc1, tangentSrc2, thetaSrc, projectionDistanceSrc) = GeneratePointOutsideLozenge(midPointXZ, pathDir, perpendicular, lozengeMajor, lozengeMinor);
+		var (dst, perimeterPointDst, tangentDst1, tangentDst2, thetaDst, projectionDistanceDst) = GeneratePointOutsideLozenge(midPointXZ, pathDir, perpendicular, lozengeMajor, lozengeMinor);
 
-		control.y = controlHeight;
-		return (extendedSrc, extendedDst, control);
-	}
-
-	private (Vector3 src, Vector3 dst) SampleTangentCameraPosition(Vector3 midPoint, Vector3 pathDir, Vector3 perpendicular, float lozengeMajor, float lozengeMinor, Vector3 targetSrc, Vector3 targetDst)
-	{
-		float referenceDist = lozengeMinor * EllipsoidMinorAxisScale + 1f;
-		Vector2 referenceXZ = new Vector2(midPoint.x, midPoint.z) + new Vector2(perpendicular.x, perpendicular.z) * referenceDist * (Random.value < 0.5f ? 1f : -1f);
-
-		Vector2 midPointXZ = new Vector2(midPoint.x, midPoint.z);
-		Vector2 relativeXZ = referenceXZ - midPointXZ;
-		float a = lozengeMajor;
-		float b = lozengeMinor;
-		float x = relativeXZ.x;
-		float y = relativeXZ.y;
-		float tangentSlope = -(b * b * x) / (a * a * y + 0.001f);
-		Vector2 tangentDir = new Vector2(1f, tangentSlope).normalized;
-
-		Vector3 tangent = tangentDir.x * pathDir + tangentDir.y * perpendicular;
-
-		float offsetRange = lozengeMajor * EllipsoidMajorAxisScale;
-		float offsetSrc = Random.Range(-offsetRange, 0f);
-		float offsetDst = Random.Range(0f, offsetRange);
-		Vector3 src = new Vector3(referenceXZ.x, 0f, referenceXZ.y) + tangent * offsetSrc;
-		Vector3 dst = new Vector3(referenceXZ.x, 0f, referenceXZ.y) + tangent * offsetDst;
-
-		src.y = Random.Range(MinCameraHeight, MaxCameraHeight);
-		dst.y = Random.Range(MinCameraHeight, MaxCameraHeight);
-
-		float minRadiusSrc = CalculateMinOrbitRadius(src.y, targetSrc.y);
-		float minRadiusDst = CalculateMinOrbitRadius(dst.y, targetDst.y);
+		// Check if points are on the same side
 		Vector2 srcXZ = new Vector2(src.x, src.z);
 		Vector2 dstXZ = new Vector2(dst.x, dst.z);
-		Vector2 targetSrcXZ = new Vector2(targetSrc.x, targetSrc.z);
-		Vector2 targetDstXZ = new Vector2(targetDst.x, targetDst.z);
+		Vector2 v1 = srcXZ - midPointXZ;
+		Vector2 v2 = dstXZ - midPointXZ;
+		float dot = Vector2.Dot(v1, v2);
+		bool flipped = false;
 
-		if (Vector2.Distance(srcXZ, targetSrcXZ) < minRadiusSrc)
+		if (dot > 0)
 		{
-			Vector2 dir = (srcXZ - targetSrcXZ).normalized;
-			srcXZ = targetSrcXZ + dir * minRadiusSrc;
-			src.x = srcXZ.x;
-			src.z = srcXZ.y;
+			Vector2 relativeDst = dstXZ - midPointXZ;
+			Vector2 flippedDst = midPointXZ - relativeDst;
+			dst = new Vector3(flippedDst.x, dst.y, flippedDst.y);
+			perimeterPointDst = MathEllipse.GetEllipsePoint(thetaDst, lozengeMajor, lozengeMinor, midPointXZ, pathDir, perpendicular);
+			var (newTangent1, newTangent2) = MathEllipse.ComputeTangentAtPoint(thetaDst, lozengeMajor, lozengeMinor, pathDir, perpendicular);
+			tangentDst1 = newTangent1;
+			tangentDst2 = newTangent2;
+			projectionDistanceDst = Vector2.Distance(midPointXZ, dstXZ) - Vector2.Distance(midPointXZ, perimeterPointDst);
+			flipped = true;
+			dstXZ = new Vector2(dst.x, dst.z);
 		}
-		if (Vector2.Distance(dstXZ, targetDstXZ) < minRadiusDst)
+
+		// Sort points so Dst is closer to targetDst if SortDstNearerPlayer is true
+		bool sorted = false;
+		if (SortDstNearerPlayer)
 		{
-			Vector2 dir = (dstXZ - targetDstXZ).normalized;
-			dstXZ = targetDstXZ + dir * minRadiusDst;
-			dst.x = dstXZ.x;
-			dst.z = dstXZ.y;
+			float srcDist = Vector2.Distance(srcXZ, targetDstXZ);
+			float dstDist = Vector2.Distance(dstXZ, targetDstXZ);
+			if (srcDist < dstDist)
+			{
+				(src, dst) = (dst, src);
+				(perimeterPointSrc, perimeterPointDst) = (perimeterPointDst, perimeterPointSrc);
+				(tangentSrc1, tangentDst1) = (tangentDst1, tangentSrc1);
+				(tangentSrc2, tangentDst2) = (tangentDst2, tangentSrc2);
+				(thetaSrc, thetaDst) = (thetaDst, thetaSrc);
+				(projectionDistanceSrc, projectionDistanceDst) = (projectionDistanceDst, projectionDistanceSrc);
+				(srcXZ, dstXZ) = (dstXZ, srcXZ);
+				sorted = true;
+			}
+		}
+
+		// Compute tangent points
+		var (tangentPointSrc1, tangentPointSrc2) = MathEllipse.ComputeTangentPoints(src, midPointXZ, pathDir, perpendicular, lozengeMajor, lozengeMinor);
+		var (tangentPointDst1, tangentPointDst2) = MathEllipse.ComputeTangentPoints(dst, midPointXZ, pathDir, perpendicular, lozengeMajor, lozengeMinor);
+
+		// Compute control point (intersection of purple Src and cyan Dst, or cyan Src and purple Dst)
+		Vector3? controlPoint = null;
+		bool colinear = false;
+		Vector2? intersection1 = null, intersection2 = null;
+
+		if (tangentPointSrc1.HasValue && tangentPointSrc2.HasValue && tangentPointDst1.HasValue && tangentPointDst2.HasValue)
+		{
+			Vector2 src1XZ = new Vector2(tangentPointSrc1.Value.x, tangentPointSrc1.Value.z);
+			Vector2 src2XZ = new Vector2(tangentPointSrc2.Value.x, tangentPointSrc2.Value.z);
+			Vector2 dst1XZ = new Vector2(tangentPointDst1.Value.x, tangentPointDst1.Value.z);
+			Vector2 dst2XZ = new Vector2(tangentPointDst2.Value.x, tangentPointDst2.Value.z);
+			Vector2 srcDir1 = (src1XZ - srcXZ).normalized;
+			Vector2 srcDir2 = (src2XZ - srcXZ).normalized;
+			Vector2 dstDir1 = (dst1XZ - dstXZ).normalized;
+			Vector2 dstDir2 = (dst2XZ - dstXZ).normalized;
+
+			// Check for colinear tangents
+			float cross1 = Mathf.Abs(srcDir1.x * dstDir2.y - srcDir1.y * dstDir2.x);
+			float cross2 = Mathf.Abs(srcDir2.x * dstDir1.y - srcDir2.y * dstDir1.x);
+			if (cross1 < 0.01f || cross2 < 0.01f)
+			{
+				colinear = true;
+				controlPoint = (src + dst) / 2f;
+			}
+			else
+			{
+				intersection1 = LineIntersection(srcXZ, srcXZ + srcDir1, dstXZ, dstXZ + dstDir2);
+				intersection2 = LineIntersection(srcXZ, srcXZ + srcDir2, dstXZ, dstXZ + dstDir1);
+
+				if (intersection1.HasValue && intersection2.HasValue)
+				{
+					float dist1 = Vector2.Distance(intersection1.Value, midPointXZ);
+					float dist2 = Vector2.Distance(intersection2.Value, midPointXZ);
+					Vector2 selectedIntersection = dist1 < dist2 ? intersection1.Value : intersection2.Value;
+					controlPoint = new Vector3(selectedIntersection.x, (src.y + dst.y) / 2f, selectedIntersection.y);
+				}
+			}
+		}
+
+		// Fallback to midpoint
+		if (!controlPoint.HasValue)
+		{
+			controlPoint = (src + dst) / 2f;
+			colinear = true;
+		}
+
+		// Create Bezier curve
+		bezierData = CreateBezierCurve(src, controlPoint.Value, dst);
+
+		// Debug visualization
+		if (DEBUG_VISUALIZE_LOZENGE)
+		{
+			VisualizeLozenge(midPoint, pathDir, perpendicular, lozengeMajor, lozengeMinor, (MinCameraHeight + MaxCameraHeight) / 2f);
+			Debug.DrawRay(perimeterPointSrc, Vector3.up * 5f, Color.yellow, DebugDrawDuration);
+			Debug.DrawRay(perimeterPointDst, Vector3.up * 5f, Color.yellow, DebugDrawDuration);
+			Debug.DrawRay(src, Vector3.up * 3f, Color.green, DebugDrawDuration);
+			Debug.DrawRay(dst, Vector3.up * 3f, flipped ? Color.magenta : Color.green, DebugDrawDuration);
+			Debug.DrawRay(controlPoint.Value, Vector3.up * 4f, Color.yellow, DebugDrawDuration);
+
+			if (tangentPointSrc1.HasValue && tangentPointSrc2.HasValue)
+			{
+				Vector3 tangentSrc1End = tangentPointSrc1.Value + (tangentPointSrc1.Value - src).normalized * TangentLineExtension;
+				Vector3 tangentSrc2End = tangentPointSrc2.Value + (tangentPointSrc2.Value - src).normalized * TangentLineExtension;
+				Debug.DrawLine(src, tangentSrc1End, Color.magenta, DebugDrawDuration);
+				Debug.DrawLine(src, tangentSrc2End, Color.cyan, DebugDrawDuration);
+				Debug.DrawRay(tangentPointSrc1.Value, Vector3.up * 2f, Color.white, DebugDrawDuration);
+				Debug.DrawRay(tangentPointSrc2.Value, Vector3.up * 2f, Color.white, DebugDrawDuration);
+			}
+			if (tangentPointDst1.HasValue && tangentPointDst2.HasValue)
+			{
+				Vector3 tangentDst1End = tangentPointDst1.Value + (tangentPointDst1.Value - dst).normalized * TangentLineExtension;
+				Vector3 tangentDst2End = tangentPointDst2.Value + (tangentPointDst2.Value - dst).normalized * TangentLineExtension;
+				Debug.DrawLine(dst, tangentDst1End, Color.magenta, DebugDrawDuration + 2f);
+				Debug.DrawLine(dst, tangentDst2End, Color.cyan, DebugDrawDuration + 2f);
+				Debug.DrawRay(tangentPointDst1.Value, Vector3.up * 2f, Color.white, DebugDrawDuration + 2f);
+				Debug.DrawRay(tangentPointDst2.Value, Vector3.up * 2f, Color.white, DebugDrawDuration + 2f);
+			}
+
+			VisualizeBezierCurve();
+			VisualizeBezierConstruction(); // New: Show Q0(t), Q1(t), B(t)
+
+			//Debug.Log($"PerimeterSrc={perimeterPointSrc}, Src={src}, ThetaSrc={thetaSrc * Mathf.Rad2Deg}deg, TangentSrc1={tangentSrc1}, TangentSrc2={tangentSrc2}, ProjectionDistanceSrc={projectionDistanceSrc}, " +
+			//		  $"PerimeterDst={perimeterPointDst}, Dst={dst}, ThetaDst={thetaDst * Mathf.Rad2Deg}deg, TangentDst1={tangentDst1}, TangentDst2={tangentDst2}, ProjectionDistanceDst={projectionDistanceDst}, " +
+			//		  $"TangentPointSrc1={tangentPointSrc1}, TangentPointSrc2={tangentPointSrc2}, TangentPointDst1={tangentPointDst1}, TangentPointDst2={tangentPointDst2}, " +
+			//		  $"DotProduct={dot}, FlippedDst={flipped}, Sorted={sorted}, SrcDistToPlayer={Vector2.Distance(srcXZ, targetDstXZ)}, DstDistToPlayer={Vector2.Distance(dstXZ, targetDstXZ)}, " +
+			//		  $"Intersection1={intersection1}, Intersection2={intersection2}, ControlPoint={controlPoint}, Colinear={colinear}");
 		}
 
 		return (src, dst);
 	}
 
-	private void VisualizeBezierPath(Vector3 p0, Vector3 p1, Vector3 p2)
+	private Vector2? LineIntersection(Vector2 p1, Vector2 p2, Vector2 p3, Vector2 p4)
+	{
+		float denom = (p1.x - p2.x) * (p3.y - p4.y) - (p1.y - p2.y) * (p3.x - p4.x);
+		if (Mathf.Abs(denom) < 0.0001f) return null;
+
+		float t = ((p1.x - p3.x) * (p3.y - p4.y) - (p1.y - p3.y) * (p3.x - p4.x)) / denom;
+		float u = -((p1.x - p2.x) * (p1.y - p3.y) - (p1.y - p2.y) * (p1.x - p3.x)) / denom;
+
+		if (t >= 0 && u >= 0)
+		{
+			return p1 + t * (p2 - p1);
+		}
+		return null;
+	}
+
+	private BezierData CreateBezierCurve(Vector3 p0, Vector3 p1, Vector3 p2)
+	{
+		BezierData data = new BezierData { P0 = p0, P1 = p1, P2 = p2 };
+
+		if (UseAnimationCurve)
+		{
+			data.curveX = new AnimationCurve();
+			data.curveY = new AnimationCurve();
+			data.curveZ = new AnimationCurve();
+
+			const int samples = 20;
+			for (int i = 0; i <= samples; i++)
+			{
+				float t = i / (float)samples;
+				Vector3 point = QuadraticBezierPoint(t, p0, p1, p2);
+				data.curveX.AddKey(t, point.x);
+				data.curveY.AddKey(t, point.y);
+				data.curveZ.AddKey(t, point.z);
+			}
+
+			for (int i = 0; i < data.curveX.keys.Length; i++)
+			{
+				data.curveX.SmoothTangents(i, 0f);
+				data.curveY.SmoothTangents(i, 0f);
+				data.curveZ.SmoothTangents(i, 0f);
+			}
+		}
+
+		return data;
+	}
+
+	private Vector3 QuadraticBezierPoint(float t, Vector3 p0, Vector3 p1, Vector3 p2)
+	{
+		float u = 1f - t;
+		float tt = t * t;
+		float uu = u * u;
+		return uu * p0 + 2f * u * t * p1 + tt * p2;
+	}
+
+	private void VisualizeBezierCurve()
 	{
 		const int segments = 20;
-		Vector3 prevPoint = p0;
-		for (int i = 1; i <= segments; i++)
+		Vector3[] points = new Vector3[segments + 1];
+		for (int i = 0; i <= segments; i++)
 		{
 			float t = i / (float)segments;
-			Vector3 point = EvaluateQuadraticBezier(t, p0, p1, p2);
-			Debug.DrawLine(prevPoint, point, Color.magenta, 0.1f);
-			prevPoint = point;
+			points[i] = EvaluateBezier(t);
+		}
+		for (int i = 0; i < segments; i++)
+		{
+			Debug.DrawLine(points[i], points[i + 1], Color.white, DebugDrawDuration);
+		}
+	}
+
+	private void VisualizeBezierConstruction()
+	{
+		// Visualize Q0(t), Q1(t), and B(t) for a few t values
+		float[] tValues = { 0.25f, 0.5f, 0.75f };
+		foreach (float t in tValues)
+		{
+			Vector3 q0 = Vector3.Lerp(bezierData.P0, bezierData.P1, t); // Q0(t)
+			Vector3 q1 = Vector3.Lerp(bezierData.P1, bezierData.P2, t); // Q1(t)
+			Vector3 b = Vector3.Lerp(q0, q1, t); // B(t)
+
+			Debug.DrawRay(q0, Vector3.up * 1f, Color.red, DebugDrawDuration); // Q0(t)
+			Debug.DrawRay(q1, Vector3.up * 1f, Color.blue, DebugDrawDuration); // Q1(t)
+			Debug.DrawRay(b, Vector3.up * 1.5f, Color.green, DebugDrawDuration); // B(t)
+			Debug.DrawLine(q0, q1, Color.gray, DebugDrawDuration); // Line from Q0 to Q1
+		}
+	}
+
+	private (Vector3 point, Vector2 perimeterPoint, Vector3 tangent1, Vector3 tangent2, float theta, float projectionDistance) GeneratePointOutsideLozenge(Vector2 midPointXZ, Vector3 pathDir, Vector3 perpendicular, float lozengeMajor, float lozengeMinor)
+	{
+		float theta = Random.Range(0f, 2f * Mathf.PI);
+		Vector2 perimeterPoint = MathEllipse.GetEllipsePoint(theta, lozengeMajor, lozengeMinor, midPointXZ, pathDir, perpendicular);
+		Vector2 direction = (perimeterPoint - midPointXZ).normalized;
+		float distanceToPerimeter = Vector2.Distance(midPointXZ, perimeterPoint);
+		float projectionDistance = distanceToPerimeter + Random.Range(1f, 5f);
+		Vector2 pointXZ = midPointXZ + direction * projectionDistance;
+		Vector3 point = new Vector3(pointXZ.x, Random.Range(MinCameraHeight, MaxCameraHeight), pointXZ.y);
+
+		var (tangent1, tangent2) = MathEllipse.ComputeTangentAtPoint(theta, lozengeMajor, lozengeMinor, pathDir, perpendicular);
+
+		return (point, perimeterPoint, tangent1, tangent2, theta, projectionDistance);
+	}
+
+	private void VisualizeLozenge(Vector3 midPoint, Vector3 pathDir, Vector3 perpendicular, float lozengeMajor, float lozengeMinor, float height)
+	{
+		const int segments = 36;
+		Vector3[] points = new Vector3[segments + 1];
+		for (int i = 0; i <= segments; i++)
+		{
+			float angle = i * 2f * Mathf.PI / segments;
+			Vector2 pointXZ = MathEllipse.GetEllipsePoint(angle, lozengeMajor, lozengeMinor, new Vector2(midPoint.x, midPoint.z), pathDir, perpendicular);
+			points[i] = new Vector3(pointXZ.x, height, pointXZ.y);
+		}
+		for (int i = 0; i < segments; i++)
+		{
+			Debug.DrawLine(points[i], points[i + 1], Color.green, DebugDrawDuration);
 		}
 	}
 
 	private void AdjustHeight(ref Vector3 position, Vector3 target)
 	{
-		float minRadius = CalculateMinOrbitRadius(position.y, target.y);
 		Vector2 positionXZ = new Vector2(position.x, position.z);
 		Vector2 targetXZ = new Vector2(target.x, target.z);
 		float distXZ = Vector2.Distance(positionXZ, targetXZ);
-
-		if (distXZ < minRadius)
-		{
-			Vector2 directionXZ = (positionXZ - targetXZ).normalized;
-			positionXZ = targetXZ + directionXZ * minRadius;
-			position.x = positionXZ.x;
-			position.z = positionXZ.y;
-		}
 
 		Vector3 direction = (target - position).normalized;
 		float pitch = Vector3.Angle(direction, Vector3.down) - 90f;
@@ -288,11 +386,5 @@ public class CinemaCameraPath : CinemaCameraBase
 			float idealHeight = target.y + VerticalOffset + distXZ / Mathf.Tan(maxPitchRad);
 			position.y = Mathf.Clamp(idealHeight, MinCameraHeight, MaxCameraHeight);
 		}
-	}
-
-	private Vector3 EvaluateQuadraticBezier(float t, Vector3 p0, Vector3 p1, Vector3 p2)
-	{
-		float u = 1f - t;
-		return u * u * p0 + 2f * u * t * p1 + t * t * p2;
 	}
 }

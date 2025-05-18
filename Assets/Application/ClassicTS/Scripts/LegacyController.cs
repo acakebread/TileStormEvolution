@@ -13,6 +13,7 @@ namespace ClassicTilestorm
 
 		public void Reset()
 		{
+			CameraController.Reset();
 			Initialize();
 			SetMode(CameraState.Static);
 

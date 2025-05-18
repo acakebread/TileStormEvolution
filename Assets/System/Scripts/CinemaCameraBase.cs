@@ -58,7 +58,12 @@ public abstract class CinemaCameraBase
 
 	public void UpdatePlayerTransform(Transform transform)
 	{
-		playerTransform = transform;
+		if (null == playerTransform)
+		{
+			playerTransform = transform;
+			lastPlayerPos = playerTransform.position;
+		}
+
 		if (playerTransform != null && IsFarEnough(playerTransform.position))
 		{
 			playerPositions.Add(playerTransform.position);
@@ -142,7 +147,7 @@ public abstract class CinemaCameraBase
 		smoothedProjectedOffset = Vector3.zero;
 	}
 
-	public virtual void StartSequence() { }
+	public virtual void StartSequence() { if (null != playerTransform) lastPlayerPos = playerTransform.position; }
 
 	public CameraController.CameraData UpdateSequence(CameraController.CameraData data, Camera camera)
 	{

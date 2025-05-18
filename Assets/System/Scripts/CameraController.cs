@@ -63,6 +63,16 @@ public static class CameraController
 	private static bool isCameraShakeEnabled; // Tracks if camera shake is active
 	private static float shakeSeed; // Seed for Perlin noise
 
+	public static void Reset()
+	{
+		cinemaController.Reset();
+		playerTransform = null;
+		focusPoints.Clear();
+		lastRefreshTime = Time.time;
+		isCameraShakeEnabled = false;
+		shakeSeed = 0f;
+	}
+
 	// Initialization
 	public static void Initialize()
 	{
@@ -83,17 +93,7 @@ public static class CameraController
 				fov = mainCamera.fieldOfView
 			};
 		}
-		Reset();
-	}
-
-	public static void Reset()
-	{
-		playerTransform = null;
-		focusPoints.Clear();
-		lastRefreshTime = Time.time;
-		cinemaController.Reset();
-		isCameraShakeEnabled = false;
-		shakeSeed = 0f;
+		//Reset();
 	}
 
 	// Cinema controls
