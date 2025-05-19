@@ -1,6 +1,6 @@
+//legacy implementation - to be removed
 using UnityEngine;
 using System.Linq;
-using System.Collections.Generic;
 
 public class CinemaMultiMode : CinemaCameraBase
 {
@@ -26,6 +26,16 @@ public class CinemaMultiMode : CinemaCameraBase
 	private float currentFovMax;
 	private Vector3 controlPoint;
 
+	// Enum for cinematic modes
+	private enum CinemaMode
+	{
+		Orbit = 0,
+		Path = 1,
+		DollyZoom = 2
+	}
+
+	private CinemaMode currentMode;
+
 	public override void Reset()
 	{
 		base.Reset();
@@ -39,16 +49,12 @@ public class CinemaMultiMode : CinemaCameraBase
 		orbitEndAngle = 0f;
 	}
 
-	public override void StartSequence(Transform transform, List<Vector3> points)
+	public override void StartSequence(CinemaCameraController _controller)
 	{
-		base.StartSequence(transform, points);
-		if (playerTransform == null)
+		base.StartSequence(_controller);
+		if (null == playerTransform)
 			return;
 
-		sequenceTimer = 0f;
-		pauseTimer = 0f;
-		lastPlayerPos = playerTransform.position;
-		smoothedProjectedOffset = Vector3.zero;
 		orbitCenter = Vector3.zero;
 		controlPoint = Vector3.zero;
 
@@ -56,15 +62,14 @@ public class CinemaMultiMode : CinemaCameraBase
 		currentSequenceDuration = DefaultSequenceDuration;
 
 		var startFocusPoint = playerTransform.position;
-		if (focusPoints.Count > 0)
+		if (cinemaCameraController.focusPoints.Count > 0)
 		{
-			var validFocusPoint = focusPoints.Where(p => Vector2.Distance(new Vector2(p.x, p.z), new Vector2(playerTransform.position.x, playerTransform.position.z)) >= MinFocusPointDistanceFromPlayer).ToList();
+			var validFocusPoint = cinemaCameraController.focusPoints.Where(p => Vector2.Distance(new Vector2(p.x, p.z), new Vector2(playerTransform.position.x, playerTransform.position.z)) >= MinFocusPointDistanceFromPlayer).ToList();
 			if (validFocusPoint.Count > 0) startFocusPoint = validFocusPoint[Random.Range(0, validFocusPoint.Count)];
 		}
 
 		targetSrc = new Vector3(startFocusPoint.x, VerticalOffset, startFocusPoint.z);
-		endTargetOffset = Vector3.zero;
-		targetDst = new Vector3(playerTransform.position.x + endTargetOffset.x, VerticalOffset, playerTransform.position.z + endTargetOffset.y);
+		targetDst = new Vector3(playerTransform.position.x, VerticalOffset, playerTransform.position.z);
 
 		if (Vector2.Distance(new Vector2(targetSrc.x, targetSrc.z), new Vector2(targetDst.x, targetDst.z)) <= OrbitTargetDistanceThreshold) currentMode = CinemaMode.Orbit;
 
@@ -121,7 +126,6 @@ public class CinemaMultiMode : CinemaCameraBase
 			}
 		}
 
-		UpdateMapExtents();
 		currentFovMax = Random.value < 0.2f ? 60f : FovMax;
 	}
 
@@ -133,7 +137,7 @@ public class CinemaMultiMode : CinemaCameraBase
 
 		if (currentMode == CinemaMode.Orbit)
 		{
-			targetSrc = new Vector3(playerTransform.position.x + endTargetOffset.x, VerticalOffset, playerTransform.position.z + endTargetOffset.y);
+			targetSrc = new Vector3(playerTransform.position.x, VerticalOffset, playerTransform.position.z);
 			targetDst = targetSrc;
 			orbitCenter += playerDelta;
 			transOrigin = SampleOrbitPosition(orbitCenter, Mathf.Lerp(orbitStartAngle, orbitEndAngle, easedT), easedT);

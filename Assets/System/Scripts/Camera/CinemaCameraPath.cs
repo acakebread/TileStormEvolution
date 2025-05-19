@@ -1,6 +1,5 @@
 ﻿using UnityEngine;
 using System.Linq;
-using System.Collections.Generic;
 
 public class CinemaCameraPath : CinemaCameraBase
 {
@@ -36,17 +35,17 @@ public class CinemaCameraPath : CinemaCameraBase
 		bezierData = default;
 	}
 
-	public override void StartSequence(Transform transform, List<Vector3> points)
+	public override void StartSequence(CinemaCameraController _controller)
 	{
-		base.StartSequence(transform, points);
+		base.StartSequence(_controller);
 		if (null == playerTransform)
 			return;
 
 		// Select start focus point
 		Vector3 startFocusPoint = playerTransform.position;
-		if (focusPoints.Count > 0)
+		if (cinemaCameraController.focusPoints.Count > 0)
 		{
-			var validFocusPoint = focusPoints.Where(p => Vector2.Distance(new Vector2(p.x, p.z), new Vector2(playerTransform.position.x, playerTransform.position.z)) >= MinFocusPointDistanceFromPlayer).ToList();
+			var validFocusPoint = cinemaCameraController.focusPoints.Where(p => Vector2.Distance(new Vector2(p.x, p.z), new Vector2(playerTransform.position.x, playerTransform.position.z)) >= MinFocusPointDistanceFromPlayer).ToList();
 			if (validFocusPoint.Count > 0) startFocusPoint = validFocusPoint[Random.Range(0, validFocusPoint.Count)];
 		}
 
@@ -87,13 +86,14 @@ public class CinemaCameraPath : CinemaCameraBase
 		targetDst += playerDelta;
 
 		// Update Bezier P2 (Dst) with player movement
+		bezierData.P1 += playerDelta * 0.5f;
 		bezierData.P2 += playerDelta;
 
 		// Evaluate Bezier curve
-		Vector3 transOrigin = EvaluateBezier(easedT);
-		Vector3 transTarget = Vector3.Lerp(targetSrc, targetDst + smoothedProjectedOffset, easedT);
-		float fovT = SmoothingUtils.EasePingPong(sequenceTimer / currentSequenceDuration);
-		float fov = Mathf.Lerp(FovMin, currentFovMax, fovT);
+		var transOrigin = EvaluateBezier(easedT);
+		var transTarget = Vector3.Lerp(targetSrc, targetDst + smoothedProjectedOffset, easedT);
+		
+		var fov = Mathf.Lerp(FovMin, currentFovMax, SmoothingUtils.EasePingPong(sequenceTimer / currentSequenceDuration));
 
 		return (transOrigin, transTarget, fov);
 	}

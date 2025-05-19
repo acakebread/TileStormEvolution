@@ -20,8 +20,8 @@ public static class CameraController
 		public Vector3 originDst;
 		public Vector3 targetSrc;
 		public Vector3 targetDst;
-		public float smoothingRate;
-		public float fov;
+		public float smoothing;
+		public float FOV;
 	}
 
 	// Public properties
@@ -52,9 +52,9 @@ public static class CameraController
 	// Internal state
 	private static CameraState currentState = CameraState.Static;
 	private static CameraState previousState = CameraState.Static;
-	private static CameraData currentData;
-	private static CameraData restoreData;
-	private static Camera mainCamera;
+	private static CameraData backupData;
+	private static CameraData cameraData;
+	private static Camera mainCamera = Camera.main;
 	private static Transform playerTransform;
 	private static bool enableAutoCinema;
 	private static float lastRefreshTime;
@@ -74,23 +74,16 @@ public static class CameraController
 	// Initialization
 	public static void Initialize()
 	{
-		mainCamera = Camera.main;
 		if (mainCamera == null) return;
-
-		if (currentState == CameraState.Cinema)
-			currentData = restoreData;
-		else
+		cameraData = new CameraData
 		{
-			currentData = new CameraData
-			{
-				originSrc = Vector3.zero,
-				targetSrc = Vector3.zero,
-				originDst = Vector3.forward,
-				targetDst = Vector3.forward,
-				smoothingRate = DefaultSmoothingRate,
-				fov = mainCamera.fieldOfView
-			};
-		}
+			originSrc = Vector3.zero,
+			targetSrc = Vector3.zero,
+			originDst = Vector3.zero,
+			targetDst = Vector3.zero,
+			smoothing = DefaultSmoothingRate,
+			FOV = mainCamera.fieldOfView
+		};
 	}
 
 	// Cinema controls
@@ -103,19 +96,19 @@ public static class CameraController
 		if (value == CameraState.Cinema && currentState != CameraState.Cinema)
 		{
 			previousState = currentState;
-			restoreData = currentData;
+			backupData = cameraData;
 
 			cinemaController.CreateCinemaSequence();
 			cinemaController.StartCinemaSequence(playerTransform, focusPoints);
-			currentData = cinemaController.GetCinemaData();
+			cameraData = cinemaController.CameraData;
 
 			isCameraShakeEnabled = Random.value < ShakeChance;
 		}
 		else if (value != CameraState.Cinema && currentState == CameraState.Cinema)
 		{
 			previousState = currentState;
-			currentData = restoreData;
-			mainCamera.fieldOfView = currentData.fov;
+			cameraData = backupData;
+			mainCamera.fieldOfView = cameraData.FOV;
 			isCameraShakeEnabled = false; // Disable shake when exiting Cinema mode
 		}
 		currentState = value;
@@ -124,27 +117,26 @@ public static class CameraController
 	public static void Refresh(float time)
 	{
 		lastRefreshTime = time;
-		if (currentState == CameraState.Cinema)
-			SetMode(previousState);
+		if (currentState == CameraState.Cinema) SetMode(previousState);
 	}
 
 	// Position setters
 	public static void SetOrigin(Vector3 value)
 	{
-		currentData.originDst = value;
-		if (currentState == CameraState.Static) currentData.originSrc = value;
+		cameraData.originDst = value;
+		if (currentState == CameraState.Static) cameraData.originSrc = value;
 	}
 
 	public static void SetTarget(Vector3 value)
 	{
-		currentData.targetDst = value;
-		if (currentState == CameraState.Static) currentData.targetSrc = value;
+		cameraData.targetDst = value;
+		if (currentState == CameraState.Static) cameraData.targetSrc = value;
 	}
 
 	public static void SetPlayer(Transform transform)
 	{
 		playerTransform = transform;
-		if (currentState == CameraState.Follow) currentData.targetDst = transform.position;
+		if (currentState == CameraState.Follow) cameraData.targetDst = transform.position;
 		if (currentState == CameraState.Cinema) cinemaController.UpdatePlayerTransform(transform);
 	}
 
@@ -179,54 +171,45 @@ public static class CameraController
 				break;
 
 			case CameraState.Cinema:
-				bool shouldContinue;
-				currentData = cinemaController.UpdateCinemaMode(mainCamera, out shouldContinue);
-				if (false == shouldContinue)
+				if (false == cinemaController.UpdateCinemaMode())
 				{
 					cinemaController.CreateCinemaSequence();
 					cinemaController.StartCinemaSequence(playerTransform, focusPoints);
-					currentData = cinemaController.GetCinemaData();
 				}
+				cameraData = cinemaController.CameraData;
 				break;
 		}
 
-		UpdateCameraTransform();
-		mainCamera.fieldOfView = currentData.fov;
+		UpdateCamera();
+		//if (true == isCameraShakeEnabled) CameraUtils.ApplyCameraShake(mainCamera);// Apply camera shake
 	}
 
 	private static void UpdatePresetMode()
 	{
-		currentData.smoothingRate = SmoothingUtils.Smooth(currentData.smoothingRate, PresetConfig.SmoothingN, Time.deltaTime, TargetFPS);
-		var presetLerp = SmoothingUtils.Smooth(0f, 1f, currentData.smoothingRate, Time.deltaTime, TargetFPS);
-		currentData.originSrc = Vector3.Lerp(currentData.originSrc, currentData.originDst, presetLerp);
-		currentData.targetSrc = Vector3.Lerp(currentData.targetSrc, currentData.targetDst, presetLerp);
+		cameraData.smoothing = SmoothingUtils.Smooth(cameraData.smoothing, PresetConfig.SmoothingN, Time.deltaTime, TargetFPS);
+		var presetLerp = SmoothingUtils.Smooth(0f, 1f, cameraData.smoothing, Time.deltaTime, TargetFPS);
+		cameraData.originSrc = Vector3.Lerp(cameraData.originSrc, cameraData.originDst, presetLerp);
+		cameraData.targetSrc = Vector3.Lerp(cameraData.targetSrc, cameraData.targetDst, presetLerp);
 	}
 
 	private static void UpdateFollowMode()
 	{
-		currentData.smoothingRate = SmoothingUtils.Smooth(currentData.smoothingRate, FollowConfig.SmoothingNa, FollowConfig.SmoothingNb, Time.deltaTime, TargetFPS);
-		var followLerp = SmoothingUtils.Smooth(0f, 1f, currentData.smoothingRate, Time.deltaTime, TargetFPS);
-		currentData.targetSrc = Vector3.Lerp(currentData.targetSrc, currentData.targetDst, followLerp);
-		var delta = currentData.targetSrc - currentData.originSrc;
+		cameraData.smoothing = SmoothingUtils.Smooth(cameraData.smoothing, FollowConfig.SmoothingNa, FollowConfig.SmoothingNb, Time.deltaTime, TargetFPS);
+		var followLerp = SmoothingUtils.Smooth(0f, 1f, cameraData.smoothing, Time.deltaTime, TargetFPS);
+		cameraData.targetSrc = Vector3.Lerp(cameraData.targetSrc, cameraData.targetDst, followLerp);
+		var delta = cameraData.targetSrc - cameraData.originSrc;
 		var deltaHorizontal = (0f == delta.x && 0f == delta.z) ? mainCamera.transform.forward : new Vector3(delta.x, 0, delta.z);
 		deltaHorizontal.Normalize();
-		var idealPos = currentData.targetSrc - deltaHorizontal * (FollowConfig.IdealDistance * FollowConfig.IdealDistanceHorizontalScale);
-		idealPos.y = currentData.targetSrc.y + FollowConfig.IdealDistance;
-		currentData.originSrc = Vector3.Lerp(currentData.originSrc, idealPos, followLerp);
+		var idealPos = cameraData.targetSrc - deltaHorizontal * (FollowConfig.IdealDistance * FollowConfig.IdealDistanceHorizontalScale);
+		idealPos.y = cameraData.targetSrc.y + FollowConfig.IdealDistance;
+		cameraData.originSrc = Vector3.Lerp(cameraData.originSrc, idealPos, followLerp);
 	}
 
-	public static void UpdateCameraTransform()
+	public static void UpdateCamera()
 	{
-		mainCamera.transform.position = currentData.originSrc;
-		var direction = currentData.targetSrc - currentData.originSrc;
-		if (direction.sqrMagnitude < 0.01f)
-		{
-			Debug.LogWarning("Direction vector too small, skipping rotation update.");
-			return;
-		}
-		mainCamera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
-
-		// Apply camera shake
-		if (true == isCameraShakeEnabled) CameraUtils.ApplyCameraShake(mainCamera);
+		mainCamera.transform.position = cameraData.originSrc;
+		var direction = cameraData.targetSrc - cameraData.originSrc;
+		if (direction.sqrMagnitude > Mathf.Epsilon) mainCamera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
+		mainCamera.fieldOfView = cameraData.FOV;
 	}
 }

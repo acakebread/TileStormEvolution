@@ -33,7 +33,7 @@ namespace ClassicTilestorm
 					CameraController.SetOrigin(new Vector3(0f, 14f, -14f));
 					CameraController.SetTarget(Vector3.zero);
 				}
-				CameraController.UpdateCameraTransform();
+				CameraController.UpdateCamera();
 				return;
 			}
 
@@ -55,7 +55,7 @@ namespace ClassicTilestorm
 			CameraController.SetTarget(dstPos);
 			CameraController.SetMode(CameraController.CameraState.Follow);
 
-			CameraController.UpdateCameraTransform();
+			CameraController.UpdateCamera();
 
 			if (eggbotController != null)
 			{
@@ -90,10 +90,10 @@ namespace ClassicTilestorm
 			}
 
 			var waypoint = mapManager.Waypoints[waypointIndex];
-			Vector3 srcPos = new Vector3(waypoint.vSrc.fX, waypoint.vSrc.fY, waypoint.vSrc.fZ);
-			if (srcPos == Vector3.zero) srcPos = new Vector3(0f, 14f, -14f);
+			var srcPos = new Vector3(waypoint.vSrc.fX, waypoint.vSrc.fY, waypoint.vSrc.fZ);
+			if (srcPos == Vector3.zero) srcPos = new Vector3(0f, 14f, -14f);// TS default
 
-			Vector3 lookAtPos = waypoint.vDst != null && IsValidVector(waypoint.vDst) ? new Vector3(waypoint.vDst.fX, waypoint.vDst.fY, waypoint.vDst.fZ) : mapManager.GetTilePosition(waypoint.nTile) + new Vector3(0f, 0.5f, 0f);
+			var lookAtPos = waypoint.vDst != null && IsValidVector(waypoint.vDst) ? new Vector3(waypoint.vDst.fX, waypoint.vDst.fY, waypoint.vDst.fZ) : mapManager.GetTilePosition(waypoint.nTile) + new Vector3(0f, 0.5f, 0f);
 
 			if (waypointIndex == mapManager.Waypoints.Count - 1)
 			{
@@ -141,7 +141,7 @@ namespace ClassicTilestorm
 			if (vector == null)
 				return false;
 
-			bool valid = !float.IsNaN(vector.fX) && !float.IsInfinity(vector.fX) && Mathf.Abs(vector.fX) < MaxVectorValue &&
+			var valid = !float.IsNaN(vector.fX) && !float.IsInfinity(vector.fX) && Mathf.Abs(vector.fX) < MaxVectorValue &&
 						 !float.IsNaN(vector.fY) && !float.IsInfinity(vector.fY) && Mathf.Abs(vector.fY) < MaxVectorValue &&
 						 !float.IsNaN(vector.fZ) && !float.IsInfinity(vector.fZ) && Mathf.Abs(vector.fZ) < MaxVectorValue;
 

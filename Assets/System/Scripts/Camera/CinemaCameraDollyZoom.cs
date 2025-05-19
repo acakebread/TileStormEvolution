@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using UnityEngine;
 
 public class CinemaCameraDollyZoom : CinemaCameraBase
@@ -20,18 +19,12 @@ public class CinemaCameraDollyZoom : CinemaCameraBase
 		dollyZoomInitialDistance = 0f;
 	}
 
-	public override void StartSequence(Transform transform, List<Vector3> points)
+	public override void StartSequence(CinemaCameraController _controller)
 	{
-		base.StartSequence(transform, points);
+		base.StartSequence(_controller);
 		if (playerTransform == null)
 			return;
 
-		sequenceTimer = 0f;
-		pauseTimer = 0f;
-		lastPlayerPos = playerTransform.position;
-		smoothedProjectedOffset = Vector3.zero;
-
-		currentMode = CinemaMode.DollyZoom;
 		currentSequenceDuration = DollyZoomSequenceDuration;
 
 		// Set target positions
@@ -51,8 +44,6 @@ public class CinemaCameraDollyZoom : CinemaCameraBase
 		dollyZoomDistance = Mathf.Min(dollyZoomDistance, MaxDollyZoomDistance);
 		originDst = originSrc + dollyZoomDirection * dollyZoomDistance;
 		originDst = new Vector3(originDst.x, height, originDst.z);
-
-		UpdateMapExtents();
 	}
 
 	protected override (Vector3 transOrigin, Vector3 transTarget, float fov) ComputeSequencePositionsAndFov(float easedT, Vector3 playerDelta)
