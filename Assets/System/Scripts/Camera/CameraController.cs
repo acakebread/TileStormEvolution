@@ -181,7 +181,7 @@ public static class CameraController
 		}
 
 		UpdateCamera();
-		//if (true == isCameraShakeEnabled) CameraUtils.ApplyCameraShake(mainCamera);// Apply camera shake
+		if (true == isCameraShakeEnabled) CameraUtils.ApplyCameraShake(mainCamera);// Apply camera shake
 	}
 
 	private static void UpdatePresetMode()
