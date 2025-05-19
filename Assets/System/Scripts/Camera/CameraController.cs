@@ -1,6 +1,5 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
-using System.Linq;
 
 public static class CameraController
 {
@@ -21,7 +20,7 @@ public static class CameraController
 		public Vector3 targetSrc;
 		public Vector3 targetDst;
 		public float smoothing;
-		public float FOV;
+		public float fieldOfView;
 	}
 
 	// Public properties
@@ -77,12 +76,12 @@ public static class CameraController
 		if (mainCamera == null) return;
 		cameraData = new CameraData
 		{
+			smoothing = DefaultSmoothingRate,
 			originSrc = Vector3.zero,
 			targetSrc = Vector3.zero,
 			originDst = Vector3.zero,
 			targetDst = Vector3.zero,
-			smoothing = DefaultSmoothingRate,
-			FOV = mainCamera.fieldOfView
+			fieldOfView = mainCamera.fieldOfView
 		};
 	}
 
@@ -108,7 +107,7 @@ public static class CameraController
 		{
 			previousState = currentState;
 			cameraData = backupData;
-			mainCamera.fieldOfView = cameraData.FOV;
+			mainCamera.fieldOfView = cameraData.fieldOfView;
 			isCameraShakeEnabled = false; // Disable shake when exiting Cinema mode
 		}
 		currentState = value;
@@ -140,9 +139,9 @@ public static class CameraController
 		if (currentState == CameraState.Cinema) cinemaController.UpdatePlayerTransform(transform);
 	}
 
-	public static void SetFocusPoints(List<Vector3> newFocusPoints)
+	public static void SetFocusPoints(List<Vector3> points)
 	{
-		focusPoints = newFocusPoints?.Where(p => p != Vector3.zero && Vector3.Distance(p, Vector3.zero) > 0.1f).ToList() ?? new List<Vector3>();
+		focusPoints = points;
 		if (currentState == CameraState.Cinema) cinemaController.SetFocusPoints(focusPoints);
 	}
 
@@ -210,6 +209,6 @@ public static class CameraController
 		mainCamera.transform.position = cameraData.originSrc;
 		var direction = cameraData.targetSrc - cameraData.originSrc;
 		if (direction.sqrMagnitude > Mathf.Epsilon) mainCamera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
-		mainCamera.fieldOfView = cameraData.FOV;
+		mainCamera.fieldOfView = cameraData.fieldOfView;
 	}
 }

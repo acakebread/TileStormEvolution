@@ -55,7 +55,7 @@ public abstract class CinemaCameraBase
 		{
 			pauseTimer -= Time.deltaTime;
 			if (pauseTimer > 0f)
-				cinemaCameraController.UpdateCameraData(originDst, targetDst, cinemaCameraController.cameraData.FOV);
+				cinemaCameraController.UpdateCameraData(originDst, targetDst, cinemaCameraController.cameraData.fieldOfView);
 			else
 				return false;
 			return true;

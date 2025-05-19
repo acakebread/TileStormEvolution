@@ -43,7 +43,7 @@ public class CinemaCameraController
 			originDst = Vector3.zero,
 			targetSrc = Vector3.zero,
 			targetDst = Vector3.zero,
-			FOV = 45f
+			fieldOfView = 45f
 		};
 
 		playerTransform = null;
@@ -102,7 +102,7 @@ public class CinemaCameraController
 		var interpolate = SmoothingUtils.Smooth(0f, 1f, cameraData.smoothing, Time.deltaTime, TargetFPS);
 		cameraData.originSrc = Vector3.Lerp(cameraData.originSrc, originDst, interpolate);
 		cameraData.targetSrc = Vector3.Lerp(cameraData.targetSrc, targetDst, interpolate);
-		cameraData.FOV = FOV;// Mathf.Lerp(cameraData.FOV, FOV, interpolate); ToDo initialise FOV in StartSequence
+		cameraData.fieldOfView = FOV;// Mathf.Lerp(cameraData.FOV, FOV, interpolate); ToDo initialise FOV in StartSequence
 		return cameraData;
 	}
 
