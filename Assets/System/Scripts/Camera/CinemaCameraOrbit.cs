@@ -65,8 +65,8 @@ public class CinemaCameraOrbit : CinemaCameraBase
 	protected override (Vector3 transOrigin, Vector3 transTarget, float fov) ComputeSequencePositionsAndFov(float easedT, Vector3 playerDelta)
 	{
 		orbitCenter += playerDelta;
-		targetDst = orbitCenter;
-		//targetSrc = targetDst;leave this out for nice lerping of orbit origin
+		targetDst = orbitCenter + smoothedProjectedOffset;
+		targetSrc = Vector3.Lerp(targetSrc, targetDst, SmoothingUtils.Smooth(0.5f, 1f, Time.deltaTime, CinemaCameraController.TargetFPS));
 
 		var transOrigin = SampleOrbitPosition(orbitCenter, Mathf.Lerp(orbitStartAngle, orbitEndAngle, easedT), easedT);
 		var transTarget = Vector3.Lerp(targetSrc, targetDst + smoothedProjectedOffset, easedT);
