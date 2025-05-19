@@ -44,13 +44,13 @@ public class CinemaCameraDollyZoom : CinemaCameraBase
 		dollyZoomDirection = playerTransform.forward.normalized;
 		dollyZoomInitialDistance = initialDistance;
 		originSrc = targetSrc + dollyZoomDirection * initialDistance;
-		originSrc.y = height;
+		originSrc = new Vector3(originSrc.x, height, originSrc.z);
 
 		// Set destination
 		float dollyZoomDistance = dollyZoomInitialDistance * 10f;
 		dollyZoomDistance = Mathf.Min(dollyZoomDistance, MaxDollyZoomDistance);
 		originDst = originSrc + dollyZoomDirection * dollyZoomDistance;
-		originDst.y = height;
+		originDst = new Vector3(originDst.x, height, originDst.z);
 
 		UpdateMapExtents();
 	}
@@ -70,9 +70,7 @@ public class CinemaCameraDollyZoom : CinemaCameraBase
 		// Dynamic FOV
 		float currentDistance = Mathf.Lerp(dollyZoomInitialDistance, dollyZoomInitialDistance * 10f, easedT);
 		currentDistance = Mathf.Min(currentDistance, MaxDollyZoomDistance);
-		float fov = CalculateFovForScreenCoverage(currentDistance);
-
-		return (transOrigin, transTarget, fov);
+		return (transOrigin, transTarget, CalculateFovForScreenCoverage(currentDistance));
 	}
 
 	private float CalculateFovForScreenCoverage(float distance)

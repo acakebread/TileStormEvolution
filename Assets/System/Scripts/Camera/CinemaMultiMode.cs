@@ -106,9 +106,9 @@ public class CinemaMultiMode : CinemaCameraBase
 				originDst = dst;
 				controlPoint = ctrl;
 
-				AdjustHeight(ref originSrc, targetSrc);
-				AdjustHeight(ref originDst, targetDst);
-				AdjustHeight(ref controlPoint, (targetSrc + targetDst) / 2f);
+				originSrc = AdjustHeight(originSrc, targetSrc);
+				originDst = AdjustHeight(originDst, targetDst);
+				controlPoint = AdjustHeight(controlPoint, (targetSrc + targetDst) / 2f);
 			}
 			else
 			{
@@ -116,8 +116,8 @@ public class CinemaMultiMode : CinemaCameraBase
 				originSrc = src;
 				originDst = dst;
 
-				AdjustHeight(ref originSrc, targetSrc);
-				AdjustHeight(ref originDst, targetDst);
+				originSrc = AdjustHeight(originSrc, targetSrc);
+				originDst = AdjustHeight(originDst, targetDst);
 			}
 		}
 
@@ -330,7 +330,7 @@ public class CinemaMultiMode : CinemaCameraBase
 		}
 	}
 
-	private void AdjustHeight(ref Vector3 position, Vector3 target)
+	private Vector3 AdjustHeight(Vector3 position, Vector3 target)
 	{
 		float minRadius = CalculateMinOrbitRadius(position.y, target.y);
 		Vector2 positionXZ = new Vector2(position.x, position.z);
@@ -353,6 +353,7 @@ public class CinemaMultiMode : CinemaCameraBase
 			float idealHeight = target.y + VerticalOffset + distXZ / Mathf.Tan(maxPitchRad);
 			position.y = Mathf.Clamp(idealHeight, MinCameraHeight, MaxCameraHeight);
 		}
+		return position;
 	}
 
 	private Vector3 EvaluateQuadraticBezier(float t, Vector3 p0, Vector3 p1, Vector3 p2)

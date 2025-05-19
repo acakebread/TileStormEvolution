@@ -53,7 +53,7 @@ public static class CameraController
 	private static CameraState currentState = CameraState.Static;
 	private static CameraState previousState = CameraState.Static;
 	private static CameraData currentData;
-	private static CameraData previousData;
+	private static CameraData restoreData;
 	private static Camera mainCamera;
 	private static Transform playerTransform;
 	private static bool enableAutoCinema;
@@ -61,7 +61,6 @@ public static class CameraController
 	private static readonly CinemaCameraController cinemaController = new();
 	private static List<Vector3> focusPoints = new();
 	private static bool isCameraShakeEnabled; // Tracks if camera shake is active
-	private static float shakeSeed; // Seed for Perlin noise
 
 	public static void Reset()
 	{
@@ -70,7 +69,6 @@ public static class CameraController
 		focusPoints.Clear();
 		lastRefreshTime = Time.time;
 		isCameraShakeEnabled = false;
-		shakeSeed = 0f;
 	}
 
 	// Initialization
@@ -80,7 +78,7 @@ public static class CameraController
 		if (mainCamera == null) return;
 
 		if (currentState == CameraState.Cinema)
-			currentData = previousData;
+			currentData = restoreData;
 		else
 		{
 			currentData = new CameraData
@@ -105,23 +103,21 @@ public static class CameraController
 		if (value == CameraState.Cinema && currentState != CameraState.Cinema)
 		{
 			previousState = currentState;
-			previousData = currentData;
-			isCameraShakeEnabled = Random.value < ShakeChance; // 33% chance for shake in Cinema mode
-			shakeSeed = Random.value * 100f; // New seed for shake
+			restoreData = currentData;
 
 			cinemaController.CreateCinemaSequence();
-			cinemaController.Reset();
 			cinemaController.StartCinemaSequence(playerTransform, focusPoints);
-			currentData = cinemaController.GetCinemaData(currentData);
+			currentData = cinemaController.GetCinemaData();
+
+			isCameraShakeEnabled = Random.value < ShakeChance;
 		}
 		else if (value != CameraState.Cinema && currentState == CameraState.Cinema)
 		{
 			previousState = currentState;
-			currentData = previousData;
+			currentData = restoreData;
 			mainCamera.fieldOfView = currentData.fov;
 			isCameraShakeEnabled = false; // Disable shake when exiting Cinema mode
 		}
-		//isCameraShakeEnabled = true;
 		currentState = value;
 	}
 
@@ -184,13 +180,12 @@ public static class CameraController
 
 			case CameraState.Cinema:
 				bool shouldContinue;
-				currentData = cinemaController.UpdateCinemaMode(currentData, mainCamera, out shouldContinue);
+				currentData = cinemaController.UpdateCinemaMode(mainCamera, out shouldContinue);
 				if (false == shouldContinue)
 				{
 					cinemaController.CreateCinemaSequence();
-					cinemaController.Reset();
 					cinemaController.StartCinemaSequence(playerTransform, focusPoints);
-					currentData = cinemaController.GetCinemaData(currentData);
+					currentData = cinemaController.GetCinemaData();
 				}
 				break;
 		}
@@ -232,6 +227,6 @@ public static class CameraController
 		mainCamera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
 
 		// Apply camera shake
-		CameraUtils.ApplyCameraShake(mainCamera, isCameraShakeEnabled, shakeSeed);
+		if (true == isCameraShakeEnabled) CameraUtils.ApplyCameraShake(mainCamera);
 	}
 }

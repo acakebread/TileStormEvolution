@@ -66,8 +66,8 @@ public class CinemaCameraPath : CinemaCameraBase
 		originSrc = src;
 		originDst = dst;
 
-		AdjustHeight(ref originSrc, targetSrc);
-		AdjustHeight(ref originDst, targetDst);
+		originSrc = AdjustHeight(originSrc, targetSrc);
+		originDst = AdjustHeight(originDst, targetDst);
 
 		// Initialize FOV
 		currentFovMax = Random.value < 0.2f ? 60f : FovMax;
@@ -373,7 +373,7 @@ public class CinemaCameraPath : CinemaCameraBase
 		}
 	}
 
-	private void AdjustHeight(ref Vector3 position, Vector3 target)
+	private Vector3 AdjustHeight(Vector3 position, Vector3 target)
 	{
 		Vector2 positionXZ = new Vector2(position.x, position.z);
 		Vector2 targetXZ = new Vector2(target.x, target.z);
@@ -387,5 +387,6 @@ public class CinemaCameraPath : CinemaCameraBase
 			float idealHeight = target.y + VerticalOffset + distXZ / Mathf.Tan(maxPitchRad);
 			position.y = Mathf.Clamp(idealHeight, MinCameraHeight, MaxCameraHeight);
 		}
+		return position;
 	}
 }
