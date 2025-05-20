@@ -12,18 +12,12 @@ public class CinemaCameraDollyZoom : CinemaCameraBase
 	private Vector3 dollyZoomDirection;
 	private float dollyZoomInitialDistance;
 
-	public override void Reset()
+	protected override void Start()
 	{
-		base.Reset();
+		if (playerTransform == null) return;
+
 		dollyZoomDirection = Vector3.zero;
 		dollyZoomInitialDistance = 0f;
-	}
-
-	public override void StartSequence(CinemaCameraController _controller)
-	{
-		base.StartSequence(_controller);
-		if (playerTransform == null)
-			return;
 
 		currentSequenceDuration = DollyZoomSequenceDuration;
 
@@ -46,7 +40,7 @@ public class CinemaCameraDollyZoom : CinemaCameraBase
 		originDst = new Vector3(originDst.x, height, originDst.z);
 	}
 
-	protected override (Vector3 transOrigin, Vector3 transTarget, float fov) ComputeSequencePositionsAndFov(float easedT, Vector3 playerDelta)
+	protected override void UpdateSequenceBespoke(float easedT, Vector3 playerDelta)
 	{
 		// Update positions
 		targetSrc = new Vector3(playerTransform.position.x, VerticalOffset, playerTransform.position.z);
@@ -61,7 +55,6 @@ public class CinemaCameraDollyZoom : CinemaCameraBase
 		// Dynamic FOV
 		float currentDistance = Mathf.Lerp(dollyZoomInitialDistance, dollyZoomInitialDistance * 10f, easedT);
 		currentDistance = Mathf.Min(currentDistance, MaxDollyZoomDistance);
-		return (transOrigin, transTarget, CalculateFovForScreenCoverage(currentDistance));
 	}
 
 	private float CalculateFovForScreenCoverage(float distance)

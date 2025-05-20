@@ -91,7 +91,6 @@ public static class CameraController
 	// State management
 	public static void SetMode(CameraState value)
 	{
-		//value = CameraState.Static;
 		if (value == CameraState.Cinema && currentState != CameraState.Cinema)
 		{
 			previousState = currentState;
@@ -99,7 +98,7 @@ public static class CameraController
 
 			cinemaController.CreateCinemaSequence();
 			cinemaController.StartCinemaSequence(playerTransform, focusPoints);
-			cameraData = cinemaController.CameraData;
+			cameraData = cinemaController.cameraData;
 
 			isCameraShakeEnabled = Random.value < ShakeChance;
 		}
@@ -175,7 +174,7 @@ public static class CameraController
 					cinemaController.CreateCinemaSequence();
 					cinemaController.StartCinemaSequence(playerTransform, focusPoints);
 				}
-				cameraData = cinemaController.CameraData;
+				cameraData = cinemaController.cameraData;
 				break;
 		}
 

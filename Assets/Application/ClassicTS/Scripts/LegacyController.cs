@@ -68,8 +68,7 @@ namespace ClassicTilestorm
 		public void UpdateCamera()
 		{
 			var eggbotController = GamePreview.eggbotController;
-			if (eggbotController != null && eggbotController.eggbotRoot != null)
-				CameraController.SetPlayer(eggbotController.eggbotRoot);
+			if (null != eggbotController && null != eggbotController.eggbotRoot) CameraController.SetPlayer(eggbotController.eggbotRoot);
 			CameraController.Update();
 		}
 

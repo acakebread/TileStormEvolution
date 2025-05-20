@@ -7,8 +7,8 @@ public class CinemaCameraOrbit : CinemaCameraBase
 	private const float FovMin = 35f;
 	private const float FovMax = 55f;
 	protected const float MaxLookAtAngle = 20f;
+	protected const float SmoothingRate = 16f;
 
-	private Vector3 orbitCenter;
 	private float orbitHeightSrc;
 	private float orbitHeightDst;
 	private float currentOrbitRadius;
@@ -16,25 +16,12 @@ public class CinemaCameraOrbit : CinemaCameraBase
 	private float orbitEndAngle;
 	private float currentFovMax;
 
-	public override void Reset()
+	protected override void Start()
 	{
-		base.Reset();
+		if (null == playerTransform) return;
 		currentFovMax = FovMax;
-		orbitCenter = Vector3.zero;
-		orbitHeightSrc = 0f;
-		orbitHeightDst = 0f;
-		currentOrbitRadius = 0f;
-		orbitStartAngle = 0f;
-		orbitEndAngle = 0f;
-	}
 
-	public override void StartSequence(CinemaCameraController _controller)
-	{
-		base.StartSequence(_controller);
-		if (null == playerTransform)
-			return;
-
-		targetSrc = targetDst = orbitCenter = new Vector3(playerTransform.position.x, VerticalOffset, playerTransform.position.z);
+		targetSrc = targetDst = new Vector3(playerTransform.position.x, VerticalOffset, playerTransform.position.z);
 		orbitStartAngle = Random.Range(0f, 360f);
 
 		orbitHeightSrc = Random.Range(MinCameraHeight, MaxCameraHeight);
@@ -45,11 +32,10 @@ public class CinemaCameraOrbit : CinemaCameraBase
 		var minRadius = Mathf.Max(minRadiusSrc, minRadiusDst);
 		currentOrbitRadius = Random.Range(Mathf.Max(minRadius, MinOrbitRadius), MaxOrbitRadius);
 
-		originSrc = SampleOrbitPosition(orbitCenter, orbitStartAngle, 0f);
+		originDst = originSrc = targetSrc + SampleOrbitPosition(orbitStartAngle, orbitEndAngle, 0f);
 		var maxDelta = Mathf.Lerp(360f, 180f, (currentOrbitRadius - MinOrbitRadius) / (MaxOrbitRadius - MinOrbitRadius));
-		var delta = Random.Range(90f, maxDelta) * (Random.value < 0.5f ? 1f : -1f);
+		var delta = Random.Range(120f, maxDelta) * (Random.value < 0.5f ? 1f : -1f);
 		orbitEndAngle = orbitStartAngle + delta;
-		originDst = SampleOrbitPosition(orbitCenter, orbitEndAngle, 1f);
 
 		currentFovMax = Random.value < 0.2f ? 60f : FovMax;
 
@@ -62,26 +48,21 @@ public class CinemaCameraOrbit : CinemaCameraBase
 		}
 	}
 
-	protected override (Vector3 transOrigin, Vector3 transTarget, float fov) ComputeSequencePositionsAndFov(float easedT, Vector3 playerDelta)
+	protected override void UpdateSequenceBespoke(float easedT, Vector3 playerDelta)
 	{
-		orbitCenter += playerDelta;
-		targetDst = orbitCenter + smoothedProjectedOffset;
-		targetSrc = Vector3.Lerp(targetSrc, targetDst, SmoothingUtils.Smooth(0f, 1f, 32, Time.deltaTime, CinemaCameraController.TargetFPS));
+		cinemaCameraController.cameraData.smoothing = SmoothingUtils.Smooth(cinemaCameraController.cameraData.smoothing, SmoothingRate, currentSequenceDuration, Time.deltaTime, CinemaCameraController.TargetFPS);
+		//update target
+		targetDst = predictedPlayerPosition + Vector3.up * VerticalOffset;
 
-		var transOrigin = SampleOrbitPosition(orbitCenter, Mathf.Lerp(orbitStartAngle, orbitEndAngle, easedT), easedT);
-		var transTarget = Vector3.Lerp(targetSrc, targetDst + smoothedProjectedOffset, easedT);
-
-		var fov = Mathf.Lerp(FovMin, currentFovMax, SmoothingUtils.EasePingPong(sequenceTimer / currentSequenceDuration));
-
-		originDst = SampleOrbitPosition(orbitCenter, orbitEndAngle, 1f);//= transOrigin;
-		return (transOrigin, transTarget, fov);
+		//update camera position
+		originDst = targetDst + SampleOrbitPosition(orbitStartAngle, orbitEndAngle, easedT);
+		fieldOfView = Mathf.Lerp(FovMin, currentFovMax, SmoothingUtils.EasePingPong(sequenceTimer / currentSequenceDuration)); ;
 	}
 
-	private Vector3 SampleOrbitPosition(Vector3 center, float angleDegrees, float easedT)
+	private Vector3 SampleOrbitPosition(float angleSrc, float angleDst, float easedT)
 	{
-		var angleRad = angleDegrees * Mathf.Deg2Rad;
-		var offset = new Vector3(Mathf.Cos(angleRad), 0f, Mathf.Sin(angleRad)) * currentOrbitRadius;
-		var position = center + offset;
+		var angleRad = Mathf.Lerp(angleSrc * Mathf.Deg2Rad, angleDst * Mathf.Deg2Rad, easedT);
+		var position = new Vector3(Mathf.Cos(angleRad), 0f, Mathf.Sin(angleRad)) * currentOrbitRadius;
 		position.y = Mathf.Lerp(orbitHeightSrc, orbitHeightDst, SmoothingUtils.Ease(easedT));
 		position.y = Mathf.Clamp(position.y, MinCameraHeight, MaxCameraHeight);
 		return position;

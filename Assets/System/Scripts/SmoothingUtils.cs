@@ -35,6 +35,8 @@ public static class SmoothingUtils
 		return current * (1f - timeAlpha) + target * timeAlpha;
 	}
 
+	public static Vector3 SmoothVector(Vector3 src, Vector3 dst, float n, float deltaTime, float fps = 60f) => new(Smooth(src.x, dst.x, n, deltaTime, fps), Smooth(src.y, dst.y, n, deltaTime, fps), Smooth(src.z, dst.z, n, deltaTime, fps));
+
 	/// <summary>
 	/// Applies a cosine-based easing function to a value, producing a smooth curve from 0 to 1.
 	/// Useful for interpolating animations or transitions with a natural, eased feel.
