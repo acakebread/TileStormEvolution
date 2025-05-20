@@ -1,11 +1,9 @@
 ﻿// Copyright 2019 massivehadron.com ltd. created 25/04/2019 by Andrew Cakebread
 
-using MassiveHadron;
 using MassiveHadronLtd;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
-using UnityEngine.UI;
 
 public class GestureHandler : TouchInterpreter
 {

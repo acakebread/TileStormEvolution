@@ -5,8 +5,6 @@ namespace MassiveHadronLtd
 {
 	public static class CameraController
 	{
-		const float CinemaTimeoutDuration = 5f;
-
 		public enum CameraState
 		{
 			Static,
@@ -22,6 +20,7 @@ namespace MassiveHadronLtd
 		// Common behavior constants
 		private const float TargetFPS = 60f;
 		private const float DefaultSmoothingRate = 64f;
+		private const float CinemaTimeoutDuration = 5f;
 
 		// State-specific constants
 		private static class FollowConfig
