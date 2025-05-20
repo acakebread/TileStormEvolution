@@ -2,7 +2,7 @@
 
 using UnityEngine;
 
-namespace MassiveHadron
+namespace MassiveHadronLtd
 {
 	public class TouchInterpreter : MonoBehaviour
 	{

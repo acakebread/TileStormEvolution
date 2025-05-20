@@ -3,7 +3,7 @@
 using UnityEngine;
 using System.Collections.Generic;
 
-namespace MassiveHadron
+namespace MassiveHadronLtd
 {
 	public static class MultiTouchEmulator
 	{
