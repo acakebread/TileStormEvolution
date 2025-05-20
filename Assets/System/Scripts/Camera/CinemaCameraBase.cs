@@ -30,9 +30,11 @@ public abstract class CinemaCameraBase
 	protected float smoothing { get => cinemaCameraController.cameraData.smoothing; set => cinemaCameraController.cameraData.smoothing = value; }
 	protected List<Vector3> focusPoints => cinemaCameraController.focusPoints;
 
-	public void StartSequence(CinemaCameraController _controller)
+	public void StartSequence(CinemaCameraController controller)
 	{
-		cinemaCameraController = _controller;
+		sequenceTimer = pauseTimer = 0f;//disable sequence by default
+		if (null == controller.playerTransform) return;
+		cinemaCameraController = controller;
 		currentSequenceDuration = DefaultSequenceDuration + Random.Range(-2, 2);
 		sequenceTimer = currentSequenceDuration;
 		pauseTimer = PauseDuration;
@@ -44,8 +46,6 @@ public abstract class CinemaCameraBase
 
 	public bool Update()
 	{
-		if (playerTransform == null) return false;
-
 		// Update sequence timer
 		sequenceTimer -= Time.deltaTime;
 		if (sequenceTimer <= 0f)
@@ -53,6 +53,7 @@ public abstract class CinemaCameraBase
 			// Handle pause state
 			if (pauseTimer <= 0f) return false;
 			pauseTimer -= Time.deltaTime;
+			if (pauseTimer > 0f) UpdateCameraData();
 			return pauseTimer > 0f;
 		}
 
@@ -67,7 +68,16 @@ public abstract class CinemaCameraBase
 		UpdateSequence(easedSequenceTimer);
 
 		lastPlayerPos = playerTransform.position;
+		UpdateCameraData();
 		return true;
+
+		void UpdateCameraData()
+		{
+			var interpolate = SmoothingUtils.Smooth(0f, 1f, smoothing, Time.deltaTime, CinemaCameraController.TargetFPS);
+			originSrc = Vector3.Lerp(originSrc, originDst, interpolate);
+			targetSrc = Vector3.Lerp(targetSrc, targetDst, interpolate);
+			//fovSrc = Mathf.Lerp(fovSrc, fovDst, interpolate); ToDo initialise FOV in StartSequence and lerp
+		}
 	}
 
 	protected abstract void UpdateSequence(float easedSequenceTimer);

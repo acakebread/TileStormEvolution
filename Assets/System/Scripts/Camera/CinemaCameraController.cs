@@ -86,25 +86,12 @@ public class CinemaCameraController
 		}
 	}
 
-	public void UpdateCameraData()
-	{
-		var interpolate = SmoothingUtils.Smooth(0f, 1f, cameraData.smoothing, Time.deltaTime, TargetFPS);
-		cameraData.originSrc = Vector3.Lerp(cameraData.originSrc, cameraData.originDst, interpolate);
-		cameraData.targetSrc = Vector3.Lerp(cameraData.targetSrc, cameraData.targetDst, interpolate);
-		//cameraData.fovSrc = Mathf.Lerp(cameraData.fovSrc, cameraData.fovDst, interpolate); ToDo initialise FOV in StartSequence and lerp
-	}
-
 	//public void CreateCinemaSequence() => cameraSystem = forceDollyZoomMode ? new CinemaCameraDollyZoom() : Random.value < 0.33f ? new CinemaCameraOrbit() : new CinemaCameraPath();
-	public void CreateCinemaSequence() => cameraSystem = Random.value < 0.5f ? new CinemaCameraOrbit() : new CinemaCameraPath();
-	//public void CreateCinemaSequence() => cameraSystem = new CinemaCameraPath();
+	//public void CreateCinemaSequence() => cameraSystem = Random.value < 0.5f ? new CinemaCameraOrbit() : new CinemaCameraPath();
+	public void CreateCinemaSequence() => cameraSystem = new CinemaCameraPath();
 	//public void CreateCinemaSequence() => cameraSystem = new CinemaCameraOrbit();
 
 	public void StartCinemaSequence() => cameraSystem.StartSequence(this);
 
-	public bool UpdateCinemaMode()
-	{
-		var result = cameraSystem.Update();//returns false when complete
-		if (true == result) UpdateCameraData();// Update camera data
-		return result;
-	}
+	public bool UpdateCinemaMode() => cameraSystem.Update();//returns false when complete
 }

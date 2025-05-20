@@ -42,8 +42,8 @@ public class CinemaCameraPath : CinemaCameraBase
 			if (validFocusPoint.Count > 0) startFocusPoint = validFocusPoint[Random.Range(0, validFocusPoint.Count)];
 		}
 
-		targetSrc = new Vector3(startFocusPoint.x, VerticalOffset, startFocusPoint.z);
-		targetDst = new Vector3(playerTransform.position.x, VerticalOffset, playerTransform.position.z);
+		targetSrc = startFocusPoint + Vector3.up * VerticalOffset;
+		targetDst = playerTransform.position + Vector3.up * VerticalOffset;
 
 		// Define lozenge
 		var targetPath = targetDst - targetSrc;
@@ -75,20 +75,20 @@ public class CinemaCameraPath : CinemaCameraBase
 
 	protected override void UpdateSequence(float easedSequenceTimer)
 	{
-		var playerDelta = playerTransform.position - lastPlayerPos;
-		smoothing = SmoothingUtils.Smooth(smoothing, 16, currentSequenceDuration, Time.deltaTime, CinemaCameraController.TargetFPS);
-
 		//update target
 		targetDst = Vector3.Lerp(targetSrc, predictedPlayerPosition + Vector3.up * VerticalOffset, easedSequenceTimer);
 
 		// Update Bezier P1 (camera path mid point) and P2 (camera path Dst) with player movement
+		var playerDelta = playerTransform.position - lastPlayerPos;
 		bezierData.P1 += playerDelta * 0.5f;
 		bezierData.P2 += playerDelta;
 
-		//update camera position
+		//update camera dest position and FOV
 		originDst = EvaluateBezier(easedSequenceTimer);// Evaluate Bezier curve
-
 		fieldOfView = Mathf.Lerp(FovMin, currentFovMax, SmoothingUtils.EasePingPong(sequenceTimer / currentSequenceDuration));
+
+		//update camera lerping
+		smoothing = SmoothingUtils.Smooth(smoothing, 16, currentSequenceDuration, Time.deltaTime, CinemaCameraController.TargetFPS);
 	}
 
 	private Vector3 EvaluateBezier(float t) => QuadraticBezierPoint(t, bezierData.P0, bezierData.P1, bezierData.P2); // Direct evaluation

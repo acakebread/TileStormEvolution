@@ -21,7 +21,7 @@ public class CinemaCameraOrbit : CinemaCameraBase
 		if (null == playerTransform) return;
 		currentFovMax = FovMax;
 
-		targetSrc = targetDst = new Vector3(playerTransform.position.x, VerticalOffset, playerTransform.position.z);
+		targetSrc = targetDst = playerTransform.position + Vector3.up * VerticalOffset;
 		orbitStartAngle = Random.Range(0f, 360f);
 
 		orbitHeightSrc = Random.Range(MinCameraHeight, MaxCameraHeight);
@@ -50,13 +50,15 @@ public class CinemaCameraOrbit : CinemaCameraBase
 
 	protected override void UpdateSequence(float easedSequenceTimer)
 	{
-		smoothing = SmoothingUtils.Smooth(smoothing, SmoothingRate, currentSequenceDuration, Time.deltaTime, CinemaCameraController.TargetFPS);
 		//update target
 		targetDst = predictedPlayerPosition + Vector3.up * VerticalOffset;
 
-		//update camera position
+		//update camera dest position and FOV
 		originDst = targetDst + SampleOrbitPosition(orbitStartAngle, orbitEndAngle, easedSequenceTimer);
 		fieldOfView = Mathf.Lerp(FovMin, currentFovMax, SmoothingUtils.EasePingPong(sequenceTimer / currentSequenceDuration)); ;
+
+		//update camera lerping
+		smoothing = SmoothingUtils.Smooth(smoothing, SmoothingRate, currentSequenceDuration, Time.deltaTime, CinemaCameraController.TargetFPS);
 	}
 
 	private Vector3 SampleOrbitPosition(float angleSrc, float angleDst, float easedT)
