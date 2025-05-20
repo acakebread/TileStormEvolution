@@ -1,10 +1,8 @@
 ﻿// Copyright 2018 massivehadron.com ltd. created 04/04/2018 by Andrew Cakebread
 
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
-namespace Decology
+namespace MassiveHadronLtd
 {
 	public class PreviewCamera : MonoBehaviour
 	{
