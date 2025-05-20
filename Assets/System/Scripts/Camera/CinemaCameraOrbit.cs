@@ -2,12 +2,15 @@ using UnityEngine;
 
 public class CinemaCameraOrbit : CinemaCameraBase
 {
+	private const float VerticalOffset = 0.5f;
 	private const float MinOrbitRadius = 2f;
 	private const float MaxOrbitRadius = 8f;
 	private const float FovMin = 35f;
 	private const float FovMax = 55f;
-	protected const float MaxLookAtAngle = 20f;
-	protected const float SmoothingRate = 16f;
+	private const float MinCameraHeight = 1f;
+	private const float MaxCameraHeight = 3f;
+	private const float MaxLookAtAngle = 20f;
+	private const float SmoothingRate = 16f;
 
 	private float orbitHeightSrc;
 	private float orbitHeightDst;
@@ -21,6 +24,7 @@ public class CinemaCameraOrbit : CinemaCameraBase
 		if (null == playerTransform) return;
 		currentFovMax = FovMax;
 
+		shake = 1f;
 		targetSrc = targetDst = playerTransform.position + Vector3.up * VerticalOffset;
 		orbitStartAngle = Random.Range(0f, 360f);
 

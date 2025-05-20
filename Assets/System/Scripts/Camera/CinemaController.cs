@@ -9,52 +9,33 @@ public static class CinemaController
 	private const float MinDistanceForNewFocusPoint = 3f;
 
 	// Shared state - world data
-	public static List<Vector3> focusPoints = new();
-	private static Bounds mapBounds; // Replaces mapExtentsMin and mapExtentsMax
 	public static Transform playerTransform;
-
+	public static List<Vector3> focusPoints = new();
+	private static Bounds mapBounds;
     private static CinemaCameraBase cameraSystem;
-
-	// Shared state - camera data
-	public static CameraController.CameraData cameraData;
 
 	static CinemaController() => Reset();
 
 	public static void Reset() // Called when a new map is loaded
 	{
 		cameraSystem = null;
-
-		mapBounds = new Bounds(Vector3.zero, Vector3.zero); // Initialize empty bounds
-		focusPoints.Clear();
-		SpatialBucketSystem.Initialize(MinDistanceForNewFocusPoint); // Initialize bucket system
-
-		cameraData = new CameraController.CameraData
-		{
-			smoothing = 64f, // Default smoothing rate
-			originSrc = Vector3.zero,
-			originDst = Vector3.zero,
-			targetSrc = Vector3.zero,
-			targetDst = Vector3.zero,
-			fieldOfView = 45f
-		};
-
 		playerTransform = null;
+		focusPoints.Clear();
+		mapBounds = new Bounds(Vector3.zero, Vector3.zero); // Initialize empty bounds
+		SpatialBucketSystem.Initialize(MinDistanceForNewFocusPoint); // Initialize bucket system
 	}
 
 	public static void SetFocusPoints(List<Vector3> points)
 	{
 		focusPoints = points ?? new List<Vector3>();
 		SpatialBucketSystem.Clear(); // Clear buckets when focus points change
-
-		if (focusPoints.Count > 0)
+		if (focusPoints.Count <= 0) return;
+		mapBounds = new Bounds(focusPoints[0], Vector3.zero); // Initialize bounds
+		foreach (var point in focusPoints)
 		{
-			mapBounds = new Bounds(focusPoints[0], Vector3.zero); // Initialize bounds
-			foreach (var point in focusPoints)
-			{
-				mapBounds.Encapsulate(point); // Expand bounds
-				if (SpatialBucketSystem.CanAddPoint(point))
-					SpatialBucketSystem.AddPoint(point);
-			}
+			mapBounds.Encapsulate(point); // Expand bounds
+			if (SpatialBucketSystem.CanAddPoint(point))
+				SpatialBucketSystem.AddPoint(point);
 		}
 	}
 
@@ -74,21 +55,20 @@ public static class CinemaController
 
 	public static void CreateCinemaSequence()
 	{
-		//cameraSystem = Random.value < 0.33f ? new CinemaCameraDollyZoom() : Random.value < 0.5f ? new CinemaCameraOrbit() : new CinemaCameraPath();
-		cameraSystem = Random.value < 0.5f ? new CinemaCameraOrbit() : new CinemaCameraPath();
+		switch (Random.Range(0, 7))
+		{
+			case 0: case 1: case 2: cameraSystem = new CinemaCameraPath(); break;
+			case 3: case 4: case 5: cameraSystem = new CinemaCameraOrbit(); break;
+			case 6: cameraSystem = new CinemaCameraDollyZoom(); break;
+		}
 		//cameraSystem = new CinemaCameraDollyZoom();
-		//cameraSystem = new CinemaCameraPath();
-		//cameraSystem = new CinemaCameraOrbit();
 	}
 
-	public static void StartCinemaSequence()
-	{
-		if (cameraSystem != null) cameraSystem.StartSequence();
-	}
+	public static void StartCinemaSequence() { if (cameraSystem != null) cameraSystem.StartSequence(); }
 
 	public static bool UpdateCinemaMode() => cameraSystem != null && cameraSystem.Update();
 
-	public static CameraController.CameraData GetCameraData() => cameraData;
+	public static CameraController.CameraData GetCameraData() => cameraSystem.cameraData;
 
 	public static Bounds GetMapBounds() => mapBounds;
 }

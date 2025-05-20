@@ -3,15 +3,18 @@ using System.Linq;
 
 public class CinemaCameraPath : CinemaCameraBase
 {
+	private const float VerticalOffset = 0.5f;
 	private const float MinDistance = 1f;
 	private const float MinFocusPointDistanceFromPlayer = 4f;
 	private const float MaxLookAtAngle = 20f;
 	private const float FovMin = 35f;
 	private const float FovMax = 55f;
-	private const float DebugDrawDuration = 5f;
+	private const float MinCameraHeight = 1.5f;
+	private const float MaxCameraHeight = 4f;
 	private const float TangentLineExtension = 2f;
 	private const bool SortDstNearerPlayer = true;
 
+	private const float DEBUG_DRAW_DURATION = 5f;
 	public static bool DEBUG_VISUALIZE_LOZENGE = true;
 
 	private float currentFovMax;
@@ -31,6 +34,7 @@ public class CinemaCameraPath : CinemaCameraBase
 	{
 		if (null == playerTransform) return;
 
+		shake = 1f;
 		bezierData = default;
 		currentFovMax = FovMax;
 
@@ -67,8 +71,8 @@ public class CinemaCameraPath : CinemaCameraBase
 		// Visualize focus points
 		if (DEBUG_VISUALIZE_LOZENGE)
 		{
-			Debug.DrawRay(targetSrc, Vector3.up * 5f, Color.red, DebugDrawDuration);
-			Debug.DrawRay(targetDst, Vector3.up * 5f, Color.blue, DebugDrawDuration);
+			Debug.DrawRay(targetSrc, Vector3.up * 5f, Color.red, DEBUG_DRAW_DURATION);
+			Debug.DrawRay(targetDst, Vector3.up * 5f, Color.blue, DEBUG_DRAW_DURATION);
 			//Debug.Log($"TargetSrc={targetSrc}, TargetDst={targetDst}, LozengeMajor={lozengeMajor}, LozengeMinor={lozengeMinor}, PathDir={pathDir}, Perpendicular={perpendicular}");
 		}
 	}
@@ -199,29 +203,29 @@ public class CinemaCameraPath : CinemaCameraBase
 		if (DEBUG_VISUALIZE_LOZENGE)
 		{
 			VisualizeLozenge(midPoint, pathDir, perpendicular, lozengeMajor, lozengeMinor, (MinCameraHeight + MaxCameraHeight) / 2f);
-			Debug.DrawRay(perimeterPointSrc, Vector3.up * 5f, Color.yellow, DebugDrawDuration);
-			Debug.DrawRay(perimeterPointDst, Vector3.up * 5f, Color.yellow, DebugDrawDuration);
-			Debug.DrawRay(src, Vector3.up * 3f, Color.green, DebugDrawDuration);
-			Debug.DrawRay(dst, Vector3.up * 3f, flipped ? Color.magenta : Color.green, DebugDrawDuration);
-			Debug.DrawRay(controlPoint.Value, Vector3.up * 4f, Color.yellow, DebugDrawDuration);
+			Debug.DrawRay(perimeterPointSrc, Vector3.up * 5f, Color.yellow, DEBUG_DRAW_DURATION);
+			Debug.DrawRay(perimeterPointDst, Vector3.up * 5f, Color.yellow, DEBUG_DRAW_DURATION);
+			Debug.DrawRay(src, Vector3.up * 3f, Color.green, DEBUG_DRAW_DURATION);
+			Debug.DrawRay(dst, Vector3.up * 3f, flipped ? Color.magenta : Color.green, DEBUG_DRAW_DURATION);
+			Debug.DrawRay(controlPoint.Value, Vector3.up * 4f, Color.yellow, DEBUG_DRAW_DURATION);
 
 			if (tangentPointSrc1.HasValue && tangentPointSrc2.HasValue)
 			{
 				Vector3 tangentSrc1End = tangentPointSrc1.Value + (tangentPointSrc1.Value - src).normalized * TangentLineExtension;
 				Vector3 tangentSrc2End = tangentPointSrc2.Value + (tangentPointSrc2.Value - src).normalized * TangentLineExtension;
-				Debug.DrawLine(src, tangentSrc1End, Color.magenta, DebugDrawDuration);
-				Debug.DrawLine(src, tangentSrc2End, Color.cyan, DebugDrawDuration);
-				Debug.DrawRay(tangentPointSrc1.Value, Vector3.up * 2f, Color.white, DebugDrawDuration);
-				Debug.DrawRay(tangentPointSrc2.Value, Vector3.up * 2f, Color.white, DebugDrawDuration);
+				Debug.DrawLine(src, tangentSrc1End, Color.magenta, DEBUG_DRAW_DURATION);
+				Debug.DrawLine(src, tangentSrc2End, Color.cyan, DEBUG_DRAW_DURATION);
+				Debug.DrawRay(tangentPointSrc1.Value, Vector3.up * 2f, Color.white, DEBUG_DRAW_DURATION);
+				Debug.DrawRay(tangentPointSrc2.Value, Vector3.up * 2f, Color.white, DEBUG_DRAW_DURATION);
 			}
 			if (tangentPointDst1.HasValue && tangentPointDst2.HasValue)
 			{
 				Vector3 tangentDst1End = tangentPointDst1.Value + (tangentPointDst1.Value - dst).normalized * TangentLineExtension;
 				Vector3 tangentDst2End = tangentPointDst2.Value + (tangentPointDst2.Value - dst).normalized * TangentLineExtension;
-				Debug.DrawLine(dst, tangentDst1End, Color.magenta, DebugDrawDuration + 2f);
-				Debug.DrawLine(dst, tangentDst2End, Color.cyan, DebugDrawDuration + 2f);
-				Debug.DrawRay(tangentPointDst1.Value, Vector3.up * 2f, Color.white, DebugDrawDuration + 2f);
-				Debug.DrawRay(tangentPointDst2.Value, Vector3.up * 2f, Color.white, DebugDrawDuration + 2f);
+				Debug.DrawLine(dst, tangentDst1End, Color.magenta, DEBUG_DRAW_DURATION + 2f);
+				Debug.DrawLine(dst, tangentDst2End, Color.cyan, DEBUG_DRAW_DURATION + 2f);
+				Debug.DrawRay(tangentPointDst1.Value, Vector3.up * 2f, Color.white, DEBUG_DRAW_DURATION + 2f);
+				Debug.DrawRay(tangentPointDst2.Value, Vector3.up * 2f, Color.white, DEBUG_DRAW_DURATION + 2f);
 			}
 
 			VisualizeBezierCurve();
@@ -262,7 +266,7 @@ public class CinemaCameraPath : CinemaCameraBase
 		}
 		for (var i = 0; i < segments; i++)
 		{
-			Debug.DrawLine(points[i], points[i + 1], Color.white, DebugDrawDuration);
+			Debug.DrawLine(points[i], points[i + 1], Color.white, DEBUG_DRAW_DURATION);
 		}
 	}
 
@@ -276,10 +280,10 @@ public class CinemaCameraPath : CinemaCameraBase
 			var q1 = Vector3.Lerp(bezierData.P1, bezierData.P2, t); // Q1(t)
 			var b = Vector3.Lerp(q0, q1, t); // B(t)
 
-			Debug.DrawRay(q0, Vector3.up * 1f, Color.red, DebugDrawDuration); // Q0(t)
-			Debug.DrawRay(q1, Vector3.up * 1f, Color.blue, DebugDrawDuration); // Q1(t)
-			Debug.DrawRay(b, Vector3.up * 1.5f, Color.green, DebugDrawDuration); // B(t)
-			Debug.DrawLine(q0, q1, Color.gray, DebugDrawDuration); // Line from Q0 to Q1
+			Debug.DrawRay(q0, Vector3.up * 1f, Color.red, DEBUG_DRAW_DURATION); // Q0(t)
+			Debug.DrawRay(q1, Vector3.up * 1f, Color.blue, DEBUG_DRAW_DURATION); // Q1(t)
+			Debug.DrawRay(b, Vector3.up * 1.5f, Color.green, DEBUG_DRAW_DURATION); // B(t)
+			Debug.DrawLine(q0, q1, Color.gray, DEBUG_DRAW_DURATION); // Line from Q0 to Q1
 		}
 	}
 
@@ -310,7 +314,7 @@ public class CinemaCameraPath : CinemaCameraBase
 		}
 		for (var i = 0; i < segments; i++)
 		{
-			Debug.DrawLine(points[i], points[i + 1], Color.green, DebugDrawDuration);
+			Debug.DrawLine(points[i], points[i + 1], Color.green, DEBUG_DRAW_DURATION);
 		}
 	}
 

@@ -23,8 +23,9 @@ public static class CameraUtils
 
 	private static float effectTime = 0;
 
-	public static void ApplyCameraShake(Camera camera)
+	public static void ApplyCameraShake(Camera camera, float amplitude = 1f)
 	{
+		if (0f == amplitude) return;
 		if (camera == null)
 		{
 			// Reset instability state
@@ -110,7 +111,7 @@ public static class CameraUtils
 		// Rotation shake (pitch and yaw)
 		float pitchShake = (Mathf.PerlinNoise(time * 1.07f + seed, 0f) - 0.5f) * 2f * ShakeRotationAmplitude * scaleMultiplier;
 		float yawShake = (Mathf.PerlinNoise(time * 1.13f + seed, 0f) - 0.5f) * 2f * ShakeRotationAmplitude * scaleMultiplier;
-		Quaternion shakeRot = Quaternion.Euler(pitchShake, yawShake, 0f); // No roll
+		Quaternion shakeRot = Quaternion.Euler(pitchShake * amplitude, yawShake * amplitude, 0f); // No roll
 		camera.transform.rotation = camera.transform.rotation * shakeRot;
 
 		// Debug logging

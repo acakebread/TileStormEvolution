@@ -15,12 +15,13 @@ public static class CameraController
 
 	public struct CameraData
 	{
+		public float smoothing;
 		public Vector3 originSrc;
 		public Vector3 originDst;
 		public Vector3 targetSrc;
 		public Vector3 targetDst;
-		public float smoothing;
 		public float fieldOfView;
+		public float shake;//deviation amplitude
 	}
 
 	// Public properties
@@ -30,9 +31,6 @@ public static class CameraController
 	// Common behavior constants
 	private const float TargetFPS = 60f;
 	private const float DefaultSmoothingRate = 64f;
-
-	// Camera shake constants
-	private const float ShakeChance = 1f;//0.33f; // 33% chance to enable shake in Cinema mode
 
 	// State-specific constants
 	private static class FollowConfig
@@ -48,17 +46,18 @@ public static class CameraController
 		public const float SmoothingN = 32f;
 	}
 
+	// Shared state - camera data//made public for now
+	public static CameraData cameraData;
+
 	// Internal state
 	private static CameraState currentState = CameraState.Static;
 	private static CameraState previousState = CameraState.Static;
 	private static CameraData backupData;
-	private static CameraData cameraData;
 	private static Camera mainCamera = Camera.main;
 	private static Transform playerTransform;
 	private static bool enableAutoCinema;
 	private static float lastRefreshTime;
 	private static List<Vector3> focusPoints = new();
-	private static bool isCameraShakeEnabled; // Tracks if camera shake is active
 
 	public static void Reset()
 	{
@@ -66,7 +65,6 @@ public static class CameraController
 		playerTransform = null;
 		focusPoints.Clear();
 		lastRefreshTime = Time.time;
-		isCameraShakeEnabled = false;
 	}
 
 	// Initialization
@@ -80,7 +78,8 @@ public static class CameraController
 			targetSrc = Vector3.zero,
 			originDst = Vector3.zero,
 			targetDst = Vector3.zero,
-			fieldOfView = mainCamera.fieldOfView
+			fieldOfView = mainCamera.fieldOfView,
+			shake = 0f
 		};
 	}
 
@@ -100,16 +99,13 @@ public static class CameraController
 			CinemaController.SetFocusPoints(focusPoints);
 			CinemaController.CreateCinemaSequence();
 			CinemaController.StartCinemaSequence();
-			cameraData = CinemaController.cameraData;
-
-			isCameraShakeEnabled = Random.value < ShakeChance;
+			cameraData = CinemaController.GetCameraData();
 		}
 		else if (value != CameraState.Cinema && currentState == CameraState.Cinema)
 		{
 			previousState = currentState;
 			cameraData = backupData;
 			mainCamera.fieldOfView = cameraData.fieldOfView;
-			isCameraShakeEnabled = false; // Disable shake when exiting Cinema mode
 		}
 		currentState = value;
 	}
@@ -176,12 +172,12 @@ public static class CameraController
 					CinemaController.CreateCinemaSequence();
 					CinemaController.StartCinemaSequence();
 				}
-				cameraData = CinemaController.cameraData;
+				cameraData = CinemaController.GetCameraData();
 				break;
 		}
 
 		UpdateCamera();
-		if (true == isCameraShakeEnabled) CameraUtils.ApplyCameraShake(mainCamera);// Apply camera shake
+		CameraUtils.ApplyCameraShake(mainCamera, cameraData.shake);// Apply camera shake
 	}
 
 	private static void UpdatePresetMode()
