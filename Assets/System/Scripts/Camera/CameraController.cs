@@ -96,8 +96,11 @@ public static class CameraController
 			previousState = currentState;
 			backupData = cameraData;
 
+			cinemaController.Reset();
+			cinemaController.UpdatePlayerTransform(playerTransform);
+			cinemaController.SetFocusPoints(focusPoints);
 			cinemaController.CreateCinemaSequence();
-			cinemaController.StartCinemaSequence(playerTransform, focusPoints);
+			cinemaController.StartCinemaSequence();
 			cameraData = cinemaController.cameraData;
 
 			isCameraShakeEnabled = Random.value < ShakeChance;
@@ -172,7 +175,7 @@ public static class CameraController
 				if (false == cinemaController.UpdateCinemaMode())
 				{
 					cinemaController.CreateCinemaSequence();
-					cinemaController.StartCinemaSequence(playerTransform, focusPoints);
+					cinemaController.StartCinemaSequence();
 				}
 				cameraData = cinemaController.cameraData;
 				break;

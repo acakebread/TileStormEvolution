@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 public abstract class CinemaCameraBase
 {
@@ -17,69 +18,57 @@ public abstract class CinemaCameraBase
 	protected float currentSequenceDuration;
 
 	//temporary workarounds
-	private Vector3 lastPlayerPos;
+	protected Vector3 lastPlayerPos;
 
-	protected CinemaCameraController cinemaCameraController;
+	private CinemaCameraController cinemaCameraController;
 	protected Transform playerTransform => cinemaCameraController.playerTransform;
 	protected Vector3 originSrc { get => cinemaCameraController.cameraData.originSrc; set => cinemaCameraController.cameraData.originSrc = value; }
 	protected Vector3 originDst { get => cinemaCameraController.cameraData.originDst; set => cinemaCameraController.cameraData.originDst = value; }
 	protected Vector3 targetSrc { get => cinemaCameraController.cameraData.targetSrc; set => cinemaCameraController.cameraData.targetSrc = value; }
 	protected Vector3 targetDst { get => cinemaCameraController.cameraData.targetDst; set => cinemaCameraController.cameraData.targetDst = value; }
 	protected float fieldOfView { get => cinemaCameraController.cameraData.fieldOfView; set => cinemaCameraController.cameraData.fieldOfView = value; }
+	protected float smoothing { get => cinemaCameraController.cameraData.smoothing; set => cinemaCameraController.cameraData.smoothing = value; }
+	protected List<Vector3> focusPoints => cinemaCameraController.focusPoints;
 
 	public void StartSequence(CinemaCameraController _controller)
 	{
 		cinemaCameraController = _controller;
-		currentSequenceDuration = DefaultSequenceDuration;
-		sequenceTimer = pauseTimer = 0f;
+		currentSequenceDuration = DefaultSequenceDuration + Random.Range(-2, 2);
+		sequenceTimer = currentSequenceDuration;
+		pauseTimer = PauseDuration;
 		lastPlayerPos = predictedPlayerPosition = playerTransform.position;
 		Start();
 	}
 
 	protected abstract void Start();
 
-	public bool UpdateSequence()
+	public bool Update()
 	{
-		if (playerTransform == null)
-			return false;
-
-		// Track player movement
-		var posDelta = playerTransform.position - lastPlayerPos;
-		lastPlayerPos = playerTransform.position;
-
-		// Handle pause state
-		if (pauseTimer > 0f)
-		{
-			pauseTimer -= Time.deltaTime;
-			if (pauseTimer <= 0f) return false;
-			cinemaCameraController.UpdateCameraData();
-			return true;
-		}
+		if (playerTransform == null) return false;
 
 		// Update sequence timer
-		sequenceTimer += Time.deltaTime;
-		if (sequenceTimer >= currentSequenceDuration)
+		sequenceTimer -= Time.deltaTime;
+		if (sequenceTimer <= 0f)
 		{
-			sequenceTimer = 0f;
-			pauseTimer = PauseDuration;
-			return true;
+			// Handle pause state
+			if (pauseTimer <= 0f) return false;
+			pauseTimer -= Time.deltaTime;
+			return pauseTimer > 0f;
 		}
 
 		// Smooth projected player position
+		var posDelta = playerTransform.position - lastPlayerPos;
 		predictedPlayerPosition = SmoothingUtils.SmoothVector(predictedPlayerPosition, playerTransform.position + posDelta * 2f, ProjectionSmoothingRate, Time.deltaTime, CinemaCameraController.TargetFPS);
 
 		// Compute eased time
-		var t = currentSequenceDuration > 0 ? Mathf.Clamp01(sequenceTimer / currentSequenceDuration) : 1f;
-		var easedT = SmoothingUtils.Ease(t);
+		var easedSequenceTimer = SmoothingUtils.Ease(currentSequenceDuration > 0 ? 1f - Mathf.Clamp01(sequenceTimer / currentSequenceDuration) : 1f);
 
 		// Compute mode-specific positions and FOV
-		UpdateSequenceBespoke(easedT, posDelta);
+		UpdateSequence(easedSequenceTimer);
 
-		// Update camera data
-		cinemaCameraController.UpdateCameraData();
-
+		lastPlayerPos = playerTransform.position;
 		return true;
 	}
 
-	protected abstract void UpdateSequenceBespoke(float easedT, Vector3 playerDelta);
+	protected abstract void UpdateSequence(float easedSequenceTimer);
 }

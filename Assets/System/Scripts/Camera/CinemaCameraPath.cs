@@ -36,9 +36,9 @@ public class CinemaCameraPath : CinemaCameraBase
 
 		// Select start focus point
 		var startFocusPoint = playerTransform.position;
-		if (cinemaCameraController.focusPoints.Count > 0)
+		if (focusPoints.Count > 0)
 		{
-			var validFocusPoint = cinemaCameraController.focusPoints.Where(p => Vector2.Distance(new Vector2(p.x, p.z), new Vector2(playerTransform.position.x, playerTransform.position.z)) >= MinFocusPointDistanceFromPlayer).ToList();
+			var validFocusPoint = focusPoints.Where(p => Vector2.Distance(new Vector2(p.x, p.z), new Vector2(playerTransform.position.x, playerTransform.position.z)) >= MinFocusPointDistanceFromPlayer).ToList();
 			if (validFocusPoint.Count > 0) startFocusPoint = validFocusPoint[Random.Range(0, validFocusPoint.Count)];
 		}
 
@@ -73,19 +73,20 @@ public class CinemaCameraPath : CinemaCameraBase
 		}
 	}
 
-	protected override void UpdateSequenceBespoke(float easedT, Vector3 playerDelta)
+	protected override void UpdateSequence(float easedSequenceTimer)
 	{
-		cinemaCameraController.cameraData.smoothing = SmoothingUtils.Smooth(cinemaCameraController.cameraData.smoothing, 16, currentSequenceDuration, Time.deltaTime, CinemaCameraController.TargetFPS);
+		var playerDelta = playerTransform.position - lastPlayerPos;
+		smoothing = SmoothingUtils.Smooth(smoothing, 16, currentSequenceDuration, Time.deltaTime, CinemaCameraController.TargetFPS);
 
 		//update target
-		targetDst = Vector3.Lerp(targetSrc, predictedPlayerPosition + Vector3.up * VerticalOffset, easedT);
+		targetDst = Vector3.Lerp(targetSrc, predictedPlayerPosition + Vector3.up * VerticalOffset, easedSequenceTimer);
 
 		// Update Bezier P1 (camera path mid point) and P2 (camera path Dst) with player movement
 		bezierData.P1 += playerDelta * 0.5f;
 		bezierData.P2 += playerDelta;
 
 		//update camera position
-		originDst = EvaluateBezier(easedT);// Evaluate Bezier curve
+		originDst = EvaluateBezier(easedSequenceTimer);// Evaluate Bezier curve
 
 		fieldOfView = Mathf.Lerp(FovMin, currentFovMax, SmoothingUtils.EasePingPong(sequenceTimer / currentSequenceDuration));
 	}

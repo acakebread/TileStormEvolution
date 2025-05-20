@@ -98,8 +98,13 @@ public class CinemaCameraController
 	public void CreateCinemaSequence() => cameraSystem = Random.value < 0.5f ? new CinemaCameraOrbit() : new CinemaCameraPath();
 	//public void CreateCinemaSequence() => cameraSystem = new CinemaCameraPath();
 	//public void CreateCinemaSequence() => cameraSystem = new CinemaCameraOrbit();
-	
-	public void StartCinemaSequence(Transform transform, List<Vector3> points) { playerTransform = null; UpdatePlayerTransform(transform); SetFocusPoints(points); cameraSystem.StartSequence(this); }
 
-	public bool UpdateCinemaMode() => cameraSystem.UpdateSequence();//returns false when complete
+	public void StartCinemaSequence() => cameraSystem.StartSequence(this);
+
+	public bool UpdateCinemaMode()
+	{
+		var result = cameraSystem.Update();//returns false when complete
+		if (true == result) UpdateCameraData();// Update camera data
+		return result;
+	}
 }

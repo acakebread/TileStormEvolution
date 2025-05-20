@@ -40,8 +40,10 @@ public class CinemaCameraDollyZoom : CinemaCameraBase
 		originDst = new Vector3(originDst.x, height, originDst.z);
 	}
 
-	protected override void UpdateSequenceBespoke(float easedT, Vector3 playerDelta)
+	protected override void UpdateSequence(float easedSequenceTimer)
 	{
+		var playerDelta = playerTransform.position - lastPlayerPos;
+
 		// Update positions
 		targetSrc = new Vector3(playerTransform.position.x, VerticalOffset, playerTransform.position.z);
 		targetDst = targetSrc;
@@ -49,11 +51,11 @@ public class CinemaCameraDollyZoom : CinemaCameraBase
 		originDst += playerDelta;
 
 		// Compute interpolated positions
-		Vector3 transOrigin = Vector3.Lerp(originSrc, originDst, easedT);
+		Vector3 transOrigin = Vector3.Lerp(originSrc, originDst, easedSequenceTimer);
 		Vector3 transTarget = targetSrc;
 
 		// Dynamic FOV
-		float currentDistance = Mathf.Lerp(dollyZoomInitialDistance, dollyZoomInitialDistance * 10f, easedT);
+		float currentDistance = Mathf.Lerp(dollyZoomInitialDistance, dollyZoomInitialDistance * 10f, easedSequenceTimer);
 		currentDistance = Mathf.Min(currentDistance, MaxDollyZoomDistance);
 	}
 

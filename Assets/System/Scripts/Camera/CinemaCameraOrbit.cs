@@ -48,14 +48,14 @@ public class CinemaCameraOrbit : CinemaCameraBase
 		}
 	}
 
-	protected override void UpdateSequenceBespoke(float easedT, Vector3 playerDelta)
+	protected override void UpdateSequence(float easedSequenceTimer)
 	{
-		cinemaCameraController.cameraData.smoothing = SmoothingUtils.Smooth(cinemaCameraController.cameraData.smoothing, SmoothingRate, currentSequenceDuration, Time.deltaTime, CinemaCameraController.TargetFPS);
+		smoothing = SmoothingUtils.Smooth(smoothing, SmoothingRate, currentSequenceDuration, Time.deltaTime, CinemaCameraController.TargetFPS);
 		//update target
 		targetDst = predictedPlayerPosition + Vector3.up * VerticalOffset;
 
 		//update camera position
-		originDst = targetDst + SampleOrbitPosition(orbitStartAngle, orbitEndAngle, easedT);
+		originDst = targetDst + SampleOrbitPosition(orbitStartAngle, orbitEndAngle, easedSequenceTimer);
 		fieldOfView = Mathf.Lerp(FovMin, currentFovMax, SmoothingUtils.EasePingPong(sequenceTimer / currentSequenceDuration)); ;
 	}
 
