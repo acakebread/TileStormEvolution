@@ -20,21 +20,19 @@ public abstract class CinemaCameraBase
 	//temporary workarounds
 	protected Vector3 lastPlayerPos;
 
-	private CinemaCameraController cinemaCameraController;
-	protected Transform playerTransform => cinemaCameraController.playerTransform;
-	protected Vector3 originSrc { get => cinemaCameraController.cameraData.originSrc; set => cinemaCameraController.cameraData.originSrc = value; }
-	protected Vector3 originDst { get => cinemaCameraController.cameraData.originDst; set => cinemaCameraController.cameraData.originDst = value; }
-	protected Vector3 targetSrc { get => cinemaCameraController.cameraData.targetSrc; set => cinemaCameraController.cameraData.targetSrc = value; }
-	protected Vector3 targetDst { get => cinemaCameraController.cameraData.targetDst; set => cinemaCameraController.cameraData.targetDst = value; }
-	protected float fieldOfView { get => cinemaCameraController.cameraData.fieldOfView; set => cinemaCameraController.cameraData.fieldOfView = value; }
-	protected float smoothing { get => cinemaCameraController.cameraData.smoothing; set => cinemaCameraController.cameraData.smoothing = value; }
-	protected List<Vector3> focusPoints => cinemaCameraController.focusPoints;
+	protected Transform playerTransform => CinemaController.playerTransform;
+	protected Vector3 originSrc { get => CinemaController.cameraData.originSrc; set => CinemaController.cameraData.originSrc = value; }
+	protected Vector3 originDst { get => CinemaController.cameraData.originDst; set => CinemaController.cameraData.originDst = value; }
+	protected Vector3 targetSrc { get => CinemaController.cameraData.targetSrc; set => CinemaController.cameraData.targetSrc = value; }
+	protected Vector3 targetDst { get => CinemaController.cameraData.targetDst; set => CinemaController.cameraData.targetDst = value; }
+	protected float fieldOfView { get => CinemaController.cameraData.fieldOfView; set => CinemaController.cameraData.fieldOfView = value; }
+	protected float smoothing { get => CinemaController.cameraData.smoothing; set => CinemaController.cameraData.smoothing = value; }
+	protected List<Vector3> focusPoints => CinemaController.focusPoints;
 
-	public void StartSequence(CinemaCameraController controller)
+	public void StartSequence()
 	{
 		sequenceTimer = pauseTimer = 0f;//disable sequence by default
-		if (null == controller.playerTransform) return;
-		cinemaCameraController = controller;
+		if (null == CinemaController.playerTransform) return;
 		currentSequenceDuration = DefaultSequenceDuration + Random.Range(-2, 2);
 		sequenceTimer = currentSequenceDuration;
 		pauseTimer = PauseDuration;
@@ -59,7 +57,7 @@ public abstract class CinemaCameraBase
 
 		// Smooth projected player position
 		var posDelta = playerTransform.position - lastPlayerPos;
-		predictedPlayerPosition = SmoothingUtils.SmoothVector(predictedPlayerPosition, playerTransform.position + posDelta * 2f, ProjectionSmoothingRate, Time.deltaTime, CinemaCameraController.TargetFPS);
+		predictedPlayerPosition = SmoothingUtils.SmoothVector(predictedPlayerPosition, playerTransform.position + posDelta * 2f, ProjectionSmoothingRate, Time.deltaTime, CinemaController.TargetFPS);
 
 		// Compute eased time
 		var easedSequenceTimer = SmoothingUtils.Ease(currentSequenceDuration > 0 ? 1f - Mathf.Clamp01(sequenceTimer / currentSequenceDuration) : 1f);
@@ -73,7 +71,7 @@ public abstract class CinemaCameraBase
 
 		void UpdateCameraData()
 		{
-			var interpolate = SmoothingUtils.Smooth(0f, 1f, smoothing, Time.deltaTime, CinemaCameraController.TargetFPS);
+			var interpolate = SmoothingUtils.Smooth(0f, 1f, smoothing, Time.deltaTime, CinemaController.TargetFPS);
 			originSrc = Vector3.Lerp(originSrc, originDst, interpolate);
 			targetSrc = Vector3.Lerp(targetSrc, targetDst, interpolate);
 			//fovSrc = Mathf.Lerp(fovSrc, fovDst, interpolate); ToDo initialise FOV in StartSequence and lerp

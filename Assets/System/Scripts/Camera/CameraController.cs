@@ -57,13 +57,12 @@ public static class CameraController
 	private static Transform playerTransform;
 	private static bool enableAutoCinema;
 	private static float lastRefreshTime;
-	private static readonly CinemaCameraController cinemaController = new();
 	private static List<Vector3> focusPoints = new();
 	private static bool isCameraShakeEnabled; // Tracks if camera shake is active
 
 	public static void Reset()
 	{
-		cinemaController.Reset();
+		CinemaController.Reset();
 		playerTransform = null;
 		focusPoints.Clear();
 		lastRefreshTime = Time.time;
@@ -96,12 +95,12 @@ public static class CameraController
 			previousState = currentState;
 			backupData = cameraData;
 
-			cinemaController.Reset();
-			cinemaController.UpdatePlayerTransform(playerTransform);
-			cinemaController.SetFocusPoints(focusPoints);
-			cinemaController.CreateCinemaSequence();
-			cinemaController.StartCinemaSequence();
-			cameraData = cinemaController.cameraData;
+			CinemaController.Reset();
+			CinemaController.UpdatePlayerTransform(playerTransform);
+			CinemaController.SetFocusPoints(focusPoints);
+			CinemaController.CreateCinemaSequence();
+			CinemaController.StartCinemaSequence();
+			cameraData = CinemaController.cameraData;
 
 			isCameraShakeEnabled = Random.value < ShakeChance;
 		}
@@ -138,13 +137,13 @@ public static class CameraController
 	{
 		playerTransform = transform;
 		if (currentState == CameraState.Follow) cameraData.targetDst = transform.position;
-		if (currentState == CameraState.Cinema) cinemaController.UpdatePlayerTransform(transform);
+		if (currentState == CameraState.Cinema) CinemaController.UpdatePlayerTransform(transform);
 	}
 
 	public static void SetFocusPoints(List<Vector3> points)
 	{
 		focusPoints = points;
-		if (currentState == CameraState.Cinema) cinemaController.SetFocusPoints(focusPoints);
+		if (currentState == CameraState.Cinema) CinemaController.SetFocusPoints(focusPoints);
 	}
 
 	// Update logic
@@ -172,12 +171,12 @@ public static class CameraController
 				break;
 
 			case CameraState.Cinema:
-				if (false == cinemaController.UpdateCinemaMode())
+				if (false == CinemaController.UpdateCinemaMode())
 				{
-					cinemaController.CreateCinemaSequence();
-					cinemaController.StartCinemaSequence();
+					CinemaController.CreateCinemaSequence();
+					CinemaController.StartCinemaSequence();
 				}
-				cameraData = cinemaController.cameraData;
+				cameraData = CinemaController.cameraData;
 				break;
 		}
 
