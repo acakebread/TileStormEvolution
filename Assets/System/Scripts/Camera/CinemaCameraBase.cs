@@ -16,7 +16,7 @@ public abstract class CinemaCameraBase
 
 	//temporary workarounds
 	protected Vector3 lastPlayerPos;
-	protected Transform playerTransform => CinemaController.playerTransform;
+ 	protected Transform playerTransform => CinemaController.playerTransform;
 	protected List<Vector3> focusPoints => CinemaController.focusPoints;
 
 	protected Vector3 originSrc { get => cameraData.originSrc; set => cameraData.originSrc = value; }
