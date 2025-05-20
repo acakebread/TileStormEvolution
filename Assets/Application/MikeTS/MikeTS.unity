@@ -26,7 +26,7 @@ RenderSettings:
   m_AmbientIntensity: 1
   m_AmbientMode: 3
   m_SubtractiveShadowColor: {r: 0.42, g: 0.478, b: 0.627, a: 1}
-  m_SkyboxMaterial: {fileID: 10304, guid: 0000000000000000f000000000000000, type: 0}
+  m_SkyboxMaterial: {fileID: 2100000, guid: 3110ed60238f6f944b9cd4c95bde74b7, type: 2}
   m_HaloStrength: 0.5
   m_FlareStrength: 1
   m_FlareFadeSpeed: 3
@@ -128,7 +128,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 225821752}
-  - component: {fileID: 225821751}
+  - component: {fileID: 225821753}
   m_Layer: 0
   m_Name: GestureSystem
   m_TagString: Untagged
@@ -136,18 +136,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &225821751
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 225821750}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c3785a1d12188b74da228325b119080c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!4 &225821752
 Transform:
   m_ObjectHideFlags: 0
@@ -163,6 +151,18 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &225821753
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 225821750}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c3785a1d12188b74da228325b119080c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &862124735
 GameObject:
   m_ObjectHideFlags: 0
@@ -193,10 +193,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   loadMapName: Industrial 01
-  scramble: 1
-  show_hidden_tiles: 0
-  show_tile_selection: 0
-  databaseJsonFile: {fileID: 4900000, guid: 6097ca3a5d85a1449ad4721a68c3f4d9, type: 3}
+  scrambled: 1
+  showHiddenTiles: 0
+  showTileSelection: 0
+  launchInCinemaMode: 0
+  databaseJsonFile: {fileID: 4900000, guid: 96c40ca8617a15a4590b9728c168e29a, type: 3}
   geometryPath: ClassicTS/Geometry/
   texturePath: ClassicTS/Textures/
 --- !u!4 &862124737
@@ -347,8 +348,8 @@ Camera:
   m_GameObject: {fileID: 1146321623}
   m_Enabled: 1
   serializedVersion: 2
-  m_ClearFlags: 4
-  m_BackGroundColor: {r: 0.009344964, g: 0.028248498, b: 0.05660379, a: 0}
+  m_ClearFlags: 1
+  m_BackGroundColor: {r: 0, g: 0, b: 0, a: 0}
   m_projectionMatrixMode: 1
   m_GateFitMode: 2
   m_FOVAxisMode: 0
@@ -371,7 +372,7 @@ Camera:
     height: 1
   near clip plane: 0.3
   far clip plane: 1000
-  field of view: 19
+  field of view: 20
   orthographic: 0
   orthographic size: 5
   m_Depth: -1
