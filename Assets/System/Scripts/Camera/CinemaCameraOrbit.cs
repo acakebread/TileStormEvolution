@@ -64,7 +64,7 @@ namespace MassiveHadronLtd
 			fieldOfView = Mathf.Lerp(FovMin, currentFovMax, SmoothingUtils.EasePingPong(sequenceTimer / currentSequenceDuration)); ;
 
 			//update camera lerping
-			smoothing = SmoothingUtils.Smooth(smoothing, SmoothingRate, currentSequenceDuration, Time.deltaTime, CinemaController.TargetFPS);
+			smoothing = SmoothingUtils.Smooth(smoothing, SmoothingRate, currentSequenceDuration, Time.deltaTime, CameraController.TargetFPS);
 		}
 
 		private Vector3 SampleOrbitPosition(float angleSrc, float angleDst, float easedT)

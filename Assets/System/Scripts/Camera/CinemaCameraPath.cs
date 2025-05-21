@@ -94,7 +94,7 @@ namespace MassiveHadronLtd
 			fieldOfView = Mathf.Lerp(FovMin, currentFovMax, SmoothingUtils.EasePingPong(sequenceTimer / currentSequenceDuration));
 
 			//update camera lerping
-			smoothing = SmoothingUtils.Smooth(smoothing, 16, currentSequenceDuration, Time.deltaTime, CinemaController.TargetFPS);
+			smoothing = SmoothingUtils.Smooth(smoothing, 16, currentSequenceDuration, Time.deltaTime, CameraController.TargetFPS);
 		}
 
 		private Vector3 EvaluateBezier(float t) => QuadraticBezierPoint(t, bezierData.P0, bezierData.P1, bezierData.P2); // Direct evaluation

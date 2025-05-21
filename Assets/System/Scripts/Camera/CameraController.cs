@@ -17,12 +17,13 @@ namespace MassiveHadronLtd
 		public static bool CinemaEnabled => enableAutoCinema;
 		public static bool CinemaActive => CameraState.Cinema == currentState;
 
-		// Common behavior constants
-		private const float TargetFPS = 60f;
+		// Constants
+		public const float TargetFPS = 60f;
 		private const float DefaultSmoothingRate = 64f;
 		private const float CinemaTimeoutDuration = 5f;
+		private const int MaxFocusPoints = 50;
+		private const float MinDistanceForNewFocusPoint = 3f;
 
-		// State-specific constants
 		private static class FollowConfig
 		{
 			public const float SmoothingNa = 8f;
@@ -36,31 +37,24 @@ namespace MassiveHadronLtd
 			public const float SmoothingN = 32f;
 		}
 
-		// Shared state - camera data//made public for now
+		// Shared state
+		public static List<Vector3> focusPoints = new();
+		public static Transform playerTransform;
 		public static CameraData cameraData;
 
-		// Internal state
-		private static CameraState currentState = CameraState.Static;
-		private static CameraState previousState = CameraState.Static;
 		private static CameraData backupData;
 		private static Camera mainCamera = Camera.main;
-		private static Transform playerTransform;
+		private static CameraState currentState = CameraState.Static;
+		private static CameraState previousState = CameraState.Static;
 		private static bool enableAutoCinema;
 		private static float lastRefreshTime;
-		private static List<Vector3> focusPoints = new();
 
+		private static Bounds mapBounds;
+		private static CinemaCameraBase cinemaSystem;
+
+		// Reset all systems
 		public static void Reset()
 		{
-			CinemaController.Reset();
-			playerTransform = null;
-			focusPoints.Clear();
-			lastRefreshTime = Time.time;
-		}
-
-		// Initialization
-		public static void Initialize()
-		{
-			if (mainCamera == null) return;
 			cameraData = new CameraData
 			{
 				smoothing = DefaultSmoothingRate,
@@ -71,12 +65,17 @@ namespace MassiveHadronLtd
 				fieldOfView = mainCamera.fieldOfView,
 				shake = 0f
 			};
+
+			playerTransform = null;
+			focusPoints.Clear();
+			lastRefreshTime = Time.time;
+			mapBounds = new Bounds(Vector3.zero, Vector3.zero);
+			cinemaSystem = null;
+			SpatialBucketSystem.Initialize(MinDistanceForNewFocusPoint);
 		}
 
-		// Cinema controls
 		public static void SetAutoCinema(bool allow = true) => enableAutoCinema = allow;
 
-		// State management
 		public static void SetMode(CameraState value)
 		{
 			if (value == CameraState.Cinema && currentState != CameraState.Cinema)
@@ -84,12 +83,15 @@ namespace MassiveHadronLtd
 				previousState = currentState;
 				backupData = cameraData;
 
-				CinemaController.Reset();
-				CinemaController.UpdatePlayerTransform(playerTransform);
-				CinemaController.SetFocusPoints(focusPoints);
-				CinemaController.CreateCinemaSequence();
-				CinemaController.StartCinemaSequence();
-				cameraData = CinemaController.GetCameraData();
+				// Initialize cinema
+				mapBounds = new Bounds(Vector3.zero, Vector3.zero);
+				SpatialBucketSystem.Initialize(MinDistanceForNewFocusPoint);
+				//UpdatePlayerTransform(playerTransform);
+				//SetFocusPoints(focusPoints);
+				cinemaSystem = CreateCinemaSequence();
+				cinemaSystem.StartSequence();
+
+				cameraData = cinemaSystem.cameraData;
 			}
 			else if (value != CameraState.Cinema && currentState == CameraState.Cinema)
 			{
@@ -100,39 +102,17 @@ namespace MassiveHadronLtd
 			currentState = value;
 		}
 
-		public static void Refresh(float time)
+		private static CinemaCameraBase CreateCinemaSequence()
 		{
-			lastRefreshTime = time;
-			if (currentState == CameraState.Cinema) SetMode(previousState);
+			switch (Random.Range(0, 7))
+			{
+				case 0: case 1: case 2: return new CinemaCameraPath();
+				case 3: case 4: case 5: return new CinemaCameraOrbit();
+				case 6: return new CinemaCameraDollyZoom();
+			}
+			return null;
 		}
 
-		// Position setters
-		public static void SetOrigin(Vector3 value)
-		{
-			cameraData.originDst = value;
-			if (currentState == CameraState.Static) cameraData.originSrc = value;
-		}
-
-		public static void SetTarget(Vector3 value)
-		{
-			cameraData.targetDst = value;
-			if (currentState == CameraState.Static) cameraData.targetSrc = value;
-		}
-
-		public static void SetPlayer(Transform transform)
-		{
-			playerTransform = transform;
-			if (currentState == CameraState.Follow) cameraData.targetDst = transform.position;
-			if (currentState == CameraState.Cinema) CinemaController.UpdatePlayerTransform(transform);
-		}
-
-		public static void SetFocusPoints(List<Vector3> points)
-		{
-			focusPoints = points;
-			if (currentState == CameraState.Cinema) CinemaController.SetFocusPoints(focusPoints);
-		}
-
-		// Update logic
 		public static void Update()
 		{
 			if (mainCamera == null) return;
@@ -157,17 +137,26 @@ namespace MassiveHadronLtd
 					break;
 
 				case CameraState.Cinema:
-					if (false == CinemaController.UpdateCinemaMode())
+					if (cinemaSystem == null || !cinemaSystem.Update())
 					{
-						CinemaController.CreateCinemaSequence();
-						CinemaController.StartCinemaSequence();
+						cinemaSystem = CreateCinemaSequence();
+						cinemaSystem.StartSequence();
 					}
-					cameraData = CinemaController.GetCameraData();
+					cameraData = cinemaSystem.cameraData;
 					break;
 			}
 
 			UpdateCamera();
-			CameraUtils.ApplyCameraShake(mainCamera, cameraData.shake);// Apply camera shake
+			CameraUtils.ApplyCameraShake(mainCamera, cameraData.shake);
+
+			static void UpdateCamera()
+			{
+				mainCamera.transform.position = cameraData.originSrc;
+				var direction = cameraData.targetSrc - cameraData.originSrc;
+				if (direction.sqrMagnitude > Mathf.Epsilon)
+					mainCamera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
+				mainCamera.fieldOfView = cameraData.fieldOfView;
+			}
 		}
 
 		private static void UpdatePresetMode()
@@ -191,12 +180,68 @@ namespace MassiveHadronLtd
 			cameraData.originSrc = Vector3.Lerp(cameraData.originSrc, idealPos, followLerp);
 		}
 
-		public static void UpdateCamera()
+		public static void Refresh(float time)
 		{
-			mainCamera.transform.position = cameraData.originSrc;
-			var direction = cameraData.targetSrc - cameraData.originSrc;
-			if (direction.sqrMagnitude > Mathf.Epsilon) mainCamera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
-			mainCamera.fieldOfView = cameraData.fieldOfView;
+			lastRefreshTime = time;
+			if (currentState == CameraState.Cinema)
+				SetMode(previousState);
 		}
+
+		public static void SetOrigin(Vector3 value)
+		{
+			cameraData.originDst = value;
+			if (currentState == CameraState.Static)
+				cameraData.originSrc = value;
+		}
+
+		public static void SetTarget(Vector3 value)
+		{
+			cameraData.targetDst = value;
+			if (currentState == CameraState.Static)
+				cameraData.targetSrc = value;
+		}
+
+		public static void SetPlayer(Transform transform)
+		{
+			playerTransform = transform;
+			if (currentState == CameraState.Follow)
+				cameraData.targetDst = transform.position;
+			if (currentState == CameraState.Cinema)
+				UpdatePlayerTransform(transform);
+		}
+
+		public static void SetFocusPoints(List<Vector3> points)
+		{
+			focusPoints = points ?? new List<Vector3>();
+			SpatialBucketSystem.Clear();
+			if (focusPoints.Count <= 0) return;
+			mapBounds = new Bounds(focusPoints[0], Vector3.zero);
+			foreach (var point in focusPoints)
+			{
+				mapBounds.Encapsulate(point);
+				if (SpatialBucketSystem.CanAddPoint(point))
+					SpatialBucketSystem.AddPoint(point);
+			}
+		}
+
+		private static void UpdatePlayerTransform(Transform transform)
+		{
+			playerTransform = transform;
+			if (null  == playerTransform || !SpatialBucketSystem.CanAddPoint(playerTransform.position))
+				return;
+
+			var pos = playerTransform.position;
+			mapBounds.Encapsulate(pos);
+			focusPoints.Add(pos);
+			SpatialBucketSystem.AddPoint(pos);
+
+			if (focusPoints.Count > MaxFocusPoints)
+			{
+				SpatialBucketSystem.RemovePoint(focusPoints[0]);
+				focusPoints.RemoveAt(0);
+			}
+		}
+
+		//public static Bounds GetMapBounds() => mapBounds;
 	}
 }

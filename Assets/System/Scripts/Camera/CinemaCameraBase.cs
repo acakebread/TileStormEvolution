@@ -18,8 +18,8 @@ namespace MassiveHadronLtd
 
 		//temporary workarounds
 		protected Vector3 lastPlayerPos;
-		protected Transform playerTransform => CinemaController.playerTransform;
-		protected List<Vector3> focusPoints => CinemaController.focusPoints;
+		protected Transform playerTransform => CameraController.playerTransform;
+		protected List<Vector3> focusPoints => CameraController.focusPoints;
 
 		protected Vector3 originSrc { get => cameraData.originSrc; set => cameraData.originSrc = value; }
 		protected Vector3 originDst { get => cameraData.originDst; set => cameraData.originDst = value; }
@@ -34,7 +34,7 @@ namespace MassiveHadronLtd
 		public virtual void StartSequence()
 		{
 			sequenceTimer = pauseTimer = 0f;//disable sequence by default
-			if (null == CinemaController.playerTransform) return;
+			if (null == CameraController.playerTransform) return;
 
 			cameraData = new CameraData
 			{
@@ -69,7 +69,7 @@ namespace MassiveHadronLtd
 			{
 				// Smooth projected player position
 				var posDelta = playerTransform.position - lastPlayerPos;
-				predictedPlayerPosition = SmoothingUtils.SmoothVector(predictedPlayerPosition, playerTransform.position + posDelta * 2f, ProjectionSmoothingRate, Time.deltaTime, CinemaController.TargetFPS);
+				predictedPlayerPosition = SmoothingUtils.SmoothVector(predictedPlayerPosition, playerTransform.position + posDelta * 2f, ProjectionSmoothingRate, Time.deltaTime, CameraController.TargetFPS);
 
 				// Compute eased time
 				var easedSequenceTimer = SmoothingUtils.Ease(currentSequenceDuration > 0 ? 1f - Mathf.Clamp01(sequenceTimer / currentSequenceDuration) : 1f);
@@ -80,7 +80,7 @@ namespace MassiveHadronLtd
 				lastPlayerPos = playerTransform.position;
 			}
 
-			var interpolate = SmoothingUtils.Smooth(0f, 1f, smoothing, Time.deltaTime, CinemaController.TargetFPS);
+			var interpolate = SmoothingUtils.Smooth(0f, 1f, smoothing, Time.deltaTime, CameraController.TargetFPS);
 			originSrc = Vector3.Lerp(originSrc, originDst, interpolate);
 			targetSrc = Vector3.Lerp(targetSrc, targetDst, interpolate);
 			//fovSrc = Mathf.Lerp(fovSrc, fovDst, interpolate); ToDo initialise FOV in StartSequence and lerp

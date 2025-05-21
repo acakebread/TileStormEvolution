@@ -14,7 +14,6 @@ namespace ClassicTilestorm
 		public void Reset()
 		{
 			CameraController.Reset();
-			CameraController.Initialize();
 			CameraController.SetMode(CameraController.CameraState.Static);
 
 			var mapManager = GamePreview.mapManager;
@@ -34,7 +33,7 @@ namespace ClassicTilestorm
 					CameraController.SetOrigin(new Vector3(0f, 14f, -14f));
 					CameraController.SetTarget(Vector3.zero);
 				}
-				CameraController.UpdateCamera();
+				//CameraController.UpdateCamera();
 				return;
 			}
 
@@ -56,7 +55,7 @@ namespace ClassicTilestorm
 			CameraController.SetTarget(dstPos);
 			CameraController.SetMode(CameraController.CameraState.Follow);
 
-			CameraController.UpdateCamera();
+			//CameraController.UpdateCamera();
 
 			if (eggbotController != null)
 			{
