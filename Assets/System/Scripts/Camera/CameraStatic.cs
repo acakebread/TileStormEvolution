@@ -2,7 +2,7 @@ namespace MassiveHadronLtd
 {
 	public class CameraStatic : CameraBase
 	{
-		public override void Start() { }// { cameraData = CameraController.defaultCameraData; }
+		public override void Start() { }
 
 		public override bool Update() => true;
 	}
