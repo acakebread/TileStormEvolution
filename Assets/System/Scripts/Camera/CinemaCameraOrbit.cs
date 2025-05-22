@@ -21,10 +21,9 @@ namespace MassiveHadronLtd
 		private float orbitEndAngle;
 		private float currentFovMax;
 
-		protected override void Start()
+		protected override void StartCinemaSequence()
 		{
 			if (null == playerTransform) return;
-			currentFovMax = FovMax;
 
 			shake = 1f;
 			targetSrc = targetDst = playerTransform.position + Vector3.up * VerticalOffset;
@@ -54,7 +53,7 @@ namespace MassiveHadronLtd
 			}
 		}
 
-		protected override void UpdateSequence(float easedSequenceTimer)
+		protected override void UpdateCinemaSequence(float easedSequenceTimer)
 		{
 			//update target
 			targetDst = predictedPlayerPosition + Vector3.up * VerticalOffset;
@@ -64,7 +63,7 @@ namespace MassiveHadronLtd
 			fieldOfView = Mathf.Lerp(FovMin, currentFovMax, SmoothingUtils.EasePingPong(sequenceTimer / currentSequenceDuration)); ;
 
 			//update camera lerping
-			smoothing = SmoothingUtils.Smooth(smoothing, SmoothingRate, currentSequenceDuration, Time.deltaTime, CameraController.TargetFPS);
+			smoothing = SmoothingUtils.Smooth(smoothing, SmoothingRate, currentSequenceDuration, Time.deltaTime, CameraData.TargetFPS);
 		}
 
 		private Vector3 SampleOrbitPosition(float angleSrc, float angleDst, float easedT)

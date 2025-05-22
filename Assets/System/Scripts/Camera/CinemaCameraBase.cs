@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace MassiveHadronLtd
 {
-	public abstract class CinemaCameraBase
+	public abstract class CinemaCameraBase : CameraBase
 	{
 		// Shared constants
 		protected const float PauseDuration = 1.5f;
@@ -29,9 +29,7 @@ namespace MassiveHadronLtd
 		protected float smoothing { get => cameraData.smoothing; set => cameraData.smoothing = value; }
 		protected float shake { get => cameraData.shake; set => cameraData.shake = value; }
 
-		public CameraData cameraData;
-
-		public virtual void StartSequence()
+		public override void Start()
 		{
 			sequenceTimer = pauseTimer = 0f;//disable sequence by default
 			if (null == CameraController.playerTransform) return;
@@ -50,12 +48,12 @@ namespace MassiveHadronLtd
 			sequenceTimer = currentSequenceDuration;
 			pauseTimer = PauseDuration;
 			lastPlayerPos = predictedPlayerPosition = playerTransform.position;
-			Start();
+			StartCinemaSequence();
 		}
 
-		protected abstract void Start();
+		protected abstract void StartCinemaSequence();
 
-		public virtual bool Update()
+		public override bool Update()
 		{
 			// Update sequence timer
 			sequenceTimer -= Time.deltaTime;
@@ -69,24 +67,24 @@ namespace MassiveHadronLtd
 			{
 				// Smooth projected player position
 				var posDelta = playerTransform.position - lastPlayerPos;
-				predictedPlayerPosition = SmoothingUtils.SmoothVector(predictedPlayerPosition, playerTransform.position + posDelta * 2f, ProjectionSmoothingRate, Time.deltaTime, CameraController.TargetFPS);
+				predictedPlayerPosition = SmoothingUtils.SmoothVector(predictedPlayerPosition, playerTransform.position + posDelta * 2f, ProjectionSmoothingRate, Time.deltaTime, CameraData.TargetFPS);
 
 				// Compute eased time
 				var easedSequenceTimer = SmoothingUtils.Ease(currentSequenceDuration > 0 ? 1f - Mathf.Clamp01(sequenceTimer / currentSequenceDuration) : 1f);
 
 				// Compute mode-specific positions and FOV
-				UpdateSequence(easedSequenceTimer);
+				UpdateCinemaSequence(easedSequenceTimer);
 
 				lastPlayerPos = playerTransform.position;
 			}
 
-			var interpolate = SmoothingUtils.Smooth(0f, 1f, smoothing, Time.deltaTime, CameraController.TargetFPS);
+			var interpolate = SmoothingUtils.Smooth(0f, 1f, smoothing, Time.deltaTime, CameraData.TargetFPS);
 			originSrc = Vector3.Lerp(originSrc, originDst, interpolate);
 			targetSrc = Vector3.Lerp(targetSrc, targetDst, interpolate);
 			//fovSrc = Mathf.Lerp(fovSrc, fovDst, interpolate); ToDo initialise FOV in StartSequence and lerp
 			return true;
 		}
 
-		protected abstract void UpdateSequence(float easedSequenceTimer);
+		protected abstract void UpdateCinemaSequence(float easedSequenceTimer);
 	}
 }

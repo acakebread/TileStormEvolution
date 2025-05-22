@@ -11,5 +11,8 @@ namespace MassiveHadronLtd
 		public Vector3 targetDst;
 		public float fieldOfView;
 		public float shake;//deviation amplitude
+
+		public const float TargetFPS = 60f;
+		public const float DefaultSmoothingRate = 64f;
 	}
 }

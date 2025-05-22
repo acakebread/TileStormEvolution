@@ -17,7 +17,7 @@ namespace MassiveHadronLtd
 		private Vector3 dollyZoomDirection;
 		private float dollyZoomInitialDistance;
 
-		protected override void Start()
+		protected override void StartCinemaSequence()
 		{
 			if (playerTransform == null) return;
 
@@ -46,7 +46,7 @@ namespace MassiveHadronLtd
 			//originDst = new Vector3(originDst.x, dollyHeight, originDst.z);
 		}
 
-		protected override void UpdateSequence(float easedSequenceTimer)
+		protected override void UpdateCinemaSequence(float easedSequenceTimer)
 		{
 			targetDst = targetSrc = new Vector3(playerTransform.position.x, VerticalOffset, playerTransform.position.z);
 

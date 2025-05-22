@@ -32,7 +32,7 @@ namespace MassiveHadronLtd
 							   //public AnimationCurve curveZ;
 		}
 
-		protected override void Start()
+		protected override void StartCinemaSequence()
 		{
 			if (null == playerTransform) return;
 
@@ -79,7 +79,7 @@ namespace MassiveHadronLtd
 			}
 		}
 
-		protected override void UpdateSequence(float easedSequenceTimer)
+		protected override void UpdateCinemaSequence(float easedSequenceTimer)
 		{
 			//update target
 			targetDst = Vector3.Lerp(targetSrc, predictedPlayerPosition + Vector3.up * VerticalOffset, easedSequenceTimer);
@@ -94,7 +94,7 @@ namespace MassiveHadronLtd
 			fieldOfView = Mathf.Lerp(FovMin, currentFovMax, SmoothingUtils.EasePingPong(sequenceTimer / currentSequenceDuration));
 
 			//update camera lerping
-			smoothing = SmoothingUtils.Smooth(smoothing, 16, currentSequenceDuration, Time.deltaTime, CameraController.TargetFPS);
+			smoothing = SmoothingUtils.Smooth(smoothing, 16, currentSequenceDuration, Time.deltaTime, CameraData.TargetFPS);
 		}
 
 		private Vector3 EvaluateBezier(float t) => QuadraticBezierPoint(t, bezierData.P0, bezierData.P1, bezierData.P2); // Direct evaluation

@@ -7,6 +7,7 @@ namespace MassiveHadronLtd
 	{
 		public enum CameraState
 		{
+			Null,
 			Static,
 			Preset,
 			Follow,
@@ -18,87 +19,142 @@ namespace MassiveHadronLtd
 		public static bool CinemaActive => CameraState.Cinema == currentState;
 
 		// Constants
-		public const float TargetFPS = 60f;
-		private const float DefaultSmoothingRate = 64f;
 		private const float CinemaTimeoutDuration = 5f;
 		private const int MaxFocusPoints = 50;
 		private const float MinDistanceForNewFocusPoint = 3f;
 
-		private static class FollowConfig
-		{
-			public const float SmoothingNa = 8f;
-			public const float SmoothingNb = 64f;
-			public const float IdealDistance = 14f;
-			public const float IdealDistanceHorizontalScale = 1.4f;
-		}
+		//private static class FollowConfig
+		//{
+		//	public const float SmoothingNa = 8f;
+		//	public const float SmoothingNb = 64f;
+		//	public const float IdealDistance = 14f;
+		//	public const float IdealDistanceHorizontalScale = 1.4f;
+		//}
 
-		private static class PresetConfig
-		{
-			public const float SmoothingN = 32f;
-		}
+		//private static class PresetConfig
+		//{
+		//	public const float SmoothingN = 32f;
+		//}
 
 		// Shared state
 		public static List<Vector3> focusPoints = new();
 		public static Transform playerTransform;
 		public static CameraData cameraData;
+		public static CameraData defaultCameraData;
 
-		private static CameraData backupData;
-		private static Camera mainCamera = Camera.main;
-		private static CameraState currentState = CameraState.Static;
-		private static CameraState previousState = CameraState.Static;
+		//private static CameraData backupData;
+		private static CameraData restoreData;
+		public static Camera mainCamera = Camera.main;
+		private static CameraState currentState = CameraState.Null;
+		private static CameraState previousState = CameraState.Null;
 		private static bool enableAutoCinema;
 		private static float lastRefreshTime;
 
 		private static Bounds mapBounds;
-		private static CinemaCameraBase cinemaSystem;
+		private static CameraBase cameraSystem;
 
 		// Reset all systems
-		public static void Reset()
+		public static void Reset()//called on load new map
 		{
-			cameraData = new CameraData
+			//defaultCameraData = new CameraData
+			//{
+			//	smoothing = CameraData.DefaultSmoothingRate,
+			//	originSrc = Vector3.zero,
+			//	targetSrc = Vector3.zero,
+			//	originDst = Vector3.zero,
+			//	targetDst = Vector3.zero,
+			//	fieldOfView = mainCamera.fieldOfView,
+			//	shake = 0f
+			//};
+
+			if (null == cameraSystem)
 			{
-				smoothing = DefaultSmoothingRate,
-				originSrc = Vector3.zero,
-				targetSrc = Vector3.zero,
-				originDst = Vector3.zero,
-				targetDst = Vector3.zero,
-				fieldOfView = mainCamera.fieldOfView,
-				shake = 0f
-			};
+				restoreData = new CameraData
+				{
+					smoothing = CameraData.DefaultSmoothingRate,
+					originSrc = Vector3.zero,
+					targetSrc = Vector3.zero,
+					originDst = Vector3.zero,
+					targetDst = Vector3.zero,
+					fieldOfView = mainCamera.fieldOfView,
+					shake = 0f
+				};
+			}
+			//cameraData = new CameraData
+			//{
+			//	smoothing = CameraData.DefaultSmoothingRate,
+			//	originSrc = Vector3.zero,
+			//	targetSrc = Vector3.zero,
+			//	originDst = Vector3.zero,
+			//	targetDst = Vector3.zero,
+			//	fieldOfView = mainCamera.fieldOfView,
+			//	shake = 0f
+			//};
 
 			playerTransform = null;
 			focusPoints.Clear();
 			lastRefreshTime = Time.time;
 			mapBounds = new Bounds(Vector3.zero, Vector3.zero);
-			cinemaSystem = null;
 			SpatialBucketSystem.Initialize(MinDistanceForNewFocusPoint);
+			//cameraSystem = new CameraStatic();//default to static
+			SetMode(CameraState.Static);
+			cameraData = restoreData;// cameraSystem.cameraData;
 		}
 
 		public static void SetAutoCinema(bool allow = true) => enableAutoCinema = allow;
 
 		public static void SetMode(CameraState value)
 		{
-			if (value == CameraState.Cinema && currentState != CameraState.Cinema)
-			{
-				previousState = currentState;
-				backupData = cameraData;
+			//if (value == CameraState.Cinema && currentState != CameraState.Cinema)
+			//{
+			//	previousState = currentState;
+			//	//backupData = cameraData;
 
-				// Initialize cinema
-				mapBounds = new Bounds(Vector3.zero, Vector3.zero);
-				SpatialBucketSystem.Initialize(MinDistanceForNewFocusPoint);
-				//UpdatePlayerTransform(playerTransform);
-				//SetFocusPoints(focusPoints);
-				cinemaSystem = CreateCinemaSequence();
-				cinemaSystem.StartSequence();
+			//	// Initialize cinema
+			//	cameraSystem = CreateCinemaSequence();
+			//	cameraSystem.Start();
+			//	cameraData = cameraSystem.cameraData;
+			//}
+			//else if (value != CameraState.Cinema && currentState == CameraState.Cinema)
+			//{
+			//	previousState = currentState;
+			//	cameraData = backupData;
+			//}
 
-				cameraData = cinemaSystem.cameraData;
-			}
-			else if (value != CameraState.Cinema && currentState == CameraState.Cinema)
+			//restoreData = null != cameraSystem ? cameraSystem.cameraData : defaultCameraData;
+
+			//if (CameraState.Cinema != previousState && value != previousState && null != cameraSystem)
+			if (CameraState.Cinema != currentState && null != cameraSystem) 
+				restoreData = cameraSystem.cameraData;
+
+			//var currentData = null != cameraSystem ? cameraSystem.cameraData : defaultCameraData;
+			switch (value)
 			{
-				previousState = currentState;
-				cameraData = backupData;
-				mainCamera.fieldOfView = cameraData.fieldOfView;
+				case CameraState.Static:
+					cameraSystem = new CameraStatic();
+					cameraSystem.cameraData = restoreData;
+					break;
+
+				case CameraState.Preset:
+					cameraSystem = new CameraPreset();
+					cameraSystem.cameraData = restoreData;
+					break;
+
+				case CameraState.Follow:
+					cameraSystem = new CameraFollow();
+					cameraSystem.cameraData = restoreData;
+					break;
+
+				case CameraState.Cinema:
+					cameraSystem = CreateCinemaSequence();
+					break;
 			}
+
+			cameraSystem.Start();
+			cameraData = cameraSystem.cameraData;
+			mainCamera.fieldOfView = cameraData.fieldOfView;
+
+			previousState = currentState;
 			currentState = value;
 		}
 
@@ -129,23 +185,26 @@ namespace MassiveHadronLtd
 					break;
 
 				case CameraState.Preset:
-					UpdatePresetMode();
+					//UpdatePresetMode();
+					cameraSystem.Update();
 					break;
 
 				case CameraState.Follow:
-					UpdateFollowMode();
+					//UpdateFollowMode();
+					cameraSystem.Update();
 					break;
 
 				case CameraState.Cinema:
-					if (cinemaSystem == null || !cinemaSystem.Update())
+					if (cameraSystem == null || !cameraSystem.Update())
 					{
-						cinemaSystem = CreateCinemaSequence();
-						cinemaSystem.StartSequence();
+						cameraSystem = CreateCinemaSequence();
+						cameraSystem.Start();
 					}
-					cameraData = cinemaSystem.cameraData;
+					//cameraData = cameraSystem.cameraData;
 					break;
 			}
 
+			cameraData = cameraSystem.cameraData;
 			UpdateCamera();
 			CameraUtils.ApplyCameraShake(mainCamera, cameraData.shake);
 
@@ -159,26 +218,26 @@ namespace MassiveHadronLtd
 			}
 		}
 
-		private static void UpdatePresetMode()
-		{
-			cameraData.smoothing = SmoothingUtils.Smooth(cameraData.smoothing, PresetConfig.SmoothingN, Time.deltaTime, TargetFPS);
-			var presetLerp = SmoothingUtils.Smooth(0f, 1f, cameraData.smoothing, Time.deltaTime, TargetFPS);
-			cameraData.originSrc = Vector3.Lerp(cameraData.originSrc, cameraData.originDst, presetLerp);
-			cameraData.targetSrc = Vector3.Lerp(cameraData.targetSrc, cameraData.targetDst, presetLerp);
-		}
+		//private static void UpdatePresetMode()
+		//{
+		//	cameraData.smoothing = SmoothingUtils.Smooth(cameraData.smoothing, PresetConfig.SmoothingN, Time.deltaTime, CameraData.TargetFPS);
+		//	var presetLerp = SmoothingUtils.Smooth(0f, 1f, cameraData.smoothing, Time.deltaTime, CameraData.TargetFPS);
+		//	cameraData.originSrc = Vector3.Lerp(cameraData.originSrc, cameraData.originDst, presetLerp);
+		//	cameraData.targetSrc = Vector3.Lerp(cameraData.targetSrc, cameraData.targetDst, presetLerp);
+		//}
 
-		private static void UpdateFollowMode()
-		{
-			cameraData.smoothing = SmoothingUtils.Smooth(cameraData.smoothing, FollowConfig.SmoothingNa, FollowConfig.SmoothingNb, Time.deltaTime, TargetFPS);
-			var followLerp = SmoothingUtils.Smooth(0f, 1f, cameraData.smoothing, Time.deltaTime, TargetFPS);
-			cameraData.targetSrc = Vector3.Lerp(cameraData.targetSrc, cameraData.targetDst, followLerp);
-			var delta = cameraData.targetSrc - cameraData.originSrc;
-			var deltaHorizontal = (0f == delta.x && 0f == delta.z) ? mainCamera.transform.forward : new Vector3(delta.x, 0, delta.z);
-			deltaHorizontal.Normalize();
-			var idealPos = cameraData.targetSrc - deltaHorizontal * (FollowConfig.IdealDistance * FollowConfig.IdealDistanceHorizontalScale);
-			idealPos.y = cameraData.targetSrc.y + FollowConfig.IdealDistance;
-			cameraData.originSrc = Vector3.Lerp(cameraData.originSrc, idealPos, followLerp);
-		}
+		//private static void UpdateFollowMode()
+		//{
+		//	cameraData.smoothing = SmoothingUtils.Smooth(cameraData.smoothing, FollowConfig.SmoothingNa, FollowConfig.SmoothingNb, Time.deltaTime, CameraData.TargetFPS);
+		//	var followLerp = SmoothingUtils.Smooth(0f, 1f, cameraData.smoothing, Time.deltaTime, CameraData.TargetFPS);
+		//	cameraData.targetSrc = Vector3.Lerp(cameraData.targetSrc, cameraData.targetDst, followLerp);
+		//	var delta = cameraData.targetSrc - cameraData.originSrc;
+		//	var deltaHorizontal = (0f == delta.x && 0f == delta.z) ? mainCamera.transform.forward : new Vector3(delta.x, 0, delta.z);
+		//	deltaHorizontal.Normalize();
+		//	var idealPos = cameraData.targetSrc - deltaHorizontal * (FollowConfig.IdealDistance * FollowConfig.IdealDistanceHorizontalScale);
+		//	idealPos.y = cameraData.targetSrc.y + FollowConfig.IdealDistance;
+		//	cameraData.originSrc = Vector3.Lerp(cameraData.originSrc, idealPos, followLerp);
+		//}
 
 		public static void Refresh(float time)
 		{
@@ -189,23 +248,32 @@ namespace MassiveHadronLtd
 
 		public static void SetOrigin(Vector3 value)
 		{
-			cameraData.originDst = value;
+			//cameraData.originDst = value;
+			//if (currentState == CameraState.Static)
+			//	cameraData.originSrc = value;
+
+			cameraSystem.cameraData.originDst = value;
 			if (currentState == CameraState.Static)
-				cameraData.originSrc = value;
+				cameraSystem.cameraData.originSrc = value;
 		}
 
 		public static void SetTarget(Vector3 value)
 		{
-			cameraData.targetDst = value;
+			//cameraData.targetDst = value;
+			//if (currentState == CameraState.Static)
+			//	cameraData.targetSrc = value;
+
+			cameraSystem.cameraData.targetDst = value;
 			if (currentState == CameraState.Static)
-				cameraData.targetSrc = value;
+				cameraSystem.cameraData.targetSrc = value;
 		}
 
 		public static void SetPlayer(Transform transform)
 		{
 			playerTransform = transform;
 			if (currentState == CameraState.Follow)
-				cameraData.targetDst = transform.position;
+				cameraSystem.cameraData.targetDst = transform.position;
+				//cameraData.targetDst = transform.position;
 			if (currentState == CameraState.Cinema)
 				UpdatePlayerTransform(transform);
 		}
@@ -241,7 +309,5 @@ namespace MassiveHadronLtd
 				focusPoints.RemoveAt(0);
 			}
 		}
-
-		//public static Bounds GetMapBounds() => mapBounds;
 	}
 }
