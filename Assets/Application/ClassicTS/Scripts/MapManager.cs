@@ -6,7 +6,7 @@ namespace ClassicTilestorm
 {
 	public class MapManager : MonoBehaviour, IMap
 	{
-		private struct TileData
+		private struct Tile
 		{
 			public TileProperties Properties;
 			public GameObject GameObject;
@@ -19,9 +19,8 @@ namespace ClassicTilestorm
 		}
 
 		private DatabaseLoader.Map currentMap;
-		//private GameObject mapRoot;
 		private int[] tiles;
-		private TileData[] tileDataArray;
+		private Tile[] tileArray;
 		private List<DatabaseLoader.Waypoint> waypoints;
 
 		public string CurrentMapName => currentMap?.name;
@@ -43,12 +42,10 @@ namespace ClassicTilestorm
 
 		private void Awake()
 		{
-			//if (null != mapRoot) Destroy(mapRoot);
-			//mapRoot = null;
 			currentMap = null;
 			waypoints = null;
 			tiles = null;
-			tileDataArray = null;
+			tileArray = null;
 
 			if (TileStripHelper.SpareTile != null) // Clear static SpareTile
 			{
@@ -63,14 +60,14 @@ namespace ClassicTilestorm
 		{
 			if (!IsValidTileIndex(tileIndex)) return null;
 			int dataIndex = tiles[tileIndex];
-			return dataIndex >= 0 && dataIndex < tileDataArray.Length ? tileDataArray[dataIndex].Properties : null;
+			return dataIndex >= 0 && dataIndex < tileArray.Length ? tileArray[dataIndex].Properties : null;
 		}
 
 		public GameObject GetTileGameObject(int tileIndex)
 		{
 			if (!IsValidTileIndex(tileIndex)) return null;
 			int dataIndex = tiles[tileIndex];
-			return dataIndex >= 0 && dataIndex < tileDataArray.Length ? tileDataArray[dataIndex].GameObject : null;
+			return dataIndex >= 0 && dataIndex < tileArray.Length ? tileArray[dataIndex].GameObject : null;
 		}
 
 		public GridCoord GetTileCoordinates(int tileIndex) => new(tileIndex % Width, tileIndex / Width);
@@ -108,7 +105,6 @@ namespace ClassicTilestorm
 		{
 			if (null == mapName) return;
 
-			//Reset();
 			currentMap = string.IsNullOrEmpty(mapName) ? DatabaseLoader.Maps.FirstOrDefault() : DatabaseLoader.Maps.FirstOrDefault(m => m.name == mapName);
 
 			if (null == currentMap)
@@ -116,9 +112,6 @@ namespace ClassicTilestorm
 				Debug.LogError($"No map found for mapName={mapName}! Available maps: {string.Join(", ", DatabaseLoader.Maps.Select(m => m.name))}");
 				return;
 			}
-
-			//mapRoot = new GameObject($"Map_{currentMap.name}");
-			//mapRoot.transform.SetParent(transform, false);
 
 			name = $"Map_{currentMap.name}";
 			LoadTileData(currentMap.tiles);
@@ -143,18 +136,16 @@ namespace ClassicTilestorm
 			}
 
 			this.tiles = new int[tiles.nWidth * tiles.nHeight];
-			var tileDataList = new List<TileData>();
+			tileArray = new Tile[tiles.nWidth * tiles.nHeight];
 
 			for (var index = 0; index < tileMap.Length; index++)
 			{
-				GameObject gameObject = null;
-				TileProperties properties = null;
+				this.tiles[index] = index;
 
 				var tileDefIndex = tileMap[index];
 				if (tileDefIndex < 0 || tileDefIndex >= currentMap.defs.Length)
 				{
 					Debug.LogWarning($"Invalid tileDefIndex={tileDefIndex}");
-					this.tiles[index] = -1;
 					continue;
 				}
 
@@ -162,93 +153,52 @@ namespace ClassicTilestorm
 				if (string.IsNullOrEmpty(szTheme)) Debug.LogWarning($"Null szTheme at tileDefIndex {tileDefIndex}");
 
 				var szType = currentMap.defs[tileDefIndex].szType;
-				if (szType == "tile_empty")
-				{
-					this.tiles[index] = -1;
-					continue;
-				}
+				if (szType == "tile_empty") continue;
 
-				properties = TilePropertiesManager.GetOrCreateTileProperties(szType, szTheme);
-				if (properties == null)
-				{
-					this.tiles[index] = -1;
-					continue;
-				}
+				var properties = TilePropertiesManager.GetOrCreateTileProperties(szType, szTheme);
+				if (null == properties) continue;
 
 				var coord = GetTileCoordinates(index);
 				if (szType == "tile_invisible")
 				{
-					if (PreviewSettings.ShowHiddenTiles) gameObject = GeometryManager.CreateDebugTile(transform, coord.ToPosition());
-
-					this.tiles[index] = tileDataList.Count;
-					tileDataList.Add(new TileData { Properties = properties, GameObject = gameObject });
+					if (PreviewSettings.ShowHiddenTiles) tileArray[index].GameObject = GeometryManager.CreateDebugTile(transform, coord.ToPosition());
 					continue;
 				}
 
 				var tileDef = DatabaseLoader.TileDefs.FirstOrDefault(td => td.szType == szType && td.szTheme == szTheme);
-				gameObject = GeometryManager.InstantiateTile(tileDef, transform, coord.ToPosition(), properties.Interactive);
-				this.tiles[index] = tileDataList.Count;
-				tileDataList.Add(new TileData { Properties = properties, GameObject = gameObject });
+				var gameObject = GeometryManager.InstantiateTile(tileDef, transform, coord.ToPosition(), properties.Interactive);
+				tileArray[index] = new Tile { Properties = properties, GameObject = gameObject };
 			}
-
-			tileDataArray = tileDataList.ToArray();
 		}
 
 		public void Scramble()
 		{
-			if (null  == currentMap?.mixed?.TileData?.bytes|| null == tiles)
+			if (null  == currentMap?.mixed?.TileData?.bytes || null == tiles)
 			{
 				Debug.LogWarning("Cannot scramble: invalid map or tiles data");
 				return;
 			}
 
-			var scrambledTiles = new int[tiles.Length];
 			var offsets = currentMap.mixed.TileData.bytes;
-			for (var index = 0; index < tiles.Length; index++)
-			{
-				var scrambledIndex = index + offsets[index];
-				if (scrambledIndex >= 0 && scrambledIndex < tiles.Length)
-					scrambledTiles[index] = tiles[scrambledIndex];
-				else
-					scrambledTiles[index] = -1;
-			}
-
-			tiles = scrambledTiles;
+			for (var n = 0; n < tiles.Length; ++n) tiles[n] = offsets[n] + n;
 			UpdateTileObjectNamesAndPositions();
 		}
 
 		public void Solve()
 		{
-			if (null == currentMap?.tiles?.TileData?.bytes || null == tiles)
-			{
-				Debug.LogWarning("Cannot solve: invalid map or tiles data");
-				return;
-			}
-
-			var def = 0;
-			var solvedTiles = new int[tiles.Length];
-			for (var index = 0; index < tiles.Length; index++)
-			{
-				solvedTiles[index] = -1;
-				if (0 != currentMap.tiles.TileData.bytes[index])
-				{
-					solvedTiles[index] = def;
-					def++;
-				}
-			}
-			tiles = solvedTiles;
+			for (var n = 0; n < tiles.Length; ++n) tiles[n] = n; 
 			UpdateTileObjectNamesAndPositions();
 		}
 
 		private void UpdateTileObjectNamesAndPositions()
 		{
-			for (var index = 0; index < tiles.Length; index++)
+			for (var n = 0; n < tiles.Length; n++)
 			{
-				var gameObject = GetTileGameObject(index);
+				var gameObject = GetTileGameObject(n);
 				if (gameObject == null) continue;
-				var coord = GetTileCoordinates(index);
+				var coord = GetTileCoordinates(n);
 #if DEBUG
-				gameObject.name = $"{GetTileProperties(index)?.Type ?? "Empty"}_{coord.X}_{coord.Z}";
+				gameObject.name = $"{GetTileProperties(n)?.Type ?? "Empty"}_{coord.X}_{coord.Z}";
 #endif
 				gameObject.transform.position = coord.ToPosition();
 			}
