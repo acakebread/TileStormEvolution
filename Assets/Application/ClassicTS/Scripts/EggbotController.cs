@@ -6,7 +6,7 @@ namespace ClassicTilestorm
 {
 	public class EggbotController : MonoBehaviour
 	{
-		private MapManager mapManager => MapManager.instance ?? instance.gameObject.AddComponent<MapManager>();
+		private MapManager mapManager => GameController.mapManager;
 
 		[HideInInspector] public Transform eggbotRoot;
 		private Transform eggbotMesh;

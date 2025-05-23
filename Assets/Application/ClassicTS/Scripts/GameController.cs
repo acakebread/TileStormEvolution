@@ -8,9 +8,8 @@ namespace ClassicTilestorm
 	{
 		private static GameController instance;
 
-		private static MapManager mapManager => MapManager.instance ?? instance.gameObject.AddComponent<MapManager>();
+		public static MapManager mapManager => MapManager.instance ?? instance.gameObject.AddComponent<MapManager>();
 		private static EggbotController eggbotController => EggbotController.instance ?? instance.gameObject.AddComponent<EggbotController>();
-		private static GestureController gestureController => GestureController.instance ?? instance.gameObject.AddComponent<GestureController>();
 
 		void Start()
 		{
@@ -25,6 +24,7 @@ namespace ClassicTilestorm
 		{
 			mapManager.Reset();
 			mapManager.Load(PreviewSettings.LoadMapName);
+			var gestureController = GestureController.instance ?? instance.gameObject.AddComponent<GestureController>();
 			eggbotController.Reset();
 			gestureController.Reset();
 			ResetCamera();
