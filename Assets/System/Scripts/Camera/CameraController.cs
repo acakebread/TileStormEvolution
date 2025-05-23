@@ -3,17 +3,17 @@ using System.Collections.Generic;
 
 namespace MassiveHadronLtd
 {
+	public enum CameraState
+	{
+		Absent,
+		Static,
+		Preset,
+		Follow,
+		Cinema
+	}
+
 	public static class CameraController
 	{
-		public enum CameraState
-		{
-			Absent,
-			Static,
-			Preset,
-			Follow,
-			Cinema
-		}
-
 		// Public properties
 		public static bool CinemaEnabled => enableAutoCinema;
 		public static bool CinemaActive => currentState == CameraState.Cinema;
@@ -31,23 +31,25 @@ namespace MassiveHadronLtd
 		private static float lastRefreshTime;
 		private static Bounds mapBounds;
 		private static CameraBase cameraSystem;
-		private static Transform playerTransform;
-		private static List<Vector3> focusPoints = new();
+		private static readonly List<Vector3> focusPoints = new();
 
-		public static void Reset(Camera camera = null)
+		public static void Awake(Camera camera = null)
 		{
-			// Initialize only once
-			if (null == cameraSystem)
+			restoreData = new CameraData
 			{
-				restoreData = new CameraData
-				{
-					smoothing = CameraData.DefaultSmoothingRate,
-					fieldOfView = (null != camera ? camera : Camera.main).fieldOfView
-				};
-			}
+				smoothing = CameraData.DefaultSmoothingRate,
+				originSrc = Vector3.zero,
+				originDst = Vector3.zero,
+				targetSrc = Vector3.zero,
+				targetDst = Vector3.zero,
+				fieldOfView = (null != camera ? camera : Camera.main).fieldOfView,
+				shake = 0f
+			};
+		}
 
+		public static void Reset()
+		{
 			lastRefreshTime = Time.time;
-			playerTransform = null;
 			focusPoints.Clear();
 			mapBounds = new Bounds(Vector3.zero, Vector3.zero);
 			SpatialBucketSystem.Initialize(MinDistanceForNewFocusPoint);
@@ -72,9 +74,6 @@ namespace MassiveHadronLtd
 			};
 
 			cameraSystem.cameraData = restoreData;
-			cameraSystem.playerTransform = playerTransform;
-			cameraSystem.focusPoints = focusPoints;
-			cameraSystem.Start();
 
 			if (value != currentState) previousState = currentState;//for exiting cinema camera system
 			currentState = value;
@@ -91,17 +90,21 @@ namespace MassiveHadronLtd
 			}
 		}
 
+		public static void Start() => cameraSystem.Start();//optional force start - not required in normal use
+
 		public static void Update()
 		{
 			if (null == cameraSystem) return;
+			cameraSystem.Update();
 
-			if (enableAutoCinema && currentState != CameraState.Cinema && Time.time - lastRefreshTime > CinemaTimeoutDuration)
-				SetMode(CameraState.Cinema);
-
-			if (!cameraSystem.Update() && CameraState.Cinema == currentState)
+			var startCinema = CameraState.Cinema == currentState ? cameraSystem.HasCompleted : enableAutoCinema && Time.time - lastRefreshTime > CinemaTimeoutDuration;
+			if (true == startCinema)
 			{
-				SetMode(CameraState.Cinema);
-				cameraSystem.Update();
+				var playerTransform = cameraSystem.playerTransform;
+				var points = cameraSystem.focusPoints;
+				SetMode(CameraState.Cinema);//restart cinema in new sub mode
+				cameraSystem.playerTransform = playerTransform;
+				cameraSystem.focusPoints = points;
 			}
 		}
 
@@ -114,14 +117,14 @@ namespace MassiveHadronLtd
 				SetMode(previousState);
 		}
 
-		public static void SetOrigin(Vector3 value) => cameraSystem.SetOrigin(value);
-		public static void SetTarget(Vector3 value) => cameraSystem.SetTarget(value);
+		public static void SetOrigin(Vector3 value, bool both = false) => cameraSystem.SetOrigin(value, both);
+		public static void SetTarget(Vector3 value, bool both = false) => cameraSystem.SetTarget(value, both);
 
 		public static void SetPlayer(Transform value)
 		{
-			playerTransform = value;
 			cameraSystem.playerTransform = value;
-			if (null != value && SpatialBucketSystem.CanAddPoint(value.position))
+			if (null == value) return;
+			if (SpatialBucketSystem.CanAddPoint(value.position))
 			{
 				var pos = value.position;
 				mapBounds.Encapsulate(pos);

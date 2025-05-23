@@ -42,14 +42,15 @@ namespace MassiveHadronLtd
 
 		protected abstract void StartCinemaSequence();
 
-		public override bool Update()
+		public override void Update()
 		{
+			base.Update();
 			// Update sequence timer
 			sequenceTimer -= Time.deltaTime;
 			if (sequenceTimer <= 0f)
 			{
 				// Handle pause state
-				if (pauseTimer <= 0f) return false;
+				if (pauseTimer <= 0f) return;
 				pauseTimer -= Time.deltaTime;
 			}
 			else
@@ -71,9 +72,10 @@ namespace MassiveHadronLtd
 			cameraData.originSrc = Vector3.Lerp(cameraData.originSrc, cameraData.originDst, interpolate);
 			cameraData.targetSrc = Vector3.Lerp(cameraData.targetSrc, cameraData.targetDst, interpolate);
 			//cameraData.fovSrc = Mathf.Lerp(cameraData.fovSrc, cameraData.fovDst, interpolate); ToDo initialise FOV in StartSequence and lerp
-			return true;
 		}
 
 		protected abstract void UpdateCinemaSequence(float easedSequenceTimer);
+
+		public override bool HasCompleted => sequenceTimer <= 0f && pauseTimer <= 0f;
 	}
 }

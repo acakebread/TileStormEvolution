@@ -1,6 +1,6 @@
-using MassiveHadronLtd;
-using System.Linq;
 using UnityEngine;
+using System.Linq;
+using MassiveHadronLtd;
 
 namespace ClassicTilestorm
 {
@@ -9,34 +9,31 @@ namespace ClassicTilestorm
 	{
 		#region Legacy Compatibility
 		public static LegacyController instance;
-		private void Awake() { instance = this; Reset(); }
+		private void Awake() { instance = this; CameraController.Awake(Camera.main); }
 
 		public void Reset()
 		{
-			CameraController.Reset(Camera.main);
-			CameraController.SetMode(CameraController.CameraState.Static);
+			CameraController.Reset();
 
 			var mapManager = GamePreview.mapManager;
+			var waypoints = mapManager.Waypoints.Select(w => mapManager.GetTilePosition(w.nTile)).ToList();
+
 			var eggbotController = GamePreview.eggbotController;
-
-			if (eggbotController?.eggbotRoot != null)
-				CameraController.SetPlayer(eggbotController.eggbotRoot);
-
+			var eggbotRoot = null != eggbotController ? GamePreview.eggbotController.eggbotRoot : null;
 			if (mapManager == null || mapManager.Waypoints == null || mapManager.Waypoints.Count == 0)
 			{
-				if (eggbotController?.eggbotRoot != null)
-					CameraController.SetMode(CameraController.CameraState.Follow);
+				if (eggbotRoot != null)
+					CameraController.SetMode(CameraState.Follow);
 				else
 				{
-					CameraController.SetOrigin(new Vector3(0f, 14f, -14f));
-					CameraController.SetTarget(Vector3.zero);
+					CameraController.SetMode(CameraState.Static);
+					CameraController.SetOrigin(new Vector3(0f, 14f, -14f), true);
+					CameraController.SetTarget(Vector3.zero, true);
 				}
+				CameraController.SetPlayer(eggbotRoot);
+				CameraController.SetFocusPoints(waypoints);// Pass waypoints to CameraController
 				return;
 			}
-
-			// Pass waypoints to CameraController
-			var waypoints = mapManager.Waypoints.Select(w => mapManager.GetTilePosition(w.nTile)).ToList();
-			CameraController.SetFocusPoints(waypoints);
 
 			var dstPos = new Vector3(mapManager.Width * 0.5f, 0f, mapManager.Height * 0.5f);
 			var srcPos = dstPos + new Vector3(0f, 14f, -14f); // TS defaults
@@ -44,13 +41,15 @@ namespace ClassicTilestorm
 			var firstWaypoint = mapManager.Waypoints[0];
 			if (firstWaypoint.bCamera)
 			{
-				if (IsValidVector(firstWaypoint.vSrc)) srcPos = new Vector3(firstWaypoint.vSrc.fX, firstWaypoint.vSrc.fY, firstWaypoint.vSrc.fZ);
-				if (IsValidVector(firstWaypoint.vDst)) dstPos = new Vector3(firstWaypoint.vDst.fX, firstWaypoint.vDst.fY, firstWaypoint.vDst.fZ);
+				if (DatabaseLoader.VectorData.IsValidVector(firstWaypoint.vSrc)) srcPos = new Vector3(firstWaypoint.vSrc.fX, firstWaypoint.vSrc.fY, firstWaypoint.vSrc.fZ);
+				if (DatabaseLoader.VectorData.IsValidVector(firstWaypoint.vDst)) dstPos = new Vector3(firstWaypoint.vDst.fX, firstWaypoint.vDst.fY, firstWaypoint.vDst.fZ);
 			}
 
-			CameraController.SetOrigin(srcPos);
-			CameraController.SetTarget(dstPos);
-			CameraController.SetMode(CameraController.CameraState.Follow);
+			CameraController.SetMode(CameraState.Follow);
+			CameraController.SetOrigin(srcPos, true);
+			CameraController.SetTarget(dstPos, true);
+			CameraController.SetPlayer(eggbotRoot);
+			CameraController.SetFocusPoints(waypoints);// Pass waypoints to CameraController
 
 			if (eggbotController != null)
 			{
@@ -78,7 +77,7 @@ namespace ClassicTilestorm
 			{
 				if (eggbotController?.eggbotRoot != null)
 				{
-					CameraController.SetMode(CameraController.CameraState.Follow);
+					CameraController.SetMode(CameraState.Follow);
 					CameraController.SetPlayer(eggbotController.eggbotRoot);
 				}
 				return;
@@ -88,23 +87,23 @@ namespace ClassicTilestorm
 			var srcPos = new Vector3(waypoint.vSrc.fX, waypoint.vSrc.fY, waypoint.vSrc.fZ);
 			if (srcPos == Vector3.zero) srcPos = new Vector3(0f, 14f, -14f);// TS default
 
-			var lookAtPos = waypoint.vDst != null && IsValidVector(waypoint.vDst) ? new Vector3(waypoint.vDst.fX, waypoint.vDst.fY, waypoint.vDst.fZ) : mapManager.GetTilePosition(waypoint.nTile) + new Vector3(0f, 0.5f, 0f);
+			var lookAtPos = waypoint.vDst != null && DatabaseLoader.VectorData.IsValidVector(waypoint.vDst) ? new Vector3(waypoint.vDst.fX, waypoint.vDst.fY, waypoint.vDst.fZ) : mapManager.GetTilePosition(waypoint.nTile) + new Vector3(0f, 0.5f, 0f);
 
 			if (waypointIndex == mapManager.Waypoints.Count - 1)
 			{
-				CameraController.SetMode(CameraController.CameraState.Follow);
+				CameraController.SetMode(CameraState.Follow);
 				CameraController.SetTarget(lookAtPos);
 				return;
 			}
 
-			if (!IsValidVector(waypoint.vSrc))
+			if (!DatabaseLoader.VectorData.IsValidVector(waypoint.vSrc))
 			{
-				CameraController.SetMode(CameraController.CameraState.Follow);
+				CameraController.SetMode(CameraState.Follow);
 				CameraController.SetPlayer(eggbotController?.eggbotRoot);
 				return;
 			}
 
-			CameraController.SetMode(CameraController.CameraState.Preset);
+			CameraController.SetMode(CameraState.Preset);
 			CameraController.SetOrigin(srcPos);
 			CameraController.SetTarget(lookAtPos);
 		}
@@ -112,8 +111,8 @@ namespace ClassicTilestorm
 		public void OnPuzzleSolved(int waypointIndex)
 		{
 			if (true == CameraController.CinemaActive) return;
-			CameraController.SetMode(CameraController.CameraState.Follow);
-			CameraController.SetPlayer(GamePreview.eggbotController?.eggbotRoot);
+			CameraController.SetMode(CameraState.Follow);
+			CameraController.SetPlayer(null != GamePreview.eggbotController ? GamePreview.eggbotController.eggbotRoot : null);
 		}
 
 		public void OnLevelCompleted() { }
@@ -128,22 +127,6 @@ namespace ClassicTilestorm
 				eggbotController.OnPuzzleSolved -= OnPuzzleSolved;
 				eggbotController.OnLevelCompleted -= OnLevelCompleted;
 			}
-		}
-
-		private const float MaxVectorValue = 100f;
-		private static bool IsValidVector(DatabaseLoader.VectorData vector)
-		{
-			if (vector == null)
-				return false;
-
-			var valid = !float.IsNaN(vector.fX) && !float.IsInfinity(vector.fX) && Mathf.Abs(vector.fX) < MaxVectorValue &&
-						 !float.IsNaN(vector.fY) && !float.IsInfinity(vector.fY) && Mathf.Abs(vector.fY) < MaxVectorValue &&
-						 !float.IsNaN(vector.fZ) && !float.IsInfinity(vector.fZ) && Mathf.Abs(vector.fZ) < MaxVectorValue;
-
-			if (!valid)
-				Debug.LogWarning($"Invalid vector: fX={vector?.fX}, fY={vector?.fY}, fZ={vector?.fZ}");
-
-			return valid;
 		}
 		#endregion
 	}

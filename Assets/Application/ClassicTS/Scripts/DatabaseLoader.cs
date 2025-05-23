@@ -96,6 +96,14 @@ namespace ClassicTilestorm
 			public float fX;
 			public float fY;
 			public float fZ;
+
+			public static bool IsValidVector(VectorData vector)
+			{
+				if (vector == null) return false;
+				var valid = !float.IsNaN(vector.fX) && !float.IsInfinity(vector.fX) && !float.IsNaN(vector.fY) && !float.IsInfinity(vector.fY) && !float.IsNaN(vector.fZ) && !float.IsInfinity(vector.fZ);
+				if (!valid) Debug.LogWarning($"Invalid vector: fX={vector?.fX}, fY={vector?.fY}, fZ={vector?.fZ}");
+				return valid;
+			}
 		}
 
 		[Serializable]
