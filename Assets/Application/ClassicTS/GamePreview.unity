@@ -193,9 +193,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   loadMapName: Industrial 01
-  scramble: 1
-  show_hidden_tiles: 0
-  show_tile_selection: 0
+  scrambled: 1
+  showHiddenTiles: 0
+  showTileSelection: 0
+  launchInCinemaMode: 0
   databaseJsonFile: {fileID: 4900000, guid: 96c40ca8617a15a4590b9728c168e29a, type: 3}
   geometryPath: ClassicTS/Geometry/
   texturePath: ClassicTS/Textures/
@@ -429,8 +430,9 @@ GameObject:
   m_Component:
   - component: {fileID: 1555382763}
   - component: {fileID: 1555382764}
+  - component: {fileID: 1555382765}
   m_Layer: 0
-  m_Name: GamePreview
+  m_Name: GameController
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -458,9 +460,21 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1555382761}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 17e4919eca5ba004db3f333e3ff1d7b4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &1555382765
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1555382761}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4bc4a6e7f7c5f9e4c8731bdb5ae11057, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
 --- !u!1660057539 &9223372036854775807

@@ -7,7 +7,6 @@ namespace ClassicTilestorm
 	// Legacy Compatibility (remove after GameController integration)
 	public class LegacyController : MonoBehaviour
 	{
-		#region Legacy Compatibility
 		public static LegacyController instance;
 		private void Awake() { instance = this; CameraController.Awake(Camera.main); }
 
@@ -128,6 +127,5 @@ namespace ClassicTilestorm
 				eggbotController.OnLevelCompleted -= OnLevelCompleted;
 			}
 		}
-		#endregion
 	}
 }

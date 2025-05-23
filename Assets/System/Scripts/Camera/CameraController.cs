@@ -33,7 +33,7 @@ namespace MassiveHadronLtd
 		private static CameraBase cameraSystem;
 		private static readonly List<Vector3> focusPoints = new();
 
-		public static void Awake(Camera camera = null)
+		public static void Start(Camera camera = null)
 		{
 			restoreData = new CameraData
 			{
@@ -90,7 +90,7 @@ namespace MassiveHadronLtd
 			}
 		}
 
-		public static void Start() => cameraSystem.Start();//optional force start - not required in normal use
+		public static void SystemStart() => cameraSystem.Start();//optional force start - not required in normal use
 
 		public static void Update()
 		{

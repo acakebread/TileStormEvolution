@@ -5,7 +5,8 @@ namespace ClassicTilestorm
 	public class GestureController : MonoBehaviour
 	{
 		private GestureSystem gestureSystem => GestureSystem.instance;
-		private MapManager mapManager => GamePreview.mapManager;
+		private MapManager mapManager => MapManager.instance ?? instance.gameObject.AddComponent<MapManager>();
+
 		private TileStripHelper.TileStrip tileStrip;
 		private Vector3 last;
 		private Vector3 delta;
