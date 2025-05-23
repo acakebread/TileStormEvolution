@@ -6,8 +6,6 @@ namespace MassiveHadronLtd
 	{
 		private const float SmoothingN = 32f;
 
-		public override void Start() { }
-
 		public override bool Update()
 		{
 			cameraData.smoothing = SmoothingUtils.Smooth(cameraData.smoothing, SmoothingN, Time.deltaTime, CameraData.TargetFPS);

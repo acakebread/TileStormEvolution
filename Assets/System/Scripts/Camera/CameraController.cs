@@ -5,7 +5,6 @@ namespace MassiveHadronLtd
 {
 	public static class CameraController
 	{
-		// Shared state
 		public enum CameraState
 		{
 			Absent,
@@ -17,9 +16,7 @@ namespace MassiveHadronLtd
 
 		// Public properties
 		public static bool CinemaEnabled => enableAutoCinema;
-		public static bool CinemaActive => CameraState.Cinema == currentState;
-		public static List<Vector3> focusPoints = new();
-		public static Transform playerTransform;
+		public static bool CinemaActive => currentState == CameraState.Cinema;
 
 		// Constants
 		private const float CinemaTimeoutDuration = 5f;
@@ -28,30 +25,24 @@ namespace MassiveHadronLtd
 
 		// Internal
 		private static CameraData restoreData;
-		private static Camera mainCamera = Camera.main;
 		private static CameraState currentState = CameraState.Absent;
 		private static CameraState previousState = CameraState.Absent;
 		private static bool enableAutoCinema;
 		private static float lastRefreshTime;
-
 		private static Bounds mapBounds;
 		private static CameraBase cameraSystem;
+		private static Transform playerTransform;
+		private static List<Vector3> focusPoints = new();
 
-		// Reset all systems
-		public static void Reset()//called on load new map
+		public static void Reset(Camera camera = null)
 		{
-			if (null == cameraSystem)//workaround for absence of initialise pattern
+			// Initialize only once
+			if (null == cameraSystem)
 			{
 				restoreData = new CameraData
 				{
-					camera = mainCamera,
 					smoothing = CameraData.DefaultSmoothingRate,
-					originSrc = Vector3.zero,
-					targetSrc = Vector3.zero,
-					originDst = Vector3.zero,
-					targetDst = Vector3.zero,
-					fieldOfView = mainCamera.fieldOfView,
-					shake = 0f
+					fieldOfView = (null != camera ? camera : Camera.main).fieldOfView
 				};
 			}
 
@@ -67,77 +58,54 @@ namespace MassiveHadronLtd
 
 		public static void SetMode(CameraState value)
 		{
-			if (CameraState.Cinema != currentState && null != cameraSystem) 
+			if (CameraState.Cinema != currentState && null != cameraSystem)
 				restoreData = cameraSystem.cameraData;
 
-			switch (value)
+			// Use dictionary or array for camera system instantiation if more types are added
+			cameraSystem = value switch
 			{
-				case CameraState.Static:
-					cameraSystem = new CameraStatic();
-					break;
-
-				case CameraState.Preset:
-					cameraSystem = new CameraPreset();
-					break;
-
-				case CameraState.Follow:
-					cameraSystem = new CameraFollow();
-					break;
-
-				case CameraState.Cinema:
-					switch (Random.Range(0, 7))
-					{
-						case 0: case 1: case 2: cameraSystem = new CinemaCameraPath(); break;
-						case 3: case 4: case 5: cameraSystem = new CinemaCameraOrbit(); break;
-						case 6: cameraSystem = new CinemaCameraDollyZoom(); break;
-					}
-					break;
-			}
+				CameraState.Static => new CameraStatic(),
+				CameraState.Preset => new CameraPreset(),
+				CameraState.Follow => new CameraFollow(),
+				CameraState.Cinema => CreateCinemaCamera(),
+				_ => cameraSystem // Fallback to current system
+			};
 
 			cameraSystem.cameraData = restoreData;
+			cameraSystem.playerTransform = playerTransform;
+			cameraSystem.focusPoints = focusPoints;
 			cameraSystem.Start();
 
-			if (value != currentState) previousState = currentState;
+			if (value != currentState) previousState = currentState;//for exiting cinema camera system
 			currentState = value;
+
+			static CameraBase CreateCinemaCamera()
+			{
+				return Random.Range(0, 7) switch
+				{
+					0 or 1 or 2 => new CinemaCameraPath(),
+					3 or 4 or 5 => new CinemaCameraOrbit(),
+					6 => new CinemaCameraDollyZoom(),
+					_ => new CinemaCameraPath() // Default fallback
+				};
+			}
 		}
 
 		public static void Update()
 		{
-			if (mainCamera == null) return;
+			if (null == cameraSystem) return;
 
 			if (enableAutoCinema && currentState != CameraState.Cinema && Time.time - lastRefreshTime > CinemaTimeoutDuration)
-			{
-				Debug.Log("Auto-switching to Cinema mode");
 				SetMode(CameraState.Cinema);
-			}
 
-			switch (currentState)
+			if (!cameraSystem.Update() && CameraState.Cinema == currentState)
 			{
-				case CameraState.Static:
-					break;
-
-				case CameraState.Preset:
-					cameraSystem.Update();
-					break;
-
-				case CameraState.Follow:
-					cameraSystem.Update();
-					break;
-
-				case CameraState.Cinema:
-					if (cameraSystem == null || !cameraSystem.Update())
-						SetMode(CameraState.Cinema);
-					break;
+				SetMode(CameraState.Cinema);
+				cameraSystem.Update();
 			}
-
-			var cameraData = cameraSystem.cameraData;
-			mainCamera.transform.position = cameraData.originSrc;
-			var direction = cameraData.targetSrc - cameraData.originSrc;
-			if (direction.sqrMagnitude > Mathf.Epsilon)
-				mainCamera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
-			mainCamera.fieldOfView = cameraData.fieldOfView;
-			CameraUtils.ApplyCameraShake(mainCamera, cameraData.shake);
 		}
+
+		public static void Project(Camera camera = null) => cameraSystem.Project(camera);
 
 		public static void Refresh(float time)
 		{
@@ -146,35 +114,16 @@ namespace MassiveHadronLtd
 				SetMode(previousState);
 		}
 
-		public static void SetOrigin(Vector3 value)
-		{
-			cameraSystem.cameraData.originDst = value;
-			if (currentState == CameraState.Static)
-				cameraSystem.cameraData.originSrc = value;
-		}
+		public static void SetOrigin(Vector3 value) => cameraSystem.SetOrigin(value);
+		public static void SetTarget(Vector3 value) => cameraSystem.SetTarget(value);
 
-		public static void SetTarget(Vector3 value)
+		public static void SetPlayer(Transform value)
 		{
-			cameraSystem.cameraData.targetDst = value;
-			if (currentState == CameraState.Static)
-				cameraSystem.cameraData.targetSrc = value;
-		}
-
-		public static void SetPlayer(Transform transform)
-		{
-			playerTransform = transform;
-			if (currentState == CameraState.Follow)
-				cameraSystem.cameraData.targetDst = transform.position;
-			if (currentState == CameraState.Cinema)
-				UpdatePlayerTransform(transform);
-
-			static void UpdatePlayerTransform(Transform transform)
+			playerTransform = value;
+			cameraSystem.playerTransform = value;
+			if (null != value && SpatialBucketSystem.CanAddPoint(value.position))
 			{
-				playerTransform = transform;
-				if (null == playerTransform || !SpatialBucketSystem.CanAddPoint(playerTransform.position))
-					return;
-
-				var pos = playerTransform.position;
+				var pos = value.position;
 				mapBounds.Encapsulate(pos);
 				focusPoints.Add(pos);
 				SpatialBucketSystem.AddPoint(pos);
@@ -185,20 +134,24 @@ namespace MassiveHadronLtd
 					focusPoints.RemoveAt(0);
 				}
 			}
+			cameraSystem.focusPoints = focusPoints;
 		}
 
 		public static void SetFocusPoints(List<Vector3> points)
 		{
-			focusPoints = points ?? new List<Vector3>();
+			focusPoints.Clear();
 			SpatialBucketSystem.Clear();
-			if (focusPoints.Count <= 0) return;
-			mapBounds = new Bounds(focusPoints[0], Vector3.zero);
-			foreach (var point in focusPoints)
+			if (null == points || 0 == points.Count) return;
+
+			focusPoints.AddRange(points);
+			mapBounds = new Bounds(points[0], Vector3.zero);
+			foreach (var point in points)
 			{
 				mapBounds.Encapsulate(point);
 				if (SpatialBucketSystem.CanAddPoint(point))
 					SpatialBucketSystem.AddPoint(point);
 			}
+			cameraSystem.focusPoints = focusPoints;
 		}
 	}
 }

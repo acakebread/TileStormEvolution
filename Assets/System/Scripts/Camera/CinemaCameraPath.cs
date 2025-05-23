@@ -32,6 +32,14 @@ namespace MassiveHadronLtd
 							   //public AnimationCurve curveZ;
 		}
 
+		private Vector3 originSrc { get => cameraData.originSrc; set => cameraData.originSrc = value; }
+		private Vector3 originDst { get => cameraData.originDst; set => cameraData.originDst = value; }
+		private Vector3 targetSrc { get => cameraData.targetSrc; set => cameraData.targetSrc = value; }
+		private Vector3 targetDst { get => cameraData.targetDst; set => cameraData.targetDst = value; }
+		private float fieldOfView { get => cameraData.fieldOfView; set => cameraData.fieldOfView = value; }
+		private float smoothing { get => cameraData.smoothing; set => cameraData.smoothing = value; }
+		private float shake { get => cameraData.shake; set => cameraData.shake = value; }
+
 		protected override void StartCinemaSequence()
 		{
 			if (null == playerTransform) return;
@@ -76,6 +84,23 @@ namespace MassiveHadronLtd
 				Debug.DrawRay(targetSrc, Vector3.up * 5f, Color.red, DEBUG_DRAW_DURATION);
 				Debug.DrawRay(targetDst, Vector3.up * 5f, Color.blue, DEBUG_DRAW_DURATION);
 				//Debug.Log($"TargetSrc={targetSrc}, TargetDst={targetDst}, LozengeMajor={lozengeMajor}, LozengeMinor={lozengeMinor}, PathDir={pathDir}, Perpendicular={perpendicular}");
+			}
+
+			static Vector3 AdjustHeight(Vector3 position, Vector3 target)
+			{
+				var positionXZ = new Vector2(position.x, position.z);
+				var targetXZ = new Vector2(target.x, target.z);
+				var distXZ = Vector2.Distance(positionXZ, targetXZ);
+
+				var direction = (target - position).normalized;
+				var pitch = Vector3.Angle(direction, Vector3.down) - 90f;
+				if (pitch > MaxLookAtAngle)
+				{
+					var maxPitchRad = MaxLookAtAngle * Mathf.Deg2Rad;
+					var idealHeight = target.y + VerticalOffset + distXZ / Mathf.Tan(maxPitchRad);
+					position.y = Mathf.Clamp(idealHeight, MinCameraHeight, MaxCameraHeight);
+				}
+				return position;
 			}
 		}
 
@@ -318,23 +343,6 @@ namespace MassiveHadronLtd
 			{
 				Debug.DrawLine(points[i], points[i + 1], Color.green, DEBUG_DRAW_DURATION);
 			}
-		}
-
-		private Vector3 AdjustHeight(Vector3 position, Vector3 target)
-		{
-			var positionXZ = new Vector2(position.x, position.z);
-			var targetXZ = new Vector2(target.x, target.z);
-			var distXZ = Vector2.Distance(positionXZ, targetXZ);
-
-			var direction = (target - position).normalized;
-			var pitch = Vector3.Angle(direction, Vector3.down) - 90f;
-			if (pitch > MaxLookAtAngle)
-			{
-				var maxPitchRad = MaxLookAtAngle * Mathf.Deg2Rad;
-				var idealHeight = target.y + VerticalOffset + distXZ / Mathf.Tan(maxPitchRad);
-				position.y = Mathf.Clamp(idealHeight, MinCameraHeight, MaxCameraHeight);
-			}
-			return position;
 		}
 	}
 }

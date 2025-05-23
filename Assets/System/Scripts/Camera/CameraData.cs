@@ -4,7 +4,6 @@ namespace MassiveHadronLtd
 {
 	public struct CameraData
 	{
-		public Camera camera;
 		public float smoothing;
 		public Vector3 originSrc;
 		public Vector3 originDst;

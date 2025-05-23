@@ -1,5 +1,4 @@
 using UnityEngine;
-using System.Collections.Generic;
 
 namespace MassiveHadronLtd
 {
@@ -16,23 +15,13 @@ namespace MassiveHadronLtd
 		protected float sequenceTimer;
 		protected float currentSequenceDuration;
 
-		//temporary workarounds
+		//cinema specific properties
 		protected Vector3 lastPlayerPos;
-		protected Transform playerTransform => CameraController.playerTransform;
-		protected List<Vector3> focusPoints => CameraController.focusPoints;
-
-		protected Vector3 originSrc { get => cameraData.originSrc; set => cameraData.originSrc = value; }
-		protected Vector3 originDst { get => cameraData.originDst; set => cameraData.originDst = value; }
-		protected Vector3 targetSrc { get => cameraData.targetSrc; set => cameraData.targetSrc = value; }
-		protected Vector3 targetDst { get => cameraData.targetDst; set => cameraData.targetDst = value; }
-		protected float fieldOfView { get => cameraData.fieldOfView; set => cameraData.fieldOfView = value; }
-		protected float smoothing { get => cameraData.smoothing; set => cameraData.smoothing = value; }
-		protected float shake { get => cameraData.shake; set => cameraData.shake = value; }
 
 		public override void Start()
 		{
 			sequenceTimer = pauseTimer = 0f;//disable sequence by default
-			if (null == CameraController.playerTransform) return;
+			if (null == playerTransform) return;
 
 			cameraData = new CameraData
 			{
@@ -78,10 +67,10 @@ namespace MassiveHadronLtd
 				lastPlayerPos = playerTransform.position;
 			}
 
-			var interpolate = SmoothingUtils.Smooth(0f, 1f, smoothing, Time.deltaTime, CameraData.TargetFPS);
-			originSrc = Vector3.Lerp(originSrc, originDst, interpolate);
-			targetSrc = Vector3.Lerp(targetSrc, targetDst, interpolate);
-			//fovSrc = Mathf.Lerp(fovSrc, fovDst, interpolate); ToDo initialise FOV in StartSequence and lerp
+			var interpolate = SmoothingUtils.Smooth(0f, 1f, cameraData.smoothing, Time.deltaTime, CameraData.TargetFPS);
+			cameraData.originSrc = Vector3.Lerp(cameraData.originSrc, cameraData.originDst, interpolate);
+			cameraData.targetSrc = Vector3.Lerp(cameraData.targetSrc, cameraData.targetDst, interpolate);
+			//cameraData.fovSrc = Mathf.Lerp(cameraData.fovSrc, cameraData.fovDst, interpolate); ToDo initialise FOV in StartSequence and lerp
 			return true;
 		}
 

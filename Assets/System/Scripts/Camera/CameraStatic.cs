@@ -1,9 +1,19 @@
+using UnityEngine;
+
 namespace MassiveHadronLtd
 {
 	public class CameraStatic : CameraBase
 	{
-		public override void Start() { }
+		public override void SetOrigin(Vector3 value)
+		{
+			base.SetOrigin(value);
+			cameraData.originSrc = value;
+		}
 
-		public override bool Update() => true;
+		public override void SetTarget(Vector3 value)
+		{
+			base.SetOrigin(value);
+			cameraData.targetSrc = value;
+		}
 	}
 }

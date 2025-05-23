@@ -17,6 +17,14 @@ namespace MassiveHadronLtd
 		private Vector3 dollyZoomDirection;
 		private float dollyZoomInitialDistance;
 
+		private Vector3 originSrc { get => cameraData.originSrc; set => cameraData.originSrc = value; }
+		private Vector3 originDst { get => cameraData.originDst; set => cameraData.originDst = value; }
+		private Vector3 targetSrc { get => cameraData.targetSrc; set => cameraData.targetSrc = value; }
+		private Vector3 targetDst { get => cameraData.targetDst; set => cameraData.targetDst = value; }
+		private float fieldOfView { get => cameraData.fieldOfView; set => cameraData.fieldOfView = value; }
+		private float smoothing { get => cameraData.smoothing; set => cameraData.smoothing = value; }
+		private float shake { get => cameraData.shake; set => cameraData.shake = value; }
+
 		protected override void StartCinemaSequence()
 		{
 			if (playerTransform == null) return;

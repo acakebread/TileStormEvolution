@@ -13,7 +13,7 @@ namespace ClassicTilestorm
 
 		public void Reset()
 		{
-			CameraController.Reset();
+			CameraController.Reset(Camera.main);
 			CameraController.SetMode(CameraController.CameraState.Static);
 
 			var mapManager = GamePreview.mapManager;
@@ -25,15 +25,12 @@ namespace ClassicTilestorm
 			if (mapManager == null || mapManager.Waypoints == null || mapManager.Waypoints.Count == 0)
 			{
 				if (eggbotController?.eggbotRoot != null)
-				{
 					CameraController.SetMode(CameraController.CameraState.Follow);
-				}
 				else
 				{
 					CameraController.SetOrigin(new Vector3(0f, 14f, -14f));
 					CameraController.SetTarget(Vector3.zero);
 				}
-				//CameraController.UpdateCamera();
 				return;
 			}
 
@@ -55,8 +52,6 @@ namespace ClassicTilestorm
 			CameraController.SetTarget(dstPos);
 			CameraController.SetMode(CameraController.CameraState.Follow);
 
-			//CameraController.UpdateCamera();
-
 			if (eggbotController != null)
 			{
 				eggbotController.OnWaypointReached += OnWaypointReached;
@@ -70,6 +65,7 @@ namespace ClassicTilestorm
 			var eggbotController = GamePreview.eggbotController;
 			if (null != eggbotController && null != eggbotController.eggbotRoot) CameraController.SetPlayer(eggbotController.eggbotRoot);
 			CameraController.Update();
+			CameraController.Project(Camera.main);
 		}
 
 		public void OnWaypointReached(int waypointIndex)
