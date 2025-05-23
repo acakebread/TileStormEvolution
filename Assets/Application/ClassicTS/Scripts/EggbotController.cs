@@ -8,8 +8,7 @@ namespace ClassicTilestorm
 	{
 		private MapManager mapManager => GameController.mapManager;
 
-		[HideInInspector] public Transform eggbotRoot;
-		private Transform eggbotMesh;
+		private Transform eggbot;
 
 		private int currentTile;
 		private int dstWaypoint;
@@ -35,35 +34,36 @@ namespace ClassicTilestorm
 		public event System.Action<int> OnPuzzleSolved;
 		public event System.Action OnLevelCompleted;
 
-		public static EggbotController instance;
-		private void Awake() { instance = this; Reset(); }
-
-		public void Reset()
+		public static EggbotController Instantiate(string EggbotCostume, Transform parent = null)
 		{
+			var eggbotController = new GameObject("Eggbot");
+			if (null != parent) eggbotController.transform.SetParent(parent, false);
+
+			var costume = string.IsNullOrEmpty(EggbotCostume) ? "Eggbot Default" : EggbotCostume;
+			var def = DatabaseLoader.TileDefs.FirstOrDefault(td => td.szType == "Eggbot" && td.szTheme == costume);
+			if (null == def?.szGeom) { Debug.LogError("Initialize: Invalid Eggbot geometry"); return null; }
+
+			var mesh = GeometryManager.InstantiatePrefab(def, eggbotController.transform, Vector3.zero);
+			mesh.name = "Mesh";
+
+			return eggbotController.AddComponent<EggbotController>();
+		}
+
+		private void Awake() 
+		{
+			eggbot = transform.Find("Mesh");//child transform
 			dstWaypoint = 1;
 			mod1 = mod2 = 0f;
 			sway = 0.1f;
 			actionQueue.Clear();
+			SetState(State.IDLE, 1f);
 
 			currentTile = Navigation.GetStartTile(mapManager);
 			if (null == mapManager || -1 == currentTile) { Debug.LogError("Initialize: Invalid setup"); return; }
 
-			if (null != eggbotRoot) Destroy(eggbotRoot.gameObject);
-			eggbotRoot = new GameObject("Eggbot").transform;
-			eggbotRoot.SetParent(mapManager.transform, false);
-
-			var costume = string.IsNullOrEmpty(mapManager.EggbotCostume) ? "Eggbot Default" : mapManager.EggbotCostume;
-			var def = DatabaseLoader.TileDefs.FirstOrDefault(td => td.szType == "Eggbot" && td.szTheme == costume);
-			if (null == def?.szGeom) { Debug.LogError("Initialize: Invalid Eggbot geometry"); return; }
-
-			var mesh = GeometryManager.InstantiatePrefab(def, eggbotRoot, Vector3.zero);
-			mesh.name = "Mesh";
-			eggbotMesh = mesh.transform;
-
-			eggbotRoot.position = mapManager.GetTilePosition(currentTile);
+			transform.position = mapManager.GetTilePosition(currentTile);
 			var yaw = mapManager.Waypoints?.Count > 1 ? Navigation.DirToAngle(Navigation.NavToDest(mapManager, mapManager.Waypoints[0].nTile, mapManager.Waypoints[1].nTile)) : 0f;
-			eggbotRoot.rotation = Quaternion.Euler(0f, yaw, 0f);
-			SetState(State.IDLE, 1f);
+			transform.rotation = Quaternion.Euler(0f, yaw, 0f);
 		}
 
 		private void SetState(State state, float duration = 0f)
@@ -106,8 +106,8 @@ namespace ClassicTilestorm
 					if (currentTile != destinationTile || (destinationTile != Navigation.GetEndTile(mapManager) && destinationTile != Navigation.GetStartTile(mapManager))) return false;
 					if (destinationTile == Navigation.GetEndTile(mapManager)) { OnLevelCompleted?.Invoke(); }
 					dstWaypoint = (dstWaypoint + 1) % mapManager.Waypoints.Count;
-					startYaw = eggbotRoot.eulerAngles.y;
-					targetYaw = eggbotRoot.eulerAngles.y + SpinAngle;
+					startYaw = transform.eulerAngles.y;
+					targetYaw = transform.eulerAngles.y + SpinAngle;
 					actionQueue.Enqueue(() => SetState(State.TURN, 1.5f));
 					actionQueue.Enqueue(() => SetState(State.IDLE, 0.5f));
 					return true;
@@ -123,7 +123,7 @@ namespace ClassicTilestorm
 					}
 
 					var direction = Navigation.NavToDest(mapManager, currentTile, destinationTile);
-					if (0 == direction || 0 != (int)Mathf.DeltaAngle(eggbotRoot.eulerAngles.y, Navigation.DirToAngle(direction))) return false;
+					if (0 == direction || 0 != (int)Mathf.DeltaAngle(transform.eulerAngles.y, Navigation.DirToAngle(direction))) return false;
 
 					if (true == isBlocked) OnPuzzleSolved?.Invoke(dstWaypoint - 1);
 					isBlocked = false;
@@ -138,10 +138,10 @@ namespace ClassicTilestorm
 				bool TestTurn(int destinationTile)
 				{
 					var direction = Navigation.NavToDest(mapManager, currentTile, destinationTile);
-					if (0 != direction && Mathf.Abs(Mathf.DeltaAngle(eggbotRoot.eulerAngles.y, Navigation.DirToAngle(direction))) > 0.01f)
+					if (0 != direction && Mathf.Abs(Mathf.DeltaAngle(transform.eulerAngles.y, Navigation.DirToAngle(direction))) > 0.01f)
 					{
-						startYaw = eggbotRoot.eulerAngles.y;
-						targetYaw = (int)eggbotRoot.eulerAngles.y + Mathf.DeltaAngle(eggbotRoot.eulerAngles.y, Navigation.DirToAngle(direction));
+						startYaw = transform.eulerAngles.y;
+						targetYaw = (int)transform.eulerAngles.y + Mathf.DeltaAngle(transform.eulerAngles.y, Navigation.DirToAngle(direction));
 						actionQueue.Enqueue(() => SetState(State.TURN, 1f / 4f));
 						return true;
 					}
@@ -151,17 +151,17 @@ namespace ClassicTilestorm
 					{
 						isBlocked = direction == 0;
 						var consoleYaw = Navigation.DirToAngle(TileProperties.GetOppositeDirection(mapManager.GetTileProperties(consoleTile).Nav));
-						if (Mathf.Abs(Mathf.DeltaAngle(eggbotRoot.eulerAngles.y, consoleYaw)) > 0.01f)
+						if (Mathf.Abs(Mathf.DeltaAngle(transform.eulerAngles.y, consoleYaw)) > 0.01f)
 						{
-							startYaw = eggbotRoot.eulerAngles.y;
-							targetYaw = eggbotRoot.eulerAngles.y + Mathf.DeltaAngle(eggbotRoot.eulerAngles.y, consoleYaw);
+							startYaw = transform.eulerAngles.y;
+							targetYaw = transform.eulerAngles.y + Mathf.DeltaAngle(transform.eulerAngles.y, consoleYaw);
 							actionQueue.Enqueue(() => SetState(State.TURN, 1f / 4f));
 							actionQueue.Enqueue(() => SetState(State.IDLE, 0.5f));
 							return true;
 						}
 
 						// Queue four BUSY states for jiggling to simulate looking at console
-						float currentYaw = eggbotRoot.eulerAngles.y;
+						float currentYaw = transform.eulerAngles.y;
 						float offset = (Random.Range(0f, 8f) - 4f) * 4.3f; // [-17.2, 17.2] degrees
 						actionQueue.Enqueue(() => { startYaw = Mathf.DeltaAngle(0f, currentYaw); targetYaw = startYaw + offset; SetState(State.TURN, Random.Range(0.25f, 0.75f)); });
 						actionQueue.Enqueue(() => { startYaw = Mathf.DeltaAngle(0f, currentYaw + offset); targetYaw = startYaw + (Random.Range(0f, 8f) - 4f) * 4.3f; SetState(State.TURN, Random.Range(0.25f, 0.75f)); });
@@ -174,14 +174,14 @@ namespace ClassicTilestorm
 			void UpdateTurn()
 			{
 				var t = stateDuration > 0 ? Mathf.Clamp01(stateTimer / stateDuration) : 1f;
-				eggbotRoot.rotation = Quaternion.Euler(0f, Mathf.Lerp(startYaw, targetYaw, SmoothingUtils.Ease(t)) % 360f, 0f);
-				if (t >= 1f) { eggbotRoot.rotation = Quaternion.Euler(0f, (int)(targetYaw % 360f), 0f); SetState(State.TEST); }
+				transform.rotation = Quaternion.Euler(0f, Mathf.Lerp(startYaw, targetYaw, SmoothingUtils.Ease(t)) % 360f, 0f);
+				if (t >= 1f) { transform.rotation = Quaternion.Euler(0f, (int)(targetYaw % 360f), 0f); SetState(State.TEST); }
 			}
 
 			void UpdateMove()
 			{
 				var t = stateDuration > 0 ? Mathf.Clamp01(stateTimer / stateDuration) : 1f;
-				eggbotRoot.position = Vector3.Lerp(startPosition, targetPosition, SmoothingUtils.Ease(t));
+				transform.position = Vector3.Lerp(startPosition, targetPosition, SmoothingUtils.Ease(t));
 				if (t >= 1f) SetState(State.TEST);
 			}
 
@@ -192,14 +192,13 @@ namespace ClassicTilestorm
 				sway = SmoothingUtils.Smooth(sway, isBlocked ? 0.02f : 0.1f, 99f, Time.deltaTime);
 				var pitch = sway * Mathf.Sin(mod1) * Mathf.Sin(mod2);
 				var rotation = Quaternion.Euler(pitch * Mathf.Rad2Deg, 0f, 0f);
-				eggbotMesh.localPosition = rotation * new Vector3(0f, 0f, -pitch);
-				eggbotMesh.localRotation = rotation;
+				eggbot.localPosition = rotation * new Vector3(0f, 0f, -pitch);
+				eggbot.localRotation = rotation;
 			}
 		}
 
 		private void OnDestroy()
 		{
-			instance = null;
 			OnWaypointReached = null;
 			OnPuzzleSolved = null;
 			OnLevelCompleted = null;

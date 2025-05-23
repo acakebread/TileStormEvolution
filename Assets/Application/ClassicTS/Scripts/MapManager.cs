@@ -19,7 +19,7 @@ namespace ClassicTilestorm
 		}
 
 		private DatabaseLoader.Map currentMap;
-		private GameObject mapRoot;
+		//private GameObject mapRoot;
 		private int[] tiles;
 		private TileData[] tileDataArray;
 		private List<DatabaseLoader.Waypoint> waypoints;
@@ -27,9 +27,35 @@ namespace ClassicTilestorm
 		public string CurrentMapName => currentMap?.name;
 		public int Width => currentMap?.tiles.nWidth ?? 0;
 		public int Height => currentMap?.tiles.nHeight ?? 0;
-		public GameObject GetMapRoot() => mapRoot;
+		public GameObject GetMapRoot() => gameObject;
 		public IReadOnlyList<DatabaseLoader.Waypoint> Waypoints => waypoints?.AsReadOnly();
 		public string EggbotCostume => currentMap?.szEggbotCostume;
+
+		public static MapManager Instantiate(string mapName, Transform parent = null)
+		{
+			var container = new GameObject("MapManager");
+			if (null != parent) container.transform.SetParent(parent, false);
+
+			var mapManager = container.AddComponent<MapManager>();
+			mapManager.Load(mapName);
+			return mapManager;
+		}
+
+		private void Awake()
+		{
+			//if (null != mapRoot) Destroy(mapRoot);
+			//mapRoot = null;
+			currentMap = null;
+			waypoints = null;
+			tiles = null;
+			tileDataArray = null;
+
+			if (TileStripHelper.SpareTile != null) // Clear static SpareTile
+			{
+				Destroy(TileStripHelper.SpareTile);
+				TileStripHelper.SpareTile = null;
+			}
+		}
 
 		public bool IsValidTileIndex(int tileIndex) => tileIndex >= 0 && tileIndex < tiles?.Length && Width > 0;
 
@@ -78,31 +104,11 @@ namespace ClassicTilestorm
 			return ToIndex(new GridCoord(worldPos));
 		}
 
-		public static MapManager instance;
-		private void Awake() { instance = this; Reset(); }
-		private void OnDestroy() => instance = null;
-
-		public void Reset()
-		{
-			if (null != mapRoot) Destroy(mapRoot);
-			mapRoot = null;
-			currentMap = null;
-			waypoints = null;
-			tiles = null;
-			tileDataArray = null; 
-			
-			if (TileStripHelper.SpareTile != null) // Clear static SpareTile
-			{
-				Destroy(TileStripHelper.SpareTile);
-				TileStripHelper.SpareTile = null;
-			}
-		}
-
-		public void Load(string mapName)
+		private void Load(string mapName)
 		{
 			if (null == mapName) return;
 
-			Reset();
+			//Reset();
 			currentMap = string.IsNullOrEmpty(mapName) ? DatabaseLoader.Maps.FirstOrDefault() : DatabaseLoader.Maps.FirstOrDefault(m => m.name == mapName);
 
 			if (null == currentMap)
@@ -111,8 +117,10 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			mapRoot = new GameObject($"Map_{currentMap.name}");
-			mapRoot.transform.SetParent(transform, false);
+			//mapRoot = new GameObject($"Map_{currentMap.name}");
+			//mapRoot.transform.SetParent(transform, false);
+
+			name = $"Map_{currentMap.name}";
 			LoadTileData(currentMap.tiles);
 
 			waypoints = currentMap.waypoints?.Where(w => w != null).ToList();
@@ -139,6 +147,9 @@ namespace ClassicTilestorm
 
 			for (var index = 0; index < tileMap.Length; index++)
 			{
+				GameObject gameObject = null;
+				TileProperties properties = null;
+
 				var tileDefIndex = tileMap[index];
 				if (tileDefIndex < 0 || tileDefIndex >= currentMap.defs.Length)
 				{
@@ -148,8 +159,7 @@ namespace ClassicTilestorm
 				}
 
 				var szTheme = currentMap.defs[tileDefIndex].szTheme;
-				if (string.IsNullOrEmpty(szTheme))
-					Debug.LogWarning($"Null szTheme at tileDefIndex {tileDefIndex}");
+				if (string.IsNullOrEmpty(szTheme)) Debug.LogWarning($"Null szTheme at tileDefIndex {tileDefIndex}");
 
 				var szType = currentMap.defs[tileDefIndex].szType;
 				if (szType == "tile_empty")
@@ -158,28 +168,25 @@ namespace ClassicTilestorm
 					continue;
 				}
 
-				var properties = TilePropertiesManager.GetOrCreateTileProperties(szType, szTheme);
+				properties = TilePropertiesManager.GetOrCreateTileProperties(szType, szTheme);
 				if (properties == null)
 				{
 					this.tiles[index] = -1;
 					continue;
 				}
 
-				GameObject gameObject = null;
 				var coord = GetTileCoordinates(index);
 				if (szType == "tile_invisible")
 				{
-					if (PreviewSettings.ShowHiddenTiles)
-					{
-						gameObject = GeometryManager.CreateDebugTile(mapRoot.transform, coord.ToPosition());
-					}
+					if (PreviewSettings.ShowHiddenTiles) gameObject = GeometryManager.CreateDebugTile(transform, coord.ToPosition());
+
 					this.tiles[index] = tileDataList.Count;
 					tileDataList.Add(new TileData { Properties = properties, GameObject = gameObject });
 					continue;
 				}
 
 				var tileDef = DatabaseLoader.TileDefs.FirstOrDefault(td => td.szType == szType && td.szTheme == szTheme);
-				gameObject = GeometryManager.InstantiateTile(tileDef, mapRoot.transform, coord.ToPosition(), properties.Interactive);
+				gameObject = GeometryManager.InstantiateTile(tileDef, transform, coord.ToPosition(), properties.Interactive);
 				this.tiles[index] = tileDataList.Count;
 				tileDataList.Add(new TileData { Properties = properties, GameObject = gameObject });
 			}
@@ -189,7 +196,7 @@ namespace ClassicTilestorm
 
 		public void Scramble()
 		{
-			if (currentMap?.mixed?.TileData?.bytes == null || tiles == null)
+			if (null  == currentMap?.mixed?.TileData?.bytes|| null == tiles)
 			{
 				Debug.LogWarning("Cannot scramble: invalid map or tiles data");
 				return;
@@ -212,10 +219,25 @@ namespace ClassicTilestorm
 
 		public void Solve()
 		{
-			if (mapRoot != null) Destroy(mapRoot);
-			mapRoot = new GameObject($"Map_{currentMap.name}");
-			mapRoot.transform.SetParent(transform, false);
-			LoadTileData(currentMap.tiles);
+			if (null == currentMap?.tiles?.TileData?.bytes || null == tiles)
+			{
+				Debug.LogWarning("Cannot solve: invalid map or tiles data");
+				return;
+			}
+
+			var def = 0;
+			var solvedTiles = new int[tiles.Length];
+			for (var index = 0; index < tiles.Length; index++)
+			{
+				solvedTiles[index] = -1;
+				if (0 != currentMap.tiles.TileData.bytes[index])
+				{
+					solvedTiles[index] = def;
+					def++;
+				}
+			}
+			tiles = solvedTiles;
+			UpdateTileObjectNamesAndPositions();
 		}
 
 		private void UpdateTileObjectNamesAndPositions()

@@ -3,14 +3,7 @@ using System.Collections.Generic;
 
 namespace MassiveHadronLtd
 {
-	public enum CameraState
-	{
-		Absent,
-		Static,
-		Preset,
-		Follow,
-		Cinema
-	}
+	public enum CameraState { Absent, Static, Preset, Follow, Cinema }
 
 	public static class CameraController
 	{
@@ -53,6 +46,8 @@ namespace MassiveHadronLtd
 			focusPoints.Clear();
 			mapBounds = new Bounds(Vector3.zero, Vector3.zero);
 			SpatialBucketSystem.Initialize(MinDistanceForNewFocusPoint);
+			cameraSystem = null;
+			restoreData.smoothing = CameraData.DefaultSmoothingRate;
 			SetMode(CameraState.Static);
 		}
 

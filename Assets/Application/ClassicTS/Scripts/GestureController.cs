@@ -33,7 +33,7 @@ namespace ClassicTilestorm
 		private void OnDestroy()
 		{
 			instance = null;
-			DebugVisualizationHelper.HighlightStrip(MapManager.instance, tileStrip, false);
+			DebugVisualizationHelper.HighlightStrip(GameController.mapManager, tileStrip, false);
 			if (null == gestureSystem) return;
 			gestureSystem.OnBeginDrag -= OnBeginDrag;
 			gestureSystem.OnDrag -= OnDrag;

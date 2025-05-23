@@ -97,11 +97,12 @@ namespace ClassicTilestorm
 			public float fY;
 			public float fZ;
 
-			public static bool IsValidVector(VectorData vector)
+			public Vector3 ToVector3() => IsValidVector() ? new Vector3(fX, fY, fZ) : Vector3.zero;
+
+			public bool IsValidVector()
 			{
-				if (vector == null) return false;
-				var valid = !float.IsNaN(vector.fX) && !float.IsInfinity(vector.fX) && !float.IsNaN(vector.fY) && !float.IsInfinity(vector.fY) && !float.IsNaN(vector.fZ) && !float.IsInfinity(vector.fZ);
-				if (!valid) Debug.LogWarning($"Invalid vector: fX={vector?.fX}, fY={vector?.fY}, fZ={vector?.fZ}");
+				var valid = !float.IsNaN(fX) && !float.IsInfinity(fX) && !float.IsNaN(fY) && !float.IsInfinity(fY) && !float.IsNaN(fZ) && !float.IsInfinity(fZ);
+				if (!valid) Debug.LogWarning($"Invalid vector: fX={fX}, fY={fY}, fZ={fZ}");
 				return valid;
 			}
 		}
