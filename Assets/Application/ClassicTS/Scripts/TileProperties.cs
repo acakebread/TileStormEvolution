@@ -1,12 +1,9 @@
-﻿namespace ClassicTilestorm
+﻿using static ClassicTilestorm.TileDirectionFlags;
+
+namespace ClassicTilestorm
 {
 	public class TileProperties
 	{
-		public const int North = 1;  // 0b0001
-		public const int South = 2;  // 0b0010
-		public const int East = 4;   // 0b0100
-		public const int West = 8;   // 0b1000
-
 		public static readonly int[] Directions = { North, South, East, West };
 
 		[System.Flags]
@@ -51,10 +48,5 @@
 		public bool Interactive => !(tileDef.bDock || tileDef.bRoll) && tileDef.bSlide;
 
 		public int Nav => nav;
-
-		public static int GetOffsetDirection(int dx, int dz) => (dx > 0 ? East : 0) | (dx < 0 ? West : 0) | (dz > 0 ? North : 0) | (dz < 0 ? South : 0);
-		public static (int dx, int dz) GetDirectionOffset(int dirBit) => (((dirBit & East) >> 2) - ((dirBit & West) >> 3), (dirBit & North) - ((dirBit & South) >> 1));
-		public static int GetOppositeDirection(int dirBit) => ((dirBit & North) << 1) | ((dirBit & South) >> 1) | ((dirBit & East) << 1) | ((dirBit & West) >> 1);
-		public static bool CanMoveBetweenTiles(TileProperties fromTile, TileProperties toTile, int dirBit) => ((fromTile?.nav ?? 0) & dirBit) != 0 && ((toTile?.nav ?? 0) & GetOppositeDirection(dirBit)) != 0;
 	}
 }

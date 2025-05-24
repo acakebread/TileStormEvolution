@@ -1,6 +1,7 @@
-using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
+using System.Linq;
+using System.Collections.Generic;
+using static ClassicTilestorm.TileDirectionFlags;
 
 namespace ClassicTilestorm
 {
@@ -50,7 +51,7 @@ namespace ClassicTilestorm
 					if (consoleProps?.IsConsole != true)
 						continue;
 
-					if (dirBit == TileProperties.GetOppositeDirection(consoleProps.Nav))
+					if (dirBit == GetOppositeDirection(consoleProps.Nav))
 						return consoleTile;
 				}
 			}
@@ -111,7 +112,7 @@ namespace ClassicTilestorm
 		//Classic TS legacy function - returns direction to next tile
 		private static int CalculateNav(int currentDir, int nextNav)
 		{
-			int oppositeDir = TileProperties.GetOppositeDirection(currentDir);
+			int oppositeDir = GetOppositeDirection(currentDir);
 			if ((oppositeDir & nextNav) != 0) // Next tile allows entering from current direction
 			{
 				if ((currentDir & nextNav) != 0)
@@ -155,7 +156,7 @@ namespace ClassicTilestorm
 		//Classic TS legacy function - returns Length in direction - ToDo rewrite correctly
 		public static float LengthDir(IMap map, int nSrc, int nDst, int nDir)
 		{
-			int nNav = TileProperties.GetOppositeDirection(nDir);
+			int nNav = GetOppositeDirection(nDir);
 			float fRet = 0.0f;
 			while (0 != nDir)
 			{
@@ -176,7 +177,7 @@ namespace ClassicTilestorm
 
 		public static int LineOfSight(IMap map, int nSrc, int nDst, int nDir)
 		{
-			int nNav = TileProperties.GetOppositeDirection(nDir);
+			int nNav = GetOppositeDirection(nDir);
 			while (0 != nDir)
 			{
 				nSrc = GetAdjacentTile(map, nSrc, nDir);
@@ -195,14 +196,20 @@ namespace ClassicTilestorm
 
 		private static int GetAdjacentTile(IMap map, int tileIndex, int dirBit)
 		{
-			var (dx, dz) = TileProperties.GetDirectionOffset(dirBit);
+			var (dx, dz) = GetDirectionOffset(dirBit);
 			var newCoord = map.GetTileCoordinates(tileIndex).Add(dx, dz);
 			if (newCoord.X < 0 || newCoord.X >= map.Width || newCoord.Z < 0 || newCoord.Z >= map.Height) return -1;
 			return map.ToIndex(newCoord);
 		}
 
-		public static int GetTileOffsetToDirection(IMap map, int tileOffset) => TileProperties.GetOffsetDirection(tileOffset % map.Width, tileOffset / map.Width);
+		public static int GetTileOffsetToDirection(IMap map, int tileOffset) => GetOffsetDirection(tileOffset % map.Width, tileOffset / map.Width);
 
 		public static float DirToAngle(int dir) => new float[] { 0f, 0f, 180f, 0f, 90f, 45f, 135f, 90f, -90f, -45f, -135f, -90f, 0f, 0f, 180f, 0f }[dir & 0xF];
+
+		public static int GetOffsetDirection(int dx, int dz) => (dx > 0 ? East : 0) | (dx < 0 ? West : 0) | (dz > 0 ? North : 0) | (dz < 0 ? South : 0);
+		public static (int dx, int dz) GetDirectionOffset(int dirBit) => (((dirBit & East) >> 2) - ((dirBit & West) >> 3), (dirBit & North) - ((dirBit & South) >> 1));
+		public static int GetOppositeDirection(int dirBit) => ((dirBit & North) << 1) | ((dirBit & South) >> 1) | ((dirBit & East) << 1) | ((dirBit & West) >> 1);
+		public static bool CanMoveBetweenTiles(TileProperties fromTile, TileProperties toTile, int dirBit) => ((fromTile?.Nav ?? 0) & dirBit) != 0 && ((toTile?.Nav ?? 0) & GetOppositeDirection(dirBit)) != 0;
+
 	}
 }

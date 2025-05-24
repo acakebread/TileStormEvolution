@@ -5,15 +5,15 @@ namespace ClassicTilestorm
 {
 	public interface IMap
 	{
+		GameObject gameObject { get; }
 		int Width { get; }
 		int Height { get; }
-		IReadOnlyList<DatabaseLoader.Waypoint> Waypoints { get; }
+		int[] GetTiles();
+		bool IsValidTileIndex(int tileIndex);
+		int ToIndex(GridCoord coord);
 		TileProperties GetTileProperties(int tileIndex);
 		GameObject GetTileGameObject(int tileIndex);
 		GridCoord GetTileCoordinates(int tileIndex);
-		int ToIndex(GridCoord coord);
-		bool IsValidTileIndex(int tileIndex);
-		int[] GetTiles();
-		GameObject GetMapRoot();
+		IReadOnlyList<DatabaseLoader.Waypoint> Waypoints { get; }
 	}
 }

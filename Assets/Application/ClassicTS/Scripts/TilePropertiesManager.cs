@@ -10,16 +10,10 @@ namespace ClassicTilestorm
 		public static TileProperties GetOrCreateTileProperties(string szType, string szTheme)
 		{
 			var key = (szType, szTheme);
-			if (propertiesCache.TryGetValue(key, out var properties))
-			{
-				return properties;
-			}
+			if (propertiesCache.TryGetValue(key, out var properties)) return properties;
 
 			var tileDef = DatabaseLoader.TileDefs.FirstOrDefault(td => td.szType == szType && td.szTheme == szTheme);
-			if (tileDef == null)
-			{
-				return null;
-			}
+			if (tileDef == null) return null;
 
 			properties = new TileProperties(tileDef);
 			propertiesCache[key] = properties;

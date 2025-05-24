@@ -150,7 +150,7 @@ namespace ClassicTilestorm
 					if (-1 != consoleTile && null != mapManager.GetTileProperties(consoleTile)?.Nav)
 					{
 						isBlocked = direction == 0;
-						var consoleYaw = Navigation.DirToAngle(TileProperties.GetOppositeDirection(mapManager.GetTileProperties(consoleTile).Nav));
+						var consoleYaw = Navigation.DirToAngle(Navigation.GetOppositeDirection(mapManager.GetTileProperties(consoleTile).Nav));
 						if (Mathf.Abs(Mathf.DeltaAngle(transform.eulerAngles.y, consoleYaw)) > 0.01f)
 						{
 							startYaw = transform.eulerAngles.y;

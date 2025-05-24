@@ -91,7 +91,7 @@ namespace ClassicTilestorm
 				if (Mathf.Approximately(val, 0f))
 					break;
 
-				int direction = val > 0f ? (isX ? TileProperties.East : TileProperties.North) : (isX ? TileProperties.West : TileProperties.South);
+				int direction = val > 0f ? (isX ? TileDirectionFlags.East : TileDirectionFlags.North) : (isX ? TileDirectionFlags.West : TileDirectionFlags.South);
 
 				tileStrip = TileStripHelper.GetTileStrip(mapManager, dragIndex, direction);
 				if (tileStrip.Count <= 1)

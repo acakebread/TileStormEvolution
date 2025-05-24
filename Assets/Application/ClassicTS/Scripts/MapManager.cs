@@ -10,12 +10,7 @@ namespace ClassicTilestorm
 		{
 			public TileProperties Properties;
 			public GameObject GameObject;
-
-			//public Vector3 position
-			//{
-			//	get => null != GameObject ? GameObject.transform.position : Vector3.zero;
-			//	set { if (null != GameObject) GameObject.transform.position = value; }
-			//}
+			//public Vector3 position { get => null != GameObject ? GameObject.transform.position : Vector3.zero; set { if (null != GameObject) GameObject.transform.position = value; } }
 		}
 
 		private DatabaseLoader.Map currentMap;
@@ -26,7 +21,6 @@ namespace ClassicTilestorm
 		public string CurrentMapName => currentMap?.name;
 		public int Width => currentMap?.tiles.nWidth ?? 0;
 		public int Height => currentMap?.tiles.nHeight ?? 0;
-		public GameObject GetMapRoot() => gameObject;
 		public IReadOnlyList<DatabaseLoader.Waypoint> Waypoints => waypoints?.AsReadOnly();
 		public string EggbotCostume => currentMap?.szEggbotCostume;
 
@@ -46,12 +40,6 @@ namespace ClassicTilestorm
 			waypoints = null;
 			tiles = null;
 			tileArray = null;
-
-			if (TileStripHelper.SpareTile != null) // Clear static SpareTile
-			{
-				Destroy(TileStripHelper.SpareTile);
-				TileStripHelper.SpareTile = null;
-			}
 		}
 
 		public bool IsValidTileIndex(int tileIndex) => tileIndex >= 0 && tileIndex < tiles?.Length && Width > 0;
@@ -121,7 +109,10 @@ namespace ClassicTilestorm
 				waypoints = Navigation.SetupWaypoints(this);
 
 			if (PreviewSettings.Scrambled)
-				Scramble();
+			{
+				Scramble();//scramble calls UpdateTileObjectNamesAndPositions
+				return;
+			}
 
 			UpdateTileObjectNamesAndPositions();
 		}
@@ -138,7 +129,7 @@ namespace ClassicTilestorm
 			this.tiles = new int[tiles.nWidth * tiles.nHeight];
 			tileArray = new Tile[tiles.nWidth * tiles.nHeight];
 
-			for (var index = 0; index < tileMap.Length; index++)
+			for (var index = 0; index < tileMap.Length; ++index)
 			{
 				this.tiles[index] = index;
 
@@ -149,11 +140,11 @@ namespace ClassicTilestorm
 					continue;
 				}
 
-				var szTheme = currentMap.defs[tileDefIndex].szTheme;
-				if (string.IsNullOrEmpty(szTheme)) Debug.LogWarning($"Null szTheme at tileDefIndex {tileDefIndex}");
-
 				var szType = currentMap.defs[tileDefIndex].szType;
 				if (szType == "tile_empty") continue;
+
+				var szTheme = currentMap.defs[tileDefIndex].szTheme;
+				if (string.IsNullOrEmpty(szTheme)) Debug.LogWarning($"Null szTheme at tileDefIndex {tileDefIndex}");
 
 				var properties = TilePropertiesManager.GetOrCreateTileProperties(szType, szTheme);
 				if (null == properties) continue;
@@ -192,7 +183,7 @@ namespace ClassicTilestorm
 
 		private void UpdateTileObjectNamesAndPositions()
 		{
-			for (var n = 0; n < tiles.Length; n++)
+			for (var n = 0; n < tiles.Length; ++n)
 			{
 				var gameObject = GetTileGameObject(n);
 				if (gameObject == null) continue;

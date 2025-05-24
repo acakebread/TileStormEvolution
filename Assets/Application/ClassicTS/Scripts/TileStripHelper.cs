@@ -46,7 +46,7 @@ namespace ClassicTilestorm
 				return strip;
 
 			var stride = 0;
-			var (dx, dz) = TileProperties.GetDirectionOffset(directionFlag);
+			var (dx, dz) = Navigation.GetDirectionOffset(directionFlag);
 			if (dx != 0) stride = dx;
 			else if (dz != 0) stride = dz * map.Width;
 
@@ -143,23 +143,16 @@ namespace ClassicTilestorm
 
 		private static void UpdateSpareTile(IMap map, in TileStrip strip, in Vector3 delta, bool active)
 		{
-			if (!active)
-			{
-				if (null != SpareTile)
-					SpareTile.SetActive(false);
-				return;
-			}
-
-			if (strip.Count <= 1)
-				return;
+			if (!active && null != SpareTile) { SpareTile.SetActive(false); return; }
+			if (strip.Count <= 1) return;
 
 			var leadingTileIndex = strip.Indices.Last();
 			var leadingTile = map.GetTileGameObject(leadingTileIndex);
 			var trailingTileIndex = strip.Indices.First() - strip.Stride;
 			var trailingPosition = map.GetTileCoordinates(trailingTileIndex).ToPosition();
 
-			if (null == SpareTile)
-				SpareTile = GeometryManager.CreateSpareTile(leadingTile, map.GetMapRoot().transform, trailingPosition + delta);
+			if (null == SpareTile) SpareTile = GeometryManager.CreateSpareTile(leadingTile, map.gameObject.transform, trailingPosition + delta);
+			if (null == SpareTile) return;
 
 			var spareRenderer = SpareTile.GetComponent<MeshRenderer>();
 			var spareFilter = SpareTile.GetComponent<MeshFilter>();
