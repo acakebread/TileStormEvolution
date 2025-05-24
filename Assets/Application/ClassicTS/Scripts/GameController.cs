@@ -20,10 +20,10 @@ namespace ClassicTilestorm
 		private void LoadMap(string map = null)
 		{
 			if (null != mapManager) Destroy(mapManager.gameObject);
-			mapManager = MapManager.Instantiate(map ?? PreviewSettings.LoadMapName, transform);
+			mapManager = MapManager.Instantiate(transform, map ?? PreviewSettings.LoadMapName);
 			(GestureController.instance ?? gameObject.AddComponent<GestureController>()).Reset();
 			if (null != eggbotController) Destroy(eggbotController.gameObject);
-			eggbotController = EggbotController.Instantiate(mapManager.EggbotCostume, transform);
+			eggbotController = EggbotController.Instantiate(transform, mapManager.EggbotCostume);
 
 			ResetCamera();
 

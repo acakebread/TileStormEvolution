@@ -145,7 +145,7 @@ namespace ClassicTilestorm
 		{
 			if (!active)
 			{
-				if (SpareTile != null)
+				if (null != SpareTile)
 					SpareTile.SetActive(false);
 				return;
 			}
@@ -158,10 +158,8 @@ namespace ClassicTilestorm
 			var trailingTileIndex = strip.Indices.First() - strip.Stride;
 			var trailingPosition = map.GetTileCoordinates(trailingTileIndex).ToPosition();
 
-			if (SpareTile == null)
-			{
+			if (null == SpareTile)
 				SpareTile = GeometryManager.CreateSpareTile(leadingTile, map.GetMapRoot().transform, trailingPosition + delta);
-			}
 
 			var spareRenderer = SpareTile.GetComponent<MeshRenderer>();
 			var spareFilter = SpareTile.GetComponent<MeshFilter>();

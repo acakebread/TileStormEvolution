@@ -4,15 +4,12 @@ namespace ClassicTilestorm
 {
 	public static class DebugVisualizationHelper
 	{
-		public class OriginalMaterialHolder : MonoBehaviour
-		{
-			public Material originalMaterial;
-		}
+		private class OriginalMaterialHolder : MonoBehaviour { public Material originalMaterial; }
 
 		public static void HighlightStrip(IMap map, in TileStripHelper.TileStrip strip, bool highlight)
 		{
 			if (!PreviewSettings.ShowTileSelection) return;
-			if (strip.Indices == null) return;
+			if (null == strip.Indices) return;
 
 			foreach (var tileIndex in strip.Indices)
 				HighlightTile(map?.GetTileGameObject(tileIndex), highlight);
@@ -23,7 +20,7 @@ namespace ClassicTilestorm
 
 		private static void HighlightTile(GameObject tile, bool enable)
 		{
-			if (tile == null) return;
+			if (null == tile) return;
 
 			var meshRenderer = tile.GetComponentInChildren<MeshRenderer>();
 			if (meshRenderer == null) return;
@@ -39,7 +36,7 @@ namespace ClassicTilestorm
 			}
 			else
 			{
-				if (tile.TryGetComponent<OriginalMaterialHolder>(out var holder) && holder.originalMaterial != null)
+				if (tile.TryGetComponent<OriginalMaterialHolder>(out var holder) && null != holder.originalMaterial)
 					meshRenderer.material = holder.originalMaterial;
 			}
 		}

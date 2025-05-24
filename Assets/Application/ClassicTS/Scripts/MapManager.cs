@@ -11,11 +11,11 @@ namespace ClassicTilestorm
 			public TileProperties Properties;
 			public GameObject GameObject;
 
-			public Vector3 position
-			{
-				get => null != GameObject ? GameObject.transform.position : Vector3.zero;
-				set { if (null != GameObject) GameObject.transform.position = value; }
-			}
+			//public Vector3 position
+			//{
+			//	get => null != GameObject ? GameObject.transform.position : Vector3.zero;
+			//	set { if (null != GameObject) GameObject.transform.position = value; }
+			//}
 		}
 
 		private DatabaseLoader.Map currentMap;
@@ -30,7 +30,7 @@ namespace ClassicTilestorm
 		public IReadOnlyList<DatabaseLoader.Waypoint> Waypoints => waypoints?.AsReadOnly();
 		public string EggbotCostume => currentMap?.szEggbotCostume;
 
-		public static MapManager Instantiate(string mapName, Transform parent = null)
+		public static MapManager Instantiate(Transform parent = null, string mapName = "Industrial 01")
 		{
 			var container = new GameObject("MapManager");
 			if (null != parent) container.transform.SetParent(parent, false);
@@ -59,14 +59,14 @@ namespace ClassicTilestorm
 		public TileProperties GetTileProperties(int tileIndex)
 		{
 			if (!IsValidTileIndex(tileIndex)) return null;
-			int dataIndex = tiles[tileIndex];
+			var dataIndex = tiles[tileIndex];
 			return dataIndex >= 0 && dataIndex < tileArray.Length ? tileArray[dataIndex].Properties : null;
 		}
 
 		public GameObject GetTileGameObject(int tileIndex)
 		{
 			if (!IsValidTileIndex(tileIndex)) return null;
-			int dataIndex = tiles[tileIndex];
+			var dataIndex = tiles[tileIndex];
 			return dataIndex >= 0 && dataIndex < tileArray.Length ? tileArray[dataIndex].GameObject : null;
 		}
 
@@ -82,8 +82,8 @@ namespace ClassicTilestorm
 
 		public Vector3 ScreenToWorld(Vector3 screenPos)
 		{
-			Ray ray = Camera.main.ScreenPointToRay(screenPos);
-			Plane mapPlane = new Plane(Vector3.up, Vector3.zero);
+			var ray = Camera.main.ScreenPointToRay(screenPos);
+			var mapPlane = new Plane(Vector3.up, Vector3.zero);
 			if (!mapPlane.Raycast(ray, out float distance)) return Vector3.zero;
 			return ray.GetPoint(distance);
 		}
@@ -157,6 +157,7 @@ namespace ClassicTilestorm
 
 				var properties = TilePropertiesManager.GetOrCreateTileProperties(szType, szTheme);
 				if (null == properties) continue;
+				tileArray[index].Properties = properties;
 
 				var coord = GetTileCoordinates(index);
 				if (szType == "tile_invisible")
@@ -166,8 +167,7 @@ namespace ClassicTilestorm
 				}
 
 				var tileDef = DatabaseLoader.TileDefs.FirstOrDefault(td => td.szType == szType && td.szTheme == szTheme);
-				var gameObject = GeometryManager.InstantiateTile(tileDef, transform, coord.ToPosition(), properties.Interactive);
-				tileArray[index] = new Tile { Properties = properties, GameObject = gameObject };
+				tileArray[index].GameObject = GeometryManager.InstantiateTile(tileDef, transform, coord.ToPosition(), properties.Interactive);
 			}
 		}
 
@@ -197,10 +197,10 @@ namespace ClassicTilestorm
 				var gameObject = GetTileGameObject(n);
 				if (gameObject == null) continue;
 				var coord = GetTileCoordinates(n);
+				gameObject.transform.position = coord.ToPosition();
 #if DEBUG
 				gameObject.name = $"{GetTileProperties(n)?.Type ?? "Empty"}_{coord.X}_{coord.Z}";
 #endif
-				gameObject.transform.position = coord.ToPosition();
 			}
 		}
 	}

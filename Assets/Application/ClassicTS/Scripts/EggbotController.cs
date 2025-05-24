@@ -34,7 +34,7 @@ namespace ClassicTilestorm
 		public event System.Action<int> OnPuzzleSolved;
 		public event System.Action OnLevelCompleted;
 
-		public static EggbotController Instantiate(string EggbotCostume, Transform parent = null)
+		public static EggbotController Instantiate(Transform parent = null, string EggbotCostume = "Eggbot Default")
 		{
 			var eggbotController = new GameObject("Eggbot");
 			if (null != parent) eggbotController.transform.SetParent(parent, false);
