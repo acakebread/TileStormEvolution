@@ -17,12 +17,16 @@ namespace ClassicTilestorm
 		// Add direction offset
 		public GridCoord Add(int dx, int dz) => new(X + dx, Z + dz);
 
+		// magnitude
+		public float magnitude => Mathf.Sqrt(X * X + Z * Z);
+
 		// Equality for comparisons
 		public override bool Equals(object obj) => obj is GridCoord other && X == other.X && Z == other.Z;
 		public override int GetHashCode() => (X, Z).GetHashCode();
 		public static bool operator ==(GridCoord a, GridCoord b) => a.X == b.X && a.Z == b.Z;
 		public static bool operator !=(GridCoord a, GridCoord b) => !(a == b);
 		public static GridCoord operator +(GridCoord a, GridCoord b) => new(a.X + b.X, a.Z + b.Z);
+		public static GridCoord operator -(GridCoord a, GridCoord b) => new(a.X - b.X, a.Z - b.Z);
 
 		// String representation for debugging
 		public override string ToString() => $"({X}, {Z})";

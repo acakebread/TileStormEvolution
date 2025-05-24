@@ -34,21 +34,6 @@ namespace ClassicTilestorm
 		public event System.Action<int> OnPuzzleSolved;
 		public event System.Action OnLevelCompleted;
 
-		public static EggbotController Instantiate(Transform parent = null, string EggbotCostume = "Eggbot Default")
-		{
-			var eggbotController = new GameObject("Eggbot");
-			if (null != parent) eggbotController.transform.SetParent(parent, false);
-
-			var costume = string.IsNullOrEmpty(EggbotCostume) ? "Eggbot Default" : EggbotCostume;
-			var def = DatabaseLoader.TileDefs.FirstOrDefault(td => td.szType == "Eggbot" && td.szTheme == costume);
-			if (null == def?.szGeom) { Debug.LogError("Initialize: Invalid Eggbot geometry"); return null; }
-
-			var mesh = GeometryManager.InstantiatePrefab(def, eggbotController.transform, Vector3.zero);
-			mesh.name = "Mesh";
-
-			return eggbotController.AddComponent<EggbotController>();
-		}
-
 		private void Awake() 
 		{
 			eggbot = transform.Find("Mesh");//child transform
@@ -202,6 +187,21 @@ namespace ClassicTilestorm
 			OnWaypointReached = null;
 			OnPuzzleSolved = null;
 			OnLevelCompleted = null;
+		}
+
+		public static EggbotController Instantiate(Transform parent = null, string EggbotCostume = "Eggbot Default")
+		{
+			var eggbotController = new GameObject("Eggbot");
+			if (null != parent) eggbotController.transform.SetParent(parent, false);
+
+			var costume = string.IsNullOrEmpty(EggbotCostume) ? "Eggbot Default" : EggbotCostume;
+			var def = DatabaseLoader.TileDefs.FirstOrDefault(td => td.szType == "Eggbot" && td.szTheme == costume);
+			if (null == def?.szGeom) { Debug.LogError("Initialize: Invalid Eggbot geometry"); return null; }
+
+			var mesh = GeometryManager.InstantiatePrefab(def, eggbotController.transform, Vector3.zero);
+			mesh.name = "Mesh";
+
+			return eggbotController.AddComponent<EggbotController>();
 		}
 	}
 }

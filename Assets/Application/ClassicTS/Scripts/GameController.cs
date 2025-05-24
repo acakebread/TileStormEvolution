@@ -37,7 +37,7 @@ namespace ClassicTilestorm
 				if (null == mapManager || null == mapManager.Waypoints || 0 == mapManager.Waypoints.Count)
 				{
 					CameraController.SetMode(null != eggbotRoot ? CameraState.Follow : CameraState.Static);
-					CameraController.SetOrigin(new Vector3(0f, 14f, -14f), true);
+					CameraController.SetOrigin(new Vector3(0f, 14f, -14f), true); // TS defaults
 					CameraController.SetTarget(Vector3.zero, true);
 					CameraController.SetPlayer(eggbotRoot);
 					CameraController.SetFocusPoints(waypoints);

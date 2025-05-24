@@ -14,8 +14,8 @@ namespace ClassicTilestorm
 		}
 
 		private DatabaseLoader.Map currentMap;
-		private int[] tiles;
 		private Tile[] tileArray;
+		private int[] tiles;
 		private List<DatabaseLoader.Waypoint> waypoints;
 
 		public string CurrentMapName => currentMap?.name;
@@ -24,22 +24,12 @@ namespace ClassicTilestorm
 		public IReadOnlyList<DatabaseLoader.Waypoint> Waypoints => waypoints?.AsReadOnly();
 		public string EggbotCostume => currentMap?.szEggbotCostume;
 
-		public static MapManager Instantiate(Transform parent = null, string mapName = "Industrial 01")
-		{
-			var container = new GameObject("MapManager");
-			if (null != parent) container.transform.SetParent(parent, false);
-
-			var mapManager = container.AddComponent<MapManager>();
-			mapManager.Load(mapName);
-			return mapManager;
-		}
-
 		private void Awake()
 		{
 			currentMap = null;
 			waypoints = null;
-			tiles = null;
 			tileArray = null;
+			tiles = null;
 		}
 
 		public bool IsValidTileIndex(int tileIndex) => tileIndex >= 0 && tileIndex < tiles?.Length && Width > 0;
@@ -58,11 +48,13 @@ namespace ClassicTilestorm
 			return dataIndex >= 0 && dataIndex < tileArray.Length ? tileArray[dataIndex].GameObject : null;
 		}
 
+		public GridCoord GetTileDelta(int nSrc, int nDst) => GetTileCoordinates(nDst) - GetTileCoordinates(nSrc);
+
 		public GridCoord GetTileCoordinates(int tileIndex) => new(tileIndex % Width, tileIndex / Width);
 
 		public Vector3 GetTilePosition(int tileIndex) => GetTileCoordinates(tileIndex).ToPosition();
 
-		public float GetTileDistance(int nSrc, int nDst) => (GetTilePosition(nDst) - GetTilePosition(nSrc)).magnitude;
+		public float GetTileDistance(int nSrc, int nDst) => GetTileDelta(nSrc, nDst).magnitude;
 
 		public int ToIndex(GridCoord coord) => coord.Z * Width + coord.X;
 
@@ -193,6 +185,16 @@ namespace ClassicTilestorm
 				gameObject.name = $"{GetTileProperties(n)?.Type ?? "Empty"}_{coord.X}_{coord.Z}";
 #endif
 			}
+		}
+
+		public static MapManager Instantiate(Transform parent = null, string mapName = "Industrial 01")
+		{
+			var container = new GameObject("MapManager");
+			if (null != parent) container.transform.SetParent(parent, false);
+
+			var mapManager = container.AddComponent<MapManager>();
+			mapManager.Load(mapName);
+			return mapManager;
 		}
 	}
 }

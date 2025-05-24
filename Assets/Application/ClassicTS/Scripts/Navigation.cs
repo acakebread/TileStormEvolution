@@ -153,7 +153,7 @@ namespace ClassicTilestorm
 			return 0; // No valid direction found
 		}
 
-		//Classic TS legacy function - returns Length in direction - ToDo rewrite correctly
+		//Classic TS legacy function - returns Length in direction
 		public static float LengthDir(IMap map, int nSrc, int nDst, int nDir)
 		{
 			int nNav = GetOppositeDirection(nDir);
