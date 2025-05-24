@@ -14,8 +14,8 @@ namespace MassiveHadronLtd
 		//public float shake;//deviation amplitude
 		public CameraData cameraData;
 
-		public virtual void Start() { }
-		public virtual void Update() { if (HasStarted) return; HasStarted = true; Start(); }
+		public virtual void Start() { HasStarted = true; }
+		public virtual void Update() { if (HasStarted) return; Start(); }
 		public virtual void Project(Camera camera = null)
 		{
 			camera ??= Camera.main;

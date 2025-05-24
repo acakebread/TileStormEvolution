@@ -20,6 +20,7 @@ namespace MassiveHadronLtd
 
 		public override void Start()
 		{
+			base.Start();
 			sequenceTimer = pauseTimer = 0f;//disable sequence by default
 			if (null == playerTransform) return;
 

@@ -85,7 +85,7 @@ namespace MassiveHadronLtd
 			}
 		}
 
-		public static void SystemStart() => cameraSystem.Start();//optional force start - not required in normal use
+		//public static void SystemStart() => cameraSystem.Start();//optional force start - not required in normal use
 
 		public static void Update()
 		{
@@ -100,6 +100,7 @@ namespace MassiveHadronLtd
 				SetMode(CameraState.Cinema);//restart cinema in new sub mode
 				cameraSystem.playerTransform = playerTransform;
 				cameraSystem.focusPoints = points;
+				cameraSystem.Start();
 			}
 		}
 
