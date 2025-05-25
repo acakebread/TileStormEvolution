@@ -38,14 +38,13 @@ namespace ClassicTilestorm
 			gestureSystem.OnBeginDrag -= OnBeginDrag;
 			gestureSystem.OnDrag -= OnDrag;
 			gestureSystem.OnEndDrag -= OnEndDrag;
-
 		}
 
 		private void OnBeginDrag(Vector3 screenPos)
 		{
 			var tileIndex = mapManager.ScreenToMapIndex(screenPos);
 			var properties = mapManager.GetTileProperties(tileIndex);
-			if (properties == null || !properties.Interactive) return;
+			if (null == properties || !properties.Interactive) return;
 
 			last = mapManager.ScreenToWorld(screenPos);
 			delta = Vector3.zero;
@@ -86,14 +85,14 @@ namespace ClassicTilestorm
 				TileStripHelper.ResetStrip(mapManager, tileStrip);
 				tileStrip = default;
 
-				bool isX = Mathf.Abs(delta.x) > Mathf.Abs(delta.z);
-				float val = isX ? delta.x : delta.z;
+				var isX = Mathf.Abs(delta.x) > Mathf.Abs(delta.z);
+				var val = isX ? delta.x : delta.z;
 				if (Mathf.Approximately(val, 0f))
 					break;
 
-				int direction = val > 0f ? (isX ? TileDirectionFlags.East : TileDirectionFlags.North) : (isX ? TileDirectionFlags.West : TileDirectionFlags.South);
+				var stride = val > 0f ? (isX ? 1 : mapManager.Width) : (isX ? -1 : -mapManager.Width);
 
-				tileStrip = TileStripHelper.GetTileStrip(mapManager, dragIndex, direction, PreviewSettings.Difficulty);
+				tileStrip = TileStripHelper.GetTileStrip(mapManager, dragIndex, stride, PreviewSettings.Difficulty);
 				if (tileStrip.Count <= 1)
 				{
 					if (isX) delta.x = 0;
@@ -101,18 +100,15 @@ namespace ClassicTilestorm
 					continue;
 				}
 
-				int count = (int)((Mathf.Abs(val) + (snap ? gridSize * 0.5f : 0f)) / gridSize);
-				for (int i = 0; i < count; ++i)
+				var count = (int)((Mathf.Abs(val) + (snap ? gridSize * 0.5f : 0f)) / gridSize);
+				for (var i = 0; i < count; ++i)
 				{
 					if (!TileStripHelper.RollStrip(mapManager, tileStrip)) break;
 					dragIndex += tileStrip.Stride;
-					tileStrip = TileStripHelper.GetTileStrip(mapManager, dragIndex, direction, PreviewSettings.Difficulty);
+					tileStrip = TileStripHelper.GetTileStrip(mapManager, dragIndex, stride, PreviewSettings.Difficulty);
 				}
 
-				if (isX)
-					delta = new Vector3(val % gridSize, 0, 0);
-				else
-					delta = new Vector3(0, 0, val % gridSize);
+				delta = isX ? new Vector3(val % gridSize, 0, 0) : new Vector3(0, 0, val % gridSize);
 				break;
 			}
 
