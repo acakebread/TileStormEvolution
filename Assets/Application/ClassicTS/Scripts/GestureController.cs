@@ -93,7 +93,7 @@ namespace ClassicTilestorm
 
 				int direction = val > 0f ? (isX ? TileDirectionFlags.East : TileDirectionFlags.North) : (isX ? TileDirectionFlags.West : TileDirectionFlags.South);
 
-				tileStrip = TileStripHelper.GetTileStrip(mapManager, dragIndex, direction);
+				tileStrip = TileStripHelper.GetTileStrip(mapManager, dragIndex, direction, PreviewSettings.Difficulty);
 				if (tileStrip.Count <= 1)
 				{
 					if (isX) delta.x = 0;
@@ -106,7 +106,7 @@ namespace ClassicTilestorm
 				{
 					if (!TileStripHelper.RollStrip(mapManager, tileStrip)) break;
 					dragIndex += tileStrip.Stride;
-					tileStrip = TileStripHelper.GetTileStrip(mapManager, dragIndex, direction);
+					tileStrip = TileStripHelper.GetTileStrip(mapManager, dragIndex, direction, PreviewSettings.Difficulty);
 				}
 
 				if (isX)

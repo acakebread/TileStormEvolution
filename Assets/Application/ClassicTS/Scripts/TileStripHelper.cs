@@ -31,7 +31,7 @@ namespace ClassicTilestorm
 			}
 		}
 
-		public static TileStrip GetTileStrip(IMap map, int startIndex, int directionFlag)
+		public static TileStrip GetTileStrip(IMap map, int startIndex, int directionFlag, bool difficult = false)
 		{
 			var strip = new TileStrip { First = -1, Count = 0, Stride = 0 };
 
@@ -50,51 +50,84 @@ namespace ClassicTilestorm
 			if (dx != 0) stride = dx;
 			else if (dz != 0) stride = dz * map.Width;
 
-			var lastIndex = startIndex;
-			while (true)
+			if (difficult)
 			{
-				var nextProps = map.GetTileProperties(lastIndex + stride);
-				if (nextProps == null || !nextProps.IsSlide || nextProps.IsDock) break;
-				lastIndex += stride;
-			}
-
-			while (true)
-			{
-				var nextProps = map.GetTileProperties(lastIndex + stride);
-				if (nextProps == null || !nextProps.IsDock) break;
-				lastIndex += stride;
-			}
-
-			while (true)
-			{
-				var nextProps = map.GetTileProperties(lastIndex + stride);
-				if (nextProps == null || !nextProps.IsRoll) break;
-				lastIndex += stride;
-			}
-
-			if (!map.GetTileProperties(lastIndex).IsRoll)
-				return strip;
-
-			if (map.GetTileProperties(lastIndex).IsDock)
-			{
+				var lastIndex = startIndex;
 				while (true)
 				{
-					var nextProps = map.GetTileProperties(strip.First - stride);
-					if (nextProps == null || !nextProps.IsDock) break;
-					strip.First -= stride;
+					var nextProps = map.GetTileProperties(lastIndex + stride);
+					if (nextProps == null || !nextProps.IsSlide || nextProps.IsDock) break;
+					lastIndex += stride;
 				}
+
+				while (true)
+				{
+					var nextProps = map.GetTileProperties(lastIndex + stride);
+					if (nextProps == null || !nextProps.IsDock) break;
+					lastIndex += stride;
+				}
+
+				while (true)
+				{
+					var nextProps = map.GetTileProperties(lastIndex + stride);
+					if (nextProps == null || !nextProps.IsRoll) break;
+					lastIndex += stride;
+				}
+
+				if (!map.GetTileProperties(lastIndex).IsRoll)
+					return strip;
+
+				if (map.GetTileProperties(lastIndex).IsDock)
+				{
+					while (true)
+					{
+						var nextProps = map.GetTileProperties(strip.First - stride);
+						if (nextProps == null || !nextProps.IsDock) break;
+						strip.First -= stride;
+					}
+				}
+				else
+				{
+					while (true)
+					{
+						var nextProps = map.GetTileProperties(strip.First - stride);
+						if (nextProps == null || !nextProps.IsSlide) break;
+						strip.First -= stride;
+					}
+				}
+
+				strip.Count = (lastIndex - strip.First) / stride + 1;
 			}
 			else
 			{
+				var lastIndex = startIndex;
+				while (true)
+				{
+					var nextProps = map.GetTileProperties(lastIndex + stride);
+					if (nextProps == null || !nextProps.IsSlide || nextProps.IsDock || nextProps.IsRoll) break;
+					lastIndex += stride;
+				}
+
+				while (true)
+				{
+					var nextProps = map.GetTileProperties(lastIndex + stride);
+					if (nextProps == null || !nextProps.IsRoll) break;
+					lastIndex += stride;
+				}
+
+				if (!map.GetTileProperties(lastIndex).IsRoll)
+					return strip;
+
 				while (true)
 				{
 					var nextProps = map.GetTileProperties(strip.First - stride);
-					if (nextProps == null || !nextProps.IsSlide) break;
+					if (nextProps == null || !nextProps.IsSlide || (nextProps.IsSlide && !nextProps.IsDock && !nextProps.IsRoll)) break;
 					strip.First -= stride;
 				}
+
+				strip.Count = (lastIndex - strip.First) / stride + 1;
 			}
 
-			strip.Count = (lastIndex - strip.First) / stride + 1;
 			strip.Stride = stride;
 			return strip;
 		}
@@ -171,10 +204,112 @@ namespace ClassicTilestorm
 			spareRenderer.transform.localScale = leadingRenderer.transform.localScale;
 
 			foreach (var collider in SpareTile.GetComponentsInChildren<Collider>())
-				Object.Destroy(collider);
+				UnityEngine.Object.Destroy(collider);
 
 			SpareTile.transform.position = trailingPosition + delta;
 			SpareTile.SetActive(true);
 		}
 	}
 }
+
+
+//public static TileStrip GetTileStrip(IMap map, int startIndex, int directionFlag, bool difficult = false)
+//{
+//	var strip = new TileStrip { First = -1, Count = 0, Stride = 0 };
+
+//	var startProps = map.GetTileProperties(startIndex);
+//	if (startProps == null || !startProps.Interactive)
+//		return strip;
+
+//	strip.First = startIndex;
+//	strip.Count = 1;
+
+//	if (directionFlag == 0)
+//		return strip;
+
+//	var stride = 0;
+//	var (dx, dz) = Navigation.GetDirectionOffset(directionFlag);
+//	if (dx != 0) stride = dx;
+//	else if (dz != 0) stride = dz * map.Width;
+
+//	if (difficult)
+//	{
+//		var lastIndex = startIndex;
+//		while (true)
+//		{
+//			var nextProps = map.GetTileProperties(lastIndex + stride);
+//			if (nextProps == null || !nextProps.IsSlide || nextProps.IsDock) break;
+//			lastIndex += stride;
+//		}
+
+//		while (true)
+//		{
+//			var nextProps = map.GetTileProperties(lastIndex + stride);
+//			if (nextProps == null || !nextProps.IsDock) break;
+//			lastIndex += stride;
+//		}
+
+//		while (true)
+//		{
+//			var nextProps = map.GetTileProperties(lastIndex + stride);
+//			if (nextProps == null || !nextProps.IsRoll) break;
+//			lastIndex += stride;
+//		}
+
+//		if (!map.GetTileProperties(lastIndex).IsRoll)
+//			return strip;
+
+//		if (map.GetTileProperties(lastIndex).IsDock)
+//		{
+//			while (true)
+//			{
+//				var nextProps = map.GetTileProperties(strip.First - stride);
+//				if (nextProps == null || !nextProps.IsDock) break;
+//				strip.First -= stride;
+//			}
+//		}
+//		else
+//		{
+//			while (true)
+//			{
+//				var nextProps = map.GetTileProperties(strip.First - stride);
+//				if (nextProps == null || !nextProps.IsSlide) break;
+//				strip.First -= stride;
+//			}
+//		}
+
+//		strip.Count = (lastIndex - strip.First) / stride + 1;
+//	}
+//	else
+//	{
+//		var lastIndex = startIndex;
+//		while (true)
+//		{
+//			var nextProps = map.GetTileProperties(lastIndex + stride);
+//			if (nextProps == null || !nextProps.IsSlide || nextProps.IsDock || nextProps.IsRoll) break;
+//			lastIndex += stride;
+//		}
+
+//		while (true)
+//		{
+//			var nextProps = map.GetTileProperties(lastIndex + stride);
+//			if (nextProps == null || !nextProps.IsRoll) break;
+//			lastIndex += stride;
+//		}
+
+//		if (!map.GetTileProperties(lastIndex).IsRoll)
+//			return strip;
+
+//		while (true)
+//		{
+//			var nextProps = map.GetTileProperties(strip.First - stride);
+//			if (nextProps == null || !nextProps.IsSlide || (nextProps.IsSlide && !nextProps.IsDock && !nextProps.IsRoll)) break;
+//			strip.First -= stride;
+//		}
+
+//		strip.Count = (lastIndex - strip.First) / stride + 1;
+//	}
+
+//	strip.Stride = stride;
+//	return strip;
+//}

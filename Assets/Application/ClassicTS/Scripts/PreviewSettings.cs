@@ -12,6 +12,10 @@ namespace ClassicTilestorm
 		[SerializeField] private bool scrambled = true;
 		public static bool Scrambled => instance.scrambled;
 
+		[Header("enable or disable easy mode")]
+		[SerializeField] private bool difficulty = false;
+		public static bool Difficulty => instance.difficulty;
+
 		[Header("hidden tiles")]
 		[SerializeField] private bool showHiddenTiles = false;
 		public static bool ShowHiddenTiles => instance.showHiddenTiles;
