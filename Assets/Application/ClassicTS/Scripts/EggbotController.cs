@@ -47,7 +47,7 @@ namespace ClassicTilestorm
 			if (null == mapManager || -1 == currentTile) { Debug.LogError("Initialize: Invalid setup"); return; }
 
 			transform.position = mapManager.GetTilePosition(currentTile);
-			var yaw = mapManager.Waypoints?.Count > 1 ? Navigation.DirToAngle(Navigation.NavToDest(mapManager, mapManager.Waypoints[0].nTile, mapManager.Waypoints[1].nTile)) : 0f;
+			var yaw = mapManager.Waypoints?.Length > 1 ? Navigation.DirToAngle(Navigation.NavToDest(mapManager, mapManager.Waypoints[0].nTile, mapManager.Waypoints[1].nTile)) : 0f;
 			transform.rotation = Quaternion.Euler(0f, yaw, 0f);
 		}
 
@@ -90,7 +90,7 @@ namespace ClassicTilestorm
 				{
 					if (currentTile != destinationTile || (destinationTile != Navigation.GetEndTile(mapManager) && destinationTile != Navigation.GetStartTile(mapManager))) return false;
 					if (destinationTile == Navigation.GetEndTile(mapManager)) { OnLevelCompleted?.Invoke(); }
-					dstWaypoint = (dstWaypoint + 1) % mapManager.Waypoints.Count;
+					dstWaypoint = (dstWaypoint + 1) % mapManager.Waypoints.Length;
 					startYaw = transform.eulerAngles.y;
 					targetYaw = transform.eulerAngles.y + SpinAngle;
 					actionQueue.Enqueue(() => SetState(State.TURN, 1.5f));
@@ -103,7 +103,7 @@ namespace ClassicTilestorm
 					if (currentTile == destinationTile)
 					{
 						OnWaypointReached?.Invoke(dstWaypoint);
-						dstWaypoint = (dstWaypoint + 1) % mapManager.Waypoints.Count;
+						dstWaypoint = (dstWaypoint + 1) % mapManager.Waypoints.Length;
 						return false;
 					}
 

@@ -1,6 +1,6 @@
 using UnityEngine;
-using System.Collections.Generic;
 using System.Linq;
+using System.Collections.Generic;
 
 namespace ClassicTilestorm
 {
@@ -21,7 +21,7 @@ namespace ClassicTilestorm
 			{
 				get
 				{
-					if (indices == null && Stride != 0)
+					if (null == indices && 0 != Stride)
 					{
 						indices = new();
 						for (var i = 0; i < Count; ++i) indices.Add(First + Stride * i);
@@ -86,6 +86,19 @@ namespace ClassicTilestorm
 			return strip;
 		}
 
+		public static void ResetStrip(IMap map, in TileStrip strip)
+		{
+			if (strip.Indices == null) return;
+			foreach (var index in strip.Indices)
+			{
+				var gameObject = map.GetTileGameObject(index);
+				if (null != gameObject)
+					gameObject.transform.position = new Vector3(index % map.Width, 0f, index / map.Width);
+			}
+			if (null != SpareTile)
+				SpareTile.SetActive(false);
+		}
+
 		public static bool RollStrip(IMap map, TileStrip strip, int adjust = 1)
 		{
 			if (strip.Count <= 1 || strip.Indices == null)
@@ -104,64 +117,51 @@ namespace ClassicTilestorm
 
 		public static void TranslateStrip(IMap map, in TileStrip strip, in Vector3 delta)
 		{
-			if (strip.Indices == null) return;
+			if (null == strip.Indices) return;
 
 			UpdateSpareTile(map, strip, delta, delta != Vector3.zero);
 			foreach (var index in strip.Indices)
 			{
 				var gameObject = map.GetTileGameObject(index);
-				if (gameObject != null)
+				if (null != gameObject)
 					gameObject.transform.position += delta;
 			}
-		}
 
-		public static void ResetStrip(IMap map, in TileStrip strip)
-		{
-			if (strip.Indices == null) return;
-			foreach (var index in strip.Indices)
+			static void UpdateSpareTile(IMap map, in TileStrip strip, in Vector3 delta, bool active)
 			{
-				var gameObject = map.GetTileGameObject(index);
-				if (gameObject != null)
-					gameObject.transform.position = new Vector3(index % map.Width, 0f, index / map.Width);
+				if (!active && null != SpareTile) { SpareTile.SetActive(false); return; }
+				if (strip.Count <= 1) return;
+
+				var leadingTileIndex = strip.Indices.Last();
+				var leadingTile = map.GetTileGameObject(leadingTileIndex);
+				var trailingTileIndex = strip.Indices.First() - strip.Stride;
+				var trailingPosition = map.GetTileCoordinates(trailingTileIndex).ToPosition();
+
+				if (null == SpareTile) SpareTile = GeometryManager.CreateSpareTile(leadingTile, map.gameObject.transform, trailingPosition + delta);
+				if (null == SpareTile) return;
+
+				var spareRenderer = SpareTile.GetComponent<MeshRenderer>();
+				var spareFilter = SpareTile.GetComponent<MeshFilter>();
+				var leadingRenderer = leadingTile?.GetComponentInChildren<MeshRenderer>();
+				var leadingFilter = leadingTile?.GetComponentInChildren<MeshFilter>();
+
+				if (leadingRenderer == null || leadingFilter == null || spareRenderer == null || spareFilter == null)
+				{
+					SpareTile.SetActive(false);
+					return;
+				}
+
+				spareFilter.sharedMesh = leadingFilter.sharedMesh;
+				spareRenderer.material = leadingRenderer.material;
+				spareRenderer.transform.rotation = leadingRenderer.transform.rotation;
+				spareRenderer.transform.localScale = leadingRenderer.transform.localScale;
+
+				foreach (var collider in SpareTile.GetComponentsInChildren<Collider>())
+					Object.Destroy(collider);
+
+				SpareTile.transform.position = trailingPosition + delta;
+				SpareTile.SetActive(true);
 			}
-			if (SpareTile != null)
-				SpareTile.SetActive(false);
-		}
-
-		private static void UpdateSpareTile(IMap map, in TileStrip strip, in Vector3 delta, bool active)
-		{
-			if (!active && null != SpareTile) { SpareTile.SetActive(false); return; }
-			if (strip.Count <= 1) return;
-
-			var leadingTileIndex = strip.Indices.Last();
-			var leadingTile = map.GetTileGameObject(leadingTileIndex);
-			var trailingTileIndex = strip.Indices.First() - strip.Stride;
-			var trailingPosition = map.GetTileCoordinates(trailingTileIndex).ToPosition();
-
-			if (null == SpareTile) SpareTile = GeometryManager.CreateSpareTile(leadingTile, map.gameObject.transform, trailingPosition + delta);
-			if (null == SpareTile) return;
-
-			var spareRenderer = SpareTile.GetComponent<MeshRenderer>();
-			var spareFilter = SpareTile.GetComponent<MeshFilter>();
-			var leadingRenderer = leadingTile?.GetComponentInChildren<MeshRenderer>();
-			var leadingFilter = leadingTile?.GetComponentInChildren<MeshFilter>();
-
-			if (leadingRenderer == null || leadingFilter == null || spareRenderer == null || spareFilter == null)
-			{
-				SpareTile.SetActive(false);
-				return;
-			}
-
-			spareFilter.sharedMesh = leadingFilter.sharedMesh;
-			spareRenderer.material = leadingRenderer.material;
-			spareRenderer.transform.rotation = leadingRenderer.transform.rotation;
-			spareRenderer.transform.localScale = leadingRenderer.transform.localScale;
-
-			foreach (var collider in SpareTile.GetComponentsInChildren<Collider>())
-				UnityEngine.Object.Destroy(collider);
-
-			SpareTile.transform.position = trailingPosition + delta;
-			SpareTile.SetActive(true);
 		}
 	}
 }

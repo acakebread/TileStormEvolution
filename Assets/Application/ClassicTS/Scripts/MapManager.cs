@@ -1,6 +1,5 @@
 ﻿using UnityEngine;
 using System.Linq;
-using System.Collections.Generic;
 
 namespace ClassicTilestorm
 {
@@ -16,12 +15,12 @@ namespace ClassicTilestorm
 		private DatabaseLoader.Map currentMap;
 		private Tile[] tileArray;
 		private int[] tiles;
-		private List<DatabaseLoader.Waypoint> waypoints;
+		private DatabaseLoader.Waypoint[] waypoints;
 
 		public string CurrentMapName => currentMap?.name;
 		public int Width => currentMap?.tiles.nWidth ?? 0;
 		public int Height => currentMap?.tiles.nHeight ?? 0;
-		public IReadOnlyList<DatabaseLoader.Waypoint> Waypoints => waypoints?.AsReadOnly();
+		public DatabaseLoader.Waypoint[] Waypoints => waypoints;
 		public string EggbotCostume => currentMap?.szEggbotCostume;
 
 		private void Awake()
@@ -96,8 +95,8 @@ namespace ClassicTilestorm
 			name = $"Map_{currentMap.name}";
 			LoadTileData(currentMap.tiles);
 
-			waypoints = currentMap.waypoints?.Where(w => w != null).ToList();
-			if (waypoints == null || waypoints.Count == 0)
+			waypoints = currentMap.waypoints?.Where(w => w != null).ToArray();
+			if (null == waypoints || 0 == waypoints.Length)
 				waypoints = Navigation.SetupWaypoints(this);
 
 			if (PreviewSettings.Scrambled)

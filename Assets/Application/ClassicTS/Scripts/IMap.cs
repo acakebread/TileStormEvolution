@@ -1,5 +1,4 @@
 using UnityEngine;
-using System.Collections.Generic;
 
 namespace ClassicTilestorm
 {
@@ -14,6 +13,6 @@ namespace ClassicTilestorm
 		TileProperties GetTileProperties(int tileIndex);
 		GameObject GetTileGameObject(int tileIndex);
 		GridCoord GetTileCoordinates(int tileIndex);
-		IReadOnlyList<DatabaseLoader.Waypoint> Waypoints { get; }
+		DatabaseLoader.Waypoint[] Waypoints { get; }
 	}
 }

@@ -34,7 +34,7 @@ namespace ClassicTilestorm
 				var waypoints = mapManager.Waypoints.Select(w => mapManager.GetTilePosition(w.nTile)).ToList();
 				var eggbotRoot = eggbotController.transform;
 
-				if (null == mapManager || null == mapManager.Waypoints || 0 == mapManager.Waypoints.Count)
+				if (null == mapManager || null == mapManager.Waypoints || 0 == mapManager.Waypoints.Length)
 				{
 					CameraController.SetMode(null != eggbotRoot ? CameraState.Follow : CameraState.Static);
 					CameraController.SetOrigin(new Vector3(0f, 14f, -14f), true); // TS defaults
@@ -83,8 +83,8 @@ namespace ClassicTilestorm
 		{
 			if (CameraController.CinemaActive) return;
 			if (null == eggbotController) return;// this can never happen because eggbot invokes this function - but leave the check just in case
-			if (null == mapManager || waypointIndex < 0 || waypointIndex >= mapManager.Waypoints.Count) return;//error!
-			if (mapManager.Waypoints.Count - 1 == waypointIndex || 0 == waypointIndex) return;//just continue following
+			if (null == mapManager || waypointIndex < 0 || waypointIndex >= mapManager.Waypoints.Length) return;//error!
+			if (mapManager.Waypoints.Length - 1 == waypointIndex || 0 == waypointIndex) return;//just continue following
 
 			var waypoint = mapManager.Waypoints[waypointIndex];
 			if (null == waypoint.vSrc || false == waypoint.vSrc.IsValidVector())

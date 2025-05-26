@@ -9,7 +9,7 @@ namespace ClassicTilestorm
 	{
 		public static int GetStartTile(IMap map)
 		{
-			if (map.Waypoints != null && map.Waypoints.Count != 0)
+			if (null != map.Waypoints && 0 != map.Waypoints.Length)
 				return map.Waypoints[0].nTile;
 
 			for (var i = 0; i < map.Width * map.Height; i++)
@@ -24,8 +24,8 @@ namespace ClassicTilestorm
 
 		public static int GetEndTile(IMap map)
 		{
-			if (map.Waypoints != null && map.Waypoints.Count != 0)
-				return map.Waypoints[map.Waypoints.Count - 1].nTile;
+			if (null != map.Waypoints&& 0 != map.Waypoints.Length)
+				return map.Waypoints[map.Waypoints.Length - 1].nTile;
 
 			for (var i = 0; i < map.Width * map.Height; i++)
 			{
@@ -58,13 +58,13 @@ namespace ClassicTilestorm
 			return -1;
 		}
 
-		public static List<DatabaseLoader.Waypoint> SetupWaypoints(IMap map)
+		public static DatabaseLoader.Waypoint[] SetupWaypoints(IMap map)
 		{
 			var generatedWaypoints = new List<DatabaseLoader.Waypoint>();
 			if (map.Width * map.Height == 0)
 			{
 				Debug.LogWarning("Cannot setup waypoints: invalid tile data");
-				return generatedWaypoints;
+				return generatedWaypoints.ToArray();
 			}
 
 			var startTile = GetStartTile(map);
@@ -73,7 +73,7 @@ namespace ClassicTilestorm
 			if (startTile == -1 || endTile == -1)
 			{
 				Debug.LogWarning("Cannot setup waypoints: missing start or end tile");
-				return generatedWaypoints;
+				return generatedWaypoints.ToArray();
 			}
 
 			generatedWaypoints.Add(new DatabaseLoader.Waypoint { nTile = startTile });
@@ -106,7 +106,7 @@ namespace ClassicTilestorm
 			generatedWaypoints.Add(new DatabaseLoader.Waypoint { nTile = endTile });
 
 			Debug.Log($"Generated {generatedWaypoints.Count} waypoints: [{string.Join(", ", generatedWaypoints.Select(w => w.nTile))}]");
-			return generatedWaypoints;
+			return generatedWaypoints.ToArray();
 		}
 
 		//Classic TS legacy function - returns direction to next tile
