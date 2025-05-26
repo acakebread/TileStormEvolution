@@ -55,7 +55,9 @@ namespace ClassicTilestorm
 
 		public float GetTileDistance(int nSrc, int nDst) => GetTileDelta(nSrc, nDst).magnitude;
 
-		public int ToIndex(GridCoord coord) => coord.Z * Width + coord.X;
+		public int ToIndex(int X, int Z) => (X >= 0 && X < Width && Z >= 0 || Z < Height) ? Z * Width + X : -1;
+
+		public int ToIndex(GridCoord coord) => ToIndex(coord.X, coord.Z);
 
 		public int[] GetTiles() => tiles;
 
@@ -67,18 +69,9 @@ namespace ClassicTilestorm
 			return ray.GetPoint(distance);
 		}
 
-		public int ScreenToMapIndex(Vector3 screenPos)
-		{
-			var worldPos = ScreenToWorld(screenPos);
-			if (worldPos.x < 0 || worldPos.x >= Width || worldPos.z < 0 || worldPos.z >= Height) return -1;
-			return ToIndex(new GridCoord(worldPos));
-		}
+		public int WorldToMapIndex(Vector3 worldPos) => (worldPos.x >= 0 && worldPos.x < Width && worldPos.z >= 0 && worldPos.z < Height) ? ToIndex(Mathf.RoundToInt(worldPos.x), Mathf.RoundToInt(worldPos.z)) : -1;
 
-		public int WorldToMapIndex(Vector3 worldPos)
-		{
-			if (worldPos.x < 0 || worldPos.x >= Width || worldPos.z < 0 || worldPos.z >= Height) return -1;
-			return ToIndex(new GridCoord(worldPos));
-		}
+		public int ScreenToMapIndex(Vector3 screenPos) => WorldToMapIndex(ScreenToWorld(screenPos));
 
 		private void Load(string mapName)
 		{

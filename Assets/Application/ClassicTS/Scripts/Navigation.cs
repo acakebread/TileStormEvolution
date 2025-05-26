@@ -7,6 +7,8 @@ namespace ClassicTilestorm
 {
 	public static class Navigation
 	{
+		private static readonly int[] Directions = { North, South, East, West };
+
 		public static int GetStartTile(IMap map)
 		{
 			if (null != map.Waypoints && 0 != map.Waypoints.Length)
@@ -41,7 +43,7 @@ namespace ClassicTilestorm
 		{
 			if (map.IsValidTileIndex(nTile))
 			{
-				foreach (var dirBit in TileProperties.Directions)
+				foreach (var dirBit in Directions)
 				{
 					var consoleTile = GetAdjacentTile(map, nTile, dirBit);
 					if (consoleTile == -1)
@@ -128,7 +130,7 @@ namespace ClassicTilestorm
 			if (src == dst || src == -1 || dst == -1)
 				return 0;
 
-			foreach (var dirBit in TileProperties.Directions)
+			foreach (var dirBit in Directions)
 			{
 				int currentTile = src;
 				int currentNav = map.GetTileProperties(src)?.Nav & dirBit ?? 0;
@@ -165,7 +167,7 @@ namespace ClassicTilestorm
 				var props = map.GetTileProperties(nSrc);
 				if (null == props) break;
 
-				int nNew = props.Nav;
+				var nNew = props.Nav;
 				nNav = nNav & nNew;
 				if (0 == nNav) break;
 				nDir = nDir & nNew;
@@ -185,7 +187,7 @@ namespace ClassicTilestorm
 				var props = map.GetTileProperties(nSrc);
 				if (null == props) break;
 
-				int nNew = props.Nav;
+				var nNew = props.Nav;
 				nNav = nNav & nNew;
 				if (0 == nNav) break;
 				nDir = nDir & nNew;
@@ -196,10 +198,8 @@ namespace ClassicTilestorm
 
 		private static int GetAdjacentTile(IMap map, int tileIndex, int dirBit)
 		{
-			var (dx, dz) = GetDirectionOffset(dirBit);
-			var newCoord = map.GetTileCoordinates(tileIndex).Add(dx, dz);
-			if (newCoord.X < 0 || newCoord.X >= map.Width || newCoord.Z < 0 || newCoord.Z >= map.Height) return -1;
-			return map.ToIndex(newCoord);
+			var(dx, dz) = GetDirectionOffset(dirBit);
+			return map.ToIndex((tileIndex % map.Width) + dx, (tileIndex / map.Width) + dz);
 		}
 
 		public static int GetTileOffsetToDirection(IMap map, int tileOffset) => GetOffsetDirection(tileOffset % map.Width, tileOffset / map.Width);
@@ -210,6 +210,5 @@ namespace ClassicTilestorm
 		public static (int dx, int dz) GetDirectionOffset(int dirBit) => (((dirBit & East) >> 2) - ((dirBit & West) >> 3), (dirBit & North) - ((dirBit & South) >> 1));
 		public static int GetOppositeDirection(int dirBit) => ((dirBit & North) << 1) | ((dirBit & South) >> 1) | ((dirBit & East) << 1) | ((dirBit & West) >> 1);
 		public static bool CanMoveBetweenTiles(TileProperties fromTile, TileProperties toTile, int dirBit) => ((fromTile?.Nav ?? 0) & dirBit) != 0 && ((toTile?.Nav ?? 0) & GetOppositeDirection(dirBit)) != 0;
-
 	}
 }

@@ -4,17 +4,15 @@ namespace ClassicTilestorm
 {
 	public class TileProperties
 	{
-		public static readonly int[] Directions = { North, South, East, West };
-
 		[System.Flags]
 		public enum TileFlags
 		{
 			None = 0,
-			Dock = 1 << 0,   // 0b0001
-			Roll = 1 << 1,   // 0b0010
-			Slide = 1 << 2,  // 0b0100
-			Start = 1 << 3,  // 0b1000
-			End = 1 << 4,    // 0b10000
+			Dock = 1 << 0,   // 0b000001
+			Roll = 1 << 1,   // 0b000010
+			Slide = 1 << 2,  // 0b000100
+			Start = 1 << 3,  // 0b001000
+			End = 1 << 4,    // 0b010000
 			Console = 1 << 5 // 0b100000
 		}
 

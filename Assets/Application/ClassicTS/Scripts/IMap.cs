@@ -9,7 +9,7 @@ namespace ClassicTilestorm
 		int Height { get; }
 		int[] GetTiles();
 		bool IsValidTileIndex(int tileIndex);
-		int ToIndex(GridCoord coord);
+		int ToIndex(int X, int Z);
 		TileProperties GetTileProperties(int tileIndex);
 		GameObject GetTileGameObject(int tileIndex);
 		GridCoord GetTileCoordinates(int tileIndex);
