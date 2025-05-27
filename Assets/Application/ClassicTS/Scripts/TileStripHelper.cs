@@ -104,7 +104,7 @@ namespace ClassicTilestorm
 			if (strip.Count <= 1 || strip.Indices == null)
 				return false;
 
-			var tiles = map.GetTiles();
+			var tiles = map.GetTileIndexes();
 			if (tiles == null)
 				return false;
 

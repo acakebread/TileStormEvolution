@@ -15,8 +15,8 @@ namespace ClassicTilestorm
 		private int[] indexes;
 		private int[] offsets;
 		private Tile[] tiles;
-		public int Width { get; set; }
-		public int Height { get; set; }
+		public int Width { get; private set; }
+		public int Height { get; private set; }
 
 		private void Awake()
 		{
@@ -47,7 +47,11 @@ namespace ClassicTilestorm
 
 		private int ToIndex(int X, int Z) => (X >= 0 && X < Width && Z >= 0 || Z < Height) ? Z * Width + X : -1;
 
-		public int[] GetTiles() => indexes;
+		private int WorldToMapIndex(Vector3 worldPos) => (worldPos.x >= 0 && worldPos.x < Width && worldPos.z >= 0 && worldPos.z < Height) ? ToIndex(Mathf.RoundToInt(worldPos.x), Mathf.RoundToInt(worldPos.z)) : -1;
+
+		public int ScreenToMapIndex(Vector3 screenPos) => WorldToMapIndex(ScreenToWorld(screenPos));
+
+		public int[] GetTileIndexes() => indexes;
 
 		public Vector3 ScreenToWorld(Vector3 screenPos)
 		{
@@ -56,10 +60,6 @@ namespace ClassicTilestorm
 			if (!mapPlane.Raycast(ray, out float distance)) return Vector3.zero;
 			return ray.GetPoint(distance);
 		}
-
-		private int WorldToMapIndex(Vector3 worldPos) => (worldPos.x >= 0 && worldPos.x < Width && worldPos.z >= 0 && worldPos.z < Height) ? ToIndex(Mathf.RoundToInt(worldPos.x), Mathf.RoundToInt(worldPos.z)) : -1;
-
-		public int ScreenToMapIndex(Vector3 screenPos) => WorldToMapIndex(ScreenToWorld(screenPos));
 
 		private void Initialise(DatabaseLoader.Map map)
 		{
@@ -134,13 +134,14 @@ namespace ClassicTilestorm
 
 		private void UpdateTileObjectNamesAndPositions()
 		{
+			Debug.AssertFormat(indexes.Length > 0 && indexes.Length == tiles.Length, "mismatched tiles and indexes");
 			for (var n = 0; n < indexes.Length; ++n)
 			{
-				var gameObject = GetTileGameObject(n);
-				if (gameObject == null) continue;
+				var gameObject = tiles[indexes[n]].GameObject;
+				if (null == gameObject) continue;
 				gameObject.transform.position = GetTilePosition(n);
 #if DEBUG
-				gameObject.name = $"{GetTileProperties(n)?.Type ?? "Empty"}_{gameObject.transform.position.x}_{gameObject.transform.position.z}";
+				gameObject.name = $"{tiles[indexes[n]].Properties.Type ?? "Empty"}_{gameObject.transform.position.x}_{gameObject.transform.position.z}";
 #endif
 			}
 		}

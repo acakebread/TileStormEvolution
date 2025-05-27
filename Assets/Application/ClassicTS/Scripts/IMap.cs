@@ -6,7 +6,7 @@ namespace ClassicTilestorm
 	{
 		int Width { get; }
 		int Height { get; }
-		int[] GetTiles();
+		int[] GetTileIndexes();
 
 		GameObject GetTileGameObject(int tileIndex);
 		TileProperties GetTileProperties(int tileIndex);
