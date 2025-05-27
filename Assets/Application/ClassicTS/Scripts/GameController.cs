@@ -6,6 +6,8 @@ namespace ClassicTilestorm
 {
 	public class GameController : MonoBehaviour
 	{
+		private DatabaseLoader.Map currentMap;
+
 		private EggbotController eggbotController;
 		public static MapManager mapManager;// public static for now - ToDo make private property and handle external requirements
 
@@ -17,13 +19,26 @@ namespace ClassicTilestorm
 			CameraController.SetAutoCinema(PreviewSettings.LaunchInCinemaMode);
 		}
 
-		private void LoadMap(string map = null)
+		private void LoadMap(string mapName = null)
 		{
+			mapName ??= PreviewSettings.LoadMapName;
+			if (null == mapName) return;
+
+			currentMap = string.IsNullOrEmpty(mapName) ? DatabaseLoader.Maps.FirstOrDefault() : DatabaseLoader.Maps.FirstOrDefault(m => m.name == mapName);
+			if (null == currentMap)
+			{
+				Debug.LogError($"No map found for mapName={mapName}! Available maps: {string.Join(", ", DatabaseLoader.Maps.Select(m => m.name))}");
+				return;
+			}
+
 			if (null != mapManager) Destroy(mapManager.gameObject);
-			mapManager = MapManager.Instantiate(transform, map ?? PreviewSettings.LoadMapName);
+			mapManager = MapManager.Instantiate(transform, currentMap);
+
+			Navigation.SetupWaypoints(currentMap, mapManager);
+
 			(GestureController.instance ?? gameObject.AddComponent<GestureController>()).Reset();
 			if (null != eggbotController) Destroy(eggbotController.gameObject);
-			eggbotController = EggbotController.Instantiate(transform, mapManager.EggbotCostume);
+			eggbotController = EggbotController.Instantiate(transform, currentMap.szEggbotCostume);
 
 			ResetCamera();
 
@@ -31,38 +46,33 @@ namespace ClassicTilestorm
 			{
 				CameraController.Reset();
 
-				var waypoints = mapManager.Waypoints.Select(w => mapManager.GetTilePosition(w.nTile)).ToList();
-				var eggbotRoot = eggbotController.transform;
-
-				if (null == mapManager || null == mapManager.Waypoints || 0 == mapManager.Waypoints.Length)
-				{
-					CameraController.SetMode(null != eggbotRoot ? CameraState.Follow : CameraState.Static);
-					CameraController.SetOrigin(new Vector3(0f, 14f, -14f), true); // TS defaults
-					CameraController.SetTarget(Vector3.zero, true);
-					CameraController.SetPlayer(eggbotRoot);
-					CameraController.SetFocusPoints(waypoints);
-					return;
-				}
-
-				var dstPos = new Vector3(mapManager.Width * 0.5f, 0f, mapManager.Height * 0.5f);
-				var srcPos = dstPos + new Vector3(0f, 14f, -14f); // TS defaults
-
-				var firstWaypoint = mapManager.Waypoints[0];
-				if (firstWaypoint.bCamera)
-				{
-					if (null != firstWaypoint.vSrc) srcPos = firstWaypoint.vSrc.ToVector3();
-					if (null != firstWaypoint.vDst) dstPos = firstWaypoint.vDst.ToVector3();
-				}
-
-				CameraController.SetMode(CameraState.Follow);
-				CameraController.SetOrigin(srcPos, true);
-				CameraController.SetTarget(dstPos, true);
-				CameraController.SetPlayer(eggbotRoot);
-				CameraController.SetFocusPoints(waypoints);
-
 				eggbotController.OnWaypointReached += OnWaypointReached;
 				eggbotController.OnPuzzleSolved += OnPuzzleSolved;
 				eggbotController.OnLevelCompleted += OnLevelCompleted;
+
+				CameraController.SetMode(CameraState.Follow);
+				CameraController.SetPlayer(eggbotController.transform);
+
+				CameraController.SetFocusPoints(Navigation.Waypoints.Select(w => mapManager.GetTilePosition(w.nTile)).ToList());
+
+				var srcPos = new Vector3(0f, 14f, -14f); // Classic TS default
+				var dstPos = Vector3.zero;
+
+				if (null != Navigation.Waypoints && 0 != Navigation.Waypoints.Length)
+				{
+					dstPos = new Vector3(mapManager.Width * 0.5f, 0f, mapManager.Height * 0.5f);// Classic TS default
+					srcPos += dstPos;
+
+					var firstWaypoint = Navigation.Waypoints[0];
+					if (firstWaypoint.bCamera)
+					{
+						if (null != firstWaypoint.vSrc) srcPos = firstWaypoint.vSrc.ToVector3();
+						if (null != firstWaypoint.vDst) dstPos = firstWaypoint.vDst.ToVector3();
+					}
+				}
+
+				CameraController.SetOrigin(srcPos, true);
+				CameraController.SetTarget(dstPos, true);
 			}
 		}
 
@@ -83,10 +93,10 @@ namespace ClassicTilestorm
 		{
 			if (CameraController.CinemaActive) return;
 			if (null == eggbotController) return;// this can never happen because eggbot invokes this function - but leave the check just in case
-			if (null == mapManager || waypointIndex < 0 || waypointIndex >= mapManager.Waypoints.Length) return;//error!
-			if (mapManager.Waypoints.Length - 1 == waypointIndex || 0 == waypointIndex) return;//just continue following
+			if (null == mapManager || waypointIndex < 0 || waypointIndex >= Navigation.Waypoints.Length) return;//error!
+			if (Navigation.Waypoints.Length - 1 == waypointIndex || 0 == waypointIndex) return;//just continue following
 
-			var waypoint = mapManager.Waypoints[waypointIndex];
+			var waypoint = Navigation.Waypoints[waypointIndex];
 			if (null == waypoint.vSrc || false == waypoint.vSrc.IsValidVector())
 			{
 				CameraController.SetMode(CameraState.Follow);
@@ -128,7 +138,7 @@ namespace ClassicTilestorm
 
 			if (GUI.Button(new Rect(230, 10, 150, 30), "Previous Level"))
 			{
-				var currentIndex = DatabaseLoader.Maps.ToList().FindIndex(m => m.name == mapManager.CurrentMapName);
+				var currentIndex = DatabaseLoader.Maps.ToList().FindIndex(m => m.name == currentMap?.name);
 				currentIndex = (DatabaseLoader.Maps.Count + currentIndex - 1) % DatabaseLoader.Maps.Count;
 				PreviewSettings.LoadMapName = DatabaseLoader.Maps[currentIndex].name;
 				LoadMap();
@@ -136,7 +146,7 @@ namespace ClassicTilestorm
 
 			if (GUI.Button(new Rect(390, 10, 150, 30), "Next Level"))
 			{
-				var currentIndex = DatabaseLoader.Maps.ToList().FindIndex(m => m.name == mapManager.CurrentMapName);
+				var currentIndex = DatabaseLoader.Maps.ToList().FindIndex(m => m.name == currentMap?.name);
 				currentIndex = (currentIndex + 1) % DatabaseLoader.Maps.Count;
 				PreviewSettings.LoadMapName = DatabaseLoader.Maps[currentIndex].name;
 				LoadMap();
