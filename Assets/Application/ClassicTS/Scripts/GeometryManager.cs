@@ -112,7 +112,7 @@ namespace ClassicTilestorm
 		// Creates a spare tile by copying mesh and material from a source tile
 		public static GameObject CreateSpareTile(GameObject sourceTile, Transform parent, Vector3 position)
 		{
-			if (null == sourceTile) return null;
+			if (null == sourceTile || null == parent) return null;
 			var spareTile = new GameObject("SpareTile");
 			spareTile.transform.SetParent(parent, false);
 			spareTile.transform.position = position;

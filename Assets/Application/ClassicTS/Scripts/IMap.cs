@@ -4,7 +4,6 @@ namespace ClassicTilestorm
 {
 	public interface IMap
 	{
-		GameObject gameObject { get; }
 		int Width { get; }
 		int Height { get; }
 		int[] GetTiles();
