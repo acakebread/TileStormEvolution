@@ -1,14 +1,11 @@
-using UnityEngine;
-
 namespace ClassicTilestorm
 {
 	public interface IMap
 	{
 		int Width { get; }
 		int Height { get; }
-		int[] GetTileIndexes();
-
-		GameObject GetTileGameObject(int tileIndex);
-		TileProperties GetTileProperties(int tileIndex);
+		int[] Indices { get; }
+		//Tile[] Tiles { get; }
+		Tile GetTile(int tileIndex);
 	}
 }

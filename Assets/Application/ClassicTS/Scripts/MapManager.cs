@@ -3,55 +3,47 @@ using System.Linq;
 
 namespace ClassicTilestorm
 {
+	public struct Tile
+	{
+		public TileProperties Properties;
+		public GameObject GameObject;
+		//public Vector3 position { get => null != GameObject ? GameObject.transform.position : Vector3.zero; set { if (null != GameObject) GameObject.transform.position = value; } }
+	}
+
 	public class MapManager : MonoBehaviour, IMap
 	{
-		private struct Tile
-		{
-			public TileProperties Properties;
-			public GameObject GameObject;
-			//public Vector3 position { get => null != GameObject ? GameObject.transform.position : Vector3.zero; set { if (null != GameObject) GameObject.transform.position = value; } }
-		}
-
-		private int[] indexes;
+		private int[] indices;
 		private int[] offsets;
 		private Tile[] tiles;
+
+		public int[] Indices { get => indices; private set => indices = value; }
+
 		public int Width { get; private set; }
 		public int Height { get; private set; }
 
 		private void Awake()
 		{
-			indexes = null;
+			indices = null;
 			offsets = null;
 			tiles = null;
 		}
 
-		private bool IsValidTileIndex(int tileIndex) => tileIndex >= 0 && tileIndex < indexes?.Length && Width > 0;
-
-		public TileProperties GetTileProperties(int tileIndex)
+		public Tile GetTile(int index)
 		{
-			if (!IsValidTileIndex(tileIndex)) return null;
-			var dataIndex = indexes[tileIndex];
-			return dataIndex >= 0 && dataIndex < tiles.Length ? tiles[dataIndex].Properties : null;
+			if (index < 0 || index >= indices?.Length || Width <= 0) return default;
+			var dataIndex = indices[index];
+			return dataIndex >= 0 && dataIndex < tiles.Length ? tiles[dataIndex] : default;
 		}
 
-		public GameObject GetTileGameObject(int tileIndex)
-		{
-			if (!IsValidTileIndex(tileIndex)) return null;
-			var dataIndex = indexes[tileIndex];
-			return dataIndex >= 0 && dataIndex < tiles.Length ? tiles[dataIndex].GameObject : null;
-		}
+		public Vector3 GetTilePosition(int index) => new(index % Width, 0f, index / Width);
 
-		public Vector3 GetTilePosition(int tileIndex) => new(tileIndex % Width, 0f, tileIndex / Width);
+		public float GetTileDistance(int src, int dst) => (GetTilePosition(dst) - GetTilePosition(src)).magnitude;
 
-		public float GetTileDistance(int nSrc, int nDst) => (GetTilePosition(nDst) - GetTilePosition(nSrc)).magnitude;
-
-		private int ToIndex(int X, int Z) => (X >= 0 && X < Width && Z >= 0 || Z < Height) ? Z * Width + X : -1;
+		private int ToIndex(int x, int z) => (x >= 0 && x < Width && z >= 0 || z < Height) ? z * Width + x : -1;
 
 		private int WorldToMapIndex(Vector3 worldPos) => (worldPos.x >= 0 && worldPos.x < Width && worldPos.z >= 0 && worldPos.z < Height) ? ToIndex(Mathf.RoundToInt(worldPos.x), Mathf.RoundToInt(worldPos.z)) : -1;
 
 		public int ScreenToMapIndex(Vector3 screenPos) => WorldToMapIndex(ScreenToWorld(screenPos));
-
-		public int[] GetTileIndexes() => indexes;
 
 		public Vector3 ScreenToWorld(Vector3 screenPos)
 		{
@@ -74,7 +66,7 @@ namespace ClassicTilestorm
 			else
 				Solve();
 
-			Debug.AssertFormat(null != indexes && null != offsets, "invalid map tile indexes or offsets data");
+			Debug.AssertFormat(null != indices && null != offsets, "invalid map tile indices or offsets data");
 
 			void LoadTileData(DatabaseLoader.Tiles dbTiles)
 			{
@@ -120,28 +112,28 @@ namespace ClassicTilestorm
 
 		public void Scramble()
 		{
-			indexes = new int[Width * Height];
-			for (var n = 0; n < indexes.Length; ++n) indexes[n] = offsets[n] + n;
+			indices = new int[Width * Height];
+			for (var n = 0; n < indices.Length; ++n) indices[n] = offsets[n] + n;
 			UpdateTileObjectNamesAndPositions();
 		}
 
 		public void Solve()
 		{
-			indexes = new int[Width * Height];
-			for (var n = 0; n < indexes.Length; ++n) indexes[n] = n; 
+			indices = new int[Width * Height];
+			for (var n = 0; n < indices.Length; ++n) indices[n] = n; 
 			UpdateTileObjectNamesAndPositions();
 		}
 
 		private void UpdateTileObjectNamesAndPositions()
 		{
-			Debug.AssertFormat(indexes.Length > 0 && indexes.Length == tiles.Length, "mismatched tiles and indexes");
-			for (var n = 0; n < indexes.Length; ++n)
+			Debug.AssertFormat(indices.Length > 0 && indices.Length == tiles.Length, "mismatched tiles and indices");
+			for (var n = 0; n < indices.Length; ++n)
 			{
-				var gameObject = tiles[indexes[n]].GameObject;
+				var gameObject = tiles[indices[n]].GameObject;
 				if (null == gameObject) continue;
 				gameObject.transform.position = GetTilePosition(n);
 #if DEBUG
-				gameObject.name = $"{tiles[indexes[n]].Properties.Type ?? "Empty"}_{gameObject.transform.position.x}_{gameObject.transform.position.z}";
+				gameObject.name = $"{tiles[indices[n]].Properties.Type ?? "Empty"}_{gameObject.transform.position.x}_{gameObject.transform.position.z}";
 #endif
 			}
 		}

@@ -12,7 +12,7 @@ namespace ClassicTilestorm
 			if (null == strip.Indices) return;
 
 			foreach (var tileIndex in strip.Indices)
-				HighlightTile(map?.GetTileGameObject(tileIndex), highlight);
+				HighlightTile(map?.GetTile(tileIndex).GameObject, highlight);
 
 			if (TileStripHelper.SpareTile != null)
 				HighlightTile(TileStripHelper.SpareTile, highlight);

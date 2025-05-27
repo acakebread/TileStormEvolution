@@ -43,7 +43,7 @@ namespace ClassicTilestorm
 		private void OnBeginDrag(Vector3 screenPos)
 		{
 			var tileIndex = mapManager.ScreenToMapIndex(screenPos);
-			var properties = mapManager.GetTileProperties(tileIndex);
+			var properties = mapManager.GetTile(tileIndex).Properties;
 			if (null == properties || !properties.Interactive) return;
 
 			last = mapManager.ScreenToWorld(screenPos);

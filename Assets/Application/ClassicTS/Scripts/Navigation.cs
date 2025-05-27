@@ -50,7 +50,7 @@ namespace ClassicTilestorm
 						if (-1 == nextTile || nextTile == startTile)
 							break;
 
-						var nextProps = map.GetTileProperties(nextTile);
+						var nextProps = map.GetTile(nextTile).Properties;
 						if (null == nextProps)
 							break;
 
@@ -76,7 +76,7 @@ namespace ClassicTilestorm
 
 			for (var i = 0; i < map.Width * map.Height; ++i)
 			{
-				var props = map.GetTileProperties(i);
+				var props = map.GetTile(i).Properties;
 				if (null != props && props.IsStart)
 					return i;
 			}
@@ -91,7 +91,7 @@ namespace ClassicTilestorm
 
 			for (var i = 0; i < map.Width * map.Height; ++i)
 			{
-				var props = map.GetTileProperties(i);
+				var props = map.GetTile(i).Properties;
 				if (null != props && props.IsEnd)
 					return i;
 			}
@@ -109,7 +109,7 @@ namespace ClassicTilestorm
 					if (-1 == consoleTile)
 						continue;
 
-					var consoleProps = map.GetTileProperties(consoleTile);
+					var consoleProps = map.GetTile(consoleTile).Properties;
 					if (consoleProps?.IsConsole != true)
 						continue;
 
@@ -142,7 +142,7 @@ namespace ClassicTilestorm
 			foreach (var dirBit in Directions)
 			{
 				var currentTile = src;
-				var currentNav = map.GetTileProperties(src)?.Nav & dirBit ?? 0;
+				var currentNav = map.GetTile(src).Properties?.Nav & dirBit ?? 0;
 
 				while (currentNav != 0)
 				{
@@ -153,7 +153,7 @@ namespace ClassicTilestorm
 					if (-1 == nextTile || nextTile == src) // Invalid tile or loop back
 						break;
 
-					var nextProps = map.GetTileProperties(nextTile);
+					var nextProps = map.GetTile(nextTile).Properties;
 					if (null == nextProps)
 						break;
 
@@ -173,7 +173,7 @@ namespace ClassicTilestorm
 			{
 				nSrc = GetAdjacentTile(map, nSrc, nDir);
 
-				var props = map.GetTileProperties(nSrc);
+				var props = map.GetTile(nSrc).Properties;
 				if (null == props) break;
 
 				var nNew = props.Nav;
@@ -193,7 +193,7 @@ namespace ClassicTilestorm
 			{
 				nSrc = GetAdjacentTile(map, nSrc, nDir);
 
-				var props = map.GetTileProperties(nSrc);
+				var props = map.GetTile(nSrc).Properties;
 				if (null == props) break;
 
 				var nNew = props.Nav;

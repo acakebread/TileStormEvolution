@@ -35,7 +35,7 @@ namespace ClassicTilestorm
 		{
 			var strip = new TileStrip { First = -1, Count = 0, Stride = 0 };
 
-			var props = map.GetTileProperties(startIndex);
+			var props = map.GetTile(startIndex).Properties;
 			if (null == props || !props.Interactive)
 				return strip;
 
@@ -48,26 +48,26 @@ namespace ClassicTilestorm
 			var lastIndex = startIndex;
 			while (true)
 			{
-				props = map.GetTileProperties(lastIndex + stride);
+				props = map.GetTile(lastIndex + stride).Properties;
 				if (null == props || !props.IsSlide || props.IsDock || (!difficult && props.IsRoll)) break;
 				lastIndex += stride;
 			}
 
 			while (true)
 			{
-				props = map.GetTileProperties(lastIndex + stride);
+				props = map.GetTile(lastIndex + stride).Properties;
 				if (null == props || !props.IsRoll) break;
 				lastIndex += stride;
 			}
 
-			if (!map.GetTileProperties(lastIndex).IsRoll)
+			if (!map.GetTile(lastIndex).Properties.IsRoll)
 				return strip;
 
-			var testDock = difficult && map.GetTileProperties(lastIndex).IsDock;
+			var testDock = difficult && map.GetTile(lastIndex).Properties.IsDock;
 
 			while (true)
 			{
-				props = map.GetTileProperties(strip.First - stride);
+				props = map.GetTile(strip.First - stride).Properties;
 				if (null == props) break;
 				if (testDock)
 				{
@@ -88,10 +88,10 @@ namespace ClassicTilestorm
 
 		public static void ResetStrip(IMap map, in TileStrip strip)
 		{
-			if (strip.Indices == null) return;
+			if (null == strip.Indices) return;
 			foreach (var index in strip.Indices)
 			{
-				var gameObject = map.GetTileGameObject(index);
+				var gameObject = map.GetTile(index).GameObject;
 				if (null != gameObject)
 					gameObject.transform.position = new Vector3(index % map.Width, 0f, index / map.Width);
 			}
@@ -101,14 +101,13 @@ namespace ClassicTilestorm
 
 		public static bool RollStrip(IMap map, TileStrip strip, int adjust = 1)
 		{
-			if (strip.Count <= 1 || strip.Indices == null)
+			if (strip.Count <= 1 || null == strip.Indices)
 				return false;
 
-			var tiles = map.GetTileIndexes();
-			if (tiles == null)
+			if (null == map.Indices)
 				return false;
 
-			ArrayExtensions.RollArray(tiles, strip.First, strip.Count, adjust, strip.Stride);
+			ArrayExtensions.RollArray(map.Indices, strip.First, strip.Count, adjust, strip.Stride);
 
 			ResetStrip(map, strip);
 
@@ -122,7 +121,7 @@ namespace ClassicTilestorm
 			UpdateSpareTile(map, strip, delta, delta != Vector3.zero);
 			foreach (var index in strip.Indices)
 			{
-				var gameObject = map.GetTileGameObject(index);
+				var gameObject = map.GetTile(index).GameObject;
 				if (null != gameObject)
 					gameObject.transform.position += delta;
 			}
@@ -133,8 +132,8 @@ namespace ClassicTilestorm
 				if (strip.Count <= 1) return;
 
 				var leadingTileIndex = strip.Indices.Last();
-				var leadingTile = map.GetTileGameObject(leadingTileIndex);
-				if (null == leadingTile) return;
+				var leadingTile = map.GetTile(leadingTileIndex).GameObject;
+				if (null == leadingTile) { if (null != SpareTile) SpareTile.SetActive(false); return; }
 
 				var trailingTileIndex = strip.Indices.First() - strip.Stride;
 				var trailingPosition = new Vector3(trailingTileIndex % map.Width, 0f, trailingTileIndex / map.Width);
@@ -144,8 +143,8 @@ namespace ClassicTilestorm
 
 				var spareRenderer = SpareTile.GetComponent<MeshRenderer>();
 				var spareFilter = SpareTile.GetComponent<MeshFilter>();
-				var leadingRenderer = leadingTile?.GetComponentInChildren<MeshRenderer>();
-				var leadingFilter = leadingTile?.GetComponentInChildren<MeshFilter>();
+				var leadingRenderer = leadingTile.GetComponentInChildren<MeshRenderer>();
+				var leadingFilter = leadingTile.GetComponentInChildren<MeshFilter>();
 
 				if (leadingRenderer == null || leadingFilter == null || spareRenderer == null || spareFilter == null)
 				{
