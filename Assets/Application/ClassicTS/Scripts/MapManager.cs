@@ -41,17 +41,11 @@ namespace ClassicTilestorm
 			return dataIndex >= 0 && dataIndex < tiles.Length ? tiles[dataIndex].GameObject : null;
 		}
 
-		public GridCoord GetTileDelta(int nSrc, int nDst) => GetTileCoordinates(nDst) - GetTileCoordinates(nSrc);
+		public Vector3 GetTilePosition(int tileIndex) => new(tileIndex % Width, 0f, tileIndex / Width);
 
-		private GridCoord GetTileCoordinates(int tileIndex) => new(tileIndex % Width, tileIndex / Width);
-
-		public Vector3 GetTilePosition(int tileIndex) => GetTileCoordinates(tileIndex).ToPosition();
-
-		public float GetTileDistance(int nSrc, int nDst) => GetTileDelta(nSrc, nDst).magnitude;
+		public float GetTileDistance(int nSrc, int nDst) => (GetTilePosition(nDst) - GetTilePosition(nSrc)).magnitude;
 
 		private int ToIndex(int X, int Z) => (X >= 0 && X < Width && Z >= 0 || Z < Height) ? Z * Width + X : -1;
-
-		//public int ToIndex(GridCoord coord) => ToIndex(coord.X, coord.Z);
 
 		public int[] GetTiles() => indexes;
 
@@ -63,7 +57,7 @@ namespace ClassicTilestorm
 			return ray.GetPoint(distance);
 		}
 
-		public int WorldToMapIndex(Vector3 worldPos) => (worldPos.x >= 0 && worldPos.x < Width && worldPos.z >= 0 && worldPos.z < Height) ? ToIndex(Mathf.RoundToInt(worldPos.x), Mathf.RoundToInt(worldPos.z)) : -1;
+		private int WorldToMapIndex(Vector3 worldPos) => (worldPos.x >= 0 && worldPos.x < Width && worldPos.z >= 0 && worldPos.z < Height) ? ToIndex(Mathf.RoundToInt(worldPos.x), Mathf.RoundToInt(worldPos.z)) : -1;
 
 		public int ScreenToMapIndex(Vector3 screenPos) => WorldToMapIndex(ScreenToWorld(screenPos));
 
@@ -92,9 +86,9 @@ namespace ClassicTilestorm
 				}
 
 				tiles = new Tile[dbTiles.nWidth * dbTiles.nHeight];
-				for (var index = 0; index < tileMap.Length; ++index)
+				for (var n = 0; n < tileMap.Length; ++n)
 				{
-					var tileDefIndex = tileMap[index];
+					var tileDefIndex = tileMap[n];
 					if (tileDefIndex < 0 || tileDefIndex >= map.defs.Length)
 					{
 						Debug.LogWarning($"Invalid tileDefIndex={tileDefIndex}");
@@ -109,17 +103,17 @@ namespace ClassicTilestorm
 
 					var properties = TilePropertiesManager.GetOrCreateTileProperties(szType, szTheme);
 					if (null == properties) continue;
-					tiles[index].Properties = properties;
+					tiles[n].Properties = properties;
 
-					var coord = GetTileCoordinates(index);
+					var position = GetTilePosition(n);
 					if (szType == "tile_invisible")
 					{
-						if (PreviewSettings.ShowHiddenTiles) this.tiles[index].GameObject = GeometryManager.CreateDebugTile(transform, coord.ToPosition());
+						if (PreviewSettings.ShowHiddenTiles) tiles[n].GameObject = GeometryManager.CreateDebugTile(transform, position);
 						continue;
 					}
 
 					var tileDef = DatabaseLoader.TileDefs.FirstOrDefault(td => td.szType == szType && td.szTheme == szTheme);
-					tiles[index].GameObject = GeometryManager.InstantiateTile(tileDef, transform, coord.ToPosition(), properties.Interactive);
+					tiles[n].GameObject = GeometryManager.InstantiateTile(tileDef, transform, position, properties.Interactive);
 				}
 			}
 		}
@@ -144,10 +138,9 @@ namespace ClassicTilestorm
 			{
 				var gameObject = GetTileGameObject(n);
 				if (gameObject == null) continue;
-				var coord = GetTileCoordinates(n);
-				gameObject.transform.position = coord.ToPosition();
+				gameObject.transform.position = GetTilePosition(n);
 #if DEBUG
-				gameObject.name = $"{GetTileProperties(n)?.Type ?? "Empty"}_{coord.X}_{coord.Z}";
+				gameObject.name = $"{GetTileProperties(n)?.Type ?? "Empty"}_{gameObject.transform.position.x}_{gameObject.transform.position.z}";
 #endif
 			}
 		}
