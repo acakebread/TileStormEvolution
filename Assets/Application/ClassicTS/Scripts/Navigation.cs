@@ -6,7 +6,7 @@ namespace ClassicTilestorm
 {
 	public static class Navigation
 	{
-		private static readonly int[] Directions = { (int)TileFlags.North, (int)TileFlags.South, (int)TileFlags.East, (int)TileFlags.West };
+		private static readonly int[] Directions = { Tile.North, Tile.South, Tile.East, Tile.West };
 		private static DatabaseLoader.Waypoint[] waypoints;
 		public static DatabaseLoader.Waypoint[] Waypoints => waypoints;
 
@@ -206,11 +206,11 @@ namespace ClassicTilestorm
 
 		public static float DirToAngle(int dir) => new float[] { 0f, 0f, 180f, 0f, 90f, 45f, 135f, 90f, -90f, -45f, -135f, -90f, 0f, 0f, 180f, 0f }[dir & 0xF];
 
-		public static int GetOffsetDirection(int dx, int dz) => (dx > 0 ? (int)TileFlags.East : 0) | (dx < 0 ? (int)TileFlags.West : 0) | (dz > 0 ? (int)TileFlags.North : 0) | (dz < 0 ? (int)TileFlags.South : 0);
+		public static int GetOffsetDirection(int dx, int dz) => (dx > 0 ? Tile.East : 0) | (dx < 0 ? Tile.West : 0) | (dz > 0 ? Tile.North : 0) | (dz < 0 ? Tile.South : 0);
 
-		public static (int dx, int dz) GetDirectionOffset(int dirBit) => (((dirBit & (int)TileFlags.East) >> 2) - ((dirBit & (int)TileFlags.West) >> 3), ((dirBit & (int)TileFlags.North) >> 0) - ((dirBit & (int)TileFlags.South) >> 1));
+		public static (int dx, int dz) GetDirectionOffset(int dirBit) => (((dirBit & Tile.East) >> 2) - ((dirBit & Tile.West) >> 3), ((dirBit & Tile.North) >> 0) - ((dirBit & Tile.South) >> 1));
 
-		public static int GetOppositeDirection(int dirBit) => ((dirBit & (int)TileFlags.North) << 1) | ((dirBit & (int)TileFlags.South) >> 1) | ((dirBit & (int)TileFlags.East) << 1) | ((dirBit & (int)TileFlags.West) >> 1);
+		public static int GetOppositeDirection(int dirBit) => ((dirBit & Tile.North) << 1) | ((dirBit & Tile.South) >> 1) | ((dirBit & Tile.East) << 1) | ((dirBit & Tile.West) >> 1);
 
 		public static bool CanMoveBetweenTiles(Tile fromTile, Tile toTile, int dirBit) => (fromTile.Nav & dirBit) != 0 && (toTile.Nav & GetOppositeDirection(dirBit)) != 0;
 	}
