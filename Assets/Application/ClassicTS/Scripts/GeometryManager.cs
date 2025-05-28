@@ -4,6 +4,8 @@ using System.Linq;
 
 namespace ClassicTilestorm
 {
+	public class RTTI : MonoBehaviour { public DatabaseLoader.TileDef tileDef; }
+
 	public static class GeometryManager
 	{
 		private static Dictionary<string, GameObject> prefabCache = new();
@@ -38,25 +40,42 @@ namespace ClassicTilestorm
 		// Instantiates a GameObject based on TileDef, with optional texture animation and collider
 		public static GameObject InstantiateTile(DatabaseLoader.TileDef tileDef, Transform parent, Vector3 position, bool interactive = false)
 		{
-			if (tileDef == null || string.IsNullOrEmpty(tileDef.szGeom))
+			if (null == tileDef || string.IsNullOrEmpty(tileDef.szGeom))
 			{
+				if (tileDef.szType == "tile_invisible")
+				{
+					if (PreviewSettings.ShowHiddenTiles)
+					{
+						var debug_tile = CreateDebugTile(parent, position);
+#if DEBUG
+						debug_tile.AddComponent<RTTI>().tileDef = tileDef;
+#endif
+						return debug_tile;
+					}
+					return null;
+				}
+
 				Debug.LogWarning("GeometryManager: Invalid TileDef or geometry name.");
-				return CreateFallbackTile(parent, position);
+				var result = CreateFallbackTile(parent, position);
+#if DEBUG
+				result.AddComponent<RTTI>().tileDef = tileDef;
+# endif
+				return result;
 			}
 
 			var prefab = GetPrefab(tileDef.szGeom);
-			if (prefab == null)
+			if (null == prefab)
 			{
 				Debug.LogWarning($"GeometryManager: Prefab {tileDef.szGeom} not found for TileDef {tileDef.szType}.");
 				return CreateFallbackTile(parent, position);
 			}
 
 			var gameObject = Object.Instantiate(prefab, position, Quaternion.identity, parent);
-			gameObject.name = tileDef.szGeom;
+			gameObject.name = tileDef.szGeom.Replace(".x", "");
 
 			// Apply texture animation
 			var theme = DatabaseLoader.Themes.FirstOrDefault(t => t.name == tileDef.szTheme);
-			if (theme != null)
+			if (null != theme)
 			{
 				var animator = gameObject.AddComponent<TextureSetAnimator>();
 				animator.Initialize(TextureSetManager.GetTextureFrames(tileDef.szTheme));
@@ -73,14 +92,27 @@ namespace ClassicTilestorm
 				collider.size = new Vector3(1f, 0.1f, 1f);
 				collider.center = new Vector3(0f, -0.05f, 0f);
 			}
-
+#if DEBUG
+			gameObject.AddComponent<RTTI>().tileDef = tileDef;
+#endif
 			return gameObject;
+
+			// Fallback tile for missing prefabs
+			static GameObject CreateFallbackTile(Transform parent, Vector3 position)
+			{
+				var gameObject = GameObject.CreatePrimitive(PrimitiveType.Cube);
+				gameObject.transform.SetParent(parent, false);
+				gameObject.transform.position = position + new Vector3(0f, -0.1f, 0f);
+				gameObject.transform.localScale = new Vector3(1f, 0.1f, 1f);
+				gameObject.name = "Fallback_Cube";
+				return gameObject;
+			}
 		}
 
 		// Creates a debug tile (e.g., for tile_invisible or spare tiles)
 		public static GameObject CreateDebugTile(Transform parent, Vector3 position, bool isSpareTile = false)
 		{
-			var gameObject = new GameObject(isSpareTile ? "SpareTile" : "DebugTile");
+			var gameObject = new GameObject(isSpareTile ? "spare_tile" : "debug_Tile");
 			gameObject.transform.SetParent(parent, false);
 			gameObject.transform.position = position;
 
@@ -137,17 +169,6 @@ namespace ClassicTilestorm
 			}
 
 			return spareTile;
-		}
-
-		// Fallback tile for missing prefabs
-		private static GameObject CreateFallbackTile(Transform parent, Vector3 position)
-		{
-			var gameObject = GameObject.CreatePrimitive(PrimitiveType.Cube);
-			gameObject.transform.SetParent(parent, false);
-			gameObject.transform.position = position + new Vector3(0f, -0.1f, 0f);
-			gameObject.transform.localScale = new Vector3(1f, 0.1f, 1f);
-			gameObject.name = "Fallback_Cube";
-			return gameObject;
 		}
 
 		// Clears cache (optional, for resource management)

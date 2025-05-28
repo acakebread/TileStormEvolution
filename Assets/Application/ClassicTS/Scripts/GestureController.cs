@@ -42,13 +42,14 @@ namespace ClassicTilestorm
 
 		private void OnBeginDrag(Vector3 screenPos)
 		{
-			var tileIndex = mapManager.ScreenToMapIndex(screenPos);
-			var properties = mapManager.GetTile(tileIndex).Properties;
-			if (null == properties || !properties.Interactive) return;
+			var vert = mapManager.ScreenToWorld(screenPos);
+			var index = mapManager.WorldToMapIndex(vert);
+			var properties = mapManager.GetTile(index).Properties;
+			if (false == properties.Interactive) return;
 
-			last = mapManager.ScreenToWorld(screenPos);
+			last = vert;
 			delta = Vector3.zero;
-			dragIndex = tileIndex;
+			dragIndex = index;
 			tileStrip = default;
 		}
 

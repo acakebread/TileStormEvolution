@@ -36,8 +36,7 @@ namespace ClassicTilestorm
 			var strip = new TileStrip { First = -1, Count = 0, Stride = 0 };
 
 			var props = map.GetTile(startIndex).Properties;
-			if (null == props || !props.Interactive)
-				return strip;
+			if (!props.Interactive) return strip;
 
 			strip.First = startIndex;
 			strip.Count = 1;
@@ -49,14 +48,14 @@ namespace ClassicTilestorm
 			while (true)
 			{
 				props = map.GetTile(lastIndex + stride).Properties;
-				if (null == props || !props.IsSlide || props.IsDock || (!difficult && props.IsRoll)) break;
+				if (!props.IsSlide || props.IsDock || (!difficult && props.IsRoll)) break;
 				lastIndex += stride;
 			}
 
 			while (true)
 			{
 				props = map.GetTile(lastIndex + stride).Properties;
-				if (null == props || !props.IsRoll) break;
+				if (!props.IsRoll) break;
 				lastIndex += stride;
 			}
 
@@ -68,7 +67,6 @@ namespace ClassicTilestorm
 			while (true)
 			{
 				props = map.GetTile(strip.First - stride).Properties;
-				if (null == props) break;
 				if (testDock)
 				{
 					if (!props.IsDock) break;

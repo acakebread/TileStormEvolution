@@ -44,7 +44,7 @@ namespace ClassicTilestorm
 			currentTile = Navigation.GetStartTile(mapManager);
 			if (null == mapManager || -1 == currentTile) { Debug.LogError("Initialize: Invalid setup"); return; }
 
-			transform.position = mapManager.GetTilePosition(currentTile);
+			transform.position = targetPosition = mapManager.GetTilePosition(currentTile);
 			var yaw = Navigation.Waypoints?.Length > 1 ? Navigation.DirToAngle(Navigation.NavToDest(mapManager, Navigation.Waypoints[0].nTile, Navigation.Waypoints[1].nTile)) : 0f;
 			transform.rotation = Quaternion.Euler(0f, yaw, 0f);
 		}
@@ -111,10 +111,11 @@ namespace ClassicTilestorm
 					if (true == isBlocked) OnPuzzleSolved?.Invoke(dstWaypoint - 1);
 					isBlocked = false;
 					startPosition = mapManager.GetTilePosition(currentTile);
+					var prevTargetPosition = targetPosition;
 					var prevCurrentTile = currentTile;
 					currentTile = Navigation.LineOfSight(mapManager, currentTile, destinationTile, direction);
 					targetPosition = mapManager.GetTilePosition(currentTile);
-					actionQueue.Enqueue(() => SetState(State.MOVE, (mapManager.GetTileDistance(prevCurrentTile, currentTile) + 1.0f) / walkSpeed));
+					actionQueue.Enqueue(() => SetState(State.MOVE, ((targetPosition - prevTargetPosition).magnitude + 1.0f) / walkSpeed));
 					return true;
 				}
 
@@ -130,7 +131,7 @@ namespace ClassicTilestorm
 					}
 
 					var consoleTile = Navigation.FindAdjacentConsole(mapManager, currentTile);
-					if (-1 != consoleTile && null != mapManager.GetTile(consoleTile).Properties?.Nav)
+					if (-1 != consoleTile && 0 != mapManager.GetTile(consoleTile).Properties.Nav)
 					{
 						isBlocked = direction == 0;
 						var consoleYaw = Navigation.DirToAngle(Navigation.GetOppositeDirection(mapManager.GetTile(consoleTile).Properties.Nav));
@@ -188,7 +189,7 @@ namespace ClassicTilestorm
 			OnLevelCompleted = null;
 		}
 
-		public static EggbotController Instantiate(Transform parent = null, string costume = "Eggbot Default")
+		public static EggbotController Instantiate(string costume = "Eggbot Default", Transform parent = null)
 		{
 			costume = string.IsNullOrEmpty(costume) ? "Eggbot Default" : costume;
 			var eggbotController = new GameObject($"Eggbot: {costume}");

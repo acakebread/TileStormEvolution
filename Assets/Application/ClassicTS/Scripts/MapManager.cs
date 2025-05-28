@@ -37,13 +37,12 @@ namespace ClassicTilestorm
 
 		public Vector3 GetTilePosition(int index) => new(index % Width, 0f, index / Width);
 
-		public float GetTileDistance(int src, int dst) => (GetTilePosition(dst) - GetTilePosition(src)).magnitude;
-
-		private int ToIndex(int x, int z) => (x >= 0 && x < Width && z >= 0 || z < Height) ? z * Width + x : -1;
-
-		private int WorldToMapIndex(Vector3 worldPos) => (worldPos.x >= 0 && worldPos.x < Width && worldPos.z >= 0 && worldPos.z < Height) ? ToIndex(Mathf.RoundToInt(worldPos.x), Mathf.RoundToInt(worldPos.z)) : -1;
-
-		public int ScreenToMapIndex(Vector3 screenPos) => WorldToMapIndex(ScreenToWorld(screenPos));
+		public int WorldToMapIndex(Vector3 worldPos)
+		{
+			var x = Mathf.RoundToInt(worldPos.x);//this rounds -0.5 to +0.5 to zero - an error in conversion forces this
+			var z = Mathf.RoundToInt(worldPos.z);//this rounds -0.5 to +0.5 to zero - an error in conversion forces this
+			return (x >= 0 && x < Width && z >= 0 && z < Height) ? z * Width + x : -1;
+		}
 
 		public Vector3 ScreenToWorld(Vector3 screenPos)
 		{
@@ -88,24 +87,14 @@ namespace ClassicTilestorm
 					}
 
 					var szType = map.defs[tileDefIndex].szType;
-					if (szType == "tile_empty") continue;
-
+					if (string.IsNullOrEmpty(szType)) Debug.LogWarning($"Null szType at tileDefIndex {tileDefIndex}");
 					var szTheme = map.defs[tileDefIndex].szTheme;
 					if (string.IsNullOrEmpty(szTheme)) Debug.LogWarning($"Null szTheme at tileDefIndex {tileDefIndex}");
-
-					var properties = TilePropertiesManager.GetOrCreateTileProperties(szType, szTheme);
-					if (null == properties) continue;
-					tiles[n].Properties = properties;
-
-					var position = GetTilePosition(n);
-					if (szType == "tile_invisible")
-					{
-						if (PreviewSettings.ShowHiddenTiles) tiles[n].GameObject = GeometryManager.CreateDebugTile(transform, position);
-						continue;
-					}
+					tiles[n].Properties = TilePropertiesManager.GetOrCreateTileProperties(szType, szTheme);
+					if (szType == "tile_empty") continue;
 
 					var tileDef = DatabaseLoader.TileDefs.FirstOrDefault(td => td.szType == szType && td.szTheme == szTheme);
-					tiles[n].GameObject = GeometryManager.InstantiateTile(tileDef, transform, position, properties.Interactive);
+					tiles[n].GameObject = GeometryManager.InstantiateTile(tileDef, transform, GetTilePosition(n), tiles[n].Properties.Interactive);
 				}
 			}
 		}
@@ -133,12 +122,12 @@ namespace ClassicTilestorm
 				if (null == gameObject) continue;
 				gameObject.transform.position = GetTilePosition(n);
 #if DEBUG
-				gameObject.name = $"{tiles[indices[n]].Properties.Type ?? "Empty"}_{gameObject.transform.position.x}_{gameObject.transform.position.z}";
+				gameObject.name = $"{gameObject.GetComponent<RTTI>().tileDef.szType ?? "Empty"} ({gameObject.transform.position.x},{gameObject.transform.position.z})";//gameObject.name = $"{tiles[indices[n]].Properties.Type ?? "Empty"}_{gameObject.transform.position.x}_{gameObject.transform.position.z}";
 #endif
 			}
 		}
 
-		public static MapManager Instantiate(Transform parent, DatabaseLoader.Map map)
+		public static MapManager Instantiate(DatabaseLoader.Map map, Transform parent = null)
 		{
 			var container = new GameObject($"Map: {map.name}");
 			if (null != parent) container.transform.SetParent(parent, false);

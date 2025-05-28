@@ -13,7 +13,7 @@ namespace ClassicTilestorm
 			if (propertiesCache.TryGetValue(key, out var properties)) return properties;
 
 			var tileDef = DatabaseLoader.TileDefs.FirstOrDefault(td => td.szType == szType && td.szTheme == szTheme);
-			if (tileDef == null) return null;
+			if (null == tileDef) return default;
 
 			properties = new TileProperties(tileDef);
 			propertiesCache[key] = properties;
