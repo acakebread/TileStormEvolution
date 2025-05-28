@@ -6,8 +6,8 @@ namespace ClassicTilestorm
 {
 	public class GameController : MonoBehaviour
 	{
-		private GestureController gestureController;
 		private MapManager mapManager;
+		private GestureController gestureController;
 		private EggbotController eggbotController;
 
 		private void Awake() => gestureController = gameObject.AddComponent<GestureController>();
@@ -108,7 +108,7 @@ namespace ClassicTilestorm
 			CameraController.SetMode(CameraState.Preset);
 			var origin = waypoint.vSrc.IsValidVector() ? waypoint.vSrc.ToVector3() : new Vector3(0f, 14f, -14f); // TS default
 			CameraController.SetOrigin(origin);
-			var target = null != waypoint.vDst && waypoint.vDst.IsValidVector() ? waypoint.vDst.ToVector3() : mapManager.GetTilePosition(waypoint.nTile) + new Vector3(0f, 0.5f, 0f);
+			var target = null != waypoint.vDst && waypoint.vDst.IsValidVector() ? waypoint.vDst.ToVector3() : mapManager.GetTilePosition(waypoint.nTile);
 			CameraController.SetTarget(target);
 		}
 
