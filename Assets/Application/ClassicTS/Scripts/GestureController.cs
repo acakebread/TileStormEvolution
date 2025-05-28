@@ -4,26 +4,25 @@ namespace ClassicTilestorm
 {
 	public class GestureController : MonoBehaviour
 	{
-		private GestureSystem gestureSystem => GestureSystem.instance;
-		private MapManager mapManager => GameController.mapManager;
-
-		private TileStripHelper.TileStrip tileStrip;
+		private MapManager mapManager;
+		private TileStrip tileStrip;
 		private Vector3 last;
 		private Vector3 delta;
 		private int dragIndex = -1;
 		private const float gridSize = 1.0f;
 
-		public static GestureController instance;
-		private void Awake() { instance = this; Reset(); }
+		private void Awake() => gameObject.AddComponent<GestureSystem>();
 
-		public void Reset()
+		public void Initialise(MapManager mapManager)
 		{
+			this.mapManager = mapManager;
 			tileStrip = default;
 			dragIndex = -1;
 		}
 
 		public void Start()
 		{
+			var gestureSystem = gameObject.GetComponent<GestureSystem>();
 			if (null == gestureSystem) return;
 			gestureSystem.OnBeginDrag += OnBeginDrag;
 			gestureSystem.OnDrag += OnDrag;
@@ -32,12 +31,13 @@ namespace ClassicTilestorm
 
 		private void OnDestroy()
 		{
-			instance = null;
 			DebugVisualizationHelper.HighlightStrip(mapManager, tileStrip, false);
+			var gestureSystem = gameObject.GetComponent<GestureSystem>();
 			if (null == gestureSystem) return;
 			gestureSystem.OnBeginDrag -= OnBeginDrag;
 			gestureSystem.OnDrag -= OnDrag;
 			gestureSystem.OnEndDrag -= OnEndDrag;
+			Destroy(gestureSystem);
 		}
 
 		private void OnBeginDrag(Vector3 screenPos)
@@ -54,7 +54,7 @@ namespace ClassicTilestorm
 
 		private void OnDrag(Vector3 screenPos)
 		{
-			if (dragIndex == -1) return;
+			if (-1 == dragIndex) return;
 
 			DebugVisualizationHelper.HighlightStrip(mapManager, tileStrip, false);
 
@@ -67,7 +67,7 @@ namespace ClassicTilestorm
 
 		private void OnEndDrag(Vector3 screenPos)
 		{
-			if (dragIndex == -1) return;
+			if (-1 == dragIndex) return;
 
 			DebugVisualizationHelper.HighlightStrip(mapManager, tileStrip, false);
 

@@ -3,13 +3,9 @@ using UnityEngine;
 
 public class GestureSystem : MonoBehaviour
 {
-	public static GestureSystem instance;
-
 	public event Action<Vector3> OnBeginDrag;
 	public event Action<Vector3> OnDrag;
 	public event Action<Vector3> OnEndDrag;
-
-	private void Awake() => instance = this;
 
 	private void Update()
 	{

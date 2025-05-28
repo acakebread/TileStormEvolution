@@ -6,8 +6,6 @@ namespace ClassicTilestorm
 {
 	public class EggbotController : MonoBehaviour
 	{
-		private MapManager mapManager => GameController.mapManager;
-
 		private int currentTile;
 		private int dstWaypoint;
 		private float stateTimer;
@@ -39,7 +37,10 @@ namespace ClassicTilestorm
 			sway = 0.1f;
 			actionQueue.Clear();
 			SetState(State.IDLE, 1f);
+		}
 
+		public void Initialise(MapManager mapManager)
+		{
 			currentTile = Navigation.GetStartTile(mapManager);
 			if (null == mapManager || -1 == currentTile) { Debug.LogError("Initialize: Invalid setup"); return; }
 
@@ -55,7 +56,7 @@ namespace ClassicTilestorm
 			stateDuration = duration;
 		}
 
-		public void UpdateEggbot()
+		public void UpdateEggbot(MapManager mapManager)
 		{
 			stateTimer += Time.deltaTime;
 			switch (currentState)

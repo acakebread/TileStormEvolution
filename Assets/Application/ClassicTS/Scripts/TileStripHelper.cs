@@ -4,32 +4,32 @@ using System.Collections.Generic;
 
 namespace ClassicTilestorm
 {
+	public struct TileStrip
+	{
+		public int First;
+		public int Count;
+		public int Stride;
+
+		public readonly int Last => First + Stride * (Count - 1);
+
+		private List<int> indices;
+		public List<int> Indices
+		{
+			get
+			{
+				if (null == indices && 0 != Stride)
+				{
+					indices = new();
+					for (var i = 0; i < Count; ++i) indices.Add(First + Stride * i);
+				}
+				return indices;
+			}
+		}
+	}
+
 	public static class TileStripHelper
 	{
 		public static GameObject SpareTile; // Public static spare tile
-
-		public struct TileStrip
-		{
-			public int First;
-			public int Count;
-			public int Stride;
-
-			public readonly int Last => First + Stride * (Count - 1);
-
-			private List<int> indices;
-			public List<int> Indices
-			{
-				get
-				{
-					if (null == indices && 0 != Stride)
-					{
-						indices = new();
-						for (var i = 0; i < Count; ++i) indices.Add(First + Stride * i);
-					}
-					return indices;
-				}
-			}
-		}
 
 		public static TileStrip GetTileStrip(IMap map, int startIndex, int stride, bool difficult = false)
 		{
@@ -101,10 +101,7 @@ namespace ClassicTilestorm
 
 		public static bool RollStrip(IMap map, TileStrip strip, int adjust = 1)
 		{
-			if (strip.Count <= 1 || null == strip.Indices)
-				return false;
-
-			if (null == map.Indices)
+			if (strip.Count <= 1 || null == strip.Indices || null == map.Indices)
 				return false;
 
 			ArrayExtensions.RollArray(map.Indices, strip.First, strip.Count, adjust, strip.Stride);

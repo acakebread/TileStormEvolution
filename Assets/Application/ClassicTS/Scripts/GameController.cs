@@ -6,17 +6,18 @@ namespace ClassicTilestorm
 {
 	public class GameController : MonoBehaviour
 	{
-		private DatabaseLoader.Map currentMap;
-
+		private GestureController gestureController;
+		private MapManager mapManager;
 		private EggbotController eggbotController;
-		public static MapManager mapManager;// public static for now - ToDo make private property and handle external requirements
+
+		private void Awake() => gestureController = gameObject.AddComponent<GestureController>();
 
 		void Start()
 		{
 			DatabaseLoader.Init(PreviewSettings.DatabaseJsonFile);
+			CameraController.SetAutoCinema(PreviewSettings.LaunchInCinemaMode);
 			CameraController.Start(Camera.main);
 			LoadMap();
-			CameraController.SetAutoCinema(PreviewSettings.LaunchInCinemaMode);
 		}
 
 		private void LoadMap(string mapName = null)
@@ -24,7 +25,7 @@ namespace ClassicTilestorm
 			mapName ??= PreviewSettings.LoadMapName;
 			if (null == mapName) return;
 
-			currentMap = string.IsNullOrEmpty(mapName) ? DatabaseLoader.Maps.FirstOrDefault() : DatabaseLoader.Maps.FirstOrDefault(m => m.name == mapName);
+			var currentMap = string.IsNullOrEmpty(mapName) ? DatabaseLoader.Maps.FirstOrDefault() : DatabaseLoader.Maps.FirstOrDefault(m => m.name == mapName);
 			if (null == currentMap)
 			{
 				Debug.LogError($"No map found for mapName={mapName}! Available maps: {string.Join(", ", DatabaseLoader.Maps.Select(m => m.name))}");
@@ -33,12 +34,12 @@ namespace ClassicTilestorm
 
 			if (null != mapManager) Destroy(mapManager.gameObject);
 			mapManager = MapManager.Instantiate(transform, currentMap);
+			gestureController.Initialise(mapManager);
 
 			Navigation.SetupWaypoints(currentMap, mapManager);
-
-			(GestureController.instance ?? gameObject.AddComponent<GestureController>()).Reset();
 			if (null != eggbotController) Destroy(eggbotController.gameObject);
 			eggbotController = EggbotController.Instantiate(transform, currentMap.szEggbotCostume);
+			eggbotController.Initialise(mapManager);
 
 			ResetCamera();
 
@@ -78,7 +79,7 @@ namespace ClassicTilestorm
 
 		void Update()
 		{
-			eggbotController.UpdateEggbot();
+			eggbotController.UpdateEggbot(mapManager);
 			UpdateCamera();
 
 			void UpdateCamera()
@@ -138,7 +139,7 @@ namespace ClassicTilestorm
 
 			if (GUI.Button(new Rect(230, 10, 150, 30), "Previous Level"))
 			{
-				var currentIndex = DatabaseLoader.Maps.ToList().FindIndex(m => m.name == currentMap?.name);
+				var currentIndex = DatabaseLoader.Maps.ToList().FindIndex(m => m.name == PreviewSettings.LoadMapName);
 				currentIndex = (DatabaseLoader.Maps.Count + currentIndex - 1) % DatabaseLoader.Maps.Count;
 				PreviewSettings.LoadMapName = DatabaseLoader.Maps[currentIndex].name;
 				LoadMap();
@@ -146,7 +147,7 @@ namespace ClassicTilestorm
 
 			if (GUI.Button(new Rect(390, 10, 150, 30), "Next Level"))
 			{
-				var currentIndex = DatabaseLoader.Maps.ToList().FindIndex(m => m.name == currentMap?.name);
+				var currentIndex = DatabaseLoader.Maps.ToList().FindIndex(m => m.name == PreviewSettings.LoadMapName);
 				currentIndex = (currentIndex + 1) % DatabaseLoader.Maps.Count;
 				PreviewSettings.LoadMapName = DatabaseLoader.Maps[currentIndex].name;
 				LoadMap();
