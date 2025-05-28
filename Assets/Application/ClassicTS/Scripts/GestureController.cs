@@ -44,8 +44,8 @@ namespace ClassicTilestorm
 		{
 			var vert = mapManager.ScreenToWorld(screenPos);
 			var index = mapManager.WorldToMapIndex(vert);
-			var properties = mapManager.GetTile(index).Properties;
-			if (false == properties.Interactive) return;
+			var tile = mapManager.GetTile(index);
+			if (false == tile.Interactive) return;
 
 			last = vert;
 			delta = Vector3.zero;

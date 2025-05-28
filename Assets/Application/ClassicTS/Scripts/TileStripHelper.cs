@@ -34,10 +34,8 @@ namespace ClassicTilestorm
 		public static TileStrip GetTileStrip(IMap map, int startIndex, int stride, bool difficult = false)
 		{
 			var strip = new TileStrip { First = -1, Count = 0, Stride = 0 };
-
-			var props = map.GetTile(startIndex).Properties;
-			if (!props.Interactive) return strip;
-
+			var tile = map.GetTile(startIndex);
+			if (!tile.Interactive) return strip;
 			strip.First = startIndex;
 			strip.Count = 1;
 
@@ -47,34 +45,34 @@ namespace ClassicTilestorm
 			var lastIndex = startIndex;
 			while (true)
 			{
-				props = map.GetTile(lastIndex + stride).Properties;
-				if (!props.IsSlide || props.IsDock || (!difficult && props.IsRoll)) break;
+				tile = map.GetTile(lastIndex + stride);
+				if (!tile.IsSlide || tile.IsDock || (!difficult && tile.IsRoll)) break;
 				lastIndex += stride;
 			}
 
 			while (true)
 			{
-				props = map.GetTile(lastIndex + stride).Properties;
-				if (!props.IsRoll) break;
+				tile = map.GetTile(lastIndex + stride);
+				if (!tile.IsRoll) break;
 				lastIndex += stride;
 			}
 
-			if (!map.GetTile(lastIndex).Properties.IsRoll)
+			if (!map.GetTile(lastIndex).IsRoll)
 				return strip;
 
-			var testDock = difficult && map.GetTile(lastIndex).Properties.IsDock;
+			var testDock = difficult && map.GetTile(lastIndex).IsDock;
 
 			while (true)
 			{
-				props = map.GetTile(strip.First - stride).Properties;
+				tile = map.GetTile(strip.First - stride);
 				if (testDock)
 				{
-					if (!props.IsDock) break;
+					if (!tile.IsDock) break;
 				}
 				else
 				{
-					if (!props.IsSlide) break;
-					if (!difficult && !props.IsDock && !props.IsRoll) break;
+					if (!tile.IsSlide) break;
+					if (!difficult && !tile.IsDock && !tile.IsRoll) break;
 				}
 				strip.First -= stride;
 			}

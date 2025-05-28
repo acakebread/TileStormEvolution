@@ -1,13 +1,12 @@
 using UnityEngine;
 using System.Linq;
 using System.Collections.Generic;
-using static ClassicTilestorm.TileDirectionFlags;
 
 namespace ClassicTilestorm
 {
 	public static class Navigation
 	{
-		private static readonly int[] Directions = { North, South, East, West };
+		private static readonly int[] Directions = { (int)TileFlags.North, (int)TileFlags.South, (int)TileFlags.East, (int)TileFlags.West };
 		private static DatabaseLoader.Waypoint[] waypoints;
 		public static DatabaseLoader.Waypoint[] Waypoints => waypoints;
 
@@ -46,16 +45,17 @@ namespace ClassicTilestorm
 						if (FindAdjacentConsole(map, currentTile) != -1)
 							generatedWaypoints.Add(new DatabaseLoader.Waypoint { nTile = currentTile });
 
-						var nextTile = GetAdjacentTile(map, currentTile, currentDir);
-						if (-1 == nextTile || nextTile == startTile) break;
+						var nextTileIndex = GetAdjacentTile(map, currentTile, currentDir);
+						if (-1 == nextTileIndex || nextTileIndex == startTile) break;
 
-						var nextProps = map.GetTile(nextTile).Properties;
-						if (0 == nextProps.Nav) break;
+						var nextTile = map.GetTile(nextTileIndex);
+						if (0 == nextTile.Nav) break;
 
-						currentDir = CalculateNav(currentDir, nextProps.Nav);
+						currentDir = CalculateNav(currentDir, nextTile.Nav);
+						currentDir = CalculateNav(currentDir, nextTile.Nav);
 						if (0 == currentDir) break;
 
-						currentTile = nextTile;
+						currentTile = nextTileIndex;
 					}
 				}
 
@@ -73,8 +73,9 @@ namespace ClassicTilestorm
 
 			for (var i = 0; i < map.Width * map.Height; ++i)
 			{
-				if (map.GetTile(i).Properties.IsStart)
+				if (map.GetTile(i).IsStart)
 					return i;
+
 			}
 			Debug.LogError("No start tile found!");
 			return -1;
@@ -87,7 +88,7 @@ namespace ClassicTilestorm
 
 			for (var i = 0; i < map.Width * map.Height; ++i)
 			{
-				if (map.GetTile(i).Properties.IsEnd)
+				if (map.GetTile(i).IsEnd)
 					return i;
 			}
 			Debug.LogError("No end tile found!");
@@ -100,16 +101,16 @@ namespace ClassicTilestorm
 			{
 				foreach (var dirBit in Directions)
 				{
-					var consoleTile = GetAdjacentTile(map, nTile, dirBit);
-					if (-1 == consoleTile)
+					var consoleTileIndex = GetAdjacentTile(map, nTile, dirBit);
+					if (-1 == consoleTileIndex)
 						continue;
 
-					var consoleProps = map.GetTile(consoleTile).Properties;
-					if (true != consoleProps.IsConsole)
+					var consoleTile = map.GetTile(consoleTileIndex);
+					if (true != consoleTile.IsConsole)
 						continue;
 
-					if (dirBit == GetOppositeDirection(consoleProps.Nav))
-						return consoleTile;
+					if (dirBit == GetOppositeDirection(consoleTile.Nav))
+						return consoleTileIndex;
 				}
 			}
 			return -1;
@@ -137,22 +138,22 @@ namespace ClassicTilestorm
 			foreach (var dirBit in Directions)
 			{
 				var currentTile = src;
-				var currentNav = map.GetTile(src).Properties.Nav & dirBit;
+				var currentNav = map.GetTile(src).Nav & dirBit;
 
 				while (currentNav != 0)
 				{
 					if (currentTile == dst)
 						return dirBit; // Found destination, return initial direction
 
-					var nextTile = GetAdjacentTile(map, currentTile, currentNav);
-					if (-1 == nextTile || nextTile == src) // Invalid tile or loop back
+					var nextTileIndex = GetAdjacentTile(map, currentTile, currentNav);
+					if (-1 == nextTileIndex || nextTileIndex == src) // Invalid tile or loop back
 						break;
 
-					var nextProps = map.GetTile(nextTile).Properties;
-					if (0 == nextProps.Nav) break;
+					var nextTile = map.GetTile(nextTileIndex);
+					if (0 == nextTile.Nav) break;
 
-					currentNav = CalculateNav(currentNav, nextProps.Nav);
-					currentTile = nextTile;
+					currentNav = CalculateNav(currentNav, nextTile.Nav);
+					currentTile = nextTileIndex;
 				}
 			}
 			return 0; // No valid direction found
@@ -166,10 +167,9 @@ namespace ClassicTilestorm
 			while (0 != nDir)
 			{
 				nSrc = GetAdjacentTile(map, nSrc, nDir);
-
-				var props = map.GetTile(nSrc).Properties;
-				if (0 == props.Nav) break;
-				var nNew = props.Nav;
+				var tile = map.GetTile(nSrc);
+				if (0 == tile.Nav) break;
+				var nNew = tile.Nav;
 				nNav = nNav & nNew;
 				if (0 == nNav) break;
 				nDir = nDir & nNew;
@@ -185,10 +185,9 @@ namespace ClassicTilestorm
 			while (0 != nDir)
 			{
 				nSrc = GetAdjacentTile(map, nSrc, nDir);
-
-				var props = map.GetTile(nSrc).Properties;
-				if (0 == props.Nav) break;
-				var nNew = props.Nav;
+				var tile = map.GetTile(nSrc);
+				if (0 == tile.Nav) break;
+				var nNew = tile.Nav;
 				nNav = nNav & nNew;
 				if (0 == nNav) break;
 				nDir = nDir & nNew;
@@ -207,9 +206,12 @@ namespace ClassicTilestorm
 
 		public static float DirToAngle(int dir) => new float[] { 0f, 0f, 180f, 0f, 90f, 45f, 135f, 90f, -90f, -45f, -135f, -90f, 0f, 0f, 180f, 0f }[dir & 0xF];
 
-		public static int GetOffsetDirection(int dx, int dz) => (dx > 0 ? East : 0) | (dx < 0 ? West : 0) | (dz > 0 ? North : 0) | (dz < 0 ? South : 0);
-		public static (int dx, int dz) GetDirectionOffset(int dirBit) => (((dirBit & East) >> 2) - ((dirBit & West) >> 3), (dirBit & North) - ((dirBit & South) >> 1));
-		public static int GetOppositeDirection(int dirBit) => ((dirBit & North) << 1) | ((dirBit & South) >> 1) | ((dirBit & East) << 1) | ((dirBit & West) >> 1);
-		public static bool CanMoveBetweenTiles(TileProperties fromTile, TileProperties toTile, int dirBit) => (fromTile.Nav & dirBit) != 0 && (toTile.Nav & GetOppositeDirection(dirBit)) != 0;
+		public static int GetOffsetDirection(int dx, int dz) => (dx > 0 ? (int)TileFlags.East : 0) | (dx < 0 ? (int)TileFlags.West : 0) | (dz > 0 ? (int)TileFlags.North : 0) | (dz < 0 ? (int)TileFlags.South : 0);
+
+		public static (int dx, int dz) GetDirectionOffset(int dirBit) => (((dirBit & (int)TileFlags.East) >> 2) - ((dirBit & (int)TileFlags.West) >> 3), ((dirBit & (int)TileFlags.North) >> 0) - ((dirBit & (int)TileFlags.South) >> 1));
+
+		public static int GetOppositeDirection(int dirBit) => ((dirBit & (int)TileFlags.North) << 1) | ((dirBit & (int)TileFlags.South) >> 1) | ((dirBit & (int)TileFlags.East) << 1) | ((dirBit & (int)TileFlags.West) >> 1);
+
+		public static bool CanMoveBetweenTiles(Tile fromTile, Tile toTile, int dirBit) => (fromTile.Nav & dirBit) != 0 && (toTile.Nav & GetOppositeDirection(dirBit)) != 0;
 	}
 }

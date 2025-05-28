@@ -3,13 +3,6 @@ using System.Linq;
 
 namespace ClassicTilestorm
 {
-	public struct Tile
-	{
-		public TileProperties Properties;
-		public GameObject GameObject;
-		//public Vector3 position { get => null != GameObject ? GameObject.transform.position : Vector3.zero; set { if (null != GameObject) GameObject.transform.position = value; } }
-	}
-
 	public class MapManager : MonoBehaviour, IMap
 	{
 		private int[] indices;
@@ -90,11 +83,11 @@ namespace ClassicTilestorm
 					if (string.IsNullOrEmpty(szType)) Debug.LogWarning($"Null szType at tileDefIndex {tileDefIndex}");
 					var szTheme = map.defs[tileDefIndex].szTheme;
 					if (string.IsNullOrEmpty(szTheme)) Debug.LogWarning($"Null szTheme at tileDefIndex {tileDefIndex}");
-					tiles[n].Properties = TilePropertiesManager.GetOrCreateTileProperties(szType, szTheme);
+					tiles[n] = new(szType, szTheme);
 					if (szType == "tile_empty") continue;
 
 					var tileDef = DatabaseLoader.TileDefs.FirstOrDefault(td => td.szType == szType && td.szTheme == szTheme);
-					tiles[n].GameObject = GeometryManager.InstantiateTile(tileDef, transform, GetTilePosition(n), tiles[n].Properties.Interactive);
+					tiles[n].GameObject = GeometryManager.InstantiateTile(tileDef, transform, GetTilePosition(n), tiles[n].Interactive);
 				}
 			}
 		}
@@ -109,7 +102,7 @@ namespace ClassicTilestorm
 		public void Solve()
 		{
 			indices = new int[Width * Height];
-			for (var n = 0; n < indices.Length; ++n) indices[n] = n; 
+			for (var n = 0; n < indices.Length; ++n) indices[n] = n;
 			UpdateTileObjectNamesAndPositions();
 		}
 
