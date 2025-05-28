@@ -1,57 +1,52 @@
 using UnityEngine;
 using System.Linq;
+using ClassicTilestorm;
 
-namespace ClassicTilestorm
+public struct Tile
 {
-	[System.Flags]
-	public enum TileFlags
-	{
-		None = 0,
-		North = 1 << 0,   // 0b0000000001
-		South = 1 << 1,   // 0b0000000010
-		East = 1 << 2,    // 0b0000000100
-		West = 1 << 3,    // 0b0000001000
-		Dock = 1 << 4,	  // 0b0000010000
-		Roll = 1 << 5,	  // 0b0000100000
-		Slide = 1 << 6,	  // 0b0001000000
-		Start = 1 << 7,	  // 0b0010000000
-		End = 1 << 8,	  // 0b0100000000
-		Console = 1 << 9  // 0b1000000000 
-	}
+	public const int North = 1 << 0;   // 0b0000000001
+	public const int South = 1 << 1;   // 0b0000000010
+	public const int East = 1 << 2;    // 0b0000000100
+	public const int West = 1 << 3;    // 0b0000001000
+	public const int Dock = 1 << 4;    // 0b0000010000
+	public const int Roll = 1 << 5;    // 0b0000100000
+	public const int Slide = 1 << 6;   // 0b0001000000
+	public const int Start = 1 << 7;   // 0b0010000000
+	public const int End = 1 << 8;     // 0b0100000000
+	public const int Console = 1 << 9; // 0b1000000000
 
-	public struct Tile
-	{
-		private readonly TileFlags flags;
+	private readonly int flags;
+	private static readonly int navMask = North | South | East | West;
 
-		//public Tile(DatabaseLoader.TileDef def)
-		public Tile(string szType, string szTheme)
+	public Tile(string szType, string szTheme)
+	{
+		var def = DatabaseLoader.TileDefs.FirstOrDefault(td => td.szType == szType && td.szTheme == szTheme);
+		flags = 0;
+		if (def != null)
 		{
-			var def = DatabaseLoader.TileDefs.FirstOrDefault(td => td.szType == szType && td.szTheme == szTheme);
-			flags = null == def ? 0 :
-				(def.bNorth ? TileFlags.North : 0) |
-				(def.bSouth ? TileFlags.South : 0) |
-				(def.bEast ? TileFlags.East : 0) |
-				(def.bWest ? TileFlags.West : 0) |
-				(def.bDock ? TileFlags.Dock : 0) |
-				(def.bRoll ? TileFlags.Roll : 0) |
-				(def.bSlide ? TileFlags.Slide : 0) |
-				(def.bStart ? TileFlags.Start : 0) |
-				(def.bEnd ? TileFlags.End : 0) |
-				(def.bConsole ? TileFlags.Console : 0);
-			GameObject = null;
+			if (def.bNorth) flags |= North;
+			if (def.bSouth) flags |= South;
+			if (def.bEast) flags |= East;
+			if (def.bWest) flags |= West;
+			if (def.bDock) flags |= Dock;
+			if (def.bRoll) flags |= Roll;
+			if (def.bSlide) flags |= Slide;
+			if (def.bStart) flags |= Start;
+			if (def.bEnd) flags |= End;
+			if (def.bConsole) flags |= Console;
 		}
-
-		public readonly bool IsStart => 0 != (flags & TileFlags.Start);
-		public readonly bool IsEnd => 0 != (flags & TileFlags.End);
-		public readonly bool IsConsole => 0 != (flags & TileFlags.Console);
-		public readonly bool IsDock => 0 != (flags & TileFlags.Dock);
-		public readonly bool IsRoll => 0 != (flags & TileFlags.Roll);
-		public readonly bool IsSlide => 0 != (flags & TileFlags.Slide);
-		public readonly bool Interactive => !(IsDock || IsRoll) && IsSlide;
-
-		public readonly int Nav => (int)(flags & (TileFlags.North | TileFlags.South | TileFlags.East | TileFlags.West));
-
-		public GameObject GameObject;
-		//public Vector3 position { get => null != GameObject ? GameObject.transform.position : Vector3.zero; set { if (null != GameObject) GameObject.transform.position = value; } }
+		GameObject = null;
 	}
+
+	public readonly bool IsStart => (flags & Start) != 0;
+	public readonly bool IsEnd => (flags & End) != 0;
+	public readonly bool IsConsole => (flags & Console) != 0;
+	public readonly bool IsDock => (flags & Dock) != 0;
+	public readonly bool IsRoll => (flags & Roll) != 0;
+	public readonly bool IsSlide => (flags & Slide) != 0;
+	public readonly bool Interactive => !(IsDock || IsRoll) && IsSlide;
+	public readonly int Nav => flags & navMask;
+
+	public GameObject GameObject;
+	//public Vector3 position { get => null != GameObject ? GameObject.transform.position : Vector3.zero; set { if (null != GameObject) GameObject.transform.position = value; } }
 }
