@@ -3,6 +3,15 @@ using System.Linq;
 
 namespace ClassicTilestorm
 {
+	public interface IMap
+	{
+		int Width { get; }
+		int Height { get; }
+		int[] Indices { get; }
+		//Tile[] Tiles { get; }
+		Tile GetTile(int tileIndex);
+	}
+
 	public class MapManager : MonoBehaviour, IMap
 	{
 		private int[] indices;
@@ -115,7 +124,7 @@ namespace ClassicTilestorm
 				if (null == gameObject) continue;
 				gameObject.transform.position = GetTilePosition(n);
 #if DEBUG
-				gameObject.name = $"{gameObject.GetComponent<RTTI>().tileDef.szType ?? "Empty"} ({gameObject.transform.position.x},{gameObject.transform.position.z})";//gameObject.name = $"{tiles[indices[n]].Properties.Type ?? "Empty"}_{gameObject.transform.position.x}_{gameObject.transform.position.z}";
+				gameObject.name = $"{gameObject.GetComponent<RTTI>()?.tileDef.szType ?? "Empty"} ({gameObject.transform.position.x},{gameObject.transform.position.z})";//gameObject.name = $"{tiles[indices[n]].Properties.Type ?? "Empty"}_{gameObject.transform.position.x}_{gameObject.transform.position.z}";
 #endif
 			}
 		}

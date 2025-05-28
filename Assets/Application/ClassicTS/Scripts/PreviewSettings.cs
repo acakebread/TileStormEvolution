@@ -32,10 +32,10 @@ namespace ClassicTilestorm
 		[SerializeField] private TextAsset databaseJsonFile;
 		public static TextAsset DatabaseJsonFile => instance.databaseJsonFile;
 
-		[SerializeField] private string geometryPath = "ClassicTS/Geometry/";
+		[SerializeField, FolderPath] private string geometryPath = "ClassicTS/Geometry/";
 		public static string GeometryPath => instance.geometryPath;
 
-		[SerializeField] private string texturePath = "ClassicTS/Textures/";
+		[SerializeField, FolderPath] private string texturePath = "ClassicTS/Textures/";
 		public static string TexturePath => instance.texturePath;
 
 		//[SerializeField] private string prefabPath = "Prefabs/";
