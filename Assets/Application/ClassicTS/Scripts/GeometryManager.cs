@@ -8,7 +8,7 @@ namespace ClassicTilestorm
 
 	public static class GeometryManager
 	{
-		private static Dictionary<string, GameObject> prefabCache = new();
+		private static readonly Dictionary<string, GameObject> prefabCache = new();
 
 		// Loads a prefab from Resources, caching it for performance
 		private static GameObject GetPrefab(string geomName)
@@ -22,7 +22,7 @@ namespace ClassicTilestorm
 			if (prefabCache.TryGetValue(geomName, out var prefab))
 				return prefab;
 
-			string path = $"{PreviewSettings.GeometryPath}{geomName}".Replace(".x", "");
+			var path = $"{PreviewSettings.GeometryPath}{geomName}".Replace(".x", "");
 			prefab = Resources.Load<GameObject>(path);
 			if (prefab == null)
 			{
@@ -121,10 +121,10 @@ namespace ClassicTilestorm
 
 			// Create a flattened cube mesh
 			var cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
-			Mesh originalMesh = cube.GetComponent<MeshFilter>().sharedMesh;
-			Mesh newMesh = Object.Instantiate(originalMesh);
-			Vector3[] vertices = newMesh.vertices;
-			for (int i = 0; i < vertices.Length; i++)
+			var originalMesh = cube.GetComponent<MeshFilter>().sharedMesh;
+			var newMesh = Object.Instantiate(originalMesh);
+			var vertices = newMesh.vertices;
+			for (var i = 0; i < vertices.Length; ++i)
 			{
 				vertices[i].y *= 0.05f;
 				vertices[i].y -= 0.05f;
@@ -154,7 +154,7 @@ namespace ClassicTilestorm
 			var spareRenderer = spareTile.AddComponent<MeshRenderer>();
 			var spareFilter = spareTile.AddComponent<MeshFilter>();
 
-			if (sourceRenderer != null && sourceFilter != null)
+			if (null != sourceRenderer && null != sourceFilter)
 			{
 				spareFilter.sharedMesh = sourceFilter.sharedMesh;
 				spareRenderer.material = sourceRenderer.material;

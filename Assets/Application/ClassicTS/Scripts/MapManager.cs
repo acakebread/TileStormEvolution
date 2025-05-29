@@ -14,7 +14,7 @@ namespace ClassicTilestorm
 	public class MapManager : MonoBehaviour, IMapManager
 	{
 		private int[] indices;//the current index mapping of the world - initial state is index array entry is equal to position - i.e. index[0] = 0, index[1] = 1...
-		private int[] offsets;//the stored deltas that are added tot he bases indices to initialise the authored stored puzzle state
+		private int[] offsets;//the stored deltas that are added to the base indices to initialise the authored stored puzzle state
 		private Tile[] tiles;//the tile properties and associated model
 
 		public int[] Indices { get => indices; private set => indices = value; }
@@ -77,15 +77,13 @@ namespace ClassicTilestorm
 
 		public void Scramble()
 		{
-			indices = new int[Count];
-			for (var n = 0; n < indices.Length; ++n) indices[n] = offsets[n] + n;
+			indices = Enumerable.Range(0, Count).Select(n => n + offsets[n]).ToArray();// set all values to index + offset
 			UpdateTileObjectNamesAndPositions();
 		}
 
 		public void Solve()
 		{
-			indices = new int[Count];
-			for (var n = 0; n < indices.Length; ++n) indices[n] = n;
+			indices = Enumerable.Range(0, Count).ToArray();// set all values to index
 			UpdateTileObjectNamesAndPositions();
 		}
 
