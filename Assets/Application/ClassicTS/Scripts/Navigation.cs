@@ -55,7 +55,6 @@ namespace ClassicTilestorm
 						if (0 == nextTile.Nav) break;
 
 						currentDir = CalculateNav(currentDir, nextTile.Nav);
-						currentDir = CalculateNav(currentDir, nextTile.Nav);
 						if (0 == currentDir) break;
 
 						currentTile = nextTileIndex;
