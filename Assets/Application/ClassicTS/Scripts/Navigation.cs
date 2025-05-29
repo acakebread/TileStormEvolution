@@ -22,7 +22,7 @@ namespace ClassicTilestorm
 			static DatabaseLoader.Waypoint[] GenerateWaypoints(IMapManager map)
 			{
 				var generatedWaypoints = new List<DatabaseLoader.Waypoint>();
-				if (0 == map.Width * map.Height)
+				if (0 == map.Count)
 				{
 					Debug.LogWarning("Cannot setup waypoints: invalid tile data");
 					return generatedWaypoints.ToArray();
@@ -74,7 +74,7 @@ namespace ClassicTilestorm
 			if (null != waypoints && 0 != waypoints.Length)
 				return waypoints[0].nTile;
 
-			for (var i = 0; i < map.Width * map.Height; ++i)
+			for (var i = 0; i < map.Count; ++i)
 			{
 				if (MapManager.GetTile(map, i).IsStart)
 					return i;
@@ -89,7 +89,7 @@ namespace ClassicTilestorm
 			if (null != waypoints && 0 != waypoints.Length)
 				return waypoints[waypoints.Length - 1].nTile;
 
-			for (var i = 0; i < map.Width * map.Height; ++i)
+			for (var i = 0; i < map.Count; ++i)
 			{
 				if (MapManager.GetTile(map, i).IsEnd)
 					return i;
@@ -100,7 +100,7 @@ namespace ClassicTilestorm
 
 		public static int FindAdjacentConsole(IMapManager map, int nTile)
 		{
-			if (nTile >= 0 && nTile < map.Width * map.Height)
+			if (nTile >= 0 && nTile < map.Count)
 			{
 				foreach (var dirBit in Directions)
 				{

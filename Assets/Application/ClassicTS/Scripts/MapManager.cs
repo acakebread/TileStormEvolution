@@ -7,6 +7,7 @@ namespace ClassicTilestorm
 	{
 		int Width { get; }
 		int Height { get; }
+		int Count { get; }
 		int[] Indices { get; }
 	}
 
@@ -21,6 +22,7 @@ namespace ClassicTilestorm
 
 		public int Width { get; private set; }
 		public int Height { get; private set; }
+		public int Count { get => Width * Height; }
 
 		private void Awake()
 		{
@@ -75,14 +77,14 @@ namespace ClassicTilestorm
 
 		public void Scramble()
 		{
-			indices = new int[Width * Height];
+			indices = new int[Count];
 			for (var n = 0; n < indices.Length; ++n) indices[n] = offsets[n] + n;
 			UpdateTileObjectNamesAndPositions();
 		}
 
 		public void Solve()
 		{
-			indices = new int[Width * Height];
+			indices = new int[Count];
 			for (var n = 0; n < indices.Length; ++n) indices[n] = n;
 			UpdateTileObjectNamesAndPositions();
 		}

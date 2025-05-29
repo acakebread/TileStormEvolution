@@ -13,9 +13,9 @@ namespace ClassicTilestorm
 
 		private void Awake() => gameObject.AddComponent<GestureSystem>();
 
-		public void Initialise(IMapManager _imap)
+		public void Initialise(IMapManager imap)
 		{
-			imap = _imap;
+			this.imap = imap;
 			tileStrip = default;
 			dragIndex = -1;
 		}
