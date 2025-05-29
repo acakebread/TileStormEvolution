@@ -37,14 +37,10 @@ namespace ClassicTilestorm
 			return dataIndex >= 0 && dataIndex < tiles.Length ? tiles[dataIndex] : default;
 		}
 
-		public Vector3 GetTilePosition(int index) => new(index % Width, 0f, index / Width);
+		private static Vector3 tile_origin = new Vector3(0.5f, 0f, 0.5f);//offset adjustment for all positions to align with world grid (tiles now align with world coordinates)
+		public static Vector3 GetWorldTilePosition(IMap map, int index) => new Vector3(index % map.Width, 0f, index / map.Width) + tile_origin;
 
-		public int WorldToMapIndex(Vector3 worldPos)
-		{
-			var x = Mathf.RoundToInt(worldPos.x);//this rounds -0.5 to +0.5 to zero - an error in conversion forces this
-			var z = Mathf.RoundToInt(worldPos.z);//this rounds -0.5 to +0.5 to zero - an error in conversion forces this
-			return (x >= 0 && x < Width && z >= 0 && z < Height) ? z * Width + x : -1;
-		}
+		public int WorldToMapIndex(Vector3 vec) => vec.x >= 0 && vec.x < Width && vec.z >= 0 && vec.z < Height ? (int)vec.z * Width + (int)vec.x : -1;
 
 		public Vector3 ScreenToWorld(Vector3 screenPos)
 		{
@@ -96,7 +92,7 @@ namespace ClassicTilestorm
 					if (szType == "tile_empty") continue;
 
 					var tileDef = DatabaseLoader.TileDefs.FirstOrDefault(td => td.szType == szType && td.szTheme == szTheme);
-					tiles[n].GameObject = GeometryManager.InstantiateTile(tileDef, transform, GetTilePosition(n), tiles[n].Interactive);
+					tiles[n].GameObject = GeometryManager.InstantiateTile(tileDef, transform, GetWorldTilePosition(this, n), tiles[n].Interactive);
 				}
 			}
 		}
@@ -122,9 +118,11 @@ namespace ClassicTilestorm
 			{
 				var gameObject = tiles[indices[n]].GameObject;
 				if (null == gameObject) continue;
-				gameObject.transform.position = GetTilePosition(n);
+				var position = GetWorldTilePosition(this, n);
+				gameObject.transform.position = position;
+				position -= tile_origin;
 #if DEBUG
-				gameObject.name = $"{gameObject.GetComponent<RTTI>()?.tileDef.szType ?? "Empty"} ({gameObject.transform.position.x},{gameObject.transform.position.z})";//gameObject.name = $"{tiles[indices[n]].Properties.Type ?? "Empty"}_{gameObject.transform.position.x}_{gameObject.transform.position.z}";
+				gameObject.name = $"{gameObject.GetComponent<RTTI>()?.tileDef.szType ?? "Empty"} ({position.x},{position.z})";
 #endif
 			}
 		}
@@ -133,7 +131,6 @@ namespace ClassicTilestorm
 		{
 			var container = new GameObject($"Map: {map.name}");
 			if (null != parent) container.transform.SetParent(parent, false);
-
 			var mapManager = container.AddComponent<MapManager>();
 			mapManager.Initialise(map);
 			return mapManager;

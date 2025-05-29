@@ -110,7 +110,7 @@ namespace ClassicTilestorm
 		}
 
 		// Creates a debug tile (e.g., for tile_invisible or spare tiles)
-		public static GameObject CreateDebugTile(Transform parent, Vector3 position, bool isSpareTile = false)
+		private static GameObject CreateDebugTile(Transform parent, Vector3 position, bool isSpareTile = false)
 		{
 			var gameObject = new GameObject(isSpareTile ? "spare_tile" : "debug_Tile");
 			gameObject.transform.SetParent(parent, false);
@@ -172,9 +172,6 @@ namespace ClassicTilestorm
 		}
 
 		// Clears cache (optional, for resource management)
-		public static void ClearCache()
-		{
-			prefabCache.Clear();
-		}
+		public static void ClearCache() => prefabCache.Clear();
 	}
 }
