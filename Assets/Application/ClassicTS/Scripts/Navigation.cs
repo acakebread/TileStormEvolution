@@ -13,13 +13,13 @@ namespace ClassicTilestorm
 		public static float DirToAngle(int dir) => new float[] { 0f, 0f, 180f, 0f, 90f, 45f, 135f, 90f, -90f, -45f, -135f, -90f, 0f, 0f, 180f, 0f }[dir & 0xF];
 		public static int GetOppositeDirection(int dir) => ((dir & Tile.North) << 1) | ((dir & Tile.South) >> 1) | ((dir & Tile.East) << 1) | ((dir & Tile.West) >> 1);
 
-		public static void SetupWaypoints(DatabaseLoader.Map map, IMap imap)
+		public static void SetupWaypoints(DatabaseLoader.Map map, IMapManager imap)
 		{
 			waypoints = map.waypoints?.Where(w => w != null).ToArray();
 			if (null == waypoints || 0 == waypoints.Length)
 				waypoints = GenerateWaypoints(imap);
 
-			static DatabaseLoader.Waypoint[] GenerateWaypoints(IMap map)
+			static DatabaseLoader.Waypoint[] GenerateWaypoints(IMapManager map)
 			{
 				var generatedWaypoints = new List<DatabaseLoader.Waypoint>();
 				if (0 == map.Width * map.Height)
@@ -51,7 +51,7 @@ namespace ClassicTilestorm
 						var nextTileIndex = GetAdjacentTile(map, currentTile, currentDir);
 						if (-1 == nextTileIndex || nextTileIndex == startTile) break;
 
-						var nextTile = map.GetTile(nextTileIndex);
+						var nextTile = MapManager.GetTile(map, nextTileIndex);
 						if (0 == nextTile.Nav) break;
 
 						currentDir = CalculateNav(currentDir, nextTile.Nav);
@@ -69,14 +69,14 @@ namespace ClassicTilestorm
 			}
 		}
 
-		public static int GetStartTile(IMap map)
+		public static int GetStartTile(IMapManager map)
 		{
 			if (null != waypoints && 0 != waypoints.Length)
 				return waypoints[0].nTile;
 
 			for (var i = 0; i < map.Width * map.Height; ++i)
 			{
-				if (map.GetTile(i).IsStart)
+				if (MapManager.GetTile(map, i).IsStart)
 					return i;
 
 			}
@@ -84,21 +84,21 @@ namespace ClassicTilestorm
 			return -1;
 		}
 
-		public static int GetEndTile(IMap map)
+		public static int GetEndTile(IMapManager map)
 		{
 			if (null != waypoints && 0 != waypoints.Length)
 				return waypoints[waypoints.Length - 1].nTile;
 
 			for (var i = 0; i < map.Width * map.Height; ++i)
 			{
-				if (map.GetTile(i).IsEnd)
+				if (MapManager.GetTile(map, i).IsEnd)
 					return i;
 			}
 			Debug.LogError("No end tile found!");
 			return -1;
 		}
 
-		public static int FindAdjacentConsole(IMap map, int nTile)
+		public static int FindAdjacentConsole(IMapManager map, int nTile)
 		{
 			if (nTile >= 0 && nTile < map.Width * map.Height)
 			{
@@ -108,7 +108,7 @@ namespace ClassicTilestorm
 					if (-1 == consoleTileIndex)
 						continue;
 
-					var consoleTile = map.GetTile(consoleTileIndex);
+					var consoleTile = MapManager.GetTile(map, consoleTileIndex);
 					if (true != consoleTile.IsConsole)
 						continue;
 
@@ -120,19 +120,19 @@ namespace ClassicTilestorm
 		}
 
 		//Classic TS legacy function - returns tile index in direction
-		public static int LineOfSight(IMap map, int src, int dst, int dir)
+		public static int LineOfSight(IMapManager map, int src, int dst, int dir)
 		{
 			while (0 != dir)
 			{
 				if (src == dst) break;
 				src = GetAdjacentTile(map, src, dir);
-				dir &= map.GetTile(src).Nav;
+				dir &= MapManager.GetTile(map, src).Nav;
 			}
 			return src;
 		}
 
 		//Classic TS legacy function - returns direction
-		public static int NavToDest(IMap map, int src, int dst)
+		public static int NavToDest(IMapManager map, int src, int dst)
 		{
 			if (src == dst || -1 == src || -1 == dst)
 				return 0;
@@ -140,7 +140,7 @@ namespace ClassicTilestorm
 			foreach (var dirBit in Directions)
 			{
 				var currentTile = src;
-				var currentNav = map.GetTile(src).Nav & dirBit;
+				var currentNav = MapManager.GetTile(map, src).Nav & dirBit;
 
 				while (currentNav != 0)
 				{
@@ -151,7 +151,7 @@ namespace ClassicTilestorm
 					if (-1 == nextTileIndex || nextTileIndex == src) // Invalid tile or loop back
 						break;
 
-					var nextTile = map.GetTile(nextTileIndex);
+					var nextTile = MapManager.GetTile(map, nextTileIndex);
 					if (0 == nextTile.Nav) break;
 
 					currentNav = CalculateNav(currentNav, nextTile.Nav);
@@ -175,7 +175,7 @@ namespace ClassicTilestorm
 		}
 
 		//Classic TS legacy function - returns index of adjacent tile
-		private static int GetAdjacentTile(IMap map, int index, int dir)
+		private static int GetAdjacentTile(IMapManager map, int index, int dir)
 		{
 			var dx = ((dir & Tile.East) >> 2) - ((dir & Tile.West) >> 3);
 			var dz = ((dir & Tile.North) >> 0) - ((dir & Tile.South) >> 1);
@@ -188,7 +188,7 @@ namespace ClassicTilestorm
 		//	while (0 != dir)
 		//	{
 		//		src = GetAdjacentTile(map, src, dir);
-		//		var tile = map.GetTile(src);
+		//		var tile = MapManager.GetTile(map, src);
 		//		if (tile.Nav == 0) break;
 		//		dir &= tile.Nav;
 		//		length += 1f;

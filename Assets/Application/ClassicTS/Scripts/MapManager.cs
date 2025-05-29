@@ -3,22 +3,21 @@ using System.Linq;
 
 namespace ClassicTilestorm
 {
-	public interface IMap
+	public interface IMapManager
 	{
 		int Width { get; }
 		int Height { get; }
 		int[] Indices { get; }
-		//Tile[] Tiles { get; }
-		Tile GetTile(int tileIndex);
 	}
 
-	public class MapManager : MonoBehaviour, IMap
+	public class MapManager : MonoBehaviour, IMapManager
 	{
-		private int[] indices;
-		private int[] offsets;
-		private Tile[] tiles;
+		private int[] indices;//the current index mapping of the world - initial state is index array entry is equal to position - i.e. index[0] = 0, index[1] = 1...
+		private int[] offsets;//the stored deltas that are added tot he bases indices to initialise the authored stored puzzle state
+		private Tile[] tiles;//the tile properties and associated model
 
 		public int[] Indices { get => indices; private set => indices = value; }
+		public Tile[] Tiles { get => tiles; private set => tiles = value; }
 
 		public int Width { get; private set; }
 		public int Height { get; private set; }
@@ -30,26 +29,6 @@ namespace ClassicTilestorm
 			tiles = null;
 		}
 
-		public Tile GetTile(int index)
-		{
-			if (index < 0 || index >= indices?.Length || Width <= 0) return default;
-			var dataIndex = indices[index];
-			return dataIndex >= 0 && dataIndex < tiles.Length ? tiles[dataIndex] : default;
-		}
-
-		private static Vector3 tile_origin = new Vector3(0.5f, 0f, 0.5f);//offset adjustment for all positions to align with world grid (tiles now align with world coordinates)
-		public static Vector3 GetWorldTilePosition(IMap map, int index) => new Vector3(index % map.Width, 0f, index / map.Width) + tile_origin;
-
-		public int WorldToMapIndex(Vector3 vec) => vec.x >= 0 && vec.x < Width && vec.z >= 0 && vec.z < Height ? (int)vec.z * Width + (int)vec.x : -1;
-
-		public Vector3 ScreenToWorld(Vector3 screenPos)
-		{
-			var ray = Camera.main.ScreenPointToRay(screenPos);
-			var mapPlane = new Plane(Vector3.up, Vector3.zero);
-			if (!mapPlane.Raycast(ray, out float distance)) return Vector3.zero;
-			return ray.GetPoint(distance);
-		}
-
 		private void Initialise(DatabaseLoader.Map map)
 		{
 			offsets = map?.mixed?.TileData?.bytes;
@@ -58,10 +37,7 @@ namespace ClassicTilestorm
 
 			LoadTileData(map.tiles);
 
-			if (PreviewSettings.Scrambled)
-				Scramble();
-			else
-				Solve();
+			if (PreviewSettings.Scrambled) Scramble(); else Solve();//(PreviewSettings.Scrambled ? (System.Action)Scramble : Solve).Invoke();
 
 			Debug.AssertFormat(null != indices && null != offsets, "invalid map tile indices or offsets data");
 
@@ -92,7 +68,7 @@ namespace ClassicTilestorm
 					if (szType == "tile_empty") continue;
 
 					var tileDef = DatabaseLoader.TileDefs.FirstOrDefault(td => td.szType == szType && td.szTheme == szTheme);
-					tiles[n].GameObject = GeometryManager.InstantiateTile(tileDef, transform, GetWorldTilePosition(this, n), tiles[n].Interactive);
+					tiles[n].GameObject = GeometryManager.InstantiateTile(tileDef, transform, TileWorldPosition(this, n), tiles[n].Interactive);
 				}
 			}
 		}
@@ -118,13 +94,33 @@ namespace ClassicTilestorm
 			{
 				var gameObject = tiles[indices[n]].GameObject;
 				if (null == gameObject) continue;
-				var position = GetWorldTilePosition(this, n);
+				var position = TileWorldPosition(this, n);
 				gameObject.transform.position = position;
 				position -= tile_origin;
 #if DEBUG
 				gameObject.name = $"{gameObject.GetComponent<RTTI>()?.tileDef.szType ?? "Empty"} ({position.x},{position.z})";
 #endif
 			}
+		}
+
+		public static Vector3 ScreenToWorld(Vector3 screenPos)
+		{
+			var ray = Camera.main.ScreenPointToRay(screenPos);
+			var mapPlane = new Plane(Vector3.up, Vector3.zero);
+			if (!mapPlane.Raycast(ray, out float distance)) return Vector3.zero;
+			return ray.GetPoint(distance);
+		}
+
+		private static Vector3 tile_origin = new(0.5f, 0f, 0.5f);//offset adjustment for all positions to align with world grid (tiles now align with world coordinates)
+		public static Vector3 TileWorldPosition(IMapManager map, int index) => new Vector3(index % map.Width, 0f, index / map.Width) + tile_origin;
+
+		public static int WorldToMapIndex(IMapManager map, Vector3 vec) => vec.x >= 0 && vec.x < map.Width && vec.z >= 0 && vec.z < map.Height ? (int)vec.z * map.Width + (int)vec.x : -1;
+
+		public static Tile GetTile(IMapManager map, int index)
+		{
+			if (map is not MapManager concrete || index < 0 || index >= map.Indices?.Length || map.Width <= 0) return default;
+			var dataIndex = map.Indices[index];
+			return dataIndex >= 0 && dataIndex < concrete.tiles.Length ? concrete.tiles[dataIndex] : default;
 		}
 
 		public static MapManager Instantiate(DatabaseLoader.Map map, Transform parent = null)

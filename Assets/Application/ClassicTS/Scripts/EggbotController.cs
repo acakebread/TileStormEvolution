@@ -39,12 +39,12 @@ namespace ClassicTilestorm
 			SetState(State.IDLE, 1f);
 		}
 
-		public void Initialise(IMap map)
+		public void Initialise(IMapManager map)
 		{
 			currentTile = Navigation.GetStartTile(map);
 			if (null == map || -1 == currentTile) { Debug.LogError("Initialize: Invalid setup"); return; }
 
-			transform.position = targetPosition = MapManager.GetWorldTilePosition(map, currentTile);
+			transform.position = targetPosition = MapManager.TileWorldPosition(map, currentTile);
 			var yaw = Navigation.Waypoints?.Length > 1 ? Navigation.DirToAngle(Navigation.NavToDest(map, Navigation.Waypoints[0].nTile, Navigation.Waypoints[1].nTile)) : 0f;
 			transform.rotation = Quaternion.Euler(0f, yaw, 0f);
 		}
@@ -56,7 +56,7 @@ namespace ClassicTilestorm
 			stateDuration = duration;
 		}
 
-		public void UpdateEggbot(IMap map)
+		public void UpdateEggbot(IMapManager map)
 		{
 			stateTimer += Time.deltaTime;
 			switch (currentState)
@@ -110,11 +110,11 @@ namespace ClassicTilestorm
 
 					if (true == isBlocked) OnPuzzleSolved?.Invoke(dstWaypoint - 1);
 					isBlocked = false;
-					startPosition = MapManager.GetWorldTilePosition(map, currentTile);
+					startPosition = MapManager.TileWorldPosition(map, currentTile);
 					var prevTargetPosition = targetPosition;
 					var prevCurrentTile = currentTile;
 					currentTile = Navigation.LineOfSight(map, currentTile, destinationTile, direction);
-					targetPosition = MapManager.GetWorldTilePosition(map, currentTile);
+					targetPosition = MapManager.TileWorldPosition(map, currentTile);
 					actionQueue.Enqueue(() => SetState(State.MOVE, ((targetPosition - prevTargetPosition).magnitude + 1.0f) / walkSpeed));
 					return true;
 				}
@@ -131,10 +131,10 @@ namespace ClassicTilestorm
 					}
 
 					var consoleTile = Navigation.FindAdjacentConsole(map, currentTile);
-					if (-1 != consoleTile && 0 != map.GetTile(consoleTile).Nav)
+					if (-1 != consoleTile && 0 != MapManager.GetTile(map, consoleTile).Nav)
 					{
 						isBlocked = direction == 0;
-						var consoleYaw = Navigation.DirToAngle(Navigation.GetOppositeDirection(map.GetTile(consoleTile).Nav));
+						var consoleYaw = Navigation.DirToAngle(Navigation.GetOppositeDirection(MapManager.GetTile(map, consoleTile).Nav));
 						if (Mathf.Abs(Mathf.DeltaAngle(transform.eulerAngles.y, consoleYaw)) > 0.01f)
 						{
 							startYaw = transform.eulerAngles.y;

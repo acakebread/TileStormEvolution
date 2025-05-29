@@ -4,7 +4,7 @@ namespace ClassicTilestorm
 {
 	public class GestureController : MonoBehaviour
 	{
-		private MapManager mapManager;
+		private IMapManager imap;
 		private TileStrip tileStrip;
 		private Vector3 last;
 		private Vector3 delta;
@@ -13,9 +13,9 @@ namespace ClassicTilestorm
 
 		private void Awake() => gameObject.AddComponent<GestureSystem>();
 
-		public void Initialise(MapManager mapManager)
+		public void Initialise(IMapManager _imap)
 		{
-			this.mapManager = mapManager;
+			imap = _imap;
 			tileStrip = default;
 			dragIndex = -1;
 		}
@@ -31,7 +31,7 @@ namespace ClassicTilestorm
 
 		private void OnDestroy()
 		{
-			DebugVisualizationHelper.HighlightStrip(mapManager, tileStrip, false);
+			DebugVisualizationHelper.HighlightStrip(imap, tileStrip, false);
 			var gestureSystem = gameObject.GetComponent<GestureSystem>();
 			if (null == gestureSystem) return;
 			gestureSystem.OnBeginDrag -= OnBeginDrag;
@@ -42,9 +42,9 @@ namespace ClassicTilestorm
 
 		private void OnBeginDrag(Vector3 screenPos)
 		{
-			var vert = mapManager.ScreenToWorld(screenPos);
-			var index = mapManager.WorldToMapIndex(vert);
-			var tile = mapManager.GetTile(index);
+			var vert = MapManager.ScreenToWorld(screenPos);
+			var index = MapManager.WorldToMapIndex(imap, vert);
+			var tile = MapManager.GetTile(imap, index);
 			if (false == tile.Interactive) return;
 
 			last = vert;
@@ -57,22 +57,22 @@ namespace ClassicTilestorm
 		{
 			if (-1 == dragIndex) return;
 
-			DebugVisualizationHelper.HighlightStrip(mapManager, tileStrip, false);
+			DebugVisualizationHelper.HighlightStrip(imap, tileStrip, false);
 
-			var vert = mapManager.ScreenToWorld(screenPos);
+			var vert = MapManager.ScreenToWorld(screenPos);
 			TryDrag(vert - last);
 			last = vert;
 
-			DebugVisualizationHelper.HighlightStrip(mapManager, tileStrip, tileStrip.Count > 1);
+			DebugVisualizationHelper.HighlightStrip(imap, tileStrip, tileStrip.Count > 1);
 		}
 
 		private void OnEndDrag(Vector3 screenPos)
 		{
 			if (-1 == dragIndex) return;
 
-			DebugVisualizationHelper.HighlightStrip(mapManager, tileStrip, false);
+			DebugVisualizationHelper.HighlightStrip(imap, tileStrip, false);
 
-			TryDrag(mapManager.ScreenToWorld(screenPos) - last, true);
+			TryDrag(MapManager.ScreenToWorld(screenPos) - last, true);
 
 			dragIndex = -1;
 		}
@@ -83,7 +83,7 @@ namespace ClassicTilestorm
 
 			for (var axis = 0; axis < 2; ++axis)
 			{
-				TileStripHelper.ResetStrip(mapManager, tileStrip);
+				TileStripHelper.ResetStrip(imap, tileStrip);
 				tileStrip = default;
 
 				var isX = Mathf.Abs(delta.x) > Mathf.Abs(delta.z);
@@ -91,9 +91,9 @@ namespace ClassicTilestorm
 				if (Mathf.Approximately(val, 0f))
 					break;
 
-				var stride = val > 0f ? (isX ? 1 : mapManager.Width) : (isX ? -1 : -mapManager.Width);
+				var stride = val > 0f ? (isX ? 1 : imap.Width) : (isX ? -1 : -imap.Width);
 
-				tileStrip = TileStripHelper.GetTileStrip(mapManager, dragIndex, stride, PreviewSettings.Difficulty);
+				tileStrip = TileStripHelper.GetTileStrip(imap, dragIndex, stride, PreviewSettings.Difficulty);
 				if (tileStrip.Count <= 1)
 				{
 					if (isX) delta.x = 0;
@@ -104,9 +104,9 @@ namespace ClassicTilestorm
 				var count = (int)((Mathf.Abs(val) + (snap ? gridSize * 0.5f : 0f)) / gridSize);
 				for (var i = 0; i < count; ++i)
 				{
-					if (!TileStripHelper.RollStrip(mapManager, tileStrip)) break;
+					if (!TileStripHelper.RollStrip(imap, tileStrip)) break;
 					dragIndex += tileStrip.Stride;
-					tileStrip = TileStripHelper.GetTileStrip(mapManager, dragIndex, stride, PreviewSettings.Difficulty);
+					tileStrip = TileStripHelper.GetTileStrip(imap, dragIndex, stride, PreviewSettings.Difficulty);
 				}
 
 				delta = isX ? new Vector3(val % gridSize, 0, 0) : new Vector3(0, 0, val % gridSize);
@@ -114,9 +114,9 @@ namespace ClassicTilestorm
 			}
 
 			if (snap)
-				TileStripHelper.ResetStrip(mapManager, tileStrip);
+				TileStripHelper.ResetStrip(imap, tileStrip);
 			else
-				TileStripHelper.TranslateStrip(mapManager, tileStrip, delta);
+				TileStripHelper.TranslateStrip(imap, tileStrip, delta);
 		}
 	}
 }

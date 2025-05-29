@@ -50,7 +50,7 @@ namespace ClassicTilestorm
 			CameraController.Reset();//Reset Camera
 			CameraController.SetMode(CameraState.Follow);
 			CameraController.SetPlayer(eggbotController.transform);
-			CameraController.SetFocusPoints(Navigation.Waypoints.Select(w => MapManager.GetWorldTilePosition(mapManager, w.nTile)).ToList());
+			CameraController.SetFocusPoints(Navigation.Waypoints.Select(w => MapManager.TileWorldPosition(mapManager, w.nTile)).ToList());
 
 			var srcPos = new Vector3(0f, 14f, -14f); // Classic TS default
 			var dstPos = Vector3.zero;
@@ -101,7 +101,7 @@ namespace ClassicTilestorm
 			CameraController.SetMode(CameraState.Preset);
 			var origin = waypoint.vSrc.IsValidVector() ? waypoint.vSrc.ToVector3() : new Vector3(0f, 14f, -14f); // TS default
 			CameraController.SetOrigin(origin);
-			var target = null != waypoint.vDst && waypoint.vDst.IsValidVector() ? waypoint.vDst.ToVector3() : MapManager.GetWorldTilePosition(mapManager, waypoint.nTile);
+			var target = null != waypoint.vDst && waypoint.vDst.IsValidVector() ? waypoint.vDst.ToVector3() : MapManager.TileWorldPosition(mapManager, waypoint.nTile);
 			CameraController.SetTarget(target);
 		}
 
