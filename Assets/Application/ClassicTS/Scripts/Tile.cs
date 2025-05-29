@@ -21,21 +21,24 @@ public struct Tile
 	public Tile(string szType, string szTheme)
 	{
 		var def = DatabaseLoader.TileDefs.FirstOrDefault(td => td.szType == szType && td.szTheme == szTheme);
-		flags = 0;
-		if (def != null)
-		{
-			if (def.bNorth) flags |= North;
-			if (def.bSouth) flags |= South;
-			if (def.bEast) flags |= East;
-			if (def.bWest) flags |= West;
-			if (def.bDock) flags |= Dock;
-			if (def.bRoll) flags |= Roll;
-			if (def.bSlide) flags |= Slide;
-			if (def.bStart) flags |= Start;
-			if (def.bEnd) flags |= End;
-			if (def.bConsole) flags |= Console;
-		}
+		flags = null == def ? 0 : CombineFlags(def);
 		GameObject = null;
+
+		static int CombineFlags(DatabaseLoader.TileDef d)
+		{
+			int f = 0;
+			if (d.bNorth) f |= North;
+			if (d.bSouth) f |= South;
+			if (d.bEast) f |= East;
+			if (d.bWest) f |= West;
+			if (d.bDock) f |= Dock;
+			if (d.bRoll) f |= Roll;
+			if (d.bSlide) f |= Slide;
+			if (d.bStart) f |= Start;
+			if (d.bEnd) f |= End;
+			if (d.bConsole) f |= Console;
+			return f;
+		}
 	}
 
 	public readonly bool IsStart => (flags & Start) != 0;
