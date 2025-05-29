@@ -10,6 +10,9 @@ namespace ClassicTilestorm
 		private static DatabaseLoader.Waypoint[] waypoints;
 		public static DatabaseLoader.Waypoint[] Waypoints => waypoints;
 
+		public static float DirToAngle(int dir) => new float[] { 0f, 0f, 180f, 0f, 90f, 45f, 135f, 90f, -90f, -45f, -135f, -90f, 0f, 0f, 180f, 0f }[dir & 0xF];
+		public static int GetOppositeDirection(int dir) => ((dir & Tile.North) << 1) | ((dir & Tile.South) >> 1) | ((dir & Tile.East) << 1) | ((dir & Tile.West) >> 1);
+
 		public static void SetupWaypoints(DatabaseLoader.Map map, IMap imap)
 		{
 			waypoints = map.waypoints?.Where(w => w != null).ToArray();
@@ -116,17 +119,16 @@ namespace ClassicTilestorm
 			return -1;
 		}
 
-		//Classic TS legacy function - returns direction to next tile
-		private static int CalculateNav(int currentDir, int nextNav)
+		//Classic TS legacy function - returns tile index in direction
+		public static int LineOfSight(IMap map, int src, int dst, int dir)
 		{
-			var oppositeDir = GetOppositeDirection(currentDir);
-			if ((oppositeDir & nextNav) != 0) // Next tile allows entering from current direction
+			while (0 != dir)
 			{
-				if ((currentDir & nextNav) != 0)
-					return currentDir; // Continue straight (crossroad or straight path)
-				return nextNav & ~oppositeDir; // Turn at bend (use next tile's nav, exclude opposite)
+				if (src == dst) break;
+				src = GetAdjacentTile(map, src, dir);
+				dir &= map.GetTile(src).Nav;
 			}
-			return 0; // Direction not supported
+			return src;
 		}
 
 		//Classic TS legacy function - returns direction
@@ -159,59 +161,40 @@ namespace ClassicTilestorm
 			return 0; // No valid direction found
 		}
 
-		//Classic TS legacy function - returns Length in direction
-		public static float LengthDir(IMap map, int nSrc, int nDst, int nDir)
+		//Classic TS legacy function - returns direction to next tile
+		private static int CalculateNav(int currentDir, int nextNav)
 		{
-			var nNav = GetOppositeDirection(nDir);
-			var fRet = 0f;
-			while (0 != nDir)
+			var oppositeDir = GetOppositeDirection(currentDir);
+			if ((oppositeDir & nextNav) != 0) // Next tile allows entering from current direction
 			{
-				nSrc = GetAdjacentTile(map, nSrc, nDir);
-				var tile = map.GetTile(nSrc);
-				if (0 == tile.Nav) break;
-				var nNew = tile.Nav;
-				nNav = nNav & nNew;
-				if (0 == nNav) break;
-				nDir = nDir & nNew;
-				fRet += 1.0f;
-				if (nSrc == nDst) break;
+				if ((currentDir & nextNav) != 0)
+					return currentDir; // Continue straight (crossroad or straight path)
+				return nextNav & ~oppositeDir; // Turn at bend (use next tile's nav, exclude opposite)
 			}
-			return fRet;
+			return 0; // Direction not supported
 		}
 
-		public static int LineOfSight(IMap map, int nSrc, int nDst, int nDir)
+		//Classic TS legacy function - returns index of adjacent tile
+		private static int GetAdjacentTile(IMap map, int index, int dir)
 		{
-			var nNav = GetOppositeDirection(nDir);
-			while (0 != nDir)
-			{
-				nSrc = GetAdjacentTile(map, nSrc, nDir);
-				var tile = map.GetTile(nSrc);
-				if (0 == tile.Nav) break;
-				var nNew = tile.Nav;
-				nNav = nNav & nNew;
-				if (0 == nNav) break;
-				nDir = nDir & nNew;
-				if (nSrc == nDst) break;
-			}
-			return nSrc;
+			var dx = ((dir & Tile.East) >> 2) - ((dir & Tile.West) >> 3);
+			var dz = ((dir & Tile.North) >> 0) - ((dir & Tile.South) >> 1);
+			return ((index / map.Width) + dz) * map.Width + (index % map.Width) + dx;
 		}
 
-		private static int GetAdjacentTile(IMap map, int tileIndex, int dirBit)
-		{
-			var(dx, dz) = GetDirectionOffset(dirBit);
-			return ((tileIndex / map.Width) + dz) * map.Width + (tileIndex % map.Width) + dx;
-		}
-
-		public static int GetTileOffsetToDirection(IMap map, int tileOffset) => GetOffsetDirection(tileOffset % map.Width, tileOffset / map.Width);
-
-		public static float DirToAngle(int dir) => new float[] { 0f, 0f, 180f, 0f, 90f, 45f, 135f, 90f, -90f, -45f, -135f, -90f, 0f, 0f, 180f, 0f }[dir & 0xF];
-
-		public static int GetOffsetDirection(int dx, int dz) => (dx > 0 ? Tile.East : 0) | (dx < 0 ? Tile.West : 0) | (dz > 0 ? Tile.North : 0) | (dz < 0 ? Tile.South : 0);
-
-		public static (int dx, int dz) GetDirectionOffset(int dirBit) => (((dirBit & Tile.East) >> 2) - ((dirBit & Tile.West) >> 3), ((dirBit & Tile.North) >> 0) - ((dirBit & Tile.South) >> 1));
-
-		public static int GetOppositeDirection(int dirBit) => ((dirBit & Tile.North) << 1) | ((dirBit & Tile.South) >> 1) | ((dirBit & Tile.East) << 1) | ((dirBit & Tile.West) >> 1);
-
-		public static bool CanMoveBetweenTiles(Tile fromTile, Tile toTile, int dirBit) => (fromTile.Nav & dirBit) != 0 && (toTile.Nav & GetOppositeDirection(dirBit)) != 0;
+		//public static float LengthDir(IMap map, int src, int dst, int dir)
+		//{
+		//	float length = 0f;
+		//	while (0 != dir)
+		//	{
+		//		src = GetAdjacentTile(map, src, dir);
+		//		var tile = map.GetTile(src);
+		//		if (tile.Nav == 0) break;
+		//		dir &= tile.Nav;
+		//		length += 1f;
+		//		if (src == dst) break;
+		//	}
+		//	return length;
+		//}
 	}
 }
