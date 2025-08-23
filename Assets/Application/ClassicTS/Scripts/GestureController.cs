@@ -2,6 +2,7 @@ using UnityEngine;
 
 namespace ClassicTilestorm
 {
+	[RequireComponent(typeof(GestureSystem))]
 	public class GestureController : MonoBehaviour
 	{
 		private IMapManager imap;
@@ -10,8 +11,6 @@ namespace ClassicTilestorm
 		private Vector3 delta;
 		private int dragIndex = -1;
 		private const float gridSize = 1.0f;
-
-		private void Awake() => gameObject.AddComponent<GestureSystem>();
 
 		public void Initialise(IMapManager imap)
 		{
@@ -23,11 +22,13 @@ namespace ClassicTilestorm
 		public void Start()
 		{
 			var gestureSystem = gameObject.GetComponent<GestureSystem>();
-			if (null == gestureSystem) return;
 			gestureSystem.OnBeginDrag += OnBeginDrag;
 			gestureSystem.OnDrag += OnDrag;
 			gestureSystem.OnEndDrag += OnEndDrag;
 		}
+
+		private void OnEnable() => gameObject.GetComponent<GestureSystem>().enabled = true;
+		private void OnDisable() { EndDrag(Vector3.zero); gameObject.GetComponent<GestureSystem>().enabled = false; }
 
 		private void OnDestroy()
 		{
@@ -66,13 +67,15 @@ namespace ClassicTilestorm
 			DebugVisualizationHelper.HighlightStrip(imap, tileStrip, tileStrip.Count > 1);
 		}
 
-		private void OnEndDrag(Vector3 screenPos)
+		private void OnEndDrag(Vector3 screenPos) => EndDrag(MapManager.ScreenToWorld(screenPos) - last);
+
+		private void EndDrag(Vector3 offset)
 		{
 			if (-1 == dragIndex) return;
 
 			DebugVisualizationHelper.HighlightStrip(imap, tileStrip, false);
 
-			TryDrag(MapManager.ScreenToWorld(screenPos) - last, true);
+			TryDrag(offset, true);
 
 			dragIndex = -1;
 		}

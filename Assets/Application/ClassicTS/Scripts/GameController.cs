@@ -4,19 +4,26 @@ using MassiveHadronLtd;
 
 namespace ClassicTilestorm
 {
+	[RequireComponent(typeof(GestureController))]
 	public class GameController : MonoBehaviour
 	{
 		private MapManager mapManager;
 		private GestureController gestureController;
 		private EggbotController eggbotController;
+		private bool locked = false;//true while player is dragging tiles
 
-		private void Awake() => gestureController = gameObject.AddComponent<GestureController>();
+		private void Awake() => gestureController = gameObject.GetComponent<GestureController>();
 
 		void Start()
 		{
 			DatabaseLoader.Init(PreviewSettings.DatabaseJsonFile);
 			CameraController.SetAutoCinema(PreviewSettings.LaunchInCinemaMode);
 			CameraController.Start(Camera.main);
+
+			var gestureSystem = gameObject.GetComponent<GestureSystem>();
+			gestureSystem.OnBeginDrag += (screenPos) => locked = true;
+			gestureSystem.OnEndDrag += (screenPos) => locked = false;
+
 			LoadMap();
 		}
 
@@ -70,13 +77,14 @@ namespace ClassicTilestorm
 
 			CameraController.SetOrigin(srcPos, true);
 			CameraController.SetTarget(dstPos, true);
+			gestureController.enabled = false;
 		}
 
 		void Update()
 		{
 			if (null != eggbotController)
 			{
-				eggbotController.UpdateEggbot(mapManager);
+				eggbotController.UpdateEggbot(locked ? null : mapManager);
 				CameraController.SetPlayer(eggbotController.transform);
 			}
 			CameraController.Update();
@@ -98,6 +106,7 @@ namespace ClassicTilestorm
 				return;
 			}
 
+			gestureController.enabled = true;
 			CameraController.SetMode(CameraState.Preset);
 			var origin = waypoint.vSrc.IsValidVector() ? waypoint.vSrc.ToVector3() : new Vector3(0f, 14f, -14f); // TS default
 			CameraController.SetOrigin(origin);
@@ -111,9 +120,10 @@ namespace ClassicTilestorm
 			if (null == eggbotController) return;// this can never happen because eggbot invokes this function - but leave the check just in case
 			CameraController.SetMode(CameraState.Follow);
 			CameraController.SetPlayer(eggbotController.transform);
+			gestureController.enabled = false;
 		}
 
-		private void OnLevelCompleted() { }
+		private void OnLevelCompleted() { }// => gestureController.enabled = false; ToDo prevent gesture system from re-enabling after level complete - only re-enable after map load/reload
 
 		void OnGUI()
 		{

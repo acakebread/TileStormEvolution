@@ -86,6 +86,7 @@ namespace ClassicTilestorm
 
 				bool TestSpin(int destinationTile)
 				{
+					if (null == map) return false;
 					if (currentTile != destinationTile || (destinationTile != Navigation.GetEndTile(map) && destinationTile != Navigation.GetStartTile(map))) return false;
 					if (destinationTile == Navigation.GetEndTile(map)) { OnLevelCompleted?.Invoke(); }
 					dstWaypoint = (dstWaypoint + 1) % Navigation.Waypoints.Length;
@@ -98,6 +99,7 @@ namespace ClassicTilestorm
 
 				bool TestMove(int destinationTile)
 				{
+					if (null == map) return false;
 					if (currentTile == destinationTile)
 					{
 						OnWaypointReached?.Invoke(dstWaypoint);
@@ -108,7 +110,8 @@ namespace ClassicTilestorm
 					var direction = Navigation.NavToDest(map, currentTile, destinationTile);
 					if (0 == direction || 0 != (int)Mathf.DeltaAngle(transform.eulerAngles.y, Navigation.DirToAngle(direction))) return false;
 
-					if (true == isBlocked) OnPuzzleSolved?.Invoke(dstWaypoint - 1);
+					var consoleTile = Navigation.FindAdjacentConsole(map, currentTile);
+					if (-1 != consoleTile) OnPuzzleSolved?.Invoke(dstWaypoint - 1);
 					isBlocked = false;
 					startPosition = MapManager.TileWorldPosition(map, currentTile);
 					var prevTargetPosition = targetPosition;
@@ -121,7 +124,9 @@ namespace ClassicTilestorm
 
 				bool TestTurn(int destinationTile)
 				{
+					if (null == map) return false;
 					var direction = Navigation.NavToDest(map, currentTile, destinationTile);
+					var consoleTile = Navigation.FindAdjacentConsole(map, currentTile);
 					if (0 != direction && Mathf.Abs(Mathf.DeltaAngle(transform.eulerAngles.y, Navigation.DirToAngle(direction))) > 0.01f)
 					{
 						startYaw = transform.eulerAngles.y;
@@ -130,7 +135,6 @@ namespace ClassicTilestorm
 						return true;
 					}
 
-					var consoleTile = Navigation.FindAdjacentConsole(map, currentTile);
 					if (-1 != consoleTile && 0 != MapManager.GetTile(map, consoleTile).Nav)
 					{
 						isBlocked = direction == 0;
@@ -145,8 +149,8 @@ namespace ClassicTilestorm
 						}
 
 						// Queue four BUSY states for jiggling to simulate looking at console
-						float currentYaw = transform.eulerAngles.y;
-						float offset = (Random.Range(0f, 8f) - 4f) * 4.3f; // [-17.2, 17.2] degrees
+						var currentYaw = transform.eulerAngles.y;
+						var offset = (Random.Range(0f, 8f) - 4f) * 4.3f; // [-17.2, 17.2] degrees
 						actionQueue.Enqueue(() => { startYaw = Mathf.DeltaAngle(0f, currentYaw); targetYaw = startYaw + offset; SetState(State.TURN, Random.Range(0.25f, 0.75f)); });
 						actionQueue.Enqueue(() => { startYaw = Mathf.DeltaAngle(0f, currentYaw + offset); targetYaw = startYaw + (Random.Range(0f, 8f) - 4f) * 4.3f; SetState(State.TURN, Random.Range(0.25f, 0.75f)); });
 						return true;
