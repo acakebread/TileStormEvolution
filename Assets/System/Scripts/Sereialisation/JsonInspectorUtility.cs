@@ -44,6 +44,11 @@ public class JsonInspectorUtility : MonoBehaviour
 				{
 					cSharpRepresentation = GenerateDeserializationCodeForArray(list, jsonInputInternal);
 				}
+				else if (Data is object[] array)
+				{
+					// Convert object[] to List<object> for consistent handling
+					cSharpRepresentation = GenerateDeserializationCodeForArray(array.ToList(), jsonInputInternal);
+				}
 				else
 				{
 					cSharpRepresentation = $"Error: Unsupported JSON root type - {Data.GetType().Name}";
@@ -202,20 +207,24 @@ public class JsonInspectorUtility : MonoBehaviour
 						if (memberDict.ContainsKey(key))
 						{
 							var value = memberDict[key];
+							bool isNullableType = value is string || value is object[] || value is Dictionary<string, object> || value == null;
+							string nullCheck = isNullableType ? $" && result[{i}].{key} != null" : "";
 							if (value is object[] subArray)
 							{
-								sb.Append($"                if (result.Length > {i} && result[{i}].{key} != null) Debug.Log($\"[{i}].{key}: {{string.Join(\", \", result[{i}].{key})}}\"); // {JsonTocs.ToJson(value)}\n");
+								sb.Append($"                if (result.Length > {i}{nullCheck}) Debug.Log($\"[{i}].{key}: {{string.Join(\", \", result[{i}].{key})}}\"); // {JsonTocs.ToJson(value)}\n");
 							}
 							else if (value is Dictionary<string, object> nestedDict)
 							{
 								foreach (var nestedPair in nestedDict)
 								{
-									sb.Append($"                if (result.Length > {i} && result[{i}].{key} != null) Debug.Log($\"[{i}].{key}.{nestedPair.Key}: {{result[{i}].{key}.{nestedPair.Key}}}\"); // {nestedPair.Value}\n");
+									bool isNestedNullable = nestedPair.Value is string || nestedPair.Value is object[] || nestedPair.Value is Dictionary<string, object> || nestedPair.Value == null;
+									string nestedNullCheck = isNestedNullable ? $" && result[{i}].{key}.{nestedPair.Key} != null" : "";
+									sb.Append($"                if (result.Length > {i}{nullCheck}{nestedNullCheck}) Debug.Log($\"[{i}].{key}.{nestedPair.Key}: {{result[{i}].{key}.{nestedPair.Key}}}\"); // {nestedPair.Value}\n");
 								}
 							}
 							else
 							{
-								sb.Append($"                if (result.Length > {i}) Debug.Log($\"[{i}].{key}: {{result[{i}].{key}}}\"); // {value ?? "null"}\n");
+								sb.Append($"                if (result.Length > {i}{nullCheck}) Debug.Log($\"[{i}].{key}: {{result[{i}].{key}}}\"); // {value ?? "null"}\n");
 							}
 						}
 					}
@@ -224,6 +233,15 @@ public class JsonInspectorUtility : MonoBehaviour
 				{
 					sb.Append($"                if (result.Length > {i}) Debug.Log($\"[{i}]: {{result[{i}]}}\"); // {JsonTocs.ToJson(data[i])}\n");
 				}
+			}
+		}
+		else
+		{
+			sb.Append("                var result = data.ToArray();\n");
+			sb.Append("                // Display deserialized values\n");
+			for (int i = 0; i < data.Count; i++)
+			{
+				sb.Append($"                if (result.Length > {i}) Debug.Log($\"[{i}]: {{result[{i}]}}\"); // {JsonTocs.ToJson(data[i])}\n");
 			}
 		}
 
@@ -262,13 +280,34 @@ public class JsonInspectorUtility : MonoBehaviour
 		{
 			foreach (var kvp in dict)
 			{
-				if (!templateDict.ContainsKey(kvp.Key) || (kvp.Value is Dictionary<string, object> || kvp.Value is object[]))
+				if (!templateDict.ContainsKey(kvp.Key))
 				{
 					templateDict[kvp.Key] = kvp.Value;
 				}
-				else if (templateDict.ContainsKey(kvp.Key) && templateDict[kvp.Key] == null)
+				else if (kvp.Value != null && templateDict[kvp.Key] == null)
 				{
 					templateDict[kvp.Key] = kvp.Value;
+				}
+				else if (kvp.Value is Dictionary<string, object> newDict && templateDict[kvp.Key] is Dictionary<string, object> existingDict)
+				{
+					// Merge nested dictionaries
+					var mergedDict = new Dictionary<string, object>(existingDict);
+					foreach (var nestedKvp in newDict)
+					{
+						if (!mergedDict.ContainsKey(nestedKvp.Key))
+						{
+							mergedDict[nestedKvp.Key] = nestedKvp.Value;
+						}
+					}
+					templateDict[kvp.Key] = mergedDict;
+				}
+				else if (kvp.Value is object[] newArray && templateDict[kvp.Key] is object[] existingArray)
+				{
+					// Prefer non-empty arrays
+					if (newArray.Length > 0 && existingArray.Length == 0)
+					{
+						templateDict[kvp.Key] = newArray;
+					}
 				}
 			}
 		}
@@ -355,7 +394,7 @@ public class JsonInspectorUtility : MonoBehaviour
 	{
 		var sb = new StringBuilder();
 		string indent = new string(' ', indentLevel * 2);
-		sb.Append($"{indent}new\n{indent}{{\n");
+		sb.Append($"{indent}({dictName}.ContainsKey(\"{parentKey}\") ? new\n{indent}{{\n");
 		foreach (var pair in nestedDict)
 		{
 			string valueExpr = pair.Value switch
@@ -371,7 +410,7 @@ public class JsonInspectorUtility : MonoBehaviour
 			sb.Append($"{indent}  {pair.Key} = {valueExpr},\n");
 		}
 		if (nestedDict.Count > 0) sb.Length -= 2;
-		sb.Append("\n" + indent + "}");
+		sb.Append($"\n{indent}}} : {GenerateAnonymousTemplate(nestedDict, indentLevel)})");
 		return sb.ToString();
 	}
 
@@ -380,7 +419,7 @@ public class JsonInspectorUtility : MonoBehaviour
 		var sb = new StringBuilder();
 		string indent = new string(' ', indentLevel * 2);
 		var items = arr.ToList();
-		if (items.FirstOrDefault() is Dictionary<string, object>)
+		if (items.FirstOrDefault() is Dictionary<string, object> firstDict)
 		{
 			var dictList = items.OfType<Dictionary<string, object>>().ToList();
 			var templateDict = CreateTemplateDictionary(dictList);
@@ -442,7 +481,6 @@ public class JsonInspectorUtilityEditor : Editor
 	{
 		JsonInspectorUtility utility = (JsonInspectorUtility)target;
 
-		// JSON Input at the top
 		EditorGUILayout.LabelField("JSON Input", EditorStyles.boldLabel);
 		string jsonInput = EditorGUILayout.TextArea(utility.GetFieldValue<string>("jsonInputInternal"), GUILayout.Height(100));
 		if (GUI.changed)
@@ -450,11 +488,9 @@ public class JsonInspectorUtilityEditor : Editor
 			utility.SetJsonInput(jsonInput);
 		}
 
-		// C# Deserialization Code (Read-Only)
 		EditorGUILayout.LabelField("C# Deserialization Code (Read-Only)", EditorStyles.boldLabel);
 		EditorGUILayout.TextArea(utility.CSharpRepresentation, GUILayout.Height(200));
 
-		// Copy Script button below the deserialization code
 		if (GUILayout.Button("Copy Script"))
 		{
 			GUIUtility.systemCopyBuffer = utility.CSharpRepresentation;
