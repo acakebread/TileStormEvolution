@@ -1,81 +1,30 @@
-using System.Collections.Generic;
-using UnityEngine;
 using System.Text;
 using System.Linq;
+using System.Collections.Generic;
 
-#if UNITY_EDITOR
-using UnityEditor;
-#endif
-
-public class JsonInspectorUtility : MonoBehaviour
+public static class jsontocs_usagegenerator
 {
-	[SerializeField, TextArea(5, 20), Header("C# Deserialization Code (Read-Only)")]
-	private string cSharpRepresentation = "";
-	public string CSharpRepresentation => cSharpRepresentation;
-	private string jsonInputInternal = "{}";
-	public object Data { get; private set; }
-
-	public void SetJsonInput(string json)
+	public static string GenerateDeserializationCode(object data, string jsonString)
 	{
-		jsonInputInternal = json;
-		OnValidate();
-	}
-
-	void OnValidate()
-	{
-		Data = null;
-		cSharpRepresentation = "No data deserialized";
-
-		if (string.IsNullOrEmpty(jsonInputInternal))
+		if (data is Dictionary<string, object> dict)
 		{
-			return;
+			return GenerateDeserializationCodeForDictionary(dict, jsonString);
 		}
-
-		try
+		else if (data is List<object> list)
 		{
-			Data = JsonTocs.FromJson<object>(jsonInputInternal);
-			if (Data != null)
-			{
-				if (Data is Dictionary<string, object> dict)
-				{
-					cSharpRepresentation = GenerateDeserializationCodeForDictionary(dict, jsonInputInternal);
-				}
-				else if (Data is List<object> list)
-				{
-					cSharpRepresentation = GenerateDeserializationCodeForArray(list, jsonInputInternal);
-				}
-				else if (Data is object[] array)
-				{
-					// Convert object[] to List<object> for consistent handling
-					cSharpRepresentation = GenerateDeserializationCodeForArray(array.ToList(), jsonInputInternal);
-				}
-				else
-				{
-					cSharpRepresentation = $"Error: Unsupported JSON root type - {Data.GetType().Name}";
-				}
-			}
-			else
-			{
-				cSharpRepresentation = "Error: Failed to deserialize JSON - null result";
-			}
+			return GenerateDeserializationCodeForArray(list, jsonString);
 		}
-		catch (System.Exception e)
+		else if (data is object[] array)
 		{
-			cSharpRepresentation = $"Error: Failed to deserialize JSON - {e.Message}";
-			Data = null;
+			return GenerateDeserializationCodeForArray(array.ToList(), jsonString);
+		}
+		else
+		{
+			return $"Error: Unsupported JSON root type - {data?.GetType().Name ?? "null"}";
 		}
 	}
 
-	void Start()
-	{
-		OnValidate();
-		if (Data != null)
-		{
-			Debug.Log($"Deserialized data: {JsonTocs.ToJson(Data)}");
-		}
-	}
-
-	private string GenerateDeserializationCodeForDictionary(Dictionary<string, object> data, string jsonString)
+	private static string GenerateDeserializationCodeForDictionary(Dictionary<string, object> data, string jsonString)
 	{
 		var sb = new StringBuilder();
 		sb.Append("using System.Collections.Generic;\n");
@@ -105,7 +54,9 @@ public class JsonInspectorUtility : MonoBehaviour
 			{
 				foreach (var nestedPair in nestedDict)
 				{
-					sb.Append($"                Debug.Log($\"{pair.Key}.{nestedPair.Key}: {{result.{pair.Key}.{nestedPair.Key}}}\"); // {nestedPair.Value}\n");
+					bool isNestedNullable = nestedPair.Value is string || nestedPair.Value is object[] || nestedPair.Value is Dictionary<string, object> || nestedPair.Value == null;
+					string nestedNullCheck = isNestedNullable ? $" && result.{pair.Key}.{nestedPair.Key} != null" : "";
+					sb.Append($"                if (result.{pair.Key} != null{nestedNullCheck}) Debug.Log($\"{pair.Key}.{nestedPair.Key}: {{result.{pair.Key}.{nestedPair.Key}}}\"); // {nestedPair.Value}\n");
 				}
 			}
 			else if (pair.Value is object[] array)
@@ -120,20 +71,24 @@ public class JsonInspectorUtility : MonoBehaviour
 							if (memberDict.ContainsKey(key))
 							{
 								var value = memberDict[key];
+								bool isNullableType = value is string || value is object[] || value is Dictionary<string, object> || value == null;
+								string nullCheck = isNullableType ? $" && result.{pair.Key}[{i}].{key} != null" : "";
 								if (value is object[] subArray)
 								{
-									sb.Append($"                if (result.{pair.Key}.Length > {i} && result.{pair.Key}[{i}].{key} != null) Debug.Log($\"{pair.Key}[{i}].{key}: {{string.Join(\", \", result.{pair.Key}[{i}].{key})}}\"); // {JsonTocs.ToJson(value)}\n");
+									sb.Append($"                if (result.{pair.Key}.Length > {i}{nullCheck}) Debug.Log($\"{pair.Key}[{i}].{key}: {{string.Join(\", \", result.{pair.Key}[{i}].{key})}}\"); // {JsonTocs.ToJson(value)}\n");
 								}
 								else if (value is Dictionary<string, object> detailsDict)
 								{
 									foreach (var detailPair in detailsDict)
 									{
-										sb.Append($"                if (result.{pair.Key}.Length > {i} && result.{pair.Key}[{i}].{key} != null) Debug.Log($\"{pair.Key}[{i}].{key}.{detailPair.Key}: {{result.{pair.Key}[{i}].{key}.{detailPair.Key}}}\"); // {detailPair.Value}\n");
+										bool isDetailNullable = detailPair.Value is string || detailPair.Value is object[] || detailPair.Value is Dictionary<string, object> || detailPair.Value == null;
+										string detailNullCheck = isDetailNullable ? $" && result.{pair.Key}[{i}].{key}.{detailPair.Key} != null" : "";
+										sb.Append($"                if (result.{pair.Key}.Length > {i}{nullCheck}{detailNullCheck}) Debug.Log($\"{pair.Key}[{i}].{key}.{detailPair.Key}: {{result.{pair.Key}[{i}].{key}.{detailPair.Key}}}\"); // {detailPair.Value}\n");
 									}
 								}
 								else
 								{
-									sb.Append($"                if (result.{pair.Key}.Length > {i}) Debug.Log($\"{pair.Key}[{i}].{key}: {{result.{pair.Key}[{i}].{key}}}\"); // {value ?? "null"}\n");
+									sb.Append($"                if (result.{pair.Key}.Length > {i}{nullCheck}) Debug.Log($\"{pair.Key}[{i}].{key}: {{result.{pair.Key}[{i}].{key}}}\"); // {value ?? "null"}\n");
 								}
 							}
 						}
@@ -146,7 +101,9 @@ public class JsonInspectorUtility : MonoBehaviour
 			}
 			else
 			{
-				sb.Append($"                Debug.Log($\"{pair.Key}: {{result.{pair.Key}}}\"); // {pair.Value ?? "null"}\n");
+				bool isNullableType = pair.Value is string || pair.Value is object[] || pair.Value is Dictionary<string, object> || pair.Value == null;
+				string nullCheck = isNullableType ? $" && result.{pair.Key} != null" : "";
+				sb.Append($"                if (true{nullCheck}) Debug.Log($\"{pair.Key}: {{result.{pair.Key}}}\"); // {pair.Value ?? "null"}\n");
 			}
 		}
 
@@ -165,7 +122,7 @@ public class JsonInspectorUtility : MonoBehaviour
 		return sb.ToString();
 	}
 
-	private string GenerateDeserializationCodeForArray(List<object> data, string jsonString)
+	private static string GenerateDeserializationCodeForArray(List<object> data, string jsonString)
 	{
 		var sb = new StringBuilder();
 		sb.Append("using System.Collections.Generic;\n");
@@ -260,7 +217,7 @@ public class JsonInspectorUtility : MonoBehaviour
 		return sb.ToString();
 	}
 
-	private HashSet<string> GetAllDictionaryKeys(IEnumerable<Dictionary<string, object>> dicts)
+	private static HashSet<string> GetAllDictionaryKeys(IEnumerable<Dictionary<string, object>> dicts)
 	{
 		var keys = new HashSet<string>();
 		foreach (var dict in dicts)
@@ -273,7 +230,7 @@ public class JsonInspectorUtility : MonoBehaviour
 		return keys;
 	}
 
-	private Dictionary<string, object> CreateTemplateDictionary(IEnumerable<Dictionary<string, object>> dicts)
+	private static Dictionary<string, object> CreateTemplateDictionary(IEnumerable<Dictionary<string, object>> dicts)
 	{
 		var templateDict = new Dictionary<string, object>();
 		foreach (var dict in dicts)
@@ -290,7 +247,6 @@ public class JsonInspectorUtility : MonoBehaviour
 				}
 				else if (kvp.Value is Dictionary<string, object> newDict && templateDict[kvp.Key] is Dictionary<string, object> existingDict)
 				{
-					// Merge nested dictionaries
 					var mergedDict = new Dictionary<string, object>(existingDict);
 					foreach (var nestedKvp in newDict)
 					{
@@ -303,7 +259,6 @@ public class JsonInspectorUtility : MonoBehaviour
 				}
 				else if (kvp.Value is object[] newArray && templateDict[kvp.Key] is object[] existingArray)
 				{
-					// Prefer non-empty arrays
 					if (newArray.Length > 0 && existingArray.Length == 0)
 					{
 						templateDict[kvp.Key] = newArray;
@@ -314,7 +269,7 @@ public class JsonInspectorUtility : MonoBehaviour
 		return templateDict;
 	}
 
-	private string GenerateAnonymousTemplate(object data, int indentLevel = 0)
+	private static string GenerateAnonymousTemplate(object data, int indentLevel = 0)
 	{
 		if (data == null) return "(object)null";
 
@@ -351,7 +306,7 @@ public class JsonInspectorUtility : MonoBehaviour
 		};
 	}
 
-	private string GenerateAnonymousResult(object data, int indentLevel = 0, string dictName = "data")
+	private static string GenerateAnonymousResult(object data, int indentLevel = 0, string dictName = "data")
 	{
 		if (data == null) return "(object)null";
 
@@ -390,7 +345,7 @@ public class JsonInspectorUtility : MonoBehaviour
 		};
 	}
 
-	private string GenerateNestedDictionaryResult(Dictionary<string, object> nestedDict, string parentKey, int indentLevel, string dictName)
+	private static string GenerateNestedDictionaryResult(Dictionary<string, object> nestedDict, string parentKey, int indentLevel, string dictName)
 	{
 		var sb = new StringBuilder();
 		string indent = new string(' ', indentLevel * 2);
@@ -414,7 +369,7 @@ public class JsonInspectorUtility : MonoBehaviour
 		return sb.ToString();
 	}
 
-	private string GenerateArrayResult(string key, IEnumerable<object> arr, int indentLevel, string dictName)
+	private static string GenerateArrayResult(string key, IEnumerable<object> arr, int indentLevel, string dictName)
 	{
 		var sb = new StringBuilder();
 		string indent = new string(' ', indentLevel * 2);
@@ -467,43 +422,8 @@ public class JsonInspectorUtility : MonoBehaviour
 		return sb.ToString();
 	}
 
-	private string EscapeJsonString(string json)
+	private static string EscapeJsonString(string json)
 	{
 		return json.Replace("\"", "\"\"");
 	}
 }
-
-#if UNITY_EDITOR
-[CustomEditor(typeof(JsonInspectorUtility))]
-public class JsonInspectorUtilityEditor : Editor
-{
-	public override void OnInspectorGUI()
-	{
-		JsonInspectorUtility utility = (JsonInspectorUtility)target;
-
-		EditorGUILayout.LabelField("JSON Input", EditorStyles.boldLabel);
-		string jsonInput = EditorGUILayout.TextArea(utility.GetFieldValue<string>("jsonInputInternal"), GUILayout.Height(100));
-		if (GUI.changed)
-		{
-			utility.SetJsonInput(jsonInput);
-		}
-
-		EditorGUILayout.LabelField("C# Deserialization Code (Read-Only)", EditorStyles.boldLabel);
-		EditorGUILayout.TextArea(utility.CSharpRepresentation, GUILayout.Height(200));
-
-		if (GUILayout.Button("Copy Script"))
-		{
-			GUIUtility.systemCopyBuffer = utility.CSharpRepresentation;
-			Debug.Log("Deserialization script copied to clipboard");
-		}
-	}
-}
-
-static class EditorExtensions
-{
-	public static T GetFieldValue<T>(this Object obj, string fieldName)
-	{
-		return (T)obj.GetType().GetField(fieldName, System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(obj);
-	}
-}
-#endif

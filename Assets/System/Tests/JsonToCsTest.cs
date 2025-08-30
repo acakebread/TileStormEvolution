@@ -1,6 +1,9 @@
 using UnityEngine;
 
-[RequireComponent(typeof(JsonInspectorUtility))]
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
+
 public class JsonToCsTest : MonoBehaviour
 {
 	[SerializeField, TextArea(3, 10)] private string jsonInput = @"{
@@ -9,16 +12,79 @@ public class JsonToCsTest : MonoBehaviour
         ""address"": { ""street"": ""123 Main St"", ""city"": ""New York"" }
     }";
 
-	private JsonInspectorUtility utility;
+	[SerializeField, TextArea(5, 20), Header("C# Deserialization Code (Read-Only)")]
+	private string cSharpRepresentation = "";
+	public string CSharpRepresentation => cSharpRepresentation;
+	private object Data { get; set; }
 
-	void OnValidate()
+	public void OnValidate()
 	{
-		// Get or add JsonInspectorUtility
-		if (utility == null)
+		Data = null;
+		cSharpRepresentation = "No data deserialized";
+
+		if (string.IsNullOrEmpty(jsonInput))
 		{
-			utility = GetComponent<JsonInspectorUtility>();
+			return;
 		}
-		// Set JSON input
-		utility.SetJsonInput(jsonInput);
+
+		try
+		{
+			Data = JsonTocs.FromJson<object>(jsonInput);
+			if (Data != null)
+			{
+				cSharpRepresentation = jsontocs_usagegenerator.GenerateDeserializationCode(Data, jsonInput);
+			}
+			else
+			{
+				cSharpRepresentation = "Error: Failed to deserialize JSON - null result";
+			}
+		}
+		catch (System.Exception e)
+		{
+			cSharpRepresentation = $"Error: Failed to deserialize JSON - {e.Message}";
+			Data = null;
+		}
 	}
+
+	void Start()
+	{
+		OnValidate();
+		if (Data != null)
+		{
+			Debug.Log($"Deserialized data: {JsonTocs.ToJson(Data)}");
+		}
+	}
+
+#if UNITY_EDITOR
+	[CustomEditor(typeof(JsonToCsTest))]
+	private class JsonToCsTestEditor : Editor
+	{
+		public override void OnInspectorGUI()
+		{
+			JsonToCsTest test = (JsonToCsTest)target;
+
+			EditorGUILayout.LabelField("JSON Input", EditorStyles.boldLabel);
+			EditorGUI.BeginChangeCheck();
+			string jsonInput = EditorGUILayout.TextArea(test.jsonInput, GUILayout.Height(100));
+			if (EditorGUI.EndChangeCheck())
+			{
+				Undo.RecordObject(test, "Change JSON Input");
+				// Update the serialized field and mark the object as dirty
+				SerializedObject serializedObject = new SerializedObject(test);
+				serializedObject.FindProperty("jsonInput").stringValue = jsonInput;
+				serializedObject.ApplyModifiedProperties();
+				EditorUtility.SetDirty(test);
+			}
+
+			EditorGUILayout.LabelField("C# Deserialization Code (Read-Only)", EditorStyles.boldLabel);
+			EditorGUILayout.TextArea(test.CSharpRepresentation, GUILayout.Height(200));
+
+			if (GUILayout.Button("Copy Script"))
+			{
+				GUIUtility.systemCopyBuffer = test.CSharpRepresentation;
+				Debug.Log("Deserialization script copied to clipboard");
+			}
+		}
+	}
+#endif
 }

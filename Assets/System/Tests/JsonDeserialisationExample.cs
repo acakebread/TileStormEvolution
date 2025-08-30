@@ -6,40 +6,61 @@ public class JsonDeserializationExample : MonoBehaviour
 {
 	void Start()
 	{
-		string jsonString = @"[
-    { ""name"": ""John"", ""age"": 30 },
-    { ""name"": ""Jane"", ""age"": 25, ""scores"": [90, 85, 88] }
-]
-";
+		string jsonString = @"{
+    ""name"": ""John"",
+    ""age"": 30,
+    ""active"": true,
+    ""scores"": [90, 85, 88],
+    ""address"": { ""street"": ""123 Main St"", ""city"": ""New York"" },
+    ""nullField"": null
+}";
 		try
 		{
-			var data = JsonTocs.FromJson<List<object>>(jsonString);
+			var data = JsonTocs.FromJson<Dictionary<string, object>>(jsonString);
 			if (data != null)
 			{
-				var template = new[] {         new
-		{
-		  name = "",
-		  age = 0,
-		  scores = new int[0]
-		} };
-
-				var result = ((List<object>)data).Select((item, i) =>
+				var template = new
 				{
-					var dict = (Dictionary<string, object>)item;
-					return new
+					name = "",
+					age = 0,
+					active = false,
+					scores = new int[0],
+					address = new
 					{
-						name = dict.ContainsKey("name") ? dict["name"].ToString() : "",
-						age = dict.ContainsKey("age") ? System.Convert.ToInt32(dict["age"]) : 0,
-						scores = (dict.ContainsKey("scores") ? ((object[])dict["scores"]).Select(item => System.Convert.ToInt32(item)).ToArray() : new int[0])
-					};
-				}).ToArray();
+						street = "",
+						city = ""
+					},
+					nullField = (object)null
+				};
+
+				var result = new
+				{
+					name = data.ContainsKey("name") ? data["name"].ToString() : "",
+					age = data.ContainsKey("age") ? System.Convert.ToInt32(data["age"]) : 0,
+					active = data.ContainsKey("active") ? (bool)data["active"] : false,
+					scores = (data.ContainsKey("scores") ? ((object[])data["scores"]).Select(item => System.Convert.ToInt32(item)).ToArray() : new int[0]),
+					address = (data.ContainsKey("address") ? new
+					{
+						street = data.ContainsKey("address") && ((Dictionary<string, object>)data["address"]).ContainsKey("street") ? ((Dictionary<string, object>)data["address"])["street"].ToString() : "",
+						city = data.ContainsKey("address") && ((Dictionary<string, object>)data["address"]).ContainsKey("city") ? ((Dictionary<string, object>)data["address"])["city"].ToString() : ""
+					} : new
+					{
+						street = "",
+						city = ""
+					}),
+					nullField = (object)null
+				};
 
 				// Display deserialized values
-				if (result.Length > 0 && result[0].name != null) Debug.Log($"[0].name: {result[0].name}"); // John
-				if (result.Length > 0) Debug.Log($"[0].age: {result[0].age}"); // 30
-				if (result.Length > 1 && result[1].name != null) Debug.Log($"[1].name: {result[1].name}"); // Jane
-				if (result.Length > 1) Debug.Log($"[1].age: {result[1].age}"); // 25
-				if (result.Length > 1 && result[1].scores != null) Debug.Log($"[1].scores: {string.Join(", ", result[1].scores)}"); // [90,85,88]
+				if (true && result.name != null) Debug.Log($"name: {result.name}"); // John
+				if (true) Debug.Log($"age: {result.age}"); // 30
+				if (true) Debug.Log($"active: {result.active}"); // True
+				if (result.scores.Length > 0) Debug.Log($"scores[0]: {result.scores[0]}"); // 90
+				if (result.scores.Length > 1) Debug.Log($"scores[1]: {result.scores[1]}"); // 85
+				if (result.scores.Length > 2) Debug.Log($"scores[2]: {result.scores[2]}"); // 88
+				if (result.address != null && result.address.street != null) Debug.Log($"address.street: {result.address.street}"); // 123 Main St
+				if (result.address != null && result.address.city != null) Debug.Log($"address.city: {result.address.city}"); // New York
+				if (true && result.nullField != null) Debug.Log($"nullField: {result.nullField}"); // null
 			}
 			else
 			{
