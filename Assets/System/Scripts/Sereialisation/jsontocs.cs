@@ -164,9 +164,7 @@ public static class JsonTocs
 		src = src.Substring(src.IndexOf("]") + 1);
 
 		if (list.Count <= 0) return new object[0];
-		object[] dst = new object[list.Count];
-		list.CopyTo(dst);
-		return dst;
+		return list.ToArray();
 	}
 
 	static object ReadObject(ref XString src)
@@ -207,6 +205,19 @@ public static class JsonTocs
 		if (value == null) return null;
 		if (value is T typedValue) return typedValue;
 
+		// Handle arrays -> List<T>
+		if (typeof(T).IsGenericType && typeof(T).GetGenericTypeDefinition() == typeof(List<>))
+		{
+			Type elementType = typeof(T).GetGenericArguments()[0];
+			var srcList = (value as IEnumerable<object>) ?? (value as object[])?.Cast<object>();
+			if (srcList == null) return null;
+
+			var listInstance = (IList)Activator.CreateInstance(typeof(T));
+			foreach (var item in srcList)
+				listInstance.Add(ConvertValue(elementType, item));
+			return listInstance as T;
+		}
+
 		if (value is IDictionary<string, object> dict)
 		{
 			if (typeof(T) == typeof(Dictionary<string, object>))
@@ -239,10 +250,17 @@ public static class JsonTocs
 			var list = ((IEnumerable<object>)value).ToList();
 			var array = Array.CreateInstance(elementType, list.Count);
 			for (int i = 0; i < list.Count; i++)
-			{
 				array.SetValue(ConvertValue(elementType, list[i]), i);
-			}
 			return array;
+		}
+
+		if (targetType.IsGenericType && targetType.GetGenericTypeDefinition() == typeof(List<>))
+		{
+			Type elementType = targetType.GetGenericArguments()[0];
+			var listInstance = (IList)Activator.CreateInstance(targetType);
+			foreach (var item in (IEnumerable<object>)value)
+				listInstance.Add(ConvertValue(elementType, item));
+			return listInstance;
 		}
 
 		if (value is IDictionary<string, object> dict && !targetType.IsGenericType(typeof(Dictionary<,>)))
@@ -252,9 +270,7 @@ public static class JsonTocs
 			{
 				PropertyInfo prop = targetType.GetProperty(pair.Key, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
 				if (prop != null && prop.CanWrite)
-				{
 					prop.SetValue(instance, ConvertValue(prop.PropertyType, pair.Value));
-				}
 			}
 			return instance;
 		}

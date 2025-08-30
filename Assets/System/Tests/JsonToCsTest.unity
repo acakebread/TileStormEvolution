@@ -129,6 +129,7 @@ GameObject:
   m_Component:
   - component: {fileID: 939026901}
   - component: {fileID: 939026900}
+  - component: {fileID: 939026902}
   m_Layer: 0
   m_Name: JsonToCsTest
   m_TagString: Untagged
@@ -165,6 +166,40 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &939026902
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 939026899}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d803ee4711bc9b14799b61cdefcc3429, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  cSharpRepresentation: "using System.Collections.Generic;\nusing UnityEngine;\nusing
+    System.Linq;\n\npublic class JsonDeserializationExample : MonoBehaviour\n{\n   
+    void Start()\n    {\n        string jsonString = @\"{\r\n        \"\"name\"\":
+    \"\"John\"\",\r\n        \"\"age\"\": 30,\r\n        \"\"address\"\": { \"\"street\"\":
+    \"\"123 Main St\"\", \"\"city\"\": \"\"New York\"\" }\r\n}\";\n        try\n       
+    {\n            var data = JsonTocs.FromJson<Dictionary<string, object>>(jsonString);\n           
+    if (data != null)\n            {\n                var template =         new\n       
+    {\n          name = \"\",\n          age = 0,\n          address =          
+    new\n          {\n            street = \"\",\n            city = \"\"\n         
+    }\n        };\n\n                var result =         new\n        {\n         
+    name = data[\"name\"].ToString(),\n          age = System.Convert.ToInt32(data[\"age\"]),\n         
+    address =           new\n          {\n            street = ((Dictionary<string,
+    object>)data[\"address\"])[\"street\"].ToString(),\n            city = ((Dictionary<string,
+    object>)data[\"address\"])[\"city\"].ToString()\n          }\n        };\n\n               
+    // Display deserialized values\n                Debug.Log($\"name: {result.name}\");
+    // John\n                Debug.Log($\"age: {result.age}\"); // 30\n               
+    Debug.Log($\"address.street: {result.address.street}\"); // 123 Main St\n               
+    Debug.Log($\"address.city: {result.address.city}\"); // New York\n           
+    }\n            else\n            {\n                Debug.LogError(\"Failed to
+    deserialize JSON\");\n            }\n        }\n        catch (System.Exception
+    e)\n        {\n            Debug.LogError($\"Deserialization error: {e.Message}\");\n       
+    }\n    }\n}\n"
 --- !u!1 &1018729843
 GameObject:
   m_ObjectHideFlags: 0
