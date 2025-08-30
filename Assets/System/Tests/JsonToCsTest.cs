@@ -59,13 +59,18 @@ public class JsonToCsTest : MonoBehaviour
 	[CustomEditor(typeof(JsonToCsTest))]
 	private class JsonToCsTestEditor : Editor
 	{
+		private Vector2 inputScrollPosition;
+		private Vector2 outputScrollPosition;
+
 		public override void OnInspectorGUI()
 		{
 			JsonToCsTest test = (JsonToCsTest)target;
 
 			EditorGUILayout.LabelField("JSON Input", EditorStyles.boldLabel);
 			EditorGUI.BeginChangeCheck();
-			string jsonInput = EditorGUILayout.TextArea(test.jsonInput, GUILayout.Height(100));
+			inputScrollPosition = EditorGUILayout.BeginScrollView(inputScrollPosition, GUILayout.Height(100));
+			string jsonInput = EditorGUILayout.TextArea(test.jsonInput, GUILayout.ExpandHeight(true));
+			EditorGUILayout.EndScrollView();
 			if (EditorGUI.EndChangeCheck())
 			{
 				Undo.RecordObject(test, "Change JSON Input");
@@ -77,7 +82,9 @@ public class JsonToCsTest : MonoBehaviour
 			}
 
 			EditorGUILayout.LabelField("C# Deserialization Code (Read-Only)", EditorStyles.boldLabel);
-			EditorGUILayout.TextArea(test.CSharpRepresentation, GUILayout.Height(200));
+			outputScrollPosition = EditorGUILayout.BeginScrollView(outputScrollPosition, GUILayout.Height(200));
+			EditorGUILayout.TextArea(test.CSharpRepresentation, GUILayout.ExpandHeight(true));
+			EditorGUILayout.EndScrollView();
 
 			if (GUILayout.Button("Copy Script"))
 			{

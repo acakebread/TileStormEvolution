@@ -55,8 +55,8 @@ public static class jsontocs_usagegenerator
 				foreach (var nestedPair in nestedDict)
 				{
 					bool isNestedNullable = nestedPair.Value is string || nestedPair.Value is object[] || nestedPair.Value is Dictionary<string, object> || nestedPair.Value == null;
-					string nestedNullCheck = isNestedNullable ? $" && result.{pair.Key}.{nestedPair.Key} != null" : "";
-					sb.Append($"                if (result.{pair.Key} != null{nestedNullCheck}) Debug.Log($\"{pair.Key}.{nestedPair.Key}: {{result.{pair.Key}.{nestedPair.Key}}}\"); // {nestedPair.Value}\n");
+					string nestedNullCheck = isNestedNullable ? $" && result._{pair.Key}._{nestedPair.Key} != null" : "";
+					sb.Append($"                if (result._{pair.Key} != null{nestedNullCheck}) Debug.Log($\"{pair.Key}.{nestedPair.Key}: {{result._{pair.Key}._{nestedPair.Key}}}\"); // {nestedPair.Value}\n");
 				}
 			}
 			else if (pair.Value is object[] array)
@@ -72,38 +72,38 @@ public static class jsontocs_usagegenerator
 							{
 								var value = memberDict[key];
 								bool isNullableType = value is string || value is object[] || value is Dictionary<string, object> || value == null;
-								string nullCheck = isNullableType ? $" && result.{pair.Key}[{i}].{key} != null" : "";
+								string nullCheck = isNullableType ? $" && result._{pair.Key}[{i}]._{key} != null" : "";
 								if (value is object[] subArray)
 								{
-									sb.Append($"                if (result.{pair.Key}.Length > {i}{nullCheck}) Debug.Log($\"{pair.Key}[{i}].{key}: {{string.Join(\", \", result.{pair.Key}[{i}].{key})}}\"); // {JsonTocs.ToJson(value)}\n");
+									sb.Append($"                if (result._{pair.Key}.Length > {i}{nullCheck}) Debug.Log($\"{pair.Key}[{i}].{key}: {{string.Join(\", \", result._{pair.Key}[{i}]._{key})}}\"); // {JsonTocs.ToJson(value)}\n");
 								}
 								else if (value is Dictionary<string, object> detailsDict)
 								{
 									foreach (var detailPair in detailsDict)
 									{
 										bool isDetailNullable = detailPair.Value is string || detailPair.Value is object[] || detailPair.Value is Dictionary<string, object> || detailPair.Value == null;
-										string detailNullCheck = isDetailNullable ? $" && result.{pair.Key}[{i}].{key}.{detailPair.Key} != null" : "";
-										sb.Append($"                if (result.{pair.Key}.Length > {i}{nullCheck}{detailNullCheck}) Debug.Log($\"{pair.Key}[{i}].{key}.{detailPair.Key}: {{result.{pair.Key}[{i}].{key}.{detailPair.Key}}}\"); // {detailPair.Value}\n");
+										string detailNullCheck = isDetailNullable ? $" && result._{pair.Key}[{i}]._{key}._{detailPair.Key} != null" : "";
+										sb.Append($"                if (result._{pair.Key}.Length > {i}{nullCheck}{detailNullCheck}) Debug.Log($\"{pair.Key}[{i}].{key}.{detailPair.Key}: {{result._{pair.Key}[{i}]._{key}._{detailPair.Key}}}\"); // {detailPair.Value}\n");
 									}
 								}
 								else
 								{
-									sb.Append($"                if (result.{pair.Key}.Length > {i}{nullCheck}) Debug.Log($\"{pair.Key}[{i}].{key}: {{result.{pair.Key}[{i}].{key}}}\"); // {value ?? "null"}\n");
+									sb.Append($"                if (result._{pair.Key}.Length > {i}{nullCheck}) Debug.Log($\"{pair.Key}[{i}].{key}: {{result._{pair.Key}[{i}]._{key}}}\"); // {value ?? "null"}\n");
 								}
 							}
 						}
 					}
 					else
 					{
-						sb.Append($"                if (result.{pair.Key}.Length > {i}) Debug.Log($\"{pair.Key}[{i}]: {{result.{pair.Key}[{i}]}}\"); // {JsonTocs.ToJson(array[i])}\n");
+						sb.Append($"                if (result._{pair.Key}.Length > {i}) Debug.Log($\"{pair.Key}[{i}]: {{result._{pair.Key}[{i}]}}\"); // {JsonTocs.ToJson(array[i])}\n");
 					}
 				}
 			}
 			else
 			{
 				bool isNullableType = pair.Value is string || pair.Value is object[] || pair.Value is Dictionary<string, object> || pair.Value == null;
-				string nullCheck = isNullableType ? $" && result.{pair.Key} != null" : "";
-				sb.Append($"                if (true{nullCheck}) Debug.Log($\"{pair.Key}: {{result.{pair.Key}}}\"); // {pair.Value ?? "null"}\n");
+				string nullCheck = isNullableType ? $" && result._{pair.Key} != null" : "";
+				sb.Append($"                if (true{nullCheck}) Debug.Log($\"{pair.Key}: {{result._{pair.Key}}}\"); // {pair.Value ?? "null"}\n");
 			}
 		}
 
@@ -165,23 +165,23 @@ public static class jsontocs_usagegenerator
 						{
 							var value = memberDict[key];
 							bool isNullableType = value is string || value is object[] || value is Dictionary<string, object> || value == null;
-							string nullCheck = isNullableType ? $" && result[{i}].{key} != null" : "";
+							string nullCheck = isNullableType ? $" && result[{i}]._{key} != null" : "";
 							if (value is object[] subArray)
 							{
-								sb.Append($"                if (result.Length > {i}{nullCheck}) Debug.Log($\"[{i}].{key}: {{string.Join(\", \", result[{i}].{key})}}\"); // {JsonTocs.ToJson(value)}\n");
+								sb.Append($"                if (result.Length > {i}{nullCheck}) Debug.Log($\"[{i}].{key}: {{string.Join(\", \", result[{i}]._{key})}}\"); // {JsonTocs.ToJson(value)}\n");
 							}
 							else if (value is Dictionary<string, object> nestedDict)
 							{
 								foreach (var nestedPair in nestedDict)
 								{
 									bool isNestedNullable = nestedPair.Value is string || nestedPair.Value is object[] || nestedPair.Value is Dictionary<string, object> || nestedPair.Value == null;
-									string nestedNullCheck = isNestedNullable ? $" && result[{i}].{key}.{nestedPair.Key} != null" : "";
-									sb.Append($"                if (result.Length > {i}{nullCheck}{nestedNullCheck}) Debug.Log($\"[{i}].{key}.{nestedPair.Key}: {{result[{i}].{key}.{nestedPair.Key}}}\"); // {nestedPair.Value}\n");
+									string nestedNullCheck = isNestedNullable ? $" && result[{i}]._{key}._{nestedPair.Key} != null" : "";
+									sb.Append($"                if (result.Length > {i}{nullCheck}{nestedNullCheck}) Debug.Log($\"[{i}].{key}.{nestedPair.Key}: {{result[{i}]._{key}._{nestedPair.Key}}}\"); // {nestedPair.Value}\n");
 								}
 							}
 							else
 							{
-								sb.Append($"                if (result.Length > {i}{nullCheck}) Debug.Log($\"[{i}].{key}: {{result[{i}].{key}}}\"); // {value ?? "null"}\n");
+								sb.Append($"                if (result.Length > {i}{nullCheck}) Debug.Log($\"[{i}].{key}: {{result[{i}]._{key}}}\"); // {value ?? "null"}\n");
 							}
 						}
 					}
@@ -290,7 +290,7 @@ public static class jsontocs_usagegenerator
 					null => "(object)null",
 					_ => "0"
 				};
-				sb.Append($"{indent}  {pair.Key} = {defaultValue},\n");
+				sb.Append($"{indent}  _{pair.Key} = {defaultValue},\n");
 			}
 			if (dict.Count > 0) sb.Length -= 2;
 			sb.Append("\n" + indent + "}");
@@ -328,7 +328,7 @@ public static class jsontocs_usagegenerator
 					null => "(object)null",
 					_ => $"{dictName}.ContainsKey(\"{pair.Key}\") ? {dictName}[\"{pair.Key}\"] : (object)null"
 				};
-				sb.Append($"{indent}  {pair.Key} = {valueExpr},\n");
+				sb.Append($"{indent}  _{pair.Key} = {valueExpr},\n");
 			}
 			if (dict.Count > 0) sb.Length -= 2;
 			sb.Append("\n" + indent + "}");
@@ -362,7 +362,7 @@ public static class jsontocs_usagegenerator
 				null => "(object)null",
 				_ => $"{dictName}.ContainsKey(\"{parentKey}\") && ((Dictionary<string, object>){dictName}[\"{parentKey}\"]).ContainsKey(\"{pair.Key}\") ? ((Dictionary<string, object>){dictName}[\"{parentKey}\"])[\"{pair.Key}\"] : (object)null"
 			};
-			sb.Append($"{indent}  {pair.Key} = {valueExpr},\n");
+			sb.Append($"{indent}  _{pair.Key} = {valueExpr},\n");
 		}
 		if (nestedDict.Count > 0) sb.Length -= 2;
 		sb.Append($"\n{indent}}} : {GenerateAnonymousTemplate(nestedDict, indentLevel)})");
@@ -394,7 +394,7 @@ public static class jsontocs_usagegenerator
 					null => "(object)null",
 					_ => $"subDict.ContainsKey(\"{pair.Key}\") ? subDict[\"{pair.Key}\"] : (object)null"
 				};
-				sb.Append($"{indent}    {pair.Key} = {valueExpr},\n");
+				sb.Append($"{indent}    _{pair.Key} = {valueExpr},\n");
 			}
 			if (templateDict.Count > 0) sb.Length -= 2;
 			sb.Append($"\n{indent}  }};\n");
@@ -410,7 +410,7 @@ public static class jsontocs_usagegenerator
 					null => "(object)null",
 					_ => "0"
 				};
-				sb.Append($"{pair.Key} = {defaultValue}, ");
+				sb.Append($"_{pair.Key} = {defaultValue}, ");
 			}
 			if (templateDict.Count > 0) sb.Length -= 2;
 			sb.Append(" } })");
