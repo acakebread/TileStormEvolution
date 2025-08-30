@@ -148,48 +148,32 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e9f5bf97d9e45d042ac9d859c577986b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  jsonInput: "{\r\n    \"name\": \"John\",\r\n    \"age\": 30,\r\n    \"active\":
-    true,\r\n    \"scores\": [90, 85, 88],\r\n    \"address\": { \"street\": \"123
-    Main St\", \"city\": \"New York\" },\r\n    \"nullField\": null\r\n}"
+  jsonInput: "[\r\n    { \"name\": \"John\", \"age\": 30 },\r\n    { \"name\": \"Jane\",
+    \"age\": 25, \"scores\": [90, 85, 88] }\r\n]"
   cSharpRepresentation: "using System.Collections.Generic;\nusing UnityEngine;\nusing
     System.Linq;\n\npublic class JsonDeserializationExample : MonoBehaviour\n{\n   
-    void Start()\n    {\n        string jsonString = @\"{\r\n    \"\"name\"\": \"\"John\"\",\r\n   
-    \"\"age\"\": 30,\r\n    \"\"active\"\": true,\r\n    \"\"scores\"\": [90, 85,
-    88],\r\n    \"\"address\"\": { \"\"street\"\": \"\"123 Main St\"\", \"\"city\"\":
-    \"\"New York\"\" },\r\n    \"\"nullField\"\": null\r\n}\";\n        try\n       
-    {\n            var data = JsonTocs.FromJson<Dictionary<string, object>>(jsonString);\n           
-    if (data != null)\n            {\n                var template =         new\n       
-    {\n          name = \"\",\n          age = 0,\n          active = false,\n         
-    scores = new int[0],\n          address =           new\n          {\n           
-    street = \"\",\n            city = \"\"\n          },\n          nullField =
-    (object)null\n        };\n\n                var result =         new\n       
-    {\n          name = data.ContainsKey(\"name\") ? data[\"name\"].ToString() :
-    \"\",\n          age = data.ContainsKey(\"age\") ? System.Convert.ToInt32(data[\"age\"])
-    : 0,\n          active = data.ContainsKey(\"active\") ? (bool)data[\"active\"]
-    : false,\n          scores =           (data.ContainsKey(\"scores\") ? ((object[])data[\"scores\"]).Select(item
-    => System.Convert.ToInt32(item)).ToArray() : new int[0]),\n          address
-    =           (data.ContainsKey(\"address\") ? new\n          {\n            street
-    = data.ContainsKey(\"address\") && ((Dictionary<string, object>)data[\"address\"]).ContainsKey(\"street\")
-    ? ((Dictionary<string, object>)data[\"address\"])[\"street\"].ToString() : \"\",\n           
-    city = data.ContainsKey(\"address\") && ((Dictionary<string, object>)data[\"address\"]).ContainsKey(\"city\")
-    ? ((Dictionary<string, object>)data[\"address\"])[\"city\"].ToString() : \"\"\n         
-    } :           new\n          {\n            street = \"\",\n            city
-    = \"\"\n          }),\n          nullField = (object)null\n        };\n\n               
-    // Display deserialized values\n                if (true && result.name != null)
-    Debug.Log($\"name: {result.name}\"); // John\n                if (true) Debug.Log($\"age:
-    {result.age}\"); // 30\n                if (true) Debug.Log($\"active: {result.active}\");
-    // True\n                if (result.scores.Length > 0) Debug.Log($\"scores[0]:
-    {result.scores[0]}\"); // 90\n                if (result.scores.Length > 1) Debug.Log($\"scores[1]:
-    {result.scores[1]}\"); // 85\n                if (result.scores.Length > 2) Debug.Log($\"scores[2]:
-    {result.scores[2]}\"); // 88\n                if (result.address != null && result.address.street
-    != null) Debug.Log($\"address.street: {result.address.street}\"); // 123 Main
-    St\n                if (result.address != null && result.address.city != null)
-    Debug.Log($\"address.city: {result.address.city}\"); // New York\n               
-    if (true && result.nullField != null) Debug.Log($\"nullField: {result.nullField}\");
-    // null\n            }\n            else\n            {\n                Debug.LogError(\"Failed
-    to deserialize JSON\");\n            }\n        }\n        catch (System.Exception
-    e)\n        {\n            Debug.LogError($\"Deserialization error: {e.Message}\");\n       
-    }\n    }\n}\n"
+    void Start()\n    {\n        string jsonString = @\"[\n    { \"\"name\"\": \"\"John\"\",
+    \"\"age\"\": 30 },\n    { \"\"name\"\": \"\"Jane\"\", \"\"age\"\": 25, \"\"scores\"\":
+    [90, 85, 88] }\n]\";\n        try\n        {\n            var data = JsonTocs.FromJson<List<object>>(jsonString);\n           
+    if (data != null)\n            {\n                var template = new[] {        
+    new\n        {\n          _name = \"\",\n          _age = 0,\n          _scores
+    = new object[0]\n        } };\n\n                var result = ((List<object>)data).Select((item,
+    i) =>\n                {\n                    var dict = (Dictionary<string,
+    object>)item;\n                    return           new\n          {\n           
+    _name = dict.ContainsKey(\"name\") ? dict[\"name\"].ToString() : \"\",\n           
+    _age = dict.ContainsKey(\"age\") ? System.Convert.ToInt32(dict[\"age\"]) : 0,\n           
+    _scores =             (dict.ContainsKey(\"scores\") ? ((object[])dict[\"scores\"]).Select(item
+    => item).ToArray() : new object[0])\n          };\n                }).ToArray();\n\n               
+    // Display deserialized values\n                if (result.Length > 0 && result[0]._name
+    != null) Debug.Log($\"[0].name: {result[0]._name}\"); // John\n               
+    if (result.Length > 0) Debug.Log($\"[0].age: {result[0]._age}\"); // 30\n               
+    if (result.Length > 1 && result[1]._name != null) Debug.Log($\"[1].name: {result[1]._name}\");
+    // Jane\n                if (result.Length > 1) Debug.Log($\"[1].age: {result[1]._age}\");
+    // 25\n                if (result.Length > 1 && result[1]._scores != null) Debug.Log($\"[1].scores:
+    {string.Join(\", \", result[1]._scores)}\"); // [90,85,88]\n            }\n           
+    else\n            {\n                Debug.LogError(\"Failed to deserialize JSON\");\n           
+    }\n        }\n        catch (System.Exception e)\n        {\n            Debug.LogError($\"Deserialization
+    error: {e.Message}\");\n        }\n    }\n}\n"
 --- !u!4 &939026901
 Transform:
   m_ObjectHideFlags: 0

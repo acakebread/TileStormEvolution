@@ -17,9 +17,16 @@ public static class JsonTocs
 
 	public static T FromJson<T>(string json) where T : class
 	{
-		XString str = new XString(ref json);
-		var result = ReadObject(ref str);
-		return ConvertToType<T>(result);
+		try
+		{
+			XString str = new XString(ref json);
+			var result = ReadObject(ref str);
+			return ConvertToType<T>(result);
+		}
+		catch (Exception e)
+		{
+			throw new ArgumentException($"Failed to deserialize JSON: {e.Message}\nInput: {json.Substring(0, Math.Min(json.Length, 100))}...", e);
+		}
 	}
 
 	public static string ToJson(object src)
@@ -81,7 +88,7 @@ public static class JsonTocs
 
 	class XString : IEnumerable<char>
 	{
-		int pos = 0;
+		public int pos = 0;
 		string str;
 		public XString(ref string src) => str = src;
 
@@ -126,11 +133,52 @@ public static class JsonTocs
 
 	static object ReadString(ref XString src)
 	{
-		int pos = 1;
-		while (pos < src.Length && (src[pos] != '"' || src[pos - 1] == '\\')) pos++;
-		string result = Regex.Unescape(src.Substring(1, pos - 1));
-		src = src.Substring(pos + 1);
-		return result;
+		try
+		{
+			if (src[0] != '"')
+				throw new ArgumentException("Expected string to start with '\"'");
+
+			int pos = 1;
+			int backslashCount = 0;
+			while (pos < src.Length)
+			{
+				char current = src[pos];
+				if (current == '\\')
+				{
+					backslashCount++;
+					pos++;
+					continue;
+				}
+				if (current == '"' && (backslashCount % 2) == 0)
+				{
+					// Unescaped quote found
+					break;
+				}
+				backslashCount = 0; // Reset backslash count for non-backslash characters
+				pos++;
+			}
+
+			if (pos >= src.Length)
+				throw new ArgumentException("Unterminated string literal");
+
+			string rawString = src.Substring(1, pos - 1);
+			string result;
+			try
+			{
+				result = Regex.Unescape(rawString);
+			}
+			catch (Exception e)
+			{
+				throw new ArgumentException($"Failed to unescape string '{rawString}': {e.Message}");
+			}
+
+			src = src.Substring(pos + 1);
+			return result;
+		}
+		catch (Exception e)
+		{
+			throw new ArgumentException($"Error parsing string at position {src.pos}: {e.Message}\nRemaining: {src.Substring(0, Math.Min(src.Length, 64))}...");
+		}
 	}
 
 	static bool IsNumber(XString src)
@@ -192,12 +240,12 @@ public static class JsonTocs
 			return dict;
 		}
 
-		if (src[0] == '\"') return ReadString(ref src);
+		if (src[0] == '"') return ReadString(ref src);
 		if (src.StartsWith("null")) return ReadNull(ref src);
 		if (src.StartsWith("true") || src.StartsWith("false")) return ReadBool(ref src);
 		if (IsNumber(src)) return ReadNumber(ref src);
 
-		throw new ArgumentException("jsontocs encountered unknown type: " + src.Substring(-20, 20) + "^" + src.Substring(0, 64));
+		throw new ArgumentException($"jsontocs encountered unknown type at position {src.pos}: {src.Substring(0, Math.Min(src.Length, 64))}...");
 	}
 
 	static T ConvertToType<T>(object value) where T : class
