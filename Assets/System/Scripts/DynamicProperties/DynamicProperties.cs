@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UI;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -31,29 +32,66 @@ public class DynamicPropertiesData
 [DisallowMultipleComponent]
 public class DynamicProperties : MonoBehaviour
 {
-	[SerializeField, TextArea(3, 10)]
-	private string serializedProperties = "{}"; // Stored as JSON string
-
-	public string SerializedProperties
-	{
-		get => serializedProperties;
-		set => serializedProperties = value;
-	}
-
+	private Text textComponent;
 	private DynamicPropertiesData data; // Runtime deserialized data
-	private Dictionary<string, DynamicProperty> propertyMap = new Dictionary<string, DynamicProperty>();
+	private Dictionary<string, DynamicProperty> propertyMap = new Dictionary<string, DynamicProperty>(StringComparer.OrdinalIgnoreCase); // Case-insensitive
 
 	private void Awake()
 	{
+		InitializeTextComponent();
 		LoadProperties();
+	}
+
+	public void InitializeTextComponent()
+	{
+		if (textComponent == null)
+		{
+			textComponent = gameObject.GetComponent<Text>();
+			if (textComponent == null)
+			{
+				textComponent = gameObject.AddComponent<Text>();
+				textComponent.enabled = false; // Disable to avoid rendering
+				textComponent.text = "{\"Properties\":[]}"; // Initialize with empty JSON
+				textComponent.hideFlags = HideFlags.HideInInspector | HideFlags.NotEditable; // Hide and make read-only
+
+				// Hide and disable Canvas and CanvasRenderer
+				Canvas canvas = gameObject.GetComponent<Canvas>();
+				if (canvas != null)
+				{
+					canvas.enabled = false;
+					canvas.hideFlags = HideFlags.HideInInspector | HideFlags.NotEditable;
+				}
+				CanvasRenderer canvasRenderer = gameObject.GetComponent<CanvasRenderer>();
+				if (canvasRenderer != null)
+				{
+					canvasRenderer.hideFlags = HideFlags.HideInInspector | HideFlags.NotEditable;
+				}
+			}
+		}
 	}
 
 	private void LoadProperties()
 	{
+		if (textComponent == null)
+		{
+			InitializeTextComponent();
+			if (textComponent == null)
+			{
+				Debug.LogWarning($"Text component could not be initialized for {gameObject.name}.");
+				data = new DynamicPropertiesData();
+				return;
+			}
+		}
+
 		try
 		{
-			data = JsonUtility.FromJson<DynamicPropertiesData>(serializedProperties);
-			if (data == null) data = new DynamicPropertiesData();
+			data = JsonUtility.FromJson<DynamicPropertiesData>(textComponent.text);
+			if (data == null || data.Properties == null)
+			{
+				Debug.LogWarning($"Invalid or empty JSON data in Text component for {gameObject.name}. Initializing empty data.");
+				data = new DynamicPropertiesData();
+				textComponent.text = JsonUtility.ToJson(data);
+			}
 			propertyMap.Clear();
 			foreach (var prop in data.Properties)
 			{
@@ -61,23 +99,56 @@ public class DynamicProperties : MonoBehaviour
 				{
 					propertyMap[prop.Name] = prop;
 				}
+				else
+				{
+					Debug.LogWarning($"Duplicate or invalid property name '{prop.Name}' ignored in {gameObject.name}.");
+				}
 			}
-			Debug.Log($"Loaded {data.Properties.Count} properties: {serializedProperties}");
 		}
 		catch (Exception e)
 		{
-			Debug.LogWarning($"Failed to parse properties JSON: {e.Message}. Initializing empty data.");
+			Debug.LogWarning($"Failed to parse properties JSON for {gameObject.name}: {e.Message}. Initializing empty data.");
 			data = new DynamicPropertiesData();
-			serializedProperties = JsonUtility.ToJson(data);
+			textComponent.text = JsonUtility.ToJson(data);
 		}
 	}
 
 	public void SaveProperties()
 	{
-		serializedProperties = JsonUtility.ToJson(data);
+		if (textComponent == null)
+		{
+			Debug.LogWarning($"Text component is missing in SaveProperties for {gameObject.name}. Reinitializing...");
+			InitializeTextComponent();
+		}
+		textComponent.text = JsonUtility.ToJson(data);
 #if UNITY_EDITOR
+		UnityEditor.EditorUtility.SetDirty(textComponent);
 		UnityEditor.EditorUtility.SetDirty(this);
 #endif
+	}
+
+	// Expose data for Editor syncing
+	public DynamicPropertiesData GetData()
+	{
+		if (data == null)
+		{
+			LoadProperties();
+		}
+		return data;
+	}
+
+	public void SetData(DynamicPropertiesData newData)
+	{
+		data = newData ?? new DynamicPropertiesData();
+		propertyMap.Clear();
+		foreach (var prop in data.Properties)
+		{
+			if (!string.IsNullOrEmpty(prop.Name) && !propertyMap.ContainsKey(prop.Name))
+			{
+				propertyMap[prop.Name] = prop;
+			}
+		}
+		SaveProperties();
 	}
 
 	// Enumeration
@@ -135,6 +206,7 @@ public class DynamicProperties : MonoBehaviour
 			SaveProperties();
 			return true;
 		}
+		Debug.LogWarning($"Failed to remove property '{name}' from {gameObject.name}: not found.");
 		return false;
 	}
 
@@ -145,6 +217,8 @@ public class DynamicProperties : MonoBehaviour
 		{
 			return true;
 		}
+		// Comment out for production; re-enable for debugging if needed
+		// Debug.LogWarning($"Property '{name}' not found or type mismatch (expected {type}) in {gameObject.name}. Available properties: {string.Join(", ", propertyMap.Keys)}");
 		property = null;
 		return false;
 	}

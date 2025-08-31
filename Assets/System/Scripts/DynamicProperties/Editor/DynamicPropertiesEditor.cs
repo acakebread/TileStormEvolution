@@ -1,66 +1,135 @@
+using System;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.UI;
 
 [CustomEditor(typeof(DynamicProperties))]
 public class DynamicPropertiesEditor : Editor
 {
-	public override void OnInspectorGUI()
+	[InitializeOnLoadMethod]
+	private static void InitializeOnLoad()
 	{
-		serializedObject.Update();
-
-		var component = (DynamicProperties)target;
-		var serializedPropertiesProp = serializedObject.FindProperty("serializedProperties");
-		DynamicPropertiesData data;
-
-		// Deserialize JSON
-		try
+		// Ensure Text component is added early in Editor lifecycle
+		EditorApplication.delayCall += () =>
 		{
-			data = JsonUtility.FromJson<DynamicPropertiesData>(serializedPropertiesProp.stringValue);
-			if (data == null || data.Properties == null)
+			foreach (var go in UnityEngine.SceneManagement.SceneManager.GetActiveScene().GetRootGameObjects())
 			{
-				data = new DynamicPropertiesData();
-				serializedPropertiesProp.stringValue = JsonUtility.ToJson(data);
-				serializedObject.ApplyModifiedProperties();
+				EnsureTextComponentOnDynamicProperties(go);
+			}
+		};
+		UnityEditor.SceneManagement.PrefabStage.prefabStageOpened += stage =>
+		{
+			EnsureTextComponentOnDynamicProperties(stage.prefabContentsRoot);
+		};
+		UnityEditor.EditorApplication.hierarchyChanged += () =>
+		{
+			foreach (var go in UnityEngine.SceneManagement.SceneManager.GetActiveScene().GetRootGameObjects())
+			{
+				EnsureTextComponentOnDynamicProperties(go);
+			}
+		};
+	}
+
+	private static void EnsureTextComponentOnDynamicProperties(GameObject go)
+	{
+		if (go == null)
+		{
+			Debug.LogWarning("GameObject is null in EnsureTextComponentOnDynamicProperties.");
+			return;
+		}
+		var components = go.GetComponentsInChildren<DynamicProperties>(true);
+		foreach (var component in components)
+		{
+			if (component == null || component.gameObject == null)
+			{
+				Debug.LogWarning($"DynamicProperties component or its GameObject is null on {go.name}.");
+				continue;
+			}
+			var textComponent = component.gameObject.GetComponent<Text>();
+			if (textComponent == null)
+			{
+				Undo.RegisterCompleteObjectUndo(component.gameObject, "Add Text Component");
+				textComponent = component.gameObject.AddComponent<Text>();
+				textComponent.enabled = false;
+				textComponent.text = "{\"Properties\":[]}";
+				textComponent.hideFlags = HideFlags.HideInInspector | HideFlags.NotEditable;
+				Canvas canvas = component.gameObject.GetComponent<Canvas>();
+				if (canvas != null)
+				{
+					canvas.enabled = false;
+					canvas.hideFlags = HideFlags.HideInInspector | HideFlags.NotEditable;
+				}
+				CanvasRenderer canvasRenderer = component.gameObject.GetComponent<CanvasRenderer>();
+				if (canvasRenderer != null)
+				{
+					canvasRenderer.hideFlags = HideFlags.HideInInspector | HideFlags.NotEditable;
+				}
+				component.InitializeTextComponent();
+				component.SaveProperties();
+				UnityEditor.EditorUtility.SetDirty(textComponent);
+				UnityEditor.EditorUtility.SetDirty(component);
 			}
 		}
-		catch (System.Exception e)
+	}
+
+	public override void OnInspectorGUI()
+	{
+		var component = (DynamicProperties)target;
+		if (component == null || component.gameObject == null)
 		{
-			EditorGUILayout.HelpBox($"Failed to parse JSON: {e.Message}. Resetting to empty data.", MessageType.Error);
-			data = new DynamicPropertiesData();
-			serializedPropertiesProp.stringValue = JsonUtility.ToJson(data);
-			serializedObject.ApplyModifiedProperties();
+			EditorGUILayout.HelpBox("DynamicProperties component or its GameObject is null. Please re-add the component to a valid GameObject.", MessageType.Error);
+			return;
 		}
+
+		// Ensure Text component is initialized before accessing GetData
+		component.InitializeTextComponent();
+		var textComponent = component.gameObject.GetComponent<Text>();
+		if (textComponent == null)
+		{
+			EditorGUILayout.HelpBox("Failed to initialize Text component. Please add it manually.", MessageType.Error);
+			return;
+		}
+
+		var textSerializedObject = new SerializedObject(textComponent);
+		var serializedPropertiesProp = textSerializedObject.FindProperty("m_Text");
+		if (serializedPropertiesProp == null)
+		{
+			EditorGUILayout.HelpBox("Text component does not have a text field.", MessageType.Error);
+			return;
+		}
+
+		textSerializedObject.Update();
+
+		DynamicPropertiesData data = component.GetData();
 
 		EditorGUILayout.LabelField("Dynamic Properties", EditorStyles.boldLabel);
 
-		// Show warning in play mode
 		if (EditorApplication.isPlaying)
 		{
 			EditorGUILayout.HelpBox("Changes made in play mode are not persisted after exiting play mode.", MessageType.Info);
 		}
 
 		bool propertiesChanged = false;
-		var existingNames = new HashSet<string>();
+		var existingNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase); // Case-insensitive
 
-		// Display and edit properties
 		for (int i = 0; i < data.Properties.Count; i++)
 		{
 			var prop = data.Properties[i];
 			EditorGUILayout.BeginHorizontal();
 
-			// Reduce label width and constrain field sizes
 			EditorGUIUtility.labelWidth = 50f;
 
 			EditorGUI.BeginChangeCheck();
 			string newName = EditorGUILayout.TextField("Name", prop.Name, GUILayout.Width(150f));
 			if (EditorGUI.EndChangeCheck())
 			{
+				Undo.RecordObject(textComponent, "Change Property Name");
 				if (string.IsNullOrEmpty(newName))
 				{
 					EditorGUILayout.HelpBox("Name cannot be empty.", MessageType.Error);
 				}
-				else if (existingNames.Contains(newName) && newName != prop.Name)
+				else if (existingNames.Contains(newName) && !string.Equals(newName, prop.Name, StringComparison.OrdinalIgnoreCase))
 				{
 					EditorGUILayout.HelpBox($"Name '{newName}' is already used.", MessageType.Error);
 				}
@@ -76,6 +145,7 @@ public class DynamicPropertiesEditor : Editor
 			PropertyType newType = (PropertyType)EditorGUILayout.EnumPopup(prop.Type, GUILayout.Width(100f));
 			if (EditorGUI.EndChangeCheck())
 			{
+				Undo.RecordObject(textComponent, "Change Property Type");
 				prop.Type = newType;
 				propertiesChanged = true;
 			}
@@ -87,6 +157,7 @@ public class DynamicPropertiesEditor : Editor
 					float newFloatValue = EditorGUILayout.FloatField(prop.FloatValue, GUILayout.Width(100f));
 					if (EditorGUI.EndChangeCheck())
 					{
+						Undo.RecordObject(textComponent, "Change Float Value");
 						prop.FloatValue = newFloatValue;
 						propertiesChanged = true;
 					}
@@ -96,6 +167,7 @@ public class DynamicPropertiesEditor : Editor
 					int newIntValue = EditorGUILayout.IntField(prop.IntValue, GUILayout.Width(100f));
 					if (EditorGUI.EndChangeCheck())
 					{
+						Undo.RecordObject(textComponent, "Change Float Value");
 						prop.IntValue = newIntValue;
 						propertiesChanged = true;
 					}
@@ -105,6 +177,7 @@ public class DynamicPropertiesEditor : Editor
 					string newStringValue = EditorGUILayout.TextField(prop.StringValue, GUILayout.Width(100f));
 					if (EditorGUI.EndChangeCheck())
 					{
+						Undo.RecordObject(textComponent, "Change String Value");
 						prop.StringValue = newStringValue;
 						propertiesChanged = true;
 					}
@@ -114,6 +187,7 @@ public class DynamicPropertiesEditor : Editor
 					bool newBoolValue = EditorGUILayout.Toggle(prop.BoolValue, GUILayout.Width(100f));
 					if (EditorGUI.EndChangeCheck())
 					{
+						Undo.RecordObject(textComponent, "Change Bool Value");
 						prop.BoolValue = newBoolValue;
 						propertiesChanged = true;
 					}
@@ -122,6 +196,7 @@ public class DynamicPropertiesEditor : Editor
 
 			if (GUILayout.Button("Remove", GUILayout.Width(60f)))
 			{
+				Undo.RecordObject(textComponent, "Remove Property");
 				data.Properties.RemoveAt(i);
 				i--;
 				propertiesChanged = true;
@@ -131,10 +206,13 @@ public class DynamicPropertiesEditor : Editor
 
 		if (GUILayout.Button("Add Property"))
 		{
+			Undo.RecordObject(textComponent, "Add Property");
 			string newName = "NewProperty" + (data.Properties.Count + 1);
+			int attempt = 1;
 			while (existingNames.Contains(newName))
 			{
-				newName = "NewProperty" + (data.Properties.Count + 1);
+				newName = "NewProperty" + (data.Properties.Count + 1 + attempt);
+				attempt++;
 			}
 			data.Properties.Add(new DynamicProperty
 			{
@@ -148,17 +226,18 @@ public class DynamicPropertiesEditor : Editor
 			propertiesChanged = true;
 		}
 
-		// Serialize back to JSON only if properties changed
 		if (propertiesChanged)
 		{
 			serializedPropertiesProp.stringValue = JsonUtility.ToJson(data);
-			component.SaveProperties();
-			serializedObject.ApplyModifiedProperties();
-			EditorUtility.SetDirty(target);
+			textSerializedObject.ApplyModifiedProperties();
+			component.SetData(data); // Syncs data, propertyMap, and saves
+			EditorUtility.SetDirty(textComponent);
+			EditorUtility.SetDirty(component);
+			Repaint();
 		}
 		else
 		{
-			serializedObject.ApplyModifiedProperties();
+			textSerializedObject.ApplyModifiedProperties();
 		}
 	}
 }

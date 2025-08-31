@@ -268,7 +268,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5ce13b3c0b096d645af3de5641f62753, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  serializedProperties: '{"Properties":[{"Name":"NewProperty1","Type":0,"FloatValue":15.0,"IntValue":0,"StringValue":"","BoolValue":false}]}'
+  serializedProperties: '{"Properties":[{"Name":"NewProperty1","Type":0,"FloatValue":15.0,"IntValue":0,"StringValue":"","BoolValue":false},{"Name":"NewProperty2","Type":0,"FloatValue":0.0,"IntValue":0,"StringValue":"","BoolValue":false},{"Name":"NewProperty3","Type":0,"FloatValue":0.0,"IntValue":0,"StringValue":"","BoolValue":false}]}'
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
