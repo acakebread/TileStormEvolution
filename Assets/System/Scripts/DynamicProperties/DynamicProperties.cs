@@ -18,6 +18,15 @@ public class DynamicProperties : MonoBehaviour
 		LoadProperties();
 	}
 
+	private void OnValidate()
+	{
+		if (!Application.isPlaying)
+		{
+			InitializeTextComponent();
+			LoadProperties();
+		}
+	}
+
 	public void InitializeTextComponent()
 	{
 		if (textComponent == null)
@@ -31,22 +40,63 @@ public class DynamicProperties : MonoBehaviour
 					Debug.LogWarning($"Failed to add Text component to {gameObject.name}.");
 					return;
 				}
-				textComponent.enabled = false; // Disable to avoid rendering
-				textComponent.text = "{\"Properties\":[]}"; // Initialize with empty JSON
-				textComponent.hideFlags = HideFlags.HideInInspector | HideFlags.NotEditable; // Hide and make read-only
+				textComponent.enabled = false;
+				textComponent.text = "{\"Properties\":[]}";
+				textComponent.hideFlags = HideFlags.HideInInspector | HideFlags.NotEditable;
+				// Reset RectTransform to mimic Transform properties
+				RectTransform rectTransform = gameObject.GetComponent<RectTransform>();
+				if (rectTransform != null)
+				{
+					rectTransform.localPosition = Vector3.zero;
+					rectTransform.localScale = Vector3.one;
+					rectTransform.localRotation = Quaternion.identity;
+					rectTransform.anchorMin = Vector2.zero;
+					rectTransform.anchorMax = Vector2.one;
+					rectTransform.anchoredPosition = Vector2.zero;
+					rectTransform.sizeDelta = Vector2.zero;
+				}
+			}
+			else
+			{
+				// Ensure existing Text component is properly configured
+				textComponent.enabled = false;
+				if (string.IsNullOrEmpty(textComponent.text))
+				{
+					textComponent.text = "{\"Properties\":[]}";
+				}
+				textComponent.hideFlags = HideFlags.HideInInspector | HideFlags.NotEditable;
+				// Reset existing RectTransform
+				RectTransform rectTransform = gameObject.GetComponent<RectTransform>();
+				if (rectTransform != null)
+				{
+					rectTransform.localPosition = Vector3.zero;
+					rectTransform.localScale = Vector3.one;
+					rectTransform.localRotation = Quaternion.identity;
+					rectTransform.anchorMin = Vector2.zero;
+					rectTransform.anchorMax = Vector2.one;
+					rectTransform.anchoredPosition = Vector2.zero;
+					rectTransform.sizeDelta = Vector2.zero;
+				}
+			}
 
-				// Hide and disable Canvas and CanvasRenderer
-				Canvas canvas = gameObject.GetComponent<Canvas>();
-				if (canvas != null)
+			// Ensure Canvas is disabled and hidden
+			Canvas canvas = gameObject.GetComponent<Canvas>();
+			if (canvas != null)
+			{
+				canvas.enabled = false;
+				canvas.hideFlags = HideFlags.HideInInspector | HideFlags.NotEditable;
+				// Prevent Canvas from being added unnecessarily
+				if (canvas.GetComponent<CanvasScaler>() == null && canvas.GetComponent<GraphicRaycaster>() == null)
 				{
-					canvas.enabled = false;
-					canvas.hideFlags = HideFlags.HideInInspector | HideFlags.NotEditable;
+					DestroyImmediate(canvas);
 				}
-				CanvasRenderer canvasRenderer = gameObject.GetComponent<CanvasRenderer>();
-				if (canvasRenderer != null)
-				{
-					canvasRenderer.hideFlags = HideFlags.HideInInspector | HideFlags.NotEditable;
-				}
+			}
+
+			// Ensure CanvasRenderer is hidden
+			CanvasRenderer canvasRenderer = gameObject.GetComponent<CanvasRenderer>();
+			if (canvasRenderer != null)
+			{
+				canvasRenderer.hideFlags = HideFlags.HideInInspector | HideFlags.NotEditable;
 			}
 		}
 	}

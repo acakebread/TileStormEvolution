@@ -195,36 +195,62 @@ public class DynamicPropertiesEditor : Editor
 				Debug.LogWarning($"DynamicProperties component or its GameObject is null on {go.name}.");
 				continue;
 			}
+			Undo.RegisterCompleteObjectUndo(component.gameObject, "Configure DynamicProperties Components");
 			var textComponent = component.gameObject.GetComponent<Text>();
 			if (textComponent == null)
 			{
-				Undo.RegisterCompleteObjectUndo(component.gameObject, "Add Text Component");
 				textComponent = component.gameObject.AddComponent<Text>();
 				if (textComponent == null)
 				{
 					Debug.LogWarning($"Failed to add Text component to {component.gameObject.name}.");
 					continue;
 				}
-				textComponent.enabled = false;
-				textComponent.text = "{\"Properties\":[]}";
-				textComponent.hideFlags = HideFlags.HideInInspector | HideFlags.NotEditable;
-				Canvas canvas = component.gameObject.GetComponent<Canvas>();
-				if (canvas != null)
-				{
-					canvas.enabled = false;
-					canvas.hideFlags = HideFlags.HideInInspector | HideFlags.NotEditable;
-				}
-				CanvasRenderer canvasRenderer = component.gameObject.GetComponent<CanvasRenderer>();
-				if (canvasRenderer != null)
-				{
-					canvasRenderer.hideFlags = HideFlags.HideInInspector | HideFlags.NotEditable;
-				}
-				component.InitializeTextComponent();
-				component.LoadProperties();
-				component.SaveProperties();
-				UnityEditor.EditorUtility.SetDirty(textComponent);
-				UnityEditor.EditorUtility.SetDirty(component);
 			}
+			// Configure Text component
+			textComponent.enabled = false;
+			if (string.IsNullOrEmpty(textComponent.text))
+			{
+				textComponent.text = "{\"Properties\":[]}";
+			}
+			textComponent.hideFlags = HideFlags.HideInInspector | HideFlags.NotEditable;
+
+			// Configure RectTransform to mimic Transform
+			RectTransform rectTransform = component.gameObject.GetComponent<RectTransform>();
+			if (rectTransform != null)
+			{
+				rectTransform.localPosition = Vector3.zero;
+				rectTransform.localScale = Vector3.one;
+				rectTransform.localRotation = Quaternion.identity;
+				rectTransform.anchorMin = Vector2.zero;
+				rectTransform.anchorMax = Vector2.one;
+				rectTransform.anchoredPosition = Vector2.zero;
+				rectTransform.sizeDelta = Vector2.zero;
+			}
+
+			// Remove Canvas if it has no necessary components
+			Canvas canvas = component.gameObject.GetComponent<Canvas>();
+			if (canvas != null)
+			{
+				canvas.enabled = false;
+				canvas.hideFlags = HideFlags.HideInInspector | HideFlags.NotEditable;
+				if (canvas.GetComponent<CanvasScaler>() == null && canvas.GetComponent<GraphicRaycaster>() == null)
+				{
+					DestroyImmediate(canvas);
+				}
+			}
+
+			// Configure CanvasRenderer if present
+			CanvasRenderer canvasRenderer = component.gameObject.GetComponent<CanvasRenderer>();
+			if (canvasRenderer != null)
+			{
+				canvasRenderer.hideFlags = HideFlags.HideInInspector | HideFlags.NotEditable;
+			}
+
+			component.InitializeTextComponent();
+			component.LoadProperties();
+			component.SaveProperties();
+			UnityEditor.EditorUtility.SetDirty(textComponent);
+			UnityEditor.EditorUtility.SetDirty(component);
 		}
 	}
 
