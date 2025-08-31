@@ -4,6 +4,7 @@ using System.Text;
 using UnityEngine;
 using UnityEngine.UI;
 using System.Linq;
+using System.Globalization;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -22,10 +23,36 @@ public class PortableDynamicProperties : MonoBehaviour
 	{
 		public string Name;
 		public PropertyType Type;
-		public float FloatValue;
-		public int IntValue;
-		public string StringValue;
-		public bool BoolValue;
+		public string Value; // Single string field to store the value
+
+		public bool TryGetFloat(out float value)
+		{
+			value = default;
+			return Type == PropertyType.Float && float.TryParse(Value, NumberStyles.Float, CultureInfo.InvariantCulture, out value);
+		}
+
+		public bool TryGetInt(out int value)
+		{
+			value = default;
+			return Type == PropertyType.Int && int.TryParse(Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out value);
+		}
+
+		public bool TryGetString(out string value)
+		{
+			value = default;
+			if (Type == PropertyType.String)
+			{
+				value = Value ?? "";
+				return true;
+			}
+			return false;
+		}
+
+		public bool TryGetBool(out bool value)
+		{
+			value = default;
+			return Type == PropertyType.Bool && bool.TryParse(Value, out value);
+		}
 	}
 
 	[System.Serializable]
@@ -34,7 +61,7 @@ public class PortableDynamicProperties : MonoBehaviour
 		public List<DynamicProperty> Properties = new List<DynamicProperty>();
 	}
 
-	// Runtime: Data management (formerly DynamicPropertiesDataManager)
+	// Runtime: Data management
 	private class DataManager
 	{
 		private readonly DynamicPropertiesData _data;
@@ -50,6 +77,25 @@ public class PortableDynamicProperties : MonoBehaviour
 				{
 					if (!string.IsNullOrEmpty(prop.Name) && !propertyMap.ContainsKey(prop.Name))
 					{
+						// Validate Value format
+						switch (prop.Type)
+						{
+							case PropertyType.Float:
+								if (!float.TryParse(prop.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out _))
+									prop.Value = "0";
+								break;
+							case PropertyType.Int:
+								if (!int.TryParse(prop.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out _))
+									prop.Value = "0";
+								break;
+							case PropertyType.String:
+								prop.Value = prop.Value ?? "";
+								break;
+							case PropertyType.Bool:
+								if (!bool.TryParse(prop.Value, out _))
+									prop.Value = "false";
+								break;
+						}
 						propertyMap.Add(prop.Name, prop);
 					}
 				}
@@ -59,21 +105,24 @@ public class PortableDynamicProperties : MonoBehaviour
 		public DynamicPropertiesData data => _data;
 		public IReadOnlyList<DynamicProperty> Properties => _data.Properties.AsReadOnly();
 
-		public IEnumerable<DynamicProperty> GetPropertiesByType(PropertyType type) =>
-			_data.Properties.FindAll(p => p.Type == type);
+		public IEnumerable<DynamicProperty> GetPropertiesByType(PropertyType type)
+		{
+			return _data.Properties.FindAll(p => p.Type == type);
+		}
 
 		public void AddFloat(string name, float value)
 		{
 			if (string.IsNullOrEmpty(name)) return;
+			string valueStr = value.ToString(CultureInfo.InvariantCulture);
 			if (propertyMap.ContainsKey(name))
 			{
 				var prop = propertyMap[name];
 				prop.Type = PropertyType.Float;
-				prop.FloatValue = value;
+				prop.Value = valueStr;
 			}
 			else
 			{
-				var prop = new DynamicProperty { Name = name, Type = PropertyType.Float, FloatValue = value };
+				var prop = new DynamicProperty { Name = name, Type = PropertyType.Float, Value = valueStr };
 				_data.Properties.Add(prop);
 				propertyMap.Add(name, prop);
 			}
@@ -82,15 +131,16 @@ public class PortableDynamicProperties : MonoBehaviour
 		public void AddInt(string name, int value)
 		{
 			if (string.IsNullOrEmpty(name)) return;
+			string valueStr = value.ToString(CultureInfo.InvariantCulture);
 			if (propertyMap.ContainsKey(name))
 			{
 				var prop = propertyMap[name];
 				prop.Type = PropertyType.Int;
-				prop.IntValue = value;
+				prop.Value = valueStr;
 			}
 			else
 			{
-				var prop = new DynamicProperty { Name = name, Type = PropertyType.Int, IntValue = value };
+				var prop = new DynamicProperty { Name = name, Type = PropertyType.Int, Value = valueStr };
 				_data.Properties.Add(prop);
 				propertyMap.Add(name, prop);
 			}
@@ -103,11 +153,11 @@ public class PortableDynamicProperties : MonoBehaviour
 			{
 				var prop = propertyMap[name];
 				prop.Type = PropertyType.String;
-				prop.StringValue = value ?? "";
+				prop.Value = value ?? "";
 			}
 			else
 			{
-				var prop = new DynamicProperty { Name = name, Type = PropertyType.String, StringValue = value ?? "" };
+				var prop = new DynamicProperty { Name = name, Type = PropertyType.String, Value = value ?? "" };
 				_data.Properties.Add(prop);
 				propertyMap.Add(name, prop);
 			}
@@ -116,15 +166,16 @@ public class PortableDynamicProperties : MonoBehaviour
 		public void AddBool(string name, bool value)
 		{
 			if (string.IsNullOrEmpty(name)) return;
+			string valueStr = value.ToString().ToLowerInvariant();
 			if (propertyMap.ContainsKey(name))
 			{
 				var prop = propertyMap[name];
 				prop.Type = PropertyType.Bool;
-				prop.BoolValue = value;
+				prop.Value = valueStr;
 			}
 			else
 			{
-				var prop = new DynamicProperty { Name = name, Type = PropertyType.Bool, BoolValue = value };
+				var prop = new DynamicProperty { Name = name, Type = PropertyType.Bool, Value = valueStr };
 				_data.Properties.Add(prop);
 				propertyMap.Add(name, prop);
 			}
@@ -138,59 +189,75 @@ public class PortableDynamicProperties : MonoBehaviour
 			return _data.Properties.Remove(prop);
 		}
 
-		public bool HasFloat(string name) => propertyMap.ContainsKey(name) && propertyMap[name].Type == PropertyType.Float;
+		public bool HasFloat(string name)
+		{
+			return propertyMap.ContainsKey(name) && propertyMap[name].Type == PropertyType.Float;
+		}
+
 		public bool TryGetFloat(string name, out float value)
 		{
 			value = default;
-			if (propertyMap.ContainsKey(name) && propertyMap[name].Type == PropertyType.Float)
-			{
-				value = propertyMap[name].FloatValue;
-				return true;
-			}
-			return false;
+			return propertyMap.ContainsKey(name) && propertyMap[name].TryGetFloat(out value);
 		}
-		public float GetFloat(string name) => HasFloat(name) ? propertyMap[name].FloatValue : throw new KeyNotFoundException($"Float property '{name}' not found.");
 
-		public bool HasInt(string name) => propertyMap.ContainsKey(name) && propertyMap[name].Type == PropertyType.Int;
+		public float GetFloat(string name)
+		{
+			return TryGetFloat(name, out float value) ? value : throw new KeyNotFoundException($"Float property '{name}' not found.");
+		}
+
+		public bool HasInt(string name)
+		{
+			return propertyMap.ContainsKey(name) && propertyMap[name].Type == PropertyType.Int;
+		}
+
 		public bool TryGetInt(string name, out int value)
 		{
 			value = default;
-			if (propertyMap.ContainsKey(name) && propertyMap[name].Type == PropertyType.Int)
-			{
-				value = propertyMap[name].IntValue;
-				return true;
-			}
-			return false;
+			return propertyMap.ContainsKey(name) && propertyMap[name].TryGetInt(out value);
 		}
-		public int GetInt(string name) => HasInt(name) ? propertyMap[name].IntValue : throw new KeyNotFoundException($"Int property '{name}' not found.");
 
-		public bool HasString(string name) => propertyMap.ContainsKey(name) && propertyMap[name].Type == PropertyType.String;
+		public int GetInt(string name)
+		{
+			return TryGetInt(name, out int value) ? value : throw new KeyNotFoundException($"Int property '{name}' not found.");
+		}
+
+		public bool HasString(string name)
+		{
+			return propertyMap.ContainsKey(name) && propertyMap[name].Type == PropertyType.String;
+		}
+
 		public bool TryGetString(string name, out string value)
 		{
 			value = default;
-			if (propertyMap.ContainsKey(name) && propertyMap[name].Type == PropertyType.String)
-			{
-				value = propertyMap[name].StringValue;
-				return true;
-			}
-			return false;
+			return propertyMap.ContainsKey(name) && propertyMap[name].TryGetString(out value);
 		}
-		public string GetString(string name) => HasString(name) ? propertyMap[name].StringValue : throw new KeyNotFoundException($"String property '{name}' not found.");
 
-		public bool HasBool(string name) => propertyMap.ContainsKey(name) && propertyMap[name].Type == PropertyType.Bool;
+		public string GetString(string name)
+		{
+			return TryGetString(name, out string value) ? value : throw new KeyNotFoundException($"String property '{name}' not found.");
+		}
+
+		public bool HasBool(string name)
+		{
+			return propertyMap.ContainsKey(name) && propertyMap[name].Type == PropertyType.Bool;
+		}
+
 		public bool TryGetBool(string name, out bool value)
 		{
 			value = default;
-			if (propertyMap.ContainsKey(name) && propertyMap[name].Type == PropertyType.Bool)
-			{
-				value = propertyMap[name].BoolValue;
-				return true;
-			}
-			return false;
+			return propertyMap.ContainsKey(name) && propertyMap[name].TryGetBool(out value);
 		}
-		public bool GetBool(string name) => HasBool(name) ? propertyMap[name].BoolValue : throw new KeyNotFoundException($"Bool property '{name}' not found.");
 
-		public string SaveToJson() => JsonUtility.ToJson(_data);
+		public bool GetBool(string name)
+		{
+			return TryGetBool(name, out bool value) ? value : throw new KeyNotFoundException($"Bool property '{name}' not found.");
+		}
+
+		public string SaveToJson()
+		{
+			string json = JsonUtility.ToJson(_data, true);
+			return json;
+		}
 	}
 
 	// Runtime: Component logic
@@ -207,79 +274,108 @@ public class PortableDynamicProperties : MonoBehaviour
 
 	private void OnValidate()
 	{
-		if (!Application.isPlaying)
+		// Avoid modifications in OnValidate to prevent dirtying
+		if (!Application.isPlaying && textComponent == null)
 		{
-			InitializeTextComponent();
-			LoadProperties();
+			textComponent = gameObject.GetComponent<Text>();
+			if (textComponent != null && string.IsNullOrEmpty(textComponent.text))
+			{
+#if UNITY_EDITOR
+				EditorApplication.delayCall += () =>
+				{
+					if (textComponent != null && string.IsNullOrEmpty(textComponent.text))
+					{
+						textComponent.text = "{\"Properties\":[]}";
+					}
+				};
+#endif
+			}
 		}
 	}
 
 	public void InitializeTextComponent()
 	{
+		bool needsDirty = false;
+
 		if (textComponent == null)
 		{
 			textComponent = gameObject.GetComponent<Text>();
 			if (textComponent == null)
 			{
+#if UNITY_EDITOR
+				Undo.RegisterCompleteObjectUndo(gameObject, "Add Text Component");
+#endif
 				textComponent = gameObject.AddComponent<Text>();
 				if (textComponent == null)
 				{
-					Debug.LogWarning($"Failed to add Text component to {gameObject.name}.");
 					return;
 				}
-				textComponent.enabled = false;
-				textComponent.text = "{\"Properties\":[]}";
-				textComponent.hideFlags = HideFlags.HideInInspector | HideFlags.NotEditable;
-				// Configure RectTransform to mimic Transform
-				RectTransform rectTransform = gameObject.GetComponent<RectTransform>();
-				if (rectTransform != null)
-				{
-					rectTransform.localPosition = Vector3.zero;
-					rectTransform.localScale = Vector3.one;
-					rectTransform.localRotation = Quaternion.identity;
-					rectTransform.anchorMin = Vector2.zero;
-					rectTransform.anchorMax = Vector2.one;
-					rectTransform.anchoredPosition = Vector2.zero;
-					rectTransform.sizeDelta = Vector2.zero;
-				}
+				needsDirty = true;
 			}
-			else
-			{
-				// Configure existing Text component
-				textComponent.enabled = false;
-				if (string.IsNullOrEmpty(textComponent.text))
-				{
-					textComponent.text = "{\"Properties\":[]}";
-				}
-				textComponent.hideFlags = HideFlags.HideInInspector | HideFlags.NotEditable;
-				// Configure existing RectTransform
-				RectTransform rectTransform = gameObject.GetComponent<RectTransform>();
-				if (rectTransform != null)
-				{
-					rectTransform.localPosition = Vector3.zero;
-					rectTransform.localScale = Vector3.one;
-					rectTransform.localRotation = Quaternion.identity;
-					rectTransform.anchorMin = Vector2.zero;
-					rectTransform.anchorMax = Vector2.one;
-					rectTransform.anchoredPosition = Vector2.zero;
-					rectTransform.sizeDelta = Vector2.zero;
-				}
-			}
+		}
 
-			// Configure Canvas if present
-			Canvas canvas = gameObject.GetComponent<Canvas>();
-			if (canvas != null)
+		// Only modify Text component properties if necessary
+		if (textComponent.enabled)
+		{
+			textComponent.enabled = false;
+			needsDirty = true;
+		}
+		if (string.IsNullOrEmpty(textComponent.text))
+		{
+			textComponent.text = "{\"Properties\":[]}";
+			needsDirty = true;
+		}
+		if (textComponent.hideFlags != (HideFlags.HideInInspector | HideFlags.NotEditable))
+		{
+			textComponent.hideFlags = HideFlags.HideInInspector | HideFlags.NotEditable;
+			needsDirty = true;
+		}
+
+		// Handle Canvas component
+		Canvas canvas = gameObject.GetComponent<Canvas>();
+		if (canvas != null)
+		{
+			if (canvas.enabled)
 			{
 				canvas.enabled = false;
-				canvas.hideFlags = HideFlags.HideInInspector | HideFlags.NotEditable;
+				needsDirty = true;
 			}
+			if (canvas.hideFlags != (HideFlags.HideInInspector | HideFlags.NotEditable))
+			{
+				canvas.hideFlags = HideFlags.HideInInspector | HideFlags.NotEditable;
+				needsDirty = true;
+			}
+			// Only remove Canvas if it has no necessary components
+			if (canvas.GetComponent<CanvasScaler>() == null && canvas.GetComponent<GraphicRaycaster>() == null)
+			{
+#if UNITY_EDITOR
+				Undo.RegisterCompleteObjectUndo(canvas, "Remove Canvas Component");
+#endif
+				DestroyImmediate(canvas);
+				needsDirty = true;
+			}
+		}
 
-			// Configure CanvasRenderer if present
-			CanvasRenderer canvasRenderer = gameObject.GetComponent<CanvasRenderer>();
-			if (canvasRenderer != null)
+		// Handle CanvasRenderer component
+		CanvasRenderer canvasRenderer = gameObject.GetComponent<CanvasRenderer>();
+		if (canvasRenderer != null)
+		{
+			if (canvasRenderer.hideFlags != (HideFlags.HideInInspector | HideFlags.NotEditable))
 			{
 				canvasRenderer.hideFlags = HideFlags.HideInInspector | HideFlags.NotEditable;
+				needsDirty = true;
 			}
+		}
+
+		if (needsDirty)
+		{
+#if UNITY_EDITOR
+			EditorUtility.SetDirty(this);
+			if (textComponent != null)
+			{
+				EditorUtility.SetDirty(textComponent);
+			}
+#endif
 		}
 	}
 
@@ -290,7 +386,6 @@ public class PortableDynamicProperties : MonoBehaviour
 			InitializeTextComponent();
 			if (textComponent == null)
 			{
-				Debug.LogWarning($"Text component could not be initialized for {gameObject.name}.");
 				dataManager = new DataManager("{\"Properties\":[]}");
 				return;
 			}
@@ -302,29 +397,29 @@ public class PortableDynamicProperties : MonoBehaviour
 	{
 		if (textComponent == null)
 		{
-			Debug.LogWarning($"Text component is missing in SaveProperties for {gameObject.name}. Reinitializing...");
 			InitializeTextComponent();
 			if (textComponent == null)
 			{
-				Debug.LogWarning($"Failed to reinitialize Text component for {gameObject.name}. Cannot save properties.");
 				return;
 			}
 		}
 		if (dataManager == null)
 		{
-			Debug.LogWarning($"DataManager is null in SaveProperties for {gameObject.name}. Reinitializing...");
 			LoadProperties();
 			if (dataManager == null)
 			{
-				Debug.LogWarning($"Failed to initialize DataManager for {gameObject.name}. Cannot save properties.");
 				return;
 			}
 		}
-		textComponent.text = dataManager.SaveToJson();
+		string newJson = dataManager.SaveToJson();
+		if (textComponent.text != newJson)
+		{
+			textComponent.text = newJson;
 #if UNITY_EDITOR
-		EditorUtility.SetDirty(textComponent);
-		EditorUtility.SetDirty(this);
+			EditorUtility.SetDirty(textComponent);
+			EditorUtility.SetDirty(this);
 #endif
+		}
 	}
 
 	public DynamicPropertiesData GetData()
@@ -340,7 +435,6 @@ public class PortableDynamicProperties : MonoBehaviour
 	{
 		if (newData == null)
 		{
-			Debug.LogWarning($"SetData received null data for {gameObject.name}. Initializing empty data.");
 			newData = new DynamicPropertiesData();
 		}
 		dataManager = new DataManager(JsonUtility.ToJson(newData));
@@ -349,166 +443,80 @@ public class PortableDynamicProperties : MonoBehaviour
 
 	// Delegate to DataManager
 	public IReadOnlyList<DynamicProperty> Properties => dataManager?.Properties ?? new List<DynamicProperty>().AsReadOnly();
-	public IEnumerable<DynamicProperty> GetPropertiesByType(PropertyType type) => dataManager?.GetPropertiesByType(type) ?? Enumerable.Empty<DynamicProperty>();
-	public void AddFloat(string name, float value) => dataManager?.AddFloat(name, value);
-	public void AddInt(string name, int value) => dataManager?.AddInt(name, value);
-	public void AddString(string name, string value) => dataManager?.AddString(name, value);
-	public void AddBool(string name, bool value) => dataManager?.AddBool(name, value);
-	public bool RemoveProperty(string name) => dataManager?.RemoveProperty(name) ?? false;
-	public bool HasFloat(string name) => dataManager?.HasFloat(name) ?? false;
-	public bool TryGetFloat(string name, out float value) => dataManager?.TryGetFloat(name, out value) ?? (value = default) == default;
-	public float GetFloat(string name) => dataManager?.GetFloat(name) ?? throw new KeyNotFoundException($"Float property '{name}' not found.");
-	public bool HasInt(string name) => dataManager?.HasInt(name) ?? false;
-	public bool TryGetInt(string name, out int value) => dataManager?.TryGetInt(name, out value) ?? (value = default) == default;
-	public int GetInt(string name) => dataManager?.GetInt(name) ?? throw new KeyNotFoundException($"Int property '{name}' not found.");
-	public bool HasString(string name) => dataManager?.HasString(name) ?? false;
-	public bool TryGetString(string name, out string value) => dataManager?.TryGetString(name, out value) ?? (value = default) == default;
-	public string GetString(string name) => dataManager?.GetString(name) ?? throw new KeyNotFoundException($"String property '{name}' not found.");
-	public bool HasBool(string name) => dataManager?.HasBool(name) ?? false;
-	public bool TryGetBool(string name, out bool value) => dataManager?.TryGetBool(name, out value) ?? (value = default) == default;
-	public bool GetBool(string name) => dataManager?.GetBool(name) ?? throw new KeyNotFoundException($"Bool property '{name}' not found.");
-
-#if UNITY_EDITOR
-	// Editor: MiniJSON parser
-	private static class MiniJSON
+	public IEnumerable<DynamicProperty> GetPropertiesByType(PropertyType type)
 	{
-		public static object Deserialize(string json)
-		{
-			if (string.IsNullOrEmpty(json)) return null;
-			index = 0;
-			return ParseValue(json, ref index);
-		}
-
-		private static int index;
-		private static object ParseValue(string json, ref int i)
-		{
-			SkipWhitespace(json, ref i);
-			if (i >= json.Length) return null;
-
-			char c = json[i];
-			if (c == '{') return ParseObject(json, ref i);
-			if (c == '[') return ParseArray(json, ref i);
-			if (c == '"') return ParseString(json, ref i);
-			if (c == '-' || char.IsDigit(c)) return ParseNumber(json, ref i);
-			if (i + 3 < json.Length && json.Substring(i, 4).ToLower() == "true") { i += 4; return true; }
-			if (i + 4 < json.Length && json.Substring(i, 5).ToLower() == "false") { i += 5; return false; }
-			if (i + 3 < json.Length && json.Substring(i, 4).ToLower() == "null") { i += 4; return null; }
-			return null;
-		}
-
-		private static Dictionary<string, object> ParseObject(string json, ref int i)
-		{
-			var dict = new Dictionary<string, object>();
-			i++;
-			while (i < json.Length)
-			{
-				SkipWhitespace(json, ref i);
-				if (i >= json.Length) return null;
-				if (json[i] == '}') { i++; return dict; }
-
-				string key = ParseString(json, ref i);
-				if (key == null) return null;
-
-				SkipWhitespace(json, ref i);
-				if (i >= json.Length || json[i] != ':') return null;
-				i++;
-
-				object value = ParseValue(json, ref i);
-				if (value == null && i < json.Length) return null;
-				dict[key] = value;
-
-				SkipWhitespace(json, ref i);
-				if (i >= json.Length) return null;
-				if (json[i] == '}') { i++; return dict; }
-				if (json[i] != ',') return null;
-				i++;
-			}
-			return null;
-		}
-
-		private static List<object> ParseArray(string json, ref int i)
-		{
-			var array = new List<object>();
-			i++;
-			while (i < json.Length)
-			{
-				SkipWhitespace(json, ref i);
-				if (i >= json.Length) return null;
-				if (json[i] == ']') { i++; return array; }
-
-				object value = ParseValue(json, ref i);
-				if (value == null && i < json.Length) return null;
-				array.Add(value);
-
-				SkipWhitespace(json, ref i);
-				if (i >= json.Length) return null;
-				if (json[i] == ']') { i++; return array; }
-				if (json[i] != ',') return null;
-				i++;
-			}
-			return null;
-		}
-
-		private static string ParseString(string json, ref int i)
-		{
-			var sb = new StringBuilder();
-			i++;
-			while (i < json.Length)
-			{
-				char c = json[i];
-				if (c == '"') { i++; return sb.ToString(); }
-				if (c == '\\')
-				{
-					i++;
-					if (i >= json.Length) return null;
-					char next = json[i];
-					if (next == '"' || next == '\\' || next == '/') sb.Append(next);
-					else if (next == 'n') sb.Append('\n');
-					else if (next == 't') sb.Append('\t');
-					else if (next == 'r') sb.Append('\r');
-					else return null;
-					i++;
-				}
-				else
-				{
-					sb.Append(c);
-					i++;
-				}
-			}
-			return null;
-		}
-
-		private static object ParseNumber(string json, ref int i)
-		{
-			var sb = new StringBuilder();
-			while (i < json.Length && (char.IsDigit(json[i]) || json[i] == '-' || json[i] == '.' || json[i] == 'e' || json[i] == 'E'))
-			{
-				sb.Append(json[i]);
-				i++;
-			}
-			string numStr = sb.ToString();
-			if (string.IsNullOrEmpty(numStr)) return null;
-			if (numStr.Contains(".") || numStr.Contains("e") || numStr.Contains("E"))
-			{
-				if (double.TryParse(numStr, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double result))
-					return result;
-				return null;
-			}
-			else
-			{
-				if (int.TryParse(numStr, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out int result))
-					return result;
-				return null;
-			}
-		}
-
-		private static void SkipWhitespace(string json, ref int i)
-		{
-			while (i < json.Length && char.IsWhiteSpace(json[i]))
-				i++;
-		}
+		return dataManager?.GetPropertiesByType(type) ?? Enumerable.Empty<DynamicProperty>();
+	}
+	public void AddFloat(string name, float value)
+	{
+		dataManager?.AddFloat(name, value);
+	}
+	public void AddInt(string name, int value)
+	{
+		dataManager?.AddInt(name, value);
+	}
+	public void AddString(string name, string value)
+	{
+		dataManager?.AddString(name, value);
+	}
+	public void AddBool(string name, bool value)
+	{
+		dataManager?.AddBool(name, value);
+	}
+	public bool RemoveProperty(string name)
+	{
+		return dataManager?.RemoveProperty(name) ?? false;
+	}
+	public bool HasFloat(string name)
+	{
+		return dataManager?.HasFloat(name) ?? false;
+	}
+	public bool TryGetFloat(string name, out float value)
+	{
+		return dataManager?.TryGetFloat(name, out value) ?? ((value = default) == default);
+	}
+	public float GetFloat(string name)
+	{
+		return dataManager?.GetFloat(name) ?? throw new KeyNotFoundException($"Float property '{name}' not found.");
+	}
+	public bool HasInt(string name)
+	{
+		return dataManager?.HasInt(name) ?? false;
+	}
+	public bool TryGetInt(string name, out int value)
+	{
+		return dataManager?.TryGetInt(name, out value) ?? ((value = default) == default);
+	}
+	public int GetInt(string name)
+	{
+		return dataManager?.GetInt(name) ?? throw new KeyNotFoundException($"Int property '{name}' not found.");
+	}
+	public bool HasString(string name)
+	{
+		return dataManager?.HasString(name) ?? false;
+	}
+	public bool TryGetString(string name, out string value)
+	{
+		return dataManager?.TryGetString(name, out value) ?? ((value = default) == default);
+	}
+	public string GetString(string name)
+	{
+		return dataManager?.GetString(name) ?? throw new KeyNotFoundException($"String property '{name}' not found.");
+	}
+	public bool HasBool(string name)
+	{
+		return dataManager?.HasBool(name) ?? false;
+	}
+	public bool TryGetBool(string name, out bool value)
+	{
+		return dataManager?.TryGetBool(name, out value) ?? ((value = default) == default);
+	}
+	public bool GetBool(string name)
+	{
+		return dataManager?.GetBool(name) ?? throw new KeyNotFoundException($"Bool property '{name}' not found.");
 	}
 
+#if UNITY_EDITOR
 	// Editor: JSON Input Dialog
 	private class JsonInputDialog : EditorWindow
 	{
@@ -517,6 +525,147 @@ public class PortableDynamicProperties : MonoBehaviour
 		private PortableDynamicProperties component;
 		private Text textComponent;
 		private SerializedObject textSerializedObject;
+		private Vector2 scrollPosition;
+
+		// MiniJSON parser, moved to JsonInputDialog as it's only used here
+		private static class MiniJSON
+		{
+			public static object Deserialize(string json)
+			{
+				if (string.IsNullOrEmpty(json)) return null;
+				index = 0;
+				return ParseValue(json, ref index);
+			}
+
+			private static int index;
+			private static object ParseValue(string json, ref int i)
+			{
+				SkipWhitespace(json, ref i);
+				if (i >= json.Length) return null;
+
+				char c = json[i];
+				if (c == '{') return ParseObject(json, ref i);
+				if (c == '[') return ParseArray(json, ref i);
+				if (c == '"') return ParseString(json, ref i);
+				if (c == '-' || char.IsDigit(c)) return ParseNumber(json, ref i);
+				if (i + 3 < json.Length && json.Substring(i, 4).ToLower() == "true") { i += 4; return true; }
+				if (i + 4 < json.Length && json.Substring(i, 5).ToLower() == "false") { i += 5; return false; }
+				if (i + 3 < json.Length && json.Substring(i, 4).ToLower() == "null") { i += 4; return null; }
+				return null;
+			}
+
+			private static Dictionary<string, object> ParseObject(string json, ref int i)
+			{
+				var dict = new Dictionary<string, object>();
+				i++;
+				while (i < json.Length)
+				{
+					SkipWhitespace(json, ref i);
+					if (i >= json.Length) return null;
+					if (json[i] == '}') { i++; return dict; }
+
+					string key = ParseString(json, ref i);
+					if (key == null) return null;
+
+					SkipWhitespace(json, ref i);
+					if (i >= json.Length || json[i] != ':') return null;
+					i++;
+
+					object value = ParseValue(json, ref i);
+					if (value == null && i < json.Length) return null;
+					dict[key] = value;
+
+					SkipWhitespace(json, ref i);
+					if (i >= json.Length) return null;
+					if (json[i] == '}') { i++; return dict; }
+					if (json[i] != ',') return null;
+					i++;
+				}
+				return null;
+			}
+
+			private static List<object> ParseArray(string json, ref int i)
+			{
+				var array = new List<object>();
+				i++;
+				while (i < json.Length)
+				{
+					SkipWhitespace(json, ref i);
+					if (i >= json.Length) return null;
+					if (json[i] == ']') { i++; return array; }
+
+					object value = ParseValue(json, ref i);
+					if (value == null && i < json.Length) return null;
+					array.Add(value);
+
+					SkipWhitespace(json, ref i);
+					if (i >= json.Length) return null;
+					if (json[i] == ']') { i++; return array; }
+					if (json[i] != ',') return null;
+					i++;
+				}
+				return null;
+			}
+
+			private static string ParseString(string json, ref int i)
+			{
+				var sb = new StringBuilder();
+				i++;
+				while (i < json.Length)
+				{
+					char c = json[i];
+					if (c == '"') { i++; return sb.ToString(); }
+					if (c == '\\')
+					{
+						i++;
+						if (i >= json.Length) return null;
+						char next = json[i];
+						if (next == '"' || next == '\\' || next == '/') sb.Append(next);
+						else if (next == 'n') sb.Append('\n');
+						else if (next == 't') sb.Append('\t');
+						else if (next == 'r') sb.Append('\r');
+						else return null;
+						i++;
+					}
+					else
+					{
+						sb.Append(c);
+						i++;
+					}
+				}
+				return null;
+			}
+
+			private static object ParseNumber(string json, ref int i)
+			{
+				var sb = new StringBuilder();
+				while (i < json.Length && (char.IsDigit(json[i]) || json[i] == '-' || json[i] == '.' || json[i] == 'e' || json[i] == 'E'))
+				{
+					sb.Append(json[i]);
+					i++;
+				}
+				string numStr = sb.ToString();
+				if (string.IsNullOrEmpty(numStr)) return null;
+				if (numStr.Contains(".") || numStr.Contains("e") || numStr.Contains("E"))
+				{
+					if (double.TryParse(numStr, NumberStyles.Float, CultureInfo.InvariantCulture, out double result))
+						return result;
+					return null;
+				}
+				else
+				{
+					if (int.TryParse(numStr, NumberStyles.Integer, CultureInfo.InvariantCulture, out int result))
+						return result;
+					return null;
+				}
+			}
+
+			private static void SkipWhitespace(string json, ref int i)
+			{
+				while (i < json.Length && char.IsWhiteSpace(json[i]))
+					i++;
+			}
+		}
 
 		public static void ShowDialog(PortableDynamicProperties component, Text textComponent, SerializedObject textSerializedObject)
 		{
@@ -524,7 +673,7 @@ public class PortableDynamicProperties : MonoBehaviour
 			window.component = component;
 			window.textComponent = textComponent;
 			window.textSerializedObject = textSerializedObject;
-			window.jsonInput = "";
+			window.jsonInput = textComponent.text;
 			window.jsonError = "";
 			window.Show();
 		}
@@ -532,9 +681,11 @@ public class PortableDynamicProperties : MonoBehaviour
 		private void OnGUI()
 		{
 			EditorGUILayout.LabelField("Inject JSON Config", EditorStyles.boldLabel);
-			EditorGUILayout.HelpBox("Paste JSON like: {\"myfloat\": 1.245, \"myint\": 6, \"mystring\": \"hello\", \"myflag\": \"false\"}", MessageType.Info);
+			EditorGUILayout.HelpBox("Paste JSON like: {\"myfloat\": 1.245, \"myint\": 6, \"mystring\": \"hello\", \"myflag\": true}", MessageType.Info);
 
-			jsonInput = EditorGUILayout.TextArea(jsonInput, GUILayout.Height(100), GUILayout.Width(position.width - 20));
+			scrollPosition = EditorGUILayout.BeginScrollView(scrollPosition, GUILayout.Height(100));
+			jsonInput = EditorGUILayout.TextArea(jsonInput, GUILayout.ExpandHeight(true));
+			EditorGUILayout.EndScrollView();
 
 			if (!string.IsNullOrEmpty(jsonError))
 			{
@@ -574,36 +725,36 @@ public class PortableDynamicProperties : MonoBehaviour
 								if (d % 1 == 0 && d >= int.MinValue && d <= int.MaxValue)
 								{
 									prop.Type = PropertyType.Int;
-									prop.IntValue = (int)d;
+									prop.Value = ((int)d).ToString(CultureInfo.InvariantCulture);
 								}
 								else
 								{
 									prop.Type = PropertyType.Float;
-									prop.FloatValue = (float)d;
+									prop.Value = ((float)d).ToString(CultureInfo.InvariantCulture);
 								}
 							}
 							else if (value is int i)
 							{
 								prop.Type = PropertyType.Int;
-								prop.IntValue = i;
+								prop.Value = i.ToString(CultureInfo.InvariantCulture);
 							}
 							else if (value is string s)
 							{
 								if (s.ToLower() == "true" || s.ToLower() == "false")
 								{
 									prop.Type = PropertyType.Bool;
-									prop.BoolValue = s.ToLower() == "true";
+									prop.Value = s.ToLower();
 								}
 								else
 								{
 									prop.Type = PropertyType.String;
-									prop.StringValue = s;
+									prop.Value = s;
 								}
 							}
 							else if (value is bool b)
 							{
 								prop.Type = PropertyType.Bool;
-								prop.BoolValue = b;
+								prop.Value = b.ToString().ToLowerInvariant();
 							}
 							else
 							{
@@ -615,6 +766,8 @@ public class PortableDynamicProperties : MonoBehaviour
 						if (string.IsNullOrEmpty(jsonError))
 						{
 							component.SetData(newData);
+							textSerializedObject.FindProperty("m_Text").stringValue = JsonUtility.ToJson(newData);
+							textSerializedObject.ApplyModifiedProperties();
 							EditorUtility.SetDirty(textComponent);
 							EditorUtility.SetDirty(component);
 							Close();
@@ -721,103 +874,93 @@ public class PortableDynamicProperties : MonoBehaviour
 		[InitializeOnLoadMethod]
 		private static void InitializeOnLoad()
 		{
+			if (EditorApplication.isPlaying || EditorApplication.isCompiling)
+			{
+				return;
+			}
+
 			EditorApplication.delayCall += () =>
 			{
-				if (!EditorApplication.isPlaying && !EditorApplication.isCompiling)
+				bool needsDirty = false;
+				foreach (var go in UnityEngine.SceneManagement.SceneManager.GetActiveScene().GetRootGameObjects())
 				{
-					foreach (var go in UnityEngine.SceneManagement.SceneManager.GetActiveScene().GetRootGameObjects())
-					{
-						EnsureTextComponentOnDynamicProperties(go);
-					}
+					needsDirty |= EnsureTextComponentOnDynamicProperties(go);
+				}
+				if (needsDirty)
+				{
+					EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
 				}
 			};
+
 			PrefabStage.prefabStageOpened += stage =>
 			{
 				if (!EditorApplication.isPlaying && !EditorApplication.isCompiling)
 				{
-					EnsureTextComponentOnDynamicProperties(stage.prefabContentsRoot);
-				}
-			};
-			EditorApplication.hierarchyChanged += () =>
-			{
-				if (!EditorApplication.isPlaying && !EditorApplication.isCompiling)
-				{
-					foreach (var go in UnityEngine.SceneManagement.SceneManager.GetActiveScene().GetRootGameObjects())
+					if (EnsureTextComponentOnDynamicProperties(stage.prefabContentsRoot))
 					{
-						EnsureTextComponentOnDynamicProperties(go);
+						EditorSceneManager.MarkSceneDirty(stage.scene);
 					}
 				}
 			};
 		}
 
-		private static void EnsureTextComponentOnDynamicProperties(GameObject go)
+		private static bool EnsureTextComponentOnDynamicProperties(GameObject go)
 		{
 			if (go == null)
 			{
-				Debug.LogWarning("GameObject is null in EnsureTextComponentOnDynamicProperties.");
-				return;
+				return false;
 			}
+			bool needsDirty = false;
 			var components = go.GetComponentsInChildren<PortableDynamicProperties>(true);
 			foreach (var component in components)
 			{
 				if (component == null || component.gameObject == null)
 				{
-					Debug.LogWarning($"PortableDynamicProperties component or its GameObject is null on {go.name}.");
 					continue;
 				}
-				Undo.RegisterCompleteObjectUndo(component.gameObject, "Configure PortableDynamicProperties Components");
+
+				bool componentChanged = false;
 				var textComponent = component.gameObject.GetComponent<Text>();
+
 				if (textComponent == null)
 				{
+					Undo.RegisterCompleteObjectUndo(component.gameObject, "Configure PortableDynamicProperties Components");
 					textComponent = component.gameObject.AddComponent<Text>();
 					if (textComponent == null)
 					{
-						Debug.LogWarning($"Failed to add Text component to {component.gameObject.name}.");
 						continue;
 					}
+					componentChanged = true;
 				}
-				// Configure Text component
-				textComponent.enabled = false;
+
+				// Only configure Text component if necessary
+				if (textComponent.enabled)
+				{
+					textComponent.enabled = false;
+					componentChanged = true;
+				}
 				if (string.IsNullOrEmpty(textComponent.text))
 				{
 					textComponent.text = "{\"Properties\":[]}";
+					componentChanged = true;
 				}
-				textComponent.hideFlags = HideFlags.HideInInspector | HideFlags.NotEditable;
-
-				// Configure RectTransform to mimic Transform
-				RectTransform rectTransform = component.gameObject.GetComponent<RectTransform>();
-				if (rectTransform != null)
+				if (textComponent.hideFlags != (HideFlags.HideInInspector | HideFlags.NotEditable))
 				{
-					rectTransform.localPosition = Vector3.zero;
-					rectTransform.localScale = Vector3.one;
-					rectTransform.localRotation = Quaternion.identity;
-					rectTransform.anchorMin = Vector2.zero;
-					rectTransform.anchorMax = Vector2.one;
-					rectTransform.anchoredPosition = Vector2.zero;
-					rectTransform.sizeDelta = Vector2.zero;
+					textComponent.hideFlags = HideFlags.HideInInspector | HideFlags.NotEditable;
+					componentChanged = true;
 				}
 
-				// Configure Canvas if present
-				Canvas canvas = component.gameObject.GetComponent<Canvas>();
-				if (canvas != null)
+				if (componentChanged)
 				{
-					canvas.enabled = false;
-					canvas.hideFlags = HideFlags.HideInInspector | HideFlags.NotEditable;
+					component.InitializeTextComponent();
+					component.LoadProperties();
+					component.SaveProperties();
+					EditorUtility.SetDirty(textComponent);
+					EditorUtility.SetDirty(component);
+					needsDirty = true;
 				}
-
-				// Configure CanvasRenderer if present
-				CanvasRenderer canvasRenderer = component.gameObject.GetComponent<CanvasRenderer>();
-				if (canvasRenderer != null)
-				{
-					canvasRenderer.hideFlags = HideFlags.HideInInspector | HideFlags.NotEditable;
-				}
-
-				component.InitializeTextComponent();
-				component.LoadProperties();
-				component.SaveProperties();
-				EditorUtility.SetDirty(textComponent);
-				EditorUtility.SetDirty(component);
 			}
+			return needsDirty;
 		}
 
 		public override void OnInspectorGUI()
@@ -829,11 +972,12 @@ public class PortableDynamicProperties : MonoBehaviour
 				return;
 			}
 
+			// Ensure Text component is initialized
 			component.InitializeTextComponent();
 			var textComponent = component.gameObject.GetComponent<Text>();
 			if (textComponent == null)
 			{
-				EditorGUILayout.HelpBox("Failed to initialize Text component. Please add it manually.", MessageType.Error);
+				EditorGUILayout.HelpBox("Text component is missing. It will be added automatically on next editor update.", MessageType.Warning);
 				return;
 			}
 
@@ -900,6 +1044,21 @@ public class PortableDynamicProperties : MonoBehaviour
 				{
 					Undo.RecordObject(textComponent, "Change Property Type");
 					prop.Type = newType;
+					switch (newType)
+					{
+						case PropertyType.Float:
+							prop.Value = "0";
+							break;
+						case PropertyType.Int:
+							prop.Value = "0";
+							break;
+						case PropertyType.String:
+							prop.Value = "";
+							break;
+						case PropertyType.Bool:
+							prop.Value = "false";
+							break;
+					}
 					propertiesChanged = true;
 				}
 
@@ -907,41 +1066,45 @@ public class PortableDynamicProperties : MonoBehaviour
 				{
 					case PropertyType.Float:
 						EditorGUI.BeginChangeCheck();
-						float newFloatValue = EditorGUILayout.FloatField(prop.FloatValue, GUILayout.Width(100f));
+						float floatValue = prop.TryGetFloat(out float f) ? f : 0f;
+						float newFloatValue = EditorGUILayout.FloatField(floatValue, GUILayout.Width(100f));
 						if (EditorGUI.EndChangeCheck())
 						{
 							Undo.RecordObject(textComponent, "Change Float Value");
-							prop.FloatValue = newFloatValue;
+							prop.Value = newFloatValue.ToString(CultureInfo.InvariantCulture);
 							propertiesChanged = true;
 						}
 						break;
 					case PropertyType.Int:
 						EditorGUI.BeginChangeCheck();
-						int newIntValue = EditorGUILayout.IntField(prop.IntValue, GUILayout.Width(100f));
+						int intValue = prop.TryGetInt(out int i2) ? i2 : 0;
+						int newIntValue = EditorGUILayout.IntField(intValue, GUILayout.Width(100f));
 						if (EditorGUI.EndChangeCheck())
 						{
 							Undo.RecordObject(textComponent, "Change Int Value");
-							prop.IntValue = newIntValue;
+							prop.Value = newIntValue.ToString(CultureInfo.InvariantCulture);
 							propertiesChanged = true;
 						}
 						break;
 					case PropertyType.String:
 						EditorGUI.BeginChangeCheck();
-						string newStringValue = EditorGUILayout.TextField(prop.StringValue, GUILayout.Width(100f));
+						string stringValue = prop.TryGetString(out string s) ? s : "";
+						string newStringValue = EditorGUILayout.TextField(stringValue, GUILayout.Width(100f));
 						if (EditorGUI.EndChangeCheck())
 						{
 							Undo.RecordObject(textComponent, "Change String Value");
-							prop.StringValue = newStringValue;
+							prop.Value = newStringValue;
 							propertiesChanged = true;
 						}
 						break;
 					case PropertyType.Bool:
 						EditorGUI.BeginChangeCheck();
-						bool newBoolValue = EditorGUILayout.Toggle(prop.BoolValue, GUILayout.Width(100f));
+						bool boolValue = prop.TryGetBool(out bool b) ? b : false;
+						bool newBoolValue = EditorGUILayout.Toggle(boolValue, GUILayout.Width(100f));
 						if (EditorGUI.EndChangeCheck())
 						{
 							Undo.RecordObject(textComponent, "Change Bool Value");
-							prop.BoolValue = newBoolValue;
+							prop.Value = newBoolValue.ToString().ToLowerInvariant();
 							propertiesChanged = true;
 						}
 						break;
@@ -981,10 +1144,7 @@ public class PortableDynamicProperties : MonoBehaviour
 				{
 					Name = newName,
 					Type = PropertyType.Float,
-					FloatValue = 0f,
-					IntValue = 0,
-					StringValue = "",
-					BoolValue = false
+					Value = "0"
 				});
 				propertiesChanged = true;
 			}

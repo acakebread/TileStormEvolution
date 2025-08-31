@@ -1,6 +1,10 @@
-using UnityEditor;
 using UnityEngine;
+using UnityEditor;
 using UnityEngine.UI;
+using System;
+using System.Collections.Generic;
+using System.Text;
+using System.Globalization;
 
 public class JsonInputDialog : EditorWindow
 {
@@ -9,47 +13,186 @@ public class JsonInputDialog : EditorWindow
 	private DynamicProperties component;
 	private Text textComponent;
 	private SerializedObject textSerializedObject;
+	private Vector2 scrollPosition;
+
+	private static class MiniJSON
+	{
+		public static object Deserialize(string json)
+		{
+			if (string.IsNullOrEmpty(json)) return null;
+			index = 0;
+			return ParseValue(json, ref index);
+		}
+
+		private static int index;
+		private static object ParseValue(string json, ref int i)
+		{
+			SkipWhitespace(json, ref i);
+			if (i >= json.Length) return null;
+
+			char c = json[i];
+			if (c == '{') return ParseObject(json, ref i);
+			if (c == '[') return ParseArray(json, ref i);
+			if (c == '"') return ParseString(json, ref i);
+			if (c == '-' || char.IsDigit(c)) return ParseNumber(json, ref i);
+			if (i + 3 < json.Length && json.Substring(i, 4).ToLower() == "true") { i += 4; return true; }
+			if (i + 4 < json.Length && json.Substring(i, 5).ToLower() == "false") { i += 5; return false; }
+			if (i + 3 < json.Length && json.Substring(i, 4).ToLower() == "null") { i += 4; return null; }
+			return null;
+		}
+
+		private static Dictionary<string, object> ParseObject(string json, ref int i)
+		{
+			var dict = new Dictionary<string, object>();
+			i++;
+			while (i < json.Length)
+			{
+				SkipWhitespace(json, ref i);
+				if (i >= json.Length) return null;
+				if (json[i] == '}') { i++; return dict; }
+
+				string key = ParseString(json, ref i);
+				if (key == null) return null;
+				SkipWhitespace(json, ref i);
+				if (i >= json.Length || json[i] != ':') return null;
+				i++;
+
+				object value = ParseValue(json, ref i);
+				if (value == null && i < json.Length) return null;
+				dict[key] = value;
+
+				SkipWhitespace(json, ref i);
+				if (i >= json.Length) return null;
+				if (json[i] == '}') { i++; return dict; }
+				if (json[i] != ',') return null;
+				i++;
+			}
+			return null;
+		}
+
+		private static List<object> ParseArray(string json, ref int i)
+		{
+			var array = new List<object>();
+			i++;
+			while (i < json.Length)
+			{
+				SkipWhitespace(json, ref i);
+				if (i >= json.Length) return null;
+				if (json[i] == ']') { i++; return array; }
+
+				object value = ParseValue(json, ref i);
+				if (value == null && i < json.Length) return null;
+				array.Add(value);
+
+				SkipWhitespace(json, ref i);
+				if (i >= json.Length) return null;
+				if (json[i] == ']') { i++; return array; }
+				if (json[i] != ',') return null;
+				i++;
+			}
+			return null;
+		}
+
+		private static string ParseString(string json, ref int i)
+		{
+			var sb = new StringBuilder();
+			i++;
+			while (i < json.Length)
+			{
+				char c = json[i];
+				if (c == '"') { i++; return sb.ToString(); }
+				if (c == '\\')
+				{
+					i++;
+					if (i >= json.Length) return null;
+					char next = json[i];
+					if (next == '"' || next == '\\' || next == '/') sb.Append(next);
+					else if (next == 'n') sb.Append('\n');
+					else if (next == 't') sb.Append('\t');
+					else if (next == 'r') sb.Append('\r');
+					else return null;
+					i++;
+				}
+				else
+				{
+					sb.Append(c);
+					i++;
+				}
+			}
+			return null;
+		}
+
+		private static object ParseNumber(string json, ref int i)
+		{
+			var sb = new StringBuilder();
+			while (i < json.Length && (char.IsDigit(json[i]) || json[i] == '-' || json[i] == '.' || json[i] == 'e' || json[i] == 'E'))
+			{
+				sb.Append(json[i]);
+				i++;
+			}
+			string numStr = sb.ToString();
+			if (string.IsNullOrEmpty(numStr)) return null;
+			if (numStr.Contains(".") || numStr.Contains("e") || numStr.Contains("E"))
+			{
+				if (double.TryParse(numStr, NumberStyles.Float, CultureInfo.InvariantCulture, out double result))
+					return result;
+				return null;
+			}
+			else
+			{
+				if (int.TryParse(numStr, NumberStyles.Integer, CultureInfo.InvariantCulture, out int result))
+					return result;
+				return null;
+			}
+		}
+
+		private static void SkipWhitespace(string json, ref int i)
+		{
+			while (i < json.Length && char.IsWhiteSpace(json[i]))
+				i++;
+		}
+	}
 
 	public static void ShowDialog(DynamicProperties component, Text textComponent, SerializedObject textSerializedObject)
 	{
-		var window = GetWindow<JsonInputDialog>("Inject JSON Config");
+		var window = GetWindow<JsonInputDialog>("Inject JSON");
 		window.component = component;
 		window.textComponent = textComponent;
 		window.textSerializedObject = textSerializedObject;
-		window.jsonInput = "";
+		window.jsonInput = textComponent.text;
 		window.jsonError = "";
 		window.Show();
 	}
 
 	private void OnGUI()
 	{
-		EditorGUILayout.LabelField("Inject JSON Config", EditorStyles.boldLabel);
-		EditorGUILayout.HelpBox("Paste JSON like: {\"myfloat\": 1.245, \"myint\": 6, \"mystring\": \"hello\", \"myflag\": \"false\"}", MessageType.Info);
+		GUILayout.Label("Paste JSON below:", EditorStyles.boldLabel);
+		EditorGUILayout.HelpBox("Paste JSON like: {\"myfloat\": 1.245, \"myint\": 6, \"mystring\": \"hello\", \"myflag\": true}", MessageType.Info);
 
-		jsonInput = EditorGUILayout.TextArea(jsonInput, GUILayout.Height(100), GUILayout.Width(position.width - 20));
+		scrollPosition = EditorGUILayout.BeginScrollView(scrollPosition, GUILayout.Height(100));
+		jsonInput = EditorGUILayout.TextArea(jsonInput, GUILayout.ExpandHeight(true));
+		EditorGUILayout.EndScrollView();
 
 		if (!string.IsNullOrEmpty(jsonError))
 		{
 			EditorGUILayout.HelpBox(jsonError, MessageType.Error);
 		}
 
+		GUILayout.Space(10);
+
 		EditorGUILayout.BeginHorizontal();
-		if (GUILayout.Button("Inject", GUILayout.Width(100)))
+		if (GUILayout.Button("Validate and Apply"))
 		{
-			Undo.RecordObject(textComponent, "Inject JSON Config");
+			Undo.RecordObject(textComponent, "Inject JSON Data");
 			jsonError = "";
 			try
 			{
-				var jsonDict = DynamicPropertiesEditor.MiniJSON.Deserialize(jsonInput) as System.Collections.Generic.Dictionary<string, object>;
-				if (jsonDict == null)
+				var parsed = MiniJSON.Deserialize(jsonInput);
+				if (parsed is Dictionary<string, object> dict)
 				{
-					jsonError = "Invalid JSON: Must be a valid JSON object (e.g., {\"key\": value}). Check for syntax errors.";
-				}
-				else
-				{
-					var newData = new DynamicPropertiesData();
-					var existingNames = new System.Collections.Generic.HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
-					foreach (var kvp in jsonDict)
+					DynamicPropertiesData newData = new DynamicPropertiesData();
+					var existingNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+					foreach (var kvp in dict)
 					{
 						string name = kvp.Key;
 						if (string.IsNullOrEmpty(name) || existingNames.Contains(name))
@@ -59,66 +202,82 @@ public class JsonInputDialog : EditorWindow
 						}
 						existingNames.Add(name);
 
-						var value = kvp.Value;
-						DynamicProperty prop = new DynamicProperty { Name = name };
+						object value = kvp.Value;
+						PropertyType type;
+						string stringValue;
+
 						if (value is double d)
 						{
 							if (d % 1 == 0 && d >= int.MinValue && d <= int.MaxValue)
 							{
-								prop.Type = PropertyType.Int;
-								prop.IntValue = (int)d;
+								type = PropertyType.Int;
+								stringValue = ((int)d).ToString(CultureInfo.InvariantCulture);
 							}
 							else
 							{
-								prop.Type = PropertyType.Float;
-								prop.FloatValue = (float)d;
+								type = PropertyType.Float;
+								stringValue = ((float)d).ToString(CultureInfo.InvariantCulture);
 							}
 						}
 						else if (value is int i)
 						{
-							prop.Type = PropertyType.Int;
-							prop.IntValue = i;
-						}
-						else if (value is string s)
-						{
-							if (s.ToLower() == "true" || s.ToLower() == "false")
-							{
-								prop.Type = PropertyType.Bool;
-								prop.BoolValue = s.ToLower() == "true";
-							}
-							else
-							{
-								prop.Type = PropertyType.String;
-								prop.StringValue = s;
-							}
+							type = PropertyType.Int;
+							stringValue = i.ToString(CultureInfo.InvariantCulture);
 						}
 						else if (value is bool b)
 						{
-							prop.Type = PropertyType.Bool;
-							prop.BoolValue = b;
+							type = PropertyType.Bool;
+							stringValue = b.ToString().ToLowerInvariant();
+						}
+						else if (value is string str)
+						{
+							if (str.ToLower() == "true" || str.ToLower() == "false")
+							{
+								type = PropertyType.Bool;
+								stringValue = str.ToLower();
+							}
+							else
+							{
+								type = PropertyType.String;
+								stringValue = str;
+							}
 						}
 						else
 						{
-							jsonError = $"Unsupported value type for property '{name}': {value?.GetType().Name ?? "null"}.";
+							jsonError = $"Unsupported JSON value type for key: {name}";
 							break;
 						}
-						newData.Properties.Add(prop);
+
+						newData.Properties.Add(new DynamicProperty
+						{
+							Name = name,
+							Type = type,
+							Value = stringValue
+						});
 					}
+
 					if (string.IsNullOrEmpty(jsonError))
 					{
 						component.SetData(newData);
+						textSerializedObject.FindProperty("m_Text").stringValue = JsonUtility.ToJson(newData);
+						textSerializedObject.ApplyModifiedProperties();
 						EditorUtility.SetDirty(textComponent);
 						EditorUtility.SetDirty(component);
 						Close();
 					}
 				}
+				else
+				{
+					jsonError = "Invalid JSON format: Expected an object (e.g., {\"key\": value}).";
+				}
 			}
-			catch (System.Exception e)
+			catch (Exception ex)
 			{
-				jsonError = $"Failed to parse JSON: {e.Message}. Ensure the JSON is well-formed and contains valid key-value pairs.";
+				jsonError = $"Failed to parse JSON: {ex.Message}";
 			}
 		}
-		if (GUILayout.Button("Cancel", GUILayout.Width(100)))
+
+		if (GUILayout.Button("Cancel"))
 		{
 			Close();
 		}
