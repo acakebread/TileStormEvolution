@@ -1,9 +1,8 @@
+using System;
 using System.Text;
 using System.Linq;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
-using System;
-using UnityEngine;
 
 public static class CodeFormatter
 {
