@@ -25,32 +25,32 @@ public class DynamicPropertiesDataManager
 
 	public IReadOnlyList<DynamicProperty> Properties => data.Properties.AsReadOnly();
 
-	public IEnumerable<DynamicProperty> GetPropertiesByType(PropertyType type)
+	public IEnumerable<DynamicProperty> GetPropertiesByType(string type)
 	{
 		return data.Properties.Where(p => p.Type == type);
 	}
 
 	public void AddFloat(string name, float value)
 	{
-		AddProperty(name, PropertyType.Float, value.ToString(System.Globalization.CultureInfo.InvariantCulture));
+		AddProperty(name, "float", value.ToString(System.Globalization.CultureInfo.InvariantCulture));
 	}
 
 	public void AddInt(string name, int value)
 	{
-		AddProperty(name, PropertyType.Int, value.ToString(System.Globalization.CultureInfo.InvariantCulture));
+		AddProperty(name, "int", value.ToString(System.Globalization.CultureInfo.InvariantCulture));
 	}
 
 	public void AddString(string name, string value)
 	{
-		AddProperty(name, PropertyType.String, value);
+		AddProperty(name, "string", value);
 	}
 
 	public void AddBool(string name, bool value)
 	{
-		AddProperty(name, PropertyType.Bool, value.ToString().ToLowerInvariant());
+		AddProperty(name, "bool", value.ToString().ToLowerInvariant());
 	}
 
-	private void AddProperty(string name, PropertyType type, string value)
+	private void AddProperty(string name, string type, string value)
 	{
 		if (string.IsNullOrEmpty(name))
 		{
@@ -76,17 +76,17 @@ public class DynamicPropertiesDataManager
 	public bool HasFloat(string name)
 	{
 		var prop = data.Properties.FirstOrDefault(p => string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase));
-		return prop != null && prop.Type == PropertyType.Float;
+		return prop != null && prop.Type == "float";
 	}
 
 	public bool TryGetFloat(string name, out float value)
 	{
-		value = default;
 		var prop = data.Properties.FirstOrDefault(p => string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase));
-		if (prop != null && prop.Type == PropertyType.Float && float.TryParse(prop.Value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out value))
+		if (prop != null && prop.Type == "float" && float.TryParse(prop.Value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out value))
 		{
 			return true;
 		}
+		value = default;
 		return false;
 	}
 
@@ -102,17 +102,17 @@ public class DynamicPropertiesDataManager
 	public bool HasInt(string name)
 	{
 		var prop = data.Properties.FirstOrDefault(p => string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase));
-		return prop != null && prop.Type == PropertyType.Int;
+		return prop != null && prop.Type == "int";
 	}
 
 	public bool TryGetInt(string name, out int value)
 	{
-		value = default;
 		var prop = data.Properties.FirstOrDefault(p => string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase));
-		if (prop != null && prop.Type == PropertyType.Int && int.TryParse(prop.Value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out value))
+		if (prop != null && prop.Type == "int" && int.TryParse(prop.Value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out value))
 		{
 			return true;
 		}
+		value = default;
 		return false;
 	}
 
@@ -128,18 +128,18 @@ public class DynamicPropertiesDataManager
 	public bool HasString(string name)
 	{
 		var prop = data.Properties.FirstOrDefault(p => string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase));
-		return prop != null && prop.Type == PropertyType.String;
+		return prop != null && prop.Type == "string";
 	}
 
 	public bool TryGetString(string name, out string value)
 	{
-		value = default;
 		var prop = data.Properties.FirstOrDefault(p => string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase));
-		if (prop != null && prop.Type == PropertyType.String)
+		if (prop != null && prop.Type == "string")
 		{
 			value = prop.Value;
 			return true;
 		}
+		value = default;
 		return false;
 	}
 
@@ -155,17 +155,17 @@ public class DynamicPropertiesDataManager
 	public bool HasBool(string name)
 	{
 		var prop = data.Properties.FirstOrDefault(p => string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase));
-		return prop != null && prop.Type == PropertyType.Bool;
+		return prop != null && prop.Type == "bool";
 	}
 
 	public bool TryGetBool(string name, out bool value)
 	{
-		value = default;
 		var prop = data.Properties.FirstOrDefault(p => string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase));
-		if (prop != null && prop.Type == PropertyType.Bool && bool.TryParse(prop.Value, out value))
+		if (prop != null && prop.Type == "bool" && bool.TryParse(prop.Value, out value))
 		{
 			return true;
 		}
+		value = default;
 		return false;
 	}
 
@@ -195,12 +195,13 @@ public class DynamicPropertiesData
 public class DynamicProperty
 {
 	public string Name;
-	public PropertyType Type;
+	public string Type; // Use string labels: "float", "int", "string", "bool"
 	public string Value;
 
 	public bool TryGetFloat(out float value)
 	{
-		return float.TryParse(Value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out value);
+		value = default;
+		return Type == "float" && float.TryParse(Value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out value);
 	}
 
 	public float FloatValue
@@ -217,7 +218,8 @@ public class DynamicProperty
 
 	public bool TryGetInt(out int value)
 	{
-		return int.TryParse(Value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out value);
+		value = default;
+		return Type == "int" && int.TryParse(Value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out value);
 	}
 
 	public int IntValue
@@ -235,7 +237,7 @@ public class DynamicProperty
 	public bool TryGetString(out string value)
 	{
 		value = Value;
-		return Type == PropertyType.String;
+		return Type == "string";
 	}
 
 	public string StringValue
@@ -252,7 +254,8 @@ public class DynamicProperty
 
 	public bool TryGetBool(out bool value)
 	{
-		return bool.TryParse(Value, out value);
+		value = default;
+		return Type == "bool" && bool.TryParse(Value, out value);
 	}
 
 	public bool BoolValue
@@ -266,12 +269,4 @@ public class DynamicProperty
 			throw new InvalidOperationException($"Property '{Name}' is not a bool or cannot be parsed.");
 		}
 	}
-}
-
-public enum PropertyType
-{
-	Float,
-	Int,
-	String,
-	Bool
 }

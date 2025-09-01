@@ -16,42 +16,82 @@ public class PortableDynamicProperties : MonoBehaviour
 {
 	// Runtime: Property data structure
 	[System.Serializable]
-	public enum PropertyType { Float, Int, String, Bool }
-
-	[System.Serializable]
 	public class DynamicProperty
 	{
 		public string Name;
-		public PropertyType Type;
+		public string Type; // Use string labels: "float", "int", "string", "bool"
 		public string Value; // Single string field to store the value
 
 		public bool TryGetFloat(out float value)
 		{
 			value = default;
-			return Type == PropertyType.Float && float.TryParse(Value, NumberStyles.Float, CultureInfo.InvariantCulture, out value);
+			return Type == "float" && float.TryParse(Value, NumberStyles.Float, CultureInfo.InvariantCulture, out value);
+		}
+
+		public float FloatValue
+		{
+			get
+			{
+				if (TryGetFloat(out float value))
+				{
+					return value;
+				}
+				throw new InvalidOperationException($"Property '{Name}' is not a float or cannot be parsed.");
+			}
 		}
 
 		public bool TryGetInt(out int value)
 		{
 			value = default;
-			return Type == PropertyType.Int && int.TryParse(Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out value);
+			return Type == "int" && int.TryParse(Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out value);
+		}
+
+		public int IntValue
+		{
+			get
+			{
+				if (TryGetInt(out int value))
+				{
+					return value;
+				}
+				throw new InvalidOperationException($"Property '{Name}' is not an int or cannot be parsed.");
+			}
 		}
 
 		public bool TryGetString(out string value)
 		{
-			value = default;
-			if (Type == PropertyType.String)
+			value = Value ?? "";
+			return Type == "string";
+		}
+
+		public string StringValue
+		{
+			get
 			{
-				value = Value ?? "";
-				return true;
+				if (TryGetString(out string value))
+				{
+					return value;
+				}
+				throw new InvalidOperationException($"Property '{Name}' is not a string.");
 			}
-			return false;
 		}
 
 		public bool TryGetBool(out bool value)
 		{
 			value = default;
-			return Type == PropertyType.Bool && bool.TryParse(Value, out value);
+			return Type == "bool" && bool.TryParse(Value, out value);
+		}
+
+		public bool BoolValue
+		{
+			get
+			{
+				if (TryGetBool(out bool value))
+				{
+					return value;
+				}
+				throw new InvalidOperationException($"Property '{Name}' is not a bool or cannot be parsed.");
+			}
 		}
 	}
 
@@ -77,23 +117,40 @@ public class PortableDynamicProperties : MonoBehaviour
 				{
 					if (!string.IsNullOrEmpty(prop.Name) && !propertyMap.ContainsKey(prop.Name))
 					{
+						// Handle legacy enum indices for backward compatibility
+						if (int.TryParse(prop.Type, out int typeIndex))
+						{
+							prop.Type = typeIndex switch
+							{
+								0 => "float",
+								1 => "int",
+								2 => "string",
+								3 => "bool",
+								_ => "float" // Default to float for invalid indices
+							};
+						}
+
 						// Validate Value format
 						switch (prop.Type)
 						{
-							case PropertyType.Float:
+							case "float":
 								if (!float.TryParse(prop.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out _))
 									prop.Value = "0";
 								break;
-							case PropertyType.Int:
+							case "int":
 								if (!int.TryParse(prop.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out _))
 									prop.Value = "0";
 								break;
-							case PropertyType.String:
+							case "string":
 								prop.Value = prop.Value ?? "";
 								break;
-							case PropertyType.Bool:
+							case "bool":
 								if (!bool.TryParse(prop.Value, out _))
 									prop.Value = "false";
+								break;
+							default:
+								prop.Type = "float";
+								prop.Value = "0";
 								break;
 						}
 						propertyMap.Add(prop.Name, prop);
@@ -105,7 +162,7 @@ public class PortableDynamicProperties : MonoBehaviour
 		public DynamicPropertiesData data => _data;
 		public IReadOnlyList<DynamicProperty> Properties => _data.Properties.AsReadOnly();
 
-		public IEnumerable<DynamicProperty> GetPropertiesByType(PropertyType type)
+		public IEnumerable<DynamicProperty> GetPropertiesByType(string type)
 		{
 			return _data.Properties.FindAll(p => p.Type == type);
 		}
@@ -117,12 +174,12 @@ public class PortableDynamicProperties : MonoBehaviour
 			if (propertyMap.ContainsKey(name))
 			{
 				var prop = propertyMap[name];
-				prop.Type = PropertyType.Float;
+				prop.Type = "float";
 				prop.Value = valueStr;
 			}
 			else
 			{
-				var prop = new DynamicProperty { Name = name, Type = PropertyType.Float, Value = valueStr };
+				var prop = new DynamicProperty { Name = name, Type = "float", Value = valueStr };
 				_data.Properties.Add(prop);
 				propertyMap.Add(name, prop);
 			}
@@ -135,12 +192,12 @@ public class PortableDynamicProperties : MonoBehaviour
 			if (propertyMap.ContainsKey(name))
 			{
 				var prop = propertyMap[name];
-				prop.Type = PropertyType.Int;
+				prop.Type = "int";
 				prop.Value = valueStr;
 			}
 			else
 			{
-				var prop = new DynamicProperty { Name = name, Type = PropertyType.Int, Value = valueStr };
+				var prop = new DynamicProperty { Name = name, Type = "int", Value = valueStr };
 				_data.Properties.Add(prop);
 				propertyMap.Add(name, prop);
 			}
@@ -152,12 +209,12 @@ public class PortableDynamicProperties : MonoBehaviour
 			if (propertyMap.ContainsKey(name))
 			{
 				var prop = propertyMap[name];
-				prop.Type = PropertyType.String;
+				prop.Type = "string";
 				prop.Value = value ?? "";
 			}
 			else
 			{
-				var prop = new DynamicProperty { Name = name, Type = PropertyType.String, Value = value ?? "" };
+				var prop = new DynamicProperty { Name = name, Type = "string", Value = value ?? "" };
 				_data.Properties.Add(prop);
 				propertyMap.Add(name, prop);
 			}
@@ -170,12 +227,12 @@ public class PortableDynamicProperties : MonoBehaviour
 			if (propertyMap.ContainsKey(name))
 			{
 				var prop = propertyMap[name];
-				prop.Type = PropertyType.Bool;
+				prop.Type = "bool";
 				prop.Value = valueStr;
 			}
 			else
 			{
-				var prop = new DynamicProperty { Name = name, Type = PropertyType.Bool, Value = valueStr };
+				var prop = new DynamicProperty { Name = name, Type = "bool", Value = valueStr };
 				_data.Properties.Add(prop);
 				propertyMap.Add(name, prop);
 			}
@@ -191,7 +248,7 @@ public class PortableDynamicProperties : MonoBehaviour
 
 		public bool HasFloat(string name)
 		{
-			return propertyMap.ContainsKey(name) && propertyMap[name].Type == PropertyType.Float;
+			return propertyMap.ContainsKey(name) && propertyMap[name].Type == "float";
 		}
 
 		public bool TryGetFloat(string name, out float value)
@@ -207,7 +264,7 @@ public class PortableDynamicProperties : MonoBehaviour
 
 		public bool HasInt(string name)
 		{
-			return propertyMap.ContainsKey(name) && propertyMap[name].Type == PropertyType.Int;
+			return propertyMap.ContainsKey(name) && propertyMap[name].Type == "int";
 		}
 
 		public bool TryGetInt(string name, out int value)
@@ -223,7 +280,7 @@ public class PortableDynamicProperties : MonoBehaviour
 
 		public bool HasString(string name)
 		{
-			return propertyMap.ContainsKey(name) && propertyMap[name].Type == PropertyType.String;
+			return propertyMap.ContainsKey(name) && propertyMap[name].Type == "string";
 		}
 
 		public bool TryGetString(string name, out string value)
@@ -239,7 +296,7 @@ public class PortableDynamicProperties : MonoBehaviour
 
 		public bool HasBool(string name)
 		{
-			return propertyMap.ContainsKey(name) && propertyMap[name].Type == PropertyType.Bool;
+			return propertyMap.ContainsKey(name) && propertyMap[name].Type == "bool";
 		}
 
 		public bool TryGetBool(string name, out bool value)
@@ -443,78 +500,27 @@ public class PortableDynamicProperties : MonoBehaviour
 
 	// Delegate to DataManager
 	public IReadOnlyList<DynamicProperty> Properties => dataManager?.Properties ?? new List<DynamicProperty>().AsReadOnly();
-	public IEnumerable<DynamicProperty> GetPropertiesByType(PropertyType type)
+	public IEnumerable<DynamicProperty> GetPropertiesByType(string type)
 	{
 		return dataManager?.GetPropertiesByType(type) ?? Enumerable.Empty<DynamicProperty>();
 	}
-	public void AddFloat(string name, float value)
-	{
-		dataManager?.AddFloat(name, value);
-	}
-	public void AddInt(string name, int value)
-	{
-		dataManager?.AddInt(name, value);
-	}
-	public void AddString(string name, string value)
-	{
-		dataManager?.AddString(name, value);
-	}
-	public void AddBool(string name, bool value)
-	{
-		dataManager?.AddBool(name, value);
-	}
-	public bool RemoveProperty(string name)
-	{
-		return dataManager?.RemoveProperty(name) ?? false;
-	}
-	public bool HasFloat(string name)
-	{
-		return dataManager?.HasFloat(name) ?? false;
-	}
-	public bool TryGetFloat(string name, out float value)
-	{
-		return dataManager?.TryGetFloat(name, out value) ?? ((value = default) == default);
-	}
-	public float GetFloat(string name)
-	{
-		return dataManager?.GetFloat(name) ?? throw new KeyNotFoundException($"Float property '{name}' not found.");
-	}
-	public bool HasInt(string name)
-	{
-		return dataManager?.HasInt(name) ?? false;
-	}
-	public bool TryGetInt(string name, out int value)
-	{
-		return dataManager?.TryGetInt(name, out value) ?? ((value = default) == default);
-	}
-	public int GetInt(string name)
-	{
-		return dataManager?.GetInt(name) ?? throw new KeyNotFoundException($"Int property '{name}' not found.");
-	}
-	public bool HasString(string name)
-	{
-		return dataManager?.HasString(name) ?? false;
-	}
-	public bool TryGetString(string name, out string value)
-	{
-		return dataManager?.TryGetString(name, out value) ?? ((value = default) == default);
-	}
-	public string GetString(string name)
-	{
-		return dataManager?.GetString(name) ?? throw new KeyNotFoundException($"String property '{name}' not found.");
-	}
-	public bool HasBool(string name)
-	{
-		return dataManager?.HasBool(name) ?? false;
-	}
-	public bool TryGetBool(string name, out bool value)
-	{
-		return dataManager?.TryGetBool(name, out value) ?? ((value = default) == default);
-	}
-	public bool GetBool(string name)
-	{
-		return dataManager?.GetBool(name) ?? throw new KeyNotFoundException($"Bool property '{name}' not found.");
-	}
+	public void AddFloat(string name, float value) => dataManager?.AddFloat(name, value);
+	public void AddInt(string name, int value) => dataManager?.AddInt(name, value);
+	public void AddString(string name, string value) => dataManager?.AddString(name, value);
+	public void AddBool(string name, bool value) => dataManager?.AddBool(name, value);
+	public bool RemoveProperty(string name) => dataManager?.RemoveProperty(name) ?? false;
+	public bool HasFloat(string name) => dataManager?.HasFloat(name) ?? false;
+	public bool TryGetFloat(string name, out float value) => dataManager?.TryGetFloat(name, out value) ?? ((value = default) == default);
+	public float GetFloat(string name) => dataManager?.GetFloat(name) ?? throw new KeyNotFoundException($"Float property '{name}' not found.");
+	public bool HasInt(string name) => dataManager?.HasInt(name) ?? false;
+	public bool TryGetInt(string name, out int value) => dataManager?.TryGetInt(name, out value) ?? ((value = default) == default);
+	public int GetInt(string name) => dataManager?.GetInt(name) ?? throw new KeyNotFoundException($"Int property '{name}' not found.");
+	public bool HasString(string name) => dataManager?.HasString(name) ?? false;
+	public bool TryGetString(string name, out string value) => dataManager?.TryGetString(name, out value) ?? ((value = default) == default);
+	public string GetString(string name) => dataManager?.GetString(name) ?? throw new KeyNotFoundException($"String property '{name}' not found.");
+	public bool HasBool(string name) => dataManager?.HasBool(name) ?? false;
+	public bool TryGetBool(string name, out bool value) => dataManager?.TryGetBool(name, out value) ?? ((value = default) == default);
+	public bool GetBool(string name) => dataManager?.GetBool(name) ?? throw new KeyNotFoundException($"Bool property '{name}' not found.");
 
 #if UNITY_EDITOR
 	// Editor: JSON Input Dialog
@@ -652,36 +658,36 @@ public class PortableDynamicProperties : MonoBehaviour
 								{
 									if (d % 1 == 0 && d >= int.MinValue && d <= int.MaxValue)
 									{
-										prop.Type = PropertyType.Int;
+										prop.Type = "int";
 										prop.Value = ((int)d).ToString(CultureInfo.InvariantCulture);
 									}
 									else
 									{
-										prop.Type = PropertyType.Float;
+										prop.Type = "float";
 										prop.Value = ((float)d).ToString(CultureInfo.InvariantCulture);
 									}
 								}
 								else if (value is int i)
 								{
-									prop.Type = PropertyType.Int;
+									prop.Type = "int";
 									prop.Value = i.ToString(CultureInfo.InvariantCulture);
 								}
 								else if (value is string s)
 								{
 									if (s.ToLower() == "true" || s.ToLower() == "false")
 									{
-										prop.Type = PropertyType.Bool;
+										prop.Type = "bool";
 										prop.Value = s.ToLower();
 									}
 									else
 									{
-										prop.Type = PropertyType.String;
+										prop.Type = "string";
 										prop.Value = s;
 									}
 								}
 								else if (value is bool b)
 								{
-									prop.Type = PropertyType.Bool;
+									prop.Type = "bool";
 									prop.Value = b.ToString().ToLowerInvariant();
 								}
 								else
@@ -1079,6 +1085,8 @@ public class PortableDynamicProperties : MonoBehaviour
 				active = { background = MakeTex(2, 2, new Color(0.6f, 0.1f, 0.1f)), textColor = Color.white }
 			};
 
+			string[] validTypes = new[] { "float", "int", "string", "bool" };
+
 			for (int i = 0; i < data.Properties.Count; i++)
 			{
 				var prop = data.Properties[i];
@@ -1108,23 +1116,26 @@ public class PortableDynamicProperties : MonoBehaviour
 				existingNames.Add(prop.Name);
 
 				EditorGUI.BeginChangeCheck();
-				PropertyType newType = (PropertyType)EditorGUILayout.EnumPopup(prop.Type, GUILayout.Width(100f));
+				int selectedIndex = Array.IndexOf(validTypes, prop.Type);
+				if (selectedIndex == -1) selectedIndex = 0;
+				selectedIndex = EditorGUILayout.Popup(selectedIndex, validTypes, GUILayout.Width(100f));
+				string newType = validTypes[selectedIndex];
 				if (EditorGUI.EndChangeCheck())
 				{
 					Undo.RecordObject(textComponent, "Change Property Type");
 					prop.Type = newType;
 					switch (newType)
 					{
-						case PropertyType.Float:
+						case "float":
 							prop.Value = "0";
 							break;
-						case PropertyType.Int:
+						case "int":
 							prop.Value = "0";
 							break;
-						case PropertyType.String:
+						case "string":
 							prop.Value = "";
 							break;
-						case PropertyType.Bool:
+						case "bool":
 							prop.Value = "false";
 							break;
 					}
@@ -1133,7 +1144,7 @@ public class PortableDynamicProperties : MonoBehaviour
 
 				switch (prop.Type)
 				{
-					case PropertyType.Float:
+					case "float":
 						EditorGUI.BeginChangeCheck();
 						float floatValue = prop.TryGetFloat(out float f) ? f : 0f;
 						float newFloatValue = EditorGUILayout.FloatField(floatValue, GUILayout.Width(100f));
@@ -1144,7 +1155,7 @@ public class PortableDynamicProperties : MonoBehaviour
 							propertiesChanged = true;
 						}
 						break;
-					case PropertyType.Int:
+					case "int":
 						EditorGUI.BeginChangeCheck();
 						int intValue = prop.TryGetInt(out int i2) ? i2 : 0;
 						int newIntValue = EditorGUILayout.IntField(intValue, GUILayout.Width(100f));
@@ -1155,7 +1166,7 @@ public class PortableDynamicProperties : MonoBehaviour
 							propertiesChanged = true;
 						}
 						break;
-					case PropertyType.String:
+					case "string":
 						EditorGUI.BeginChangeCheck();
 						string stringValue = prop.TryGetString(out string s) ? s : "";
 						string newStringValue = EditorGUILayout.TextField(stringValue, GUILayout.Width(100f));
@@ -1166,7 +1177,7 @@ public class PortableDynamicProperties : MonoBehaviour
 							propertiesChanged = true;
 						}
 						break;
-					case PropertyType.Bool:
+					case "bool":
 						EditorGUI.BeginChangeCheck();
 						bool boolValue = prop.TryGetBool(out bool b) ? b : false;
 						bool newBoolValue = EditorGUILayout.Toggle(boolValue, GUILayout.Width(100f));
@@ -1212,7 +1223,7 @@ public class PortableDynamicProperties : MonoBehaviour
 				data.Properties.Add(new DynamicProperty
 				{
 					Name = newName,
-					Type = PropertyType.Float,
+					Type = "float",
 					Value = "0"
 				});
 				propertiesChanged = true;

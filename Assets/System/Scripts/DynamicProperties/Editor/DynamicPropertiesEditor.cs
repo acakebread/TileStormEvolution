@@ -166,6 +166,8 @@ public class DynamicPropertiesEditor : Editor
 			active = { background = MakeTex(2, 2, new Color(0.6f, 0.1f, 0.1f)), textColor = Color.white }
 		};
 
+		string[] validTypes = new[] { "float", "int", "string", "bool" };
+
 		for (int i = 0; i < data.Properties.Count; i++)
 		{
 			var prop = data.Properties[i];
@@ -195,23 +197,26 @@ public class DynamicPropertiesEditor : Editor
 			existingNames.Add(prop.Name);
 
 			EditorGUI.BeginChangeCheck();
-			PropertyType newType = (PropertyType)EditorGUILayout.EnumPopup(prop.Type, GUILayout.Width(100f));
+			int selectedIndex = Array.IndexOf(validTypes, prop.Type);
+			if (selectedIndex == -1) selectedIndex = 0;
+			selectedIndex = EditorGUILayout.Popup(selectedIndex, validTypes, GUILayout.Width(100f));
+			string newType = validTypes[selectedIndex];
 			if (EditorGUI.EndChangeCheck())
 			{
 				Undo.RecordObject(textComponent, "Change Property Type");
 				prop.Type = newType;
 				switch (newType)
 				{
-					case PropertyType.Float:
+					case "float":
 						prop.Value = "0";
 						break;
-					case PropertyType.Int:
+					case "int":
 						prop.Value = "0";
 						break;
-					case PropertyType.String:
+					case "string":
 						prop.Value = "";
 						break;
-					case PropertyType.Bool:
+					case "bool":
 						prop.Value = "false";
 						break;
 				}
@@ -220,7 +225,7 @@ public class DynamicPropertiesEditor : Editor
 
 			switch (prop.Type)
 			{
-				case PropertyType.Float:
+				case "float":
 					EditorGUI.BeginChangeCheck();
 					float floatValue = prop.TryGetFloat(out float f) ? f : 0f;
 					float newFloatValue = EditorGUILayout.FloatField(floatValue, GUILayout.Width(100f));
@@ -231,7 +236,7 @@ public class DynamicPropertiesEditor : Editor
 						propertiesChanged = true;
 					}
 					break;
-				case PropertyType.Int:
+				case "int":
 					EditorGUI.BeginChangeCheck();
 					int intValue = prop.TryGetInt(out int i2) ? i2 : 0;
 					int newIntValue = EditorGUILayout.IntField(intValue, GUILayout.Width(100f));
@@ -242,7 +247,7 @@ public class DynamicPropertiesEditor : Editor
 						propertiesChanged = true;
 					}
 					break;
-				case PropertyType.String:
+				case "string":
 					EditorGUI.BeginChangeCheck();
 					string stringValue = prop.TryGetString(out string s) ? s : "";
 					string newStringValue = EditorGUILayout.TextField(stringValue, GUILayout.Width(100f));
@@ -253,7 +258,7 @@ public class DynamicPropertiesEditor : Editor
 						propertiesChanged = true;
 					}
 					break;
-				case PropertyType.Bool:
+				case "bool":
 					EditorGUI.BeginChangeCheck();
 					bool boolValue = prop.TryGetBool(out bool b) ? b : false;
 					bool newBoolValue = EditorGUILayout.Toggle(boolValue, GUILayout.Width(100f));
@@ -299,7 +304,7 @@ public class DynamicPropertiesEditor : Editor
 			data.Properties.Add(new DynamicProperty
 			{
 				Name = newName,
-				Type = PropertyType.Float,
+				Type = "float",
 				Value = "0"
 			});
 			propertiesChanged = true;

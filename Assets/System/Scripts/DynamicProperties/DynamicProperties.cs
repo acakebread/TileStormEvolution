@@ -186,7 +186,7 @@ public class DynamicProperties : MonoBehaviour
 	}
 
 	public IReadOnlyList<DynamicProperty> Properties => dataManager?.Properties ?? new List<DynamicProperty>().AsReadOnly();
-	public IEnumerable<DynamicProperty> GetPropertiesByType(PropertyType type) => dataManager?.GetPropertiesByType(type) ?? Enumerable.Empty<DynamicProperty>();
+	public IEnumerable<DynamicProperty> GetPropertiesByType(string type) => dataManager?.GetPropertiesByType(type) ?? Enumerable.Empty<DynamicProperty>();
 
 	public void AddFloat(string name, float value)
 	{

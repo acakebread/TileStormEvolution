@@ -131,42 +131,42 @@ public class JsonInputDialog : EditorWindow
 							existingNames.Add(name);
 
 							object value = kvp.Value;
-							PropertyType type;
+							string type;
 							string stringValue;
 
 							if (value is double d)
 							{
 								if (d % 1 == 0 && d >= int.MinValue && d <= int.MaxValue)
 								{
-									type = PropertyType.Int;
+									type = "int";
 									stringValue = ((int)d).ToString(CultureInfo.InvariantCulture);
 								}
 								else
 								{
-									type = PropertyType.Float;
+									type = "float";
 									stringValue = ((float)d).ToString(CultureInfo.InvariantCulture);
 								}
 							}
 							else if (value is int i)
 							{
-								type = PropertyType.Int;
+								type = "int";
 								stringValue = i.ToString(CultureInfo.InvariantCulture);
 							}
 							else if (value is bool b)
 							{
-								type = PropertyType.Bool;
+								type = "bool";
 								stringValue = b.ToString().ToLowerInvariant();
 							}
 							else if (value is string str)
 							{
 								if (str.ToLower() == "true" || str.ToLower() == "false")
 								{
-									type = PropertyType.Bool;
+									type = "bool";
 									stringValue = str.ToLower();
 								}
 								else
 								{
-									type = PropertyType.String;
+									type = "string";
 									stringValue = str;
 								}
 							}
