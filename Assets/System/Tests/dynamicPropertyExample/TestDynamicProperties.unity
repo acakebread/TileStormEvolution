@@ -223,8 +223,9 @@ GameObject:
   - component: {fileID: 1521845050}
   - component: {fileID: 1521845049}
   - component: {fileID: 1521845052}
+  - component: {fileID: 1521845053}
   m_Layer: 0
-  m_Name: test
+  m_Name: TestDynamicProperties
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -265,7 +266,7 @@ MonoBehaviour:
     m_LineSpacing: 1
   m_Text: '{"Properties":[{"Name":"flt test","Type":"float","Value":"12.45"},{"Name":"int
     tst","Type":"int","Value":"66"},{"Name":"str tst","Type":"string","Value":"hello"},{"Name":"bool
-    tst","Type":"bool","Value":"true"}]}'
+    tst","Type":"bool","Value":"true"},{"Name":"NewProperty5","Type":"string","Value":"dsfsdfsfd"}]}'
 --- !u!222 &1521845050
 CanvasRenderer:
   m_ObjectHideFlags: 10
@@ -303,6 +304,18 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5ce13b3c0b096d645af3de5641f62753, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &1521845053
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1521845047}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3d46c2242a8cb064389fa91ba7338c90, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
 --- !u!1660057539 &9223372036854775807

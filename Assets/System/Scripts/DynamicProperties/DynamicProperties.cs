@@ -2,10 +2,20 @@ using UnityEngine;
 using UnityEngine.UI;
 using System.Collections.Generic;
 using System.Linq;
+using System; // For Serializable
 
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
+
+// Updated PropertyType enum to match test code expectations
+public enum PropertyType
+{
+	FLOAT,
+	INT,
+	STRING,
+	BOOL
+}
 
 [DisallowMultipleComponent]
 public class DynamicProperties : MonoBehaviour

@@ -198,6 +198,27 @@ public class DynamicProperty
 	public string Type; // Use string labels: "float", "int", "string", "bool"
 	public string Value;
 
+	// PropertyType property to map string Type to enum
+	public PropertyType PropertyType
+	{
+		get
+		{
+			switch (Type?.ToLowerInvariant())
+			{
+				case "float":
+					return PropertyType.FLOAT;
+				case "int":
+					return PropertyType.INT;
+				case "string":
+					return PropertyType.STRING;
+				case "bool":
+					return PropertyType.BOOL;
+				default:
+					return PropertyType.FLOAT; // Default fallback
+			}
+		}
+	}
+
 	public bool TryGetFloat(out float value)
 	{
 		value = default;

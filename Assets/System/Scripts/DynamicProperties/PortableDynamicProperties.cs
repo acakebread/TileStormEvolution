@@ -14,6 +14,15 @@ using UnityEditor.SceneManagement;
 [DisallowMultipleComponent]
 public class PortableDynamicProperties : MonoBehaviour
 {
+	// Added PropertyType enum to support test code expectations
+	public enum PropertyType
+	{
+		FLOAT,
+		INT,
+		STRING,
+		BOOL
+	}
+
 	// Runtime: Property data structure
 	[System.Serializable]
 	public class DynamicProperty
@@ -21,6 +30,27 @@ public class PortableDynamicProperties : MonoBehaviour
 		public string Name;
 		public string Type; // Use string labels: "float", "int", "string", "bool"
 		public string Value; // Single string field to store the value
+
+		// Added PropertyType property to map string Type to enum
+		public PropertyType PropertyType
+		{
+			get
+			{
+				switch (Type?.ToLowerInvariant())
+				{
+					case "float":
+						return PropertyType.FLOAT;
+					case "int":
+						return PropertyType.INT;
+					case "string":
+						return PropertyType.STRING;
+					case "bool":
+						return PropertyType.BOOL;
+					default:
+						return PropertyType.FLOAT; // Default fallback
+				}
+			}
+		}
 
 		public bool TryGetFloat(out float value)
 		{
