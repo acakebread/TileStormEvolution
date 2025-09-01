@@ -50,6 +50,10 @@ public class DynamicPropertiesEditor : Editor
 		}
 		bool needsDirty = false;
 		var components = go.GetComponentsInChildren<DynamicProperties>(true);
+		if (components.Length > 1)
+		{
+			Debug.LogWarning($"GameObject '{go.name}' has multiple DynamicProperties components, which is not allowed due to [DisallowMultipleComponent]. Please remove extra components.");
+		}
 		foreach (var component in components)
 		{
 			if (component == null || component.gameObject == null)
@@ -107,6 +111,22 @@ public class DynamicPropertiesEditor : Editor
 		{
 			EditorGUILayout.HelpBox("DynamicProperties component or its GameObject is null. Please re-add the component to a valid GameObject.", MessageType.Error);
 			return;
+		}
+
+		var components = component.gameObject.GetComponents<DynamicProperties>();
+		if (components.Length > 1)
+		{
+			EditorGUILayout.HelpBox($"Multiple DynamicProperties components detected on '{component.gameObject.name}'. This is not allowed due to [DisallowMultipleComponent]. Please remove extra components.", MessageType.Error);
+			if (GUILayout.Button("Remove Extra Components"))
+			{
+				Undo.RecordObject(component.gameObject, "Remove Extra DynamicProperties");
+				for (int i = 1; i < components.Length; i++)
+				{
+					DestroyImmediate(components[i]);
+				}
+				EditorUtility.SetDirty(component.gameObject);
+				return;
+			}
 		}
 
 		component.InitializeTextComponent();

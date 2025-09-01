@@ -8,12 +8,210 @@ using System.Globalization;
 
 public class JsonInputDialog : EditorWindow
 {
-	private string jsonInput = "";
+	private string dialogInput = "<input json here>";
 	private string jsonError = "";
 	private DynamicProperties component;
 	private Text textComponent;
 	private SerializedObject textSerializedObject;
 	private Vector2 scrollPosition;
+	private bool isPlaceholder = true;
+	private readonly string textAreaControlName = "JsonInputTextArea";
+
+	private void OnEnable()
+	{
+		dialogInput = "<input json here>";
+		jsonError = "";
+		scrollPosition = Vector2.zero;
+		isPlaceholder = true;
+	}
+
+	private void OnFocus()
+	{
+		dialogInput = "<input json here>";
+		jsonError = "";
+		scrollPosition = Vector2.zero;
+		isPlaceholder = true;
+	}
+
+	public static void ShowDialog(DynamicProperties component, Text textComponent, SerializedObject textSerializedObject)
+	{
+		if (HasOpenInstances<JsonInputDialog>())
+		{
+			GetWindow<JsonInputDialog>().Close();
+		}
+		var window = GetWindow<JsonInputDialog>("Inject JSON");
+		window.component = component;
+		window.textComponent = textComponent;
+		window.textSerializedObject = textSerializedObject;
+		window.dialogInput = "<input json here>";
+		window.jsonError = "";
+		window.scrollPosition = Vector2.zero;
+		window.isPlaceholder = true;
+		window.Show();
+	}
+
+	private void OnGUI()
+	{
+		// Ensure no unexpected content overrides placeholder
+		if (!isPlaceholder && dialogInput == "<input json here>")
+		{
+			dialogInput = "";
+			isPlaceholder = false;
+		}
+
+		GUILayout.Label("Paste JSON below:", EditorStyles.boldLabel);
+		EditorGUILayout.HelpBox("Example: {\"string_property\": \"string_value\"}", MessageType.Info);
+
+		// Set control name for the text area to detect focus
+		GUI.SetNextControlName(textAreaControlName);
+		scrollPosition = EditorGUILayout.BeginScrollView(scrollPosition, GUILayout.Height(100));
+
+		// Use a custom style to visually distinguish placeholder text
+		GUIStyle textAreaStyle = new GUIStyle(EditorStyles.textArea)
+		{
+			fontStyle = isPlaceholder ? FontStyle.Italic : FontStyle.Normal,
+			normal = { textColor = isPlaceholder ? Color.gray : Color.black }
+		};
+
+		string newInput = EditorGUILayout.TextArea(dialogInput, textAreaStyle, GUILayout.ExpandHeight(true));
+
+		// Check if the text area is focused
+		bool isTextAreaFocused = GUI.GetNameOfFocusedControl() == textAreaControlName;
+
+		if (isTextAreaFocused && isPlaceholder)
+		{
+			dialogInput = "";
+			isPlaceholder = false;
+		}
+		else if (newInput != dialogInput)
+		{
+			// User typed or modified the text
+			if (isPlaceholder && newInput != "<input json here>")
+			{
+				isPlaceholder = false;
+			}
+			dialogInput = newInput;
+		}
+
+		EditorGUILayout.EndScrollView();
+
+		if (!string.IsNullOrEmpty(jsonError))
+		{
+			EditorGUILayout.HelpBox(jsonError, MessageType.Error);
+		}
+
+		GUILayout.Space(10);
+
+		EditorGUILayout.BeginHorizontal();
+		if (GUILayout.Button("Validate and Apply"))
+		{
+			if (string.IsNullOrEmpty(dialogInput.Trim()) || dialogInput == "<input json here>")
+			{
+				jsonError = "Please enter valid JSON.";
+			}
+			else
+			{
+				Undo.RecordObject(textComponent, "Inject JSON Data");
+				jsonError = "";
+				try
+				{
+					var parsed = MiniJSON.Deserialize(dialogInput);
+					if (parsed is Dictionary<string, object> dict)
+					{
+						DynamicPropertiesData newData = new DynamicPropertiesData();
+						var existingNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+						foreach (var kvp in dict)
+						{
+							string name = kvp.Key;
+							if (string.IsNullOrEmpty(name) || existingNames.Contains(name))
+							{
+								jsonError = $"Invalid or duplicate property name '{name}'.";
+								break;
+							}
+							existingNames.Add(name);
+
+							object value = kvp.Value;
+							PropertyType type;
+							string stringValue;
+
+							if (value is double d)
+							{
+								if (d % 1 == 0 && d >= int.MinValue && d <= int.MaxValue)
+								{
+									type = PropertyType.Int;
+									stringValue = ((int)d).ToString(CultureInfo.InvariantCulture);
+								}
+								else
+								{
+									type = PropertyType.Float;
+									stringValue = ((float)d).ToString(CultureInfo.InvariantCulture);
+								}
+							}
+							else if (value is int i)
+							{
+								type = PropertyType.Int;
+								stringValue = i.ToString(CultureInfo.InvariantCulture);
+							}
+							else if (value is bool b)
+							{
+								type = PropertyType.Bool;
+								stringValue = b.ToString().ToLowerInvariant();
+							}
+							else if (value is string str)
+							{
+								if (str.ToLower() == "true" || str.ToLower() == "false")
+								{
+									type = PropertyType.Bool;
+									stringValue = str.ToLower();
+								}
+								else
+								{
+									type = PropertyType.String;
+									stringValue = str;
+								}
+							}
+							else
+							{
+								jsonError = $"Unsupported JSON value type for key: {name}";
+								break;
+							}
+
+							newData.Properties.Add(new DynamicProperty
+							{
+								Name = name,
+								Type = type,
+								Value = stringValue
+							});
+						}
+
+						if (string.IsNullOrEmpty(jsonError))
+						{
+							component.SetData(newData);
+							textSerializedObject.FindProperty("m_Text").stringValue = JsonUtility.ToJson(newData);
+							textSerializedObject.ApplyModifiedProperties();
+							EditorUtility.SetDirty(textComponent);
+							EditorUtility.SetDirty(component);
+							Close();
+						}
+					}
+					else
+					{
+						jsonError = "Invalid JSON format: Expected an object (e.g., {\"key\": value}).";
+					}
+				}
+				catch (Exception ex)
+				{
+					jsonError = $"Failed to parse JSON: {ex.Message}";
+				}
+			}
+		}
+
+		if (GUILayout.Button("Cancel"))
+		{
+			Close();
+		}
+		EditorGUILayout.EndHorizontal();
+	}
 
 	private static class MiniJSON
 	{
@@ -151,136 +349,5 @@ public class JsonInputDialog : EditorWindow
 			while (i < json.Length && char.IsWhiteSpace(json[i]))
 				i++;
 		}
-	}
-
-	public static void ShowDialog(DynamicProperties component, Text textComponent, SerializedObject textSerializedObject)
-	{
-		var window = GetWindow<JsonInputDialog>("Inject JSON");
-		window.component = component;
-		window.textComponent = textComponent;
-		window.textSerializedObject = textSerializedObject;
-		window.jsonInput = textComponent.text;
-		window.jsonError = "";
-		window.Show();
-	}
-
-	private void OnGUI()
-	{
-		GUILayout.Label("Paste JSON below:", EditorStyles.boldLabel);
-		EditorGUILayout.HelpBox("Paste JSON like: {\"myfloat\": 1.245, \"myint\": 6, \"mystring\": \"hello\", \"myflag\": true}", MessageType.Info);
-
-		scrollPosition = EditorGUILayout.BeginScrollView(scrollPosition, GUILayout.Height(100));
-		jsonInput = EditorGUILayout.TextArea(jsonInput, GUILayout.ExpandHeight(true));
-		EditorGUILayout.EndScrollView();
-
-		if (!string.IsNullOrEmpty(jsonError))
-		{
-			EditorGUILayout.HelpBox(jsonError, MessageType.Error);
-		}
-
-		GUILayout.Space(10);
-
-		EditorGUILayout.BeginHorizontal();
-		if (GUILayout.Button("Validate and Apply"))
-		{
-			Undo.RecordObject(textComponent, "Inject JSON Data");
-			jsonError = "";
-			try
-			{
-				var parsed = MiniJSON.Deserialize(jsonInput);
-				if (parsed is Dictionary<string, object> dict)
-				{
-					DynamicPropertiesData newData = new DynamicPropertiesData();
-					var existingNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-					foreach (var kvp in dict)
-					{
-						string name = kvp.Key;
-						if (string.IsNullOrEmpty(name) || existingNames.Contains(name))
-						{
-							jsonError = $"Invalid or duplicate property name '{name}'.";
-							break;
-						}
-						existingNames.Add(name);
-
-						object value = kvp.Value;
-						PropertyType type;
-						string stringValue;
-
-						if (value is double d)
-						{
-							if (d % 1 == 0 && d >= int.MinValue && d <= int.MaxValue)
-							{
-								type = PropertyType.Int;
-								stringValue = ((int)d).ToString(CultureInfo.InvariantCulture);
-							}
-							else
-							{
-								type = PropertyType.Float;
-								stringValue = ((float)d).ToString(CultureInfo.InvariantCulture);
-							}
-						}
-						else if (value is int i)
-						{
-							type = PropertyType.Int;
-							stringValue = i.ToString(CultureInfo.InvariantCulture);
-						}
-						else if (value is bool b)
-						{
-							type = PropertyType.Bool;
-							stringValue = b.ToString().ToLowerInvariant();
-						}
-						else if (value is string str)
-						{
-							if (str.ToLower() == "true" || str.ToLower() == "false")
-							{
-								type = PropertyType.Bool;
-								stringValue = str.ToLower();
-							}
-							else
-							{
-								type = PropertyType.String;
-								stringValue = str;
-							}
-						}
-						else
-						{
-							jsonError = $"Unsupported JSON value type for key: {name}";
-							break;
-						}
-
-						newData.Properties.Add(new DynamicProperty
-						{
-							Name = name,
-							Type = type,
-							Value = stringValue
-						});
-					}
-
-					if (string.IsNullOrEmpty(jsonError))
-					{
-						component.SetData(newData);
-						textSerializedObject.FindProperty("m_Text").stringValue = JsonUtility.ToJson(newData);
-						textSerializedObject.ApplyModifiedProperties();
-						EditorUtility.SetDirty(textComponent);
-						EditorUtility.SetDirty(component);
-						Close();
-					}
-				}
-				else
-				{
-					jsonError = "Invalid JSON format: Expected an object (e.g., {\"key\": value}).";
-				}
-			}
-			catch (Exception ex)
-			{
-				jsonError = $"Failed to parse JSON: {ex.Message}";
-			}
-		}
-
-		if (GUILayout.Button("Cancel"))
-		{
-			Close();
-		}
-		EditorGUILayout.EndHorizontal();
 	}
 }
