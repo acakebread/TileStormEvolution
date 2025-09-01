@@ -5,7 +5,6 @@ using System.Text.RegularExpressions;
 using System;
 using UnityEngine;
 
-
 public static class CodeFormatter
 {
 	public static string FormatCode(string code)
