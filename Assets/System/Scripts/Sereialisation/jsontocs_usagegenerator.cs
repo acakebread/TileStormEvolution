@@ -222,37 +222,6 @@ public static class jsontocs_usagegenerator
 							}
 						}
 					}
-					if (array1[i] is Dictionary<string, object> nestedDict && nestedDict.ContainsKey("Items") && nestedDict["Items"] is object[] itemsArray && itemsArray.Any() && itemsArray[0] is Dictionary<string, object>)
-					{
-						var nestedSubDicts = itemsArray.OfType<Dictionary<string, object>>().ToList();
-						var nestedSubKeyMapping = CreateKeyMapping(GetAllDictionaryKeys(nestedSubDicts));
-						for (int j = 0; j < itemsArray.Length; j++)
-						{
-							if (itemsArray[j] is Dictionary<string, object> nestedItemDict)
-							{
-								var nestedItemKeyMapping = CreateKeyMapping(nestedItemDict.Keys);
-								foreach (var subKey in nestedItemKeyMapping.OrderBy(kv => kv.Key))
-								{
-									if (nestedItemDict.ContainsKey(subKey.Key))
-									{
-										var value = nestedItemDict[subKey.Key];
-										bool isNullableType = value is string || value is object[] || value is Dictionary<string, object> || value == null;
-										string nullCheck = isNullableType ? $" && result.{SanitizeKey(pair.Key)}[{i}].Items[{j}].{SanitizeKey(subKey.Key)} != null" : "";
-										string path = EscapeInterpolatedString($"{pair.Key}[{i}].Items[{j}].{subKey.Key}");
-										string valueAccess = $"result.{SanitizeKey(pair.Key)}[{i}].Items[{j}].{SanitizeKey(subKey.Key)}";
-										if (value is object[] subArray)
-										{
-											sb.Append($"if (result.{SanitizeKey(pair.Key)} != null && result.{SanitizeKey(pair.Key)}.Length > {i} && result.{SanitizeKey(pair.Key)}[{i}].Items != null && result.{SanitizeKey(pair.Key)}[{i}].Items.Length > {j}{nullCheck}) Debug.Log($\"{path} : {{string.Join(\", \", {valueAccess})}}\"); // {EscapeCommentValue(value)}\n");
-										}
-										else
-										{
-											sb.Append($"if (result.{SanitizeKey(pair.Key)} != null && result.{SanitizeKey(pair.Key)}.Length > {i} && result.{SanitizeKey(pair.Key)}[{i}].Items != null && result.{SanitizeKey(pair.Key)}[{i}].Items.Length > {j}{nullCheck}) Debug.Log($\"{path} : {{ {valueAccess} }}\"); // {EscapeCommentValue(value)}\n");
-										}
-									}
-								}
-							}
-						}
-					}
 				}
 			}
 			else if (pair.Value is Dictionary<string, object> nestedDict)
