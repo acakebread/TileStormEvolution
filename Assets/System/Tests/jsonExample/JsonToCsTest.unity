@@ -152,50 +152,75 @@ MonoBehaviour:
     \"$type\": \"Document\",\r\n          \"DocumentIndex\": 0,\r\n          \"Title\":
     \"Test.cs\"\r\n        },\r\n        {\r\n          \"$type\": \"Bookmark\",\r\n         
     \"Name\": \"ST:1:0:{12345678-1234-1234-1234-1234567890ab}\"\r\n        }\r\n     
-    ]\r\n    }\r\n  ]\r\n}"
-  cSharpRepresentation: "using System.Collections.Generic;\nusing UnityEngine;\nusing
-    System.Linq;\n\npublic class JsonDeserializationExample : MonoBehaviour\n{\n   
-    void Start()\n    {\n        string jsonString = @\"{\n  \"\"Groups\"\": [\n   
-    {\n      \"\"Items\"\": [\n        {\n          \"\"$type\"\": \"\"Document\"\",\n         
-    \"\"DocumentIndex\"\": 0,\n          \"\"Title\"\": \"\"Test.cs\"\"\n       
-    },\n        {\n          \"\"$type\"\": \"\"Bookmark\"\",\n          \"\"Name\"\":
-    \"\"ST:1:0:{12345678-1234-1234-1234-1234567890ab}\"\"\n        }\n      ]\n   
-    }\n  ]\n}\";\n        try\n        {\n            var data = JsonTocs.FromJson<Dictionary<string,
-    object>>(jsonString);\n            if (data != null)\n            {\n               
-    var template =         new\n        {\n          _Groups = new[] {          
-    new\n          {\n            _Items = new[] {             new\n            {\n             
-    __type = \"\",\n              _DocumentIndex = 0,\n              _Title = \"\"\n           
-    } }\n          } }\n        };\n\n                var result =         new\n       
-    {\n          _Groups =           (data.ContainsKey(\"Groups\") ? ((object[])data[\"Groups\"]).Select((item,
-    i) =>\n          {\n            var subDict = (Dictionary<string, object>)item;\n           
-    return new\n            {\n              _Items =             (subDict.ContainsKey(\"Items\")
-    ? ((object[])subDict[\"Items\"]).Select((item, i) =>\n            {\n             
-    var subDict = (Dictionary<string, object>)item;\n              return new\n             
-    {\n                __type = subDict.ContainsKey(\"$type\") ? subDict[\"$type\"].ToString()
-    : \"\",\n                _DocumentIndex = subDict.ContainsKey(\"DocumentIndex\")
-    ? System.Convert.ToInt32(subDict[\"DocumentIndex\"]) : 0,\n                _Name
-    = subDict.ContainsKey(\"Name\") ? subDict[\"Name\"].ToString() : \"\",\n               
-    _Title = subDict.ContainsKey(\"Title\") ? subDict[\"Title\"].ToString() : \"\"\n             
-    };\n            }).ToArray() : new[] { new { __type = \"\", _DocumentIndex =
-    0, _Name = \"\", _Title = \"\" } })\n            };\n          }).ToArray() :
-    new[] { new { _Items = new[] { new\n{\n  __type = \"\",\n  _DocumentIndex = 0,\n 
-    _Title = \"\"\n} } } })\n        };\n\n                // Display deserialized
-    values\n                if (result._Groups.Length > 0 && result._Groups[0]._Items.Length
-    > 0 && result._Groups[0]._Items[0].__type != null) Debug.Log($\"Groups[0].Items[0].$type:
-    {result._Groups[0]._Items[0].__type}\"); // Document\n                if (result._Groups.Length
-    > 0 && result._Groups[0]._Items.Length > 0) Debug.Log($\"Groups[0].Items[0].DocumentIndex:
-    {result._Groups[0]._Items[0]._DocumentIndex}\"); // 0\n                if (result._Groups.Length
-    > 0 && result._Groups[0]._Items.Length > 0 && result._Groups[0]._Items[0]._Title
-    != null) Debug.Log($\"Groups[0].Items[0].Title: {result._Groups[0]._Items[0]._Title}\");
-    // Test.cs\n                if (result._Groups.Length > 0 && result._Groups[0]._Items.Length
-    > 1 && result._Groups[0]._Items[1].__type != null) Debug.Log($\"Groups[0].Items[1].$type:
-    {result._Groups[0]._Items[1].__type}\"); // Bookmark\n                if (result._Groups.Length
-    > 0 && result._Groups[0]._Items.Length > 1 && result._Groups[0]._Items[1]._Name
-    != null) Debug.Log($\"Groups[0].Items[1].Name: {result._Groups[0]._Items[1]._Name}\");
-    // ST:1:0:{12345678-1234-1234-1234-1234567890ab}\n            }\n           
-    else\n            {\n                Debug.LogError(\"Failed to deserialize JSON\");\n           
-    }\n        }\n        catch (System.Exception e)\n        {\n            Debug.LogError($\"Deserialization
-    error: {e.Message}\");\n        }\n    }\n}\n"
+    ]\r\n    }\r\n  ]\r\n}\r\n\r\n"
+  cSharpRepresentation: "using System;\nusing System.Collections.Generic;\nusing
+    UnityEngine;\nusing System.Linq;\n\npublic class JsonDeserializationExample :
+    MonoBehaviour\n{\n    void Start()\n    {\n        string jsonString = @\"{\n 
+    \"\"Groups\"\": [\n    {\n      \"\"Items\"\": [\n        {\n          \"\"$type\"\":
+    \"\"Document\"\",\n          \"\"DocumentIndex\"\": 0,\n          \"\"Title\"\":
+    \"\"Test.cs\"\"\n        },\n        {\n          \"\"$type\"\": \"\"Bookmark\"\",\n         
+    \"\"Name\"\": \"\"ST:1:0:{12345678-1234-1234-1234-1234567890ab}\"\"\n       
+    }\n      ]\n    }\n  ]\n}\n\n\";\n        try\n        {\n            var data
+    = JsonTocs.FromJson<Dictionary<string, object>>(jsonString);\n            if
+    (data != null)\n            {\n                var template =         new\n       
+    {\n          Groups = new[] {           new\n          {\n            Items =
+    new[] {             new\n            {\n              _type = (object)null,\n             
+    DocumentIndex = (object)null,\n              Name = (object)null,\n             
+    Title = (object)null\n            } }\n          } }\n        };\n\n               
+    var result =         new\n        {\n          Groups =           (data.ContainsKey(\"Groups\")
+    ? ((object[])data[\"Groups\"]).Select((item, j) =>\n          {\n           
+    var subDict = (Dictionary<string, object>)item;\n            return new\n           
+    {\n              Items = subDict.ContainsKey(\"Items\") ? ((object[])subDict[\"Items\"]).Select((innerItem,
+    k) =>\n              {\n                var innerDict = (Dictionary<string, object>)innerItem;\n               
+    return new\n                {\n                  _type = innerDict.ContainsKey(\"$type\")
+    ? innerDict[\"$type\"] : (object)null,\n                  DocumentIndex = innerDict.ContainsKey(\"DocumentIndex\")
+    ? innerDict[\"DocumentIndex\"] : (object)null,\n                  Name = innerDict.ContainsKey(\"Name\")
+    ? innerDict[\"Name\"] : (object)null,\n                  Title = innerDict.ContainsKey(\"Title\")
+    ? innerDict[\"Title\"] : (object)null\n                };\n              }).ToArray()
+    : new[] {                   new\n                  {\n                    _type
+    = (object)null,\n                    DocumentIndex = (object)null,\n                   
+    Name = (object)null,\n                    Title = (object)null\n                 
+    } }\n            };\n          }).ToArray() : new[] {               new\n             
+    {\n                Items = new[] {                 new\n                {\n                 
+    _type = (object)null,\n                  DocumentIndex = (object)null,\n                 
+    Name = (object)null,\n                  Title = (object)null\n               
+    } }\n              } })\n        };\n\n                // Display deserialized
+    values\n                if (result.Groups != null && result.Groups.Length > 0
+    && result.Groups[0].Items != null && result.Groups[0].Items.Length > 0 && result.Groups[0].Items[0]._type
+    != null) Debug.Log($\"Groups[0].Items[0].$type : { result.Groups[0].Items[0]._type
+    }\"); // \"Document\"\n                if (result.Groups != null && result.Groups.Length
+    > 0 && result.Groups[0].Items != null && result.Groups[0].Items.Length > 0) Debug.Log($\"Groups[0].Items[0].DocumentIndex
+    : { result.Groups[0].Items[0].DocumentIndex }\"); // 0\n                if (result.Groups
+    != null && result.Groups.Length > 0 && result.Groups[0].Items != null && result.Groups[0].Items.Length
+    > 0 && result.Groups[0].Items[0].Title != null) Debug.Log($\"Groups[0].Items[0].Title
+    : { result.Groups[0].Items[0].Title }\"); // \"Test.cs\"\n                if
+    (result.Groups != null && result.Groups.Length > 0 && result.Groups[0].Items
+    != null && result.Groups[0].Items.Length > 1 && result.Groups[0].Items[1]._type
+    != null) Debug.Log($\"Groups[0].Items[1].$type : { result.Groups[0].Items[1]._type
+    }\"); // \"Bookmark\"\n                if (result.Groups != null && result.Groups.Length
+    > 0 && result.Groups[0].Items != null && result.Groups[0].Items.Length > 1 &&
+    result.Groups[0].Items[1].Name != null) Debug.Log($\"Groups[0].Items[1].Name
+    : { result.Groups[0].Items[1].Name }\"); // \"ST:1:0:{12345678-1234-1234-1234-1234567890ab}\"\n               
+    if (result.Groups != null && result.Groups.Length > 0 && result.Groups[0].Items
+    != null && result.Groups[0].Items.Length > 0 && result.Groups[0].Items[0]._type
+    != null) Debug.Log($\"Groups[0].Items[0].$type : { result.Groups[0].Items[0]._type
+    }\"); // \"Document\"\n                if (result.Groups != null && result.Groups.Length
+    > 0 && result.Groups[0].Items != null && result.Groups[0].Items.Length > 0) Debug.Log($\"Groups[0].Items[0].DocumentIndex
+    : { result.Groups[0].Items[0].DocumentIndex }\"); // 0\n                if (result.Groups
+    != null && result.Groups.Length > 0 && result.Groups[0].Items != null && result.Groups[0].Items.Length
+    > 0 && result.Groups[0].Items[0].Title != null) Debug.Log($\"Groups[0].Items[0].Title
+    : { result.Groups[0].Items[0].Title }\"); // \"Test.cs\"\n                if
+    (result.Groups != null && result.Groups.Length > 0 && result.Groups[0].Items
+    != null && result.Groups[0].Items.Length > 1 && result.Groups[0].Items[1]._type
+    != null) Debug.Log($\"Groups[0].Items[1].$type : { result.Groups[0].Items[1]._type
+    }\"); // \"Bookmark\"\n                if (result.Groups != null && result.Groups.Length
+    > 0 && result.Groups[0].Items != null && result.Groups[0].Items.Length > 1 &&
+    result.Groups[0].Items[1].Name != null) Debug.Log($\"Groups[0].Items[1].Name
+    : { result.Groups[0].Items[1].Name }\"); // \"ST:1:0:{12345678-1234-1234-1234-1234567890ab}\"\n           
+    }\n            else\n            {\n                Debug.LogError(\"Failed to
+    deserialize JSON\");\n            }\n        }\n        catch (System.Exception
+    e)\n        {\n            Debug.LogError($\"Deserialization error: {e.Message}\");\n       
+    }\n    }\n}\n"
 --- !u!4 &939026901
 Transform:
   m_ObjectHideFlags: 0
