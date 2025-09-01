@@ -8,24 +8,23 @@ public class JsonDeserializationExample : MonoBehaviour
 	void Start()
 	{
 		string jsonString = @"{
-  ""Groups"": [
-    {
-      ""Items"": [
-        {
-          ""$type"": ""Document"",
-          ""DocumentIndex"": 0,
-          ""Title"": ""Test.cs""
-        },
-        {
-          ""$type"": ""Bookmark"",
-          ""Name"": ""ST:1:0:{12345678-1234-1234-1234-1234567890ab}""
+            ""Groups"": [
+            {
+                ""Items"": [
+                {
+                    ""$type"": ""Document"",
+                    ""DocumentIndex"": 0,
+                    ""Title"": ""Test.cs""
+                },
+                {
+                    ""$type"": ""Bookmark"",
+                    ""Name"": ""ST:1:0:{12345678-1234-1234-1234-1234567890ab}""
+                }
+                ]
+            }
+            ]
         }
-      ]
-    }
-  ]
-}
-
-";
+        ";
 		try
 		{
 			var data = JsonTocs.FromJson<Dictionary<string, object>>(jsonString);
@@ -33,16 +32,16 @@ public class JsonDeserializationExample : MonoBehaviour
 			{
 				var template = new
 				{
-					Groups = new[] {           new
-		  {
-			Items = new[] {             new
-			{
-			  _type = (object)null,
-			  DocumentIndex = (object)null,
-			  Name = (object)null,
-			  Title = (object)null
-			} }
-		  } }
+					Groups = new[] { new
+					{
+						Items = new[] { new
+						{
+							_type = (object)null,
+							DocumentIndex = (object)null,
+							Name = (object)null,
+							Title = (object)null
+						} }
+					} }
 				};
 
 				var result = new
@@ -62,24 +61,24 @@ public class JsonDeserializationExample : MonoBehaviour
 									Name = innerDict.ContainsKey("Name") ? innerDict["Name"] : (object)null,
 									Title = innerDict.ContainsKey("Title") ? innerDict["Title"] : (object)null
 								};
-							}).ToArray() : new[] {                   new
-				  {
-					_type = (object)null,
-					DocumentIndex = (object)null,
-					Name = (object)null,
-					Title = (object)null
-				  } }
+							}).ToArray() : new[] { new
+							{
+								_type = (object)null,
+								DocumentIndex = (object)null,
+								Name = (object)null,
+								Title = (object)null
+							} }
 						};
-					}).ToArray() : new[] {               new
-			  {
-				Items = new[] {                 new
-				{
-				  _type = (object)null,
-				  DocumentIndex = (object)null,
-				  Name = (object)null,
-				  Title = (object)null
-				} }
-			  } })
+					}).ToArray() : new[] { new
+					{
+						Items = new[] { new
+						{
+							_type = (object)null,
+							DocumentIndex = (object)null,
+							Name = (object)null,
+							Title = (object)null
+						} }
+					} })
 				};
 
 				// Display deserialized values
@@ -105,3 +104,4 @@ public class JsonDeserializationExample : MonoBehaviour
 		}
 	}
 }
+

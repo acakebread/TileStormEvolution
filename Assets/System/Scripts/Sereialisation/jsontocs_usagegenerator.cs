@@ -5,6 +5,45 @@ using System.Text.RegularExpressions;
 using System;
 using UnityEngine;
 
+
+public static class CodeFormatter
+{
+	public static string FormatCode(string code)
+	{
+		if (string.IsNullOrWhiteSpace(code))
+			return string.Empty;
+
+		var sb = new StringBuilder();
+		var lines = code.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
+		int indentLevel = 0;
+		string indentString = "    "; // 4 spaces per indent
+
+		foreach (var rawLine in lines)
+		{
+			string line = rawLine.Trim();
+
+			if (line.Length == 0)
+			{
+				sb.AppendLine();
+				continue;
+			}
+
+			// If line starts with a closing brace, reduce indent first
+			if (line.StartsWith("}"))
+				indentLevel = Math.Max(indentLevel - 1, 0);
+
+			sb.Append(new string(' ', indentLevel * indentString.Length));
+			sb.AppendLine(line);
+
+			// If line ends with opening brace, increase indent
+			if (line.EndsWith("{"))
+				indentLevel++;
+		}
+
+		return sb.ToString();
+	}
+}
+
 public static class jsontocs_usagegenerator
 {
 	private static string SanitizeKey(string key)
@@ -56,24 +95,24 @@ public static class jsontocs_usagegenerator
 		{
 			if (data is Dictionary<string, object> dict)
 			{
-				return GenerateDeserializationCodeForDictionary(dict, jsonString);
+				return CodeFormatter.FormatCode(GenerateDeserializationCodeForDictionary(dict, jsonString));
 			}
 			else if (data is List<object> list)
 			{
-				return GenerateDeserializationCodeForArray(list, jsonString);
+				return CodeFormatter.FormatCode(GenerateDeserializationCodeForArray(list, jsonString));
 			}
 			else if (data is object[] array)
 			{
-				return GenerateDeserializationCodeForArray(array.ToList(), jsonString);
+				return CodeFormatter.FormatCode(GenerateDeserializationCodeForArray(array.ToList(), jsonString));
 			}
 			else
 			{
-				return $"Error: Unsupported JSON root type - {data?.GetType().Name ?? "null"}";
+				return CodeFormatter.FormatCode($"Error: Unsupported JSON root type - {data?.GetType().Name ?? "null"}");
 			}
 		}
 		catch (Exception e)
 		{
-			return $"Error: Failed to generate deserialization code - {e.Message}";
+			return CodeFormatter.FormatCode($"Error: Failed to generate deserialization code - {e.Message}");
 		}
 	}
 
@@ -87,21 +126,21 @@ public static class jsontocs_usagegenerator
 		sb.Append("\n");
 		sb.Append("public class JsonDeserializationExample : MonoBehaviour\n");
 		sb.Append("{\n");
-		sb.Append("    void Start()\n");
-		sb.Append("    {\n");
-		sb.Append($"        string jsonString = @\"{EscapeJsonString(jsonString)}\";\n");
-		sb.Append("        try\n");
-		sb.Append("        {\n");
-		sb.Append("            var data = JsonTocs.FromJson<Dictionary<string, object>>(jsonString);\n");
-		sb.Append("            if (data != null)\n");
-		sb.Append("            {\n");
+		sb.Append("void Start()\n");
+		sb.Append("{\n");
+		sb.Append($"string jsonString = @\"{EscapeJsonString(jsonString)}\";\n");
+		sb.Append("try\n");
+		sb.Append("{\n");
+		sb.Append("var data = JsonTocs.FromJson<Dictionary<string, object>>(jsonString);\n");
+		sb.Append("if (data != null)\n");
+		sb.Append("{\n");
 
 		var keyMapping = CreateKeyMapping(data.Keys);
-		sb.Append($"                var template = {GenerateAnonymousTemplate(data, keyMapping, 4)};\n");
+		sb.Append($"var template = {GenerateAnonymousTemplate(data, keyMapping)};\n");
 		sb.Append("\n");
-		sb.Append($"                var result = {GenerateAnonymousResult(data, keyMapping, 4)};\n");
+		sb.Append($"var result = {GenerateAnonymousResult(data, keyMapping)};\n");
 		sb.Append("\n");
-		sb.Append("                // Display deserialized values\n");
+		sb.Append("// Display deserialized values\n");
 
 		foreach (var pair in data.OrderBy(p => p.Key))
 		{
@@ -129,11 +168,11 @@ public static class jsontocs_usagegenerator
 										string valueAccess = $"result.{SanitizeKey(pair.Key)}[{i}].{SanitizeKey(subKey.Key)}.{SanitizeKey(nestedKey.Key)}";
 										if (value is object[] subArray)
 										{
-											sb.Append($"                if (result.{SanitizeKey(pair.Key)} != null && result.{SanitizeKey(pair.Key)}.Length > {i} && result.{SanitizeKey(pair.Key)}[{i}].{SanitizeKey(subKey.Key)} != null{nullCheck}) Debug.Log($\"{path} : {{string.Join(\", \", {valueAccess})}}\"); // {EscapeCommentValue(value)}\n");
+											sb.Append($"if (result.{SanitizeKey(pair.Key)} != null && result.{SanitizeKey(pair.Key)}.Length > {i} && result.{SanitizeKey(pair.Key)}[{i}].{SanitizeKey(subKey.Key)} != null{nullCheck}) Debug.Log($\"{path} : {{string.Join(\", \", {valueAccess})}}\"); // {EscapeCommentValue(value)}\n");
 										}
 										else
 										{
-											sb.Append($"                if (result.{SanitizeKey(pair.Key)} != null && result.{SanitizeKey(pair.Key)}.Length > {i} && result.{SanitizeKey(pair.Key)}[{i}].{SanitizeKey(subKey.Key)} != null{nullCheck}) Debug.Log($\"{path} : {{ {valueAccess} }}\"); // {EscapeCommentValue(value)}\n");
+											sb.Append($"if (result.{SanitizeKey(pair.Key)} != null && result.{SanitizeKey(pair.Key)}.Length > {i} && result.{SanitizeKey(pair.Key)}[{i}].{SanitizeKey(subKey.Key)} != null{nullCheck}) Debug.Log($\"{path} : {{ {valueAccess} }}\"); // {EscapeCommentValue(value)}\n");
 										}
 									}
 								}
@@ -155,11 +194,11 @@ public static class jsontocs_usagegenerator
 											string valueAccess = $"result.{SanitizeKey(pair.Key)}[{i}].{SanitizeKey(subKey.Key)}[{j}].{SanitizeKey(innerKey.Key)}";
 											if (value is object[] subArray)
 											{
-												sb.Append($"                if (result.{SanitizeKey(pair.Key)} != null && result.{SanitizeKey(pair.Key)}.Length > {i} && result.{SanitizeKey(pair.Key)}[{i}].{SanitizeKey(subKey.Key)} != null && result.{SanitizeKey(pair.Key)}[{i}].{SanitizeKey(subKey.Key)}.Length > {j}{nullCheck}) Debug.Log($\"{path} : {{string.Join(\", \", {valueAccess})}}\"); // {EscapeCommentValue(value)}\n");
+												sb.Append($"if (result.{SanitizeKey(pair.Key)} != null && result.{SanitizeKey(pair.Key)}.Length > {i} && result.{SanitizeKey(pair.Key)}[{i}].{SanitizeKey(subKey.Key)} != null && result.{SanitizeKey(pair.Key)}[{i}].{SanitizeKey(subKey.Key)}.Length > {j}{nullCheck}) Debug.Log($\"{path} : {{string.Join(\", \", {valueAccess})}}\"); // {EscapeCommentValue(value)}\n");
 											}
 											else
 											{
-												sb.Append($"                if (result.{SanitizeKey(pair.Key)} != null && result.{SanitizeKey(pair.Key)}.Length > {i} && result.{SanitizeKey(pair.Key)}[{i}].{SanitizeKey(subKey.Key)} != null && result.{SanitizeKey(pair.Key)}[{i}].{SanitizeKey(subKey.Key)}.Length > {j}{nullCheck}) Debug.Log($\"{path} : {{ {valueAccess} }}\"); // {EscapeCommentValue(value)}\n");
+												sb.Append($"if (result.{SanitizeKey(pair.Key)} != null && result.{SanitizeKey(pair.Key)}.Length > {i} && result.{SanitizeKey(pair.Key)}[{i}].{SanitizeKey(subKey.Key)} != null && result.{SanitizeKey(pair.Key)}[{i}].{SanitizeKey(subKey.Key)}.Length > {j}{nullCheck}) Debug.Log($\"{path} : {{ {valueAccess} }}\"); // {EscapeCommentValue(value)}\n");
 											}
 										}
 									}
@@ -174,11 +213,11 @@ public static class jsontocs_usagegenerator
 								string valueAccess = $"result.{SanitizeKey(pair.Key)}[{i}].{SanitizeKey(subKey.Key)}";
 								if (value is object[] subArray)
 								{
-									sb.Append($"                if (result.{SanitizeKey(pair.Key)} != null && result.{SanitizeKey(pair.Key)}.Length > {i}{nullCheck}) Debug.Log($\"{path} : {{string.Join(\", \", {valueAccess})}}\"); // {EscapeCommentValue(value)}\n");
+									sb.Append($"if (result.{SanitizeKey(pair.Key)} != null && result.{SanitizeKey(pair.Key)}.Length > {i}{nullCheck}) Debug.Log($\"{path} : {{string.Join(\", \", {valueAccess})}}\"); // {EscapeCommentValue(value)}\n");
 								}
 								else
 								{
-									sb.Append($"                if (result.{SanitizeKey(pair.Key)} != null && result.{SanitizeKey(pair.Key)}.Length > {i}{nullCheck}) Debug.Log($\"{path} : {{ {valueAccess} }}\"); // {EscapeCommentValue(value)}\n");
+									sb.Append($"if (result.{SanitizeKey(pair.Key)} != null && result.{SanitizeKey(pair.Key)}.Length > {i}{nullCheck}) Debug.Log($\"{path} : {{ {valueAccess} }}\"); // {EscapeCommentValue(value)}\n");
 								}
 							}
 						}
@@ -203,11 +242,11 @@ public static class jsontocs_usagegenerator
 										string valueAccess = $"result.{SanitizeKey(pair.Key)}[{i}].Items[{j}].{SanitizeKey(subKey.Key)}";
 										if (value is object[] subArray)
 										{
-											sb.Append($"                if (result.{SanitizeKey(pair.Key)} != null && result.{SanitizeKey(pair.Key)}.Length > {i} && result.{SanitizeKey(pair.Key)}[{i}].Items != null && result.{SanitizeKey(pair.Key)}[{i}].Items.Length > {j}{nullCheck}) Debug.Log($\"{path} : {{string.Join(\", \", {valueAccess})}}\"); // {EscapeCommentValue(value)}\n");
+											sb.Append($"if (result.{SanitizeKey(pair.Key)} != null && result.{SanitizeKey(pair.Key)}.Length > {i} && result.{SanitizeKey(pair.Key)}[{i}].Items != null && result.{SanitizeKey(pair.Key)}[{i}].Items.Length > {j}{nullCheck}) Debug.Log($\"{path} : {{string.Join(\", \", {valueAccess})}}\"); // {EscapeCommentValue(value)}\n");
 										}
 										else
 										{
-											sb.Append($"                if (result.{SanitizeKey(pair.Key)} != null && result.{SanitizeKey(pair.Key)}.Length > {i} && result.{SanitizeKey(pair.Key)}[{i}].Items != null && result.{SanitizeKey(pair.Key)}[{i}].Items.Length > {j}{nullCheck}) Debug.Log($\"{path} : {{ {valueAccess} }}\"); // {EscapeCommentValue(value)}\n");
+											sb.Append($"if (result.{SanitizeKey(pair.Key)} != null && result.{SanitizeKey(pair.Key)}.Length > {i} && result.{SanitizeKey(pair.Key)}[{i}].Items != null && result.{SanitizeKey(pair.Key)}[{i}].Items.Length > {j}{nullCheck}) Debug.Log($\"{path} : {{ {valueAccess} }}\"); // {EscapeCommentValue(value)}\n");
 										}
 									}
 								}
@@ -228,11 +267,11 @@ public static class jsontocs_usagegenerator
 					string valueAccess = $"result.{SanitizeKey(pair.Key)}.{SanitizeKey(subKey.Key)}";
 					if (value is object[] subArray)
 					{
-						sb.Append($"                if (result.{SanitizeKey(pair.Key)} != null{nullCheck}) Debug.Log($\"{path} : {{string.Join(\", \", {valueAccess})}}\"); // {EscapeCommentValue(value)}\n");
+						sb.Append($"if (result.{SanitizeKey(pair.Key)} != null{nullCheck}) Debug.Log($\"{path} : {{string.Join(\", \", {valueAccess})}}\"); // {EscapeCommentValue(value)}\n");
 					}
 					else
 					{
-						sb.Append($"                if (result.{SanitizeKey(pair.Key)} != null{nullCheck}) Debug.Log($\"{path} : {{ {valueAccess} }}\"); // {EscapeCommentValue(value)}\n");
+						sb.Append($"if (result.{SanitizeKey(pair.Key)} != null{nullCheck}) Debug.Log($\"{path} : {{ {valueAccess} }}\"); // {EscapeCommentValue(value)}\n");
 					}
 				}
 			}
@@ -244,26 +283,26 @@ public static class jsontocs_usagegenerator
 				string valueAccess = $"result.{SanitizeKey(pair.Key)}";
 				if (pair.Value is object[] array2)
 				{
-					sb.Append($"                if ({nullCheck}) Debug.Log($\"{path} : {{string.Join(\", \", {valueAccess})}}\"); // {EscapeCommentValue(pair.Value)}\n");
+					sb.Append($"if ({nullCheck}) Debug.Log($\"{path} : {{string.Join(\", \", {valueAccess})}}\"); // {EscapeCommentValue(pair.Value)}\n");
 				}
 				else
 				{
-					sb.Append($"                if ({nullCheck}) Debug.Log($\"{path} : {{ {valueAccess} }}\"); // {EscapeCommentValue(pair.Value)}\n");
+					sb.Append($"if ({nullCheck}) Debug.Log($\"{path} : {{ {valueAccess} }}\"); // {EscapeCommentValue(pair.Value)}\n");
 				}
 			}
 		}
 
-		sb.Append("            }\n");
-		sb.Append("            else\n");
-		sb.Append("            {\n");
-		sb.Append("                Debug.LogError(\"Failed to deserialize JSON\");\n");
-		sb.Append("            }\n");
-		sb.Append("        }\n");
-		sb.Append("        catch (System.Exception e)\n");
-		sb.Append("        {\n");
-		sb.Append("            Debug.LogError($\"Deserialization error: {e.Message}\");\n");
-		sb.Append("        }\n");
-		sb.Append("    }\n");
+		sb.Append("}\n");
+		sb.Append("else\n");
+		sb.Append("{\n");
+		sb.Append("Debug.LogError(\"Failed to deserialize JSON\");\n");
+		sb.Append("}\n");
+		sb.Append("}\n");
+		sb.Append("catch (System.Exception e)\n");
+		sb.Append("{\n");
+		sb.Append("Debug.LogError($\"Deserialization error: {e.Message}\");\n");
+		sb.Append("}\n");
+		sb.Append("}\n");
 		sb.Append("}\n");
 		return sb.ToString();
 	}
@@ -278,14 +317,14 @@ public static class jsontocs_usagegenerator
 		sb.Append("\n");
 		sb.Append("public class JsonDeserializationExample : MonoBehaviour\n");
 		sb.Append("{\n");
-		sb.Append("    void Start()\n");
-		sb.Append("    {\n");
-		sb.Append($"        string jsonString = @\"{EscapeJsonString(jsonString)}\";\n");
-		sb.Append("        try\n");
-		sb.Append("        {\n");
-		sb.Append("            var data = JsonTocs.FromJson<List<object>>(jsonString);\n");
-		sb.Append("            if (data != null)\n");
-		sb.Append("            {\n");
+		sb.Append("void Start()\n");
+		sb.Append("{\n");
+		sb.Append($"string jsonString = @\"{EscapeJsonString(jsonString)}\";\n");
+		sb.Append("try\n");
+		sb.Append("{\n");
+		sb.Append("var data = JsonTocs.FromJson<List<object>>(jsonString);\n");
+		sb.Append("if (data != null)\n");
+		sb.Append("{\n");
 
 		var dictList = data.OfType<Dictionary<string, object>>().ToList();
 		if (dictList.Any())
@@ -293,15 +332,15 @@ public static class jsontocs_usagegenerator
 			var allKeys = GetAllDictionaryKeys(dictList);
 			var keyMapping = CreateKeyMapping(allKeys);
 			var templateDict = CreateTemplateDictionary(dictList);
-			sb.Append($"                var template = new[] {{ {GenerateAnonymousTemplate(templateDict, keyMapping, 4)} }};\n");
+			sb.Append($"var template = new[] {{ {GenerateAnonymousTemplate(templateDict, keyMapping)} }};\n");
 			sb.Append("\n");
-			sb.Append($"                var result = ((List<object>)data).Select((item, i) =>\n");
-			sb.Append("                {\n");
-			sb.Append($"                    var subDict = (Dictionary<string, object>)item;\n");
-			sb.Append($"                    return {GenerateAnonymousResult(templateDict, keyMapping, 5, "subDict")};\n");
-			sb.Append("                }).ToArray();\n");
+			sb.Append($"var result = ((List<object>)data).Select((item, i) =>\n");
+			sb.Append("{\n");
+			sb.Append($"var subDict = (Dictionary<string, object>)item;\n");
+			sb.Append($"return {GenerateAnonymousResult(templateDict, keyMapping, 0, "subDict")};\n");
+			sb.Append("}).ToArray();\n");
 			sb.Append("\n");
-			sb.Append("                // Display deserialized values\n");
+			sb.Append("// Display deserialized values\n");
 
 			for (int i = 0; i < data.Count; i++)
 			{
@@ -319,7 +358,7 @@ public static class jsontocs_usagegenerator
 							string valueAccess = $"result[{i}].{SanitizeKey(key.Key)}";
 							if (value is object[] subArray)
 							{
-								sb.Append($"                if (result.Length > {i}{nullCheck}) Debug.Log($\"{path} : {{string.Join(\", \", {valueAccess})}}\"); // {EscapeCommentValue(value)}\n");
+								sb.Append($"if (result.Length > {i}{nullCheck}) Debug.Log($\"{path} : {{string.Join(\", \", {valueAccess})}}\"); // {EscapeCommentValue(value)}\n");
 							}
 							else if (value is Dictionary<string, object> nestedDict)
 							{
@@ -335,18 +374,18 @@ public static class jsontocs_usagegenerator
 										string nestedValueAccess = $"result[{i}].{SanitizeKey(key.Key)}.{SanitizeKey(nestedKey.Key)}";
 										if (nestedValue is object[] nestedArray)
 										{
-											sb.Append($"                if (result.Length > {i} && result[{i}].{SanitizeKey(key.Key)} != null{nestedNullCheck}) Debug.Log($\"{nestedPath} : {{string.Join(\", \", {nestedValueAccess})}}\"); // {EscapeCommentValue(nestedValue)}\n");
+											sb.Append($"if (result.Length > {i} && result[{i}].{SanitizeKey(key.Key)} != null{nestedNullCheck}) Debug.Log($\"{nestedPath} : {{string.Join(\", \", {nestedValueAccess})}}\"); // {EscapeCommentValue(nestedValue)}\n");
 										}
 										else
 										{
-											sb.Append($"                if (result.Length > {i} && result[{i}].{SanitizeKey(key.Key)} != null{nestedNullCheck}) Debug.Log($\"{nestedPath} : {{ {nestedValueAccess} }}\"); // {EscapeCommentValue(nestedValue)}\n");
+											sb.Append($"if (result.Length > {i} && result[{i}].{SanitizeKey(key.Key)} != null{nestedNullCheck}) Debug.Log($\"{nestedPath} : {{ {nestedValueAccess} }}\"); // {EscapeCommentValue(nestedValue)}\n");
 										}
 									}
 								}
 							}
 							else
 							{
-								sb.Append($"                if (result.Length > {i}{nullCheck}) Debug.Log($\"{path} : {{ {valueAccess} }}\"); // {EscapeCommentValue(value)}\n");
+								sb.Append($"if (result.Length > {i}{nullCheck}) Debug.Log($\"{path} : {{ {valueAccess} }}\"); // {EscapeCommentValue(value)}\n");
 							}
 						}
 					}
@@ -355,29 +394,29 @@ public static class jsontocs_usagegenerator
 		}
 		else
 		{
-			sb.Append("                var result = data.ToArray();\n");
-			sb.Append("                // Display deserialized values\n");
+			sb.Append("var result = data.ToArray();\n");
+			sb.Append("// Display deserialized values\n");
 			for (int i = 0; i < data.Count; i++)
 			{
 				string path = EscapeInterpolatedString($"[{i}]");
 				string valueAccess = $"result[{i}]";
 				bool isNullableType = data[i] is string || data[i] is object[] || data[i] is Dictionary<string, object> || data[i] == null;
 				string nullCheck = isNullableType ? $" && result[{i}] != null" : "";
-				sb.Append($"                if (result.Length > {i}{nullCheck}) Debug.Log($\"{path} : {{ {valueAccess} }}\"); // {EscapeCommentValue(data[i])}\n");
+				sb.Append($"if (result.Length > {i}{nullCheck}) Debug.Log($\"{path} : {{ {valueAccess} }}\"); // {EscapeCommentValue(data[i])}\n");
 			}
 		}
 
-		sb.Append("            }\n");
-		sb.Append("            else\n");
-		sb.Append("            {\n");
-		sb.Append("                Debug.LogError(\"Failed to deserialize JSON\");\n");
-		sb.Append("            }\n");
-		sb.Append("        }\n");
-		sb.Append("        catch (System.Exception e)\n");
-		sb.Append("        {\n");
-		sb.Append("            Debug.LogError($\"Deserialization error: {e.Message}\");\n");
-		sb.Append("        }\n");
-		sb.Append("    }\n");
+		sb.Append("}\n");
+		sb.Append("else\n");
+		sb.Append("{\n");
+		sb.Append("Debug.LogError(\"Failed to deserialize JSON\");\n");
+		sb.Append("}\n");
+		sb.Append("}\n");
+		sb.Append("catch (System.Exception e)\n");
+		sb.Append("{\n");
+		sb.Append("Debug.LogError($\"Deserialization error: {e.Message}\");\n");
+		sb.Append("}\n");
+		sb.Append("}\n");
 		sb.Append("}\n");
 		return sb.ToString();
 	}
@@ -445,28 +484,28 @@ public static class jsontocs_usagegenerator
 		return mapping;
 	}
 
-	private static string GenerateAnonymousTemplate(object data, Dictionary<string, string> keyMapping, int indentLevel = 0)
+	private static string GenerateAnonymousTemplate(object data, Dictionary<string, string> keyMapping)
 	{
 		if (data == null) return "(object)null";
 
 		var sb = new StringBuilder();
-		string indent = new string(' ', indentLevel * 2);
 
 		if (data is Dictionary<string, object> dict)
 		{
-			sb.Append($"{indent}new\n{indent}{{\n");
+			sb.Append("new\n");
+			sb.Append("{\n");
 			foreach (var key in keyMapping.OrderBy(kv => kv.Key).Select(kv => kv.Key))
 			{
 				string defaultValue = dict.ContainsKey(key) && dict[key] != null ? dict[key] switch
 				{
-					Dictionary<string, object> nestedDict => GenerateAnonymousTemplate(nestedDict, CreateKeyMapping(nestedDict.Keys), indentLevel + 1),
-					object[] arr => arr.Any() && arr[0] is Dictionary<string, object> firstDict ? $"new[] {{ {GenerateAnonymousTemplate(firstDict, CreateKeyMapping(GetAllDictionaryKeys(arr.OfType<Dictionary<string, object>>())), indentLevel + 1)} }}" : "new object[0]",
+					Dictionary<string, object> nestedDict => GenerateAnonymousTemplate(nestedDict, CreateKeyMapping(nestedDict.Keys)),
+					object[] arr => arr.Any() && arr[0] is Dictionary<string, object> firstDict ? $"new[] {{ {GenerateAnonymousTemplate(firstDict, CreateKeyMapping(GetAllDictionaryKeys(arr.OfType<Dictionary<string, object>>())))} }}" : "new object[0]",
 					_ => "(object)null"
 				} : "(object)null";
-				sb.Append($"{indent}  {keyMapping[key]} = {defaultValue},\n");
+				sb.Append($"{keyMapping[key]} = {defaultValue},\n");
 			}
 			if (keyMapping.Count > 0) sb.Length -= 2;
-			sb.Append("\n" + indent + "}");
+			sb.Append("\n}");
 			return sb.ToString();
 		}
 
@@ -478,23 +517,23 @@ public static class jsontocs_usagegenerator
 		if (data == null) return "(object)null";
 
 		var sb = new StringBuilder();
-		string indent = new string(' ', indentLevel * 2);
 
 		if (data is Dictionary<string, object> dict)
 		{
-			sb.Append($"{indent}new\n{indent}{{\n");
+			sb.Append("new\n");
+			sb.Append("{\n");
 			foreach (var key in keyMapping.OrderBy(kv => kv.Key).Select(kv => kv.Key))
 			{
 				string valueExpr = dict.ContainsKey(key) && dict[key] != null ? dict[key] switch
 				{
-					Dictionary<string, object> nestedDict => GenerateNestedDictionaryResult(nestedDict, key, CreateKeyMapping(nestedDict.Keys), indentLevel + 1, dictName),
-					object[] arr => GenerateArrayResult(key, arr, CreateKeyMapping(GetAllDictionaryKeys(arr.OfType<Dictionary<string, object>>())), indentLevel + 1, dictName, dict),
+					Dictionary<string, object> nestedDict => GenerateNestedDictionaryResult(nestedDict, key, CreateKeyMapping(nestedDict.Keys), 0, dictName),
+					object[] arr => GenerateArrayResult(key, arr, CreateKeyMapping(GetAllDictionaryKeys(arr.OfType<Dictionary<string, object>>())), 0, dictName, dict),
 					_ => $"{dictName}.ContainsKey(\"{key}\") ? {dictName}[\"{key}\"] : (object)null"
 				} : $"{dictName}.ContainsKey(\"{key}\") ? {dictName}[\"{key}\"] : (object)null";
-				sb.Append($"{indent}  {keyMapping[key]} = {valueExpr},\n");
+				sb.Append($"{keyMapping[key]} = {valueExpr},\n");
 			}
 			if (keyMapping.Count > 0) sb.Length -= 2;
-			sb.Append("\n" + indent + "}");
+			sb.Append("\n}");
 			return sb.ToString();
 		}
 
@@ -504,24 +543,23 @@ public static class jsontocs_usagegenerator
 	private static string GenerateNestedDictionaryResult(Dictionary<string, object> nestedDict, string parentKey, Dictionary<string, string> keyMapping, int indentLevel, string dictName)
 	{
 		var sb = new StringBuilder();
-		string indent = new string(' ', indentLevel * 2);
-		var template = GenerateAnonymousTemplate(nestedDict, keyMapping, indentLevel + 2);
+		var template = GenerateAnonymousTemplate(nestedDict, keyMapping);
 
-		sb.Append($"{indent}({dictName}.ContainsKey(\"{parentKey}\") ? new\n{indent}{{\n");
+		sb.Append($"({dictName}.ContainsKey(\"{parentKey}\") ? new\n");
+		sb.Append("{\n");
 		foreach (var key in keyMapping.OrderBy(kv => kv.Key).Select(kv => kv.Key))
 		{
 			string valueExpr = $"({dictName}.ContainsKey(\"{parentKey}\") && ((Dictionary<string, object>){dictName}[\"{parentKey}\"]).ContainsKey(\"{key}\") ? ((Dictionary<string, object>){dictName}[\"{parentKey}\"])[\"{key}\"] : (object)null)";
-			sb.Append($"{indent}  {keyMapping[key]} = {valueExpr},\n");
+			sb.Append($"{keyMapping[key]} = {valueExpr},\n");
 		}
 		if (keyMapping.Count > 0) sb.Length -= 2;
-		sb.Append($"\n{indent}}} : {template})");
+		sb.Append($"\n}} : {template})");
 		return sb.ToString();
 	}
 
 	private static string GenerateArrayResult(string key, IEnumerable<object> arr, Dictionary<string, string> keyMapping, int indentLevel, string dictName, Dictionary<string, object> parentDict)
 	{
 		var sb = new StringBuilder();
-		string indent = new string(' ', indentLevel * 2);
 		var items = arr.ToList();
 		if (items.FirstOrDefault() is Dictionary<string, object> firstDict)
 		{
@@ -529,52 +567,54 @@ public static class jsontocs_usagegenerator
 			var allKeys = GetAllDictionaryKeys(dictList);
 			var innerKeyMapping = CreateKeyMapping(allKeys);
 			var templateDict = CreateTemplateDictionary(dictList);
-			var itemTemplate = GenerateAnonymousTemplate(templateDict, innerKeyMapping, indentLevel + 2);
+			var itemTemplate = GenerateAnonymousTemplate(templateDict, innerKeyMapping);
 
-			sb.Append($"{indent}({dictName}.ContainsKey(\"{key}\") ? ((object[]){dictName}[\"{key}\"]).Select((item, j) =>\n");
-			sb.Append(indent + "{\n");
-			sb.Append($"{indent}  var subDict = (Dictionary<string, object>)item;\n");
-			sb.Append($"{indent}  return new\n{indent}  {{\n");
+			sb.Append($"({dictName}.ContainsKey(\"{key}\") ? ((object[]){dictName}[\"{key}\"]).Select((item, j) =>\n");
+			sb.Append("{\n");
+			sb.Append($"var subDict = (Dictionary<string, object>)item;\n");
+			sb.Append($"return new\n");
+			sb.Append("{\n");
 			foreach (var subKey in allKeys.OrderBy(k => k))
 			{
 				if (parentDict.ContainsKey(key) && parentDict[key] is object[] subArr && subArr.Any() && subArr.Any(dict => dict is Dictionary<string, object> nestedDict && nestedDict.ContainsKey(subKey) && nestedDict[subKey] is Dictionary<string, object> nestedSubDict))
 				{
 					var nestedSubDict = subArr.OfType<Dictionary<string, object>>().First(dict => dict.ContainsKey(subKey) && dict[subKey] is Dictionary<string, object>).GetValueOrDefault(subKey) as Dictionary<string, object>;
 					var nestedKeyMapping = CreateKeyMapping(nestedSubDict.Keys);
-					sb.Append($"{indent}    {innerKeyMapping[subKey]} = {GenerateNestedDictionaryResult(nestedSubDict, subKey, nestedKeyMapping, indentLevel + 2, "subDict")},\n");
+					sb.Append($"{innerKeyMapping[subKey]} = {GenerateNestedDictionaryResult(nestedSubDict, subKey, nestedKeyMapping, 0, "subDict")},\n");
 				}
 				else if (parentDict.ContainsKey(key) && parentDict[key] is object[] subArr2 && subArr2.Any() && subArr2.Any(dict => dict is Dictionary<string, object> nestedDict2 && nestedDict2.ContainsKey(subKey) && nestedDict2[subKey] is object[] innerArr && innerArr.Any() && innerArr[0] is Dictionary<string, object>))
 				{
 					var innerArr = subArr2.OfType<Dictionary<string, object>>().First(dict => dict.ContainsKey(subKey) && dict[subKey] is object[] innerArr2 && innerArr2.Any() && innerArr2[0] is Dictionary<string, object>).GetValueOrDefault(subKey) as object[];
 					var innerDictList = innerArr.OfType<Dictionary<string, object>>().ToList();
 					var innerInnerKeyMapping = CreateKeyMapping(GetAllDictionaryKeys(innerDictList));
-					var innerTemplate = GenerateAnonymousTemplate(CreateTemplateDictionary(innerDictList), innerInnerKeyMapping, indentLevel + 4);
-					sb.Append($"{indent}    {innerKeyMapping[subKey]} = subDict.ContainsKey(\"{subKey}\") ? ((object[])subDict[\"{subKey}\"]).Select((innerItem, k) =>\n");
-					sb.Append($"{indent}    {{\n");
-					sb.Append($"{indent}      var innerDict = (Dictionary<string, object>)innerItem;\n");
-					sb.Append($"{indent}      return new\n{indent}      {{\n");
+					var innerTemplate = GenerateAnonymousTemplate(CreateTemplateDictionary(innerDictList), innerInnerKeyMapping);
+					sb.Append($"{innerKeyMapping[subKey]} = subDict.ContainsKey(\"{subKey}\") ? ((object[])subDict[\"{subKey}\"]).Select((innerItem, k) =>\n");
+					sb.Append("{\n");
+					sb.Append($"var innerDict = (Dictionary<string, object>)innerItem;\n");
+					sb.Append($"return new\n");
+					sb.Append("{\n");
 					foreach (var innerKey in innerInnerKeyMapping.OrderBy(kv => kv.Key).Select(kv => kv.Key))
 					{
 						string valueExpr = $"innerDict.ContainsKey(\"{innerKey}\") ? innerDict[\"{innerKey}\"] : (object)null";
-						sb.Append($"{indent}        {innerInnerKeyMapping[innerKey]} = {valueExpr},\n");
+						sb.Append($"{innerInnerKeyMapping[innerKey]} = {valueExpr},\n");
 					}
 					if (innerInnerKeyMapping.Count > 0) sb.Length -= 2;
-					sb.Append($"\n{indent}      }};\n");
-					sb.Append($"{indent}    }}).ToArray() : new[] {{ {innerTemplate} }},\n");
+					sb.Append($"\n}};\n");
+					sb.Append($"}}).ToArray() : new[] {{ {innerTemplate} }},\n");
 				}
 				else
 				{
 					string valueExpr = $"subDict.ContainsKey(\"{subKey}\") ? subDict[\"{subKey}\"] : (object)null";
-					sb.Append($"{indent}    {innerKeyMapping[subKey]} = {valueExpr},\n");
+					sb.Append($"{innerKeyMapping[subKey]} = {valueExpr},\n");
 				}
 			}
 			if (allKeys.Count > 0) sb.Length -= 2;
-			sb.Append($"\n{indent}  }};\n");
-			sb.Append(indent + "}).ToArray() : new[] { " + itemTemplate + " })");
+			sb.Append($"\n}};\n");
+			sb.Append($"}}).ToArray() : new[] {{ {itemTemplate} }})");
 		}
 		else
 		{
-			sb.Append($"{indent}({dictName}.ContainsKey(\"{key}\") ? ((object[]){dictName}[\"{key}\"]).Select(item => item).ToArray() : new object[0])");
+			sb.Append($"({dictName}.ContainsKey(\"{key}\") ? ((object[]){dictName}[\"{key}\"]).Select(item => item).ToArray() : new object[0])");
 		}
 		return sb.ToString();
 	}
