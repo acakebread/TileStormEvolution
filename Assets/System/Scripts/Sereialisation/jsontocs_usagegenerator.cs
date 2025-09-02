@@ -41,31 +41,59 @@ public static class jsontocs_usagegenerator
 	private static string SanitizeKey(string key)
 	{
 		if (string.IsNullOrEmpty(key)) return "_";
-		string sanitized = Regex.Replace(key, @"[^a-zA-Z0-9_]", "_");
-		if (char.IsDigit(sanitized[0]))
-		{
-			sanitized = "_" + sanitized;
-		}
-		return sanitized;
+		return "_" + Regex.Replace(key, @"[^a-zA-Z0-9_]", "_");
 	}
 
 	private static string EscapeCommentValue(object value)
 	{
 		if (value == null) return "null";
-		string stringValue = JsonTocs.ToJson(value);
-		// Strip escape sequences and control characters
-		stringValue = Regex.Replace(stringValue, @"\\[nrt\\]|[\\n\\r\\t]", "");
-		const int maxLength = 50;
-		if (stringValue.Length > maxLength)
+		if (value is string str)
 		{
-			stringValue = stringValue.Substring(0, maxLength - 3) + "...";
+			// Remove surrounding quotes from JSON-serialized string
+			string stringValue = JsonTocs.ToJson(str).Trim('"');
+			// Escape special characters for C# comment
+			stringValue = Regex.Replace(stringValue, @"\\[nrt\\""\\fb0]|[\\n\\r\\t\\f\\b\\0\-\\u001F]", m =>
+			{
+				return m.Value switch
+				{
+					"\\n" => "\\\\n",
+					"\\r" => "\\\\r",
+					"\\t" => "\\\\t",
+					"\\\"" => "\\\"",
+					"\\\\" => "\\\\",
+					"\\f" => "\\\\f",
+					"\\b" => "\\\\b",
+					"\\0" => "\\\\0",
+					_ => ""
+				};
+			});
+			const int maxLength = 50;
+			if (stringValue.Length > maxLength)
+			{
+				stringValue = stringValue.Substring(0, maxLength - 3) + "...";
+			}
+			return stringValue;
 		}
-		return stringValue;
+		if (value is bool || value is int || value is long || value is float || value is double)
+		{
+			return value.ToString();
+		}
+		if (value is object[] or List<object>)
+		{
+			return "[...]";
+		}
+		if (value is Dictionary<string, object>)
+		{
+			return "{...}";
+		}
+		return value.ToString();
 	}
 
 	private static string EscapeJsonString(string json)
 	{
-		return json.Replace("\"", "\"\"").Replace("\r\n", "\n");
+		if (string.IsNullOrEmpty(json)) return json;
+		string escaped = json.Replace("\"", "\"\"");
+		return escaped;
 	}
 
 	private static string EscapeInterpolatedString(string input)
@@ -128,7 +156,47 @@ public static class jsontocs_usagegenerator
 
 		foreach (var pair in data.OrderBy(p => p.Key))
 		{
-			if (pair.Value is object[] array1 && array1.Any() && array1[0] is Dictionary<string, object>)
+			if (pair.Value is Dictionary<string, object> nestedDict)
+			{
+				var nestedKeyMapping = CreateKeyMapping(nestedDict.Keys);
+				foreach (var subKey in nestedKeyMapping.OrderBy(kv => kv.Key))
+				{
+					var value = nestedDict[subKey.Key];
+					bool isNullableType = value is string || value is object[] || value is Dictionary<string, object> || value == null;
+					string nullCheck = isNullableType ? $" && result.{SanitizeKey(pair.Key)}.{SanitizeKey(subKey.Key)} != null" : "";
+					string path = EscapeInterpolatedString($"{pair.Key}.{subKey.Key}");
+					string valueAccess = $"result.{SanitizeKey(pair.Key)}.{SanitizeKey(subKey.Key)}";
+					if (value is object[] subArray)
+					{
+						sb.Append($"if (result.{SanitizeKey(pair.Key)} != null{nullCheck}) Debug.Log($\"{path} : {{string.Join(\", \", (object[]){valueAccess})}}\"); // {EscapeCommentValue(value)}\n");
+					}
+					else if (value is Dictionary<string, object> subDict)
+					{
+						var subNestedKeyMapping = CreateKeyMapping(subDict.Keys);
+						foreach (var subNestedKey in subNestedKeyMapping.OrderBy(kv => kv.Key))
+						{
+							var subValue = subDict[subNestedKey.Key];
+							bool isSubNullable = subValue is string || subValue is object[] || subValue is Dictionary<string, object> || subValue == null;
+							string subNullCheck = isSubNullable ? $" && result.{SanitizeKey(pair.Key)}.{SanitizeKey(subKey.Key)}.{SanitizeKey(subNestedKey.Key)} != null" : "";
+							string subPath = EscapeInterpolatedString($"{pair.Key}.{subKey.Key}.{subNestedKey.Key}");
+							string subValueAccess = $"result.{SanitizeKey(pair.Key)}.{SanitizeKey(subKey.Key)}.{SanitizeKey(subNestedKey.Key)}";
+							if (subValue is object[] subSubArray)
+							{
+								sb.Append($"if (result.{SanitizeKey(pair.Key)} != null && result.{SanitizeKey(pair.Key)}.{SanitizeKey(subKey.Key)} != null{subNullCheck}) Debug.Log($\"{subPath} : {{string.Join(\", \", (object[]){subValueAccess})}}\"); // {EscapeCommentValue(subValue)}\n");
+							}
+							else
+							{
+								sb.Append($"if (result.{SanitizeKey(pair.Key)} != null && result.{SanitizeKey(pair.Key)}.{SanitizeKey(subKey.Key)} != null{subNullCheck}) Debug.Log($\"{subPath} : {{ {subValueAccess} }}\"); // {EscapeCommentValue(subValue)}\n");
+							}
+						}
+					}
+					else
+					{
+						sb.Append($"if (result.{SanitizeKey(pair.Key)} != null{nullCheck}) Debug.Log($\"{path} : {{ {valueAccess} }}\"); // {EscapeCommentValue(value)}\n");
+					}
+				}
+			}
+			else if (pair.Value is object[] array1 && (array1.Any() && array1[0] is Dictionary<string, object> || !array1.Any()))
 			{
 				var subDicts = array1.OfType<Dictionary<string, object>>().ToList();
 				var subKeyMapping = CreateKeyMapping(GetAllDictionaryKeys(subDicts));
@@ -152,7 +220,7 @@ public static class jsontocs_usagegenerator
 										string valueAccess = $"result.{SanitizeKey(pair.Key)}[{i}].{SanitizeKey(subKey.Key)}.{SanitizeKey(nestedKey.Key)}";
 										if (value is object[] subArray)
 										{
-											sb.Append($"if (result.{SanitizeKey(pair.Key)} != null && result.{SanitizeKey(pair.Key)}.Length > {i} && result.{SanitizeKey(pair.Key)}[{i}].{SanitizeKey(subKey.Key)} != null{nullCheck}) Debug.Log($\"{path} : {{string.Join(\", \", {valueAccess})}}\"); // {EscapeCommentValue(value)}\n");
+											sb.Append($"if (result.{SanitizeKey(pair.Key)} != null && result.{SanitizeKey(pair.Key)}.Length > {i} && result.{SanitizeKey(pair.Key)}[{i}].{SanitizeKey(subKey.Key)} != null{nullCheck}) Debug.Log($\"{path} : {{string.Join(\", \", (object[]){valueAccess})}}\"); // {EscapeCommentValue(value)}\n");
 										}
 										else
 										{
@@ -161,7 +229,7 @@ public static class jsontocs_usagegenerator
 									}
 								}
 							}
-							else if (itemDict[subKey.Key] is object[] innerArray && innerArray.Any() && innerArray[0] is Dictionary<string, object>)
+							else if (itemDict[subKey.Key] is object[] innerArray && (innerArray.Any() && innerArray[0] is Dictionary<string, object> || !innerArray.Any()))
 							{
 								var innerDicts = innerArray.OfType<Dictionary<string, object>>().ToList();
 								var innerKeyMapping = CreateKeyMapping(GetAllDictionaryKeys(innerDicts));
@@ -178,7 +246,7 @@ public static class jsontocs_usagegenerator
 											string valueAccess = $"result.{SanitizeKey(pair.Key)}[{i}].{SanitizeKey(subKey.Key)}[{j}].{SanitizeKey(innerKey.Key)}";
 											if (value is object[] subArray)
 											{
-												sb.Append($"if (result.{SanitizeKey(pair.Key)} != null && result.{SanitizeKey(pair.Key)}.Length > {i} && result.{SanitizeKey(pair.Key)}[{i}].{SanitizeKey(subKey.Key)} != null && result.{SanitizeKey(pair.Key)}[{i}].{SanitizeKey(subKey.Key)}.Length > {j}{nullCheck}) Debug.Log($\"{path} : {{string.Join(\", \", {valueAccess})}}\"); // {EscapeCommentValue(value)}\n");
+												sb.Append($"if (result.{SanitizeKey(pair.Key)} != null && result.{SanitizeKey(pair.Key)}.Length > {i} && result.{SanitizeKey(pair.Key)}[{i}].{SanitizeKey(subKey.Key)} != null && result.{SanitizeKey(pair.Key)}[{i}].{SanitizeKey(subKey.Key)}.Length > {j}{nullCheck}) Debug.Log($\"{path} : {{string.Join(\", \", (object[]){valueAccess})}}\"); // {EscapeCommentValue(value)}\n");
 											}
 											else
 											{
@@ -197,7 +265,7 @@ public static class jsontocs_usagegenerator
 								string valueAccess = $"result.{SanitizeKey(pair.Key)}[{i}].{SanitizeKey(subKey.Key)}";
 								if (value is object[] subArray)
 								{
-									sb.Append($"if (result.{SanitizeKey(pair.Key)} != null && result.{SanitizeKey(pair.Key)}.Length > {i}{nullCheck}) Debug.Log($\"{path} : {{string.Join(\", \", {valueAccess})}}\"); // {EscapeCommentValue(value)}\n");
+									sb.Append($"if (result.{SanitizeKey(pair.Key)} != null && result.{SanitizeKey(pair.Key)}.Length > {i}{nullCheck}) Debug.Log($\"{path} : {{string.Join(\", \", (object[]){valueAccess})}}\"); // {EscapeCommentValue(value)}\n");
 								}
 								else
 								{
@@ -208,39 +276,19 @@ public static class jsontocs_usagegenerator
 					}
 				}
 			}
-			else if (pair.Value is Dictionary<string, object> nestedDict)
-			{
-				var nestedKeyMapping = CreateKeyMapping(nestedDict.Keys);
-				foreach (var subKey in nestedKeyMapping.OrderBy(kv => kv.Key))
-				{
-					var value = nestedDict[subKey.Key];
-					bool isNullableType = value is string || value is object[] || value is Dictionary<string, object> || value == null;
-					string nullCheck = isNullableType ? $" && result.{SanitizeKey(pair.Key)}.{SanitizeKey(subKey.Key)} != null" : "";
-					string path = EscapeInterpolatedString($"{pair.Key}.{subKey.Key}");
-					string valueAccess = $"result.{SanitizeKey(pair.Key)}.{SanitizeKey(subKey.Key)}";
-					if (value is object[] subArray)
-					{
-						sb.Append($"if (result.{SanitizeKey(pair.Key)} != null{nullCheck}) Debug.Log($\"{path} : {{string.Join(\", \", {valueAccess})}}\"); // {EscapeCommentValue(value)}\n");
-					}
-					else
-					{
-						sb.Append($"if (result.{SanitizeKey(pair.Key)} != null{nullCheck}) Debug.Log($\"{path} : {{ {valueAccess} }}\"); // {EscapeCommentValue(value)}\n");
-					}
-				}
-			}
 			else
 			{
 				bool isNullableType = pair.Value is string || pair.Value is object[] || pair.Value is Dictionary<string, object> || pair.Value == null;
-				string nullCheck = isNullableType ? $"result.{SanitizeKey(pair.Key)} != null" : "true";
+				string nullCheck = isNullableType ? $" && result.{SanitizeKey(pair.Key)} != null" : "";
 				string path = EscapeInterpolatedString(pair.Key);
 				string valueAccess = $"result.{SanitizeKey(pair.Key)}";
 				if (pair.Value is object[] array2)
 				{
-					sb.Append($"if ({nullCheck}) Debug.Log($\"{path} : {{string.Join(\", \", {valueAccess})}}\"); // {EscapeCommentValue(pair.Value)}\n");
+					sb.Append($"if (result.{SanitizeKey(pair.Key)} != null{nullCheck}) Debug.Log($\"{path} : {{string.Join(\", \", (object[]){valueAccess})}}\"); // {EscapeCommentValue(pair.Value)}\n");
 				}
 				else
 				{
-					sb.Append($"if ({nullCheck}) Debug.Log($\"{path} : {{ {valueAccess} }}\"); // {EscapeCommentValue(pair.Value)}\n");
+					sb.Append($"if (result.{SanitizeKey(pair.Key)} != null{nullCheck}) Debug.Log($\"{path} : {{ {valueAccess} }}\"); // {EscapeCommentValue(pair.Value)}\n");
 				}
 			}
 		}
@@ -311,7 +359,7 @@ public static class jsontocs_usagegenerator
 							string valueAccess = $"result[{i}].{SanitizeKey(key.Key)}";
 							if (value is object[] subArray)
 							{
-								sb.Append($"if (result.Length > {i}{nullCheck}) Debug.Log($\"{path} : {{string.Join(\", \", {valueAccess})}}\"); // {EscapeCommentValue(value)}\n");
+								sb.Append($"if (result.Length > {i}{nullCheck}) Debug.Log($\"{path} : {{string.Join(\", \", (object[]){valueAccess})}}\"); // {EscapeCommentValue(value)}\n");
 							}
 							else if (value is Dictionary<string, object> nestedDict)
 							{
@@ -327,7 +375,7 @@ public static class jsontocs_usagegenerator
 										string nestedValueAccess = $"result[{i}].{SanitizeKey(key.Key)}.{SanitizeKey(nestedKey.Key)}";
 										if (nestedValue is object[] nestedArray)
 										{
-											sb.Append($"if (result.Length > {i} && result[{i}].{SanitizeKey(key.Key)} != null{nestedNullCheck}) Debug.Log($\"{nestedPath} : {{string.Join(\", \", {nestedValueAccess})}}\"); // {EscapeCommentValue(nestedValue)}\n");
+											sb.Append($"if (result.Length > {i} && result[{i}].{SanitizeKey(key.Key)} != null{nestedNullCheck}) Debug.Log($\"{nestedPath} : {{string.Join(\", \", (object[]){nestedValueAccess})}}\"); // {EscapeCommentValue(nestedValue)}\n");
 										}
 										else
 										{
@@ -409,7 +457,7 @@ public static class jsontocs_usagegenerator
 				{
 					templateDict[key] = CreateTemplateDictionary(new[] { nestedDict });
 				}
-				else if (firstNonNull is object[] array && array.Any() && array[0] is Dictionary<string, object> firstDict)
+				else if (firstNonNull is object[] array && (array.Any() && array[0] is Dictionary<string, object> || !array.Any()))
 				{
 					var subDicts = array.OfType<Dictionary<string, object>>().ToList();
 					if (subDicts.Any())
@@ -460,12 +508,14 @@ public static class jsontocs_usagegenerator
 				string defaultValue = dict.ContainsKey(key) && dict[key] != null ? dict[key] switch
 				{
 					Dictionary<string, object> nestedDict => GenerateAnonymousTemplate(nestedDict, CreateKeyMapping(nestedDict.Keys)),
-					object[] arr => arr.Any() && arr[0] is Dictionary<string, object> firstDict ? $"new[] {{ {GenerateAnonymousTemplate(firstDict, CreateKeyMapping(GetAllDictionaryKeys(arr.OfType<Dictionary<string, object>>())))} }}" : "new object[0]",
+					object[] arr => arr.Any() && arr[0] is Dictionary<string, object> firstDict
+						? $"new[] {{ {GenerateAnonymousTemplate(firstDict, CreateKeyMapping(GetAllDictionaryKeys(arr.OfType<Dictionary<string, object>>())))} }}"
+						: "new object[0]",
 					_ => "(object)null"
 				} : "(object)null";
 				sb.Append($"{keyMapping[key]} = {defaultValue},\n");
 			}
-			if (keyMapping.Count > 0) sb.Length -= 2;
+			if (keyMapping.Count > 0) sb.Length -= 2; // Remove trailing comma
 			sb.Append("\n}");
 			return sb.ToString();
 		}
@@ -487,8 +537,8 @@ public static class jsontocs_usagegenerator
 			{
 				string valueExpr = dict.ContainsKey(key) && dict[key] != null ? dict[key] switch
 				{
-					Dictionary<string, object> nestedDict => GenerateNestedDictionaryResult(nestedDict, key, CreateKeyMapping(nestedDict.Keys), 0, dictName),
-					object[] arr => GenerateArrayResult(key, arr, CreateKeyMapping(GetAllDictionaryKeys(arr.OfType<Dictionary<string, object>>())), 0, dictName, dict),
+					Dictionary<string, object> nestedDict => GenerateNestedDictionaryResult(nestedDict, key, CreateKeyMapping(nestedDict.Keys), indentLevel + 1, dictName),
+					object[] arr => GenerateArrayResult(key, arr, CreateKeyMapping(GetAllDictionaryKeys(arr.OfType<Dictionary<string, object>>())), indentLevel + 1, dictName, dict),
 					_ => $"{dictName}.ContainsKey(\"{key}\") ? {dictName}[\"{key}\"] : (object)null"
 				} : $"{dictName}.ContainsKey(\"{key}\") ? {dictName}[\"{key}\"] : (object)null";
 				sb.Append($"{keyMapping[key]} = {valueExpr},\n");
@@ -506,15 +556,79 @@ public static class jsontocs_usagegenerator
 		var sb = new StringBuilder();
 		var template = GenerateAnonymousTemplate(nestedDict, keyMapping);
 
-		sb.Append($"({dictName}.ContainsKey(\"{parentKey}\") ? new\n");
+		sb.Append($"({dictName}.ContainsKey(\"{parentKey}\") && {dictName}[\"{parentKey}\"] != null ? new\n");
 		sb.Append("{\n");
 		foreach (var key in keyMapping.OrderBy(kv => kv.Key).Select(kv => kv.Key))
 		{
-			string valueExpr = $"({dictName}.ContainsKey(\"{parentKey}\") && ((Dictionary<string, object>){dictName}[\"{parentKey}\"]).ContainsKey(\"{key}\") ? ((Dictionary<string, object>){dictName}[\"{parentKey}\"])[\"{key}\"] : (object)null)";
+			string valueExpr;
+			if (nestedDict.ContainsKey(key) && nestedDict[key] is Dictionary<string, object> subDict)
+			{
+				var subKeyMapping = CreateKeyMapping(subDict.Keys);
+				valueExpr = GenerateNestedDictionaryResult(subDict, key, subKeyMapping, indentLevel + 1, $"((Dictionary<string, object>){dictName}[\"{parentKey}\"])");
+			}
+			else if (nestedDict.ContainsKey(key) && nestedDict[key] is object[] arr && (arr.Any() && arr[0] is Dictionary<string, object> || !arr.Any()))
+			{
+				var dictList = arr.OfType<Dictionary<string, object>>().ToList();
+				var innerKeyMapping = CreateKeyMapping(GetAllDictionaryKeys(dictList));
+				var itemTemplate = dictList.Any() ? GenerateAnonymousTemplate(CreateTemplateDictionary(dictList), innerKeyMapping) : "new { }";
+				valueExpr = $"({dictName}.ContainsKey(\"{parentKey}\") && ((Dictionary<string, object>){dictName}[\"{parentKey}\"]).ContainsKey(\"{key}\") ? ((object[])((Dictionary<string, object>){dictName}[\"{parentKey}\"])[\"{key}\"]).Select((item, j) =>\n";
+				valueExpr += "{\n";
+				valueExpr += $"var subDict = (Dictionary<string, object>)item;\n";
+				valueExpr += $"return new\n";
+				valueExpr += "{\n";
+				foreach (var innerKey in innerKeyMapping.OrderBy(kv => kv.Key).Select(kv => kv.Key))
+				{
+					if (dictList.Any() && dictList.Any(d => d.ContainsKey(innerKey) && d[innerKey] is Dictionary<string, object>))
+					{
+						var nestedSubDict = dictList.First(d => d.ContainsKey(innerKey) && d[innerKey] is Dictionary<string, object>)[innerKey] as Dictionary<string, object>;
+						var nestedInnerKeyMapping = CreateKeyMapping(nestedSubDict.Keys);
+						valueExpr += $"{innerKeyMapping[innerKey]} = {GenerateNestedDictionaryResult(nestedSubDict, innerKey, nestedInnerKeyMapping, indentLevel + 2, "subDict")},\n";
+					}
+					else if (dictList.Any() && dictList.Any(d => d.ContainsKey(innerKey) && d[innerKey] is object[] innerArr && (innerArr.Any() && innerArr[0] is Dictionary<string, object> || !innerArr.Any())))
+					{
+						var innerArr = dictList.First(d => d.ContainsKey(innerKey) && d[innerKey] is object[])[innerKey] as object[];
+						var innerDictList = innerArr.OfType<Dictionary<string, object>>().ToList();
+						var innerInnerKeyMapping = CreateKeyMapping(GetAllDictionaryKeys(innerDictList));
+						var innerTemplate = innerDictList.Any() ? GenerateAnonymousTemplate(CreateTemplateDictionary(innerDictList), innerInnerKeyMapping) : "new { }";
+						valueExpr += $"{innerKeyMapping[innerKey]} = subDict.ContainsKey(\"{innerKey}\") && subDict[\"{innerKey}\"] != null ? ((object[])subDict[\"{innerKey}\"]).Select((innerItem, k) =>\n";
+						valueExpr += "{\n";
+						valueExpr += $"var innerDict = (Dictionary<string, object>)innerItem;\n";
+						valueExpr += $"return new\n";
+						valueExpr += "{\n";
+						foreach (var nestedKey in innerInnerKeyMapping.OrderBy(kv => kv.Key).Select(kv => kv.Key))
+						{
+							if (innerDictList.Any() && innerDictList.Any(d => d.ContainsKey(nestedKey) && d[nestedKey] is Dictionary<string, object>))
+							{
+								var nestedInnerDict = innerDictList.First(d => d.ContainsKey(nestedKey) && d[nestedKey] is Dictionary<string, object>)[nestedKey] as Dictionary<string, object>;
+								var nestedInnerKeyMapping = CreateKeyMapping(nestedInnerDict.Keys);
+								valueExpr += $"{innerInnerKeyMapping[nestedKey]} = {GenerateNestedDictionaryResult(nestedInnerDict, nestedKey, nestedInnerKeyMapping, indentLevel + 3, "innerDict")},\n";
+							}
+							else
+							{
+								valueExpr += $"{innerInnerKeyMapping[nestedKey]} = innerDict.ContainsKey(\"{nestedKey}\") ? innerDict[\"{nestedKey}\"] : (object)null,\n";
+							}
+						}
+						if (innerInnerKeyMapping.Count > 0) valueExpr = valueExpr.Substring(0, valueExpr.Length - 2);
+						valueExpr += "};\n";
+						valueExpr += "}).ToArray() : new[] { " + innerTemplate + " },\n";
+					}
+					else
+					{
+						valueExpr += $"{innerKeyMapping[innerKey]} = subDict.ContainsKey(\"{innerKey}\") ? subDict[\"{innerKey}\"] : (object)null,\n";
+					}
+				}
+				if (innerKeyMapping.Count > 0) valueExpr = valueExpr.Substring(0, valueExpr.Length - 2);
+				valueExpr += "};\n";
+				valueExpr += "}).ToArray() : new[] { " + itemTemplate + " })";
+			}
+			else
+			{
+				valueExpr = $"({dictName}.ContainsKey(\"{parentKey}\") && ((Dictionary<string, object>){dictName}[\"{parentKey}\"]).ContainsKey(\"{key}\") ? ((Dictionary<string, object>){dictName}[\"{parentKey}\"])[\"{key}\"] : (object)null)";
+			}
 			sb.Append($"{keyMapping[key]} = {valueExpr},\n");
 		}
 		if (keyMapping.Count > 0) sb.Length -= 2;
-		sb.Append($"\n}} : {template})");
+		sb.Append("\n} : " + template + ")");
 		return sb.ToString();
 	}
 
@@ -522,46 +636,54 @@ public static class jsontocs_usagegenerator
 	{
 		var sb = new StringBuilder();
 		var items = arr.ToList();
-		if (items.FirstOrDefault() is Dictionary<string, object> firstDict)
+		if (items.Any() && items[0] is Dictionary<string, object> firstDict || !items.Any())
 		{
 			var dictList = items.OfType<Dictionary<string, object>>().ToList();
 			var allKeys = GetAllDictionaryKeys(dictList);
 			var innerKeyMapping = CreateKeyMapping(allKeys);
 			var templateDict = CreateTemplateDictionary(dictList);
-			var itemTemplate = GenerateAnonymousTemplate(templateDict, innerKeyMapping);
+			var itemTemplate = dictList.Any() ? GenerateAnonymousTemplate(templateDict, innerKeyMapping) : "new { }";
 
-			sb.Append($"({dictName}.ContainsKey(\"{key}\") ? ((object[]){dictName}[\"{key}\"]).Select((item, j) =>\n");
+			sb.Append($"({dictName}.ContainsKey(\"{key}\") && ((Dictionary<string, object>){dictName}[\"{key}\"]).ContainsKey(\"{key}\") ? ((object[]){dictName}[\"{key}\"]).Select((item, j) =>\n");
 			sb.Append("{\n");
 			sb.Append($"var subDict = (Dictionary<string, object>)item;\n");
 			sb.Append($"return new\n");
 			sb.Append("{\n");
 			foreach (var subKey in allKeys.OrderBy(k => k))
 			{
-				if (parentDict.ContainsKey(key) && parentDict[key] is object[] subArr && subArr.Any() && subArr.Any(dict => dict is Dictionary<string, object> nestedDict && nestedDict.ContainsKey(subKey) && nestedDict[subKey] is Dictionary<string, object> nestedSubDict))
+				if (dictList.Any() && dictList.Any(dict => dict.ContainsKey(subKey) && dict[subKey] is Dictionary<string, object> nestedDict))
 				{
-					var nestedSubDict = subArr.OfType<Dictionary<string, object>>().First(dict => dict.ContainsKey(subKey) && dict[subKey] is Dictionary<string, object>).GetValueOrDefault(subKey) as Dictionary<string, object>;
+					var nestedSubDict = dictList.First(dict => dict.ContainsKey(subKey) && dict[subKey] is Dictionary<string, object>)[subKey] as Dictionary<string, object>;
 					var nestedKeyMapping = CreateKeyMapping(nestedSubDict.Keys);
-					sb.Append($"{innerKeyMapping[subKey]} = {GenerateNestedDictionaryResult(nestedSubDict, subKey, nestedKeyMapping, 0, "subDict")},\n");
+					sb.Append($"{innerKeyMapping[subKey]} = {GenerateNestedDictionaryResult(nestedSubDict, subKey, nestedKeyMapping, indentLevel + 1, "subDict")},\n");
 				}
-				else if (parentDict.ContainsKey(key) && parentDict[key] is object[] subArr2 && subArr2.Any() && subArr2.Any(dict => dict is Dictionary<string, object> nestedDict2 && nestedDict2.ContainsKey(subKey) && nestedDict2[subKey] is object[] innerArr && innerArr.Any() && innerArr[0] is Dictionary<string, object>))
+				else if (dictList.Any() && dictList.Any(dict => dict.ContainsKey(subKey) && dict[subKey] is object[] innerArr && (innerArr.Any() && innerArr[0] is Dictionary<string, object> || !innerArr.Any())))
 				{
-					var innerArr = subArr2.OfType<Dictionary<string, object>>().First(dict => dict.ContainsKey(subKey) && dict[subKey] is object[] innerArr2 && innerArr2.Any() && innerArr2[0] is Dictionary<string, object>).GetValueOrDefault(subKey) as object[];
+					var innerArr = dictList.First(dict => dict.ContainsKey(subKey) && dict[subKey] is object[])[subKey] as object[];
 					var innerDictList = innerArr.OfType<Dictionary<string, object>>().ToList();
 					var innerInnerKeyMapping = CreateKeyMapping(GetAllDictionaryKeys(innerDictList));
-					var innerTemplate = GenerateAnonymousTemplate(CreateTemplateDictionary(innerDictList), innerInnerKeyMapping);
-					sb.Append($"{innerKeyMapping[subKey]} = subDict.ContainsKey(\"{subKey}\") ? ((object[])subDict[\"{subKey}\"]).Select((innerItem, k) =>\n");
+					var innerTemplate = innerDictList.Any() ? GenerateAnonymousTemplate(CreateTemplateDictionary(innerDictList), innerInnerKeyMapping) : "new { }";
+					sb.Append($"{innerKeyMapping[subKey]} = subDict.ContainsKey(\"{subKey}\") && subDict[\"{subKey}\"] != null ? ((object[])subDict[\"{subKey}\"]).Select((innerItem, k) =>\n");
 					sb.Append("{\n");
 					sb.Append($"var innerDict = (Dictionary<string, object>)innerItem;\n");
 					sb.Append($"return new\n");
 					sb.Append("{\n");
 					foreach (var innerKey in innerInnerKeyMapping.OrderBy(kv => kv.Key).Select(kv => kv.Key))
 					{
-						string valueExpr = $"innerDict.ContainsKey(\"{innerKey}\") ? innerDict[\"{innerKey}\"] : (object)null";
-						sb.Append($"{innerInnerKeyMapping[innerKey]} = {valueExpr},\n");
+						if (innerDictList.Any() && innerDictList.Any(d => d.ContainsKey(innerKey) && d[innerKey] is Dictionary<string, object>))
+						{
+							var nestedInnerDict = innerDictList.First(d => d.ContainsKey(innerKey) && d[innerKey] is Dictionary<string, object>)[innerKey] as Dictionary<string, object>;
+							var nestedInnerKeyMapping = CreateKeyMapping(nestedInnerDict.Keys);
+							sb.Append($"{innerInnerKeyMapping[innerKey]} = {GenerateNestedDictionaryResult(nestedInnerDict, innerKey, nestedInnerKeyMapping, indentLevel + 2, "innerDict")},\n");
+						}
+						else
+						{
+							sb.Append($"{innerInnerKeyMapping[innerKey]} = innerDict.ContainsKey(\"{innerKey}\") ? innerDict[\"{innerKey}\"] : (object)null,\n");
+						}
 					}
 					if (innerInnerKeyMapping.Count > 0) sb.Length -= 2;
-					sb.Append($"\n}};\n");
-					sb.Append($"\n}}).ToArray() : new[] {{ {innerTemplate} }},\n");
+					sb.Append("};\n");
+					sb.Append("}).ToArray() : new[] { " + innerTemplate + " },\n");
 				}
 				else
 				{
@@ -570,8 +692,8 @@ public static class jsontocs_usagegenerator
 				}
 			}
 			if (allKeys.Count > 0) sb.Length -= 2;
-			sb.Append($"\n}};\n");
-			sb.Append($"\n}}).ToArray() : new[] {{ {itemTemplate} }})");
+			sb.Append("};\n");
+			sb.Append("}).ToArray() : new[] { " + itemTemplate + " })");
 		}
 		else
 		{

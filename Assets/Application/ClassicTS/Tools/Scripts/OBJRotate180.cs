@@ -5,13 +5,13 @@ using UnityEngine;
 
 public class OBJRotate180Helper
 {
-	// Structure to hold vertex data
-	private struct VertexData
-	{
-		public Vector3 Position;
-		public Vector3? Normal;
-		public Vector2? TexCoord;
-	}
+	//// Structure to hold vertex data - not used any more
+	//private struct VertexData
+	//{
+	//	public Vector3 Position;
+	//	public Vector3? Normal;
+	//	public Vector2? TexCoord;
+	//}
 
 	// Structure to hold face data
 	private struct Face

@@ -148,28 +148,36 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e9f5bf97d9e45d042ac9d859c577986b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  jsonInput: '{"@metadata": "info", "#count": 5, "user-name": "alice"}'
+  jsonInput: '{ "a": { "b": { "c": "e:\\fpp" } } }
+
+'
   cSharpRepresentation: "using System;\r\nusing System.Collections.Generic;\r\nusing
     UnityEngine;\r\nusing System.Linq;\r\n\r\npublic class JsonDeserializationExample
     : MonoBehaviour\r\n{\r\n    void Start()\r\n    {\r\n        string jsonString
-    = @\"{\"\"@metadata\"\": \"\"info\"\", \"\"#count\"\": 5, \"\"user-name\"\":
-    \"\"alice\"\"}\";\r\n        try\r\n        {\r\n            var data = JsonTocs.FromJson<Dictionary<string,
+    = @\"{ \"\"a\"\": { \"\"b\"\": { \"\"c\"\": \"\"e:\\\\fpp\"\" } } }\r\n       
+    \";\r\n        try\r\n        {\r\n            var data = JsonTocs.FromJson<Dictionary<string,
     object>>(jsonString);\r\n            if (data != null)\r\n            {\r\n               
-    var template = new\r\n                {\r\n                    _count = (object)null,\r\n                   
-    _metadata = (object)null,\r\n                    user_name = (object)null\r\n               
+    var template = new\r\n                {\r\n                    _a = new\r\n                   
+    {\r\n                        _b = new\r\n                        {\r\n                           
+    _c = (object)null\r\n                        }\r\n                    }\r\n               
     };\r\n\r\n                var result = new\r\n                {\r\n                   
-    _count = data.ContainsKey(\"#count\") ? data[\"#count\"] : (object)null,\r\n                   
-    _metadata = data.ContainsKey(\"@metadata\") ? data[\"@metadata\"] : (object)null,\r\n                   
-    user_name = data.ContainsKey(\"user-name\") ? data[\"user-name\"] : (object)null\r\n               
-    };\r\n\r\n                // Display deserialized values\r\n                if
-    (true) Debug.Log($\"#count : { result._count }\"); // 5\r\n                if
-    (result._metadata != null) Debug.Log($\"@metadata : { result._metadata }\");
-    // \"info\"\r\n                if (result.user_name != null) Debug.Log($\"user-name
-    : { result.user_name }\"); // \"alice\"\r\n            }\r\n            else\r\n           
-    {\r\n                Debug.LogError(\"Failed to deserialize JSON\");\r\n           
-    }\r\n        }\r\n        catch (System.Exception e)\r\n        {\r\n           
-    Debug.LogError($\"Deserialization error: {e.Message}\");\r\n        }\r\n   
-    }\r\n}\r\n\r\n"
+    _a = (data.ContainsKey(\"a\") && data[\"a\"] != null ? new\r\n                   
+    {\r\n                        _b = (((Dictionary<string, object>)data[\"a\"]).ContainsKey(\"b\")
+    && ((Dictionary<string, object>)data[\"a\"])[\"b\"] != null ? new\r\n                       
+    {\r\n                            _c = (((Dictionary<string, object>)data[\"a\"]).ContainsKey(\"b\")
+    && ((Dictionary<string, object>)((Dictionary<string, object>)data[\"a\"])[\"b\"]).ContainsKey(\"c\")
+    ? ((Dictionary<string, object>)((Dictionary<string, object>)data[\"a\"])[\"b\"])[\"c\"]
+    : (object)null)\r\n                        } : new\r\n                       
+    {\r\n                            _c = (object)null\r\n                       
+    })\r\n                    } : new\r\n                    {\r\n                       
+    _b = new\r\n                        {\r\n                            _c = (object)null\r\n                       
+    }\r\n                    })\r\n                };\r\n\r\n                // Display
+    deserialized values\r\n                if (result._a != null && result._a._b
+    != null && result._a._b._c != null) Debug.Log($\"a.b.c : { result._a._b._c }\");
+    // e:\\\\pp\r\n            }\r\n            else\r\n            {\r\n               
+    Debug.LogError(\"Failed to deserialize JSON\");\r\n            }\r\n        }\r\n       
+    catch (System.Exception e)\r\n        {\r\n            Debug.LogError($\"Deserialization
+    error: {e.Message}\");\r\n        }\r\n    }\r\n}\r\n\r\n"
 --- !u!4 &939026901
 Transform:
   m_ObjectHideFlags: 0

@@ -1,11 +1,35 @@
-using UnityEngine;
+using System;
 using System.Collections.Generic;
+using UnityEngine;
+using System.Linq;
 
 public class JsonDeserializationExample : MonoBehaviour
 {
 	void Start()
 	{
-		string jsonString = @"{""@metadata"": ""info"", ""#count"": 5, ""user-name"": ""alice""}";
+		string jsonString = @"{
+            ""deep"": {
+                ""a"": [
+                {
+                    ""b"": {
+                        ""c"": [
+                        {
+                            ""d"": {
+                                ""e"": ""value""
+                            }
+                        }
+                        ]
+                    }
+                },
+                {
+                    ""b"": {
+                        ""c"": []
+                    }
+                }
+                ],
+                ""x"": ""\n\t""
+            }
+        }";
 		try
 		{
 			var data = JsonTocs.FromJson<Dictionary<string, object>>(jsonString);
@@ -13,22 +37,106 @@ public class JsonDeserializationExample : MonoBehaviour
 			{
 				var template = new
 				{
-					_count = (object)null,
-					_metadata = (object)null,
-					user_name = (object)null
+					deep = new
+					{
+						a = new[] { new
+						{
+							b = new
+							{
+								c = new[] { new
+								{
+									d = new
+									{
+										e = (object)null
+									}
+								} }
+							}
+						} },
+						x = (object)null
+					}
 				};
 
 				var result = new
 				{
-					_count = data.ContainsKey("#count") ? data["#count"] : (object)null,
-					_metadata = data.ContainsKey("@metadata") ? data["@metadata"] : (object)null,
-					user_name = data.ContainsKey("user-name") ? data["user-name"] : (object)null
+					deep = (data.ContainsKey("deep") && data["deep"] != null ? new
+					{
+						a = (data.ContainsKey("deep") && ((Dictionary<string, object>)data["deep"]).ContainsKey("a") ? ((object[])((Dictionary<string, object>)data["deep"])["a"]).Select((item, j) =>
+						{
+							var subDict = (Dictionary<string, object>)item;
+							return new
+							{
+								b = (subDict.ContainsKey("b") && subDict["b"] != null ? new
+								{
+									c = (subDict.ContainsKey("b") && ((Dictionary<string, object>)subDict["b"]).ContainsKey("c") ? ((object[])((Dictionary<string, object>)subDict["b"])["c"]).Select((item, j) =>
+									{
+										var subDict = (Dictionary<string, object>)item;
+										return new
+										{
+											d = (subDict.ContainsKey("d") && subDict["d"] != null ? new
+											{
+												e = (subDict.ContainsKey("d") && ((Dictionary<string, object>)subDict["d"]).ContainsKey("e") ? ((Dictionary<string, object>)subDict["d"])["e"] : (object)null)
+											} : new
+											{
+												e = (object)null
+											})
+										};
+
+									}).ToArray() : new[] { new
+									{
+										d = new
+										{
+											e = (object)null
+										}
+									} })
+								} : new
+								{
+									c = new[] { new
+									{
+										d = new
+										{
+											e = (object)null
+										}
+									} }
+								})
+							};
+
+						}).ToArray() : new[] { new
+						{
+							b = new
+							{
+								c = new[] { new
+								{
+									d = new
+									{
+										e = (object)null
+									}
+								} }
+							}
+						} }),
+						x = (data.ContainsKey("deep") && ((Dictionary<string, object>)data["deep"]).ContainsKey("x") ? ((Dictionary<string, object>)data["deep"])["x"] : (object)null)
+					} : new
+					{
+						a = new[] { new
+						{
+							b = new
+							{
+								c = new[] { new
+								{
+									d = new
+									{
+										e = (object)null
+									}
+								} }
+							}
+						} },
+						x = (object)null
+					})
 				};
 
 				// Display deserialized values
-				if (true) Debug.Log($"#count : {result._count}"); // 5
-				if (result._metadata != null) Debug.Log($"@metadata : {result._metadata}"); // "info"
-				if (result.user_name != null) Debug.Log($"user-name : {result.user_name}"); // "alice"
+				if (result.deep != null && result.deep.a != null) Debug.Log($"deep.a : {string.Join(", ", (object[])result.deep.a)}"); // [...]
+				if (result.deep != null && result.deep.x != null) Debug.Log($"deep.x : {result.deep.x}"); //
+
 			}
 			else
 			{
