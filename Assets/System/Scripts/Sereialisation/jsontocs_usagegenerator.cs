@@ -10,25 +10,22 @@ public static class jsontocs_usagegenerator
 
 	private static string EscapeCommentValue(object value)
 	{
-		return "ToDo";
-
 		if (value == null) return "null";
-		string stringValue = JsonTocs.ToJson(value);
-		stringValue = Regex.Replace(stringValue, @"[\n\r\t{}]{}", m => m.Value switch
+
+		string result = value.ToString();
+
+		// Handle different types specifically if needed
+		if (value is object[] array)
 		{
-			"\n" => "\\n",
-			"\r" => "\\r",
-			"\t" => "\\t",
-			"{" => "{",
-			"}" => "}",
-			_ => m.Value
-		});
-		const int maxLength = 100;
-		if (stringValue.Length > maxLength)
-		{
-			stringValue = stringValue.Substring(0, maxLength - 3) + "...";
+			result = $"[{string.Join(", ", array.Select(x => EscapeCommentValue(x)))}]";
 		}
-		return stringValue;
+		else if (value is Dictionary<string, object> dict)
+		{
+			result = "{" + string.Join(", ", dict.Select(kv => $"{kv.Key}: {EscapeCommentValue(kv.Value)}")) + "}";
+		}
+
+		// Replace special characters with underscore
+		return Regex.Replace(result, @"[\n\r\t\""\']+|\\.", "_");
 	}
 
 	private static string EscapeJsonString(string json) => string.IsNullOrEmpty(json) ? json : json.Replace("\"", "\"\"");
