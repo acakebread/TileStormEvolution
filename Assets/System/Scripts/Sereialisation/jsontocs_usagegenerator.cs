@@ -491,22 +491,26 @@ public static class jsontocs_usagegenerator
 
 		if (data is Dictionary<string, object> dict)
 		{
-			sb.Append("new\n");
-			sb.Append("{\n");
-			foreach (var key in keyMapping.OrderBy(kv => kv.Key).Select(kv => kv.Key))
+			sb.Append("new {");
+			if (keyMapping.Any())
 			{
-				string defaultValue = dict.ContainsKey(key) && dict[key] != null ? dict[key] switch
+				sb.Append("\n");
+				foreach (var key in keyMapping.OrderBy(kv => kv.Key).Select(kv => kv.Key))
 				{
-					Dictionary<string, object> nestedDict => GenerateAnonymousTemplate(nestedDict, CreateKeyMapping(nestedDict.Keys)),
-					object[] arr => arr.Any() && arr[0] is Dictionary<string, object> firstDict
-						? $"new[] {{ {GenerateAnonymousTemplate(firstDict, CreateKeyMapping(GetAllDictionaryKeys(arr.OfType<Dictionary<string, object>>())))} }}"
-						: "new object[0]",
-					_ => "(object)null"
-				} : "(object)null";
-				sb.Append($"{keyMapping[key]} = {defaultValue},\n");
+					string defaultValue = dict.ContainsKey(key) && dict[key] != null ? dict[key] switch
+					{
+						Dictionary<string, object> nestedDict => GenerateAnonymousTemplate(nestedDict, CreateKeyMapping(nestedDict.Keys)),
+						object[] arr => arr.Any() && arr[0] is Dictionary<string, object> firstDict
+							? $"new[] {{ {GenerateAnonymousTemplate(firstDict, CreateKeyMapping(GetAllDictionaryKeys(arr.OfType<Dictionary<string, object>>())))} }}"
+							: "new object[0]",
+						_ => "(object)null"
+					} : "(object)null";
+					sb.Append($"{keyMapping[key]} = {defaultValue},\n");
+				}
+				if (keyMapping.Count > 0) sb.Length -= 2; // Remove trailing comma
+				sb.Append("\n");
 			}
-			if (keyMapping.Count > 0) sb.Length -= 2; // Remove trailing comma
-			sb.Append("}\n");
+			sb.Append("}");
 			return sb.ToString();
 		}
 
@@ -521,20 +525,24 @@ public static class jsontocs_usagegenerator
 
 		if (data is Dictionary<string, object> dict)
 		{
-			sb.Append("new\n");
-			sb.Append("{\n");
-			foreach (var key in keyMapping.OrderBy(kv => kv.Key).Select(kv => kv.Key))
+			sb.Append("new {");
+			if (keyMapping.Any())
 			{
-				string valueExpr = dict.ContainsKey(key) && dict[key] != null ? dict[key] switch
+				sb.Append("\n");
+				foreach (var key in keyMapping.OrderBy(kv => kv.Key).Select(kv => kv.Key))
 				{
-					Dictionary<string, object> nestedDict => GenerateNestedDictionaryResult(nestedDict, key, CreateKeyMapping(nestedDict.Keys), indentLevel + 1, dictName),
-					object[] arr => GenerateArrayResult(key, arr, CreateKeyMapping(GetAllDictionaryKeys(arr.OfType<Dictionary<string, object>>())), indentLevel + 1, dictName, dict),
-					_ => $"{dictName}.ContainsKey(\"{key}\") ? {dictName}[\"{key}\"] : (object)null"
-				} : $"{dictName}.ContainsKey(\"{key}\") ? {dictName}[\"{key}\"] : (object)null";
-				sb.Append($"{keyMapping[key]} = {valueExpr},\n");
+					string valueExpr = dict.ContainsKey(key) && dict[key] != null ? dict[key] switch
+					{
+						Dictionary<string, object> nestedDict => GenerateNestedDictionaryResult(nestedDict, key, CreateKeyMapping(nestedDict.Keys), indentLevel + 1, dictName),
+						object[] arr => GenerateArrayResult(key, arr, CreateKeyMapping(GetAllDictionaryKeys(arr.OfType<Dictionary<string, object>>())), indentLevel + 1, dictName, dict),
+						_ => $"{dictName}.ContainsKey(\"{key}\") ? {dictName}[\"{key}\"] : (object)null"
+					} : $"{dictName}.ContainsKey(\"{key}\") ? {dictName}[\"{key}\"] : (object)null";
+					sb.Append($"{keyMapping[key]} = {valueExpr},\n");
+				}
+				if (keyMapping.Count > 0) sb.Length -= 2;
+				sb.Append("\n");
 			}
-			if (keyMapping.Count > 0) sb.Length -= 2;
-			sb.Append("}\n");
+			sb.Append("}");
 			return sb.ToString();
 		}
 
@@ -546,78 +554,92 @@ public static class jsontocs_usagegenerator
 		var sb = new StringBuilder();
 		var template = GenerateAnonymousTemplate(nestedDict, keyMapping);
 
-		sb.Append($"({dictName}.ContainsKey(\"{parentKey}\") && {dictName}[\"{parentKey}\"] != null ? new\n");
-		sb.Append("{\n");
-		foreach (var key in keyMapping.OrderBy(kv => kv.Key).Select(kv => kv.Key))
+		sb.Append($"({dictName}.ContainsKey(\"{parentKey}\") && {dictName}[\"{parentKey}\"] != null ? new {{");
+		if (keyMapping.Any())
 		{
-			string valueExpr;
-			if (nestedDict.ContainsKey(key) && nestedDict[key] is Dictionary<string, object> subDict)
+			sb.Append("\n");
+			foreach (var key in keyMapping.OrderBy(kv => kv.Key).Select(kv => kv.Key))
 			{
-				var subKeyMapping = CreateKeyMapping(subDict.Keys);
-				valueExpr = GenerateNestedDictionaryResult(subDict, key, subKeyMapping, indentLevel + 1, $"((Dictionary<string, object>){dictName}[\"{parentKey}\"])");
-			}
-			else if (nestedDict.ContainsKey(key) && nestedDict[key] is object[] arr && (arr.Any() && arr[0] is Dictionary<string, object> || !arr.Any()))
-			{
-				var dictList = arr.OfType<Dictionary<string, object>>().ToList();
-				var innerKeyMapping = CreateKeyMapping(GetAllDictionaryKeys(dictList));
-				var itemTemplate = dictList.Any() ? GenerateAnonymousTemplate(CreateTemplateDictionary(dictList), innerKeyMapping) : "new { }";
-				valueExpr = $"({dictName}.ContainsKey(\"{parentKey}\") && ((Dictionary<string, object>){dictName}[\"{parentKey}\"]).ContainsKey(\"{key}\") && ((Dictionary<string, object>){dictName}[\"{parentKey}\"])[\"{key}\"] != null ? ((object[])((Dictionary<string, object>){dictName}[\"{parentKey}\"])[\"{key}\"]).Select((item, j) =>\n";
-				valueExpr += "{\n";
-				valueExpr += $"var subDict = (Dictionary<string, object>)item;\n";
-				valueExpr += $"return new\n";
-				valueExpr += "{\n";
-				foreach (var innerKey in innerKeyMapping.OrderBy(kv => kv.Key).Select(kv => kv.Key))
+				string valueExpr;
+				if (nestedDict.ContainsKey(key) && nestedDict[key] is Dictionary<string, object> subDict)
 				{
-					if (dictList.Any() && dictList.Any(d => d.ContainsKey(innerKey) && d[innerKey] is Dictionary<string, object>))
+					var subKeyMapping = CreateKeyMapping(subDict.Keys);
+					valueExpr = GenerateNestedDictionaryResult(subDict, key, subKeyMapping, indentLevel + 1, $"((Dictionary<string, object>){dictName}[\"{parentKey}\"])");
+				}
+				else if (nestedDict.ContainsKey(key) && nestedDict[key] is object[] arr && (arr.Any() && arr[0] is Dictionary<string, object> || !arr.Any()))
+				{
+					var dictList = arr.OfType<Dictionary<string, object>>().ToList();
+					var innerKeyMapping = CreateKeyMapping(GetAllDictionaryKeys(dictList));
+					var itemTemplate = dictList.Any() ? GenerateAnonymousTemplate(CreateTemplateDictionary(dictList), innerKeyMapping) : "new { }";
+					valueExpr = $"({dictName}.ContainsKey(\"{parentKey}\") && ((Dictionary<string, object>){dictName}[\"{parentKey}\"]).ContainsKey(\"{key}\") && ((Dictionary<string, object>){dictName}[\"{parentKey}\"])[\"{key}\"] != null ? ((object[])((Dictionary<string, object>){dictName}[\"{parentKey}\"])[\"{key}\"]).Select((item, j) =>\n";
+					valueExpr += "{\n";
+					valueExpr += $"var subDict = (Dictionary<string, object>)item;\n";
+					valueExpr += $"return new {{";
+					if (innerKeyMapping.Any())
 					{
-						var nestedSubDict = dictList.First(d => d.ContainsKey(innerKey) && d[innerKey] is Dictionary<string, object>)[innerKey] as Dictionary<string, object>;
-						var nestedInnerKeyMapping = CreateKeyMapping(nestedSubDict.Keys);
-						valueExpr += $"{innerKeyMapping[innerKey]} = {GenerateNestedDictionaryResult(nestedSubDict, innerKey, nestedInnerKeyMapping, indentLevel + 2, "subDict")},\n";
-					}
-					else if (dictList.Any() && dictList.Any(d => d.ContainsKey(innerKey) && d[innerKey] is object[] innerArr && (innerArr.Any() && innerArr[0] is Dictionary<string, object> || !innerArr.Any())))
-					{
-						var innerArr = dictList.First(d => d.ContainsKey(innerKey) && d[innerKey] is object[])[innerKey] as object[];
-						var innerDictList = innerArr.OfType<Dictionary<string, object>>().ToList();
-						var innerInnerKeyMapping = CreateKeyMapping(GetAllDictionaryKeys(innerDictList));
-						var innerTemplate = innerDictList.Any() ? GenerateAnonymousTemplate(CreateTemplateDictionary(innerDictList), innerInnerKeyMapping) : "new { }";
-						valueExpr += $"{innerKeyMapping[innerKey]} = subDict.ContainsKey(\"{innerKey}\") && subDict[\"{innerKey}\"] != null ? ((object[])subDict[\"{innerKey}\"]).Select((innerItem, k) =>\n";
-						valueExpr += "{\n";
-						valueExpr += $"var innerDict = (Dictionary<string, object>)innerItem;\n";
-						valueExpr += $"return new\n";
-						valueExpr += "{\n";
-						foreach (var nestedKey in innerInnerKeyMapping.OrderBy(kv => kv.Key).Select(kv => kv.Key))
+						valueExpr += "\n";
+						foreach (var innerKey in innerKeyMapping.OrderBy(kv => kv.Key).Select(kv => kv.Key))
 						{
-							if (innerDictList.Any() && innerDictList.Any(d => d.ContainsKey(nestedKey) && d[nestedKey] is Dictionary<string, object>))
+							if (dictList.Any() && dictList.Any(d => d.ContainsKey(innerKey) && d[innerKey] is Dictionary<string, object>))
 							{
-								var nestedInnerDict = innerDictList.First(d => d.ContainsKey(nestedKey) && d[nestedKey] is Dictionary<string, object>)[nestedKey] as Dictionary<string, object>;
-								var nestedInnerKeyMapping = CreateKeyMapping(nestedInnerDict.Keys);
-								valueExpr += $"{innerInnerKeyMapping[nestedKey]} = {GenerateNestedDictionaryResult(nestedInnerDict, nestedKey, nestedInnerKeyMapping, indentLevel + 3, "innerDict")},\n";
+								var nestedSubDict = dictList.First(d => d.ContainsKey(innerKey) && d[innerKey] is Dictionary<string, object>)[innerKey] as Dictionary<string, object>;
+								var nestedInnerKeyMapping = CreateKeyMapping(nestedSubDict.Keys);
+								valueExpr += $"{innerKeyMapping[innerKey]} = {GenerateNestedDictionaryResult(nestedSubDict, innerKey, nestedInnerKeyMapping, indentLevel + 2, "subDict")},\n";
+							}
+							else if (dictList.Any() && dictList.Any(d => d.ContainsKey(innerKey) && d[innerKey] is object[] innerArr && (innerArr.Any() && innerArr[0] is Dictionary<string, object> || !innerArr.Any())))
+							{
+								var innerArr = dictList.First(d => d.ContainsKey(innerKey) && d[innerKey] is object[])[innerKey] as object[];
+								var innerDictList = innerArr.OfType<Dictionary<string, object>>().ToList();
+								var innerInnerKeyMapping = CreateKeyMapping(GetAllDictionaryKeys(innerDictList));
+								var innerTemplate = innerDictList.Any() ? GenerateAnonymousTemplate(CreateTemplateDictionary(innerDictList), innerInnerKeyMapping) : "new { }";
+								valueExpr += $"{innerKeyMapping[innerKey]} = subDict.ContainsKey(\"{innerKey}\") && subDict[\"{innerKey}\"] != null ? ((object[])subDict[\"{innerKey}\"]).Select((innerItem, k) =>\n";
+								valueExpr += "{\n";
+								valueExpr += $"var innerDict = (Dictionary<string, object>)innerItem;\n";
+								valueExpr += $"return new {{";
+								if (innerInnerKeyMapping.Any())
+								{
+									valueExpr += "\n";
+									foreach (var nestedKey in innerInnerKeyMapping.OrderBy(kv => kv.Key).Select(kv => kv.Key))
+									{
+										if (innerDictList.Any() && innerDictList.Any(d => d.ContainsKey(nestedKey) && d[nestedKey] is Dictionary<string, object>))
+										{
+											var nestedInnerDict = innerDictList.First(d => d.ContainsKey(nestedKey) && d[nestedKey] is Dictionary<string, object>)[nestedKey] as Dictionary<string, object>;
+											var nestedInnerKeyMapping = CreateKeyMapping(nestedInnerDict.Keys);
+											valueExpr += $"{innerInnerKeyMapping[nestedKey]} = {GenerateNestedDictionaryResult(nestedInnerDict, nestedKey, nestedInnerKeyMapping, indentLevel + 3, "innerDict")},\n";
+										}
+										else
+										{
+											valueExpr += $"{innerInnerKeyMapping[nestedKey]} = innerDict.ContainsKey(\"{nestedKey}\") ? innerDict[\"{nestedKey}\"] : (object)null,\n";
+										}
+									}
+									if (innerInnerKeyMapping.Count > 0) valueExpr = valueExpr.Substring(0, valueExpr.Length - 2);
+									valueExpr += "\n";
+								}
+								valueExpr += "}";
+								valueExpr += ";\n";
+								valueExpr += "}).ToArray() : new[] { " + innerTemplate + " },\n";
 							}
 							else
 							{
-								valueExpr += $"{innerInnerKeyMapping[nestedKey]} = innerDict.ContainsKey(\"{nestedKey}\") ? innerDict[\"{nestedKey}\"] : (object)null,\n";
+								valueExpr += $"{innerKeyMapping[innerKey]} = subDict.ContainsKey(\"{innerKey}\") ? subDict[\"{innerKey}\"] : (object)null,\n";
 							}
 						}
-						if (innerInnerKeyMapping.Count > 0) valueExpr = valueExpr.Substring(0, valueExpr.Length - 2);
-						valueExpr += "};\n";
-						valueExpr += "}).ToArray() : new[] { " + innerTemplate + " },\n";
+						if (innerKeyMapping.Count > 0) valueExpr = valueExpr.Substring(0, valueExpr.Length - 2);
+						valueExpr += "\n";
 					}
-					else
-					{
-						valueExpr += $"{innerKeyMapping[innerKey]} = subDict.ContainsKey(\"{innerKey}\") ? subDict[\"{innerKey}\"] : (object)null,\n";
-					}
+					valueExpr += "}";
+					valueExpr += ";\n";
+					valueExpr += "}).ToArray() : new[] { " + itemTemplate + " })";
 				}
-				if (innerKeyMapping.Count > 0) valueExpr = valueExpr.Substring(0, valueExpr.Length - 2);
-				valueExpr += "};\n";
-				valueExpr += "}).ToArray() : new[] { " + itemTemplate + " })";
+				else
+				{
+					valueExpr = $"({dictName}.ContainsKey(\"{parentKey}\") && ((Dictionary<string, object>){dictName}[\"{parentKey}\"]).ContainsKey(\"{key}\") ? ((Dictionary<string, object>){dictName}[\"{parentKey}\"])[\"{key}\"] : (object)null)";
+				}
+				sb.Append($"{keyMapping[key]} = {valueExpr},\n");
 			}
-			else
-			{
-				valueExpr = $"({dictName}.ContainsKey(\"{parentKey}\") && ((Dictionary<string, object>){dictName}[\"{parentKey}\"]).ContainsKey(\"{key}\") ? ((Dictionary<string, object>){dictName}[\"{parentKey}\"])[\"{key}\"] : (object)null)";
-			}
-			sb.Append($"{keyMapping[key]} = {valueExpr},\n");
+			if (keyMapping.Count > 0) sb.Length -= 2;
+			sb.Append("\n");
 		}
-		if (keyMapping.Count > 0) sb.Length -= 2;
 		sb.Append("} : " + template + ")");
 		return sb.ToString();
 	}
@@ -632,75 +654,90 @@ public static class jsontocs_usagegenerator
 			var allKeys = GetAllDictionaryKeys(dictList);
 			var innerKeyMapping = CreateKeyMapping(allKeys);
 			var templateDict = CreateTemplateDictionary(dictList);
-			var itemTemplate = dictList.Any() ? GenerateAnonymousTemplate(templateDict, innerKeyMapping) : "new { }";
+			var itemTemplate = dictList.Any() ? GenerateAnonymousTemplate(CreateTemplateDictionary(dictList), innerKeyMapping) : "new { }";
 
 			sb.Append($"({dictName}.ContainsKey(\"{key}\") && {dictName}[\"{key}\"] != null ? ((object[]){dictName}[\"{key}\"]).Select((item, j) =>\n");
 			sb.Append("{\n");
 			sb.Append($"var subDict = (Dictionary<string, object>)item;\n");
-			sb.Append($"return new\n");
-			sb.Append("{\n");
-			foreach (var subKey in allKeys.OrderBy(k => k))
+			sb.Append($"return new {{");
+			if (allKeys.Any())
 			{
-				if (dictList.Any() && dictList.Any(dict => dict.ContainsKey(subKey) && dict[subKey] is Dictionary<string, object> nestedDict))
+				sb.Append("\n");
+				foreach (var subKey in allKeys.OrderBy(k => k))
 				{
-					var nestedSubDict = dictList.First(dict => dict.ContainsKey(subKey) && dict[subKey] is Dictionary<string, object>)[subKey] as Dictionary<string, object>;
-					var nestedKeyMapping = CreateKeyMapping(nestedSubDict.Keys);
-					sb.Append($"{innerKeyMapping[subKey]} = {GenerateNestedDictionaryResult(nestedSubDict, subKey, nestedKeyMapping, indentLevel + 1, "subDict")},\n");
-				}
-				else if (dictList.Any() && dictList.Any(dict => dict.ContainsKey(subKey) && dict[subKey] is object[] innerArr && (innerArr.Any() && innerArr[0] is Dictionary<string, object> || !innerArr.Any())))
-				{
-					var innerArr = dictList.First(dict => dict.ContainsKey(subKey) && dict[subKey] is object[])[subKey] as object[];
-					var innerDictList = innerArr.OfType<Dictionary<string, object>>().ToList();
-					var innerInnerKeyMapping = CreateKeyMapping(GetAllDictionaryKeys(innerDictList));
-					var innerTemplate = innerDictList.Any() ? GenerateAnonymousTemplate(CreateTemplateDictionary(innerDictList), innerInnerKeyMapping) : "new { }";
-					sb.Append($"{innerKeyMapping[subKey]} = subDict.ContainsKey(\"{subKey}\") && subDict[\"{subKey}\"] != null ? ((object[])subDict[\"{subKey}\"]).Select((innerItem, k) =>\n");
-					sb.Append("{\n");
-					sb.Append($"var innerDict = (Dictionary<string, object>)innerItem;\n");
-					sb.Append($"return new\n");
-					sb.Append("{\n");
-					foreach (var innerKey in innerInnerKeyMapping.OrderBy(kv => kv.Key).Select(kv => kv.Key))
+					if (dictList.Any() && dictList.Any(dict => dict.ContainsKey(subKey) && dict[subKey] is Dictionary<string, object> nestedDict))
 					{
-						if (innerDictList.Any() && innerDictList.Any(d => d.ContainsKey(innerKey) && d[innerKey] is Dictionary<string, object>))
-						{
-							var nestedInnerDict = innerDictList.First(d => d.ContainsKey(innerKey) && d[innerKey] is Dictionary<string, object>)[innerKey] as Dictionary<string, object>;
-							var nestedInnerKeyMapping = CreateKeyMapping(nestedInnerDict.Keys);
-							sb.Append($"{innerInnerKeyMapping[innerKey]} = {GenerateNestedDictionaryResult(nestedInnerDict, innerKey, nestedInnerKeyMapping, indentLevel + 2, "innerDict")},\n");
-						}
-						else if (innerDictList.Any() && innerDictList.Any(d => d.ContainsKey(innerKey) && d[innerKey] is object[] innerInnerArr && (innerInnerArr.Any() && innerInnerArr[0] is Dictionary<string, object> || !innerInnerArr.Any())))
-						{
-							var innerInnerArr = innerDictList.First(d => d.ContainsKey(innerKey) && d[innerKey] is object[])[innerKey] as object[];
-							var innerInnerDictList = innerInnerArr.OfType<Dictionary<string, object>>().ToList();
-							var innerInnerInnerKeyMapping = CreateKeyMapping(GetAllDictionaryKeys(innerInnerDictList));
-							var innerInnerTemplate = innerInnerDictList.Any() ? GenerateAnonymousTemplate(CreateTemplateDictionary(innerInnerDictList), innerInnerInnerKeyMapping) : "new { }";
-							sb.Append($"{innerInnerKeyMapping[innerKey]} = innerDict.ContainsKey(\"{innerKey}\") && innerDict[\"{innerKey}\"] != null ? ((object[])innerDict[\"{innerKey}\"]).Select((innerInnerItem, m) =>\n");
-							sb.Append("{\n");
-							sb.Append($"var innerInnerDict = (Dictionary<string, object>)innerInnerItem;\n");
-							sb.Append($"return new\n");
-							sb.Append("{\n");
-							foreach (var innerInnerKey in innerInnerInnerKeyMapping.OrderBy(kv => kv.Key).Select(kv => kv.Key))
-							{
-								sb.Append($"{innerInnerInnerKeyMapping[innerInnerKey]} = innerInnerDict.ContainsKey(\"{innerInnerKey}\") ? innerInnerDict[\"{innerInnerKey}\"] : (object)null,\n");
-							}
-							if (innerInnerInnerKeyMapping.Count > 0) sb.Length -= 2;
-							sb.Append("};\n");
-							sb.Append("}).ToArray() : new[] { " + innerInnerTemplate + " },\n");
-						}
-						else
-						{
-							sb.Append($"{innerInnerKeyMapping[innerKey]} = innerDict.ContainsKey(\"{innerKey}\") ? innerDict[\"{innerKey}\"] : (object)null,\n");
-						}
+						var nestedSubDict = dictList.First(dict => dict.ContainsKey(subKey) && dict[subKey] is Dictionary<string, object>)[subKey] as Dictionary<string, object>;
+						var nestedKeyMapping = CreateKeyMapping(nestedSubDict.Keys);
+						sb.Append($"{innerKeyMapping[subKey]} = {GenerateNestedDictionaryResult(nestedSubDict, subKey, nestedKeyMapping, indentLevel + 1, "subDict")},\n");
 					}
-					if (innerInnerKeyMapping.Count > 0) sb.Length -= 2;
-					sb.Append("};\n");
-					sb.Append("}).ToArray() : new[] { " + innerTemplate + " },\n");
+					else if (dictList.Any() && dictList.Any(dict => dict.ContainsKey(subKey) && dict[subKey] is object[] innerArr && (innerArr.Any() && innerArr[0] is Dictionary<string, object> || !innerArr.Any())))
+					{
+						var innerArr = dictList.First(dict => dict.ContainsKey(subKey) && dict[subKey] is object[])[subKey] as object[];
+						var innerDictList = innerArr.OfType<Dictionary<string, object>>().ToList();
+						var innerInnerKeyMapping = CreateKeyMapping(GetAllDictionaryKeys(innerDictList));
+						var innerTemplate = innerDictList.Any() ? GenerateAnonymousTemplate(CreateTemplateDictionary(innerDictList), innerInnerKeyMapping) : "new { }";
+						sb.Append($"{innerKeyMapping[subKey]} = subDict.ContainsKey(\"{subKey}\") && subDict[\"{subKey}\"] != null ? ((object[])subDict[\"{subKey}\"]).Select((innerItem, k) =>\n");
+						sb.Append("{\n");
+						sb.Append($"var innerDict = (Dictionary<string, object>)innerItem;\n");
+						sb.Append($"return new {{");
+						if (innerInnerKeyMapping.Any())
+						{
+							sb.Append("\n");
+							foreach (var innerKey in innerInnerKeyMapping.OrderBy(kv => kv.Key).Select(kv => kv.Key))
+							{
+								if (innerDictList.Any() && innerDictList.Any(d => d.ContainsKey(innerKey) && d[innerKey] is Dictionary<string, object>))
+								{
+									var nestedInnerDict = innerDictList.First(d => d.ContainsKey(innerKey) && d[innerKey] is Dictionary<string, object>)[innerKey] as Dictionary<string, object>;
+									var nestedInnerKeyMapping = CreateKeyMapping(nestedInnerDict.Keys);
+									sb.Append($"{innerInnerKeyMapping[innerKey]} = {GenerateNestedDictionaryResult(nestedInnerDict, innerKey, nestedInnerKeyMapping, indentLevel + 2, "innerDict")},\n");
+								}
+								else if (innerDictList.Any() && innerDictList.Any(d => d.ContainsKey(innerKey) && d[innerKey] is object[] innerInnerArr && (innerInnerArr.Any() && innerInnerArr[0] is Dictionary<string, object> || !innerInnerArr.Any())))
+								{
+									var innerInnerArr = innerDictList.First(d => d.ContainsKey(innerKey) && d[innerKey] is object[])[innerKey] as object[];
+									var innerInnerDictList = innerInnerArr.OfType<Dictionary<string, object>>().ToList();
+									var innerInnerInnerKeyMapping = CreateKeyMapping(GetAllDictionaryKeys(innerInnerDictList));
+									var innerInnerTemplate = innerInnerDictList.Any() ? GenerateAnonymousTemplate(CreateTemplateDictionary(innerInnerDictList), innerInnerInnerKeyMapping) : "new { }";
+									sb.Append($"{innerInnerKeyMapping[innerKey]} = innerDict.ContainsKey(\"{innerKey}\") && innerDict[\"{innerKey}\"] != null ? ((object[])innerDict[\"{innerKey}\"]).Select((innerInnerItem, m) =>\n");
+									sb.Append("{\n");
+									sb.Append($"var innerInnerDict = (Dictionary<string, object>)innerInnerItem;\n");
+									sb.Append($"return new {{");
+									if (innerInnerInnerKeyMapping.Any())
+									{
+										sb.Append("\n");
+										foreach (var innerInnerKey in innerInnerInnerKeyMapping.OrderBy(kv => kv.Key).Select(kv => kv.Key))
+										{
+											sb.Append($"{innerInnerInnerKeyMapping[innerInnerKey]} = innerInnerDict.ContainsKey(\"{innerInnerKey}\") ? innerInnerDict[\"{innerInnerKey}\"] : (object)null,\n");
+										}
+										sb.Length -= 2;
+										sb.Append("\n");
+									}
+									sb.Append("}");
+									sb.Append(";\n");
+									sb.Append("}).ToArray() : new[] { " + innerInnerTemplate + " },\n");
+								}
+								else
+								{
+									sb.Append($"{innerInnerKeyMapping[innerKey]} = innerDict.ContainsKey(\"{innerKey}\") ? innerDict[\"{innerKey}\"] : (object)null,\n");
+								}
+							}
+							if (innerInnerKeyMapping.Count > 0) sb.Length -= 2;
+							sb.Append("\n");
+						}
+						sb.Append("}");
+						sb.Append(";\n");
+						sb.Append("}).ToArray() : new[] { " + innerTemplate + " },\n");
+					}
+					else
+					{
+						sb.Append($"{innerKeyMapping[subKey]} = subDict.ContainsKey(\"{subKey}\") ? subDict[\"{subKey}\"] : (object)null,\n");
+					}
 				}
-				else
-				{
-					sb.Append($"{innerKeyMapping[subKey]} = subDict.ContainsKey(\"{subKey}\") ? subDict[\"{subKey}\"] : (object)null,\n");
-				}
+				if (allKeys.Count > 0) sb.Length -= 2;
+				sb.Append("\n");
 			}
-			if (allKeys.Count > 0) sb.Length -= 2;
-			sb.Append("};\n");
+			sb.Append("}");
+			sb.Append(";\n");
 			sb.Append("}).ToArray() : new[] { " + itemTemplate + " })");
 		}
 		else

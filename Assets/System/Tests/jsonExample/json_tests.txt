@@ -1,3 +1,5 @@
+{"key":"value"}
+
 test 1
 
 {
