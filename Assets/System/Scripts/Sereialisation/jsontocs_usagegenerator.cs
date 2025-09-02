@@ -36,6 +36,12 @@ public static class jsontocs_usagegenerator
 	{
 		try
 		{
+			// Remove all trailing whitespace
+			if (!string.IsNullOrEmpty(jsonString))
+			{
+				jsonString = jsonString.TrimEnd();
+			}
+
 			if (data is Dictionary<string, object> dict)
 			{
 				return CodeFormatter.FormatCode(GenerateDeserializationCodeForDictionary(dict, jsonString));
