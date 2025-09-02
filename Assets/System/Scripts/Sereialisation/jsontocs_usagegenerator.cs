@@ -1,8 +1,9 @@
-using System;
 using System.Text;
 using System.Linq;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
+using System;
+using UnityEngine;
 
 public static class CodeFormatter
 {
@@ -19,25 +20,18 @@ public static class CodeFormatter
 		foreach (var rawLine in lines)
 		{
 			string line = rawLine.Trim();
-
 			if (line.Length == 0)
 			{
 				sb.AppendLine();
 				continue;
 			}
-
-			// If line starts with a closing brace, reduce indent first
 			if (line.StartsWith("}"))
 				indentLevel = Math.Max(indentLevel - 1, 0);
-
 			sb.Append(new string(' ', indentLevel * indentString.Length));
 			sb.AppendLine(line);
-
-			// If line ends with opening brace, increase indent
 			if (line.EndsWith("{"))
 				indentLevel++;
 		}
-
 		return sb.ToString();
 	}
 }
@@ -59,16 +53,9 @@ public static class jsontocs_usagegenerator
 	{
 		if (value == null) return "null";
 		string stringValue = JsonTocs.ToJson(value);
-		stringValue = Regex.Replace(stringValue, @"[\n\r\t{}]{}", m => m.Value switch
-		{
-			"\n" => "\\n",
-			"\r" => "\\r",
-			"\t" => "\\t",
-			"{" => "{",
-			"}" => "}",
-			_ => m.Value
-		});
-		const int maxLength = 100;
+		// Strip escape sequences and control characters
+		stringValue = Regex.Replace(stringValue, @"\\[nrt\\]|[\\n\\r\\t]", "");
+		const int maxLength = 50;
 		if (stringValue.Length > maxLength)
 		{
 			stringValue = stringValue.Substring(0, maxLength - 3) + "...";
@@ -78,7 +65,6 @@ public static class jsontocs_usagegenerator
 
 	private static string EscapeJsonString(string json)
 	{
-		if (string.IsNullOrEmpty(json)) return "";
 		return json.Replace("\"", "\"\"").Replace("\r\n", "\n");
 	}
 
@@ -357,6 +343,14 @@ public static class jsontocs_usagegenerator
 						}
 					}
 				}
+				else
+				{
+					string path = EscapeInterpolatedString($"[{i}]");
+					string valueAccess = $"result[{i}]";
+					bool isNullableType = data[i] is string || data[i] is object[] || data[i] is Dictionary<string, object> || data[i] == null;
+					string nullCheck = isNullableType ? $" && result[{i}] != null" : "";
+					sb.Append($"if (result.Length > {i}{nullCheck}) Debug.Log($\"{path} : {{ {valueAccess} }}\"); // {EscapeCommentValue(data[i])}\n");
+				}
 			}
 		}
 		else
@@ -567,7 +561,7 @@ public static class jsontocs_usagegenerator
 					}
 					if (innerInnerKeyMapping.Count > 0) sb.Length -= 2;
 					sb.Append($"\n}};\n");
-					sb.Append($"}}).ToArray() : new[] {{ {innerTemplate} }},\n");
+					sb.Append($"\n}}).ToArray() : new[] {{ {innerTemplate} }},\n");
 				}
 				else
 				{
@@ -577,7 +571,7 @@ public static class jsontocs_usagegenerator
 			}
 			if (allKeys.Count > 0) sb.Length -= 2;
 			sb.Append($"\n}};\n");
-			sb.Append($"}}).ToArray() : new[] {{ {itemTemplate} }})");
+			sb.Append($"\n}}).ToArray() : new[] {{ {itemTemplate} }})");
 		}
 		else
 		{

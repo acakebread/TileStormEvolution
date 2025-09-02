@@ -95,7 +95,12 @@ public static class JsonTocs
 		public char this[int i] => str[pos + i];
 		public int Length => str.Length - pos;
 
-		public string Substring(int startIndex, int length) => str.Substring(pos + startIndex, length);
+		public string Substring(int startIndex, int length)
+		{
+			if (startIndex < 0 || length < 0 || pos + startIndex + length > str.Length)
+				throw new ArgumentException($"Invalid substring parameters: startIndex={startIndex}, length={length}, pos={pos}, str.Length={str.Length}");
+			return str.Substring(pos + startIndex, length);
+		}
 		public XString Substring(int startIndex)
 		{
 			pos += startIndex;
@@ -107,7 +112,7 @@ public static class JsonTocs
 			return this;
 		}
 
-		public bool StartsWith(string src) => str.IndexOf(src, pos, src.Length) == pos;
+		public bool StartsWith(string src) => str.IndexOf(src, pos, StringComparison.Ordinal) == pos;
 		public int IndexOf(string c) => str.IndexOf(c, pos) - pos;
 
 		public IEnumerator<char> GetEnumerator() { for (int i = pos; i < str.Length; i++) yield return str[i]; }
@@ -202,15 +207,23 @@ public static class JsonTocs
 	{
 		List<object> list = new List<object>();
 		src = src.Substring(src.IndexOf("[") + 1);
-		while (src[0] != ']')
+		src = src.TrimStart(WHITESPACE);
+		while (src.Length > 0 && src[0] != ']')
 		{
 			object v = ReadObject(ref src);
 			list.Add(v);
 			src = src.TrimStart(WHITESPACE);
-			if (src.StartsWith(",")) src = src.Substring(1);
+			if (src.Length > 0 && src.StartsWith(",")) src = src.Substring(1);
+			src = src.TrimStart(WHITESPACE);
 		}
-		src = src.Substring(src.IndexOf("]") + 1);
-
+		if (src.Length > 0 && src[0] == ']')
+		{
+			src = src.Substring(1); // Advance past ']'
+		}
+		else
+		{
+			throw new ArgumentException("Expected ']' to close array");
+		}
 		if (list.Count <= 0) return new object[0];
 		return list.ToArray();
 	}
