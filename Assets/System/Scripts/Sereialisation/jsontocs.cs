@@ -8,13 +8,6 @@ using System.Collections;
 
 public static class JsonTocs
 {
-	private static Dictionary<string, Type> _typeRegistry = new Dictionary<string, Type>();
-
-	public static void RegisterType(string jsonKey, Type type)
-	{
-		_typeRegistry[jsonKey] = type;
-	}
-
 	public static T FromJson<T>(string json) where T : class
 	{
 		try

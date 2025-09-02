@@ -148,36 +148,226 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e9f5bf97d9e45d042ac9d859c577986b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  jsonInput: '{ "a": { "b": { "c": "e:\\fpp" } } }
-
-'
+  jsonInput: "{\r\n  \"DocumentGroupContainers\": [\r\n    {\r\n      \"Orientation\":
+    0,\r\n      \"VerticalTabListWidth\": 256,\r\n      \"DocumentGroups\": [\r\n       
+    {\r\n          \"DockedWidth\": 200,\r\n          \"SelectedChildIndex\": 0,\r\n         
+    \"Children\": [\r\n            {\r\n              \"$type\": \"Document\",\r\n             
+    \"DocumentIndex\": 0,\r\n              \"Title\": \"Intro.cs\",\r\n             
+    \"DocumentMoniker\": \"C:\\\\GIT\\\\MassiveHadron\\\\WestonParkFriends\\\\WestonPark\\\\Assets\\\\Application\\\\Scripts\\\\Sections\\\\Intro.cs\",\r\n             
+    \"RelativeDocumentMoniker\": \"Assets\\\\Application\\\\Scripts\\\\Sections\\\\Intro.cs\",\r\n             
+    \"ToolTip\": \"C:\\\\GIT\\\\MassiveHadron\\\\WestonParkFriends\\\\WestonPark\\\\Assets\\\\Application\\\\Scripts\\\\Sections\\\\Intro.cs\",\r\n             
+    \"RelativeToolTip\": \"Assets\\\\Application\\\\Scripts\\\\Sections\\\\Intro.cs\",\r\n             
+    \"ViewState\": \"AgIAAAAAAAAAAAAAAAAvwBEAAAAAAAAAAAAAAA==\",\r\n             
+    \"Icon\": \"ae27a6b0-e345-4288-96df-5eaf394ee369.000738|\",\r\n             
+    \"WhenOpened\": \"2025-07-09T06:20:43.379Z\",\r\n              \"EditorCaption\":
+    \"\"\r\n            },\r\n            {\r\n              \"$type\": \"Bookmark\",\r\n             
+    \"Name\": \"ST:130:0:{1fc202d4-d401-403c-9834-5b218574bb67}\"\r\n           
+    },\r\n            {\r\n              \"$type\": \"Bookmark\",\r\n             
+    \"Name\": \"ST:131:0:{116d2292-e37d-41cd-a077-ebacac4c8cc4}\"\r\n           
+    },\r\n            {\r\n              \"$type\": \"Document\",\r\n             
+    \"DocumentIndex\": 1,\r\n              \"Title\": \"CharacterData.cs\",\r\n             
+    \"DocumentMoniker\": \"C:\\\\GIT\\\\MassiveHadron\\\\WestonParkFriends\\\\WestonPark\\\\Assets\\\\Application\\\\Content\\\\Database\\\\CharacterData.cs\",\r\n             
+    \"RelativeDocumentMoniker\": \"Assets\\\\Application\\\\Content\\\\Database\\\\CharacterData.cs\",\r\n             
+    \"ToolTip\": \"C:\\\\GIT\\\\MassiveHadron\\\\WestonParkFriends\\\\WestonPark\\\\Assets\\\\Application\\\\Content\\\\Database\\\\CharacterData.cs\",\r\n             
+    \"RelativeToolTip\": \"Assets\\\\Application\\\\Content\\\\Database\\\\CharacterData.cs\",\r\n             
+    \"ViewState\": \"AgIAAAAAAAAAAAAAAAAAABEAAAABAAAAAAAAAA==\",\r\n             
+    \"Icon\": \"ae27a6b0-e345-4288-96df-5eaf394ee369.000738|\",\r\n             
+    \"WhenOpened\": \"2025-01-21T12:57:49.819Z\",\r\n              \"EditorCaption\":
+    \"\"\r\n            },\r\n            {\r\n              \"$type\": \"Document\",\r\n             
+    \"DocumentIndex\": 2,\r\n              \"Title\": \"AppBuildVersion.cs\",\r\n             
+    \"DocumentMoniker\": \"C:\\\\GIT\\\\MassiveHadron\\\\WestonParkFriends\\\\WestonPark\\\\Assets\\\\MassiveHadron\\\\System\\\\AppBuildVersion.cs\",\r\n             
+    \"RelativeDocumentMoniker\": \"Assets\\\\MassiveHadron\\\\System\\\\AppBuildVersion.cs\",\r\n             
+    \"ToolTip\": \"C:\\\\GIT\\\\MassiveHadron\\\\WestonParkFriends\\\\WestonPark\\\\Assets\\\\MassiveHadron\\\\System\\\\AppBuildVersion.cs\",\r\n             
+    \"RelativeToolTip\": \"Assets\\\\MassiveHadron\\\\System\\\\AppBuildVersion.cs\",\r\n             
+    \"ViewState\": \"AgIAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAA==\",\r\n             
+    \"Icon\": \"ae27a6b0-e345-4288-96df-5eaf394ee369.000738|\",\r\n             
+    \"WhenOpened\": \"2025-01-21T12:57:14.773Z\"\r\n            },\r\n           
+    {\r\n              \"$type\": \"Document\",\r\n              \"DocumentIndex\":
+    3,\r\n              \"Title\": \"AppController.cs\",\r\n              \"DocumentMoniker\":
+    \"C:\\\\GIT\\\\MassiveHadron\\\\WestonParkFriends\\\\WestonPark\\\\Assets\\\\Application\\\\Scripts\\\\AppController.cs\",\r\n             
+    \"RelativeDocumentMoniker\": \"Assets\\\\Application\\\\Scripts\\\\AppController.cs\",\r\n             
+    \"ToolTip\": \"C:\\\\GIT\\\\MassiveHadron\\\\WestonParkFriends\\\\WestonPark\\\\Assets\\\\Application\\\\Scripts\\\\AppController.cs\",\r\n             
+    \"RelativeToolTip\": \"Assets\\\\Application\\\\Scripts\\\\AppController.cs\",\r\n             
+    \"ViewState\": \"AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==\",\r\n             
+    \"Icon\": \"ae27a6b0-e345-4288-96df-5eaf394ee369.000738|\",\r\n             
+    \"WhenOpened\": \"2025-01-21T12:56:43.65Z\"\r\n            }\r\n          ]\r\n       
+    }\r\n      ]\r\n    }\r\n  ]\r\n}\r\n\r\n\r\n\r\n\r\n"
   cSharpRepresentation: "using System;\r\nusing System.Collections.Generic;\r\nusing
     UnityEngine;\r\nusing System.Linq;\r\n\r\npublic class JsonDeserializationExample
     : MonoBehaviour\r\n{\r\n    void Start()\r\n    {\r\n        string jsonString
-    = @\"{ \"\"a\"\": { \"\"b\"\": { \"\"c\"\": \"\"e:\\\\fpp\"\" } } }\r\n       
-    \";\r\n        try\r\n        {\r\n            var data = JsonTocs.FromJson<Dictionary<string,
-    object>>(jsonString);\r\n            if (data != null)\r\n            {\r\n               
-    var template = new\r\n                {\r\n                    _a = new\r\n                   
-    {\r\n                        _b = new\r\n                        {\r\n                           
-    _c = (object)null\r\n                        }\r\n                    }\r\n               
-    };\r\n\r\n                var result = new\r\n                {\r\n                   
-    _a = (data.ContainsKey(\"a\") && data[\"a\"] != null ? new\r\n                   
-    {\r\n                        _b = (((Dictionary<string, object>)data[\"a\"]).ContainsKey(\"b\")
-    && ((Dictionary<string, object>)data[\"a\"])[\"b\"] != null ? new\r\n                       
-    {\r\n                            _c = (((Dictionary<string, object>)data[\"a\"]).ContainsKey(\"b\")
-    && ((Dictionary<string, object>)((Dictionary<string, object>)data[\"a\"])[\"b\"]).ContainsKey(\"c\")
-    ? ((Dictionary<string, object>)((Dictionary<string, object>)data[\"a\"])[\"b\"])[\"c\"]
-    : (object)null)\r\n                        } : new\r\n                       
-    {\r\n                            _c = (object)null\r\n                       
-    })\r\n                    } : new\r\n                    {\r\n                       
-    _b = new\r\n                        {\r\n                            _c = (object)null\r\n                       
-    }\r\n                    })\r\n                };\r\n\r\n                // Display
-    deserialized values\r\n                if (result._a != null && result._a._b
-    != null && result._a._b._c != null) Debug.Log($\"a.b.c : { result._a._b._c }\");
-    // e:\\\\pp\r\n            }\r\n            else\r\n            {\r\n               
-    Debug.LogError(\"Failed to deserialize JSON\");\r\n            }\r\n        }\r\n       
-    catch (System.Exception e)\r\n        {\r\n            Debug.LogError($\"Deserialization
-    error: {e.Message}\");\r\n        }\r\n    }\r\n}\r\n\r\n"
+    = @\"{\r\n            \"\"DocumentGroupContainers\"\": [\r\n            {\r\n               
+    \"\"Orientation\"\": 0,\r\n                \"\"VerticalTabListWidth\"\": 256,\r\n               
+    \"\"DocumentGroups\"\": [\r\n                {\r\n                    \"\"DockedWidth\"\":
+    200,\r\n                    \"\"SelectedChildIndex\"\": 0,\r\n                   
+    \"\"Children\"\": [\r\n                    {\r\n                        \"\"$type\"\":
+    \"\"Document\"\",\r\n                        \"\"DocumentIndex\"\": 0,\r\n                       
+    \"\"Title\"\": \"\"Intro.cs\"\",\r\n                        \"\"DocumentMoniker\"\":
+    \"\"C:\\\\GIT\\\\MassiveHadron\\\\WestonParkFriends\\\\WestonPark\\\\Assets\\\\Application\\\\Scripts\\\\Sections\\\\Intro.cs\"\",\r\n                       
+    \"\"RelativeDocumentMoniker\"\": \"\"Assets\\\\Application\\\\Scripts\\\\Sections\\\\Intro.cs\"\",\r\n                       
+    \"\"ToolTip\"\": \"\"C:\\\\GIT\\\\MassiveHadron\\\\WestonParkFriends\\\\WestonPark\\\\Assets\\\\Application\\\\Scripts\\\\Sections\\\\Intro.cs\"\",\r\n                       
+    \"\"RelativeToolTip\"\": \"\"Assets\\\\Application\\\\Scripts\\\\Sections\\\\Intro.cs\"\",\r\n                       
+    \"\"ViewState\"\": \"\"AgIAAAAAAAAAAAAAAAAvwBEAAAAAAAAAAAAAAA==\"\",\r\n                       
+    \"\"Icon\"\": \"\"ae27a6b0-e345-4288-96df-5eaf394ee369.000738|\"\",\r\n                       
+    \"\"WhenOpened\"\": \"\"2025-07-09T06:20:43.379Z\"\",\r\n                       
+    \"\"EditorCaption\"\": \"\"\"\"\r\n                    },\r\n                   
+    {\r\n                        \"\"$type\"\": \"\"Bookmark\"\",\r\n                       
+    \"\"Name\"\": \"\"ST:130:0:{1fc202d4-d401-403c-9834-5b218574bb67}\"\"\r\n                   
+    },\r\n                    {\r\n                        \"\"$type\"\": \"\"Bookmark\"\",\r\n                       
+    \"\"Name\"\": \"\"ST:131:0:{116d2292-e37d-41cd-a077-ebacac4c8cc4}\"\"\r\n                   
+    },\r\n                    {\r\n                        \"\"$type\"\": \"\"Document\"\",\r\n                       
+    \"\"DocumentIndex\"\": 1,\r\n                        \"\"Title\"\": \"\"CharacterData.cs\"\",\r\n                       
+    \"\"DocumentMoniker\"\": \"\"C:\\\\GIT\\\\MassiveHadron\\\\WestonParkFriends\\\\WestonPark\\\\Assets\\\\Application\\\\Content\\\\Database\\\\CharacterData.cs\"\",\r\n                       
+    \"\"RelativeDocumentMoniker\"\": \"\"Assets\\\\Application\\\\Content\\\\Database\\\\CharacterData.cs\"\",\r\n                       
+    \"\"ToolTip\"\": \"\"C:\\\\GIT\\\\MassiveHadron\\\\WestonParkFriends\\\\WestonPark\\\\Assets\\\\Application\\\\Content\\\\Database\\\\CharacterData.cs\"\",\r\n                       
+    \"\"RelativeToolTip\"\": \"\"Assets\\\\Application\\\\Content\\\\Database\\\\CharacterData.cs\"\",\r\n                       
+    \"\"ViewState\"\": \"\"AgIAAAAAAAAAAAAAAAAAABEAAAABAAAAAAAAAA==\"\",\r\n                       
+    \"\"Icon\"\": \"\"ae27a6b0-e345-4288-96df-5eaf394ee369.000738|\"\",\r\n                       
+    \"\"WhenOpened\"\": \"\"2025-01-21T12:57:49.819Z\"\",\r\n                       
+    \"\"EditorCaption\"\": \"\"\"\"\r\n                    },\r\n                   
+    {\r\n                        \"\"$type\"\": \"\"Document\"\",\r\n                       
+    \"\"DocumentIndex\"\": 2,\r\n                        \"\"Title\"\": \"\"AppBuildVersion.cs\"\",\r\n                       
+    \"\"DocumentMoniker\"\": \"\"C:\\\\GIT\\\\MassiveHadron\\\\WestonParkFriends\\\\WestonPark\\\\Assets\\\\MassiveHadron\\\\System\\\\AppBuildVersion.cs\"\",\r\n                       
+    \"\"RelativeDocumentMoniker\"\": \"\"Assets\\\\MassiveHadron\\\\System\\\\AppBuildVersion.cs\"\",\r\n                       
+    \"\"ToolTip\"\": \"\"C:\\\\GIT\\\\MassiveHadron\\\\WestonParkFriends\\\\WestonPark\\\\Assets\\\\MassiveHadron\\\\System\\\\AppBuildVersion.cs\"\",\r\n                       
+    \"\"RelativeToolTip\"\": \"\"Assets\\\\MassiveHadron\\\\System\\\\AppBuildVersion.cs\"\",\r\n                       
+    \"\"ViewState\"\": \"\"AgIAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAA==\"\",\r\n                       
+    \"\"Icon\"\": \"\"ae27a6b0-e345-4288-96df-5eaf394ee369.000738|\"\",\r\n                       
+    \"\"WhenOpened\"\": \"\"2025-01-21T12:57:14.773Z\"\"\r\n                    },\r\n                   
+    {\r\n                        \"\"$type\"\": \"\"Document\"\",\r\n                       
+    \"\"DocumentIndex\"\": 3,\r\n                        \"\"Title\"\": \"\"AppController.cs\"\",\r\n                       
+    \"\"DocumentMoniker\"\": \"\"C:\\\\GIT\\\\MassiveHadron\\\\WestonParkFriends\\\\WestonPark\\\\Assets\\\\Application\\\\Scripts\\\\AppController.cs\"\",\r\n                       
+    \"\"RelativeDocumentMoniker\"\": \"\"Assets\\\\Application\\\\Scripts\\\\AppController.cs\"\",\r\n                       
+    \"\"ToolTip\"\": \"\"C:\\\\GIT\\\\MassiveHadron\\\\WestonParkFriends\\\\WestonPark\\\\Assets\\\\Application\\\\Scripts\\\\AppController.cs\"\",\r\n                       
+    \"\"RelativeToolTip\"\": \"\"Assets\\\\Application\\\\Scripts\\\\AppController.cs\"\",\r\n                       
+    \"\"ViewState\"\": \"\"AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==\"\",\r\n                       
+    \"\"Icon\"\": \"\"ae27a6b0-e345-4288-96df-5eaf394ee369.000738|\"\",\r\n                       
+    \"\"WhenOpened\"\": \"\"2025-01-21T12:56:43.65Z\"\"\r\n                    }\r\n                   
+    ]\r\n                }\r\n                ]\r\n            }\r\n            ]\r\n       
+    }\r\n\r\n\r\n\r\n\r\n        \";\r\n        try\r\n        {\r\n            var
+    data = JsonTocs.FromJson<Dictionary<string, object>>(jsonString);\r\n           
+    if (data != null)\r\n            {\r\n                var template = new\r\n               
+    {\r\n                    _DocumentGroupContainers = new[] { new\r\n                   
+    {\r\n                        _DocumentGroups = new[] { new\r\n                       
+    {\r\n                            _Children = new[] { new\r\n                           
+    {\r\n                                __type = (object)null,\r\n                               
+    _DocumentIndex = (object)null,\r\n                                _DocumentMoniker
+    = (object)null,\r\n                                _EditorCaption = (object)null,\r\n                               
+    _Icon = (object)null,\r\n                                _Name = (object)null,\r\n                               
+    _RelativeDocumentMoniker = (object)null,\r\n                                _RelativeToolTip
+    = (object)null,\r\n                                _Title = (object)null,\r\n                               
+    _ToolTip = (object)null,\r\n                                _ViewState = (object)null,\r\n                               
+    _WhenOpened = (object)null\r\n                            } },\r\n                           
+    _DockedWidth = (object)null,\r\n                            _SelectedChildIndex
+    = (object)null\r\n                        } },\r\n                        _Orientation
+    = (object)null,\r\n                        _VerticalTabListWidth = (object)null\r\n                   
+    } }\r\n                };\r\n\r\n                var result = new\r\n               
+    {\r\n                    _DocumentGroupContainers = (data.ContainsKey(\"DocumentGroupContainers\")
+    && data[\"DocumentGroupContainers\"] != null ? ((object[])data[\"DocumentGroupContainers\"]).Select((item,
+    j) =>\r\n                    {\r\n                        var subDict = (Dictionary<string,
+    object>)item;\r\n                        return new\r\n                       
+    {\r\n                            _DocumentGroups = subDict.ContainsKey(\"DocumentGroups\")
+    && subDict[\"DocumentGroups\"] != null ? ((object[])subDict[\"DocumentGroups\"]).Select((innerItem,
+    k) =>\r\n                            {\r\n                                var
+    innerDict = (Dictionary<string, object>)innerItem;\r\n                               
+    return new\r\n                                {\r\n                                   
+    _Children = innerDict.ContainsKey(\"Children\") && innerDict[\"Children\"] !=
+    null ? ((object[])innerDict[\"Children\"]).Select((innerInnerItem, m) =>\r\n                                   
+    {\r\n                                        var innerInnerDict = (Dictionary<string,
+    object>)innerInnerItem;\r\n                                        return new\r\n                                       
+    {\r\n                                            __type = innerInnerDict.ContainsKey(\"$type\")
+    ? innerInnerDict[\"$type\"] : (object)null,\r\n                                           
+    _DocumentIndex = innerInnerDict.ContainsKey(\"DocumentIndex\") ? innerInnerDict[\"DocumentIndex\"]
+    : (object)null,\r\n                                            _DocumentMoniker
+    = innerInnerDict.ContainsKey(\"DocumentMoniker\") ? innerInnerDict[\"DocumentMoniker\"]
+    : (object)null,\r\n                                            _EditorCaption
+    = innerInnerDict.ContainsKey(\"EditorCaption\") ? innerInnerDict[\"EditorCaption\"]
+    : (object)null,\r\n                                            _Icon = innerInnerDict.ContainsKey(\"Icon\")
+    ? innerInnerDict[\"Icon\"] : (object)null,\r\n                                           
+    _Name = innerInnerDict.ContainsKey(\"Name\") ? innerInnerDict[\"Name\"] : (object)null,\r\n                                           
+    _RelativeDocumentMoniker = innerInnerDict.ContainsKey(\"RelativeDocumentMoniker\")
+    ? innerInnerDict[\"RelativeDocumentMoniker\"] : (object)null,\r\n                                           
+    _RelativeToolTip = innerInnerDict.ContainsKey(\"RelativeToolTip\") ? innerInnerDict[\"RelativeToolTip\"]
+    : (object)null,\r\n                                            _Title = innerInnerDict.ContainsKey(\"Title\")
+    ? innerInnerDict[\"Title\"] : (object)null,\r\n                                           
+    _ToolTip = innerInnerDict.ContainsKey(\"ToolTip\") ? innerInnerDict[\"ToolTip\"]
+    : (object)null,\r\n                                            _ViewState = innerInnerDict.ContainsKey(\"ViewState\")
+    ? innerInnerDict[\"ViewState\"] : (object)null,\r\n                                           
+    _WhenOpened = innerInnerDict.ContainsKey(\"WhenOpened\") ? innerInnerDict[\"WhenOpened\"]
+    : (object)null                    };\r\n                                       
+    }).ToArray() : new[] { new\r\n                                        {\r\n                                           
+    __type = (object)null,\r\n                                            _DocumentIndex
+    = (object)null,\r\n                                            _DocumentMoniker
+    = (object)null,\r\n                                            _EditorCaption
+    = (object)null,\r\n                                            _Icon = (object)null,\r\n                                           
+    _Name = (object)null,\r\n                                            _RelativeDocumentMoniker
+    = (object)null,\r\n                                            _RelativeToolTip
+    = (object)null,\r\n                                            _Title = (object)null,\r\n                                           
+    _ToolTip = (object)null,\r\n                                            _ViewState
+    = (object)null,\r\n                                            _WhenOpened =
+    (object)null\r\n                                        } },\r\n                                       
+    _DockedWidth = innerDict.ContainsKey(\"DockedWidth\") ? innerDict[\"DockedWidth\"]
+    : (object)null,\r\n                                        _SelectedChildIndex
+    = innerDict.ContainsKey(\"SelectedChildIndex\") ? innerDict[\"SelectedChildIndex\"]
+    : (object)null            };\r\n                                    }).ToArray()
+    : new[] { new\r\n                                    {\r\n                                       
+    _Children = new[] { new\r\n                                        {\r\n                                           
+    __type = (object)null,\r\n                                            _DocumentIndex
+    = (object)null,\r\n                                            _DocumentMoniker
+    = (object)null,\r\n                                            _EditorCaption
+    = (object)null,\r\n                                            _Icon = (object)null,\r\n                                           
+    _Name = (object)null,\r\n                                            _RelativeDocumentMoniker
+    = (object)null,\r\n                                            _RelativeToolTip
+    = (object)null,\r\n                                            _Title = (object)null,\r\n                                           
+    _ToolTip = (object)null,\r\n                                            _ViewState
+    = (object)null,\r\n                                            _WhenOpened =
+    (object)null\r\n                                        } },\r\n                                       
+    _DockedWidth = (object)null,\r\n                                        _SelectedChildIndex
+    = (object)null\r\n                                    } },\r\n                                   
+    _Orientation = subDict.ContainsKey(\"Orientation\") ? subDict[\"Orientation\"]
+    : (object)null,\r\n                                    _VerticalTabListWidth
+    = subDict.ContainsKey(\"VerticalTabListWidth\") ? subDict[\"VerticalTabListWidth\"]
+    : (object)null    };\r\n                                }).ToArray() : new[]
+    { new\r\n                                {\r\n                                   
+    _DocumentGroups = new[] { new\r\n                                    {\r\n                                       
+    _Children = new[] { new\r\n                                        {\r\n                                           
+    __type = (object)null,\r\n                                            _DocumentIndex
+    = (object)null,\r\n                                            _DocumentMoniker
+    = (object)null,\r\n                                            _EditorCaption
+    = (object)null,\r\n                                            _Icon = (object)null,\r\n                                           
+    _Name = (object)null,\r\n                                            _RelativeDocumentMoniker
+    = (object)null,\r\n                                            _RelativeToolTip
+    = (object)null,\r\n                                            _Title = (object)null,\r\n                                           
+    _ToolTip = (object)null,\r\n                                            _ViewState
+    = (object)null,\r\n                                            _WhenOpened =
+    (object)null\r\n                                        } },\r\n                                       
+    _DockedWidth = (object)null,\r\n                                        _SelectedChildIndex
+    = (object)null\r\n                                    } },\r\n                                   
+    _Orientation = (object)null,\r\n                                    _VerticalTabListWidth
+    = (object)null\r\n                                } })\r\n                           
+    };\r\n\r\n                            // Display deserialized values\r\n                           
+    if (result._DocumentGroupContainers != null && result._DocumentGroupContainers.Length
+    > 0 && result._DocumentGroupContainers[0]._DocumentGroups != null && result._DocumentGroupContainers[0]._DocumentGroups.Length
+    > 0 && result._DocumentGroupContainers[0]._DocumentGroups[0]._Children != null)
+    Debug.Log($\"DocumentGroupContainers[0].DocumentGroups[0].Children : {string.Join(\",
+    \", (object[])result._DocumentGroupContainers[0]._DocumentGroups[0]._Children)}\");
+    // [...]\r\n                            if (result._DocumentGroupContainers !=
+    null && result._DocumentGroupContainers.Length > 0 && result._DocumentGroupContainers[0]._DocumentGroups
+    != null && result._DocumentGroupContainers[0]._DocumentGroups.Length > 0) Debug.Log($\"DocumentGroupContainers[0].DocumentGroups[0].DockedWidth
+    : { result._DocumentGroupContainers[0]._DocumentGroups[0]._DockedWidth }\");
+    // 200\r\n                            if (result._DocumentGroupContainers !=
+    null && result._DocumentGroupContainers.Length > 0 && result._DocumentGroupContainers[0]._DocumentGroups
+    != null && result._DocumentGroupContainers[0]._DocumentGroups.Length > 0) Debug.Log($\"DocumentGroupContainers[0].DocumentGroups[0].SelectedChildIndex
+    : { result._DocumentGroupContainers[0]._DocumentGroups[0]._SelectedChildIndex
+    }\"); // 0\r\n                            if (result._DocumentGroupContainers
+    != null && result._DocumentGroupContainers.Length > 0) Debug.Log($\"DocumentGroupContainers[0].Orientation
+    : { result._DocumentGroupContainers[0]._Orientation }\"); // 0\r\n                           
+    if (result._DocumentGroupContainers != null && result._DocumentGroupContainers.Length
+    > 0) Debug.Log($\"DocumentGroupContainers[0].VerticalTabListWidth : { result._DocumentGroupContainers[0]._VerticalTabListWidth
+    }\"); // 256\r\n                        }\r\n                        else\r\n                       
+    {\r\n                            Debug.LogError(\"Failed to deserialize JSON\");\r\n                       
+    }\r\n                    }\r\n                    catch (System.Exception e)\r\n                   
+    {\r\n                        Debug.LogError($\"Deserialization error: {e.Message}\");\r\n                   
+    }\r\n                }\r\n            }\r\n\r\n"
 --- !u!4 &939026901
 Transform:
   m_ObjectHideFlags: 0

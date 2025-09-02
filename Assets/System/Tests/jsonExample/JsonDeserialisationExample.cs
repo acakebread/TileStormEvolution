@@ -1,152 +1,75 @@
-using System;
-using System.Collections.Generic;
-using UnityEngine;
-using System.Linq;
+//using System;
+//using System.Collections.Generic;
+//using System.Linq;
+//using UnityEngine;
 
-public class JsonDeserializationExample : MonoBehaviour
-{
-	void Start()
-	{
-		string jsonString = @"{
-            ""deep"": {
-                ""a"": [
-                {
-                    ""b"": {
-                        ""c"": [
-                        {
-                            ""d"": {
-                                ""e"": ""value""
-                            }
-                        }
-                        ]
-                    }
-                },
-                {
-                    ""b"": {
-                        ""c"": []
-                    }
-                }
-                ],
-                ""x"": ""\n\t""
-            }
-        }";
-		try
-		{
-			var data = JsonTocs.FromJson<Dictionary<string, object>>(jsonString);
-			if (data != null)
-			{
-				var template = new
-				{
-					deep = new
-					{
-						a = new[] { new
-						{
-							b = new
-							{
-								c = new[] { new
-								{
-									d = new
-									{
-										e = (object)null
-									}
-								} }
-							}
-						} },
-						x = (object)null
-					}
-				};
+//public class JsonDeserializationExample : MonoBehaviour
+//{
+//	void Start()
+//	{
+//		string jsonString = @"{
+//            ""DocumentGroupContainers"": [
+//            {
+//                ""DocumentGroups"": [
+//                {
+//                    ""Children"": [
+//                    {
+//                        ""EditorCaption"": """"
+//                    },
+//                    {
+//                        ""WhenOpened"": ""2025-01-21T12:56:43.65Z""
+//                    }
+//                    ]
+//                }
+//                ]
+//            }
+//            ]
+//        }";
 
-				var result = new
-				{
-					deep = (data.ContainsKey("deep") && data["deep"] != null ? new
-					{
-						a = (data.ContainsKey("deep") && ((Dictionary<string, object>)data["deep"]).ContainsKey("a") ? ((object[])((Dictionary<string, object>)data["deep"])["a"]).Select((item, j) =>
-						{
-							var subDict = (Dictionary<string, object>)item;
-							return new
-							{
-								b = (subDict.ContainsKey("b") && subDict["b"] != null ? new
-								{
-									c = (subDict.ContainsKey("b") && ((Dictionary<string, object>)subDict["b"]).ContainsKey("c") ? ((object[])((Dictionary<string, object>)subDict["b"])["c"]).Select((item, j) =>
-									{
-										var subDict = (Dictionary<string, object>)item;
-										return new
-										{
-											d = (subDict.ContainsKey("d") && subDict["d"] != null ? new
-											{
-												e = (subDict.ContainsKey("d") && ((Dictionary<string, object>)subDict["d"]).ContainsKey("e") ? ((Dictionary<string, object>)subDict["d"])["e"] : (object)null)
-											} : new
-											{
-												e = (object)null
-											})
-										};
+//		try
+//		{
+//			var data = JsonTocs.FromJson<Dictionary<string, object>>(jsonString);
+//			if (data != null)
+//			{
+//				var result = new
+//				{
+//					_DocumentGroupContainers =
+//						data.ContainsKey("DocumentGroupContainers")
+//						? ((object[])data["DocumentGroupContainers"]).Select(item =>
+//						{
+//							var subDict = (Dictionary<string, object>)item;
+//							return new
+//							{
+//								_DocumentGroups = subDict.ContainsKey("DocumentGroups")
+//									? ((object[])subDict["DocumentGroups"]).Select(innerItem =>
+//									{
+//										var innerDict = (Dictionary<string, object>)innerItem;
+//										return new
+//										{
+//											_Children = innerDict.ContainsKey("Children")
+//												? innerDict["Children"] // always object
+//												: (object)null
+//										};
+//									}).ToArray()
+//									: Array.Empty<object>() // consistent type
+//							};
+//						}).ToArray()
+//						: Array.Empty<object>()
+//				};
 
-									}).ToArray() : new[] { new
-									{
-										d = new
-										{
-											e = (object)null
-										}
-									} })
-								} : new
-								{
-									c = new[] { new
-									{
-										d = new
-										{
-											e = (object)null
-										}
-									} }
-								})
-							};
-
-						}).ToArray() : new[] { new
-						{
-							b = new
-							{
-								c = new[] { new
-								{
-									d = new
-									{
-										e = (object)null
-									}
-								} }
-							}
-						} }),
-						x = (data.ContainsKey("deep") && ((Dictionary<string, object>)data["deep"]).ContainsKey("x") ? ((Dictionary<string, object>)data["deep"])["x"] : (object)null)
-					} : new
-					{
-						a = new[] { new
-						{
-							b = new
-							{
-								c = new[] { new
-								{
-									d = new
-									{
-										e = (object)null
-									}
-								} }
-							}
-						} },
-						x = (object)null
-					})
-				};
-
-				// Display deserialized values
-				if (result.deep != null && result.deep.a != null) Debug.Log($"deep.a : {string.Join(", ", (object[])result.deep.a)}"); // [...]
-				if (result.deep != null && result.deep.x != null) Debug.Log($"deep.x : {result.deep.x}"); //
-
-			}
-			else
-			{
-				Debug.LogError("Failed to deserialize JSON");
-			}
-		}
-		catch (System.Exception e)
-		{
-			Debug.LogError($"Deserialization error: {e.Message}");
-		}
-	}
-}
-
+//				// Example debug output
+//				Debug.Log("Deserialization succeeded!");
+//				var firstChild = ((object[])((dynamic)result._DocumentGroupContainers)[0]._DocumentGroups[0]._Children)[0];
+//				Debug.Log($"First child: {firstChild}");
+//			}
+//			else
+//			{
+//				Debug.LogError("Failed to deserialize JSON");
+//			}
+//		}
+//		catch (Exception e)
+//		{
+//			Debug.LogError($"Deserialization error: {e.Message}");
+//		}
+//	}
+//}
