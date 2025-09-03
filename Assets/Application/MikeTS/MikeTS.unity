@@ -155,8 +155,8 @@ MonoBehaviour:
   showTileSelection: 0
   launchInCinemaMode: 0
   databaseJsonFile: {fileID: 4900000, guid: 96c40ca8617a15a4590b9728c168e29a, type: 3}
-  geometryPath: ClassicTS/Geometry/
-  texturePath: ClassicTS/Textures/
+  geometryPath: MikeTS/Geometry/
+  texturePath: MikeTS/Textures/
 --- !u!4 &862124737
 Transform:
   m_ObjectHideFlags: 0
@@ -387,6 +387,8 @@ GameObject:
   m_Component:
   - component: {fileID: 1555382763}
   - component: {fileID: 1555382765}
+  - component: {fileID: 1555382767}
+  - component: {fileID: 1555382766}
   m_Layer: 0
   m_Name: GameController
   m_TagString: Untagged
@@ -419,6 +421,30 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4bc4a6e7f7c5f9e4c8731bdb5ae11057, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &1555382766
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1555382761}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 38ed1b5251682304fbc463391bafa476, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &1555382767
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1555382761}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c3785a1d12188b74da228325b119080c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
 --- !u!1660057539 &9223372036854775807
