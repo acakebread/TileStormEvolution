@@ -148,25 +148,30 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e9f5bf97d9e45d042ac9d859c577986b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  jsonInput: '{"key":"value"}
-
-
-'
+  jsonInput: '[{"$type": "Item", "id": 1}, {"$type": "Item", "id": 2}]'
   cSharpRepresentation: "using System;\r\nusing System.Collections.Generic;\r\nusing
-    UnityEngine;\r\nusing System.Linq;\r\n\r\npublic class JsonDeserializationExample
-    : MonoBehaviour\r\n{\r\n    void Start()\r\n    {\r\n        string jsonString
-    = @\"{\"\"key\"\":\"\"value\"\"}\";\r\n        try\r\n        {\r\n           
-    var data = JsonTocs.FromJson<Dictionary<string, object>>(jsonString);\r\n           
-    if (data != null)\r\n            {\r\n                var template = new {\r\n                   
-    _key = (object)null\r\n                };\r\n\r\n                var result =
-    new {\r\n                    _key = data.ContainsKey(\"key\") ? data[\"key\"]
-    : (object)null\r\n                };\r\n\r\n                // Display deserialized
-    values\r\n                if (result._key != null && result._key != null) Debug.Log($\"key
-    : { result._key }\"); // value\r\n            }\r\n            else\r\n           
-    {\r\n                Debug.LogError(\"Failed to deserialize JSON\");\r\n           
-    }\r\n        }\r\n        catch (System.Exception e)\r\n        {\r\n           
-    Debug.LogError($\"Deserialization error: {e.Message}\");\r\n        }\r\n   
-    }\r\n}\r\n\r\n"
+    System.Linq;\r\nusing UnityEngine;\r\n\r\npublic class JsonDeserializationExample
+    : MonoBehaviour\r\n{\r\n    static class J\r\n    {\r\n        public static
+    Dictionary<string, object> D(object o) => o as Dictionary<string, object>;\r\n       
+    public static object[] A(object o) => o as object[];\r\n        public static
+    object G(Dictionary<string, object> d, string k) => (d != null && d.ContainsKey(k))
+    ? d[k] : null;\r\n    }\r\n\r\n    void Start()\r\n    {\r\n        string jsonString
+    = @\"[{\"\"$type\"\": \"\"Item\"\", \"\"id\"\": 1}, {\"\"$type\"\": \"\"Item\"\",
+    \"\"id\"\": 2}]\";\r\n        try\r\n        {\r\n            var data = JsonTocs.FromJson<Dictionary<string,
+    object>>(jsonString);\r\n            if (data != null)\r\n            {\r\n               
+    var template = new[] { new { __type = (object)null, _id = (object)null } };\r\n               
+    var result = (J.A(data) != null ? J.A(data).Select((item0, i0) => new { __type
+    = J.G(J.D(item0), \"$type\"), _id = J.G(J.D(item0), \"id\") }).ToArray() : new[]
+    { new { __type = (object)null, _id = (object)null } });\r\n                if
+    (result != null) Debug.Log($\" (array length): {result.Length}\");\r\n               
+    if (result != null)\r\n                {\r\n                    for (int i0 =
+    0; i0 < result.Length; i0++)\r\n                    {\r\n                       
+    if (result[i0].__type != null) Debug.Log($\"[{{i0}}].$type : {result[i0].__type}\");\r\n                       
+    if (result[i0]._id != null) Debug.Log($\"[{{i0}}].id : {result[i0]._id}\");\r\n                   
+    }\r\n                }\r\n            }\r\n            else\r\n            {\r\n               
+    Debug.LogError(\"Failed to deserialize JSON\");\r\n            }\r\n        }\r\n       
+    catch (System.Exception e)\r\n        {\r\n            Debug.LogError($\"Deserialization
+    error: {e.Message}\");\r\n        }\r\n    }\r\n}\r\n"
 --- !u!4 &939026901
 Transform:
   m_ObjectHideFlags: 0
