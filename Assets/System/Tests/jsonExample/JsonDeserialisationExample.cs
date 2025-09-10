@@ -33,13 +33,14 @@ public class JsonDeserializationExample : MonoBehaviour
 				{
 					for (int i0 = 0; i0 < result._members.Length; i0++)
 					{
-						if (result._members[i0]._name != null) Debug.Log($"members[{{i0}}].name : {result._members[i0]._name}");
-						if (result._members[i0]._roles != null) Debug.Log($"members[{{i0}}].roles (array length): {result._members[i0]._roles.Length}");
-						if (result._members[i0]._roles != null)
+						var elementi0 = new { _name = J.G(J.D(result._members[i0]), "name"), _roles = (J.A(J.G(J.D(result._members[i0]), "roles")) != null ? J.A(J.G(J.D(result._members[i0]), "roles")).Select((item1, i1) => J.D(item1)).ToArray() : new[] { (object)null }) };
+						if (elementi0._name != null) Debug.Log($"members[{{i0}}].name : {elementi0._name}");
+						if (elementi0._roles != null) Debug.Log($"members[{{i0}}].roles (array length): {elementi0._roles.Length}");
+						if (elementi0._roles != null)
 						{
-							for (int i1 = 0; i1 < result._members[i0]._roles.Length; i1++)
+							for (int i1 = 0; i1 < elementi0._roles.Length; i1++)
 							{
-								if (result._members[i0]._roles[i1] != null) Debug.Log($"members[{{i0}}].roles[{{i1}}] : {result._members[i0]._roles[i1]}");
+								if (elementi0._roles[i1] != null) Debug.Log($"members[{{i0}}].roles[{{i1}}] : {elementi0._roles[i1]}");
 							}
 						}
 					}
