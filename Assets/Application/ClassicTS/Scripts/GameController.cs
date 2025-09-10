@@ -78,6 +78,7 @@ namespace ClassicTilestorm
 			CameraController.SetOrigin(srcPos, true);
 			CameraController.SetTarget(dstPos, true);
 			gestureController.enabled = false;
+			locked = false;
 		}
 
 		void Update()
