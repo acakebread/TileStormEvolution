@@ -455,7 +455,7 @@ MonoBehaviour:
   referenceCamera: {fileID: 1146321625}
   planeNormal: {x: 0, y: 1, z: 0}
   offset: -0.2
-  dimColor: {r: 0, g: 0, b: 0, a: 0.69803923}
+  dimColor: {r: 0.1, g: 0.1, b: 0.1, a: 0.69803923}
 --- !u!114 &1504592389
 MonoBehaviour:
   m_ObjectHideFlags: 0

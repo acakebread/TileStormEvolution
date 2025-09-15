@@ -1,8 +1,8 @@
-Shader "Unlit/TransparentDim"
+Shader "Unlit/ReflectionDimScreen"
 {
     Properties
     {
-        _Color ("Color", Color) = (0.1, 0.1, 0.1, 0.7)
+        _Color ("Dim Color", Color) = (0.1, 0.1, 0.1, 0.7)
     }
     SubShader
     {
@@ -10,13 +10,14 @@ Shader "Unlit/TransparentDim"
         LOD 100
         Blend SrcAlpha OneMinusSrcAlpha
         ZWrite Off
-        Cull Off // Render both front and back faces
+        ZTest Always
 
         Pass
         {
             CGPROGRAM
             #pragma vertex vert
             #pragma fragment frag
+
             #include "UnityCG.cginc"
 
             struct appdata
@@ -34,7 +35,7 @@ Shader "Unlit/TransparentDim"
             v2f vert (appdata v)
             {
                 v2f o;
-                o.vertex = UnityObjectToClipPos(v.vertex);
+                o.vertex = UnityObjectToClipPos(v.vertex); // World to clip space
                 return o;
             }
 
