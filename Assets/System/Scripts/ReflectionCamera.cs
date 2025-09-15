@@ -1,215 +1,166 @@
 using UnityEngine;
+using UnityEngine.Rendering;
 
 [RequireComponent(typeof(Camera))]
 public class ReflectionCamera : MonoBehaviour
 {
-	[SerializeField, Range(float.Epsilon, 1f)] private float brightness = 1f;
-	[SerializeField] private Camera reflectionCamera; // Assign in Inspector or create programmatically
-	[SerializeField] private bool compositeToScreen = true; // Set to true to composite to screen
+	[SerializeField] private Camera referenceCamera; // Overlay camera (Scene Camera)
+	[SerializeField] private Vector3 planeNormal = Vector3.up;
+	[SerializeField] private float offset;
+	[SerializeField] private Color dimColor = new Color(0.1f, 0.1f, 0.1f, 0.7f); // Dark grey with alpha
 
-	private Camera _mainCam;
-	private RenderTexture _reflectionTexture;
-	private RenderTexture _flippedTexture;
-	private Light[] _sceneLights;
-	private float[] _originalLightIntensities;
-	private Color _originalAmbientLight;
-	private float _originalAmbientIntensity;
+	private Camera reflectionCamera;
+	private CommandBuffer cullingCommandBuffer;
+	private CommandBuffer resetCullingBuffer;
+	private GameObject dimPlane;
+	private Material dimMaterial; // Store material for real-time updates
+	private Color lastDimColor; // Track last color to detect changes
 
-	private void Start()
+	void Awake()
 	{
-		InitializeMainCamera();
-		InitializeReflectionCamera();
-		InitializeRenderTextures();
-		InitializeSceneLights();
-	}
+		reflectionCamera = GetComponent<Camera>();
+		reflectionCamera.clearFlags = CameraClearFlags.Depth; // Skybox handled by Base camera
 
-	private void InitializeMainCamera()
-	{
-		_mainCam = GetComponent<Camera>();
-		_mainCam.clearFlags = CameraClearFlags.Nothing; // Preserve reflection
-		_mainCam.depth = 0; // Ensure main camera renders last
-		Debug.Log("Main camera initialized: " + _mainCam.name);
-	}
-
-	private void InitializeReflectionCamera()
-	{
-		if (reflectionCamera == null)
+		if (referenceCamera == null)
 		{
-			var camObj = new GameObject("ReflectionCamera");
-			reflectionCamera = camObj.AddComponent<Camera>();
-		}
-
-		reflectionCamera.enabled = false; // Render manually
-		reflectionCamera.CopyFrom(_mainCam);
-		reflectionCamera.depth = _mainCam.depth - 1; // Render before main camera
-		reflectionCamera.clearFlags = CameraClearFlags.SolidColor;
-		reflectionCamera.backgroundColor = Color.clear;
-		reflectionCamera.cullingMask = _mainCam.cullingMask; // Match main camera's culling
-		reflectionCamera.nearClipPlane = _mainCam.nearClipPlane;
-		reflectionCamera.farClipPlane = _mainCam.farClipPlane;
-		reflectionCamera.fieldOfView = _mainCam.fieldOfView;
-		Debug.Log("Reflection camera initialized: " + reflectionCamera.name);
-	}
-
-	private void InitializeRenderTextures()
-	{
-		_reflectionTexture = new RenderTexture(_mainCam.pixelWidth, _mainCam.pixelHeight, 24, RenderTextureFormat.ARGB32);
-		_flippedTexture = new RenderTexture(_mainCam.pixelWidth, _mainCam.pixelHeight, 24, RenderTextureFormat.ARGB32);
-		reflectionCamera.targetTexture = _reflectionTexture;
-		Debug.Log("Render textures created: " + _reflectionTexture.name + ", " + _flippedTexture.name);
-	}
-
-	private void InitializeSceneLights()
-	{
-		_sceneLights = FindObjectsByType<Light>(FindObjectsSortMode.None);
-		_originalLightIntensities = new float[_sceneLights.Length];
-		for (var i = 0; i < _sceneLights.Length; i++)
-		{
-			_originalLightIntensities[i] = _sceneLights[i].intensity;
-		}
-		_originalAmbientLight = RenderSettings.ambientLight;
-		_originalAmbientIntensity = RenderSettings.ambientIntensity;
-		Debug.Log("Scene lights initialized: " + _sceneLights.Length + " lights found");
-	}
-
-	private void OnPreRender()
-	{
-		if (!reflectionCamera)
-		{
-			Debug.LogError("Reflection camera is null!");
 			return;
 		}
 
-		// Sync reflection camera transform with main camera
-		reflectionCamera.transform.SetPositionAndRotation(_mainCam.transform.position, _mainCam.transform.rotation);
-		Debug.Log($"Reflection camera transform synced: {_mainCam.transform.position}");
+		// Create CommandBuffer for culling
+		cullingCommandBuffer = new CommandBuffer { name = "ReflectionCulling" };
+		cullingCommandBuffer.SetInvertCulling(true);
+		reflectionCamera.AddCommandBuffer(CameraEvent.BeforeDepthTexture, cullingCommandBuffer);
 
-		// Adjust lighting
-		for (var i = 0; i < _sceneLights.Length; i++)
+		// Create reset CommandBuffer
+		resetCullingBuffer = new CommandBuffer { name = "ResetCulling" };
+		resetCullingBuffer.SetInvertCulling(false);
+		reflectionCamera.AddCommandBuffer(CameraEvent.AfterForwardAlpha, resetCullingBuffer);
+
+		// Create dimming plane
+		CreateDimPlane();
+	}
+
+	void CreateDimPlane()
+	{
+		// Create quad
+		dimPlane = GameObject.CreatePrimitive(PrimitiveType.Quad);
+		dimPlane.name = "ReflectionDimPlane";
+		dimPlane.hideFlags = HideFlags.HideInHierarchy; // Hide in Inspector/Hierarchy
+
+		// Position and orient at reflection plane
+		var normalizedNormal = planeNormal.normalized;
+		dimPlane.transform.position = normalizedNormal * offset;
+		dimPlane.transform.rotation = Quaternion.LookRotation(normalizedNormal); // Face upward for Vector3.up
+		dimPlane.transform.localScale = Vector3.one * 100000f; // Large enough to cover view
+
+		// Set layer
+		int reflectionDimLayer = LayerMask.NameToLayer("ReflectionDim");
+		if (reflectionDimLayer == -1)
 		{
-			if (_sceneLights[i].enabled)
-			{
-				_sceneLights[i].intensity = _originalLightIntensities[i] * brightness;
-			}
+			return;
 		}
-		RenderSettings.ambientLight = _originalAmbientLight * brightness;
-		RenderSettings.ambientIntensity = _originalAmbientIntensity * brightness;
+		dimPlane.layer = reflectionDimLayer;
 
-		// Render reflection camera
-		reflectionCamera.Render();
-		Debug.Log("Reflection camera rendered to: " + _reflectionTexture.name);
+		// Set culling mask
+		reflectionCamera.cullingMask = (1 << reflectionDimLayer) | (1 << LayerMask.NameToLayer("Default"));
 
-		// Flip the RenderTexture vertically
-		FlipRenderTexture();
+		// Create material
+		dimMaterial = new Material(Shader.Find("Unlit/UnlitTransparentDim"));
+		dimMaterial.SetColor("_BaseColor", dimColor); // Use dimColor with its alpha
+		dimMaterial.renderQueue = 3100; // Transparent queue
+		dimMaterial.EnableKeyword("_ALPHABLEND_ON");
+		dimMaterial.SetFloat("_ZWrite", 0);
+		dimMaterial.SetFloat("_Surface", 1); // Transparent
+		dimMaterial.SetFloat("_Blend", 0); // Alpha blend
 
-		// Restore lighting
-		for (var i = 0; i < _sceneLights.Length; i++)
+		// Assign material and force update
+		var renderer = dimPlane.GetComponent<MeshRenderer>();
+		renderer.material = dimMaterial;
+		renderer.enabled = false;
+		renderer.enabled = true; // Force renderer update
+
+		// Initialize last color
+		lastDimColor = dimColor;
+	}
+
+	void OnValidate()
+	{
+		// Update material color in Edit mode when dimColor changes in Inspector
+		if (dimMaterial != null && dimColor != lastDimColor)
 		{
-			if (_sceneLights[i].enabled)
-			{
-				_sceneLights[i].intensity = _originalLightIntensities[i];
-			}
-		}
-		RenderSettings.ambientLight = _originalAmbientLight;
-		RenderSettings.ambientIntensity = _originalAmbientIntensity;
-
-		// Composite to screen if enabled
-		if (compositeToScreen)
-		{
-			Graphics.Blit(_flippedTexture, null as RenderTexture);
-			Debug.Log("Composited flipped texture to screen");
+			dimMaterial.SetColor("_BaseColor", dimColor);
+			lastDimColor = dimColor;
 		}
 	}
 
-	private void FlipRenderTexture()
+	void Update()
 	{
-		// Make the original RenderTexture readable
-		RenderTexture.active = _reflectionTexture;
-		Texture2D tempTexture = new Texture2D(_reflectionTexture.width, _reflectionTexture.height, TextureFormat.RGBA32, false);
-		tempTexture.ReadPixels(new Rect(0, 0, _reflectionTexture.width, _reflectionTexture.height), 0, 0);
-		tempTexture.Apply();
-		Debug.Log("Read pixels from reflection texture");
-
-		// Create flipped pixel data
-		Color[] pixels = tempTexture.GetPixels();
-		Color[] flippedPixels = new Color[pixels.Length];
-		int width = _reflectionTexture.width;
-		int height = _reflectionTexture.height;
-
-		for (int y = 0; y < height; y++)
+		// Update material color in Play mode when dimColor changes in Inspector
+		if (dimMaterial != null && dimColor != lastDimColor)
 		{
-			for (int x = 0; x < width; x++)
-			{
-				flippedPixels[x + y * width] = pixels[x + (height - 1 - y) * width];
-			}
+			dimMaterial.SetColor("_BaseColor", dimColor);
+			lastDimColor = dimColor;
 		}
-		Debug.Log($"Flipped {pixels.Length} pixels: {width}x{height}");
-
-		// Apply flipped pixels to the flipped RenderTexture
-		tempTexture.SetPixels(flippedPixels);
-		tempTexture.Apply();
-		RenderTexture.active = _flippedTexture;
-		Graphics.CopyTexture(tempTexture, _flippedTexture);
-		Debug.Log("Copied flipped pixels to flipped texture");
-
-		// Cleanup
-		Object.Destroy(tempTexture);
-		RenderTexture.active = null;
 	}
 
-	private void OnDestroy()
+	void OnRenderObject()
 	{
-		if (_reflectionTexture != null)
+		if (referenceCamera == null || reflectionCamera == null)
 		{
-			_reflectionTexture.Release();
+			return;
 		}
-		if (_flippedTexture != null)
+
+		// Copy properties from the Reference Camera (Scene Camera)
+		reflectionCamera.fieldOfView = referenceCamera.fieldOfView;
+		reflectionCamera.nearClipPlane = referenceCamera.nearClipPlane;
+		reflectionCamera.farClipPlane = referenceCamera.farClipPlane;
+		reflectionCamera.orthographic = referenceCamera.orthographic;
+		reflectionCamera.orthographicSize = referenceCamera.orthographicSize;
+		reflectionCamera.aspect = referenceCamera.aspect;
+		reflectionCamera.rect = referenceCamera.rect;
+
+		// Compute reflection matrix
+		var normalizedNormal = planeNormal.normalized;
+		var pointOnPlane = normalizedNormal * offset;
+
+		var reflectionMat = Matrix4x4.identity;
+		reflectionMat[0, 0] = 1 - 2 * normalizedNormal.x * normalizedNormal.x;
+		reflectionMat[0, 1] = -2 * normalizedNormal.x * normalizedNormal.y;
+		reflectionMat[0, 2] = -2 * normalizedNormal.x * normalizedNormal.z;
+		reflectionMat[1, 0] = -2 * normalizedNormal.y * normalizedNormal.x;
+		reflectionMat[1, 1] = 1 - 2 * normalizedNormal.y * normalizedNormal.y;
+		reflectionMat[1, 2] = -2 * normalizedNormal.y * normalizedNormal.z;
+		reflectionMat[2, 0] = -2 * normalizedNormal.z * normalizedNormal.x;
+		reflectionMat[2, 1] = -2 * normalizedNormal.z * normalizedNormal.y;
+		reflectionMat[2, 2] = 1 - 2 * normalizedNormal.z * normalizedNormal.z;
+
+		var translateToOrigin = Matrix4x4.Translate(-pointOnPlane);
+		var translateBack = Matrix4x4.Translate(pointOnPlane);
+		reflectionMat = translateBack * reflectionMat * translateToOrigin;
+
+		// Apply reflection matrix
+		reflectionCamera.worldToCameraMatrix = referenceCamera.worldToCameraMatrix * reflectionMat;
+		reflectionCamera.projectionMatrix = referenceCamera.projectionMatrix;
+
+		// Force culling CommandBuffer execution
+		Graphics.ExecuteCommandBuffer(cullingCommandBuffer);
+	}
+
+	void OnDisable()
+	{
+		if (cullingCommandBuffer != null)
 		{
-			_flippedTexture.Release();
+			reflectionCamera.RemoveCommandBuffer(CameraEvent.BeforeDepthTexture, cullingCommandBuffer);
+			cullingCommandBuffer.Release();
 		}
-		if (reflectionCamera != null && reflectionCamera.gameObject != null)
+		if (resetCullingBuffer != null)
 		{
-			Object.Destroy(reflectionCamera.gameObject);
+			reflectionCamera.RemoveCommandBuffer(CameraEvent.AfterForwardAlpha, resetCullingBuffer);
+			resetCullingBuffer.Release();
+		}
+		if (dimPlane != null)
+		{
+			Destroy(dimPlane);
 		}
 	}
 }
-
-//using UnityEngine;
-
-//public class ReflectionCamera : MonoBehaviour
-//{
-//	public Camera reflectionCamera;
-//	//public Material material;
-
-//	void OnWillRenderObject()
-//	{
-//		if (reflectionCamera != null)// && material != null)
-//		{
-//			// Set up reflection camera
-//			SetReflectionCamera();
-
-//			// Render the scene through the reflection camera
-//			reflectionCamera.Render();
-
-//			// Apply the reflection texture to the material
-//			//material.SetTexture("_DynReflTex", reflectionCamera.targetTexture);
-//		}
-//	}
-
-//	private void SetReflectionCamera()
-//	{
-//		if (reflectionCamera != null)
-//		{
-//			// Calculate the reflection plane (Y-axis is inverted)
-//			float distance = Vector3.Dot(transform.position, transform.up) * 2; //Y axis is inverted
-//			reflectionCamera.transform.position = new Vector3(transform.position.x, distance + transform.position.y, transform.position.z);
-
-//			// Set the view matrix
-//			Vector3 cameraPosition = reflectionCamera.transform.position;
-//			Quaternion rotation = Quaternion.Euler(180, 0, 0); // Rotate 180 degrees around X
-//			//Matrix4x4 viewMatrix = Matrix4x4.LookAtMatrix(cameraPosition, transform.position, Vector3.Cross(transform.right, cameraPosition - transform.position).normalized);
-
-//			//reflectionCamera.worldToCameraMatrix = viewMatrix; // Set the reflection camera's view matrix
-//		}
-//	}
-//}

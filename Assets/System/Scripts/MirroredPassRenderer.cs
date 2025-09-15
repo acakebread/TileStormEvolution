@@ -1,254 +1,356 @@
-using UnityEngine;
-using UnityEngine.Rendering;
+//using UnityEngine;
+//using UnityEngine.Rendering;
+//using UnityEngine.Rendering.Universal;
+//using UnityEngine.Rendering.RenderGraphModule;
 
-[RequireComponent(typeof(Camera))]
-public class MirroredPassRenderer : MonoBehaviour
-{
-	[SerializeField] private Vector3 planeNormal = Vector3.up;
-	[SerializeField] private float offset;
-	[SerializeField, Range(float.Epsilon, 1f)] private float brightness = 1f;
+//[RequireComponent(typeof(Camera))]
+//public class MirroredPassRenderer : MonoBehaviour
+//{
+//	[SerializeField] private Vector3 planeNormal = Vector3.up;
+//	[SerializeField] private float offset;
+//	[SerializeField, Range(float.Epsilon, 1f)] private float brightness = 1f;
 
-	private Camera _mainCam;
-	private Camera _mirrorCam;
-	private CommandBuffer _mirrorCommandBuffer;
-	private CommandBuffer _mainCamCommandBuffer;
-	private Light[] _sceneLights;
-	private float[] _originalLightIntensities;
-	private Color _originalAmbientLight;
-	private float _originalAmbientIntensity;
-	private CameraClearFlags _originalCameraClearFlags;
-	private Material _originalSkyboxMaterial;
-	private Material _flippedSkyboxMaterial;
+//	private Camera _mainCam;
+//	private Camera _mirrorCam;
+//	private Light[] _sceneLights;
+//	private float[] _originalLightIntensities;
+//	private Color _originalAmbientLight;
+//	private float _originalAmbientIntensity;
+//	private CameraClearFlags _originalCameraClearFlags;
+//	private MirrorRenderFeature _renderFeature;
 
-	private void Start()
-	{
-		InitializeMainCamera();
-		InitializeMirrorCamera();
-		InitializeCommandBuffers();
-		InitializeSceneLights();
-		InitializeSkybox();
-	}
+//	private void Start()
+//	{
+//		InitializeMainCamera();
+//		InitializeMirrorCamera();
+//		InitializeSceneLights();
+//		InitializeRenderFeature();
+//	}
 
-	private void InitializeMainCamera()
-	{
-		_mainCam = Camera.main;
-		_originalCameraClearFlags = _mainCam.clearFlags;
-		_mainCam.clearFlags = CameraClearFlags.Nothing; // Required for reflection
-	}
+//	private void InitializeMainCamera()
+//	{
+//		_mainCam = GetComponent<Camera>();
+//		if (_mainCam == null)
+//		{
+//			Debug.LogError("Main camera not found!");
+//			enabled = false;
+//			return;
+//		}
+//		_originalCameraClearFlags = _mainCam.clearFlags;
+//		_mainCam.clearFlags = CameraClearFlags.Nothing; // Preserve mirror camera output
+//		Debug.Log("Main camera initialized with ClearFlags.Nothing");
+//	}
 
-	private void InitializeMirrorCamera()
-	{
-		var camObj = new GameObject("MirrorCamera") { hideFlags = HideFlags.HideAndDontSave };
-		_mirrorCam = camObj.AddComponent<Camera>();
-		_mirrorCam.enabled = false;
-	}
+//	private void InitializeMirrorCamera()
+//	{
+//		var camObj = new GameObject("MirrorCamera");
+//		_mirrorCam = camObj.AddComponent<Camera>();
+//		_mirrorCam.enabled = false;
+//		_mirrorCam.CopyFrom(_mainCam);
+//		_mirrorCam.clearFlags = CameraClearFlags.SolidColor;
+//		_mirrorCam.backgroundColor = Color.red; // Red for visibility
+//		_mirrorCam.depth = _mainCam.depth - 1;
+//		_mirrorCam.cullingMask = _mainCam.cullingMask; // Render same layers as main camera
+//		Debug.Log("Mirror camera initialized with red clear color.");
+//	}
 
-	private void InitializeCommandBuffers()
-	{
-		_mirrorCommandBuffer = new CommandBuffer { name = "MirrorCameraCullingFix" };
-		_mirrorCam.AddCommandBuffer(CameraEvent.BeforeDepthTexture, _mirrorCommandBuffer);
+//	private void InitializeSceneLights()
+//	{
+//		_sceneLights = FindObjectsByType<Light>(FindObjectsSortMode.None);
+//		_originalLightIntensities = new float[_sceneLights.Length];
+//		for (var i = 0; i < _sceneLights.Length; i++)
+//		{
+//			if (_sceneLights[i] != null)
+//			{
+//				_originalLightIntensities[i] = _sceneLights[i].intensity;
+//			}
+//		}
+//		_originalAmbientLight = RenderSettings.ambientLight;
+//		_originalAmbientIntensity = RenderSettings.ambientIntensity;
+//	}
 
-		_mainCamCommandBuffer = new CommandBuffer { name = "MainCameraCullingReset" };
-		_mainCamCommandBuffer.SetInvertCulling(false);
-		_mainCam.AddCommandBuffer(CameraEvent.BeforeDepthTexture, _mainCamCommandBuffer);
-	}
+//	private void InitializeRenderFeature()
+//	{
+//		_renderFeature = ScriptableObject.CreateInstance<MirrorRenderFeature>();
+//		_renderFeature.Initialize(_mirrorCam, _mainCam, planeNormal, offset, _sceneLights, _originalLightIntensities, _originalAmbientLight, _originalAmbientIntensity, brightness);
 
-	private void InitializeSceneLights()
-	{
-		_sceneLights = FindObjectsByType<Light>(FindObjectsSortMode.None);
-		_originalLightIntensities = new float[_sceneLights.Length];
-		for (var i = 0; i < _sceneLights.Length; i++)
-		{
-			_originalLightIntensities[i] = _sceneLights[i].intensity;
-		}
-		_originalAmbientLight = RenderSettings.ambientLight;
-		_originalAmbientIntensity = RenderSettings.ambientIntensity;
-	}
+//		// Add the render feature to the URP renderer
+//		var urpAsset = UniversalRenderPipeline.asset;
+//		if (urpAsset != null)
+//		{
+//			var rendererDataList = urpAsset.GetType().GetField("m_RendererDataList", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.GetValue(urpAsset) as ScriptableRendererData[];
+//			if (rendererDataList != null && rendererDataList.Length > 0)
+//			{
+//				var rendererData = rendererDataList[0]; // Use the first renderer (e.g., Universal Renderer)
+//				rendererData.rendererFeatures.Add(_renderFeature);
+//				rendererData.SetDirty();
+//				Debug.Log("MirrorRenderFeature successfully added to URP renderer.");
+//			}
+//			else
+//			{
+//				Debug.LogError("No renderer data found in URP asset!");
+//				enabled = false;
+//			}
+//		}
+//		else
+//		{
+//			Debug.LogError("URP asset not found!");
+//			enabled = false;
+//		}
+//	}
 
-	private void InitializeSkybox()
-	{
-		if (RenderSettings.skybox == null)
-		{
-			Debug.LogWarning("No skybox material set in RenderSettings!");
-			return;
-		}
+//	private void OnDestroy()
+//	{
+//		if (_mirrorCam != null)
+//		{
+//			Destroy(_mirrorCam.gameObject);
+//		}
 
-		_originalSkyboxMaterial = RenderSettings.skybox;
-		_flippedSkyboxMaterial = new Material(_originalSkyboxMaterial) { name = "FlippedNightskySkybox" };
+//		if (_mainCam != null)
+//		{
+//			_mainCam.clearFlags = _originalCameraClearFlags;
+//		}
 
-		// Swap top and bottom textures
-		SwapTextures("_UpTex", "_DownTex");
+//		// Clean up render feature
+//		if (_renderFeature != null)
+//		{
+//			var urpAsset = UniversalRenderPipeline.asset;
+//			if (urpAsset != null)
+//			{
+//				var rendererDataList = urpAsset.GetType().GetField("m_RendererDataList", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.GetValue(urpAsset) as ScriptableRendererData[];
+//				if (rendererDataList != null && rendererDataList.Length > 0)
+//				{
+//					var rendererData = rendererDataList[0];
+//					rendererData.rendererFeatures.Remove(_renderFeature);
+//					rendererData.SetDirty();
+//				}
+//			}
+//			Destroy(_renderFeature);
+//		}
+//	}
 
-		// Flip all textures vertically
-		FlipAllTextures();
+//	// Custom Render Feature
+//	public class MirrorRenderFeature : ScriptableRendererFeature
+//	{
+//		private MirrorRenderPass _mirrorRenderPass;
 
-		RenderSettings.skybox = _flippedSkyboxMaterial;
-	}
+//		public void Initialize(Camera mirrorCam, Camera mainCam, Vector3 planeNormal, float offset, Light[] sceneLights, float[] originalLightIntensities, Color originalAmbientLight, float originalAmbientIntensity, float brightness)
+//		{
+//			_mirrorRenderPass = new MirrorRenderPass(mirrorCam, mainCam, planeNormal, offset, sceneLights, originalLightIntensities, originalAmbientLight, originalAmbientIntensity, brightness);
+//		}
 
-	private void SwapTextures(string texProperty1, string texProperty2)
-	{
-		if (!_flippedSkyboxMaterial.HasProperty(texProperty1) || !_flippedSkyboxMaterial.HasProperty(texProperty2))
-		{
-			Debug.LogWarning($"Skybox shader lacks properties: {texProperty1}, {texProperty2}");
-			return;
-		}
+//		public override void Create()
+//		{
+//			// No additional creation logic needed
+//		}
 
-		var tex1 = _flippedSkyboxMaterial.GetTexture(texProperty1);
-		var tex2 = _flippedSkyboxMaterial.GetTexture(texProperty2);
-		if (tex1 == null || tex2 == null)
-		{
-			Debug.LogWarning($"Textures not found: {texProperty1}, {texProperty2}");
-			return;
-		}
+//		public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
+//		{
+//			if (_mirrorRenderPass != null && renderingData.cameraData.camera == _mirrorRenderPass.MainCamera)
+//			{
+//				renderer.EnqueuePass(_mirrorRenderPass);
+//			}
+//		}
+//	}
 
-		_flippedSkyboxMaterial.SetTexture(texProperty1, tex2);
-		_flippedSkyboxMaterial.SetTexture(texProperty2, tex1);
-	}
+//	// Custom Render Pass
+//	private class MirrorRenderPass : ScriptableRenderPass
+//	{
+//		private readonly Camera _mirrorCam;
+//		private readonly Camera _mainCam;
+//		private readonly Vector3 _planeNormal;
+//		private readonly float _offset;
+//		private readonly Light[] _sceneLights;
+//		private readonly float[] _originalLightIntensities;
+//		private readonly Color _originalAmbientLight;
+//		private float _originalAmbientIntensity;
+//		private readonly float _brightness;
 
-	private void FlipAllTextures()
-	{
-		var textureProperties = new[] { "_UpTex", "_DownTex", "_FrontTex", "_BackTex", "_LeftTex", "_RightTex" };
-		foreach (var prop in textureProperties)
-		{
-			if (!_flippedSkyboxMaterial.HasProperty(prop)) continue;
+//		public Camera MainCamera => _mainCam;
 
-			var texture = _flippedSkyboxMaterial.GetTexture(prop);
-			if (texture == null)
-			{
-				Debug.LogWarning($"Texture not found for {prop}");
-				continue;
-			}
+//		public MirrorRenderPass(Camera mirrorCam, Camera mainCam, Vector3 planeNormal, float offset, Light[] sceneLights, float[] originalLightIntensities, Color originalAmbientLight, float originalAmbientIntensity, float brightness)
+//		{
+//			_mirrorCam = mirrorCam;
+//			_mainCam = mainCam;
+//			_planeNormal = planeNormal;
+//			_offset = offset;
+//			_sceneLights = sceneLights;
+//			_originalLightIntensities = originalLightIntensities;
+//			_originalAmbientLight = originalAmbientLight;
+//			_originalAmbientIntensity = originalAmbientIntensity;
+//			_brightness = brightness;
+//			renderPassEvent = RenderPassEvent.BeforeRenderingOpaques; // Render before main camera's opaque objects
+//		}
 
-			var flippedTexture = FlipTextureViaGPU(texture);
-			flippedTexture.filterMode = FilterMode.Trilinear;
-			flippedTexture.wrapMode = TextureWrapMode.Clamp;
-			_flippedSkyboxMaterial.SetTexture(prop, flippedTexture);
-		}
-	}
+//		// Legacy Execute method for compatibility mode
+//		[System.Obsolete]
+//		public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
+//		{
+//			// Fallback for non-Render Graph mode
+//			RenderMirrorPass(context);
+//		}
 
-	private static Texture2D FlipTextureViaGPU(Texture originalTex)
-	{
-		var width = originalTex.width;
-		var height = originalTex.height;
+//		public override void RecordRenderGraph(RenderGraph renderGraph, ref RenderingData renderingData)
+//		{
+//			if (!_mirrorCam || !_mainCam)
+//			{
+//				Debug.LogWarning("Mirror or main camera is null, skipping render pass.");
+//				return;
+//			}
 
-		var rt = new RenderTexture(width, height, 0);
-		RenderTexture.active = rt;
-		Graphics.Blit(originalTex, rt);
+//			using (var builder = renderGraph.AddRenderPass<RasterRenderPass>("MirrorRenderPass", out var passData))
+//			{
+//				Debug.Log("Recording MirrorRenderPass in Render Graph");
 
-		var flipped = new Texture2D(width, height, TextureFormat.RGBA32, false);
-		flipped.ReadPixels(new Rect(0, 0, width, height), 0, 0);
-		flipped.Apply();
+//				// Set up reflection matrix
+//				var normalizedNormal = _planeNormal.normalized;
+//				var pointOnPlane = normalizedNormal * _offset;
 
-		RenderTexture.active = null;
-		rt.Release();
+//				var reflectionMat = Matrix4x4.identity;
+//				reflectionMat[0, 0] = 1 - 2 * normalizedNormal.x * normalizedNormal.x;
+//				reflectionMat[0, 1] = -2 * normalizedNormal.x * normalizedNormal.y;
+//				reflectionMat[0, 2] = -2 * normalizedNormal.x * normalizedNormal.z;
+//				reflectionMat[1, 0] = -2 * normalizedNormal.y * normalizedNormal.x;
+//				reflectionMat[1, 1] = 1 - 2 * normalizedNormal.y * normalizedNormal.y;
+//				reflectionMat[1, 2] = -2 * normalizedNormal.y * normalizedNormal.z;
+//				reflectionMat[2, 0] = -2 * normalizedNormal.z * normalizedNormal.x;
+//				reflectionMat[2, 1] = -2 * normalizedNormal.z * normalizedNormal.y;
+//				reflectionMat[2, 2] = 1 - 2 * normalizedNormal.z * normalizedNormal.z;
 
-		return FlipTextureVertically(flipped);
-	}
+//				var translateToOrigin = Matrix4x4.Translate(-pointOnPlane);
+//				var translateBack = Matrix4x4.Translate(pointOnPlane);
+//				reflectionMat = translateBack * reflectionMat * translateToOrigin;
 
-	private static Texture2D FlipTextureVertically(Texture2D original)
-	{
-		var width = original.width;
-		var height = original.height;
-		var flipped = new Texture2D(width, height, original.format, false)
-		{
-			wrapMode = original.wrapMode,
-			filterMode = original.filterMode
-		};
+//				// Update mirror camera transform
+//				_mirrorCam.worldToCameraMatrix = _mainCam.worldToCameraMatrix * reflectionMat;
+//				_mirrorCam.rect = new Rect(0, 0, 1, 1);
+//				Debug.Log($"Mirror camera worldToCameraMatrix: {_mirrorCam.worldToCameraMatrix}");
 
-		for (var y = 0; y < height; y++)
-		{
-			flipped.SetPixels(0, y, width, 1, original.GetPixels(0, height - 1 - y, width, 1));
-		}
+//				// Adjust lighting
+//				for (var i = 0; i < _sceneLights.Length; i++)
+//				{
+//					if (_sceneLights[i] != null && _sceneLights[i].enabled)
+//					{
+//						_sceneLights[i].intensity = _originalLightIntensities[i] * _brightness;
+//					}
+//				}
 
-		flipped.Apply();
-		return flipped;
-	}
+//				RenderSettings.ambientLight = _originalAmbientLight * _brightness;
+//				RenderSettings.ambientIntensity = _originalAmbientIntensity * _brightness;
 
-	private void OnPreRender()
-	{
-		if (!_mainCam || !_mirrorCam) return;
+//				// Set up culling inversion
+//				passData.cmd = CommandBufferPool.Get("MirrorCameraCullingFix");
+//				Debug.Log("Inverting culling for mirror camera");
+//				passData.cmd.SetInvertCulling(true);
 
-		_mirrorCam.CopyFrom(_mainCam);
-		_mirrorCam.clearFlags = _originalCameraClearFlags;
-		_mirrorCam.depth = _mainCam.depth - 1;
+//				// Configure render target
+//				passData.camera = _mirrorCam;
 
-		var normalizedNormal = planeNormal.normalized;
-		var pointOnPlane = normalizedNormal * offset;
+//				// Set up the pass
+//				builder.SetRenderFunc((RasterRenderPass pass, RenderGraphContext ctx) =>
+//				{
+//					ctx.cmd.ExecuteCommandBuffer(passData.cmd);
+//					CommandBufferPool.Release(passData.cmd);
 
-		var reflectionMat = Matrix4x4.identity;
-		reflectionMat[0, 0] = 1 - 2 * normalizedNormal.x * normalizedNormal.x;
-		reflectionMat[0, 1] = -2 * normalizedNormal.x * normalizedNormal.y;
-		reflectionMat[0, 2] = -2 * normalizedNormal.x * normalizedNormal.z;
-		reflectionMat[1, 0] = -2 * normalizedNormal.y * normalizedNormal.x;
-		reflectionMat[1, 1] = 1 - 2 * normalizedNormal.y * normalizedNormal.y;
-		reflectionMat[1, 2] = -2 * normalizedNormal.y * normalizedNormal.z;
-		reflectionMat[2, 0] = -2 * normalizedNormal.z * normalizedNormal.x;
-		reflectionMat[2, 1] = -2 * normalizedNormal.z * normalizedNormal.y;
-		reflectionMat[2, 2] = 1 - 2 * normalizedNormal.z * normalizedNormal.z;
+//					// Render the mirror camera
+//					ctx.renderContext.ExecuteSingleCamera(_mirrorCam, ref renderingData);
 
-		var translateToOrigin = Matrix4x4.Translate(-pointOnPlane);
-		var translateBack = Matrix4x4.Translate(pointOnPlane);
-		reflectionMat = translateBack * reflectionMat * translateToOrigin;
+//					// Reset lighting
+//					for (var i = 0; i < _sceneLights.Length; i++)
+//					{
+//						if (_sceneLights[i] != null && _sceneLights[i].enabled)
+//						{
+//							_sceneLights[i].intensity = _originalLightIntensities[i];
+//						}
+//					}
 
-		_mirrorCam.worldToCameraMatrix = _mainCam.worldToCameraMatrix * reflectionMat;
-		_mirrorCam.rect = new Rect(0, 0, 1, 1);
+//					RenderSettings.ambientLight = _originalAmbientLight;
+//					RenderSettings.ambientIntensity = _originalAmbientIntensity;
 
-		for (var i = 0; i < _sceneLights.Length; i++)
-		{
-			if (_sceneLights[i].enabled)
-			{
-				_sceneLights[i].intensity = _originalLightIntensities[i] * brightness;
-			}
-		}
+//					// Reset culling
+//					var resetCmd = CommandBufferPool.Get("MainCameraCullingReset");
+//					resetCmd.SetInvertCulling(false);
+//					ctx.cmd.ExecuteCommandBuffer(resetCmd);
+//					CommandBufferPool.Release(resetCmd);
+//				});
+//			}
+//		}
 
-		RenderSettings.ambientLight = _originalAmbientLight * brightness;
-		RenderSettings.ambientIntensity = _originalAmbientIntensity * brightness;
+//		private void RenderMirrorPass(ScriptableRenderContext context)
+//		{
+//			if (!_mirrorCam || !_mainCam)
+//			{
+//				Debug.LogWarning("Mirror or main camera is null, skipping render pass.");
+//				return;
+//			}
 
-		_mirrorCommandBuffer.Clear();
-		_mirrorCommandBuffer.SetInvertCulling(true);
+//			Debug.Log("Executing MirrorRenderPass (legacy)");
 
-		_mirrorCam.Render();
+//			// Set up reflection matrix
+//			var normalizedNormal = _planeNormal.normalized;
+//			var pointOnPlane = normalizedNormal * _offset;
 
-		for (var i = 0; i < _sceneLights.Length; i++)
-		{
-			if (_sceneLights[i].enabled)
-			{
-				_sceneLights[i].intensity = _originalLightIntensities[i];
-			}
-		}
+//			var reflectionMat = Matrix4x4.identity;
+//			reflectionMat[0, 0] = 1 - 2 * normalizedNormal.x * normalizedNormal.x;
+//			reflectionMat[0, 1] = -2 * normalizedNormal.x * normalizedNormal.y;
+//			reflectionMat[0, 2] = -2 * normalizedNormal.x * normalizedNormal.z;
+//			reflectionMat[1, 0] = -2 * normalizedNormal.y * normalizedNormal.x;
+//			reflectionMat[1, 1] = 1 - 2 * normalizedNormal.y * normalizedNormal.y;
+//			reflectionMat[1, 2] = -2 * normalizedNormal.y * normalizedNormal.z;
+//			reflectionMat[2, 0] = -2 * normalizedNormal.z * normalizedNormal.x;
+//			reflectionMat[2, 1] = -2 * normalizedNormal.z * normalizedNormal.y;
+//			reflectionMat[2, 2] = 1 - 2 * normalizedNormal.z * normalizedNormal.z;
 
-		RenderSettings.ambientLight = _originalAmbientLight;
-		RenderSettings.ambientIntensity = _originalAmbientIntensity;
+//			var translateToOrigin = Matrix4x4.Translate(-pointOnPlane);
+//			var translateBack = Matrix4x4.Translate(pointOnPlane);
+//			reflectionMat = translateBack * reflectionMat * translateToOrigin;
 
-		_mirrorCommandBuffer.SetInvertCulling(false);
-	}
+//			// Update mirror camera transform
+//			_mirrorCam.worldToCameraMatrix = _mainCam.worldToCameraMatrix * reflectionMat;
+//			_mirrorCam.rect = new Rect(0, 0, 1, 1);
+//			Debug.Log($"Mirror camera worldToCameraMatrix: {_mirrorCam.worldToCameraMatrix}");
 
-	private void OnDestroy()
-	{
-		if (_mirrorCam != null)
-		{
-			if (_mirrorCommandBuffer != null)
-			{
-				_mirrorCam.RemoveCommandBuffer(CameraEvent.BeforeDepthTexture, _mirrorCommandBuffer);
-				_mirrorCommandBuffer.Release();
-			}
-			Destroy(_mirrorCam.gameObject);
-		}
+//			// Set up culling inversion
+//			CommandBuffer cmd = CommandBufferPool.Get("MirrorCameraCullingFix");
+//			Debug.Log("Inverting culling for mirror camera");
+//			cmd.SetInvertCulling(true);
+//			context.ExecuteCommandBuffer(cmd);
+//			CommandBufferPool.Release(cmd);
 
-		if (_mainCam != null && _mainCamCommandBuffer != null)
-		{
-			_mainCam.RemoveCommandBuffer(CameraEvent.BeforeDepthTexture, _mainCamCommandBuffer);
-			_mainCamCommandBuffer.Release();
-		}
+//			// Adjust lighting
+//			for (var i = 0; i < _sceneLights.Length; i++)
+//			{
+//				if (_sceneLights[i] != null && _sceneLights[i].enabled)
+//				{
+//					_sceneLights[i].intensity = _originalLightIntensities[i] * _brightness;
+//				}
+//			}
 
-		if (_originalSkyboxMaterial != null)
-		{
-			RenderSettings.skybox = _originalSkyboxMaterial;
-		}
+//			RenderSettings.ambientLight = _originalAmbientLight * _brightness;
+//			RenderSettings.ambientIntensity = _originalAmbientIntensity * _brightness;
 
-		if (_flippedSkyboxMaterial != null)
-		{
-			Destroy(_flippedSkyboxMaterial);
-		}
-	}
-}
+//			// Render the mirror camera
+//#pragma warning disable CS0618
+//			UniversalRenderPipeline.RenderSingleCamera(context, _mirrorCam);
+//#pragma warning restore CS0618
+
+//			// Reset lighting
+//			for (var i = 0; i < _sceneLights.Length; i++)
+//			{
+//				if (_sceneLights[i] != null && _sceneLights[i].enabled)
+//				{
+//					_sceneLights[i].intensity = _originalLightIntensities[i];
+//				}
+//			}
+
+//			RenderSettings.ambientLight = _originalAmbientLight;
+//			RenderSettings.ambientIntensity = _originalAmbientIntensity;
+
+//			// Reset culling
+//			cmd = CommandBufferPool.Get("MainCameraCullingReset");
+//			cmd.SetInvertCulling(false);
+//			context.ExecuteCommandBuffer(cmd);
+//			CommandBufferPool.Release(cmd);
+//		}
+//	}
+//}
