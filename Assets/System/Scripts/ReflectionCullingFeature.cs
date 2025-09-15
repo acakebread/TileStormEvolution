@@ -15,12 +15,10 @@ public class ReflectionCullingPass : ScriptableRenderPass
 		if (renderingData.cameraData.camera.name == "Reflection Camera")
 		{
 			cmd.SetInvertCulling(true);
-			cmd.SetGlobalFloat("_TestCommandBuffer", 1.0f);
 		}
 		else
 		{
 			cmd.SetInvertCulling(false);
-			cmd.SetGlobalFloat("_TestCommandBuffer", 0.0f);
 		}
 		context.ExecuteCommandBuffer(cmd);
 		CommandBufferPool.Release(cmd);

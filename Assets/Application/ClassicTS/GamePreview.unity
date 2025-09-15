@@ -305,6 +305,7 @@ GameObject:
   - component: {fileID: 1146321625}
   - component: {fileID: 1146321624}
   - component: {fileID: 1146321629}
+  - component: {fileID: 1146321630}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -430,6 +431,23 @@ MonoBehaviour:
     m_MipBias: 0
     m_VarianceClampScale: 0.9
     m_ContrastAdaptiveSharpening: 0
+--- !u!114 &1146321630
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1146321623}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7e563c8788668e741988b82c30e4dfda, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  dimColor: {r: 0.1, g: 0.1, b: 0.1, a: 0.7}
+  dimMaterial: {fileID: 2100000, guid: 48bd3659faedbd549b4f5537580eebca, type: 2}
+  planeNormal: {x: 0, y: 1, z: 0}
+  offset: -0.2
+  reflectionCamera: {fileID: 1504592392}
 --- !u!1 &1504592386
 GameObject:
   m_ObjectHideFlags: 0
@@ -479,8 +497,6 @@ MonoBehaviour:
   referenceCamera: {fileID: 1146321625}
   planeNormal: {x: 0, y: 1, z: 0}
   offset: -0.2
-  dimColor: {r: 0.1, g: 0.1, b: 0.1, a: 0.69803923}
-  dimMaterial: {fileID: 0}
 --- !u!114 &1504592389
 MonoBehaviour:
   m_ObjectHideFlags: 0
