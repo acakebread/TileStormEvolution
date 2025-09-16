@@ -10,9 +10,8 @@ public class DimOverlay : MonoBehaviour
 	[SerializeField] private Camera reflectionCamera; // Reference to Reflection Camera
 
 	private Camera sceneCamera;
-	private GameObject dimObject;
 	private Mesh dimMesh;
-	private CommandBuffer dimCommandBuffer;
+	private CommandBuffer commandBuffer;
 	private int currentFrame;
 
 	void Awake()
@@ -24,19 +23,12 @@ public class DimOverlay : MonoBehaviour
 			return;
 		}
 
-		// Create dim object (for transform only)
-		dimObject = new GameObject("DimOverlay");
-		dimObject.transform.SetParent(transform, false);
-		dimObject.transform.localPosition = Vector3.zero;
-		dimObject.transform.localRotation = Quaternion.identity;
-		dimObject.transform.localScale = Vector3.one;
-
 		// Set material color
 		dimMaterial.SetColor(dimMaterial.HasProperty("_BaseColor") ? "_BaseColor" : "_Color", dimColor);
 
 		// Initialize CommandBuffer
 		dimMesh = new Mesh();
-		dimCommandBuffer = new CommandBuffer { name = "DimOverlay" };
+		commandBuffer = new CommandBuffer { name = "DimOverlay" };
 		RenderPipelineManager.endCameraRendering += OnEndCameraRendering;
 	}
 
@@ -170,9 +162,9 @@ public class DimOverlay : MonoBehaviour
 		if (camera != reflectionCamera || dimMesh.vertexCount == 0 || Time.frameCount == currentFrame)
 			return;
 
-		dimCommandBuffer.Clear();
-		dimCommandBuffer.DrawMesh(dimMesh, Matrix4x4.identity, dimMaterial, 0, -1);
-		context.ExecuteCommandBuffer(dimCommandBuffer);
+		commandBuffer.Clear();
+		commandBuffer.DrawMesh(dimMesh, Matrix4x4.identity, dimMaterial, 0, -1);
+		context.ExecuteCommandBuffer(commandBuffer);
 		context.Submit();
 		currentFrame = Time.frameCount;
 	}
@@ -215,10 +207,6 @@ public class DimOverlay : MonoBehaviour
 	void OnDisable()
 	{
 		RenderPipelineManager.endCameraRendering -= OnEndCameraRendering;
-		if (dimObject != null)
-		{
-			Destroy(dimObject);
-		}
 		if (dimMaterial != null)
 		{
 			if (dimMaterial.GetTag("CreatedByScript", false) == "True")
@@ -228,9 +216,9 @@ public class DimOverlay : MonoBehaviour
 		{
 			Destroy(dimMesh);
 		}
-		if (dimCommandBuffer != null)
+		if (commandBuffer != null)
 		{
-			dimCommandBuffer.Dispose();
+			commandBuffer.Dispose();
 		}
 	}
 }
