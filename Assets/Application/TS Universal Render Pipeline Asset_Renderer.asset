@@ -38,8 +38,9 @@ MonoBehaviour:
     probeSamplingDebugTexture: {fileID: 0}
     probeVolumeBlendStatesCS: {fileID: 0}
   m_RendererFeatures:
-  - {fileID: 4100415544075312596}
-  m_RendererFeatureMap: d45d1960369ae738
+  - {fileID: 4881411945029437190}
+  - {fileID: 6251240324023955588}
+  m_RendererFeatureMap: 0607d4194d42be4384b00b47f4ddc056
   m_UseNativeRenderPass: 0
   xrSystemData: {fileID: 0}
   postProcessData: {fileID: 0}
@@ -78,7 +79,7 @@ MonoBehaviour:
   m_Name: ReverseCullingRenderFeature
   m_EditorClassIdentifier: 
   m_Active: 1
---- !u!114 &4100415544075312596
+--- !u!114 &4881411945029437190
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -89,6 +90,19 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5bb17a67a11b96940905a5a59eaf2e8c, type: 3}
   m_Name: CommandBufferFeature
+  m_EditorClassIdentifier: 
+  m_Active: 0
+--- !u!114 &6251240324023955588
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f3a00de2ef6c3742a4b9e189bb118c3, type: 3}
+  m_Name: CommandBufferFeatureRG
   m_EditorClassIdentifier: 
   m_Active: 1
 --- !u!114 &8176043919466149038
