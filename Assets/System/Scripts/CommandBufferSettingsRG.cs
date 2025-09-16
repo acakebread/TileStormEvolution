@@ -50,25 +50,29 @@ public class CommandBufferSettingsRG : MonoBehaviour
 
 	public void ExecuteCommands(RenderPassMode mode, RasterCommandBuffer commandBuffer, Camera camera)
 	{
-		if (!commands.ContainsKey(mode))
-		{
-			Debug.LogWarning($"CommandBufferSettingsRG: No commands registered for mode {mode} on {gameObject.name}");
+		if (!HasCommands(mode))
 			return;
-		}
 
 		foreach (var entry in commands[mode])
 		{
 			if (entry.CameraName == null || entry.CameraName == camera.name)
 			{
-				try
-				{
-					entry.Command?.Invoke(commandBuffer, camera);
-				}
+				try { entry.Command?.Invoke(commandBuffer, camera); }
 				catch (Exception e)
 				{
 					Debug.LogError($"CommandBufferSettingsRG: Error executing command for mode {mode}, camera {camera.name}: {e.Message}");
 				}
 			}
 		}
+	}
+
+	public bool HasCommands(RenderPassMode mode)
+	{
+		return commands.ContainsKey(mode) && commands[mode].Count > 0;
+	}
+
+	void OnDestroy()
+	{
+		commands.Clear();
 	}
 }
