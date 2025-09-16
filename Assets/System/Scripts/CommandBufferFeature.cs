@@ -1,153 +1,123 @@
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
+using UnityEngine.Rendering.RenderGraphModule;
 
-public class BeforeRendererPass : ScriptableRenderPass
+public class CommandBufferPass : ScriptableRenderPass
 {
-	private string passName = "BeforeRendererPass";
+	private readonly string passName;
+	private readonly CommandBufferSettings.RenderPassMode mode;
 
-	public BeforeRendererPass()
+	public CommandBufferPass(CommandBufferSettings.RenderPassMode mode)
 	{
-		renderPassEvent = RenderPassEvent.BeforeRendering; // Early in the pipeline for before render
+		this.mode = mode;
+		this.passName = $"CommandBufferPassRG_{mode}";
+		switch (mode)
+		{
+			case CommandBufferSettings.RenderPassMode.BeforeRendering:
+				renderPassEvent = RenderPassEvent.BeforeRendering;
+				break;
+			case CommandBufferSettings.RenderPassMode.BeforeRenderingOpaques:
+				renderPassEvent = RenderPassEvent.BeforeRenderingOpaques;
+				break;
+			case CommandBufferSettings.RenderPassMode.AfterRenderingTransparents:
+				renderPassEvent = RenderPassEvent.AfterRenderingTransparents;
+				break;
+			case CommandBufferSettings.RenderPassMode.AfterRendering:
+				renderPassEvent = RenderPassEvent.AfterRendering;
+				break;
+			default:
+				Debug.LogError($"CommandBufferPassRG: Invalid mode {mode}");
+				renderPassEvent = RenderPassEvent.AfterRendering;
+				break;
+		}
 	}
 
-	public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
+	public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameData)
 	{
-		// Get the camera from RenderingData
-		Camera camera = renderingData.cameraData.camera;
+		UniversalResourceData resourceData = frameData.Get<UniversalResourceData>();
+		UniversalCameraData cameraData = frameData.Get<UniversalCameraData>();
 
-		// Check for custom command buffer settings component
-		CommandBufferSettings bufferSettings = camera.GetComponent<CommandBufferSettings>();
+		Camera cam = cameraData.camera;
+		CommandBufferSettings bufferSettings = cam.GetComponent<CommandBufferSettings>();
 
-		// Create and configure the command buffer
-		CommandBuffer cmd = CommandBufferPool.Get(passName);
-		if (null != bufferSettings) bufferSettings.OnBeforeRender?.Invoke(cmd);
+		// Skip cameras without CommandBufferSettingsRG
+		if (bufferSettings == null)
+			return;
 
-		// Execute and release the command buffer
-		context.ExecuteCommandBuffer(cmd);
-		CommandBufferPool.Release(cmd);
+		using (var builder = renderGraph.AddRasterRenderPass<PassData>(passName, out var passData))
+		{
+			passData.camera = cam;
+			passData.bufferSettings = bufferSettings;
+
+			var colorTarget = mode == CommandBufferSettings.RenderPassMode.BeforeRendering
+				? resourceData.activeColorTexture
+				: resourceData.cameraColor;
+			var depthTarget = resourceData.cameraDepth;
+
+			if (!colorTarget.IsValid() || (mode != CommandBufferSettings.RenderPassMode.BeforeRendering && !depthTarget.IsValid()))
+			{
+				Debug.LogError($"{passName}: Invalid render targets: Color={colorTarget.IsValid()}, Depth={depthTarget.IsValid()}, Camera={cam.name}");
+				return;
+			}
+
+			builder.SetRenderAttachment(colorTarget, 0, AccessFlags.Write);
+			if (mode != CommandBufferSettings.RenderPassMode.BeforeRendering)
+				builder.SetRenderAttachmentDepth(depthTarget, AccessFlags.ReadWrite);
+			builder.AllowPassCulling(false);
+			builder.AllowGlobalStateModification(true);
+
+			builder.SetRenderFunc((PassData data, RasterGraphContext context) =>
+			{
+				data.bufferSettings.ExecuteCommands(mode, context.cmd, data.camera);
+			});
+		}
+	}
+
+	private class PassData
+	{
+		public TextureHandle srcColor;
+		public CommandBufferSettings bufferSettings;
+		public Camera camera;
 	}
 }
 
-public class AfterRendererPass : ScriptableRenderPass
-{
-	private string passName = "AfterRendererPass";
-
-	public AfterRendererPass()
-	{
-		renderPassEvent = RenderPassEvent.AfterRendering; // Late in the pipeline for after render
-	}
-
-	public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
-	{
-		// Get the camera from RenderingData
-		Camera camera = renderingData.cameraData.camera;
-
-		// Check for custom command buffer settings component
-		CommandBufferSettings bufferSettings = camera.GetComponent<CommandBufferSettings>();
-
-		// Create and configure the command buffer
-		CommandBuffer cmd = CommandBufferPool.Get(passName);
-		if (null != bufferSettings) bufferSettings.OnAfterRender?.Invoke(cmd);
-
-		// Execute and release the command buffer
-		context.ExecuteCommandBuffer(cmd);
-		CommandBufferPool.Release(cmd);
-	}
-}
-
+[CreateAssetMenu(menuName = "Rendering/CommandBufferFeatureRG")]
 public class CommandBufferFeature : ScriptableRendererFeature
 {
-	BeforeRendererPass beforeRendererPass;
-	AfterRendererPass afterRendererPass;
+	private CommandBufferPass beforeRenderingPass;
+	private CommandBufferPass beforeRenderingOpaquesPass;
+	private CommandBufferPass afterRenderingTransparentsPass;
+	private CommandBufferPass afterRenderingPass;
 
 	public override void Create()
 	{
-		beforeRendererPass = new BeforeRendererPass();
-		afterRendererPass = new AfterRendererPass();
+		beforeRenderingPass = new CommandBufferPass(CommandBufferSettings.RenderPassMode.BeforeRendering);
+		beforeRenderingOpaquesPass = new CommandBufferPass(CommandBufferSettings.RenderPassMode.BeforeRenderingOpaques);
+		afterRenderingTransparentsPass = new CommandBufferPass(CommandBufferSettings.RenderPassMode.AfterRenderingTransparents);
+		afterRenderingPass = new CommandBufferPass(CommandBufferSettings.RenderPassMode.AfterRendering);
 	}
 
 	public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
 	{
-		// Enqueue the pass for all cameras
-		renderer.EnqueuePass(beforeRendererPass);
-		renderer.EnqueuePass(afterRendererPass);
+		var cam = renderingData.cameraData.camera;
+		var settings = cam.GetComponent<CommandBufferSettings>();
+		if (settings == null)
+			return;
+
+		if (settings.HasCommands(CommandBufferSettings.RenderPassMode.BeforeRenderingOpaques))
+			renderer.EnqueuePass(beforeRenderingOpaquesPass);
+
+		if (settings.HasCommands(CommandBufferSettings.RenderPassMode.AfterRenderingTransparents))
+			renderer.EnqueuePass(afterRenderingTransparentsPass);
+
+		if (settings.HasCommands(CommandBufferSettings.RenderPassMode.AfterRendering))
+			renderer.EnqueuePass(afterRenderingPass);
+
+		// only enqueue beforeRenderingPass if you intend to support it
+	}
+
+	protected override void Dispose(bool disposing)
+	{
 	}
 }
-
-//using UnityEngine;
-//using UnityEngine.Rendering;
-//using UnityEngine.Rendering.Universal;
-
-//public class BeforeRendererPass : ScriptableRenderPass
-//{
-//	private string passName = "BeforeRendererPass";
-
-//	public BeforeRendererPass()
-//	{
-//		renderPassEvent = RenderPassEvent.BeforeRendering; // Early in the pipeline for before render
-//	}
-
-//	public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
-//	{
-//		// Get the camera from RenderingData
-//		Camera camera = renderingData.cameraData.camera;
-
-//		// Check for custom command buffer settings component
-//		CommandBufferSettings bufferSettings = camera.GetComponent<CommandBufferSettings>();
-
-//		// Create and configure the command buffer
-//		CommandBuffer cmd = CommandBufferPool.Get(passName);
-//		if (null != bufferSettings) bufferSettings.OnBeforeRender(cmd);
-
-//		// Execute and release the command buffer
-//		context.ExecuteCommandBuffer(cmd);
-//		CommandBufferPool.Release(cmd);
-//	}
-//}
-
-//public class AfterRendererPass : ScriptableRenderPass
-//{
-//	private string passName = "AfterRendererPass";
-
-//	public AfterRendererPass()
-//	{
-//		renderPassEvent = RenderPassEvent.AfterRendering; // Late in the pipeline for after render
-//	}
-
-//	public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
-//	{
-//		// Get the camera from RenderingData
-//		Camera camera = renderingData.cameraData.camera;
-
-//		// Check for custom command buffer settings component
-//		CommandBufferSettings bufferSettings = camera.GetComponent<CommandBufferSettings>();
-
-//		// Create and configure the command buffer
-//		CommandBuffer cmd = CommandBufferPool.Get(passName);
-//		if (null != bufferSettings) bufferSettings.OnAfterRender(cmd);
-
-//		// Execute and release the command buffer
-//		context.ExecuteCommandBuffer(cmd);
-//		CommandBufferPool.Release(cmd);
-//	}
-//}
-
-//public class CommandBufferFeature : ScriptableRendererFeature
-//{
-//	BeforeRendererPass beforeRendererPass;
-//	AfterRendererPass afterRendererPass;
-
-//	public override void Create()
-//	{
-//		beforeRendererPass = new BeforeRendererPass();
-//		afterRendererPass = new AfterRendererPass();
-//	}
-
-//	public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
-//	{
-//		// Enqueue the pass for all cameras
-//		renderer.EnqueuePass(beforeRendererPass);
-//		renderer.EnqueuePass(afterRendererPass);
-//	}
-//}

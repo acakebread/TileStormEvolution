@@ -39,8 +39,7 @@ MonoBehaviour:
     probeVolumeBlendStatesCS: {fileID: 0}
   m_RendererFeatures:
   - {fileID: 4881411945029437190}
-  - {fileID: 6251240324023955588}
-  m_RendererFeatureMap: 0607d4194d42be4384b00b47f4ddc056
+  m_RendererFeatureMap: 0607d4194d42be43
   m_UseNativeRenderPass: 0
   xrSystemData: {fileID: 0}
   postProcessData: {fileID: 0}
@@ -91,7 +90,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5bb17a67a11b96940905a5a59eaf2e8c, type: 3}
   m_Name: CommandBufferFeature
   m_EditorClassIdentifier: 
-  m_Active: 0
+  m_Active: 1
 --- !u!114 &6251240324023955588
 MonoBehaviour:
   m_ObjectHideFlags: 0

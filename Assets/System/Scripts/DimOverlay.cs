@@ -3,7 +3,7 @@ using UnityEngine.Rendering;
 using System.Collections.Generic;
 
 [RequireComponent(typeof(Camera))]
-public class DimOverlay : MonoBehaviour
+public class DimOverlay : CommandBufferSettings
 {
     [SerializeField] private Color dimColor = new Color(0.1f, 0.1f, 0.1f, 0.5f); // Inky black with 50% transparency
     [SerializeField] private Material dimMaterial; // Assign Custom/UnlitFixedColor
@@ -31,7 +31,7 @@ public class DimOverlay : MonoBehaviour
             return;
         }
 
-        var rgSettings = GetComponents<CommandBufferSettingsRG>();
+        var rgSettings = GetComponents<CommandBufferSettings>();
         if (rgSettings.Length > 1)
         {
             Debug.LogError($"DimOverlay on {gameObject.name}: Multiple CommandBufferSettingsRG components.");
@@ -85,14 +85,14 @@ public class DimOverlay : MonoBehaviour
         UpdateMaterialColor();
 
         // Register DrawMesh command
-        var commandBufferSettings = GetComponent<CommandBufferSettingsRG>();
+        var commandBufferSettings = GetComponent<CommandBufferSettings>();
         if (commandBufferSettings == null)
         {
             Debug.LogError($"DimOverlay on {gameObject.name}: CommandBufferSettingsRG component missing");
             enabled = false;
             return;
         }
-        commandBufferSettings.RegisterCommand(CommandBufferSettingsRG.RenderPassMode.AfterRendering, (commandBuffer, camera) =>
+        commandBufferSettings.RegisterCommand(CommandBufferSettings.RenderPassMode.AfterRendering, (commandBuffer, camera) =>
         {
             UpdateDimGeometry();
             if (dimMesh.vertexCount < 3 || dimMesh.triangles.Length < 3)

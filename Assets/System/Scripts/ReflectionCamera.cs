@@ -1,8 +1,7 @@
 using UnityEngine;
-using UnityEngine.Rendering;
 
 [RequireComponent(typeof(Camera))]
-public class ReflectionCamera : MonoBehaviour
+public class ReflectionCamera : CommandBufferSettings
 {
 	[SerializeField] private Camera referenceCamera; // Overlay camera (Scene Camera)
 	[SerializeField] public Vector3 planeNormal = Vector3.up; // Public for potential sharing
@@ -25,7 +24,7 @@ public class ReflectionCamera : MonoBehaviour
 
 		reflectionCamera.cullingMask = referenceCamera.cullingMask;
 
-		var commandBufferSettings = GetComponent<CommandBufferSettingsRG>();
+		var commandBufferSettings = GetComponent<CommandBufferSettings>();
 		if (commandBufferSettings == null)
 		{
 			Debug.LogError("CommandBufferSettingsRG component missing on Reflection Camera");
@@ -33,9 +32,9 @@ public class ReflectionCamera : MonoBehaviour
 			return;
 		}
 
-		commandBufferSettings.RegisterCommand(CommandBufferSettingsRG.RenderPassMode.BeforeRenderingOpaques,
+		commandBufferSettings.RegisterCommand(CommandBufferSettings.RenderPassMode.BeforeRenderingOpaques,
 			(commandBuffer, camera) => commandBuffer.SetInvertCulling(true), reflectionCamera.name);
-		commandBufferSettings.RegisterCommand(CommandBufferSettingsRG.RenderPassMode.AfterRendering,
+		commandBufferSettings.RegisterCommand(CommandBufferSettings.RenderPassMode.AfterRendering,
 			(commandBuffer, camera) => commandBuffer.SetInvertCulling(false), reflectionCamera.name);
 	}
 

@@ -306,7 +306,6 @@ GameObject:
   - component: {fileID: 1146321624}
   - component: {fileID: 1146321629}
   - component: {fileID: 1146321630}
-  - component: {fileID: 1146321631}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -447,21 +446,6 @@ MonoBehaviour:
   dimColor: {r: 0, g: 0, b: 0, a: 0.5019608}
   dimMaterial: {fileID: 2100000, guid: 48bd3659faedbd549b4f5537580eebca, type: 2}
   reflectionCamera: {fileID: 1504592392}
-  useFallbackQuad: 0
-  debugVisualizePoints: 1
-  debugPointDuration: 0.1
---- !u!114 &1146321631
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1146321623}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f4dae87215fea1c49a1cde82f3b68d69, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!1 &1504592386
 GameObject:
   m_ObjectHideFlags: 0
@@ -474,7 +458,6 @@ GameObject:
   - component: {fileID: 1504592392}
   - component: {fileID: 1504592389}
   - component: {fileID: 1504592388}
-  - component: {fileID: 1504592393}
   m_Layer: 0
   m_Name: Reflection Camera
   m_TagString: Untagged
@@ -607,18 +590,6 @@ Camera:
   m_OcclusionCulling: 1
   m_StereoConvergence: 10
   m_StereoSeparation: 0.022
---- !u!114 &1504592393
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1504592386}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f4dae87215fea1c49a1cde82f3b68d69, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!1 &1555382761
 GameObject:
   m_ObjectHideFlags: 0

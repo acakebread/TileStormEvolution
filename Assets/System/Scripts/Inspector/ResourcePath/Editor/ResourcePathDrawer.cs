@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using System;
 using UnityEngine;
 using UnityEditor;
@@ -150,3 +151,4 @@ public class ResourcePathDrawer : PropertyDrawer
 		propToUpdate = null;
 	}
 }
+#endif
