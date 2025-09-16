@@ -1,9 +1,9 @@
-using System.Collections.Generic;
 using UnityEngine;
+using System.Collections.Generic;
 using UnityEngine.Rendering;
 
 [RequireComponent(typeof(Camera))]
-public class DimOverlay : MonoBehaviour
+public class DimOverlay : CommandBufferSettings
 {
 	[SerializeField] private Color dimColor = new Color(0.1f, 0.1f, 0.1f, 0.7f);
 	[SerializeField] private Material dimMaterial; // Required: Assign URP Unlit material in Inspector
@@ -11,8 +11,6 @@ public class DimOverlay : MonoBehaviour
 
 	private Camera sceneCamera;
 	private Mesh dimMesh;
-	private CommandBuffer commandBuffer;
-	private int currentFrame;
 
 	void Awake()
 	{
@@ -23,13 +21,12 @@ public class DimOverlay : MonoBehaviour
 			return;
 		}
 
+		//create mesh
+		dimMesh = new Mesh();
 		// Set material color
 		dimMaterial.SetColor(dimMaterial.HasProperty("_BaseColor") ? "_BaseColor" : "_Color", dimColor);
 
-		// Initialize CommandBuffer
-		dimMesh = new Mesh();
-		commandBuffer = new CommandBuffer { name = "DimOverlay" };
-		RenderPipelineManager.endCameraRendering += OnEndCameraRendering;
+		OnBeforeRender += onBeforeRender;
 	}
 
 	void LateUpdate()
@@ -38,11 +35,7 @@ public class DimOverlay : MonoBehaviour
 
 		// Update dim color
 		string colorProperty = dimMaterial.HasProperty("_BaseColor") ? "_BaseColor" : "_Color";
-		if (dimMaterial.GetColor(colorProperty) != dimColor)
-		{
-			dimMaterial.SetColor(colorProperty, dimColor);
-		}
-
+		if (dimMaterial.GetColor(colorProperty) != dimColor) dimMaterial.SetColor(colorProperty, dimColor);
 		UpdateDimGeometry();
 	}
 
@@ -149,24 +142,17 @@ public class DimOverlay : MonoBehaviour
 		for (int i = 1; i < points.Count - 1; i++)
 		{
 			triangles.Add(0);
-			triangles.Add(i + 1);
 			triangles.Add(i);
+			triangles.Add(i + 1);
 		}
 		dimMesh.triangles = triangles.ToArray();
 		dimMesh.RecalculateBounds();
 		dimMesh.RecalculateNormals();
 	}
 
-	void OnEndCameraRendering(ScriptableRenderContext context, Camera camera)
+	private void onBeforeRender(CommandBuffer commandBuffer)
 	{
-		if (camera != reflectionCamera || dimMesh.vertexCount == 0 || Time.frameCount == currentFrame)
-			return;
-
-		commandBuffer.Clear();
 		commandBuffer.DrawMesh(dimMesh, Matrix4x4.identity, dimMaterial, 0, -1);
-		context.ExecuteCommandBuffer(commandBuffer);
-		context.Submit();
-		currentFrame = Time.frameCount;
 	}
 
 	Vector3[] IntersectPlaneWithQuad(Plane plane, Vector3[] quad)
@@ -204,24 +190,275 @@ public class DimOverlay : MonoBehaviour
 		return unique;
 	}
 
-	void OnDisable()
+	void OnDestroy()
 	{
-		RenderPipelineManager.endCameraRendering -= OnEndCameraRendering;
-		if (dimMaterial != null)
-		{
-			if (dimMaterial.GetTag("CreatedByScript", false) == "True")
-				Destroy(dimMaterial);
-		}
 		if (dimMesh != null)
 		{
 			Destroy(dimMesh);
 		}
-		if (commandBuffer != null)
-		{
-			commandBuffer.Dispose();
-		}
 	}
 }
+
+
+
+
+//using System.Collections.Generic;
+//using UnityEngine;
+//using UnityEngine.Rendering;
+
+//[RequireComponent(typeof(Camera))]
+//public class DimOverlay : MonoBehaviour
+//{
+//	[SerializeField] private Color dimColor = new Color(0.1f, 0.1f, 0.1f, 0.7f);
+//	[SerializeField] private Material dimMaterial; // Required: Assign URP Unlit material in Inspector
+//	[SerializeField] private Camera reflectionCamera; // Reference to Reflection Camera
+
+//	private Camera sceneCamera;
+//	private Mesh dimMesh;
+//	//private CommandBuffer commandBuffer;
+//	//private int currentFrame;
+
+//	void Awake()
+//	{
+//		sceneCamera = GetComponent<Camera>();
+//		if (sceneCamera == null || reflectionCamera == null || dimMaterial == null)
+//		{
+//			enabled = false;
+//			return;
+//		}
+
+//		// Set material color
+//		dimMaterial.SetColor(dimMaterial.HasProperty("_BaseColor") ? "_BaseColor" : "_Color", dimColor);
+
+//		// Initialize CommandBuffer
+//		dimMesh = new Mesh();
+//		//commandBuffer = new CommandBuffer { name = "DimOverlay" };
+//		//RenderPipelineManager.beginCameraRendering += OnBeginCameraRendering;
+//		//RenderPipelineManager.endCameraRendering += OnEndCameraRendering;
+
+//		GetComponent<CommandBufferSettings>().BeforeRender += OnBeforeRender;
+//		//GetComponent<CommandBufferSettings>().AfterRender += OnAfterRender;
+//	}
+
+//	void LateUpdate()
+//	{
+//		if (sceneCamera == null || dimMaterial == null || reflectionCamera == null) return;
+
+//		// Update dim color
+//		string colorProperty = dimMaterial.HasProperty("_BaseColor") ? "_BaseColor" : "_Color";
+//		if (dimMaterial.GetColor(colorProperty) != dimColor)
+//		{
+//			dimMaterial.SetColor(colorProperty, dimColor);
+//		}
+
+//		UpdateDimGeometry();
+//	}
+
+//	void UpdateDimGeometry()
+//	{
+//		// Get plane from ReflectionCamera
+//		var reflectionCameraComponent = reflectionCamera.GetComponent<ReflectionCamera>();
+//		if (reflectionCameraComponent == null) return;
+
+//		Vector3 planeNormal = reflectionCameraComponent.planeNormal;
+//		float offset = reflectionCameraComponent.offset;
+//		var n = planeNormal.normalized;
+//		var planePoint = n * offset;
+//		var plane = new Plane(n, planePoint);
+
+//		float near = sceneCamera.nearClipPlane;
+//		float far = sceneCamera.farClipPlane;
+//		float fovRad = sceneCamera.fieldOfView * Mathf.Deg2Rad;
+//		float halfFovTan = Mathf.Tan(fovRad * 0.5f);
+//		float aspect = sceneCamera.aspect;
+
+//		// Negated corner calculations
+//		Vector3[] nearCorners = new Vector3[4];
+//		Vector3[] farCorners = new Vector3[4];
+//		nearCorners[0] = -new Vector3(-halfFovTan * aspect * near, halfFovTan * near, near); // Top-left
+//		nearCorners[1] = -new Vector3(halfFovTan * aspect * near, halfFovTan * near, near);  // Top-right
+//		nearCorners[2] = -new Vector3(halfFovTan * aspect * near, -halfFovTan * near, near); // Bottom-right
+//		nearCorners[3] = -new Vector3(-halfFovTan * aspect * near, -halfFovTan * near, near); // Bottom-left
+//		farCorners[0] = -new Vector3(-halfFovTan * aspect * far, halfFovTan * far, far); // Top-left
+//		farCorners[1] = -new Vector3(halfFovTan * aspect * far, halfFovTan * far, far);  // Top-right
+//		farCorners[2] = -new Vector3(halfFovTan * aspect * far, -halfFovTan * far, far); // Bottom-right
+//		farCorners[3] = -new Vector3(-halfFovTan * aspect * far, -halfFovTan * far, far); // Bottom-left
+
+//		// Transform to world space
+//		Matrix4x4 viewToWorld = sceneCamera.cameraToWorldMatrix;
+//		for (int i = 0; i < 4; i++)
+//		{
+//			nearCorners[i] = viewToWorld.MultiplyPoint(nearCorners[i]);
+//			farCorners[i] = viewToWorld.MultiplyPoint(farCorners[i]);
+//		}
+
+//		// Intersect frustum edges with plane
+//		List<Vector3> intersectionPoints = new List<Vector3>();
+//		for (int i = 0; i < 4; i++)
+//		{
+//			Vector3 start = nearCorners[i];
+//			Vector3 end = farCorners[i];
+//			Vector3 dir = (end - start).normalized;
+//			if (plane.Raycast(new Ray(start, dir), out float distance) && distance >= 0 && distance <= Vector3.Distance(start, end))
+//			{
+//				intersectionPoints.Add(start + dir * distance);
+//			}
+//		}
+
+//		// Intersect near and far planes if needed
+//		if (intersectionPoints.Count < 6)
+//		{
+//			Vector3[] nearQuad = { nearCorners[0], nearCorners[1], nearCorners[2], nearCorners[3] };
+//			intersectionPoints.AddRange(IntersectPlaneWithQuad(plane, nearQuad));
+//			Vector3[] farQuad = { farCorners[0], farCorners[1], farCorners[2], farCorners[3] };
+//			intersectionPoints.AddRange(IntersectPlaneWithQuad(plane, farQuad));
+//		}
+
+//		// Remove duplicates and limit to 6 vertices
+//		intersectionPoints = RemoveDuplicates(intersectionPoints, 0.01f);
+//		if (intersectionPoints.Count > 6) intersectionPoints = intersectionPoints.GetRange(0, 6);
+
+//		if (intersectionPoints.Count >= 3)
+//		{
+//			// Sort points for convex polygon
+//			Vector3 centroid = Vector3.zero;
+//			foreach (var pt in intersectionPoints) centroid += pt;
+//			centroid /= intersectionPoints.Count;
+//			Vector3 refDir = (intersectionPoints[0] - centroid).normalized;
+//			intersectionPoints.Sort((a, b) =>
+//			{
+//				Vector3 va = a - centroid;
+//				Vector3 vb = b - centroid;
+//				float angleA = Mathf.Atan2(Vector3.Dot(Vector3.Cross(refDir, va), n), Vector3.Dot(refDir, va));
+//				float angleB = Mathf.Atan2(Vector3.Dot(Vector3.Cross(refDir, vb), n), Vector3.Dot(refDir, vb));
+//				return angleA.CompareTo(angleB);
+//			});
+
+//			UpdateDimMesh(intersectionPoints);
+//		}
+//	}
+
+//	void UpdateDimMesh(List<Vector3> points)
+//	{
+//		if (points.Count < 3) return;
+
+//		// Use world-space vertices (CommandBuffer uses Matrix4x4.identity)
+//		Vector3[] vertices = new Vector3[points.Count];
+//		for (int i = 0; i < points.Count; i++)
+//		{
+//			vertices[i] = points[i];
+//		}
+
+//		dimMesh.Clear();
+//		dimMesh.vertices = vertices;
+
+//		// Fan triangulation
+//		List<int> triangles = new List<int>();
+//		for (int i = 1; i < points.Count - 1; i++)
+//		{
+//			triangles.Add(0);
+//			triangles.Add(i + 1);
+//			triangles.Add(i);
+//		}
+//		dimMesh.triangles = triangles.ToArray();
+//		dimMesh.RecalculateBounds();
+//		dimMesh.RecalculateNormals();
+//	}
+
+//	//void OnBeginCameraRendering(ScriptableRenderContext context, Camera camera)
+//	//{
+//	//	//Debug.Log("OnBeginCameraRendering");
+
+//	//	//commandBuffer.Clear();
+//	//	//commandBuffer.SetInvertCulling(true);
+//	//	//context.ExecuteCommandBuffer(commandBuffer);
+//	//	//context.Submit();
+//	//}
+
+//	//void OnEndCameraRendering(ScriptableRenderContext context, Camera camera)
+//	//{
+//	//	//Debug.Log("OnEndCameraRendering");
+
+//	//	if (camera != reflectionCamera || dimMesh.vertexCount == 0 || Time.frameCount == currentFrame)
+//	//		return;
+
+//	//	commandBuffer.Clear();
+//	//	commandBuffer.DrawMesh(dimMesh, Matrix4x4.identity, dimMaterial, 0, -1);
+//	//	context.ExecuteCommandBuffer(commandBuffer);
+//	//	context.Submit();
+//	//	currentFrame = Time.frameCount;
+//	//}
+
+//	//private void OnBeforeRender(CommandBuffer commandBuffer) 
+//	//{
+//	//	Debug.Log("OnBeforeRender");
+//	//	commandBuffer.SetInvertCulling(false);
+//	//}
+
+//	private void OnBeforeRender(CommandBuffer commandBuffer)
+//	{
+//	//	Debug.Log("OnBeforeRender");
+//		commandBuffer.DrawMesh(dimMesh, Matrix4x4.identity, dimMaterial, 0, -1);
+//	}
+
+//	//private void OnAfterRender(CommandBuffer commandBuffer)
+//	//{
+//	//	commandBuffer.DrawMesh(dimMesh, Matrix4x4.identity, dimMaterial, 0, -1);
+//	//}
+
+//	Vector3[] IntersectPlaneWithQuad(Plane plane, Vector3[] quad)
+//	{
+//		List<Vector3> points = new List<Vector3>();
+//		for (int i = 0; i < 4; i++)
+//		{
+//			Vector3 start = quad[i];
+//			Vector3 end = quad[(i + 1) % 4];
+//			Vector3 dir = (end - start).normalized;
+//			if (plane.Raycast(new Ray(start, dir), out float distance) && distance >= 0 && distance <= Vector3.Distance(start, end))
+//			{
+//				points.Add(start + dir * distance);
+//			}
+//		}
+//		return points.ToArray();
+//	}
+
+//	List<Vector3> RemoveDuplicates(List<Vector3> points, float threshold)
+//	{
+//		List<Vector3> unique = new List<Vector3>();
+//		foreach (var pt in points)
+//		{
+//			bool isUnique = true;
+//			foreach (var u in unique)
+//			{
+//				if (Vector3.Distance(pt, u) < threshold)
+//				{
+//					isUnique = false;
+//					break;
+//				}
+//			}
+//			if (isUnique) unique.Add(pt);
+//		}
+//		return unique;
+//	}
+
+//	void OnDisable()
+//	{
+//		//RenderPipelineManager.endCameraRendering -= OnEndCameraRendering;
+//		//if (dimMaterial != null)
+//		//{
+//		//	if (dimMaterial.GetTag("CreatedByScript", false) == "True")
+//		//		Destroy(dimMaterial);
+//		//}
+//		if (dimMesh != null)
+//		{
+//			Destroy(dimMesh);
+//		}
+//		//if (commandBuffer != null)
+//		//{
+//		//	commandBuffer.Dispose();
+//		//}
+//	}
+//}
 
 
 //using UnityEngine;

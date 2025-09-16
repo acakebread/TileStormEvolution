@@ -2,14 +2,16 @@ using UnityEngine;
 using UnityEngine.Rendering;
 
 [RequireComponent(typeof(Camera))]
-public class ReflectionCamera : MonoBehaviour
+public class ReflectionCamera : CommandBufferSettings
 {
 	[SerializeField] private Camera referenceCamera; // Overlay camera (Scene Camera)
 	[SerializeField] public Vector3 planeNormal = Vector3.up; // Public for potential sharing
 	[SerializeField] public float offset = -0.2f; // Public for potential sharing
 
 	private Camera reflectionCamera;
-	private CommandBuffer cullingCommandBuffer;
+
+	private void onBeforeRender(CommandBuffer commandBuffer) { commandBuffer.SetInvertCulling(true); }
+	private void onAfterRender(CommandBuffer commandBuffer) { commandBuffer.SetInvertCulling(false); }
 
 	void Awake()
 	{
@@ -26,9 +28,8 @@ public class ReflectionCamera : MonoBehaviour
 
 		reflectionCamera.cullingMask = referenceCamera.cullingMask;
 
-		cullingCommandBuffer = new CommandBuffer { name = "ReflectionCulling" };
-		cullingCommandBuffer.SetInvertCulling(true);
-		reflectionCamera.AddCommandBuffer(CameraEvent.BeforeDepthTexture, cullingCommandBuffer);
+		OnBeforeRender += onBeforeRender;
+		OnAfterRender += onAfterRender;
 	}
 
 	void LateUpdate()
@@ -59,16 +60,99 @@ public class ReflectionCamera : MonoBehaviour
 		reflectionCamera.worldToCameraMatrix = referenceCamera.worldToCameraMatrix * reflectionMat;
 		reflectionCamera.projectionMatrix = referenceCamera.projectionMatrix;
 	}
-
-	void OnDisable()
-	{
-		if (cullingCommandBuffer != null)
-		{
-			reflectionCamera.RemoveCommandBuffer(CameraEvent.BeforeDepthTexture, cullingCommandBuffer);
-			cullingCommandBuffer.Release();
-		}
-	}
 }
+
+
+//using UnityEngine;
+//using UnityEngine.Rendering;
+
+//[RequireComponent(typeof(Camera))]
+//public class ReflectionCamera : MonoBehaviour
+//{
+//	[SerializeField] private Camera referenceCamera; // Overlay camera (Scene Camera)
+//	[SerializeField] public Vector3 planeNormal = Vector3.up; // Public for potential sharing
+//	[SerializeField] public float offset = -0.2f; // Public for potential sharing
+
+//	private Camera reflectionCamera;
+//	//private CommandBuffer commandBuffer;
+
+//	private void OnBeforeRender(CommandBuffer commandBuffer) { commandBuffer.SetInvertCulling(true); }
+//	private void OnAfterRender(CommandBuffer commandBuffer) { commandBuffer.SetInvertCulling(false); }
+
+//	void Awake()
+//	{
+//		reflectionCamera = GetComponent<Camera>();
+//		reflectionCamera.clearFlags = CameraClearFlags.Depth;
+//		reflectionCamera.targetTexture = null; // Render to framebuffer
+
+//		if (referenceCamera == null)
+//		{
+//			Debug.LogError("Reference camera is null!", this);
+//			enabled = false;
+//			return;
+//		}
+
+//		reflectionCamera.cullingMask = referenceCamera.cullingMask;
+
+//		//commandBuffer = new CommandBuffer { name = "ReflectionCulling" };
+//		//reflectionCamera.AddCommandBuffer(CameraEvent.BeforeForwardOpaque, commandBuffer);
+//		//RenderPipelineManager.beginCameraRendering += OnBeginCameraRendering;
+
+//		GetComponent<CommandBufferSettings>().BeforeRender += OnBeforeRender;
+//		GetComponent<CommandBufferSettings>().AfterRender += OnAfterRender;
+//	}
+
+//	//void OnBeginCameraRendering(ScriptableRenderContext context, Camera camera)
+//	//{
+//	//	commandBuffer.Clear();
+//	//	commandBuffer.SetInvertCulling(true);
+//	//	context.ExecuteCommandBuffer(commandBuffer);
+//	//	context.Submit();
+//	//}
+
+//	void LateUpdate()
+//	{
+//		if (referenceCamera == null || reflectionCamera == null) return;
+
+//		reflectionCamera.fieldOfView = referenceCamera.fieldOfView;
+//		reflectionCamera.nearClipPlane = referenceCamera.nearClipPlane;
+//		reflectionCamera.farClipPlane = referenceCamera.farClipPlane;
+//		reflectionCamera.aspect = referenceCamera.aspect;
+
+//		var n = planeNormal.normalized;
+//		var planePoint = n * offset;
+//		var reflectionMat = Matrix4x4.identity;
+//		reflectionMat[0, 0] = 1 - 2 * n.x * n.x;
+//		reflectionMat[0, 1] = -2 * n.x * n.y;
+//		reflectionMat[0, 2] = -2 * n.x * n.z;
+//		reflectionMat[1, 0] = -2 * n.y * n.x;
+//		reflectionMat[1, 1] = 1 - 2 * n.y * n.y;
+//		reflectionMat[1, 2] = -2 * n.y * n.z;
+//		reflectionMat[2, 0] = -2 * n.z * n.x;
+//		reflectionMat[2, 1] = -2 * n.z * n.y;
+//		reflectionMat[2, 2] = 1 - 2 * n.z * n.z;
+//		var translateToOrigin = Matrix4x4.Translate(-planePoint);
+//		var translateBack = Matrix4x4.Translate(planePoint);
+//		reflectionMat = translateBack * reflectionMat * translateToOrigin;
+
+//		reflectionCamera.worldToCameraMatrix = referenceCamera.worldToCameraMatrix * reflectionMat;
+//		reflectionCamera.projectionMatrix = referenceCamera.projectionMatrix;
+//	}
+
+//	void OnDisable()
+//	{
+//		//if (commandBuffer != null)
+//		//{
+//		//	reflectionCamera.RemoveCommandBuffer(CameraEvent.BeforeDepthTexture, commandBuffer);
+//		//	commandBuffer.Release();
+//		//}
+
+//		//if (commandBuffer != null)
+//		//{
+//		//	commandBuffer.Dispose();
+//		//}
+//	}
+//}
 
 
 //using UnityEngine;
