@@ -444,7 +444,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7e563c8788668e741988b82c30e4dfda, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  dimColor: {r: 0, g: 0, b: 0, a: 0.7}
+  dimColor: {r: 0, g: 0, b: 0, a: 0.5019608}
   dimMaterial: {fileID: 2100000, guid: 48bd3659faedbd549b4f5537580eebca, type: 2}
   reflectionCamera: {fileID: 1504592392}
   useFallbackQuad: 0

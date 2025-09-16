@@ -1,49 +1,74 @@
 ﻿using UnityEngine;
 using UnityEngine.Rendering;
+using System;
+using System.Collections.Generic;
 
 public class CommandBufferSettingsRG : MonoBehaviour
 {
-	public delegate void RenderCommand(RasterCommandBuffer commandBuffer);
-	public event RenderCommand OnBeforeRender;
-	public event RenderCommand OnAfterTransparent;
-	public event RenderCommand OnAfterRender;
-
-	public void ExecuteBeforeRender(RasterCommandBuffer commandBuffer, Camera camera)
+	public enum RenderPassMode
 	{
-		if (GetComponent<Camera>() == camera)
+		BeforeRendering,
+		BeforeRenderingOpaques,
+		AfterRenderingTransparents,
+		AfterRendering
+	}
+
+	private class CommandEntry
+	{
+		public Action<RasterCommandBuffer, Camera> Command;
+		public string CameraName; // Null for all cameras
+	}
+
+	private readonly Dictionary<RenderPassMode, List<CommandEntry>> commands = new Dictionary<RenderPassMode, List<CommandEntry>>();
+
+	void Awake()
+	{
+		InitializeCommands();
+	}
+
+	private void InitializeCommands()
+	{
+		// Ensure all RenderPassMode keys are initialized
+		foreach (RenderPassMode mode in Enum.GetValues(typeof(RenderPassMode)))
 		{
-			//Debug.Log($"Executing OnBeforeRender for camera: {camera.name}");
-			OnBeforeRender?.Invoke(commandBuffer);
-		}
-		else
-		{
-			Debug.Log($"Skipping OnBeforeRender for camera: {camera.name} (Expected: {GetComponent<Camera>()?.name})");
+			if (!commands.ContainsKey(mode))
+			{
+				commands[mode] = new List<CommandEntry>();
+			}
 		}
 	}
 
-	public void ExecuteAfterTransparentRender(RasterCommandBuffer commandBuffer, Camera camera)
+	public void RegisterCommand(RenderPassMode mode, Action<RasterCommandBuffer, Camera> command, string cameraName = null)
 	{
-		if (GetComponent<Camera>() == camera)
+		// Lazy initialization for the mode if not already present
+		if (!commands.ContainsKey(mode))
 		{
-			//Debug.Log($"Executing OnAfterRender for camera: {camera.name}");
-			OnAfterTransparent?.Invoke(commandBuffer);
+			commands[mode] = new List<CommandEntry>();
 		}
-		else
-		{
-			Debug.Log($"Skipping OnAfterTransparent for camera: {camera.name} (Expected: {GetComponent<Camera>()?.name})");
-		}
+		commands[mode].Add(new CommandEntry { Command = command, CameraName = cameraName });
 	}
 
-	public void ExecuteAfterRender(RasterCommandBuffer commandBuffer, Camera camera)
+	public void ExecuteCommands(RenderPassMode mode, RasterCommandBuffer commandBuffer, Camera camera)
 	{
-		if (GetComponent<Camera>() == camera)
+		if (!commands.ContainsKey(mode))
 		{
-			//Debug.Log($"Executing OnAfterRender for camera: {camera.name}");
-			OnAfterRender?.Invoke(commandBuffer);
+			Debug.LogWarning($"CommandBufferSettingsRG: No commands registered for mode {mode} on {gameObject.name}");
+			return;
 		}
-		else
+
+		foreach (var entry in commands[mode])
 		{
-			Debug.Log($"Skipping OnAfterRender for camera: {camera.name} (Expected: {GetComponent<Camera>()?.name})");
+			if (entry.CameraName == null || entry.CameraName == camera.name)
+			{
+				try
+				{
+					entry.Command?.Invoke(commandBuffer, camera);
+				}
+				catch (Exception e)
+				{
+					Debug.LogError($"CommandBufferSettingsRG: Error executing command for mode {mode}, camera {camera.name}: {e.Message}");
+				}
+			}
 		}
 	}
 }
