@@ -380,10 +380,6 @@ public class ReflectionPassCamera : CommandBufferSettings
 
 	void LateUpdate()
 	{
-		// Update dim geometry and material color
-		UpdateMaterialColor();
-		UpdateDimGeometry();
-
 		// SceneCamera updates
 		if (sceneCamera != null)
 		{
@@ -422,6 +418,10 @@ public class ReflectionPassCamera : CommandBufferSettings
 			reflectionCamera.worldToCameraMatrix = mainCamera.worldToCameraMatrix * reflectionMat;
 			reflectionCamera.projectionMatrix = mainCamera.projectionMatrix;
 		}
+
+		// Update dim geometry and material color
+		UpdateMaterialColor();
+		UpdateDimGeometry();
 	}
 
 	void OnDestroy()
