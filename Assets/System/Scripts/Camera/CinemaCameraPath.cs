@@ -76,6 +76,7 @@ namespace MassiveHadronLtd
 			originDst = AdjustHeight(originDst, targetDst);
 
 			// Initialize FOV
+			fieldOfView = FovMin;
 			currentFovMax = Random.value < 0.2f ? 60f : FovMax;
 
 			// Visualize focus points

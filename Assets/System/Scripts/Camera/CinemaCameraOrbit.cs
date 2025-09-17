@@ -50,6 +50,7 @@ namespace MassiveHadronLtd
 			var delta = Random.Range(120f, maxDelta) * (Random.value < 0.5f ? 1f : -1f);
 			orbitEndAngle = orbitStartAngle + delta;
 
+			fieldOfView = FovMin;
 			currentFovMax = Random.value < 0.2f ? 60f : FovMax;
 
 			float CalculateMinOrbitRadius(float cameraHeight, float targetY)

@@ -47,6 +47,8 @@ namespace MassiveHadronLtd
 
 			dollyZoomDirection = (originSrc - targetSrc).normalized;
 
+			fieldOfView = CalculateFovForScreenCoverage(dollyZoomInitialDistance);
+
 			//// Set destination
 			//var dollyZoomDistance = dollyZoomInitialDistance * 10f;
 			//dollyZoomDistance = Mathf.Min(dollyZoomDistance, MaxDollyZoomDistance);
