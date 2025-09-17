@@ -112,7 +112,7 @@ public class DimOverlay : CommandBufferSettings
 			enabled = false;
 			return;
 		}
-		commandBufferSettings.RegisterCommand(CommandBufferSettings.RenderPassMode.AfterRendering, (commandBuffer, camera) =>
+		commandBufferSettings.RegisterCommand(CommandBufferSettings.RenderPassMode.BeforeRenderingOpaques, (commandBuffer, camera) =>
 		{
 			UpdateDimGeometry();
 			if (dimMesh.vertexCount < 3 || dimMesh.triangles.Length < 3)

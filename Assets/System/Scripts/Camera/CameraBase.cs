@@ -24,7 +24,7 @@ namespace MassiveHadronLtd
 			if (direction.sqrMagnitude > Mathf.Epsilon)
 				camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
 			camera.fieldOfView = cameraData.fieldOfView;
-			CameraUtils.ApplyCameraShake(camera, cameraData.shake);
+			//CameraUtils.ApplyCameraShake(camera, cameraData.shake);
 		}
 
 		public virtual Transform playerTransform { get; set; }

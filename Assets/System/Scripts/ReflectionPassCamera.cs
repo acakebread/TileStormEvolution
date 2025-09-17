@@ -197,21 +197,21 @@ public class ReflectionPassCamera : MonoBehaviour
 		}
 	}
 
-	void Update()
+	void LateUpdate()
 	{
 		// Sync camera properties
-		if (reflectionCamera != null)
-		{
-			SyncCameraProperties(reflectionCamera);
-			var reflection = reflectionCamera.GetComponent<ReflectionCamera>();
-			if (reflection != null)
-			{
-				reflection.planeNormal = planeNormal;
-				reflection.offset = offset;
-				SetPrivateField(reflection, "referenceCamera", mainCamera);
-				reflection.enabled = true;
-			}
-		}
+		//if (reflectionCamera != null)// copy is not currently needed because the reflection camera successfully copies properties in time
+		//{
+		//	SyncCameraProperties(reflectionCamera);
+		//	var reflection = reflectionCamera.GetComponent<ReflectionCamera>();
+		//	if (reflection != null)
+		//	{
+		//		reflection.planeNormal = planeNormal;
+		//		reflection.offset = offset;
+		//		SetPrivateField(reflection, "referenceCamera", mainCamera);
+		//		reflection.enabled = true;
+		//	}
+		//}
 		if (sceneCamera != null)
 		{
 			SyncCameraProperties(sceneCamera);
