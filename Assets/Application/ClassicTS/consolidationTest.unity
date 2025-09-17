@@ -305,7 +305,6 @@ GameObject:
   - component: {fileID: 1146321625}
   - component: {fileID: 1146321624}
   - component: {fileID: 1146321629}
-  - component: {fileID: 1146321631}
   - component: {fileID: 1146321630}
   m_Layer: 0
   m_Name: Main Camera
@@ -451,18 +450,6 @@ MonoBehaviour:
   sceneCullingMask:
     serializedVersion: 2
     m_Bits: 4294967295
---- !u!114 &1146321631
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1146321623}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d11e7b26a1a38e44aa2ecd85b57c5d4f, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!1 &1555382761
 GameObject:
   m_ObjectHideFlags: 0
