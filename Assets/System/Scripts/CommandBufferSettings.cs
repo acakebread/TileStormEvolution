@@ -60,7 +60,7 @@ public class CommandBufferSettings : MonoBehaviour
 				try { entry.Command?.Invoke(commandBuffer, camera); }
 				catch (Exception e)
 				{
-					Debug.LogError($"CommandBufferSettingsRG: Error executing command for mode {mode}, camera {camera.name}: {e.Message}");
+					Debug.LogError($"CommandBufferSettings: Error executing command for mode {mode}, camera {camera.name}: {e.Message}");
 				}
 			}
 		}

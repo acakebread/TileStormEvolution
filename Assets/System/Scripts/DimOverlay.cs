@@ -34,7 +34,7 @@ public class DimOverlay : CommandBufferSettings
         var rgSettings = GetComponents<CommandBufferSettings>();
         if (rgSettings.Length > 1)
         {
-            Debug.LogError($"DimOverlay on {gameObject.name}: Multiple CommandBufferSettingsRG components.");
+            Debug.LogError($"DimOverlay on {gameObject.name}: Multiple CommandBufferSettings components.");
         }
 
         // Create mesh
@@ -88,7 +88,7 @@ public class DimOverlay : CommandBufferSettings
         var commandBufferSettings = GetComponent<CommandBufferSettings>();
         if (commandBufferSettings == null)
         {
-            Debug.LogError($"DimOverlay on {gameObject.name}: CommandBufferSettingsRG component missing");
+            Debug.LogError($"DimOverlay on {gameObject.name}: CommandBufferSettings component missing");
             enabled = false;
             return;
         }

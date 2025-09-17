@@ -27,7 +27,7 @@ public class ReflectionCamera : CommandBufferSettings
 		var commandBufferSettings = GetComponent<CommandBufferSettings>();
 		if (commandBufferSettings == null)
 		{
-			Debug.LogError("CommandBufferSettingsRG component missing on Reflection Camera");
+			Debug.LogError("CommandBufferSettings component missing on Reflection Camera");
 			enabled = false;
 			return;
 		}

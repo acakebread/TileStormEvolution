@@ -41,7 +41,7 @@ public class CommandBufferPass : ScriptableRenderPass
 		Camera cam = cameraData.camera;
 		CommandBufferSettings bufferSettings = cam.GetComponent<CommandBufferSettings>();
 
-		// Skip cameras without CommandBufferSettingsRG
+		// Skip cameras without CommandBufferSettings
 		if (bufferSettings == null)
 			return;
 
