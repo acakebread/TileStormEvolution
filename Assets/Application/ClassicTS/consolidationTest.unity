@@ -443,13 +443,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: debe350cb86502644be674b7e850e7b1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  planeNormal: {x: 0, y: 1, z: 0}
-  offset: -0.2
-  dimColor: {r: 0.1, g: 0.1, b: 0.1, a: 0.5}
-  dimMaterial: {fileID: 0}
   sceneCullingMask:
     serializedVersion: 2
     m_Bits: 4294967295
+  planeNormal: {x: 0, y: 1, z: 0}
+  offset: -0.2
+  dimMaterial: {fileID: 0}
 --- !u!1 &1555382761
 GameObject:
   m_ObjectHideFlags: 0

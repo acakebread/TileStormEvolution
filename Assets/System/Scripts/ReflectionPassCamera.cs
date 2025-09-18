@@ -20,6 +20,7 @@ public class ReflectionPassCamera : CommandBufferSettings
 	// Serialized fields for dim geometry
 	[SerializeField] private Vector3 planeNormal = Vector3.up; // Reflection plane normal
 	[SerializeField] private float offset = -0.2f; // Reflection plane offset
+	[SerializeField] private Material dimMaterial; // Custom material for dim geometry (e.g., Unlit or custom shader)
 
 	void Awake()
 	{
@@ -55,7 +56,7 @@ public class ReflectionPassCamera : CommandBufferSettings
 
 		// Initialize dim mesh and material
 		dimMesh = new Mesh();
-		quadMaterial = CreateMaterial();
+		quadMaterial = dimMaterial != null ? dimMaterial : CreateMaterial(); // Use assigned material or create one
 		transformMatrix = Matrix4x4.identity; // Use identity since vertices are in world space
 
 		// Initialize cameras
@@ -97,15 +98,19 @@ public class ReflectionPassCamera : CommandBufferSettings
 		var unlitShader = Shader.Find("Universal Render Pipeline/Unlit");
 		if (unlitShader == null)
 		{
-			Debug.LogError("ReflectionPassCamera: URP Unlit shader not found!");
-			return null;
+			unlitShader = Shader.Find("Custom/UnlitAlpha");
+			if (unlitShader == null)
+			{
+				Debug.LogError("ReflectionPassCamera: Neither URP Unlit nor Custom/UnlitAlpha shader found!");
+				return null;
+			}
 		}
 
 		var material = new Material(unlitShader)
 		{
 			renderQueue = (int)RenderQueue.Transparent
 		};
-		material.SetColor("_BaseColor", new Color(0.1f, 0.1f, 0.1f, 0.5f)); // Correct color
+		material.SetColor("_BaseColor", new Color(0.1f, 0.1f, 0.1f, 0.5f)); // Default color
 		material.SetFloat("_Surface", 1f); // Transparent
 		material.SetFloat("_SrcBlend", (float)BlendMode.SrcAlpha);
 		material.SetFloat("_DstBlend", (float)BlendMode.OneMinusSrcAlpha);
@@ -416,22 +421,22 @@ public class ReflectionPassCamera : CommandBufferSettings
 	{
 		if (quadMaterial != null && isMaterialDynamic)
 		{
-			DestroyImmediate(quadMaterial);
-			Debug.Log("ReflectionPassCamera: Destroyed material");
+			Object.DestroyImmediate(quadMaterial);
+			Debug.Log("ReflectionPassCamera: Destroyed dynamic material");
 		}
 		if (dimMesh != null)
 		{
-			DestroyImmediate(dimMesh);
+			Object.DestroyImmediate(dimMesh);
 			Debug.Log("ReflectionPassCamera: Destroyed dimMesh");
 		}
 		if (reflectionCamera != null)
 		{
-			DestroyImmediate(reflectionCamera.gameObject);
+			Object.DestroyImmediate(reflectionCamera.gameObject);
 			Debug.Log("ReflectionPassCamera: Destroyed ReflectionCamera");
 		}
 		if (sceneCamera != null)
 		{
-			DestroyImmediate(sceneCamera.gameObject);
+			Object.DestroyImmediate(sceneCamera.gameObject);
 			Debug.Log("ReflectionPassCamera: Destroyed SceneCamera");
 		}
 	}
