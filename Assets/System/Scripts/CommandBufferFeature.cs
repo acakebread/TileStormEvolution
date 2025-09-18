@@ -2,10 +2,11 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.Rendering.RenderGraphModule;
+using System.Collections.Generic;
 
 public class CommandBufferPass : ScriptableRenderPass
 {
-	private readonly string passName;
+	private new string passName;
 
 	public CommandBufferPass(RenderPassEvent renderEvent)
 	{
@@ -65,17 +66,11 @@ public class CommandBufferPass : ScriptableRenderPass
 [CreateAssetMenu(menuName = "Rendering/CommandBufferFeature")]
 public class CommandBufferFeature : ScriptableRendererFeature
 {
-	private CommandBufferPass beforeRenderingPass;
-	private CommandBufferPass beforeRenderingOpaquesPass;
-	private CommandBufferPass afterRenderingTransparentsPass;
-	private CommandBufferPass afterRenderingPass;
+	private Dictionary<RenderPassEvent, CommandBufferPass> renderPasses;
 
 	public override void Create()
 	{
-		beforeRenderingPass = new CommandBufferPass(RenderPassEvent.BeforeRendering);
-		beforeRenderingOpaquesPass = new CommandBufferPass(RenderPassEvent.BeforeRenderingOpaques);
-		afterRenderingTransparentsPass = new CommandBufferPass(RenderPassEvent.AfterRenderingTransparents);
-		afterRenderingPass = new CommandBufferPass(RenderPassEvent.AfterRendering);
+		renderPasses = new Dictionary<RenderPassEvent, CommandBufferPass>();
 	}
 
 	public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
@@ -85,20 +80,23 @@ public class CommandBufferFeature : ScriptableRendererFeature
 		if (settings == null)
 			return;
 
-		if (settings.HasCommands(RenderPassEvent.BeforeRendering))
-			renderer.EnqueuePass(beforeRenderingPass);
-
-		if (settings.HasCommands(RenderPassEvent.BeforeRenderingOpaques))
-			renderer.EnqueuePass(beforeRenderingOpaquesPass);
-
-		if (settings.HasCommands(RenderPassEvent.AfterRenderingTransparents))
-			renderer.EnqueuePass(afterRenderingTransparentsPass);
-
-		if (settings.HasCommands(RenderPassEvent.AfterRendering))
-			renderer.EnqueuePass(afterRenderingPass);
+		// Iterate through all possible RenderPassEvent values
+		foreach (RenderPassEvent evt in System.Enum.GetValues(typeof(RenderPassEvent)))
+		{
+			if (settings.HasCommands(evt))
+			{
+				// Create a CommandBufferPass if it doesn't exist
+				if (!renderPasses.ContainsKey(evt))
+				{
+					renderPasses[evt] = new CommandBufferPass(evt);
+				}
+				renderer.EnqueuePass(renderPasses[evt]);
+			}
+		}
 	}
 
 	protected override void Dispose(bool disposing)
 	{
+		renderPasses.Clear();
 	}
 }

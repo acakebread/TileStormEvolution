@@ -416,22 +416,22 @@ public class ReflectionPassCamera : CommandBufferSettings
 	{
 		if (quadMaterial != null && isMaterialDynamic)
 		{
-			Object.DestroyImmediate(quadMaterial);
+			DestroyImmediate(quadMaterial);
 			Debug.Log("ReflectionPassCamera: Destroyed material");
 		}
 		if (dimMesh != null)
 		{
-			Object.DestroyImmediate(dimMesh);
+			DestroyImmediate(dimMesh);
 			Debug.Log("ReflectionPassCamera: Destroyed dimMesh");
 		}
 		if (reflectionCamera != null)
 		{
-			Object.DestroyImmediate(reflectionCamera.gameObject);
+			DestroyImmediate(reflectionCamera.gameObject);
 			Debug.Log("ReflectionPassCamera: Destroyed ReflectionCamera");
 		}
 		if (sceneCamera != null)
 		{
-			Object.DestroyImmediate(sceneCamera.gameObject);
+			DestroyImmediate(sceneCamera.gameObject);
 			Debug.Log("ReflectionPassCamera: Destroyed SceneCamera");
 		}
 	}
