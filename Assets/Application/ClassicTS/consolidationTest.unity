@@ -446,7 +446,7 @@ MonoBehaviour:
   planeNormal: {x: 0, y: 1, z: 0}
   offset: -0.2
   dimColor: {r: 0.1, g: 0.1, b: 0.1, a: 0.5}
-  dimMaterial: {fileID: 2100000, guid: 48bd3659faedbd549b4f5537580eebca, type: 2}
+  dimMaterial: {fileID: 0}
   sceneCullingMask:
     serializedVersion: 2
     m_Bits: 4294967295

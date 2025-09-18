@@ -11,7 +11,7 @@ public class CommandBufferPass : ScriptableRenderPass
 	public CommandBufferPass(CommandBufferSettings.RenderPassMode mode)
 	{
 		this.mode = mode;
-		this.passName = $"CommandBufferPassRG_{mode}";
+		this.passName = $"CommandBufferPass_{mode}";
 		switch (mode)
 		{
 			case CommandBufferSettings.RenderPassMode.BeforeRendering:
@@ -27,7 +27,7 @@ public class CommandBufferPass : ScriptableRenderPass
 				renderPassEvent = RenderPassEvent.AfterRendering;
 				break;
 			default:
-				Debug.LogError($"CommandBufferPassRG: Invalid mode {mode}");
+				Debug.LogError($"CommandBufferPass: Invalid mode {mode}");
 				renderPassEvent = RenderPassEvent.AfterRendering;
 				break;
 		}
@@ -69,14 +69,32 @@ public class CommandBufferPass : ScriptableRenderPass
 
 			builder.SetRenderFunc((PassData data, RasterGraphContext context) =>
 			{
+				// Execute registered commands
 				data.bufferSettings.ExecuteCommands(mode, context.cmd, data.camera);
+
+				// Render quad geometry if available and in the correct mode
+				if (mode == CommandBufferSettings.RenderPassMode.AfterRenderingTransparents &&
+					data.bufferSettings.HasQuadGeometry() &&
+					data.camera.name == "SceneCamera")
+				{
+					var mesh = data.bufferSettings.QuadMesh;
+					var material = data.bufferSettings.QuadMaterial;
+					var transformMatrix = data.bufferSettings.TransformMatrix;
+
+					if (mesh == null || material == null || mesh.vertexCount < 3 || mesh.triangles.Length < 3)
+					{
+						Debug.LogWarning("CommandBufferPass: Invalid quad mesh or material.");
+						return;
+					}
+
+					context.cmd.DrawMesh(mesh, transformMatrix, material, 0, 0);
+				}
 			});
 		}
 	}
 
 	private class PassData
 	{
-		public TextureHandle srcColor;
 		public CommandBufferSettings bufferSettings;
 		public Camera camera;
 	}
@@ -105,16 +123,18 @@ public class CommandBufferFeature : ScriptableRendererFeature
 		if (settings == null)
 			return;
 
+		if (settings.HasCommands(CommandBufferSettings.RenderPassMode.BeforeRendering))
+			renderer.EnqueuePass(beforeRenderingPass);
+
 		if (settings.HasCommands(CommandBufferSettings.RenderPassMode.BeforeRenderingOpaques))
 			renderer.EnqueuePass(beforeRenderingOpaquesPass);
 
-		if (settings.HasCommands(CommandBufferSettings.RenderPassMode.AfterRenderingTransparents))
+		if (settings.HasCommands(CommandBufferSettings.RenderPassMode.AfterRenderingTransparents) ||
+			(settings.HasQuadGeometry() && cam.tag == "MainCamera"))
 			renderer.EnqueuePass(afterRenderingTransparentsPass);
 
 		if (settings.HasCommands(CommandBufferSettings.RenderPassMode.AfterRendering))
 			renderer.EnqueuePass(afterRenderingPass);
-
-		// only enqueue beforeRenderingPass if you intend to support it
 	}
 
 	protected override void Dispose(bool disposing)
