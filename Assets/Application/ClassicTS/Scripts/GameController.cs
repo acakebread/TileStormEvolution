@@ -10,7 +10,8 @@ namespace ClassicTilestorm
 		private MapManager mapManager;
 		private GestureController gestureController;
 		private EggbotController eggbotController;
-		private bool locked = false;//true while player is dragging tiles
+		private bool locked = false; // true while player is dragging tiles
+		private bool isFirstLoad = true; // Flag to track first map load after launch
 
 		private void Awake() => gestureController = gameObject.GetComponent<GestureController>();
 
@@ -24,12 +25,19 @@ namespace ClassicTilestorm
 			gestureSystem.OnBeginDrag += (screenPos) => locked = true;
 			gestureSystem.OnEndDrag += (screenPos) => locked = false;
 
-			LoadMap();
+			// Load the last map from PlayerPrefs if it exists, otherwise use PreviewSettings
+			string mapName = PlayerPrefs.GetString("LastLoadedMap", PreviewSettings.LoadMapName);
+			LoadMap(mapName);
 		}
 
 		private void LoadMap(string mapName = null)
 		{
-			mapName ??= PreviewSettings.LoadMapName;
+			// If no mapName provided, use PlayerPrefs or PreviewSettings for first load
+			if (string.IsNullOrEmpty(mapName))
+			{
+				mapName = isFirstLoad ? PlayerPrefs.GetString("LastLoadedMap", PreviewSettings.LoadMapName) : PreviewSettings.LoadMapName;
+			}
+
 			if (null == mapName) return;
 
 			var currentMap = string.IsNullOrEmpty(mapName) ? DatabaseLoader.Maps.FirstOrDefault() : DatabaseLoader.Maps.FirstOrDefault(m => m.name == mapName);
@@ -38,6 +46,13 @@ namespace ClassicTilestorm
 				Debug.LogError($"No map found for mapName={mapName}! Available maps: {string.Join(", ", DatabaseLoader.Maps.Select(m => m.name))}");
 				return;
 			}
+
+			// Update PreviewSettings to reflect the loaded map
+			PreviewSettings.LoadMapName = currentMap.name;
+
+			// Save the loaded map name to PlayerPrefs
+			PlayerPrefs.SetString("LastLoadedMap", currentMap.name);
+			PlayerPrefs.Save();
 
 			if (null != mapManager) Destroy(mapManager.gameObject);
 			mapManager = MapManager.Instantiate(currentMap, transform);
@@ -54,7 +69,7 @@ namespace ClassicTilestorm
 				eggbotController.OnLevelCompleted += OnLevelCompleted;
 			}
 
-			CameraController.Reset();//Reset Camera
+			CameraController.Reset(); // Reset Camera
 			CameraController.SetMode(CameraState.Follow);
 			CameraController.SetPlayer(eggbotController.transform);
 			CameraController.SetFocusPoints(Navigation.Waypoints.Select(w => MapManager.TileWorldPosition(mapManager, w.nTile)).ToList());
@@ -64,7 +79,7 @@ namespace ClassicTilestorm
 
 			if (null != Navigation.Waypoints && 0 != Navigation.Waypoints.Length)
 			{
-				dstPos = new Vector3(mapManager.Width * 0.5f, 0f, mapManager.Height * 0.5f);// Classic TS default
+				dstPos = new Vector3(mapManager.Width * 0.5f, 0f, mapManager.Height * 0.5f); // Classic TS default
 				srcPos += dstPos;
 
 				var firstWaypoint = Navigation.Waypoints[0];
@@ -79,6 +94,9 @@ namespace ClassicTilestorm
 			CameraController.SetTarget(dstPos, true);
 			gestureController.enabled = false;
 			locked = false;
+
+			// Mark first load as complete
+			isFirstLoad = false;
 		}
 
 		void Update()
@@ -90,14 +108,35 @@ namespace ClassicTilestorm
 			}
 			CameraController.Update();
 			CameraController.Project(Camera.main);
+
+			// NEW: Handle left/right arrow key inputs for Previous/Next Level
+			if (!locked && !CameraController.CinemaActive)
+			{
+				if (Input.GetKeyDown(KeyCode.LeftArrow))
+				{
+					// Same logic as Previous Level button
+					var currentIndex = DatabaseLoader.Maps.ToList().FindIndex(m => m.name == PreviewSettings.LoadMapName);
+					currentIndex = (DatabaseLoader.Maps.Count + currentIndex - 1) % DatabaseLoader.Maps.Count;
+					PreviewSettings.LoadMapName = DatabaseLoader.Maps[currentIndex].name;
+					LoadMap();
+				}
+				else if (Input.GetKeyDown(KeyCode.RightArrow))
+				{
+					// Same logic as Next Level button
+					var currentIndex = DatabaseLoader.Maps.ToList().FindIndex(m => m.name == PreviewSettings.LoadMapName);
+					currentIndex = (currentIndex + 1) % DatabaseLoader.Maps.Count;
+					PreviewSettings.LoadMapName = DatabaseLoader.Maps[currentIndex].name;
+					LoadMap();
+				}
+			}
 		}
 
 		private void OnWaypointReached(int waypointIndex)
 		{
 			if (CameraController.CinemaActive) return;
-			if (null == eggbotController) return;// this can never happen because eggbot invokes this function - but leave the check just in case
-			if (null == mapManager || waypointIndex < 0 || waypointIndex >= Navigation.Waypoints.Length) return;//error!
-			if (Navigation.Waypoints.Length - 1 == waypointIndex || 0 == waypointIndex) return;//just continue following
+			if (null == eggbotController) return; // this can never happen because eggbot invokes this function - but leave the check just in case
+			if (null == mapManager || waypointIndex < 0 || waypointIndex >= Navigation.Waypoints.Length) return; // error!
+			if (Navigation.Waypoints.Length - 1 == waypointIndex || 0 == waypointIndex) return; // just continue following
 
 			var waypoint = Navigation.Waypoints[waypointIndex];
 			if (null == waypoint.vSrc || false == waypoint.vSrc.IsValidVector())
@@ -118,13 +157,13 @@ namespace ClassicTilestorm
 		private void OnPuzzleSolved(int waypointIndex)
 		{
 			if (true == CameraController.CinemaActive) return;
-			if (null == eggbotController) return;// this can never happen because eggbot invokes this function - but leave the check just in case
+			if (null == eggbotController) return; // this can never happen because eggbot invokes this function - but leave the check just in case
 			CameraController.SetMode(CameraState.Follow);
 			CameraController.SetPlayer(eggbotController.transform);
 			gestureController.enabled = false;
 		}
 
-		private void OnLevelCompleted() { }// => gestureController.enabled = false; ToDo prevent gesture system from re-enabling after level complete - only re-enable after map load/reload
+		private void OnLevelCompleted() { } // => gestureController.enabled = false; ToDo prevent gesture system from re-enabling after level complete - only re-enable after map load/reload
 
 		void OnGUI()
 		{
