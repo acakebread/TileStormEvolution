@@ -100,7 +100,7 @@ public class CommandBufferPass : ScriptableRenderPass
 	}
 }
 
-[CreateAssetMenu(menuName = "Rendering/CommandBufferFeatureRG")]
+[CreateAssetMenu(menuName = "Rendering/CommandBufferFeature")]
 public class CommandBufferFeature : ScriptableRendererFeature
 {
 	private CommandBufferPass beforeRenderingPass;
