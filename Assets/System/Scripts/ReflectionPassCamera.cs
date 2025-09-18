@@ -71,7 +71,7 @@ public class ReflectionPassCamera : CommandBufferSettings
 		// Register DrawMesh command for SceneCamera
 		if (sceneCommandBufferSettings != null)
 		{
-			sceneCommandBufferSettings.RegisterCommand(RenderPassMode.AfterRenderingTransparents, (commandBuffer, camera) =>
+			sceneCommandBufferSettings.RegisterCommand(RenderPassEvent.AfterRenderingTransparents, (commandBuffer, camera) =>
 			{
 				if (dimMesh != null && dimMesh.vertexCount >= 3 && dimMesh.triangles.Length >= 3 && quadMaterial != null)
 				{
@@ -87,7 +87,7 @@ public class ReflectionPassCamera : CommandBufferSettings
 		}
 
 		// Register a dummy command for main camera (optional, can be removed if not needed)
-		commandBufferSettings.RegisterCommand(RenderPassMode.AfterRenderingTransparents, (cmd, cam) => { }, mainCamera.name);
+		commandBufferSettings.RegisterCommand(RenderPassEvent.AfterRenderingTransparents, (cmd, cam) => { }, mainCamera.name);
 
 		Debug.Log("ReflectionPassCamera: Initialized successfully", this);
 	}
@@ -137,9 +137,9 @@ public class ReflectionPassCamera : CommandBufferSettings
 		}
 
 		// Register command buffers for culling inversion
-		reflectionCommandBufferSettings.RegisterCommand(RenderPassMode.BeforeRenderingOpaques,
+		reflectionCommandBufferSettings.RegisterCommand(RenderPassEvent.BeforeRenderingOpaques,
 			(commandBuffer, camera) => commandBuffer.SetInvertCulling(true), reflectionCamera.name);
-		reflectionCommandBufferSettings.RegisterCommand(RenderPassMode.AfterRendering,
+		reflectionCommandBufferSettings.RegisterCommand(RenderPassEvent.AfterRendering,
 			(commandBuffer, camera) => commandBuffer.SetInvertCulling(false), reflectionCamera.name);
 
 		// Add UniversalAdditionalCameraData

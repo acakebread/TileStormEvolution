@@ -6,31 +6,11 @@ using UnityEngine.Rendering.RenderGraphModule;
 public class CommandBufferPass : ScriptableRenderPass
 {
 	private readonly string passName;
-	private readonly CommandBufferSettings.RenderPassMode mode;
 
-	public CommandBufferPass(CommandBufferSettings.RenderPassMode mode)
+	public CommandBufferPass(RenderPassEvent renderEvent)
 	{
-		this.mode = mode;
-		this.passName = $"CommandBufferPass_{mode}";
-		switch (mode)
-		{
-			case CommandBufferSettings.RenderPassMode.BeforeRendering:
-				renderPassEvent = RenderPassEvent.BeforeRendering;
-				break;
-			case CommandBufferSettings.RenderPassMode.BeforeRenderingOpaques:
-				renderPassEvent = RenderPassEvent.BeforeRenderingOpaques;
-				break;
-			case CommandBufferSettings.RenderPassMode.AfterRenderingTransparents:
-				renderPassEvent = RenderPassEvent.AfterRenderingTransparents;
-				break;
-			case CommandBufferSettings.RenderPassMode.AfterRendering:
-				renderPassEvent = RenderPassEvent.AfterRendering;
-				break;
-			default:
-				Debug.LogError($"CommandBufferPass: Invalid mode {mode}");
-				renderPassEvent = RenderPassEvent.AfterRendering;
-				break;
-		}
+		this.passName = $"CommandBufferPass_{renderEvent}";
+		renderPassEvent = renderEvent; // Directly assign the provided RenderPassEvent
 	}
 
 	public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameData)
@@ -50,19 +30,19 @@ public class CommandBufferPass : ScriptableRenderPass
 			passData.camera = cam;
 			passData.bufferSettings = bufferSettings;
 
-			var colorTarget = mode == CommandBufferSettings.RenderPassMode.BeforeRendering
+			var colorTarget = renderPassEvent == RenderPassEvent.BeforeRendering
 				? resourceData.activeColorTexture
 				: resourceData.cameraColor;
 			var depthTarget = resourceData.cameraDepth;
 
-			if (!colorTarget.IsValid() || (mode != CommandBufferSettings.RenderPassMode.BeforeRendering && !depthTarget.IsValid()))
+			if (!colorTarget.IsValid() || (renderPassEvent != RenderPassEvent.BeforeRendering && !depthTarget.IsValid()))
 			{
 				Debug.LogError($"{passName}: Invalid render targets: Color={colorTarget.IsValid()}, Depth={depthTarget.IsValid()}, Camera={cam.name}");
 				return;
 			}
 
 			builder.SetRenderAttachment(colorTarget, 0, AccessFlags.Write);
-			if (mode != CommandBufferSettings.RenderPassMode.BeforeRendering)
+			if (renderPassEvent != RenderPassEvent.BeforeRendering)
 				builder.SetRenderAttachmentDepth(depthTarget, AccessFlags.ReadWrite);
 			builder.AllowPassCulling(false);
 			builder.AllowGlobalStateModification(true);
@@ -70,7 +50,7 @@ public class CommandBufferPass : ScriptableRenderPass
 			builder.SetRenderFunc((PassData data, RasterGraphContext context) =>
 			{
 				// Execute registered commands
-				data.bufferSettings.ExecuteCommands(mode, context.cmd, data.camera);
+				data.bufferSettings.ExecuteCommands(renderPassEvent, context.cmd, data.camera);
 			});
 		}
 	}
@@ -92,10 +72,10 @@ public class CommandBufferFeature : ScriptableRendererFeature
 
 	public override void Create()
 	{
-		beforeRenderingPass = new CommandBufferPass(CommandBufferSettings.RenderPassMode.BeforeRendering);
-		beforeRenderingOpaquesPass = new CommandBufferPass(CommandBufferSettings.RenderPassMode.BeforeRenderingOpaques);
-		afterRenderingTransparentsPass = new CommandBufferPass(CommandBufferSettings.RenderPassMode.AfterRenderingTransparents);
-		afterRenderingPass = new CommandBufferPass(CommandBufferSettings.RenderPassMode.AfterRendering);
+		beforeRenderingPass = new CommandBufferPass(RenderPassEvent.BeforeRendering);
+		beforeRenderingOpaquesPass = new CommandBufferPass(RenderPassEvent.BeforeRenderingOpaques);
+		afterRenderingTransparentsPass = new CommandBufferPass(RenderPassEvent.AfterRenderingTransparents);
+		afterRenderingPass = new CommandBufferPass(RenderPassEvent.AfterRendering);
 	}
 
 	public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
@@ -105,16 +85,16 @@ public class CommandBufferFeature : ScriptableRendererFeature
 		if (settings == null)
 			return;
 
-		if (settings.HasCommands(CommandBufferSettings.RenderPassMode.BeforeRendering))
+		if (settings.HasCommands(RenderPassEvent.BeforeRendering))
 			renderer.EnqueuePass(beforeRenderingPass);
 
-		if (settings.HasCommands(CommandBufferSettings.RenderPassMode.BeforeRenderingOpaques))
+		if (settings.HasCommands(RenderPassEvent.BeforeRenderingOpaques))
 			renderer.EnqueuePass(beforeRenderingOpaquesPass);
 
-		if (settings.HasCommands(CommandBufferSettings.RenderPassMode.AfterRenderingTransparents))
+		if (settings.HasCommands(RenderPassEvent.AfterRenderingTransparents))
 			renderer.EnqueuePass(afterRenderingTransparentsPass);
 
-		if (settings.HasCommands(CommandBufferSettings.RenderPassMode.AfterRendering))
+		if (settings.HasCommands(RenderPassEvent.AfterRendering))
 			renderer.EnqueuePass(afterRenderingPass);
 	}
 
