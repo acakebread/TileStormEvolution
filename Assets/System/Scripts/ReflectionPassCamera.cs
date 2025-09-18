@@ -68,12 +68,22 @@ public class ReflectionPassCamera : CommandBufferSettings
 		// Initial dim geometry update
 		UpdateDimGeometry();
 
-		// Register dim geometry with SceneCamera's CommandBufferSettings
+		// Register DrawMesh command for SceneCamera
 		if (sceneCommandBufferSettings != null)
 		{
-			sceneCommandBufferSettings.RegisterQuadGeometry(dimMesh, quadMaterial, transformMatrix);
-			// Register a command for SceneCamera to ensure the pass is executed
-			sceneCommandBufferSettings.RegisterCommand(RenderPassMode.AfterRenderingTransparents, (cmd, cam) => { }, sceneCamera.name);
+			sceneCommandBufferSettings.RegisterCommand(RenderPassMode.AfterRenderingTransparents, (commandBuffer, camera) =>
+			{
+				if (dimMesh != null && dimMesh.vertexCount >= 3 && dimMesh.triangles.Length >= 3 && quadMaterial != null)
+				{
+					// Ensure material properties are set before rendering
+					quadMaterial.SetPass(0); // Set the first pass of the material
+					commandBuffer.DrawMesh(dimMesh, transformMatrix, quadMaterial, 0, 0);
+				}
+				else
+				{
+					Debug.LogWarning("ReflectionPassCamera: Invalid dimMesh or quadMaterial in DrawMesh command", this);
+				}
+			}, sceneCamera.name);
 		}
 
 		// Register a dummy command for main camera (optional, can be removed if not needed)
@@ -233,14 +243,6 @@ public class ReflectionPassCamera : CommandBufferSettings
 
 		// Update dim geometry each frame
 		UpdateDimGeometry();
-
-		// Re-register geometry to update SceneCamera's command buffer
-		if (dimMesh != null && dimMesh.vertexCount >= 3 && sceneCommandBufferSettings != null)
-		{
-			sceneCommandBufferSettings.RegisterQuadGeometry(dimMesh, quadMaterial, transformMatrix);
-			// Ensure the command is re-registered to trigger the pass
-			sceneCommandBufferSettings.RegisterCommand(RenderPassMode.AfterRenderingTransparents, (cmd, cam) => { }, sceneCamera.name);
-		}
 	}
 
 	private void UpdateDimGeometry()

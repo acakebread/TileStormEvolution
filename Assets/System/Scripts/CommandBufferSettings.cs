@@ -20,13 +20,6 @@ public class CommandBufferSettings : MonoBehaviour
 	}
 
 	private readonly Dictionary<RenderPassMode, List<CommandEntry>> commands = new Dictionary<RenderPassMode, List<CommandEntry>>();
-	private Mesh quadMesh;
-	private Material quadMaterial;
-	private Matrix4x4 transformMatrix;
-
-	public Mesh QuadMesh => quadMesh;
-	public Material QuadMaterial => quadMaterial;
-	public Matrix4x4 TransformMatrix => transformMatrix;
 
 	void Awake()
 	{
@@ -51,18 +44,6 @@ public class CommandBufferSettings : MonoBehaviour
 			commands[mode] = new List<CommandEntry>();
 		}
 		commands[mode].Add(new CommandEntry { Command = command, CameraName = cameraName });
-	}
-
-	public void RegisterQuadGeometry(Mesh mesh, Material material, Matrix4x4 transformMatrix)
-	{
-		this.quadMesh = mesh;
-		this.quadMaterial = material;
-		this.transformMatrix = transformMatrix;
-	}
-
-	public bool HasQuadGeometry()
-	{
-		return quadMesh != null && quadMaterial != null;
 	}
 
 	public void ExecuteCommands(RenderPassMode mode, RasterCommandBuffer commandBuffer, Camera camera)

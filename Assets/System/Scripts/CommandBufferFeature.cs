@@ -71,24 +71,6 @@ public class CommandBufferPass : ScriptableRenderPass
 			{
 				// Execute registered commands
 				data.bufferSettings.ExecuteCommands(mode, context.cmd, data.camera);
-
-				// Render quad geometry if available and in the correct mode
-				if (mode == CommandBufferSettings.RenderPassMode.AfterRenderingTransparents &&
-					data.bufferSettings.HasQuadGeometry() &&
-					data.camera.name == "SceneCamera")
-				{
-					var mesh = data.bufferSettings.QuadMesh;
-					var material = data.bufferSettings.QuadMaterial;
-					var transformMatrix = data.bufferSettings.TransformMatrix;
-
-					if (mesh == null || material == null || mesh.vertexCount < 3 || mesh.triangles.Length < 3)
-					{
-						Debug.LogWarning("CommandBufferPass: Invalid quad mesh or material.");
-						return;
-					}
-
-					context.cmd.DrawMesh(mesh, transformMatrix, material, 0, 0);
-				}
 			});
 		}
 	}
@@ -129,8 +111,7 @@ public class CommandBufferFeature : ScriptableRendererFeature
 		if (settings.HasCommands(CommandBufferSettings.RenderPassMode.BeforeRenderingOpaques))
 			renderer.EnqueuePass(beforeRenderingOpaquesPass);
 
-		if (settings.HasCommands(CommandBufferSettings.RenderPassMode.AfterRenderingTransparents) ||
-			(settings.HasQuadGeometry() && cam.tag == "MainCamera"))
+		if (settings.HasCommands(CommandBufferSettings.RenderPassMode.AfterRenderingTransparents))
 			renderer.EnqueuePass(afterRenderingTransparentsPass);
 
 		if (settings.HasCommands(CommandBufferSettings.RenderPassMode.AfterRendering))
