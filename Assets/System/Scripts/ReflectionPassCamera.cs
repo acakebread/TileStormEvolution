@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using System;
@@ -245,36 +245,43 @@ public class ReflectionPassCamera : MonoBehaviour
 		if (sceneCamera == null)
 		{
 			Debug.LogError("ReflectionPassCamera: sceneCamera is null", this);
+			reflectionMesh.Clear();
 			return;
 		}
 
-		if (planeNormal == Vector3.zero)
+		// Validate plane normal
+		Vector3 normal = planeNormal.normalized;
+		if (normal == Vector3.zero)
 		{
-			Debug.LogWarning("ReflectionPassCamera: Invalid planeNormal (zero vector)", this);
+			Debug.LogWarning("ReflectionPassCamera: Invalid plane normal (zero vector)", this);
+			reflectionMesh.Clear();
 			return;
 		}
 
-		var n = planeNormal.normalized;
-		var planePoint = n * offset;
-		var plane = new Plane(n, planePoint);
+		// Define reflection plane
+		Vector3 planePoint = normal * offset;
+		Plane plane = new Plane(normal, planePoint);
 
-		float near = -sceneCamera.nearClipPlane;
-		float far = -sceneCamera.farClipPlane;
+		// Get frustum parameters
+		float near = -sceneCamera.nearClipPlane; // Restored negative sign
+		float far = -sceneCamera.farClipPlane;   // Restored negative sign
 		float fovRad = sceneCamera.fieldOfView * Mathf.Deg2Rad;
 		float halfFovTan = Mathf.Tan(fovRad * 0.5f);
 		float aspect = sceneCamera.aspect;
 
+		// Compute frustum corners in view space
 		Vector3[] nearCorners = new Vector3[4];
 		Vector3[] farCorners = new Vector3[4];
-		nearCorners[0] = new Vector3(-halfFovTan * aspect * near, halfFovTan * near, near);
-		nearCorners[1] = new Vector3(halfFovTan * aspect * near, halfFovTan * near, near);
-		nearCorners[2] = new Vector3(halfFovTan * aspect * near, -halfFovTan * near, near);
-		nearCorners[3] = new Vector3(-halfFovTan * aspect * near, -halfFovTan * near, near);
+		nearCorners[0] = new Vector3(-halfFovTan * aspect * near, halfFovTan * near, near); // Top-left
+		nearCorners[1] = new Vector3(halfFovTan * aspect * near, halfFovTan * near, near); // Top-right
+		nearCorners[2] = new Vector3(halfFovTan * aspect * near, -halfFovTan * near, near); // Bottom-right
+		nearCorners[3] = new Vector3(-halfFovTan * aspect * near, -halfFovTan * near, near); // Bottom-left
 		farCorners[0] = new Vector3(-halfFovTan * aspect * far, halfFovTan * far, far);
 		farCorners[1] = new Vector3(halfFovTan * aspect * far, halfFovTan * far, far);
 		farCorners[2] = new Vector3(halfFovTan * aspect * far, -halfFovTan * far, far);
 		farCorners[3] = new Vector3(-halfFovTan * aspect * far, -halfFovTan * far, far);
 
+		// Transform corners to world space
 		Matrix4x4 viewToWorld = sceneCamera.cameraToWorldMatrix;
 		for (int i = 0; i < 4; i++)
 		{
@@ -282,72 +289,64 @@ public class ReflectionPassCamera : MonoBehaviour
 			farCorners[i] = viewToWorld.MultiplyPoint(farCorners[i]);
 		}
 
-		List<Vector3> intersectionPoints = new List<Vector3>();
+		// Find intersections of frustum edges with the plane
+		List<Vector3> intersectionPoints = new List<Vector3>(12); // Max 12 edges in frustum
 		for (int i = 0; i < 4; i++)
 		{
-			Vector3 start = nearCorners[i];
-			Vector3 end = farCorners[i];
-			Vector3 dir = (end - start).normalized;
-			float maxDistance = Vector3.Distance(start, end);
-			bool raycastHit = plane.Raycast(new Ray(start, dir), out float distance);
-			if (raycastHit && distance >= 0 && distance <= maxDistance)
+			// Near-to-far edges
+			AddIntersection(plane, nearCorners[i], farCorners[i], intersectionPoints);
+			// Near plane quad edges
+			AddIntersection(plane, nearCorners[i], nearCorners[(i + 1) % 4], intersectionPoints);
+			// Far plane quad edges
+			AddIntersection(plane, farCorners[i], farCorners[(i + 1) % 4], intersectionPoints);
+		}
+
+		// Remove duplicates (threshold of 0.01f for floating-point precision)
+		List<Vector3> uniquePoints = new List<Vector3>();
+		const float thresholdSqr = 0.01f * 0.01f;
+		foreach (Vector3 pt in intersectionPoints)
+		{
+			bool isUnique = true;
+			foreach (Vector3 u in uniquePoints)
 			{
-				Vector3 point = start + dir * distance;
-				intersectionPoints.Add(point);
+				if ((pt - u).sqrMagnitude < thresholdSqr)
+				{
+					isUnique = false;
+					break;
+				}
 			}
+			if (isUnique) uniquePoints.Add(pt);
 		}
 
-		Vector3[] nearQuad = { nearCorners[0], nearCorners[1], nearCorners[2], nearCorners[3] };
-		var nearPoints = IntersectPlaneWithQuad(plane, nearQuad);
-		intersectionPoints.AddRange(nearPoints);
-		Vector3[] farQuad = { farCorners[0], farCorners[1], farCorners[2], farCorners[3] };
-		var farPoints = IntersectPlaneWithQuad(plane, farQuad);
-		intersectionPoints.AddRange(farPoints);
+		// Limit to 6 points to avoid excessive vertices
+		if (uniquePoints.Count > 6) uniquePoints = uniquePoints.GetRange(0, 6);
 
-		intersectionPoints = RemoveDuplicates(intersectionPoints, 0.01f);
-		if (intersectionPoints.Count > 6) intersectionPoints = intersectionPoints.GetRange(0, 6);
-
-		if (intersectionPoints.Count >= 3)
+		// Check if we have enough points to form a mesh
+		if (uniquePoints.Count < 3)
 		{
-			Vector3 centroid = Vector3.zero;
-			foreach (var pt in intersectionPoints) centroid += pt;
-			centroid /= intersectionPoints.Count;
-			Vector3 refDir = (intersectionPoints[0] - centroid).normalized;
-			intersectionPoints.Sort((a, b) =>
-			{
-				Vector3 va = a - centroid;
-				Vector3 vb = b - centroid;
-				float angleA = Mathf.Atan2(Vector3.Dot(Vector3.Cross(refDir, va), n), Vector3.Dot(refDir, va));
-				float angleB = Mathf.Atan2(Vector3.Dot(Vector3.Cross(refDir, vb), n), Vector3.Dot(refDir, vb));
-				return angleA.CompareTo(angleB);
-			});
-
-			UpdateReflectionMesh(intersectionPoints);
-		}
-		else
-		{
-			reflectionMesh.Clear();
-			Debug.LogWarning("ReflectionPassCamera: Insufficient intersection points for reflectionMesh", this);
-		}
-	}
-
-	private void UpdateReflectionMesh(List<Vector3> points)
-	{
-		if (points.Count < 3)
-		{
-			Debug.LogWarning($"ReflectionPassCamera: Too few points ({points.Count}) to create mesh", this);
+			Debug.LogWarning($"ReflectionPassCamera: Too few intersection points ({uniquePoints.Count}) to create mesh", this);
 			reflectionMesh.Clear();
 			return;
 		}
 
-		Vector3[] vertices = new Vector3[points.Count];
-		for (int i = 0; i < points.Count; i++)
+		// Sort points in clockwise order around centroid
+		Vector3 centroid = Vector3.zero;
+		foreach (Vector3 pt in uniquePoints) centroid += pt;
+		centroid /= uniquePoints.Count;
+		Vector3 refDir = (uniquePoints[0] - centroid).normalized;
+		uniquePoints.Sort((a, b) =>
 		{
-			vertices[i] = points[i];
-		}
+			Vector3 va = a - centroid;
+			Vector3 vb = b - centroid;
+			float angleA = Mathf.Atan2(Vector3.Dot(Vector3.Cross(refDir, va), normal), Vector3.Dot(refDir, va));
+			float angleB = Mathf.Atan2(Vector3.Dot(Vector3.Cross(refDir, vb), normal), Vector3.Dot(refDir, vb));
+			return angleA.CompareTo(angleB);
+		});
 
+		// Update mesh
+		Vector3[] vertices = uniquePoints.ToArray();
 		List<int> triangles = new List<int>();
-		for (int i = 1; i < points.Count - 1; i++)
+		for (int i = 1; i < uniquePoints.Count - 1; i++)
 		{
 			triangles.Add(0);
 			triangles.Add(i);
@@ -361,42 +360,14 @@ public class ReflectionPassCamera : MonoBehaviour
 		reflectionMesh.RecalculateNormals();
 	}
 
-	private Vector3[] IntersectPlaneWithQuad(Plane plane, Vector3[] quad)
+	private void AddIntersection(Plane plane, Vector3 start, Vector3 end, List<Vector3> points)
 	{
-		List<Vector3> points = new List<Vector3>();
-		for (int i = 0; i < 4; i++)
+		Vector3 dir = (end - start).normalized;
+		float maxDistance = Vector3.Distance(start, end);
+		if (plane.Raycast(new Ray(start, dir), out float distance) && distance >= 0 && distance <= maxDistance)
 		{
-			Vector3 start = quad[i];
-			Vector3 end = quad[(i + 1) % 4];
-			Vector3 dir = (end - start).normalized;
-			float maxDistance = Vector3.Distance(start, end);
-			bool raycastHit = plane.Raycast(new Ray(start, dir), out float distance);
-			if (raycastHit && distance >= 0 && distance <= maxDistance)
-			{
-				Vector3 point = start + dir * distance;
-				points.Add(point);
-			}
+			points.Add(start + dir * distance);
 		}
-		return points.ToArray();
-	}
-
-	private List<Vector3> RemoveDuplicates(List<Vector3> points, float threshold)
-	{
-		List<Vector3> unique = new List<Vector3>();
-		foreach (var pt in points)
-		{
-			bool isUnique = true;
-			foreach (var u in unique)
-			{
-				if (Vector3.Distance(pt, u) < threshold)
-				{
-					isUnique = false;
-					break;
-				}
-			}
-			if (isUnique) unique.Add(pt);
-		}
-		return unique;
 	}
 
 	void OnDestroy()
