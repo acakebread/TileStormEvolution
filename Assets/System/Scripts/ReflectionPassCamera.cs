@@ -17,17 +17,8 @@ public class ReflectionPassCamera : MonoBehaviour
 
 		public void ExecuteCommands(RenderPassEvent evt, RasterCommandBuffer commandBuffer, Camera camera)
 		{
-			if (commands.ContainsKey(evt) && commands[evt] != null)
-			{
-				try
-				{
-					commands[evt].Invoke(commandBuffer, camera);
-				}
-				catch (System.Exception e)
-				{
-					Debug.LogError($"CameraCommandProvider: Error executing command for event {evt}, camera {camera.name}: {e.Message}");
-				}
-			}
+			if (commands.TryGetValue(evt, out var command))
+				command.Invoke(commandBuffer, camera);
 		}
 
 		void OnDestroy() => commands.Clear();
@@ -55,11 +46,6 @@ public class ReflectionPassCamera : MonoBehaviour
 			return;
 		}
 
-		if (gameObject.tag != "MainCamera")
-		{
-			gameObject.tag = "MainCamera";
-		}
-
 		sceneCullingMask = mainCamera.cullingMask;
 		mainCamera.clearFlags = CameraClearFlags.Skybox;
 		mainCamera.cullingMask = 0;
@@ -68,12 +54,15 @@ public class ReflectionPassCamera : MonoBehaviour
 
 		reflectionMesh = new Mesh();
 		reflectionMaterial = customReflectionMaterial != null ? customReflectionMaterial : MaterialUtils.CreateTransparentUnlitMaterial(new Color(0.1f, 0.1f, 0.1f, 0.5f));
-		isMaterialDynamic = customReflectionMaterial == null; // True if using script-created material
+		isMaterialDynamic = customReflectionMaterial == null;
 		transformMatrix = Matrix4x4.identity;
 
 		InitializeCameras();
 		ConfigureCameraStack();
-		FrustumPlaneIntersection.GenerateFrustumPlaneIntersectionMesh(sceneCamera, planeNormal, offset, reflectionMesh);
+		if (sceneCamera != null)
+			FrustumPlaneIntersection.GenerateFrustumPlaneIntersectionMesh(sceneCamera, planeNormal, offset, reflectionMesh);
+		else
+			Debug.LogWarning("ReflectionPassCamera: sceneCamera is null, skipping mesh generation", this);
 	}
 
 	private void InitializeCameras()
@@ -112,7 +101,7 @@ public class ReflectionPassCamera : MonoBehaviour
 
 	private Camera InitializeCamera(string name, CameraClearFlags clearFlags, int depth, RenderPassEvent[] events, Action<RasterCommandBuffer, Camera>[] commands)
 	{
-		var obj = new GameObject(name);
+		var obj = new GameObject(name) { hideFlags = HideFlags.HideInHierarchy | HideFlags.HideInInspector };
 		obj.transform.SetParent(transform, false);
 		var camera = obj.AddComponent<Camera>();
 		camera.clearFlags = clearFlags;
@@ -153,47 +142,40 @@ public class ReflectionPassCamera : MonoBehaviour
 			mainCameraData.cameraStack.Add(sceneCamera);
 	}
 
+	private void SyncCameraProperties(Camera source, Camera target)
+	{
+		if (target != null)
+		{
+			target.fieldOfView = source.fieldOfView;
+			target.nearClipPlane = source.nearClipPlane;
+			target.farClipPlane = source.farClipPlane;
+			target.aspect = source.aspect;
+			target.orthographic = source.orthographic;
+			target.orthographicSize = source.orthographicSize;
+			target.transform.SetPositionAndRotation(source.transform.position, source.transform.rotation);
+		}
+	}
+
 	void LateUpdate()
 	{
-		if (sceneCamera != null)
-		{
-			sceneCamera.fieldOfView = mainCamera.fieldOfView;
-			sceneCamera.nearClipPlane = mainCamera.nearClipPlane;
-			sceneCamera.farClipPlane = mainCamera.farClipPlane;
-			sceneCamera.aspect = mainCamera.aspect;
-			sceneCamera.orthographic = mainCamera.orthographic;
-			sceneCamera.orthographicSize = mainCamera.orthographicSize;
-			sceneCamera.transform.position = mainCamera.transform.position;
-			sceneCamera.transform.rotation = mainCamera.transform.rotation;
-		}
-
+		SyncCameraProperties(mainCamera, sceneCamera);
 		if (reflectionCamera != null)
 		{
-			reflectionCamera.fieldOfView = mainCamera.fieldOfView;
-			reflectionCamera.nearClipPlane = mainCamera.nearClipPlane;
-			reflectionCamera.farClipPlane = mainCamera.farClipPlane;
-			reflectionCamera.aspect = mainCamera.aspect;
-
+			SyncCameraProperties(mainCamera, reflectionCamera);
 			var reflectionMat = MatrixUtils.GetReflectionMatrix(planeNormal, offset);
 			reflectionCamera.worldToCameraMatrix = mainCamera.worldToCameraMatrix * reflectionMat;
 			reflectionCamera.projectionMatrix = mainCamera.projectionMatrix;
 		}
 
-		FrustumPlaneIntersection.GenerateFrustumPlaneIntersectionMesh(sceneCamera, planeNormal, offset, reflectionMesh);
+		if (sceneCamera != null)
+			FrustumPlaneIntersection.GenerateFrustumPlaneIntersectionMesh(sceneCamera, planeNormal, offset, reflectionMesh);
 	}
 
 	void OnDestroy()
 	{
-		if (reflectionMaterial != null && isMaterialDynamic)
-			DestroyImmediate(reflectionMaterial);
-
-		if (reflectionMesh != null)
-			DestroyImmediate(reflectionMesh);
-
-		if (reflectionCamera != null)
-			DestroyImmediate(reflectionCamera.gameObject);
-
-		if (sceneCamera != null)
-			DestroyImmediate(sceneCamera.gameObject);
+		if (isMaterialDynamic) DestroyImmediate(reflectionMaterial);
+		DestroyImmediate(reflectionMesh);
+		DestroyImmediate(reflectionCamera?.gameObject);
+		DestroyImmediate(sceneCamera?.gameObject);
 	}
 }

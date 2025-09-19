@@ -2,7 +2,15 @@ using UnityEngine;
 
 public static class FrustumPlaneIntersection
 {
-    public static bool GenerateFrustumPlaneIntersectionMesh(Camera camera, Vector3 planeNormal, float planeOffset, Mesh targetMesh)
+	/// <summary>
+	/// Generates a mesh representing the intersection of a camera frustum with a plane.
+	/// </summary>
+	/// <param name="camera">The camera whose frustum to intersect.</param>
+	/// <param name="planeNormal">The plane's normal vector (will be normalized).</param>
+	/// <param name="planeOffset">The distance from the origin along the normal to the plane.</param>
+	/// <param name="targetMesh">The mesh to store the intersection geometry.</param>
+	/// <returns>True if a valid mesh was generated, false otherwise.</returns>
+	public static bool GenerateFrustumPlaneIntersectionMesh(Camera camera, Vector3 planeNormal, float planeOffset, Mesh targetMesh)
     {
         if (!camera || planeNormal.normalized == Vector3.zero)
         {
