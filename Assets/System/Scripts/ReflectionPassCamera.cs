@@ -1,7 +1,7 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
-using System;
 using System.Collections.Generic;
 
 [RequireComponent(typeof(Camera))]
@@ -23,7 +23,7 @@ public class ReflectionPassCamera : MonoBehaviour
 				{
 					commands[evt].Invoke(commandBuffer, camera);
 				}
-				catch (Exception e)
+				catch (System.Exception e)
 				{
 					Debug.LogError($"CameraCommandProvider: Error executing command for event {evt}, camera {camera.name}: {e.Message}");
 				}
@@ -67,33 +67,13 @@ public class ReflectionPassCamera : MonoBehaviour
 		mainCamera.enabled = true;
 
 		reflectionMesh = new Mesh();
-		reflectionMaterial = customReflectionMaterial != null ? customReflectionMaterial : CreateMaterial();
+		reflectionMaterial = customReflectionMaterial != null ? customReflectionMaterial : MaterialUtils.CreateTransparentUnlitMaterial(new Color(0.1f, 0.1f, 0.1f, 0.5f));
+		isMaterialDynamic = customReflectionMaterial == null; // True if using script-created material
 		transformMatrix = Matrix4x4.identity;
 
 		InitializeCameras();
 		ConfigureCameraStack();
 		FrustumPlaneIntersection.GenerateFrustumPlaneIntersectionMesh(sceneCamera, planeNormal, offset, reflectionMesh);
-	}
-
-	private Material CreateMaterial()
-	{
-		var unlitShader = Shader.Find("Universal Render Pipeline/Unlit");
-		if (unlitShader == null)
-		{
-			Debug.LogError("ReflectionPassCamera: Universal Render Pipeline/Unlit shader not found! Ensure URP is installed.", this);
-			return null;
-		}
-
-		var material = new Material(unlitShader) { renderQueue = (int)RenderQueue.Transparent };
-		material.SetColor("_BaseColor", new Color(0.1f, 0.1f, 0.1f, 0.5f));
-		material.SetFloat("_Surface", 1f);
-		material.SetFloat("_SrcBlend", (float)BlendMode.SrcAlpha);
-		material.SetFloat("_DstBlend", (float)BlendMode.OneMinusSrcAlpha);
-		material.SetFloat("_ZWrite", 0f);
-		material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
-		material.SetOverrideTag("RenderType", "Transparent");
-		isMaterialDynamic = true;
-		return material;
 	}
 
 	private void InitializeCameras()
