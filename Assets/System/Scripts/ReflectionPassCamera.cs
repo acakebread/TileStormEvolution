@@ -7,9 +7,9 @@ public class ReflectionPassCamera : CommandBufferSettings
 {
 	private Camera mainCamera;
 	private Camera reflectionCamera; // Child overlay camera for reflection
-	private Camera sceneCamera; // Child overlay camera for dimMesh
-	private Mesh dimMesh;
-	private Material quadMaterial;
+	private Camera sceneCamera; // Child overlay camera for reflectionMesh
+	private Mesh reflectionMesh;
+	private Material reflectionMaterial;
 	private Matrix4x4 transformMatrix;
 	private bool isMaterialDynamic;
 	private CommandBufferSettings commandBufferSettings; // For main camera
@@ -17,10 +17,10 @@ public class ReflectionPassCamera : CommandBufferSettings
 	private CommandBufferSettings reflectionCommandBufferSettings; // For ReflectionCamera
 	[HideInInspector] public LayerMask sceneCullingMask = ~0; // Backup culling mask for reflection and scene cameras
 
-	// Serialized fields for dim geometry
+	// Serialized fields for reflection geometry
 	[SerializeField] private Vector3 planeNormal = Vector3.up; // Reflection plane normal
 	[SerializeField] private float offset = -0.2f; // Reflection plane offset
-	[SerializeField] private Material dimMaterial; // Custom material for dim geometry (e.g., Unlit or custom shader)
+	[SerializeField] private Material customReflectionMaterial; // Custom material for reflection geometry (e.g., Unlit or custom shader)
 
 	void Awake()
 	{
@@ -54,9 +54,9 @@ public class ReflectionPassCamera : CommandBufferSettings
 			Debug.Log("ReflectionPassCamera: Added CommandBufferSettings component to main camera", this);
 		}
 
-		// Initialize dim mesh and material
-		dimMesh = new Mesh();
-		quadMaterial = dimMaterial != null ? dimMaterial : CreateMaterial(); // Use assigned material or create one
+		// Initialize reflection mesh and material
+		reflectionMesh = new Mesh();
+		reflectionMaterial = customReflectionMaterial != null ? customReflectionMaterial : CreateMaterial(); // Use assigned material or create one
 		transformMatrix = Matrix4x4.identity; // Use identity since vertices are in world space
 
 		// Initialize cameras
@@ -66,29 +66,11 @@ public class ReflectionPassCamera : CommandBufferSettings
 		// Configure camera stack
 		ConfigureCameraStack();
 
-		// Initial dim geometry update
-		UpdateDimGeometry();
+		// Initial reflection geometry update
+		UpdateReflectionGeometry();
 
-		// Register DrawMesh command for SceneCamera
-		if (sceneCommandBufferSettings != null)
-		{
-			sceneCommandBufferSettings.RegisterCommand(RenderPassEvent.AfterRenderingTransparents, (commandBuffer, camera) =>
-			{
-				if (dimMesh != null && dimMesh.vertexCount >= 3 && dimMesh.triangles.Length >= 3 && quadMaterial != null)
-				{
-					// Ensure material properties are set before rendering
-					quadMaterial.SetPass(0); // Set the first pass of the material
-					commandBuffer.DrawMesh(dimMesh, transformMatrix, quadMaterial, 0, 0);
-				}
-				else
-				{
-					Debug.LogWarning("ReflectionPassCamera: Invalid dimMesh or quadMaterial in DrawMesh command", this);
-				}
-			}, sceneCamera.name);
-		}
-
-		// Register a dummy command for main camera (optional, can be removed if not needed)
-		commandBufferSettings.RegisterCommand(RenderPassEvent.AfterRenderingTransparents, (cmd, cam) => { }, mainCamera.name);
+		//// Register a dummy command for main camera (optional, can be removed if not needed)
+		//commandBufferSettings.RegisterCommand(RenderPassEvent.BeforeRendering, (cmd, cam) => { }, mainCamera.name);
 
 		Debug.Log("ReflectionPassCamera: Initialized successfully", this);
 	}
@@ -142,7 +124,7 @@ public class ReflectionPassCamera : CommandBufferSettings
 		}
 
 		// Register command buffers for culling inversion
-		reflectionCommandBufferSettings.RegisterCommand(RenderPassEvent.BeforeRenderingOpaques,
+		reflectionCommandBufferSettings.RegisterCommand(RenderPassEvent.BeforeRendering,
 			(commandBuffer, camera) => commandBuffer.SetInvertCulling(true), reflectionCamera.name);
 		reflectionCommandBufferSettings.RegisterCommand(RenderPassEvent.AfterRendering,
 			(commandBuffer, camera) => commandBuffer.SetInvertCulling(false), reflectionCamera.name);
@@ -171,6 +153,24 @@ public class ReflectionPassCamera : CommandBufferSettings
 			Debug.LogError("ReflectionPassCamera: Failed to add CommandBufferSettings to SceneCamera", this);
 			enabled = false;
 			return;
+		}
+
+		// Register DrawMesh command for SceneCamera
+		if (sceneCommandBufferSettings != null)
+		{
+			sceneCommandBufferSettings.RegisterCommand(RenderPassEvent.BeforeRendering, (commandBuffer, camera) =>
+			{
+				if (reflectionMesh != null && reflectionMesh.vertexCount >= 3 && reflectionMesh.triangles.Length >= 3 && reflectionMaterial != null)
+				{
+					// Ensure material properties are set before rendering
+					reflectionMaterial.SetPass(0); // Set the first pass of the material
+					commandBuffer.DrawMesh(reflectionMesh, transformMatrix, reflectionMaterial, 0, 0);
+				}
+				else
+				{
+					Debug.LogWarning("ReflectionPassCamera: Invalid reflectionMesh or quadMaterial in DrawMesh command", this);
+				}
+			}, sceneCamera.name);
 		}
 
 		// Add UniversalAdditionalCameraData
@@ -246,11 +246,11 @@ public class ReflectionPassCamera : CommandBufferSettings
 			reflectionCamera.projectionMatrix = mainCamera.projectionMatrix;
 		}
 
-		// Update dim geometry each frame
-		UpdateDimGeometry();
+		// Update reflection geometry each frame
+		UpdateReflectionGeometry();
 	}
 
-	private void UpdateDimGeometry()
+	private void UpdateReflectionGeometry()
 	{
 		if (sceneCamera == null)
 		{
@@ -338,21 +338,21 @@ public class ReflectionPassCamera : CommandBufferSettings
 				return angleA.CompareTo(angleB);
 			});
 
-			UpdateDimMesh(intersectionPoints);
+			UpdateReflectionMesh(intersectionPoints);
 		}
 		else
 		{
-			dimMesh.Clear();
-			Debug.LogWarning("ReflectionPassCamera: Insufficient intersection points for dimMesh", this);
+			reflectionMesh.Clear();
+			Debug.LogWarning("ReflectionPassCamera: Insufficient intersection points for reflectionMesh", this);
 		}
 	}
 
-	private void UpdateDimMesh(System.Collections.Generic.List<Vector3> points)
+	private void UpdateReflectionMesh(System.Collections.Generic.List<Vector3> points)
 	{
 		if (points.Count < 3)
 		{
 			Debug.LogWarning($"ReflectionPassCamera: Too few points ({points.Count}) to create mesh", this);
-			dimMesh.Clear();
+			reflectionMesh.Clear();
 			return;
 		}
 
@@ -372,11 +372,11 @@ public class ReflectionPassCamera : CommandBufferSettings
 			triangles.Add(i + 1);
 		}
 
-		dimMesh.Clear();
-		dimMesh.vertices = vertices;
-		dimMesh.triangles = triangles.ToArray();
-		dimMesh.RecalculateBounds();
-		dimMesh.RecalculateNormals();
+		reflectionMesh.Clear();
+		reflectionMesh.vertices = vertices;
+		reflectionMesh.triangles = triangles.ToArray();
+		reflectionMesh.RecalculateBounds();
+		reflectionMesh.RecalculateNormals();
 	}
 
 	private Vector3[] IntersectPlaneWithQuad(Plane plane, Vector3[] quad)
@@ -419,24 +419,24 @@ public class ReflectionPassCamera : CommandBufferSettings
 
 	void OnDestroy()
 	{
-		if (quadMaterial != null && isMaterialDynamic)
+		if (reflectionMaterial != null && isMaterialDynamic)
 		{
-			Object.DestroyImmediate(quadMaterial);
+			DestroyImmediate(reflectionMaterial);
 			Debug.Log("ReflectionPassCamera: Destroyed dynamic material");
 		}
-		if (dimMesh != null)
+		if (reflectionMesh != null)
 		{
-			Object.DestroyImmediate(dimMesh);
-			Debug.Log("ReflectionPassCamera: Destroyed dimMesh");
+			DestroyImmediate(reflectionMesh);
+			Debug.Log("ReflectionPassCamera: Destroyed reflectionMesh");
 		}
 		if (reflectionCamera != null)
 		{
-			Object.DestroyImmediate(reflectionCamera.gameObject);
+			DestroyImmediate(reflectionCamera.gameObject);
 			Debug.Log("ReflectionPassCamera: Destroyed ReflectionCamera");
 		}
 		if (sceneCamera != null)
 		{
-			Object.DestroyImmediate(sceneCamera.gameObject);
+			DestroyImmediate(sceneCamera.gameObject);
 			Debug.Log("ReflectionPassCamera: Destroyed SceneCamera");
 		}
 	}
