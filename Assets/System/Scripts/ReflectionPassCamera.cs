@@ -11,15 +11,9 @@ public class ReflectionPassCamera : MonoBehaviour
 	{
 		private readonly Dictionary<RenderPassEvent, Action<RasterCommandBuffer, Camera>> commands = new Dictionary<RenderPassEvent, Action<RasterCommandBuffer, Camera>>();
 
-		public void RegisterCommand(RenderPassEvent evt, Action<RasterCommandBuffer, Camera> command)
-		{
-			commands[evt] = command;
-		}
+		public void RegisterCommand(RenderPassEvent evt, Action<RasterCommandBuffer, Camera> command) => commands[evt] = command;
 
-		public bool HasCommands(RenderPassEvent evt)
-		{
-			return commands.ContainsKey(evt) && commands[evt] != null;
-		}
+		public bool HasCommands(RenderPassEvent evt) => commands.ContainsKey(evt) && commands[evt] != null;
 
 		public void ExecuteCommands(RenderPassEvent evt, RasterCommandBuffer commandBuffer, Camera camera)
 		{
@@ -29,17 +23,14 @@ public class ReflectionPassCamera : MonoBehaviour
 				{
 					commands[evt].Invoke(commandBuffer, camera);
 				}
-				catch (System.Exception e)
+				catch (Exception e)
 				{
 					Debug.LogError($"CameraCommandProvider: Error executing command for event {evt}, camera {camera.name}: {e.Message}");
 				}
 			}
 		}
 
-		void OnDestroy()
-		{
-			commands.Clear();
-		}
+		void OnDestroy() => commands.Clear();
 	}
 
 	private Camera mainCamera;
@@ -93,10 +84,7 @@ public class ReflectionPassCamera : MonoBehaviour
 			return null;
 		}
 
-		var material = new Material(unlitShader)
-		{
-			renderQueue = (int)RenderQueue.Transparent
-		};
+		var material = new Material(unlitShader) { renderQueue = (int)RenderQueue.Transparent };
 		material.SetColor("_BaseColor", new Color(0.1f, 0.1f, 0.1f, 0.5f));
 		material.SetFloat("_Surface", 1f);
 		material.SetFloat("_SrcBlend", (float)BlendMode.SrcAlpha);
@@ -162,9 +150,7 @@ public class ReflectionPassCamera : MonoBehaviour
 		}
 
 		for (int i = 0; i < events.Length; i++)
-		{
 			provider.RegisterCommand(events[i], commands[i]);
-		}
 
 		var data = obj.AddComponent<UniversalAdditionalCameraData>();
 		data.renderType = CameraRenderType.Overlay;
@@ -175,19 +161,16 @@ public class ReflectionPassCamera : MonoBehaviour
 	{
 		var mainCameraData = mainCamera.GetComponent<UniversalAdditionalCameraData>();
 		if (mainCameraData == null)
-		{
 			mainCameraData = mainCamera.gameObject.AddComponent<UniversalAdditionalCameraData>();
-		}
+
 		mainCameraData.renderType = CameraRenderType.Base;
 		mainCameraData.cameraStack.Clear();
+
 		if (reflectionCamera != null)
-		{
 			mainCameraData.cameraStack.Add(reflectionCamera);
-		}
+
 		if (sceneCamera != null)
-		{
 			mainCameraData.cameraStack.Add(sceneCamera);
-		}
 	}
 
 	void LateUpdate()
@@ -211,22 +194,7 @@ public class ReflectionPassCamera : MonoBehaviour
 			reflectionCamera.farClipPlane = mainCamera.farClipPlane;
 			reflectionCamera.aspect = mainCamera.aspect;
 
-			var n = planeNormal.normalized;
-			var planePoint = n * offset;
-			var reflectionMat = Matrix4x4.identity;
-			reflectionMat[0, 0] = 1 - 2 * n.x * n.x;
-			reflectionMat[0, 1] = -2 * n.x * n.y;
-			reflectionMat[0, 2] = -2 * n.x * n.z;
-			reflectionMat[1, 0] = -2 * n.y * n.x;
-			reflectionMat[1, 1] = 1 - 2 * n.y * n.y;
-			reflectionMat[1, 2] = -2 * n.y * n.z;
-			reflectionMat[2, 0] = -2 * n.z * n.x;
-			reflectionMat[2, 1] = -2 * n.z * n.y;
-			reflectionMat[2, 2] = 1 - 2 * n.z * n.z;
-			var translateToOrigin = Matrix4x4.Translate(-planePoint);
-			var translateBack = Matrix4x4.Translate(planePoint);
-			reflectionMat = translateBack * reflectionMat * translateToOrigin;
-
+			var reflectionMat = MatrixUtils.GetReflectionMatrix(planeNormal, offset);
 			reflectionCamera.worldToCameraMatrix = mainCamera.worldToCameraMatrix * reflectionMat;
 			reflectionCamera.projectionMatrix = mainCamera.projectionMatrix;
 		}
@@ -237,20 +205,15 @@ public class ReflectionPassCamera : MonoBehaviour
 	void OnDestroy()
 	{
 		if (reflectionMaterial != null && isMaterialDynamic)
-		{
 			DestroyImmediate(reflectionMaterial);
-		}
+
 		if (reflectionMesh != null)
-		{
 			DestroyImmediate(reflectionMesh);
-		}
+
 		if (reflectionCamera != null)
-		{
 			DestroyImmediate(reflectionCamera.gameObject);
-		}
+
 		if (sceneCamera != null)
-		{
 			DestroyImmediate(sceneCamera.gameObject);
-		}
 	}
 }
