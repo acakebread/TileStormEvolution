@@ -10,28 +10,25 @@ public static class MatrixUtils
 	/// <returns>A Matrix4x4 representing the reflection transformation. Returns identity if the normal is zero.</returns>
 	public static Matrix4x4 GetReflectionMatrix(Vector3 planeNormal, float planeOffset)
 	{
-		var normalizedNormal = planeNormal.normalized;
-		if (normalizedNormal == Vector3.zero)
+		var n = planeNormal.normalized;
+		if (n == Vector3.zero)
 		{
 			Debug.LogWarning("MatrixUtils: Invalid plane normal (zero vector), returning identity matrix");
 			return Matrix4x4.identity;
 		}
 
-		var pointOnPlane = normalizedNormal * planeOffset;
+		var p = n * planeOffset;
+		var m = Matrix4x4.identity;
+		m[0, 0] = 1 - 2 * n.x * n.x;
+		m[0, 1] = -2 * n.x * n.y;
+		m[0, 2] = -2 * n.x * n.z;
+		m[1, 0] = -2 * n.y * n.x;
+		m[1, 1] = 1 - 2 * n.y * n.y;
+		m[1, 2] = -2 * n.y * n.z;
+		m[2, 0] = -2 * n.z * n.x;
+		m[2, 1] = -2 * n.z * n.y;
+		m[2, 2] = 1 - 2 * n.z * n.z;
 
-		var reflectionMat = Matrix4x4.identity;
-		reflectionMat[0, 0] = 1 - 2 * normalizedNormal.x * normalizedNormal.x;
-		reflectionMat[0, 1] = -2 * normalizedNormal.x * normalizedNormal.y;
-		reflectionMat[0, 2] = -2 * normalizedNormal.x * normalizedNormal.z;
-		reflectionMat[1, 0] = -2 * normalizedNormal.y * normalizedNormal.x;
-		reflectionMat[1, 1] = 1 - 2 * normalizedNormal.y * normalizedNormal.y;
-		reflectionMat[1, 2] = -2 * normalizedNormal.y * normalizedNormal.z;
-		reflectionMat[2, 0] = -2 * normalizedNormal.z * normalizedNormal.x;
-		reflectionMat[2, 1] = -2 * normalizedNormal.z * normalizedNormal.y;
-		reflectionMat[2, 2] = 1 - 2 * normalizedNormal.z * normalizedNormal.z;
-
-		var translateToOrigin = Matrix4x4.Translate(-pointOnPlane);
-		var translateBack = Matrix4x4.Translate(pointOnPlane);
-		return translateBack * reflectionMat * translateToOrigin;
+		return Matrix4x4.Translate(p) * m * Matrix4x4.Translate(-p);
 	}
 }

@@ -11,7 +11,7 @@ public static class MaterialUtils
 	public static Material CreateTransparentUnlitMaterial(Color baseColor)
 	{
 		var unlitShader = Shader.Find("Universal Render Pipeline/Unlit");
-		if (unlitShader == null)
+		if (!unlitShader)
 		{
 			Debug.LogError("MaterialUtils: Universal Render Pipeline/Unlit shader not found! Ensure URP is installed.");
 			return null;
@@ -19,7 +19,7 @@ public static class MaterialUtils
 
 		var material = new Material(unlitShader) { renderQueue = (int)RenderQueue.Transparent };
 		material.SetColor("_BaseColor", baseColor);
-		material.SetFloat("_Surface", 1f); // Transparent
+		material.SetFloat("_Surface", 1f);
 		material.SetFloat("_SrcBlend", (float)BlendMode.SrcAlpha);
 		material.SetFloat("_DstBlend", (float)BlendMode.OneMinusSrcAlpha);
 		material.SetFloat("_ZWrite", 0f);
