@@ -3,6 +3,7 @@ using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 [RequireComponent(typeof(Camera))]
 public class ReflectionPassCamera : MonoBehaviour
@@ -242,46 +243,29 @@ public class ReflectionPassCamera : MonoBehaviour
 
 	private void UpdateReflectionGeometry()
 	{
-		if (sceneCamera == null)
+		if (sceneCamera == null || (planeNormal = planeNormal.normalized) == Vector3.zero)
 		{
-			Debug.LogError("ReflectionPassCamera: sceneCamera is null", this);
 			reflectionMesh.Clear();
+			if (sceneCamera == null) Debug.LogError("ReflectionPassCamera: sceneCamera is null", this);
+			else Debug.LogWarning("ReflectionPassCamera: Invalid plane normal (zero vector)", this);
 			return;
 		}
 
-		// Validate plane normal
-		Vector3 normal = planeNormal.normalized;
-		if (normal == Vector3.zero)
-		{
-			Debug.LogWarning("ReflectionPassCamera: Invalid plane normal (zero vector)", this);
-			reflectionMesh.Clear();
-			return;
-		}
+		Plane plane = new Plane(planeNormal, planeNormal * offset);
 
-		// Define reflection plane
-		Vector3 planePoint = normal * offset;
-		Plane plane = new Plane(normal, planePoint);
-
-		// Get frustum parameters
-		float near = -sceneCamera.nearClipPlane; // Restored negative sign
-		float far = -sceneCamera.farClipPlane;   // Restored negative sign
-		float fovRad = sceneCamera.fieldOfView * Mathf.Deg2Rad;
-		float halfFovTan = Mathf.Tan(fovRad * 0.5f);
+		float near = -sceneCamera.nearClipPlane, far = -sceneCamera.farClipPlane;
+		float fovRad = sceneCamera.fieldOfView * Mathf.Deg2Rad, halfFovTan = Mathf.Tan(fovRad * 0.5f);
 		float aspect = sceneCamera.aspect;
 
-		// Compute frustum corners in view space
-		Vector3[] nearCorners = new Vector3[4];
-		Vector3[] farCorners = new Vector3[4];
-		nearCorners[0] = new Vector3(-halfFovTan * aspect * near, halfFovTan * near, near); // Top-left
-		nearCorners[1] = new Vector3(halfFovTan * aspect * near, halfFovTan * near, near); // Top-right
-		nearCorners[2] = new Vector3(halfFovTan * aspect * near, -halfFovTan * near, near); // Bottom-right
-		nearCorners[3] = new Vector3(-halfFovTan * aspect * near, -halfFovTan * near, near); // Bottom-left
-		farCorners[0] = new Vector3(-halfFovTan * aspect * far, halfFovTan * far, far);
-		farCorners[1] = new Vector3(halfFovTan * aspect * far, halfFovTan * far, far);
-		farCorners[2] = new Vector3(halfFovTan * aspect * far, -halfFovTan * far, far);
-		farCorners[3] = new Vector3(-halfFovTan * aspect * far, -halfFovTan * far, far);
+		Vector3[] nearCorners = new Vector3[4], farCorners = new Vector3[4];
+		float[] xs = { -halfFovTan * aspect, halfFovTan * aspect, halfFovTan * aspect, -halfFovTan * aspect };
+		float[] ys = { halfFovTan, halfFovTan, -halfFovTan, -halfFovTan };
+		for (int i = 0; i < 4; i++)
+		{
+			nearCorners[i] = new Vector3(xs[i] * near, ys[i] * near, near);
+			farCorners[i] = new Vector3(xs[i] * far, ys[i] * far, far);
+		}
 
-		// Transform corners to world space
 		Matrix4x4 viewToWorld = sceneCamera.cameraToWorldMatrix;
 		for (int i = 0; i < 4; i++)
 		{
@@ -289,85 +273,48 @@ public class ReflectionPassCamera : MonoBehaviour
 			farCorners[i] = viewToWorld.MultiplyPoint(farCorners[i]);
 		}
 
-		// Find intersections of frustum edges with the plane
-		List<Vector3> intersectionPoints = new List<Vector3>(12); // Max 12 edges in frustum
+		List<Vector3> points = new List<Vector3>(12);
 		for (int i = 0; i < 4; i++)
 		{
-			// Near-to-far edges
-			AddIntersection(plane, nearCorners[i], farCorners[i], intersectionPoints);
-			// Near plane quad edges
-			AddIntersection(plane, nearCorners[i], nearCorners[(i + 1) % 4], intersectionPoints);
-			// Far plane quad edges
-			AddIntersection(plane, farCorners[i], farCorners[(i + 1) % 4], intersectionPoints);
+			AddSegmentIntersection(plane, nearCorners[i], farCorners[i], points);
+			AddSegmentIntersection(plane, nearCorners[i], nearCorners[(i + 1) % 4], points);
+			AddSegmentIntersection(plane, farCorners[i], farCorners[(i + 1) % 4], points);
 		}
 
-		// Remove duplicates (threshold of 0.01f for floating-point precision)
-		List<Vector3> uniquePoints = new List<Vector3>();
-		const float thresholdSqr = 0.01f * 0.01f;
-		foreach (Vector3 pt in intersectionPoints)
+		if (points.Count < 3)
 		{
-			bool isUnique = true;
-			foreach (Vector3 u in uniquePoints)
-			{
-				if ((pt - u).sqrMagnitude < thresholdSqr)
-				{
-					isUnique = false;
-					break;
-				}
-			}
-			if (isUnique) uniquePoints.Add(pt);
-		}
-
-		// Limit to 6 points to avoid excessive vertices
-		if (uniquePoints.Count > 6) uniquePoints = uniquePoints.GetRange(0, 6);
-
-		// Check if we have enough points to form a mesh
-		if (uniquePoints.Count < 3)
-		{
-			Debug.LogWarning($"ReflectionPassCamera: Too few intersection points ({uniquePoints.Count}) to create mesh", this);
 			reflectionMesh.Clear();
 			return;
 		}
 
-		// Sort points in clockwise order around centroid
-		Vector3 centroid = Vector3.zero;
-		foreach (Vector3 pt in uniquePoints) centroid += pt;
-		centroid /= uniquePoints.Count;
-		Vector3 refDir = (uniquePoints[0] - centroid).normalized;
-		uniquePoints.Sort((a, b) =>
+		// Sort clockwise around centroid
+		Vector3 centroid = points.Aggregate(Vector3.zero, (c, p) => c + p) / points.Count;
+		points.Sort((a, b) =>
 		{
-			Vector3 va = a - centroid;
-			Vector3 vb = b - centroid;
-			float angleA = Mathf.Atan2(Vector3.Dot(Vector3.Cross(refDir, va), normal), Vector3.Dot(refDir, va));
-			float angleB = Mathf.Atan2(Vector3.Dot(Vector3.Cross(refDir, vb), normal), Vector3.Dot(refDir, vb));
-			return angleA.CompareTo(angleB);
+			Vector3 va = a - centroid, vb = b - centroid;
+			float cross = Vector3.Dot(planeNormal, Vector3.Cross(va, vb));
+			float dot = Vector3.Dot(va, vb);
+			return cross > 0 ? -1 : (cross < 0 ? 1 : dot.CompareTo(0));
 		});
 
-		// Update mesh
-		Vector3[] vertices = uniquePoints.ToArray();
-		List<int> triangles = new List<int>();
-		for (int i = 1; i < uniquePoints.Count - 1; i++)
-		{
-			triangles.Add(0);
-			triangles.Add(i);
-			triangles.Add(i + 1);
-		}
-
+		// Fan triangulation
 		reflectionMesh.Clear();
-		reflectionMesh.vertices = vertices;
-		reflectionMesh.triangles = triangles.ToArray();
+		reflectionMesh.vertices = points.ToArray();
+		int[] tris = new int[(points.Count - 2) * 3];
+		for (int i = 0, idx = 0; i < points.Count - 2; i++, idx += 3)
+		{
+			tris[idx] = 0; tris[idx + 1] = i + 1; tris[idx + 2] = i + 2;
+		}
+		reflectionMesh.triangles = tris;
 		reflectionMesh.RecalculateBounds();
 		reflectionMesh.RecalculateNormals();
 
-		//private function 
-		void AddIntersection(Plane plane, Vector3 start, Vector3 end, List<Vector3> points)
+		void AddSegmentIntersection(Plane p, Vector3 s, Vector3 e, List<Vector3> lst)
 		{
-			Vector3 dir = (end - start).normalized;
-			float maxDistance = Vector3.Distance(start, end);
-			if (plane.Raycast(new Ray(start, dir), out float distance) && distance >= 0 && distance <= maxDistance)
-			{
-				points.Add(start + dir * distance);
-			}
+			Vector3 d = (e - s).normalized;
+			float len = Vector3.Distance(s, e);
+			if (p.Raycast(new Ray(s, d), out float t) && t >= 0 && t <= len)
+				lst.Add(s + d * t);
 		}
 	}
 
