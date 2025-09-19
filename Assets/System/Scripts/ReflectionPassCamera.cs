@@ -3,7 +3,6 @@ using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 [RequireComponent(typeof(Camera))]
 public class ReflectionPassCamera : MonoBehaviour
@@ -82,7 +81,7 @@ public class ReflectionPassCamera : MonoBehaviour
 
 		InitializeCameras();
 		ConfigureCameraStack();
-		UpdateReflectionGeometry();
+		FrustumPlaneIntersection.GenerateFrustumPlaneIntersectionMesh(sceneCamera, planeNormal, offset, reflectionMesh);
 	}
 
 	private Material CreateMaterial()
@@ -232,90 +231,7 @@ public class ReflectionPassCamera : MonoBehaviour
 			reflectionCamera.projectionMatrix = mainCamera.projectionMatrix;
 		}
 
-		if (mainCamera != null)
-		{
-			mainCamera.ResetWorldToCameraMatrix();
-			mainCamera.ResetProjectionMatrix();
-		}
-
-		UpdateReflectionGeometry();
-	}
-
-	private void UpdateReflectionGeometry()
-	{
-		if (sceneCamera == null || (planeNormal = planeNormal.normalized) == Vector3.zero)
-		{
-			reflectionMesh.Clear();
-			if (sceneCamera == null) Debug.LogError("ReflectionPassCamera: sceneCamera is null", this);
-			else Debug.LogWarning("ReflectionPassCamera: Invalid plane normal (zero vector)", this);
-			return;
-		}
-
-		Plane plane = new Plane(planeNormal, planeNormal * offset);
-
-		float near = -sceneCamera.nearClipPlane, far = -sceneCamera.farClipPlane;
-		float fovRad = sceneCamera.fieldOfView * Mathf.Deg2Rad, halfFovTan = Mathf.Tan(fovRad * 0.5f);
-		float aspect = sceneCamera.aspect;
-
-		Vector3[] nearCorners = new Vector3[4], farCorners = new Vector3[4];
-		float[] xs = { -halfFovTan * aspect, halfFovTan * aspect, halfFovTan * aspect, -halfFovTan * aspect };
-		float[] ys = { halfFovTan, halfFovTan, -halfFovTan, -halfFovTan };
-		for (int i = 0; i < 4; i++)
-		{
-			nearCorners[i] = new Vector3(xs[i] * near, ys[i] * near, near);
-			farCorners[i] = new Vector3(xs[i] * far, ys[i] * far, far);
-		}
-
-		Matrix4x4 viewToWorld = sceneCamera.cameraToWorldMatrix;
-		for (int i = 0; i < 4; i++)
-		{
-			nearCorners[i] = viewToWorld.MultiplyPoint(nearCorners[i]);
-			farCorners[i] = viewToWorld.MultiplyPoint(farCorners[i]);
-		}
-
-		List<Vector3> points = new List<Vector3>(12);
-		for (int i = 0; i < 4; i++)
-		{
-			AddSegmentIntersection(plane, nearCorners[i], farCorners[i], points);
-			AddSegmentIntersection(plane, nearCorners[i], nearCorners[(i + 1) % 4], points);
-			AddSegmentIntersection(plane, farCorners[i], farCorners[(i + 1) % 4], points);
-		}
-
-		if (points.Count < 3)
-		{
-			reflectionMesh.Clear();
-			return;
-		}
-
-		// Sort clockwise around centroid
-		Vector3 centroid = points.Aggregate(Vector3.zero, (c, p) => c + p) / points.Count;
-		points.Sort((a, b) =>
-		{
-			Vector3 va = a - centroid, vb = b - centroid;
-			float cross = Vector3.Dot(planeNormal, Vector3.Cross(va, vb));
-			float dot = Vector3.Dot(va, vb);
-			return cross > 0 ? -1 : (cross < 0 ? 1 : dot.CompareTo(0));
-		});
-
-		// Fan triangulation
-		reflectionMesh.Clear();
-		reflectionMesh.vertices = points.ToArray();
-		int[] tris = new int[(points.Count - 2) * 3];
-		for (int i = 0, idx = 0; i < points.Count - 2; i++, idx += 3)
-		{
-			tris[idx] = 0; tris[idx + 1] = i + 1; tris[idx + 2] = i + 2;
-		}
-		reflectionMesh.triangles = tris;
-		reflectionMesh.RecalculateBounds();
-		reflectionMesh.RecalculateNormals();
-
-		void AddSegmentIntersection(Plane p, Vector3 s, Vector3 e, List<Vector3> lst)
-		{
-			Vector3 d = (e - s).normalized;
-			float len = Vector3.Distance(s, e);
-			if (p.Raycast(new Ray(s, d), out float t) && t >= 0 && t <= len)
-				lst.Add(s + d * t);
-		}
+		FrustumPlaneIntersection.GenerateFrustumPlaneIntersectionMesh(sceneCamera, planeNormal, offset, reflectionMesh);
 	}
 
 	void OnDestroy()
