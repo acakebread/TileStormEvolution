@@ -358,15 +358,16 @@ public class ReflectionPassCamera : MonoBehaviour
 		reflectionMesh.triangles = triangles.ToArray();
 		reflectionMesh.RecalculateBounds();
 		reflectionMesh.RecalculateNormals();
-	}
 
-	private void AddIntersection(Plane plane, Vector3 start, Vector3 end, List<Vector3> points)
-	{
-		Vector3 dir = (end - start).normalized;
-		float maxDistance = Vector3.Distance(start, end);
-		if (plane.Raycast(new Ray(start, dir), out float distance) && distance >= 0 && distance <= maxDistance)
+		//private function 
+		void AddIntersection(Plane plane, Vector3 start, Vector3 end, List<Vector3> points)
 		{
-			points.Add(start + dir * distance);
+			Vector3 dir = (end - start).normalized;
+			float maxDistance = Vector3.Distance(start, end);
+			if (plane.Raycast(new Ray(start, dir), out float distance) && distance >= 0 && distance <= maxDistance)
+			{
+				points.Add(start + dir * distance);
+			}
 		}
 	}
 
