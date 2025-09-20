@@ -78,7 +78,7 @@ public class ReflectionPassCamera : MonoBehaviour
 		{
 			int width = Screen.width;
 			int height = Screen.height;
-			reflectionTexture = new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32); // Depth buffer included
+			reflectionTexture = new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32);
 			reflectionTexture.filterMode = FilterMode.Bilinear;
 			reflectionTexture.useDynamicScale = true;
 			reflectionTexture.Create();
@@ -126,7 +126,7 @@ public class ReflectionPassCamera : MonoBehaviour
 			obj.transform.SetParent(transform, false);
 			frostedCamera = obj.AddComponent<Camera>();
 			frostedCamera.CopyFrom(mainCamera);
-			frostedCamera.clearFlags = CameraClearFlags.Skybox; // Render skybox
+			frostedCamera.clearFlags = CameraClearFlags.Skybox;
 			frostedCamera.cullingMask = sceneCullingMask;
 			frostedCamera.depth = -3;
 			frostedCamera.enabled = true;
@@ -144,7 +144,7 @@ public class ReflectionPassCamera : MonoBehaviour
 			provider.RegisterCommand(RenderPassEvent.AfterRendering, (cmd, cam) => { cmd.SetInvertCulling(false); });
 
 			var data = obj.AddComponent<UniversalAdditionalCameraData>();
-			data.renderType = CameraRenderType.Base; // Base camera for skybox
+			data.renderType = CameraRenderType.Base;
 		}
 
 		// Initialize scene camera (overlay, draws reflection mesh)
@@ -204,7 +204,7 @@ public class ReflectionPassCamera : MonoBehaviour
 		{
 			reflectionMaterial = customReflectionMaterial;
 			isMaterialDynamic = false;
-			// Update properties for frosted effect
+			// Update properties only for frosted effect
 			if (useFrostedEffect && reflectionTexture != null)
 			{
 				reflectionMaterial.SetTexture("_MainTex", reflectionTexture);
@@ -214,15 +214,31 @@ public class ReflectionPassCamera : MonoBehaviour
 				if (noiseTexture != null)
 					reflectionMaterial.SetTexture("_NoiseTex", noiseTexture);
 			}
+			else
+			{
+				// Clear effect-specific properties for non-frosted modes
+				if (reflectionMaterial.HasProperty("_MainTex"))
+					reflectionMaterial.SetTexture("_MainTex", null);
+				if (reflectionMaterial.HasProperty("_NoiseTex"))
+					reflectionMaterial.SetTexture("_NoiseTex", null);
+				if (reflectionMaterial.HasProperty("_Radius"))
+					reflectionMaterial.SetFloat("_Radius", 0);
+				if (reflectionMaterial.HasProperty("_NoiseStrength"))
+					reflectionMaterial.SetFloat("_NoiseStrength", 0);
+				if (reflectionMaterial.HasProperty("_FilmIntensity"))
+					reflectionMaterial.SetFloat("_FilmIntensity", 0);
+				if (reflectionMaterial.HasProperty("_NoiseScale"))
+					reflectionMaterial.SetFloat("_NoiseScale", 0);
+			}
 		}
 		else if (usePerfectMirror)
 		{
-			reflectionMaterial = MaterialUtils.CreateTransparentUnlitMaterial(baseColor);
+			reflectionMaterial = MaterialUtils.CreateTransparentUnlitMaterial(new Color(0.1f, 0.1f, 0.1f, 0.5f)); // Restored original darkened color
 			isMaterialDynamic = true;
 		}
 		else if (useSurfaceFilm)
 		{
-			reflectionMaterial = MaterialUtils.CreateSurfaceFilmMaterial(baseColor, noiseTexture, filmIntensity, noiseScale);
+			reflectionMaterial = MaterialUtils.CreateSurfaceFilmMaterial(new Color(0.1f, 0.1f, 0.1f, 0.5f), noiseTexture, filmIntensity, noiseScale); // Darkened color
 			isMaterialDynamic = true;
 		}
 		else if (useFrostedEffect)
@@ -233,14 +249,14 @@ public class ReflectionPassCamera : MonoBehaviour
 		else
 		{
 			Debug.LogWarning("ReflectionPassCamera: No valid effect selected, falling back to default Unlit");
-			reflectionMaterial = MaterialUtils.CreateTransparentUnlitMaterial(baseColor);
+			reflectionMaterial = MaterialUtils.CreateTransparentUnlitMaterial(new Color(0.1f, 0.1f, 0.1f, 0.5f));
 			isMaterialDynamic = true;
 		}
 
 		if (reflectionMaterial == null)
 		{
 			Debug.LogWarning("ReflectionPassCamera: Failed to create material, falling back to default Unlit");
-			reflectionMaterial = MaterialUtils.CreateTransparentUnlitMaterial(baseColor);
+			reflectionMaterial = MaterialUtils.CreateTransparentUnlitMaterial(new Color(0.1f, 0.1f, 0.1f, 0.5f));
 			isMaterialDynamic = true;
 		}
 	}
@@ -259,7 +275,6 @@ public class ReflectionPassCamera : MonoBehaviour
 			mainCameraData.cameraStack.Add(reflectionCamera);
 		if (sceneCamera != null)
 			mainCameraData.cameraStack.Add(sceneCamera);
-		// Note: frostedCamera is not added to the stack as it's a Base camera
 	}
 
 	private void SyncCameraProperties(Camera source, Camera target)
@@ -302,21 +317,54 @@ public class ReflectionPassCamera : MonoBehaviour
 		if (sceneCamera != null)
 			FrustumPlaneIntersection.GenerateFrustumPlaneIntersectionMesh(sceneCamera, planeNormal, offset, reflectionMesh);
 
-		// Update material properties for frosted effect (dynamic or custom material)
-		if (!usePerfectMirror && useFrostedEffect && reflectionMaterial != null)
+		// Update material properties based on mode
+		if (reflectionMaterial != null)
 		{
-			reflectionMaterial.SetTexture("_MainTex", reflectionTexture);
-			reflectionMaterial.SetFloat("_Radius", frostRadius);
-			reflectionMaterial.SetColor("_BaseColor", baseColor);
-			reflectionMaterial.SetFloat("_NoiseStrength", noiseStrength);
-			if (noiseTexture != null)
+			if (!usePerfectMirror && useFrostedEffect)
+			{
+				reflectionMaterial.SetTexture("_MainTex", reflectionTexture);
+				reflectionMaterial.SetFloat("_Radius", frostRadius);
+				reflectionMaterial.SetColor("_BaseColor", baseColor);
+				reflectionMaterial.SetFloat("_NoiseStrength", noiseStrength);
+				if (noiseTexture != null)
+					reflectionMaterial.SetTexture("_NoiseTex", noiseTexture);
+				// Clear surface film properties
+				if (reflectionMaterial.HasProperty("_FilmIntensity"))
+					reflectionMaterial.SetFloat("_FilmIntensity", 0);
+				if (reflectionMaterial.HasProperty("_NoiseScale"))
+					reflectionMaterial.SetFloat("_NoiseScale", 0);
+			}
+			else if (!usePerfectMirror && useSurfaceFilm && reflectionMaterial.shader.name == "Unlit/URPSurfaceFilm")
+			{
 				reflectionMaterial.SetTexture("_NoiseTex", noiseTexture);
-		}
-		else if (!usePerfectMirror && useSurfaceFilm && reflectionMaterial != null && reflectionMaterial.shader.name == "Unlit/URPSurfaceFilm")
-		{
-			reflectionMaterial.SetTexture("_NoiseTex", noiseTexture);
-			reflectionMaterial.SetFloat("_FilmIntensity", filmIntensity);
-			reflectionMaterial.SetFloat("_NoiseScale", noiseScale);
+				reflectionMaterial.SetFloat("_FilmIntensity", filmIntensity);
+				reflectionMaterial.SetFloat("_NoiseScale", noiseScale);
+				reflectionMaterial.SetColor("_BaseColor", new Color(0.1f, 0.1f, 0.1f, 0.5f)); // Ensure consistent color
+																							  // Clear frosted properties
+				if (reflectionMaterial.HasProperty("_MainTex"))
+					reflectionMaterial.SetTexture("_MainTex", null);
+				if (reflectionMaterial.HasProperty("_Radius"))
+					reflectionMaterial.SetFloat("_Radius", 0);
+				if (reflectionMaterial.HasProperty("_NoiseStrength"))
+					reflectionMaterial.SetFloat("_NoiseStrength", 0);
+			}
+			else if (usePerfectMirror)
+			{
+				reflectionMaterial.SetColor("_BaseColor", new Color(0.1f, 0.1f, 0.1f, 0.5f)); // Ensure consistent color
+																							  // Clear all effect-specific properties
+				if (reflectionMaterial.HasProperty("_MainTex"))
+					reflectionMaterial.SetTexture("_MainTex", null);
+				if (reflectionMaterial.HasProperty("_NoiseTex"))
+					reflectionMaterial.SetTexture("_NoiseTex", null);
+				if (reflectionMaterial.HasProperty("_Radius"))
+					reflectionMaterial.SetFloat("_Radius", 0);
+				if (reflectionMaterial.HasProperty("_NoiseStrength"))
+					reflectionMaterial.SetFloat("_NoiseStrength", 0);
+				if (reflectionMaterial.HasProperty("_FilmIntensity"))
+					reflectionMaterial.SetFloat("_FilmIntensity", 0);
+				if (reflectionMaterial.HasProperty("_NoiseScale"))
+					reflectionMaterial.SetFloat("_NoiseScale", 0);
+			}
 		}
 	}
 

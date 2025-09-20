@@ -9,13 +9,13 @@ public static class MaterialUtils
 		if (!surfaceFilmShader)
 		{
 			Debug.LogWarning("MaterialUtils: Unlit/URPSurfaceFilm shader not found! Falling back to URP/Unlit.");
-			return CreateTransparentUnlitMaterial(baseColor);
+			return CreateTransparentUnlitMaterial(new Color(0.1f, 0.1f, 0.1f, 0.5f));
 		}
 
 		if (!noiseTexture)
 		{
 			Debug.LogWarning("MaterialUtils: Noise texture is null! Falling back to URP/Unlit.");
-			return CreateTransparentUnlitMaterial(baseColor);
+			return CreateTransparentUnlitMaterial(new Color(0.1f, 0.1f, 0.1f, 0.5f));
 		}
 
 		var material = new Material(surfaceFilmShader) { renderQueue = (int)RenderQueue.Transparent };
@@ -29,6 +29,13 @@ public static class MaterialUtils
 		material.SetFloat("_ZWrite", 0f);
 		material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
 		material.SetOverrideTag("RenderType", "Transparent");
+		// Clear frosted-specific properties
+		if (material.HasProperty("_MainTex"))
+			material.SetTexture("_MainTex", null);
+		if (material.HasProperty("_Radius"))
+			material.SetFloat("_Radius", 0);
+		if (material.HasProperty("_NoiseStrength"))
+			material.SetFloat("_NoiseStrength", 0);
 		return material;
 	}
 
@@ -38,7 +45,7 @@ public static class MaterialUtils
 		if (!frostedShader)
 		{
 			Debug.LogWarning("MaterialUtils: Unlit/URPFrostedGlass shader not found! Falling back to URP/Unlit.");
-			return CreateTransparentUnlitMaterial(baseColor);
+			return CreateTransparentUnlitMaterial(new Color(0.1f, 0.1f, 0.1f, 0.5f));
 		}
 
 		var material = new Material(frostedShader) { renderQueue = (int)RenderQueue.Transparent };
@@ -55,6 +62,11 @@ public static class MaterialUtils
 			material.SetTexture("_MainTex", reflectionTexture);
 		if (noiseTexture != null)
 			material.SetTexture("_NoiseTex", noiseTexture);
+		// Clear surface film properties
+		if (material.HasProperty("_FilmIntensity"))
+			material.SetFloat("_FilmIntensity", 0);
+		if (material.HasProperty("_NoiseScale"))
+			material.SetFloat("_NoiseScale", 0);
 		return material;
 	}
 
@@ -75,6 +87,19 @@ public static class MaterialUtils
 		material.SetFloat("_ZWrite", 0f);
 		material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
 		material.SetOverrideTag("RenderType", "Transparent");
+		// Clear all effect-specific properties
+		if (material.HasProperty("_MainTex"))
+			material.SetTexture("_MainTex", null);
+		if (material.HasProperty("_NoiseTex"))
+			material.SetTexture("_NoiseTex", null);
+		if (material.HasProperty("_Radius"))
+			material.SetFloat("_Radius", 0);
+		if (material.HasProperty("_NoiseStrength"))
+			material.SetFloat("_NoiseStrength", 0);
+		if (material.HasProperty("_FilmIntensity"))
+			material.SetFloat("_FilmIntensity", 0);
+		if (material.HasProperty("_NoiseScale"))
+			material.SetFloat("_NoiseScale", 0);
 		return material;
 	}
 }
