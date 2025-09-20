@@ -4,8 +4,9 @@ using UnityEngine.Rendering.Universal;
 [RequireComponent(typeof(MeshRenderer))]
 public class FrostedQuad : MonoBehaviour
 {
-	[SerializeField, Range(1, 20)] private float frostRadius = 12f;
+	[SerializeField, Range(1, 120)] private float frostRadius = 32f;
 	[SerializeField] private Color baseColor = new Color(0.25f, 0.25f, 0.25f, 1f);
+	[SerializeField, Range(0.1f, 10f)] private float blurScale = 1f; // New property for blur strength
 	[SerializeField] private LayerMask cullingMask = ~0; // Layers to render (exclude quad’s layer)
 	[SerializeField] private Texture2D noiseTexture; // Optional noise texture
 
@@ -47,6 +48,7 @@ public class FrostedQuad : MonoBehaviour
 		frostedMaterial = new Material(frostedShader);
 		frostedMaterial.SetColor("_BaseColor", baseColor);
 		frostedMaterial.SetFloat("_Radius", frostRadius);
+		frostedMaterial.SetFloat("_BlurScale", blurScale);
 		frostedMaterial.SetTexture("_MainTex", renderTexture);
 		frostedMaterial.SetTexture("_NoiseTex", noiseTexture);
 		frostedMaterial.SetFloat("_NoiseStrength", 0.02f);
@@ -77,6 +79,7 @@ public class FrostedQuad : MonoBehaviour
 		// Update material properties
 		frostedMaterial.SetFloat("_Radius", frostRadius);
 		frostedMaterial.SetColor("_BaseColor", baseColor);
+		frostedMaterial.SetFloat("_BlurScale", blurScale);
 
 		// Sync texture camera with main camera
 		textureCamera.fieldOfView = Camera.main.fieldOfView;

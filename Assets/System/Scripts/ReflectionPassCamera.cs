@@ -44,7 +44,7 @@ public class ReflectionPassCamera : MonoBehaviour
 	[SerializeField] private Texture2D noiseTexture;
 	[SerializeField, Range(0, 0.5f)] private float filmIntensity = 0.2f;
 	[SerializeField, Range(0.1f, 50f)] private float noiseScale = 1f;
-	[SerializeField, Range(1, 20)] private float frostRadius = 12f;
+	[SerializeField, Range(1, 120)] private float frostRadius = 64f;
 	[SerializeField] private Color baseColor = new Color(0.25f, 0.25f, 0.25f, 1f);
 	[SerializeField, Range(0, 0.1f)] private float noiseStrength = 0.02f;
 

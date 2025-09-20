@@ -1,9 +1,9 @@
-Shader "Unlit/URPFrostedGlass"
+Shader "Unlit/URPFrosted"
 {
     Properties
     {
         _BaseColor ("Base Color", Color) = (0.25, 0.25, 0.25, 1)
-        _Radius ("Radius", Range(1, 20)) = 12 // Capped for performance
+        _Radius ("Radius", Range(1, 128)) = 64 // Capped for performance
         _MainTex ("Texture", 2D) = "white" {}
         _NoiseTex ("Noise Texture", 2D) = "white" {}
         _NoiseStrength ("Noise Strength", Range(0, 0.1)) = 0.02
@@ -16,17 +16,16 @@ Shader "Unlit/URPFrostedGlass"
             "Queue" = "Transparent+1"
             "RenderPipeline" = "UniversalPipeline"
         }
-        LOD 100
-
-        Pass
+        LOD 100    Pass
         {
-            Name "FrostedGlass"
+            Name "Frosted"
             Blend SrcAlpha OneMinusSrcAlpha
             ZWrite Off
 
             HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment frag
+            #pragma unroll // Optimize for WebGL
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 
             struct Attributes
@@ -72,16 +71,24 @@ Shader "Unlit/URPFrostedGlass"
                 // Sample center pixel
                 sum += SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, screenUV);
 
-                // Cross-shaped box blur (mimics original FrostedGlass)
-                float step = 0.1; // Restored for smoothness
-                for (float range = step; range <= _Radius; range += step)
+                // Combined blur (diagonal + horizontal/vertical)
+                float step = 0.1; // Matches original
+                float radius = _Radius * 1.41421356237; // Match original scaling
+                float scale = 1.0 / input.screenPos.w; // Perspective correction for 3D quad
+                for (float range = step; range <= radius; range += step)
                 {
-                    float2 texelOffset = _MainTex_TexelSize.xy * range;
+                    float2 texelOffset = _MainTex_TexelSize.xy * range * scale;
+                    // Diagonal samples (first pass of FrostedGlass)
                     sum += SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, screenUV + float2(texelOffset.x, texelOffset.y));
                     sum += SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, screenUV + float2(texelOffset.x, -texelOffset.y));
                     sum += SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, screenUV + float2(-texelOffset.x, texelOffset.y));
                     sum += SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, screenUV + float2(-texelOffset.x, -texelOffset.y));
-                    measurements += 4;
+                    // Horizontal/vertical samples (second pass of FrostedGlass)
+                    sum += SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, screenUV + float2(texelOffset.x, 0));
+                    sum += SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, screenUV + float2(-texelOffset.x, 0));
+                    sum += SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, screenUV + float2(0, texelOffset.y));
+                    sum += SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, screenUV + float2(0, -texelOffset.y));
+                    measurements += 8;
                 }
 
                 half4 color = sum / measurements;
@@ -90,7 +97,7 @@ Shader "Unlit/URPFrostedGlass"
                 half4 noise = SAMPLE_TEXTURE2D(_NoiseTex, sampler_NoiseTex, input.uv);
                 color.rgb += (noise.rgb - 0.5) * _NoiseStrength;
 
-                // Blend with base color (preserve brightness)
+                // Blend with base color
                 color.rgb = lerp(color.rgb, _BaseColor.rgb, _BaseColor.a * 0.3);
                 return half4(color.rgb, _BaseColor.a);
             }

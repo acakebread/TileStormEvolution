@@ -39,7 +39,7 @@ public static class MaterialUtils
 		return material;
 	}
 
-	public static Material CreateFrostedMaterial(Color baseColor, float frostRadius = 12f, RenderTexture reflectionTexture = null, Texture2D noiseTexture = null, float noiseStrength = 0.02f)
+	public static Material CreateFrostedMaterial(Color baseColor, float frostRadius = 64f, RenderTexture reflectionTexture = null, Texture2D noiseTexture = null, float noiseStrength = 0.02f)
 	{
 		var frostedShader = Shader.Find("Unlit/URPFrosted");
 		if (!frostedShader)
