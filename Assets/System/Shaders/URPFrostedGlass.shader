@@ -1,4 +1,4 @@
-Shader "Unlit/URPFrosted"
+Shader "Unlit/URPFrostedGlass"
 {
     Properties
     {
@@ -20,14 +20,13 @@ Shader "Unlit/URPFrosted"
 
         Pass
         {
-            Name "Frosted"
+            Name "FrostedGlass"
             Blend SrcAlpha OneMinusSrcAlpha
             ZWrite Off
 
             HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment frag
-            #pragma unroll // Optimize for WebGL loop performance
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 
             struct Attributes
@@ -74,7 +73,7 @@ Shader "Unlit/URPFrosted"
                 sum += SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, screenUV);
 
                 // Cross-shaped box blur (mimics original FrostedGlass)
-                float step = 0.1; // Fine increments for smoothness
+                float step = 0.1; // Restored for smoothness
                 for (float range = step; range <= _Radius; range += step)
                 {
                     float2 texelOffset = _MainTex_TexelSize.xy * range;
