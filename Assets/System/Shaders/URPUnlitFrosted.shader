@@ -27,7 +27,7 @@ Shader "Unlit/URPFrosted"
             HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment frag
-            #pragma unroll // Optimize for WebGL loop performance
+            #pragma unroll // Optimize for WebGL
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 
             struct Attributes
@@ -73,15 +73,16 @@ Shader "Unlit/URPFrosted"
                 // Sample center pixel
                 sum += SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, screenUV);
 
-                // Cross-shaped box blur (mimics original FrostedGlass)
-                float step = 0.1; // Fine increments for smoothness
-                for (float range = step; range <= _Radius; range += step)
+                // Cross-shaped box blur (mimics FrostedGlass)
+                float step = 0.1; // Matches original
+                float radius = _Radius * 1.41421356237; // Match second pass of original
+                for (float range = step; range <= radius; range += step)
                 {
                     float2 texelOffset = _MainTex_TexelSize.xy * range;
-                    sum += SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, screenUV + float2(texelOffset.x, texelOffset.y));
-                    sum += SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, screenUV + float2(texelOffset.x, -texelOffset.y));
-                    sum += SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, screenUV + float2(-texelOffset.x, texelOffset.y));
-                    sum += SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, screenUV + float2(-texelOffset.x, -texelOffset.y));
+                    sum += SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, screenUV + float2(texelOffset.x, 0));
+                    sum += SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, screenUV + float2(-texelOffset.x, 0));
+                    sum += SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, screenUV + float2(0, texelOffset.y));
+                    sum += SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, screenUV + float2(0, -texelOffset.y));
                     measurements += 4;
                 }
 
@@ -91,7 +92,7 @@ Shader "Unlit/URPFrosted"
                 half4 noise = SAMPLE_TEXTURE2D(_NoiseTex, sampler_NoiseTex, input.uv);
                 color.rgb += (noise.rgb - 0.5) * _NoiseStrength;
 
-                // Blend with base color (preserve brightness)
+                // Blend with base color
                 color.rgb = lerp(color.rgb, _BaseColor.rgb, _BaseColor.a * 0.3);
                 return half4(color.rgb, _BaseColor.a);
             }

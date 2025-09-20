@@ -41,10 +41,10 @@ public static class MaterialUtils
 
 	public static Material CreateFrostedMaterial(Color baseColor, float frostRadius = 12f, RenderTexture reflectionTexture = null, Texture2D noiseTexture = null, float noiseStrength = 0.02f)
 	{
-		var frostedShader = Shader.Find("Unlit/URPFrostedGlass");
+		var frostedShader = Shader.Find("Unlit/URPFrosted");
 		if (!frostedShader)
 		{
-			Debug.LogWarning("MaterialUtils: Unlit/URPFrostedGlass shader not found! Falling back to URP/Unlit.");
+			Debug.LogWarning("MaterialUtils: Unlit/URPFrosted shader not found! Falling back to URP/Unlit.");
 			return CreateTransparentUnlitMaterial(new Color(0.1f, 0.1f, 0.1f, 0.5f));
 		}
 
