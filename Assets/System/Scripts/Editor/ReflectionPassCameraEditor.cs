@@ -18,12 +18,20 @@ public class ReflectionPassCameraEditor : Editor
 		EditorGUILayout.LabelField("Reflection Effects", EditorStyles.boldLabel);
 		var usePerfectMirrorProp = serializedObject.FindProperty("usePerfectMirror");
 		var useSurfaceFilmProp = serializedObject.FindProperty("useSurfaceFilm");
+		var useFrostedEffectProp = serializedObject.FindProperty("useFrostedEffect");
 
 		EditorGUILayout.PropertyField(usePerfectMirrorProp);
 
 		if (!usePerfectMirrorProp.boolValue)
 		{
 			EditorGUILayout.PropertyField(useSurfaceFilmProp);
+			EditorGUILayout.PropertyField(useFrostedEffectProp);
+
+			// Ensure only one effect is enabled
+			if (useSurfaceFilmProp.boolValue && useFrostedEffectProp.boolValue)
+			{
+				useFrostedEffectProp.boolValue = false; // Prioritize surface film if both are checked
+			}
 
 			if (useSurfaceFilmProp.boolValue)
 			{
@@ -31,10 +39,18 @@ public class ReflectionPassCameraEditor : Editor
 				EditorGUILayout.PropertyField(serializedObject.FindProperty("filmIntensity"));
 				EditorGUILayout.PropertyField(serializedObject.FindProperty("noiseScale"));
 			}
+			else if (useFrostedEffectProp.boolValue)
+			{
+				EditorGUILayout.PropertyField(serializedObject.FindProperty("noiseTexture"));
+				EditorGUILayout.PropertyField(serializedObject.FindProperty("frostRadius"));
+				EditorGUILayout.PropertyField(serializedObject.FindProperty("baseColor"));
+				EditorGUILayout.PropertyField(serializedObject.FindProperty("noiseStrength"));
+			}
 		}
 		else
 		{
 			useSurfaceFilmProp.boolValue = false;
+			useFrostedEffectProp.boolValue = false;
 		}
 
 		EditorGUILayout.Space();
@@ -42,7 +58,6 @@ public class ReflectionPassCameraEditor : Editor
 
 		if (serializedObject.ApplyModifiedProperties())
 		{
-			// Force immediate update
 			var targetScript = (ReflectionPassCamera)target;
 			targetScript.OnValidate();
 		}

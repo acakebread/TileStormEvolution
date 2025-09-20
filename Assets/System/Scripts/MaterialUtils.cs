@@ -32,18 +32,19 @@ public static class MaterialUtils
 		return material;
 	}
 
-	public static Material CreateFrostedMaterial(Color baseColor, float frostRadius = 0.005f, RenderTexture reflectionTexture = null)
+	public static Material CreateFrostedMaterial(Color baseColor, float frostRadius = 12f, RenderTexture reflectionTexture = null, Texture2D noiseTexture = null, float noiseStrength = 0.02f)
 	{
-		var frostedShader = Shader.Find("Unlit/URPFrosted");
+		var frostedShader = Shader.Find("Unlit/URPFrostedGlass");
 		if (!frostedShader)
 		{
-			Debug.LogWarning("MaterialUtils: Unlit/URPFrosted shader not found! Falling back to URP/Unlit.");
+			Debug.LogWarning("MaterialUtils: Unlit/URPFrostedGlass shader not found! Falling back to URP/Unlit.");
 			return CreateTransparentUnlitMaterial(baseColor);
 		}
 
 		var material = new Material(frostedShader) { renderQueue = (int)RenderQueue.Transparent };
 		material.SetColor("_BaseColor", baseColor);
-		material.SetFloat("_FrostRadius", frostRadius);
+		material.SetFloat("_Radius", frostRadius);
+		material.SetFloat("_NoiseStrength", noiseStrength);
 		material.SetFloat("_Surface", 1f);
 		material.SetFloat("_SrcBlend", (float)BlendMode.SrcAlpha);
 		material.SetFloat("_DstBlend", (float)BlendMode.OneMinusSrcAlpha);
@@ -52,6 +53,8 @@ public static class MaterialUtils
 		material.SetOverrideTag("RenderType", "Transparent");
 		if (reflectionTexture != null)
 			material.SetTexture("_MainTex", reflectionTexture);
+		if (noiseTexture != null)
+			material.SetTexture("_NoiseTex", noiseTexture);
 		return material;
 	}
 
