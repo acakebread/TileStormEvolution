@@ -10,137 +10,107 @@ namespace MassiveHadronLtd
 	{
 		public float lookSpeedH = 2f;
 		public float lookSpeedV = 2f;
-		public float zoomSpeed = 1f;
-		public float dragSpeed = 6f;
+		public float zoomSpeed = 12f;
+		public float dragSpeed = 18f;
+
+		private float yaw;
+		private float pitch;
+		private bool dragging;
+		private bool skipNextScroll; // Only for scroll wheel
+
+		private void Awake()
+		{
+			yaw = transform.eulerAngles.y;
+			pitch = transform.eulerAngles.x;
+			dragging = false;
+			skipNextScroll = false;
+
+			// Ensure EventSystem exists
+			if (!Object.FindAnyObjectByType<EventSystem>())
+			{
+				new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
+			}
+		}
+
+		private void OnApplicationFocus(bool hasFocus)
+		{
+			if (hasFocus)
+			{
+				skipNextScroll = true; // Skip scroll delta on first frame after focus
+			}
+		}
 
 		private IEnumerator Start()
 		{
-			var yaw = transform.eulerAngles.y;
-			var pitch = transform.eulerAngles.x;
-			var dragging = false;
-
 			while (true)
 			{
 				yield return null;
+				bool wasDragging = dragging;
 
-				if (null == EventSystem.current) new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
-				if ((true == Input.GetMouseButtonDown(0) || true == Input.GetMouseButtonDown(1)) && false == EventSystem.current.IsPointerOverGameObject()) dragging = true;
+				// Handle mouse button down to start dragging
+				if ((Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1)) &&
+					!EventSystem.current.IsPointerOverGameObject())
+				{
+					dragging = true;
+				}
 
-				float pointer_x = Input.GetAxis("Mouse X");
-				float pointer_y = Input.GetAxis("Mouse Y");
+				// Get mouse or touch input
+				float pointerX = Input.GetAxis("Mouse X");
+				float pointerY = Input.GetAxis("Mouse Y");
 				if (Input.touchCount > 0)
 				{
-					pointer_x = Input.touches[0].deltaPosition.x * 0.05f;
-					pointer_y = Input.touches[0].deltaPosition.y * 0.05f;
+					pointerX = Input.touches[0].deltaPosition.x * 0.05f;
+					pointerY = Input.touches[0].deltaPosition.y * 0.05f;
 				}
 
-				if (true == dragging && (Input.touchCount > 0 || Input.GetMouseButton(0) || Input.GetMouseButton(1)))
+				// Handle camera rotation (skip deltas on first frame of drag)
+				if (dragging && wasDragging && (Input.touchCount > 0 || Input.GetMouseButton(0) || Input.GetMouseButton(1)))
 				{
-					yaw += lookSpeedH * pointer_x;
-					pitch -= lookSpeedV * pointer_y;
-
+					yaw += lookSpeedH * pointerX;
+					pitch -= lookSpeedV * pointerY;
 					transform.eulerAngles = new Vector3(pitch, yaw, 0f);
 				}
-				else
+				else if (!(Input.touchCount > 0 || Input.GetMouseButton(0) || Input.GetMouseButton(1)))
+				{
 					dragging = false;
+				}
 
-
-				//Zoom in and out with Mouse Wheel
-				if (true == insideWindow()) transform.Translate(0, 0, Input.GetAxis("Mouse ScrollWheel") * zoomSpeed, Space.Self);
+				// Zoom with mouse wheel
+				if (insideWindow())
+				{
+					float scroll = skipNextScroll ? 0f : Input.GetAxis("Mouse ScrollWheel");
+					transform.Translate(0, 0, scroll * zoomSpeed, Space.Self);
+					skipNextScroll = false; // Reset after scroll handling
+				}
 
 				// Translation
-				var translation = GetInputTranslationDirection() * zoomSpeed * Time.deltaTime;
-
+				Vector3 translation = GetInputTranslationDirection() * zoomSpeed * Time.deltaTime;
 				transform.Translate(translation, Space.Self);
 			}
 		}
 
-		bool insideWindow()
+		private bool insideWindow()
 		{
-			// Get the mouse position in screen coordinates
 			Vector3 mousePosition = Input.mousePosition;
-
-			// Check if the mouse is within the game window bounds
-			if (mousePosition.x >= 0 && mousePosition.x <= Screen.width &&
-				mousePosition.y >= 0 && mousePosition.y <= Screen.height)
-			{
-				// Mouse is inside the game window
-				return true;
-			}
-			return false;
+			return mousePosition.x >= 0 && mousePosition.x <= Screen.width &&
+				   mousePosition.y >= 0 && mousePosition.y <= Screen.height;
 		}
 
-		//private void Start()
-		//{
-		//	yaw = transform.eulerAngles.y;
-		//	pitch = transform.eulerAngles.x;
-		//}
-
-		//void Update()
-		//{
-		//	if ((true == Input.GetMouseButtonDown(0) || true == Input.GetMouseButtonDown(1)) && false == EventSystem.current.IsPointerOverGameObject()) dragging = true;
-
-		//	float pointer_x = Input.GetAxis("Mouse X");
-		//	float pointer_y = Input.GetAxis("Mouse Y");
-		//	if (Input.touchCount > 0)
-		//	{
-		//		pointer_x = Input.touches[0].deltaPosition.x * 0.05f;
-		//		pointer_y = Input.touches[0].deltaPosition.y * 0.05f;
-		//	}
-
-		//	if (true == dragging && (Input.touchCount > 0 || Input.GetMouseButton(0) || Input.GetMouseButton(1)))
-		//	{
-		//		yaw += lookSpeedH * pointer_x;
-		//		pitch -= lookSpeedV * pointer_y;
-
-		//		transform.eulerAngles = new Vector3(pitch, yaw, 0f);
-		//	}
-		//	else
-		//		dragging = false;
-
-		//	////drag camera around with Middle Mouse
-		//	//if (Input.GetMouseButton(2))
-		//	//{
-		//	//	transform.Translate(-Input.GetAxisRaw("Mouse X") * Time.deltaTime * dragSpeed, -Input.GetAxisRaw("Mouse Y") * Time.deltaTime * dragSpeed, 0);
-		//	//}
-
-		//	//Zoom in and out with Mouse Wheel
-		//	transform.Translate(0, 0, Input.GetAxis("Mouse ScrollWheel") * zoomSpeed, Space.Self);
-
-		//	// Translation
-		//	var translation = GetInputTranslationDirection() * zoomSpeed * Time.deltaTime;
-
-		//	transform.Translate(translation, Space.Self);
-		//}
-
-		Vector3 GetInputTranslationDirection()
+		private Vector3 GetInputTranslationDirection()
 		{
 			Vector3 direction = Vector3.zero;
-			if (Input.GetKey(KeyCode.W))
+			if (Input.GetKey(KeyCode.W)) direction += Vector3.forward;
+			if (Input.GetKey(KeyCode.S)) direction += Vector3.back;
+			if (Input.GetKey(KeyCode.A)) direction += Vector3.left;
+			if (Input.GetKey(KeyCode.D)) direction += Vector3.right;
+			if (Input.GetKey(KeyCode.Q)) direction += Vector3.down;
+			if (Input.GetKey(KeyCode.E)) direction += Vector3.up;
+
+			// Apply 5x speed multiplier when shift is held
+			if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))
 			{
-				direction += Vector3.forward;
+				direction *= 5f;
 			}
-			if (Input.GetKey(KeyCode.S))
-			{
-				direction += Vector3.back;
-			}
-			if (Input.GetKey(KeyCode.A))
-			{
-				direction += Vector3.left;
-			}
-			if (Input.GetKey(KeyCode.D))
-			{
-				direction += Vector3.right;
-			}
-			if (Input.GetKey(KeyCode.Q))
-			{
-				direction += Vector3.down;
-			}
-			if (Input.GetKey(KeyCode.E))
-			{
-				direction += Vector3.up;
-			}
-			if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) direction *= 3f;
 
 			return direction;
 		}
