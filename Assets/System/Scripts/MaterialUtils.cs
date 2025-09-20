@@ -3,11 +3,58 @@ using UnityEngine.Rendering;
 
 public static class MaterialUtils
 {
-	/// <summary>
-	/// Creates a transparent URP Unlit material with specified base color.
-	/// </summary>
-	/// <param name="baseColor">The base color (including alpha) for the material.</param>
-	/// <returns>A configured Material, or null if the URP Unlit shader is not found.</returns>
+	public static Material CreateSurfaceFilmMaterial(Color baseColor, Texture2D noiseTexture, float filmIntensity = 0.2f, float noiseScale = 1f)
+	{
+		var surfaceFilmShader = Shader.Find("Unlit/URPSurfaceFilm");
+		if (!surfaceFilmShader)
+		{
+			Debug.LogWarning("MaterialUtils: Unlit/URPSurfaceFilm shader not found! Falling back to URP/Unlit.");
+			return CreateTransparentUnlitMaterial(baseColor);
+		}
+
+		if (!noiseTexture)
+		{
+			Debug.LogWarning("MaterialUtils: Noise texture is null! Falling back to URP/Unlit.");
+			return CreateTransparentUnlitMaterial(baseColor);
+		}
+
+		var material = new Material(surfaceFilmShader) { renderQueue = (int)RenderQueue.Transparent };
+		material.SetColor("_BaseColor", baseColor);
+		material.SetTexture("_NoiseTex", noiseTexture);
+		material.SetFloat("_FilmIntensity", filmIntensity);
+		material.SetFloat("_NoiseScale", noiseScale);
+		material.SetFloat("_Surface", 1f);
+		material.SetFloat("_SrcBlend", (float)BlendMode.SrcAlpha);
+		material.SetFloat("_DstBlend", (float)BlendMode.OneMinusSrcAlpha);
+		material.SetFloat("_ZWrite", 0f);
+		material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+		material.SetOverrideTag("RenderType", "Transparent");
+		return material;
+	}
+
+	public static Material CreateFrostedMaterial(Color baseColor, float frostRadius = 0.005f, RenderTexture reflectionTexture = null)
+	{
+		var frostedShader = Shader.Find("Unlit/URPFrosted");
+		if (!frostedShader)
+		{
+			Debug.LogWarning("MaterialUtils: Unlit/URPFrosted shader not found! Falling back to URP/Unlit.");
+			return CreateTransparentUnlitMaterial(baseColor);
+		}
+
+		var material = new Material(frostedShader) { renderQueue = (int)RenderQueue.Transparent };
+		material.SetColor("_BaseColor", baseColor);
+		material.SetFloat("_FrostRadius", frostRadius);
+		material.SetFloat("_Surface", 1f);
+		material.SetFloat("_SrcBlend", (float)BlendMode.SrcAlpha);
+		material.SetFloat("_DstBlend", (float)BlendMode.OneMinusSrcAlpha);
+		material.SetFloat("_ZWrite", 0f);
+		material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+		material.SetOverrideTag("RenderType", "Transparent");
+		if (reflectionTexture != null)
+			material.SetTexture("_MainTex", reflectionTexture);
+		return material;
+	}
+
 	public static Material CreateTransparentUnlitMaterial(Color baseColor)
 	{
 		var unlitShader = Shader.Find("Universal Render Pipeline/Unlit");

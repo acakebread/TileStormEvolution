@@ -448,7 +448,12 @@ MonoBehaviour:
     m_Bits: 4294967295
   planeNormal: {x: 0, y: 1, z: 0}
   offset: -0.2
-  dimMaterial: {fileID: 0}
+  usePerfectMirror: 0
+  useSurfaceFilm: 1
+  customReflectionMaterial: {fileID: 0}
+  noiseTexture: {fileID: 0}
+  filmIntensity: 0.2
+  noiseScale: 24.5
 --- !u!1 &1555382761
 GameObject:
   m_ObjectHideFlags: 0

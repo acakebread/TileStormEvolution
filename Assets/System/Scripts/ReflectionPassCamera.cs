@@ -31,10 +31,16 @@ public class ReflectionPassCamera : MonoBehaviour
 	private Material reflectionMaterial;
 	private Matrix4x4 transformMatrix;
 	private bool isMaterialDynamic;
+	private bool isTextureDynamic;
 	[HideInInspector] public LayerMask sceneCullingMask = ~0;
 	[SerializeField] private Vector3 planeNormal = Vector3.up;
 	[SerializeField] private float offset = -0.2f;
+	[SerializeField] private bool usePerfectMirror = true;
+	[SerializeField] private bool useSurfaceFilm = false;
 	[SerializeField] private Material customReflectionMaterial;
+	[SerializeField] private Texture2D noiseTexture;
+	[SerializeField, Range(0, 0.5f)] private float filmIntensity = 0.2f;
+	[SerializeField, Range(0.1f, 50f)] private float noiseScale = 1f;
 
 	void Awake()
 	{
@@ -53,9 +59,21 @@ public class ReflectionPassCamera : MonoBehaviour
 		mainCamera.enabled = true;
 
 		reflectionMesh = new Mesh();
-		reflectionMaterial = customReflectionMaterial != null ? customReflectionMaterial : MaterialUtils.CreateTransparentUnlitMaterial(new Color(0.1f, 0.1f, 0.1f, 0.5f));
-		isMaterialDynamic = customReflectionMaterial == null;
+
+		if (!usePerfectMirror && useSurfaceFilm)
+		{
+			noiseTexture = noiseTexture != null ? noiseTexture : TextureUtils.GeneratePerlinNoiseTexture();
+			isTextureDynamic = noiseTexture == null;
+		}
+
+		UpdateMaterial();
+
 		transformMatrix = Matrix4x4.identity;
+
+		// Debug log with safe texture checks
+		string noiseTexName = reflectionMaterial != null && reflectionMaterial.HasProperty("_NoiseTex") ? reflectionMaterial.GetTexture("_NoiseTex")?.name : "null";
+		string mainTexName = reflectionMaterial != null && reflectionMaterial.HasProperty("_MainTex") ? reflectionMaterial.GetTexture("_MainTex")?.name : "null";
+		Debug.Log($"Awake: reflectionMaterial shader={(reflectionMaterial != null ? reflectionMaterial.shader.name : "null")}, noiseTexture={noiseTexName}, mainTex={mainTexName}, filmIntensity={filmIntensity}, noiseScale={noiseScale}, usePerfectMirror={usePerfectMirror}, useSurfaceFilm={useSurfaceFilm}");
 
 		InitializeCameras();
 		ConfigureCameraStack();
@@ -63,6 +81,39 @@ public class ReflectionPassCamera : MonoBehaviour
 			FrustumPlaneIntersection.GenerateFrustumPlaneIntersectionMesh(sceneCamera, planeNormal, offset, reflectionMesh);
 		else
 			Debug.LogWarning("ReflectionPassCamera: sceneCamera is null, skipping mesh generation", this);
+	}
+
+	private void UpdateMaterial()
+	{
+		// Destroy old material only if dynamic
+		if (reflectionMaterial != null && isMaterialDynamic)
+		{
+			DestroyImmediate(reflectionMaterial);
+			reflectionMaterial = null;
+		}
+
+		if (customReflectionMaterial != null)
+		{
+			reflectionMaterial = customReflectionMaterial;
+			isMaterialDynamic = false;
+		}
+		else if (usePerfectMirror || !useSurfaceFilm)
+		{
+			reflectionMaterial = MaterialUtils.CreateTransparentUnlitMaterial(new Color(0.1f, 0.1f, 0.1f, 0.5f));
+			isMaterialDynamic = true;
+		}
+		else if (useSurfaceFilm)
+		{
+			reflectionMaterial = MaterialUtils.CreateSurfaceFilmMaterial(new Color(0.1f, 0.1f, 0.1f, 0.5f), noiseTexture, filmIntensity, noiseScale);
+			isMaterialDynamic = true;
+		}
+
+		if (reflectionMaterial == null)
+		{
+			Debug.LogWarning("ReflectionPassCamera: Failed to create material, falling back to default Unlit");
+			reflectionMaterial = MaterialUtils.CreateTransparentUnlitMaterial(new Color(0.1f, 0.1f, 0.1f, 0.5f));
+			isMaterialDynamic = true;
+		}
 	}
 
 	private void InitializeCameras()
@@ -82,7 +133,7 @@ public class ReflectionPassCamera : MonoBehaviour
 			"SceneCamera",
 			CameraClearFlags.Nothing,
 			0,
-			new[] { RenderPassEvent.BeforeRendering },
+			new[] { RenderPassEvent.AfterRenderingTransparents },
 			new Action<RasterCommandBuffer, Camera>[] {
 				(cmd, cam) => {
 					if (reflectionMesh != null && reflectionMesh.vertexCount >= 3 && reflectionMesh.triangles.Length >= 3 && reflectionMaterial != null)
@@ -108,7 +159,7 @@ public class ReflectionPassCamera : MonoBehaviour
 		camera.cullingMask = sceneCullingMask;
 		camera.depth = depth;
 		camera.enabled = true;
-		camera.targetTexture = null;
+		camera.targetTexture = null; // No render texture needed without frosted effect
 
 		var provider = obj.AddComponent<CameraCommandProvider>();
 		if (provider == null)
@@ -156,6 +207,11 @@ public class ReflectionPassCamera : MonoBehaviour
 		}
 	}
 
+	public void OnValidate()
+	{
+		UpdateMaterial();
+	}
+
 	void LateUpdate()
 	{
 		SyncCameraProperties(mainCamera, sceneCamera);
@@ -169,13 +225,21 @@ public class ReflectionPassCamera : MonoBehaviour
 
 		if (sceneCamera != null)
 			FrustumPlaneIntersection.GenerateFrustumPlaneIntersectionMesh(sceneCamera, planeNormal, offset, reflectionMesh);
+
+		if (!usePerfectMirror && useSurfaceFilm && reflectionMaterial != null && reflectionMaterial.shader.name == "Unlit/URPSurfaceFilm")
+		{
+			reflectionMaterial.SetTexture("_NoiseTex", noiseTexture);
+			reflectionMaterial.SetFloat("_FilmIntensity", filmIntensity);
+			reflectionMaterial.SetFloat("_NoiseScale", noiseScale);
+		}
 	}
 
 	void OnDestroy()
 	{
-		if (isMaterialDynamic) DestroyImmediate(reflectionMaterial);
+		if (isMaterialDynamic && reflectionMaterial != null) DestroyImmediate(reflectionMaterial);
 		DestroyImmediate(reflectionMesh);
 		DestroyImmediate(reflectionCamera?.gameObject);
 		DestroyImmediate(sceneCamera?.gameObject);
+		if (isTextureDynamic && useSurfaceFilm) DestroyImmediate(noiseTexture);
 	}
 }
