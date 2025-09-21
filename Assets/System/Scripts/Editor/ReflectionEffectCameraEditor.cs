@@ -1,8 +1,7 @@
 using UnityEditor;
-using UnityEngine;
 
-[CustomEditor(typeof(ReflectionPassCamera))]
-public class ReflectionPassCameraEditor : Editor
+[CustomEditor(typeof(ReflectionEffectCamera))]
+public class ReflectionEffectCameraEditor : Editor
 {
 	public override void OnInspectorGUI()
 	{
@@ -58,7 +57,7 @@ public class ReflectionPassCameraEditor : Editor
 
 		if (serializedObject.ApplyModifiedProperties())
 		{
-			var targetScript = (ReflectionPassCamera)target;
+			var targetScript = (ReflectionEffectCamera)target;
 			targetScript.OnValidate();
 		}
 	}

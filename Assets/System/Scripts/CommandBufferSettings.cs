@@ -12,7 +12,7 @@ public class CommandBufferSettings : MonoBehaviour
 		public string CameraName; // Null for all cameras
 	}
 
-	private readonly Dictionary<RenderPassEvent, List<CommandEntry>> commands = new Dictionary<RenderPassEvent, List<CommandEntry>>();
+	private readonly Dictionary<RenderPassEvent, List<CommandEntry>> commands = new();
 
 	void Awake()
 	{

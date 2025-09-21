@@ -37,8 +37,8 @@ public class ReflectionCamera : CommandBufferSettings
 			return;
 		}
 
-		if (null != referenceCamera.GetComponent<ReflectionPassCamera>())
-			reflectionCamera.cullingMask = referenceCamera.GetComponent<ReflectionPassCamera>().sceneCullingMask;
+		if (null != referenceCamera.GetComponent<ReflectionEffectCamera>())
+			reflectionCamera.cullingMask = referenceCamera.GetComponent<ReflectionEffectCamera>().sceneCullingMask;
 		else
 			reflectionCamera.cullingMask = referenceCamera.cullingMask;
 
