@@ -66,6 +66,7 @@ public class ReflectionPassCamera : MonoBehaviour
 		reflectionCamera = InitializeCamera(
 			"ReflectionCamera",
 			CameraClearFlags.Nothing,
+			sceneCullingMask,
 			0,
 			new[] { RenderPassEvent.BeforeRendering, RenderPassEvent.AfterRendering },
 			new Action<RasterCommandBuffer, Camera>[] {
@@ -77,6 +78,7 @@ public class ReflectionPassCamera : MonoBehaviour
 		effectCamera = InitializeCamera(
 			"EffectCamera",
 			CameraClearFlags.Nothing,
+			0,
 			0,
 			new[] { RenderPassEvent.BeforeRendering },
 			new Action<RasterCommandBuffer, Camera>[] {
@@ -108,13 +110,13 @@ public class ReflectionPassCamera : MonoBehaviour
 		FrustumPlaneIntersection.GenerateFrustumPlaneIntersectionMesh(mainCamera, planeNormal, offset, effectMesh);
 
 		//local function
-		Camera InitializeCamera(string name, CameraClearFlags clearFlags, int depth, RenderPassEvent[] events, Action<RasterCommandBuffer, Camera>[] commands)
+		Camera InitializeCamera(string name, CameraClearFlags clearFlags, LayerMask layerMask, int depth, RenderPassEvent[] events, Action<RasterCommandBuffer, Camera>[] commands)
 		{
-			var obj = new GameObject(name) { hideFlags = HideFlags.HideInHierarchy | HideFlags.HideInInspector };
+			var obj = new GameObject(name);// { hideFlags = HideFlags.HideInHierarchy | HideFlags.HideInInspector };
 			obj.transform.SetParent(transform, false);
 			var camera = obj.AddComponent<Camera>();
 			camera.clearFlags = clearFlags;
-			camera.cullingMask = sceneCullingMask;
+			camera.cullingMask = layerMask;
 			camera.depth = depth;
 			camera.enabled = true;
 			camera.targetTexture = null;
