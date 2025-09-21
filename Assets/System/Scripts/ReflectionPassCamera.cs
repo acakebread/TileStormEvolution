@@ -126,24 +126,8 @@ public class ReflectionPassCamera : MonoBehaviour
 			data.renderType = CameraRenderType.Overlay;
 			if (CameraClearFlags.Nothing == clearFlags)
 			{
-				// --- Try a public setter if URP added one in future versions ---
-				var prop = typeof(UniversalAdditionalCameraData).GetProperty(
-					"clearDepth", BindingFlags.Instance | BindingFlags.Public);
-				if (prop != null && prop.CanWrite)
-				{
-					prop.SetValue(data, false);
-				}
-				else
-				{
-					// --- Fallback: set the private serialized backing field used in most URP versions ---
-					var field = typeof(UniversalAdditionalCameraData).GetField(
-						"m_ClearDepth", BindingFlags.Instance | BindingFlags.NonPublic);
-					if (field != null)
-						field.SetValue(data, false);
-					else
-						Debug.LogWarning("Couldn't set clearDepth on UniversalAdditionalCameraData (field not found). " +
-							"Consider creating the overlay camera in the Editor or using a prefab with Clear Depth off.");
-				}
+				// Set clearDepth in a safe, “Inspector-like” way
+				URPCameraHelper.SetClearDepth(data, false);
 			}
 
 			var provider = obj.AddComponent<CameraCommandProvider>();
