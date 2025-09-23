@@ -27,7 +27,7 @@ public class SingleCameraRenderToTexture : MonoBehaviour
 		void OnDestroy() => commands.Clear();
 	}
 
-	private RenderTexture renderTexture;
+	public RenderTexture renderTexture;
 	private Camera mainCamera;
 
 	//private Camera effectCamera;// no longer needed becasuse main camer handles this
@@ -64,7 +64,7 @@ public class SingleCameraRenderToTexture : MonoBehaviour
 
 		if (!mainCamera.gameObject.TryGetComponent<CameraCommandProvider>(out var provider)) provider = mainCamera.gameObject.AddComponent<CameraCommandProvider>();
 
-		provider.RegisterCommand(RenderPassEvent.BeforeRendering, (cmd, cam) => { mainCamera.targetTexture = renderTexture; });// First pass: reset targetTexture to render to texture
+		//provider.RegisterCommand(RenderPassEvent.BeforeRendering, (cmd, cam) => { mainCamera.targetTexture = renderTexture; });// First pass: reset targetTexture to render to texture
 
 		provider.RegisterCommand(RenderPassEvent.AfterRenderingTransparents,
 			(cmd, cam) =>
@@ -87,10 +87,18 @@ public class SingleCameraRenderToTexture : MonoBehaviour
 				}
 			}
 		);
+		RenderPipelineManager.beginCameraRendering += OnBeginCameraRendering;
+	}
+
+	private void OnBeginCameraRendering(ScriptableRenderContext context, Camera camera)
+	{
+		if (camera != mainCamera) return;
+		mainCamera.targetTexture = renderTexture;
 	}
 
 	void OnDestroy()
 	{
+		RenderPipelineManager.beginCameraRendering -= OnBeginCameraRendering;
 		// Restore original culling mask
 		if (mainCamera != null)
 			mainCamera.targetTexture = null;
