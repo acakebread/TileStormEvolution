@@ -31,7 +31,7 @@ public class FrostedQuad : MonoBehaviour
 		// Create render texture (optimized for WebGL)
 		int width = Screen.width; // Use screen resolution for WebGL
 		int height = Screen.height;
-		renderTexture = new RenderTexture(width, height, 0, RenderTextureFormat.ARGB32);
+		renderTexture = new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32);
 		renderTexture.filterMode = FilterMode.Bilinear; // Bilinear for WebGL compatibility
 		renderTexture.useDynamicScale = true; // Auto-scale for low-memory devices
 		renderTexture.Create();
@@ -96,9 +96,11 @@ public class FrostedQuad : MonoBehaviour
 	{
 		if (frostedMaterial != null)
 			DestroyImmediate(frostedMaterial);
-		if (renderTexture != null)
-			DestroyImmediate(renderTexture);
+		if (textureCamera != null)
+			textureCamera.targetTexture = null;
 		if (textureCamera != null)
 			DestroyImmediate(textureCamera.gameObject);
+		if (renderTexture != null)
+			DestroyImmediate(renderTexture);
 	}
 }

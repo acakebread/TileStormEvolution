@@ -3,7 +3,7 @@ Shader "Unlit/URPFrosted"
     Properties
     {
         _BaseColor ("Base Color", Color) = (0.25, 0.25, 0.25, 1)
-        _Radius ("Radius", Range(1, 20)) = 12 // Capped for performance
+        _Radius ("Radius", Range(1, 128)) = 64 // Match your working version
         _MainTex ("Texture", 2D) = "white" {}
         _NoiseTex ("Noise Texture", 2D) = "white" {}
         _NoiseStrength ("Noise Strength", Range(0, 0.1)) = 0.02
@@ -73,16 +73,41 @@ Shader "Unlit/URPFrosted"
                 // Sample center pixel
                 sum += SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, screenUV);
 
-                // Cross-shaped box blur (mimics FrostedGlass)
+                // Radial blur with dithered sampling
                 float step = 0.1; // Matches original
-                float radius = _Radius * 1.41421356237; // Match second pass of original
+                float radius = _Radius * 1.41421356237; // Match original scaling
+                float scale = 1.0 / input.screenPos.w; // Perspective correction
+                float2 pixelPos = screenUV * _ScreenParams.xy; // Screen-space pixel coordinates
+                float dither = fmod(pixelPos.x + pixelPos.y, 2.0); // Checkerboard dithering
+
+                // Define sample offsets (diagonal or horizontal/vertical)
+                float diagScale = 0.70710678118; // 1/sqrt(2) for circular sampling
+                float2 sampleOffsets[4];
+                if (dither < 1.0)
+                {
+                    // Diagonal samples on circle perimeter
+                    sampleOffsets[0] = float2(diagScale, diagScale);
+                    sampleOffsets[1] = float2(diagScale, -diagScale);
+                    sampleOffsets[2] = float2(-diagScale, diagScale);
+                    sampleOffsets[3] = float2(-diagScale, -diagScale);
+                }
+                else
+                {
+                    // Horizontal/vertical samples
+                    sampleOffsets[0] = float2(1.0, 0.0);
+                    sampleOffsets[1] = float2(-1.0, 0.0);
+                    sampleOffsets[2] = float2(0.0, 1.0);
+                    sampleOffsets[3] = float2(0.0, -1.0);
+                }
+
+                // Sample loop
                 for (float range = step; range <= radius; range += step)
                 {
-                    float2 texelOffset = _MainTex_TexelSize.xy * range;
-                    sum += SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, screenUV + float2(texelOffset.x, 0));
-                    sum += SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, screenUV + float2(-texelOffset.x, 0));
-                    sum += SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, screenUV + float2(0, texelOffset.y));
-                    sum += SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, screenUV + float2(0, -texelOffset.y));
+                    float2 texelOffset = _MainTex_TexelSize.xy * range * scale;
+                    for (int i = 0; i < 4; i++)
+                    {
+                        sum += SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, screenUV + texelOffset * sampleOffsets[i]);
+                    }
                     measurements += 4;
                 }
 
