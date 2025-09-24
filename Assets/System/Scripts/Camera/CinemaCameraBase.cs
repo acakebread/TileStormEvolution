@@ -39,6 +39,7 @@ namespace MassiveHadronLtd
 			pauseTimer = PauseDuration;
 			lastPlayerPos = predictedPlayerPosition = playerTransform.position;
 			StartCinemaSequence();
+			UpdateCinemaSequence();
 		}
 
 		protected abstract void StartCinemaSequence();
@@ -75,7 +76,7 @@ namespace MassiveHadronLtd
 			//cameraData.fovSrc = Mathf.Lerp(cameraData.fovSrc, cameraData.fovDst, interpolate); ToDo initialise FOV in StartSequence and lerp
 		}
 
-		protected abstract void UpdateCinemaSequence(float easedSequenceTimer);
+		protected abstract void UpdateCinemaSequence(float easedSequenceTimer = 0);
 
 		public override bool HasCompleted => sequenceTimer <= 0f && pauseTimer <= 0f;
 	}
