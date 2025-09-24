@@ -13,16 +13,6 @@ namespace ClassicTilestorm
 		private bool locked = false; // true while player is dragging tiles
 		private bool isFirstLoad = true; // Flag to track first map load after launch
 
-		// Key repeat variables
-		private float initialKeyDelay = 0.5f; // Delay before first repeat (seconds)
-		private float repeatKeyInterval = 0.1f; // Interval between subsequent repeats (seconds)
-		private float leftKeyHeldTime = 0f; // Time left arrow key has been held
-		private float rightKeyHeldTime = 0f; // Time right arrow key has been held
-		private bool isLeftKeyRepeating = false; // Flag for left key repeat state
-		private bool isRightKeyRepeating = false; // Flag for right key repeat state
-		private bool hasLeftKeyRepeated = false; // Flag to track if left key has repeated once
-		private bool hasRightKeyRepeated = false; // Flag to track if right key has repeated once
-
 		private void Awake() => gestureController = gameObject.GetComponent<GestureController>();
 
 		void Start()
@@ -138,58 +128,13 @@ namespace ClassicTilestorm
 			// Handle left/right arrow key inputs for Previous/Next Level with repeat
 			if (!locked && !CameraController.CinemaActive)
 			{
-				// Left arrow key
-				if (Input.GetKey(KeyCode.LeftArrow))
+				if (InputUtility.GetKeyRepeat(KeyCode.LeftArrow))
 				{
-					if (!isLeftKeyRepeating)
-					{
-						// Initial press
-						ChangeMap(-1); // Previous map
-						leftKeyHeldTime = Time.time;
-						isLeftKeyRepeating = true;
-						hasLeftKeyRepeated = false;
-					}
-					else if (Time.time - leftKeyHeldTime >= (hasLeftKeyRepeated ? repeatKeyInterval : initialKeyDelay))
-					{
-						// Repeat after delay
-						ChangeMap(-1); // Previous map
-						leftKeyHeldTime = Time.time;
-						hasLeftKeyRepeated = true;
-					}
+					ChangeMap(-1); // Previous map
 				}
-				else if (Input.GetKeyUp(KeyCode.LeftArrow))
+				if (InputUtility.GetKeyRepeat(KeyCode.RightArrow))
 				{
-					// Reset on key release
-					isLeftKeyRepeating = false;
-					hasLeftKeyRepeated = false;
-					leftKeyHeldTime = 0f;
-				}
-
-				// Right arrow key
-				if (Input.GetKey(KeyCode.RightArrow))
-				{
-					if (!isRightKeyRepeating)
-					{
-						// Initial press
-						ChangeMap(1); // Next map
-						rightKeyHeldTime = Time.time;
-						isRightKeyRepeating = true;
-						hasRightKeyRepeated = false;
-					}
-					else if (Time.time - rightKeyHeldTime >= (hasRightKeyRepeated ? repeatKeyInterval : initialKeyDelay))
-					{
-						// Repeat after delay
-						ChangeMap(1); // Next map
-						rightKeyHeldTime = Time.time;
-						hasRightKeyRepeated = true;
-					}
-				}
-				else if (Input.GetKeyUp(KeyCode.RightArrow))
-				{
-					// Reset on key release
-					isRightKeyRepeating = false;
-					hasRightKeyRepeated = false;
-					rightKeyHeldTime = 0f;
+					ChangeMap(1); // Next map
 				}
 			}
 		}
