@@ -13,6 +13,16 @@ namespace ClassicTilestorm
 		private bool locked = false; // true while player is dragging tiles
 		private bool isFirstLoad = true; // Flag to track first map load after launch
 
+		// Key repeat variables
+		private float initialKeyDelay = 0.5f; // Delay before first repeat (seconds)
+		private float repeatKeyInterval = 0.1f; // Interval between subsequent repeats (seconds)
+		private float leftKeyHeldTime = 0f; // Time left arrow key has been held
+		private float rightKeyHeldTime = 0f; // Time right arrow key has been held
+		private bool isLeftKeyRepeating = false; // Flag for left key repeat state
+		private bool isRightKeyRepeating = false; // Flag for right key repeat state
+		private bool hasLeftKeyRepeated = false; // Flag to track if left key has repeated once
+		private bool hasRightKeyRepeated = false; // Flag to track if right key has repeated once
+
 		private void Awake() => gestureController = gameObject.GetComponent<GestureController>();
 
 		void Start()
@@ -101,6 +111,20 @@ namespace ClassicTilestorm
 			isFirstLoad = false;
 		}
 
+		private void ChangeMap(int delta)
+		{
+			if (delta == 0)
+			{
+				LoadMap(); // Reload current map
+				return;
+			}
+
+			var currentIndex = DatabaseLoader.Maps.ToList().FindIndex(m => m.name == PreviewSettings.LoadMapName);
+			currentIndex = (DatabaseLoader.Maps.Count + currentIndex + delta) % DatabaseLoader.Maps.Count;
+			PreviewSettings.LoadMapName = DatabaseLoader.Maps[currentIndex].name;
+			LoadMap();
+		}
+
 		void Update()
 		{
 			if (null != eggbotController)
@@ -111,24 +135,61 @@ namespace ClassicTilestorm
 			CameraController.Update();
 			CameraController.Project(Camera.main);
 
-			// NEW: Handle left/right arrow key inputs for Previous/Next Level
+			// Handle left/right arrow key inputs for Previous/Next Level with repeat
 			if (!locked && !CameraController.CinemaActive)
 			{
-				if (Input.GetKeyDown(KeyCode.LeftArrow))
+				// Left arrow key
+				if (Input.GetKey(KeyCode.LeftArrow))
 				{
-					// Same logic as Previous Level button
-					var currentIndex = DatabaseLoader.Maps.ToList().FindIndex(m => m.name == PreviewSettings.LoadMapName);
-					currentIndex = (DatabaseLoader.Maps.Count + currentIndex - 1) % DatabaseLoader.Maps.Count;
-					PreviewSettings.LoadMapName = DatabaseLoader.Maps[currentIndex].name;
-					LoadMap();
+					if (!isLeftKeyRepeating)
+					{
+						// Initial press
+						ChangeMap(-1); // Previous map
+						leftKeyHeldTime = Time.time;
+						isLeftKeyRepeating = true;
+						hasLeftKeyRepeated = false;
+					}
+					else if (Time.time - leftKeyHeldTime >= (hasLeftKeyRepeated ? repeatKeyInterval : initialKeyDelay))
+					{
+						// Repeat after delay
+						ChangeMap(-1); // Previous map
+						leftKeyHeldTime = Time.time;
+						hasLeftKeyRepeated = true;
+					}
 				}
-				else if (Input.GetKeyDown(KeyCode.RightArrow))
+				else if (Input.GetKeyUp(KeyCode.LeftArrow))
 				{
-					// Same logic as Next Level button
-					var currentIndex = DatabaseLoader.Maps.ToList().FindIndex(m => m.name == PreviewSettings.LoadMapName);
-					currentIndex = (currentIndex + 1) % DatabaseLoader.Maps.Count;
-					PreviewSettings.LoadMapName = DatabaseLoader.Maps[currentIndex].name;
-					LoadMap();
+					// Reset on key release
+					isLeftKeyRepeating = false;
+					hasLeftKeyRepeated = false;
+					leftKeyHeldTime = 0f;
+				}
+
+				// Right arrow key
+				if (Input.GetKey(KeyCode.RightArrow))
+				{
+					if (!isRightKeyRepeating)
+					{
+						// Initial press
+						ChangeMap(1); // Next map
+						rightKeyHeldTime = Time.time;
+						isRightKeyRepeating = true;
+						hasRightKeyRepeated = false;
+					}
+					else if (Time.time - rightKeyHeldTime >= (hasRightKeyRepeated ? repeatKeyInterval : initialKeyDelay))
+					{
+						// Repeat after delay
+						ChangeMap(1); // Next map
+						rightKeyHeldTime = Time.time;
+						hasRightKeyRepeated = true;
+					}
+				}
+				else if (Input.GetKeyUp(KeyCode.RightArrow))
+				{
+					// Reset on key release
+					isRightKeyRepeating = false;
+					hasRightKeyRepeated = false;
+					rightKeyHeldTime = 0f;
 				}
 			}
 		}
@@ -172,7 +233,10 @@ namespace ClassicTilestorm
 			GUI.skin.label.fontSize = 24;
 			GUI.color = Color.green;
 
-			if (GUI.Button(new Rect(10, 10, 100, 30), "Reload")) LoadMap();
+			if (GUI.Button(new Rect(10, 10, 100, 30), "Reload"))
+			{
+				ChangeMap(0); // Reload current map
+			}
 
 			if (GUI.Button(new Rect(120, 10, 100, 30), "Scramble")) mapManager.Scramble();
 
@@ -180,18 +244,12 @@ namespace ClassicTilestorm
 
 			if (GUI.Button(new Rect(340, 10, 150, 30), "Previous Level"))
 			{
-				var currentIndex = DatabaseLoader.Maps.ToList().FindIndex(m => m.name == PreviewSettings.LoadMapName);
-				currentIndex = (DatabaseLoader.Maps.Count + currentIndex - 1) % DatabaseLoader.Maps.Count;
-				PreviewSettings.LoadMapName = DatabaseLoader.Maps[currentIndex].name;
-				LoadMap();
+				ChangeMap(-1); // Previous map
 			}
 
 			if (GUI.Button(new Rect(500, 10, 150, 30), "Next Level"))
 			{
-				var currentIndex = DatabaseLoader.Maps.ToList().FindIndex(m => m.name == PreviewSettings.LoadMapName);
-				currentIndex = (currentIndex + 1) % DatabaseLoader.Maps.Count;
-				PreviewSettings.LoadMapName = DatabaseLoader.Maps[currentIndex].name;
-				LoadMap();
+				ChangeMap(1); // Next map
 			}
 
 			if (GUI.Button(new Rect(660, 10, 150, 30), CameraController.CinemaEnabled ? "Disable Cinematic" : "Enable Cinematic"))
