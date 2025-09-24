@@ -126,16 +126,13 @@ namespace ClassicTilestorm
 			CameraController.Project(Camera.main);
 
 			// Handle left/right arrow key inputs for Previous/Next Level with repeat
-			if (!locked && !CameraController.CinemaActive)
+			if (InputUtility.GetKeyRepeat(KeyCode.LeftArrow))
 			{
-				if (InputUtility.GetKeyRepeat(KeyCode.LeftArrow))
-				{
-					ChangeMap(-1); // Previous map
-				}
-				if (InputUtility.GetKeyRepeat(KeyCode.RightArrow))
-				{
-					ChangeMap(1); // Next map
-				}
+				ChangeMap(-1); // Previous map
+			}
+			if (InputUtility.GetKeyRepeat(KeyCode.RightArrow))
+			{
+				ChangeMap(1); // Next map
 			}
 		}
 
