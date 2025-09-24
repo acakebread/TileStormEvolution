@@ -5,7 +5,7 @@ using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 
 [RequireComponent(typeof(Camera))]
-public class SingleCameraRenderToTexture : MonoBehaviour
+public class DualCameraRenderToTexture : MonoBehaviour
 {
 	private class CameraCommandProvider : MonoBehaviour, ICommandBufferProvider
 	{
@@ -106,7 +106,6 @@ public class SingleCameraRenderToTexture : MonoBehaviour
 			// Set clearDepth in a safe, “Inspector-like” way
 			URPCameraHelper.SetClearDepth(data, false);
 
-
 			var texturecam_data = textureCamera.gameObject.GetComponent<UniversalAdditionalCameraData>();
 			texturecam_data.cameraStack.Clear();
 			texturecam_data.cameraStack.Add(overlayCamera);
@@ -172,6 +171,8 @@ public class SingleCameraRenderToTexture : MonoBehaviour
 }
 
 
+
+
 //using System;
 //using UnityEngine;
 //using System.Collections.Generic;
@@ -179,7 +180,7 @@ public class SingleCameraRenderToTexture : MonoBehaviour
 //using UnityEngine.Rendering.Universal;
 
 //[RequireComponent(typeof(Camera))]
-//public class SingleCameraRenderToTexture : MonoBehaviour
+//public class DualCameraRenderToTexture : MonoBehaviour
 //{
 //	private class CameraCommandProvider : MonoBehaviour, ICommandBufferProvider
 //	{
@@ -202,6 +203,9 @@ public class SingleCameraRenderToTexture : MonoBehaviour
 //	}
 
 //	private Camera mainCamera;
+//	private Camera reflectionCameraMain;
+//	//public Camera renderCamera;
+//	//private Camera reflectionCameraRender;
 //	public RenderTexture renderTexture;
 
 //	private Mesh effectMesh;
@@ -210,7 +214,6 @@ public class SingleCameraRenderToTexture : MonoBehaviour
 
 //	[SerializeField] private Vector3 planeNormal = Vector3.up;
 //	[SerializeField] private float offset = 0f;
-//	[SerializeField] private Material customEffectMaterial;
 
 //	[SerializeField, Range(1, 120)] private float frostRadius = 64f;
 //	[SerializeField] private Color baseColor = new Color(0.25f, 0.25f, 0.25f, 1f);
@@ -225,7 +228,9 @@ public class SingleCameraRenderToTexture : MonoBehaviour
 //			return;
 //		}
 
-//		// Allocate render texture with depth buffer to suppress warning
+//		mainCamera.depth = -5;
+
+//		// Allocate render texture with depth buffer
 //		renderTexture = new RenderTexture(Screen.width, Screen.height, 24, RenderTextureFormat.ARGB32)
 //		{
 //			name = "RenderTexture",
@@ -238,64 +243,146 @@ public class SingleCameraRenderToTexture : MonoBehaviour
 
 //		effectMesh = new Mesh();
 //		effectMaterial = MaterialUtils.CreateFrostedMaterial(baseColor, frostRadius, renderTexture, null, 0);
-//		isMaterialDynamic = customEffectMaterial == null; // True if using script-created material
+//		isMaterialDynamic = true;
 
-//		if (!mainCamera.gameObject.TryGetComponent<CameraCommandProvider>(out var provider)) provider = mainCamera.gameObject.AddComponent<CameraCommandProvider>();
+//		{
+//			var obj = new GameObject("ReflectionCameraMain");// { hideFlags = HideFlags.HideInHierarchy | HideFlags.HideInInspector };
+//			obj.transform.SetParent(transform, false);
+//			reflectionCameraMain = obj.AddComponent<Camera>();
+//			reflectionCameraMain.clearFlags = CameraClearFlags.Nothing;
+//			reflectionCameraMain.cullingMask = mainCamera.cullingMask;
+//			reflectionCameraMain.depth = -1;
+//			reflectionCameraMain.enabled = true;
+//			reflectionCameraMain.targetTexture = null;
 
-//		//provider.RegisterCommand(RenderPassEvent.BeforeRendering, (cmd, cam) => { mainCamera.targetTexture = renderTexture; });// First pass: reset targetTexture to render to texture
-
-//		provider.RegisterCommand(RenderPassEvent.AfterRendering,
-//			(cmd, cam) =>
+//			var provider = obj.AddComponent<CameraCommandProvider>();
+//			if (provider == null)
 //			{
-//				FrustumPlaneIntersection.GenerateFrustumPlaneIntersectionMesh(mainCamera, planeNormal, offset, effectMesh);
-
-//				// Assuming renderTexture is your RenderTexture
-//				mainCamera.targetTexture = null;
-
-//				// Blit render texture to display buffer first
-//				Graphics.Blit(renderTexture, null as RenderTexture);
-
-//				// "Lock" the renderTexture by ensuring it's not the active render target
-//				RenderTexture previousActiveRT = RenderTexture.active; // Store the current active RenderTexture
-//				RenderTexture.active = null; // Set active to null to prevent writes to any RenderTexture
-
-//				if (effectMesh != null && effectMesh.vertexCount >= 3 && effectMesh.triangles.Length >= 3 && effectMaterial != null)
-//				{
-//					effectMaterial.SetPass(0);
-//					cmd.DrawMesh(effectMesh, Matrix4x4.identity, effectMaterial, 0, 0);
-//				}
-//				else
-//				{
-//					Debug.LogWarning("SingleCameraRenderToTexture: Invalid effectMesh or effectMaterial", this);
-//				}
-
-//				// "Unlock" the renderTexture by restoring the previous active RenderTexture
-//				RenderTexture.active = previousActiveRT;
+//				Debug.LogError("ReflectionEffectCamera: Failed to add CameraCommandProvider to ReflectionCameraMain", this);
+//				enabled = false;
+//				return;
 //			}
-//		);
-//		RenderPipelineManager.beginCameraRendering += OnBeginCameraRendering;
+
+//			provider.RegisterCommand(RenderPassEvent.BeforeRendering, (cmd, cam) => { cmd.SetInvertCulling(true); });
+//			provider.RegisterCommand(RenderPassEvent.AfterRendering, (cmd, cam) => { cmd.SetInvertCulling(false); });
+
+//			var data = obj.AddComponent<UniversalAdditionalCameraData>();
+//			data.renderType = CameraRenderType.Overlay;
+
+//			// Set clearDepth in a safe, “Inspector-like” way
+//			URPCameraHelper.SetClearDepth(data, false);
+//		}
+
+//		{
+//			CameraCommandProvider provider = mainCamera.gameObject.GetComponent<CameraCommandProvider>();
+//			if (provider == null)
+//				provider = mainCamera.gameObject.AddComponent<CameraCommandProvider>();
+
+//			provider.RegisterCommand(RenderPassEvent.AfterRendering,
+//				(cmd, cam) =>
+//				{
+//					FrustumPlaneIntersection.GenerateFrustumPlaneIntersectionMesh(mainCamera, planeNormal, offset, effectMesh);
+//					if (effectMesh != null && effectMesh.vertexCount >= 3 && effectMesh.triangles.Length >= 3 && effectMaterial != null)
+//					{
+//						effectMaterial.SetPass(0);
+//						cmd.DrawMesh(effectMesh, Matrix4x4.identity, effectMaterial, 0, 0);
+//					}
+//				}
+//			);
+
+//			var data = mainCamera.gameObject.GetComponent<UniversalAdditionalCameraData>();
+//			data.cameraStack.Clear();
+//			data.cameraStack.Add(reflectionCameraMain);
+//		}
+
+//		//{
+//		//	var obj = new GameObject("RenderCamera");// { hideFlags = HideFlags.HideInHierarchy | HideFlags.HideInInspector };
+//		//	obj.transform.SetParent(transform, false);
+//		//	renderCamera = obj.AddComponent<Camera>();
+//		//	renderCamera.CopyFrom(mainCamera);
+//		//	renderCamera.clearFlags = CameraClearFlags.Skybox;
+//		//	renderCamera.cullingMask = mainCamera.cullingMask;
+//		//	renderCamera.depth = -2;
+//		//	renderCamera.enabled = true;
+//		//	renderCamera.targetTexture = renderTexture;
+//		//	var data = obj.AddComponent<UniversalAdditionalCameraData>();
+//		//	data.renderType = CameraRenderType.Base;
+
+//		//	var renderProvider = obj.AddComponent<CameraCommandProvider>();
+//		//	if (renderProvider == null)
+//		//	{
+//		//		Debug.LogError("ReflectionEffectCamera: Failed to add CameraCommandProvider to ReflectionCameraRender", this);
+//		//		enabled = false;
+//		//		return;
+//		//	}
+
+//		//	renderProvider.RegisterCommand(RenderPassEvent.BeforeRendering, (cmd, cam) => { cmd.SetInvertCulling(true); });
+//		//	renderProvider.RegisterCommand(RenderPassEvent.AfterRendering, (cmd, cam) => { cmd.SetInvertCulling(false); });
+
+//		//	//{
+//		//	//	var renderObj = new GameObject("ReflectionCameraRender");// { hideFlags = HideFlags.HideInHierarchy | HideFlags.HideInInspector };
+//		//	//	renderObj.transform.SetParent(renderCamera.transform, false);
+//		//	//	reflectionCameraRender = renderObj.AddComponent<Camera>();
+//		//	//	reflectionCameraRender.CopyFrom(renderCamera);
+//		//	//	reflectionCameraRender.clearFlags = CameraClearFlags.Nothing;
+//		//	//	reflectionCameraRender.cullingMask = mainCamera.cullingMask;
+
+//		//	//	var renderData = renderObj.AddComponent<UniversalAdditionalCameraData>();
+//		//	//	renderData.renderType = CameraRenderType.Overlay;
+
+//		//	//	// Set clearDepth in a safe, “Inspector-like” way
+//		//	//	URPCameraHelper.SetClearDepth(renderData, false);
+//		//	//}
+
+//		//	var base_data = obj.GetComponent<UniversalAdditionalCameraData>();
+//		//	if (base_data == null)
+//		//		base_data = obj.AddComponent<UniversalAdditionalCameraData>();
+
+//		//	//base_data.cameraStack.Clear();
+//		//	//base_data.cameraStack.Add(reflectionCameraRender);
+//		//}
 //	}
 
 //	public void Update()
 //	{
+//		effectMaterial.SetTexture("_MainTex", renderTexture);
 //		effectMaterial.SetFloat("_Radius", frostRadius);
 //		effectMaterial.SetColor("_BaseColor", baseColor);
 //	}
 
-//	private void OnBeginCameraRendering(ScriptableRenderContext context, Camera camera)
+//	private void LateUpdate()
 //	{
-//		if (camera != mainCamera) return;
-//		mainCamera.targetTexture = renderTexture;
+//		if (reflectionCameraMain != null)
+//		{
+//			//SyncCameraProperties(mainCamera, reflectionCameraMain);
+//			var reflectionMat = MatrixUtils.GetReflectionMatrix(planeNormal, offset);
+//			reflectionCameraMain.worldToCameraMatrix = mainCamera.worldToCameraMatrix * reflectionMat;
+//			reflectionCameraMain.projectionMatrix = mainCamera.projectionMatrix;
+//		}
+
+//		//if (reflectionCameraRender != null)
+//		//{
+//		//	//SyncCameraProperties(mainCamera, reflectionCameraRender);
+//		//	var reflectionMat = MatrixUtils.GetReflectionMatrix(planeNormal, offset);
+//		//	reflectionCameraRender.worldToCameraMatrix = mainCamera.worldToCameraMatrix * reflectionMat;
+//		//	reflectionCameraRender.projectionMatrix = mainCamera.projectionMatrix;
+//		//}
+
+//		//if (renderCamera != null)
+//		//{
+//		//	//SyncCameraProperties(mainCamera, reflectionCameraRender);
+//		//	var reflectionMat = MatrixUtils.GetReflectionMatrix(planeNormal, offset);
+//		//	renderCamera.worldToCameraMatrix = mainCamera.worldToCameraMatrix * reflectionMat;
+//		//	renderCamera.projectionMatrix = mainCamera.projectionMatrix;
+//		//}
+
 //	}
 
 //	void OnDestroy()
 //	{
-//		RenderPipelineManager.beginCameraRendering -= OnBeginCameraRendering;
-//		// Restore original culling mask
-//		if (mainCamera != null)
-//			mainCamera.targetTexture = null;
+//		//if (renderCamera != null)
+//		//	renderCamera.targetTexture = null;
 
-//		// Cleanup
 //		if (renderTexture != null)
 //		{
 //			renderTexture.Release();
@@ -309,4 +396,3 @@ public class SingleCameraRenderToTexture : MonoBehaviour
 //			DestroyImmediate(effectMesh);
 //	}
 //}
-

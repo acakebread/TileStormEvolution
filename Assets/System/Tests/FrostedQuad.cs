@@ -8,6 +8,7 @@ public class FrostedQuad : MonoBehaviour
 	[SerializeField] private Color baseColor = new Color(0.25f, 0.25f, 0.25f, 1f);
 	[SerializeField] private LayerMask cullingMask = ~0; // Layers to render (exclude quad’s layer)
 	[SerializeField] private Texture2D noiseTexture; // Optional noise texture
+	//[SerializeField] private RenderTexture blurTexture;
 
 	private RenderTexture renderTexture;
 	private Material frostedMaterial;
@@ -35,6 +36,11 @@ public class FrostedQuad : MonoBehaviour
 		renderTexture.useDynamicScale = true; // Auto-scale for low-memory devices
 		renderTexture.Create();
 
+		//blurTexture = new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32);
+		//blurTexture.filterMode = FilterMode.Bilinear; // Bilinear for WebGL compatibility
+		//blurTexture.useDynamicScale = true; // Auto-scale for low-memory devices
+		//blurTexture.Create();       
+		
 		// Create frosted material
 		var frostedShader = Shader.Find("Unlit/URPFrosted");
 		if (!frostedShader)
@@ -49,6 +55,7 @@ public class FrostedQuad : MonoBehaviour
 		frostedMaterial.SetFloat("_Radius", frostRadius);
 		frostedMaterial.SetTexture("_MainTex", renderTexture);
 		frostedMaterial.SetTexture("_NoiseTex", noiseTexture);
+		//frostedMaterial.SetTexture("_BlurTex", blurTexture);
 		frostedMaterial.SetFloat("_NoiseStrength", 0.02f);
 		meshRenderer.material = frostedMaterial;
 
@@ -99,5 +106,7 @@ public class FrostedQuad : MonoBehaviour
 			DestroyImmediate(textureCamera.gameObject);
 		if (renderTexture != null)
 			DestroyImmediate(renderTexture);
+		//if (blurTexture != null)
+		//	DestroyImmediate(blurTexture);
 	}
 }
