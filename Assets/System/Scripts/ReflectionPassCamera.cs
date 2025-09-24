@@ -3,7 +3,6 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using System.Collections.Generic;
-using System.Reflection;
 
 [RequireComponent(typeof(Camera))]
 public class ReflectionPassCamera : MonoBehaviour
@@ -20,14 +19,8 @@ public class ReflectionPassCamera : MonoBehaviour
 		{
 			if (commands.ContainsKey(evt) && commands[evt] != null)
 			{
-				try
-				{
-					commands[evt].Invoke(commandBuffer, camera);
-				}
-				catch (Exception e)
-				{
-					Debug.LogError($"CameraCommandProvider: Error executing command for event {evt}, camera {camera.name}: {e.Message}");
-				}
+				try { commands[evt].Invoke(commandBuffer, camera); }
+				catch (Exception e) { Debug.LogError($"CameraCommandProvider: Error executing command for event {evt}, camera {camera.name}: {e.Message}"); }
 			}
 		}
 
