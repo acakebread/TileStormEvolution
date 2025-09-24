@@ -1,64 +1,48 @@
-//using UnityEditor;
+using UnityEditor;
+using UnityEngine;
 
-//[CustomEditor(typeof(ReflectionEffectCamera))]
-//public class ReflectionEffectCameraEditor : Editor
-//{
-//	public override void OnInspectorGUI()
-//	{
-//		serializedObject.Update();
+[CustomEditor(typeof(ReflectionEffectCamera))]
+public class ReflectionEffectCameraEditor : Editor
+{
+	public override void OnInspectorGUI()
+	{
+		serializedObject.Update();
 
-//		// Plane settings
-//		EditorGUILayout.LabelField("Plane Settings", EditorStyles.boldLabel);
-//		EditorGUILayout.PropertyField(serializedObject.FindProperty("planeNormal"));
-//		EditorGUILayout.PropertyField(serializedObject.FindProperty("offset"));
+		// Plane settings
+		EditorGUILayout.LabelField("Plane Settings", EditorStyles.boldLabel);
+		EditorGUILayout.PropertyField(serializedObject.FindProperty("planeNormal"));
+		EditorGUILayout.PropertyField(serializedObject.FindProperty("offset"));
 
-//		// Effect settings
-//		EditorGUILayout.Space();
-//		EditorGUILayout.LabelField("Reflection Effects", EditorStyles.boldLabel);
-//		var usePerfectMirrorProp = serializedObject.FindProperty("usePerfectMirror");
-//		var useSurfaceFilmProp = serializedObject.FindProperty("useSurfaceFilm");
-//		var useFrostedEffectProp = serializedObject.FindProperty("useFrostedEffect");
+		// Effect settings
+		EditorGUILayout.Space();
+		EditorGUILayout.LabelField("Reflection Effects", EditorStyles.boldLabel);
+		var effectModeProp = serializedObject.FindProperty("effectMode");
+		EditorGUILayout.PropertyField(effectModeProp);
 
-//		EditorGUILayout.PropertyField(usePerfectMirrorProp);
+		// Show properties based on the selected effect mode
+		switch ((ReflectionEffectCamera.EffectMode)effectModeProp.enumValueIndex)
+		{
+			case ReflectionEffectCamera.EffectMode.PerfectMirror:
+				// No additional properties for PerfectMirror
+				break;
 
-//		if (!usePerfectMirrorProp.boolValue)
-//		{
-//			EditorGUILayout.PropertyField(useSurfaceFilmProp);
-//			EditorGUILayout.PropertyField(useFrostedEffectProp);
+			case ReflectionEffectCamera.EffectMode.SurfaceFilm:
+				EditorGUILayout.PropertyField(serializedObject.FindProperty("noiseTexture"));
+				EditorGUILayout.PropertyField(serializedObject.FindProperty("filmIntensity"));
+				EditorGUILayout.PropertyField(serializedObject.FindProperty("noiseScale"));
+				break;
 
-//			// Ensure only one effect is enabled
-//			if (useSurfaceFilmProp.boolValue && useFrostedEffectProp.boolValue)
-//			{
-//				useFrostedEffectProp.boolValue = false; // Prioritize surface film if both are checked
-//			}
+			case ReflectionEffectCamera.EffectMode.FrostEffect:
+				EditorGUILayout.PropertyField(serializedObject.FindProperty("noiseTexture"));
+				EditorGUILayout.PropertyField(serializedObject.FindProperty("frostRadius"));
+				EditorGUILayout.PropertyField(serializedObject.FindProperty("baseColor"));
+				break;
+		}
 
-//			if (useSurfaceFilmProp.boolValue)
-//			{
-//				EditorGUILayout.PropertyField(serializedObject.FindProperty("noiseTexture"));
-//				EditorGUILayout.PropertyField(serializedObject.FindProperty("filmIntensity"));
-//				EditorGUILayout.PropertyField(serializedObject.FindProperty("noiseScale"));
-//			}
-//			else if (useFrostedEffectProp.boolValue)
-//			{
-//				EditorGUILayout.PropertyField(serializedObject.FindProperty("noiseTexture"));
-//				EditorGUILayout.PropertyField(serializedObject.FindProperty("frostRadius"));
-//				EditorGUILayout.PropertyField(serializedObject.FindProperty("baseColor"));
-//				EditorGUILayout.PropertyField(serializedObject.FindProperty("noiseStrength"));
-//			}
-//		}
-//		else
-//		{
-//			useSurfaceFilmProp.boolValue = false;
-//			useFrostedEffectProp.boolValue = false;
-//		}
-
-//		EditorGUILayout.Space();
-//		EditorGUILayout.PropertyField(serializedObject.FindProperty("customEffectMaterial"));
-
-//		if (serializedObject.ApplyModifiedProperties())
-//		{
-//			var targetScript = (ReflectionEffectCamera)target;
-//			targetScript.OnValidate();
-//		}
-//	}
-//}
+		if (serializedObject.ApplyModifiedProperties())
+		{
+			var targetScript = (ReflectionEffectCamera)target;
+			targetScript.OnValidate();
+		}
+	}
+}

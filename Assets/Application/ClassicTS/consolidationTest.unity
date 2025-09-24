@@ -306,6 +306,7 @@ GameObject:
   - component: {fileID: 1146321624}
   - component: {fileID: 1146321629}
   - component: {fileID: 1146321630}
+  - component: {fileID: 1146321631}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -443,13 +444,30 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: debe350cb86502644be674b7e850e7b1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  textureCamera: {fileID: 0}
-  renderTexture: {fileID: 0}
   planeNormal: {x: 0, y: 1, z: 0}
   offset: -0.2
-  frostRadius: 64
-  baseColor: {r: 0.25, g: 0.25, b: 0.25, a: 0.5}
-  effectMode: 0
+  effectMode: 2
+  frostRadius: 128
+  baseColor: {r: 0, g: 0, b: 0, a: 0.5019608}
+  filmIntensity: 0.2
+  noiseScale: 1
+  noiseTexture: {fileID: 0}
+--- !u!114 &1146321631
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1146321623}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b51d92c7d0d06ee4887abd0179fb4f6e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  lookSpeedH: 2
+  lookSpeedV: 2
+  zoomSpeed: 12
+  dragSpeed: 18
 --- !u!1 &1555382761
 GameObject:
   m_ObjectHideFlags: 0

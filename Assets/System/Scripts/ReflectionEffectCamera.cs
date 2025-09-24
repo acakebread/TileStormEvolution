@@ -30,36 +30,39 @@ public class ReflectionEffectCamera : MonoBehaviour
 	[SerializeField] private Vector3 planeNormal = Vector3.up;
 	[SerializeField] private float offset = 0f;
 
-	enum EffectMode
+	public enum EffectMode
 	{
 		PerfectMirror,
+		SurfaceFilm,
 		FrostEffect
-	};
+	}
 
 	[SerializeField] private EffectMode effectMode = EffectMode.PerfectMirror;
 
-	//used for frost effect	
-	[SerializeField, Range(1, 120)] private float frostRadius = 64f;
+	// Used for frost effect
+	[SerializeField, Range(1, 256)] private float frostRadius = 64f;
 	[SerializeField] private Color baseColor = new Color(0.25f, 0.25f, 0.25f, 0.5f);
 
+	// Used for surface film effect
+	[SerializeField, Range(0, 0.5f)] private float filmIntensity = 0.2f;
+	[SerializeField, Range(0.1f, 50f)] private float noiseScale = 1f;
+	[SerializeField] private Texture2D noiseTexture;
 
 	private Camera mainCamera;
 	private Camera reflectionCamera;
-
-	//used for frost effect
 	private Camera textureCamera;
 	private RenderTexture renderTexture;
-
 	private Mesh effectMesh;
 	private Material effectMaterial;
 	private bool isMaterialDynamic;
+	private bool isTextureDynamic;
 
 	void Start()
 	{
 		mainCamera = GetComponent<Camera>();
 		if (null != mainCamera)
 		{
-			var obj = new GameObject("ReflectionCamera");// { hideFlags = HideFlags.HideInHierarchy | HideFlags.HideInInspector };
+			var obj = new GameObject("ReflectionCamera");
 			obj.transform.SetParent(transform, false);
 			reflectionCamera = obj.AddComponent<Camera>();
 			reflectionCamera.clearFlags = CameraClearFlags.Nothing;
@@ -79,7 +82,6 @@ public class ReflectionEffectCamera : MonoBehaviour
 			var data = obj.AddComponent<UniversalAdditionalCameraData>();
 			data.renderType = CameraRenderType.Overlay;
 
-			// Set clearDepth in a safe, “Inspector-like” way
 			URPCameraHelper.SetClearDepth(data, false);
 		}
 		else
@@ -89,7 +91,14 @@ public class ReflectionEffectCamera : MonoBehaviour
 			return;
 		}
 
-		Camera outputStage = null;// the last camera in the stack that is not a render to texture camera
+		// Initialize noise texture for surface film or frost effect
+		if (effectMode == EffectMode.SurfaceFilm || effectMode == EffectMode.FrostEffect)
+		{
+			noiseTexture = noiseTexture != null ? noiseTexture : TextureUtils.GeneratePerlinNoiseTexture();
+			isTextureDynamic = noiseTexture == null;
+		}
+
+		Camera outputStage = null;
 		switch (effectMode)
 		{
 			case EffectMode.PerfectMirror:
@@ -108,9 +117,24 @@ public class ReflectionEffectCamera : MonoBehaviour
 				}
 				break;
 
+			case EffectMode.SurfaceFilm:
+				{
+					effectMesh = new Mesh();
+					effectMaterial = MaterialUtils.CreateSurfaceFilmMaterial(new Color(0.1f, 0.1f, 0.1f, 0.5f), noiseTexture, filmIntensity, noiseScale);
+					isMaterialDynamic = true;
+
+					var data = mainCamera.gameObject.GetComponent<UniversalAdditionalCameraData>();
+					data.cameraStack.Clear();
+					data.cameraStack.Add(reflectionCamera);
+
+					reflectionCamera.targetTexture = null;
+
+					outputStage = reflectionCamera;
+				}
+				break;
+
 			case EffectMode.FrostEffect:
 				{
-					// Allocate render texture with depth buffer
 					renderTexture = new RenderTexture(Screen.width, Screen.height, 24, RenderTextureFormat.ARGB32)
 					{
 						name = "RenderTexture",
@@ -122,10 +146,10 @@ public class ReflectionEffectCamera : MonoBehaviour
 					renderTexture.Create();
 
 					effectMesh = new Mesh();
-					effectMaterial = MaterialUtils.CreateFrostedMaterial(baseColor, frostRadius, renderTexture, null, 0);
+					effectMaterial = MaterialUtils.CreateFrostedMaterial(baseColor, frostRadius, renderTexture, noiseTexture, 0.02f); // Using noiseStrength from old script
 					isMaterialDynamic = true;
 
-					var obj = new GameObject("TextureCamera");// { hideFlags = HideFlags.HideInHierarchy | HideFlags.HideInInspector };
+					var obj = new GameObject("TextureCamera");
 					obj.transform.SetParent(transform, false);
 					textureCamera = obj.AddComponent<Camera>();
 					textureCamera.CopyFrom(mainCamera);
@@ -166,14 +190,23 @@ public class ReflectionEffectCamera : MonoBehaviour
 
 	public void Update()
 	{
-		effectMaterial.SetColor("_BaseColor", baseColor);
-		switch (effectMode)
+		if (effectMaterial != null)
 		{
-			case EffectMode.PerfectMirror:
-				break;
-			case EffectMode.FrostEffect:
-				effectMaterial.SetFloat("_Radius", frostRadius);
-				break;
+			effectMaterial.SetColor("_BaseColor", baseColor);
+			switch (effectMode)
+			{
+				case EffectMode.PerfectMirror:
+					break;
+				case EffectMode.SurfaceFilm:
+					effectMaterial.SetFloat("_FilmIntensity", filmIntensity);
+					effectMaterial.SetFloat("_NoiseScale", noiseScale);
+					effectMaterial.SetTexture("_NoiseTex", noiseTexture);
+					break;
+				case EffectMode.FrostEffect:
+					effectMaterial.SetFloat("_Radius", frostRadius);
+					effectMaterial.SetTexture("_NoiseTex", noiseTexture);
+					break;
+			}
 		}
 	}
 
@@ -203,15 +236,155 @@ public class ReflectionEffectCamera : MonoBehaviour
 		}
 	}
 
+	public void OnValidate()
+	{
+		// Skip if not fully initialized or in play mode
+		if (!isActiveAndEnabled || mainCamera == null)
+			return;
+
+		// Clean up existing dynamic resources to avoid memory leaks
+		if (effectMaterial != null && isMaterialDynamic)
+		{
+			DestroyImmediate(effectMaterial);
+			effectMaterial = null;
+		}
+		if (renderTexture != null && effectMode != EffectMode.FrostEffect)
+		{
+			DestroyImmediate(renderTexture);
+			renderTexture = null;
+		}
+		if (isTextureDynamic && noiseTexture != null)
+		{
+			DestroyImmediate(noiseTexture);
+			noiseTexture = null;
+		}
+
+		// Initialize noise texture for SurfaceFilm or FrostEffect
+		if (effectMode == EffectMode.SurfaceFilm || effectMode == EffectMode.FrostEffect)
+		{
+			noiseTexture = noiseTexture != null ? noiseTexture : TextureUtils.GeneratePerlinNoiseTexture();
+			isTextureDynamic = noiseTexture == null;
+		}
+
+		// Update camera and material setup based on effect mode
+		switch (effectMode)
+		{
+			case EffectMode.PerfectMirror:
+				{
+					if (textureCamera != null)
+					{
+						DestroyImmediate(textureCamera.gameObject);
+						textureCamera = null;
+					}
+					if (effectMesh == null)
+						effectMesh = new Mesh();
+					effectMaterial = MaterialUtils.CreateTransparentUnlitMaterial(new Color(0.1f, 0.1f, 0.1f, 0.5f));
+					isMaterialDynamic = true;
+
+					var data = mainCamera.gameObject.GetComponent<UniversalAdditionalCameraData>();
+					data.cameraStack.Clear();
+					data.cameraStack.Add(reflectionCamera);
+
+					reflectionCamera.targetTexture = null;
+					break;
+				}
+			case EffectMode.SurfaceFilm:
+				{
+					if (textureCamera != null)
+					{
+						DestroyImmediate(textureCamera.gameObject);
+						textureCamera = null;
+					}
+					if (effectMesh == null)
+						effectMesh = new Mesh();
+					effectMaterial = MaterialUtils.CreateSurfaceFilmMaterial(new Color(0.1f, 0.1f, 0.1f, 0.5f), noiseTexture, filmIntensity, noiseScale);
+					isMaterialDynamic = true;
+
+					var data = mainCamera.gameObject.GetComponent<UniversalAdditionalCameraData>();
+					data.cameraStack.Clear();
+					data.cameraStack.Add(reflectionCamera);
+
+					reflectionCamera.targetTexture = null;
+					break;
+				}
+			case EffectMode.FrostEffect:
+				{
+					if (renderTexture == null)
+					{
+						renderTexture = new RenderTexture(Screen.width, Screen.height, 24, RenderTextureFormat.ARGB32)
+						{
+							name = "RenderTexture",
+							useMipMap = false,
+							autoGenerateMips = false,
+							filterMode = FilterMode.Bilinear,
+							useDynamicScale = true
+						};
+						renderTexture.Create();
+					}
+					if (effectMesh == null)
+						effectMesh = new Mesh();
+					effectMaterial = MaterialUtils.CreateFrostedMaterial(baseColor, frostRadius, renderTexture, noiseTexture, 0.02f);
+					isMaterialDynamic = true;
+
+					if (textureCamera == null)
+					{
+						var obj = new GameObject("TextureCamera");
+						obj.transform.SetParent(transform, false);
+						textureCamera = obj.AddComponent<Camera>();
+						textureCamera.CopyFrom(mainCamera);
+						textureCamera.clearFlags = mainCamera.clearFlags;
+						textureCamera.cullingMask = mainCamera.cullingMask;
+						textureCamera.targetTexture = renderTexture;
+						var data = obj.AddComponent<UniversalAdditionalCameraData>();
+						data.cameraStack.Clear();
+						data.cameraStack.Add(reflectionCamera);
+					}
+
+					reflectionCamera.targetTexture = renderTexture;
+					break;
+				}
+		}
+
+		// Update material properties
+		if (effectMaterial != null)
+		{
+			effectMaterial.SetColor("_BaseColor", baseColor);
+			switch (effectMode)
+			{
+				case EffectMode.SurfaceFilm:
+					effectMaterial.SetFloat("_FilmIntensity", filmIntensity);
+					effectMaterial.SetFloat("_NoiseScale", noiseScale);
+					effectMaterial.SetTexture("_NoiseTex", noiseTexture);
+					break;
+				case EffectMode.FrostEffect:
+					effectMaterial.SetFloat("_Radius", frostRadius);
+					effectMaterial.SetTexture("_NoiseTex", noiseTexture);
+					break;
+			}
+		}
+	}
+
 	void OnDestroy()
 	{
 		if (mainCamera != null)
 			mainCamera.targetTexture = null;
+
+		if (reflectionCamera != null)
+			reflectionCamera.targetTexture = null;
+
+		if (textureCamera != null)
+			textureCamera.targetTexture = null;
 
 		if (effectMaterial != null && isMaterialDynamic)
 			DestroyImmediate(effectMaterial);
 
 		if (effectMesh != null)
 			DestroyImmediate(effectMesh);
+
+		if (renderTexture != null)
+			DestroyImmediate(renderTexture);
+
+		if (isTextureDynamic && noiseTexture != null)
+			DestroyImmediate(noiseTexture);
 	}
 }

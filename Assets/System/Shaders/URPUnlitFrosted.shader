@@ -3,7 +3,7 @@ Shader "Unlit/URPFrosted"
     Properties
     {
         _BaseColor ("Base Color", Color) = (0.25, 0.25, 0.25, 1)
-        _Radius ("Radius", Range(1, 128)) = 64 // Match your working version
+        _Radius ("Radius", Range(1, 256)) = 64 // Match your working version
         _MainTex ("Texture", 2D) = "white" {}
         _NoiseTex ("Noise Texture", 2D) = "white" {}
         _NoiseStrength ("Noise Strength", Range(0, 0.1)) = 0.02
@@ -64,63 +64,70 @@ Shader "Unlit/URPFrosted"
                 return output;
             }
 
-            half4 frag(Varyings input) : SV_Target
-            {
-                float2 screenUV = input.screenPos.xy / input.screenPos.w;
-                half4 sum = 0;
-                float measurements = 1;
 
-                // Sample center pixel
-                sum += SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, screenUV);
+half4 frag(Varyings input) : SV_Target
+{
+    float2 screenUV = input.screenPos.xy / input.screenPos.w;
+    half4 sum = 0;
+    float measurements = 1;
 
-                // Radial blur with dithered sampling
-                float step = 0.1; // Matches original
-                float radius = _Radius * 1.41421356237; // Match original scaling
-                float scale = 1.0 / input.screenPos.w; // Perspective correction
-                float2 pixelPos = screenUV * _ScreenParams.xy; // Screen-space pixel coordinates
-                float dither = fmod(pixelPos.x + pixelPos.y, 2.0); // Checkerboard dithering
+    // Sample center pixel
+    sum += SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, screenUV);
 
-                // Define sample offsets (diagonal or horizontal/vertical)
-                float diagScale = 0.70710678118; // 1/sqrt(2) for circular sampling
-                float2 sampleOffsets[4];
-                if (dither < 1.0)
-                {
-                    // Diagonal samples on circle perimeter
-                    sampleOffsets[0] = float2(diagScale, diagScale);
-                    sampleOffsets[1] = float2(diagScale, -diagScale);
-                    sampleOffsets[2] = float2(-diagScale, diagScale);
-                    sampleOffsets[3] = float2(-diagScale, -diagScale);
-                }
-                else
-                {
-                    // Horizontal/vertical samples
-                    sampleOffsets[0] = float2(1.0, 0.0);
-                    sampleOffsets[1] = float2(-1.0, 0.0);
-                    sampleOffsets[2] = float2(0.0, 1.0);
-                    sampleOffsets[3] = float2(0.0, -1.0);
-                }
+    // Radial blur with dithered sampling
+    float step = 0.25; // Matches original
+    float radius = _Radius; // Match original scaling
+    float scale = 1.0 / input.screenPos.w; // Perspective correction
+    float2 pixelPos = screenUV * _ScreenParams.xy; // Screen-space pixel coordinates
 
-                // Sample loop
-                for (float range = step; range <= radius; range += step)
-                {
-                    float2 texelOffset = _MainTex_TexelSize.xy * range * scale;
-                    for (int i = 0; i < 4; i++)
-                    {
-                        sum += SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, screenUV + texelOffset * sampleOffsets[i]);
-                    }
-                    measurements += 4;
-                }
+    // 4x4 Bayer dither matrix (normalized to [0,1])
+    static const float bayer4x4[16] = {
+        0.0/16.0,  8.0/16.0,  2.0/16.0, 10.0/16.0,
+       12.0/16.0,  4.0/16.0, 14.0/16.0,  6.0/16.0,
+        3.0/16.0, 11.0/16.0,  1.0/16.0,  9.0/16.0,
+       15.0/16.0,  7.0/16.0, 13.0/16.0,  5.0/16.0
+    };
 
-                half4 color = sum / measurements;
+    // Compute dither index from pixel position
+    int2 iPixelPos = int2(fmod(pixelPos.x, 4.0), fmod(pixelPos.y, 4.0));
+    int ditherIndex = iPixelPos.x + iPixelPos.y * 4;
+    float ditherValue = bayer4x4[ditherIndex];
 
-                // Apply noise
-                half4 noise = SAMPLE_TEXTURE2D(_NoiseTex, sampler_NoiseTex, input.uv);
-                color.rgb += (noise.rgb - 0.5) * _NoiseStrength;
+    // Define 16 sample offsets at 22.5-degree increments
+    float2 sampleOffsets[4];
+    float angleIndex = floor(ditherValue * 4.0); // Map dither value to one of 16 angles
+    float angleStep = 22.5 * (3.14159265359 / 180.0); // 22.5 degrees in radians
+    float startAngle = angleIndex * angleStep;
 
-                // Blend with base color
-                color.rgb = lerp(color.rgb, _BaseColor.rgb, _BaseColor.a * 0.3);
-                return half4(color.rgb, _BaseColor.a);
-            }
+    // Compute 4 sample offsets at 90-degree intervals starting from the dithered angle
+    for (int i = 0; i < 4; i++)
+    {
+        float angle = startAngle + i * (90.0 * 3.14159265359 / 180.0); // 90-degree steps
+        sampleOffsets[i] = float2(cos(angle), sin(angle));
+    }
+
+    // Sample loop
+    for (float range = step; range <= radius; range += step)
+    {
+        float2 texelOffset = _MainTex_TexelSize.xy * range * scale;
+        for (int i = 0; i < 4; i++)
+        {
+            sum += SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, screenUV + texelOffset * sampleOffsets[i]);
+        }
+        measurements += 4;
+    }
+
+    half4 color = sum / measurements;
+
+    // Apply noise
+    half4 noise = SAMPLE_TEXTURE2D(_NoiseTex, sampler_NoiseTex, input.uv);
+    color.rgb += (noise.rgb - 0.5) * _NoiseStrength;
+
+    // Blend with base color
+    color.rgb = color.rgb * (1.0 - _BaseColor.a) + _BaseColor.rgb * _BaseColor.a;
+    return half4(color.rgb, 1);            
+}
+
             ENDHLSL
         }
     }
