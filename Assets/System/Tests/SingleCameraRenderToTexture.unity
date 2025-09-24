@@ -614,11 +614,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   renderTexture: {fileID: 0}
+  textureCamera: {fileID: 0}
   planeNormal: {x: 0, y: 1, z: 0}
   offset: 0
-  customReflectionMaterial: {fileID: 0}
-  useFrostedEffect: 1
-  customNoiseTexture: {fileID: 0}
+  renderEffectMesh: 1
   frostRadius: 64
   baseColor: {r: 0.25, g: 0.25, b: 0.25, a: 1}
   noiseStrength: 0.02
