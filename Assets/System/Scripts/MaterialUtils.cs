@@ -70,6 +70,37 @@ public static class MaterialUtils
 		return material;
 	}
 
+	public static Material CreateFrostMaterial(Color baseColor, float depth = 1f, RenderTexture reflectionTexture = null, Texture2D noiseTexture = null, float noiseStrength = 0.02f)
+	{
+		var frostShader = Shader.Find("Unlit/URPFrost");
+		if (!frostShader)
+		{
+			Debug.LogWarning("MaterialUtils: Unlit/URPFrost shader not found! Falling back to URP/Unlit.");
+			return CreateTransparentUnlitMaterial(new Color(0.1f, 0.1f, 0.1f, 0.5f));
+		}
+
+		var material = new Material(frostShader) { renderQueue = (int)RenderQueue.Transparent };
+		material.SetColor("_BaseColor", baseColor);
+		material.SetFloat("_Depth", depth);
+		material.SetFloat("_NoiseStrength", noiseStrength);
+		material.SetFloat("_Surface", 1f);
+		material.SetFloat("_SrcBlend", (float)BlendMode.SrcAlpha);
+		material.SetFloat("_DstBlend", (float)BlendMode.OneMinusSrcAlpha);
+		material.SetFloat("_ZWrite", 0f);
+		material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+		material.SetOverrideTag("RenderType", "Transparent");
+		if (reflectionTexture != null)
+			material.SetTexture("_MainTex", reflectionTexture);
+		if (noiseTexture != null)
+			material.SetTexture("_NoiseTex", noiseTexture);
+		// Clear surface film properties
+		if (material.HasProperty("_FilmIntensity"))
+			material.SetFloat("_FilmIntensity", 0);
+		if (material.HasProperty("_NoiseScale"))
+			material.SetFloat("_NoiseScale", 0);
+		return material;
+	}
+
 	public static Material CreateTransparentUnlitMaterial(Color baseColor)
 	{
 		var unlitShader = Shader.Find("Universal Render Pipeline/Unlit");

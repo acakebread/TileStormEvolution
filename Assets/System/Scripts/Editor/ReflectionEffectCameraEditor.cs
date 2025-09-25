@@ -34,7 +34,7 @@ public class ReflectionEffectCameraEditor : Editor
 
 			case ReflectionEffectCamera.EffectMode.FrostEffect:
 				EditorGUILayout.PropertyField(serializedObject.FindProperty("noiseTexture"));
-				EditorGUILayout.PropertyField(serializedObject.FindProperty("frostRadius"));
+				EditorGUILayout.PropertyField(serializedObject.FindProperty("frostDepth"));
 				EditorGUILayout.PropertyField(serializedObject.FindProperty("baseColor"));
 				break;
 		}

@@ -40,7 +40,7 @@ public class ReflectionEffectCamera : MonoBehaviour
 	[SerializeField] private EffectMode effectMode = EffectMode.PerfectMirror;
 
 	// Used for frost effect
-	[SerializeField, Range(1, 256)] private float frostRadius = 64f;
+	[SerializeField, Range(0f, 1f)] private float frostDepth = 0.5f;
 	[SerializeField] private Color baseColor = new Color(0.25f, 0.25f, 0.25f, 0.5f);
 
 	// Used for surface film effect
@@ -146,7 +146,7 @@ public class ReflectionEffectCamera : MonoBehaviour
 					renderTexture.Create();
 
 					effectMesh = new Mesh();
-					effectMaterial = MaterialUtils.CreateFrostedMaterial(baseColor, frostRadius, renderTexture, noiseTexture, 0.02f); // Using noiseStrength from old script
+					effectMaterial = MaterialUtils.CreateFrostMaterial(baseColor, frostDepth, renderTexture, null, 0.02f);
 					isMaterialDynamic = true;
 
 					var obj = new GameObject("TextureCamera");
@@ -203,7 +203,7 @@ public class ReflectionEffectCamera : MonoBehaviour
 					effectMaterial.SetTexture("_NoiseTex", noiseTexture);
 					break;
 				case EffectMode.FrostEffect:
-					effectMaterial.SetFloat("_Radius", frostRadius);
+					effectMaterial.SetFloat("_Depth", frostDepth);
 					effectMaterial.SetTexture("_NoiseTex", noiseTexture);
 					break;
 			}
@@ -323,7 +323,7 @@ public class ReflectionEffectCamera : MonoBehaviour
 					}
 					if (effectMesh == null)
 						effectMesh = new Mesh();
-					effectMaterial = MaterialUtils.CreateFrostedMaterial(baseColor, frostRadius, renderTexture, noiseTexture, 0.02f);
+					effectMaterial = MaterialUtils.CreateFrostMaterial(baseColor, frostDepth, renderTexture, null, 0.02f);
 					isMaterialDynamic = true;
 
 					if (textureCamera == null)
@@ -357,7 +357,7 @@ public class ReflectionEffectCamera : MonoBehaviour
 					effectMaterial.SetTexture("_NoiseTex", noiseTexture);
 					break;
 				case EffectMode.FrostEffect:
-					effectMaterial.SetFloat("_Radius", frostRadius);
+					effectMaterial.SetFloat("_Depth", frostDepth);
 					effectMaterial.SetTexture("_NoiseTex", noiseTexture);
 					break;
 			}
