@@ -4,9 +4,9 @@
     {
         _BaseColor ("Base Color", Color) = (0.25, 0.5, 0.75, 1) // Blue-ish tint for water
         _MainTex ("Texture", 2D) = "white" {}
-        _RippleSpeed ("Ripple Speed", Range(0, 1)) = 0.5 // Normalized, was 25.0 / 100
-        _RippleAmplitude ("Ripple Amplitude", Range(0, 1)) = 0.5 // Normalized, was 0.002 / 0.05
-        _RippleFrequency ("Ripple Frequency", Range(0, 1)) = 0.5 // Normalized, was 250.0 / 250
+        _RippleSpeed ("Ripple Speed", Range(0, 1)) = 0.5
+        _RippleAmplitude ("Ripple Amplitude", Range(0, 1)) = 0.5
+        _RippleFrequency ("Ripple Frequency", Range(0, 1)) = 0.5
         _RippleOffset ("Ripple Offset", Range(0, 1)) = 0.5
         _TimeSeed ("Time Seed", Float) = 0.0
     }
@@ -59,8 +59,8 @@
             SAMPLER(sampler_MainTex);
 
             // Internal scalars for adjusting normalized inputs
-            #define RIPPLE_SPEED_SCALE 20.0 // Scales normalized speed back to 0-100 range
-            #define RIPPLE_AMPLITUDE_SCALE 0.05 // Scales normalized amplitude back to 0-0.05 range
+            #define RIPPLE_SPEED_SCALE 20.0 // Scales normalized speed back to 0-20 range
+            #define RIPPLE_AMPLITUDE_SCALE 0.5 // Scales normalized amplitude back to 0-0.5 range
             #define RIPPLE_FREQUENCY_SCALE 250.0 // Scales normalized frequency back to 1-250 range
             #define RIPPLE_FREQUENCY_OFFSET 1.0 // Adds the minimum frequency (1.0)
 
@@ -87,19 +87,14 @@
                 float time = _TimeSeed * speed;
 
                 // Four intersecting sine waves with different angles and phases
-                float2 wave1Dir = normalize(float2(1.0, 0.5)); // First wave direction
-                float2 wave2Dir = normalize(float2(-0.5, 1.0)); // Second wave direction, roughly perpendicular
-                float2 wave3Dir = -wave1Dir; // Opposite of first wave
-                float2 wave4Dir = -wave2Dir; // Opposite of second wave
+                float2 wave1Dir = normalize(float2(1, 1)); // First wave direction
+                float2 wave2Dir = normalize(float2(-1, 1)); // Second wave direction, perpendicular
 
-                // Calculate wave displacements with distinct phase offsets
-                float wave1 = sin(dot(uv, wave1Dir) * frequency + time * 1.61803398875 + _RippleOffset); // Golden ratio
-                float wave2 = sin(dot(uv, wave2Dir) * frequency + time * 2.2360679775 + _RippleOffset); // Sqrt(5)
-                float wave3 = sin(dot(uv, wave3Dir) * frequency + time * 1.41421356237 + _RippleOffset); // Sqrt(2)
-                float wave4 = sin(dot(uv, wave4Dir) * frequency + time * 1.73205080757 + _RippleOffset); // Sqrt(3)
+                float wave1 = sin(dot(uv, wave1Dir) * frequency + time * 1.41421356237) + sin(frequency + time * .173205080757);
+                float wave2 = sin(dot(uv, wave2Dir) * frequency + time * 1.61803398875) + sin(frequency + time * .223606797750);
 
                 // Combine waves for displacement, using full directional vectors
-                float2 displacement = amplitude * (wave1 * wave1Dir + wave2 * wave2Dir + wave3 * wave3Dir + wave4 * wave4Dir);
+                float2 displacement = amplitude * (wave1 * wave1Dir + wave2 * wave2Dir) / input.screenPos.w;
 
                 // Apply displacement to UVs
                 float2 displacedUV = screenUV + displacement;

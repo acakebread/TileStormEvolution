@@ -558,14 +558,14 @@ MonoBehaviour:
   offset: -0.2
   effectMode: 3
   frostDepth: 0.5
-  baseColor: {r: 0, g: 0, b: 0, a: 0.6666667}
+  baseColor: {r: 0, g: 0, b: 0, a: 0.6784314}
   filmIntensity: 0.2
   noiseScale: 1
   noiseTexture: {fileID: 0}
-  rippleSpeed: 0.279
-  rippleAmplitude: 0.061
-  rippleFrequency: 0.109
-  rippleOffset: 0.5
+  rippleSpeed: 0.153
+  rippleAmplitude: 0.13
+  rippleFrequency: 0.145
+  rippleOffset: 0
 --- !u!114 &1146321631
 MonoBehaviour:
   m_ObjectHideFlags: 0
