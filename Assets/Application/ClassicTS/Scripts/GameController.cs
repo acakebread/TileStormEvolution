@@ -117,6 +117,12 @@ namespace ClassicTilestorm
 
 		void Update()
 		{
+			// Handle left/right arrow key inputs for Previous/Next Level with repeat
+			if (InputUtility.GetKeyRepeat(KeyCode.LeftArrow)) ChangeMap(-1); // Previous map
+			if (InputUtility.GetKeyRepeat(KeyCode.RightArrow)) ChangeMap(1); // Next map
+
+			if (true == PreviewSettings.DebugMode) return;
+
 			if (null != eggbotController)
 			{
 				eggbotController.UpdateEggbot(locked ? null : mapManager);
@@ -124,16 +130,6 @@ namespace ClassicTilestorm
 			}
 			CameraController.Update();
 			CameraController.Project(Camera.main);
-
-			// Handle left/right arrow key inputs for Previous/Next Level with repeat
-			if (InputUtility.GetKeyRepeat(KeyCode.LeftArrow))
-			{
-				ChangeMap(-1); // Previous map
-			}
-			if (InputUtility.GetKeyRepeat(KeyCode.RightArrow))
-			{
-				ChangeMap(1); // Next map
-			}
 		}
 
 		private void OnWaypointReached(int waypointIndex)

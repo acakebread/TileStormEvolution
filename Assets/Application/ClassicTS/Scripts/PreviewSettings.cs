@@ -52,6 +52,10 @@ namespace ClassicTilestorm
 		//[SerializeField] private string databasePath = "ClassicTS/";
 		//public static string DatabasePath => instance.databasePath;
 
+		[Header("debug mode")]
+		[SerializeField] private bool debugMode = false;
+		public static bool DebugMode => instance.debugMode;
+
 		private static PreviewSettings instance;
 		void Awake() => instance = this;
 	}

@@ -157,6 +157,7 @@ MonoBehaviour:
   databaseJsonFile: {fileID: 4900000, guid: 96c40ca8617a15a4590b9728c168e29a, type: 3}
   geometryPath: ClassicTS/Geometry/
   texturePath: ClassicTS/Textures/
+  debugMode: 1
 --- !u!4 &862124737
 Transform:
   m_ObjectHideFlags: 0
@@ -447,8 +448,8 @@ MonoBehaviour:
   planeNormal: {x: 0, y: 1, z: 0}
   offset: -0.2
   effectMode: 2
-  frostRadius: 128
-  baseColor: {r: 0, g: 0, b: 0, a: 0.5019608}
+  frostDepth: 0.07
+  baseColor: {r: 0, g: 0, b: 0, a: 0.36078432}
   filmIntensity: 0.2
   noiseScale: 1
   noiseTexture: {fileID: 0}
