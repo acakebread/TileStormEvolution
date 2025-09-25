@@ -40,57 +40,57 @@ namespace MassiveHadronLtd
 			}
 		}
 
-private IEnumerator Start()
-{
-    while (true)
-    {
-        yield return null;
-        bool wasDragging = dragging;
+		private IEnumerator Start()
+		{
+			while (true)
+			{
+				yield return null;
+				bool wasDragging = dragging;
 
-        // Handle mouse button down to start dragging
-        if ((Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1)) &&
-            !EventSystem.current.IsPointerOverGameObject())
-        {
-            dragging = true;
-            // Update yaw and pitch to current camera rotation when dragging starts
-            yaw = transform.eulerAngles.y;
-            pitch = transform.eulerAngles.x;
-        }
+				// Handle mouse button down to start dragging
+				if ((Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1)) &&
+					!EventSystem.current.IsPointerOverGameObject())
+				{
+					dragging = true;
+					// Update yaw and pitch to current camera rotation when dragging starts
+					yaw = transform.eulerAngles.y;
+					pitch = transform.eulerAngles.x;
+				}
 
-        // Get mouse or touch input
-        float pointerX = Input.GetAxis("Mouse X");
-        float pointerY = Input.GetAxis("Mouse Y");
-        if (Input.touchCount > 0)
-        {
-            pointerX = Input.touches[0].deltaPosition.x * 0.05f;
-            pointerY = Input.touches[0].deltaPosition.y * 0.05f;
-        }
+				// Get mouse or touch input
+				float pointerX = Input.GetAxis("Mouse X");
+				float pointerY = Input.GetAxis("Mouse Y");
+				if (Input.touchCount > 0)
+				{
+					pointerX = Input.touches[0].deltaPosition.x * 0.05f;
+					pointerY = Input.touches[0].deltaPosition.y * 0.05f;
+				}
 
-        // Handle camera rotation (skip deltas on first frame of drag)
-        if (dragging && wasDragging && (Input.touchCount > 0 || Input.GetMouseButton(0) || Input.GetMouseButton(1)))
-        {
-            yaw += lookSpeedH * pointerX;
-            pitch -= lookSpeedV * pointerY;
-            transform.eulerAngles = new Vector3(pitch, yaw, 0f);
-        }
-        else if (!(Input.touchCount > 0 || Input.GetMouseButton(0) || Input.GetMouseButton(1)))
-        {
-            dragging = false;
-        }
+				// Handle camera rotation (skip deltas on first frame of drag)
+				if (dragging && wasDragging && (Input.touchCount > 0 || Input.GetMouseButton(0) || Input.GetMouseButton(1)))
+				{
+					yaw += lookSpeedH * pointerX;
+					pitch -= lookSpeedV * pointerY;
+					transform.eulerAngles = new Vector3(pitch, yaw, 0f);
+				}
+				else if (!(Input.touchCount > 0 || Input.GetMouseButton(0) || Input.GetMouseButton(1)))
+				{
+					dragging = false;
+				}
 
-        // Zoom with mouse wheel
-        if (insideWindow())
-        {
-            float scroll = skipNextScroll ? 0f : Input.GetAxis("Mouse ScrollWheel");
-            transform.Translate(0, 0, scroll * zoomSpeed, Space.Self);
-            skipNextScroll = false; // Reset after scroll handling
-        }
+				// Zoom with mouse wheel
+				if (insideWindow())
+				{
+					float scroll = skipNextScroll ? 0f : Input.GetAxis("Mouse ScrollWheel");
+					transform.Translate(0, 0, scroll * zoomSpeed, Space.Self);
+					skipNextScroll = false; // Reset after scroll handling
+				}
 
-        // Translation
-        Vector3 translation = GetInputTranslationDirection() * zoomSpeed * Time.deltaTime;
-        transform.Translate(translation, Space.Self);
-    }
-}
+				// Translation
+				Vector3 translation = GetInputTranslationDirection() * zoomSpeed * Time.deltaTime;
+				transform.Translate(translation, Space.Self);
+			}
+		}
 
 		private bool insideWindow()
 		{
