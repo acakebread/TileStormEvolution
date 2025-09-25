@@ -37,6 +37,14 @@ public class ReflectionEffectCameraEditor : Editor
 				EditorGUILayout.PropertyField(serializedObject.FindProperty("frostDepth"));
 				EditorGUILayout.PropertyField(serializedObject.FindProperty("baseColor"));
 				break;
+
+			case ReflectionEffectCamera.EffectMode.URPWater:
+				EditorGUILayout.PropertyField(serializedObject.FindProperty("baseColor"));
+				EditorGUILayout.PropertyField(serializedObject.FindProperty("rippleSpeed"));
+				EditorGUILayout.PropertyField(serializedObject.FindProperty("rippleAmplitude"));
+				EditorGUILayout.PropertyField(serializedObject.FindProperty("rippleFrequency"));
+				EditorGUILayout.PropertyField(serializedObject.FindProperty("rippleOffset"));
+				break;
 		}
 
 		if (serializedObject.ApplyModifiedProperties())

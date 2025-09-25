@@ -101,6 +101,44 @@ public static class MaterialUtils
 		return material;
 	}
 
+	public static Material CreateWaterMaterial(Color baseColor, RenderTexture reflectionTexture, float rippleSpeed = 1f, float rippleAmplitude = 0.02f, float rippleFrequency = 5f, float rippleOffset = 0.5f)
+	{
+		var waterShader = Shader.Find("Unlit/URPWater");
+		if (!waterShader)
+		{
+			Debug.LogWarning("MaterialUtils: Unlit/URPWater shader not found! Falling back to URP/Unlit.");
+			return CreateTransparentUnlitMaterial(new Color(0.1f, 0.1f, 0.1f, 0.5f));
+		}
+
+		var material = new Material(waterShader) { renderQueue = (int)RenderQueue.Transparent + 1 };
+		material.SetColor("_BaseColor", baseColor);
+		material.SetFloat("_RippleSpeed", rippleSpeed);
+		material.SetFloat("_RippleAmplitude", rippleAmplitude);
+		material.SetFloat("_RippleFrequency", rippleFrequency);
+		material.SetFloat("_RippleOffset", rippleOffset);
+		material.SetFloat("_TimeSeed", 0f);
+		material.SetFloat("_Surface", 1f);
+		material.SetFloat("_SrcBlend", (float)BlendMode.SrcAlpha);
+		material.SetFloat("_DstBlend", (float)BlendMode.OneMinusSrcAlpha);
+		material.SetFloat("_ZWrite", 0f);
+		material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+		material.SetOverrideTag("RenderType", "Transparent");
+		if (reflectionTexture != null)
+			material.SetTexture("_MainTex", reflectionTexture);
+		// Clear unrelated properties
+		if (material.HasProperty("_NoiseTex"))
+			material.SetTexture("_NoiseTex", null);
+		if (material.HasProperty("_Depth"))
+			material.SetFloat("_Depth", 0);
+		if (material.HasProperty("_NoiseStrength"))
+			material.SetFloat("_NoiseStrength", 0);
+		if (material.HasProperty("_FilmIntensity"))
+			material.SetFloat("_FilmIntensity", 0);
+		if (material.HasProperty("_NoiseScale"))
+			material.SetFloat("_NoiseScale", 0);
+		return material;
+	}
+
 	public static Material CreateTransparentUnlitMaterial(Color baseColor)
 	{
 		var unlitShader = Shader.Find("Universal Render Pipeline/Unlit");

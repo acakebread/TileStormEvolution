@@ -34,7 +34,8 @@ public class ReflectionEffectCamera : MonoBehaviour
 	{
 		PerfectMirror,
 		SurfaceFilm,
-		FrostEffect
+		FrostEffect,
+		URPWater // New mode added
 	}
 
 	[SerializeField] private EffectMode effectMode = EffectMode.PerfectMirror;
@@ -48,6 +49,12 @@ public class ReflectionEffectCamera : MonoBehaviour
 	[SerializeField, Range(0.1f, 50f)] private float noiseScale = 1f;
 	[SerializeField] private Texture2D noiseTexture;
 
+	// Used for URPWater effect
+	[SerializeField, Range(0f, 1f)] private float rippleSpeed = 0.5f;
+	[SerializeField, Range(0f, 1f)] private float rippleAmplitude = 0.5f;
+	[SerializeField, Range(0f, 1f)] private float rippleFrequency = 0.5f;
+	[SerializeField, Range(0f, 1f)] private float rippleOffset = 0.5f;
+
 	private Camera mainCamera;
 	private Camera reflectionCamera;
 	private Camera textureCamera;
@@ -56,6 +63,7 @@ public class ReflectionEffectCamera : MonoBehaviour
 	private Material effectMaterial;
 	private bool isMaterialDynamic;
 	private bool isTextureDynamic;
+	private float timeSeed; // For URPWater time-based animation
 
 	void Start()
 	{
@@ -146,7 +154,40 @@ public class ReflectionEffectCamera : MonoBehaviour
 					renderTexture.Create();
 
 					effectMesh = new Mesh();
-					effectMaterial = MaterialUtils.CreateFrostMaterial(baseColor, frostDepth, renderTexture, null, 0.02f);
+					effectMaterial = MaterialUtils.CreateFrostMaterial(baseColor, frostDepth, renderTexture, noiseTexture, 0.02f);
+					isMaterialDynamic = true;
+
+					var obj = new GameObject("TextureCamera");
+					obj.transform.SetParent(transform, false);
+					textureCamera = obj.AddComponent<Camera>();
+					textureCamera.CopyFrom(mainCamera);
+					textureCamera.clearFlags = mainCamera.clearFlags;
+					textureCamera.cullingMask = mainCamera.cullingMask;
+					textureCamera.targetTexture = renderTexture;
+					var data = obj.AddComponent<UniversalAdditionalCameraData>();
+					data.cameraStack.Clear();
+					data.cameraStack.Add(reflectionCamera);
+
+					reflectionCamera.targetTexture = renderTexture;
+
+					outputStage = mainCamera;
+				}
+				break;
+
+			case EffectMode.URPWater:
+				{
+					renderTexture = new RenderTexture(Screen.width, Screen.height, 24, RenderTextureFormat.ARGB32)
+					{
+						name = "WaterRenderTexture",
+						useMipMap = false,
+						autoGenerateMips = false,
+						filterMode = FilterMode.Bilinear,
+						useDynamicScale = true
+					};
+					renderTexture.Create();
+
+					effectMesh = new Mesh();
+					effectMaterial = MaterialUtils.CreateWaterMaterial(baseColor, renderTexture, rippleSpeed, rippleAmplitude, rippleFrequency, rippleOffset);
 					isMaterialDynamic = true;
 
 					var obj = new GameObject("TextureCamera");
@@ -206,7 +247,19 @@ public class ReflectionEffectCamera : MonoBehaviour
 					effectMaterial.SetFloat("_Depth", frostDepth);
 					effectMaterial.SetTexture("_NoiseTex", noiseTexture);
 					break;
+				case EffectMode.URPWater:
+					effectMaterial.SetFloat("_RippleSpeed", rippleSpeed);
+					effectMaterial.SetFloat("_RippleAmplitude", rippleAmplitude);
+					effectMaterial.SetFloat("_RippleFrequency", rippleFrequency);
+					effectMaterial.SetFloat("_RippleOffset", rippleOffset);
+					effectMaterial.SetFloat("_TimeSeed", timeSeed);
+					break;
 			}
+		}
+		// Update time seed for water animation
+		if (effectMode == EffectMode.URPWater)
+		{
+			timeSeed += Time.deltaTime;
 		}
 	}
 
@@ -248,7 +301,7 @@ public class ReflectionEffectCamera : MonoBehaviour
 			DestroyImmediate(effectMaterial);
 			effectMaterial = null;
 		}
-		if (renderTexture != null && effectMode != EffectMode.FrostEffect)
+		if (renderTexture != null && effectMode != EffectMode.FrostEffect && effectMode != EffectMode.URPWater)
 		{
 			DestroyImmediate(renderTexture);
 			renderTexture = null;
@@ -323,7 +376,43 @@ public class ReflectionEffectCamera : MonoBehaviour
 					}
 					if (effectMesh == null)
 						effectMesh = new Mesh();
-					effectMaterial = MaterialUtils.CreateFrostMaterial(baseColor, frostDepth, renderTexture, null, 0.02f);
+					effectMaterial = MaterialUtils.CreateFrostMaterial(baseColor, frostDepth, renderTexture, noiseTexture, 0.02f);
+					isMaterialDynamic = true;
+
+					if (textureCamera == null)
+					{
+						var obj = new GameObject("TextureCamera");
+						obj.transform.SetParent(transform, false);
+						textureCamera = obj.AddComponent<Camera>();
+						textureCamera.CopyFrom(mainCamera);
+						textureCamera.clearFlags = mainCamera.clearFlags;
+						textureCamera.cullingMask = mainCamera.cullingMask;
+						textureCamera.targetTexture = renderTexture;
+						var data = obj.AddComponent<UniversalAdditionalCameraData>();
+						data.cameraStack.Clear();
+						data.cameraStack.Add(reflectionCamera);
+					}
+
+					reflectionCamera.targetTexture = renderTexture;
+					break;
+				}
+			case EffectMode.URPWater:
+				{
+					if (renderTexture == null)
+					{
+						renderTexture = new RenderTexture(Screen.width, Screen.height, 24, RenderTextureFormat.ARGB32)
+						{
+							name = "WaterRenderTexture",
+							useMipMap = false,
+							autoGenerateMips = false,
+							filterMode = FilterMode.Bilinear,
+							useDynamicScale = true
+						};
+						renderTexture.Create();
+					}
+					if (effectMesh == null)
+						effectMesh = new Mesh();
+					effectMaterial = MaterialUtils.CreateWaterMaterial(baseColor, renderTexture, rippleSpeed, rippleAmplitude, rippleFrequency, rippleOffset);
 					isMaterialDynamic = true;
 
 					if (textureCamera == null)
@@ -359,6 +448,13 @@ public class ReflectionEffectCamera : MonoBehaviour
 				case EffectMode.FrostEffect:
 					effectMaterial.SetFloat("_Depth", frostDepth);
 					effectMaterial.SetTexture("_NoiseTex", noiseTexture);
+					break;
+				case EffectMode.URPWater:
+					effectMaterial.SetFloat("_RippleSpeed", rippleSpeed);
+					effectMaterial.SetFloat("_RippleAmplitude", rippleAmplitude);
+					effectMaterial.SetFloat("_RippleFrequency", rippleFrequency);
+					effectMaterial.SetFloat("_RippleOffset", rippleOffset);
+					effectMaterial.SetFloat("_TimeSeed", timeSeed);
 					break;
 			}
 		}
