@@ -101,7 +101,7 @@ public static class MaterialUtils
 		return material;
 	}
 
-	public static Material CreateWaterMaterial(Color baseColor, RenderTexture reflectionTexture, float rippleSpeed = 1f, float rippleAmplitude = 0.02f, float rippleFrequency = 5f, float rippleOffset = 0.5f)
+	public static Material CreateWaterMaterial(Color baseColor, RenderTexture reflectionTexture, float rippleSpeed = 0.5f, float rippleAmplitude = 0.5f, float rippleFrequency = 0.5f, float rippleOffset = 0.5f, float depthThreshold = 5.0f, float depthTolerance = 0.01f, float waterPlaneY = 0.0f, float debugDepthScalar = 0.0f)
 	{
 		var waterShader = Shader.Find("Unlit/URPWater");
 		if (!waterShader)
@@ -117,14 +117,13 @@ public static class MaterialUtils
 		material.SetFloat("_RippleFrequency", rippleFrequency);
 		material.SetFloat("_RippleOffset", rippleOffset);
 		material.SetFloat("_TimeSeed", 0f);
-		material.SetFloat("_Surface", 1f);
-		material.SetFloat("_SrcBlend", (float)BlendMode.SrcAlpha);
-		material.SetFloat("_DstBlend", (float)BlendMode.OneMinusSrcAlpha);
-		material.SetFloat("_ZWrite", 0f);
-		material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
-		material.SetOverrideTag("RenderType", "Transparent");
+		material.SetFloat("_DepthThreshold", depthThreshold);
+		material.SetFloat("_DepthTolerance", depthTolerance);
+		material.SetFloat("_WaterPlaneY", waterPlaneY);
+		material.SetFloat("_DebugDepthScalar", debugDepthScalar);
 		if (reflectionTexture != null)
 			material.SetTexture("_MainTex", reflectionTexture);
+
 		// Clear unrelated properties
 		if (material.HasProperty("_NoiseTex"))
 			material.SetTexture("_NoiseTex", null);
@@ -136,6 +135,9 @@ public static class MaterialUtils
 			material.SetFloat("_FilmIntensity", 0);
 		if (material.HasProperty("_NoiseScale"))
 			material.SetFloat("_NoiseScale", 0);
+
+		// Force shader recompilation
+		material.shader = waterShader;
 		return material;
 	}
 

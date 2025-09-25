@@ -9,6 +9,9 @@
         _RippleFrequency ("Ripple Frequency", Range(0, 1)) = 0.5
         _RippleOffset ("Ripple Offset", Range(0, 1)) = 0.5
         _TimeSeed ("Time Seed", Float) = 0.0
+        _DepthThreshold ("Depth Threshold", Float) = 2.0 // Depth at which depthScalar reaches 1
+        _DepthTolerance ("Depth Tolerance", Float) = 0.01 // Tolerance for depth test
+        _DebugDepthScalar ("Debug Depth Scalar", Range(0, 1)) = 0 // Set to 1 to visualize depthScalar
     }
     SubShader
     {
@@ -52,6 +55,9 @@
                 float _RippleFrequency;
                 float _RippleOffset;
                 float _TimeSeed;
+                float _DepthThreshold;
+                float _DepthTolerance;
+                float _DebugDepthScalar;
                 float4 _MainTex_TexelSize;
             CBUFFER_END
 
@@ -59,10 +65,10 @@
             SAMPLER(sampler_MainTex);
 
             // Internal scalars for adjusting normalized inputs
-            #define RIPPLE_SPEED_SCALE 20.0 // Scales normalized speed back to 0-20 range
-            #define RIPPLE_AMPLITUDE_SCALE 0.5 // Scales normalized amplitude back to 0-0.5 range
-            #define RIPPLE_FREQUENCY_SCALE 250.0 // Scales normalized frequency back to 1-250 range
-            #define RIPPLE_FREQUENCY_OFFSET 1.0 // Adds the minimum frequency (1.0)
+            #define RIPPLE_SPEED_SCALE 20.0
+            #define RIPPLE_AMPLITUDE_SCALE 0.5
+            #define RIPPLE_FREQUENCY_SCALE 250.0
+            #define RIPPLE_FREQUENCY_OFFSET 1.0
 
             Varyings vert(Attributes input)
             {
@@ -82,33 +88,45 @@
                 float amplitude = _RippleAmplitude * RIPPLE_AMPLITUDE_SCALE;
                 float frequency = _RippleFrequency * RIPPLE_FREQUENCY_SCALE + RIPPLE_FREQUENCY_OFFSET;
 
+                // Sample depth at undisplaced UV for depth test and scalar
+                float sampledDepth = SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, screenUV).r;
+                float fragmentDepth = input.screenPos.z / input.screenPos.w;
+
+                // Convert depths to linear eye-space
+                float sampledDepthLinear = LinearEyeDepth(sampledDepth, _ZBufferParams);
+                float fragmentDepthLinear = LinearEyeDepth(fragmentDepth, _ZBufferParams);
+
+                // Calculate depth scalar using squared normalized depth difference
+                float depthDifference = abs(sampledDepthLinear - fragmentDepthLinear);
+                float normalizedDepth = depthDifference / _DepthThreshold;
+                float depthScalar = normalizedDepth * normalizedDepth; // Square for slow initial rise
+                depthScalar = min(depthScalar, 1.0);
+
+                // Debug: Visualize depthScalar if enabled
+                if (_DebugDepthScalar > 0.5)
+                {
+                    return half4(depthScalar, depthScalar, depthScalar, 1);
+                }
+
                 // Procedural ripple displacement
                 float2 uv = input.uv;
                 float time = _TimeSeed * speed;
 
-                // Four intersecting sine waves with different angles and phases
+                // Two intersecting sine waves with different angles and phases
                 float2 wave1Dir = normalize(float2(1, 1)); // First wave direction
                 float2 wave2Dir = normalize(float2(-1, 1)); // Second wave direction, perpendicular
 
-                float wave1 = sin(dot(uv, wave1Dir) * frequency + time * 1.41421356237) + sin(frequency + time * .173205080757);
-                float wave2 = sin(dot(uv, wave2Dir) * frequency + time * 1.61803398875) + sin(frequency + time * .223606797750);
+                float wave1 = sin(dot(uv, wave1Dir) * frequency + time * 1.41421356237 + _RippleOffset) + sin(frequency + time * 0.173205080757 + _RippleOffset);
+                float wave2 = sin(dot(uv, wave2Dir) * frequency + time * 1.61803398875 + _RippleOffset) + sin(frequency + time * 0.223606797750 + _RippleOffset);
 
-                // Combine waves for displacement, using full directional vectors
-                float2 displacement = amplitude * (wave1 * wave1Dir + wave2 * wave2Dir) / input.screenPos.w;
+                // Combine waves for displacement, using depth scaling and depth scalar
+                float2 displacement = amplitude * (wave1 * wave1Dir + wave2 * wave2Dir) / input.screenPos.w * depthScalar;
 
                 // Apply displacement to UVs
                 float2 displacedUV = screenUV + displacement;
 
-                // Sample the depth buffer at displaced UV
-                float sampledDepth = SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, displacedUV).r;
-                float fragmentDepth = input.screenPos.z / input.screenPos.w;
-
-                // Convert depths to linear eye-space for comparison
-                float sampledDepthLinear = LinearEyeDepth(sampledDepth, _ZBufferParams);
-                float fragmentDepthLinear = LinearEyeDepth(fragmentDepth, _ZBufferParams);
-
-                // Reject samples that are nearer than the fragment's depth
-                if (sampledDepthLinear < fragmentDepthLinear)
+                // Reject samples that are nearer than the fragment's depth, with tolerance
+                if (sampledDepthLinear < fragmentDepthLinear - _DepthTolerance)
                 {
                     // Sample at undisplaced UV as fallback
                     half4 color = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, screenUV);
