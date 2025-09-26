@@ -141,6 +141,45 @@ public static class MaterialUtils
 		return material;
 	}
 
+	public static Material CreateWaterMaterialOpaque(Color baseColor, RenderTexture reflectionTexture, float rippleSpeed = 0.5f, float rippleAmplitude = 0.5f, float rippleFrequency = 0.5f, float rippleOffset = 0.5f, float depthThreshold = 5.0f, float depthTolerance = 0.01f, float debugDepthScalar = 0.0f)
+	{
+		var waterShader = Shader.Find("Unlit/URPWaterOpaque");
+		if (!waterShader)
+		{
+			Debug.LogWarning("MaterialUtils: Unlit/URPWaterOpaque shader not found! Falling back to URP/Unlit.");
+			return new Material(Shader.Find("Universal Render Pipeline/Unlit")) { color = new Color(0.25f, 0.5f, 0.75f, 1.0f) }; // Opaque fallback
+		}
+
+		var material = new Material(waterShader) { renderQueue = (int)RenderQueue.Geometry };
+		material.SetColor("_BaseColor", baseColor);
+		material.SetFloat("_RippleSpeed", rippleSpeed);
+		material.SetFloat("_RippleAmplitude", rippleAmplitude);
+		material.SetFloat("_RippleFrequency", rippleFrequency);
+		material.SetFloat("_RippleOffset", rippleOffset);
+		material.SetFloat("_TimeSeed", 0f);
+		material.SetFloat("_DepthThreshold", depthThreshold);
+		material.SetFloat("_DepthTolerance", depthTolerance);
+		material.SetFloat("_DebugDepthScalar", debugDepthScalar);
+		if (reflectionTexture != null)
+			material.SetTexture("_MainTex", reflectionTexture);
+
+		// Clear unrelated properties
+		if (material.HasProperty("_NoiseTex"))
+			material.SetTexture("_NoiseTex", null);
+		if (material.HasProperty("_Depth"))
+			material.SetFloat("_Depth", 0);
+		if (material.HasProperty("_NoiseStrength"))
+			material.SetFloat("_NoiseStrength", 0);
+		if (material.HasProperty("_FilmIntensity"))
+			material.SetFloat("_FilmIntensity", 0);
+		if (material.HasProperty("_NoiseScale"))
+			material.SetFloat("_NoiseScale", 0);
+
+		// Force shader recompilation
+		material.shader = waterShader;
+		return material;
+	}
+
 	public static Material CreateTransparentUnlitMaterial(Color baseColor)
 	{
 		var unlitShader = Shader.Find("Universal Render Pipeline/Unlit");

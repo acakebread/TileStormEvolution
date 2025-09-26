@@ -1,4 +1,6 @@
-﻿using System;
+﻿
+
+using System;
 using UnityEngine;
 using System.Collections.Generic;
 using UnityEngine.Rendering;
@@ -32,6 +34,7 @@ public class ReflectionEffectCamera : MonoBehaviour
 
 	public enum EffectMode
 	{
+		Debug,
 		PerfectMirror,
 		SurfaceFilm,
 		FrostEffect,
@@ -156,11 +159,19 @@ public class ReflectionEffectCamera : MonoBehaviour
 			case EffectMode.URPWater:
 				SetupRenderTexture("WaterRenderTexture");
 				effectMesh = new Mesh();
-				effectMaterial = MaterialUtils.CreateWaterMaterial(baseColor, renderTexture, rippleSpeed, rippleAmplitude, rippleFrequency, rippleOffset);
+				effectMaterial = MaterialUtils.CreateWaterMaterialOpaque(baseColor, renderTexture, rippleSpeed, rippleAmplitude, rippleFrequency, rippleOffset);
 				isMaterialDynamic = true;
 
 				SetupTextureCamera();
 				reflectionCamera.targetTexture = renderTexture;
+				outputStage = mainCamera;
+				break;
+
+			default:
+				var defaultData = mainCamera.gameObject.GetComponent<UniversalAdditionalCameraData>();
+				defaultData.cameraStack.Clear();
+				defaultData.cameraStack.Add(reflectionCamera);
+
 				outputStage = mainCamera;
 				break;
 		}
@@ -178,6 +189,7 @@ public class ReflectionEffectCamera : MonoBehaviour
 			provider.RegisterCommand(RenderPassEvent.AfterRendering,
 				(cmd, cam) =>
 				{
+					if (null == effectMesh) return;
 					FrustumPlaneIntersection.GenerateFrustumPlaneIntersectionMesh(mainCamera, planeNormal, offset, effectMesh);
 					if (effectMesh != null && effectMesh.vertexCount >= 3 && effectMesh.triangles.Length >= 3 && effectMaterial != null)
 					{
