@@ -31,4 +31,45 @@ public static class MatrixUtils
 
 		return Matrix4x4.Translate(p) * m * Matrix4x4.Translate(-p);
 	}
+
+	public static Matrix4x4 GetReflectedMatrixNonInverted(this Matrix4x4 matrix, Vector3 planeNormal, float planeOffset)
+	{
+		var n = planeNormal.normalized;
+		if (n == Vector3.zero)
+		{
+			UnityEngine.Debug.LogWarning("Matrix4x4Extensions: Invalid plane normal, returning original matrix");
+			return matrix;
+		}
+
+		// Reflect position
+		Matrix4x4 reflectionMatrix = MatrixUtils.GetReflectionMatrix(planeNormal, planeOffset);
+		Vector3 position = matrix.GetColumn(3);
+		Vector3 reflectedPosition = reflectionMatrix.MultiplyPoint(position);
+
+		// Compute reflected coordinate system
+		Matrix4x4 reflectedCameraMatrix = reflectionMatrix * matrix;
+		Vector3 xAxis = reflectedCameraMatrix.GetColumn(0);
+		Vector3 zAxis = reflectedCameraMatrix.GetColumn(2);
+		Vector3 upVector = Vector3.Cross(xAxis, zAxis).normalized;
+		if (upVector.sqrMagnitude < 0.0001f)
+		{
+			UnityEngine.Debug.LogWarning("Matrix4x4Extensions: Invalid up vector, returning original matrix");
+			return matrix;
+		}
+
+		Vector3 rightVector = Vector3.Cross(-upVector, zAxis).normalized;
+		if (rightVector.sqrMagnitude < 0.0001f)
+		{
+			UnityEngine.Debug.LogWarning("Matrix4x4Extensions: Invalid right vector, returning original matrix");
+			return matrix;
+		}
+
+		// Build result matrix
+		Matrix4x4 result = Matrix4x4.identity;
+		result.SetColumn(0, rightVector);
+		result.SetColumn(1, upVector);
+		result.SetColumn(2, zAxis);
+		result.SetColumn(3, new Vector4(reflectedPosition.x, reflectedPosition.y, reflectedPosition.z, 1));
+		return result;
+	}
 }

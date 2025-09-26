@@ -92,7 +92,7 @@ public static class FrustumPlaneIntersection
 		if (pointCount < 3)
 		{
 			targetMesh.Clear();
-			Debug.LogWarning($"FrustumPlaneIntersection: Too few intersection points ({pointCount}) to create mesh");
+			//Debug.LogWarning($"FrustumPlaneIntersection: Too few intersection points ({pointCount}) to create mesh");
 			return false;
 		}
 
