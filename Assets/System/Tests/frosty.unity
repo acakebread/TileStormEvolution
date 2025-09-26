@@ -471,8 +471,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   frostRadius: 64
-  baseColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
-  blurScale: 1
+  baseColor: {r: 0.5, g: 0.5, b: 0.5, a: 0.5019608}
   cullingMask:
     serializedVersion: 2
     m_Bits: 4294967295
