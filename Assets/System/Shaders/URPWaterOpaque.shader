@@ -81,82 +81,51 @@ Shader "Unlit/URPWaterOpaque"
             half4 frag(Varyings input) : SV_Target
             {
                 float2 screenUV = input.screenPos.xy / input.screenPos.w;
-
-                // Sample depth from main camera's depth texture
-                float sampledDepth = SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, screenUV).r;
-
-                //return half4(0.05f/sampledDepth, sampledDepth * 0.1, sampledDepth * 0.1, 1);
-
-
-                // Compute screen-space UVs for the reflection camera
-                float4 worldPos = input.positionWS;
-                float4 clipPosReflected = mul(_ReflectionViewProjMatrix, worldPos);
-                float2 reflectedUV = (clipPosReflected.xy / clipPosReflected.w) * 0.5 + 0.5;
-
-                // // // Clamp UVs and check validity
-                // reflectedUV = clamp(reflectedUV, 0.0, 1.0);
-                // float uvValid = all(reflectedUV >= 0.0 && reflectedUV <= 1.0) ? 1.0 : 0.0;
-
-                // // // Sample depth texture using reflected UVs
-                // float waterSampledDepth = uvValid ? SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, reflectedUV).r : sampledDepth;
-
-                // Sample depth texture using reflected UVs
-                float waterSampledDepth = SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, screenUV).r;
-                //return half4(0.05f/waterSampledDepth * 0.1, waterSampledDepth * 0.1, waterSampledDepth * 0.1, 1);
-
-                // Convert depths to linear eye-space
-                float sampledDepthLinear = LinearEyeDepth(sampledDepth, _ZBufferParams);
-                float waterSampledDepthLinear = LinearEyeDepth(waterSampledDepth, _ZBufferParams);
-                float fragmentDepthLinear = LinearEyeDepth(input.positionCS.z / input.positionCS.w, _ZBufferParams);
-
-                // Calculate depth difference
-                float depthDifference = abs(waterSampledDepthLinear - fragmentDepthLinear);
-
-                // Debug: Visualize depth difference
-                //return half4(depthDifference * 0.1, depthDifference * 0.1, depthDifference * 0.1, 1); // Scale for visibility
-
-                // Debug: Visualize waterSampledDepth
-                //return half4(waterSampledDepthLinear * 0.1, waterSampledDepthLinear * 0.1, waterSampledDepthLinear * 0.1, 1);
-
-                // Debug: Visualize reflected UVs
-                //return half4(reflectedUV.x, reflectedUV.y, 0, 1);
-
-                // Debug: Visualize UV validity
-                //return half4(uvValid, uvValid, uvValid, 1);
-
+                
                 // Normalize and scale inputs
                 float speed = _RippleSpeed * RIPPLE_SPEED_SCALE;
                 float amplitude = _RippleAmplitude * RIPPLE_AMPLITUDE_SCALE;
                 float frequency = _RippleFrequency * RIPPLE_FREQUENCY_SCALE + RIPPLE_FREQUENCY_OFFSET;
 
-                // Calculate depth scalar
-                float normalizedDepth = depthDifference / _DepthThreshold;
-                float depthScalar = normalizedDepth * normalizedDepth;
-                depthScalar = min(depthScalar, 1.0);
-
-                // Debug: Visualize depth scalar
-                //return half4(depthScalar, depthScalar, depthScalar, 1);
-
                 // Procedural ripple displacement
                 float2 uv = input.uv;
                 float time = _TimeSeed * speed;
 
-                float2 wave1Dir = normalize(float2(1, 1));
-                float2 wave2Dir = normalize(float2(-1, 1));
+                // Four intersecting sine waves with different angles and phases
+                float2 wave1Dir = normalize(float2(1, 1)); // First wave direction
+                float2 wave2Dir = normalize(float2(-1, 1)); // Second wave direction, perpendicular
 
-                float wave1 = sin(dot(uv, wave1Dir) * frequency + time * 1.41421356237 + _RippleOffset) + sin(frequency + time * 0.173205080757 + _RippleOffset);
-                float wave2 = sin(dot(uv, wave2Dir) * frequency + time * 1.61803398875 + _RippleOffset) + sin(frequency + time * 0.223606797750 + _RippleOffset);
+                float wave1 = sin(dot(uv, wave1Dir) * frequency + time * 1.30901699437) + sin(frequency + time * 0.161803398875);
+                float wave2 = sin(dot(uv, wave2Dir) * frequency + time * 1.61803398875) + sin(frequency + time * 0.323606797750);
 
-                float2 displacement = amplitude * (wave1 * wave1Dir + wave2 * wave2Dir) / input.screenPos.w * depthScalar;
+                // Combine waves for displacement, using full directional vectors
+                float2 displacement = amplitude * (wave1 * wave1Dir + wave2 * wave2Dir) / input.screenPos.w;
 
                 // Apply displacement to UVs
                 float2 displacedUV = screenUV + displacement;
 
+                // Sample the depth buffer at displaced UV
+                float sampledDepth = SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, displacedUV).r;
+                float fragmentDepth = input.screenPos.z / input.screenPos.w;
+
+                // Convert depths to linear eye-space for comparison
+                float sampledDepthLinear = LinearEyeDepth(sampledDepth, _ZBufferParams);
+                float fragmentDepthLinear = LinearEyeDepth(fragmentDepth, _ZBufferParams);
+
+                // Reject samples that are nearer than the fragment's depth
+                if (sampledDepthLinear < fragmentDepthLinear)
+                {
+                    // Sample at undisplaced UV as fallback
+                    half4 color = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, screenUV);
+                    color.rgb = color.rgb * (1.0 - _BaseColor.a) + _BaseColor.rgb * _BaseColor.a;
+                    return half4(color.rgb, 1);
+                }
+
                 // Sample texture with displaced UVs
                 half4 color = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, displacedUV);
 
-                // Apply base color tint
-                color.rgb = lerp(color.rgb, _BaseColor.rgb, 0.5);
+                // Blend with base color for water tint
+                color.rgb = color.rgb * (1.0 - _BaseColor.a) + _BaseColor.rgb * _BaseColor.a;
 
                 return half4(color.rgb, 1);
             }
