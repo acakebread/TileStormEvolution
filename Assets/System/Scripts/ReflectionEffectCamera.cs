@@ -1,6 +1,4 @@
-﻿
-
-using System;
+﻿using System;
 using UnityEngine;
 using System.Collections.Generic;
 using UnityEngine.Rendering;
@@ -38,10 +36,12 @@ public class ReflectionEffectCamera : MonoBehaviour
 		PerfectMirror,
 		SurfaceFilm,
 		FrostEffect,
-		URPWater
+		Water,
+		OceanEffect
 	}
 
 	[SerializeField] private EffectMode effectMode = EffectMode.PerfectMirror;
+	[SerializeField, HideInInspector] private EffectMode previousEffectMode;
 
 	// Used for frost effect
 	[SerializeField, Range(0f, 1f)] private float frostDepth = 0.5f;
@@ -52,11 +52,15 @@ public class ReflectionEffectCamera : MonoBehaviour
 	[SerializeField, Range(0.1f, 50f)] private float noiseScale = 1f;
 	[SerializeField] private Texture2D noiseTexture;
 
-	// Used for URPWater effect
+	// Used for water effect
 	[SerializeField, Range(0f, 1f)] private float rippleSpeed = 0.5f;
 	[SerializeField, Range(0f, 1f)] private float rippleAmplitude = 0.5f;
 	[SerializeField, Range(0f, 1f)] private float rippleFrequency = 0.5f;
 	[SerializeField, Range(0f, 1f)] private float rippleOffset = 0.5f;
+
+	// Used for ocean effect
+	[SerializeField, Range(0f, 1f)] private float frostThreshold = 0.8f;
+	[SerializeField, Range(0f, 0.2f)] private float frostFadeRange = 0.1f;
 
 	private Camera mainCamera;
 	private Camera reflectionCamera;
@@ -66,7 +70,7 @@ public class ReflectionEffectCamera : MonoBehaviour
 	private Material effectMaterial;
 	private bool isMaterialDynamic;
 	private bool isTextureDynamic;
-	private float timeSeed; // For URPWater time-based animation
+	private float timeSeed;
 
 	void Start()
 	{
@@ -100,8 +104,9 @@ public class ReflectionEffectCamera : MonoBehaviour
 		data.renderType = CameraRenderType.Overlay;
 		URPCameraHelper.SetClearDepth(data, false);
 
-		// Initialize effect settings
+		// Initialize effect and set previousEffectMode
 		InitializeEffect();
+		previousEffectMode = effectMode;
 	}
 
 	private void InitializeEffect()
@@ -109,11 +114,28 @@ public class ReflectionEffectCamera : MonoBehaviour
 		// Clean up existing dynamic resources
 		CleanupDynamicResources();
 
-		// Initialize noise texture for SurfaceFilm or FrostEffect
-		if (effectMode == EffectMode.SurfaceFilm || effectMode == EffectMode.FrostEffect)
+		// Initialize noise texture for SurfaceFilm, FrostEffect, or OceanEffect
+		if (effectMode == EffectMode.SurfaceFilm || effectMode == EffectMode.FrostEffect || effectMode == EffectMode.OceanEffect)
 		{
-			noiseTexture = noiseTexture != null ? noiseTexture : TextureUtils.GeneratePerlinNoiseTexture();
-			isTextureDynamic = noiseTexture == null;
+			if (noiseTexture == null)
+			{
+				noiseTexture = TextureUtils.GeneratePerlinNoiseTexture();
+				isTextureDynamic = true;
+			}
+			else
+			{
+				isTextureDynamic = false;
+			}
+		}
+		else
+		{
+			// Clean up noise texture if not needed
+			if (isTextureDynamic && noiseTexture != null)
+			{
+				DestroyImmediate(noiseTexture);
+				noiseTexture = null;
+				isTextureDynamic = false;
+			}
 		}
 
 		Camera outputStage = null;
@@ -148,7 +170,7 @@ public class ReflectionEffectCamera : MonoBehaviour
 			case EffectMode.FrostEffect:
 				SetupRenderTexture("RenderTexture");
 				effectMesh = new Mesh();
-				effectMaterial = MaterialUtils.CreateFrostMaterial(baseColor, frostDepth, renderTexture, noiseTexture, 0.02f);
+				effectMaterial = MaterialUtils.CreateFrostOpaqueMaterial(baseColor, frostDepth, renderTexture, noiseTexture, 0.02f);
 				isMaterialDynamic = true;
 
 				SetupTextureCamera();
@@ -156,11 +178,26 @@ public class ReflectionEffectCamera : MonoBehaviour
 				outputStage = mainCamera;
 				break;
 
-			case EffectMode.URPWater:
+			case EffectMode.Water:
 				SetupRenderTexture("WaterRenderTexture");
 				effectMesh = new Mesh();
 				effectMaterial = MaterialUtils.CreateWaterMaterialOpaque(baseColor, renderTexture, rippleSpeed, rippleAmplitude, rippleFrequency, rippleOffset);
 				isMaterialDynamic = true;
+
+				SetupTextureCamera();
+				reflectionCamera.targetTexture = renderTexture;
+				outputStage = mainCamera;
+				break;
+
+			case EffectMode.OceanEffect:
+				SetupRenderTexture("OceanRenderTexture");
+				effectMesh = new Mesh();
+				effectMaterial = MaterialUtils.CreateOceanOpaqueMaterial(baseColor, rippleSpeed, rippleAmplitude, rippleFrequency, rippleOffset, frostDepth, 0.02f, frostThreshold, frostFadeRange, renderTexture, noiseTexture);
+				isMaterialDynamic = true;
+
+				if (renderTexture == null) Debug.LogError("OceanEffect: renderTexture is null!");
+				if (noiseTexture == null) Debug.LogWarning("OceanEffect: noiseTexture is null, using generated Perlin noise.");
+				Debug.Log($"OceanEffect: Material created with shader {effectMaterial.shader.name}");
 
 				SetupTextureCamera();
 				reflectionCamera.targetTexture = renderTexture;
@@ -189,7 +226,7 @@ public class ReflectionEffectCamera : MonoBehaviour
 			provider.RegisterCommand(RenderPassEvent.AfterRendering,
 				(cmd, cam) =>
 				{
-					if (null == effectMesh) return;
+					if (effectMesh == null) return;
 					FrustumPlaneIntersection.GenerateFrustumPlaneIntersectionMesh(mainCamera, planeNormal, offset, effectMesh);
 					if (effectMesh != null && effectMesh.vertexCount >= 3 && effectMesh.triangles.Length >= 3 && effectMaterial != null)
 					{
@@ -208,7 +245,7 @@ public class ReflectionEffectCamera : MonoBehaviour
 			DestroyImmediate(effectMaterial);
 			effectMaterial = null;
 		}
-		if (renderTexture != null && effectMode != EffectMode.FrostEffect && effectMode != EffectMode.URPWater)
+		if (renderTexture != null && effectMode != EffectMode.FrostEffect && effectMode != EffectMode.Water && effectMode != EffectMode.OceanEffect)
 		{
 			DestroyImmediate(renderTexture);
 			renderTexture = null;
@@ -218,10 +255,15 @@ public class ReflectionEffectCamera : MonoBehaviour
 			DestroyImmediate(noiseTexture);
 			noiseTexture = null;
 		}
-		if (textureCamera != null && effectMode != EffectMode.FrostEffect && effectMode != EffectMode.URPWater)
+		if (textureCamera != null && effectMode != EffectMode.FrostEffect && effectMode != EffectMode.Water && effectMode != EffectMode.OceanEffect)
 		{
 			DestroyImmediate(textureCamera.gameObject);
 			textureCamera = null;
+		}
+		if (effectMesh != null)
+		{
+			DestroyImmediate(effectMesh);
+			effectMesh = null;
 		}
 	}
 
@@ -274,12 +316,26 @@ public class ReflectionEffectCamera : MonoBehaviour
 					effectMaterial.SetFloat("_Depth", frostDepth);
 					effectMaterial.SetTexture("_NoiseTex", noiseTexture);
 					break;
-				case EffectMode.URPWater:
+				case EffectMode.Water:
 					effectMaterial.SetFloat("_RippleSpeed", rippleSpeed);
 					effectMaterial.SetFloat("_RippleAmplitude", rippleAmplitude);
 					effectMaterial.SetFloat("_RippleFrequency", rippleFrequency);
 					effectMaterial.SetFloat("_RippleOffset", rippleOffset);
 					effectMaterial.SetFloat("_TimeSeed", timeSeed);
+					break;
+				case EffectMode.OceanEffect:
+					effectMaterial.SetFloat("_RippleSpeed", rippleSpeed);
+					effectMaterial.SetFloat("_RippleAmplitude", rippleAmplitude);
+					effectMaterial.SetFloat("_RippleFrequency", rippleFrequency);
+					effectMaterial.SetFloat("_RippleOffset", rippleOffset);
+					effectMaterial.SetFloat("_DepthThreshold", 128.0f); // Maps to _DepthMax, default 128
+					effectMaterial.SetFloat("_FrostDepth", frostDepth); // Maps to _Depth
+					effectMaterial.SetFloat("_FrostNoiseStrength", 0.02f); // Maps to _NoiseStrength
+					effectMaterial.SetFloat("_FrostThreshold", frostThreshold);
+					effectMaterial.SetFloat("_FrostFadeRange", frostFadeRange);
+					effectMaterial.SetTexture("_NoiseTex", noiseTexture);
+					effectMaterial.SetFloat("_RippleSeed", timeSeed);
+					//Debug.Log($"OceanEffect properties: FrostDepth={frostDepth}, FrostDepthMax=128, FrostNoiseStrength=0.02, NoiseTex={(noiseTexture != null ? noiseTexture.name : "null")}");
 					break;
 			}
 		}
@@ -288,7 +344,7 @@ public class ReflectionEffectCamera : MonoBehaviour
 	public void Update()
 	{
 		UpdateMaterialProperties();
-		if (effectMode == EffectMode.URPWater)
+		if (effectMode == EffectMode.Water || effectMode == EffectMode.OceanEffect)
 		{
 			timeSeed += Time.deltaTime;
 		}
@@ -325,7 +381,17 @@ public class ReflectionEffectCamera : MonoBehaviour
 		if (!isActiveAndEnabled || mainCamera == null)
 			return;
 
-		InitializeEffect();
+		// Only reinitialize if effectMode has changed
+		if (effectMode != previousEffectMode)
+		{
+			InitializeEffect();
+			previousEffectMode = effectMode;
+		}
+		else
+		{
+			// Update material properties without recreating resources
+			UpdateMaterialProperties();
+		}
 	}
 
 	void OnDestroy()

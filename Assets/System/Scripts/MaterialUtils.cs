@@ -101,6 +101,35 @@ public static class MaterialUtils
 		return material;
 	}
 
+	public static Material CreateFrostOpaqueMaterial(Color baseColor, float depth = 1f, RenderTexture reflectionTexture = null, Texture2D noiseTexture = null, float noiseStrength = 0.02f)
+	{
+		var frostShader = Shader.Find("Unlit/URPFrostOpaque");
+		if (!frostShader)
+		{
+			Debug.LogWarning("MaterialUtils: Unlit/URPFrostOpaque shader not found! Falling back to URP/Unlit.");
+			return new Material(Shader.Find("Universal Render Pipeline/Unlit")) { color = new Color(0.25f, 0.25f, 0.25f, 1.0f) }; // Opaque fallback
+		}
+
+		var material = new Material(frostShader) { renderQueue = (int)RenderQueue.Geometry };
+		material.SetColor("_BaseColor", baseColor);
+		material.SetFloat("_Depth", depth);
+		material.SetFloat("_NoiseStrength", noiseStrength);
+		if (reflectionTexture != null)
+			material.SetTexture("_MainTex", reflectionTexture);
+		if (noiseTexture != null)
+			material.SetTexture("_NoiseTex", noiseTexture);
+
+		// Clear unrelated properties
+		if (material.HasProperty("_FilmIntensity"))
+			material.SetFloat("_FilmIntensity", 0);
+		if (material.HasProperty("_NoiseScale"))
+			material.SetFloat("_NoiseScale", 0);
+
+		// Force shader recompilation
+		material.shader = frostShader;
+		return material;
+	}
+
 	public static Material CreateWaterMaterial(Color baseColor, RenderTexture reflectionTexture, float rippleSpeed = 0.5f, float rippleAmplitude = 0.5f, float rippleFrequency = 0.5f, float rippleOffset = 0.5f, float depthThreshold = 5.0f, float depthTolerance = 0.01f, float waterPlaneY = 0.0f, float debugDepthScalar = 0.0f)
 	{
 		var waterShader = Shader.Find("Unlit/URPWater");
@@ -177,6 +206,45 @@ public static class MaterialUtils
 
 		// Force shader recompilation
 		material.shader = waterShader;
+		return material;
+	}
+
+	public static Material CreateOceanOpaqueMaterial(Color baseColor, float rippleSpeed = 0.5f, float rippleAmplitude = 0.5f, float rippleFrequency = 0.5f, float rippleOffset = 0.5f, float frostDepth = 0.5f, float frostNoiseStrength = 0.02f, float frostThreshold = 0.8f, float frostFadeRange = 0.1f, RenderTexture reflectionTexture = null, Texture2D noiseTexture = null)
+	{
+		var oceanShader = Shader.Find("Unlit/URPOceanOpaque");
+		if (!oceanShader)
+		{
+			Debug.LogError("MaterialUtils: Unlit/URPOceanOpaque shader not found! Ensure the shader file is in the project and named correctly.");
+			return new Material(Shader.Find("Universal Render Pipeline/Unlit")) { color = new Color(0.25f, 0.5f, 0.75f, 1.0f) };
+		}
+		Debug.Log("MaterialUtils: Successfully found Unlit/URPOceanOpaque shader.");
+
+		var material = new Material(oceanShader) { renderQueue = (int)RenderQueue.Geometry };
+		material.SetColor("_BaseColor", baseColor);
+		material.SetFloat("_RippleSpeed", rippleSpeed);
+		material.SetFloat("_RippleAmplitude", rippleAmplitude);
+		material.SetFloat("_RippleFrequency", rippleFrequency);
+		material.SetFloat("_RippleOffset", rippleOffset);
+		material.SetFloat("_DepthThreshold", 128.0f); // Maps to _DepthMax, default 128
+		material.SetFloat("_FrostDepth", frostDepth); // Maps to _Depth
+		material.SetFloat("_FrostNoiseStrength", frostNoiseStrength); // Maps to _NoiseStrength
+		material.SetFloat("_FrostThreshold", frostThreshold);
+		material.SetFloat("_FrostFadeRange", frostFadeRange);
+		if (reflectionTexture != null)
+			material.SetTexture("_MainTex", reflectionTexture);
+		if (noiseTexture != null)
+			material.SetTexture("_NoiseTex", noiseTexture);
+
+		// Clear unrelated properties
+		if (material.HasProperty("_Depth"))
+			material.SetFloat("_Depth", 0);
+		if (material.HasProperty("_FilmIntensity"))
+			material.SetFloat("_FilmIntensity", 0);
+		if (material.HasProperty("_NoiseScale"))
+			material.SetFloat("_NoiseScale", 0);
+
+		// Force shader recompilation
+		material.shader = oceanShader;
 		return material;
 	}
 
