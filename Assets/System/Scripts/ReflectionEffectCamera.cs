@@ -45,11 +45,12 @@ public class ReflectionEffectCamera : MonoBehaviour
 
 	// Used for frost effect
 	[SerializeField, Range(0f, 1f)] private float frostDepth = 0.5f;
+	[SerializeField, Range(0f, 1f)] private float noiseStrength = 0.5f;
 	[SerializeField] private Color baseColor = new Color(0.25f, 0.25f, 0.25f, 0.5f);
 
 	// Used for surface film effect
 	[SerializeField, Range(0, 0.5f)] private float filmIntensity = 0.2f;
-	[SerializeField, Range(0.1f, 50f)] private float noiseScale = 1f;
+	[SerializeField, Range(0.01f, 5f)] private float noiseScale = 1f;
 	[SerializeField] private Texture2D noiseTexture;
 
 	// Used for water effect
@@ -170,7 +171,7 @@ public class ReflectionEffectCamera : MonoBehaviour
 			case EffectMode.FrostEffect:
 				SetupRenderTexture("RenderTexture");
 				effectMesh = new Mesh();
-				effectMaterial = MaterialUtils.CreateFrostOpaqueMaterial(baseColor, frostDepth, renderTexture, noiseTexture, 0.02f);
+				effectMaterial = MaterialUtils.CreateFrostOpaqueMaterial(baseColor, frostDepth, renderTexture, noiseTexture, noiseStrength);
 				isMaterialDynamic = true;
 
 				SetupTextureCamera();
@@ -192,7 +193,7 @@ public class ReflectionEffectCamera : MonoBehaviour
 			case EffectMode.OceanEffect:
 				SetupRenderTexture("OceanRenderTexture");
 				effectMesh = new Mesh();
-				effectMaterial = MaterialUtils.CreateOceanOpaqueMaterial(baseColor, rippleSpeed, rippleAmplitude, rippleFrequency, rippleOffset, frostDepth, 0.02f, frostThreshold, frostFadeRange, renderTexture, noiseTexture);
+				effectMaterial = MaterialUtils.CreateOceanOpaqueMaterial(baseColor, rippleSpeed, rippleAmplitude, rippleFrequency, rippleOffset, frostDepth, noiseStrength, frostThreshold, frostFadeRange, renderTexture, noiseTexture);
 				isMaterialDynamic = true;
 
 				if (renderTexture == null) Debug.LogError("OceanEffect: renderTexture is null!");
@@ -314,6 +315,7 @@ public class ReflectionEffectCamera : MonoBehaviour
 					break;
 				case EffectMode.FrostEffect:
 					effectMaterial.SetFloat("_Depth", frostDepth);
+					effectMaterial.SetFloat("_NoiseStrength", noiseStrength);
 					effectMaterial.SetTexture("_NoiseTex", noiseTexture);
 					break;
 				case EffectMode.Water:
@@ -330,7 +332,7 @@ public class ReflectionEffectCamera : MonoBehaviour
 					effectMaterial.SetFloat("_RippleOffset", rippleOffset);
 					effectMaterial.SetFloat("_DepthThreshold", 128.0f); // Maps to _DepthMax, default 128
 					effectMaterial.SetFloat("_FrostDepth", frostDepth); // Maps to _Depth
-					effectMaterial.SetFloat("_FrostNoiseStrength", 0.02f); // Maps to _NoiseStrength
+					effectMaterial.SetFloat("_FrostNoiseStrength", noiseStrength); // Maps to _NoiseStrength
 					effectMaterial.SetFloat("_FrostThreshold", frostThreshold);
 					effectMaterial.SetFloat("_FrostFadeRange", frostFadeRange);
 					effectMaterial.SetTexture("_NoiseTex", noiseTexture);

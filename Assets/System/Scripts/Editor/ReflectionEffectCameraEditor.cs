@@ -1,5 +1,4 @@
 using UnityEditor;
-using UnityEngine;
 
 [CustomEditor(typeof(ReflectionEffectCamera))]
 public class ReflectionEffectCameraEditor : Editor
@@ -34,6 +33,7 @@ public class ReflectionEffectCameraEditor : Editor
 
 			case ReflectionEffectCamera.EffectMode.FrostEffect:
 				EditorGUILayout.PropertyField(serializedObject.FindProperty("noiseTexture"));
+				EditorGUILayout.PropertyField(serializedObject.FindProperty("noiseStrength"));
 				EditorGUILayout.PropertyField(serializedObject.FindProperty("frostDepth"));
 				EditorGUILayout.PropertyField(serializedObject.FindProperty("baseColor"));
 				break;

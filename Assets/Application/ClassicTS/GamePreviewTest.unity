@@ -137,7 +137,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!64 &516813557
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -222,7 +222,7 @@ Transform:
   m_GameObject: {fileID: 516813556}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -6.89, y: -0.51, z: 0}
+  m_LocalPosition: {x: -5, y: -0.5, z: -5}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -491,13 +491,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1146321623}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.2588191, y: -0, z: -0, w: 0.9659258}
-  m_LocalPosition: {x: 0, y: 3, z: -4}
+  m_LocalRotation: {x: 0.7071068, y: 0, z: 0, w: 0.7071068}
+  m_LocalPosition: {x: -20, y: 3, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 30, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 90, y: 0, z: 0}
 --- !u!114 &1146321629
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -556,16 +556,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   planeNormal: {x: 0, y: 1, z: 0}
   offset: -0.2
-  effectMode: 5
-  frostDepth: 0.5
-  baseColor: {r: 0, g: 0, b: 0, a: 0.6784314}
+  effectMode: 4
+  previousEffectMode: 4
+  frostDepth: 0.57
+  noiseStrength: 0.097
+  baseColor: {r: 0, g: 0, b: 0, a: 0.5882353}
   filmIntensity: 0.2
   noiseScale: 1
   noiseTexture: {fileID: 0}
-  rippleSpeed: 0.153
-  rippleAmplitude: 0.13
-  rippleFrequency: 0.145
-  rippleOffset: 0
+  rippleSpeed: 0.201
+  rippleAmplitude: 0.06
+  rippleFrequency: 0.074
+  rippleOffset: 0.651
   frostThreshold: 0.8
   frostFadeRange: 0.1
 --- !u!114 &1146321631

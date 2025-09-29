@@ -157,6 +157,7 @@ MonoBehaviour:
   databaseJsonFile: {fileID: 4900000, guid: 96c40ca8617a15a4590b9728c168e29a, type: 3}
   geometryPath: ClassicTS/Geometry/
   texturePath: ClassicTS/Textures/
+  debugMode: 0
 --- !u!4 &862124737
 Transform:
   m_ObjectHideFlags: 0
@@ -445,12 +446,20 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   planeNormal: {x: 0, y: 1, z: 0}
   offset: -0.2
-  effectMode: 2
-  frostDepth: 0.07
-  baseColor: {r: 0, g: 0, b: 0, a: 0.36078432}
+  effectMode: 4
+  previousEffectMode: 4
+  frostDepth: 0.57
+  noiseStrength: 0.097
+  baseColor: {r: 0, g: 0, b: 0, a: 0.5882353}
   filmIntensity: 0.2
   noiseScale: 1
   noiseTexture: {fileID: 0}
+  rippleSpeed: 0.201
+  rippleAmplitude: 0.06
+  rippleFrequency: 0.074
+  rippleOffset: 0.651
+  frostThreshold: 0.8
+  frostFadeRange: 0.1
 --- !u!1 &1555382761
 GameObject:
   m_ObjectHideFlags: 0

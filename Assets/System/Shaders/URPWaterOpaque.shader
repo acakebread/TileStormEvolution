@@ -63,9 +63,9 @@ Shader "Unlit/URPWaterOpaque"
             SAMPLER(sampler_MainTex);
 
             // Internal scalars for adjusting normalized inputs
-            #define RIPPLE_SPEED_SCALE 20.0
-            #define RIPPLE_AMPLITUDE_SCALE 0.5
-            #define RIPPLE_FREQUENCY_SCALE 250.0
+            #define RIPPLE_SPEED_SCALE 10.0
+            #define RIPPLE_AMPLITUDE_SCALE 1.0
+            #define RIPPLE_FREQUENCY_SCALE 100.0
             #define RIPPLE_FREQUENCY_OFFSET 1.0
 
             Varyings vert(Attributes input)
@@ -85,7 +85,7 @@ Shader "Unlit/URPWaterOpaque"
                 // Normalize and scale inputs
                 float speed = _RippleSpeed * RIPPLE_SPEED_SCALE;
                 float amplitude = _RippleAmplitude * RIPPLE_AMPLITUDE_SCALE;
-                float frequency = _RippleFrequency * RIPPLE_FREQUENCY_SCALE + RIPPLE_FREQUENCY_OFFSET;
+                float frequency = _RippleFrequency * RIPPLE_FREQUENCY_SCALE;
 
                 // Procedural ripple displacement
                 float2 uv = input.uv;

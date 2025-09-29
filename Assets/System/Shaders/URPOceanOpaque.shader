@@ -13,7 +13,7 @@ Shader "Unlit/URPOceanOpaque"
         _DepthThreshold ("Frost Depth Max", Range(1, 512)) = 128
         _FrostDepth ("Frost Depth", Range(0, 1)) = 0.5
         _FrostNoiseStrength ("Frost Noise Strength", Range(0, 0.1)) = 0.02
-        _FrostThreshold ("Frost Threshold", Range(0, 1)) = 0.5 // Adjusted for displacement
+        _FrostThreshold ("Frost Threshold", Range(0, 1)) = 0.5
         _FrostFadeRange ("Frost Fade Range", Range(0, 0.2)) = 0.1
         _FrostBrightness ("Frost Brightness", Range(1, 2)) = 1.5
     }
@@ -73,7 +73,7 @@ Shader "Unlit/URPOceanOpaque"
             TEXTURE2D(_NoiseTex);
             SAMPLER(sampler_NoiseTex);
 
-            // Water ripple scalars (from water shader)
+            // Water ripple scalars
             #define RIPPLE_SPEED_SCALE 20.0
             #define RIPPLE_AMPLITUDE_SCALE 0.5
             #define RIPPLE_FREQUENCY_SCALE 250.0
@@ -117,7 +117,7 @@ Shader "Unlit/URPOceanOpaque"
 
                 // Debug: Visualize displacement magnitude
                 // float dispMag = length(displacement);
-                // return half4(dispMag * 100.0, dispMag * 100.0, dispMag * 100.0, 1); // Grayscale, expect small values
+                // return half4(dispMag * 100.0, dispMag * 100.0, dispMag * 100.0, 1);
 
                 // Depth testing
                 float sceneDepth = SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, screenUV).r;
@@ -128,10 +128,14 @@ Shader "Unlit/URPOceanOpaque"
                 // Debug: Visualize depthDiff
                 // return half4(depthDiff * 0.1, depthDiff * 0.1, depthDiff * 0.1, 1);
 
-                // Frost factor based on displacement
-                float dispMag = length(displacement) * 100.0; // Scale to match smoothstep range
-                float frostFactor = smoothstep(_FrostThreshold - _FrostFadeRange, _FrostThreshold, dispMag);
-                frostFactor = 1;//max(frostFactor, 0.1); // Ensure some frost visibility
+                // Frost factor based on noise and displacement
+                float dispMag = length(displacement) * 100.0;
+                half4 noise = SAMPLE_TEXTURE2D(_NoiseTex, sampler_NoiseTex, input.uv + displacement);
+                if (noise.r == 0 && noise.g == 0 && noise.b == 0)
+                    noise = half4(0.5, 0.5, 0.5, 1);
+                float noiseValue = (noise.r + noise.g + noise.b) / 3.0;
+                float frostFactor = smoothstep(_FrostThreshold - _FrostFadeRange, _FrostThreshold, noiseValue * (1.0 + dispMag));
+                frostFactor = max(frostFactor, 0.1);
 
                 // Debug: Visualize frostFactor
                 // return half4(frostFactor, frostFactor, frostFactor, 1);
@@ -184,14 +188,14 @@ Shader "Unlit/URPOceanOpaque"
                     }
 
                     half4 frostColor = sum / measurements;
-                    half4 noise = SAMPLE_TEXTURE2D(_NoiseTex, sampler_NoiseTex, input.uv);
+                    noise = SAMPLE_TEXTURE2D(_NoiseTex, sampler_NoiseTex, input.uv);
                     if (noise.r == 0 && noise.g == 0 && noise.b == 0)
                         noise = half4(0.5, 0.5, 0.5, 1);
                     frostColor.rgb += (noise.rgb - 0.5) * _FrostNoiseStrength;
 
-                    // // Brighten frost
-                    // frostColor.rgb *= _FrostBrightness;
-                    // frostColor.rgb = lerp(frostColor.rgb, 1.0, 0.3);
+                    // Brighten frost
+                    frostColor.rgb *= _FrostBrightness;
+                    frostColor.rgb = lerp(frostColor.rgb, 1.0, 0.3);
 
                     color = lerp(color, frostColor, frostFactor);
                 }

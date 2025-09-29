@@ -213,17 +213,17 @@ public static class FrustumPlaneIntersection
 		if (absNormal.y > absNormal.x && absNormal.y > absNormal.z)
 		{
 			// Y-dominant (e.g., ground plane): use XZ for UVs
-			return new Vector2(position.x, position.z) * 0.1f; // Scale for noise texture
+			return new Vector2(position.x, position.z) * 1f; // Scale for noise texture
 		}
 		else if (absNormal.x > absNormal.z)
 		{
 			// X-dominant: use YZ for UVs
-			return new Vector2(position.y, position.z) * 0.1f;
+			return new Vector2(position.y, position.z) * 1f;
 		}
 		else
 		{
 			// Z-dominant: use XY for UVs
-			return new Vector2(position.x, position.y) * 0.1f;
+			return new Vector2(position.x, position.y) * 1f;
 		}
 	}
 }
