@@ -706,9 +706,9 @@ MonoBehaviour:
   filmIntensity: 0.2
   noiseScale: 1
   noiseTexture: {fileID: 0}
-  rippleSpeed: 0.396
-  rippleAmplitude: 0.031
-  rippleFrequency: 0.119
+  rippleSpeed: 0.231
+  rippleAmplitude: 0.262
+  rippleFrequency: 0.372
   rippleOffset: 0.651
   frostThreshold: 0.8
   frostFadeRange: 0.1
