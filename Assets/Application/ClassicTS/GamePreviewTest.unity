@@ -239,6 +239,7 @@ GameObject:
   - component: {fileID: 756155710}
   - component: {fileID: 756155709}
   - component: {fileID: 756155707}
+  - component: {fileID: 756155711}
   m_Layer: 0
   m_Name: Post Processing Camera
   m_TagString: Untagged
@@ -349,13 +350,25 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 756155704}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.7071068, y: 0, z: 0, w: 0.7071068}
-  m_LocalPosition: {x: -20, y: 3, z: 0}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 0}
+  m_Father: {fileID: 1146321626}
   m_LocalEulerAnglesHint: {x: 90, y: 0, z: 0}
+--- !u!114 &756155711
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 756155704}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d110705e5a497ce49956c64ecbd5594b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &862124735
 GameObject:
   m_ObjectHideFlags: 0
@@ -623,7 +636,8 @@ Transform:
   m_LocalPosition: {x: -20, y: 3, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 756155710}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 90, y: 0, z: 0}
 --- !u!114 &1146321629
@@ -692,9 +706,9 @@ MonoBehaviour:
   filmIntensity: 0.2
   noiseScale: 1
   noiseTexture: {fileID: 0}
-  rippleSpeed: 0.201
-  rippleAmplitude: 0.06
-  rippleFrequency: 0.074
+  rippleSpeed: 0.396
+  rippleAmplitude: 0.031
+  rippleFrequency: 0.119
   rippleOffset: 0.651
   frostThreshold: 0.8
   frostFadeRange: 0.1
@@ -852,7 +866,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!65 &1950030456
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -947,10 +961,9 @@ SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
   - {fileID: 1146321626}
-  - {fileID: 756155710}
   - {fileID: 868117987}
   - {fileID: 862124737}
   - {fileID: 1555382763}
-  - {fileID: 516813560}
   - {fileID: 1759731158}
+  - {fileID: 516813560}
   - {fileID: 1950030459}

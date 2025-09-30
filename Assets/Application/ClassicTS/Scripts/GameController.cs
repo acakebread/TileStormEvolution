@@ -99,6 +99,13 @@ namespace ClassicTilestorm
 
 			// Mark first load as complete
 			isFirstLoad = false;
+
+			if (null != eggbotController)
+			{
+				var postProcessingCameraController = FindAnyObjectByType<PostProcessingCameraController>(FindObjectsInactive.Include);
+				if (null != postProcessingCameraController)
+					postProcessingCameraController.target = eggbotController.transform;
+			}
 		}
 
 		private void ChangeMap(int delta)
@@ -121,13 +128,13 @@ namespace ClassicTilestorm
 			if (InputUtility.GetKeyRepeat(KeyCode.LeftArrow)) ChangeMap(-1); // Previous map
 			if (InputUtility.GetKeyRepeat(KeyCode.RightArrow)) ChangeMap(1); // Next map
 
-			if (true == PreviewSettings.DebugMode) return;
-
 			if (null != eggbotController)
 			{
 				eggbotController.UpdateEggbot(locked ? null : mapManager);
 				CameraController.SetPlayer(eggbotController.transform);
 			}
+			if (true == PreviewSettings.DebugMode) return;
+
 			CameraController.Update();
 			CameraController.Project(Camera.main);
 		}
