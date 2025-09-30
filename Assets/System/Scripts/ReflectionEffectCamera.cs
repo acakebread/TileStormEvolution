@@ -66,6 +66,7 @@ public class ReflectionEffectCamera : MonoBehaviour
 	private Camera mainCamera;
 	private Camera reflectionCamera;
 	private Camera textureCamera;
+	[SerializeField] private Camera postProcessingCamera;
 	private RenderTexture renderTexture;
 	private Mesh effectMesh;
 	private Material effectMaterial;
@@ -99,7 +100,7 @@ public class ReflectionEffectCamera : MonoBehaviour
 		}
 
 		provider.RegisterCommand(RenderPassEvent.BeforeRendering, (cmd, cam) => { cmd.SetInvertCulling(true); });
-		provider.RegisterCommand(RenderPassEvent.AfterRenderingTransparents, (cmd, cam) => { cmd.SetInvertCulling(false); });
+		provider.RegisterCommand(RenderPassEvent.AfterRenderingOpaques, (cmd, cam) => { cmd.SetInvertCulling(false); });
 
 		var data = obj.AddComponent<UniversalAdditionalCameraData>();
 		data.renderType = CameraRenderType.Overlay;
@@ -149,7 +150,6 @@ public class ReflectionEffectCamera : MonoBehaviour
 
 				var mirrorData = mainCamera.gameObject.GetComponent<UniversalAdditionalCameraData>();
 				mirrorData.cameraStack.Clear();
-				mirrorData.cameraStack.Add(reflectionCamera);
 
 				reflectionCamera.targetTexture = null;
 				outputStage = reflectionCamera;
@@ -162,7 +162,6 @@ public class ReflectionEffectCamera : MonoBehaviour
 
 				var filmData = mainCamera.gameObject.GetComponent<UniversalAdditionalCameraData>();
 				filmData.cameraStack.Clear();
-				filmData.cameraStack.Add(reflectionCamera);
 
 				reflectionCamera.targetTexture = null;
 				outputStage = reflectionCamera;
@@ -213,6 +212,9 @@ public class ReflectionEffectCamera : MonoBehaviour
 				outputStage = mainCamera;
 				break;
 		}
+
+		var mainCameraData = mainCamera.gameObject.GetComponent<UniversalAdditionalCameraData>();
+		if (null != postProcessingCamera) mainCameraData.cameraStack.Add(postProcessingCamera);
 
 		// Update material properties
 		UpdateMaterialProperties();

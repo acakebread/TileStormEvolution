@@ -59,6 +59,9 @@ public class ReflectionEffectCameraEditor : Editor
 				break;
 		}
 
+		EditorGUILayout.LabelField("Post Processing Settings", EditorStyles.boldLabel);
+		EditorGUILayout.PropertyField(serializedObject.FindProperty("postProcessingCamera"));
+
 		if (serializedObject.ApplyModifiedProperties())
 		{
 			var targetScript = (ReflectionEffectCamera)target;
