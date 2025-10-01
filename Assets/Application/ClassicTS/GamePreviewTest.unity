@@ -407,6 +407,7 @@ MonoBehaviour:
   databaseJsonFile: {fileID: 4900000, guid: 96c40ca8617a15a4590b9728c168e29a, type: 3}
   geometryPath: ClassicTS/Geometry/
   texturePath: ClassicTS/Textures/
+  skycubesPath: ClassicTS/SkyCubes/
   debugMode: 1
 --- !u!4 &862124737
 Transform:
@@ -710,6 +711,7 @@ MonoBehaviour:
   rippleAmplitude: 0.262
   rippleFrequency: 0.372
   rippleOffset: 0.651
+  reflectionStrength: 0.5
   frostThreshold: 0.8
   frostFadeRange: 0.1
   postProcessingCamera: {fileID: 756155709}

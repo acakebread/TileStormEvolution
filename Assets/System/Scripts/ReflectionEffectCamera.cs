@@ -151,6 +151,7 @@ public class ReflectionEffectCamera : MonoBehaviour
 
 				var mirrorData = mainCamera.gameObject.GetComponent<UniversalAdditionalCameraData>();
 				mirrorData.cameraStack.Clear();
+				mirrorData.cameraStack.Add(reflectionCamera);
 
 				reflectionCamera.targetTexture = null;
 				outputStage = reflectionCamera;
@@ -163,6 +164,7 @@ public class ReflectionEffectCamera : MonoBehaviour
 
 				var filmData = mainCamera.gameObject.GetComponent<UniversalAdditionalCameraData>();
 				filmData.cameraStack.Clear();
+				filmData.cameraStack.Add(reflectionCamera);
 
 				reflectionCamera.targetTexture = null;
 				outputStage = reflectionCamera;
