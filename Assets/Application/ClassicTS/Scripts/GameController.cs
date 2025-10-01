@@ -12,8 +12,13 @@ namespace ClassicTilestorm
 		private EggbotController eggbotController;
 		private bool locked = false; // true while player is dragging tiles
 		private bool isFirstLoad = true; // Flag to track first map load after launch
+		private Material defaultSkycubeMaterial;
 
-		private void Awake() => gestureController = gameObject.GetComponent<GestureController>();
+		private void Awake()
+		{
+			defaultSkycubeMaterial = RenderSettings.skybox;
+			gestureController = gameObject.GetComponent<GestureController>();
+		}
 
 		void Start()
 		{
@@ -46,6 +51,8 @@ namespace ClassicTilestorm
 				Debug.LogError($"No map found for mapName={mapName}! Available maps: {string.Join(", ", DatabaseLoader.Maps.Select(m => m.name))}");
 				return;
 			}
+
+			LoadSkybox(currentMap.szMusic);
 
 			// Update PreviewSettings to reflect the loaded map
 			PreviewSettings.LoadMapName = currentMap.name;
@@ -106,6 +113,14 @@ namespace ClassicTilestorm
 				if (null != postProcessingCameraController)
 					postProcessingCameraController.target = eggbotController.transform;
 			}
+			if (true == PreviewSettings.DebugMode) Camera.main.fieldOfView = 45;
+		}
+
+		private void LoadSkybox(string skycube)
+		{
+			string skybox = $"{PreviewSettings.SkycubesPath}{skycube}Skybox".Replace(".mat", "");
+			var material = Resources.Load<Material>(skybox);
+			RenderSettings.skybox = material ? material : defaultSkycubeMaterial;
 		}
 
 		private void ChangeMap(int delta)

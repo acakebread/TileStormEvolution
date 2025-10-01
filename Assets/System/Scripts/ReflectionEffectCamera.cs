@@ -58,6 +58,7 @@ public class ReflectionEffectCamera : MonoBehaviour
 	[SerializeField, Range(0f, 1f)] private float rippleAmplitude = 0.5f;
 	[SerializeField, Range(0f, 1f)] private float rippleFrequency = 0.5f;
 	[SerializeField, Range(0f, 1f)] private float rippleOffset = 0.5f;
+	[SerializeField, Range(0f, 1f)] private float reflectionStrength = 0.5f;
 
 	// Used for ocean effect
 	[SerializeField, Range(0f, 1f)] private float frostThreshold = 0.8f;
@@ -182,6 +183,8 @@ public class ReflectionEffectCamera : MonoBehaviour
 				SetupRenderTexture("WaterRenderTexture");
 				effectMesh = new Mesh();
 				effectMaterial = MaterialUtils.CreateWaterMaterialOpaque(baseColor, renderTexture, rippleSpeed, rippleAmplitude, rippleFrequency, rippleOffset);
+				//effectMaterial.SetTexture("_Skybox", RenderSettings.skybox.mainTexture);
+				SkyboxUtility.SetSkyboxCubemap(effectMaterial, RenderSettings.skybox);
 				isMaterialDynamic = true;
 
 				SetupTextureCamera();
@@ -326,6 +329,9 @@ public class ReflectionEffectCamera : MonoBehaviour
 					effectMaterial.SetFloat("_RippleFrequency", rippleFrequency);
 					effectMaterial.SetFloat("_RippleOffset", rippleOffset);
 					effectMaterial.SetFloat("_TimeSeed", timeSeed);
+					effectMaterial.SetFloat("_ReflectionStrength", reflectionStrength);
+					SkyboxUtility.SetSkyboxCubemap(effectMaterial, RenderSettings.skybox);
+
 					break;
 				case EffectMode.OceanEffect:
 					effectMaterial.SetFloat("_RippleSpeed", rippleSpeed);

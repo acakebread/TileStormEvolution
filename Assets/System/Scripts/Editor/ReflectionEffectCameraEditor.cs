@@ -44,6 +44,7 @@ public class ReflectionEffectCameraEditor : Editor
 				EditorGUILayout.PropertyField(serializedObject.FindProperty("rippleAmplitude"));
 				EditorGUILayout.PropertyField(serializedObject.FindProperty("rippleFrequency"));
 				EditorGUILayout.PropertyField(serializedObject.FindProperty("rippleOffset"));
+				EditorGUILayout.PropertyField(serializedObject.FindProperty("reflectionStrength"));
 				break;
 
 			case ReflectionEffectCamera.EffectMode.OceanEffect:

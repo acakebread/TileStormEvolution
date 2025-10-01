@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System.Linq;
+using System.Collections.Generic; // Added for List
 
 namespace ClassicTilestorm
 {
@@ -13,9 +14,9 @@ namespace ClassicTilestorm
 
 	public class MapManager : MonoBehaviour, IMapManager
 	{
-		private int[] indices;//the current index mapping of the world - initial state is index array entry is equal to position - i.e. index[0] = 0, index[1] = 1...
-		private int[] offsets;//the stored deltas that are added to the base indices to initialise the authored stored puzzle state
-		private Tile[] tiles;//the tile properties and associated model
+		private int[] indices;
+		private int[] offsets;
+		private Tile[] tiles;
 
 		public int[] Indices { get => indices; private set => indices = value; }
 		public Tile[] Tiles { get => tiles; private set => tiles = value; }
@@ -23,6 +24,8 @@ namespace ClassicTilestorm
 		public int Width { get; private set; }
 		public int Height { get; private set; }
 		public int Count { get => Width * Height; }
+
+		private WindController windController; // Reference to WindController
 
 		private void Awake()
 		{
@@ -39,9 +42,11 @@ namespace ClassicTilestorm
 
 			LoadTileData(map.tiles);
 
-			if (PreviewSettings.Scrambled) Scramble(); else Solve();//(PreviewSettings.Scrambled ? (System.Action)Scramble : Solve).Invoke();
+			if (PreviewSettings.Scrambled) Scramble(); else Solve();
 
 			Debug.AssertFormat(null != indices && null != offsets, "invalid map tile indices or offsets data");
+
+			InitializeWindController(); // Initialize WindController after tiles are loaded
 
 			void LoadTileData(DatabaseLoader.Tiles dbTiles)
 			{
@@ -71,19 +76,55 @@ namespace ClassicTilestorm
 
 					var tileDef = DatabaseLoader.TileDefs.FirstOrDefault(td => td.szType == szType && td.szTheme == szTheme);
 					tiles[n].GameObject = GeometryManager.InstantiateTile(tileDef, transform, TileWorldPosition(this, n), tiles[n].Interactive);
+
+					if (tiles[n].GameObject != null)
+					{
+						var meshRenderer = tiles[n].GameObject.GetComponentInChildren<MeshRenderer>(true);
+						if (meshRenderer != null)
+						{
+							var filter = meshRenderer.GetComponent<MeshFilter>();
+							if (filter != null && filter.IsRuntimeWritable())
+							{
+								var morphGeomSway = tiles[n].GameObject.AddComponent<MorphGeomSway>();
+								morphGeomSway.SetCustomInfluenceVolume(Vector3.up, 0.2f);
+							}
+						}
+					}
 				}
 			}
 		}
 
+		// Initialize WindController and collect MorphGeomSway components
+		private void InitializeWindController()
+		{
+			windController = gameObject.AddComponent<WindController>();
+			var swayComponents = new List<(MorphGeomSway sway, Vector3 position)>();
+
+			for (int n = 0; n < tiles.Length; ++n)
+			{
+				if (tiles[n].GameObject == null) continue;
+				var sway = tiles[n].GameObject.GetComponent<MorphGeomSway>();
+				if (sway != null)
+				{
+					Vector3 position = TileWorldPosition(this, n);
+					swayComponents.Add((sway, position));
+				}
+			}
+
+			windController.Initialize(swayComponents);
+			Debug.Log($"WindController initialized with {swayComponents.Count} MorphGeomSway components.");
+		}
+
+		// Rest of MapManager remains unchanged
 		public void Scramble()
 		{
-			indices = Enumerable.Range(0, Count).Select(n => n + offsets[n]).ToArray();// set all values to index + offset
+			indices = Enumerable.Range(0, Count).Select(n => n + offsets[n]).ToArray();
 			UpdateTileObjectNamesAndPositions();
 		}
 
 		public void Solve()
 		{
-			indices = Enumerable.Range(0, Count).ToArray();// set all values to index
+			indices = Enumerable.Range(0, Count).ToArray();
 			UpdateTileObjectNamesAndPositions();
 		}
 
@@ -111,7 +152,7 @@ namespace ClassicTilestorm
 			return ray.GetPoint(distance);
 		}
 
-		private static Vector3 tile_origin = new(0.5f, 0f, 0.5f);//offset adjustment for all positions to align with world grid (tiles now align with world coordinates)
+		private static Vector3 tile_origin = new(0.5f, 0f, 0.5f);
 		public static Vector3 TileWorldPosition(IMapManager map, int index) => new Vector3(index % map.Width, 0f, index / map.Width) + tile_origin;
 
 		public static int WorldToMapIndex(IMapManager map, Vector3 vec) => vec.x >= 0 && vec.x < map.Width && vec.z >= 0 && vec.z < map.Height ? (int)vec.z * map.Width + (int)vec.x : -1;
