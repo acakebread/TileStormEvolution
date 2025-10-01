@@ -12,8 +12,8 @@ Shader "Unlit/URPWaterOpaque"
         _DepthThreshold ("Depth Threshold", Float) = 5.0
         _ReflectionStrength ("Reflection Strength", Range(0, 1)) = 0.25
         _Skybox ("Skybox", Cube) = "" {}
-        _NormalScale ("Normal Scale", Range(0, 5)) = 2.0 // Increased range for stronger perturbation
-        _FresnelPower ("Fresnel Power", Range(1, 5)) = 2.0 // Controls Fresnel effect strength
+        _NormalScale ("Normal Scale", Range(0, 5)) = 2.0
+        _FresnelPower ("Fresnel Power", Range(1, 5)) = 2.0
     }
     SubShader
     {
@@ -105,17 +105,31 @@ Shader "Unlit/URPWaterOpaque"
                 // Procedural ripple displacement for texture sampling
                 float2 uv = input.uv;
 
-                // Four intersecting sine waves with different angles and phases
-                float2 wave1Dir = normalize(float2(1, 0));
-                float2 wave2Dir = normalize(float2(0, 1));
+                // Four waves at 45-degree angles
+                float2 wave1Dir = normalize(float2(cos(0.0), sin(0.0))); // 0°
+                float2 wave2Dir = normalize(float2(cos(0.785398), sin(0.785398))); // 45°
+                float2 wave3Dir = normalize(float2(cos(1.570796), sin(1.570796))); // 90°
+                float2 wave4Dir = normalize(float2(cos(2.356194), sin(2.356194))); // 135°
 
-                float seed1 = uv.x * frequency + time;
-                float seed2 = uv.y * frequency + time;
+                // Seeds with UV and phase offsets
+                float seed1 = dot(uv, wave1Dir) * frequency + time + _RippleOffset * 0.0;
+                float seed2 = dot(uv, wave2Dir) * frequency + time + _RippleOffset * 0.25;
+                float seed3 = dot(uv, wave3Dir) * frequency + time + _RippleOffset * 0.5;
+                float seed4 = dot(uv, wave4Dir) * frequency + time + _RippleOffset * 0.75;
+
+                // Combine multiple sine terms for noise
                 float wave1 = (sin(seed1 * frequency) + sin(seed1 * 1.61803398875) - sin(seed1 * 1.41421356237));
                 float wave2 = (sin(seed2 * frequency) + sin(seed2 * 1.73205080757) - sin(seed2 * 1.30901699437));
+                float wave3 = (sin(seed3 * frequency) + sin(seed3 * 1.61803398875) - sin(seed3 * 1.41421356237));
+                float wave4 = (sin(seed4 * frequency) + sin(seed4 * 1.73205080757) - sin(seed4 * 1.30901699437));
 
                 // Combine waves for displacement
-                float2 displacement = amplitude * (wave1 * wave1Dir + wave2 * wave2Dir) / input.screenPos.w;
+                float2 displacement = amplitude * (
+                    wave1 * wave1Dir +
+                    wave2 * wave2Dir +
+                    wave3 * wave3Dir +
+                    wave4 * wave4Dir
+                ) / input.screenPos.w;
 
                 // Apply displacement to UVs for texture sampling
                 float2 displacedUV = screenUV + displacement;
