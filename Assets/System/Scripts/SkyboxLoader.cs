@@ -50,8 +50,7 @@ public static class SkyboxUtility
 
 			if (front != null && back != null && left != null && right != null && up != null && down != null)
 			{
-				Debug.LogWarning("Skybox is 6-sided. No cubemap property available. " +
-								 "Consider baking these six textures into a Cubemap if required.");
+				//Debug.LogWarning("Skybox is 6-sided. No cubemap property available. " + "Consider baking these six textures into a Cubemap if required.");
 				// You could create a Cubemap dynamically here if needed, but Unity doesn’t do this automatically.
 			}
 		}
