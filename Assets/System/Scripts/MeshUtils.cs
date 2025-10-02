@@ -20,6 +20,20 @@ namespace ClassicTilestorm
 			}
 		}
 
+		private struct Edge
+		{
+			public int a, b;
+
+			public Edge(int a, int b)
+			{
+				this.a = Mathf.Min(a, b);
+				this.b = Mathf.Max(a, b);
+			}
+
+			public override int GetHashCode() => a ^ b * 397;
+			public override bool Equals(object obj) => obj is Edge e && e.a == a && e.b == b;
+		}
+
 		public static Mesh SubdivideMeshLongEdges(Mesh inputMesh, Vector3 divisionAxis, float maxSegmentLength, Vector3 meshCenter)
 		{
 			divisionAxis = divisionAxis.normalized;
@@ -57,7 +71,7 @@ namespace ClassicTilestorm
 				return new Mesh();
 			}
 
-			// Deduplicate vertices using the same robust method as MeshUtilTest
+			// Deduplicate vertices using the existing method
 			var (uniqueVerts, uniqueTris) = DeduplicateVertices(allVerts, allTris);
 
 			// Build and return the unified mesh
@@ -106,8 +120,8 @@ namespace ClassicTilestorm
 			float midProj = (minProj + maxProj) / 2f;
 			float offset = Vector3.Dot(meshCenter + divisionAxis * midProj, divisionAxis);
 
-			// Use SplitMeshAlongPlane to get a single mesh
-			Mesh tempMesh = MeshUtilTest.SplitMeshAlongPlane(mesh, divisionAxis, offset);
+			// Use integrated SplitMeshAlongPlane
+			Mesh tempMesh = SplitMeshAlongPlane(mesh, divisionAxis, offset);
 
 			if (tempMesh.vertexCount == 0)
 			{
@@ -129,7 +143,6 @@ namespace ClassicTilestorm
 			List<Vector2> bottomUVs = new List<Vector2>();
 			List<int> bottomTris = new List<int>();
 
-			// Use distinct names to avoid conflicts
 			var splitVerts = tempMesh.vertices;
 			var splitNorms = tempMesh.normals;
 			var splitUVs = tempMesh.uv;
@@ -193,6 +206,438 @@ namespace ClassicTilestorm
 			Object.Destroy(bottomMesh);
 		}
 
+		private static Mesh SplitMeshAlongPlane(Mesh mesh, Vector3 planeNormal, float offset)
+		{
+			planeNormal = planeNormal.normalized;
+
+			var verts = mesh.vertices;
+			var tris = mesh.triangles;
+			var norms = mesh.normals.Length == verts.Length ? mesh.normals : null;
+			var uvs = mesh.uv.Length == verts.Length ? mesh.uv : null;
+
+			List<VertexData> allVerts = new List<VertexData>();
+			List<int[]> triIndices = new List<int[]>();
+
+			for (int i = 0; i < tris.Length; i += 3)
+			{
+				int[] triIdx = new int[3];
+				for (int j = 0; j < 3; j++)
+				{
+					int idx = tris[i + j];
+					triIdx[j] = allVerts.Count;
+					allVerts.Add(new VertexData(
+						verts[idx],
+						norms != null ? norms[idx] : Vector3.up,
+						uvs != null ? uvs[idx] : Vector2.zero
+					));
+				}
+				triIndices.Add(triIdx);
+			}
+
+			HashSet<int> processedTriangles = new HashSet<int>();
+			List<int[]> newTris = new List<int[]>();
+			Dictionary<Edge, int> edgeSplitVertex = new Dictionary<Edge, int>();
+
+			for (int i = 0; i < triIndices.Count; i++)
+			{
+				for (int j = i + 1; j < triIndices.Count; j++)
+				{
+					if (processedTriangles.Contains(i) || processedTriangles.Contains(j))
+						continue;
+
+					int[] tri1 = triIndices[i];
+					int[] tri2 = triIndices[j];
+					VertexData[] v1 = new VertexData[] { allVerts[tri1[0]], allVerts[tri1[1]], allVerts[tri1[2]] };
+					VertexData[] v2 = new VertexData[] { allVerts[tri2[0]], allVerts[tri2[1]], allVerts[tri2[2]] };
+
+					bool shareEdge = AreTrianglesSharingEdge(v1, v2);
+					bool coplanar = AreTrianglesCoplanar(v1, v2, tri1, tri2, allVerts);
+
+					if (shareEdge && coplanar)
+					{
+						SplitCoplanarPair(tri1, tri2, v1, v2, planeNormal, offset, edgeSplitVertex, allVerts, newTris);
+						processedTriangles.Add(i);
+						processedTriangles.Add(j);
+					}
+				}
+			}
+
+			for (int i = 0; i < triIndices.Count; i++)
+			{
+				if (processedTriangles.Contains(i))
+					continue;
+
+				int[] tri = triIndices[i];
+				VertexData[] v = new VertexData[] { allVerts[tri[0]], allVerts[tri[1]], allVerts[tri[2]] };
+
+				float d0 = Vector3.Dot(v[0].pos, planeNormal) - offset;
+				float d1 = Vector3.Dot(v[1].pos, planeNormal) - offset;
+				float d2 = Vector3.Dot(v[2].pos, planeNormal) - offset;
+
+				bool above0 = d0 >= 0;
+				bool above1 = d1 >= 0;
+				bool above2 = d2 >= 0;
+
+				int aboveCount = (above0 ? 1 : 0) + (above1 ? 1 : 0) + (above2 ? 1 : 0);
+
+				if (aboveCount == 0 || aboveCount == 3)
+				{
+					newTris.Add(tri);
+					continue;
+				}
+
+				List<VertexData> top = new List<VertexData>();
+				List<VertexData> bottom = new List<VertexData>();
+
+				SplitTrianglePlane(v, tri, planeNormal, offset, edgeSplitVertex, allVerts, top, bottom);
+
+				AddPolygonToTris(top, newTris, allVerts);
+				AddPolygonToTris(bottom, newTris, allVerts);
+			}
+
+			var (uniqueVerts, uniqueTris) = DeduplicateVertices(allVerts, newTris.SelectMany(t => t).ToList());
+
+			return BuildMesh(uniqueVerts, uniqueTris);
+		}
+
+		private static bool AreTrianglesSharingEdge(VertexData[] tri1, VertexData[] tri2)
+		{
+			int sharedCount = 0;
+			for (int a = 0; a < 3; a++)
+			{
+				for (int b = 0; b < 3; b++)
+				{
+					if (Vector3.SqrMagnitude(tri1[a].pos - tri2[b].pos) < 1e-6f)
+					{
+						sharedCount++;
+						break;
+					}
+				}
+			}
+			return sharedCount == 2;
+		}
+
+		private static bool AreTrianglesCoplanar(VertexData[] tri1, VertexData[] tri2, int[] tri1Idx, int[] tri2Idx, List<VertexData> allVerts)
+		{
+			Vector3 n1 = Vector3.Cross(tri1[1].pos - tri1[0].pos, tri1[2].pos - tri1[0].pos).normalized;
+			Vector3 n2 = Vector3.Cross(tri2[1].pos - tri2[0].pos, tri2[2].pos - tri2[0].pos).normalized;
+
+			float dot = Mathf.Abs(Vector3.Dot(n1, n2));
+			if (dot < 0.9999f)
+				return false;
+
+			float d1 = Vector3.Dot(n1, tri1[0].pos);
+			for (int i = 0; i < 3; i++)
+			{
+				float dist = Mathf.Abs(Vector3.Dot(n1, tri2[i].pos) - d1);
+				if (dist > 1e-4f)
+					return false;
+			}
+
+			Dictionary<Vector3, List<int>> posToIndices = new Dictionary<Vector3, List<int>>(new VertexPositionEqualityComparer(1e-6f));
+			foreach (int idx in tri1Idx.Concat(tri2Idx))
+			{
+				Vector3 pos = allVerts[idx].pos;
+				if (!posToIndices.TryGetValue(pos, out var list))
+				{
+					list = new List<int>();
+					posToIndices[pos] = list;
+				}
+				list.Add(idx);
+			}
+
+			List<int> sharedVerts = new List<int>();
+			List<int> uniqueVerts1 = new List<int>();
+			List<int> uniqueVerts2 = new List<int>();
+
+			foreach (var kvp in posToIndices)
+			{
+				if (kvp.Value.Count > 1)
+				{
+					sharedVerts.Add(kvp.Value[0]);
+				}
+				else
+				{
+					if (tri1Idx.Contains(kvp.Value[0]))
+					{
+						uniqueVerts1.Add(kvp.Value[0]);
+					}
+					else
+					{
+						uniqueVerts2.Add(kvp.Value[0]);
+					}
+				}
+			}
+
+			if (sharedVerts.Count != 2 || uniqueVerts1.Count != 1 || uniqueVerts2.Count != 1)
+				return false;
+
+			int v1Idx = uniqueVerts1[0];
+			int v2Idx = uniqueVerts2[0];
+			int s1Idx = sharedVerts[0];
+			int s2Idx = sharedVerts[1];
+
+			Vector3 v1Normal = allVerts[v1Idx].normal;
+			Vector3 s1Normal = allVerts[s1Idx].normal;
+			Vector3 v2Normal = allVerts[v2Idx].normal;
+			Vector3 s2Normal = allVerts[s2Idx].normal;
+
+			float dot1 = Mathf.Abs(Vector3.Dot(v1Normal, s1Normal));
+			float dot2 = Mathf.Abs(Vector3.Dot(v2Normal, s2Normal));
+
+			return dot1 >= 0.9999f && dot2 >= 0.9999f;
+		}
+
+		private static void SplitTrianglePlane(VertexData[] v, int[] tri, Vector3 planeNormal, float offset,
+			Dictionary<Edge, int> edgeSplitVertex, List<VertexData> allVerts, List<VertexData> top, List<VertexData> bottom)
+		{
+			for (int i = 0; i < 3; i++)
+			{
+				int i0 = i;
+				int i1 = (i + 1) % 3;
+
+				VertexData a = v[i0];
+				VertexData b = v[i1];
+				int aIdx = tri[i0];
+				int bIdx = tri[i1];
+
+				float da = Vector3.Dot(a.pos, planeNormal) - offset;
+				float db = Vector3.Dot(b.pos, planeNormal) - offset;
+
+				bool aboveA = da >= 0;
+				bool aboveB = db >= 0;
+
+				if (aboveA) top.Add(a); else bottom.Add(a);
+
+				if (aboveA != aboveB)
+				{
+					Edge e = new Edge(aIdx, bIdx);
+					if (!edgeSplitVertex.TryGetValue(e, out int newIndex))
+					{
+						float t = da / (da - db);
+						t = Mathf.Clamp01(t);
+						VertexData interp = new VertexData(
+							Vector3.Lerp(a.pos, b.pos, t),
+							Vector3.Lerp(a.normal, b.normal, t).normalized,
+							Vector2.Lerp(a.uv, b.uv, t)
+						);
+						newIndex = allVerts.Count;
+						allVerts.Add(interp);
+						edgeSplitVertex[e] = newIndex;
+					}
+					top.Add(allVerts[newIndex]);
+					bottom.Add(allVerts[newIndex]);
+				}
+			}
+		}
+
+		private static void SplitCoplanarPair(int[] tri1, int[] tri2, VertexData[] v1, VertexData[] v2,
+			Vector3 planeNormal, float offset, Dictionary<Edge, int> edgeSplitVertex, List<VertexData> allVerts, List<int[]> newTris)
+		{
+			Dictionary<Vector3, List<int>> posToIndices = new Dictionary<Vector3, List<int>>(new VertexPositionEqualityComparer(1e-6f));
+			foreach (int idx in tri1.Concat(tri2))
+			{
+				Vector3 pos = allVerts[idx].pos;
+				if (!posToIndices.TryGetValue(pos, out var list))
+				{
+					list = new List<int>();
+					posToIndices[pos] = list;
+				}
+				list.Add(idx);
+			}
+
+			List<int> sharedVerts = new List<int>();
+			List<int> uniqueVerts1 = new List<int>();
+			List<int> uniqueVerts2 = new List<int>();
+
+			foreach (var kvp in posToIndices)
+			{
+				if (kvp.Value.Count > 1)
+				{
+					sharedVerts.Add(kvp.Value[0]);
+				}
+				else
+				{
+					if (tri1.Contains(kvp.Value[0]))
+					{
+						uniqueVerts1.Add(kvp.Value[0]);
+					}
+					else
+					{
+						uniqueVerts2.Add(kvp.Value[0]);
+					}
+				}
+			}
+
+			if (sharedVerts.Count != 2 || uniqueVerts1.Count != 1 || uniqueVerts2.Count != 1)
+			{
+				newTris.Add(tri1);
+				newTris.Add(tri2);
+				return;
+			}
+
+			int v1Idx = uniqueVerts1[0];
+			int v2Idx = uniqueVerts2[0];
+			int s1Idx = sharedVerts[0];
+			int s2Idx = sharedVerts[1];
+
+			VertexData v1Unique = allVerts[v1Idx];
+			VertexData v2Unique = allVerts[v2Idx];
+			VertexData s1 = allVerts[s1Idx];
+			VertexData s2 = allVerts[s2Idx];
+
+			float d1 = Vector3.Dot(v1Unique.pos, planeNormal) - offset;
+			float d2 = Vector3.Dot(v2Unique.pos, planeNormal) - offset;
+			float ds1 = Vector3.Dot(s1.pos, planeNormal) - offset;
+			float ds2 = Vector3.Dot(s2.pos, planeNormal) - offset;
+
+			bool above1 = d1 >= 0;
+			bool above2 = d2 >= 0;
+			bool aboveS1 = ds1 >= 0;
+			bool aboveS2 = ds2 >= 0;
+
+			if ((above1 && above2 && aboveS1 && aboveS2) || (!above1 && !above2 && !aboveS1 && !aboveS2))
+			{
+				newTris.Add(tri1);
+				newTris.Add(tri2);
+				return;
+			}
+
+			int p1Idx = -1;
+			Edge e1 = new Edge(v1Idx, s1Idx);
+			if (above1 != aboveS1)
+			{
+				if (!edgeSplitVertex.TryGetValue(e1, out p1Idx))
+				{
+					float t = d1 / (d1 - ds1);
+					t = Mathf.Clamp01(t);
+					VertexData interp = new VertexData(
+						Vector3.Lerp(v1Unique.pos, s1.pos, t),
+						v1Unique.normal,
+						Vector2.Lerp(v1Unique.uv, s1.uv, t)
+					);
+					p1Idx = allVerts.Count;
+					allVerts.Add(interp);
+					edgeSplitVertex[e1] = p1Idx;
+				}
+			}
+
+			int p2Idx = -1;
+			Edge e2 = new Edge(v2Idx, s2Idx);
+			if (above2 != aboveS2)
+			{
+				if (!edgeSplitVertex.TryGetValue(e2, out p2Idx))
+				{
+					float t = d2 / (d2 - ds2);
+					t = Mathf.Clamp01(t);
+					VertexData interp = new VertexData(
+						Vector3.Lerp(v2Unique.pos, s2.pos, t),
+						v2Unique.normal,
+						Vector2.Lerp(v2Unique.uv, s2.uv, t)
+					);
+					p2Idx = allVerts.Count;
+					allVerts.Add(interp);
+					edgeSplitVertex[e2] = p2Idx;
+				}
+			}
+
+			if (p1Idx != -1 && p2Idx != -1)
+			{
+				Vector3 faceNormal = Vector3.Cross(v1Unique.pos - s1.pos, s2.pos - s1.pos).normalized;
+				if (Vector3.Dot(faceNormal, v1Unique.normal) < 0)
+				{
+					faceNormal = -faceNormal;
+				}
+
+				if (aboveS1 && aboveS2)
+				{
+					AddTriangleWithNormalCheck(newTris, allVerts, s1Idx, s2Idx, p2Idx, faceNormal, "Above s1-s2-p2");
+					AddTriangleWithNormalCheck(newTris, allVerts, s1Idx, p2Idx, p1Idx, faceNormal, "Above s1-p2-p1");
+				}
+				else if (above1 && above2)
+				{
+					AddTriangleWithNormalCheck(newTris, allVerts, v1Idx, v2Idx, p2Idx, faceNormal, "Above v1-v2-p2");
+					AddTriangleWithNormalCheck(newTris, allVerts, v1Idx, p2Idx, p1Idx, faceNormal, "Above v1-p2-p1");
+				}
+				else if (above1)
+				{
+					AddTriangleWithNormalCheck(newTris, allVerts, v1Idx, p2Idx, p1Idx, faceNormal, "Above v1-p2-p1");
+					AddTriangleWithNormalCheck(newTris, allVerts, v1Idx, s2Idx, p2Idx, faceNormal, "Above v1-s2-p2");
+				}
+				else if (above2)
+				{
+					AddTriangleWithNormalCheck(newTris, allVerts, v2Idx, p1Idx, p2Idx, faceNormal, "Above v2-p1-p2");
+					AddTriangleWithNormalCheck(newTris, allVerts, v2Idx, s1Idx, p1Idx, faceNormal, "Above v2-s1-p1");
+				}
+
+				if (!aboveS1 && !aboveS2)
+				{
+					AddTriangleWithNormalCheck(newTris, allVerts, s1Idx, p2Idx, s2Idx, faceNormal, "Below s1-p2-s2");
+					AddTriangleWithNormalCheck(newTris, allVerts, s1Idx, p1Idx, p2Idx, faceNormal, "Below s1-p1-p2");
+				}
+				else if (!above1 && !above2)
+				{
+					AddTriangleWithNormalCheck(newTris, allVerts, v1Idx, p1Idx, v2Idx, faceNormal, "Below v1-p1-v2");
+					AddTriangleWithNormalCheck(newTris, allVerts, v1Idx, v2Idx, p2Idx, faceNormal, "Below v1-v2-p2");
+				}
+				else if (!above1)
+				{
+					AddTriangleWithNormalCheck(newTris, allVerts, v1Idx, p1Idx, p2Idx, faceNormal, "Below v1-p1-p2");
+					AddTriangleWithNormalCheck(newTris, allVerts, v1Idx, p2Idx, s2Idx, faceNormal, "Below v1-p2-s2");
+				}
+				else if (!above2)
+				{
+					AddTriangleWithNormalCheck(newTris, allVerts, v2Idx, p2Idx, p1Idx, faceNormal, "Below v2-p2-p1");
+					AddTriangleWithNormalCheck(newTris, allVerts, v2Idx, p1Idx, s1Idx, faceNormal, "Below v2-p1-s1");
+				}
+			}
+			else
+			{
+				newTris.Add(tri1);
+				newTris.Add(tri2);
+			}
+		}
+
+		private static void AddTriangleWithNormalCheck(List<int[]> tris, List<VertexData> allVerts, int i0, int i1, int i2, Vector3 refNormal, string context)
+		{
+			Vector3 p0 = allVerts[i0].pos;
+			Vector3 p1 = allVerts[i1].pos;
+			Vector3 p2 = allVerts[i2].pos;
+			Vector3 triNormal = Vector3.Cross(p1 - p0, p2 - p0).normalized;
+			float area = Vector3.Cross(p1 - p0, p2 - p0).magnitude * 0.5f;
+
+			if (area < 1e-6f)
+				return;
+
+			if (Vector3.Dot(triNormal, refNormal) < 0)
+			{
+				tris.Add(new int[] { i0, i2, i1 });
+			}
+			else
+			{
+				tris.Add(new int[] { i0, i1, i2 });
+			}
+		}
+
+		private static void AddPolygonToTris(List<VertexData> poly, List<int[]> tris, List<VertexData> allVerts)
+		{
+			if (poly.Count < 3) return;
+
+			int baseIndex = allVerts.Count;
+			allVerts.AddRange(poly);
+
+			Vector3 refNormal = Vector3.Cross(poly[1].pos - poly[0].pos, poly[2].pos - poly[0].pos).normalized;
+			if (Vector3.Dot(refNormal, poly[0].normal) < 0)
+			{
+				refNormal = -refNormal;
+			}
+
+			for (int i = 1; i < poly.Count - 1; i++)
+			{
+				AddTriangleWithNormalCheck(tris, allVerts, baseIndex, baseIndex + i, baseIndex + i + 1, refNormal, $"Polygon tri {i}");
+			}
+		}
+
 		private static (List<VertexData>, List<int>) DeduplicateVertices(List<VertexData> verts, List<int> tris)
 		{
 			var uniqueVerts = new List<VertexData>();
@@ -248,6 +693,16 @@ namespace ClassicTilestorm
 			return mesh;
 		}
 
+		private class VertexPositionEqualityComparer : IEqualityComparer<Vector3>
+		{
+			private readonly float _tolerance;
+			public VertexPositionEqualityComparer(float tolerance) { _tolerance = tolerance; }
+			public bool Equals(Vector3 a, Vector3 b) => Vector3.SqrMagnitude(a - b) < _tolerance * _tolerance;
+			public int GetHashCode(Vector3 obj) => ((int)(Mathf.Round(obj.x / _tolerance) * 73856093)) ^
+												   ((int)(Mathf.Round(obj.y / _tolerance) * 19349663)) ^
+												   ((int)(Mathf.Round(obj.z / _tolerance) * 83492791));
+		}
+
 		private class VertexEqualityComparer : IEqualityComparer<VertexData>
 		{
 			private readonly float _posTol;
@@ -278,1191 +733,34 @@ namespace ClassicTilestorm
 				return hx ^ hy ^ hz ^ nx ^ ny ^ nz;
 			}
 		}
+
+		private class VertexPositionNormalEqualityComparer : IEqualityComparer<(Vector3 pos, Vector3 normal)>
+		{
+			private readonly float _posTolerance;
+			private readonly float _normTolerance;
+
+			public VertexPositionNormalEqualityComparer(float posTolerance, float normTolerance)
+			{
+				_posTolerance = posTolerance;
+				_normTolerance = normTolerance;
+			}
+
+			public bool Equals((Vector3 pos, Vector3 normal) a, (Vector3 pos, Vector3 normal) b)
+			{
+				return Vector3.SqrMagnitude(a.pos - b.pos) < _posTolerance * _posTolerance &&
+					   Vector3.SqrMagnitude(a.normal - b.normal) < _normTolerance * _normTolerance;
+			}
+
+			public int GetHashCode((Vector3 pos, Vector3 normal) obj)
+			{
+				int posHash = ((int)(Mathf.Round(obj.pos.x / _posTolerance) * 73856093)) ^
+							  ((int)(Mathf.Round(obj.pos.y / _posTolerance) * 19349663)) ^
+							  ((int)(Mathf.Round(obj.pos.z / _posTolerance) * 83492791));
+				int normHash = ((int)(Mathf.Round(obj.normal.x / _normTolerance) * 73856093)) ^
+							   ((int)(Mathf.Round(obj.normal.y / _normTolerance) * 19349663)) ^
+							   ((int)(Mathf.Round(obj.normal.z / _normTolerance) * 83492791));
+				return posHash ^ normHash;
+			}
+		}
 	}
 }
-
-//using System.Collections.Generic;
-//using System.Linq;
-//using UnityEngine;
-
-//namespace ClassicTilestorm
-//{
-//	public static class MeshUtils
-//	{
-//		private struct VertexData
-//		{
-//			public Vector3 pos;
-//			public Vector3 normal;
-//			public Vector2 uv;
-
-//			public VertexData(Vector3 p, Vector3 n, Vector2 u)
-//			{
-//				pos = p;
-//				normal = n;
-//				uv = u;
-//			}
-//		}
-
-//		public static Mesh SubdivideMeshLongEdges(Mesh inputMesh, Vector3 divisionAxis, float maxSegmentLength, Vector3 meshCenter)
-//		{
-//			divisionAxis = divisionAxis.normalized;
-
-//			// Compute bounds along axis
-//			float minProj = float.MaxValue;
-//			float maxProj = float.MinValue;
-//			foreach (Vector3 v in inputMesh.vertices)
-//			{
-//				float proj = Vector3.Dot(v - meshCenter, divisionAxis);
-//				minProj = Mathf.Min(minProj, proj);
-//				maxProj = Mathf.Max(maxProj, proj);
-//			}
-//			float length = maxProj - minProj;
-//			int maxDepth = Mathf.CeilToInt(Mathf.Log(length / maxSegmentLength, 2f));
-
-//			if (Debug.isDebugBuild)
-//			{
-//				Debug.Log($"SubdivideMeshLongEdges: Length = {length:F3}, maxSegmentLength = {maxSegmentLength:F3}, maxDepth = {maxDepth}");
-//			}
-
-//			// Accumulate all vertices and triangles
-//			List<VertexData> allVerts = new List<VertexData>();
-//			List<int> allTris = new List<int>();
-
-//			// Start BSP recursion
-//			SubdivideMeshBSP(inputMesh, divisionAxis, minProj, maxProj, maxSegmentLength, meshCenter, 0, maxDepth, allVerts, allTris);
-
-//			if (allVerts.Count == 0 || allTris.Count == 0)
-//			{
-//				if (Debug.isDebugBuild)
-//				{
-//					Debug.LogWarning("SubdivideMeshLongEdges: No valid geometry after subdivision. Returning empty mesh.");
-//				}
-//				return new Mesh();
-//			}
-
-//			// Deduplicate vertices across all subdivisions
-//			var (uniqueVerts, uniqueTris) = DeduplicateVertices(allVerts, allTris);
-
-//			// Build and return the unified mesh
-//			Mesh resultMesh = BuildMesh(uniqueVerts, uniqueTris);
-
-//			if (Debug.isDebugBuild)
-//			{
-//				Debug.Log($"Final unified mesh: {resultMesh.vertexCount} vertices, {resultMesh.triangles.Length / 3} triangles");
-//			}
-
-//			return resultMesh;
-//		}
-
-//		private static void SubdivideMeshBSP(Mesh mesh, Vector3 divisionAxis, float minProj, float maxProj, float maxSegmentLength, Vector3 meshCenter, int depth, int maxDepth, List<VertexData> allVerts, List<int> allTris)
-//		{
-//			float length = maxProj - minProj;
-//			if (length <= maxSegmentLength || depth >= maxDepth)
-//			{
-//				if (mesh.vertexCount > 0)
-//				{
-//					// Add this mesh's geometry to the shared lists
-//					var verts = mesh.vertices;
-//					var tris = mesh.triangles;
-//					var norms = mesh.normals.Length == verts.Length ? mesh.normals : null;
-//					var uvs = mesh.uv.Length == verts.Length ? mesh.uv : null;
-
-//					int baseIndex = allVerts.Count;
-//					for (int i = 0; i < verts.Length; i++)
-//					{
-//						Vector3 p = verts[i];
-//						Vector3 n = norms != null ? norms[i] : Vector3.up;
-//						Vector2 uv = uvs != null ? uvs[i] : Vector2.zero;
-//						allVerts.Add(new VertexData(p, n, uv));
-//					}
-//					allTris.AddRange(tris.Select(t => t + baseIndex));
-
-//					if (Debug.isDebugBuild)
-//					{
-//						Debug.Log($"Leaf at depth {depth}: {verts.Length} vertices, {tris.Length / 3} triangles added to unified mesh");
-//					}
-//				}
-//				return;
-//			}
-
-//			// Split at midpoint
-//			float midProj = (minProj + maxProj) / 2f;
-//			float offset = Vector3.Dot(meshCenter + divisionAxis * midProj, divisionAxis);
-
-//			// Use SplitMeshAlongPlane to get a single mesh (top and bottom combined)
-//			Mesh splitMesh = MeshUtilTest.SplitMeshAlongPlane(mesh, divisionAxis, offset);
-
-//			if (Debug.isDebugBuild)
-//			{
-//				Debug.Log($"Split at depth {depth}, offset {offset:F3}: split mesh {splitMesh.vertexCount} vertices, {splitMesh.triangles.Length / 3} triangles");
-//			}
-
-//			// Recurse on the split mesh
-//			if (splitMesh.vertexCount > 0)
-//			{
-//				SubdivideMeshBSP(splitMesh, divisionAxis, midProj, maxProj, maxSegmentLength, meshCenter, depth + 1, maxDepth, allVerts, allTris);
-//				SubdivideMeshBSP(splitMesh, divisionAxis, minProj, midProj, maxSegmentLength, meshCenter, depth + 1, maxDepth, allVerts, allTris);
-//				Object.Destroy(splitMesh); // Clean up temporary mesh
-//			}
-//		}
-
-//		private static (List<VertexData>, List<int>) DeduplicateVertices(List<VertexData> verts, List<int> tris)
-//		{
-//			var uniqueVerts = new List<VertexData>();
-//			var vertexMap = new Dictionary<Vector3, int>(new VertexPositionEqualityComparer(1e-6f));
-//			var newTris = new List<int>();
-
-//			int[] indexMap = new int[verts.Count];
-//			for (int i = 0; i < verts.Count; i++)
-//			{
-//				Vector3 pos = verts[i].pos;
-//				if (!vertexMap.TryGetValue(pos, out int index))
-//				{
-//					index = uniqueVerts.Count;
-//					uniqueVerts.Add(verts[i]);
-//					vertexMap[pos] = index;
-//				}
-//				indexMap[i] = index;
-//			}
-
-//			foreach (int oldIndex in tris)
-//			{
-//				if (oldIndex >= 0 && oldIndex < indexMap.Length)
-//				{
-//					newTris.Add(indexMap[oldIndex]);
-//				}
-//				else
-//				{
-//					Debug.LogWarning($"Invalid triangle index {oldIndex} encountered. Skipping.");
-//				}
-//			}
-
-//			return (uniqueVerts, newTris);
-//		}
-
-//		private static Mesh BuildMesh(List<VertexData> verts, List<int> tris)
-//		{
-//			Mesh mesh = new Mesh();
-//			var positions = new Vector3[verts.Count];
-//			var normals = new Vector3[verts.Count];
-//			var uvs = new Vector2[verts.Count];
-
-//			for (int i = 0; i < verts.Count; i++)
-//			{
-//				positions[i] = verts[i].pos;
-//				normals[i] = verts[i].normal;
-//				uvs[i] = verts[i].uv;
-//			}
-
-//			mesh.SetVertices(positions);
-//			mesh.SetNormals(normals);
-//			mesh.SetUVs(0, uvs);
-//			mesh.SetTriangles(tris, 0);
-
-//			mesh.RecalculateBounds();
-//			return mesh;
-//		}
-
-//		private class VertexPositionEqualityComparer : IEqualityComparer<Vector3>
-//		{
-//			private readonly float _tolerance;
-
-//			public VertexPositionEqualityComparer(float tolerance)
-//			{
-//				_tolerance = tolerance;
-//			}
-
-//			public bool Equals(Vector3 a, Vector3 b)
-//			{
-//				return Vector3.SqrMagnitude(a - b) < _tolerance * _tolerance;
-//			}
-
-//			public int GetHashCode(Vector3 obj)
-//			{
-//				return ((int)(Mathf.Round(obj.x / _tolerance) * 73856093)) ^
-//					   ((int)(Mathf.Round(obj.y / _tolerance) * 19349663)) ^
-//					   ((int)(Mathf.Round(obj.z / _tolerance) * 83492791));
-//			}
-//		}
-//	}
-//}
-
-
-
-//using System.Collections.Generic;
-//using System.Linq;
-//using UnityEngine;
-
-//namespace ClassicTilestorm
-//{
-//    public static class MeshUtils
-//    {
-//        private struct VertexData
-//        {
-//            public Vector3 pos;
-//            public Vector3 normal;
-//            public Vector2 uv;
-
-//            public VertexData(Vector3 p, Vector3 n, Vector2 u)
-//            {
-//                pos = p;
-//                normal = n;
-//                uv = u;
-//            }
-//        }
-
-//        //public static Mesh SplitMeshAlongPlane(Mesh mesh, Vector3 planeNormal, float offset)
-//        //{
-//        //    planeNormal.Normalize();
-
-//        //    var verts = mesh.vertices;
-//        //    var tris = mesh.triangles;
-//        //    var norms = mesh.normals.Length == verts.Length ? mesh.normals : null;
-//        //    var uvs = mesh.uv.Length == verts.Length ? mesh.uv : null;
-
-//        //    List<VertexData> allVerts = new List<VertexData>();
-//        //    List<int> allTris = new List<int>();
-//        //    List<VertexData> tri = new List<VertexData>(3);
-
-//        //    for (int i = 0; i < tris.Length; i += 3)
-//        //    {
-//        //        tri.Clear();
-//        //        for (int j = 0; j < 3; j++)
-//        //        {
-//        //            int idx = tris[i + j];
-//        //            Vector3 p = verts[idx];
-//        //            Vector3 n = norms != null ? norms[idx] : Vector3.up;
-//        //            Vector2 uv = uvs != null ? uvs[idx] : Vector2.zero;
-//        //            tri.Add(new VertexData(p, n, uv));
-//        //        }
-
-//        //        ClipTriangle(tri, planeNormal, offset, allVerts, allTris);
-//        //    }
-
-//        //    var (uniqueVerts, uniqueTris) = DeduplicateVertices(allVerts, allTris);
-//        //    return BuildMesh(uniqueVerts, uniqueTris);
-//        //}
-
-//        public static Mesh SubdivideMeshLongEdges(Mesh inputMesh, Vector3 divisionAxis, float maxSegmentLength, Vector3 meshCenter)
-//        {
-//            divisionAxis = divisionAxis.normalized;
-
-//            // Compute bounds along axis
-//            float minProj = float.MaxValue;
-//            float maxProj = float.MinValue;
-//            foreach (Vector3 v in inputMesh.vertices)
-//            {
-//                float proj = Vector3.Dot(v - meshCenter, divisionAxis);
-//                minProj = Mathf.Min(minProj, proj);
-//                maxProj = Mathf.Max(maxProj, proj);
-//            }
-//            float length = maxProj - minProj;
-//            int maxDepth = Mathf.CeilToInt(Mathf.Log(length / maxSegmentLength, 2f));
-
-//            if (Debug.isDebugBuild)
-//            {
-//                Debug.Log($"SubdivideMeshLongEdges: Length = {length:F3}, maxSegmentLength = {maxSegmentLength:F3}, maxDepth = {maxDepth}");
-//            }
-
-//            // Accumulate all vertices and triangles
-//            List<VertexData> allVerts = new List<VertexData>();
-//            List<int> allTris = new List<int>();
-
-//            // Start BSP recursion
-//            SubdivideMeshBSP(inputMesh, divisionAxis, minProj, maxProj, maxSegmentLength, meshCenter, 0, maxDepth, allVerts, allTris);
-
-//            if (allVerts.Count == 0 || allTris.Count == 0)
-//            {
-//                if (Debug.isDebugBuild)
-//                {
-//                    Debug.LogWarning("SubdivideMeshLongEdges: No valid geometry after subdivision. Returning empty mesh.");
-//                }
-//                return new Mesh();
-//            }
-
-//            // Deduplicate vertices across all subdivisions
-//            var (uniqueVerts, uniqueTris) = DeduplicateVertices(allVerts, allTris);
-
-//            // Build and return the unified mesh
-//            Mesh resultMesh = BuildMesh(uniqueVerts, uniqueTris);
-
-//            if (Debug.isDebugBuild)
-//            {
-//                Debug.Log($"Final unified mesh: {resultMesh.vertexCount} vertices, {resultMesh.triangles.Length / 3} triangles");
-//            }
-
-//            return resultMesh;
-//        }
-
-//        private static void SubdivideMeshBSP(Mesh mesh, Vector3 divisionAxis, float minProj, float maxProj, float maxSegmentLength, Vector3 meshCenter, int depth, int maxDepth, List<VertexData> allVerts, List<int> allTris)
-//        {
-//            float length = maxProj - minProj;
-//            if (length <= maxSegmentLength || depth >= maxDepth)
-//            {
-//                if (mesh.vertexCount > 0)
-//                {
-//                    // Add this mesh's geometry to the shared lists
-//                    var verts = mesh.vertices;
-//                    var tris = mesh.triangles;
-//                    var norms = mesh.normals.Length == verts.Length ? mesh.normals : null;
-//                    var uvs = mesh.uv.Length == verts.Length ? mesh.uv : null;
-
-//                    int baseIndex = allVerts.Count;
-//                    for (int i = 0; i < verts.Length; i++)
-//                    {
-//                        Vector3 p = verts[i];
-//                        Vector3 n = norms != null ? norms[i] : Vector3.up;
-//                        Vector2 uv = uvs != null ? uvs[i] : Vector2.zero;
-//                        allVerts.Add(new VertexData(p, n, uv));
-//                    }
-//                    allTris.AddRange(tris.Select(t => t + baseIndex));
-
-//                    if (Debug.isDebugBuild)
-//                    {
-//                        Debug.Log($"Leaf at depth {depth}: {verts.Length} vertices, {tris.Length / 3} triangles added to unified mesh");
-//                    }
-//                }
-//                return;
-//            }
-
-//            // Split at midpoint
-//            float midProj = (minProj + maxProj) / 2f;
-//            float offset = Vector3.Dot(meshCenter + divisionAxis * midProj, divisionAxis);
-
-//            // Use SplitMeshAlongPlane to get a single mesh (top and bottom combined)
-//            Mesh splitMesh = MeshUtilTest.SplitMeshAlongPlane(mesh, divisionAxis, offset);
-
-//            if (Debug.isDebugBuild)
-//            {
-//                Debug.Log($"Split at depth {depth}, offset {offset:F3}: split mesh {splitMesh.vertexCount} vertices, {splitMesh.triangles.Length / 3} triangles");
-//            }
-
-//            // Recurse on the split mesh
-//            if (splitMesh.vertexCount > 0)
-//            {
-//                SubdivideMeshBSP(splitMesh, divisionAxis, midProj, maxProj, maxSegmentLength, meshCenter, depth + 1, maxDepth, allVerts, allTris);
-//                SubdivideMeshBSP(splitMesh, divisionAxis, minProj, midProj, maxSegmentLength, meshCenter, depth + 1, maxDepth, allVerts, allTris);
-//                Object.Destroy(splitMesh); // Clean up temporary mesh
-//            }
-//        }
-
-//        private static void ClipTriangle(List<VertexData> tri,
-//            Vector3 planeNormal, float offset,
-//            List<VertexData> allVerts, List<int> allTris)
-//        {
-//            List<VertexData> topPoly, bottomPoly;
-//            ClipPolygonAgainstPlane(tri, planeNormal, offset, out topPoly, out bottomPoly);
-//            AddPolygon(topPoly, allVerts, allTris);
-//            AddPolygon(bottomPoly, allVerts, allTris);
-//        }
-
-//        private static void ClipPolygonAgainstPlane(
-//            List<VertexData> poly,
-//            Vector3 planeNormal, float offset,
-//            out List<VertexData> topPoly, out List<VertexData> bottomPoly)
-//        {
-//            topPoly = new List<VertexData>();
-//            bottomPoly = new List<VertexData>();
-
-//            int count = poly.Count;
-//            for (int i = 0; i < count; i++)
-//            {
-//                VertexData curr = poly[i];
-//                VertexData next = poly[(i + 1) % count];
-
-//                float d1 = Vector3.Dot(curr.pos, planeNormal) - offset;
-//                float d2 = Vector3.Dot(next.pos, planeNormal) - offset;
-
-//                bool currAbove = d1 >= 0;
-//                bool nextAbove = d2 >= 0;
-
-//                if (currAbove) topPoly.Add(curr);
-//                else bottomPoly.Add(curr);
-
-//                if (currAbove != nextAbove)
-//                {
-//                    float t = d1 / (d1 - d2);
-//                    VertexData interp = Lerp(curr, next, t);
-//                    topPoly.Add(interp);
-//                    bottomPoly.Add(interp);
-//                }
-//            }
-
-//            // Remove coplanar quads in top and bottom poly
-//            topPoly = MeshSimplify(topPoly);
-//            bottomPoly = MeshSimplify(bottomPoly);
-//        }
-
-//        private static List<VertexData> MeshSimplify(List<VertexData> poly)
-//        {
-//            if (poly.Count < 3) return poly;
-
-//            // Triangulate the polygon to identify triangles
-//            List<int> tris = new List<int>();
-//            int baseIndex = 0; // Simulate vertex list starting at 0
-//            for (int i = 1; i < poly.Count - 1; i++)
-//            {
-//                tris.Add(baseIndex);
-//                tris.Add(baseIndex + i);
-//                tris.Add(baseIndex + i + 1);
-//            }
-
-//            // Find coplanar triangle pairs and merge them
-//            List<int> newTris = new List<int>();
-//            HashSet<int> processedTris = new HashSet<int>(); // Track processed triangle indices
-//            List<VertexData> mergedPoly = new List<VertexData>(poly); // Start with original vertices
-
-//            for (int i = 0; i < tris.Count; i += 3)
-//            {
-//                if (processedTris.Contains(i)) continue;
-
-//                // Get first triangle
-//                int t0 = tris[i];
-//                int t1 = tris[i + 1];
-//                int t2 = tris[i + 2];
-//                Vector3 v0 = poly[t0].pos;
-//                Vector3 v1 = poly[t1].pos;
-//                Vector3 v2 = poly[t2].pos;
-//                Vector3 normal1 = Vector3.Cross(v1 - v0, v2 - v0).normalized;
-
-//                // Look for a coplanar triangle sharing an edge
-//                for (int j = 0; j < tris.Count; j += 3)
-//                {
-//                    if (i == j || processedTris.Contains(j)) continue;
-
-//                    int t3 = tris[j];
-//                    int t4 = tris[j + 1];
-//                    int t5 = tris[j + 2];
-//                    Vector3 v3 = poly[t3].pos;
-//                    Vector3 v4 = poly[t4].pos;
-//                    Vector3 v5 = poly[t5].pos;
-//                    Vector3 normal2 = Vector3.Cross(v4 - v3, v5 - v3).normalized;
-
-//                    // Check if triangles are coplanar (normals are parallel within tolerance)
-//                    const float normalTolerance = 0.001f;
-//                    if (Vector3.Dot(normal1, normal2) < 1f - normalTolerance) continue;
-
-//                    // Check if triangles share an edge
-//                    int[] tri1 = { t0, t1, t2 };
-//                    int[] tri2 = { t3, t4, t5 };
-//                    List<int> sharedVerts = new List<int>();
-//                    foreach (int idx1 in tri1)
-//                    {
-//                        foreach (int idx2 in tri2)
-//                        {
-//                            if (Vector3.SqrMagnitude(poly[idx1].pos - poly[idx2].pos) < 1e-6f)
-//                            {
-//                                sharedVerts.Add(idx1);
-//                            }
-//                        }
-//                    }
-
-//                    // If exactly two vertices are shared, the triangles share an edge
-//                    if (sharedVerts.Count == 2)
-//                    {
-//                        // Mark triangles as processed
-//                        processedTris.Add(i);
-//                        processedTris.Add(j);
-
-//                        // Collect unique vertices to form a quad
-//                        HashSet<int> quadVerts = new HashSet<int> { t0, t1, t2, t3, t4, t5 };
-//                        List<VertexData> quad = quadVerts.Select(idx => poly[idx]).ToList();
-
-//                        // Project vertices to 2D plane for convex polygon triangulation
-//                        List<Vector2> projectedVerts = ProjectTo2D(quad, normal1);
-//                        List<int> quadTris = TriangulateConvexPolygon(projectedVerts);
-
-//                        // Add new triangles with adjusted indices
-//                        int newBaseIndex = mergedPoly.Count;
-//                        mergedPoly.AddRange(quad);
-//                        foreach (int triIdx in quadTris)
-//                        {
-//                            newTris.Add(newBaseIndex + triIdx);
-//                        }
-
-//                        // Debug log
-//                        if (Debug.isDebugBuild)
-//                        {
-//                            Debug.Log($"Merged coplanar triangles into quad: {quad.Count} vertices, {quadTris.Count / 3} triangles");
-//                        }
-//                    }
-//                }
-
-//                // If triangle wasn't merged, keep it
-//                if (!processedTris.Contains(i))
-//                {
-//                    newTris.Add(t0);
-//                    newTris.Add(t1);
-//                    newTris.Add(t2);
-//                }
-//            }
-
-//            // If no simplification occurred, return original polygon
-//            if (newTris.Count == tris.Count)
-//            {
-//                return poly;
-//            }
-
-//            // Deduplicate vertices in the merged polygon
-//            var (uniqueVerts, uniqueTris) = DeduplicateVertices(mergedPoly, newTris);
-//            return uniqueVerts;
-//        }
-
-//        private static List<Vector2> ProjectTo2D(List<VertexData> vertices, Vector3 planeNormal)
-//        {
-//            List<Vector2> projected = new List<Vector2>();
-//            Vector3 u = Vector3.Cross(planeNormal, Mathf.Abs(Vector3.Dot(planeNormal, Vector3.up)) > 0.99f ? Vector3.forward : Vector3.up).normalized;
-//            Vector3 v = Vector3.Cross(planeNormal, u).normalized;
-
-//            foreach (var vertex in vertices)
-//            {
-//                float x = Vector3.Dot(vertex.pos, u);
-//                float y = Vector3.Dot(vertex.pos, v);
-//                projected.Add(new Vector2(x, y));
-//            }
-
-//            return projected;
-//        }
-
-//        private static List<int> TriangulateConvexPolygon(List<Vector2> vertices)
-//        {
-//            List<int> triangles = new List<int>();
-//            for (int i = 1; i < vertices.Count - 1; i++)
-//            {
-//                triangles.Add(0);
-//                triangles.Add(i);
-//                triangles.Add(i + 1);
-//            }
-//            return triangles;
-//        }
-
-//        private static void AddPolygon(List<VertexData> poly,
-//            List<VertexData> verts, List<int> tris)
-//        {
-//            if (poly.Count < 3) return;
-
-//            int baseIndex = verts.Count;
-//            verts.AddRange(poly);
-
-//            for (int i = 1; i < poly.Count - 1; i++)
-//            {
-//                tris.Add(baseIndex);
-//                tris.Add(baseIndex + i);
-//                tris.Add(baseIndex + i + 1);
-//            }
-//        }
-
-//        private static VertexData Lerp(VertexData a, VertexData b, float t)
-//        {
-//            return new VertexData(
-//                Vector3.Lerp(a.pos, b.pos, t),
-//                Vector3.Normalize(Vector3.Lerp(a.normal, b.normal, t)),
-//                Vector2.Lerp(a.uv, b.uv, t)
-//            );
-//        }
-
-//        private static (List<VertexData>, List<int>) DeduplicateVertices(List<VertexData> verts, List<int> tris)
-//        {
-//            var uniqueVerts = new List<VertexData>();
-//            var vertexMap = new Dictionary<Vector3, int>(new VertexPositionEqualityComparer(1e-6f));
-//            var newTris = new List<int>();
-
-//            int[] indexMap = new int[verts.Count];
-//            for (int i = 0; i < verts.Count; i++)
-//            {
-//                Vector3 pos = verts[i].pos;
-//                if (!vertexMap.TryGetValue(pos, out int index))
-//                {
-//                    index = uniqueVerts.Count;
-//                    uniqueVerts.Add(verts[i]);
-//                    vertexMap[pos] = index;
-//                }
-//                indexMap[i] = index;
-//            }
-
-//            foreach (int oldIndex in tris)
-//            {
-//                if (oldIndex >= 0 && oldIndex < indexMap.Length)
-//                {
-//                    newTris.Add(indexMap[oldIndex]);
-//                }
-//                else
-//                {
-//                    Debug.LogWarning($"Invalid triangle index {oldIndex} encountered. Skipping.");
-//                }
-//            }
-
-//            return (uniqueVerts, newTris);
-//        }
-
-//        private static Mesh BuildMesh(List<VertexData> verts, List<int> tris)
-//        {
-//            Mesh mesh = new Mesh();
-//            var positions = new Vector3[verts.Count];
-//            var normals = new Vector3[verts.Count];
-//            var uvs = new Vector2[verts.Count];
-
-//            for (int i = 0; i < verts.Count; i++)
-//            {
-//                positions[i] = verts[i].pos;
-//                normals[i] = verts[i].normal;
-//                uvs[i] = verts[i].uv;
-//            }
-
-//            mesh.SetVertices(positions);
-//            mesh.SetNormals(normals);
-//            mesh.SetUVs(0, uvs);
-//            mesh.SetTriangles(tris, 0);
-
-//            mesh.RecalculateBounds();
-//            return mesh;
-//        }
-
-//        private class VertexPositionEqualityComparer : IEqualityComparer<Vector3>
-//        {
-//            private readonly float _tolerance;
-
-//            public VertexPositionEqualityComparer(float tolerance)
-//            {
-//                _tolerance = tolerance;
-//            }
-
-//            public bool Equals(Vector3 a, Vector3 b)
-//            {
-//                return Vector3.SqrMagnitude(a - b) < _tolerance * _tolerance;
-//            }
-
-//            public int GetHashCode(Vector3 obj)
-//            {
-//                return ((int)(Mathf.Round(obj.x / _tolerance) * 73856093)) ^
-//                       ((int)(Mathf.Round(obj.y / _tolerance) * 19349663)) ^
-//                       ((int)(Mathf.Round(obj.z / _tolerance) * 83492791));
-//            }
-//        }
-//    }
-//}
-
-
-//using System.Collections.Generic;
-//using System.Linq;
-//using UnityEngine;
-
-//namespace ClassicTilestorm
-//{
-//	public static class MeshUtils
-//	{
-//		private struct VertexData
-//		{
-//			public Vector3 pos;
-//			public Vector3 normal;
-//			public Vector2 uv;
-
-//			public VertexData(Vector3 p, Vector3 n, Vector2 u)
-//			{
-//				pos = p;
-//				normal = n;
-//				uv = u;
-//			}
-//		}
-
-//		public static Mesh SplitMeshAlongPlane(Mesh mesh, Vector3 planeNormal, float offset)
-//		{
-//			planeNormal.Normalize();
-
-//			var verts = mesh.vertices;
-//			var tris = mesh.triangles;
-//			var norms = mesh.normals.Length == verts.Length ? mesh.normals : null;
-//			var uvs = mesh.uv.Length == verts.Length ? mesh.uv : null;
-
-//			List<VertexData> allVerts = new List<VertexData>();
-//			List<int> allTris = new List<int>();
-//			List<VertexData> tri = new List<VertexData>(3);
-
-//			for (int i = 0; i < tris.Length; i += 3)
-//			{
-//				tri.Clear();
-//				for (int j = 0; j < 3; j++)
-//				{
-//					int idx = tris[i + j];
-//					Vector3 p = verts[idx];
-//					Vector3 n = norms != null ? norms[idx] : Vector3.up;
-//					Vector2 uv = uvs != null ? uvs[idx] : Vector2.zero;
-//					tri.Add(new VertexData(p, n, uv));
-//				}
-
-//				ClipTriangle(tri, planeNormal, offset, allVerts, allTris);
-//			}
-
-//			var (uniqueVerts, uniqueTris) = DeduplicateVertices(allVerts, allTris);
-//			return BuildMesh(uniqueVerts, uniqueTris);
-//		}
-
-//		// Updated to return a single Mesh
-//		public static Mesh SubdivideMeshLongEdges(Mesh inputMesh, Vector3 divisionAxis, float maxSegmentLength, Vector3 meshCenter)
-//		{
-//			divisionAxis = divisionAxis.normalized;
-
-//			// Compute bounds along axis
-//			float minProj = float.MaxValue;
-//			float maxProj = float.MinValue;
-//			foreach (Vector3 v in inputMesh.vertices)
-//			{
-//				float proj = Vector3.Dot(v - meshCenter, divisionAxis);
-//				minProj = Mathf.Min(minProj, proj);
-//				maxProj = Mathf.Max(maxProj, proj);
-//			}
-//			float length = maxProj - minProj;
-//			int maxDepth = Mathf.CeilToInt(Mathf.Log(length / maxSegmentLength, 2f));
-
-//			if (Debug.isDebugBuild)
-//			{
-//				Debug.Log($"SubdivideMeshLongEdges: Length = {length:F3}, maxSegmentLength = {maxSegmentLength:F3}, maxDepth = {maxDepth}");
-//			}
-
-//			// Accumulate all vertices and triangles
-//			List<VertexData> allVerts = new List<VertexData>();
-//			List<int> allTris = new List<int>();
-
-//			// Start BSP recursion
-//			SubdivideMeshBSP(inputMesh, divisionAxis, minProj, maxProj, maxSegmentLength, meshCenter, 0, maxDepth, allVerts, allTris);
-
-//			if (allVerts.Count == 0 || allTris.Count == 0)
-//			{
-//				if (Debug.isDebugBuild)
-//				{
-//					Debug.LogWarning("SubdivideMeshLongEdges: No valid geometry after subdivision. Returning empty mesh.");
-//				}
-//				return new Mesh();
-//			}
-
-//			// Deduplicate vertices across all subdivisions
-//			var (uniqueVerts, uniqueTris) = DeduplicateVertices(allVerts, allTris);
-
-//			// Build and return the unified mesh
-//			Mesh resultMesh = BuildMesh(uniqueVerts, uniqueTris);
-
-//			if (Debug.isDebugBuild)
-//			{
-//				Debug.Log($"Final unified mesh: {resultMesh.vertexCount} vertices, {resultMesh.triangles.Length / 3} triangles");
-//			}
-
-//			return resultMesh;
-//		}
-
-//		// Updated to accumulate vertices and triangles
-//		private static void SubdivideMeshBSP(Mesh mesh, Vector3 divisionAxis, float minProj, float maxProj, float maxSegmentLength, Vector3 meshCenter, int depth, int maxDepth, List<VertexData> allVerts, List<int> allTris)
-//		{
-//			float length = maxProj - minProj;
-//			if (length <= maxSegmentLength || depth >= maxDepth)
-//			{
-//				if (mesh.vertexCount > 0)
-//				{
-//					// Add this mesh's geometry to the shared lists
-//					var verts = mesh.vertices;
-//					var tris = mesh.triangles;
-//					var norms = mesh.normals.Length == verts.Length ? mesh.normals : null;
-//					var uvs = mesh.uv.Length == verts.Length ? mesh.uv : null;
-
-//					int baseIndex = allVerts.Count;
-//					for (int i = 0; i < verts.Length; i++)
-//					{
-//						Vector3 p = verts[i];
-//						Vector3 n = norms != null ? norms[i] : Vector3.up;
-//						Vector2 uv = uvs != null ? uvs[i] : Vector2.zero;
-//						allVerts.Add(new VertexData(p, n, uv));
-//					}
-//					allTris.AddRange(tris.Select(t => t + baseIndex));
-
-//					if (Debug.isDebugBuild)
-//					{
-//						Debug.Log($"Leaf at depth {depth}: {verts.Length} vertices, {tris.Length / 3} triangles added to unified mesh");
-//					}
-//				}
-//				return;
-//			}
-
-//			// Split at midpoint
-//			float midProj = (minProj + maxProj) / 2f;
-//			float offset = Vector3.Dot(meshCenter + divisionAxis * midProj, divisionAxis);
-
-//			// Use SplitMeshAlongPlane to get a single mesh (top and bottom combined)
-//			Mesh splitMesh = SplitMeshAlongPlane(mesh, divisionAxis, offset);
-
-//			if (Debug.isDebugBuild)
-//			{
-//				Debug.Log($"Split at depth {depth}, offset {offset:F3}: split mesh {splitMesh.vertexCount} vertices, {splitMesh.triangles.Length / 3} triangles");
-//			}
-
-//			// Recurse on the split mesh
-//			if (splitMesh.vertexCount > 0)
-//			{
-//				SubdivideMeshBSP(splitMesh, divisionAxis, midProj, maxProj, maxSegmentLength, meshCenter, depth + 1, maxDepth, allVerts, allTris);
-//				SubdivideMeshBSP(splitMesh, divisionAxis, minProj, midProj, maxSegmentLength, meshCenter, depth + 1, maxDepth, allVerts, allTris);
-//				Object.Destroy(splitMesh); // Clean up temporary mesh
-//			}
-//		}
-
-//		private static void ClipTriangle(List<VertexData> tri,
-//			Vector3 planeNormal, float offset,
-//			List<VertexData> allVerts, List<int> allTris)
-//		{
-//			List<VertexData> topPoly, bottomPoly;
-//			ClipPolygonAgainstPlane(tri, planeNormal, offset, out topPoly, out bottomPoly);
-//			AddPolygon(topPoly, allVerts, allTris);
-//			AddPolygon(bottomPoly, allVerts, allTris);
-//		}
-
-//		private static void ClipPolygonAgainstPlane(
-//			List<VertexData> poly,
-//			Vector3 planeNormal, float offset,
-//			out List<VertexData> topPoly, out List<VertexData> bottomPoly)
-//		{
-//			topPoly = new List<VertexData>();
-//			bottomPoly = new List<VertexData>();
-
-//			int count = poly.Count;
-//			for (int i = 0; i < count; i++)
-//			{
-//				VertexData curr = poly[i];
-//				VertexData next = poly[(i + 1) % count];
-
-//				float d1 = Vector3.Dot(curr.pos, planeNormal) - offset;
-//				float d2 = Vector3.Dot(next.pos, planeNormal) - offset;
-
-//				bool currAbove = d1 >= 0;
-//				bool nextAbove = d2 >= 0;
-
-//				if (currAbove) topPoly.Add(curr);
-//				else bottomPoly.Add(curr);
-
-//				if (currAbove != nextAbove)
-//				{
-//					float t = d1 / (d1 - d2);
-//					VertexData interp = Lerp(curr, next, t);
-//					topPoly.Add(interp);
-//					bottomPoly.Add(interp);
-//				}
-//			}
-//			//remove coplanar quads in top and bottom poly
-//		}
-
-//		private static void AddPolygon(List<VertexData> poly,
-//			List<VertexData> verts, List<int> tris)
-//		{
-//			if (poly.Count < 3) return;
-
-//			int baseIndex = verts.Count;
-//			verts.AddRange(poly);
-
-//			for (int i = 1; i < poly.Count - 1; i++)
-//			{
-//				tris.Add(baseIndex);
-//				tris.Add(baseIndex + i);
-//				tris.Add(baseIndex + i + 1);
-//			}
-//		}
-
-//		private static VertexData Lerp(VertexData a, VertexData b, float t)
-//		{
-//			return new VertexData(
-//				Vector3.Lerp(a.pos, b.pos, t),
-//				Vector3.Normalize(Vector3.Lerp(a.normal, b.normal, t)),
-//				Vector2.Lerp(a.uv, b.uv, t)
-//			);
-//		}
-
-//		private static (List<VertexData>, List<int>) DeduplicateVertices(List<VertexData> verts, List<int> tris)
-//		{
-//			var uniqueVerts = new List<VertexData>();
-//			var vertexMap = new Dictionary<Vector3, int>(new VertexPositionEqualityComparer(1e-6f));
-//			var newTris = new List<int>();
-
-//			int[] indexMap = new int[verts.Count];
-//			for (int i = 0; i < verts.Count; i++)
-//			{
-//				Vector3 pos = verts[i].pos;
-//				if (!vertexMap.TryGetValue(pos, out int index))
-//				{
-//					index = uniqueVerts.Count;
-//					uniqueVerts.Add(verts[i]);
-//					vertexMap[pos] = index;
-//				}
-//				indexMap[i] = index;
-//			}
-
-//			foreach (int oldIndex in tris)
-//			{
-//				if (oldIndex >= 0 && oldIndex < indexMap.Length)
-//				{
-//					newTris.Add(indexMap[oldIndex]);
-//				}
-//				else
-//				{
-//					Debug.LogWarning($"Invalid triangle index {oldIndex} encountered. Skipping.");
-//				}
-//			}
-
-//			return (uniqueVerts, newTris);
-//		}
-
-//		private static Mesh BuildMesh(List<VertexData> verts, List<int> tris)
-//		{
-//			Mesh mesh = new Mesh();
-//			var positions = new Vector3[verts.Count];
-//			var normals = new Vector3[verts.Count];
-//			var uvs = new Vector2[verts.Count];
-
-//			for (int i = 0; i < verts.Count; i++)
-//			{
-//				positions[i] = verts[i].pos;
-//				normals[i] = verts[i].normal;
-//				uvs[i] = verts[i].uv;
-//			}
-
-//			mesh.SetVertices(positions);
-//			mesh.SetNormals(normals);
-//			mesh.SetUVs(0, uvs);
-//			mesh.SetTriangles(tris, 0);
-
-//			mesh.RecalculateBounds();
-//			return mesh;
-//		}
-
-//		private class VertexPositionEqualityComparer : IEqualityComparer<Vector3>
-//		{
-//			private readonly float _tolerance;
-
-//			public VertexPositionEqualityComparer(float tolerance)
-//			{
-//				_tolerance = tolerance;
-//			}
-
-//			public bool Equals(Vector3 a, Vector3 b)
-//			{
-//				return Vector3.SqrMagnitude(a - b) < _tolerance * _tolerance;
-//			}
-
-//			public int GetHashCode(Vector3 obj)
-//			{
-//				return ((int)(Mathf.Round(obj.x / _tolerance) * 73856093)) ^
-//					   ((int)(Mathf.Round(obj.y / _tolerance) * 19349663)) ^
-//					   ((int)(Mathf.Round(obj.z / _tolerance) * 83492791));
-//			}
-//		}
-//	}
-//}
-
-
-//using System.Collections.Generic;
-//using UnityEngine;
-
-//namespace ClassicTilestorm
-//{
-//	public static class MeshUtils
-//	{
-//		private struct VertexData
-//		{
-//			public Vector3 pos;
-//			public Vector3 normal;
-//			public Vector2 uv;
-
-//			public VertexData(Vector3 p, Vector3 n, Vector2 u)
-//			{
-//				pos = p;
-//				normal = n;
-//				uv = u;
-//			}
-//		}
-
-//		public static Mesh SplitMeshAlongPlane(Mesh mesh, Vector3 planeNormal, float offset)
-//		{
-//			planeNormal.Normalize();
-
-//			var verts = mesh.vertices;
-//			var tris = mesh.triangles;
-//			var norms = mesh.normals.Length == verts.Length ? mesh.normals : null;
-//			var uvs = mesh.uv.Length == verts.Length ? mesh.uv : null;
-
-//			List<VertexData> allVerts = new List<VertexData>();
-//			List<int> allTris = new List<int>();
-//			List<VertexData> tri = new List<VertexData>(3);
-
-//			// Process triangles and clip them
-//			for (int i = 0; i < tris.Length; i += 3)
-//			{
-//				tri.Clear();
-//				for (int j = 0; j < 3; j++)
-//				{
-//					int idx = tris[i + j];
-//					Vector3 p = verts[idx];
-//					Vector3 n = norms != null ? norms[idx] : Vector3.up;
-//					Vector2 uv = uvs != null ? uvs[idx] : Vector2.zero;
-//					tri.Add(new VertexData(p, n, uv));
-//				}
-
-//				ClipTriangle(tri, planeNormal, offset, allVerts, allTris);
-//			}
-
-//			// Deduplicate vertices and update triangle indices
-//			var (uniqueVerts, uniqueTris) = DeduplicateVertices(allVerts, allTris);
-
-//			// Build and return the unified mesh
-//			return BuildMesh(uniqueVerts, uniqueTris);
-//		}
-
-//		private static void ClipTriangle(List<VertexData> tri,
-//			Vector3 planeNormal, float offset,
-//			List<VertexData> allVerts, List<int> allTris)
-//		{
-//			List<VertexData> topPoly, bottomPoly;
-//			ClipPolygonAgainstPlane(tri, planeNormal, offset, out topPoly, out bottomPoly);
-
-//			// Add both top and bottom polygons to the unified lists
-//			AddPolygon(topPoly, allVerts, allTris);
-//			AddPolygon(bottomPoly, allVerts, allTris);
-//		}
-
-//		private static void ClipPolygonAgainstPlane(
-//			List<VertexData> poly,
-//			Vector3 planeNormal, float offset,
-//			out List<VertexData> topPoly, out List<VertexData> bottomPoly)
-//		{
-//			topPoly = new List<VertexData>();
-//			bottomPoly = new List<VertexData>();
-
-//			int count = poly.Count;
-//			for (int i = 0; i < count; i++)
-//			{
-//				VertexData curr = poly[i];
-//				VertexData next = poly[(i + 1) % count];
-
-//				// Distance from origin to point along plane normal
-//				float d1 = Vector3.Dot(curr.pos, planeNormal) - offset;
-//				float d2 = Vector3.Dot(next.pos, planeNormal) - offset;
-
-//				bool currAbove = d1 >= 0;
-//				bool nextAbove = d2 >= 0;
-
-//				if (currAbove) topPoly.Add(curr);
-//				else bottomPoly.Add(curr);
-
-//				if (currAbove != nextAbove)
-//				{
-//					float t = d1 / (d1 - d2);
-//					VertexData interp = Lerp(curr, next, t);
-//					topPoly.Add(interp);
-//					bottomPoly.Add(interp);
-//				}
-//			}
-//		}
-
-//		private static void AddPolygon(List<VertexData> poly,
-//			List<VertexData> verts, List<int> tris)
-//		{
-//			if (poly.Count < 3) return;
-
-//			int baseIndex = verts.Count;
-//			verts.AddRange(poly);
-
-//			for (int i = 1; i < poly.Count - 1; i++)
-//			{
-//				tris.Add(baseIndex);
-//				tris.Add(baseIndex + i);
-//				tris.Add(baseIndex + i + 1);
-//			}
-//		}
-
-//		private static VertexData Lerp(VertexData a, VertexData b, float t)
-//		{
-//			return new VertexData(
-//				Vector3.Lerp(a.pos, b.pos, t),
-//				Vector3.Normalize(Vector3.Lerp(a.normal, b.normal, t)),
-//				Vector2.Lerp(a.uv, b.uv, t)
-//			);
-//		}
-
-//		private static (List<VertexData>, List<int>) DeduplicateVertices(List<VertexData> verts, List<int> tris)
-//		{
-//			var uniqueVerts = new List<VertexData>();
-//			var vertexMap = new Dictionary<Vector3, int>(new VertexPositionEqualityComparer(1e-6f));
-//			var newTris = new List<int>();
-
-//			// Map original vertex indices to new unique indices
-//			int[] indexMap = new int[verts.Count]; // Maps old indices to new indices
-//			for (int i = 0; i < verts.Count; i++)
-//			{
-//				Vector3 pos = verts[i].pos;
-//				if (!vertexMap.TryGetValue(pos, out int index))
-//				{
-//					index = uniqueVerts.Count;
-//					uniqueVerts.Add(verts[i]);
-//					vertexMap[pos] = index;
-//				}
-//				indexMap[i] = index;
-//			}
-
-//			// Remap triangle indices
-//			foreach (int oldIndex in tris)
-//			{
-//				if (oldIndex >= 0 && oldIndex < indexMap.Length)
-//				{
-//					newTris.Add(indexMap[oldIndex]);
-//				}
-//				else
-//				{
-//					Debug.LogWarning($"Invalid triangle index {oldIndex} encountered. Skipping.");
-//				}
-//			}
-
-//			return (uniqueVerts, newTris);
-//		}
-
-//		private static Mesh BuildMesh(List<VertexData> verts, List<int> tris)
-//		{
-//			Mesh mesh = new Mesh();
-//			var positions = new Vector3[verts.Count];
-//			var normals = new Vector3[verts.Count];
-//			var uvs = new Vector2[verts.Count];
-
-//			for (int i = 0; i < verts.Count; i++)
-//			{
-//				positions[i] = verts[i].pos;
-//				normals[i] = verts[i].normal;
-//				uvs[i] = verts[i].uv;
-//			}
-
-//			mesh.SetVertices(positions);
-//			mesh.SetNormals(normals);
-//			mesh.SetUVs(0, uvs);
-//			mesh.SetTriangles(tris, 0);
-
-//			mesh.RecalculateBounds();
-//			return mesh;
-//		}
-
-//		private class VertexPositionEqualityComparer : IEqualityComparer<Vector3>
-//		{
-//			private readonly float _tolerance;
-
-//			public VertexPositionEqualityComparer(float tolerance)
-//			{
-//				_tolerance = tolerance;
-//			}
-
-//			public bool Equals(Vector3 a, Vector3 b)
-//			{
-//				return Vector3.SqrMagnitude(a - b) < _tolerance * _tolerance;
-//			}
-
-//			public int GetHashCode(Vector3 obj)
-//			{
-//				// Simple hash based on rounded coordinates to handle floating-point precision
-//				return ((int)(Mathf.Round(obj.x / _tolerance) * 73856093)) ^
-//					   ((int)(Mathf.Round(obj.y / _tolerance) * 19349663)) ^
-//					   ((int)(Mathf.Round(obj.z / _tolerance) * 83492791));
-//			}
-//		}
-//	}
-//}
-
-
