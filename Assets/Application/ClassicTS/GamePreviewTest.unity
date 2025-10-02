@@ -398,7 +398,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fbf6ebd314ddae74da38abc2292cb56c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  loadMapName: Industrial 01
+  loadMapName: Jungle 01
   scrambled: 1
   difficulty: 0
   showHiddenTiles: 0

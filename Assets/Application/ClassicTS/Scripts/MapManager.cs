@@ -87,6 +87,8 @@ namespace ClassicTilestorm
 							{
 								var morphGeomSway = tiles[n].GameObject.AddComponent<MorphGeomSway>();
 								morphGeomSway.SetCustomInfluenceVolume(Vector3.up, 0.2f);
+								morphGeomSway.swayInfluencePower = 2.5f; // More top sway
+								//morphGeomSway.ConfigureSubdivision(true, 0.3f); // Enable subdivision with max segment length
 							}
 						}
 					}

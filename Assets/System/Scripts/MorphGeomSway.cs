@@ -12,27 +12,24 @@ namespace ClassicTilestorm
 		[SerializeField, Range(0f, 1f)] private float phase = 0f;
 		[SerializeField] public bool useExternalSwayVector = false;
 		[SerializeField] public Vector3 externalSwayVector = Vector3.zero;
+		[SerializeField] public float swayInfluencePower = 2f; // Power for non-linear rotation influence
 
-		// Public method to set external phase
 		public void SetPhase(float normalizedPhase)
 		{
-			//useExternalPhase = true;//this is set externally
+			//useExternalPhase = true; // Set externally
 			phase = Mathf.Clamp01(normalizedPhase);
 		}
 
-		// Public method to set external sway vector
 		public void SetSwayVector(Vector3 swayVector)
 		{
-			//useExternalSwayVector = true;//this is set externally
+			//useExternalSwayVector = true; // Set externally
 			externalSwayVector = swayVector;
 		}
 
 		protected override void ApplyMorphEffect()
 		{
-			// Map world positions to vertex indices to ensure identical positions move together
 			Dictionary<Vector3, List<int>> vertexGroups = new Dictionary<Vector3, List<int>>(Vector3EqualityComparer.Instance);
 
-			// Group vertices by their world position
 			for (int i = 0; i < originalVertices.Length; i++)
 			{
 				Vector3 worldPos = transform.TransformPoint(originalVertices[i]);
@@ -41,7 +38,6 @@ namespace ClassicTilestorm
 				vertexGroups[worldPos].Add(i);
 			}
 
-			// Compute rotation pivot (center of anchor plane in world space)
 			Vector3 worldAnchorPlaneNormal = transform.TransformDirection(anchorPlaneNormal);
 			Vector3 pivot = transform.TransformPoint(anchorPlaneNormal * anchorPlaneOffset);
 
@@ -52,10 +48,9 @@ namespace ClassicTilestorm
 					continue;
 
 				float distance = GetDistanceToAnchorPlane(vertexWorldPos);
-				if (distance <= 0f) // At or below anchor plane
+				if (distance <= 0f)
 					continue;
 
-				// Normalize distance
 				float influenceHeight = influenceVolume.size.y;
 				float normalizedDistance = Mathf.Clamp01(distance / influenceHeight);
 
@@ -66,31 +61,27 @@ namespace ClassicTilestorm
 				}
 				else
 				{
-					// Calculate sway offset
 					float phaseInput = useExternalPhase ? phase * 2f * Mathf.PI : Time.time * swayFrequency;
 					float swayOffset = Mathf.Sin(phaseInput) * swayAmplitude * normalizedDistance;
 					swayVector = swayDirection.normalized * swayOffset;
 				}
 
-				// Compute rotation axis (cross product of plane normal and sway direction)
 				Vector3 swayDir = swayVector.normalized;
 				Vector3 rotationAxis = Vector3.Cross(worldAnchorPlaneNormal, swayDir);
-				if (rotationAxis.sqrMagnitude < 0.0001f) // Avoid singularity if parallel
+				if (rotationAxis.sqrMagnitude < 0.0001f)
 				{
-					rotationAxis = Vector3.Cross(worldAnchorPlaneNormal, Vector3.up); // Fallback axis
+					rotationAxis = Vector3.Cross(worldAnchorPlaneNormal, Vector3.up);
 					if (rotationAxis.sqrMagnitude < 0.0001f)
-						rotationAxis = Vector3.right; // Final fallback
+						rotationAxis = Vector3.right;
 				}
 				rotationAxis = rotationAxis.normalized;
 
-				// Compute rotation angle (based on sway magnitude, scaled by distance)
-				float maxAngle = swayVector.magnitude * Mathf.Rad2Deg; // Convert magnitude to degrees
-				float angle = maxAngle * normalizedDistance;
+				float maxAngle = swayVector.magnitude * Mathf.Rad2Deg;
+				float influence = Mathf.Pow(normalizedDistance, swayInfluencePower);
+				float angle = maxAngle * influence;
 
-				// Create rotation quaternion
 				Quaternion rotation = Quaternion.AngleAxis(angle, rotationAxis);
 
-				// Apply rotation to vertex relative to pivot
 				foreach (int index in group.Value)
 				{
 					Vector3 localVertex = originalVertices[index];
@@ -109,6 +100,7 @@ namespace ClassicTilestorm
 			swayAmplitude = Mathf.Max(0f, swayAmplitude);
 			swayFrequency = Mathf.Max(0f, swayFrequency);
 			phase = Mathf.Clamp01(phase);
+			swayInfluencePower = Mathf.Max(0.1f, swayInfluencePower);
 		}
 	}
 }
