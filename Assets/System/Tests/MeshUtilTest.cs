@@ -66,7 +66,6 @@ namespace ClassicTilestorm
 			List<int[]> newTris = new List<int[]>();
 			Dictionary<Edge, int> edgeSplitVertex = new Dictionary<Edge, int>();
 
-			int pairCount = 0;
 			for (int i = 0; i < triIndices.Count; i++)
 			{
 				for (int j = i + 1; j < triIndices.Count; j++)
@@ -84,25 +83,18 @@ namespace ClassicTilestorm
 
 					if (shareEdge && coplanar)
 					{
-						Debug.Log($"Coplanar pair {pairCount++}: Tri {i} ({tri1[0]},{tri1[1]},{tri1[2]}) and Tri {j} ({tri2[0]},{tri2[1]},{tri2[2]})");
 						SplitCoplanarPair(tri1, tri2, v1, v2, planeNormal, offset, edgeSplitVertex, allVerts, newTris);
 						processedTriangles.Add(i);
 						processedTriangles.Add(j);
 					}
-					else
-					{
-						Debug.Log($"Pair {i}-{j} rejected: Shares edge={shareEdge}, Coplanar={coplanar}");
-					}
 				}
 			}
-			Debug.Log($"Detected {pairCount} coplanar pairs");
 
 			for (int i = 0; i < triIndices.Count; i++)
 			{
 				if (processedTriangles.Contains(i))
 					continue;
 
-				Debug.Log($"Processing single triangle {i}");
 				int[] tri = triIndices[i];
 				VertexData[] v = new VertexData[] { allVerts[tri[0]], allVerts[tri[1]], allVerts[tri[2]] };
 
@@ -119,7 +111,6 @@ namespace ClassicTilestorm
 				if (aboveCount == 0 || aboveCount == 3)
 				{
 					newTris.Add(tri);
-					Debug.Log($"Triangle {i} entirely on one side: aboveCount={aboveCount}");
 					continue;
 				}
 
@@ -133,13 +124,6 @@ namespace ClassicTilestorm
 			}
 
 			var (uniqueVerts, finalTris) = DeduplicateVertices(allVerts, newTris);
-
-			for (int i = 0; i < uniqueVerts.Count; i++)
-			{
-				Debug.Log($"Final vertex {i}: pos={uniqueVerts[i].pos}, normal={uniqueVerts[i].normal}, uv={uniqueVerts[i].uv}");
-			}
-
-			Debug.Log($"Final mesh: {uniqueVerts.Count} vertices, {finalTris.Count / 3} triangles");
 
 			return BuildMesh(uniqueVerts, finalTris);
 		}
@@ -163,29 +147,21 @@ namespace ClassicTilestorm
 
 		private static bool AreTrianglesCoplanar(VertexData[] tri1, VertexData[] tri2, int[] tri1Idx, int[] tri2Idx, List<VertexData> allVerts)
 		{
-			// Check geometric coplanarity
 			Vector3 n1 = Vector3.Cross(tri1[1].pos - tri1[0].pos, tri1[2].pos - tri1[0].pos).normalized;
 			Vector3 n2 = Vector3.Cross(tri2[1].pos - tri2[0].pos, tri2[2].pos - tri2[0].pos).normalized;
 
 			float dot = Mathf.Abs(Vector3.Dot(n1, n2));
 			if (dot < 0.9999f)
-			{
-				Debug.Log($"Non-coplanar normals: n1={n1}, n2={n2}, abs(dot)={dot}");
 				return false;
-			}
 
 			float d1 = Vector3.Dot(n1, tri1[0].pos);
 			for (int i = 0; i < 3; i++)
 			{
 				float dist = Mathf.Abs(Vector3.Dot(n1, tri2[i].pos) - d1);
 				if (dist > 1e-4f)
-				{
-					Debug.Log($"Non-coplanar plane: tri2[{i}] pos={tri2[i].pos}, dist={dist}");
 					return false;
-				}
 			}
 
-			// Find shared and unique vertices
 			Dictionary<Vector3, List<int>> posToIndices = new Dictionary<Vector3, List<int>>(new VertexPositionEqualityComparer(1e-6f));
 			foreach (int idx in tri1Idx.Concat(tri2Idx))
 			{
@@ -222,40 +198,22 @@ namespace ClassicTilestorm
 			}
 
 			if (sharedVerts.Count != 2 || uniqueVerts1.Count != 1 || uniqueVerts2.Count != 1)
-			{
-				Debug.LogWarning($"Invalid coplanar pair in normal check: shared={sharedVerts.Count}, unique1={uniqueVerts1.Count}, unique2={uniqueVerts2.Count}");
 				return false;
-			}
 
 			int v1Idx = uniqueVerts1[0];
 			int v2Idx = uniqueVerts2[0];
 			int s1Idx = sharedVerts[0];
 			int s2Idx = sharedVerts[1];
 
-			// Check normals for unique vertices and their adjacent shared vertex
 			Vector3 v1Normal = allVerts[v1Idx].normal;
 			Vector3 s1Normal = allVerts[s1Idx].normal;
 			Vector3 v2Normal = allVerts[v2Idx].normal;
 			Vector3 s2Normal = allVerts[s2Idx].normal;
 
-			// For tri1 (v1, s1, s2), check v1 and s1 normals
 			float dot1 = Mathf.Abs(Vector3.Dot(v1Normal, s1Normal));
-			// For tri2 (v2, s2, s1), check v2 and s2 normals
 			float dot2 = Mathf.Abs(Vector3.Dot(v2Normal, s2Normal));
 
-			if (dot1 < 0.9999f)
-			{
-				Debug.Log($"Non-matching normals in tri1: v1={v1Normal}, s1={s1Normal}, dot={dot1}");
-				return false;
-			}
-			if (dot2 < 0.9999f)
-			{
-				Debug.Log($"Non-matching normals in tri2: v2={v2Normal}, s2={s2Normal}, dot={dot2}");
-				return false;
-			}
-
-			Debug.Log($"Coplanar pair normals: v1={v1Normal}, s1={s1Normal}, v2={v2Normal}, s2={s2Normal}");
-			return true;
+			return dot1 >= 0.9999f && dot2 >= 0.9999f;
 		}
 
 		private static void SplitTrianglePlane(VertexData[] v, int[] tri, Vector3 planeNormal, float offset,
@@ -285,11 +243,7 @@ namespace ClassicTilestorm
 					if (!edgeSplitVertex.TryGetValue(e, out int newIndex))
 					{
 						float t = da / (da - db);
-						if (t < 0 || t > 1)
-						{
-							Debug.LogWarning($"Invalid interpolation t={t} for edge {aIdx}-{bIdx}, da={da}, db={db}");
-							t = Mathf.Clamp01(t);
-						}
+						t = Mathf.Clamp01(t);
 						VertexData interp = new VertexData(
 							Vector3.Lerp(a.pos, b.pos, t),
 							Vector3.Lerp(a.normal, b.normal, t).normalized,
@@ -298,7 +252,6 @@ namespace ClassicTilestorm
 						newIndex = allVerts.Count;
 						allVerts.Add(interp);
 						edgeSplitVertex[e] = newIndex;
-						Debug.Log($"Split edge {aIdx}-{bIdx}: pos={interp.pos}, normal={interp.normal}, uv={interp.uv}, t={t}, a.normal={a.normal}, b.normal={b.normal}");
 					}
 					top.Add(allVerts[newIndex]);
 					bottom.Add(allVerts[newIndex]);
@@ -346,7 +299,6 @@ namespace ClassicTilestorm
 
 			if (sharedVerts.Count != 2 || uniqueVerts1.Count != 1 || uniqueVerts2.Count != 1)
 			{
-				Debug.LogWarning($"Invalid coplanar pair: shared={sharedVerts.Count}, unique1={uniqueVerts1.Count}, unique2={uniqueVerts2.Count}");
 				newTris.Add(tri1);
 				newTris.Add(tri2);
 				return;
@@ -372,15 +324,10 @@ namespace ClassicTilestorm
 			bool aboveS1 = ds1 >= 0;
 			bool aboveS2 = ds2 >= 0;
 
-			Debug.Log($"Pair vertices: v1={v1Unique.pos}, v2={v2Unique.pos}, s1={s1.pos}, s2={s2.pos}");
-			Debug.Log($"Plane distances: v1={d1}, v2={d2}, s1={ds1}, s2={ds2}");
-			Debug.Log($"Vertex normals: v1={v1Unique.normal}, s1={s1.normal}, v2={v2Unique.normal}, s2={s2.normal}");
-
 			if ((above1 && above2 && aboveS1 && aboveS2) || (!above1 && !above2 && !aboveS1 && !aboveS2))
 			{
 				newTris.Add(tri1);
 				newTris.Add(tri2);
-				Debug.Log("Pair entirely on one side, keeping original triangles");
 				return;
 			}
 
@@ -391,20 +338,15 @@ namespace ClassicTilestorm
 				if (!edgeSplitVertex.TryGetValue(e1, out p1Idx))
 				{
 					float t = d1 / (d1 - ds1);
-					if (t < 0 || t > 1)
-					{
-						Debug.LogWarning($"Invalid interpolation t={t} for edge v1-s1, d1={d1}, ds1={ds1}");
-						t = Mathf.Clamp01(t);
-					}
+					t = Mathf.Clamp01(t);
 					VertexData interp = new VertexData(
 						Vector3.Lerp(v1Unique.pos, s1.pos, t),
-						v1Unique.normal, // Use v1's normal (matches s1 for cylinder)
+						v1Unique.normal,
 						Vector2.Lerp(v1Unique.uv, s1.uv, t)
 					);
 					p1Idx = allVerts.Count;
 					allVerts.Add(interp);
 					edgeSplitVertex[e1] = p1Idx;
-					Debug.Log($"Split edge v1-s1: pos={interp.pos}, normal={interp.normal}, uv={interp.uv}, t={t}, v1.normal={v1Unique.normal}, s1.normal={s1.normal}");
 				}
 			}
 
@@ -415,27 +357,20 @@ namespace ClassicTilestorm
 				if (!edgeSplitVertex.TryGetValue(e2, out p2Idx))
 				{
 					float t = d2 / (d2 - ds2);
-					if (t < 0 || t > 1)
-					{
-						Debug.LogWarning($"Invalid interpolation t={t} for edge v2-s2, d2={d2}, ds2={ds2}");
-						t = Mathf.Clamp01(t);
-					}
+					t = Mathf.Clamp01(t);
 					VertexData interp = new VertexData(
 						Vector3.Lerp(v2Unique.pos, s2.pos, t),
-						v2Unique.normal, // Use v2's normal (matches s2 for cylinder)
+						v2Unique.normal,
 						Vector2.Lerp(v2Unique.uv, s2.uv, t)
 					);
 					p2Idx = allVerts.Count;
 					allVerts.Add(interp);
 					edgeSplitVertex[e2] = p2Idx;
-					Debug.Log($"Split edge v2-s2: pos={interp.pos}, normal={interp.normal}, uv={interp.uv}, t={t}, v2.normal={v2Unique.normal}, s2.normal={s2.normal}");
 				}
 			}
 
 			if (p1Idx != -1 && p2Idx != -1)
 			{
-				Debug.Log($"Forming quads: s1={s1Idx}, s2={s2Idx}, v1={v1Idx}, v2={v2Idx}, p1={p1Idx}, p2={p2Idx}");
-
 				Vector3 faceNormal = Vector3.Cross(v1Unique.pos - s1.pos, s2.pos - s1.pos).normalized;
 				if (Vector3.Dot(faceNormal, v1Unique.normal) < 0)
 				{
@@ -483,14 +418,11 @@ namespace ClassicTilestorm
 					AddTriangleWithNormalCheck(newTris, allVerts, v2Idx, p2Idx, p1Idx, faceNormal, "Below v2-p2-p1");
 					AddTriangleWithNormalCheck(newTris, allVerts, v2Idx, p1Idx, s1Idx, faceNormal, "Below v2-p1-s1");
 				}
-
-				Debug.Log($"Added 4 triangles for coplanar pair");
 			}
 			else
 			{
 				newTris.Add(tri1);
 				newTris.Add(tri2);
-				Debug.LogWarning("Coplanar pair not split: insufficient edge intersections");
 			}
 		}
 
@@ -503,20 +435,15 @@ namespace ClassicTilestorm
 			float area = Vector3.Cross(p1 - p0, p2 - p0).magnitude * 0.5f;
 
 			if (area < 1e-6f)
-			{
-				Debug.LogWarning($"Degenerate triangle in {context}: {i0},{i1},{i2}, area={area}");
 				return;
-			}
 
 			if (Vector3.Dot(triNormal, refNormal) < 0)
 			{
 				tris.Add(new int[] { i0, i2, i1 });
-				Debug.Log($"Reversed triangle in {context}: {i0},{i2},{i1}, normal={triNormal}, refNormal={refNormal}");
 			}
 			else
 			{
 				tris.Add(new int[] { i0, i1, i2 });
-				Debug.Log($"Added triangle in {context}: {i0},{i1},{i2}, normal={triNormal}, refNormal={refNormal}");
 			}
 		}
 
@@ -554,11 +481,6 @@ namespace ClassicTilestorm
 					idx = uniqueVerts.Count;
 					uniqueVerts.Add(verts[i]);
 					vertexMap[key] = idx;
-					Debug.Log($"Vertex {i} mapped to {idx}: pos={verts[i].pos}, normal={verts[i].normal}, uv={verts[i].uv}");
-				}
-				else
-				{
-					Debug.Log($"Vertex {i} deduplicated to {idx}: pos={verts[i].pos}, normal={verts[i].normal}, uv={verts[i].uv}");
 				}
 				indexMap[i] = idx;
 			}
@@ -566,10 +488,8 @@ namespace ClassicTilestorm
 			foreach (var tri in tris)
 			{
 				if (indexMap[tri[0]] == indexMap[tri[1]] || indexMap[tri[1]] == indexMap[tri[2]] || indexMap[tri[0]] == indexMap[tri[2]])
-				{
-					Debug.LogWarning($"Skipping degenerate triangle: {tri[0]},{tri[1]},{tri[2]}");
 					continue;
-				}
+
 				finalTris.Add(indexMap[tri[0]]);
 				finalTris.Add(indexMap[tri[1]]);
 				finalTris.Add(indexMap[tri[2]]);
