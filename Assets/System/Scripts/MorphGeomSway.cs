@@ -16,14 +16,14 @@ namespace ClassicTilestorm
 		// Public method to set external phase
 		public void SetPhase(float normalizedPhase)
 		{
-			useExternalPhase = true;
+			//useExternalPhase = true;//this is set externally
 			phase = Mathf.Clamp01(normalizedPhase);
 		}
 
 		// Public method to set external sway vector
 		public void SetSwayVector(Vector3 swayVector)
 		{
-			useExternalSwayVector = true;
+			//useExternalSwayVector = true;//this is set externally
 			externalSwayVector = swayVector;
 		}
 
