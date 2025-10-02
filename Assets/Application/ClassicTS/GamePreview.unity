@@ -299,7 +299,7 @@ MonoBehaviour:
   geometryPath: ClassicTS/Geometry/
   texturePath: ClassicTS/Textures/
   skycubesPath: ClassicTS/SkyCubes/
-  debugMode: 0
+  debugMode: 1
 --- !u!4 &862124737
 Transform:
   m_ObjectHideFlags: 0
