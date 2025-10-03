@@ -151,16 +151,26 @@ public static class MeshStratifier
 			}
 		}
 
-		List<int> frontTris = Triangulate(frontPoly);
-		backTriangles = Triangulate(backPoly);
+		List<int> frontTris = Triangulate(frontPoly, verts);
+		backTriangles = Triangulate(backPoly, verts);
 		return frontTris;
 	}
 
-	private static List<int> Triangulate(List<PolyVertex> poly)
+	private static List<int> Triangulate(List<PolyVertex> poly, List<Vector3> verts)
 	{
 		List<int> tris = new List<int>();
 		if (poly.Count < 3) return tris;
 
+		if (poly.Count == 4)
+		{
+			// Quad: pick shortest diagonal
+			return GeomUtils.TriangulateQuad(
+				poly[0].idx, poly[1].idx, poly[2].idx, poly[3].idx,
+				verts.ToArray()
+			);
+		}
+
+		// Fallback: simple fan triangulation
 		int first = poly[0].idx;
 		for (int i = 1; i < poly.Count - 1; i++)
 		{
