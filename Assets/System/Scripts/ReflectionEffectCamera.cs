@@ -366,61 +366,70 @@ public class ReflectionEffectCamera : MonoBehaviour
 		if (effectMaterial == null)
 			return;
 
-		// Only update if properties have changed
-		if (!HasMaterialPropertiesChanged())
-			return;
-
-		effectMaterial.SetColor("_BaseColor", baseColor);
-		switch (effectMode)
+		// Only update static properties if they have changed
+		if (HasMaterialPropertiesChanged())
 		{
-			case EffectMode.SurfaceFilm:
-				effectMaterial.SetFloat("_FilmIntensity", filmIntensity);
-				effectMaterial.SetFloat("_NoiseScale", noiseScale);
-				effectMaterial.SetTexture("_NoiseTex", noiseTexture);
-				break;
-			case EffectMode.FrostEffect:
-				effectMaterial.SetFloat("_Depth", frostDepth);
-				effectMaterial.SetFloat("_NoiseStrength", noiseStrength);
-				effectMaterial.SetTexture("_NoiseTex", noiseTexture);
-				break;
-			case EffectMode.Water:
-				effectMaterial.SetFloat("_RippleSpeed", rippleSpeed);
-				effectMaterial.SetFloat("_RippleAmplitude", rippleAmplitude);
-				effectMaterial.SetFloat("_RippleFrequency", rippleFrequency);
-				effectMaterial.SetFloat("_RippleOffset", rippleOffset);
-				effectMaterial.SetFloat("_TimeSeed", timeSeed);
-				effectMaterial.SetFloat("_ReflectionStrength", reflectionStrength);
-				if (RenderSettings.skybox != lastSkyboxMaterial)
-					SkyboxUtility.SetSkyboxCubemap(effectMaterial, RenderSettings.skybox);
-				break;
-			case EffectMode.OceanEffect:
-				effectMaterial.SetFloat("_RippleSpeed", rippleSpeed);
-				effectMaterial.SetFloat("_RippleAmplitude", rippleAmplitude);
-				effectMaterial.SetFloat("_RippleFrequency", rippleFrequency);
-				effectMaterial.SetFloat("_RippleOffset", rippleOffset);
-				effectMaterial.SetFloat("_DepthThreshold", 128.0f); // Maps to _DepthMax, default 128
-				effectMaterial.SetFloat("_FrostDepth", frostDepth); // Maps to _Depth
-				effectMaterial.SetFloat("_FrostNoiseStrength", noiseStrength); // Maps to _NoiseStrength
-				effectMaterial.SetFloat("_FrostThreshold", frostThreshold);
-				effectMaterial.SetFloat("_FrostFadeRange", frostFadeRange);
-				effectMaterial.SetTexture("_NoiseTex", noiseTexture);
-				effectMaterial.SetFloat("_RippleSeed", timeSeed);
-				if (RenderSettings.skybox != lastSkyboxMaterial)
-					SkyboxUtility.SetSkyboxCubemap(effectMaterial, RenderSettings.skybox);
-				break;
+			effectMaterial.SetColor("_BaseColor", baseColor);
+			switch (effectMode)
+			{
+				case EffectMode.SurfaceFilm:
+					effectMaterial.SetFloat("_FilmIntensity", filmIntensity);
+					effectMaterial.SetFloat("_NoiseScale", noiseScale);
+					effectMaterial.SetTexture("_NoiseTex", noiseTexture);
+					break;
+				case EffectMode.FrostEffect:
+					effectMaterial.SetFloat("_Depth", frostDepth);
+					effectMaterial.SetFloat("_NoiseStrength", noiseStrength);
+					effectMaterial.SetTexture("_NoiseTex", noiseTexture);
+					break;
+				case EffectMode.Water:
+					effectMaterial.SetFloat("_RippleSpeed", rippleSpeed);
+					effectMaterial.SetFloat("_RippleAmplitude", rippleAmplitude);
+					effectMaterial.SetFloat("_RippleFrequency", rippleFrequency);
+					effectMaterial.SetFloat("_RippleOffset", rippleOffset);
+					effectMaterial.SetFloat("_ReflectionStrength", reflectionStrength);
+					if (RenderSettings.skybox != lastSkyboxMaterial)
+						SkyboxUtility.SetSkyboxCubemap(effectMaterial, RenderSettings.skybox);
+					break;
+				case EffectMode.OceanEffect:
+					effectMaterial.SetFloat("_RippleSpeed", rippleSpeed);
+					effectMaterial.SetFloat("_RippleAmplitude", rippleAmplitude);
+					effectMaterial.SetFloat("_RippleFrequency", rippleFrequency);
+					effectMaterial.SetFloat("_RippleOffset", rippleOffset);
+					effectMaterial.SetFloat("_DepthThreshold", 128.0f); // Maps to _DepthMax, default 128
+					effectMaterial.SetFloat("_FrostDepth", frostDepth); // Maps to _Depth
+					effectMaterial.SetFloat("_FrostNoiseStrength", noiseStrength); // Maps to _NoiseStrength
+					effectMaterial.SetFloat("_FrostThreshold", frostThreshold);
+					effectMaterial.SetFloat("_FrostFadeRange", frostFadeRange);
+					effectMaterial.SetTexture("_NoiseTex", noiseTexture);
+					if (RenderSettings.skybox != lastSkyboxMaterial)
+						SkyboxUtility.SetSkyboxCubemap(effectMaterial, RenderSettings.skybox);
+					break;
+			}
+
+			// Store the updated values
+			StoreMaterialPropertyValues();
 		}
 
-		// Store the updated values
-		StoreMaterialPropertyValues();
+		// Always update timeSeed for Water and OceanEffect
+		if (effectMode == EffectMode.Water || effectMode == EffectMode.OceanEffect)
+		{
+			effectMaterial.SetFloat("_TimeSeed", timeSeed);
+			if (effectMode == EffectMode.OceanEffect)
+				effectMaterial.SetFloat("_RippleSeed", timeSeed);
+		}
 	}
 
 	public void Update()
 	{
-		UpdateMaterialProperties();
+		// Update timeSeed every frame for Water and OceanEffect
 		if (effectMode == EffectMode.Water || effectMode == EffectMode.OceanEffect)
 		{
 			timeSeed += Time.deltaTime;
 		}
+
+		// Update material properties (will skip static properties if unchanged)
+		UpdateMaterialProperties();
 	}
 
 	private void LateUpdate()
@@ -464,6 +473,15 @@ public class ReflectionEffectCamera : MonoBehaviour
 		{
 			// Update material properties without recreating resources
 			UpdateMaterialProperties();
+		}
+	}
+
+	public void ForceSkyboxUpdate()
+	{
+		if (effectMode == EffectMode.Water || effectMode == EffectMode.OceanEffect)
+		{
+			SkyboxUtility.SetSkyboxCubemap(effectMaterial, RenderSettings.skybox);
+			lastSkyboxMaterial = RenderSettings.skybox;
 		}
 	}
 
