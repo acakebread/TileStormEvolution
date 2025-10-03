@@ -7,6 +7,7 @@ namespace ClassicTilestorm
 	{
 		[SerializeField] private bool enableSubdivision = true;
 		[SerializeField] private Vector3 divisionAxis = Vector3.up;
+		[SerializeField] private float offset = 0f;
 
 		private MeshFilter meshFilter;
 		private MeshRenderer meshRenderer;
@@ -52,7 +53,7 @@ namespace ClassicTilestorm
 			Vector3 localAxis = transform.InverseTransformDirection(divisionAxis.normalized);
 
 			// Split the mesh along the plane
-			newMesh = MeshUtilTest.SplitMeshAlongPlane(meshFilter.sharedMesh, localAxis, 0f);
+			newMesh = MeshUtilTest.SplitMeshAlongPlane(meshFilter.sharedMesh, localAxis, offset);
 
 			// Create new GameObject for split mesh
 			newObject = new GameObject(name + "_Split");

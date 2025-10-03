@@ -2,5 +2,9 @@ using UnityEngine;
 
 public class Rotate : MonoBehaviour
 {
-    void Update() => transform.Rotate(Time.deltaTime * 10, Time.deltaTime * 7, 0);
+	public float rotX = 0;
+	public float rotY = 0;
+	public float rotZ = 0;
+
+    void Update() => transform.Rotate(Time.deltaTime * rotX, Time.deltaTime * rotY, rotZ);
 }
