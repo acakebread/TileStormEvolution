@@ -77,21 +77,21 @@ namespace ClassicTilestorm
 					var tileDef = DatabaseLoader.TileDefs.FirstOrDefault(td => td.szType == szType && td.szTheme == szTheme);
 					tiles[n].GameObject = GeometryManager.InstantiateTile(tileDef, transform, TileWorldPosition(this, n), tiles[n].Interactive);
 
-					if (tiles[n].GameObject != null)
-					{
-						var meshRenderer = tiles[n].GameObject.GetComponentInChildren<MeshRenderer>(true);
-						if (meshRenderer != null)
-						{
-							var filter = meshRenderer.GetComponent<MeshFilter>();
-							if (filter != null && filter.IsRuntimeWritable())
-							{
-								var morphGeomSway = tiles[n].GameObject.AddComponent<MorphGeomSway>();
-								morphGeomSway.SetCustomInfluenceVolume(Vector3.up, 0.2f);
-								morphGeomSway.swayInfluencePower = 0.5f; // More top sway
-								morphGeomSway.ConfigureSubdivision(true, 0.3f); // Enable stratification with maxSegmentLength for influence volume
-							}
-						}
-					}
+					//if (tiles[n].GameObject != null)
+					//{
+					//	var meshRenderer = tiles[n].GameObject.GetComponentInChildren<MeshRenderer>(true);
+					//	if (meshRenderer != null)
+					//	{
+					//		var filter = meshRenderer.GetComponent<MeshFilter>();
+					//		if (filter != null && filter.IsRuntimeWritable())// || tiles[n].GameObject.name.Contains("door")
+					//		{
+					//			var morphGeomSway = tiles[n].GameObject.AddComponent<MorphGeomSway>();
+					//			morphGeomSway.SetCustomInfluenceVolume(Vector3.up, 0.2f);
+					//			morphGeomSway.swayInfluencePower = 0.5f; // More top sway
+					//			morphGeomSway.ConfigureSubdivision(true, 0.3f); // Enable stratification with maxSegmentLength for influence volume
+					//		}
+					//	}
+					//}
 				}
 			}
 		}

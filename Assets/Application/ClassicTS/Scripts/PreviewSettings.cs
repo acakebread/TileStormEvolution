@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices.WindowsRuntime;
 using UnityEngine;
 
 namespace ClassicTilestorm
@@ -56,7 +57,7 @@ namespace ClassicTilestorm
 
 		[Header("debug mode")]
 		[SerializeField] private bool debugMode = false;
-		public static bool DebugMode => instance.debugMode;
+		public static bool DebugMode { set => instance.debugMode = value; get => instance.debugMode; }
 
 		private static PreviewSettings instance;
 		void Awake() => instance = this;

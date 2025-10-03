@@ -95,6 +95,20 @@ namespace ClassicTilestorm
 #if DEBUG
 			gameObject.AddComponent<RTTI>().tileDef = tileDef;
 #endif
+
+			var meshRenderer = gameObject.GetComponentInChildren<MeshRenderer>(true);
+			if (meshRenderer != null)
+			{
+				var filter = meshRenderer.GetComponent<MeshFilter>();
+				if (filter != null && filter.IsRuntimeWritable())// || tiles[n].GameObject.name.Contains("door")
+				{
+					var morphGeomSway = gameObject.AddComponent<MorphGeomSway>();
+					morphGeomSway.SetCustomInfluenceVolume(Vector3.up, 0.2f);
+					morphGeomSway.swayInfluencePower = 0.5f; // More top sway
+					morphGeomSway.ConfigureSubdivision(true, 0.3f); // Enable stratification with maxSegmentLength for influence volume
+				}
+			}
+
 			return gameObject;
 
 			// Fallback tile for missing prefabs

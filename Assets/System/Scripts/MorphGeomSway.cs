@@ -1,5 +1,4 @@
 using UnityEngine;
-using System.Collections.Generic;
 
 namespace ClassicTilestorm
 {
@@ -16,32 +15,22 @@ namespace ClassicTilestorm
 
 		public void SetPhase(float normalizedPhase)
 		{
-			//useExternalPhase = true; // Set externally
 			phase = Mathf.Clamp01(normalizedPhase);
 		}
 
 		public void SetSwayVector(Vector3 swayVector)
 		{
-			//useExternalSwayVector = true; // Set externally
 			externalSwayVector = swayVector;
 		}
 
 		protected override void ApplyMorphEffect()
 		{
-			Dictionary<Vector3, List<int>> vertexGroups = new Dictionary<Vector3, List<int>>(Vector3EqualityComparer.Instance);
-
-			for (int i = 0; i < originalVertices.Length; i++)
-			{
-				Vector3 worldPos = transform.TransformPoint(originalVertices[i]);
-				if (!vertexGroups.ContainsKey(worldPos))
-					vertexGroups[worldPos] = new List<int>();
-				vertexGroups[worldPos].Add(i);
-			}
-
 			Vector3 worldAnchorPlaneNormal = transform.TransformDirection(anchorPlaneNormal);
 			Vector3 pivot = transform.TransformPoint(anchorPlaneNormal * anchorPlaneOffset);
+			float phaseInput = useExternalPhase ? phase * 2f * Mathf.PI : Time.time * swayFrequency;
+			float influenceHeight = influenceVolume.size.y;
 
-			foreach (var group in vertexGroups)
+			foreach (var group in cachedVertexGroups)
 			{
 				Vector3 vertexWorldPos = group.Key;
 				if (!IsVertexInInfluenceVolume(vertexWorldPos))
@@ -51,20 +40,10 @@ namespace ClassicTilestorm
 				if (distance <= 0f)
 					continue;
 
-				float influenceHeight = influenceVolume.size.y;
 				float normalizedDistance = Mathf.Clamp01(distance / influenceHeight);
-
-				Vector3 swayVector;
-				if (useExternalSwayVector)
-				{
-					swayVector = externalSwayVector * normalizedDistance;
-				}
-				else
-				{
-					float phaseInput = useExternalPhase ? phase * 2f * Mathf.PI : Time.time * swayFrequency;
-					float swayOffset = Mathf.Sin(phaseInput) * swayAmplitude * normalizedDistance;
-					swayVector = swayDirection.normalized * swayOffset;
-				}
+				Vector3 swayVector = useExternalSwayVector
+					? externalSwayVector * normalizedDistance
+					: swayDirection.normalized * (Mathf.Sin(phaseInput) * swayAmplitude * normalizedDistance);
 
 				Vector3 swayDir = swayVector.normalized;
 				Vector3 rotationAxis = Vector3.Cross(worldAnchorPlaneNormal, swayDir);
@@ -84,8 +63,7 @@ namespace ClassicTilestorm
 
 				foreach (int index in group.Value)
 				{
-					Vector3 localVertex = originalVertices[index];
-					Vector3 worldVertex = transform.TransformPoint(localVertex);
+					Vector3 worldVertex = originalWorldVertices[index];
 					Vector3 relativePos = worldVertex - pivot;
 					Vector3 rotatedRelativePos = rotation * relativePos;
 					Vector3 newWorldPos = pivot + rotatedRelativePos;

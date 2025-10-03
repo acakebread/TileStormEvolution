@@ -18,6 +18,9 @@ namespace ClassicTilestorm
 		{
 			defaultSkycubeMaterial = RenderSettings.skybox;
 			gestureController = gameObject.GetComponent<GestureController>();
+
+			// Add PlaceholderUI component to this GameObject
+			gameObject.AddComponent<PlaceholderUI>();
 		}
 
 		void Start()
@@ -33,6 +36,20 @@ namespace ClassicTilestorm
 			// Load the last map from PlayerPrefs if it exists, otherwise use PreviewSettings
 			string mapName = PlayerPrefs.GetString("LastLoadedMap", PreviewSettings.LoadMapName);
 			LoadMap(mapName);
+		}
+
+		public void ChangeMap(int delta)
+		{
+			if (delta == 0)
+			{
+				LoadMap(); // Reload current map
+				return;
+			}
+
+			var currentIndex = DatabaseLoader.Maps.ToList().FindIndex(m => m.name == PreviewSettings.LoadMapName);
+			currentIndex = (DatabaseLoader.Maps.Count + currentIndex + delta) % DatabaseLoader.Maps.Count;
+			PreviewSettings.LoadMapName = DatabaseLoader.Maps[currentIndex].name;
+			LoadMap();
 		}
 
 		private void LoadMap(string mapName = null)
@@ -52,7 +69,7 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			LoadSkybox(currentMap.szMusic);
+			LoadSkybox(currentMap.szMusic); // temporarily use the music name ToDo implement custom skybox resource ID in database
 
 			// Update PreviewSettings to reflect the loaded map
 			PreviewSettings.LoadMapName = currentMap.name;
@@ -109,7 +126,7 @@ namespace ClassicTilestorm
 
 			if (null != eggbotController)
 			{
-				var postProcessingCameraController = FindAnyObjectByType<PostProcessingCameraController>(FindObjectsInactive.Include);
+				var postProcessingCameraController = Object.FindFirstObjectByType<PostProcessingCameraController>(FindObjectsInactive.Include);
 				if (null != postProcessingCameraController)
 					postProcessingCameraController.target = eggbotController.transform;
 			}
@@ -121,20 +138,6 @@ namespace ClassicTilestorm
 			string skybox = $"{PreviewSettings.SkycubesPath}{skycube}Skybox".Replace(".mat", "");
 			var material = Resources.Load<Material>(skybox);
 			RenderSettings.skybox = material ? material : defaultSkycubeMaterial;
-		}
-
-		private void ChangeMap(int delta)
-		{
-			if (delta == 0)
-			{
-				LoadMap(); // Reload current map
-				return;
-			}
-
-			var currentIndex = DatabaseLoader.Maps.ToList().FindIndex(m => m.name == PreviewSettings.LoadMapName);
-			currentIndex = (DatabaseLoader.Maps.Count + currentIndex + delta) % DatabaseLoader.Maps.Count;
-			PreviewSettings.LoadMapName = DatabaseLoader.Maps[currentIndex].name;
-			LoadMap();
 		}
 
 		void Update()
@@ -187,37 +190,6 @@ namespace ClassicTilestorm
 		}
 
 		private void OnLevelCompleted() { } // => gestureController.enabled = false; ToDo prevent gesture system from re-enabling after level complete - only re-enable after map load/reload
-
-		void OnGUI()
-		{
-			GUI.skin.label.fontSize = 24;
-			GUI.color = Color.green;
-
-			if (GUI.Button(new Rect(10, 10, 100, 30), "Reload"))
-			{
-				ChangeMap(0); // Reload current map
-			}
-
-			if (GUI.Button(new Rect(120, 10, 100, 30), "Scramble")) mapManager.Scramble();
-
-			if (GUI.Button(new Rect(230, 10, 100, 30), "Solve")) mapManager.Solve();
-
-			if (GUI.Button(new Rect(340, 10, 150, 30), "Previous Level"))
-			{
-				ChangeMap(-1); // Previous map
-			}
-
-			if (GUI.Button(new Rect(500, 10, 150, 30), "Next Level"))
-			{
-				ChangeMap(1); // Next map
-			}
-
-			if (GUI.Button(new Rect(660, 10, 150, 30), CameraController.CinemaEnabled ? "Disable Cinematic" : "Enable Cinematic"))
-			{
-				CameraController.SetAutoCinema(!CameraController.CinemaEnabled);
-				CameraController.Refresh(Time.time - (CameraController.CinemaEnabled ? 999 : 0));
-			}
-		}
 
 		private void OnDestroy()
 		{
