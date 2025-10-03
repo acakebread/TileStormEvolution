@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 using System.Linq;
-using System.Collections.Generic; // Added for List
+using System.Collections.Generic;
 
 namespace ClassicTilestorm
 {
@@ -71,7 +71,7 @@ namespace ClassicTilestorm
 					if (string.IsNullOrEmpty(szType)) Debug.LogWarning($"Null szType at tileDefIndex {tileDefIndex}");
 					var szTheme = map.defs[tileDefIndex].szTheme;
 					if (string.IsNullOrEmpty(szTheme)) Debug.LogWarning($"Null szTheme at tileDefIndex {tileDefIndex}");
-					tiles[n] = new(szType, szTheme);
+					tiles[n] = new Tile(szType, szTheme);
 					if (szType == "tile_empty") continue;
 
 					var tileDef = DatabaseLoader.TileDefs.FirstOrDefault(td => td.szType == szType && td.szTheme == szTheme);
@@ -87,8 +87,8 @@ namespace ClassicTilestorm
 							{
 								var morphGeomSway = tiles[n].GameObject.AddComponent<MorphGeomSway>();
 								morphGeomSway.SetCustomInfluenceVolume(Vector3.up, 0.2f);
-								morphGeomSway.swayInfluencePower = 2.5f; // More top sway
-								//morphGeomSway.ConfigureSubdivision(true, 0.3f); // Enable subdivision with max segment length
+								morphGeomSway.swayInfluencePower = 0.5f; // More top sway
+								morphGeomSway.ConfigureSubdivision(true, 0.3f); // Enable stratification with maxSegmentLength for influence volume
 							}
 						}
 					}
@@ -117,7 +117,6 @@ namespace ClassicTilestorm
 			Debug.Log($"WindController initialized with {swayComponents.Count} MorphGeomSway components.");
 		}
 
-		// Rest of MapManager remains unchanged
 		public void Scramble()
 		{
 			indices = Enumerable.Range(0, Count).Select(n => n + offsets[n]).ToArray();
@@ -154,7 +153,7 @@ namespace ClassicTilestorm
 			return ray.GetPoint(distance);
 		}
 
-		private static Vector3 tile_origin = new(0.5f, 0f, 0.5f);
+		private static Vector3 tile_origin = new Vector3(0.5f, 0f, 0.5f);
 		public static Vector3 TileWorldPosition(IMapManager map, int index) => new Vector3(index % map.Width, 0f, index / map.Width) + tile_origin;
 
 		public static int WorldToMapIndex(IMapManager map, Vector3 vec) => vec.x >= 0 && vec.x < map.Width && vec.z >= 0 && vec.z < map.Height ? (int)vec.z * map.Width + (int)vec.x : -1;

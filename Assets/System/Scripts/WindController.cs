@@ -12,13 +12,13 @@ namespace ClassicTilestorm
 		}
 
 		[SerializeField] private Vector3 baseWaveDirection = Vector3.right; // Initial direction (world space)
-		[SerializeField] private DirectionPattern directionPattern = DirectionPattern.Circular; // Pattern for direction change
+		[SerializeField] private DirectionPattern directionPattern = DirectionPattern.Oscillating; // Pattern for direction change
 		[SerializeField] private float directionChangeSpeed = 0.1f; // Speed of direction rotation (radians per second)
 		[SerializeField] private float oscillationRange = 90f; // Max angle (degrees) for oscillating pattern
 		[SerializeField] private float waveSpeed = 0.2f; // Speed of wave propagation
 		[SerializeField] private float waveAmplitude = 0.3f; // Max sway displacement during gusts
-		[SerializeField] private float waveFrequency = 0.03f; // Spatial frequency of the wave
-		[SerializeField] private float minAmplitude = 0.01f; // Min sway displacement during calm periods
+		[SerializeField] private float waveFrequency = 0.08f; // Spatial frequency of the wave
+		[SerializeField] private float minAmplitude = 0.02f; // Min sway displacement during calm periods
 		[SerializeField] private float gustFrequency = 0.1f; // Frequency of gust cycles
 		[SerializeField] private float gustSharpness = 1f; // Controls sharpness of gust transitions
 
