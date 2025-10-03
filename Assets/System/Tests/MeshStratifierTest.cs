@@ -100,13 +100,13 @@ using UnityEngine;
 
 public class MeshStratifierTest : MonoBehaviour
 {
+	public int numStrata = 3; // default 3 layers
 	void Start()
 	{
 		Mesh originalMesh = GetComponent<MeshFilter>().mesh;
 		Vector3 planeNormal = Vector3.up; // Slice along Y-axis
 		float offset = -0.5f; // Plane at Y=-0.5
 		Plane minPlane = new Plane(planeNormal, -offset); // distance = -offset to place plane at y = offset
-		int numStrata = 3; // Create 4 layers
 		Mesh stratifiedMesh = MeshStratifier.StratifyMesh(originalMesh, minPlane, numStrata);
 		GetComponent<MeshFilter>().mesh = stratifiedMesh;
 	}

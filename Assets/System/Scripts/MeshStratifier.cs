@@ -33,15 +33,20 @@ public static class MeshStratifier
 			strataPlanes.Add(new Plane(planeNormal, -strataOffset));
 		}
 
+		// Build BSP-style visit order (balanced binary search tree order)
+		List<int> planeVisitOrder = new List<int>();
+		BuildBSPOrder(0, strataPlanes.Count - 1, planeVisitOrder);
+
 		// Working buffers
 		List<Vector3> newVertices = new List<Vector3>(vertices);
 		List<Vector3> newNormals = new List<Vector3>(mesh.normals);
 		List<Vector2> newUVs = new List<Vector2>(mesh.uv);
 		List<int> currentTriangles = new List<int>(mesh.triangles);
 
-		// Slice against each plane
-		foreach (var plane in strataPlanes)
+		// Slice against planes in BSP order
+		foreach (int planeIndex in planeVisitOrder)
 		{
+			Plane plane = strataPlanes[planeIndex];
 			List<int> nextTriangles = new List<int>();
 
 			for (int i = 0; i < currentTriangles.Count; i += 3)
@@ -50,14 +55,12 @@ public static class MeshStratifier
 				int v1 = currentTriangles[i + 1];
 				int v2 = currentTriangles[i + 2];
 
-				// Clip this triangle and get front/back triangles
 				List<int> backTris;
 				List<int> frontTris = ClipTriangleAgainstPlane(
 					v0, v1, v2, plane,
 					newVertices, newNormals, newUVs,
 					out backTris);
 
-				// Keep both halves (stratification → not discarding either side)
 				nextTriangles.AddRange(frontTris);
 				nextTriangles.AddRange(backTris);
 			}
@@ -73,23 +76,26 @@ public static class MeshStratifier
 			triangles = currentTriangles.ToArray()
 		};
 
-		// Debug log
-		StringBuilder sb = new StringBuilder();
-		sb.AppendLine($"Final mesh: {result.vertexCount} vertices, {result.triangles.Length / 3} triangles");
-		sb.AppendLine("Vertices:");
-		for (int i = 0; i < result.vertexCount; i++)
-			sb.AppendLine($"v{i}: {result.vertices[i]}");
-		sb.AppendLine("Triangles:");
-		for (int i = 0; i < result.triangles.Length; i += 3)
-			sb.AppendLine($"t{i / 3}: ({result.triangles[i]}, {result.triangles[i + 1]}, {result.triangles[i + 2]})");
-		Debug.Log(sb.ToString());
-
 		result.RecalculateBounds();
 		result.RecalculateTangents();
+
+		// Optional debug log
+		StringBuilder sb = new StringBuilder();
+		sb.AppendLine($"Final mesh: {result.vertexCount} vertices, {result.triangles.Length / 3} triangles");
+		Debug.Log(sb.ToString());
+
 		return result;
 	}
 
-	// Small helper struct (safer & clearer than tuple fields)
+	private static void BuildBSPOrder(int start, int end, List<int> order)
+	{
+		if (start > end) return;
+		int mid = (start + end) / 2;
+		order.Add(mid);
+		BuildBSPOrder(start, mid - 1, order);
+		BuildBSPOrder(mid + 1, end, order);
+	}
+
 	private struct PolyVertex
 	{
 		public Vector3 pos;
@@ -99,7 +105,6 @@ public static class MeshStratifier
 		public PolyVertex(Vector3 p, Vector3 n, Vector2 u, int i) { pos = p; normal = n; uv = u; idx = i; }
 	}
 
-	// Clip a single triangle against a plane. Returns front triangles and outputs back triangles.
 	private static List<int> ClipTriangleAgainstPlane(
 		int v0, int v1, int v2, Plane plane,
 		List<Vector3> verts, List<Vector3> norms, List<Vector2> uvs,
@@ -134,8 +139,7 @@ public static class MeshStratifier
 
 			if ((aFront && !bFront) || (!aFront && bFront))
 			{
-				// Edge crosses plane — compute intersection
-				float t = da / (da - db); // safe since signs differ
+				float t = da / (da - db);
 				Vector3 p = Vector3.Lerp(a.pos, b.pos, t);
 				Vector3 n = Vector3.Lerp(a.normal, b.normal, t).normalized;
 				Vector2 uv = Vector2.Lerp(a.uv, b.uv, t);
@@ -163,14 +167,10 @@ public static class MeshStratifier
 
 		if (poly.Count == 4)
 		{
-			// Quad: pick shortest diagonal
-			return GeomUtils.TriangulateQuad(
-				poly[0].idx, poly[1].idx, poly[2].idx, poly[3].idx,
-				verts.ToArray()
-			);
+			// Use the original quad triangulation you specified
+			return GeomUtils.TriangulateQuad(poly[0].idx, poly[1].idx, poly[2].idx, poly[3].idx, verts.ToArray());
 		}
 
-		// Fallback: simple fan triangulation
 		int first = poly[0].idx;
 		for (int i = 1; i < poly.Count - 1; i++)
 		{
@@ -181,3 +181,33 @@ public static class MeshStratifier
 		return tris;
 	}
 }
+
+//public static class GeomUtils
+//{
+//	/// <summary>
+//	/// Triangulates a quad (a,b,c,d) choosing the diagonal that produces 
+//	/// the shortest split. Assumes vertices are in order (convex quad).
+//	/// </summary>
+//	public static List<int> TriangulateQuad(int a, int b, int c, int d, Vector3[] verts)
+//	{
+//		List<int> tris = new List<int>(6);
+
+//		float diagAC = (verts[a] - verts[c]).sqrMagnitude;
+//		float diagBD = (verts[b] - verts[d]).sqrMagnitude;
+
+//		if (diagAC <= diagBD)
+//		{
+//			// Use diagonal AC
+//			tris.Add(a); tris.Add(b); tris.Add(c);
+//			tris.Add(a); tris.Add(c); tris.Add(d);
+//		}
+//		else
+//		{
+//			// Use diagonal BD
+//			tris.Add(a); tris.Add(b); tris.Add(d);
+//			tris.Add(b); tris.Add(c); tris.Add(d);
+//		}
+
+//		return tris;
+//	}
+//}
