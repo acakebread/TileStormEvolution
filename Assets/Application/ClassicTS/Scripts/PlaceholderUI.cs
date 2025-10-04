@@ -7,8 +7,8 @@ namespace ClassicTilestorm
 	[RequireComponent(typeof(GameController))]
 	public class PlaceholderUI : MonoBehaviour
 	{
-		private GameController gameController;
-		private MapManager mapManager;
+		private GameController gameController => GetComponent<GameController>();
+		private MapManager mapManager => gameController.mapManager;
 		private bool isGuiVisible = false;
 		private float hideTimer = 0f;
 		private float hideDelay = 3f; // 3 seconds before hiding
@@ -16,12 +16,6 @@ namespace ClassicTilestorm
 		private float targetY = -100; // Target Y position for animation
 		private float animationSpeed = 300f; // Pixels per second for animation
 		private bool isMouseOverGui = false;
-
-		private void Start()
-		{
-			gameController = GetComponent<GameController>();
-			mapManager = Object.FindFirstObjectByType<MapManager>();
-		}
 
 		private void Update()
 		{

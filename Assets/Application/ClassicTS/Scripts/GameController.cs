@@ -7,7 +7,7 @@ namespace ClassicTilestorm
 	[RequireComponent(typeof(GestureController))]
 	public class GameController : MonoBehaviour
 	{
-		private MapManager mapManager;
+		[HideInInspector] public MapManager mapManager;
 		private GestureController gestureController;
 		private EggbotController eggbotController;
 		private bool locked = false; // true while player is dragging tiles
