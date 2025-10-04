@@ -6,7 +6,7 @@ namespace ClassicTilestorm
 	{
 		[Header("map to load")]
 		[SerializeField] private string loadMapName = "Industrial 01";
-		public static string LoadMapName { get => instance.loadMapName; set => instance.loadMapName = value; }// => instance.loadMapName;
+		public static string LoadMapName { get => instance.loadMapName; set => instance.loadMapName = value; }
 
 		[Header("load map scrambled or solved")]
 		[SerializeField] private bool scrambled = true;

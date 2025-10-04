@@ -1,5 +1,6 @@
 using UnityEngine;
 using MassiveHadronLtd;
+using System.Linq;
 
 namespace ClassicTilestorm
 {
@@ -24,6 +25,10 @@ namespace ClassicTilestorm
 
 		private void Update()
 		{
+			// Handle left/right arrow key inputs for Previous/Next Level with repeat
+			if (InputUtility.GetKeyRepeat(KeyCode.LeftArrow)) ChangeMap(-1); // Previous map
+			if (InputUtility.GetKeyRepeat(KeyCode.RightArrow)) ChangeMap(1); // Next map
+
 			// Check if mouse is near the top of the screen (within 50 pixels)
 			Vector2 mousePos = Input.mousePosition;
 			bool isMouseNearTop = mousePos.y >= Screen.height - 50;
@@ -56,6 +61,20 @@ namespace ClassicTilestorm
 			guiRect.y = newY;
 		}
 
+		public void ChangeMap(int delta)
+		{
+			if (delta == 0)
+			{
+				gameController.LoadMap(); // Reload current map
+				return;
+			}
+
+			var currentIndex = DatabaseLoader.Maps.ToList().FindIndex(m => m.name == PreviewSettings.LoadMapName);
+			currentIndex = (DatabaseLoader.Maps.Count + currentIndex + delta) % DatabaseLoader.Maps.Count;
+			PreviewSettings.LoadMapName = DatabaseLoader.Maps[currentIndex].name;
+			gameController.LoadMap();
+		}
+
 		private void OnGUI()
 		{
 			// Only draw GUI if it's visible or animating
@@ -65,30 +84,15 @@ namespace ClassicTilestorm
 			GUI.color = Color.green;
 
 			// Draw buttons within the animated rect
-			if (GUI.Button(new Rect(guiRect.x + 0, guiRect.y, 100, 30), "Reload"))
-			{
-				gameController.ChangeMap(0);
-			}
+			if (GUI.Button(new Rect(guiRect.x + 0, guiRect.y, 100, 30), "Reload")) ChangeMap(0);
 
-			if (GUI.Button(new Rect(guiRect.x + 110, guiRect.y, 100, 30), "Scramble"))
-			{
-				mapManager.Scramble();
-			}
+			if (GUI.Button(new Rect(guiRect.x + 110, guiRect.y, 100, 30), "Scramble")) mapManager.Scramble();
 
-			if (GUI.Button(new Rect(guiRect.x + 220, guiRect.y, 100, 30), "Solve"))
-			{
-				mapManager.Solve();
-			}
+			if (GUI.Button(new Rect(guiRect.x + 220, guiRect.y, 100, 30), "Solve")) mapManager.Solve();
 
-			if (GUI.Button(new Rect(guiRect.x + 330, guiRect.y, 150, 30), "Previous Level"))
-			{
-				gameController.ChangeMap(-1);
-			}
+			if (GUI.Button(new Rect(guiRect.x + 330, guiRect.y, 150, 30), "Previous Level")) ChangeMap(-1);
 
-			if (GUI.Button(new Rect(guiRect.x + 490, guiRect.y, 150, 30), "Next Level"))
-			{
-				gameController.ChangeMap(1);
-			}
+			if (GUI.Button(new Rect(guiRect.x + 490, guiRect.y, 150, 30), "Next Level")) ChangeMap(1);
 
 			if (GUI.Button(new Rect(guiRect.x + 650, guiRect.y, 150, 30), CameraController.CinemaEnabled ? "Disable Cinematic" : "Enable Cinematic"))
 			{

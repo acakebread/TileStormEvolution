@@ -23,7 +23,7 @@ namespace ClassicTilestorm
 			gameObject.AddComponent<PlaceholderUI>();
 		}
 
-		void Start()
+		private void Start()
 		{
 			DatabaseLoader.Init(PreviewSettings.DatabaseJsonFile);
 			CameraController.SetAutoCinema(PreviewSettings.LaunchInCinemaMode);
@@ -37,21 +37,7 @@ namespace ClassicTilestorm
 			LoadMap(PlayerPrefs.GetString("LastLoadedMap", PreviewSettings.LoadMapName));
 		}
 
-		public void ChangeMap(int delta)
-		{
-			if (delta == 0)
-			{
-				LoadMap(); // Reload current map
-				return;
-			}
-
-			var currentIndex = DatabaseLoader.Maps.ToList().FindIndex(m => m.name == PreviewSettings.LoadMapName);
-			currentIndex = (DatabaseLoader.Maps.Count + currentIndex + delta) % DatabaseLoader.Maps.Count;
-			PreviewSettings.LoadMapName = DatabaseLoader.Maps[currentIndex].name;
-			LoadMap();
-		}
-
-		private void LoadMap(string mapName = null)
+		public void LoadMap(string mapName = null)
 		{
 			// If no mapName provided, use PlayerPrefs or PreviewSettings for first load
 			if (string.IsNullOrEmpty(mapName))
@@ -130,21 +116,18 @@ namespace ClassicTilestorm
 					postProcessingCameraController.target = eggbotController.transform;
 			}
 			if (true == PreviewSettings.DebugMode) Camera.main.fieldOfView = 45;
-		}
 
-		private void LoadSkybox(string skycube)
-		{
-			var skybox = $"{PreviewSettings.SkycubesPath}{skycube}Skybox".Replace(".mat", "");
-			var material = Resources.Load<Material>(skybox);
-			RenderSettings.skybox = material ? material : defaultSkycubeMaterial;
+			//local function
+			void LoadSkybox(string skycube)
+			{
+				var skybox = $"{PreviewSettings.SkycubesPath}{skycube}Skybox".Replace(".mat", "");
+				var material = Resources.Load<Material>(skybox);
+				RenderSettings.skybox = material ? material : defaultSkycubeMaterial;
+			}
 		}
 
 		void Update()
 		{
-			// Handle left/right arrow key inputs for Previous/Next Level with repeat
-			if (InputUtility.GetKeyRepeat(KeyCode.LeftArrow)) ChangeMap(-1); // Previous map
-			if (InputUtility.GetKeyRepeat(KeyCode.RightArrow)) ChangeMap(1); // Next map
-
 			if (null != eggbotController)
 			{
 				eggbotController.UpdateEggbot(locked ? null : mapManager);
