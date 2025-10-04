@@ -110,13 +110,14 @@ namespace ClassicTilestorm
 			float offset = anchorPlaneOffset;
 			Plane minPlane = new Plane(planeNormal, -offset); // Unity Plane uses -distance
 			int originalVertexCount = inputMesh.vertices.Length;
+			int originalTrianglesCount = inputMesh.triangles.Length ;
 
 			// Use MeshStratifier with numStrata = 3
 			Mesh newMesh = MeshStratifier.StratifyMesh(inputMesh, minPlane, numStrata: 3);
 
 			if (Debug.isDebugBuild)
 			{
-				Debug.Log($"{GetType().Name}: Stratified mesh from {originalVertexCount} to {newMesh.vertexCount} vertices, {newMesh.triangles.Length / 3} triangles");
+				Debug.Log($"{GetType().Name}: Stratified mesh from {originalVertexCount} to {newMesh.vertexCount} vertices, and {originalTrianglesCount / 3} to {newMesh.triangles.Length / 3} triangles");
 			}
 
 			return newMesh;
@@ -254,10 +255,10 @@ namespace ClassicTilestorm
 				{
 					includedVertices++;
 				}
-				else
-				{
-					Debug.LogWarning($"{GetType().Name}: Vertex at world pos {worldPos} excluded from influence volume {influenceVolume.center}, {influenceVolume.size}");
-				}
+				//else
+				//{
+				//	Debug.LogWarning($"{GetType().Name}: Vertex at world pos {worldPos} excluded from influence volume {influenceVolume.center}, {influenceVolume.size}");
+				//}
 			}
 			Debug.Log($"{GetType().Name}: {includedVertices}/{meshFilter.sharedMesh.vertices.Length} vertices included in influence volume");
 		}

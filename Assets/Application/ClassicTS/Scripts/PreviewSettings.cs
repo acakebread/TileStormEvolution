@@ -1,4 +1,3 @@
-using System.Runtime.InteropServices.WindowsRuntime;
 using UnityEngine;
 
 namespace ClassicTilestorm
@@ -41,19 +40,6 @@ namespace ClassicTilestorm
 
 		[SerializeField, ResourcePath] private string skycubesPath = "ClassicTS/SkyCubes/";
 		public static string SkycubesPath => instance.skycubesPath;
-
-		//[SerializeField] private string geometryPath = "ClassicTS/Geometry/";
-		//public static string GeometryPath => instance.geometryPath;
-
-		//[SerializeField] private string texturePath = "ClassicTS/Textures/";
-		//public static string TexturePath => instance.texturePath;
-
-
-		//[SerializeField] private string prefabPath = "Prefabs/";
-		//public static string PrefabPath => instance.prefabPath;
-
-		//[SerializeField] private string databasePath = "ClassicTS/";
-		//public static string DatabasePath => instance.databasePath;
 
 		[Header("debug mode")]
 		[SerializeField] private bool debugMode = false;
