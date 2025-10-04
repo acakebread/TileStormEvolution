@@ -79,7 +79,7 @@ namespace MassiveHadronLtd
 				{
 					0 or 1 or 2 => new CinemaCameraPath(),
 					3 or 4 or 5 => new CinemaCameraOrbit(),
-					6 => new CinemaCameraDollyZoom(),
+					//6 => new CinemaCameraDollyZoom(),//disable dolly mode for now because it's not great
 					_ => new CinemaCameraPath() // Default fallback
 				};
 			}
