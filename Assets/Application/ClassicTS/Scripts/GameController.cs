@@ -10,7 +10,7 @@ namespace ClassicTilestorm
 		private MapManager mapManager;
 		private GestureController gestureController;
 		private EggbotController eggbotController;
-		private bool locked = false; // true while player is dragging tiles
+		//private bool locked = false; // true while player is dragging tiles
 		private bool isFirstLoad = true; // Flag to track first map load after launch
 		private Material defaultSkycubeMaterial;
 
@@ -29,9 +29,9 @@ namespace ClassicTilestorm
 			CameraController.SetAutoCinema(PreviewSettings.LaunchInCinemaMode);
 			CameraController.Start(Camera.main);
 
-			var gestureSystem = gameObject.GetComponent<GestureSystem>();
-			gestureSystem.OnBeginDrag += (screenPos) => locked = true;
-			gestureSystem.OnEndDrag += (screenPos) => locked = false;
+			//var gestureSystem = gameObject.GetComponent<GestureSystem>();
+			//gestureSystem.OnBeginDrag += (screenPos) => locked = true;
+			//gestureSystem.OnEndDrag += (screenPos) => locked = false;
 
 			// Load the last map from PlayerPrefs if it exists, otherwise use PreviewSettings
 			LoadMap(PlayerPrefs.GetString("LastLoadedMap", PreviewSettings.LoadMapName));
@@ -104,7 +104,7 @@ namespace ClassicTilestorm
 			CameraController.Update();
 			CameraController.Project(Camera.main);
 			gestureController.enabled = false;
-			locked = false;
+			//locked = false;
 
 			// Mark first load as complete
 			isFirstLoad = false;
@@ -130,7 +130,7 @@ namespace ClassicTilestorm
 		{
 			if (null != eggbotController)
 			{
-				eggbotController.UpdateEggbot(locked ? null : mapManager);
+				eggbotController.UpdateEggbot(gestureController.enabled ? null : mapManager);
 				CameraController.SetPlayer(eggbotController.transform);
 			}
 			if (true == PreviewSettings.DebugMode) return;
