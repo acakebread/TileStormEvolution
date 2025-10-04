@@ -111,7 +111,7 @@ namespace ClassicTilestorm
 
 			if (null != eggbotController)
 			{
-				var postProcessingCameraController = Object.FindFirstObjectByType<PostProcessingCameraController>(FindObjectsInactive.Include);
+				var postProcessingCameraController = FindFirstObjectByType<PostProcessingCameraController>(FindObjectsInactive.Include);
 				if (null != postProcessingCameraController)
 					postProcessingCameraController.target = eggbotController.transform;
 			}
