@@ -13,14 +13,8 @@ public static class GeomUtils
 		float d0 = (v0 - v2).sqrMagnitude;
 		float d1 = (v1 - v3).sqrMagnitude;
 		List<int> tris = new List<int>();
-		if (d0 < d1)
-		{
-			tris.AddRange(new int[] { i0, i1, i2, i0, i2, i3 });
-		}
-		else
-		{
-			tris.AddRange(new int[] { i0, i1, i3, i1, i2, i3 });
-		}
+		if (d0 < d1) tris.AddRange(new int[] { i0, i1, i2, i0, i2, i3 });
+		else tris.AddRange(new int[] { i0, i1, i3, i1, i2, i3 });
 		return tris;
 	}
 

@@ -15,7 +15,7 @@ namespace MassiveHadronLtd
 		{
 			get
 			{
-				Vector2 delta = new Vector2(Input.GetAxis("Mouse X"), Input.GetAxis("Mouse Y")); //Input.mousePosition - lastMousePosition;
+				Vector2 delta = new Vector2(Input.GetAxis("Mouse X"), Input.GetAxis("Mouse Y"));
 				lastMousePosition = Input.mousePosition;
 
 				Dictionary<int, Touch> old = map;
