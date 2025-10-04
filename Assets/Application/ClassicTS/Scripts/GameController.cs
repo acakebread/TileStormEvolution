@@ -34,8 +34,7 @@ namespace ClassicTilestorm
 			gestureSystem.OnEndDrag += (screenPos) => locked = false;
 
 			// Load the last map from PlayerPrefs if it exists, otherwise use PreviewSettings
-			string mapName = PlayerPrefs.GetString("LastLoadedMap", PreviewSettings.LoadMapName);
-			LoadMap(mapName);
+			LoadMap(PlayerPrefs.GetString("LastLoadedMap", PreviewSettings.LoadMapName));
 		}
 
 		public void ChangeMap(int delta)
@@ -135,7 +134,7 @@ namespace ClassicTilestorm
 
 		private void LoadSkybox(string skycube)
 		{
-			string skybox = $"{PreviewSettings.SkycubesPath}{skycube}Skybox".Replace(".mat", "");
+			var skybox = $"{PreviewSettings.SkycubesPath}{skycube}Skybox".Replace(".mat", "");
 			var material = Resources.Load<Material>(skybox);
 			RenderSettings.skybox = material ? material : defaultSkycubeMaterial;
 		}
