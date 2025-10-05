@@ -25,8 +25,6 @@ namespace ClassicTilestorm
 		public int Height { get; private set; }
 		public int Count { get => Width * Height; }
 
-		private WindController windController; // Reference to WindController
-
 		private void Awake()
 		{
 			indices = null;
@@ -83,7 +81,7 @@ namespace ClassicTilestorm
 		// Initialize WindController and collect MorphGeomSway components
 		private void InitializeWindController()
 		{
-			windController = gameObject.AddComponent<WindController>();
+			var windController = gameObject.AddComponent<WindController>();
 			var swayComponents = new List<(MorphGeomSway sway, Vector3 position)>();
 
 			for (int n = 0; n < tiles.Length; ++n)
