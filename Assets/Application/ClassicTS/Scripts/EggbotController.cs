@@ -30,6 +30,8 @@ namespace ClassicTilestorm
 		public event System.Action<int> OnPuzzleSolved;
 		public event System.Action OnLevelCompleted;
 
+		public int NavDirection(IMapManager map) => Navigation.NavToDest(map, currentTile, Navigation.Waypoints[dstWaypoint].nTile);
+
 		private void Awake() 
 		{
 			dstWaypoint = 1;
@@ -109,10 +111,8 @@ namespace ClassicTilestorm
 
 					var direction = Navigation.NavToDest(map, currentTile, destinationTile);
 					if (0 == direction || 0 != (int)Mathf.DeltaAngle(transform.eulerAngles.y, Navigation.DirToAngle(direction))) return false;
-
-					var consoleTile = Navigation.FindAdjacentConsole(map, currentTile);
-					if (-1 != consoleTile) OnPuzzleSolved?.Invoke(dstWaypoint - 1);
 					isBlocked = false;
+
 					startPosition = MapManager.TileWorldPosition(map, currentTile);
 					var prevTargetPosition = targetPosition;
 					var prevCurrentTile = currentTile;
@@ -132,6 +132,7 @@ namespace ClassicTilestorm
 						startYaw = transform.eulerAngles.y;
 						targetYaw = (int)transform.eulerAngles.y + Mathf.DeltaAngle(transform.eulerAngles.y, Navigation.DirToAngle(direction));
 						actionQueue.Enqueue(() => SetState(State.TURN, 1f / 4f));
+						if (-1 != consoleTile) OnPuzzleSolved?.Invoke(dstWaypoint - 1);
 						return true;
 					}
 

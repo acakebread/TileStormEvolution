@@ -10,8 +10,6 @@ namespace ClassicTilestorm
 		[HideInInspector] public MapManager mapManager;
 		private GestureController gestureController;
 		private EggbotController eggbotController;
-		private bool locked = false; // true while player is dragging tiles
-		private bool isFirstLoad = true; // Flag to track first map load after launch
 		private Material defaultSkycubeMaterial;
 
 		private void Awake()
@@ -29,21 +27,18 @@ namespace ClassicTilestorm
 			CameraController.SetAutoCinema(PreviewSettings.LaunchInCinemaMode);
 			CameraController.Start(Camera.main);
 
-			var gestureSystem = gameObject.GetComponent<GestureSystem>();
-			gestureSystem.OnBeginDrag += (screenPos) => locked = true;
-			gestureSystem.OnEndDrag += (screenPos) => locked = false;
-
 			// Load the last map from PlayerPrefs if it exists, otherwise use PreviewSettings
 			LoadMap(PlayerPrefs.GetString("LastLoadedMap", PreviewSettings.LoadMapName));
+
+			var gestureSystem = gameObject.GetComponent<GestureSystem>();
+			gestureSystem.OnDrag += CheckDisableDrag;//ToDo change to OnEndDrag but requires changes to GestureController
 		}
 
 		public void LoadMap(string mapName = null)
 		{
 			// If no mapName provided, use PlayerPrefs or PreviewSettings for first load
 			if (string.IsNullOrEmpty(mapName))
-			{
-				mapName = isFirstLoad ? PlayerPrefs.GetString("LastLoadedMap", PreviewSettings.LoadMapName) : PreviewSettings.LoadMapName;
-			}
+				mapName = null != mapManager ? PreviewSettings.LoadMapName : PlayerPrefs.GetString("LastLoadedMap", PreviewSettings.LoadMapName);
 
 			if (null == mapName) return;
 
@@ -103,11 +98,6 @@ namespace ClassicTilestorm
 			CameraController.SetTarget(dstPos, true);
 			CameraController.Update();
 			CameraController.Project(Camera.main);
-			gestureController.enabled = false;
-			locked = false;
-
-			// Mark first load as complete
-			isFirstLoad = false;
 
 			if (null != eggbotController)
 			{
@@ -130,7 +120,7 @@ namespace ClassicTilestorm
 		{
 			if (null != eggbotController)
 			{
-				eggbotController.UpdateEggbot(locked ? null : mapManager);
+				eggbotController.UpdateEggbot(mapManager);
 				CameraController.SetPlayer(eggbotController.transform);
 			}
 			if (true == PreviewSettings.DebugMode) return;
@@ -168,10 +158,11 @@ namespace ClassicTilestorm
 			if (null == eggbotController) return; // this can never happen because eggbot invokes this function - but leave the check just in case
 			CameraController.SetMode(CameraState.Follow);
 			CameraController.SetPlayer(eggbotController.transform);
-			gestureController.enabled = false;
 		}
 
 		private void OnLevelCompleted() { } // => gestureController.enabled = false; ToDo prevent gesture system from re-enabling after level complete - only re-enable after map load/reload
+
+		private void CheckDisableDrag(Vector3 screenPos) { if (0 != eggbotController.NavDirection(mapManager)) gestureController.enabled = false; }//check if solved
 
 		private void OnDestroy()
 		{
@@ -179,6 +170,8 @@ namespace ClassicTilestorm
 			eggbotController.OnWaypointReached -= OnWaypointReached;
 			eggbotController.OnPuzzleSolved -= OnPuzzleSolved;
 			eggbotController.OnLevelCompleted -= OnLevelCompleted;
+			var gestureSystem = gameObject.GetComponent<GestureSystem>();
+			gestureSystem.OnDrag -= CheckDisableDrag;
 		}
 	}
 }
