@@ -46,7 +46,7 @@ namespace ClassicTilestorm
 			currentTile = Navigation.GetStartTile(map);
 			if (null == map || -1 == currentTile) { Debug.LogError("Initialize: Invalid setup"); return; }
 
-			transform.position = targetPosition = MapManager.TileWorldPosition(map, currentTile);
+			transform.position = targetPosition = map.TileWorldPosition(currentTile);
 			var yaw = Navigation.Waypoints?.Length > 1 ? Navigation.DirToAngle(Navigation.NavToDest(map, Navigation.Waypoints[0].nTile, Navigation.Waypoints[1].nTile)) : 0f;
 			transform.rotation = Quaternion.Euler(0f, yaw, 0f);
 		}
@@ -113,11 +113,11 @@ namespace ClassicTilestorm
 					if (0 == direction || 0 != (int)Mathf.DeltaAngle(transform.eulerAngles.y, Navigation.DirToAngle(direction))) return false;
 					isBlocked = false;
 
-					startPosition = MapManager.TileWorldPosition(map, currentTile);
+					startPosition = map.TileWorldPosition(currentTile);
 					var prevTargetPosition = targetPosition;
 					var prevCurrentTile = currentTile;
 					currentTile = Navigation.LineOfSight(map, currentTile, destinationTile, direction);
-					targetPosition = MapManager.TileWorldPosition(map, currentTile);
+					targetPosition = map.TileWorldPosition(currentTile);
 					actionQueue.Enqueue(() => SetState(State.MOVE, ((targetPosition - prevTargetPosition).magnitude + 1.0f) / walkSpeed));
 					return true;
 				}
@@ -136,10 +136,10 @@ namespace ClassicTilestorm
 						return true;
 					}
 
-					if (-1 != consoleTile && 0 != MapManager.GetTile(map, consoleTile).Nav)
+					if (-1 != consoleTile && 0 != map.GetTile(consoleTile).Nav)
 					{
 						isBlocked = direction == 0;
-						var consoleYaw = Navigation.DirToAngle(Navigation.GetOppositeDirection(MapManager.GetTile(map, consoleTile).Nav));
+						var consoleYaw = Navigation.DirToAngle(Navigation.GetOppositeDirection(map.GetTile(consoleTile).Nav));
 						if (Mathf.Abs(Mathf.DeltaAngle(transform.eulerAngles.y, consoleYaw)) > 0.01f)
 						{
 							startYaw = transform.eulerAngles.y;

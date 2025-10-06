@@ -4,12 +4,19 @@ using System.Collections.Generic;
 
 namespace ClassicTilestorm
 {
-	public interface IMapManager
+	public interface IMapData
 	{
 		int Width { get; }
 		int Height { get; }
 		int Count { get; }
 		int[] Indices { get; }
+	}
+
+	public interface IMapManager : IMapData
+	{
+		Vector3 TileWorldPosition(int index);
+		int WorldToMapIndex(Vector3 vec);
+		Tile GetTile(int index);
 	}
 
 	public class MapManager : MonoBehaviour, IMapManager
@@ -73,7 +80,7 @@ namespace ClassicTilestorm
 					if (szType == "tile_empty") continue;
 
 					var tileDef = DatabaseLoader.TileDefs.FirstOrDefault(td => td.szType == szType && td.szTheme == szTheme);
-					tiles[n].GameObject = GeometryManager.InstantiateTile(tileDef, transform, TileWorldPosition(this, n), tiles[n].Interactive);
+					tiles[n].GameObject = GeometryManager.InstantiateTile(tileDef, transform, TileWorldPosition(n), tiles[n].Interactive);
 				}
 			}
 		}
@@ -90,7 +97,7 @@ namespace ClassicTilestorm
 				var sway = tiles[n].GameObject.GetComponent<MorphGeomSway>();
 				if (sway != null)
 				{
-					var position = TileWorldPosition(this, n);
+					var position = TileWorldPosition(n);
 					swayComponents.Add((sway, position));
 				}
 			}
@@ -118,13 +125,27 @@ namespace ClassicTilestorm
 			{
 				var gameObject = tiles[indices[n]].GameObject;
 				if (null == gameObject) continue;
-				var position = TileWorldPosition(this, n);
+				var position = TileWorldPosition(n);
 				gameObject.transform.position = position;
 				position -= tile_origin;
 #if DEBUG
 				gameObject.name = $"{gameObject.GetComponent<RTTI>()?.tileDef.szType ?? "Empty"} ({position.x},{position.z})";
 #endif
 			}
+		}
+		private static readonly Vector3 tile_origin = new (0.5f, 0f, 0.5f);
+		// Instance method: No cast needed when called on concrete
+		public Vector3 TileWorldPosition(int index) => new Vector3(index % Width, 0f, index / Width) + tile_origin;
+
+		// Instance method: Uses interface props
+		public int WorldToMapIndex(Vector3 vec) => vec.x >= 0 && vec.x < Width && vec.z >= 0 && vec.z < Height ? (int)vec.z * Width + (int)vec.x : -1;
+
+		// Instance method: Direct access to private fields
+		public Tile GetTile(int index)
+		{
+			if (index < 0 || index >= Indices.Length || Width <= 0) return default;
+			var dataIndex = Indices[index];
+			return dataIndex >= 0 && dataIndex < tiles.Length ? tiles[dataIndex] : default;
 		}
 
 		public static Vector3 ScreenToWorld(Vector3 screenPos)
@@ -133,18 +154,6 @@ namespace ClassicTilestorm
 			var mapPlane = new Plane(Vector3.up, Vector3.zero);
 			if (!mapPlane.Raycast(ray, out float distance)) return Vector3.zero;
 			return ray.GetPoint(distance);
-		}
-
-		private static Vector3 tile_origin = new Vector3(0.5f, 0f, 0.5f);
-		public static Vector3 TileWorldPosition(IMapManager map, int index) => new Vector3(index % map.Width, 0f, index / map.Width) + tile_origin;
-
-		public static int WorldToMapIndex(IMapManager map, Vector3 vec) => vec.x >= 0 && vec.x < map.Width && vec.z >= 0 && vec.z < map.Height ? (int)vec.z * map.Width + (int)vec.x : -1;
-
-		public static Tile GetTile(IMapManager map, int index)
-		{
-			if (map is not MapManager concrete || index < 0 || index >= map.Indices?.Length || map.Width <= 0) return default;
-			var dataIndex = map.Indices[index];
-			return dataIndex >= 0 && dataIndex < concrete.tiles.Length ? concrete.tiles[dataIndex] : default;
 		}
 
 		public static MapManager Instantiate(DatabaseLoader.Map map, Transform parent = null)

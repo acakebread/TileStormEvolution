@@ -11,7 +11,7 @@ namespace ClassicTilestorm
 		private Vector3 delta;
 		private int dragIndex = -1;
 		private const float gridSize = 1.0f;
-		public event System.Action OnMapUpdated;
+		public event System.Action<IMapManager> OnMapUpdated;
 
 		public void Initialise(IMapManager imap)
 		{
@@ -45,8 +45,8 @@ namespace ClassicTilestorm
 		private void OnBeginDrag(Vector3 screenPos)
 		{
 			var vert = MapManager.ScreenToWorld(screenPos);
-			var index = MapManager.WorldToMapIndex(imap, vert);
-			var tile = MapManager.GetTile(imap, index);
+			var index = imap.WorldToMapIndex(vert);
+			var tile = imap.GetTile(index);
 			if (false == tile.Interactive) return;
 
 			last = vert;
@@ -109,7 +109,7 @@ namespace ClassicTilestorm
 				for (var i = 0; i < count; ++i)
 				{
 					if (!TileStripHelper.RollStrip(imap, tileStrip)) break;
-					OnMapUpdated?.Invoke();
+					OnMapUpdated?.Invoke(imap);
 					dragIndex += tileStrip.Stride;
 					tileStrip = TileStripHelper.GetTileStrip(imap, dragIndex, stride, PreviewSettings.Difficulty);
 				}

@@ -7,16 +7,15 @@ namespace ClassicTilestorm
 	[RequireComponent(typeof(GestureController))]
 	public class GameController : MonoBehaviour
 	{
-		[HideInInspector] public MapManager mapManager;
+		public MapManager mapManager { get; private set; }
 		private GestureController gestureController;
 		private EggbotController eggbotController;
 
 		private void Awake()
 		{
+			gameObject.AddComponent<PlaceholderUI>();// Add PlaceholderUI component to this GameObject
 			gestureController = gameObject.GetComponent<GestureController>();
-
-			// Add PlaceholderUI component to this GameObject
-			gameObject.AddComponent<PlaceholderUI>();
+			gestureController.OnMapUpdated += CheckDisableDrag;
 		}
 
 		private void Start()
@@ -27,8 +26,6 @@ namespace ClassicTilestorm
 
 			// Load the last map from PlayerPrefs if it exists, otherwise use PreviewSettings
 			LoadMap(PlayerPrefs.GetString("LastLoadedMap", PreviewSettings.LoadMapName));
-
-			gestureController.OnMapUpdated += CheckDisableDrag;
 		}
 
 		public void LoadMap(string mapName = null)
@@ -72,7 +69,7 @@ namespace ClassicTilestorm
 			CameraController.Reset(); // Reset Camera
 			CameraController.SetMode(CameraState.Follow);
 			CameraController.SetPlayer(eggbotController.transform);
-			CameraController.SetFocusPoints(Navigation.Waypoints.Select(w => MapManager.TileWorldPosition(mapManager, w.nTile)).ToList());
+			CameraController.SetFocusPoints(Navigation.Waypoints.Select(w => mapManager.TileWorldPosition(w.nTile)).ToList());//MapManager.TileWorldPosition(mapManager, w.nTile)
 
 			var srcPos = new Vector3(0f, 14f, -14f); // Classic TS default
 			var dstPos = Vector3.zero;
@@ -98,23 +95,19 @@ namespace ClassicTilestorm
 			if (null != eggbotController)
 			{
 				var postProcessingCameraController = FindFirstObjectByType<PostProcessingCameraController>(FindObjectsInactive.Include);
-				if (null != postProcessingCameraController)
-					postProcessingCameraController.target = eggbotController.transform;
+				if (null != postProcessingCameraController) postProcessingCameraController.target = eggbotController.transform;
 			}
-			if (true == PreviewSettings.DebugMode) Camera.main.fieldOfView = 45;
 
 			gestureController.Initialise(mapManager);
+			if (true == PreviewSettings.DebugMode) Camera.main.fieldOfView = 45;
 		}
 
 		void Update()
 		{
-			if (null != eggbotController)
-			{
-				eggbotController.UpdateEggbot(mapManager);
-				CameraController.SetPlayer(eggbotController.transform);
-			}
+			if (null != eggbotController) eggbotController.UpdateEggbot(mapManager);
 			if (true == PreviewSettings.DebugMode) return;
 
+			if (null != eggbotController) CameraController.SetPlayer(eggbotController.transform);
 			CameraController.Update();
 			CameraController.Project(Camera.main);
 		}
@@ -137,7 +130,7 @@ namespace ClassicTilestorm
 			CameraController.SetMode(CameraState.Preset);
 			var origin = waypoint.vSrc.IsValidVector() ? waypoint.vSrc.ToVector3() : new Vector3(0f, 14f, -14f); // Classic TS default
 			CameraController.SetOrigin(origin);
-			var target = null != waypoint.vDst && waypoint.vDst.IsValidVector() ? waypoint.vDst.ToVector3() : MapManager.TileWorldPosition(mapManager, waypoint.nTile);
+			var target = null != waypoint.vDst && waypoint.vDst.IsValidVector() ? waypoint.vDst.ToVector3() : mapManager.TileWorldPosition(waypoint.nTile);//MapManager.TileWorldPosition(mapManager, waypoint.nTile);
 			CameraController.SetTarget(target);
 			gestureController.enabled = true;
 		}
@@ -152,7 +145,7 @@ namespace ClassicTilestorm
 
 		private void OnLevelCompleted() { } // => gestureController.enabled = false; ToDo prevent gesture system from re-enabling after level complete - only re-enable after map load/reload
 
-		private void CheckDisableDrag() { if (0 != eggbotController?.NavDirection(mapManager)) gestureController.enabled = false; }//check if solved
+		private void CheckDisableDrag(IMapManager imap) { if (null != eggbotController && 0 != eggbotController.NavDirection(imap)) gestureController.enabled = false; }//check if solved
 
 		private void OnDestroy()
 		{

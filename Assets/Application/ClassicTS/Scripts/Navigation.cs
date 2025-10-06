@@ -51,7 +51,7 @@ namespace ClassicTilestorm
 						var nextTileIndex = GetAdjacentTile(imap, currentTile, currentDir);
 						if (-1 == nextTileIndex || nextTileIndex == startTile) break;
 
-						var nextTile = MapManager.GetTile(imap, nextTileIndex);
+						var nextTile = imap.GetTile(nextTileIndex);
 						if (0 == nextTile.Nav) break;
 
 						currentDir = CalculateNav(currentDir, nextTile.Nav);
@@ -75,7 +75,7 @@ namespace ClassicTilestorm
 
 			for (var i = 0; i < map.Count; ++i)
 			{
-				if (MapManager.GetTile(map, i).IsStart)
+				if (map.GetTile(i).IsStart)
 					return i;
 
 			}
@@ -90,7 +90,7 @@ namespace ClassicTilestorm
 
 			for (var i = 0; i < map.Count; ++i)
 			{
-				if (MapManager.GetTile(map, i).IsEnd)
+				if (map.GetTile(i).IsEnd)
 					return i;
 			}
 			Debug.LogError("No end tile found!");
@@ -107,7 +107,7 @@ namespace ClassicTilestorm
 					if (-1 == consoleTileIndex)
 						continue;
 
-					var consoleTile = MapManager.GetTile(map, consoleTileIndex);
+					var consoleTile = map.GetTile(consoleTileIndex);
 					if (true != consoleTile.IsConsole)
 						continue;
 
@@ -125,7 +125,7 @@ namespace ClassicTilestorm
 			{
 				if (src == dst) break;
 				src = GetAdjacentTile(map, src, dir);
-				dir &= MapManager.GetTile(map, src).Nav;
+				dir &= map.GetTile(src).Nav;
 			}
 			return src;
 		}
@@ -139,7 +139,7 @@ namespace ClassicTilestorm
 			foreach (var dirBit in Directions)
 			{
 				var currentTile = src;
-				var currentNav = MapManager.GetTile(map, src).Nav & dirBit;
+				var currentNav = map.GetTile(src).Nav & dirBit;
 
 				while (currentNav != 0)
 				{
@@ -150,7 +150,7 @@ namespace ClassicTilestorm
 					if (-1 == nextTileIndex || nextTileIndex == src) // Invalid tile or loop back
 						break;
 
-					var nextTile = MapManager.GetTile(map, nextTileIndex);
+					var nextTile = map.GetTile(nextTileIndex);
 					if (0 == nextTile.Nav) break;
 
 					currentNav = CalculateNav(currentNav, nextTile.Nav);
