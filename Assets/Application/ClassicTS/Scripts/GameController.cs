@@ -10,11 +10,9 @@ namespace ClassicTilestorm
 		[HideInInspector] public MapManager mapManager;
 		private GestureController gestureController;
 		private EggbotController eggbotController;
-		private Material defaultSkycubeMaterial;
 
 		private void Awake()
 		{
-			defaultSkycubeMaterial = RenderSettings.skybox;
 			gestureController = gameObject.GetComponent<GestureController>();
 
 			// Add PlaceholderUI component to this GameObject
@@ -48,20 +46,19 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			LoadSkybox(currentMap.szMusic); // temporarily use the music name ToDo implement custom skybox resource ID in database
-
 			// Update PreviewSettings to reflect the loaded map
 			PreviewSettings.LoadMapName = currentMap.name;
-
 			// Save the loaded map name to PlayerPrefs
 			PlayerPrefs.SetString("LastLoadedMap", currentMap.name);
 			PlayerPrefs.Save();
 
+			// Load skybox using the music name (ToDo: implement custom skybox resource ID in database)
+			SkyboxUtility.SetSkybox(PreviewSettings.SkycubesPath, currentMap.szMusic);
+
 			if (null != mapManager) Destroy(mapManager.gameObject);
 			mapManager = MapManager.Instantiate(currentMap, transform);
-			gestureController.Initialise(mapManager);
-
 			Navigation.SetupWaypoints(currentMap, mapManager);
+
 			if (null != eggbotController) Destroy(eggbotController.gameObject);
 			eggbotController = EggbotController.Instantiate(currentMap.szEggbotCostume, transform);
 			if (null != eggbotController)
@@ -106,13 +103,7 @@ namespace ClassicTilestorm
 			}
 			if (true == PreviewSettings.DebugMode) Camera.main.fieldOfView = 45;
 
-			//local function
-			void LoadSkybox(string skycube)
-			{
-				var skybox = $"{PreviewSettings.SkycubesPath}{skycube}Skybox".Replace(".mat", "");
-				var material = Resources.Load<Material>(skybox);
-				RenderSettings.skybox = material ? material : defaultSkycubeMaterial;
-			}
+			gestureController.Initialise(mapManager);
 		}
 
 		void Update()
@@ -143,12 +134,12 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			gestureController.enabled = true;
 			CameraController.SetMode(CameraState.Preset);
-			var origin = waypoint.vSrc.IsValidVector() ? waypoint.vSrc.ToVector3() : new Vector3(0f, 14f, -14f); // TS default
+			var origin = waypoint.vSrc.IsValidVector() ? waypoint.vSrc.ToVector3() : new Vector3(0f, 14f, -14f); // Classic TS default
 			CameraController.SetOrigin(origin);
 			var target = null != waypoint.vDst && waypoint.vDst.IsValidVector() ? waypoint.vDst.ToVector3() : MapManager.TileWorldPosition(mapManager, waypoint.nTile);
 			CameraController.SetTarget(target);
+			gestureController.enabled = true;
 		}
 
 		private void OnPuzzleSolved(int waypointIndex)
