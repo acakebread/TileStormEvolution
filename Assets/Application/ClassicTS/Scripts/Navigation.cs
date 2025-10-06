@@ -1,122 +1,13 @@
-using UnityEngine;
-using System.Linq;
-using System.Collections.Generic;
-
 namespace ClassicTilestorm
 {
 	public static class Navigation
 	{
-		private static readonly int[] Directions = { Tile.North, Tile.South, Tile.East, Tile.West };
-		private static DatabaseLoader.Waypoint[] waypoints;
-		public static DatabaseLoader.Waypoint[] Waypoints => waypoints;
-
+		// CHANGED: Made public for access from MapManager.FindAdjacentConsole
+		public static readonly int[] Directions = { Tile.North, Tile.South, Tile.East, Tile.West };
 		public static float DirToAngle(int dir) => new float[] { 0f, 0f, 180f, 0f, 90f, 45f, 135f, 90f, -90f, -45f, -135f, -90f, 0f, 0f, 180f, 0f }[dir & 0xF];
 		public static int GetOppositeDirection(int dir) => ((dir & Tile.North) << 1) | ((dir & Tile.South) >> 1) | ((dir & Tile.East) << 1) | ((dir & Tile.West) >> 1);
 
-		public static void SetupWaypoints(DatabaseLoader.Map map, IMapManager imap)
-		{
-			waypoints = map.waypoints?.Where(w => w != null).ToArray();
-			if (null == waypoints || 0 == waypoints.Length)
-				waypoints = GenerateWaypoints(imap);
-
-			static DatabaseLoader.Waypoint[] GenerateWaypoints(IMapManager imap)
-			{
-				var generatedWaypoints = new List<DatabaseLoader.Waypoint>();
-				if (0 == imap.Count)
-				{
-					Debug.LogWarning("Cannot setup waypoints: invalid tile data");
-					return generatedWaypoints.ToArray();
-				}
-
-				var startTile = GetStartTile(imap);
-				var endTile = GetEndTile(imap);
-
-				if (-1 == startTile || -1 == endTile)
-				{
-					Debug.LogWarning("Cannot setup waypoints: missing start or end tile");
-					return generatedWaypoints.ToArray();
-				}
-
-				generatedWaypoints.Add(new DatabaseLoader.Waypoint { nTile = startTile });
-
-				var currentTile = startTile;
-				var currentDir = NavToDest(imap, currentTile, endTile);
-				if (0 != currentDir)
-				{
-					while (currentTile != endTile)
-					{
-						if (FindAdjacentConsole(imap, currentTile) != -1)
-							generatedWaypoints.Add(new DatabaseLoader.Waypoint { nTile = currentTile });
-
-						var nextTileIndex = GetAdjacentTile(imap, currentTile, currentDir);
-						if (-1 == nextTileIndex || nextTileIndex == startTile) break;
-
-						var nextTile = imap.GetTile(nextTileIndex);
-						if (0 == nextTile.Nav) break;
-
-						currentDir = CalculateNav(currentDir, nextTile.Nav);
-						if (0 == currentDir) break;
-
-						currentTile = nextTileIndex;
-					}
-				}
-
-				generatedWaypoints.Add(new DatabaseLoader.Waypoint { nTile = endTile });
-
-				Debug.Log($"Generated {generatedWaypoints.Count} waypoints: [{string.Join(", ", generatedWaypoints.Select(w => w.nTile))}]");
-				return generatedWaypoints.ToArray();
-			}
-		}
-
-		public static int GetStartTile(IMapManager map)
-		{
-			if (null != waypoints && 0 != waypoints.Length)
-				return waypoints[0].nTile;
-
-			for (var i = 0; i < map.Count; ++i)
-			{
-				if (map.GetTile(i).IsStart)
-					return i;
-
-			}
-			Debug.LogError("No start tile found!");
-			return -1;
-		}
-
-		public static int GetEndTile(IMapManager map)
-		{
-			if (null != waypoints && 0 != waypoints.Length)
-				return waypoints[waypoints.Length - 1].nTile;
-
-			for (var i = 0; i < map.Count; ++i)
-			{
-				if (map.GetTile(i).IsEnd)
-					return i;
-			}
-			Debug.LogError("No end tile found!");
-			return -1;
-		}
-
-		public static int FindAdjacentConsole(IMapManager map, int nTile)
-		{
-			if (nTile >= 0 && nTile < map.Count)
-			{
-				foreach (var dirBit in Directions)
-				{
-					var consoleTileIndex = GetAdjacentTile(map, nTile, dirBit);
-					if (-1 == consoleTileIndex)
-						continue;
-
-					var consoleTile = map.GetTile(consoleTileIndex);
-					if (true != consoleTile.IsConsole)
-						continue;
-
-					if (dirBit == GetOppositeDirection(consoleTile.Nav))
-						return consoleTileIndex;
-				}
-			}
-			return -1;
-		}
+		// REMOVED: All waypoint-specific code (fields, SetupWaypoints, GenerateWaypoints, GetStartTile, GetEndTile, FindAdjacentConsole)
 
 		//Classic TS legacy function - returns tile index in direction
 		public static int LineOfSight(IMapManager map, int src, int dst, int dir)
@@ -161,7 +52,7 @@ namespace ClassicTilestorm
 		}
 
 		//Classic TS legacy function - returns direction to next tile
-		private static int CalculateNav(int currentDir, int nextNav)
+		public static int CalculateNav(int currentDir, int nextNav)
 		{
 			var oppositeDir = GetOppositeDirection(currentDir);
 			if ((oppositeDir & nextNav) != 0) // Next tile allows entering from current direction
@@ -174,7 +65,7 @@ namespace ClassicTilestorm
 		}
 
 		//Classic TS legacy function - returns index of adjacent tile
-		private static int GetAdjacentTile(IMapManager map, int index, int dir)
+		public static int GetAdjacentTile(IMapManager map, int index, int dir)
 		{
 			var dx = ((dir & Tile.East) >> 2) - ((dir & Tile.West) >> 3);
 			var dz = ((dir & Tile.North) >> 0) - ((dir & Tile.South) >> 1);

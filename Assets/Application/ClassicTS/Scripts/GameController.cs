@@ -54,7 +54,7 @@ namespace ClassicTilestorm
 
 			if (null != mapManager) Destroy(mapManager.gameObject);
 			mapManager = MapManager.Instantiate(currentMap, transform);
-			Navigation.SetupWaypoints(currentMap, mapManager);
+			mapManager.SetupWaypoints(currentMap);
 
 			if (null != eggbotController) Destroy(eggbotController.gameObject);
 			eggbotController = EggbotController.Instantiate(currentMap.szEggbotCostume, transform);
@@ -69,17 +69,17 @@ namespace ClassicTilestorm
 			CameraController.Reset(); // Reset Camera
 			CameraController.SetMode(CameraState.Follow);
 			CameraController.SetPlayer(eggbotController.transform);
-			CameraController.SetFocusPoints(Navigation.Waypoints.Select(w => mapManager.TileWorldPosition(w.nTile)).ToList());//MapManager.TileWorldPosition(mapManager, w.nTile)
+			CameraController.SetFocusPoints(mapManager.Waypoints.Select(w => mapManager.TileWorldPosition(w.nTile)).ToList());//MapManager.TileWorldPosition(mapManager, w.nTile)
 
 			var srcPos = new Vector3(0f, 14f, -14f); // Classic TS default
 			var dstPos = Vector3.zero;
 
-			if (null != Navigation.Waypoints && 0 != Navigation.Waypoints.Length)
+			if (null != mapManager.Waypoints && 0 != mapManager.Waypoints.Length)
 			{
 				dstPos = new Vector3(mapManager.Width * 0.5f, 0f, mapManager.Height * 0.5f); // Classic TS default
 				srcPos += dstPos;
 
-				var firstWaypoint = Navigation.Waypoints[0];
+				var firstWaypoint = mapManager.Waypoints[0];
 				if (firstWaypoint.bCamera)
 				{
 					if (null != firstWaypoint.vSrc) srcPos = firstWaypoint.vSrc.ToVector3();
@@ -116,10 +116,10 @@ namespace ClassicTilestorm
 		{
 			if (CameraController.CinemaActive) return;
 			if (null == eggbotController) return; // this can never happen because eggbot invokes this function - but leave the check just in case
-			if (null == mapManager || waypointIndex < 0 || waypointIndex >= Navigation.Waypoints.Length) return; // error!
-			if (Navigation.Waypoints.Length - 1 == waypointIndex || 0 == waypointIndex) return; // just continue following
+			if (null == mapManager || waypointIndex < 0 || waypointIndex >= mapManager.Waypoints.Length) return; // error!
+			if (mapManager.Waypoints.Length - 1 == waypointIndex || 0 == waypointIndex) return; // just continue following
 
-			var waypoint = Navigation.Waypoints[waypointIndex];
+			var waypoint = mapManager.Waypoints[waypointIndex];
 			if (null == waypoint.vSrc || false == waypoint.vSrc.IsValidVector())
 			{
 				CameraController.SetMode(CameraState.Follow);

@@ -17,6 +17,12 @@ namespace ClassicTilestorm
 		Vector3 TileWorldPosition(int index);
 		int WorldToMapIndex(Vector3 vec);
 		Tile GetTile(int index);
+		// ADDED: Waypoint-related members to interface for consistency
+		DatabaseLoader.Waypoint[] Waypoints { get; }
+		void SetupWaypoints(DatabaseLoader.Map map);
+		int GetStartTile();
+		int GetEndTile();
+		int FindAdjacentConsole(int nTile);
 	}
 
 	public class MapManager : MonoBehaviour, IMapManager
@@ -24,6 +30,10 @@ namespace ClassicTilestorm
 		private int[] indices;
 		private int[] offsets;
 		private Tile[] tiles;
+
+		// ADDED: Waypoint field and property
+		private DatabaseLoader.Waypoint[] waypoints;
+		public DatabaseLoader.Waypoint[] Waypoints => waypoints;
 
 		public int[] Indices { get => indices; private set => indices = value; }
 		public Tile[] Tiles { get => tiles; private set => tiles = value; }
@@ -37,6 +47,8 @@ namespace ClassicTilestorm
 			indices = null;
 			offsets = null;
 			tiles = null;
+			// ADDED: Ensure waypoints starts null
+			waypoints = null;
 		}
 
 		private void Initialise(DatabaseLoader.Map map)
@@ -52,6 +64,9 @@ namespace ClassicTilestorm
 			Debug.AssertFormat(null != indices && null != offsets, "invalid map tile indices or offsets data");
 
 			InitializeWindController(); // Initialize WindController after tiles are loaded
+
+			// ADDED: Setup waypoints after tiles are loaded (requires GetTile calls)
+			SetupWaypoints(map);
 
 			void LoadTileData(DatabaseLoader.Tiles dbTiles)
 			{
@@ -83,6 +98,114 @@ namespace ClassicTilestorm
 					tiles[n].GameObject = GeometryManager.InstantiateTile(tileDef, transform, TileWorldPosition(n), tiles[n].Interactive);
 				}
 			}
+		}
+
+		// ADDED: Instance method to setup waypoints (formerly static in Navigation)
+		public void SetupWaypoints(DatabaseLoader.Map map)
+		{
+			waypoints = map.waypoints?.Where(w => w != null).ToArray();
+			if (null == waypoints || 0 == waypoints.Length)
+				waypoints = GenerateWaypoints();
+
+			DatabaseLoader.Waypoint[] GenerateWaypoints() // Local function (non-static, uses 'this')
+			{
+				var generatedWaypoints = new List<DatabaseLoader.Waypoint>();
+				if (0 == Count)
+				{
+					Debug.LogWarning("Cannot setup waypoints: invalid tile data");
+					return generatedWaypoints.ToArray();
+				}
+
+				var startTile = GetStartTile();
+				var endTile = GetEndTile();
+
+				if (-1 == startTile || -1 == endTile)
+				{
+					Debug.LogWarning("Cannot setup waypoints: missing start or end tile");
+					return generatedWaypoints.ToArray();
+				}
+
+				generatedWaypoints.Add(new DatabaseLoader.Waypoint { nTile = startTile });
+
+				var currentTile = startTile;
+				var currentDir = Navigation.NavToDest(this, currentTile, endTile);
+				if (0 != currentDir)
+				{
+					while (currentTile != endTile)
+					{
+						if (FindAdjacentConsole(currentTile) != -1)
+							generatedWaypoints.Add(new DatabaseLoader.Waypoint { nTile = currentTile });
+
+						var nextTileIndex = Navigation.GetAdjacentTile(this, currentTile, currentDir);
+						if (-1 == nextTileIndex || nextTileIndex == startTile) break;
+
+						var nextTile = GetTile(nextTileIndex);
+						if (0 == nextTile.Nav) break;
+
+						currentDir = Navigation.CalculateNav(currentDir, nextTile.Nav);
+						if (0 == currentDir) break;
+
+						currentTile = nextTileIndex;
+					}
+				}
+
+				generatedWaypoints.Add(new DatabaseLoader.Waypoint { nTile = endTile });
+
+				Debug.Log($"Generated {generatedWaypoints.Count} waypoints: [{string.Join(", ", generatedWaypoints.Select(w => w.nTile))}]");
+				return generatedWaypoints.ToArray();
+			}
+		}
+
+		// ADDED: Instance method (formerly static in Navigation)
+		public int GetStartTile()
+		{
+			if (null != waypoints && 0 != waypoints.Length)
+				return waypoints[0].nTile;
+
+			for (var i = 0; i < Count; ++i)
+			{
+				if (GetTile(i).IsStart)
+					return i;
+			}
+			Debug.LogError("No start tile found!");
+			return -1;
+		}
+
+		// ADDED: Instance method (formerly static in Navigation)
+		public int GetEndTile()
+		{
+			if (null != waypoints && 0 != waypoints.Length)
+				return waypoints.Last().nTile;
+
+			for (var i = 0; i < Count; ++i)
+			{
+				if (GetTile(i).IsEnd)
+					return i;
+			}
+			Debug.LogError("No end tile found!");
+			return -1;
+		}
+
+		// ADDED: Instance method (formerly static in Navigation)
+		public int FindAdjacentConsole(int nTile)
+		{
+			var tile = GetTile(nTile);
+			if (0 == tile.Nav) return -1;
+
+			foreach (var dirBit in Navigation.Directions)
+			{
+				var consoleTileIndex = Navigation.GetAdjacentTile(this, nTile, dirBit);
+				if (-1 == consoleTileIndex)
+					continue;
+
+				var consoleTile = GetTile(consoleTileIndex);
+				if (true != consoleTile.IsConsole)
+					continue;
+
+				if (dirBit == Navigation.GetOppositeDirection(consoleTile.Nav))
+					return consoleTileIndex;
+			}
+			return -1;
 		}
 
 		// Initialize WindController and collect MorphGeomSway components
@@ -133,7 +256,7 @@ namespace ClassicTilestorm
 #endif
 			}
 		}
-		private static readonly Vector3 tile_origin = new (0.5f, 0f, 0.5f);
+		private static readonly Vector3 tile_origin = new(0.5f, 0f, 0.5f);
 		// Instance method: No cast needed when called on concrete
 		public Vector3 TileWorldPosition(int index) => new Vector3(index % Width, 0f, index / Width) + tile_origin;
 
