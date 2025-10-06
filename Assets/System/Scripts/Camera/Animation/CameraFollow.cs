@@ -12,6 +12,7 @@ namespace MassiveHadronLtd
 		public override void  Update()
 		{
 			base.Update();
+			cameraData.targetDst = playerTransform.position;
 			cameraData.smoothing = SmoothingUtils.Smooth(cameraData.smoothing, SmoothingNa, SmoothingNb, Time.deltaTime, CameraData.TargetFPS);
 			var followLerp = SmoothingUtils.Smooth(0f, 1f, cameraData.smoothing, Time.deltaTime, CameraData.TargetFPS);
 			cameraData.targetSrc = Vector3.Lerp(cameraData.targetSrc, cameraData.targetDst, followLerp);
