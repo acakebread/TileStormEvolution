@@ -30,8 +30,7 @@ namespace ClassicTilestorm
 			// Load the last map from PlayerPrefs if it exists, otherwise use PreviewSettings
 			LoadMap(PlayerPrefs.GetString("LastLoadedMap", PreviewSettings.LoadMapName));
 
-			var gestureSystem = gameObject.GetComponent<GestureSystem>();
-			gestureSystem.OnDrag += CheckDisableDrag;//ToDo change to OnEndDrag but requires changes to GestureController
+			gestureController.OnMapUpdated += CheckDisableDrag;
 		}
 
 		public void LoadMap(string mapName = null)
@@ -162,7 +161,7 @@ namespace ClassicTilestorm
 
 		private void OnLevelCompleted() { } // => gestureController.enabled = false; ToDo prevent gesture system from re-enabling after level complete - only re-enable after map load/reload
 
-		private void CheckDisableDrag(Vector3 screenPos) { if (0 != eggbotController.NavDirection(mapManager)) gestureController.enabled = false; }//check if solved
+		private void CheckDisableDrag() { if (0 != eggbotController?.NavDirection(mapManager)) gestureController.enabled = false; }//check if solved
 
 		private void OnDestroy()
 		{
@@ -170,8 +169,7 @@ namespace ClassicTilestorm
 			eggbotController.OnWaypointReached -= OnWaypointReached;
 			eggbotController.OnPuzzleSolved -= OnPuzzleSolved;
 			eggbotController.OnLevelCompleted -= OnLevelCompleted;
-			var gestureSystem = gameObject.GetComponent<GestureSystem>();
-			gestureSystem.OnDrag -= CheckDisableDrag;
+			gestureController.OnMapUpdated -= CheckDisableDrag;
 		}
 	}
 }

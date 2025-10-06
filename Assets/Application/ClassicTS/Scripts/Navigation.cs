@@ -19,17 +19,17 @@ namespace ClassicTilestorm
 			if (null == waypoints || 0 == waypoints.Length)
 				waypoints = GenerateWaypoints(imap);
 
-			static DatabaseLoader.Waypoint[] GenerateWaypoints(IMapManager map)
+			static DatabaseLoader.Waypoint[] GenerateWaypoints(IMapManager imap)
 			{
 				var generatedWaypoints = new List<DatabaseLoader.Waypoint>();
-				if (0 == map.Count)
+				if (0 == imap.Count)
 				{
 					Debug.LogWarning("Cannot setup waypoints: invalid tile data");
 					return generatedWaypoints.ToArray();
 				}
 
-				var startTile = GetStartTile(map);
-				var endTile = GetEndTile(map);
+				var startTile = GetStartTile(imap);
+				var endTile = GetEndTile(imap);
 
 				if (-1 == startTile || -1 == endTile)
 				{
@@ -40,18 +40,18 @@ namespace ClassicTilestorm
 				generatedWaypoints.Add(new DatabaseLoader.Waypoint { nTile = startTile });
 
 				var currentTile = startTile;
-				var currentDir = NavToDest(map, currentTile, endTile);
+				var currentDir = NavToDest(imap, currentTile, endTile);
 				if (0 != currentDir)
 				{
 					while (currentTile != endTile)
 					{
-						if (FindAdjacentConsole(map, currentTile) != -1)
+						if (FindAdjacentConsole(imap, currentTile) != -1)
 							generatedWaypoints.Add(new DatabaseLoader.Waypoint { nTile = currentTile });
 
-						var nextTileIndex = GetAdjacentTile(map, currentTile, currentDir);
+						var nextTileIndex = GetAdjacentTile(imap, currentTile, currentDir);
 						if (-1 == nextTileIndex || nextTileIndex == startTile) break;
 
-						var nextTile = MapManager.GetTile(map, nextTileIndex);
+						var nextTile = MapManager.GetTile(imap, nextTileIndex);
 						if (0 == nextTile.Nav) break;
 
 						currentDir = CalculateNav(currentDir, nextTile.Nav);

@@ -11,6 +11,7 @@ namespace ClassicTilestorm
 		private Vector3 delta;
 		private int dragIndex = -1;
 		private const float gridSize = 1.0f;
+		public event System.Action OnMapUpdated;
 
 		public void Initialise(IMapManager imap)
 		{
@@ -108,6 +109,7 @@ namespace ClassicTilestorm
 				for (var i = 0; i < count; ++i)
 				{
 					if (!TileStripHelper.RollStrip(imap, tileStrip)) break;
+					OnMapUpdated?.Invoke();
 					dragIndex += tileStrip.Stride;
 					tileStrip = TileStripHelper.GetTileStrip(imap, dragIndex, stride, PreviewSettings.Difficulty);
 				}
