@@ -9,9 +9,9 @@ namespace MassiveHadronLtd
 	public class CameraController : MonoBehaviour
 	{
 		// Public properties
-		public event Action<CameraState> OnCameraEnable;//ToDo
+		public event Action<CameraState> OnCameraEnable;
 		public event Action<CameraState> OnCameraUpdate;
-		public event Action<CameraState> OnCameraDisable;//ToDo
+		public event Action<CameraState> OnCameraDisable;
 
 		// Public accessors
 		public CameraBase CameraSystem => cameraSystem;
