@@ -39,11 +39,8 @@ namespace ClassicTilestorm
 
 		private void Update()
 		{
-			if (eggbotController != null)
-				eggbotController.UpdateEggbot(mapManager);
-
+			if (null != eggbotController) eggbotController.UpdateEggbot(mapManager);
 			HandleCinemaRestart();
-			if (PreviewSettings.DebugMode) return;
 		}
 
 		private void HandleCinemaRestart()
