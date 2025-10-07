@@ -95,6 +95,7 @@ namespace MassiveHadronLtd
 		private void Update()
 		{
 			OnCameraUpdate?.Invoke(currentState);
+			UpdateFocusPoints();
 			cameraSystem?.Update();
 			cameraSystem?.Project(GetComponent<Camera>());
 		}
@@ -105,10 +106,15 @@ namespace MassiveHadronLtd
 		public void SetPlayer(Transform value)
 		{
 			cameraSystem.playerTransform = value;
-			if (null == value) return;
-			if (SpatialBucketSystem.CanAddPoint(value.position))
+			UpdateFocusPoints();
+		}
+
+		private void UpdateFocusPoints()
+		{
+			if (null == cameraSystem.playerTransform) return;
+			if (SpatialBucketSystem.CanAddPoint(cameraSystem.playerTransform.position))
 			{
-				var pos = value.position;
+				var pos = cameraSystem.playerTransform.position;
 				mapBounds.Encapsulate(pos);
 				focusPoints.Add(pos);
 				SpatialBucketSystem.AddPoint(pos);

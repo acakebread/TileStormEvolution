@@ -81,10 +81,7 @@ namespace ClassicTilestorm
 			var postProcessingCameraController = cameraController.GetComponentInChildren<PostProcessingCameraController>(true);
 			if (postProcessingCameraController != null)
 				postProcessingCameraController.enabled = cameraController.CameraSystem.cameraData.enablePostProcessing;
-		}
 
-		private void OnCameraUpdate(CameraState state)
-		{
 			switch (state)
 			{
 				case CameraState.Follow:
@@ -93,6 +90,8 @@ namespace ClassicTilestorm
 					break;
 			}
 		}
+
+		private void OnCameraUpdate(CameraState state) {}
 
 		private void OnCameraDisable(CameraState state) {}
 
