@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 using System.Collections.Generic;
 
 namespace MassiveHadronLtd
@@ -8,7 +9,8 @@ namespace MassiveHadronLtd
 	{
 		// Public properties
 		public bool CinemaEnabled => enableAutoCinema;
-		public bool CinemaActive => currentState == CameraState.Cinema;
+		public bool CinemaActive => currentState == CameraState.Cinema;    // Events
+		public event Action<CameraState> OnCameraUpdate;
 
 		// Constants
 		private const float CinemaTimeoutDuration = 5f;
@@ -81,7 +83,7 @@ namespace MassiveHadronLtd
 
 			static CameraBase CreateCinemaCamera()
 			{
-				return Random.Range(0, 7) switch
+				return UnityEngine.Random.Range(0, 7) switch
 				{
 					0 or 1 or 2 => new CinemaCameraPath(),
 					3 or 4 or 5 => new CinemaCameraOrbit(),
@@ -91,11 +93,11 @@ namespace MassiveHadronLtd
 			}
 		}
 
-		//public void SystemStart() => cameraSystem.Start();//optional force start - not required in normal use
-
-		public void _Update()
+		private void Update()
 		{
+			if (true == ClassicTilestorm.PreviewSettings.DebugMode) return;
 			if (null == cameraSystem) return;
+			OnCameraUpdate?.Invoke(currentState);
 			cameraSystem.Update();
 
 			var startCinema = CameraState.Cinema == currentState ? cameraSystem.HasCompleted : enableAutoCinema && Time.time - lastRefreshTime > CinemaTimeoutDuration;
@@ -108,9 +110,8 @@ namespace MassiveHadronLtd
 				cameraSystem.focusPoints = points;
 				cameraSystem.Start();
 			}
+			cameraSystem?.Project(GetComponent<Camera>());
 		}
-
-		public void Project() => cameraSystem?.Project(GetComponent<Camera>());
 
 		public void Refresh(float time)
 		{
@@ -169,12 +170,11 @@ namespace MassiveHadronLtd
 //namespace MassiveHadronLtd
 //{
 //	public enum CameraState { Absent, Static, Preset, Follow, Cinema }
-
-//	public static class CameraController
+//	public class CameraController : MonoBehaviour
 //	{
 //		// Public properties
-//		public static bool CinemaEnabled => enableAutoCinema;
-//		public static bool CinemaActive => currentState == CameraState.Cinema;
+//		public bool CinemaEnabled => enableAutoCinema;
+//		public bool CinemaActive => currentState == CameraState.Cinema;
 
 //		// Constants
 //		private const float CinemaTimeoutDuration = 5f;
@@ -182,17 +182,24 @@ namespace MassiveHadronLtd
 //		private const float MinDistanceForNewFocusPoint = 3f;
 
 //		// Internal
-//		private static CameraData restoreData;
-//		private static CameraState currentState = CameraState.Absent;
-//		private static CameraState previousState = CameraState.Absent;
-//		private static bool enableAutoCinema;
-//		private static float lastRefreshTime;
-//		private static Bounds mapBounds;
-//		private static CameraBase cameraSystem;
-//		private static readonly List<Vector3> focusPoints = new();
+//		private CameraData restoreData;
+//		private CameraState currentState = CameraState.Absent;
+//		private CameraState previousState = CameraState.Absent;
+//		private bool enableAutoCinema;
+//		private float lastRefreshTime;
+//		private Bounds mapBounds;
+//		private CameraBase cameraSystem;
+//		private readonly List<Vector3> focusPoints = new();
 
-//		public static void Start(Camera camera = null)
+//		private void Awake()
 //		{
+//			Camera cam = GetComponent<Camera>();
+//			if (cam == null)
+//			{
+//				Debug.LogError("CameraController requires a Camera component on the same GameObject.");
+//				return;
+//			}
+
 //			restoreData = new CameraData
 //			{
 //				smoothing = CameraData.DefaultSmoothingRate,
@@ -200,12 +207,12 @@ namespace MassiveHadronLtd
 //				originDst = Vector3.zero,
 //				targetSrc = Vector3.zero,
 //				targetDst = Vector3.zero,
-//				fieldOfView = (null != camera ? camera : Camera.main).fieldOfView,
+//				fieldOfView = cam.fieldOfView,
 //				shake = 0f
 //			};
 //		}
 
-//		public static void Reset()
+//		public void Reset()
 //		{
 //			lastRefreshTime = Time.time;
 //			focusPoints.Clear();
@@ -216,9 +223,9 @@ namespace MassiveHadronLtd
 //			SetMode(CameraState.Static);
 //		}
 
-//		public static void SetAutoCinema(bool allow = true) => enableAutoCinema = allow;
+//		public void SetAutoCinema(bool allow = true) => enableAutoCinema = allow;
 
-//		public static void SetMode(CameraState value)
+//		public void SetMode(CameraState value)
 //		{
 //			if (CameraState.Cinema != currentState && null != cameraSystem)
 //				restoreData = cameraSystem.cameraData;
@@ -250,10 +257,9 @@ namespace MassiveHadronLtd
 //			}
 //		}
 
-//		//public static void SystemStart() => cameraSystem.Start();//optional force start - not required in normal use
-
-//		public static void Update()
+//		private void Update()
 //		{
+//			if (true == ClassicTilestorm.PreviewSettings.DebugMode) return;
 //			if (null == cameraSystem) return;
 //			cameraSystem.Update();
 
@@ -267,21 +273,20 @@ namespace MassiveHadronLtd
 //				cameraSystem.focusPoints = points;
 //				cameraSystem.Start();
 //			}
+//			cameraSystem?.Project(GetComponent<Camera>());
 //		}
 
-//		public static void Project(Camera camera = null) => cameraSystem.Project(camera);
-
-//		public static void Refresh(float time)
+//		public void Refresh(float time)
 //		{
 //			lastRefreshTime = time;
 //			if (currentState == CameraState.Cinema)
 //				SetMode(previousState);
 //		}
 
-//		public static void SetOrigin(Vector3 value, bool both = false) => cameraSystem.SetOrigin(value, both);
-//		public static void SetTarget(Vector3 value, bool both = false) => cameraSystem.SetTarget(value, both);
+//		public void SetOrigin(Vector3 value, bool both = false) => cameraSystem?.SetOrigin(value, both);
+//		public void SetTarget(Vector3 value, bool both = false) => cameraSystem?.SetTarget(value, both);
 
-//		public static void SetPlayer(Transform value)
+//		public void SetPlayer(Transform value)
 //		{
 //			cameraSystem.playerTransform = value;
 //			if (null == value) return;
@@ -301,7 +306,7 @@ namespace MassiveHadronLtd
 //			cameraSystem.focusPoints = focusPoints;
 //		}
 
-//		public static void SetFocusPoints(List<Vector3> points)
+//		public void SetFocusPoints(List<Vector3> points)
 //		{
 //			focusPoints.Clear();
 //			SpatialBucketSystem.Clear();

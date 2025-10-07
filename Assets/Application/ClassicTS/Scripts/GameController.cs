@@ -10,13 +10,12 @@ namespace ClassicTilestorm
 		public MapManager mapManager { get; private set; }
 		private GestureController gestureController;
 		private EggbotController eggbotController;
-		private CameraController cameraController; private void Awake()
+		private CameraController cameraController;
+		private void Awake()
 		{
 			gameObject.AddComponent<PlaceholderUI>();// Add PlaceholderUI component to this GameObject
 			gestureController = gameObject.GetComponent<GestureController>();
-			gestureController.OnMapUpdated += CheckDisableDrag;
-
-			cameraController = Camera.main?.GetComponent<CameraController>();
+			gestureController.OnMapUpdated += CheckDisableDrag; cameraController = Camera.main?.GetComponent<CameraController>();
 			if (cameraController == null && Camera.main != null)
 			{
 				cameraController = Camera.main.gameObject.AddComponent<CameraController>();
@@ -30,6 +29,18 @@ namespace ClassicTilestorm
 
 			// Load the last map from PlayerPrefs if it exists, otherwise use PreviewSettings
 			LoadMap(PlayerPrefs.GetString("LastLoadedMap", PreviewSettings.LoadMapName));
+
+			cameraController.OnCameraUpdate += OnCameraUpdate;
+		}
+
+		private void OnCameraUpdate(CameraState state)
+		{
+			switch (state)
+			{
+				case CameraState.Follow:
+					if (null != eggbotController) cameraController.SetPlayer(eggbotController.transform);
+					break;
+			}
 		}
 
 		public void LoadMap(string mapName = null)
@@ -93,8 +104,6 @@ namespace ClassicTilestorm
 
 			cameraController.SetOrigin(srcPos, true);
 			cameraController.SetTarget(dstPos, true);
-			cameraController._Update();
-			cameraController.Project();
 
 			if (null != eggbotController)
 			{
@@ -110,10 +119,6 @@ namespace ClassicTilestorm
 		{
 			if (null != eggbotController) eggbotController.UpdateEggbot(mapManager);
 			if (true == PreviewSettings.DebugMode) return;
-
-			if (null != eggbotController) cameraController.SetPlayer(eggbotController.transform);//need this for now
-			cameraController._Update();
-			cameraController.Project();
 		}
 
 		private void OnWaypointReached(int waypointIndex)
@@ -158,9 +163,12 @@ namespace ClassicTilestorm
 			eggbotController.OnPuzzleSolved -= OnPuzzleSolved;
 			eggbotController.OnLevelCompleted -= OnLevelCompleted;
 			gestureController.OnMapUpdated -= CheckDisableDrag;
+
+			cameraController.OnCameraUpdate -= OnCameraUpdate;
 		}
 	}
 }
+
 
 
 
@@ -176,19 +184,23 @@ namespace ClassicTilestorm
 //		public MapManager mapManager { get; private set; }
 //		private GestureController gestureController;
 //		private EggbotController eggbotController;
-
-//		private void Awake()
+//		private CameraController cameraController; private void Awake()
 //		{
 //			gameObject.AddComponent<PlaceholderUI>();// Add PlaceholderUI component to this GameObject
 //			gestureController = gameObject.GetComponent<GestureController>();
 //			gestureController.OnMapUpdated += CheckDisableDrag;
+
+//			cameraController = Camera.main?.GetComponent<CameraController>();
+//			if (cameraController == null && Camera.main != null)
+//			{
+//				cameraController = Camera.main.gameObject.AddComponent<CameraController>();
+//			}
 //		}
 
 //		private void Start()
 //		{
 //			DatabaseLoader.Init(PreviewSettings.DatabaseJsonFile);
-//			CameraController.SetAutoCinema(PreviewSettings.LaunchInCinemaMode);
-//			CameraController.Start(Camera.main);
+//			cameraController.SetAutoCinema(PreviewSettings.LaunchInCinemaMode);
 
 //			// Load the last map from PlayerPrefs if it exists, otherwise use PreviewSettings
 //			LoadMap(PlayerPrefs.GetString("LastLoadedMap", PreviewSettings.LoadMapName));
@@ -232,10 +244,10 @@ namespace ClassicTilestorm
 //				eggbotController.OnLevelCompleted += OnLevelCompleted;
 //			}
 
-//			CameraController.Reset(); // Reset Camera
-//			CameraController.SetMode(CameraState.Follow);
-//			CameraController.SetPlayer(eggbotController.transform);
-//			CameraController.SetFocusPoints(mapManager.Waypoints.Select(w => mapManager.TileWorldPosition(w.nTile)).ToList());
+//			cameraController.Reset(); // Reset Camera
+//			cameraController.SetMode(CameraState.Follow);
+//			cameraController.SetPlayer(eggbotController.transform);
+//			cameraController.SetFocusPoints(mapManager.Waypoints.Select(w => mapManager.TileWorldPosition(w.nTile)).ToList());
 
 //			var srcPos = new Vector3(0f, 14f, -14f); // Classic TS default
 //			var dstPos = Vector3.zero;
@@ -253,10 +265,8 @@ namespace ClassicTilestorm
 //				}
 //			}
 
-//			CameraController.SetOrigin(srcPos, true);
-//			CameraController.SetTarget(dstPos, true);
-//			CameraController.Update();
-//			CameraController.Project(Camera.main);
+//			cameraController.SetOrigin(srcPos, true);
+//			cameraController.SetTarget(dstPos, true);
 
 //			if (null != eggbotController)
 //			{
@@ -273,13 +283,12 @@ namespace ClassicTilestorm
 //			if (null != eggbotController) eggbotController.UpdateEggbot(mapManager);
 //			if (true == PreviewSettings.DebugMode) return;
 
-//			CameraController.Update();
-//			CameraController.Project(Camera.main);
+//			if (null != eggbotController) cameraController.SetPlayer(eggbotController.transform);//need this for now - I want this to be in a delegate called 'onCameraUpdate'
 //		}
 
 //		private void OnWaypointReached(int waypointIndex)
 //		{
-//			if (CameraController.CinemaActive) return;
+//			if (cameraController.CinemaActive) return;
 //			if (null == eggbotController) return; // this can never happen because eggbot invokes this function - but leave the check just in case
 //			if (null == mapManager || waypointIndex < 0 || waypointIndex >= mapManager.Waypoints.Length) return; // error!
 //			if (mapManager.Waypoints.Length - 1 == waypointIndex || 0 == waypointIndex) return; // just continue following
@@ -287,25 +296,25 @@ namespace ClassicTilestorm
 //			var waypoint = mapManager.Waypoints[waypointIndex];
 //			if (null == waypoint.vSrc || false == waypoint.vSrc.IsValidVector())
 //			{
-//				CameraController.SetMode(CameraState.Follow);
-//				CameraController.SetPlayer(eggbotController.transform);
+//				cameraController.SetMode(CameraState.Follow);
+//				cameraController.SetPlayer(eggbotController.transform);
 //				return;
 //			}
 
-//			CameraController.SetMode(CameraState.Preset);
+//			cameraController.SetMode(CameraState.Preset);
 //			var origin = waypoint.vSrc.IsValidVector() ? waypoint.vSrc.ToVector3() : new Vector3(0f, 14f, -14f); // Classic TS default
-//			CameraController.SetOrigin(origin);
+//			cameraController.SetOrigin(origin);
 //			var target = null != waypoint.vDst && waypoint.vDst.IsValidVector() ? waypoint.vDst.ToVector3() : mapManager.TileWorldPosition(waypoint.nTile);
-//			CameraController.SetTarget(target);
+//			cameraController.SetTarget(target);
 //			gestureController.enabled = true;
 //		}
 
 //		private void OnPuzzleSolved(int waypointIndex)
 //		{
-//			if (true == CameraController.CinemaActive) return;
+//			if (true == cameraController.CinemaActive) return;
 //			if (null == eggbotController) return; // this can never happen because eggbot invokes this function - but leave the check just in case
-//			CameraController.SetMode(CameraState.Follow);
-//			CameraController.SetPlayer(eggbotController.transform);
+//			cameraController.SetMode(CameraState.Follow);
+//			cameraController.SetPlayer(eggbotController.transform);
 //		}
 
 //		private void OnLevelCompleted() { } // => gestureController.enabled = false; ToDo prevent gesture system from re-enabling after level complete - only re-enable after map load/reload
