@@ -31,7 +31,8 @@ namespace MassiveHadronLtd
 				originDst = Vector3.zero,
 				targetSrc = Vector3.zero,
 				targetDst = Vector3.zero,
-				fieldOfView = 45f
+				fieldOfView = 45f,
+				enablePostProcessing = true
 			};
 
 			currentSequenceDuration = DefaultSequenceDuration + Random.Range(-2, 2);
