@@ -14,8 +14,8 @@ namespace ClassicTilestorm
 
 		private const float CinemaTimeoutDuration = 5f;
 		private float cinemaTimeStamp;
-		private bool enableAutoCinema;
-		public bool CinemaEnabled => enableAutoCinema;
+		private bool cinemaEnabled;
+		public bool CinemaEnabled => cinemaEnabled;
 
 		private void Awake()
 		{
@@ -31,9 +31,11 @@ namespace ClassicTilestorm
 		private void Start()
 		{
 			DatabaseLoader.Init(PreviewSettings.DatabaseJsonFile);
-			enableAutoCinema = PreviewSettings.LaunchInCinemaMode;
+			cinemaEnabled = PreviewSettings.LaunchInCinemaMode;
 			LoadMap(PlayerPrefs.GetString("LastLoadedMap", PreviewSettings.LoadMapName));
+			cameraController.OnCameraEnable += OnCameraEnable;
 			cameraController.OnCameraUpdate += OnCameraUpdate;
+			cameraController.OnCameraEnable += OnCameraDisable;
 		}
 
 		private void Update()
@@ -63,7 +65,7 @@ namespace ClassicTilestorm
 
 		public void ToggleCinemma(bool force = false)
 		{
-			enableAutoCinema = !enableAutoCinema;
+			cinemaEnabled = !cinemaEnabled;
 			if (true == force) cinemaTimeStamp = Time.time - CinemaTimeoutDuration;
 			if (cameraController.CurrentState == CameraState.Cinema) cameraController.SetMode(cameraController.PreviousState);
 		}
@@ -72,6 +74,13 @@ namespace ClassicTilestorm
 		{
 			PreviewSettings.EditorMode = !PreviewSettings.EditorMode;
 			cameraController.SetMode(true == PreviewSettings.EditorMode ? CameraState.Editor : CameraState.Static);
+		}
+
+		private void OnCameraEnable(CameraState state)
+		{
+			var postProcessingCameraController = cameraController.GetComponentInChildren<PostProcessingCameraController>(true);
+			if (postProcessingCameraController != null)
+				postProcessingCameraController.enabled = cameraController.CameraSystem.cameraData.enablePostProcessing;
 		}
 
 		private void OnCameraUpdate(CameraState state)
@@ -84,6 +93,8 @@ namespace ClassicTilestorm
 					break;
 			}
 		}
+
+		private void OnCameraDisable(CameraState state) {}
 
 		public void LoadMap(string mapName = null)
 		{
@@ -206,7 +217,9 @@ namespace ClassicTilestorm
 			eggbotController.OnPuzzleSolved -= OnPuzzleSolved;
 			eggbotController.OnLevelCompleted -= OnLevelCompleted;
 			gestureController.OnMapUpdated -= CheckDisableDrag;
+			cameraController.OnCameraEnable -= OnCameraEnable;
 			cameraController.OnCameraUpdate -= OnCameraUpdate;
+			cameraController.OnCameraDisable -= OnCameraDisable;
 		}
 	}
 }

@@ -41,7 +41,8 @@ namespace MassiveHadronLtd
 				targetSrc = Vector3.zero,
 				targetDst = Vector3.zero,
 				fieldOfView = null != cam ? cam.fieldOfView : 45f,
-				shake = 0f
+				shake = 0f,
+				enablePostProcessing = true
 			};
 
 			if (null == cam) Debug.LogError("CameraController requires a Camera component on the same GameObject.");
@@ -87,6 +88,8 @@ namespace MassiveHadronLtd
 					_ => new CinemaCameraPath()
 				};
 			}
+			if (CameraState.Editor == currentState) cameraSystem.Start();//only editor for now
+			OnCameraEnable?.Invoke(currentState);
 		}
 
 		private void Update()

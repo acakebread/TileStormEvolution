@@ -8,6 +8,7 @@ namespace MassiveHadronLtd
 		{
 			base.Start();
 			cameraData.fieldOfView = 45f;
+			cameraData.enablePostProcessing = false;
 		}
 
 		public override void Project(Camera camera = null)

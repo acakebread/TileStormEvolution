@@ -5,14 +5,22 @@ using UnityEngine.Rendering.Universal;
 
 public class PostProcessingCameraController : MonoBehaviour
 {
-	private Volume volume;
 	public Transform target { get; set; } // for DOF
 
-	IEnumerator Start()
+	private void OnEnable()
 	{
-		volume = FindAnyObjectByType<Volume>(FindObjectsInactive.Include);
+		var volume = GetComponentInChildren<Volume>(true);
+		if (null == volume || null == volume.profile)
+		{
+			Debug.LogWarning("Volume or VolumeProfile not found.", this);
+			return;
+		}
+		volume.enabled = true;
 
-		if (volume != null && volume.profile != null)
+		StartCoroutine(Run());
+
+		//local function
+		IEnumerator Run()
 		{
 			while (true)
 			{
@@ -31,17 +39,18 @@ public class PostProcessingCameraController : MonoBehaviour
 						dof.active = false;
 					}
 				}
-				else
-				{
-					Debug.LogWarning("DepthOfField component not found in VolumeProfile.", this);
-				}
-
+				//else
+				//{
+				//	Debug.LogWarning("DepthOfField component not found in VolumeProfile.", this);
+				//}
 				yield return null;
 			}
 		}
-		else
-		{
-			Debug.LogWarning("Volume or VolumeProfile not found.", this);
-		}
+	}
+
+	private void OnDisable()
+	{
+		var volume = GetComponentInChildren<Volume>(true);
+		if (null != volume) volume.enabled = false;
 	}
 }
