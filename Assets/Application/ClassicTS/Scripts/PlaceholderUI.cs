@@ -7,7 +7,6 @@ namespace ClassicTilestorm
 	public class PlaceholderUI : MonoBehaviour
 	{
 		private GameController gameController => GetComponent<GameController>();
-		private MapManager mapManager => gameController.mapManager;
 
 		// basic animation system
 		private bool isGuiVisible = false;
@@ -84,15 +83,15 @@ namespace ClassicTilestorm
 
 			if (GUI.Button(new Rect(guiRect.x + 160, guiRect.y, 100, 30), "Reload")) ChangeMap(0);
 
-			if (GUI.Button(new Rect(guiRect.x + 270, guiRect.y, 100, 30), "Scramble")) mapManager.Scramble();
+			if (GUI.Button(new Rect(guiRect.x + 270, guiRect.y, 100, 30), "Scramble")) gameController.mapManager.Scramble();
 
-			if (GUI.Button(new Rect(guiRect.x + 380, guiRect.y, 100, 30), "Solve")) mapManager.Solve();
+			if (GUI.Button(new Rect(guiRect.x + 380, guiRect.y, 100, 30), "Solve")) gameController.mapManager.Solve();
 
 			if (GUI.Button(new Rect(guiRect.x + 490, guiRect.y, 150, 30), "Previous Level")) ChangeMap(-1);
 
 			if (GUI.Button(new Rect(guiRect.x + 650, guiRect.y, 150, 30), "Next Level")) ChangeMap(1);
 
-			if (GUI.Button(new Rect(guiRect.x + 810, guiRect.y, 150, 30), (gameController.CinemaEnabled ? "Disable" : "Enable") + " Cinematic")) gameController.ToggleCinemma();
+			if (GUI.Button(new Rect(guiRect.x + 810, guiRect.y, 150, 30), (gameController.CinemaEnabled ? "Disable" : "Enable") + " Cinematic")) gameController.ToggleCinemma(true);
 		}
 	}
 }

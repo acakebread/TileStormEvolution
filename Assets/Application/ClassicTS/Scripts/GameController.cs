@@ -13,10 +13,9 @@ namespace ClassicTilestorm
 		private CameraController cameraController;
 
 		private const float CinemaTimeoutDuration = 5f;
+		private float cinemaTimeStamp;
 		private bool enableAutoCinema;
 		public bool CinemaEnabled => enableAutoCinema;
-
-		public void SetAutoCinema(bool allow = true) => enableAutoCinema = allow;
 
 		private void Awake()
 		{
@@ -24,15 +23,15 @@ namespace ClassicTilestorm
 			gestureController = gameObject.GetComponent<GestureController>();
 			gestureController.OnMapUpdated += CheckDisableDrag;
 
-			cameraController = Camera.main?.GetComponent<CameraController>();
-			if (cameraController == null && Camera.main != null)
+			cameraController = null != Camera.main ? Camera.main.GetComponent<CameraController>() : null;
+			if (cameraController == null && null != Camera.main)
 				cameraController = Camera.main.gameObject.AddComponent<CameraController>();
 		}
 
 		private void Start()
 		{
 			DatabaseLoader.Init(PreviewSettings.DatabaseJsonFile);
-			SetAutoCinema(PreviewSettings.LaunchInCinemaMode);
+			enableAutoCinema = PreviewSettings.LaunchInCinemaMode;
 			LoadMap(PlayerPrefs.GetString("LastLoadedMap", PreviewSettings.LoadMapName));
 			cameraController.OnCameraUpdate += OnCameraUpdate;
 		}
@@ -53,23 +52,20 @@ namespace ClassicTilestorm
 			bool startCinema =
 				cameraController.CurrentState == CameraState.Cinema
 					? cameraSystem.HasCompleted
-					: CinemaEnabled && Time.time - cameraController.LastRefreshTime > CinemaTimeoutDuration;
+					: CinemaEnabled && Time.time - cinemaTimeStamp > CinemaTimeoutDuration;
 
 			if (!startCinema) return;
 
-			var playerTransform = cameraSystem.playerTransform;
-			var points = cameraSystem.focusPoints;
-
+			cinemaTimeStamp = Time.time;
 			cameraController.SetMode(CameraState.Cinema);
-			cameraSystem.playerTransform = playerTransform;
-			cameraSystem.focusPoints = points;
 			cameraSystem.Start();
 		}
 
-		public void ToggleCinemma()
+		public void ToggleCinemma(bool force = false)
 		{
-			SetAutoCinema(!CinemaEnabled);
-			cameraController.Refresh(Time.time - (CinemaEnabled? 999f : 0f));
+			enableAutoCinema = !enableAutoCinema;
+			if (true == force) cinemaTimeStamp = Time.time - CinemaTimeoutDuration;
+			if (cameraController.CurrentState == CameraState.Cinema) cameraController.SetMode(cameraController.PreviousState);
 		}
 
 		public void ToggleEditor()
@@ -152,13 +148,14 @@ namespace ClassicTilestorm
 
 			if (eggbotController != null)
 			{
-				var postProcessingCameraController = FindFirstObjectByType<PostProcessingCameraController>(FindObjectsInactive.Include);
+				var postProcessingCameraController = cameraController.GetComponentInChildren<PostProcessingCameraController>(true);
 				if (postProcessingCameraController != null)
 					postProcessingCameraController.target = eggbotController.transform;
 			}
 
 			gestureController.Initialise(mapManager);
 			if (PreviewSettings.EditorMode) cameraController.SetMode(CameraState.Editor);
+			cinemaTimeStamp = Time.time;
 		}
 
 		private void OnWaypointReached(int waypointIndex)
@@ -188,7 +185,7 @@ namespace ClassicTilestorm
 
 		private void OnPuzzleSolved(int waypointIndex)
 		{
-			if (cameraController.CurrentState == CameraState.Cinema) return;
+			if (cameraController.CurrentState == CameraState.Cinema || cameraController.CurrentState == CameraState.Editor) return;
 			if (eggbotController == null) return;
 			cameraController.SetMode(CameraState.Follow);
 			cameraController.SetPlayer(eggbotController.transform);

@@ -1,5 +1,4 @@
-﻿// Modified: CameraController.cs
-using System;
+﻿using System;
 using UnityEngine;
 using System.Collections.Generic;
 
@@ -10,34 +9,30 @@ namespace MassiveHadronLtd
 	public class CameraController : MonoBehaviour
 	{
 		// Public properties
+		public event Action<CameraState> OnCameraEnable;//ToDo
 		public event Action<CameraState> OnCameraUpdate;
+		public event Action<CameraState> OnCameraDisable;//ToDo
+
+		// Public accessors
+		public CameraBase CameraSystem => cameraSystem;
+		public CameraState PreviousState => previousState;
+		public CameraState CurrentState => currentState;
+
+		// Internal
+		private CameraBase cameraSystem;
+		private CameraData restoreData;
+		private CameraState currentState = CameraState.Absent;
+		private CameraState previousState = CameraState.Absent;
+		private Bounds mapBounds;
+		private readonly List<Vector3> focusPoints = new();
 
 		// Constants
 		private const int MaxFocusPoints = 50;
 		private const float MinDistanceForNewFocusPoint = 3f;
 
-		// Internal
-		private CameraData restoreData;
-		private CameraState currentState = CameraState.Absent;
-		private CameraState previousState = CameraState.Absent;
-		private float lastRefreshTime;
-		private Bounds mapBounds;
-		private CameraBase cameraSystem;
-		private readonly List<Vector3> focusPoints = new();
-
-		public CameraBase CameraSystem => cameraSystem;
-		public CameraState CurrentState => currentState;
-		public float LastRefreshTime => lastRefreshTime;
-
 		private void Awake()
 		{
-			Camera cam = GetComponent<Camera>();
-			if (cam == null)
-			{
-				Debug.LogError("CameraController requires a Camera component on the same GameObject.");
-				return;
-			}
-
+			var cam = GetComponent<Camera>();
 			restoreData = new CameraData
 			{
 				smoothing = CameraData.DefaultSmoothingRate,
@@ -45,18 +40,19 @@ namespace MassiveHadronLtd
 				originDst = Vector3.zero,
 				targetSrc = Vector3.zero,
 				targetDst = Vector3.zero,
-				fieldOfView = cam.fieldOfView,
+				fieldOfView = null != cam ? cam.fieldOfView : 45f,
 				shake = 0f
 			};
+
+			if (null == cam) Debug.LogError("CameraController requires a Camera component on the same GameObject.");
 		}
 
 		public void Reset()
 		{
-			lastRefreshTime = Time.time;
+			cameraSystem = null;
 			focusPoints.Clear();
 			mapBounds = new Bounds(Vector3.zero, Vector3.zero);
 			SpatialBucketSystem.Initialize(MinDistanceForNewFocusPoint);
-			cameraSystem = null;
 			restoreData.smoothing = CameraData.DefaultSmoothingRate;
 			SetMode(CameraState.Static);
 		}
@@ -95,18 +91,9 @@ namespace MassiveHadronLtd
 
 		private void Update()
 		{
-			//if (currentState == CameraState.Editor) return;
-			if (null == cameraSystem) return;
-
 			OnCameraUpdate?.Invoke(currentState);
 			cameraSystem?.Update();
 			cameraSystem?.Project(GetComponent<Camera>());
-		}
-
-		public void Refresh(float time)
-		{
-			lastRefreshTime = time;
-			if (currentState == CameraState.Cinema) SetMode(previousState);
 		}
 
 		public void SetOrigin(Vector3 value, bool both = false) => cameraSystem?.SetOrigin(value, both);
