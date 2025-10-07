@@ -89,10 +89,10 @@ namespace ClassicTilestorm
 
 			if (GUI.Button(new Rect(guiRect.x + 490, guiRect.y, 150, 30), "Next Level")) ChangeMap(1);
 
-			if (cameraController != null && GUI.Button(new Rect(guiRect.x + 650, guiRect.y, 150, 30), cameraController.CinemaEnabled ? "Disable Cinematic" : "Enable Cinematic"))
+			if (cameraController != null && GUI.Button(new Rect(guiRect.x + 650, guiRect.y, 150, 30), gameController.CinemaEnabled ? "Disable Cinematic" : "Enable Cinematic"))
 			{
-				cameraController.SetAutoCinema(!cameraController.CinemaEnabled);
-				cameraController.Refresh(Time.time - (cameraController.CinemaEnabled ? 999f : 0f));
+				gameController.SetAutoCinema(!gameController.CinemaEnabled);
+				cameraController.Refresh(Time.time - (gameController.CinemaEnabled ? 999f : 0f));
 			}
 
 			// New button to toggle DebugMode

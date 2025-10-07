@@ -5,15 +5,13 @@ using System.Collections.Generic;
 namespace MassiveHadronLtd
 {
 	public enum CameraState { Absent, Static, Preset, Follow, Cinema }
+
 	public class CameraController : MonoBehaviour
 	{
 		// Public properties
-		public bool CinemaEnabled => enableAutoCinema;
-		public bool CinemaActive => currentState == CameraState.Cinema;    // Events
 		public event Action<CameraState> OnCameraUpdate;
 
 		// Constants
-		private const float CinemaTimeoutDuration = 5f;
 		private const int MaxFocusPoints = 50;
 		private const float MinDistanceForNewFocusPoint = 3f;
 
@@ -21,11 +19,14 @@ namespace MassiveHadronLtd
 		private CameraData restoreData;
 		private CameraState currentState = CameraState.Absent;
 		private CameraState previousState = CameraState.Absent;
-		private bool enableAutoCinema;
 		private float lastRefreshTime;
 		private Bounds mapBounds;
 		private CameraBase cameraSystem;
 		private readonly List<Vector3> focusPoints = new();
+
+		public CameraBase CameraSystem => cameraSystem;
+		public CameraState CurrentState => currentState;
+		public float LastRefreshTime => lastRefreshTime;
 
 		private void Awake()
 		{
@@ -59,26 +60,23 @@ namespace MassiveHadronLtd
 			SetMode(CameraState.Static);
 		}
 
-		public void SetAutoCinema(bool allow = true) => enableAutoCinema = allow;
-
 		public void SetMode(CameraState value)
 		{
 			if (CameraState.Cinema != currentState && null != cameraSystem)
 				restoreData = cameraSystem.cameraData;
 
-			// Use dictionary or array for camera system instantiation if more types are added
 			cameraSystem = value switch
 			{
 				CameraState.Static => new CameraStatic(),
 				CameraState.Preset => new CameraPreset(),
 				CameraState.Follow => new CameraFollow(),
 				CameraState.Cinema => CreateCinemaCamera(),
-				_ => cameraSystem // Fallback to current system
+				_ => cameraSystem
 			};
 
 			cameraSystem.cameraData = restoreData;
 
-			if (value != currentState) previousState = currentState;//for exiting cinema camera system
+			if (value != currentState) previousState = currentState;
 			currentState = value;
 
 			static CameraBase CreateCinemaCamera()
@@ -88,26 +86,16 @@ namespace MassiveHadronLtd
 					0 or 1 or 2 => new CinemaCameraPath(),
 					3 or 4 or 5 => new CinemaCameraOrbit(),
 					//6 => new CinemaCameraDollyZoom(),//disable dolly mode for now because it's not great
-					_ => new CinemaCameraPath() // Default fallback
+					_ => new CinemaCameraPath()
 				};
 			}
 		}
 
 		private void Update()
 		{
-			if (true == ClassicTilestorm.PreviewSettings.DebugMode) return;
+			if (ClassicTilestorm.PreviewSettings.DebugMode) return;
 			if (null == cameraSystem) return;
 
-			var startCinema = CameraState.Cinema == currentState ? cameraSystem.HasCompleted : enableAutoCinema && Time.time - lastRefreshTime > CinemaTimeoutDuration;
-			if (true == startCinema)
-			{
-				var playerTransform = cameraSystem.playerTransform;
-				var points = cameraSystem.focusPoints;
-				SetMode(CameraState.Cinema);//restart cinema in new sub mode
-				cameraSystem.playerTransform = playerTransform;
-				cameraSystem.focusPoints = points;
-				cameraSystem.Start();
-			}
 			OnCameraUpdate?.Invoke(currentState);
 			cameraSystem?.Update();
 			cameraSystem?.Project(GetComponent<Camera>());
