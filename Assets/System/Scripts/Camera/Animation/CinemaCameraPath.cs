@@ -27,10 +27,10 @@ namespace MassiveHadronLtd
 			public Vector3 P0; // Src
 			public Vector3 P1; // Control point
 			public Vector3 P2; // Dst
-							   //public AnimationCurve curveX;
-							   //public AnimationCurve curveY;
-							   //public AnimationCurve curveZ;
-		}
+			//public AnimationCurve curveX;
+			//public AnimationCurve curveY;
+			//public AnimationCurve curveZ;
+	}
 
 		private Vector3 originSrc { get => cameraData.originSrc; set => cameraData.originSrc = value; }
 		private Vector3 originDst { get => cameraData.originDst; set => cameraData.originDst = value; }
@@ -181,7 +181,6 @@ namespace MassiveHadronLtd
 			// Compute control point (intersection of purple Src and cyan Dst, or cyan Src and purple Dst)
 			Vector3? controlPoint = null;
 			//var colinear = false;//debug
-			Vector2? intersection1 = null, intersection2 = null;
 
 			if (tangentPointSrc1.HasValue && tangentPointSrc2.HasValue && tangentPointDst1.HasValue && tangentPointDst2.HasValue)
 			{
@@ -204,8 +203,8 @@ namespace MassiveHadronLtd
 				}
 				else
 				{
-					intersection1 = LineIntersection(srcXZ, srcXZ + srcDir1, dstXZ, dstXZ + dstDir2);
-					intersection2 = LineIntersection(srcXZ, srcXZ + srcDir2, dstXZ, dstXZ + dstDir1);
+					var intersection1 = LineIntersection(srcXZ, srcXZ + srcDir1, dstXZ, dstXZ + dstDir2);
+					var intersection2 = LineIntersection(srcXZ, srcXZ + srcDir2, dstXZ, dstXZ + dstDir1);
 
 					if (intersection1.HasValue && intersection2.HasValue)
 					{

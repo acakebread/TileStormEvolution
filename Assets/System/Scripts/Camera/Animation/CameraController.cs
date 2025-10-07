@@ -58,6 +58,15 @@ namespace MassiveHadronLtd
 			SetMode(CameraState.Static);
 		}
 
+		public void SetOrigin(Vector3 value, bool both = false) => cameraSystem?.SetOrigin(value, both);
+		public void SetTarget(Vector3 value, bool both = false) => cameraSystem?.SetTarget(value, both);
+
+		public void SetPlayer(Transform value)
+		{
+			cameraSystem.playerTransform = value;
+			UpdateFocusPoints();
+		}
+
 		public void SetMode(CameraState value)
 		{
 			if (CameraState.Cinema != currentState && CameraState.Editor != currentState && null != cameraSystem)
@@ -98,15 +107,6 @@ namespace MassiveHadronLtd
 			UpdateFocusPoints();
 			cameraSystem?.Update();
 			cameraSystem?.Project(GetComponent<Camera>());
-		}
-
-		public void SetOrigin(Vector3 value, bool both = false) => cameraSystem?.SetOrigin(value, both);
-		public void SetTarget(Vector3 value, bool both = false) => cameraSystem?.SetTarget(value, both);
-
-		public void SetPlayer(Transform value)
-		{
-			cameraSystem.playerTransform = value;
-			UpdateFocusPoints();
 		}
 
 		private void UpdateFocusPoints()
