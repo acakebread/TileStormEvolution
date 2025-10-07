@@ -4,8 +4,7 @@ using System.Collections.Generic;
 
 namespace MassiveHadronLtd
 {
-	public enum CameraState { Absent, Editor, Static, Preset, Follow, Cinema}
-
+	public enum CameraState { Absent, Editor, Static, Preset, Follow, Cinema }
 	public class CameraController : MonoBehaviour
 	{
 		// Public properties
@@ -21,6 +20,7 @@ namespace MassiveHadronLtd
 		// Internal
 		private CameraBase cameraSystem;
 		private CameraData restoreData;
+		public CameraData currentData;//temporarily public
 		private CameraState currentState = CameraState.Absent;
 		private CameraState previousState = CameraState.Absent;
 		private Bounds mapBounds;
@@ -33,7 +33,7 @@ namespace MassiveHadronLtd
 		private void Awake()
 		{
 			var cam = GetComponent<Camera>();
-			restoreData = new CameraData
+			restoreData = currentData = new CameraData
 			{
 				smoothing = CameraData.DefaultSmoothingRate,
 				originSrc = Vector3.zero,
@@ -58,19 +58,21 @@ namespace MassiveHadronLtd
 			SetMode(CameraState.Static);
 		}
 
-		public void SetOrigin(Vector3 value, bool both = false) => cameraSystem?.SetOrigin(value, both);
-		public void SetTarget(Vector3 value, bool both = false) => cameraSystem?.SetTarget(value, both);
+		public void SetOrigin(Vector3 value, bool both = false) => cameraSystem?.SetOrigin(ref currentData, value, both);
+		public void SetTarget(Vector3 value, bool both = false) => cameraSystem?.SetTarget(ref currentData, value, both);
 
 		public void SetPlayer(Transform value)
 		{
 			cameraSystem.playerTransform = value;
+			if (cameraSystem is CameraFollow)
+				currentData.targetDst = value.position;
 			UpdateFocusPoints();
 		}
 
 		public void SetMode(CameraState value)
 		{
 			if (CameraState.Cinema != currentState && CameraState.Editor != currentState && null != cameraSystem)
-				restoreData = cameraSystem.cameraData;
+				restoreData = currentData;
 
 			cameraSystem = value switch
 			{
@@ -82,7 +84,7 @@ namespace MassiveHadronLtd
 				_ => cameraSystem
 			};
 
-			cameraSystem.cameraData = restoreData;
+			currentData = restoreData;
 
 			if (value != currentState) previousState = currentState;
 			currentState = value;
@@ -97,7 +99,7 @@ namespace MassiveHadronLtd
 					_ => new CinemaCameraPath()
 				};
 			}
-			if (CameraState.Editor == currentState) cameraSystem.Start();//only editor for now
+			if (CameraState.Editor == currentState) cameraSystem.Start(ref currentData);//only editor for now
 			OnCameraEnable?.Invoke(currentState);
 		}
 
@@ -105,8 +107,8 @@ namespace MassiveHadronLtd
 		{
 			OnCameraUpdate?.Invoke(currentState);
 			UpdateFocusPoints();
-			cameraSystem?.Update();
-			cameraSystem?.Project(GetComponent<Camera>());
+			cameraSystem?.Update(ref currentData);
+			cameraSystem?.Project(ref currentData, GetComponent<Camera>());
 		}
 
 		private void UpdateFocusPoints()

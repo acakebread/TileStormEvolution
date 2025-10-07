@@ -12,25 +12,24 @@ namespace MassiveHadronLtd
 		//public Vector3 targetDst;
 		//public float fieldOfView;
 		//public float shake;//deviation amplitude
-		public CameraData cameraData;
-
-		public virtual void Start() { HasStarted = true; }
-		public virtual void Update() { if (HasStarted) return; Start(); }
-		public virtual void Project(Camera camera = null)
+		
+		public virtual void Start(ref CameraData data) { HasStarted = true; }
+		public virtual void Update(ref CameraData data) { if (HasStarted) return; Start(ref data); }
+		public virtual void Project(ref CameraData data, Camera camera = null)
 		{
 			camera ??= Camera.main;
-			camera.transform.position = cameraData.originSrc;
-			var direction = cameraData.targetSrc - cameraData.originSrc;
+			camera.transform.position = data.originSrc;
+			var direction = data.targetSrc - data.originSrc;
 			if (direction.sqrMagnitude > Mathf.Epsilon)
 				camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
-			camera.fieldOfView = cameraData.fieldOfView;
-			CameraUtils.ApplyCameraShake(camera, cameraData.shake);
+			camera.fieldOfView = data.fieldOfView;
+			CameraUtils.ApplyCameraShake(camera, data.shake);
 		}
 
 		public virtual Transform playerTransform { get; set; }
 		public virtual List<Vector3> focusPoints { get; set; }
-		public virtual void SetOrigin(Vector3 value, bool both = false) { cameraData.originDst = value; if (both) cameraData.originSrc = value; }
-		public virtual void SetTarget(Vector3 value, bool both = false) { cameraData.targetDst = value; if (both) cameraData.targetSrc = value; }
+		public virtual void SetOrigin(ref CameraData data, Vector3 value, bool both = false) { data.originDst = value; if (both) data.originSrc = value; }
+		public virtual void SetTarget(ref CameraData data, Vector3 value, bool both = false) { data.targetDst = value; if (both) data.targetSrc = value; }
 		public bool HasStarted { private get; set; }
 		public virtual bool HasCompleted => false;
 		//public virtual void SetPlayer(Vector3 value) { }

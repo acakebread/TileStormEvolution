@@ -4,17 +4,16 @@ namespace MassiveHadronLtd
 {
 	public class CameraEditor : CameraBase
 	{
-		public override void Start()
+		public override void Start(ref CameraData data)
 		{
-			base.Start();
-			cameraData.fieldOfView = 45f;
-			cameraData.enablePostProcessing = false;
+			base.Start(ref data);
+			data.fieldOfView = 45f;
+			data.enablePostProcessing = false;
 		}
-
-		public override void Project(Camera camera = null)
+		public override void Project(ref CameraData data, Camera camera = null)
 		{
 			camera ??= Camera.main;
-			camera.fieldOfView = cameraData.fieldOfView;
+			camera.fieldOfView = data.fieldOfView;
 		}
 	}
 }

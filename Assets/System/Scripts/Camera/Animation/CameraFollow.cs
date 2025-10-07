@@ -8,29 +8,25 @@ namespace MassiveHadronLtd
 		private const float SmoothingNb = 64f;
 		private const float IdealDistance = 14f;
 		private const float IdealDistanceHorizontalScale = 1.4f;
-
-		public override void  Update()
+		
+		public override void Update(ref CameraData data)
 		{
-			base.Update();
-			cameraData.targetDst = playerTransform.position;
-			cameraData.smoothing = SmoothingUtils.Smooth(cameraData.smoothing, SmoothingNa, SmoothingNb, Time.deltaTime, CameraData.TargetFPS);
-			var followLerp = SmoothingUtils.Smooth(0f, 1f, cameraData.smoothing, Time.deltaTime, CameraData.TargetFPS);
-			cameraData.targetSrc = Vector3.Lerp(cameraData.targetSrc, cameraData.targetDst, followLerp);
-			var delta = cameraData.targetSrc - cameraData.originSrc;
+			base.Update(ref data);
+			data.targetDst = playerTransform.position;
+			data.smoothing = SmoothingUtils.Smooth(data.smoothing, SmoothingNa, SmoothingNb, Time.deltaTime, CameraData.TargetFPS);
+			var followLerp = SmoothingUtils.Smooth(0f, 1f, data.smoothing, Time.deltaTime, CameraData.TargetFPS);
+			data.targetSrc = Vector3.Lerp(data.targetSrc, data.targetDst, followLerp);
+			var delta = data.targetSrc - data.originSrc;
 			var deltaHorizontal = (0f == delta.x && 0f == delta.z) ? Vector3.zero : new Vector3(delta.x, 0, delta.z).normalized;
-			var idealPos = cameraData.targetSrc - deltaHorizontal * (IdealDistance * IdealDistanceHorizontalScale);
-			idealPos.y = cameraData.targetSrc.y + IdealDistance;
-			cameraData.originSrc = Vector3.Lerp(cameraData.originSrc, idealPos, followLerp);
+			var idealPos = data.targetSrc - deltaHorizontal * (IdealDistance * IdealDistanceHorizontalScale);
+			idealPos.y = data.targetSrc.y + IdealDistance;
+			data.originSrc = Vector3.Lerp(data.originSrc, idealPos, followLerp);
 		}
 
-		public override Transform playerTransform 
-		{ 
+		public override Transform playerTransform
+		{
 			get => base.playerTransform;
-			set
-			{
-				base.playerTransform = value;
-				cameraData.targetDst = value.position;
-			}
+			set => base.playerTransform = value;
 		}
 	}
 }

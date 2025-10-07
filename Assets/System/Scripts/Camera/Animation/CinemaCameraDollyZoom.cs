@@ -11,77 +11,67 @@ namespace MassiveHadronLtd
 		private const float PlayerRadius = 1f;
 		private const float MinFov = 1f;
 		private const float MinCameraHeight = 0.25f;
-		private const float MaxCameraHeight = 1f;
-
-		// Dolly Zoom-specific state
+		private const float MaxCameraHeight = 1f;    // Dolly Zoom-specific state
 		private Vector3 dollyZoomDirection;
 		private float dollyZoomInitialDistance;
 
-		private Vector3 originSrc { get => cameraData.originSrc; set => cameraData.originSrc = value; }
-		private Vector3 originDst { get => cameraData.originDst; set => cameraData.originDst = value; }
-		private Vector3 targetSrc { get => cameraData.targetSrc; set => cameraData.targetSrc = value; }
-		private Vector3 targetDst { get => cameraData.targetDst; set => cameraData.targetDst = value; }
-		private float fieldOfView { get => cameraData.fieldOfView; set => cameraData.fieldOfView = value; }
-		private float smoothing { get => cameraData.smoothing; set => cameraData.smoothing = value; }
-		private float shake { get => cameraData.shake; set => cameraData.shake = value; }
-
-		protected override void StartCinemaSequence()
+		protected override void StartCinemaSequence(ref CameraData data)
 		{
 			if (playerTransform == null) return;
 
 			currentSequenceDuration = DollyZoomSequenceDuration;
 			sequenceTimer = currentSequenceDuration;
 			pauseTimer = 1f;
-			shake = 0.02f;
+			data.shake = 0.02f;
 
 			// Set target positions
-			targetDst = targetSrc = new Vector3(playerTransform.position.x, VerticalOffset, playerTransform.position.z);
+			data.targetDst = data.targetSrc = new Vector3(playerTransform.position.x, VerticalOffset, playerTransform.position.z);
 
 			// Set initial camera position
 			var dollyHeight = Random.Range(MinCameraHeight, MaxCameraHeight);// add vertical offset so camera tlts down slightly
 			var initialDistance = Random.Range(2f, 3f);
 			dollyZoomDirection = playerTransform.forward.normalized;
 			dollyZoomInitialDistance = initialDistance;
-			originSrc = targetSrc + dollyZoomDirection * initialDistance;
-			originSrc += Vector3.up * dollyHeight;
+			data.originSrc = data.targetSrc + dollyZoomDirection * initialDistance;
+			data.originSrc += Vector3.up * dollyHeight;
 
-			dollyZoomDirection = (originSrc - targetSrc).normalized;
+			dollyZoomDirection = (data.originSrc - data.targetSrc).normalized;
 
-			fieldOfView = CalculateFovForScreenCoverage(dollyZoomInitialDistance);
+			data.fieldOfView = CalculateFovForScreenCoverage(dollyZoomInitialDistance);
 
 			//// Set destination
 			//var dollyZoomDistance = dollyZoomInitialDistance * 10f;
 			//dollyZoomDistance = Mathf.Min(dollyZoomDistance, MaxDollyZoomDistance);
-			//originDst = originSrc + dollyZoomDirection * dollyZoomDistance;
-			//originDst = new Vector3(originDst.x, dollyHeight, originDst.z);
+			//data.originDst = data.originSrc + dollyZoomDirection * dollyZoomDistance;
+			//data.originDst = new Vector3(data.originDst.x, dollyHeight, data.originDst.z);
 		}
 
-		protected override void UpdateCinemaSequence(float easedSequenceTimer)
+		protected override void UpdateCinemaSequence(ref CameraData data, float easedSequenceTimer)
 		{
-			targetDst = targetSrc = new Vector3(playerTransform.position.x, VerticalOffset, playerTransform.position.z);
+			data.targetDst = data.targetSrc = new Vector3(playerTransform.position.x, VerticalOffset, playerTransform.position.z);
 
 			var maxDollyZoomDistance = Mathf.Min(dollyZoomInitialDistance * 10f, MaxDollyZoomDistance);
 			var currentDollyDistance = Mathf.Lerp(dollyZoomInitialDistance, maxDollyZoomDistance, easedSequenceTimer);
 
-			originDst = originSrc = targetSrc + dollyZoomDirection * currentDollyDistance;
-			fieldOfView = CalculateFovForScreenCoverage(currentDollyDistance);
+			data.originDst = data.originSrc = data.targetSrc + dollyZoomDirection * currentDollyDistance;
+			data.fieldOfView = CalculateFovForScreenCoverage(currentDollyDistance);
 
 			//var playerDelta = playerTransform.position - lastPlayerPos;
 
 			//// Update positions
-			//targetDst = targetSrc = new Vector3(playerTransform.position.x, VerticalOffset, playerTransform.position.z);
-			//originSrc += playerDelta;
+			//data.targetDst = data.targetSrc = new Vector3(playerTransform.position.x, VerticalOffset, playerTransform.position.z);
+			//data.originSrc += playerDelta;
 
 			//// Compute interpolated positions
-			//originDst = originSrc = Vector3.Lerp(originSrc, originDst, easedSequenceTimer);
+			//data.originDst = data.originSrc = Vector3.Lerp(data.originSrc, data.originDst, easedSequenceTimer);
 
-			//fieldOfView = CalculateFovForScreenCoverage((targetSrc - originSrc).magnitude);
+			//data.fieldOfView = CalculateFovForScreenCoverage((data.targetSrc - data.originSrc).magnitude);
 
 			//// Dynamic FOV
 			//var currentDistance = Mathf.Lerp(dollyZoomInitialDistance, dollyZoomInitialDistance * 10f, easedSequenceTimer);
 			//currentDistance = Mathf.Min(currentDistance, MaxDollyZoomDistance);
 
-			//fieldOfView = CalculateFovForScreenCoverage(currentDistance);
+			//data.fieldOfView = CalculateFovForScreenCoverage(currentDistance);
 		}
 
 		private float CalculateFovForScreenCoverage(float distance)

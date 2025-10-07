@@ -1,6 +1,6 @@
 namespace MassiveHadronLtd
 {
-	public class CameraStatic : CameraBase 
-	{ 
+	public class CameraStatic : CameraBase
+	{
 	}
 }

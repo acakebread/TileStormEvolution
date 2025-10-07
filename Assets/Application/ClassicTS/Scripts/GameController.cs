@@ -60,7 +60,7 @@ namespace ClassicTilestorm
 
 			cinemaTimeStamp = Time.time;
 			cameraController.SetMode(CameraState.Cinema);
-			cameraSystem.Start();
+			cameraSystem.Start(ref cameraController.currentData);
 		}
 
 		public void ToggleCinemma(bool force = false)
@@ -80,8 +80,8 @@ namespace ClassicTilestorm
 		{
 			var postProcessingCameraController = cameraController.GetComponentInChildren<PostProcessingCameraController>(true);
 			if (postProcessingCameraController != null)
-				postProcessingCameraController.enabled = cameraController.CameraSystem.cameraData.enablePostProcessing;
-
+				postProcessingCameraController.enabled = cameraController.currentData.enablePostProcessing; //postProcessingCameraController.enabled = cameraController.CameraSystem.cameraData.enablePostProcessing;
+	
 			switch (state)
 			{
 				case CameraState.Follow:

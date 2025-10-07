@@ -32,19 +32,19 @@ namespace MassiveHadronLtd
 			//public AnimationCurve curveZ;
 	}
 
-		private Vector3 originSrc { get => cameraData.originSrc; set => cameraData.originSrc = value; }
-		private Vector3 originDst { get => cameraData.originDst; set => cameraData.originDst = value; }
-		private Vector3 targetSrc { get => cameraData.targetSrc; set => cameraData.targetSrc = value; }
-		private Vector3 targetDst { get => cameraData.targetDst; set => cameraData.targetDst = value; }
-		private float fieldOfView { get => cameraData.fieldOfView; set => cameraData.fieldOfView = value; }
-		private float smoothing { get => cameraData.smoothing; set => cameraData.smoothing = value; }
-		private float shake { get => cameraData.shake; set => cameraData.shake = value; }
+		//private Vector3 originSrc { get => cameraData.originSrc; set => cameraData.originSrc = value; }
+		//private Vector3 originDst { get => cameraData.originDst; set => cameraData.originDst = value; }
+		//private Vector3 targetSrc { get => cameraData.targetSrc; set => cameraData.targetSrc = value; }
+		//private Vector3 targetDst { get => cameraData.targetDst; set => cameraData.targetDst = value; }
+		//private float fieldOfView { get => cameraData.fieldOfView; set => cameraData.fieldOfView = value; }
+		//private float smoothing { get => cameraData.smoothing; set => cameraData.smoothing = value; }
+		//private float shake { get => cameraData.shake; set => cameraData.shake = value; }
 
-		protected override void StartCinemaSequence()
+		protected override void StartCinemaSequence(ref CameraData data)
 		{
 			if (null == playerTransform) return;
 
-			shake = 1f;
+			data.shake = 1f;
 			bezierData = default;
 			currentFovMax = FovMax;
 
@@ -56,34 +56,34 @@ namespace MassiveHadronLtd
 				if (validFocusPoint.Count > 0) startFocusPoint = validFocusPoint[Random.Range(0, validFocusPoint.Count)];
 			}
 
-			targetSrc = startFocusPoint + Vector3.up * VerticalOffset;
-			targetDst = playerTransform.position + Vector3.up * VerticalOffset;
+			data.targetSrc = startFocusPoint + Vector3.up * VerticalOffset;
+			data.targetDst = playerTransform.position + Vector3.up * VerticalOffset;
 
 			// Define lozenge
-			var targetPath = targetDst - targetSrc;
+			var targetPath = data.targetDst - data.targetSrc;
 			var pathDir = targetPath.magnitude > 0.1f ? targetPath.normalized : Random.onUnitSphere;
-			var midPoint = (targetSrc + targetDst) / 2f;
+			var midPoint = (data.targetSrc + data.targetDst) / 2f;
 			var perpendicular = new Vector3(-pathDir.z, 0f, pathDir.x).normalized;
 			var lozengeMajor = targetPath.magnitude + 2f * MinDistance;
 			var lozengeMinor = Mathf.Max(lozengeMajor * 0.66f, MinDistance * 2f);
 
 			// Generate camera points
-			var (src, dst) = SampleCameraPosition(midPoint, pathDir, perpendicular, lozengeMajor, lozengeMinor);
-			originSrc = src;
-			originDst = dst;
+			var (src, dst) = SampleCameraPosition(ref data, midPoint, pathDir, perpendicular, lozengeMajor, lozengeMinor);
+			data.originSrc = src;
+			data.originDst = dst;
 
-			originSrc = AdjustHeight(originSrc, targetSrc);
-			originDst = AdjustHeight(originDst, targetDst);
+			data.originSrc = AdjustHeight(data.originSrc, data.targetSrc);
+			data.originDst = AdjustHeight(data.originDst, data.targetDst);
 
 			// Initialize FOV
-			fieldOfView = FovMin;
+			data.fieldOfView = FovMin;
 			currentFovMax = Random.value < 0.2f ? 60f : FovMax;
 
 			// Visualize focus points
 			if (DEBUG_VISUALIZE_LOZENGE)
 			{
-				Debug.DrawRay(targetSrc, Vector3.up * 5f, Color.red, DEBUG_DRAW_DURATION);
-				Debug.DrawRay(targetDst, Vector3.up * 5f, Color.blue, DEBUG_DRAW_DURATION);
+				Debug.DrawRay(data.targetSrc, Vector3.up * 5f, Color.red, DEBUG_DRAW_DURATION);
+				Debug.DrawRay(data.targetDst, Vector3.up * 5f, Color.blue, DEBUG_DRAW_DURATION);
 				//Debug.Log($"TargetSrc={targetSrc}, TargetDst={targetDst}, LozengeMajor={lozengeMajor}, LozengeMinor={lozengeMinor}, PathDir={pathDir}, Perpendicular={perpendicular}");
 			}
 
@@ -105,10 +105,10 @@ namespace MassiveHadronLtd
 			}
 		}
 
-		protected override void UpdateCinemaSequence(float easedSequenceTimer)
+		protected override void UpdateCinemaSequence(ref CameraData data, float easedSequenceTimer)
 		{
 			//update target
-			targetDst = Vector3.Lerp(targetSrc, predictedPlayerPosition + Vector3.up * VerticalOffset, easedSequenceTimer);
+			data.targetDst = Vector3.Lerp(data.targetSrc, predictedPlayerPosition + Vector3.up * VerticalOffset, easedSequenceTimer);
 
 			// Update Bezier P1 (camera path mid point) and P2 (camera path Dst) with player movement
 			var playerDelta = playerTransform.position - lastPlayerPos;
@@ -116,19 +116,19 @@ namespace MassiveHadronLtd
 			bezierData.P2 += playerDelta;
 
 			//update camera dest position and FOV
-			originDst = EvaluateBezier(easedSequenceTimer);// Evaluate Bezier curve
-			fieldOfView = Mathf.Lerp(FovMin, currentFovMax, SmoothingUtils.EasePingPong(sequenceTimer / currentSequenceDuration));
+			data.originDst = EvaluateBezier(easedSequenceTimer);// Evaluate Bezier curve
+			data.fieldOfView = Mathf.Lerp(FovMin, currentFovMax, SmoothingUtils.EasePingPong(sequenceTimer / currentSequenceDuration));
 
 			//update camera lerping
-			smoothing = SmoothingUtils.Smooth(smoothing, 16, currentSequenceDuration, Time.deltaTime, CameraData.TargetFPS);
+			data.smoothing = SmoothingUtils.Smooth(data.smoothing, 16, currentSequenceDuration, Time.deltaTime, CameraData.TargetFPS);
 		}
 
 		private Vector3 EvaluateBezier(float t) => QuadraticBezierPoint(t, bezierData.P0, bezierData.P1, bezierData.P2); // Direct evaluation
 
-		private (Vector3 src, Vector3 dst) SampleCameraPosition(Vector3 midPoint, Vector3 pathDir, Vector3 perpendicular, float lozengeMajor, float lozengeMinor)
+		private (Vector3 src, Vector3 dst) SampleCameraPosition(ref CameraData data, Vector3 midPoint, Vector3 pathDir, Vector3 perpendicular, float lozengeMajor, float lozengeMinor)
 		{
 			var midPointXZ = new Vector2(midPoint.x, midPoint.z);
-			var targetDstXZ = new Vector2(targetDst.x, targetDst.z);
+			var targetDstXZ = new Vector2(data.targetDst.x, data.targetDst.z);
 
 			// Generate points
 			var (src, perimeterPointSrc, tangentSrc1, tangentSrc2, thetaSrc, projectionDistanceSrc) = GeneratePointOutsideLozenge(midPointXZ, pathDir, perpendicular, lozengeMajor, lozengeMinor);
