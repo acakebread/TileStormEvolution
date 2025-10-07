@@ -77,7 +77,7 @@ namespace ClassicTilestorm
 			if (guiRect.y < -90 && !isGuiVisible) return; // Skip drawing if fully hidden
 
 			GUI.skin.label.fontSize = 24;
-			GUI.color = Color.green;
+			GUI.color = new Color(0.75f, 0.75f, 1.0f);
 
 			// Draw buttons within the animated rect
 			if (GUI.Button(new Rect(guiRect.x + 000, guiRect.y, 150, 30), (PreviewSettings.EditorMode ? "Disable" : "Enable") + "  Editor")) gameController.ToggleEditor();
