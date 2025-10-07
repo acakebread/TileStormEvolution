@@ -97,8 +97,6 @@ namespace MassiveHadronLtd
 		{
 			if (true == ClassicTilestorm.PreviewSettings.DebugMode) return;
 			if (null == cameraSystem) return;
-			OnCameraUpdate?.Invoke(currentState);
-			cameraSystem.Update();
 
 			var startCinema = CameraState.Cinema == currentState ? cameraSystem.HasCompleted : enableAutoCinema && Time.time - lastRefreshTime > CinemaTimeoutDuration;
 			if (true == startCinema)
@@ -110,6 +108,8 @@ namespace MassiveHadronLtd
 				cameraSystem.focusPoints = points;
 				cameraSystem.Start();
 			}
+			OnCameraUpdate?.Invoke(currentState);
+			cameraSystem?.Update();
 			cameraSystem?.Project(GetComponent<Camera>());
 		}
 
