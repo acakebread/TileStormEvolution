@@ -15,7 +15,7 @@ namespace MassiveHadronLtd
 		private float yaw;
 		private float pitch;
 		private bool dragging;
-		private bool skipNextScroll; // Only for scroll wheel
+		private bool skipNextScroll;
 
 		private void Awake()
 		{
@@ -25,20 +25,13 @@ namespace MassiveHadronLtd
 			skipNextScroll = false;
 
 			// Ensure EventSystem exists
-			if (!Object.FindAnyObjectByType<EventSystem>())
-			{
-				new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
-			}
+			if (!FindAnyObjectByType<EventSystem>()) new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
 		}
 
 		private void OnApplicationFocus(bool hasFocus)
 		{
-			if (hasFocus)
-			{
-				skipNextScroll = true; // Skip scroll delta on first frame after focus
-			}
+			if (hasFocus) skipNextScroll = true; // Skip scroll delta on first frame after focus
 		}
-
 
 		private void Update()
 		{
@@ -91,8 +84,7 @@ namespace MassiveHadronLtd
 		private bool insideWindow()
 		{
 			Vector3 mousePosition = Input.mousePosition;
-			return mousePosition.x >= 0 && mousePosition.x <= Screen.width &&
-				   mousePosition.y >= 0 && mousePosition.y <= Screen.height;
+			return mousePosition.x >= 0 && mousePosition.x <= Screen.width && mousePosition.y >= 0 && mousePosition.y <= Screen.height;
 		}
 
 		private Vector3 GetInputTranslationDirection()
@@ -106,10 +98,7 @@ namespace MassiveHadronLtd
 			if (Input.GetKey(KeyCode.E)) direction += Vector3.up;
 
 			// Apply 5x speed multiplier when shift is held
-			if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))
-			{
-				direction *= 5f;
-			}
+			if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) direction *= 5f;
 
 			return direction;
 		}

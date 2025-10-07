@@ -41,9 +41,9 @@ namespace ClassicTilestorm
 		[SerializeField, ResourcePath] private string skycubesPath = "ClassicTS/SkyCubes/";
 		public static string SkycubesPath => instance.skycubesPath;
 
-		[Header("debug mode")]
-		[SerializeField] private bool debugMode = false;
-		public static bool DebugMode { set => instance.debugMode = value; get => instance.debugMode; }
+		[Header("editor mode")]
+		[SerializeField] private bool editorMode = false;
+		public static bool EditorMode { set => instance.editorMode = value; get => instance.editorMode; }
 
 		private static PreviewSettings instance;
 		void Awake() => instance = this;

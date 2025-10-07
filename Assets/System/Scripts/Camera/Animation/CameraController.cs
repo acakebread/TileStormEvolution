@@ -1,10 +1,11 @@
-﻿using System;
+﻿// Modified: CameraController.cs
+using System;
 using UnityEngine;
 using System.Collections.Generic;
 
 namespace MassiveHadronLtd
 {
-	public enum CameraState { Absent, Static, Preset, Follow, Cinema }
+	public enum CameraState { Absent, Editor, Static, Preset, Follow, Cinema}
 
 	public class CameraController : MonoBehaviour
 	{
@@ -62,11 +63,12 @@ namespace MassiveHadronLtd
 
 		public void SetMode(CameraState value)
 		{
-			if (CameraState.Cinema != currentState && null != cameraSystem)
+			if (CameraState.Cinema != currentState && CameraState.Editor != currentState && null != cameraSystem)
 				restoreData = cameraSystem.cameraData;
 
 			cameraSystem = value switch
 			{
+				CameraState.Editor => new CameraEditor(),
 				CameraState.Static => new CameraStatic(),
 				CameraState.Preset => new CameraPreset(),
 				CameraState.Follow => new CameraFollow(),
@@ -93,7 +95,7 @@ namespace MassiveHadronLtd
 
 		private void Update()
 		{
-			if (ClassicTilestorm.PreviewSettings.DebugMode) return;
+			//if (currentState == CameraState.Editor) return;
 			if (null == cameraSystem) return;
 
 			OnCameraUpdate?.Invoke(currentState);
@@ -104,8 +106,7 @@ namespace MassiveHadronLtd
 		public void Refresh(float time)
 		{
 			lastRefreshTime = time;
-			if (currentState == CameraState.Cinema)
-				SetMode(previousState);
+			if (currentState == CameraState.Cinema) SetMode(previousState);
 		}
 
 		public void SetOrigin(Vector3 value, bool both = false) => cameraSystem?.SetOrigin(value, both);

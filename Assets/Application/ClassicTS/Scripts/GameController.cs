@@ -66,6 +66,18 @@ namespace ClassicTilestorm
 			cameraSystem.Start();
 		}
 
+		public void ToggleCinemma()
+		{
+			SetAutoCinema(!CinemaEnabled);
+			cameraController.Refresh(Time.time - (CinemaEnabled? 999f : 0f));
+		}
+
+		public void ToggleEditor()
+		{
+			PreviewSettings.EditorMode = !PreviewSettings.EditorMode;
+			cameraController.SetMode(true == PreviewSettings.EditorMode ? CameraState.Editor : CameraState.Static);
+		}
+
 		private void OnCameraUpdate(CameraState state)
 		{
 			switch (state)
@@ -146,12 +158,12 @@ namespace ClassicTilestorm
 			}
 
 			gestureController.Initialise(mapManager);
-			if (PreviewSettings.DebugMode) Camera.main.fieldOfView = 45;
+			if (PreviewSettings.EditorMode) cameraController.SetMode(CameraState.Editor);
 		}
 
 		private void OnWaypointReached(int waypointIndex)
 		{
-			if (cameraController.CurrentState == CameraState.Cinema) return;
+			if (cameraController.CurrentState == CameraState.Cinema || cameraController.CurrentState == CameraState.Editor) return;
 			if (eggbotController == null) return;
 			if (mapManager == null || waypointIndex < 0 || waypointIndex >= mapManager.Waypoints.Length) return;
 			if (mapManager.Waypoints.Length - 1 == waypointIndex || waypointIndex == 0) return;
