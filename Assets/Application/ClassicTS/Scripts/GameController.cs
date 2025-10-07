@@ -78,10 +78,6 @@ namespace ClassicTilestorm
 
 		private void OnCameraEnable(CameraState state)
 		{
-			var postProcessingCameraController = cameraController.GetComponentInChildren<PostProcessingCameraController>(true);
-			if (postProcessingCameraController != null)
-				postProcessingCameraController.enabled = cameraController.currentData.enablePostProcessing; //postProcessingCameraController.enabled = cameraController.CameraSystem.cameraData.enablePostProcessing;
-	
 			switch (state)
 			{
 				case CameraState.Follow:

@@ -20,7 +20,7 @@ namespace MassiveHadronLtd
 		// Internal
 		private CameraBase cameraSystem;
 		private CameraData restoreData;
-		public CameraData currentData;//temporarily public
+		[HideInInspector] public CameraData currentData;//temporarily public
 		private CameraState currentState = CameraState.Absent;
 		private CameraState previousState = CameraState.Absent;
 		private Bounds mapBounds;
@@ -74,6 +74,8 @@ namespace MassiveHadronLtd
 			if (CameraState.Cinema != currentState && CameraState.Editor != currentState && null != cameraSystem)
 				restoreData = currentData;
 
+			OnCameraDisable?.Invoke(currentState);
+
 			cameraSystem = value switch
 			{
 				CameraState.Editor => new CameraEditor(),
@@ -100,6 +102,13 @@ namespace MassiveHadronLtd
 				};
 			}
 			if (CameraState.Editor == currentState) cameraSystem.Start(ref currentData);//only editor for now
+			OnEnableCamera();
+		}
+
+		private void OnEnableCamera()
+		{
+			var postProcessingCameraController = GetComponentInChildren<PostProcessingCameraController>(true);
+			if (postProcessingCameraController != null) postProcessingCameraController.enabled = currentData.enablePostProcessing;
 			OnCameraEnable?.Invoke(currentState);
 		}
 
