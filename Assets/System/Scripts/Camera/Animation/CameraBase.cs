@@ -16,7 +16,7 @@ namespace MassiveHadronLtd
 
 		protected virtual void Start() { }
 
-		public void Update(ref CameraAnimationData data)
+		public virtual void Update(ref CameraAnimationData data)
 		{
 			_data = data;
 			if (!HasStarted) Start(ref _data);
@@ -29,7 +29,8 @@ namespace MassiveHadronLtd
 		protected virtual void ApplyProjection(CameraAnimationData data)
 		{
 			if (data.camera == null) return;
-			var direction = data.lerpedTarget - data.camera.transform.position;
+			data.camera.transform.position = data.lerpedPosition; // Use lerpedPosition (originSrc)
+			var direction = data.lerpedTarget - data.lerpedPosition; // Use lerpedTarget - lerpedPosition
 			if (direction.sqrMagnitude > Mathf.Epsilon)
 				data.camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
 			data.camera.fieldOfView = data.fieldOfView;
@@ -50,7 +51,8 @@ namespace MassiveHadronLtd
 		protected virtual void SetPosition(Vector3 value, bool immediate = false)
 		{
 			_data.position = value;
-			if (immediate) _data.camera.transform.position = value;
+			if (immediate)
+				_data.lerpedPosition = value;
 		}
 
 		public virtual void SetTarget(ref CameraAnimationData data, Vector3 value, bool immediate = false)
@@ -62,7 +64,8 @@ namespace MassiveHadronLtd
 		protected virtual void SetTarget(Vector3 value, bool immediate = false)
 		{
 			_data.target = value;
-			if (immediate) _data.lerpedTarget = value;
+			if (immediate)
+				_data.lerpedTarget = value;
 		}
 
 		public bool HasStarted { private get; set; }

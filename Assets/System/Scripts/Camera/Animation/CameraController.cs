@@ -19,7 +19,7 @@ namespace MassiveHadronLtd
 
 		// Internal
 		private CameraBase cameraSystem;
-		private CameraData restoreData;
+		private CameraAnimationData restoreData;
 		[HideInInspector] public CameraAnimationData currentData; // Temporarily public
 		private CameraState currentState = CameraState.Absent;
 		private CameraState previousState = CameraState.Absent;
@@ -37,7 +37,7 @@ namespace MassiveHadronLtd
 				0 or 1 or 2 => new CameraPath(),
 				3 or 4 or 5 => new CameraOrbit(),
 				//6 => new CameraDollyZoom(),
-				_ => new CameraPath()
+				_ => new CameraOrbit()
 			};
 		}
 
@@ -45,7 +45,7 @@ namespace MassiveHadronLtd
 		{
 			var cam = GetComponent<Camera>();
 			currentData = new CameraAnimationData(cam);
-			restoreData = new CameraData(cam);
+			restoreData = new CameraAnimationData(cam);
 
 			if (cam == null) Debug.LogError("CameraController requires a Camera component on the same GameObject.");
 		}
@@ -94,7 +94,7 @@ namespace MassiveHadronLtd
 
 			var cam = GetComponent<Camera>();
 			currentData = new CameraAnimationData(cam);
-			currentData.CopyFrom(previousData); // Copy position, lerpedTarget
+			currentData.CopyFrom(previousData); // Copy position, lerpedPosition, lerpedTarget, postProcessingCameraController
 			currentData.CopyFrom(restoreData); // Copy target, smoothing, fieldOfView, shake, enablePostProcessing
 
 			if (value == CameraState.Cinema)
@@ -117,6 +117,7 @@ namespace MassiveHadronLtd
 			if (postProcessingCameraController != null)
 			{
 				currentData.postProcessingCameraController = postProcessingCameraController;
+				currentData.postProcessingCameraController.enabled = currentData.enablePostProcessing;
 			}
 			OnCameraEnable?.Invoke(currentState);
 		}
@@ -126,6 +127,10 @@ namespace MassiveHadronLtd
 			OnCameraUpdate?.Invoke(currentState);
 			UpdateFocusPoints();
 			cameraSystem?.Update(ref currentData);
+			if (currentState == CameraState.Cinema && cameraSystem.HasCompleted)
+			{
+				Debug.Log($"CameraController.Update: Cinema camera completed (HasCompleted={cameraSystem.HasCompleted})");
+			}
 		}
 
 		private void UpdateFocusPoints()
