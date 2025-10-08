@@ -11,7 +11,7 @@ namespace MassiveHadronLtd
 			data.enablePostProcessing = false;
 		}
 
-		public override void Project(ref CameraData data)
+		protected override void ApplyProjection(ref CameraData data)
 		{
 			if (data.camera == null) return;
 			data.camera.fieldOfView = data.fieldOfView;
