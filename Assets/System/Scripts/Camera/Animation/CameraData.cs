@@ -4,7 +4,7 @@ namespace MassiveHadronLtd
 {
 	public class CameraData
 	{
-		public const float DefaultSmoothingRate = 8f;
+		public const float DefaultSmoothingRate = 64f;
 		public const float TargetFPS = 60f;
 
 		public Vector3 target;
