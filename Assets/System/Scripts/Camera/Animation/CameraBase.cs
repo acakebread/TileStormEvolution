@@ -5,7 +5,14 @@ namespace MassiveHadronLtd
 {
 	public abstract class CameraBase
 	{
-		public virtual void Start(ref CameraAnimationData data) { HasStarted = true; }
+		public virtual void Start(ref CameraAnimationData data)
+		{
+			HasStarted = true;
+			if (data.postProcessingCameraController != null)
+			{
+				data.postProcessingCameraController.enabled = data.enablePostProcessing;
+			}
+		}
 		public virtual void Update(ref CameraAnimationData data)
 		{
 			if (!HasStarted) Start(ref data);

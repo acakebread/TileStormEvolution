@@ -33,7 +33,10 @@ namespace MassiveHadronLtd
 		private void Awake()
 		{
 			var cam = GetComponent<Camera>();
-			currentData = new CameraAnimationData(cam);
+			currentData = new CameraAnimationData(cam)
+			{
+				postProcessingCameraController = GetComponentInChildren<PostProcessingCameraController>(true)
+			};
 			restoreState = new CameraData(cam);
 
 			if (cam == null) Debug.LogError("CameraController requires a Camera component on the same GameObject.");
@@ -90,6 +93,7 @@ namespace MassiveHadronLtd
 			{
 				currentData = new CameraAnimationData(GetComponent<Camera>())
 				{
+					postProcessingCameraController = GetComponentInChildren<PostProcessingCameraController>(true),
 					position = currentData.camera != null ? currentData.camera.transform.position : Vector3.zero,
 					target = restoreState.target,
 					lerpedTarget = restoreState.target,
@@ -107,6 +111,7 @@ namespace MassiveHadronLtd
 			{
 				currentData = new CameraAnimationData(GetComponent<Camera>())
 				{
+					postProcessingCameraController = GetComponentInChildren<PostProcessingCameraController>(true),
 					position = currentData.camera != null ? currentData.camera.transform.position : Vector3.zero,
 					target = restoreState.target,
 					lerpedTarget = restoreState.target,
@@ -120,18 +125,7 @@ namespace MassiveHadronLtd
 			if (value != currentState) previousState = currentState;
 			currentState = value;
 
-			if (CameraState.Editor == currentState) cameraSystem.Start(ref currentData);
-			OnEnableCamera();
-		}
-
-		private void OnEnableCamera()
-		{
-			var postProcessingCameraController = GetComponentInChildren<PostProcessingCameraController>(true);
-			if (postProcessingCameraController != null)
-			{
-				postProcessingCameraController.enabled = currentData.enablePostProcessing;
-				currentData.postProcessingCamera = postProcessingCameraController.GetComponent<Camera>();
-			}
+//			if (CameraState.Editor == currentState) cameraSystem.Start(ref currentData);
 			OnCameraEnable?.Invoke(currentState);
 		}
 
