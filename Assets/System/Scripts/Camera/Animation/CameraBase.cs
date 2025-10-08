@@ -1,17 +1,12 @@
 using UnityEngine;
 using System.Collections.Generic;
-
 namespace MassiveHadronLtd
 {
 	public abstract class CameraBase
 	{
 		public virtual void Start(ref CameraData data) { HasStarted = true; }
-		public virtual void Update(ref CameraData data)
-		{
-			if (!HasStarted) Start(ref data);
-			ApplyProjection(ref data);
-		}
-		protected virtual void ApplyProjection(ref CameraData data)
+		public virtual void Update(ref CameraData data) { if (!HasStarted) Start(ref data); }
+		public virtual void Project(ref CameraData data)
 		{
 			if (data.camera == null) return;
 			var direction = data.lerpedTarget - data.camera.transform.position;
@@ -20,7 +15,6 @@ namespace MassiveHadronLtd
 			data.camera.fieldOfView = data.fieldOfView;
 			CameraUtils.ApplyCameraShake(data.camera, data.shake);
 		}
-
 		public virtual Transform playerTransform { get; set; }
 		public virtual List<Vector3> focusPoints { get; set; }
 		public virtual void SetPosition(ref CameraData data, Vector3 value, bool immediate = false)
