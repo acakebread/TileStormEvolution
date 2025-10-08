@@ -4,17 +4,21 @@ namespace MassiveHadronLtd
 {
 	public class CameraEditor : CameraBase
 	{
-		public override void Start(ref CameraAnimationData data)
+		protected override void Start()
 		{
-			base.Start(ref data);
-			data.fieldOfView = 45f;
-			data.enablePostProcessing = false;
+			_data.fieldOfView = 45f;
+			_data.enablePostProcessing = false;
 		}
 
-		public override void Project(ref CameraAnimationData data)
+		protected override void ApplyProjection(CameraAnimationData data)
 		{
 			if (data.camera == null) return;
 			data.camera.fieldOfView = data.fieldOfView;
+		}
+
+		protected override void Update()
+		{
+			// No custom update logic for CameraEditor
 		}
 	}
 }

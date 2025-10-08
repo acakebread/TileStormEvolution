@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 namespace MassiveHadronLtd
 {
-	public enum CameraState { Absent, Editor, Static, Preset, Follow } //, Cinema }
+	public enum CameraState { Absent, Editor, Static, Preset, Follow }
 	public class CameraController : MonoBehaviour
 	{
 		// Public properties
@@ -84,9 +84,10 @@ namespace MassiveHadronLtd
 				_ => cameraSystem
 			};
 
-			currentData = new CameraAnimationData(GetComponent<Camera>())
+			var cam = GetComponent<Camera>();
+			currentData = new CameraAnimationData(cam)
 			{
-				position = previousData.position,
+				position = cam != null ? cam.transform.position : previousData.position,
 				lerpedTarget = previousData.lerpedTarget,
 				target = restoreData.target,
 				smoothing = restoreData.smoothing,
@@ -118,7 +119,6 @@ namespace MassiveHadronLtd
 			OnCameraUpdate?.Invoke(currentState);
 			UpdateFocusPoints();
 			cameraSystem?.Update(ref currentData);
-			cameraSystem?.Project(ref currentData);
 		}
 
 		private void UpdateFocusPoints()

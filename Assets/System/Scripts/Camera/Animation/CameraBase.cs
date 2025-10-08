@@ -5,9 +5,28 @@ namespace MassiveHadronLtd
 {
 	public abstract class CameraBase
 	{
-		public virtual void Start(ref CameraAnimationData data) { HasStarted = true; }
-		public virtual void Update(ref CameraAnimationData data) { if (!HasStarted) Start(ref data); }
-		public virtual void Project(ref CameraAnimationData data)
+		protected CameraAnimationData _data;
+
+		public virtual void Start(ref CameraAnimationData data)
+		{
+			_data = data;
+			HasStarted = true;
+			Start();
+		}
+
+		protected virtual void Start() { }
+
+		public void Update(ref CameraAnimationData data)
+		{
+			_data = data;
+			if (!HasStarted) Start(ref _data);
+			Update();
+			ApplyProjection(_data);
+		}
+
+		protected virtual void Update() { }
+
+		protected virtual void ApplyProjection(CameraAnimationData data)
 		{
 			if (data.camera == null) return;
 			var direction = data.lerpedTarget - data.camera.transform.position;
@@ -19,16 +38,31 @@ namespace MassiveHadronLtd
 
 		public virtual Transform playerTransform { get; set; }
 		public virtual List<Vector3> focusPoints { get; set; }
+
 		public virtual void SetPosition(ref CameraAnimationData data, Vector3 value, bool immediate = false)
 		{
-			data.position = value;
-			if (immediate) data.camera.transform.position = value;
+			_data = data;
+			SetPosition(value, immediate);
 		}
+
+		protected virtual void SetPosition(Vector3 value, bool immediate = false)
+		{
+			_data.position = value;
+			if (immediate) _data.camera.transform.position = value;
+		}
+
 		public virtual void SetTarget(ref CameraAnimationData data, Vector3 value, bool immediate = false)
 		{
-			data.target = value;
-			if (immediate) data.lerpedTarget = value;
+			_data = data;
+			SetTarget(value, immediate);
 		}
+
+		protected virtual void SetTarget(Vector3 value, bool immediate = false)
+		{
+			_data.target = value;
+			if (immediate) _data.lerpedTarget = value;
+		}
+
 		public bool HasStarted { private get; set; }
 		public virtual bool HasCompleted => false;
 	}
