@@ -34,6 +34,8 @@ namespace MassiveHadronLtd
 				data.camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
 			data.camera.fieldOfView = data.fieldOfView;
 			CameraUtils.ApplyCameraShake(data.camera, data.shake);
+			if (data.postProcessingCameraController != null)
+				data.postProcessingCameraController.enabled = data.enablePostProcessing;
 		}
 
 		public virtual Transform playerTransform { get; set; }

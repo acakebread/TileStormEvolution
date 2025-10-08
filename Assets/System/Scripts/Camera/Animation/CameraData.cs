@@ -4,21 +4,32 @@ namespace MassiveHadronLtd
 {
 	public class CameraData
 	{
-		public Vector3 target; // Desired look-at target
+		public const float DefaultSmoothingRate = 8f;
+		public const float TargetFPS = 60f;
+
+		public Vector3 target;
 		public float smoothing;
 		public float fieldOfView;
-		public float shake; // Deviation amplitude
+		public float shake;
 		public bool enablePostProcessing;
-		public const float TargetFPS = 60f;
-		public const float DefaultSmoothingRate = 64f;
 
-		public CameraData(Camera cam = null)
+		public CameraData(Camera camera)
 		{
-			target = Vector3.zero;
 			smoothing = DefaultSmoothingRate;
-			fieldOfView = cam != null ? cam.fieldOfView : 45f;
+			fieldOfView = camera != null ? camera.fieldOfView : 60f;
 			shake = 0f;
-			enablePostProcessing = true;
+			enablePostProcessing = false;
+			target = Vector3.zero;
+		}
+
+		public void CopyFrom(CameraAnimationData source)
+		{
+			if (source == null) return;
+			target = source.target;
+			smoothing = source.smoothing;
+			fieldOfView = source.fieldOfView;
+			shake = source.shake;
+			enablePostProcessing = source.enablePostProcessing;
 		}
 	}
 }

@@ -77,11 +77,7 @@ namespace MassiveHadronLtd
 
 			if (CameraState.Editor != currentState && CameraState.Cinema != currentState && cameraSystem != null)
 			{
-				restoreData.target = currentData.target;
-				restoreData.smoothing = currentData.smoothing;
-				restoreData.fieldOfView = currentData.fieldOfView;
-				restoreData.shake = currentData.shake;
-				restoreData.enablePostProcessing = currentData.enablePostProcessing;
+				restoreData.CopyFrom(currentData);
 			}
 
 			OnCameraDisable?.Invoke(currentState);
@@ -97,16 +93,9 @@ namespace MassiveHadronLtd
 			};
 
 			var cam = GetComponent<Camera>();
-			currentData = new CameraAnimationData(cam)
-			{
-				position = cam != null ? cam.transform.position : previousData.position,
-				lerpedTarget = previousData.lerpedTarget,
-				target = restoreData.target,
-				smoothing = restoreData.smoothing,
-				fieldOfView = restoreData.fieldOfView,
-				shake = restoreData.shake,
-				enablePostProcessing = restoreData.enablePostProcessing
-			};
+			currentData = new CameraAnimationData(cam);
+			currentData.CopyFrom(previousData); // Copy position, lerpedTarget
+			currentData.CopyFrom(restoreData); // Copy target, smoothing, fieldOfView, shake, enablePostProcessing
 
 			if (value == CameraState.Cinema)
 			{
@@ -127,8 +116,7 @@ namespace MassiveHadronLtd
 			var postProcessingCameraController = GetComponentInChildren<PostProcessingCameraController>(true);
 			if (postProcessingCameraController != null)
 			{
-				postProcessingCameraController.enabled = currentData.enablePostProcessing;
-				currentData.postProcessingCamera = postProcessingCameraController.GetComponent<Camera>();
+				currentData.postProcessingCameraController = postProcessingCameraController;
 			}
 			OnCameraEnable?.Invoke(currentState);
 		}
