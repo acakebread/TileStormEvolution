@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 namespace MassiveHadronLtd
 {
-	public enum CameraState { Absent, Editor, Static, Preset, Follow }
+	public enum CameraState { Absent, Editor, Static, Preset, Follow, Cinema }
 	public class CameraController : MonoBehaviour
 	{
 		// Public properties
@@ -29,6 +29,17 @@ namespace MassiveHadronLtd
 		// Constants
 		private const int MaxFocusPoints = 50;
 		private const float MinDistanceForNewFocusPoint = 3f;
+
+		private static CameraBase CreateCinemaCamera()
+		{
+			return UnityEngine.Random.Range(0, 7) switch
+			{
+				0 or 1 or 2 => new CameraPath(),
+				3 or 4 or 5 => new CameraOrbit(),
+				//6 => new CameraDollyZoom(),
+				_ => new CameraPath()
+			};
+		}
 
 		private void Awake()
 		{
@@ -64,7 +75,7 @@ namespace MassiveHadronLtd
 		{
 			CameraAnimationData previousData = currentData;
 
-			if (CameraState.Editor != currentState && cameraSystem != null)
+			if (CameraState.Editor != currentState && CameraState.Cinema != currentState && cameraSystem != null)
 			{
 				restoreData.target = currentData.target;
 				restoreData.smoothing = currentData.smoothing;
@@ -81,6 +92,7 @@ namespace MassiveHadronLtd
 				CameraState.Static => new CameraStatic(),
 				CameraState.Preset => new CameraPreset(),
 				CameraState.Follow => new CameraFollow(),
+				CameraState.Cinema => CreateCinemaCamera(),
 				_ => cameraSystem
 			};
 
@@ -95,6 +107,13 @@ namespace MassiveHadronLtd
 				shake = restoreData.shake,
 				enablePostProcessing = restoreData.enablePostProcessing
 			};
+
+			if (value == CameraState.Cinema)
+			{
+				currentData.smoothing = CameraData.DefaultSmoothingRate;
+				currentData.shake = 0f;
+				currentData.enablePostProcessing = true;
+			}
 
 			if (value != currentState) previousState = currentState;
 			currentState = value;
