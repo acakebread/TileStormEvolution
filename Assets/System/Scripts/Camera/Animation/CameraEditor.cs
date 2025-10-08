@@ -10,10 +10,11 @@ namespace MassiveHadronLtd
 			data.fieldOfView = 45f;
 			data.enablePostProcessing = false;
 		}
-		public override void Project(ref CameraData data, Camera camera = null)
+
+		public override void Project(ref CameraData data)
 		{
-			camera ??= Camera.main;
-			camera.fieldOfView = data.fieldOfView;
+			if (data.camera == null) return;
+			data.camera.fieldOfView = data.fieldOfView;
 		}
 	}
 }

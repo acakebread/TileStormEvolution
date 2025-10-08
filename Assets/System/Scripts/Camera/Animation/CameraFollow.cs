@@ -1,5 +1,4 @@
 using UnityEngine;
-
 namespace MassiveHadronLtd
 {
 	public class CameraFollow : CameraBase
@@ -8,21 +7,20 @@ namespace MassiveHadronLtd
 		private const float SmoothingNb = 64f;
 		private const float IdealDistance = 14f;
 		private const float IdealDistanceHorizontalScale = 1.4f;
-		
 		public override void Update(ref CameraData data)
 		{
 			base.Update(ref data);
-			data.targetDst = playerTransform.position;
+			if (data.camera == null || playerTransform == null) return;
+			data.target = playerTransform.position;
 			data.smoothing = SmoothingUtils.Smooth(data.smoothing, SmoothingNa, SmoothingNb, Time.deltaTime, CameraData.TargetFPS);
 			var followLerp = SmoothingUtils.Smooth(0f, 1f, data.smoothing, Time.deltaTime, CameraData.TargetFPS);
-			data.targetSrc = Vector3.Lerp(data.targetSrc, data.targetDst, followLerp);
-			var delta = data.targetSrc - data.originSrc;
-			var deltaHorizontal = (0f == delta.x && 0f == delta.z) ? Vector3.zero : new Vector3(delta.x, 0, delta.z).normalized;
-			var idealPos = data.targetSrc - deltaHorizontal * (IdealDistance * IdealDistanceHorizontalScale);
-			idealPos.y = data.targetSrc.y + IdealDistance;
-			data.originSrc = Vector3.Lerp(data.originSrc, idealPos, followLerp);
+			data.lerpedTarget = Vector3.Lerp(data.lerpedTarget, data.target, followLerp);
+			var delta = data.lerpedTarget - data.camera.transform.position;
+			var deltaHorizontal = (delta.x == 0f && delta.z == 0f) ? Vector3.zero : new Vector3(delta.x, 0, delta.z).normalized;
+			var idealPos = data.lerpedTarget - deltaHorizontal * (IdealDistance * IdealDistanceHorizontalScale);
+			idealPos.y = data.lerpedTarget.y + IdealDistance;
+			data.camera.transform.position = Vector3.Lerp(data.camera.transform.position, idealPos, followLerp);
 		}
-
 		public override Transform playerTransform
 		{
 			get => base.playerTransform;
