@@ -19,8 +19,8 @@ namespace MassiveHadronLtd
 
 		// Internal
 		private CameraBase cameraSystem;
-		private CameraStateSnapshot restoreState;
-		[HideInInspector] public CameraData currentData;
+		private CameraData restoreState;
+		[HideInInspector] public CameraAnimationData currentData;
 		private CameraState currentState = CameraState.Absent;
 		private CameraState previousState = CameraState.Absent;
 		private Bounds mapBounds;
@@ -33,28 +33,8 @@ namespace MassiveHadronLtd
 		private void Awake()
 		{
 			var cam = GetComponent<Camera>();
-			currentData = new CameraData
-			{
-				camera = cam,
-				postProcessingCamera = null,
-				smoothing = CameraData.DefaultSmoothingRate,
-				position = Vector3.zero,
-				target = Vector3.zero,
-				lerpedTarget = Vector3.zero,
-				fieldOfView = cam != null ? cam.fieldOfView : 45f,
-				shake = 0f,
-				enablePostProcessing = true
-			};
-			restoreState = new CameraStateSnapshot
-			{
-				position = Vector3.zero,
-				target = Vector3.zero,
-				lerpedTarget = Vector3.zero,
-				smoothing = CameraData.DefaultSmoothingRate,
-				fieldOfView = cam != null ? cam.fieldOfView : 45f,
-				shake = 0f,
-				enablePostProcessing = true
-			};
+			currentData = new CameraAnimationData(cam);
+			restoreState = new CameraData(cam);
 
 			if (cam == null) Debug.LogError("CameraController requires a Camera component on the same GameObject.");
 		}
@@ -84,11 +64,9 @@ namespace MassiveHadronLtd
 		{
 			if (CameraState.Cinema != currentState && CameraState.Editor != currentState && cameraSystem != null)
 			{
-				restoreState = new CameraStateSnapshot
+				restoreState = new CameraData
 				{
-					position = currentData.camera.transform.position,
 					target = currentData.target,
-					lerpedTarget = currentData.lerpedTarget,
 					smoothing = currentData.smoothing,
 					fieldOfView = currentData.fieldOfView,
 					shake = currentData.shake,
@@ -110,13 +88,11 @@ namespace MassiveHadronLtd
 
 			if (value != CameraState.Cinema)
 			{
-				currentData = new CameraData
+				currentData = new CameraAnimationData(GetComponent<Camera>())
 				{
-					camera = GetComponent<Camera>(),
-					postProcessingCamera = GetComponentInChildren<PostProcessingCameraController>(true)?.GetComponent<Camera>(),
-					position = restoreState.position,
+					position = currentData.camera != null ? currentData.camera.transform.position : Vector3.zero,
 					target = restoreState.target,
-					lerpedTarget = restoreState.lerpedTarget,
+					lerpedTarget = restoreState.target,
 					smoothing = restoreState.smoothing,
 					fieldOfView = restoreState.fieldOfView,
 					shake = restoreState.shake,
@@ -124,18 +100,16 @@ namespace MassiveHadronLtd
 				};
 				if (currentData.camera != null)
 				{
-					currentData.camera.transform.position = restoreState.position;
+					currentData.camera.transform.position = currentData.position;
 				}
 			}
 			else
 			{
-				currentData = new CameraData
+				currentData = new CameraAnimationData(GetComponent<Camera>())
 				{
-					camera = GetComponent<Camera>(),
-					postProcessingCamera = GetComponentInChildren<PostProcessingCameraController>(true)?.GetComponent<Camera>(),
 					position = currentData.camera != null ? currentData.camera.transform.position : Vector3.zero,
 					target = restoreState.target,
-					lerpedTarget = restoreState.lerpedTarget,
+					lerpedTarget = restoreState.target,
 					smoothing = CameraData.DefaultSmoothingRate,
 					fieldOfView = restoreState.fieldOfView,
 					shake = 0f,

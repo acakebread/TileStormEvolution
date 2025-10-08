@@ -1,16 +1,13 @@
-// CameraOrbit.cs
 using UnityEngine;
 
 namespace MassiveHadronLtd
 {
 	public class CameraOrbit : CameraBase
 	{
-		// Shared constants from CinemaCameraBase
 		protected const float PauseDuration = 1.5f;
 		protected const float DefaultSequenceDuration = 8f;
-		protected const float ProjectionSmoothingRate = 8f; //16f;
+		protected const float ProjectionSmoothingRate = 8f;
 
-		// Constants from CinemaCameraOrbit
 		private const float VerticalOffset = 0.5f;
 		private const float MinOrbitRadius = 2f;
 		private const float MaxOrbitRadius = 8f;
@@ -21,14 +18,12 @@ namespace MassiveHadronLtd
 		private const float MaxLookAtAngle = 20f;
 		private const float SmoothingRate = 16f;
 
-		// Shared state from CinemaCameraBase
 		protected Vector3 predictedPlayerPosition = Vector3.zero;
 		protected float pauseTimer;
 		protected float sequenceTimer;
 		protected float currentSequenceDuration;
 		protected Vector3 lastPlayerPos;
 
-		// Fields from CinemaCameraOrbit
 		private float orbitHeightSrc;
 		private float orbitHeightDst;
 		private float currentOrbitRadius;
@@ -36,13 +31,12 @@ namespace MassiveHadronLtd
 		private float orbitEndAngle;
 		private float currentFovMax;
 
-		public override void Start(ref CameraData data)
+		public override void Start(ref CameraAnimationData data)
 		{
 			base.Start(ref data);
-			sequenceTimer = pauseTimer = 0f; // Disable sequence by default
+			sequenceTimer = pauseTimer = 0f;
 			if (playerTransform == null) return;
 
-			// Preserve existing data for seamless transition, but initialize cinema-specific fields
 			data.smoothing = CameraData.DefaultSmoothingRate;
 			data.fieldOfView = 45f;
 			data.shake = 0f;
@@ -53,7 +47,6 @@ namespace MassiveHadronLtd
 			pauseTimer = PauseDuration;
 			lastPlayerPos = predictedPlayerPosition = playerTransform.position;
 
-			// Call what was StartCinemaSequence
 			if (data.camera == null || playerTransform == null) return;
 
 			data.shake = 1f;
@@ -77,7 +70,6 @@ namespace MassiveHadronLtd
 			data.fieldOfView = FovMin;
 			currentFovMax = Random.value < 0.2f ? 60f : FovMax;
 
-			// Update immediately for t=0
 			UpdateOrbitSequence(ref data, 0f);
 			data.camera.transform.position = data.position;
 			data.lerpedTarget = data.target;
@@ -91,47 +83,38 @@ namespace MassiveHadronLtd
 			return Mathf.Max(MinOrbitRadius, heightDiff / Mathf.Tan(maxPitchRad));
 		}
 
-		public override void Update(ref CameraData data)
+		public override void Update(ref CameraAnimationData data)
 		{
 			base.Update(ref data);
 			if (data.camera == null || playerTransform == null) return;
 
-			// Update sequence timer (from CinemaCameraBase Update)
 			sequenceTimer -= Time.deltaTime;
 			if (sequenceTimer <= 0f)
 			{
-				// Handle pause state
 				if (pauseTimer <= 0f) return;
 				pauseTimer -= Time.deltaTime;
 			}
 			else
 			{
-				// Smooth projected player position
 				var posDelta = playerTransform.position - lastPlayerPos;
 				predictedPlayerPosition = SmoothingUtils.SmoothVector(predictedPlayerPosition, playerTransform.position + posDelta * 2f, ProjectionSmoothingRate, Time.deltaTime, CameraData.TargetFPS);
 
-				// Compute eased time
 				var easedSequenceTimer = SmoothingUtils.Ease(currentSequenceDuration > 0 ? 1f - Mathf.Clamp01(sequenceTimer / currentSequenceDuration) : 1f);
 
-				// Compute mode-specific positions and FOV (from UpdateCinemaSequence)
 				UpdateOrbitSequence(ref data, easedSequenceTimer);
 
 				lastPlayerPos = playerTransform.position;
 			}
 
-			// Lerp positions (from CinemaCameraBase Update)
 			data.smoothing = SmoothingUtils.Smooth(data.smoothing, SmoothingRate, Time.deltaTime, CameraData.TargetFPS);
 			var interpolate = SmoothingUtils.Smooth(0f, 1f, data.smoothing, Time.deltaTime, CameraData.TargetFPS);
 			data.camera.transform.position = Vector3.Lerp(data.camera.transform.position, data.position, interpolate);
 			data.lerpedTarget = Vector3.Lerp(data.lerpedTarget, data.target, interpolate);
 		}
 
-		private void UpdateOrbitSequence(ref CameraData data, float easedSequenceTimer)
+		private void UpdateOrbitSequence(ref CameraAnimationData data, float easedSequenceTimer)
 		{
-			// Update target
 			data.target = predictedPlayerPosition + Vector3.up * VerticalOffset;
-
-			// Update camera dest position and FOV
 			data.position = data.target + SampleOrbitPosition(orbitStartAngle, orbitEndAngle, easedSequenceTimer);
 			data.fieldOfView = Mathf.Lerp(FovMin, currentFovMax, SmoothingUtils.EasePingPong(sequenceTimer / currentSequenceDuration));
 		}
