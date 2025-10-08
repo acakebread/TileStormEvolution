@@ -115,10 +115,7 @@ namespace MassiveHadronLtd
 		{
 			var postProcessingCameraController = GetComponentInChildren<PostProcessingCameraController>(true);
 			if (postProcessingCameraController != null)
-			{
 				currentData.postProcessingCameraController = postProcessingCameraController;
-				currentData.postProcessingCameraController.enabled = currentData.enablePostProcessing;
-			}
 			OnCameraEnable?.Invoke(currentState);
 		}
 

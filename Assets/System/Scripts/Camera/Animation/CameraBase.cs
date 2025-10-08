@@ -10,8 +10,10 @@ namespace MassiveHadronLtd
 		public virtual void Start(ref CameraAnimationData data)
 		{
 			_data = data;
-			HasStarted = true;
 			Start();
+			if (null != data.postProcessingCameraController)
+				data.postProcessingCameraController.enabled = data.enablePostProcessing;
+			HasStarted = true;
 		}
 
 		protected virtual void Start() { }
@@ -35,8 +37,6 @@ namespace MassiveHadronLtd
 				data.camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
 			data.camera.fieldOfView = data.fieldOfView;
 			CameraUtils.ApplyCameraShake(data.camera, data.shake);
-			if (data.postProcessingCameraController != null)
-				data.postProcessingCameraController.enabled = data.enablePostProcessing;
 		}
 
 		public virtual Transform playerTransform { get; set; }
@@ -68,7 +68,7 @@ namespace MassiveHadronLtd
 				_data.lerpedTarget = value;
 		}
 
-		public bool HasStarted { private get; set; }
+		private bool HasStarted { get; set; }
 		public virtual bool HasCompleted => false;
 	}
 }
