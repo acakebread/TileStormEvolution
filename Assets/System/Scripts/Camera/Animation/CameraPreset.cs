@@ -4,7 +4,7 @@ namespace MassiveHadronLtd
 	public class CameraPreset : CameraBase
 	{
 		private const float SmoothingN = 32f;
-		public override void Update(ref CameraAnimationData data)
+		public override void Update(ref CameraData data)
 		{
 			base.Update(ref data);
 			if (data.camera == null) return;

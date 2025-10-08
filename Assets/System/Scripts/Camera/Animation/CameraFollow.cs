@@ -7,7 +7,7 @@ namespace MassiveHadronLtd
 		private const float SmoothingNb = 64f;
 		private const float IdealDistance = 14f;
 		private const float IdealDistanceHorizontalScale = 1.4f;
-		public override void Update(ref CameraAnimationData data)
+		public override void Update(ref CameraData data)
 		{
 			base.Update(ref data);
 			if (data.camera == null || playerTransform == null) return;
