@@ -33,6 +33,7 @@ namespace MassiveHadronLtd
 			{
 				0 or 1 or 2 => new CameraPath(),
 				3 or 4 or 5 => new CameraOrbit(),
+				//6 => new CameraDollyZoom(),
 				_ => new CameraOrbit()
 			};
 		}
