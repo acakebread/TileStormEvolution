@@ -263,35 +263,6 @@ public class ReflectionEffectCamera : MonoBehaviour
 		}
 	}
 
-	private void CleanupDynamicResources()
-	{
-		if (effectMaterial != null && isMaterialDynamic)
-		{
-			DestroyImmediate(effectMaterial);
-			effectMaterial = null;
-		}
-		if (renderTexture != null && effectMode != EffectMode.FrostEffect && effectMode != EffectMode.Water && effectMode != EffectMode.OceanEffect)
-		{
-			DestroyImmediate(renderTexture);
-			renderTexture = null;
-		}
-		if (isTextureDynamic && noiseTexture != null)
-		{
-			DestroyImmediate(noiseTexture);
-			noiseTexture = null;
-		}
-		if (textureCamera != null && effectMode != EffectMode.FrostEffect && effectMode != EffectMode.Water && effectMode != EffectMode.OceanEffect)
-		{
-			DestroyImmediate(textureCamera.gameObject);
-			textureCamera = null;
-		}
-		if (effectMesh != null)
-		{
-			DestroyImmediate(effectMesh);
-			effectMesh = null;
-		}
-	}
-
 	private void SetupRenderTexture(string textureName)
 	{
 		if (renderTexture == null)
@@ -319,7 +290,7 @@ public class ReflectionEffectCamera : MonoBehaviour
 			textureCamera.clearFlags = mainCamera.clearFlags;
 			textureCamera.cullingMask = mainCamera.cullingMask;
 			textureCamera.targetTexture = renderTexture;
-			textureCamera.depth = mainCamera.depth + 1;
+			textureCamera.depth = mainCamera.depth - 1;
 			var data = obj.AddComponent<UniversalAdditionalCameraData>();
 			data.cameraStack.Clear();
 			data.cameraStack.Add(reflectionCamera);
@@ -483,6 +454,35 @@ public class ReflectionEffectCamera : MonoBehaviour
 		{
 			SkyboxUtility.SetSkyboxCubemap(effectMaterial, RenderSettings.skybox);
 			lastSkyboxMaterial = RenderSettings.skybox;
+		}
+	}
+
+	private void CleanupDynamicResources()
+	{
+		if (effectMaterial != null && isMaterialDynamic)
+		{
+			DestroyImmediate(effectMaterial);
+			effectMaterial = null;
+		}
+		if (effectMesh != null)
+		{
+			DestroyImmediate(effectMesh);
+			effectMesh = null;
+		}
+		if (noiseTexture != null && isTextureDynamic)
+		{
+			DestroyImmediate(noiseTexture);
+			noiseTexture = null;
+		}
+		if (renderTexture != null && effectMode != EffectMode.FrostEffect && effectMode != EffectMode.Water && effectMode != EffectMode.OceanEffect)
+		{
+			DestroyImmediate(renderTexture);
+			renderTexture = null;
+		}
+		if (textureCamera != null && effectMode != EffectMode.FrostEffect && effectMode != EffectMode.Water && effectMode != EffectMode.OceanEffect)
+		{
+			DestroyImmediate(textureCamera.gameObject);
+			textureCamera = null;
 		}
 	}
 

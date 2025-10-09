@@ -13,11 +13,7 @@ namespace MassiveHadronLtd
 		private const float FovMax = 55f;
 		private const float MinCameraHeight = 1.5f;
 		private const float MaxCameraHeight = 4f;
-		private const float TangentLineExtension = 2f;
 		private const bool SortDstNearerPlayer = true;
-
-		private const float DEBUG_DRAW_DURATION = 5f;
-		public static bool DEBUG_VISUALIZE_LOZENGE = true;
 
 		private float currentFovMax;
 		private BezierData bezierData;
@@ -76,13 +72,6 @@ namespace MassiveHadronLtd
 			// Initialize FOV
 			_data.fieldOfView = FovMin;
 			currentFovMax = Random.value < 0.2f ? 60f : FovMax;
-
-			// Visualize focus points
-			if (DEBUG_VISUALIZE_LOZENGE)
-			{
-				Debug.DrawRay(_data.lerpedTarget, Vector3.up * 5f, Color.red, DEBUG_DRAW_DURATION);
-				Debug.DrawRay(_data.target, Vector3.up * 5f, Color.blue, DEBUG_DRAW_DURATION);
-			}
 		}
 
 		protected override void Update()
@@ -142,7 +131,6 @@ namespace MassiveHadronLtd
 			var v1 = srcXZ - midPointXZ;
 			var v2 = dstXZ - midPointXZ;
 			var dot = Vector2.Dot(v1, v2);
-			var flipped = false;
 
 			if (dot > 0)
 			{
@@ -154,7 +142,6 @@ namespace MassiveHadronLtd
 				tangentDst1 = newTangent1;
 				tangentDst2 = newTangent2;
 				projectionDistanceDst = Vector2.Distance(midPointXZ, dstXZ) - Vector2.Distance(midPointXZ, perimeterPointDst);
-				flipped = true;
 				dstXZ = new Vector2(dst.x, dst.z);
 			}
 
@@ -216,45 +203,11 @@ namespace MassiveHadronLtd
 
 			// Fallback to midpoint
 			if (!controlPoint.HasValue)
-			{
 				controlPoint = (src + dst) / 2f;
-			}
 
 			// Create Bezier curve
 			bezierData = new BezierData { P0 = src, P1 = controlPoint.Value, P2 = dst };
 
-			// Debug visualization
-			if (DEBUG_VISUALIZE_LOZENGE)
-			{
-				VisualizeLozenge(midPoint, pathDir, perpendicular, lozengeMajor, lozengeMinor, (MinCameraHeight + MaxCameraHeight) / 2f);
-				Debug.DrawRay(perimeterPointSrc, Vector3.up * 5f, Color.yellow, DEBUG_DRAW_DURATION);
-				Debug.DrawRay(perimeterPointDst, Vector3.up * 5f, Color.yellow, DEBUG_DRAW_DURATION);
-				Debug.DrawRay(src, Vector3.up * 3f, Color.green, DEBUG_DRAW_DURATION);
-				Debug.DrawRay(dst, Vector3.up * 3f, flipped ? Color.magenta : Color.green, DEBUG_DRAW_DURATION);
-				Debug.DrawRay(controlPoint.Value, Vector3.up * 4f, Color.yellow, DEBUG_DRAW_DURATION);
-
-				if (tangentPointSrc1.HasValue && tangentPointSrc2.HasValue)
-				{
-					Vector3 tangentSrc1End = tangentPointSrc1.Value + (tangentPointSrc1.Value - src).normalized * TangentLineExtension;
-					Vector3 tangentSrc2End = tangentPointSrc2.Value + (tangentPointSrc2.Value - src).normalized * TangentLineExtension;
-					Debug.DrawLine(src, tangentSrc1End, Color.magenta, DEBUG_DRAW_DURATION);
-					Debug.DrawLine(src, tangentSrc2End, Color.cyan, DEBUG_DRAW_DURATION);
-					Debug.DrawRay(tangentPointSrc1.Value, Vector3.up * 2f, Color.white, DEBUG_DRAW_DURATION);
-					Debug.DrawRay(tangentPointSrc2.Value, Vector3.up * 2f, Color.white, DEBUG_DRAW_DURATION);
-				}
-				if (tangentPointDst1.HasValue && tangentPointDst2.HasValue)
-				{
-					Vector3 tangentDst1End = tangentPointDst1.Value + (tangentPointDst1.Value - dst).normalized * TangentLineExtension;
-					Vector3 tangentDst2End = tangentPointDst2.Value + (tangentPointDst2.Value - dst).normalized * TangentLineExtension;
-					Debug.DrawLine(dst, tangentDst1End, Color.magenta, DEBUG_DRAW_DURATION + 2f);
-					Debug.DrawLine(dst, tangentDst2End, Color.cyan, DEBUG_DRAW_DURATION + 2f);
-					Debug.DrawRay(tangentPointDst1.Value, Vector3.up * 2f, Color.white, DEBUG_DRAW_DURATION + 2f);
-					Debug.DrawRay(tangentPointDst2.Value, Vector3.up * 2f, Color.white, DEBUG_DRAW_DURATION + 2f);
-				}
-
-				VisualizeBezierCurve();
-				VisualizeBezierConstruction();
-			}
 			return (src, dst);
 		}
 
@@ -267,37 +220,6 @@ namespace MassiveHadronLtd
 			var u = -((p1.x - p2.x) * (p1.y - p3.y) - (p1.y - p2.y) * (p1.x - p3.x)) / denom;
 
 			return t >= 0 && u >= 0 ? p1 + t * (p2 - p1) : null;
-		}
-
-		private void VisualizeBezierCurve()
-		{
-			const int segments = 20;
-			var points = new Vector3[segments + 1];
-			for (var i = 0; i <= segments; i++)
-			{
-				float t = i / (float)segments;
-				points[i] = EvaluateBezier(t);
-			}
-			for (var i = 0; i < segments; i++)
-			{
-				Debug.DrawLine(points[i], points[i + 1], Color.white, DEBUG_DRAW_DURATION);
-			}
-		}
-
-		private void VisualizeBezierConstruction()
-		{
-			float[] tValues = { 0.25f, 0.5f, 0.75f };
-			foreach (var t in tValues)
-			{
-				var q0 = Vector3.Lerp(bezierData.P0, bezierData.P1, t); // Q0(t)
-				var q1 = Vector3.Lerp(bezierData.P1, bezierData.P2, t); // Q1(t)
-				var b = Vector3.Lerp(q0, q1, t); // B(t)
-
-				Debug.DrawRay(q0, Vector3.up * 1f, Color.red, DEBUG_DRAW_DURATION); // Q0(t)
-				Debug.DrawRay(q1, Vector3.up * 1f, Color.blue, DEBUG_DRAW_DURATION); // Q1(t)
-				Debug.DrawRay(b, Vector3.up * 1.5f, Color.green, DEBUG_DRAW_DURATION); // B(t)
-				Debug.DrawLine(q0, q1, Color.gray, DEBUG_DRAW_DURATION); // Line from Q0 to Q1
-			}
 		}
 
 		private (Vector3 point, Vector2 perimeterPoint, Vector3 tangent1, Vector3 tangent2, float theta, float projectionDistance) GeneratePointOutsideLozenge(Vector2 midPointXZ, Vector3 pathDir, Vector3 perpendicular, float lozengeMajor, float lozengeMinor)
@@ -330,22 +252,6 @@ namespace MassiveHadronLtd
 				position.y = Mathf.Clamp(idealHeight, MinCameraHeight, MaxCameraHeight);
 			}
 			return position;
-		}
-
-		private void VisualizeLozenge(Vector3 midPoint, Vector3 pathDir, Vector3 perpendicular, float lozengeMajor, float lozengeMinor, float height)
-		{
-			const int segments = 36;
-			var points = new Vector3[segments + 1];
-			for (var i = 0; i <= segments; i++)
-			{
-				var angle = i * 2f * Mathf.PI / segments;
-				Vector2 pointXZ = MathEllipse.GetEllipsePoint(angle, lozengeMajor, lozengeMinor, new Vector2(midPoint.x, midPoint.z), pathDir, perpendicular);
-				points[i] = new Vector3(pointXZ.x, height, pointXZ.y);
-			}
-			for (var i = 0; i < segments; i++)
-			{
-				Debug.DrawLine(points[i], points[i + 1], Color.green, DEBUG_DRAW_DURATION);
-			}
 		}
 	}
 }
