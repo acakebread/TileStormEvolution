@@ -25,8 +25,8 @@ namespace ClassicTilestorm
 		public static bool ShowTileSelection => instance.showTileSelection;
 
 		[Header("cinema mode")]
-		[SerializeField] private bool launchInCinemaMode = false;
-		public static bool LaunchInCinemaMode => instance.launchInCinemaMode;
+		[SerializeField] private bool cinemaMode = false;
+		public static bool CinemaMode { set => instance.cinemaMode = value; get => instance.cinemaMode; }
 
 		[Header("resource paths")]
 		[SerializeField] private TextAsset databaseJsonFile;

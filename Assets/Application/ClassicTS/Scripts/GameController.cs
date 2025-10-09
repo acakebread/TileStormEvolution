@@ -13,9 +13,7 @@ namespace ClassicTilestorm
 		private CameraController cameraController;
 
 		private const float CinemaTimeoutDuration = 5f;
-		private float cinemaTimeStamp;
-		private bool cinemaEnabled;
-		public bool CinemaEnabled => cinemaEnabled;
+		private float timeStart;
 
 		private void Awake()
 		{
@@ -24,14 +22,12 @@ namespace ClassicTilestorm
 			gestureController.OnMapUpdated += CheckDisableDrag;
 
 			cameraController = Camera.main != null ? Camera.main.GetComponent<CameraController>() : null;
-			if (cameraController == null && Camera.main != null)
-				cameraController = Camera.main.gameObject.AddComponent<CameraController>();
+			if (cameraController == null && Camera.main != null) cameraController = Camera.main.gameObject.AddComponent<CameraController>();
 		}
 
 		private void Start()
 		{
 			DatabaseLoader.Init(PreviewSettings.DatabaseJsonFile);
-			cinemaEnabled = PreviewSettings.LaunchInCinemaMode;
 			LoadMap(PlayerPrefs.GetString("LastLoadedMap", PreviewSettings.LoadMapName));
 			cameraController.OnCameraEnable += OnCameraEnable;
 			cameraController.OnCameraUpdate += OnCameraUpdate;
@@ -41,39 +37,31 @@ namespace ClassicTilestorm
 		private void Update()
 		{
 			if (eggbotController != null) eggbotController.UpdateEggbot(mapManager);
-			HandleCinemaRestart();
+			CinemaUpdate();
 		}
 
-		private void HandleCinemaRestart()
+		private void CinemaUpdate()
 		{
-			if (cameraController == null) return;
+			if (null == cameraController || null == cameraController.CameraSystem) return;
 
-			var cameraSystem = cameraController.CameraSystem;
-			if (cameraSystem == null) return;
-
-			bool startCinema =
-				cameraController.CurrentState == CameraState.Cinema
-					? cameraSystem.HasCompleted
-					: CinemaEnabled && Time.time - cinemaTimeStamp > CinemaTimeoutDuration;
-
+			bool startCinema = PreviewSettings.CinemaMode ? cameraController.CameraSystem.HasCompleted : PreviewSettings.CinemaMode && Time.time - timeStart > CinemaTimeoutDuration;
 			if (!startCinema) return;
 
-			cinemaTimeStamp = Time.time;
+			timeStart = Time.time;
 			cameraController.SetMode(CameraState.Cinema);
-			cameraSystem.Start(ref cameraController.currentData);
 		}
 
 		public void ToggleCinemma(bool force = false)
 		{
-			cinemaEnabled = !cinemaEnabled;
-			if (force) cinemaTimeStamp = Time.time - CinemaTimeoutDuration;
-			if (cameraController.CurrentState == CameraState.Cinema) cameraController.SetMode(cameraController.PreviousState);
+			PreviewSettings.CinemaMode = !PreviewSettings.CinemaMode;
+			if (PreviewSettings.CinemaMode) timeStart = force ? Time.time - CinemaTimeoutDuration : Time.time;
+			cameraController.SetMode(PreviewSettings.CinemaMode ? CameraState.Cinema : cameraController.PreviousState);
 		}
 
 		public void ToggleEditor()
 		{
 			PreviewSettings.EditorMode = !PreviewSettings.EditorMode;
-			cameraController.SetMode(PreviewSettings.EditorMode ? CameraState.Editor : CameraState.Static);
+			cameraController.SetMode(PreviewSettings.EditorMode ? CameraState.Editor : cameraController.PreviousState);
 		}
 
 		private void OnCameraEnable(CameraState state)
@@ -93,15 +81,10 @@ namespace ClassicTilestorm
 
 		public void LoadMap(string mapName = null)
 		{
-			if (string.IsNullOrEmpty(mapName))
-				mapName = mapManager != null ? PreviewSettings.LoadMapName : PlayerPrefs.GetString("LastLoadedMap", PreviewSettings.LoadMapName);
-
+			if (string.IsNullOrEmpty(mapName)) mapName = mapManager != null ? PreviewSettings.LoadMapName : PlayerPrefs.GetString("LastLoadedMap", PreviewSettings.LoadMapName);
 			if (mapName == null) return;
 
-			var currentMap = string.IsNullOrEmpty(mapName)
-				? DatabaseLoader.Maps.FirstOrDefault()
-				: DatabaseLoader.Maps.FirstOrDefault(m => m.name == mapName);
-
+			var currentMap = string.IsNullOrEmpty(mapName) ? DatabaseLoader.Maps.FirstOrDefault() : DatabaseLoader.Maps.FirstOrDefault(m => m.name == mapName);
 			if (currentMap == null)
 			{
 				Debug.LogError($"No map found for mapName={mapName}! Available maps: {string.Join(", ", DatabaseLoader.Maps.Select(m => m.name))}");
@@ -133,7 +116,7 @@ namespace ClassicTilestorm
 			cameraController.SetPlayer(eggbotController.transform);
 			cameraController.SetFocusPoints(mapManager.Waypoints.Select(w => mapManager.TileWorldPosition(w.nTile)).ToList());
 
-			var srcPos = new Vector3(0f, 14f, -14f);
+			var srcPos = new Vector3(0f, 14f, -14f);// Classic TS default
 			var dstPos = Vector3.zero;
 
 			if (mapManager.Waypoints != null && mapManager.Waypoints.Length != 0)
@@ -155,13 +138,12 @@ namespace ClassicTilestorm
 			if (eggbotController != null)
 			{
 				var postProcessingCameraController = cameraController.GetComponentInChildren<PostProcessingCameraController>(true);
-				if (postProcessingCameraController != null)
-					postProcessingCameraController.target = eggbotController.transform;
+				if (postProcessingCameraController != null) postProcessingCameraController.target = eggbotController.transform;
 			}
 
 			gestureController.Initialise(mapManager);
 			if (PreviewSettings.EditorMode) cameraController.SetMode(CameraState.Editor);
-			cinemaTimeStamp = Time.time;
+			timeStart = Time.time;
 		}
 
 		private void OnWaypointReached(int waypointIndex)
@@ -182,9 +164,7 @@ namespace ClassicTilestorm
 			cameraController.SetMode(CameraState.Preset);
 			var position = waypoint.vSrc.IsValidVector() ? waypoint.vSrc.ToVector3() : new Vector3(0f, 14f, -14f);
 			cameraController.SetPosition(position);
-			var target = waypoint.vDst != null && waypoint.vDst.IsValidVector()
-				? waypoint.vDst.ToVector3()
-				: mapManager.TileWorldPosition(waypoint.nTile);
+			var target = waypoint.vDst != null && waypoint.vDst.IsValidVector() ? waypoint.vDst.ToVector3() : mapManager.TileWorldPosition(waypoint.nTile);
 			cameraController.SetTarget(target);
 			gestureController.enabled = true;
 		}

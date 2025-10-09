@@ -19,8 +19,8 @@ namespace MassiveHadronLtd
 
 		// Internal
 		private CameraBase cameraSystem;
-		private CameraAnimationData restoreData;
-		[HideInInspector] public CameraAnimationData currentData; // Temporarily public
+		private CameraData restoreData;
+		private CameraData currentData;
 		private CameraState currentState = CameraState.Absent;
 		private CameraState previousState = CameraState.Absent;
 		private Bounds mapBounds;
@@ -44,8 +44,8 @@ namespace MassiveHadronLtd
 		private void Awake()
 		{
 			var cam = GetComponent<Camera>();
-			currentData = new CameraAnimationData(cam);
-			restoreData = new CameraAnimationData(cam);
+			currentData = new CameraData(cam);
+			restoreData = new CameraData(cam);
 
 			var postProcessingCameraController = GetComponentInChildren<PostProcessingCameraController>(true);
 			if (postProcessingCameraController != null)

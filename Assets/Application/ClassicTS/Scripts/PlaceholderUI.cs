@@ -91,7 +91,7 @@ namespace ClassicTilestorm
 
 			if (GUI.Button(new Rect(guiRect.x + 650, guiRect.y, 150, 30), "Next Level")) ChangeMap(1);
 
-			if (GUI.Button(new Rect(guiRect.x + 810, guiRect.y, 150, 30), (gameController.CinemaEnabled ? "Disable" : "Enable") + " Cinematic")) gameController.ToggleCinemma(true);
+			if (GUI.Button(new Rect(guiRect.x + 810, guiRect.y, 150, 30), (PreviewSettings.CinemaMode ? "Disable" : "Enable") + " Cinematic")) gameController.ToggleCinemma(true);
 		}
 	}
 }

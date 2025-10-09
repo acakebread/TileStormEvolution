@@ -5,10 +5,10 @@ namespace MassiveHadronLtd
 {
 	public abstract class CameraBase
 	{
-		protected CameraAnimationData _data;
+		protected CameraData _data;
 
 		protected virtual void Start() { }
-		public virtual void Start(ref CameraAnimationData data)
+		public virtual void Start(ref CameraData data)
 		{
 			_data = data;
 			Start();
@@ -17,7 +17,7 @@ namespace MassiveHadronLtd
 		}
 
 		protected virtual void Update() { }
-		public virtual void Update(ref CameraAnimationData data)
+		public virtual void Update(ref CameraData data)
 		{
 			_data = data;
 			if (!HasStarted) Start(ref _data);
@@ -25,7 +25,7 @@ namespace MassiveHadronLtd
 			ApplyProjection(_data);
 		}
 
-		protected virtual void ApplyProjection(CameraAnimationData data)
+		protected virtual void ApplyProjection(CameraData data)
 		{
 			if (data.camera == null) return;
 			data.camera.transform.position = data.lerpedPosition;
@@ -38,7 +38,7 @@ namespace MassiveHadronLtd
 		public virtual Transform playerTransform { get; set; }
 		public virtual List<Vector3> focusPoints { get; set; }
 
-		public virtual void SetPosition(ref CameraAnimationData data, Vector3 value, bool immediate = false)
+		public virtual void SetPosition(ref CameraData data, Vector3 value, bool immediate = false)
 		{
 			_data = data;
 			SetPosition(value, immediate);
@@ -50,7 +50,7 @@ namespace MassiveHadronLtd
 			if (immediate) _data.lerpedPosition = value;
 		}
 
-		public virtual void SetTarget(ref CameraAnimationData data, Vector3 value, bool immediate = false)
+		public virtual void SetTarget(ref CameraData data, Vector3 value, bool immediate = false)
 		{
 			_data = data;
 			SetTarget(value, immediate);
