@@ -8,6 +8,7 @@ namespace MassiveHadronLtd
 	public class CameraController : MonoBehaviour
 	{
 		// Public properties
+		public Func<Transform> OnUpdatePlayer;
 		public event Action<CameraState> OnCameraEnable;
 		public event Action<CameraState> OnCameraUpdate;
 		public event Action<CameraState> OnCameraDisable;
@@ -30,7 +31,7 @@ namespace MassiveHadronLtd
 		private const int MaxFocusPoints = 50;
 		private const float MinDistanceForNewFocusPoint = 3f;
 
-		private static CameraBase CreateCinemaCamera()
+		private static CameraBase CreateCinemaCamera()// => new CameraPath();
 		{
 			return UnityEngine.Random.Range(0, 7) switch
 			{
@@ -68,11 +69,6 @@ namespace MassiveHadronLtd
 
 		public void SetOrigin(Vector3 value, bool immediate = false) => cameraSystem?.SetOrigin(ref currentData, value, immediate);
 		public void SetTarget(Vector3 value, bool immediate = false) => cameraSystem?.SetTarget(ref currentData, value, immediate);
-		public void SetPlayer(Transform value)
-		{
-			cameraSystem.playerTransform = value;
-			if (null != value) UpdateFocusPoints(cameraSystem.playerTransform.position);
-		}
 
 		public void SetFocusPoints(List<Vector3> points)
 		{
@@ -93,6 +89,7 @@ namespace MassiveHadronLtd
 		{
 			if (CameraState.Editor != currentState && CameraState.Cinema != currentState && cameraSystem != null)
 				restoreData.CopyFrom(currentData);
+			currentData.CopyFrom(restoreData);
 
 			OnCameraDisable?.Invoke(currentState);
 
@@ -106,23 +103,23 @@ namespace MassiveHadronLtd
 				_ => cameraSystem
 			};
 
-			currentData.CopyFrom(restoreData);
+			cameraSystem.OnUpdatePlayer += OnUpdatePlayer;
+			cameraSystem.OnUpdateFocusPoints += () => focusPoints;
 
 			if (value != currentState) restoreState = currentState;
 			currentState = value;
 
-			if (CameraState.Editor == currentState) cameraSystem.Start(ref currentData);
+			cameraSystem.Start(ref currentData);
 			OnCameraEnable?.Invoke(currentState);
 		}
 
 		private void Update()
 		{
 			OnCameraUpdate?.Invoke(currentState);
-			if (null != cameraSystem?.playerTransform) UpdateFocusPoints(cameraSystem.playerTransform.position);
 			cameraSystem?.Update(ref currentData);
 		}
 
-		private void UpdateFocusPoints(Vector3 position)
+		public void UpdateFocusPoints(Vector3 position)
 		{
 			if (SpatialBucketSystem.CanAddPoint(position))
 			{

@@ -25,7 +25,9 @@ namespace MassiveHadronLtd
 
 		protected override void Start()
 		{
+			playerTransform = OnUpdatePlayer?.Invoke();
 			InitializeCinemaSequence();
+
 			if (playerTransform == null || _data.camera == null) return;
 
 			currentSequenceDuration = DefaultSequenceDuration + Random.Range(-2f, 2f);

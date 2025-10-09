@@ -29,6 +29,9 @@ namespace MassiveHadronLtd
 
 		protected override void Start()
 		{
+			playerTransform = OnUpdatePlayer?.Invoke();
+			focusPoints = OnUpdateFocusPoints?.Invoke();
+
 			InitializeCinemaSequence();
 			if (_data.camera == null || playerTransform == null)
 			{

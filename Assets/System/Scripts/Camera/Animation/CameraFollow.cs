@@ -11,6 +11,7 @@ namespace MassiveHadronLtd
 
 		protected override void Update()
 		{
+			playerTransform = OnUpdatePlayer?.Invoke();
 			if (playerTransform == null) return;
 
 			_data.target = playerTransform.position;
@@ -25,10 +26,10 @@ namespace MassiveHadronLtd
 			_data.lerpedOrigin = Vector3.Lerp(_data.lerpedOrigin, _data.origin, followLerp);
 		}
 
-		public override Transform playerTransform
-		{
-			get => base.playerTransform;
-			set => base.playerTransform = value;
-		}
+		//public override Transform playerTransform
+		//{
+		//	get => base.playerTransform;
+		//	set => base.playerTransform = value;
+		//}
 	}
 }

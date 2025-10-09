@@ -64,20 +64,9 @@ namespace ClassicTilestorm
 			cameraController.SetMode(PreviewSettings.EditorMode ? CameraState.Editor : cameraController.RestoreState);
 		}
 
-		private void OnCameraEnable(CameraState state)
-		{
-			switch (state)
-			{
-				case CameraState.Follow:
-				case CameraState.Cinema:
-					cameraController.SetPlayer(null != eggbotController ? eggbotController.transform : null);
-					break;
-			}
-		}
-
-		private void OnCameraUpdate(CameraState state) { }
-
-		private void OnCameraDisable(CameraState state) { }
+		private void OnCameraEnable(CameraState state) {}
+		private void OnCameraUpdate(CameraState state) {}
+		private void OnCameraDisable(CameraState state) {}
 
 		public void LoadMap(string mapName = null)
 		{
@@ -112,9 +101,11 @@ namespace ClassicTilestorm
 			}
 
 			cameraController.Reset();
+			cameraController.OnUpdatePlayer = () => eggbotController.transform;
 			cameraController.SetMode(CameraState.Follow);
-			cameraController.SetPlayer(eggbotController.transform);
+			//cameraController.SetPlayer(eggbotController.transform);
 			cameraController.SetFocusPoints(mapManager.Waypoints.Select(w => mapManager.TileWorldPosition(w.nTile)).ToList());
+			cameraController.UpdateFocusPoints(eggbotController.transform.position);
 
 			var srcPos = new Vector3(0f, 14f, -14f);// Classic TS default
 			var dstPos = Vector3.zero;
@@ -157,7 +148,6 @@ namespace ClassicTilestorm
 			if (waypoint.vSrc == null || !waypoint.vSrc.IsValidVector())
 			{
 				cameraController.SetMode(CameraState.Follow);
-				cameraController.SetPlayer(eggbotController.transform);
 				return;
 			}
 
@@ -174,7 +164,6 @@ namespace ClassicTilestorm
 			if (CameraState.Cinema == cameraController.CurrentState || CameraState.Editor == cameraController.CurrentState) return;
 			if (eggbotController == null) return;
 			cameraController.SetMode(CameraState.Follow);
-			cameraController.SetPlayer(eggbotController.transform);
 		}
 
 		private void OnLevelCompleted() { }

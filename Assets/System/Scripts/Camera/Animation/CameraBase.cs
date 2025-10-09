@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using System.Collections.Generic;
 
@@ -23,6 +24,9 @@ namespace MassiveHadronLtd
 		// === Common interface ===
 		public virtual Transform playerTransform { get; set; }
 		public virtual List<Vector3> focusPoints { get; set; }
+
+		public Func<Transform> OnUpdatePlayer;
+		public Func<List<Vector3>> OnUpdateFocusPoints;
 
 		protected virtual void Start() { }
 
@@ -92,7 +96,7 @@ namespace MassiveHadronLtd
 			_data.shake = 0f;
 			_data.enablePostProcessing = true;
 
-			currentSequenceDuration = DefaultSequenceDuration + Random.Range(-2f, 2f);
+			currentSequenceDuration = DefaultSequenceDuration + UnityEngine.Random.Range(-2f, 2f);
 			sequenceTimer = currentSequenceDuration;
 			pauseTimer = PauseDurationDefault;
 
