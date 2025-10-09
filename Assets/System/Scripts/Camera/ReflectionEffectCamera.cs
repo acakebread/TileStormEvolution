@@ -319,6 +319,7 @@ public class ReflectionEffectCamera : MonoBehaviour
 			textureCamera.clearFlags = mainCamera.clearFlags;
 			textureCamera.cullingMask = mainCamera.cullingMask;
 			textureCamera.targetTexture = renderTexture;
+			textureCamera.depth = mainCamera.depth + 1;
 			var data = obj.AddComponent<UniversalAdditionalCameraData>();
 			data.cameraStack.Clear();
 			data.cameraStack.Add(reflectionCamera);
