@@ -81,7 +81,7 @@ namespace MassiveHadronLtd
 		public void SetMode(CameraState value)
 		{
 			if (CameraState.Editor != currentState && CameraState.Cinema != currentState && cameraSystem != null)
-				restoreData= cameraSystem.GetData(); //restoreData.CopyFrom(cameraSystem.GetData());
+				restoreData= cameraSystem.GetData();
 			var currentData = restoreData;
 
 			OnCameraDisable?.Invoke(currentState);
