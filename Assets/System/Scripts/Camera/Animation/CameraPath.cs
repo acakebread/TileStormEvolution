@@ -29,33 +29,11 @@ namespace MassiveHadronLtd
 			public Vector3 P2; // Dst
 		}
 
-		protected const float PauseDuration = 1.5f;
-		protected const float DefaultSequenceDuration = 8f;
-		protected const float ProjectionSmoothingRate = 8f;
-
-		protected Vector3 predictedPlayerPosition = Vector3.zero;
-		protected float pauseTimer;
-		protected float sequenceTimer;
-		protected float currentSequenceDuration;
-		protected Vector3 lastPlayerPos;
-
 		public override bool HasCompleted => sequenceTimer <= 0f && pauseTimer <= 0f;
 
 		protected override void Start()
 		{
-			sequenceTimer = pauseTimer = 0f; // Disable sequence by default
-			if (playerTransform == null) return;
-
-			_data.smoothing = CameraData.DefaultSmoothingRate;
-			_data.fieldOfView = 45f;
-			_data.shake = 0f;
-			_data.enablePostProcessing = true;
-
-			currentSequenceDuration = DefaultSequenceDuration + Random.Range(-2, 2);
-			sequenceTimer = currentSequenceDuration;
-			pauseTimer = PauseDuration;
-			lastPlayerPos = predictedPlayerPosition = playerTransform.position;
-
+			InitializeCinemaSequence();
 			if (_data.camera == null || playerTransform == null)
 			{
 				Debug.LogWarning("CameraPath.Start: Missing camera or playerTransform");
@@ -68,9 +46,11 @@ namespace MassiveHadronLtd
 
 			// Select start focus point
 			var startFocusPoint = playerTransform.position;
-			if (focusPoints.Count > 0)
+			if (focusPoints != null && focusPoints.Count > 0)
 			{
-				var validFocusPoint = focusPoints.Where(p => Vector2.Distance(new Vector2(p.x, p.z), new Vector2(playerTransform.position.x, playerTransform.position.z)) >= MinFocusPointDistanceFromPlayer).ToList();
+				var validFocusPoint = focusPoints
+					.Where(p => Vector2.Distance(new Vector2(p.x, p.z), new Vector2(playerTransform.position.x, playerTransform.position.z)) >= MinFocusPointDistanceFromPlayer)
+					.ToList();
 				if (validFocusPoint.Count > 0) startFocusPoint = validFocusPoint[Random.Range(0, validFocusPoint.Count)];
 			}
 
@@ -107,38 +87,28 @@ namespace MassiveHadronLtd
 
 		protected override void Update()
 		{
-			if (_data.camera == null || playerTransform == null)
+			if (!UpdateCinemaSequence())
 			{
-				Debug.LogWarning("CameraPath.Update: Missing camera or playerTransform");
+				if (_data.camera == null || playerTransform == null)
+				{
+					Debug.LogWarning("CameraPath.Update: Missing camera or playerTransform");
+				}
 				return;
 			}
 
-			sequenceTimer -= Time.deltaTime;
+			var easedSequenceTimer = SmoothingUtils.Ease(currentSequenceDuration > 0 ? 1f - Mathf.Clamp01(sequenceTimer / currentSequenceDuration) : 1f);
 
-			if (sequenceTimer <= 0f)
-			{
-				if (pauseTimer <= 0f) return;
-				pauseTimer -= Time.deltaTime;
-			}
-			else
-			{
-				var posDelta = playerTransform.position - lastPlayerPos;
-				predictedPlayerPosition = SmoothingUtils.SmoothVector(predictedPlayerPosition, playerTransform.position + posDelta * 2f, ProjectionSmoothingRate, Time.deltaTime, CameraData.TargetFPS);
+			// Update target
+			_data.target = Vector3.Lerp(_data.lerpedTarget, predictedPlayerPosition + Vector3.up * VerticalOffset, easedSequenceTimer);
 
-				var easedSequenceTimer = SmoothingUtils.Ease(currentSequenceDuration > 0 ? 1f - Mathf.Clamp01(sequenceTimer / currentSequenceDuration) : 1f);
+			// Update Bezier P1 (camera path mid point) and P2 (camera path Dst) with player movement
+			var playerDelta = playerTransform.position - lastPlayerPos;
+			bezierData.P1 += playerDelta * 0.5f;
+			bezierData.P2 += playerDelta;
 
-				// Update target
-				_data.target = Vector3.Lerp(_data.lerpedTarget, predictedPlayerPosition + Vector3.up * VerticalOffset, easedSequenceTimer);
-
-				// Update Bezier P1 (camera path mid point) and P2 (camera path Dst) with player movement
-				var playerDelta = playerTransform.position - lastPlayerPos;
-				bezierData.P1 += playerDelta * 0.5f;
-				bezierData.P2 += playerDelta;
-
-				// Update camera dest position and FOV
-				_data.position = EvaluateBezier(easedSequenceTimer);
-				_data.fieldOfView = Mathf.Lerp(FovMin, currentFovMax, SmoothingUtils.EasePingPong(sequenceTimer / currentSequenceDuration));
-			}
+			// Update camera dest position and FOV
+			_data.position = EvaluateBezier(easedSequenceTimer);
+			_data.fieldOfView = Mathf.Lerp(FovMin, currentFovMax, SmoothingUtils.EasePingPong(sequenceTimer / currentSequenceDuration));
 
 			// Update camera lerping
 			_data.smoothing = SmoothingUtils.Smooth(_data.smoothing, 16, currentSequenceDuration, Time.deltaTime, CameraData.TargetFPS);
@@ -149,7 +119,13 @@ namespace MassiveHadronLtd
 			lastPlayerPos = playerTransform.position;
 		}
 
-		private Vector3 EvaluateBezier(float t) => QuadraticBezierPoint(t, bezierData.P0, bezierData.P1, bezierData.P2);
+		private Vector3 EvaluateBezier(float t)
+		{
+			var u = 1f - t;
+			var tt = t * t;
+			var uu = u * u;
+			return uu * bezierData.P0 + 2f * u * t * bezierData.P1 + tt * bezierData.P2;
+		}
 
 		private (Vector3 src, Vector3 dst) SampleCameraPosition(Vector3 midPoint, Vector3 pathDir, Vector3 perpendicular, float lozengeMajor, float lozengeMinor)
 		{
@@ -245,7 +221,7 @@ namespace MassiveHadronLtd
 			}
 
 			// Create Bezier curve
-			bezierData = CreateBezierCurve(src, controlPoint.Value, dst);
+			bezierData = new BezierData { P0 = src, P1 = controlPoint.Value, P2 = dst };
 
 			// Debug visualization
 			if (DEBUG_VISUALIZE_LOZENGE)
@@ -291,16 +267,6 @@ namespace MassiveHadronLtd
 			var u = -((p1.x - p2.x) * (p1.y - p3.y) - (p1.y - p2.y) * (p1.x - p3.x)) / denom;
 
 			return t >= 0 && u >= 0 ? p1 + t * (p2 - p1) : null;
-		}
-
-		private BezierData CreateBezierCurve(Vector3 p0, Vector3 p1, Vector3 p2) => new BezierData { P0 = p0, P1 = p1, P2 = p2 };
-
-		private Vector3 QuadraticBezierPoint(float t, Vector3 p0, Vector3 p1, Vector3 p2)
-		{
-			var u = 1f - t;
-			var tt = t * t;
-			var uu = u * u;
-			return uu * p0 + 2f * u * t * p1 + tt * p2;
 		}
 
 		private void VisualizeBezierCurve()
