@@ -14,15 +14,15 @@ namespace MassiveHadronLtd
 
 		// Public accessors
 		public CameraBase CameraSystem => cameraSystem;
-		public CameraState PreviousState => previousState;
+		public CameraState RestoreState => restoreState;
 		public CameraState CurrentState => currentState;
 
 		// Internal
 		private CameraBase cameraSystem;
 		private CameraData restoreData;
 		private CameraData currentData;
+		private CameraState restoreState = CameraState.Absent;
 		private CameraState currentState = CameraState.Absent;
-		private CameraState previousState = CameraState.Absent;
 		private Bounds mapBounds;
 		private readonly List<Vector3> focusPoints = new();
 
@@ -44,8 +44,8 @@ namespace MassiveHadronLtd
 		private void Awake()
 		{
 			var cam = GetComponent<Camera>();
-			currentData = new CameraData(cam);
 			restoreData = new CameraData(cam);
+			currentData = new CameraData(cam);
 
 			var postProcessingCameraController = GetComponentInChildren<PostProcessingCameraController>(true);
 			if (postProcessingCameraController != null)
@@ -73,8 +73,8 @@ namespace MassiveHadronLtd
 		public void SetPlayer(Transform value)
 		{
 			cameraSystem.playerTransform = value;
-			if (cameraSystem is CameraFollow) currentData.target = value.position;
-			UpdateFocusPoints();
+			//if (cameraSystem is CameraFollow) currentData.target = value.position;
+			if (null != cameraSystem?.playerTransform) UpdateFocusPoints(cameraSystem.playerTransform.position);
 		}
 
 		public void SetMode(CameraState value)
@@ -96,7 +96,7 @@ namespace MassiveHadronLtd
 
 			currentData.CopyFrom(restoreData);
 
-			if (value != currentState) previousState = currentState;
+			if (value != currentState) restoreState = currentState;
 			currentState = value;
 
 			if (CameraState.Editor == currentState) cameraSystem.Start(ref currentData);
@@ -106,19 +106,17 @@ namespace MassiveHadronLtd
 		private void Update()
 		{
 			OnCameraUpdate?.Invoke(currentState);
-			UpdateFocusPoints();
+			if (null != cameraSystem?.playerTransform) UpdateFocusPoints(cameraSystem.playerTransform.position);
 			cameraSystem?.Update(ref currentData);
 		}
 
-		private void UpdateFocusPoints()
+		private void UpdateFocusPoints(Vector3 position)
 		{
-			if (cameraSystem?.playerTransform == null) return;
-			if (SpatialBucketSystem.CanAddPoint(cameraSystem.playerTransform.position))
+			if (SpatialBucketSystem.CanAddPoint(position))
 			{
-				var pos = cameraSystem.playerTransform.position;
-				mapBounds.Encapsulate(pos);
-				focusPoints.Add(pos);
-				SpatialBucketSystem.AddPoint(pos);
+				mapBounds.Encapsulate(position);
+				focusPoints.Add(position);
+				SpatialBucketSystem.AddPoint(position);
 				if (focusPoints.Count > MaxFocusPoints)
 				{
 					SpatialBucketSystem.RemovePoint(focusPoints[0]);
@@ -138,8 +136,7 @@ namespace MassiveHadronLtd
 			foreach (var point in points)
 			{
 				mapBounds.Encapsulate(point);
-				if (SpatialBucketSystem.CanAddPoint(point))
-					SpatialBucketSystem.AddPoint(point);
+				SpatialBucketSystem.TryAddPoint(point);
 			}
 			cameraSystem.focusPoints = focusPoints;
 		}

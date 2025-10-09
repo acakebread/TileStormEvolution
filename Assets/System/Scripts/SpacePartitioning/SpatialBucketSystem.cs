@@ -40,6 +40,13 @@ public static class SpatialBucketSystem
 			buckets[cell] = position;
 	}
 
+	public static bool TryAddPoint(Vector3 position)
+	{
+		if (!CanAddPoint(position)) return false;
+		AddPoint(position);
+		return true;
+	}
+
 	public static void RemovePoint(Vector3 position)
 	{
 		Vector2Int cell = GetBucketCell(position);

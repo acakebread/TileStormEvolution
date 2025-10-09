@@ -55,13 +55,13 @@ namespace ClassicTilestorm
 		{
 			PreviewSettings.CinemaMode = !PreviewSettings.CinemaMode;
 			if (PreviewSettings.CinemaMode) timeStart = force ? Time.time - CinemaTimeoutDuration : Time.time;
-			cameraController.SetMode(PreviewSettings.CinemaMode ? CameraState.Cinema : cameraController.PreviousState);
+			cameraController.SetMode(PreviewSettings.CinemaMode ? CameraState.Cinema : cameraController.RestoreState);
 		}
 
 		public void ToggleEditor()
 		{
 			PreviewSettings.EditorMode = !PreviewSettings.EditorMode;
-			cameraController.SetMode(PreviewSettings.EditorMode ? CameraState.Editor : cameraController.PreviousState);
+			cameraController.SetMode(PreviewSettings.EditorMode ? CameraState.Editor : cameraController.RestoreState);
 		}
 
 		private void OnCameraEnable(CameraState state)

@@ -9,16 +9,16 @@ namespace MassiveHadronLtd
 		private bool HasStarted { get; set; }
 
 		// === Shared cinema constants ===
-		protected const float PauseDurationDefault = 1.5f;
-		protected const float DefaultSequenceDuration = 8f;
 		protected const float ProjectionSmoothingRate = 8f;
+		protected const float DefaultSequenceDuration = 8f;
+		protected const float PauseDurationDefault = 1.5f;
 
 		// === Shared cinema state ===
 		protected Vector3 predictedPlayerPosition = Vector3.zero;
-		protected float pauseTimer;
-		protected float sequenceTimer;
-		protected float currentSequenceDuration;
-		protected Vector3 lastPlayerPos;
+		protected Vector3 lastPlayerPos = Vector3.zero;
+		protected float currentSequenceDuration = DefaultSequenceDuration;
+		protected float sequenceTimer = DefaultSequenceDuration;
+		protected float pauseTimer = PauseDurationDefault;
 
 		// === Common interface ===
 		public virtual Transform playerTransform { get; set; }
