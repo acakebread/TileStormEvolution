@@ -1,29 +1,17 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 public static class SkyboxUtility
 {
-	// Optional: Reference to a default cubemap to use as a fallback (set in Inspector or code)
 	private static Cubemap defaultCubemap = null;
 	private static Material lastSkyboxMaterial = null;
 	private static Cubemap lastCubemap = null;
-
 	private static Material defaultSkyboxMaterial;
 
-	/// <summary>
-	/// Static constructor to automatically initialize the default skybox material from the current RenderSettings.
-	/// </summary>
 	static SkyboxUtility()
 	{
 		defaultSkyboxMaterial = RenderSettings.skybox;
 	}
 
-	/// <summary>
-	/// Loads a skybox material from Resources using the provided path prefix and skybox name,
-	/// then sets RenderSettings.skybox to it or falls back to the initial default skybox material.
-	/// Constructs the resource path as "{pathPrefix}{skyboxName}Skybox" (with .mat extension removed if present).
-	/// </summary>
-	/// <param name="pathPrefix">The base path for skybox resources (e.g., from PreviewSettings).</param>
-	/// <param name="skyboxName">The name of the skybox (e.g., music name or custom ID).</param>
 	public static void SetSkybox(string pathPrefix, string skyboxName)
 	{
 		if (string.IsNullOrEmpty(pathPrefix) || string.IsNullOrEmpty(skyboxName))
@@ -37,13 +25,6 @@ public static class SkyboxUtility
 		RenderSettings.skybox = material ? material : defaultSkyboxMaterial;
 	}
 
-	/// <summary>
-	/// Loads a skybox material from Resources using the provided path prefix and skybox name.
-	/// Constructs the resource path as "{pathPrefix}{skyboxName}Skybox" (with .mat extension removed if present).
-	/// </summary>
-	/// <param name="pathPrefix">The base path for skybox resources (e.g., from PreviewSettings).</param>
-	/// <param name="skyboxName">The name of the skybox (e.g., music name or custom ID).</param>
-	/// <returns>The loaded Material, or null if not found.</returns>
 	public static Material LoadSkyboxMaterial(string pathPrefix, string skyboxName)
 	{
 		if (string.IsNullOrEmpty(pathPrefix) || string.IsNullOrEmpty(skyboxName))
@@ -57,8 +38,8 @@ public static class SkyboxUtility
 	}
 
 	/// <summary>
-	/// Attempts to extract a cubemap from a skybox material and assign it to the water material.
-	/// Supports both cubemap-based and 6-sided skybox shaders.
+	/// Sets the water reflection cubemap to match the current skybox.
+	/// Handles both cubemap-based and 6-sided skyboxes.
 	/// </summary>
 	public static void SetSkyboxCubemap(Material waterMaterial, Material skyboxMaterial)
 	{
@@ -71,11 +52,11 @@ public static class SkyboxUtility
 		if (skyboxMaterial == null)
 		{
 			Debug.LogWarning("Skybox material is null.");
-			waterMaterial.SetTexture("_Skybox", defaultCubemap); // Use default cubemap or null
+			waterMaterial.SetTexture("_Skybox", defaultCubemap);
 			return;
 		}
 
-		// Skip if the skybox material hasn't changed
+		// Skip if already processed
 		if (skyboxMaterial == lastSkyboxMaterial && lastCubemap != null)
 		{
 			waterMaterial.SetTexture("_Skybox", lastCubemap);
@@ -84,7 +65,7 @@ public static class SkyboxUtility
 
 		Cubemap cubemap = null;
 
-		// Check for cubemap-based skybox
+		// --- 1️⃣ Cubemap-based skyboxes ---
 		if (skyboxMaterial.HasProperty("_Tex"))
 		{
 			cubemap = skyboxMaterial.GetTexture("_Tex") as Cubemap;
@@ -102,20 +83,71 @@ public static class SkyboxUtility
 			return;
 		}
 
-		// Handle "Skybox/6 Sided" � no cubemap creation, use fallback
+		// --- 2️⃣ 6-Sided skyboxes ---
 		if (skyboxMaterial.HasProperty("_FrontTex"))
 		{
-			// Skip cubemap creation for 6-sided skyboxes; use fallback
-			waterMaterial.SetTexture("_Skybox", defaultCubemap); // Use default cubemap or null
-			lastSkyboxMaterial = skyboxMaterial;
-			lastCubemap = defaultCubemap;
+			// Extract 6 textures
+			Texture2D front = skyboxMaterial.GetTexture("_FrontTex") as Texture2D;
+			Texture2D back  = skyboxMaterial.GetTexture("_BackTex") as Texture2D;
+			Texture2D left  = skyboxMaterial.GetTexture("_LeftTex") as Texture2D;
+			Texture2D right = skyboxMaterial.GetTexture("_RightTex") as Texture2D;
+			Texture2D up    = skyboxMaterial.GetTexture("_UpTex") as Texture2D;
+			Texture2D down  = skyboxMaterial.GetTexture("_DownTex") as Texture2D;
+
+			if (front && back && left && right && up && down)
+			{
+				int size = front.width; // assume square
+				cubemap = new Cubemap(size, TextureFormat.RGBA32, false);
+
+				// Copy each face (GPU->CPU readback)
+				// NOTE: This is slow at runtime, but works fine for editor/runtime previewing
+				CopyFace(cubemap, CubemapFace.PositiveZ, front);
+				CopyFace(cubemap, CubemapFace.NegativeZ, back);
+				CopyFace(cubemap, CubemapFace.NegativeX, right);
+				CopyFace(cubemap, CubemapFace.PositiveX, left);
+				CopyFace(cubemap, CubemapFace.PositiveY, up);
+				CopyFace(cubemap, CubemapFace.NegativeY, down);
+				cubemap.Apply();
+			}
+			else
+			{
+				Debug.LogWarning("Incomplete 6-sided skybox textures, using fallback cubemap.");
+				cubemap = defaultCubemap;
+			}
 		}
 		else
 		{
 			Debug.LogWarning($"Skybox shader '{skyboxMaterial.shader.name}' does not expose a cubemap property.");
-			waterMaterial.SetTexture("_Skybox", defaultCubemap); // Use default cubemap or null
-			lastSkyboxMaterial = skyboxMaterial;
-			lastCubemap = defaultCubemap;
+			cubemap = defaultCubemap;
 		}
+
+		waterMaterial.SetTexture("_Skybox", cubemap);
+		lastSkyboxMaterial = skyboxMaterial;
+		lastCubemap = cubemap;
+	}
+
+	/// <summary>
+	/// Copies a Texture2D face into a Cubemap face (CPU readback).
+	/// </summary>
+	private static void CopyFace(Cubemap target, CubemapFace face, Texture2D source)
+	{
+		if (source == null || target == null)
+			return;
+
+		// Ensure readable texture
+		RenderTexture rt = RenderTexture.GetTemporary(source.width, source.height, 0);
+		Graphics.Blit(source, rt);
+		RenderTexture.active = rt;
+
+		Texture2D readable = new Texture2D(source.width, source.height, TextureFormat.RGBA32, false);
+		readable.ReadPixels(new Rect(0, 0, source.width, source.height), 0, 0);
+		readable.Apply();
+
+		Color[] pixels = readable.GetPixels();
+		target.SetPixels(pixels, face);
+
+		RenderTexture.active = null;
+		RenderTexture.ReleaseTemporary(rt);
+		Object.DestroyImmediate(readable);
 	}
 }
