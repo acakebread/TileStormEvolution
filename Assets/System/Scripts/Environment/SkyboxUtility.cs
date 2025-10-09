@@ -105,8 +105,8 @@ public static class SkyboxUtility
 				CopyFace(cubemap, CubemapFace.NegativeZ, back);
 				CopyFace(cubemap, CubemapFace.NegativeX, right);
 				CopyFace(cubemap, CubemapFace.PositiveX, left);
-				CopyFace(cubemap, CubemapFace.PositiveY, up);
-				CopyFace(cubemap, CubemapFace.NegativeY, down);
+				CopyFace(cubemap, CubemapFace.PositiveY, down);
+				CopyFace(cubemap, CubemapFace.NegativeY, up);
 				cubemap.Apply();
 			}
 			else
