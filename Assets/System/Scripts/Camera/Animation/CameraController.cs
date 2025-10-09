@@ -5,39 +5,34 @@ using System.Collections.Generic;
 namespace MassiveHadronLtd
 {
 	public enum CameraState { Absent, Editor, Static, Preset, Follow, Cinema }
+
 	public class CameraController : MonoBehaviour
 	{
-		// Public properties
 		public Func<Transform> OnUpdatePlayer;
 		public event Action<CameraState> OnCameraEnable;
 		public event Action<CameraState> OnCameraUpdate;
 		public event Action<CameraState> OnCameraDisable;
 
-		// Public accessors
 		public CameraBase CameraSystem => cameraSystem;
 		public CameraState RestoreState => restoreState;
 		public CameraState CurrentState => currentState;
 
-		// Internal
 		private CameraBase cameraSystem;
 		private CameraData restoreData;
-		private CameraData currentData;
 		private CameraState restoreState = CameraState.Absent;
 		private CameraState currentState = CameraState.Absent;
 		private Bounds mapBounds;
 		private readonly List<Vector3> focusPoints = new();
 
-		// Constants
 		private const int MaxFocusPoints = 50;
 		private const float MinDistanceForNewFocusPoint = 3f;
 
-		private static CameraBase CreateCinemaCamera()// => new CameraPath();
+		private static CameraBase CreateCinemaCamera()
 		{
 			return UnityEngine.Random.Range(0, 7) switch
 			{
 				0 or 1 or 2 => new CameraPath(),
 				3 or 4 or 5 => new CameraOrbit(),
-				//6 => new CameraDollyZoom(),
 				_ => new CameraOrbit()
 			};
 		}
@@ -53,12 +48,10 @@ namespace MassiveHadronLtd
 
 			var cam = GetComponent<Camera>();
 			restoreData = new CameraData(cam);
-			currentData = new CameraData(cam);
 
 			var postProcessingCameraController = GetComponentInChildren<PostProcessingCameraController>(true);
 			if (null != postProcessingCameraController)
 			{
-				currentData.postProcessingCameraController = postProcessingCameraController;
 				restoreData.postProcessingCameraController = postProcessingCameraController;
 			}
 			else
@@ -67,8 +60,8 @@ namespace MassiveHadronLtd
 			SetMode(CameraState.Static);
 		}
 
-		public void SetOrigin(Vector3 value, bool immediate = false) => cameraSystem?.SetOrigin(ref currentData, value, immediate);
-		public void SetTarget(Vector3 value, bool immediate = false) => cameraSystem?.SetTarget(ref currentData, value, immediate);
+		public void SetOrigin(Vector3 value, bool immediate = false) => cameraSystem?.SetOrigin(value, immediate);
+		public void SetTarget(Vector3 value, bool immediate = false) => cameraSystem?.SetTarget(value, immediate);
 
 		public void SetFocusPoints(List<Vector3> points)
 		{
@@ -88,8 +81,8 @@ namespace MassiveHadronLtd
 		public void SetMode(CameraState value)
 		{
 			if (CameraState.Editor != currentState && CameraState.Cinema != currentState && cameraSystem != null)
-				restoreData.CopyFrom(currentData);
-			currentData.CopyFrom(restoreData);
+				restoreData= cameraSystem.GetData(); //restoreData.CopyFrom(cameraSystem.GetData());
+			var currentData = restoreData;
 
 			OnCameraDisable?.Invoke(currentState);
 
@@ -105,18 +98,19 @@ namespace MassiveHadronLtd
 
 			cameraSystem.OnUpdatePlayer += OnUpdatePlayer;
 			cameraSystem.OnUpdateFocusPoints += () => focusPoints;
+			cameraSystem.SetData(currentData);
 
 			if (value != currentState) restoreState = currentState;
 			currentState = value;
 
-			cameraSystem.Start(ref currentData);
+			cameraSystem.Start(this);
 			OnCameraEnable?.Invoke(currentState);
 		}
 
 		private void Update()
 		{
 			OnCameraUpdate?.Invoke(currentState);
-			cameraSystem?.Update(ref currentData);
+			cameraSystem?.Update(this);
 		}
 
 		public void UpdateFocusPoints(Vector3 position)

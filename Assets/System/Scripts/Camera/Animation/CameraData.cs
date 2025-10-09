@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace MassiveHadronLtd
 {
-	public class CameraData
+	public struct CameraData
 	{
 		public const float TargetFPS = 60f;
 		public const float DefaultSmoothingRate = 64f;
@@ -27,20 +27,7 @@ namespace MassiveHadronLtd
 			shake = 0f;
 			smoothing = DefaultSmoothingRate;
 			enablePostProcessing = false;
-		}
-
-		public void CopyFrom(CameraData source)
-		{
-			if (source == null) return;
-			origin = source.origin;
-			lerpedOrigin = source.lerpedOrigin;
-			target = source.target;
-			lerpedTarget = source.lerpedTarget;
-			fieldOfView = source.fieldOfView;
-			shake = source.shake;
-			smoothing = source.smoothing;
-			enablePostProcessing = source.enablePostProcessing;
-			postProcessingCameraController = source.postProcessingCameraController;
+			postProcessingCameraController = null;
 		}
 	}
 }

@@ -28,58 +28,44 @@ namespace MassiveHadronLtd
 		public Func<Transform> OnUpdatePlayer;
 		public Func<List<Vector3>> OnUpdateFocusPoints;
 
+		public virtual void Start(CameraController controller)
+		{
+			Start();
+			if (null != _data.postProcessingCameraController)
+				_data.postProcessingCameraController.enabled = _data.enablePostProcessing;
+			HasStarted = true;
+		}
+
 		protected virtual void Start() { }
 
-		public virtual void Start(ref CameraData data)
+		public virtual void Update(CameraController controller)
 		{
-			_data = data;
-			Start();
-			if (data.postProcessingCameraController != null)
-				data.postProcessingCameraController.enabled = data.enablePostProcessing;
-			HasStarted = true;
+			if (!HasStarted) Start(controller);
+			Update();
+			ApplyProjection();
 		}
 
 		protected virtual void Update() { }
 
-		public virtual void Update(ref CameraData data)
+		protected virtual void ApplyProjection()
 		{
-			_data = data;
-			if (!HasStarted) Start(ref _data);
-			Update();
-			ApplyProjection(_data);
-		}
-
-		protected virtual void ApplyProjection(CameraData data)
-		{
-			if (data.camera == null) return;
-			data.camera.transform.position = data.lerpedOrigin;
-			var direction = data.lerpedTarget - data.lerpedOrigin;
+			if (_data.camera == null) return;
+			_data.camera.transform.position = _data.lerpedOrigin;
+			var direction = _data.lerpedTarget - _data.lerpedOrigin;
 			if (direction.sqrMagnitude > Mathf.Epsilon)
-				data.camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
-			data.camera.fieldOfView = data.fieldOfView;
-			CameraUtils.ApplyCameraShake(data.camera, data.shake);
+				_data.camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
+			_data.camera.fieldOfView = _data.fieldOfView;
+			CameraUtils.ApplyCameraShake(_data.camera, _data.shake);
 		}
 
 		// === Common helpers ===
-		public virtual void SetOrigin(ref CameraData data, Vector3 value, bool immediate = false)
-		{
-			_data = data;
-			SetOrigin(value, immediate);
-		}
-
-		protected virtual void SetOrigin(Vector3 value, bool immediate = false)
+		public virtual void SetOrigin(Vector3 value, bool immediate = false)
 		{
 			_data.origin = value;
 			if (immediate) _data.lerpedOrigin = value;
 		}
 
-		public virtual void SetTarget(ref CameraData data, Vector3 value, bool immediate = false)
-		{
-			_data = data;
-			SetTarget(value, immediate);
-		}
-
-		protected virtual void SetTarget(Vector3 value, bool immediate = false)
+		public virtual void SetTarget(Vector3 value, bool immediate = false)
 		{
 			_data.target = value;
 			if (immediate) _data.lerpedTarget = value;
@@ -105,11 +91,10 @@ namespace MassiveHadronLtd
 
 		protected virtual bool UpdateCinemaSequence()
 		{
-			// returns true if the cinematic sequence is still active (including pause phase)
 			if (_data.camera == null || playerTransform == null) return false;
 
 			sequenceTimer -= Time.deltaTime;
-			if (sequenceTimer > 0f)//inSequence
+			if (sequenceTimer > 0f)
 			{
 				var posDelta = playerTransform.position - lastPlayerPos;
 				predictedPlayerPosition = SmoothingUtils.SmoothVector(
@@ -135,5 +120,8 @@ namespace MassiveHadronLtd
 		}
 
 		public virtual bool HasCompleted => sequenceTimer <= 0f && pauseTimer <= 0f;
+
+		public CameraData GetData() => _data;
+		public void SetData(CameraData data) => _data = data;
 	}
 }

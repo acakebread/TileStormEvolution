@@ -103,7 +103,6 @@ namespace ClassicTilestorm
 			cameraController.Reset();
 			cameraController.OnUpdatePlayer = () => eggbotController.transform;
 			cameraController.SetMode(CameraState.Follow);
-			//cameraController.SetPlayer(eggbotController.transform);
 			cameraController.SetFocusPoints(mapManager.Waypoints.Select(w => mapManager.TileWorldPosition(w.nTile)).ToList());
 			cameraController.UpdateFocusPoints(eggbotController.transform.position);
 

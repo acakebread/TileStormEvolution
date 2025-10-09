@@ -9,6 +9,6 @@ namespace MassiveHadronLtd
 			_data.enablePostProcessing = false;
 		}
 
-		protected override void ApplyProjection(CameraData data) {}//skip
+		protected override void ApplyProjection() { }// (CameraData data) {}//skip
 	}
 }
