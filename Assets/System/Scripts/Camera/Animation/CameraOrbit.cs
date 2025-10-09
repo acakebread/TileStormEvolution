@@ -71,10 +71,8 @@ namespace MassiveHadronLtd
 				_data.fieldOfView = Mathf.Lerp(FovMin, currentFovMax, SmoothingUtils.EasePingPong(sequenceTimer / currentSequenceDuration));
 			}
 
+			//update camera lerping
 			_data.smoothing = SmoothingUtils.Smooth(_data.smoothing, SmoothingRate, currentSequenceDuration, Time.deltaTime, CameraData.TargetFPS);
-			var t = SmoothingUtils.Smooth(0f, 1f, _data.smoothing, Time.deltaTime, CameraData.TargetFPS);
-			_data.lerpedPosition = Vector3.Lerp(_data.lerpedPosition, _data.position, t);
-			_data.lerpedTarget = Vector3.Lerp(_data.lerpedTarget, _data.target, t);
 		}
 
 		private float CalculateMinOrbitRadius(float cameraHeight, float targetY)

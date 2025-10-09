@@ -103,9 +103,6 @@ namespace MassiveHadronLtd
 
 			// Update camera lerping
 			_data.smoothing = SmoothingUtils.Smooth(_data.smoothing, 16, currentSequenceDuration, Time.deltaTime, CameraData.TargetFPS);
-			var interpolate = SmoothingUtils.Smooth(0f, 1f, _data.smoothing, Time.deltaTime, CameraData.TargetFPS);
-			_data.lerpedPosition = Vector3.Lerp(_data.lerpedPosition, _data.position, interpolate);
-			_data.lerpedTarget = Vector3.Lerp(_data.lerpedTarget, _data.target, interpolate);
 		}
 
 		private Vector3 EvaluateBezier(float t)

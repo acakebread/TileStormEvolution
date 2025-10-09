@@ -40,10 +40,14 @@ namespace MassiveHadronLtd
 		public virtual void Update(ref CameraData data)
 		{
 			_data = data;
-			if (!HasStarted)
-				Start(ref _data);
-
+			if (!HasStarted) Start(ref _data);
 			Update();
+
+			// Update camera lerping
+			var interpolate = SmoothingUtils.Smooth(0f, 1f, _data.smoothing, Time.deltaTime, CameraData.TargetFPS);
+			_data.lerpedPosition = Vector3.Lerp(_data.lerpedPosition, _data.position, interpolate);
+			_data.lerpedTarget = Vector3.Lerp(_data.lerpedTarget, _data.target, interpolate);
+
 			ApplyProjection(_data);
 		}
 
@@ -107,10 +111,7 @@ namespace MassiveHadronLtd
 			if (_data.camera == null || playerTransform == null) return false;
 
 			sequenceTimer -= Time.deltaTime;
-
-			bool inSequence = sequenceTimer > 0f;
-
-			if (inSequence)
+			if (sequenceTimer > 0f)//inSequence
 			{
 				var posDelta = playerTransform.position - lastPlayerPos;
 				predictedPlayerPosition = SmoothingUtils.SmoothVector(
