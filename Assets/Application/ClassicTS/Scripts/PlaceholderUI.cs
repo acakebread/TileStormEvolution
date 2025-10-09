@@ -79,19 +79,19 @@ namespace ClassicTilestorm
 			GUI.color = new Color(0.75f, 0.75f, 1.0f);
 
 			// Draw buttons within the animated rect
-			if (GUI.Button(new Rect(guiRect.x + 000, guiRect.y, 150, 30), (PreviewSettings.EditorMode ? "Disable" : "Enable") + "  Editor")) gameController.ToggleEditor();
+			if (GUI.Button(new Rect(guiRect.x + 000, guiRect.y, 100, 30), (PreviewSettings.EditorMode ? "Disable" : "Enable") + "  Editor")) gameController.ToggleEditor();
 
-			if (GUI.Button(new Rect(guiRect.x + 160, guiRect.y, 100, 30), "Reload")) ChangeMap(0);
+			if (GUI.Button(new Rect(guiRect.x + 110, guiRect.y, 100, 30), "Previous Level")) ChangeMap(-1);
 
-			if (GUI.Button(new Rect(guiRect.x + 270, guiRect.y, 100, 30), "Scramble")) gameController.mapManager.Scramble();
+			if (GUI.Button(new Rect(guiRect.x + 220, guiRect.y, 100, 30), "Next Level")) ChangeMap(1);
 
-			if (GUI.Button(new Rect(guiRect.x + 380, guiRect.y, 100, 30), "Solve")) gameController.mapManager.Solve();
+			if (GUI.Button(new Rect(guiRect.x + 330, guiRect.y, 100, 30), "Reload")) ChangeMap(0);
 
-			if (GUI.Button(new Rect(guiRect.x + 490, guiRect.y, 150, 30), "Previous Level")) ChangeMap(-1);
+			if (GUI.Button(new Rect(guiRect.x + 440, guiRect.y, 100, 30), "Scramble")) gameController.mapManager.Scramble();
 
-			if (GUI.Button(new Rect(guiRect.x + 650, guiRect.y, 150, 30), "Next Level")) ChangeMap(1);
+			if (GUI.Button(new Rect(guiRect.x + 550, guiRect.y, 100, 30), "Solve")) gameController.mapManager.Solve();
 
-			if (GUI.Button(new Rect(guiRect.x + 810, guiRect.y, 150, 30), (PreviewSettings.CinemaMode ? "Disable" : "Enable") + " Cinematic")) gameController.ToggleCinemma(true);
+			if (GUI.Button(new Rect(guiRect.x + 660, guiRect.y, 140, 30), (PreviewSettings.CinemaMode ? "Disable" : "Enable") + " Cinematic")) gameController.ToggleCinemma(true);
 		}
 	}
 }
