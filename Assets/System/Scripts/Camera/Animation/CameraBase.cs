@@ -55,6 +55,7 @@ namespace MassiveHadronLtd
 			if (direction.sqrMagnitude > Mathf.Epsilon)
 				data.camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
 			data.camera.fieldOfView = data.fieldOfView;
+			CameraUtils.ApplyCameraShake(data.camera, data.shake);
 		}
 
 		// === Common helpers ===
@@ -102,28 +103,31 @@ namespace MassiveHadronLtd
 
 		protected virtual bool UpdateCinemaSequence()
 		{
-			// returns true if the cinematic sequence is still active
+			// returns true if the cinematic sequence is still active (including pause phase)
 			if (_data.camera == null || playerTransform == null) return false;
 
 			sequenceTimer -= Time.deltaTime;
 
-			if (sequenceTimer <= 0f)
+			bool inSequence = sequenceTimer > 0f;
+
+			if (inSequence)
 			{
-				if (pauseTimer <= 0f) return false;
+				var posDelta = playerTransform.position - lastPlayerPos;
+				predictedPlayerPosition = SmoothingUtils.SmoothVector(
+					predictedPlayerPosition,
+					playerTransform.position + posDelta * 2f,
+					ProjectionSmoothingRate,
+					Time.deltaTime,
+					CameraData.TargetFPS);
+
+				lastPlayerPos = playerTransform.position;
+			}
+			else
+			{
 				pauseTimer -= Time.deltaTime;
-				return false;
 			}
 
-			var posDelta = playerTransform.position - lastPlayerPos;
-			predictedPlayerPosition = SmoothingUtils.SmoothVector(
-				predictedPlayerPosition,
-				playerTransform.position + posDelta * 2f,
-				ProjectionSmoothingRate,
-				Time.deltaTime,
-				CameraData.TargetFPS);
-
-			lastPlayerPos = playerTransform.position;
-			return true;
+			return sequenceTimer > 0f || pauseTimer > 0f;
 		}
 
 		public virtual bool HasCompleted => sequenceTimer <= 0f && pauseTimer <= 0f;

@@ -52,19 +52,24 @@ namespace MassiveHadronLtd
 
 			_data.position = _data.target + SampleOrbitPosition(orbitStartAngle, orbitEndAngle, 0f);
 			_data.lerpedPosition = _data.position;
+
+			_data.shake = 1f;
 		}
 
 		protected override void Update()
 		{
 			if (!UpdateCinemaSequence()) return;
 
-			var easedSequenceTimer = SmoothingUtils.Ease(currentSequenceDuration > 0
-				? 1f - Mathf.Clamp01(sequenceTimer / currentSequenceDuration)
-				: 1f);
+			if (sequenceTimer > 0f)
+			{
+				var easedSequenceTimer = SmoothingUtils.Ease(currentSequenceDuration > 0
+					? 1f - Mathf.Clamp01(sequenceTimer / currentSequenceDuration)
+					: 1f);
 
-			_data.target = predictedPlayerPosition + Vector3.up * VerticalOffset;
-			_data.position = _data.target + SampleOrbitPosition(orbitStartAngle, orbitEndAngle, easedSequenceTimer);
-			_data.fieldOfView = Mathf.Lerp(FovMin, currentFovMax, SmoothingUtils.EasePingPong(sequenceTimer / currentSequenceDuration));
+				_data.target = predictedPlayerPosition + Vector3.up * VerticalOffset;
+				_data.position = _data.target + SampleOrbitPosition(orbitStartAngle, orbitEndAngle, easedSequenceTimer);
+				_data.fieldOfView = Mathf.Lerp(FovMin, currentFovMax, SmoothingUtils.EasePingPong(sequenceTimer / currentSequenceDuration));
+			}
 
 			_data.smoothing = SmoothingUtils.Smooth(_data.smoothing, SmoothingRate, currentSequenceDuration, Time.deltaTime, CameraData.TargetFPS);
 			var t = SmoothingUtils.Smooth(0f, 1f, _data.smoothing, Time.deltaTime, CameraData.TargetFPS);
