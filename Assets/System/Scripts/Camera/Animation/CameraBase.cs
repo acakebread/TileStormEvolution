@@ -48,8 +48,8 @@ namespace MassiveHadronLtd
 		protected virtual void ApplyProjection(CameraData data)
 		{
 			if (data.camera == null) return;
-			data.camera.transform.position = data.lerpedPosition;
-			var direction = data.lerpedTarget - data.lerpedPosition;
+			data.camera.transform.position = data.lerpedOrigin;
+			var direction = data.lerpedTarget - data.lerpedOrigin;
 			if (direction.sqrMagnitude > Mathf.Epsilon)
 				data.camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
 			data.camera.fieldOfView = data.fieldOfView;
@@ -57,16 +57,16 @@ namespace MassiveHadronLtd
 		}
 
 		// === Common helpers ===
-		public virtual void SetPosition(ref CameraData data, Vector3 value, bool immediate = false)
+		public virtual void SetOrigin(ref CameraData data, Vector3 value, bool immediate = false)
 		{
 			_data = data;
-			SetPosition(value, immediate);
+			SetOrigin(value, immediate);
 		}
 
-		protected virtual void SetPosition(Vector3 value, bool immediate = false)
+		protected virtual void SetOrigin(Vector3 value, bool immediate = false)
 		{
-			_data.position = value;
-			if (immediate) _data.lerpedPosition = value;
+			_data.origin = value;
+			if (immediate) _data.lerpedOrigin = value;
 		}
 
 		public virtual void SetTarget(ref CameraData data, Vector3 value, bool immediate = false)
@@ -124,7 +124,7 @@ namespace MassiveHadronLtd
 
 			// Update camera lerping
 			var interpolate = SmoothingUtils.Smooth(0f, 1f, _data.smoothing, Time.deltaTime, CameraData.TargetFPS);
-			_data.lerpedPosition = Vector3.Lerp(_data.lerpedPosition, _data.position, interpolate);
+			_data.lerpedOrigin = Vector3.Lerp(_data.lerpedOrigin, _data.origin, interpolate);
 			_data.lerpedTarget = Vector3.Lerp(_data.lerpedTarget, _data.target, interpolate);
 
 			return sequenceTimer > 0f || pauseTimer > 0f;

@@ -41,40 +41,52 @@ namespace MassiveHadronLtd
 			};
 		}
 
-		private void Awake()
+		private void Awake() => Reset();
+
+		public void Reset()
 		{
+			cameraSystem = null;
+			mapBounds = new Bounds(Vector3.zero, Vector3.zero);
+			focusPoints.Clear();
+			SpatialBucketSystem.Initialize(MinDistanceForNewFocusPoint);
+
 			var cam = GetComponent<Camera>();
 			restoreData = new CameraData(cam);
 			currentData = new CameraData(cam);
 
 			var postProcessingCameraController = GetComponentInChildren<PostProcessingCameraController>(true);
-			if (postProcessingCameraController != null)
+			if (null != postProcessingCameraController)
 			{
 				currentData.postProcessingCameraController = postProcessingCameraController;
 				restoreData.postProcessingCameraController = postProcessingCameraController;
 			}
+			else
+				Debug.LogError("CameraController requires a Camera component on the same GameObject.");
 
-			if (cam == null) Debug.LogError("CameraController requires a Camera component on the same GameObject.");
-		}
-
-		public void Reset()
-		{
-			cameraSystem = null;
-			focusPoints.Clear();
-			mapBounds = new Bounds(Vector3.zero, Vector3.zero);
-			SpatialBucketSystem.Initialize(MinDistanceForNewFocusPoint);
-			restoreData.smoothing = CameraData.DefaultSmoothingRate;
 			SetMode(CameraState.Static);
 		}
 
-		public void SetPosition(Vector3 value, bool immediate = false) => cameraSystem?.SetPosition(ref currentData, value, immediate);
+		public void SetOrigin(Vector3 value, bool immediate = false) => cameraSystem?.SetOrigin(ref currentData, value, immediate);
 		public void SetTarget(Vector3 value, bool immediate = false) => cameraSystem?.SetTarget(ref currentData, value, immediate);
-
 		public void SetPlayer(Transform value)
 		{
 			cameraSystem.playerTransform = value;
-			//if (cameraSystem is CameraFollow) currentData.target = value.position;
-			if (null != cameraSystem?.playerTransform) UpdateFocusPoints(cameraSystem.playerTransform.position);
+			if (null != value) UpdateFocusPoints(cameraSystem.playerTransform.position);
+		}
+
+		public void SetFocusPoints(List<Vector3> points)
+		{
+			mapBounds = new Bounds(points[0], Vector3.zero);
+			focusPoints.Clear();
+			SpatialBucketSystem.Clear();
+			if (points == null || points.Count == 0) return;
+			focusPoints.AddRange(points);
+			foreach (var point in points)
+			{
+				mapBounds.Encapsulate(point);
+				SpatialBucketSystem.TryAddPoint(point);
+			}
+			cameraSystem.focusPoints = focusPoints;
 		}
 
 		public void SetMode(CameraState value)
@@ -122,21 +134,6 @@ namespace MassiveHadronLtd
 					SpatialBucketSystem.RemovePoint(focusPoints[0]);
 					focusPoints.RemoveAt(0);
 				}
-			}
-			cameraSystem.focusPoints = focusPoints;
-		}
-
-		public void SetFocusPoints(List<Vector3> points)
-		{
-			focusPoints.Clear();
-			SpatialBucketSystem.Clear();
-			if (points == null || points.Count == 0) return;
-			focusPoints.AddRange(points);
-			mapBounds = new Bounds(points[0], Vector3.zero);
-			foreach (var point in points)
-			{
-				mapBounds.Encapsulate(point);
-				SpatialBucketSystem.TryAddPoint(point);
 			}
 			cameraSystem.focusPoints = focusPoints;
 		}

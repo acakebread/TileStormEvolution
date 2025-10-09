@@ -63,11 +63,11 @@ namespace MassiveHadronLtd
 
 			// Generate camera points
 			var (src, dst) = SampleCameraPosition(midPoint, pathDir, perpendicular, lozengeMajor, lozengeMinor);
-			_data.lerpedPosition = src;
-			_data.position = dst;
+			_data.lerpedOrigin = src;
+			_data.origin = dst;
 
-			_data.lerpedPosition = AdjustHeight(_data.lerpedPosition, _data.lerpedTarget);
-			_data.position = AdjustHeight(_data.position, _data.target);
+			_data.lerpedOrigin = AdjustHeight(_data.lerpedOrigin, _data.lerpedTarget);
+			_data.origin = AdjustHeight(_data.origin, _data.target);
 
 			// Initialize FOV
 			_data.fieldOfView = FovMin;
@@ -97,7 +97,7 @@ namespace MassiveHadronLtd
 				bezierData.P2 += playerDelta;
 
 				// Update camera dest position and FOV
-				_data.position = EvaluateBezier(easedSequenceTimer);
+				_data.origin = EvaluateBezier(easedSequenceTimer);
 				_data.fieldOfView = Mathf.Lerp(FovMin, currentFovMax, SmoothingUtils.EasePingPong(sequenceTimer / currentSequenceDuration));
 			}
 

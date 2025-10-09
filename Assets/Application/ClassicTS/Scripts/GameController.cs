@@ -70,7 +70,7 @@ namespace ClassicTilestorm
 			{
 				case CameraState.Follow:
 				case CameraState.Cinema:
-					cameraController.SetPlayer(eggbotController != null ? eggbotController.transform : null);
+					cameraController.SetPlayer(null != eggbotController ? eggbotController.transform : null);
 					break;
 			}
 		}
@@ -132,7 +132,7 @@ namespace ClassicTilestorm
 				}
 			}
 
-			cameraController.SetPosition(srcPos, true);
+			cameraController.SetOrigin(srcPos, true);
 			cameraController.SetTarget(dstPos, true);
 
 			if (eggbotController != null)
@@ -148,7 +148,7 @@ namespace ClassicTilestorm
 
 		private void OnWaypointReached(int waypointIndex)
 		{
-			if (cameraController.CurrentState == CameraState.Cinema || cameraController.CurrentState == CameraState.Editor) return;
+			if (CameraState.Cinema == cameraController.CurrentState || CameraState.Editor == cameraController.CurrentState) return;
 			if (eggbotController == null) return;
 			if (mapManager == null || waypointIndex < 0 || waypointIndex >= mapManager.Waypoints.Length) return;
 			if (mapManager.Waypoints.Length - 1 == waypointIndex || waypointIndex == 0) return;
@@ -163,7 +163,7 @@ namespace ClassicTilestorm
 
 			cameraController.SetMode(CameraState.Preset);
 			var position = waypoint.vSrc.IsValidVector() ? waypoint.vSrc.ToVector3() : new Vector3(0f, 14f, -14f);
-			cameraController.SetPosition(position);
+			cameraController.SetOrigin(position);
 			var target = waypoint.vDst != null && waypoint.vDst.IsValidVector() ? waypoint.vDst.ToVector3() : mapManager.TileWorldPosition(waypoint.nTile);
 			cameraController.SetTarget(target);
 			gestureController.enabled = true;
@@ -171,7 +171,7 @@ namespace ClassicTilestorm
 
 		private void OnPuzzleSolved(int waypointIndex)
 		{
-			if (cameraController.CurrentState == CameraState.Cinema || cameraController.CurrentState == CameraState.Editor) return;
+			if (CameraState.Cinema == cameraController.CurrentState || CameraState.Editor == cameraController.CurrentState) return;
 			if (eggbotController == null) return;
 			cameraController.SetMode(CameraState.Follow);
 			cameraController.SetPlayer(eggbotController.transform);

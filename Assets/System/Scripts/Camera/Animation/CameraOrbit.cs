@@ -50,8 +50,8 @@ namespace MassiveHadronLtd
 			_data.fieldOfView = FovMin;
 			currentFovMax = Random.value < 0.2f ? 60f : FovMax;
 
-			_data.position = _data.target + SampleOrbitPosition(orbitStartAngle, orbitEndAngle, 0f);
-			_data.lerpedPosition = _data.position;
+			_data.origin = _data.target + SampleOrbitPosition(orbitStartAngle, orbitEndAngle, 0f);
+			_data.lerpedOrigin = _data.origin;
 
 			_data.shake = 1f;
 		}
@@ -67,7 +67,7 @@ namespace MassiveHadronLtd
 					: 1f);
 
 				_data.target = predictedPlayerPosition + Vector3.up * VerticalOffset;
-				_data.position = _data.target + SampleOrbitPosition(orbitStartAngle, orbitEndAngle, easedSequenceTimer);
+				_data.origin = _data.target + SampleOrbitPosition(orbitStartAngle, orbitEndAngle, easedSequenceTimer);
 				_data.fieldOfView = Mathf.Lerp(FovMin, currentFovMax, SmoothingUtils.EasePingPong(sequenceTimer / currentSequenceDuration));
 			}
 
