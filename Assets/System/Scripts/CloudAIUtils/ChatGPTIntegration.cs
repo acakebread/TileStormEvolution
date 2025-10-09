@@ -17,7 +17,6 @@ namespace com.massivehadron.utils.cloud_ai_utils
 		private static string lastConsoleStackTrace = "";
 		private static LogType lastConsoleType;
 
-		// Subscribe to Unity's log events (Editor only)
 		[InitializeOnLoadMethod]
 		private static void InitLogListener()
 		{
@@ -33,7 +32,7 @@ namespace com.massivehadron.utils.cloud_ai_utils
 		}
 
 		// ===============================
-		// SCRIPT CONTEXT MENU
+		// CONTEXT MENU: Single Script
 		// ===============================
 		[MenuItem("Assets/Send Script to ChatGPT", false, 2000)]
 		private static void SendScriptToChatGPT_Context()
@@ -42,7 +41,16 @@ namespace com.massivehadron.utils.cloud_ai_utils
 		}
 
 		// ===============================
-		// CONSOLE CONTEXT MENU
+		// CONTEXT MENU: Multiple Scripts
+		// ===============================
+		[MenuItem("Assets/Send Selected Scripts to ChatGPT (Multi)", false, 2002)]
+		private static void SendMultipleScriptsToChatGPT_Context()
+		{
+			SendMultipleScriptsToChatGPT();
+		}
+
+		// ===============================
+		// CONTEXT MENU: Console Message
 		// ===============================
 		[MenuItem("Assets/Send Last Console Message to ChatGPT", false, 2001)]
 		private static void SendConsoleToChatGPT_Context()
@@ -51,7 +59,7 @@ namespace com.massivehadron.utils.cloud_ai_utils
 		}
 
 		// ===============================
-		// Shared logic for scripts
+		// Single script logic
 		// ===============================
 		private static void SendSelectedScriptToChatGPT()
 		{
@@ -70,19 +78,13 @@ namespace com.massivehadron.utils.cloud_ai_utils
 			}
 
 			string scriptText = File.ReadAllText(path);
-
-			string prompt = EditorPrefs.GetString(
-				"ChatGPT_ScriptPrompt",
-				"please refactor this script for efficiency"
-			);
+			string prompt = EditorPrefs.GetString("ChatGPT_ScriptPrompt", "please refactor this script for efficiency");
 
 			string combined = prompt + "\n\n```csharp\n" + scriptText + "\n```";
 			GUIUtility.systemCopyBuffer = combined;
 
 			Debug.Log($"✅ Script + prompt copied to clipboard. Opening ChatGPT for {Path.GetFileName(path)}...");
-
 			OpenURL("https://chat.openai.com/");
-
 			EditorUtility.DisplayDialog(
 				"ChatGPT Ready",
 				"Your script + prompt has been copied to the clipboard.\n\n" +
@@ -92,7 +94,52 @@ namespace com.massivehadron.utils.cloud_ai_utils
 		}
 
 		// ===============================
-		// Shared logic for console messages
+		// Multiple scripts logic
+		// ===============================
+		private static void SendMultipleScriptsToChatGPT()
+		{
+			var selectedObjects = Selection.objects;
+			if (selectedObjects == null || selectedObjects.Length == 0)
+			{
+				Debug.LogWarning("⚠️ No scripts selected.");
+				return;
+			}
+
+			string prompt = EditorPrefs.GetString("ChatGPT_ScriptPrompt", "please refactor these scripts for efficiency");
+			System.Text.StringBuilder sb = new System.Text.StringBuilder();
+			sb.AppendLine(prompt);
+			sb.AppendLine();
+
+			foreach (var obj in selectedObjects)
+			{
+				string path = AssetDatabase.GetAssetPath(obj);
+				if (!path.EndsWith(".cs")) continue;
+
+				string fileName = Path.GetFileName(path);
+				string scriptText = File.ReadAllText(path);
+
+				sb.AppendLine($"--- Script: {fileName} ---");
+				sb.AppendLine("```csharp");
+				sb.AppendLine(scriptText);
+				sb.AppendLine("```");
+				sb.AppendLine();
+			}
+
+			string combined = sb.ToString();
+			GUIUtility.systemCopyBuffer = combined;
+
+			Debug.Log($"✅ {selectedObjects.Length} script(s) copied to clipboard. Opening ChatGPT...");
+			OpenURL("https://chat.openai.com/");
+			EditorUtility.DisplayDialog(
+				"ChatGPT Ready",
+				"Your selected scripts + prompt have been copied to the clipboard.\n\n" +
+				"👉 Switch to ChatGPT and press Ctrl+V (Cmd+V on Mac) to paste them.",
+				"OK"
+			);
+		}
+
+		// ===============================
+		// Console message logic
 		// ===============================
 		private static void SendConsoleToChatGPT()
 		{
@@ -103,10 +150,7 @@ namespace com.massivehadron.utils.cloud_ai_utils
 				return;
 			}
 
-			string prompt = EditorPrefs.GetString(
-				"ChatGPT_ConsolePrompt",
-				"please help me debug this Unity error"
-			);
+			string prompt = EditorPrefs.GetString("ChatGPT_ConsolePrompt", "please help me debug this Unity error");
 
 			string combined = prompt +
 							  $"\n\nLog Type: {lastConsoleType}\n" +
@@ -116,9 +160,7 @@ namespace com.massivehadron.utils.cloud_ai_utils
 			GUIUtility.systemCopyBuffer = combined;
 
 			Debug.Log("✅ Console message + prompt copied to clipboard. Opening ChatGPT...");
-
 			OpenURL("https://chat.openai.com/");
-
 			EditorUtility.DisplayDialog(
 				"ChatGPT Ready",
 				"The last console message has been copied to the clipboard.\n\n" +
@@ -128,7 +170,7 @@ namespace com.massivehadron.utils.cloud_ai_utils
 		}
 
 		// ===============================
-		// PROMPT CONFIG WINDOW
+		// Prompt config window
 		// ===============================
 		[MenuItem("Tools/ChatGPT/Set Prompts")]
 		private static void ShowPromptWindow()
@@ -138,15 +180,8 @@ namespace com.massivehadron.utils.cloud_ai_utils
 
 		private void OnEnable()
 		{
-			scriptPrompt = EditorPrefs.GetString(
-				"ChatGPT_ScriptPrompt",
-				"please refactor this script for efficiency"
-			);
-
-			consolePrompt = EditorPrefs.GetString(
-				"ChatGPT_ConsolePrompt",
-				"please help me debug this Unity error"
-			);
+			scriptPrompt = EditorPrefs.GetString("ChatGPT_ScriptPrompt", "please refactor this script for efficiency");
+			consolePrompt = EditorPrefs.GetString("ChatGPT_ConsolePrompt", "please help me debug this Unity error");
 		}
 
 		private void OnGUI()
