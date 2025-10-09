@@ -119,28 +119,29 @@ namespace MassiveHadronLtd
 			{
 				if (pauseTimer <= 0f) return;
 				pauseTimer -= Time.deltaTime;
-				return;
+			}
+			else
+			{
+				var posDelta = playerTransform.position - lastPlayerPos;
+				predictedPlayerPosition = SmoothingUtils.SmoothVector(predictedPlayerPosition, playerTransform.position + posDelta * 2f, ProjectionSmoothingRate, Time.deltaTime, CameraData.TargetFPS);
+
+				var easedSequenceTimer = SmoothingUtils.Ease(currentSequenceDuration > 0 ? 1f - Mathf.Clamp01(sequenceTimer / currentSequenceDuration) : 1f);
+
+				// Update target
+				_data.target = Vector3.Lerp(_data.lerpedTarget, predictedPlayerPosition + Vector3.up * VerticalOffset, easedSequenceTimer);
+
+				// Update Bezier P1 (camera path mid point) and P2 (camera path Dst) with player movement
+				var playerDelta = playerTransform.position - lastPlayerPos;
+				bezierData.P1 += playerDelta * 0.5f;
+				bezierData.P2 += playerDelta;
+
+				// Update camera dest position and FOV
+				_data.position = EvaluateBezier(easedSequenceTimer);
+				_data.fieldOfView = Mathf.Lerp(FovMin, currentFovMax, SmoothingUtils.EasePingPong(sequenceTimer / currentSequenceDuration));
 			}
 
-			var posDelta = playerTransform.position - lastPlayerPos;
-			predictedPlayerPosition = SmoothingUtils.SmoothVector(predictedPlayerPosition, playerTransform.position + posDelta * 2f, ProjectionSmoothingRate, Time.deltaTime, CameraData.TargetFPS);
-
-			var easedSequenceTimer = SmoothingUtils.Ease(currentSequenceDuration > 0 ? 1f - Mathf.Clamp01(sequenceTimer / currentSequenceDuration) : 1f);
-
-			// Update target
-			_data.target = Vector3.Lerp(_data.lerpedTarget, predictedPlayerPosition + Vector3.up * VerticalOffset, easedSequenceTimer);
-
-			// Update Bezier P1 (camera path mid point) and P2 (camera path Dst) with player movement
-			var playerDelta = playerTransform.position - lastPlayerPos;
-			bezierData.P1 += playerDelta * 0.5f;
-			bezierData.P2 += playerDelta;
-
-			// Update camera dest position and FOV
-			_data.position = EvaluateBezier(easedSequenceTimer);
-			_data.fieldOfView = Mathf.Lerp(FovMin, currentFovMax, SmoothingUtils.EasePingPong(sequenceTimer / currentSequenceDuration));
-
 			// Update camera lerping
-			_data.smoothing = SmoothingUtils.Smooth(_data.smoothing, 16, Time.deltaTime, CameraData.TargetFPS);
+			_data.smoothing = SmoothingUtils.Smooth(_data.smoothing, 16, currentSequenceDuration, Time.deltaTime, CameraData.TargetFPS);
 			var interpolate = SmoothingUtils.Smooth(0f, 1f, _data.smoothing, Time.deltaTime, CameraData.TargetFPS);
 			_data.lerpedPosition = Vector3.Lerp(_data.lerpedPosition, _data.position, interpolate);
 			_data.lerpedTarget = Vector3.Lerp(_data.lerpedTarget, _data.target, interpolate);

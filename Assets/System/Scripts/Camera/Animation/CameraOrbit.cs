@@ -85,7 +85,7 @@ namespace MassiveHadronLtd
 			_data.lerpedPosition = _data.position;
 			_data.fieldOfView = Mathf.Lerp(FovMin, currentFovMax, SmoothingUtils.EasePingPong(easedSequenceTimer));
 
-			Debug.Log($"CameraOrbit.Start: sequenceTimer={sequenceTimer}, pauseTimer={pauseTimer}, lerpedPosition={_data.lerpedPosition}, lerpedTarget={_data.lerpedTarget}");
+			//Debug.Log($"CameraOrbit.Start: sequenceTimer={sequenceTimer}, pauseTimer={pauseTimer}, lerpedPosition={_data.lerpedPosition}, lerpedTarget={_data.lerpedTarget}");
 		}
 
 		protected override void Update()
@@ -102,19 +102,21 @@ namespace MassiveHadronLtd
 			{
 				if (pauseTimer <= 0f) return;
 				pauseTimer -= Time.deltaTime;
-				return;
+			}
+			else
+			{
+
+				var posDelta = playerTransform.position - lastPlayerPos;
+				predictedPlayerPosition = SmoothingUtils.SmoothVector(predictedPlayerPosition, playerTransform.position + posDelta * 2f, ProjectionSmoothingRate, Time.deltaTime, CameraData.TargetFPS);
+
+				var easedSequenceTimer = SmoothingUtils.Ease(currentSequenceDuration > 0 ? 1f - Mathf.Clamp01(sequenceTimer / currentSequenceDuration) : 1f);
+
+				_data.target = predictedPlayerPosition + Vector3.up * VerticalOffset;
+				_data.position = _data.target + SampleOrbitPosition(orbitStartAngle, orbitEndAngle, easedSequenceTimer);
+				_data.fieldOfView = Mathf.Lerp(FovMin, currentFovMax, SmoothingUtils.EasePingPong(sequenceTimer / currentSequenceDuration));
 			}
 
-			var posDelta = playerTransform.position - lastPlayerPos;
-			predictedPlayerPosition = SmoothingUtils.SmoothVector(predictedPlayerPosition, playerTransform.position + posDelta * 2f, ProjectionSmoothingRate, Time.deltaTime, CameraData.TargetFPS);
-
-			var easedSequenceTimer = SmoothingUtils.Ease(currentSequenceDuration > 0 ? 1f - Mathf.Clamp01(sequenceTimer / currentSequenceDuration) : 1f);
-
-			_data.target = predictedPlayerPosition + Vector3.up * VerticalOffset;
-			_data.position = _data.target + SampleOrbitPosition(orbitStartAngle, orbitEndAngle, easedSequenceTimer);
-			_data.fieldOfView = Mathf.Lerp(FovMin, currentFovMax, SmoothingUtils.EasePingPong(sequenceTimer / currentSequenceDuration));
-
-			_data.smoothing = SmoothingUtils.Smooth(_data.smoothing, SmoothingRate, Time.deltaTime, CameraData.TargetFPS);
+			_data.smoothing = SmoothingUtils.Smooth(_data.smoothing, SmoothingRate, currentSequenceDuration, Time.deltaTime, CameraData.TargetFPS);
 			var interpolate = SmoothingUtils.Smooth(0f, 1f, _data.smoothing, Time.deltaTime, CameraData.TargetFPS);
 			_data.lerpedPosition = Vector3.Lerp(_data.lerpedPosition, _data.position, interpolate);
 			_data.lerpedTarget = Vector3.Lerp(_data.lerpedTarget, _data.target, interpolate);

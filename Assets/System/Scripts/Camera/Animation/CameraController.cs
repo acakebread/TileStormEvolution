@@ -47,6 +47,13 @@ namespace MassiveHadronLtd
 			currentData = new CameraAnimationData(cam);
 			restoreData = new CameraAnimationData(cam);
 
+			var postProcessingCameraController = GetComponentInChildren<PostProcessingCameraController>(true);
+			if (postProcessingCameraController != null)
+			{
+				currentData.postProcessingCameraController = postProcessingCameraController;
+				restoreData.postProcessingCameraController = postProcessingCameraController;
+			}
+
 			if (cam == null) Debug.LogError("CameraController requires a Camera component on the same GameObject.");
 		}
 
@@ -66,19 +73,14 @@ namespace MassiveHadronLtd
 		public void SetPlayer(Transform value)
 		{
 			cameraSystem.playerTransform = value;
-			if (cameraSystem is CameraFollow)
-				currentData.target = value.position;
+			if (cameraSystem is CameraFollow) currentData.target = value.position;
 			UpdateFocusPoints();
 		}
 
 		public void SetMode(CameraState value)
 		{
-			CameraAnimationData previousData = currentData;
-
 			if (CameraState.Editor != currentState && CameraState.Cinema != currentState && cameraSystem != null)
-			{
 				restoreData.CopyFrom(currentData);
-			}
 
 			OnCameraDisable?.Invoke(currentState);
 
@@ -92,30 +94,12 @@ namespace MassiveHadronLtd
 				_ => cameraSystem
 			};
 
-			var cam = GetComponent<Camera>();
-			currentData = new CameraAnimationData(cam);
-			currentData.CopyFrom(previousData); // Copy position, lerpedPosition, lerpedTarget, postProcessingCameraController
-			currentData.CopyFrom(restoreData); // Copy target, smoothing, fieldOfView, shake, enablePostProcessing
-
-			if (value == CameraState.Cinema)
-			{
-				currentData.smoothing = CameraData.DefaultSmoothingRate;
-				currentData.shake = 0f;
-				currentData.enablePostProcessing = true;
-			}
+			currentData.CopyFrom(restoreData);
 
 			if (value != currentState) previousState = currentState;
 			currentState = value;
 
 			if (CameraState.Editor == currentState) cameraSystem.Start(ref currentData);
-			OnEnableCamera();
-		}
-
-		private void OnEnableCamera()
-		{
-			var postProcessingCameraController = GetComponentInChildren<PostProcessingCameraController>(true);
-			if (postProcessingCameraController != null)
-				currentData.postProcessingCameraController = postProcessingCameraController;
 			OnCameraEnable?.Invoke(currentState);
 		}
 
@@ -124,10 +108,6 @@ namespace MassiveHadronLtd
 			OnCameraUpdate?.Invoke(currentState);
 			UpdateFocusPoints();
 			cameraSystem?.Update(ref currentData);
-			if (currentState == CameraState.Cinema && cameraSystem.HasCompleted)
-			{
-				Debug.Log($"CameraController.Update: Cinema camera completed (HasCompleted={cameraSystem.HasCompleted})");
-			}
 		}
 
 		private void UpdateFocusPoints()

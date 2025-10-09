@@ -7,17 +7,16 @@ namespace MassiveHadronLtd
 	{
 		protected CameraAnimationData _data;
 
+		protected virtual void Start() { }
 		public virtual void Start(ref CameraAnimationData data)
 		{
 			_data = data;
 			Start();
-			if (null != data.postProcessingCameraController)
-				data.postProcessingCameraController.enabled = data.enablePostProcessing;
+			if (null != data.postProcessingCameraController) data.postProcessingCameraController.enabled = data.enablePostProcessing;
 			HasStarted = true;
 		}
 
-		protected virtual void Start() { }
-
+		protected virtual void Update() { }
 		public virtual void Update(ref CameraAnimationData data)
 		{
 			_data = data;
@@ -26,17 +25,14 @@ namespace MassiveHadronLtd
 			ApplyProjection(_data);
 		}
 
-		protected virtual void Update() { }
-
 		protected virtual void ApplyProjection(CameraAnimationData data)
 		{
 			if (data.camera == null) return;
-			data.camera.transform.position = data.lerpedPosition; // Use lerpedPosition (originSrc)
-			var direction = data.lerpedTarget - data.lerpedPosition; // Use lerpedTarget - lerpedPosition
-			if (direction.sqrMagnitude > Mathf.Epsilon)
-				data.camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
+			data.camera.transform.position = data.lerpedPosition;
+			var direction = data.lerpedTarget - data.lerpedPosition;
+			if (direction.sqrMagnitude > Mathf.Epsilon) data.camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
 			data.camera.fieldOfView = data.fieldOfView;
-			CameraUtils.ApplyCameraShake(data.camera, data.shake);
+			//CameraUtils.ApplyCameraShake(data.camera, data.shake);
 		}
 
 		public virtual Transform playerTransform { get; set; }
@@ -51,8 +47,7 @@ namespace MassiveHadronLtd
 		protected virtual void SetPosition(Vector3 value, bool immediate = false)
 		{
 			_data.position = value;
-			if (immediate)
-				_data.lerpedPosition = value;
+			if (immediate) _data.lerpedPosition = value;
 		}
 
 		public virtual void SetTarget(ref CameraAnimationData data, Vector3 value, bool immediate = false)
@@ -64,8 +59,7 @@ namespace MassiveHadronLtd
 		protected virtual void SetTarget(Vector3 value, bool immediate = false)
 		{
 			_data.target = value;
-			if (immediate)
-				_data.lerpedTarget = value;
+			if (immediate) _data.lerpedTarget = value;
 		}
 
 		private bool HasStarted { get; set; }
