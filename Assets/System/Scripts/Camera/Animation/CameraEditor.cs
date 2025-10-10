@@ -2,15 +2,17 @@ namespace MassiveHadronLtd
 {
 	public class CameraEditor : CameraBase
 	{
-		protected override void Awake()
+		public override void Awake()
 		{
+			base.Awake();
 			data.fieldOfView = 45f;
-			data.enablePostProcessing = false;
+			data.postProcessingEnabled = false;
 			data.camera.fieldOfView = data.fieldOfView;
 		}
 
-		protected override void Update()
+		public override void Update()
 		{
+			base.Update();
 		}
 
 		protected override void ApplyProjection() 

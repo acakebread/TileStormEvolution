@@ -21,24 +21,25 @@ namespace MassiveHadronLtd
 		private float orbitEndAngle;
 		private float currentFovMax;
 
-		protected override void Awake()
+		public override void Awake()
 		{
+			base.Awake();
 			data.smoothing = CameraData.DefaultSmoothingRate;
-			data.fieldOfView = 45f;
 			data.shake = 0f;
-			data.enablePostProcessing = true;
+			data.fieldOfView = 45f;
+			data.postProcessingEnabled = true;
 		}
 
-		protected override void Start()
+		public override void Start()
 		{
 			var playerTransform = base.playerTransform?.Invoke();
 			InitializeCinemaSequence();
 
-			if (playerTransform == null || data.camera == null) return;
+			if (null == playerTransform || null == data.camera) return;
 
 			sequenceDuration = DefaultSequenceDuration + Random.Range(-2f, 2f);
 			sequenceTimer = sequenceDuration;
-			pauseTimer = PauseDurationDefault;
+			pauseTimer = DefaultPauseDuration;
 			lastPlayerPos = nextPlayerPos = playerTransform.position;
 
 			orbitStartAngle = Random.Range(0f, 360f);
@@ -64,8 +65,9 @@ namespace MassiveHadronLtd
 			data.shake = 1f;
 		}
 
-		protected override void Update()
+		public override void Update()
 		{
+			base.Update();
 			if (!UpdateCinemaSequence()) return;
 
 			if (sequenceTimer > 0f)
@@ -81,6 +83,8 @@ namespace MassiveHadronLtd
 
 			//update camera lerping
 			data.smoothing = SmoothingUtils.Smooth(data.smoothing, SmoothingRate, sequenceDuration, Time.deltaTime, CameraData.TargetFPS);
+
+			ApplyProjection();
 		}
 
 		private float CalculateMinOrbitRadius(float cameraHeight, float targetY)

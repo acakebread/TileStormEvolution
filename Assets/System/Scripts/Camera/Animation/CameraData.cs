@@ -15,8 +15,11 @@ namespace MassiveHadronLtd
 		public float fieldOfView;
 		public float shake;
 		public float smoothing;
-		public bool enablePostProcessing;
-		public PostProcessingCameraController postProcessingCameraController;
+		public bool postProcessingEnabled
+		{
+			get => null != controller ? controller.enabled : false;
+			set { if (null != controller) controller.enabled = value; }
+		}
 
 		public CameraData(Camera camera)
 		{
@@ -26,8 +29,9 @@ namespace MassiveHadronLtd
 			fieldOfView = camera != null ? camera.fieldOfView : 60f;
 			shake = 0f;
 			smoothing = DefaultSmoothingRate;
-			enablePostProcessing = false;
-			postProcessingCameraController = null;
+			postProcessingEnabled = true;
 		}
+
+		private readonly PostProcessingCameraController controller => camera.GetComponentInChildren<PostProcessingCameraController>(true);
 	}
 }

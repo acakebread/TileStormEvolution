@@ -27,15 +27,16 @@ namespace MassiveHadronLtd
 
 		public override bool HasCompleted => sequenceTimer <= 0f && pauseTimer <= 0f;
 
-		protected override void Awake()
+		public override void Awake()
 		{
+			base.Awake();
 			data.smoothing = CameraData.DefaultSmoothingRate;
-			data.fieldOfView = 45f;
 			data.shake = 0f;
-			data.enablePostProcessing = true;
+			data.fieldOfView = 45f;
+			data.postProcessingEnabled = true;
 		}
 
-		protected override void Start()
+		public override void Start()
 		{
 			var playerTransform = base.playerTransform?.Invoke();
 			var focusPoints = base.focusPoints?.Invoke();
@@ -85,8 +86,9 @@ namespace MassiveHadronLtd
 			currentFovMax = Random.value < 0.2f ? 60f : FovMax;
 		}
 
-		protected override void Update()
+		public override void Update()
 		{
+			base.Update();
 			var playerTransform = base.playerTransform?.Invoke();
 			if (data.camera == null || playerTransform == null)
 			{
@@ -115,6 +117,7 @@ namespace MassiveHadronLtd
 
 			// Update camera lerping
 			data.smoothing = SmoothingUtils.Smooth(data.smoothing, 16, sequenceDuration, Time.deltaTime, CameraData.TargetFPS);
+			ApplyProjection();
 		}
 
 		private Vector3 EvaluateBezier(float t)

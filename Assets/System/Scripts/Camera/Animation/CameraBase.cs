@@ -6,54 +6,15 @@ namespace MassiveHadronLtd
 {
 	public abstract class CameraBase
 	{
-		protected CameraData data;
-		public CameraData Data { get => data; set => data = value; }
+		public CameraData data;
 		public Func<Transform> playerTransform;
 		public Func<IReadOnlyList<Vector3>> focusPoints;
 
-		// === Shared cinema constants ===
-		protected const float ProjectionSmoothingRate = 8f;
-		protected const float DefaultSequenceDuration = 8f;
-		protected const float PauseDurationDefault = 1.5f;
+		public virtual void Awake() { }
+		public virtual void Start() { }
+		public virtual void Update() { }
 
-		// === Shared cinema state ===
-		protected Vector3 lastPlayerPos = Vector3.zero;
-		protected Vector3 nextPlayerPos = Vector3.zero;//prediction
-		protected float sequenceDuration = DefaultSequenceDuration;
-		protected float sequenceTimer = DefaultSequenceDuration;
-		protected float pauseTimer = PauseDurationDefault;
-
-		public virtual void Awake(CameraController controller)
-		{
-			Awake();
-			if (null != data.postProcessingCameraController)
-				data.postProcessingCameraController.enabled = data.enablePostProcessing;
-		}
-
-		protected virtual void Awake() { }
-
-		public virtual void Start(CameraController controller) { Start(); }
-
-		protected virtual void Start() { }
-
-		public virtual void Update(CameraController controller)
-		{
-			Update();
-			ApplyProjection();
-		}
-
-		protected virtual void Update() { }
-
-		protected virtual void ApplyProjection()
-		{
-			if (data.camera == null) return;
-			data.camera.transform.position = data.lerpedOrigin;
-			var direction = data.lerpedTarget - data.lerpedOrigin;
-			if (direction.sqrMagnitude > Mathf.Epsilon)
-				data.camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
-			data.camera.fieldOfView = data.fieldOfView;
-			CameraUtils.ApplyCameraShake(data.camera, data.shake);
-		}
+		public virtual bool HasCompleted => sequenceTimer <= 0f && pauseTimer <= 0f;
 
 		// === Common helpers ===
 		public virtual void SetOrigin(Vector3 value, bool immediate = false)
@@ -68,42 +29,57 @@ namespace MassiveHadronLtd
 			if (immediate) data.lerpedTarget = value;
 		}
 
+		protected virtual void ApplyProjection()
+		{
+			if (data.camera == null) return;
+			data.camera.transform.position = data.lerpedOrigin;
+			var direction = data.lerpedTarget - data.lerpedOrigin;
+			if (direction.sqrMagnitude > Mathf.Epsilon)
+				data.camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
+			data.camera.fieldOfView = data.fieldOfView;
+			CameraUtils.ApplyCameraShake(data.camera, data.shake);
+		}
+
+		// === Shared cinema constants ===
+		protected const float ProjectionSmoothingRate = 8f;
+		protected const float DefaultSequenceDuration = 8f;
+		protected const float DefaultPauseDuration = 1.5f;
+
+		// === Shared cinema state ===
+		protected Vector3 lastPlayerPos = Vector3.zero;
+		protected Vector3 nextPlayerPos = Vector3.zero;//prediction
+		protected float sequenceDuration = DefaultSequenceDuration;
+		protected float sequenceTimer = DefaultSequenceDuration;
+		protected float pauseTimer = DefaultPauseDuration;
+
 		// === Shared cinema utilities ===
 		protected virtual void InitializeCinemaSequence()
 		{
-			var playerTransform = this.playerTransform?.Invoke();
+			var transform = playerTransform?.Invoke();
 			sequenceTimer = pauseTimer = 0f;
-			if (playerTransform == null) return;
+			if (null == transform) return;
 
 			sequenceDuration = DefaultSequenceDuration + UnityEngine.Random.Range(-2f, 2f);
 			sequenceTimer = sequenceDuration;
-			pauseTimer = PauseDurationDefault;
+			pauseTimer = DefaultPauseDuration;
 
-			lastPlayerPos = nextPlayerPos = playerTransform.position;
+			lastPlayerPos = nextPlayerPos = transform.position;
 		}
 
 		protected virtual bool UpdateCinemaSequence()
 		{
-			var playerTransform = this.playerTransform?.Invoke();
-			if (data.camera == null || playerTransform == null) return false;
+			var transform = playerTransform?.Invoke();
+			if (null == data.camera || null == transform) return false;
 
 			sequenceTimer -= Time.deltaTime;
 			if (sequenceTimer > 0f)
 			{
-				var posDelta = playerTransform.position - lastPlayerPos;
-				nextPlayerPos = SmoothingUtils.SmoothVector(
-					nextPlayerPos,
-					playerTransform.position + posDelta * 2f,
-					ProjectionSmoothingRate,
-					Time.deltaTime,
-					CameraData.TargetFPS);
-
-				lastPlayerPos = playerTransform.position;
+				var posDelta = transform.position - lastPlayerPos;
+				nextPlayerPos = SmoothingUtils.SmoothVector(nextPlayerPos, transform.position + posDelta * 2f, ProjectionSmoothingRate, Time.deltaTime, CameraData.TargetFPS);
+				lastPlayerPos = transform.position;
 			}
 			else
-			{
 				pauseTimer -= Time.deltaTime;
-			}
 
 			// Update camera lerping
 			var interpolate = SmoothingUtils.Smooth(0f, 1f, data.smoothing, Time.deltaTime, CameraData.TargetFPS);
@@ -112,7 +88,5 @@ namespace MassiveHadronLtd
 
 			return sequenceTimer > 0f || pauseTimer > 0f;
 		}
-
-		public virtual bool HasCompleted => sequenceTimer <= 0f && pauseTimer <= 0f;
 	}
 }

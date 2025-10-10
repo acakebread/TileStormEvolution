@@ -6,6 +6,7 @@ namespace MassiveHadronLtd
 {
 	public enum CameraState { Absent, Editor, Static, Preset, Follow, Cinema }
 
+	[RequireComponent(typeof(Camera))]
 	public class CameraController : MonoBehaviour
 	{
 		public Func<Transform> playerTransform;
@@ -30,7 +31,7 @@ namespace MassiveHadronLtd
 
 		private void Awake()
 		{
-			restoreData = new CameraData(GetComponent<Camera>()) { postProcessingCameraController = GetComponentInChildren<PostProcessingCameraController>(true) };
+			restoreData = new CameraData(GetComponent<Camera>());
 			Reset();
 		}
 
@@ -49,7 +50,7 @@ namespace MassiveHadronLtd
 		public void SetMode(CameraState value)
 		{
 			if (CameraState.Editor != CurrentState && CameraState.Cinema != CurrentState && null != CameraSystem)
-				restoreData = CameraSystem.Data;
+				restoreData = CameraSystem.data;
 			var currentData = restoreData;
 
 			CameraSystem = value switch
@@ -64,18 +65,15 @@ namespace MassiveHadronLtd
 
 			CameraSystem.playerTransform += playerTransform;
 			CameraSystem.focusPoints += focusPoints;
-			CameraSystem.Data = currentData;
-			CameraSystem.Awake(this);
+			CameraSystem.data = currentData;
+			CameraSystem.Awake();
 
 			RestoreState = CurrentState;
 			CurrentState = value;
 
-			CameraSystem.Start(this);
+			CameraSystem.Start();
 		}
 
-		private void Update()
-		{
-			CameraSystem?.Update(this);
-		}
+		private void Update() => CameraSystem?.Update();
 	}
 }

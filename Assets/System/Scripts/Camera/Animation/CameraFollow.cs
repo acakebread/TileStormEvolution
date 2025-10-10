@@ -9,13 +9,15 @@ namespace MassiveHadronLtd
 		private const float IdealDistance = 14f;
 		private const float IdealDistanceHorizontalScale = 1.4f;
 
-		protected override void Awake()
+		public override void Awake()
 		{
+			base.Awake();
 			data.fieldOfView = 20f;
 		}
 
-		protected override void Update()
+		public override void Update()
 		{
+			base.Update();
 			var playerTransform = base.playerTransform?.Invoke();
 			if (playerTransform == null) return;
 
@@ -29,6 +31,7 @@ namespace MassiveHadronLtd
 			idealPos.y = data.lerpedTarget.y + IdealDistance;
 			data.origin = idealPos;
 			data.lerpedOrigin = Vector3.Lerp(data.lerpedOrigin, data.origin, followLerp);
+			ApplyProjection();
 		}
 	}
 }
