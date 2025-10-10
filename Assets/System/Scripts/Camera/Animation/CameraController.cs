@@ -65,9 +65,8 @@ namespace MassiveHadronLtd
 			CameraSystem.focusPoints += focusPoints;
 			CameraSystem.data = restoreData;
 			CameraSystem.Awake();
-			CameraSystem.Start();
 
-			RestoreState = CurrentState;
+			if (value != CurrentState) RestoreState = CurrentState;
 			CurrentState = value;
 		}
 

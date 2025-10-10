@@ -34,10 +34,7 @@ namespace MassiveHadronLtd
 			data.shake = 0f;
 			data.fieldOfView = 45f;
 			data.postProcessingEnabled = true;
-		}
 
-		public override void Start()
-		{
 			var playerTransform = base.playerTransform?.Invoke();
 			if (null == playerTransform || null == data.camera) return;
 

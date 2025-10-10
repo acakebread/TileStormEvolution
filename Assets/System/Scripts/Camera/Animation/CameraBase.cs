@@ -11,7 +11,6 @@ namespace MassiveHadronLtd
 		public Func<IReadOnlyList<Vector3>> focusPoints;
 
 		public virtual void Awake() { }
-		public virtual void Start() { }
 		public virtual void Update() { }
 
 		public virtual bool HasCompleted => sequenceTimer <= 0f && pauseTimer <= 0f;
