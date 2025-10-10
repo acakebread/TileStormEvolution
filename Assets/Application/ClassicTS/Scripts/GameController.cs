@@ -12,6 +12,10 @@ namespace ClassicTilestorm
 		private EggbotController eggbotController;
 		private CameraController cameraController;
 
+		private SpatialBucketSystem spatialSystem;
+		private const int MaxFocusPoints = 50;
+		private const float MinDistanceForNewFocusPoint = 3f;
+
 		private const float CinemaTimeoutDuration = 5f;
 		private float timeStart;
 
@@ -29,9 +33,6 @@ namespace ClassicTilestorm
 		{
 			DatabaseLoader.Init(PreviewSettings.DatabaseJsonFile);
 			LoadMap(PlayerPrefs.GetString("LastLoadedMap", PreviewSettings.LoadMapName));
-			cameraController.OnCameraEnable += OnCameraEnable;
-			cameraController.OnCameraUpdate += OnCameraUpdate;
-			cameraController.OnCameraEnable += OnCameraDisable;
 		}
 
 		private void Update()
@@ -101,8 +102,20 @@ namespace ClassicTilestorm
 			}
 
 			cameraController.Reset();
+			spatialSystem = new SpatialBucketSystem(MinDistanceForNewFocusPoint, MaxFocusPoints);
 			cameraController.playerTransform = () => eggbotController.transform;
-			cameraController.SetFocusPoints(mapManager.Waypoints.Select(w => mapManager.TileWorldPosition(w.nTile)).ToList());
+
+			cameraController.focusPoints = () =>
+			{
+				spatialSystem.SetPoints(mapManager.Waypoints.Select(w => mapManager.TileWorldPosition(w.nTile)).ToList());
+				cameraController.focusPoints = () =>
+				{
+					if (null != eggbotController.transform) spatialSystem.TryAddPoint(eggbotController.transform.position);
+					return spatialSystem.Points;
+				};
+				return spatialSystem.Points;
+			};
+
 			cameraController.SetMode(CameraState.Follow);
 
 			var srcPos = new Vector3(0f, 14f, -14f);// Classic TS default
@@ -127,7 +140,7 @@ namespace ClassicTilestorm
 			if (eggbotController != null)
 			{
 				var postProcessingCameraController = cameraController.GetComponentInChildren<PostProcessingCameraController>(true);
-				if (postProcessingCameraController != null) postProcessingCameraController.target = eggbotController.transform;
+				if (postProcessingCameraController != null) postProcessingCameraController.dofTarget = eggbotController.transform;
 			}
 
 			gestureController.Initialise(mapManager);
@@ -179,9 +192,6 @@ namespace ClassicTilestorm
 			eggbotController.OnPuzzleSolved -= OnPuzzleSolved;
 			eggbotController.OnLevelCompleted -= OnLevelCompleted;
 			gestureController.OnMapUpdated -= CheckDisableDrag;
-			cameraController.OnCameraEnable -= OnCameraEnable;
-			cameraController.OnCameraUpdate -= OnCameraUpdate;
-			cameraController.OnCameraDisable -= OnCameraDisable;
 		}
 	}
 }
