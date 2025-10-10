@@ -8,7 +8,7 @@ namespace MassiveHadronLtd
 
 	public class CameraController : MonoBehaviour
 	{
-		public Func<Transform> OnUpdatePlayer;
+		public Func<Transform> playerTransform;
 		public event Action<CameraState> OnCameraEnable;
 		public event Action<CameraState> OnCameraUpdate;
 		public event Action<CameraState> OnCameraDisable;
@@ -21,7 +21,6 @@ namespace MassiveHadronLtd
 		private CameraData restoreData;
 		private CameraState restoreState = CameraState.Absent;
 		private CameraState currentState = CameraState.Absent;
-		private Bounds mapBounds;
 		private readonly List<Vector3> focusPoints = new();
 
 		private const int MaxFocusPoints = 50;
@@ -38,23 +37,22 @@ namespace MassiveHadronLtd
 			};
 		}
 
-		private void Awake() => Reset();
+		private void Awake()
+		{
+			var cam = GetComponent<Camera>();
+			restoreData = new CameraData(cam);
+			Reset();
+		}
 
 		public void Reset()
 		{
 			cameraSystem = null;
-			mapBounds = new Bounds(Vector3.zero, Vector3.zero);
 			focusPoints.Clear();
 			SpatialBucketSystem.Initialize(MinDistanceForNewFocusPoint);
 
-			var cam = GetComponent<Camera>();
-			restoreData = new CameraData(cam);
-
 			var postProcessingCameraController = GetComponentInChildren<PostProcessingCameraController>(true);
 			if (null != postProcessingCameraController)
-			{
 				restoreData.postProcessingCameraController = postProcessingCameraController;
-			}
 			else
 				Debug.LogError("CameraController requires a Camera component on the same GameObject.");
 
@@ -64,25 +62,10 @@ namespace MassiveHadronLtd
 		public void SetOrigin(Vector3 value, bool immediate = false) => cameraSystem?.SetOrigin(value, immediate);
 		public void SetTarget(Vector3 value, bool immediate = false) => cameraSystem?.SetTarget(value, immediate);
 
-		public void SetFocusPoints(List<Vector3> points)
-		{
-			mapBounds = new Bounds(points[0], Vector3.zero);
-			focusPoints.Clear();
-			SpatialBucketSystem.Clear();
-			if (points == null || points.Count == 0) return;
-			focusPoints.AddRange(points);
-			foreach (var point in points)
-			{
-				mapBounds.Encapsulate(point);
-				SpatialBucketSystem.TryAddPoint(point);
-			}
-			cameraSystem.focusPoints = focusPoints;
-		}
-
 		public void SetMode(CameraState value)
 		{
-			if (CameraState.Editor != currentState && CameraState.Cinema != currentState && cameraSystem != null)
-				restoreData= cameraSystem.GetData();
+			if (CameraState.Editor != currentState && CameraState.Cinema != currentState && null != cameraSystem)
+				restoreData = cameraSystem.Data;
 			var currentData = restoreData;
 
 			OnCameraDisable?.Invoke(currentState);
@@ -97,9 +80,15 @@ namespace MassiveHadronLtd
 				_ => cameraSystem
 			};
 
-			cameraSystem.OnUpdatePlayer += OnUpdatePlayer;
-			cameraSystem.OnUpdateFocusPoints += () => focusPoints;
-			cameraSystem.SetData(currentData);
+			cameraSystem.playerTransform += playerTransform;
+			cameraSystem.focusPoints += () =>
+			{
+				var transform = playerTransform();
+				if (null != transform) UpdateFocusPoints(transform.position);
+				return focusPoints;
+			};
+			cameraSystem.Data = currentData;
+			cameraSystem.Awake(this);
 
 			if (value != currentState) restoreState = currentState;
 			currentState = value;
@@ -114,11 +103,20 @@ namespace MassiveHadronLtd
 			cameraSystem?.Update(this);
 		}
 
-		public void UpdateFocusPoints(Vector3 position)
+		public void SetFocusPoints(List<Vector3> points)
+		{
+			focusPoints.Clear();
+			SpatialBucketSystem.Clear();
+			if (points == null || points.Count == 0) return;
+			focusPoints.AddRange(points);
+			foreach (var point in points)
+				SpatialBucketSystem.TryAddPoint(point);
+		}
+
+		private void UpdateFocusPoints(Vector3 position)
 		{
 			if (SpatialBucketSystem.CanAddPoint(position))
 			{
-				mapBounds.Encapsulate(position);
 				focusPoints.Add(position);
 				SpatialBucketSystem.AddPoint(position);
 				if (focusPoints.Count > MaxFocusPoints)
@@ -127,7 +125,6 @@ namespace MassiveHadronLtd
 					focusPoints.RemoveAt(0);
 				}
 			}
-			cameraSystem.focusPoints = focusPoints;
 		}
 	}
 }

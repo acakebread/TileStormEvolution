@@ -27,19 +27,27 @@ namespace MassiveHadronLtd
 
 		public override bool HasCompleted => sequenceTimer <= 0f && pauseTimer <= 0f;
 
+		protected override void Awake()
+		{
+			data.smoothing = CameraData.DefaultSmoothingRate;
+			data.fieldOfView = 45f;
+			data.shake = 0f;
+			data.enablePostProcessing = true;
+		}
+
 		protected override void Start()
 		{
-			playerTransform = OnUpdatePlayer?.Invoke();
-			focusPoints = OnUpdateFocusPoints?.Invoke();
+			var playerTransform = base.playerTransform?.Invoke();
+			var focusPoints = base.focusPoints?.Invoke();
 
 			InitializeCinemaSequence();
-			if (_data.camera == null || playerTransform == null)
+			if (data.camera == null || playerTransform == null)
 			{
 				Debug.LogWarning("CameraPath.Start: Missing camera or playerTransform");
 				return;
 			}
 
-			_data.shake = 1f;
+			data.shake = 1f;
 			bezierData = default;
 			currentFovMax = FovMax;
 
@@ -53,33 +61,34 @@ namespace MassiveHadronLtd
 				if (validFocusPoint.Count > 0) startFocusPoint = validFocusPoint[Random.Range(0, validFocusPoint.Count)];
 			}
 
-			_data.lerpedTarget = _data.target = startFocusPoint + Vector3.up * VerticalOffset;
-			_data.target = playerTransform.position + Vector3.up * VerticalOffset;
+			data.lerpedTarget = data.target = startFocusPoint + Vector3.up * VerticalOffset;
+			data.target = playerTransform.position + Vector3.up * VerticalOffset;
 
 			// Define lozenge
-			var targetPath = _data.target - _data.lerpedTarget;
+			var targetPath = data.target - data.lerpedTarget;
 			var pathDir = targetPath.magnitude > 0.1f ? targetPath.normalized : Random.onUnitSphere;
-			var midPoint = (_data.lerpedTarget + _data.target) / 2f;
+			var midPoint = (data.lerpedTarget + data.target) / 2f;
 			var perpendicular = new Vector3(-pathDir.z, 0f, pathDir.x).normalized;
 			var lozengeMajor = targetPath.magnitude + 2f * MinDistance;
 			var lozengeMinor = Mathf.Max(lozengeMajor * 0.66f, MinDistance * 2f);
 
 			// Generate camera points
 			var (src, dst) = SampleCameraPosition(midPoint, pathDir, perpendicular, lozengeMajor, lozengeMinor);
-			_data.lerpedOrigin = src;
-			_data.origin = dst;
+			data.lerpedOrigin = src;
+			data.origin = dst;
 
-			_data.lerpedOrigin = AdjustHeight(_data.lerpedOrigin, _data.lerpedTarget);
-			_data.origin = AdjustHeight(_data.origin, _data.target);
+			data.lerpedOrigin = AdjustHeight(data.lerpedOrigin, data.lerpedTarget);
+			data.origin = AdjustHeight(data.origin, data.target);
 
 			// Initialize FOV
-			_data.fieldOfView = FovMin;
+			data.fieldOfView = FovMin;
 			currentFovMax = Random.value < 0.2f ? 60f : FovMax;
 		}
 
 		protected override void Update()
 		{
-			if (_data.camera == null || playerTransform == null)
+			var playerTransform = base.playerTransform?.Invoke();
+			if (data.camera == null || playerTransform == null)
 			{
 				Debug.LogWarning("CameraPath.Update: Missing camera or playerTransform");
 				return;
@@ -89,10 +98,10 @@ namespace MassiveHadronLtd
 
 			if (sequenceTimer > 0f)
 			{
-				var easedSequenceTimer = SmoothingUtils.Ease(currentSequenceDuration > 0 ? 1f - Mathf.Clamp01(sequenceTimer / currentSequenceDuration) : 1f);
+				var easedSequenceTimer = SmoothingUtils.Ease(sequenceDuration > 0 ? 1f - Mathf.Clamp01(sequenceTimer / sequenceDuration) : 1f);
 
 				// Update target
-				_data.target = Vector3.Lerp(_data.lerpedTarget, predictedPlayerPosition + Vector3.up * VerticalOffset, easedSequenceTimer);
+				data.target = Vector3.Lerp(data.lerpedTarget, nextPlayerPos + Vector3.up * VerticalOffset, easedSequenceTimer);
 
 				// Update Bezier P1 (camera path mid point) and P2 (camera path Dst) with player movement
 				var playerDelta = playerTransform.position - lastPlayerPos;
@@ -100,12 +109,12 @@ namespace MassiveHadronLtd
 				bezierData.P2 += playerDelta;
 
 				// Update camera dest position and FOV
-				_data.origin = EvaluateBezier(easedSequenceTimer);
-				_data.fieldOfView = Mathf.Lerp(FovMin, currentFovMax, SmoothingUtils.EasePingPong(sequenceTimer / currentSequenceDuration));
+				data.origin = EvaluateBezier(easedSequenceTimer);
+				data.fieldOfView = Mathf.Lerp(FovMin, currentFovMax, SmoothingUtils.EasePingPong(sequenceTimer / sequenceDuration));
 			}
 
 			// Update camera lerping
-			_data.smoothing = SmoothingUtils.Smooth(_data.smoothing, 16, currentSequenceDuration, Time.deltaTime, CameraData.TargetFPS);
+			data.smoothing = SmoothingUtils.Smooth(data.smoothing, 16, sequenceDuration, Time.deltaTime, CameraData.TargetFPS);
 		}
 
 		private Vector3 EvaluateBezier(float t)
@@ -119,7 +128,7 @@ namespace MassiveHadronLtd
 		private (Vector3 src, Vector3 dst) SampleCameraPosition(Vector3 midPoint, Vector3 pathDir, Vector3 perpendicular, float lozengeMajor, float lozengeMinor)
 		{
 			var midPointXZ = new Vector2(midPoint.x, midPoint.z);
-			var targetXZ = new Vector2(_data.target.x, _data.target.z);
+			var targetXZ = new Vector2(data.target.x, data.target.z);
 
 			// Generate points
 			var (src, perimeterPointSrc, tangentSrc1, tangentSrc2, thetaSrc, projectionDistanceSrc) = GeneratePointOutsideLozenge(midPointXZ, pathDir, perpendicular, lozengeMajor, lozengeMinor);

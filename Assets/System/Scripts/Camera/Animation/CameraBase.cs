@@ -6,8 +6,10 @@ namespace MassiveHadronLtd
 {
 	public abstract class CameraBase
 	{
-		protected CameraData _data;
-		private bool HasStarted { get; set; }
+		protected CameraData data;
+		public CameraData Data { get => data; set => data = value; }
+		public Func<Transform> playerTransform;
+		public Func<List<Vector3>> focusPoints;
 
 		// === Shared cinema constants ===
 		protected const float ProjectionSmoothingRate = 8f;
@@ -15,32 +17,27 @@ namespace MassiveHadronLtd
 		protected const float PauseDurationDefault = 1.5f;
 
 		// === Shared cinema state ===
-		protected Vector3 predictedPlayerPosition = Vector3.zero;
 		protected Vector3 lastPlayerPos = Vector3.zero;
-		protected float currentSequenceDuration = DefaultSequenceDuration;
+		protected Vector3 nextPlayerPos = Vector3.zero;//prediction
+		protected float sequenceDuration = DefaultSequenceDuration;
 		protected float sequenceTimer = DefaultSequenceDuration;
 		protected float pauseTimer = PauseDurationDefault;
 
-		// === Common interface ===
-		public virtual Transform playerTransform { get; set; }
-		public virtual List<Vector3> focusPoints { get; set; }
-
-		public Func<Transform> OnUpdatePlayer;
-		public Func<List<Vector3>> OnUpdateFocusPoints;
-
-		public virtual void Start(CameraController controller)
+		public virtual void Awake(CameraController controller)
 		{
-			Start();
-			if (null != _data.postProcessingCameraController)
-				_data.postProcessingCameraController.enabled = _data.enablePostProcessing;
-			HasStarted = true;
+			Awake();
+			if (null != data.postProcessingCameraController)
+				data.postProcessingCameraController.enabled = data.enablePostProcessing;
 		}
+
+		protected virtual void Awake() { }
+
+		public virtual void Start(CameraController controller) { Start(); }
 
 		protected virtual void Start() { }
 
 		public virtual void Update(CameraController controller)
 		{
-			if (!HasStarted) Start(controller);
 			Update();
 			ApplyProjection();
 		}
@@ -49,56 +46,53 @@ namespace MassiveHadronLtd
 
 		protected virtual void ApplyProjection()
 		{
-			if (_data.camera == null) return;
-			_data.camera.transform.position = _data.lerpedOrigin;
-			var direction = _data.lerpedTarget - _data.lerpedOrigin;
+			if (data.camera == null) return;
+			data.camera.transform.position = data.lerpedOrigin;
+			var direction = data.lerpedTarget - data.lerpedOrigin;
 			if (direction.sqrMagnitude > Mathf.Epsilon)
-				_data.camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
-			_data.camera.fieldOfView = _data.fieldOfView;
-			CameraUtils.ApplyCameraShake(_data.camera, _data.shake);
+				data.camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
+			data.camera.fieldOfView = data.fieldOfView;
+			CameraUtils.ApplyCameraShake(data.camera, data.shake);
 		}
 
 		// === Common helpers ===
 		public virtual void SetOrigin(Vector3 value, bool immediate = false)
 		{
-			_data.origin = value;
-			if (immediate) _data.lerpedOrigin = value;
+			data.origin = value;
+			if (immediate) data.lerpedOrigin = value;
 		}
 
 		public virtual void SetTarget(Vector3 value, bool immediate = false)
 		{
-			_data.target = value;
-			if (immediate) _data.lerpedTarget = value;
+			data.target = value;
+			if (immediate) data.lerpedTarget = value;
 		}
 
 		// === Shared cinema utilities ===
 		protected virtual void InitializeCinemaSequence()
 		{
+			var playerTransform = this.playerTransform?.Invoke();
 			sequenceTimer = pauseTimer = 0f;
 			if (playerTransform == null) return;
 
-			_data.smoothing = CameraData.DefaultSmoothingRate;
-			_data.fieldOfView = 45f;
-			_data.shake = 0f;
-			_data.enablePostProcessing = true;
-
-			currentSequenceDuration = DefaultSequenceDuration + UnityEngine.Random.Range(-2f, 2f);
-			sequenceTimer = currentSequenceDuration;
+			sequenceDuration = DefaultSequenceDuration + UnityEngine.Random.Range(-2f, 2f);
+			sequenceTimer = sequenceDuration;
 			pauseTimer = PauseDurationDefault;
 
-			lastPlayerPos = predictedPlayerPosition = playerTransform.position;
+			lastPlayerPos = nextPlayerPos = playerTransform.position;
 		}
 
 		protected virtual bool UpdateCinemaSequence()
 		{
-			if (_data.camera == null || playerTransform == null) return false;
+			var playerTransform = this.playerTransform?.Invoke();
+			if (data.camera == null || playerTransform == null) return false;
 
 			sequenceTimer -= Time.deltaTime;
 			if (sequenceTimer > 0f)
 			{
 				var posDelta = playerTransform.position - lastPlayerPos;
-				predictedPlayerPosition = SmoothingUtils.SmoothVector(
-					predictedPlayerPosition,
+				nextPlayerPos = SmoothingUtils.SmoothVector(
+					nextPlayerPos,
 					playerTransform.position + posDelta * 2f,
 					ProjectionSmoothingRate,
 					Time.deltaTime,
@@ -112,16 +106,13 @@ namespace MassiveHadronLtd
 			}
 
 			// Update camera lerping
-			var interpolate = SmoothingUtils.Smooth(0f, 1f, _data.smoothing, Time.deltaTime, CameraData.TargetFPS);
-			_data.lerpedOrigin = Vector3.Lerp(_data.lerpedOrigin, _data.origin, interpolate);
-			_data.lerpedTarget = Vector3.Lerp(_data.lerpedTarget, _data.target, interpolate);
+			var interpolate = SmoothingUtils.Smooth(0f, 1f, data.smoothing, Time.deltaTime, CameraData.TargetFPS);
+			data.lerpedOrigin = Vector3.Lerp(data.lerpedOrigin, data.origin, interpolate);
+			data.lerpedTarget = Vector3.Lerp(data.lerpedTarget, data.target, interpolate);
 
 			return sequenceTimer > 0f || pauseTimer > 0f;
 		}
 
 		public virtual bool HasCompleted => sequenceTimer <= 0f && pauseTimer <= 0f;
-
-		public CameraData GetData() => _data;
-		public void SetData(CameraData data) => _data = data;
 	}
 }

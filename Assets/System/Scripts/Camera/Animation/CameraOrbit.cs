@@ -21,41 +21,47 @@ namespace MassiveHadronLtd
 		private float orbitEndAngle;
 		private float currentFovMax;
 
-		public override bool HasCompleted => base.HasCompleted;
+		protected override void Awake()
+		{
+			data.smoothing = CameraData.DefaultSmoothingRate;
+			data.fieldOfView = 45f;
+			data.shake = 0f;
+			data.enablePostProcessing = true;
+		}
 
 		protected override void Start()
 		{
-			playerTransform = OnUpdatePlayer?.Invoke();
+			var playerTransform = base.playerTransform?.Invoke();
 			InitializeCinemaSequence();
 
-			if (playerTransform == null || _data.camera == null) return;
+			if (playerTransform == null || data.camera == null) return;
 
-			currentSequenceDuration = DefaultSequenceDuration + Random.Range(-2f, 2f);
-			sequenceTimer = currentSequenceDuration;
+			sequenceDuration = DefaultSequenceDuration + Random.Range(-2f, 2f);
+			sequenceTimer = sequenceDuration;
 			pauseTimer = PauseDurationDefault;
-			lastPlayerPos = predictedPlayerPosition = playerTransform.position;
+			lastPlayerPos = nextPlayerPos = playerTransform.position;
 
 			orbitStartAngle = Random.Range(0f, 360f);
 			orbitHeightSrc = Random.Range(MinCameraHeight, MaxCameraHeight);
 			orbitHeightDst = Random.Range(MinCameraHeight, MaxCameraHeight);
 
-			var minRadiusSrc = CalculateMinOrbitRadius(orbitHeightSrc, _data.target.y);
-			var minRadiusDst = CalculateMinOrbitRadius(orbitHeightDst, _data.target.y);
+			var minRadiusSrc = CalculateMinOrbitRadius(orbitHeightSrc, data.target.y);
+			var minRadiusDst = CalculateMinOrbitRadius(orbitHeightDst, data.target.y);
 			var minRadius = Mathf.Max(minRadiusSrc, minRadiusDst);
 			currentOrbitRadius = Random.Range(Mathf.Max(minRadius, MinOrbitRadius), MaxOrbitRadius);
 
-			_data.lerpedTarget = _data.target = playerTransform.position + Vector3.up * VerticalOffset;
+			data.lerpedTarget = data.target = playerTransform.position + Vector3.up * VerticalOffset;
 			var maxDelta = Mathf.Lerp(360f, 180f, (currentOrbitRadius - MinOrbitRadius) / (MaxOrbitRadius - MinOrbitRadius));
 			var delta = Random.Range(120f, maxDelta) * (Random.value < 0.5f ? 1f : -1f);
 			orbitEndAngle = orbitStartAngle + delta;
 
-			_data.fieldOfView = FovMin;
+			data.fieldOfView = FovMin;
 			currentFovMax = Random.value < 0.2f ? 60f : FovMax;
 
-			_data.origin = _data.target + SampleOrbitPosition(orbitStartAngle, orbitEndAngle, 0f);
-			_data.lerpedOrigin = _data.origin;
+			data.origin = data.target + SampleOrbitPosition(orbitStartAngle, orbitEndAngle, 0f);
+			data.lerpedOrigin = data.origin;
 
-			_data.shake = 1f;
+			data.shake = 1f;
 		}
 
 		protected override void Update()
@@ -64,17 +70,17 @@ namespace MassiveHadronLtd
 
 			if (sequenceTimer > 0f)
 			{
-				var easedSequenceTimer = SmoothingUtils.Ease(currentSequenceDuration > 0
-					? 1f - Mathf.Clamp01(sequenceTimer / currentSequenceDuration)
+				var easedSequenceTimer = SmoothingUtils.Ease(sequenceDuration > 0
+					? 1f - Mathf.Clamp01(sequenceTimer / sequenceDuration)
 					: 1f);
 
-				_data.target = predictedPlayerPosition + Vector3.up * VerticalOffset;
-				_data.origin = _data.target + SampleOrbitPosition(orbitStartAngle, orbitEndAngle, easedSequenceTimer);
-				_data.fieldOfView = Mathf.Lerp(FovMin, currentFovMax, SmoothingUtils.EasePingPong(sequenceTimer / currentSequenceDuration));
+				data.target = nextPlayerPos + Vector3.up * VerticalOffset;
+				data.origin = data.target + SampleOrbitPosition(orbitStartAngle, orbitEndAngle, easedSequenceTimer);
+				data.fieldOfView = Mathf.Lerp(FovMin, currentFovMax, SmoothingUtils.EasePingPong(sequenceTimer / sequenceDuration));
 			}
 
 			//update camera lerping
-			_data.smoothing = SmoothingUtils.Smooth(_data.smoothing, SmoothingRate, currentSequenceDuration, Time.deltaTime, CameraData.TargetFPS);
+			data.smoothing = SmoothingUtils.Smooth(data.smoothing, SmoothingRate, sequenceDuration, Time.deltaTime, CameraData.TargetFPS);
 		}
 
 		private float CalculateMinOrbitRadius(float cameraHeight, float targetY)
