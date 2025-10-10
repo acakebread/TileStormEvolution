@@ -40,7 +40,6 @@ namespace MassiveHadronLtd
 			CameraSystem = null;
 			RestoreState = CameraState.Absent;
 			CurrentState = CameraState.Absent;
-
 			SetMode(CameraState.Static);
 		}
 
@@ -51,7 +50,6 @@ namespace MassiveHadronLtd
 		{
 			if (CameraState.Editor != CurrentState && CameraState.Cinema != CurrentState && null != CameraSystem)
 				restoreData = CameraSystem.data;
-			var currentData = restoreData;
 
 			CameraSystem = value switch
 			{
@@ -65,13 +63,12 @@ namespace MassiveHadronLtd
 
 			CameraSystem.playerTransform += playerTransform;
 			CameraSystem.focusPoints += focusPoints;
-			CameraSystem.data = currentData;
+			CameraSystem.data = restoreData;
 			CameraSystem.Awake();
+			CameraSystem.Start();
 
 			RestoreState = CurrentState;
 			CurrentState = value;
-
-			CameraSystem.Start();
 		}
 
 		private void Update() => CameraSystem?.Update();

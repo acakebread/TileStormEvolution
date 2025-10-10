@@ -5,7 +5,7 @@ namespace MassiveHadronLtd
 		public override void Awake()
 		{
 			base.Awake();
-			data.fieldOfView = 20f;
+			data.fieldOfView = 60f;
 		}
 	}
 }

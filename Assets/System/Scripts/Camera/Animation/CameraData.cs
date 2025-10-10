@@ -24,9 +24,9 @@ namespace MassiveHadronLtd
 		public CameraData(Camera camera)
 		{
 			this.camera = camera;
-			origin = lerpedOrigin = camera != null ? camera.transform.position : Vector3.zero;
-			target = lerpedTarget = Vector3.zero;
-			fieldOfView = camera != null ? camera.fieldOfView : 60f;
+			origin = lerpedOrigin = null != camera ? camera.transform.position : Vector3.zero;
+			target = lerpedTarget = origin + Vector3.forward;
+			fieldOfView = null != camera ? camera.fieldOfView : 60f;
 			shake = 0f;
 			smoothing = DefaultSmoothingRate;
 			postProcessingEnabled = true;

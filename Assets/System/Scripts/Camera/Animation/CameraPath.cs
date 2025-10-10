@@ -39,14 +39,10 @@ namespace MassiveHadronLtd
 		public override void Start()
 		{
 			var playerTransform = base.playerTransform?.Invoke();
-			var focusPoints = base.focusPoints?.Invoke();
+			if (null == playerTransform || null == data.camera) return;
 
+			var focusPoints = base.focusPoints?.Invoke();
 			InitializeCinemaSequence();
-			if (data.camera == null || playerTransform == null)
-			{
-				Debug.LogWarning("CameraPath.Start: Missing camera or playerTransform");
-				return;
-			}
 
 			data.shake = 1f;
 			bezierData = default;

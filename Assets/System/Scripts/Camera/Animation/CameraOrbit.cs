@@ -33,9 +33,9 @@ namespace MassiveHadronLtd
 		public override void Start()
 		{
 			var playerTransform = base.playerTransform?.Invoke();
-			InitializeCinemaSequence();
-
 			if (null == playerTransform || null == data.camera) return;
+
+			InitializeCinemaSequence();
 
 			sequenceDuration = DefaultSequenceDuration + Random.Range(-2f, 2f);
 			sequenceTimer = sequenceDuration;

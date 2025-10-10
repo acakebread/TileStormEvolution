@@ -15,8 +15,6 @@ namespace MassiveHadronLtd
 			base.Update();
 		}
 
-		protected override void ApplyProjection() 
-		{ 
-		}
+		protected override void ApplyProjection() { }
 	}
 }
