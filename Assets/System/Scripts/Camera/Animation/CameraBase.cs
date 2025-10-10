@@ -9,7 +9,7 @@ namespace MassiveHadronLtd
 		protected CameraData data;
 		public CameraData Data { get => data; set => data = value; }
 		public Func<Transform> playerTransform;
-		public Func<List<Vector3>> focusPoints;
+		public Func<IReadOnlyList<Vector3>> focusPoints;
 
 		// === Shared cinema constants ===
 		protected const float ProjectionSmoothingRate = 8f;

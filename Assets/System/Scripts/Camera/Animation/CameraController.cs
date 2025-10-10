@@ -21,7 +21,7 @@ namespace MassiveHadronLtd
 		private CameraData restoreData;
 		private CameraState restoreState = CameraState.Absent;
 		private CameraState currentState = CameraState.Absent;
-		private readonly List<Vector3> focusPoints = new();
+		private SpatialBucketSystem spatialSystem;
 
 		private const int MaxFocusPoints = 50;
 		private const float MinDistanceForNewFocusPoint = 3f;
@@ -46,9 +46,8 @@ namespace MassiveHadronLtd
 
 		public void Reset()
 		{
+			spatialSystem = new SpatialBucketSystem(MinDistanceForNewFocusPoint, MaxFocusPoints);
 			cameraSystem = null;
-			focusPoints.Clear();
-			SpatialBucketSystem.Initialize(MinDistanceForNewFocusPoint);
 
 			var postProcessingCameraController = GetComponentInChildren<PostProcessingCameraController>(true);
 			if (null != postProcessingCameraController)
@@ -84,8 +83,8 @@ namespace MassiveHadronLtd
 			cameraSystem.focusPoints += () =>
 			{
 				var transform = playerTransform();
-				if (null != transform) UpdateFocusPoints(transform.position);
-				return focusPoints;
+				if (null != transform) spatialSystem.TryAddPoint(transform.position);
+				return spatialSystem.Points;
 			};
 			cameraSystem.Data = currentData;
 			cameraSystem.Awake(this);
@@ -103,28 +102,6 @@ namespace MassiveHadronLtd
 			cameraSystem?.Update(this);
 		}
 
-		public void SetFocusPoints(List<Vector3> points)
-		{
-			focusPoints.Clear();
-			SpatialBucketSystem.Clear();
-			if (points == null || points.Count == 0) return;
-			focusPoints.AddRange(points);
-			foreach (var point in points)
-				SpatialBucketSystem.TryAddPoint(point);
-		}
-
-		private void UpdateFocusPoints(Vector3 position)
-		{
-			if (SpatialBucketSystem.CanAddPoint(position))
-			{
-				focusPoints.Add(position);
-				SpatialBucketSystem.AddPoint(position);
-				if (focusPoints.Count > MaxFocusPoints)
-				{
-					SpatialBucketSystem.RemovePoint(focusPoints[0]);
-					focusPoints.RemoveAt(0);
-				}
-			}
-		}
+		public void SetFocusPoints(List<Vector3> points) => spatialSystem.SetPoints(points);
 	}
 }
