@@ -87,6 +87,9 @@ namespace ClassicTilestorm
 			mapManager = MapManager.Instantiate(currentMap, transform);
 			mapManager.SetupWaypoints(currentMap);
 
+			gestureController.Initialise(mapManager);
+			timeStart = Time.time;
+
 			if (null != eggbotController) Destroy(eggbotController.gameObject);
 			eggbotController = EggbotController.Instantiate(currentMap.szEggbotCostume, transform);
 			if (null != eggbotController)
@@ -98,10 +101,11 @@ namespace ClassicTilestorm
 			}
 
 			cameraController.Reset();
+
 			spatialSystem = new SpatialBucketSystem(MinDistanceForNewFocusPoint, MaxFocusPoints);
 
 			// Create a single CameraDelegates instance
-			var delegates = new CameraDelegates { playerTransform = () => eggbotController?.transform };
+			var delegates = new CameraDelegates { target = () => null != eggbotController && null != eggbotController.transform ? eggbotController.transform.position : Vector3.zero };
 
 			// Define the "initial" version (this will replace itself after running once)
 			Func<IReadOnlyList<Vector3>> focusFunc = () =>
@@ -113,7 +117,7 @@ namespace ClassicTilestorm
 				// Now redefine focusFunc for all *future* calls
 				focusFunc = () =>
 				{
-					if (null != eggbotController?.transform)
+					if (null != eggbotController && null != eggbotController?.transform)
 						spatialSystem.TryAddPoint(eggbotController.transform.position);
 					return spatialSystem.Points;
 				};
@@ -128,36 +132,24 @@ namespace ClassicTilestorm
 			// Register delegates once
 			cameraController.delegates = () => delegates;
 
-			cameraController.SetMode(CameraState.Follow);
+			var ppController = cameraController.GetComponentInChildren<PostProcessingCameraController>(true);
+			if (null != eggbotController && null != ppController)
+				ppController.dofTarget = eggbotController.transform;
 
-			var srcPos = new Vector3(0f, 14f, -14f);// Classic TS default
-			var dstPos = Vector3.zero;
+			cameraController.SetMode(PreviewSettings.EditorMode ? CameraState.Editor : CameraState.Follow);
 
-			if (null != mapManager.Waypoints && 0 != mapManager.Waypoints.Length)
+			var dstPos = new Vector3(mapManager.Width * 0.5f, 0f, mapManager.Height * 0.5f);
+			var srcPos = dstPos + new Vector3(0f, 14f, -14f);// Classic TS default for no waypoints
+
+			if (null != mapManager.Waypoints && 0 != mapManager.Waypoints.Length && true == mapManager.Waypoints[0].bCamera)
 			{
-				dstPos = new Vector3(mapManager.Width * 0.5f, 0f, mapManager.Height * 0.5f);
-				srcPos += dstPos;
-
 				var firstWaypoint = mapManager.Waypoints[0];
-				if (firstWaypoint.bCamera)
-				{
-					if (firstWaypoint.vSrc != null) srcPos = firstWaypoint.vSrc.ToVector3();
-					if (firstWaypoint.vDst != null) dstPos = firstWaypoint.vDst.ToVector3();
-				}
+				if (null != firstWaypoint.vSrc) srcPos = firstWaypoint.vSrc.ToVector3();
+				if (null != firstWaypoint.vDst) dstPos = firstWaypoint.vDst.ToVector3();
 			}
 
 			cameraController.SetOrigin(srcPos, true);
 			cameraController.SetTarget(dstPos, true);
-
-			if (null != eggbotController)
-			{
-				var postProcessingCameraController = cameraController.GetComponentInChildren<PostProcessingCameraController>(true);
-				if (postProcessingCameraController != null) postProcessingCameraController.dofTarget = eggbotController.transform;
-			}
-
-			gestureController.Initialise(mapManager);
-			if (PreviewSettings.EditorMode) cameraController.SetMode(CameraState.Editor);
-			timeStart = Time.time;
 		}
 
 		private void OnWaypointReached(int waypointIndex)

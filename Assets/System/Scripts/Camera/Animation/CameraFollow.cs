@@ -17,11 +17,7 @@ namespace MassiveHadronLtd
 		public override void Update()
 		{
 			base.Update();
-			var delegatesInstance = delegates?.Invoke();
-			var playerTransform = delegatesInstance?.playerTransform?.Invoke();
-			if (playerTransform == null) return;
-
-			data.target = playerTransform.position;
+			data.target = delegates.Invoke().target.Invoke();
 			data.smoothing = SmoothingUtils.Smooth(data.smoothing, SmoothingNa, SmoothingNb, Time.deltaTime, CameraData.TargetFPS);
 			var followLerp = SmoothingUtils.Smooth(0f, 1f, data.smoothing, Time.deltaTime, CameraData.TargetFPS);
 			data.lerpedTarget = Vector3.Lerp(data.lerpedTarget, data.target, followLerp);

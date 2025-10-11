@@ -6,7 +6,7 @@ namespace MassiveHadronLtd
 {
 	public struct CameraDelegates
 	{
-		public Func<Transform> playerTransform;
+		public Func<Vector3> target;
 		public Func<IReadOnlyList<Vector3>> focusPoints;
 	}
 
@@ -41,7 +41,7 @@ namespace MassiveHadronLtd
 			if (direction.sqrMagnitude > Mathf.Epsilon)
 				data.camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
 			data.camera.fieldOfView = data.fieldOfView;
-			CameraUtils.ApplyCameraShake(data.camera, data.shake);
+			//CameraUtils.ApplyCameraShake(data.camera, data.shake);
 		}
 
 		// === Shared cinema constants ===
@@ -59,30 +59,28 @@ namespace MassiveHadronLtd
 		// === Shared cinema utilities ===
 		protected virtual void InitializeCinemaSequence()
 		{
-			var callbacksInstance = delegates?.Invoke();
-			var transform = callbacksInstance?.playerTransform?.Invoke();
+			var delegatesInstance = delegates.Invoke();
 			sequenceTimer = pauseTimer = 0f;
-			if (null == transform) return;
 
 			sequenceDuration = DefaultSequenceDuration + UnityEngine.Random.Range(-2f, 2f);
 			sequenceTimer = sequenceDuration;
 			pauseTimer = DefaultPauseDuration;
 
-			lastPlayerPos = nextPlayerPos = transform.position;
+			lastPlayerPos = nextPlayerPos = delegatesInstance.target.Invoke();
 		}
 
 		protected virtual bool UpdateCinemaSequence()
 		{
-			var callbacksInstance = delegates?.Invoke();
-			var transform = callbacksInstance?.playerTransform?.Invoke();
-			if (null == data.camera || null == transform) return false;
+			if (null == data.camera) return false;
+			var delegatesInstance = delegates.Invoke();
 
 			sequenceTimer -= Time.deltaTime;
 			if (sequenceTimer > 0f)
 			{
-				var posDelta = transform.position - lastPlayerPos;
-				nextPlayerPos = SmoothingUtils.SmoothVector(nextPlayerPos, transform.position + posDelta * 2f, ProjectionSmoothingRate, Time.deltaTime, CameraData.TargetFPS);
-				lastPlayerPos = transform.position;
+				var _target = delegatesInstance.target.Invoke();
+				var posDelta = _target - lastPlayerPos;
+				nextPlayerPos = SmoothingUtils.SmoothVector(nextPlayerPos, _target + posDelta * 2f, ProjectionSmoothingRate, Time.deltaTime, CameraData.TargetFPS);
+				lastPlayerPos = _target;
 			}
 			else
 				pauseTimer -= Time.deltaTime;

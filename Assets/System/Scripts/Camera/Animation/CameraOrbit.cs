@@ -26,17 +26,16 @@ namespace MassiveHadronLtd
 			data.shake = 0f;
 			data.fieldOfView = 45f;
 			data.postProcessingEnabled = true;
+			if (null == data.camera) return;
 
-			var callbacksInstance = base.delegates?.Invoke();
-			var playerTransform = callbacksInstance?.playerTransform?.Invoke();
-			if (null == playerTransform || null == data.camera) return;
+			var delegatesInstance = delegates.Invoke();
 
 			InitializeCinemaSequence();
 
 			sequenceDuration = DefaultSequenceDuration + Random.Range(-2f, 2f);
 			sequenceTimer = sequenceDuration;
 			pauseTimer = DefaultPauseDuration;
-			lastPlayerPos = nextPlayerPos = playerTransform.position;
+			lastPlayerPos = nextPlayerPos = delegatesInstance.target.Invoke();
 
 			orbitStartAngle = Random.Range(0f, 360f);
 			orbitHeightSrc = Random.Range(MinCameraHeight, MaxCameraHeight);
@@ -47,7 +46,7 @@ namespace MassiveHadronLtd
 			var minRadius = Mathf.Max(minRadiusSrc, minRadiusDst);
 			currentOrbitRadius = Random.Range(Mathf.Max(minRadius, MinOrbitRadius), MaxOrbitRadius);
 
-			data.lerpedTarget = data.target = playerTransform.position + Vector3.up * VerticalOffset;
+			data.lerpedTarget = data.target = delegatesInstance.target.Invoke() + Vector3.up * VerticalOffset;
 			var maxDelta = Mathf.Lerp(360f, 180f, (currentOrbitRadius - MinOrbitRadius) / (MaxOrbitRadius - MinOrbitRadius));
 			var delta = Random.Range(120f, maxDelta) * (Random.value < 0.5f ? 1f : -1f);
 			orbitEndAngle = orbitStartAngle + delta;
