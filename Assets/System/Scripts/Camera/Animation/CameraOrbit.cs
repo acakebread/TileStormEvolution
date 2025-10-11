@@ -27,8 +27,8 @@ namespace MassiveHadronLtd
 			data.fieldOfView = 45f;
 			data.postProcessingEnabled = true;
 
-			var delegatesInstance = base.delegates?.Invoke();
-			var playerTransform = delegatesInstance?.playerTransform?.Invoke();
+			var callbacksInstance = base.delegates?.Invoke();
+			var playerTransform = callbacksInstance?.playerTransform?.Invoke();
 			if (null == playerTransform || null == data.camera) return;
 
 			InitializeCinemaSequence();

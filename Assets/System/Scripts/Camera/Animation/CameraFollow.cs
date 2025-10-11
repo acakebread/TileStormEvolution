@@ -11,12 +11,13 @@ namespace MassiveHadronLtd
 		{
 			base.Awake();
 			data.fieldOfView = 20f;
+			data.smoothing = 64f;
 		}
 
 		public override void Update()
 		{
 			base.Update();
-			var delegatesInstance = base.delegates?.Invoke();
+			var delegatesInstance = delegates?.Invoke();
 			var playerTransform = delegatesInstance?.playerTransform?.Invoke();
 			if (playerTransform == null) return;
 

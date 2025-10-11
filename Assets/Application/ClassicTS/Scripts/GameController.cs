@@ -130,14 +130,20 @@ namespace ClassicTilestorm
 
 			cameraController.SetMode(CameraState.Follow);
 
-			var dstPos = new Vector3(mapManager.Width * 0.5f, 0f, mapManager.Height * 0.5f);
-			var srcPos = dstPos + new Vector3(0f, 14f, -14f);// Classic TS default for no waypoints
+			var srcPos = new Vector3(0f, 14f, -14f);// Classic TS default
+			var dstPos = Vector3.zero;
 
-			if (null != mapManager.Waypoints && 0 != mapManager.Waypoints.Length && true == mapManager.Waypoints[0].bCamera)
+			if (null != mapManager.Waypoints && 0 != mapManager.Waypoints.Length)
 			{
+				dstPos = new Vector3(mapManager.Width * 0.5f, 0f, mapManager.Height * 0.5f);
+				srcPos += dstPos;
+
 				var firstWaypoint = mapManager.Waypoints[0];
-				if (null != firstWaypoint.vSrc) srcPos = firstWaypoint.vSrc.ToVector3();
-				if (null != firstWaypoint.vDst) dstPos = firstWaypoint.vDst.ToVector3();
+				if (firstWaypoint.bCamera)
+				{
+					if (firstWaypoint.vSrc != null) srcPos = firstWaypoint.vSrc.ToVector3();
+					if (firstWaypoint.vDst != null) dstPos = firstWaypoint.vDst.ToVector3();
+				}
 			}
 
 			cameraController.SetOrigin(srcPos, true);

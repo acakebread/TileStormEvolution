@@ -59,8 +59,8 @@ namespace MassiveHadronLtd
 		// === Shared cinema utilities ===
 		protected virtual void InitializeCinemaSequence()
 		{
-			var delegatesInstance = delegates?.Invoke();
-			var transform = delegatesInstance?.playerTransform?.Invoke();
+			var callbacksInstance = delegates?.Invoke();
+			var transform = callbacksInstance?.playerTransform?.Invoke();
 			sequenceTimer = pauseTimer = 0f;
 			if (null == transform) return;
 
@@ -73,8 +73,8 @@ namespace MassiveHadronLtd
 
 		protected virtual bool UpdateCinemaSequence()
 		{
-			var delegatesInstance = delegates?.Invoke();
-			var transform = delegatesInstance?.playerTransform?.Invoke();
+			var callbacksInstance = delegates?.Invoke();
+			var transform = callbacksInstance?.playerTransform?.Invoke();
 			if (null == data.camera || null == transform) return false;
 
 			sequenceTimer -= Time.deltaTime;

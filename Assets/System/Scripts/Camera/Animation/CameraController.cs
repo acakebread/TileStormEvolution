@@ -43,7 +43,8 @@ namespace MassiveHadronLtd
 				CameraState.Static => new CameraStatic(),
 				CameraState.Preset => new CameraPreset(),
 				CameraState.Follow => new CameraFollow(),
-				CameraState.Cinema => UnityEngine.Random.Range(0, 7) switch { 0 or 1 or 2 => new CameraOrbit(), _ => new CameraPath() },
+				//CameraState.Cinema => UnityEngine.Random.Range(0, 7) switch { 0 or 1 or 2 => new CameraOrbit(), _ => new CameraPath() },
+				CameraState.Cinema => new CameraPath(),
 				_ => CameraSystem
 			};
 
