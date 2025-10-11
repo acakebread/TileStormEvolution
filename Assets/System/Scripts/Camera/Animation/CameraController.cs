@@ -18,17 +18,6 @@ namespace MassiveHadronLtd
 
 		private CameraData restoreData;
 
-		private static CameraBase CreateCinemaCamera()
-		{
-			return UnityEngine.Random.Range(0, 7) switch
-			{
-				0 or 1 or 2 => new CameraPath(),
-				3 or 4 or 5 => new CameraOrbit(),
-				//6 => new CameraDollyZoom(),
-				_ => new CameraOrbit()
-			};
-		}
-
 		private void Awake()
 		{
 			restoreData = new CameraData(GetComponent<Camera>());
@@ -57,7 +46,7 @@ namespace MassiveHadronLtd
 				CameraState.Static => new CameraStatic(),
 				CameraState.Preset => new CameraPreset(),
 				CameraState.Follow => new CameraFollow(),
-				CameraState.Cinema => CreateCinemaCamera(),
+				CameraState.Cinema => UnityEngine.Random.Range(0, 7) switch { 0 or 1 or 2 => new CameraOrbit(), _ => new CameraPath() },
 				_ => CameraSystem
 			};
 
