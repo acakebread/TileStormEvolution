@@ -14,7 +14,7 @@ namespace ClassicTilestorm
 
 		private static readonly Dictionary<KeyCode, KeyState> keyStates = new Dictionary<KeyCode, KeyState>();
 		private static readonly float initialKeyDelay = 0.5f; // Delay before first repeat (seconds)
-		private static readonly float repeatKeyInterval = 0.1f; // Interval between subsequent repeats (seconds)
+		private static readonly float repeatKeyInterval = 0.05f; // Interval between subsequent repeats (seconds)
 
 		/// <summary>
 		/// Checks if a key should trigger an action (initial press or repeat).

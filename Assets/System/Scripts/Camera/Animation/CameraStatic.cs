@@ -2,9 +2,9 @@ namespace MassiveHadronLtd
 {
 	public class CameraStatic : CameraBase
 	{
-		public override void Awake()
+		public override void Start()
 		{
-			base.Awake();
+			base.Start();
 			data.fieldOfView = 60f;
 		}
 	}

@@ -6,10 +6,12 @@ namespace MassiveHadronLtd
 	{
 		private const float SmoothingN = 32f;
 
-		public override void Awake()
+		public override void Start()
 		{
-			base.Awake();
+			base.Start();
 			data.fieldOfView = 20f;
+			data.origin = origin.Invoke();
+			data.target = target.Invoke();
 		}
 
 		public override void Update()
