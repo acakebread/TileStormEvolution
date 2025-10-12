@@ -179,7 +179,6 @@ namespace MassiveHadronLtd
 			var v1 = srcXZ - midPointXZ;
 			var v2 = dstXZ - midPointXZ;
 			var dot = Vector2.Dot(v1, v2);
-			var flipped = false;
 
 			if (dot > 0)
 			{
@@ -191,7 +190,6 @@ namespace MassiveHadronLtd
 				tangentDst1 = newTangent1;
 				tangentDst2 = newTangent2;
 				projectionDistanceDst = Vector2.Distance(midPointXZ, dstXZ) - Vector2.Distance(midPointXZ, perimeterPointDst);
-				flipped = true;
 				dstXZ = new Vector2(dst.x, dst.z);
 			}
 
