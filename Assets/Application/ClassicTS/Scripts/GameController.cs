@@ -28,7 +28,7 @@ namespace ClassicTilestorm
 
 		private class CameraState
 		{
-			public CameraMode cameraMode; // Stores the mode for this state, used for player mode restoration
+			public CameraMode cameraMode;
 			public CameraData data;
 			public Func<Vector3> origin;
 			public Func<Vector3> target;
@@ -100,19 +100,18 @@ namespace ClassicTilestorm
 
 		public void SetPreviewMode(PreviewMode mode, bool forceCinema = false)
 		{
-			// Store the current player mode in playerState.cameraMode before switching away
 			if (isPlayerMode)
 				playerState.cameraMode = currentMode;
 
 			CameraMode camMode = mode switch
 			{
-				PreviewMode.Editor => CameraMode.Editor,
-				PreviewMode.Cinema => CameraMode.Cinema,
-				PreviewMode.Player => playerState.cameraMode, // Use stored player mode
-				_ => CameraMode.Follow // Default to Follow if no player mode is set
+				PreviewMode.Editor => editorState.cameraMode,
+				PreviewMode.Cinema => cinemaState.cameraMode,
+				PreviewMode.Player => playerState.cameraMode,
+				_ => CameraMode.Absent
 			};
 
-			if (mode == PreviewMode.Cinema)
+			if (CameraMode.Cinema == camMode)
 				timeStart = forceCinema ? Time.time - CinemaTimeoutDuration : Time.time;
 
 			SetCameraMode(camMode);
@@ -207,7 +206,7 @@ namespace ClassicTilestorm
 			if (waypoint.vSrc == null || !waypoint.vSrc.IsValidVector())
 			{
 				playerState.target = () => null != eggbotController && null != eggbotController.transform ? eggbotController.transform.position : Vector3.zero;
-				playerState.cameraMode = CameraMode.Follow; // Update playerState.cameraMode instead of restoreMode
+				playerState.cameraMode = CameraMode.Follow;
 
 				if (false == isPlayerMode)
 					return;
@@ -221,7 +220,7 @@ namespace ClassicTilestorm
 
 			playerState.origin = () => origin;
 			playerState.target = () => target;
-			playerState.cameraMode = CameraMode.Preset; // Update playerState.cameraMode instead of restoreMode
+			playerState.cameraMode = CameraMode.Preset;
 
 			if (false == isPlayerMode)
 				return;
@@ -235,7 +234,7 @@ namespace ClassicTilestorm
 			if (null == eggbotController) return;
 
 			playerState.target = () => null != eggbotController && null != eggbotController.transform ? eggbotController.transform.position : Vector3.zero;
-			playerState.cameraMode = CameraMode.Follow; // Update playerState.cameraMode instead of restoreMode
+			playerState.cameraMode = CameraMode.Follow;
 
 			if (false == isPlayerMode)
 				return;
