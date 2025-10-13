@@ -89,7 +89,7 @@ namespace ClassicTilestorm
 		{
 			if (null == cameraController || null == cameraController.cameraSystem) return;
 
-			bool startCinema = PreviewSettings.CurrentMode == PreviewMode.Cinema && (cameraController.cameraSystem.HasCompleted && Time.time - timeStart > CinemaTimeoutDuration);
+			bool startCinema = currentMode == CameraMode.Cinema && cameraController.cameraSystem.HasCompleted && Time.time - timeStart > CinemaTimeoutDuration;
 			if (!startCinema) return;
 
 			timeStart = Time.time;
@@ -99,7 +99,6 @@ namespace ClassicTilestorm
 		public void SetPreviewMode(PreviewMode mode, bool forceCinema = false)
 		{
 			if (currentMode == CameraMode.Preset || currentMode == CameraMode.Follow) { restoreMode = currentMode; }
-			PreviewSettings.CurrentMode = mode;
 			CameraMode camMode = mode switch
 			{
 				PreviewMode.Editor => CameraMode.Editor,

@@ -137,7 +137,10 @@ namespace ClassicTilestorm
 			GUI.backgroundColor = isPlayerSelected ? Color.green : Color.gray;
 			GUI.color = isPlayerSelected ? selectedTextColor : unselectedTextColor;
 			if (GUI.Button(new Rect(currentX, y, buttonWidth, buttonHeight), "Player"))
+			{
+				PreviewSettings.CurrentMode = PreviewMode.Player;
 				gameController.SetPreviewMode(PreviewMode.Player);
+			}
 			GUI.color = originalColor;
 			GUI.backgroundColor = Color.white;
 			currentX += buttonWidth + spacing;
@@ -147,7 +150,10 @@ namespace ClassicTilestorm
 			GUI.backgroundColor = isCinemaSelected ? Color.green : Color.gray;
 			GUI.color = isCinemaSelected ? selectedTextColor : unselectedTextColor;
 			if (GUI.Button(new Rect(currentX, y, buttonWidth, buttonHeight), "Cinema"))
+			{
+				PreviewSettings.CurrentMode = PreviewMode.Cinema;
 				gameController.SetPreviewMode(PreviewMode.Cinema, true);
+			}
 			GUI.color = originalColor;
 			GUI.backgroundColor = Color.white;
 			currentX += buttonWidth + spacing;
@@ -157,7 +163,10 @@ namespace ClassicTilestorm
 			GUI.backgroundColor = isEditorSelected ? Color.green : Color.gray;
 			GUI.color = isEditorSelected ? selectedTextColor : unselectedTextColor;
 			if (GUI.Button(new Rect(currentX, y, buttonWidth, buttonHeight), "Editor"))
+			{
+				PreviewSettings.CurrentMode = PreviewMode.Editor;
 				gameController.SetPreviewMode(PreviewMode.Editor);
+			}
 			GUI.color = originalColor;
 			GUI.backgroundColor = Color.white;
 			currentX += buttonWidth + spacing;
