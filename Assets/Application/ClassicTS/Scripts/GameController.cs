@@ -109,7 +109,7 @@ namespace ClassicTilestorm
 		{
 			if (null == cameraController || null == cameraController.cameraSystem) return;
 
-			bool startCinema = PreviewSettings.CurrentMode == PreviewMode.Cinema && (cameraController.cameraSystem.HasCompleted || Time.time - timeStart > CinemaTimeoutDuration);
+			bool startCinema = PreviewSettings.CurrentMode == PreviewMode.Cinema && (cameraController.cameraSystem.HasCompleted && Time.time - timeStart > CinemaTimeoutDuration);
 			if (!startCinema) return;
 
 			timeStart = Time.time;
