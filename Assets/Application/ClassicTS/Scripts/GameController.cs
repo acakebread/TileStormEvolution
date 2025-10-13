@@ -22,20 +22,20 @@ namespace ClassicTilestorm
 		// CameraController properties
 		private CameraController cameraController;
 
-		private CameraState restoreState = CameraState.Absent;
-		private CameraState currentState = CameraState.Absent;
-		private CameraData restoreData;
+		private CameraMode restoreMode = CameraMode.Absent;
+		private CameraMode currentMode = CameraMode.Absent;
 
-		private class CameraDelegates
+		private class CameraState
 		{
+			public CameraData data;
 			public Func<Vector3> origin;
 			public Func<Vector3> target;
 			public Func<IReadOnlyList<Vector3>> focusPoints;
 		}
 
-		private CameraDelegates editorDelegates;
-		private CameraDelegates playerDelegates;
-		private CameraDelegates cinemaDelegates;
+		private CameraState editorState;
+		private CameraState playerState;
+		private CameraState cinemaState;
 
 		private void Awake()
 		{
@@ -45,7 +45,6 @@ namespace ClassicTilestorm
 
 			cameraController = null != Camera.main ? Camera.main.GetComponent<CameraController>() : null;
 			if (null == cameraController && null != Camera.main) cameraController = Camera.main.gameObject.AddComponent<CameraController>();
-			restoreData = new CameraData(cameraController.GetComponent<Camera>());
 		}
 
 		private void Start()
@@ -60,27 +59,48 @@ namespace ClassicTilestorm
 			CinemaUpdate();
 		}
 
-		private void SetCameraMode(CameraState value)
+		private void SetCameraMode(CameraMode value)
 		{
-			if (CameraState.Editor != currentState && CameraState.Cinema != currentState && null != cameraController.cameraSystem)
-				restoreData = cameraController.cameraSystem.data;
-
-			cameraController.SetMode(value);
-
-			cameraController.cameraSystem.data = restoreData;
-			if (value != currentState) restoreState = currentState;
-			currentState = value;
-
-			var delegates = value switch
+			if (null != cameraController.cameraSystem)
 			{
-				CameraState.Cinema => cinemaDelegates,
-				CameraState.Editor => editorDelegates,
-				_ => playerDelegates
+				var current_state = currentMode switch
+				{
+					CameraMode.Cinema => cinemaState,
+					CameraMode.Editor => editorState,
+					CameraMode.Preset => playerState,
+					CameraMode.Follow => playerState,
+					_ => null
+				};
+
+				if (null != current_state)
+				{
+					current_state.data = cameraController.cameraSystem.data;
+					//current_state.origin = cameraController.cameraSystem.originFunc;
+					//current_state.target = cameraController.cameraSystem.targetFunc;
+					//current_state.focusPoints = cameraController.cameraSystem.focusPointsFunc;
+				}
+			}
+
+			var state = value switch
+			{
+				CameraMode.Cinema => cinemaState,
+				CameraMode.Editor => editorState,
+				CameraMode.Preset => playerState,
+				CameraMode.Follow => playerState,
+				_ => null
 			};
 
-			cameraController.cameraSystem.origin = delegates.origin;
-			cameraController.cameraSystem.target = delegates.target;
-			cameraController.cameraSystem.focusPoints = delegates.focusPoints;
+			cameraController.SetMode(value);
+			restoreMode = currentMode;
+			currentMode = value;
+
+			if (null != state)
+			{
+				cameraController.cameraSystem.data = state.data;
+				cameraController.cameraSystem.originFunc = state.origin;
+				cameraController.cameraSystem.targetFunc = state.target;
+				cameraController.cameraSystem.focusPointsFunc = state.focusPoints;
+			}
 
 			cameraController.Initialise();
 		}
@@ -93,20 +113,20 @@ namespace ClassicTilestorm
 			if (!startCinema) return;
 
 			timeStart = Time.time;
-			SetCameraMode(CameraState.Cinema);
+			SetCameraMode(CameraMode.Cinema);
 		}
 
 		public void ToggleCinemma(bool force = false)
 		{
 			PreviewSettings.CinemaMode = !PreviewSettings.CinemaMode;
 			if (PreviewSettings.CinemaMode) timeStart = force ? Time.time - CinemaTimeoutDuration : Time.time;
-			SetCameraMode(PreviewSettings.CinemaMode ? CameraState.Cinema : restoreState);
+			SetCameraMode(PreviewSettings.CinemaMode ? CameraMode.Cinema : restoreMode);
 		}
 
 		public void ToggleEditor()
 		{
 			PreviewSettings.EditorMode = !PreviewSettings.EditorMode;
-			SetCameraMode(PreviewSettings.EditorMode ? CameraState.Editor : restoreState);
+			SetCameraMode(PreviewSettings.EditorMode ? CameraMode.Editor : restoreMode);
 		}
 
 		public void LoadMap(string mapName = null)
@@ -156,9 +176,13 @@ namespace ClassicTilestorm
 				if (null != firstWaypoint.vDst) dstPos = firstWaypoint.vDst.ToVector3();
 			}
 
-			editorDelegates = new CameraDelegates { };
-			playerDelegates = new CameraDelegates { target = () => null != eggbotController && null != eggbotController.transform ? eggbotController.transform.position : Vector3.zero, origin = () => srcPos };
-			cinemaDelegates = new CameraDelegates { target = () => null != eggbotController && null != eggbotController.transform ? eggbotController.transform.position : Vector3.zero };
+			var cameraData = new CameraData(cameraController.GetComponent<Camera>());
+			cameraData.origin = srcPos;
+			cameraData.target = dstPos;
+
+			editorState = new CameraState { data = cameraData };
+			playerState = new CameraState { data = cameraData, target = () => null != eggbotController && null != eggbotController.transform ? eggbotController.transform.position : Vector3.zero, origin = () => srcPos };
+			cinemaState = new CameraState { data = cameraData, target = () => null != eggbotController && null != eggbotController.transform ? eggbotController.transform.position : Vector3.zero };
 
 			Func<IReadOnlyList<Vector3>> focusFunc = () =>
 			{
@@ -175,21 +199,18 @@ namespace ClassicTilestorm
 				return spatialSystem.Points;
 			};
 
-			cinemaDelegates.focusPoints = () => focusFunc();
+			cinemaState.focusPoints = () => focusFunc();
 
 			var ppController = cameraController.GetComponentInChildren<PostProcessingCameraController>(true);
 			if (null != eggbotController && null != ppController)
 				ppController.dofTarget = eggbotController.transform;
 
-			SetCameraMode(PreviewSettings.EditorMode ? CameraState.Editor : CameraState.Follow);
-
-			cameraController.cameraSystem.data.lerpedOrigin = srcPos;
-			cameraController.cameraSystem.data.lerpedTarget = dstPos;
+			SetCameraMode(PreviewSettings.EditorMode ? CameraMode.Editor : CameraMode.Follow);
 		}
 
 		private void OnWaypointReached(int waypointIndex)
 		{
-			if (CameraState.Cinema == currentState || CameraState.Editor == currentState) return;
+			if (CameraMode.Cinema == currentMode || CameraMode.Editor == currentMode) return;
 			if (null == eggbotController) return;
 			if (null == mapManager || waypointIndex < 0 || waypointIndex >= mapManager.Waypoints.Length) return;
 			if (mapManager.Waypoints.Length - 1 == waypointIndex || waypointIndex == 0) return;
@@ -197,28 +218,28 @@ namespace ClassicTilestorm
 			var waypoint = mapManager.Waypoints[waypointIndex];
 			if (waypoint.vSrc == null || !waypoint.vSrc.IsValidVector())
 			{
-				playerDelegates.target = () => null != eggbotController && null != eggbotController.transform ? eggbotController.transform.position : Vector3.zero;
-				SetCameraMode(CameraState.Follow);
+				playerState.target = () => null != eggbotController && null != eggbotController.transform ? eggbotController.transform.position : Vector3.zero;
+				SetCameraMode(CameraMode.Follow);
 				return;
 			}
 
 			var origin = waypoint.vSrc.IsValidVector() ? waypoint.vSrc.ToVector3() : new Vector3(0f, 14f, -14f);
 			var target = null != waypoint.vDst && waypoint.vDst.IsValidVector() ? waypoint.vDst.ToVector3() : mapManager.TileWorldPosition(waypoint.nTile);
 
-			playerDelegates.origin = () => origin;
-			playerDelegates.target = () => target;
+			playerState.origin = () => origin;
+			playerState.target = () => target;
 
-			SetCameraMode(CameraState.Preset);
+			SetCameraMode(CameraMode.Preset);
 			gestureController.enabled = true;
 		}
 
 		private void OnPuzzleSolved(int waypointIndex)
 		{
-			if (CameraState.Cinema == currentState || CameraState.Editor == currentState) return;
+			if (CameraMode.Cinema == currentMode || CameraMode.Editor == currentMode) return;
 			if (null == eggbotController) return;
 
-			playerDelegates.target = () => null != eggbotController && null != eggbotController.transform ? eggbotController.transform.position : Vector3.zero;
-			SetCameraMode(CameraState.Follow);
+			playerState.target = () => null != eggbotController && null != eggbotController.transform ? eggbotController.transform.position : Vector3.zero;
+			SetCameraMode(CameraMode.Follow);
 		}
 
 		private void OnLevelCompleted() { }

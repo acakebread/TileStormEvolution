@@ -26,6 +26,9 @@ namespace MassiveHadronLtd
 			public Vector3 P2; // Dst
 		}
 
+		private Vector3 origin;
+		private Vector3 target;
+
 		// === Shared cinema constants ===
 		protected const float ProjectionSmoothingRate = 8f;
 		protected const float DefaultSequenceDuration = 8f;
@@ -44,14 +47,14 @@ namespace MassiveHadronLtd
 			sequenceDuration = DefaultSequenceDuration + UnityEngine.Random.Range(-2f, 2f);
 			sequenceTimer = sequenceDuration;
 			pauseTimer = DefaultPauseDuration;
-			lastTarget = nextTarget = target.Invoke();
+			lastTarget = nextTarget = targetFunc.Invoke();
 		}
 
 		protected virtual void UpdateCinemaLerping()
 		{
 			var interpolate = SmoothingUtils.Smooth(0f, 1f, data.smoothing, Time.deltaTime, CameraData.TargetFPS);
-			data.lerpedOrigin = Vector3.Lerp(data.lerpedOrigin, data.origin, interpolate);
-			data.lerpedTarget = Vector3.Lerp(data.lerpedTarget, data.target, interpolate);
+			data.origin = Vector3.Lerp(data.origin, origin, interpolate);
+			data.target = Vector3.Lerp(data.target, target, interpolate);
 		}
 
 		public override bool HasCompleted => sequenceTimer <= 0f && pauseTimer <= 0f;
@@ -70,8 +73,8 @@ namespace MassiveHadronLtd
 				return;
 			}
 
-			var targetPosition = target.Invoke();
-			var _focusPoints = focusPoints?.Invoke();
+			var targetPosition = targetFunc.Invoke();
+			var _focusPoints = focusPointsFunc?.Invoke();
 
 			sequenceDuration = DefaultSequenceDuration + Random.Range(-2f, 2f);
 			sequenceTimer = sequenceDuration;
@@ -84,7 +87,7 @@ namespace MassiveHadronLtd
 
 			// Select start focus point
 			var startFocusPoint = targetPosition;
-			if (focusPoints != null && _focusPoints.Count > 0)
+			if (focusPointsFunc != null && _focusPoints.Count > 0)
 			{
 				var validFocusPoint = _focusPoints.Where(p =>
 					Vector2.Distance(new Vector2(p.x, p.z), new Vector2(targetPosition.x, targetPosition.z)) >= MinFocusPointDistanceFromPlayer).ToList();
@@ -92,24 +95,24 @@ namespace MassiveHadronLtd
 					startFocusPoint = validFocusPoint[Random.Range(0, validFocusPoint.Count)];
 			}
 
-			data.lerpedTarget = data.target = startFocusPoint + Vector3.up * VerticalOffset;
-			data.target = targetPosition + Vector3.up * VerticalOffset;
+			data.target = target = startFocusPoint + Vector3.up * VerticalOffset;
+			target = targetPosition + Vector3.up * VerticalOffset;
 
 			// Define lozenge
-			var targetPath = data.target - data.lerpedTarget;
+			var targetPath = target - data.target;
 			var pathDir = targetPath.magnitude > 0.1f ? targetPath.normalized : Random.onUnitSphere;
-			var midPoint = (data.lerpedTarget + data.target) / 2f;
+			var midPoint = (data.target + target) / 2f;
 			var perpendicular = new Vector3(-pathDir.z, 0f, pathDir.x).normalized;
 			var lozengeMajor = targetPath.magnitude + 2f * MinDistance;
 			var lozengeMinor = Mathf.Max(lozengeMajor * 0.66f, MinDistance * 2f);
 
 			// Generate camera points
 			var (src, dst) = SampleCameraPosition(midPoint, pathDir, perpendicular, lozengeMajor, lozengeMinor);
-			data.lerpedOrigin = src;
-			data.origin = dst;
+			data.origin = src;
+			origin = dst;
 
-			data.lerpedOrigin = AdjustHeight(data.lerpedOrigin, data.lerpedTarget);
 			data.origin = AdjustHeight(data.origin, data.target);
+			origin = AdjustHeight(origin, target);
 
 			// Initialize FOV
 			data.fieldOfView = FovMin;
@@ -120,7 +123,7 @@ namespace MassiveHadronLtd
 		{
 			base.Update();
 
-			var _target = target.Invoke();
+			var _target = targetFunc.Invoke();
 			var posDelta = _target - lastTarget;
 			lastTarget = _target;
 
@@ -136,14 +139,14 @@ namespace MassiveHadronLtd
 			{
 				// Update target
 				var easedSequenceTimer = SmoothingUtils.Ease(sequenceDuration > 0 ? 1f - Mathf.Clamp01(sequenceTimer / sequenceDuration) : 1f);
-				data.target = Vector3.Lerp(data.lerpedTarget, nextTarget, easedSequenceTimer);
+				target = Vector3.Lerp(data.target, nextTarget, easedSequenceTimer);
 
 				// Update Bezier P1 and P2 with player movement
 				bezierData.P1 += posDelta * 0.5f;
 				bezierData.P2 += posDelta;
 
 				// Update camera dest position and FOV
-				data.origin = EvaluateBezier(easedSequenceTimer);
+				origin = EvaluateBezier(easedSequenceTimer);
 				data.fieldOfView = Mathf.Lerp(FovMin, currentFovMax, SmoothingUtils.EasePingPong(sequenceTimer / sequenceDuration));
 			}
 
@@ -167,7 +170,7 @@ namespace MassiveHadronLtd
 		private (Vector3 src, Vector3 dst) SampleCameraPosition(Vector3 midPoint, Vector3 pathDir, Vector3 perpendicular, float lozengeMajor, float lozengeMinor)
 		{
 			var midPointXZ = new Vector2(midPoint.x, midPoint.z);
-			var targetXZ = new Vector2(data.target.x, data.target.z);
+			var targetXZ = new Vector2(target.x, target.z);
 
 			// Generate points
 			var (src, perimeterPointSrc, tangentSrc1, tangentSrc2, thetaSrc, projectionDistanceSrc) = GeneratePointOutsideLozenge(midPointXZ, pathDir, perpendicular, lozengeMajor, lozengeMinor);

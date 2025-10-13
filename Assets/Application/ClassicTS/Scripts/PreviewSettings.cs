@@ -24,10 +24,6 @@ namespace ClassicTilestorm
 		[SerializeField] private bool showTileSelection = false;
 		public static bool ShowTileSelection => instance.showTileSelection;
 
-		[Header("cinema mode")]
-		[SerializeField] private bool cinemaMode = false;
-		public static bool CinemaMode { set => instance.cinemaMode = value; get => instance.cinemaMode; }
-
 		[Header("resource paths")]
 		[SerializeField] private TextAsset databaseJsonFile;
 		public static TextAsset DatabaseJsonFile => instance.databaseJsonFile;
@@ -40,6 +36,14 @@ namespace ClassicTilestorm
 
 		[SerializeField, ResourcePath] private string skycubesPath = "ClassicTS/SkyCubes/";
 		public static string SkycubesPath => instance.skycubesPath;
+
+		[Header("player mode")]
+		[SerializeField] private bool playerMode = false;
+		public static bool PlayerMode { set => instance.playerMode = value; get => instance.playerMode; }
+
+		[Header("cinema mode")]
+		[SerializeField] private bool cinemaMode = false;
+		public static bool CinemaMode { set => instance.cinemaMode = value; get => instance.cinemaMode; }
 
 		[Header("editor mode")]
 		[SerializeField] private bool editorMode = false;

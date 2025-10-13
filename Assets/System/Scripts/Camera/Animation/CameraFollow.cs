@@ -19,16 +19,15 @@ namespace MassiveHadronLtd
 		public override void Update()
 		{
 			base.Update();
-			data.target = target.Invoke();
+			var target = targetFunc.Invoke();
 			data.smoothing = SmoothingUtils.Smooth(data.smoothing, SmoothingNa, SmoothingNb, Time.deltaTime, CameraData.TargetFPS);
 			var followLerp = SmoothingUtils.Smooth(0f, 1f, data.smoothing, Time.deltaTime, CameraData.TargetFPS);
-			data.lerpedTarget = Vector3.Lerp(data.lerpedTarget, data.target, followLerp);
-			var delta = data.lerpedTarget - data.lerpedOrigin;
+			data.target = Vector3.Lerp(data.target, target, followLerp);
+			var delta = data.target - data.origin;
 			var deltaHorizontal = (0f == delta.x && 0f == delta.z) ? Vector3.zero : new Vector3(delta.x, 0, delta.z).normalized;
-			var idealPos = data.lerpedTarget - deltaHorizontal * (IdealDistance * IdealDistanceHorizontalScale);
-			idealPos.y = data.lerpedTarget.y + IdealDistance;
-			data.origin = idealPos;
-			data.lerpedOrigin = Vector3.Lerp(data.lerpedOrigin, data.origin, followLerp);
+			var origin = data.target - deltaHorizontal * (IdealDistance * IdealDistanceHorizontalScale);
+			origin.y = data.target.y + IdealDistance;
+			data.origin = Vector3.Lerp(data.origin, origin, followLerp);
 			ApplyProjection();
 		}
 	}

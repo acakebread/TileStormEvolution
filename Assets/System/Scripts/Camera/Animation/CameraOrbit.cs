@@ -20,6 +20,9 @@ namespace MassiveHadronLtd
 		private float orbitEndAngle;
 		private float currentFovMax;
 
+		private Vector3 origin;
+		private Vector3 target;
+
 		public override bool HasCompleted => sequenceTimer <= 0f && pauseTimer <= 0f;
 
 		public override void Start()
@@ -33,21 +36,23 @@ namespace MassiveHadronLtd
 
 			InitializeCinemaSequence();
 
+			target = targetFunc.Invoke();
+
 			sequenceDuration = DefaultSequenceDuration + Random.Range(-2f, 2f);
 			sequenceTimer = sequenceDuration;
 			pauseTimer = DefaultPauseDuration;
-			lastTarget = nextTarget = target.Invoke();
+			lastTarget = nextTarget = targetFunc.Invoke();
 
 			orbitStartAngle = Random.Range(0f, 360f);
 			orbitHeightSrc = Random.Range(MinCameraHeight, MaxCameraHeight);
 			orbitHeightDst = Random.Range(MinCameraHeight, MaxCameraHeight);
 
-			var minRadiusSrc = CalculateMinOrbitRadius(orbitHeightSrc, data.target.y);
-			var minRadiusDst = CalculateMinOrbitRadius(orbitHeightDst, data.target.y);
+			var minRadiusSrc = CalculateMinOrbitRadius(orbitHeightSrc, target.y);
+			var minRadiusDst = CalculateMinOrbitRadius(orbitHeightDst, target.y);
 			var minRadius = Mathf.Max(minRadiusSrc, minRadiusDst);
 			currentOrbitRadius = Random.Range(Mathf.Max(minRadius, MinOrbitRadius), MaxOrbitRadius);
 
-			data.lerpedTarget = data.target = target.Invoke() + Vector3.up * VerticalOffset;
+			data.target = target = targetFunc.Invoke() + Vector3.up * VerticalOffset;
 			var maxDelta = Mathf.Lerp(360f, 180f, (currentOrbitRadius - MinOrbitRadius) / (MaxOrbitRadius - MinOrbitRadius));
 			var delta = Random.Range(120f, maxDelta) * (Random.value < 0.5f ? 1f : -1f);
 			orbitEndAngle = orbitStartAngle + delta;
@@ -55,8 +60,7 @@ namespace MassiveHadronLtd
 			data.fieldOfView = FovMin;
 			currentFovMax = Random.value < 0.2f ? 60f : FovMax;
 
-			data.origin = data.target + SampleOrbitPosition(orbitStartAngle, orbitEndAngle, 0f);
-			data.lerpedOrigin = data.origin;
+			data.origin = origin = target + SampleOrbitPosition(orbitStartAngle, orbitEndAngle, 0f);
 
 			data.shake = 1f;
 		}
@@ -64,11 +68,10 @@ namespace MassiveHadronLtd
 		public override void Update()
 		{
 			base.Update();
-			data.target = target.Invoke();
+			target = targetFunc.Invoke();
 			sequenceTimer -= Time.deltaTime;
 			if (sequenceTimer > 0f)
 			{
-				var target = data.target;
 				var posDelta = target - lastTarget;
 				nextTarget = SmoothingUtils.SmoothVector(nextTarget, target + posDelta * 2f, ProjectionSmoothingRate, Time.deltaTime, CameraData.TargetFPS);
 				lastTarget = target;
@@ -79,8 +82,8 @@ namespace MassiveHadronLtd
 			if (sequenceTimer > 0f)
 			{
 				var easedSequenceTimer = SmoothingUtils.Ease(sequenceDuration > 0 ? 1f - Mathf.Clamp01(sequenceTimer / sequenceDuration) : 1f);
-				data.target = target.Invoke() + Vector3.up * VerticalOffset;
-				data.origin = data.target + SampleOrbitPosition(orbitStartAngle, orbitEndAngle, easedSequenceTimer);
+				target = targetFunc.Invoke() + Vector3.up * VerticalOffset;
+				origin = target + SampleOrbitPosition(orbitStartAngle, orbitEndAngle, easedSequenceTimer);
 				data.fieldOfView = Mathf.Lerp(FovMin, currentFovMax, SmoothingUtils.EasePingPong(sequenceTimer / sequenceDuration));
 			}
 
@@ -129,15 +132,15 @@ namespace MassiveHadronLtd
 			sequenceTimer = sequenceDuration;
 			pauseTimer = DefaultPauseDuration;
 
-			lastTarget = nextTarget = target.Invoke();
+			lastTarget = nextTarget = targetFunc.Invoke();
 		}
 
 		protected virtual void UpdateCinemaLerping()
 		{
 			// Update camera lerping
 			var interpolate = SmoothingUtils.Smooth(0f, 1f, data.smoothing, Time.deltaTime, CameraData.TargetFPS);
-			data.lerpedOrigin = Vector3.Lerp(data.lerpedOrigin, data.origin, interpolate);
-			data.lerpedTarget = Vector3.Lerp(data.lerpedTarget, data.target, interpolate);
+			data.origin = Vector3.Lerp(data.origin, origin, interpolate);
+			data.target = Vector3.Lerp(data.target, target, interpolate);
 		}
 	}
 }

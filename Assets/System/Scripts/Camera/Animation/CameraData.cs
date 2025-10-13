@@ -9,9 +9,7 @@ namespace MassiveHadronLtd
 
 		public Camera camera;
 		public Vector3 origin;
-		public Vector3 lerpedOrigin;
 		public Vector3 target;
-		public Vector3 lerpedTarget;
 		public float fieldOfView;
 		public float shake;
 		public float smoothing;
@@ -24,8 +22,9 @@ namespace MassiveHadronLtd
 		public CameraData(Camera camera)
 		{
 			this.camera = camera;
-			origin = lerpedOrigin = null != camera ? camera.transform.position : Vector3.zero;
-			target = lerpedTarget = origin + Vector3.forward;
+
+			origin = null != camera ? camera.transform.position : Vector3.zero;
+			target = origin + Vector3.forward;
 			fieldOfView = null != camera ? camera.fieldOfView : 60f;
 			shake = 0f;
 			smoothing = DefaultSmoothingRate;
