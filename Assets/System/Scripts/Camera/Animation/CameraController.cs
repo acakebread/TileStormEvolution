@@ -10,7 +10,7 @@ namespace MassiveHadronLtd
 	{
 		[HideInInspector] public CameraBase cameraSystem = null;
 		private CameraMode currentMode = CameraMode.Absent;
-		private Dictionary<CameraMode, CameraState> stateLookup = new Dictionary<CameraMode, CameraState>();
+		private Dictionary<CameraMode, CameraState> stateLookup = new();
 
 		public CameraMode CurrentMode => currentMode;
 
