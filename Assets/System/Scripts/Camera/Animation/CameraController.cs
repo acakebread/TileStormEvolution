@@ -23,12 +23,10 @@ namespace MassiveHadronLtd
 				case CameraMode.Editor:
 					editorState = state;
 					break;
-
 				case CameraMode.Follow:
 				case CameraMode.Preset:
 					playerState = state;
 					break;
-
 				case CameraMode.Cinema:
 					cinemaState = state;
 					break;

@@ -58,17 +58,15 @@ namespace ClassicTilestorm
 		public void SetPreviewMode(PreviewMode mode, bool forceCinema = false)
 		{
 			if (mode == PreviewMode.Cinema)
-				timeStart = forceCinema ? Time.time - CinemaTimeoutDuration : Time.time;
+				timeStart = Time.time - (forceCinema ? CinemaTimeoutDuration : 0);
 
-			CameraMode cameraMode = mode switch
+			cameraController.SetCameraMode(mode switch
 			{
 				PreviewMode.Editor => CameraMode.Editor,
 				PreviewMode.Cinema => CameraMode.Cinema,
 				PreviewMode.Player => CameraMode.Preset,
 				_ => CameraMode.Absent
-			};
-
-			cameraController.SetCameraMode(cameraController.GetStateForMode(cameraMode).cameraMode);
+			});
 		}
 
 		public void LoadMap(string mapName = null)
