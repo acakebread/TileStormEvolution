@@ -66,39 +66,39 @@ namespace ClassicTilestorm
 		private static PreviewSettings instance;
 		void Awake() => instance = this;
 
-#if UNITY_EDITOR
-		[CustomEditor(typeof(PreviewSettings))]
-		public class PreviewSettingsEditor : Editor
-		{
-			public override void OnInspectorGUI()
-			{
-				serializedObject.Update();
+//#if UNITY_EDITOR
+//		[CustomEditor(typeof(PreviewSettings))]
+//		public class PreviewSettingsEditor : Editor
+//		{
+//			public override void OnInspectorGUI()
+//			{
+//				serializedObject.Update();
 
-				// Draw all properties except the previewMode
-				SerializedProperty prop = serializedObject.GetIterator();
-				bool enterChildren = true;
-				while (prop.NextVisible(enterChildren))
-				{
-					if (prop.name == "previewMode")
-					{
-						continue; // Skip the default enum field
-					}
+//				// Draw all properties except the previewMode
+//				SerializedProperty prop = serializedObject.GetIterator();
+//				bool enterChildren = true;
+//				while (prop.NextVisible(enterChildren))
+//				{
+//					if (prop.name == "previewMode")
+//					{
+//						continue; // Skip the default enum field
+//					}
 
-					EditorGUILayout.PropertyField(prop, true);
-				}
+//					EditorGUILayout.PropertyField(prop, true);
+//				}
 
-				// Custom radio buttons for previewMode
-				EditorGUILayout.Space();
-				EditorGUILayout.LabelField("Game Mode", EditorStyles.boldLabel);
-				SerializedProperty modeProp = serializedObject.FindProperty("previewMode");
-				int selectedIndex = (int)modeProp.enumValueIndex;
-				string[] modeNames = { "Player Mode", "Cinema Mode", "Editor Mode" };
-				selectedIndex = GUILayout.SelectionGrid(selectedIndex, modeNames, 3, EditorStyles.radioButton);
-				modeProp.enumValueIndex = (int)selectedIndex;
+//				// Custom radio buttons for previewMode
+//				EditorGUILayout.Space();
+//				EditorGUILayout.LabelField("Game Mode", EditorStyles.boldLabel);
+//				SerializedProperty modeProp = serializedObject.FindProperty("previewMode");
+//				int selectedIndex = (int)modeProp.enumValueIndex;
+//				string[] modeNames = { "Player Mode", "Cinema Mode", "Editor Mode" };
+//				selectedIndex = GUILayout.SelectionGrid(selectedIndex, modeNames, 3, EditorStyles.radioButton);
+//				modeProp.enumValueIndex = (int)selectedIndex;
 
-				serializedObject.ApplyModifiedProperties();
-			}
-		}
-#endif
+//				serializedObject.ApplyModifiedProperties();
+//			}
+//		}
+//#endif
 	}
 }
