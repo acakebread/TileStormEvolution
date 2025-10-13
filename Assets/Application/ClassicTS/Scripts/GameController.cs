@@ -64,11 +64,11 @@ namespace ClassicTilestorm
 			{
 				PreviewMode.Editor => CameraMode.Editor,
 				PreviewMode.Cinema => CameraMode.Cinema,
-				PreviewMode.Player => cameraController.GetStateForMode(CameraMode.Preset).cameraMode, // Gets current mode of playerState
+				PreviewMode.Player => CameraMode.Preset,
 				_ => CameraMode.Absent
 			};
 
-			cameraController.SetCameraMode(cameraMode);
+			cameraController.SetCameraMode(cameraController.GetStateForMode(cameraMode).cameraMode);
 		}
 
 		public void LoadMap(string mapName = null)
