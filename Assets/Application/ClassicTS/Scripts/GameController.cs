@@ -15,29 +15,15 @@ namespace ClassicTilestorm
 		private SpatialBucketSystem spatialSystem;
 		private const int MaxFocusPoints = 50;
 		private const float MinDistanceForNewFocusPoint = 3f;
-
 		private const float CinemaTimeoutDuration = 5f;
 		private float timeStart;
 
-		// CameraController properties
 		private CameraController cameraController;
-
-		private CameraMode currentMode = CameraMode.Absent;
-
-		private bool isPlayerMode => CameraMode.Preset == currentMode || CameraMode.Follow == currentMode;
-
-		private class CameraState
-		{
-			public CameraMode cameraMode;
-			public CameraData data;
-			public Func<Vector3> origin;
-			public Func<Vector3> target;
-			public Func<IReadOnlyList<Vector3>> focusPoints;
-		}
-
 		private CameraState editorState;
 		private CameraState playerState;
 		private CameraState cinemaState;
+
+		private bool isPlayerMode => cameraController.CurrentMode == CameraMode.Preset || cameraController.CurrentMode == CameraMode.Follow;
 
 		private void Awake()
 		{
@@ -45,8 +31,8 @@ namespace ClassicTilestorm
 			gestureController = gameObject.GetComponent<GestureController>();
 			gestureController.OnMapUpdated += CheckDisableDrag;
 
-			cameraController = null != Camera.main ? Camera.main.GetComponent<CameraController>() : null;
-			if (null == cameraController && null != Camera.main) cameraController = Camera.main.gameObject.AddComponent<CameraController>();
+			cameraController = Camera.main != null ? Camera.main.GetComponent<CameraController>() : null;
+			if (cameraController == null && Camera.main != null) cameraController = Camera.main.gameObject.AddComponent<CameraController>();
 		}
 
 		private void Start()
@@ -57,73 +43,49 @@ namespace ClassicTilestorm
 
 		private void Update()
 		{
-			if (null != eggbotController) eggbotController.UpdateEggbot(mapManager);
+			if (eggbotController != null) eggbotController.UpdateEggbot(mapManager);
 			CinemaUpdate();
-		}
-
-		private void SetCameraMode(CameraMode value)
-		{
-			currentMode = value;
-
-			var state = value switch
-			{
-				CameraMode.Cinema => cinemaState,
-				CameraMode.Editor => editorState,
-				CameraMode.Preset => playerState,
-				CameraMode.Follow => playerState,
-				_ => null
-			};
-
-			cameraController.SetMode(value);
-
-			if (null != state)
-			{
-				cameraController.cameraSystem.data = state.data;
-				cameraController.cameraSystem.originFunc = state.origin;
-				cameraController.cameraSystem.targetFunc = state.target;
-				cameraController.cameraSystem.focusPointsFunc = state.focusPoints;
-			}
-
-			cameraController.Initialise();
 		}
 
 		private void CinemaUpdate()
 		{
-			if (null == cameraController || null == cameraController.cameraSystem) return;
+			if (cameraController == null || cameraController.cameraSystem == null) return;
 
-			bool startCinema = currentMode == CameraMode.Cinema && cameraController.cameraSystem.HasCompleted && Time.time - timeStart > CinemaTimeoutDuration;
+			bool startCinema = cameraController.CurrentMode == CameraMode.Cinema && cameraController.cameraSystem.HasCompleted && Time.time - timeStart > CinemaTimeoutDuration;
 			if (!startCinema) return;
 
 			timeStart = Time.time;
-			SetCameraMode(CameraMode.Cinema);
+			cameraController.SetCameraMode(CameraMode.Cinema, cinemaState);
 		}
 
 		public void SetPreviewMode(PreviewMode mode, bool forceCinema = false)
 		{
 			if (isPlayerMode)
-				playerState.cameraMode = currentMode;
+				playerState.cameraMode = cameraController.CurrentMode;
 
-			CameraMode camMode = mode switch
+			CameraState state = mode switch
 			{
-				PreviewMode.Editor => editorState.cameraMode,
-				PreviewMode.Cinema => cinemaState.cameraMode,
-				PreviewMode.Player => playerState.cameraMode,
-				_ => CameraMode.Absent
+				PreviewMode.Editor => editorState,
+				PreviewMode.Cinema => cinemaState,
+				PreviewMode.Player => playerState,
+				_ => null
 			};
 
-			if (CameraMode.Cinema == camMode)
+			CameraMode camMode = state?.cameraMode ?? CameraMode.Absent;
+
+			if (camMode == CameraMode.Cinema)
 				timeStart = forceCinema ? Time.time - CinemaTimeoutDuration : Time.time;
 
-			SetCameraMode(camMode);
+			cameraController.SetCameraMode(camMode, state);
 		}
 
 		public void LoadMap(string mapName = null)
 		{
 			if (string.IsNullOrEmpty(mapName)) mapName = mapManager != null ? PreviewSettings.LoadMapName : PlayerPrefs.GetString("LastLoadedMap", PreviewSettings.LoadMapName);
-			if (null == mapName) return;
+			if (mapName == null) return;
 
 			var currentMap = string.IsNullOrEmpty(mapName) ? DatabaseLoader.Maps.FirstOrDefault() : DatabaseLoader.Maps.FirstOrDefault(m => m.name == mapName);
-			if (null == currentMap)
+			if (currentMap == null)
 			{
 				Debug.LogError($"No map found for mapName={mapName}! Available maps: {string.Join(", ", DatabaseLoader.Maps.Select(m => m.name))}");
 				return;
@@ -135,16 +97,16 @@ namespace ClassicTilestorm
 
 			SkyboxUtility.SetSkybox(PreviewSettings.SkycubesPath, currentMap.szMusic);
 
-			if (null != mapManager) Destroy(mapManager.gameObject);
+			if (mapManager != null) Destroy(mapManager.gameObject);
 			mapManager = MapManager.Instantiate(currentMap, transform);
 			mapManager.SetupWaypoints(currentMap);
 
 			gestureController.Initialise(mapManager);
 			timeStart = Time.time;
 
-			if (null != eggbotController) Destroy(eggbotController.gameObject);
+			if (eggbotController != null) Destroy(eggbotController.gameObject);
 			eggbotController = EggbotController.Instantiate(currentMap.szEggbotCostume, transform);
-			if (null != eggbotController)
+			if (eggbotController != null)
 			{
 				eggbotController.Initialise(mapManager);
 				eggbotController.OnWaypointReached += OnWaypointReached;
@@ -155,13 +117,13 @@ namespace ClassicTilestorm
 			spatialSystem = new SpatialBucketSystem(MinDistanceForNewFocusPoint, MaxFocusPoints);
 
 			var dstPos = new Vector3(mapManager.Width * 0.5f, 0f, mapManager.Height * 0.5f);
-			var srcPos = dstPos + new Vector3(0f, 14f, -14f); // Classic TS default for no waypoints
+			var srcPos = dstPos + new Vector3(0f, 14f, -14f);
 
-			if (null != mapManager.Waypoints && 0 != mapManager.Waypoints.Length && true == mapManager.Waypoints[0].bCamera)
+			if (mapManager.Waypoints != null && mapManager.Waypoints.Length > 0 && mapManager.Waypoints[0].bCamera)
 			{
 				var firstWaypoint = mapManager.Waypoints[0];
-				if (null != firstWaypoint.vSrc) srcPos = firstWaypoint.vSrc.ToVector3();
-				if (null != firstWaypoint.vDst) dstPos = firstWaypoint.vDst.ToVector3();
+				if (firstWaypoint.vSrc != null) srcPos = firstWaypoint.vSrc.ToVector3();
+				if (firstWaypoint.vDst != null) dstPos = firstWaypoint.vDst.ToVector3();
 			}
 
 			var editorCameraData = new CameraData(cameraController.GetComponent<Camera>()) { origin = srcPos, target = dstPos };
@@ -169,8 +131,19 @@ namespace ClassicTilestorm
 			var cinemaCameraData = new CameraData(cameraController.GetComponent<Camera>()) { origin = srcPos, target = dstPos };
 
 			editorState = new CameraState { cameraMode = CameraMode.Editor, data = editorCameraData };
-			playerState = new CameraState { cameraMode = CameraMode.Follow, data = playerCameraData, target = () => null != eggbotController && null != eggbotController.transform ? eggbotController.transform.position : Vector3.zero, origin = () => srcPos };
-			cinemaState = new CameraState { cameraMode = CameraMode.Cinema, data = cinemaCameraData, target = () => null != eggbotController && null != eggbotController.transform ? eggbotController.transform.position : Vector3.zero };
+			playerState = new CameraState
+			{
+				cameraMode = CameraMode.Follow,
+				data = playerCameraData,
+				target = () => eggbotController != null && eggbotController.transform != null ? eggbotController.transform.position : Vector3.zero,
+				origin = () => srcPos
+			};
+			cinemaState = new CameraState
+			{
+				cameraMode = CameraMode.Cinema,
+				data = cinemaCameraData,
+				target = () => eggbotController != null && eggbotController.transform != null ? eggbotController.transform.position : Vector3.zero
+			};
 
 			Func<IReadOnlyList<Vector3>> focusFunc = () =>
 			{
@@ -179,7 +152,7 @@ namespace ClassicTilestorm
 
 				focusFunc = () =>
 				{
-					if (null != eggbotController && null != eggbotController?.transform)
+					if (eggbotController != null && eggbotController.transform != null)
 						spatialSystem.TryAddPoint(eggbotController.transform.position);
 					return spatialSystem.Points;
 				};
@@ -190,70 +163,73 @@ namespace ClassicTilestorm
 			cinemaState.focusPoints = () => focusFunc();
 
 			var ppController = cameraController.GetComponentInChildren<PostProcessingCameraController>(true);
-			if (null != eggbotController && null != ppController)
+			if (eggbotController != null && ppController != null)
 				ppController.dofTarget = eggbotController.transform;
 
-			SetCameraMode(PreviewSettings.CurrentMode == PreviewMode.Editor ? CameraMode.Editor : PreviewSettings.CurrentMode == PreviewMode.Cinema ? CameraMode.Cinema : playerState.cameraMode);
+			cameraController.SetCameraMode(PreviewSettings.CurrentMode == PreviewMode.Editor ? CameraMode.Editor :
+										  PreviewSettings.CurrentMode == PreviewMode.Cinema ? CameraMode.Cinema :
+										  playerState.cameraMode, state: PreviewSettings.CurrentMode == PreviewMode.Editor ? editorState :
+																		 PreviewSettings.CurrentMode == PreviewMode.Cinema ? cinemaState :
+																		 playerState);
 		}
 
 		private void OnWaypointReached(int waypointIndex)
 		{
-			if (null == eggbotController) return;
-			if (null == mapManager || waypointIndex < 0 || waypointIndex >= mapManager.Waypoints.Length) return;
+			if (eggbotController == null || mapManager == null || waypointIndex < 0 || waypointIndex >= mapManager.Waypoints.Length) return;
 			if (mapManager.Waypoints.Length - 1 == waypointIndex || waypointIndex == 0) return;
 
 			var waypoint = mapManager.Waypoints[waypointIndex];
 			if (waypoint.vSrc == null || !waypoint.vSrc.IsValidVector())
 			{
-				playerState.target = () => null != eggbotController && null != eggbotController.transform ? eggbotController.transform.position : Vector3.zero;
+				playerState.target = () => eggbotController != null && eggbotController.transform != null ? eggbotController.transform.position : Vector3.zero;
 				playerState.cameraMode = CameraMode.Follow;
 
-				if (false == isPlayerMode)
+				if (!isPlayerMode)
 					return;
 
-				SetCameraMode(CameraMode.Follow);
+				cameraController.SetCameraMode(CameraMode.Follow, playerState);
 				return;
 			}
 
 			var origin = waypoint.vSrc.IsValidVector() ? waypoint.vSrc.ToVector3() : new Vector3(0f, 14f, -14f);
-			var target = null != waypoint.vDst && waypoint.vDst.IsValidVector() ? waypoint.vDst.ToVector3() : mapManager.TileWorldPosition(waypoint.nTile);
+			var target = waypoint.vDst != null && waypoint.vDst.IsValidVector() ? waypoint.vDst.ToVector3() : mapManager.TileWorldPosition(waypoint.nTile);
 
 			playerState.origin = () => origin;
 			playerState.target = () => target;
 			playerState.cameraMode = CameraMode.Preset;
 
-			if (false == isPlayerMode)
+			if (!isPlayerMode)
 				return;
 
-			SetCameraMode(CameraMode.Preset);
+			cameraController.SetCameraMode(CameraMode.Preset, playerState);
 			gestureController.enabled = true;
 		}
 
 		private void OnPuzzleSolved(int waypointIndex)
 		{
-			if (null == eggbotController) return;
+			if (eggbotController == null) return;
 
-			playerState.target = () => null != eggbotController && null != eggbotController.transform ? eggbotController.transform.position : Vector3.zero;
+			playerState.target = () => eggbotController != null && eggbotController.transform != null ? eggbotController.transform.position : Vector3.zero;
 			playerState.cameraMode = CameraMode.Follow;
 
-			if (false == isPlayerMode)
+			if (!isPlayerMode)
 				return;
 
-			SetCameraMode(CameraMode.Follow);
+			cameraController.SetCameraMode(CameraMode.Follow, playerState);
 		}
 
 		private void OnLevelCompleted() { }
 
 		private void CheckDisableDrag(IMapManager imap)
 		{
-			if (null != eggbotController && 0 != eggbotController.NavDirection(imap))
+			if (eggbotController != null && eggbotController.NavDirection(imap) != 0)
 				gestureController.enabled = false;
 		}
 
 		private void OnDestroy()
 		{
 			gestureController.OnMapUpdated -= CheckDisableDrag;
-			if (null == eggbotController) return;
+			if (eggbotController == null) return;
 			eggbotController.OnWaypointReached -= OnWaypointReached;
 			eggbotController.OnPuzzleSolved -= OnPuzzleSolved;
 			eggbotController.OnLevelCompleted -= OnLevelCompleted;
