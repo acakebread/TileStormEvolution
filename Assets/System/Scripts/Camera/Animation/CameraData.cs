@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace MassiveHadronLtd
 {
-	public struct CameraData
+	public class CameraData
 	{
 		public const float TargetFPS = 60f;
 		public const float DefaultSmoothingRate = 64f;
@@ -31,6 +31,6 @@ namespace MassiveHadronLtd
 			postProcessingEnabled = true;
 		}
 
-		private readonly PostProcessingCameraController controller => camera.GetComponentInChildren<PostProcessingCameraController>(true);
+		private PostProcessingCameraController controller => camera.GetComponentInChildren<PostProcessingCameraController>(true);
 	}
 }
