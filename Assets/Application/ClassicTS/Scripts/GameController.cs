@@ -22,13 +22,13 @@ namespace ClassicTilestorm
 		// CameraController properties
 		private CameraController cameraController;
 
-		private CameraMode restoreMode = CameraMode.Absent;
 		private CameraMode currentMode = CameraMode.Absent;
 
 		private bool isPlayerMode => CameraMode.Preset == currentMode || CameraMode.Follow == currentMode;
 
 		private class CameraState
 		{
+			public CameraMode cameraMode; // Stores the mode for this state, used for player mode restoration
 			public CameraData data;
 			public Func<Vector3> origin;
 			public Func<Vector3> target;
@@ -100,13 +100,16 @@ namespace ClassicTilestorm
 
 		public void SetPreviewMode(PreviewMode mode, bool forceCinema = false)
 		{
-			if (true == isPlayerMode) restoreMode = currentMode;
+			// Store the current player mode in playerState.cameraMode before switching away
+			if (isPlayerMode)
+				playerState.cameraMode = currentMode;
 
 			CameraMode camMode = mode switch
 			{
 				PreviewMode.Editor => CameraMode.Editor,
 				PreviewMode.Cinema => CameraMode.Cinema,
-				_ => restoreMode
+				PreviewMode.Player => playerState.cameraMode, // Use stored player mode
+				_ => CameraMode.Follow // Default to Follow if no player mode is set
 			};
 
 			if (mode == PreviewMode.Cinema)
@@ -153,7 +156,7 @@ namespace ClassicTilestorm
 			spatialSystem = new SpatialBucketSystem(MinDistanceForNewFocusPoint, MaxFocusPoints);
 
 			var dstPos = new Vector3(mapManager.Width * 0.5f, 0f, mapManager.Height * 0.5f);
-			var srcPos = dstPos + new Vector3(0f, 14f, -14f);// Classic TS default for no waypoints
+			var srcPos = dstPos + new Vector3(0f, 14f, -14f); // Classic TS default for no waypoints
 
 			if (null != mapManager.Waypoints && 0 != mapManager.Waypoints.Length && true == mapManager.Waypoints[0].bCamera)
 			{
@@ -166,9 +169,9 @@ namespace ClassicTilestorm
 			var playerCameraData = new CameraData(cameraController.GetComponent<Camera>()) { origin = srcPos, target = dstPos };
 			var cinemaCameraData = new CameraData(cameraController.GetComponent<Camera>()) { origin = srcPos, target = dstPos };
 
-			editorState = new CameraState { data = editorCameraData };
-			playerState = new CameraState { data = playerCameraData, target = () => null != eggbotController && null != eggbotController.transform ? eggbotController.transform.position : Vector3.zero, origin = () => srcPos };
-			cinemaState = new CameraState { data = cinemaCameraData, target = () => null != eggbotController && null != eggbotController.transform ? eggbotController.transform.position : Vector3.zero };
+			editorState = new CameraState { cameraMode = CameraMode.Editor, data = editorCameraData };
+			playerState = new CameraState { cameraMode = CameraMode.Follow, data = playerCameraData, target = () => null != eggbotController && null != eggbotController.transform ? eggbotController.transform.position : Vector3.zero, origin = () => srcPos };
+			cinemaState = new CameraState { cameraMode = CameraMode.Cinema, data = cinemaCameraData, target = () => null != eggbotController && null != eggbotController.transform ? eggbotController.transform.position : Vector3.zero };
 
 			Func<IReadOnlyList<Vector3>> focusFunc = () =>
 			{
@@ -191,7 +194,7 @@ namespace ClassicTilestorm
 			if (null != eggbotController && null != ppController)
 				ppController.dofTarget = eggbotController.transform;
 
-			SetCameraMode(PreviewSettings.CurrentMode == PreviewMode.Editor ? CameraMode.Editor : PreviewSettings.CurrentMode == PreviewMode.Cinema ? CameraMode.Cinema : CameraMode.Follow);
+			SetCameraMode(PreviewSettings.CurrentMode == PreviewMode.Editor ? CameraMode.Editor : PreviewSettings.CurrentMode == PreviewMode.Cinema ? CameraMode.Cinema : playerState.cameraMode);
 		}
 
 		private void OnWaypointReached(int waypointIndex)
@@ -204,12 +207,10 @@ namespace ClassicTilestorm
 			if (waypoint.vSrc == null || !waypoint.vSrc.IsValidVector())
 			{
 				playerState.target = () => null != eggbotController && null != eggbotController.transform ? eggbotController.transform.position : Vector3.zero;
+				playerState.cameraMode = CameraMode.Follow; // Update playerState.cameraMode instead of restoreMode
 
 				if (false == isPlayerMode)
-				{
-					restoreMode = CameraMode.Follow;
 					return;
-				}
 
 				SetCameraMode(CameraMode.Follow);
 				return;
@@ -220,12 +221,11 @@ namespace ClassicTilestorm
 
 			playerState.origin = () => origin;
 			playerState.target = () => target;
+			playerState.cameraMode = CameraMode.Preset; // Update playerState.cameraMode instead of restoreMode
 
 			if (false == isPlayerMode)
-			{
-				restoreMode = CameraMode.Preset;
 				return;
-			}
+
 			SetCameraMode(CameraMode.Preset);
 			gestureController.enabled = true;
 		}
@@ -235,12 +235,11 @@ namespace ClassicTilestorm
 			if (null == eggbotController) return;
 
 			playerState.target = () => null != eggbotController && null != eggbotController.transform ? eggbotController.transform.position : Vector3.zero;
+			playerState.cameraMode = CameraMode.Follow; // Update playerState.cameraMode instead of restoreMode
 
 			if (false == isPlayerMode)
-			{
-				restoreMode = CameraMode.Follow;
 				return;
-			}
+
 			SetCameraMode(CameraMode.Follow);
 		}
 
