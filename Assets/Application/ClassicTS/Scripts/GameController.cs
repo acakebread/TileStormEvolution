@@ -109,24 +109,56 @@ namespace ClassicTilestorm
 		{
 			if (null == cameraController || null == cameraController.cameraSystem) return;
 
-			bool startCinema = PreviewSettings.CinemaMode ? cameraController.cameraSystem.HasCompleted : PreviewSettings.CinemaMode && Time.time - timeStart > CinemaTimeoutDuration;
+			bool startCinema = PreviewSettings.CurrentMode == PreviewMode.Cinema && (cameraController.cameraSystem.HasCompleted || Time.time - timeStart > CinemaTimeoutDuration);
 			if (!startCinema) return;
 
 			timeStart = Time.time;
 			SetCameraMode(CameraMode.Cinema);
 		}
 
-		public void ToggleCinemma(bool force = false)
+		public void SetPreviewMode(PreviewMode mode)
 		{
-			PreviewSettings.CinemaMode = !PreviewSettings.CinemaMode;
-			if (PreviewSettings.CinemaMode) timeStart = force ? Time.time - CinemaTimeoutDuration : Time.time;
-			SetCameraMode(PreviewSettings.CinemaMode ? CameraMode.Cinema : restoreMode);
+			PreviewSettings.CurrentMode = mode;
+			CameraMode camMode = mode switch
+			{
+				PreviewMode.Editor => CameraMode.Editor,
+				PreviewMode.Cinema => CameraMode.Cinema,
+				_ => CameraMode.Follow
+			};
+			if (mode == PreviewMode.Cinema)
+			{
+				timeStart = Time.time - CinemaTimeoutDuration;
+			}
+			SetCameraMode(camMode);
+		}
+
+		public void ToggleCinema(bool force = false)
+		{
+			if (PreviewSettings.CurrentMode == PreviewMode.Cinema)
+			{
+				PreviewSettings.CurrentMode = PreviewMode.Player;
+				SetCameraMode(restoreMode);
+			}
+			else
+			{
+				PreviewSettings.CurrentMode = PreviewMode.Cinema;
+				timeStart = force ? Time.time - CinemaTimeoutDuration : Time.time;
+				SetCameraMode(CameraMode.Cinema);
+			}
 		}
 
 		public void ToggleEditor()
 		{
-			PreviewSettings.EditorMode = !PreviewSettings.EditorMode;
-			SetCameraMode(PreviewSettings.EditorMode ? CameraMode.Editor : restoreMode);
+			if (PreviewSettings.CurrentMode == PreviewMode.Editor)
+			{
+				PreviewSettings.CurrentMode = PreviewMode.Player;
+				SetCameraMode(restoreMode);
+			}
+			else
+			{
+				PreviewSettings.CurrentMode = PreviewMode.Editor;
+				SetCameraMode(CameraMode.Editor);
+			}
 		}
 
 		public void LoadMap(string mapName = null)
@@ -205,7 +237,7 @@ namespace ClassicTilestorm
 			if (null != eggbotController && null != ppController)
 				ppController.dofTarget = eggbotController.transform;
 
-			SetCameraMode(PreviewSettings.EditorMode ? CameraMode.Editor : CameraMode.Follow);
+			SetCameraMode(PreviewSettings.CurrentMode == PreviewMode.Editor ? CameraMode.Editor : CameraMode.Follow);
 		}
 
 		private void OnWaypointReached(int waypointIndex)

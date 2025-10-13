@@ -11,12 +11,41 @@ namespace ClassicTilestorm
 		// basic animation system
 		private bool isGuiVisible = false;
 		private float hideTimer = 0f;
-		private Rect guiRect = new Rect(10, -100, 980, 40); // Adjusted width for new button
+		private Rect guiRect = new Rect(0, -100, Screen.width, 40); // Full width
 		private float targetY = -100; // Target Y position for animation
 		private bool isMouseOverGui = false;
 
 		private readonly float hideDelay = 3f; // 3 seconds before hiding
 		private readonly float animationSpeed = 300f; // Pixels per second for animation
+
+		// Button layout constants
+		private readonly float buttonWidth = 100f;
+		private readonly float buttonHeight = 30f;
+		private readonly float spacing = 10f;
+		private readonly float labelWidth = 50f; // Increased from 40f to prevent clipping
+		private readonly float panelGap = 5f; // Gap above and below buttons within panel
+		private readonly float buttonStartX = 10f; // Left margin for buttons
+		private readonly Color panelColor = new Color(0.2f, 0.2f, 0.4f, 0.75f);
+		private readonly Color selectedTextColor = Color.green;
+		private readonly Color unselectedTextColor = new Color(0.5f, 0.8f, 0.5f); // Dull green
+
+		private Texture2D panelTexture;
+
+		private void Awake()
+		{
+			panelTexture = MakeTex(1, 1, panelColor);
+		}
+
+		private Texture2D MakeTex(int width, int height, Color col)
+		{
+			Color[] pix = new Color[width * height];
+			for (int i = 0; i < pix.Length; i++)
+				pix[i] = col;
+			Texture2D result = new Texture2D(width, height);
+			result.SetPixels(pix);
+			result.Apply();
+			return result;
+		}
 
 		private void Update()
 		{
@@ -33,8 +62,8 @@ namespace ClassicTilestorm
 
 			if (isMouseNearTop || isMouseOverGui)
 			{
-				// Show GUI by setting target position to 10
-				targetY = 10;
+				// Show GUI by setting target position to panelGap (buttons start with gap from top)
+				targetY = panelGap;
 				isGuiVisible = true;
 				hideTimer = 0f; // Reset timer when mouse is near or over GUI
 			}
@@ -75,23 +104,87 @@ namespace ClassicTilestorm
 			// Only draw GUI if it's visible or animating
 			if (guiRect.y < -90 && !isGuiVisible) return; // Skip drawing if fully hidden
 
-			GUI.skin.label.fontSize = 24;
+			// Set styles
+			GUI.skin.button.fontSize = 16;
+			GUI.skin.label.fontSize = 16; // Adjusted to match buttons; previously no labels so no effect
+
+			Color originalColor = GUI.color;
 			GUI.color = new Color(0.75f, 0.75f, 1.0f);
 
-			// Draw buttons within the animated rect
-			if (GUI.Button(new Rect(guiRect.x + 000, guiRect.y, 100, 30), (PreviewSettings.EditorMode ? "Disable" : "Enable") + "  Editor")) gameController.ToggleEditor();
+			float currentX = buttonStartX;
+			float y = guiRect.y; // Buttons and label at animated y
 
-			if (GUI.Button(new Rect(guiRect.x + 110, guiRect.y, 100, 30), "Previous Level")) ChangeMap(-1);
+			// Full screen width panel background, solid bar filling the entire top region, animating with buttons
+			float panelHeight = buttonHeight + (2 * panelGap);
+			float panelY = y - panelGap; // Panel starts panelGap above buttons
+			GUIStyle panelStyle = new GUIStyle(GUI.skin.box);
+			panelStyle.normal.background = panelTexture;
+			GUI.color = Color.white; // Ensure no tinting of the panel texture
+			GUI.Box(new Rect(0, panelY, Screen.width, panelHeight), GUIContent.none, panelStyle);
 
-			if (GUI.Button(new Rect(guiRect.x + 220, guiRect.y, 100, 30), "Next Level")) ChangeMap(1);
+			// Mode label (aligned with buttons, no offset, using custom style for vertical alignment)
+			GUIStyle labelStyle = new GUIStyle(GUI.skin.label);
+			labelStyle.alignment = TextAnchor.MiddleLeft;
+			labelStyle.normal.textColor = Color.green;
+			GUI.color = originalColor;
+			GUI.Label(new Rect(currentX, y, labelWidth, buttonHeight), "Mode:", labelStyle);
 
-			if (GUI.Button(new Rect(guiRect.x + 330, guiRect.y, 100, 30), "Reload")) ChangeMap(0);
+			// Advance for label
+			currentX += labelWidth + spacing;
 
-			if (GUI.Button(new Rect(guiRect.x + 440, guiRect.y, 100, 30), "Scramble")) gameController.mapManager.Scramble();
+			// Player button
+			bool isPlayerSelected = PreviewSettings.CurrentMode == PreviewMode.Player;
+			GUI.backgroundColor = isPlayerSelected ? Color.green : Color.gray;
+			GUI.color = isPlayerSelected ? selectedTextColor : unselectedTextColor;
+			if (GUI.Button(new Rect(currentX, y, buttonWidth, buttonHeight), "Player"))
+				gameController.SetPreviewMode(PreviewMode.Player);
+			GUI.color = originalColor;
+			GUI.backgroundColor = Color.white;
+			currentX += buttonWidth + spacing;
 
-			if (GUI.Button(new Rect(guiRect.x + 550, guiRect.y, 100, 30), "Solve")) gameController.mapManager.Solve();
+			// Cinema button
+			bool isCinemaSelected = PreviewSettings.CurrentMode == PreviewMode.Cinema;
+			GUI.backgroundColor = isCinemaSelected ? Color.green : Color.gray;
+			GUI.color = isCinemaSelected ? selectedTextColor : unselectedTextColor;
+			if (GUI.Button(new Rect(currentX, y, buttonWidth, buttonHeight), "Cinema"))
+				gameController.SetPreviewMode(PreviewMode.Cinema);
+			GUI.color = originalColor;
+			GUI.backgroundColor = Color.white;
+			currentX += buttonWidth + spacing;
 
-			if (GUI.Button(new Rect(guiRect.x + 660, guiRect.y, 140, 30), (PreviewSettings.CinemaMode ? "Disable" : "Enable") + " Cinematic")) gameController.ToggleCinemma(true);
+			// Editor button
+			bool isEditorSelected = PreviewSettings.CurrentMode == PreviewMode.Editor;
+			GUI.backgroundColor = isEditorSelected ? Color.green : Color.gray;
+			GUI.color = isEditorSelected ? selectedTextColor : unselectedTextColor;
+			if (GUI.Button(new Rect(currentX, y, buttonWidth, buttonHeight), "Editor"))
+				gameController.SetPreviewMode(PreviewMode.Editor);
+			GUI.color = originalColor;
+			GUI.backgroundColor = Color.white;
+			currentX += buttonWidth + spacing;
+
+			// End of mode section
+
+			currentX += 20;
+
+			// Navigation buttons
+			if (GUI.Button(new Rect(currentX, y, buttonWidth, buttonHeight), "<< Level")) ChangeMap(-1);
+			currentX += buttonWidth + spacing;
+
+			if (GUI.Button(new Rect(currentX, y, buttonWidth, buttonHeight), "Level >>")) ChangeMap(1);
+			currentX += buttonWidth + spacing;
+
+			if (GUI.Button(new Rect(currentX, y, buttonWidth, buttonHeight), "Reload")) ChangeMap(0);
+			currentX += buttonWidth + spacing;
+
+			if (GUI.Button(new Rect(currentX, y, buttonWidth, buttonHeight), "Scramble")) gameController.mapManager.Scramble();
+			currentX += buttonWidth + spacing;
+
+			if (GUI.Button(new Rect(currentX, y, buttonWidth, buttonHeight), "Solve")) gameController.mapManager.Solve();
+
+			// Update guiRect height if needed, but since full width, it's fine
+			guiRect.height = panelHeight; // Match panel height for mouse detection
+
+			GUI.color = originalColor;
 		}
 	}
 }
