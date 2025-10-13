@@ -132,6 +132,19 @@ namespace ClassicTilestorm
 			// Advance for label
 			currentX += labelWidth + spacing;
 
+			// Editor button
+			bool isEditorSelected = PreviewSettings.CurrentMode == PreviewMode.Editor;
+			GUI.backgroundColor = isEditorSelected ? Color.green : Color.gray;
+			GUI.color = isEditorSelected ? selectedTextColor : unselectedTextColor;
+			if (GUI.Button(new Rect(currentX, y, buttonWidth, buttonHeight), "Editor"))
+			{
+				PreviewSettings.CurrentMode = PreviewMode.Editor;
+				gameController.SetPreviewMode(PreviewMode.Editor);
+			}
+			GUI.color = originalColor;
+			GUI.backgroundColor = Color.white;
+			currentX += buttonWidth + spacing;          
+			
 			// Player button
 			bool isPlayerSelected = PreviewSettings.CurrentMode == PreviewMode.Player;
 			GUI.backgroundColor = isPlayerSelected ? Color.green : Color.gray;
@@ -153,19 +166,6 @@ namespace ClassicTilestorm
 			{
 				PreviewSettings.CurrentMode = PreviewMode.Cinema;
 				gameController.SetPreviewMode(PreviewMode.Cinema, true);
-			}
-			GUI.color = originalColor;
-			GUI.backgroundColor = Color.white;
-			currentX += buttonWidth + spacing;
-
-			// Editor button
-			bool isEditorSelected = PreviewSettings.CurrentMode == PreviewMode.Editor;
-			GUI.backgroundColor = isEditorSelected ? Color.green : Color.gray;
-			GUI.color = isEditorSelected ? selectedTextColor : unselectedTextColor;
-			if (GUI.Button(new Rect(currentX, y, buttonWidth, buttonHeight), "Editor"))
-			{
-				PreviewSettings.CurrentMode = PreviewMode.Editor;
-				gameController.SetPreviewMode(PreviewMode.Editor);
 			}
 			GUI.color = originalColor;
 			GUI.backgroundColor = Color.white;

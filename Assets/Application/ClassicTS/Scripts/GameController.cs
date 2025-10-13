@@ -25,6 +25,8 @@ namespace ClassicTilestorm
 		private CameraMode restoreMode = CameraMode.Absent;
 		private CameraMode currentMode = CameraMode.Absent;
 
+		private bool isPlayerMode => CameraMode.Preset == currentMode || CameraMode.Follow == currentMode;
+
 		private class CameraState
 		{
 			public CameraData data;
@@ -98,7 +100,8 @@ namespace ClassicTilestorm
 
 		public void SetPreviewMode(PreviewMode mode, bool forceCinema = false)
 		{
-			if (currentMode == CameraMode.Preset || currentMode == CameraMode.Follow) { restoreMode = currentMode; }
+			if (true == isPlayerMode) restoreMode = currentMode;
+
 			CameraMode camMode = mode switch
 			{
 				PreviewMode.Editor => CameraMode.Editor,
@@ -202,7 +205,7 @@ namespace ClassicTilestorm
 			{
 				playerState.target = () => null != eggbotController && null != eggbotController.transform ? eggbotController.transform.position : Vector3.zero;
 
-				if (CameraMode.Cinema == currentMode || CameraMode.Editor == currentMode)
+				if (false == isPlayerMode)
 				{
 					restoreMode = CameraMode.Follow;
 					return;
@@ -218,7 +221,7 @@ namespace ClassicTilestorm
 			playerState.origin = () => origin;
 			playerState.target = () => target;
 
-			if (CameraMode.Cinema == currentMode || CameraMode.Editor == currentMode)
+			if (false == isPlayerMode)
 			{
 				restoreMode = CameraMode.Preset;
 				return;
@@ -233,7 +236,7 @@ namespace ClassicTilestorm
 
 			playerState.target = () => null != eggbotController && null != eggbotController.transform ? eggbotController.transform.position : Vector3.zero;
 
-			if (CameraMode.Cinema == currentMode || CameraMode.Editor == currentMode)
+			if (false == isPlayerMode)
 			{
 				restoreMode = CameraMode.Follow;
 				return;
