@@ -61,25 +61,7 @@ namespace ClassicTilestorm
 
 		private void SetCameraMode(CameraMode value)
 		{
-			//if (null != cameraController.cameraSystem)
-			//{
-			//	var current_state = currentMode switch
-			//	{
-			//		CameraMode.Cinema => cinemaState,
-			//		CameraMode.Editor => editorState,
-			//		CameraMode.Preset => playerState,
-			//		CameraMode.Follow => playerState,
-			//		_ => null
-			//	};
-
-			//	if (null != current_state)
-			//	{
-			//		current_state.data = cameraController.cameraSystem.data;
-			//		//current_state.origin = cameraController.cameraSystem.originFunc;
-			//		//current_state.target = cameraController.cameraSystem.targetFunc;
-			//		//current_state.focusPoints = cameraController.cameraSystem.focusPointsFunc;
-			//	}
-			//}
+			currentMode = value;
 
 			var state = value switch
 			{
@@ -91,8 +73,6 @@ namespace ClassicTilestorm
 			};
 
 			cameraController.SetMode(value);
-			//restoreMode = currentMode;
-			currentMode = value;
 
 			if (null != state)
 			{
@@ -116,7 +96,7 @@ namespace ClassicTilestorm
 			SetCameraMode(CameraMode.Cinema);
 		}
 
-		public void SetPreviewMode(PreviewMode mode)
+		public void SetPreviewMode(PreviewMode mode, bool forceCinema = false)
 		{
 			if (currentMode == CameraMode.Preset || currentMode == CameraMode.Follow) { restoreMode = currentMode; }
 			PreviewSettings.CurrentMode = mode;
@@ -126,40 +106,11 @@ namespace ClassicTilestorm
 				PreviewMode.Cinema => CameraMode.Cinema,
 				_ => restoreMode
 			};
+
 			if (mode == PreviewMode.Cinema)
-			{
-				timeStart = Time.time - CinemaTimeoutDuration;
-			}
+				timeStart = forceCinema ? Time.time - CinemaTimeoutDuration : Time.time;
+
 			SetCameraMode(camMode);
-		}
-
-		public void ToggleCinema(bool force = false)
-		{
-			if (PreviewSettings.CurrentMode == PreviewMode.Cinema)
-			{
-				PreviewSettings.CurrentMode = PreviewMode.Player;
-				SetCameraMode(restoreMode);
-			}
-			else
-			{
-				PreviewSettings.CurrentMode = PreviewMode.Cinema;
-				timeStart = force ? Time.time - CinemaTimeoutDuration : Time.time;
-				SetCameraMode(CameraMode.Cinema);
-			}
-		}
-
-		public void ToggleEditor()
-		{
-			if (PreviewSettings.CurrentMode == PreviewMode.Editor)
-			{
-				PreviewSettings.CurrentMode = PreviewMode.Player;
-				SetCameraMode(restoreMode);
-			}
-			else
-			{
-				PreviewSettings.CurrentMode = PreviewMode.Editor;
-				SetCameraMode(CameraMode.Editor);
-			}
 		}
 
 		public void LoadMap(string mapName = null)
@@ -243,7 +194,6 @@ namespace ClassicTilestorm
 
 		private void OnWaypointReached(int waypointIndex)
 		{
-			//if (CameraMode.Cinema == currentMode || CameraMode.Editor == currentMode) return;
 			if (null == eggbotController) return;
 			if (null == mapManager || waypointIndex < 0 || waypointIndex >= mapManager.Waypoints.Length) return;
 			if (mapManager.Waypoints.Length - 1 == waypointIndex || waypointIndex == 0) return;
@@ -280,7 +230,6 @@ namespace ClassicTilestorm
 
 		private void OnPuzzleSolved(int waypointIndex)
 		{
-			//if (CameraMode.Cinema == currentMode || CameraMode.Editor == currentMode) return;
 			if (null == eggbotController) return;
 
 			playerState.target = () => null != eggbotController && null != eggbotController.transform ? eggbotController.transform.position : Vector3.zero;

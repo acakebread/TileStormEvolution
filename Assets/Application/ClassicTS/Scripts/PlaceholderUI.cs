@@ -147,7 +147,7 @@ namespace ClassicTilestorm
 			GUI.backgroundColor = isCinemaSelected ? Color.green : Color.gray;
 			GUI.color = isCinemaSelected ? selectedTextColor : unselectedTextColor;
 			if (GUI.Button(new Rect(currentX, y, buttonWidth, buttonHeight), "Cinema"))
-				gameController.SetPreviewMode(PreviewMode.Cinema);
+				gameController.SetPreviewMode(PreviewMode.Cinema, true);
 			GUI.color = originalColor;
 			GUI.backgroundColor = Color.white;
 			currentX += buttonWidth + spacing;
