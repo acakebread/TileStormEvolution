@@ -25,10 +25,12 @@ namespace MassiveHadronLtd
 
 		public void SetCameraMode(CameraMode mode, bool updateMode = true)
 		{
-			CameraState state = GetStateForMode(mode);
-			if (state == null) return;
+			var state = GetStateForMode(mode);
+			if (null == state) return;
+			state.cameraMode = mode;
+			if (!updateMode) return;
 
-			var system = mode switch
+			cameraSystem = mode switch
 			{
 				CameraMode.Editor => new CameraEditor(),
 				CameraMode.Static => new CameraStatic(),
@@ -38,19 +40,15 @@ namespace MassiveHadronLtd
 				_ => cameraSystem
 			};
 
-			if (system != null)
+			if (null != cameraSystem)
 			{
-				system.data = state.data;
-				system.originFunc = state.origin;
-				system.targetFunc = state.target;
-				system.focusPointsFunc = state.focusPoints;
+				cameraSystem.data = state.data;
+				cameraSystem.originFunc = state.origin;
+				cameraSystem.targetFunc = state.target;
+				cameraSystem.focusPointsFunc = state.focusPoints;
 			}
 
-			if (!updateMode) return;
-
-			cameraSystem = system;
 			currentMode = mode;
-
 			Initialise();
 		}
 
