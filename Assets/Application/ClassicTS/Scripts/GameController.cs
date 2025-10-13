@@ -46,9 +46,9 @@ namespace ClassicTilestorm
 
 		private void CinemaUpdate()
 		{
-			if (null == cameraController || null == cameraController.cameraSystem) return;
+			if (null == cameraController) return;
 
-			bool startCinema = cameraController.CurrentMode == CameraMode.Cinema && cameraController.cameraSystem.HasCompleted && Time.time - timeStart > CinemaTimeoutDuration;
+			bool startCinema = cameraController.CurrentMode == CameraMode.Cinema && cameraController.HasCompleted && Time.time - timeStart > CinemaTimeoutDuration;
 			if (!startCinema) return;
 
 			timeStart = Time.time;

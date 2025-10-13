@@ -8,11 +8,14 @@ namespace MassiveHadronLtd
 	[RequireComponent(typeof(Camera))]
 	public class CameraController : MonoBehaviour
 	{
-		[HideInInspector] public CameraBase cameraSystem = null;
+		private CameraBase cameraSystem = null;
 		private CameraMode currentMode = CameraMode.Absent;
 		private Dictionary<CameraMode, CameraState> stateLookup = new();
 
 		public CameraMode CurrentMode => currentMode;
+
+		// Public property to expose HasCompleted from cameraSystem
+		public bool HasCompleted => cameraSystem != null && cameraSystem.HasCompleted;
 
 		public void RegisterState(CameraState state, CameraMode[] modes)
 		{
