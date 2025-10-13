@@ -72,7 +72,7 @@ namespace ClassicTilestorm
 		public void LoadMap(string mapName = null)
 		{
 			if (string.IsNullOrEmpty(mapName)) mapName = mapManager != null ? PreviewSettings.LoadMapName : PlayerPrefs.GetString("LastLoadedMap", PreviewSettings.LoadMapName);
-			if (mapName == null) return;
+			if (null == mapName) return;
 
 			var currentMap = string.IsNullOrEmpty(mapName) ? DatabaseLoader.Maps.FirstOrDefault() : DatabaseLoader.Maps.FirstOrDefault(m => m.name == mapName);
 			if (null == currentMap)
