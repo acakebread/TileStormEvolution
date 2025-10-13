@@ -12,25 +12,35 @@ namespace MassiveHadronLtd
 
 		public CameraMode CurrentMode => currentMode;
 
-		public void SetCameraMode(CameraMode mode, CameraState state = null)
+		public CameraState editorState;
+		public CameraState playerState;
+		public CameraState cinemaState;
+
+		public void RegisterState(CameraState state)
 		{
-			currentMode = mode;
-			SetMode(mode);
-
-			if (state != null)
+			switch (state.cameraMode)
 			{
-				cameraSystem.data = state.data;
-				cameraSystem.originFunc = state.origin;
-				cameraSystem.targetFunc = state.target;
-				cameraSystem.focusPointsFunc = state.focusPoints;
-			}
+				case CameraMode.Editor:
+					editorState = state;
+					break;
 
-			Initialise();
+				case CameraMode.Follow:
+				case CameraMode.Preset:
+					playerState = state;
+					break;
+
+				case CameraMode.Cinema:
+					cinemaState = state;
+					break;
+			}
 		}
 
-		public void SetMode(CameraMode value)
+		public void SetCameraMode(CameraMode mode, bool updateMode = true)
 		{
-			cameraSystem = value switch
+			CameraState state = GetStateForMode(mode);
+			if (state == null) return;
+
+			var system = mode switch
 			{
 				CameraMode.Editor => new CameraEditor(),
 				CameraMode.Static => new CameraStatic(),
@@ -38,6 +48,32 @@ namespace MassiveHadronLtd
 				CameraMode.Follow => new CameraFollow(),
 				CameraMode.Cinema => new CameraPath(),
 				_ => cameraSystem
+			};
+
+			if (system != null)
+			{
+				system.data = state.data;
+				system.originFunc = state.origin;
+				system.targetFunc = state.target;
+				system.focusPointsFunc = state.focusPoints;
+			}
+
+			if (!updateMode) return;
+
+			cameraSystem = system;
+			currentMode = mode;
+
+			Initialise();
+		}
+
+		public CameraState GetStateForMode(CameraMode mode)
+		{
+			return mode switch
+			{
+				CameraMode.Editor => editorState,
+				CameraMode.Cinema => cinemaState,
+				CameraMode.Preset or CameraMode.Follow => playerState,
+				_ => null
 			};
 		}
 
