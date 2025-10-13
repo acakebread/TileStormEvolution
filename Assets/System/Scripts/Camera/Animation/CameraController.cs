@@ -12,9 +12,9 @@ namespace MassiveHadronLtd
 
 		public CameraMode CurrentMode => currentMode;
 
-		public CameraState editorState;
-		public CameraState playerState;
-		public CameraState cinemaState;
+		private CameraState editorState;
+		private CameraState playerState;
+		private CameraState cinemaState;
 
 		public void RegisterState(CameraState state)
 		{

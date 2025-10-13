@@ -118,11 +118,15 @@ namespace ClassicTilestorm
 				if (firstWaypoint.vDst != null) dstPos = firstWaypoint.vDst.ToVector3();
 			}
 
-			cameraController.RegisterState(new CameraState { cameraMode = CameraMode.Editor, data = new CameraData(cameraController.GetComponent<Camera>()) { origin = srcPos, target = dstPos } });
-			cameraController.RegisterState(new CameraState { cameraMode = CameraMode.Follow, data = new CameraData(cameraController.GetComponent<Camera>()) { origin = srcPos, target = dstPos }, target = () => eggbotController != null && eggbotController.transform != null ? eggbotController.transform.position : Vector3.zero, origin = () => srcPos });
-			cameraController.RegisterState(new CameraState { cameraMode = CameraMode.Cinema, data = new CameraData(cameraController.GetComponent<Camera>()) { origin = srcPos, target = dstPos }, target = () => eggbotController != null && eggbotController.transform != null ? eggbotController.transform.position : Vector3.zero });
+			var editorState = new CameraState { cameraMode = CameraMode.Editor, data = new CameraData(cameraController.GetComponent<Camera>()) { origin = srcPos, target = dstPos } };
+			var playerState = new CameraState { cameraMode = CameraMode.Follow, data = new CameraData(cameraController.GetComponent<Camera>()) { origin = srcPos, target = dstPos }, target = () => eggbotController != null && eggbotController.transform != null ? eggbotController.transform.position : Vector3.zero, origin = () => srcPos };
+			var cinemaState = new CameraState { cameraMode = CameraMode.Cinema, data = new CameraData(cameraController.GetComponent<Camera>()) { origin = srcPos, target = dstPos }, target = () => eggbotController != null && eggbotController.transform != null ? eggbotController.transform.position : Vector3.zero };
 
-			Func<IReadOnlyList<Vector3>> focusFunc = () =>
+			cameraController.RegisterState(editorState);
+			cameraController.RegisterState(playerState);
+			cameraController.RegisterState(cinemaState);
+
+			Func <IReadOnlyList<Vector3>> focusFunc = () =>
 			{
 				var waypoints = mapManager.Waypoints.Select(w => mapManager.TileWorldPosition(w.nTile)).ToList();
 				spatialSystem.SetPoints(waypoints);
@@ -137,7 +141,7 @@ namespace ClassicTilestorm
 				return spatialSystem.Points;
 			};
 
-			cameraController.cinemaState.focusPoints = () => focusFunc();
+			cinemaState.focusPoints = () => focusFunc();
 
 			var ppController = cameraController.GetComponentInChildren<PostProcessingCameraController>(true);
 			if (null != eggbotController && null != ppController)
