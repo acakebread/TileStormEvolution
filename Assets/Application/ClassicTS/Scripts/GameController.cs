@@ -60,13 +60,13 @@ namespace ClassicTilestorm
 			if (mode == PreviewMode.Cinema)
 				timeStart = Time.time - (forceCinema ? CinemaTimeoutDuration : 0);
 
-			cameraController.SetCameraMode(mode switch
+			cameraController.SetCameraMode(cameraController.GetStateForMode(mode switch
 			{
 				PreviewMode.Editor => CameraMode.Editor,
 				PreviewMode.Cinema => CameraMode.Cinema,
 				PreviewMode.Player => CameraMode.Preset,
 				_ => CameraMode.Absent
-			});
+			}).cameraMode);
 		}
 
 		public void LoadMap(string mapName = null)
@@ -116,13 +116,29 @@ namespace ClassicTilestorm
 				if (firstWaypoint.vDst != null) dstPos = firstWaypoint.vDst.ToVector3();
 			}
 
-			var editorState = new CameraState { cameraMode = CameraMode.Editor, data = new CameraData(cameraController.GetComponent<Camera>()) { origin = srcPos, target = dstPos } };
-			var playerState = new CameraState { cameraMode = CameraMode.Follow, data = new CameraData(cameraController.GetComponent<Camera>()) { origin = srcPos, target = dstPos }, target = () => eggbotController != null && eggbotController.transform != null ? eggbotController.transform.position : Vector3.zero, origin = () => srcPos };
-			var cinemaState = new CameraState { cameraMode = CameraMode.Cinema, data = new CameraData(cameraController.GetComponent<Camera>()) { origin = srcPos, target = dstPos }, target = () => eggbotController != null && eggbotController.transform != null ? eggbotController.transform.position : Vector3.zero };
+			// In LoadMap method, replace the state registration part
+			var editorState = new CameraState
+			{
+				cameraMode = CameraMode.Editor,
+				data = new CameraData(cameraController.GetComponent<Camera>()) { origin = srcPos, target = dstPos }
+			};
+			var playerState = new CameraState
+			{
+				cameraMode = CameraMode.Follow,
+				data = new CameraData(cameraController.GetComponent<Camera>()) { origin = srcPos, target = dstPos },
+				target = () => eggbotController != null && eggbotController.transform != null ? eggbotController.transform.position : Vector3.zero,
+				origin = () => srcPos
+			};
+			var cinemaState = new CameraState
+			{
+				cameraMode = CameraMode.Cinema,
+				data = new CameraData(cameraController.GetComponent<Camera>()) { origin = srcPos, target = dstPos },
+				target = () => eggbotController != null && eggbotController.transform != null ? eggbotController.transform.position : Vector3.zero
+			};
 
-			cameraController.RegisterState(editorState);
-			cameraController.RegisterState(playerState);
-			cameraController.RegisterState(cinemaState);
+			cameraController.RegisterState(editorState, new[] { CameraMode.Editor });
+			cameraController.RegisterState(playerState, new[] { CameraMode.Follow, CameraMode.Preset });
+			cameraController.RegisterState(cinemaState, new[] { CameraMode.Cinema });
 
 			Func <IReadOnlyList<Vector3>> focusFunc = () =>
 			{

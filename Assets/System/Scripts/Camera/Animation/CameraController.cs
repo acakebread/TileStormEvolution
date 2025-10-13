@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using System.Collections.Generic;
 
 namespace MassiveHadronLtd
 {
@@ -9,28 +10,14 @@ namespace MassiveHadronLtd
 	{
 		[HideInInspector] public CameraBase cameraSystem = null;
 		private CameraMode currentMode = CameraMode.Absent;
+		private Dictionary<CameraMode, CameraState> stateLookup = new Dictionary<CameraMode, CameraState>();
 
 		public CameraMode CurrentMode => currentMode;
 
-		private CameraState editorState;
-		private CameraState playerState;
-		private CameraState cinemaState;
-
-		public void RegisterState(CameraState state)
+		public void RegisterState(CameraState state, CameraMode[] modes)
 		{
-			switch (state.cameraMode)
-			{
-				case CameraMode.Editor:
-					editorState = state;
-					break;
-				case CameraMode.Follow:
-				case CameraMode.Preset:
-					playerState = state;
-					break;
-				case CameraMode.Cinema:
-					cinemaState = state;
-					break;
-			}
+			foreach (var mode in modes)
+				stateLookup[mode] = state;
 		}
 
 		public void SetCameraMode(CameraMode mode, bool updateMode = true)
@@ -64,16 +51,7 @@ namespace MassiveHadronLtd
 			Initialise();
 		}
 
-		public CameraState GetStateForMode(CameraMode mode)
-		{
-			return mode switch
-			{
-				CameraMode.Editor => editorState,
-				CameraMode.Cinema => cinemaState,
-				CameraMode.Preset or CameraMode.Follow => playerState,
-				_ => null
-			};
-		}
+		public CameraState GetStateForMode(CameraMode mode) => stateLookup.TryGetValue(mode, out var state) ? state : null;
 
 		public void Initialise() => cameraSystem?.Start();
 
