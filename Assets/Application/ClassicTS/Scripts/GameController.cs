@@ -20,8 +20,6 @@ namespace ClassicTilestorm
 
 		private CameraController cameraController;
 
-		private bool isPlayerMode => CameraMode.Preset == cameraController.CurrentMode || CameraMode.Follow == cameraController.CurrentMode;
-
 		private void Awake()
 		{
 			gameObject.AddComponent<PlaceholderUI>();
@@ -48,7 +46,7 @@ namespace ClassicTilestorm
 		{
 			if (null == cameraController) return;
 
-			bool startCinema = cameraController.CurrentMode == CameraMode.Cinema && cameraController.HasCompleted && Time.time - timeStart > CinemaTimeoutDuration;
+			bool startCinema = PreviewMode.Cinema == PreviewSettings.CurrentMode && cameraController.HasCompleted && Time.time - timeStart > CinemaTimeoutDuration;
 			if (!startCinema) return;
 
 			timeStart = Time.time;
@@ -161,7 +159,7 @@ namespace ClassicTilestorm
 			if (null != eggbotController && null != ppController)
 				ppController.dofTarget = eggbotController.transform;
 
-			CameraMode initialMode = PreviewSettings.CurrentMode switch
+			var initialMode = PreviewSettings.CurrentMode switch
 			{
 				PreviewMode.Editor => CameraMode.Editor,
 				PreviewMode.Cinema => CameraMode.Cinema,
@@ -179,33 +177,31 @@ namespace ClassicTilestorm
 			var waypoint = mapManager.Waypoints[waypointIndex];
 			if (null == waypoint.vSrc || !waypoint.vSrc.IsValidVector())
 			{
-				cameraController.SetCameraMode(CameraMode.Follow, isPlayerMode);
+				cameraController.SetCameraMode(CameraMode.Follow, true);
 				return;
 			}
 
 			var origin = waypoint.vSrc.IsValidVector() ? waypoint.vSrc.ToVector3() : new Vector3(0f, 14f, -14f);
 			var target = waypoint.vDst != null && waypoint.vDst.IsValidVector() ? waypoint.vDst.ToVector3() : mapManager.TileWorldPosition(waypoint.nTile);
 
-			// Update playerState indirectly via CameraController
-			CameraState playerState = cameraController.GetStateForMode(CameraMode.Preset);
+			var playerState = cameraController.GetStateForMode(CameraMode.Preset);// Update playerState indirectly via CameraController
 			playerState.origin = () => origin;
 			playerState.target = () => target;
 			playerState.cameraMode = CameraMode.Preset;
 
-			cameraController.SetCameraMode(CameraMode.Preset, isPlayerMode);
-			gestureController.enabled = isPlayerMode;
+			cameraController.SetCameraMode(CameraMode.Preset, true);
+			gestureController.enabled = PreviewMode.Player == PreviewSettings.CurrentMode;
 		}
 
 		private void OnPuzzleSolved(int waypointIndex)
 		{
 			if (null == eggbotController) return;
 
-			// Update playerState indirectly via CameraController
-			CameraState playerState = cameraController.GetStateForMode(CameraMode.Follow);
+			var playerState = cameraController.GetStateForMode(CameraMode.Follow);// Update playerState indirectly via CameraController
 			playerState.target = () => eggbotController != null && eggbotController.transform != null ? eggbotController.transform.position : Vector3.zero;
 			playerState.cameraMode = CameraMode.Follow;
 
-			cameraController.SetCameraMode(CameraMode.Follow, isPlayerMode);
+			cameraController.SetCameraMode(CameraMode.Follow, true);
 		}
 
 		private void OnLevelCompleted() { }

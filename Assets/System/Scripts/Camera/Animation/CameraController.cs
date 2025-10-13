@@ -12,9 +12,6 @@ namespace MassiveHadronLtd
 		private CameraMode currentMode = CameraMode.Absent;
 		private Dictionary<CameraMode, CameraState> stateLookup = new();
 
-		public CameraMode CurrentMode => currentMode;
-
-		// Public property to expose HasCompleted from cameraSystem
 		public bool HasCompleted => cameraSystem != null && cameraSystem.HasCompleted;
 
 		public void RegisterState(CameraState state, CameraMode[] modes)
@@ -23,12 +20,16 @@ namespace MassiveHadronLtd
 				stateLookup[mode] = state;
 		}
 
-		public void SetCameraMode(CameraMode mode, bool updateMode = true)
+		public void SetCameraMode(CameraMode mode, bool background = false)
 		{
 			var state = GetStateForMode(mode);
 			if (null == state) return;
 			state.cameraMode = mode;
-			if (!updateMode) return;
+			if (background)
+			{
+				if (mode != GetStateForMode(currentMode).cameraMode)
+					return;// if current state is not the same as 'mode state' then exit
+			}
 
 			cameraSystem = mode switch
 			{
@@ -54,7 +55,7 @@ namespace MassiveHadronLtd
 
 		public CameraState GetStateForMode(CameraMode mode) => stateLookup.TryGetValue(mode, out var state) ? state : null;
 
-		public void Initialise() => cameraSystem?.Start();
+		private void Initialise() => cameraSystem?.Start();
 
 		private void Update() => cameraSystem?.Update();
 	}
