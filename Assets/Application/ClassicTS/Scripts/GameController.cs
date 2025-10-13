@@ -188,7 +188,7 @@ namespace ClassicTilestorm
 			if (null != eggbotController && null != ppController)
 				ppController.dofTarget = eggbotController.transform;
 
-			SetCameraMode(PreviewSettings.CurrentMode == PreviewMode.Editor ? CameraMode.Editor : CameraMode.Follow);
+			SetCameraMode(PreviewSettings.CurrentMode == PreviewMode.Editor ? CameraMode.Editor : PreviewSettings.CurrentMode == PreviewMode.Cinema ? CameraMode.Cinema : CameraMode.Follow);
 		}
 
 		private void OnWaypointReached(int waypointIndex)
