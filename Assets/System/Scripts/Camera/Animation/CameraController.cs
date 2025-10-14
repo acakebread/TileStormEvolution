@@ -46,5 +46,7 @@ namespace MassiveHadronLtd
 		}
 
 		private void Update() => cameraSystem?.Update();
+
+		private void OnApplicationFocus(bool hasFocus) => cameraSystem?.OnApplicationFocus(hasFocus);
 	}
 }

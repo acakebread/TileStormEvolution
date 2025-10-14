@@ -10,10 +10,8 @@ namespace MassiveHadronLtd
 
 		protected CameraState state;
 
-		// Constructor requiring CameraState
 		public CameraBase(CameraState _state) => state = _state ?? throw new ArgumentNullException(nameof(_state));
 
-		// Helper properties for easier access to CameraState properties
 		protected Vector3 origin => state.origin?.Invoke() ?? Vector3.zero;
 		protected Vector3 target => state.target?.Invoke() ?? Vector3.zero;
 		protected IReadOnlyList<Vector3> focusPoints => state.focusPoints?.Invoke() ?? Array.Empty<Vector3>();
@@ -21,7 +19,7 @@ namespace MassiveHadronLtd
 
 		public virtual void Start() { }
 		public virtual void Update() { }
-
+		public virtual void OnApplicationFocus(bool hasFocus) { }
 		public virtual bool HasCompleted => false;
 
 		protected virtual void ApplyProjection()
