@@ -14,7 +14,7 @@ namespace MassiveHadronLtd
 
 		protected Vector3 origin => state.origin?.Invoke() ?? Vector3.zero;
 		protected Vector3 target => state.target?.Invoke() ?? Vector3.zero;
-		protected IReadOnlyList<Vector3> focusPoints => state.focusPoints?.Invoke() ?? Array.Empty<Vector3>();
+		protected IReadOnlyList<Vector3> points => state.points?.Invoke() ?? Array.Empty<Vector3>();//focus points
 		protected CameraData data => state.data;
 
 		public virtual void Start() { }

@@ -25,7 +25,7 @@ namespace MassiveHadronLtd
 		public override void Start()
 		{
 			base.Start();
-			data.fieldOfView = 45f;
+			data.fieldOfView = 60f;
 			data.postProcessingEnabled = false;
 			data.camera.fieldOfView = data.fieldOfView;
 

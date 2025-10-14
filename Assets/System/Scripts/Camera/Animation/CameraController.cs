@@ -26,9 +26,9 @@ namespace MassiveHadronLtd
 		{
 			var state = GetStateForMode(mode);
 			if (null == state) return;
-			state.cameraMode = mode;
+			state.mode = mode;
 
-			if (background && mode != GetStateForMode(currentMode).cameraMode)
+			if (background && mode != GetStateForMode(currentMode).mode)
 				return;
 
 			cameraSystem = mode switch

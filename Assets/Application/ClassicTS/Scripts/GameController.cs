@@ -9,16 +9,22 @@ namespace ClassicTilestorm
 	[RequireComponent(typeof(GestureController))]
 	public class GameController : MonoBehaviour
 	{
-		public MapManager mapManager { get; private set; }
-		private GestureController gestureController;
+		private MapManager mapManager;
 		private EggbotController eggbotController;
+		private CameraController cameraController;
+
+		//gesture control system respects modes
+		private GestureController gestureController;
+		private bool gestureControllerEnabled = true;
+		private bool GestureControllerEnabled { set { gestureControllerEnabled = value; UpdateGestureControllerState(); } }
+		private void UpdateGestureControllerState() => gestureController.enabled = gestureControllerEnabled && (PreviewMode.Player == PreviewSettings.CurrentMode);
+
 		private SpatialBucketSystem spatialSystem;
 		private const int MaxFocusPoints = 50;
 		private const float MinDistanceForNewFocusPoint = 3f;
+
 		private const float CinemaTimeoutDuration = 5f;
 		private float timeStart;
-
-		private CameraController cameraController;
 
 		private void Awake()
 		{
@@ -64,7 +70,9 @@ namespace ClassicTilestorm
 				PreviewMode.Cinema => CameraMode.Cinema,
 				PreviewMode.Player => CameraMode.Preset,
 				_ => CameraMode.Absent
-			}).cameraMode);
+			}).mode);
+
+			UpdateGestureControllerState();
 		}
 
 		public void LoadMap(string mapName = null)
@@ -90,6 +98,7 @@ namespace ClassicTilestorm
 			mapManager.SetupWaypoints(currentMap);
 
 			gestureController.Initialise(mapManager);
+			GestureControllerEnabled = false;
 			timeStart = Time.time;
 
 			if (null != eggbotController) Destroy(eggbotController.gameObject);
@@ -117,19 +126,19 @@ namespace ClassicTilestorm
 			// In LoadMap method, replace the state registration part
 			var editorState = new CameraState
 			{
-				cameraMode = CameraMode.Editor,
+				mode = CameraMode.Editor,
 				data = new CameraData(cameraController.GetComponent<Camera>()) { origin = srcPos, target = dstPos }
 			};
 			var playerState = new CameraState
 			{
-				cameraMode = CameraMode.Follow,
+				mode = CameraMode.Follow,
 				data = new CameraData(cameraController.GetComponent<Camera>()) { origin = srcPos, target = dstPos },
 				target = () => eggbotController != null && eggbotController.transform != null ? eggbotController.transform.position : Vector3.zero,
 				origin = () => srcPos
 			};
 			var cinemaState = new CameraState
 			{
-				cameraMode = CameraMode.Cinema,
+				mode = CameraMode.Cinema,
 				data = new CameraData(cameraController.GetComponent<Camera>()) { origin = srcPos, target = dstPos },
 				target = () => eggbotController != null && eggbotController.transform != null ? eggbotController.transform.position : Vector3.zero
 			};
@@ -153,7 +162,7 @@ namespace ClassicTilestorm
 				return spatialSystem.Points;
 			};
 
-			cinemaState.focusPoints = () => focusFunc();
+			cinemaState.points = () => focusFunc();
 
 			var ppController = cameraController.GetComponentInChildren<PostProcessingCameraController>(true);
 			if (null != eggbotController && null != ppController)
@@ -187,10 +196,18 @@ namespace ClassicTilestorm
 			var playerState = cameraController.GetStateForMode(CameraMode.Preset);// Update playerState indirectly via CameraController
 			playerState.origin = () => origin;
 			playerState.target = () => target;
-			playerState.cameraMode = CameraMode.Preset;
+			playerState.mode = CameraMode.Preset;
 
+			GestureControllerEnabled = true;
 			cameraController.SetCameraMode(CameraMode.Preset, true);
-			gestureController.enabled = PreviewMode.Player == PreviewSettings.CurrentMode;
+		}
+
+		public void Scramble() => mapManager.Scramble();
+
+		public void Solve()
+		{
+			mapManager.Solve();
+			GestureControllerEnabled = false;
 		}
 
 		private void OnPuzzleSolved(int waypointIndex)
@@ -199,7 +216,7 @@ namespace ClassicTilestorm
 
 			var playerState = cameraController.GetStateForMode(CameraMode.Follow);// Update playerState indirectly via CameraController
 			playerState.target = () => eggbotController != null && eggbotController.transform != null ? eggbotController.transform.position : Vector3.zero;
-			playerState.cameraMode = CameraMode.Follow;
+			playerState.mode = CameraMode.Follow;
 
 			cameraController.SetCameraMode(CameraMode.Follow, true);
 		}
@@ -209,7 +226,7 @@ namespace ClassicTilestorm
 		private void CheckDisableDrag(IMapManager imap)
 		{
 			if (null != eggbotController && eggbotController.NavDirection(imap) != 0)
-				gestureController.enabled = false;
+				GestureControllerEnabled = false;
 		}
 
 		private void OnDestroy()

@@ -228,10 +228,10 @@ namespace ClassicTilestorm
 			if (GUI.Button(new Rect(currentX, y, buttonWidth, buttonHeight), "Reload")) ChangeMap(0);
 			currentX += buttonWidth + spacing;
 
-			if (GUI.Button(new Rect(currentX, y, buttonWidth, buttonHeight), "Scramble")) gameController.mapManager.Scramble();
+			if (GUI.Button(new Rect(currentX, y, buttonWidth, buttonHeight), "Scramble")) gameController.Scramble();
 			currentX += buttonWidth + spacing;
 
-			if (GUI.Button(new Rect(currentX, y, buttonWidth, buttonHeight), "Solve")) gameController.mapManager.Solve();
+			if (GUI.Button(new Rect(currentX, y, buttonWidth, buttonHeight), "Solve")) gameController.Solve();
 
 			guiRect.height = panelHeight;
 

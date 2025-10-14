@@ -45,7 +45,7 @@ namespace MassiveHadronLtd
 		protected virtual void InitializeCinemaSequence()
 		{
 			sequenceTimer = pauseTimer = 0f;
-			sequenceDuration = DefaultSequenceDuration + UnityEngine.Random.Range(-2f, 2f);
+			sequenceDuration = DefaultSequenceDuration + Random.Range(-2f, 2f);
 			sequenceTimer = sequenceDuration;
 			pauseTimer = DefaultPauseDuration;
 			lastTarget = nextTarget = this.target; // Use CameraBase.target property
@@ -75,7 +75,7 @@ namespace MassiveHadronLtd
 			}
 
 			var targetPosition = this.target; // Use CameraBase.target property
-			var _focusPoints = this.focusPoints; // Use CameraBase.focusPoints property
+			var _focusPoints = this.points; // Use CameraBase.points property (focus points)
 
 			sequenceDuration = DefaultSequenceDuration + Random.Range(-2f, 2f);
 			sequenceTimer = sequenceDuration;
