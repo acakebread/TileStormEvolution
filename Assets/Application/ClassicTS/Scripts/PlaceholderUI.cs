@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Linq;
+using UnityEngine.UI; // For potential future uGUI, but keeping IMGUI for now
 
 namespace ClassicTilestorm
 {
@@ -29,11 +30,21 @@ namespace ClassicTilestorm
 		private readonly Color selectedTextColor = Color.green;
 		private readonly Color unselectedTextColor = new Color(0.5f, 0.8f, 0.5f); // Dull green
 
+		// Custom mode button colors
+		private readonly Color modeUnselectedBg = new Color(0.1f, 0.3f, 0.1f); // Muted green (user-updated)
+		private readonly Color modeSelectedBg = new Color(0.4f, 0.4f, 0.15f); // Dull yellow (user-updated)
+
+		// Textures for custom button backgrounds
+		private Texture2D unselectedButtonTex;
+		private Texture2D selectedButtonTex;
+
 		private Texture2D panelTexture;
 
 		private void Awake()
 		{
 			panelTexture = MakeTex(1, 1, panelColor);
+			unselectedButtonTex = MakeTex(1, 1, modeUnselectedBg);
+			selectedButtonTex = MakeTex(1, 1, modeSelectedBg);
 		}
 
 		private Texture2D MakeTex(int width, int height, Color col)
@@ -81,7 +92,9 @@ namespace ClassicTilestorm
 
 			// Animate the GUI position
 			var currentY = guiRect.y;
-			var newY = Mathf.MoveTowards(currentY, targetY, animationSpeed * Time.deltaTime);
+			var newY = Mathf.MoveTowards(currentY, targetY
+
+, animationSpeed * Time.deltaTime);
 			guiRect.y = newY;
 		}
 
@@ -106,76 +119,106 @@ namespace ClassicTilestorm
 
 			// Set styles
 			GUI.skin.button.fontSize = 16;
-			GUI.skin.label.fontSize = 16; // Adjusted to match buttons; previously no labels so no effect
+			GUI.skin.label.fontSize = 16;
 
 			Color originalColor = GUI.color;
+			Color originalBgColor = GUI.backgroundColor;
 			GUI.color = new Color(0.75f, 0.75f, 1.0f);
 
 			float currentX = buttonStartX;
 			float y = guiRect.y; // Buttons and label at animated y
 
-			// Full screen width panel background, solid bar filling the entire top region, animating with buttons
+			// Full screen width panel background
 			float panelHeight = buttonHeight + (2 * panelGap);
-			float panelY = y - panelGap; // Panel starts panelGap above buttons
+			float panelY = y - panelGap;
 			GUIStyle panelStyle = new GUIStyle(GUI.skin.box);
 			panelStyle.normal.background = panelTexture;
-			GUI.color = Color.white; // Ensure no tinting of the panel texture
+			GUI.color = Color.white;
 			GUI.Box(new Rect(0, panelY, Screen.width, panelHeight), GUIContent.none, panelStyle);
 
-			// Mode label (aligned with buttons, no offset, using custom style for vertical alignment)
+			// Mode label
 			GUIStyle labelStyle = new GUIStyle(GUI.skin.label);
 			labelStyle.alignment = TextAnchor.MiddleLeft;
 			labelStyle.normal.textColor = Color.green;
 			GUI.color = originalColor;
 			GUI.Label(new Rect(currentX, y, labelWidth, buttonHeight), "Mode:", labelStyle);
 
-			// Advance for label
 			currentX += labelWidth + spacing;
+
+			// Create a custom GUIStyle for mode buttons (radio-button behavior)
+			GUIStyle modeButtonStyle = new GUIStyle(GUI.skin.button);
+			modeButtonStyle.fontSize = 16;
+
+			// Key: We'll configure per-button to avoid hover changes
 
 			// Editor button
 			bool isEditorSelected = PreviewSettings.CurrentMode == PreviewMode.Editor;
-			GUI.backgroundColor = isEditorSelected ? Color.green : Color.gray;
-			GUI.color = isEditorSelected ? selectedTextColor : unselectedTextColor;
-			if (GUI.Button(new Rect(currentX, y, buttonWidth, buttonHeight), "Editor"))
+
+			// Set normal (base state)
+			modeButtonStyle.normal.background = isEditorSelected ? selectedButtonTex : unselectedButtonTex;
+			modeButtonStyle.normal.textColor = isEditorSelected ? selectedTextColor : unselectedTextColor;
+
+			// Force all states to match normal (no hover/change)
+			CopyStyleState(modeButtonStyle.normal, modeButtonStyle.hover);
+			CopyStyleState(modeButtonStyle.normal, modeButtonStyle.active);
+			CopyStyleState(modeButtonStyle.normal, modeButtonStyle.focused);
+			CopyStyleState(modeButtonStyle.normal, modeButtonStyle.onNormal);
+			CopyStyleState(modeButtonStyle.normal, modeButtonStyle.onHover);
+			CopyStyleState(modeButtonStyle.normal, modeButtonStyle.onActive);
+
+			if (GUI.Button(new Rect(currentX, y, buttonWidth, buttonHeight), "Editor", modeButtonStyle))
 			{
 				PreviewSettings.CurrentMode = PreviewMode.Editor;
 				gameController.SetPreviewMode(PreviewMode.Editor);
 			}
-			GUI.color = originalColor;
-			GUI.backgroundColor = Color.white;
-			currentX += buttonWidth + spacing;          
-			
+			currentX += buttonWidth + spacing;
+
 			// Player button
 			bool isPlayerSelected = PreviewSettings.CurrentMode == PreviewMode.Player;
-			GUI.backgroundColor = isPlayerSelected ? Color.green : Color.gray;
-			GUI.color = isPlayerSelected ? selectedTextColor : unselectedTextColor;
-			if (GUI.Button(new Rect(currentX, y, buttonWidth, buttonHeight), "Player"))
+			modeButtonStyle.normal.background = isPlayerSelected ? selectedButtonTex : unselectedButtonTex;
+			modeButtonStyle.normal.textColor = isPlayerSelected ? selectedTextColor : unselectedTextColor;
+
+			CopyStyleState(modeButtonStyle.normal, modeButtonStyle.hover);
+			CopyStyleState(modeButtonStyle.normal, modeButtonStyle.active);
+			CopyStyleState(modeButtonStyle.normal, modeButtonStyle.focused);
+			CopyStyleState(modeButtonStyle.normal, modeButtonStyle.onNormal);
+			CopyStyleState(modeButtonStyle.normal, modeButtonStyle.onHover);
+			CopyStyleState(modeButtonStyle.normal, modeButtonStyle.onActive);
+
+			if (GUI.Button(new Rect(currentX, y, buttonWidth, buttonHeight), "Player", modeButtonStyle))
 			{
 				PreviewSettings.CurrentMode = PreviewMode.Player;
 				gameController.SetPreviewMode(PreviewMode.Player);
 			}
-			GUI.color = originalColor;
-			GUI.backgroundColor = Color.white;
 			currentX += buttonWidth + spacing;
 
 			// Cinema button
 			bool isCinemaSelected = PreviewSettings.CurrentMode == PreviewMode.Cinema;
-			GUI.backgroundColor = isCinemaSelected ? Color.green : Color.gray;
-			GUI.color = isCinemaSelected ? selectedTextColor : unselectedTextColor;
-			if (GUI.Button(new Rect(currentX, y, buttonWidth, buttonHeight), "Cinema"))
+			modeButtonStyle.normal.background = isCinemaSelected ? selectedButtonTex : unselectedButtonTex;
+			modeButtonStyle.normal.textColor = isCinemaSelected ? selectedTextColor : unselectedTextColor;
+
+			CopyStyleState(modeButtonStyle.normal, modeButtonStyle.hover);
+			CopyStyleState(modeButtonStyle.normal, modeButtonStyle.active);
+			CopyStyleState(modeButtonStyle.normal, modeButtonStyle.focused);
+			CopyStyleState(modeButtonStyle.normal, modeButtonStyle.onNormal);
+			CopyStyleState(modeButtonStyle.normal, modeButtonStyle.onHover);
+			CopyStyleState(modeButtonStyle.normal, modeButtonStyle.onActive);
+
+			if (GUI.Button(new Rect(currentX, y, buttonWidth, buttonHeight), "Cinema", modeButtonStyle))
 			{
 				PreviewSettings.CurrentMode = PreviewMode.Cinema;
 				gameController.SetPreviewMode(PreviewMode.Cinema, true);
 			}
-			GUI.color = originalColor;
-			GUI.backgroundColor = Color.white;
 			currentX += buttonWidth + spacing;
 
-			// End of mode section
+			// Reset to default for navigation buttons
+			GUI.skin.button.normal.background = null;
+			GUI.color = originalColor;
+			GUI.backgroundColor = originalBgColor;
 
 			currentX += 20;
 
-			// Navigation buttons
+			// Navigation buttons (default style)
 			if (GUI.Button(new Rect(currentX, y, buttonWidth, buttonHeight), "<< Level")) ChangeMap(-1);
 			currentX += buttonWidth + spacing;
 
@@ -190,10 +233,17 @@ namespace ClassicTilestorm
 
 			if (GUI.Button(new Rect(currentX, y, buttonWidth, buttonHeight), "Solve")) gameController.mapManager.Solve();
 
-			// Update guiRect height if needed, but since full width, it's fine
-			guiRect.height = panelHeight; // Match panel height for mouse detection
+			guiRect.height = panelHeight;
 
 			GUI.color = originalColor;
+			GUI.backgroundColor = originalBgColor;
+		}
+
+		// Helper to copy GUIStyleState (background and textColor)
+		private void CopyStyleState(GUIStyleState source, GUIStyleState target)
+		{
+			target.background = source.background;
+			target.textColor = source.textColor;
 		}
 	}
 }
