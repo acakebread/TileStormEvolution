@@ -10,7 +10,7 @@ namespace MassiveHadronLtd
 		private bool dragging;
 		private bool skipNextScroll;
 		private Transform cameraTransform;
-		private bool isDraggingWithBothMouseButtons; // For LMB + RMB plane dragging
+		private bool isDraggingWithLeftMouse; // For LMB plane dragging
 		private Vector2 dragStartMousePosition; // Screen-space mouse position at drag start
 		private Plane dragPlane;
 		private GameObject selectedObject; // Currently selected object
@@ -38,7 +38,7 @@ namespace MassiveHadronLtd
 			pitch = cameraTransform.eulerAngles.x;
 			dragging = false;
 			skipNextScroll = false;
-			isDraggingWithBothMouseButtons = false;
+			isDraggingWithLeftMouse = false;
 			selectedObject = null;
 			selectionMarker = null;
 
@@ -63,34 +63,33 @@ namespace MassiveHadronLtd
 				yaw = cameraTransform.eulerAngles.y;
 				pitch = cameraTransform.eulerAngles.x;
 
-				// Handle LMB down for selection
+				// Handle LMB down for selection or dragging
 				if (Input.GetMouseButtonDown(0))
 				{
 					Ray ray = data.camera.ScreenPointToRay(Input.mousePosition);
 					if (Physics.Raycast(ray, out RaycastHit hit))
 					{
+						// Object selected: highlight only
 						selectedObject = hit.transform.gameObject;
-						CreateSelectionMarker(hit.point);
-						Debug.Log($"Selected Object: {selectedObject.name}, Position: {hit.point}");
+						//CreateSelectionMarker(hit.point);
+						// Set drag plane to hit point height for future use
+						dragPlane = new Plane(Vector3.up, new Vector3(0f, hit.point.y, 0f));
 					}
 					else
 					{
+						// No object selected: start plane dragging
 						selectedObject = null;
 						DestroySelectionMarker();
-						Debug.Log("No object selected");
-					}
-				}
-
-				// Handle LMB + RMB for plane dragging
-				if (Input.GetMouseButton(0) && Input.GetMouseButton(1))
-				{
-					isDraggingWithBothMouseButtons = true;
-					dragStartMousePosition = Input.mousePosition;
-					Ray ray = data.camera.ScreenPointToRay(Input.mousePosition);
-					if (Physics.Raycast(ray, out RaycastHit hit))
-						dragPlane = new Plane(Vector3.up, new Vector3(0f, hit.point.y, 0f));
-					else
+						isDraggingWithLeftMouse = true;
+						dragStartMousePosition = Input.mousePosition;
+						// Set drag plane to y = 0f or raycast hit
 						dragPlane = new Plane(Vector3.up, new Vector3(0f, 0f, 0f));
+						if (dragPlane.Raycast(ray, out float enter))
+						{
+							Vector3 hitPoint = ray.GetPoint(enter);
+							dragPlane = new Plane(Vector3.up, new Vector3(0f, hitPoint.y, 0f));
+						}
+					}
 				}
 			}
 
@@ -103,17 +102,16 @@ namespace MassiveHadronLtd
 				pointerY = Input.touches[0].deltaPosition.y * 0.05f;
 			}
 
-			// Handle camera rotation (for right mouse alone or touch dragging)
-			if (dragging && wasDragging && !isDraggingWithBothMouseButtons &&
-				(Input.touchCount > 0 || (Input.GetMouseButton(1) && !Input.GetMouseButton(0))))
+			// Handle camera rotation (for right mouse)
+			if (dragging && wasDragging && !isDraggingWithLeftMouse &&
+				(Input.touchCount > 0 || Input.GetMouseButton(1)))
 			{
 				yaw += lookSpeedH * pointerX;
 				pitch -= lookSpeedV * pointerY;
 				cameraTransform.eulerAngles = new Vector3(pitch, yaw, 0f);
 			}
-			// Handle plane-based dragging (for LMB + RMB)
-			else if (dragging && wasDragging && isDraggingWithBothMouseButtons &&
-					 Input.GetMouseButton(0) && Input.GetMouseButton(1))
+			// Handle plane-based dragging (for LMB, only if no object selected)
+			else if (dragging && wasDragging && isDraggingWithLeftMouse && Input.GetMouseButton(0) && selectedObject == null)
 			{
 				// Calculate screen-space delta
 				Vector2 delta = (Vector2)Input.mousePosition - dragStartMousePosition;
@@ -143,16 +141,12 @@ namespace MassiveHadronLtd
 				if (selectedObject != null)
 				{
 					selectedObject = null;
-					DestroySelectionMarker();
-					Debug.Log("Selection cleared");
+					//DestroySelectionMarker();
 				}
+				isDraggingWithLeftMouse = false;
 			}
 
 			// Stop dragging when both mouse buttons are released
-			if (!(Input.touchCount > 0 || (Input.GetMouseButton(0) && Input.GetMouseButton(1))))
-			{
-				isDraggingWithBothMouseButtons = false;
-			}
 			if (!(Input.touchCount > 0 || Input.GetMouseButton(0) || Input.GetMouseButton(1)))
 			{
 				dragging = false;
@@ -183,7 +177,6 @@ namespace MassiveHadronLtd
 				renderer.material.color = Color.red; // Distinct color for visibility
 			}
 			selectionMarker.name = "SelectionMarker";
-			Debug.Log($"Created marker at: {position}");
 		}
 
 		private void DestroySelectionMarker()
