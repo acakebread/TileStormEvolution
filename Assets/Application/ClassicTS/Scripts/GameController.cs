@@ -145,7 +145,7 @@ namespace ClassicTilestorm
 
 				focusFunc = () =>
 				{
-					if (eggbotController != null && eggbotController.transform != null)
+					if (null != eggbotController && null != eggbotController.transform)
 						spatialSystem.TryAddPoint(eggbotController.transform.position);
 					return spatialSystem.Points;
 				};

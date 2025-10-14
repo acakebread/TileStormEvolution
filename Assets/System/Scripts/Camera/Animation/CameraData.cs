@@ -4,9 +4,6 @@ namespace MassiveHadronLtd
 {
 	public class CameraData
 	{
-		public const float TargetFPS = 60f;
-		public const float DefaultSmoothingRate = 64f;
-
 		public Camera camera;
 		public Vector3 origin;
 		public Vector3 target;
@@ -25,9 +22,9 @@ namespace MassiveHadronLtd
 
 			origin = null != camera ? camera.transform.position : Vector3.zero;
 			target = origin + Vector3.forward;
-			fieldOfView = null != camera ? camera.fieldOfView : 60f;
+			fieldOfView = null != camera ? camera.fieldOfView : 60f;// Default Field of View
 			shake = 0f;
-			smoothing = DefaultSmoothingRate;
+			smoothing = 64f;// Default Smoothing Rate
 			postProcessingEnabled = true;
 		}
 

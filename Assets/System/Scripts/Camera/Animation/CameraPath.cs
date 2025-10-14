@@ -26,15 +26,14 @@ namespace MassiveHadronLtd
 			public Vector3 P2; // Dst
 		}
 
-		private Vector3 origin;
-		private Vector3 target;
+		private Vector3 localOrigin; // Renamed to avoid conflict with helper property
+		private Vector3 localTarget;
 
-		// === Shared cinema constants ===
+		protected const float DefaultSmoothingRate = 64f;
 		protected const float ProjectionSmoothingRate = 8f;
 		protected const float DefaultSequenceDuration = 8f;
 		protected const float DefaultPauseDuration = 1.5f;
 
-		// === Shared cinema state ===
 		protected Vector3 lastTarget = Vector3.zero;
 		protected Vector3 nextTarget = Vector3.zero;
 		protected float sequenceDuration = DefaultSequenceDuration;
@@ -47,34 +46,36 @@ namespace MassiveHadronLtd
 			sequenceDuration = DefaultSequenceDuration + UnityEngine.Random.Range(-2f, 2f);
 			sequenceTimer = sequenceDuration;
 			pauseTimer = DefaultPauseDuration;
-			lastTarget = nextTarget = targetFunc.Invoke();
+			lastTarget = nextTarget = target; // Use helper property 'target'
 		}
 
 		protected virtual void UpdateCinemaLerping()
 		{
-			var interpolate = SmoothingUtils.Smooth(0f, 1f, data.smoothing, Time.deltaTime, CameraData.TargetFPS);
-			data.origin = Vector3.Lerp(data.origin, origin, interpolate);
-			data.target = Vector3.Lerp(data.target, target, interpolate);
+			var interpolate = SmoothingUtils.Smooth(0f, 1f, data.smoothing, Time.deltaTime, TargetFPS);
+			data.origin = Vector3.Lerp(data.origin, localOrigin, interpolate);
+			data.target = Vector3.Lerp(data.target, localTarget, interpolate);
 		}
 
 		public override bool HasCompleted => sequenceTimer <= 0f && pauseTimer <= 0f;
 
+		public CameraPath(CameraState state) : base(state) { }
+
 		public override void Start()
 		{
 			base.Start();
-			data.smoothing = CameraData.DefaultSmoothingRate;
+			data.smoothing = DefaultSmoothingRate;
 			data.fieldOfView = 45f;
 			data.shake = 0f;
 			data.postProcessingEnabled = true;
 
-			if (null == data.camera)
+			if (data?.camera == null)
 			{
 				Debug.LogWarning("CameraPath.Awake: Missing camera or delegates");
 				return;
 			}
 
-			var targetPosition = targetFunc.Invoke();
-			var _focusPoints = focusPointsFunc?.Invoke();
+			var targetPosition = target; // Use helper property 'target'
+			var _focusPoints = focusPoints; // Use helper property 'focusPoints'
 
 			sequenceDuration = DefaultSequenceDuration + Random.Range(-2f, 2f);
 			sequenceTimer = sequenceDuration;
@@ -87,7 +88,7 @@ namespace MassiveHadronLtd
 
 			// Select start focus point
 			var startFocusPoint = targetPosition;
-			if (focusPointsFunc != null && _focusPoints.Count > 0)
+			if (_focusPoints.Count > 0)
 			{
 				var validFocusPoint = _focusPoints.Where(p =>
 					Vector2.Distance(new Vector2(p.x, p.z), new Vector2(targetPosition.x, targetPosition.z)) >= MinFocusPointDistanceFromPlayer).ToList();
@@ -95,13 +96,13 @@ namespace MassiveHadronLtd
 					startFocusPoint = validFocusPoint[Random.Range(0, validFocusPoint.Count)];
 			}
 
-			data.target = target = startFocusPoint + Vector3.up * VerticalOffset;
-			target = targetPosition + Vector3.up * VerticalOffset;
+			data.target = localTarget = startFocusPoint + Vector3.up * VerticalOffset;
+			localTarget = targetPosition + Vector3.up * VerticalOffset;
 
 			// Define lozenge
-			var targetPath = target - data.target;
+			var targetPath = localTarget - data.target;
 			var pathDir = targetPath.magnitude > 0.1f ? targetPath.normalized : Random.onUnitSphere;
-			var midPoint = (data.target + target) / 2f;
+			var midPoint = (data.target + localTarget) / 2f;
 			var perpendicular = new Vector3(-pathDir.z, 0f, pathDir.x).normalized;
 			var lozengeMajor = targetPath.magnitude + 2f * MinDistance;
 			var lozengeMinor = Mathf.Max(lozengeMajor * 0.66f, MinDistance * 2f);
@@ -109,10 +110,10 @@ namespace MassiveHadronLtd
 			// Generate camera points
 			var (src, dst) = SampleCameraPosition(midPoint, pathDir, perpendicular, lozengeMajor, lozengeMinor);
 			data.origin = src;
-			origin = dst;
+			localOrigin = dst;
 
 			data.origin = AdjustHeight(data.origin, data.target);
-			origin = AdjustHeight(origin, target);
+			localOrigin = AdjustHeight(localOrigin, localTarget);
 
 			// Initialize FOV
 			data.fieldOfView = FovMin;
@@ -123,101 +124,49 @@ namespace MassiveHadronLtd
 		{
 			base.Update();
 
-			var _target = targetFunc.Invoke();
-			var posDelta = _target - lastTarget;
-			lastTarget = _target;
-
+			localTarget = target; // Use helper property 'target'
 			sequenceTimer -= Time.deltaTime;
 			if (sequenceTimer > 0f)
 			{
-				nextTarget = SmoothingUtils.SmoothVector(nextTarget, _target + posDelta * 2f, ProjectionSmoothingRate, Time.deltaTime, CameraData.TargetFPS);
+				var posDelta = localTarget - lastTarget;
+				nextTarget = SmoothingUtils.SmoothVector(nextTarget, localTarget + posDelta * 2f, ProjectionSmoothingRate, Time.deltaTime, TargetFPS);
+				lastTarget = localTarget;
+
+				var easedSequenceTimer = SmoothingUtils.Ease(sequenceDuration > 0 ? 1f - Mathf.Clamp01(sequenceTimer / sequenceDuration) : 1f);
+				var t = easedSequenceTimer;
+				localOrigin = QuadraticBezier(bezierData.P0, bezierData.P1, bezierData.P2, t); // Use local Bezier calculation
+				data.fieldOfView = Mathf.Lerp(FovMin, currentFovMax, SmoothingUtils.EasePingPong(sequenceTimer / sequenceDuration));
 			}
 			else
 				pauseTimer -= Time.deltaTime;
 
-			if (sequenceTimer > 0f)
-			{
-				// Update target
-				var easedSequenceTimer = SmoothingUtils.Ease(sequenceDuration > 0 ? 1f - Mathf.Clamp01(sequenceTimer / sequenceDuration) : 1f);
-				target = Vector3.Lerp(data.target, nextTarget, easedSequenceTimer);
-
-				// Update Bezier P1 and P2 with player movement
-				bezierData.P1 += posDelta * 0.5f;
-				bezierData.P2 += posDelta;
-
-				// Update camera dest position and FOV
-				origin = EvaluateBezier(easedSequenceTimer);
-				data.fieldOfView = Mathf.Lerp(FovMin, currentFovMax, SmoothingUtils.EasePingPong(sequenceTimer / sequenceDuration));
-			}
-
-			// Update camera smoothing
-			data.smoothing = SmoothingUtils.Smooth(data.smoothing, SmoothingRate, sequenceDuration, Time.deltaTime, CameraData.TargetFPS);
+			data.smoothing = SmoothingUtils.Smooth(data.smoothing, SmoothingRate, sequenceDuration, Time.deltaTime, TargetFPS);
 
 			UpdateCinemaLerping();
 			ApplyProjection();
 		}
 
-		private Vector3 EvaluateBezier(float t) => QuadraticBezierPoint(t, bezierData.P0, bezierData.P1, bezierData.P2);
-
-		private Vector3 QuadraticBezierPoint(float t, Vector3 p0, Vector3 p1, Vector3 p2)
+		private Vector3 QuadraticBezier(Vector3 p0, Vector3 p1, Vector3 p2, float t)
 		{
-			var u = 1f - t;
-			var tt = t * t;
-			var uu = u * u;
-			return uu * p0 + 2f * u * t * p1 + tt * p2;
+			// Quadratic Bezier curve: B(t) = (1-t)^2 * P0 + 2 * (1-t) * t * P1 + t^2 * P2
+			float u = 1f - t;
+			float tt = t * t;
+			float uu = u * u;
+			return (uu * p0) + (2f * u * t * p1) + (tt * p2);
 		}
 
 		private (Vector3 src, Vector3 dst) SampleCameraPosition(Vector3 midPoint, Vector3 pathDir, Vector3 perpendicular, float lozengeMajor, float lozengeMinor)
 		{
 			var midPointXZ = new Vector2(midPoint.x, midPoint.z);
-			var targetXZ = new Vector2(target.x, target.z);
+			var (src, srcPerimeter, srcTangent1, srcTangent2, srcTheta, srcProjectionDistance) = GeneratePointOutsideLozenge(midPointXZ, pathDir, perpendicular, lozengeMajor, lozengeMinor);
+			var (dst, dstPerimeter, dstTangent1, dstTangent2, dstTheta, dstProjectionDistance) = GeneratePointOutsideLozenge(midPointXZ, pathDir, perpendicular, lozengeMajor, lozengeMinor);
 
-			// Generate points
-			var (src, perimeterPointSrc, tangentSrc1, tangentSrc2, thetaSrc, projectionDistanceSrc) = GeneratePointOutsideLozenge(midPointXZ, pathDir, perpendicular, lozengeMajor, lozengeMinor);
-			var (dst, perimeterPointDst, tangentDst1, tangentDst2, thetaDst, projectionDistanceDst) = GeneratePointOutsideLozenge(midPointXZ, pathDir, perpendicular, lozengeMajor, lozengeMinor);
-
-			// Check if points are on the same side
 			var srcXZ = new Vector2(src.x, src.z);
 			var dstXZ = new Vector2(dst.x, dst.z);
-			var v1 = srcXZ - midPointXZ;
-			var v2 = dstXZ - midPointXZ;
-			var dot = Vector2.Dot(v1, v2);
 
-			if (dot > 0)
-			{
-				Vector2 relativeDst = dstXZ - midPointXZ;
-				Vector2 flippedDst = midPointXZ - relativeDst;
-				dst = new Vector3(flippedDst.x, dst.y, flippedDst.y);
-				perimeterPointDst = MathEllipse.GetEllipsePoint(thetaDst, lozengeMajor, lozengeMinor, midPointXZ, pathDir, perpendicular);
-				var (newTangent1, newTangent2) = MathEllipse.ComputeTangentAtPoint(thetaDst, lozengeMajor, lozengeMinor, pathDir, perpendicular);
-				tangentDst1 = newTangent1;
-				tangentDst2 = newTangent2;
-				projectionDistanceDst = Vector2.Distance(midPointXZ, dstXZ) - Vector2.Distance(midPointXZ, perimeterPointDst);
-				dstXZ = new Vector2(dst.x, dst.z);
-			}
-
-			// Sort points so Dst is closer to target if SortDstNearerPlayer is true
-			if (SortDstNearerPlayer)
-			{
-				float srcDist = Vector2.Distance(srcXZ, targetXZ);
-				float dstDist = Vector2.Distance(dstXZ, targetXZ);
-				if (srcDist < dstDist)
-				{
-					(src, dst) = (dst, src);
-					(perimeterPointSrc, perimeterPointDst) = (perimeterPointDst, perimeterPointSrc);
-					(tangentSrc1, tangentDst1) = (tangentDst1, tangentSrc1);
-					(tangentSrc2, tangentDst2) = (tangentDst2, tangentSrc2);
-					(thetaSrc, thetaDst) = (thetaDst, thetaSrc);
-					(projectionDistanceSrc, projectionDistanceDst) = (projectionDistanceDst, projectionDistanceSrc);
-					(srcXZ, dstXZ) = (dstXZ, srcXZ);
-				}
-			}
-
-			// Compute tangent points
 			var (tangentPointSrc1, tangentPointSrc2) = MathEllipse.ComputeTangentPoints(src, midPointXZ, pathDir, perpendicular, lozengeMajor, lozengeMinor);
 			var (tangentPointDst1, tangentPointDst2) = MathEllipse.ComputeTangentPoints(dst, midPointXZ, pathDir, perpendicular, lozengeMajor, lozengeMinor);
 
-			// Compute control point
 			Vector3? controlPoint = null;
 
 			if (tangentPointSrc1.HasValue && tangentPointSrc2.HasValue && tangentPointDst1.HasValue && tangentPointDst2.HasValue)
@@ -252,13 +201,11 @@ namespace MassiveHadronLtd
 				}
 			}
 
-			// Fallback to midpoint
 			if (!controlPoint.HasValue)
 			{
 				controlPoint = (src + dst) / 2f;
 			}
 
-			// Create Bezier curve
 			bezierData = new BezierData { P0 = src, P1 = controlPoint.Value, P2 = dst };
 
 			return (src, dst);

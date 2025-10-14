@@ -20,42 +20,30 @@ namespace MassiveHadronLtd
 				stateLookup[mode] = state;
 		}
 
+		public CameraState GetStateForMode(CameraMode mode) => stateLookup.TryGetValue(mode, out var state) ? state : null;
+
 		public void SetCameraMode(CameraMode mode, bool background = false)
 		{
 			var state = GetStateForMode(mode);
 			if (null == state) return;
 			state.cameraMode = mode;
-			if (background)
-			{
-				if (mode != GetStateForMode(currentMode).cameraMode)
-					return;// if current state is not the same as 'mode state' then exit
-			}
+
+			if (background && mode != GetStateForMode(currentMode).cameraMode)
+				return;
 
 			cameraSystem = mode switch
 			{
-				CameraMode.Editor => new CameraEditor(),
-				CameraMode.Static => new CameraStatic(),
-				CameraMode.Preset => new CameraPreset(),
-				CameraMode.Follow => new CameraFollow(),
-				CameraMode.Cinema => new CameraPath(),
+				CameraMode.Editor => new CameraEditor(state),
+				CameraMode.Static => new CameraStatic(state),
+				CameraMode.Preset => new CameraPreset(state),
+				CameraMode.Follow => new CameraFollow(state),
+				CameraMode.Cinema => new CameraPath(state),
 				_ => cameraSystem
 			};
 
-			if (null != cameraSystem)
-			{
-				cameraSystem.data = state.data;
-				cameraSystem.originFunc = state.origin;
-				cameraSystem.targetFunc = state.target;
-				cameraSystem.focusPointsFunc = state.focusPoints;
-			}
-
 			currentMode = mode;
-			Initialise();
+			cameraSystem?.Start();
 		}
-
-		public CameraState GetStateForMode(CameraMode mode) => stateLookup.TryGetValue(mode, out var state) ? state : null;
-
-		private void Initialise() => cameraSystem?.Start();
 
 		private void Update() => cameraSystem?.Update();
 	}

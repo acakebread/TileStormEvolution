@@ -6,11 +6,18 @@ namespace MassiveHadronLtd
 {
 	public abstract class CameraBase
 	{
-		public CameraData data;
+		protected const float TargetFPS = 60f;
 
-		public Func<Vector3> originFunc;
-		public Func<Vector3> targetFunc;
-		public Func<IReadOnlyList<Vector3>> focusPointsFunc;
+		protected CameraState state;
+
+		// Constructor requiring CameraState
+		public CameraBase(CameraState _state) => state = _state ?? throw new ArgumentNullException(nameof(_state));
+
+		// Helper properties for easier access to CameraState properties
+		protected Vector3 origin => state.origin?.Invoke() ?? Vector3.zero;
+		protected Vector3 target => state.target?.Invoke() ?? Vector3.zero;
+		protected IReadOnlyList<Vector3> focusPoints => state.focusPoints?.Invoke() ?? Array.Empty<Vector3>();
+		protected CameraData data => state.data;
 
 		public virtual void Start() { }
 		public virtual void Update() { }
@@ -19,7 +26,7 @@ namespace MassiveHadronLtd
 
 		protected virtual void ApplyProjection()
 		{
-			if (null == data.camera) return;
+			if (data?.camera == null) return;
 			data.camera.transform.position = data.origin;
 			var direction = data.target - data.origin;
 			if (direction.sqrMagnitude > Mathf.Epsilon)

@@ -9,6 +9,8 @@ namespace MassiveHadronLtd
 		private const float IdealDistance = 14f;
 		private const float IdealDistanceHorizontalScale = 1.4f;
 
+		public CameraFollow(CameraState state) : base(state) { }
+
 		public override void Start()
 		{
 			base.Start();
@@ -19,10 +21,9 @@ namespace MassiveHadronLtd
 		public override void Update()
 		{
 			base.Update();
-			var target = targetFunc.Invoke();
-			data.smoothing = SmoothingUtils.Smooth(data.smoothing, SmoothingNa, SmoothingNb, Time.deltaTime, CameraData.TargetFPS);
-			var followLerp = SmoothingUtils.Smooth(0f, 1f, data.smoothing, Time.deltaTime, CameraData.TargetFPS);
-			data.target = Vector3.Lerp(data.target, target, followLerp);
+			data.smoothing = SmoothingUtils.Smooth(data.smoothing, SmoothingNa, SmoothingNb, Time.deltaTime, TargetFPS);
+			var followLerp = SmoothingUtils.Smooth(0f, 1f, data.smoothing, Time.deltaTime, TargetFPS);
+			data.target = Vector3.Lerp(data.target, target, followLerp); // Use helper property 'target'
 			var delta = data.target - data.origin;
 			var deltaHorizontal = (0f == delta.x && 0f == delta.z) ? Vector3.zero : new Vector3(delta.x, 0, delta.z).normalized;
 			var origin = data.target - deltaHorizontal * (IdealDistance * IdealDistanceHorizontalScale);

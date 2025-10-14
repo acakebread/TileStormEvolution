@@ -2,6 +2,8 @@ namespace MassiveHadronLtd
 {
 	public class CameraEditor : CameraBase
 	{
+		public CameraEditor(CameraState state) : base(state) { }
+
 		public override void Start()
 		{
 			base.Start();
