@@ -70,7 +70,7 @@ namespace MassiveHadronLtd
 		public override void Update()
 		{
 			base.Update();
-			localTarget = target; // Use helper property 'target'
+			localTarget = target + Vector3.up * VerticalOffset; // Use helper property 'target'
 			sequenceTimer -= Time.deltaTime;
 			if (sequenceTimer > 0f)
 			{
