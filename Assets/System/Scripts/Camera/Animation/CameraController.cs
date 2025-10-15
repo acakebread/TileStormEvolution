@@ -10,14 +10,12 @@ namespace MassiveHadronLtd
 		private CameraBase cameraSystem;
 		private CameraMode currentMode = CameraMode.Absent;
 		private Dictionary<CameraMode, CameraState> stateLookup = new();
-		private float cinemaTimeoutDuration = 5f;
-		private float cinemaTimer;
 		private Func<IReadOnlyList<Vector3>> getFocusPoints;
 		private Func<Vector3> getTargetPosition;
 
 		public bool HasCompleted => cameraSystem != null && cameraSystem.HasCompleted;
 
-		public void Initialize(
+		public void Initialise(
 			Vector3 initialSrcPos,
 			Vector3 initialDstPos,
 			Func<Vector3> targetPositionGetter,
@@ -28,22 +26,6 @@ namespace MassiveHadronLtd
 			getFocusPoints = focusPointsGetter ?? throw new ArgumentNullException(nameof(focusPointsGetter));
 			SetupCameraStates(initialSrcPos, initialDstPos);
 			SetCameraMode(initialMode);
-		}
-
-		public void ResetCinematicTimer()
-		{
-			if (currentMode == CameraMode.Cinema)
-			{
-				cinemaTimer = 0f;
-			}
-		}
-
-		public void UpdateCinematic()
-		{
-			if (currentMode != CameraMode.Cinema || !HasCompleted || Time.time - cinemaTimer <= cinemaTimeoutDuration) return;
-
-			cinemaTimer = Time.time;
-			SetCameraMode(CameraMode.Cinema);
 		}
 
 		public void UpdateCameraForPreset(CameraMode mode, Vector3 origin, Vector3 target)

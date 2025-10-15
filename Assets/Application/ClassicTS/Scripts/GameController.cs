@@ -11,11 +11,11 @@ namespace ClassicTilestorm
 		private EggbotController eggbotController;
 		private CameraController cameraController;
 		private GestureController gestureController;
-		private CameraStateProvider cameraStateProvider;
+		private CameraStateController cameraStateController;
 		private PostProcessingCameraController postProcessingController;
 		private bool gestureControllerEnabled = true;
 		private const float CinemaTimeoutDuration = 5f;
-		private float timeStart;
+		private float cinemaTimer;
 
 		private bool GestureControllerEnabled
 		{
@@ -26,7 +26,7 @@ namespace ClassicTilestorm
 		{
 			gameObject.AddComponent<PlaceholderUI>();
 			gestureController = GetComponent<GestureController>();
-			cameraStateProvider = gameObject.AddComponent<CameraStateProvider>();
+			cameraStateController = gameObject.AddComponent<TilestormCameraStateController>();
 			gestureController.OnMapUpdated += CheckDisableDrag;
 		}
 
@@ -44,14 +44,15 @@ namespace ClassicTilestorm
 
 		private void CinemaUpdate()
 		{
-			if (cameraController == null || PreviewMode.Cinema != PreviewSettings.CurrentMode || !cameraController.HasCompleted || Time.time - timeStart <= CinemaTimeoutDuration) return;
-			timeStart = Time.time;
+			if (cameraController == null || PreviewMode.Cinema != PreviewSettings.CurrentMode || !cameraController.HasCompleted || Time.time - cinemaTimer <= CinemaTimeoutDuration) return;
+			cinemaTimer = Time.time;
 			cameraController.SetCameraMode(CameraMode.Cinema);
 		}
 
 		public void SetPreviewMode(PreviewMode mode, bool forceCinema = false)
 		{
-			if (mode == PreviewMode.Cinema) timeStart = Time.time - (forceCinema ? CinemaTimeoutDuration : 0);
+			if (mode == PreviewMode.Cinema)
+				cinemaTimer = Time.time - (forceCinema ? CinemaTimeoutDuration : 0);
 			if (cameraController != null)
 			{
 				var cameraMode = mode switch
@@ -91,16 +92,20 @@ namespace ClassicTilestorm
 
 			gestureController.Initialise(mapManager);
 			GestureControllerEnabled = false;
-			timeStart = Time.time;
+			cinemaTimer = Time.time;
 
 			if (eggbotController != null) Destroy(eggbotController.gameObject);
 			eggbotController = EggbotController.Instantiate(currentMap.szEggbotCostume, transform);
-			if (eggbotController != null) eggbotController.Initialise(mapManager);
+			if (eggbotController != null)
+			{
+				eggbotController.Initialise(mapManager);
+				eggbotController.OnLevelCompleted += OnLevelCompleted;
+			}
 
 			cameraController = EnsureCameraController();
 			if (cameraController != null)
 			{
-				cameraStateProvider.Initialize(mapManager, eggbotController, cameraController);
+				((TilestormCameraStateController)cameraStateController).Initialise(mapManager, eggbotController, cameraController);
 				var initialMode = PreviewSettings.CurrentMode switch
 				{
 					PreviewMode.Editor => CameraMode.Editor,

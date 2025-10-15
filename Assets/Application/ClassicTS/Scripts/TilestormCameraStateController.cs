@@ -1,27 +1,25 @@
-using UnityEngine;
-using MassiveHadronLtd;
 using System;
-using System.Collections.Generic;
+using UnityEngine;
 using System.Linq;
+using MassiveHadronLtd;
+using System.Collections.Generic;
 
 namespace ClassicTilestorm
 {
-	public class CameraStateProvider : MonoBehaviour
+	public class TilestormCameraStateController : CameraStateController
 	{
 		private MapManager mapManager;
 		private EggbotController eggbotController;
-		private CameraController cameraController;
 		private SpatialBucketSystem spatialSystem;
 		private const int MaxFocusPoints = 50;
 		private const float MinDistanceForNewFocusPoint = 3f;
 
-		public void Initialize(MapManager map, EggbotController eggbot, CameraController camera)
+		public void Initialise(MapManager map, EggbotController eggbot, CameraController camera)
 		{
 			mapManager = map ?? throw new ArgumentNullException(nameof(map));
 			eggbotController = eggbot;
-			cameraController = camera ?? throw new ArgumentNullException(nameof(camera));
+			base.Initialise(camera);
 			spatialSystem = new SpatialBucketSystem(MinDistanceForNewFocusPoint, MaxFocusPoints);
-			SetupCameraStates();
 			if (eggbotController != null)
 			{
 				eggbotController.OnWaypointReached += HandleWaypointReached;
@@ -29,7 +27,7 @@ namespace ClassicTilestorm
 			}
 		}
 
-		public (Vector3 srcPos, Vector3 dstPos) GetInitialCameraPositions()
+		protected override (Vector3 srcPos, Vector3 dstPos) GetInitialCameraPositions()
 		{
 			if (mapManager == null)
 				return (new Vector3(0f, 14f, -14f), Vector3.zero);
@@ -47,15 +45,17 @@ namespace ClassicTilestorm
 			return (srcPos, dstPos);
 		}
 
-		public Func<Vector3> GetTargetPosition()
+		protected override Func<Vector3> GetTargetPosition()
 		{
 			return () => eggbotController != null && eggbotController.transform != null
 				? eggbotController.transform.position
 				: Vector3.zero;
 		}
 
-		public Func<IReadOnlyList<Vector3>> GetFocusPoints()
+		protected override Func<IReadOnlyList<Vector3>> GetFocusPoints()
 		{
+			if (mapManager == null) return () => Array.Empty<Vector3>();
+
 			Func<IReadOnlyList<Vector3>> focusFunc = () =>
 			{
 				var waypoints = mapManager.Waypoints.Select(w => mapManager.TileWorldPosition(w.nTile)).ToList();
@@ -72,6 +72,45 @@ namespace ClassicTilestorm
 			};
 
 			return focusFunc;
+		}
+
+		protected override void SetupCameraStates()
+		{
+			if (cameraController == null || cameraController.GetComponent<Camera>() == null)
+			{
+				Debug.LogWarning("Cannot setup camera states: CameraController or Camera is null");
+				return;
+			}
+
+			var (srcPos, dstPos) = GetInitialCameraPositions();
+			var editorState = new CameraState
+			{
+				mode = CameraMode.Editor,
+				data = new CameraData(cameraController.GetComponent<Camera>()) { origin = srcPos, target = dstPos },
+				origin = () => srcPos,
+				target = GetTargetPosition(),
+				points = GetFocusPoints()
+			};
+
+			var playerState = new CameraState
+			{
+				mode = CameraMode.Follow,
+				data = new CameraData(cameraController.GetComponent<Camera>()) { origin = srcPos, target = dstPos },
+				target = GetTargetPosition(),
+				origin = () => srcPos
+			};
+
+			var cinemaState = new CameraState
+			{
+				mode = CameraMode.Cinema,
+				data = new CameraData(cameraController.GetComponent<Camera>()) { origin = srcPos, target = dstPos },
+				target = GetTargetPosition(),
+				points = GetFocusPoints()
+			};
+
+			cameraController.RegisterState(editorState, new[] { CameraMode.Editor });
+			cameraController.RegisterState(playerState, new[] { CameraMode.Follow, CameraMode.Preset });
+			cameraController.RegisterState(cinemaState, new[] { CameraMode.Cinema });
 		}
 
 		private void HandleWaypointReached(int waypointIndex)
@@ -112,43 +151,14 @@ namespace ClassicTilestorm
 			}
 		}
 
-		private void SetupCameraStates()
-		{
-			var (srcPos, dstPos) = GetInitialCameraPositions();
-			var editorState = new CameraState
-			{
-				mode = CameraMode.Editor,
-				data = new CameraData(cameraController.GetComponent<Camera>()) { origin = srcPos, target = dstPos }
-			};
-
-			var playerState = new CameraState
-			{
-				mode = CameraMode.Follow,
-				data = new CameraData(cameraController.GetComponent<Camera>()) { origin = srcPos, target = dstPos },
-				target = GetTargetPosition(),
-				origin = () => srcPos
-			};
-
-			var cinemaState = new CameraState
-			{
-				mode = CameraMode.Cinema,
-				data = new CameraData(cameraController.GetComponent<Camera>()) { origin = srcPos, target = dstPos },
-				target = GetTargetPosition(),
-				points = GetFocusPoints()
-			};
-
-			cameraController.RegisterState(editorState, new[] { CameraMode.Editor });
-			cameraController.RegisterState(playerState, new[] { CameraMode.Follow, CameraMode.Preset });
-			cameraController.RegisterState(cinemaState, new[] { CameraMode.Cinema });
-		}
-
-		private void OnDestroy()
+		protected override void OnDestroy()
 		{
 			if (eggbotController != null)
 			{
 				eggbotController.OnWaypointReached -= HandleWaypointReached;
 				eggbotController.OnPuzzleSolved -= HandlePuzzleSolved;
 			}
+			base.OnDestroy();
 		}
 	}
 }
