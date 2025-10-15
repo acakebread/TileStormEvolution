@@ -14,6 +14,8 @@ namespace ClassicTilestorm
 		private const int MaxFocusPoints = 50;
 		private const float MinDistanceForNewFocusPoint = 3f;
 
+		public event Action<bool> OnWaypointReachedForGestures;
+
 		public void Initialise(MapManager map, EggbotController eggbot, CameraController camera, CameraMode initialMode = CameraMode.Follow)
 		{
 			mapManager = map ?? throw new ArgumentNullException(nameof(map));
@@ -135,6 +137,7 @@ namespace ClassicTilestorm
 				playerState.target = () => target;
 				playerState.mode = CameraMode.Preset;
 				cameraController.SetCameraMode(CameraMode.Preset, true);
+				OnWaypointReachedForGestures?.Invoke(true);
 			}
 		}
 

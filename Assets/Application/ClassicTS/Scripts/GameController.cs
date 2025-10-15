@@ -28,6 +28,7 @@ namespace ClassicTilestorm
 			gameObject.AddComponent<PlaceholderUI>();
 			gestureController = GetComponent<GestureController>();
 			cameraStateController = gameObject.AddComponent<TilestormCameraStateController>();
+			((TilestormCameraStateController)cameraStateController).OnWaypointReachedForGestures += OnWaypointGesturesEnable;
 			gestureController.OnMapUpdated += CheckDisableDrag;
 		}
 
@@ -142,11 +143,18 @@ namespace ClassicTilestorm
 			gestureController.enabled = gestureControllerEnabled && PreviewMode.Player == PreviewSettings.CurrentMode;
 		}
 
+		private void OnWaypointGesturesEnable(bool value)
+		{
+			GestureControllerEnabled = value;
+		}
+
 		private void OnDestroy()
 		{
 			gestureController.OnMapUpdated -= CheckDisableDrag;
 			if (eggbotController != null)
 				eggbotController.OnLevelCompleted -= OnLevelCompleted;
+			if (cameraStateController != null)
+				((TilestormCameraStateController)cameraStateController).OnWaypointReachedForGestures -= OnWaypointGesturesEnable;
 		}
 
 		private CameraController EnsureCameraController()
