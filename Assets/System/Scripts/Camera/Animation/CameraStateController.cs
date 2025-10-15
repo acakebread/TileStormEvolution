@@ -1,6 +1,5 @@
-using UnityEngine;
-using MassiveHadronLtd;
 using System;
+using UnityEngine;
 using System.Collections.Generic;
 
 namespace MassiveHadronLtd
@@ -9,10 +8,11 @@ namespace MassiveHadronLtd
 	{
 		protected CameraController cameraController;
 
-		public virtual void Initialise(CameraController camera)
+		public virtual void Initialise(CameraController camera, CameraMode initialMode = CameraMode.Editor)
 		{
 			cameraController = camera ?? throw new ArgumentNullException(nameof(camera));
 			SetupCameraStates();
+			cameraController.Initialise(initialMode);
 		}
 
 		public virtual (Vector3 srcPos, Vector3 dstPos) GetInitialCameraPositions()

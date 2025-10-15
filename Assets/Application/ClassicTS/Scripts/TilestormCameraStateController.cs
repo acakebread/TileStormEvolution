@@ -14,12 +14,12 @@ namespace ClassicTilestorm
 		private const int MaxFocusPoints = 50;
 		private const float MinDistanceForNewFocusPoint = 3f;
 
-		public void Initialise(MapManager map, EggbotController eggbot, CameraController camera)
+		public void Initialise(MapManager map, EggbotController eggbot, CameraController camera, CameraMode initialMode = CameraMode.Follow)
 		{
 			mapManager = map ?? throw new ArgumentNullException(nameof(map));
 			eggbotController = eggbot;
-			base.Initialise(camera);
 			spatialSystem = new SpatialBucketSystem(MinDistanceForNewFocusPoint, MaxFocusPoints);
+			base.Initialise(camera, initialMode);
 			if (eggbotController != null)
 			{
 				eggbotController.OnWaypointReached += HandleWaypointReached;

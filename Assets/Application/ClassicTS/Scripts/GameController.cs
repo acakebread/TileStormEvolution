@@ -113,8 +113,7 @@ namespace ClassicTilestorm
 					PreviewMode.Player => CameraMode.Follow,
 					_ => CameraMode.Follow
 				};
-				((TilestormCameraStateController)cameraStateController).Initialise(mapManager, eggbotController, cameraController);
-				cameraController.Initialise(initialMode);
+				((TilestormCameraStateController)cameraStateController).Initialise(mapManager, eggbotController, cameraController, initialMode);
 			}
 
 			postProcessingController = EnsurePostProcessingController();
