@@ -1,8 +1,8 @@
-using System;
 using UnityEngine;
-using System.Linq;
 using MassiveHadronLtd;
+using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace ClassicTilestorm
 {
@@ -27,7 +27,7 @@ namespace ClassicTilestorm
 			}
 		}
 
-		protected override (Vector3 srcPos, Vector3 dstPos) GetInitialCameraPositions()
+		public override (Vector3 srcPos, Vector3 dstPos) GetInitialCameraPositions()
 		{
 			if (mapManager == null)
 				return (new Vector3(0f, 14f, -14f), Vector3.zero);
@@ -45,14 +45,14 @@ namespace ClassicTilestorm
 			return (srcPos, dstPos);
 		}
 
-		protected override Func<Vector3> GetTargetPosition()
+		public override Func<Vector3> GetTargetPosition()
 		{
 			return () => eggbotController != null && eggbotController.transform != null
 				? eggbotController.transform.position
 				: Vector3.zero;
 		}
 
-		protected override Func<IReadOnlyList<Vector3>> GetFocusPoints()
+		public override Func<IReadOnlyList<Vector3>> GetFocusPoints()
 		{
 			if (mapManager == null) return () => Array.Empty<Vector3>();
 

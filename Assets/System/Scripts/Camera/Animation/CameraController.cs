@@ -10,21 +10,16 @@ namespace MassiveHadronLtd
 		private CameraBase cameraSystem;
 		private CameraMode currentMode = CameraMode.Absent;
 		private Dictionary<CameraMode, CameraState> stateLookup = new();
-		private Func<IReadOnlyList<Vector3>> getFocusPoints;
-		private Func<Vector3> getTargetPosition;
 
 		public bool HasCompleted => cameraSystem != null && cameraSystem.HasCompleted;
 
-		public void Initialise(
-			Vector3 initialSrcPos,
-			Vector3 initialDstPos,
-			Func<Vector3> targetPositionGetter,
-			Func<IReadOnlyList<Vector3>> focusPointsGetter,
-			CameraMode initialMode = CameraMode.Follow)
+		public void Initialise(CameraMode initialMode = CameraMode.Editor)
 		{
-			getTargetPosition = targetPositionGetter ?? throw new ArgumentNullException(nameof(targetPositionGetter));
-			getFocusPoints = focusPointsGetter ?? throw new ArgumentNullException(nameof(focusPointsGetter));
-			SetupCameraStates(initialSrcPos, initialDstPos);
+			if (GetComponent<Camera>() == null)
+			{
+				Debug.LogWarning("CameraController requires a Camera component");
+				return;
+			}
 			SetCameraMode(initialMode);
 		}
 
@@ -77,34 +72,5 @@ namespace MassiveHadronLtd
 		private void Update() => cameraSystem?.Update();
 
 		private void OnApplicationFocus(bool hasFocus) => cameraSystem?.OnApplicationFocus(hasFocus);
-
-		private void SetupCameraStates(Vector3 srcPos, Vector3 dstPos)
-		{
-			var editorState = new CameraState
-			{
-				mode = CameraMode.Editor,
-				data = new CameraData(GetComponent<Camera>()) { origin = srcPos, target = dstPos }
-			};
-
-			var playerState = new CameraState
-			{
-				mode = CameraMode.Follow,
-				data = new CameraData(GetComponent<Camera>()) { origin = srcPos, target = dstPos },
-				target = getTargetPosition,
-				origin = () => srcPos
-			};
-
-			var cinemaState = new CameraState
-			{
-				mode = CameraMode.Cinema,
-				data = new CameraData(GetComponent<Camera>()) { origin = srcPos, target = dstPos },
-				target = getTargetPosition,
-				points = getFocusPoints
-			};
-
-			RegisterState(editorState, new[] { CameraMode.Editor });
-			RegisterState(playerState, new[] { CameraMode.Follow, CameraMode.Preset });
-			RegisterState(cinemaState, new[] { CameraMode.Cinema });
-		}
 	}
 }

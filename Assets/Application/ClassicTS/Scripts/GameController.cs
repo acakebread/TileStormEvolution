@@ -1,6 +1,7 @@
 using UnityEngine;
 using System.Linq;
 using MassiveHadronLtd;
+using System;
 
 namespace ClassicTilestorm
 {
@@ -105,7 +106,6 @@ namespace ClassicTilestorm
 			cameraController = EnsureCameraController();
 			if (cameraController != null)
 			{
-				((TilestormCameraStateController)cameraStateController).Initialise(mapManager, eggbotController, cameraController);
 				var initialMode = PreviewSettings.CurrentMode switch
 				{
 					PreviewMode.Editor => CameraMode.Editor,
@@ -113,7 +113,8 @@ namespace ClassicTilestorm
 					PreviewMode.Player => CameraMode.Follow,
 					_ => CameraMode.Follow
 				};
-				cameraController.SetCameraMode(initialMode);
+				((TilestormCameraStateController)cameraStateController).Initialise(mapManager, eggbotController, cameraController);
+				cameraController.Initialise(initialMode);
 			}
 
 			postProcessingController = EnsurePostProcessingController();

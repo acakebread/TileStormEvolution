@@ -1,5 +1,6 @@
-using System;
 using UnityEngine;
+using MassiveHadronLtd;
+using System;
 using System.Collections.Generic;
 
 namespace MassiveHadronLtd
@@ -14,17 +15,17 @@ namespace MassiveHadronLtd
 			SetupCameraStates();
 		}
 
-		protected virtual (Vector3 srcPos, Vector3 dstPos) GetInitialCameraPositions()
+		public virtual (Vector3 srcPos, Vector3 dstPos) GetInitialCameraPositions()
 		{
 			return (new Vector3(0f, 14f, -14f), Vector3.zero);
 		}
 
-		protected virtual Func<Vector3> GetTargetPosition()
+		public virtual Func<Vector3> GetTargetPosition()
 		{
 			return () => Vector3.zero;
 		}
 
-		protected virtual Func<IReadOnlyList<Vector3>> GetFocusPoints()
+		public virtual Func<IReadOnlyList<Vector3>> GetFocusPoints()
 		{
 			return () => Array.Empty<Vector3>();
 		}
