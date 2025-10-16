@@ -102,6 +102,14 @@ namespace ClassicTilestorm
 				origin = () => srcPos
 			};
 
+			var directState = new CameraState
+			{
+				mode = CameraMode.Direct,
+				data = new CameraData(cameraController.GetComponent<Camera>()) { origin = srcPos, target = dstPos },
+				target = () => dstPos,
+				origin = () => srcPos
+			};
+
 			var cinemaState = new CameraState
 			{
 				mode = CameraMode.Cinema,
@@ -112,6 +120,7 @@ namespace ClassicTilestorm
 
 			cameraController.RegisterState(editorState, new[] { CameraMode.Editor });
 			cameraController.RegisterState(playerState, new[] { CameraMode.Follow, CameraMode.Preset });
+			cameraController.RegisterState(directState, new[] { CameraMode.Direct });
 			cameraController.RegisterState(cinemaState, new[] { CameraMode.Cinema });
 		}
 

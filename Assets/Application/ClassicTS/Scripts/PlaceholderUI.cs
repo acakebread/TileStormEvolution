@@ -192,6 +192,25 @@ namespace ClassicTilestorm
 			}
 			currentX += buttonWidth + spacing;
 
+			//// Direct button
+			//bool isDirectSelected = PreviewSettings.CurrentMode == PreviewMode.Direct;
+			//modeButtonStyle.normal.background = isDirectSelected ? selectedButtonTex : unselectedButtonTex;
+			//modeButtonStyle.normal.textColor = isDirectSelected ? selectedTextColor : unselectedTextColor;
+
+			//CopyStyleState(modeButtonStyle.normal, modeButtonStyle.hover);
+			//CopyStyleState(modeButtonStyle.normal, modeButtonStyle.active);
+			//CopyStyleState(modeButtonStyle.normal, modeButtonStyle.focused);
+			//CopyStyleState(modeButtonStyle.normal, modeButtonStyle.onNormal);
+			//CopyStyleState(modeButtonStyle.normal, modeButtonStyle.onHover);
+			//CopyStyleState(modeButtonStyle.normal, modeButtonStyle.onActive);
+
+			//if (GUI.Button(new Rect(currentX, y, buttonWidth, buttonHeight), "Direct", modeButtonStyle))
+			//{
+			//	PreviewSettings.CurrentMode = PreviewMode.Direct;
+			//	gameController.SetPreviewMode(PreviewMode.Direct);
+			//}
+			//currentX += buttonWidth + spacing;
+
 			// Cinema button
 			bool isCinemaSelected = PreviewSettings.CurrentMode == PreviewMode.Cinema;
 			modeButtonStyle.normal.background = isCinemaSelected ? selectedButtonTex : unselectedButtonTex;

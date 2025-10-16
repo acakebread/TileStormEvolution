@@ -1,7 +1,6 @@
 using UnityEngine;
 using System.Linq;
 using MassiveHadronLtd;
-using System;
 
 namespace ClassicTilestorm
 {
@@ -62,6 +61,7 @@ namespace ClassicTilestorm
 					PreviewMode.Editor => CameraMode.Editor,
 					PreviewMode.Cinema => CameraMode.Cinema,
 					PreviewMode.Player => CameraMode.Preset,
+					PreviewMode.Direct => CameraMode.Direct,
 					_ => CameraMode.Absent
 				};
 				var state = cameraController.GetStateForMode(cameraMode);
