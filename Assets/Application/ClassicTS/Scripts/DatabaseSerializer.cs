@@ -2,7 +2,6 @@ using System;
 using System.Linq;
 using System.Collections.Generic;
 using UnityEngine;
-using MassiveHadronLtd;
 
 namespace ClassicTilestorm
 {
@@ -156,7 +155,7 @@ namespace ClassicTilestorm
 		}
 
 		private static TextAsset databaseJsonFile;
-		private static string databaseFilePath;
+		private static Action<TextAsset> saveDelegate;
 		private static DatabaseData data;
 		private static bool isLoaded;
 		private static readonly object lockObject = new object();
@@ -168,7 +167,7 @@ namespace ClassicTilestorm
 		public static IReadOnlyList<Button> Buttons => LoadAndGetData()?.buttons ?? Array.Empty<Button>();
 		public static IReadOnlyList<TextureSet> TextureSets => LoadAndGetData()?.texture_set ?? Array.Empty<TextureSet>();
 
-		public static void Init(TextAsset jsonFile, string filePath)
+		public static void Init(TextAsset jsonFile, Action<TextAsset> saveAction = null)
 		{
 			lock (lockObject)
 			{
@@ -176,16 +175,16 @@ namespace ClassicTilestorm
 				{
 					throw new ArgumentNullException(nameof(jsonFile), "TextAsset cannot be null.");
 				}
-				if (string.IsNullOrEmpty(filePath))
+				if (saveAction == null)
 				{
-					throw new ArgumentNullException(nameof(filePath), "File path cannot be null or empty.");
+					throw new ArgumentNullException(nameof(saveAction), "Save delegate cannot be null.");
 				}
 
 				databaseJsonFile = jsonFile;
-				databaseFilePath = filePath;
+				saveDelegate = saveAction;
 				data = null;
 				isLoaded = false;
-				Debug.Log($"DatabaseSerializer initialized with TextAsset and path: {filePath}");
+				Debug.Log($"DatabaseSerializer initialized with TextAsset: {jsonFile.name}");
 			}
 		}
 
@@ -198,16 +197,16 @@ namespace ClassicTilestorm
 					return data;
 				}
 
-				if (databaseJsonFile == null || string.IsNullOrEmpty(databaseFilePath))
+				if (databaseJsonFile == null)
 				{
-					Debug.LogError("DatabaseSerializer: Not initialized. Call Init() with a valid TextAsset and file path.");
+					Debug.LogError("DatabaseSerializer: Not initialized. Call Init() with a valid TextAsset and save delegate.");
 					return null;
 				}
 
-				string jsonContent = SerializerUtility.ReadTextAsset(databaseFilePath, databaseJsonFile);
+				string jsonContent = databaseJsonFile.text;
 				if (string.IsNullOrEmpty(jsonContent))
 				{
-					Debug.LogError("DatabaseSerializer: Failed to read JSON content.");
+					Debug.LogError("DatabaseSerializer: TextAsset content is null or empty.");
 					return null;
 				}
 
@@ -216,7 +215,7 @@ namespace ClassicTilestorm
 					data = JsonUtility.FromJson<DatabaseData>(jsonContent);
 					if (data == null)
 					{
-						Debug.LogError($"DatabaseSerializer: Failed to parse JSON from {databaseFilePath}: DatabaseData is null!");
+						Debug.LogError("DatabaseSerializer: Failed to parse JSON from TextAsset: DatabaseData is null!");
 						return null;
 					}
 
@@ -236,7 +235,7 @@ namespace ClassicTilestorm
 				}
 				catch (Exception ex)
 				{
-					Debug.LogError($"DatabaseSerializer: JSON deserialization failed for {databaseFilePath}: {ex.Message}\nStackTrace: {ex.StackTrace}");
+					Debug.LogError($"DatabaseSerializer: JSON deserialization failed: {ex.Message}\nStackTrace: {ex.StackTrace}");
 					isLoaded = false;
 					data = null;
 					return null;
@@ -254,16 +253,18 @@ namespace ClassicTilestorm
 
 			lock (lockObject)
 			{
-				if (string.IsNullOrEmpty(databaseFilePath))
+				if (databaseJsonFile == null || saveDelegate == null)
 				{
-					Debug.LogError("DatabaseSerializer: Not initialized. Call Init() with a valid file path.");
+					Debug.LogError("DatabaseSerializer: Not initialized. Call Init() with a valid TextAsset and save delegate.");
 					return;
 				}
 
 				try
 				{
 					string jsonContent = JsonUtility.ToJson(newData, true);
-					SerializerUtility.WriteTextFile(databaseFilePath, jsonContent);
+					TextAsset newTextAsset = new TextAsset(jsonContent);
+					newTextAsset.name = databaseJsonFile.name;
+					saveDelegate?.Invoke(newTextAsset); // Calls PreviewSettings.DatabaseJsonFile setter or other save logic
 
 					data = newData;
 					isLoaded = true;
