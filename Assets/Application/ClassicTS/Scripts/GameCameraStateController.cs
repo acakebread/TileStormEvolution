@@ -6,7 +6,7 @@ using System.Linq;
 
 namespace ClassicTilestorm
 {
-	public class TilestormCameraStateController : CameraStateController
+	public class GameCameraStateController : CameraStateController
 	{
 		private MapManager mapManager;
 		private EggbotController eggbotController;

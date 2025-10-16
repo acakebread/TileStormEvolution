@@ -18,7 +18,6 @@ namespace ClassicTilestorm
 		Vector3 TileWorldPosition(int index);
 		int WorldToMapIndex(Vector3 vec);
 		Tile GetTile(int index);
-		// ADDED: Waypoint-related members to interface for consistency
 		DatabaseSerializer.Waypoint[] Waypoints { get; }
 		void SetupWaypoints(DatabaseSerializer.Map map);
 		int GetStartTile();
@@ -31,8 +30,9 @@ namespace ClassicTilestorm
 		private int[] indices;
 		private int[] offsets;
 		private Tile[] tiles;
+		private DatabaseSerializer.Tiles mapTiles; // Store only the tiles data for updating
+		private DatabaseSerializer.MapTileDef[] mapDefs; // Store defs for tile updates
 
-		// ADDED: Waypoint field and property
 		private DatabaseSerializer.Waypoint[] waypoints;
 		public DatabaseSerializer.Waypoint[] Waypoints => waypoints;
 
@@ -48,7 +48,8 @@ namespace ClassicTilestorm
 			indices = null;
 			offsets = null;
 			tiles = null;
-			// ADDED: Ensure waypoints starts null
+			mapTiles = null;
+			mapDefs = null;
 			waypoints = null;
 		}
 
@@ -57,17 +58,8 @@ namespace ClassicTilestorm
 			offsets = map?.mixed?.TileData?.bytes;
 			Width = map?.tiles.nWidth ?? 0;
 			Height = map?.tiles.nHeight ?? 0;
-
-			LoadTileData(map.tiles);
-
-			if (PreviewSettings.Scrambled) Scramble(); else Solve();
-
-			Debug.AssertFormat(null != indices && null != offsets, "invalid map tile indices or offsets data");
-
-			InitializeWindController(); // Initialize WindController after tiles are loaded
-
-			// ADDED: Setup waypoints after tiles are loaded (requires GetTile calls)
-			SetupWaypoints(map);
+			mapTiles = map?.tiles; // Store tiles for updating
+			mapDefs = map?.defs; // Store defs for tile updates
 
 			void LoadTileData(DatabaseSerializer.Tiles dbTiles)
 			{
@@ -99,16 +91,89 @@ namespace ClassicTilestorm
 					tiles[n].GameObject = GeometryManager.InstantiateTile(tileDef, transform, TileWorldPosition(n), tiles[n].Interactive);
 				}
 			}
+
+			LoadTileData(map.tiles);
+
+			if (PreviewSettings.Scrambled) Scramble(); else Solve();
+
+			Debug.AssertFormat(null != indices && null != offsets, "invalid map tile indices or offsets data");
+
+			InitializeWindController();
+
+			SetupWaypoints(map);
 		}
 
-		// ADDED: Instance method to setup waypoints (formerly static in Navigation)
+		public void UpdateTileAt(int x, int z, int newTileDefIndex)
+		{
+			if (x < 0 || x >= Width || z < 0 || z >= Height)
+			{
+				Debug.LogError($"Invalid coordinates: ({x}, {z}) outside map bounds (Width={Width}, Height={Height})");
+				return;
+			}
+
+			if (mapTiles == null || mapTiles.TileData?.bytes == null)
+			{
+				Debug.LogError("Map tiles or tile data is null");
+				return;
+			}
+
+			int index = z * Width + x;
+			if (index >= mapTiles.TileData.bytes.Length)
+			{
+				Debug.LogError($"Calculated index {index} is out of bounds for tile data array (length={mapTiles.TileData.bytes.Length})");
+				return;
+			}
+
+			if (newTileDefIndex < 0 || newTileDefIndex >= mapDefs.Length)
+			{
+				Debug.LogError($"Invalid newTileDefIndex={newTileDefIndex}, must be between 0 and {mapDefs.Length - 1}");
+				return;
+			}
+
+			// Update the map tile data
+			mapTiles.TileData.bytes[index] = newTileDefIndex;
+
+			// Update the tile at the specified index
+			var szType = mapDefs[newTileDefIndex].szType;
+			var szTheme = mapDefs[newTileDefIndex].szTheme;
+			if (string.IsNullOrEmpty(szType)) Debug.LogWarning($"Null szType at tileDefIndex {newTileDefIndex}");
+			if (string.IsNullOrEmpty(szTheme)) Debug.LogWarning($"Null szTheme at tileDefIndex {newTileDefIndex}");
+
+			// Destroy the existing GameObject, if any
+			if (tiles[index].GameObject != null)
+			{
+				Destroy(tiles[index].GameObject);
+			}
+
+			// Create new tile
+			tiles[index] = new Tile(szType, szTheme);
+			if (szType != "tile_empty")
+			{
+				var tileDef = DatabaseSerializer.TileDefs.FirstOrDefault(td => td.szType == szType && td.szTheme == szTheme);
+				tiles[index].GameObject = GeometryManager.InstantiateTile(tileDef, transform, TileWorldPosition(index), tiles[index].Interactive);
+			}
+
+			// Update the GameObject name and position
+			if (tiles[index].GameObject != null)
+			{
+				var position = TileWorldPosition(index);
+				tiles[index].GameObject.transform.position = position;
+				var namePosition = position - tile_origin;
+#if DEBUG
+				tiles[index].GameObject.name = $"{tiles[index].GameObject.GetComponent<RTTI>()?.tileDef.szType ?? "Empty"} ({namePosition.x},{namePosition.z})";
+#endif
+			}
+
+			Debug.Log($"Updated tile at ({x}, {z}) to tileDefIndex={newTileDefIndex}");
+		}
+
 		public void SetupWaypoints(DatabaseSerializer.Map map)
 		{
 			waypoints = map.waypoints?.Where(w => w != null).ToArray();
 			if (null == waypoints || 0 == waypoints.Length)
 				waypoints = GenerateWaypoints();
 
-			DatabaseSerializer.Waypoint[] GenerateWaypoints() // Local function (non-static, uses 'this')
+			DatabaseSerializer.Waypoint[] GenerateWaypoints()
 			{
 				var generatedWaypoints = new List<DatabaseSerializer.Waypoint>();
 				if (0 == Count)
@@ -157,7 +222,6 @@ namespace ClassicTilestorm
 			}
 		}
 
-		// ADDED: Instance method (formerly static in Navigation)
 		public int GetStartTile()
 		{
 			if (null != waypoints && 0 != waypoints.Length)
@@ -172,7 +236,6 @@ namespace ClassicTilestorm
 			return -1;
 		}
 
-		// ADDED: Instance method (formerly static in Navigation)
 		public int GetEndTile()
 		{
 			if (null != waypoints && 0 != waypoints.Length)
@@ -187,7 +250,6 @@ namespace ClassicTilestorm
 			return -1;
 		}
 
-		// ADDED: Instance method (formerly static in Navigation)
 		public int FindAdjacentConsole(int nTile)
 		{
 			var tile = GetTile(nTile);
@@ -209,7 +271,6 @@ namespace ClassicTilestorm
 			return -1;
 		}
 
-		// Initialize WindController and collect MorphGeomSway components
 		private void InitializeWindController()
 		{
 			var windController = gameObject.AddComponent<WindController>();
@@ -257,14 +318,13 @@ namespace ClassicTilestorm
 #endif
 			}
 		}
+
 		private static readonly Vector3 tile_origin = new(0.5f, 0f, 0.5f);
-		// Instance method: No cast needed when called on concrete
+
 		public Vector3 TileWorldPosition(int index) => new Vector3(index % Width, 0f, index / Width) + tile_origin;
 
-		// Instance method: Uses interface props
 		public int WorldToMapIndex(Vector3 vec) => vec.x >= 0 && vec.x < Width && vec.z >= 0 && vec.z < Height ? (int)vec.z * Width + (int)vec.x : -1;
 
-		// Instance method: Direct access to private fields
 		public Tile GetTile(int index)
 		{
 			if (index < 0 || index >= Indices.Length || Width <= 0) return default;

@@ -26,8 +26,8 @@ namespace ClassicTilestorm
 		{
 			gameObject.AddComponent<PlaceholderUI>();
 			gestureController = GetComponent<GestureController>();
-			cameraStateController = gameObject.AddComponent<TilestormCameraStateController>();
-			((TilestormCameraStateController)cameraStateController).OnWaypointReachedForGestures += OnWaypointGesturesEnable;
+			cameraStateController = gameObject.AddComponent<GameCameraStateController>();
+			((GameCameraStateController)cameraStateController).OnWaypointReachedForGestures += OnWaypointGesturesEnable;
 			gestureController.OnMapUpdated += CheckDisableDrag;
 		}
 
@@ -114,7 +114,7 @@ namespace ClassicTilestorm
 					PreviewMode.Player => CameraMode.Follow,
 					_ => CameraMode.Follow
 				};
-				((TilestormCameraStateController)cameraStateController).Initialise(mapManager, eggbotController, cameraController, initialMode);
+				((GameCameraStateController)cameraStateController).Initialise(mapManager, eggbotController, cameraController, initialMode);
 			}
 
 			postProcessingController = EnsurePostProcessingController();
@@ -154,7 +154,7 @@ namespace ClassicTilestorm
 			if (eggbotController != null)
 				eggbotController.OnLevelCompleted -= OnLevelCompleted;
 			if (cameraStateController != null)
-				((TilestormCameraStateController)cameraStateController).OnWaypointReachedForGestures -= OnWaypointGesturesEnable;
+				((GameCameraStateController)cameraStateController).OnWaypointReachedForGestures -= OnWaypointGesturesEnable;
 		}
 
 		private CameraController EnsureCameraController()
@@ -194,3 +194,52 @@ namespace ClassicTilestorm
 		}
 	}
 }
+
+
+//private void OnGUI()
+//{
+//	// Place button in bottom-left corner
+//	float buttonWidth = 120;
+//	float buttonHeight = 30;
+//	float margin = 10;
+
+//	if (GUI.Button(new Rect(margin, Screen.height - buttonHeight - margin, buttonWidth, buttonHeight), "Test Serialize"))
+//	{
+//		TestSerialize();
+//	}
+//}
+
+//// MODIFIED: Test function to change tile at (0,0) to index 3 and save
+//public void TestSerialize()
+//{
+//	if (mapManager == null)
+//	{
+//		Debug.LogError("TestSerialize: MapManager is null");
+//		return;
+//	}
+
+//	// Ensure the map is "Industrial 01"
+//	string mapName = mapManager.gameObject.name.Replace("Map: ", "");
+//	if (mapName != "Industrial 01")
+//	{
+//		Debug.LogError($"TestSerialize can only run on 'Industrial 01', current map is '{mapName}'");
+//		return;
+//	}
+
+//	// Change tile at (0,0) to tileDefIndex 3
+//	mapManager.UpdateTileAt(0, 0, 3);
+
+//	// Create a new DatabaseData instance with the current (modified) data
+//	var newData = new DatabaseSerializer.DatabaseData
+//	{
+//		maps = DatabaseSerializer.Maps.ToArray(), // Includes the modified map from MapManager
+//		themes = DatabaseSerializer.Themes.ToArray(),
+//		tiledefs = DatabaseSerializer.TileDefs.ToArray(),
+//		buttons = DatabaseSerializer.Buttons.ToArray(),
+//		texture_set = DatabaseSerializer.TextureSets.ToArray()
+//	};
+
+//	// Save the modified database
+//	DatabaseSerializer.SaveDatabase(newData);
+//	Debug.Log("TestSerialize: Database saved with updated tile at (0,0)");
+//}
