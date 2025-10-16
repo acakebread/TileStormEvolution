@@ -22,7 +22,6 @@ namespace MassiveHadronLtd
 				return;
 			}
 
-			// Initialize with default Editor state to ensure camera is positioned correctly on Awake
 			var (srcPos, dstPos) = GetInitialCameraPositions();
 			var defaultState = new CameraState
 			{
@@ -45,10 +44,8 @@ namespace MassiveHadronLtd
 				return;
 			}
 
-			// Setup camera states before applying the initial mode
 			SetupCameraStates();
 
-			// Apply state for initial mode
 			var state = GetStateForMode(initialMode);
 			if (state != null)
 			{
@@ -62,7 +59,6 @@ namespace MassiveHadronLtd
 				GetComponent<Camera>().transform.rotation = Quaternion.LookRotation(dstPos - srcPos, Vector3.up);
 			}
 
-			// Skip SetCameraMode if using default Editor mode and no custom states
 			if (initialMode != CameraMode.Editor || hasCustomStates)
 			{
 				SetCameraMode(initialMode);
@@ -123,6 +119,16 @@ namespace MassiveHadronLtd
 				CameraMode.Cinema => UnityEngine.Random.Range(0, 7) switch { 0 or 1 or 2 => new CameraOrbit(state), _ => new CameraPath(state) },
 				_ => cameraSystem
 			};
+
+			// Manually copy state properties to the new camera system
+			if (cameraSystem != null)
+			{
+				cameraSystem.mode = state.mode;
+				cameraSystem.data = state.data;
+				cameraSystem.originFn = state.origin;
+				cameraSystem.targetFn = state.target;
+				cameraSystem.pointsFn = state.points;
+			}
 
 			currentMode = mode;
 			cameraSystem?.Start();
