@@ -9,9 +9,8 @@ namespace ClassicTilestorm
 	{
 		private MapManager mapManager;
 		private EggbotController eggbotController;
-		private CameraController cameraController;
+		private GameCameraController cameraController; // Changed to GameCameraController
 		private GestureController gestureController;
-		private CameraStateController cameraStateController;
 		private PostProcessingCameraController postProcessingController;
 		private bool gestureControllerEnabled = true;
 		private const float CinemaTimeoutDuration = 5f;
@@ -26,9 +25,9 @@ namespace ClassicTilestorm
 		{
 			gameObject.AddComponent<PlaceholderUI>();
 			gestureController = GetComponent<GestureController>();
-			cameraStateController = gameObject.AddComponent<GameCameraStateController>();
-			((GameCameraStateController)cameraStateController).OnWaypointReachedForGestures += OnWaypointGesturesEnable;
 			gestureController.OnMapUpdated += CheckDisableDrag;
+			cameraController = EnsureCameraController(); // Ensure this is called early
+			cameraController.OnWaypointReachedForGestures += OnWaypointGesturesEnable; // Subscribe to event
 		}
 
 		private void Start()
@@ -114,7 +113,7 @@ namespace ClassicTilestorm
 					PreviewMode.Player => CameraMode.Follow,
 					_ => CameraMode.Follow
 				};
-				((GameCameraStateController)cameraStateController).Initialise(mapManager, eggbotController, cameraController, initialMode);
+				cameraController.Initialise(mapManager, eggbotController, initialMode);
 			}
 
 			postProcessingController = EnsurePostProcessingController();
@@ -153,23 +152,23 @@ namespace ClassicTilestorm
 			gestureController.OnMapUpdated -= CheckDisableDrag;
 			if (eggbotController != null)
 				eggbotController.OnLevelCompleted -= OnLevelCompleted;
-			if (cameraStateController != null)
-				((GameCameraStateController)cameraStateController).OnWaypointReachedForGestures -= OnWaypointGesturesEnable;
+			if (cameraController != null)
+				cameraController.OnWaypointReachedForGestures -= OnWaypointGesturesEnable;
 		}
 
-		private CameraController EnsureCameraController()
+		private GameCameraController EnsureCameraController()
 		{
 			if (Camera.main == null)
 			{
-				Debug.LogWarning("Cannot create CameraController: Camera.main is null");
+				Debug.LogWarning("Cannot create GameCameraController: Camera.main is null");
 				return null;
 			}
 
-			var controller = Camera.main.GetComponent<CameraController>();
+			var controller = Camera.main.GetComponent<GameCameraController>();
 			if (controller == null)
 			{
-				controller = Camera.main.gameObject.AddComponent<CameraController>();
-				Debug.Log("Created CameraController on Camera.main");
+				controller = Camera.main.gameObject.AddComponent<GameCameraController>();
+				Debug.Log("Created GameCameraController on Camera.main");
 			}
 			return controller;
 		}

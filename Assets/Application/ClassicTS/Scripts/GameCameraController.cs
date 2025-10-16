@@ -6,7 +6,7 @@ using System.Linq;
 
 namespace ClassicTilestorm
 {
-	public class GameCameraStateController : CameraStateController
+	public class GameCameraController : CameraController
 	{
 		private MapManager mapManager;
 		private EggbotController eggbotController;
@@ -16,20 +16,20 @@ namespace ClassicTilestorm
 
 		public event Action<bool> OnWaypointReachedForGestures;
 
-		public void Initialise(MapManager map, EggbotController eggbot, CameraController camera, CameraMode initialMode = CameraMode.Follow)
+		public void Initialise(MapManager map, EggbotController eggbot, CameraMode initialMode = CameraMode.Follow)
 		{
 			mapManager = map ?? throw new ArgumentNullException(nameof(map));
 			eggbotController = eggbot;
 			spatialSystem = new SpatialBucketSystem(MinDistanceForNewFocusPoint, MaxFocusPoints);
-			base.Initialise(camera, initialMode);
 			if (eggbotController != null)
 			{
 				eggbotController.OnWaypointReached += HandleWaypointReached;
 				eggbotController.OnPuzzleSolved += HandlePuzzleSolved;
 			}
+			base.Initialise(initialMode);
 		}
 
-		public override (Vector3 srcPos, Vector3 dstPos) GetInitialCameraPositions()
+		protected override (Vector3 srcPos, Vector3 dstPos) GetInitialCameraPositions()
 		{
 			if (mapManager == null)
 				return (new Vector3(0f, 14f, -14f), Vector3.zero);
@@ -47,14 +47,14 @@ namespace ClassicTilestorm
 			return (srcPos, dstPos);
 		}
 
-		public override Func<Vector3> GetTargetPosition()
+		protected override Func<Vector3> GetTargetPosition()
 		{
 			return () => eggbotController != null && eggbotController.transform != null
 				? eggbotController.transform.position
 				: Vector3.zero;
 		}
 
-		public override Func<IReadOnlyList<Vector3>> GetFocusPoints()
+		protected override Func<IReadOnlyList<Vector3>> GetFocusPoints()
 		{
 			if (mapManager == null) return () => Array.Empty<Vector3>();
 
@@ -78,9 +78,9 @@ namespace ClassicTilestorm
 
 		protected override void SetupCameraStates()
 		{
-			if (cameraController == null || cameraController.GetComponent<Camera>() == null)
+			if (GetComponent<Camera>() == null)
 			{
-				Debug.LogWarning("Cannot setup camera states: CameraController or Camera is null");
+				Debug.LogWarning("Cannot setup camera states: Camera is null");
 				return;
 			}
 
@@ -88,7 +88,7 @@ namespace ClassicTilestorm
 			var editorState = new CameraState
 			{
 				mode = CameraMode.Editor,
-				data = new CameraData(cameraController.GetComponent<Camera>()) { origin = srcPos, target = dstPos },
+				data = new CameraData(GetComponent<Camera>()) { origin = srcPos, target = dstPos },
 				origin = () => srcPos,
 				target = GetTargetPosition(),
 				points = GetFocusPoints()
@@ -97,7 +97,7 @@ namespace ClassicTilestorm
 			var playerState = new CameraState
 			{
 				mode = CameraMode.Follow,
-				data = new CameraData(cameraController.GetComponent<Camera>()) { origin = srcPos, target = dstPos },
+				data = new CameraData(GetComponent<Camera>()) { origin = srcPos, target = dstPos },
 				target = GetTargetPosition(),
 				origin = () => srcPos
 			};
@@ -105,7 +105,7 @@ namespace ClassicTilestorm
 			var directState = new CameraState
 			{
 				mode = CameraMode.Direct,
-				data = new CameraData(cameraController.GetComponent<Camera>()) { origin = srcPos, target = dstPos },
+				data = new CameraData(GetComponent<Camera>()) { origin = srcPos, target = dstPos },
 				target = () => dstPos,
 				origin = () => srcPos
 			};
@@ -113,15 +113,15 @@ namespace ClassicTilestorm
 			var cinemaState = new CameraState
 			{
 				mode = CameraMode.Cinema,
-				data = new CameraData(cameraController.GetComponent<Camera>()) { origin = srcPos, target = dstPos },
+				data = new CameraData(GetComponent<Camera>()) { origin = srcPos, target = dstPos },
 				target = GetTargetPosition(),
 				points = GetFocusPoints()
 			};
 
-			cameraController.RegisterState(editorState, new[] { CameraMode.Editor });
-			cameraController.RegisterState(playerState, new[] { CameraMode.Follow, CameraMode.Preset });
-			cameraController.RegisterState(directState, new[] { CameraMode.Direct });
-			cameraController.RegisterState(cinemaState, new[] { CameraMode.Cinema });
+			RegisterState(editorState, new[] { CameraMode.Editor });
+			RegisterState(playerState, new[] { CameraMode.Follow, CameraMode.Preset });
+			RegisterState(directState, new[] { CameraMode.Direct });
+			RegisterState(cinemaState, new[] { CameraMode.Cinema });
 		}
 
 		private void HandleWaypointReached(int waypointIndex)
@@ -132,45 +132,44 @@ namespace ClassicTilestorm
 			var waypoint = mapManager.Waypoints[waypointIndex];
 			if (waypoint.vSrc == null || !waypoint.vSrc.IsValidVector())
 			{
-				cameraController?.SetCameraMode(CameraMode.Follow, true);
+				SetCameraMode(CameraMode.Follow, true);
 				return;
 			}
 
 			var origin = waypoint.vSrc.IsValidVector() ? waypoint.vSrc.ToVector3() : new Vector3(0f, 14f, -14f);
 			var target = waypoint.vDst != null && waypoint.vDst.IsValidVector() ? waypoint.vDst.ToVector3() : mapManager.TileWorldPosition(waypoint.nTile);
 
-			var playerState = cameraController?.GetStateForMode(CameraMode.Preset);
+			var playerState = GetStateForMode(CameraMode.Preset);
 			if (playerState != null)
 			{
 				playerState.origin = () => origin;
 				playerState.target = () => target;
 				playerState.mode = CameraMode.Preset;
-				cameraController.SetCameraMode(CameraMode.Preset, true);
+				SetCameraMode(CameraMode.Preset, true);
 				OnWaypointReachedForGestures?.Invoke(true);
 			}
 		}
 
 		private void HandlePuzzleSolved(int waypointIndex)
 		{
-			if (eggbotController == null || cameraController == null) return;
+			if (eggbotController == null) return;
 
-			var playerState = cameraController.GetStateForMode(CameraMode.Follow);
+			var playerState = GetStateForMode(CameraMode.Follow);
 			if (playerState != null)
 			{
 				playerState.target = GetTargetPosition();
 				playerState.mode = CameraMode.Follow;
-				cameraController.SetCameraMode(CameraMode.Follow, true);
+				SetCameraMode(CameraMode.Follow, true);
 			}
 		}
 
-		protected override void OnDestroy()
+		private void OnDestroy()
 		{
 			if (eggbotController != null)
 			{
 				eggbotController.OnWaypointReached -= HandleWaypointReached;
 				eggbotController.OnPuzzleSolved -= HandlePuzzleSolved;
 			}
-			base.OnDestroy();
 		}
 	}
 }

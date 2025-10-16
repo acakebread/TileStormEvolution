@@ -1,6 +1,6 @@
 ﻿using System;
-using UnityEngine;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace MassiveHadronLtd
 {
@@ -22,28 +22,22 @@ namespace MassiveHadronLtd
 				return;
 			}
 
-			// Register default Editor state
+			// Initialize with default Editor state to ensure camera is positioned correctly on Awake
+			var (srcPos, dstPos) = GetInitialCameraPositions();
 			var defaultState = new CameraState
 			{
 				mode = CameraMode.Editor,
-				data = new CameraData(GetComponent<Camera>())
-				{
-					origin = new Vector3(0f, 14f, -14f),
-					target = Vector3.zero
-				},
-				origin = () => new Vector3(0f, 14f, -14f),
-				target = () => Vector3.zero,
+				data = new CameraData(GetComponent<Camera>()) { origin = srcPos, target = dstPos },
+				origin = () => srcPos,
+				target = () => dstPos,
 				points = () => Array.Empty<Vector3>()
 			};
 			stateLookup[CameraMode.Editor] = defaultState;
-			Debug.Log("Registered default CameraState for Editor mode in Awake");
-
-			// Apply default state to camera - default camera position and orientation for first initialisation
 			defaultState.ApplyToCamera(GetComponent<Camera>());
 			SetCameraMode(CameraMode.Editor);
 		}
 
-		public void Initialise(CameraMode initialMode = CameraMode.Editor)
+		public virtual void Initialise(CameraMode initialMode = CameraMode.Editor)
 		{
 			if (GetComponent<Camera>() == null)
 			{
@@ -51,7 +45,10 @@ namespace MassiveHadronLtd
 				return;
 			}
 
-			// Apply state for initial mode - default camera position and orientation for first initialisation
+			// Setup camera states before applying the initial mode
+			SetupCameraStates();
+
+			// Apply state for initial mode
 			var state = GetStateForMode(initialMode);
 			if (state != null)
 			{
@@ -60,9 +57,9 @@ namespace MassiveHadronLtd
 			else
 			{
 				Debug.LogWarning($"No state for mode {initialMode}. Using default Editor position.");
-				var defaultPos = new Vector3(0f, 14f, -14f);
-				GetComponent<Camera>().transform.position = defaultPos;
-				GetComponent<Camera>().transform.rotation = Quaternion.LookRotation(Vector3.zero - defaultPos, Vector3.up);
+				var (srcPos, dstPos) = GetInitialCameraPositions();
+				GetComponent<Camera>().transform.position = srcPos;
+				GetComponent<Camera>().transform.rotation = Quaternion.LookRotation(dstPos - srcPos, Vector3.up);
 			}
 
 			// Skip SetCameraMode if using default Editor mode and no custom states
@@ -134,5 +131,40 @@ namespace MassiveHadronLtd
 		private void Update() => cameraSystem?.Update();
 
 		private void OnApplicationFocus(bool hasFocus) => cameraSystem?.OnApplicationFocus(hasFocus);
+
+		protected virtual void SetupCameraStates()
+		{
+			if (GetComponent<Camera>() == null)
+			{
+				Debug.LogWarning("Cannot setup camera states: Camera is null");
+				return;
+			}
+
+			var (srcPos, dstPos) = GetInitialCameraPositions();
+			var editorState = new CameraState
+			{
+				mode = CameraMode.Editor,
+				data = new CameraData(GetComponent<Camera>()) { origin = srcPos, target = dstPos },
+				origin = () => srcPos,
+				target = GetTargetPosition(),
+				points = GetFocusPoints()
+			};
+			RegisterState(editorState, new[] { CameraMode.Editor });
+		}
+
+		protected virtual (Vector3 srcPos, Vector3 dstPos) GetInitialCameraPositions()
+		{
+			return (new Vector3(0f, 14f, -14f), Vector3.zero);
+		}
+
+		protected virtual Func<Vector3> GetTargetPosition()
+		{
+			return () => Vector3.zero;
+		}
+
+		protected virtual Func<IReadOnlyList<Vector3>> GetFocusPoints()
+		{
+			return () => Array.Empty<Vector3>();
+		}
 	}
 }
