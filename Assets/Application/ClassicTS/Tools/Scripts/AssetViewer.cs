@@ -2,7 +2,6 @@ using UnityEngine;
 using System.Linq;
 using System.Collections.Generic;
 using ClassicTilestorm;
-using MassiveHadronLtd;
 
 namespace AssetViewerNamespace
 {
@@ -33,7 +32,7 @@ namespace AssetViewerNamespace
 
 		void Start()
 		{
-			DatabaseLoader.Init(PreviewSettings.DatabaseJsonFile); 
+			DatabaseSerializer.Init(PreviewSettings.DatabaseJsonFile); 
 			mapName = PreviewSettings.LoadMapName;
 			mapCentre = Vector3.zero;
 			activeTileCount = 0;
@@ -42,7 +41,7 @@ namespace AssetViewerNamespace
 
 		void Initialize()
 		{
-			Debug.Log($"AssetViewer initialized: Maps.Count={DatabaseLoader.Maps.Count}");
+			Debug.Log($"AssetViewer initialized: Maps.Count={DatabaseSerializer.Maps.Count}");
 			DisplayMap();
 		}
 
@@ -56,7 +55,7 @@ namespace AssetViewerNamespace
 
 		void DisplayMap()
 		{
-			DatabaseLoader.Map map = string.IsNullOrEmpty(mapName) ? DatabaseLoader.Maps.FirstOrDefault() : DatabaseLoader.Maps.FirstOrDefault(m => m.name == mapName);
+			DatabaseSerializer.Map map = string.IsNullOrEmpty(mapName) ? DatabaseSerializer.Maps.FirstOrDefault() : DatabaseSerializer.Maps.FirstOrDefault(m => m.name == mapName);
 
 			if (map == null)
 			{
@@ -128,7 +127,7 @@ namespace AssetViewerNamespace
 						continue;
 					}
 
-					DatabaseLoader.TileDef tileDef = DatabaseLoader.TileDefs.FirstOrDefault(td => td.szType == szType && td.szTheme == szTheme);
+					DatabaseSerializer.TileDef tileDef = DatabaseSerializer.TileDefs.FirstOrDefault(td => td.szType == szType && td.szTheme == szTheme);
 					if (tileDef == null)
 					{
 						Debug.LogWarning($"TileDef not found for szType={szType}, szTheme={szTheme} at ({x}, {z}) in map {map.name}");
@@ -189,12 +188,12 @@ namespace AssetViewerNamespace
 			Camera.main.transform.position = mapCentre + (Vector3.up - Vector3.forward) * 8;
 		}
 
-		private DatabaseLoader.TextureSet GetTextureForTileDef(DatabaseLoader.TileDef tileDef, string szTheme)
+		private DatabaseSerializer.TextureSet GetTextureForTileDef(DatabaseSerializer.TileDef tileDef, string szTheme)
 		{
-			DatabaseLoader.Theme theme = DatabaseLoader.Themes.FirstOrDefault(t => t.name == szTheme || t.szTileTextureSet == szTheme);
+			DatabaseSerializer.Theme theme = DatabaseSerializer.Themes.FirstOrDefault(t => t.name == szTheme || t.szTileTextureSet == szTheme);
 			if (theme != null && !string.IsNullOrEmpty(theme.szTileTextureSet))
 			{
-				DatabaseLoader.TextureSet texSet = DatabaseLoader.TextureSets.FirstOrDefault(ts => ts.name == theme.szTileTextureSet);
+				DatabaseSerializer.TextureSet texSet = DatabaseSerializer.TextureSets.FirstOrDefault(ts => ts.name == theme.szTileTextureSet);
 				if (texSet != null && texSet.frames != null && texSet.frames.Length > 0)
 				{
 					Debug.Log($"TextureSet found: {texSet.name}, frames={texSet.frames.Length}");
@@ -202,7 +201,7 @@ namespace AssetViewerNamespace
 				}
 			}
 
-			DatabaseLoader.TextureSet fallbackSet = DatabaseLoader.TextureSets.FirstOrDefault(ts => ts.name == szTheme);
+			DatabaseSerializer.TextureSet fallbackSet = DatabaseSerializer.TextureSets.FirstOrDefault(ts => ts.name == szTheme);
 			if (fallbackSet != null && fallbackSet.frames != null && fallbackSet.frames.Length > 0)
 			{
 				Debug.Log($"Fallback TextureSet: {fallbackSet.name}, frames={fallbackSet.frames.Length}");

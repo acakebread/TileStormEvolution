@@ -20,11 +20,11 @@ public struct Tile
 
 	public Tile(string szType, string szTheme)
 	{
-		var def = DatabaseLoader.TileDefs.FirstOrDefault(td => td.szType == szType && td.szTheme == szTheme);
+		var def = DatabaseSerializer.TileDefs.FirstOrDefault(td => td.szType == szType && td.szTheme == szTheme);
 		flags = null == def ? 0 : CombineFlags(def);
 		GameObject = null;
 
-		static int CombineFlags(DatabaseLoader.TileDef d)
+		static int CombineFlags(DatabaseSerializer.TileDef d)
 		{
 			int f = 0;
 			if (d.bNorth) f |= North;

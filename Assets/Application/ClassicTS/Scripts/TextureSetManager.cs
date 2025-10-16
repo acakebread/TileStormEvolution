@@ -16,10 +16,10 @@ namespace ClassicTilestorm
 
 		public static TextureFrame[] GetTextureFrames(string szTheme)
 		{
-			DatabaseLoader.Theme theme = DatabaseLoader.Themes.FirstOrDefault(t => t.name == szTheme);
+			DatabaseSerializer.Theme theme = DatabaseSerializer.Themes.FirstOrDefault(t => t.name == szTheme);
 			if (theme == null || string.IsNullOrEmpty(theme.szTileTextureSet)) return null;
 
-			DatabaseLoader.TextureSet textureSet = DatabaseLoader.TextureSets.FirstOrDefault(ts => ts.name == theme.szTileTextureSet);
+			DatabaseSerializer.TextureSet textureSet = DatabaseSerializer.TextureSets.FirstOrDefault(ts => ts.name == theme.szTileTextureSet);
 			if (textureSet == null || textureSet.frames == null || textureSet.frames.Length <= 0) return null;
 
 			var frames = new TextureFrame[textureSet.frames.Length];

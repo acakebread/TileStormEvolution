@@ -5,7 +5,7 @@ using MassiveHadronLtd;
 
 namespace ClassicTilestorm
 {
-	public class RTTI : MonoBehaviour { public DatabaseLoader.TileDef tileDef; }
+	public class RTTI : MonoBehaviour { public DatabaseSerializer.TileDef tileDef; }
 
 	public static class GeometryManager
 	{
@@ -36,10 +36,10 @@ namespace ClassicTilestorm
 		}
 
 		//workaround for the fact that TileDefs are really prefab definitions
-		public static GameObject InstantiatePrefab(DatabaseLoader.TileDef tileDef, Transform parent, Vector3 position) => InstantiateTile(tileDef, parent, position);
+		public static GameObject InstantiatePrefab(DatabaseSerializer.TileDef tileDef, Transform parent, Vector3 position) => InstantiateTile(tileDef, parent, position);
 
 		// Instantiates a GameObject based on TileDef, with optional texture animation and collider
-		public static GameObject InstantiateTile(DatabaseLoader.TileDef tileDef, Transform parent, Vector3 position, bool interactive = false)
+		public static GameObject InstantiateTile(DatabaseSerializer.TileDef tileDef, Transform parent, Vector3 position, bool interactive = false)
 		{
 			if (null == tileDef || string.IsNullOrEmpty(tileDef.szGeom))
 			{
@@ -75,7 +75,7 @@ namespace ClassicTilestorm
 			gameObject.name = tileDef.szGeom.Replace(".x", "");
 
 			// Apply texture animation
-			var theme = DatabaseLoader.Themes.FirstOrDefault(t => t.name == tileDef.szTheme);
+			var theme = DatabaseSerializer.Themes.FirstOrDefault(t => t.name == tileDef.szTheme);
 			if (null != theme)
 			{
 				var animator = gameObject.AddComponent<TextureSetAnimator>();

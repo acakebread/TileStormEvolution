@@ -33,7 +33,7 @@ namespace ClassicTilestorm
 
 		private void Start()
 		{
-			DatabaseLoader.Init(PreviewSettings.DatabaseJsonFile);
+			DatabaseSerializer.Init(PreviewSettings.DatabaseJsonFile, (asset) => { PreviewSettings.DatabaseJsonFile = asset; });
 			LoadMap(PlayerPrefs.GetString("LastLoadedMap", PreviewSettings.LoadMapName));
 		}
 
@@ -75,10 +75,10 @@ namespace ClassicTilestorm
 			mapName ??= mapManager != null ? PreviewSettings.LoadMapName : PlayerPrefs.GetString("LastLoadedMap", PreviewSettings.LoadMapName);
 			if (mapName == null) return;
 
-			var currentMap = DatabaseLoader.Maps.FirstOrDefault(m => m.name == mapName) ?? DatabaseLoader.Maps.FirstOrDefault();
+			var currentMap = DatabaseSerializer.Maps.FirstOrDefault(m => m.name == mapName) ?? DatabaseSerializer.Maps.FirstOrDefault();
 			if (currentMap == null)
 			{
-				Debug.LogError($"No map found for mapName={mapName}! Available maps: {string.Join(", ", DatabaseLoader.Maps.Select(m => m.name))}");
+				Debug.LogError($"No map found for mapName={mapName}! Available maps: {string.Join(", ", DatabaseSerializer.Maps.Select(m => m.name))}");
 				return;
 			}
 

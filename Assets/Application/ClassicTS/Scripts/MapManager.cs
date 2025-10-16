@@ -19,8 +19,8 @@ namespace ClassicTilestorm
 		int WorldToMapIndex(Vector3 vec);
 		Tile GetTile(int index);
 		// ADDED: Waypoint-related members to interface for consistency
-		DatabaseLoader.Waypoint[] Waypoints { get; }
-		void SetupWaypoints(DatabaseLoader.Map map);
+		DatabaseSerializer.Waypoint[] Waypoints { get; }
+		void SetupWaypoints(DatabaseSerializer.Map map);
 		int GetStartTile();
 		int GetEndTile();
 		int FindAdjacentConsole(int nTile);
@@ -33,8 +33,8 @@ namespace ClassicTilestorm
 		private Tile[] tiles;
 
 		// ADDED: Waypoint field and property
-		private DatabaseLoader.Waypoint[] waypoints;
-		public DatabaseLoader.Waypoint[] Waypoints => waypoints;
+		private DatabaseSerializer.Waypoint[] waypoints;
+		public DatabaseSerializer.Waypoint[] Waypoints => waypoints;
 
 		public int[] Indices { get => indices; private set => indices = value; }
 		public Tile[] Tiles { get => tiles; private set => tiles = value; }
@@ -52,7 +52,7 @@ namespace ClassicTilestorm
 			waypoints = null;
 		}
 
-		private void Initialise(DatabaseLoader.Map map)
+		private void Initialise(DatabaseSerializer.Map map)
 		{
 			offsets = map?.mixed?.TileData?.bytes;
 			Width = map?.tiles.nWidth ?? 0;
@@ -69,7 +69,7 @@ namespace ClassicTilestorm
 			// ADDED: Setup waypoints after tiles are loaded (requires GetTile calls)
 			SetupWaypoints(map);
 
-			void LoadTileData(DatabaseLoader.Tiles dbTiles)
+			void LoadTileData(DatabaseSerializer.Tiles dbTiles)
 			{
 				var tileMap = dbTiles.TileData.bytes;
 				if (tileMap == null || tileMap.Length != dbTiles.nWidth * dbTiles.nHeight)
@@ -95,22 +95,22 @@ namespace ClassicTilestorm
 					tiles[n] = new Tile(szType, szTheme);
 					if (szType == "tile_empty") continue;
 
-					var tileDef = DatabaseLoader.TileDefs.FirstOrDefault(td => td.szType == szType && td.szTheme == szTheme);
+					var tileDef = DatabaseSerializer.TileDefs.FirstOrDefault(td => td.szType == szType && td.szTheme == szTheme);
 					tiles[n].GameObject = GeometryManager.InstantiateTile(tileDef, transform, TileWorldPosition(n), tiles[n].Interactive);
 				}
 			}
 		}
 
 		// ADDED: Instance method to setup waypoints (formerly static in Navigation)
-		public void SetupWaypoints(DatabaseLoader.Map map)
+		public void SetupWaypoints(DatabaseSerializer.Map map)
 		{
 			waypoints = map.waypoints?.Where(w => w != null).ToArray();
 			if (null == waypoints || 0 == waypoints.Length)
 				waypoints = GenerateWaypoints();
 
-			DatabaseLoader.Waypoint[] GenerateWaypoints() // Local function (non-static, uses 'this')
+			DatabaseSerializer.Waypoint[] GenerateWaypoints() // Local function (non-static, uses 'this')
 			{
-				var generatedWaypoints = new List<DatabaseLoader.Waypoint>();
+				var generatedWaypoints = new List<DatabaseSerializer.Waypoint>();
 				if (0 == Count)
 				{
 					Debug.LogWarning("Cannot setup waypoints: invalid tile data");
@@ -126,7 +126,7 @@ namespace ClassicTilestorm
 					return generatedWaypoints.ToArray();
 				}
 
-				generatedWaypoints.Add(new DatabaseLoader.Waypoint { nTile = startTile });
+				generatedWaypoints.Add(new DatabaseSerializer.Waypoint { nTile = startTile });
 
 				var currentTile = startTile;
 				var currentDir = Navigation.NavToDest(this, currentTile, endTile);
@@ -135,7 +135,7 @@ namespace ClassicTilestorm
 					while (currentTile != endTile)
 					{
 						if (FindAdjacentConsole(currentTile) != -1)
-							generatedWaypoints.Add(new DatabaseLoader.Waypoint { nTile = currentTile });
+							generatedWaypoints.Add(new DatabaseSerializer.Waypoint { nTile = currentTile });
 
 						var nextTileIndex = Navigation.GetAdjacentTile(this, currentTile, currentDir);
 						if (-1 == nextTileIndex || nextTileIndex == startTile) break;
@@ -150,7 +150,7 @@ namespace ClassicTilestorm
 					}
 				}
 
-				generatedWaypoints.Add(new DatabaseLoader.Waypoint { nTile = endTile });
+				generatedWaypoints.Add(new DatabaseSerializer.Waypoint { nTile = endTile });
 
 				Debug.Log($"Generated {generatedWaypoints.Count} waypoints: [{string.Join(", ", generatedWaypoints.Select(w => w.nTile))}]");
 				return generatedWaypoints.ToArray();
@@ -280,7 +280,7 @@ namespace ClassicTilestorm
 			return ray.GetPoint(distance);
 		}
 
-		public static MapManager Instantiate(DatabaseLoader.Map map, Transform parent = null)
+		public static MapManager Instantiate(DatabaseSerializer.Map map, Transform parent = null)
 		{
 			var container = new GameObject($"Map: {map.name}");
 			if (null != parent) container.transform.SetParent(parent, false);

@@ -106,9 +106,9 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			var currentIndex = DatabaseLoader.Maps.ToList().FindIndex(m => m.name == PreviewSettings.LoadMapName);
-			currentIndex = (DatabaseLoader.Maps.Count + currentIndex + delta) % DatabaseLoader.Maps.Count;
-			PreviewSettings.LoadMapName = DatabaseLoader.Maps[currentIndex].name;
+			var currentIndex = DatabaseSerializer.Maps.ToList().FindIndex(m => m.name == PreviewSettings.LoadMapName);
+			currentIndex = (DatabaseSerializer.Maps.Count + currentIndex + delta) % DatabaseSerializer.Maps.Count;
+			PreviewSettings.LoadMapName = DatabaseSerializer.Maps[currentIndex].name;
 			gameController.LoadMap();
 		}
 

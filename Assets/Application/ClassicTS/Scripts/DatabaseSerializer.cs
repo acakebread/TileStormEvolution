@@ -177,7 +177,7 @@ namespace ClassicTilestorm
 				}
 				if (saveAction == null)
 				{
-					throw new ArgumentNullException(nameof(saveAction), "Save delegate cannot be null.");
+					Debug.LogWarning($"Save delegate is null. Saving disabled: {nameof(saveAction)}"); // throw new ArgumentNullException(nameof(saveAction), "Save delegate cannot be null.");
 				}
 
 				databaseJsonFile = jsonFile;
