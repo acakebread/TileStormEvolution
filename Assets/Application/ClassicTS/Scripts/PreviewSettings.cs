@@ -1,5 +1,11 @@
 using UnityEngine;
 using System.IO;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
+using System.Diagnostics;
+using Debug = UnityEngine.Debug;
+using MassiveHadronLtd;
 
 namespace ClassicTilestorm
 {
@@ -13,6 +19,9 @@ namespace ClassicTilestorm
 
 	public class PreviewSettings : MonoBehaviour
 	{
+		// Public constant for the subfolder name in persistentDataPath (can be empty for root)
+		public const string MutableDatabaseSubfolder = "Data";
+
 		[Header("map to load")]
 		[SerializeField] private string loadMapName = "Industrial 01";
 		public static string LoadMapName { get => instance.loadMapName; set => instance.loadMapName = value; }
@@ -45,30 +54,16 @@ namespace ClassicTilestorm
 					return null;
 				}
 
-				// Use a fixed 'Data' subfolder in persistentDataPath
-				string targetFolder = Path.Combine(Application.persistentDataPath, "Data");
-				string fileName = instance.databaseJsonFile.name + ".json";
-				string targetPath = Path.Combine(targetFolder, fileName);
-
-				// Ensure the target directory exists
-				if (!Directory.Exists(targetFolder))
+				string targetPath = GetDatabaseFilePath();
+				string fileContent = SerializerUtility.ReadTextAsset(targetPath, instance.databaseJsonFile);
+				if (string.IsNullOrEmpty(fileContent))
 				{
-					Directory.CreateDirectory(targetFolder);
-					Debug.Log($"Created directory: {targetFolder}");
+					Debug.LogError("PreviewSettings: Failed to read database JSON.");
+					return null;
 				}
 
-				// Check if the file already exists in the target path
-				if (!File.Exists(targetPath))
-				{
-					// Copy the original TextAsset content to the target path
-					File.WriteAllText(targetPath, instance.databaseJsonFile.text);
-					Debug.Log($"Copied database JSON to: {targetPath}");
-				}
-
-				// Load the file as a TextAsset
-				string fileContent = File.ReadAllText(targetPath);
 				TextAsset textAsset = new TextAsset(fileContent);
-				textAsset.name = instance.databaseJsonFile.name; // Preserve the original name
+				textAsset.name = instance.databaseJsonFile.name;
 				return textAsset;
 			}
 		}
@@ -99,8 +94,71 @@ namespace ClassicTilestorm
 
 		private static PreviewSettings instance;
 		void Awake() => instance = this;
+
+		public static string GetDatabaseFilePath()
+		{
+			if (instance == null || instance.databaseJsonFile == null)
+			{
+				Debug.LogError("PreviewSettings: instance or databaseJsonFile is null.");
+				return null;
+			}
+
+			string targetFolder = string.IsNullOrEmpty(MutableDatabaseSubfolder)
+				? Application.persistentDataPath
+				: Path.Combine(Application.persistentDataPath, MutableDatabaseSubfolder);
+			string fullFileName = instance.databaseJsonFile.name.EndsWith(".json")
+				? instance.databaseJsonFile.name
+				: instance.databaseJsonFile.name + ".json";
+			return Path.Combine(targetFolder, fullFileName);
+		}
+
+		public static string GetDatabaseFolderPath()
+		{
+			return string.IsNullOrEmpty(MutableDatabaseSubfolder)
+				? Application.persistentDataPath
+				: Path.Combine(Application.persistentDataPath, MutableDatabaseSubfolder);
+		}
+
+#if UNITY_EDITOR
+		[CustomEditor(typeof(PreviewSettings))]
+		private class PreviewSettingsEditor : Editor
+		{
+			public override void OnInspectorGUI()
+			{
+				DrawDefaultInspector();
+				EditorGUILayout.Space();
+
+				if (GUILayout.Button("Locate Mutable Database"))
+				{
+					string targetFolder = GetDatabaseFolderPath();
+					if (!Directory.Exists(targetFolder))
+					{
+						Directory.CreateDirectory(targetFolder);
+						Debug.Log($"Created directory: {targetFolder}");
+					}
+
+					try
+					{
+						string normalizedPath = targetFolder.Replace("/", Path.DirectorySeparatorChar.ToString());
+						Process.Start(new ProcessStartInfo
+						{
+							FileName = normalizedPath,
+							UseShellExecute = true,
+							Verb = "open"
+						});
+						Debug.Log($"Opened file explorer at: {normalizedPath}");
+					}
+					catch (System.Exception ex)
+					{
+						Debug.LogError($"Failed to open file explorer at {targetFolder}: {ex.Message}");
+					}
+				}
+			}
+		}
+#endif
 	}
 }
+
 
 //using UnityEngine;
 //using System.IO;

@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace ClassicTilestorm
+namespace MassiveHadronLtd
 {
 	public class MorphGeomSway : MorphGeomBase
 	{

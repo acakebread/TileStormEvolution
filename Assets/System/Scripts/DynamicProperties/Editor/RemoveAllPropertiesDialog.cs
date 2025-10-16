@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEditor;
 using UnityEngine.UI;
+using MassiveHadronLtd;
 
 public class RemoveAllPropertiesDialog : EditorWindow
 {

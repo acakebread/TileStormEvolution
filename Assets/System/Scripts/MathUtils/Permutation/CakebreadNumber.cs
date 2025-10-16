@@ -3,86 +3,89 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 
-public static class CakebreadNumber
+namespace MassiveHadronLtd
 {
-	private static BigInteger DistinctPermutations(int[] v)
+	public static class CakebreadNumber
 	{
-		BigInteger n = Factorial(v.Length);
-		var groups = v.GroupBy(x => x);
-		foreach (var group in groups)
-			n /= Factorial(group.Count());
-		return n;
-	}
-
-	private static BigInteger BinomialCoefficient(int n, int k)
-	{
-		if (k > n || k < 0) return 0;
-		k = Math.Min(k, n - k);
-		BigInteger result = 1;
-		for (int i = 0; i < k; i++)
-			result = result * (n - i) / (i + 1);
-		return result;
-	}
-
-	public static BigInteger ToCakebreadNumber(int[] v)
-	{
-		BigInteger result = 0;
-		int[] arr = v.ToArray();
-		while (arr.Length > 1)
+		private static BigInteger DistinctPermutations(int[] v)
 		{
-			BigInteger total = 0;
-			var max = arr.Max();
-			var pos = 0;
-			var count = arr.Count(x => x == max);
-			while (count > 1)
-			{
-				if (max == arr[pos++])
-				{
-					total += BinomialCoefficient(arr.Length - pos, count);
-					count--;
-				}
-			}
-			total += arr.Length - Array.LastIndexOf(arr, max) - 1;
-			arr = arr.Where(x => x != max).ToArray();
-			result += total * DistinctPermutations(arr);
+			BigInteger n = Factorial(v.Length);
+			var groups = v.GroupBy(x => x);
+			foreach (var group in groups)
+				n /= Factorial(group.Count());
+			return n;
 		}
-		return result;
-	}
 
-	public static int[] FromCakebreadNumber(int[] v, BigInteger n)
-	{
-		var output = new List<int>();
-		int[] arr = v.ToArray();
-		while (arr.Any())
+		private static BigInteger BinomialCoefficient(int n, int k)
 		{
-			var pos = 0;
-			var min = arr.Min();
-			var count = arr.Count(x => x == min);
-			var combinations = BinomialCoefficient(output.Count + count, count);
-			var mod = n % combinations;
-			n /= combinations;
-			while (count > 0)
-			{
-				var coef = BinomialCoefficient(output.Count + count - pos - 1, count);
-				if (mod >= coef)
-				{
-					count--;
-					mod -= coef;
-					output.Insert(pos, min);
-				}
-				pos++;
-			}
-			arr = arr.Where(x => x != min).ToArray();
+			if (k > n || k < 0) return 0;
+			k = Math.Min(k, n - k);
+			BigInteger result = 1;
+			for (int i = 0; i < k; i++)
+				result = result * (n - i) / (i + 1);
+			return result;
 		}
-		return output.ToArray();
-	}
 
-	private static BigInteger Factorial(int n)
-	{
-		if (n <= 1) return 1;
-		BigInteger v = n;
-		while (--n > 1) v *= n;
-		return v;
+		public static BigInteger ToCakebreadNumber(int[] v)
+		{
+			BigInteger result = 0;
+			int[] arr = v.ToArray();
+			while (arr.Length > 1)
+			{
+				BigInteger total = 0;
+				var max = arr.Max();
+				var pos = 0;
+				var count = arr.Count(x => x == max);
+				while (count > 1)
+				{
+					if (max == arr[pos++])
+					{
+						total += BinomialCoefficient(arr.Length - pos, count);
+						count--;
+					}
+				}
+				total += arr.Length - Array.LastIndexOf(arr, max) - 1;
+				arr = arr.Where(x => x != max).ToArray();
+				result += total * DistinctPermutations(arr);
+			}
+			return result;
+		}
+
+		public static int[] FromCakebreadNumber(int[] v, BigInteger n)
+		{
+			var output = new List<int>();
+			int[] arr = v.ToArray();
+			while (arr.Any())
+			{
+				var pos = 0;
+				var min = arr.Min();
+				var count = arr.Count(x => x == min);
+				var combinations = BinomialCoefficient(output.Count + count, count);
+				var mod = n % combinations;
+				n /= combinations;
+				while (count > 0)
+				{
+					var coef = BinomialCoefficient(output.Count + count - pos - 1, count);
+					if (mod >= coef)
+					{
+						count--;
+						mod -= coef;
+						output.Insert(pos, min);
+					}
+					pos++;
+				}
+				arr = arr.Where(x => x != min).ToArray();
+			}
+			return output.ToArray();
+		}
+
+		private static BigInteger Factorial(int n)
+		{
+			if (n <= 1) return 1;
+			BigInteger v = n;
+			while (--n > 1) v *= n;
+			return v;
+		}
 	}
 }
 

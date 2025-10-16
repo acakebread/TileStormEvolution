@@ -5,6 +5,7 @@ using UnityEngine.UI;
 using System;
 using System.Globalization;
 using UnityEditor.SceneManagement;
+using MassiveHadronLtd;
 
 [CustomEditor(typeof(DynamicProperties))]
 public class DynamicPropertiesEditor : Editor

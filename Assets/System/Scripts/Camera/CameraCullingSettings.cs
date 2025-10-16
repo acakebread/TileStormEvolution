@@ -1,6 +1,9 @@
 using UnityEngine;
 
-public class CameraCullingSettings : MonoBehaviour
+namespace MassiveHadronLtd
 {
-	public bool invertCulling = false; // Default is false (normal culling)
+	public class CameraCullingSettings : MonoBehaviour
+	{
+		public bool invertCulling = false; // Default is false (normal culling)
+	}
 }

@@ -2,7 +2,10 @@
 
 using UnityEngine;
 
-public static class MaterialExt
+namespace MassiveHadronLtd
 {
-	public static Material clone(this Material material) { return new Material(material) { name = material.name }; }
+	public static class MaterialExt
+	{
+		public static Material clone(this Material material) { return new Material(material) { name = material.name }; }
+	}
 }

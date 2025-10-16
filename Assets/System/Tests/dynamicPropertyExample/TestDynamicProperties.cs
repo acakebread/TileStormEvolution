@@ -1,3 +1,4 @@
+using MassiveHadronLtd;
 using UnityEngine;
 
 public class TestDynamicProperties : MonoBehaviour

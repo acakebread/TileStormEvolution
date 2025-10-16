@@ -1,22 +1,25 @@
-public static class Probability
+namespace MassiveHadronLtd
 {
-	public static int Choose(int num, int count) => MathUtil.Factorial(count) / MathUtil.Factorial(num) / MathUtil.Factorial(count - num);
-	
-	//return number of unique combinations of supplied array
-	public static int DistinctPermutations(int[] v)
+	public static class Probability
 	{
-		var n = MathUtil.Factorial(v.Length);
-		for (var i = 0; i < v.Length;)
+		public static int Choose(int num, int count) => MathUtil.Factorial(count) / MathUtil.Factorial(num) / MathUtil.Factorial(count - num);
+
+		//return number of unique combinations of supplied array
+		public static int DistinctPermutations(int[] v)
 		{
-			var c = 1;
-			for (var j = i + 1; j < v.Length; ++j)
+			var n = MathUtil.Factorial(v.Length);
+			for (var i = 0; i < v.Length;)
 			{
-				if (v[j] != v[i]) continue;
-				v[j] = v[i + c];
-				n /= ++c;
+				var c = 1;
+				for (var j = i + 1; j < v.Length; ++j)
+				{
+					if (v[j] != v[i]) continue;
+					v[j] = v[i + c];
+					n /= ++c;
+				}
+				i += c;
 			}
-			i += c;
+			return n;
 		}
-		return n;
 	}
 }

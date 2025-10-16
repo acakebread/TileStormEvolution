@@ -4,90 +4,92 @@ using System.Linq;
 using UnityEngine;
 using System.Numerics;
 
-public class CakebreadNumberTest : MonoBehaviour
+namespace MassiveHadronLtd
 {
-	void Start()
+	public class CakebreadNumberTest : MonoBehaviour
 	{
-		BigInteger Factorial(int n)
+		void Start()
 		{
-			if (n <= 1) return 1;
-			BigInteger result = n;
-			while (--n > 1) result *= n;
-			return result;
-		}
-
-		BigInteger DistinctPermutations(int[] v)
-		{
-			if (v.Length == 0) return 1;
-			BigInteger n = Factorial(v.Length);
-			var groups = v.GroupBy(x => x);
-			foreach (var group in groups)
-				n /= Factorial(group.Count());
-			return n;
-		}
-
-		BigInteger BinomialCoefficient(int n, int k)
-		{
-			if (k > n || k < 0) return 0;
-			k = Math.Min(k, n - k);
-			BigInteger result = 1;
-			for (int i = 0; i < k; i++)
-				result = result * (n - i) / (i + 1);
-			return result;
-		}
-
-		BigInteger ToPermuradic(int[] v)
-		{
-			BigInteger result = 0;
-			int[] arr = v.ToArray();
-			while (arr.Length > 1)
+			BigInteger Factorial(int n)
 			{
-				BigInteger total = 0;
-				var max = arr.Max();
-				var pos = 0;
-				var count = arr.Count(x => x == max);
-				while (count > 1)
-				{
-					if (max == arr[pos++]) total += BinomialCoefficient(arr.Length - pos, count--);
-				}
-				total += arr.Length - Array.LastIndexOf(arr, max) - 1;
-				arr = arr.Where(x => x != max).ToArray();
-				result += total * DistinctPermutations(arr);
+				if (n <= 1) return 1;
+				BigInteger result = n;
+				while (--n > 1) result *= n;
+				return result;
 			}
-			return result;
-		}
 
-		int[] FromPermuradic(int[] v, BigInteger n)
-		{
-			var output = new List<int>();
-			int[] arr = v.ToArray();
-			while (arr.Any())
+			BigInteger DistinctPermutations(int[] v)
 			{
-				var pos = 0;
-				var min = arr.Min();
-				var count = arr.Count(x => x == min);
-				var combinations = BinomialCoefficient(output.Count + count, count);
-				var mod = n % combinations;
-				n /= combinations;
-				while (count > 0)
+				if (v.Length == 0) return 1;
+				BigInteger n = Factorial(v.Length);
+				var groups = v.GroupBy(x => x);
+				foreach (var group in groups)
+					n /= Factorial(group.Count());
+				return n;
+			}
+
+			BigInteger BinomialCoefficient(int n, int k)
+			{
+				if (k > n || k < 0) return 0;
+				k = Math.Min(k, n - k);
+				BigInteger result = 1;
+				for (int i = 0; i < k; i++)
+					result = result * (n - i) / (i + 1);
+				return result;
+			}
+
+			BigInteger ToPermuradic(int[] v)
+			{
+				BigInteger result = 0;
+				int[] arr = v.ToArray();
+				while (arr.Length > 1)
 				{
-					var coef = BinomialCoefficient(output.Count + count - pos - 1, count);
-					if (mod >= coef)
+					BigInteger total = 0;
+					var max = arr.Max();
+					var pos = 0;
+					var count = arr.Count(x => x == max);
+					while (count > 1)
 					{
-						count--;
-						mod -= coef;
-						output.Insert(pos, min);
+						if (max == arr[pos++]) total += BinomialCoefficient(arr.Length - pos, count--);
 					}
-					pos++;
+					total += arr.Length - Array.LastIndexOf(arr, max) - 1;
+					arr = arr.Where(x => x != max).ToArray();
+					result += total * DistinctPermutations(arr);
 				}
-				arr = arr.Where(x => x != min).ToArray();
+				return result;
 			}
-			return output.ToArray();
-		}
+
+			int[] FromPermuradic(int[] v, BigInteger n)
+			{
+				var output = new List<int>();
+				int[] arr = v.ToArray();
+				while (arr.Any())
+				{
+					var pos = 0;
+					var min = arr.Min();
+					var count = arr.Count(x => x == min);
+					var combinations = BinomialCoefficient(output.Count + count, count);
+					var mod = n % combinations;
+					n /= combinations;
+					while (count > 0)
+					{
+						var coef = BinomialCoefficient(output.Count + count - pos - 1, count);
+						if (mod >= coef)
+						{
+							count--;
+							mod -= coef;
+							output.Insert(pos, min);
+						}
+						pos++;
+					}
+					arr = arr.Where(x => x != min).ToArray();
+				}
+				return output.ToArray();
+			}
 
 
 
-		char[] initialState = {
+			char[] initialState = {
 		'r', 'n', 'b', 'q', 'k', 'b', 'n', 'r',
 		'p', 'p', 'p', 'p', 'p', 'p', 'p', 'p',
 		'.', '.', '.', '.', '.', '.', '.', '.',
@@ -97,7 +99,7 @@ public class CakebreadNumberTest : MonoBehaviour
 		'P', 'P', 'P', 'P', 'P', 'P', 'P', 'P',
 		'R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R' };
 
-		char[] midGameState = {
+			char[] midGameState = {
 		'r', '.', 'b', 'q', 'k', 'b', 'n', 'r',
 		'p', 'p', 'p', '.', '.', 'p', 'p', 'p',
 		'.', '.', 'n', '.', 'p', '.', '.', '.',
@@ -109,40 +111,40 @@ public class CakebreadNumberTest : MonoBehaviour
 
 
 
-		//var test = new[] { 5, 1, 1, 2, 6, 2, 3, 3, 4, 8, 11, 15, 15, 17, 17, 17, 12, 18, 99, 98, 97, 96, 95, 100, 11, 11, 11, 11, 11, 11, 11, 11 };//
-		var test = new int[64];//
-		//for (var i = 0; i < test.Length; ++i) test[i] = UnityEngine.Random.Range(0, 64);
-		for (var i = 0; i < test.Length; ++i) test[i] = initialState[i];
+			//var test = new[] { 5, 1, 1, 2, 6, 2, 3, 3, 4, 8, 11, 15, 15, 17, 17, 17, 12, 18, 99, 98, 97, 96, 95, 100, 11, 11, 11, 11, 11, 11, 11, 11 };//
+			var test = new int[64];//
+								   //for (var i = 0; i < test.Length; ++i) test[i] = UnityEngine.Random.Range(0, 64);
+			for (var i = 0; i < test.Length; ++i) test[i] = initialState[i];
 
-		//var test = new[] { 3, 2, 2, 1, 1, 4 };//
-		
-		var totalPerms = DistinctPermutations(test);
-		Debug.Log($"Total distinct permutations: {totalPerms}");
+			//var test = new[] { 3, 2, 2, 1, 1, 4 };//
 
-		var break_ct = 0;
-		for (BigInteger i = 0; i < totalPerms; i += 1000000000000)
-		//for (BigInteger i = 0; i < totalPerms; ++i)
-		{
-			if (break_ct++ > 1000) break;
-			var perm = FromPermuradic(test, i);
-			var cakebreadNum = CakebreadNumber.ToCakebreadNumber(perm);
-			var cakebreadPerm = CakebreadNumber.FromCakebreadNumber(test, cakebreadNum);
-			var permuradicNum = ToPermuradic(cakebreadPerm);
+			var totalPerms = DistinctPermutations(test);
+			Debug.Log($"Total distinct permutations: {totalPerms}");
 
-			Debug.Log($"{i} FromPermuradic: [{string.Join(", ", perm)}] " +
-					  $"ToCakebreadNumber: {cakebreadNum} " +
-					  $"FromCakebreadNumber: [{string.Join(", ", cakebreadPerm)}] " +
-					  $"ToPermuradic: {permuradicNum}");
-
-			if (cakebreadNum != i || permuradicNum != i || !perm.SequenceEqual(cakebreadPerm))
+			var break_ct = 0;
+			for (BigInteger i = 0; i < totalPerms; i += 1000000000000)
+			//for (BigInteger i = 0; i < totalPerms; ++i)
 			{
-				Debug.LogError($"Test failed at i={i}!");
-				break;
+				if (break_ct++ > 1000) break;
+				var perm = FromPermuradic(test, i);
+				var cakebreadNum = CakebreadNumber.ToCakebreadNumber(perm);
+				var cakebreadPerm = CakebreadNumber.FromCakebreadNumber(test, cakebreadNum);
+				var permuradicNum = ToPermuradic(cakebreadPerm);
+
+				Debug.Log($"{i} FromPermuradic: [{string.Join(", ", perm)}] " +
+						  $"ToCakebreadNumber: {cakebreadNum} " +
+						  $"FromCakebreadNumber: [{string.Join(", ", cakebreadPerm)}] " +
+						  $"ToPermuradic: {permuradicNum}");
+
+				if (cakebreadNum != i || permuradicNum != i || !perm.SequenceEqual(cakebreadPerm))
+				{
+					Debug.LogError($"Test failed at i={i}!");
+					break;
+				}
 			}
 		}
 	}
 }
-
 
 //using System;
 //using System.Collections.Generic;

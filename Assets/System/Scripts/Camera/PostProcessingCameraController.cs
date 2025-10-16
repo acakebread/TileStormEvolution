@@ -3,54 +3,57 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 
-public class PostProcessingCameraController : MonoBehaviour
+namespace MassiveHadronLtd
 {
-	public Transform dofTarget { get; set; } // for DepthOfField
-
-	private Volume volume => GetComponentInChildren<Volume>(true);
-	private DepthOfField depthOfField
-	{ 
-		get
-		{
-			if (null == volume || null == volume.profile) return null;
-			volume.profile.TryGet<DepthOfField>(out var result);
-			return result;
-		}
-	}
-
-	private void OnEnable()
+	public class PostProcessingCameraController : MonoBehaviour
 	{
-		if (null == volume || null == volume.profile)
-		{
-			Debug.LogWarning("Volume or VolumeProfile not found.", this);
-			return;
-		}
-		volume.enabled = true;
-		var dof = depthOfField;
-		if (null != dof)
-		{
-			dof.active = true;
-			StartCoroutine(DepthOfFieldUpdate());
-		}
+		public Transform dofTarget { get; set; } // for DepthOfField
 
-		//local function
-		IEnumerator DepthOfFieldUpdate()
+		private Volume volume => GetComponentInChildren<Volume>(true);
+		private DepthOfField depthOfField
 		{
-			while (true)
+			get
 			{
-				if (null != dofTarget) dof.focusDistance.Override((dofTarget.position - transform.position).magnitude);
-				yield return null;
+				if (null == volume || null == volume.profile) return null;
+				volume.profile.TryGet<DepthOfField>(out var result);
+				return result;
 			}
 		}
-	}
 
-	private void OnDisable()
-	{
-		if (null == volume) return;
-		volume.enabled = false;
+		private void OnEnable()
+		{
+			if (null == volume || null == volume.profile)
+			{
+				Debug.LogWarning("Volume or VolumeProfile not found.", this);
+				return;
+			}
+			volume.enabled = true;
+			var dof = depthOfField;
+			if (null != dof)
+			{
+				dof.active = true;
+				StartCoroutine(DepthOfFieldUpdate());
+			}
 
-		var dof = depthOfField;
-		if (null == dof) return;
-		dof.active = false;
+			//local function
+			IEnumerator DepthOfFieldUpdate()
+			{
+				while (true)
+				{
+					if (null != dofTarget) dof.focusDistance.Override((dofTarget.position - transform.position).magnitude);
+					yield return null;
+				}
+			}
+		}
+
+		private void OnDisable()
+		{
+			if (null == volume) return;
+			volume.enabled = false;
+
+			var dof = depthOfField;
+			if (null == dof) return;
+			dof.active = false;
+		}
 	}
 }

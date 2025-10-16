@@ -96,6 +96,7 @@
 //}
 
 
+using MassiveHadronLtd;
 using UnityEngine;
 
 public class MeshStratifierTest : MonoBehaviour
