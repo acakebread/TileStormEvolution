@@ -6,7 +6,7 @@ namespace MassiveHadronLtd
 {
 	public static class SerializerUtility
 	{
-		public static string ReadTextAsset(string filePath, TextAsset sourceAsset = null)
+		public static string ReadText(string filePath)
 		{
 			if (string.IsNullOrEmpty(filePath))
 			{
@@ -18,35 +18,20 @@ namespace MassiveHadronLtd
 			{
 				if (!File.Exists(filePath))
 				{
-					string targetFolder = Path.GetDirectoryName(filePath);
-					if (!Directory.Exists(targetFolder))
-					{
-						Directory.CreateDirectory(targetFolder);
-						Debug.Log($"SerializerUtility: Created directory: {targetFolder}");
-					}
-
-					if (sourceAsset != null)
-					{
-						File.WriteAllText(filePath, sourceAsset.text);
-						Debug.Log($"SerializerUtility: Copied text asset to: {filePath}");
-					}
-					else
-					{
-						Debug.LogError($"SerializerUtility: Cannot read {filePath}: File does not exist and no source TextAsset provided.");
-						return null;
-					}
+					Debug.LogError($"SerializerUtility: Cannot read {filePath}: File does not exist.");
+					return null;
 				}
 
 				return File.ReadAllText(filePath);
 			}
 			catch (Exception ex)
 			{
-				Debug.LogError($"SerializerUtility: Failed to read text asset from {filePath}: {ex.Message}");
+				Debug.LogError($"SerializerUtility: Failed to read text from {filePath}: {ex.Message}");
 				return null;
 			}
 		}
 
-		public static void WriteTextFile(string filePath, string content)
+		public static void WriteText(string filePath, string content)
 		{
 			if (string.IsNullOrEmpty(filePath))
 			{
@@ -70,11 +55,11 @@ namespace MassiveHadronLtd
 				}
 
 				File.WriteAllText(filePath, content);
-				Debug.Log($"SerializerUtility: Saved text file to: {filePath}");
+				Debug.Log($"SerializerUtility: Saved text to: {filePath}");
 			}
 			catch (Exception ex)
 			{
-				Debug.LogError($"SerializerUtility: Failed to write text file to {filePath}: {ex.Message}");
+				Debug.LogError($"SerializerUtility: Failed to write text to {filePath}: {ex.Message}");
 			}
 		}
 	}
