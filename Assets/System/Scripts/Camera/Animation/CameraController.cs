@@ -68,9 +68,16 @@ namespace MassiveHadronLtd
 			hasCustomStates = true;
 		}
 
-		public CameraState GetStateForMode(CameraMode mode) => stateLookup.TryGetValue(mode, out var state) ? state : null;
+		private CameraState GetStateForMode(CameraMode mode) => stateLookup.TryGetValue(mode, out var state) ? state : null;
 
-		public CameraMode GetModeForState(CameraState state) => stateMode.TryGetValue(state, out var mode) ? mode : CameraMode.Absent;
+		private CameraMode GetModeForState(CameraState state) => stateMode.TryGetValue(state, out var mode) ? mode : CameraMode.Absent;
+
+		public CameraMode GetCurrentModeForMode(CameraMode mode)
+		{
+			var state = GetStateForMode(mode);
+			if (state != null) return GetModeForState(state);
+			return CameraMode.Absent;
+		}
 
 		public void SetCameraMode(CameraMode mode, bool background = false)
 		{
