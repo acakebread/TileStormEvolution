@@ -27,7 +27,6 @@ namespace MassiveHadronLtd
 			var (srcPos, dstPos) = GetInitialCameraPositions();
 			var defaultState = new CameraState
 			{
-				//mode = CameraMode.Editor,
 				data = new CameraData(GetComponent<Camera>()) { origin = srcPos, target = dstPos },
 				origin = () => srcPos,
 				target = () => dstPos,
@@ -137,7 +136,6 @@ namespace MassiveHadronLtd
 			var (srcPos, dstPos) = GetInitialCameraPositions();
 			var editorState = new CameraState
 			{
-				//mode = CameraMode.Editor,
 				data = new CameraData(GetComponent<Camera>()) { origin = srcPos, target = dstPos },
 				origin = () => srcPos,
 				target = GetTargetPosition(),
