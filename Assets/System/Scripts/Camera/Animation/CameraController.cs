@@ -10,7 +10,7 @@ namespace MassiveHadronLtd
 		private CameraBase cameraSystem = null;
 		private CameraMode currentMode = CameraMode.Absent;
 		private Dictionary<CameraState, CameraMode> stateMode = new();
-		private Dictionary<CameraMode, CameraState> stateLookup = new();
+		private Dictionary<CameraMode, CameraState> modeState = new();
 		private bool hasCustomStates = false;
 
 		public bool HasCompleted => cameraSystem != null && cameraSystem.HasCompleted;
@@ -23,8 +23,8 @@ namespace MassiveHadronLtd
 				return;
 			}
 
-			stateLookup[CameraMode.Editor] = editorState();
-			stateLookup[CameraMode.Editor].ApplyToCamera(GetComponent<Camera>());
+			modeState[CameraMode.Editor] = editorState();
+			modeState[CameraMode.Editor].ApplyToCamera(GetComponent<Camera>());
 			SetCameraMode(CameraMode.Editor);
 		}
 
@@ -62,13 +62,13 @@ namespace MassiveHadronLtd
 				Debug.LogError("Cannot register null CameraState or CameraData");
 				return;
 			}
-			foreach (var mode in modes) stateLookup[mode] = state;
+			foreach (var mode in modes) modeState[mode] = state;
 			if (modes.Length > 0) stateMode[state] = modes[0];
 
 			hasCustomStates = true;
 		}
 
-		private CameraState GetStateForMode(CameraMode mode) => stateLookup.TryGetValue(mode, out var state) ? state : null;
+		private CameraState GetStateForMode(CameraMode mode) => modeState.TryGetValue(mode, out var state) ? state : null;
 
 		private CameraMode GetModeForState(CameraState state) => stateMode.TryGetValue(state, out var mode) ? mode : CameraMode.Absent;
 
