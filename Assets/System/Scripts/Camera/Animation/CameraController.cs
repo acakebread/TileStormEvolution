@@ -69,17 +69,6 @@ namespace MassiveHadronLtd
 			}
 		}
 
-		public void UpdateCameraForPreset(CameraMode mode, Vector3 origin, Vector3 target)
-		{
-			var state = GetStateForMode(mode);
-			if (state == null) return;
-
-			state.origin = () => origin;
-			state.target = () => target;
-			state.mode = mode;
-			SetCameraMode(mode, true);
-		}
-
 		public void RegisterState(CameraState state, CameraMode[] modes)
 		{
 			if (state == null || state.data == null)
