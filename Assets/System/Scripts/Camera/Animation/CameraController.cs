@@ -1,16 +1,16 @@
 ﻿using System;
-using System.Collections.Generic;
 using UnityEngine;
+using System.Collections.Generic;
 
 namespace MassiveHadronLtd
 {
 	[RequireComponent(typeof(Camera))]
 	public class CameraController : MonoBehaviour
 	{
-		private CameraBase cameraSystem;
+		private CameraBase cameraSystem = null;
 		private CameraMode currentMode = CameraMode.Absent;
 		private Dictionary<CameraMode, CameraState> stateLookup = new();
-		private bool hasCustomStates;
+		private bool hasCustomStates = false;
 		private Dictionary<CameraState, CameraMode> stateMode = new();
 
 		public bool HasCompleted => cameraSystem != null && cameraSystem.HasCompleted;
@@ -33,6 +33,7 @@ namespace MassiveHadronLtd
 				target = () => dstPos,
 				points = () => Array.Empty<Vector3>()
 			};
+			stateLookup[CameraMode.Absent] = null;
 			stateLookup[CameraMode.Editor] = defaultState;
 			defaultState.ApplyToCamera(GetComponent<Camera>());
 			SetCameraMode(CameraMode.Editor);
@@ -51,23 +52,18 @@ namespace MassiveHadronLtd
 
 			// Apply state for initial mode
 			var state = GetStateForMode(initialMode);
-			if (state != null)
-			{
-				state.ApplyToCamera(GetComponent<Camera>());
-			}
-			else
+			if (null == state)
 			{
 				Debug.LogWarning($"No state for mode {initialMode}. Using default Editor position.");
 				var (srcPos, dstPos) = GetInitialCameraPositions();
 				GetComponent<Camera>().transform.position = srcPos;
 				GetComponent<Camera>().transform.rotation = Quaternion.LookRotation(dstPos - srcPos, Vector3.up);
 			}
+			else
+				state.ApplyToCamera(GetComponent<Camera>());
 
 			// Skip SetCameraMode if using default Editor mode and no custom states
-			if (initialMode != CameraMode.Editor || hasCustomStates)
-			{
-				SetCameraMode(initialMode);
-			}
+			if (initialMode != CameraMode.Editor || hasCustomStates) SetCameraMode(initialMode);
 		}
 
 		public void RegisterState(CameraState state, CameraMode[] modes)
@@ -77,10 +73,7 @@ namespace MassiveHadronLtd
 				Debug.LogError("Cannot register null CameraState or CameraData");
 				return;
 			}
-			foreach (var mode in modes)
-			{
-				stateLookup[mode] = state;
-			}
+			foreach (var mode in modes) stateLookup[mode] = state;
 			if (modes.Length > 0) stateMode[state] = modes[0];
 
 			hasCustomStates = true;
@@ -96,43 +89,23 @@ namespace MassiveHadronLtd
 			if (state == null)
 			{
 				Debug.LogWarning($"No state registered for CameraMode {mode}. Falling back to Editor mode.");
-				state = GetStateForMode(CameraMode.Editor);
-				if (state == null)
-				{
-					return;
-				}
-				mode = CameraMode.Editor;
+				return;
 			}
-			//state.mode = mode;
 			stateMode[state] = mode;
 
-			//var match = mode == GetStateForMode(currentMode)?.mode;
-			//var test = false;
-			var new_match = false;
-
-			if (null!=GetStateForMode(currentMode))
+			if (background)
 			{
-				//test = true;
-				var cstate = GetStateForMode(currentMode);
-				stateMode.TryGetValue(GetStateForMode(currentMode), out var tmode);
-				new_match = tmode == mode;
-
-				Debug.Log(cstate + " " + tmode + " " + mode);
+				var mode_state = GetStateForMode(currentMode);
+				if (null != mode_state)
+				{
+					stateMode.TryGetValue(mode_state, out var _mode);
+					if (_mode != mode) return;
+				}
+				else
+				{
+					Debug.LogWarning("no state for currentMode " + currentMode);
+				}
 			}
-
-			//if (background && false == match && false == test)
-			//{
-			//	Debug.LogError("failed a test");
-			//}
-
-			//if (background && false == match && false != new_match)
-			//{
-			//	Debug.LogError("failed match");
-			//}
-
-			if (background && false == new_match) return;
-
-			//if (background && mode != GetStateForMode(currentMode)?.mode) return;
 
 			cameraSystem = mode switch
 			{
@@ -173,19 +146,8 @@ namespace MassiveHadronLtd
 			RegisterState(editorState, new[] { CameraMode.Editor });
 		}
 
-		protected virtual (Vector3 srcPos, Vector3 dstPos) GetInitialCameraPositions()
-		{
-			return (new Vector3(0f, 14f, -14f), Vector3.zero);
-		}
-
-		protected virtual Func<Vector3> GetTargetPosition()
-		{
-			return () => Vector3.zero;
-		}
-
-		protected virtual Func<IReadOnlyList<Vector3>> GetFocusPoints()
-		{
-			return () => Array.Empty<Vector3>();
-		}
+		protected virtual (Vector3 srcPos, Vector3 dstPos) GetInitialCameraPositions() => (new Vector3(0f, 14f, -14f), Vector3.zero);
+		protected virtual Func<Vector3> GetTargetPosition() => () => Vector3.zero;
+		protected virtual Func<IReadOnlyList<Vector3>> GetFocusPoints() => () => Array.Empty<Vector3>();
 	}
 }

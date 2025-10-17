@@ -9,7 +9,7 @@ namespace ClassicTilestorm
 	{
 		private MapManager mapManager;
 		private EggbotController eggbotController;
-		private GameCameraController cameraController; // Changed to GameCameraController
+		private GameCameraController cameraController;
 		private GestureController gestureController;
 		private PostProcessingCameraController postProcessingController;
 		private bool gestureControllerEnabled = true;
@@ -64,7 +64,6 @@ namespace ClassicTilestorm
 					_ => CameraMode.Absent
 				};
 				var state = cameraController.GetStateForMode(cameraMode);
-				//if (state != null) cameraController.SetCameraMode(state.mode);
 				if (state != null) cameraController.SetCameraMode(cameraController.GetModeForState(state));
 			}
 			UpdateGestureControllerState();

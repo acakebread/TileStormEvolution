@@ -87,7 +87,6 @@ namespace ClassicTilestorm
 			var (srcPos, dstPos) = GetInitialCameraPositions();
 			var editorState = new CameraState
 			{
-				//mode = CameraMode.Editor,
 				data = new CameraData(GetComponent<Camera>()) { origin = srcPos, target = dstPos },
 				origin = () => srcPos,
 				target = GetTargetPosition(),
@@ -96,7 +95,6 @@ namespace ClassicTilestorm
 
 			var playerState = new CameraState
 			{
-				//mode = CameraMode.Follow,
 				data = new CameraData(GetComponent<Camera>()) { origin = srcPos, target = dstPos },
 				target = GetTargetPosition(),
 				origin = () => srcPos
@@ -104,7 +102,6 @@ namespace ClassicTilestorm
 
 			var directState = new CameraState
 			{
-				//mode = CameraMode.Direct,
 				data = new CameraData(GetComponent<Camera>()) { origin = srcPos, target = dstPos },
 				target = () => dstPos,
 				origin = () => srcPos
@@ -112,7 +109,6 @@ namespace ClassicTilestorm
 
 			var cinemaState = new CameraState
 			{
-				//mode = CameraMode.Cinema,
 				data = new CameraData(GetComponent<Camera>()) { origin = srcPos, target = dstPos },
 				target = GetTargetPosition(),
 				points = GetFocusPoints()
@@ -144,7 +140,6 @@ namespace ClassicTilestorm
 			{
 				playerState.origin = () => origin;
 				playerState.target = () => target;
-				//playerState.mode = CameraMode.Preset;
 				SetCameraMode(CameraMode.Preset, true);
 				OnWaypointReachedForGestures?.Invoke(true);
 			}
@@ -158,7 +153,6 @@ namespace ClassicTilestorm
 			if (playerState != null)
 			{
 				playerState.target = GetTargetPosition();
-				//playerState.mode = CameraMode.Follow;
 				SetCameraMode(CameraMode.Follow, true);
 			}
 		}
