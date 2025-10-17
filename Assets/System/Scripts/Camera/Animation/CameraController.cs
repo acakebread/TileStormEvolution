@@ -32,7 +32,7 @@ namespace MassiveHadronLtd
 				target = () => dstPos,
 				points = () => Array.Empty<Vector3>()
 			};
-			stateLookup[CameraMode.Absent] = null;
+
 			stateLookup[CameraMode.Editor] = defaultState;
 			defaultState.ApplyToCamera(GetComponent<Camera>());
 			SetCameraMode(CameraMode.Editor);
@@ -97,13 +97,11 @@ namespace MassiveHadronLtd
 				var mode_state = GetStateForMode(currentMode);
 				if (null != mode_state)
 				{
-					stateMode.TryGetValue(mode_state, out var _mode);
-					if (_mode != mode) return;
+					if (mode != GetModeForState(mode_state)) 
+						return;
 				}
 				else
-				{
 					Debug.LogWarning("no state for currentMode " + currentMode);
-				}
 			}
 
 			cameraSystem = mode switch
