@@ -6,7 +6,7 @@ namespace MassiveHadronLtd
 {
 	public class CameraState
 	{
-		public CameraMode mode;
+		//public CameraMode mode;
 		public CameraData data;
 		public Func<Vector3> origin;
 		public Func<Vector3> target;

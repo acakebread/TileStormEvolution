@@ -11,6 +11,7 @@ namespace MassiveHadronLtd
 		private CameraMode currentMode = CameraMode.Absent;
 		private Dictionary<CameraMode, CameraState> stateLookup = new();
 		private bool hasCustomStates;
+		private Dictionary<CameraState, CameraMode> stateMode = new();
 
 		public bool HasCompleted => cameraSystem != null && cameraSystem.HasCompleted;
 
@@ -26,7 +27,7 @@ namespace MassiveHadronLtd
 			var (srcPos, dstPos) = GetInitialCameraPositions();
 			var defaultState = new CameraState
 			{
-				mode = CameraMode.Editor,
+				//mode = CameraMode.Editor,
 				data = new CameraData(GetComponent<Camera>()) { origin = srcPos, target = dstPos },
 				origin = () => srcPos,
 				target = () => dstPos,
@@ -80,10 +81,14 @@ namespace MassiveHadronLtd
 			{
 				stateLookup[mode] = state;
 			}
+			if (modes.Length > 0) stateMode[state] = modes[0];
+
 			hasCustomStates = true;
 		}
 
 		public CameraState GetStateForMode(CameraMode mode) => stateLookup.TryGetValue(mode, out var state) ? state : null;
+
+		public CameraMode GetModeForState(CameraState state) => stateMode.TryGetValue(state, out var mode) ? mode : CameraMode.Absent;
 
 		public void SetCameraMode(CameraMode mode, bool background = false)
 		{
@@ -98,9 +103,36 @@ namespace MassiveHadronLtd
 				}
 				mode = CameraMode.Editor;
 			}
-			state.mode = mode;
+			//state.mode = mode;
+			stateMode[state] = mode;
 
-			if (background && mode != GetStateForMode(currentMode)?.mode) return;
+			//var match = mode == GetStateForMode(currentMode)?.mode;
+			//var test = false;
+			var new_match = false;
+
+			if (null!=GetStateForMode(currentMode))
+			{
+				//test = true;
+				var cstate = GetStateForMode(currentMode);
+				stateMode.TryGetValue(GetStateForMode(currentMode), out var tmode);
+				new_match = tmode == mode;
+
+				Debug.Log(cstate + " " + tmode + " " + mode);
+			}
+
+			//if (background && false == match && false == test)
+			//{
+			//	Debug.LogError("failed a test");
+			//}
+
+			//if (background && false == match && false != new_match)
+			//{
+			//	Debug.LogError("failed match");
+			//}
+
+			if (background && false == new_match) return;
+
+			//if (background && mode != GetStateForMode(currentMode)?.mode) return;
 
 			cameraSystem = mode switch
 			{
@@ -132,7 +164,7 @@ namespace MassiveHadronLtd
 			var (srcPos, dstPos) = GetInitialCameraPositions();
 			var editorState = new CameraState
 			{
-				mode = CameraMode.Editor,
+				//mode = CameraMode.Editor,
 				data = new CameraData(GetComponent<Camera>()) { origin = srcPos, target = dstPos },
 				origin = () => srcPos,
 				target = GetTargetPosition(),
