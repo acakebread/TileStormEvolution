@@ -8,29 +8,20 @@ namespace MassiveHadronLtd
 	{
 		protected const float TargetFPS = 60f;
 
-		//protected CameraState state;
-		//public CameraBase(CameraState _state) => state = _state ?? throw new ArgumentNullException(nameof(_state));
-
-		//protected Vector3 origin => state.origin?.Invoke() ?? Vector3.zero;
-		//protected Vector3 target => state.target?.Invoke() ?? Vector3.zero;
-		//protected IReadOnlyList<Vector3> points => state.points?.Invoke() ?? Array.Empty<Vector3>();//focus points
-		//protected CameraData data => state.data;
-
 		//merged in from CameraState
 		protected CameraData data;
 		protected Func<Vector3> originFn;
 		protected Func<Vector3> targetFn;
 		protected Func<IReadOnlyList<Vector3>> pointsFn;
 
-		public CameraBase(CameraState _state)
+		public CameraBase(CameraState state)
 		{
-			//state = _state ?? throw new ArgumentNullException(nameof(_state));
-			if (null != _state)
+			if (null != state)
 			{
-				data = _state.data;
-				originFn = _state.origin;
-				targetFn = _state.target;
-				pointsFn = _state.points;
+				data = state.data;
+				originFn = state.origin;
+				targetFn = state.target;
+				pointsFn = state.points;
 			}
 		}
 
