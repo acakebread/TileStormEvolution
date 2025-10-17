@@ -76,6 +76,8 @@ namespace ClassicTilestorm
 			return focusFunc;
 		}
 
+		private CameraState PlayerState = null;
+
 		protected override void SetupCameraStates()
 		{
 			if (GetComponent<Camera>() == null)
@@ -118,6 +120,8 @@ namespace ClassicTilestorm
 			RegisterState(playerState, new[] { CameraMode.Follow, CameraMode.Preset });
 			RegisterState(directState, new[] { CameraMode.Direct });
 			RegisterState(cinemaState, new[] { CameraMode.Cinema });
+
+			PlayerState = playerState;
 		}
 
 		private void HandleWaypointReached(int waypointIndex)
@@ -135,7 +139,7 @@ namespace ClassicTilestorm
 			var origin = waypoint.vSrc.IsValidVector() ? waypoint.vSrc.ToVector3() : new Vector3(0f, 14f, -14f);
 			var target = waypoint.vDst != null && waypoint.vDst.IsValidVector() ? waypoint.vDst.ToVector3() : mapManager.TileWorldPosition(waypoint.nTile);
 
-			var playerState = GetStateForMode(CameraMode.Preset);
+			var playerState = PlayerState;// GetStateForMode(CameraMode.Preset);
 			if (playerState != null)
 			{
 				playerState.origin = () => origin;
@@ -149,7 +153,7 @@ namespace ClassicTilestorm
 		{
 			if (eggbotController == null) return;
 
-			var playerState = GetStateForMode(CameraMode.Follow);
+			var playerState = PlayerState;// GetStateForMode(CameraMode.Follow);
 			if (playerState != null)
 			{
 				playerState.target = GetTargetPosition();
