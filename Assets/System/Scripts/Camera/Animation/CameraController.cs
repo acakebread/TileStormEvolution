@@ -9,9 +9,9 @@ namespace MassiveHadronLtd
 	{
 		private CameraBase cameraSystem = null;
 		private CameraMode currentMode = CameraMode.Absent;
+		private Dictionary<CameraState, CameraMode> stateMode = new();
 		private Dictionary<CameraMode, CameraState> stateLookup = new();
 		private bool hasCustomStates = false;
-		private Dictionary<CameraState, CameraMode> stateMode = new();
 
 		public bool HasCompleted => cameraSystem != null && cameraSystem.HasCompleted;
 
@@ -23,18 +23,8 @@ namespace MassiveHadronLtd
 				return;
 			}
 
-			// Initialize with default Editor state to ensure camera is positioned correctly on Awake
-			var (srcPos, dstPos) = GetInitialCameraPositions();
-			var defaultState = new CameraState
-			{
-				data = new CameraData(GetComponent<Camera>()) { origin = srcPos, target = dstPos },
-				origin = () => srcPos,
-				target = () => dstPos,
-				points = () => Array.Empty<Vector3>()
-			};
-
-			stateLookup[CameraMode.Editor] = defaultState;
-			defaultState.ApplyToCamera(GetComponent<Camera>());
+			stateLookup[CameraMode.Editor] = editorState();
+			stateLookup[CameraMode.Editor].ApplyToCamera(GetComponent<Camera>());
 			SetCameraMode(CameraMode.Editor);
 		}
 
@@ -94,14 +84,15 @@ namespace MassiveHadronLtd
 
 			if (background)
 			{
-				var mode_state = GetStateForMode(currentMode);
-				if (null != mode_state)
+				var currentState = GetStateForMode(currentMode);
+				if (currentState != null && mode != GetModeForState(currentState))
 				{
-					if (mode != GetModeForState(mode_state)) 
-						return;
+					return;
 				}
-				else
-					Debug.LogWarning("no state for currentMode " + currentMode);
+				if (currentState == null)
+				{
+					Debug.LogWarning($"No state for currentMode {currentMode}");
+				}
 			}
 
 			cameraSystem = mode switch
@@ -131,17 +122,10 @@ namespace MassiveHadronLtd
 				return;
 			}
 
-			var (srcPos, dstPos) = GetInitialCameraPositions();
-			var editorState = new CameraState
-			{
-				data = new CameraData(GetComponent<Camera>()) { origin = srcPos, target = dstPos },
-				origin = () => srcPos,
-				target = GetTargetPosition(),
-				points = GetFocusPoints()
-			};
-			RegisterState(editorState, new[] { CameraMode.Editor });
+			RegisterState(editorState(), new[] { CameraMode.Editor });
 		}
 
+		private CameraState editorState() { return new CameraState { data = new CameraData(GetComponent<Camera>()) { origin = new Vector3(0f, 14f, -14f), target = Vector3.zero }, }; }
 		protected virtual (Vector3 srcPos, Vector3 dstPos) GetInitialCameraPositions() => (new Vector3(0f, 14f, -14f), Vector3.zero);
 		protected virtual Func<Vector3> GetTargetPosition() => () => Vector3.zero;
 		protected virtual Func<IReadOnlyList<Vector3>> GetFocusPoints() => () => Array.Empty<Vector3>();
