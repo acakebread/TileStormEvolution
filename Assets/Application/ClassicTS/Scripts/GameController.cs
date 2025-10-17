@@ -63,8 +63,6 @@ namespace ClassicTilestorm
 					PreviewMode.Direct => CameraMode.Direct,
 					_ => CameraMode.Absent
 				};
-				//var state = cameraController.GetStateForMode(cameraMode);
-				//if (state != null) cameraController.SetCameraMode(cameraController.GetModeForState(state));
 				cameraController.SetCameraMode(cameraController.GetCurrentModeForMode(cameraMode));
 			}
 			UpdateGestureControllerState();
