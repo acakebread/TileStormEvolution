@@ -1,9 +1,18 @@
+using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace MassiveHadronLtd
 {
 	public class CameraOrbit : CameraBase
 	{
+		protected Func<Vector3> originFn;
+		protected Func<Vector3> targetFn;
+		protected Func<IReadOnlyList<Vector3>> pointsFn;
+		protected Vector3 origin => originFn?.Invoke() ?? Vector3.zero;
+		protected Vector3 target => targetFn?.Invoke() ?? Vector3.zero;
+		protected IReadOnlyList<Vector3> points => pointsFn?.Invoke() ?? Array.Empty<Vector3>();//focus points
+
 		private const float VerticalOffset = 0.5f;
 		private const float MinOrbitRadius = 2f;
 		private const float MaxOrbitRadius = 8f;
@@ -25,7 +34,27 @@ namespace MassiveHadronLtd
 
 		public override bool HasCompleted => sequenceTimer <= 0f && pauseTimer <= 0f;
 
-		public CameraOrbit(CameraConfig config) : base(config) { }
+		public CameraOrbit(CameraConfig config) : base(config)
+		{
+			if (null != config)
+			{
+				data = config.data;
+				originFn = config.origin;
+				targetFn = config.target;
+				pointsFn = config.points;
+			}
+		}
+
+		public override void Awake()
+		{
+			//initialise camera
+			var camera = data.camera;
+			if (camera == null) return;
+			camera.transform.position = originFn?.Invoke() ?? data.origin;
+			var direction = (targetFn?.Invoke() ?? data.target) - camera.transform.position;
+			if (direction.sqrMagnitude > Mathf.Epsilon)
+				camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
+		}
 
 		public override void Start()
 		{
@@ -40,27 +69,27 @@ namespace MassiveHadronLtd
 
 			localTarget = target; // Use helper property 'target'
 
-			sequenceDuration = DefaultSequenceDuration + Random.Range(-2f, 2f);
+			sequenceDuration = DefaultSequenceDuration + UnityEngine.Random.Range(-2f, 2f);
 			sequenceTimer = sequenceDuration;
 			pauseTimer = DefaultPauseDuration;
 			lastTarget = nextTarget = target; // Use helper property 'target'
 
-			orbitStartAngle = Random.Range(0f, 360f);
-			orbitHeightSrc = Random.Range(MinCameraHeight, MaxCameraHeight);
-			orbitHeightDst = Random.Range(MinCameraHeight, MaxCameraHeight);
+			orbitStartAngle = UnityEngine.Random.Range(0f, 360f);
+			orbitHeightSrc = UnityEngine.Random.Range(MinCameraHeight, MaxCameraHeight);
+			orbitHeightDst = UnityEngine.Random.Range(MinCameraHeight, MaxCameraHeight);
 
 			var minRadiusSrc = CalculateMinOrbitRadius(orbitHeightSrc, localTarget.y);
 			var minRadiusDst = CalculateMinOrbitRadius(orbitHeightDst, localTarget.y);
 			var minRadius = Mathf.Max(minRadiusSrc, minRadiusDst);
-			currentOrbitRadius = Random.Range(Mathf.Max(minRadius, MinOrbitRadius), MaxOrbitRadius);
+			currentOrbitRadius = UnityEngine.Random.Range(Mathf.Max(minRadius, MinOrbitRadius), MaxOrbitRadius);
 
 			data.target = localTarget = target + Vector3.up * VerticalOffset; // Use helper property 'target'
 			var maxDelta = Mathf.Lerp(360f, 180f, (currentOrbitRadius - MinOrbitRadius) / (MaxOrbitRadius - MinOrbitRadius));
-			var delta = Random.Range(120f, maxDelta) * (Random.value < 0.5f ? 1f : -1f);
+			var delta = UnityEngine.Random.Range(120f, maxDelta) * (UnityEngine.Random.value < 0.5f ? 1f : -1f);
 			orbitEndAngle = orbitStartAngle + delta;
 
 			data.fieldOfView = FovMin;
-			currentFovMax = Random.value < 0.2f ? 60f : FovMax;
+			currentFovMax = UnityEngine.Random.value < 0.2f ? 60f : FovMax;
 
 			data.origin = localOrigin = localTarget + SampleOrbitPosition(orbitStartAngle, orbitEndAngle, 0f);
 
@@ -92,7 +121,7 @@ namespace MassiveHadronLtd
 			data.smoothing = SmoothingUtils.Smooth(data.smoothing, SmoothingRate, sequenceDuration, Time.deltaTime, TargetFPS);
 
 			UpdateCinemaLerping();
-			ApplyProjection();
+			OnRender();
 		}
 
 		private float CalculateMinOrbitRadius(float cameraHeight, float targetY)

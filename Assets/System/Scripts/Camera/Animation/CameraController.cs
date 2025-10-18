@@ -28,7 +28,7 @@ namespace MassiveHadronLtd
 			}
 
 			cameraSystems[CameraMode.Default] = new CameraDefault(defaultConfig());
-			cameraSystems[CameraMode.Default].InitialiseCamera();
+			cameraSystems[CameraMode.Default].Awake();
 			SetCameraMode(CameraMode.Default);
 		}
 
@@ -49,7 +49,7 @@ namespace MassiveHadronLtd
 
 			// Apply config for initial mode
 			if (cameraSystems.ContainsKey(initialMode))
-				cameraSystems[initialMode].InitialiseCamera();
+				cameraSystems[initialMode].Awake();
 			else
 			{
 				Debug.LogWarning($"No config for mode {initialMode}. Using default position.");

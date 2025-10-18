@@ -1,15 +1,44 @@
+using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace MassiveHadronLtd
 {
 	public class CameraFollow : CameraBase
 	{
+		protected Func<Vector3> originFn;
+		protected Func<Vector3> targetFn;
+		protected Func<IReadOnlyList<Vector3>> pointsFn;
+		protected Vector3 origin => originFn?.Invoke() ?? Vector3.zero;
+		protected Vector3 target => targetFn?.Invoke() ?? Vector3.zero;
+		protected IReadOnlyList<Vector3> points => pointsFn?.Invoke() ?? Array.Empty<Vector3>();//focus points
+
 		private const float SmoothingNa = 8f;
 		private const float SmoothingNb = 64f;
 		private const float IdealDistance = 14f;
 		private const float IdealDistanceHorizontalScale = 1.4f;
 
-		public CameraFollow(CameraConfig config) : base(config) { }
+		public CameraFollow(CameraConfig config) : base(config)
+		{
+			if (null != config)
+			{
+				data = config.data;
+				originFn = config.origin;
+				targetFn = config.target;
+				pointsFn = config.points;
+			}
+		}
+
+		public override void Awake()
+		{
+			//initialise camera
+			var camera = data.camera;
+			if (camera == null) return;
+			camera.transform.position = originFn?.Invoke() ?? data.origin;
+			var direction = (targetFn?.Invoke() ?? data.target) - camera.transform.position;
+			if (direction.sqrMagnitude > Mathf.Epsilon)
+				camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
+		}
 
 		public override void Start()
 		{
@@ -29,7 +58,7 @@ namespace MassiveHadronLtd
 			var origin = data.target - deltaHorizontal * (IdealDistance * IdealDistanceHorizontalScale);
 			origin.y = data.target.y + IdealDistance;
 			data.origin = Vector3.Lerp(data.origin, origin, followLerp);
-			ApplyProjection();
+			OnRender();
 		}
 	}
 }

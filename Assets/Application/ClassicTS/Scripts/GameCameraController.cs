@@ -153,8 +153,8 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			CameraSystems[CameraMode.Preset].OriginFn = () => waypoint.vSrc.IsValidVector() ? waypoint.vSrc.ToVector3() : new Vector3(0f, 14f, -14f);
-			CameraSystems[CameraMode.Preset].TargetFn = () => waypoint.vDst != null && waypoint.vDst.IsValidVector() ? waypoint.vDst.ToVector3() : mapManager.TileWorldPosition(waypoint.nTile);
+			((CameraPreset)CameraSystems[CameraMode.Preset]).OriginFn = () => waypoint.vSrc.IsValidVector() ? waypoint.vSrc.ToVector3() : new Vector3(0f, 14f, -14f);
+			((CameraPreset)CameraSystems[CameraMode.Preset]).TargetFn = () => waypoint.vDst != null && waypoint.vDst.IsValidVector() ? waypoint.vDst.ToVector3() : mapManager.TileWorldPosition(waypoint.nTile);
 
 			SetCameraMode(CameraMode.Preset, true);
 			OnWaypointReachedForGestures?.Invoke(true);

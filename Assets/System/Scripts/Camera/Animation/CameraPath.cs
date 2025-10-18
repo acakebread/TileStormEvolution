@@ -1,10 +1,19 @@
 using UnityEngine;
 using System.Linq;
+using System;
+using System.Collections.Generic;
 
 namespace MassiveHadronLtd
 {
 	public class CameraPath : CameraBase
 	{
+		protected Func<Vector3> originFn;
+		protected Func<Vector3> targetFn;
+		protected Func<IReadOnlyList<Vector3>> pointsFn;
+		protected Vector3 origin => originFn?.Invoke() ?? Vector3.zero;
+		protected Vector3 target => targetFn?.Invoke() ?? Vector3.zero;
+		protected IReadOnlyList<Vector3> points => pointsFn?.Invoke() ?? Array.Empty<Vector3>();//focus points
+
 		private const float VerticalOffset = 0.5f;
 		private const float MinDistance = 1f;
 		private const float MinFocusPointDistanceFromPlayer = 4f;
@@ -40,12 +49,32 @@ namespace MassiveHadronLtd
 		protected float sequenceTimer = DefaultSequenceDuration;
 		protected float pauseTimer = DefaultPauseDuration;
 
-		public CameraPath(CameraConfig config) : base(config) { }
+		public CameraPath(CameraConfig config) : base(config)
+		{
+			if (null != config)
+			{
+				data = config.data;
+				originFn = config.origin;
+				targetFn = config.target;
+				pointsFn = config.points;
+			}
+		}
+
+		public override void Awake()
+		{
+			//initialise camera
+			var camera = data.camera;
+			if (camera == null) return;
+			camera.transform.position = originFn?.Invoke() ?? data.origin;
+			var direction = (targetFn?.Invoke() ?? data.target) - camera.transform.position;
+			if (direction.sqrMagnitude > Mathf.Epsilon)
+				camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
+		}
 
 		protected virtual void InitializeCinemaSequence()
 		{
 			sequenceTimer = pauseTimer = 0f;
-			sequenceDuration = DefaultSequenceDuration + Random.Range(-2f, 2f);
+			sequenceDuration = DefaultSequenceDuration + UnityEngine.Random.Range(-2f, 2f);
 			sequenceTimer = sequenceDuration;
 			pauseTimer = DefaultPauseDuration;
 			lastTarget = nextTarget = this.target; // Use CameraBase.target property
@@ -77,7 +106,7 @@ namespace MassiveHadronLtd
 			var targetPosition = this.target; // Use CameraBase.target property
 			var _focusPoints = this.points; // Use CameraBase.points property (focus points)
 
-			sequenceDuration = DefaultSequenceDuration + Random.Range(-2f, 2f);
+			sequenceDuration = DefaultSequenceDuration + UnityEngine.Random.Range(-2f, 2f);
 			sequenceTimer = sequenceDuration;
 			pauseTimer = DefaultPauseDuration;
 			lastTarget = nextTarget = targetPosition;
@@ -93,7 +122,7 @@ namespace MassiveHadronLtd
 				var validFocusPoint = _focusPoints.Where(p =>
 					Vector2.Distance(new Vector2(p.x, p.z), new Vector2(targetPosition.x, targetPosition.z)) >= MinFocusPointDistanceFromPlayer).ToList();
 				if (validFocusPoint.Count > 0)
-					startFocusPoint = validFocusPoint[Random.Range(0, validFocusPoint.Count)];
+					startFocusPoint = validFocusPoint[UnityEngine.Random.Range(0, validFocusPoint.Count)];
 			}
 
 			data.target = localTarget = startFocusPoint + Vector3.up * VerticalOffset;
@@ -101,7 +130,7 @@ namespace MassiveHadronLtd
 
 			// Define lozenge
 			var targetPath = localTarget - data.target;
-			var pathDir = targetPath.magnitude > 0.1f ? targetPath.normalized : Random.onUnitSphere;
+			var pathDir = targetPath.magnitude > 0.1f ? targetPath.normalized : UnityEngine.Random.onUnitSphere;
 			var midPoint = (data.target + localTarget) / 2f;
 			var perpendicular = new Vector3(-pathDir.z, 0f, pathDir.x).normalized;
 			var lozengeMajor = targetPath.magnitude + 2f * MinDistance;
@@ -117,7 +146,7 @@ namespace MassiveHadronLtd
 
 			// Initialize FOV
 			data.fieldOfView = FovMin;
-			currentFovMax = Random.value < 0.2f ? 60f : FovMax;
+			currentFovMax = UnityEngine.Random.value < 0.2f ? 60f : FovMax;
 		}
 
 		public override void Update()
@@ -151,7 +180,7 @@ namespace MassiveHadronLtd
 			data.smoothing = SmoothingUtils.Smooth(data.smoothing, SmoothingRate, sequenceDuration, Time.deltaTime, TargetFPS);
 
 			UpdateCinemaLerping();
-			ApplyProjection();
+			OnRender();
 		}
 
 		private Vector3 QuadraticBezierPoint(float t, Vector3 p0, Vector3 p1, Vector3 p2)
@@ -273,13 +302,13 @@ namespace MassiveHadronLtd
 		private (Vector3 point, Vector2 perimeterPoint, Vector3 tangent1, Vector3 tangent2, float theta, float projectionDistance)
 			GeneratePointOutsideLozenge(Vector2 midPointXZ, Vector3 pathDir, Vector3 perpendicular, float lozengeMajor, float lozengeMinor)
 		{
-			var theta = Random.Range(0f, 2f * Mathf.PI);
+			var theta = UnityEngine.Random.Range(0f, 2f * Mathf.PI);
 			var perimeterPoint = MathEllipse.GetEllipsePoint(theta, lozengeMajor, lozengeMinor, midPointXZ, pathDir, perpendicular);
 			var direction = (perimeterPoint - midPointXZ).normalized;
 			var distanceToPerimeter = Vector2.Distance(midPointXZ, perimeterPoint);
-			var projectionDistance = distanceToPerimeter + Random.Range(1f, 5f);
+			var projectionDistance = distanceToPerimeter + UnityEngine.Random.Range(1f, 5f);
 			var pointXZ = midPointXZ + direction * projectionDistance;
-			var point = new Vector3(pointXZ.x, Random.Range(MinCameraHeight, MaxCameraHeight), pointXZ.y);
+			var point = new Vector3(pointXZ.x, UnityEngine.Random.Range(MinCameraHeight, MaxCameraHeight), pointXZ.y);
 
 			var (tangent1, tangent2) = MathEllipse.ComputeTangentAtPoint(theta, lozengeMajor, lozengeMinor, pathDir, perpendicular);
 
