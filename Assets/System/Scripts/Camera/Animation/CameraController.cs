@@ -17,7 +17,7 @@ namespace MassiveHadronLtd
 		private bool hasCustomCameras = false;
 
 		protected Dictionary<CameraMode, CameraBase> CameraSystems { get => cameraSystems; }
-		public bool HasCompleted => cameraSystem != null && cameraSystem.HasCompleted;
+		public bool HasCompleted => cameraSystem is CameraOrbit orbit ? orbit.HasCompleted : cameraSystem is CameraPath path && path.HasCompleted;
 
 		private void Awake()
 		{

@@ -88,7 +88,7 @@ namespace MassiveHadronLtd
 			data.target = Vector3.Lerp(data.target, localTarget, interpolate);
 		}
 
-		public override bool HasCompleted => sequenceTimer <= 0f && pauseTimer <= 0f;
+		public bool HasCompleted => sequenceTimer <= 0f && pauseTimer <= 0f;
 
 		public override void Start()
 		{

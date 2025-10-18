@@ -33,7 +33,7 @@ namespace MassiveHadronLtd
 		private Vector3 localOrigin; // Renamed to avoid conflict with helper property
 		private Vector3 localTarget;
 
-		public override bool HasCompleted => sequenceTimer <= 0f && pauseTimer <= 0f;
+		public bool HasCompleted => sequenceTimer <= 0f && pauseTimer <= 0f;
 
 		public CameraOrbit(CameraConfig config) : base(config)
 		{

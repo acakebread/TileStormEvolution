@@ -6,7 +6,6 @@ namespace MassiveHadronLtd
 
 		protected CameraData data;
 		public CameraData Data { get => data; set => data = value; }
-		public virtual bool HasCompleted => false;
 
 		public CameraBase(CameraConfig config) { }
 
