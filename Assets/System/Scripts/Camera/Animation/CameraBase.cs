@@ -9,10 +9,20 @@ namespace MassiveHadronLtd
 		protected const float TargetFPS = 60f;
 
 		//merged in from CameraState
-		public CameraData data;
+		protected CameraData data;
 		protected Func<Vector3> originFn;
 		protected Func<Vector3> targetFn;
 		protected Func<IReadOnlyList<Vector3>> pointsFn;
+
+		public void InitialiseCamera()
+		{
+			var camera = data.camera;
+			if (camera == null) return;
+			camera.transform.position = originFn?.Invoke() ?? Vector3.zero;
+			var direction = (targetFn?.Invoke() ?? Vector3.zero) - camera.transform.position;
+			if (direction.sqrMagnitude > Mathf.Epsilon)
+				camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
+		}
 
 		public CameraBase(CameraState state)
 		{
@@ -25,20 +35,11 @@ namespace MassiveHadronLtd
 			}
 		}
 
-		public CameraState State
-		{
-			set
-			{
-				if (null != value)
-				{
-					data = value.data;
-					originFn = value.origin;
-					targetFn = value.target;
-					pointsFn = value.points;
-				}
-			}
-			get => new CameraState() { data = this.data, origin = originFn, target = targetFn, points = pointsFn };
-		}
+		public CameraData Data { get => data; set => data = value; }
+
+		public Func<Vector3> OriginFn { set => originFn = value; }
+		public Func<Vector3> TargetFn { set => targetFn = value; }
+		public Func<IReadOnlyList<Vector3>> PointsFn { set => pointsFn = value; }
 
 		protected Vector3 origin => originFn?.Invoke() ?? Vector3.zero;
 		protected Vector3 target => targetFn?.Invoke() ?? Vector3.zero;

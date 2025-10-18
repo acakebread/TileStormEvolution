@@ -10,12 +10,13 @@ namespace MassiveHadronLtd
 	{
 		private CameraMode currentMode = CameraMode.Absent;
 		private CameraBase cameraSystem = null;
-		protected Dictionary<CameraMode, CameraBase> cameraSystems = new();
+		private Dictionary<CameraMode, CameraBase> cameraSystems = new();
 		private Dictionary<string, CameraMode[]> groups = new();
 		private Dictionary<string, CameraMode> groupMode = new();
 
 		private bool hasCustomCameras = false;
 
+		protected Dictionary<CameraMode, CameraBase> CameraSystems { get => cameraSystems; }
 		public bool HasCompleted => cameraSystem != null && cameraSystem.HasCompleted;
 
 		private void Awake()
@@ -48,16 +49,15 @@ namespace MassiveHadronLtd
 			SetupCameraStates();
 
 			// Apply state for initial mode
-			var state = cameraSystems[initialMode].State;
-			if (null == state)
+			if (cameraSystems.ContainsKey(initialMode))
+				cameraSystems[initialMode].InitialiseCamera();
+			else
 			{
 				Debug.LogWarning($"No state for mode {initialMode}. Using default Editor position.");
 				var (srcPos, dstPos) = GetInitialCameraPositions();
 				GetComponent<Camera>().transform.position = srcPos;
 				GetComponent<Camera>().transform.rotation = Quaternion.LookRotation(dstPos - srcPos, Vector3.up);
 			}
-			else
-				state.ApplyToCamera(GetComponent<Camera>());
 
 			// Skip SetCameraMode if using default Editor mode and no custom states
 			if (initialMode != CameraMode.Editor || hasCustomCameras) SetCameraMode(initialMode);
@@ -74,47 +74,39 @@ namespace MassiveHadronLtd
 			hasCustomCameras = true;
 		}
 
-		protected void RegisterGroup(string ID, CameraMode[] modes) => groups[ID] = modes.ToArray();
-
-		private bool AreModesSameGroup(CameraMode m1, CameraMode m2) 
+		protected void RegisterGroup(string groupId, CameraMode[] modes)
 		{
-			foreach (var group in groups)
+			if (string.IsNullOrEmpty(groupId) || modes == null || modes.Length == 0)
 			{
-				if (group.Value.Contains(m1) && group.Value.Contains(m2)) 
-					return true;
+				Debug.LogWarning("Invalid group registration.");
+				return;
 			}
-			return false;
+			groups[groupId] = modes.ToArray();
 		}
 
-		private string ModeGroupKey(CameraMode mode)
-		{
-			foreach (var group in groups)
-			{
-				if (group.Value.Contains(mode))
-					return group.Key;
-			}
-			return null;
-		}
+		private bool AreModesInSameGroup(CameraMode mode1, CameraMode mode2) => groups.Any(group => group.Value.Contains(mode1) && group.Value.Contains(mode2));
+
+		private string GetGroupIdForMode(CameraMode mode) => groups.FirstOrDefault(group => group.Value.Contains(mode)).Key;
 
 		public CameraMode GetCurrentGroupMode(CameraMode mode)
 		{
-			var key = ModeGroupKey(mode);
+			var key = GetGroupIdForMode(mode);
 			return null != key && groupMode.ContainsKey(key) ? groupMode[key] : mode;
 		}
 
 		public void SetCameraMode(CameraMode mode, bool background = false)
 		{
-			var key = ModeGroupKey(mode);
+			var key = GetGroupIdForMode(mode);
 			var group_mode = null != key && groupMode.ContainsKey(key) ? groupMode[key] : mode;
 			if (null != key) groupMode[key] = mode;
 
-			if (background && false == AreModesSameGroup(mode, currentMode))
+			if (background && false == AreModesInSameGroup(mode, currentMode))
 				return;
 
-			var group_state = cameraSystems[group_mode].State;
+			//var group_state = cameraSystems[group_mode].State;
 
 			cameraSystem = cameraSystems[mode];
-			cameraSystem.data = group_state.data;
+			cameraSystem.Data = cameraSystems[group_mode].Data;//cameraSystem.data = group_state.data;
 
 			currentMode = mode;
 			cameraSystem?.Start();

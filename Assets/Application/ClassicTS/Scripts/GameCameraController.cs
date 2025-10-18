@@ -157,19 +157,11 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			var origin = waypoint.vSrc.IsValidVector() ? waypoint.vSrc.ToVector3() : new Vector3(0f, 14f, -14f);
-			var target = waypoint.vDst != null && waypoint.vDst.IsValidVector() ? waypoint.vDst.ToVector3() : mapManager.TileWorldPosition(waypoint.nTile);
+			CameraSystems[CameraMode.Preset].OriginFn = () => waypoint.vSrc.IsValidVector() ? waypoint.vSrc.ToVector3() : new Vector3(0f, 14f, -14f);
+			CameraSystems[CameraMode.Preset].TargetFn = () => waypoint.vDst != null && waypoint.vDst.IsValidVector() ? waypoint.vDst.ToVector3() : mapManager.TileWorldPosition(waypoint.nTile);
 
-			var presetState = PresetState;
-			if (presetState != null)
-			{
-				presetState.origin = () => origin;
-				presetState.target = () => target;
-				cameraSystems[CameraMode.Preset].State = presetState;
-
-				SetCameraMode(CameraMode.Preset, true);
-				OnWaypointReachedForGestures?.Invoke(true);
-			}
+			SetCameraMode(CameraMode.Preset, true);
+			OnWaypointReachedForGestures?.Invoke(true);
 		}
 
 		private void HandlePuzzleSolved(int waypointIndex)
