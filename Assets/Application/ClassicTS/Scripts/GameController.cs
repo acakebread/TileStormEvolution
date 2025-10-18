@@ -110,7 +110,6 @@ namespace ClassicTilestorm
 				{
 					PreviewMode.Editor => CameraMode.Editor,
 					PreviewMode.Player => CameraMode.Follow,
-					//PreviewMode.Cinema => CameraMode.Cinema,
 					PreviewMode.Cinema => Random.Range(0, 7) switch { 0 or 1 or 2 => CameraMode.Orbit, _ => CameraMode.Path },
 					_ => CameraMode.Follow
 				};
