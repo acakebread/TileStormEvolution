@@ -103,8 +103,6 @@ namespace MassiveHadronLtd
 			if (background && false == AreModesInSameGroup(mode, currentMode))
 				return;
 
-			//var group_state = cameraSystems[group_mode].State;
-
 			cameraSystem = cameraSystems[mode];
 			cameraSystem.Data = cameraSystems[group_mode].Data;//cameraSystem.data = group_state.data;
 
