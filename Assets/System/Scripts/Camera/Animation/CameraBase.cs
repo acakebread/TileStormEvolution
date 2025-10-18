@@ -25,6 +25,21 @@ namespace MassiveHadronLtd
 			}
 		}
 
+		public CameraState State
+		{
+			set
+			{
+				if (null != value)
+				{
+					data = value.data;
+					originFn = value.origin;
+					targetFn = value.target;
+					pointsFn = value.points;
+				}
+			}
+			get => new CameraState() { data = this.data, origin = originFn, target = targetFn, points = pointsFn };
+		}
+
 		protected Vector3 origin => originFn?.Invoke() ?? Vector3.zero;
 		protected Vector3 target => targetFn?.Invoke() ?? Vector3.zero;
 		protected IReadOnlyList<Vector3> points => pointsFn?.Invoke() ?? Array.Empty<Vector3>();//focus points
