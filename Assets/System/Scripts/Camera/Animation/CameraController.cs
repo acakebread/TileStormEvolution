@@ -27,9 +27,8 @@ namespace MassiveHadronLtd
 				return;
 			}
 
-			var state = editorState();
-			state.ApplyToCamera(GetComponent<Camera>());
-			cameraSystems[CameraMode.Editor] = new CameraEditor(state);
+			cameraSystems[CameraMode.Editor] = new CameraEditor(editorState());
+			cameraSystems[CameraMode.Editor].InitialiseCamera();
 			SetCameraMode(CameraMode.Editor);
 		}
 
@@ -46,7 +45,7 @@ namespace MassiveHadronLtd
 			cameraSystems = new();
 
 			// Setup camera states before applying the initial mode
-			SetupCameraStates();
+			SetupCameras();
 
 			// Apply state for initial mode
 			if (cameraSystems.ContainsKey(initialMode))
@@ -114,7 +113,7 @@ namespace MassiveHadronLtd
 
 		private void OnApplicationFocus(bool hasFocus) => cameraSystem?.OnApplicationFocus(hasFocus);
 
-		protected virtual void SetupCameraStates()
+		protected virtual void SetupCameras()
 		{
 			if (GetComponent<Camera>() == null)
 			{

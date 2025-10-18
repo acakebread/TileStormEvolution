@@ -76,9 +76,7 @@ namespace ClassicTilestorm
 			return focusFunc;
 		}
 		
-		private CameraState PresetState = null;
-
-		protected override void SetupCameraStates()
+		protected override void SetupCameras()
 		{
 			if (GetComponent<Camera>() == null)
 			{
@@ -141,8 +139,6 @@ namespace ClassicTilestorm
 			RegisterGroup("PLAYER", new[] { CameraMode.Follow, CameraMode.Preset });
 			RegisterGroup("DIRECT", new[] { CameraMode.Direct });
 			RegisterGroup("CINEMA", new[] { CameraMode.Path, CameraMode.Orbit });
-
-			PresetState = presetState;
 		}
 
 		private void HandleWaypointReached(int waypointIndex)

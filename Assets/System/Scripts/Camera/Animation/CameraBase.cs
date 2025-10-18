@@ -18,8 +18,8 @@ namespace MassiveHadronLtd
 		{
 			var camera = data.camera;
 			if (camera == null) return;
-			camera.transform.position = originFn?.Invoke() ?? Vector3.zero;
-			var direction = (targetFn?.Invoke() ?? Vector3.zero) - camera.transform.position;
+			camera.transform.position = originFn?.Invoke() ?? data.origin;
+			var direction = (targetFn?.Invoke() ?? data.target) - camera.transform.position;
 			if (direction.sqrMagnitude > Mathf.Epsilon)
 				camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
 		}
