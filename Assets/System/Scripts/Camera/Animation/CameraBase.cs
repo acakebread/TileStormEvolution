@@ -8,7 +8,7 @@ namespace MassiveHadronLtd
 	{
 		protected const float TargetFPS = 60f;
 
-		//merged in from CameraState
+		//merged in from CameraConfig
 		protected CameraData data;
 		protected Func<Vector3> originFn;
 		protected Func<Vector3> targetFn;
@@ -24,14 +24,14 @@ namespace MassiveHadronLtd
 				camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
 		}
 
-		public CameraBase(CameraState state)
+		public CameraBase(CameraConfig config)
 		{
-			if (null != state)
+			if (null != config)
 			{
-				data = state.data;
-				originFn = state.origin;
-				targetFn = state.target;
-				pointsFn = state.points;
+				data = config.data;
+				originFn = config.origin;
+				targetFn = config.target;
+				pointsFn = config.points;
 			}
 		}
 

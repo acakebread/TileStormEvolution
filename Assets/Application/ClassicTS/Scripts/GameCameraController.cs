@@ -80,12 +80,12 @@ namespace ClassicTilestorm
 		{
 			if (GetComponent<Camera>() == null)
 			{
-				Debug.LogWarning("Cannot setup camera states: Camera is null");
+				Debug.LogWarning("Cannot setup camera configs: Camera is null");
 				return;
 			}
 
 			var (srcPos, dstPos) = GetInitialCameraPositions();
-			var editorState = new CameraState
+			var editorConfig = new CameraConfig
 			{
 				data = new CameraData(GetComponent<Camera>()) { origin = srcPos, target = dstPos },
 				origin = () => srcPos,
@@ -93,47 +93,47 @@ namespace ClassicTilestorm
 				points = GetFocusPoints()
 			};
 
-			var followState = new CameraState
+			var followConfig = new CameraConfig
 			{
 				data = new CameraData(GetComponent<Camera>()) { origin = srcPos, target = dstPos },
 				target = GetTargetPosition(),
 				origin = () => srcPos
 			};
 
-			var presetState = new CameraState
+			var presetConfig = new CameraConfig
 			{
 				data = new CameraData(GetComponent<Camera>()) { origin = srcPos, target = dstPos },
 				target = GetTargetPosition(),
 				origin = () => srcPos
 			};
 
-			var directState = new CameraState
+			var directConfig = new CameraConfig
 			{
 				data = new CameraData(GetComponent<Camera>()) { origin = srcPos, target = dstPos },
 				target = () => dstPos,
 				origin = () => srcPos
 			};
 
-			var orbitState = new CameraState
+			var orbitConfig = new CameraConfig
 			{
 				data = new CameraData(GetComponent<Camera>()) { origin = srcPos, target = dstPos },
 				target = GetTargetPosition(),
 				points = GetFocusPoints()
 			};
 
-			var pathState = new CameraState
+			var pathConfig = new CameraConfig
 			{
 				data = new CameraData(GetComponent<Camera>()) { origin = srcPos, target = dstPos },
 				target = GetTargetPosition(),
 				points = GetFocusPoints()
 			};
 
-			RegisterCamera(new CameraEditor(editorState), CameraMode.Editor);
-			RegisterCamera(new CameraFollow(followState), CameraMode.Follow);
-			RegisterCamera(new CameraPreset(presetState), CameraMode.Preset);
-			RegisterCamera(new CameraDirect(directState), CameraMode.Direct);
-			RegisterCamera(new CameraOrbit(orbitState), CameraMode.Orbit);
-			RegisterCamera(new CameraPath(pathState), CameraMode.Path);
+			RegisterCamera(new CameraEditor(editorConfig), CameraMode.Editor);
+			RegisterCamera(new CameraFollow(followConfig), CameraMode.Follow);
+			RegisterCamera(new CameraPreset(presetConfig), CameraMode.Preset);
+			RegisterCamera(new CameraDirect(directConfig), CameraMode.Direct);
+			RegisterCamera(new CameraOrbit(orbitConfig), CameraMode.Orbit);
+			RegisterCamera(new CameraPath(pathConfig), CameraMode.Path);
 
 			RegisterGroup("EDITOR", new[] { CameraMode.Editor });
 			RegisterGroup("PLAYER", new[] { CameraMode.Follow, CameraMode.Preset });

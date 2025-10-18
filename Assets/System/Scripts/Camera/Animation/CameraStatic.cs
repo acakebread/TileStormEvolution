@@ -2,7 +2,7 @@ namespace MassiveHadronLtd
 {
 	public class CameraStatic : CameraBase
 	{
-		public CameraStatic(CameraState state) : base(state) { }
+		public CameraStatic(CameraConfig config) : base(config) { }
 
 		public override void Start()
 		{

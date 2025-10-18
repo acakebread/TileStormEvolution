@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace MassiveHadronLtd
 {
-	public class CameraState
+	public class CameraConfig
 	{
 		public CameraData data;
 		public Func<Vector3> origin;

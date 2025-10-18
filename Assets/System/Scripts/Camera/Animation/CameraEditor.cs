@@ -17,9 +17,9 @@ namespace MassiveHadronLtd
 		private float lookSpeedV = 2f;
 		private float zoomSpeed = 12f;
 
-		public CameraEditor(CameraState state) : base(state)
+		public CameraEditor(CameraConfig config) : base(config)
 		{
-			cameraTransform = state.data.camera.transform;
+			cameraTransform = config.data.camera.transform;
 		}
 
 		public override void Start()

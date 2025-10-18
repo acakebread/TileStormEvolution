@@ -9,7 +9,7 @@ namespace MassiveHadronLtd
 		private const float IdealDistance = 14f;
 		private const float IdealDistanceHorizontalScale = 1.4f;
 
-		public CameraFollow(CameraState state) : base(state) { }
+		public CameraFollow(CameraConfig config) : base(config) { }
 
 		public override void Start()
 		{

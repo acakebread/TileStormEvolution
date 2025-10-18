@@ -40,7 +40,7 @@ namespace MassiveHadronLtd
 		protected float sequenceTimer = DefaultSequenceDuration;
 		protected float pauseTimer = DefaultPauseDuration;
 
-		public CameraPath(CameraState state) : base(state) { }
+		public CameraPath(CameraConfig config) : base(config) { }
 
 		protected virtual void InitializeCinemaSequence()
 		{

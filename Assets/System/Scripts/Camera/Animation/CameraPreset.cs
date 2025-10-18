@@ -8,7 +8,7 @@ namespace MassiveHadronLtd
 		private Vector3 localOrigin; // Renamed to avoid conflict with helper property
 		private Vector3 localTarget;
 
-		public CameraPreset(CameraState state) : base(state) { }
+		public CameraPreset(CameraConfig config) : base(config) { }
 
 		public override void Start()
 		{

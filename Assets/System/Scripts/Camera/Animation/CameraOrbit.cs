@@ -25,7 +25,7 @@ namespace MassiveHadronLtd
 
 		public override bool HasCompleted => sequenceTimer <= 0f && pauseTimer <= 0f;
 
-		public CameraOrbit(CameraState state) : base(state) { }
+		public CameraOrbit(CameraConfig config) : base(config) { }
 
 		public override void Start()
 		{

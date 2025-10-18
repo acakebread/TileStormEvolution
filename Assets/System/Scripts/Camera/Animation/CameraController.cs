@@ -27,7 +27,7 @@ namespace MassiveHadronLtd
 				return;
 			}
 
-			cameraSystems[CameraMode.Editor] = new CameraEditor(editorState());
+			cameraSystems[CameraMode.Editor] = new CameraEditor(editorConfig());
 			cameraSystems[CameraMode.Editor].InitialiseCamera();
 			SetCameraMode(CameraMode.Editor);
 		}
@@ -44,21 +44,21 @@ namespace MassiveHadronLtd
 			groupMode = new();
 			cameraSystems = new();
 
-			// Setup camera states before applying the initial mode
+			// Setup camera configs before applying the initial mode
 			SetupCameras();
 
-			// Apply state for initial mode
+			// Apply config for initial mode
 			if (cameraSystems.ContainsKey(initialMode))
 				cameraSystems[initialMode].InitialiseCamera();
 			else
 			{
-				Debug.LogWarning($"No state for mode {initialMode}. Using default Editor position.");
+				Debug.LogWarning($"No config for mode {initialMode}. Using default Editor position.");
 				var (srcPos, dstPos) = GetInitialCameraPositions();
 				GetComponent<Camera>().transform.position = srcPos;
 				GetComponent<Camera>().transform.rotation = Quaternion.LookRotation(dstPos - srcPos, Vector3.up);
 			}
 
-			// Skip SetCameraMode if using default Editor mode and no custom states
+			// Skip SetCameraMode if using default Editor mode and no custom configs
 			if (initialMode != CameraMode.Editor || hasCustomCameras) SetCameraMode(initialMode);
 		}
 
@@ -103,7 +103,7 @@ namespace MassiveHadronLtd
 				return;
 
 			cameraSystem = cameraSystems[mode];
-			cameraSystem.Data = cameraSystems[group_mode].Data;//cameraSystem.data = group_state.data;
+			cameraSystem.Data = cameraSystems[group_mode].Data;
 
 			currentMode = mode;
 			cameraSystem?.Start();
@@ -117,14 +117,14 @@ namespace MassiveHadronLtd
 		{
 			if (GetComponent<Camera>() == null)
 			{
-				Debug.LogWarning("Cannot setup camera states: Camera is null");
+				Debug.LogWarning("Cannot setup camera configs: Camera is null");
 				return;
 			}
 
-			RegisterCamera(new CameraEditor(editorState()), CameraMode.Editor);
+			RegisterCamera(new CameraEditor(editorConfig()), CameraMode.Editor);
 		}
 
-		private CameraState editorState() { return new CameraState { data = new CameraData(GetComponent<Camera>()) { origin = new Vector3(0f, 14f, -14f), target = Vector3.zero }, }; }
+		private CameraConfig editorConfig() { return new CameraConfig { data = new CameraData(GetComponent<Camera>()) { origin = new Vector3(0f, 14f, -14f), target = Vector3.zero }, }; }
 		protected virtual (Vector3 srcPos, Vector3 dstPos) GetInitialCameraPositions() => (new Vector3(0f, 14f, -14f), Vector3.zero);
 		protected virtual Func<Vector3> GetTargetPosition() => () => Vector3.zero;
 		protected virtual Func<IReadOnlyList<Vector3>> GetFocusPoints() => () => Array.Empty<Vector3>();
