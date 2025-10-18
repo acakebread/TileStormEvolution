@@ -27,12 +27,12 @@ namespace MassiveHadronLtd
 				return;
 			}
 
-			cameraSystems[CameraMode.Editor] = new CameraEditor(editorConfig());
-			cameraSystems[CameraMode.Editor].InitialiseCamera();
-			SetCameraMode(CameraMode.Editor);
+			cameraSystems[CameraMode.Default] = new CameraDefault(defaultConfig());
+			cameraSystems[CameraMode.Default].InitialiseCamera();
+			SetCameraMode(CameraMode.Default);
 		}
 
-		public virtual void Initialise(CameraMode initialMode = CameraMode.Editor)
+		public virtual void Initialise(CameraMode initialMode = CameraMode.Default)
 		{
 			if (GetComponent<Camera>() == null)
 			{
@@ -52,14 +52,14 @@ namespace MassiveHadronLtd
 				cameraSystems[initialMode].InitialiseCamera();
 			else
 			{
-				Debug.LogWarning($"No config for mode {initialMode}. Using default Editor position.");
+				Debug.LogWarning($"No config for mode {initialMode}. Using default position.");
 				var (srcPos, dstPos) = GetInitialCameraPositions();
 				GetComponent<Camera>().transform.position = srcPos;
 				GetComponent<Camera>().transform.rotation = Quaternion.LookRotation(dstPos - srcPos, Vector3.up);
 			}
 
-			// Skip SetCameraMode if using default Editor mode and no custom configs
-			if (initialMode != CameraMode.Editor || hasCustomCameras) SetCameraMode(initialMode);
+			// Skip SetCameraMode if using default mode and no custom configs
+			if (initialMode != CameraMode.Default || hasCustomCameras) SetCameraMode(initialMode);
 		}
 
 		protected void RegisterCamera(CameraBase camera, CameraMode mode)
@@ -121,10 +121,10 @@ namespace MassiveHadronLtd
 				return;
 			}
 
-			RegisterCamera(new CameraEditor(editorConfig()), CameraMode.Editor);
+			RegisterCamera(new CameraDefault(defaultConfig()), CameraMode.Default);
 		}
 
-		private CameraConfig editorConfig() { return new CameraConfig { data = new CameraData(GetComponent<Camera>()) { origin = new Vector3(0f, 14f, -14f), target = Vector3.zero }, }; }
+		private CameraConfig defaultConfig() { return new CameraConfig { data = new CameraData(GetComponent<Camera>()) { origin = new Vector3(0f, 14f, -14f), target = Vector3.zero }, }; }
 		protected virtual (Vector3 srcPos, Vector3 dstPos) GetInitialCameraPositions() => (new Vector3(0f, 14f, -14f), Vector3.zero);
 		protected virtual Func<Vector3> GetTargetPosition() => () => Vector3.zero;
 		protected virtual Func<IReadOnlyList<Vector3>> GetFocusPoints() => () => Array.Empty<Vector3>();
