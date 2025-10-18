@@ -9,7 +9,7 @@ namespace MassiveHadronLtd
 		protected const float TargetFPS = 60f;
 
 		//merged in from CameraState
-		protected CameraData data;
+		public CameraData data;
 		protected Func<Vector3> originFn;
 		protected Func<Vector3> targetFn;
 		protected Func<IReadOnlyList<Vector3>> pointsFn;

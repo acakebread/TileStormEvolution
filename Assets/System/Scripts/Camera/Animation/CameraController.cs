@@ -111,19 +111,10 @@ namespace MassiveHadronLtd
 			if (background && false == AreModesSameGroup(mode, currentMode))
 				return;
 
-			var state = cameraSystems[mode].State;
-			if (state == null)
-			{
-				Debug.LogWarning($"No state registered for CameraMode {mode}. Falling back to Editor mode.");
-				return;
-			}
-
 			var group_state = cameraSystems[group_mode].State;
-			if (null != group_state)
-				state.data = group_state.data;
 
 			cameraSystem = cameraSystems[mode];
-			cameraSystem.State = state;
+			cameraSystem.data = group_state.data;
 
 			currentMode = mode;
 			cameraSystem?.Start();
