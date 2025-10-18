@@ -1,17 +1,22 @@
 ﻿using System;
-using System.Collections.Generic;
 using UnityEngine;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace MassiveHadronLtd
 {
 	[RequireComponent(typeof(Camera))]
 	public class CameraController : MonoBehaviour
 	{
-		private CameraBase cameraSystem;
 		private CameraMode currentMode = CameraMode.Absent;
-		private Dictionary<CameraMode, CameraState> stateLookup = new();
-		private bool hasCustomStates;
+		private CameraBase cameraSystem = null;
+		private Dictionary<CameraMode, CameraBase> cameraSystems = new();
+		private Dictionary<string, CameraMode[]> groups = new();
+		private Dictionary<string, CameraMode> groupModes = new();
 
+		private bool hasCustomCameras = false;
+
+		protected Dictionary<CameraMode, CameraBase> CameraSystems { get => cameraSystems; }
 		public bool HasCompleted => cameraSystem != null && cameraSystem.HasCompleted;
 
 		private void Awake()
@@ -22,22 +27,12 @@ namespace MassiveHadronLtd
 				return;
 			}
 
-			// Initialize with default Editor state to ensure camera is positioned correctly on Awake
-			var (srcPos, dstPos) = GetInitialCameraPositions();
-			var defaultState = new CameraState
-			{
-				mode = CameraMode.Editor,
-				data = new CameraData(GetComponent<Camera>()) { origin = srcPos, target = dstPos },
-				origin = () => srcPos,
-				target = () => dstPos,
-				points = () => Array.Empty<Vector3>()
-			};
-			stateLookup[CameraMode.Editor] = defaultState;
-			defaultState.ApplyToCamera(GetComponent<Camera>());
-			SetCameraMode(CameraMode.Editor);
+			cameraSystems[CameraMode.Default] = new CameraDefault(defaultConfig());
+			cameraSystems[CameraMode.Default].Awake();
+			SetCameraMode(CameraMode.Default);
 		}
 
-		public virtual void Initialise(CameraMode initialMode = CameraMode.Editor)
+		public virtual void Initialise(CameraMode initialMode = CameraMode.Default)
 		{
 			if (GetComponent<Camera>() == null)
 			{
@@ -45,115 +40,96 @@ namespace MassiveHadronLtd
 				return;
 			}
 
-			// Setup camera states before applying the initial mode
-			SetupCameraStates();
+			groups = new();
+			groupModes = new();
+			cameraSystems = new();
 
-			// Apply state for initial mode
-			var state = GetStateForMode(initialMode);
-			if (state != null)
-			{
-				state.ApplyToCamera(GetComponent<Camera>());
-			}
+			// Setup camera configs before applying the initial mode
+			SetupCameras();
+
+			// Apply config for initial mode
+			if (cameraSystems.ContainsKey(initialMode))
+				cameraSystems[initialMode].Awake();
 			else
 			{
-				Debug.LogWarning($"No state for mode {initialMode}. Using default Editor position.");
+				Debug.LogWarning($"No config for mode {initialMode}. Using default position.");
 				var (srcPos, dstPos) = GetInitialCameraPositions();
 				GetComponent<Camera>().transform.position = srcPos;
 				GetComponent<Camera>().transform.rotation = Quaternion.LookRotation(dstPos - srcPos, Vector3.up);
 			}
 
-			// Skip SetCameraMode if using default Editor mode and no custom states
-			if (initialMode != CameraMode.Editor || hasCustomStates)
-			{
-				SetCameraMode(initialMode);
-			}
+			// Skip SetCameraMode if using default mode and no custom configs
+			if (initialMode != CameraMode.Default || hasCustomCameras) SetCameraMode(initialMode);
 		}
 
-		public void RegisterState(CameraState state, CameraMode[] modes)
+		protected void RegisterCamera(CameraBase camera, CameraMode mode)
 		{
-			if (state == null || state.data == null)
+			if (null == camera)
 			{
-				Debug.LogError("Cannot register null CameraState or CameraData");
+				Debug.LogError("Cannot register null Camera");
 				return;
 			}
-			foreach (var mode in modes)
-			{
-				stateLookup[mode] = state;
-			}
-			hasCustomStates = true;
+			cameraSystems[mode] = camera;
+			hasCustomCameras = true;
 		}
 
-		public CameraState GetStateForMode(CameraMode mode) => stateLookup.TryGetValue(mode, out var state) ? state : null;
+		protected void RegisterGroup(string groupId, CameraMode[] modes)
+		{
+			if (string.IsNullOrEmpty(groupId) || modes == null || modes.Length == 0)
+			{
+				Debug.LogWarning("Invalid group registration.");
+				return;
+			}
+			groups[groupId] = modes.ToArray();
+		}
+
+		private string GetGroupIdForMode(CameraMode mode) => groups.FirstOrDefault(group => group.Value.Contains(mode)).Key;
+
+		public CameraMode GetCurrentGroupMode(CameraMode mode)
+		{
+			var key = GetGroupIdForMode(mode);
+			return null != key && groupModes.ContainsKey(key) ? groupModes[key] : mode;
+		}
 
 		public void SetCameraMode(CameraMode mode, bool background = false)
 		{
-			var state = GetStateForMode(mode);
-			if (state == null)
-			{
-				Debug.LogWarning($"No state registered for CameraMode {mode}. Falling back to Editor mode.");
-				state = GetStateForMode(CameraMode.Editor);
-				if (state == null)
-				{
-					return;
-				}
-				mode = CameraMode.Editor;
-			}
-			state.mode = mode;
+			var key = GetGroupIdForMode(mode);
+			var groupMode = null != key && groupModes.ContainsKey(key) ? groupModes[key] : mode;
+			if (null != key) groupModes[key] = mode;
 
-			if (background && mode != GetStateForMode(currentMode)?.mode) return;
+			if (background && false == AreModesInSameGroup(mode, currentMode))
+				return;
 
-			cameraSystem = mode switch
-			{
-				CameraMode.Editor => new CameraEditor(state),
-				CameraMode.Static => new CameraStatic(state),
-				CameraMode.Preset => new CameraPreset(state),
-				CameraMode.Follow => new CameraFollow(state),
-				CameraMode.Direct => new CameraDirect(state),
-				CameraMode.Cinema => UnityEngine.Random.Range(0, 7) switch { 0 or 1 or 2 => new CameraOrbit(state), _ => new CameraPath(state) },
-				_ => cameraSystem
-			};
+			cameraSystem = cameraSystems[mode];
+			if (null == cameraSystem)
+				return;
 
 			currentMode = mode;
-			cameraSystem?.Start();
+			cameraSystem.Data = cameraSystems[groupMode].Data;
+			cameraSystem.Start();
+
+			//local function
+			bool AreModesInSameGroup(CameraMode mode1, CameraMode mode2) => groups.Any(group => group.Value.Contains(mode1) && group.Value.Contains(mode2));
 		}
 
 		private void Update() => cameraSystem?.Update();
 
 		private void OnApplicationFocus(bool hasFocus) => cameraSystem?.OnApplicationFocus(hasFocus);
 
-		protected virtual void SetupCameraStates()
+		protected virtual void SetupCameras()
 		{
 			if (GetComponent<Camera>() == null)
 			{
-				Debug.LogWarning("Cannot setup camera states: Camera is null");
+				Debug.LogWarning("Cannot setup camera configs: Camera is null");
 				return;
 			}
 
-			var (srcPos, dstPos) = GetInitialCameraPositions();
-			var editorState = new CameraState
-			{
-				mode = CameraMode.Editor,
-				data = new CameraData(GetComponent<Camera>()) { origin = srcPos, target = dstPos },
-				origin = () => srcPos,
-				target = GetTargetPosition(),
-				points = GetFocusPoints()
-			};
-			RegisterState(editorState, new[] { CameraMode.Editor });
+			RegisterCamera(new CameraDefault(defaultConfig()), CameraMode.Default);
 		}
 
-		protected virtual (Vector3 srcPos, Vector3 dstPos) GetInitialCameraPositions()
-		{
-			return (new Vector3(0f, 14f, -14f), Vector3.zero);
-		}
-
-		protected virtual Func<Vector3> GetTargetPosition()
-		{
-			return () => Vector3.zero;
-		}
-
-		protected virtual Func<IReadOnlyList<Vector3>> GetFocusPoints()
-		{
-			return () => Array.Empty<Vector3>();
-		}
+		private CameraConfig defaultConfig() { return new CameraConfig { data = new CameraData(GetComponent<Camera>()) { origin = new Vector3(0f, 14f, -14f), target = Vector3.zero }, }; }
+		protected virtual (Vector3 srcPos, Vector3 dstPos) GetInitialCameraPositions() => (new Vector3(0f, 14f, -14f), Vector3.zero);
+		protected virtual Func<Vector3> GetTargetPosition() => () => Vector3.zero;
+		protected virtual Func<IReadOnlyList<Vector3>> GetFocusPoints() => () => Array.Empty<Vector3>();
 	}
 }

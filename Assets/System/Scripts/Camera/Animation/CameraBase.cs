@@ -1,36 +1,19 @@
-using System;
-using UnityEngine;
-using System.Collections.Generic;
-
 namespace MassiveHadronLtd
 {
 	public abstract class CameraBase
 	{
 		protected const float TargetFPS = 60f;
 
-		protected CameraState state;
+		protected CameraData data;
+		public CameraData Data { get => data; set => data = value; }
+		public virtual bool HasCompleted => false;
 
-		public CameraBase(CameraState _state) => state = _state ?? throw new ArgumentNullException(nameof(_state));
+		public CameraBase(CameraConfig config) { }
 
-		protected Vector3 origin => state.origin?.Invoke() ?? Vector3.zero;
-		protected Vector3 target => state.target?.Invoke() ?? Vector3.zero;
-		protected IReadOnlyList<Vector3> points => state.points?.Invoke() ?? Array.Empty<Vector3>();//focus points
-		protected CameraData data => state.data;
-
+		public virtual void Awake() { }
 		public virtual void Start() { }
 		public virtual void Update() { }
 		public virtual void OnApplicationFocus(bool hasFocus) { }
-		public virtual bool HasCompleted => false;
-
-		protected virtual void ApplyProjection()
-		{
-			if (data?.camera == null) return;
-			data.camera.transform.position = data.origin;
-			var direction = data.target - data.origin;
-			if (direction.sqrMagnitude > Mathf.Epsilon)
-				data.camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
-			data.camera.fieldOfView = data.fieldOfView;
-			//CameraUtils.ApplyCameraShake(data.camera, data.shake);
-		}
+		protected virtual void OnRender() { }
 	}
 }

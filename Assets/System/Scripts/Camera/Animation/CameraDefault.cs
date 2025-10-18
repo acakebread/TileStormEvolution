@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 namespace MassiveHadronLtd
 {
-	public class CameraEditor : CameraBase
+	public class CameraDefault : CameraBase
 	{
 		protected Func<Vector3> originFn;
 		protected Func<Vector3> targetFn;
@@ -12,6 +12,7 @@ namespace MassiveHadronLtd
 		protected Vector3 origin => originFn?.Invoke() ?? Vector3.zero;
 		protected Vector3 target => targetFn?.Invoke() ?? Vector3.zero;
 		protected IReadOnlyList<Vector3> points => pointsFn?.Invoke() ?? Array.Empty<Vector3>();//focus points
+
 
 		private float yaw;
 		private float pitch;
@@ -26,14 +27,16 @@ namespace MassiveHadronLtd
 		private float lookSpeedV = 2f;
 		private float zoomSpeed = 12f;
 
-		public CameraEditor(CameraConfig config) : base(config)
+		public CameraDefault(CameraConfig config) : base(config)
 		{
-			if (null != config)
 			{
-				data = config.data;
-				originFn = config.origin;
-				targetFn = config.target;
-				pointsFn = config.points;
+				if (null != config)
+				{
+					data = config.data;
+					originFn = config.origin;
+					targetFn = config.target;
+					pointsFn = config.points;
+				}
 			}
 
 			cameraTransform = config.data.camera.transform;

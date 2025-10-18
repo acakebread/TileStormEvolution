@@ -9,7 +9,7 @@ namespace ClassicTilestorm
 	{
 		private MapManager mapManager;
 		private EggbotController eggbotController;
-		private GameCameraController cameraController; // Changed to GameCameraController
+		private GameCameraController cameraController;
 		private GestureController gestureController;
 		private PostProcessingCameraController postProcessingController;
 		private bool gestureControllerEnabled = true;
@@ -46,7 +46,7 @@ namespace ClassicTilestorm
 		{
 			if (cameraController == null || PreviewMode.Cinema != PreviewSettings.CurrentMode || !cameraController.HasCompleted || Time.time - cinemaTimer <= CinemaTimeoutDuration) return;
 			cinemaTimer = Time.time;
-			cameraController.SetCameraMode(CameraMode.Cinema);
+			cameraController.SetCameraMode(Random.Range(0, 7) switch { 0 or 1 or 2 => CameraMode.Orbit, _ => CameraMode.Path });
 		}
 
 		public void SetPreviewMode(PreviewMode mode, bool forceCinema = false)
@@ -58,13 +58,13 @@ namespace ClassicTilestorm
 				var cameraMode = mode switch
 				{
 					PreviewMode.Editor => CameraMode.Editor,
-					PreviewMode.Cinema => CameraMode.Cinema,
+					PreviewMode.Cinema => CameraMode.Orbit,
 					PreviewMode.Player => CameraMode.Preset,
 					PreviewMode.Direct => CameraMode.Direct,
 					_ => CameraMode.Absent
 				};
-				var state = cameraController.GetStateForMode(cameraMode);
-				if (state != null) cameraController.SetCameraMode(state.mode);
+				cameraController.SetCameraMode(cameraController.GetCurrentGroupMode(cameraMode));
+				
 			}
 			UpdateGestureControllerState();
 		}
@@ -109,8 +109,8 @@ namespace ClassicTilestorm
 				var initialMode = PreviewSettings.CurrentMode switch
 				{
 					PreviewMode.Editor => CameraMode.Editor,
-					PreviewMode.Cinema => CameraMode.Cinema,
 					PreviewMode.Player => CameraMode.Follow,
+					PreviewMode.Cinema => Random.Range(0, 7) switch { 0 or 1 or 2 => CameraMode.Orbit, _ => CameraMode.Path },
 					_ => CameraMode.Follow
 				};
 				cameraController.Initialise(mapManager, eggbotController, initialMode);

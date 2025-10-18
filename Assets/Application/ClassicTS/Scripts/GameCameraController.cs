@@ -75,53 +75,70 @@ namespace ClassicTilestorm
 
 			return focusFunc;
 		}
-
-		protected override void SetupCameraStates()
+		
+		protected override void SetupCameras()
 		{
 			if (GetComponent<Camera>() == null)
 			{
-				Debug.LogWarning("Cannot setup camera states: Camera is null");
+				Debug.LogWarning("Cannot setup camera configs: Camera is null");
 				return;
 			}
 
 			var (srcPos, dstPos) = GetInitialCameraPositions();
-			var editorState = new CameraState
+			var editorConfig = new CameraConfig
 			{
-				mode = CameraMode.Editor,
 				data = new CameraData(GetComponent<Camera>()) { origin = srcPos, target = dstPos },
 				origin = () => srcPos,
 				target = GetTargetPosition(),
 				points = GetFocusPoints()
 			};
 
-			var playerState = new CameraState
+			var followConfig = new CameraConfig
 			{
-				mode = CameraMode.Follow,
 				data = new CameraData(GetComponent<Camera>()) { origin = srcPos, target = dstPos },
 				target = GetTargetPosition(),
 				origin = () => srcPos
 			};
 
-			var directState = new CameraState
+			var presetConfig = new CameraConfig
 			{
-				mode = CameraMode.Direct,
+				data = new CameraData(GetComponent<Camera>()) { origin = srcPos, target = dstPos },
+				target = GetTargetPosition(),
+				origin = () => srcPos
+			};
+
+			var directConfig = new CameraConfig
+			{
 				data = new CameraData(GetComponent<Camera>()) { origin = srcPos, target = dstPos },
 				target = () => dstPos,
 				origin = () => srcPos
 			};
 
-			var cinemaState = new CameraState
+			var orbitConfig = new CameraConfig
 			{
-				mode = CameraMode.Cinema,
 				data = new CameraData(GetComponent<Camera>()) { origin = srcPos, target = dstPos },
 				target = GetTargetPosition(),
 				points = GetFocusPoints()
 			};
 
-			RegisterState(editorState, new[] { CameraMode.Editor });
-			RegisterState(playerState, new[] { CameraMode.Follow, CameraMode.Preset });
-			RegisterState(directState, new[] { CameraMode.Direct });
-			RegisterState(cinemaState, new[] { CameraMode.Cinema });
+			var pathConfig = new CameraConfig
+			{
+				data = new CameraData(GetComponent<Camera>()) { origin = srcPos, target = dstPos },
+				target = GetTargetPosition(),
+				points = GetFocusPoints()
+			};
+
+			RegisterCamera(new CameraEditor(editorConfig), CameraMode.Editor);
+			RegisterCamera(new CameraFollow(followConfig), CameraMode.Follow);
+			RegisterCamera(new CameraPreset(presetConfig), CameraMode.Preset);
+			RegisterCamera(new CameraDirect(directConfig), CameraMode.Direct);
+			RegisterCamera(new CameraOrbit(orbitConfig), CameraMode.Orbit);
+			RegisterCamera(new CameraPath(pathConfig), CameraMode.Path);
+
+			RegisterGroup("EDITOR", new[] { CameraMode.Editor });
+			RegisterGroup("PLAYER", new[] { CameraMode.Follow, CameraMode.Preset });
+			RegisterGroup("DIRECT", new[] { CameraMode.Direct });
+			RegisterGroup("CINEMA", new[] { CameraMode.Path, CameraMode.Orbit });
 		}
 
 		private void HandleWaypointReached(int waypointIndex)
@@ -136,31 +153,17 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			var origin = waypoint.vSrc.IsValidVector() ? waypoint.vSrc.ToVector3() : new Vector3(0f, 14f, -14f);
-			var target = waypoint.vDst != null && waypoint.vDst.IsValidVector() ? waypoint.vDst.ToVector3() : mapManager.TileWorldPosition(waypoint.nTile);
+			((CameraPreset)CameraSystems[CameraMode.Preset]).OriginFn = () => waypoint.vSrc.IsValidVector() ? waypoint.vSrc.ToVector3() : new Vector3(0f, 14f, -14f);
+			((CameraPreset)CameraSystems[CameraMode.Preset]).TargetFn = () => waypoint.vDst != null && waypoint.vDst.IsValidVector() ? waypoint.vDst.ToVector3() : mapManager.TileWorldPosition(waypoint.nTile);
 
-			var playerState = GetStateForMode(CameraMode.Preset);
-			if (playerState != null)
-			{
-				playerState.origin = () => origin;
-				playerState.target = () => target;
-				playerState.mode = CameraMode.Preset;
-				SetCameraMode(CameraMode.Preset, true);
-				OnWaypointReachedForGestures?.Invoke(true);
-			}
+			SetCameraMode(CameraMode.Preset, true);
+			OnWaypointReachedForGestures?.Invoke(true);
 		}
 
 		private void HandlePuzzleSolved(int waypointIndex)
 		{
 			if (eggbotController == null) return;
-
-			var playerState = GetStateForMode(CameraMode.Follow);
-			if (playerState != null)
-			{
-				playerState.target = GetTargetPosition();
-				playerState.mode = CameraMode.Follow;
-				SetCameraMode(CameraMode.Follow, true);
-			}
+			SetCameraMode(CameraMode.Follow, true);
 		}
 
 		private void OnDestroy()
