@@ -1,5 +1,3 @@
-using UnityEngine;
-
 namespace MassiveHadronLtd
 {
 	public abstract class CameraBase
