@@ -46,7 +46,6 @@ namespace ClassicTilestorm
 		{
 			if (cameraController == null || PreviewMode.Cinema != PreviewSettings.CurrentMode || !cameraController.HasCompleted || Time.time - cinemaTimer <= CinemaTimeoutDuration) return;
 			cinemaTimer = Time.time;
-			//cameraController.SetCameraMode(CameraMode.Cinema);
 			cameraController.SetCameraMode(Random.Range(0, 7) switch { 0 or 1 or 2 => CameraMode.Orbit, _ => CameraMode.Path });
 		}
 
@@ -59,13 +58,11 @@ namespace ClassicTilestorm
 				var cameraMode = mode switch
 				{
 					PreviewMode.Editor => CameraMode.Editor,
-					//PreviewMode.Cinema => CameraMode.Cinema,
 					PreviewMode.Cinema => CameraMode.Orbit,
 					PreviewMode.Player => CameraMode.Preset,
 					PreviewMode.Direct => CameraMode.Direct,
 					_ => CameraMode.Absent
 				};
-				//cameraController.SetCameraMode(cameraController.GetCurrentModeForMode(cameraMode));
 				cameraController.SetCameraMode(cameraController.GetCurrentGroupMode(cameraMode));
 				
 			}
