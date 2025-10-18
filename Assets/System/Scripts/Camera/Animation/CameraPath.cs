@@ -183,6 +183,17 @@ namespace MassiveHadronLtd
 			OnRender();
 		}
 
+		protected override void OnRender()
+		{
+			if (data?.camera == null) return;
+			data.camera.transform.position = data.origin;
+			var direction = data.target - data.origin;
+			if (direction.sqrMagnitude > Mathf.Epsilon)
+				data.camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
+			data.camera.fieldOfView = data.fieldOfView;
+			//CameraUtils.ApplyCameraShake(data.camera, data.shake);
+		}
+
 		private Vector3 QuadraticBezierPoint(float t, Vector3 p0, Vector3 p1, Vector3 p2)
 		{
 			var u = 1f - t;

@@ -60,5 +60,16 @@ namespace MassiveHadronLtd
 			data.target = Vector3.Lerp(data.target, localTarget, presetLerp);
 			OnRender();
 		}
+
+		protected override void OnRender()
+		{
+			if (data?.camera == null) return;
+			data.camera.transform.position = data.origin;
+			var direction = data.target - data.origin;
+			if (direction.sqrMagnitude > Mathf.Epsilon)
+				data.camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
+			data.camera.fieldOfView = data.fieldOfView;
+			//CameraUtils.ApplyCameraShake(data.camera, data.shake);
+		}
 	}
 }
