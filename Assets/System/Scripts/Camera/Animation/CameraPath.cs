@@ -24,6 +24,7 @@ namespace MassiveHadronLtd
 		private const float MinCameraHeight = 1.5f;
 		private const float MaxCameraHeight = 4f;
 		private const bool SortDstNearerPlayer = true;
+		private float shake = 0f;
 
 		private float currentFovMax;
 		private BezierData bezierData;
@@ -94,7 +95,7 @@ namespace MassiveHadronLtd
 			base.Start();
 			data.smoothing = DefaultSmoothingRate;
 			data.fieldOfView = 45f;
-			data.shake = 0f;
+			shake = 0f;
 			data.postProcessingEnabled = true;
 
 			if (data?.camera == null)
@@ -111,7 +112,7 @@ namespace MassiveHadronLtd
 			pauseTimer = DefaultPauseDuration;
 			lastTarget = nextTarget = targetPosition;
 
-			data.shake = 1f;
+			shake = 1f;
 			bezierData = default;
 			currentFovMax = FovMax;
 
@@ -191,7 +192,7 @@ namespace MassiveHadronLtd
 			if (direction.sqrMagnitude > Mathf.Epsilon)
 				data.camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
 			data.camera.fieldOfView = data.fieldOfView;
-			//CameraUtils.ApplyCameraShake(data.camera, data.shake);
+			//CameraUtils.ApplyCameraShake(data.camera, shake);
 		}
 
 		private Vector3 QuadraticBezierPoint(float t, Vector3 p0, Vector3 p1, Vector3 p2)

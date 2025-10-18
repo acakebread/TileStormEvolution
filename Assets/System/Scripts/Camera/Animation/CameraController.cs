@@ -12,7 +12,7 @@ namespace MassiveHadronLtd
 		private CameraBase cameraSystem = null;
 		private Dictionary<CameraMode, CameraBase> cameraSystems = new();
 		private Dictionary<string, CameraMode[]> groups = new();
-		private Dictionary<string, CameraMode> groupMode = new();
+		private Dictionary<string, CameraMode> groupModes = new();
 
 		private bool hasCustomCameras = false;
 
@@ -41,7 +41,7 @@ namespace MassiveHadronLtd
 			}
 
 			groups = new();
-			groupMode = new();
+			groupModes = new();
 			cameraSystems = new();
 
 			// Setup camera configs before applying the initial mode
@@ -83,30 +83,33 @@ namespace MassiveHadronLtd
 			groups[groupId] = modes.ToArray();
 		}
 
-		private bool AreModesInSameGroup(CameraMode mode1, CameraMode mode2) => groups.Any(group => group.Value.Contains(mode1) && group.Value.Contains(mode2));
-
 		private string GetGroupIdForMode(CameraMode mode) => groups.FirstOrDefault(group => group.Value.Contains(mode)).Key;
 
 		public CameraMode GetCurrentGroupMode(CameraMode mode)
 		{
 			var key = GetGroupIdForMode(mode);
-			return null != key && groupMode.ContainsKey(key) ? groupMode[key] : mode;
+			return null != key && groupModes.ContainsKey(key) ? groupModes[key] : mode;
 		}
 
 		public void SetCameraMode(CameraMode mode, bool background = false)
 		{
 			var key = GetGroupIdForMode(mode);
-			var group_mode = null != key && groupMode.ContainsKey(key) ? groupMode[key] : mode;
-			if (null != key) groupMode[key] = mode;
+			var groupMode = null != key && groupModes.ContainsKey(key) ? groupModes[key] : mode;
+			if (null != key) groupModes[key] = mode;
 
 			if (background && false == AreModesInSameGroup(mode, currentMode))
 				return;
 
 			cameraSystem = cameraSystems[mode];
-			cameraSystem.Data = cameraSystems[group_mode].Data;
+			if (null == cameraSystem)
+				return;
 
 			currentMode = mode;
-			cameraSystem?.Start();
+			cameraSystem.Data = cameraSystems[groupMode].Data;
+			cameraSystem.Start();
+
+			//local function
+			bool AreModesInSameGroup(CameraMode mode1, CameraMode mode2) => groups.Any(group => group.Value.Contains(mode1) && group.Value.Contains(mode2));
 		}
 
 		private void Update() => cameraSystem?.Update();

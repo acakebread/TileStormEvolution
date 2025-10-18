@@ -28,6 +28,7 @@ namespace MassiveHadronLtd
 		private float orbitStartAngle;
 		private float orbitEndAngle;
 		private float currentFovMax;
+		private float shake = 0f;
 
 		private Vector3 localOrigin; // Renamed to avoid conflict with helper property
 		private Vector3 localTarget;
@@ -60,7 +61,7 @@ namespace MassiveHadronLtd
 		{
 			base.Start();
 			data.smoothing = DefaultSmoothingRate;
-			data.shake = 0f;
+			shake = 0f;
 			data.fieldOfView = 45f;
 			data.postProcessingEnabled = true;
 			if (data?.camera == null) return;
@@ -93,7 +94,7 @@ namespace MassiveHadronLtd
 
 			data.origin = localOrigin = localTarget + SampleOrbitPosition(orbitStartAngle, orbitEndAngle, 0f);
 
-			data.shake = 1f;
+			shake = 1f;
 		}
 
 		public override void Update()
@@ -132,7 +133,7 @@ namespace MassiveHadronLtd
 			if (direction.sqrMagnitude > Mathf.Epsilon)
 				data.camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
 			data.camera.fieldOfView = data.fieldOfView;
-			//CameraUtils.ApplyCameraShake(data.camera, data.shake);
+			//CameraUtils.ApplyCameraShake(data.camera, shake);
 		}
 
 		private float CalculateMinOrbitRadius(float cameraHeight, float targetY)

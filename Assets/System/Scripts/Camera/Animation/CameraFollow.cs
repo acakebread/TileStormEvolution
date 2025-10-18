@@ -69,7 +69,7 @@ namespace MassiveHadronLtd
 			if (direction.sqrMagnitude > Mathf.Epsilon)
 				data.camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
 			data.camera.fieldOfView = data.fieldOfView;
-			//CameraUtils.ApplyCameraShake(data.camera, data.shake);
+			//CameraUtils.ApplyCameraShake(data.camera, shake);
 		}
 	}
 }
