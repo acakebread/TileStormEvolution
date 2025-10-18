@@ -105,7 +105,7 @@ namespace MassiveHadronLtd
 				return;
 
 			currentMode = mode;
-			cameraSystem.Data = cameraSystems[groupMode].Data;
+			//cameraSystem.CopyFrom(cameraSystems[groupMode]); 
 			cameraSystem.Start();
 
 			//local function
@@ -127,7 +127,7 @@ namespace MassiveHadronLtd
 			RegisterCamera(new CameraDefault(defaultConfig()), CameraMode.Default);
 		}
 
-		private CameraConfig defaultConfig() { return new CameraConfig { data = new CameraData(GetComponent<Camera>()) { origin = new Vector3(0f, 14f, -14f), target = Vector3.zero }, }; }
+		private CameraConfig defaultConfig() { return new CameraConfig { data = new CameraData(GetComponent<Camera>()) { iorigin = new Vector3(0f, 14f, -14f), itarget = Vector3.zero }, }; }
 		protected virtual (Vector3 srcPos, Vector3 dstPos) GetInitialCameraPositions() => (new Vector3(0f, 14f, -14f), Vector3.zero);
 		protected virtual Func<Vector3> GetTargetPosition() => () => Vector3.zero;
 		protected virtual Func<IReadOnlyList<Vector3>> GetFocusPoints() => () => Array.Empty<Vector3>();

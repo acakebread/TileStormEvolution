@@ -87,7 +87,7 @@ namespace ClassicTilestorm
 			var (srcPos, dstPos) = GetInitialCameraPositions();
 			var editorConfig = new CameraConfig
 			{
-				data = new CameraData(GetComponent<Camera>()) { origin = srcPos, target = dstPos },
+				data = new CameraData(GetComponent<Camera>()) { iorigin = srcPos, itarget = dstPos },
 				origin = () => srcPos,
 				target = GetTargetPosition(),
 				points = GetFocusPoints()
@@ -95,35 +95,35 @@ namespace ClassicTilestorm
 
 			var followConfig = new CameraConfig
 			{
-				data = new CameraData(GetComponent<Camera>()) { origin = srcPos, target = dstPos },
+				data = new CameraData(GetComponent<Camera>()) { iorigin = srcPos, itarget = dstPos },
 				target = GetTargetPosition(),
 				origin = () => srcPos
 			};
 
 			var presetConfig = new CameraConfig
 			{
-				data = new CameraData(GetComponent<Camera>()) { origin = srcPos, target = dstPos },
+				data = new CameraData(GetComponent<Camera>()) { iorigin = srcPos, itarget = dstPos },
 				target = GetTargetPosition(),
 				origin = () => srcPos
 			};
 
 			var directConfig = new CameraConfig
 			{
-				data = new CameraData(GetComponent<Camera>()) { origin = srcPos, target = dstPos },
+				data = new CameraData(GetComponent<Camera>()) { iorigin = srcPos, itarget = dstPos },
 				target = () => dstPos,
 				origin = () => srcPos
 			};
 
 			var orbitConfig = new CameraConfig
 			{
-				data = new CameraData(GetComponent<Camera>()) { origin = srcPos, target = dstPos },
+				data = new CameraData(GetComponent<Camera>()) { iorigin = srcPos, itarget = dstPos },
 				target = GetTargetPosition(),
 				points = GetFocusPoints()
 			};
 
 			var pathConfig = new CameraConfig
 			{
-				data = new CameraData(GetComponent<Camera>()) { origin = srcPos, target = dstPos },
+				data = new CameraData(GetComponent<Camera>()) { iorigin = srcPos, itarget = dstPos },
 				target = GetTargetPosition(),
 				points = GetFocusPoints()
 			};

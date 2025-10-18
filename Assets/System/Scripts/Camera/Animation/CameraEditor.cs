@@ -44,8 +44,8 @@ namespace MassiveHadronLtd
 			//initialise camera
 			var camera = data.camera;
 			if (camera == null) return;
-			camera.transform.position = originFn?.Invoke() ?? data.origin;
-			var direction = (targetFn?.Invoke() ?? data.target) - camera.transform.position;
+			camera.transform.position = originFn?.Invoke() ?? data.iorigin;
+			var direction = (targetFn?.Invoke() ?? data.itarget) - camera.transform.position;
 			if (direction.sqrMagnitude > Mathf.Epsilon)
 				camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
 		}
@@ -192,8 +192,8 @@ namespace MassiveHadronLtd
 		protected override void OnRender()
 		{
 			if (data?.camera == null) return;
-			data.camera.transform.position = data.origin;
-			var direction = data.target - data.origin;
+			data.camera.transform.position = data.iorigin;
+			var direction = data.itarget - data.iorigin;
 			if (direction.sqrMagnitude > Mathf.Epsilon)
 				data.camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
 			data.camera.fieldOfView = data.fieldOfView;

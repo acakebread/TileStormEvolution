@@ -2,10 +2,7 @@ namespace MassiveHadronLtd
 {
 	public abstract class CameraBase
 	{
-		protected const float TargetFPS = 60f;
-
 		protected CameraData data;
-		public CameraData Data { get => data; set => data = value; }
 
 		public CameraBase(CameraConfig config) { }
 
@@ -14,5 +11,20 @@ namespace MassiveHadronLtd
 		public virtual void Update() { }
 		public virtual void OnApplicationFocus(bool hasFocus) { }
 		protected virtual void OnRender() { }
+
+		public virtual void CopyFrom(CameraBase other)
+		{
+			if (other == null) return;
+			data.iorigin = other.data.iorigin;
+			data.itarget = other.data.itarget;
+			data.postProcessingEnabled = other.data.postProcessingEnabled;
+			//originFn = other.originFn;
+			//targetFn = other.targetFn;
+			//pointsFn = other.pointsFn;
+			smoothing = other.smoothing;
+		}
+
+		public float smoothing = 64f;// Default Smoothing Rate
+		protected const float TargetFPS = 60f;
 	}
 }

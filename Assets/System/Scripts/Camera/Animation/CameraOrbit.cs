@@ -51,8 +51,8 @@ namespace MassiveHadronLtd
 			//initialise camera
 			var camera = data.camera;
 			if (camera == null) return;
-			camera.transform.position = originFn?.Invoke() ?? data.origin;
-			var direction = (targetFn?.Invoke() ?? data.target) - camera.transform.position;
+			camera.transform.position = originFn?.Invoke() ?? data.iorigin;
+			var direction = (targetFn?.Invoke() ?? data.itarget) - camera.transform.position;
 			if (direction.sqrMagnitude > Mathf.Epsilon)
 				camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
 		}
@@ -60,7 +60,7 @@ namespace MassiveHadronLtd
 		public override void Start()
 		{
 			base.Start();
-			data.smoothing = DefaultSmoothingRate;
+			smoothing = DefaultSmoothingRate;
 			shake = 0f;
 			data.fieldOfView = 45f;
 			data.postProcessingEnabled = true;
@@ -84,7 +84,7 @@ namespace MassiveHadronLtd
 			var minRadius = Mathf.Max(minRadiusSrc, minRadiusDst);
 			currentOrbitRadius = UnityEngine.Random.Range(Mathf.Max(minRadius, MinOrbitRadius), MaxOrbitRadius);
 
-			data.target = localTarget = target + Vector3.up * VerticalOffset; // Use helper property 'target'
+			data.itarget = localTarget = target + Vector3.up * VerticalOffset; // Use helper property 'target'
 			var maxDelta = Mathf.Lerp(360f, 180f, (currentOrbitRadius - MinOrbitRadius) / (MaxOrbitRadius - MinOrbitRadius));
 			var delta = UnityEngine.Random.Range(120f, maxDelta) * (UnityEngine.Random.value < 0.5f ? 1f : -1f);
 			orbitEndAngle = orbitStartAngle + delta;
@@ -92,7 +92,7 @@ namespace MassiveHadronLtd
 			data.fieldOfView = FovMin;
 			currentFovMax = UnityEngine.Random.value < 0.2f ? 60f : FovMax;
 
-			data.origin = localOrigin = localTarget + SampleOrbitPosition(orbitStartAngle, orbitEndAngle, 0f);
+			data.iorigin = localOrigin = localTarget + SampleOrbitPosition(orbitStartAngle, orbitEndAngle, 0f);
 
 			shake = 1f;
 		}
@@ -119,7 +119,7 @@ namespace MassiveHadronLtd
 				data.fieldOfView = Mathf.Lerp(FovMin, currentFovMax, SmoothingUtils.EasePingPong(sequenceTimer / sequenceDuration));
 			}
 
-			data.smoothing = SmoothingUtils.Smooth(data.smoothing, SmoothingRate, sequenceDuration, Time.deltaTime, TargetFPS);
+			smoothing = SmoothingUtils.Smooth(smoothing, SmoothingRate, sequenceDuration, Time.deltaTime, TargetFPS);
 
 			UpdateCinemaLerping();
 			OnRender();
@@ -128,8 +128,8 @@ namespace MassiveHadronLtd
 		protected override void OnRender()
 		{
 			if (data?.camera == null) return;
-			data.camera.transform.position = data.origin;
-			var direction = data.target - data.origin;
+			data.camera.transform.position = data.iorigin;
+			var direction = data.itarget - data.iorigin;
 			if (direction.sqrMagnitude > Mathf.Epsilon)
 				data.camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
 			data.camera.fieldOfView = data.fieldOfView;
@@ -177,9 +177,9 @@ namespace MassiveHadronLtd
 
 		protected virtual void UpdateCinemaLerping()
 		{
-			var interpolate = SmoothingUtils.Smooth(0f, 1f, data.smoothing, Time.deltaTime, TargetFPS);
-			data.origin = Vector3.Lerp(data.origin, localOrigin, interpolate);
-			data.target = Vector3.Lerp(data.target, localTarget, interpolate);
+			var interpolate = SmoothingUtils.Smooth(0f, 1f, smoothing, Time.deltaTime, TargetFPS);
+			data.iorigin = Vector3.Lerp(data.iorigin, localOrigin, interpolate);
+			data.itarget = Vector3.Lerp(data.itarget, localTarget, interpolate);
 		}
 	}
 }

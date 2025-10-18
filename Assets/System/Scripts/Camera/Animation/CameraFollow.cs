@@ -34,8 +34,8 @@ namespace MassiveHadronLtd
 			//initialise camera
 			var camera = data.camera;
 			if (camera == null) return;
-			camera.transform.position = originFn?.Invoke() ?? data.origin;
-			var direction = (targetFn?.Invoke() ?? data.target) - camera.transform.position;
+			camera.transform.position = originFn?.Invoke() ?? data.iorigin;
+			var direction = (targetFn?.Invoke() ?? data.itarget) - camera.transform.position;
 			if (direction.sqrMagnitude > Mathf.Epsilon)
 				camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
 		}
@@ -44,28 +44,28 @@ namespace MassiveHadronLtd
 		{
 			base.Start();
 			data.fieldOfView = 20f;
-			data.smoothing = 64f;
+			smoothing = 64f;
 		}
 
 		public override void Update()
 		{
 			base.Update();
-			data.smoothing = SmoothingUtils.Smooth(data.smoothing, SmoothingNa, SmoothingNb, Time.deltaTime, TargetFPS);
-			var followLerp = SmoothingUtils.Smooth(0f, 1f, data.smoothing, Time.deltaTime, TargetFPS);
-			data.target = Vector3.Lerp(data.target, target, followLerp); // Use helper property 'target'
-			var delta = data.target - data.origin;
+			smoothing = SmoothingUtils.Smooth(smoothing, SmoothingNa, SmoothingNb, Time.deltaTime, TargetFPS);
+			var followLerp = SmoothingUtils.Smooth(0f, 1f, smoothing, Time.deltaTime, TargetFPS);
+			data.itarget = Vector3.Lerp(data.itarget, target, followLerp); // Use helper property 'target'
+			var delta = data.itarget - data.iorigin;
 			var deltaHorizontal = (0f == delta.x && 0f == delta.z) ? Vector3.zero : new Vector3(delta.x, 0, delta.z).normalized;
-			var origin = data.target - deltaHorizontal * (IdealDistance * IdealDistanceHorizontalScale);
-			origin.y = data.target.y + IdealDistance;
-			data.origin = Vector3.Lerp(data.origin, origin, followLerp);
+			var origin = data.itarget - deltaHorizontal * (IdealDistance * IdealDistanceHorizontalScale);
+			origin.y = data.itarget.y + IdealDistance;
+			data.iorigin = Vector3.Lerp(data.iorigin, origin, followLerp);
 			OnRender();
 		}
 
 		protected override void OnRender()
 		{
 			if (data?.camera == null) return;
-			data.camera.transform.position = data.origin;
-			var direction = data.target - data.origin;
+			data.camera.transform.position = data.iorigin;
+			var direction = data.itarget - data.iorigin;
 			if (direction.sqrMagnitude > Mathf.Epsilon)
 				data.camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
 			data.camera.fieldOfView = data.fieldOfView;

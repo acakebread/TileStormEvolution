@@ -66,8 +66,8 @@ namespace MassiveHadronLtd
 			//initialise camera
 			var camera = data.camera;
 			if (camera == null) return;
-			camera.transform.position = originFn?.Invoke() ?? data.origin;
-			var direction = (targetFn?.Invoke() ?? data.target) - camera.transform.position;
+			camera.transform.position = originFn?.Invoke() ?? data.iorigin;
+			var direction = (targetFn?.Invoke() ?? data.itarget) - camera.transform.position;
 			if (direction.sqrMagnitude > Mathf.Epsilon)
 				camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
 		}
@@ -83,9 +83,9 @@ namespace MassiveHadronLtd
 
 		protected virtual void UpdateCinemaLerping()
 		{
-			var interpolate = SmoothingUtils.Smooth(0f, 1f, data.smoothing, Time.deltaTime, TargetFPS);
-			data.origin = Vector3.Lerp(data.origin, localOrigin, interpolate);
-			data.target = Vector3.Lerp(data.target, localTarget, interpolate);
+			var interpolate = SmoothingUtils.Smooth(0f, 1f, smoothing, Time.deltaTime, TargetFPS);
+			data.iorigin = Vector3.Lerp(data.iorigin, localOrigin, interpolate);
+			data.itarget = Vector3.Lerp(data.itarget, localTarget, interpolate);
 		}
 
 		public bool HasCompleted => sequenceTimer <= 0f && pauseTimer <= 0f;
@@ -93,7 +93,7 @@ namespace MassiveHadronLtd
 		public override void Start()
 		{
 			base.Start();
-			data.smoothing = DefaultSmoothingRate;
+			smoothing = DefaultSmoothingRate;
 			data.fieldOfView = 45f;
 			shake = 0f;
 			data.postProcessingEnabled = true;
@@ -126,23 +126,23 @@ namespace MassiveHadronLtd
 					startFocusPoint = validFocusPoint[UnityEngine.Random.Range(0, validFocusPoint.Count)];
 			}
 
-			data.target = localTarget = startFocusPoint + Vector3.up * VerticalOffset;
+			data.itarget = localTarget = startFocusPoint + Vector3.up * VerticalOffset;
 			localTarget = targetPosition + Vector3.up * VerticalOffset;
 
 			// Define lozenge
-			var targetPath = localTarget - data.target;
+			var targetPath = localTarget - data.itarget;
 			var pathDir = targetPath.magnitude > 0.1f ? targetPath.normalized : UnityEngine.Random.onUnitSphere;
-			var midPoint = (data.target + localTarget) / 2f;
+			var midPoint = (data.itarget + localTarget) / 2f;
 			var perpendicular = new Vector3(-pathDir.z, 0f, pathDir.x).normalized;
 			var lozengeMajor = targetPath.magnitude + 2f * MinDistance;
 			var lozengeMinor = Mathf.Max(lozengeMajor * 0.66f, MinDistance * 2f);
 
 			// Generate camera points
 			var (src, dst) = SampleCameraPosition(midPoint, pathDir, perpendicular, lozengeMajor, lozengeMinor);
-			data.origin = src;
+			data.iorigin = src;
 			localOrigin = dst;
 
-			data.origin = AdjustHeight(data.origin, data.target);
+			data.iorigin = AdjustHeight(data.iorigin, data.itarget);
 			localOrigin = AdjustHeight(localOrigin, localTarget);
 
 			// Initialize FOV
@@ -165,7 +165,7 @@ namespace MassiveHadronLtd
 
 				// Update target
 				var easedSequenceTimer = SmoothingUtils.Ease(sequenceDuration > 0 ? 1f - Mathf.Clamp01(sequenceTimer / sequenceDuration) : 1f);
-				localTarget = Vector3.Lerp(data.target, nextTarget, easedSequenceTimer);
+				localTarget = Vector3.Lerp(data.itarget, nextTarget, easedSequenceTimer);
 
 				// Update Bezier P1 and P2 with player movement
 				bezierData.P1 += posDelta * 0.5f;
@@ -178,7 +178,7 @@ namespace MassiveHadronLtd
 			else
 				pauseTimer -= Time.deltaTime;
 
-			data.smoothing = SmoothingUtils.Smooth(data.smoothing, SmoothingRate, sequenceDuration, Time.deltaTime, TargetFPS);
+			smoothing = SmoothingUtils.Smooth(smoothing, SmoothingRate, sequenceDuration, Time.deltaTime, TargetFPS);
 
 			UpdateCinemaLerping();
 			OnRender();
@@ -187,8 +187,8 @@ namespace MassiveHadronLtd
 		protected override void OnRender()
 		{
 			if (data?.camera == null) return;
-			data.camera.transform.position = data.origin;
-			var direction = data.target - data.origin;
+			data.camera.transform.position = data.iorigin;
+			var direction = data.itarget - data.iorigin;
 			if (direction.sqrMagnitude > Mathf.Epsilon)
 				data.camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
 			data.camera.fieldOfView = data.fieldOfView;
