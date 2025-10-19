@@ -18,7 +18,7 @@ namespace MassiveHadronLtd
 			{
 				if (!File.Exists(filePath))
 				{
-					Debug.LogError($"SerializerUtility: Cannot read {filePath}: File does not exist.");
+					// Instead of logging an error, return null to indicate the file doesn't exist
 					return null;
 				}
 
