@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 namespace ClassicTilestorm
 {
@@ -10,6 +11,7 @@ namespace ClassicTilestorm
 		protected float lookSpeedH = 2f;
 		protected float lookSpeedV = 2f;
 		protected float zoomSpeed = 12f;
+		protected float dragSpeed = 0.01f; // Added for drag movement
 		protected bool skipNextScroll;
 
 		public GameCameraEditorMovement(Camera camera)
@@ -57,11 +59,15 @@ namespace ClassicTilestorm
 			}
 
 			// Zoom with mouse wheel
-			if (InsideWindow())
+			if (InsideWindow() && !GUIManager.IsMouseOverGui() && !EventSystem.current.IsPointerOverGameObject())
 			{
 				float scroll = skipNextScroll ? 0f : Input.GetAxis("Mouse ScrollWheel");
 				cameraTransform.Translate(0, 0, scroll * zoomSpeed, Space.Self);
 				skipNextScroll = false;
+				if (scroll != 0f)
+				{
+					Debug.Log($"Zooming: scroll={scroll}, zoomSpeed={zoomSpeed}");
+				}
 			}
 
 			// Translation (WASD movement)
