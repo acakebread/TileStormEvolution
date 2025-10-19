@@ -78,7 +78,7 @@ namespace ClassicTilestorm
 		
 		protected override void SetupCameras()
 		{
-			if (GetComponent<Camera>() == null)
+			if (null == GetComponent<Camera>())
 			{
 				Debug.LogWarning("Cannot setup camera configs: Camera is null");
 				return;
@@ -93,15 +93,14 @@ namespace ClassicTilestorm
 			var followConfig = new CameraConfig
 			{
 				data = new CameraData(GetComponent<Camera>()) { iorigin = srcPos, itarget = dstPos },
-				target = GetTargetPosition(),
-				origin = () => srcPos
+				target = GetTargetPosition()
 			};
 
 			var presetConfig = new CameraConfig
 			{
 				data = new CameraData(GetComponent<Camera>()) { iorigin = srcPos, itarget = dstPos },
-				target = GetTargetPosition(),
-				origin = () => srcPos
+				origin = () => srcPos,
+				target = GetTargetPosition()
 			};
 
 			var orbitConfig = new CameraConfig
@@ -125,7 +124,6 @@ namespace ClassicTilestorm
 
 			RegisterGroup("EDITOR", new[] { CameraMode.Editor });
 			RegisterGroup("PLAYER", new[] { CameraMode.Follow, CameraMode.Preset });
-			RegisterGroup("DIRECT", new[] { CameraMode.Direct });
 			RegisterGroup("CINEMA", new[] { CameraMode.Path, CameraMode.Orbit });
 		}
 
@@ -141,8 +139,8 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			((CameraPreset)CameraSystems[CameraMode.Preset]).OriginFn = () => waypoint.vSrc.IsValidVector() ? waypoint.vSrc.ToVector3() : new Vector3(0f, 14f, -14f);
-			((CameraPreset)CameraSystems[CameraMode.Preset]).TargetFn = () => waypoint.vDst != null && waypoint.vDst.IsValidVector() ? waypoint.vDst.ToVector3() : mapManager.TileWorldPosition(waypoint.nTile);
+			((CameraPreset)CameraSystems[CameraMode.Preset]).originFn = () => waypoint.vSrc.IsValidVector() ? waypoint.vSrc.ToVector3() : new Vector3(0f, 14f, -14f);
+			((CameraPreset)CameraSystems[CameraMode.Preset]).targetFn = () => waypoint.vDst != null && waypoint.vDst.IsValidVector() ? waypoint.vDst.ToVector3() : mapManager.TileWorldPosition(waypoint.nTile);
 
 			SetCameraMode(CameraMode.Preset, true);
 			OnWaypointReachedForGestures?.Invoke(true);
@@ -156,11 +154,9 @@ namespace ClassicTilestorm
 
 		private void OnDestroy()
 		{
-			if (eggbotController != null)
-			{
-				eggbotController.OnWaypointReached -= HandleWaypointReached;
-				eggbotController.OnPuzzleSolved -= HandlePuzzleSolved;
-			}
+			if (null == eggbotController) return;
+			eggbotController.OnWaypointReached -= HandleWaypointReached;
+			eggbotController.OnPuzzleSolved -= HandlePuzzleSolved;
 		}
 	}
 }

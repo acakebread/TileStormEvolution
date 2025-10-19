@@ -1,45 +1,23 @@
 using System;
-using System.Collections.Generic;
 using UnityEngine;
 
 namespace MassiveHadronLtd
 {
 	public class CameraPreset : CameraBase
 	{
-		protected Func<Vector3> originFn;
-		protected Func<Vector3> targetFn;
-		protected Func<IReadOnlyList<Vector3>> pointsFn;
-		protected Vector3 origin => originFn?.Invoke() ?? Vector3.zero;
-		protected Vector3 target => targetFn?.Invoke() ?? Vector3.zero;
-		protected IReadOnlyList<Vector3> points => pointsFn?.Invoke() ?? Array.Empty<Vector3>();//focus points
+		public Func<Vector3> originFn { get; set; }
+		public Func<Vector3> targetFn { get; set; }
+
+		private Vector3 origin;
+		private Vector3 target;
 
 		private const float SmoothingN = 32f;
-		private Vector3 localOrigin; // Renamed to avoid conflict with helper property
-		private Vector3 localTarget;
-
-		public Func<Vector3> OriginFn { set => originFn = value; }
-		public Func<Vector3> TargetFn { set => targetFn = value; }
 
 		public CameraPreset(CameraConfig config) : base(config)
 		{
-			if (null != config)
-			{
-				data = config.data;
-				originFn = config.origin;
-				targetFn = config.target;
-				pointsFn = config.points;
-			}
-		}
-
-		public override void Awake()
-		{
-			//initialise camera
-			var camera = data.camera;
-			if (camera == null) return;
-			camera.transform.position = originFn?.Invoke() ?? data.iorigin;
-			var direction = (targetFn?.Invoke() ?? data.itarget) - camera.transform.position;
-			if (direction.sqrMagnitude > Mathf.Epsilon)
-				camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
+			data = config.data;
+			originFn = config.origin;
+			targetFn = config.target;
 		}
 
 		public override void Start()
@@ -47,8 +25,8 @@ namespace MassiveHadronLtd
 			base.Start();
 			data.fieldOfView = 20f;
 
-			localOrigin = origin; // Use helper property 'origin'
-			localTarget = target; // Use helper property 'target'
+			origin = originFn?.Invoke() ?? Vector3.zero;
+			target = targetFn?.Invoke() ?? Vector3.forward;
 		}
 
 		public override void Update()
@@ -56,8 +34,8 @@ namespace MassiveHadronLtd
 			base.Update();
 			smoothing = SmoothingUtils.Smooth(smoothing, SmoothingN, Time.deltaTime, TargetFPS);
 			var presetLerp = SmoothingUtils.Smooth(0f, 1f, smoothing, Time.deltaTime, TargetFPS);
-			data.iorigin = Vector3.Lerp(data.iorigin, localOrigin, presetLerp);
-			data.itarget = Vector3.Lerp(data.itarget, localTarget, presetLerp);
+			data.iorigin = Vector3.Lerp(data.iorigin, origin, presetLerp);
+			data.itarget = Vector3.Lerp(data.itarget, target, presetLerp);
 			OnRender();
 		}
 
@@ -69,7 +47,6 @@ namespace MassiveHadronLtd
 			if (direction.sqrMagnitude > Mathf.Epsilon)
 				data.camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
 			data.camera.fieldOfView = data.fieldOfView;
-			//CameraUtils.ApplyCameraShake(data.camera, data.shake);
 		}
 	}
 }

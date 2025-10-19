@@ -48,9 +48,7 @@ namespace MassiveHadronLtd
 			SetupCameras();
 
 			// Apply config for initial mode
-			if (cameraSystems.ContainsKey(initialMode))
-				cameraSystems[initialMode].Awake();
-			else
+			if (false == cameraSystems.ContainsKey(initialMode))
 			{
 				Debug.LogWarning($"No config for mode {initialMode}. Using default position.");
 				var (srcPos, dstPos) = GetInitialCameraPositions();
@@ -70,6 +68,7 @@ namespace MassiveHadronLtd
 				return;
 			}
 			cameraSystems[mode] = camera;
+			cameraSystems[mode].Awake();
 			hasCustomCameras = true;
 		}
 
@@ -127,8 +126,8 @@ namespace MassiveHadronLtd
 			RegisterCamera(new CameraDefault(defaultConfig()), CameraMode.Default);
 		}
 
-		private CameraConfig defaultConfig() { return new CameraConfig { data = new CameraData(GetComponent<Camera>()) { iorigin = new Vector3(0f, 14f, -14f), itarget = Vector3.zero }, }; }
-		protected virtual (Vector3 srcPos, Vector3 dstPos) GetInitialCameraPositions() => (new Vector3(0f, 14f, -14f), Vector3.zero);
+		private CameraConfig defaultConfig() { return new CameraConfig { data = new CameraData(GetComponent<Camera>()) { iorigin = new Vector3(0f, 4f, -4f), itarget = Vector3.zero }, }; }
+		protected virtual (Vector3 srcPos, Vector3 dstPos) GetInitialCameraPositions() => (new Vector3(0f, 0f, 0f), Vector3.forward);
 		protected virtual Func<Vector3> GetTargetPosition() => () => Vector3.zero;
 		protected virtual Func<IReadOnlyList<Vector3>> GetFocusPoints() => () => Array.Empty<Vector3>();
 	}

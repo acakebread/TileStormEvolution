@@ -18,9 +18,6 @@ namespace MassiveHadronLtd
 			data.iorigin = other.data.iorigin;
 			data.itarget = other.data.itarget;
 			data.postProcessingEnabled = other.data.postProcessingEnabled;
-			//originFn = other.originFn;
-			//targetFn = other.targetFn;
-			//pointsFn = other.pointsFn;
 			smoothing = other.smoothing;
 		}
 

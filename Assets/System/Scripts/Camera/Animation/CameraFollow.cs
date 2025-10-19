@@ -1,18 +1,12 @@
 using System;
-using System.Collections.Generic;
 using UnityEngine;
 
 namespace MassiveHadronLtd
 {
 	public class CameraFollow : CameraBase
 	{
-		protected Func<Vector3> originFn;
-		protected Func<Vector3> targetFn;
-		protected Func<IReadOnlyList<Vector3>> pointsFn;
-		protected Vector3 origin => originFn?.Invoke() ?? Vector3.zero;
-		protected Vector3 target => targetFn?.Invoke() ?? Vector3.zero;
-		protected IReadOnlyList<Vector3> points => pointsFn?.Invoke() ?? Array.Empty<Vector3>();//focus points
-
+		private Func<Vector3> targetFn;
+		
 		private const float SmoothingNa = 8f;
 		private const float SmoothingNb = 64f;
 		private const float IdealDistance = 14f;
@@ -20,36 +14,22 @@ namespace MassiveHadronLtd
 
 		public CameraFollow(CameraConfig config) : base(config)
 		{
-			if (null != config)
-			{
-				data = config.data;
-				originFn = config.origin;
-				targetFn = config.target;
-				pointsFn = config.points;
-			}
-		}
-
-		public override void Awake()
-		{
-			//initialise camera
-			var camera = data.camera;
-			if (camera == null) return;
-			camera.transform.position = originFn?.Invoke() ?? data.iorigin;
-			var direction = (targetFn?.Invoke() ?? data.itarget) - camera.transform.position;
-			if (direction.sqrMagnitude > Mathf.Epsilon)
-				camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
+			data = config.data;
+			targetFn = config.target;
 		}
 
 		public override void Start()
 		{
 			base.Start();
-			data.fieldOfView = 20f;
 			smoothing = 64f;
+			if (null == data) return;
+			data.fieldOfView = 20f;
 		}
 
 		public override void Update()
 		{
 			base.Update();
+			var target = targetFn?.Invoke() ?? Vector3.forward;
 			smoothing = SmoothingUtils.Smooth(smoothing, SmoothingNa, SmoothingNb, Time.deltaTime, TargetFPS);
 			var followLerp = SmoothingUtils.Smooth(0f, 1f, smoothing, Time.deltaTime, TargetFPS);
 			data.itarget = Vector3.Lerp(data.itarget, target, followLerp); // Use helper property 'target'
@@ -63,13 +43,12 @@ namespace MassiveHadronLtd
 
 		protected override void OnRender()
 		{
-			if (data?.camera == null) return;
+			if (null == data?.camera) return;
 			data.camera.transform.position = data.iorigin;
 			var direction = data.itarget - data.iorigin;
 			if (direction.sqrMagnitude > Mathf.Epsilon)
 				data.camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
 			data.camera.fieldOfView = data.fieldOfView;
-			//CameraUtils.ApplyCameraShake(data.camera, shake);
 		}
 	}
 }
