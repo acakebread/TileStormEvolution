@@ -96,14 +96,25 @@ namespace ClassicTilestorm
 			// Get PlaceholderUI panel bottom Y for stacking buttons
 			float panelBottomY = placeholderUI != null ? placeholderUI.GetPanelBottomY() : buttonHeight + margin;
 
-			// Mode toggle buttons stacked on the left
+			// Mode toggle buttons and Save button stacked on the left
 			Rect dragButtonRect = new Rect(margin, panelBottomY + spacing, buttonWidth, buttonHeight);
 			Rect paintButtonRect = new Rect(margin, panelBottomY + spacing + buttonHeight + spacing, buttonWidth, buttonHeight);
+			Rect saveButtonRect = new Rect(margin, panelBottomY + spacing + 2 * (buttonHeight + spacing), buttonWidth, buttonHeight);
 			GUIManager.RegisterGuiRect(dragButtonRect);
 			GUIManager.RegisterGuiRect(paintButtonRect);
+			GUIManager.RegisterGuiRect(saveButtonRect);
 
 			bool dragToggled = GUI.Toggle(dragButtonRect, currentMode == EditorMode.Drag, "Drag", "Button");
 			bool paintToggled = GUI.Toggle(paintButtonRect, currentMode == EditorMode.Paint, "Paint", "Button");
+
+			// Save button (red)
+			GUIStyle saveButtonStyle = new GUIStyle(GUI.skin.button);
+			saveButtonStyle.normal.background = MakeTex(1, 1, new Color(0.8f, 0.2f, 0.2f)); // Red background
+			if (GUI.Button(saveButtonRect, "Save", saveButtonStyle))
+			{
+				mapManager.SaveChanges();
+				Debug.Log("Saved map changes to DatabaseSerializer");
+			}
 
 			// Ensure radio button behavior
 			if (dragToggled && currentMode != EditorMode.Drag)

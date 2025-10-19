@@ -24,6 +24,7 @@ namespace ClassicTilestorm
 		int GetEndTile();
 		int FindAdjacentConsole(int nTile);
 		int GetOrAddMapDefIndex(string szType, string szTheme);
+		void SaveChanges(); // Added for saving changes
 	}
 
 	public class MapManager : MonoBehaviour, IMapManager
@@ -33,8 +34,10 @@ namespace ClassicTilestorm
 		private Tile[] tiles;
 		private DatabaseSerializer.Tiles mapTiles;
 		private DatabaseSerializer.MapTileDef[] mapDefs;
-		private DatabaseSerializer.Map currentMap; // Store the current map for saving
+		private DatabaseSerializer.Map currentMap;
 		private DatabaseSerializer.Waypoint[] waypoints;
+		private int[] pendingTileData; // Temporary storage for tile changes
+		private DatabaseSerializer.MapTileDef[] pendingMapDefs; // Temporary storage for mapDefs
 		public DatabaseSerializer.Waypoint[] Waypoints => waypoints;
 
 		public int[] Indices { get => indices; private set => indices = value; }
@@ -53,16 +56,20 @@ namespace ClassicTilestorm
 			mapDefs = null;
 			waypoints = null;
 			currentMap = null;
+			pendingTileData = null;
+			pendingMapDefs = null;
 		}
 
 		private void Initialise(DatabaseSerializer.Map map)
 		{
-			currentMap = map; // Store map reference
+			currentMap = map;
 			offsets = map?.mixed?.TileData?.bytes;
 			Width = map?.tiles.nWidth ?? 0;
 			Height = map?.tiles.nHeight ?? 0;
 			mapTiles = map?.tiles;
 			mapDefs = map?.defs;
+			pendingTileData = mapTiles?.TileData?.bytes?.ToArray(); // Copy for pending changes
+			pendingMapDefs = mapDefs?.ToArray(); // Copy for pending changes
 
 			void LoadTileData(DatabaseSerializer.Tiles dbTiles)
 			{
@@ -114,10 +121,10 @@ namespace ClassicTilestorm
 				return -1;
 			}
 
-			// Find existing MapTileDef
-			for (int i = 0; i < mapDefs.Length; i++)
+			// Find existing MapTileDef in pendingMapDefs
+			for (int i = 0; i < pendingMapDefs.Length; i++)
 			{
-				if (mapDefs[i].szType == szType && mapDefs[i].szTheme == szTheme)
+				if (pendingMapDefs[i].szType == szType && pendingMapDefs[i].szTheme == szTheme)
 					return i;
 			}
 
@@ -129,27 +136,12 @@ namespace ClassicTilestorm
 				return -1;
 			}
 
-			// Add new MapTileDef
+			// Add new MapTileDef to pendingMapDefs
 			var newDef = new DatabaseSerializer.MapTileDef { szType = szType, szTheme = szTheme };
-			mapDefs = mapDefs.Concat(new[] { newDef }).ToArray();
-			Debug.Log($"Added new MapTileDef: szType={szType}, szTheme={szTheme}, new index={mapDefs.Length - 1}");
+			pendingMapDefs = pendingMapDefs.Concat(new[] { newDef }).ToArray();
+			Debug.Log($"Added new MapTileDef: szType={szType}, szTheme={szTheme}, new index={pendingMapDefs.Length - 1}");
 
-			// Update currentMap and save
-			if (currentMap != null)
-			{
-				currentMap.defs = mapDefs;
-				DatabaseSerializer.SaveDatabase(new DatabaseSerializer.DatabaseData
-				{
-					maps = DatabaseSerializer.Maps.ToArray(),
-					themes = DatabaseSerializer.Themes.ToArray(),
-					tiledefs = DatabaseSerializer.TileDefs.ToArray(),
-					buttons = DatabaseSerializer.Buttons.ToArray(),
-					texture_set = DatabaseSerializer.TextureSets.ToArray()
-				});
-				Debug.Log("Database updated with new mapDefs");
-			}
-
-			return mapDefs.Length - 1;
+			return pendingMapDefs.Length - 1;
 		}
 
 		public void UpdateTileAt(int x, int z, int newTileDefIndex)
@@ -160,31 +152,31 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			if (mapTiles == null || mapTiles.TileData?.bytes == null)
+			if (mapTiles == null || pendingTileData == null)
 			{
-				Debug.LogError("Map tiles or tile data is null");
+				Debug.LogError("Map tiles or pending tile data is null");
 				return;
 			}
 
 			int index = z * Width + x;
-			if (index >= mapTiles.TileData.bytes.Length)
+			if (index >= pendingTileData.Length)
 			{
-				Debug.LogError($"Calculated index {index} is out of bounds for tile data array (length={mapTiles.TileData.bytes.Length})");
+				Debug.LogError($"Calculated index {index} is out of bounds for tile data array (length={pendingTileData.Length})");
 				return;
 			}
 
-			if (newTileDefIndex < 0 || newTileDefIndex >= mapDefs.Length)
+			if (newTileDefIndex < 0 || newTileDefIndex >= pendingMapDefs.Length)
 			{
-				Debug.LogError($"Invalid newTileDefIndex={newTileDefIndex}, must be between 0 and {mapDefs.Length - 1}");
+				Debug.LogError($"Invalid newTileDefIndex={newTileDefIndex}, must be between 0 and {pendingMapDefs.Length - 1}");
 				return;
 			}
 
-			// Update the map tile data
-			mapTiles.TileData.bytes[index] = newTileDefIndex;
+			// Update pending tile data
+			pendingTileData[index] = newTileDefIndex;
 
 			// Update the tile at the specified index
-			var szType = mapDefs[newTileDefIndex].szType;
-			var szTheme = mapDefs[newTileDefIndex].szTheme;
+			var szType = pendingMapDefs[newTileDefIndex].szType;
+			var szTheme = pendingMapDefs[newTileDefIndex].szTheme;
 			if (string.IsNullOrEmpty(szType)) Debug.LogWarning($"Null szType at tileDefIndex {newTileDefIndex}");
 			if (string.IsNullOrEmpty(szTheme)) Debug.LogWarning($"Null szTheme at tileDefIndex {newTileDefIndex}");
 
@@ -201,21 +193,32 @@ namespace ClassicTilestorm
 				var tileDef = DatabaseSerializer.TileDefs.FirstOrDefault(td => td.szType == szType && td.szTheme == szTheme);
 				tiles[index].GameObject = GeometryManager.InstantiateTile(tileDef, transform, TileWorldPosition(index), tiles[index].Interactive);
 			}
+		}
 
-			// Update currentMap and save
-			if (currentMap != null)
+		public void SaveChanges()
+		{
+			if (currentMap == null || pendingTileData == null || pendingMapDefs == null)
 			{
-				currentMap.tiles = mapTiles;
-				DatabaseSerializer.SaveDatabase(new DatabaseSerializer.DatabaseData
-				{
-					maps = DatabaseSerializer.Maps.ToArray(),
-					themes = DatabaseSerializer.Themes.ToArray(),
-					tiledefs = DatabaseSerializer.TileDefs.ToArray(),
-					buttons = DatabaseSerializer.Buttons.ToArray(),
-					texture_set = DatabaseSerializer.TextureSets.ToArray()
-				});
-				Debug.Log("Database updated with new TileData");
+				Debug.LogError("Cannot save changes: map or pending data is null");
+				return;
 			}
+
+			// Update currentMap with pending changes
+			mapTiles.TileData.bytes = pendingTileData.ToArray();
+			mapDefs = pendingMapDefs.ToArray();
+			currentMap.tiles = mapTiles;
+			currentMap.defs = mapDefs;
+
+			// Save to DatabaseSerializer
+			DatabaseSerializer.SaveDatabase(new DatabaseSerializer.DatabaseData
+			{
+				maps = DatabaseSerializer.Maps.ToArray(),
+				themes = DatabaseSerializer.Themes.ToArray(),
+				tiledefs = DatabaseSerializer.TileDefs.ToArray(),
+				buttons = DatabaseSerializer.Buttons.ToArray(),
+				texture_set = DatabaseSerializer.TextureSets.ToArray()
+			});
+			Debug.Log("Database updated with pending mapDefs and TileData");
 		}
 
 		public void SetupWaypoints(DatabaseSerializer.Map map)
