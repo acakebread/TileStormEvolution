@@ -274,7 +274,7 @@ namespace ClassicTilestorm
 
 			// Save button (red)
 			GUIStyle saveButtonStyle = new GUIStyle(GUI.skin.button);
-			saveButtonStyle.normal.background = MakeTex(1, 1, new Color(0.8f, 0.2f, 0.2f)); // Red background
+			saveButtonStyle.normal.background = TextureUtils.MakeTex(1, 1, new Color(0.8f, 0.2f, 0.2f)); // Red background
 			if (GUI.Button(saveButtonRect, "Save", saveButtonStyle))
 			{
 				mapManager.SaveChanges();
@@ -355,7 +355,7 @@ namespace ClassicTilestorm
 
 				// Draw background
 				GUIStyle panelStyle = new GUIStyle(GUI.skin.box);
-				panelStyle.normal.background = MakeTex(1, 1, new Color(0.2f, 0.2f, 0.4f, 0.75f));
+				panelStyle.normal.background = TextureUtils.MakeTex(1, 1, new Color(0.2f, 0.2f, 0.4f, 0.75f));
 				GUI.Box(tileSelectorRect, "Tile Selector", panelStyle);
 
 				// Scroll view for tiles
@@ -434,18 +434,6 @@ namespace ClassicTilestorm
 					}
 				}
 			}
-		}
-
-		// Helper to create a texture for the tile selector background
-		private Texture2D MakeTex(int width, int height, Color col)
-		{
-			Color[] pix = new Color[width * height];
-			for (int i = 0; i < pix.Length; i++)
-				pix[i] = col;
-			Texture2D result = new Texture2D(width, height);
-			result.SetPixels(pix);
-			result.Apply();
-			return result;
 		}
 
 		public override void OnDestroy()
