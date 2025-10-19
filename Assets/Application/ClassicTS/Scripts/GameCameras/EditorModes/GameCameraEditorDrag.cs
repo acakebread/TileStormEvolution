@@ -24,7 +24,7 @@ namespace ClassicTilestorm
 				{
 					isDragging = true;
 					dragOrigin = Input.mousePosition;
-					Debug.Log("Started dragging camera");
+					//Debug.Log("Started dragging camera");
 				}
 			}
 
@@ -38,7 +38,7 @@ namespace ClassicTilestorm
 			if (Input.GetMouseButtonUp(0))
 			{
 				isDragging = false;
-				Debug.Log("Stopped dragging camera");
+				//Debug.Log("Stopped dragging camera");
 			}
 		}
 	}

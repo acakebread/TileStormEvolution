@@ -64,10 +64,10 @@ namespace ClassicTilestorm
 				float scroll = skipNextScroll ? 0f : Input.GetAxis("Mouse ScrollWheel");
 				cameraTransform.Translate(0, 0, scroll * zoomSpeed, Space.Self);
 				skipNextScroll = false;
-				if (scroll != 0f)
-				{
-					Debug.Log($"Zooming: scroll={scroll}, zoomSpeed={zoomSpeed}");
-				}
+				//if (scroll != 0f)
+				//{
+				//	Debug.Log($"Zooming: scroll={scroll}, zoomSpeed={zoomSpeed}");
+				//}
 			}
 
 			// Translation (WASD movement)

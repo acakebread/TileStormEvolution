@@ -16,6 +16,15 @@ namespace ClassicTilestorm
 		private int selectedMapDefIndex = 0; // Index into mapDefs
 		private int tempSelectedTileDefGlobalIndex = 0; // Index into DatabaseSerializer.TileDefs
 		private PlaceholderUI placeholderUI; // Reference to PlaceholderUI
+		private float tileSelectorWidth = 120f; // Current width, start collapsed
+		private readonly float fullWidth = 300f; // Expanded width
+		private readonly float collapsedWidth = 120f; // Collapsed width (matches buttonWidth)
+		private float mouseExitTime = 0f; // Time when mouse last exited tile selector
+		private bool isMouseOverTileSelector; // Track if mouse is over tile selector
+		private readonly float autoHideDelay = 1f; // 1 second delay for auto-hide
+		private float targetWidth; // Target width for animation
+		private float animationStartTime; // Time when animation started
+		private readonly float animationDuration = 0.3f; // Duration for width animation
 
 		public GameCameraEditor(Camera camera) : base(camera) { }
 
@@ -29,10 +38,10 @@ namespace ClassicTilestorm
 			if (direction.sqrMagnitude > Mathf.Epsilon)
 				cameraTransform.rotation = Quaternion.LookRotation(direction, Vector3.up);
 
-			// Initialize mode instances
 			dragMode = new GameCameraEditorDrag(camera);
 			paintMode = new GameCameraEditorPaint(camera, mapManager, selectedMapDefIndex);
 			activeMode = dragMode;
+			targetWidth = collapsedWidth; // Initialize to collapsed
 		}
 
 		public override void Start()
@@ -59,7 +68,6 @@ namespace ClassicTilestorm
 			if (Input.GetMouseButtonUp(0) && GUIUtility.hotControl != 0)
 			{
 				GUIUtility.hotControl = 0;
-				Debug.Log("Manually reset hotControl on mouse release");
 			}
 
 			if (activeMode != null)
@@ -113,7 +121,6 @@ namespace ClassicTilestorm
 			if (GUI.Button(saveButtonRect, "Save", saveButtonStyle))
 			{
 				mapManager.SaveChanges();
-				Debug.Log("Saved map changes to DatabaseSerializer");
 			}
 
 			// Ensure radio button behavior
@@ -121,23 +128,61 @@ namespace ClassicTilestorm
 			{
 				currentMode = EditorMode.Drag;
 				activeMode = dragMode;
-				Debug.Log("Switched to Drag mode");
 			}
 			else if (paintToggled && currentMode != EditorMode.Paint)
 			{
 				currentMode = EditorMode.Paint;
 				activeMode = paintMode;
-				Debug.Log("Switched to Paint mode");
+				targetWidth = collapsedWidth; // Start collapsed in Paint mode
+				tileSelectorWidth = collapsedWidth; // Immediate collapse on mode switch
+				animationStartTime = Time.time;
 			}
 
 			// Tile selector (visible only in Paint mode)
 			if (currentMode == EditorMode.Paint)
 			{
-				float tileSelectorWidth = 300;
+				// Calculate mouse position in GUI coordinates
+				Vector2 mousePos = Input.mousePosition;
+				mousePos.y = Screen.height - mousePos.y; // Convert to GUI coordinates
+
+				// Update tile selector width before defining rects
+				bool wasMouseOverTileSelector = isMouseOverTileSelector;
 				float tileSelectorX = Screen.width - tileSelectorWidth - margin;
 				float tileSelectorY = panelBottomY + spacing;
 				float tileSelectorHeight = Screen.height - tileSelectorY - margin;
 				Rect tileSelectorRect = new Rect(tileSelectorX, tileSelectorY, tileSelectorWidth, tileSelectorHeight);
+				isMouseOverTileSelector = tileSelectorRect.Contains(mousePos);
+
+				// Handle auto-expand and auto-hide
+				if (isMouseOverTileSelector)
+				{
+					if (targetWidth != fullWidth)
+					{
+						targetWidth = fullWidth; // Expand when mouse is over
+						animationStartTime = Time.time;
+					}
+					mouseExitTime = 0f; // Reset timer
+				}
+				else
+				{
+					if (wasMouseOverTileSelector)
+					{
+						mouseExitTime = Time.time; // Start timer when mouse exits
+					}
+					if (mouseExitTime > 0f && Time.time - mouseExitTime >= autoHideDelay && targetWidth != collapsedWidth)
+					{
+						targetWidth = collapsedWidth; // Collapse after 1 second
+						animationStartTime = Time.time;
+					}
+				}
+
+				// Animate tile selector width
+				float t = Mathf.Clamp01((Time.time - animationStartTime) / animationDuration);
+				tileSelectorWidth = Mathf.Lerp(tileSelectorWidth, targetWidth, t);
+
+				// Redefine rects with updated width
+				tileSelectorX = Screen.width - tileSelectorWidth - margin;
+				tileSelectorRect = new Rect(tileSelectorX, tileSelectorY, tileSelectorWidth, tileSelectorHeight);
 				GUIManager.RegisterGuiRect(tileSelectorRect);
 
 				// Draw background
@@ -173,7 +218,6 @@ namespace ClassicTilestorm
 						if (selectedMapDefIndex >= 0)
 						{
 							paintMode.SetTileDefIndex(selectedMapDefIndex);
-							Debug.Log($"Selected tileDef: {selectedTileDef.szType} ({selectedTileDef.szTheme}), mapped to mapDefs index={selectedMapDefIndex}");
 						}
 					}
 					GUI.color = Color.white;
