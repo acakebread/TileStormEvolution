@@ -58,6 +58,9 @@ namespace ClassicTilestorm
 			placeholderUI = Object.FindAnyObjectByType<PlaceholderUI>();
 			if (placeholderUI == null)
 				Debug.LogWarning("PlaceholderUI not found in scene!");
+
+			// Initialize ghost material
+			GeometryUtil.InitializeGhostMaterial();
 		}
 
 		public override void Update()
@@ -72,6 +75,24 @@ namespace ClassicTilestorm
 
 			if (activeMode != null)
 				activeMode.Update();
+
+			// Update ghost tile position
+			if (currentMode == EditorMode.Paint && !GUIManager.IsMouseOverGui() && !EventSystem.current.IsPointerOverGameObject())
+			{
+				if (tempSelectedTileDefGlobalIndex >= 0 && tempSelectedTileDefGlobalIndex < DatabaseSerializer.TileDefs.Count)
+				{
+					var tileDef = DatabaseSerializer.TileDefs[tempSelectedTileDefGlobalIndex];
+					GeometryUtil.UpdateGhostTile(camera, mapManager, tileDef);
+				}
+				else
+				{
+					GeometryUtil.HideGhostTile();
+				}
+			}
+			else
+			{
+				GeometryUtil.HideGhostTile();
+			}
 		}
 
 		public override void OnApplicationFocus(bool hasFocus)
@@ -128,6 +149,7 @@ namespace ClassicTilestorm
 			{
 				currentMode = EditorMode.Drag;
 				activeMode = dragMode;
+				GeometryUtil.HideGhostTile();
 			}
 			else if (paintToggled && currentMode != EditorMode.Paint)
 			{
@@ -218,6 +240,9 @@ namespace ClassicTilestorm
 						if (selectedMapDefIndex >= 0)
 						{
 							paintMode.SetTileDefIndex(selectedMapDefIndex);
+							// Update ghost tile immediately
+							GeometryUtil.DestroyGhostTile(); // Ensure old tile is removed
+							GeometryUtil.UpdateGhostTile(camera, mapManager, selectedTileDef);
 						}
 					}
 					GUI.color = Color.white;
