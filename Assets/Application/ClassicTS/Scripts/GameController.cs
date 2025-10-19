@@ -44,17 +44,18 @@ namespace ClassicTilestorm
 
 		private CameraBase cameraSystem => cameraController.currentSystem;
 		private bool HasCompleted => cameraSystem is GameCameraOrbit orbit ? orbit.HasCompleted : cameraSystem is GameCameraPath path && path.HasCompleted;
+		private bool IsCinemaCamera(CameraBase _cameraSystem) => _cameraSystem is GameCameraOrbit || _cameraSystem is GameCameraPath;
 
 		private void CinemaUpdate()
 		{
-			if (cameraController == null || PreviewMode.Cinema != PreviewSettings.CurrentMode || !HasCompleted || Time.time - cinemaTimer <= CinemaTimeoutDuration) return;
+			if (!IsCinemaCamera(cameraSystem) || !HasCompleted || Time.time - cinemaTimer <= CinemaTimeoutDuration) return;
 			cinemaTimer = Time.time;
 			cameraController.SetCameraMode(Random.Range(0, 7) switch { 0 or 1 or 2 => CameraModeRegistry.Orbit, _ => CameraModeRegistry.Path });
 		}
 
 		public void SetPreviewMode(PreviewMode mode, bool forceCinema = false)
 		{
-			if (mode == PreviewMode.Cinema)
+			if (IsCinemaCamera(cameraSystem))
 				cinemaTimer = Time.time - (forceCinema ? CinemaTimeoutDuration : 0);
 			if (cameraController != null)
 			{
