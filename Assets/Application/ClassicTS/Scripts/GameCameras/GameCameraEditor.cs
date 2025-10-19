@@ -179,5 +179,19 @@ namespace ClassicTilestorm
 				camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
 			camera.fieldOfView = fieldOfView;
 		}
+
+		public override void OnGUI()
+		{
+			base.OnGUI();
+
+			// Place button in bottom-left corner
+			float buttonWidth = 120;
+			float buttonHeight = 30;
+			float margin = 10;
+
+			if (GUI.Button(new Rect(margin, Screen.height - buttonHeight - margin, buttonWidth, buttonHeight), "Editor Button"))
+			{
+			}
+		}
 	}
 }

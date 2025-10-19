@@ -20,6 +20,7 @@ namespace MassiveHadronLtd
 		public virtual void Awake() { }
 		public virtual void Start() { }
 		public virtual void Update() { }
+		public virtual void OnGUI() { }
 		public virtual void OnApplicationFocus(bool hasFocus) { }
 		protected virtual void OnRender() { }
 

@@ -140,6 +140,8 @@ namespace MassiveHadronLtd
 
 		protected virtual void Update() => currentSystem?.Update();
 
+		public virtual void OnGUI() => currentSystem?.OnGUI(); 
+		
 		private void OnApplicationFocus(bool hasFocus) => currentSystem?.OnApplicationFocus(hasFocus);
 
 		protected virtual void SetupCameras() { }
