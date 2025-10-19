@@ -28,7 +28,7 @@ namespace MassiveHadronLtd
 				return;
 			}
 
-			RegisterCamera(new CameraDefault(GetComponent<Camera>()) { iorigin = new Vector3(0f, 4f, -4f), itarget = Vector3.zero }, DefaultMode);
+			RegisterCamera(new CameraDefault(GetComponent<Camera>()), DefaultMode);
 			SetCameraMode(DefaultMode);
 		}
 
