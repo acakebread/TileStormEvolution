@@ -9,10 +9,6 @@ namespace MassiveHadronLtd
 		protected Func<Vector3> originFn;
 		protected Func<Vector3> targetFn;
 		protected Func<IReadOnlyList<Vector3>> pointsFn;
-		protected Vector3 origin => originFn?.Invoke() ?? Vector3.zero;
-		protected Vector3 target => targetFn?.Invoke() ?? Vector3.zero;
-		protected IReadOnlyList<Vector3> points => pointsFn?.Invoke() ?? Array.Empty<Vector3>();//focus points
-
 
 		private float yaw;
 		private float pitch;

@@ -88,9 +88,6 @@ namespace ClassicTilestorm
 			var editorConfig = new CameraConfig
 			{
 				data = new CameraData(GetComponent<Camera>()) { iorigin = srcPos, itarget = dstPos },
-				origin = () => srcPos,
-				target = GetTargetPosition(),
-				points = GetFocusPoints()
 			};
 
 			var followConfig = new CameraConfig
@@ -107,18 +104,10 @@ namespace ClassicTilestorm
 				origin = () => srcPos
 			};
 
-			var directConfig = new CameraConfig
-			{
-				data = new CameraData(GetComponent<Camera>()) { iorigin = srcPos, itarget = dstPos },
-				target = () => dstPos,
-				origin = () => srcPos
-			};
-
 			var orbitConfig = new CameraConfig
 			{
 				data = new CameraData(GetComponent<Camera>()) { iorigin = srcPos, itarget = dstPos },
 				target = GetTargetPosition(),
-				points = GetFocusPoints()
 			};
 
 			var pathConfig = new CameraConfig
@@ -131,7 +120,6 @@ namespace ClassicTilestorm
 			RegisterCamera(new CameraEditor(editorConfig), CameraMode.Editor);
 			RegisterCamera(new CameraFollow(followConfig), CameraMode.Follow);
 			RegisterCamera(new CameraPreset(presetConfig), CameraMode.Preset);
-			RegisterCamera(new CameraDirect(directConfig), CameraMode.Direct);
 			RegisterCamera(new CameraOrbit(orbitConfig), CameraMode.Orbit);
 			RegisterCamera(new CameraPath(pathConfig), CameraMode.Path);
 

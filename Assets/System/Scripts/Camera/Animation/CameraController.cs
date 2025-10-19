@@ -105,7 +105,7 @@ namespace MassiveHadronLtd
 				return;
 
 			currentMode = mode;
-			//cameraSystem.CopyFrom(cameraSystems[groupMode]); 
+			cameraSystem.CopyFrom(cameraSystems[groupMode]); 
 			cameraSystem.Start();
 
 			//local function

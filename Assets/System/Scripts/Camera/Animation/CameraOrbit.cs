@@ -8,10 +8,8 @@ namespace MassiveHadronLtd
 	{
 		protected Func<Vector3> originFn;
 		protected Func<Vector3> targetFn;
-		protected Func<IReadOnlyList<Vector3>> pointsFn;
 		protected Vector3 origin => originFn?.Invoke() ?? Vector3.zero;
 		protected Vector3 target => targetFn?.Invoke() ?? Vector3.zero;
-		protected IReadOnlyList<Vector3> points => pointsFn?.Invoke() ?? Array.Empty<Vector3>();//focus points
 
 		private const float VerticalOffset = 0.5f;
 		private const float MinOrbitRadius = 2f;
@@ -28,7 +26,7 @@ namespace MassiveHadronLtd
 		private float orbitStartAngle;
 		private float orbitEndAngle;
 		private float currentFovMax;
-		private float shake = 0f;
+		//private float shake = 0f;
 
 		private Vector3 localOrigin; // Renamed to avoid conflict with helper property
 		private Vector3 localTarget;
@@ -42,7 +40,6 @@ namespace MassiveHadronLtd
 				data = config.data;
 				originFn = config.origin;
 				targetFn = config.target;
-				pointsFn = config.points;
 			}
 		}
 
@@ -61,7 +58,7 @@ namespace MassiveHadronLtd
 		{
 			base.Start();
 			smoothing = DefaultSmoothingRate;
-			shake = 0f;
+			//shake = 0f;
 			data.fieldOfView = 45f;
 			data.postProcessingEnabled = true;
 			if (data?.camera == null) return;
@@ -94,7 +91,7 @@ namespace MassiveHadronLtd
 
 			data.iorigin = localOrigin = localTarget + SampleOrbitPosition(orbitStartAngle, orbitEndAngle, 0f);
 
-			shake = 1f;
+			//shake = 1f;
 		}
 
 		public override void Update()

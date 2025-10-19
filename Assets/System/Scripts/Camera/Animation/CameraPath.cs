@@ -24,7 +24,7 @@ namespace MassiveHadronLtd
 		private const float MinCameraHeight = 1.5f;
 		private const float MaxCameraHeight = 4f;
 		private const bool SortDstNearerPlayer = true;
-		private float shake = 0f;
+		//private float shake = 0f;
 
 		private float currentFovMax;
 		private BezierData bezierData;
@@ -95,7 +95,7 @@ namespace MassiveHadronLtd
 			base.Start();
 			smoothing = DefaultSmoothingRate;
 			data.fieldOfView = 45f;
-			shake = 0f;
+			//shake = 0f;
 			data.postProcessingEnabled = true;
 
 			if (data?.camera == null)
@@ -112,7 +112,7 @@ namespace MassiveHadronLtd
 			pauseTimer = DefaultPauseDuration;
 			lastTarget = nextTarget = targetPosition;
 
-			shake = 1f;
+			//shake = 1f;
 			bezierData = default;
 			currentFovMax = FovMax;
 
