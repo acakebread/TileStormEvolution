@@ -1,11 +1,14 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
 using MassiveHadronLtd;
+using System.Linq;
 
 namespace ClassicTilestorm
 {
 	public class GameCameraEditor : CameraBase
 	{
+		public MapManager mapManager;
+
 		private float yaw;
 		private float pitch;
 		private bool dragging;
@@ -189,8 +192,24 @@ namespace ClassicTilestorm
 			float buttonHeight = 30;
 			float margin = 10;
 
-			if (GUI.Button(new Rect(margin, Screen.height - buttonHeight - margin, buttonWidth, buttonHeight), "Editor Button"))
+			if (GUI.Button(new Rect(margin, Screen.height - buttonHeight - margin, buttonWidth, buttonHeight), "Test Alter Map"))
 			{
+				// Change tile at (0,0) to tileDefIndex 3
+				mapManager.UpdateTileAt(0, 0, 3);
+
+				// Create a new DatabaseData instance with the current (modified) data
+				var newData = new DatabaseSerializer.DatabaseData
+				{
+					maps = DatabaseSerializer.Maps.ToArray(), // Includes the modified map from MapManager
+					themes = DatabaseSerializer.Themes.ToArray(),
+					tiledefs = DatabaseSerializer.TileDefs.ToArray(),
+					buttons = DatabaseSerializer.Buttons.ToArray(),
+					texture_set = DatabaseSerializer.TextureSets.ToArray()
+				};
+
+				// Save the modified database
+				DatabaseSerializer.SaveDatabase(newData);
+				Debug.Log("TestSerialize: Database saved with updated tile at (0,0)");
 			}
 		}
 	}
