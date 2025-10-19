@@ -1,10 +1,21 @@
+using UnityEngine;
+
 namespace MassiveHadronLtd
 {
 	public abstract class CameraBase
 	{
-		protected CameraData data;
+		protected Camera camera;
+		public Vector3 iorigin;
+		public Vector3 itarget;
+		public float fieldOfView;
 
-		public CameraBase(CameraData _data) { data = _data; }
+		public CameraBase(Camera camera) 
+		{ 
+			this.camera = camera;
+			iorigin = null != camera ? camera.transform.position : Vector3.back;
+			itarget = iorigin + Vector3.forward;
+			fieldOfView = null != camera ? camera.fieldOfView : 60f;
+		}
 
 		public virtual void Awake() { }
 		public virtual void Start() { }
@@ -15,8 +26,8 @@ namespace MassiveHadronLtd
 		public virtual void CopyFrom(CameraBase other)
 		{
 			if (other == null) return;
-			data.iorigin = other.data.iorigin;
-			data.itarget = other.data.itarget;
+			iorigin = other.iorigin;
+			itarget = other.itarget;
 			smoothing = other.smoothing;
 		}
 
@@ -28,6 +39,6 @@ namespace MassiveHadronLtd
 			get => null != controller ? controller.enabled : false;
 			set { if (null != controller) controller.enabled = value; }
 		}
-		private PostProcessingCameraController controller => data.camera?.GetComponentInChildren<PostProcessingCameraController>(true);
+		private PostProcessingCameraController controller => camera?.GetComponentInChildren<PostProcessingCameraController>(true);
 	}
 }

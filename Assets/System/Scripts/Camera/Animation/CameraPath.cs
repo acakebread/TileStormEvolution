@@ -50,16 +50,16 @@ namespace MassiveHadronLtd
 		protected float sequenceTimer = DefaultSequenceDuration;
 		protected float pauseTimer = DefaultPauseDuration;
 
-		public CameraPath(CameraData _data) : base(_data) { }
+		public CameraPath(Camera camera) : base(camera) { }
 
 		public override void Awake()
 		{
 			base.Awake();
 			////initialise camera
-			//var camera = data.camera;
+			//var camera = camera;
 			//if (camera == null) return;
-			//camera.transform.position = originFn?.Invoke() ?? data.iorigin;
-			//var direction = (targetFn?.Invoke() ?? data.itarget) - camera.transform.position;
+			//camera.transform.position = originFn?.Invoke() ?? iorigin;
+			//var direction = (targetFn?.Invoke() ?? itarget) - camera.transform.position;
 			//if (direction.sqrMagnitude > Mathf.Epsilon)
 			//	camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
 		}
@@ -76,8 +76,8 @@ namespace MassiveHadronLtd
 		protected virtual void UpdateCinemaLerping()
 		{
 			var interpolate = SmoothingUtils.Smooth(0f, 1f, smoothing, Time.deltaTime, TargetFPS);
-			data.iorigin = Vector3.Lerp(data.iorigin, localOrigin, interpolate);
-			data.itarget = Vector3.Lerp(data.itarget, localTarget, interpolate);
+			iorigin = Vector3.Lerp(iorigin, localOrigin, interpolate);
+			itarget = Vector3.Lerp(itarget, localTarget, interpolate);
 		}
 
 		public bool HasCompleted => sequenceTimer <= 0f && pauseTimer <= 0f;
@@ -86,11 +86,11 @@ namespace MassiveHadronLtd
 		{
 			base.Start();
 			smoothing = DefaultSmoothingRate;
-			data.fieldOfView = 45f;
+			fieldOfView = 45f;
 			//shake = 0f;
 			postProcessingEnabled = true;
 
-			if (data?.camera == null)
+			if (camera == null)
 			{
 				Debug.LogWarning("CameraPath.Awake: Missing camera or delegates");
 				return;
@@ -118,27 +118,27 @@ namespace MassiveHadronLtd
 					startFocusPoint = validFocusPoint[UnityEngine.Random.Range(0, validFocusPoint.Count)];
 			}
 
-			data.itarget = localTarget = startFocusPoint + Vector3.up * VerticalOffset;
+			itarget = localTarget = startFocusPoint + Vector3.up * VerticalOffset;
 			localTarget = targetPosition + Vector3.up * VerticalOffset;
 
 			// Define lozenge
-			var targetPath = localTarget - data.itarget;
+			var targetPath = localTarget - itarget;
 			var pathDir = targetPath.magnitude > 0.1f ? targetPath.normalized : UnityEngine.Random.onUnitSphere;
-			var midPoint = (data.itarget + localTarget) / 2f;
+			var midPoint = (itarget + localTarget) / 2f;
 			var perpendicular = new Vector3(-pathDir.z, 0f, pathDir.x).normalized;
 			var lozengeMajor = targetPath.magnitude + 2f * MinDistance;
 			var lozengeMinor = Mathf.Max(lozengeMajor * 0.66f, MinDistance * 2f);
 
 			// Generate camera points
 			var (src, dst) = SampleCameraPosition(midPoint, pathDir, perpendicular, lozengeMajor, lozengeMinor);
-			data.iorigin = src;
+			iorigin = src;
 			localOrigin = dst;
 
-			data.iorigin = AdjustHeight(data.iorigin, data.itarget);
+			iorigin = AdjustHeight(iorigin, itarget);
 			localOrigin = AdjustHeight(localOrigin, localTarget);
 
 			// Initialize FOV
-			data.fieldOfView = FovMin;
+			fieldOfView = FovMin;
 			currentFovMax = UnityEngine.Random.value < 0.2f ? 60f : FovMax;
 		}
 
@@ -157,7 +157,7 @@ namespace MassiveHadronLtd
 
 				// Update target
 				var easedSequenceTimer = SmoothingUtils.Ease(sequenceDuration > 0 ? 1f - Mathf.Clamp01(sequenceTimer / sequenceDuration) : 1f);
-				localTarget = Vector3.Lerp(data.itarget, nextTarget, easedSequenceTimer);
+				localTarget = Vector3.Lerp(itarget, nextTarget, easedSequenceTimer);
 
 				// Update Bezier P1 and P2 with player movement
 				bezierData.P1 += posDelta * 0.5f;
@@ -165,7 +165,7 @@ namespace MassiveHadronLtd
 
 				// Update camera dest position and FOV
 				localOrigin = MathUtil.QuadraticBezierPoint(easedSequenceTimer, bezierData.P0, bezierData.P1, bezierData.P2);
-				data.fieldOfView = Mathf.Lerp(FovMin, currentFovMax, SmoothingUtils.EasePingPong(sequenceTimer / sequenceDuration));
+				fieldOfView = Mathf.Lerp(FovMin, currentFovMax, SmoothingUtils.EasePingPong(sequenceTimer / sequenceDuration));
 			}
 			else
 				pauseTimer -= Time.deltaTime;
@@ -178,13 +178,13 @@ namespace MassiveHadronLtd
 
 		protected override void OnRender()
 		{
-			if (data?.camera == null) return;
-			data.camera.transform.position = data.iorigin;
-			var direction = data.itarget - data.iorigin;
+			if (camera == null) return;
+			camera.transform.position = iorigin;
+			var direction = itarget - iorigin;
 			if (direction.sqrMagnitude > Mathf.Epsilon)
-				data.camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
-			data.camera.fieldOfView = data.fieldOfView;
-			//CameraUtils.ApplyCameraShake(data.camera, shake);
+				camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
+			camera.fieldOfView = fieldOfView;
+			//CameraUtils.ApplyCameraShake(camera, shake);
 		}
 
 		private (Vector3 src, Vector3 dst) SampleCameraPosition(Vector3 midPoint, Vector3 pathDir, Vector3 perpendicular, float lozengeMajor, float lozengeMinor)

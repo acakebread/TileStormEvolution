@@ -31,15 +31,14 @@ namespace MassiveHadronLtd
 
 		public bool HasCompleted => sequenceTimer <= 0f && pauseTimer <= 0f;
 
-		public CameraOrbit(CameraData _data) : base(_data) { }
+		public CameraOrbit(Camera camera) : base(camera) { }
 
 		public override void Awake()
 		{
 			//initialise camera
-			var camera = data.camera;
 			if (camera == null) return;
-			camera.transform.position = originFn?.Invoke() ?? data.iorigin;
-			var direction = (targetFn?.Invoke() ?? data.itarget) - camera.transform.position;
+			camera.transform.position = originFn?.Invoke() ?? iorigin;
+			var direction = (targetFn?.Invoke() ?? itarget) - camera.transform.position;
 			if (direction.sqrMagnitude > Mathf.Epsilon)
 				camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
 		}
@@ -49,9 +48,9 @@ namespace MassiveHadronLtd
 			base.Start();
 			smoothing = DefaultSmoothingRate;
 			//shake = 0f;
-			data.fieldOfView = 45f;
+			fieldOfView = 45f;
 			postProcessingEnabled = true;
-			if (data?.camera == null) return;
+			if (camera == null) return;
 
 			InitializeCinemaSequence();
 
@@ -71,15 +70,15 @@ namespace MassiveHadronLtd
 			var minRadius = Mathf.Max(minRadiusSrc, minRadiusDst);
 			currentOrbitRadius = UnityEngine.Random.Range(Mathf.Max(minRadius, MinOrbitRadius), MaxOrbitRadius);
 
-			data.itarget = localTarget = target + Vector3.up * VerticalOffset; // Use helper property 'target'
+			itarget = localTarget = target + Vector3.up * VerticalOffset; // Use helper property 'target'
 			var maxDelta = Mathf.Lerp(360f, 180f, (currentOrbitRadius - MinOrbitRadius) / (MaxOrbitRadius - MinOrbitRadius));
 			var delta = UnityEngine.Random.Range(120f, maxDelta) * (UnityEngine.Random.value < 0.5f ? 1f : -1f);
 			orbitEndAngle = orbitStartAngle + delta;
 
-			data.fieldOfView = FovMin;
+			fieldOfView = FovMin;
 			currentFovMax = UnityEngine.Random.value < 0.2f ? 60f : FovMax;
 
-			data.iorigin = localOrigin = localTarget + SampleOrbitPosition(orbitStartAngle, orbitEndAngle, 0f);
+			iorigin = localOrigin = localTarget + SampleOrbitPosition(orbitStartAngle, orbitEndAngle, 0f);
 
 			//shake = 1f;
 		}
@@ -103,7 +102,7 @@ namespace MassiveHadronLtd
 				var easedSequenceTimer = SmoothingUtils.Ease(sequenceDuration > 0 ? 1f - Mathf.Clamp01(sequenceTimer / sequenceDuration) : 1f);
 				localTarget = target + Vector3.up * VerticalOffset; // Use helper property 'target'
 				localOrigin = localTarget + SampleOrbitPosition(orbitStartAngle, orbitEndAngle, easedSequenceTimer);
-				data.fieldOfView = Mathf.Lerp(FovMin, currentFovMax, SmoothingUtils.EasePingPong(sequenceTimer / sequenceDuration));
+				fieldOfView = Mathf.Lerp(FovMin, currentFovMax, SmoothingUtils.EasePingPong(sequenceTimer / sequenceDuration));
 			}
 
 			smoothing = SmoothingUtils.Smooth(smoothing, SmoothingRate, sequenceDuration, Time.deltaTime, TargetFPS);
@@ -114,13 +113,13 @@ namespace MassiveHadronLtd
 
 		protected override void OnRender()
 		{
-			if (data?.camera == null) return;
-			data.camera.transform.position = data.iorigin;
-			var direction = data.itarget - data.iorigin;
+			if (camera == null) return;
+			camera.transform.position = iorigin;
+			var direction = itarget - iorigin;
 			if (direction.sqrMagnitude > Mathf.Epsilon)
-				data.camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
-			data.camera.fieldOfView = data.fieldOfView;
-			//CameraUtils.ApplyCameraShake(data.camera, shake);
+				camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
+			camera.fieldOfView = fieldOfView;
+			//CameraUtils.ApplyCameraShake(camera, shake);
 		}
 
 		private float CalculateMinOrbitRadius(float cameraHeight, float targetY)
@@ -165,8 +164,8 @@ namespace MassiveHadronLtd
 		protected virtual void UpdateCinemaLerping()
 		{
 			var interpolate = SmoothingUtils.Smooth(0f, 1f, smoothing, Time.deltaTime, TargetFPS);
-			data.iorigin = Vector3.Lerp(data.iorigin, localOrigin, interpolate);
-			data.itarget = Vector3.Lerp(data.itarget, localTarget, interpolate);
+			iorigin = Vector3.Lerp(iorigin, localOrigin, interpolate);
+			itarget = Vector3.Lerp(itarget, localTarget, interpolate);
 		}
 	}
 }

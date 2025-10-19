@@ -16,15 +16,15 @@ namespace MassiveHadronLtd
 		private float lookSpeedV = 2f;
 		private float zoomSpeed = 12f;
 
-		public CameraDefault(CameraData _data) : base(_data) { }
+		public CameraDefault(Camera camera) : base(camera) { }
 
 		public override void Awake()
 		{
 			base.Awake();
 
-			var cameraTransform = data.camera.transform;
-			cameraTransform.position = data.iorigin;
-			var direction = data.itarget - data.iorigin;
+			var cameraTransform = camera.transform;
+			cameraTransform.position = iorigin;
+			var direction = itarget - iorigin;
 			if (direction.sqrMagnitude > Mathf.Epsilon)
 				cameraTransform.rotation = Quaternion.LookRotation(direction, Vector3.up);
 		}
@@ -32,12 +32,12 @@ namespace MassiveHadronLtd
 		public override void Start()
 		{
 			base.Start();
-			data.fieldOfView = 60f;
-			data.camera.fieldOfView = data.fieldOfView;
+			fieldOfView = 60f;
+			camera.fieldOfView = fieldOfView;
 			postProcessingEnabled = false;
 
 			// Initialize rotation and state
-			var cameraTransform = data.camera.transform;
+			var cameraTransform = camera.transform;
 			yaw = cameraTransform.eulerAngles.y;
 			pitch = cameraTransform.eulerAngles.x;
 			dragging = false;
@@ -54,7 +54,7 @@ namespace MassiveHadronLtd
 			base.Update();
 
 			var wasDragging = dragging;
-			var cameraTransform = data.camera.transform;
+			var cameraTransform = camera.transform;
 
 			// Handle mouse button down to start dragging (left or right mouse)
 			if ((Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1)) &&
@@ -69,7 +69,7 @@ namespace MassiveHadronLtd
 				{
 					isDraggingWithLeftMouse = true;
 					cameraStartPosition = cameraTransform.position;
-					Ray ray = data.camera.ScreenPointToRay(Input.mousePosition);
+					Ray ray = camera.ScreenPointToRay(Input.mousePosition);
 					if (Physics.Raycast(ray, out RaycastHit hit))
 					{
 						// Set the drag plane height to the y-position of the hit point
@@ -111,7 +111,7 @@ namespace MassiveHadronLtd
 				// Current ray from mouse position
 
 				cameraTransform.position = cameraStartPosition;
-				Ray currentRay = data.camera.ScreenPointToRay(Input.mousePosition);
+				Ray currentRay = camera.ScreenPointToRay(Input.mousePosition);
 				if (dragPlane.Raycast(currentRay, out float enter))
 				{
 					Vector3 currentWorldPoint = currentRay.GetPoint(enter);
@@ -170,12 +170,12 @@ namespace MassiveHadronLtd
 
 		protected override void OnRender()
 		{
-			if (data?.camera == null) return;
-			data.camera.transform.position = data.iorigin;
-			var direction = data.itarget - data.iorigin;
+			if (camera == null) return;
+			camera.transform.position = iorigin;
+			var direction = itarget - iorigin;
 			if (direction.sqrMagnitude > Mathf.Epsilon)
-				data.camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
-			data.camera.fieldOfView = data.fieldOfView;
+				camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
+			camera.fieldOfView = fieldOfView;
 		}
 	}
 }

@@ -85,17 +85,12 @@ namespace ClassicTilestorm
 			}
 
 			var (srcPos, dstPos) = GetInitialCameraPositions();
-			var editorData = new CameraData(GetComponent<Camera>()) { iorigin = srcPos, itarget = dstPos };
-			var followData = new CameraData(GetComponent<Camera>()) { iorigin = srcPos, itarget = dstPos };
-			var presetData = new CameraData(GetComponent<Camera>()) { iorigin = srcPos, itarget = dstPos };
-			var orbitData = new CameraData(GetComponent<Camera>()) { iorigin = srcPos, itarget = dstPos };
-			var pathData = new CameraData(GetComponent<Camera>()) { iorigin = srcPos, itarget = dstPos };
 
-			RegisterCamera(new CameraEditor(editorData), CameraMode.Editor);
-			RegisterCamera(new CameraFollow(followData) { targetFn = GetTargetPosition() }, CameraMode.Follow);
-			RegisterCamera(new CameraPreset(presetData) { originFn = () => srcPos, targetFn = GetTargetPosition() }, CameraMode.Preset);
-			RegisterCamera(new CameraOrbit(orbitData) { originFn = () => srcPos, targetFn = GetTargetPosition() }, CameraMode.Orbit);
-			RegisterCamera(new CameraPath(pathData) { pointsFn = GetFocusPoints(), targetFn = GetTargetPosition() }, CameraMode.Path);
+			RegisterCamera(new CameraEditor(GetComponent<Camera>()), CameraMode.Editor);
+			RegisterCamera(new CameraFollow(GetComponent<Camera>()) { iorigin = srcPos, itarget = dstPos, targetFn = GetTargetPosition() }, CameraMode.Follow);
+			RegisterCamera(new CameraPreset(GetComponent<Camera>()) { iorigin = srcPos, itarget = dstPos, originFn = () => srcPos, targetFn = GetTargetPosition() }, CameraMode.Preset);
+			RegisterCamera(new CameraOrbit(GetComponent<Camera>()) { iorigin = srcPos, itarget = dstPos, originFn = () => srcPos, targetFn = GetTargetPosition() }, CameraMode.Orbit);
+			RegisterCamera(new CameraPath(GetComponent<Camera>()) { iorigin = srcPos, itarget = dstPos, pointsFn = GetFocusPoints(), targetFn = GetTargetPosition() }, CameraMode.Path);
 
 			RegisterGroup("EDITOR", new[] { CameraMode.Editor });
 			RegisterGroup("PLAYER", new[] { CameraMode.Follow, CameraMode.Preset });

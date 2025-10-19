@@ -13,12 +13,12 @@ namespace MassiveHadronLtd
 
 		private const float SmoothingN = 32f;
 
-		public CameraPreset(CameraData _data) : base(_data) { }
+		public CameraPreset(Camera camera) : base(camera) { }
 
 		public override void Start()
 		{
 			base.Start();
-			data.fieldOfView = 20f;
+			fieldOfView = 20f;
 			origin = originFn?.Invoke() ?? Vector3.zero;
 			target = targetFn?.Invoke() ?? Vector3.forward;
 			postProcessingEnabled = true;
@@ -29,19 +29,19 @@ namespace MassiveHadronLtd
 			base.Update();
 			smoothing = SmoothingUtils.Smooth(smoothing, SmoothingN, Time.deltaTime, TargetFPS);
 			var presetLerp = SmoothingUtils.Smooth(0f, 1f, smoothing, Time.deltaTime, TargetFPS);
-			data.iorigin = Vector3.Lerp(data.iorigin, origin, presetLerp);
-			data.itarget = Vector3.Lerp(data.itarget, target, presetLerp);
+			iorigin = Vector3.Lerp(iorigin, origin, presetLerp);
+			itarget = Vector3.Lerp(itarget, target, presetLerp);
 			OnRender();
 		}
 
 		protected override void OnRender()
 		{
-			if (data?.camera == null) return;
-			data.camera.transform.position = data.iorigin;
-			var direction = data.itarget - data.iorigin;
+			if (camera == null) return;
+			camera.transform.position = iorigin;
+			var direction = itarget - iorigin;
 			if (direction.sqrMagnitude > Mathf.Epsilon)
-				data.camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
-			data.camera.fieldOfView = data.fieldOfView;
+				camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
+			camera.fieldOfView = fieldOfView;
 		}
 	}
 }
