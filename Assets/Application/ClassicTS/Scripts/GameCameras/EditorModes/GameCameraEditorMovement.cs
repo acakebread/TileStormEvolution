@@ -11,7 +11,6 @@ namespace ClassicTilestorm
 		protected float lookSpeedH = 2f;
 		protected float lookSpeedV = 2f;
 		protected float zoomSpeed = 12f;
-		protected float dragSpeed = 0.01f; // Added for drag movement
 		protected bool skipNextScroll;
 
 		public GameCameraEditorMovement(Camera camera)
