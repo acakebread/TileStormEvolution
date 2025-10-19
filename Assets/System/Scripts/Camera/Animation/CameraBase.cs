@@ -21,7 +21,7 @@ namespace MassiveHadronLtd
 			smoothing = other.smoothing;
 		}
 
-		public float smoothing = 64f;// Default Smoothing Rate
+		protected float smoothing = 64f;// Default Smoothing Rate
 		protected const float TargetFPS = 60f;
 	}
 }
