@@ -12,10 +12,10 @@ namespace ClassicTilestorm
 		private GameCameraEditorPaint paintMode;
 		private enum EditorMode { Drag, Paint }
 		private EditorMode currentMode = EditorMode.Drag;
-		private int selectedMapDefIndex = 0; // Index into mapDefs
-		private bool showTileSelector = false;
 		private Vector2 scrollPosition = Vector2.zero;
+		private int selectedMapDefIndex = 0; // Index into mapDefs
 		private int tempSelectedTileDefGlobalIndex = 0; // Index into DatabaseSerializer.TileDefs
+		private PlaceholderUI placeholderUI; // Reference to PlaceholderUI
 
 		public GameCameraEditor(Camera camera) : base(camera) { }
 
@@ -45,6 +45,10 @@ namespace ClassicTilestorm
 
 			if (!Object.FindAnyObjectByType<EventSystem>())
 				new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
+
+			placeholderUI = Object.FindAnyObjectByType<PlaceholderUI>();
+			if (placeholderUI == null)
+				Debug.LogWarning("PlaceholderUI not found in scene!");
 		}
 
 		public override void Update()
@@ -87,13 +91,19 @@ namespace ClassicTilestorm
 			float buttonWidth = 120;
 			float buttonHeight = 30;
 			float margin = 10;
+			float spacing = 10;
 
-			// Radio buttons for mode selection
-			Rect groupRect = new Rect(margin, Screen.height - buttonHeight * 3 - margin * 2, buttonWidth, buttonHeight * 2);
-			GUIManager.RegisterGuiRect(groupRect); // Register mode selection group
-			GUI.BeginGroup(groupRect);
-			bool dragToggled = GUI.Toggle(new Rect(0, 0, buttonWidth, buttonHeight), currentMode == EditorMode.Drag, "Drag", "Button");
-			bool paintToggled = GUI.Toggle(new Rect(0, buttonHeight, buttonWidth, buttonHeight), currentMode == EditorMode.Paint, "Paint", "Button");
+			// Get PlaceholderUI panel bottom Y for stacking buttons
+			float panelBottomY = placeholderUI != null ? placeholderUI.GetPanelBottomY() : buttonHeight + margin;
+
+			// Mode toggle buttons stacked on the left
+			Rect dragButtonRect = new Rect(margin, panelBottomY + spacing, buttonWidth, buttonHeight);
+			Rect paintButtonRect = new Rect(margin, panelBottomY + spacing + buttonHeight + spacing, buttonWidth, buttonHeight);
+			GUIManager.RegisterGuiRect(dragButtonRect);
+			GUIManager.RegisterGuiRect(paintButtonRect);
+
+			bool dragToggled = GUI.Toggle(dragButtonRect, currentMode == EditorMode.Drag, "Drag", "Button");
+			bool paintToggled = GUI.Toggle(paintButtonRect, currentMode == EditorMode.Paint, "Paint", "Button");
 
 			// Ensure radio button behavior
 			if (dragToggled && currentMode != EditorMode.Drag)
@@ -108,81 +118,70 @@ namespace ClassicTilestorm
 				activeMode = paintMode;
 				Debug.Log("Switched to Paint mode");
 			}
-			GUI.EndGroup();
 
-			// Button to open tile selector
-			Rect selectTileButtonRect = new Rect(margin + buttonWidth + 10, Screen.height - buttonHeight * 3 - margin * 2, buttonWidth, buttonHeight);
-			GUIManager.RegisterGuiRect(selectTileButtonRect); // Register select tile button
-			if (GUI.Button(selectTileButtonRect, "Select Tile"))
+			// Tile selector (visible only in Paint mode)
+			if (currentMode == EditorMode.Paint)
 			{
-				showTileSelector = true;
-				tempSelectedTileDefGlobalIndex = 0;
-			}
+				float tileSelectorWidth = 300;
+				float tileSelectorX = Screen.width - tileSelectorWidth - margin;
+				float tileSelectorY = panelBottomY + spacing;
+				float tileSelectorHeight = Screen.height - tileSelectorY - margin;
+				Rect tileSelectorRect = new Rect(tileSelectorX, tileSelectorY, tileSelectorWidth, tileSelectorHeight);
+				GUIManager.RegisterGuiRect(tileSelectorRect);
 
-			// Tile selector popup
-			if (showTileSelector)
-			{
-				float popupWidth = 300;
-				float popupHeight = 400;
-				float popupX = Screen.width / 2 - popupWidth / 2;
-				float popupY = Screen.height / 2 - popupHeight / 2;
+				// Draw background
+				GUIStyle panelStyle = new GUIStyle(GUI.skin.box);
+				panelStyle.normal.background = MakeTex(1, 1, new Color(0.2f, 0.2f, 0.4f, 0.75f));
+				GUI.Box(tileSelectorRect, "Tile Selector", panelStyle);
 
-				Rect popupRect = new Rect(popupX, popupY, popupWidth, popupHeight);
-				GUIManager.RegisterGuiRect(popupRect); // Register popup background
-				GUI.Box(popupRect, "Select Tile Type");
-
-				float scrollViewHeight = popupHeight - 100;
-				Rect scrollViewRect = new Rect(popupX + 10, popupY + 30, popupWidth - 20, scrollViewHeight);
-				GUIManager.RegisterGuiRect(scrollViewRect); // Register scroll view area
+				// Scroll view for tiles
+				Rect scrollViewRect = new Rect(tileSelectorX + 10, tileSelectorY + 30, tileSelectorWidth - 20, tileSelectorHeight - 40);
+				GUIManager.RegisterGuiRect(scrollViewRect);
 				scrollPosition = GUI.BeginScrollView(
 					scrollViewRect,
 					scrollPosition,
-					new Rect(0, 0, popupWidth - 40, DatabaseSerializer.TileDefs.Count * 40) // Increased height per entry
+					new Rect(0, 0, tileSelectorWidth - 40, DatabaseSerializer.TileDefs.Count * 40)
 				);
 
 				for (int i = 0; i < DatabaseSerializer.TileDefs.Count; i++)
 				{
 					var tileDef = DatabaseSerializer.TileDefs[i];
 					string displayName = $"{tileDef.szType} ({tileDef.szTheme})";
-					Rect buttonRect = new Rect(0, i * 40, popupWidth - 40, 35); // Taller entries
+					Rect buttonRect = new Rect(0, i * 40, tileSelectorWidth - 40, 35);
 
 					// Green highlight for selected tile
 					if (i == tempSelectedTileDefGlobalIndex)
 					{
-						GUI.color = Color.green; // Green background for button
+						GUI.color = Color.green;
 					}
 					if (GUI.Button(buttonRect, displayName))
 					{
 						tempSelectedTileDefGlobalIndex = i;
+						var selectedTileDef = DatabaseSerializer.TileDefs[i];
+						selectedMapDefIndex = mapManager.GetOrAddMapDefIndex(selectedTileDef.szType, selectedTileDef.szTheme);
+						if (selectedMapDefIndex >= 0)
+						{
+							paintMode.SetTileDefIndex(selectedMapDefIndex);
+							Debug.Log($"Selected tileDef: {selectedTileDef.szType} ({selectedTileDef.szTheme}), mapped to mapDefs index={selectedMapDefIndex}");
+						}
 					}
-					GUI.color = Color.white; // Reset color
+					GUI.color = Color.white;
 				}
 
 				GUI.EndScrollView();
-
-				// OK and Cancel buttons
-				Rect okButtonRect = new Rect(popupX + 10, popupY + popupHeight - 60, buttonWidth, buttonHeight);
-				Rect cancelButtonRect = new Rect(popupX + popupWidth - buttonWidth - 10, popupY + popupHeight - 60, buttonWidth, buttonHeight);
-				GUIManager.RegisterGuiRect(okButtonRect);
-				GUIManager.RegisterGuiRect(cancelButtonRect);
-
-				if (GUI.Button(okButtonRect, "OK"))
-				{
-					var tileDef = DatabaseSerializer.TileDefs[tempSelectedTileDefGlobalIndex];
-					selectedMapDefIndex = mapManager.GetOrAddMapDefIndex(tileDef.szType, tileDef.szTheme);
-					if (selectedMapDefIndex >= 0)
-					{
-						paintMode.SetTileDefIndex(selectedMapDefIndex);
-						Debug.Log($"Selected tileDef: {tileDef.szType} ({tileDef.szTheme}), mapped to mapDefs index={selectedMapDefIndex}");
-					}
-					showTileSelector = false;
-				}
-
-				if (GUI.Button(cancelButtonRect, "Cancel"))
-				{
-					showTileSelector = false;
-				}
 			}
+		}
+
+		// Helper to create a texture for the tile selector background
+		private Texture2D MakeTex(int width, int height, Color col)
+		{
+			Color[] pix = new Color[width * height];
+			for (int i = 0; i < pix.Length; i++)
+				pix[i] = col;
+			Texture2D result = new Texture2D(width, height);
+			result.SetPixels(pix);
+			result.Apply();
+			return result;
 		}
 	}
 }

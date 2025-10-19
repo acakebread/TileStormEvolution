@@ -1,3 +1,4 @@
+// GameCameraEditorDrag.cs (unchanged)
 using UnityEngine;
 using UnityEngine.EventSystems;
 

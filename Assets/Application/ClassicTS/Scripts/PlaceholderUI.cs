@@ -9,7 +9,7 @@ namespace ClassicTilestorm
 	{
 		private GameController gameController => GetComponent<GameController>();
 
-		// basic animation system
+		// Basic animation system
 		private bool isGuiVisible = false;
 		private float hideTimer = 0f;
 		private Rect guiRect = new Rect(0, -100, Screen.width, 40); // Full width
@@ -22,22 +22,19 @@ namespace ClassicTilestorm
 		// Button layout constants
 		private readonly float buttonWidth = 100f;
 		private readonly float buttonHeight = 30f;
-		private readonly float spacing = 10f;
-		private readonly float labelWidth = 50f; // Increased from 40f to prevent clipping
-		private readonly float panelGap = 5f; // Gap above and below buttons within panel
 		private readonly float buttonStartX = 10f; // Left margin for buttons
+		private readonly float spacing = 10f;
+		private readonly float labelWidth = 50f;
+		private readonly float panelGap = 5f;
 		private readonly Color panelColor = new Color(0.2f, 0.2f, 0.4f, 0.75f);
 		private readonly Color selectedTextColor = Color.green;
-		private readonly Color unselectedTextColor = new Color(0.5f, 0.8f, 0.5f); // Dull green
+		private readonly Color unselectedTextColor = new Color(0.5f, 0.8f, 0.5f);
 
-		// Custom mode button colors
-		private readonly Color modeUnselectedBg = new Color(0.1f, 0.3f, 0.1f); // Muted green (user-updated)
-		private readonly Color modeSelectedBg = new Color(0.4f, 0.4f, 0.15f); // Dull yellow (user-updated)
+		private readonly Color modeUnselectedBg = new Color(0.1f, 0.3f, 0.1f);
+		private readonly Color modeSelectedBg = new Color(0.4f, 0.4f, 0.15f);
 
-		// Textures for custom button backgrounds
 		private Texture2D unselectedButtonTex;
 		private Texture2D selectedButtonTex;
-
 		private Texture2D panelTexture;
 
 		private void Awake()
@@ -61,40 +58,42 @@ namespace ClassicTilestorm
 		private void Update()
 		{
 			// Handle left/right arrow key inputs for Previous/Next Level with repeat
-			if (InputUtility.GetKeyRepeat(KeyCode.LeftArrow)) ChangeMap(-1); // Previous map
-			if (InputUtility.GetKeyRepeat(KeyCode.RightArrow)) ChangeMap(1); // Next map
+			if (InputUtility.GetKeyRepeat(KeyCode.LeftArrow)) ChangeMap(-1);
+			if (InputUtility.GetKeyRepeat(KeyCode.RightArrow)) ChangeMap(1);
 
-			// Check if mouse is near the top of the screen (within 50 pixels)
-			var mousePos = Input.mousePosition;
-			var isMouseNearTop = mousePos.y >= Screen.height - 50;
-
-			// Check if mouse is over the GUI area
-			isMouseOverGui = guiRect.Contains(new Vector2(mousePos.x, Screen.height - mousePos.y));
-
-			if (isMouseNearTop || isMouseOverGui)
+			// In Editor mode, keep GUI visible without hiding
+			if (PreviewSettings.CurrentMode == PreviewMode.Editor)
 			{
-				// Show GUI by setting target position to panelGap (buttons start with gap from top)
 				targetY = panelGap;
 				isGuiVisible = true;
-				hideTimer = 0f; // Reset timer when mouse is near or over GUI
+				hideTimer = 0f;
 			}
-			else if (isGuiVisible)
+			else
 			{
-				// Increment timer when mouse is not over GUI or near top
-				hideTimer += Time.deltaTime;
-				if (hideTimer >= hideDelay)
+				// Check if mouse is near the top of the screen (within 50 pixels)
+				var mousePos = Input.mousePosition;
+				isMouseOverGui = guiRect.Contains(new Vector2(mousePos.x, Screen.height - mousePos.y));
+
+				if (mousePos.y >= Screen.height - 50 || isMouseOverGui)
 				{
-					// Hide GUI by setting target position off-screen
-					targetY = -100;
-					isGuiVisible = false;
+					targetY = panelGap;
+					isGuiVisible = true;
+					hideTimer = 0f;
+				}
+				else if (isGuiVisible)
+				{
+					hideTimer += Time.deltaTime;
+					if (hideTimer >= hideDelay)
+					{
+						targetY = -100;
+						isGuiVisible = false;
+					}
 				}
 			}
 
 			// Animate the GUI position
 			var currentY = guiRect.y;
-			var newY = Mathf.MoveTowards(currentY, targetY
-
-, animationSpeed * Time.deltaTime);
+			var newY = Mathf.MoveTowards(currentY, targetY, animationSpeed * Time.deltaTime);
 			guiRect.y = newY;
 		}
 
@@ -102,7 +101,7 @@ namespace ClassicTilestorm
 		{
 			if (delta == 0)
 			{
-				gameController.LoadMap(); // Reload current map
+				gameController.LoadMap();
 				return;
 			}
 
@@ -112,10 +111,19 @@ namespace ClassicTilestorm
 			gameController.LoadMap();
 		}
 
+		// Get the bottom Y position of the panel in GUI coordinates
+		public float GetPanelBottomY()
+		{
+			return guiRect.y + guiRect.height;
+		}
+
 		private void OnGUI()
 		{
 			// Only draw GUI if it's visible or animating
-			if (guiRect.y < -90 && !isGuiVisible) return; // Skip drawing if fully hidden
+			if (guiRect.y < -90 && !isGuiVisible) return;
+
+			// Register GUI rect for input blocking
+			GUIManager.RegisterGuiRect(new Rect(0, guiRect.y - panelGap, Screen.width, guiRect.height + 2 * panelGap));
 
 			// Set styles
 			GUI.skin.button.fontSize = 16;
@@ -126,7 +134,7 @@ namespace ClassicTilestorm
 			GUI.color = new Color(0.75f, 0.75f, 1.0f);
 
 			float currentX = buttonStartX;
-			float y = guiRect.y; // Buttons and label at animated y
+			float y = guiRect.y;
 
 			// Full screen width panel background
 			float panelHeight = buttonHeight + (2 * panelGap);
@@ -134,31 +142,23 @@ namespace ClassicTilestorm
 			GUIStyle panelStyle = new GUIStyle(GUI.skin.box);
 			panelStyle.normal.background = panelTexture;
 			GUI.color = Color.white;
-			GUI.Box(new Rect(0, panelY, Screen.width, panelHeight), GUIContent.none, panelStyle);
+			GUI.Box(new Rect(0, panelY, Screen.width, panelHeight), "", panelStyle);
 
-			// Mode label
-			GUIStyle labelStyle = new GUIStyle(GUI.skin.label);
-			labelStyle.alignment = TextAnchor.MiddleLeft;
-			labelStyle.normal.textColor = Color.green;
-			GUI.color = originalColor;
-			GUI.Label(new Rect(currentX, y, labelWidth, buttonHeight), "Mode:", labelStyle);
-
+			// Map name label
+			GUI.Label(new Rect(currentX, y, labelWidth, buttonHeight), "Map:");
 			currentX += labelWidth + spacing;
 
-			// Create a custom GUIStyle for mode buttons (radio-button behavior)
-			GUIStyle modeButtonStyle = new GUIStyle(GUI.skin.button);
-			modeButtonStyle.fontSize = 16;
+			GUI.Label(new Rect(currentX, y, buttonWidth, buttonHeight), PreviewSettings.LoadMapName);
+			currentX += buttonWidth + spacing;
 
-			// Key: We'll configure per-button to avoid hover changes
+			// Mode buttons with custom colors
+			GUIStyle modeButtonStyle = new GUIStyle(GUI.skin.button);
 
 			// Editor button
 			bool isEditorSelected = PreviewSettings.CurrentMode == PreviewMode.Editor;
-
-			// Set normal (base state)
 			modeButtonStyle.normal.background = isEditorSelected ? selectedButtonTex : unselectedButtonTex;
 			modeButtonStyle.normal.textColor = isEditorSelected ? selectedTextColor : unselectedTextColor;
 
-			// Force all states to match normal (no hover/change)
 			CopyStyleState(modeButtonStyle.normal, modeButtonStyle.hover);
 			CopyStyleState(modeButtonStyle.normal, modeButtonStyle.active);
 			CopyStyleState(modeButtonStyle.normal, modeButtonStyle.focused);
@@ -191,25 +191,6 @@ namespace ClassicTilestorm
 				gameController.SetPreviewMode(PreviewMode.Player);
 			}
 			currentX += buttonWidth + spacing;
-
-			//// Direct button
-			//bool isDirectSelected = PreviewSettings.CurrentMode == PreviewMode.Direct;
-			//modeButtonStyle.normal.background = isDirectSelected ? selectedButtonTex : unselectedButtonTex;
-			//modeButtonStyle.normal.textColor = isDirectSelected ? selectedTextColor : unselectedTextColor;
-
-			//CopyStyleState(modeButtonStyle.normal, modeButtonStyle.hover);
-			//CopyStyleState(modeButtonStyle.normal, modeButtonStyle.active);
-			//CopyStyleState(modeButtonStyle.normal, modeButtonStyle.focused);
-			//CopyStyleState(modeButtonStyle.normal, modeButtonStyle.onNormal);
-			//CopyStyleState(modeButtonStyle.normal, modeButtonStyle.onHover);
-			//CopyStyleState(modeButtonStyle.normal, modeButtonStyle.onActive);
-
-			//if (GUI.Button(new Rect(currentX, y, buttonWidth, buttonHeight), "Direct", modeButtonStyle))
-			//{
-			//	PreviewSettings.CurrentMode = PreviewMode.Direct;
-			//	gameController.SetPreviewMode(PreviewMode.Direct);
-			//}
-			//currentX += buttonWidth + spacing;
 
 			// Cinema button
 			bool isCinemaSelected = PreviewSettings.CurrentMode == PreviewMode.Cinema;
