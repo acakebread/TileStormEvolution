@@ -112,8 +112,7 @@ namespace ClassicTilestorm
 			var pathConfig = new CameraConfig
 			{
 				data = new CameraData(GetComponent<Camera>()) { iorigin = srcPos, itarget = dstPos },
-				target = GetTargetPosition(),
-				//points = GetFocusPoints()
+				target = GetTargetPosition()
 			};
 
 			RegisterCamera(new CameraEditor(editorConfig), CameraMode.Editor);
