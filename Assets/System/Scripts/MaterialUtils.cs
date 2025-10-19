@@ -267,7 +267,41 @@ namespace MassiveHadronLtd
 			material.SetFloat("_ZWrite", 0f);
 			material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
 			material.SetOverrideTag("RenderType", "Transparent");
-			// Clear all effect-specific properties
+			//// Clear all effect-specific properties
+			//if (material.HasProperty("_MainTex"))
+			//	material.SetTexture("_MainTex", null);
+			//if (material.HasProperty("_NoiseTex"))
+			//	material.SetTexture("_NoiseTex", null);
+			//if (material.HasProperty("_Radius"))
+			//	material.SetFloat("_Radius", 0);
+			//if (material.HasProperty("_NoiseStrength"))
+			//	material.SetFloat("_NoiseStrength", 0);
+			//if (material.HasProperty("_FilmIntensity"))
+			//	material.SetFloat("_FilmIntensity", 0);
+			//if (material.HasProperty("_NoiseScale"))
+			//	material.SetFloat("_NoiseScale", 0);
+			return material;
+		}
+
+		public static Material CreateOpaqueUnlitMaterial(Color baseColor)
+		{
+			var unlitShader = Shader.Find("Universal Render Pipeline/Unlit");
+			if (!unlitShader)
+			{
+				Debug.LogError("MaterialUtils: Universal Render Pipeline/Unlit shader not found! Ensure URP is installed.");
+				return null;
+			}
+
+			var material = new Material(unlitShader) { renderQueue = (int)RenderQueue.Geometry };
+			material.SetColor("_BaseColor", baseColor);
+			material.SetFloat("_Surface", 0f); // Opaque surface
+			material.SetFloat("_SrcBlend", (float)BlendMode.One);
+			material.SetFloat("_DstBlend", (float)BlendMode.Zero);
+			material.SetFloat("_ZWrite", 1f); // Enable ZWrite for opaque materials
+			material.DisableKeyword("_SURFACE_TYPE_TRANSPARENT");
+			material.SetOverrideTag("RenderType", "Opaque");
+
+			// Clear unrelated properties
 			if (material.HasProperty("_MainTex"))
 				material.SetTexture("_MainTex", null);
 			if (material.HasProperty("_NoiseTex"))
@@ -280,6 +314,9 @@ namespace MassiveHadronLtd
 				material.SetFloat("_FilmIntensity", 0);
 			if (material.HasProperty("_NoiseScale"))
 				material.SetFloat("_NoiseScale", 0);
+
+			// Force shader recompilation
+			material.shader = unlitShader;
 			return material;
 		}
 	}
