@@ -13,18 +13,15 @@ namespace MassiveHadronLtd
 
 		private const float SmoothingN = 32f;
 
-		public CameraPreset(CameraConfig config) : base(config)
-		{
-			data = config.data;
-		}
+		public CameraPreset(CameraData _data) : base(_data) { }
 
 		public override void Start()
 		{
 			base.Start();
 			data.fieldOfView = 20f;
-
 			origin = originFn?.Invoke() ?? Vector3.zero;
 			target = targetFn?.Invoke() ?? Vector3.forward;
+			postProcessingEnabled = true;
 		}
 
 		public override void Update()

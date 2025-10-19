@@ -4,10 +4,9 @@ namespace MassiveHadronLtd
 {
 	public class CameraStatic : CameraBase
 	{
-		public CameraStatic(CameraConfig config) : base(config)
+		public CameraStatic(CameraData _data) : base(_data)
 		{
-			if (null != config)
-				data = config.data;
+			data = _data;//noty sure if data will already be valid from base
 			//initialise camera
 			var camera = data.camera;
 			if (null == camera)

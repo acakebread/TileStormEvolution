@@ -31,10 +31,7 @@ namespace MassiveHadronLtd
 
 		public bool HasCompleted => sequenceTimer <= 0f && pauseTimer <= 0f;
 
-		public CameraOrbit(CameraConfig config) : base(config)
-		{
-			data = config.data;
-		}
+		public CameraOrbit(CameraData _data) : base(_data) { }
 
 		public override void Awake()
 		{
@@ -53,7 +50,7 @@ namespace MassiveHadronLtd
 			smoothing = DefaultSmoothingRate;
 			//shake = 0f;
 			data.fieldOfView = 45f;
-			data.postProcessingEnabled = true;
+			postProcessingEnabled = true;
 			if (data?.camera == null) return;
 
 			InitializeCinemaSequence();

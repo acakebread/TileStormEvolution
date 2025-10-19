@@ -4,7 +4,7 @@ namespace MassiveHadronLtd
 	{
 		protected CameraData data;
 
-		public CameraBase(CameraConfig config) { }
+		public CameraBase(CameraData _data) { data = _data; }
 
 		public virtual void Awake() { }
 		public virtual void Start() { }
@@ -17,11 +17,18 @@ namespace MassiveHadronLtd
 			if (other == null) return;
 			data.iorigin = other.data.iorigin;
 			data.itarget = other.data.itarget;
-			data.postProcessingEnabled = other.data.postProcessingEnabled;
+			//data.postProcessingEnabled = other.data.postProcessingEnabled;
 			smoothing = other.smoothing;
 		}
 
 		protected float smoothing = 64f;// Default Smoothing Rate
 		protected const float TargetFPS = 60f;
+
+		protected bool postProcessingEnabled
+		{
+			get => null != controller ? controller.enabled : false;
+			set { if (null != controller) controller.enabled = value; }
+		}
+		private PostProcessingCameraController controller => data.camera?.GetComponentInChildren<PostProcessingCameraController>(true);
 	}
 }

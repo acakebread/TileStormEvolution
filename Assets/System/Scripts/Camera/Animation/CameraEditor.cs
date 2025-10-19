@@ -8,7 +8,6 @@ namespace MassiveHadronLtd
 		private float pitch;
 		private bool dragging;
 		private bool skipNextScroll;
-		private Transform cameraTransform;
 		private bool isDraggingWithLeftMouse;
 		private Vector3 dragStartWorldPoint; // World-space point on the plane where drag starts
 		private Vector3 cameraStartPosition;
@@ -17,20 +16,28 @@ namespace MassiveHadronLtd
 		private float lookSpeedV = 2f;
 		private float zoomSpeed = 12f;
 
-		public CameraEditor(CameraConfig config) : base(config)
+		public CameraEditor(CameraData _data) : base(_data) { }
+
+		public override void Awake()
 		{
-			data = config.data;
-			if (null != data) cameraTransform = data.camera.transform;
+			base.Awake();
+
+			var cameraTransform = data.camera.transform;
+			cameraTransform.position = data.iorigin;
+			var direction = data.itarget - data.iorigin;
+			if (direction.sqrMagnitude > Mathf.Epsilon)
+				cameraTransform.rotation = Quaternion.LookRotation(direction, Vector3.up);
 		}
 
 		public override void Start()
 		{
 			base.Start();
 			data.fieldOfView = 60f;
-			data.postProcessingEnabled = false;
 			data.camera.fieldOfView = data.fieldOfView;
+			postProcessingEnabled = false;
 
 			// Initialize rotation and state
+			var cameraTransform = data.camera.transform;
 			yaw = cameraTransform.eulerAngles.y;
 			pitch = cameraTransform.eulerAngles.x;
 			dragging = false;
@@ -46,7 +53,8 @@ namespace MassiveHadronLtd
 		{
 			base.Update();
 
-			bool wasDragging = dragging;
+			var wasDragging = dragging;
+			var cameraTransform = data.camera.transform;
 
 			// Handle mouse button down to start dragging (left or right mouse)
 			if ((Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1)) &&

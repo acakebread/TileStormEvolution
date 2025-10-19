@@ -4,7 +4,7 @@
 //{
 //	public class CameraDirect : CameraBase
 //	{
-//		public CameraDirect(CameraConfig config) : base(config)
+//		public CameraDirect(CameraData _data) : base(_data)
 //		{
 //			if (null != config)
 //				data = config.data;

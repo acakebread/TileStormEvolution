@@ -50,10 +50,7 @@ namespace MassiveHadronLtd
 		protected float sequenceTimer = DefaultSequenceDuration;
 		protected float pauseTimer = DefaultPauseDuration;
 
-		public CameraPath(CameraConfig config) : base(config)
-		{
-			data = config.data;
-		}
+		public CameraPath(CameraData _data) : base(_data) { }
 
 		public override void Awake()
 		{
@@ -91,7 +88,7 @@ namespace MassiveHadronLtd
 			smoothing = DefaultSmoothingRate;
 			data.fieldOfView = 45f;
 			//shake = 0f;
-			data.postProcessingEnabled = true;
+			postProcessingEnabled = true;
 
 			if (data?.camera == null)
 			{

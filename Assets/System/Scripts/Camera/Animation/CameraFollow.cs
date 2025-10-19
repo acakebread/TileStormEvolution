@@ -12,17 +12,14 @@ namespace MassiveHadronLtd
 		private const float IdealDistance = 14f;
 		private const float IdealDistanceHorizontalScale = 1.4f;
 
-		public CameraFollow(CameraConfig config) : base(config)
-		{
-			data = config.data;
-		}
+		public CameraFollow(CameraData _data) : base(_data) { }
 
 		public override void Start()
 		{
 			base.Start();
 			smoothing = 64f;
-			if (null == data) return;
 			data.fieldOfView = 20f;
+			postProcessingEnabled = true;
 		}
 
 		public override void Update()
