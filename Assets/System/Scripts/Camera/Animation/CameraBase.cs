@@ -17,7 +17,6 @@ namespace MassiveHadronLtd
 			if (other == null) return;
 			data.iorigin = other.data.iorigin;
 			data.itarget = other.data.itarget;
-			//data.postProcessingEnabled = other.data.postProcessingEnabled;
 			smoothing = other.smoothing;
 		}
 
