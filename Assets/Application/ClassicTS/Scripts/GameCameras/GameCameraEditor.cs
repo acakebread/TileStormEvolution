@@ -82,6 +82,7 @@ namespace ClassicTilestorm
 		public override void OnGUI()
 		{
 			base.OnGUI();
+			GUIManager.ResetGuiState(); // Clear rects at start of OnGUI
 
 			float buttonWidth = 120;
 			float buttonHeight = 30;
@@ -89,6 +90,7 @@ namespace ClassicTilestorm
 
 			// Radio buttons for mode selection
 			Rect groupRect = new Rect(margin, Screen.height - buttonHeight * 3 - margin * 2, buttonWidth, buttonHeight * 2);
+			GUIManager.RegisterGuiRect(groupRect); // Register mode selection group
 			GUI.BeginGroup(groupRect);
 			bool dragToggled = GUI.Toggle(new Rect(0, 0, buttonWidth, buttonHeight), currentMode == EditorMode.Drag, "Drag", "Button");
 			bool paintToggled = GUI.Toggle(new Rect(0, buttonHeight, buttonWidth, buttonHeight), currentMode == EditorMode.Paint, "Paint", "Button");
@@ -109,10 +111,11 @@ namespace ClassicTilestorm
 			GUI.EndGroup();
 
 			// Button to open tile selector
-			if (GUI.Button(new Rect(margin + buttonWidth + 10, Screen.height - buttonHeight * 3 - margin * 2, buttonWidth, buttonHeight), "Select Tile"))
+			Rect selectTileButtonRect = new Rect(margin + buttonWidth + 10, Screen.height - buttonHeight * 3 - margin * 2, buttonWidth, buttonHeight);
+			GUIManager.RegisterGuiRect(selectTileButtonRect); // Register select tile button
+			if (GUI.Button(selectTileButtonRect, "Select Tile"))
 			{
 				showTileSelector = true;
-				// Initialize to a valid TileDef index
 				tempSelectedTileDefGlobalIndex = 0;
 			}
 
@@ -124,38 +127,46 @@ namespace ClassicTilestorm
 				float popupX = Screen.width / 2 - popupWidth / 2;
 				float popupY = Screen.height / 2 - popupHeight / 2;
 
-				GUI.Box(new Rect(popupX, popupY, popupWidth, popupHeight), "Select Tile Type");
+				Rect popupRect = new Rect(popupX, popupY, popupWidth, popupHeight);
+				GUIManager.RegisterGuiRect(popupRect); // Register popup background
+				GUI.Box(popupRect, "Select Tile Type");
 
 				float scrollViewHeight = popupHeight - 100;
+				Rect scrollViewRect = new Rect(popupX + 10, popupY + 30, popupWidth - 20, scrollViewHeight);
+				GUIManager.RegisterGuiRect(scrollViewRect); // Register scroll view area
 				scrollPosition = GUI.BeginScrollView(
-					new Rect(popupX + 10, popupY + 30, popupWidth - 20, scrollViewHeight),
+					scrollViewRect,
 					scrollPosition,
-					new Rect(0, 0, popupWidth - 40, DatabaseSerializer.TileDefs.Count * 30)
+					new Rect(0, 0, popupWidth - 40, DatabaseSerializer.TileDefs.Count * 40) // Increased height per entry
 				);
 
 				for (int i = 0; i < DatabaseSerializer.TileDefs.Count; i++)
 				{
 					var tileDef = DatabaseSerializer.TileDefs[i];
 					string displayName = $"{tileDef.szType} ({tileDef.szTheme})";
-					Rect buttonRect = new Rect(0, i * 30, popupWidth - 40, 25);
+					Rect buttonRect = new Rect(0, i * 40, popupWidth - 40, 35); // Taller entries
 
+					// Green highlight for selected tile
 					if (i == tempSelectedTileDefGlobalIndex)
 					{
-						GUI.color = Color.yellow;
-						GUI.Box(new Rect(buttonRect.x - 5, buttonRect.y - 2, buttonRect.width + 10, buttonRect.height + 4), "");
-						GUI.color = Color.white;
+						GUI.color = Color.green; // Green background for button
 					}
-
 					if (GUI.Button(buttonRect, displayName))
 					{
 						tempSelectedTileDefGlobalIndex = i;
 					}
+					GUI.color = Color.white; // Reset color
 				}
 
 				GUI.EndScrollView();
 
 				// OK and Cancel buttons
-				if (GUI.Button(new Rect(popupX + 10, popupY + popupHeight - 60, buttonWidth, buttonHeight), "OK"))
+				Rect okButtonRect = new Rect(popupX + 10, popupY + popupHeight - 60, buttonWidth, buttonHeight);
+				Rect cancelButtonRect = new Rect(popupX + popupWidth - buttonWidth - 10, popupY + popupHeight - 60, buttonWidth, buttonHeight);
+				GUIManager.RegisterGuiRect(okButtonRect);
+				GUIManager.RegisterGuiRect(cancelButtonRect);
+
+				if (GUI.Button(okButtonRect, "OK"))
 				{
 					var tileDef = DatabaseSerializer.TileDefs[tempSelectedTileDefGlobalIndex];
 					selectedMapDefIndex = mapManager.GetOrAddMapDefIndex(tileDef.szType, tileDef.szTheme);
@@ -167,7 +178,7 @@ namespace ClassicTilestorm
 					showTileSelector = false;
 				}
 
-				if (GUI.Button(new Rect(popupX + popupWidth - buttonWidth - 10, popupY + popupHeight - 60, buttonWidth, buttonHeight), "Cancel"))
+				if (GUI.Button(cancelButtonRect, "Cancel"))
 				{
 					showTileSelector = false;
 				}

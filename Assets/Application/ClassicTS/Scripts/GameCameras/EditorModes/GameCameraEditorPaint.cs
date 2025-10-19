@@ -6,7 +6,7 @@ namespace ClassicTilestorm
 	public class GameCameraEditorPaint : GameCameraEditorMovement
 	{
 		private MapManager mapManager;
-		private int selectedMapDefIndex; // Index into mapDefs
+		private int selectedMapDefIndex;
 
 		public GameCameraEditorPaint(Camera camera, MapManager map, int mapDefIndex) : base(camera)
 		{
@@ -24,8 +24,8 @@ namespace ClassicTilestorm
 			base.Update();
 			if (!camera || !mapManager) return;
 
-			// Check if a GUI control is active
-			bool isGuiControlActive = GUIUtility.hotControl != 0;
+			// Check if a GUI control or area is active
+			bool isGuiControlActive = GUIManager.IsMouseOverGui();
 
 			// Handle mouse button down
 			if (Input.GetMouseButtonDown(0) && !EventSystem.current.IsPointerOverGameObject() && !isGuiControlActive)
@@ -36,7 +36,7 @@ namespace ClassicTilestorm
 
 		private void PlaceTileAtMousePosition()
 		{
-			if (GUIUtility.hotControl != 0) return;
+			if (GUIManager.IsMouseOverGui()) return;
 
 			Vector3 worldPos = MapManager.ScreenToWorld(Input.mousePosition);
 			int mapIndex = mapManager.WorldToMapIndex(worldPos);

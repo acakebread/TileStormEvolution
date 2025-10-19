@@ -21,8 +21,8 @@ namespace ClassicTilestorm
 			var wasDragging = dragging;
 			var cameraTransform = camera.transform;
 
-			// Check if a GUI control is active
-			bool isGuiControlActive = GUIUtility.hotControl != 0;
+			// Check if a GUI control or area is active
+			bool isGuiControlActive = GUIManager.IsMouseOverGui();
 
 			// Handle mouse button down
 			if (Input.GetMouseButtonDown(0) && !EventSystem.current.IsPointerOverGameObject() && !isGuiControlActive)
