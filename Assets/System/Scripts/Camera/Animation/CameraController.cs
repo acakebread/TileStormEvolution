@@ -8,15 +8,15 @@ namespace MassiveHadronLtd
 	[RequireComponent(typeof(Camera))]
 	public class CameraController : MonoBehaviour
 	{
-		private CameraMode currentMode = CameraMode.Absent;
+		private const string DefaultMode = "Default"; // Define default mode in core library
+		private string currentMode = DefaultMode;
 		private CameraBase cameraSystem = null;
-		private Dictionary<CameraMode, CameraBase> cameraSystems = new();
-		private Dictionary<string, CameraMode[]> groups = new();
-		private Dictionary<string, CameraMode> groupModes = new();
-
+		private Dictionary<string, CameraBase> cameraSystems = new();
+		private Dictionary<string, string[]> groups = new();
+		private Dictionary<string, string> groupModes = new();
 		private bool hasCustomCameras = false;
 
-		protected Dictionary<CameraMode, CameraBase> CameraSystems { get => cameraSystems; }
+		protected Dictionary<string, CameraBase> CameraSystems => cameraSystems;
 		public bool HasCompleted => cameraSystem is CameraOrbit orbit ? orbit.HasCompleted : cameraSystem is CameraPath path && path.HasCompleted;
 
 		private void Awake()
@@ -27,12 +27,14 @@ namespace MassiveHadronLtd
 				return;
 			}
 
-			RegisterCamera(defaultCamera, CameraMode.Default);
-			SetCameraMode(CameraMode.Default);
+			RegisterCamera(defaultCamera, DefaultMode);
+			SetCameraMode(DefaultMode);
 		}
 
-		public virtual void Initialise(CameraMode initialMode = CameraMode.Default)
+		public virtual void Initialise(string initialMode = null)
 		{
+			initialMode = string.IsNullOrEmpty(initialMode) ? DefaultMode : initialMode;
+
 			if (GetComponent<Camera>() == null)
 			{
 				Debug.LogWarning("CameraController requires a Camera component");
@@ -43,71 +45,97 @@ namespace MassiveHadronLtd
 			groupModes = new();
 			cameraSystems = new();
 
-			// Setup camera configs before applying the initial mode
 			SetupCameras();
 
-			// Apply config for initial mode
-			if (false == cameraSystems.ContainsKey(initialMode))
+			if (!cameraSystems.ContainsKey(initialMode))
 			{
-				Debug.LogWarning($"No config for mode {initialMode}. Using default position.");
+				Debug.LogWarning($"No config for mode '{initialMode}'. Using default position.");
 				var (srcPos, dstPos) = GetInitialCameraPositions();
 				GetComponent<Camera>().transform.position = srcPos;
 				GetComponent<Camera>().transform.rotation = Quaternion.LookRotation(dstPos - srcPos, Vector3.up);
 			}
 
-			// Skip SetCameraMode if using default mode and no custom configs
-			if (initialMode != CameraMode.Default || hasCustomCameras) SetCameraMode(initialMode);
+			if (initialMode != DefaultMode || hasCustomCameras)
+			{
+				SetCameraMode(initialMode);
+			}
 		}
 
-		protected void RegisterCamera(CameraBase camera, CameraMode mode)
+		protected void RegisterCamera(CameraBase camera, string mode)
 		{
-			if (null == camera)
+			if (camera == null)
 			{
 				Debug.LogError("Cannot register null Camera");
 				return;
+			}
+			if (string.IsNullOrEmpty(mode))
+			{
+				Debug.LogError("Cannot register camera with null or empty mode");
+				return;
+			}
+			if (cameraSystems.ContainsKey(mode))
+			{
+				Debug.LogWarning($"Camera mode '{mode}' is already registered. Overwriting.");
 			}
 			cameraSystems[mode] = camera;
 			cameraSystems[mode].Awake();
 			hasCustomCameras = true;
 		}
 
-		protected void RegisterGroup(string groupId, CameraMode[] modes)
+		protected void RegisterGroup(string groupId, string[] modes)
 		{
-			if (string.IsNullOrEmpty(groupId) || modes == null || modes.Length == 0)
+			if (string.IsNullOrEmpty(groupId) || modes == null || modes.Length == 0 || modes.Any(string.IsNullOrEmpty))
 			{
-				Debug.LogWarning("Invalid group registration.");
+				Debug.LogWarning("Invalid group registration: Group ID or modes are null/empty.");
 				return;
+			}
+			if (groups.ContainsKey(groupId))
+			{
+				Debug.LogWarning($"Group '{groupId}' is already registered. Overwriting.");
 			}
 			groups[groupId] = modes.ToArray();
 		}
 
-		private string GetGroupIdForMode(CameraMode mode) => groups.FirstOrDefault(group => group.Value.Contains(mode)).Key;
+		private string GetGroupIdForMode(string mode) => groups.FirstOrDefault(group => group.Value.Contains(mode)).Key;
 
-		public CameraMode GetCurrentGroupMode(CameraMode mode)
+		public string GetCurrentGroupMode(string mode)
 		{
+			if (string.IsNullOrEmpty(mode))
+			{
+				Debug.LogWarning($"Invalid mode: {mode}. Returning default mode.");
+				return DefaultMode;
+			}
 			var key = GetGroupIdForMode(mode);
-			return null != key && groupModes.ContainsKey(key) ? groupModes[key] : mode;
+			return key != null && groupModes.ContainsKey(key) ? groupModes[key] : mode;
 		}
 
-		public void SetCameraMode(CameraMode mode, bool background = false)
+		public void SetCameraMode(string mode, bool background = false)
 		{
-			var key = GetGroupIdForMode(mode);
-			var groupMode = null != key && groupModes.ContainsKey(key) ? groupModes[key] : mode;
-			if (null != key) groupModes[key] = mode;
+			if (string.IsNullOrEmpty(mode))
+			{
+				Debug.LogWarning($"Invalid camera mode: {mode}. Falling back to '{DefaultMode}'.");
+				mode = DefaultMode;
+			}
 
-			if (background && false == AreModesInSameGroup(mode, currentMode))
+			var key = GetGroupIdForMode(mode);
+			var groupMode = key != null && groupModes.ContainsKey(key) ? groupModes[key] : mode;
+			if (key != null) groupModes[key] = mode;
+
+			if (background && !AreModesInSameGroup(mode, currentMode))
 				return;
+
+			if (!cameraSystems.ContainsKey(mode))
+			{
+				Debug.LogWarning($"No camera system registered for mode '{mode}'.");
+				return;
+			}
 
 			cameraSystem = cameraSystems[mode];
-			if (null == cameraSystem)
-				return;
-
 			currentMode = mode;
-			cameraSystem.CopyFrom(cameraSystems[groupMode]); 
+			cameraSystem.CopyFrom(cameraSystems.ContainsKey(groupMode) ? cameraSystems[groupMode] : null);
 			cameraSystem.Start();
 
-			//local function
-			bool AreModesInSameGroup(CameraMode mode1, CameraMode mode2) => groups.Any(group => group.Value.Contains(mode1) && group.Value.Contains(mode2));
+			bool AreModesInSameGroup(string mode1, string mode2) => groups.Any(group => group.Value.Contains(mode1) && group.Value.Contains(mode2));
 		}
 
 		private void Update() => cameraSystem?.Update();
@@ -122,7 +150,7 @@ namespace MassiveHadronLtd
 				return;
 			}
 
-			RegisterCamera(defaultCamera, CameraMode.Default);
+			RegisterCamera(defaultCamera, DefaultMode);
 		}
 
 		private CameraDefault defaultCamera => new CameraDefault(GetComponent<Camera>()) { iorigin = new Vector3(0f, 4f, -4f), itarget = Vector3.zero };

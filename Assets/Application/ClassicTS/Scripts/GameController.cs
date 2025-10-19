@@ -26,8 +26,8 @@ namespace ClassicTilestorm
 			gameObject.AddComponent<PlaceholderUI>();
 			gestureController = GetComponent<GestureController>();
 			gestureController.OnMapUpdated += CheckDisableDrag;
-			cameraController = EnsureCameraController(); // Ensure this is called early
-			cameraController.OnWaypointReachedForGestures += OnWaypointGesturesEnable; // Subscribe to event
+			cameraController = EnsureCameraController();
+			cameraController.OnWaypointReachedForGestures += OnWaypointGesturesEnable;
 		}
 
 		private void Start()
@@ -46,7 +46,7 @@ namespace ClassicTilestorm
 		{
 			if (cameraController == null || PreviewMode.Cinema != PreviewSettings.CurrentMode || !cameraController.HasCompleted || Time.time - cinemaTimer <= CinemaTimeoutDuration) return;
 			cinemaTimer = Time.time;
-			cameraController.SetCameraMode(Random.Range(0, 7) switch { 0 or 1 or 2 => CameraMode.Orbit, _ => CameraMode.Path });
+			cameraController.SetCameraMode(Random.Range(0, 7) switch { 0 or 1 or 2 => CameraModeRegistry.Orbit, _ => CameraModeRegistry.Path });
 		}
 
 		public void SetPreviewMode(PreviewMode mode, bool forceCinema = false)
@@ -57,21 +57,20 @@ namespace ClassicTilestorm
 			{
 				var cameraMode = mode switch
 				{
-					PreviewMode.Editor => CameraMode.Editor,
-					PreviewMode.Cinema => CameraMode.Path,
-					PreviewMode.Player => CameraMode.Preset,
-					PreviewMode.Direct => CameraMode.Direct,
-					_ => CameraMode.Absent
+					PreviewMode.Editor => CameraModeRegistry.Editor,
+					PreviewMode.Cinema => CameraModeRegistry.Path,
+					PreviewMode.Player => CameraModeRegistry.Preset,
+					PreviewMode.Direct => CameraModeRegistry.Direct,
+					_ => CameraModeRegistry.Absent
 				};
 				cameraController.SetCameraMode(cameraController.GetCurrentGroupMode(cameraMode));
-				
 			}
 			UpdateGestureControllerState();
 		}
 
 		public void LoadMap(string mapName = null)
 		{
-			mapName ??= mapManager != null ? PreviewSettings.LoadMapName : PlayerPrefs.GetString("LastLoadedMap", PreviewSettings.LoadMapName);
+			mapName = mapName ?? (mapManager != null ? PreviewSettings.LoadMapName : PlayerPrefs.GetString("LastLoadedMap", PreviewSettings.LoadMapName));
 			if (mapName == null) return;
 
 			var currentMap = DatabaseSerializer.Maps.FirstOrDefault(m => m.name == mapName) ?? DatabaseSerializer.Maps.FirstOrDefault();
@@ -108,10 +107,10 @@ namespace ClassicTilestorm
 			{
 				var initialMode = PreviewSettings.CurrentMode switch
 				{
-					PreviewMode.Editor => CameraMode.Editor,
-					PreviewMode.Player => CameraMode.Follow,
-					PreviewMode.Cinema => Random.Range(0, 7) switch { 0 or 1 or 2 => CameraMode.Orbit, _ => CameraMode.Path },
-					_ => CameraMode.Follow
+					PreviewMode.Editor => CameraModeRegistry.Editor,
+					PreviewMode.Player => CameraModeRegistry.Follow,
+					PreviewMode.Cinema => Random.Range(0, 7) switch { 0 or 1 or 2 => CameraModeRegistry.Orbit, _ => CameraModeRegistry.Path },
+					_ => CameraModeRegistry.Follow
 				};
 				cameraController.Initialise(mapManager, eggbotController, initialMode);
 			}
