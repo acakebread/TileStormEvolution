@@ -5,10 +5,9 @@ namespace MassiveHadronLtd
 {
 	public class CameraOrbit : CameraBase
 	{
-		protected Func<Vector3> originFn;
-		protected Func<Vector3> targetFn;
-		protected Vector3 origin => originFn?.Invoke() ?? Vector3.zero;
-		protected Vector3 target => targetFn?.Invoke() ?? Vector3.zero;
+		private Func<Vector3> originFn;
+		private Func<Vector3> targetFn;
+		private Vector3 target => targetFn?.Invoke() ?? Vector3.zero;
 
 		private const float VerticalOffset = 0.5f;
 		private const float MinOrbitRadius = 2f;
@@ -27,19 +26,16 @@ namespace MassiveHadronLtd
 		private float currentFovMax;
 		//private float shake = 0f;
 
-		private Vector3 localOrigin; // Renamed to avoid conflict with helper property
+		private Vector3 localOrigin;
 		private Vector3 localTarget;
 
 		public bool HasCompleted => sequenceTimer <= 0f && pauseTimer <= 0f;
 
 		public CameraOrbit(CameraConfig config) : base(config)
 		{
-			if (null != config)
-			{
-				data = config.data;
-				originFn = config.origin;
-				targetFn = config.target;
-			}
+			data = config.data;
+			originFn = config.origin;
+			targetFn = config.target;
 		}
 
 		public override void Awake()
