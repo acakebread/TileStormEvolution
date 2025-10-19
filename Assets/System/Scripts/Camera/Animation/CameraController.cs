@@ -138,7 +138,7 @@ namespace MassiveHadronLtd
 			bool AreModesInSameGroup(string mode1, string mode2) => groups.Any(group => group.Value.Contains(mode1) && group.Value.Contains(mode2));
 		}
 
-		private void Update() => currentSystem?.Update();
+		protected virtual void Update() => currentSystem?.Update();
 
 		private void OnApplicationFocus(bool hasFocus) => currentSystem?.OnApplicationFocus(hasFocus);
 

@@ -13,8 +13,14 @@ namespace ClassicTilestorm
 		private SpatialBucketSystem spatialSystem;
 		private const int MaxFocusPoints = 50;
 		private const float MinDistanceForNewFocusPoint = 3f;
+		private const float CinemaTimeoutDuration = 5f;
+		private float cinemaTimer = 0f; // Initialize to 0 instead of Time.time
 
 		public event Action<bool> OnWaypointReachedForGestures;
+
+		private CameraBase cameraSystem => currentSystem;
+		private bool HasCompleted => cameraSystem is GameCameraOrbit orbit ? orbit.HasCompleted : cameraSystem is GameCameraPath path && path.HasCompleted;
+		private bool IsCinemaCamera(CameraBase _cameraSystem) => _cameraSystem is GameCameraOrbit || _cameraSystem is GameCameraPath;
 
 		public void Initialise(MapManager map, EggbotController eggbot, string initialMode = null)
 		{
@@ -126,11 +132,29 @@ namespace ClassicTilestorm
 			SetCameraMode(CameraModeRegistry.Follow, true);
 		}
 
+		protected void UpdateCinemaMode()
+		{
+			if (!IsCinemaCamera(cameraSystem) || !HasCompleted || Time.time < cinemaTimer + CinemaTimeoutDuration) return;
+			cinemaTimer = Time.time;
+			SetCameraMode(UnityEngine.Random.Range(0, 7) switch { 0 or 1 or 2 => CameraModeRegistry.Orbit, _ => CameraModeRegistry.Path });
+		}
+
+		protected override void Update()
+		{
+			base.Update();
+			UpdateCinemaMode();
+		}
+
 		private void OnDestroy()
 		{
 			if (eggbotController == null) return;
 			eggbotController.OnWaypointReached -= HandleWaypointReached;
 			eggbotController.OnPuzzleSolved -= HandlePuzzleSolved;
+		}
+
+		public void ResetCinemaTimer(bool forceCinema = false)
+		{
+			cinemaTimer = Time.time - (forceCinema ? CinemaTimeoutDuration : 0);
 		}
 	}
 }

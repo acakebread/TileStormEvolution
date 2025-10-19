@@ -13,8 +13,6 @@ namespace ClassicTilestorm
 		private GestureController gestureController;
 		private PostProcessingCameraController postProcessingController;
 		private bool gestureControllerEnabled = true;
-		private const float CinemaTimeoutDuration = 5f;
-		private float cinemaTimer;
 
 		private bool GestureControllerEnabled
 		{
@@ -39,24 +37,10 @@ namespace ClassicTilestorm
 		private void Update()
 		{
 			if (eggbotController != null) eggbotController.UpdateEggbot(mapManager);
-			CinemaUpdate();
-		}
-
-		private CameraBase cameraSystem => cameraController.currentSystem;
-		private bool HasCompleted => cameraSystem is GameCameraOrbit orbit ? orbit.HasCompleted : cameraSystem is GameCameraPath path && path.HasCompleted;
-		private bool IsCinemaCamera(CameraBase _cameraSystem) => _cameraSystem is GameCameraOrbit || _cameraSystem is GameCameraPath;
-
-		private void CinemaUpdate()
-		{
-			if (!IsCinemaCamera(cameraSystem) || !HasCompleted || Time.time - cinemaTimer <= CinemaTimeoutDuration) return;
-			cinemaTimer = Time.time;
-			cameraController.SetCameraMode(Random.Range(0, 7) switch { 0 or 1 or 2 => CameraModeRegistry.Orbit, _ => CameraModeRegistry.Path });
 		}
 
 		public void SetPreviewMode(PreviewMode mode, bool forceCinema = false)
 		{
-			if (IsCinemaCamera(cameraSystem))
-				cinemaTimer = Time.time - (forceCinema ? CinemaTimeoutDuration : 0);
 			if (cameraController != null)
 			{
 				var cameraMode = mode switch
@@ -68,6 +52,10 @@ namespace ClassicTilestorm
 					_ => CameraModeRegistry.Absent
 				};
 				cameraController.SetCameraMode(cameraController.GetCurrentGroupMode(cameraMode));
+				if (mode == PreviewMode.Cinema)
+				{
+					cameraController.ResetCinemaTimer(forceCinema);
+				}
 			}
 			UpdateGestureControllerState();
 		}
@@ -96,7 +84,6 @@ namespace ClassicTilestorm
 
 			gestureController.Initialise(mapManager);
 			GestureControllerEnabled = false;
-			cinemaTimer = Time.time;
 
 			if (eggbotController != null) Destroy(eggbotController.gameObject);
 			eggbotController = EggbotController.Instantiate(currentMap.szEggbotCostume, transform);
