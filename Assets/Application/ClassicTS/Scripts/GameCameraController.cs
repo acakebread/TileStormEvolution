@@ -113,14 +113,14 @@ namespace ClassicTilestorm
 			{
 				data = new CameraData(GetComponent<Camera>()) { iorigin = srcPos, itarget = dstPos },
 				target = GetTargetPosition(),
-				points = GetFocusPoints()
+				//points = GetFocusPoints()
 			};
 
 			RegisterCamera(new CameraEditor(editorConfig), CameraMode.Editor);
 			RegisterCamera(new CameraFollow(followConfig), CameraMode.Follow);
 			RegisterCamera(new CameraPreset(presetConfig), CameraMode.Preset);
 			RegisterCamera(new CameraOrbit(orbitConfig), CameraMode.Orbit);
-			RegisterCamera(new CameraPath(pathConfig), CameraMode.Path);
+			RegisterCamera(new CameraPath(pathConfig) { pointsFn = GetFocusPoints() }, CameraMode.Path);
 
 			RegisterGroup("EDITOR", new[] { CameraMode.Editor });
 			RegisterGroup("PLAYER", new[] { CameraMode.Follow, CameraMode.Preset });

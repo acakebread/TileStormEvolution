@@ -1,10 +1,19 @@
-using System.Collections.Generic;
+using UnityEngine;
 using System.Linq;
+using System.Collections.Generic;
 
 namespace MassiveHadronLtd
 {
 	public static class MathUtil
 	{
+		public static Vector3 QuadraticBezierPoint(float t, Vector3 p0, Vector3 p1, Vector3 p2)
+		{
+			var u = 1f - t;
+			var tt = t * t;
+			var uu = u * u;
+			return uu * p0 + 2f * u * t * p1 + tt * p2;
+		}
+
 		public static int Factorial(int n) { var v = n; while (--n > 1) v *= n; return v > 0 ? v : 1; }
 
 

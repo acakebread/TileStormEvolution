@@ -9,6 +9,6 @@ namespace MassiveHadronLtd
 		public CameraData data;
 		public Func<Vector3> origin;
 		public Func<Vector3> target;
-		public Func<IReadOnlyList<Vector3>> points;
+		//public Func<IReadOnlyList<Vector3>> points;
 	}
 }

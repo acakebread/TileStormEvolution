@@ -7,12 +7,12 @@ namespace MassiveHadronLtd
 {
 	public class CameraPath : CameraBase
 	{
-		protected Func<Vector3> originFn;
-		protected Func<Vector3> targetFn;
-		protected Func<IReadOnlyList<Vector3>> pointsFn;
-		protected Vector3 origin => originFn?.Invoke() ?? Vector3.zero;
-		protected Vector3 target => targetFn?.Invoke() ?? Vector3.zero;
-		protected IReadOnlyList<Vector3> points => pointsFn?.Invoke() ?? Array.Empty<Vector3>();//focus points
+		public Func<IReadOnlyList<Vector3>> pointsFn;
+
+		private Func<Vector3> originFn;
+		private Func<Vector3> targetFn;
+		private Vector3 target => targetFn?.Invoke() ?? Vector3.zero;
+		private IReadOnlyList<Vector3> points => pointsFn?.Invoke() ?? Array.Empty<Vector3>();//focus points
 
 		private const float VerticalOffset = 0.5f;
 		private const float MinDistance = 1f;
@@ -52,13 +52,9 @@ namespace MassiveHadronLtd
 
 		public CameraPath(CameraConfig config) : base(config)
 		{
-			if (null != config)
-			{
-				data = config.data;
-				originFn = config.origin;
-				targetFn = config.target;
-				pointsFn = config.points;
-			}
+			data = config.data;
+			originFn = config.origin;
+			targetFn = config.target;
 		}
 
 		public override void Awake()
@@ -104,8 +100,8 @@ namespace MassiveHadronLtd
 				return;
 			}
 
-			var targetPosition = this.target; // Use CameraBase.target property
-			var _focusPoints = this.points; // Use CameraBase.points property (focus points)
+			var targetPosition = target;
+			var _focusPoints = points;
 
 			sequenceDuration = DefaultSequenceDuration + UnityEngine.Random.Range(-2f, 2f);
 			sequenceTimer = sequenceDuration;
@@ -154,7 +150,7 @@ namespace MassiveHadronLtd
 		{
 			base.Update();
 
-			var _target = this.target; // Use CameraBase.target property
+			var _target = target;
 			var posDelta = _target - lastTarget;
 			lastTarget = _target;
 
@@ -172,7 +168,7 @@ namespace MassiveHadronLtd
 				bezierData.P2 += posDelta;
 
 				// Update camera dest position and FOV
-				localOrigin = QuadraticBezierPoint(easedSequenceTimer, bezierData.P0, bezierData.P1, bezierData.P2);
+				localOrigin = MathUtil.QuadraticBezierPoint(easedSequenceTimer, bezierData.P0, bezierData.P1, bezierData.P2);
 				data.fieldOfView = Mathf.Lerp(FovMin, currentFovMax, SmoothingUtils.EasePingPong(sequenceTimer / sequenceDuration));
 			}
 			else
@@ -193,14 +189,6 @@ namespace MassiveHadronLtd
 				data.camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
 			data.camera.fieldOfView = data.fieldOfView;
 			//CameraUtils.ApplyCameraShake(data.camera, shake);
-		}
-
-		private Vector3 QuadraticBezierPoint(float t, Vector3 p0, Vector3 p1, Vector3 p2)
-		{
-			var u = 1f - t;
-			var tt = t * t;
-			var uu = u * u;
-			return uu * p0 + 2f * u * t * p1 + tt * p2;
 		}
 
 		private (Vector3 src, Vector3 dst) SampleCameraPosition(Vector3 midPoint, Vector3 pathDir, Vector3 perpendicular, float lozengeMajor, float lozengeMinor)
