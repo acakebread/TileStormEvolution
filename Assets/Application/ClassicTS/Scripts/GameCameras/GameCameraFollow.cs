@@ -1,9 +1,10 @@
 using System;
 using UnityEngine;
+using MassiveHadronLtd;
 
-namespace MassiveHadronLtd
+namespace ClassicTilestorm
 {
-	public class CameraFollow : CameraBase
+	public class GameCameraFollow : CameraBase
 	{
 		public Func<Vector3> targetFn;
 		
@@ -12,7 +13,7 @@ namespace MassiveHadronLtd
 		private const float IdealDistance = 14f;
 		private const float IdealDistanceHorizontalScale = 1.4f;
 
-		public CameraFollow(Camera camera) : base(camera) { }
+		public GameCameraFollow(Camera camera) : base(camera) { }
 
 		public override void Start()
 		{

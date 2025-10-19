@@ -8,16 +8,17 @@ namespace MassiveHadronLtd
 	[RequireComponent(typeof(Camera))]
 	public class CameraController : MonoBehaviour
 	{
+		public CameraBase currentSystem => cameraSystems.ContainsKey(currentMode) ? cameraSystems[currentMode] : null;
+
 		private const string DefaultMode = "Default"; // Define default mode in core library
 		private string currentMode = DefaultMode;
-		private CameraBase cameraSystem = null;
+
 		private Dictionary<string, CameraBase> cameraSystems = new();
 		private Dictionary<string, string[]> groups = new();
 		private Dictionary<string, string> groupModes = new();
 		private bool hasCustomCameras = false;
 
 		protected Dictionary<string, CameraBase> CameraSystems => cameraSystems;
-		public bool HasCompleted => cameraSystem is CameraOrbit orbit ? orbit.HasCompleted : cameraSystem is CameraPath path && path.HasCompleted;
 
 		private void Awake()
 		{
@@ -27,7 +28,7 @@ namespace MassiveHadronLtd
 				return;
 			}
 
-			RegisterCamera(defaultCamera, DefaultMode);
+			RegisterCamera(new CameraDefault(GetComponent<Camera>()) { iorigin = new Vector3(0f, 4f, -4f), itarget = Vector3.zero }, DefaultMode);
 			SetCameraMode(DefaultMode);
 		}
 
@@ -130,32 +131,19 @@ namespace MassiveHadronLtd
 				return;
 			}
 
-			cameraSystem = cameraSystems[mode];
 			currentMode = mode;
-			cameraSystem.CopyFrom(cameraSystems.ContainsKey(groupMode) ? cameraSystems[groupMode] : null);
-			cameraSystem.Start();
+			currentSystem?.CopyFrom(cameraSystems.ContainsKey(groupMode) ? cameraSystems[groupMode] : null);
+			currentSystem?.Start();
 
 			bool AreModesInSameGroup(string mode1, string mode2) => groups.Any(group => group.Value.Contains(mode1) && group.Value.Contains(mode2));
 		}
 
-		private void Update() => cameraSystem?.Update();
+		private void Update() => currentSystem?.Update();
 
-		private void OnApplicationFocus(bool hasFocus) => cameraSystem?.OnApplicationFocus(hasFocus);
+		private void OnApplicationFocus(bool hasFocus) => currentSystem?.OnApplicationFocus(hasFocus);
 
-		protected virtual void SetupCameras()
-		{
-			if (GetComponent<Camera>() == null)
-			{
-				Debug.LogWarning("Cannot setup camera configs: Camera is null");
-				return;
-			}
+		protected virtual void SetupCameras() { }
 
-			RegisterCamera(defaultCamera, DefaultMode);
-		}
-
-		private CameraDefault defaultCamera => new CameraDefault(GetComponent<Camera>()) { iorigin = new Vector3(0f, 4f, -4f), itarget = Vector3.zero };
 		protected virtual (Vector3 srcPos, Vector3 dstPos) GetInitialCameraPositions() => (new Vector3(0f, 0f, 0f), Vector3.forward);
-		protected virtual Func<Vector3> GetTargetPosition() => () => Vector3.zero;
-		protected virtual Func<IReadOnlyList<Vector3>> GetFocusPoints() => () => Array.Empty<Vector3>();
 	}
 }

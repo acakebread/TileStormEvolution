@@ -1,9 +1,10 @@
 using System;
 using UnityEngine;
+using MassiveHadronLtd;
 
-namespace MassiveHadronLtd
+namespace ClassicTilestorm
 {
-	public class CameraOrbit : CameraBase
+	public class GameCameraOrbit : CameraBase
 	{
 		public Func<Vector3> originFn;
 		public Func<Vector3> targetFn;
@@ -30,7 +31,7 @@ namespace MassiveHadronLtd
 
 		public bool HasCompleted => sequenceTimer <= 0f && pauseTimer <= 0f;
 
-		public CameraOrbit(Camera camera) : base(camera) { }
+		public GameCameraOrbit(Camera camera) : base(camera) { }
 
 		public override void Awake()
 		{

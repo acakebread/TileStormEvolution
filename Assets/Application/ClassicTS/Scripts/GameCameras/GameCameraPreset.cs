@@ -1,9 +1,10 @@
 using System;
 using UnityEngine;
+using MassiveHadronLtd;
 
-namespace MassiveHadronLtd
+namespace ClassicTilestorm
 {
-	public class CameraPreset : CameraBase
+	public class GameCameraPreset : CameraBase
 	{
 		public Func<Vector3> originFn { get; set; }
 		public Func<Vector3> targetFn { get; set; }
@@ -13,7 +14,7 @@ namespace MassiveHadronLtd
 
 		private const float SmoothingN = 32f;
 
-		public CameraPreset(Camera camera) : base(camera) { }
+		public GameCameraPreset(Camera camera) : base(camera) { }
 
 		public override void Start()
 		{

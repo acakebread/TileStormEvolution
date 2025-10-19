@@ -2,10 +2,11 @@ using UnityEngine;
 using System.Linq;
 using System;
 using System.Collections.Generic;
+using MassiveHadronLtd;
 
-namespace MassiveHadronLtd
+namespace ClassicTilestorm
 {
-	public class CameraPath : CameraBase
+	public class GameCameraPath : CameraBase
 	{
 		//public Func<Vector3> originFn;
 		public Func<Vector3> targetFn;
@@ -49,7 +50,7 @@ namespace MassiveHadronLtd
 		protected float sequenceTimer = DefaultSequenceDuration;
 		protected float pauseTimer = DefaultPauseDuration;
 
-		public CameraPath(Camera camera) : base(camera) { }
+		public GameCameraPath(Camera camera) : base(camera) { }
 
 		protected virtual void InitializeCinemaSequence()
 		{

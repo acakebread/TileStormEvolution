@@ -1,8 +1,10 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
-namespace MassiveHadronLtd
+using MassiveHadronLtd;
+
+namespace ClassicTilestorm
 {
-	public class CameraEditor : CameraBase
+	public class GameCameraEditor : CameraBase
 	{
 		private float yaw;
 		private float pitch;
@@ -16,7 +18,7 @@ namespace MassiveHadronLtd
 		private float lookSpeedV = 2f;
 		private float zoomSpeed = 12f;
 
-		public CameraEditor(Camera camera) : base(camera) { }
+		public GameCameraEditor(Camera camera) : base(camera) { }
 
 		public override void Awake()
 		{

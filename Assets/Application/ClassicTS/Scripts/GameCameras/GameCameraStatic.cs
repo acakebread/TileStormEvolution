@@ -1,10 +1,11 @@
 using UnityEngine;
+using MassiveHadronLtd;
 
-namespace MassiveHadronLtd
+namespace ClassicTilestorm
 {
-	public class CameraStatic : CameraBase
+	public class GameCameraStatic : CameraBase
 	{
-		public CameraStatic(Camera camera) : base(camera)
+		public GameCameraStatic(Camera camera) : base(camera)
 		{
 			//initialise camera
 			if (null == camera) return;

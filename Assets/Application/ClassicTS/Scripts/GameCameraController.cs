@@ -48,14 +48,14 @@ namespace ClassicTilestorm
 			return (srcPos, dstPos);
 		}
 
-		protected override Func<Vector3> GetTargetPosition()
+		protected Func<Vector3> GetTargetPosition()
 		{
 			return () => eggbotController != null && eggbotController.transform != null
 				? eggbotController.transform.position
 				: Vector3.zero;
 		}
 
-		protected override Func<IReadOnlyList<Vector3>> GetFocusPoints()
+		protected Func<IReadOnlyList<Vector3>> GetFocusPoints()
 		{
 			if (mapManager == null) return () => Array.Empty<Vector3>();
 
@@ -79,6 +79,7 @@ namespace ClassicTilestorm
 
 		protected override void SetupCameras()
 		{
+			base.SetupCameras();
 			if (GetComponent<Camera>() == null)
 			{
 				Debug.LogWarning("Cannot setup camera configs: Camera is null");
@@ -87,13 +88,15 @@ namespace ClassicTilestorm
 
 			var (srcPos, dstPos) = GetInitialCameraPositions();
 
-			RegisterCamera(new CameraEditor(GetComponent<Camera>()), CameraModeRegistry.Editor);
-			RegisterCamera(new CameraFollow(GetComponent<Camera>()) { iorigin = srcPos, itarget = dstPos, targetFn = GetTargetPosition() }, CameraModeRegistry.Follow);
-			RegisterCamera(new CameraPreset(GetComponent<Camera>()) { iorigin = srcPos, itarget = dstPos, originFn = () => srcPos, targetFn = GetTargetPosition() }, CameraModeRegistry.Preset);
-			RegisterCamera(new CameraOrbit(GetComponent<Camera>()) { iorigin = srcPos, itarget = dstPos, originFn = () => srcPos, targetFn = GetTargetPosition() }, CameraModeRegistry.Orbit);
-			RegisterCamera(new CameraPath(GetComponent<Camera>()) { iorigin = srcPos, itarget = dstPos, pointsFn = GetFocusPoints(), targetFn = GetTargetPosition() }, CameraModeRegistry.Path);
+			RegisterCamera(new GameCameraEditor(GetComponent<Camera>()), CameraModeRegistry.Editor);
+			RegisterCamera(new GameCameraDirect(GetComponent<Camera>()) { iorigin = srcPos, itarget = dstPos }, CameraModeRegistry.Direct);
+			RegisterCamera(new GameCameraFollow(GetComponent<Camera>()) { iorigin = srcPos, itarget = dstPos, targetFn = GetTargetPosition() }, CameraModeRegistry.Follow);
+			RegisterCamera(new GameCameraPreset(GetComponent<Camera>()) { iorigin = srcPos, itarget = dstPos, originFn = () => srcPos, targetFn = GetTargetPosition() }, CameraModeRegistry.Preset);
+			RegisterCamera(new GameCameraOrbit(GetComponent<Camera>()) { iorigin = srcPos, itarget = dstPos, originFn = () => srcPos, targetFn = GetTargetPosition() }, CameraModeRegistry.Orbit);
+			RegisterCamera(new GameCameraPath(GetComponent<Camera>()) { iorigin = srcPos, itarget = dstPos, pointsFn = GetFocusPoints(), targetFn = GetTargetPosition() }, CameraModeRegistry.Path);
 
 			RegisterGroup("EDITOR", new[] { CameraModeRegistry.Editor });
+			RegisterGroup("DIRECT", new[] { CameraModeRegistry.Direct });
 			RegisterGroup("PLAYER", new[] { CameraModeRegistry.Follow, CameraModeRegistry.Preset });
 			RegisterGroup("CINEMA", new[] { CameraModeRegistry.Path, CameraModeRegistry.Orbit });
 		}
@@ -110,8 +113,8 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			((CameraPreset)CameraSystems[CameraModeRegistry.Preset]).originFn = () => waypoint.vSrc.IsValidVector() ? waypoint.vSrc.ToVector3() : new Vector3(0f, 14f, -14f);
-			((CameraPreset)CameraSystems[CameraModeRegistry.Preset]).targetFn = () => waypoint.vDst != null && waypoint.vDst.IsValidVector() ? waypoint.vDst.ToVector3() : mapManager.TileWorldPosition(waypoint.nTile);
+			((GameCameraPreset)CameraSystems[CameraModeRegistry.Preset]).originFn = () => waypoint.vSrc.IsValidVector() ? waypoint.vSrc.ToVector3() : new Vector3(0f, 14f, -14f);
+			((GameCameraPreset)CameraSystems[CameraModeRegistry.Preset]).targetFn = () => waypoint.vDst != null && waypoint.vDst.IsValidVector() ? waypoint.vDst.ToVector3() : mapManager.TileWorldPosition(waypoint.nTile);
 
 			SetCameraMode(CameraModeRegistry.Preset, true);
 			OnWaypointReachedForGestures?.Invoke(true);

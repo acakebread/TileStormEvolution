@@ -42,9 +42,12 @@ namespace ClassicTilestorm
 			CinemaUpdate();
 		}
 
+		private CameraBase cameraSystem => cameraController.currentSystem;
+		private bool HasCompleted => cameraSystem is GameCameraOrbit orbit ? orbit.HasCompleted : cameraSystem is GameCameraPath path && path.HasCompleted;
+
 		private void CinemaUpdate()
 		{
-			if (cameraController == null || PreviewMode.Cinema != PreviewSettings.CurrentMode || !cameraController.HasCompleted || Time.time - cinemaTimer <= CinemaTimeoutDuration) return;
+			if (cameraController == null || PreviewMode.Cinema != PreviewSettings.CurrentMode || !HasCompleted || Time.time - cinemaTimer <= CinemaTimeoutDuration) return;
 			cinemaTimer = Time.time;
 			cameraController.SetCameraMode(Random.Range(0, 7) switch { 0 or 1 or 2 => CameraModeRegistry.Orbit, _ => CameraModeRegistry.Path });
 		}
