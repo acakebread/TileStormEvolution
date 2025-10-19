@@ -1,25 +1,21 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
 using MassiveHadronLtd;
-using System.Linq;
 
 namespace ClassicTilestorm
 {
 	public class GameCameraEditor : CameraBase
 	{
 		public MapManager mapManager;
-
-		private float yaw;
-		private float pitch;
-		private bool dragging;
-		private bool skipNextScroll;
-		private bool isDraggingWithLeftMouse;
-		private Vector3 dragStartWorldPoint; // World-space point on the plane where drag starts
-		private Vector3 cameraStartPosition;
-		private Plane dragPlane;    // Configuration values
-		private float lookSpeedH = 2f;
-		private float lookSpeedV = 2f;
-		private float zoomSpeed = 12f;
+		private GameCameraEditorMovement activeMode;
+		private GameCameraEditorDrag dragMode;
+		private GameCameraEditorPaint paintMode;
+		private enum EditorMode { Drag, Paint }
+		private EditorMode currentMode = EditorMode.Drag;
+		private int selectedMapDefIndex = 0; // Index into mapDefs
+		private bool showTileSelector = false;
+		private Vector2 scrollPosition = Vector2.zero;
+		private int tempSelectedTileDefGlobalIndex = 0; // Index into DatabaseSerializer.TileDefs
 
 		public GameCameraEditor(Camera camera) : base(camera) { }
 
@@ -32,24 +28,21 @@ namespace ClassicTilestorm
 			var direction = itarget - iorigin;
 			if (direction.sqrMagnitude > Mathf.Epsilon)
 				cameraTransform.rotation = Quaternion.LookRotation(direction, Vector3.up);
+
+			// Initialize mode instances
+			dragMode = new GameCameraEditorDrag(camera);
+			paintMode = new GameCameraEditorPaint(camera, mapManager, selectedMapDefIndex);
+			activeMode = dragMode;
 		}
 
 		public override void Start()
 		{
 			base.Start();
-			fieldOfView = 60f;
-			camera.fieldOfView = fieldOfView;
+			camera.fieldOfView = 60f;
 			postProcessingEnabled = false;
+			dragMode.Initialize();
+			paintMode.Initialize();
 
-			// Initialize rotation and state
-			var cameraTransform = camera.transform;
-			yaw = cameraTransform.eulerAngles.y;
-			pitch = cameraTransform.eulerAngles.x;
-			dragging = false;
-			skipNextScroll = false;
-			isDraggingWithLeftMouse = false;
-
-			// Ensure EventSystem exists
 			if (!Object.FindAnyObjectByType<EventSystem>())
 				new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
 		}
@@ -58,119 +51,22 @@ namespace ClassicTilestorm
 		{
 			base.Update();
 
-			var wasDragging = dragging;
-			var cameraTransform = camera.transform;
-
-			// Handle mouse button down to start dragging (left or right mouse)
-			if ((Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1)) &&
-				!EventSystem.current.IsPointerOverGameObject())
+			// Workaround: Reset hotControl on mouse release to handle drag outside GUI
+			if (Input.GetMouseButtonUp(0) && GUIUtility.hotControl != 0)
 			{
-				dragging = true;
-				yaw = cameraTransform.eulerAngles.y;
-				pitch = cameraTransform.eulerAngles.x;
-
-				// If left mouse button, start dragging
-				if (Input.GetMouseButtonDown(0))
-				{
-					isDraggingWithLeftMouse = true;
-					cameraStartPosition = cameraTransform.position;
-					Ray ray = camera.ScreenPointToRay(Input.mousePosition);
-					if (Physics.Raycast(ray, out RaycastHit hit))
-					{
-						// Set the drag plane height to the y-position of the hit point
-						dragPlane = new Plane(Vector3.up, new Vector3(0f, hit.point.y, 0f));
-						dragStartWorldPoint = hit.point;
-					}
-					else
-					{
-						// Fallback to default plane (y = 0f)
-						dragPlane = new Plane(Vector3.up, new Vector3(0f, 0f, 0f));
-						if (dragPlane.Raycast(ray, out float enter))
-							dragStartWorldPoint = ray.GetPoint(enter);
-						else
-							dragStartWorldPoint = cameraTransform.position;
-					}
-				}
+				GUIUtility.hotControl = 0;
+				Debug.Log("Manually reset hotControl on mouse release");
 			}
 
-			// Get mouse or touch input
-			float pointerX = Input.GetAxis("Mouse X");
-			float pointerY = Input.GetAxis("Mouse Y");
-			if (Input.touchCount > 0)
-			{
-				pointerX = Input.touches[0].deltaPosition.x * 0.05f;
-				pointerY = Input.touches[0].deltaPosition.y * 0.05f;
-			}
-
-			// Handle camera rotation (for right mouse or touch dragging)
-			if (dragging && wasDragging && !isDraggingWithLeftMouse &&
-				(Input.touchCount > 0 || Input.GetMouseButton(1)))
-			{
-				yaw += lookSpeedH * pointerX;
-				pitch -= lookSpeedV * pointerY;
-				cameraTransform.eulerAngles = new Vector3(pitch, yaw, 0f);
-			}
-			// Handle plane-based dragging (for left mouse)
-			else if (dragging && wasDragging && isDraggingWithLeftMouse && Input.GetMouseButton(0))
-			{
-				// Current ray from mouse position
-
-				cameraTransform.position = cameraStartPosition;
-				Ray currentRay = camera.ScreenPointToRay(Input.mousePosition);
-				if (dragPlane.Raycast(currentRay, out float enter))
-				{
-					Vector3 currentWorldPoint = currentRay.GetPoint(enter);
-					// Move camera to keep dragStartWorldPoint under the mouse
-					Vector3 delta = dragStartWorldPoint - currentWorldPoint;
-					cameraTransform.position += delta;
-				}
-			}
-
-			// Stop dragging when mouse buttons or touch are released
-			if (!(Input.touchCount > 0 || Input.GetMouseButton(0) || Input.GetMouseButton(1)))
-			{
-				dragging = false;
-				isDraggingWithLeftMouse = false;
-			}
-
-			// Zoom with mouse wheel
-			if (InsideWindow())
-			{
-				float scroll = skipNextScroll ? 0f : Input.GetAxis("Mouse ScrollWheel");
-				cameraTransform.Translate(0, 0, scroll * zoomSpeed, Space.Self);
-				skipNextScroll = false;
-			}
-
-			// Translation (WASD movement, always enabled)
-			Vector3 translation = GetInputTranslationDirection() * zoomSpeed * Time.deltaTime;
-			cameraTransform.Translate(translation, Space.Self);
+			if (activeMode != null)
+				activeMode.Update();
 		}
 
 		public override void OnApplicationFocus(bool hasFocus)
 		{
-			if (hasFocus) skipNextScroll = true;
-		}
-
-		private bool InsideWindow()
-		{
-			Vector3 mousePosition = Input.mousePosition;
-			return mousePosition.x >= 0 && mousePosition.x <= Screen.width &&
-				   mousePosition.y >= 0 && mousePosition.y <= Screen.height;
-		}
-
-		private Vector3 GetInputTranslationDirection()
-		{
-			Vector3 direction = Vector3.zero;
-			if (Input.GetKey(KeyCode.W)) direction += Vector3.forward;
-			if (Input.GetKey(KeyCode.S)) direction += Vector3.back;
-			if (Input.GetKey(KeyCode.A)) direction += Vector3.left;
-			if (Input.GetKey(KeyCode.D)) direction += Vector3.right;
-			if (Input.GetKey(KeyCode.Q)) direction += Vector3.down;
-			if (Input.GetKey(KeyCode.E)) direction += Vector3.up;
-
-			if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) direction *= 5f;
-
-			return direction;
+			base.OnApplicationFocus(hasFocus);
+			if (activeMode != null)
+				activeMode.OnApplicationFocus(hasFocus);
 		}
 
 		protected override void OnRender()
@@ -187,29 +83,94 @@ namespace ClassicTilestorm
 		{
 			base.OnGUI();
 
-			// Place button in bottom-left corner
 			float buttonWidth = 120;
 			float buttonHeight = 30;
 			float margin = 10;
 
-			if (GUI.Button(new Rect(margin, Screen.height - buttonHeight - margin, buttonWidth, buttonHeight), "Test Alter Map"))
+			// Radio buttons for mode selection
+			Rect groupRect = new Rect(margin, Screen.height - buttonHeight * 3 - margin * 2, buttonWidth, buttonHeight * 2);
+			GUI.BeginGroup(groupRect);
+			bool dragToggled = GUI.Toggle(new Rect(0, 0, buttonWidth, buttonHeight), currentMode == EditorMode.Drag, "Drag", "Button");
+			bool paintToggled = GUI.Toggle(new Rect(0, buttonHeight, buttonWidth, buttonHeight), currentMode == EditorMode.Paint, "Paint", "Button");
+
+			// Ensure radio button behavior
+			if (dragToggled && currentMode != EditorMode.Drag)
 			{
-				// Change tile at (0,0) to tileDefIndex 3
-				mapManager.UpdateTileAt(0, 0, 3);
+				currentMode = EditorMode.Drag;
+				activeMode = dragMode;
+				Debug.Log("Switched to Drag mode");
+			}
+			else if (paintToggled && currentMode != EditorMode.Paint)
+			{
+				currentMode = EditorMode.Paint;
+				activeMode = paintMode;
+				Debug.Log("Switched to Paint mode");
+			}
+			GUI.EndGroup();
 
-				// Create a new DatabaseData instance with the current (modified) data
-				var newData = new DatabaseSerializer.DatabaseData
+			// Button to open tile selector
+			if (GUI.Button(new Rect(margin + buttonWidth + 10, Screen.height - buttonHeight * 3 - margin * 2, buttonWidth, buttonHeight), "Select Tile"))
+			{
+				showTileSelector = true;
+				// Initialize to a valid TileDef index
+				tempSelectedTileDefGlobalIndex = 0;
+			}
+
+			// Tile selector popup
+			if (showTileSelector)
+			{
+				float popupWidth = 300;
+				float popupHeight = 400;
+				float popupX = Screen.width / 2 - popupWidth / 2;
+				float popupY = Screen.height / 2 - popupHeight / 2;
+
+				GUI.Box(new Rect(popupX, popupY, popupWidth, popupHeight), "Select Tile Type");
+
+				float scrollViewHeight = popupHeight - 100;
+				scrollPosition = GUI.BeginScrollView(
+					new Rect(popupX + 10, popupY + 30, popupWidth - 20, scrollViewHeight),
+					scrollPosition,
+					new Rect(0, 0, popupWidth - 40, DatabaseSerializer.TileDefs.Count * 30)
+				);
+
+				for (int i = 0; i < DatabaseSerializer.TileDefs.Count; i++)
 				{
-					maps = DatabaseSerializer.Maps.ToArray(), // Includes the modified map from MapManager
-					themes = DatabaseSerializer.Themes.ToArray(),
-					tiledefs = DatabaseSerializer.TileDefs.ToArray(),
-					buttons = DatabaseSerializer.Buttons.ToArray(),
-					texture_set = DatabaseSerializer.TextureSets.ToArray()
-				};
+					var tileDef = DatabaseSerializer.TileDefs[i];
+					string displayName = $"{tileDef.szType} ({tileDef.szTheme})";
+					Rect buttonRect = new Rect(0, i * 30, popupWidth - 40, 25);
 
-				// Save the modified database
-				DatabaseSerializer.SaveDatabase(newData);
-				Debug.Log("TestSerialize: Database saved with updated tile at (0,0)");
+					if (i == tempSelectedTileDefGlobalIndex)
+					{
+						GUI.color = Color.yellow;
+						GUI.Box(new Rect(buttonRect.x - 5, buttonRect.y - 2, buttonRect.width + 10, buttonRect.height + 4), "");
+						GUI.color = Color.white;
+					}
+
+					if (GUI.Button(buttonRect, displayName))
+					{
+						tempSelectedTileDefGlobalIndex = i;
+					}
+				}
+
+				GUI.EndScrollView();
+
+				// OK and Cancel buttons
+				if (GUI.Button(new Rect(popupX + 10, popupY + popupHeight - 60, buttonWidth, buttonHeight), "OK"))
+				{
+					var tileDef = DatabaseSerializer.TileDefs[tempSelectedTileDefGlobalIndex];
+					selectedMapDefIndex = mapManager.GetOrAddMapDefIndex(tileDef.szType, tileDef.szTheme);
+					if (selectedMapDefIndex >= 0)
+					{
+						paintMode.SetTileDefIndex(selectedMapDefIndex);
+						Debug.Log($"Selected tileDef: {tileDef.szType} ({tileDef.szTheme}), mapped to mapDefs index={selectedMapDefIndex}");
+					}
+					showTileSelector = false;
+				}
+
+				if (GUI.Button(new Rect(popupX + popupWidth - buttonWidth - 10, popupY + popupHeight - 60, buttonWidth, buttonHeight), "Cancel"))
+				{
+					showTileSelector = false;
+				}
 			}
 		}
 	}
