@@ -93,33 +93,28 @@ namespace ClassicTilestorm
 			var followConfig = new CameraConfig
 			{
 				data = new CameraData(GetComponent<Camera>()) { iorigin = srcPos, itarget = dstPos },
-				target = GetTargetPosition()
 			};
 
 			var presetConfig = new CameraConfig
 			{
 				data = new CameraData(GetComponent<Camera>()) { iorigin = srcPos, itarget = dstPos },
-				origin = () => srcPos,
-				target = GetTargetPosition()
 			};
 
 			var orbitConfig = new CameraConfig
 			{
 				data = new CameraData(GetComponent<Camera>()) { iorigin = srcPos, itarget = dstPos },
-				target = GetTargetPosition(),
 			};
 
 			var pathConfig = new CameraConfig
 			{
 				data = new CameraData(GetComponent<Camera>()) { iorigin = srcPos, itarget = dstPos },
-				target = GetTargetPosition()
 			};
 
 			RegisterCamera(new CameraEditor(editorConfig), CameraMode.Editor);
-			RegisterCamera(new CameraFollow(followConfig), CameraMode.Follow);
-			RegisterCamera(new CameraPreset(presetConfig), CameraMode.Preset);
-			RegisterCamera(new CameraOrbit(orbitConfig), CameraMode.Orbit);
-			RegisterCamera(new CameraPath(pathConfig) { pointsFn = GetFocusPoints() }, CameraMode.Path);
+			RegisterCamera(new CameraFollow(followConfig) { targetFn = GetTargetPosition() }, CameraMode.Follow);
+			RegisterCamera(new CameraPreset(presetConfig) { originFn = () => srcPos, targetFn = GetTargetPosition() }, CameraMode.Preset);
+			RegisterCamera(new CameraOrbit(orbitConfig) { originFn = () => srcPos, targetFn = GetTargetPosition() }, CameraMode.Orbit);
+			RegisterCamera(new CameraPath(pathConfig) { pointsFn = GetFocusPoints(), targetFn = GetTargetPosition() }, CameraMode.Path);
 
 			RegisterGroup("EDITOR", new[] { CameraMode.Editor });
 			RegisterGroup("PLAYER", new[] { CameraMode.Follow, CameraMode.Preset });

@@ -5,8 +5,8 @@ namespace MassiveHadronLtd
 {
 	public class CameraOrbit : CameraBase
 	{
-		private Func<Vector3> originFn;
-		private Func<Vector3> targetFn;
+		public Func<Vector3> originFn;
+		public Func<Vector3> targetFn;
 		private Vector3 target => targetFn?.Invoke() ?? Vector3.zero;
 
 		private const float VerticalOffset = 0.5f;
@@ -34,8 +34,6 @@ namespace MassiveHadronLtd
 		public CameraOrbit(CameraConfig config) : base(config)
 		{
 			data = config.data;
-			originFn = config.origin;
-			targetFn = config.target;
 		}
 
 		public override void Awake()

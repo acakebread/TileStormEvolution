@@ -16,8 +16,6 @@ namespace MassiveHadronLtd
 		public CameraPreset(CameraConfig config) : base(config)
 		{
 			data = config.data;
-			originFn = config.origin;
-			targetFn = config.target;
 		}
 
 		public override void Start()

@@ -58,7 +58,7 @@ namespace ClassicTilestorm
 				var cameraMode = mode switch
 				{
 					PreviewMode.Editor => CameraMode.Editor,
-					PreviewMode.Cinema => CameraMode.Orbit,
+					PreviewMode.Cinema => CameraMode.Path,
 					PreviewMode.Player => CameraMode.Preset,
 					PreviewMode.Direct => CameraMode.Direct,
 					_ => CameraMode.Absent

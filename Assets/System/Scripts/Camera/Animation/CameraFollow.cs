@@ -5,7 +5,7 @@ namespace MassiveHadronLtd
 {
 	public class CameraFollow : CameraBase
 	{
-		private Func<Vector3> targetFn;
+		public Func<Vector3> targetFn;
 		
 		private const float SmoothingNa = 8f;
 		private const float SmoothingNb = 64f;
@@ -15,7 +15,6 @@ namespace MassiveHadronLtd
 		public CameraFollow(CameraConfig config) : base(config)
 		{
 			data = config.data;
-			targetFn = config.target;
 		}
 
 		public override void Start()
