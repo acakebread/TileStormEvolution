@@ -24,7 +24,6 @@ namespace MassiveHadronLtd
 		private const float MinCameraHeight = 1.5f;
 		private const float MaxCameraHeight = 4f;
 		private const bool SortDstNearerPlayer = true;
-		//private float shake = 0f;
 
 		private float currentFovMax;
 		private BezierData bezierData;
@@ -52,18 +51,6 @@ namespace MassiveHadronLtd
 
 		public CameraPath(Camera camera) : base(camera) { }
 
-		public override void Awake()
-		{
-			base.Awake();
-			////initialise camera
-			//var camera = camera;
-			//if (camera == null) return;
-			//camera.transform.position = originFn?.Invoke() ?? iorigin;
-			//var direction = (targetFn?.Invoke() ?? itarget) - camera.transform.position;
-			//if (direction.sqrMagnitude > Mathf.Epsilon)
-			//	camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
-		}
-
 		protected virtual void InitializeCinemaSequence()
 		{
 			sequenceTimer = pauseTimer = 0f;
@@ -87,7 +74,6 @@ namespace MassiveHadronLtd
 			base.Start();
 			smoothing = DefaultSmoothingRate;
 			fieldOfView = 45f;
-			//shake = 0f;
 			postProcessingEnabled = true;
 
 			if (camera == null)
@@ -104,7 +90,6 @@ namespace MassiveHadronLtd
 			pauseTimer = DefaultPauseDuration;
 			lastTarget = nextTarget = targetPosition;
 
-			//shake = 1f;
 			bezierData = default;
 			currentFovMax = FovMax;
 
@@ -184,7 +169,7 @@ namespace MassiveHadronLtd
 			if (direction.sqrMagnitude > Mathf.Epsilon)
 				camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
 			camera.fieldOfView = fieldOfView;
-			//CameraUtils.ApplyCameraShake(camera, shake);
+			CameraUtils.ApplyCameraShake(camera, 1f);
 		}
 
 		private (Vector3 src, Vector3 dst) SampleCameraPosition(Vector3 midPoint, Vector3 pathDir, Vector3 perpendicular, float lozengeMajor, float lozengeMinor)
