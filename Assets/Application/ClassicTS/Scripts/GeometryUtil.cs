@@ -1,4 +1,5 @@
 using UnityEngine;
+using MassiveHadronLtd;
 
 namespace ClassicTilestorm
 {
@@ -7,19 +8,16 @@ namespace ClassicTilestorm
 		private static GameObject ghostTile;
 		private static Material ghostMaterial;
 
-		// Initialize the ghost material (call once, e.g., in GameCameraEditor.Start)
+		// Initialize the ghost material
 		public static void InitializeGhostMaterial()
 		{
 			if (ghostMaterial == null)
 			{
-				ghostMaterial = new Material(Shader.Find("Standard"));
-				ghostMaterial.SetFloat("_Mode", 3); // Transparent mode
-				ghostMaterial.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-				ghostMaterial.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-				ghostMaterial.SetInt("_ZWrite", 0);
-				ghostMaterial.EnableKeyword("_ALPHABLEND_ON");
-				ghostMaterial.renderQueue = 3000; // Transparent queue
-				ghostMaterial.color = new Color(1f, 1f, 1f, 0.5f); // Semi-transparent
+				ghostMaterial = MaterialUtils.CreateTransparentUnlitMaterial(new Color(1f, 1f, 1f, 0.5f));
+				if (ghostMaterial == null)
+				{
+					Debug.LogError("GeometryUtil: Failed to create transparent unlit material.");
+				}
 			}
 		}
 
@@ -96,5 +94,9 @@ namespace ClassicTilestorm
 				ghostTile = null;
 			}
 		}
+
+		// For debugging
+		public static bool IsGhostTileActive() => ghostTile != null && ghostTile.activeSelf;
+		public static Vector3 GetGhostTilePosition() => ghostTile != null ? ghostTile.transform.position : Vector3.zero;
 	}
 }

@@ -145,8 +145,9 @@ namespace ClassicTilestorm
 			UpdateCinemaMode();
 		}
 
-		private void OnDestroy()
+		protected override void OnDestroy()
 		{
+			base.OnDestroy();
 			if (eggbotController == null) return;
 			eggbotController.OnWaypointReached -= HandleWaypointReached;
 			eggbotController.OnPuzzleSolved -= HandlePuzzleSolved;

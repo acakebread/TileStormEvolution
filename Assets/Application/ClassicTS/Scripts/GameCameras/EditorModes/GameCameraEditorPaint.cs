@@ -1,4 +1,4 @@
-// GameCameraEditorPaint.cs (unchanged)
+using System.Linq;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
@@ -7,17 +7,17 @@ namespace ClassicTilestorm
 	public class GameCameraEditorPaint : GameCameraEditorMovement
 	{
 		private MapManager mapManager;
-		private int selectedMapDefIndex;
+		private int selectedTileDefIndex;
 
-		public GameCameraEditorPaint(Camera camera, MapManager map, int mapDefIndex) : base(camera)
+		public GameCameraEditorPaint(Camera camera, MapManager map, int tileDefIndex) : base(camera)
 		{
 			mapManager = map;
-			selectedMapDefIndex = mapDefIndex;
+			selectedTileDefIndex = tileDefIndex;
 		}
 
-		public void SetTileDefIndex(int mapDefIndex)
+		public void SetTileDefIndex(int tileDefIndex)
 		{
-			selectedMapDefIndex = mapDefIndex;
+			selectedTileDefIndex = tileDefIndex;
 		}
 
 		public override void Update()
@@ -25,8 +25,8 @@ namespace ClassicTilestorm
 			base.Update();
 			if (!camera || !mapManager) return;
 
-			// Check if a GUI control or area is active
-			bool isGuiControlActive = GUIManager.IsMouseOverGui();
+			// Check if a GUI control is active
+			bool isGuiControlActive = GUIUtility.hotControl != 0;
 
 			// Handle mouse button down
 			if (Input.GetMouseButtonDown(0) && !EventSystem.current.IsPointerOverGameObject() && !isGuiControlActive)
@@ -35,9 +35,9 @@ namespace ClassicTilestorm
 			}
 		}
 
-		private void PlaceTileAtMousePosition()
+		public void PlaceTileAtMousePosition()
 		{
-			if (GUIManager.IsMouseOverGui()) return;
+			if (GUIUtility.hotControl != 0) return;
 
 			Vector3 worldPos = MapManager.ScreenToWorld(Input.mousePosition);
 			int mapIndex = mapManager.WorldToMapIndex(worldPos);
@@ -50,8 +50,17 @@ namespace ClassicTilestorm
 			int x = mapIndex % mapManager.Width;
 			int z = mapIndex / mapManager.Width;
 
-			mapManager.UpdateTileAt(x, z, selectedMapDefIndex);
-			Debug.Log($"Placed tile at ({x}, {z}) with mapDefs index={selectedMapDefIndex}");
+			mapManager.UpdateTileAt(x, z, selectedTileDefIndex);
+			var newData = new DatabaseSerializer.DatabaseData
+			{
+				maps = DatabaseSerializer.Maps.ToArray(),
+				themes = DatabaseSerializer.Themes.ToArray(),
+				tiledefs = DatabaseSerializer.TileDefs.ToArray(),
+				buttons = DatabaseSerializer.Buttons.ToArray(),
+				texture_set = DatabaseSerializer.TextureSets.ToArray()
+			};
+			DatabaseSerializer.SaveDatabase(newData);
+			Debug.Log($"Placed tile at ({x}, {z}) with tileDefIndex={selectedTileDefIndex}");
 		}
 	}
 }
