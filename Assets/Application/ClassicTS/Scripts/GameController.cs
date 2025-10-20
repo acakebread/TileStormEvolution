@@ -154,11 +154,19 @@ namespace ClassicTilestorm
 				return null;
 			}
 
-			var controller = Camera.main.GetComponent<GameCameraController>();
-			if (controller == null)
+			//var controller = Camera.main.GetComponent<GameCameraController>();
+			//if (controller == null)
+			//{
+			//	controller = Camera.main.gameObject.AddComponent<GameCameraController>();
+			//	Debug.Log("Created GameCameraController on Camera.main");
+			//}
+
+			var controller = gameObject.GetComponent<GameCameraController>();
+			if (null == controller)
 			{
-				controller = Camera.main.gameObject.AddComponent<GameCameraController>();
-				Debug.Log("Created GameCameraController on Camera.main");
+				controller = gameObject.AddComponent<GameCameraController>();
+				controller.camera = Camera.main;
+				Debug.Log("Created GameCameraController");
 			}
 			return controller;
 		}

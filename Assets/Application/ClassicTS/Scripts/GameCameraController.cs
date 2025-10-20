@@ -11,6 +11,7 @@ namespace ClassicTilestorm
 		private MapManager mapManager;
 		private EggbotController eggbotController;
 		private SpatialBucketSystem spatialSystem;
+
 		private const int MaxFocusPoints = 50;
 		private const float MinDistanceForNewFocusPoint = 3f;
 		private const float CinemaTimeoutDuration = 5f;
@@ -86,7 +87,7 @@ namespace ClassicTilestorm
 		protected override void SetupCameras()
 		{
 			base.SetupCameras();
-			if (GetComponent<Camera>() == null)
+			if (camera == null)
 			{
 				Debug.LogWarning("Cannot setup camera configs: Camera is null");
 				return;
@@ -94,12 +95,12 @@ namespace ClassicTilestorm
 
 			var (srcPos, dstPos) = GetInitialCameraPositions();
 
-			RegisterCamera(new GameCameraEditor(GetComponent<Camera>()) { mapManager = this.mapManager }, CameraModeRegistry.Editor);
-			RegisterCamera(new GameCameraDirect(GetComponent<Camera>()) { iorigin = srcPos, itarget = dstPos }, CameraModeRegistry.Direct);
-			RegisterCamera(new GameCameraFollow(GetComponent<Camera>()) { iorigin = srcPos, itarget = dstPos, targetFn = GetTargetPosition() }, CameraModeRegistry.Follow);
-			RegisterCamera(new GameCameraPreset(GetComponent<Camera>()) { iorigin = srcPos, itarget = dstPos, originFn = () => srcPos, targetFn = GetTargetPosition() }, CameraModeRegistry.Preset);
-			RegisterCamera(new GameCameraOrbit(GetComponent<Camera>()) { iorigin = srcPos, itarget = dstPos, originFn = () => srcPos, targetFn = GetTargetPosition() }, CameraModeRegistry.Orbit);
-			RegisterCamera(new GameCameraPath(GetComponent<Camera>()) { iorigin = srcPos, itarget = dstPos, pointsFn = GetFocusPoints(), targetFn = GetTargetPosition() }, CameraModeRegistry.Path);
+			RegisterCamera(new GameCameraEditor(camera) { mapManager = this.mapManager }, CameraModeRegistry.Editor);
+			RegisterCamera(new GameCameraDirect(camera) { iorigin = srcPos, itarget = dstPos }, CameraModeRegistry.Direct);
+			RegisterCamera(new GameCameraFollow(camera) { iorigin = srcPos, itarget = dstPos, targetFn = GetTargetPosition() }, CameraModeRegistry.Follow);
+			RegisterCamera(new GameCameraPreset(camera) { iorigin = srcPos, itarget = dstPos, originFn = () => srcPos, targetFn = GetTargetPosition() }, CameraModeRegistry.Preset);
+			RegisterCamera(new GameCameraOrbit(camera) { iorigin = srcPos, itarget = dstPos, originFn = () => srcPos, targetFn = GetTargetPosition() }, CameraModeRegistry.Orbit);
+			RegisterCamera(new GameCameraPath(camera) { iorigin = srcPos, itarget = dstPos, pointsFn = GetFocusPoints(), targetFn = GetTargetPosition() }, CameraModeRegistry.Path);
 
 			RegisterGroup("EDITOR", new[] { CameraModeRegistry.Editor });
 			RegisterGroup("DIRECT", new[] { CameraModeRegistry.Direct });

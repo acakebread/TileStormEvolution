@@ -5,10 +5,16 @@ using System.Linq;
 
 namespace MassiveHadronLtd
 {
-	[RequireComponent(typeof(Camera))]
+	//[RequireComponent(typeof(Camera))]
 	public class CameraController : MonoBehaviour
 	{
 		public CameraBase currentSystem => cameraSystems.ContainsKey(currentMode) ? cameraSystems[currentMode] : null;
+		private Camera _camera = null;
+		public new Camera camera 
+		{
+			set => _camera = value;
+			get => null != _camera ? _camera : Camera.main; 
+		}
 
 		private const string DefaultMode = "Default"; // Define default mode in core library
 		private string currentMode = DefaultMode;
@@ -22,13 +28,13 @@ namespace MassiveHadronLtd
 
 		private void Awake()
 		{
-			if (GetComponent<Camera>() == null)
+			if (null == camera)
 			{
 				Debug.LogWarning("CameraController requires a Camera component");
 				return;
 			}
 
-			RegisterCamera(new CameraDefault(GetComponent<Camera>()), DefaultMode);
+			RegisterCamera(new CameraDefault(camera), DefaultMode);
 			SetCameraMode(DefaultMode);
 		}
 
@@ -36,7 +42,7 @@ namespace MassiveHadronLtd
 		{
 			initialMode = string.IsNullOrEmpty(initialMode) ? DefaultMode : initialMode;
 
-			if (GetComponent<Camera>() == null)
+			if (null == camera)
 			{
 				Debug.LogWarning("CameraController requires a Camera component");
 				return;
@@ -52,8 +58,8 @@ namespace MassiveHadronLtd
 			{
 				Debug.LogWarning($"No config for mode '{initialMode}'. Using default position.");
 				var (srcPos, dstPos) = GetInitialCameraPositions();
-				GetComponent<Camera>().transform.position = srcPos;
-				GetComponent<Camera>().transform.rotation = Quaternion.LookRotation(dstPos - srcPos, Vector3.up);
+				camera.transform.position = srcPos;
+				camera.transform.rotation = Quaternion.LookRotation(dstPos - srcPos, Vector3.up);
 			}
 
 			if (initialMode != DefaultMode || hasCustomCameras)
