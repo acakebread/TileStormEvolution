@@ -118,6 +118,7 @@ namespace MassiveHadronLtd
 
 		public void SetCameraMode(string mode, bool background = false)
 		{
+			//if (currentMode == mode) return;
 			if (string.IsNullOrEmpty(mode))
 			{
 				Debug.LogWarning($"Invalid camera mode: {mode}. Falling back to '{DefaultMode}'.");
@@ -137,14 +138,20 @@ namespace MassiveHadronLtd
 				return;
 			}
 
+			currentSystem?.OnDisable();
 			currentMode = mode;
 			currentSystem?.CopyFrom(cameraSystems.ContainsKey(groupMode) ? cameraSystems[groupMode] : null);
 			currentSystem?.Start();
+			currentSystem?.OnEnable();
 
 			bool AreModesInSameGroup(string mode1, string mode2) => groups.Any(group => group.Value.Contains(mode1) && group.Value.Contains(mode2));
 		}
 
+		//protected virtual void OnEnable() => currentSystem?.OnEnable();
+		
 		protected virtual void Update() => currentSystem?.Update();
+
+		//protected virtual void OnDisable() => currentSystem?.OnDisable();
 
 		protected virtual void OnGUI() => currentSystem?.OnGUI();
 
