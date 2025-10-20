@@ -51,15 +51,6 @@ namespace ClassicTilestorm
 			int z = mapIndex / mapManager.Width;
 
 			mapManager.UpdateTileAt(x, z, selectedTileDefIndex);
-			var newData = new DatabaseSerializer.DatabaseData
-			{
-				maps = DatabaseSerializer.Maps.ToArray(),
-				themes = DatabaseSerializer.Themes.ToArray(),
-				tiledefs = DatabaseSerializer.TileDefs.ToArray(),
-				buttons = DatabaseSerializer.Buttons.ToArray(),
-				texture_set = DatabaseSerializer.TextureSets.ToArray()
-			};
-			DatabaseSerializer.SaveDatabase(newData);
 			Debug.Log($"Placed tile at ({x}, {z}) with tileDefIndex={selectedTileDefIndex}");
 		}
 	}
