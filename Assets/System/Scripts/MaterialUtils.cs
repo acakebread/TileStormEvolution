@@ -267,19 +267,19 @@ namespace MassiveHadronLtd
 			material.SetFloat("_ZWrite", 0f);
 			material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
 			material.SetOverrideTag("RenderType", "Transparent");
-			//// Clear all effect-specific properties
-			//if (material.HasProperty("_MainTex"))
-			//	material.SetTexture("_MainTex", null);
-			//if (material.HasProperty("_NoiseTex"))
-			//	material.SetTexture("_NoiseTex", null);
-			//if (material.HasProperty("_Radius"))
-			//	material.SetFloat("_Radius", 0);
-			//if (material.HasProperty("_NoiseStrength"))
-			//	material.SetFloat("_NoiseStrength", 0);
-			//if (material.HasProperty("_FilmIntensity"))
-			//	material.SetFloat("_FilmIntensity", 0);
-			//if (material.HasProperty("_NoiseScale"))
-			//	material.SetFloat("_NoiseScale", 0);
+			// Clear all effect-specific properties
+			if (material.HasProperty("_MainTex"))
+				material.SetTexture("_MainTex", null);
+			if (material.HasProperty("_NoiseTex"))
+				material.SetTexture("_NoiseTex", null);
+			if (material.HasProperty("_Radius"))
+				material.SetFloat("_Radius", 0);
+			if (material.HasProperty("_NoiseStrength"))
+				material.SetFloat("_NoiseStrength", 0);
+			if (material.HasProperty("_FilmIntensity"))
+				material.SetFloat("_FilmIntensity", 0);
+			if (material.HasProperty("_NoiseScale"))
+				material.SetFloat("_NoiseScale", 0);
 			return material;
 		}
 
@@ -301,19 +301,19 @@ namespace MassiveHadronLtd
 			material.DisableKeyword("_SURFACE_TYPE_TRANSPARENT");
 			material.SetOverrideTag("RenderType", "Opaque");
 
-			// Clear unrelated properties
-			if (material.HasProperty("_MainTex"))
-				material.SetTexture("_MainTex", null);
-			if (material.HasProperty("_NoiseTex"))
-				material.SetTexture("_NoiseTex", null);
-			if (material.HasProperty("_Radius"))
-				material.SetFloat("_Radius", 0);
-			if (material.HasProperty("_NoiseStrength"))
-				material.SetFloat("_NoiseStrength", 0);
-			if (material.HasProperty("_FilmIntensity"))
-				material.SetFloat("_FilmIntensity", 0);
-			if (material.HasProperty("_NoiseScale"))
-				material.SetFloat("_NoiseScale", 0);
+			//// Clear unrelated properties
+			//if (material.HasProperty("_MainTex"))
+			//	material.SetTexture("_MainTex", null);
+			//if (material.HasProperty("_NoiseTex"))
+			//	material.SetTexture("_NoiseTex", null);
+			//if (material.HasProperty("_Radius"))
+			//	material.SetFloat("_Radius", 0);
+			//if (material.HasProperty("_NoiseStrength"))
+			//	material.SetFloat("_NoiseStrength", 0);
+			//if (material.HasProperty("_FilmIntensity"))
+			//	material.SetFloat("_FilmIntensity", 0);
+			//if (material.HasProperty("_NoiseScale"))
+			//	material.SetFloat("_NoiseScale", 0);
 
 			// Force shader recompilation
 			material.shader = unlitShader;

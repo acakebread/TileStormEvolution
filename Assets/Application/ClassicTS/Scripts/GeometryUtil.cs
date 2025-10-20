@@ -13,8 +13,8 @@ namespace ClassicTilestorm
 		{
 			if (ghostMaterial == null)
 			{
-				//ghostMaterial = MaterialUtils.CreateTransparentUnlitMaterial(new Color(1f, 1f, 1f, 0.5f));
-				ghostMaterial = MaterialUtils.CreateOpaqueUnlitMaterial(new Color(0.75f, 0.75f, 0.75f, 1f));
+				ghostMaterial = MaterialUtils.CreateTransparentUnlitMaterial(new Color(1f, 1f, 1f, 0.5f));
+				//ghostMaterial = MaterialUtils.CreateOpaqueUnlitMaterial(new Color(0.75f, 0.75f, 0.75f, 1f));
 				if (ghostMaterial == null)
 				{
 					Debug.LogError("GeometryUtil: Failed to create transparent unlit material.");
