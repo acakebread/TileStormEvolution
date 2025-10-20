@@ -119,7 +119,7 @@ namespace MassiveHadronLtd
 			}
 
 			provider.RegisterCommand(RenderPassEvent.BeforeRendering, (cmd, cam) => { cmd.SetInvertCulling(true); });
-			provider.RegisterCommand(RenderPassEvent.AfterRenderingSkybox, (cmd, cam) => { cmd.SetInvertCulling(false); });
+			provider.RegisterCommand(RenderPassEvent.AfterRenderingOpaques, (cmd, cam) => { cmd.SetInvertCulling(false); });
 
 			var data = obj.AddComponent<UniversalAdditionalCameraData>();
 			data.renderType = CameraRenderType.Overlay;
@@ -250,7 +250,7 @@ namespace MassiveHadronLtd
 				if (provider == null)
 					provider = outputStage.gameObject.AddComponent<CameraCommandProvider>();
 
-				provider.RegisterCommand(RenderPassEvent.BeforeRenderingTransparents,
+				provider.RegisterCommand(RenderPassEvent.AfterRendering,
 					(cmd, cam) =>
 					{
 						if (effectMesh == null) return;
