@@ -206,6 +206,9 @@ namespace MassiveHadronLtd
 			if (material.HasProperty("_NoiseScale"))
 				material.SetFloat("_NoiseScale", 0);
 
+			material.DisableKeyword("_SURFACE_TYPE_TRANSPARENT");
+			material.SetOverrideTag("RenderType", "Opaque");
+
 			// Force shader recompilation
 			material.shader = waterShader;
 			return material;
@@ -244,6 +247,9 @@ namespace MassiveHadronLtd
 				material.SetFloat("_FilmIntensity", 0);
 			if (material.HasProperty("_NoiseScale"))
 				material.SetFloat("_NoiseScale", 0);
+
+			material.DisableKeyword("_SURFACE_TYPE_TRANSPARENT");
+			material.SetOverrideTag("RenderType", "Opaque");
 
 			// Force shader recompilation
 			material.shader = oceanShader;

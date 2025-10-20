@@ -47,3 +47,18 @@
 //	DatabaseSerializer.SaveDatabase(newData);
 //	Debug.Log("TestSerialize: Database saved with updated tile at (0,0)");
 //}
+
+
+				provider.RegisterCommand(RenderPassEvent.BeforeRenderingTransparents,
+
+				//#if UNITY_EDITOR
+				//					provider.RegisterCommand(RenderPassEvent.BeforeRenderingTransparents,
+				//#else
+				//					provider.RegisterCommand(RenderPassEvent.AfterRendering,//PLATFORM_WEBGL
+				//#endif
+
+//#if UNITY_EDITOR
+				ghostMaterial = MaterialUtils.CreateTransparentUnlitMaterial(new Color(1f, 1f, 1f, 0.5f));
+//#else
+//				ghostMaterial = MaterialUtils.CreateOpaqueUnlitMaterial(new Color(0.75f, 0.75f, 0.75f, 1f));//PLATFORM_WEBGL
+//#endif

@@ -250,8 +250,8 @@ namespace MassiveHadronLtd
 				if (provider == null)
 					provider = outputStage.gameObject.AddComponent<CameraCommandProvider>();
 
-				provider.RegisterCommand(RenderPassEvent.AfterRendering,
-					(cmd, cam) =>
+				provider.RegisterCommand(RenderPassEvent.BeforeRenderingTransparents,
+				(cmd, cam) =>
 					{
 						if (effectMesh == null) return;
 						FrustumPlaneIntersection.GenerateFrustumPlaneIntersectionMesh(mainCamera, planeNormal, offset, effectMesh);
