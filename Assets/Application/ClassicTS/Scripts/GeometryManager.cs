@@ -115,7 +115,11 @@ namespace ClassicTilestorm
 			// Fallback tile for missing prefabs
 			static GameObject CreateFallbackTile(Transform parent, Vector3 position)
 			{
+				var urpMaterial = new Material(Shader.Find("Universal Render Pipeline/Simple Lit"));
+				urpMaterial.color = new Color(0.25f, 0.25f, 0.35f, 1f); // Set desired color
+
 				var gameObject = GameObject.CreatePrimitive(PrimitiveType.Cube);
+				gameObject.GetComponent<Renderer>().material = urpMaterial;
 				gameObject.transform.SetParent(parent, false);
 				gameObject.transform.position = position + new Vector3(0f, -0.1f, 0f);
 				gameObject.transform.localScale = new Vector3(1f, 0.1f, 1f);
@@ -151,8 +155,7 @@ namespace ClassicTilestorm
 			Object.Destroy(cube);
 
 			// Apply debug material
-			meshRenderer.material = new Material(Shader.Find("Standard")) { color = new Color(0.2f, 0.3f, 0.15f, 1f) };
-
+			meshRenderer.material = new Material(Shader.Find("Universal Render Pipeline/Simple Lit"));
 			return gameObject;
 		}
 

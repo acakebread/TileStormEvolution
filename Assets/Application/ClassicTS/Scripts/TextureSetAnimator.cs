@@ -12,7 +12,8 @@ namespace ClassicTilestorm
 		private void ApplyTexture(int index)
 		{
 			if (target == null || frames[index].texture == null) return;
-			if (target.material == null) target.material = new Material(Shader.Find("Standard"));
+			if (null == target.material) target.material = new Material(Shader.Find("Universal Render Pipeline/Simple Lit"));
+
 			target.material.mainTexture = frames[index].texture;
 		}
 
