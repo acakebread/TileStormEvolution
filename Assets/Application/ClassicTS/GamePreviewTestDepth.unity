@@ -407,7 +407,7 @@ MonoBehaviour:
   geometryPath: ClassicTS/Geometry/
   texturePath: ClassicTS/Textures/
   skycubesPath: ClassicTS/SkyCubes/
-  previewMode: 3
+  previewMode: 0
 --- !u!4 &862124737
 Transform:
   m_ObjectHideFlags: 0
