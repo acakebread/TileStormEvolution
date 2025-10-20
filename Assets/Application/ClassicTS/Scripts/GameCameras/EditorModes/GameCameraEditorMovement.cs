@@ -12,6 +12,7 @@ namespace ClassicTilestorm
 		protected float lookSpeedV = 2f;
 		protected float zoomSpeed = 12f;
 		protected bool skipNextScroll;
+		protected bool didGainFocus;
 
 		public GameCameraEditorMovement(Camera camera)
 		{
@@ -23,6 +24,7 @@ namespace ClassicTilestorm
 				pitch = cameraTransform.eulerAngles.x;
 			}
 			skipNextScroll = false;
+			didGainFocus = false;
 		}
 
 		public virtual void Initialize()
@@ -43,7 +45,7 @@ namespace ClassicTilestorm
 
 			// Handle rotation (right mouse or touch)
 			bool isGuiControlActive = GUIUtility.hotControl != 0;
-			if ((Input.GetMouseButton(1) || Input.touchCount > 0) && !isGuiControlActive)
+			if ((Input.GetMouseButton(1) || Input.touchCount > 0) && !isGuiControlActive && false == didGainFocus)
 			{
 				float pointerX = Input.GetAxis("Mouse X");
 				float pointerY = Input.GetAxis("Mouse Y");
@@ -72,11 +74,14 @@ namespace ClassicTilestorm
 			// Translation (WASD movement)
 			Vector3 translation = GetInputTranslationDirection() * zoomSpeed * Time.deltaTime;
 			cameraTransform.Translate(translation, Space.Self);
+
+			if (InsideWindow() && (Input.GetMouseButton(0) || Input.GetMouseButton(1))) didGainFocus = false;
 		}
 
 		public virtual void OnApplicationFocus(bool hasFocus)
 		{
 			if (hasFocus) skipNextScroll = true;
+			if (hasFocus) didGainFocus = true;
 		}
 
 		protected bool InsideWindow()
