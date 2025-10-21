@@ -18,7 +18,7 @@ class GitGraphApp:
         self.repo_path = None
         self.activity = {}
         self.start_date = datetime.now().date() - timedelta(days=365)  # Default 365 days ago
-        self.end_date = datetime.now().date()  # October 21, 2025, 6:57 PM BST
+        self.end_date = datetime.now().date()  # October 21, 2025, 7:12 PM BST
         self.email = None
         
         self.setup_ui()
@@ -75,13 +75,15 @@ class GitGraphApp:
             start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date() if start_date_str else None
             end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date() if end_date_str else self.end_date
             
-            commits = repo.iter_commits(author=email) if email else repo.iter_commits()
+            commits = repo.iter_commits()
             
             activity = defaultdict(int)
             oldest_date = None
             for commit in commits:
                 date = datetime.fromtimestamp(commit.committed_date).date()
                 if date > end_date:
+                    continue
+                if email and commit.author.email != email:
                     continue
                 activity[date] += 1
                 if oldest_date is None or date < oldest_date:
@@ -108,6 +110,18 @@ class GitGraphApp:
             raise ValueError(f"Invalid date or data: {str(e)}")
         except Exception as e:
             raise ValueError(f"Error in commit activity: {str(e)}")
+
+    def get_unique_emails(self):
+        try:
+            repo = git.Repo(self.repo_path)
+            emails = set()
+            for commit in repo.iter_commits(max_count=1000):  # Limit to 1000 commits for performance
+                emails.add(commit.author.email)
+            return sorted(list(emails))
+        except git.InvalidGitRepositoryError:
+            return []
+        except Exception:
+            return []
 
     def update_graph(self):
         try:
@@ -140,23 +154,26 @@ class GitGraphApp:
             data = np.array(counts).reshape(num_weeks, 7).T
             weekly_totals = data.sum(axis=0)
             
+            # Ensure x-axis (range) matches data length
+            x_range = range(len(weekly_totals))
+            
             colors = ['#ebedf0', '#9be9a8', '#40c463', '#30a14e', '#216e39']
             cmap = ListedColormap(colors)
             bounds = [0, 1, 3, 7, 12, np.max(data) + 1]
             norm = BoundaryNorm(bounds, cmap.N)
             midpoints = [(bounds[i] + bounds[i+1]) / 2 for i in range(len(bounds)-1)]
             
-            self.ax_bar.bar(range(num_weeks), weekly_totals, color='skyblue', edgecolor='black', width=1.0)
+            self.ax_bar.bar(x_range, weekly_totals, color='skyblue', edgecolor='black', width=1.0)
             self.ax_bar.set_title(f'Weekly Commit Totals - {repo_name}')
             self.ax_bar.set_ylabel('Commits')
             self.ax_bar.grid(axis='y', linestyle='--', alpha=0.7)
-            self.ax_bar.set_xlim(-0.5, num_weeks - 0.5)
+            self.ax_bar.set_xlim(-0.5, len(x_range) - 0.5)
             
             im = self.ax_heat.imshow(data, cmap=cmap, norm=norm, aspect='auto')
             self.ax_heat.set_yticks(range(7))
             self.ax_heat.set_yticklabels(['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'])
             self.ax_heat.yaxis.tick_right()
-            self.ax_heat.set_xlim(-0.5, num_weeks - 0.5)
+            self.ax_heat.set_xlim(-0.5, len(x_range) - 0.5)
             
             tick_positions = [0]
             month_labels = [self.start_date.strftime('%b')]
@@ -192,12 +209,23 @@ class GitGraphApp:
     def open_settings(self):
         settings_window = tk.Toplevel(self.root)
         settings_window.title("Settings")
-        settings_window.geometry("300x250")
+        settings_window.geometry("350x250")  # Increased width to accommodate longer emails
         
-        ttk.Label(settings_window, text="Email (leave blank for all):").pack(pady=5)
-        email_entry = ttk.Entry(settings_window)
-        email_entry.insert(0, self.email or "")
-        email_entry.pack(pady=5)
+        # Pre-populate email dropdown
+        emails = self.get_unique_emails()
+        if not emails:
+            messagebox.showwarning("No Emails", "No author emails found in the repository.")
+            emails = [""]
+        else:
+            emails.insert(0, "")  # Add blank for "All Authors"
+        
+        ttk.Label(settings_window, text="Email (select or leave blank for all):").pack(pady=5)
+        email_var = tk.StringVar(value=self.email or "")
+        # Set width based on longest email, with scrolling if needed
+        max_length = max(len(email) for email in emails) if emails else 20
+        email_dropdown = ttk.Combobox(settings_window, textvariable=email_var, values=emails, 
+                                     state="readonly", width=max(max_length, 30))  # Minimum 30 chars
+        email_dropdown.pack(pady=5)
         
         ttk.Label(settings_window, text="Start Date (YYYY-MM-DD, blank for 365 days ago):").pack(pady=5)
         start_date_entry = ttk.Entry(settings_window)
@@ -210,7 +238,7 @@ class GitGraphApp:
         end_date_entry.pack(pady=5)
         
         def save_settings():
-            self.email = email_entry.get() if email_entry.get() else None
+            self.email = email_var.get() if email_var.get() else None
             start_date = start_date_entry.get() if start_date_entry.get() else None
             end_date = end_date_entry.get() if end_date_entry.get() else None
             if start_date:
