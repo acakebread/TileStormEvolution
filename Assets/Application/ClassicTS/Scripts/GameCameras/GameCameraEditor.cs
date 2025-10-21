@@ -31,7 +31,7 @@ namespace ClassicTilestorm
 		private int lastClickedMapIndex = -1; // Last clicked tile index for cycling
 		private List<int> tileDefCycleList; // List of TileDef indices for cycling
 		private int cycleIndex = 0; // Current position in cycle list
-		private GameObject gridLinesObject; // GameObject for LineRenderer grid
+		private GameObject gridLines;
 		private LineRenderer gridLineRenderer; // LineRenderer for grid lines
 		private bool gridLinesEnabled = true; // Toggle for grid lines
 		private static Texture2D panelBackgroundTexture; // Static texture for tile selector
@@ -107,68 +107,8 @@ namespace ClassicTilestorm
 			}
 		}
 
-		private void InitializeGridLines()
-		{
-			if (gridLinesObject != null)
-			{
-				Object.Destroy(gridLinesObject);
-			}
-
-			gridLinesObject = new GameObject("GridLines");
-			gridLinesObject.transform.SetParent(mapManager.transform, false);
-
-			float y = 0f; // Map at y=0
-			int width = mapManager.Width;
-			int height = mapManager.Height;
-			float offset = 0f; // Adjust to 0 if tiles are at integer coords, 0.5 if centered
-
-			var grid_material = MaterialUtils.CreateOpaqueUnlitMaterial(new Color(0.25f, 0.45f, 0.65f, 1f));
-
-			// Create vertical lines (along X)
-			for (int x = 0; x <= width; x++)
-			{
-				float xPos = x + offset;
-				var lineObj = new GameObject($"VerticalLine_{x}");
-				lineObj.transform.SetParent(gridLinesObject.transform, false);
-				var lr = lineObj.AddComponent<LineRenderer>();
-				lr.material = grid_material;
-				lr.startWidth = 0.02f;
-				lr.endWidth = 0.02f;
-				lr.useWorldSpace = true;
-				lr.positionCount = 2;
-				lr.SetPosition(0, new Vector3(xPos, y, 0 + offset));
-				lr.SetPosition(1, new Vector3(xPos, y, height + offset));
-				lr.enabled = gridLinesEnabled;
-			}
-
-			// Create horizontal lines (along Z)
-			for (int z = 0; z <= height; z++)
-			{
-				float zPos = z + offset;
-				var lineObj = new GameObject($"HorizontalLine_{z}");
-				lineObj.transform.SetParent(gridLinesObject.transform, false);
-				var lr = lineObj.AddComponent<LineRenderer>();
-				lr.material = grid_material;
-				lr.startWidth = 0.02f;
-				lr.endWidth = 0.02f;
-				lr.useWorldSpace = true;
-				lr.positionCount = 2;
-				lr.SetPosition(0, new Vector3(0 + offset, y, zPos));
-				lr.SetPosition(1, new Vector3(width + offset, y, zPos));
-				lr.enabled = gridLinesEnabled;
-			}
-		}
-
-		private void UpdateGridLines()
-		{
-			if (mapManager == null || gridLinesObject == null) return;
-
-			var lineRenderers = gridLinesObject.GetComponentsInChildren<LineRenderer>();
-			foreach (var lr in lineRenderers)
-			{
-				lr.enabled = gridLinesEnabled;
-			}
-		}
+		private void InitializeGridLines() => gridLines = GridLinesHelper.CreateGridLines(mapManager.transform, mapManager.Width, mapManager.Height, gridLinesEnabled);//, color: new Color(0.25f, 0.45f, 0.65f, 1f));
+		private void UpdateGridLines() => gridLines.SetActive(gridLinesEnabled);
 
 		public override void Update()
 		{
@@ -548,9 +488,9 @@ namespace ClassicTilestorm
 		public override void OnDestroy()
 		{
 			base.OnDestroy();
-			if (gridLinesObject != null)
+			if (gridLines != null)
 			{
-				Object.Destroy(gridLinesObject);
+				Object.Destroy(gridLines);
 			}
 			GeometryUtil.DestroyGhostTile();
 
