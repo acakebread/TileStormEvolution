@@ -18,11 +18,11 @@ class GitGraphApp:
         self.repo_path = None
         self.activity = {}
         self.start_date = datetime.now().date() - timedelta(days=365)  # Default 365 days ago
-        self.end_date = datetime.now().date()  # October 21, 2025, 6:44 PM BST
+        self.end_date = datetime.now().date()  # October 21, 2025, 6:57 PM BST
         self.email = None
         
         self.setup_ui()
-        self.load_repo()
+        self.load_repo()  # Set repo path, delay graph update
 
     def setup_ui(self):
         # Main frame to handle resizing
@@ -41,7 +41,7 @@ class GitGraphApp:
         self.canvas_frame = ttk.Frame(self.main_frame)
         self.canvas_frame.pack(fill=tk.BOTH, expand=True)
         
-        # Plot setup
+        # Plot setup (initial empty)
         self.fig, (self.ax_bar, self.ax_heat) = plt.subplots(2, 1, figsize=(12, 6), 
                                                             gridspec_kw={'height_ratios': [1, 3]})
         self.canvas = FigureCanvasTkAgg(self.fig, master=self.canvas_frame)
@@ -59,10 +59,15 @@ class GitGraphApp:
             self.repo_path = filedialog.askdirectory(title="Select Git Repository Folder")
         
         if self.repo_path:
-            self.update_graph()
+            # Delay graph update and force focus
+            self.root.after(100, self.update_graph_with_focus)
         else:
             messagebox.showerror("Error", "No valid Git repository selected.")
             self.root.quit()
+
+    def update_graph_with_focus(self):
+        self.update_graph()
+        self.root.focus_force()  # Ensure GUI takes focus
 
     def get_commit_activity(self, email=None, start_date_str=None, end_date_str=None, max_days=365):
         try:
@@ -111,13 +116,12 @@ class GitGraphApp:
             self.fig, (self.ax_bar, self.ax_heat) = plt.subplots(2, 1, figsize=(12, 6), 
                                                                gridspec_kw={'height_ratios': [1, 3]})
             self.canvas.figure = self.fig
-            self.canvas.draw()
             
             self.activity, self.start_date = self.get_commit_activity(self.email, 
                                                                    str(self.start_date)[:10], 
                                                                    str(self.end_date)[:10])
             if not self.activity:
-                messagebox.showwarning("Warning", "No commit data available for the selected range.")
+                messagebox.showinfo("No Data", "No commits found for the selected email/date range. Try a different email or wider dates.")
                 return
             
             repo_name = os.path.basename(self.repo_path.rstrip(os.sep))
@@ -225,7 +229,7 @@ class GitGraphApp:
                 messagebox.showerror("Error", "Start date cannot be after end date.")
                 return
             settings_window.destroy()
-            self.update_graph()
+            self.update_graph_with_focus()
 
         ttk.Button(settings_window, text="Save", command=save_settings).pack(pady=10)
 
