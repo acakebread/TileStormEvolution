@@ -159,6 +159,7 @@ Shader "Unlit/URPWaterOpaque"
                 float fresnelTerm = pow(1.0 - saturate(dot(viewDirWS, reflectionNormal)), _FresnelPower);
                 float reflectionIntensity = fresnelTerm * _ReflectionStrength;
 
+                #if !defined(SHADER_API_GLES) && !defined(SHADER_API_GLES3) // Non-WebGL
                 // Handle depth test for texture sampling
                 if (sampledDepthLinear < fragmentDepthLinear)
                 {
@@ -169,6 +170,7 @@ Shader "Unlit/URPWaterOpaque"
                     color.rgb = lerp(color.rgb, reflectionColor.rgb, reflectionIntensity);
                     return half4(color.rgb, 1);
                 }
+                #endif
 
                 // Sample texture with displaced UVs
                 half4 color = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, displacedUV);
