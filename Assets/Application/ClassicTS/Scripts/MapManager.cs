@@ -24,7 +24,9 @@ namespace ClassicTilestorm
 		int GetEndTile();
 		int FindAdjacentConsole(int nTile);
 		int GetOrAddMapDefIndex(string szType, string szTheme);
-		void SaveChanges(); // Added for saving changes
+		void SaveChanges();
+		int GetTileDefIndexAt(int mapIndex);
+		DatabaseSerializer.MapTileDef[] GetMapDefs(); // Added method
 	}
 
 	public class MapManager : MonoBehaviour, IMapManager
@@ -36,8 +38,6 @@ namespace ClassicTilestorm
 		private DatabaseSerializer.MapTileDef[] mapDefs;
 		private DatabaseSerializer.Map currentMap;
 		private DatabaseSerializer.Waypoint[] waypoints;
-		private int[] pendingTileData; // Temporary storage for tile changes
-		private DatabaseSerializer.MapTileDef[] pendingMapDefs; // Temporary storage for mapDefs
 		public DatabaseSerializer.Waypoint[] Waypoints => waypoints;
 
 		public int[] Indices { get => indices; private set => indices = value; }
@@ -56,8 +56,6 @@ namespace ClassicTilestorm
 			mapDefs = null;
 			waypoints = null;
 			currentMap = null;
-			pendingTileData = null;
-			pendingMapDefs = null;
 		}
 
 		private void Initialise(DatabaseSerializer.Map map)
@@ -68,8 +66,6 @@ namespace ClassicTilestorm
 			Height = map?.tiles.nHeight ?? 0;
 			mapTiles = map?.tiles;
 			mapDefs = map?.defs;
-			pendingTileData = mapTiles?.TileData?.bytes?.ToArray(); // Copy for pending changes
-			pendingMapDefs = mapDefs?.ToArray(); // Copy for pending changes
 
 			void LoadTileData(DatabaseSerializer.Tiles dbTiles)
 			{
@@ -121,10 +117,10 @@ namespace ClassicTilestorm
 				return -1;
 			}
 
-			// Find existing MapTileDef in pendingMapDefs
-			for (int i = 0; i < pendingMapDefs.Length; i++)
+			// Find existing MapTileDef
+			for (int i = 0; i < mapDefs.Length; i++)
 			{
-				if (pendingMapDefs[i].szType == szType && pendingMapDefs[i].szTheme == szTheme)
+				if (mapDefs[i].szType == szType && mapDefs[i].szTheme == szTheme)
 					return i;
 			}
 
@@ -136,12 +132,12 @@ namespace ClassicTilestorm
 				return -1;
 			}
 
-			// Add new MapTileDef to pendingMapDefs
+			// Add new MapTileDef
 			var newDef = new DatabaseSerializer.MapTileDef { szType = szType, szTheme = szTheme };
-			pendingMapDefs = pendingMapDefs.Concat(new[] { newDef }).ToArray();
-			Debug.Log($"Added new MapTileDef: szType={szType}, szTheme={szTheme}, new index={pendingMapDefs.Length - 1}");
+			mapDefs = mapDefs.Concat(new[] { newDef }).ToArray();
+			Debug.Log($"Added new MapTileDef: szType={szType}, szTheme={szTheme}, new index={mapDefs.Length - 1}");
 
-			return pendingMapDefs.Length - 1;
+			return mapDefs.Length - 1;
 		}
 
 		public void UpdateTileAt(int x, int z, int newTileDefIndex)
@@ -152,31 +148,31 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			if (mapTiles == null || pendingTileData == null)
+			if (mapTiles == null || mapTiles.TileData == null)
 			{
-				Debug.LogError("Map tiles or pending tile data is null");
+				Debug.LogError("Map tiles or tile data is null");
 				return;
 			}
 
 			int index = z * Width + x;
-			if (index >= pendingTileData.Length)
+			if (index >= mapTiles.TileData.bytes.Length)
 			{
-				Debug.LogError($"Calculated index {index} is out of bounds for tile data array (length={pendingTileData.Length})");
+				Debug.LogError($"Calculated index {index} is out of bounds for tile data array (length={mapTiles.TileData.bytes.Length})");
 				return;
 			}
 
-			if (newTileDefIndex < 0 || newTileDefIndex >= pendingMapDefs.Length)
+			if (newTileDefIndex < 0 || newTileDefIndex >= mapDefs.Length)
 			{
-				Debug.LogError($"Invalid newTileDefIndex={newTileDefIndex}, must be between 0 and {pendingMapDefs.Length - 1}");
+				Debug.LogError($"Invalid newTileDefIndex={newTileDefIndex}, must be between 0 and {mapDefs.Length - 1}");
 				return;
 			}
 
-			// Update pending tile data
-			pendingTileData[index] = newTileDefIndex;
+			// Update tile data immediately
+			mapTiles.TileData.bytes[index] = newTileDefIndex;
 
 			// Update the tile at the specified index
-			var szType = pendingMapDefs[newTileDefIndex].szType;
-			var szTheme = pendingMapDefs[newTileDefIndex].szTheme;
+			var szType = mapDefs[newTileDefIndex].szType;
+			var szTheme = mapDefs[newTileDefIndex].szTheme;
 			if (string.IsNullOrEmpty(szType)) Debug.LogWarning($"Null szType at tileDefIndex {newTileDefIndex}");
 			if (string.IsNullOrEmpty(szTheme)) Debug.LogWarning($"Null szTheme at tileDefIndex {newTileDefIndex}");
 
@@ -197,17 +193,11 @@ namespace ClassicTilestorm
 
 		public void SaveChanges()
 		{
-			if (currentMap == null || pendingTileData == null || pendingMapDefs == null)
+			if (currentMap == null)
 			{
-				Debug.LogError("Cannot save changes: map or pending data is null");
+				Debug.LogError("Cannot save changes: map is null");
 				return;
 			}
-
-			// Update currentMap with pending changes
-			mapTiles.TileData.bytes = pendingTileData.ToArray();
-			mapDefs = pendingMapDefs.ToArray();
-			currentMap.tiles = mapTiles;
-			currentMap.defs = mapDefs;
 
 			// Save to DatabaseSerializer
 			DatabaseSerializer.SaveDatabase(new DatabaseSerializer.DatabaseData
@@ -218,7 +208,22 @@ namespace ClassicTilestorm
 				buttons = DatabaseSerializer.Buttons.ToArray(),
 				texture_set = DatabaseSerializer.TextureSets.ToArray()
 			});
-			Debug.Log("Database updated with pending mapDefs and TileData");
+			Debug.Log("Database saved to disk");
+		}
+
+		public int GetTileDefIndexAt(int mapIndex)
+		{
+			if (mapIndex < 0 || mapIndex >= mapTiles.TileData.bytes.Length)
+			{
+				Debug.LogWarning($"Invalid mapIndex={mapIndex}, must be between 0 and {mapTiles.TileData.bytes.Length - 1}");
+				return -1;
+			}
+			return mapTiles.TileData.bytes[mapIndex];
+		}
+
+		public DatabaseSerializer.MapTileDef[] GetMapDefs()
+		{
+			return mapDefs;
 		}
 
 		public void SetupWaypoints(DatabaseSerializer.Map map)
@@ -363,7 +368,7 @@ namespace ClassicTilestorm
 				gameObject.transform.position = position;
 				position -= tile_origin;
 #if DEBUG
-				gameObject.name = $"{gameObject.GetComponent<RTTI>()?.tileDef.szType ?? "Empty"} ({position.x},{position.z})";//this is for debug in editor only - do not use RTTI
+				gameObject.name = $"{gameObject.GetComponent<RTTI>()?.tileDef.szType ?? "Empty"} ({position.x},{position.z})";
 #endif
 			}
 		}

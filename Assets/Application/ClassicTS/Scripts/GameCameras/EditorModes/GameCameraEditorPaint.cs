@@ -23,15 +23,7 @@ namespace ClassicTilestorm
 		{
 			base.Update();
 			if (!camera || !mapManager) return;
-
-			// Check if a GUI control is active
-			bool isGuiControlActive = GUIUtility.hotControl != 0;
-
-			// Handle mouse button down
-			if (Input.GetMouseButtonDown(0) && !EventSystem.current.IsPointerOverGameObject() && !isGuiControlActive)
-			{
-				PlaceTileAtMousePosition();
-			}
+			// Removed tile placement logic from Update to prevent double placement
 		}
 
 		public void PlaceTileAtMousePosition()

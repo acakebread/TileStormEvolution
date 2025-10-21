@@ -28,11 +28,12 @@ namespace ClassicTilestorm
 		private float animationStartTime; // Time when animation started
 		private readonly float animationDuration = 0.3f; // Duration for width animation
 		private Vector3 mouseDownPos; // Mouse position on RMB down for delete
+		private Vector3 mouseDownPosLMB; // Mouse position on LMB down for placement
+		private int mouseDownMapIndex = -1; // Map index on LMB down
 		private int lastClickedMapIndex = -1; // Last clicked tile index for cycling
 		private List<int> tileDefCycleList; // List of TileDef indices for cycling
 		private int cycleIndex = 0; // Current position in cycle list
 		private GameObject gridLines;
-		private LineRenderer gridLineRenderer; // LineRenderer for grid lines
 		private bool gridLinesEnabled = true; // Toggle for grid lines
 		private static Texture2D panelBackgroundTexture; // Static texture for tile selector
 		private static Texture2D saveBackgroundTexture; // Static texture for save button
@@ -82,33 +83,30 @@ namespace ClassicTilestorm
 
 			// Initialize static textures (4x4 for better scaling)
 			if (panelBackgroundTexture == null)
-			{
 				panelBackgroundTexture = TextureUtils.MakeTex(4, 4, new Color(0.2f, 0.2f, 0.4f, 0.75f));
-			}
+
 			if (saveBackgroundTexture == null)
-			{
 				saveBackgroundTexture = TextureUtils.MakeTex(4, 4, new Color(0.8f, 0.2f, 0.2f, 1f));
-			}
+
 			if (gridButtonBackgroundTexture == null)
-			{
 				gridButtonBackgroundTexture = TextureUtils.MakeTex(4, 4, new Color(0.5f, 0.5f, 0.5f, 1f));
-			}
+
 			if (toggleOffBackgroundTexture == null)
-			{
 				toggleOffBackgroundTexture = TextureUtils.MakeTex(4, 4, new Color(0.3f, 0.3f, 0.3f, 1f)); // Dark gray for off
-			}
+
 			if (toggleOnBackgroundTexture == null)
-			{
 				toggleOnBackgroundTexture = TextureUtils.MakeTex(4, 4, new Color(0.3f, 0.6f, 0.3f, 1f)); // Greenish for on
-			}
+
 			if (toggleHoverBackgroundTexture == null)
-			{
 				toggleHoverBackgroundTexture = TextureUtils.MakeTex(4, 4, new Color(0.4f, 0.4f, 0.4f, 1f)); // Lighter gray for hover
-			}
 		}
 
-		private void InitializeGridLines() => gridLines = GridLinesHelper.CreateGridLines(mapManager.transform, mapManager.Width, mapManager.Height, gridLinesEnabled);//, color: new Color(0.25f, 0.45f, 0.65f, 1f));
-		private void UpdateGridLines() => gridLines.SetActive(gridLinesEnabled);
+		private void InitializeGridLines() => gridLines = GridLinesHelper.CreateGridLines(mapManager.transform, mapManager.Width, mapManager.Height, gridLinesEnabled);
+		private void UpdateGridLines()
+		{
+			if (null == gridLines) InitializeGridLines();
+			gridLines.SetActive(gridLinesEnabled);
+		}
 
 		public override void Update()
 		{
@@ -116,9 +114,7 @@ namespace ClassicTilestorm
 
 			// Workaround: Reset hotControl on mouse release to handle drag outside GUI
 			if (Input.GetMouseButtonUp(0) && GUIUtility.hotControl != 0)
-			{
 				GUIUtility.hotControl = 0;
-			}
 
 			if (activeMode != null)
 				activeMode.Update();
@@ -199,7 +195,7 @@ namespace ClassicTilestorm
 			UpdateGridLines();
 		}
 
-		private void UpdateTileCycleList(string baseTileType, string currentTileType)
+		private void UpdateTileCycleList(string currentTileType)
 		{
 			// Define suffix groups
 			var singleDirections = new[] { " n", " e", " s", " w" };
@@ -207,29 +203,33 @@ namespace ClassicTilestorm
 			var doubleDiagonal = new[] { " ne", " nw", " se", " sw" };
 			string[] selectedGroup = null;
 
+			// Determine the base tile type by removing the suffix from currentTileType
+			string derivedBaseTileType = currentTileType;
+			foreach (var suffix in singleDirections.Concat(doubleLinear).Concat(doubleDiagonal))
+			{
+				if (currentTileType.EndsWith(suffix))
+				{
+					derivedBaseTileType = currentTileType.Substring(0, currentTileType.Length - suffix.Length);
+					break;
+				}
+			}
+
 			// Determine the group based on the current tile's suffix
-			if (currentTileType == baseTileType)
-			{
-				selectedGroup = singleDirections; // Default to single directions for base tile
-			}
+			if (singleDirections.Any(suffix => currentTileType.EndsWith(suffix)))
+				selectedGroup = singleDirections;
+			else if (doubleLinear.Any(suffix => currentTileType.EndsWith(suffix)))
+				selectedGroup = doubleLinear;
+			else if (doubleDiagonal.Any(suffix => currentTileType.EndsWith(suffix)))
+				selectedGroup = doubleDiagonal;
 			else
-			{
-				if (singleDirections.Any(suffix => currentTileType.EndsWith(suffix)))
-					selectedGroup = singleDirections;
-				else if (doubleLinear.Any(suffix => currentTileType.EndsWith(suffix)))
-					selectedGroup = doubleLinear;
-				else if (doubleDiagonal.Any(suffix => currentTileType.EndsWith(suffix)))
-					selectedGroup = doubleDiagonal;
-				else
-					selectedGroup = singleDirections; // Fallback
-			}
+				selectedGroup = singleDirections; // Fallback to single directions if no suffix or base tile
 
 			tileDefCycleList = new List<int>();
 
 			// Include base tile if it exists
 			for (int i = 0; i < DatabaseSerializer.TileDefs.Count; i++)
 			{
-				if (DatabaseSerializer.TileDefs[i].szType == baseTileType)
+				if (DatabaseSerializer.TileDefs[i].szType == derivedBaseTileType)
 				{
 					tileDefCycleList.Add(i);
 					break;
@@ -241,7 +241,7 @@ namespace ClassicTilestorm
 			{
 				for (int i = 0; i < DatabaseSerializer.TileDefs.Count; i++)
 				{
-					if (DatabaseSerializer.TileDefs[i].szType == baseTileType + suffix)
+					if (DatabaseSerializer.TileDefs[i].szType == derivedBaseTileType + suffix)
 					{
 						tileDefCycleList.Add(i);
 						break;
@@ -260,13 +260,9 @@ namespace ClassicTilestorm
 			float margin = 10;
 			float spacing = 10;
 
-			// Hardcode panelBottomY to start at top-left for testing
 			float panelBottomY = 0f; // Start at top of screen
 			if (placeholderUI != null)
-			{
 				panelBottomY = placeholderUI.GetPanelBottomY();
-				//Debug.Log($"PlaceholderUI panelBottomY: {panelBottomY}");
-			}
 
 			// Mode toggle buttons, Save button, and Grid toggle stacked on the left
 			Rect dragButtonRect = new Rect(margin, panelBottomY + spacing, buttonWidth, buttonHeight);
@@ -278,14 +274,8 @@ namespace ClassicTilestorm
 			GUIManager.RegisterGuiRect(saveButtonRect);
 			GUIManager.RegisterGuiRect(gridToggleRect);
 
-			// Detailed debug logs
 			Vector2 mousePos = Input.mousePosition;
 			mousePos.y = Screen.height - mousePos.y; // Convert to GUI coordinates
-			//Debug.Log($"Drag Rect: {dragButtonRect}, Contains Mouse: {dragButtonRect.Contains(mousePos)}");
-			//Debug.Log($"Paint Rect: {paintButtonRect}, Contains Mouse: {paintButtonRect.Contains(mousePos)}");
-			//Debug.Log($"Save Rect: {saveButtonRect}, Contains Mouse: {saveButtonRect.Contains(mousePos)}");
-			//Debug.Log($"Grid Rect: {gridToggleRect}, Contains Mouse: {gridToggleRect.Contains(mousePos)}");
-			//Debug.Log($"Mouse: {Input.mousePosition}, GUI Mouse: {mousePos}, Over GUI: {GUIManager.IsMouseOverGui()}, Over GameObject: {EventSystem.current.IsPointerOverGameObject()}");
 
 			// Toggle style for Drag and Paint
 			GUIStyle toggleStyle = new GUIStyle(GUI.skin.toggle);
@@ -301,13 +291,9 @@ namespace ClassicTilestorm
 			toggleStyle.fixedWidth = buttonWidth;
 			toggleStyle.fixedHeight = buttonHeight;
 
-			// Drag toggle button
 			bool dragToggled = GUI.Toggle(dragButtonRect, currentMode == EditorMode.Drag, "Drag", toggleStyle);
-
-			// Paint toggle button
 			bool paintToggled = GUI.Toggle(paintButtonRect, currentMode == EditorMode.Paint, "Paint", toggleStyle);
 
-			// Save button (red)
 			GUIStyle saveButtonStyle = new GUIStyle(GUI.skin.button);
 			saveButtonStyle.normal.background = saveBackgroundTexture;
 			saveButtonStyle.padding = new RectOffset(10, 10, 5, 5);
@@ -316,11 +302,8 @@ namespace ClassicTilestorm
 			saveButtonStyle.fixedWidth = buttonWidth;
 			saveButtonStyle.fixedHeight = buttonHeight;
 			if (GUI.Button(saveButtonRect, "Save", saveButtonStyle))
-			{
 				mapManager.SaveChanges();
-			}
 
-			// Grid toggle button (gray)
 			GUIStyle gridButtonStyle = new GUIStyle(GUI.skin.button);
 			gridButtonStyle.normal.background = gridButtonBackgroundTexture;
 			gridButtonStyle.padding = new RectOffset(10, 10, 5, 5);
@@ -335,7 +318,6 @@ namespace ClassicTilestorm
 				UpdateGridLines();
 			}
 
-			// Ensure radio button behavior
 			if (dragToggled && currentMode != EditorMode.Drag)
 			{
 				Debug.Log("Drag Mode Selected");
@@ -355,14 +337,13 @@ namespace ClassicTilestorm
 				lastClickedMapIndex = -1; // Reset cycle
 			}
 
-			// Tile selector (visible only in Paint mode)
 			if (currentMode == EditorMode.Paint)
 			{
 				// Calculate mouse position in GUI coordinates
 				Vector2 tileSelectorMousePos = Input.mousePosition;
-				tileSelectorMousePos.y = Screen.height - tileSelectorMousePos.y; // Convert to GUI coordinates
+				tileSelectorMousePos.y = Screen.height - tileSelectorMousePos.y;
 
-				// Update tile selector width before defining rects
+				// Update tile selector width
 				bool wasMouseOverTileSelector = isMouseOverTileSelector;
 				float tileSelectorX = Screen.width - tileSelectorWidth - margin;
 				float tileSelectorY = panelBottomY + spacing;
@@ -370,44 +351,39 @@ namespace ClassicTilestorm
 				Rect tileSelectorRect = new Rect(tileSelectorX, tileSelectorY, tileSelectorWidth, tileSelectorHeight);
 				isMouseOverTileSelector = tileSelectorRect.Contains(tileSelectorMousePos);
 
-				// Handle auto-expand and auto-hide
 				if (isMouseOverTileSelector)
 				{
 					if (targetWidth != fullWidth)
 					{
-						targetWidth = fullWidth; // Expand when mouse is over
+						targetWidth = fullWidth;
 						animationStartTime = Time.time;
 					}
-					mouseExitTime = 0f; // Reset timer
+					mouseExitTime = 0f;
 				}
 				else
 				{
 					if (wasMouseOverTileSelector)
 					{
-						mouseExitTime = Time.time; // Start timer when mouse exits
+						mouseExitTime = Time.time;
 					}
 					if (mouseExitTime > 0f && Time.time - mouseExitTime >= autoHideDelay && targetWidth != collapsedWidth)
 					{
-						targetWidth = collapsedWidth; // Collapse after 1 second
+						targetWidth = collapsedWidth;
 						animationStartTime = Time.time;
 					}
 				}
 
-				// Animate tile selector width
 				float t = Mathf.Clamp01((Time.time - animationStartTime) / animationDuration);
 				tileSelectorWidth = Mathf.Lerp(tileSelectorWidth, targetWidth, t);
 
-				// Redefine rects with updated width
 				tileSelectorX = Screen.width - tileSelectorWidth - margin;
 				tileSelectorRect = new Rect(tileSelectorX, tileSelectorY, tileSelectorWidth, tileSelectorHeight);
 				GUIManager.RegisterGuiRect(tileSelectorRect);
 
-				// Draw tile selector background
 				GUIStyle panelStyle = new GUIStyle(GUI.skin.box);
 				panelStyle.normal.background = panelBackgroundTexture;
 				GUI.Box(tileSelectorRect, "Tile Selector", panelStyle);
 
-				// Scroll view for tiles
 				Rect scrollViewRect = new Rect(tileSelectorX + 10, tileSelectorY + 30, tileSelectorWidth - 20, tileSelectorHeight - 40);
 				GUIManager.RegisterGuiRect(scrollViewRect);
 				scrollPosition = GUI.BeginScrollView(
@@ -422,7 +398,6 @@ namespace ClassicTilestorm
 					string displayName = $"{tileDef.szType} ({tileDef.szTheme})";
 					Rect buttonRect = new Rect(0, i * 40, tileSelectorWidth - 40, 35);
 
-					// Green highlight for selected tile
 					if (i == tempSelectedTileDefGlobalIndex)
 					{
 						GUI.color = Color.green;
@@ -435,11 +410,9 @@ namespace ClassicTilestorm
 						if (selectedMapDefIndex >= 0)
 						{
 							paintMode.SetTileDefIndex(selectedMapDefIndex);
-							// Update tile cycle list based on the selected tile's group
-							UpdateTileCycleList(selectedTileDef.szType, selectedTileDef.szType);
+							UpdateTileCycleList(selectedTileDef.szType);
 							cycleIndex = tileDefCycleList.IndexOf(i);
-							if (cycleIndex < 0) cycleIndex = 0; // Fallback to start
-																// Update ghost tile
+							if (cycleIndex < 0) cycleIndex = 0;
 							GeometryUtil.DestroyGhostTile();
 							GeometryUtil.UpdateGhostTile(camera, mapManager, selectedTileDef);
 							lastClickedMapIndex = -1; // Reset cycle
@@ -450,7 +423,24 @@ namespace ClassicTilestorm
 
 				GUI.EndScrollView();
 
-				// Handle tile placement and cycling (LMB)
+				// Track mouse down for LMB to verify same grid cell
+				if (!isMouseOverTileSelector && !EventSystem.current.IsPointerOverGameObject() && Input.GetMouseButtonDown(0))
+				{
+					mouseDownPosLMB = Input.mousePosition;
+					Ray ray = camera.ScreenPointToRay(mouseDownPosLMB);
+					Plane plane = new Plane(Vector3.up, Vector3.zero);
+					if (plane.Raycast(ray, out float enter))
+					{
+						Vector3 worldPos = ray.GetPoint(enter);
+						mouseDownMapIndex = mapManager.WorldToMapIndex(worldPos);
+					}
+					else
+					{
+						mouseDownMapIndex = -1;
+					}
+				}
+
+				// Handle tile placement and cycling on mouse up (LMB)
 				if (!isMouseOverTileSelector && !EventSystem.current.IsPointerOverGameObject() && Input.GetMouseButtonUp(0))
 				{
 					Ray ray = camera.ScreenPointToRay(Input.mousePosition);
@@ -459,28 +449,53 @@ namespace ClassicTilestorm
 					{
 						Vector3 worldPos = ray.GetPoint(enter);
 						int mapIndex = mapManager.WorldToMapIndex(worldPos);
-						if (mapIndex >= 0 && mapIndex < mapManager.Count)
+						if (mapIndex >= 0 && mapIndex < mapManager.Count && mapIndex == mouseDownMapIndex)
 						{
-							if (mapIndex == lastClickedMapIndex && tileDefCycleList != null && tileDefCycleList.Count > 1)
+							// Get the current tile's MapTileDef index at the clicked position
+							int currentMapDefIndex = mapManager.GetTileDefIndexAt(mapIndex);
+							var selectedTileDef = DatabaseSerializer.TileDefs[tempSelectedTileDefGlobalIndex];
+							int selectedTileDefIndex = mapManager.GetOrAddMapDefIndex(selectedTileDef.szType, selectedTileDef.szTheme);
+
+							// Compare szType and szTheme of the current and selected tiles
+							bool tilesMatch = false;
+							var mapDefs = mapManager.GetMapDefs();
+							if (currentMapDefIndex >= 0 && currentMapDefIndex < mapDefs.Length)
 							{
-								// Cycle to next tile in the group
-								cycleIndex = (cycleIndex + 1) % tileDefCycleList.Count;
-								tempSelectedTileDefGlobalIndex = tileDefCycleList[cycleIndex];
-								var newTileDef = DatabaseSerializer.TileDefs[tempSelectedTileDefGlobalIndex];
-								selectedMapDefIndex = mapManager.GetOrAddMapDefIndex(newTileDef.szType, newTileDef.szTheme);
-								paintMode.SetTileDefIndex(selectedMapDefIndex);
-								GeometryUtil.DestroyGhostTile();
-								GeometryUtil.UpdateGhostTile(camera, mapManager, newTileDef);
+								var currentTileDef = mapDefs[currentMapDefIndex];
+								tilesMatch = currentTileDef.szType == selectedTileDef.szType && currentTileDef.szTheme == selectedTileDef.szTheme;
+							}
+
+							if (tilesMatch)
+							{
+								// Same tile type, cycle to the next in the group
+								if (tileDefCycleList != null && tileDefCycleList.Count > 1)
+								{
+									cycleIndex = (cycleIndex + 1) % tileDefCycleList.Count;
+									tempSelectedTileDefGlobalIndex = tileDefCycleList[cycleIndex];
+									var newTileDef = DatabaseSerializer.TileDefs[tempSelectedTileDefGlobalIndex];
+									selectedMapDefIndex = mapManager.GetOrAddMapDefIndex(newTileDef.szType, newTileDef.szTheme);
+									paintMode.SetTileDefIndex(selectedMapDefIndex);
+									GeometryUtil.DestroyGhostTile();
+									GeometryUtil.UpdateGhostTile(camera, mapManager, newTileDef);
+									paintMode.PlaceTileAtMousePosition();
+									lastClickedMapIndex = mapIndex;
+								}
 							}
 							else
 							{
-								// Place the selected tile (first click or new position)
-								paintMode.SetTileDefIndex(selectedMapDefIndex);
+								// Different tile type, place the selected tile
+								paintMode.SetTileDefIndex(selectedTileDefIndex);
+								paintMode.PlaceTileAtMousePosition();
+								lastClickedMapIndex = mapIndex;
 							}
-							paintMode.PlaceTileAtMousePosition();
-							lastClickedMapIndex = mapIndex;
+						}
+						else
+						{
+							// Different grid cell or invalid position, reset to avoid unintended placement
+							lastClickedMapIndex = -1;
 						}
 					}
+					mouseDownMapIndex = -1; // Reset after mouse up
 				}
 			}
 		}
@@ -489,9 +504,7 @@ namespace ClassicTilestorm
 		{
 			base.OnDestroy();
 			if (gridLines != null)
-			{
 				Object.Destroy(gridLines);
-			}
 			GeometryUtil.DestroyGhostTile();
 
 			// Clean up static textures
