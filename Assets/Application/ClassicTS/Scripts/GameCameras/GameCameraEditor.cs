@@ -34,6 +34,12 @@ namespace ClassicTilestorm
 		private GameObject gridLinesObject; // GameObject for LineRenderer grid
 		private LineRenderer gridLineRenderer; // LineRenderer for grid lines
 		private bool gridLinesEnabled = true; // Toggle for grid lines
+		private static Texture2D panelBackgroundTexture; // Static texture for tile selector
+		private static Texture2D saveBackgroundTexture; // Static texture for save button
+		private static Texture2D gridButtonBackgroundTexture; // Static texture for grid toggle button
+		private static Texture2D toggleOffBackgroundTexture; // Static texture for toggle off state
+		private static Texture2D toggleOnBackgroundTexture; // Static texture for toggle on state
+		private static Texture2D toggleHoverBackgroundTexture; // Static texture for toggle hover state
 
 		public GameCameraEditor(Camera camera) : base(camera) { }
 
@@ -73,6 +79,32 @@ namespace ClassicTilestorm
 
 			// Initialize grid lines
 			InitializeGridLines();
+
+			// Initialize static textures (4x4 for better scaling)
+			if (panelBackgroundTexture == null)
+			{
+				panelBackgroundTexture = TextureUtils.MakeTex(4, 4, new Color(0.2f, 0.2f, 0.4f, 0.75f));
+			}
+			if (saveBackgroundTexture == null)
+			{
+				saveBackgroundTexture = TextureUtils.MakeTex(4, 4, new Color(0.8f, 0.2f, 0.2f, 1f));
+			}
+			if (gridButtonBackgroundTexture == null)
+			{
+				gridButtonBackgroundTexture = TextureUtils.MakeTex(4, 4, new Color(0.5f, 0.5f, 0.5f, 1f));
+			}
+			if (toggleOffBackgroundTexture == null)
+			{
+				toggleOffBackgroundTexture = TextureUtils.MakeTex(4, 4, new Color(0.3f, 0.3f, 0.3f, 1f)); // Dark gray for off
+			}
+			if (toggleOnBackgroundTexture == null)
+			{
+				toggleOnBackgroundTexture = TextureUtils.MakeTex(4, 4, new Color(0.3f, 0.6f, 0.3f, 1f)); // Greenish for on
+			}
+			if (toggleHoverBackgroundTexture == null)
+			{
+				toggleHoverBackgroundTexture = TextureUtils.MakeTex(4, 4, new Color(0.4f, 0.4f, 0.4f, 1f)); // Lighter gray for hover
+			}
 		}
 
 		private void InitializeGridLines()
@@ -286,8 +318,13 @@ namespace ClassicTilestorm
 			float margin = 10;
 			float spacing = 10;
 
-			// Get PlaceholderUI panel bottom Y for stacking buttons
-			float panelBottomY = placeholderUI != null ? placeholderUI.GetPanelBottomY() : buttonHeight + margin;
+			// Hardcode panelBottomY to start at top-left for testing
+			float panelBottomY = 0f; // Start at top of screen
+			if (placeholderUI != null)
+			{
+				panelBottomY = placeholderUI.GetPanelBottomY();
+				//Debug.Log($"PlaceholderUI panelBottomY: {panelBottomY}");
+			}
 
 			// Mode toggle buttons, Save button, and Grid toggle stacked on the left
 			Rect dragButtonRect = new Rect(margin, panelBottomY + spacing, buttonWidth, buttonHeight);
@@ -299,20 +336,59 @@ namespace ClassicTilestorm
 			GUIManager.RegisterGuiRect(saveButtonRect);
 			GUIManager.RegisterGuiRect(gridToggleRect);
 
-			bool dragToggled = GUI.Toggle(dragButtonRect, currentMode == EditorMode.Drag, "Drag", "Button");
-			bool paintToggled = GUI.Toggle(paintButtonRect, currentMode == EditorMode.Paint, "Paint", "Button");
+			// Detailed debug logs
+			Vector2 mousePos = Input.mousePosition;
+			mousePos.y = Screen.height - mousePos.y; // Convert to GUI coordinates
+			//Debug.Log($"Drag Rect: {dragButtonRect}, Contains Mouse: {dragButtonRect.Contains(mousePos)}");
+			//Debug.Log($"Paint Rect: {paintButtonRect}, Contains Mouse: {paintButtonRect.Contains(mousePos)}");
+			//Debug.Log($"Save Rect: {saveButtonRect}, Contains Mouse: {saveButtonRect.Contains(mousePos)}");
+			//Debug.Log($"Grid Rect: {gridToggleRect}, Contains Mouse: {gridToggleRect.Contains(mousePos)}");
+			//Debug.Log($"Mouse: {Input.mousePosition}, GUI Mouse: {mousePos}, Over GUI: {GUIManager.IsMouseOverGui()}, Over GameObject: {EventSystem.current.IsPointerOverGameObject()}");
+
+			// Toggle style for Drag and Paint
+			GUIStyle toggleStyle = new GUIStyle(GUI.skin.toggle);
+			toggleStyle.normal.background = toggleOffBackgroundTexture;
+			toggleStyle.onNormal.background = toggleOnBackgroundTexture;
+			toggleStyle.hover.background = toggleHoverBackgroundTexture;
+			toggleStyle.onHover.background = toggleHoverBackgroundTexture;
+			toggleStyle.active.background = toggleOnBackgroundTexture;
+			toggleStyle.onActive.background = toggleOnBackgroundTexture;
+			toggleStyle.padding = new RectOffset(10, 10, 5, 5);
+			toggleStyle.fontSize = 14;
+			toggleStyle.alignment = TextAnchor.MiddleCenter;
+			toggleStyle.fixedWidth = buttonWidth;
+			toggleStyle.fixedHeight = buttonHeight;
+
+			// Drag toggle button
+			bool dragToggled = GUI.Toggle(dragButtonRect, currentMode == EditorMode.Drag, "Drag", toggleStyle);
+
+			// Paint toggle button
+			bool paintToggled = GUI.Toggle(paintButtonRect, currentMode == EditorMode.Paint, "Paint", toggleStyle);
 
 			// Save button (red)
 			GUIStyle saveButtonStyle = new GUIStyle(GUI.skin.button);
-			saveButtonStyle.normal.background = TextureUtils.MakeTex(1, 1, new Color(0.8f, 0.2f, 0.2f)); // Red background
+			saveButtonStyle.normal.background = saveBackgroundTexture;
+			saveButtonStyle.padding = new RectOffset(10, 10, 5, 5);
+			saveButtonStyle.fontSize = 14;
+			saveButtonStyle.alignment = TextAnchor.MiddleCenter;
+			saveButtonStyle.fixedWidth = buttonWidth;
+			saveButtonStyle.fixedHeight = buttonHeight;
 			if (GUI.Button(saveButtonRect, "Save", saveButtonStyle))
 			{
 				mapManager.SaveChanges();
 			}
 
-			// Grid toggle button
-			if (GUI.Button(gridToggleRect, gridLinesEnabled ? "Hide Grid" : "Show Grid"))
+			// Grid toggle button (gray)
+			GUIStyle gridButtonStyle = new GUIStyle(GUI.skin.button);
+			gridButtonStyle.normal.background = gridButtonBackgroundTexture;
+			gridButtonStyle.padding = new RectOffset(10, 10, 5, 5);
+			gridButtonStyle.fontSize = 14;
+			gridButtonStyle.alignment = TextAnchor.MiddleCenter;
+			gridButtonStyle.fixedWidth = buttonWidth;
+			gridButtonStyle.fixedHeight = buttonHeight;
+			if (GUI.Button(gridToggleRect, gridLinesEnabled ? "Hide Grid" : "Show Grid", gridButtonStyle))
 			{
+				Debug.Log("Grid Toggle Clicked!");
 				gridLinesEnabled = !gridLinesEnabled;
 				UpdateGridLines();
 			}
@@ -320,6 +396,7 @@ namespace ClassicTilestorm
 			// Ensure radio button behavior
 			if (dragToggled && currentMode != EditorMode.Drag)
 			{
+				Debug.Log("Drag Mode Selected");
 				currentMode = EditorMode.Drag;
 				activeMode = dragMode;
 				GeometryUtil.HideGhostTile();
@@ -327,6 +404,7 @@ namespace ClassicTilestorm
 			}
 			else if (paintToggled && currentMode != EditorMode.Paint)
 			{
+				Debug.Log("Paint Mode Selected");
 				currentMode = EditorMode.Paint;
 				activeMode = paintMode;
 				targetWidth = collapsedWidth; // Start collapsed
@@ -339,8 +417,8 @@ namespace ClassicTilestorm
 			if (currentMode == EditorMode.Paint)
 			{
 				// Calculate mouse position in GUI coordinates
-				Vector2 mousePos = Input.mousePosition;
-				mousePos.y = Screen.height - mousePos.y; // Convert to GUI coordinates
+				Vector2 tileSelectorMousePos = Input.mousePosition;
+				tileSelectorMousePos.y = Screen.height - tileSelectorMousePos.y; // Convert to GUI coordinates
 
 				// Update tile selector width before defining rects
 				bool wasMouseOverTileSelector = isMouseOverTileSelector;
@@ -348,7 +426,7 @@ namespace ClassicTilestorm
 				float tileSelectorY = panelBottomY + spacing;
 				float tileSelectorHeight = Screen.height - tileSelectorY - margin;
 				Rect tileSelectorRect = new Rect(tileSelectorX, tileSelectorY, tileSelectorWidth, tileSelectorHeight);
-				isMouseOverTileSelector = tileSelectorRect.Contains(mousePos);
+				isMouseOverTileSelector = tileSelectorRect.Contains(tileSelectorMousePos);
 
 				// Handle auto-expand and auto-hide
 				if (isMouseOverTileSelector)
@@ -382,9 +460,9 @@ namespace ClassicTilestorm
 				tileSelectorRect = new Rect(tileSelectorX, tileSelectorY, tileSelectorWidth, tileSelectorHeight);
 				GUIManager.RegisterGuiRect(tileSelectorRect);
 
-				// Draw background
+				// Draw tile selector background
 				GUIStyle panelStyle = new GUIStyle(GUI.skin.box);
-				panelStyle.normal.background = TextureUtils.MakeTex(1, 1, new Color(0.2f, 0.2f, 0.4f, 0.75f));
+				panelStyle.normal.background = panelBackgroundTexture;
 				GUI.Box(tileSelectorRect, "Tile Selector", panelStyle);
 
 				// Scroll view for tiles
@@ -473,6 +551,38 @@ namespace ClassicTilestorm
 				Object.Destroy(gridLinesObject);
 			}
 			GeometryUtil.DestroyGhostTile();
+
+			// Clean up static textures
+			if (panelBackgroundTexture != null)
+			{
+				Object.Destroy(panelBackgroundTexture);
+				panelBackgroundTexture = null;
+			}
+			if (saveBackgroundTexture != null)
+			{
+				Object.Destroy(saveBackgroundTexture);
+				saveBackgroundTexture = null;
+			}
+			if (gridButtonBackgroundTexture != null)
+			{
+				Object.Destroy(gridButtonBackgroundTexture);
+				gridButtonBackgroundTexture = null;
+			}
+			if (toggleOffBackgroundTexture != null)
+			{
+				Object.Destroy(toggleOffBackgroundTexture);
+				toggleOffBackgroundTexture = null;
+			}
+			if (toggleOnBackgroundTexture != null)
+			{
+				Object.Destroy(toggleOnBackgroundTexture);
+				toggleOnBackgroundTexture = null;
+			}
+			if (toggleHoverBackgroundTexture != null)
+			{
+				Object.Destroy(toggleHoverBackgroundTexture);
+				toggleHoverBackgroundTexture = null;
+			}
 		}
 	}
 }

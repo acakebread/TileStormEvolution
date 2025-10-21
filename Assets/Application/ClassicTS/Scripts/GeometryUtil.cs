@@ -42,14 +42,20 @@ namespace ClassicTilestorm
 				Vector3 snappedPos = mapManager.TileWorldPosition(mapIndex);
 
 				// Create or update ghost tile
-				if (ghostTile == null || ghostTile.GetComponent<RTTI>()?.tileDef != tileDef)
+				if (ghostTile == null)// || ghostTile.GetComponent<RTTI>()?.tileDef != tileDef)// do not use RTTI - it's debug only || ghostTile.GetComponent<RTTI>()?.tileDef != tileDef)
 				{
-					if (ghostTile != null)
-						Object.Destroy(ghostTile);
+					//if (ghostTile != null)
+					//	Object.Destroy(ghostTile);
 
 					ghostTile = GeometryManager.InstantiateTile(tileDef, mapManager.transform, snappedPos, false);
 					if (ghostTile != null)
 					{
+						// Remove TextureSetAnimator
+						foreach (var iter in ghostTile.GetComponentsInChildren<TextureSetAnimator>())
+						{
+							iter.enabled = false;
+							//Object.Destroy(iter);
+						}                       
 						// Apply ghost material to all renderers
 						foreach (var renderer in ghostTile.GetComponentsInChildren<MeshRenderer>())
 						{
@@ -60,6 +66,12 @@ namespace ClassicTilestorm
 						{
 							Object.Destroy(collider);
 						}
+						// Remove MorphGeomSway
+						foreach (var iter in ghostTile.GetComponentsInChildren<MorphGeomSway>())
+						{
+							Object.Destroy(iter);
+						}
+
 						ghostTile.name = "GhostTile";
 					}
 				}

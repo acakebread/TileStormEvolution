@@ -1,4 +1,3 @@
-using System.Linq;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
@@ -51,7 +50,7 @@ namespace ClassicTilestorm
 			int z = mapIndex / mapManager.Width;
 
 			mapManager.UpdateTileAt(x, z, selectedTileDefIndex);
-			Debug.Log($"Placed tile at ({x}, {z}) with tileDefIndex={selectedTileDefIndex}");
+			//Debug.Log($"Placed tile at ({x}, {z}) with tileDefIndex={selectedTileDefIndex}");
 		}
 	}
 }
