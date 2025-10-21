@@ -122,6 +122,8 @@ namespace ClassicTilestorm
 			int height = mapManager.Height;
 			float offset = 0f; // Adjust to 0 if tiles are at integer coords, 0.5 if centered
 
+			var grid_material = MaterialUtils.CreateOpaqueUnlitMaterial(new Color(0.25f, 0.45f, 0.65f, 1f));
+
 			// Create vertical lines (along X)
 			for (int x = 0; x <= width; x++)
 			{
@@ -129,7 +131,7 @@ namespace ClassicTilestorm
 				var lineObj = new GameObject($"VerticalLine_{x}");
 				lineObj.transform.SetParent(gridLinesObject.transform, false);
 				var lr = lineObj.AddComponent<LineRenderer>();
-				lr.material = MaterialUtils.CreateOpaqueUnlitMaterial(new Color(0.25f, 0.45f, 0.65f, 1f));
+				lr.material = grid_material;
 				lr.startWidth = 0.02f;
 				lr.endWidth = 0.02f;
 				lr.useWorldSpace = true;
@@ -146,7 +148,7 @@ namespace ClassicTilestorm
 				var lineObj = new GameObject($"HorizontalLine_{z}");
 				lineObj.transform.SetParent(gridLinesObject.transform, false);
 				var lr = lineObj.AddComponent<LineRenderer>();
-				lr.material = MaterialUtils.CreateOpaqueUnlitMaterial(new Color(0.25f, 0.45f, 0.65f, 1f));
+				lr.material = grid_material;
 				lr.startWidth = 0.02f;
 				lr.endWidth = 0.02f;
 				lr.useWorldSpace = true;
