@@ -26,7 +26,7 @@ namespace ClassicTilestorm
 		int GetOrAddMapDefIndex(string szType, string szTheme);
 		void SaveChanges();
 		int GetTileDefIndexAt(int mapIndex);
-		DatabaseSerializer.MapTileDef[] GetMapDefs(); // Added method
+		DatabaseSerializer.MapTileDef[] GetMapDefs();
 	}
 
 	public class MapManager : MonoBehaviour, IMapManager
@@ -199,6 +199,9 @@ namespace ClassicTilestorm
 				return;
 			}
 
+			// Update currentMap.defs with the modified mapDefs before saving
+			currentMap.defs = mapDefs;
+
 			// Save to DatabaseSerializer
 			DatabaseSerializer.SaveDatabase(new DatabaseSerializer.DatabaseData
 			{
@@ -208,7 +211,7 @@ namespace ClassicTilestorm
 				buttons = DatabaseSerializer.Buttons.ToArray(),
 				texture_set = DatabaseSerializer.TextureSets.ToArray()
 			});
-			Debug.Log("Database saved to disk");
+			Debug.Log("Database saved to disk with updated mapDefs");
 		}
 
 		public int GetTileDefIndexAt(int mapIndex)
