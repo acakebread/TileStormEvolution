@@ -55,9 +55,8 @@ def plot_calendar(activity, start_date, repo_name):
         
         data = np.array(counts).reshape(num_weeks, 7).T  # Shape: (7, num_weeks)
         
-        # Weekly totals for bar chart (start after offset)
-        weekly_totals = data.sum(axis=0)[offset//7:]  # Align with heatmap data
-        num_bars = len(weekly_totals)
+        # Weekly totals for bar chart (full span including partial week)
+        weekly_totals = data.sum(axis=0)  # Sum per week, including all weeks
         
         # GitHub-like colors and levels
         colors = ['#ebedf0', '#9be9a8', '#40c463', '#30a14e', '#216e39']
@@ -65,64 +64,51 @@ def plot_calendar(activity, start_date, repo_name):
         bounds = [0, 1, 3, 7, 12, np.max(data) + 1]
         norm = BoundaryNorm(bounds, cmap.N)
         
+        # Compute midpoints for colorbar ticks
+        midpoints = [(bounds[i] + bounds[i+1]) / 2 for i in range(len(bounds)-1)]
+        
         # Two subplots: top bar, bottom heatmap
         fig, (ax_bar, ax_heat) = plt.subplots(2, 1, figsize=(12, 6), gridspec_kw={'height_ratios': [1, 3]})
-        fig.subplots_adjust(left=0.05, right=0.9, top=0.85, bottom=0.15, hspace=0)
+        fig.subplots_adjust(left=0.05, right=0.9, top=0.85, bottom=0.05, hspace=0.25)
         
         # Bar chart (weekly totals)
-        bar_positions = range(num_bars)
+        bar_positions = range(num_weeks)
         ax_bar.bar(bar_positions, weekly_totals, color='skyblue', edgecolor='black', width=1.0)
         ax_bar.set_title(f'Weekly Commit Totals - {repo_name}')
         ax_bar.set_ylabel('Commits')
-        # Add sparse x-ticks matching heatmap months
-        month_labels = []
-        tick_positions = []
-        current_month = start_date.month
-        col = 0
-        for i in range(offset, total_days, 7):
-            week_start = start_date + timedelta(days=(i - offset))
-            if week_start.month != current_month:
-                adjusted_pos = col - offset//7
-                if adjusted_pos >= 0:
-                    tick_positions.append(adjusted_pos)
-                    month_labels.append((week_start - timedelta(days=7)).strftime('%b'))
-                    current_month = week_start.month
-            col += 1
-        if num_bars > 0:
-            tick_positions.append(num_bars - 1)
-            month_labels.append(end_date.strftime('%b'))
-        ax_bar.set_xticks(tick_positions)
-        ax_bar.set_xticklabels(month_labels, rotation=45, fontsize=8)
         ax_bar.grid(axis='y', linestyle='--', alpha=0.7)
+        ax_bar.set_xlim(-0.5, num_weeks - 0.5)
         
         # Heatmap
-        im = ax_heat.imshow(data, cmap=cmap, norm=norm, aspect='equal')
+        im = ax_heat.imshow(data, cmap=cmap, norm=norm, aspect='auto')
         
         # Y-axis: Days of week (Sun at top)
         ax_heat.set_yticks(range(7))
         ax_heat.set_yticklabels(['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'])
         ax_heat.yaxis.tick_right()
+        ax_heat.set_xlim(-0.5, num_weeks - 0.5)
         
-        # X-axis: Month labels
-        month_labels = []
-        tick_positions = []
+        # X-axis: Month labels at start of each month for both plots
+        tick_positions = [0]
+        month_labels = [start_date.strftime('%b')]
         current_month = start_date.month
         col = 0
         for i in range(offset, total_days, 7):
             week_start = start_date + timedelta(days=(i - offset))
             if week_start.month != current_month:
-                tick_positions.append(col - 1)
-                month_labels.append((week_start - timedelta(days=7)).strftime('%b'))
+                tick_positions.append(col)
+                month_labels.append(week_start.strftime('%b'))
                 current_month = week_start.month
             col += 1
-        tick_positions.append(num_weeks - 1)
-        month_labels.append(end_date.strftime('%b'))
         
         ax_heat.set_xticks(tick_positions)
         ax_heat.set_xticklabels(month_labels)
         
+        ax_bar.set_xticks(tick_positions)
+        ax_bar.set_xticklabels(month_labels, rotation=45, fontsize=8)
+        
         # Colorbar below heatmap
-        cbar = fig.colorbar(im, ax=ax_heat, orientation='horizontal', pad=0.2, ticks=range(len(colors)))
+        cbar = fig.colorbar(im, ax=ax_heat, orientation='horizontal', pad=0.2, ticks=midpoints)
         cbar.set_ticklabels(['No commits', '1-2', '3-6', '7-11', '12+'])
         
         # Set window title and main title
