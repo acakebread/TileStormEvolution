@@ -363,7 +363,7 @@ namespace ClassicTilestorm
 				gameObject.transform.position = position;
 				position -= tile_origin;
 #if DEBUG
-				gameObject.name = $"{gameObject.GetComponent<RTTI>()?.tileDef.szType ?? "Empty"} ({position.x},{position.z})";
+				gameObject.name = $"{gameObject.GetComponent<RTTI>()?.tileDef.szType ?? "Empty"} ({position.x},{position.z})";//this is for debug in editor only - do not use RTTI
 #endif
 			}
 		}
