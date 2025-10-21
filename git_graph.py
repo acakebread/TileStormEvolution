@@ -18,7 +18,7 @@ class GitGraphApp:
         self.repo_path = None
         self.activity = {}
         self.start_date = datetime.now().date() - timedelta(days=365)  # Default 365 days ago
-        self.end_date = datetime.now().date()  # October 21, 2025, 7:12 PM BST
+        self.end_date = datetime.now().date()  # October 21, 2025, 7:40 PM BST
         self.email = None
         
         self.setup_ui()
@@ -76,33 +76,41 @@ class GitGraphApp:
             end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date() if end_date_str else self.end_date
             
             commits = repo.iter_commits()
-            
             activity = defaultdict(int)
             oldest_date = None
+            newest_date = None
+            commit_count = 0
+            
             for commit in commits:
                 date = datetime.fromtimestamp(commit.committed_date).date()
-                if date > end_date:
-                    continue
                 if email and commit.author.email != email:
                     continue
+                if date > end_date:
+                    continue
                 activity[date] += 1
+                commit_count += 1
                 if oldest_date is None or date < oldest_date:
                     oldest_date = date
+                if newest_date is None or date > newest_date:
+                    newest_date = date
             
             if not activity:
                 raise ValueError("No commits found in the repository (or matching the filter).")
             
-            if start_date:
-                calc_start = start_date
+            # Adjust date range based on available data
+            if start_date is None and oldest_date:
+                repo_age_days = (end_date - oldest_date).days
+                calc_start = oldest_date if repo_age_days < max_days else end_date - timedelta(days=max_days)
             else:
-                if oldest_date:
-                    repo_age_days = (end_date - oldest_date).days
-                    calc_start = end_date - timedelta(days=max_days) if repo_age_days > max_days else oldest_date
-                else:
-                    calc_start = end_date - timedelta(days=max_days)
+                calc_start = start_date if start_date else end_date - timedelta(days=max_days)
             
             calc_start = max(calc_start, oldest_date) if oldest_date else calc_start
             filtered_activity = {d: c for d, c in activity.items() if calc_start <= d <= end_date}
+            
+            # Debug: Log commit count for the selected email
+            if not getattr(sys, 'frozen', False) and email:
+                print(f"Commits for {email}: {commit_count}")
+            
             return filtered_activity, calc_start
         except git.InvalidGitRepositoryError:
             raise ValueError("Selected folder is not a valid Git repository.")
@@ -154,7 +162,7 @@ class GitGraphApp:
             data = np.array(counts).reshape(num_weeks, 7).T
             weekly_totals = data.sum(axis=0)
             
-            # Ensure x-axis (range) matches data length
+            # Ensure x-axis matches data length
             x_range = range(len(weekly_totals))
             
             colors = ['#ebedf0', '#9be9a8', '#40c463', '#30a14e', '#216e39']
@@ -209,7 +217,7 @@ class GitGraphApp:
     def open_settings(self):
         settings_window = tk.Toplevel(self.root)
         settings_window.title("Settings")
-        settings_window.geometry("350x250")  # Increased width to accommodate longer emails
+        settings_window.geometry("350x250")  # Increased width for readability
         
         # Pre-populate email dropdown
         emails = self.get_unique_emails()
@@ -221,10 +229,10 @@ class GitGraphApp:
         
         ttk.Label(settings_window, text="Email (select or leave blank for all):").pack(pady=5)
         email_var = tk.StringVar(value=self.email or "")
-        # Set width based on longest email, with scrolling if needed
+        # Set width based on longest email, minimum 30 chars
         max_length = max(len(email) for email in emails) if emails else 20
         email_dropdown = ttk.Combobox(settings_window, textvariable=email_var, values=emails, 
-                                     state="readonly", width=max(max_length, 30))  # Minimum 30 chars
+                                     state="readonly", width=max(max_length, 30))
         email_dropdown.pack(pady=5)
         
         ttk.Label(settings_window, text="Start Date (YYYY-MM-DD, blank for 365 days ago):").pack(pady=5)
