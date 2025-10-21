@@ -49,7 +49,7 @@ namespace ClassicTilestorm
 					{
 						var debug_tile = CreateDebugTile(parent, position);
 #if DEBUG
-						debug_tile.AddComponent<RTTI>().tileDef = tileDef;
+						debug_tile.AddComponent<RTTI>().tileDef = tileDef;//this is for debug in editor only - do not use RTTI
 #endif
 						return debug_tile;
 					}
@@ -59,8 +59,8 @@ namespace ClassicTilestorm
 				Debug.LogWarning("GeometryManager: Invalid TileDef or geometry name.");
 				var result = CreateFallbackTile(parent, position);
 #if DEBUG
-				result.AddComponent<RTTI>().tileDef = tileDef;
-# endif
+				result.AddComponent<RTTI>().tileDef = tileDef;//this is for debug in editor only - do not use RTTI
+#endif
 				return result;
 			}
 
@@ -94,7 +94,7 @@ namespace ClassicTilestorm
 				collider.center = new Vector3(0f, -0.05f, 0f);
 			}
 #if DEBUG
-			gameObject.AddComponent<RTTI>().tileDef = tileDef;
+			gameObject.AddComponent<RTTI>().tileDef = tileDef;//this is for debug in editor only - do not use RTTI
 #endif
 
 			var meshRenderer = gameObject.GetComponentInChildren<MeshRenderer>(true);
