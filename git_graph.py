@@ -18,7 +18,7 @@ class GitGraphApp:
         self.repo_path = None
         self.activity = {}
         self.start_date = datetime.now().date() - timedelta(days=365)  # Default 365 days ago
-        self.end_date = datetime.now().date()  # October 21, 2025, 6:39 PM BST
+        self.end_date = datetime.now().date()  # October 21, 2025, 6:44 PM BST
         self.email = None
         
         self.setup_ui()
@@ -106,6 +106,13 @@ class GitGraphApp:
 
     def update_graph(self):
         try:
+            # Reinitialize figure and axes to reset layout
+            plt.close(self.fig)  # Close the old figure
+            self.fig, (self.ax_bar, self.ax_heat) = plt.subplots(2, 1, figsize=(12, 6), 
+                                                               gridspec_kw={'height_ratios': [1, 3]})
+            self.canvas.figure = self.fig
+            self.canvas.draw()
+            
             self.activity, self.start_date = self.get_commit_activity(self.email, 
                                                                    str(self.start_date)[:10], 
                                                                    str(self.end_date)[:10])
@@ -134,12 +141,6 @@ class GitGraphApp:
             bounds = [0, 1, 3, 7, 12, np.max(data) + 1]
             norm = BoundaryNorm(bounds, cmap.N)
             midpoints = [(bounds[i] + bounds[i+1]) / 2 for i in range(len(bounds)-1)]
-            
-            # Clear all axes and reset layout
-            self.ax_bar.cla()
-            self.ax_heat.cla()
-            if len(self.fig.axes) > 2:
-                self.fig.delaxes(self.fig.axes[-1])  # Remove colorbar
             
             self.ax_bar.bar(range(num_weeks), weekly_totals, color='skyblue', edgecolor='black', width=1.0)
             self.ax_bar.set_title(f'Weekly Commit Totals - {repo_name}')
@@ -170,10 +171,7 @@ class GitGraphApp:
             self.ax_bar.set_xticks(tick_positions)
             self.ax_bar.set_xticklabels(month_labels, rotation=45, fontsize=8)
             
-            # Add colorbar with explicit padding control
-            if len(self.fig.axes) > 2:
-                self.fig.delaxes(self.fig.axes[-1])  # Ensure no leftover colorbar
-            self.fig.subplots_adjust(bottom=0.15, top=0.9)  # Adjust to prevent title overlap and space
+            self.fig.subplots_adjust(bottom=0.15, top=0.9)  # Control margins
             cbar = plt.colorbar(im, ax=self.ax_heat, orientation='horizontal', pad=0.1, ticks=midpoints)
             cbar.set_ticklabels(['No commits', '1-2', '3-6', '7-11', '12+'])
             
@@ -181,7 +179,7 @@ class GitGraphApp:
             self.fig.suptitle(f'Git Contribution Calendar - {repo_name}')
             
             self.canvas.draw()
-            self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)  # Ensure resizing
+            self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
         except ValueError as e:
             messagebox.showerror("Error", f"Error updating graph: {str(e)}")
         except Exception as e:
