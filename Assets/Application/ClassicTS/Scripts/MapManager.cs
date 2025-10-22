@@ -18,15 +18,11 @@ namespace ClassicTilestorm
 		Vector3 TileWorldPosition(int index);
 		int WorldToMapIndex(Vector3 vec);
 		Tile GetTile(int index);
-		DatabaseSerializer.Waypoint[] Waypoints { get; }
-		void SetupWaypoints(DatabaseSerializer.Map map);
 		int GetStartTile();
 		int GetEndTile();
 		int FindAdjacentConsole(int nTile);
-		int GetOrAddMapDefIndex(string szType, string szTheme);
-		void SaveChanges();
-		int GetTileDefIndexAt(int mapIndex);
-		DatabaseSerializer.MapTileDef[] GetMapDefs();
+
+		DatabaseSerializer.Waypoint[] Waypoints { get; }
 	}
 
 	public class MapManager : MonoBehaviour, IMapManager
@@ -236,7 +232,7 @@ namespace ClassicTilestorm
 			return mapDefs;
 		}
 
-		public void SetupWaypoints(DatabaseSerializer.Map map)
+		private void SetupWaypoints(DatabaseSerializer.Map map)
 		{
 			waypoints = map?.waypoints;
 			if (null != waypoints && waypoints.Length > 0)

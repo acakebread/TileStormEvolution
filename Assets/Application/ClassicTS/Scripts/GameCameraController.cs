@@ -69,6 +69,8 @@ namespace ClassicTilestorm
 				GestureControllerEnabled = false;
 		}
 
+		private void OnLevelCompleted() { }
+
 		public void OnMapSolved() => GestureControllerEnabled = false;
 
 		private bool GestureControllerEnabled { set { gestureControllerEnabled = value; UpdateGestureControllerState(); } }
@@ -90,6 +92,7 @@ namespace ClassicTilestorm
 			if (eggbotController != null)
 			{
 				eggbotController.OnWaypointReached += HandleWaypointReached;
+				eggbotController.OnLevelCompleted += OnLevelCompleted;
 				eggbotController.OnPuzzleSolved += HandlePuzzleSolved;
 			}
 			base.Initialise(initialMode);
@@ -217,6 +220,7 @@ namespace ClassicTilestorm
 			if (eggbotController == null) return;
 			eggbotController.OnWaypointReached -= HandleWaypointReached;
 			eggbotController.OnPuzzleSolved -= HandlePuzzleSolved;
+			eggbotController.OnLevelCompleted -= OnLevelCompleted;
 		}
 
 		public void ResetCinemaTimer(bool forceCinema = false)

@@ -14,6 +14,23 @@ namespace ClassicTilestorm
 		{
 			gameObject.AddComponent<PlaceholderUI>();
 			cameraController = InitialiseCameraController(gameObject, Camera.main);//Camera.main.gameObject, Camera.main - container does not have to be the camera
+
+			GameCameraController InitialiseCameraController(GameObject containter, Camera camera)
+			{
+				if (null == camera || null == containter)
+				{
+					Debug.LogWarning("Cannot create GameCameraController: Camera or containter is null");
+					return null;
+				}
+
+				if (!containter.TryGetComponent<GameCameraController>(out var controller))
+				{
+					controller = containter.AddComponent<GameCameraController>();
+					controller.camera = camera;
+					Debug.Log("Created GameCameraController");
+				}
+				return controller;
+			}
 		}
 
 		private void Start()
@@ -64,15 +81,11 @@ namespace ClassicTilestorm
 
 			if (mapManager != null) Destroy(mapManager.gameObject);
 			mapManager = MapManager.Instantiate(currentMap, transform);
-			mapManager.SetupWaypoints(currentMap);
 
 			if (eggbotController != null) Destroy(eggbotController.gameObject);
 			eggbotController = EggbotController.Instantiate(currentMap.szEggbotCostume, transform);
 			if (eggbotController != null)
-			{
 				eggbotController.Initialise(mapManager);
-				eggbotController.OnLevelCompleted += OnLevelCompleted;
-			}
 
 			if (cameraController != null)
 				cameraController.Initialise(mapManager, eggbotController, GameModeToCameraMode(PreviewSettings.CurrentMode));
@@ -86,29 +99,6 @@ namespace ClassicTilestorm
 			if (cameraController != null) cameraController.OnMapSolved();
 		}
 
-		private void OnLevelCompleted() { }
-
-		private void OnDestroy()
-		{
-			if (eggbotController != null)
-				eggbotController.OnLevelCompleted -= OnLevelCompleted;
-		}
-
-		private GameCameraController InitialiseCameraController(GameObject containter, Camera camera)
-		{
-			if (null == camera || null == containter)
-			{
-				Debug.LogWarning("Cannot create GameCameraController: Camera or containter is null");
-				return null;
-			}
-
-			if (!containter.TryGetComponent<GameCameraController>(out var controller))
-			{
-				controller = containter.AddComponent<GameCameraController>();
-				controller.camera = camera;
-				Debug.Log("Created GameCameraController");
-			}
-			return controller;
-		}
+		private void OnDestroy() { }
 	}
 }
