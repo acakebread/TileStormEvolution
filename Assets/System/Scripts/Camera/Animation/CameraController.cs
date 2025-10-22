@@ -147,11 +147,11 @@ namespace MassiveHadronLtd
 			bool AreModesInSameGroup(string mode1, string mode2) => groups.Any(group => group.Value.Contains(mode1) && group.Value.Contains(mode2));
 		}
 
-		//protected virtual void OnEnable() => currentSystem?.OnEnable();
+		protected virtual void OnEnable() => currentSystem?.OnEnable();
 		
 		protected virtual void Update() => currentSystem?.Update();
 
-		//protected virtual void OnDisable() => currentSystem?.OnDisable();
+		protected virtual void OnDisable() => currentSystem?.OnDisable();
 
 		protected virtual void OnGUI() => currentSystem?.OnGUI();
 

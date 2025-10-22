@@ -26,6 +26,9 @@ namespace ClassicTilestorm
 			gestureController.OnMapUpdated += CheckDisableDrag;
 			cameraController = EnsureCameraController();
 			cameraController.OnWaypointReachedForGestures += OnWaypointGesturesEnable;
+
+			var mode = PlayerPrefs.GetInt("PreviousMode", (int)PreviewSettings.CurrentMode);
+			PreviewSettings.CurrentMode = (PreviewMode)mode;
 		}
 
 		private void Start()
@@ -39,23 +42,28 @@ namespace ClassicTilestorm
 			if (eggbotController != null) eggbotController.UpdateEggbot(mapManager);
 		}
 
+		private string GameModeToCameraMode(PreviewMode mode)
+		{
+			return mode switch
+			{
+				PreviewMode.Direct => CameraModeRegistry.Direct,
+				PreviewMode.Editor => CameraModeRegistry.Editor,
+				PreviewMode.Player => CameraModeRegistry.Follow,
+				PreviewMode.Cinema => Random.Range(0, 7) switch { 0 or 1 or 2 => CameraModeRegistry.Orbit, _ => CameraModeRegistry.Path },
+				_ => CameraModeRegistry.Absent
+			};
+		}
+
 		public void SetPreviewMode(PreviewMode mode, bool forceCinema = false)
 		{
+			PlayerPrefs.SetInt("PreviousMode", (int)PreviewSettings.CurrentMode);
+			PlayerPrefs.Save();
+
 			if (cameraController != null)
 			{
-				var cameraMode = mode switch
-				{
-					PreviewMode.Editor => CameraModeRegistry.Editor,
-					PreviewMode.Cinema => CameraModeRegistry.Path,
-					PreviewMode.Player => CameraModeRegistry.Preset,
-					PreviewMode.Direct => CameraModeRegistry.Direct,
-					_ => CameraModeRegistry.Absent
-				};
-				cameraController.SetCameraMode(cameraController.GetCurrentGroupMode(cameraMode));
+				cameraController.SetCameraMode(cameraController.GetCurrentGroupMode(GameModeToCameraMode(mode)));
 				if (mode == PreviewMode.Cinema)
-				{
 					cameraController.ResetCinemaTimer(forceCinema);
-				}
 			}
 			UpdateGestureControllerState();
 		}
@@ -96,14 +104,7 @@ namespace ClassicTilestorm
 			cameraController = EnsureCameraController();
 			if (cameraController != null)
 			{
-				var initialMode = PreviewSettings.CurrentMode switch
-				{
-					PreviewMode.Editor => CameraModeRegistry.Editor,
-					PreviewMode.Player => CameraModeRegistry.Follow,
-					PreviewMode.Cinema => Random.Range(0, 7) switch { 0 or 1 or 2 => CameraModeRegistry.Orbit, _ => CameraModeRegistry.Path },
-					_ => CameraModeRegistry.Follow
-				};
-				cameraController.Initialise(mapManager, eggbotController, initialMode);
+				cameraController.Initialise(mapManager, eggbotController, GameModeToCameraMode(PreviewSettings.CurrentMode));
 			}
 
 			postProcessingController = EnsurePostProcessingController();

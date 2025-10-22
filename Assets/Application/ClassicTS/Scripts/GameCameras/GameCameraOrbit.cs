@@ -6,7 +6,6 @@ namespace ClassicTilestorm
 {
 	public class GameCameraOrbit : CameraBase
 	{
-		public Func<Vector3> originFn;
 		public Func<Vector3> targetFn;
 		private Vector3 target => targetFn?.Invoke() ?? Vector3.zero;
 
@@ -32,16 +31,6 @@ namespace ClassicTilestorm
 		public bool HasCompleted => sequenceTimer <= 0f && pauseTimer <= 0f;
 
 		public GameCameraOrbit(Camera camera) : base(camera) { }
-
-		public override void Awake()
-		{
-			//initialise camera
-			if (camera == null) return;
-			camera.transform.position = originFn?.Invoke() ?? iorigin;
-			var direction = (targetFn?.Invoke() ?? itarget) - camera.transform.position;
-			if (direction.sqrMagnitude > Mathf.Epsilon)
-				camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
-		}
 
 		public override void Start()
 		{
@@ -97,7 +86,7 @@ namespace ClassicTilestorm
 			if (sequenceTimer > 0f)
 			{
 				var easedSequenceTimer = SmoothingUtils.Ease(sequenceDuration > 0 ? 1f - Mathf.Clamp01(sequenceTimer / sequenceDuration) : 1f);
-				localTarget = target + Vector3.up * VerticalOffset; // Use helper property 'target'
+				localTarget = target + Vector3.up * VerticalOffset;
 				localOrigin = localTarget + SampleOrbitPosition(orbitStartAngle, orbitEndAngle, easedSequenceTimer);
 				fieldOfView = Mathf.Lerp(FovMin, currentFovMax, SmoothingUtils.EasePingPong(sequenceTimer / sequenceDuration));
 			}

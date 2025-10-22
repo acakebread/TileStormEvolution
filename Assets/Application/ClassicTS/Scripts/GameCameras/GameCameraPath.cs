@@ -8,7 +8,6 @@ namespace ClassicTilestorm
 {
 	public class GameCameraPath : CameraBase
 	{
-		//public Func<Vector3> originFn;
 		public Func<Vector3> targetFn;
 		public Func<IReadOnlyList<Vector3>> pointsFn;
 
@@ -58,7 +57,7 @@ namespace ClassicTilestorm
 			sequenceDuration = DefaultSequenceDuration + UnityEngine.Random.Range(-2f, 2f);
 			sequenceTimer = sequenceDuration;
 			pauseTimer = DefaultPauseDuration;
-			lastTarget = nextTarget = this.target; // Use CameraBase.target property
+			lastTarget = nextTarget = this.target;
 		}
 
 		protected virtual void UpdateCinemaLerping()
