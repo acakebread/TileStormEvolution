@@ -16,7 +16,6 @@ namespace ClassicTilestorm
 			{
 				_mapManager = value;
 				OnMapManagerChanged();
-				Debug.Log("MapManager changed or reloaded");
 			}
 		}
 		private GameCameraEditorMovement activeMode;
@@ -119,6 +118,7 @@ namespace ClassicTilestorm
 
 		private void OnMapManagerChanged() 
 		{
+			Debug.Log("MapManager changed or reloaded");
 		}
 
 		public override void Update()
