@@ -5,12 +5,11 @@ using System.Linq;
 
 namespace MassiveHadronLtd
 {
-	//[RequireComponent(typeof(Camera))]
 	public class CameraController : MonoBehaviour
 	{
 		public CameraBase currentSystem => cameraSystems.ContainsKey(currentMode) ? cameraSystems[currentMode] : null;
 		private Camera _camera = null;
-		public new Camera camera 
+		public virtual new Camera camera 
 		{
 			set => _camera = value;
 			get => null != _camera ? _camera : Camera.main; 

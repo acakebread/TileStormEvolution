@@ -13,6 +13,7 @@ namespace ClassicTilestorm
 		private EggbotController eggbotController;
 		private SpatialBucketSystem spatialSystem;
 		private GestureController gestureController;
+		private PostProcessingCameraController postProcessingController;
 
 		private const int MaxFocusPoints = 50;
 		private const float MinDistanceForNewFocusPoint = 3f;
@@ -25,6 +26,35 @@ namespace ClassicTilestorm
 		private CameraBase cameraSystem => currentSystem;
 		private bool HasCompleted => cameraSystem is GameCameraOrbit orbit ? orbit.HasCompleted : cameraSystem is GameCameraPath path && path.HasCompleted;
 		private bool IsCinemaCamera(CameraBase _cameraSystem) => _cameraSystem is GameCameraOrbit || _cameraSystem is GameCameraPath;
+
+		public override Camera camera
+		{
+			get { return base.camera; }
+			set
+			{
+				base.camera = value;
+				postProcessingController = InitialisePostProcessingController();
+			}
+		}
+
+		private PostProcessingCameraController InitialisePostProcessingController()
+		{
+			if (null == camera)
+			{
+				Debug.LogWarning("Cannot create PostProcessingCameraController: Camera is null");
+				return null;
+			}
+
+			var ppController = camera.GetComponentInChildren<PostProcessingCameraController>(true);
+			if (ppController == null)
+			{
+				var ppObject = new GameObject("PostProcessing");
+				ppObject.transform.SetParent(camera.transform, false);
+				ppController = ppObject.AddComponent<PostProcessingCameraController>();
+				Debug.Log("Created PostProcessingCameraController on camera");
+			}
+			return ppController;
+		}
 
 		private void Awake()
 		{
@@ -65,6 +95,9 @@ namespace ClassicTilestorm
 			base.Initialise(initialMode);
 			GestureControllerEnabled = false;
 			UpdateGestureControllerState();
+
+			if (postProcessingController != null && eggbotController != null)
+				postProcessingController.dofTarget = eggbotController.transform;
 		}
 
 		protected override (Vector3 srcPos, Vector3 dstPos) GetInitialCameraPositions()

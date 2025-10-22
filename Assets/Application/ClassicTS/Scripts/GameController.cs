@@ -9,13 +9,11 @@ namespace ClassicTilestorm
 		private MapManager mapManager;
 		private EggbotController eggbotController;
 		private GameCameraController cameraController;
-		private PostProcessingCameraController postProcessingController;
 
 		private void Awake()
 		{
 			gameObject.AddComponent<PlaceholderUI>();
 			cameraController = InitialiseCameraController(gameObject, Camera.main);//Camera.main.gameObject, Camera.main - container does not have to be the camera
-			postProcessingController = InitialisePostProcessingController(Camera.main);
 		}
 
 		private void Start()
@@ -78,9 +76,6 @@ namespace ClassicTilestorm
 
 			if (cameraController != null)
 				cameraController.Initialise(mapManager, eggbotController, GameModeToCameraMode(PreviewSettings.CurrentMode));
-
-			if (postProcessingController != null && eggbotController != null)
-				postProcessingController.dofTarget = eggbotController.transform;
 		}
 
 		public void Scramble() => mapManager?.Scramble();
@@ -114,25 +109,6 @@ namespace ClassicTilestorm
 				Debug.Log("Created GameCameraController");
 			}
 			return controller;
-		}
-
-		private PostProcessingCameraController InitialisePostProcessingController(Camera camera)
-		{
-			if (null == camera)
-			{
-				Debug.LogWarning("Cannot create PostProcessingCameraController: Camera is null");
-				return null;
-			}
-
-			var ppController = camera.GetComponentInChildren<PostProcessingCameraController>(true);
-			if (ppController == null)
-			{
-				var ppObject = new GameObject("PostProcessing");
-				ppObject.transform.SetParent(camera.transform, false);
-				ppController = ppObject.AddComponent<PostProcessingCameraController>();
-				Debug.Log("Created PostProcessingCameraController on camera");
-			}
-			return ppController;
 		}
 	}
 }
