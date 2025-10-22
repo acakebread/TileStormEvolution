@@ -18,11 +18,23 @@ class GitGraphApp:
         self.repo_path = None
         self.activity = {}
         self.start_date = datetime.now().date() - timedelta(days=365)  # Default 365 days ago
-        self.end_date = datetime.now().date()  # October 21, 2025, 7:40 PM BST
+        self.end_date = datetime.now().date()  # October 21, 2025
         self.email = None
         
+        # Check if a path is provided via sys.argv and validate it
+        if len(sys.argv) > 1:
+            provided_path = sys.argv[1]
+            try:
+                git.Repo(provided_path)
+                self.repo_path = provided_path
+                self.root.after(100, self.update_graph_with_focus)
+            except git.InvalidGitRepositoryError:
+                messagebox.showerror("Error", f"Invalid Git repository at {provided_path}. Please select a valid repository.")
+                self.load_repo()  # Prompt for directory if provided path is invalid
+        else:
+            self.load_repo()  # No path provided, prompt for directory
+        
         self.setup_ui()
-        self.load_repo()  # Set repo path, delay graph update
 
     def setup_ui(self):
         # Main frame to handle resizing
@@ -51,16 +63,22 @@ class GitGraphApp:
         self.canvas._tkcanvas.pack(fill=tk.BOTH, expand=True)
 
     def load_repo(self):
-        current_dir = os.getcwd()
-        try:
-            git.Repo(current_dir)
-            self.repo_path = current_dir
-        except git.InvalidGitRepositoryError:
-            self.repo_path = filedialog.askdirectory(title="Select Git Repository Folder")
+        # Only prompt for directory if no valid repo_path is set
+        if not self.repo_path:
+            current_dir = os.getcwd()
+            try:
+                git.Repo(current_dir)
+                self.repo_path = current_dir
+            except git.InvalidGitRepositoryError:
+                self.repo_path = filedialog.askdirectory(title="Select Git Repository Folder")
         
         if self.repo_path:
-            # Delay graph update and force focus
-            self.root.after(100, self.update_graph_with_focus)
+            try:
+                git.Repo(self.repo_path)  # Validate the repo_path
+                self.root.after(100, self.update_graph_with_focus)
+            except git.InvalidGitRepositoryError:
+                messagebox.showerror("Error", "No valid Git repository selected.")
+                self.root.quit()
         else:
             messagebox.showerror("Error", "No valid Git repository selected.")
             self.root.quit()
