@@ -65,7 +65,7 @@ namespace ClassicTilestorm
 			Width = map?.tiles.nWidth ?? 0;
 			Height = map?.tiles.nHeight ?? 0;
 			mapTiles = map?.tiles;
-			mapDefs = map?.defs;
+			mapDefs = map?.defs ?? new DatabaseSerializer.MapTileDef[0];
 
 			void LoadTileData(DatabaseSerializer.Tiles dbTiles)
 			{
@@ -137,6 +137,9 @@ namespace ClassicTilestorm
 			mapDefs = mapDefs.Concat(new[] { newDef }).ToArray();
 			Debug.Log($"Added new MapTileDef: szType={szType}, szTheme={szTheme}, new index={mapDefs.Length - 1}");
 
+			// Update currentMap.defs immediately to keep in-memory database in sync
+			currentMap.defs = mapDefs;
+
 			return mapDefs.Length - 1;
 		}
 
@@ -170,6 +173,9 @@ namespace ClassicTilestorm
 			// Update tile data immediately
 			mapTiles.TileData.bytes[index] = newTileDefIndex;
 
+			// Update currentMap.tiles to keep in-memory database in sync
+			currentMap.tiles = mapTiles;
+
 			// Update the tile at the specified index
 			var szType = mapDefs[newTileDefIndex].szType;
 			var szTheme = mapDefs[newTileDefIndex].szTheme;
@@ -199,8 +205,9 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			// Update currentMap.defs with the modified mapDefs before saving
+			// Ensure currentMap.defs and currentMap.tiles are up-to-date (redundant but safe)
 			currentMap.defs = mapDefs;
+			currentMap.tiles = mapTiles;
 
 			// Save to DatabaseSerializer
 			DatabaseSerializer.SaveDatabase(new DatabaseSerializer.DatabaseData
@@ -211,7 +218,7 @@ namespace ClassicTilestorm
 				buttons = DatabaseSerializer.Buttons.ToArray(),
 				texture_set = DatabaseSerializer.TextureSets.ToArray()
 			});
-			Debug.Log("Database saved to disk with updated mapDefs");
+			Debug.Log("Database saved to disk with updated mapDefs and tile data");
 		}
 
 		public int GetTileDefIndexAt(int mapIndex)
