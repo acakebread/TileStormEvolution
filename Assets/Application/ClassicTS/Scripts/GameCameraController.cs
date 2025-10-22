@@ -6,27 +6,55 @@ using System.Linq;
 
 namespace ClassicTilestorm
 {
+	[RequireComponent(typeof(GestureController))]
 	public class GameCameraController : CameraController
 	{
 		private MapManager mapManager;
 		private EggbotController eggbotController;
 		private SpatialBucketSystem spatialSystem;
+		private GestureController gestureController;
 
 		private const int MaxFocusPoints = 50;
 		private const float MinDistanceForNewFocusPoint = 3f;
 		private const float CinemaTimeoutDuration = 5f;
 		private float cinemaTimer = 0f; // Initialize to 0 instead of Time.time
 
+		private bool gestureControllerEnabled = true;
 		public event Action<bool> OnWaypointReachedForGestures;
 
 		private CameraBase cameraSystem => currentSystem;
 		private bool HasCompleted => cameraSystem is GameCameraOrbit orbit ? orbit.HasCompleted : cameraSystem is GameCameraPath path && path.HasCompleted;
 		private bool IsCinemaCamera(CameraBase _cameraSystem) => _cameraSystem is GameCameraOrbit || _cameraSystem is GameCameraPath;
 
+		private void Awake()
+		{
+			gestureController = GetComponent<GestureController>();
+			OnWaypointReachedForGestures += OnWaypointGesturesEnable;
+			gestureController.OnMapUpdated += CheckDisableDrag;
+		}
+
+		private void CheckDisableDrag(IMapManager imap)
+		{
+			if (eggbotController != null && eggbotController.NavDirection(imap) != 0)
+				GestureControllerEnabled = false;
+		}
+
+		public void OnMapSolved() => GestureControllerEnabled = false;
+
+		private bool GestureControllerEnabled { set { gestureControllerEnabled = value; UpdateGestureControllerState(); } }
+
+		private void OnWaypointGesturesEnable(bool value) => GestureControllerEnabled = value;
+
+		private void UpdateGestureControllerState()
+		{
+			gestureController.enabled = gestureControllerEnabled && PreviewMode.Player == PreviewSettings.CurrentMode;
+		}
+
 		public void Initialise(MapManager map, EggbotController eggbot, string initialMode = null)
 		{
 			initialMode = initialMode ?? CameraModeRegistry.Follow;
 			mapManager = map ?? throw new ArgumentNullException(nameof(map));
+			gestureController.Initialise(mapManager);
 			eggbotController = eggbot;
 			spatialSystem = new SpatialBucketSystem(MinDistanceForNewFocusPoint, MaxFocusPoints);
 			if (eggbotController != null)
@@ -35,6 +63,8 @@ namespace ClassicTilestorm
 				eggbotController.OnPuzzleSolved += HandlePuzzleSolved;
 			}
 			base.Initialise(initialMode);
+			GestureControllerEnabled = false;
+			UpdateGestureControllerState();
 		}
 
 		protected override (Vector3 srcPos, Vector3 dstPos) GetInitialCameraPositions()
@@ -149,6 +179,8 @@ namespace ClassicTilestorm
 		protected override void OnDestroy()
 		{
 			base.OnDestroy();
+			OnWaypointReachedForGestures -= OnWaypointGesturesEnable;
+			gestureController.OnMapUpdated -= CheckDisableDrag;
 			if (eggbotController == null) return;
 			eggbotController.OnWaypointReached -= HandleWaypointReached;
 			eggbotController.OnPuzzleSolved -= HandlePuzzleSolved;

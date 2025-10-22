@@ -4,37 +4,24 @@ using MassiveHadronLtd;
 
 namespace ClassicTilestorm
 {
-	[RequireComponent(typeof(GestureController))]
 	public class GameController : MonoBehaviour
 	{
 		private MapManager mapManager;
 		private EggbotController eggbotController;
 		private GameCameraController cameraController;
-		private GestureController gestureController;
 		private PostProcessingCameraController postProcessingController;
-		private bool gestureControllerEnabled = true;
-
-		private bool GestureControllerEnabled
-		{
-			set { gestureControllerEnabled = value; UpdateGestureControllerState(); }
-		}
 
 		private void Awake()
 		{
 			gameObject.AddComponent<PlaceholderUI>();
-			gestureController = GetComponent<GestureController>();
-			gestureController.OnMapUpdated += CheckDisableDrag;
-			cameraController = EnsureCameraController();
-			cameraController.OnWaypointReachedForGestures += OnWaypointGesturesEnable;
-
-			var mode = PlayerPrefs.GetInt("PreviousMode", (int)PreviewSettings.CurrentMode);
-			PreviewSettings.CurrentMode = (PreviewMode)mode;
+			cameraController = InitialiseCameraController(gameObject, Camera.main);//Camera.main.gameObject, Camera.main - container does not have to be the camera
+			postProcessingController = InitialisePostProcessingController(Camera.main);
 		}
 
 		private void Start()
 		{
 			DatabaseSerializer.Init(PreviewSettings.DatabaseJsonFile, (asset) => { PreviewSettings.DatabaseJsonFile = asset; });
-			LoadMap(PlayerPrefs.GetString("LastLoadedMap", PreviewSettings.LoadMapName));
+			LoadMap(PreviewSettings.LoadMapName);
 		}
 
 		private void Update()
@@ -56,21 +43,16 @@ namespace ClassicTilestorm
 
 		public void SetPreviewMode(PreviewMode mode, bool forceCinema = false)
 		{
-			PlayerPrefs.SetInt("PreviousMode", (int)PreviewSettings.CurrentMode);
-			PlayerPrefs.Save();
+			if (null == cameraController) return;
 
-			if (cameraController != null)
-			{
-				cameraController.SetCameraMode(cameraController.GetCurrentGroupMode(GameModeToCameraMode(mode)));
-				if (mode == PreviewMode.Cinema)
-					cameraController.ResetCinemaTimer(forceCinema);
-			}
-			UpdateGestureControllerState();
+			cameraController.SetCameraMode(cameraController.GetCurrentGroupMode(GameModeToCameraMode(mode)));
+			if (mode == PreviewMode.Cinema)
+				cameraController.ResetCinemaTimer(forceCinema);
 		}
 
 		public void LoadMap(string mapName = null)
 		{
-			mapName = mapName ?? (mapManager != null ? PreviewSettings.LoadMapName : PlayerPrefs.GetString("LastLoadedMap", PreviewSettings.LoadMapName));
+			mapName = mapName ?? PreviewSettings.LoadMapName;
 			if (mapName == null) return;
 
 			var currentMap = DatabaseSerializer.Maps.FirstOrDefault(m => m.name == mapName) ?? DatabaseSerializer.Maps.FirstOrDefault();
@@ -80,18 +62,11 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			PreviewSettings.LoadMapName = currentMap.name;
-			PlayerPrefs.SetString("LastLoadedMap", currentMap.name);
-			PlayerPrefs.Save();
-
 			SkyboxUtility.SetSkybox(PreviewSettings.SkycubesPath, currentMap.szMusic);
 
 			if (mapManager != null) Destroy(mapManager.gameObject);
 			mapManager = MapManager.Instantiate(currentMap, transform);
 			mapManager.SetupWaypoints(currentMap);
-
-			gestureController.Initialise(mapManager);
-			GestureControllerEnabled = false;
 
 			if (eggbotController != null) Destroy(eggbotController.gameObject);
 			eggbotController = EggbotController.Instantiate(currentMap.szEggbotCostume, transform);
@@ -101,13 +76,9 @@ namespace ClassicTilestorm
 				eggbotController.OnLevelCompleted += OnLevelCompleted;
 			}
 
-			cameraController = EnsureCameraController();
 			if (cameraController != null)
-			{
 				cameraController.Initialise(mapManager, eggbotController, GameModeToCameraMode(PreviewSettings.CurrentMode));
-			}
 
-			postProcessingController = EnsurePostProcessingController();
 			if (postProcessingController != null && eggbotController != null)
 				postProcessingController.dofTarget = eggbotController.transform;
 		}
@@ -117,76 +88,49 @@ namespace ClassicTilestorm
 		public void Solve()
 		{
 			if (mapManager != null) mapManager.Solve();
-			GestureControllerEnabled = false;
+			if (cameraController != null) cameraController.OnMapSolved();
 		}
 
 		private void OnLevelCompleted() { }
 
-		private void CheckDisableDrag(IMapManager imap)
-		{
-			if (eggbotController != null && eggbotController.NavDirection(imap) != 0)
-				GestureControllerEnabled = false;
-		}
-
-		private void UpdateGestureControllerState()
-		{
-			gestureController.enabled = gestureControllerEnabled && PreviewMode.Player == PreviewSettings.CurrentMode;
-		}
-
-		private void OnWaypointGesturesEnable(bool value)
-		{
-			GestureControllerEnabled = value;
-		}
-
 		private void OnDestroy()
 		{
-			gestureController.OnMapUpdated -= CheckDisableDrag;
 			if (eggbotController != null)
 				eggbotController.OnLevelCompleted -= OnLevelCompleted;
-			if (cameraController != null)
-				cameraController.OnWaypointReachedForGestures -= OnWaypointGesturesEnable;
 		}
 
-		private GameCameraController EnsureCameraController()
+		private GameCameraController InitialiseCameraController(GameObject containter, Camera camera)
 		{
-			if (Camera.main == null)
+			if (null == camera || null == containter)
 			{
-				Debug.LogWarning("Cannot create GameCameraController: Camera.main is null");
+				Debug.LogWarning("Cannot create GameCameraController: Camera or containter is null");
 				return null;
 			}
 
-			//var controller = Camera.main.GetComponent<GameCameraController>();
-			//if (controller == null)
-			//{
-			//	controller = Camera.main.gameObject.AddComponent<GameCameraController>();
-			//	Debug.Log("Created GameCameraController on Camera.main");
-			//}
-
-			var controller = gameObject.GetComponent<GameCameraController>();
-			if (null == controller)
+			if (!containter.TryGetComponent<GameCameraController>(out var controller))
 			{
-				controller = gameObject.AddComponent<GameCameraController>();
-				controller.camera = Camera.main;
+				controller = containter.AddComponent<GameCameraController>();
+				controller.camera = camera;
 				Debug.Log("Created GameCameraController");
 			}
 			return controller;
 		}
 
-		private PostProcessingCameraController EnsurePostProcessingController()
+		private PostProcessingCameraController InitialisePostProcessingController(Camera camera)
 		{
-			if (Camera.main == null)
+			if (null == camera)
 			{
-				Debug.LogWarning("Cannot create PostProcessingCameraController: Camera.main is null");
+				Debug.LogWarning("Cannot create PostProcessingCameraController: Camera is null");
 				return null;
 			}
 
-			var ppController = Camera.main.GetComponentInChildren<PostProcessingCameraController>(true);
+			var ppController = camera.GetComponentInChildren<PostProcessingCameraController>(true);
 			if (ppController == null)
 			{
 				var ppObject = new GameObject("PostProcessing");
-				ppObject.transform.SetParent(Camera.main.transform, false);
+				ppObject.transform.SetParent(camera.transform, false);
 				ppController = ppObject.AddComponent<PostProcessingCameraController>();
-				Debug.Log("Created PostProcessingCameraController on Camera.main");
+				Debug.Log("Created PostProcessingCameraController on camera");
 			}
 			return ppController;
 		}
