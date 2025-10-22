@@ -39,7 +39,6 @@ namespace MassiveHadronLtd
 				lr.positionCount = 2;
 				lr.SetPosition(0, new Vector3(xPos, y, 0 + offset));
 				lr.SetPosition(1, new Vector3(xPos, y, height + offset));
-				lr.enabled = gridLinesEnabled;
 			}
 
 			// Create horizontal lines (along Z)
@@ -56,10 +55,9 @@ namespace MassiveHadronLtd
 				lr.positionCount = 2;
 				lr.SetPosition(0, new Vector3(0 + offset, y, zPos));
 				lr.SetPosition(1, new Vector3(width + offset, y, zPos));
-				lr.enabled = gridLinesEnabled;
 			}
 
-			gridLinesObject.SetActive(gridLinesEnabled);
+			gridLinesObject.SetActive(gridLinesEnabled);//all it was was these
 			return gridLinesObject;
 		}
 	}

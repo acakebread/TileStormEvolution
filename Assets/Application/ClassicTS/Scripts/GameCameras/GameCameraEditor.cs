@@ -8,7 +8,17 @@ namespace ClassicTilestorm
 {
 	public class GameCameraEditor : CameraBase
 	{
-		public MapManager mapManager;
+		private MapManager _mapManager;
+		public MapManager mapManager
+		{
+			get => _mapManager;
+			set
+			{
+				_mapManager = value;
+				OnMapManagerChanged();
+				Debug.Log("MapManager changed or reloaded");
+			}
+		}
 		private GameCameraEditorMovement activeMode;
 		private GameCameraEditorDrag dragMode;
 		private GameCameraEditorPaint paintMode;
@@ -30,7 +40,6 @@ namespace ClassicTilestorm
 		private Vector3 mouseDownPos; // Mouse position on RMB down for delete
 		private Vector3 mouseDownPosLMB; // Mouse position on LMB down for placement
 		private int mouseDownMapIndex = -1; // Map index on LMB down
-		private int lastClickedMapIndex = -1; // Last clicked tile index for cycling
 		private List<int> tileDefCycleList; // List of TileDef indices for cycling
 		private int cycleIndex = 0; // Current position in cycle list
 		private GameObject gridLines;
@@ -108,6 +117,10 @@ namespace ClassicTilestorm
 			gridLines.SetActive(gridLinesEnabled);
 		}
 
+		private void OnMapManagerChanged() 
+		{
+		}
+
 		public override void Update()
 		{
 			base.Update();
@@ -118,9 +131,6 @@ namespace ClassicTilestorm
 
 			if (activeMode != null)
 				activeMode.Update();
-
-			// Update grid lines
-			UpdateGridLines();
 
 			// Update ghost tile position and handle delete
 			if (currentMode == EditorMode.Paint && !GUIManager.IsMouseOverGui() && !EventSystem.current.IsPointerOverGameObject())
@@ -147,7 +157,6 @@ namespace ClassicTilestorm
 							{
 								paintMode.SetTileDefIndex(emptyTileDefIndex);
 								paintMode.PlaceTileAtMousePosition();
-								lastClickedMapIndex = -1; // Reset cycle on delete
 							}
 						}
 					}
@@ -324,7 +333,6 @@ namespace ClassicTilestorm
 				currentMode = EditorMode.Drag;
 				activeMode = dragMode;
 				GeometryUtil.HideGhostTile();
-				lastClickedMapIndex = -1; // Reset cycle
 			}
 			else if (paintToggled && currentMode != EditorMode.Paint)
 			{
@@ -334,7 +342,6 @@ namespace ClassicTilestorm
 				targetWidth = collapsedWidth; // Start collapsed
 				tileSelectorWidth = collapsedWidth; // Immediate collapse
 				animationStartTime = Time.time;
-				lastClickedMapIndex = -1; // Reset cycle
 			}
 
 			if (currentMode == EditorMode.Paint)
@@ -415,7 +422,6 @@ namespace ClassicTilestorm
 							if (cycleIndex < 0) cycleIndex = 0;
 							GeometryUtil.DestroyGhostTile();
 							GeometryUtil.UpdateGhostTile(camera, mapManager, selectedTileDef);
-							lastClickedMapIndex = -1; // Reset cycle
 						}
 					}
 					GUI.color = Color.white;
@@ -478,7 +484,6 @@ namespace ClassicTilestorm
 									GeometryUtil.DestroyGhostTile();
 									GeometryUtil.UpdateGhostTile(camera, mapManager, newTileDef);
 									paintMode.PlaceTileAtMousePosition();
-									lastClickedMapIndex = mapIndex;
 								}
 							}
 							else
@@ -486,13 +491,7 @@ namespace ClassicTilestorm
 								// Different tile type, place the selected tile
 								paintMode.SetTileDefIndex(selectedTileDefIndex);
 								paintMode.PlaceTileAtMousePosition();
-								lastClickedMapIndex = mapIndex;
 							}
-						}
-						else
-						{
-							// Different grid cell or invalid position, reset to avoid unintended placement
-							lastClickedMapIndex = -1;
 						}
 					}
 					mouseDownMapIndex = -1; // Reset after mouse up
