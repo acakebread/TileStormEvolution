@@ -115,7 +115,6 @@ namespace ClassicTilestorm
 		protected override void SetupCameras()
 		{
 			base.SetupCameras();
-
 			var camera = Camera.main;//any camera
 
 			if (camera == null)

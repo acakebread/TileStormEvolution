@@ -16,19 +16,18 @@ namespace MassiveHadronLtd
 		private Dictionary<string, CameraBase> cameraSystems = new();
 		private Dictionary<string, string[]> groups = new();
 		private Dictionary<string, string> groupModes = new();
-		private bool hasCustomCameras = false;
-		private new Camera camera;//internal default
 
 		private void Awake()
 		{
-			camera = null != Camera.main ? Camera.main : FindAnyObjectByType<Camera>();//any camera
+			var camera = null != Camera.main ? Camera.main : FindAnyObjectByType<Camera>();//any camera
 			if (null == camera)
 			{
 				Debug.LogWarning("CameraController requires a Camera component");
 				return;
 			}
 
-			RegisterCamera(new CameraDefault(camera), DefaultMode);
+			var (srcPos, dstPos) = GetInitialCameraPositions();
+			RegisterCamera(new CameraDefault(camera) { iorigin = srcPos, itarget = dstPos }, DefaultMode);
 			SetCameraMode(DefaultMode);
 		}
 
@@ -45,21 +44,15 @@ namespace MassiveHadronLtd
 			if (!cameraSystems.ContainsKey(initialMode))
 			{
 				Debug.LogWarning($"No config for mode '{initialMode}'. Using default position.");
-				var (srcPos, dstPos) = GetInitialCameraPositions();
-
-				if (null == camera)
-				{
-					Debug.LogWarning("CameraController requires a Camera component");
-					return;
-				}
-
-				camera.transform.position = srcPos;
-				camera.transform.rotation = Quaternion.LookRotation(dstPos - srcPos, Vector3.up);
+				initialMode = DefaultMode;
 			}
 
-			if (initialMode != DefaultMode || hasCustomCameras)
-				SetCameraMode(initialMode);
+			SetCameraMode(initialMode);
 		}
+
+		protected virtual (Vector3 srcPos, Vector3 dstPos) GetInitialCameraPositions() => (new Vector3(0f, 0f, -10f), Vector3.forward);
+
+		protected virtual void SetupCameras() { }
 
 		protected void RegisterCamera(CameraBase system, string mode)
 		{
@@ -68,13 +61,12 @@ namespace MassiveHadronLtd
 				Debug.LogError("Cannot register camera with null or empty mode");
 				return;
 			}
+
 			if (cameraSystems.ContainsKey(mode))
-			{
 				Debug.LogWarning($"Camera mode '{mode}' is already registered. Overwriting.");
-			}
+
 			cameraSystems[mode] = system;
 			cameraSystems[mode].Awake();
-			hasCustomCameras = true;
 		}
 
 		protected void RegisterGroup(string groupId, string[] modes)
@@ -85,9 +77,8 @@ namespace MassiveHadronLtd
 				return;
 			}
 			if (groups.ContainsKey(groupId))
-			{
 				Debug.LogWarning($"Group '{groupId}' is already registered. Overwriting.");
-			}
+
 			groups[groupId] = modes.ToArray();
 		}
 
@@ -107,7 +98,7 @@ namespace MassiveHadronLtd
 		public void SetCameraMode(string mode, bool background = false)
 		{
 			//if (currentMode == mode) return;
-			if (string.IsNullOrEmpty(mode))
+			if (!cameraSystems.ContainsKey(mode))
 			{
 				Debug.LogWarning($"Invalid camera mode: {mode}. Falling back to '{DefaultMode}'.");
 				mode = DefaultMode;
@@ -147,10 +138,6 @@ namespace MassiveHadronLtd
 
 		protected virtual void OnDestroy() => currentSystem?.OnDestroy();
 
-		private void OnApplicationFocus(bool hasFocus) => currentSystem?.OnApplicationFocus(hasFocus);
-
-		protected virtual void SetupCameras() { }
-
-		protected virtual (Vector3 srcPos, Vector3 dstPos) GetInitialCameraPositions() => (new Vector3(0f, 0f, 0f), Vector3.forward);
+		protected virtual void OnApplicationFocus(bool hasFocus) => currentSystem?.OnApplicationFocus(hasFocus);
 	}
 }
