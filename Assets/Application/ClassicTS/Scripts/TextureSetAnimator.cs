@@ -9,12 +9,16 @@ namespace ClassicTilestorm
 		private int frame = 0;
 		private float timer = 0f;
 
-		private void ApplyTexture(int index)
+		public delegate void TextureChangedHandler(Texture newTexture);
+		public event TextureChangedHandler OnTextureChanged;
+
+		public void ApplyTexture(int index)
 		{
 			if (target == null || frames[index].texture == null) return;
 			if (null == target.material) target.material = new Material(Shader.Find("Universal Render Pipeline/Simple Lit"));
 
 			target.material.mainTexture = frames[index].texture;
+			OnTextureChanged?.Invoke(frames[index].texture); // Notify listeners
 		}
 
 		public void Initialize(TextureFrame[] frames)

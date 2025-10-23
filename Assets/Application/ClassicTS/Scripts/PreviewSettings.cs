@@ -115,6 +115,9 @@ namespace ClassicTilestorm
 		[SerializeField, ResourcePath] private string texturePath = "ClassicTS/Textures/";
 		public static string TexturePath => instance.texturePath;
 
+		[SerializeField, ResourcePath] private string materialPath = "ClassicTS/Materials/";
+		public static string MaterialPath => instance.materialPath;
+
 		[SerializeField, ResourcePath] private string skycubesPath = "ClassicTS/SkyCubes/";
 		public static string SkycubesPath => instance.skycubesPath;
 
