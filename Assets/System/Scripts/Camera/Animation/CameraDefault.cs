@@ -119,15 +119,5 @@ namespace MassiveHadronLtd
 
 			return direction;
 		}
-
-		protected override void OnRender()
-		{
-			if (camera == null) return;
-			camera.transform.position = iorigin;
-			var direction = itarget - iorigin;
-			if (direction.sqrMagnitude > Mathf.Epsilon)
-				camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
-			camera.fieldOfView = fieldOfView;
-		}
 	}
 }
