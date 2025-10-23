@@ -130,11 +130,9 @@ namespace MassiveHadronLtd
 		
 		protected virtual void Update() => currentSystem?.Update();
 
-		protected virtual void OnDisable() => currentSystem?.OnDisable();
-
 		protected virtual void OnGUI() => currentSystem?.OnGUI();
 
-		protected virtual void OnPostRender() => currentSystem?.OnPostRender();
+		protected virtual void OnDisable() => currentSystem?.OnDisable();
 
 		protected virtual void OnDestroy() => currentSystem?.OnDestroy();
 

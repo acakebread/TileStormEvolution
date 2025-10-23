@@ -101,7 +101,7 @@ namespace ClassicTilestorm
 			if (Input.GetKey(KeyCode.Q)) direction += Vector3.down;
 			if (Input.GetKey(KeyCode.E)) direction += Vector3.up;
 
-			if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) direction *= 5f;
+			if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) direction *= zoomSpeed * 0.5f;
 			return direction;
 		}
 	}

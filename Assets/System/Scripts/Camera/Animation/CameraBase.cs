@@ -21,13 +21,10 @@ namespace MassiveHadronLtd
 		public virtual void Start() { }
 		public virtual void OnEnable() { }
 		public virtual void Update() { }
-		public virtual void OnDisable() { }
 		public virtual void OnGUI() { }
+		public virtual void OnDisable() { }
 		public virtual void OnApplicationFocus(bool hasFocus) { }
-		public virtual void OnPostRender() { }
 		public virtual void OnDestroy() { }
-
-		protected virtual void OnRender() { }
 
 		public virtual void CopyFrom(CameraBase other)
 		{

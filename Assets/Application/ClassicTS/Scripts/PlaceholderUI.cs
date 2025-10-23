@@ -4,10 +4,10 @@ using MassiveHadronLtd;
 
 namespace ClassicTilestorm
 {
-	[RequireComponent(typeof(GameController))]
+	[RequireComponent(typeof(MainController))]
 	public class PlaceholderUI : MonoBehaviour
 	{
-		private GameController gameController => GetComponent<GameController>();
+		private MainController mainController => GetComponent<MainController>();
 
 		// Basic animation system
 		private bool isGuiVisible = false;
@@ -101,14 +101,14 @@ namespace ClassicTilestorm
 		{
 			if (delta == 0)
 			{
-				gameController.LoadMap();
+				mainController.LoadMap();
 				return;
 			}
 
 			var currentIndex = DatabaseSerializer.Maps.ToList().FindIndex(m => m.name == PreviewSettings.LoadMapName);
 			currentIndex = (DatabaseSerializer.Maps.Count + currentIndex + delta) % DatabaseSerializer.Maps.Count;
 			PreviewSettings.LoadMapName = DatabaseSerializer.Maps[currentIndex].name;
-			gameController.LoadMap();
+			mainController.LoadMap();
 		}
 
 		// Get the bottom Y position of the panel in GUI coordinates
@@ -169,7 +169,7 @@ namespace ClassicTilestorm
 			if (GUI.Button(new Rect(currentX, y, buttonWidth, buttonHeight), "Editor", modeButtonStyle))
 			{
 				PreviewSettings.CurrentMode = PreviewMode.Editor;
-				gameController.SetPreviewMode(PreviewMode.Editor);
+				mainController.SetPreviewMode(PreviewMode.Editor);
 			}
 			currentX += buttonWidth + spacing;
 
@@ -188,7 +188,7 @@ namespace ClassicTilestorm
 			if (GUI.Button(new Rect(currentX, y, buttonWidth, buttonHeight), "Player", modeButtonStyle))
 			{
 				PreviewSettings.CurrentMode = PreviewMode.Player;
-				gameController.SetPreviewMode(PreviewMode.Player);
+				mainController.SetPreviewMode(PreviewMode.Player);
 			}
 			currentX += buttonWidth + spacing;
 
@@ -207,7 +207,7 @@ namespace ClassicTilestorm
 			if (GUI.Button(new Rect(currentX, y, buttonWidth, buttonHeight), "Cinema", modeButtonStyle))
 			{
 				PreviewSettings.CurrentMode = PreviewMode.Cinema;
-				gameController.SetPreviewMode(PreviewMode.Cinema, true);
+				mainController.SetPreviewMode(PreviewMode.Cinema, true);
 			}
 			currentX += buttonWidth + spacing;
 
@@ -228,10 +228,10 @@ namespace ClassicTilestorm
 			if (GUI.Button(new Rect(currentX, y, buttonWidth, buttonHeight), "Reload")) ChangeMap(0);
 			currentX += buttonWidth + spacing;
 
-			if (GUI.Button(new Rect(currentX, y, buttonWidth, buttonHeight), "Scramble")) gameController.Scramble();
+			if (GUI.Button(new Rect(currentX, y, buttonWidth, buttonHeight), "Scramble")) mainController.Scramble();
 			currentX += buttonWidth + spacing;
 
-			if (GUI.Button(new Rect(currentX, y, buttonWidth, buttonHeight), "Solve")) gameController.Solve();
+			if (GUI.Button(new Rect(currentX, y, buttonWidth, buttonHeight), "Solve")) mainController.Solve();
 
 			guiRect.height = panelHeight;
 

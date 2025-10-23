@@ -38,7 +38,7 @@ namespace ClassicTilestorm
 			OnRender();
 		}
 
-		protected override void OnRender()
+		private void OnRender()
 		{
 			if (null == camera) return;
 			camera.transform.position = iorigin;
