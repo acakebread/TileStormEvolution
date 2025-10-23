@@ -19,6 +19,7 @@ namespace ClassicTilestorm
 		private const float MinDistanceForNewFocusPoint = 3f;
 		private const float CinemaTimeoutDuration = 5f;
 		private float cinemaTimer = 0f; // Initialize to 0 instead of Time.time
+		public void ResetCinemaTimer(bool forceCinema = false) => cinemaTimer = Time.time - (forceCinema ? CinemaTimeoutDuration : 0);
 
 		private bool gestureControllerEnabled = true;
 		public event Action<bool> OnWaypointReachedForGestures;
@@ -33,27 +34,27 @@ namespace ClassicTilestorm
 			set
 			{
 				base.camera = value;
-				postProcessingController = InitialisePostProcessingController();
-			}
-		}
+				postProcessingController = InitialisePostProcessingController(value);
 
-		private PostProcessingCameraController InitialisePostProcessingController()
-		{
-			if (null == camera)
-			{
-				Debug.LogWarning("Cannot create PostProcessingCameraController: Camera is null");
-				return null;
-			}
+				static PostProcessingCameraController InitialisePostProcessingController(Camera camera)
+				{
+					if (null == camera)
+					{
+						Debug.LogWarning("Cannot create PostProcessingCameraController: Camera is null");
+						return null;
+					}
 
-			var ppController = camera.GetComponentInChildren<PostProcessingCameraController>(true);
-			if (ppController == null)
-			{
-				var ppObject = new GameObject("PostProcessing");
-				ppObject.transform.SetParent(camera.transform, false);
-				ppController = ppObject.AddComponent<PostProcessingCameraController>();
-				Debug.Log("Created PostProcessingCameraController on camera");
+					var ppController = camera.GetComponentInChildren<PostProcessingCameraController>(true);
+					if (ppController == null)
+					{
+						var ppObject = new GameObject("PostProcessing");
+						ppObject.transform.SetParent(camera.transform, false);
+						ppController = ppObject.AddComponent<PostProcessingCameraController>();
+						Debug.Log("Created PostProcessingCameraController on camera");
+					}
+					return ppController;
+				}
 			}
-			return ppController;
 		}
 
 		private void Awake()
@@ -69,18 +70,13 @@ namespace ClassicTilestorm
 				GestureControllerEnabled = false;
 		}
 
-		private void OnLevelCompleted() { }
-
 		public void OnMapSolved() => GestureControllerEnabled = false;
 
 		private bool GestureControllerEnabled { set { gestureControllerEnabled = value; UpdateGestureControllerState(); } }
 
-		private void OnWaypointGesturesEnable(bool value) => GestureControllerEnabled = value;
+		private void UpdateGestureControllerState() => gestureController.enabled = gestureControllerEnabled && PreviewMode.Player == PreviewSettings.CurrentMode;
 
-		private void UpdateGestureControllerState()
-		{
-			gestureController.enabled = gestureControllerEnabled && PreviewMode.Player == PreviewSettings.CurrentMode;
-		}
+		private void OnWaypointGesturesEnable(bool value) => GestureControllerEnabled = value;
 
 		public void Initialise(MapManager map, EggbotController eggbot, string initialMode = null)
 		{
@@ -91,7 +87,7 @@ namespace ClassicTilestorm
 			spatialSystem = new SpatialBucketSystem(MinDistanceForNewFocusPoint, MaxFocusPoints);
 			if (eggbotController != null)
 			{
-				eggbotController.OnWaypointReached += HandleWaypointReached;
+				eggbotController.OnWaypointReached += OnWaypointReached;
 				eggbotController.OnLevelCompleted += OnLevelCompleted;
 				eggbotController.OnPuzzleSolved += HandlePuzzleSolved;
 			}
@@ -121,12 +117,7 @@ namespace ClassicTilestorm
 			return (srcPos, dstPos);
 		}
 
-		protected Func<Vector3> GetTargetPosition()
-		{
-			return () => eggbotController != null && eggbotController.transform != null
-				? eggbotController.transform.position
-				: Vector3.zero;
-		}
+		protected Func<Vector3> GetTargetPosition() => () => eggbotController != null && eggbotController.transform != null ? eggbotController.transform.position : Vector3.zero;
 
 		protected Func<IReadOnlyList<Vector3>> GetFocusPoints()
 		{
@@ -174,7 +165,7 @@ namespace ClassicTilestorm
 			RegisterGroup("CINEMA", new[] { CameraModeRegistry.Path, CameraModeRegistry.Orbit });
 		}
 
-		private void HandleWaypointReached(int waypointIndex)
+		private void OnWaypointReached(int waypointIndex)
 		{
 			if (eggbotController == null || mapManager == null || waypointIndex < 0 || waypointIndex >= mapManager.Waypoints.Length) return;
 			if (waypointIndex == 0 || waypointIndex == mapManager.Waypoints.Length - 1) return;
@@ -199,7 +190,9 @@ namespace ClassicTilestorm
 			SetCameraMode(CameraModeRegistry.Follow, true);
 		}
 
-		protected void UpdateCinemaMode()
+		private void OnLevelCompleted() { }
+
+		private void UpdateCinemaMode()
 		{
 			if (!IsCinemaCamera(cameraSystem) || !HasCompleted || Time.time < cinemaTimer + CinemaTimeoutDuration) return;
 			cinemaTimer = Time.time;
@@ -218,14 +211,9 @@ namespace ClassicTilestorm
 			OnWaypointReachedForGestures -= OnWaypointGesturesEnable;
 			gestureController.OnMapUpdated -= CheckDisableDrag;
 			if (eggbotController == null) return;
-			eggbotController.OnWaypointReached -= HandleWaypointReached;
+			eggbotController.OnWaypointReached -= OnWaypointReached;
 			eggbotController.OnPuzzleSolved -= HandlePuzzleSolved;
 			eggbotController.OnLevelCompleted -= OnLevelCompleted;
-		}
-
-		public void ResetCinemaTimer(bool forceCinema = false)
-		{
-			cinemaTimer = Time.time - (forceCinema ? CinemaTimeoutDuration : 0);
 		}
 	}
 }

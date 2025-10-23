@@ -15,7 +15,7 @@ namespace ClassicTilestorm
 			gameObject.AddComponent<PlaceholderUI>();
 			cameraController = InitialiseCameraController(gameObject, Camera.main);//Camera.main.gameObject, Camera.main - container does not have to be the camera
 
-			GameCameraController InitialiseCameraController(GameObject containter, Camera camera)
+			static GameCameraController InitialiseCameraController(GameObject containter, Camera camera)
 			{
 				if (null == camera || null == containter)
 				{
