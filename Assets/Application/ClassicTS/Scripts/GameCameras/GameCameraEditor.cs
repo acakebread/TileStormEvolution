@@ -179,17 +179,6 @@ namespace ClassicTilestorm
 				activeMode.OnApplicationFocus(hasFocus);
 		}
 
-		protected override void OnRender()
-		{
-			base.OnRender();
-			if (camera == null) return;
-			camera.transform.position = iorigin;
-			var direction = itarget - iorigin;
-			if (direction.sqrMagnitude > Mathf.Epsilon)
-				camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
-			camera.fieldOfView = fieldOfView;
-		}
-
 		public override void OnEnable()
 		{
 			base.OnEnable();

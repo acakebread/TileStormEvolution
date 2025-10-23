@@ -28,35 +28,6 @@ namespace ClassicTilestorm
 		private bool HasCompleted => cameraSystem is GameCameraOrbit orbit ? orbit.HasCompleted : cameraSystem is GameCameraPath path && path.HasCompleted;
 		private bool IsCinemaCamera(CameraBase _cameraSystem) => _cameraSystem is GameCameraOrbit || _cameraSystem is GameCameraPath;
 
-		public override Camera camera
-		{
-			get { return base.camera; }
-			set
-			{
-				base.camera = value;
-				postProcessingController = InitialisePostProcessingController(value);
-
-				static PostProcessingCameraController InitialisePostProcessingController(Camera camera)
-				{
-					if (null == camera)
-					{
-						Debug.LogWarning("Cannot create PostProcessingCameraController: Camera is null");
-						return null;
-					}
-
-					var ppController = camera.GetComponentInChildren<PostProcessingCameraController>(true);
-					if (ppController == null)
-					{
-						var ppObject = new GameObject("PostProcessing");
-						ppObject.transform.SetParent(camera.transform, false);
-						ppController = ppObject.AddComponent<PostProcessingCameraController>();
-						Debug.Log("Created PostProcessingCameraController on camera");
-					}
-					return ppController;
-				}
-			}
-		}
-
 		private void Awake()
 		{
 			gestureController = GetComponent<GestureController>();
@@ -144,15 +115,33 @@ namespace ClassicTilestorm
 		protected override void SetupCameras()
 		{
 			base.SetupCameras();
+
+			var camera = Camera.main;//any camera
+
 			if (camera == null)
 			{
 				Debug.LogWarning("Cannot setup camera configs: Camera is null");
 				return;
 			}
 
+			postProcessingController = InitialisePostProcessingController(camera);
+
+			static PostProcessingCameraController InitialisePostProcessingController(Camera camera)
+			{
+				var ppController = camera.GetComponentInChildren<PostProcessingCameraController>(true);
+				if (null == ppController)
+				{
+					var ppObject = new GameObject("PostProcessing");
+					ppObject.transform.SetParent(camera.transform, false);
+					ppController = ppObject.AddComponent<PostProcessingCameraController>();
+					Debug.Log("Created PostProcessingCameraController on camera");
+				}
+				return ppController;
+			}
+
 			var (srcPos, dstPos) = GetInitialCameraPositions();
 
-			RegisterCamera(new GameCameraEditor(camera) { mapManager = this.mapManager }, CameraModeRegistry.Editor);
+			RegisterCamera(new GameCameraEditor(camera) { iorigin = srcPos, itarget = dstPos, mapManager = this.mapManager }, CameraModeRegistry.Editor);
 			RegisterCamera(new GameCameraDirect(camera) { iorigin = srcPos, itarget = dstPos }, CameraModeRegistry.Direct);
 			RegisterCamera(new GameCameraFollow(camera) { iorigin = srcPos, itarget = dstPos, targetFn = GetTargetPosition() }, CameraModeRegistry.Follow);
 			RegisterCamera(new GameCameraPreset(camera) { iorigin = srcPos, itarget = dstPos, originFn = () => srcPos, targetFn = GetTargetPosition() }, CameraModeRegistry.Preset);

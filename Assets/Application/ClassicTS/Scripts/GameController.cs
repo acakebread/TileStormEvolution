@@ -13,24 +13,7 @@ namespace ClassicTilestorm
 		private void Awake()
 		{
 			gameObject.AddComponent<PlaceholderUI>();
-			cameraController = InitialiseCameraController(gameObject, Camera.main);//Camera.main.gameObject, Camera.main - container does not have to be the camera
-
-			static GameCameraController InitialiseCameraController(GameObject containter, Camera camera)
-			{
-				if (null == camera || null == containter)
-				{
-					Debug.LogWarning("Cannot create GameCameraController: Camera or containter is null");
-					return null;
-				}
-
-				if (!containter.TryGetComponent<GameCameraController>(out var controller))
-				{
-					controller = containter.AddComponent<GameCameraController>();
-					controller.camera = camera;
-					Debug.Log("Created GameCameraController");
-				}
-				return controller;
-			}
+			cameraController = gameObject.AddComponent<GameCameraController>();
 		}
 
 		private void Start()

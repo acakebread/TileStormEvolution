@@ -8,12 +8,7 @@ namespace MassiveHadronLtd
 	public class CameraController : MonoBehaviour
 	{
 		public CameraBase currentSystem => cameraSystems.ContainsKey(currentMode) ? cameraSystems[currentMode] : null;
-		private Camera _camera = null;
-		public virtual new Camera camera 
-		{
-			set => _camera = value;
-			get => null != _camera ? _camera : Camera.main; 
-		}
+		protected Dictionary<string, CameraBase> CameraSystems => cameraSystems;
 
 		private const string DefaultMode = "Default"; // Define default mode in core library
 		private string currentMode = DefaultMode;
@@ -22,11 +17,11 @@ namespace MassiveHadronLtd
 		private Dictionary<string, string[]> groups = new();
 		private Dictionary<string, string> groupModes = new();
 		private bool hasCustomCameras = false;
-
-		protected Dictionary<string, CameraBase> CameraSystems => cameraSystems;
+		private new Camera camera;//internal default
 
 		private void Awake()
 		{
+			camera = null != Camera.main ? Camera.main : FindAnyObjectByType<Camera>();//any camera
 			if (null == camera)
 			{
 				Debug.LogWarning("CameraController requires a Camera component");
@@ -41,12 +36,6 @@ namespace MassiveHadronLtd
 		{
 			initialMode = string.IsNullOrEmpty(initialMode) ? DefaultMode : initialMode;
 
-			if (null == camera)
-			{
-				Debug.LogWarning("CameraController requires a Camera component");
-				return;
-			}
-
 			groups = new();
 			groupModes = new();
 			cameraSystems = new();
@@ -57,23 +46,23 @@ namespace MassiveHadronLtd
 			{
 				Debug.LogWarning($"No config for mode '{initialMode}'. Using default position.");
 				var (srcPos, dstPos) = GetInitialCameraPositions();
+
+				if (null == camera)
+				{
+					Debug.LogWarning("CameraController requires a Camera component");
+					return;
+				}
+
 				camera.transform.position = srcPos;
 				camera.transform.rotation = Quaternion.LookRotation(dstPos - srcPos, Vector3.up);
 			}
 
 			if (initialMode != DefaultMode || hasCustomCameras)
-			{
 				SetCameraMode(initialMode);
-			}
 		}
 
-		protected void RegisterCamera(CameraBase camera, string mode)
+		protected void RegisterCamera(CameraBase system, string mode)
 		{
-			if (camera == null)
-			{
-				Debug.LogError("Cannot register null Camera");
-				return;
-			}
 			if (string.IsNullOrEmpty(mode))
 			{
 				Debug.LogError("Cannot register camera with null or empty mode");
@@ -83,7 +72,7 @@ namespace MassiveHadronLtd
 			{
 				Debug.LogWarning($"Camera mode '{mode}' is already registered. Overwriting.");
 			}
-			cameraSystems[mode] = camera;
+			cameraSystems[mode] = system;
 			cameraSystems[mode].Awake();
 			hasCustomCameras = true;
 		}
