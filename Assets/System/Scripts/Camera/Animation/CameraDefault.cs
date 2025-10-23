@@ -18,11 +18,10 @@ namespace MassiveHadronLtd
 		{
 			base.Awake();
 
-			var cameraTransform = camera.transform;
-			cameraTransform.position = iorigin;
+			camera.transform.position = iorigin;
 			var direction = itarget - iorigin;
 			if (direction.sqrMagnitude > Mathf.Epsilon)
-				cameraTransform.rotation = Quaternion.LookRotation(direction, Vector3.up);
+				camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
 		}
 
 		public override void Start()
@@ -33,9 +32,8 @@ namespace MassiveHadronLtd
 			postProcessingEnabled = false;
 
 			// Initialize rotation and state
-			var cameraTransform = camera.transform;
-			yaw = cameraTransform.eulerAngles.y;
-			pitch = cameraTransform.eulerAngles.x;
+			yaw = camera.transform.eulerAngles.y;
+			pitch = camera.transform.eulerAngles.x;
 			dragging = false;
 			skipNextScroll = false;
 
@@ -49,15 +47,14 @@ namespace MassiveHadronLtd
 			base.Update();
 
 			var wasDragging = dragging;
-			var cameraTransform = camera.transform;
 
 			// Handle mouse button down to start dragging
 			if ((Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1)) &&
 				!EventSystem.current.IsPointerOverGameObject())
 			{
 				dragging = true;
-				yaw = cameraTransform.eulerAngles.y;
-				pitch = cameraTransform.eulerAngles.x;
+				yaw = camera.transform.eulerAngles.y;
+				pitch = camera.transform.eulerAngles.x;
 			}
 
 			// Get mouse or touch input
@@ -74,7 +71,7 @@ namespace MassiveHadronLtd
 			{
 				yaw += lookSpeedH * pointerX;
 				pitch -= lookSpeedV * pointerY;
-				cameraTransform.eulerAngles = new Vector3(pitch, yaw, 0f);
+				camera.transform.eulerAngles = new Vector3(pitch, yaw, 0f);
 			}
 
 			// Stop dragging when mouse buttons or touch are released
@@ -87,13 +84,13 @@ namespace MassiveHadronLtd
 			if (InsideWindow())
 			{
 				float scroll = skipNextScroll ? 0f : Input.GetAxis("Mouse ScrollWheel");
-				cameraTransform.Translate(0, 0, scroll * zoomSpeed, Space.Self);
+				camera.transform.Translate(0, 0, scroll * zoomSpeed, Space.Self);
 				skipNextScroll = false;
 			}
 
 			// Translation (WASD movement, always enabled)
 			Vector3 translation = GetInputTranslationDirection() * zoomSpeed * Time.deltaTime;
-			cameraTransform.Translate(translation, Space.Self);
+			camera.transform.Translate(translation, Space.Self);
 		}
 
 		public override void OnApplicationFocus(bool hasFocus)

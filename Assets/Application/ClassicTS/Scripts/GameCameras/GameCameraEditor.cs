@@ -56,11 +56,10 @@ namespace ClassicTilestorm
 		{
 			base.Awake();
 
-			var cameraTransform = camera.transform;
-			cameraTransform.position = iorigin;
+			camera.transform.position = iorigin;
 			var direction = itarget - iorigin;
 			if (direction.sqrMagnitude > Mathf.Epsilon)
-				cameraTransform.rotation = Quaternion.LookRotation(direction, Vector3.up);
+				camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
 
 			dragMode = new GameCameraEditorDrag(camera);
 			paintMode = new GameCameraEditorPaint(camera, mapManager, selectedMapDefIndex);
