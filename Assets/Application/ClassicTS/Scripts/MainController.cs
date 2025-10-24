@@ -56,7 +56,7 @@ namespace ClassicTilestorm
 			if (null != cameraController) cameraController.Initialise(mapManager, eggbotController);
 
 			if (null != gameController) gameController.Initialise();
-			if (null != editorController) editorController.Initialise(mapManager, eggbotController);
+			if (null != editorController) editorController.Initialise(mapManager);
 		}
 
 		public void Scramble() { if (null != mapManager) mapManager.Scramble(); }

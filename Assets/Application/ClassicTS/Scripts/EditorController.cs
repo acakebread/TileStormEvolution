@@ -9,11 +9,9 @@ namespace ClassicTilestorm
 	public class EditorController : MonoBehaviour
 	{
 		private MapManager mapManager;
-		private EggbotController eggbotController;
 
 		private GameObject gridLines;
 		private bool gridLinesEnabled = true; // Toggle for grid lines
-
 
 		private GameCameraEditorMovement activeMode;
 		private GameCameraEditorDrag dragMode;
@@ -44,6 +42,8 @@ namespace ClassicTilestorm
 		private static Texture2D toggleOnBackgroundTexture; // Static texture for toggle on state
 		private static Texture2D toggleHoverBackgroundTexture; // Static texture for toggle hover state
 
+		//temporary
+		private PlaceholderUI placeholderUI; // Reference to PlaceholderUI
 
 		private void Start()
 		{
@@ -64,7 +64,7 @@ namespace ClassicTilestorm
 			if (null == toggleHoverBackgroundTexture) toggleHoverBackgroundTexture = TextureUtils.MakeTex(4, 4, new Color(0.4f, 0.4f, 0.4f, 1f)); // Lighter gray for hover
 		}
 
-		public void Initialise(MapManager map, EggbotController eggbot)
+		public void Initialise(MapManager map)
 		{
 			Destroy();
 
@@ -73,32 +73,12 @@ namespace ClassicTilestorm
 			controller.SetCameraSystem(CameraModeRegistry.Editor, true);
 
 			mapManager = map;
-			eggbotController = eggbot;
 
 			gridLines = null != mapManager ? GridLinesHelper.CreateGridLines(transform, mapManager.Width, mapManager.Height) : null;
 			UpdateGridLines(false);
 
 			if (isActiveAndEnabled) OnEnable();
-
-			//var cameraSystem = controller.currentCamera;
-			//var camera = cameraSystem.camera;
-			//camera.transform.position = cameraSystem.iorigin;
-			//var direction = cameraSystem.itarget - cameraSystem.iorigin;
-			//if (direction.sqrMagnitude > Mathf.Epsilon)
-			//	camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
-
-			//dragMode = new GameCameraEditorDrag(camera);
-			//paintMode = new GameCameraEditorPaint(camera, mapManager, selectedMapDefIndex);
-			//activeMode = dragMode;
-			//targetWidth = collapsedWidth; // Initialize to collapsed
 		}
-
-		//private void OnMapManagerChanged()
-		//{
-		//	Debug.Log("MapManager changed or reloaded");
-		//	gridLines = null != mapManager ? GridLinesHelper.CreateGridLines(transform, mapManager.Width, mapManager.Height) : null;
-		//	UpdateGridLines(gridLinesEnabled & isActiveAndEnabled);
-		//}
 
 		private void UpdateGridLines(bool value) { if (null != gridLines) gridLines.SetActive(value); }
 
@@ -178,10 +158,11 @@ namespace ClassicTilestorm
 			}
 		}
 
-		void Destroy()
-		{
-			if (null != gridLines) Destroy(gridLines);
+		void Destroy() { if (null != gridLines) Destroy(gridLines); }
 
+		void OnDestroy()
+		{
+			Destroy();
 			GeometryUtil.DestroyGhostTile();
 
 			// Clean up static textures
@@ -217,12 +198,9 @@ namespace ClassicTilestorm
 			}
 		}
 
-		void OnDestroy() => Destroy();
-
 		public void OnApplicationFocus(bool hasFocus)
 		{
-			if (activeMode != null)
-				activeMode.OnApplicationFocus(hasFocus);
+			if (null != activeMode) activeMode.OnApplicationFocus(hasFocus);
 		}
 
 		private void UpdateTileCycleList(string currentTileType)
@@ -294,7 +272,7 @@ namespace ClassicTilestorm
 			float spacing = 10;
 
 			float panelBottomY = 0f; // Start at top of screen
-			if (placeholderUI != null)
+			if (null != placeholderUI)
 				panelBottomY = placeholderUI.GetPanelBottomY();
 
 			// Mode toggle buttons, Save button, and Grid toggle stacked on the left
@@ -522,46 +500,5 @@ namespace ClassicTilestorm
 				}
 			}
 		}
-
-		//public void OnGUI()
-		//{
-		//	GUIManager.ResetGuiState(); // Clear rects at start of OnGUI
-
-		//	float buttonWidth = 120;
-		//	float buttonHeight = 30;
-		//	float margin = 10;
-		//	float spacing = 10;
-
-		//	float panelBottomY = 0f; // Start at top of screen
-		//	if (null != placeholderUI) panelBottomY = placeholderUI.GetPanelBottomY();
-
-		//	// Mode toggle buttons, Save button, and Grid toggle stacked on the left
-		//	Rect dragButtonRect = new Rect(margin, panelBottomY + spacing, buttonWidth, buttonHeight);
-		//	Rect paintButtonRect = new Rect(margin, panelBottomY + spacing + buttonHeight + spacing, buttonWidth, buttonHeight);
-		//	Rect saveButtonRect = new Rect(margin, panelBottomY + spacing + 2 * (buttonHeight + spacing), buttonWidth, buttonHeight);
-		//	Rect gridToggleRect = new Rect(margin, panelBottomY + spacing + 3 * (buttonHeight + spacing), buttonWidth, buttonHeight);
-		//	GUIManager.RegisterGuiRect(dragButtonRect);
-		//	GUIManager.RegisterGuiRect(paintButtonRect);
-		//	GUIManager.RegisterGuiRect(saveButtonRect);
-		//	GUIManager.RegisterGuiRect(gridToggleRect);
-
-
-		//	GUIStyle gridButtonStyle = new GUIStyle(GUI.skin.button);
-		//	gridButtonStyle.normal.background = gridButtonBackgroundTexture;
-		//	gridButtonStyle.padding = new RectOffset(10, 10, 5, 5);
-		//	gridButtonStyle.fontSize = 14;
-		//	gridButtonStyle.alignment = TextAnchor.MiddleCenter;
-		//	gridButtonStyle.fixedWidth = buttonWidth;
-		//	gridButtonStyle.fixedHeight = buttonHeight;
-		//	if (GUI.Button(gridToggleRect, gridLinesEnabled ? "Hide Grid" : "Show Grid", gridButtonStyle))
-		//	{
-		//		Debug.Log("Grid Toggle Clicked!");
-		//		gridLinesEnabled = !gridLinesEnabled;
-		//		UpdateGridLines(gridLinesEnabled);
-		//	}
-		//}
-
-		//temporary
-		private PlaceholderUI placeholderUI; // Reference to PlaceholderUI
 	}
 }
