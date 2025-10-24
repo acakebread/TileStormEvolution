@@ -42,8 +42,8 @@ namespace ClassicTilestorm
 			var isGuiControlActive = PlaceholderEditorUI.Instance.IsGuiControlActive();
 			if ((Input.GetMouseButton(1) || Input.touchCount > 0) && !isGuiControlActive && !didGainFocus)
 			{
-				float pointerX = Input.GetAxis("Mouse X");
-				float pointerY = Input.GetAxis("Mouse Y");
+				var pointerX = Input.GetAxis("Mouse X");
+				var pointerY = Input.GetAxis("Mouse Y");
 				if (Input.touchCount > 0)
 				{
 					pointerX = Input.touches[0].deltaPosition.x * 0.05f;
