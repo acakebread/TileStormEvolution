@@ -7,7 +7,6 @@ namespace ClassicTilestorm
 	{
 		public GameCameraStatic(Camera camera) : base(camera)
 		{
-			//initialise camera
 			if (null == camera) return;
 			camera.transform.position = iorigin;
 			var direction = itarget - camera.transform.position;
