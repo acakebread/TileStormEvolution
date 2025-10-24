@@ -15,6 +15,7 @@ namespace ClassicTilestorm
 		private void Awake()
 		{
 			gameObject.AddComponent<PlaceholderUI>();
+			gameObject.AddComponent<PlaceholderEditorUI>();
 			gameController = gameObject.AddComponent<GameController>();
 			editorController = gameObject.AddComponent<EditorController>();
 			cameraController = gameObject.AddComponent<MainCameraController>();

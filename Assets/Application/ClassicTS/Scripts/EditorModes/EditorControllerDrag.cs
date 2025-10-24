@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.EventSystems;
 
 namespace ClassicTilestorm
 {
@@ -21,16 +20,16 @@ namespace ClassicTilestorm
 			var wasDragging = dragging;
 			var cameraTransform = camera.transform;
 
-			// Check if a GUI control or area is active
-			bool isGuiControlActive = GUIManager.IsMouseOverGui();
+			// Use PlaceholderEditorUI for GUI checks
+			var isGuiControlActive = PlaceholderEditorUI.Instance.IsGuiControlActive();
 
 			// Handle mouse button down
-			if (Input.GetMouseButtonDown(0) && !EventSystem.current.IsPointerOverGameObject() && !isGuiControlActive)
+			if (Input.GetMouseButtonDown(0) && !PlaceholderEditorUI.Instance.IsMouseOverGui())
 			{
 				dragging = true;
 				isDraggingWithLeftMouse = true;
 				cameraStartPosition = cameraTransform.position;
-				Ray ray = camera.ScreenPointToRay(Input.mousePosition);
+				var ray = camera.ScreenPointToRay(Input.mousePosition);
 				if (Physics.Raycast(ray, out RaycastHit hit))
 				{
 					dragPlane = new Plane(Vector3.up, new Vector3(0f, hit.point.y, 0f));
@@ -53,8 +52,8 @@ namespace ClassicTilestorm
 				Ray currentRay = camera.ScreenPointToRay(Input.mousePosition);
 				if (dragPlane.Raycast(currentRay, out float enter))
 				{
-					Vector3 currentWorldPoint = currentRay.GetPoint(enter);
-					Vector3 delta = dragStartWorldPoint - currentWorldPoint;
+					var currentWorldPoint = currentRay.GetPoint(enter);
+					var delta = dragStartWorldPoint - currentWorldPoint;
 					cameraTransform.position += delta;
 				}
 			}

@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.EventSystems;
 
 namespace ClassicTilestorm
 {
@@ -17,11 +16,10 @@ namespace ClassicTilestorm
 		public EditorControllerMovement(Camera camera)
 		{
 			this.camera = camera;
-			if (camera != null && yaw == 0f && pitch == 0f) // Initialize only if not set
+			if (null != camera)
 			{
-				var cameraTransform = camera.transform;
-				yaw = cameraTransform.eulerAngles.y;
-				pitch = cameraTransform.eulerAngles.x;
+				yaw = camera.transform.eulerAngles.y;
+				pitch = camera.transform.eulerAngles.x;
 			}
 			skipNextScroll = false;
 			didGainFocus = false;
@@ -29,12 +27,9 @@ namespace ClassicTilestorm
 
 		public virtual void Initialize()
 		{
-			if (camera != null)
-			{
-				var cameraTransform = camera.transform;
-				yaw = cameraTransform.eulerAngles.y;
-				pitch = cameraTransform.eulerAngles.x;
-			}
+			if (null == camera) return;
+			yaw = camera.transform.eulerAngles.y;
+			pitch = camera.transform.eulerAngles.x;
 		}
 
 		public virtual void Update()
@@ -44,8 +39,8 @@ namespace ClassicTilestorm
 			var cameraTransform = camera.transform;
 
 			// Handle rotation (right mouse or touch)
-			bool isGuiControlActive = GUIUtility.hotControl != 0;
-			if ((Input.GetMouseButton(1) || Input.touchCount > 0) && !isGuiControlActive && false == didGainFocus)
+			var isGuiControlActive = PlaceholderEditorUI.Instance.IsGuiControlActive();
+			if ((Input.GetMouseButton(1) || Input.touchCount > 0) && !isGuiControlActive && !didGainFocus)
 			{
 				float pointerX = Input.GetAxis("Mouse X");
 				float pointerY = Input.GetAxis("Mouse Y");
@@ -60,35 +55,25 @@ namespace ClassicTilestorm
 			}
 
 			// Zoom with mouse wheel
-			if (InsideWindow() && !GUIManager.IsMouseOverGui() && !EventSystem.current.IsPointerOverGameObject())
+			if (PlaceholderEditorUI.Instance.IsMouseInsideWindow() && !PlaceholderEditorUI.Instance.IsMouseOverGui())
 			{
-				float scroll = skipNextScroll ? 0f : Input.GetAxis("Mouse ScrollWheel");
+				var scroll = skipNextScroll ? 0f : Input.GetAxis("Mouse ScrollWheel");
 				cameraTransform.Translate(0, 0, scroll * zoomSpeed, Space.Self);
 				skipNextScroll = false;
-				//if (scroll != 0f)
-				//{
-				//	Debug.Log($"Zooming: scroll={scroll}, zoomSpeed={zoomSpeed}");
-				//}
 			}
 
 			// Translation (WASD movement)
-			Vector3 translation = GetInputTranslationDirection() * zoomSpeed * Time.deltaTime;
+			var translation = GetInputTranslationDirection() * zoomSpeed * Time.deltaTime;
 			cameraTransform.Translate(translation, Space.Self);
 
-			if (InsideWindow() && (Input.GetMouseButton(0) || Input.GetMouseButton(1))) didGainFocus = false;
+			if (PlaceholderEditorUI.Instance.IsMouseInsideWindow() && (Input.GetMouseButton(0) || Input.GetMouseButton(1)))
+				didGainFocus = false;
 		}
 
 		public virtual void OnApplicationFocus(bool hasFocus)
 		{
 			if (hasFocus) skipNextScroll = true;
 			if (hasFocus) didGainFocus = true;
-		}
-
-		protected bool InsideWindow()
-		{
-			Vector3 mousePosition = Input.mousePosition;
-			return mousePosition.x >= 0 && mousePosition.x <= Screen.width &&
-				   mousePosition.y >= 0 && mousePosition.y <= Screen.height;
 		}
 
 		protected Vector3 GetInputTranslationDirection()
