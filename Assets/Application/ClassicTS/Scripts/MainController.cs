@@ -23,11 +23,11 @@ namespace ClassicTilestorm
 			SetPreviewMode(PreviewSettings.CurrentMode);//invoke to enable and disable game and editor controllers - ToDo improve this
 		}
 
-		private void Update() { if (eggbotController != null) eggbotController.UpdateEggbot(mapManager); }
+		private void Update() { if (null != eggbotController) eggbotController.UpdateEggbot(mapManager); }
 
 		public void SetPreviewMode(PreviewMode mode)
 		{
-			if (cameraController == null) return;
+			if (null == cameraController) return;
 
 			cameraController.SetCameraMode(GameModes.GetModeString(mode));
 			editorController.enabled = mode == PreviewMode.Editor;
@@ -36,7 +36,7 @@ namespace ClassicTilestorm
 
 		public void LoadMap(string mapName = null)
 		{
-			if ((mapName = mapName ?? PreviewSettings.LoadMapName) == null) return;
+			if (null == (mapName = mapName ?? PreviewSettings.LoadMapName)) return;
 
 			var currentMap = DatabaseSerializer.Maps.FirstOrDefault(m => m.name == mapName) ?? DatabaseSerializer.Maps.FirstOrDefault();
 			if (null == currentMap)
