@@ -3,7 +3,7 @@ using UnityEngine.EventSystems;
 
 namespace ClassicTilestorm
 {
-	public class GameCameraEditorDrag : GameCameraEditorMovement
+	public class EditorControllerDrag : EditorControllerMovement
 	{
 		private bool dragging;
 		private bool isDraggingWithLeftMouse;
@@ -11,7 +11,7 @@ namespace ClassicTilestorm
 		private Vector3 cameraStartPosition;
 		private Plane dragPlane;
 
-		public GameCameraEditorDrag(Camera camera) : base(camera) { }
+		public EditorControllerDrag(Camera camera) : base(camera) { }
 
 		public override void Update()
 		{

@@ -13,9 +13,9 @@ namespace ClassicTilestorm
 		private GameObject gridLines;
 		private bool gridLinesEnabled = true; // Toggle for grid lines
 
-		private GameCameraEditorMovement activeMode;
-		private GameCameraEditorDrag dragMode;
-		private GameCameraEditorPaint paintMode;
+		private EditorControllerMovement activeMode;
+		private EditorControllerDrag dragMode;
+		private EditorControllerPaint paintMode;
 		private enum EditorMode { Drag, Paint }
 		private EditorMode currentMode = EditorMode.Drag;
 		private Vector2 scrollPosition = Vector2.zero;
@@ -94,8 +94,8 @@ namespace ClassicTilestorm
 			if (direction.sqrMagnitude > Mathf.Epsilon)
 				camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
 
-			dragMode = new GameCameraEditorDrag(camera);
-			paintMode = new GameCameraEditorPaint(camera, mapManager, selectedMapDefIndex);
+			dragMode = new EditorControllerDrag(camera);
+			paintMode = new EditorControllerPaint(camera, mapManager, selectedMapDefIndex);
 			activeMode = dragMode;
 			targetWidth = collapsedWidth;
 		}

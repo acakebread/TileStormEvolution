@@ -3,7 +3,7 @@ using UnityEngine.EventSystems;
 
 namespace ClassicTilestorm
 {
-	public abstract class GameCameraEditorMovement
+	public abstract class EditorControllerMovement
 	{
 		protected Camera camera;
 		protected static float yaw; // Static to share across instances
@@ -14,7 +14,7 @@ namespace ClassicTilestorm
 		protected bool skipNextScroll;
 		protected bool didGainFocus;
 
-		public GameCameraEditorMovement(Camera camera)
+		public EditorControllerMovement(Camera camera)
 		{
 			this.camera = camera;
 			if (camera != null && yaw == 0f && pitch == 0f) // Initialize only if not set

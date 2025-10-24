@@ -3,12 +3,12 @@ using UnityEngine.EventSystems;
 
 namespace ClassicTilestorm
 {
-	public class GameCameraEditorPaint : GameCameraEditorMovement
+	public class EditorControllerPaint : EditorControllerMovement
 	{
 		private MapManager mapManager;
 		private int selectedTileDefIndex;
 
-		public GameCameraEditorPaint(Camera camera, MapManager map, int tileDefIndex) : base(camera)
+		public EditorControllerPaint(Camera camera, MapManager map, int tileDefIndex) : base(camera)
 		{
 			mapManager = map;
 			selectedTileDefIndex = tileDefIndex;
