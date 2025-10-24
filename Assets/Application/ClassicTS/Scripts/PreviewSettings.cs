@@ -11,10 +11,10 @@ namespace ClassicTilestorm
 {
 	public enum PreviewMode
 	{
-		Player,
 		Direct,
-		Cinema,
-		Editor
+		Editor,
+		Player,
+		Cinema
 	}
 
 	public class PreviewSettings : MonoBehaviour
@@ -26,7 +26,7 @@ namespace ClassicTilestorm
 		[SerializeField] private string loadMapName = "Industrial 01";
 		public static string LoadMapName 
 		{ 
-			get => instance.loadMapName;
+			get => PlayerPrefsX.GetString("LastLoadedMap", instance.loadMapName);//restore previous session map
 			set 
 			{ 
 				instance.loadMapName = value;
@@ -126,13 +126,14 @@ namespace ClassicTilestorm
 
 		public static PreviewMode CurrentMode
 		{
-			get => instance != null ? instance.previewMode : PreviewMode.Player;
+
+			get => (PreviewMode)PlayerPrefsX.GetInt("PreviousMode", (int)instance.previewMode);
 			set
 			{
 				if (instance != null)
 				{
 					instance.previewMode = value;
-					PlayerPrefsX.SetInt("PreviousMode", (int)CurrentMode, true);
+					PlayerPrefsX.SetInt("PreviousMode", (int)value, true);
 				}
 			}
 		}
@@ -141,8 +142,6 @@ namespace ClassicTilestorm
 		void Awake()
 		{
 			instance = this;
-			LoadMapName = PlayerPrefsX.GetString("LastLoadedMap", LoadMapName);//restore previous session map
-			CurrentMode = (PreviewMode)PlayerPrefsX.GetInt("PreviousMode", (int)CurrentMode);//restore previous session mode
 		}
 
 		public static string GetDatabaseFilePath()

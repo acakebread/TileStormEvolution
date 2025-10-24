@@ -1,0 +1,23 @@
+using UnityEngine;
+
+namespace ClassicTilestorm
+{
+	public class GameController : MonoBehaviour
+	{
+		public void Initialise()
+		{
+			//set default system
+			if (!TryGetComponent<MainCameraController>(out var controller)) return;
+			controller.SetCameraSystem(CameraModeRegistry.Preset, true);//for player mode
+			controller.SetCameraSystem(CameraModeRegistry.Path, true);//for cinema mode
+		}
+
+		void OnEnable()
+		{
+		}
+
+		void OnDisable()
+		{
+		}
+	}
+}

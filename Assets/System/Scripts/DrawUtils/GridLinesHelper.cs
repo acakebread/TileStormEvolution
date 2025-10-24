@@ -4,13 +4,13 @@ namespace MassiveHadronLtd
 {
 	public static class GridLinesHelper
 	{
-		public static GameObject CreateGridLines(Transform parentTransform, int width, int height, bool gridLinesEnabled, float y = 0f, float offset = 0f, Color? color = null)
+		public static GameObject CreateGridLines(Transform parentTransform, int width, int height, float y = 0f, float offset = 0f, Color? color = null)
 		{
 			// Destroy existing grid lines if they exist
 			var existingGridLines = parentTransform.Find("GridLines");
 			if (existingGridLines != null)
 			{
-				UnityEngine.Object.Destroy(existingGridLines.gameObject);
+				Object.Destroy(existingGridLines.gameObject);
 			}
 
 			// Create new grid lines object
@@ -22,7 +22,7 @@ namespace MassiveHadronLtd
 			var gridMaterial = MaterialUtils.CreateTransparentUnlitMaterial(gridColor);
 			if (gridMaterial == null)
 			{
-				UnityEngine.Debug.LogError("GridLinesHelper: Failed to create grid line material.");
+				Debug.LogError("GridLinesHelper: Failed to create grid line material.");
 			}
 
 			// Create vertical lines (along X)
@@ -56,8 +56,6 @@ namespace MassiveHadronLtd
 				lr.SetPosition(0, new Vector3(0 + offset, y, zPos));
 				lr.SetPosition(1, new Vector3(width + offset, y, zPos));
 			}
-
-			gridLinesObject.SetActive(gridLinesEnabled);//all it was was these
 			return gridLinesObject;
 		}
 	}

@@ -7,7 +7,7 @@ using System.Linq;
 namespace ClassicTilestorm
 {
 	[RequireComponent(typeof(GestureController))]
-	public class GameCameraController : CameraController
+	public class MainCameraController : CameraController
 	{
 		private MapManager mapManager;
 		private EggbotController eggbotController;
@@ -18,18 +18,26 @@ namespace ClassicTilestorm
 		private const int MaxFocusPoints = 50;
 		private const float MinDistanceForNewFocusPoint = 3f;
 		private const float CinemaTimeoutDuration = 5f;
-		private float cinemaTimer = 0f; // Initialize to 0 instead of Time.time
+		private float cinemaTimer = 0f;
 		public void ResetCinemaTimer(bool forceCinema = false) => cinemaTimer = Time.time - (forceCinema ? CinemaTimeoutDuration : 0);
 
 		private bool gestureControllerEnabled = true;
 		public event Action<bool> OnWaypointReachedForGestures;
 
-		private CameraBase cameraSystem => currentSystem;
-		private bool HasCompleted => cameraSystem is GameCameraOrbit orbit ? orbit.HasCompleted : cameraSystem is GameCameraPath path && path.HasCompleted;
-		private bool IsCinemaCamera(CameraBase _cameraSystem) => _cameraSystem is GameCameraOrbit || _cameraSystem is GameCameraPath;
+		private CameraBase cameraSystem => currentCamera;
 
-		private void Awake()
+		public string PreviewModeToCameraMode(PreviewMode mode) => mode switch
 		{
+			PreviewMode.Direct => CameraModeRegistry.Direct,
+			PreviewMode.Editor => CameraModeRegistry.Editor,
+			PreviewMode.Player => CameraModeRegistry.Follow,
+			PreviewMode.Cinema => UnityEngine.Random.Range(0, 7) switch { 0 or 1 or 2 => CameraModeRegistry.Orbit, _ => CameraModeRegistry.Path },
+			_ => CameraModeRegistry.Absent
+		};
+
+		protected override void Awake()
+		{
+			base.Awake();
 			gestureController = GetComponent<GestureController>();
 			OnWaypointReachedForGestures += OnWaypointGesturesEnable;
 			gestureController.OnMapUpdated += CheckDisableDrag;
@@ -49,11 +57,10 @@ namespace ClassicTilestorm
 
 		private void OnWaypointGesturesEnable(bool value) => GestureControllerEnabled = value;
 
-		public void Initialise(MapManager map, EggbotController eggbot, string initialMode = null)
+		public void Initialise(MapManager map, EggbotController eggbot)
 		{
-			initialMode = initialMode ?? CameraModeRegistry.Follow;
 			mapManager = map ?? throw new ArgumentNullException(nameof(map));
-			gestureController.Initialise(mapManager);
+			gestureController.Initialise(Camera.main, mapManager);
 			eggbotController = eggbot;
 			spatialSystem = new SpatialBucketSystem(MinDistanceForNewFocusPoint, MaxFocusPoints);
 			if (eggbotController != null)
@@ -62,7 +69,8 @@ namespace ClassicTilestorm
 				eggbotController.OnLevelCompleted += OnLevelCompleted;
 				eggbotController.OnPuzzleSolved += HandlePuzzleSolved;
 			}
-			base.Initialise(initialMode);
+			var initialMode = PreviewModeToCameraMode(PreviewSettings.CurrentMode);
+			Initialise(initialMode ?? CameraModeRegistry.Preset);
 			GestureControllerEnabled = false;
 			UpdateGestureControllerState();
 
@@ -73,10 +81,10 @@ namespace ClassicTilestorm
 		protected override (Vector3 srcPos, Vector3 dstPos) GetInitialCameraPositions()
 		{
 			if (mapManager == null)
-				return (new Vector3(0f, 14f, -14f), Vector3.zero);
+				return (new Vector3(0f, 14f, -14f), Vector3.zero);//Classic TS defaults
 
 			var dstPos = new Vector3(mapManager.Width * 0.5f, 0f, mapManager.Height * 0.5f);
-			var srcPos = dstPos + new Vector3(0f, 14f, -14f);
+			var srcPos = dstPos + new Vector3(0f, 14f, -14f);//Classic TS defaults
 
 			if (mapManager.Waypoints?.Length > 0 && mapManager.Waypoints[0].bCamera)
 			{
@@ -115,7 +123,7 @@ namespace ClassicTilestorm
 		protected override void SetupCameras()
 		{
 			base.SetupCameras();
-			var camera = Camera.main;//any camera
+			var camera = Camera.main;
 
 			if (camera == null)
 			{
@@ -140,17 +148,15 @@ namespace ClassicTilestorm
 
 			var (srcPos, dstPos) = GetInitialCameraPositions();
 
-			RegisterCamera(new GameCameraEditor(camera) { iorigin = srcPos, itarget = dstPos, mapManager = this.mapManager }, CameraModeRegistry.Editor);
 			RegisterCamera(new GameCameraDirect(camera) { iorigin = srcPos, itarget = dstPos }, CameraModeRegistry.Direct);
+			RegisterCamera(new GameCameraEditor(camera) { iorigin = srcPos, itarget = dstPos }, CameraModeRegistry.Editor);
 			RegisterCamera(new GameCameraFollow(camera) { iorigin = srcPos, itarget = dstPos, targetFn = GetTargetPosition() }, CameraModeRegistry.Follow);
 			RegisterCamera(new GameCameraPreset(camera) { iorigin = srcPos, itarget = dstPos, originFn = () => srcPos, targetFn = GetTargetPosition() }, CameraModeRegistry.Preset);
 			RegisterCamera(new GameCameraOrbit(camera) { iorigin = srcPos, itarget = dstPos, targetFn = GetTargetPosition() }, CameraModeRegistry.Orbit);
 			RegisterCamera(new GameCameraPath(camera) { iorigin = srcPos, itarget = dstPos, pointsFn = GetFocusPoints(), targetFn = GetTargetPosition() }, CameraModeRegistry.Path);
 
-			RegisterGroup("EDITOR", new[] { CameraModeRegistry.Editor });
-			RegisterGroup("DIRECT", new[] { CameraModeRegistry.Direct });
-			RegisterGroup("PLAYER", new[] { CameraModeRegistry.Follow, CameraModeRegistry.Preset });
-			RegisterGroup("CINEMA", new[] { CameraModeRegistry.Path, CameraModeRegistry.Orbit });
+			// Register modes using GameModes
+			GameModes.RegisterAllModes(RegisterMode);
 		}
 
 		private void OnWaypointReached(int waypointIndex)
@@ -161,30 +167,33 @@ namespace ClassicTilestorm
 			var waypoint = mapManager.Waypoints[waypointIndex];
 			if (waypoint.vSrc == null || !waypoint.vSrc.IsValidVector())
 			{
-				SetCameraMode(CameraModeRegistry.Follow, true);
+				SetCameraSystem(CameraModeRegistry.Follow, true);
 				return;
 			}
 
 			((GameCameraPreset)CameraSystems[CameraModeRegistry.Preset]).originFn = () => waypoint.vSrc.IsValidVector() ? waypoint.vSrc.ToVector3() : new Vector3(0f, 14f, -14f);
 			((GameCameraPreset)CameraSystems[CameraModeRegistry.Preset]).targetFn = () => waypoint.vDst != null && waypoint.vDst.IsValidVector() ? waypoint.vDst.ToVector3() : mapManager.TileWorldPosition(waypoint.nTile);
 
-			SetCameraMode(CameraModeRegistry.Preset, true);
+			SetCameraSystem(CameraModeRegistry.Preset, true);
 			OnWaypointReachedForGestures?.Invoke(true);
 		}
 
 		private void HandlePuzzleSolved(int waypointIndex)
 		{
-			if (eggbotController == null) return;
-			SetCameraMode(CameraModeRegistry.Follow, true);
+			if (null == eggbotController) return;
+			SetCameraSystem(CameraModeRegistry.Follow, true);
 		}
 
 		private void OnLevelCompleted() { }
 
 		private void UpdateCinemaMode()
 		{
-			if (!IsCinemaCamera(cameraSystem) || !HasCompleted || Time.time < cinemaTimer + CinemaTimeoutDuration) return;
+			if (!IsCinemaCamera() || !HasCompleted() || Time.time < cinemaTimer + CinemaTimeoutDuration) return;
 			cinemaTimer = Time.time;
-			SetCameraMode(UnityEngine.Random.Range(0, 7) switch { 0 or 1 or 2 => CameraModeRegistry.Orbit, _ => CameraModeRegistry.Path });
+			SetCameraSystem(UnityEngine.Random.Range(0, 7) switch { 0 or 1 or 2 => CameraModeRegistry.Orbit, _ => CameraModeRegistry.Path });
+
+			bool HasCompleted() => cameraSystem is GameCameraOrbit orbit ? orbit.HasCompleted : cameraSystem is GameCameraPath path && path.HasCompleted;
+			bool IsCinemaCamera() => cameraSystem is GameCameraOrbit || cameraSystem is GameCameraPath;
 		}
 
 		protected override void Update()

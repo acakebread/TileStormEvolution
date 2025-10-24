@@ -16,7 +16,7 @@ namespace ClassicTilestorm
 		private float targetY = -100; // Target Y position for animation
 		private bool isMouseOverGui = false;
 
-		private readonly float hideDelay = 3f; // 3 seconds before hiding
+		private readonly float hideDelay = 2f; // 2 seconds before hiding
 		private readonly float animationSpeed = 300f; // Pixels per second for animation
 
 		// Button layout constants
@@ -207,7 +207,7 @@ namespace ClassicTilestorm
 			if (GUI.Button(new Rect(currentX, y, buttonWidth, buttonHeight), "Cinema", modeButtonStyle))
 			{
 				PreviewSettings.CurrentMode = PreviewMode.Cinema;
-				mainController.SetPreviewMode(PreviewMode.Cinema, true);
+				mainController.SetPreviewMode(PreviewMode.Cinema);
 			}
 			currentX += buttonWidth + spacing;
 

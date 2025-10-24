@@ -6,38 +6,32 @@ namespace ClassicTilestorm
 {
 	public class MainController : MonoBehaviour
 	{
+		private GameController gameController;
+		private EditorController editorController;
 		private MapManager mapManager;
 		private EggbotController eggbotController;
-		private GameCameraController cameraController;
+		private MainCameraController cameraController;
 
 		private void Awake()
 		{
 			gameObject.AddComponent<PlaceholderUI>();
-			cameraController = gameObject.AddComponent<GameCameraController>();
-		}
-
-		private void Start()
-		{
+			gameController = gameObject.AddComponent<GameController>();
+			editorController = gameObject.AddComponent<EditorController>();
+			cameraController = gameObject.AddComponent<MainCameraController>();
 			DatabaseSerializer.Init(PreviewSettings.DatabaseJsonFile, (asset) => { PreviewSettings.DatabaseJsonFile = asset; });
 			LoadMap(PreviewSettings.LoadMapName);
+			SetPreviewMode(PreviewSettings.CurrentMode);//invoke to enable and disable game and editor controllers - ToDo improve this
 		}
 
 		private void Update() { if (eggbotController != null) eggbotController.UpdateEggbot(mapManager); }
 
-		private string PreviewModeToCameraMode(PreviewMode mode) => mode switch
+		public void SetPreviewMode(PreviewMode mode)
 		{
-			PreviewMode.Direct => CameraModeRegistry.Direct,
-			PreviewMode.Editor => CameraModeRegistry.Editor,
-			PreviewMode.Player => CameraModeRegistry.Follow,
-			PreviewMode.Cinema => Random.Range(0, 7) switch { 0 or 1 or 2 => CameraModeRegistry.Orbit, _ => CameraModeRegistry.Path },
-			_ => CameraModeRegistry.Absent
-		};
+			if (cameraController == null) return;
 
-		public void SetPreviewMode(PreviewMode mode, bool forceCinema = false)
-		{
-			if (null == cameraController) return;
-			cameraController.SetCameraMode(cameraController.GetCurrentGroupMode(PreviewModeToCameraMode(mode)));
-			if (mode == PreviewMode.Cinema) cameraController.ResetCinemaTimer(forceCinema);
+			cameraController.SetCameraMode(GameModes.GetModeString(mode));
+			editorController.enabled = mode == PreviewMode.Editor;
+			gameController.enabled = mode != PreviewMode.Editor;
 		}
 
 		public void LoadMap(string mapName = null)
@@ -59,7 +53,10 @@ namespace ClassicTilestorm
 			if (null != eggbotController) Destroy(eggbotController.gameObject);
 			eggbotController = EggbotController.Instantiate(currentMap.szEggbotCostume, transform);
 			if (null != eggbotController) eggbotController.Initialise(mapManager);
-			if (null != cameraController) cameraController.Initialise(mapManager, eggbotController, PreviewModeToCameraMode(PreviewSettings.CurrentMode));
+			if (null != cameraController) cameraController.Initialise(mapManager, eggbotController);
+
+			if (null != gameController) gameController.Initialise();
+			if (null != editorController) editorController.Initialise(mapManager, eggbotController);
 		}
 
 		public void Scramble() { if (null != mapManager) mapManager.Scramble(); }

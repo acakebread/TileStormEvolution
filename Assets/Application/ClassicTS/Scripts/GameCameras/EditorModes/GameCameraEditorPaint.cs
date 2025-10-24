@@ -30,7 +30,7 @@ namespace ClassicTilestorm
 		{
 			if (GUIUtility.hotControl != 0) return;
 
-			Vector3 worldPos = MapManager.ScreenToWorld(Input.mousePosition);
+			Vector3 worldPos = MapManager.ScreenToWorld(camera, Input.mousePosition);
 			int mapIndex = mapManager.WorldToMapIndex(worldPos);
 			if (mapIndex == -1)
 			{

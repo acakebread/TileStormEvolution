@@ -38,8 +38,7 @@ namespace MassiveHadronLtd
 			skipNextScroll = false;
 
 			// Ensure EventSystem exists
-			if (!Object.FindAnyObjectByType<EventSystem>())
-				new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
+			if (!Object.FindAnyObjectByType<EventSystem>()) new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
 		}
 
 		public override void Update()

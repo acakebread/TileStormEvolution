@@ -392,9 +392,9 @@ namespace ClassicTilestorm
 			return dataIndex >= 0 && dataIndex < tiles.Length ? tiles[dataIndex] : default;
 		}
 
-		public static Vector3 ScreenToWorld(Vector3 screenPos)
+		public static Vector3 ScreenToWorld(Camera camera, Vector3 screenPos)
 		{
-			var ray = Camera.main.ScreenPointToRay(screenPos);
+			var ray = camera.ScreenPointToRay(screenPos);
 			var mapPlane = new Plane(Vector3.up, Vector3.zero);
 			if (!mapPlane.Raycast(ray, out float distance)) return Vector3.zero;
 			return ray.GetPoint(distance);
