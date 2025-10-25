@@ -82,13 +82,7 @@ namespace ClassicTilestorm
 			}
 
 			if (!TryGetComponent<MainCameraController>(out var controller)) return;
-			var cameraSystem = controller.activeSystem;
-			var camera = cameraSystem.camera;
-			camera.transform.position = cameraSystem.iorigin;
-			var direction = cameraSystem.itarget - cameraSystem.iorigin;
-			if (direction.sqrMagnitude > Mathf.Epsilon)
-				camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
-
+			var camera = controller.activeSystem?.camera;
 			dragMode = new EditorControllerDrag(camera);
 			paintMode = new EditorControllerPaint(camera, mapManager, 0);
 			activeMode = editorUI.currentMode == EditorMode.Drag ? dragMode : paintMode;

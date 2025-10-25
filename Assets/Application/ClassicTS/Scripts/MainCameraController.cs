@@ -148,7 +148,6 @@ namespace ClassicTilestorm
 
 			var (srcPos, dstPos) = GetInitialCameraPositions();
 
-			RegisterCamera(new GameCameraDirect(camera) { iorigin = srcPos, itarget = dstPos }, CameraModeRegistry.Direct);
 			RegisterCamera(new GameCameraEditor(camera) { iorigin = srcPos, itarget = dstPos }, CameraModeRegistry.Editor);
 			RegisterCamera(new GameCameraFollow(camera) { iorigin = srcPos, itarget = dstPos, targetFn = GetTargetPosition() }, CameraModeRegistry.Follow);
 			RegisterCamera(new GameCameraPreset(camera) { iorigin = srcPos, itarget = dstPos, originFn = () => srcPos, targetFn = GetTargetPosition() }, CameraModeRegistry.Preset);

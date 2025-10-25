@@ -18,7 +18,7 @@ namespace ClassicTilestorm
 	public static class GameModes
 	{
 		// String constants for GameModes
-		public const string Direct = "DIRECT";
+		//public const string Direct = "DIRECT";
 		public const string Editor = "EDITOR";
 		public const string Player = "PLAYER";
 		public const string Cinema = "CINEMA";
@@ -26,7 +26,7 @@ namespace ClassicTilestorm
 		// Mapping from PreviewMode to (GameMode string, CameraModeRegistry array)
 		private static readonly Dictionary<PreviewMode, (string Mode, string[] CameraModes)> ModeMap = new()
 		{
-			{ PreviewMode.Direct, (Direct, new[] { CameraModeRegistry.Direct }) },
+			//{ PreviewMode.Direct, (Direct, new[] { CameraModeRegistry.Direct }) },
 			{ PreviewMode.Editor, (Editor, new[] { CameraModeRegistry.Editor }) },
 			{ PreviewMode.Player, (Player, new[] { CameraModeRegistry.Follow, CameraModeRegistry.Preset }) },
 			{ PreviewMode.Cinema, (Cinema, new[] { CameraModeRegistry.Path, CameraModeRegistry.Orbit }) }
