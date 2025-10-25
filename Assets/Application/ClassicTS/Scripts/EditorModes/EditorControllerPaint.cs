@@ -125,7 +125,7 @@ namespace ClassicTilestorm
 			{
 				var currentTileDef = mapDefs[currentMapDefIndex];
 				//tilesMatch = currentTileDef.szType == selectedTileDef.szType && currentTileDef.szTheme == selectedTileDef.szTheme;
-				tilesMatch = currentTileDef.szType == selectedTileDef.szType;
+				tilesMatch = currentTileDef == selectedTileDef.szType;
 			}
 
 			if (tilesMatch && tileDefCycleList != null && tileDefCycleList.Count > 1)

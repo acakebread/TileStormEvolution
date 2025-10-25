@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace ClassicTilestorm
 {
-	public static class DatabaseSerializer
+	public static class DatabaseUniversalSerializer
 	{
 		[Serializable]
 		public class DatabaseData
@@ -22,7 +22,7 @@ namespace ClassicTilestorm
 		{
 			public string name;
 			public bool bLightTiles;
-			public string[] defs; // New format: array of strings
+			public string[] defs;
 			public Waypoint[] waypoints;
 			public Tiles tiles;
 			public Tiles mixed;
@@ -30,6 +30,37 @@ namespace ClassicTilestorm
 			public string szEggbotCostume;
 			public string szButtonID;
 			public string szMusic;
+		}
+
+		[Serializable]
+		private class LegacyDatabaseData
+		{
+			public LegacyMap[] maps;
+			public Theme[] themes;
+			public TileDef[] tiledefs;
+			public Button[] buttons;
+			public TextureSet[] texture_set;
+		}
+
+		[Serializable]
+		private class LegacyMap
+		{
+			public string name;
+			public bool bLightTiles;
+			public LegacyMapTileDef[] defs;
+			public Waypoint[] waypoints;
+			public Tiles tiles;
+			public Tiles mixed;
+			public Pickups Pickups;
+			public string szEggbotCostume;
+			public string szButtonID;
+			public string szMusic;
+		}
+
+		[Serializable]
+		private class LegacyMapTileDef
+		{
+			public string szType;
 		}
 
 		[Serializable]
@@ -199,55 +230,108 @@ namespace ClassicTilestorm
 
 				try
 				{
+					// Try deserializing with new format
 					data = JsonUtility.FromJson<DatabaseData>(jsonContent);
-					if (data == null)
-					{
-						Debug.LogError("DatabaseSerializer: Failed to parse JSON from TextAsset: DatabaseData is null!");
-						return null;
-					}
+					bool needsConversion = false;
 
 					// Validate maps and defs
-					if (data.maps == null)
+					if (data != null && data.maps != null)
 					{
-						Debug.LogError("DatabaseSerializer: Maps array is null");
-						data.maps = Array.Empty<Map>();
+						foreach (var map in data.maps)
+						{
+							if (map == null)
+							{
+								Debug.LogWarning($"Null map detected in DatabaseData.maps");
+								needsConversion = true;
+								break;
+							}
+							if (map.defs == null)
+							{
+								Debug.LogWarning($"Map {map.name}: defs array is null, setting to empty array");
+								map.defs = new string[0];
+								needsConversion = true;
+							}
+							else if (map.defs.Any(d => string.IsNullOrEmpty(d)))
+							{
+								Debug.LogWarning($"Map {map.name}: defs array contains null or empty entries: [{string.Join(", ", map.defs.Select(d => d ?? "null"))}]");
+								needsConversion = true;
+							}
+						}
 					}
-					foreach (var map in data.maps)
+					else
 					{
-						if (map == null)
-						{
-							Debug.LogError("DatabaseSerializer: Null map detected in maps array");
-							continue;
-						}
-						if (map.defs == null)
-						{
-							Debug.LogWarning($"Map {map.name}: defs array is null, setting to empty array");
-							map.defs = new string[0];
-						}
-						else if (map.defs.Any(d => string.IsNullOrEmpty(d)))
-						{
-							Debug.LogError($"Map {map.name}: defs array contains null or empty entries: [{string.Join(", ", map.defs.Select(d => d ?? "null"))}]");
-						}
+						Debug.LogWarning("DatabaseData or maps is null");
+						needsConversion = true;
 					}
 
-					// Validate tiledefs
-					if (data.tiledefs == null)
+					if (needsConversion || data == null)
 					{
-						Debug.LogError("DatabaseSerializer: TileDefs array is null");
-						data.tiledefs = Array.Empty<TileDef>();
+						// Deserialize with legacy format
+						var legacyData = JsonUtility.FromJson<LegacyDatabaseData>(jsonContent);
+						if (legacyData == null || legacyData.maps == null)
+						{
+							Debug.LogError("DatabaseSerializer: Failed to parse JSON with both new and legacy formats.");
+							return null;
+						}
+
+						// Convert legacy format to new format
+						data = new DatabaseData
+						{
+							maps = legacyData.maps.Select(lm =>
+							{
+								if (lm == null)
+								{
+									Debug.LogWarning("Null legacy map detected, skipping");
+									return null;
+								}
+								var newDefs = lm.defs?.Select(d => d?.szType).Where(s => !string.IsNullOrEmpty(s)).ToArray() ?? new string[0];
+								if (lm.defs != null && lm.defs.Any(d => string.IsNullOrEmpty(d?.szType)))
+								{
+									Debug.LogWarning($"Map {lm.name}: Legacy defs contains null or empty szType: [{string.Join(", ", lm.defs.Select(d => d?.szType ?? "null"))}]");
+								}
+								return new Map
+								{
+									name = lm.name,
+									bLightTiles = lm.bLightTiles,
+									defs = newDefs,
+									waypoints = lm.waypoints,
+									tiles = lm.tiles,
+									mixed = lm.mixed,
+									Pickups = lm.Pickups,
+									szEggbotCostume = lm.szEggbotCostume,
+									szButtonID = lm.szButtonID,
+									szMusic = lm.szMusic
+								};
+							}).Where(m => m != null).ToArray(),
+							themes = legacyData.themes,
+							tiledefs = legacyData.tiledefs,
+							buttons = legacyData.buttons,
+							texture_set = legacyData.texture_set
+						};
+
+						Debug.Log("Converted legacy defs format to new string array format");
+						SaveDatabase(data); // Save converted data to disk
 					}
-					else if (data.tiledefs.Any(td => string.IsNullOrEmpty(td?.szType)))
+
+					// Additional validation for TileDefs
+					if (data.tiledefs == null || data.tiledefs.Any(td => string.IsNullOrEmpty(td?.szType)))
 					{
-						Debug.LogError($"TileDefs contains null or empty szType: [{string.Join(", ", data.tiledefs.Select(td => td?.szType ?? "null"))}]");
+						Debug.LogError($"TileDefs contains null or invalid entries: [{string.Join(", ", (data.tiledefs ?? Array.Empty<TileDef>()).Select(td => td?.szType ?? "null"))}]");
 					}
 
 					isLoaded = true;
 
-					Debug.Log($"DatabaseSerializer: Loaded {data.maps.Length} maps: {string.Join(", ", data.maps.Select(m => m.name ?? "null"))}");
+					Debug.Log($"DatabaseSerializer: Loaded {data.maps?.Length ?? 0} maps: {string.Join(", ", (data.maps ?? Array.Empty<Map>()).Select(m => m.name ?? "null"))}");
 					Debug.Log($"DatabaseSerializer: Loaded {data.themes?.Length ?? 0} themes: {string.Join(", ", (data.themes ?? Array.Empty<Theme>()).Select(t => t.name ?? "null"))}");
-					Debug.Log($"DatabaseSerializer: Loaded {data.tiledefs.Length} tiledefs: {string.Join(", ", data.tiledefs.Take(5).Select(td => td?.szType ?? "null"))}");
+					Debug.Log($"DatabaseSerializer: Loaded {data.tiledefs?.Length ?? 0} tiledefs: {string.Join(", ", (data.tiledefs ?? Array.Empty<TileDef>()).Take(5).Select(td => td?.szType ?? "null"))}");
 					Debug.Log($"DatabaseSerializer: Loaded {data.buttons?.Length ?? 0} buttons: {string.Join(", ", (data.buttons ?? Array.Empty<Button>()).Select(b => b.name ?? "null"))}");
 					Debug.Log($"DatabaseSerializer: Loaded {data.texture_set?.Length ?? 0} texture sets: {string.Join(", ", (data.texture_set ?? Array.Empty<TextureSet>()).Take(5).Select(ts => ts.name ?? "null"))}");
+
+					// Log defs for debugging
+					foreach (var map in data.maps)
+					{
+						Debug.Log($"Map {map.name}: defs=[{string.Join(", ", map.defs.Select(d => d ?? "null"))}]");
+					}
 
 					VerifyData();
 
@@ -286,31 +370,11 @@ namespace ClassicTilestorm
 					// Validate before saving
 					foreach (var map in newData.maps)
 					{
-						if (map == null)
-						{
-							Debug.LogError("DatabaseSerializer: Cannot save, null map detected");
-							return;
-						}
-						if (map.defs == null)
-						{
-							Debug.LogWarning($"Map {map.name}: defs array is null, setting to empty array");
-							map.defs = new string[0];
-						}
-						else if (map.defs.Any(d => string.IsNullOrEmpty(d)))
+						if (map.defs.Any(d => string.IsNullOrEmpty(d)))
 						{
 							Debug.LogError($"Map {map.name}: Cannot save, defs contains null or empty entries: [{string.Join(", ", map.defs.Select(d => d ?? "null"))}]");
 							return;
 						}
-					}
-					if (newData.tiledefs == null)
-					{
-						Debug.LogError("DatabaseSerializer: Cannot save, TileDefs array is null");
-						return;
-					}
-					else if (newData.tiledefs.Any(td => string.IsNullOrEmpty(td?.szType)))
-					{
-						Debug.LogError($"DatabaseSerializer: Cannot save, TileDefs contains null or empty szType: [{string.Join(", ", newData.tiledefs.Select(td => td?.szType ?? "null"))}]");
-						return;
 					}
 
 					string jsonContent = JsonUtility.ToJson(newData, true);
