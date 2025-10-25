@@ -30,9 +30,8 @@ namespace ClassicTilestorm
 		private int[] indices;
 		private int[] offsets;
 		private Tile[] tiles;
-		private DatabaseSerializer.Tiles mapTiles;
-		private string[] mapDefs; // Changed to string[]
 		private DatabaseSerializer.Map currentMap;
+		private string[] mapDefs;
 		private DatabaseSerializer.Waypoint[] waypoints;
 		public DatabaseSerializer.Waypoint[] Waypoints => waypoints;
 
@@ -48,7 +47,6 @@ namespace ClassicTilestorm
 			indices = null;
 			offsets = null;
 			tiles = null;
-			mapTiles = null;
 			mapDefs = null;
 			waypoints = null;
 			currentMap = null;
@@ -57,40 +55,43 @@ namespace ClassicTilestorm
 		private void Initialise(DatabaseSerializer.Map map)
 		{
 			currentMap = map;
-			offsets = map?.mixed?.TileData?.bytes;
-			Width = map?.tiles.nWidth ?? 0;
-			Height = map?.tiles.nHeight ?? 0;
-			mapTiles = map?.tiles;
+			offsets = map?.mixed;
+			Width = map?.nWidth ?? 0;
+			Height = map?.nHeight ?? 0;
 			mapDefs = map?.defs ?? new string[0];
 
-			void LoadTileData(DatabaseSerializer.Tiles dbTiles)
+			void LoadTileData(int[] tileMap)
 			{
-				var tileMap = dbTiles.TileData.bytes;
-				if (tileMap == null || tileMap.Length != dbTiles.nWidth * dbTiles.nHeight)
+				if (tileMap == null || tileMap.Length != Width * Height)
 				{
-					Debug.LogError($"Invalid tiles data! length={(tileMap?.Length ?? -1)}, expected={dbTiles.nWidth * dbTiles.nHeight}");
+					Debug.LogError($"Invalid tiles data! length={(tileMap?.Length ?? -1)}, expected={Width * Height}");
 					return;
 				}
 
-				tiles = new Tile[dbTiles.nWidth * dbTiles.nHeight];
+				tiles = new Tile[Width * Height];
 				for (var n = 0; n < tileMap.Length; ++n)
 				{
 					var tileDefIndex = tileMap[n];
 					if (tileDefIndex < 0 || tileDefIndex >= mapDefs.Length)
 					{
-						Debug.LogWarning($"Invalid tileDefIndex={tileDefIndex}");
+						Debug.LogWarning($"Invalid tileDefIndex={tileDefIndex} at tile {n}, expected range [0, {mapDefs.Length - 1}]");
 						continue;
 					}
 
 					var szType = mapDefs[tileDefIndex];
-					if (string.IsNullOrEmpty(szType)) Debug.LogWarning($"Null szType at tileDefIndex {tileDefIndex}");
+					if (string.IsNullOrEmpty(szType))
+					{
+						Debug.LogWarning($"Null or empty szType at tileDefIndex {tileDefIndex} for tile {n}, using tile_empty");
+						szType = "tile_empty";
+					}
+
 					tiles[n] = new Tile(szType);
 					if (szType == "tile_empty") continue;
 
 					var tileDef = DatabaseSerializer.TileDefs.FirstOrDefault(td => td.szType == szType);
 					if (tileDef == null)
 					{
-						Debug.LogError($"TileDef not found for szType={szType} at tileDefIndex={tileDefIndex}");
+						Debug.LogError($"TileDef not found for szType={szType} at tileDefIndex={tileDefIndex} for tile {n}");
 						continue;
 					}
 					tiles[n].GameObject = GeometryManager.InstantiateTile(tileDef, transform, TileWorldPosition(n), tiles[n].Interactive);
@@ -116,14 +117,12 @@ namespace ClassicTilestorm
 				return -1;
 			}
 
-			// Find existing mapDef
 			for (int i = 0; i < mapDefs.Length; i++)
 			{
 				if (mapDefs[i] == szType)
 					return i;
 			}
 
-			// Verify TileDef exists
 			var tileDef = DatabaseSerializer.TileDefs.FirstOrDefault(td => td.szType == szType);
 			if (tileDef == null)
 			{
@@ -131,13 +130,10 @@ namespace ClassicTilestorm
 				return -1;
 			}
 
-			// Add new mapDef
 			mapDefs = mapDefs.Concat(new[] { szType }).ToArray();
 			Debug.Log($"Added new mapDef: szType={szType}, new index={mapDefs.Length - 1}");
 
-			// Update currentMap.defs to keep in-memory database in sync
 			currentMap.defs = mapDefs;
-
 			return mapDefs.Length - 1;
 		}
 
@@ -149,16 +145,16 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			if (mapTiles == null || mapTiles.TileData == null)
+			if (currentMap == null || currentMap.tiles == null)
 			{
-				Debug.LogError("Map tiles or tile data is null");
+				Debug.LogError("Map or tiles array is null");
 				return;
 			}
 
 			int index = z * Width + x;
-			if (index >= mapTiles.TileData.bytes.Length)
+			if (index >= currentMap.tiles.Length)
 			{
-				Debug.LogError($"Calculated index {index} is out of bounds for tile data array (length={mapTiles.TileData.bytes.Length})");
+				Debug.LogError($"Calculated index {index} is out of bounds for tiles array (length={currentMap.tiles.Length})");
 				return;
 			}
 
@@ -168,30 +164,27 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			// Update tile data immediately
-			mapTiles.TileData.bytes[index] = newTileDefIndex;
+			currentMap.tiles[index] = newTileDefIndex;
 
-			// Update currentMap.tiles to keep in-memory database in sync
-			currentMap.tiles = mapTiles;
-
-			// Update the tile at the specified index
 			var szType = mapDefs[newTileDefIndex];
-			if (string.IsNullOrEmpty(szType)) Debug.LogWarning($"Null szType at tileDefIndex {newTileDefIndex}");
+			if (string.IsNullOrEmpty(szType))
+			{
+				Debug.LogError($"Null or empty szType at tileDefIndex {newTileDefIndex} for tile ({x}, {z})");
+				return;
+			}
 
-			// Destroy the existing GameObject, if any
 			if (tiles[index].GameObject != null)
 			{
 				Destroy(tiles[index].GameObject);
 			}
 
-			// Create new tile
 			tiles[index] = new Tile(szType);
 			if (szType != "tile_empty")
 			{
 				var tileDef = DatabaseSerializer.TileDefs.FirstOrDefault(td => td.szType == szType);
 				if (tileDef == null)
 				{
-					Debug.LogError($"TileDef not found for szType={szType} at tileDefIndex={newTileDefIndex}");
+					Debug.LogError($"TileDef not found for szType={szType} at tileDefIndex={newTileDefIndex} for tile ({x}, {z})");
 					return;
 				}
 				tiles[index].GameObject = GeometryManager.InstantiateTile(tileDef, transform, TileWorldPosition(index), tiles[index].Interactive);
@@ -206,11 +199,8 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			// Ensure currentMap.defs and currentMap.tiles are up-to-date
 			currentMap.defs = mapDefs;
-			currentMap.tiles = mapTiles;
 
-			// Save to DatabaseSerializer
 			DatabaseSerializer.SaveDatabase(new DatabaseSerializer.DatabaseData
 			{
 				maps = DatabaseSerializer.Maps.ToArray(),
@@ -224,12 +214,12 @@ namespace ClassicTilestorm
 
 		public int GetTileDefIndexAt(int mapIndex)
 		{
-			if (mapIndex < 0 || mapIndex >= mapTiles.TileData.bytes.Length)
+			if (mapIndex < 0 || mapIndex >= currentMap.tiles.Length)
 			{
-				Debug.LogWarning($"Invalid mapIndex={mapIndex}, must be between 0 and {mapTiles.TileData.bytes.Length - 1}");
+				Debug.LogWarning($"Invalid mapIndex={mapIndex}, must be between 0 and {currentMap.tiles.Length - 1}");
 				return -1;
 			}
-			return mapTiles.TileData.bytes[mapIndex];
+			return currentMap.tiles[mapIndex];
 		}
 
 		public string[] GetMapDefs()

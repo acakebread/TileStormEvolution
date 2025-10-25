@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Collections.Generic;
 using UnityEngine;
+using System.IO;
 
 namespace ClassicTilestorm
 {
@@ -22,14 +23,55 @@ namespace ClassicTilestorm
 		{
 			public string name;
 			public bool bLightTiles;
-			public string[] defs; // New format: array of strings
+			public string[] defs;
 			public Waypoint[] waypoints;
-			public Tiles tiles;
-			public Tiles mixed;
+			public int nWidth; // Moved to Map level
+			public int nHeight; // Moved to Map level
+			public int[] tiles; // Direct int array
+			public int[] mixed; // Direct int array
 			public Pickups Pickups;
 			public string szEggbotCostume;
 			public string szButtonID;
 			public string szMusic;
+		}
+
+		[Serializable]
+		private class LegacyDatabaseData
+		{
+			public LegacyMap[] maps;
+			public Theme[] themes;
+			public TileDef[] tiledefs;
+			public Button[] buttons;
+			public TextureSet[] texture_set;
+		}
+
+		[Serializable]
+		private class LegacyMap
+		{
+			public string name;
+			public bool bLightTiles;
+			public string[] defs;
+			public Waypoint[] waypoints;
+			public LegacyTiles tiles;
+			public LegacyTiles mixed;
+			public Pickups Pickups;
+			public string szEggbotCostume;
+			public string szButtonID;
+			public string szMusic;
+		}
+
+		[Serializable]
+		private class LegacyTiles
+		{
+			public int nWidth;
+			public int nHeight;
+			public LegacyTileArray TileData;
+		}
+
+		[Serializable]
+		private class LegacyTileArray
+		{
+			public int[] bytes;
 		}
 
 		[Serializable]
@@ -51,20 +93,6 @@ namespace ClassicTilestorm
 			public bool bSouth;
 			public bool bEast;
 			public bool bWest;
-		}
-
-		[Serializable]
-		public class Tiles
-		{
-			public int nWidth;
-			public int nHeight;
-			public TileArray TileData;
-		}
-
-		[Serializable]
-		public class TileArray
-		{
-			public int[] bytes;
 		}
 
 		[Serializable]
@@ -199,55 +227,130 @@ namespace ClassicTilestorm
 
 				try
 				{
+					// Try deserializing with new format
 					data = JsonUtility.FromJson<DatabaseData>(jsonContent);
-					if (data == null)
+					bool needsConversion = false;
+
+					// Validate maps, defs, tiles, and mixed
+					if (data != null && data.maps != null)
 					{
-						Debug.LogError("DatabaseSerializer: Failed to parse JSON from TextAsset: DatabaseData is null!");
+						foreach (var map in data.maps)
+						{
+							if (map == null)
+							{
+								Debug.LogWarning($"Null map detected in DatabaseData.maps");
+								needsConversion = true;
+								break;
+							}
+							if (map.defs == null)
+							{
+								Debug.LogWarning($"Map {map.name}: defs array is null, setting to empty array");
+								map.defs = new string[0];
+								needsConversion = true;
+							}
+							else if (map.defs.Any(d => string.IsNullOrEmpty(d)))
+							{
+								Debug.LogWarning($"Map {map.name}: defs array contains null or empty entries: [{string.Join(", ", map.defs.Select(d => d ?? "null"))}]");
+								needsConversion = true;
+							}
+							if (map.nWidth <= 0 || map.nHeight <= 0)
+							{
+								Debug.LogWarning($"Map {map.name}: Invalid dimensions (nWidth={map.nWidth}, nHeight={map.nHeight})");
+								needsConversion = true;
+							}
+							if (map.tiles == null || map.tiles.Length != map.nWidth * map.nHeight)
+							{
+								Debug.LogWarning($"Map {map.name}: tiles array is invalid (null={map.tiles == null}, length={map.tiles?.Length}, expected={map.nWidth * map.nHeight})");
+								needsConversion = true;
+							}
+							if (map.mixed == null || map.mixed.Length != map.nWidth * map.nHeight)
+							{
+								Debug.LogWarning($"Map {map.name}: mixed array is invalid (null={map.mixed == null}, length={map.mixed?.Length}, expected={map.nWidth * map.nHeight})");
+								needsConversion = true;
+							}
+						}
+					}
+					else
+					{
+						Debug.LogWarning("DatabaseData or maps is null");
+						needsConversion = true;
+					}
+
+					if (needsConversion || data == null)
+					{
+						// Deserialize with legacy format
+						var legacyData = JsonUtility.FromJson<LegacyDatabaseData>(jsonContent);
+						if (legacyData == null || legacyData.maps == null)
+						{
+							Debug.LogError("DatabaseSerializer: Failed to parse JSON with both new and legacy formats.");
+							return null;
+						}
+
+						// Convert legacy format to new format
+						data = new DatabaseData
+						{
+							maps = legacyData.maps.Select(lm =>
+							{
+								if (lm == null)
+								{
+									Debug.LogWarning($"Null legacy map detected, skipping");
+									return null;
+								}
+								if (lm.tiles == null || lm.mixed == null || lm.tiles.nWidth != lm.mixed.nWidth || lm.tiles.nHeight != lm.mixed.nHeight)
+								{
+									Debug.LogWarning($"Map {lm.name}: Invalid or mismatched tiles/mixed dimensions (tiles={lm.tiles?.nWidth}x{lm.tiles?.nHeight}, mixed={lm.mixed?.nWidth}x{lm.mixed?.nHeight})");
+									return null;
+								}
+								if (lm.tiles?.TileData?.bytes == null || lm.mixed?.TileData?.bytes == null)
+								{
+									Debug.LogWarning($"Map {lm.name}: Null tiles or mixed bytes array");
+									return null;
+								}
+								return new Map
+								{
+									name = lm.name,
+									bLightTiles = lm.bLightTiles,
+									defs = lm.defs ?? new string[0],
+									waypoints = lm.waypoints,
+									nWidth = lm.tiles.nWidth,
+									nHeight = lm.tiles.nHeight,
+									tiles = lm.tiles.TileData.bytes,
+									mixed = lm.mixed.TileData.bytes,
+									Pickups = lm.Pickups,
+									szEggbotCostume = lm.szEggbotCostume,
+									szButtonID = lm.szButtonID,
+									szMusic = lm.szMusic
+								};
+							}).Where(m => m != null).ToArray(),
+							themes = legacyData.themes,
+							tiledefs = legacyData.tiledefs,
+							buttons = legacyData.buttons,
+							texture_set = legacyData.texture_set
+						};
+
+						Debug.Log("Converted legacy format to new format (tiles and mixed)");
+						SaveDatabase(data); // Save converted data to persistent data path
+					}
+
+					// Validate TileDefs
+					if (data.tiledefs == null || data.tiledefs.Any(td => string.IsNullOrEmpty(td?.szType)))
+					{
+						Debug.LogError($"TileDefs contains null or invalid entries: [{string.Join(", ", (data.tiledefs ?? Array.Empty<TileDef>()).Select(td => td?.szType ?? "null"))}]");
 						return null;
-					}
-
-					// Validate maps and defs
-					if (data.maps == null)
-					{
-						Debug.LogError("DatabaseSerializer: Maps array is null");
-						data.maps = Array.Empty<Map>();
-					}
-					foreach (var map in data.maps)
-					{
-						if (map == null)
-						{
-							Debug.LogError("DatabaseSerializer: Null map detected in maps array");
-							continue;
-						}
-						if (map.defs == null)
-						{
-							Debug.LogWarning($"Map {map.name}: defs array is null, setting to empty array");
-							map.defs = new string[0];
-						}
-						else if (map.defs.Any(d => string.IsNullOrEmpty(d)))
-						{
-							Debug.LogError($"Map {map.name}: defs array contains null or empty entries: [{string.Join(", ", map.defs.Select(d => d ?? "null"))}]");
-						}
-					}
-
-					// Validate tiledefs
-					if (data.tiledefs == null)
-					{
-						Debug.LogError("DatabaseSerializer: TileDefs array is null");
-						data.tiledefs = Array.Empty<TileDef>();
-					}
-					else if (data.tiledefs.Any(td => string.IsNullOrEmpty(td?.szType)))
-					{
-						Debug.LogError($"TileDefs contains null or empty szType: [{string.Join(", ", data.tiledefs.Select(td => td?.szType ?? "null"))}]");
 					}
 
 					isLoaded = true;
 
-					Debug.Log($"DatabaseSerializer: Loaded {data.maps.Length} maps: {string.Join(", ", data.maps.Select(m => m.name ?? "null"))}");
+					Debug.Log($"DatabaseSerializer: Loaded {data.maps?.Length ?? 0} maps: {string.Join(", ", (data.maps ?? Array.Empty<Map>()).Select(m => m.name ?? "null"))}");
 					Debug.Log($"DatabaseSerializer: Loaded {data.themes?.Length ?? 0} themes: {string.Join(", ", (data.themes ?? Array.Empty<Theme>()).Select(t => t.name ?? "null"))}");
-					Debug.Log($"DatabaseSerializer: Loaded {data.tiledefs.Length} tiledefs: {string.Join(", ", data.tiledefs.Take(5).Select(td => td?.szType ?? "null"))}");
+					Debug.Log($"DatabaseSerializer: Loaded {data.tiledefs?.Length ?? 0} tiledefs: {string.Join(", ", (data.tiledefs ?? Array.Empty<TileDef>()).Take(5).Select(td => td?.szType ?? "null"))}");
 					Debug.Log($"DatabaseSerializer: Loaded {data.buttons?.Length ?? 0} buttons: {string.Join(", ", (data.buttons ?? Array.Empty<Button>()).Select(b => b.name ?? "null"))}");
 					Debug.Log($"DatabaseSerializer: Loaded {data.texture_set?.Length ?? 0} texture sets: {string.Join(", ", (data.texture_set ?? Array.Empty<TextureSet>()).Take(5).Select(ts => ts.name ?? "null"))}");
+
+					foreach (var map in data.maps)
+					{
+						Debug.Log($"Map {map.name}: defs=[{string.Join(", ", map.defs.Select(d => d ?? "null"))}], tiles=[{string.Join(", ", map.tiles.Take(5))}], mixed=[{string.Join(", ", map.mixed.Take(5))}]");
+					}
 
 					VerifyData();
 
@@ -288,45 +391,51 @@ namespace ClassicTilestorm
 					{
 						if (map == null)
 						{
-							Debug.LogError("DatabaseSerializer: Cannot save, null map detected");
+							Debug.LogError($"Null map detected in DatabaseData.maps");
 							return;
 						}
-						if (map.defs == null)
-						{
-							Debug.LogWarning($"Map {map.name}: defs array is null, setting to empty array");
-							map.defs = new string[0];
-						}
-						else if (map.defs.Any(d => string.IsNullOrEmpty(d)))
+						if (map.defs == null || map.defs.Any(d => string.IsNullOrEmpty(d)))
 						{
 							Debug.LogError($"Map {map.name}: Cannot save, defs contains null or empty entries: [{string.Join(", ", map.defs.Select(d => d ?? "null"))}]");
 							return;
 						}
-					}
-					if (newData.tiledefs == null)
-					{
-						Debug.LogError("DatabaseSerializer: Cannot save, TileDefs array is null");
-						return;
-					}
-					else if (newData.tiledefs.Any(td => string.IsNullOrEmpty(td?.szType)))
-					{
-						Debug.LogError($"DatabaseSerializer: Cannot save, TileDefs contains null or empty szType: [{string.Join(", ", newData.tiledefs.Select(td => td?.szType ?? "null"))}]");
-						return;
+						if (map.nWidth <= 0 || map.nHeight <= 0)
+						{
+							Debug.LogError($"Map {map.name}: Cannot save, invalid dimensions (nWidth={map.nWidth}, nHeight={map.nHeight})");
+							return;
+						}
+						if (map.tiles == null || map.tiles.Length != map.nWidth * map.nHeight)
+						{
+							Debug.LogError($"Map {map.name}: Cannot save, tiles array is invalid (null={map.tiles == null}, length={map.tiles?.Length}, expected={map.nWidth * map.nHeight})");
+							return;
+						}
+						if (map.mixed == null || map.mixed.Length != map.nWidth * map.nHeight)
+						{
+							Debug.LogError($"Map {map.name}: Cannot save, mixed array is invalid (null={map.mixed == null}, length={map.mixed?.Length}, expected={map.nWidth * map.nHeight})");
+							return;
+						}
 					}
 
+					string outputDir = Path.Combine(Application.persistentDataPath, "Data");
+					if (!Directory.Exists(outputDir))
+					{
+						Directory.CreateDirectory(outputDir);
+						Debug.Log($"Created directory: {outputDir}");
+					}
+
+					string outputPath = Path.Combine(outputDir, "database.json");
 					string jsonContent = JsonUtility.ToJson(newData, true);
-					TextAsset newTextAsset = new TextAsset(jsonContent);
-					newTextAsset.name = databaseJsonFile.name;
-					saveDelegate?.Invoke(newTextAsset);
+					File.WriteAllText(outputPath, jsonContent);
+					Debug.Log($"Database saved to {outputPath}");
 
 					data = newData;
 					isLoaded = true;
 					VerifyData();
 					OnDatabaseLoaded?.Invoke();
-					Debug.Log("Database saved successfully");
 				}
 				catch (Exception ex)
 				{
-					Debug.LogError($"DatabaseSerializer: Failed to serialize DatabaseData: {ex.Message}\nStackTrace: {ex.StackTrace}");
+					Debug.LogError($"DatabaseSerializer: Failed to save DatabaseData: {ex.Message}\nStackTrace: {ex.StackTrace}");
 				}
 			}
 		}
@@ -339,7 +448,7 @@ namespace ClassicTilestorm
 			{
 				var sampleMap = data.maps[0];
 				Debug.Log($"Sample map: name={sampleMap.name}, bLightTiles={sampleMap.bLightTiles}, defsCount={(sampleMap.defs?.Length ?? 0)}, " +
-						  $"waypointsCount={(sampleMap.waypoints?.Length ?? 0)}, tiles={sampleMap.tiles?.nWidth}x{sampleMap.tiles?.nHeight}");
+						  $"waypointsCount={(sampleMap.waypoints?.Length ?? 0)}, dimensions={sampleMap.nWidth}x{sampleMap.nHeight}");
 			}
 
 			if (data?.themes?.Length > 0)
