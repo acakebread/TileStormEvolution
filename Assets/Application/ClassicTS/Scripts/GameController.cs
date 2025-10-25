@@ -12,12 +12,8 @@ namespace ClassicTilestorm
 			controller.SetCameraSystem(CameraModeRegistry.Path, true);//for cinema mode
 		}
 
-		void OnEnable()
-		{
-		}
+		void OnEnable() { }
 
-		void OnDisable()
-		{
-		}
+		void OnDisable() { }
 	}
 }
