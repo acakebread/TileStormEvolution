@@ -1,7 +1,5 @@
 using UnityEngine;
-using System.Linq;
 using MassiveHadronLtd;
-using System.Collections.Generic;
 using UnityEngine.EventSystems;
 
 namespace ClassicTilestorm
@@ -14,16 +12,11 @@ namespace ClassicTilestorm
 		private EditorControllerDrag dragMode;
 		private EditorControllerPaint paintMode;
 		public enum EditorMode { Drag, Paint }
-		private Vector3 mouseDownPos; // Mouse position on RMB down for delete
-		private Vector3 mouseDownPosLMB; // Mouse position on LMB down for placement
-		private int mouseDownMapIndex = -1; // Map index on LMB down
-		private List<int> tileDefCycleList; // List of TileDef indices for cycling
-		private int cycleIndex = 0; // Current position in cycle list
-		private int selectedMapDefIndex = 0; // Index into mapDefs
+		private PlaceholderUI placeholderUI;
+		private PlaceholderEditorUI editorUI;
 
-		//temporary
-		private PlaceholderUI placeholderUI; // Reference to PlaceholderUI
-		private PlaceholderEditorUI editorUI; // Reference to PlaceholderEditorUI
+		// Public getter for paintMode
+		public EditorControllerPaint PaintMode => paintMode;
 
 		private void Awake()
 		{
@@ -34,7 +27,6 @@ namespace ClassicTilestorm
 			if (null == placeholderUI) Debug.LogWarning("PlaceholderUI not found in scene!");
 			if (null == editorUI) Debug.LogWarning("PlaceholderEditorUI not found in scene!");
 
-			// Initialize ghost material
 			GeometryUtil.InitializeGhostMaterial();
 		}
 
@@ -42,13 +34,11 @@ namespace ClassicTilestorm
 		{
 			Destroy();
 
-			// Set default system
 			if (!TryGetComponent<MainCameraController>(out var controller)) return;
 			controller.SetCameraSystem(CameraModeRegistry.Editor, true);
 
 			mapManager = map;
 
-			// Initialize PlaceholderEditorUI
 			editorUI = FindAnyObjectByType<PlaceholderEditorUI>();
 			if (null == editorUI)
 			{
@@ -73,184 +63,23 @@ namespace ClassicTilestorm
 			var cameraSystem = controller.activeSystem;
 			var camera = cameraSystem.camera;
 
-			// Workaround: Reset hotControl on mouse release to handle drag outside GUI
 			if (Input.GetMouseButtonUp(0) && GUIUtility.hotControl != 0)
 				GUIUtility.hotControl = 0;
 
-			if (activeMode != null)
+			if (null != activeMode)
 				activeMode.Update();
 
-			// Update ghost tile position and handle delete
-			if (editorUI.currentMode == EditorMode.Paint && !editorUI.IsMouseOverGui() && !EventSystem.current.IsPointerOverGameObject())
-			{
-				var tempSelectedTileDefGlobalIndex = editorUI.GetSelectedTileDefGlobalIndex();
-				if (tempSelectedTileDefGlobalIndex >= 0 && tempSelectedTileDefGlobalIndex < DatabaseSerializer.TileDefs.Count)
-				{
-					var tileDef = DatabaseSerializer.TileDefs[tempSelectedTileDefGlobalIndex];
-					GeometryUtil.UpdateGhostTile(camera, mapManager, tileDef);
-
-					// Track mouse down for delete (RMB)
-					if (Input.GetMouseButtonDown(1))
-						mouseDownPos = Input.mousePosition;
-
-					// Handle click-and-release for delete (RMB)
-					if (Input.GetMouseButtonUp(1))
-					{
-						var mouseMoveDistance = Vector3.Distance(Input.mousePosition, mouseDownPos);
-						if (mouseMoveDistance < 5f) // Threshold: 5 pixels
-						{
-							var emptyTileDefIndex = mapManager.GetOrAddMapDefIndex("tile_empty", "Default");
-							if (emptyTileDefIndex >= 0)
-							{
-								paintMode.SetTileDefIndex(emptyTileDefIndex);
-								paintMode.PlaceTileAtMousePosition();
-							}
-						}
-					}
-				}
-				else
-				{
-					GeometryUtil.HideGhostTile();
-				}
-			}
-			else
-			{
-				GeometryUtil.HideGhostTile();
-			}
-
-			// Handle tile placement and cycling
-			if (editorUI.currentMode == EditorMode.Paint && !editorUI.IsMouseOverGui() && !EventSystem.current.IsPointerOverGameObject())
-			{
-				// Track mouse down for LMB to verify same grid cell
-				if (Input.GetMouseButtonDown(0))
-				{
-					mouseDownPosLMB = Input.mousePosition;
-					var ray = camera.ScreenPointToRay(mouseDownPosLMB);
-					var plane = new Plane(Vector3.up, Vector3.zero);
-					if (plane.Raycast(ray, out float enter))
-					{
-						Vector3 worldPos = ray.GetPoint(enter);
-						mouseDownMapIndex = mapManager.WorldToMapIndex(worldPos);
-					}
-					else
-					{
-						mouseDownMapIndex = -1;
-					}
-				}
-
-				// Handle tile placement and cycling on mouse up (LMB)
-				if (Input.GetMouseButtonUp(0))
-				{
-					var ray = camera.ScreenPointToRay(Input.mousePosition);
-					var plane = new Plane(Vector3.up, Vector3.zero);
-					if (plane.Raycast(ray, out float enter))
-					{
-						var worldPos = ray.GetPoint(enter);
-						var mapIndex = mapManager.WorldToMapIndex(worldPos);
-						if (mapIndex >= 0 && mapIndex < mapManager.Count && mapIndex == mouseDownMapIndex)
-						{
-							var tempSelectedTileDefGlobalIndex = editorUI.GetSelectedTileDefGlobalIndex();
-							var selectedTileDef = DatabaseSerializer.TileDefs[tempSelectedTileDefGlobalIndex];
-							var selectedTileDefIndex = mapManager.GetOrAddMapDefIndex(selectedTileDef.szType, selectedTileDef.szTheme);
-
-							// Get the current tile's MapTileDef index at the clicked position
-							var currentMapDefIndex = mapManager.GetTileDefIndexAt(mapIndex);
-							var tilesMatch = false;
-							var mapDefs = mapManager.GetMapDefs();
-							if (currentMapDefIndex >= 0 && currentMapDefIndex < mapDefs.Length)
-							{
-								var currentTileDef = mapDefs[currentMapDefIndex];
-								tilesMatch = currentTileDef.szType == selectedTileDef.szType && currentTileDef.szTheme == selectedTileDef.szTheme;
-							}
-
-							if (tilesMatch)
-							{
-								// Same tile type, cycle to the next in the group
-								if (tileDefCycleList != null && tileDefCycleList.Count > 1)
-								{
-									cycleIndex = (cycleIndex + 1) % tileDefCycleList.Count;
-									tempSelectedTileDefGlobalIndex = tileDefCycleList[cycleIndex];
-									editorUI.SetSelectedTileDefGlobalIndex(tempSelectedTileDefGlobalIndex);
-									var newTileDef = DatabaseSerializer.TileDefs[tempSelectedTileDefGlobalIndex];
-									selectedMapDefIndex = mapManager.GetOrAddMapDefIndex(newTileDef.szType, newTileDef.szTheme);
-									paintMode.SetTileDefIndex(selectedMapDefIndex);
-									GeometryUtil.DestroyGhostTile();
-									GeometryUtil.UpdateGhostTile(camera, mapManager, newTileDef);
-									paintMode.PlaceTileAtMousePosition();
-								}
-							}
-							else
-							{
-								// Different tile type, place the selected tile
-								paintMode.SetTileDefIndex(selectedTileDefIndex);
-								paintMode.PlaceTileAtMousePosition();
-							}
-						}
-					}
-					mouseDownMapIndex = -1; // Reset after mouse up
-				}
-			}
-		}
-
-		private void UpdateTileCycleList(string currentTileType)
-		{
-			// Define suffix groups
-			var singleDirections = new[] { " n", " e", " s", " w" };
-			var doubleLinear = new[] { " we", " ns", " ew", " sn" };
-			var doubleDiagonal = new[] { " nw", " ne", " se", " sw" };
-			string[] selectedGroup = null;
-
-			// Determine the base tile type by removing the suffix from currentTileType
-			var derivedBaseTileType = currentTileType;
-			foreach (var suffix in singleDirections.Concat(doubleLinear).Concat(doubleDiagonal))
-			{
-				if (currentTileType.EndsWith(suffix))
-				{
-					derivedBaseTileType = currentTileType.Substring(0, currentTileType.Length - suffix.Length);
-					break;
-				}
-			}
-
-			// Determine the group based on the current tile's suffix
-			if (singleDirections.Any(suffix => currentTileType.EndsWith(suffix)))
-				selectedGroup = singleDirections;
-			else if (doubleLinear.Any(suffix => currentTileType.EndsWith(suffix)))
-				selectedGroup = doubleLinear;
-			else if (doubleDiagonal.Any(suffix => currentTileType.EndsWith(suffix)))
-				selectedGroup = doubleDiagonal;
-			else
-				selectedGroup = singleDirections; // Fallback to single directions if no suffix or base tile
-
-			tileDefCycleList = new List<int>();
-
-			// Include base tile if it exists
-			for (var i = 0; i < DatabaseSerializer.TileDefs.Count; i++)
-			{
-				if (DatabaseSerializer.TileDefs[i].szType == derivedBaseTileType)
-				{
-					tileDefCycleList.Add(i);
-					break;
-				}
-			}
-
-			// Add tiles with suffixes from the selected group
-			foreach (var suffix in selectedGroup)
-			{
-				for (var i = 0; i < DatabaseSerializer.TileDefs.Count; i++)
-				{
-					if (DatabaseSerializer.TileDefs[i].szType == derivedBaseTileType + suffix)
-					{
-						tileDefCycleList.Add(i);
-						break;
-					}
-				}
-			}
+			if (editorUI.currentMode != (activeMode == dragMode ? EditorMode.Drag : EditorMode.Paint))
+				SetMode(editorUI.currentMode);
 		}
 
 		void OnEnable()
 		{
-			editorUI.enabled = true;
-			UpdateGridLines(editorUI.GetGridLinesEnabled());
+			if (null != editorUI)
+			{
+				editorUI.enabled = true;
+				UpdateGridLines(editorUI.GetGridLinesEnabled());
+			}
 
 			if (!TryGetComponent<MainCameraController>(out var controller)) return;
 			var cameraSystem = controller.activeSystem;
@@ -261,16 +90,14 @@ namespace ClassicTilestorm
 				camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
 
 			dragMode = new EditorControllerDrag(camera);
-			paintMode = new EditorControllerPaint(camera, mapManager, selectedMapDefIndex);
-			activeMode = dragMode;
-
-			SetMode(editorUI.currentMode);
+			paintMode = new EditorControllerPaint(camera, mapManager, 0);
+			activeMode = editorUI.currentMode == EditorMode.Drag ? dragMode : paintMode;
 		}
 
 		void OnDisable()
 		{
-			UpdateGridLines(false);
-			editorUI.enabled = false;
+			if (null != gridLines) gridLines.SetActive(false); // Only deactivate grid lines, don't reset UI state
+			if (null != editorUI) editorUI.enabled = false;
 		}
 
 		void Destroy()
@@ -292,15 +119,6 @@ namespace ClassicTilestorm
 		public void SetMode(EditorMode mode)
 		{
 			activeMode = mode == EditorMode.Drag ? dragMode : paintMode;
-		}
-
-		public void SetSelectedTileDef(int mapDefIndex, int globalIndex)
-		{
-			selectedMapDefIndex = mapDefIndex;
-			paintMode.SetTileDefIndex(mapDefIndex);
-			UpdateTileCycleList(DatabaseSerializer.TileDefs[globalIndex].szType);
-			cycleIndex = tileDefCycleList.IndexOf(globalIndex);
-			if (cycleIndex < 0) cycleIndex = 0;
 		}
 	}
 }
