@@ -266,6 +266,8 @@ namespace ClassicTilestorm
 			dragMode = new EditorControllerDrag(camera);
 			paintMode = new EditorControllerPaint(camera, mapManager, selectedMapDefIndex);
 			activeMode = dragMode;
+
+			SetMode(editorUI.currentMode);
 		}
 
 		void OnDisable()
@@ -291,7 +293,6 @@ namespace ClassicTilestorm
 
 		public void SetMode(EditorMode mode)
 		{
-			editorUI.currentMode = mode;
 			activeMode = mode == EditorMode.Drag ? dragMode : paintMode;
 		}
 
