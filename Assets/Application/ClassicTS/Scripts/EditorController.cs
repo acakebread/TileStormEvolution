@@ -49,7 +49,7 @@ namespace ClassicTilestorm
 			editorUI.Initialize(this, mapManager, camera);
 
 			gridLines = null != mapManager ? GridLinesHelper.CreateGridLines(transform, mapManager.Width, mapManager.Height) : null;
-			UpdateGridLines(editorUI.GetGridLinesEnabled());
+			UpdateGridLines(editorUI.GetGridLinesEnabled() & isActiveAndEnabled);
 
 			if (isActiveAndEnabled) OnEnable();
 		}
