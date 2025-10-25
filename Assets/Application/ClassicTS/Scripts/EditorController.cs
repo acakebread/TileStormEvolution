@@ -50,7 +50,7 @@ namespace ClassicTilestorm
 
 			// Initialize PlaceholderEditorUI
 			editorUI = FindAnyObjectByType<PlaceholderEditorUI>();
-			if (editorUI == null)
+			if (null == editorUI)
 			{
 				Debug.LogError("PlaceholderEditorUI not found in scene!");
 				return;
@@ -87,7 +87,7 @@ namespace ClassicTilestorm
 			// Update ghost tile position and handle delete
 			if (editorUI.currentMode == EditorMode.Paint && !editorUI.IsMouseOverGui() && !EventSystem.current.IsPointerOverGameObject())
 			{
-				int tempSelectedTileDefGlobalIndex = editorUI.GetSelectedTileDefGlobalIndex();
+				var tempSelectedTileDefGlobalIndex = editorUI.GetSelectedTileDefGlobalIndex();
 				if (tempSelectedTileDefGlobalIndex >= 0 && tempSelectedTileDefGlobalIndex < DatabaseSerializer.TileDefs.Count)
 				{
 					var tileDef = DatabaseSerializer.TileDefs[tempSelectedTileDefGlobalIndex];
@@ -95,17 +95,15 @@ namespace ClassicTilestorm
 
 					// Track mouse down for delete (RMB)
 					if (Input.GetMouseButtonDown(1))
-					{
 						mouseDownPos = Input.mousePosition;
-					}
 
 					// Handle click-and-release for delete (RMB)
 					if (Input.GetMouseButtonUp(1))
 					{
-						float mouseMoveDistance = Vector3.Distance(Input.mousePosition, mouseDownPos);
+						var mouseMoveDistance = Vector3.Distance(Input.mousePosition, mouseDownPos);
 						if (mouseMoveDistance < 5f) // Threshold: 5 pixels
 						{
-							int emptyTileDefIndex = mapManager.GetOrAddMapDefIndex("tile_empty", "Default");
+							var emptyTileDefIndex = mapManager.GetOrAddMapDefIndex("tile_empty", "Default");
 							if (emptyTileDefIndex >= 0)
 							{
 								paintMode.SetTileDefIndex(emptyTileDefIndex);
@@ -131,8 +129,8 @@ namespace ClassicTilestorm
 				if (Input.GetMouseButtonDown(0))
 				{
 					mouseDownPosLMB = Input.mousePosition;
-					Ray ray = camera.ScreenPointToRay(mouseDownPosLMB);
-					Plane plane = new Plane(Vector3.up, Vector3.zero);
+					var ray = camera.ScreenPointToRay(mouseDownPosLMB);
+					var plane = new Plane(Vector3.up, Vector3.zero);
 					if (plane.Raycast(ray, out float enter))
 					{
 						Vector3 worldPos = ray.GetPoint(enter);
@@ -147,21 +145,21 @@ namespace ClassicTilestorm
 				// Handle tile placement and cycling on mouse up (LMB)
 				if (Input.GetMouseButtonUp(0))
 				{
-					Ray ray = camera.ScreenPointToRay(Input.mousePosition);
-					Plane plane = new Plane(Vector3.up, Vector3.zero);
+					var ray = camera.ScreenPointToRay(Input.mousePosition);
+					var plane = new Plane(Vector3.up, Vector3.zero);
 					if (plane.Raycast(ray, out float enter))
 					{
-						Vector3 worldPos = ray.GetPoint(enter);
-						int mapIndex = mapManager.WorldToMapIndex(worldPos);
+						var worldPos = ray.GetPoint(enter);
+						var mapIndex = mapManager.WorldToMapIndex(worldPos);
 						if (mapIndex >= 0 && mapIndex < mapManager.Count && mapIndex == mouseDownMapIndex)
 						{
-							int tempSelectedTileDefGlobalIndex = editorUI.GetSelectedTileDefGlobalIndex();
+							var tempSelectedTileDefGlobalIndex = editorUI.GetSelectedTileDefGlobalIndex();
 							var selectedTileDef = DatabaseSerializer.TileDefs[tempSelectedTileDefGlobalIndex];
-							int selectedTileDefIndex = mapManager.GetOrAddMapDefIndex(selectedTileDef.szType, selectedTileDef.szTheme);
+							var selectedTileDefIndex = mapManager.GetOrAddMapDefIndex(selectedTileDef.szType, selectedTileDef.szTheme);
 
 							// Get the current tile's MapTileDef index at the clicked position
-							int currentMapDefIndex = mapManager.GetTileDefIndexAt(mapIndex);
-							bool tilesMatch = false;
+							var currentMapDefIndex = mapManager.GetTileDefIndexAt(mapIndex);
+							var tilesMatch = false;
 							var mapDefs = mapManager.GetMapDefs();
 							if (currentMapDefIndex >= 0 && currentMapDefIndex < mapDefs.Length)
 							{
@@ -207,7 +205,7 @@ namespace ClassicTilestorm
 			string[] selectedGroup = null;
 
 			// Determine the base tile type by removing the suffix from currentTileType
-			string derivedBaseTileType = currentTileType;
+			var derivedBaseTileType = currentTileType;
 			foreach (var suffix in singleDirections.Concat(doubleLinear).Concat(doubleDiagonal))
 			{
 				if (currentTileType.EndsWith(suffix))
@@ -230,7 +228,7 @@ namespace ClassicTilestorm
 			tileDefCycleList = new List<int>();
 
 			// Include base tile if it exists
-			for (int i = 0; i < DatabaseSerializer.TileDefs.Count; i++)
+			for (var i = 0; i < DatabaseSerializer.TileDefs.Count; i++)
 			{
 				if (DatabaseSerializer.TileDefs[i].szType == derivedBaseTileType)
 				{
@@ -242,7 +240,7 @@ namespace ClassicTilestorm
 			// Add tiles with suffixes from the selected group
 			foreach (var suffix in selectedGroup)
 			{
-				for (int i = 0; i < DatabaseSerializer.TileDefs.Count; i++)
+				for (var i = 0; i < DatabaseSerializer.TileDefs.Count; i++)
 				{
 					if (DatabaseSerializer.TileDefs[i].szType == derivedBaseTileType + suffix)
 					{

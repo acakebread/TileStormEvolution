@@ -49,7 +49,7 @@ namespace ClassicTilestorm
 			if (dragging && wasDragging && isDraggingWithLeftMouse && Input.GetMouseButton(0) && !isGuiControlActive)
 			{
 				cameraTransform.position = cameraStartPosition;
-				Ray currentRay = camera.ScreenPointToRay(Input.mousePosition);
+				var currentRay = camera.ScreenPointToRay(Input.mousePosition);
 				if (dragPlane.Raycast(currentRay, out float enter))
 				{
 					var currentWorldPoint = currentRay.GetPoint(enter);
