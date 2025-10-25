@@ -71,13 +71,7 @@ namespace ClassicTilestorm
 		[Serializable]
 		public class TileArray
 		{
-			public int nReserved;
-			public int nUncompressedLength;
-			public int nCompression;
-			public int nCompressedLength;
-			public int nAdjust;
-			public string[] compressed_bytes;
-			public int[] bytes;
+			public int[] bytes; // Only keep the decompressed bytes
 		}
 
 		[Serializable]
@@ -177,7 +171,7 @@ namespace ClassicTilestorm
 				}
 				if (saveAction == null)
 				{
-					Debug.LogWarning($"Save delegate is null. Saving disabled: {nameof(saveAction)}"); // throw new ArgumentNullException(nameof(saveAction), "Save delegate cannot be null.");
+					Debug.LogWarning($"Save delegate is null. Saving disabled: {nameof(saveAction)}");
 				}
 
 				databaseJsonFile = jsonFile;
@@ -264,7 +258,7 @@ namespace ClassicTilestorm
 					string jsonContent = JsonUtility.ToJson(newData, true);
 					TextAsset newTextAsset = new TextAsset(jsonContent);
 					newTextAsset.name = databaseJsonFile.name;
-					saveDelegate?.Invoke(newTextAsset); // Calls PreviewSettings.DatabaseJsonFile setter or other save logic
+					saveDelegate?.Invoke(newTextAsset);
 
 					data = newData;
 					isLoaded = true;
