@@ -28,7 +28,7 @@ namespace ClassicTilestorm
 
 		public string PreviewModeToCameraMode(PreviewMode mode) => mode switch
 		{
-			PreviewMode.Direct => CameraModeRegistry.Direct,
+			//PreviewMode.Direct => CameraModeRegistry.Direct,
 			PreviewMode.Editor => CameraModeRegistry.Editor,
 			PreviewMode.Player => CameraModeRegistry.Follow,
 			PreviewMode.Cinema => UnityEngine.Random.Range(0, 7) switch { 0 or 1 or 2 => CameraModeRegistry.Orbit, _ => CameraModeRegistry.Path },

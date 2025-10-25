@@ -11,7 +11,7 @@ namespace ClassicTilestorm
 {
 	public enum PreviewMode
 	{
-		Direct,
+		//Direct,
 		Editor,
 		Player,
 		Cinema
