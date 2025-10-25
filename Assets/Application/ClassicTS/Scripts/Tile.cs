@@ -18,10 +18,10 @@ public struct Tile
 	private readonly int flags;
 	private static readonly int navMask = North | South | East | West;
 
-	public Tile(string szType, string szTheme)
+	public Tile(string szType)
 	{
-		var def = DatabaseSerializer.TileDefs.FirstOrDefault(td => td.szType == szType && td.szTheme == szTheme);
-		flags = null == def ? 0 : CombineFlags(def);
+		var def = DatabaseSerializer.TileDefs.FirstOrDefault(td => td.szType == szType);
+		flags = def == null ? 0 : CombineFlags(def);
 		GameObject = null;
 
 		static int CombineFlags(DatabaseSerializer.TileDef d)
@@ -51,5 +51,4 @@ public struct Tile
 	public readonly int Nav => flags & navMask;
 
 	public GameObject GameObject;
-	//public Vector3 position { get => null != GameObject ? GameObject.transform.position : Vector3.zero; set { if (null != GameObject) GameObject.transform.position = value; } }
 }

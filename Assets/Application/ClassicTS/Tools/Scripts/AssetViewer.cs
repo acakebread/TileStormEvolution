@@ -32,7 +32,7 @@ namespace AssetViewerNamespace
 
 		void Start()
 		{
-			DatabaseSerializer.Init(PreviewSettings.DatabaseJsonFile); 
+			DatabaseUniversalSerializer.Init(PreviewSettings.DatabaseJsonFile); 
 			mapName = PreviewSettings.LoadMapName;
 			mapCentre = Vector3.zero;
 			activeTileCount = 0;
@@ -41,7 +41,7 @@ namespace AssetViewerNamespace
 
 		void Initialize()
 		{
-			Debug.Log($"AssetViewer initialized: Maps.Count={DatabaseSerializer.Maps.Count}");
+			Debug.Log($"AssetViewer initialized: Maps.Count={DatabaseUniversalSerializer.Maps.Count}");
 			DisplayMap();
 		}
 
@@ -55,7 +55,7 @@ namespace AssetViewerNamespace
 
 		void DisplayMap()
 		{
-			DatabaseSerializer.Map map = string.IsNullOrEmpty(mapName) ? DatabaseSerializer.Maps.FirstOrDefault() : DatabaseSerializer.Maps.FirstOrDefault(m => m.name == mapName);
+			DatabaseUniversalSerializer.Map map = string.IsNullOrEmpty(mapName) ? DatabaseUniversalSerializer.Maps.FirstOrDefault() : DatabaseUniversalSerializer.Maps.FirstOrDefault(m => m.name == mapName);
 
 			if (map == null)
 			{
@@ -116,21 +116,24 @@ namespace AssetViewerNamespace
 						continue;
 					}
 
-					string szType = map.defs[defIndex].szType;
+					//string szType = map.defs[defIndex].szType;
+					string szType = map.defs[defIndex];
 					if ("tile_empty" == szType || "tile_invisible" == szType)
 						continue;
 
-					string szTheme = map.defs[defIndex].szTheme;
-					if (string.IsNullOrEmpty(szType))
-					{
-						Debug.LogWarning($"Null or empty szType at defIndex {defIndex} in map {map.name}");
-						continue;
-					}
+					//string szTheme = map.defs[defIndex].szTheme;
+					//if (string.IsNullOrEmpty(szType))
+					//{
+					//	Debug.LogWarning($"Null or empty szType at defIndex {defIndex} in map {map.name}");
+					//	continue;
+					//}
 
-					DatabaseSerializer.TileDef tileDef = DatabaseSerializer.TileDefs.FirstOrDefault(td => td.szType == szType && td.szTheme == szTheme);
+					//DatabaseSerializer.TileDef tileDef = DatabaseSerializer.TileDefs.FirstOrDefault(td => td.szType == szType && td.szTheme == szTheme);
+					DatabaseUniversalSerializer.TileDef tileDef = DatabaseUniversalSerializer.TileDefs.FirstOrDefault(td => td.szType == szType);
 					if (tileDef == null)
 					{
-						Debug.LogWarning($"TileDef not found for szType={szType}, szTheme={szTheme} at ({x}, {z}) in map {map.name}");
+						//Debug.LogWarning($"TileDef not found for szType={szType}, szTheme={szTheme} at ({x}, {z}) in map {map.name}");
+						Debug.LogWarning($"TileDef not found for szType={szType} at ({x}, {z}) in map {map.name}");
 						continue;
 					}
 
@@ -176,7 +179,8 @@ namespace AssetViewerNamespace
 					}
 					else
 					{
-						Debug.LogWarning($"No valid texture set for TileDef {tileDef.szType}, szTheme={szTheme}");
+						//Debug.LogWarning($"No valid texture set for TileDef {tileDef.szType}, szTheme={szTheme}");
+						Debug.LogWarning($"No valid texture set for TileDef {tileDef.szType}");
 					}
 				}
 			}
@@ -188,12 +192,12 @@ namespace AssetViewerNamespace
 			Camera.main.transform.position = mapCentre + (Vector3.up - Vector3.forward) * 8;
 		}
 
-		private DatabaseSerializer.TextureSet GetTextureForTileDef(DatabaseSerializer.TileDef tileDef, string szTheme)
+		private DatabaseUniversalSerializer.TextureSet GetTextureForTileDef(DatabaseUniversalSerializer.TileDef tileDef, string szTheme)
 		{
-			DatabaseSerializer.Theme theme = DatabaseSerializer.Themes.FirstOrDefault(t => t.name == szTheme || t.szTileTextureSet == szTheme);
+			DatabaseUniversalSerializer.Theme theme = DatabaseUniversalSerializer.Themes.FirstOrDefault(t => t.name == szTheme || t.szTileTextureSet == szTheme);
 			if (theme != null && !string.IsNullOrEmpty(theme.szTileTextureSet))
 			{
-				DatabaseSerializer.TextureSet texSet = DatabaseSerializer.TextureSets.FirstOrDefault(ts => ts.name == theme.szTileTextureSet);
+				DatabaseUniversalSerializer.TextureSet texSet = DatabaseUniversalSerializer.TextureSets.FirstOrDefault(ts => ts.name == theme.szTileTextureSet);
 				if (texSet != null && texSet.frames != null && texSet.frames.Length > 0)
 				{
 					Debug.Log($"TextureSet found: {texSet.name}, frames={texSet.frames.Length}");
@@ -201,7 +205,7 @@ namespace AssetViewerNamespace
 				}
 			}
 
-			DatabaseSerializer.TextureSet fallbackSet = DatabaseSerializer.TextureSets.FirstOrDefault(ts => ts.name == szTheme);
+			DatabaseUniversalSerializer.TextureSet fallbackSet = DatabaseUniversalSerializer.TextureSets.FirstOrDefault(ts => ts.name == szTheme);
 			if (fallbackSet != null && fallbackSet.frames != null && fallbackSet.frames.Length > 0)
 			{
 				Debug.Log($"Fallback TextureSet: {fallbackSet.name}, frames={fallbackSet.frames.Length}");
