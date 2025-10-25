@@ -12,7 +12,11 @@ namespace ClassicTilestorm
 			controller.SetCameraSystem(CameraModeRegistry.Path, true);//for cinema mode
 		}
 
-		void OnEnable() { }
+		void OnEnable() 
+		{
+			if (!TryGetComponent<MainCameraController>(out var controller)) return;
+			controller.UpdateGestureControllerState();
+		}
 
 		void OnDisable() { }
 	}

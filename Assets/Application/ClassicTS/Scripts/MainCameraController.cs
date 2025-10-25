@@ -53,7 +53,7 @@ namespace ClassicTilestorm
 
 		private bool GestureControllerEnabled { set { gestureControllerEnabled = value; UpdateGestureControllerState(); } }
 
-		private void UpdateGestureControllerState() => gestureController.enabled = gestureControllerEnabled && PreviewMode.Player == PreviewSettings.CurrentMode;
+		public void UpdateGestureControllerState() => gestureController.enabled = gestureControllerEnabled && PreviewMode.Player == PreviewSettings.CurrentMode;
 
 		private void OnWaypointGesturesEnable(bool value) => GestureControllerEnabled = value;
 
