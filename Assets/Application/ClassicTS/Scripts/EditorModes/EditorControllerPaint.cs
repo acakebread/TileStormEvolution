@@ -124,7 +124,8 @@ namespace ClassicTilestorm
 			if (currentMapDefIndex >= 0 && currentMapDefIndex < mapDefs.Length)
 			{
 				var currentTileDef = mapDefs[currentMapDefIndex];
-				tilesMatch = currentTileDef.szType == selectedTileDef.szType && currentTileDef.szTheme == selectedTileDef.szTheme;
+				//tilesMatch = currentTileDef.szType == selectedTileDef.szType && currentTileDef.szTheme == selectedTileDef.szTheme;
+				tilesMatch = currentTileDef.szType == selectedTileDef.szType;
 			}
 
 			if (tilesMatch && tileDefCycleList != null && tileDefCycleList.Count > 1)

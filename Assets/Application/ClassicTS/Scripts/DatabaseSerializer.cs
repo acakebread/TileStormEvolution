@@ -35,8 +35,7 @@ namespace ClassicTilestorm
 		[Serializable]
 		public class MapTileDef
 		{
-			public string szTheme;
-			public string szType;
+			public string szType; // Removed szTheme
 		}
 
 		[Serializable]
@@ -71,7 +70,7 @@ namespace ClassicTilestorm
 		[Serializable]
 		public class TileArray
 		{
-			public int[] bytes; // Only keep the decompressed bytes
+			public int[] bytes;
 		}
 
 		[Serializable]

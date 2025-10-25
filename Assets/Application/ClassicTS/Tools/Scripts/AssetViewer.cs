@@ -120,17 +120,19 @@ namespace AssetViewerNamespace
 					if ("tile_empty" == szType || "tile_invisible" == szType)
 						continue;
 
-					string szTheme = map.defs[defIndex].szTheme;
-					if (string.IsNullOrEmpty(szType))
-					{
-						Debug.LogWarning($"Null or empty szType at defIndex {defIndex} in map {map.name}");
-						continue;
-					}
+					//string szTheme = map.defs[defIndex].szTheme;
+					//if (string.IsNullOrEmpty(szType))
+					//{
+					//	Debug.LogWarning($"Null or empty szType at defIndex {defIndex} in map {map.name}");
+					//	continue;
+					//}
 
-					DatabaseSerializer.TileDef tileDef = DatabaseSerializer.TileDefs.FirstOrDefault(td => td.szType == szType && td.szTheme == szTheme);
+					//DatabaseSerializer.TileDef tileDef = DatabaseSerializer.TileDefs.FirstOrDefault(td => td.szType == szType && td.szTheme == szTheme);
+					DatabaseSerializer.TileDef tileDef = DatabaseSerializer.TileDefs.FirstOrDefault(td => td.szType == szType);
 					if (tileDef == null)
 					{
-						Debug.LogWarning($"TileDef not found for szType={szType}, szTheme={szTheme} at ({x}, {z}) in map {map.name}");
+						//Debug.LogWarning($"TileDef not found for szType={szType}, szTheme={szTheme} at ({x}, {z}) in map {map.name}");
+						Debug.LogWarning($"TileDef not found for szType={szType} at ({x}, {z}) in map {map.name}");
 						continue;
 					}
 
@@ -176,7 +178,8 @@ namespace AssetViewerNamespace
 					}
 					else
 					{
-						Debug.LogWarning($"No valid texture set for TileDef {tileDef.szType}, szTheme={szTheme}");
+						//Debug.LogWarning($"No valid texture set for TileDef {tileDef.szType}, szTheme={szTheme}");
+						Debug.LogWarning($"No valid texture set for TileDef {tileDef.szType}");
 					}
 				}
 			}

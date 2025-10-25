@@ -84,12 +84,15 @@ namespace ClassicTilestorm
 
 					var szType = mapDefs[tileDefIndex].szType;
 					if (string.IsNullOrEmpty(szType)) Debug.LogWarning($"Null szType at tileDefIndex {tileDefIndex}");
-					var szTheme = mapDefs[tileDefIndex].szTheme;
-					if (string.IsNullOrEmpty(szTheme)) Debug.LogWarning($"Null szTheme at tileDefIndex {tileDefIndex}");
-					tiles[n] = new Tile(szType, szTheme);
+					//var szTheme = mapDefs[tileDefIndex].szTheme;
+					//if (string.IsNullOrEmpty(szTheme)) Debug.LogWarning($"Null szTheme at tileDefIndex {tileDefIndex}");
+					tiles[n] = new Tile(szType, "generic"); //new Tile(szType, szTheme);
 					if (szType == "tile_empty") continue;
 
-					var tileDef = DatabaseSerializer.TileDefs.FirstOrDefault(td => td.szType == szType && td.szTheme == szTheme);
+					//var tileDef = DatabaseSerializer.TileDefs.FirstOrDefault(td => td.szType == szType && td.szTheme == szTheme);
+					//tiles[n].GameObject = GeometryManager.InstantiateTile(tileDef, transform, TileWorldPosition(n), tiles[n].Interactive);
+
+					var tileDef = DatabaseSerializer.TileDefs.FirstOrDefault(td => td.szType == szType);
 					tiles[n].GameObject = GeometryManager.InstantiateTile(tileDef, transform, TileWorldPosition(n), tiles[n].Interactive);
 				}
 			}
@@ -116,12 +119,14 @@ namespace ClassicTilestorm
 			// Find existing MapTileDef
 			for (int i = 0; i < mapDefs.Length; i++)
 			{
-				if (mapDefs[i].szType == szType && mapDefs[i].szTheme == szTheme)
+				//if (mapDefs[i].szType == szType && mapDefs[i].szTheme == szTheme)
+				if (mapDefs[i].szType == szType)
 					return i;
 			}
 
 			// Verify TileDef exists
-			var tileDef = DatabaseSerializer.TileDefs.FirstOrDefault(td => td.szType == szType && td.szTheme == szTheme);
+			//var tileDef = DatabaseSerializer.TileDefs.FirstOrDefault(td => td.szType == szType && td.szTheme == szTheme);
+			var tileDef = DatabaseSerializer.TileDefs.FirstOrDefault(td => td.szType == szType);
 			if (tileDef == null)
 			{
 				Debug.LogError($"TileDef not found for szType={szType}, szTheme={szTheme}");
@@ -129,7 +134,8 @@ namespace ClassicTilestorm
 			}
 
 			// Add new MapTileDef
-			var newDef = new DatabaseSerializer.MapTileDef { szType = szType, szTheme = szTheme };
+			//var newDef = new DatabaseSerializer.MapTileDef { szType = szType, szTheme = szTheme };
+			var newDef = new DatabaseSerializer.MapTileDef { szType = szType };
 			mapDefs = mapDefs.Concat(new[] { newDef }).ToArray();
 			Debug.Log($"Added new MapTileDef: szType={szType}, szTheme={szTheme}, new index={mapDefs.Length - 1}");
 
@@ -174,9 +180,9 @@ namespace ClassicTilestorm
 
 			// Update the tile at the specified index
 			var szType = mapDefs[newTileDefIndex].szType;
-			var szTheme = mapDefs[newTileDefIndex].szTheme;
+			//var szTheme = mapDefs[newTileDefIndex].szTheme;
 			if (string.IsNullOrEmpty(szType)) Debug.LogWarning($"Null szType at tileDefIndex {newTileDefIndex}");
-			if (string.IsNullOrEmpty(szTheme)) Debug.LogWarning($"Null szTheme at tileDefIndex {newTileDefIndex}");
+			//if (string.IsNullOrEmpty(szTheme)) Debug.LogWarning($"Null szTheme at tileDefIndex {newTileDefIndex}");
 
 			// Destroy the existing GameObject, if any
 			if (tiles[index].GameObject != null)
@@ -185,10 +191,12 @@ namespace ClassicTilestorm
 			}
 
 			// Create new tile
-			tiles[index] = new Tile(szType, szTheme);
+			//tiles[index] = new Tile(szType, szTheme);
+			tiles[index] = new Tile(szType, "generic");
 			if (szType != "tile_empty")
 			{
-				var tileDef = DatabaseSerializer.TileDefs.FirstOrDefault(td => td.szType == szType && td.szTheme == szTheme);
+				//var tileDef = DatabaseSerializer.TileDefs.FirstOrDefault(td => td.szType == szType && td.szTheme == szTheme);
+				var tileDef = DatabaseSerializer.TileDefs.FirstOrDefault(td => td.szType == szType);
 				tiles[index].GameObject = GeometryManager.InstantiateTile(tileDef, transform, TileWorldPosition(index), tiles[index].Interactive);
 			}
 		}
