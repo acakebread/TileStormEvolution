@@ -45,8 +45,7 @@ namespace ClassicTilestorm
 				Debug.LogError("PlaceholderEditorUI not found in scene!");
 				return;
 			}
-			var cameraSystem = controller.activeSystem;
-			var camera = cameraSystem.camera;
+			var camera = controller.activeSystem?.camera;
 			editorUI.Initialize(this, mapManager, camera);
 
 			gridLines = null != mapManager ? GridLinesHelper.CreateGridLines(transform, mapManager.Width, mapManager.Height) : null;
@@ -60,8 +59,7 @@ namespace ClassicTilestorm
 		private void Update()
 		{
 			if (!TryGetComponent<MainCameraController>(out var controller)) return;
-			var cameraSystem = controller.activeSystem;
-			var camera = cameraSystem.camera;
+			var camera = controller.activeSystem?.camera;
 
 			if (Input.GetMouseButtonUp(0) && GUIUtility.hotControl != 0)
 				GUIUtility.hotControl = 0;
