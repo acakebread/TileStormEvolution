@@ -196,8 +196,8 @@ namespace ClassicTilestorm
 		{
 			// Define suffix groups
 			var singleDirections = new[] { " n", " e", " s", " w" };
-			var doubleLinear = new[] { " ew", " ns", " we", " sn" };
-			var doubleDiagonal = new[] { " ne", " nw", " se", " sw" };
+			var doubleLinear = new[] { " we", " ns", " ew", " sn" };
+			var doubleDiagonal = new[] { " nw", " ne", " se", " sw" };
 			string[] selectedGroup = null;
 
 			// Determine the base tile type by removing the suffix from currentTileType
