@@ -24,7 +24,7 @@ namespace ClassicTilestorm
 		private bool gestureControllerEnabled = true;
 		public event Action<bool> OnWaypointReachedForGestures;
 
-		private CameraBase cameraSystem => currentCamera;
+		private CameraBase cameraSystem => activeSystem;
 
 		public string PreviewModeToCameraMode(PreviewMode mode) => mode switch
 		{

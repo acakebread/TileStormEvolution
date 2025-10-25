@@ -32,9 +32,9 @@ namespace ClassicTilestorm
 
 		public GameCameraOrbit(Camera camera) : base(camera) { }
 
-		public override void Start()
+		public override void OnEnable()
 		{
-			base.Start();
+			base.OnEnable();
 			smoothing = DefaultSmoothingRate;
 			fieldOfView = 45f;
 			postProcessingEnabled = true;
@@ -94,11 +94,7 @@ namespace ClassicTilestorm
 			smoothing = SmoothingUtils.Smooth(smoothing, SmoothingRate, sequenceDuration, Time.deltaTime, TargetFPS);
 
 			UpdateCinemaLerping();
-			OnRender();
-		}
 
-		private void OnRender()
-		{
 			if (camera == null) return;
 			camera.transform.position = iorigin;
 			var direction = itarget - iorigin;

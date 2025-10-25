@@ -24,9 +24,9 @@ namespace MassiveHadronLtd
 				camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
 		}
 
-		public override void Start()
+		public override void OnEnable()
 		{
-			base.Start();
+			base.OnEnable();
 			fieldOfView = 60f;
 			camera.fieldOfView = fieldOfView;
 			postProcessingEnabled = false;

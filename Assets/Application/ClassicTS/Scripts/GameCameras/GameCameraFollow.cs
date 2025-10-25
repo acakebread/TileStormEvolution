@@ -15,9 +15,9 @@ namespace ClassicTilestorm
 
 		public GameCameraFollow(Camera camera) : base(camera) { }
 
-		public override void Start()
+		public override void OnEnable()
 		{
-			base.Start();
+			base.OnEnable();
 			smoothing = 64f;
 			fieldOfView = 20f;
 			postProcessingEnabled = true;
@@ -35,11 +35,7 @@ namespace ClassicTilestorm
 			var origin = itarget - deltaHorizontal * (IdealDistance * IdealDistanceHorizontalScale);
 			origin.y = itarget.y + IdealDistance;
 			iorigin = Vector3.Lerp(iorigin, origin, followLerp);
-			OnRender();
-		}
 
-		private void OnRender()
-		{
 			if (null == camera) return;
 			camera.transform.position = iorigin;
 			var direction = itarget - iorigin;

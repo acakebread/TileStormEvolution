@@ -16,9 +16,9 @@ namespace ClassicTilestorm
 
 		public GameCameraPreset(Camera camera) : base(camera) { }
 
-		public override void Start()
+		public override void OnEnable()
 		{
-			base.Start();
+			base.OnEnable();
 			fieldOfView = 20f;
 			origin = originFn?.Invoke() ?? Vector3.zero;
 			target = targetFn?.Invoke() ?? Vector3.forward;
@@ -32,11 +32,7 @@ namespace ClassicTilestorm
 			var presetLerp = SmoothingUtils.Smooth(0f, 1f, smoothing, Time.deltaTime, TargetFPS);
 			iorigin = Vector3.Lerp(iorigin, origin, presetLerp);
 			itarget = Vector3.Lerp(itarget, target, presetLerp);
-			OnRender();
-		}
 
-		private void OnRender()
-		{
 			if (camera == null) return;
 			camera.transform.position = iorigin;
 			var direction = itarget - iorigin;

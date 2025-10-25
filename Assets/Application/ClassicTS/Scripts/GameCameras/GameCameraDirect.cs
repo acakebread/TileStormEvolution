@@ -5,8 +5,6 @@ namespace ClassicTilestorm
 {
 	public class GameCameraDirect : CameraBase
 	{
-		public GameCameraDirect(Camera camera) : base(camera)
-		{
-		}
+		public GameCameraDirect(Camera camera) : base(camera) { }
 	}
 }

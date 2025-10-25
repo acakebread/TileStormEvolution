@@ -1,7 +1,5 @@
 using UnityEngine;
-using System.Linq;
 using MassiveHadronLtd;
-using System.Collections.Generic;
 using UnityEngine.EventSystems;
 
 namespace ClassicTilestorm
@@ -47,7 +45,7 @@ namespace ClassicTilestorm
 				Debug.LogError("PlaceholderEditorUI not found in scene!");
 				return;
 			}
-			var cameraSystem = controller.currentCamera;
+			var cameraSystem = controller.activeSystem;
 			var camera = cameraSystem.camera;
 			editorUI.Initialize(this, mapManager, camera);
 
@@ -82,7 +80,7 @@ namespace ClassicTilestorm
 			UpdateGridLines(editorUI.GetGridLinesEnabled());
 
 			if (!TryGetComponent<MainCameraController>(out var controller)) return;
-			var cameraSystem = controller.currentCamera;
+			var cameraSystem = controller.activeSystem;
 			var camera = cameraSystem.camera;
 			camera.transform.position = cameraSystem.iorigin;
 			var direction = cameraSystem.itarget - cameraSystem.iorigin;

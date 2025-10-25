@@ -151,8 +151,8 @@ namespace ClassicTilestorm
 		private void UpdateTileCycleList(string currentTileType)
 		{
 			var singleDirections = new[] { " n", " e", " s", " w" };
-			var doubleLinear = new[] { " ew", " ns", " we", " sn" };
-			var doubleDiagonal = new[] { " ne", " nw", " se", " sw" };
+			var doubleLinear = new[] { " we", " ns", " ew", " sn" };
+			var doubleDiagonal = new[] { " nw", " ne", " se", " sw" };
 			string[] selectedGroup = null;
 
 			var derivedBaseTileType = currentTileType;

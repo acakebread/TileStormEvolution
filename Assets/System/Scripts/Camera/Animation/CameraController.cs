@@ -7,7 +7,7 @@ namespace MassiveHadronLtd
 {
 	public class CameraController : MonoBehaviour
 	{
-		public CameraBase currentCamera => cameraSystems.ContainsKey(currentSystem) ? cameraSystems[currentSystem] : null;
+		public CameraBase activeSystem => cameraSystems.ContainsKey(currentSystem) ? cameraSystems[currentSystem] : null;
 		protected Dictionary<string, CameraBase> CameraSystems => cameraSystems;
 
 		private const string DefaultSystem = "Default"; // Define default mode in core library
@@ -80,11 +80,11 @@ namespace MassiveHadronLtd
 				return;
 			}
 
-			currentCamera?.OnDisable();
+			activeSystem?.OnDisable();
 			currentSystem = system;
-			currentCamera?.CopyFrom(cameraSystems.ContainsKey(modeSystem) ? cameraSystems[modeSystem] : null);
-			currentCamera?.Start();
-			currentCamera?.OnEnable();
+			activeSystem?.CopyFrom(cameraSystems.ContainsKey(modeSystem) ? cameraSystems[modeSystem] : null);
+			//activeSystem?.Start();
+			activeSystem?.OnEnable();
 
 			bool AreSystemsInSameMode(string system1, string system2) => modes.Any(mode => mode.Value.Contains(system1) && mode.Value.Contains(system2));
 		}
@@ -106,6 +106,7 @@ namespace MassiveHadronLtd
 
 			cameraSystems[system] = camera;
 			cameraSystems[system].Awake();
+			cameraSystems[system].Start();//ToDo defer start until just before first enable
 		}
 
 		protected void RegisterMode(string modeId, string[] systems)
@@ -123,16 +124,16 @@ namespace MassiveHadronLtd
 
 		private string GetModeIDForSystem(string system) => modes.FirstOrDefault(mode => mode.Value.Contains(system)).Key;
 
-		protected virtual void OnEnable() => currentCamera?.OnEnable();
+		protected virtual void OnEnable() => activeSystem?.OnEnable();
 		
-		protected virtual void Update() => currentCamera?.Update();
+		protected virtual void Update() => activeSystem?.Update();
 
-		protected virtual void OnGUI() => currentCamera?.OnGUI();
+		protected virtual void OnGUI() => activeSystem?.OnGUI();
 
-		protected virtual void OnDisable() => currentCamera?.OnDisable();
+		protected virtual void OnDisable() => activeSystem?.OnDisable();
 
-		protected virtual void OnDestroy() => currentCamera?.OnDestroy();
+		protected virtual void OnDestroy() => activeSystem?.OnDestroy();
 
-		protected virtual void OnApplicationFocus(bool hasFocus) => currentCamera?.OnApplicationFocus(hasFocus);
+		protected virtual void OnApplicationFocus(bool hasFocus) => activeSystem?.OnApplicationFocus(hasFocus);
 	}
 }
