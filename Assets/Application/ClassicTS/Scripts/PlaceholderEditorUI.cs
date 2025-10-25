@@ -59,6 +59,7 @@ namespace ClassicTilestorm
 
 		private void Awake()
 		{
+			// Ensure singleton
 			if (instance != null && instance != this)
 			{
 				Destroy(gameObject);
@@ -66,6 +67,7 @@ namespace ClassicTilestorm
 			}
 			instance = this;
 
+			// Initialize textures
 			panelBackgroundTexture = TextureUtils.MakeTex(4, 4, new Color(0.2f, 0.2f, 0.4f, 0.75f));
 			saveBackgroundTexture = TextureUtils.MakeTex(4, 4, new Color(0.8f, 0.2f, 0.2f, 1f));
 			gridButtonBackgroundTexture = TextureUtils.MakeTex(4, 4, new Color(0.5f, 0.5f, 0.5f, 1f));
@@ -103,9 +105,11 @@ namespace ClassicTilestorm
 		{
 			if (currentMode == EditorController.EditorMode.Paint)
 			{
+				// Calculate mouse position in GUI coordinates
 				Vector2 tileSelectorMousePos = Input.mousePosition;
 				tileSelectorMousePos.y = Screen.height - tileSelectorMousePos.y;
 
+				// Update tile selector width
 				bool wasMouseOverTileSelector = isMouseOverTileSelector;
 				float tileSelectorX = Screen.width - tileSelectorWidth - margin;
 				float tileSelectorY = GetPanelBottomY() + spacing;
@@ -150,8 +154,10 @@ namespace ClassicTilestorm
 		{
 			if (!editorController || !mapManager || !camera) return;
 
+			// Get panel bottom Y from PlaceholderUI to avoid overlap at top of screen
 			float panelBottomY = GetPanelBottomY();
 
+			// Mode toggle buttons, Save button, and Grid toggle stacked on the left
 			Rect dragButtonRect = new Rect(margin, panelBottomY + spacing, buttonWidth, buttonHeight);
 			Rect paintButtonRect = new Rect(margin, panelBottomY + spacing + buttonHeight + spacing, buttonWidth, buttonHeight);
 			Rect saveButtonRect = new Rect(margin, panelBottomY + spacing + 2 * (buttonHeight + spacing), buttonWidth, buttonHeight);
@@ -161,6 +167,7 @@ namespace ClassicTilestorm
 			GUIManager.RegisterGuiRect(saveButtonRect);
 			GUIManager.RegisterGuiRect(gridToggleRect);
 
+			// Toggle style for Drag and Paint
 			GUIStyle toggleStyle = new GUIStyle(GUI.skin.toggle);
 			toggleStyle.normal.background = toggleOffBackgroundTexture;
 			toggleStyle.onNormal.background = toggleOnBackgroundTexture;
@@ -213,8 +220,8 @@ namespace ClassicTilestorm
 				Debug.Log("Paint Mode Selected");
 				currentMode = EditorController.EditorMode.Paint;
 				editorController.SetMode(EditorController.EditorMode.Paint);
-				targetWidth = collapsedWidth;
-				tileSelectorWidth = collapsedWidth;
+				targetWidth = collapsedWidth; // Start collapsed
+				tileSelectorWidth = collapsedWidth; // Immediate collapse
 				animationStartTime = Time.time;
 			}
 
@@ -255,7 +262,7 @@ namespace ClassicTilestorm
 						int selectedMapDefIndex = mapManager.GetOrAddMapDefIndex(selectedTileDef.szType, selectedTileDef.szTheme);
 						if (selectedMapDefIndex >= 0)
 						{
-							editorController.PaintMode.SetTileDefIndex(selectedMapDefIndex, i); // Updated line
+							editorController.SetSelectedTileDef(selectedMapDefIndex, i);
 							GeometryUtil.DestroyGhostTile();
 							GeometryUtil.UpdateGhostTile(camera, mapManager, selectedTileDef);
 						}
@@ -269,6 +276,7 @@ namespace ClassicTilestorm
 
 		private void OnDestroy()
 		{
+			// Clean up textures
 			if (panelBackgroundTexture != null) Destroy(panelBackgroundTexture);
 			if (saveBackgroundTexture != null) Destroy(saveBackgroundTexture);
 			if (gridButtonBackgroundTexture != null) Destroy(gridButtonBackgroundTexture);
