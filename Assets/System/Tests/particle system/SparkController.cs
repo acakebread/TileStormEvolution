@@ -20,9 +20,9 @@ namespace MassiveHadronLtd
 			public bool useGlobalGroundPlane = true;
 		}
 
-		[SerializeField] private Material particleMaterial; // Material for ParticleSystem
+		[SerializeField] private Material particleMaterial; // Material for ParticleSystem, should use URP Unlit Shader
 		[SerializeField] private bool useThreeZoneSlicing = false;
-		[SerializeField] private bool useAdditiveBlending = true; // Moved here for initialization
+		[SerializeField] private bool useAdditiveBlending = true; // Initialization setting
 		[SerializeField] private SparkSettings defaultSettings;
 		[SerializeField] private bool updateSparks = true; // Controls whether sparks are updated
 		private readonly float simSpeed = 1f;
@@ -49,7 +49,7 @@ namespace MassiveHadronLtd
 			activeSparks = new List<SparkData>();
 			if (particleMaterial == null)
 			{
-				Debug.LogError("SparkController: particleMaterial is not assigned!");
+				Debug.LogError("SparkController: particleMaterial is not assigned! Please assign a material with the 'Universal Render Pipeline/Unlit' shader.");
 				enabled = false;
 				return;
 			}
@@ -57,14 +57,10 @@ namespace MassiveHadronLtd
 			customParticleSystem = new ParticleSystem(particleMaterial, useThreeZoneSlicing, useAdditiveBlending);
 		}
 
-		void FixedUpdate()
+		void Update()
 		{
 			if (updateSparks)
 				UpdateSparks();
-		}
-
-		void Update()
-		{
 			customParticleSystem.Render();
 		}
 
@@ -72,7 +68,6 @@ namespace MassiveHadronLtd
 		{
 			if (settings == null) settings = defaultSettings;
 
-			// Convert SparkSettings to ParticleSystem.ParticleSettings
 			var particleSettings = new ParticleSystem.ParticleSettings
 			{
 				lifetime = settings.lifetime,
@@ -137,14 +132,13 @@ namespace MassiveHadronLtd
 				{
 					float decayFactor = spark.lifetime / spark.maxLifetime;
 					spark.width = spark.initialWidth * decayFactor;
-					spark.tipSize = spark.width / 2f; // Keep tipSize as half of width
+					spark.tipSize = spark.width / 2f;
 				}
 
 				spark.velocity.y -= defaultSettings.gravity * deltaTime * simSpeed;
 				spark.position += spark.velocity * defaultSettings.moveScale * deltaTime * simSpeed;
 
-				// Ground collision
-				float currentY = spark.position.y; // Always use world space
+				float currentY = spark.position.y;
 				float groundY = defaultSettings.groundHeight;
 				if (!defaultSettings.useGlobalGroundPlane)
 				{
@@ -157,7 +151,6 @@ namespace MassiveHadronLtd
 					spark.velocity.y = -spark.velocity.y * defaultSettings.bounceDamping;
 				}
 
-				// Update the ParticleSystem with the new spark properties
 				customParticleSystem.UpdateParticle(spark.poolIndex, spark.position, spark.velocity, spark.lifetime, spark.width, spark.tipSize, spark.color);
 			}
 		}

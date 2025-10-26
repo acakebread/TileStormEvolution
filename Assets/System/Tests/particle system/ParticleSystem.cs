@@ -18,7 +18,7 @@ namespace MassiveHadronLtd
 		private readonly bool useThreeZoneSlicing;
 		private readonly bool useAdditiveBlending;
 		private readonly Material material;
-		private Mesh mesh; // Removed readonly
+		private Mesh mesh;
 		private readonly Camera mainCamera;
 
 		private class Particle
@@ -64,31 +64,30 @@ namespace MassiveHadronLtd
 
 		private void SetupURPMaterial()
 		{
-			material.DisableKeyword("_ALPHABLEND_ON");
-			material.DisableKeyword("_ALPHAPREMULTIPLY_ON");
-			material.DisableKeyword("_ALPHATEST_ON");
-			material.DisableKeyword("_COLORADDSUBDIFF_ON");
-
-			if (useAdditiveBlending)
+			// Ensure the material uses the custom AdditiveParticles shader
+			if (material.shader.name != "MassiveHadronLtd/Unlit/AdditiveParticles")
 			{
-				material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.One);
-				material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.One);
-				material.SetInt("_ZWrite", 0);
-				material.EnableKeyword("_ALPHAPREMULTIPLY_ON");
-			}
-			else
-			{
-				material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-				material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-				material.SetInt("_ZWrite", 0);
-				material.EnableKeyword("_ALPHABLEND_ON");
+				Debug.LogWarning($"ParticleSystem: Material shader is {material.shader.name}, expected 'MassiveHadronLtd/Unlit/AdditiveParticles'. Attempting to set shader.");
+				Shader additiveShader = Shader.Find("MassiveHadronLtd/Unlit/AdditiveParticles");
+				if (additiveShader == null)
+				{
+					Debug.LogError("ParticleSystem: Could not find 'MassiveHadronLtd/Unlit/AdditiveParticles' shader. Please ensure the shader is included in the project.");
+					return;
+				}
+				material.shader = additiveShader;
 			}
 
-			material.SetColor("_BaseColor", Color.white);
-			material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
-			material.SetFloat("_Cutoff", 0f);
-			material.SetFloat("_ZTest", (int)UnityEngine.Rendering.CompareFunction.LessEqual);
-			material.SetPass(0);
+			// Configure material properties
+			material.SetColor("_BaseColor", Color.white); // Base color for vertex color modulation
+			material.SetFloat("_ZWrite", 0); // Ensure ZWrite is off
+			material.SetFloat("_Cull", (float)UnityEngine.Rendering.CullMode.Off); // Disable culling
+			material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent + 100; // Slightly higher to render after other transparent objects
+
+			// Check if a texture is assigned
+			if (material.GetTexture("_BaseMap") == null)
+			{
+				Debug.LogWarning("ParticleSystem: No texture assigned to _BaseMap in material. Assign a spark texture for proper rendering.");
+			}
 		}
 
 		private void InitializePool()
@@ -168,20 +167,20 @@ namespace MassiveHadronLtd
 			Particle particle = GetInactiveParticle();
 			if (particle == null) return -1;
 
-			particle.position = position; // World space
+			particle.position = position;
 			particle.previousPosition = particle.position;
-			particle.velocity = velocity; // World space, managed by SparkController
+			particle.velocity = velocity;
 			particle.lifetime = settings.lifetime;
 			particle.maxLifetime = settings.lifetime;
 			particle.color = settings.color;
 			particle.width = settings.width;
 			particle.initialWidth = settings.width;
-			particle.tipSize = settings.width / 2f; // Tip size is half of width
+			particle.tipSize = settings.width / 2f;
 			particle.isActive = true;
 
 			activeParticles.Add(particle);
 			activeParticleCount++;
-			return particle.poolIndex; // Return poolIndex for SparkController to track
+			return particle.poolIndex;
 		}
 
 		private Particle GetInactiveParticle()
@@ -289,12 +288,11 @@ namespace MassiveHadronLtd
 				int vertexIndex = particle.vertexIndex;
 				if (useThreeZoneSlicing)
 				{
-					// Center the particle around the midpoint
 					Vector3 centerPos = (pos + prevPos) * 0.5f;
-					float totalLength = Mathf.Max(particle.width, deltaLength); // Cap at deltaLength or width
-					float tipSize = particle.tipSize; // width / 2
-					float bodyLength = totalLength - 2 * tipSize; // Body length adjusted for tips
-					if (bodyLength < 0) bodyLength = 0; // Ensure non-negative body length
+					float totalLength = Mathf.Max(particle.width, deltaLength);
+					float tipSize = particle.tipSize;
+					float bodyLength = totalLength - 2 * tipSize;
+					if (bodyLength < 0) bodyLength = 0;
 
 					Vector3 tailTail = centerPos - particleDir * (bodyLength / 2 + tipSize);
 					Vector3 tailFront = centerPos - particleDir * (bodyLength / 2);
@@ -340,9 +338,8 @@ namespace MassiveHadronLtd
 				}
 				else
 				{
-					// Center the particle around the midpoint
 					Vector3 centerPos = (pos + prevPos) * 0.5f;
-					float halfLength = Mathf.Max(particle.width, deltaLength) * 0.5f; // Ensure length is at least width
+					float halfLength = Mathf.Max(particle.width, deltaLength) * 0.5f;
 					Vector3 tailPos = centerPos - particleDir * halfLength;
 					Vector3 headPos = centerPos + particleDir * halfLength;
 

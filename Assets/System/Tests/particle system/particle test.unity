@@ -373,12 +373,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1081262121}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 0}
+  m_Father: {fileID: 2032521525}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1143789306
 GameObject:
@@ -542,24 +542,24 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1143789306}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: debe350cb86502644be674b7e850e7b1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   planeNormal: {x: 0, y: 1, z: 0}
   offset: 0
-  effectMode: 1
-  previousEffectMode: 0
+  effectMode: 4
+  previousEffectMode: 4
   frostDepth: 0.5
   noiseStrength: 0.5
-  baseColor: {r: 0.25, g: 0.25, b: 0.25, a: 0.5}
+  baseColor: {r: 0.066037714, g: 0.058873247, b: 0.058873247, a: 0.7294118}
   filmIntensity: 0.2
   noiseScale: 1
   noiseTexture: {fileID: 0}
-  rippleSpeed: 0.5
-  rippleAmplitude: 0.5
-  rippleFrequency: 0.5
+  rippleSpeed: 0.304
+  rippleAmplitude: 0.132
+  rippleFrequency: 0.289
   rippleOffset: 0.5
   reflectionStrength: 0.5
   frostThreshold: 0.8
@@ -598,7 +598,7 @@ MonoBehaviour:
   delay: 0.02
   ct: 2
   continuous: 1
-  spawnOffset: {x: -1, y: 0, z: 0}
+  spawnOffset: {x: -1, y: 0.25, z: 0}
 --- !u!4 &1759432267
 Transform:
   m_ObjectHideFlags: 0
@@ -611,7 +611,8 @@ Transform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 1910858983}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1909807536
@@ -775,12 +776,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1910858981}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 0}
+  m_Father: {fileID: 1759432267}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1940496639
 GameObject:
@@ -1124,10 +1125,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   sparkController: {fileID: 1081262122}
-  delay: 0.01
-  ct: 32
+  delay: 1.47
+  ct: 95
   continuous: 1
-  spawnOffset: {x: 1, y: 0, z: 0}
+  spawnOffset: {x: 1, y: 0.25, z: 0}
 --- !u!4 &2032521525
 Transform:
   m_ObjectHideFlags: 0
@@ -1140,7 +1141,8 @@ Transform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 1081262123}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2049721151
@@ -1270,13 +1272,11 @@ SceneRoots:
   m_Roots:
   - {fileID: 1143789309}
   - {fileID: 2049721153}
+  - {fileID: 1959222891}
   - {fileID: 2009816644}
   - {fileID: 1940496643}
   - {fileID: 625280535}
   - {fileID: 1909807540}
   - {fileID: 372958388}
-  - {fileID: 1959222891}
   - {fileID: 1759432267}
-  - {fileID: 1910858983}
   - {fileID: 2032521525}
-  - {fileID: 1081262123}
