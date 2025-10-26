@@ -10,6 +10,7 @@ namespace MassiveHadronLtd
 		{
 			public float speed = 4f;
 			public float lifetime = 1f;
+			public float lifetimeVariation = 0.5f; // New: Random lifetime variation (±seconds)
 			public float width = 0.02f; // Controls size for simple particles and body width for three-zone
 			public bool decay = true; // Shrink width with age
 			public Color color = Color.white;
@@ -20,19 +21,19 @@ namespace MassiveHadronLtd
 			public bool useGlobalGroundPlane = true;
 		}
 
-		[SerializeField] private Material particleMaterial; // Material for ParticleSystem, should use URP Unlit Shader
+		[SerializeField] private Material particleMaterial; // Material with custom AdditiveParticles shader
 		[SerializeField] private bool useThreeZoneSlicing = false;
-		[SerializeField] private bool useAdditiveBlending = true; // Initialization setting
-		[SerializeField] private SparkSettings defaultSettings;
-		[SerializeField] private bool updateSparks = true; // Controls whether sparks are updated
+		[SerializeField] private bool useAdditiveBlending = true;
+		[SerializeField] public SparkSettings defaultSettings;
+		[SerializeField] private bool updateSparks = true;
 		private readonly float simSpeed = 1f;
 		private ParticleSystem customParticleSystem;
 
 		private class SparkData
 		{
-			public int poolIndex; // ParticleSystem pool index
-			public Vector3 position; // World space
-			public Vector3 velocity; // World space
+			public int poolIndex;
+			public Vector3 position;
+			public Vector3 velocity;
 			public float lifetime;
 			public float maxLifetime;
 			public Color color;
@@ -49,7 +50,7 @@ namespace MassiveHadronLtd
 			activeSparks = new List<SparkData>();
 			if (particleMaterial == null)
 			{
-				Debug.LogError("SparkController: particleMaterial is not assigned! Please assign a material with the 'Universal Render Pipeline/Unlit' shader.");
+				Debug.LogError("SparkController: particleMaterial is not assigned! Please assign a material with the 'MassiveHadronLtd/Unlit/AdditiveParticles' shader and a spark texture.");
 				enabled = false;
 				return;
 			}
@@ -57,20 +58,29 @@ namespace MassiveHadronLtd
 			customParticleSystem = new ParticleSystem(particleMaterial, useThreeZoneSlicing, useAdditiveBlending);
 		}
 
-		void Update()
+		void FixedUpdate()
 		{
 			if (updateSparks)
 				UpdateSparks();
+		}
+
+		void Update()
+		{
 			customParticleSystem.Render();
 		}
 
 		public void SpawnSpark(Vector3 position, Vector3 velocity, SparkSettings settings = null)
 		{
+			if (!updateSparks) return;
 			if (settings == null) settings = defaultSettings;
+
+			// Apply random lifetime variation
+			float lifetime = settings.lifetime + Random.Range(-settings.lifetimeVariation, settings.lifetimeVariation);
+			lifetime = Mathf.Max(0.1f, lifetime); // Ensure lifetime isn't negative or too short
 
 			var particleSettings = new ParticleSystem.ParticleSettings
 			{
-				lifetime = settings.lifetime,
+				lifetime = lifetime, // Use modified lifetime
 				width = settings.width,
 				decay = settings.decay,
 				color = settings.color
@@ -82,14 +92,14 @@ namespace MassiveHadronLtd
 			SparkData spark = new SparkData
 			{
 				poolIndex = poolIndex,
-				position = position, // World space
-				velocity = velocity * settings.speed, // World space, scaled
-				lifetime = settings.lifetime,
-				maxLifetime = settings.lifetime,
+				position = position,
+				velocity = velocity * settings.speed,
+				lifetime = lifetime, // Use modified lifetime
+				maxLifetime = lifetime,
 				color = settings.color,
 				width = settings.width,
 				initialWidth = settings.width,
-				tipSize = settings.width / 2f, // Tip size is half of width
+				tipSize = settings.width / 2f,
 				isActive = true
 			};
 
@@ -125,7 +135,7 @@ namespace MassiveHadronLtd
 				}
 				else
 				{
-					spark.color.a = 1f; // Alpha irrelevant for additive
+					spark.color.a = 1f; // Alpha modulates intensity for additive
 				}
 
 				if (defaultSettings.decay)
