@@ -304,6 +304,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   sparkSystem: {fileID: 1940496640}
   delay: 0.01
+  ct: 32
   continuous: 1
 --- !u!4 &1759432267
 Transform:
@@ -461,12 +462,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   defaultSettings:
-    speed: 8
+    speed: 4
     length: 0.1
     tipSize: 0.025
-    lifetime: 3
+    lifetime: 1
     width: 0.05
-    color: {r: 1, g: 0.8564266, b: 0, a: 1}
+    decay: 1
+    color: {r: 0.41960785, g: 1, b: 1, a: 1}
     gravity: 10
     moveScale: 1
     bounceDamping: 0.8
@@ -474,7 +476,7 @@ MonoBehaviour:
     headUVRange: {x: 0, y: 0.333}
     bodyUVRange: {x: 0.333, y: 0.666}
     tailUVRange: {x: 0.666, y: 1}
-  maxSparks: 256
+  maxSparks: 4096
   updateSparks: 1
   useGlobalGroundPlane: 1
   sparkMaterial: {fileID: 2100000, guid: 02223f9d74ca8f74999a27cdc04e130f, type: 2}
@@ -546,6 +548,52 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1959222889
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1959222891}
+  - component: {fileID: 1959222890}
+  m_Layer: 0
+  m_Name: EditorFrameRateLimiter
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1959222890
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1959222889}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3a09634d62f489a4eaa8f639dd3f21d2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  targetFrameRate: 60
+  enableLimit: 0
+--- !u!4 &1959222891
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1959222889}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2009816641
 GameObject:
   m_ObjectHideFlags: 0
@@ -581,6 +629,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   sparkSystem: {fileID: 0}
   delay: 0.1
+  ct: 1
   continuous: 1
 --- !u!114 &2009816643
 MonoBehaviour:
@@ -825,3 +874,4 @@ SceneRoots:
   - {fileID: 1940496643}
   - {fileID: 1909807540}
   - {fileID: 1759432267}
+  - {fileID: 1959222891}
