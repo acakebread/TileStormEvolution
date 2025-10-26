@@ -7,29 +7,27 @@ public class SparkSystem : MonoBehaviour
 	[System.Serializable]
 	public class SparkSettings
 	{
-		public float speed = 8f;
+		public float speed = 4f;
 		public float length = 0.1f; // Body length for simple sparks; body length for three-zone
 		public float tipSize = 0.025f; // Head/tail quad size for three-zone
-		public float lifetime = 3f;
-		public float width = 0.05f;
-		public bool decay = true; // Shrink width with age
+		public float lifetime = 1f;
+		public float width = 0.01f;
+		public bool decay = true; // Shrink all dimensions with age
+		public bool useAdditiveBlending = false; // Toggle additive vs transparent blending
 		public Color color = Color.white;
 		public float gravity = 10f; // Y-axis damping
 		public float moveScale = 1f; // Velocity scale
 		public float bounceDamping = 0.8f; // Velocity damping on collision
 		public float groundHeight = 0f; // Ground plane Y position
-		public Vector2 headUVRange = new Vector2(0f, 0.333f); // UV x-range for head
-		public Vector2 bodyUVRange = new Vector2(0.333f, 0.666f); // UV x-range for body
-		public Vector2 tailUVRange = new Vector2(0.666f, 1f); // UV x-range for tail
 	}
 
 	[SerializeField] private SparkSettings defaultSettings;
-	[SerializeField] private int maxSparks = 256;
+	[SerializeField] private int maxSparks = 4096;
 	[SerializeField] private bool updateSparks = true;
-	[SerializeField] private bool useGlobalGroundPlane = true; // Default to global ground plane
-	[SerializeField, Tooltip("Assign a URP material with 'Universal Render Pipeline/Particles/Unlit' (Transparent, Fade mode)")]
+	[SerializeField] private bool useGlobalGroundPlane = true;
+	[SerializeField, Tooltip("Assign a URP material with 'Universal Render Pipeline/Particles/Unlit' set to Additive or Transparent")]
 	private Material sparkMaterial;
-	[SerializeField] private bool useThreeZoneSlicing = false; // Toggle simple vs. three-zone sparks
+	[SerializeField] private bool useThreeZoneSlicing = false;
 
 	private class Spark
 	{
@@ -41,12 +39,16 @@ public class SparkSystem : MonoBehaviour
 		public Color color;
 		public float width; // Current width
 		public float initialWidth; // Initial width for decay
+		public float tipSize; // Current tip size for three-zone
+		public float initialTipSize; // Initial tip size
+		public float length; // Current length for simple sparks
+		public float initialLength; // Initial length
 		public bool isActive;
 		public int vertexIndex; // Starting vertex index in mesh
 		public int poolIndex; // Index in sparkPool
 	}
 
-	private readonly float simSpeed = 1f; // SIM_SPEED from DirectX sample
+	private readonly float simSpeed = 1f;
 	private List<Spark> sparkPool;
 	private List<Spark> activeSparks;
 	private List<int> freeSparkIndices;
@@ -69,26 +71,55 @@ public class SparkSystem : MonoBehaviour
 		MeshRenderer renderer = GetComponent<MeshRenderer>();
 		if (sparkMaterial != null)
 		{
-			SetupURPMaterial(sparkMaterial);
-			renderer.material = sparkMaterial;
+			Material materialInstance = new Material(sparkMaterial);
+			SetupURPMaterial(materialInstance);
+			renderer.material = materialInstance;
+			Debug.Log($"SparkSystem Awake: Material assigned, useAdditiveBlending={defaultSettings.useAdditiveBlending}, SrcBlend={materialInstance.GetInt("_SrcBlend")}, DstBlend={materialInstance.GetInt("_DstBlend")}, Keywords={string.Join(", ", materialInstance.shaderKeywords)}");
 		}
 		else
 		{
 			enabled = false;
-			throw new System.Exception("SparkSystem: sparkMaterial is not assigned. Please assign a URP-compatible material with 'Universal Render Pipeline/Particles/Unlit' (Transparent, Fade mode).");
+			throw new System.Exception("SparkSystem: sparkMaterial is not assigned. Please assign a URP-compatible material with 'Universal Render Pipeline/Particles/Unlit'.");
+		}
+	}
+
+	void Start()
+	{
+		MeshRenderer renderer = GetComponent<MeshRenderer>();
+		if (renderer.material != null)
+		{
+			SetupURPMaterial(renderer.material);
+			Debug.Log($"SparkSystem Start: Material reapplied, useAdditiveBlending={defaultSettings.useAdditiveBlending}, SrcBlend={renderer.material.GetInt("_SrcBlend")}, DstBlend={renderer.material.GetInt("_DstBlend")}, Keywords={string.Join(", ", renderer.material.shaderKeywords)}");
 		}
 	}
 
 	void SetupURPMaterial(Material mat)
 	{
-		mat.SetFloat("_Mode", 2); // Fade mode
-		mat.SetInt("_Surface", 1); // Transparent surface
-		mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-		mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-		mat.SetInt("_ZWrite", 0); // Disable ZWrite
-		mat.EnableKeyword("_ALPHABLEND_ON");
-		mat.SetColor("_BaseColor", Color.white); // Ensure vertex colors control fading
+		mat.DisableKeyword("_ALPHABLEND_ON");
+		mat.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+		mat.DisableKeyword("_ALPHATEST_ON");
+		mat.DisableKeyword("_COLORADDSUBDIFF_ON");
+
+		if (defaultSettings.useAdditiveBlending)
+		{
+			mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.One);
+			mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.One);
+			mat.SetInt("_ZWrite", 0);
+			mat.EnableKeyword("_ALPHAPREMULTIPLY_ON");
+		}
+		else
+		{
+			mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+			mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+			mat.SetInt("_ZWrite", 0);
+			mat.EnableKeyword("_ALPHABLEND_ON");
+		}
+
+		mat.SetColor("_BaseColor", Color.white);
 		mat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+		mat.SetFloat("_Cutoff", 0f);
+		mat.SetFloat("_ZTest", (int)UnityEngine.Rendering.CompareFunction.LessEqual);
+		mat.SetPass(0);
 	}
 
 	void InitializePool()
@@ -129,14 +160,14 @@ public class SparkSystem : MonoBehaviour
 				});
 				colors.AddRange(new Color[8]);
 				uvs.AddRange(new[] {
-					new Vector2(0, 0f), // v0: Tail bottom-left
-                    new Vector2(1, 0f), // v1: Tail bottom-right
-                    new Vector2(0, 0.5f), // v2: Tail top-left
-                    new Vector2(1, 0.5f), // v3: Tail top-right
-                    new Vector2(0, 0.5f), // v4: Body start-left
-                    new Vector2(1, 0.5f), // v5: Body start-right
-                    new Vector2(0, 1f), // v6: Head start-left
-                    new Vector2(1, 1f)  // v7: Head start-right
+					new Vector2(0f, 0f), // v0: Tail bottom-left
+                    new Vector2(1f, 0f), // v1: Tail bottom-right
+                    new Vector2(0f, 0.5f), // v2: Tail top-left
+                    new Vector2(1f, 0.5f), // v3: Tail top-right
+                    new Vector2(0f, 0.5f), // v4: Body start-left
+                    new Vector2(1f, 0.5f), // v5: Body start-right
+                    new Vector2(0f, 1f), // v6: Head start-left
+                    new Vector2(1f, 1f) // v7: Head start-right
                 });
 			}
 			else
@@ -151,7 +182,7 @@ public class SparkSystem : MonoBehaviour
 					new Vector2(0f, 0f), // v0
                     new Vector2(1f, 0f), // v1
                     new Vector2(0f, 1f), // v2
-                    new Vector2(1f, 1f)  // v3
+                    new Vector2(1f, 1f) // v3
                 });
 			}
 		}
@@ -176,15 +207,18 @@ public class SparkSystem : MonoBehaviour
 		Spark spark = GetInactiveSpark();
 		if (spark == null) return;
 
-		// Set position in world space, offset by SparkSystem transform
-		spark.position = position + transform.position;
+		spark.position = position + transform.position; // World space
 		spark.previousPosition = spark.position;
-		spark.velocity = transform.InverseTransformDirection(velocity.normalized) * settings.speed;
+		spark.velocity = transform.InverseTransformDirection(velocity) * settings.speed; // Respect velocity magnitude
 		spark.lifetime = settings.lifetime;
 		spark.maxLifetime = settings.lifetime;
 		spark.color = settings.color;
 		spark.width = settings.width;
-		spark.initialWidth = settings.width; // Store initial width for decay
+		spark.initialWidth = settings.width;
+		spark.tipSize = settings.tipSize;
+		spark.initialTipSize = settings.tipSize;
+		spark.length = settings.length;
+		spark.initialLength = settings.length;
 		spark.isActive = true;
 
 		activeSparks.Add(spark);
@@ -223,6 +257,7 @@ public class SparkSystem : MonoBehaviour
 			}
 
 			spark.lifetime -= deltaTime;
+
 			if (spark.lifetime <= 0f)
 			{
 				spark.isActive = false;
@@ -233,11 +268,21 @@ public class SparkSystem : MonoBehaviour
 				continue;
 			}
 
-			// Update alpha and width
-			spark.color.a = spark.lifetime / spark.maxLifetime;
+			if (!defaultSettings.useAdditiveBlending)
+			{
+				spark.color.a = spark.lifetime / spark.maxLifetime;
+			}
+			else
+			{
+				spark.color.a = 1f; // Alpha irrelevant for additive
+			}
+
 			if (defaultSettings.decay)
 			{
-				spark.width = spark.initialWidth * (spark.lifetime / spark.maxLifetime);
+				float decayFactor = spark.lifetime / spark.maxLifetime;
+				spark.width = spark.initialWidth * decayFactor;
+				spark.tipSize = spark.initialTipSize * decayFactor;
+				spark.length = spark.initialLength * decayFactor;
 			}
 
 			spark.velocity.y -= defaultSettings.gravity * deltaTime * simSpeed;
@@ -245,19 +290,18 @@ public class SparkSystem : MonoBehaviour
 			spark.position += spark.velocity * defaultSettings.moveScale * deltaTime * simSpeed;
 
 			// Ground collision
-			float collide = spark.width * 0.75f;
 			float currentY = useGlobalGroundPlane ? spark.position.y : transform.InverseTransformPoint(spark.position).y;
 			float groundY = defaultSettings.groundHeight;
-			if (spark.velocity.y < 0 && currentY < groundY + collide)
+			if (spark.velocity.y < 0 && currentY <= groundY)
 			{
 				if (useGlobalGroundPlane)
 				{
-					spark.position.y = groundY + (collide * 2f - (spark.position.y - groundY));
+					spark.position.y = groundY;
 				}
 				else
 				{
 					Vector3 localPos = transform.InverseTransformPoint(spark.position);
-					localPos.y = groundY + (collide * 2f - (localPos.y - groundY));
+					localPos.y = groundY;
 					spark.position = transform.TransformPoint(localPos);
 				}
 				spark.velocity.y = -spark.velocity.y * defaultSettings.bounceDamping;
@@ -273,20 +317,20 @@ public class SparkSystem : MonoBehaviour
 			for (int i = 0; i < 18; i++)
 				triangles[indexOffset + i] = vertexIndex;
 			for (int i = 0; i < 8; i++)
-				colors[vertexIndex + i] = Color.clear;
+				colors[vertexIndex + i] = defaultSettings.useAdditiveBlending ? Color.black : Color.clear;
 		}
 		else
 		{
 			for (int i = 0; i < 6; i++)
 				triangles[indexOffset + i] = vertexIndex;
 			for (int i = 0; i < 4; i++)
-				colors[vertexIndex + i] = Color.clear;
+				colors[vertexIndex + i] = defaultSettings.useAdditiveBlending ? Color.black : Color.clear;
 		}
 	}
 
 	private void UpdateMesh()
 	{
-		Vector3 camPos = mainCamera.transform.position; // Camera in world space
+		Vector3 camPos = mainCamera.transform.position;
 		Vector3 camRight = mainCamera.transform.right;
 		Vector3 camUp = mainCamera.transform.up;
 
@@ -302,12 +346,12 @@ public class SparkSystem : MonoBehaviour
 			Spark spark = activeSparks[i];
 			if (!spark.isActive) continue;
 
-			Vector3 pos = spark.position; // World space
+			Vector3 pos = spark.position;
 			Vector3 prevPos = spark.previousPosition;
 
 			Vector3 sparkDir = (pos - prevPos);
 			if (sparkDir.sqrMagnitude < 0.0001f)
-				sparkDir = spark.velocity.normalized; // Local space, will normalize in world space
+				sparkDir = spark.velocity.normalized;
 			else
 				sparkDir = sparkDir.normalized;
 
@@ -323,13 +367,12 @@ public class SparkSystem : MonoBehaviour
 			{
 				sy = camUp;
 			}
-			Vector3 vecy = sy * spark.width * 0.5f; // Width offset
-			Vector3 tipVec = sparkDir * defaultSettings.tipSize; // Head/tail extension
+			Vector3 vecy = sy * spark.width * 0.5f;
+			Vector3 tipVec = sparkDir * spark.tipSize;
 
 			int vertexIndex = spark.vertexIndex;
 			if (useThreeZoneSlicing)
 			{
-				// Tail quad (v0, v1, v2, v3): from prevPos - tipSize to prevPos
 				Vector3 tailTail = prevPos - tipVec;
 				Vector3 tailFront = prevPos;
 				vertices[vertexIndex + 0] = tailTail - vecy;
@@ -337,37 +380,31 @@ public class SparkSystem : MonoBehaviour
 				vertices[vertexIndex + 2] = tailFront - vecy;
 				vertices[vertexIndex + 3] = tailFront + vecy;
 
-				// Body quad (v2, v3, v4, v5): from prevPos to pos
-				vertices[vertexIndex + 2] = vertices[vertexIndex + 2]; // Shared with tail
-				vertices[vertexIndex + 3] = vertices[vertexIndex + 3]; // Shared with tail
+				vertices[vertexIndex + 2] = vertices[vertexIndex + 2];
+				vertices[vertexIndex + 3] = vertices[vertexIndex + 3];
 				vertices[vertexIndex + 4] = pos - vecy;
 				vertices[vertexIndex + 5] = pos + vecy;
 
-				// Head quad (v4, v5, v6, v7): from pos to pos + tipSize
 				Vector3 headTail = pos;
 				Vector3 headFront = pos + tipVec;
-				vertices[vertexIndex + 4] = vertices[vertexIndex + 4]; // Shared with body
-				vertices[vertexIndex + 5] = vertices[vertexIndex + 5]; // Shared with body
+				vertices[vertexIndex + 4] = vertices[vertexIndex + 4];
+				vertices[vertexIndex + 5] = vertices[vertexIndex + 5];
 				vertices[vertexIndex + 6] = headFront - vecy;
 				vertices[vertexIndex + 7] = headFront + vecy;
 
-				// Update triangles
 				int indexOffset = (vertexIndex / 8) * 18;
-				// Tail quad
 				triangles[indexOffset + 0] = vertexIndex + 0;
 				triangles[indexOffset + 1] = vertexIndex + 1;
 				triangles[indexOffset + 2] = vertexIndex + 2;
 				triangles[indexOffset + 3] = vertexIndex + 1;
 				triangles[indexOffset + 4] = vertexIndex + 3;
 				triangles[indexOffset + 5] = vertexIndex + 2;
-				// Body quad
 				triangles[indexOffset + 6] = vertexIndex + 2;
 				triangles[indexOffset + 7] = vertexIndex + 3;
 				triangles[indexOffset + 8] = vertexIndex + 4;
 				triangles[indexOffset + 9] = vertexIndex + 3;
 				triangles[indexOffset + 10] = vertexIndex + 5;
 				triangles[indexOffset + 11] = vertexIndex + 4;
-				// Head quad
 				triangles[indexOffset + 12] = vertexIndex + 4;
 				triangles[indexOffset + 13] = vertexIndex + 5;
 				triangles[indexOffset + 14] = vertexIndex + 6;
@@ -375,13 +412,12 @@ public class SparkSystem : MonoBehaviour
 				triangles[indexOffset + 16] = vertexIndex + 7;
 				triangles[indexOffset + 17] = vertexIndex + 6;
 
-				// Update colors
 				for (int j = 0; j < 8; j++)
 					colors[vertexIndex + j] = spark.color;
 			}
 			else
 			{
-				float extension = defaultSettings.length * 0.5f;
+				float extension = spark.length * 0.5f;
 				Vector3 tailPos = prevPos - sparkDir * extension;
 				Vector3 headPos = pos + sparkDir * extension;
 
@@ -406,7 +442,6 @@ public class SparkSystem : MonoBehaviour
 		mesh.SetVertices(vertices);
 		mesh.SetTriangles(triangles, 0);
 		mesh.SetColors(colors);
-		// UVs are not updated here; set in InitializeMesh
 		mesh.RecalculateBounds();
 	}
 }
