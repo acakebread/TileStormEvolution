@@ -10,25 +10,22 @@ namespace MassiveHadronLtd
 		{
 			public float speed = 4f;
 			public float lifetime = 1f;
-			public float lifetimeVariation = 0.5f; // New: Random lifetime variation (±seconds)
+			public float lifetimeVariation = 0.5f; // Random lifetime variation (±seconds)
 			public float width = 0.02f; // Controls size for simple particles and body width for three-zone
 			public bool decay = true; // Shrink width with age
 			public Color color = Color.white;
 			public float gravity = 10f; // Y-axis damping
-			public float moveScale = 1f; // Velocity scale
 			public float bounceDamping = 0.8f; // Velocity damping on collision
 			public float groundHeight = 0f; // Ground plane Y position
 			public bool useGlobalGroundPlane = true;
+			public bool useThreeZoneSlicing = false;
+			public bool updateSparks = true;
 		}
 
-		[SerializeField] private Material particleMaterial; // Material with custom AdditiveParticles shader
-		[SerializeField] private bool useThreeZoneSlicing = false;
-		[SerializeField] private bool useAdditiveBlending = true;
-		[SerializeField] public SparkSettings defaultSettings;
-		[SerializeField] private bool updateSparks = true;
-		private readonly float simSpeed = 1f;
-		private ParticleSystem customParticleSystem;
+		[SerializeField] private Material particleMaterial;
+		[SerializeField] private SparkSettings settings;
 
+		private ParticleSystem customParticleSystem;
 		private class SparkData
 		{
 			public int poolIndex;
@@ -54,13 +51,19 @@ namespace MassiveHadronLtd
 				enabled = false;
 				return;
 			}
+			if (settings == null)
+			{
+				Debug.LogError("SparkController: settings is not assigned! Please assign SparkSettings in the Inspector.");
+				enabled = false;
+				return;
+			}
 
-			customParticleSystem = new ParticleSystem(particleMaterial, useThreeZoneSlicing, useAdditiveBlending);
+			customParticleSystem = new ParticleSystem(particleMaterial, settings.useThreeZoneSlicing);
 		}
 
 		void FixedUpdate()
 		{
-			if (updateSparks)
+			if (settings.updateSparks)
 				UpdateSparks();
 		}
 
@@ -69,37 +72,37 @@ namespace MassiveHadronLtd
 			customParticleSystem.Render();
 		}
 
-		public void SpawnSpark(Vector3 position, Vector3 velocity, SparkSettings settings = null)
+		public void SpawnSpark(Vector3 position, Vector3 velocity, float? lifetimeVariation = null, SparkSettings customSettings = null)
 		{
-			if (!updateSparks) return;
-			if (settings == null) settings = defaultSettings;
+			if (!settings.updateSparks) return;
+			var activeSettings = customSettings ?? settings;
+			float variation = lifetimeVariation ?? activeSettings.lifetimeVariation;
 
-			// Apply random lifetime variation
-			float lifetime = settings.lifetime + Random.Range(-settings.lifetimeVariation, settings.lifetimeVariation);
-			lifetime = Mathf.Max(0.1f, lifetime); // Ensure lifetime isn't negative or too short
+			float lifetime = activeSettings.lifetime + Random.Range(-variation, variation);
+			lifetime = Mathf.Max(0.1f, lifetime);
 
 			var particleSettings = new ParticleSystem.ParticleSettings
 			{
-				lifetime = lifetime, // Use modified lifetime
-				width = settings.width,
-				decay = settings.decay,
-				color = settings.color
+				lifetime = lifetime,
+				width = activeSettings.width,
+				decay = activeSettings.decay,
+				color = activeSettings.color
 			};
 
-			int poolIndex = customParticleSystem.SpawnParticle(position, velocity * settings.speed, particleSettings);
+			int poolIndex = customParticleSystem.SpawnParticle(position, velocity * activeSettings.speed, particleSettings);
 			if (poolIndex == -1) return;
 
 			SparkData spark = new SparkData
 			{
 				poolIndex = poolIndex,
 				position = position,
-				velocity = velocity * settings.speed,
-				lifetime = lifetime, // Use modified lifetime
+				velocity = velocity * activeSettings.speed,
+				lifetime = lifetime,
 				maxLifetime = lifetime,
-				color = settings.color,
-				width = settings.width,
-				initialWidth = settings.width,
-				tipSize = settings.width / 2f,
+				color = activeSettings.color,
+				width = activeSettings.width,
+				initialWidth = activeSettings.width,
+				tipSize = activeSettings.width * 0.54f,
 				isActive = true
 			};
 
@@ -129,36 +132,29 @@ namespace MassiveHadronLtd
 					continue;
 				}
 
-				if (!useAdditiveBlending)
-				{
-					spark.color.a = spark.lifetime / spark.maxLifetime;
-				}
-				else
-				{
-					spark.color.a = 1f; // Alpha modulates intensity for additive
-				}
+				spark.color.a = spark.lifetime / spark.maxLifetime; // Modulate alpha for intensity
 
-				if (defaultSettings.decay)
+				if (settings.decay)
 				{
 					float decayFactor = spark.lifetime / spark.maxLifetime;
 					spark.width = spark.initialWidth * decayFactor;
-					spark.tipSize = spark.width / 2f;
+					spark.tipSize = spark.width * 0.54f;
 				}
 
-				spark.velocity.y -= defaultSettings.gravity * deltaTime * simSpeed;
-				spark.position += spark.velocity * defaultSettings.moveScale * deltaTime * simSpeed;
+				spark.velocity.y -= settings.gravity * deltaTime;
+				spark.position += spark.velocity * deltaTime;
 
 				float currentY = spark.position.y;
-				float groundY = defaultSettings.groundHeight;
-				if (!defaultSettings.useGlobalGroundPlane)
+				float groundY = settings.groundHeight;
+				if (!settings.useGlobalGroundPlane)
 				{
-					groundY = transform.position.y + defaultSettings.groundHeight;
+					groundY = transform.position.y + settings.groundHeight;
 				}
 
 				if (spark.velocity.y < 0 && currentY <= groundY)
 				{
 					spark.position.y = groundY;
-					spark.velocity.y = -spark.velocity.y * defaultSettings.bounceDamping;
+					spark.velocity.y = -spark.velocity.y * settings.bounceDamping;
 				}
 
 				customParticleSystem.UpdateParticle(spark.poolIndex, spark.position, spark.velocity, spark.lifetime, spark.width, spark.tipSize, spark.color);

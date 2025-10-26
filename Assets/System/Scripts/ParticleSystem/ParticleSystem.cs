@@ -13,10 +13,8 @@ namespace MassiveHadronLtd
 			public Color color = Color.white;
 		}
 
-		public ParticleSettings defaultSettings = new ParticleSettings();
 		private readonly int maxParticles = 4096;
 		private readonly bool useThreeZoneSlicing;
-		private readonly bool useAdditiveBlending;
 		private readonly Material material;
 		private Mesh mesh;
 		private readonly Camera mainCamera;
@@ -48,11 +46,10 @@ namespace MassiveHadronLtd
 		private readonly int verticesPerParticle;
 		private readonly int trianglesPerParticle;
 
-		public ParticleSystem(Material particleMaterial, bool threeZoneSlicing = false, bool useAdditiveBlending = true)
+		public ParticleSystem(Material particleMaterial, bool threeZoneSlicing)
 		{
 			material = new Material(particleMaterial);
 			useThreeZoneSlicing = threeZoneSlicing;
-			this.useAdditiveBlending = useAdditiveBlending;
 			verticesPerParticle = useThreeZoneSlicing ? 8 : 4;
 			trianglesPerParticle = useThreeZoneSlicing ? 18 : 6;
 			mainCamera = Camera.main;
@@ -64,26 +61,23 @@ namespace MassiveHadronLtd
 
 		private void SetupURPMaterial()
 		{
-			// Ensure the material uses the custom AdditiveParticles shader
 			if (material.shader.name != "MassiveHadronLtd/Unlit/AdditiveParticles")
 			{
 				Debug.LogWarning($"ParticleSystem: Material shader is {material.shader.name}, expected 'MassiveHadronLtd/Unlit/AdditiveParticles'. Attempting to set shader.");
 				Shader additiveShader = Shader.Find("MassiveHadronLtd/Unlit/AdditiveParticles");
 				if (additiveShader == null)
 				{
-					Debug.LogError("ParticleSystem: Could not find 'MassiveHadronLtd/Unlit/AdditiveParticles' shader. Please ensure the shader is included in the project.");
+					Debug.LogError("ParticleSystem: Could not find 'MassiveHadronLtd/Unlit/AdditiveParticles' shader.");
 					return;
 				}
 				material.shader = additiveShader;
 			}
 
-			// Configure material properties
-			material.SetColor("_BaseColor", Color.white); // Base color for vertex color modulation
-			material.SetFloat("_ZWrite", 0); // Ensure ZWrite is off
-			material.SetFloat("_Cull", (float)UnityEngine.Rendering.CullMode.Off); // Disable culling
-			material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent + 100; // Slightly higher to render after other transparent objects
+			material.SetColor("_BaseColor", Color.white);
+			material.SetFloat("_ZWrite", 0);
+			material.SetFloat("_Cull", (float)UnityEngine.Rendering.CullMode.Off);
+			material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent + 100;
 
-			// Check if a texture is assigned
 			if (material.GetTexture("_BaseMap") == null)
 			{
 				Debug.LogWarning("ParticleSystem: No texture assigned to _BaseMap in material. Assign a spark texture for proper rendering.");
@@ -118,24 +112,20 @@ namespace MassiveHadronLtd
 				{
 					vertices.AddRange(new Vector3[8]);
 					triangles.AddRange(new[] {
-						vertexOffset + 0, vertexOffset + 1, vertexOffset + 2, // Tail quad
-                        vertexOffset + 1, vertexOffset + 3, vertexOffset + 2,
-						vertexOffset + 2, vertexOffset + 3, vertexOffset + 4, // Body quad
-                        vertexOffset + 3, vertexOffset + 5, vertexOffset + 4,
-						vertexOffset + 4, vertexOffset + 5, vertexOffset + 6, // Head quad
-                        vertexOffset + 5, vertexOffset + 7, vertexOffset + 6
+						vertexOffset + 0, vertexOffset + 1, vertexOffset + 2,
+						vertexOffset + 1, vertexOffset + 3, vertexOffset + 2,
+						vertexOffset + 2, vertexOffset + 3, vertexOffset + 4,
+						vertexOffset + 3, vertexOffset + 5, vertexOffset + 4,
+						vertexOffset + 4, vertexOffset + 5, vertexOffset + 6,
+						vertexOffset + 5, vertexOffset + 7, vertexOffset + 6
 					});
 					colors.AddRange(new Color[8]);
 					uvs.AddRange(new[] {
-						new Vector2(0f, 0f), // v0: Tail bottom-left
-                        new Vector2(1f, 0f), // v1: Tail bottom-right
-                        new Vector2(0f, 0.5f), // v2: Tail top-left
-                        new Vector2(1f, 0.5f), // v3: Tail top-right
-                        new Vector2(0f, 0.5f), // v4: Body start-left
-                        new Vector2(1f, 0.5f), // v5: Body start-right
-                        new Vector2(0f, 1f), // v6: Head start-left
-                        new Vector2(1f, 1f) // v7: Head start-right
-                    });
+						new Vector2(0f, 0f), new Vector2(1f, 0f),
+						new Vector2(0f, 0.5f), new Vector2(1f, 0.5f),
+						new Vector2(0f, 0.5f), new Vector2(1f, 0.5f),
+						new Vector2(0f, 1f), new Vector2(1f, 1f)
+					});
 				}
 				else
 				{
@@ -146,11 +136,9 @@ namespace MassiveHadronLtd
 					});
 					colors.AddRange(new Color[4]);
 					uvs.AddRange(new[] {
-						new Vector2(0f, 0f), // v0
-                        new Vector2(1f, 0f), // v1
-                        new Vector2(0f, 1f), // v2
-                        new Vector2(1f, 1f) // v3
-                    });
+						new Vector2(0f, 0f), new Vector2(1f, 0f),
+						new Vector2(0f, 1f), new Vector2(1f, 1f)
+					});
 				}
 			}
 			mesh.SetVertices(vertices);
@@ -160,22 +148,20 @@ namespace MassiveHadronLtd
 			mesh.RecalculateBounds();
 		}
 
-		public int SpawnParticle(Vector3 position, Vector3 velocity, ParticleSettings settings = null)
+		public int SpawnParticle(Vector3 position, Vector3 velocity, ParticleSettings settings)
 		{
-			if (settings == null) settings = defaultSettings;
-
 			Particle particle = GetInactiveParticle();
 			if (particle == null) return -1;
 
 			particle.position = position;
-			particle.previousPosition = particle.position;
+			particle.previousPosition = position;
 			particle.velocity = velocity;
 			particle.lifetime = settings.lifetime;
 			particle.maxLifetime = settings.lifetime;
 			particle.color = settings.color;
 			particle.width = settings.width;
 			particle.initialWidth = settings.width;
-			particle.tipSize = settings.width / 2f;
+			particle.tipSize = settings.width * 0.54f; // Matches your update
 			particle.isActive = true;
 
 			activeParticles.Add(particle);
@@ -186,7 +172,6 @@ namespace MassiveHadronLtd
 		private Particle GetInactiveParticle()
 		{
 			if (freeParticleIndices.Count == 0) return null;
-
 			int poolIndex = freeParticleIndices[freeParticleIndices.Count - 1];
 			freeParticleIndices.RemoveAt(freeParticleIndices.Count - 1);
 			return particlePool[poolIndex];
@@ -224,19 +209,10 @@ namespace MassiveHadronLtd
 		private void DeactivateQuad(int vertexIndex)
 		{
 			int indexOffset = (vertexIndex / verticesPerParticle) * trianglesPerParticle;
-			if (useThreeZoneSlicing)
+			int count = useThreeZoneSlicing ? 18 : 6;
+			for (int i = 0; i < count; i++)
 			{
-				for (int i = 0; i < 18; i++)
-					triangles[indexOffset + i] = vertexIndex;
-				for (int i = 0; i < 8; i++)
-					colors[vertexIndex + i] = useAdditiveBlending ? Color.black : Color.clear;
-			}
-			else
-			{
-				for (int i = 0; i < 6; i++)
-					triangles[indexOffset + i] = vertexIndex;
-				for (int i = 0; i < 4; i++)
-					colors[vertexIndex + i] = useAdditiveBlending ? Color.black : Color.clear;
+				triangles[indexOffset + i] = 0; // Collapse triangles to vertex 0
 			}
 		}
 
@@ -266,7 +242,6 @@ namespace MassiveHadronLtd
 
 				Vector3 pos = particle.position;
 				Vector3 prevPos = particle.previousPosition;
-
 				Vector3 delta = pos - prevPos;
 				float deltaLength = delta.magnitude;
 				Vector3 particleDir = deltaLength > 0.0001f ? delta.normalized : particle.velocity.normalized;
@@ -300,16 +275,10 @@ namespace MassiveHadronLtd
 					vertices[vertexIndex + 1] = tailTail + vecy;
 					vertices[vertexIndex + 2] = tailFront - vecy;
 					vertices[vertexIndex + 3] = tailFront + vecy;
-
-					vertices[vertexIndex + 2] = vertices[vertexIndex + 2];
-					vertices[vertexIndex + 3] = vertices[vertexIndex + 3];
 					vertices[vertexIndex + 4] = centerPos + particleDir * (bodyLength / 2) - vecy;
 					vertices[vertexIndex + 5] = centerPos + particleDir * (bodyLength / 2) + vecy;
-
 					Vector3 headTail = centerPos + particleDir * (bodyLength / 2);
 					Vector3 headFront = centerPos + particleDir * (bodyLength / 2 + tipSize);
-					vertices[vertexIndex + 4] = vertices[vertexIndex + 4];
-					vertices[vertexIndex + 5] = vertices[vertexIndex + 5];
 					vertices[vertexIndex + 6] = headFront - vecy;
 					vertices[vertexIndex + 7] = headFront + vecy;
 

@@ -366,21 +366,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   particleMaterial: {fileID: 2100000, guid: 02223f9d74ca8f74999a27cdc04e130f, type: 2}
-  useThreeZoneSlicing: 1
-  useAdditiveBlending: 1
-  defaultSettings:
-    speed: 5
-    lifetime: 1
-    lifetimeVariation: 2
-    width: 0.05
+  settings:
+    speed: 4
+    lifetime: 0.25
+    lifetimeVariation: 0.5
+    width: 0.02
     decay: 1
-    color: {r: 0.1273585, g: 0.8099976, b: 1, a: 1}
+    color: {r: 0.142, g: 0.2746606, b: 1, a: 1}
     gravity: 10
-    moveScale: 1
     bounceDamping: 0.8
     groundHeight: 0
     useGlobalGroundPlane: 1
-  updateSparks: 1
+    useThreeZoneSlicing: 1
+    updateSparks: 1
 --- !u!4 &1081262123
 Transform:
   m_ObjectHideFlags: 0
@@ -615,9 +613,8 @@ MonoBehaviour:
   delay: 0.02
   ct: 2
   continuous: 1
-  spawnOffset: {x: -1, y: 0.25, z: 0}
+  spawnOffset: {x: -0.25, y: 0.25, z: 0}
   lifetimeVariation: 0.5
-  bias: {x: 0, y: 1, z: 0}
 --- !u!4 &1759432267
 Transform:
   m_ObjectHideFlags: 0
@@ -806,21 +803,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   particleMaterial: {fileID: 2100000, guid: 02223f9d74ca8f74999a27cdc04e130f, type: 2}
-  useThreeZoneSlicing: 1
-  useAdditiveBlending: 1
-  defaultSettings:
-    speed: 2
-    lifetime: 0.25
-    lifetimeVariation: 1
-    width: 0.49
+  settings:
+    speed: 0.3
+    lifetime: 0.2
+    lifetimeVariation: 0.2
+    width: 0.15
     decay: 1
-    color: {r: 0.46226418, g: 0.23014045, b: 0, a: 1}
-    gravity: -2
-    moveScale: 1
-    bounceDamping: 1
+    color: {r: 1, g: 0.127, b: 0.049, a: 1}
+    gravity: -0.2
+    bounceDamping: 0.8
     groundHeight: 0
     useGlobalGroundPlane: 1
-  updateSparks: 1
+    useThreeZoneSlicing: 1
+    updateSparks: 1
 --- !u!4 &1910858983
 Transform:
   m_ObjectHideFlags: 0
@@ -912,12 +907,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   sparkController: {fileID: 1081262122}
-  delay: 2
+  delay: 1
   ct: 64
   continuous: 1
-  spawnOffset: {x: 1, y: 0.25, z: 0}
+  spawnOffset: {x: 0.25, y: 0.25, z: 0}
   lifetimeVariation: 0.5
-  bias: {x: 0, y: 0.5, z: 0}
 --- !u!4 &2032521525
 Transform:
   m_ObjectHideFlags: 0
