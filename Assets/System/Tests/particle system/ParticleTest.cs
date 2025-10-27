@@ -10,6 +10,7 @@ public class ParticleTest : MonoBehaviour
 	[SerializeField] private bool continuous = true;
 	[SerializeField] private Vector3 spawnOffset = Vector3.zero;
 	[SerializeField][Range(0, 2)] private float lifetimeVariation = 0.5f;
+	[SerializeField] private Vector3 bias = Vector3.zero;
 
 	void Awake()
 	{
@@ -31,7 +32,7 @@ public class ParticleTest : MonoBehaviour
 				{
 					var vel = Random.onUnitSphere * Random.value * 0.5f;
 					vel.y *= 2f;
-					vel += Vector3.up;
+					vel += bias;
 					Vector3 worldPos = sparkController.transform.position + spawnOffset;
 					sparkController.SpawnSpark(worldPos, vel, lifetimeVariation);
 				}

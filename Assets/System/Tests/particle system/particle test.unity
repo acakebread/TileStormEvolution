@@ -199,55 +199,46 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   particleMaterial: {fileID: 2100000, guid: 02223f9d74ca8f74999a27cdc04e130f, type: 2}
   settings:
-    speed: 4
-    lifetime: 0.25
-    lifetimeVariation: 0.5
-    width: 0.02
+    speed: 2
+    lifetime: 0.5
+    lifetimeVariation: 1
+    width: 0.007
     scaleCurve:
       serializedVersion: 2
       m_Curve:
       - serializedVersion: 3
         time: 0
-        value: 2
+        value: 1.0188675
         inSlope: -2
-        outSlope: -2
+        outSlope: 0.50943947
         tangentMode: 1
         weightedMode: 0
         inWeight: 0
-        outWeight: 0
+        outWeight: 0.25252524
       - serializedVersion: 3
-        time: 0.33
-        value: 1.33
-        inSlope: -2
-        outSlope: -2
+        time: 0.8825774
+        value: 0.3347225
+        inSlope: -5.810459
+        outSlope: -3.1883974
         tangentMode: 1
         weightedMode: 0
-        inWeight: 0
-        outWeight: 0
-      - serializedVersion: 3
-        time: 0.66
-        value: 0.66
-        inSlope: -2
-        outSlope: -2
-        tangentMode: 1
-        weightedMode: 0
-        inWeight: 0
-        outWeight: 0
+        inWeight: 0.03917587
+        outWeight: 0.86419374
       - serializedVersion: 3
         time: 1
         value: 0
-        inSlope: -2
+        inSlope: -0.6792455
         outSlope: -2
         tangentMode: 1
         weightedMode: 0
-        inWeight: 0
+        inWeight: 0.7096873
         outWeight: 0
       m_PreInfinity: 2
       m_PostInfinity: 2
       m_RotationOrder: 4
-    color: {r: 0.142, g: 0.2746606, b: 1, a: 1}
+    color: {r: 0.482, g: 0.773, b: 1, a: 1}
     gravity: 10
-    bounceDamping: 0.8
+    bounceDamping: 0.4
     groundHeight: 0
     useGlobalGroundPlane: 1
     useThreeZoneSlicing: 1
@@ -488,6 +479,7 @@ MonoBehaviour:
   continuous: 1
   spawnOffset: {x: -0.25, y: 0.25, z: 0}
   lifetimeVariation: 0.5
+  bias: {x: 0, y: 2, z: 0}
 --- !u!4 &1759432267
 Transform:
   m_ObjectHideFlags: 0
@@ -686,31 +678,22 @@ MonoBehaviour:
       m_Curve:
       - serializedVersion: 3
         time: 0
-        value: 2
-        inSlope: -2
-        outSlope: -2
+        value: 0.1509552
+        inSlope: 0
+        outSlope: 5.597788
         tangentMode: 1
         weightedMode: 0
         inWeight: 0
-        outWeight: 0
+        outWeight: 0.062273167
       - serializedVersion: 3
-        time: 0.33
-        value: 1.33
-        inSlope: -2
-        outSlope: -2
+        time: 0.58182174
+        value: 1.0988505
+        inSlope: 0.15051125
+        outSlope: -0.14575744
         tangentMode: 1
         weightedMode: 0
-        inWeight: 0
-        outWeight: 0
-      - serializedVersion: 3
-        time: 0.66
-        value: 0.66
-        inSlope: -2
-        outSlope: -2
-        tangentMode: 1
-        weightedMode: 0
-        inWeight: 0
-        outWeight: 0
+        inWeight: 0.17217883
+        outWeight: 0.2073283
       - serializedVersion: 3
         time: 1
         value: 0
@@ -821,11 +804,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   sparkController: {fileID: 1081262122}
-  delay: 1
-  ct: 64
+  delay: 2
+  ct: 48
   continuous: 1
-  spawnOffset: {x: 0.25, y: 0.25, z: 0}
-  lifetimeVariation: 0.5
+  spawnOffset: {x: 0.25, y: 1, z: 0}
+  lifetimeVariation: 2
+  bias: {x: 0, y: 0.25, z: 0}
 --- !u!4 &2032521525
 Transform:
   m_ObjectHideFlags: 0
