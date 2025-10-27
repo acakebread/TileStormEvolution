@@ -1,43 +1,41 @@
-using MassiveHadronLtd;
-using System.Collections;
 using UnityEngine;
+using MassiveHadronLtd;
 
 public class ParticleTest : MonoBehaviour
 {
-	[SerializeField] private ParticleController particleController;
-	[SerializeField][Range(0, 10)] private float delay = 0.1f;
-	[SerializeField][Range(1, 128)] private int ct = 1;
-	[SerializeField] private bool continuous = true;
-	[SerializeField] private Vector3 spawnOffset = Vector3.zero;
-	[SerializeField][Range(0, 2)] private float lifetimeVariation = 0.5f;
-	[SerializeField] private Vector3 bias = Vector3.zero;
+	private ParticleController[] controllers;
+	private bool[] buttonStates; // Tracks which buttons are held
 
 	void Awake()
 	{
-		if (particleController == null)
-		{
-			Debug.LogError("ParticleTest: particleController is not assigned!");
-			enabled = false;
-			return;
-		}
+		// Find all ParticleController instances in the scene
+		controllers = Object.FindObjectsByType<ParticleController>(FindObjectsSortMode.None);
+		buttonStates = new bool[controllers.Length];
 	}
 
-	IEnumerator Start()
+	void OnGUI()
 	{
-		while (true)
+		// Simple vertical layout for buttons
+		float buttonHeight = 30f;
+		float buttonWidth = 200f;
+		float yOffset = 10f;
+
+		for (int i = 0; i < controllers.Length; i++)
 		{
-			if (continuous || Input.GetKey(KeyCode.Space))
+			Rect buttonRect = new Rect(10, yOffset + i * (buttonHeight + 5), buttonWidth, buttonHeight);
+			bool wasPressed = buttonStates[i];
+			buttonStates[i] = GUI.RepeatButton(buttonRect, controllers[i].gameObject.name);
+
+			if (buttonStates[i] && !wasPressed)
 			{
-				for (var n = 0; n < ct; ++n)
-				{
-					var vel = Random.onUnitSphere * Random.value * 0.5f;
-					vel.y *= 2f;
-					vel += bias;
-					Vector3 worldPos = particleController.transform.position + spawnOffset;
-					particleController.SpawnParticle(worldPos, vel, lifetimeVariation);
-				}
+				// Button was just pressed
+				controllers[i].EmitParticles();
 			}
-			yield return new WaitForSeconds(delay);
+			else if (!buttonStates[i] && wasPressed)
+			{
+				// Button was just released
+				controllers[i].StopEmitting();
+			}
 		}
 	}
 }

@@ -24,6 +24,17 @@ namespace MassiveHadronLtd
 			public bool useThreeZoneSlicing = false;
 			public bool updateParticles = true;
 			[Range(0f, 1f)] public float fadeStartTime = 1f;
+			[Range(0.1f, 10f)] public float cycleTime = 0.1f; // Total PWM cycle duration (seconds)
+			[SerializeField] public List<Pulse> pulses = new List<Pulse> { new Pulse { start = 0f, end = 0.1f } }; // List of pulses
+			[Range(1, 128)] public int particleCount = 1;
+			public Vector3 velocityBias = Vector3.zero;
+
+			[System.Serializable]
+			public class Pulse
+			{
+				[Range(0f, 1f)] public float start;
+				[Range(0f, 1f)] public float end;
+			}
 		}
 
 		[SerializeField] private Material particleMaterial;
@@ -45,6 +56,8 @@ namespace MassiveHadronLtd
 		}
 
 		private List<ParticleData> activeParticles;
+		private bool emitEnabled; // Forces continuous emission when true
+		private float timelinePosition; // Tracks position in the PWM timeline (seconds)
 
 		void Awake()
 		{
@@ -78,17 +91,65 @@ namespace MassiveHadronLtd
 			}
 
 			customParticleSystem = new ParticleSystem(particleMaterial, settings.useThreeZoneSlicing);
+			timelinePosition = 0f;
+			emitEnabled = false;
 		}
 
 		void FixedUpdate()
 		{
 			if (settings.updateParticles)
 				UpdateParticles();
+
+			// Advance PWM timeline
+			timelinePosition += Time.deltaTime;
+			if (timelinePosition >= settings.cycleTime)
+				timelinePosition -= settings.cycleTime;
+
+			// Emit particles if forced continuous or within any pulse
+			float normalizedTime = timelinePosition / settings.cycleTime;
+			bool inPulse = false;
+			foreach (var pulse in settings.pulses)
+			{
+				if (normalizedTime >= pulse.start && normalizedTime <= pulse.end)
+				{
+					inPulse = true;
+					break;
+				}
+			}
+
+			if (emitEnabled || inPulse)
+				EmitParticlesInternal();
 		}
 
 		void Update()
 		{
 			customParticleSystem.Render();
+		}
+
+		public void EmitParticles()
+		{
+			emitEnabled = true;
+			timelinePosition = 0f; // Reset timeline on start
+		}
+
+		public void StopEmitting()
+		{
+			emitEnabled = false;
+			timelinePosition = 0f; // Reset timeline on stop
+		}
+
+		private void EmitParticlesInternal()
+		{
+			// Emit exactly particleCount particles per frame
+			int emitCount = Mathf.Max(1, settings.particleCount);
+			for (int n = 0; n < emitCount; ++n)
+			{
+				var vel = Random.onUnitSphere * Random.value * 0.5f;
+				vel.y *= 2f;
+				vel += settings.velocityBias;
+				Vector3 worldPos = transform.position;
+				SpawnParticle(worldPos, vel, settings.lifetimeVariation);
+			}
 		}
 
 		public void SpawnParticle(Vector3 position, Vector3 velocity, float? lifetimeVariation = null, ParticleSettings customSettings = null)

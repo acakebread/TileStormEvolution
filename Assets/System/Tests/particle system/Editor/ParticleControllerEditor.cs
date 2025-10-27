@@ -1,6 +1,7 @@
 #if UNITY_EDITOR
 using UnityEditor;
 using UnityEngine;
+using System.Collections.Generic;
 
 namespace MassiveHadronLtd
 {
@@ -8,6 +9,9 @@ namespace MassiveHadronLtd
 	public class ParticleControllerEditor : Editor
 	{
 		private bool presetApplied = false;
+		private enum DragState { None, Start, End }
+		private DragState dragState = DragState.None; // Tracks which edge is being dragged
+		private int draggedPulseIndex = -1; // Tracks which pulse is being dragged
 
 		public override void OnInspectorGUI()
 		{
@@ -85,6 +89,7 @@ namespace MassiveHadronLtd
 
 			presetApplied = false;
 			scaleCurveProp.animationCurveValue = newCurve;
+
 			EditorGUILayout.PropertyField(settingsProp.FindPropertyRelative("color"));
 			EditorGUILayout.PropertyField(settingsProp.FindPropertyRelative("gravity"));
 			EditorGUILayout.PropertyField(settingsProp.FindPropertyRelative("bounceDamping"));
@@ -93,6 +98,148 @@ namespace MassiveHadronLtd
 			EditorGUILayout.PropertyField(settingsProp.FindPropertyRelative("useThreeZoneSlicing"));
 			EditorGUILayout.PropertyField(settingsProp.FindPropertyRelative("updateParticles"));
 			EditorGUILayout.PropertyField(settingsProp.FindPropertyRelative("fadeStartTime"));
+
+			// PWM Timeline Editor
+			EditorGUILayout.LabelField("PWM Timeline:", EditorStyles.boldLabel);
+			EditorGUILayout.PropertyField(settingsProp.FindPropertyRelative("cycleTime"));
+			var pulsesProp = settingsProp.FindPropertyRelative("pulses");
+
+			// Pulse management buttons
+			EditorGUILayout.BeginHorizontal();
+			if (GUILayout.Button("Add Pulse"))
+			{
+				pulsesProp.arraySize++;
+				var newPulse = pulsesProp.GetArrayElementAtIndex(pulsesProp.arraySize - 1);
+				newPulse.FindPropertyRelative("start").floatValue = 0f;
+				newPulse.FindPropertyRelative("end").floatValue = 0.1f;
+			}
+			if (GUILayout.Button("Remove Last Pulse") && pulsesProp.arraySize > 1)
+			{
+				pulsesProp.arraySize--;
+			}
+			EditorGUILayout.EndHorizontal();
+
+			// Custom timeline UI
+			Rect timelineRect = EditorGUILayout.GetControlRect(false, 30);
+			EditorGUI.DrawRect(timelineRect, new Color(0.2f, 0.2f, 0.2f)); // Background
+			float timelineWidth = timelineRect.width;
+
+			// Draw all pulses
+			for (int i = 0; i < pulsesProp.arraySize; i++)
+			{
+				var pulseProp = pulsesProp.GetArrayElementAtIndex(i);
+				var startProp = pulseProp.FindPropertyRelative("start");
+				var endProp = pulseProp.FindPropertyRelative("end");
+
+				// Ensure end >= start
+				if (endProp.floatValue < startProp.floatValue)
+					endProp.floatValue = startProp.floatValue;
+
+				float startX = timelineRect.x + startProp.floatValue * timelineWidth;
+				float endX = timelineRect.x + endProp.floatValue * timelineWidth;
+				EditorGUI.DrawRect(new Rect(startX, timelineRect.y, endX - startX, timelineRect.height), new Color(0, 0.8f, 0));
+			}
+
+			// Handle mouse events
+			Vector2 mousePos = Event.current.mousePosition;
+			float normalizedPos = Mathf.Clamp01((mousePos.x - timelineRect.x) / timelineWidth);
+			float handleWidth = 0.1f; // 10% of timeline
+
+			if (Event.current.type == EventType.MouseDown && timelineRect.Contains(mousePos))
+			{
+				// Check if clicking within an existing pulse
+				bool inPulse = false;
+				int closestPulseIndex = -1;
+				bool isStartEdge = false;
+				float minDistance = float.MaxValue;
+
+				for (int i = 0; i < pulsesProp.arraySize; i++)
+				{
+					var pulseProp = pulsesProp.GetArrayElementAtIndex(i);
+					var startProp = pulseProp.FindPropertyRelative("start");
+					var endProp = pulseProp.FindPropertyRelative("end");
+
+					if (normalizedPos >= startProp.floatValue && normalizedPos <= endProp.floatValue)
+					{
+						inPulse = true; // Click is within a pulse
+					}
+
+					float startDistance = Mathf.Abs(normalizedPos - startProp.floatValue);
+					float endDistance = Mathf.Abs(normalizedPos - endProp.floatValue);
+
+					if (startDistance < minDistance && startDistance <= handleWidth)
+					{
+						minDistance = startDistance;
+						closestPulseIndex = i;
+						isStartEdge = true;
+					}
+					if (endDistance < minDistance && endDistance <= handleWidth)
+					{
+						minDistance = endDistance;
+						closestPulseIndex = i;
+						isStartEdge = false;
+					}
+				}
+
+				if (closestPulseIndex >= 0)
+				{
+					// Start dragging the closest edge
+					draggedPulseIndex = closestPulseIndex;
+					dragState = isStartEdge ? DragState.Start : DragState.End;
+				}
+				else if (!inPulse)
+				{
+					// Create new pulse only if not in an existing pulse
+					pulsesProp.arraySize++;
+					var newPulse = pulsesProp.GetArrayElementAtIndex(pulsesProp.arraySize - 1);
+					float newWidth = 0.1f;
+					newPulse.FindPropertyRelative("start").floatValue = Mathf.Clamp01(normalizedPos - newWidth * 0.5f);
+					newPulse.FindPropertyRelative("end").floatValue = Mathf.Clamp01(normalizedPos + newWidth * 0.5f);
+					dragState = DragState.None;
+					draggedPulseIndex = -1;
+				}
+				Event.current.Use();
+			}
+			else if (Event.current.type == EventType.MouseDrag && dragState != DragState.None && draggedPulseIndex >= 0)
+			{
+				// Continue dragging the selected edge
+				var pulseProp = pulsesProp.GetArrayElementAtIndex(draggedPulseIndex);
+				var startProp = pulseProp.FindPropertyRelative("start");
+				var endProp = pulseProp.FindPropertyRelative("end");
+
+				if (dragState == DragState.Start)
+				{
+					startProp.floatValue = Mathf.Clamp01(normalizedPos);
+					if (startProp.floatValue > endProp.floatValue)
+						endProp.floatValue = startProp.floatValue;
+				}
+				else if (dragState == DragState.End)
+				{
+					endProp.floatValue = Mathf.Clamp01(normalizedPos);
+					if (endProp.floatValue < startProp.floatValue)
+						startProp.floatValue = endProp.floatValue;
+				}
+				Event.current.Use();
+			}
+			else if (Event.current.type == EventType.MouseUp)
+			{
+				// End dragging
+				dragState = DragState.None;
+				draggedPulseIndex = -1;
+				Event.current.Use();
+			}
+
+			// Display pulse details
+			for (int i = 0; i < pulsesProp.arraySize; i++)
+			{
+				var pulseProp = pulsesProp.GetArrayElementAtIndex(i);
+				var startProp = pulseProp.FindPropertyRelative("start");
+				var endProp = pulseProp.FindPropertyRelative("end");
+				EditorGUILayout.LabelField($"Pulse {i + 1}: Start = {startProp.floatValue:F2}, End = {endProp.floatValue:F2}");
+			}
+
+			EditorGUILayout.PropertyField(settingsProp.FindPropertyRelative("particleCount"));
+			EditorGUILayout.PropertyField(settingsProp.FindPropertyRelative("velocityBias"));
 
 			serializedObject.ApplyModifiedProperties();
 
