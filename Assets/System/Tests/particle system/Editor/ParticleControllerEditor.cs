@@ -4,14 +4,14 @@ using UnityEngine;
 
 namespace MassiveHadronLtd
 {
-	[CustomEditor(typeof(SparkController))]
-	public class SparkControllerEditor : Editor
+	[CustomEditor(typeof(ParticleController))]
+	public class ParticleControllerEditor : Editor
 	{
-		private bool presetApplied = false; // Track if a preset was just applied
+		private bool presetApplied = false;
 
 		public override void OnInspectorGUI()
 		{
-			var controller = (SparkController)target;
+			var controller = (ParticleController)target;
 
 			serializedObject.Update();
 			EditorGUILayout.PropertyField(serializedObject.FindProperty("particleMaterial"));
@@ -21,15 +21,13 @@ namespace MassiveHadronLtd
 			EditorGUILayout.PropertyField(settingsProp.FindPropertyRelative("lifetimeVariation"));
 			EditorGUILayout.PropertyField(settingsProp.FindPropertyRelative("width"));
 
-			// Custom curve field with larger preview and percentage labels
 			EditorGUILayout.LabelField("Scale Curve (%):", EditorStyles.boldLabel);
 			EditorGUILayout.LabelField("(Y-axis: 0 = 0%, 1 = 100%, 2 = 200%)");
 			var scaleCurveProp = settingsProp.FindPropertyRelative("scaleCurve");
 			var curve = scaleCurveProp.animationCurveValue;
-			var rect = EditorGUILayout.GetControlRect(false, 100); // 100-pixel height
+			var rect = EditorGUILayout.GetControlRect(false, 100);
 			var newCurve = EditorGUI.CurveField(rect, curve, Color.green, new Rect(0, 0, 1, 2));
 
-			// Custom preset buttons
 			EditorGUILayout.BeginHorizontal();
 			if (GUILayout.Button("Linear (100%)"))
 			{
@@ -48,27 +46,22 @@ namespace MassiveHadronLtd
 			}
 			EditorGUILayout.EndHorizontal();
 
-			// Clamp Y values to 0–2 and ensure at least two keyframes (start and end)
-			bool curveChanged = !AreCurvesEqual(curve, newCurve);
-			if (curveChanged && !presetApplied)
+			if (!AreCurvesEqual(curve, newCurve) && !presetApplied)
 			{
-				// Ensure at least two keyframes (X = 0 and X = 1)
 				AnimationCurve tempCurve = new AnimationCurve(newCurve.keys);
 				if (tempCurve.keys.Length < 2)
 				{
-					tempCurve = CreateLinearCurve(); // Fallback to default if invalid
+					tempCurve = CreateLinearCurve();
 				}
 				else
 				{
-					// Clamp Y values
 					for (int i = 0; i < tempCurve.keys.Length; i++)
 					{
 						Keyframe key = tempCurve.keys[i];
 						key.value = Mathf.Clamp(key.value, 0f, 2f);
-						key.time = Mathf.Clamp01(key.time); // Clamp X to 0–1
+						key.time = Mathf.Clamp01(key.time);
 						tempCurve.MoveKey(i, key);
 					}
-					// Ensure start and end keyframes
 					bool hasStart = false, hasEnd = false;
 					for (int i = 0; i < tempCurve.keys.Length; i++)
 					{
@@ -82,7 +75,6 @@ namespace MassiveHadronLtd
 				}
 				newCurve = tempCurve;
 
-				// Set Free tangent modes
 				for (int i = 0; i < newCurve.keys.Length; i++)
 				{
 					AnimationUtility.SetKeyBroken(newCurve, i, true);
@@ -91,9 +83,7 @@ namespace MassiveHadronLtd
 				}
 			}
 
-			// Reset presetApplied flag
 			presetApplied = false;
-
 			scaleCurveProp.animationCurveValue = newCurve;
 			EditorGUILayout.PropertyField(settingsProp.FindPropertyRelative("color"));
 			EditorGUILayout.PropertyField(settingsProp.FindPropertyRelative("gravity"));
@@ -101,7 +91,8 @@ namespace MassiveHadronLtd
 			EditorGUILayout.PropertyField(settingsProp.FindPropertyRelative("groundHeight"));
 			EditorGUILayout.PropertyField(settingsProp.FindPropertyRelative("useGlobalGroundPlane"));
 			EditorGUILayout.PropertyField(settingsProp.FindPropertyRelative("useThreeZoneSlicing"));
-			EditorGUILayout.PropertyField(settingsProp.FindPropertyRelative("updateSparks"));
+			EditorGUILayout.PropertyField(settingsProp.FindPropertyRelative("updateParticles"));
+			EditorGUILayout.PropertyField(settingsProp.FindPropertyRelative("fadeStartTime"));
 
 			serializedObject.ApplyModifiedProperties();
 
@@ -111,7 +102,6 @@ namespace MassiveHadronLtd
 			}
 		}
 
-		// Helper method to compare curves for changes
 		private bool AreCurvesEqual(AnimationCurve curve1, AnimationCurve curve2)
 		{
 			if (curve1.keys.Length != curve2.keys.Length)
@@ -128,14 +118,13 @@ namespace MassiveHadronLtd
 			return true;
 		}
 
-		// Preset: Linear at 100% (Y = 1.0)
 		private AnimationCurve CreateLinearCurve()
 		{
 			var curve = new AnimationCurve();
 			float[] fixedTimes = { 0f, 0.33f, 0.66f, 1f };
 			for (int i = 0; i < 4; i++)
 			{
-				float tangent = 0f; // Flat for constant Y = 1.0
+				float tangent = 0f;
 				curve.AddKey(new Keyframe(fixedTimes[i], 1.0f, tangent, tangent));
 				AnimationUtility.SetKeyBroken(curve, i, true);
 				AnimationUtility.SetKeyLeftTangentMode(curve, i, AnimationUtility.TangentMode.Free);
@@ -144,16 +133,15 @@ namespace MassiveHadronLtd
 			return curve;
 		}
 
-		// Preset: Scale Up (0% to 200%)
 		private AnimationCurve CreateScaleUpCurve()
 		{
 			var curve = new AnimationCurve();
 			float[] fixedTimes = { 0f, 0.33f, 0.66f, 1f };
-			float[] values = { 0f, 0.66f, 1.33f, 2.0f }; // Linear from 0 to 2
-			float slope = (2.0f - 0f) / (1f - 0f); // Slope = 2.0
+			float[] values = { 0f, 0.66f, 1.33f, 2.0f };
+			float slope = (2.0f - 0f) / (1f - 0f);
 			for (int i = 0; i < 4; i++)
 			{
-				float tangent = slope; // All points use slope for continuity
+				float tangent = slope;
 				curve.AddKey(new Keyframe(fixedTimes[i], values[i], tangent, tangent));
 				AnimationUtility.SetKeyBroken(curve, i, true);
 				AnimationUtility.SetKeyLeftTangentMode(curve, i, AnimationUtility.TangentMode.Free);
@@ -162,16 +150,15 @@ namespace MassiveHadronLtd
 			return curve;
 		}
 
-		// Preset: Scale Down (200% to 0%)
 		private AnimationCurve CreateScaleDownCurve()
 		{
 			var curve = new AnimationCurve();
 			float[] fixedTimes = { 0f, 0.33f, 0.66f, 1f };
-			float[] values = { 2.0f, 1.33f, 0.66f, 0f }; // Linear from 2 to 0
-			float slope = (0f - 2.0f) / (1f - 0f); // Slope = -2.0
+			float[] values = { 2.0f, 1.33f, 0.66f, 0f };
+			float slope = (0f - 2.0f) / (1f - 0f);
 			for (int i = 0; i < 4; i++)
 			{
-				float tangent = slope; // All points use slope for continuity
+				float tangent = slope;
 				curve.AddKey(new Keyframe(fixedTimes[i], values[i], tangent, tangent));
 				AnimationUtility.SetKeyBroken(curve, i, true);
 				AnimationUtility.SetKeyLeftTangentMode(curve, i, AnimationUtility.TangentMode.Free);

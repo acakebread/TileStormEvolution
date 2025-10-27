@@ -177,72 +177,14 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1081262123}
-  - component: {fileID: 1081262122}
+  - component: {fileID: 1081262124}
   m_Layer: 0
-  m_Name: SparkControllerElectric
+  m_Name: ParticleControllerElectric
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1081262122
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1081262121}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: de5d0820d9725da4c867e8216140fad8, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  particleMaterial: {fileID: 2100000, guid: 02223f9d74ca8f74999a27cdc04e130f, type: 2}
-  settings:
-    speed: 2
-    lifetime: 0.5
-    lifetimeVariation: 1
-    width: 0.007
-    scaleCurve:
-      serializedVersion: 2
-      m_Curve:
-      - serializedVersion: 3
-        time: 0
-        value: 1.0188675
-        inSlope: -2
-        outSlope: 0.50943947
-        tangentMode: 1
-        weightedMode: 0
-        inWeight: 0
-        outWeight: 0.25252524
-      - serializedVersion: 3
-        time: 0.8825774
-        value: 0.3347225
-        inSlope: -5.810459
-        outSlope: -3.1883974
-        tangentMode: 1
-        weightedMode: 0
-        inWeight: 0.03917587
-        outWeight: 0.86419374
-      - serializedVersion: 3
-        time: 1
-        value: 0
-        inSlope: -0.6792455
-        outSlope: -2
-        tangentMode: 1
-        weightedMode: 0
-        inWeight: 0.7096873
-        outWeight: 0
-      m_PreInfinity: 2
-      m_PostInfinity: 2
-      m_RotationOrder: 4
-    color: {r: 0.482, g: 0.773, b: 1, a: 1}
-    gravity: 10
-    bounceDamping: 0.4
-    groundHeight: 0
-    useGlobalGroundPlane: 1
-    useThreeZoneSlicing: 1
-    updateSparks: 1
 --- !u!4 &1081262123
 Transform:
   m_ObjectHideFlags: 0
@@ -258,6 +200,74 @@ Transform:
   m_Children: []
   m_Father: {fileID: 2032521525}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1081262124
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1081262121}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cd8578c20d24105438647a46520bbefb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  particleMaterial: {fileID: 2100000, guid: 02223f9d74ca8f74999a27cdc04e130f, type: 2}
+  settings:
+    speed: 2
+    lifetime: 0.5
+    lifetimeVariation: 1
+    width: 0.007
+    scaleCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 1
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 0.8776339
+        value: 0.47536016
+        inSlope: -3.0916867
+        outSlope: -1.9697204
+        tangentMode: 1
+        weightedMode: 0
+        inWeight: 0.052978907
+        outWeight: 1
+      - serializedVersion: 3
+        time: 0.98553467
+        value: 0.1368103
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 1
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 0.023590088
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 1
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    color: {r: 0.48235294, g: 0.77254903, b: 1, a: 1}
+    gravity: 10
+    bounceDamping: 0.4
+    groundHeight: 0
+    useGlobalGroundPlane: 1
+    useThreeZoneSlicing: 1
+    updateParticles: 1
+    fadeStartTime: 0.75
 --- !u!1 &1143789306
 GameObject:
   m_ObjectHideFlags: 0
@@ -368,8 +378,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   lookSpeedH: 2
   lookSpeedV: 2
-  zoomSpeed: 4
-  dragSpeed: 4
+  zoomSpeed: 2
+  dragSpeed: 2
 --- !u!114 &1143789311
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -473,7 +483,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 99950c4c81b33c8428367f3267876a88, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  sparkController: {fileID: 1910858982}
+  particleController: {fileID: 1910858984}
   delay: 0.02
   ct: 2
   continuous: 1
@@ -647,72 +657,14 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1910858983}
-  - component: {fileID: 1910858982}
+  - component: {fileID: 1910858984}
   m_Layer: 0
-  m_Name: SparkController
+  m_Name: ParticleControllerFire
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1910858982
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1910858981}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: de5d0820d9725da4c867e8216140fad8, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  particleMaterial: {fileID: 2100000, guid: 02223f9d74ca8f74999a27cdc04e130f, type: 2}
-  settings:
-    speed: 0.3
-    lifetime: 0.2
-    lifetimeVariation: 0.2
-    width: 0.15
-    scaleCurve:
-      serializedVersion: 2
-      m_Curve:
-      - serializedVersion: 3
-        time: 0
-        value: 0.1509552
-        inSlope: 0
-        outSlope: 5.597788
-        tangentMode: 1
-        weightedMode: 0
-        inWeight: 0
-        outWeight: 0.062273167
-      - serializedVersion: 3
-        time: 0.58182174
-        value: 1.0988505
-        inSlope: 0.15051125
-        outSlope: -0.14575744
-        tangentMode: 1
-        weightedMode: 0
-        inWeight: 0.17217883
-        outWeight: 0.2073283
-      - serializedVersion: 3
-        time: 1
-        value: 0
-        inSlope: -2
-        outSlope: -2
-        tangentMode: 1
-        weightedMode: 0
-        inWeight: 0
-        outWeight: 0
-      m_PreInfinity: 2
-      m_PostInfinity: 2
-      m_RotationOrder: 4
-    color: {r: 1, g: 0.127, b: 0.049, a: 1}
-    gravity: -0.2
-    bounceDamping: 0.8
-    groundHeight: 0
-    useGlobalGroundPlane: 1
-    useThreeZoneSlicing: 1
-    updateSparks: 1
 --- !u!4 &1910858983
 Transform:
   m_ObjectHideFlags: 0
@@ -728,6 +680,65 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1759432267}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1910858984
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1910858981}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cd8578c20d24105438647a46520bbefb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  particleMaterial: {fileID: 2100000, guid: 02223f9d74ca8f74999a27cdc04e130f, type: 2}
+  settings:
+    speed: 0.3
+    lifetime: 0.2
+    lifetimeVariation: 0.2
+    width: 0.15
+    scaleCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0.45281982
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 1
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 0.20470086
+        value: 1.028305
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 1
+        weightedMode: 0
+        inWeight: 0.33333334
+        outWeight: 0.33333334
+      - serializedVersion: 3
+        time: 1
+        value: 0.17922974
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 1
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    color: {r: 1, g: 0.1254902, b: 0.047058824, a: 1}
+    gravity: -0.2
+    bounceDamping: 0.8
+    groundHeight: 0
+    useGlobalGroundPlane: 1
+    useThreeZoneSlicing: 1
+    updateParticles: 1
+    fadeStartTime: 0.4
 --- !u!1 &1959222889
 GameObject:
   m_ObjectHideFlags: 0
@@ -803,7 +814,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 99950c4c81b33c8428367f3267876a88, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  sparkController: {fileID: 1081262122}
+  particleController: {fileID: 1081262124}
   delay: 2
   ct: 48
   continuous: 1

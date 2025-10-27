@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class ParticleTest : MonoBehaviour
 {
-	[SerializeField] private SparkController sparkController;
+	[SerializeField] private ParticleController particleController;
 	[SerializeField][Range(0, 10)] private float delay = 0.1f;
 	[SerializeField][Range(1, 128)] private int ct = 1;
 	[SerializeField] private bool continuous = true;
@@ -14,9 +14,9 @@ public class ParticleTest : MonoBehaviour
 
 	void Awake()
 	{
-		if (sparkController == null)
+		if (particleController == null)
 		{
-			Debug.LogError("ParticleTest: sparkController is not assigned!");
+			Debug.LogError("ParticleTest: particleController is not assigned!");
 			enabled = false;
 			return;
 		}
@@ -33,8 +33,8 @@ public class ParticleTest : MonoBehaviour
 					var vel = Random.onUnitSphere * Random.value * 0.5f;
 					vel.y *= 2f;
 					vel += bias;
-					Vector3 worldPos = sparkController.transform.position + spawnOffset;
-					sparkController.SpawnSpark(worldPos, vel, lifetimeVariation);
+					Vector3 worldPos = particleController.transform.position + spawnOffset;
+					particleController.SpawnParticle(worldPos, vel, lifetimeVariation);
 				}
 			}
 			yield return new WaitForSeconds(delay);
