@@ -194,11 +194,11 @@ Transform:
   m_GameObject: {fileID: 1081262121}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0.5, y: 1, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 0}
+  m_Father: {fileID: 2032521525}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1081262124
 MonoBehaviour:
@@ -268,10 +268,6 @@ MonoBehaviour:
     useThreeZoneSlicing: 1
     updateParticles: 1
     fadeStartTime: 0.75
-    pulseWidth: 0.006
-    pulseIntensity: 1
-    particleCount: 1
-    velocityBias: {x: 0, y: 0, z: 0}
 --- !u!1 &1143789306
 GameObject:
   m_ObjectHideFlags: 0
@@ -469,7 +465,7 @@ GameObject:
   - component: {fileID: 1759432267}
   - component: {fileID: 1759432266}
   m_Layer: 0
-  m_Name: DebugTest
+  m_Name: InvokeSystemFire
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -487,6 +483,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 99950c4c81b33c8428367f3267876a88, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  particleController: {fileID: 1910858984}
+  delay: 0.02
+  ct: 2
+  continuous: 1
+  spawnOffset: {x: -0.25, y: 0.25, z: 0}
+  lifetimeVariation: 0.5
+  bias: {x: 0, y: 2, z: 0}
 --- !u!4 &1759432267
 Transform:
   m_ObjectHideFlags: 0
@@ -499,7 +502,8 @@ Transform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 1910858983}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1760635931
@@ -670,11 +674,11 @@ Transform:
   m_GameObject: {fileID: 1910858981}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 1, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 0}
+  m_Father: {fileID: 1759432267}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1910858984
 MonoBehaviour:
@@ -735,10 +739,6 @@ MonoBehaviour:
     useThreeZoneSlicing: 1
     updateParticles: 1
     fadeStartTime: 0.4
-    pulseWidth: 0.1
-    pulseIntensity: 1
-    particleCount: 1
-    velocityBias: {x: 0, y: 0, z: 0}
 --- !u!1 &1959222889
 GameObject:
   m_ObjectHideFlags: 0
@@ -783,6 +783,58 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &2032521523
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2032521525}
+  - component: {fileID: 2032521524}
+  m_Layer: 0
+  m_Name: InvokeSystemElectriic
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &2032521524
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2032521523}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 99950c4c81b33c8428367f3267876a88, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  particleController: {fileID: 1081262124}
+  delay: 2
+  ct: 48
+  continuous: 1
+  spawnOffset: {x: 0.25, y: 1, z: 0}
+  lifetimeVariation: 2
+  bias: {x: 0, y: 0.25, z: 0}
+--- !u!4 &2032521525
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2032521523}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 1081262123}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2049721151
@@ -914,5 +966,4 @@ SceneRoots:
   - {fileID: 2049721153}
   - {fileID: 1959222891}
   - {fileID: 1759432267}
-  - {fileID: 1910858983}
-  - {fileID: 1081262123}
+  - {fileID: 2032521525}
