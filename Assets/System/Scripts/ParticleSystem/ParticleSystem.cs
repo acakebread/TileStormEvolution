@@ -9,7 +9,7 @@ namespace MassiveHadronLtd
 		{
 			public float width = 0.02f; // Controls size for simple particles and body width for three-zone
 			public float lifetime = 1f;
-			public bool decay = true; // Shrink width with age, handled by SparkController
+			public bool decay = true; // Shrink width with age, handled by ParticleController
 			public Color color = Color.white;
 		}
 
@@ -23,13 +23,13 @@ namespace MassiveHadronLtd
 		{
 			public Vector3 position; // World space
 			public Vector3 previousPosition; // World space
-			public Vector3 velocity; // World space, set by SparkController
-			public float lifetime; // Current lifetime, set by SparkController
+			public Vector3 velocity; // World space, set by ParticleController
+			public float lifetime; // Current lifetime, set by ParticleController
 			public float maxLifetime; // Initial lifetime
-			public Color color; // Current color, set by SparkController
-			public float width; // Current width, set by SparkController
+			public Color color; // Current color, set by ParticleController
+			public float width; // Current width, set by ParticleController
 			public float initialWidth; // Initial width
-			public float tipSize; // Current tip size for three-zone, set by SparkController
+			public float tipSize; // Current tip size for three-zone, set by ParticleController
 			public bool isActive;
 			public int vertexIndex; // Starting vertex index in mesh
 			public int poolIndex; // Index in particlePool
@@ -80,7 +80,7 @@ namespace MassiveHadronLtd
 
 			if (material.GetTexture("_BaseMap") == null)
 			{
-				Debug.LogWarning("ParticleSystem: No texture assigned to _BaseMap in material. Assign a spark texture for proper rendering.");
+				Debug.LogWarning("ParticleSystem: No texture assigned to _BaseMap in material. Assign a particle texture for proper rendering.");
 			}
 		}
 
