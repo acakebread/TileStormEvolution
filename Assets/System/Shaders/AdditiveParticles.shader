@@ -60,7 +60,9 @@ Shader "MassiveHadronLtd/Unlit/AdditiveParticles"
             {
                 half4 texColor = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv);
                 half4 color = IN.color * texColor;
+                color.rgb *= IN.color.a; // Apply vertex color alpha to RGB for fading
                 color.rgb = MixFog(color.rgb, IN.fogFactor);
+                color.a = 1.0; // Ensure alpha is 1 for additive blending
                 return color;
             }
             ENDHLSL

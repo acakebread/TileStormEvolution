@@ -161,7 +161,7 @@ namespace MassiveHadronLtd
 			particle.color = settings.color;
 			particle.width = settings.width;
 			particle.initialWidth = settings.width;
-			particle.tipSize = settings.width * 0.54f; // Matches your update
+			particle.tipSize = settings.width * 0.5f;
 			particle.isActive = true;
 
 			activeParticles.Add(particle);

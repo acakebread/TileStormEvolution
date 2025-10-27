@@ -1,5 +1,8 @@
 using UnityEngine;
 using System.Collections.Generic;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace MassiveHadronLtd
 {
@@ -11,8 +14,8 @@ namespace MassiveHadronLtd
 			public float speed = 4f;
 			public float lifetime = 1f;
 			public float lifetimeVariation = 0.5f; // Random lifetime variation (±seconds)
-			public float width = 0.02f; // Controls size for simple particles and body width for three-zone
-			public bool decay = true; // Shrink width with age
+			public float width = 0.02f; // Initial size for simple particles and body width for three-zone
+			public AnimationCurve scaleCurve = AnimationCurve.Linear(0f, 1f, 1f, 1f); // Scale over lifetime
 			public Color color = Color.white;
 			public float gravity = 10f; // Y-axis damping
 			public float bounceDamping = 0.8f; // Velocity damping on collision
@@ -23,7 +26,7 @@ namespace MassiveHadronLtd
 		}
 
 		[SerializeField] private Material particleMaterial;
-		[SerializeField] private SparkSettings settings;
+		[SerializeField] public SparkSettings settings;
 
 		private ParticleSystem customParticleSystem;
 		private class SparkData
@@ -58,6 +61,22 @@ namespace MassiveHadronLtd
 				return;
 			}
 
+			// Initialize scaleCurve with two keyframes: Linear Y = 1.0 (100%)
+			if (settings.scaleCurve.keys.Length == 0)
+			{
+				settings.scaleCurve = new AnimationCurve();
+				settings.scaleCurve.AddKey(new Keyframe(0f, 1.0f, 0f, 0f)); // Start: 100%
+				settings.scaleCurve.AddKey(new Keyframe(1f, 1.0f, 0f, 0f)); // End: 100%
+#if UNITY_EDITOR
+				for (int i = 0; i < settings.scaleCurve.keys.Length; i++)
+				{
+					AnimationUtility.SetKeyBroken(settings.scaleCurve, i, true);
+					AnimationUtility.SetKeyLeftTangentMode(settings.scaleCurve, i, AnimationUtility.TangentMode.Free);
+					AnimationUtility.SetKeyRightTangentMode(settings.scaleCurve, i, AnimationUtility.TangentMode.Free);
+				}
+#endif
+			}
+
 			customParticleSystem = new ParticleSystem(particleMaterial, settings.useThreeZoneSlicing);
 		}
 
@@ -84,8 +103,8 @@ namespace MassiveHadronLtd
 			var particleSettings = new ParticleSystem.ParticleSettings
 			{
 				lifetime = lifetime,
-				width = activeSettings.width,
-				decay = activeSettings.decay,
+				width = 0,//activeSettings.width,
+				decay = false,
 				color = activeSettings.color
 			};
 
@@ -102,7 +121,7 @@ namespace MassiveHadronLtd
 				color = activeSettings.color,
 				width = activeSettings.width,
 				initialWidth = activeSettings.width,
-				tipSize = activeSettings.width * 0.54f,
+				tipSize = activeSettings.width * 0.5f,
 				isActive = true
 			};
 
@@ -134,12 +153,11 @@ namespace MassiveHadronLtd
 
 				spark.color.a = spark.lifetime / spark.maxLifetime; // Modulate alpha for intensity
 
-				if (settings.decay)
-				{
-					float decayFactor = spark.lifetime / spark.maxLifetime;
-					spark.width = spark.initialWidth * decayFactor;
-					spark.tipSize = spark.width * 0.54f;
-				}
+				// Apply scaling based on scaleCurve, with t=0 as start and t=1 as end
+				float normalizedTime = 1f - Mathf.Clamp01(spark.lifetime / spark.maxLifetime);
+				float scaleFactor = settings.scaleCurve.Evaluate(normalizedTime);
+				spark.width = spark.initialWidth * scaleFactor;
+				spark.tipSize = spark.width * 0.54f;
 
 				spark.velocity.y -= settings.gravity * deltaTime;
 				spark.position += spark.velocity * deltaTime;
