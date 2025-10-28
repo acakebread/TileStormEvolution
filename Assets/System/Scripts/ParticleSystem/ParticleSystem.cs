@@ -98,6 +98,8 @@ namespace MassiveHadronLtd
 		private void InitializeMesh()
 		{
 			mesh = new Mesh { name = "ParticleMesh" };
+			mesh.MarkDynamic();
+
 			vertices = new List<Vector3>(maxParticles * verticesPerParticle);
 			triangles = new List<int>(maxParticles * trianglesPerParticle);
 			colors = new List<Color>(maxParticles * verticesPerParticle);
@@ -139,8 +141,9 @@ namespace MassiveHadronLtd
 					});
 				}
 			}
+
 			mesh.SetVertices(vertices);
-			mesh.SetTriangles(triangles, 0);
+			mesh.SetTriangles(triangles, 0); // only once
 			mesh.SetColors(colors);
 			mesh.SetUVs(0, uvs);
 			mesh.RecalculateBounds();
@@ -193,21 +196,27 @@ namespace MassiveHadronLtd
 			if (particle.lifetime <= 0f)
 			{
 				particle.isActive = false;
+
+				// collapse the vertices and clear colors immediately so stale geometry doesn't render
 				DeactivateQuad(particle.vertexIndex);
+
 				freeParticleIndices.Add(particle.poolIndex);
 				activeParticles.Remove(particle);
 				activeParticleCount--;
 			}
 		}
 
+		// Collapse vertices & colors for the given particle. Do NOT touch triangle indices (topology is static).
 		private void DeactivateQuad(int vertexIndex)
 		{
-			int indexOffset = (vertexIndex / verticesPerParticle) * trianglesPerParticle;
-			int count = useThreeZoneSlicing ? 18 : 6;
-			for (int i = 0; i < count; i++)
+			// zero out the vertices and clear the colors so this particle contributes nothing until reused
+			for (int v = 0; v < verticesPerParticle; v++)
 			{
-				triangles[indexOffset + i] = 0; // Collapse triangles to vertex 0
+				vertices[vertexIndex + v] = Vector3.zero;
+				colors[vertexIndex + v] = Color.clear;
 			}
+			// note: we do NOT call mesh.SetVertices / SetColors here.
+			// The next UpdateMesh() will upload the modified lists in a single batch.
 		}
 
 		public void Render()
@@ -236,8 +245,7 @@ namespace MassiveHadronLtd
 				var vParticleOld = particle.previousPosition;
 				var vParticleDelta = vParticlePos - vParticleOld;
 				var vCamParticle = (vParticlePos - vCamPos).normalized;
-
-				var vTanParticle = Vector3.Cross(vCamParticle, vParticleDelta).normalized;
+				var vTanParticle = Vector3.Cross(vCamParticle, vParticleDelta).normalized; // preserve your original orientation
 
 				var dot = Vector3.Dot(vParticleDelta, vCamParticle);
 				var tangentialComponent = (vParticleDelta - dot * vCamParticle).magnitude;
@@ -256,7 +264,7 @@ namespace MassiveHadronLtd
 
 				if (useThreeZoneSlicing)
 				{
-					var velocityComponent = tangentialComponent > 0.0001f ? Mathf.Max(0,tangentialComponent - particle.radius) / tangentialComponent : 0f;//epsilon
+					var velocityComponent = tangentialComponent > 0.0001f ? Mathf.Max(0, tangentialComponent - particle.radius) / tangentialComponent : 0f; // epsilon
 					var vHalfBody = velocityComponent * vParticleDelta;
 					var headBody = vParticlePos + vHalfBody;
 					var tailBody = vParticlePos - vHalfBody;
@@ -271,30 +279,6 @@ namespace MassiveHadronLtd
 					vertices[vertexIndex + 6] = tailPos + vTangentRadius;
 					vertices[vertexIndex + 7] = tailPos - vTangentRadius;
 
-					var indexOffset = (vertexIndex / 8) * 18;
-
-					// head quad
-					triangles[indexOffset + 0] = vertexIndex + 0;
-					triangles[indexOffset + 1] = vertexIndex + 1;
-					triangles[indexOffset + 2] = vertexIndex + 2;
-					triangles[indexOffset + 3] = vertexIndex + 2;
-					triangles[indexOffset + 4] = vertexIndex + 1;
-					triangles[indexOffset + 5] = vertexIndex + 3;
-					// Body quad
-					triangles[indexOffset + 6] = vertexIndex + 2;
-					triangles[indexOffset + 7] = vertexIndex + 3;
-					triangles[indexOffset + 8] = vertexIndex + 4;
-					triangles[indexOffset + 9] = vertexIndex + 3;
-					triangles[indexOffset + 10] = vertexIndex + 5;
-					triangles[indexOffset + 11] = vertexIndex + 4;
-					// Tail quad
-					triangles[indexOffset + 12] = vertexIndex + 4;
-					triangles[indexOffset + 13] = vertexIndex + 5;
-					triangles[indexOffset + 14] = vertexIndex + 6;
-					triangles[indexOffset + 15] = vertexIndex + 5;
-					triangles[indexOffset + 16] = vertexIndex + 7;
-					triangles[indexOffset + 17] = vertexIndex + 6;
-
 					for (var j = 0; j < 8; j++) colors[vertexIndex + j] = particle.color;
 				}
 				else
@@ -304,20 +288,12 @@ namespace MassiveHadronLtd
 					vertices[vertexIndex + 2] = headPos - vTangentRadius;
 					vertices[vertexIndex + 3] = headPos + vTangentRadius;
 
-					var indexOffset = (vertexIndex / 4) * 6;
-					triangles[indexOffset + 0] = vertexIndex + 0;
-					triangles[indexOffset + 1] = vertexIndex + 1;
-					triangles[indexOffset + 2] = vertexIndex + 2;
-					triangles[indexOffset + 3] = vertexIndex + 1;
-					triangles[indexOffset + 4] = vertexIndex + 3;
-					triangles[indexOffset + 5] = vertexIndex + 2;
-
 					for (var j = 0; j < 4; j++) colors[vertexIndex + j] = particle.color;
 				}
 			}
 
+			// Upload the dynamic vertex/color data once per frame
 			mesh.SetVertices(vertices);
-			mesh.SetTriangles(triangles, 0);
 			mesh.SetColors(colors);
 			mesh.RecalculateBounds();
 		}

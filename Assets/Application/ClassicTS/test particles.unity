@@ -184,7 +184,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &1081262123
 Transform:
   m_ObjectHideFlags: 0
@@ -267,11 +267,11 @@ MonoBehaviour:
     useThreeZoneSlicing: 1
     updateParticles: 1
     fadeStartTime: 0.75
-    cycleTime: 0.1
+    cycleTime: 1.03
     pulses:
     - start: 0
-      end: 1
-    particleCount: 6
+      end: 0.48044693
+    particleCount: 128
     velocity: {x: 0, y: 0, z: 0}
     scatter: 1.19
 --- !u!1 &1143789306
@@ -926,7 +926,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &2063531461
 MonoBehaviour:
   m_ObjectHideFlags: 0
