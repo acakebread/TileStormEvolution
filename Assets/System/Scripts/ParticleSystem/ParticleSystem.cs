@@ -28,7 +28,6 @@ namespace MassiveHadronLtd
 			public Color color; // Current color, set by SparkController
 			public float radius; // Current radius, set by SparkController
 			public float initialRadius; // Initial radius
-			public float tipSize; // Current tip size for three-zone, set by SparkController
 			public bool isActive;
 			public int vertexIndex; // Starting vertex index in mesh
 			public int poolIndex; // Index in particlePool
@@ -159,7 +158,6 @@ namespace MassiveHadronLtd
 			particle.color = settings.color;
 			particle.radius = settings.radius;
 			particle.initialRadius = settings.radius;
-			particle.tipSize = settings.radius;
 			particle.isActive = true;
 
 			activeParticles.Add(particle);
@@ -190,7 +188,6 @@ namespace MassiveHadronLtd
 			particle.position = position;
 			particle.lifetime = lifetime;
 			particle.radius = radius;
-			particle.tipSize = tipSize;
 			particle.color = color;
 
 			if (particle.lifetime <= 0f)
@@ -221,9 +218,9 @@ namespace MassiveHadronLtd
 
 		private void UpdateMesh()
 		{
-			Vector3 vCamPos = mainCamera.transform.position;
+			var vCamPos = mainCamera.transform.position;
 
-			for (int i = 0; i < activeParticleCount; i++)
+			for (var i = 0; i < activeParticleCount; i++)
 			{
 				if (i >= activeParticles.Count)
 				{
@@ -242,34 +239,80 @@ namespace MassiveHadronLtd
 				var vTanParticle = Vector3.Cross(vCamParticle, vParticleDelta).normalized;
 
 				var dot = Mathf.Abs(Vector3.Dot(vParticleDelta, vCamParticle));
-				var hypoteneuse = vParticleDelta.sqrMagnitude - (dot * dot);
-				var tangentialComponent = hypoteneuse > 0.0001f ? Mathf.Sqrt(hypoteneuse) : 0f;//epsilon
-				
+				var tangentialComponent = (vParticleDelta - dot * vCamParticle).magnitude;
+
 				if (tangentialComponent < particle.radius)
 				{
 					var vCross = Vector3.Cross(vTanParticle, vCamParticle);
 					vParticleDelta += (particle.radius - tangentialComponent) * vCross;
 				}
 
-				int vertexIndex = particle.vertexIndex;
+				var vertexIndex = particle.vertexIndex;
+
 				var headPos = vParticlePos + vParticleDelta;
 				var tailPos = vParticlePos - vParticleDelta;
 				var vTangentRadius = vTanParticle * particle.radius;
-				vertices[vertexIndex + 0] = tailPos - vTangentRadius;
-				vertices[vertexIndex + 1] = tailPos + vTangentRadius;
-				vertices[vertexIndex + 2] = headPos - vTangentRadius;
-				vertices[vertexIndex + 3] = headPos + vTangentRadius;
 
-				int indexOffset = (vertexIndex / 4) * 6;
-				triangles[indexOffset + 0] = vertexIndex + 0;
-				triangles[indexOffset + 1] = vertexIndex + 1;
-				triangles[indexOffset + 2] = vertexIndex + 2;
-				triangles[indexOffset + 3] = vertexIndex + 1;
-				triangles[indexOffset + 4] = vertexIndex + 3;
-				triangles[indexOffset + 5] = vertexIndex + 2;
+				if (useThreeZoneSlicing)
+				{
+					var velocityComponent = tangentialComponent / (tangentialComponent + particle.radius);
+					var vHalfBody = 0.5f * velocityComponent * vParticleDelta;
+					var headBody = vParticlePos + vHalfBody;
+					var tailBody = vParticlePos - vHalfBody;
 
-				for (int j = 0; j < 4; j++)
-					colors[vertexIndex + j] = particle.color;
+					// --- 8 vertices, 3 quads (tail/body/head) ---
+					vertices[vertexIndex + 0] = headPos + vTangentRadius;
+					vertices[vertexIndex + 1] = headPos - vTangentRadius;
+					vertices[vertexIndex + 2] = headBody + vTangentRadius;
+					vertices[vertexIndex + 3] = headBody - vTangentRadius;
+					vertices[vertexIndex + 4] = tailBody + vTangentRadius;
+					vertices[vertexIndex + 5] = tailBody - vTangentRadius;
+					vertices[vertexIndex + 6] = tailPos + vTangentRadius;
+					vertices[vertexIndex + 7] = tailPos - vTangentRadius;
+
+					var indexOffset = (vertexIndex / 8) * 18;
+
+					// head quad
+					triangles[indexOffset + 0] = vertexIndex + 0;
+					triangles[indexOffset + 1] = vertexIndex + 1;
+					triangles[indexOffset + 2] = vertexIndex + 2;
+					triangles[indexOffset + 3] = vertexIndex + 2;
+					triangles[indexOffset + 4] = vertexIndex + 1;
+					triangles[indexOffset + 5] = vertexIndex + 3;
+					// Body quad
+					triangles[indexOffset + 6] = vertexIndex + 2;
+					triangles[indexOffset + 7] = vertexIndex + 3;
+					triangles[indexOffset + 8] = vertexIndex + 4;
+					triangles[indexOffset + 9] = vertexIndex + 3;
+					triangles[indexOffset + 10] = vertexIndex + 5;
+					triangles[indexOffset + 11] = vertexIndex + 4;
+					// Tail quad
+					triangles[indexOffset + 12] = vertexIndex + 4;
+					triangles[indexOffset + 13] = vertexIndex + 5;
+					triangles[indexOffset + 14] = vertexIndex + 6;
+					triangles[indexOffset + 15] = vertexIndex + 5;
+					triangles[indexOffset + 16] = vertexIndex + 7;
+					triangles[indexOffset + 17] = vertexIndex + 6;
+
+					for (var j = 0; j < 8; j++) colors[vertexIndex + j] = particle.color;
+				}
+				else
+				{
+					vertices[vertexIndex + 0] = tailPos - vTangentRadius;
+					vertices[vertexIndex + 1] = tailPos + vTangentRadius;
+					vertices[vertexIndex + 2] = headPos - vTangentRadius;
+					vertices[vertexIndex + 3] = headPos + vTangentRadius;
+
+					var indexOffset = (vertexIndex / 4) * 6;
+					triangles[indexOffset + 0] = vertexIndex + 0;
+					triangles[indexOffset + 1] = vertexIndex + 1;
+					triangles[indexOffset + 2] = vertexIndex + 2;
+					triangles[indexOffset + 3] = vertexIndex + 1;
+					triangles[indexOffset + 4] = vertexIndex + 3;
+					triangles[indexOffset + 5] = vertexIndex + 2;
+
+					for (var j = 0; j < 4; j++) colors[vertexIndex + j] = particle.color;
+				}
 			}
 
 			mesh.SetVertices(vertices);
