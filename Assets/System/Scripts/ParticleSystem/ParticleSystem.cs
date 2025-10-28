@@ -229,24 +229,17 @@ namespace MassiveHadronLtd
 					break;
 				}
 
-				Particle particle = activeParticles[i];
+				var particle = activeParticles[i];
 				if (!particle.isActive) continue;
 
 				var vParticlePos = particle.position;
 				var vParticleOld = particle.previousPosition;
 				var vParticleDelta = vParticlePos - vParticleOld;
 				var vCamParticle = (vParticlePos - vCamPos).normalized;
+
 				var vTanParticle = Vector3.Cross(vCamParticle, vParticleDelta).normalized;
 
-				//var dot = Mathf.Abs(Vector3.Dot(vParticleDelta, vCamParticle));
 				var dot = Vector3.Dot(vParticleDelta, vCamParticle);
-				if (dot < 0)
-				{
-					vTanParticle = -vTanParticle;
-					vParticleDelta = -vParticleDelta;
-					dot = -dot; // ← THIS IS THE KEY
-				}
-
 				var tangentialComponent = (vParticleDelta - dot * vCamParticle).magnitude;
 
 				if (tangentialComponent < particle.radius)
@@ -263,7 +256,6 @@ namespace MassiveHadronLtd
 
 				if (useThreeZoneSlicing)
 				{
-					//var velocityComponent = tangentialComponent / (tangentialComponent + particle.radius);
 					var velocityComponent = tangentialComponent > 0.0001f ? Mathf.Max(0,tangentialComponent - particle.radius) / tangentialComponent : 0f;//epsilon
 					var vHalfBody = velocityComponent * vParticleDelta;
 					var headBody = vParticlePos + vHalfBody;
