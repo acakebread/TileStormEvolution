@@ -7,9 +7,9 @@ namespace MassiveHadronLtd
 	{
 		public class ParticleSettings
 		{
-			public float width = 0.02f; // Controls size for simple particles and body width for three-zone
+			public float radius = 0.01f; // Controls size for simple particles and body radius for three-zone
 			public float lifetime = 1f;
-			public bool decay = true; // Shrink width with age, handled by SparkController
+			public bool decay = true; // Shrink radius with age, handled by SparkController
 			public Color color = Color.white;
 		}
 
@@ -23,12 +23,11 @@ namespace MassiveHadronLtd
 		{
 			public Vector3 position; // World space
 			public Vector3 previousPosition; // World space
-			public Vector3 velocity; // World space, set by SparkController
 			public float lifetime; // Current lifetime, set by SparkController
 			public float maxLifetime; // Initial lifetime
 			public Color color; // Current color, set by SparkController
-			public float width; // Current width, set by SparkController
-			public float initialWidth; // Initial width
+			public float radius; // Current radius, set by SparkController
+			public float initialRadius; // Initial radius
 			public float tipSize; // Current tip size for three-zone, set by SparkController
 			public bool isActive;
 			public int vertexIndex; // Starting vertex index in mesh
@@ -148,20 +147,19 @@ namespace MassiveHadronLtd
 			mesh.RecalculateBounds();
 		}
 
-		public int SpawnParticle(Vector3 position, Vector3 velocity, ParticleSettings settings)
+		public int SpawnParticle(Vector3 position, ParticleSettings settings)
 		{
 			Particle particle = GetInactiveParticle();
 			if (particle == null) return -1;
 
 			particle.position = position;
 			particle.previousPosition = position;
-			particle.velocity = velocity;
 			particle.lifetime = settings.lifetime;
 			particle.maxLifetime = settings.lifetime;
 			particle.color = settings.color;
-			particle.width = settings.width;
-			particle.initialWidth = settings.width;
-			particle.tipSize = settings.width * 0.5f;
+			particle.radius = settings.radius;
+			particle.initialRadius = settings.radius;
+			particle.tipSize = settings.radius;
 			particle.isActive = true;
 
 			activeParticles.Add(particle);
@@ -177,7 +175,7 @@ namespace MassiveHadronLtd
 			return particlePool[poolIndex];
 		}
 
-		public void UpdateParticle(int poolIndex, Vector3 position, Vector3 velocity, float lifetime, float width, float tipSize, Color color)
+		public void UpdateParticle(int poolIndex, Vector3 position, float lifetime, float radius, float tipSize, Color color)
 		{
 			if (poolIndex < 0 || poolIndex >= particlePool.Count)
 			{
@@ -190,9 +188,8 @@ namespace MassiveHadronLtd
 
 			particle.previousPosition = particle.position;
 			particle.position = position;
-			particle.velocity = velocity;
 			particle.lifetime = lifetime;
-			particle.width = width;
+			particle.radius = radius;
 			particle.tipSize = tipSize;
 			particle.color = color;
 
@@ -224,9 +221,7 @@ namespace MassiveHadronLtd
 
 		private void UpdateMesh()
 		{
-			Vector3 camPos = mainCamera.transform.position;
-			Vector3 camRight = mainCamera.transform.right;
-			Vector3 camUp = mainCamera.transform.up;
+			Vector3 vCamPos = mainCamera.transform.position;
 
 			for (int i = 0; i < activeParticleCount; i++)
 			{
@@ -240,94 +235,41 @@ namespace MassiveHadronLtd
 				Particle particle = activeParticles[i];
 				if (!particle.isActive) continue;
 
-				Vector3 pos = particle.position;
-				Vector3 prevPos = particle.previousPosition;
-				Vector3 delta = pos - prevPos;
-				float deltaLength = delta.magnitude;
-				Vector3 particleDir = deltaLength > 0.0001f ? delta.normalized : particle.velocity.normalized;
+				var vParticlePos = particle.position;
+				var vParticleOld = particle.previousPosition;
+				var vParticleDelta = vParticlePos - vParticleOld;
+				var vCamParticle = (vParticlePos - vCamPos).normalized;
+				var vTanParticle = Vector3.Cross(vCamParticle, vParticleDelta).normalized;
 
-				Vector3 sz = pos - camPos;
-				Vector3 sy = Vector3.Cross(sz, particleDir);
-				Vector3 sx = camRight;
-				if (sy.sqrMagnitude > 0.0001f)
+				var dot = Mathf.Abs(Vector3.Dot(vParticleDelta, vCamParticle));
+				var hypoteneuse = vParticleDelta.sqrMagnitude - (dot * dot);
+				var tangentialComponent = hypoteneuse > 0.0001f ? Mathf.Sqrt(hypoteneuse) : 0f;//epsilon
+				
+				if (tangentialComponent < particle.radius)
 				{
-					sy = sy.normalized;
-					sx = Vector3.Cross(sy, sz).normalized;
+					var vCross = Vector3.Cross(vTanParticle, vCamParticle);
+					vParticleDelta += (particle.radius - tangentialComponent) * vCross;
 				}
-				else
-				{
-					sy = camUp;
-				}
-				Vector3 vecy = sy * particle.width * 0.5f;
 
 				int vertexIndex = particle.vertexIndex;
-				if (useThreeZoneSlicing)
-				{
-					Vector3 centerPos = (pos + prevPos) * 0.5f;
-					float totalLength = Mathf.Max(particle.width, deltaLength);
-					float tipSize = particle.tipSize;
-					float bodyLength = totalLength - 2 * tipSize;
-					if (bodyLength < 0) bodyLength = 0;
+				var headPos = vParticlePos + vParticleDelta;
+				var tailPos = vParticlePos - vParticleDelta;
+				var vTangentRadius = vTanParticle * particle.radius;
+				vertices[vertexIndex + 0] = tailPos - vTangentRadius;
+				vertices[vertexIndex + 1] = tailPos + vTangentRadius;
+				vertices[vertexIndex + 2] = headPos - vTangentRadius;
+				vertices[vertexIndex + 3] = headPos + vTangentRadius;
 
-					Vector3 tailTail = centerPos - particleDir * (bodyLength / 2 + tipSize);
-					Vector3 tailFront = centerPos - particleDir * (bodyLength / 2);
-					vertices[vertexIndex + 0] = tailTail - vecy;
-					vertices[vertexIndex + 1] = tailTail + vecy;
-					vertices[vertexIndex + 2] = tailFront - vecy;
-					vertices[vertexIndex + 3] = tailFront + vecy;
-					vertices[vertexIndex + 4] = centerPos + particleDir * (bodyLength / 2) - vecy;
-					vertices[vertexIndex + 5] = centerPos + particleDir * (bodyLength / 2) + vecy;
-					Vector3 headTail = centerPos + particleDir * (bodyLength / 2);
-					Vector3 headFront = centerPos + particleDir * (bodyLength / 2 + tipSize);
-					vertices[vertexIndex + 6] = headFront - vecy;
-					vertices[vertexIndex + 7] = headFront + vecy;
+				int indexOffset = (vertexIndex / 4) * 6;
+				triangles[indexOffset + 0] = vertexIndex + 0;
+				triangles[indexOffset + 1] = vertexIndex + 1;
+				triangles[indexOffset + 2] = vertexIndex + 2;
+				triangles[indexOffset + 3] = vertexIndex + 1;
+				triangles[indexOffset + 4] = vertexIndex + 3;
+				triangles[indexOffset + 5] = vertexIndex + 2;
 
-					int indexOffset = (vertexIndex / 8) * 18;
-					triangles[indexOffset + 0] = vertexIndex + 0;
-					triangles[indexOffset + 1] = vertexIndex + 1;
-					triangles[indexOffset + 2] = vertexIndex + 2;
-					triangles[indexOffset + 3] = vertexIndex + 1;
-					triangles[indexOffset + 4] = vertexIndex + 3;
-					triangles[indexOffset + 5] = vertexIndex + 2;
-					triangles[indexOffset + 6] = vertexIndex + 2;
-					triangles[indexOffset + 7] = vertexIndex + 3;
-					triangles[indexOffset + 8] = vertexIndex + 4;
-					triangles[indexOffset + 9] = vertexIndex + 3;
-					triangles[indexOffset + 10] = vertexIndex + 5;
-					triangles[indexOffset + 11] = vertexIndex + 4;
-					triangles[indexOffset + 12] = vertexIndex + 4;
-					triangles[indexOffset + 13] = vertexIndex + 5;
-					triangles[indexOffset + 14] = vertexIndex + 6;
-					triangles[indexOffset + 15] = vertexIndex + 5;
-					triangles[indexOffset + 16] = vertexIndex + 7;
-					triangles[indexOffset + 17] = vertexIndex + 6;
-
-					for (int j = 0; j < 8; j++)
-						colors[vertexIndex + j] = particle.color;
-				}
-				else
-				{
-					Vector3 centerPos = (pos + prevPos) * 0.5f;
-					float halfLength = Mathf.Max(particle.width, deltaLength) * 0.5f;
-					Vector3 tailPos = centerPos - particleDir * halfLength;
-					Vector3 headPos = centerPos + particleDir * halfLength;
-
-					vertices[vertexIndex + 0] = tailPos - vecy;
-					vertices[vertexIndex + 1] = tailPos + vecy;
-					vertices[vertexIndex + 2] = headPos - vecy;
-					vertices[vertexIndex + 3] = headPos + vecy;
-
-					int indexOffset = (vertexIndex / 4) * 6;
-					triangles[indexOffset + 0] = vertexIndex + 0;
-					triangles[indexOffset + 1] = vertexIndex + 1;
-					triangles[indexOffset + 2] = vertexIndex + 2;
-					triangles[indexOffset + 3] = vertexIndex + 1;
-					triangles[indexOffset + 4] = vertexIndex + 3;
-					triangles[indexOffset + 5] = vertexIndex + 2;
-
-					for (int j = 0; j < 4; j++)
-						colors[vertexIndex + j] = particle.color;
-				}
+				for (int j = 0; j < 4; j++)
+					colors[vertexIndex + j] = particle.color;
 			}
 
 			mesh.SetVertices(vertices);
