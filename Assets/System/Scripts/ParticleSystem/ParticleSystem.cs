@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using System.Collections.Generic;
 
 namespace MassiveHadronLtd
@@ -238,10 +238,16 @@ namespace MassiveHadronLtd
 				var vCamParticle = (vParticlePos - vCamPos).normalized;
 				var vTanParticle = Vector3.Cross(vCamParticle, vParticleDelta).normalized;
 
-				var dot = Mathf.Abs(Vector3.Dot(vParticleDelta, vCamParticle));
+				//var dot = Mathf.Abs(Vector3.Dot(vParticleDelta, vCamParticle));
+				var dot = Vector3.Dot(vParticleDelta, vCamParticle);
+				if (dot < 0)
+				{
+					vTanParticle = -vTanParticle;
+					vParticleDelta = -vParticleDelta;
+					dot = -dot; // ← THIS IS THE KEY
+				}
+
 				var tangentialComponent = (vParticleDelta - dot * vCamParticle).magnitude;
-				//var hypoteneuse = vParticleDelta.sqrMagnitude - (dot * dot);
-				//var tangentialComponent = hypoteneuse > 0.0001f ? Mathf.Sqrt(hypoteneuse) : 0f;
 
 				if (tangentialComponent < particle.radius)
 				{
