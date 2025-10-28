@@ -216,7 +216,7 @@ MonoBehaviour:
   settings:
     lifetime: 0.5
     lifetimeVariation: 1
-    radius: 0.02
+    radius: 0.01
     scaleCurve:
       serializedVersion: 2
       m_Curve:
@@ -271,9 +271,9 @@ MonoBehaviour:
     pulses:
     - start: 0
       end: 0.48044693
-    particleCount: 128
+    particleCount: 53
     velocity: {x: 0, y: 0, z: 0}
-    scatter: 1.19
+    scatter: 3.13
 --- !u!1 &1143789306
 GameObject:
   m_ObjectHideFlags: 0
@@ -437,7 +437,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1143789306}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: debe350cb86502644be674b7e850e7b1, type: 3}
   m_Name: 
