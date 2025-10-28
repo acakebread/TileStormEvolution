@@ -28,6 +28,7 @@ namespace MassiveHadronLtd
 			[SerializeField] public List<Pulse> pulses = new List<Pulse> { new Pulse { start = 0f, end = 0.1f } }; // List of pulses
 			[Range(1, 128)] public int particleCount = 1;
 			public Vector3 velocity = Vector3.zero;
+			[Range(0f, 10f)] public float scatter = 0f;
 
 			[System.Serializable]
 			public class Pulse
@@ -169,13 +170,8 @@ namespace MassiveHadronLtd
 			int emitCount = Mathf.Max(1, settings.particleCount);
 			for (int n = 0; n < emitCount; ++n)
 			{
-				//var vel = Random.onUnitSphere * Random.value * 0.5f;
-				//vel.y *= 2f;
-				//vel += settings.velocityBias;
-				//Vector3 worldPos = transform.position;
-				//SpawnParticle(worldPos, vel, settings.lifetimeVariation);
-				//settings.velocity = Vector3.forward;
-				SpawnParticle(transform.position, settings.velocity, settings.lifetimeVariation);
+				var scatter = Random.value * settings.scatter * Random.onUnitSphere;
+				SpawnParticle(transform.position, settings.velocity + scatter, settings.lifetimeVariation);
 			}
 		}
 

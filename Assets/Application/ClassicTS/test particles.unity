@@ -194,7 +194,7 @@ Transform:
   m_GameObject: {fileID: 1081262121}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 1, y: 0.25, z: 0}
+  m_LocalPosition: {x: 1, y: 1, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -264,15 +264,16 @@ MonoBehaviour:
     bounceDamping: 0.4
     groundHeight: 0
     useGlobalGroundPlane: 1
-    useThreeZoneSlicing: 0
+    useThreeZoneSlicing: 1
     updateParticles: 1
     fadeStartTime: 0.75
     cycleTime: 0.1
     pulses:
     - start: 0
-      end: 0.1
-    particleCount: 1
-    velocity: {x: 0, y: 1, z: 0}
+      end: 1
+    particleCount: 6
+    velocity: {x: 0, y: 0, z: 0}
+    scatter: 1.19
 --- !u!1 &1143789306
 GameObject:
   m_ObjectHideFlags: 0
@@ -362,7 +363,7 @@ Transform:
   m_GameObject: {fileID: 1143789306}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 3, z: -3}
+  m_LocalPosition: {x: 0, y: 1, z: -3}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -691,9 +692,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   particleMaterial: {fileID: 2100000, guid: 02223f9d74ca8f74999a27cdc04e130f, type: 2}
   settings:
-    lifetime: 0.2
-    lifetimeVariation: 0.2
-    radius: 0.02
+    lifetime: 1
+    lifetimeVariation: 0.45
+    radius: 0.1
     scaleCurve:
       serializedVersion: 2
       m_Curve:
@@ -728,8 +729,8 @@ MonoBehaviour:
       m_PostInfinity: 2
       m_RotationOrder: 4
     color: {r: 1, g: 0.1254902, b: 0.047058824, a: 1}
-    gravity: -0.2
-    bounceDamping: 0.8
+    gravity: -0.75
+    bounceDamping: 0
     groundHeight: 0
     useGlobalGroundPlane: 1
     useThreeZoneSlicing: 0
@@ -737,10 +738,11 @@ MonoBehaviour:
     fadeStartTime: 0.4
     cycleTime: 0.1
     pulses:
-    - start: 0
-      end: 0.1
+    - start: -0.01
+      end: 0
     particleCount: 1
-    velocity: {x: 0, y: 1, z: 0}
+    velocity: {x: 0, y: 0, z: 0}
+    scatter: 0.2
 --- !u!1 &1959222889
 GameObject:
   m_ObjectHideFlags: 0
@@ -998,6 +1000,7 @@ MonoBehaviour:
       end: 0
     particleCount: 1
     velocity: {x: 0, y: 0, z: 64}
+    scatter: 0
 --- !u!4 &2063531462
 Transform:
   m_ObjectHideFlags: 0
@@ -1007,7 +1010,7 @@ Transform:
   m_GameObject: {fileID: 2063531460}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 1, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []

@@ -301,6 +301,7 @@ namespace MassiveHadronLtd
 
 			EditorGUILayout.PropertyField(settingsProp.FindPropertyRelative("particleCount"));
 			EditorGUILayout.PropertyField(settingsProp.FindPropertyRelative("velocity"));
+			EditorGUILayout.PropertyField(settingsProp.FindPropertyRelative("scatter"));
 
 			serializedObject.ApplyModifiedProperties();
 

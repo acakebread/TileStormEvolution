@@ -240,6 +240,8 @@ namespace MassiveHadronLtd
 
 				var dot = Mathf.Abs(Vector3.Dot(vParticleDelta, vCamParticle));
 				var tangentialComponent = (vParticleDelta - dot * vCamParticle).magnitude;
+				//var hypoteneuse = vParticleDelta.sqrMagnitude - (dot * dot);
+				//var tangentialComponent = hypoteneuse > 0.0001f ? Mathf.Sqrt(hypoteneuse) : 0f;
 
 				if (tangentialComponent < particle.radius)
 				{
@@ -255,8 +257,9 @@ namespace MassiveHadronLtd
 
 				if (useThreeZoneSlicing)
 				{
-					var velocityComponent = tangentialComponent / (tangentialComponent + particle.radius);
-					var vHalfBody = 0.5f * velocityComponent * vParticleDelta;
+					//var velocityComponent = tangentialComponent / (tangentialComponent + particle.radius);
+					var velocityComponent = tangentialComponent > 0.0001f ? Mathf.Max(0,tangentialComponent - particle.radius) / tangentialComponent : 0f;//epsilon
+					var vHalfBody = velocityComponent * vParticleDelta;
 					var headBody = vParticlePos + vHalfBody;
 					var tailBody = vParticlePos - vHalfBody;
 
