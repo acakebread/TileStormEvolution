@@ -8,7 +8,9 @@ namespace MassiveHadronLtd
 {
 	public class ParticleController : MonoBehaviour
 	{
-		#region --- Exposed Settings (formerly ParticleSettings) ---
+		// ──────────────────────────────────────────────────────────────
+		// (all inspector fields – copy from your previous version)
+		// ──────────────────────────────────────────────────────────────
 		[Header("Lifetime")]
 		public float lifetime = 1f;
 		public float lifetimeVariation = 0.5f;
@@ -37,7 +39,6 @@ namespace MassiveHadronLtd
 		[Range(1, 128)] public int particleCount = 1;
 		public Vector3 velocity = Vector3.zero;
 		[Range(0f, 10f)] public float scatter = 0f;
-		#endregion
 
 		[System.Serializable]
 		public class Pulse
@@ -49,54 +50,11 @@ namespace MassiveHadronLtd
 		[SerializeField] private Material particleMaterial;
 
 		private ParticleSystem customParticleSystem;
-
-		private class ParticleData : ParticleSystem.ParticleDataRoot
-		{
-			public ParticleController controller;
-			public Vector3 velocity;
-			public float duration;
-			public Color color;
-			public float size;
-
-			public override void UpdateColour()
-			{
-				// ----- Fade -----
-				var norm = 1f - Mathf.Clamp01(particle.life / duration);
-				particle.color.a = (norm < controller.fadeStartTime || Mathf.Approximately(controller.fadeStartTime, 1f)) ? 1f : Mathf.Clamp01(1f - ((norm - controller.fadeStartTime) / (1f - controller.fadeStartTime)));
-			}
-
-			public override void UpdateScale()
-			{
-				// ----- Scale -----
-				var norm = 1f - Mathf.Clamp01(particle.life / duration);
-				particle.radius = size * controller.scaleCurve.Evaluate(norm);
-			}
-
-			public override void UpdatePosition()
-			{
-				// ----- Physics -----
-				var dt = Time.deltaTime;
-				velocity.y -= controller.gravity * dt;
-				particle.delta = -particle.position;
-				particle.position += velocity * dt;
-
-				var groundY = controller.useGlobalGroundPlane ? controller.groundHeight : controller.transform.position.y + controller.groundHeight;
-
-				if (velocity.y < 0f && particle.position.y <= groundY)
-				{
-					particle.position.y = groundY;
-					velocity.y = -velocity.y;
-					velocity *= controller.bounceDamping;
-				}
-				particle.delta += particle.position;
-			}
-		}
-
 		private bool emitEnabled;
 		private float timelinePosition;
 		private float lastTimelinePosition;
 
-		void Awake()
+		private void Awake()
 		{
 			if (particleMaterial == null)
 			{
@@ -105,112 +63,119 @@ namespace MassiveHadronLtd
 				return;
 			}
 
-			// Initialise default scale curve if empty
 			if (scaleCurve.keys.Length == 0)
-			{
-				scaleCurve = new AnimationCurve();
-				scaleCurve.AddKey(new Keyframe(0f, 1.0f, 0f, 0f));
-				scaleCurve.AddKey(new Keyframe(1f, 1.0f, 0f, 0f));
-#if UNITY_EDITOR
-				for (int i = 0; i < scaleCurve.keys.Length; i++)
-				{
-					AnimationUtility.SetKeyBroken(scaleCurve, i, true);
-					AnimationUtility.SetKeyLeftTangentMode(scaleCurve, i, AnimationUtility.TangentMode.Free);
-					AnimationUtility.SetKeyRightTangentMode(scaleCurve, i, AnimationUtility.TangentMode.Free);
-				}
-#endif
-			}
+				scaleCurve = AnimationCurve.Linear(0f, 1f, 1f, 1f);
 
-			customParticleSystem = new ParticleSystem(particleMaterial, useThreeZoneSlicing);
+			customParticleSystem = new ParticleSystem(particleMaterial, useThreeZoneSlicing, this);
 			timelinePosition = lastTimelinePosition = 0f;
 			emitEnabled = false;
 		}
 
-		void FixedUpdate()
+		private void FixedUpdate()
 		{
-			if (updateParticles)
-				UpdateParticles();
+			if (!updateParticles || customParticleSystem == null) return;
+
+			customParticleSystem.UpdateParticles();
 
 			lastTimelinePosition = timelinePosition;
 			timelinePosition += Time.deltaTime;
 			if (timelinePosition >= cycleTime)
 				timelinePosition -= cycleTime;
 
-			var normalizedTime = timelinePosition / cycleTime;
-			var lastNormalizedTime = lastTimelinePosition / cycleTime;
-			var inPulse = false;
+			float normNow = timelinePosition / cycleTime;
+			float normPrev = lastTimelinePosition / cycleTime;
+			bool inPulse = false;
 
-			foreach (var pulse in pulses)
+			foreach (var p in pulses)
 			{
-				if (normalizedTime >= pulse.start && normalizedTime <= pulse.end)
-					inPulse = true;
+				if (normNow >= p.start && normNow <= p.end) inPulse = true;
 
-				var crossed = false;
-				if (lastNormalizedTime <= normalizedTime)
+				bool crossed = false;
+				if (normPrev <= normNow)
 				{
-					if (lastNormalizedTime < pulse.end && normalizedTime > pulse.start)
-						crossed = true;
+					if (normPrev < p.end && normNow > p.start) crossed = true;
 				}
 				else
 				{
-					if (lastNormalizedTime < pulse.end || normalizedTime > pulse.start)
-						crossed = true;
+					if (normPrev < p.end || normNow > p.start) crossed = true;
 				}
 
-				if (crossed)
-					EmitParticlesInternal();
+				if (crossed) EmitParticlesInternal();
 			}
 
-			if (emitEnabled || inPulse)
-				EmitParticlesInternal();
+			if (emitEnabled || inPulse) EmitParticlesInternal();
 		}
 
-		void Update() => customParticleSystem.Render();
+		private void Update()
+		{
+			customParticleSystem?.Render();
+		}
 
 		public void EmitParticles() { emitEnabled = true; timelinePosition = 0f; }
 		public void StopEmitting() { emitEnabled = false; timelinePosition = 0f; }
 
 		private void EmitParticlesInternal()
 		{
-			int emitCount = Mathf.Max(1, particleCount);
-			for (int n = 0; n < emitCount; ++n)
+			if (customParticleSystem == null) return;
+
+			int cnt = Mathf.Max(1, particleCount);
+			for (int i = 0; i < cnt; ++i)
 			{
-				var scatterVec = Random.value * scatter * Random.onUnitSphere;
-				SpawnParticle(transform.position, velocity + scatterVec, lifetimeVariation);
+				Vector3 scatterVec = Random.value * scatter * Random.onUnitSphere;
+				SpawnParticle(transform.position, velocity + scatterVec);
 			}
 		}
 
 		public void SpawnParticle(Vector3 position, Vector3 velocity, float? lifetimeVariation = null)
 		{
-			if (!updateParticles) return;
+			if (!updateParticles || customParticleSystem == null) return;
 
-			var variation = lifetimeVariation ?? this.lifetimeVariation;
-			var life = lifetime + variation + Random.Range(-variation, variation);
-			if (life <= 0f)
+			float variation = lifetimeVariation ?? this.lifetimeVariation;
+			float life = lifetime + Random.Range(-variation, variation);
+			if (life <= 0f) return;
+
+			Particle p = null;
+
+			if (gravity > 0.01f || bounceDamping < 0.99f)
 			{
-				Debug.LogError($"spawning particle with no life span {life}");
-				return;
+				var pp = customParticleSystem.AllocateParticle<PhysicsParticle>();
+				if (pp == null) return;
+
+				pp.duration = life;
+				pp.life = life;
+				pp.position = position;
+				pp.initialRadius = radius;
+				pp.radius = radius;
+				pp.color = color;
+				pp.velocity = velocity;
+				pp.gravity = gravity;
+				pp.bounceDamping = bounceDamping;
+				pp.groundHeight = groundHeight;
+				pp.useGlobalGroundPlane = useGlobalGroundPlane;
+				p = pp;
+			}
+			else
+			{
+				var sp = customParticleSystem.AllocateParticle<StaticParticle>();
+				if (sp == null) return;
+
+				sp.duration = life;
+				sp.life = life;
+				sp.position = position;
+				sp.initialRadius = radius;
+				sp.radius = radius;
+				sp.color = color;
+				p = sp;
 			}
 
-			var particle = customParticleSystem.AllocateParticle();
-			if (particle == null) return;
-
-			particle.delta = Vector3.zero;
-			particle.position = position;
-			particle.life = life;
-			particle.color = color;
-			particle.particleData = new ParticleData
+			// ---- First-frame update (still zero-allocation) ----
+			var ctx = new ParticleUpdateContext
 			{
 				controller = this,
-				particle = particle,
-				velocity = velocity,
-				duration = life,
-				color = color,
-				size = radius
+				deltaTime = 0f,
+				normalizedLife = 0f
 			};
+			p.Update(ref ctx);
 		}
-
-		private void UpdateParticles() => customParticleSystem.UpdateParticles();
 	}
 }
-

@@ -212,8 +212,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cd8578c20d24105438647a46520bbefb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  lifetime: 0.5
-  lifetimeVariation: 1
+  lifetime: 0.75
+  lifetimeVariation: 0.5
   radius: 0.01
   scaleCurve:
     serializedVersion: 2

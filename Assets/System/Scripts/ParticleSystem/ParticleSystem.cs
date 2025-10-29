@@ -3,63 +3,156 @@ using System.Collections.Generic;
 
 namespace MassiveHadronLtd
 {
+	// --------------------------------------------------------------------
+	// Re-usable update context – **zero allocations per particle**
+	// --------------------------------------------------------------------
+	public struct ParticleUpdateContext
+	{
+		public ParticleController controller;
+		public float deltaTime;
+		public float normalizedLife;
+	}
+
+	// --------------------------------------------------------------------
+	// Base particle
+	// --------------------------------------------------------------------
+	public abstract class Particle
+	{
+		public float life;
+		public float duration;
+		public float initialRadius;
+		public int vertexIndex;
+		public int poolIndex;
+		public Vector3 position;
+		public Vector3 delta;
+		public float radius;
+		public Color color;
+
+		public abstract void Update(ref ParticleUpdateContext ctx);
+	}
+
+	// --------------------------------------------------------------------
+	// Physics particle
+	// --------------------------------------------------------------------
+	public class PhysicsParticle : Particle
+	{
+		public Vector3 velocity;
+		public float gravity;
+		public float bounceDamping;
+		public float groundHeight;
+		public bool useGlobalGroundPlane;
+
+		public override void Update(ref ParticleUpdateContext ctx)
+		{
+			float norm = ctx.normalizedLife;
+
+			// fade
+			float a = (norm < ctx.controller.fadeStartTime || Mathf.Approximately(ctx.controller.fadeStartTime, 1f))
+				? 1f
+				: Mathf.Clamp01(1f - ((norm - ctx.controller.fadeStartTime) / (1f - ctx.controller.fadeStartTime)));
+			color.a = a;
+
+			// scale
+			radius = initialRadius * ctx.controller.scaleCurve.Evaluate(norm);
+
+			// physics
+			velocity.y -= gravity * ctx.deltaTime;
+			delta = -position;
+			position += velocity * ctx.deltaTime;
+
+			float groundY = useGlobalGroundPlane
+				? groundHeight
+				: ctx.controller.transform.position.y + groundHeight;
+
+			if (velocity.y < 0f && position.y <= groundY)
+			{
+				position.y = groundY;
+				velocity.y = -velocity.y * bounceDamping;
+			}
+
+			delta += position; // newPos – oldPos
+		}
+	}
+
+	// --------------------------------------------------------------------
+	// Static particle – **billboard fallback**
+	// --------------------------------------------------------------------
+	public class StaticParticle : Particle
+	{
+		public override void Update(ref ParticleUpdateContext ctx)
+		{
+			float norm = ctx.normalizedLife;
+
+			// fade
+			float a = (norm < ctx.controller.fadeStartTime || Mathf.Approximately(ctx.controller.fadeStartTime, 1f))
+				? 1f
+				: Mathf.Clamp01(1f - ((norm - ctx.controller.fadeStartTime) / (1f - ctx.controller.fadeStartTime)));
+			color.a = a;
+
+			// scale
+			radius = initialRadius * ctx.controller.scaleCurve.Evaluate(norm);
+		}
+	}
+
+	// --------------------------------------------------------------------
+	// ParticleSystem – pool / mesh / update / render
+	// --------------------------------------------------------------------
 	public class ParticleSystem
 	{
-		private readonly int maxParticles = 1024;
+		private const int MaxParticles = 1024;               // change freely
 		private readonly bool useThreeZoneSlicing;
-		private Mesh mesh;
 		private readonly Material material;
 		private readonly Camera mainCamera;
-
-		public abstract class ParticleDataRoot 
-		{
-			public Particle particle;
-			public abstract void UpdateColour();
-			public abstract void UpdateScale();
-			public abstract void UpdatePosition();
-		}
-
-		public class Particle
-		{
-			public ParticleDataRoot particleData;
-			public float life; // < 0 → dead
-			public int vertexIndex;
-			public int poolIndex;
-			public Vector3 position;
-			public Vector3 delta;
-			public float radius;
-			public Color color;
-		}
-
-		private List<Particle> particlePool;
-		public List<Particle> activeParticles;
-		private List<int> freeParticleIndices;
-		private List<Vector3> vertices;
-		private List<int> triangles;
-		private List<Color> colors;
-		private List<Vector2> uvs;
 		private readonly int verticesPerParticle;
-		private readonly int trianglesPerParticle;
 
-		public ParticleSystem(Material particleMaterial, bool threeZoneSlicing)
+		private readonly List<Particle> particlePool = new List<Particle>(MaxParticles);
+		public readonly List<Particle> activeParticles = new List<Particle>(MaxParticles);
+		private readonly List<int> freeParticleIndices = new List<int>(MaxParticles);
+
+		private Mesh mesh;
+		private readonly List<Vector3> vertices;
+		private readonly List<int> triangles;
+		private readonly List<Color> colors;
+		private readonly List<Vector2> uvs;
+
+		public ParticleController Controller { get; private set; }
+
+		// ----------------------------------------------------------------
+		// **Mutable** reusable context – NOT readonly
+		// ----------------------------------------------------------------
+		private ParticleUpdateContext updateCtx;
+
+		// ----------------------------------------------------------------
+		public ParticleSystem(Material particleMaterial, bool threeZoneSlicing, ParticleController controller)
 		{
 			material = new Material(particleMaterial);
 			useThreeZoneSlicing = threeZoneSlicing;
 			verticesPerParticle = useThreeZoneSlicing ? 8 : 4;
-			trianglesPerParticle = useThreeZoneSlicing ? 18 : 6;
 			mainCamera = Camera.main;
+			Controller = controller;
+
+			int trianglesPerParticle = useThreeZoneSlicing ? 18 : 6;
+			int totalTriangles = MaxParticles * trianglesPerParticle;
+
+			vertices = new List<Vector3>(MaxParticles * 8);
+			triangles = new List<int>(totalTriangles);
+			colors = new List<Color>(MaxParticles * 8);
+			uvs = new List<Vector2>(MaxParticles * 8);
 
 			InitializePool();
 			InitializeMesh();
 			SetupURPMaterial();
+
+			// initialise the reusable context once
+			updateCtx = new ParticleUpdateContext();
 		}
 
+		// ----------------------------------------------------------------
 		private void SetupURPMaterial()
 		{
 			if (material.shader.name != "MassiveHadronLtd/Unlit/AdditiveParticles")
 			{
-				Debug.LogWarning($"ParticleSystem: Expected shader 'MassiveHadronLtd/Unlit/AdditiveParticles'.");
-				Shader s = Shader.Find("MassiveHadronLtd/Unlit/AdditiveParticles");
+				var s = Shader.Find("MassiveHadronLtd/Unlit/AdditiveParticles");
 				if (s) material.shader = s;
 			}
 			material.SetColor("_BaseColor", Color.white);
@@ -68,49 +161,40 @@ namespace MassiveHadronLtd
 			material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent + 100;
 		}
 
+		// ----------------------------------------------------------------
 		private void InitializePool()
 		{
-			particlePool = new List<Particle>(maxParticles);
-			activeParticles = new List<Particle>(maxParticles);
-			freeParticleIndices = new List<int>(maxParticles);
-
-			for (var i = 0; i < maxParticles; i++)
+			for (int i = 0; i < MaxParticles; i++)
 			{
-				var p = new Particle
-				{
-					vertexIndex = i * verticesPerParticle,
-					poolIndex = i,
-					life = -1f
-				};
-				particlePool.Add(p);
+				particlePool.Add(null);
 				freeParticleIndices.Add(i);
 			}
 		}
 
+		// ----------------------------------------------------------------
 		private void InitializeMesh()
 		{
 			mesh = new Mesh { name = "ParticleMesh" };
 			mesh.MarkDynamic();
 
-			vertices = new List<Vector3>(maxParticles * verticesPerParticle);
-			triangles = new List<int>(maxParticles * trianglesPerParticle);
-			colors = new List<Color>(maxParticles * verticesPerParticle);
-			uvs = new List<Vector2>(maxParticles * verticesPerParticle);
-
-			for (var i = 0; i < maxParticles; i++)
+			for (int i = 0; i < MaxParticles; i++)
 			{
-				var offset = i * verticesPerParticle;
+				int offset = i * verticesPerParticle;
 				if (useThreeZoneSlicing)
 				{
 					vertices.AddRange(new Vector3[8]);
-					triangles.AddRange(new[] {
+					triangles.AddRange(new[]
+					{
 						offset+0,offset+1,offset+2, offset+1,offset+3,offset+2,
 						offset+2,offset+3,offset+4, offset+3,offset+5,offset+4,
 						offset+4,offset+5,offset+6, offset+5,offset+7,offset+6
 					});
 					colors.AddRange(new Color[8]);
-					uvs.AddRange(new[]{ new Vector2(0,0),new Vector2(1,0), new Vector2(0,0.5f),new Vector2(1,0.5f),
-										new Vector2(0,0.5f),new Vector2(1,0.5f), new Vector2(0,1),new Vector2(1,1) });
+					uvs.AddRange(new[]
+					{
+						new Vector2(0,0), new Vector2(1,0), new Vector2(0,0.5f), new Vector2(1,0.5f),
+						new Vector2(0,0.5f), new Vector2(1,0.5f), new Vector2(0,1), new Vector2(1,1)
+					});
 				}
 				else
 				{
@@ -128,51 +212,78 @@ namespace MassiveHadronLtd
 			mesh.RecalculateBounds();
 		}
 
-		public Particle AllocateParticle()
+		// ----------------------------------------------------------------
+		public T AllocateParticle<T>() where T : Particle, new()
 		{
-			if (0 == freeParticleIndices.Count) return null;
-			var idx = freeParticleIndices[freeParticleIndices.Count - 1];
+			if (freeParticleIndices.Count == 0)
+			{
+				Debug.LogWarning($"[ParticleSystem] Out of particles! Max: {MaxParticles}");
+				return null;
+			}
+
+			int idx = freeParticleIndices[freeParticleIndices.Count - 1];
 			freeParticleIndices.RemoveAt(freeParticleIndices.Count - 1);
-			activeParticles.Add(particlePool[idx]);
-			return particlePool[idx];
+
+			var p = new T
+			{
+				vertexIndex = idx * verticesPerParticle,
+				poolIndex = idx,
+				life = -1f,
+				position = Vector3.zero,
+				delta = Vector3.zero,
+				radius = 0f,
+				color = Color.clear
+			};
+			particlePool[idx] = p;
+			activeParticles.Add(p);
+			return p;
 		}
 
+		// ----------------------------------------------------------------
+		// **ZERO allocations** – one struct reused for the whole frame
+		// ----------------------------------------------------------------
 		public void UpdateParticles()
 		{
-			for (var i = activeParticles.Count - 1; i >= 0; i--)
-			{
-				if (false == UpdateParticle(activeParticles[i])) continue;
-				activeParticles[i].particleData.UpdateColour();
-				activeParticles[i].particleData.UpdateScale();
-				activeParticles[i].particleData.UpdatePosition();
-			}
-		}
+			if (Controller == null) return;
 
-		public bool UpdateParticle(Particle particle)
-		{
-			if (null == particle || particle.life <= 0f)
-			{
-				Debug.LogError($"updating null particle or praticle with less than zero life!! {particle?.life}");
-				return false;
-			}
+			float dt = Time.deltaTime;
 
-			particle.life -= Time.deltaTime;
-			if (particle.life <= 0f)
+			// fill once
+			updateCtx.controller = Controller;
+			updateCtx.deltaTime = dt;
+
+			for (int i = activeParticles.Count - 1; i >= 0; i--)
 			{
-				//DeactivateQuad
-				var vertexIndex = particle.vertexIndex;
-				for (var v = 0; v < verticesPerParticle; v++)
+				Particle p = activeParticles[i];
+				if (p.life <= 0f) continue;
+
+				p.life -= dt;
+				if (p.life <= 0f)
 				{
-					vertices[vertexIndex + v] = Vector3.zero;
-					colors[vertexIndex + v] = Color.clear;// don't know if this is necessary
+					DeactivateParticle(i);
+					continue;
 				}
-				freeParticleIndices.Add(particle.poolIndex);
-				activeParticles.Remove(particle);
-				return false;
+
+				updateCtx.normalizedLife = 1f - (p.life / p.duration);
+				p.Update(ref updateCtx);
 			}
-			return true;
 		}
 
+		// ----------------------------------------------------------------
+		private void DeactivateParticle(int index)
+		{
+			Particle p = activeParticles[index];
+			int v = p.vertexIndex;
+			for (int i = 0; i < verticesPerParticle; i++)
+			{
+				vertices[v + i] = Vector3.zero;
+				colors[v + i] = Color.clear;
+			}
+			freeParticleIndices.Add(p.poolIndex);
+			activeParticles.RemoveAt(index);
+		}
+
+		// ----------------------------------------------------------------
 		public void Render()
 		{
 			UpdateMesh();
@@ -181,54 +292,66 @@ namespace MassiveHadronLtd
 
 		private void UpdateMesh()
 		{
-			var camPos = mainCamera.transform.position;
+			Vector3 camPos = mainCamera ? mainCamera.transform.position : Vector3.zero;
 
-			for (var i = 0; i < activeParticles.Count; i++)
+			for (int i = 0; i < activeParticles.Count; i++)
 			{
-				var particle = activeParticles[i];
-				if (particle.life <= 0f)
+				Particle p = activeParticles[i];
+				if (p.life <= 0f) continue;
+
+				Vector3 pos = p.position;
+				Vector3 delta = p.delta;
+				Vector3 toCam = (pos - camPos).normalized;
+
+				// ──────────────────────────────────────────────────────────────
+				// TANGENT: moving → from delta, stationary → from camera up
+				// ──────────────────────────────────────────────────────────────
+				Vector3 tangent;
+				if (delta.sqrMagnitude > 0.000001f)
 				{
-					Debug.LogError("processing inactive particle!!!");
-					continue;
+					tangent = Vector3.Cross(toCam, delta).normalized;
+				}
+				else
+				{
+					Vector3 camUp = mainCamera ? mainCamera.transform.up : Vector3.up;
+					tangent = Vector3.Cross(toCam, camUp).normalized;
+					if (tangent.sqrMagnitude < 0.01f)
+						tangent = Vector3.Cross(toCam, Vector3.right).normalized;
+				}
+				// ──────────────────────────────────────────────────────────────
+
+				float dot = Vector3.Dot(delta, toCam);
+				float tang = (delta - dot * toCam).magnitude;
+				if (tang < p.radius)
+				{
+					Vector3 cross = Vector3.Cross(tangent, toCam);
+					delta += (p.radius - tang) * cross;
 				}
 
-				var pos = particle.position;
-				var delta = particle.delta;
-				var toCam = (pos - camPos).normalized;
-				var tangent = Vector3.Cross(toCam, delta).normalized;
-
-				var dot = Vector3.Dot(delta, toCam);
-				var tang = (delta - dot * toCam).magnitude;
-				if (tang < particle.radius)
-				{
-					var cross = Vector3.Cross(tangent, toCam);
-					delta += (particle.radius - tang) * cross;
-				}
-
-				var head = pos + delta;
-				var tail = pos - delta;
-				var rad = tangent * particle.radius;
-				var v = particle.vertexIndex;
+				Vector3 head = pos + delta;
+				Vector3 tail = pos - delta;
+				Vector3 rad = tangent * p.radius;
+				int v = p.vertexIndex;
 
 				if (useThreeZoneSlicing)
 				{
-					var velComp = tang > 0.0001f ? Mathf.Max(0, tang - particle.radius) / tang : 0f;
-					var half = velComp * delta;
-					var headB = pos + half;
-					var tailB = pos - half;
+					float velComp = tang > 0.0001f ? Mathf.Max(0, tang - p.radius) / tang : 0f;
+					Vector3 half = velComp * delta;
+					Vector3 headB = pos + half;
+					Vector3 tailB = pos - half;
 
 					vertices[v + 0] = head + rad; vertices[v + 1] = head - rad;
 					vertices[v + 2] = headB + rad; vertices[v + 3] = headB - rad;
 					vertices[v + 4] = tailB + rad; vertices[v + 5] = tailB - rad;
 					vertices[v + 6] = tail + rad; vertices[v + 7] = tail - rad;
 
-					for (var j = 0; j < 8; j++) colors[v + j] = particle.color;
+					for (int j = 0; j < 8; j++) colors[v + j] = p.color;
 				}
 				else
 				{
 					vertices[v + 0] = head - rad; vertices[v + 1] = head + rad;
 					vertices[v + 2] = tail - rad; vertices[v + 3] = tail + rad;
-					for (var j = 0; j < 4; j++) colors[v + j] = particle.color;
+					for (int j = 0; j < 4; j++) colors[v + j] = p.color;
 				}
 			}
 
