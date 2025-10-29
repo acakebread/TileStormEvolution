@@ -131,7 +131,7 @@ namespace MassiveHadronLtd
 			return particlePool[idx];
 		}
 
-		public bool UpdateParticle(Particle particle, Vector3 position, float radius, Color color)
+		public bool UpdateParticle(Particle particle)
 		{
 			if (null == particle || particle.life <= 0f)
 			{
@@ -153,11 +153,6 @@ namespace MassiveHadronLtd
 				activeParticles.Remove(particle);
 				return false;
 			}
-
-			particle.delta = position - particle.position;
-			particle.position = position;
-			particle.radius = radius;
-			particle.color = color;
 			return true;
 		}
 
@@ -171,36 +166,36 @@ namespace MassiveHadronLtd
 		{
 			var camPos = mainCamera.transform.position;
 
-			for (int i = 0; i < activeParticles.Count; i++)
+			for (var i = 0; i < activeParticles.Count; i++)
 			{
-				var p = activeParticles[i];
-				if (p.life <= 0f)
+				var particle = activeParticles[i];
+				if (particle.life <= 0f)
 				{
 					Debug.LogError("processing inactive particle!!!");
 					continue;
 				}
 
-				var pos = p.position;
-				var delta = p.delta;
+				var pos = particle.position;
+				var delta = particle.delta;
 				var toCam = (pos - camPos).normalized;
 				var tangent = Vector3.Cross(toCam, delta).normalized;
 
 				var dot = Vector3.Dot(delta, toCam);
 				var tang = (delta - dot * toCam).magnitude;
-				if (tang < p.radius)
+				if (tang < particle.radius)
 				{
 					var cross = Vector3.Cross(tangent, toCam);
-					delta += (p.radius - tang) * cross;
+					delta += (particle.radius - tang) * cross;
 				}
 
 				var head = pos + delta;
 				var tail = pos - delta;
-				var rad = tangent * p.radius;
-				var v = p.vertexIndex;
+				var rad = tangent * particle.radius;
+				var v = particle.vertexIndex;
 
 				if (useThreeZoneSlicing)
 				{
-					var velComp = tang > 0.0001f ? Mathf.Max(0, tang - p.radius) / tang : 0f;
+					var velComp = tang > 0.0001f ? Mathf.Max(0, tang - particle.radius) / tang : 0f;
 					var half = velComp * delta;
 					var headB = pos + half;
 					var tailB = pos - half;
@@ -210,13 +205,13 @@ namespace MassiveHadronLtd
 					vertices[v + 4] = tailB + rad; vertices[v + 5] = tailB - rad;
 					vertices[v + 6] = tail + rad; vertices[v + 7] = tail - rad;
 
-					for (var j = 0; j < 8; j++) colors[v + j] = p.color;
+					for (var j = 0; j < 8; j++) colors[v + j] = particle.color;
 				}
 				else
 				{
 					vertices[v + 0] = tail - rad; vertices[v + 1] = tail + rad;
 					vertices[v + 2] = head - rad; vertices[v + 3] = head + rad;
-					for (var j = 0; j < 4; j++) colors[v + j] = p.color;
+					for (var j = 0; j < 4; j++) colors[v + j] = particle.color;
 				}
 			}
 

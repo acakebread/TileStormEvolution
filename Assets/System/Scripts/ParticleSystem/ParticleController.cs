@@ -184,28 +184,28 @@ namespace MassiveHadronLtd
 
 		private void UpdateParticles()
 		{
-			float dt = Time.deltaTime;
+			var dt = Time.deltaTime;
 
-			for (int i = customParticleSystem.activeParticles.Count - 1; i >= 0; i--)
+			for (var i = customParticleSystem.activeParticles.Count - 1; i >= 0; i--)
 			{
 				var pd = customParticleSystem.activeParticles[i].particleData as ParticleData;
 
 				// ----- Fade -----
-				float norm = 1f - Mathf.Clamp01(pd.particle.life / pd.maxLifetime);
-				float alpha = (norm < fadeStartTime || Mathf.Approximately(fadeStartTime, 1f))
+				var norm = 1f - Mathf.Clamp01(pd.particle.life / pd.maxLifetime);
+				var alpha = (norm < fadeStartTime || Mathf.Approximately(fadeStartTime, 1f))
 							   ? 1f
 							   : Mathf.Clamp01(1f - ((norm - fadeStartTime) / (1f - fadeStartTime)));
 				pd.color.a = alpha;
 
 				// ----- Scale -----
-				float scale = scaleCurve.Evaluate(norm);
+				var scale = scaleCurve.Evaluate(norm);
 				var radius = pd.initialRadius * scale;
 
 				// ----- Physics -----
 				pd.velocity.y -= gravity * dt;
 				pd.position += pd.velocity * dt;
 
-				float groundY = useGlobalGroundPlane ? groundHeight : transform.position.y + groundHeight;
+				var groundY = useGlobalGroundPlane ? groundHeight : transform.position.y + groundHeight;
 
 				if (pd.velocity.y < 0f && pd.position.y <= groundY)
 				{
@@ -214,8 +214,13 @@ namespace MassiveHadronLtd
 					pd.velocity *= bounceDamping;
 				}
 
+				pd.particle.delta = pd.position - pd.particle.position;
+				pd.particle.position = pd.position;
+				pd.particle.radius = radius;
+				pd.particle.color = color;
+
 				// ----- Render update -----
-				customParticleSystem.UpdateParticle(pd.particle, pd.position, radius, pd.color);
+				if (false == customParticleSystem.UpdateParticle(pd.particle)) continue;
 			}
 		}
 	}
