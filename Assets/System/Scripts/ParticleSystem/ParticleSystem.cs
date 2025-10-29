@@ -5,33 +5,34 @@ namespace MassiveHadronLtd
 {
 	public class ParticleSystem
 	{
-		private readonly int maxParticles = 4096;
+		private readonly int maxParticles = 1024;
 		private readonly bool useThreeZoneSlicing;
 		private readonly Material material;
 		private Mesh mesh;
 		private readonly Camera mainCamera;
 
+		public abstract class ParticleDataBase { }
+
 		public class Particle
 		{
+			public ParticleDataBase particleDataBase;
+			public float life; // < 0 → dead
 			public int vertexIndex;
 			public int poolIndex;
 			public Vector3 position;
 			public Vector3 previousPosition;
-			public float lifetime;            // < 0 → dead
-			public float maxLifetime;
-			public Color color;
-			public float radius;
 			public float initialRadius;
+			public float radius;
+			public Color color;
 		}
 
 		private List<Particle> particlePool;
-		private List<Particle> activeParticles;
+		public List<Particle> activeParticles;
 		private List<int> freeParticleIndices;
 		private List<Vector3> vertices;
 		private List<int> triangles;
 		private List<Color> colors;
 		private List<Vector2> uvs;
-		private int activeParticleCount;
 		private readonly int verticesPerParticle;
 		private readonly int trianglesPerParticle;
 
@@ -74,12 +75,11 @@ namespace MassiveHadronLtd
 				{
 					vertexIndex = i * verticesPerParticle,
 					poolIndex = i,
-					lifetime = -1f
+					life = -1f
 				};
 				particlePool.Add(p);
 				freeParticleIndices.Add(i);
 			}
-			activeParticleCount = 0;
 		}
 
 		private void InitializeMesh()
@@ -123,19 +123,12 @@ namespace MassiveHadronLtd
 			mesh.RecalculateBounds();
 		}
 
-		// NEW: Returns the actual Particle
-		public Particle SpawnParticle(Vector3 position, float lifetime, float radius, Color color)
+		public Particle AllocateParticle()
 		{
 			Particle p = GetInactiveParticle();
 			if (p == null) return null;
 
-			p.position = p.previousPosition = position;
-			p.lifetime = p.maxLifetime = lifetime;
-			p.color = color;
-			p.radius = p.initialRadius = radius;
-
 			activeParticles.Add(p);
-			activeParticleCount++;
 			return p;
 		}
 
@@ -147,32 +140,36 @@ namespace MassiveHadronLtd
 			return particlePool[idx];
 		}
 
-		// NEW: Takes Particle reference
-		public void UpdateParticle(Particle particle, Vector3 position, float lifetime, float radius, Color color)
+		public bool UpdateParticle(Particle particle, Vector3 position, float radius, Color color)
 		{
-			if (particle == null || particle.lifetime <= 0f) return;
+			if (null == particle || particle.life <= 0f)
+			{
+				Debug.LogError($"updating null particle or praticle with less than zero life!! {particle?.life}");
+				return false;
+			}
 
-			particle.previousPosition = particle.position;
-			particle.position = position;
-			particle.lifetime = lifetime;
-			particle.radius = radius;
-			particle.color = color;
-
-			if (lifetime <= 0f)
+			particle.life -= Time.deltaTime;
+			if (particle.life <= 0f)
 			{
 				DeactivateQuad(particle.vertexIndex);
 				freeParticleIndices.Add(particle.poolIndex);
 				activeParticles.Remove(particle);
-				activeParticleCount--;
+				return false;
 			}
-		}
 
-		private void DeactivateQuad(int vertexIndex)
-		{
-			for (int v = 0; v < verticesPerParticle; v++)
+			particle.previousPosition = particle.position;
+			particle.position = position;
+			particle.radius = radius;
+			particle.color = color;
+			return true;
+
+			void DeactivateQuad(int vertexIndex)
 			{
-				vertices[vertexIndex + v] = Vector3.zero;
-				colors[vertexIndex + v] = Color.clear;
+				for (int v = 0; v < verticesPerParticle; v++)
+				{
+					vertices[vertexIndex + v] = Vector3.zero;
+					colors[vertexIndex + v] = Color.clear;
+				}
 			}
 		}
 
@@ -186,11 +183,14 @@ namespace MassiveHadronLtd
 		{
 			var camPos = mainCamera.transform.position;
 
-			for (int i = 0; i < activeParticleCount; i++)
+			for (int i = 0; i < activeParticles.Count; i++)
 			{
-				if (i >= activeParticles.Count) { activeParticleCount = activeParticles.Count; break; }
 				var p = activeParticles[i];
-				if (p.lifetime <= 0f) continue;
+				if (p.life <= 0f)
+				{
+					Debug.LogError("processing inactive particle!!!");
+					continue;
+				}
 
 				var pos = p.position;
 				var prev = p.previousPosition;

@@ -271,9 +271,9 @@ MonoBehaviour:
     pulses:
     - start: 0
       end: 0.48044693
-    particleCount: 53
+    particleCount: 64
     velocity: {x: 0, y: 0, z: 0}
-    scatter: 3.13
+    scatter: 4
 --- !u!1 &1143789306
 GameObject:
   m_ObjectHideFlags: 0

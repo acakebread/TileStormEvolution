@@ -43,27 +43,23 @@ namespace MassiveHadronLtd
 
 		private ParticleSystem customParticleSystem;
 
-		private class ParticleData
+		private class ParticleData : ParticleSystem.ParticleDataBase
 		{
 			public ParticleSystem.Particle particle;  // Direct reference
 			public Vector3 position;
 			public Vector3 velocity;
-			public float lifetime;
 			public float maxLifetime;
 			public Color color;
 			public float radius;
 			public float initialRadius;
 		}
 
-		private List<ParticleData> activeParticles;
 		private bool emitEnabled;
 		private float timelinePosition;
 		private float lastTimelinePosition;
 
 		void Awake()
 		{
-			activeParticles = new List<ParticleData>();
-
 			if (particleMaterial == null)
 			{
 				Debug.LogError("ParticleController: particleMaterial is not assigned!");
@@ -154,67 +150,55 @@ namespace MassiveHadronLtd
 			}
 		}
 
-		public void SpawnParticle(Vector3 position, Vector3 velocity,
-								  float? lifetimeVariation = null,
-								  ParticleSettings customSettings = null)
+		public void SpawnParticle(Vector3 position, Vector3 velocity, float? lifetimeVariation = null, ParticleSettings customSettings = null)
 		{
 			if (!settings.updateParticles) return;
+			var particle = customParticleSystem.AllocateParticle();
+			if (particle == null) return;
 
 			var s = customSettings ?? settings;
-			float variation = lifetimeVariation ?? s.lifetimeVariation;
-			float lifetime = s.lifetime + Random.Range(-variation, variation);
+			float variation = (lifetimeVariation ?? s.lifetimeVariation);
+			float life = s.lifetime + variation + Random.Range(-variation, variation);
+			if (life <= 0f)
+			{
+				Debug.LogError($"spawning particle with no life span {life}");
+				return;
+			}
 
 			float initialScale = s.scaleCurve.Evaluate(0f);
 			float initialRadius = s.radius * initialScale;
 
-			// NEW: Returns Particle directly
-			var particle = customParticleSystem.SpawnParticle(position, lifetime, initialRadius, s.color);
-			if (particle == null) return;
+			particle.position = particle.previousPosition = position;
+			particle.life = life;
+			particle.color = s.color;
+			particle.radius = particle.initialRadius = s.radius;
 
 			var pd = new ParticleData
 			{
 				particle = particle,
 				position = position,
 				velocity = velocity,
-				lifetime = lifetime,
-				maxLifetime = lifetime,
+				maxLifetime = life,
 				color = s.color,
 				radius = initialRadius,
 				initialRadius = s.radius
 			};
 
-			activeParticles.Add(pd);
+			particle.particleDataBase = pd;
 		}
 
 		private void UpdateParticles()
 		{
 			float dt = Time.deltaTime;
 
-			for (int i = activeParticles.Count - 1; i >= 0; i--)
+			for (int i = customParticleSystem.activeParticles.Count - 1; i >= 0; i--)
 			{
-				var pd = activeParticles[i];
+				var pd = customParticleSystem.activeParticles[i].particleDataBase as ParticleData;
 				var p = pd.particle;
 
-				if (pd.lifetime <= 0f)
-				{
-					activeParticles.RemoveAt(i);
-					continue;
-				}
-
-				pd.lifetime -= dt;
-
-				if (pd.lifetime <= 0f)
-				{
-					customParticleSystem.UpdateParticle(p, pd.position, 0f, pd.radius, pd.color);
-					activeParticles.RemoveAt(i);
-					continue;
-				}
-
 				// fade
-				float norm = 1f - Mathf.Clamp01(pd.lifetime / pd.maxLifetime);
-				float alpha = (norm < settings.fadeStartTime || Mathf.Approximately(settings.fadeStartTime, 1f))
-							  ? 1f
-							  : Mathf.Clamp01(1f - ((norm - settings.fadeStartTime) / (1f - settings.fadeStartTime)));
+				float norm = 1f - Mathf.Clamp01(p.life / pd.maxLifetime);
+				float alpha = (norm < settings.fadeStartTime || Mathf.Approximately(settings.fadeStartTime, 1f)) ? 1f : Mathf.Clamp01(1f - ((norm - settings.fadeStartTime) / (1f - settings.fadeStartTime)));
 				pd.color.a = alpha;
 
 				// scale
@@ -225,9 +209,7 @@ namespace MassiveHadronLtd
 				pd.velocity.y -= settings.gravity * dt;
 				pd.position += pd.velocity * dt;
 
-				float groundY = settings.useGlobalGroundPlane
-								? settings.groundHeight
-								: transform.position.y + settings.groundHeight;
+				float groundY = settings.useGlobalGroundPlane ? settings.groundHeight : transform.position.y + settings.groundHeight;
 
 				if (pd.velocity.y < 0f && pd.position.y <= groundY)
 				{
@@ -237,7 +219,7 @@ namespace MassiveHadronLtd
 				}
 
 				// Update render system
-				customParticleSystem.UpdateParticle(p, pd.position, pd.lifetime, pd.radius, pd.color);
+				customParticleSystem.UpdateParticle(p, pd.position, pd.radius, pd.color);
 			}
 		}
 	}
