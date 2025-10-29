@@ -166,7 +166,8 @@ namespace MassiveHadronLtd
 			var particle = customParticleSystem.AllocateParticle();
 			if (particle == null) return;
 
-			particle.position = particle.previousPosition = position;
+			particle.delta = Vector3.zero;
+			particle.position = position;
 			particle.life = life;
 			particle.color = color;
 

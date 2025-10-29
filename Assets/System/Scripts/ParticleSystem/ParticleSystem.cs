@@ -20,7 +20,7 @@ namespace MassiveHadronLtd
 			public int vertexIndex;
 			public int poolIndex;
 			public Vector3 position;
-			public Vector3 previousPosition;
+			public Vector3 delta;
 			public float radius;
 			public Color color;
 		}
@@ -148,7 +148,7 @@ namespace MassiveHadronLtd
 				return false;
 			}
 
-			particle.previousPosition = particle.position;
+			particle.delta = position - particle.position;
 			particle.position = position;
 			particle.radius = radius;
 			particle.color = color;
@@ -184,8 +184,7 @@ namespace MassiveHadronLtd
 				}
 
 				var pos = p.position;
-				var prev = p.previousPosition;
-				var delta = pos - prev;
+				var delta = p.delta;
 				var toCam = (pos - camPos).normalized;
 				var tangent = Vector3.Cross(toCam, delta).normalized;
 
