@@ -43,7 +43,7 @@ namespace MassiveHadronLtd
 
 		private ParticleSystem customParticleSystem;
 
-		private class ParticleData : ParticleSystem.ParticleDataBase
+		private class ParticleData : ParticleSystem.ParticleDataRoot
 		{
 			public ParticleSystem.Particle particle;  // Direct reference
 			public Vector3 position;
@@ -152,26 +152,26 @@ namespace MassiveHadronLtd
 		public void SpawnParticle(Vector3 position, Vector3 velocity, float? lifetimeVariation = null, ParticleSettings customSettings = null)
 		{
 			if (!settings.updateParticles) return;
-			var particle = customParticleSystem.AllocateParticle();
-			if (particle == null) return;
 
 			var s = customSettings ?? settings;
-			float variation = (lifetimeVariation ?? s.lifetimeVariation);
-			float life = s.lifetime + variation + Random.Range(-variation, variation);
+			var variation = (lifetimeVariation ?? s.lifetimeVariation);
+			var life = s.lifetime + variation + Random.Range(-variation, variation);
 			if (life <= 0f)
 			{
 				Debug.LogError($"spawning particle with no life span {life}");
 				return;
 			}
 
-			float initialScale = s.scaleCurve.Evaluate(0f);
-			float initialRadius = s.radius * initialScale;
+			var particle = customParticleSystem.AllocateParticle();
+			if (particle == null) return;
 
 			particle.position = particle.previousPosition = position;
 			particle.life = life;
 			particle.color = s.color;
 
-			var pd = new ParticleData
+			var initialRadius = s.radius * s.scaleCurve.Evaluate(0f);
+
+			particle.particleData = new ParticleData
 			{
 				particle = particle,
 				position = position,
@@ -180,8 +180,6 @@ namespace MassiveHadronLtd
 				color = s.color,
 				initialRadius = s.radius
 			};
-
-			particle.particleDataBase = pd;
 		}
 
 		private void UpdateParticles()
@@ -190,11 +188,10 @@ namespace MassiveHadronLtd
 
 			for (int i = customParticleSystem.activeParticles.Count - 1; i >= 0; i--)
 			{
-				var pd = customParticleSystem.activeParticles[i].particleDataBase as ParticleData;
-				var p = pd.particle;
+				var pd = customParticleSystem.activeParticles[i].particleData as ParticleData;
 
 				// fade
-				float norm = 1f - Mathf.Clamp01(p.life / pd.maxLifetime);
+				float norm = 1f - Mathf.Clamp01(pd.particle.life / pd.maxLifetime);
 				float alpha = (norm < settings.fadeStartTime || Mathf.Approximately(settings.fadeStartTime, 1f)) ? 1f : Mathf.Clamp01(1f - ((norm - settings.fadeStartTime) / (1f - settings.fadeStartTime)));
 				pd.color.a = alpha;
 
@@ -216,7 +213,7 @@ namespace MassiveHadronLtd
 				}
 
 				// Update render system
-				customParticleSystem.UpdateParticle(p, pd.position, radius, pd.color);
+				customParticleSystem.UpdateParticle(pd.particle, pd.position, radius, pd.color);
 			}
 		}
 	}

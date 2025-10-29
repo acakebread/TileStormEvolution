@@ -11,11 +11,11 @@ namespace MassiveHadronLtd
 		private Mesh mesh;
 		private readonly Camera mainCamera;
 
-		public abstract class ParticleDataBase { }
+		public abstract class ParticleDataRoot { }
 
 		public class Particle
 		{
-			public ParticleDataBase particleDataBase;
+			public ParticleDataRoot particleData;
 			public float life; // < 0 → dead
 			public int vertexIndex;
 			public int poolIndex;
@@ -167,7 +167,7 @@ namespace MassiveHadronLtd
 				for (int v = 0; v < verticesPerParticle; v++)
 				{
 					vertices[vertexIndex + v] = Vector3.zero;
-					colors[vertexIndex + v] = Color.clear;
+					colors[vertexIndex + v] = Color.clear;// don't know if this is necessary
 				}
 			}
 		}
