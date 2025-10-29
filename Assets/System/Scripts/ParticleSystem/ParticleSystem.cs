@@ -10,7 +10,6 @@ namespace MassiveHadronLtd
 			public float lifetime = 1f;
 			public float radius = 0.01f; // Controls size for simple particles and body radius for three-zone
 			public Color color = Color.white;
-			// decay removed — never used
 		}
 
 		private readonly int maxParticles = 4096;
@@ -21,7 +20,6 @@ namespace MassiveHadronLtd
 
 		private class Particle
 		{
-			// public bool isActive; → REMOVED
 			public int vertexIndex;           // Starting vertex index in mesh
 			public int poolIndex;             // Index in particlePool
 			public Vector3 position;          // World space
