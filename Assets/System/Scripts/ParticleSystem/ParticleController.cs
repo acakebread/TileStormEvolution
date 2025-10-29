@@ -24,7 +24,8 @@ namespace MassiveHadronLtd
 			public bool updateParticles = true;
 			[Range(0f, 1f)] public float fadeStartTime = 1f;
 			[Range(0.1f, 10f)] public float cycleTime = 0.1f;
-			[SerializeField] public List<Pulse> pulses = new List<Pulse> { new Pulse { start = 0f, end = 0.1f } };
+			[SerializeField]
+			public List<Pulse> pulses = new List<Pulse> { new Pulse { start = 0f, end = 0.1f } };
 			[Range(1, 128)] public int particleCount = 1;
 			public Vector3 velocity = Vector3.zero;
 			[Range(0f, 10f)] public float scatter = 0f;
@@ -44,7 +45,7 @@ namespace MassiveHadronLtd
 
 		private class ParticleData
 		{
-			public int poolIndex;
+			public ParticleSystem.Particle particle;  // Direct reference
 			public Vector3 position;
 			public Vector3 velocity;
 			public float lifetime;
@@ -101,7 +102,6 @@ namespace MassiveHadronLtd
 			if (settings.updateParticles)
 				UpdateParticles();
 
-			// PWM timeline
 			lastTimelinePosition = timelinePosition;
 			timelinePosition += Time.deltaTime;
 			if (timelinePosition >= settings.cycleTime)
@@ -167,13 +167,13 @@ namespace MassiveHadronLtd
 			float initialScale = s.scaleCurve.Evaluate(0f);
 			float initialRadius = s.radius * initialScale;
 
-			// ----- NEW CALL: 4 arguments -----
-			int poolIndex = customParticleSystem.SpawnParticle(position, lifetime, initialRadius, s.color);
-			if (poolIndex == -1) return;
+			// NEW: Returns Particle directly
+			var particle = customParticleSystem.SpawnParticle(position, lifetime, initialRadius, s.color);
+			if (particle == null) return;
 
 			var pd = new ParticleData
 			{
-				poolIndex = poolIndex,
+				particle = particle,
 				position = position,
 				velocity = velocity,
 				lifetime = lifetime,
@@ -193,6 +193,7 @@ namespace MassiveHadronLtd
 			for (int i = activeParticles.Count - 1; i >= 0; i--)
 			{
 				var pd = activeParticles[i];
+				var p = pd.particle;
 
 				if (pd.lifetime <= 0f)
 				{
@@ -204,7 +205,7 @@ namespace MassiveHadronLtd
 
 				if (pd.lifetime <= 0f)
 				{
-					customParticleSystem.UpdateParticle(pd.poolIndex, pd.position, 0f, pd.radius, pd.color);
+					customParticleSystem.UpdateParticle(p, pd.position, 0f, pd.radius, pd.color);
 					activeParticles.RemoveAt(i);
 					continue;
 				}
@@ -235,7 +236,8 @@ namespace MassiveHadronLtd
 					pd.velocity *= settings.bounceDamping;
 				}
 
-				customParticleSystem.UpdateParticle(pd.poolIndex, pd.position, pd.lifetime, pd.radius, pd.color);
+				// Update render system
+				customParticleSystem.UpdateParticle(p, pd.position, pd.lifetime, pd.radius, pd.color);
 			}
 		}
 	}

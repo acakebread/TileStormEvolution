@@ -11,7 +11,7 @@ namespace MassiveHadronLtd
 		private Mesh mesh;
 		private readonly Camera mainCamera;
 
-		private class Particle
+		public class Particle
 		{
 			public int vertexIndex;
 			public int poolIndex;
@@ -123,11 +123,11 @@ namespace MassiveHadronLtd
 			mesh.RecalculateBounds();
 		}
 
-		// ----- NEW API -------------------------------------------------
-		public int SpawnParticle(Vector3 position, float lifetime, float radius, Color color)
+		// NEW: Returns the actual Particle
+		public Particle SpawnParticle(Vector3 position, float lifetime, float radius, Color color)
 		{
 			Particle p = GetInactiveParticle();
-			if (p == null) return -1;
+			if (p == null) return null;
 
 			p.position = p.previousPosition = position;
 			p.lifetime = p.maxLifetime = lifetime;
@@ -136,7 +136,7 @@ namespace MassiveHadronLtd
 
 			activeParticles.Add(p);
 			activeParticleCount++;
-			return p.poolIndex;
+			return p;
 		}
 
 		private Particle GetInactiveParticle()
@@ -147,24 +147,22 @@ namespace MassiveHadronLtd
 			return particlePool[idx];
 		}
 
-		public void UpdateParticle(int poolIndex, Vector3 position, float lifetime, float radius, Color color)
+		// NEW: Takes Particle reference
+		public void UpdateParticle(Particle particle, Vector3 position, float lifetime, float radius, Color color)
 		{
-			if (poolIndex < 0 || poolIndex >= particlePool.Count) return;
+			if (particle == null || particle.lifetime <= 0f) return;
 
-			Particle p = particlePool[poolIndex];
-			if (p.lifetime <= 0f) return;
-
-			p.previousPosition = p.position;
-			p.position = position;
-			p.lifetime = lifetime;
-			p.radius = radius;
-			p.color = color;
+			particle.previousPosition = particle.position;
+			particle.position = position;
+			particle.lifetime = lifetime;
+			particle.radius = radius;
+			particle.color = color;
 
 			if (lifetime <= 0f)
 			{
-				DeactivateQuad(p.vertexIndex);
-				freeParticleIndices.Add(p.poolIndex);
-				activeParticles.Remove(p);
+				DeactivateQuad(particle.vertexIndex);
+				freeParticleIndices.Add(particle.poolIndex);
+				activeParticles.Remove(particle);
 				activeParticleCount--;
 			}
 		}
