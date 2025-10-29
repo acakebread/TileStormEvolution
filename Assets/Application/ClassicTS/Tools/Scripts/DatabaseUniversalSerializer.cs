@@ -35,32 +35,32 @@ namespace ClassicTilestorm
 		[Serializable]
 		private class LegacyDatabaseData
 		{
-			public LegacyMap[] maps;
-			public Theme[] themes;
-			public TileDef[] tiledefs;
-			public Button[] buttons;
-			public TextureSet[] texture_set;
+			[System.NonSerialized] public LegacyMap[] maps;
+			[System.NonSerialized] public Theme[] themes;
+			[System.NonSerialized] public TileDef[] tiledefs;
+			[System.NonSerialized] public Button[] buttons;
+			[System.NonSerialized] public TextureSet[] texture_set;
 		}
 
 		[Serializable]
 		private class LegacyMap
 		{
-			public string name;
-			public bool bLightTiles;
-			public LegacyMapTileDef[] defs;
-			public Waypoint[] waypoints;
-			public Tiles tiles;
-			public Tiles mixed;
-			public Pickups Pickups;
-			public string szEggbotCostume;
-			public string szButtonID;
-			public string szMusic;
+			[System.NonSerialized] public string name;
+			[System.NonSerialized] public bool bLightTiles;
+			[System.NonSerialized] public LegacyMapTileDef[] defs;
+			[System.NonSerialized] public Waypoint[] waypoints;
+			[System.NonSerialized] public Tiles tiles;
+			[System.NonSerialized] public Tiles mixed;
+			[System.NonSerialized] public Pickups Pickups;
+			[System.NonSerialized] public string szEggbotCostume;
+			[System.NonSerialized] public string szButtonID;
+			[System.NonSerialized] public string szMusic;
 		}
 
 		[Serializable]
 		private class LegacyMapTileDef
 		{
-			public string szType;
+			[System.NonSerialized] public string szType;
 		}
 
 		[Serializable]
