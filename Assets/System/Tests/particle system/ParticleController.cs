@@ -270,7 +270,8 @@ namespace MassiveHadronLtd
 				if (particle.velocity.y < 0 && currentY <= groundY)
 				{
 					particle.position.y = groundY;
-					particle.velocity.y = -particle.velocity.y * settings.bounceDamping;
+					particle.velocity.y = -particle.velocity.y;// * settings.bounceDamping;
+					particle.velocity*= settings.bounceDamping;
 				}
 
 				customParticleSystem.UpdateParticle(particle.poolIndex, particle.position, particle.lifetime, particle.radius, particle.tipSize, particle.color);
