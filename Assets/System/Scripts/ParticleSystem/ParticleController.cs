@@ -47,12 +47,11 @@ namespace MassiveHadronLtd
 			public int poolIndex;
 			public Vector3 position;
 			public Vector3 velocity;
-			public float lifetime;          // < 0 → dead / returned to pool
+			public float lifetime;
 			public float maxLifetime;
 			public Color color;
 			public float radius;
 			public float initialRadius;
-			// tipSize removed – never used by the renderer
 		}
 
 		private List<ParticleData> activeParticles;
@@ -77,7 +76,6 @@ namespace MassiveHadronLtd
 				return;
 			}
 
-			// Ensure a valid curve (editor may have cleared it)
 			if (settings.scaleCurve.keys.Length == 0)
 			{
 				settings.scaleCurve = new AnimationCurve();
@@ -103,7 +101,7 @@ namespace MassiveHadronLtd
 			if (settings.updateParticles)
 				UpdateParticles();
 
-			// ---- PWM timeline ----
+			// PWM timeline
 			lastTimelinePosition = timelinePosition;
 			timelinePosition += Time.deltaTime;
 			if (timelinePosition >= settings.cycleTime)
@@ -115,18 +113,16 @@ namespace MassiveHadronLtd
 
 			foreach (var pulse in settings.pulses)
 			{
-				// currently inside a pulse?
 				if (normalizedTime >= pulse.start && normalizedTime <= pulse.end)
 					inPulse = true;
 
-				// did we cross a pulse start this frame?
 				bool crossed = false;
 				if (lastNormalizedTime <= normalizedTime)
 				{
 					if (lastNormalizedTime < pulse.end && normalizedTime > pulse.start)
 						crossed = true;
 				}
-				else // wrap-around
+				else
 				{
 					if (lastNormalizedTime < pulse.end || normalizedTime > pulse.start)
 						crossed = true;
@@ -164,36 +160,30 @@ namespace MassiveHadronLtd
 		{
 			if (!settings.updateParticles) return;
 
-			var activeSettings = customSettings ?? settings;
-			float variation = lifetimeVariation ?? activeSettings.lifetimeVariation;
-			float lifetime = activeSettings.lifetime + Random.Range(-variation, variation);
+			var s = customSettings ?? settings;
+			float variation = lifetimeVariation ?? s.lifetimeVariation;
+			float lifetime = s.lifetime + Random.Range(-variation, variation);
 
-			float initialScale = activeSettings.scaleCurve.Evaluate(0f);
-			float initialRadius = activeSettings.radius * initialScale;
+			float initialScale = s.scaleCurve.Evaluate(0f);
+			float initialRadius = s.radius * initialScale;
 
-			var ps = new ParticleSystem.ParticleSettings
-			{
-				lifetime = lifetime,
-				radius = initialRadius,
-				color = activeSettings.color
-			};
-
-			int poolIndex = customParticleSystem.SpawnParticle(position, ps);
+			// ----- NEW CALL: 4 arguments -----
+			int poolIndex = customParticleSystem.SpawnParticle(position, lifetime, initialRadius, s.color);
 			if (poolIndex == -1) return;
 
-			var particle = new ParticleData
+			var pd = new ParticleData
 			{
 				poolIndex = poolIndex,
 				position = position,
 				velocity = velocity,
 				lifetime = lifetime,
 				maxLifetime = lifetime,
-				color = activeSettings.color,
+				color = s.color,
 				radius = initialRadius,
-				initialRadius = activeSettings.radius
+				initialRadius = s.radius
 			};
 
-			activeParticles.Add(particle);
+			activeParticles.Add(pd);
 		}
 
 		private void UpdateParticles()
@@ -202,52 +192,50 @@ namespace MassiveHadronLtd
 
 			for (int i = activeParticles.Count - 1; i >= 0; i--)
 			{
-				var p = activeParticles[i];
+				var pd = activeParticles[i];
 
-				if (p.lifetime <= 0f)
+				if (pd.lifetime <= 0f)
 				{
 					activeParticles.RemoveAt(i);
 					continue;
 				}
 
-				p.lifetime -= dt;
+				pd.lifetime -= dt;
 
-				if (p.lifetime <= 0f)
+				if (pd.lifetime <= 0f)
 				{
-					// Notify system particle is dead — only 5 args!
-					customParticleSystem.UpdateParticle(p.poolIndex, p.position, 0f, p.radius, p.color);
+					customParticleSystem.UpdateParticle(pd.poolIndex, pd.position, 0f, pd.radius, pd.color);
 					activeParticles.RemoveAt(i);
 					continue;
 				}
 
-				// ---- alpha fade ----
-				float norm = 1f - Mathf.Clamp01(p.lifetime / p.maxLifetime);
+				// fade
+				float norm = 1f - Mathf.Clamp01(pd.lifetime / pd.maxLifetime);
 				float alpha = (norm < settings.fadeStartTime || Mathf.Approximately(settings.fadeStartTime, 1f))
 							  ? 1f
 							  : Mathf.Clamp01(1f - ((norm - settings.fadeStartTime) / (1f - settings.fadeStartTime)));
-				p.color.a = alpha;
+				pd.color.a = alpha;
 
-				// ---- scaling ----
+				// scale
 				float scale = settings.scaleCurve.Evaluate(norm);
-				p.radius = p.initialRadius * scale;
+				pd.radius = pd.initialRadius * scale;
 
-				// ---- physics ----
-				p.velocity.y -= settings.gravity * dt;
-				p.position += p.velocity * dt;
+				// physics
+				pd.velocity.y -= settings.gravity * dt;
+				pd.position += pd.velocity * dt;
 
 				float groundY = settings.useGlobalGroundPlane
 								? settings.groundHeight
 								: transform.position.y + settings.groundHeight;
 
-				if (p.velocity.y < 0f && p.position.y <= groundY)
+				if (pd.velocity.y < 0f && pd.position.y <= groundY)
 				{
-					p.position.y = groundY;
-					p.velocity.y = -p.velocity.y;
-					p.velocity *= settings.bounceDamping;
+					pd.position.y = groundY;
+					pd.velocity.y = -pd.velocity.y;
+					pd.velocity *= settings.bounceDamping;
 				}
 
-				// CORRECT CALL: 5 arguments only
-				customParticleSystem.UpdateParticle(p.poolIndex, p.position, p.lifetime, p.radius, p.color);
+				customParticleSystem.UpdateParticle(pd.poolIndex, pd.position, pd.lifetime, pd.radius, pd.color);
 			}
 		}
 	}

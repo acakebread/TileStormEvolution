@@ -5,13 +5,6 @@ namespace MassiveHadronLtd
 {
 	public class ParticleSystem
 	{
-		public class ParticleSettings
-		{
-			public float lifetime = 1f;
-			public float radius = 0.01f; // Controls size for simple particles and body radius for three-zone
-			public Color color = Color.white;
-		}
-
 		private readonly int maxParticles = 4096;
 		private readonly bool useThreeZoneSlicing;
 		private readonly Material material;
@@ -20,12 +13,12 @@ namespace MassiveHadronLtd
 
 		private class Particle
 		{
-			public int vertexIndex;           // Starting vertex index in mesh
-			public int poolIndex;             // Index in particlePool
-			public Vector3 position;          // World space
-			public Vector3 previousPosition;  // World space
-			public float lifetime;            // < 0 → not in use, > 0 → alive
-			public float maxLifetime;         // Initial lifetime
+			public int vertexIndex;
+			public int poolIndex;
+			public Vector3 position;
+			public Vector3 previousPosition;
+			public float lifetime;            // < 0 → dead
+			public float maxLifetime;
 			public Color color;
 			public float radius;
 			public float initialRadius;
@@ -59,25 +52,14 @@ namespace MassiveHadronLtd
 		{
 			if (material.shader.name != "MassiveHadronLtd/Unlit/AdditiveParticles")
 			{
-				Debug.LogWarning($"ParticleSystem: Material shader is {material.shader.name}, expected 'MassiveHadronLtd/Unlit/AdditiveParticles'. Attempting to set shader.");
-				Shader additiveShader = Shader.Find("MassiveHadronLtd/Unlit/AdditiveParticles");
-				if (additiveShader == null)
-				{
-					Debug.LogError("ParticleSystem: Could not find 'MassiveHadronLtd/Unlit/AdditiveParticles' shader.");
-					return;
-				}
-				material.shader = additiveShader;
+				Debug.LogWarning($"ParticleSystem: Expected shader 'MassiveHadronLtd/Unlit/AdditiveParticles'.");
+				Shader s = Shader.Find("MassiveHadronLtd/Unlit/AdditiveParticles");
+				if (s) material.shader = s;
 			}
-
 			material.SetColor("_BaseColor", Color.white);
 			material.SetFloat("_ZWrite", 0);
 			material.SetFloat("_Cull", (float)UnityEngine.Rendering.CullMode.Off);
 			material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent + 100;
-
-			if (material.GetTexture("_BaseMap") == null)
-			{
-				Debug.LogWarning("ParticleSystem: No texture assigned to _BaseMap in material. Assign a spark texture for proper rendering.");
-			}
 		}
 
 		private void InitializePool()
@@ -90,10 +72,9 @@ namespace MassiveHadronLtd
 			{
 				var p = new Particle
 				{
-					// isActive = false → REMOVED
 					vertexIndex = i * verticesPerParticle,
 					poolIndex = i,
-					lifetime = -1f  // Explicit "dead" sentinel
+					lifetime = -1f
 				};
 				particlePool.Add(p);
 				freeParticleIndices.Add(i);
@@ -113,43 +94,25 @@ namespace MassiveHadronLtd
 
 			for (int i = 0; i < maxParticles; i++)
 			{
-				int vertexOffset = i * verticesPerParticle;
-
+				int offset = i * verticesPerParticle;
 				if (useThreeZoneSlicing)
 				{
 					vertices.AddRange(new Vector3[8]);
-					triangles.AddRange(new[]
-					{
-						vertexOffset + 0, vertexOffset + 1, vertexOffset + 2,
-						vertexOffset + 1, vertexOffset + 3, vertexOffset + 2,
-						vertexOffset + 2, vertexOffset + 3, vertexOffset + 4,
-						vertexOffset + 3, vertexOffset + 5, vertexOffset + 4,
-						vertexOffset + 4, vertexOffset + 5, vertexOffset + 6,
-						vertexOffset + 5, vertexOffset + 7, vertexOffset + 6
+					triangles.AddRange(new[] {
+						offset+0,offset+1,offset+2, offset+1,offset+3,offset+2,
+						offset+2,offset+3,offset+4, offset+3,offset+5,offset+4,
+						offset+4,offset+5,offset+6, offset+5,offset+7,offset+6
 					});
 					colors.AddRange(new Color[8]);
-					uvs.AddRange(new[]
-					{
-						new Vector2(0f, 0f), new Vector2(1f, 0f),
-						new Vector2(0f, 0.5f), new Vector2(1f, 0.5f),
-						new Vector2(0f, 0.5f), new Vector2(1f, 0.5f),
-						new Vector2(0f, 1f), new Vector2(1f, 1f)
-					});
+					uvs.AddRange(new[]{ new Vector2(0,0),new Vector2(1,0), new Vector2(0,0.5f),new Vector2(1,0.5f),
+										new Vector2(0,0.5f),new Vector2(1,0.5f), new Vector2(0,1),new Vector2(1,1) });
 				}
 				else
 				{
 					vertices.AddRange(new Vector3[4]);
-					triangles.AddRange(new[]
-					{
-						vertexOffset + 0, vertexOffset + 1, vertexOffset + 2,
-						vertexOffset + 1, vertexOffset + 3, vertexOffset + 2
-					});
+					triangles.AddRange(new[] { offset + 0, offset + 1, offset + 2, offset + 1, offset + 3, offset + 2 });
 					colors.AddRange(new Color[4]);
-					uvs.AddRange(new[]
-					{
-						new Vector2(0f, 0f), new Vector2(1f, 0f),
-						new Vector2(0f, 1f), new Vector2(1f, 1f)
-					});
+					uvs.AddRange(new[] { new Vector2(0, 0), new Vector2(1, 0), new Vector2(0, 1), new Vector2(1, 1) });
 				}
 			}
 
@@ -160,59 +123,48 @@ namespace MassiveHadronLtd
 			mesh.RecalculateBounds();
 		}
 
-		public int SpawnParticle(Vector3 position, ParticleSettings settings)
+		// ----- NEW API -------------------------------------------------
+		public int SpawnParticle(Vector3 position, float lifetime, float radius, Color color)
 		{
-			Particle particle = GetInactiveParticle();
-			if (particle == null) return -1;
+			Particle p = GetInactiveParticle();
+			if (p == null) return -1;
 
-			particle.position = position;
-			particle.previousPosition = position;
-			particle.lifetime = settings.lifetime;
-			particle.maxLifetime = settings.lifetime;
-			particle.color = settings.color;
-			particle.radius = settings.radius;
-			particle.initialRadius = settings.radius;
-			// particle.isActive = true → REMOVED
+			p.position = p.previousPosition = position;
+			p.lifetime = p.maxLifetime = lifetime;
+			p.color = color;
+			p.radius = p.initialRadius = radius;
 
-			activeParticles.Add(particle);
+			activeParticles.Add(p);
 			activeParticleCount++;
-			return particle.poolIndex;
+			return p.poolIndex;
 		}
 
 		private Particle GetInactiveParticle()
 		{
 			if (freeParticleIndices.Count == 0) return null;
-			int poolIndex = freeParticleIndices[freeParticleIndices.Count - 1];
+			int idx = freeParticleIndices[freeParticleIndices.Count - 1];
 			freeParticleIndices.RemoveAt(freeParticleIndices.Count - 1);
-			return particlePool[poolIndex];
+			return particlePool[idx];
 		}
 
-		public void UpdateParticle(int poolIndex, Vector3 position, float lifetime,
-								   float radius, Color color)
+		public void UpdateParticle(int poolIndex, Vector3 position, float lifetime, float radius, Color color)
 		{
-			if (poolIndex < 0 || poolIndex >= particlePool.Count)
-			{
-				Debug.LogWarning($"UpdateParticle: Invalid poolIndex {poolIndex}");
-				return;
-			}
+			if (poolIndex < 0 || poolIndex >= particlePool.Count) return;
 
-			Particle particle = particlePool[poolIndex];
+			Particle p = particlePool[poolIndex];
+			if (p.lifetime <= 0f) return;
 
-			// Ignore updates on dead particles
-			if (particle.lifetime <= 0f) return;
-
-			particle.previousPosition = particle.position;
-			particle.position = position;
-			particle.lifetime = lifetime;
-			particle.radius = radius;
-			particle.color = color;
+			p.previousPosition = p.position;
+			p.position = position;
+			p.lifetime = lifetime;
+			p.radius = radius;
+			p.color = color;
 
 			if (lifetime <= 0f)
 			{
-				DeactivateQuad(particle.vertexIndex);
-
-				freeParticleIndices.Add(particle.poolIndex);
-				activeParticles.Remove(particle);
+				DeactivateQuad(p.vertexIndex);
+				freeParticleIndices.Add(p.poolIndex);
+				activeParticles.Remove(p);
 				activeParticleCount--;
 			}
 		}
@@ -224,7 +176,6 @@ namespace MassiveHadronLtd
 				vertices[vertexIndex + v] = Vector3.zero;
 				colors[vertexIndex + v] = Color.clear;
 			}
-			// Upload happens in UpdateMesh()
 		}
 
 		public void Render()
@@ -235,66 +186,52 @@ namespace MassiveHadronLtd
 
 		private void UpdateMesh()
 		{
-			var vCamPos = mainCamera.transform.position;
+			var camPos = mainCamera.transform.position;
 
-			for (var i = 0; i < activeParticleCount; i++)
+			for (int i = 0; i < activeParticleCount; i++)
 			{
-				if (i >= activeParticles.Count)
+				if (i >= activeParticles.Count) { activeParticleCount = activeParticles.Count; break; }
+				var p = activeParticles[i];
+				if (p.lifetime <= 0f) continue;
+
+				var pos = p.position;
+				var prev = p.previousPosition;
+				var delta = pos - prev;
+				var toCam = (pos - camPos).normalized;
+				var tangent = Vector3.Cross(toCam, delta).normalized;
+
+				float dot = Vector3.Dot(delta, toCam);
+				float tang = (delta - dot * toCam).magnitude;
+				if (tang < p.radius)
 				{
-					Debug.LogWarning($"UpdateMesh: Index {i} out of bounds for activeParticles.Count {activeParticles.Count}, activeParticleCount {activeParticleCount}");
-					activeParticleCount = activeParticles.Count;
-					break;
+					var cross = Vector3.Cross(tangent, toCam);
+					delta += (p.radius - tang) * cross;
 				}
 
-				var particle = activeParticles[i];
-				if (particle.lifetime <= 0f) continue; // Guard
-
-				var vParticlePos = particle.position;
-				var vParticleOld = particle.previousPosition;
-				var vParticleDelta = vParticlePos - vParticleOld;
-				var vCamParticle = (vParticlePos - vCamPos).normalized;
-				var vTanParticle = Vector3.Cross(vCamParticle, vParticleDelta).normalized;
-
-				var dot = Vector3.Dot(vParticleDelta, vCamParticle);
-				var tangentialComponent = (vParticleDelta - dot * vCamParticle).magnitude;
-
-				if (tangentialComponent < particle.radius)
-				{
-					var vCross = Vector3.Cross(vTanParticle, vCamParticle);
-					vParticleDelta += (particle.radius - tangentialComponent) * vCross;
-				}
-
-				var vertexIndex = particle.vertexIndex;
-				var headPos = vParticlePos + vParticleDelta;
-				var tailPos = vParticlePos - vParticleDelta;
-				var vTangentRadius = vTanParticle * particle.radius;
+				var head = pos + delta;
+				var tail = pos - delta;
+				var rad = tangent * p.radius;
+				int v = p.vertexIndex;
 
 				if (useThreeZoneSlicing)
 				{
-					var velocityComponent = tangentialComponent > 0.0001f ? Mathf.Max(0, tangentialComponent - particle.radius) / tangentialComponent : 0f;
-					var vHalfBody = velocityComponent * vParticleDelta;
-					var headBody = vParticlePos + vHalfBody;
-					var tailBody = vParticlePos - vHalfBody;
+					float velComp = tang > 0.0001f ? Mathf.Max(0, tang - p.radius) / tang : 0f;
+					var half = velComp * delta;
+					var headB = pos + half;
+					var tailB = pos - half;
 
-					vertices[vertexIndex + 0] = headPos + vTangentRadius;
-					vertices[vertexIndex + 1] = headPos - vTangentRadius;
-					vertices[vertexIndex + 2] = headBody + vTangentRadius;
-					vertices[vertexIndex + 3] = headBody - vTangentRadius;
-					vertices[vertexIndex + 4] = tailBody + vTangentRadius;
-					vertices[vertexIndex + 5] = tailBody - vTangentRadius;
-					vertices[vertexIndex + 6] = tailPos + vTangentRadius;
-					vertices[vertexIndex + 7] = tailPos - vTangentRadius;
+					vertices[v + 0] = head + rad; vertices[v + 1] = head - rad;
+					vertices[v + 2] = headB + rad; vertices[v + 3] = headB - rad;
+					vertices[v + 4] = tailB + rad; vertices[v + 5] = tailB - rad;
+					vertices[v + 6] = tail + rad; vertices[v + 7] = tail - rad;
 
-					for (var j = 0; j < 8; j++) colors[vertexIndex + j] = particle.color;
+					for (int j = 0; j < 8; j++) colors[v + j] = p.color;
 				}
 				else
 				{
-					vertices[vertexIndex + 0] = tailPos - vTangentRadius;
-					vertices[vertexIndex + 1] = tailPos + vTangentRadius;
-					vertices[vertexIndex + 2] = headPos - vTangentRadius;
-					vertices[vertexIndex + 3] = headPos + vTangentRadius;
-
-					for (var j = 0; j < 4; j++) colors[vertexIndex + j] = particle.color;
+					vertices[v + 0] = tail - rad; vertices[v + 1] = tail + rad;
+					vertices[v + 2] = head - rad; vertices[v + 3] = head + rad;
+					for (int j = 0; j < 4; j++) colors[v + j] = p.color;
 				}
 			}
 
