@@ -142,7 +142,13 @@ namespace MassiveHadronLtd
 			particle.life -= Time.deltaTime;
 			if (particle.life <= 0f)
 			{
-				DeactivateQuad(particle.vertexIndex);
+				//DeactivateQuad
+				var vertexIndex = particle.vertexIndex;
+				for (var v = 0; v < verticesPerParticle; v++)
+				{
+					vertices[vertexIndex + v] = Vector3.zero;
+					colors[vertexIndex + v] = Color.clear;// don't know if this is necessary
+				}
 				freeParticleIndices.Add(particle.poolIndex);
 				activeParticles.Remove(particle);
 				return false;
@@ -153,15 +159,6 @@ namespace MassiveHadronLtd
 			particle.radius = radius;
 			particle.color = color;
 			return true;
-
-			void DeactivateQuad(int vertexIndex)
-			{
-				for (var v = 0; v < verticesPerParticle; v++)
-				{
-					vertices[vertexIndex + v] = Vector3.zero;
-					colors[vertexIndex + v] = Color.clear;// don't know if this is necessary
-				}
-			}
 		}
 
 		public void Render()
