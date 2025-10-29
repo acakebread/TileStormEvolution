@@ -21,7 +21,6 @@ namespace MassiveHadronLtd
 			public int poolIndex;
 			public Vector3 position;
 			public Vector3 previousPosition;
-			public float initialRadius;
 			public float radius;
 			public Color color;
 		}

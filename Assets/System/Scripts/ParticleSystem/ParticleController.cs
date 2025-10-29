@@ -50,7 +50,6 @@ namespace MassiveHadronLtd
 			public Vector3 velocity;
 			public float maxLifetime;
 			public Color color;
-			public float radius;
 			public float initialRadius;
 		}
 
@@ -171,7 +170,6 @@ namespace MassiveHadronLtd
 			particle.position = particle.previousPosition = position;
 			particle.life = life;
 			particle.color = s.color;
-			particle.radius = particle.initialRadius = s.radius;
 
 			var pd = new ParticleData
 			{
@@ -180,7 +178,6 @@ namespace MassiveHadronLtd
 				velocity = velocity,
 				maxLifetime = life,
 				color = s.color,
-				radius = initialRadius,
 				initialRadius = s.radius
 			};
 
@@ -203,7 +200,7 @@ namespace MassiveHadronLtd
 
 				// scale
 				float scale = settings.scaleCurve.Evaluate(norm);
-				pd.radius = pd.initialRadius * scale;
+				var radius = pd.initialRadius * scale;
 
 				// physics
 				pd.velocity.y -= settings.gravity * dt;
@@ -219,7 +216,7 @@ namespace MassiveHadronLtd
 				}
 
 				// Update render system
-				customParticleSystem.UpdateParticle(p, pd.position, pd.radius, pd.color);
+				customParticleSystem.UpdateParticle(p, pd.position, radius, pd.color);
 			}
 		}
 	}
