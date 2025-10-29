@@ -11,7 +11,11 @@ namespace MassiveHadronLtd
 		private readonly Material material;
 		private readonly Camera mainCamera;
 
-		public abstract class ParticleDataRoot { }
+		public abstract class ParticleDataRoot 
+		{
+			public Particle particle;   // Direct reference
+			public abstract void Update();
+		}
 
 		public class Particle
 		{
@@ -129,6 +133,15 @@ namespace MassiveHadronLtd
 			freeParticleIndices.RemoveAt(freeParticleIndices.Count - 1);
 			activeParticles.Add(particlePool[idx]);
 			return particlePool[idx];
+		}
+
+		public void UpdateParticles()
+		{
+			for (var i = activeParticles.Count - 1; i >= 0; i--)
+			{
+				activeParticles[i].particleData.Update();
+				UpdateParticle(activeParticles[i]);
+			}
 		}
 
 		public bool UpdateParticle(Particle particle)
