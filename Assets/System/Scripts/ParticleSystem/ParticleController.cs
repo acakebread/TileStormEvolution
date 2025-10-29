@@ -54,35 +54,39 @@ namespace MassiveHadronLtd
 		{
 			public ParticleController controller;
 			public Vector3 velocity;
-			public float maxLifetime;
+			public float duration;
 			public Color color;
-			public float initialRadius;
+			public float size;
 
-			public override void Update()
+			public override void UpdateColour()
 			{
-				var dt = Time.deltaTime;
-				var data = this;
-				var particle = data.particle;
-				particle.delta = -particle.position;
-
 				// ----- Fade -----
-				var norm = 1f - Mathf.Clamp01(data.particle.life / data.maxLifetime);
+				var norm = 1f - Mathf.Clamp01(particle.life / duration);
 				particle.color.a = (norm < controller.fadeStartTime || Mathf.Approximately(controller.fadeStartTime, 1f)) ? 1f : Mathf.Clamp01(1f - ((norm - controller.fadeStartTime) / (1f - controller.fadeStartTime)));
+			}
 
+			public override void UpdateScale()
+			{
 				// ----- Scale -----
-				particle.radius = data.initialRadius * controller.scaleCurve.Evaluate(norm);
+				var norm = 1f - Mathf.Clamp01(particle.life / duration);
+				particle.radius = size * controller.scaleCurve.Evaluate(norm);
+			}
 
+			public override void UpdatePosition()
+			{
 				// ----- Physics -----
-				data.velocity.y -= controller.gravity * dt;
-				particle.position += data.velocity * dt;
+				var dt = Time.deltaTime;
+				velocity.y -= controller.gravity * dt;
+				particle.delta = -particle.position;
+				particle.position += velocity * dt;
 
 				var groundY = controller.useGlobalGroundPlane ? controller.groundHeight : controller.transform.position.y + controller.groundHeight;
 
-				if (data.velocity.y < 0f && particle.position.y <= groundY)
+				if (velocity.y < 0f && particle.position.y <= groundY)
 				{
 					particle.position.y = groundY;
-					data.velocity.y = -data.velocity.y;
-					data.velocity *= controller.bounceDamping;
+					velocity.y = -velocity.y;
+					velocity *= controller.bounceDamping;
 				}
 				particle.delta += particle.position;
 			}
@@ -132,16 +136,16 @@ namespace MassiveHadronLtd
 			if (timelinePosition >= cycleTime)
 				timelinePosition -= cycleTime;
 
-			float normalizedTime = timelinePosition / cycleTime;
-			float lastNormalizedTime = lastTimelinePosition / cycleTime;
-			bool inPulse = false;
+			var normalizedTime = timelinePosition / cycleTime;
+			var lastNormalizedTime = lastTimelinePosition / cycleTime;
+			var inPulse = false;
 
 			foreach (var pulse in pulses)
 			{
 				if (normalizedTime >= pulse.start && normalizedTime <= pulse.end)
 					inPulse = true;
 
-				bool crossed = false;
+				var crossed = false;
 				if (lastNormalizedTime <= normalizedTime)
 				{
 					if (lastNormalizedTime < pulse.end && normalizedTime > pulse.start)
@@ -200,50 +204,13 @@ namespace MassiveHadronLtd
 				controller = this,
 				particle = particle,
 				velocity = velocity,
-				maxLifetime = life,
+				duration = life,
 				color = color,
-				initialRadius = radius
+				size = radius
 			};
 		}
 
-		private void UpdateParticles()
-		{
-			customParticleSystem.UpdateParticles();
-			//var dt = Time.deltaTime;
-
-			//for (var i = customParticleSystem.activeParticles.Count - 1; i >= 0; i--)
-			//{
-			//	var data = customParticleSystem.activeParticles[i].particleData as ParticleData;
-			//	var particle = data.particle;
-			//	//particle.delta = -particle.position;
-
-			//	//// ----- Fade -----
-			//	//var norm = 1f - Mathf.Clamp01(data.particle.life / data.maxLifetime);
-			//	//particle.color.a = (norm < fadeStartTime || Mathf.Approximately(fadeStartTime, 1f)) ? 1f : Mathf.Clamp01(1f - ((norm - fadeStartTime) / (1f - fadeStartTime)));
-
-			//	//// ----- Scale -----
-			//	//particle.radius = data.initialRadius * scaleCurve.Evaluate(norm);
-
-			//	//// ----- Physics -----
-			//	//data.velocity.y -= gravity * dt;
-			//	//particle.position += data.velocity * dt;
-
-			//	//var groundY = useGlobalGroundPlane ? groundHeight : transform.position.y + groundHeight;
-
-			//	//if (data.velocity.y < 0f && particle.position.y <= groundY)
-			//	//{
-			//	//	particle.position.y = groundY;
-			//	//	data.velocity.y = -data.velocity.y;
-			//	//	data.velocity *= bounceDamping;
-			//	//}
-			//	//particle.delta += particle.position;
-
-			//	data.Update();
-
-			//	// ----- Render update -----
-			//	customParticleSystem.UpdateParticle(particle);
-			//}
-		}
+		private void UpdateParticles() => customParticleSystem.UpdateParticles();
 	}
 }
 

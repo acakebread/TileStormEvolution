@@ -13,8 +13,10 @@ namespace MassiveHadronLtd
 
 		public abstract class ParticleDataRoot 
 		{
-			public Particle particle;   // Direct reference
-			public abstract void Update();
+			public Particle particle;
+			public abstract void UpdateColour();
+			public abstract void UpdateScale();
+			public abstract void UpdatePosition();
 		}
 
 		public class Particle
@@ -139,8 +141,10 @@ namespace MassiveHadronLtd
 		{
 			for (var i = activeParticles.Count - 1; i >= 0; i--)
 			{
-				activeParticles[i].particleData.Update();
-				UpdateParticle(activeParticles[i]);
+				if (false == UpdateParticle(activeParticles[i])) continue;
+				activeParticles[i].particleData.UpdateColour();
+				activeParticles[i].particleData.UpdateScale();
+				activeParticles[i].particleData.UpdatePosition();
 			}
 		}
 
