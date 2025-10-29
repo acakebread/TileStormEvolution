@@ -209,8 +209,8 @@ namespace MassiveHadronLtd
 				}
 				else
 				{
-					vertices[v + 0] = tail - rad; vertices[v + 1] = tail + rad;
-					vertices[v + 2] = head - rad; vertices[v + 3] = head + rad;
+					vertices[v + 0] = head - rad; vertices[v + 1] = head + rad;
+					vertices[v + 2] = tail - rad; vertices[v + 3] = tail + rad;
 					for (var j = 0; j < 4; j++) colors[v + j] = particle.color;
 				}
 			}

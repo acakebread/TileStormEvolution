@@ -652,7 +652,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &1910858983
 Transform:
   m_ObjectHideFlags: 0
@@ -680,48 +680,48 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cd8578c20d24105438647a46520bbefb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  lifetime: 1
-  lifetimeVariation: 0.5
-  radius: 0.02
+  lifetime: 0.3
+  lifetimeVariation: 0.3
+  radius: 0.05
   scaleCurve:
     serializedVersion: 2
     m_Curve:
     - serializedVersion: 3
       time: 0
-      value: 1
-      inSlope: 0
-      outSlope: 0
-      tangentMode: 0
+      value: 0.6462483
+      inSlope: 4
+      outSlope: 2.3007286
+      tangentMode: 1
       weightedMode: 0
       inWeight: 0
-      outWeight: 0
+      outWeight: 0.07789855
     - serializedVersion: 3
       time: 1
-      value: 1
-      inSlope: 0
+      value: 0.051879883
+      inSlope: -2.3435237
       outSlope: 0
-      tangentMode: 0
+      tangentMode: 1
       weightedMode: 0
-      inWeight: 0
+      inWeight: 0.054347813
       outWeight: 0
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  color: {r: 1, g: 1, b: 1, a: 1}
-  gravity: 10
-  bounceDamping: 0.8
+  color: {r: 1, g: 0.26917732, b: 0, a: 1}
+  gravity: -0.05
+  bounceDamping: 0
   groundHeight: 0
   useGlobalGroundPlane: 1
   useThreeZoneSlicing: 0
   updateParticles: 1
-  fadeStartTime: 1
+  fadeStartTime: 0.3
   cycleTime: 0.1
   pulses:
-  - start: 0
-    end: 0.1
+  - start: -0.01
+    end: 0
   particleCount: 1
-  velocity: {x: 0, y: 0, z: 0}
-  scatter: 0
+  velocity: {x: 0, y: 0.2, z: 0}
+  scatter: 0.1
   particleMaterial: {fileID: 2100000, guid: 02223f9d74ca8f74999a27cdc04e130f, type: 2}
 --- !u!1 &1959222889
 GameObject:

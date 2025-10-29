@@ -130,8 +130,6 @@ namespace MassiveHadronLtd
 
 			if (emitEnabled || inPulse)
 				EmitParticlesInternal();
-
-			customParticleSystem.Render();
 		}
 
 		void Update() => customParticleSystem.Render();
@@ -174,7 +172,7 @@ namespace MassiveHadronLtd
 				velocity = velocity,
 				maxLifetime = life,
 				color = color,
-				initialRadius = radius * scaleCurve.Evaluate(0f)
+				initialRadius = radius
 			};
 		}
 
@@ -184,40 +182,33 @@ namespace MassiveHadronLtd
 
 			for (var i = customParticleSystem.activeParticles.Count - 1; i >= 0; i--)
 			{
-				var pd = customParticleSystem.activeParticles[i].particleData as ParticleData;
-				var particle = pd.particle;
+				var data = customParticleSystem.activeParticles[i].particleData as ParticleData;
+				var particle = data.particle;
 				particle.delta = -particle.position;
 
 				// ----- Fade -----
-				var norm = 1f - Mathf.Clamp01(pd.particle.life / pd.maxLifetime);
-				var alpha = (norm < fadeStartTime || Mathf.Approximately(fadeStartTime, 1f))
-							   ? 1f
-							   : Mathf.Clamp01(1f - ((norm - fadeStartTime) / (1f - fadeStartTime)));
-				pd.color.a = alpha;
+				var norm = 1f - Mathf.Clamp01(data.particle.life / data.maxLifetime);
+				particle.color.a = (norm < fadeStartTime || Mathf.Approximately(fadeStartTime, 1f)) ? 1f : Mathf.Clamp01(1f - ((norm - fadeStartTime) / (1f - fadeStartTime)));
 
 				// ----- Scale -----
-				var scale = scaleCurve.Evaluate(norm);
-				var radius = pd.initialRadius * scale;
+				particle.radius = data.initialRadius * scaleCurve.Evaluate(norm);
 
 				// ----- Physics -----
-				pd.velocity.y -= gravity * dt;
-				particle.position += pd.velocity * dt;
+				data.velocity.y -= gravity * dt;
+				particle.position += data.velocity * dt;
 
 				var groundY = useGlobalGroundPlane ? groundHeight : transform.position.y + groundHeight;
 
-				if (pd.velocity.y < 0f && particle.position.y <= groundY)
+				if (data.velocity.y < 0f && particle.position.y <= groundY)
 				{
 					particle.position.y = groundY;
-					pd.velocity.y = -pd.velocity.y;
-					pd.velocity *= bounceDamping;
+					data.velocity.y = -data.velocity.y;
+					data.velocity *= bounceDamping;
 				}
 				particle.delta += particle.position;
 
-				pd.particle.radius = radius;
-				pd.particle.color = color;
-
 				// ----- Render update -----
-				if (false == customParticleSystem.UpdateParticle(pd.particle)) continue;
+				if (false == customParticleSystem.UpdateParticle(particle)) continue;
 			}
 		}
 	}
