@@ -53,7 +53,6 @@ namespace MassiveHadronLtd
 		private class ParticleData : ParticleSystem.ParticleDataRoot
 		{
 			public ParticleSystem.Particle particle;   // Direct reference
-			public Vector3 position;
 			public Vector3 velocity;
 			public float maxLifetime;
 			public Color color;
@@ -131,12 +130,11 @@ namespace MassiveHadronLtd
 
 			if (emitEnabled || inPulse)
 				EmitParticlesInternal();
-		}
 
-		void Update()
-		{
 			customParticleSystem.Render();
 		}
+
+		void Update() => customParticleSystem.Render();
 
 		public void EmitParticles() { emitEnabled = true; timelinePosition = 0f; }
 		public void StopEmitting() { emitEnabled = false; timelinePosition = 0f; }
@@ -170,11 +168,9 @@ namespace MassiveHadronLtd
 			particle.position = position;
 			particle.life = life;
 			particle.color = color;
-
 			particle.particleData = new ParticleData
 			{
 				particle = particle,
-				position = position,
 				velocity = velocity,
 				maxLifetime = life,
 				color = color,
@@ -189,6 +185,8 @@ namespace MassiveHadronLtd
 			for (var i = customParticleSystem.activeParticles.Count - 1; i >= 0; i--)
 			{
 				var pd = customParticleSystem.activeParticles[i].particleData as ParticleData;
+				var particle = pd.particle;
+				particle.delta = -particle.position;
 
 				// ----- Fade -----
 				var norm = 1f - Mathf.Clamp01(pd.particle.life / pd.maxLifetime);
@@ -203,19 +201,18 @@ namespace MassiveHadronLtd
 
 				// ----- Physics -----
 				pd.velocity.y -= gravity * dt;
-				pd.position += pd.velocity * dt;
+				particle.position += pd.velocity * dt;
 
 				var groundY = useGlobalGroundPlane ? groundHeight : transform.position.y + groundHeight;
 
-				if (pd.velocity.y < 0f && pd.position.y <= groundY)
+				if (pd.velocity.y < 0f && particle.position.y <= groundY)
 				{
-					pd.position.y = groundY;
+					particle.position.y = groundY;
 					pd.velocity.y = -pd.velocity.y;
 					pd.velocity *= bounceDamping;
 				}
+				particle.delta += particle.position;
 
-				pd.particle.delta = pd.position - pd.particle.position;
-				pd.particle.position = pd.position;
 				pd.particle.radius = radius;
 				pd.particle.color = color;
 

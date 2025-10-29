@@ -251,7 +251,7 @@ MonoBehaviour:
   color: {r: 0.34069067, g: 0.8301887, b: 0.8301887, a: 1}
   gravity: 10
   bounceDamping: 0.4
-  groundHeight: 0
+  groundHeight: 0.1
   useGlobalGroundPlane: 1
   useThreeZoneSlicing: 1
   updateParticles: 1
