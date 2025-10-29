@@ -214,13 +214,13 @@ namespace MassiveHadronLtd
 					vertices[v + 4] = tailB + rad; vertices[v + 5] = tailB - rad;
 					vertices[v + 6] = tail + rad; vertices[v + 7] = tail - rad;
 
-					for (int j = 0; j < 8; j++) colors[v + j] = p.color;
+					for (var j = 0; j < 8; j++) colors[v + j] = p.color;
 				}
 				else
 				{
 					vertices[v + 0] = tail - rad; vertices[v + 1] = tail + rad;
 					vertices[v + 2] = head - rad; vertices[v + 3] = head + rad;
-					for (int j = 0; j < 4; j++) colors[v + j] = p.color;
+					for (var j = 0; j < 4; j++) colors[v + j] = p.color;
 				}
 			}
 
