@@ -8,44 +8,51 @@ namespace MassiveHadronLtd
 {
 	public class ParticleController : MonoBehaviour
 	{
-		[System.Serializable]
-		public class ParticleSettings
-		{
-			public float lifetime = 1f;
-			public float lifetimeVariation = 0.5f;
-			public float radius = 0.02f;
-			public AnimationCurve scaleCurve = AnimationCurve.Linear(0f, 1f, 1f, 1f);
-			public Color color = Color.white;
-			public float gravity = 10f;
-			public float bounceDamping = 0.8f;
-			public float groundHeight = 0f;
-			public bool useGlobalGroundPlane = true;
-			public bool useThreeZoneSlicing = false;
-			public bool updateParticles = true;
-			[Range(0f, 1f)] public float fadeStartTime = 1f;
-			[Range(0.1f, 10f)] public float cycleTime = 0.1f;
-			[SerializeField]
-			public List<Pulse> pulses = new List<Pulse> { new Pulse { start = 0f, end = 0.1f } };
-			[Range(1, 128)] public int particleCount = 1;
-			public Vector3 velocity = Vector3.zero;
-			[Range(0f, 10f)] public float scatter = 0f;
+		#region --- Exposed Settings (formerly ParticleSettings) ---
+		[Header("Lifetime")]
+		public float lifetime = 1f;
+		public float lifetimeVariation = 0.5f;
 
-			[System.Serializable]
-			public class Pulse
-			{
-				[Range(0f, 1f)] public float start;
-				[Range(0f, 1f)] public float end;
-			}
+		[Header("Appearance")]
+		public float radius = 0.02f;
+		public AnimationCurve scaleCurve = AnimationCurve.Linear(0f, 1f, 1f, 1f);
+		public Color color = Color.white;
+
+		[Header("Physics")]
+		public float gravity = 10f;
+		public float bounceDamping = 0.8f;
+		public float groundHeight = 0f;
+		public bool useGlobalGroundPlane = true;
+
+		[Header("Rendering")]
+		public bool useThreeZoneSlicing = false;
+		public bool updateParticles = true;
+
+		[Header("Fade")]
+		[Range(0f, 1f)] public float fadeStartTime = 1f;
+
+		[Header("PWM / Emission")]
+		[Range(0.1f, 10f)] public float cycleTime = 0.1f;
+		[SerializeField] public List<Pulse> pulses = new List<Pulse> { new Pulse { start = 0f, end = 0.1f } };
+		[Range(1, 128)] public int particleCount = 1;
+		public Vector3 velocity = Vector3.zero;
+		[Range(0f, 10f)] public float scatter = 0f;
+		#endregion
+
+		[System.Serializable]
+		public class Pulse
+		{
+			[Range(0f, 1f)] public float start;
+			[Range(0f, 1f)] public float end;
 		}
 
 		[SerializeField] private Material particleMaterial;
-		[SerializeField] public ParticleSettings settings;
 
 		private ParticleSystem customParticleSystem;
 
 		private class ParticleData : ParticleSystem.ParticleDataRoot
 		{
-			public ParticleSystem.Particle particle;  // Direct reference
+			public ParticleSystem.Particle particle;   // Direct reference
 			public Vector3 position;
 			public Vector3 velocity;
 			public float maxLifetime;
@@ -65,48 +72,43 @@ namespace MassiveHadronLtd
 				enabled = false;
 				return;
 			}
-			if (settings == null)
-			{
-				Debug.LogError("ParticleController: settings is not assigned!");
-				enabled = false;
-				return;
-			}
 
-			if (settings.scaleCurve.keys.Length == 0)
+			// Initialise default scale curve if empty
+			if (scaleCurve.keys.Length == 0)
 			{
-				settings.scaleCurve = new AnimationCurve();
-				settings.scaleCurve.AddKey(new Keyframe(0f, 1.0f, 0f, 0f));
-				settings.scaleCurve.AddKey(new Keyframe(1f, 1.0f, 0f, 0f));
+				scaleCurve = new AnimationCurve();
+				scaleCurve.AddKey(new Keyframe(0f, 1.0f, 0f, 0f));
+				scaleCurve.AddKey(new Keyframe(1f, 1.0f, 0f, 0f));
 #if UNITY_EDITOR
-				for (int i = 0; i < settings.scaleCurve.keys.Length; i++)
+				for (int i = 0; i < scaleCurve.keys.Length; i++)
 				{
-					AnimationUtility.SetKeyBroken(settings.scaleCurve, i, true);
-					AnimationUtility.SetKeyLeftTangentMode(settings.scaleCurve, i, AnimationUtility.TangentMode.Free);
-					AnimationUtility.SetKeyRightTangentMode(settings.scaleCurve, i, AnimationUtility.TangentMode.Free);
+					AnimationUtility.SetKeyBroken(scaleCurve, i, true);
+					AnimationUtility.SetKeyLeftTangentMode(scaleCurve, i, AnimationUtility.TangentMode.Free);
+					AnimationUtility.SetKeyRightTangentMode(scaleCurve, i, AnimationUtility.TangentMode.Free);
 				}
 #endif
 			}
 
-			customParticleSystem = new ParticleSystem(particleMaterial, settings.useThreeZoneSlicing);
+			customParticleSystem = new ParticleSystem(particleMaterial, useThreeZoneSlicing);
 			timelinePosition = lastTimelinePosition = 0f;
 			emitEnabled = false;
 		}
 
 		void FixedUpdate()
 		{
-			if (settings.updateParticles)
+			if (updateParticles)
 				UpdateParticles();
 
 			lastTimelinePosition = timelinePosition;
 			timelinePosition += Time.deltaTime;
-			if (timelinePosition >= settings.cycleTime)
-				timelinePosition -= settings.cycleTime;
+			if (timelinePosition >= cycleTime)
+				timelinePosition -= cycleTime;
 
-			float normalizedTime = timelinePosition / settings.cycleTime;
-			float lastNormalizedTime = lastTimelinePosition / settings.cycleTime;
+			float normalizedTime = timelinePosition / cycleTime;
+			float lastNormalizedTime = lastTimelinePosition / cycleTime;
 			bool inPulse = false;
 
-			foreach (var pulse in settings.pulses)
+			foreach (var pulse in pulses)
 			{
 				if (normalizedTime >= pulse.start && normalizedTime <= pulse.end)
 					inPulse = true;
@@ -141,21 +143,20 @@ namespace MassiveHadronLtd
 
 		private void EmitParticlesInternal()
 		{
-			int emitCount = Mathf.Max(1, settings.particleCount);
+			int emitCount = Mathf.Max(1, particleCount);
 			for (int n = 0; n < emitCount; ++n)
 			{
-				var scatter = Random.value * settings.scatter * Random.onUnitSphere;
-				SpawnParticle(transform.position, settings.velocity + scatter, settings.lifetimeVariation);
+				var scatterVec = Random.value * scatter * Random.onUnitSphere;
+				SpawnParticle(transform.position, velocity + scatterVec, lifetimeVariation);
 			}
 		}
 
-		public void SpawnParticle(Vector3 position, Vector3 velocity, float? lifetimeVariation = null, ParticleSettings customSettings = null)
+		public void SpawnParticle(Vector3 position, Vector3 velocity, float? lifetimeVariation = null)
 		{
-			if (!settings.updateParticles) return;
+			if (!updateParticles) return;
 
-			var s = customSettings ?? settings;
-			var variation = (lifetimeVariation ?? s.lifetimeVariation);
-			var life = s.lifetime + variation + Random.Range(-variation, variation);
+			var variation = lifetimeVariation ?? this.lifetimeVariation;
+			var life = lifetime + variation + Random.Range(-variation, variation);
 			if (life <= 0f)
 			{
 				Debug.LogError($"spawning particle with no life span {life}");
@@ -167,9 +168,9 @@ namespace MassiveHadronLtd
 
 			particle.position = particle.previousPosition = position;
 			particle.life = life;
-			particle.color = s.color;
+			particle.color = color;
 
-			var initialRadius = s.radius * s.scaleCurve.Evaluate(0f);
+			var initialRadius = radius * scaleCurve.Evaluate(0f);
 
 			particle.particleData = new ParticleData
 			{
@@ -177,8 +178,8 @@ namespace MassiveHadronLtd
 				position = position,
 				velocity = velocity,
 				maxLifetime = life,
-				color = s.color,
-				initialRadius = s.radius
+				color = color,
+				initialRadius = radius
 			};
 		}
 
@@ -190,31 +191,34 @@ namespace MassiveHadronLtd
 			{
 				var pd = customParticleSystem.activeParticles[i].particleData as ParticleData;
 
-				// fade
+				// ----- Fade -----
 				float norm = 1f - Mathf.Clamp01(pd.particle.life / pd.maxLifetime);
-				float alpha = (norm < settings.fadeStartTime || Mathf.Approximately(settings.fadeStartTime, 1f)) ? 1f : Mathf.Clamp01(1f - ((norm - settings.fadeStartTime) / (1f - settings.fadeStartTime)));
+				float alpha = (norm < fadeStartTime || Mathf.Approximately(fadeStartTime, 1f))
+							   ? 1f
+							   : Mathf.Clamp01(1f - ((norm - fadeStartTime) / (1f - fadeStartTime)));
 				pd.color.a = alpha;
 
-				// scale
-				float scale = settings.scaleCurve.Evaluate(norm);
+				// ----- Scale -----
+				float scale = scaleCurve.Evaluate(norm);
 				var radius = pd.initialRadius * scale;
 
-				// physics
-				pd.velocity.y -= settings.gravity * dt;
+				// ----- Physics -----
+				pd.velocity.y -= gravity * dt;
 				pd.position += pd.velocity * dt;
 
-				float groundY = settings.useGlobalGroundPlane ? settings.groundHeight : transform.position.y + settings.groundHeight;
+				float groundY = useGlobalGroundPlane ? groundHeight : transform.position.y + groundHeight;
 
 				if (pd.velocity.y < 0f && pd.position.y <= groundY)
 				{
 					pd.position.y = groundY;
 					pd.velocity.y = -pd.velocity.y;
-					pd.velocity *= settings.bounceDamping;
+					pd.velocity *= bounceDamping;
 				}
 
-				// Update render system
+				// ----- Render update -----
 				customParticleSystem.UpdateParticle(pd.particle, pd.position, radius, pd.color);
 			}
 		}
 	}
 }
+
