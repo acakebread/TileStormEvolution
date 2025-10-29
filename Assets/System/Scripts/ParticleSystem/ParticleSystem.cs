@@ -7,8 +7,8 @@ namespace MassiveHadronLtd
 	{
 		private readonly int maxParticles = 1024;
 		private readonly bool useThreeZoneSlicing;
-		private readonly Material material;
 		private Mesh mesh;
+		private readonly Material material;
 		private readonly Camera mainCamera;
 
 		public abstract class ParticleDataRoot { }
@@ -68,7 +68,7 @@ namespace MassiveHadronLtd
 			activeParticles = new List<Particle>(maxParticles);
 			freeParticleIndices = new List<int>(maxParticles);
 
-			for (int i = 0; i < maxParticles; i++)
+			for (var i = 0; i < maxParticles; i++)
 			{
 				var p = new Particle
 				{
@@ -91,9 +91,9 @@ namespace MassiveHadronLtd
 			colors = new List<Color>(maxParticles * verticesPerParticle);
 			uvs = new List<Vector2>(maxParticles * verticesPerParticle);
 
-			for (int i = 0; i < maxParticles; i++)
+			for (var i = 0; i < maxParticles; i++)
 			{
-				int offset = i * verticesPerParticle;
+				var offset = i * verticesPerParticle;
 				if (useThreeZoneSlicing)
 				{
 					vertices.AddRange(new Vector3[8]);
@@ -124,18 +124,10 @@ namespace MassiveHadronLtd
 
 		public Particle AllocateParticle()
 		{
-			Particle p = GetInactiveParticle();
-			if (p == null) return null;
-
-			activeParticles.Add(p);
-			return p;
-		}
-
-		private Particle GetInactiveParticle()
-		{
-			if (freeParticleIndices.Count == 0) return null;
-			int idx = freeParticleIndices[freeParticleIndices.Count - 1];
+			if (0 == freeParticleIndices.Count) return null;
+			var idx = freeParticleIndices[freeParticleIndices.Count - 1];
 			freeParticleIndices.RemoveAt(freeParticleIndices.Count - 1);
+			activeParticles.Add(particlePool[idx]);
 			return particlePool[idx];
 		}
 
@@ -164,7 +156,7 @@ namespace MassiveHadronLtd
 
 			void DeactivateQuad(int vertexIndex)
 			{
-				for (int v = 0; v < verticesPerParticle; v++)
+				for (var v = 0; v < verticesPerParticle; v++)
 				{
 					vertices[vertexIndex + v] = Vector3.zero;
 					colors[vertexIndex + v] = Color.clear;// don't know if this is necessary
@@ -197,8 +189,8 @@ namespace MassiveHadronLtd
 				var toCam = (pos - camPos).normalized;
 				var tangent = Vector3.Cross(toCam, delta).normalized;
 
-				float dot = Vector3.Dot(delta, toCam);
-				float tang = (delta - dot * toCam).magnitude;
+				var dot = Vector3.Dot(delta, toCam);
+				var tang = (delta - dot * toCam).magnitude;
 				if (tang < p.radius)
 				{
 					var cross = Vector3.Cross(tangent, toCam);
@@ -208,11 +200,11 @@ namespace MassiveHadronLtd
 				var head = pos + delta;
 				var tail = pos - delta;
 				var rad = tangent * p.radius;
-				int v = p.vertexIndex;
+				var v = p.vertexIndex;
 
 				if (useThreeZoneSlicing)
 				{
-					float velComp = tang > 0.0001f ? Mathf.Max(0, tang - p.radius) / tang : 0f;
+					var velComp = tang > 0.0001f ? Mathf.Max(0, tang - p.radius) / tang : 0f;
 					var half = velComp * delta;
 					var headB = pos + half;
 					var tailB = pos - half;

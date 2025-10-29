@@ -170,8 +170,6 @@ namespace MassiveHadronLtd
 			particle.life = life;
 			particle.color = color;
 
-			var initialRadius = radius * scaleCurve.Evaluate(0f);
-
 			particle.particleData = new ParticleData
 			{
 				particle = particle,
@@ -179,7 +177,7 @@ namespace MassiveHadronLtd
 				velocity = velocity,
 				maxLifetime = life,
 				color = color,
-				initialRadius = radius
+				initialRadius = radius * scaleCurve.Evaluate(0f)
 			};
 		}
 
