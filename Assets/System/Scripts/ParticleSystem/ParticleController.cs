@@ -101,7 +101,7 @@ namespace MassiveHadronLtd
 			if (emit) EmitParticlesInternal();
 		}
 
-		private void Update()
+		private void LateUpdate()
 		{
 			customParticleSystem?.Render();
 		}
