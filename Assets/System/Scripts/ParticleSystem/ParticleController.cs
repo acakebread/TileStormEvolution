@@ -1,8 +1,5 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
-#if UNITY_EDITOR
-using UnityEditor;
-#endif
 
 namespace MassiveHadronLtd
 {
@@ -11,34 +8,38 @@ namespace MassiveHadronLtd
 		// ──────────────────────────────────────────────────────────────
 		// (all inspector fields – copy from your previous version)
 		// ──────────────────────────────────────────────────────────────
+		[Header("Debug")]//[Header("Rendering")]
+		public bool updateParticles = true;
+
 		[Header("Lifetime")]
 		public float lifetime = 1f;
 		public float lifetimeVariation = 0.5f;
 
 		[Header("Appearance")]
-		public float radius = 0.02f;
-		public AnimationCurve scaleCurve = AnimationCurve.Linear(0f, 1f, 1f, 1f);
+		public bool useThreeZoneSlicing = false;
+		[SerializeField] private Material particleMaterial;
 		public Color color = Color.white;
+		public float radius = 0.02f;
+		[Range(0f, 1f)] public float fadeStartTime = 1f;//[Header("Fade")]
 
 		[Header("Physics")]
 		public float gravity = 10f;
-		public float bounceDamping = 0.8f;
+		public float friction = 0.98f;
+		public Vector3 velocityBias = Vector3.zero;
+		public Vector3 velocityMagnitude = Vector3.one;
+		public bool enableCollision = false;
 		public float groundHeight = 0f;
-		public bool useGlobalGroundPlane = true;
+		public float bounceDamping = 0.8f;
 
-		[Header("Rendering")]
-		public bool useThreeZoneSlicing = false;
-		public bool updateParticles = true;
-
-		[Header("Fade")]
-		[Range(0f, 1f)] public float fadeStartTime = 1f;
+		[Header("Animation")]//for some reason this doesn't display - editor interfering
+		public AnimationCurve scaleCurve = AnimationCurve.Linear(0f, 1f, 1f, 1f);
 
 		[Header("PWM / Emission")]
+		[Range(1, 128)] public int particleCount = 1;
+		public Vector3 scatterScalar = Vector3.zero;
+
 		[Range(0.1f, 10f)] public float cycleTime = 0.1f;
 		[SerializeField] public List<Pulse> pulses = new List<Pulse> { new Pulse { start = 0f, end = 0.1f } };
-		[Range(1, 128)] public int particleCount = 1;
-		public Vector3 velocity = Vector3.zero;
-		[Range(0f, 10f)] public float scatter = 0f;
 
 		[System.Serializable]
 		public class Pulse
@@ -47,12 +48,10 @@ namespace MassiveHadronLtd
 			[Range(0f, 1f)] public float end;
 		}
 
-		[SerializeField] private Material particleMaterial;
-
 		private ParticleSystem customParticleSystem;
-		private bool emitEnabled;
-		private float timelinePosition;
-		private float lastTimelinePosition;
+		private bool forceEmission = false;//UI override for continuous emission
+		private float timelinePosition = 0f;
+		private float lastTimelinePosition = 0f;
 
 		private void Awake()
 		{
@@ -64,11 +63,9 @@ namespace MassiveHadronLtd
 			}
 
 			if (scaleCurve.keys.Length == 0)
-				scaleCurve = AnimationCurve.Linear(0f, 1f, 1f, 1f);
+				scaleCurve = AnimationCurve.Linear(0f, 1f, 1f, 1f);//default
 
 			customParticleSystem = new ParticleSystem(particleMaterial, useThreeZoneSlicing, this);
-			timelinePosition = lastTimelinePosition = 0f;
-			emitEnabled = false;
 		}
 
 		private void FixedUpdate()
@@ -84,26 +81,24 @@ namespace MassiveHadronLtd
 
 			float normNow = timelinePosition / cycleTime;
 			float normPrev = lastTimelinePosition / cycleTime;
-			bool inPulse = false;
+			bool emit = forceEmission;
 
 			foreach (var p in pulses)
 			{
-				if (normNow >= p.start && normNow <= p.end) inPulse = true;
+				if (normNow >= p.start && normNow <= p.end) emit = true;
 
-				bool crossed = false;
 				if (normPrev <= normNow)
 				{
-					if (normPrev < p.end && normNow > p.start) crossed = true;
+					if (normPrev < p.end && normNow > p.start) emit = true;
 				}
 				else
 				{
-					if (normPrev < p.end || normNow > p.start) crossed = true;
+					if (normPrev < p.end || normNow > p.start) emit = true;
 				}
-
-				if (crossed) EmitParticlesInternal();
+				if (emit) break;
 			}
 
-			if (emitEnabled || inPulse) EmitParticlesInternal();
+			if (emit) EmitParticlesInternal();
 		}
 
 		private void Update()
@@ -111,8 +106,8 @@ namespace MassiveHadronLtd
 			customParticleSystem?.Render();
 		}
 
-		public void EmitParticles() { emitEnabled = true; timelinePosition = 0f; }
-		public void StopEmitting() { emitEnabled = false; timelinePosition = 0f; }
+		public void EmitParticles() { forceEmission = true; timelinePosition = 0f; }
+		public void StopEmitting() { forceEmission = false; timelinePosition = 0f; }
 
 		private void EmitParticlesInternal()
 		{
@@ -121,8 +116,9 @@ namespace MassiveHadronLtd
 			int cnt = Mathf.Max(1, particleCount);
 			for (int i = 0; i < cnt; ++i)
 			{
-				Vector3 scatterVec = Random.value * scatter * Random.onUnitSphere;
-				SpawnParticle(transform.position, velocity + scatterVec);
+				Vector3 position = transform.position + Mathf.Pow(Random.value, 1f / 3f) * Vector3.Scale(Random.onUnitSphere, scatterScalar);
+				Vector3 veolcity = velocityBias + Mathf.Pow(Random.value, 1f / 3f) * Vector3.Scale(Random.onUnitSphere, velocityMagnitude);
+				SpawnParticle(position, veolcity);
 			}
 		}
 
@@ -136,7 +132,7 @@ namespace MassiveHadronLtd
 
 			Particle p = null;
 
-			if (gravity > 0.01f || bounceDamping < 0.99f)
+			if (gravity != 0f || velocity != Vector3.zero)
 			{
 				var pp = customParticleSystem.AllocateParticle<PhysicsParticle>();
 				if (pp == null) return;
@@ -149,9 +145,10 @@ namespace MassiveHadronLtd
 				pp.color = color;
 				pp.velocity = velocity;
 				pp.gravity = gravity;
+				pp.friction = friction;
 				pp.bounceDamping = bounceDamping;
 				pp.groundHeight = groundHeight;
-				pp.useGlobalGroundPlane = useGlobalGroundPlane;
+				pp.enableCollision = enableCollision;
 				p = pp;
 			}
 			else

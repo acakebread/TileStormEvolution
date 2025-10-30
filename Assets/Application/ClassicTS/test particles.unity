@@ -212,9 +212,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cd8578c20d24105438647a46520bbefb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  updateParticles: 1
   lifetime: 0.75
   lifetimeVariation: 0.5
+  useThreeZoneSlicing: 1
+  particleMaterial: {fileID: 2100000, guid: 02223f9d74ca8f74999a27cdc04e130f, type: 2}
+  color: {r: 0.34069067, g: 0.8301887, b: 0.8301887, a: 1}
   radius: 0.01
+  fadeStartTime: 0.49
+  gravity: 10
+  friction: 0.98
+  velocityBias: {x: 0, y: -0.5, z: 0}
+  velocityMagnitude: {x: 1, y: 0, z: 0.5}
+  enableCollision: 1
+  groundHeight: 0.1
+  bounceDamping: 0.4
   scaleCurve:
     serializedVersion: 2
     m_Curve:
@@ -248,22 +260,12 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  color: {r: 0.34069067, g: 0.8301887, b: 0.8301887, a: 1}
-  gravity: 10
-  bounceDamping: 0.4
-  groundHeight: 0.1
-  useGlobalGroundPlane: 1
-  useThreeZoneSlicing: 1
-  updateParticles: 1
-  fadeStartTime: 0.49
-  cycleTime: 0.1
+  particleCount: 16
+  scatterScalar: {x: 1.5, y: 0, z: 0}
+  cycleTime: 1
   pulses:
-  - start: 0
-    end: 0.1
-  particleCount: 30
-  velocity: {x: 0, y: 0.5, z: 0}
-  scatter: 3.2
-  particleMaterial: {fileID: 2100000, guid: 02223f9d74ca8f74999a27cdc04e130f, type: 2}
+  - start: -0.01
+    end: 0.4985507
 --- !u!1 &1143789306
 GameObject:
   m_ObjectHideFlags: 0
@@ -450,6 +452,113 @@ MonoBehaviour:
   frostThreshold: 0.8
   frostFadeRange: 0.1
   postProcessingCamera: {fileID: 1760635932}
+--- !u!1 &1458804427
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1458804429}
+  - component: {fileID: 1458804428}
+  m_Layer: 0
+  m_Name: ParticleControllerTest2
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1458804428
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1458804427}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cd8578c20d24105438647a46520bbefb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  updateParticles: 1
+  lifetime: 0.75
+  lifetimeVariation: 0.5
+  useThreeZoneSlicing: 0
+  particleMaterial: {fileID: 2100000, guid: 02223f9d74ca8f74999a27cdc04e130f, type: 2}
+  color: {r: 0.6886792, g: 0.4580211, b: 0, a: 1}
+  radius: 0.25
+  fadeStartTime: 0.5
+  gravity: -1
+  friction: 0.98
+  velocityBias: {x: 0, y: 0.5, z: 0}
+  velocityMagnitude: {x: 0.25, y: 0.25, z: 0.25}
+  enableCollision: 0
+  groundHeight: 0
+  bounceDamping: 1
+  scaleCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0.5188751
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 1
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 0.33
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 1
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 0.66
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 1
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 0.28302002
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 1
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  particleCount: 1
+  scatterScalar: {x: 0, y: 0, z: 0}
+  cycleTime: 0.1
+  pulses:
+  - start: -0.01
+    end: 0
+--- !u!4 &1458804429
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1458804427}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -1, y: 0.25, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1759432265
 GameObject:
   m_ObjectHideFlags: 0
@@ -466,7 +575,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &1759432266
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -652,7 +761,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &1910858983
 Transform:
   m_ObjectHideFlags: 0
@@ -680,9 +789,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cd8578c20d24105438647a46520bbefb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  updateParticles: 1
   lifetime: 0.3
   lifetimeVariation: 0.3
+  useThreeZoneSlicing: 0
+  particleMaterial: {fileID: 2100000, guid: 02223f9d74ca8f74999a27cdc04e130f, type: 2}
+  color: {r: 1, g: 0.26917732, b: 0, a: 1}
   radius: 0.05
+  fadeStartTime: 0.3
+  gravity: -0.05
+  friction: 0.98
+  velocityBias: {x: 0, y: 0, z: 0}
+  velocityMagnitude: {x: 1, y: 1, z: 1}
+  enableCollision: 0
+  groundHeight: 0
+  bounceDamping: 0
   scaleCurve:
     serializedVersion: 2
     m_Curve:
@@ -707,22 +828,12 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  color: {r: 1, g: 0.26917732, b: 0, a: 1}
-  gravity: -0.05
-  bounceDamping: 0
-  groundHeight: 0
-  useGlobalGroundPlane: 1
-  useThreeZoneSlicing: 0
-  updateParticles: 1
-  fadeStartTime: 0.3
+  particleCount: 1
+  scatterScalar: {x: 0, y: 0, z: 0}
   cycleTime: 0.1
   pulses:
   - start: -0.01
     end: 0
-  particleCount: 1
-  velocity: {x: 0, y: 0.2, z: 0}
-  scatter: 0.1
-  particleMaterial: {fileID: 2100000, guid: 02223f9d74ca8f74999a27cdc04e130f, type: 2}
 --- !u!1 &1959222889
 GameObject:
   m_ObjectHideFlags: 0
@@ -919,9 +1030,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cd8578c20d24105438647a46520bbefb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  updateParticles: 1
   lifetime: 1
   lifetimeVariation: 0.5
+  useThreeZoneSlicing: 0
+  particleMaterial: {fileID: 2100000, guid: 02223f9d74ca8f74999a27cdc04e130f, type: 2}
+  color: {r: 1, g: 1, b: 1, a: 1}
   radius: 0.02
+  fadeStartTime: 1
+  gravity: 10
+  friction: 0.98
+  velocityBias: {x: 0, y: 0, z: 0}
+  velocityMagnitude: {x: 1, y: 1, z: 1}
+  enableCollision: 0
+  groundHeight: 0
+  bounceDamping: 0.8
   scaleCurve:
     serializedVersion: 2
     m_Curve:
@@ -946,22 +1069,12 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  color: {r: 1, g: 1, b: 1, a: 1}
-  gravity: 10
-  bounceDamping: 0.8
-  groundHeight: 0
-  useGlobalGroundPlane: 1
-  useThreeZoneSlicing: 0
-  updateParticles: 1
-  fadeStartTime: 1
+  particleCount: 1
+  scatterScalar: {x: 0, y: 0, z: 0}
   cycleTime: 0.1
   pulses:
   - start: 0
     end: 0.1
-  particleCount: 1
-  velocity: {x: 0, y: 0, z: 0}
-  scatter: 0
-  particleMaterial: {fileID: 2100000, guid: 02223f9d74ca8f74999a27cdc04e130f, type: 2}
 --- !u!4 &2063531462
 Transform:
   m_ObjectHideFlags: 0
@@ -985,6 +1098,7 @@ SceneRoots:
   - {fileID: 2049721153}
   - {fileID: 1959222891}
   - {fileID: 1759432267}
-  - {fileID: 1910858983}
   - {fileID: 1081262123}
+  - {fileID: 1910858983}
   - {fileID: 2063531462}
+  - {fileID: 1458804429}

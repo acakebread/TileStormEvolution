@@ -38,9 +38,10 @@ namespace MassiveHadronLtd
 	{
 		public Vector3 velocity;
 		public float gravity;
+		public float friction;
 		public float bounceDamping;
 		public float groundHeight;
-		public bool useGlobalGroundPlane;
+		public bool enableCollision;
 
 		public override void Update(ref ParticleUpdateContext ctx)
 		{
@@ -57,16 +58,14 @@ namespace MassiveHadronLtd
 
 			// physics
 			velocity.y -= gravity * ctx.deltaTime;
+			velocity *= friction;//ToDo calculate air friction properly - frame rate independant
+			if (enableCollision) position.y = Mathf.Max(position.y, groundHeight);
 			delta = -position;
 			position += velocity * ctx.deltaTime;
 
-			float groundY = useGlobalGroundPlane
-				? groundHeight
-				: ctx.controller.transform.position.y + groundHeight;
-
-			if (velocity.y < 0f && position.y <= groundY)
+			if (true == enableCollision && velocity.y < 0f && position.y <= groundHeight)
 			{
-				position.y = groundY;
+				position.y = groundHeight;
 				velocity.y = -velocity.y * bounceDamping;
 			}
 
@@ -99,7 +98,7 @@ namespace MassiveHadronLtd
 	// --------------------------------------------------------------------
 	public class ParticleSystem
 	{
-		private const int MaxParticles = 1024;               // change freely
+		private const int MaxParticles = 8192;
 		private readonly bool useThreeZoneSlicing;
 		private readonly Material material;
 		private readonly Camera mainCamera;
@@ -217,7 +216,6 @@ namespace MassiveHadronLtd
 		{
 			if (freeParticleIndices.Count == 0)
 			{
-				Debug.LogWarning($"[ParticleSystem] Out of particles! Max: {MaxParticles}");
 				return null;
 			}
 

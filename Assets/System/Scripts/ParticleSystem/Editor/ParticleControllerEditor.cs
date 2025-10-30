@@ -15,20 +15,50 @@ namespace MassiveHadronLtd
 		private int draggedPulseIndex = -1;
 		private const float MIN_PULSE_WIDTH = 0.01f;
 
+		private static bool IsGameViewMaximized()
+		{
+#if UNITY_EDITOR
+			var gameView = UnityEditor.EditorWindow.GetWindow(typeof(UnityEditor.Editor).Assembly.GetType("UnityEditor.GameView"));
+			return gameView != null && gameView.maximized;
+#else
+    return false;
+#endif
+		}
+
 		public override void OnInspectorGUI()
 		{
+			// Don't draw inspector if Game View is full screen or maximized
+			if (IsGameViewMaximized())
+				return;
+
 			var controller = (ParticleController)target;
 			serializedObject.Update();
 
-			EditorGUILayout.PropertyField(serializedObject.FindProperty("particleMaterial"));
+			// ----- Debug -----
+			EditorGUILayout.PropertyField(serializedObject.FindProperty("updateParticles"));
 
 			// ----- Lifetime -----
 			EditorGUILayout.PropertyField(serializedObject.FindProperty("lifetime"));
 			EditorGUILayout.PropertyField(serializedObject.FindProperty("lifetimeVariation"));
 
-			// ----- Appearance -----
+			// ----- Appearance -----// ----- Rendering -----
+			EditorGUILayout.PropertyField(serializedObject.FindProperty("useThreeZoneSlicing"));
+			EditorGUILayout.PropertyField(serializedObject.FindProperty("particleMaterial"));
+			EditorGUILayout.PropertyField(serializedObject.FindProperty("color"));
 			EditorGUILayout.PropertyField(serializedObject.FindProperty("radius"));
+			EditorGUILayout.PropertyField(serializedObject.FindProperty("fadeStartTime"));
 
+			// ----- Physics -----
+			EditorGUILayout.PropertyField(serializedObject.FindProperty("gravity"));
+			EditorGUILayout.PropertyField(serializedObject.FindProperty("friction"));
+			EditorGUILayout.PropertyField(serializedObject.FindProperty("velocityBias"));
+			EditorGUILayout.PropertyField(serializedObject.FindProperty("velocityMagnitude"));
+			EditorGUILayout.PropertyField(serializedObject.FindProperty("enableCollision"));
+			EditorGUILayout.PropertyField(serializedObject.FindProperty("groundHeight"));
+			EditorGUILayout.PropertyField(serializedObject.FindProperty("bounceDamping"));
+
+			// ----- Animation -----
+			EditorGUILayout.LabelField("");//spacer
 			EditorGUILayout.LabelField("Scale Curve (%):", EditorStyles.boldLabel);
 			EditorGUILayout.LabelField("(Y-axis: 0 = 0%, 1 = 100%, 2 = 200%)");
 			var curveProp = serializedObject.FindProperty("scaleCurve");
@@ -72,21 +102,12 @@ namespace MassiveHadronLtd
 			presetApplied = false;
 			curveProp.animationCurveValue = newCurve;
 
-			EditorGUILayout.PropertyField(serializedObject.FindProperty("color"));
-
-			// ----- Physics -----
-			EditorGUILayout.PropertyField(serializedObject.FindProperty("gravity"));
-			EditorGUILayout.PropertyField(serializedObject.FindProperty("bounceDamping"));
-			EditorGUILayout.PropertyField(serializedObject.FindProperty("groundHeight"));
-			EditorGUILayout.PropertyField(serializedObject.FindProperty("useGlobalGroundPlane"));
-
-			// ----- Rendering -----
-			EditorGUILayout.PropertyField(serializedObject.FindProperty("useThreeZoneSlicing"));
-			EditorGUILayout.PropertyField(serializedObject.FindProperty("updateParticles"));
-			EditorGUILayout.PropertyField(serializedObject.FindProperty("fadeStartTime"));
+			// ----- Emission -----
+			EditorGUILayout.PropertyField(serializedObject.FindProperty("particleCount"));
+			EditorGUILayout.PropertyField(serializedObject.FindProperty("scatterScalar"));
 
 			// ----- PWM Timeline -----
-			EditorGUILayout.LabelField("PWM Timeline:", EditorStyles.boldLabel);
+			//EditorGUILayout.LabelField("PWM Timeline:", EditorStyles.boldLabel);
 			EditorGUILayout.PropertyField(serializedObject.FindProperty("cycleTime"));
 			var pulsesProp = serializedObject.FindProperty("pulses");
 
@@ -235,11 +256,6 @@ namespace MassiveHadronLtd
 				var e = p.FindPropertyRelative("end").floatValue;
 				EditorGUILayout.LabelField($"Pulse {i + 1}: Start = {s:F2}, End = {e:F2}");
 			}
-
-			// ----- Emission -----
-			EditorGUILayout.PropertyField(serializedObject.FindProperty("particleCount"));
-			EditorGUILayout.PropertyField(serializedObject.FindProperty("velocity"));
-			EditorGUILayout.PropertyField(serializedObject.FindProperty("scatter"));
 
 			serializedObject.ApplyModifiedProperties();
 
