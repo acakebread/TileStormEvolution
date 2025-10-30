@@ -98,10 +98,10 @@ namespace MassiveHadronLtd
 	// --------------------------------------------------------------------
 	public class ParticleSystem
 	{
-		private const int MaxParticles = 64;
+		private const int MaxParticles = 8192;
 		private readonly bool useThreeZoneSlicing;
 		private readonly Material material;
-		private readonly Camera mainCamera;
+		private readonly Transform cameraTransform;
 		private readonly int verticesPerParticle;
 
 		private readonly List<Particle> particlePool = new List<Particle>(MaxParticles);
@@ -127,7 +127,7 @@ namespace MassiveHadronLtd
 			material = new Material(particleMaterial);
 			useThreeZoneSlicing = threeZoneSlicing;
 			verticesPerParticle = useThreeZoneSlicing ? 8 : 4;
-			mainCamera = Camera.main;
+			cameraTransform = Camera.main.transform;
 			Controller = controller;
 
 			int trianglesPerParticle = useThreeZoneSlicing ? 18 : 6;
@@ -290,7 +290,7 @@ namespace MassiveHadronLtd
 
 		private void UpdateMesh()
 		{
-			Vector3 camPos = mainCamera ? mainCamera.transform.position : Vector3.zero;
+			Vector3 camPos = cameraTransform ? cameraTransform.transform.position : Vector3.zero;
 
 			for (int i = 0; i < activeParticles.Count; i++)
 			{
@@ -311,7 +311,7 @@ namespace MassiveHadronLtd
 				}
 				else
 				{
-					Vector3 camUp = mainCamera ? mainCamera.transform.up : Vector3.up;
+					Vector3 camUp = cameraTransform ? cameraTransform.transform.up : Vector3.up;
 					tangent = Vector3.Cross(camUp, toCam).normalized;
 					if (tangent.sqrMagnitude < 0.01f)
 						tangent = Vector3.Cross(Vector3.up, toCam).normalized;
