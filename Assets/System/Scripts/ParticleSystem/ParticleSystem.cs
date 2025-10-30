@@ -314,7 +314,7 @@ namespace MassiveHadronLtd
 					Vector3 camUp = mainCamera ? mainCamera.transform.up : Vector3.up;
 					tangent = Vector3.Cross(camUp, toCam).normalized;
 					if (tangent.sqrMagnitude < 0.01f)
-						tangent = Vector3.Cross(toCam, Vector3.right).normalized;
+						tangent = Vector3.Cross(Vector3.up, toCam).normalized;
 				}
 				// ──────────────────────────────────────────────────────────────
 
@@ -325,8 +325,6 @@ namespace MassiveHadronLtd
 					Vector3 cross = Vector3.Cross(toCam, tangent);
 					delta += (p.radius - tang) * cross;
 				}
-
-				//tangent = -tangent;// I hate having to do this!!!!
 
 				Vector3 head = pos + delta;
 				Vector3 tail = pos - delta;
