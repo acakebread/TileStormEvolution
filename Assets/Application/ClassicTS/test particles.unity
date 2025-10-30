@@ -221,7 +221,7 @@ MonoBehaviour:
   radius: 0.01
   fadeStartTime: 0.49
   gravity: 10
-  friction: 0.98
+  friction: 0.01
   velocityBias: {x: 0, y: -0.5, z: 0}
   velocityMagnitude: {x: 1, y: 0, z: 0.5}
   enableCollision: 1
@@ -490,7 +490,7 @@ MonoBehaviour:
   radius: 0.25
   fadeStartTime: 0.5
   gravity: -1
-  friction: 0.98
+  friction: 0.01
   velocityBias: {x: 0, y: 0.5, z: 0}
   velocityMagnitude: {x: 0.25, y: 0.25, z: 0.25}
   enableCollision: 0
@@ -798,7 +798,7 @@ MonoBehaviour:
   radius: 0.05
   fadeStartTime: 0.3
   gravity: -0.05
-  friction: 0.98
+  friction: 0.01
   velocityBias: {x: 0, y: 0, z: 0}
   velocityMagnitude: {x: 1, y: 1, z: 1}
   enableCollision: 0
@@ -1039,7 +1039,7 @@ MonoBehaviour:
   radius: 0.02
   fadeStartTime: 1
   gravity: 10
-  friction: 0.98
+  friction: 0.01
   velocityBias: {x: 0, y: 0, z: 0}
   velocityMagnitude: {x: 1, y: 1, z: 1}
   enableCollision: 0

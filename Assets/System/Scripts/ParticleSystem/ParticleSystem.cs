@@ -58,7 +58,7 @@ namespace MassiveHadronLtd
 
 			// physics
 			velocity.y -= gravity * ctx.deltaTime;
-			velocity *= friction;//ToDo calculate air friction properly - frame rate independant
+			velocity *= 1f - friction;//ToDo calculate air friction properly - frame rate independant
 			if (enableCollision) position.y = Mathf.Max(position.y, groundHeight);
 			delta = -position;
 			position += velocity * ctx.deltaTime;

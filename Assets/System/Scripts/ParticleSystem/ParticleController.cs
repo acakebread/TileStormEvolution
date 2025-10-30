@@ -24,7 +24,7 @@ namespace MassiveHadronLtd
 
 		[Header("Physics")]
 		public float gravity = 10f;
-		public float friction = 0.98f;
+		[Range(0f, 1f)] public float friction = 0.01f;
 		public Vector3 velocityBias = Vector3.zero;
 		public Vector3 velocityMagnitude = Vector3.one;
 		public bool enableCollision = false;
@@ -116,8 +116,8 @@ namespace MassiveHadronLtd
 			int cnt = Mathf.Max(1, particleCount);
 			for (int i = 0; i < cnt; ++i)
 			{
-				Vector3 position = transform.position + Mathf.Pow(Random.value, 1f / 3f) * Vector3.Scale(Random.onUnitSphere, scatterScalar);
-				Vector3 veolcity = velocityBias + Mathf.Pow(Random.value, 1f / 3f) * Vector3.Scale(Random.onUnitSphere, velocityMagnitude);
+				Vector3 position = transform.position + EllipsoidRandom.Inside(scatterScalar);
+				Vector3 veolcity = velocityBias + EllipsoidRandom.Inside(velocityMagnitude);
 				SpawnParticle(position, veolcity);
 			}
 		}
