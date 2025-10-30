@@ -98,7 +98,7 @@ namespace MassiveHadronLtd
 	// --------------------------------------------------------------------
 	public class ParticleSystem
 	{
-		private const int MaxParticles = 8192;
+		private const int MaxParticles = 64;
 		private readonly bool useThreeZoneSlicing;
 		private readonly Material material;
 		private readonly Camera mainCamera;
@@ -184,15 +184,15 @@ namespace MassiveHadronLtd
 					vertices.AddRange(new Vector3[8]);
 					triangles.AddRange(new[]
 					{
-						offset+0,offset+1,offset+2, offset+1,offset+3,offset+2,
-						offset+2,offset+3,offset+4, offset+3,offset+5,offset+4,
-						offset+4,offset+5,offset+6, offset+5,offset+7,offset+6
+						offset+0,offset+1,offset+2, offset+2,offset+1,offset+3,
+						offset+4,offset+2,offset+3, offset+4,offset+3,offset+5,
+						offset+6,offset+4,offset+5, offset+6,offset+5,offset+7
 					});
 					colors.AddRange(new Color[8]);
 					uvs.AddRange(new[]
 					{
-						new Vector2(0,0), new Vector2(1,0), new Vector2(0,0.5f), new Vector2(1,0.5f),
-						new Vector2(0,0.5f), new Vector2(1,0.5f), new Vector2(0,1), new Vector2(1,1)
+						new Vector2(0,1), new Vector2(1,1), new Vector2(0,0.5f), new Vector2(1,0.5f),
+						new Vector2(0,0.5f), new Vector2(1,0.5f), new Vector2(0,0), new Vector2(1,0)
 					});
 				}
 				else
@@ -200,7 +200,7 @@ namespace MassiveHadronLtd
 					vertices.AddRange(new Vector3[4]);
 					triangles.AddRange(new[] { offset + 0, offset + 1, offset + 2, offset + 1, offset + 3, offset + 2 });
 					colors.AddRange(new Color[4]);
-					uvs.AddRange(new[] { new Vector2(0, 0), new Vector2(1, 0), new Vector2(0, 1), new Vector2(1, 1) });
+					uvs.AddRange(new[] { new Vector2(0,1), new Vector2(1,1), new Vector2(0,0), new Vector2(1,0)});
 				}
 			}
 
@@ -307,12 +307,12 @@ namespace MassiveHadronLtd
 				Vector3 tangent;
 				if (delta.sqrMagnitude > 0.000001f)
 				{
-					tangent = Vector3.Cross(toCam, delta).normalized;
+					tangent = Vector3.Cross(delta, toCam).normalized;
 				}
 				else
 				{
 					Vector3 camUp = mainCamera ? mainCamera.transform.up : Vector3.up;
-					tangent = Vector3.Cross(toCam, camUp).normalized;
+					tangent = Vector3.Cross(camUp, toCam).normalized;
 					if (tangent.sqrMagnitude < 0.01f)
 						tangent = Vector3.Cross(toCam, Vector3.right).normalized;
 				}
@@ -322,9 +322,11 @@ namespace MassiveHadronLtd
 				float tang = (delta - dot * toCam).magnitude;
 				if (tang < p.radius)
 				{
-					Vector3 cross = Vector3.Cross(tangent, toCam);
+					Vector3 cross = Vector3.Cross(toCam, tangent);
 					delta += (p.radius - tang) * cross;
 				}
+
+				//tangent = -tangent;// I hate having to do this!!!!
 
 				Vector3 head = pos + delta;
 				Vector3 tail = pos - delta;
@@ -338,11 +340,10 @@ namespace MassiveHadronLtd
 					Vector3 headB = pos + half;
 					Vector3 tailB = pos - half;
 
-					vertices[v + 0] = head + rad; vertices[v + 1] = head - rad;
-					vertices[v + 2] = headB + rad; vertices[v + 3] = headB - rad;
-					vertices[v + 4] = tailB + rad; vertices[v + 5] = tailB - rad;
-					vertices[v + 6] = tail + rad; vertices[v + 7] = tail - rad;
-
+					vertices[v + 0] = head - rad; vertices[v + 1] = head + rad;
+					vertices[v + 2] = headB - rad; vertices[v + 3] = headB + rad;
+					vertices[v + 4] = tailB - rad; vertices[v + 5] = tailB + rad;
+					vertices[v + 6] = tail - rad; vertices[v + 7] = tail + rad;
 					for (int j = 0; j < 8; j++) colors[v + j] = p.color;
 				}
 				else
