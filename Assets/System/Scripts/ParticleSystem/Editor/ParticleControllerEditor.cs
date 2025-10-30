@@ -27,9 +27,9 @@ namespace MassiveHadronLtd
 
 		public override void OnInspectorGUI()
 		{
-			// Don't draw inspector if Game View is full screen or maximized
-			if (IsGameViewMaximized())
-				return;
+			//// Don't draw inspector if Game View is full screen or maximized
+			//if (IsGameViewMaximized())
+			//	return;
 
 			var controller = (ParticleController)target;
 			serializedObject.Update();
