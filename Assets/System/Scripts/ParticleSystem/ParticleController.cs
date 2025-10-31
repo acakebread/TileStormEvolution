@@ -75,6 +75,7 @@ namespace MassiveHadronLtd
 		// ──────────────────────────────────────────────────────────────
 		[Header("Debug")]//[Header("Rendering")]
 		public bool showInSceneView = true;
+		[Tooltip("True = Cyan debug (no tint), False = Real material (UVs/textures)")] 
 		public bool useDebugMaterial = false;
 		public bool updateParticles = true;
 
@@ -277,8 +278,16 @@ namespace MassiveHadronLtd
 #if UNITY_EDITOR
 		private void OnRenderObject()
 		{
-			if (!showInSceneView || customParticleSystem == null) return;
-			if (Camera.current == null || Camera.current.cameraType != CameraType.SceneView) return;
+			// CRITICAL: ONLY RUN IN SCENE VIEW — NO GAME VIEW LEAK
+			if (!showInSceneView) return;
+			if (customParticleSystem == null) return;
+			if (Camera.current == null) return;
+			if (Camera.current.cameraType != CameraType.SceneView) return;
+
+			// EXTRA SAFETY: Check if we're in Edit Mode and Scene View is active
+#if UNITY_EDITOR
+			if (!UnityEditor.SceneView.currentDrawingSceneView) return;
+#endif
 
 			var mesh = customParticleSystem.GetDebugMesh();
 			if (mesh == null) return;
@@ -340,7 +349,6 @@ namespace MassiveHadronLtd
 			mesh.colors = whiteColorCache;
 		}
 
-		// Optional: Clean up on destroy
 		private void OnDestroy()
 		{
 			if (cyanDebugMaterial != null)
