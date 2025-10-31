@@ -3,6 +3,68 @@ using System.Collections.Generic;
 
 namespace MassiveHadronLtd
 {
+	// --------------------------------------------------------------------
+	// Physics particle
+	// --------------------------------------------------------------------
+	public class PhysicsParticle : Particle
+	{
+		public Vector3 velocity;
+		public float gravity;
+		public float friction;
+		public float bounceDamping;
+		public float groundHeight;
+		public bool enableCollision;
+
+		public override void Update(ref ParticleUpdateContext ctx)
+		{
+			float norm = ctx.normalizedLife;
+
+			// fade
+			float a = (norm < ctx.controller.fadeStartTime || Mathf.Approximately(ctx.controller.fadeStartTime, 1f))
+				? 1f
+				: Mathf.Clamp01(1f - ((norm - ctx.controller.fadeStartTime) / (1f - ctx.controller.fadeStartTime)));
+			color.a = a;
+
+			// scale
+			radius = initialRadius * ctx.controller.scaleCurve.Evaluate(norm);
+
+			// physics
+			velocity.y -= gravity * ctx.deltaTime;
+			velocity *= 1f - friction;//ToDo calculate air friction properly - frame rate independant
+			if (enableCollision) position.y = Mathf.Max(position.y, groundHeight);
+			delta = -position;
+			position += velocity * ctx.deltaTime;
+
+			if (true == enableCollision && velocity.y < 0f && position.y <= groundHeight)
+			{
+				position.y = groundHeight;
+				velocity.y = -velocity.y * bounceDamping;
+			}
+
+			delta += position; // newPos – oldPos
+		}
+	}
+
+	// --------------------------------------------------------------------
+	// Static particle – **billboard fallback**
+	// --------------------------------------------------------------------
+	public class StaticParticle : Particle
+	{
+		public override void Update(ref ParticleUpdateContext ctx)
+		{
+			float norm = ctx.normalizedLife;
+
+			// fade
+			float a = (norm < ctx.controller.fadeStartTime || Mathf.Approximately(ctx.controller.fadeStartTime, 1f))
+				? 1f
+				: Mathf.Clamp01(1f - ((norm - ctx.controller.fadeStartTime) / (1f - ctx.controller.fadeStartTime)));
+			color.a = a;
+
+			// scale
+			radius = initialRadius * ctx.controller.scaleCurve.Evaluate(norm);
+		}
+	}
+
 	public class ParticleController : MonoBehaviour
 	{
 		// ──────────────────────────────────────────────────────────────
