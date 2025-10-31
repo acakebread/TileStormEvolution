@@ -35,6 +35,7 @@ namespace MassiveHadronLtd
 			serializedObject.Update();
 
 			// ----- Debug -----
+			EditorGUILayout.PropertyField(serializedObject.FindProperty("showInSceneView"));
 			EditorGUILayout.PropertyField(serializedObject.FindProperty("updateParticles"));
 
 			// ----- Lifetime -----

@@ -67,12 +67,14 @@ namespace MassiveHadronLtd
 		}
 	}
 
+	[ExecuteInEditMode]  // ← CRITICAL
 	public class ParticleController : MonoBehaviour
 	{
 		// ──────────────────────────────────────────────────────────────
 		// (all inspector fields – copy from your previous version)
 		// ──────────────────────────────────────────────────────────────
 		[Header("Debug")]//[Header("Rendering")]
+		public bool showInSceneView = true;
 		public bool updateParticles = true;
 
 		[Header("Lifetime")]
@@ -117,19 +119,36 @@ namespace MassiveHadronLtd
 		private float timelinePosition = 0f;
 		private float lastTimelinePosition = 0f;
 
+		private void Awake()
+		{
+			if (particleMaterial == null)
+			{
+				Debug.LogError("ParticleController: particleMaterial is not assigned!");
+				enabled = false;
+				return;
+			}
+
+			if (scaleCurve.keys.Length == 0)
+				scaleCurve = AnimationCurve.Linear(0f, 1f, 1f, 1f);//default
+
+			customParticleSystem = new ParticleSystem(particleMaterial, useThreeZoneSlicing, this);
+			// Remove the unnecessary if(Application.isPlaying) - the creation is the same for edit/play mode
+		}
+
 		private void OnEnable()
 		{
 			RenderPipelineManager.beginCameraRendering += OnBeginCameraRendering;
 		}
+
 		private void OnDisable()
 		{
 			RenderPipelineManager.beginCameraRendering -= OnBeginCameraRendering;
 		}
 
 		/* --------------------------------------------------------------
-		   This is the ONLY place we draw particles.
-		   It is called once for every camera that URP renders.
-		   -------------------------------------------------------------- */
+           This is the ONLY place we draw particles.
+           It is called once for every camera that URP renders.
+           -------------------------------------------------------------- */
 		private void OnBeginCameraRendering(ScriptableRenderContext _, Camera cam)
 		{
 			//Debug.Log($"[Particle] Rendering for camera: {cam.name} (tag: {cam.tag})");
@@ -148,21 +167,6 @@ namespace MassiveHadronLtd
 			//     !cam.CompareTag("TextureCamera")) return;
 
 			customParticleSystem.Render(cam);
-		}
-
-		private void Awake()
-		{
-			if (particleMaterial == null)
-			{
-				Debug.LogError("ParticleController: particleMaterial is not assigned!");
-				enabled = false;
-				return;
-			}
-
-			if (scaleCurve.keys.Length == 0)
-				scaleCurve = AnimationCurve.Linear(0f, 1f, 1f, 1f);//default
-
-			customParticleSystem = new ParticleSystem(particleMaterial, useThreeZoneSlicing, this);
 		}
 
 		private void FixedUpdate()
@@ -266,5 +270,61 @@ namespace MassiveHadronLtd
 			};
 			p.Update(ref ctx);
 		}
+
+		// ----------------------------------------------------------------
+		// SCENE VIEW DEBUG RENDER
+		// ----------------------------------------------------------------
+#if UNITY_EDITOR
+		private void OnRenderObject()
+		{
+			if (!showInSceneView || customParticleSystem == null) return;
+			if (Camera.current == null) return;
+			if (Camera.current.cameraType != CameraType.SceneView) return;
+
+			var mesh = customParticleSystem.GetDebugMesh();
+			if (mesh == null) return;
+
+			var mat = GetDebugMaterial();
+			if (mat == null) return;
+
+			// Draw both passes
+			for (int pass = 0; pass < mat.passCount; pass++)
+			{
+				mat.SetPass(pass);
+				Graphics.DrawMeshNow(mesh, transform.localToWorldMatrix);
+			}
+		}
+
+		private static Material _debugMat;
+		private Material GetDebugMaterial()
+		{
+			if (_debugMat != null) return _debugMat;
+
+			var shader = Shader.Find("Debug/ParticleOutlineSimple");
+			if (shader == null)
+			{
+				Debug.LogWarning("Debug/ParticleOutlineSimple not found. Using fallback.");
+				shader = Shader.Find("Unlit/Color");
+			}
+
+			_debugMat = new Material(shader)
+			{
+				hideFlags = HideFlags.HideAndDontSave
+			};
+
+			if (shader.name.Contains("OutlineSimple"))
+			{
+				_debugMat.SetColor("_MainColor", new Color(0, 1, 1, 0.3f));
+				_debugMat.SetColor("_OutlineColor", new Color(1, 0, 1, 1));
+				_debugMat.SetFloat("_OutlineWidth", 0.2f); // 20% larger
+			}
+			else
+			{
+				_debugMat.color = new Color(1, 0, 1, 0.3f);
+			}
+
+			return _debugMat;
+		}
+#endif
 	}
 }

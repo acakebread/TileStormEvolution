@@ -348,5 +348,18 @@ namespace MassiveHadronLtd
 				}
 			}
 		}
+
+#if UNITY_EDITOR
+		// Returns the main camera's mesh (or first valid one) for Scene View
+		public Mesh GetDebugMesh()
+		{
+			for (int i = 0; i < viewCount; i++)
+			{
+				if (viewUsed[i])
+					return viewMeshes[i];
+			}
+			return viewCount > 0 ? viewMeshes[0] : null;
+		}
+#endif
 	}
 }
