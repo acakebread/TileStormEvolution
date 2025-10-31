@@ -119,6 +119,106 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!1 &182906320
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 182906322}
+  - component: {fileID: 182906321}
+  m_Layer: 0
+  m_Name: ParticleControllerAlgae
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &182906321
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 182906320}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cd8578c20d24105438647a46520bbefb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  showInSceneView: 1
+  useDebugMaterial: 0
+  updateParticles: 1
+  lifetime: 0.35
+  lifetimeVariation: 0.1
+  useThreeZoneSlicing: 0
+  particleMaterial: {fileID: 2100000, guid: 02223f9d74ca8f74999a27cdc04e130f, type: 2}
+  color: {r: 0.34069067, g: 0.8301887, b: 0.8301887, a: 1}
+  radius: 0.01
+  fadeStartTime: 0.49
+  gravity: 0
+  friction: 0.01
+  velocityBias: {x: 0, y: 0, z: 0}
+  velocityMagnitude: {x: 0, y: 0, z: 0}
+  enableCollision: 1
+  groundHeight: 0.1
+  bounceDamping: 0
+  scaleCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1.0047188
+      inSlope: -2
+      outSlope: 0.049121093
+      tangentMode: 1
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0.29095298
+    - serializedVersion: 3
+      time: 0.8227579
+      value: 0.56112236
+      inSlope: -2
+      outSlope: -2
+      tangentMode: 1
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: -2
+      outSlope: -2
+      tangentMode: 1
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  particleCount: 64
+  scatterScalar: {x: 16, y: 0, z: 16}
+  cycleTime: 1
+  pulses:
+  - start: -0.01
+    end: 1
+--- !u!4 &182906322
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 182906320}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 1, y: 0.1, z: 4}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &391604674
 GameObject:
   m_ObjectHideFlags: 0
@@ -184,7 +284,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &1081262123
 Transform:
   m_ObjectHideFlags: 0
@@ -765,7 +865,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &1910858983
 Transform:
   m_ObjectHideFlags: 0
@@ -1041,7 +1141,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &2063531461
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1145,4 +1245,5 @@ SceneRoots:
   - {fileID: 1910858983}
   - {fileID: 2063531462}
   - {fileID: 1081262123}
+  - {fileID: 182906322}
   - {fileID: 1458804429}
