@@ -36,7 +36,7 @@ namespace MassiveHadronLtd
 
 			// ----- Debug -----
 			EditorGUILayout.PropertyField(serializedObject.FindProperty("showInSceneView"));
-			EditorGUILayout.PropertyField(serializedObject.FindProperty("debugOutlinePixels"));
+			EditorGUILayout.PropertyField(serializedObject.FindProperty("useDebugMaterial"));
 			EditorGUILayout.PropertyField(serializedObject.FindProperty("updateParticles"));
 
 			// ----- Lifetime -----

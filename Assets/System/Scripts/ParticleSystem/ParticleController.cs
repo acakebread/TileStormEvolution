@@ -75,7 +75,8 @@ namespace MassiveHadronLtd
 		// ──────────────────────────────────────────────────────────────
 		[Header("Debug")]//[Header("Rendering")]
 		public bool showInSceneView = true;
-		public float debugOutlinePixels = 2f;
+		public bool useDebugMaterial = false;
+
 		public bool updateParticles = true;
 
 		[Header("Lifetime")]
@@ -133,7 +134,6 @@ namespace MassiveHadronLtd
 				scaleCurve = AnimationCurve.Linear(0f, 1f, 1f, 1f);//default
 
 			customParticleSystem = new ParticleSystem(particleMaterial, useThreeZoneSlicing, this);
-			// Remove the unnecessary if(Application.isPlaying) - the creation is the same for edit/play mode
 		}
 
 		private void OnEnable()
@@ -284,32 +284,26 @@ namespace MassiveHadronLtd
 			var mesh = customParticleSystem.GetDebugMesh();
 			if (mesh == null) return;
 
-			var mat = GetDebugMaterial();
-			if (mat == null) return;
+			// Use real material if you want UVs
+			var mat = useDebugMaterial ? GetCyanMaterial() : particleMaterial;
 
 			mat.SetPass(0);
 			Graphics.DrawMeshNow(mesh, transform.localToWorldMatrix);
 		}
 
-		private static Material _debugMat;
-		private Material GetDebugMaterial()
+
+		private static Material _cyanMat;
+		private Material GetCyanMaterial()
 		{
-			if (_debugMat != null) return _debugMat;
+			if (_cyanMat != null) return _cyanMat;
 
-			var shader = Shader.Find("Debug/TriggerWireframe");
-			if (shader == null)
-			{
-				Debug.LogWarning("Debug/TriggerWireframe not found.");
-				return null;
-			}
-
-			_debugMat = new Material(shader)
+			var shader = Shader.Find("Hidden/Internal-Colored");
+			_cyanMat = new Material(shader)
 			{
 				color = new Color(0, 1, 1, 0.3f),
 				hideFlags = HideFlags.HideAndDontSave
 			};
-
-			return _debugMat;
+			return _cyanMat;
 		}
 #endif
 	}
