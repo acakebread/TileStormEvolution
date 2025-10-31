@@ -212,6 +212,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cd8578c20d24105438647a46520bbefb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  showInSceneView: 1
+  useDebugMaterial: 0
   updateParticles: 1
   lifetime: 0.75
   lifetimeVariation: 0.5
@@ -481,6 +483,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cd8578c20d24105438647a46520bbefb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  showInSceneView: 1
+  useDebugMaterial: 0
   updateParticles: 1
   lifetime: 1
   lifetimeVariation: 0
@@ -789,10 +793,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cd8578c20d24105438647a46520bbefb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  showInSceneView: 1
+  useDebugMaterial: 0
   updateParticles: 1
   lifetime: 0.75
   lifetimeVariation: 0.5
-  useThreeZoneSlicing: 0
+  useThreeZoneSlicing: 1
   particleMaterial: {fileID: 2100000, guid: 02223f9d74ca8f74999a27cdc04e130f, type: 2}
   color: {r: 0.6886792, g: 0.4580211, b: 0, a: 1}
   radius: 0.25
@@ -1048,10 +1054,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cd8578c20d24105438647a46520bbefb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  showInSceneView: 1
+  useDebugMaterial: 0
   updateParticles: 1
   lifetime: 1
   lifetimeVariation: 0.5
-  useThreeZoneSlicing: 0
+  useThreeZoneSlicing: 1
   particleMaterial: {fileID: 2100000, guid: 02223f9d74ca8f74999a27cdc04e130f, type: 2}
   color: {r: 0.057, g: 0.248, b: 0, a: 1}
   radius: 0.1
