@@ -4,52 +4,55 @@
     {
         _MainColor ("Main Color", Color) = (0,1,1,0.3)
         _OutlineColor ("Outline Color", Color) = (1,0,1,1)
-        _OutlineWidth ("Outline Width", Range(1.0, 2.0)) = 1.1
+        _OutlineWidth ("Outline Width", Range(0.01, 0.5)) = 0.2
     }
     SubShader
     {
         Tags { "Queue"="Transparent" "RenderType"="Transparent" }
 
-        // --- PASS 1: OUTLINE (drawn first, larger) ---
-        Pass
-        {
-            Blend SrcAlpha OneMinusSrcAlpha
-            ZWrite Off
-            Cull Off
+        // // PASS 0: OUTLINE — expanded in screen space
+        // Pass
+        // {
+        //     Blend SrcAlpha OneMinusSrcAlpha
+        //     ZWrite Off
+        //     Cull Off
 
-            CGPROGRAM
-            #pragma vertex vert
-            #pragma fragment frag
-            #include "UnityCG.cginc"
+        //     CGPROGRAM
+        //     #pragma vertex vert
+        //     #pragma fragment frag
+        //     #include "UnityCG.cginc"
 
-            fixed4 _OutlineColor;
-            float _OutlineWidth;
+        //     fixed4 _OutlineColor;
+        //     float _OutlineWidth;
 
-            struct appdata {
-                float4 vertex : POSITION;
-            };
-            struct v2f {
-                float4 pos : SV_POSITION;
-            };
+        //     struct appdata { float4 vertex : POSITION; };
+        //     struct v2f     { float4 pos : SV_POSITION; };
 
-            v2f vert(appdata v)
-            {
-                v2f o;
-                float4 clipPos = UnityObjectToClipPos(v.vertex);
-                float3 viewPos = UnityObjectToViewPos(v.vertex);
-                viewPos *= _OutlineWidth;
-                o.pos = UnityViewToClipPos(viewPos);
-                return o;
-            }
+        //     v2f vert(appdata v)
+        //     {
+        //         v2f o;
+        //         float4 clip = UnityObjectToClipPos(v.vertex);
+        //         float2 ndc = clip.xy / clip.w;
+        //         float2 pixel = ndc * _ScreenParams.xy;
 
-            fixed4 frag(v2f i) : SV_Target
-            {
-                return _OutlineColor;
-            }
-            ENDCG
-        }
+        //         // Expand by a fraction of the particle's screen radius
+        //         float radius = length(pixel);
+        //         if (radius > 0.01)
+        //         {
+        //             float2 dir = pixel / radius;
+        //             pixel += dir * radius * _OutlineWidth;
+        //         }
 
-        // --- PASS 2: FILL (drawn on top) ---
+        //         ndc = pixel / _ScreenParams.xy;
+        //         o.pos = float4(ndc * clip.w, clip.z, clip.w);
+        //         return o;
+        //     }
+
+        //     fixed4 frag(v2f i) : SV_Target { return _OutlineColor; }
+        //     ENDCG
+        // }
+
+        // PASS 1: FILL — original size
         Pass
         {
             Blend SrcAlpha OneMinusSrcAlpha
@@ -63,12 +66,8 @@
 
             fixed4 _MainColor;
 
-            struct appdata {
-                float4 vertex : POSITION;
-            };
-            struct v2f {
-                float4 pos : SV_POSITION;
-            };
+            struct appdata { float4 vertex : POSITION; };
+            struct v2f     { float4 pos : SV_POSITION; };
 
             v2f vert(appdata v)
             {
@@ -77,10 +76,7 @@
                 return o;
             }
 
-            fixed4 frag(v2f i) : SV_Target
-            {
-                return _MainColor;
-            }
+            fixed4 frag(v2f i) : SV_Target { return _MainColor; }
             ENDCG
         }
     }

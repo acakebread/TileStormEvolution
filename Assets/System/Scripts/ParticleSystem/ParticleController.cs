@@ -75,6 +75,7 @@ namespace MassiveHadronLtd
 		// ──────────────────────────────────────────────────────────────
 		[Header("Debug")]//[Header("Rendering")]
 		public bool showInSceneView = true;
+		public float debugOutlinePixels = 2f;
 		public bool updateParticles = true;
 
 		[Header("Lifetime")]
@@ -278,8 +279,7 @@ namespace MassiveHadronLtd
 		private void OnRenderObject()
 		{
 			if (!showInSceneView || customParticleSystem == null) return;
-			if (Camera.current == null) return;
-			if (Camera.current.cameraType != CameraType.SceneView) return;
+			if (Camera.current == null || Camera.current.cameraType != CameraType.SceneView) return;
 
 			var mesh = customParticleSystem.GetDebugMesh();
 			if (mesh == null) return;
@@ -287,12 +287,8 @@ namespace MassiveHadronLtd
 			var mat = GetDebugMaterial();
 			if (mat == null) return;
 
-			// Draw both passes
-			for (int pass = 0; pass < mat.passCount; pass++)
-			{
-				mat.SetPass(pass);
-				Graphics.DrawMeshNow(mesh, transform.localToWorldMatrix);
-			}
+			mat.SetPass(0);
+			Graphics.DrawMeshNow(mesh, transform.localToWorldMatrix);
 		}
 
 		private static Material _debugMat;
@@ -300,28 +296,18 @@ namespace MassiveHadronLtd
 		{
 			if (_debugMat != null) return _debugMat;
 
-			var shader = Shader.Find("Debug/ParticleOutlineSimple");
+			var shader = Shader.Find("Debug/TriggerWireframe");
 			if (shader == null)
 			{
-				Debug.LogWarning("Debug/ParticleOutlineSimple not found. Using fallback.");
-				shader = Shader.Find("Unlit/Color");
+				Debug.LogWarning("Debug/TriggerWireframe not found.");
+				return null;
 			}
 
 			_debugMat = new Material(shader)
 			{
+				color = new Color(0, 1, 1, 0.3f),
 				hideFlags = HideFlags.HideAndDontSave
 			};
-
-			if (shader.name.Contains("OutlineSimple"))
-			{
-				_debugMat.SetColor("_MainColor", new Color(0, 1, 1, 0.3f));
-				_debugMat.SetColor("_OutlineColor", new Color(1, 0, 1, 1));
-				_debugMat.SetFloat("_OutlineWidth", 0.2f); // 20% larger
-			}
-			else
-			{
-				_debugMat.color = new Color(1, 0, 1, 0.3f);
-			}
 
 			return _debugMat;
 		}
