@@ -1,5 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 
 namespace MassiveHadronLtd
 {
@@ -115,6 +117,39 @@ namespace MassiveHadronLtd
 		private float timelinePosition = 0f;
 		private float lastTimelinePosition = 0f;
 
+		private void OnEnable()
+		{
+			RenderPipelineManager.beginCameraRendering += OnBeginCameraRendering;
+		}
+		private void OnDisable()
+		{
+			RenderPipelineManager.beginCameraRendering -= OnBeginCameraRendering;
+		}
+
+		/* --------------------------------------------------------------
+		   This is the ONLY place we draw particles.
+		   It is called once for every camera that URP renders.
+		   -------------------------------------------------------------- */
+		private void OnBeginCameraRendering(ScriptableRenderContext _, Camera cam)
+		{
+			//Debug.Log($"[Particle] Rendering for camera: {cam.name} (tag: {cam.tag})");
+			if (customParticleSystem == null) return;
+
+			// ---- 1. Skip cameras that are not part of the reflection stack ----
+			// (main camera, reflectionCamera and textureCamera all have a
+			//  UniversalAdditionalCameraData component – everything else can be ignored)
+			var uacd = cam.GetComponent<UniversalAdditionalCameraData>();
+			if (uacd == null) return;
+
+			// ---- 2. OPTIONAL: filter by tag if you want to be extra safe ----
+			// (uncomment if you added the tags in ReflectionEffectCamera)
+			// if (!cam.CompareTag("MainCamera") &&
+			//     !cam.CompareTag("ReflectionCamera") &&
+			//     !cam.CompareTag("TextureCamera")) return;
+
+			customParticleSystem.Render(cam);
+		}
+
 		private void Awake()
 		{
 			if (particleMaterial == null)
@@ -161,11 +196,6 @@ namespace MassiveHadronLtd
 			}
 
 			if (emit) EmitParticlesInternal();
-		}
-
-		private void LateUpdate()
-		{
-			customParticleSystem?.Render();
 		}
 
 		public void EmitParticles() { forceEmission = true; timelinePosition = 0f; }

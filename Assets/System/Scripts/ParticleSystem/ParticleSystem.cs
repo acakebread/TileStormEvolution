@@ -39,7 +39,6 @@ namespace MassiveHadronLtd
 		private const int MaxParticles = 4096;
 		private readonly bool useThreeZoneSlicing;
 		private readonly Material material;
-		private readonly Transform cameraTransform;
 		private readonly int verticesPerParticle;
 
 		private readonly List<Particle> particlePool = new List<Particle>(MaxParticles);
@@ -65,7 +64,6 @@ namespace MassiveHadronLtd
 			material = new Material(particleMaterial);
 			useThreeZoneSlicing = threeZoneSlicing;
 			verticesPerParticle = useThreeZoneSlicing ? 8 : 4;
-			cameraTransform = Camera.main.transform;
 			Controller = controller;
 
 			int trianglesPerParticle = useThreeZoneSlicing ? 18 : 6;
@@ -220,15 +218,25 @@ namespace MassiveHadronLtd
 		}
 
 		// ----------------------------------------------------------------
-		public void Render()
+		// NEW public API – called with the camera that is currently rendering
+		// ----------------------------------------------------------------
+		public void Render(Camera renderingCamera)
 		{
-			UpdateMesh();
-			Graphics.DrawMesh(mesh, Matrix4x4.identity, material, 0);
+			UpdateMesh(renderingCamera);
+			Graphics.DrawMesh(mesh, Matrix4x4.identity, material, 0, renderingCamera);
 		}
 
-		private void UpdateMesh()
+		// ----------------------------------------------------------------
+		// Updated to use the *real* rendering camera
+		// ----------------------------------------------------------------
+		private void UpdateMesh(Camera renderingCamera)
 		{
-			Vector3 camPos = cameraTransform ? cameraTransform.transform.position : Vector3.zero;
+			if (renderingCamera == null) return;
+
+			Matrix4x4 view = renderingCamera.worldToCameraMatrix;
+			Matrix4x4 cameraToWorld = view.inverse;
+			Vector3 camPos = cameraToWorld.MultiplyPoint(Vector3.zero);
+			Vector3 camUp = cameraToWorld.MultiplyVector(Vector3.up).normalized;
 
 			for (int i = 0; i < activeParticles.Count; i++)
 			{
@@ -239,22 +247,15 @@ namespace MassiveHadronLtd
 				Vector3 delta = p.delta;
 				Vector3 toCam = (pos - camPos).normalized;
 
-				// ──────────────────────────────────────────────────────────────
-				// TANGENT: moving → from delta, stationary → from camera up
-				// ──────────────────────────────────────────────────────────────
 				Vector3 tangent;
 				if (delta.sqrMagnitude > 0.000001f)
-				{
 					tangent = Vector3.Cross(delta, toCam).normalized;
-				}
 				else
 				{
-					Vector3 camUp = cameraTransform ? cameraTransform.transform.up : Vector3.up;
 					tangent = Vector3.Cross(camUp, toCam).normalized;
 					if (tangent.sqrMagnitude < 0.01f)
 						tangent = Vector3.Cross(Vector3.up, toCam).normalized;
 				}
-				// ──────────────────────────────────────────────────────────────
 
 				float dot = Vector3.Dot(delta, toCam);
 				float tang = (delta - dot * toCam).magnitude;
