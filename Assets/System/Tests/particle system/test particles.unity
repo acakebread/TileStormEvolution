@@ -184,7 +184,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &1081262123
 Transform:
   m_ObjectHideFlags: 0
@@ -440,12 +440,12 @@ MonoBehaviour:
   previousEffectMode: 4
   frostDepth: 0.5
   noiseStrength: 0.5
-  baseColor: {r: 0.066037714, g: 0.058873247, b: 0.058873247, a: 0.13333334}
+  baseColor: {r: 0.066037714, g: 0.058873247, b: 0.058873247, a: 0.6509804}
   filmIntensity: 0.2
   noiseScale: 1
   noiseTexture: {fileID: 0}
   rippleSpeed: 0.304
-  rippleAmplitude: 0
+  rippleAmplitude: 0.197
   rippleFrequency: 0.289
   rippleOffset: 0.5
   reflectionStrength: 0.5
@@ -468,7 +468,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &1458804428
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -621,7 +621,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!20 &1760635932
 Camera:
   m_ObjectHideFlags: 0
@@ -761,7 +761,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &1910858983
 Transform:
   m_ObjectHideFlags: 0
@@ -1035,7 +1035,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &2063531461
 MonoBehaviour:
   m_ObjectHideFlags: 0
