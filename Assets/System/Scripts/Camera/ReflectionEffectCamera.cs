@@ -45,15 +45,22 @@ namespace MassiveHadronLtd
 		[SerializeField] private EffectMode effectMode = EffectMode.PerfectMirror;
 		[SerializeField, HideInInspector] private EffectMode previousEffectMode;
 
-		// Used for frost effect
-		[SerializeField, Range(0f, 1f)] private float frostDepth = 0.5f;
-		[SerializeField, Range(0f, 1f)] private float noiseStrength = 0.5f;
-		[SerializeField] private Color baseColor = new Color(0.25f, 0.25f, 0.25f, 0.5f);
+		// === MIRROR & FILM TINT (NEW) ===
+		[SerializeField, Tooltip("Tint for PerfectMirror and SurfaceFilm (multiplies reflection)")]
+		private Color mirrorTint = new Color(1f, 1f, 1f, 1f);
+
+		// === FROST / WATER / OCEAN BASE COLOR (OLD) ===
+		[SerializeField, Tooltip("Base color for Frost, Water, Ocean")]
+		private Color baseColor = new Color(0.25f, 0.25f, 0.25f, 0.5f);
 
 		// Used for surface film effect
 		[SerializeField, Range(0, 0.5f)] private float filmIntensity = 0.2f;
 		[SerializeField, Range(0.01f, 5f)] private float noiseScale = 1f;
 		[SerializeField] private Texture2D noiseTexture;
+
+		// Used for frost effect
+		[SerializeField, Range(0f, 1f)] private float frostDepth = 0.5f;
+		[SerializeField, Range(0f, 1f)] private float noiseStrength = 0.5f;
 
 		// Used for water effect
 		[SerializeField, Range(0f, 1f)] private float rippleSpeed = 0.5f;
@@ -77,7 +84,8 @@ namespace MassiveHadronLtd
 		private bool isTextureDynamic;
 		private float timeSeed;
 
-		// Track previous values for change detection
+		// Track previous values
+		private Color lastMirrorTint;
 		private Color lastBaseColor;
 		private float lastFrostDepth;
 		private float lastNoiseStrength;
@@ -103,7 +111,6 @@ namespace MassiveHadronLtd
 				return;
 			}
 
-			// Initialize reflection camera
 			var obj = new GameObject("ReflectionCamera");
 			obj.transform.SetParent(transform, false);
 			reflectionCamera = obj.AddComponent<Camera>();
@@ -125,19 +132,15 @@ namespace MassiveHadronLtd
 			data.renderType = CameraRenderType.Overlay;
 			URPCameraHelper.SetClearDepth(data, false);
 
-			// Initialize effect and set previousEffectMode
 			InitializeEffect();
 			previousEffectMode = effectMode;
-			// Initialize tracked values
 			StoreMaterialPropertyValues();
 		}
 
 		private void InitializeEffect()
 		{
-			// Clean up existing dynamic resources
 			CleanupDynamicResources();
 
-			// Initialize noise texture for SurfaceFilm, FrostEffect, or OceanEffect
 			if (effectMode == EffectMode.SurfaceFilm || effectMode == EffectMode.FrostEffect || effectMode == EffectMode.OceanEffect)
 			{
 				if (noiseTexture == null)
@@ -152,7 +155,6 @@ namespace MassiveHadronLtd
 			}
 			else
 			{
-				// Clean up noise texture if not needed
 				if (isTextureDynamic && noiseTexture != null)
 				{
 					DestroyImmediate(noiseTexture);
@@ -165,29 +167,23 @@ namespace MassiveHadronLtd
 			switch (effectMode)
 			{
 				case EffectMode.PerfectMirror:
+					SetupRenderTexture("RenderTexture");
 					effectMesh = new Mesh();
-					effectMaterial = MaterialUtils.CreateTransparentUnlitMaterial(new Color(0.1f, 0.1f, 0.1f, 0.5f));
+					effectMaterial = MaterialUtils.CreatePerfectMirrorOpaqueMaterial(renderTexture, mirrorTint);
 					isMaterialDynamic = true;
-
-					var mirrorData = mainCamera.gameObject.GetComponent<UniversalAdditionalCameraData>();
-					mirrorData.cameraStack.Clear();
-					mirrorData.cameraStack.Add(reflectionCamera);
-
-					reflectionCamera.targetTexture = null;
-					outputStage = reflectionCamera;
+					SetupTextureCamera();
+					reflectionCamera.targetTexture = renderTexture;
+					outputStage = mainCamera;
 					break;
 
 				case EffectMode.SurfaceFilm:
+					SetupRenderTexture("MirrorWithFilmRT");
 					effectMesh = new Mesh();
-					effectMaterial = MaterialUtils.CreateSurfaceFilmMaterial(new Color(0.1f, 0.1f, 0.1f, 0.5f), noiseTexture, filmIntensity, noiseScale);
+					effectMaterial = MaterialUtils.CreateMirrorWithFilmOpaque(renderTexture, mirrorTint, noiseTexture, filmIntensity, noiseScale);
 					isMaterialDynamic = true;
-
-					var filmData = mainCamera.gameObject.GetComponent<UniversalAdditionalCameraData>();
-					filmData.cameraStack.Clear();
-					filmData.cameraStack.Add(reflectionCamera);
-
-					reflectionCamera.targetTexture = null;
-					outputStage = reflectionCamera;
+					SetupTextureCamera();
+					reflectionCamera.targetTexture = renderTexture;
+					outputStage = mainCamera;
 					break;
 
 				case EffectMode.FrostEffect:
@@ -195,7 +191,6 @@ namespace MassiveHadronLtd
 					effectMesh = new Mesh();
 					effectMaterial = MaterialUtils.CreateFrostOpaqueMaterial(baseColor, frostDepth, renderTexture, noiseTexture, noiseStrength);
 					isMaterialDynamic = true;
-
 					SetupTextureCamera();
 					reflectionCamera.targetTexture = renderTexture;
 					outputStage = mainCamera;
@@ -206,7 +201,6 @@ namespace MassiveHadronLtd
 					effectMesh = new Mesh();
 					effectMaterial = MaterialUtils.CreateWaterMaterialOpaque(baseColor, renderTexture, rippleSpeed, rippleAmplitude, rippleFrequency, rippleOffset);
 					isMaterialDynamic = true;
-
 					SetupTextureCamera();
 					reflectionCamera.targetTexture = renderTexture;
 					outputStage = mainCamera;
@@ -217,11 +211,6 @@ namespace MassiveHadronLtd
 					effectMesh = new Mesh();
 					effectMaterial = MaterialUtils.CreateOceanOpaqueMaterial(baseColor, rippleSpeed, rippleAmplitude, rippleFrequency, rippleOffset, frostDepth, noiseStrength, frostThreshold, frostFadeRange, renderTexture, noiseTexture);
 					isMaterialDynamic = true;
-
-					if (renderTexture == null) Debug.LogError("OceanEffect: renderTexture is null!");
-					if (noiseTexture == null) Debug.LogWarning("OceanEffect: noiseTexture is null, using generated Perlin noise.");
-					Debug.Log($"OceanEffect: Material created with shader {effectMaterial.shader.name}");
-
 					SetupTextureCamera();
 					reflectionCamera.targetTexture = renderTexture;
 					outputStage = mainCamera;
@@ -231,7 +220,6 @@ namespace MassiveHadronLtd
 					var defaultData = mainCamera.gameObject.GetComponent<UniversalAdditionalCameraData>();
 					defaultData.cameraStack.Clear();
 					defaultData.cameraStack.Add(reflectionCamera);
-
 					outputStage = mainCamera;
 					break;
 			}
@@ -239,11 +227,9 @@ namespace MassiveHadronLtd
 			var mainCameraData = mainCamera.gameObject.GetComponent<UniversalAdditionalCameraData>();
 			if (null != postProcessingCamera) mainCameraData.cameraStack.Add(postProcessingCamera);
 
-			// Update material properties and skybox
 			UpdateMaterialProperties();
 			SkyboxUtility.SetSkyboxCubemap(effectMaterial, RenderSettings.skybox);
 
-			// Register rendering command
 			if (outputStage != null)
 			{
 				var provider = outputStage.gameObject.GetComponent<CameraCommandProvider>();
@@ -252,15 +238,15 @@ namespace MassiveHadronLtd
 
 				provider.RegisterCommand(RenderPassEvent.BeforeRenderingTransparents,
 				(cmd, cam) =>
+				{
+					if (effectMesh == null) return;
+					FrustumPlaneIntersection.GenerateFrustumPlaneIntersectionMesh(mainCamera, planeNormal, offset, effectMesh);
+					if (effectMesh != null && effectMesh.vertexCount >= 3 && effectMesh.triangles.Length >= 3 && effectMaterial != null)
 					{
-						if (effectMesh == null) return;
-						FrustumPlaneIntersection.GenerateFrustumPlaneIntersectionMesh(mainCamera, planeNormal, offset, effectMesh);
-						if (effectMesh != null && effectMesh.vertexCount >= 3 && effectMesh.triangles.Length >= 3 && effectMaterial != null)
-						{
-							effectMaterial.SetPass(0);
-							cmd.DrawMesh(effectMesh, Matrix4x4.identity, effectMaterial, 0, 0);
-						}
+						effectMaterial.SetPass(0);
+						cmd.DrawMesh(effectMesh, Matrix4x4.identity, effectMaterial, 0, 0);
 					}
+				}
 				);
 			}
 		}
@@ -302,7 +288,8 @@ namespace MassiveHadronLtd
 
 		private bool HasMaterialPropertiesChanged()
 		{
-			return baseColor != lastBaseColor ||
+			return mirrorTint != lastMirrorTint ||
+				   baseColor != lastBaseColor ||
 				   frostDepth != lastFrostDepth ||
 				   noiseStrength != lastNoiseStrength ||
 				   filmIntensity != lastFilmIntensity ||
@@ -320,6 +307,7 @@ namespace MassiveHadronLtd
 
 		private void StoreMaterialPropertyValues()
 		{
+			lastMirrorTint = mirrorTint;
 			lastBaseColor = baseColor;
 			lastFrostDepth = frostDepth;
 			lastNoiseStrength = noiseStrength;
@@ -338,26 +326,32 @@ namespace MassiveHadronLtd
 
 		private void UpdateMaterialProperties()
 		{
-			if (effectMaterial == null)
-				return;
+			if (effectMaterial == null) return;
 
-			// Only update static properties if they have changed
 			if (HasMaterialPropertiesChanged())
 			{
-				effectMaterial.SetColor("_BaseColor", baseColor);
 				switch (effectMode)
 				{
+					case EffectMode.PerfectMirror:
 					case EffectMode.SurfaceFilm:
-						effectMaterial.SetFloat("_FilmIntensity", filmIntensity);
-						effectMaterial.SetFloat("_NoiseScale", noiseScale);
-						effectMaterial.SetTexture("_NoiseTex", noiseTexture);
+						effectMaterial.SetColor("_DimColor", mirrorTint);
+						if (effectMode == EffectMode.SurfaceFilm)
+						{
+							effectMaterial.SetFloat("_FilmIntensity", filmIntensity);
+							effectMaterial.SetFloat("_NoiseScale", noiseScale);
+							effectMaterial.SetTexture("_NoiseTex", noiseTexture);
+						}
 						break;
+
 					case EffectMode.FrostEffect:
+						effectMaterial.SetColor("_BaseColor", baseColor);
 						effectMaterial.SetFloat("_Depth", frostDepth);
 						effectMaterial.SetFloat("_NoiseStrength", noiseStrength);
 						effectMaterial.SetTexture("_NoiseTex", noiseTexture);
 						break;
+
 					case EffectMode.Water:
+						effectMaterial.SetColor("_BaseColor", baseColor);
 						effectMaterial.SetFloat("_RippleSpeed", rippleSpeed);
 						effectMaterial.SetFloat("_RippleAmplitude", rippleAmplitude);
 						effectMaterial.SetFloat("_RippleFrequency", rippleFrequency);
@@ -366,14 +360,16 @@ namespace MassiveHadronLtd
 						if (RenderSettings.skybox != lastSkyboxMaterial)
 							SkyboxUtility.SetSkyboxCubemap(effectMaterial, RenderSettings.skybox);
 						break;
+
 					case EffectMode.OceanEffect:
+						effectMaterial.SetColor("_BaseColor", baseColor);
 						effectMaterial.SetFloat("_RippleSpeed", rippleSpeed);
 						effectMaterial.SetFloat("_RippleAmplitude", rippleAmplitude);
 						effectMaterial.SetFloat("_RippleFrequency", rippleFrequency);
 						effectMaterial.SetFloat("_RippleOffset", rippleOffset);
-						effectMaterial.SetFloat("_DepthThreshold", 128.0f); // Maps to _DepthMax, default 128
-						effectMaterial.SetFloat("_FrostDepth", frostDepth); // Maps to _Depth
-						effectMaterial.SetFloat("_FrostNoiseStrength", noiseStrength); // Maps to _NoiseStrength
+						effectMaterial.SetFloat("_DepthThreshold", 128.0f);
+						effectMaterial.SetFloat("_FrostDepth", frostDepth);
+						effectMaterial.SetFloat("_FrostNoiseStrength", noiseStrength);
 						effectMaterial.SetFloat("_FrostThreshold", frostThreshold);
 						effectMaterial.SetFloat("_FrostFadeRange", frostFadeRange);
 						effectMaterial.SetTexture("_NoiseTex", noiseTexture);
@@ -382,11 +378,9 @@ namespace MassiveHadronLtd
 						break;
 				}
 
-				// Store the updated values
 				StoreMaterialPropertyValues();
 			}
 
-			// Always update timeSeed for Water and OceanEffect
 			if (effectMode == EffectMode.Water || effectMode == EffectMode.OceanEffect)
 			{
 				effectMaterial.SetFloat("_TimeSeed", timeSeed);
@@ -397,13 +391,11 @@ namespace MassiveHadronLtd
 
 		public void Update()
 		{
-			// Update timeSeed every frame for Water and OceanEffect
 			if (effectMode == EffectMode.Water || effectMode == EffectMode.OceanEffect)
 			{
 				timeSeed += Time.deltaTime;
 			}
 
-			// Update material properties (will skip static properties if unchanged)
 			UpdateMaterialProperties();
 		}
 
@@ -438,7 +430,6 @@ namespace MassiveHadronLtd
 			if (!isActiveAndEnabled || mainCamera == null)
 				return;
 
-			// Only reinitialize if effectMode has changed
 			if (effectMode != previousEffectMode)
 			{
 				InitializeEffect();
@@ -446,7 +437,6 @@ namespace MassiveHadronLtd
 			}
 			else
 			{
-				// Update material properties without recreating resources
 				UpdateMaterialProperties();
 			}
 		}
@@ -491,26 +481,13 @@ namespace MassiveHadronLtd
 
 		void OnDestroy()
 		{
-			if (mainCamera != null)
-				mainCamera.targetTexture = null;
-
-			if (reflectionCamera != null)
-				reflectionCamera.targetTexture = null;
-
-			if (textureCamera != null)
-				textureCamera.targetTexture = null;
-
-			if (effectMaterial != null && isMaterialDynamic)
-				DestroyImmediate(effectMaterial);
-
-			if (effectMesh != null)
-				DestroyImmediate(effectMesh);
-
-			if (renderTexture != null)
-				DestroyImmediate(renderTexture);
-
-			if (isTextureDynamic && noiseTexture != null)
-				DestroyImmediate(noiseTexture);
+			if (mainCamera != null) mainCamera.targetTexture = null;
+			if (reflectionCamera != null) reflectionCamera.targetTexture = null;
+			if (textureCamera != null) textureCamera.targetTexture = null;
+			if (effectMaterial != null && isMaterialDynamic) DestroyImmediate(effectMaterial);
+			if (effectMesh != null) DestroyImmediate(effectMesh);
+			if (renderTexture != null) DestroyImmediate(renderTexture);
+			if (isTextureDynamic && noiseTexture != null) DestroyImmediate(noiseTexture);
 		}
 	}
 }

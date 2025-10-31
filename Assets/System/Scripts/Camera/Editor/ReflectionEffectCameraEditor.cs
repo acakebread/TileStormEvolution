@@ -1,5 +1,6 @@
 using UnityEditor;
 using MassiveHadronLtd;
+using UnityEngine;
 
 [CustomEditor(typeof(ReflectionEffectCamera))]
 public class ReflectionEffectCameraEditor : Editor
@@ -8,25 +9,23 @@ public class ReflectionEffectCameraEditor : Editor
 	{
 		serializedObject.Update();
 
-		// Plane settings
 		EditorGUILayout.LabelField("Plane Settings", EditorStyles.boldLabel);
 		EditorGUILayout.PropertyField(serializedObject.FindProperty("planeNormal"));
 		EditorGUILayout.PropertyField(serializedObject.FindProperty("offset"));
 
-		// Effect settings
 		EditorGUILayout.Space();
 		EditorGUILayout.LabelField("Reflection Effects", EditorStyles.boldLabel);
 		var effectModeProp = serializedObject.FindProperty("effectMode");
 		EditorGUILayout.PropertyField(effectModeProp);
 
-		// Show properties based on the selected effect mode
 		switch ((ReflectionEffectCamera.EffectMode)effectModeProp.enumValueIndex)
 		{
 			case ReflectionEffectCamera.EffectMode.PerfectMirror:
-				// No additional properties for PerfectMirror
+				EditorGUILayout.PropertyField(serializedObject.FindProperty("mirrorTint"), new GUIContent("Mirror Tint"));
 				break;
 
 			case ReflectionEffectCamera.EffectMode.SurfaceFilm:
+				EditorGUILayout.PropertyField(serializedObject.FindProperty("mirrorTint"), new GUIContent("Mirror Tint"));
 				EditorGUILayout.PropertyField(serializedObject.FindProperty("noiseTexture"));
 				EditorGUILayout.PropertyField(serializedObject.FindProperty("filmIntensity"));
 				EditorGUILayout.PropertyField(serializedObject.FindProperty("noiseScale"));
