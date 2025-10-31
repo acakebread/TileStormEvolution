@@ -1,43 +1,113 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
-#if UNITY_EDITOR
-using UnityEditor;
-#endif
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 
 namespace MassiveHadronLtd
 {
+	// --------------------------------------------------------------------
+	// Physics particle
+	// --------------------------------------------------------------------
+	public class PhysicsParticle : Particle
+	{
+		public Vector3 velocity;
+		public float gravity;
+		public float friction;
+		public float bounceDamping;
+		public float groundHeight;
+		public bool enableCollision;
+
+		public override void Update(ref ParticleUpdateContext ctx)
+		{
+			float norm = ctx.normalizedLife;
+
+			// fade
+			float a = (norm < ctx.controller.fadeStartTime || Mathf.Approximately(ctx.controller.fadeStartTime, 1f))
+				? 1f
+				: Mathf.Clamp01(1f - ((norm - ctx.controller.fadeStartTime) / (1f - ctx.controller.fadeStartTime)));
+			color.a = a;
+
+			// scale
+			radius = initialRadius * ctx.controller.scaleCurve.Evaluate(norm);
+
+			// physics
+			velocity.y -= gravity * ctx.deltaTime;
+			velocity *= 1f - friction;//ToDo calculate air friction properly - frame rate independant
+			if (enableCollision) position.y = Mathf.Max(position.y, groundHeight);
+			delta = -position;
+			position += velocity * ctx.deltaTime;
+
+			if (true == enableCollision && velocity.y < 0f && position.y <= groundHeight)
+			{
+				position.y = groundHeight;
+				velocity.y = -velocity.y * bounceDamping;
+			}
+
+			delta += position; // newPos – oldPos
+		}
+	}
+
+	// --------------------------------------------------------------------
+	// Static particle – **billboard fallback**
+	// --------------------------------------------------------------------
+	public class StaticParticle : Particle
+	{
+		public override void Update(ref ParticleUpdateContext ctx)
+		{
+			float norm = ctx.normalizedLife;
+
+			// fade
+			float a = (norm < ctx.controller.fadeStartTime || Mathf.Approximately(ctx.controller.fadeStartTime, 1f))
+				? 1f
+				: Mathf.Clamp01(1f - ((norm - ctx.controller.fadeStartTime) / (1f - ctx.controller.fadeStartTime)));
+			color.a = a;
+
+			// scale
+			radius = initialRadius * ctx.controller.scaleCurve.Evaluate(norm);
+		}
+	}
+
+	[ExecuteInEditMode]  // ← CRITICAL
 	public class ParticleController : MonoBehaviour
 	{
-		#region --- Exposed Settings (formerly ParticleSettings) ---
+		// ──────────────────────────────────────────────────────────────
+		// (all inspector fields – copy from your previous version)
+		// ──────────────────────────────────────────────────────────────
+		[Header("Debug")]//[Header("Rendering")]
+		public bool showInSceneView = true;
+		[Tooltip("True = Cyan debug (no tint), False = Real material (UVs/textures)")] 
+		public bool useDebugMaterial = false;
+		public bool updateParticles = true;
+
 		[Header("Lifetime")]
 		public float lifetime = 1f;
 		public float lifetimeVariation = 0.5f;
 
 		[Header("Appearance")]
-		public float radius = 0.02f;
-		public AnimationCurve scaleCurve = AnimationCurve.Linear(0f, 1f, 1f, 1f);
+		public bool useThreeZoneSlicing = false;
+		[SerializeField] private Material particleMaterial;
 		public Color color = Color.white;
+		public float radius = 0.02f;
+		[Range(0f, 1f)] public float fadeStartTime = 1f;//[Header("Fade")]
 
 		[Header("Physics")]
 		public float gravity = 10f;
-		public float bounceDamping = 0.8f;
+		[Range(0f, 1f)] public float friction = 0.01f;
+		public Vector3 velocityBias = Vector3.zero;
+		public Vector3 velocityMagnitude = Vector3.one;
+		public bool enableCollision = false;
 		public float groundHeight = 0f;
-		public bool useGlobalGroundPlane = true;
+		public float bounceDamping = 0.8f;
 
-		[Header("Rendering")]
-		public bool useThreeZoneSlicing = false;
-		public bool updateParticles = true;
-
-		[Header("Fade")]
-		[Range(0f, 1f)] public float fadeStartTime = 1f;
+		[Header("Animation")]//for some reason this doesn't display - editor interfering
+		public AnimationCurve scaleCurve = AnimationCurve.Linear(0f, 1f, 1f, 1f);
 
 		[Header("PWM / Emission")]
+		[Range(1, 128)] public int particleCount = 1;
+		public Vector3 scatterScalar = Vector3.zero;
+
 		[Range(0.1f, 10f)] public float cycleTime = 0.1f;
 		[SerializeField] public List<Pulse> pulses = new List<Pulse> { new Pulse { start = 0f, end = 0.1f } };
-		[Range(1, 128)] public int particleCount = 1;
-		public Vector3 velocity = Vector3.zero;
-		[Range(0f, 10f)] public float scatter = 0f;
-		#endregion
 
 		[System.Serializable]
 		public class Pulse
@@ -46,24 +116,12 @@ namespace MassiveHadronLtd
 			[Range(0f, 1f)] public float end;
 		}
 
-		[SerializeField] private Material particleMaterial;
-
 		private ParticleSystem customParticleSystem;
+		private bool forceEmission = false;//UI override for continuous emission
+		private float timelinePosition = 0f;
+		private float lastTimelinePosition = 0f;
 
-		private class ParticleData : ParticleSystem.ParticleDataRoot
-		{
-			public ParticleSystem.Particle particle;   // Direct reference
-			public Vector3 velocity;
-			public float maxLifetime;
-			public Color color;
-			public float initialRadius;
-		}
-
-		private bool emitEnabled;
-		private float timelinePosition;
-		private float lastTimelinePosition;
-
-		void Awake()
+		private void Awake()
 		{
 			if (particleMaterial == null)
 			{
@@ -72,145 +130,236 @@ namespace MassiveHadronLtd
 				return;
 			}
 
-			// Initialise default scale curve if empty
 			if (scaleCurve.keys.Length == 0)
-			{
-				scaleCurve = new AnimationCurve();
-				scaleCurve.AddKey(new Keyframe(0f, 1.0f, 0f, 0f));
-				scaleCurve.AddKey(new Keyframe(1f, 1.0f, 0f, 0f));
-#if UNITY_EDITOR
-				for (int i = 0; i < scaleCurve.keys.Length; i++)
-				{
-					AnimationUtility.SetKeyBroken(scaleCurve, i, true);
-					AnimationUtility.SetKeyLeftTangentMode(scaleCurve, i, AnimationUtility.TangentMode.Free);
-					AnimationUtility.SetKeyRightTangentMode(scaleCurve, i, AnimationUtility.TangentMode.Free);
-				}
-#endif
-			}
+				scaleCurve = AnimationCurve.Linear(0f, 1f, 1f, 1f);//default
 
-			customParticleSystem = new ParticleSystem(particleMaterial, useThreeZoneSlicing);
-			timelinePosition = lastTimelinePosition = 0f;
-			emitEnabled = false;
+			customParticleSystem = new ParticleSystem(particleMaterial, useThreeZoneSlicing, this);
 		}
 
-		void FixedUpdate()
+		private void OnEnable()
 		{
-			if (updateParticles)
-				UpdateParticles();
+			RenderPipelineManager.beginCameraRendering += OnBeginCameraRendering;
+		}
+
+		private void OnDisable()
+		{
+			RenderPipelineManager.beginCameraRendering -= OnBeginCameraRendering;
+		}
+
+		/* --------------------------------------------------------------
+           This is the ONLY place we draw particles.
+           It is called once for every camera that URP renders.
+           -------------------------------------------------------------- */
+		private void OnBeginCameraRendering(ScriptableRenderContext _, Camera cam)
+		{
+			//Debug.Log($"[Particle] Rendering for camera: {cam.name} (tag: {cam.tag})");
+			if (customParticleSystem == null) return;
+
+			// ---- 1. Skip cameras that are not part of the reflection stack ----
+			// (main camera, reflectionCamera and textureCamera all have a
+			//  UniversalAdditionalCameraData component – everything else can be ignored)
+			var uacd = cam.GetComponent<UniversalAdditionalCameraData>();
+			if (uacd == null) return;
+
+			// ---- 2. OPTIONAL: filter by tag if you want to be extra safe ----
+			// (uncomment if you added the tags in ReflectionEffectCamera)
+			// if (!cam.CompareTag("MainCamera") &&
+			//     !cam.CompareTag("ReflectionCamera") &&
+			//     !cam.CompareTag("TextureCamera")) return;
+
+			customParticleSystem.Render(cam);
+		}
+
+		private void FixedUpdate()
+		{
+			if (!updateParticles || customParticleSystem == null) return;
+
+			customParticleSystem.UpdateParticles();
 
 			lastTimelinePosition = timelinePosition;
 			timelinePosition += Time.deltaTime;
 			if (timelinePosition >= cycleTime)
 				timelinePosition -= cycleTime;
 
-			float normalizedTime = timelinePosition / cycleTime;
-			float lastNormalizedTime = lastTimelinePosition / cycleTime;
-			bool inPulse = false;
+			float normNow = timelinePosition / cycleTime;
+			float normPrev = lastTimelinePosition / cycleTime;
+			bool emit = forceEmission;
 
-			foreach (var pulse in pulses)
+			foreach (var p in pulses)
 			{
-				if (normalizedTime >= pulse.start && normalizedTime <= pulse.end)
-					inPulse = true;
+				if (normNow >= p.start && normNow <= p.end) emit = true;
 
-				bool crossed = false;
-				if (lastNormalizedTime <= normalizedTime)
+				if (normPrev <= normNow)
 				{
-					if (lastNormalizedTime < pulse.end && normalizedTime > pulse.start)
-						crossed = true;
+					if (normPrev < p.end && normNow > p.start) emit = true;
 				}
 				else
 				{
-					if (lastNormalizedTime < pulse.end || normalizedTime > pulse.start)
-						crossed = true;
+					if (normPrev < p.end || normNow > p.start) emit = true;
 				}
-
-				if (crossed)
-					EmitParticlesInternal();
+				if (emit) break;
 			}
 
-			if (emitEnabled || inPulse)
-				EmitParticlesInternal();
+			if (emit) EmitParticlesInternal();
 		}
 
-		void Update() => customParticleSystem.Render();
-
-		public void EmitParticles() { emitEnabled = true; timelinePosition = 0f; }
-		public void StopEmitting() { emitEnabled = false; timelinePosition = 0f; }
+		public void EmitParticles() { forceEmission = true; timelinePosition = 0f; }
+		public void StopEmitting() { forceEmission = false; timelinePosition = 0f; }
 
 		private void EmitParticlesInternal()
 		{
-			int emitCount = Mathf.Max(1, particleCount);
-			for (int n = 0; n < emitCount; ++n)
+			if (customParticleSystem == null) return;
+
+			int cnt = Mathf.Max(1, particleCount);
+			for (int i = 0; i < cnt; ++i)
 			{
-				var scatterVec = Random.value * scatter * Random.onUnitSphere;
-				SpawnParticle(transform.position, velocity + scatterVec, lifetimeVariation);
+				Vector3 position = transform.position + EllipsoidRandom.Inside(scatterScalar);
+				Vector3 veolcity = velocityBias + EllipsoidRandom.Inside(velocityMagnitude);
+				SpawnParticle(position, veolcity);
 			}
 		}
 
 		public void SpawnParticle(Vector3 position, Vector3 velocity, float? lifetimeVariation = null)
 		{
-			if (!updateParticles) return;
+			if (!updateParticles || customParticleSystem == null) return;
 
-			var variation = lifetimeVariation ?? this.lifetimeVariation;
-			var life = lifetime + variation + Random.Range(-variation, variation);
-			if (life <= 0f)
+			float variation = lifetimeVariation ?? this.lifetimeVariation;
+			float life = lifetime + Random.Range(-variation, variation);
+			if (life <= 0f) return;
+
+			Particle p = null;
+
+			if (gravity != 0f || velocity != Vector3.zero)
 			{
-				Debug.LogError($"spawning particle with no life span {life}");
-				return;
+				var pp = customParticleSystem.AllocateParticle<PhysicsParticle>();
+				if (pp == null) return;
+
+				pp.duration = life;
+				pp.life = life;
+				pp.position = position;
+				pp.initialRadius = radius;
+				pp.radius = radius;
+				pp.color = color;
+				pp.velocity = velocity;
+				pp.gravity = gravity;
+				pp.friction = friction;
+				pp.bounceDamping = bounceDamping;
+				pp.groundHeight = groundHeight;
+				pp.enableCollision = enableCollision;
+				p = pp;
+			}
+			else
+			{
+				var sp = customParticleSystem.AllocateParticle<StaticParticle>();
+				if (sp == null) return;
+
+				sp.duration = life;
+				sp.life = life;
+				sp.position = position;
+				sp.initialRadius = radius;
+				sp.radius = radius;
+				sp.color = color;
+				p = sp;
 			}
 
-			var particle = customParticleSystem.AllocateParticle();
-			if (particle == null) return;
-
-			particle.delta = Vector3.zero;
-			particle.position = position;
-			particle.life = life;
-			particle.color = color;
-			particle.particleData = new ParticleData
+			// ---- First-frame update (still zero-allocation) ----
+			var ctx = new ParticleUpdateContext
 			{
-				particle = particle,
-				velocity = velocity,
-				maxLifetime = life,
-				color = color,
-				initialRadius = radius
+				controller = this,
+				deltaTime = 0f,
+				normalizedLife = 0f
 			};
+			p.Update(ref ctx);
 		}
 
-		private void UpdateParticles()
+		// ----------------------------------------------------------------
+		// SCENE VIEW DEBUG RENDER
+		// ----------------------------------------------------------------
+#if UNITY_EDITOR
+		private void OnRenderObject()
 		{
-			var dt = Time.deltaTime;
+			// CRITICAL: ONLY RUN IN SCENE VIEW — NO GAME VIEW LEAK
+			if (!showInSceneView) return;
+			if (customParticleSystem == null) return;
+			if (Camera.current == null) return;
+			if (Camera.current.cameraType != CameraType.SceneView) return;
 
-			for (var i = customParticleSystem.activeParticles.Count - 1; i >= 0; i--)
+			// EXTRA SAFETY: Check if we're in Edit Mode and Scene View is active
+#if UNITY_EDITOR
+			if (!UnityEditor.SceneView.currentDrawingSceneView) return;
+#endif
+
+			var mesh = customParticleSystem.GetDebugMesh();
+			if (mesh == null) return;
+
+			var mat = useDebugMaterial ? GetCyanDebugMaterial() : particleMaterial;
+			if (mat == null) return;
+
+			if (useDebugMaterial)
 			{
-				var data = customParticleSystem.activeParticles[i].particleData as ParticleData;
-				var particle = data.particle;
-				particle.delta = -particle.position;
+				EnsureWhiteColors(mesh);
+			}
 
-				// ----- Fade -----
-				var norm = 1f - Mathf.Clamp01(data.particle.life / data.maxLifetime);
-				particle.color.a = (norm < fadeStartTime || Mathf.Approximately(fadeStartTime, 1f)) ? 1f : Mathf.Clamp01(1f - ((norm - fadeStartTime) / (1f - fadeStartTime)));
+			mat.SetPass(0);
+			Graphics.DrawMeshNow(mesh, transform.localToWorldMatrix);
+		}
 
-				// ----- Scale -----
-				particle.radius = data.initialRadius * scaleCurve.Evaluate(norm);
+		private static Material cyanDebugMaterial;
+		private static Color[] whiteColorCache;
+		private static int lastVertexCount = 0;
 
-				// ----- Physics -----
-				data.velocity.y -= gravity * dt;
-				particle.position += data.velocity * dt;
+		private Material GetCyanDebugMaterial()
+		{
+			if (cyanDebugMaterial != null) return cyanDebugMaterial;
 
-				var groundY = useGlobalGroundPlane ? groundHeight : transform.position.y + groundHeight;
+			var shader = Shader.Find("Debug/TriggerWireframe");
+			if (shader == null)
+			{
+				Debug.LogWarning("Debug/TriggerWireframe not found. Using Unlit/Color.");
+				shader = Shader.Find("Unlit/Color");
+			}
 
-				if (data.velocity.y < 0f && particle.position.y <= groundY)
-				{
-					particle.position.y = groundY;
-					data.velocity.y = -data.velocity.y;
-					data.velocity *= bounceDamping;
-				}
-				particle.delta += particle.position;
+			cyanDebugMaterial = new Material(shader)
+			{
+				hideFlags = HideFlags.HideAndDontSave,
+				color = new Color(0, 1, 1, 0.3f)
+			};
 
-				// ----- Render update -----
-				if (false == customParticleSystem.UpdateParticle(particle)) continue;
+			return cyanDebugMaterial;
+		}
+
+		private void EnsureWhiteColors(Mesh mesh)
+		{
+			int vertexCount = mesh.vertexCount;
+			if (whiteColorCache == null || whiteColorCache.Length != vertexCount)
+			{
+				whiteColorCache = new Color[vertexCount];
+				for (int i = 0; i < vertexCount; i++)
+					whiteColorCache[i] = Color.white;
+				lastVertexCount = vertexCount;
+			}
+			else if (lastVertexCount != vertexCount)
+			{
+				System.Array.Resize(ref whiteColorCache, vertexCount);
+				for (int i = lastVertexCount; i < vertexCount; i++)
+					whiteColorCache[i] = Color.white;
+				lastVertexCount = vertexCount;
+			}
+
+			mesh.colors = whiteColorCache;
+		}
+
+		private void OnDestroy()
+		{
+			if (cyanDebugMaterial != null)
+			{
+				if (Application.isPlaying)
+					Object.Destroy(cyanDebugMaterial);
+				else
+					Object.DestroyImmediate(cyanDebugMaterial);
+				cyanDebugMaterial = null;
 			}
 		}
+#endif
 	}
 }
-

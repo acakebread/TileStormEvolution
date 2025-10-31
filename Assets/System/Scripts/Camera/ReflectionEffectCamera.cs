@@ -296,6 +296,7 @@ namespace MassiveHadronLtd
 				var data = obj.AddComponent<UniversalAdditionalCameraData>();
 				data.cameraStack.Clear();
 				data.cameraStack.Add(reflectionCamera);
+				obj.AddComponent<CameraCommandProvider>();
 			}
 		}
 

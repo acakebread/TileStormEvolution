@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using System.Linq;
 using System.Collections.Generic;
 
@@ -6,6 +6,21 @@ namespace MassiveHadronLtd
 {
 	public static class MathUtil
 	{
+		public static Vector3 RandomInEllipsoid(Vector3 ellipse)
+		{
+			// Generate a random direction uniformly
+			Vector3 dir = Random.onUnitSphere;
+
+			// Generate a radius uniformly by volume
+			float r = Mathf.Pow(Random.value, 1f / 3f);
+
+			// Scale direction by radius to get a point inside a unit sphere
+			Vector3 p = dir * r;
+
+			// Apply the ellipsoidal scaling *after* normalization
+			return Vector3.Scale(p, ellipse);
+		}
+
 		public static Vector3 QuadraticBezierPoint(float t, Vector3 p0, Vector3 p1, Vector3 p2)
 		{
 			var u = 1f - t;
