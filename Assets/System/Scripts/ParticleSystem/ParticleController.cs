@@ -209,21 +209,18 @@ namespace MassiveHadronLtd
 		private void EmitParticlesInternal()
 		{
 			if (customParticleSystem == null) return;
-
 			int cnt = Mathf.Max(1, particleCount);
 			for (int i = 0; i < cnt; ++i)
-			{
-				Vector3 position = transform.position + EllipsoidRandom.Inside(scatterScalar);
-				Vector3 veolcity = velocityBias + EllipsoidRandom.Inside(velocityMagnitude);
-				SpawnParticle(position, veolcity);
-			}
+				SpawnParticle();
 		}
 
-		public void SpawnParticle(Vector3 position, Vector3 velocity, float? lifetimeVariation = null)
+		public void SpawnParticle()
 		{
 			if (!updateParticles || customParticleSystem == null) return;
 
-			float variation = lifetimeVariation ?? this.lifetimeVariation;
+			Vector3 position = transform.position + EllipsoidRandom.Inside(scatterScalar);
+			Vector3 velocity = velocityBias + EllipsoidRandom.Inside(velocityMagnitude);
+			float variation = lifetimeVariation;
 			float life = lifetime + Random.Range(-variation, variation);
 			if (life <= 0f) return;
 
