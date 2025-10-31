@@ -3,9 +3,6 @@ using System.Collections.Generic;
 
 namespace MassiveHadronLtd
 {
-	// --------------------------------------------------------------------
-	// Re-usable update context – **zero allocations per particle**
-	// --------------------------------------------------------------------
 	public struct ParticleUpdateContext
 	{
 		public ParticleController controller;
@@ -13,9 +10,6 @@ namespace MassiveHadronLtd
 		public float normalizedLife;
 	}
 
-	// --------------------------------------------------------------------
-	// Base particle
-	// --------------------------------------------------------------------
 	public abstract class Particle
 	{
 		public float life;
@@ -31,12 +25,10 @@ namespace MassiveHadronLtd
 		public abstract void Update(ref ParticleUpdateContext ctx);
 	}
 
-	// --------------------------------------------------------------------
-	// ParticleSystem – pool / mesh / update / render
-	// --------------------------------------------------------------------
 	public class ParticleSystem
 	{
 		private const int MaxParticles = 4096;
+		private const int MaxViewCache = 8;
 		private readonly bool useThreeZoneSlicing;
 		private readonly Material material;
 		private readonly int verticesPerParticle;
@@ -45,20 +37,21 @@ namespace MassiveHadronLtd
 		public readonly List<Particle> activeParticles = new List<Particle>(MaxParticles);
 		private readonly List<int> freeParticleIndices = new List<int>(MaxParticles);
 
-		private Mesh mesh;
 		private readonly List<Vector3> vertices;
 		private readonly List<int> triangles;
 		private readonly List<Color> colors;
 		private readonly List<Vector2> uvs;
 
+		// ----- DYNAMIC MESH CACHE -----
+		private readonly Mesh[] viewMeshes = new Mesh[MaxViewCache];
+		private readonly Matrix4x4[] viewMatrices = new Matrix4x4[MaxViewCache];
+		private readonly bool[] viewUsed = new bool[MaxViewCache];  // true = mesh built this frame
+		private int viewCount = 0;
+
 		public ParticleController Controller { get; private set; }
-
-		// ----------------------------------------------------------------
-		// **Mutable** reusable context – NOT readonly
-		// ----------------------------------------------------------------
 		private ParticleUpdateContext updateCtx;
+		private readonly HashSet<int> dirtyColorIndices = new HashSet<int>();
 
-		// ----------------------------------------------------------------
 		public ParticleSystem(Material particleMaterial, bool threeZoneSlicing, ParticleController controller)
 		{
 			material = new Material(particleMaterial);
@@ -75,14 +68,12 @@ namespace MassiveHadronLtd
 			uvs = new List<Vector2>(MaxParticles * 8);
 
 			InitializePool();
-			InitializeMesh();
+			InitializeSharedBuffers();
 			SetupURPMaterial();
 
-			// initialise the reusable context once
 			updateCtx = new ParticleUpdateContext();
 		}
 
-		// ----------------------------------------------------------------
 		private void SetupURPMaterial()
 		{
 			if (material.shader.name != "MassiveHadronLtd/Unlit/AdditiveParticles")
@@ -96,7 +87,6 @@ namespace MassiveHadronLtd
 			material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent + 100;
 		}
 
-		// ----------------------------------------------------------------
 		private void InitializePool()
 		{
 			for (int i = 0; i < MaxParticles; i++)
@@ -106,12 +96,8 @@ namespace MassiveHadronLtd
 			}
 		}
 
-		// ----------------------------------------------------------------
-		private void InitializeMesh()
+		private void InitializeSharedBuffers()
 		{
-			mesh = new Mesh { name = "ParticleMesh" };
-			mesh.MarkDynamic();
-
 			for (int i = 0; i < MaxParticles; i++)
 			{
 				int offset = i * verticesPerParticle;
@@ -136,24 +122,27 @@ namespace MassiveHadronLtd
 					vertices.AddRange(new Vector3[4]);
 					triangles.AddRange(new[] { offset + 0, offset + 1, offset + 2, offset + 1, offset + 3, offset + 2 });
 					colors.AddRange(new Color[4]);
-					uvs.AddRange(new[] { new Vector2(0,1), new Vector2(1,1), new Vector2(0,0), new Vector2(1,0)});
+					uvs.AddRange(new[] { new Vector2(0, 1), new Vector2(1, 1), new Vector2(0, 0), new Vector2(1, 0) });
 				}
 			}
 
-			mesh.SetVertices(vertices);
-			mesh.SetTriangles(triangles, 0);
-			mesh.SetColors(colors);
-			mesh.SetUVs(0, uvs);
-			mesh.RecalculateBounds();
+			for (int i = 0; i < MaxViewCache; i++)
+			{
+				var m = new Mesh { name = $"ParticleViewMesh_{i}" };
+				m.MarkDynamic();
+				m.SetVertices(vertices);
+				m.SetTriangles(triangles, 0);
+				m.SetColors(colors);
+				m.SetUVs(0, uvs);
+				m.RecalculateBounds();
+				viewMeshes[i] = m;
+				viewUsed[i] = false;
+			}
 		}
 
-		// ----------------------------------------------------------------
 		public T AllocateParticle<T>() where T : Particle, new()
 		{
-			if (freeParticleIndices.Count == 0)
-			{
-				return null;
-			}
+			if (freeParticleIndices.Count == 0) return null;
 
 			int idx = freeParticleIndices[freeParticleIndices.Count - 1];
 			freeParticleIndices.RemoveAt(freeParticleIndices.Count - 1);
@@ -174,17 +163,20 @@ namespace MassiveHadronLtd
 		}
 
 		// ----------------------------------------------------------------
-		// **ZERO allocations** – one struct reused for the whole frame
+		// UPDATE: Reset view cache at frame start
 		// ----------------------------------------------------------------
 		public void UpdateParticles()
 		{
 			if (Controller == null) return;
 
 			float dt = Time.deltaTime;
-
-			// fill once
 			updateCtx.controller = Controller;
 			updateCtx.deltaTime = dt;
+
+			// ---- RESET VIEW CACHE FLAGS ----
+			viewCount = 0;
+			System.Array.Clear(viewUsed, 0, MaxViewCache);
+			dirtyColorIndices.Clear();
 
 			for (int i = activeParticles.Count - 1; i >= 0; i--)
 			{
@@ -200,10 +192,13 @@ namespace MassiveHadronLtd
 
 				updateCtx.normalizedLife = 1f - (p.life / p.duration);
 				p.Update(ref updateCtx);
+
+				int baseIdx = p.vertexIndex;
+				if (!colors[baseIdx].Equals(p.color))
+					dirtyColorIndices.Add(p.poolIndex);
 			}
 		}
 
-		// ----------------------------------------------------------------
 		private void DeactivateParticle(int index)
 		{
 			Particle p = activeParticles[index];
@@ -218,25 +213,89 @@ namespace MassiveHadronLtd
 		}
 
 		// ----------------------------------------------------------------
-		// NEW public API – called with the camera that is currently rendering
+		// RENDER: Matrix-driven, rebuild only if new this frame
 		// ----------------------------------------------------------------
 		public void Render(Camera renderingCamera)
-		{
-			UpdateMesh(renderingCamera);
-			Graphics.DrawMesh(mesh, Matrix4x4.identity, material, 0, renderingCamera);
-		}
-
-		// ----------------------------------------------------------------
-		// Updated to use the *real* rendering camera
-		// ----------------------------------------------------------------
-		private void UpdateMesh(Camera renderingCamera)
 		{
 			if (renderingCamera == null) return;
 
 			Matrix4x4 view = renderingCamera.worldToCameraMatrix;
-			Matrix4x4 cameraToWorld = view.inverse;
-			Vector3 camPos = cameraToWorld.MultiplyPoint(Vector3.zero);
-			Vector3 camUp = cameraToWorld.MultiplyVector(Vector3.up).normalized;
+			int slot = FindOrCreateViewSlot(view);
+			Mesh mesh = viewMeshes[slot];
+
+			// ---- REBUILD ONLY IF THIS VIEW IS NEW THIS FRAME ----
+			if (!viewUsed[slot])
+			{
+				UpdateMeshInternal(renderingCamera, vertices, colors);
+
+				mesh.SetVertices(vertices);
+
+				if (dirtyColorIndices.Count > 0)
+				{
+					foreach (int poolIdx in dirtyColorIndices)
+					{
+						Particle p = particlePool[poolIdx];
+						if (p == null) continue;
+						int v = p.vertexIndex;
+						for (int i = 0; i < verticesPerParticle; i++)
+							colors[v + i] = p.color;
+					}
+					dirtyColorIndices.Clear();
+				}
+
+				mesh.SetColors(colors);
+				mesh.RecalculateBounds();
+
+				viewMatrices[slot] = view;
+				viewUsed[slot] = true;
+			}
+
+			Graphics.DrawMesh(mesh, Matrix4x4.identity, material, 0, renderingCamera);
+		}
+
+		// ----------------------------------------------------------------
+		// FIND OR CREATE SLOT BASED ON MATRIX
+		// ----------------------------------------------------------------
+		private int FindOrCreateViewSlot(Matrix4x4 view)
+		{
+			for (int i = 0; i < viewCount; i++)
+			{
+				if (viewUsed[i] && MatricesEqual(view, viewMatrices[i]))
+					return i;
+			}
+
+			if (viewCount >= MaxViewCache)
+			{
+				// Fallback: reuse slot 0
+				viewCount = 1;
+				viewUsed[0] = false;
+				viewMatrices[0] = view;
+				return 0;
+			}
+
+			int slot = viewCount++;
+			viewMatrices[slot] = view;
+			viewUsed[slot] = false;
+			return slot;
+		}
+
+		private bool MatricesEqual(Matrix4x4 a, Matrix4x4 b)
+		{
+			for (int i = 0; i < 16; i++)
+				if (!Mathf.Approximately(a[i], b[i]))
+					return false;
+			return true;
+		}
+
+		// ----------------------------------------------------------------
+		// MESH UPDATE (per-view)
+		// ----------------------------------------------------------------
+		private void UpdateMeshInternal(Camera renderingCamera, List<Vector3> verts, List<Color> cols)
+		{
+			Matrix4x4 view = renderingCamera.worldToCameraMatrix;
+			Matrix4x4 camToWorld = view.inverse;
+			Vector3 camPos = camToWorld.MultiplyPoint(Vector3.zero);
+			Vector3 camUp = camToWorld.MultiplyVector(Vector3.up).normalized;
 
 			for (int i = 0; i < activeParticles.Count; i++)
 			{
@@ -277,23 +336,17 @@ namespace MassiveHadronLtd
 					Vector3 headB = pos + half;
 					Vector3 tailB = pos - half;
 
-					vertices[v + 0] = head - rad; vertices[v + 1] = head + rad;
-					vertices[v + 2] = headB - rad; vertices[v + 3] = headB + rad;
-					vertices[v + 4] = tailB - rad; vertices[v + 5] = tailB + rad;
-					vertices[v + 6] = tail - rad; vertices[v + 7] = tail + rad;
-					for (int j = 0; j < 8; j++) colors[v + j] = p.color;
+					verts[v + 0] = head - rad; verts[v + 1] = head + rad;
+					verts[v + 2] = headB - rad; verts[v + 3] = headB + rad;
+					verts[v + 4] = tailB - rad; verts[v + 5] = tailB + rad;
+					verts[v + 6] = tail - rad; verts[v + 7] = tail + rad;
 				}
 				else
 				{
-					vertices[v + 0] = head - rad; vertices[v + 1] = head + rad;
-					vertices[v + 2] = tail - rad; vertices[v + 3] = tail + rad;
-					for (int j = 0; j < 4; j++) colors[v + j] = p.color;
+					verts[v + 0] = head - rad; verts[v + 1] = head + rad;
+					verts[v + 2] = tail - rad; verts[v + 3] = tail + rad;
 				}
 			}
-
-			mesh.SetVertices(vertices);
-			mesh.SetColors(colors);
-			mesh.RecalculateBounds();
 		}
 	}
 }
