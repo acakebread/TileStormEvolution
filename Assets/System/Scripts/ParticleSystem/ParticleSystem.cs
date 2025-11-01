@@ -25,6 +25,13 @@ namespace MassiveHadronLtd
 		public abstract void Update(ref ParticleUpdateContext ctx);
 	}
 
+	public class ParticleMesh
+	{
+		public Mesh mesh;                    // Output mesh
+		public Matrix4x4 viewMatrix;         // View matrix used to build it
+		public bool usedThisFrame;           // Was this mesh built this frame?
+	}
+
 	public class ParticleSystem
 	{
 		private const int MaxParticles = 4096;
@@ -42,11 +49,12 @@ namespace MassiveHadronLtd
 		private readonly List<Color> colors;
 		private readonly List<Vector2> uvs;
 
-		// ----- DYNAMIC MESH CACHE -----
-		private readonly Mesh[] viewMeshes = new Mesh[MaxViewCache];
-		private readonly Matrix4x4[] viewMatrices = new Matrix4x4[MaxViewCache];
-		private readonly bool[] viewUsed = new bool[MaxViewCache];  // true = mesh built this frame
+		// Fixed-size cache using ParticleMesh — matches original behavior exactly
+		private readonly ParticleMesh[] particleMeshes = new ParticleMesh[MaxViewCache];
 		private int viewCount = 0;
+
+		// Placeholder for future use
+		private readonly List<Vector3> positions;
 
 		public ParticleController Controller { get; private set; }
 		private ParticleUpdateContext updateCtx;
@@ -66,6 +74,7 @@ namespace MassiveHadronLtd
 			triangles = new List<int>(totalTriangles);
 			colors = new List<Color>(MaxParticles * 8);
 			uvs = new List<Vector2>(MaxParticles * 8);
+			positions = new List<Vector3>(MaxParticles); // Kept for future use
 
 			InitializePool();
 			InitializeSharedBuffers();
@@ -126,17 +135,23 @@ namespace MassiveHadronLtd
 				}
 			}
 
+			// Initialize all cached meshes with shared topology
 			for (int i = 0; i < MaxViewCache; i++)
 			{
-				var m = new Mesh { name = $"ParticleViewMesh_{i}" };
-				m.MarkDynamic();
-				m.SetVertices(vertices);
-				m.SetTriangles(triangles, 0);
-				m.SetColors(colors);
-				m.SetUVs(0, uvs);
-				m.RecalculateBounds();
-				viewMeshes[i] = m;
-				viewUsed[i] = false;
+				var mesh = new Mesh { name = $"ParticleViewMesh_{i}" };
+				mesh.MarkDynamic();
+				mesh.SetVertices(vertices);
+				mesh.SetTriangles(triangles, 0);
+				mesh.SetColors(colors);
+				mesh.SetUVs(0, uvs);
+				mesh.RecalculateBounds();
+
+				particleMeshes[i] = new ParticleMesh
+				{
+					mesh = mesh,
+					viewMatrix = Matrix4x4.identity,
+					usedThisFrame = false
+				};
 			}
 		}
 
@@ -173,9 +188,11 @@ namespace MassiveHadronLtd
 			updateCtx.controller = Controller;
 			updateCtx.deltaTime = dt;
 
-			// ---- RESET VIEW CACHE FLAGS ----
+			// Reset view cache
 			viewCount = 0;
-			System.Array.Clear(viewUsed, 0, MaxViewCache);
+			for (int i = 0; i < MaxViewCache; i++)
+				particleMeshes[i].usedThisFrame = false;
+
 			dirtyColorIndices.Clear();
 
 			for (int i = activeParticles.Count - 1; i >= 0; i--)
@@ -221,14 +238,13 @@ namespace MassiveHadronLtd
 
 			Matrix4x4 view = renderingCamera.worldToCameraMatrix;
 			int slot = FindOrCreateViewSlot(view);
-			Mesh mesh = viewMeshes[slot];
+			ParticleMesh pm = particleMeshes[slot];
 
-			// ---- REBUILD ONLY IF THIS VIEW IS NEW THIS FRAME ----
-			if (!viewUsed[slot])
+			if (!pm.usedThisFrame)
 			{
 				UpdateMeshInternal(renderingCamera, vertices, colors);
 
-				mesh.SetVertices(vertices);
+				pm.mesh.SetVertices(vertices);
 
 				if (dirtyColorIndices.Count > 0)
 				{
@@ -243,14 +259,14 @@ namespace MassiveHadronLtd
 					dirtyColorIndices.Clear();
 				}
 
-				mesh.SetColors(colors);
-				mesh.RecalculateBounds();
+				pm.mesh.SetColors(colors);
+				pm.mesh.RecalculateBounds();
 
-				viewMatrices[slot] = view;
-				viewUsed[slot] = true;
+				pm.viewMatrix = view;
+				pm.usedThisFrame = true;
 			}
 
-			Graphics.DrawMesh(mesh, Matrix4x4.identity, material, 0, renderingCamera);
+			Graphics.DrawMesh(pm.mesh, Matrix4x4.identity, material, 0, renderingCamera);
 		}
 
 		// ----------------------------------------------------------------
@@ -260,22 +276,22 @@ namespace MassiveHadronLtd
 		{
 			for (int i = 0; i < viewCount; i++)
 			{
-				if (viewUsed[i] && MatricesEqual(view, viewMatrices[i]))
+				if (particleMeshes[i].usedThisFrame && MatricesEqual(view, particleMeshes[i].viewMatrix))
 					return i;
 			}
 
 			if (viewCount >= MaxViewCache)
 			{
-				// Fallback: reuse slot 0
+				// Reuse slot 0 (original behavior)
 				viewCount = 1;
-				viewUsed[0] = false;
-				viewMatrices[0] = view;
+				particleMeshes[0].usedThisFrame = false;
+				particleMeshes[0].viewMatrix = view;
 				return 0;
 			}
 
 			int slot = viewCount++;
-			viewMatrices[slot] = view;
-			viewUsed[slot] = false;
+			particleMeshes[slot].viewMatrix = view;
+			particleMeshes[slot].usedThisFrame = false;
 			return slot;
 		}
 
@@ -355,10 +371,10 @@ namespace MassiveHadronLtd
 		{
 			for (int i = 0; i < viewCount; i++)
 			{
-				if (viewUsed[i])
-					return viewMeshes[i];
+				if (particleMeshes[i].usedThisFrame)
+					return particleMeshes[i].mesh;
 			}
-			return viewCount > 0 ? viewMeshes[0] : null;
+			return viewCount > 0 ? particleMeshes[0].mesh : null;
 		}
 #endif
 	}
