@@ -32,7 +32,7 @@ namespace MassiveHadronLtd
 
 			// physics
 			velocity.y -= gravity * ctx.deltaTime;
-			velocity *= 1f - friction;//ToDo calculate air friction properly - frame rate independant
+			velocity *= 1f - friction;
 			if (enableCollision) position.y = Mathf.Max(position.y, groundHeight);
 			delta = -position;
 			position += velocity * ctx.deltaTime;
@@ -67,15 +67,12 @@ namespace MassiveHadronLtd
 		}
 	}
 
-	[ExecuteInEditMode]  // ← CRITICAL
+	[ExecuteInEditMode]
 	public class ParticleController : MonoBehaviour
 	{
-		// ──────────────────────────────────────────────────────────────
-		// (all inspector fields – copy from your previous version)
-		// ──────────────────────────────────────────────────────────────
-		[Header("Debug")]//[Header("Rendering")]
+		[Header("Debug")]
 		public bool showInSceneView = true;
-		[Tooltip("True = Cyan debug (no tint), False = Real material (UVs/textures)")] 
+		[Tooltip("True = Cyan debug (no tint), False = Real material (UVs/textures)")]
 		public bool useDebugMaterial = false;
 		public bool updateParticles = true;
 
@@ -88,7 +85,7 @@ namespace MassiveHadronLtd
 		[SerializeField] private Material particleMaterial;
 		public Color color = Color.white;
 		public float radius = 0.02f;
-		[Range(0f, 1f)] public float fadeStartTime = 1f;//[Header("Fade")]
+		[Range(0f, 1f)] public float fadeStartTime = 1f;
 
 		[Header("Physics")]
 		public float gravity = 10f;
@@ -99,7 +96,7 @@ namespace MassiveHadronLtd
 		public float groundHeight = 0f;
 		public float bounceDamping = 0.8f;
 
-		[Header("Animation")]//for some reason this doesn't display - editor interfering
+		[Header("Animation")]
 		public AnimationCurve scaleCurve = AnimationCurve.Linear(0f, 1f, 1f, 1f);
 
 		[Header("PWM / Emission")]
@@ -117,9 +114,12 @@ namespace MassiveHadronLtd
 		}
 
 		private ParticleSystem customParticleSystem;
-		private bool forceEmission = false;//UI override for continuous emission
+		private bool forceEmission = false;
 		private float timelinePosition = 0f;
 		private float lastTimelinePosition = 0f;
+
+		// Debug GUI tracking
+		private int lastViewCount = 0;
 
 		private void Awake()
 		{
@@ -131,7 +131,7 @@ namespace MassiveHadronLtd
 			}
 
 			if (scaleCurve.keys.Length == 0)
-				scaleCurve = AnimationCurve.Linear(0f, 1f, 1f, 1f);//default
+				scaleCurve = AnimationCurve.Linear(0f, 1f, 1f, 1f);
 
 			customParticleSystem = new ParticleSystem(particleMaterial, useThreeZoneSlicing, this);
 		}
@@ -139,35 +139,31 @@ namespace MassiveHadronLtd
 		private void OnEnable()
 		{
 			RenderPipelineManager.beginCameraRendering += OnBeginCameraRendering;
+			RenderPipelineManager.endCameraRendering += OnEndCameraRendering;
 		}
 
 		private void OnDisable()
 		{
 			RenderPipelineManager.beginCameraRendering -= OnBeginCameraRendering;
+			RenderPipelineManager.endCameraRendering -= OnEndCameraRendering;
 		}
 
-		/* --------------------------------------------------------------
-           This is the ONLY place we draw particles.
-           It is called once for every camera that URP renders.
-           -------------------------------------------------------------- */
 		private void OnBeginCameraRendering(ScriptableRenderContext _, Camera cam)
 		{
-			//Debug.Log($"[Particle] Rendering for camera: {cam.name} (tag: {cam.tag})");
 			if (customParticleSystem == null) return;
 
-			// ---- 1. Skip cameras that are not part of the reflection stack ----
-			// (main camera, reflectionCamera and textureCamera all have a
-			//  UniversalAdditionalCameraData component – everything else can be ignored)
 			var uacd = cam.GetComponent<UniversalAdditionalCameraData>();
 			if (uacd == null) return;
 
-			// ---- 2. OPTIONAL: filter by tag if you want to be extra safe ----
-			// (uncomment if you added the tags in ReflectionEffectCamera)
-			// if (!cam.CompareTag("MainCamera") &&
-			//     !cam.CompareTag("ReflectionCamera") &&
-			//     !cam.CompareTag("TextureCamera")) return;
-
 			customParticleSystem.Render(cam);
+		}
+
+		private void OnEndCameraRendering(ScriptableRenderContext _, Camera cam)
+		{
+			// Only update debug count after the *last* camera in the frame
+			// We don't know which is last, so we update every time — it's fine.
+			if (customParticleSystem != null)
+				lastViewCount = customParticleSystem.ViewCount;
 		}
 
 		private void FixedUpdate()
@@ -259,7 +255,6 @@ namespace MassiveHadronLtd
 				p = sp;
 			}
 
-			// ---- First-frame update (still zero-allocation) ----
 			var ctx = new ParticleUpdateContext
 			{
 				controller = this,
@@ -269,19 +264,14 @@ namespace MassiveHadronLtd
 			p.Update(ref ctx);
 		}
 
-		// ----------------------------------------------------------------
-		// SCENE VIEW DEBUG RENDER
-		// ----------------------------------------------------------------
 #if UNITY_EDITOR
 		private void OnRenderObject()
 		{
-			// CRITICAL: ONLY RUN IN SCENE VIEW — NO GAME VIEW LEAK
 			if (!showInSceneView) return;
 			if (customParticleSystem == null) return;
 			if (Camera.current == null) return;
 			if (Camera.current.cameraType != CameraType.SceneView) return;
 
-			// EXTRA SAFETY: Check if we're in Edit Mode and Scene View is active
 #if UNITY_EDITOR
 			if (!UnityEditor.SceneView.currentDrawingSceneView) return;
 #endif
@@ -356,6 +346,55 @@ namespace MassiveHadronLtd
 					Object.DestroyImmediate(cyanDebugMaterial);
 				cyanDebugMaterial = null;
 			}
+		}
+#endif
+
+		// ================================================================
+		// DEBUG GUI: Shows ParticleMesh slots used & active particle count
+		// ================================================================
+		//#if UNITY_EDITOR || DEVELOPMENT_BUILD
+		//		private void OnGUI()
+		//		{
+		//			if (!Application.isPlaying && !showInSceneView) return;
+
+		//			GUI.color = Color.cyan;
+		//			GUI.skin.label.fontStyle = FontStyle.Bold;
+		//			GUI.skin.label.fontSize = 12;
+
+		//			GUILayout.BeginArea(new Rect(15, 15, 400, 100), GUI.skin.box);
+		//			GUILayout.Label("<color=white><b>PARTICLE SYSTEM DEBUG</b></color>");
+		//			GUILayout.Label($"<color=yellow>ParticleMesh slots used:</color> <color=white>{lastViewCount}</color>/<color=lime>{ParticleSystem.MaxViewCache}</color>");
+		//			GUILayout.Label($"<color=yellow>Active particles:</color> <color=white>{(customParticleSystem?.ActiveParticleCount ?? 0)}</color>");
+		//			GUILayout.EndArea();
+		//		}
+		//#endif
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+		private int stableViewCount = 0;
+		private float lastGuiUpdate = 0f;
+		private const float GuiUpdateInterval = 0.1f; // Update GUI 10 times/sec
+
+		private void OnGUI()
+		{
+			if (!Application.isPlaying && !showInSceneView) return;
+
+			// Throttle GUI updates to reduce flicker
+			float now = Time.unscaledTime;
+			if (now - lastGuiUpdate >= GuiUpdateInterval)
+			{
+				stableViewCount = lastViewCount;
+				lastGuiUpdate = now;
+			}
+
+			GUI.color = Color.cyan;
+			GUI.skin.label.fontStyle = FontStyle.Bold;
+			GUI.skin.label.fontSize = 12;
+
+			GUILayout.BeginArea(new Rect(15, 15, 400, 100), GUI.skin.box);
+			GUILayout.Label("<color=white><b>PARTICLE SYSTEM DEBUG</b></color>");
+			GUILayout.Label($"<color=yellow>ParticleMesh slots used:</color> <color=white>{stableViewCount}</color>/<color=lime>{ParticleSystem.MaxViewCache}</color>");
+			GUILayout.Label($"<color=yellow>Active particles:</color> <color=white>{(customParticleSystem?.ActiveParticleCount ?? 0)}</color>");
+			GUILayout.EndArea();
 		}
 #endif
 	}
