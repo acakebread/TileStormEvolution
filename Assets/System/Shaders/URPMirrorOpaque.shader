@@ -36,13 +36,11 @@ Shader "Unlit/URPMirrorOpaque"
             struct Varyings
             {
                 float4 positionCS : SV_POSITION;
-                float2 uv : TEXCOORD0;
                 float4 screenPos : TEXCOORD1;
             };
 
             CBUFFER_START(UnityPerMaterial)
-                float4 _MainTex_TexelSize;
-                float4 _DimColor;        // <-- NEW
+                float4 _DimColor;
             CBUFFER_END
 
             TEXTURE2D(_MainTex);
@@ -52,7 +50,6 @@ Shader "Unlit/URPMirrorOpaque"
             {
                 Varyings output;
                 output.positionCS = TransformObjectToHClip(input.positionOS.xyz);
-                output.uv = input.uv;
                 output.screenPos = ComputeScreenPos(output.positionCS);
                 return output;
             }
@@ -61,11 +58,7 @@ Shader "Unlit/URPMirrorOpaque"
             {
                 float2 screenUV = input.screenPos.xy / input.screenPos.w;
                 half3 reflection = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, screenUV).rgb;
-
-                // Apply dim/tint
-                reflection *= _DimColor.rgb;
-
-                return half4(reflection, 1);
+                return half4(reflection * _DimColor.rgb, 1);
             }
             ENDHLSL
         }

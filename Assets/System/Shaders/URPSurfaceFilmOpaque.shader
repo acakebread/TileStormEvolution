@@ -18,7 +18,7 @@ Shader "Unlit/URPMirrorWithFilmOpaque"
         {
             ZWrite On
             ZTest LEqual
-            Blend One Zero  // Opaque
+            Blend One Zero
 
             HLSLPROGRAM
             #pragma vertex vert
@@ -39,7 +39,6 @@ Shader "Unlit/URPMirrorWithFilmOpaque"
             };
 
             CBUFFER_START(UnityPerMaterial)
-                float4 _MainTex_TexelSize;
                 float4 _DimColor;
                 float _FilmIntensity;
                 float _NoiseScale;
@@ -59,20 +58,11 @@ Shader "Unlit/URPMirrorWithFilmOpaque"
 
             half4 frag(Varyings i) : SV_Target
             {
-                float2 uv = i.screenPos.xy / i.screenPos.w;
-
-                // Sample mirror
-                half3 mirror = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, uv).rgb;
-
-                // Sample noise
+                float2 screenUV = i.screenPos.xy / i.screenPos.w;
+                half3 mirror = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, screenUV).rgb;
                 half noise = SAMPLE_TEXTURE2D(_NoiseTex, sampler_NoiseTex, i.uv).r;
-
-                // Add film
                 half3 film = _DimColor.rgb * (noise * _FilmIntensity);
-
-                // Combine: mirror * dim + film
                 half3 color = mirror * _DimColor.rgb + film;
-
                 return half4(color, 1);
             }
             ENDHLSL
