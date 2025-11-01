@@ -49,16 +49,13 @@ namespace MassiveHadronLtd
 		private readonly List<Color> colors;
 		private readonly List<Vector2> uvs;
 
+		private bool coloursUpdatedThisFrame;
 		// Fixed-size cache using ParticleMesh — matches original behavior exactly
 		private readonly ParticleMesh[] particleMeshes = new ParticleMesh[MaxViewCache];
 		private int viewCount = 0;
 
-		// Placeholder for future use
-		private readonly List<Vector3> positions;
-
 		public ParticleController Controller { get; private set; }
 		private ParticleUpdateContext updateCtx;
-		private readonly HashSet<int> dirtyColorIndices = new HashSet<int>();
 
 		public ParticleSystem(Material particleMaterial, bool threeZoneSlicing, ParticleController controller)
 		{
@@ -74,8 +71,7 @@ namespace MassiveHadronLtd
 			triangles = new List<int>(totalTriangles);
 			colors = new List<Color>(MaxParticles * 8);
 			uvs = new List<Vector2>(MaxParticles * 8);
-			positions = new List<Vector3>(MaxParticles); // Kept for future use
-
+			
 			InitializePool();
 			InitializeSharedBuffers();
 			SetupURPMaterial();
@@ -193,7 +189,9 @@ namespace MassiveHadronLtd
 			for (int i = 0; i < MaxViewCache; i++)
 				particleMeshes[i].usedThisFrame = false;
 
-			dirtyColorIndices.Clear();
+			// ---- NEW: reset colour-update flag ----
+			coloursUpdatedThisFrame = false;
+			// ---------------------------------------
 
 			for (int i = activeParticles.Count - 1; i >= 0; i--)
 			{
@@ -209,10 +207,6 @@ namespace MassiveHadronLtd
 
 				updateCtx.normalizedLife = 1f - (p.life / p.duration);
 				p.Update(ref updateCtx);
-
-				int baseIdx = p.vertexIndex;
-				if (!colors[baseIdx].Equals(p.color))
-					dirtyColorIndices.Add(p.poolIndex);
 			}
 		}
 
@@ -240,25 +234,27 @@ namespace MassiveHadronLtd
 			int slot = FindOrCreateViewSlot(view);
 			ParticleMesh pm = particleMeshes[slot];
 
+			// ---- NEW: update colours only once per frame ----
+			if (!coloursUpdatedThisFrame)
+			{
+				for (int i = 0; i < activeParticles.Count; i++)
+				{
+					Particle p = activeParticles[i];
+					if (p.life <= 0f) continue;
+
+					int v = p.vertexIndex;
+					for (int j = 0; j < verticesPerParticle; j++)
+						colors[v + j] = p.color;
+				}
+				coloursUpdatedThisFrame = true;
+			}
+			// -------------------------------------------------
+
 			if (!pm.usedThisFrame)
 			{
 				UpdateMeshInternal(renderingCamera, vertices, colors);
 
 				pm.mesh.SetVertices(vertices);
-
-				if (dirtyColorIndices.Count > 0)
-				{
-					foreach (int poolIdx in dirtyColorIndices)
-					{
-						Particle p = particlePool[poolIdx];
-						if (p == null) continue;
-						int v = p.vertexIndex;
-						for (int i = 0; i < verticesPerParticle; i++)
-							colors[v + i] = p.color;
-					}
-					dirtyColorIndices.Clear();
-				}
-
 				pm.mesh.SetColors(colors);
 				pm.mesh.RecalculateBounds();
 
@@ -356,11 +352,13 @@ namespace MassiveHadronLtd
 					verts[v + 2] = headB - rad; verts[v + 3] = headB + rad;
 					verts[v + 4] = tailB - rad; verts[v + 5] = tailB + rad;
 					verts[v + 6] = tail - rad; verts[v + 7] = tail + rad;
+					// colour loop removed – now done once in Render()
 				}
 				else
 				{
 					verts[v + 0] = head - rad; verts[v + 1] = head + rad;
 					verts[v + 2] = tail - rad; verts[v + 3] = tail + rad;
+					// colour loop removed – now done once in Render()
 				}
 			}
 		}
