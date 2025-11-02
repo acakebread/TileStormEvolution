@@ -257,6 +257,7 @@ namespace MassiveHadronLtd
 				pm.mesh.RecalculateBounds();
 				pm.viewMatrix = view;
 			}
+			ParticleSystem.ReportViewRendered(view);
 			pm = particleMeshes[slot];
 			Graphics.DrawMesh(pm.mesh, Matrix4x4.identity, material, 0, renderingCamera);
 		}
@@ -269,7 +270,7 @@ namespace MassiveHadronLtd
 			// Search existing valid slots
 			for (int i = 0; i < viewCount; i++)
 			{
-				if (particleMeshes[i].viewMatrix != Matrix4x4.zero && MatricesApproximatelyEqual(view, particleMeshes[i].viewMatrix))
+				if (particleMeshes[i].viewMatrix != Matrix4x4.zero && MatricesEqual(view, particleMeshes[i].viewMatrix))
 					return i;
 			}
 			return -1;
@@ -280,10 +281,9 @@ namespace MassiveHadronLtd
 		// ----------------------------------------------------------------
 		private int CreateViewSlot(Matrix4x4 view)
 		{
-			// Cache miss: find or create slot
 			if (viewCount >= MaxViewCache)
 			{
-				// Reuse slot 0 (LRU-like)
+				// Reuse slot 0
 				viewCount = 1;
 				particleMeshes[0].viewMatrix = view;
 				return 0;
@@ -322,9 +322,12 @@ namespace MassiveHadronLtd
 
 		private bool MatricesEqual(Matrix4x4 a, Matrix4x4 b)
 		{
+			const float epsilon = 1e-6f;
 			for (int i = 0; i < 16; i++)
-				if (!Mathf.Approximately(a[i], b[i]))
+			{
+				if (Mathf.Abs(a[i] - b[i]) > epsilon)
 					return false;
+			}
 			return true;
 		}
 
@@ -424,5 +427,47 @@ namespace MassiveHadronLtd
 			return viewCount > 0 ? particleMeshes[0].mesh : null;
 		}
 #endif
+
+		// GLOBAL TRACKING : Count of unique view matrices rendered this frame
+		// GLOBAL: Track UNIQUE view matrices this frame
+		private static readonly HashSet<int> _renderedViewHashes = new();
+		private static int _lastFrame = -1;
+
+		public static int GlobalSlotsUsed
+		{
+			get
+			{
+				if (Time.frameCount != _lastFrame)
+					return 0;
+				return _renderedViewHashes.Count;
+			}
+		}
+
+		public static void ResetGlobalTracking()
+		{
+			_renderedViewHashes.Clear();
+			_lastFrame = Time.frameCount;
+		}
+
+		public static void ReportViewRendered(Matrix4x4 viewMatrix)
+		{
+			if (Time.frameCount != _lastFrame)
+				ResetGlobalTracking();
+
+			int hash = GetMatrixHash(viewMatrix);
+			_renderedViewHashes.Add(hash);
+		}
+
+		// Helper: Fast matrix hash
+		private static int GetMatrixHash(Matrix4x4 m)
+		{
+			unchecked
+			{
+				int hash = 17;
+				for (int i = 0; i < 16; i++)
+					hash = hash * 31 + m[i].GetHashCode();
+				return hash;
+			}
+		}
 	}
 }

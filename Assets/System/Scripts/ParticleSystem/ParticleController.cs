@@ -113,13 +113,14 @@ namespace MassiveHadronLtd
 			[Range(0f, 1f)] public float end;
 		}
 
-		private ParticleSystem customParticleSystem;
+		public ParticleSystem customParticleSystem;
 		private bool forceEmission = false;
 		private float timelinePosition = 0f;
 		private float lastTimelinePosition = 0f;
 
-		// Debug GUI tracking
-		private int lastViewCount = 0;
+		// external debug
+		private int _debugActiveCount = 0;
+		public int DebugActiveCount => _debugActiveCount;
 
 		private void Awake()
 		{
@@ -139,31 +140,28 @@ namespace MassiveHadronLtd
 		private void OnEnable()
 		{
 			RenderPipelineManager.beginCameraRendering += OnBeginCameraRendering;
-			RenderPipelineManager.endCameraRendering += OnEndCameraRendering;
 		}
 
 		private void OnDisable()
 		{
 			RenderPipelineManager.beginCameraRendering -= OnBeginCameraRendering;
-			RenderPipelineManager.endCameraRendering -= OnEndCameraRendering;
 		}
+
+		private int _lastFrameReset = -1;
 
 		private void OnBeginCameraRendering(ScriptableRenderContext _, Camera cam)
 		{
-			if (customParticleSystem == null) return;
+			if (Time.frameCount != _lastFrameReset)
+			{
+				ParticleSystem.ResetGlobalTracking();
+				_lastFrameReset = Time.frameCount;
+			}
 
+			if (customParticleSystem == null) return;
 			var uacd = cam.GetComponent<UniversalAdditionalCameraData>();
 			if (uacd == null) return;
 
 			customParticleSystem.Render(cam);
-		}
-
-		private void OnEndCameraRendering(ScriptableRenderContext _, Camera cam)
-		{
-			// Only update debug count after the *last* camera in the frame
-			// We don't know which is last, so we update every time — it's fine.
-			if (customParticleSystem != null)
-				lastViewCount = customParticleSystem.ViewCount;
 		}
 
 		private void FixedUpdate()
@@ -346,55 +344,6 @@ namespace MassiveHadronLtd
 					Object.DestroyImmediate(cyanDebugMaterial);
 				cyanDebugMaterial = null;
 			}
-		}
-#endif
-
-		// ================================================================
-		// DEBUG GUI: Shows ParticleMesh slots used & active particle count
-		// ================================================================
-		//#if UNITY_EDITOR || DEVELOPMENT_BUILD
-		//		private void OnGUI()
-		//		{
-		//			if (!Application.isPlaying && !showInSceneView) return;
-
-		//			GUI.color = Color.cyan;
-		//			GUI.skin.label.fontStyle = FontStyle.Bold;
-		//			GUI.skin.label.fontSize = 12;
-
-		//			GUILayout.BeginArea(new Rect(15, 15, 400, 100), GUI.skin.box);
-		//			GUILayout.Label("<color=white><b>PARTICLE SYSTEM DEBUG</b></color>");
-		//			GUILayout.Label($"<color=yellow>ParticleMesh slots used:</color> <color=white>{lastViewCount}</color>/<color=lime>{ParticleSystem.MaxViewCache}</color>");
-		//			GUILayout.Label($"<color=yellow>Active particles:</color> <color=white>{(customParticleSystem?.ActiveParticleCount ?? 0)}</color>");
-		//			GUILayout.EndArea();
-		//		}
-		//#endif
-
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-		private int stableViewCount = 0;
-		private float lastGuiUpdate = 0f;
-		private const float GuiUpdateInterval = 0.1f; // Update GUI 10 times/sec
-
-		private void OnGUI()
-		{
-			if (!Application.isPlaying && !showInSceneView) return;
-
-			// Throttle GUI updates to reduce flicker
-			float now = Time.unscaledTime;
-			if (now - lastGuiUpdate >= GuiUpdateInterval)
-			{
-				stableViewCount = lastViewCount;
-				lastGuiUpdate = now;
-			}
-
-			GUI.color = Color.cyan;
-			GUI.skin.label.fontStyle = FontStyle.Bold;
-			GUI.skin.label.fontSize = 12;
-
-			GUILayout.BeginArea(new Rect(15, 15, 400, 100), GUI.skin.box);
-			GUILayout.Label("<color=white><b>PARTICLE SYSTEM DEBUG</b></color>");
-			GUILayout.Label($"<color=yellow>ParticleMesh slots used:</color> <color=white>{stableViewCount}</color>/<color=lime>{ParticleSystem.MaxViewCache}</color>");
-			GUILayout.Label($"<color=yellow>Active particles:</color> <color=white>{(customParticleSystem?.ActiveParticleCount ?? 0)}</color>");
-			GUILayout.EndArea();
 		}
 #endif
 	}
