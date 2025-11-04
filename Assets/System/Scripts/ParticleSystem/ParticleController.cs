@@ -3,6 +3,10 @@ using System.Collections.Generic;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
+
 namespace MassiveHadronLtd
 {
 	// --------------------------------------------------------------------
@@ -262,6 +266,7 @@ namespace MassiveHadronLtd
 			p.Update(ref ctx);
 		}
 
+
 #if UNITY_EDITOR
 		private void OnRenderObject()
 		{
@@ -269,82 +274,10 @@ namespace MassiveHadronLtd
 			if (customParticleSystem == null) return;
 			if (Camera.current == null) return;
 			if (Camera.current.cameraType != CameraType.SceneView) return;
-
-#if UNITY_EDITOR
-			if (!UnityEditor.SceneView.currentDrawingSceneView) return;
-#endif
-
-			var mesh = customParticleSystem.GetDebugMesh();
-			if (mesh == null) return;
-
-			var mat = useDebugMaterial ? GetCyanDebugMaterial() : particleMaterial;
-			if (mat == null) return;
-
-			if (useDebugMaterial)
-			{
-				EnsureWhiteColors(mesh);
-			}
-
-			mat.SetPass(0);
-			Graphics.DrawMeshNow(mesh, transform.localToWorldMatrix);
-		}
-
-		private static Material cyanDebugMaterial;
-		private static Color[] whiteColorCache;
-		private static int lastVertexCount = 0;
-
-		private Material GetCyanDebugMaterial()
-		{
-			if (cyanDebugMaterial != null) return cyanDebugMaterial;
-
-			var shader = Shader.Find("Debug/TriggerWireframe");
-			if (shader == null)
-			{
-				Debug.LogWarning("Debug/TriggerWireframe not found. Using Unlit/Color.");
-				shader = Shader.Find("Unlit/Color");
-			}
-
-			cyanDebugMaterial = new Material(shader)
-			{
-				hideFlags = HideFlags.HideAndDontSave,
-				color = new Color(0, 1, 1, 0.3f)
-			};
-
-			return cyanDebugMaterial;
-		}
-
-		private void EnsureWhiteColors(Mesh mesh)
-		{
-			int vertexCount = mesh.vertexCount;
-			if (whiteColorCache == null || whiteColorCache.Length != vertexCount)
-			{
-				whiteColorCache = new Color[vertexCount];
-				for (int i = 0; i < vertexCount; i++)
-					whiteColorCache[i] = Color.white;
-				lastVertexCount = vertexCount;
-			}
-			else if (lastVertexCount != vertexCount)
-			{
-				System.Array.Resize(ref whiteColorCache, vertexCount);
-				for (int i = lastVertexCount; i < vertexCount; i++)
-					whiteColorCache[i] = Color.white;
-				lastVertexCount = vertexCount;
-			}
-
-			mesh.colors = whiteColorCache;
-		}
-
-		private void OnDestroy()
-		{
-			if (cyanDebugMaterial != null)
-			{
-				if (Application.isPlaying)
-					Object.Destroy(cyanDebugMaterial);
-				else
-					Object.DestroyImmediate(cyanDebugMaterial);
-				cyanDebugMaterial = null;
-			}
+			ParticleControllerSceneView.OnRender(SceneView.currentDrawingSceneView);
 		}
 #endif
+
+		public Material ParticleMaterial => particleMaterial;
 	}
 }
