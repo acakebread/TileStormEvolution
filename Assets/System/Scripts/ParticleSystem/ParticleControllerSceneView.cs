@@ -7,12 +7,22 @@ namespace MassiveHadronLtd
 	[InitializeOnLoad]
 	public static class ParticleControllerSceneView
 	{
-		public static void OnRender(SceneView sceneView, ParticleController controller)
+		private static Material _cyanDebugMaterial;
+		private static Color[] _whiteColors;
+		private static int _lastVertexCount;
+
+		static ParticleControllerSceneView()
+		{
+			// Cleanup on domain reload (play mode exit, script reload, etc.)
+			AssemblyReloadEvents.afterAssemblyReload += OnAfterAssemblyReload;
+		}
+
+		public static void OnRender(ParticleController controller)
 		{
 			var mesh = controller.customParticleSystem.GetDebugMesh();
 			if (mesh == null) return;
 
-			var mat = controller.useDebugMaterial ? GetCyanDebugMaterial() : controller.particleMaterial;
+			var mat = controller.useDebugMaterial ? GetCyanDebugMaterial() : controller.ParticleMaterial;
 			if (mat == null) return;
 
 			if (controller.useDebugMaterial)
@@ -21,21 +31,17 @@ namespace MassiveHadronLtd
 			}
 
 			mat.SetPass(0);
-			Graphics.DrawMeshNow(mesh, controller.transform.localToWorldMatrix); Graphics.DrawMeshNow(mesh, controller.transform.localToWorldMatrix);
+			Graphics.DrawMeshNow(mesh, controller.transform.localToWorldMatrix);
 		}
-
-		private static Material _cyanDebugMaterial;
-		private static Color[] _whiteColors;
-		private static int _lastVertexCount;
 
 		private static Material GetCyanDebugMaterial()
 		{
 			if (_cyanDebugMaterial != null) return _cyanDebugMaterial;
 
-			var shader = Shader.Find("Debug/TriggerWireframe");
+			var shader = Shader.Find("Hidden/Internal-Colored");
 			if (shader == null)
 			{
-				Debug.LogWarning("Debug/TriggerWireframe not found. Using Unlit/Color.");
+				Debug.LogWarning("Hidden/Internal-Colored not found. Using Unlit/Color.");
 				shader = Shader.Find("Unlit/Color");
 			}
 
@@ -69,14 +75,37 @@ namespace MassiveHadronLtd
 			mesh.colors = _whiteColors;
 		}
 
-		// Optional: cleanup
+		// Reinstate OnDestroy behavior via AssemblyReloadEvents
 		[UnityEditor.Callbacks.DidReloadScripts]
-		private static void OnScriptsReloaded()
+		private static void OnAfterAssemblyReload()
+		{
+			Cleanup();
+		}
+
+		// Also clean up when entering play mode
+		private static void Cleanup()
 		{
 			if (_cyanDebugMaterial != null)
 			{
 				Object.DestroyImmediate(_cyanDebugMaterial);
 				_cyanDebugMaterial = null;
+			}
+			_whiteColors = null;
+			_lastVertexCount = 0;
+		}
+
+		// Optional: Clean up on play mode change
+		[InitializeOnLoadMethod]
+		private static void SetupPlayModeCleanup()
+		{
+			EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
+		}
+
+		private static void OnPlayModeStateChanged(PlayModeStateChange state)
+		{
+			if (state == PlayModeStateChange.EnteredEditMode)
+			{
+				Cleanup();
 			}
 		}
 	}
