@@ -7,42 +7,21 @@ namespace MassiveHadronLtd
 	[InitializeOnLoad]
 	public static class ParticleControllerSceneView
 	{
-		public static void OnRender(SceneView sceneView)
+		public static void OnRender(SceneView sceneView, ParticleController controller)
 		{
-			if (!Application.isPlaying && !UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode)
+			var mesh = controller.customParticleSystem.GetDebugMesh();
+			if (mesh == null) return;
+
+			var mat = controller.useDebugMaterial ? GetCyanDebugMaterial() : controller.particleMaterial;
+			if (mat == null) return;
+
+			if (controller.useDebugMaterial)
 			{
-				// Optional: update particles in edit mode
-				foreach (var controller in Object.FindObjectsByType<ParticleController>(FindObjectsSortMode.None))
-				{
-					if (controller != null && controller.updateParticles && controller.customParticleSystem != null)
-					{
-						controller.customParticleSystem.UpdateParticles();
-					}
-				}
+				EnsureWhiteColors(mesh);
 			}
 
-			// Draw all controllers that want to be shown
-			foreach (var controller in Object.FindObjectsByType<ParticleController>(FindObjectsSortMode.None))
-			{
-				if (controller == null || !controller.showInSceneView || controller.customParticleSystem == null)
-					continue;
-
-				var mesh = controller.customParticleSystem.GetDebugMesh();
-				if (mesh == null) continue;
-
-				var mat = controller.useDebugMaterial
-					? GetCyanDebugMaterial()
-					: controller.ParticleMaterial;
-
-				if (mat == null) continue;
-
-				// Force white vertex colors for debug material (so tint is ignored)
-				if (controller.useDebugMaterial)
-					EnsureWhiteColors(mesh);
-
-				mat.SetPass(0);
-				Graphics.DrawMeshNow(mesh, controller.transform.localToWorldMatrix);
-			}
+			mat.SetPass(0);
+			Graphics.DrawMeshNow(mesh, controller.transform.localToWorldMatrix); Graphics.DrawMeshNow(mesh, controller.transform.localToWorldMatrix);
 		}
 
 		private static Material _cyanDebugMaterial;

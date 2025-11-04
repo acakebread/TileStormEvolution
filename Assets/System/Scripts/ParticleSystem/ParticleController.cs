@@ -86,7 +86,7 @@ namespace MassiveHadronLtd
 
 		[Header("Appearance")]
 		public bool useThreeZoneSlicing = false;
-		[SerializeField] private Material particleMaterial;
+		[SerializeField] public Material particleMaterial;
 		public Color color = Color.white;
 		public float radius = 0.02f;
 		[Range(0f, 1f)] public float fadeStartTime = 1f;
@@ -274,9 +274,98 @@ namespace MassiveHadronLtd
 			if (customParticleSystem == null) return;
 			if (Camera.current == null) return;
 			if (Camera.current.cameraType != CameraType.SceneView) return;
-			ParticleControllerSceneView.OnRender(SceneView.currentDrawingSceneView);
+
+#if UNITY_EDITOR
+			if (!SceneView.currentDrawingSceneView) return;
+#endif
+			ParticleControllerSceneView.OnRender(SceneView.currentDrawingSceneView, this);
 		}
 #endif
+
+//#if UNITY_EDITOR
+//		private void OnRenderObject()
+//		{
+//			if (!showInSceneView) return;
+//			if (customParticleSystem == null) return;
+//			if (Camera.current == null) return;
+//			if (Camera.current.cameraType != CameraType.SceneView) return;
+
+//#if UNITY_EDITOR
+//			if (!UnityEditor.SceneView.currentDrawingSceneView) return;
+//#endif
+
+//			var mesh = customParticleSystem.GetDebugMesh();
+//			if (mesh == null) return;
+
+//			var mat = useDebugMaterial ? GetCyanDebugMaterial() : particleMaterial;
+//			if (mat == null) return;
+
+//			if (useDebugMaterial)
+//			{
+//				EnsureWhiteColors(mesh);
+//			}
+
+//			mat.SetPass(0);
+//			Graphics.DrawMeshNow(mesh, transform.localToWorldMatrix);
+//		}
+
+//		private static Material cyanDebugMaterial;
+//		private static Color[] whiteColorCache;
+//		private static int lastVertexCount = 0;
+
+//		private Material GetCyanDebugMaterial()
+//		{
+//			if (cyanDebugMaterial != null) return cyanDebugMaterial;
+
+//			var shader = Shader.Find("Debug/TriggerWireframe");
+//			if (shader == null)
+//			{
+//				Debug.LogWarning("Debug/TriggerWireframe not found. Using Unlit/Color.");
+//				shader = Shader.Find("Unlit/Color");
+//			}
+
+//			cyanDebugMaterial = new Material(shader)
+//			{
+//				hideFlags = HideFlags.HideAndDontSave,
+//				color = new Color(0, 1, 1, 0.3f)
+//			};
+
+//			return cyanDebugMaterial;
+//		}
+
+//		private void EnsureWhiteColors(Mesh mesh)
+//		{
+//			int vertexCount = mesh.vertexCount;
+//			if (whiteColorCache == null || whiteColorCache.Length != vertexCount)
+//			{
+//				whiteColorCache = new Color[vertexCount];
+//				for (int i = 0; i < vertexCount; i++)
+//					whiteColorCache[i] = Color.white;
+//				lastVertexCount = vertexCount;
+//			}
+//			else if (lastVertexCount != vertexCount)
+//			{
+//				System.Array.Resize(ref whiteColorCache, vertexCount);
+//				for (int i = lastVertexCount; i < vertexCount; i++)
+//					whiteColorCache[i] = Color.white;
+//				lastVertexCount = vertexCount;
+//			}
+
+//			mesh.colors = whiteColorCache;
+//		}
+
+//		private void OnDestroy()
+//		{
+//			if (cyanDebugMaterial != null)
+//			{
+//				if (Application.isPlaying)
+//					Object.Destroy(cyanDebugMaterial);
+//				else
+//					Object.DestroyImmediate(cyanDebugMaterial);
+//				cyanDebugMaterial = null;
+//			}
+//		}
+//#endif
 
 		public Material ParticleMaterial => particleMaterial;
 	}
