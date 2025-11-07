@@ -295,7 +295,7 @@ MonoBehaviour:
   difficulty: 0
   showHiddenTiles: 0
   showTileSelection: 0
-  databaseJsonFile: {fileID: 4900000, guid: 96c40ca8617a15a4590b9728c168e29a, type: 3}
+  databaseJsonFile: {fileID: 4900000, guid: 6097ca3a5d85a1449ad4721a68c3f4d9, type: 3}
   geometryPath: MikeTS/Geometry/
   texturePath: MikeTS/Textures/
   materialPath: MikeTS/Materials/
@@ -592,12 +592,13 @@ MonoBehaviour:
   offset: -0.2
   effectMode: 4
   previousEffectMode: 4
-  frostDepth: 0.57
-  noiseStrength: 0.097
+  mirrorTint: {r: 1, g: 1, b: 1, a: 1}
   baseColor: {r: 0, g: 0, b: 0, a: 0.5882353}
   filmIntensity: 0.2
   noiseScale: 1
   noiseTexture: {fileID: 0}
+  frostDepth: 0.57
+  noiseStrength: 0.097
   rippleSpeed: 0.231
   rippleAmplitude: 0.262
   rippleFrequency: 0.372
