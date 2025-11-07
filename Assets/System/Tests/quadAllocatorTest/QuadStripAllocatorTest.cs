@@ -16,6 +16,10 @@ public class QuadStripAllocatorTest : MonoBehaviour
 	[Range(10f, 100f)]
 	[SerializeField] private float stripWidth = 60f;
 
+	[Header("Spawning")]
+	[Range(0.01f, 1f)]
+	[SerializeField] private float spawnDelay = 0.04f;
+
 	[Header("Material")]
 	[SerializeField] private Material stripMaterial;
 
@@ -94,7 +98,7 @@ public class QuadStripAllocatorTest : MonoBehaviour
 					va.uv[vIdx + 1] = new Vector2(1f, v);  // right
 				}
 			}
-			yield return new WaitForSeconds(0.04f);
+			yield return new WaitForSeconds(spawnDelay);
 		}
 	}
 
