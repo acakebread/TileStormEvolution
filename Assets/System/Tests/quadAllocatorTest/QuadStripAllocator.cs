@@ -45,7 +45,6 @@ public class QuadStripAllocator : MonoBehaviour
 
 		var strip = new QuadStrip
 		{
-			numQuads = numQuads,
 			indexBlocks = new List<int>(numQuads),
 			vertexBlocks = new List<int>(numQuads + 1)
 		};
