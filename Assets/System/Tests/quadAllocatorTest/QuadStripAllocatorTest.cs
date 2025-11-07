@@ -82,7 +82,7 @@ public class QuadStripAllocatorTest : MonoBehaviour
 				Color cyan = new Color(0f, 1f, 1f);
 				var va = quadAllocator.vertexAllocator;
 
-				for (int i = 0; i <= strip.numQuads; i++)
+				for (int i = 0; i <= numQuads; i++)
 				{
 					int vBlock = strip.vertexBlocks[i];
 					int vIdx = vBlock * 2;
@@ -93,7 +93,7 @@ public class QuadStripAllocatorTest : MonoBehaviour
 
 					// UVs: U = 0 (left), 1 (right)
 					// V = i / numQuads (top to bottom)
-					float v = (float)i / strip.numQuads;
+					float v = (float)i / numQuads;
 					va.uv[vIdx] = new Vector2(0f, v);  // left
 					va.uv[vIdx + 1] = new Vector2(1f, v);  // right
 				}
@@ -118,7 +118,7 @@ public class QuadStripAllocatorTest : MonoBehaviour
 
 			float elapsed = now - strip.startTime;
 			float fallDistance = strip.fallSpeed * elapsed;
-			float stripHeight = strip.numQuads * stripWidth;
+			float stripHeight = strip.indexBlocks.Count * stripWidth;
 			float yBottom = panelY + fallDistance;
 			float yTop = yBottom - stripHeight;
 
@@ -137,9 +137,9 @@ public class QuadStripAllocatorTest : MonoBehaviour
 			float xRight = xLeft + stripWidth;
 
 			// UPDATE VERTICES ONLY
-			for (int i = 0; i <= strip.numQuads; i++)
+			for (int i = 0; i <= strip.indexBlocks.Count; i++)
 			{
-				float quadT = (float)i / strip.numQuads;
+				float quadT = (float)i / strip.indexBlocks.Count;
 				float y = Mathf.Lerp(yTop, yBottom, quadT);
 
 				int vBlock = strip.vertexBlocks[i];
@@ -256,9 +256,9 @@ public class QuadStripAllocatorTest : MonoBehaviour
 					float y1 = strip.tempYTop;
 					float y2 = strip.tempYBottom;
 
-					for (int i = 0; i <= strip.numQuads; i++)
+					for (int i = 0; i <= strip.indexBlocks.Count; i++)
 					{
-						float _y = Mathf.Lerp(y1, y2, (float)i / strip.numQuads);
+						float _y = Mathf.Lerp(y1, y2, (float)i / strip.indexBlocks.Count);
 						GL.Vertex3(x1, _y, 0);
 						GL.Vertex3(x2, _y, 0);
 					}
