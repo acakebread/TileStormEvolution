@@ -1,5 +1,11 @@
 using System.Collections.Generic;
 
+public class QuadStrip
+{
+	public List<int> indexBlocks;
+	public List<int> vertexBlocks;
+}
+
 public class QuadStripAllocator
 {
 	// --------------------------------------------------------------
@@ -18,7 +24,6 @@ public class QuadStripAllocator
 
 	public IReadOnlyList<QuadStrip> ActiveStrips => activeStrips;
 	public int ActiveStripCount => activeStrips.Count;
-
 
 	public void Initialise()
 	{

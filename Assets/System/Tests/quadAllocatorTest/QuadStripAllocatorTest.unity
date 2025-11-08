@@ -163,8 +163,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1a12d43678ef20740bf6efe0a3f818b9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  baseFallSpeed: 200
-  fallSpeedBonus: 600
+  fallDurationRange: 2
   stripWidth: 20
   spawnDelay: 0.04
   stripMaterial: {fileID: 2100000, guid: caa242fed4a568644b0255456db09105, type: 2}

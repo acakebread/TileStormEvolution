@@ -1,6 +1,6 @@
-﻿using System.Collections;
+﻿using UnityEngine;
+using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
 
 public class QuadStripAllocatorTest : MonoBehaviour
 {
@@ -8,8 +8,8 @@ public class QuadStripAllocatorTest : MonoBehaviour
 	private readonly System.Random rnd = new();
 
 	[Header("Falling Speed (px/sec)")]
-	[SerializeField] private float baseFallSpeed = 200f;
-	[SerializeField] private float fallSpeedBonus = 600f;
+	[Range(1f, 10f)]
+	[SerializeField] private float fallDurationRange = 2f;
 
 	[Header("Strip Width (px)")]
 	[Range(10f, 100f)]
@@ -73,15 +73,15 @@ public class QuadStripAllocatorTest : MonoBehaviour
 			if (strip != null)
 			{
 				float xOffset = ((float)rnd.NextDouble() * 2f - 1f);
-				float duration = panelH / (baseFallSpeed + fallSpeedBonus / (numQuads + 1));
-				float fallSpeed = panelH / duration;
+				float duration = Random.Range(1f, fallDurationRange);
+				float _fallSpeed = panelH / duration;
 
 				var falling = new FallingStrip
 				{
 					strip = strip,
 					startTime = Time.time,
 					xOffset = xOffset,
-					fallSpeed = fallSpeed
+					fallSpeed = _fallSpeed
 				};
 
 				// SET COLOR + UVs
@@ -330,8 +330,7 @@ public class QuadStripAllocatorTest : MonoBehaviour
 		{
 			for (int gx = 0; gx < gridSize; gx++)
 			{
-				// Safe: if out of range (e.g. 16+), return false
-				bool isUsed = alloc.IsBlockAllocated(gx, gy);
+				bool isUsed = alloc.IsBlockAllocated(gy * 32 + gx);
 
 				GUI.color = isUsed ? usedCol : Color.gray;
 
