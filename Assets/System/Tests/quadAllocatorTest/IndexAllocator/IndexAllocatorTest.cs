@@ -2,15 +2,21 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-[RequireComponent(typeof(IndexAllocator))]
 public class IndexAllocatorTest : MonoBehaviour
 {
+	class IndexAllocator : DynamicAllocator
+	{
+		public const int IndicesPerBlock = 6;
+		public const int TotalIndices = Blocks * IndicesPerBlock;
+		public int[] indices = new int[TotalIndices];
+	}
+
 	private IndexAllocator allocator;
 	private readonly System.Random rnd = new System.Random();
 
 	private readonly Dictionary<int, (float startTime, float duration)> activeAllocations = new();
 
-	private void Awake() => allocator = GetComponent<IndexAllocator>();
+	private void Awake() => allocator = new IndexAllocator();
 	private void Start() => StartCoroutine(TestRoutine());
 
 	private IEnumerator TestRoutine()

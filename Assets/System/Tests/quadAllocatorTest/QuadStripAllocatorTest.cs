@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿// QuadStripAllocatorTest.cs
+using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 
@@ -6,6 +7,12 @@ public class QuadStripAllocatorTest : MonoBehaviour
 {
 	private QuadStripAllocator quadAllocator = new();
 	private readonly System.Random rnd = new();
+
+	// -----------------------------------------------------------------
+	// DEBUG ONLY: allocation bitmaps (one per allocator)
+	// -----------------------------------------------------------------
+	private readonly bool[] _indexUsed = new bool[DynamicAllocator.Blocks];
+	private readonly bool[] _vertexUsed = new bool[DynamicAllocator.Blocks];
 
 	[Header("Falling Speed (px/sec)")]
 	[Range(1f, 10f)]
@@ -50,7 +57,12 @@ public class QuadStripAllocatorTest : MonoBehaviour
 
 	private void Awake()
 	{
-		quadAllocator.Initialise();
+		// Initialise debug allocation bitmaps
+		for (int i = 0; i < DynamicAllocator.Blocks; i++)
+		{
+			_indexUsed[i] = false;
+			_vertexUsed[i] = false;
+		}
 
 		int infoX = pad + largeGridW + 30;
 		panelX = infoX + 200;
@@ -72,6 +84,10 @@ public class QuadStripAllocatorTest : MonoBehaviour
 			var strip = quadAllocator.AllocateStrip(numQuads);
 			if (strip != null)
 			{
+				// MARK BLOCKS AS USED (debug only)
+				foreach (int idx in strip.indexBlocks) _indexUsed[idx] = true;
+				foreach (int vtx in strip.vertexBlocks) _vertexUsed[vtx] = true;
+
 				float xOffset = ((float)rnd.NextDouble() * 2f - 1f);
 				float duration = Random.Range(1f, fallDurationRange);
 				float _fallSpeed = panelH / duration;
@@ -85,19 +101,17 @@ public class QuadStripAllocatorTest : MonoBehaviour
 				};
 
 				// SET COLOR + UVs
-				var va = quadAllocator.VertexAllocator;
-
 				for (int i = 0; i <= numQuads; i++)
 				{
 					int vBlock = strip.vertexBlocks[i];
-					int vIdx = vBlock * 2;
+					int vIdx = vBlock * QuadStripAllocator.VerticesPerBlock;
 
-					va.colors[vIdx] = Color.white;
-					va.colors[vIdx + 1] = Color.white;
+					quadAllocator.colors[vIdx] = Color.white;
+					quadAllocator.colors[vIdx + 1] = Color.white;
 
 					float v = (float)i / numQuads;
-					va.uv[vIdx] = new Vector2(0f, v);  // left
-					va.uv[vIdx + 1] = new Vector2(1f, v);  // right
+					quadAllocator.uv[vIdx] = new Vector2(0f, v);  // left
+					quadAllocator.uv[vIdx + 1] = new Vector2(1f, v);  // right
 				}
 
 				fallingStrips.Add(falling);
@@ -152,11 +166,10 @@ public class QuadStripAllocatorTest : MonoBehaviour
 				float y = Mathf.Lerp(yTop, yBottom, quadT);
 
 				int vBlock = strip.vertexBlocks[j];
-				int vIdx = vBlock * 2;
+				int vIdx = vBlock * QuadStripAllocator.VerticesPerBlock;
 
-				var va = quadAllocator.VertexAllocator;
-				va.vertices[vIdx] = new Vector3(xLeft, y, 0);
-				va.vertices[vIdx + 1] = new Vector3(xRight, y, 0);
+				quadAllocator.vertices[vIdx] = new Vector3(xLeft, y, 0);
+				quadAllocator.vertices[vIdx + 1] = new Vector3(xRight, y, 0);
 			}
 
 			// UPDATE TEMP FIELDS
@@ -172,6 +185,10 @@ public class QuadStripAllocatorTest : MonoBehaviour
 		// RELEASE AFTER LOOP
 		foreach (var falling in stripsToRelease)
 		{
+			// MARK BLOCKS AS FREE (debug only)
+			foreach (int idx in falling.strip.indexBlocks) _indexUsed[idx] = false;
+			foreach (int vtx in falling.strip.vertexBlocks) _vertexUsed[vtx] = false;
+
 			quadAllocator.ReleaseStrip(falling.strip);
 			fallingStrips.Remove(falling);
 		}
@@ -182,7 +199,7 @@ public class QuadStripAllocatorTest : MonoBehaviour
 		int y = pad;
 
 		// --------------------------------------------------------------
-		// 1. Two 32×32 heatmaps — SAME ORDER AS ORIGINAL (gy=0 = bottom row)
+		// 1. Two 32×32 heatmaps
 		// --------------------------------------------------------------
 		const int GRID_SIZE = 32;
 		const int GAP = 30;
@@ -198,7 +215,7 @@ public class QuadStripAllocatorTest : MonoBehaviour
 		int bottomY = topY + MAP_PIXEL_SIZE + GAP;
 
 		DrawAllocatorHeatmap(
-			quadAllocator.IndexAllocator,
+			blockId => blockId >= 0 && blockId < DynamicAllocator.Blocks && _indexUsed[blockId],
 			topY,
 			leftOffset,
 			CELL_SIZE,
@@ -207,7 +224,7 @@ public class QuadStripAllocatorTest : MonoBehaviour
 			new Color(1f, 0.6f, 0f, 1f));
 
 		DrawAllocatorHeatmap(
-			quadAllocator.VertexAllocator,
+			blockId => blockId >= 0 && blockId < DynamicAllocator.Blocks && _vertexUsed[blockId],
 			bottomY,
 			leftOffset,
 			CELL_SIZE,
@@ -225,8 +242,8 @@ public class QuadStripAllocatorTest : MonoBehaviour
 			GUILayout.Label("<b>QuadStrip Allocator Test</b>", Rich());
 			GUILayout.Space(8);
 			GUILayout.Label($"Active Strips: <color=yellow>{fallingStrips.Count}</color>");
-			GUILayout.Label($"Index Blocks: <color=orange>{quadAllocator.IndexAllocator.AllocatedBlockCount}</color>/{GRID_SIZE * GRID_SIZE}");
-			GUILayout.Label($"Vertex Blocks: <color=lime>{quadAllocator.VertexAllocator.AllocatedBlockCount}</color>/{GRID_SIZE * GRID_SIZE}");
+			GUILayout.Label($"Index Blocks: <color=orange>{quadAllocator.IndexBlockAllocatedCount}</color>/{GRID_SIZE * GRID_SIZE}");
+			GUILayout.Label($"Vertex Blocks: <color=lime>{quadAllocator.VertexBlockAllocatedCount}</color>/{GRID_SIZE * GRID_SIZE}");
 		}
 		GUILayout.EndArea();
 
@@ -249,7 +266,7 @@ public class QuadStripAllocatorTest : MonoBehaviour
 		GUI.color = Color.white;
 
 		// --------------------------------------------------------------
-		// 4. Render the strips with GL (unchanged)
+		// 4. Render the strips with GL
 		// --------------------------------------------------------------
 		if (Event.current.type == EventType.Repaint)
 		{
@@ -258,24 +275,24 @@ public class QuadStripAllocatorTest : MonoBehaviour
 			GL.LoadPixelMatrix(0, Screen.width, Screen.height, 0);
 
 			GL.Begin(GL.TRIANGLES);
-			var ia = quadAllocator.IndexAllocator;
-			var va = quadAllocator.VertexAllocator;
-			for (int i = 0; i < ia.indices.Length; i += 3)
+			for (int i = 0; i < quadAllocator.indices.Length; i += 3)
 			{
-				int i0 = ia.indices[i];
-				int i1 = ia.indices[i + 1];
-				int i2 = ia.indices[i + 2];
-				if (i0 >= va.vertices.Length || i1 >= va.vertices.Length || i2 >= va.vertices.Length) continue;
+				int i0 = quadAllocator.indices[i];
+				int i1 = quadAllocator.indices[i + 1];
+				int i2 = quadAllocator.indices[i + 2];
 
-				Vector3 v0 = va.vertices[i0];
-				Vector3 v1 = va.vertices[i1];
-				Vector3 v2 = va.vertices[i2];
-				Color c0 = va.colors[i0];
-				Color c1 = va.colors[i1];
-				Color c2 = va.colors[i2];
-				Vector2 uv0 = va.uv[i0];
-				Vector2 uv1 = va.uv[i1];
-				Vector2 uv2 = va.uv[i2];
+				if (i0 >= quadAllocator.vertices.Length || i1 >= quadAllocator.vertices.Length || i2 >= quadAllocator.vertices.Length)
+					continue;
+
+				Vector3 v0 = quadAllocator.vertices[i0];
+				Vector3 v1 = quadAllocator.vertices[i1];
+				Vector3 v2 = quadAllocator.vertices[i2];
+				Color c0 = quadAllocator.colors[i0];
+				Color c1 = quadAllocator.colors[i1];
+				Color c2 = quadAllocator.colors[i2];
+				Vector2 uv0 = quadAllocator.uv[i0];
+				Vector2 uv1 = quadAllocator.uv[i1];
+				Vector2 uv2 = quadAllocator.uv[i2];
 
 				GL.Color(c0); GL.TexCoord2(uv0.x, uv0.y); GL.Vertex(v0);
 				GL.Color(c1); GL.TexCoord2(uv1.x, uv1.y); GL.Vertex(v1);
@@ -313,16 +330,17 @@ public class QuadStripAllocatorTest : MonoBehaviour
 		}
 	}
 
-	// ---------------------------------------------------------------------
-	// NEW: generic heat-map drawer – cell size is passed in
-	// ---------------------------------------------------------------------
-	private void DrawAllocatorHeatmap(DynamicAllocator alloc,
-									 int yStart,
-									 int xStart,
-									 int cellSize,
-									 int gridSize,
-									 string title,
-									 Color usedCol)
+	// -----------------------------------------------------------------
+	// Generic heat-map drawer using predicate
+	// -----------------------------------------------------------------
+	private void DrawAllocatorHeatmap(
+		System.Func<int, bool> isUsed,
+		int yStart,
+		int xStart,
+		int cellSize,
+		int gridSize,
+		string title,
+		Color usedCol)
 	{
 		int inner = cellSize - 1;
 
@@ -330,9 +348,10 @@ public class QuadStripAllocatorTest : MonoBehaviour
 		{
 			for (int gx = 0; gx < gridSize; gx++)
 			{
-				bool isUsed = alloc.IsBlockAllocated(gy * 32 + gx);
+				int blockId = gy * gridSize + gx;
+				bool used = isUsed(blockId);
 
-				GUI.color = isUsed ? usedCol : Color.gray;
+				GUI.color = used ? usedCol : Color.gray;
 
 				Rect r = new Rect(
 					xStart + gx * cellSize,

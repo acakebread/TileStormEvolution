@@ -5,13 +5,23 @@ using UnityEngine;
 [RequireComponent(typeof(VertexAllocator))]
 public class VertexAllocatorTest : MonoBehaviour
 {
+	class VertexAllocator : DynamicAllocator
+	{
+		public const int VerticesPerBlock = 2;
+		public const int TotalVertices = Blocks * VerticesPerBlock;
+
+		public Vector3[] vertices = new Vector3[TotalVertices];
+		public Color[] colors = new Color[TotalVertices];
+		public Vector2[] uv = new Vector2[TotalVertices];
+	}
+
 	private VertexAllocator allocator;
 	private readonly System.Random rnd = new System.Random();
 
 	// Track lifetime for color fade
 	private readonly Dictionary<int, (float startTime, float duration)> activeAllocations = new();
 
-	private void Awake() => allocator = GetComponent<VertexAllocator>();
+	private void Awake() => allocator = new VertexAllocator();
 	private void Start() => StartCoroutine(TestRoutine());
 
 	private IEnumerator TestRoutine()
