@@ -2,10 +2,9 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-[RequireComponent(typeof(QuadStripAllocator))]
 public class QuadStripAllocatorTest : MonoBehaviour
 {
-	private QuadStripAllocator quadAllocator;
+	private QuadStripAllocator quadAllocator = new();
 	private readonly System.Random rnd = new();
 
 	[Header("Falling Speed (px/sec)")]
@@ -27,11 +26,8 @@ public class QuadStripAllocatorTest : MonoBehaviour
 	[SerializeField] private bool wireframe = true;
 
 	private const int largeCell = 22;
-	private const int smallCell = 11;
 	private const int pad = 30;
-	private const int spacing = 30;
 	private const int largeGridW = 16 * largeCell;
-	private const int smallGridW = 16 * smallCell;
 
 	private int panelX, panelY;
 	private const int panelW = 300;
@@ -54,7 +50,7 @@ public class QuadStripAllocatorTest : MonoBehaviour
 
 	private void Awake()
 	{
-		quadAllocator = GetComponent<QuadStripAllocator>();
+		quadAllocator.Initialise();
 
 		int infoX = pad + largeGridW + 30;
 		panelX = infoX + 200;
@@ -89,7 +85,7 @@ public class QuadStripAllocatorTest : MonoBehaviour
 				};
 
 				// SET COLOR + UVs
-				var va = quadAllocator.vertexAllocator;
+				var va = quadAllocator.VertexAllocator;
 
 				for (int i = 0; i <= numQuads; i++)
 				{
@@ -158,7 +154,7 @@ public class QuadStripAllocatorTest : MonoBehaviour
 				int vBlock = strip.vertexBlocks[j];
 				int vIdx = vBlock * 2;
 
-				var va = quadAllocator.vertexAllocator;
+				var va = quadAllocator.VertexAllocator;
 				va.vertices[vIdx] = new Vector3(xLeft, y, 0);
 				va.vertices[vIdx + 1] = new Vector3(xRight, y, 0);
 			}
@@ -184,15 +180,44 @@ public class QuadStripAllocatorTest : MonoBehaviour
 	private void OnGUI()
 	{
 		int y = pad;
-		DrawQuadGrid(y);
-		y += largeGridW + spacing;
 
-		int totalSmallWidth = 2 * smallGridW + 30;
-		int leftOffset = (largeGridW - totalSmallWidth) / 2 + pad;
+		// --------------------------------------------------------------
+		// 1. Two 32×32 heatmaps — SAME ORDER AS ORIGINAL (gy=0 = bottom row)
+		// --------------------------------------------------------------
+		const int GRID_SIZE = 32;
+		const int GAP = 30;
+		const int AVAILABLE_HEIGHT = panelH - GAP;
+		const int MAP_HEIGHT = AVAILABLE_HEIGHT / 2;
 
-		DrawAllocatorGrid(quadAllocator.IndexAllocator, y, leftOffset, "Index Blocks", new Color(1f, 0.6f, 0f, 1f));
-		DrawAllocatorGrid(quadAllocator.VertexAllocator, y, leftOffset + smallGridW + 30, "Vertex Blocks", new Color(0.3f, 1f, 0.3f, 1f));
+		const int CELL_SIZE = MAP_HEIGHT / GRID_SIZE;     // ~8 px
+		const int MAP_PIXEL_SIZE = GRID_SIZE * CELL_SIZE;
 
+		int leftOffset = pad + (largeGridW - MAP_PIXEL_SIZE) / 2;
+
+		int topY = y;
+		int bottomY = topY + MAP_PIXEL_SIZE + GAP;
+
+		DrawAllocatorHeatmap(
+			quadAllocator.IndexAllocator,
+			topY,
+			leftOffset,
+			CELL_SIZE,
+			GRID_SIZE,
+			"Index Blocks",
+			new Color(1f, 0.6f, 0f, 1f));
+
+		DrawAllocatorHeatmap(
+			quadAllocator.VertexAllocator,
+			bottomY,
+			leftOffset,
+			CELL_SIZE,
+			GRID_SIZE,
+			"Vertex Blocks",
+			new Color(0.3f, 1f, 0.3f, 1f));
+
+		// --------------------------------------------------------------
+		// 2. Info panel
+		// --------------------------------------------------------------
 		GUI.color = Color.white;
 		int infoX = pad + largeGridW + 30;
 		GUILayout.BeginArea(new Rect(infoX, pad, 360, 500));
@@ -200,11 +225,14 @@ public class QuadStripAllocatorTest : MonoBehaviour
 			GUILayout.Label("<b>QuadStrip Allocator Test</b>", Rich());
 			GUILayout.Space(8);
 			GUILayout.Label($"Active Strips: <color=yellow>{fallingStrips.Count}</color>");
-			GUILayout.Label($"Index Blocks: <color=orange>{quadAllocator.IndexAllocator.AllocatedBlockCount}</color>/256");
-			GUILayout.Label($"Vertex Blocks: <color=lime>{quadAllocator.VertexAllocator.AllocatedBlockCount}</color>/256");
+			GUILayout.Label($"Index Blocks: <color=orange>{quadAllocator.IndexAllocator.AllocatedBlockCount}</color>/{GRID_SIZE * GRID_SIZE}");
+			GUILayout.Label($"Vertex Blocks: <color=lime>{quadAllocator.VertexAllocator.AllocatedBlockCount}</color>/{GRID_SIZE * GRID_SIZE}");
 		}
 		GUILayout.EndArea();
 
+		// --------------------------------------------------------------
+		// 3. Falling-strip panel (unchanged)
+		// --------------------------------------------------------------
 		GUI.color = new Color(0.05f, 0.05f, 0.1f, 1f);
 		GUI.DrawTexture(new Rect(panelX, panelY, panelW, panelH), Texture2D.whiteTexture);
 		GUI.color = Color.white;
@@ -220,16 +248,18 @@ public class QuadStripAllocatorTest : MonoBehaviour
 		}
 		GUI.color = Color.white;
 
+		// --------------------------------------------------------------
+		// 4. Render the strips with GL (unchanged)
+		// --------------------------------------------------------------
 		if (Event.current.type == EventType.Repaint)
 		{
 			stripMaterial.SetPass(0);
 			GL.PushMatrix();
 			GL.LoadPixelMatrix(0, Screen.width, Screen.height, 0);
 
-			// SOLID QUADS WITH UVs
 			GL.Begin(GL.TRIANGLES);
-			var ia = quadAllocator.indexAllocator;
-			var va = quadAllocator.vertexAllocator;
+			var ia = quadAllocator.IndexAllocator;
+			var va = quadAllocator.VertexAllocator;
 			for (int i = 0; i < ia.indices.Length; i += 3)
 			{
 				int i0 = ia.indices[i];
@@ -247,9 +277,9 @@ public class QuadStripAllocatorTest : MonoBehaviour
 				Vector2 uv1 = va.uv[i1];
 				Vector2 uv2 = va.uv[i2];
 
-				GL.Color(c0); GL.TexCoord(uv0); GL.Vertex(v0);
-				GL.Color(c1); GL.TexCoord(uv1); GL.Vertex(v1);
-				GL.Color(c2); GL.TexCoord(uv2); GL.Vertex(v2);
+				GL.Color(c0); GL.TexCoord2(uv0.x, uv0.y); GL.Vertex(v0);
+				GL.Color(c1); GL.TexCoord2(uv1.x, uv1.y); GL.Vertex(v1);
+				GL.Color(c2); GL.TexCoord2(uv2.x, uv2.y); GL.Vertex(v2);
 			}
 			GL.End();
 
@@ -257,7 +287,6 @@ public class QuadStripAllocatorTest : MonoBehaviour
 			{
 				GL.Begin(GL.LINES);
 				GL.Color(Color.white);
-
 				foreach (var falling in fallingStrips)
 				{
 					var strip = falling.strip;
@@ -284,44 +313,40 @@ public class QuadStripAllocatorTest : MonoBehaviour
 		}
 	}
 
-	private void DrawQuadGrid(int yStart)
+	// ---------------------------------------------------------------------
+	// NEW: generic heat-map drawer – cell size is passed in
+	// ---------------------------------------------------------------------
+	private void DrawAllocatorHeatmap(DynamicAllocator alloc,
+									 int yStart,
+									 int xStart,
+									 int cellSize,
+									 int gridSize,
+									 string title,
+									 Color usedCol)
 	{
-		for (int gy = 0; gy < 16; gy++)
-			for (int gx = 0; gx < 16; gx++)
+		int inner = cellSize - 1;
+
+		for (int gy = 0; gy < gridSize; gy++)
+		{
+			for (int gx = 0; gx < gridSize; gx++)
 			{
-				int id = gy * 16 + gx;
-				Rect r = new Rect(pad + gx * largeCell, yStart + gy * largeCell, largeCell - 2, largeCell - 2);
-				bool used = false;
+				// Safe: if out of range (e.g. 16+), return false
+				bool isUsed = alloc.IsBlockAllocated(gx, gy);
 
-				// INDEXED LOOP
-				for (int i = 0; i < fallingStrips.Count; i++)
-				{
-					var strip = fallingStrips[i].strip;
-					if (strip != null && strip.indexBlocks.Contains(id))
-					{
-						used = true;
-						break;
-					}
-				}
+				GUI.color = isUsed ? usedCol : Color.gray;
 
-				GUI.color = used ? Color.cyan : Color.red;
+				Rect r = new Rect(
+					xStart + gx * cellSize,
+					yStart + gy * cellSize,
+					inner,
+					inner);
+
 				GUI.DrawTexture(r, Texture2D.whiteTexture);
 			}
-		GUI.color = Color.white;
-		GUI.Label(new Rect(pad, yStart - 20, 300, 20), "<b>Quad Usage</b>", Rich());
-	}
+		}
 
-	private void DrawAllocatorGrid(DynamicAllocator alloc, int yStart, int xStart, string title, Color usedCol)
-	{
-		for (int gy = 0; gy < 16; gy++)
-			for (int gx = 0; gx < 16; gx++)
-			{
-				Rect r = new Rect(xStart + gx * smallCell, yStart + gy * smallCell, smallCell - 1, smallCell - 1);
-				GUI.color = alloc.IsBlockAllocated(gx, gy) ? usedCol : Color.gray;
-				GUI.DrawTexture(r, Texture2D.whiteTexture);
-			}
 		GUI.color = Color.white;
-		GUI.Label(new Rect(xStart, yStart - 20, 200, 20), $"<b>{title}</b>", Rich());
+		GUI.Label(new Rect(xStart, yStart - 20, 400, 20), $"<b>{title} ({gridSize}×{gridSize})</b>", Rich());
 	}
 
 	private GUIStyle Rich() => new GUIStyle(GUI.skin.label) { richText = true };

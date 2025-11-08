@@ -89,7 +89,7 @@ public class QuadStripDynamicAllocatorTest : MonoBehaviour
 					fallSpeed = fallSpeed
 				};
 
-				var va = quadAllocator.vertexAllocator;
+				var va = quadAllocator.VertexAllocator;
 				for (int i = 0; i <= numQuads; i++)
 				{
 					int vBlock = strip.vertexBlocks[i];
@@ -153,7 +153,7 @@ public class QuadStripDynamicAllocatorTest : MonoBehaviour
 				int vBlock = strip.vertexBlocks[j];
 				int vIdx = vBlock * 2;
 
-				var va = quadAllocator.vertexAllocator;
+				var va = quadAllocator.VertexAllocator;
 				va.vertices[vIdx] = new Vector3(xLeft, y, 0);
 				va.vertices[vIdx + 1] = new Vector3(xRight, y, 0);
 			}
@@ -242,8 +242,8 @@ public class QuadStripDynamicAllocatorTest : MonoBehaviour
 			GL.LoadPixelMatrix(0, Screen.width, Screen.height, 0);
 
 			GL.Begin(GL.TRIANGLES);
-			var ia = quadAllocator.indexAllocator;
-			var va = quadAllocator.vertexAllocator;
+			var ia = quadAllocator.IndexAllocator;
+			var va = quadAllocator.VertexAllocator;
 			for (int i = 0; i < ia.indices.Length; i += 3)
 			{
 				int i0 = ia.indices[i], i1 = ia.indices[i + 1], i2 = ia.indices[i + 2];

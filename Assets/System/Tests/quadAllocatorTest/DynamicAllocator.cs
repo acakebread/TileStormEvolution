@@ -1,10 +1,9 @@
-using UnityEngine;
-
-public abstract class DynamicAllocator : MonoBehaviour
+public abstract class DynamicAllocator
 {
-	public const int GridSize = 16;
-	public const int Blocks = GridSize * GridSize; // 256
+	public const int GridSize = 32;
+	public const int Blocks = GridSize * GridSize;
 
+	public abstract void Initialise();
 	public abstract int Allocate();
 	public abstract bool Release(int blockId);
 	public abstract bool IsBlockAllocated(int gridX, int gridY);

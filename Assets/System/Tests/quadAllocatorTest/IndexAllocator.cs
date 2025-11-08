@@ -4,17 +4,18 @@ using UnityEngine;
 public class IndexAllocator : DynamicAllocator
 {
 	public const int IndicesPerBlock = 6;
-	public const int TotalIndices = Blocks * IndicesPerBlock; // 1536
+	public const int TotalIndices = Blocks * IndicesPerBlock;
 
 	[HideInInspector] public int[] indices = new int[TotalIndices];
 
 	private readonly bool[] blockUsed = new bool[Blocks];
 	private readonly List<int> freeBlocks = new List<int>(Blocks);
 
-	private void Awake()
+	public override void Initialise()
 	{
 		for (int i = 0; i < Blocks; i++)
 			freeBlocks.Add(i);
+		freeBlocks.Reverse();
 
 		for (int block = 0; block < Blocks; block++)
 		{

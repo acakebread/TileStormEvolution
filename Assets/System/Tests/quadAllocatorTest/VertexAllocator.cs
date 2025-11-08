@@ -6,17 +6,18 @@ public class VertexAllocator : DynamicAllocator
 	public const int VerticesPerBlock = 2;
 	public const int TotalVertices = Blocks * VerticesPerBlock; // 512
 
-	[HideInInspector] public Vector3[] vertices = new Vector3[TotalVertices];
-	[HideInInspector] public Color[] colors = new Color[TotalVertices];
-	[HideInInspector] public Vector2[] uv = new Vector2[TotalVertices]; // ADDED
+	public Vector3[] vertices = new Vector3[TotalVertices];
+	public Color[] colors = new Color[TotalVertices];
+	public Vector2[] uv = new Vector2[TotalVertices]; // ADDED
 
 	private readonly bool[] blockUsed = new bool[Blocks];
 	private readonly List<int> freeBlocks = new List<int>(Blocks);
 
-	private void Awake()
+	public override void Initialise()
 	{
 		for (int i = 0; i < Blocks; i++)
 			freeBlocks.Add(i);
+		freeBlocks.Reverse();
 
 		for (int i = 0; i < TotalVertices; i++)
 		{

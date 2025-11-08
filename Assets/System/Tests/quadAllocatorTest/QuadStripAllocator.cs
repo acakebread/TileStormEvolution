@@ -1,37 +1,29 @@
 using System.Collections.Generic;
-using UnityEngine;
 
-[RequireComponent(typeof(IndexAllocator))]
-[RequireComponent(typeof(VertexAllocator))]
-public class QuadStripAllocator : MonoBehaviour
+public class QuadStripAllocator
 {
 	// --------------------------------------------------------------
 	// Private fields – set once in Awake (never assigned later)
 	// --------------------------------------------------------------
-	[SerializeField] private IndexAllocator _indexAllocator;
-	[SerializeField] private VertexAllocator _vertexAllocator;
+	private IndexAllocator _indexAllocator = new();
+	private VertexAllocator _vertexAllocator = new();
 
 	// --------------------------------------------------------------
 	// Public read-only access
 	// --------------------------------------------------------------
-	public IndexAllocator indexAllocator => _indexAllocator;
-	public VertexAllocator vertexAllocator => _vertexAllocator;
-
-	public DynamicAllocator IndexAllocator => _indexAllocator;
-	public DynamicAllocator VertexAllocator => _vertexAllocator;
+	public IndexAllocator IndexAllocator => _indexAllocator;
+	public VertexAllocator VertexAllocator => _vertexAllocator;
 
 	private readonly List<QuadStrip> activeStrips = new();
 
 	public IReadOnlyList<QuadStrip> ActiveStrips => activeStrips;
 	public int ActiveStripCount => activeStrips.Count;
 
-	// --------------------------------------------------------------
-	// Awake – guarantee the components are present
-	// --------------------------------------------------------------
-	private void Awake()
+
+	public void Initialise()
 	{
-		if (_indexAllocator == null) _indexAllocator = GetComponent<IndexAllocator>();
-		if (_vertexAllocator == null) _vertexAllocator = GetComponent<VertexAllocator>();
+		_indexAllocator.Initialise();
+		_vertexAllocator.Initialise();
 	}
 
 	// --------------------------------------------------------------
