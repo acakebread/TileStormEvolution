@@ -11,6 +11,10 @@ public class DynamicAllocator
 	private readonly List<int> _freeBlocks = new();
 	private int _nextBlockId = 0;
 
+	public DynamicAllocator()
+	{
+	}
+
 	public DynamicAllocator(int maxBlocks)
 	{
 		SetMaxBlocks(maxBlocks);
