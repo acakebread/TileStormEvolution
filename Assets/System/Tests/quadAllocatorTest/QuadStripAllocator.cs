@@ -1,6 +1,5 @@
-// QuadStripAllocator.cs
-using System.Collections.Generic;
 using UnityEngine;
+using System.Collections.Generic;
 
 public class QuadStrip
 {
@@ -10,10 +9,63 @@ public class QuadStrip
 
 public class QuadStripAllocator
 {
-	public const int IndicesPerBlock = 6;
-	public const int VerticesPerBlock = 2;
+	private class DynamicAllocator
+	{
+		public const int DefaultMaxBlocks = 1024;
+		public int MaxBlocks { get; private set; } = DefaultMaxBlocks;
+		public void SetMaxBlocks(int newMax) => MaxBlocks = newMax < 1 ? 1 : newMax;
 
+		private readonly List<int> _freeBlocks = new();
+		private int _nextBlockId = 0;
+
+		public int Allocate()
+		{
+			if (_freeBlocks.Count > 0)
+			{
+				int id = _freeBlocks[_freeBlocks.Count - 1];
+				_freeBlocks.RemoveAt(_freeBlocks.Count - 1);
+				return id;
+			}
+
+			if (_nextBlockId >= MaxBlocks) return -1;
+			return _nextBlockId++;
+		}
+
+		public bool Release(int blockId)
+		{
+			if (blockId < 0 || blockId >= _nextBlockId) return false;
+			if (_freeBlocks.Contains(blockId)) return false;
+
+			_freeBlocks.Add(blockId);
+
+			while (_nextBlockId > 0 && _freeBlocks.Contains(_nextBlockId - 1))
+			{
+				_freeBlocks.Remove(_nextBlockId - 1);
+				_nextBlockId--;
+			}
+
+			return true;
+		}
+
+		public void Clear()
+		{
+			_freeBlocks.Clear();
+			_nextBlockId = 0;
+		}
+
+		public int AvailableBlockCount => _freeBlocks.Count - _nextBlockId + MaxBlocks;
+		public int AllocatedBlockCount => _nextBlockId - _freeBlocks.Count;
+
+		// Debug section
+		public int HighWaterMark => _nextBlockId;
+	}
+
+	public const int IndicesPerBlock = 6;
+	private readonly DynamicAllocator _indexBlockAllocator = new();
 	public int MaxIndexBlocks => _indexBlockAllocator.MaxBlocks;
+
+	public const int VerticesPerBlock = 2;
+	private readonly DynamicAllocator _vertexBlockAllocator = new();
 	public int MaxVertexBlocks => _vertexBlockAllocator.MaxBlocks;
 
 	private readonly List<int> _indices = new();
@@ -21,12 +73,7 @@ public class QuadStripAllocator
 	private readonly List<Color> _colors = new();
 	private readonly List<Vector2> _uv = new();
 
-	private readonly DynamicAllocator _indexBlockAllocator;
-	private readonly DynamicAllocator _vertexBlockAllocator;
 	private readonly List<QuadStrip> activeStrips = new();
-
-	public IReadOnlyList<QuadStrip> ActiveStrips => activeStrips;
-	public int ActiveStripCount => activeStrips.Count;
 
 	public IReadOnlyList<int> Indices => _indices;
 	public IReadOnlyList<Vector3> Vertices => _vertices;
@@ -38,30 +85,11 @@ public class QuadStripAllocator
 	internal List<Color> MutableColors => _colors;
 	internal List<Vector2> MutableUV => _uv;
 
-	public int IndexBlockAvailable => _indexBlockAllocator.AvailableBlockCount;
 	public int IndexBlockAllocated => _indexBlockAllocator.AllocatedBlockCount;
-	public int VertexBlockAvailable => _vertexBlockAllocator.AvailableBlockCount;
 	public int VertexBlockAllocated => _vertexBlockAllocator.AllocatedBlockCount;
 
-	// Optional: expose high-water marks
-	public int IndexHighWater => _indexBlockAllocator.HighWaterMark;
-	public int VertexHighWater => _vertexBlockAllocator.HighWaterMark;
-
-	public QuadStripAllocator(int maxIndexBlocks, int maxVertexBlocks)
-	{
-		_indexBlockAllocator = new DynamicAllocator(maxIndexBlocks);
-		_vertexBlockAllocator = new DynamicAllocator(maxVertexBlocks);
-	}
-
-	public void SetMaxIndexBlocks(int newMax)
-	{
-		_indexBlockAllocator.SetMaxBlocks(newMax);
-	}
-
-	public void SetMaxVertexBlocks(int newMax)
-	{
-		_vertexBlockAllocator.SetMaxBlocks(newMax);
-	}
+	public void SetMaxIndexBlocks(int newMax) => _indexBlockAllocator.SetMaxBlocks(newMax);
+	public void SetMaxVertexBlocks(int newMax) => _vertexBlockAllocator.SetMaxBlocks(newMax);
 
 	private void EnsureIndexCapacity(int required)
 	{
@@ -87,25 +115,27 @@ public class QuadStripAllocator
 			vertexBlocks = new List<int>(numQuads + 1)
 		};
 
-		// Allocate index blocks
+		int maxIndexBlock = -1;
 		for (int i = 0; i < numQuads; i++)
 		{
-			int idx = _indexBlockAllocator.Allocate();
-			if (idx == -1) { ReleaseStrip(strip); return null; }
+			int idx = _indexBlockAllocator.Allocate(); // Guaranteed success
 			strip.indexBlocks.Add(idx);
-			EnsureIndexCapacity((idx + 1) * IndicesPerBlock);
+			if (idx > maxIndexBlock) maxIndexBlock = idx;
 		}
 
-		// Allocate vertex blocks
+		int maxVertexBlock = -1;
 		for (int i = 0; i < numQuads + 1; i++)
 		{
-			int vtx = _vertexBlockAllocator.Allocate();
-			if (vtx == -1) { ReleaseStrip(strip); return null; }
+			int vtx = _vertexBlockAllocator.Allocate(); // Guaranteed success
 			strip.vertexBlocks.Add(vtx);
-			EnsureVertexCapacity((vtx + 1) * VerticesPerBlock);
+			if (vtx > maxVertexBlock) maxVertexBlock = vtx;
 		}
 
-		// Fill index buffer
+		// One-time capacity
+		EnsureIndexCapacity((maxIndexBlock + 1) * IndicesPerBlock);
+		EnsureVertexCapacity((maxVertexBlock + 1) * VerticesPerBlock);
+
+		// Fill indices
 		for (int q = 0; q < numQuads; q++)
 		{
 			int idxBase = strip.indexBlocks[q] * IndicesPerBlock;
@@ -130,7 +160,6 @@ public class QuadStripAllocator
 	{
 		if (strip == null || !activeStrips.Contains(strip)) return false;
 
-		// Clear index references (optional, for safety)
 		foreach (int idxBlock in strip.indexBlocks)
 		{
 			int idxBase = idxBlock * IndicesPerBlock;
@@ -143,14 +172,15 @@ public class QuadStripAllocator
 		foreach (int vtx in strip.vertexBlocks) _vertexBlockAllocator.Release(vtx);
 
 		bool removed = activeStrips.Remove(strip);
-
-		// Optional: full reset when empty
 		if (activeStrips.Count == 0)
 		{
 			_indexBlockAllocator.Clear();
 			_vertexBlockAllocator.Clear();
 		}
-
 		return removed;
 	}
+
+	// Debug section
+	public int IndexHighWater => _indexBlockAllocator.HighWaterMark;
+	public int VertexHighWater => _vertexBlockAllocator.HighWaterMark;
 }

@@ -82,7 +82,7 @@ public class QuadStripAllocatorTest : MonoBehaviour
 
 		int clampedIndex = Mathf.Clamp(maxIndexBlocks, 4, 1024);
 		int clampedVertex = Mathf.Clamp(maxVertexBlocks, 4, 1024);
-		quadAllocator = new QuadStripAllocator(clampedIndex, clampedVertex);
+		quadAllocator = new QuadStripAllocator();
 	}
 
 	private void Update()
