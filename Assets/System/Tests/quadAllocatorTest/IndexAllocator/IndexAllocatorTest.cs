@@ -7,7 +7,7 @@ public class IndexAllocatorTest : MonoBehaviour
 	class IndexAllocator : DynamicAllocator
 	{
 		public const int IndicesPerBlock = 6;
-		public const int TotalIndices = Blocks * IndicesPerBlock;
+		public const int TotalIndices = DefaultMaxBlocks * IndicesPerBlock;
 		public int[] indices = new int[TotalIndices];
 	}
 
@@ -25,7 +25,7 @@ public class IndexAllocatorTest : MonoBehaviour
 		{
 			for (int n = 0; n < 4; ++n)
 			{
-				if (allocator.FreeBlockCount > 0)
+				if (allocator.AvailableBlockCount > 0)
 				{
 					int blockId = allocator.Allocate();
 					if (blockId != -1)
@@ -87,7 +87,7 @@ public class IndexAllocatorTest : MonoBehaviour
 			GUILayout.Label($"<b>Index Allocator Test</b>", new GUIStyle(GUI.skin.label) { richText = true });
 			GUILayout.Space(4);
 			GUILayout.Label($"• Allocated: <color=yellow>{allocator.AllocatedBlockCount}</color>/256 blocks");
-			GUILayout.Label($"• Free: <color=cyan>{allocator.FreeBlockCount}</color>");
+			GUILayout.Label($"• Free: <color=cyan>{allocator.AvailableBlockCount}</color>");
 			GUILayout.Space(4);
 			GUILayout.Label("<color=#00AAFF>Bright blue</color> → <color=#000033>black</color> = lifetime fade (1–4s)");
 			GUILayout.Label("4 blocks allocated every 0.04s");

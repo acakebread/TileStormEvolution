@@ -8,7 +8,7 @@ public class VertexAllocatorTest : MonoBehaviour
 	class VertexAllocator : DynamicAllocator
 	{
 		public const int VerticesPerBlock = 2;
-		public const int TotalVertices = Blocks * VerticesPerBlock;
+		public const int TotalVertices = DefaultMaxBlocks * VerticesPerBlock;
 
 		public Vector3[] vertices = new Vector3[TotalVertices];
 		public Color[] colors = new Color[TotalVertices];
@@ -30,7 +30,7 @@ public class VertexAllocatorTest : MonoBehaviour
 		{
 			for (int n = 0; n < 4; ++n)
 			{
-				if (allocator.FreeBlockCount > 0)
+				if (allocator.AvailableBlockCount > 0)
 				{
 					int blockId = allocator.Allocate();
 					if (blockId != -1)
@@ -92,7 +92,7 @@ public class VertexAllocatorTest : MonoBehaviour
 			GUILayout.Label($"<b>Vertex Allocator Test</b>", new GUIStyle(GUI.skin.label) { richText = true });
 			GUILayout.Space(4);
 			GUILayout.Label($"• Allocated: <color=yellow>{allocator.AllocatedBlockCount}</color>/256 blocks");
-			GUILayout.Label($"• Free: <color=cyan>{allocator.FreeBlockCount}</color>");
+			GUILayout.Label($"• Free: <color=cyan>{allocator.AvailableBlockCount}</color>");
 			GUILayout.Space(4);
 			GUILayout.Label("<color=#00FFFF>Bright cyan</color> to <color=#000033>black</color> = lifetime fade (1–4s)");
 			GUILayout.Label("4 blocks (2 vertices each) every 0.04s");
