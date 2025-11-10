@@ -2,6 +2,7 @@
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+using MassiveHadronLtd;
 
 public class QuadStripAllocatorTestGL : MonoBehaviour
 {

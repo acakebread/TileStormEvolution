@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+using MassiveHadronLtd;
 
 [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
 public class QuadStripAllocatorTest : MonoBehaviour
