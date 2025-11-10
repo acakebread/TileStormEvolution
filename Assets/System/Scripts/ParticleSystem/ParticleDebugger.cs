@@ -4,16 +4,12 @@ using System.Linq;
 
 namespace MassiveHadronLtd
 {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-	[ExecuteAlways]
 	public class ParticleDebugger : MonoBehaviour
 	{
 		[Header("Display")]
 		public bool showInPlayMode = true;
-		public bool showInEditMode = true;
+		public bool showInEditMode = true; // Kept, but will be ignored in builds
 		public Vector2 screenOffset = new Vector2(15, 15);
-		public int maxWidth = 400;
-		public int maxHeight = 200;
 
 		[Header("Update")]
 		[Range(0.05f, 1f)] public float guiUpdateInterval = 0.1f;
@@ -22,6 +18,10 @@ namespace MassiveHadronLtd
 		private float _lastGuiUpdate = 0f;
 		private int _totalSlots = 0;
 		private int _totalActive = 0;
+
+		// Global toggle state
+		private bool _globalUpdateParticles = true;
+		private bool _applyPending = false;
 
 		private void OnEnable()
 		{
@@ -32,21 +32,43 @@ namespace MassiveHadronLtd
 		{
 			if (Application.isPlaying)
 				RefreshControllers();
+
+			// Apply toggle change to all controllers
+			if (_applyPending && _controllers.Count > 0)
+			{
+				foreach (var controller in _controllers)
+				{
+					if (controller != null)
+						controller.updateParticles = _globalUpdateParticles;
+				}
+				_applyPending = false;
+			}
 		}
 
 		private void RefreshControllers()
 		{
 			var all = FindObjectsByType<ParticleController>(FindObjectsSortMode.None);
-			if (_controllers.Count != all.Length || !_controllers.SequenceEqual(all))
+			bool changed = _controllers.Count != all.Length || !_controllers.SequenceEqual(all);
+
+			if (changed)
+			{
 				_controllers = all.ToList();
+
+				// Sync toggle to current state (use first if mixed)
+				if (_controllers.Count > 0)
+				{
+					_globalUpdateParticles = _controllers[0].updateParticles;
+					_applyPending = true; // force sync on change
+				}
+			}
 		}
 
 		private void OnGUI()
 		{
-			bool shouldDraw = (Application.isPlaying && showInPlayMode) ||
-							  (!Application.isPlaying && showInEditMode);
-			if (!shouldDraw || _controllers.Count == 0) return;
+			// Only draw in Play Mode (even in Editor)
+			if (!Application.isPlaying || !showInPlayMode || _controllers.Count == 0) return;
 
+			// Update stats
 			float now = Time.unscaledTime;
 			if (now - _lastGuiUpdate >= guiUpdateInterval)
 			{
@@ -57,19 +79,35 @@ namespace MassiveHadronLtd
 
 			int totalCapacity = ParticleSystem.MaxViewCache * _controllers.Count;
 
+			// GUI Style
 			GUI.color = Color.cyan;
 			GUI.skin.label.fontStyle = FontStyle.Bold;
 			GUI.skin.label.fontSize = 12;
+			GUI.skin.toggle.fontSize = 11;
+			GUI.skin.toggle.normal.textColor = Color.white;
 
-			GUILayout.BeginArea(new Rect(screenOffset.x, screenOffset.y, maxWidth, maxHeight), GUI.skin.box);
+			// YOUR EXACT SIZE
+			float width = 200;
+			float height = 100;
+			var areaRect = new Rect(screenOffset.x, screenOffset.y, width, height);
+
+			GUILayout.BeginArea(areaRect, GUI.skin.box);
+
 			GUILayout.Label("<color=white><b>PARTICLE SYSTEM DEBUG</b></color>");
 
 			GUILayout.Label(
-				$"<color=yellow>ParticleMesh slots used:</color> " +
-				$"<color=white>{_totalSlots}</color>/<color=lime>{totalCapacity}</color>");
+				$"<color=yellow>Slots:</color> <color=white>{_totalSlots}</color>/<color=lime>{totalCapacity}</color>");
 
 			GUILayout.Label(
-				$"<color=yellow>Active particles:</color> <color=white>{_totalActive}</color>");
+				$"<color=yellow>Active:</color> <color=white>{_totalActive}</color>");
+
+			// Toggle
+			bool newUpdate = GUILayout.Toggle(_globalUpdateParticles, " Update Particles");
+			if (newUpdate != _globalUpdateParticles)
+			{
+				_globalUpdateParticles = newUpdate;
+				_applyPending = true;
+			}
 
 			GUILayout.EndArea();
 		}
@@ -79,5 +117,4 @@ namespace MassiveHadronLtd
 		private void OnValidate() => RefreshControllers();
 #endif
 	}
-#endif
 }
