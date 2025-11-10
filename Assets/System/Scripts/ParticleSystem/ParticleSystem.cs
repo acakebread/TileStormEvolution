@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿// File: Assets/System/Scripts/ParticleSystem.cs
+using UnityEngine;
 using System.Collections.Generic;
 
 namespace MassiveHadronLtd
@@ -15,20 +16,21 @@ namespace MassiveHadronLtd
 		public float life;
 		public float duration;
 		public float initialRadius;
-		public int vertexIndex;
 		public int poolIndex;
 		public Vector3 position;
 		public Vector3 delta;
 		public float radius;
 		public Color color;
 
+		internal QuadStrip strip;
+
 		public abstract void Update(ref ParticleUpdateContext ctx);
 	}
 
 	public class ParticleMesh
 	{
-		public Mesh mesh;                    // Output mesh
-		public Matrix4x4 viewMatrix;         // View matrix used to build it (zero = invalid/unused)
+		public Mesh mesh;
+		public Matrix4x4 viewMatrix;
 	}
 
 	public class ParticleSystem
@@ -37,46 +39,45 @@ namespace MassiveHadronLtd
 		public const int MaxViewCache = 8;
 		private readonly bool useThreeZoneSlicing;
 		private readonly Material material;
-		private readonly int verticesPerParticle;
 
-		private readonly List<Particle> particlePool = new List<Particle>(MaxParticles);
-		public readonly List<Particle> activeParticles = new List<Particle>(MaxParticles);
-		private readonly List<int> freeParticleIndices = new List<int>(MaxParticles);
+		private readonly QuadStripAllocator _allocator = new();
 
-		private readonly List<Vector3> vertices;
-		private readonly List<int> triangles;
-		private readonly List<Color> colors;
-		private readonly List<Vector2> uvs;
+		private readonly List<Particle> particlePool = new(MaxParticles);
+		public readonly List<Particle> activeParticles = new(MaxParticles);
+		private readonly Stack<Particle> freeParticles = new();
 
-		private bool coloursUpdatedThisFrame;
 		private readonly ParticleMesh[] particleMeshes = new ParticleMesh[MaxViewCache];
 		private int viewCount = 0;
 
+		private bool coloursUpdatedThisFrame;
+		private ParticleUpdateContext updateCtx;
+
 		public int ViewCount => viewCount;
 		public int ActiveParticleCount => activeParticles.Count;
-
 		public ParticleController Controller { get; private set; }
-		private ParticleUpdateContext updateCtx;
 
 		public ParticleSystem(Material particleMaterial, bool threeZoneSlicing, ParticleController controller)
 		{
 			material = new Material(particleMaterial);
 			useThreeZoneSlicing = threeZoneSlicing;
-			verticesPerParticle = useThreeZoneSlicing ? 8 : 4;
 			Controller = controller;
 
-			int trianglesPerParticle = useThreeZoneSlicing ? 18 : 6;
-			int totalTriangles = MaxParticles * trianglesPerParticle;
+			int quadsPerParticle = useThreeZoneSlicing ? 3 : 1;
+			int totalQuads = MaxParticles * quadsPerParticle;
+			_allocator.SetMaxIndexBlocks(totalQuads);
+			_allocator.SetMaxVertexBlocks(totalQuads + MaxParticles);
 
-			vertices = new List<Vector3>(MaxParticles * 8);
-			triangles = new List<int>(totalTriangles);
-			colors = new List<Color>(MaxParticles * 8);
-			uvs = new List<Vector2>(MaxParticles * 8);
+			for (int i = 0; i < MaxParticles; i++)
+				particlePool.Add(null);
 
-			InitializePool();
-			InitializeSharedBuffers();
+			for (int i = 0; i < MaxViewCache; i++)
+			{
+				var mesh = new Mesh { name = $"ParticleViewMesh_{i}" };
+				mesh.MarkDynamic();
+				particleMeshes[i] = new ParticleMesh { mesh = mesh, viewMatrix = Matrix4x4.zero };
+			}
+
 			SetupURPMaterial();
-
 			updateCtx = new ParticleUpdateContext();
 		}
 
@@ -93,89 +94,72 @@ namespace MassiveHadronLtd
 			material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent + 100;
 		}
 
-		private void InitializePool()
-		{
-			for (int i = 0; i < MaxParticles; i++)
-			{
-				particlePool.Add(null);
-				freeParticleIndices.Add(i);
-			}
-		}
-
-		private void InitializeSharedBuffers()
-		{
-			for (int i = 0; i < MaxParticles; i++)
-			{
-				int offset = i * verticesPerParticle;
-				if (useThreeZoneSlicing)
-				{
-					vertices.AddRange(new Vector3[8]);
-					triangles.AddRange(new[]
-					{
-						offset+0,offset+1,offset+2, offset+2,offset+1,offset+3,
-						offset+4,offset+2,offset+3, offset+4,offset+3,offset+5,
-						offset+6,offset+4,offset+5, offset+6,offset+5,offset+7
-					});
-					colors.AddRange(new Color[8]);
-					uvs.AddRange(new[]
-					{
-						new Vector2(0,1), new Vector2(1,1), new Vector2(0,0.5f), new Vector2(1,0.5f),
-						new Vector2(0,0.5f), new Vector2(1,0.5f), new Vector2(0,0), new Vector2(1,0)
-					});
-				}
-				else
-				{
-					vertices.AddRange(new Vector3[4]);
-					triangles.AddRange(new[] { offset + 0, offset + 1, offset + 2, offset + 1, offset + 3, offset + 2 });
-					colors.AddRange(new Color[4]);
-					uvs.AddRange(new[] { new Vector2(0, 1), new Vector2(1, 1), new Vector2(0, 0), new Vector2(1, 0) });
-				}
-			}
-
-			// Initialize all cached meshes with shared topology
-			for (int i = 0; i < MaxViewCache; i++)
-			{
-				var mesh = new Mesh { name = $"ParticleViewMesh_{i}" };
-				mesh.MarkDynamic();
-				mesh.SetVertices(vertices);
-				mesh.SetTriangles(triangles, 0);
-				mesh.SetColors(colors);
-				mesh.SetUVs(0, uvs);
-				mesh.RecalculateBounds();
-
-				particleMeshes[i] = new ParticleMesh
-				{
-					mesh = mesh,
-					viewMatrix = Matrix4x4.zero  // Start as invalid
-				};
-			}
-		}
-
 		public T AllocateParticle<T>() where T : Particle, new()
 		{
-			if (freeParticleIndices.Count == 0) return null;
-
-			int idx = freeParticleIndices[freeParticleIndices.Count - 1];
-			freeParticleIndices.RemoveAt(freeParticleIndices.Count - 1);
-
-			var p = new T
+			Particle p;
+			if (freeParticles.Count > 0)
 			{
-				vertexIndex = idx * verticesPerParticle,
-				poolIndex = idx,
-				life = -1f,
-				position = Vector3.zero,
-				delta = Vector3.zero,
-				radius = 0f,
-				color = Color.clear
-			};
-			particlePool[idx] = p;
+				p = freeParticles.Pop();
+				if (p.strip != null)
+				{
+					_allocator.ReleaseStrip(p.strip);
+					p.strip = null;
+				}
+			}
+			else
+			{
+				p = new T();
+				int poolIdx = particlePool.Count;
+				while (poolIdx >= particlePool.Count) particlePool.Add(null);
+				p.poolIndex = poolIdx;
+			}
+
+			p.life = 1f;
+			p.duration = 1f;
+			p.initialRadius = 0.1f;
+			p.radius = 0.1f;
+			p.position = Vector3.zero;
+			p.delta = Vector3.zero;
+			p.color = Color.white;
+
+			int quads = useThreeZoneSlicing ? 3 : 1;
+			p.strip = _allocator.AllocateStrip(quads);
+
+			// WRITE UVs ONCE, HERE
+			WriteUVsForStrip(p.strip, quads);
+
+			particlePool[p.poolIndex] = p;
 			activeParticles.Add(p);
-			return p;
+			return (T)p;
 		}
 
-		// ----------------------------------------------------------------
-		// UPDATE: Reset view cache at frame start (set matrices to zero)
-		// ----------------------------------------------------------------
+		private void WriteUVsForStrip(QuadStrip strip, int quads)
+		{
+			var uvs = _allocator.MutableUV;
+			var blocks = strip.vertexBlocks;
+
+			if (quads == 3)
+			{
+				int v0 = blocks[0] * 2;
+				int v1 = blocks[1] * 2;
+				int v2 = blocks[2] * 2;
+				int v3 = blocks[3] * 2;
+
+				uvs[v0 + 0] = new Vector2(0, 1); uvs[v0 + 1] = new Vector2(1, 1);
+				uvs[v1 + 0] = new Vector2(0, 0.5f); uvs[v1 + 1] = new Vector2(1, 0.5f);
+				uvs[v2 + 0] = new Vector2(0, 0.5f); uvs[v2 + 1] = new Vector2(1, 0.5f);
+				uvs[v3 + 0] = new Vector2(0, 0); uvs[v3 + 1] = new Vector2(1, 0);
+			}
+			else // quads == 1
+			{
+				int v0 = blocks[0] * 2;
+				int v1 = blocks[1] * 2;
+
+				uvs[v0 + 0] = new Vector2(0, 1); uvs[v0 + 1] = new Vector2(1, 1);
+				uvs[v1 + 0] = new Vector2(0, 0); uvs[v1 + 1] = new Vector2(1, 0);
+			}
+		}
+
 		public void UpdateParticles()
 		{
 			if (Controller == null) return;
@@ -184,23 +168,27 @@ namespace MassiveHadronLtd
 			updateCtx.controller = Controller;
 			updateCtx.deltaTime = dt;
 
-			// Reset view cache: mark all as unused by zeroing matrix
 			viewCount = 0;
 			for (int i = 0; i < MaxViewCache; i++)
 				particleMeshes[i].viewMatrix = Matrix4x4.zero;
 
-			// Reset colour-update flag
 			coloursUpdatedThisFrame = false;
 
 			for (int i = activeParticles.Count - 1; i >= 0; i--)
 			{
-				Particle p = activeParticles[i];
+				var p = activeParticles[i];
 				if (p.life <= 0f) continue;
 
 				p.life -= dt;
 				if (p.life <= 0f)
 				{
-					DeactivateParticle(i);
+					if (p.strip != null)
+					{
+						_allocator.ReleaseStrip(p.strip);
+						p.strip = null;
+					}
+					freeParticles.Push(p);
+					activeParticles.RemoveAt(i);
 					continue;
 				}
 
@@ -209,164 +197,59 @@ namespace MassiveHadronLtd
 			}
 		}
 
-		private void DeactivateParticle(int index)
-		{
-			Particle p = activeParticles[index];
-			int v = p.vertexIndex;
-			for (int i = 0; i < verticesPerParticle; i++)
-			{
-				vertices[v + i] = Vector3.zero;
-				colors[v + i] = Color.clear;
-			}
-			freeParticleIndices.Add(p.poolIndex);
-			activeParticles.RemoveAt(index);
-		}
-
-		// ----------------------------------------------------------------
-		// RENDER: Rebuild only if view matrix differs
-		// ----------------------------------------------------------------
 		public void Render(Camera renderingCamera)
 		{
-			if (renderingCamera == null) return;
+			if (renderingCamera == null || activeParticles.Count == 0) return;
 
-			// Update colors once per frame
 			if (!coloursUpdatedThisFrame)
 			{
-				for (int i = 0; i < activeParticles.Count; i++)
-				{
-					Particle p = activeParticles[i];
-					if (p.life <= 0f) continue;
-
-					int v = p.vertexIndex;
-					for (int j = 0; j < verticesPerParticle; j++)
-						colors[v + j] = p.color;
-				}
+				UpdateColors();
 				coloursUpdatedThisFrame = true;
 			}
 
-			ParticleMesh pm = null;
 			Matrix4x4 view = renderingCamera.worldToCameraMatrix;
 			int slot = FindMatchingViewSlot(view);
-			if (slot == -1)// Rebuild mesh if this view hasn't been processed this frame
+			if (slot == -1)
 			{
 				slot = CreateViewSlot(view);
-				pm = particleMeshes[slot];
-				UpdateMeshInternal(renderingCamera, vertices, colors);
-				pm.mesh.SetVertices(vertices);
-				pm.mesh.SetColors(colors);
-				pm.mesh.RecalculateBounds();
-				pm.viewMatrix = view;
+				UpdateMeshForView(renderingCamera, slot);
 			}
-			ParticleSystem.ReportViewRendered(view);
-			pm = particleMeshes[slot];
-			Graphics.DrawMesh(pm.mesh, Matrix4x4.identity, material, 0, renderingCamera);
+
+			ReportViewRendered(view);
+			Graphics.DrawMesh(particleMeshes[slot].mesh, Matrix4x4.identity, material, 0, renderingCamera);
 		}
 
-		// ----------------------------------------------------------------
-		// FIND Matching SLOT BASED ON MATRIX (zero = unused)
-		// ----------------------------------------------------------------
-		private int FindMatchingViewSlot(Matrix4x4 view)
+		private void UpdateColors()
 		{
-			// Search existing valid slots
-			for (int i = 0; i < viewCount; i++)
+			var colors = _allocator.MutableColors;
+			foreach (var p in activeParticles)
 			{
-				if (particleMeshes[i].viewMatrix != Matrix4x4.zero && MatricesEqual(view, particleMeshes[i].viewMatrix))
-					return i;
+				if (p.life <= 0f || p.strip == null) continue;
+				Color c = p.color;
+				var blocks = p.strip.vertexBlocks;
+				for (int i = 0; i < blocks.Count; i++)
+				{
+					int v = blocks[i] * 2;
+					if (v + 1 < colors.Count)
+					{
+						colors[v + 0] = c;
+						colors[v + 1] = c;
+					}
+				}
 			}
-			return -1;
 		}
 
-		// ----------------------------------------------------------------
-		// CREATE SLOT BASED ON MATRIX (zero = unused)
-		// ----------------------------------------------------------------
-		private int CreateViewSlot(Matrix4x4 view)
+		private void UpdateMeshForView(Camera cam, int slot)
 		{
-			if (viewCount >= MaxViewCache)
-			{
-				// Reuse slot 0
-				viewCount = 1;
-				particleMeshes[0].viewMatrix = view;
-				return 0;
-			}
+			var verts = _allocator.MutableVertices;
 
-			int slot = viewCount++;
-			particleMeshes[slot].viewMatrix = view;
-			return slot;
-		}
-
-		//// ----------------------------------------------------------------
-		//// FIND OR CREATE SLOT BASED ON MATRIX (zero = unused)
-		//// ----------------------------------------------------------------
-		//private int FindOrCreateViewSlot(Matrix4x4 view)
-		//{
-		//	// Search existing valid slots
-		//	for (int i = 0; i < viewCount; i++)
-		//	{
-		//		if (particleMeshes[i].viewMatrix != Matrix4x4.zero && MatricesEqual(view, particleMeshes[i].viewMatrix))
-		//			return i;
-		//	}
-
-		//	// Cache miss: find or create slot
-		//	if (viewCount >= MaxViewCache)
-		//	{
-		//		// Reuse slot 0 (LRU-like)
-		//		viewCount = 1;
-		//		particleMeshes[0].viewMatrix = view;
-		//		return 0;
-		//	}
-
-		//	int slot = viewCount++;
-		//	particleMeshes[slot].viewMatrix = view;
-		//	return slot;
-		//}
-
-		private bool MatricesEqual(Matrix4x4 a, Matrix4x4 b)
-		{
-			const float epsilon = 1e-6f;
-			for (int i = 0; i < 16; i++)
-			{
-				if (Mathf.Abs(a[i] - b[i]) > epsilon)
-					return false;
-			}
-			return true;
-		}
-
-		private bool MatricesApproximatelyEqual(Matrix4x4 a, Matrix4x4 b)
-		{
-			// Extract position and forward/up from inverse (worldToCamera)
-			Matrix4x4 invA = a.inverse;
-			Matrix4x4 invB = b.inverse;
-
-			Vector3 posA = invA.GetColumn(3);
-			Vector3 posB = invB.GetColumn(3);
-			Vector3 fwdA = invA.GetColumn(2).normalized;
-			Vector3 fwdB = invB.GetColumn(2).normalized;
-			Vector3 upA = invA.GetColumn(1).normalized;
-			Vector3 upB = invB.GetColumn(1).normalized;
-
-			const float posEpsilon = 0.001f;
-			const float dirEpsilon = 0.001f;
-
-			return
-				Vector3.Distance(posA, posB) < posEpsilon &&
-				Vector3.Distance(fwdA, fwdB) < dirEpsilon &&
-				Vector3.Distance(upA, upB) < dirEpsilon;
-		}
-
-		// ----------------------------------------------------------------
-		// MESH UPDATE (per-view)
-		// ----------------------------------------------------------------
-		private void UpdateMeshInternal(Camera renderingCamera, List<Vector3> verts, List<Color> cols)
-		{
-			Matrix4x4 view = renderingCamera.worldToCameraMatrix;
-			Matrix4x4 camToWorld = view.inverse;
+			Matrix4x4 camToWorld = cam.worldToCameraMatrix.inverse;
 			Vector3 camPos = camToWorld.MultiplyPoint(Vector3.zero);
 			Vector3 camUp = camToWorld.MultiplyVector(Vector3.up).normalized;
 
-			for (int i = 0; i < activeParticles.Count; i++)
+			foreach (var p in activeParticles)
 			{
-				Particle p = activeParticles[i];
-				if (p.life <= 0f) continue;
+				if (p.life <= 0f || p.strip == null) continue;
 
 				Vector3 pos = p.position;
 				Vector3 delta = p.delta;
@@ -393,55 +276,85 @@ namespace MassiveHadronLtd
 				Vector3 head = pos + delta;
 				Vector3 tail = pos - delta;
 				Vector3 rad = tangent * p.radius;
-				int v = p.vertexIndex;
 
-				if (useThreeZoneSlicing)
+				var blocks = p.strip.vertexBlocks;
+				int quads = p.strip.indexBlocks.Count;
+
+				if (useThreeZoneSlicing && quads == 3)
 				{
 					float velComp = tang > 0.0001f ? Mathf.Max(0, tang - p.radius) / tang : 0f;
 					Vector3 half = velComp * delta;
 					Vector3 headB = pos + half;
 					Vector3 tailB = pos - half;
 
-					verts[v + 0] = head - rad; verts[v + 1] = head + rad;
-					verts[v + 2] = headB - rad; verts[v + 3] = headB + rad;
-					verts[v + 4] = tailB - rad; verts[v + 5] = tailB + rad;
-					verts[v + 6] = tail - rad; verts[v + 7] = tail + rad;
+					WriteSegment(verts, blocks, 0, head, headB, rad);
+					WriteSegment(verts, blocks, 1, headB, tailB, rad);
+					WriteSegment(verts, blocks, 2, tailB, tail, rad);
 				}
-				else
+				else if (quads == 1)
 				{
-					verts[v + 0] = head - rad; verts[v + 1] = head + rad;
-					verts[v + 2] = tail - rad; verts[v + 3] = tail + rad;
+					WriteSegment(verts, blocks, 0, head, tail, rad);
 				}
 			}
+
+			var mesh = particleMeshes[slot].mesh;
+			mesh.Clear();
+			mesh.SetVertices(verts);
+			mesh.SetColors(_allocator.MutableColors);
+			mesh.SetUVs(0, _allocator.MutableUV);  // UVs are correct from allocation
+			mesh.SetIndices(_allocator.MutableIndices, MeshTopology.Triangles, 0);
+			mesh.RecalculateBounds();
 		}
 
-#if UNITY_EDITOR
-		// Returns the main camera's mesh (or first valid one) for Scene View
-		public Mesh GetDebugMesh()
+		private void WriteSegment(List<Vector3> verts, List<int> blocks, int segIndex, Vector3 a, Vector3 b, Vector3 rad)
+		{
+			int v0 = blocks[segIndex] * 2;
+			int v1 = blocks[segIndex + 1] * 2;
+
+			if (v1 + 1 >= verts.Count) return;
+
+			verts[v0 + 0] = a - rad;
+			verts[v0 + 1] = a + rad;
+			verts[v1 + 0] = b - rad;
+			verts[v1 + 1] = b + rad;
+		}
+
+		private int FindMatchingViewSlot(Matrix4x4 view)
 		{
 			for (int i = 0; i < viewCount; i++)
 			{
-				if (particleMeshes[i].viewMatrix != Matrix4x4.zero)
-					return particleMeshes[i].mesh;
+				if (particleMeshes[i].viewMatrix != Matrix4x4.zero && MatricesEqual(view, particleMeshes[i].viewMatrix))
+					return i;
 			}
-			return viewCount > 0 ? particleMeshes[0].mesh : null;
+			return -1;
 		}
-#endif
 
-		// GLOBAL TRACKING : Count of unique view matrices rendered this frame
-		// GLOBAL: Track UNIQUE view matrices this frame
+		private int CreateViewSlot(Matrix4x4 view)
+		{
+			if (viewCount >= MaxViewCache)
+			{
+				viewCount = 1;
+				particleMeshes[0].viewMatrix = view;
+				return 0;
+			}
+			int slot = viewCount++;
+			particleMeshes[slot].viewMatrix = view;
+			return slot;
+		}
+
+		private bool MatricesEqual(Matrix4x4 a, Matrix4x4 b)
+		{
+			const float epsilon = 1e-6f;
+			for (int i = 0; i < 16; i++)
+				if (Mathf.Abs(a[i] - b[i]) > epsilon)
+					return false;
+			return true;
+		}
+
 		private static readonly HashSet<int> _renderedViewHashes = new();
 		private static int _lastFrame = -1;
 
-		public static int GlobalSlotsUsed
-		{
-			get
-			{
-				if (Time.frameCount != _lastFrame)
-					return 0;
-				return _renderedViewHashes.Count;
-			}
-		}
+		public static int GlobalSlotsUsed => Time.frameCount != _lastFrame ? 0 : _renderedViewHashes.Count;
 
 		public static void ResetGlobalTracking()
 		{
@@ -451,14 +364,11 @@ namespace MassiveHadronLtd
 
 		public static void ReportViewRendered(Matrix4x4 viewMatrix)
 		{
-			if (Time.frameCount != _lastFrame)
-				ResetGlobalTracking();
-
+			if (Time.frameCount != _lastFrame) ResetGlobalTracking();
 			int hash = GetMatrixHash(viewMatrix);
 			_renderedViewHashes.Add(hash);
 		}
 
-		// Helper: Fast matrix hash
 		private static int GetMatrixHash(Matrix4x4 m)
 		{
 			unchecked
@@ -469,5 +379,28 @@ namespace MassiveHadronLtd
 				return hash;
 			}
 		}
+
+		public void Defrag() => _allocator.Defrag();
+
+		public void Clear()
+		{
+			foreach (var p in activeParticles)
+				if (p.strip != null) _allocator.ReleaseStrip(p.strip);
+			activeParticles.Clear();
+			freeParticles.Clear();
+			_allocator.Defrag();
+		}
+
+#if UNITY_EDITOR
+		public Mesh GetDebugMesh()
+		{
+			for (int i = 0; i < viewCount; i++)
+			{
+				if (particleMeshes[i].viewMatrix != Matrix4x4.zero)
+					return particleMeshes[i].mesh;
+			}
+			return viewCount > 0 ? particleMeshes[0].mesh : null;
+		}
+#endif
 	}
 }
