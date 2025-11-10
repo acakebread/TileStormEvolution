@@ -1,15 +1,11 @@
-ï»¿using UnityEngine;
+// QuadStripAllocatorTest.cs
+using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 
-[RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
-public class QuadStripAllocatorTest : MonoBehaviour
+public class QuadStripAllocatorTestGL : MonoBehaviour
 {
 	private QuadStripAllocator quadAllocator;
-	private Mesh mesh;
-	private MeshFilter meshFilter;
-	private MeshRenderer meshRenderer;
-	private Camera cam;
 
 	private readonly System.Random rnd = new();
 
@@ -17,11 +13,11 @@ public class QuadStripAllocatorTest : MonoBehaviour
 	private bool[] _vertexUsed;
 
 	// ------------------------------------------------------------------------
-	// INSPECTOR SETTINGS
+	// INSPECTOR SETTINGS – Adjust here (4–1024)
 	// ------------------------------------------------------------------------
-	[Header("Allocator Limits (4â€“1024)")]
-	[Range(4, 1024)] public int maxIndexBlocks = 64;
-	[Range(4, 1024)] public int maxVertexBlocks = 64;
+	[Header("Allocator Limits (4–1024)")]
+	[Range(4, 1024)] public int maxIndexBlocks = 4;
+	[Range(4, 1024)] public int maxVertexBlocks = 4;
 
 	[Header("Falling Speed")]
 	[Range(1f, 10f)] public float fallDurationRange = 2f;
@@ -35,14 +31,18 @@ public class QuadStripAllocatorTest : MonoBehaviour
 	[Header("Material")]
 	public Material stripMaterial;
 
+	[Header("Debug")]
+	public bool wireframe = true;
+
 	// ------------------------------------------------------------------------
 	// Layout
 	// ------------------------------------------------------------------------
 	private const int largeCell = 22;
 	private const int pad = 30;
 	private const int largeGridW = 16 * largeCell;
-	private int panelX;
+	private int panelX, panelY;
 	private const int panelW = 300;
+	private const int panelH = 600;
 
 	private readonly List<FallingStrip> fallingStrips = new();
 	private readonly List<FallingStrip> stripsToRelease = new();
@@ -53,6 +53,10 @@ public class QuadStripAllocatorTest : MonoBehaviour
 		public float startTime;
 		public float xOffset;
 		public float fallSpeed;
+		public float tempXLeft;
+		public float tempXRight;
+		public float tempYTop;
+		public float tempYBottom;
 	}
 
 	// ------------------------------------------------------------------------
@@ -60,36 +64,13 @@ public class QuadStripAllocatorTest : MonoBehaviour
 	// ------------------------------------------------------------------------
 	private void Awake()
 	{
-		// --- Camera (orthographic, pixel-perfect) ---
-		cam = Camera.main ?? gameObject.AddComponent<Camera>();
-		cam.tag = "MainCamera";
-		cam.orthographic = true;
-		cam.orthographicSize = Screen.height * 0.5f;
-		cam.transform.position = new Vector3(Screen.width * 0.5f, Screen.height * 0.5f, -10f);
-		cam.clearFlags = CameraClearFlags.SolidColor;
-		cam.backgroundColor = new Color(0.02f, 0.02f, 0.05f);
-
-		// --- Layout ---
 		int infoX = pad + largeGridW + 30;
 		panelX = infoX + 200;
-
-		// --- Mesh ---
-		meshFilter = GetComponent<MeshFilter>();
-		meshRenderer = GetComponent<MeshRenderer>();
-
-		mesh = new Mesh { name = "QuadStripMesh_PixelSpace" };
-		mesh.MarkDynamic();
-		meshFilter.mesh = mesh;
+		panelY = pad;
 
 		if (stripMaterial == null)
-		{
 			stripMaterial = new Material(Shader.Find("Unlit/Color"));
-			stripMaterial.color = Color.white;
-		}
-		meshRenderer.material = stripMaterial;
-		meshRenderer.enabled = true;
 
-		// --- Allocator ---
 		CreateAllocatorIfNeeded();
 		ResizeDebugArrays();
 		ClearDebugArrays();
@@ -98,20 +79,25 @@ public class QuadStripAllocatorTest : MonoBehaviour
 	private void CreateAllocatorIfNeeded()
 	{
 		if (quadAllocator != null) return;
-		int idx = Mathf.Clamp(maxIndexBlocks, 4, 1024);
-		int vtx = Mathf.Clamp(maxVertexBlocks, 4, 1024);
+
+		int clampedIndex = Mathf.Clamp(maxIndexBlocks, 4, 1024);
+		int clampedVertex = Mathf.Clamp(maxVertexBlocks, 4, 1024);
 		quadAllocator = new QuadStripAllocator();
-		quadAllocator.SetMaxIndexBlocks(idx);
-		quadAllocator.SetMaxVertexBlocks(vtx);
 	}
 
 	private void Update()
 	{
-		if (quadAllocator == null) return;
-		int idx = Mathf.Clamp(maxIndexBlocks, 4, 1024);
-		int vtx = Mathf.Clamp(maxVertexBlocks, 4, 1024);
-		if (quadAllocator.MaxIndexBlocks != idx) quadAllocator.SetMaxIndexBlocks(idx);
-		if (quadAllocator.MaxVertexBlocks != vtx) quadAllocator.SetMaxVertexBlocks(vtx);
+		// LIVE UPDATE MAX BLOCKS — NO REBUILD!
+		if (quadAllocator != null)
+		{
+			int clampedIndex = Mathf.Clamp(maxIndexBlocks, 4, 1024);
+			int clampedVertex = Mathf.Clamp(maxVertexBlocks, 4, 1024);
+
+			if (quadAllocator.MaxIndexBlocks != clampedIndex)
+				quadAllocator.SetMaxIndexBlocks(clampedIndex);
+			if (quadAllocator.MaxVertexBlocks != clampedVertex)
+				quadAllocator.SetMaxVertexBlocks(clampedVertex);
+		}
 	}
 
 	private void Start() => StartCoroutine(SpawnRoutine());
@@ -123,52 +109,52 @@ public class QuadStripAllocatorTest : MonoBehaviour
 	{
 		while (true)
 		{
-			int numQuads = 1 + rnd.Next(8);
+			int numQuads = 1 + rnd.Next(6);
 			var strip = quadAllocator.AllocateStrip(numQuads);
-			if (strip == null) { yield return null; continue; }
-
-			foreach (int i in strip.indexBlocks) if (i < _indexUsed.Length) _indexUsed[i] = true;
-			foreach (int v in strip.vertexBlocks) if (v < _vertexUsed.Length) _vertexUsed[v] = true;
-
-			float xOffset = ((float)rnd.NextDouble() * 2f - 1f);
-			float duration = Random.Range(1f, fallDurationRange);
-			float fallSpeed = Screen.height / duration;
-
-			var falling = new FallingStrip
+			if (strip != null)
 			{
-				strip = strip,
-				startTime = Time.time,
-				xOffset = xOffset,
-				fallSpeed = fallSpeed
-			};
+				foreach (int idx in strip.indexBlocks) if (idx < _indexUsed.Length) _indexUsed[idx] = true;
+				foreach (int vtx in strip.vertexBlocks) if (vtx < _vertexUsed.Length) _vertexUsed[vtx] = true;
 
-			var colors = quadAllocator.MutableColors;
-			var uv = quadAllocator.MutableUV;
-			for (int i = 0; i <= numQuads; i++)
-			{
-				int vIdx = strip.vertexBlocks[i] * QuadStripAllocator.VerticesPerBlock;
-				if (vIdx + 1 >= colors.Count) break;
-				colors[vIdx] = colors[vIdx + 1] = Color.white;
-				float v = i * 0.125f;
-				uv[vIdx] = new Vector2(0f, v);
-				uv[vIdx + 1] = new Vector2(1f, v);
+				float xOffset = ((float)rnd.NextDouble() * 2f - 1f);
+				float duration = Random.Range(1f, fallDurationRange);
+				float fallSpeed = panelH / duration;
+
+				var falling = new FallingStrip
+				{
+					strip = strip,
+					startTime = Time.time,
+					xOffset = xOffset,
+					fallSpeed = fallSpeed
+				};
+
+				var colors = quadAllocator.MutableColors;
+				var uv = quadAllocator.MutableUV;
+				for (int i = 0; i <= numQuads; i++)
+				{
+					int vBlock = strip.vertexBlocks[i];
+					int vIdx = vBlock * QuadStripAllocator.VerticesPerBlock;
+					if (vIdx + 1 < colors.Count)
+					{
+						colors[vIdx] = colors[vIdx + 1] = Color.white;
+						float v = (float)i / numQuads;
+						uv[vIdx] = new Vector2(0f, v);
+						uv[vIdx + 1] = new Vector2(1f, v);
+					}
+				}
+
+				fallingStrips.Add(falling);
 			}
-
-			fallingStrips.Add(falling);
 			yield return new WaitForSeconds(spawnDelay);
 		}
 	}
 
 	// ------------------------------------------------------------------------
-	// Animation & Mesh Update (PIXEL SPACE) â€“ **FALLING DOWN**
+	// Animation
 	// ------------------------------------------------------------------------
-	private void LateUpdate()
-	{
-		UpdateFallingStrips();
-		UpdateMeshBuffers();
-	}
+	private void LateUpdate() => UpdateFallingMesh();
 
-	private void UpdateFallingStrips()
+	private void UpdateFallingMesh()
 	{
 		float now = Time.time;
 		stripsToRelease.Clear();
@@ -183,43 +169,36 @@ public class QuadStripAllocatorTest : MonoBehaviour
 			float elapsed = now - f.startTime;
 			float fallDistance = f.fallSpeed * elapsed;
 			float stripHeight = numQuads * stripWidth;
+			float yBottom = panelY + fallDistance;
+			float yTop = yBottom - stripHeight;
 
-			// Full intended position (ignoring panel bounds)
-			float yBottom = Screen.height - fallDistance;
-			float yTop = yBottom + stripHeight;
+			if (yTop >= panelY + panelH) { stripsToRelease.Add(f); continue; }
 
-			if (yTop < 0)
-			{
-				// Fully below â†’ release
-				stripsToRelease.Add(f);
-				continue;
-			}
+			yTop = Mathf.Max(yTop, panelY);
+			yBottom = Mathf.Min(yBottom, panelY + panelH);
 
-			// --- X Position ---
 			float maxX = panelX + panelW - stripWidth;
 			float t = (f.xOffset + 1f) * 0.5f;
 			float xLeft = Mathf.Lerp(panelX, maxX, t);
 			float xRight = xLeft + stripWidth;
 
-			// --- Write vertices ---
 			for (int j = 0; j <= numQuads; j++)
 			{
-				float tY = (float)j / numQuads;
-				float pixelY = Mathf.Lerp(yBottom, yTop, tY);
-
+				float posY = Mathf.Lerp(yTop, yBottom, (float)j / numQuads);
 				int vBlock = f.strip.vertexBlocks[j];
 				int vIdx = vBlock * QuadStripAllocator.VerticesPerBlock;
 				if (vIdx + 1 < vertices.Count)
 				{
-					vertices[vIdx] = new Vector3(xLeft, pixelY, 0f);
-					vertices[vIdx + 1] = new Vector3(xRight, pixelY, 0f);
+					vertices[vIdx] = new Vector3(xLeft, posY, 0);
+					vertices[vIdx + 1] = new Vector3(xRight, posY, 0);
 				}
 			}
 
+			f.tempXLeft = xLeft; f.tempXRight = xRight;
+			f.tempYTop = yTop; f.tempYBottom = yBottom;
 			fallingStrips[i] = f;
 		}
 
-		// --- Release ---
 		foreach (var f in stripsToRelease)
 		{
 			foreach (int idx in f.strip.indexBlocks) if (idx < _indexUsed.Length) _indexUsed[idx] = false;
@@ -227,23 +206,10 @@ public class QuadStripAllocatorTest : MonoBehaviour
 			quadAllocator.ReleaseStrip(f.strip);
 			fallingStrips.Remove(f);
 		}
-
-		// --- Defrag (light) ---
-		quadAllocator.Defrag();
-	}
-
-	private void UpdateMeshBuffers()
-	{
-		mesh.Clear();
-		mesh.SetVertices(quadAllocator.MutableVertices);
-		mesh.SetColors(quadAllocator.MutableColors);
-		mesh.SetUVs(0, quadAllocator.MutableUV);
-		mesh.SetTriangles(quadAllocator.MutableIndices, 0);
-		mesh.RecalculateBounds();
 	}
 
 	// ------------------------------------------------------------------------
-	// OnGUI â€“ heatmaps + stats + panel + wireframe
+	// GUI
 	// ------------------------------------------------------------------------
 	private void OnGUI()
 	{
@@ -263,10 +229,81 @@ public class QuadStripAllocatorTest : MonoBehaviour
 			GUILayout.Label("<b>QuadStrip Allocator Test</b>", Rich());
 			GUILayout.Space(8);
 			GUILayout.Label($"Active Strips: <color=yellow>{fallingStrips.Count}</color>");
-			GUILayout.Label($"Index Blocks: <color=orange>{quadAllocator.IndexBlockAllocated}</color>/{quadAllocator.IndexHighWater}");
-			GUILayout.Label($"Vertex Blocks: <color=lime>{quadAllocator.VertexBlockAllocated}</color>/{quadAllocator.VertexHighWater}");
+			GUILayout.Label($"Index Blocks: <color=orange>{quadAllocator.IndexBlockAllocated}</color>/{quadAllocator.MaxIndexBlocks} " +
+						   $"(high: {quadAllocator.IndexHighWater})");
+			GUILayout.Label($"Vertex Blocks: <color=lime>{quadAllocator.VertexBlockAllocated}</color>/{quadAllocator.MaxVertexBlocks} " +
+						   $"(high: {quadAllocator.VertexHighWater})");
 		}
 		GUILayout.EndArea();
+
+		GUI.color = new Color(0.05f, 0.05f, 0.1f, 1f);
+		GUI.DrawTexture(new Rect(panelX, panelY, panelW, panelH), Texture2D.whiteTexture);
+		GUI.color = Color.white;
+
+		GUI.Label(new Rect(panelX, panelY - 20, panelW, 20), "<b>Falling QuadStrips</b>", Rich());
+
+		GUI.color = new Color(0.2f, 0.2f, 0.2f, 1f);
+		for (int i = 1; i < 5; i++)
+		{
+			float py = panelY + i * (panelH / 5f);
+			GUI.DrawTexture(new Rect(panelX, py, panelW, 1), Texture2D.whiteTexture);
+			float px = panelX + i * (panelW / 5f);
+			GUI.DrawTexture(new Rect(px, panelY, 1, panelH), Texture2D.whiteTexture);
+		}
+		GUI.color = Color.white;
+
+		if (Event.current.type == EventType.Repaint)
+		{
+			stripMaterial.SetPass(0);
+			GL.PushMatrix();
+			GL.LoadPixelMatrix(0, Screen.width, Screen.height, 0);
+
+			var indices = quadAllocator.Indices;
+			var vertices = quadAllocator.Vertices;
+			var colors = quadAllocator.Colors;
+			var uv = quadAllocator.UV;
+
+			GL.Begin(GL.TRIANGLES);
+			for (int i = 0; i < indices.Count; i += 3)
+			{
+				int i0 = indices[i];
+				int i1 = indices[i + 1];
+				int i2 = indices[i + 2];
+				if (i0 >= vertices.Count || i1 >= vertices.Count || i2 >= vertices.Count) continue;
+
+				Vector3 v0 = vertices[i0]; Vector3 v1 = vertices[i1]; Vector3 v2 = vertices[i2];
+				Color c0 = colors[i0]; Color c1 = colors[i1]; Color c2 = colors[i2];
+				Vector2 u0 = uv[i0]; Vector2 u1 = uv[i1]; Vector2 u2 = uv[i2];
+
+				GL.Color(c0); GL.TexCoord2(u0.x, u0.y); GL.Vertex(v0);
+				GL.Color(c1); GL.TexCoord2(u1.x, u1.y); GL.Vertex(v1);
+				GL.Color(c2); GL.TexCoord2(u2.x, u2.y); GL.Vertex(v2);
+			}
+			GL.End();
+
+			if (wireframe)
+			{
+				GL.Begin(GL.LINES);
+				GL.Color(Color.white);
+				foreach (var f in fallingStrips)
+				{
+					if (f.strip == null) continue;
+					float x1 = f.tempXLeft, x2 = f.tempXRight, y1 = f.tempYTop, y2 = f.tempYBottom;
+					int n = f.strip.indexBlocks.Count;
+					for (int i = 0; i <= n; i++)
+					{
+						float y = Mathf.Lerp(y1, y2, (float)i / n);
+						GL.Vertex3(x1, y, 0);
+						GL.Vertex3(x2, y, 0);
+					}
+					GL.Vertex3(x1, y1, 0); GL.Vertex3(x1, y2, 0);
+					GL.Vertex3(x2, y1, 0); GL.Vertex3(x2, y2, 0);
+				}
+				GL.End();
+			}
+
+			GL.PopMatrix();
+		}
 	}
 
 	// ------------------------------------------------------------------------
@@ -305,9 +342,4 @@ public class QuadStripAllocatorTest : MonoBehaviour
 	}
 
 	private GUIStyle Rich() => new GUIStyle(GUI.skin.label) { richText = true };
-
-	private void OnDestroy()
-	{
-		if (mesh) Destroy(mesh);
-	}
 }

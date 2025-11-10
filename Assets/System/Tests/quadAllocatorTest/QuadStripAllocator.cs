@@ -38,13 +38,16 @@ public class QuadStripAllocator
 
 			_freeBlocks.Add(blockId);
 
+			return true;
+		}
+
+		public void Defrag()
+		{
 			while (_nextBlockId > 0 && _freeBlocks.Contains(_nextBlockId - 1))
 			{
 				_freeBlocks.Remove(_nextBlockId - 1);
 				_nextBlockId--;
 			}
-
-			return true;
 		}
 
 		public void Clear()
@@ -84,9 +87,6 @@ public class QuadStripAllocator
 	internal List<Vector3> MutableVertices => _vertices;
 	internal List<Color> MutableColors => _colors;
 	internal List<Vector2> MutableUV => _uv;
-
-	public int IndexBlockAllocated => _indexBlockAllocator.AllocatedBlockCount;
-	public int VertexBlockAllocated => _vertexBlockAllocator.AllocatedBlockCount;
 
 	public void SetMaxIndexBlocks(int newMax) => _indexBlockAllocator.SetMaxBlocks(newMax);
 	public void SetMaxVertexBlocks(int newMax) => _vertexBlockAllocator.SetMaxBlocks(newMax);
@@ -139,17 +139,17 @@ public class QuadStripAllocator
 		for (int q = 0; q < numQuads; q++)
 		{
 			int idxBase = strip.indexBlocks[q] * IndicesPerBlock;
-			int v0 = strip.vertexBlocks[q] * VerticesPerBlock;
+			int v0 = strip.vertexBlocks[q + 0] * VerticesPerBlock;
 			int v1 = v0 + 1;
-			int v2 = strip.vertexBlocks[q + 1] * VerticesPerBlock + 1;
-			int v3 = v2 - 1;
+			int v2 = strip.vertexBlocks[q + 1] * VerticesPerBlock;
+			int v3 = v2 + 1;
 
-			_indices[idxBase] = v0;
-			_indices[idxBase + 1] = v1;
-			_indices[idxBase + 2] = v2;
-			_indices[idxBase + 3] = v2;
-			_indices[idxBase + 4] = v3;
-			_indices[idxBase + 5] = v0;
+			_indices[idxBase + 0] = v0;
+			_indices[idxBase + 1] = v2;
+			_indices[idxBase + 2] = v1;
+			_indices[idxBase + 3] = v1;
+			_indices[idxBase + 4] = v2;
+			_indices[idxBase + 5] = v3;
 		}
 
 		activeStrips.Add(strip);
@@ -180,7 +180,15 @@ public class QuadStripAllocator
 		return removed;
 	}
 
+	public void Defrag()
+	{
+		_indexBlockAllocator.Defrag();
+		_vertexBlockAllocator.Defrag();
+	}
+
 	// Debug section
+	public int IndexBlockAllocated => _indexBlockAllocator.AllocatedBlockCount;
+	public int VertexBlockAllocated => _vertexBlockAllocator.AllocatedBlockCount;
 	public int IndexHighWater => _indexBlockAllocator.HighWaterMark;
 	public int VertexHighWater => _vertexBlockAllocator.HighWaterMark;
 }
