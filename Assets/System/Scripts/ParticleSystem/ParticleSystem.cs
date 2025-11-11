@@ -12,7 +12,7 @@ namespace MassiveHadronLtd
 
 	public abstract class ParticleBehaviour
 	{
-
+		public virtual void Update(ref ParticleUpdateContext ctx, Particle particle) { }
 	}
 
 	public abstract class Particle
@@ -27,22 +27,24 @@ namespace MassiveHadronLtd
 		public float radius;
 		public Color color;
 
-		public ParticleBehaviour behaviour; // I want custom bahaviour to be handled with this property that can be instantiated in the controller
+		public ParticleBehaviour behaviour;
 
 		public virtual void Update(ref ParticleUpdateContext ctx)
 		{
 			float norm = ctx.normalizedLife;
 
+			// Universal: fade
 			float a = (norm < ctx.controller.fadeStartTime || Mathf.Approximately(ctx.controller.fadeStartTime, 1f))
 				? 1f
 				: Mathf.Clamp01(1f - ((norm - ctx.controller.fadeStartTime) / (1f - ctx.controller.fadeStartTime)));
 			color.a = a;
 
+			// Universal: scale
 			radius = initialRadius * ctx.controller.scaleCurve.Evaluate(norm);
 
-			Process(ref ctx);
+			// Custom behaviour
+			behaviour?.Update(ref ctx, this);
 		}
-		public virtual void Process(ref ParticleUpdateContext ctx) { }//custom bahaviour
 	}
 
 	public class ParticleMesh
@@ -84,19 +86,20 @@ namespace MassiveHadronLtd
 
 			Initialize();
 			SetupURPMaterial();
+			CreateViewMeshes();
+		}
 
-			void SetupURPMaterial()
+		protected virtual void SetupURPMaterial()
+		{
+			if (material.shader.name != "MassiveHadronLtd/Unlit/AdditiveParticles")
 			{
-				if (material.shader.name != "MassiveHadronLtd/Unlit/AdditiveParticles")
-				{
-					var s = Shader.Find("MassiveHadronLtd/Unlit/AdditiveParticles");
-					if (s) material.shader = s;
-				}
-				material.SetColor("_BaseColor", Color.white);
-				material.SetFloat("_ZWrite", 0);
-				material.SetFloat("_Cull", (float)UnityEngine.Rendering.CullMode.Off);
-				material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent + 100;
+				var s = Shader.Find("MassiveHadronLtd/Unlit/AdditiveParticles");
+				if (s) material.shader = s;
 			}
+			material.SetColor("_BaseColor", Color.white);
+			material.SetFloat("_ZWrite", 0);
+			material.SetFloat("_Cull", (float)UnityEngine.Rendering.CullMode.Off);
+			material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent + 100;
 		}
 
 		protected virtual void Initialize()
@@ -105,6 +108,28 @@ namespace MassiveHadronLtd
 			{
 				particlePool.Add(null);
 				freeParticleIndices.Add(i);
+			}
+		}
+
+		protected abstract void InitializeBuffers();
+
+		private void CreateViewMeshes()
+		{
+			for (int i = 0; i < MaxViewCache; i++)
+			{
+				var mesh = new Mesh { name = $"ParticleMesh_{i}" };
+				mesh.MarkDynamic();
+				mesh.SetVertices(vertices);
+				mesh.SetTriangles(triangles, 0);
+				mesh.SetColors(colors);
+				mesh.SetUVs(0, uvs);
+				mesh.RecalculateBounds();
+
+				particleMeshes[i] = new ParticleMesh
+				{
+					mesh = mesh,
+					viewMatrix = Matrix4x4.zero
+				};
 			}
 		}
 
@@ -132,7 +157,7 @@ namespace MassiveHadronLtd
 				p.life -= dt;
 				if (p.life <= 0f)
 				{
-					DeactivateParticle(i);
+					DeactivateParticle(p, i);
 					continue;
 				}
 
@@ -141,18 +166,10 @@ namespace MassiveHadronLtd
 			}
 		}
 
-		protected virtual void DeactivateParticle(int index)
+		protected virtual void DeactivateParticle(Particle p, int activeIndex)
 		{
-			Particle p = activeParticles[index];
-			int v = p.vertexIndex;
-			int vpc = GetVerticesPerParticle();
-			for (int i = 0; i < vpc; i++)
-			{
-				vertices[v + i] = Vector3.zero;
-				colors[v + i] = Color.clear;
-			}
 			freeParticleIndices.Add(p.poolIndex);
-			activeParticles.RemoveAt(index);
+			activeParticles.RemoveAt(activeIndex);
 		}
 
 		public virtual void Render(Camera renderingCamera)
@@ -161,16 +178,7 @@ namespace MassiveHadronLtd
 
 			if (!coloursUpdatedThisFrame)
 			{
-				int vpc = GetVerticesPerParticle();
-				for (int i = 0; i < activeParticles.Count; i++)
-				{
-					Particle p = activeParticles[i];
-					if (p.life <= 0f) continue;
-
-					int v = p.vertexIndex;
-					for (int j = 0; j < vpc; j++)
-						colors[v + j] = p.color;
-				}
+				UpdateColors();
 				coloursUpdatedThisFrame = true;
 			}
 
@@ -181,7 +189,7 @@ namespace MassiveHadronLtd
 			{
 				slot = CreateViewSlot(view);
 				pm = particleMeshes[slot];
-				UpdateMeshInternal(renderingCamera, vertices, colors);
+				UpdateMesh(renderingCamera, vertices, colors);
 				pm.mesh.SetVertices(vertices);
 				pm.mesh.SetColors(colors);
 				pm.mesh.RecalculateBounds();
@@ -191,6 +199,8 @@ namespace MassiveHadronLtd
 			pm = particleMeshes[slot];
 			Graphics.DrawMesh(pm.mesh, Matrix4x4.identity, material, 0, renderingCamera);
 		}
+
+		protected virtual void UpdateColors() { }
 
 		private int FindMatchingViewSlot(Matrix4x4 view)
 		{
@@ -227,8 +237,7 @@ namespace MassiveHadronLtd
 			return true;
 		}
 
-		protected abstract void UpdateMeshInternal(Camera renderingCamera, List<Vector3> verts, List<Color> cols);
-		protected abstract int GetVerticesPerParticle();
+		protected abstract void UpdateMesh(Camera renderingCamera, List<Vector3> verts, List<Color> cols);
 
 #if UNITY_EDITOR
 		public Mesh GetDebugMesh()

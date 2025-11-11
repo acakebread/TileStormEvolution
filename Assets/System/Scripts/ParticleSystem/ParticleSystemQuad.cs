@@ -17,6 +17,11 @@ namespace MassiveHadronLtd
 		protected override void Initialize()
 		{
 			base.Initialize();
+			InitializeBuffers();
+		}
+
+		protected override void InitializeBuffers()
+		{
 			vertices = new List<Vector3>(MaxParticles * VerticesPerParticle);
 			triangles = new List<int>(MaxParticles * 6);
 			colors = new List<Color>(MaxParticles * VerticesPerParticle);
@@ -33,23 +38,6 @@ namespace MassiveHadronLtd
 					new Vector2(0, 1), new Vector2(1, 1),
 					new Vector2(0, 0), new Vector2(1, 0)
 				});
-			}
-
-			for (int i = 0; i < MaxViewCache; i++)
-			{
-				var mesh = new Mesh { name = $"ParticleQuadMesh_{i}" };
-				mesh.MarkDynamic();
-				mesh.SetVertices(vertices);
-				mesh.SetTriangles(triangles, 0);
-				mesh.SetColors(colors);
-				mesh.SetUVs(0, uvs);
-				mesh.RecalculateBounds();
-
-				particleMeshes[i] = new ParticleMesh
-				{
-					mesh = mesh,
-					viewMatrix = Matrix4x4.zero
-				};
 			}
 		}
 
@@ -75,9 +63,30 @@ namespace MassiveHadronLtd
 			return p;
 		}
 
-		protected override int GetVerticesPerParticle() => VerticesPerParticle;
+		protected override void DeactivateParticle(Particle p, int activeIndex)
+		{
+			int v = p.vertexIndex;
+			for (int i = 0; i < VerticesPerParticle; i++)
+			{
+				vertices[v + i] = Vector3.zero;
+				colors[v + i] = Color.clear;
+			}
+			base.DeactivateParticle(p, activeIndex);
+		}
 
-		protected override void UpdateMeshInternal(Camera renderingCamera, List<Vector3> verts, List<Color> cols)
+		protected override void UpdateColors()
+		{
+			for (int i = 0; i < activeParticles.Count; i++)
+			{
+				Particle p = activeParticles[i];
+				if (p.life <= 0f) continue;
+				int v = p.vertexIndex;
+				for (int j = 0; j < VerticesPerParticle; j++)
+					colors[v + j] = p.color;
+			}
+		}
+
+		protected override void UpdateMesh(Camera renderingCamera, List<Vector3> verts, List<Color> cols)
 		{
 			Matrix4x4 view = renderingCamera.worldToCameraMatrix;
 			Matrix4x4 camToWorld = view.inverse;

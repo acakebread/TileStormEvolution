@@ -9,7 +9,36 @@ using UnityEditor;
 
 namespace MassiveHadronLtd
 {
-	[ExecuteInEditMode]
+	public class PhysicsParticleBehaviour : ParticleBehaviour
+	{
+		public Vector3 velocity;
+		public float gravity;
+		public float friction;
+		public float bounceDamping;
+		public float groundHeight;
+		public bool enableCollision;
+
+		public override void Update(ref ParticleUpdateContext ctx, Particle p)
+		{
+			velocity.y -= gravity * ctx.deltaTime;
+			velocity *= 1f - friction;
+
+			if (enableCollision)
+				p.position.y = Mathf.Max(p.position.y, groundHeight);
+
+			p.delta = -p.position;
+			p.position += velocity * ctx.deltaTime;
+
+			if (enableCollision && velocity.y < 0f && p.position.y <= groundHeight)
+			{
+				p.position.y = groundHeight;
+				velocity.y = -velocity.y * bounceDamping;
+			}
+
+			p.delta += p.position;
+		}
+	}
+
 	public class ParticleController : MonoBehaviour
 	{
 		[Header("Debug")]
@@ -171,16 +200,21 @@ namespace MassiveHadronLtd
 			p.radius = radius;
 			p.color = color;
 
-			if (p is ParticleThreeSlice threeSlice)
+			// Only ThreeSlice supports physics
+			if (p is ParticleThreeSlice && (gravity != 0f || velocity != Vector3.zero))
 			{
-				threeSlice.velocity = velocity;
-				threeSlice.gravity = gravity;
-				threeSlice.friction = friction;
-				threeSlice.bounceDamping = bounceDamping;
-				threeSlice.groundHeight = groundHeight;
-				threeSlice.enableCollision = enableCollision;
+				var phys = new PhysicsParticleBehaviour
+				{
+					velocity = velocity,
+					gravity = gravity,
+					friction = friction,
+					bounceDamping = bounceDamping,
+					groundHeight = groundHeight,
+					enableCollision = enableCollision
+				};
+				p.behaviour = phys;
 			}
-			// ParticleQuad has no extra fields
+			// ParticleQuad: no behaviour needed
 
 			var ctx = new ParticleUpdateContext
 			{
