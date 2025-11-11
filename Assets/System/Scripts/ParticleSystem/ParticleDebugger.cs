@@ -12,8 +12,8 @@ namespace MassiveHadronLtd
 		public bool showInPlayMode = true;
 		public bool showInEditMode = true;
 		public Vector2 screenOffset = new Vector2(15, 15);
-		public int maxWidth = 400;
-		public int maxHeight = 200;
+		public int maxWidth = 200;
+		public int maxHeight = 100;
 
 		[Header("Update")]
 		[Range(0.05f, 1f)] public float guiUpdateInterval = 0.1f;

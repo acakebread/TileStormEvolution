@@ -39,9 +39,9 @@ namespace MassiveHadronLtd
 		private readonly Material material;
 		private readonly int verticesPerParticle;
 
-		private readonly List<Particle> particlePool = new List<Particle>(MaxParticles);
-		public readonly List<Particle> activeParticles = new List<Particle>(MaxParticles);
-		private readonly List<int> freeParticleIndices = new List<int>(MaxParticles);
+		private readonly List<Particle> particlePool = new();
+		public readonly List<Particle> activeParticles = new();
+		private readonly List<int> freeParticleIndices = new();
 
 		private readonly List<Vector3> vertices;
 		private readonly List<int> triangles;
@@ -256,7 +256,7 @@ namespace MassiveHadronLtd
 				pm.mesh.RecalculateBounds();
 				pm.viewMatrix = view;
 			}
-			ParticleSystem.ReportViewRendered(view);
+			ReportViewRendered(view);
 			pm = particleMeshes[slot];
 			Graphics.DrawMesh(pm.mesh, Matrix4x4.identity, material, 0, renderingCamera);
 		}
@@ -293,32 +293,6 @@ namespace MassiveHadronLtd
 			return slot;
 		}
 
-		//// ----------------------------------------------------------------
-		//// FIND OR CREATE SLOT BASED ON MATRIX (zero = unused)
-		//// ----------------------------------------------------------------
-		//private int FindOrCreateViewSlot(Matrix4x4 view)
-		//{
-		//	// Search existing valid slots
-		//	for (int i = 0; i < viewCount; i++)
-		//	{
-		//		if (particleMeshes[i].viewMatrix != Matrix4x4.zero && MatricesEqual(view, particleMeshes[i].viewMatrix))
-		//			return i;
-		//	}
-
-		//	// Cache miss: find or create slot
-		//	if (viewCount >= MaxViewCache)
-		//	{
-		//		// Reuse slot 0 (LRU-like)
-		//		viewCount = 1;
-		//		particleMeshes[0].viewMatrix = view;
-		//		return 0;
-		//	}
-
-		//	int slot = viewCount++;
-		//	particleMeshes[slot].viewMatrix = view;
-		//	return slot;
-		//}
-
 		private bool MatricesEqual(Matrix4x4 a, Matrix4x4 b)
 		{
 			const float epsilon = 1e-6f;
@@ -328,28 +302,6 @@ namespace MassiveHadronLtd
 					return false;
 			}
 			return true;
-		}
-
-		private bool MatricesApproximatelyEqual(Matrix4x4 a, Matrix4x4 b)
-		{
-			// Extract position and forward/up from inverse (worldToCamera)
-			Matrix4x4 invA = a.inverse;
-			Matrix4x4 invB = b.inverse;
-
-			Vector3 posA = invA.GetColumn(3);
-			Vector3 posB = invB.GetColumn(3);
-			Vector3 fwdA = invA.GetColumn(2).normalized;
-			Vector3 fwdB = invB.GetColumn(2).normalized;
-			Vector3 upA = invA.GetColumn(1).normalized;
-			Vector3 upB = invB.GetColumn(1).normalized;
-
-			const float posEpsilon = 0.001f;
-			const float dirEpsilon = 0.001f;
-
-			return
-				Vector3.Distance(posA, posB) < posEpsilon &&
-				Vector3.Distance(fwdA, fwdB) < dirEpsilon &&
-				Vector3.Distance(upA, upB) < dirEpsilon;
 		}
 
 		// ----------------------------------------------------------------
