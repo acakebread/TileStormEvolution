@@ -51,6 +51,8 @@ namespace MassiveHadronLtd
 			EditorGUILayout.PropertyField(serializedObject.FindProperty("fadeStartTime"));
 
 			// ----- Physics -----
+			EditorGUILayout.PropertyField(serializedObject.FindProperty("enablePhysics"));
+			EditorGUI.BeginDisabledGroup(!controller.enablePhysics); 
 			EditorGUILayout.PropertyField(serializedObject.FindProperty("gravity"));
 			EditorGUILayout.PropertyField(serializedObject.FindProperty("friction"));
 			EditorGUILayout.PropertyField(serializedObject.FindProperty("velocityBias"));

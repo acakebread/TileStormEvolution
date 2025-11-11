@@ -59,6 +59,7 @@ namespace MassiveHadronLtd
 		[Range(0f, 1f)] public float fadeStartTime = 1f;
 
 		[Header("Physics")]
+		public bool enablePhysics = false;
 		public float gravity = 10f;
 		[Range(0f, 1f)] public float friction = 0.01f;
 		public Vector3 velocityBias = Vector3.zero;
@@ -200,8 +201,7 @@ namespace MassiveHadronLtd
 			p.radius = radius;
 			p.color = color;
 
-			// Only ThreeSlice supports physics
-			if (p is ParticleThreeSlice && (gravity != 0f || velocity != Vector3.zero))
+			if (enablePhysics && (gravity != 0f || velocity != Vector3.zero))
 			{
 				var phys = new PhysicsParticleBehaviour
 				{
@@ -214,7 +214,6 @@ namespace MassiveHadronLtd
 				};
 				p.behaviour = phys;
 			}
-			// ParticleQuad: no behaviour needed
 
 			var ctx = new ParticleUpdateContext
 			{

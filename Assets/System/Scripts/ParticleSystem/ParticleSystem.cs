@@ -33,16 +33,13 @@ namespace MassiveHadronLtd
 		{
 			float norm = ctx.normalizedLife;
 
-			// Universal: fade
 			float a = (norm < ctx.controller.fadeStartTime || Mathf.Approximately(ctx.controller.fadeStartTime, 1f))
 				? 1f
 				: Mathf.Clamp01(1f - ((norm - ctx.controller.fadeStartTime) / (1f - ctx.controller.fadeStartTime)));
 			color.a = a;
 
-			// Universal: scale
 			radius = initialRadius * ctx.controller.scaleCurve.Evaluate(norm);
 
-			// Custom behaviour
 			behaviour?.Update(ref ctx, this);
 		}
 	}
@@ -251,7 +248,6 @@ namespace MassiveHadronLtd
 		}
 #endif
 
-		// GLOBAL TRACKING
 		private static readonly HashSet<int> _renderedViewHashes = new();
 		private static int _lastFrame = -1;
 

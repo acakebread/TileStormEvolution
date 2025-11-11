@@ -158,6 +158,7 @@ MonoBehaviour:
   color: {r: 0.34069067, g: 0.8301887, b: 0.8301887, a: 1}
   radius: 0.01
   fadeStartTime: 0.49
+  enablePhysics: 0
   gravity: 10
   friction: 0.01
   velocityBias: {x: 0, y: -0.5, z: 0}
@@ -258,6 +259,7 @@ MonoBehaviour:
   color: {r: 0.34069067, g: 0.8301887, b: 0.8301887, a: 1}
   radius: 0.01
   fadeStartTime: 0.49
+  enablePhysics: 0
   gravity: 0
   friction: 0.01
   velocityBias: {x: 0, y: 0, z: 0}
@@ -407,6 +409,7 @@ MonoBehaviour:
   color: {r: 0.34069067, g: 0.8301887, b: 0.8301887, a: 1}
   radius: 0.01
   fadeStartTime: 0.49
+  enablePhysics: 0
   gravity: 10
   friction: 0.01
   velocityBias: {x: 0, y: -0.5, z: 0}
@@ -522,6 +525,7 @@ MonoBehaviour:
   color: {r: 0.34069067, g: 0.8301887, b: 0.8301887, a: 1}
   radius: 0.01
   fadeStartTime: 0.49
+  enablePhysics: 1
   gravity: 10
   friction: 0.01
   velocityBias: {x: 0, y: -0.5, z: 0}
@@ -607,6 +611,7 @@ MonoBehaviour:
   color: {r: 0.34069067, g: 0.8301887, b: 0.8301887, a: 1}
   radius: 0.01
   fadeStartTime: 0.49
+  enablePhysics: 0
   gravity: 10
   friction: 0.01
   velocityBias: {x: 0, y: -0.5, z: 0}
@@ -894,6 +899,7 @@ MonoBehaviour:
   color: {r: 0.34069067, g: 0.8301887, b: 0.8301887, a: 1}
   radius: 0.01
   fadeStartTime: 0.49
+  enablePhysics: 0
   gravity: 10
   friction: 0.01
   velocityBias: {x: 0, y: -0.5, z: 0}
@@ -994,6 +1000,7 @@ MonoBehaviour:
   color: {r: 0.34069067, g: 0.8301887, b: 0.8301887, a: 1}
   radius: 0.01
   fadeStartTime: 0.49
+  enablePhysics: 0
   gravity: 10
   friction: 0.01
   velocityBias: {x: 0, y: -0.5, z: 0}
@@ -1094,6 +1101,7 @@ MonoBehaviour:
   color: {r: 0.3584906, g: 0.3584906, b: 0.3584906, a: 1}
   radius: 0.25
   fadeStartTime: 0.5
+  enablePhysics: 0
   gravity: 0
   friction: 0.01
   velocityBias: {x: 0, y: 0, z: 64}
@@ -1193,6 +1201,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: aed1b05ef48914643b6b2e60bebe0dce, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  fontSize: 18
+  textColor: {r: 1, g: 1, b: 1, a: 1}
+  bgColor: {r: 0, g: 0, b: 0, a: 0.7}
+  padding: 10
+  chartHeight: 40
+  chartSamples: 120
+  samplesPerBar: 10
+  barGap: 1
+  peakHistorySamples: 600
+  smoothFactor: 0.1
+  textUpdateInterval: 0.25
 --- !u!4 &1507133991
 Transform:
   m_ObjectHideFlags: 0
@@ -1240,8 +1259,6 @@ MonoBehaviour:
   showInPlayMode: 1
   showInEditMode: 1
   screenOffset: {x: 15, y: 15}
-  maxWidth: 400
-  maxHeight: 120
   guiUpdateInterval: 0.1
 --- !u!4 &1541448315
 Transform:
@@ -1493,11 +1510,12 @@ MonoBehaviour:
   updateParticles: 1
   lifetime: 0.75
   lifetimeVariation: 0.5
-  useThreeZoneSlicing: 1
+  useThreeZoneSlicing: 0
   particleMaterial: {fileID: 2100000, guid: 02223f9d74ca8f74999a27cdc04e130f, type: 2}
   color: {r: 0.6886792, g: 0.4580211, b: 0, a: 1}
   radius: 0.25
   fadeStartTime: 0.5
+  enablePhysics: 1
   gravity: -1
   friction: 0.01
   velocityBias: {x: 0, y: 0.5, z: 0}
@@ -1754,11 +1772,12 @@ MonoBehaviour:
   updateParticles: 1
   lifetime: 1
   lifetimeVariation: 0.5
-  useThreeZoneSlicing: 1
+  useThreeZoneSlicing: 0
   particleMaterial: {fileID: 2100000, guid: 02223f9d74ca8f74999a27cdc04e130f, type: 2}
   color: {r: 0.057, g: 0.248, b: 0, a: 1}
   radius: 0.1
   fadeStartTime: 0.238
+  enablePhysics: 1
   gravity: -1
   friction: 0.02
   velocityBias: {x: 0, y: 0, z: 0}
