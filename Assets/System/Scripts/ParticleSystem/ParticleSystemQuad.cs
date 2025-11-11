@@ -8,6 +8,7 @@ namespace MassiveHadronLtd
 	public class ParticleSystemQuad : ParticleSystem
 	{
 		private const int VerticesPerParticle = 4;
+		private const int TrianglesPerParticle = 2;
 
 		public ParticleSystemQuad(Material particleMaterial, ParticleController controller)
 			: base(particleMaterial, controller)
@@ -23,7 +24,7 @@ namespace MassiveHadronLtd
 		protected override void InitializeBuffers()
 		{
 			vertices = new List<Vector3>(MaxParticles * VerticesPerParticle);
-			triangles = new List<int>(MaxParticles * 6);
+			triangles = new List<int>(MaxParticles * TrianglesPerParticle);
 			colors = new List<Color>(MaxParticles * VerticesPerParticle);
 			uvs = new List<Vector2>(MaxParticles * VerticesPerParticle);
 

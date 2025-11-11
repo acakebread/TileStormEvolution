@@ -9,7 +9,6 @@ namespace MassiveHadronLtd
 	[CustomEditor(typeof(ParticleController))]
 	public class ParticleControllerEditor : Editor
 	{
-		private bool presetApplied = false;
 		private enum DragState { None, Start, End }
 		private DragState dragState = DragState.None;
 		private int draggedPulseIndex = -1;
