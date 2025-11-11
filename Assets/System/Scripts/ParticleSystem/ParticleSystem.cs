@@ -65,13 +65,12 @@ namespace MassiveHadronLtd
 			verticesPerParticle = useThreeZoneSlicing ? 8 : 4;
 			Controller = controller;
 
-			int trianglesPerParticle = useThreeZoneSlicing ? 18 : 6;
-			int totalTriangles = MaxParticles * trianglesPerParticle;
+			int trianglesPerParticle = useThreeZoneSlicing ? 6 : 2;
 
-			vertices = new List<Vector3>(MaxParticles * 8);
-			triangles = new List<int>(totalTriangles);
-			colors = new List<Color>(MaxParticles * 8);
-			uvs = new List<Vector2>(MaxParticles * 8);
+			vertices = new List<Vector3>(MaxParticles * verticesPerParticle);
+			triangles = new List<int>(MaxParticles * trianglesPerParticle);
+			colors = new List<Color>(MaxParticles * verticesPerParticle);
+			uvs = new List<Vector2>(MaxParticles * verticesPerParticle);
 
 			InitializePool();
 			InitializeSharedBuffers();
