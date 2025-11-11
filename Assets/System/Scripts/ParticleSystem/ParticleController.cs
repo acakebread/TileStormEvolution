@@ -9,9 +9,6 @@ using UnityEditor;
 
 namespace MassiveHadronLtd
 {
-	// --------------------------------------------------------------------
-	// Physics particle
-	// --------------------------------------------------------------------
 	public class PhysicsParticle : Particle
 	{
 		public Vector3 velocity;
@@ -25,48 +22,40 @@ namespace MassiveHadronLtd
 		{
 			float norm = ctx.normalizedLife;
 
-			// fade
 			float a = (norm < ctx.controller.fadeStartTime || Mathf.Approximately(ctx.controller.fadeStartTime, 1f))
 				? 1f
 				: Mathf.Clamp01(1f - ((norm - ctx.controller.fadeStartTime) / (1f - ctx.controller.fadeStartTime)));
 			color.a = a;
 
-			// scale
 			radius = initialRadius * ctx.controller.scaleCurve.Evaluate(norm);
 
-			// physics
 			velocity.y -= gravity * ctx.deltaTime;
 			velocity *= 1f - friction;
 			if (enableCollision) position.y = Mathf.Max(position.y, groundHeight);
 			delta = -position;
 			position += velocity * ctx.deltaTime;
 
-			if (true == enableCollision && velocity.y < 0f && position.y <= groundHeight)
+			if (enableCollision && velocity.y < 0f && position.y <= groundHeight)
 			{
 				position.y = groundHeight;
 				velocity.y = -velocity.y * bounceDamping;
 			}
 
-			delta += position; // newPos – oldPos
+			delta += position;
 		}
 	}
 
-	// --------------------------------------------------------------------
-	// Static particle – **billboard fallback**
-	// --------------------------------------------------------------------
 	public class StaticParticle : Particle
 	{
 		public override void Update(ref ParticleUpdateContext ctx)
 		{
 			float norm = ctx.normalizedLife;
 
-			// fade
 			float a = (norm < ctx.controller.fadeStartTime || Mathf.Approximately(ctx.controller.fadeStartTime, 1f))
 				? 1f
 				: Mathf.Clamp01(1f - ((norm - ctx.controller.fadeStartTime) / (1f - ctx.controller.fadeStartTime)));
 			color.a = a;
 
-			// scale
 			radius = initialRadius * ctx.controller.scaleCurve.Evaluate(norm);
 		}
 	}
@@ -122,7 +111,6 @@ namespace MassiveHadronLtd
 		private float timelinePosition = 0f;
 		private float lastTimelinePosition = 0f;
 
-		// external debug
 		private int _debugActiveCount = 0;
 		public int DebugActiveCount => _debugActiveCount;
 
@@ -138,7 +126,10 @@ namespace MassiveHadronLtd
 			if (scaleCurve.keys.Length == 0)
 				scaleCurve = AnimationCurve.Linear(0f, 1f, 1f, 1f);
 
-			customParticleSystem = new ParticleSystem(particleMaterial, useThreeZoneSlicing, this);
+			if (useThreeZoneSlicing)
+				customParticleSystem = new ParticleSystemThreeSlice(particleMaterial, this);
+			else
+				customParticleSystem = new ParticleSystemQuad(particleMaterial, this);
 		}
 
 		private void OnEnable()
@@ -265,7 +256,6 @@ namespace MassiveHadronLtd
 			};
 			p.Update(ref ctx);
 		}
-
 
 #if UNITY_EDITOR
 		public Material ParticleMaterial => particleMaterial;
