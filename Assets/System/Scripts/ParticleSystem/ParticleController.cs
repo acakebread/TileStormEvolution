@@ -39,6 +39,44 @@ namespace MassiveHadronLtd
 		}
 	}
 
+	public class FloaterParticleBehaviour : ParticleBehaviour
+	{
+		public float driftAmplitude = 1.5f;
+		public float driftFrequency = 0.3f;
+		public float spatialScale = 1f;
+
+		private Vector3 _phase;
+
+		public void Initialize(Vector3 spawnPosition)
+		{
+			// Spatial seeding: nearby particles get similar phases
+			float scale = spatialScale;
+			_phase = new Vector3(
+				Mathf.PerlinNoise(spawnPosition.x * scale, spawnPosition.z * scale) * 100f,
+				Mathf.PerlinNoise(spawnPosition.x * scale, spawnPosition.y * scale) * 100f,
+				Mathf.PerlinNoise(spawnPosition.z * scale, spawnPosition.y * scale) * 100f
+			);
+		}
+
+		public override void Update(ref ParticleUpdateContext ctx, Particle p)
+		{
+			float t = ctx.normalizedLife * 10f;
+			float phaseX = _phase.x + t * driftFrequency;
+			float phaseY = _phase.y + t * driftFrequency;
+			float phaseZ = _phase.z + t * driftFrequency;
+
+			Vector3 drift = new Vector3(
+				Mathf.Sin(phaseX) * driftAmplitude,
+				Mathf.Sin(phaseY) * driftAmplitude * 0.6f,
+				Mathf.Sin(phaseZ) * driftAmplitude
+			);
+
+			p.delta = -p.position;
+			p.position += drift * ctx.deltaTime;
+			p.delta += p.position;
+		}
+	}
+
 	public class ParticleController : MonoBehaviour
 	{
 		[Header("Debug")]
@@ -67,6 +105,13 @@ namespace MassiveHadronLtd
 		public bool enableCollision = false;
 		public float groundHeight = 0f;
 		public float bounceDamping = 0.8f;
+
+		[Header("Floater Behaviour")]
+		public bool enableFloater = false;
+		public float floaterDriftAmplitude = 1.5f;
+		public float floaterDriftFrequency = 0.3f;
+		[Tooltip("Controls spatial coherence: higher = larger coherent groups")]
+		public float floaterSpatialScale = 0.1f;
 
 		[Header("Animation")]
 		public AnimationCurve scaleCurve = AnimationCurve.Linear(0f, 1f, 1f, 1f);
@@ -215,6 +260,18 @@ namespace MassiveHadronLtd
 				p.behaviour = phys;
 			}
 
+			if (enableFloater)
+			{
+				var floater = new FloaterParticleBehaviour
+				{
+					driftAmplitude = floaterDriftAmplitude,
+					driftFrequency = floaterDriftFrequency,
+					spatialScale = floaterSpatialScale
+				};
+				floater.Initialize(p.position);  // Seed from spawn position
+				p.behaviour = floater;
+			}
+
 			var ctx = new ParticleUpdateContext
 			{
 				controller = this,
@@ -234,9 +291,7 @@ namespace MassiveHadronLtd
 			if (Camera.current == null) return;
 			if (Camera.current.cameraType != CameraType.SceneView) return;
 
-#if UNITY_EDITOR
 			if (!SceneView.currentDrawingSceneView) return;
-#endif
 			ParticleControllerSceneView.OnRender(this);
 		}
 #endif
