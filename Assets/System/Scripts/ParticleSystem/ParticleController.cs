@@ -9,57 +9,6 @@ using UnityEditor;
 
 namespace MassiveHadronLtd
 {
-	public class PhysicsParticle : Particle
-	{
-		public Vector3 velocity;
-		public float gravity;
-		public float friction;
-		public float bounceDamping;
-		public float groundHeight;
-		public bool enableCollision;
-
-		public override void Update(ref ParticleUpdateContext ctx)
-		{
-			float norm = ctx.normalizedLife;
-
-			float a = (norm < ctx.controller.fadeStartTime || Mathf.Approximately(ctx.controller.fadeStartTime, 1f))
-				? 1f
-				: Mathf.Clamp01(1f - ((norm - ctx.controller.fadeStartTime) / (1f - ctx.controller.fadeStartTime)));
-			color.a = a;
-
-			radius = initialRadius * ctx.controller.scaleCurve.Evaluate(norm);
-
-			velocity.y -= gravity * ctx.deltaTime;
-			velocity *= 1f - friction;
-			if (enableCollision) position.y = Mathf.Max(position.y, groundHeight);
-			delta = -position;
-			position += velocity * ctx.deltaTime;
-
-			if (enableCollision && velocity.y < 0f && position.y <= groundHeight)
-			{
-				position.y = groundHeight;
-				velocity.y = -velocity.y * bounceDamping;
-			}
-
-			delta += position;
-		}
-	}
-
-	public class StaticParticle : Particle
-	{
-		public override void Update(ref ParticleUpdateContext ctx)
-		{
-			float norm = ctx.normalizedLife;
-
-			float a = (norm < ctx.controller.fadeStartTime || Mathf.Approximately(ctx.controller.fadeStartTime, 1f))
-				? 1f
-				: Mathf.Clamp01(1f - ((norm - ctx.controller.fadeStartTime) / (1f - ctx.controller.fadeStartTime)));
-			color.a = a;
-
-			radius = initialRadius * ctx.controller.scaleCurve.Evaluate(norm);
-		}
-	}
-
 	[ExecuteInEditMode]
 	public class ParticleController : MonoBehaviour
 	{
@@ -177,7 +126,6 @@ namespace MassiveHadronLtd
 			foreach (var p in pulses)
 			{
 				if (normNow >= p.start && normNow <= p.end) emit = true;
-
 				if (normPrev <= normNow)
 				{
 					if (normPrev < p.end && normNow > p.start) emit = true;
@@ -213,40 +161,26 @@ namespace MassiveHadronLtd
 			float life = lifetime + Random.Range(-variation, variation);
 			if (life <= 0f) return;
 
-			Particle p = null;
+			Particle p = customParticleSystem.AllocateParticle();
+			if (p == null) return;
 
-			if (gravity != 0f || velocity != Vector3.zero)
+			p.duration = life;
+			p.life = life;
+			p.position = position;
+			p.initialRadius = radius;
+			p.radius = radius;
+			p.color = color;
+
+			if (p is ParticleThreeSlice threeSlice)
 			{
-				var pp = customParticleSystem.AllocateParticle<PhysicsParticle>();
-				if (pp == null) return;
-
-				pp.duration = life;
-				pp.life = life;
-				pp.position = position;
-				pp.initialRadius = radius;
-				pp.radius = radius;
-				pp.color = color;
-				pp.velocity = velocity;
-				pp.gravity = gravity;
-				pp.friction = friction;
-				pp.bounceDamping = bounceDamping;
-				pp.groundHeight = groundHeight;
-				pp.enableCollision = enableCollision;
-				p = pp;
+				threeSlice.velocity = velocity;
+				threeSlice.gravity = gravity;
+				threeSlice.friction = friction;
+				threeSlice.bounceDamping = bounceDamping;
+				threeSlice.groundHeight = groundHeight;
+				threeSlice.enableCollision = enableCollision;
 			}
-			else
-			{
-				var sp = customParticleSystem.AllocateParticle<StaticParticle>();
-				if (sp == null) return;
-
-				sp.duration = life;
-				sp.life = life;
-				sp.position = position;
-				sp.initialRadius = radius;
-				sp.radius = radius;
-				sp.color = color;
-				p = sp;
-			}
+			// ParticleQuad has no extra fields
 
 			var ctx = new ParticleUpdateContext
 			{

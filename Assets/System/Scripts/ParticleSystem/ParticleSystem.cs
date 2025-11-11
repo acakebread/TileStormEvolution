@@ -10,6 +10,11 @@ namespace MassiveHadronLtd
 		public float normalizedLife;
 	}
 
+	public abstract class ParticleBehaviour
+	{
+
+	}
+
 	public abstract class Particle
 	{
 		public float life;
@@ -22,7 +27,22 @@ namespace MassiveHadronLtd
 		public float radius;
 		public Color color;
 
-		public abstract void Update(ref ParticleUpdateContext ctx);
+		public ParticleBehaviour behaviour; // I want custom bahaviour to be handled with this property that can be instantiated in the controller
+
+		public virtual void Update(ref ParticleUpdateContext ctx)
+		{
+			float norm = ctx.normalizedLife;
+
+			float a = (norm < ctx.controller.fadeStartTime || Mathf.Approximately(ctx.controller.fadeStartTime, 1f))
+				? 1f
+				: Mathf.Clamp01(1f - ((norm - ctx.controller.fadeStartTime) / (1f - ctx.controller.fadeStartTime)));
+			color.a = a;
+
+			radius = initialRadius * ctx.controller.scaleCurve.Evaluate(norm);
+
+			Process(ref ctx);
+		}
+		public virtual void Process(ref ParticleUpdateContext ctx) { }//custom bahaviour
 	}
 
 	public class ParticleMesh
@@ -39,10 +59,9 @@ namespace MassiveHadronLtd
 		protected readonly Material material;
 
 		protected readonly List<Particle> particlePool = new();
-		public readonly List<Particle> activeParticles = new();
+		protected readonly List<Particle> activeParticles = new();
 		protected readonly List<int> freeParticleIndices = new();
 
-		// **Buffers are now abstract – derived classes own them**
 		protected List<Vector3> vertices;
 		protected List<int> triangles;
 		protected List<Color> colors;
@@ -56,34 +75,31 @@ namespace MassiveHadronLtd
 		public int ActiveParticleCount => activeParticles.Count;
 
 		public ParticleController Controller { get; protected set; }
-		protected ParticleUpdateContext updateCtx;
+		protected ParticleUpdateContext updateCtx = new();
 
 		protected ParticleSystem(Material particleMaterial, ParticleController controller)
 		{
 			material = new Material(particleMaterial);
 			Controller = controller;
 
-			InitializePool();
-			PostInitialize();                 // <-- derived classes allocate buffers here
+			Initialize();
 			SetupURPMaterial();
 
-			updateCtx = new ParticleUpdateContext();
-		}
-
-		protected virtual void SetupURPMaterial()
-		{
-			if (material.shader.name != "MassiveHadronLtd/Unlit/AdditiveParticles")
+			void SetupURPMaterial()
 			{
-				var s = Shader.Find("MassiveHadronLtd/Unlit/AdditiveParticles");
-				if (s) material.shader = s;
+				if (material.shader.name != "MassiveHadronLtd/Unlit/AdditiveParticles")
+				{
+					var s = Shader.Find("MassiveHadronLtd/Unlit/AdditiveParticles");
+					if (s) material.shader = s;
+				}
+				material.SetColor("_BaseColor", Color.white);
+				material.SetFloat("_ZWrite", 0);
+				material.SetFloat("_Cull", (float)UnityEngine.Rendering.CullMode.Off);
+				material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent + 100;
 			}
-			material.SetColor("_BaseColor", Color.white);
-			material.SetFloat("_ZWrite", 0);
-			material.SetFloat("_Cull", (float)UnityEngine.Rendering.CullMode.Off);
-			material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent + 100;
 		}
 
-		protected virtual void InitializePool()
+		protected virtual void Initialize()
 		{
 			for (int i = 0; i < MaxParticles; i++)
 			{
@@ -92,32 +108,7 @@ namespace MassiveHadronLtd
 			}
 		}
 
-		// **Derived classes allocate and fill buffers here**
-		protected abstract void PostInitialize();
-
-		public T AllocateParticle<T>() where T : Particle, new()
-		{
-			if (freeParticleIndices.Count == 0) return null;
-
-			int idx = freeParticleIndices[freeParticleIndices.Count - 1];
-			freeParticleIndices.RemoveAt(freeParticleIndices.Count - 1);
-
-			var p = new T
-			{
-				vertexIndex = idx * GetVerticesPerParticle(),
-				poolIndex = idx,
-				life = -1f,
-				position = Vector3.zero,
-				delta = Vector3.zero,
-				radius = 0f,
-				color = Color.clear
-			};
-			particlePool[idx] = p;
-			activeParticles.Add(p);
-			return p;
-		}
-
-		protected abstract int GetVerticesPerParticle();
+		public abstract Particle AllocateParticle();
 
 		public virtual void UpdateParticles()
 		{
@@ -237,6 +228,7 @@ namespace MassiveHadronLtd
 		}
 
 		protected abstract void UpdateMeshInternal(Camera renderingCamera, List<Vector3> verts, List<Color> cols);
+		protected abstract int GetVerticesPerParticle();
 
 #if UNITY_EDITOR
 		public Mesh GetDebugMesh()

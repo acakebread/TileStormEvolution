@@ -3,20 +3,22 @@ using System.Collections.Generic;
 
 namespace MassiveHadronLtd
 {
+	public class ParticleQuad : Particle { }
+
 	public class ParticleSystemQuad : ParticleSystem
 	{
 		private const int VerticesPerParticle = 4;
-		private const int TrianglesPerParticle = 2;
 
 		public ParticleSystemQuad(Material particleMaterial, ParticleController controller)
 			: base(particleMaterial, controller)
 		{
 		}
 
-		protected override void PostInitialize()
+		protected override void Initialize()
 		{
+			base.Initialize();
 			vertices = new List<Vector3>(MaxParticles * VerticesPerParticle);
-			triangles = new List<int>(MaxParticles * TrianglesPerParticle * 3);
+			triangles = new List<int>(MaxParticles * 6);
 			colors = new List<Color>(MaxParticles * VerticesPerParticle);
 			uvs = new List<Vector2>(MaxParticles * VerticesPerParticle);
 
@@ -49,6 +51,28 @@ namespace MassiveHadronLtd
 					viewMatrix = Matrix4x4.zero
 				};
 			}
+		}
+
+		public override Particle AllocateParticle()
+		{
+			if (freeParticleIndices.Count == 0) return null;
+
+			int idx = freeParticleIndices[freeParticleIndices.Count - 1];
+			freeParticleIndices.RemoveAt(freeParticleIndices.Count - 1);
+
+			var p = new ParticleQuad
+			{
+				vertexIndex = idx * VerticesPerParticle,
+				poolIndex = idx,
+				life = -1f,
+				position = Vector3.zero,
+				delta = Vector3.zero,
+				radius = 0f,
+				color = Color.clear
+			};
+			particlePool[idx] = p;
+			activeParticles.Add(p);
+			return p;
 		}
 
 		protected override int GetVerticesPerParticle() => VerticesPerParticle;

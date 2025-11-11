@@ -3,20 +3,47 @@ using System.Collections.Generic;
 
 namespace MassiveHadronLtd
 {
+	public class ParticleThreeSlice : Particle
+	{
+		public Vector3 velocity;
+		public float gravity;
+		public float friction;
+		public float bounceDamping;
+		public float groundHeight;
+		public bool enableCollision;
+
+		public override void Process(ref ParticleUpdateContext ctx)//custom bahaviour
+		{
+			velocity.y -= gravity * ctx.deltaTime;
+			velocity *= 1f - friction;
+			if (enableCollision) position.y = Mathf.Max(position.y, groundHeight);
+			delta = -position;
+			position += velocity * ctx.deltaTime;
+
+			if (enableCollision && velocity.y < 0f && position.y <= groundHeight)
+			{
+				position.y = groundHeight;
+				velocity.y = -velocity.y * bounceDamping;
+			}
+
+			delta += position;
+		}
+	}
+
 	public class ParticleSystemThreeSlice : ParticleSystem
 	{
 		private const int VerticesPerParticle = 8;
-		private const int TrianglesPerParticle = 6;
 
 		public ParticleSystemThreeSlice(Material particleMaterial, ParticleController controller)
 			: base(particleMaterial, controller)
 		{
 		}
 
-		protected override void PostInitialize()
+		protected override void Initialize()
 		{
+			base.Initialize();
 			vertices = new List<Vector3>(MaxParticles * VerticesPerParticle);
-			triangles = new List<int>(MaxParticles * TrianglesPerParticle * 3);
+			triangles = new List<int>(MaxParticles * 18);
 			colors = new List<Color>(MaxParticles * VerticesPerParticle);
 			uvs = new List<Vector2>(MaxParticles * VerticesPerParticle);
 
@@ -54,6 +81,28 @@ namespace MassiveHadronLtd
 					viewMatrix = Matrix4x4.zero
 				};
 			}
+		}
+
+		public override Particle AllocateParticle()
+		{
+			if (freeParticleIndices.Count == 0) return null;
+
+			int idx = freeParticleIndices[freeParticleIndices.Count - 1];
+			freeParticleIndices.RemoveAt(freeParticleIndices.Count - 1);
+
+			var p = new ParticleThreeSlice
+			{
+				vertexIndex = idx * VerticesPerParticle,
+				poolIndex = idx,
+				life = -1f,
+				position = Vector3.zero,
+				delta = Vector3.zero,
+				radius = 0f,
+				color = Color.clear
+			};
+			particlePool[idx] = p;
+			activeParticles.Add(p);
+			return p;
 		}
 
 		protected override int GetVerticesPerParticle() => VerticesPerParticle;
