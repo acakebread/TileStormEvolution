@@ -7,7 +7,7 @@ namespace MassiveHadronLtd
 {
 	public abstract class ParticleBehaviour
 	{
-		public virtual void Update(Particle particle, float deltaTime = 0f) { }//0f for initialise
+		public virtual void Update(Particle particle, float deltaTime = 0f) { }
 	}
 
 	public abstract class Particle
@@ -23,31 +23,17 @@ namespace MassiveHadronLtd
 		public Color color;
 		public float fadeStartTime;
 
-		public readonly struct ScaleTable
-		{
-			public readonly float[] values;
-			public readonly int resolution;  // e.g., 32
-
-			public ScaleTable(float[] v, int r) { values = v; resolution = r; }
-
-			[MethodImpl(MethodImplOptions.AggressiveInlining)]
-			public float Evaluate(float norm)
-			{
-				int i = (int)(norm * (resolution - 1));
-				float frac = norm * (resolution - 1f) - i;
-				return math.lerp(values[i], values[i + 1], frac);  // Use math.lerp for Burst if needed
-			}
-		}
-
-		public ScaleTable scaleTable;  // Set on spawn
+		// Reference to shared table from controller
+		public ParticleController.ScaleTable scaleTable;
 
 		public ParticleBehaviour behaviour;
 
-		public virtual void Update(float deltaTime = 0f)//0f for initialise
+		public virtual void Update(float deltaTime = 0f)
 		{
 			float norm = 1f - life / duration;
-			color.a = (norm < fadeStartTime || Mathf.Approximately(fadeStartTime, 1f)) ? 1f : Mathf.Clamp01(1f - ((norm - fadeStartTime) / (1f - fadeStartTime)));
-			//radius = initialRadius * controller.scaleCurve.Evaluate(norm);
+			color.a = (norm < fadeStartTime || Mathf.Approximately(fadeStartTime, 1f))
+				? 1f : Mathf.Clamp01(1f - ((norm - fadeStartTime) / (1f - fadeStartTime)));
+
 			radius = initialRadius * scaleTable.Evaluate(norm);
 			behaviour?.Update(this, deltaTime);
 		}

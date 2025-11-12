@@ -49,7 +49,6 @@ namespace MassiveHadronLtd
 
 		public void Initialize(Vector3 spawnPosition)
 		{
-			// Spatial seeding: nearby particles get similar phases
 			float scale = spatialScale;
 			_phase = new Vector3(
 				Mathf.PerlinNoise(spawnPosition.x * scale, spawnPosition.z * scale) * 100f,
@@ -120,7 +119,6 @@ namespace MassiveHadronLtd
 		[Header("PWM / Emission")]
 		[Range(1, 128)] public int particleCount = 1;
 		public Vector3 scatterScalar = Vector3.zero;
-
 		[Range(0.1f, 10f)] public float cycleTime = 0.1f;
 		[SerializeField] public List<Pulse> pulses = new List<Pulse> { new Pulse { start = 0f, end = 0.1f } };
 
@@ -129,6 +127,29 @@ namespace MassiveHadronLtd
 		{
 			[Range(0f, 1f)] public float start;
 			[Range(0f, 1f)] public float end;
+		}
+
+		// === SHARED SCALE TABLE ===
+		[SerializeField, HideInInspector] private ScaleTable _sharedScaleTable;
+		private const int ScaleTableResolution = 32;
+
+		public ScaleTable SharedScaleTable => _sharedScaleTable;
+
+		public struct ScaleTable
+		{
+			public float[] values;
+			public int resolution;
+
+			public ScaleTable(float[] v, int r) { values = v; resolution = r; }
+
+			[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+			public float Evaluate(float norm)
+			{
+				int i = (int)(norm * (resolution - 1));
+				i = Mathf.Clamp(i, 0, resolution - 2);
+				float frac = norm * (resolution - 1f) - i;
+				return Mathf.LerpUnclamped(values[i], values[i + 1], frac);
+			}
 		}
 
 		public ParticleSystem customParticleSystem;
@@ -167,12 +188,8 @@ namespace MassiveHadronLtd
 				float t = i / (float)(ScaleTableResolution - 1);
 				values[i] = scaleCurve.Evaluate(t);
 			}
-			_bakedScaleTable = new Particle.ScaleTable(values, ScaleTableResolution);
+			_sharedScaleTable = new ScaleTable(values, ScaleTableResolution);
 		}
-
-		[SerializeField, HideInInspector] private Particle.ScaleTable _bakedScaleTable;  // Editor-visible
-		private const int ScaleTableResolution = 32;  // Tune: 32-64 ideal
-		public Particle.ScaleTable GetScaleTable() => _bakedScaleTable;  // For ParticleSystem impls
 
 		private void OnEnable()
 		{
@@ -264,7 +281,7 @@ namespace MassiveHadronLtd
 			p.radius = radius;
 			p.color = color;
 			p.fadeStartTime = fadeStartTime;
-			p.scaleTable = GetScaleTable();
+			p.scaleTable = _sharedScaleTable;  // Reference only!
 
 			if (enablePhysics && (gravity != 0f || velocity != Vector3.zero))
 			{
@@ -288,11 +305,11 @@ namespace MassiveHadronLtd
 					driftFrequency = floaterDriftFrequency,
 					spatialScale = floaterSpatialScale
 				};
-				floater.Initialize(p.position);  // Seed from spawn position
+				floater.Initialize(p.position);
 				p.behaviour = floater;
 			}
 
-			p.Update(0f);//0f for initialise
+			p.Update(0f);
 		}
 
 #if UNITY_EDITOR
@@ -304,10 +321,15 @@ namespace MassiveHadronLtd
 			if (customParticleSystem == null) return;
 			if (Camera.current == null) return;
 			if (Camera.current.cameraType != CameraType.SceneView) return;
-
 			if (!SceneView.currentDrawingSceneView) return;
 			ParticleControllerSceneView.OnRender(this);
 		}
 #endif
+
+		private void OnValidate()
+		{
+			if (Application.isPlaying)
+				RebakeScaleTable();
+		}
 	}
 }
