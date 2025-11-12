@@ -2,6 +2,7 @@
 using UnityEditor;
 using UnityEngine;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace MassiveHadronLtd
 {
@@ -9,42 +10,33 @@ namespace MassiveHadronLtd
 	public class ParticleControllerEditor : Editor
 	{
 		private enum DragState { None, Start, End }
-		private DragState dragState = DragState.None;
-		private int draggedPulseIndex = -1;
+		private DragState _dragState = DragState.None;
+		private int _draggedPulseIndex = -1;
 		private const float MIN_PULSE_WIDTH = 0.01f;
-
-		private static bool IsGameViewMaximized()
-		{
-#if UNITY_EDITOR
-			var gameView = UnityEditor.EditorWindow.GetWindow(typeof(UnityEditor.Editor).Assembly.GetType("UnityEditor.GameView"));
-			return gameView != null && gameView.maximized;
-#else
-            return false;
-#endif
-		}
+		private const float HANDLE_WIDTH_NORM = 0.08f;   // visual handle size in normalized space
 
 		public override void OnInspectorGUI()
 		{
 			var controller = (ParticleController)target;
 			serializedObject.Update();
 
-			// ----- Debug -----
+			// ----- Debug -------------------------------------------------
 			EditorGUILayout.PropertyField(serializedObject.FindProperty("showInSceneView"));
 			EditorGUILayout.PropertyField(serializedObject.FindProperty("useDebugMaterial"));
 			EditorGUILayout.PropertyField(serializedObject.FindProperty("updateParticles"));
 
-			// ----- Lifetime -----
+			// ----- Lifetime -----------------------------------------------
 			EditorGUILayout.PropertyField(serializedObject.FindProperty("lifetime"));
 			EditorGUILayout.PropertyField(serializedObject.FindProperty("lifetimeVariation"));
 
-			// ----- Appearance -----
+			// ----- Appearance ---------------------------------------------
 			EditorGUILayout.PropertyField(serializedObject.FindProperty("useThreeZoneSlicing"));
 			EditorGUILayout.PropertyField(serializedObject.FindProperty("particleMaterial"));
 			EditorGUILayout.PropertyField(serializedObject.FindProperty("color"));
 			EditorGUILayout.PropertyField(serializedObject.FindProperty("radius"));
 			EditorGUILayout.PropertyField(serializedObject.FindProperty("fadeStartTime"));
 
-			// ----- Physics -----
+			// ----- Physics ------------------------------------------------
 			EditorGUILayout.PropertyField(serializedObject.FindProperty("enablePhysics"));
 			EditorGUI.BeginDisabledGroup(!controller.enablePhysics);
 			EditorGUILayout.PropertyField(serializedObject.FindProperty("gravity"));
@@ -56,7 +48,7 @@ namespace MassiveHadronLtd
 			EditorGUILayout.PropertyField(serializedObject.FindProperty("bounceDamping"));
 			EditorGUI.EndDisabledGroup();
 
-			// ----- Floater Behaviour -----
+			// ----- Floater Behaviour --------------------------------------
 			EditorGUILayout.Space();
 			EditorGUILayout.LabelField("Floater Behaviour", EditorStyles.boldLabel);
 			EditorGUILayout.PropertyField(serializedObject.FindProperty("enableFloater"));
@@ -66,230 +58,303 @@ namespace MassiveHadronLtd
 			EditorGUILayout.PropertyField(serializedObject.FindProperty("floaterSpatialScale"));
 			EditorGUI.EndDisabledGroup();
 
-			// ----- Animation -----
-			EditorGUILayout.PropertyField(serializedObject.FindProperty("scaleCurve"));
+			// ----- Animation ----------------------------------------------
+			EditorGUILayout.Space();
+			EditorGUILayout.LabelField("Scale Curve (%):", EditorStyles.boldLabel);
+			EditorGUILayout.LabelField("(Y-axis: 0 = 0%, 1 = 100%, 2 = 200%)");
 
-			// ----- PWM / Emission -----
+			var curveProp = serializedObject.FindProperty("scaleCurve");
+			var curve = curveProp.animationCurveValue;
+
+			// 100 px tall curve editor
+			Rect curveRect = EditorGUILayout.GetControlRect(false, 100);
+			AnimationCurve newCurve = EditorGUI.CurveField(curveRect, curve, Color.green, new Rect(0, 0, 1, 2));
+
+			// Preset buttons
+			EditorGUILayout.BeginHorizontal();
+			if (GUILayout.Button("Linear (100%)")) newCurve = AnimationCurve.Linear(0f, 1f, 1f, 1f);
+			if (GUILayout.Button("Scale Up (0% to 200%)")) newCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 2f);
+			if (GUILayout.Button("Scale Down (200% to 0%)")) newCurve = CreateScaleDownCurve();
+			EditorGUILayout.EndHorizontal();
+
+			// Clamp / enforce start-end keys (same logic as old version)
+			if (!CurvesRoughlyEqual(curve, newCurve))
+			{
+				var temp = new AnimationCurve(newCurve.keys);
+				if (temp.keys.Length < 2) temp = AnimationCurve.Linear(0f, 1f, 1f, 1f);
+				else
+				{
+					for (int i = 0; i < temp.keys.Length; i++)
+					{
+						var k = temp.keys[i];
+						k.time = Mathf.Clamp01(k.time);
+						k.value = Mathf.Clamp(k.value, 0f, 2f);
+						temp.MoveKey(i, k);
+					}
+					bool hasStart = temp.keys.Any(k => Mathf.Approximately(k.time, 0f));
+					bool hasEnd = temp.keys.Any(k => Mathf.Approximately(k.time, 1f));
+					if (!hasStart) temp.AddKey(0f, Mathf.Clamp(temp.Evaluate(0f), 0f, 2f));
+					if (!hasEnd) temp.AddKey(1f, Mathf.Clamp(temp.Evaluate(1f), 0f, 2f));
+				}
+				// Force free tangents
+				for (int i = 0; i < temp.keys.Length; i++)
+				{
+					AnimationUtility.SetKeyBroken(temp, i, true);
+					AnimationUtility.SetKeyLeftTangentMode(temp, i, AnimationUtility.TangentMode.Free);
+					AnimationUtility.SetKeyRightTangentMode(temp, i, AnimationUtility.TangentMode.Free);
+				}
+				newCurve = temp;
+			}
+			curveProp.animationCurveValue = newCurve;
+
+			// ----- PWM / Emission -----------------------------------------
+			EditorGUILayout.Space();
 			EditorGUILayout.PropertyField(serializedObject.FindProperty("particleCount"));
 			EditorGUILayout.PropertyField(serializedObject.FindProperty("scatterScalar"));
 			EditorGUILayout.PropertyField(serializedObject.FindProperty("cycleTime"));
 
 			var pulsesProp = serializedObject.FindProperty("pulses");
-			EditorGUILayout.PropertyField(pulsesProp, true);
+			DrawPulseTimeline(controller, pulsesProp);
 
-			if (pulsesProp.isExpanded && pulsesProp.arraySize > 0)
-			{
-				DrawPulseTimeline(controller);
-			}
+			// ----- Presets ------------------------------------------------
+			EditorGUILayout.Space();
+			if (GUILayout.Button("Apply Preset: Burst")) ApplyBurstPreset(controller);
+			if (GUILayout.Button("Apply Preset: Continuous")) ApplyContinuousPreset(controller);
 
-			if (GUILayout.Button("Apply Preset: Burst"))
+			// ----- Bake ---------------------------------------------------
+			if (GUILayout.Button("Rebake Scale Table"))
+				controller.RebakeScaleTable();
+
+			// Auto-rebake on any change
+			if (GUI.changed)
 			{
-				ApplyBurstPreset(controller);
-			}
-			if (GUILayout.Button("Apply Preset: Continuous"))
-			{
-				ApplyContinuousPreset(controller);
+				controller.RebakeScaleTable();
+				EditorUtility.SetDirty(controller);
 			}
 
 			serializedObject.ApplyModifiedProperties();
 		}
 
-		private void DrawPulseTimeline(ParticleController controller)
+		// --------------------------------------------------------------------
+		private void DrawPulseTimeline(ParticleController controller, SerializedProperty pulsesProp)
 		{
-			Rect rect = GUILayoutUtility.GetRect(0, 40);
-			rect.x += 18;
-			rect.width -= 36;
+			const float timelineHeight = 40f;
+			Rect timelineRect = EditorGUILayout.GetControlRect(false, timelineHeight);
+			EditorGUI.DrawRect(timelineRect, new Color(0.2f, 0.2f, 0.2f));
 
+			float width = timelineRect.width;
 			float cycleTime = controller.cycleTime;
-			Handles.color = Color.gray;
-			Handles.DrawLine(new Vector3(rect.x, rect.y + 20), new Vector3(rect.xMax, rect.y + 20));
 
-			GUIStyle labelStyle = new GUIStyle(EditorStyles.label) { alignment = TextAnchor.MiddleCenter };
-			for (int i = 0; i <= 10; i++)
+			// ---- draw existing pulses ---------------------------------------
+			for (int i = 0; i < pulsesProp.arraySize; i++)
 			{
-				float t = i / 10f;
-				float x = rect.x + t * rect.width;
-				Handles.DrawLine(new Vector3(x, rect.y + 18), new Vector3(x, rect.y + 22));
-				if (i % 2 == 0)
-					EditorGUI.LabelField(new Rect(x - 10, rect.y + 24, 20, 16), (t * cycleTime).ToString("0.0"), labelStyle);
+				var p = pulsesProp.GetArrayElementAtIndex(i);
+				var start = p.FindPropertyRelative("start").floatValue;
+				var end = p.FindPropertyRelative("end").floatValue;
+
+				// enforce minimum width
+				if (end < start + MIN_PULSE_WIDTH) end = start + MIN_PULSE_WIDTH;
+
+				float x0 = timelineRect.x + start * width;
+				float x1 = timelineRect.x + end * width;
+
+				Color fill = new Color(0f, 0.8f, 0f, 0.4f);
+				EditorGUI.DrawRect(new Rect(x0, timelineRect.y, x1 - x0, timelineRect.height), fill);
 			}
 
-			for (int i = 0; i < controller.pulses.Count; i++)
+			// ---- mouse handling ---------------------------------------------
+			Event e = Event.current;
+			Vector2 mouse = e.mousePosition;
+			float norm = Mathf.Clamp01((mouse.x - timelineRect.x) / width);
+
+			if (e.type == EventType.MouseDown && timelineRect.Contains(mouse))
 			{
-				var pulse = controller.pulses[i];
-				float startX = rect.x + pulse.start * rect.width;
-				float endX = rect.x + pulse.end * rect.width;
+				// find nearest handle
+				int closestIdx = -1;
+				bool isStart = false;
+				float bestDist = float.MaxValue;
 
-				Color fill = new Color(0.2f, 0.8f, 0.2f, 0.3f);
-				Color outline = new Color(0.2f, 0.8f, 0.2f, 1f);
-				EditorGUI.DrawRect(new Rect(startX, rect.y + 5, endX - startX, 30), fill);
-				Handles.color = outline;
-				Handles.DrawLine(new Vector3(startX, rect.y + 5), new Vector3(startX, rect.y + 35));
-				Handles.DrawLine(new Vector3(endX, rect.y + 5), new Vector3(endX, rect.y + 35));
-
-				EditorGUIUtility.AddCursorRect(new Rect(startX - 5, rect.y, 10, 40), MouseCursor.ResizeHorizontal);
-				EditorGUIUtility.AddCursorRect(new Rect(endX - 5, rect.y, 10, 40), MouseCursor.ResizeHorizontal);
-
-				if (Event.current.type == EventType.MouseDown && rect.Contains(Event.current.mousePosition))
+				for (int i = 0; i < pulsesProp.arraySize; i++)
 				{
-					if (Mathf.Abs(Event.current.mousePosition.x - startX) < 10)
-					{
-						dragState = DragState.Start;
-						draggedPulseIndex = i;
-					}
-					else if (Mathf.Abs(Event.current.mousePosition.x - endX) < 10)
-					{
-						dragState = DragState.End;
-						draggedPulseIndex = i;
-					}
-					Event.current.Use();
+					var p = pulsesProp.GetArrayElementAtIndex(i);
+					float s = p.FindPropertyRelative("start").floatValue;
+					float en = p.FindPropertyRelative("end").floatValue;
+
+					float dStart = Mathf.Abs(norm - s);
+					float dEnd = Mathf.Abs(norm - en);
+
+					if (dStart < bestDist && dStart <= HANDLE_WIDTH_NORM) { bestDist = dStart; closestIdx = i; isStart = true; }
+					if (dEnd < bestDist && dEnd <= HANDLE_WIDTH_NORM) { bestDist = dEnd; closestIdx = i; isStart = false; }
 				}
-			}
 
-			if (dragState != DragState.None && Event.current.type == EventType.MouseDrag)
-			{
-				float norm = (Event.current.mousePosition.x - rect.x) / rect.width;
-				norm = Mathf.Clamp01(norm);
-				var pulse = controller.pulses[draggedPulseIndex];
-				if (dragState == DragState.Start)
+				if (closestIdx >= 0)
 				{
-					pulse.start = Mathf.Min(norm, pulse.end - MIN_PULSE_WIDTH);
+					_draggedPulseIndex = closestIdx;
+					_dragState = isStart ? DragState.Start : DragState.End;
 				}
 				else
 				{
-					pulse.end = Mathf.Max(norm, pulse.start + MIN_PULSE_WIDTH);
+					// create new pulse centered on click
+					pulsesProp.arraySize++;
+					var np = pulsesProp.GetArrayElementAtIndex(pulsesProp.arraySize - 1);
+					float w = 0.1f;
+					np.FindPropertyRelative("start").floatValue = Mathf.Clamp01(norm - w * 0.5f);
+					np.FindPropertyRelative("end").floatValue = Mathf.Clamp01(norm + w * 0.5f);
 				}
-				EditorUtility.SetDirty(controller);
-				Event.current.Use();
+				e.Use();
 			}
-
-			if (Event.current.type == EventType.MouseUp)
+			else if (e.type == EventType.MouseDrag && _dragState != DragState.None && _draggedPulseIndex >= 0)
 			{
-				dragState = DragState.None;
-				draggedPulseIndex = -1;
+				var p = pulsesProp.GetArrayElementAtIndex(_draggedPulseIndex);
+				var startProp = p.FindPropertyRelative("start");
+				var endProp = p.FindPropertyRelative("end");
+
+				if (_dragState == DragState.Start)
+				{
+					startProp.floatValue = Mathf.Clamp01(norm);
+					if (startProp.floatValue > endProp.floatValue - MIN_PULSE_WIDTH)
+						endProp.floatValue = startProp.floatValue + MIN_PULSE_WIDTH;
+				}
+				else
+				{
+					endProp.floatValue = Mathf.Clamp01(norm);
+					if (endProp.floatValue < startProp.floatValue + MIN_PULSE_WIDTH)
+						startProp.floatValue = endProp.floatValue - MIN_PULSE_WIDTH;
+				}
+				e.Use();
+			}
+			else if (e.type == EventType.MouseUp && _dragState != DragState.None)
+			{
+				// ----- MERGE OVERLAPPING PULSES -----
+				var list = new List<(float s, float e, int idx)>();
+				for (int i = 0; i < pulsesProp.arraySize; i++)
+				{
+					var p = pulsesProp.GetArrayElementAtIndex(i);
+					list.Add((p.FindPropertyRelative("start").floatValue,
+							  p.FindPropertyRelative("end").floatValue, i));
+				}
+				list.Sort((a, b) => a.s.CompareTo(b.s));
+
+				var merged = new List<(float s, float e)>();
+				float curS = list[0].s, curE = list[0].e;
+				for (int i = 1; i < list.Count; i++)
+				{
+					if (list[i].s <= curE) curE = Mathf.Max(curE, list[i].e);
+					else { merged.Add((curS, curE)); curS = list[i].s; curE = list[i].e; }
+				}
+				merged.Add((curS, curE));
+
+				pulsesProp.arraySize = merged.Count;
+				for (int i = 0; i < merged.Count; i++)
+				{
+					var p = pulsesProp.GetArrayElementAtIndex(i);
+					p.FindPropertyRelative("start").floatValue = merged[i].s;
+					p.FindPropertyRelative("end").floatValue = merged[i].e;
+				}
+
+				_dragState = DragState.None;
+				_draggedPulseIndex = -1;
+				e.Use();
+			}
+			else if (e.type == EventType.MouseUp)
+			{
+				_dragState = DragState.None;
+				_draggedPulseIndex = -1;
 			}
 
+			// ---- add / remove buttons ---------------------------------------
 			EditorGUILayout.BeginHorizontal();
-			if (GUILayout.Button("+ Add Pulse"))
+			if (GUILayout.Button("Add Pulse"))
 			{
-				controller.pulses.Add(new ParticleController.Pulse { start = 0.2f, end = 0.3f });
-				EditorUtility.SetDirty(controller);
+				pulsesProp.arraySize++;
+				var np = pulsesProp.GetArrayElementAtIndex(pulsesProp.arraySize - 1);
+				np.FindPropertyRelative("start").floatValue = 0f;
+				np.FindPropertyRelative("end").floatValue = 0.1f;
 			}
-			if (controller.pulses.Count > 1 && GUILayout.Button("- Remove Last"))
-			{
-				controller.pulses.RemoveAt(controller.pulses.Count - 1);
-				EditorUtility.SetDirty(controller);
-			}
+			if (pulsesProp.arraySize > 1 && GUILayout.Button("Remove Last Pulse"))
+				pulsesProp.arraySize--;
 			EditorGUILayout.EndHorizontal();
-		}
 
-		private void ApplyBurstPreset(ParticleController controller)
-		{
-			controller.particleCount = 32;
-			controller.lifetime = 1.5f;
-			controller.lifetimeVariation = 0.3f;
-			controller.radius = 0.03f;
-			controller.color = new Color(1f, 0.8f, 0.3f);
-			controller.scaleCurve = CreateScaleUpCurve();
-			controller.cycleTime = 0.1f;
-			controller.pulses = new List<ParticleController.Pulse>
+			// ---- per-pulse labels -------------------------------------------
+			for (int i = 0; i < pulsesProp.arraySize; i++)
 			{
-				new ParticleController.Pulse { start = 0f, end = 0.1f }
-			};
-			controller.enablePhysics = true;
-			controller.gravity = 15f;
-			controller.velocityMagnitude = new Vector3(3f, 8f, 3f);
-			controller.enableCollision = true;
-			controller.bounceDamping = 0.7f;
-			controller.enableFloater = true;
-			controller.floaterDriftAmplitude = 2f;
-			controller.floaterDriftFrequency = 0.25f;
-			controller.floaterSpatialScale = 0.08f;
-			EditorUtility.SetDirty(controller);
+				var p = pulsesProp.GetArrayElementAtIndex(i);
+				float s = p.FindPropertyRelative("start").floatValue;
+				float en = p.FindPropertyRelative("end").floatValue;
+				EditorGUILayout.LabelField($"Pulse {i + 1}: Start = {s * cycleTime:F3}s, End = {en * cycleTime:F3}s");
+			}
 		}
 
-		private void ApplyContinuousPreset(ParticleController controller)
-		{
-			controller.particleCount = 8;
-			controller.lifetime = 2f;
-			controller.lifetimeVariation = 1f;
-			controller.radius = 0.02f;
-			controller.color = Color.cyan;
-			controller.scaleCurve = AnimationCurve.Linear(0f, 1f, 1f, 1f);
-			controller.cycleTime = 0.05f;
-			controller.pulses = new List<ParticleController.Pulse>
-			{
-				new ParticleController.Pulse { start = 0f, end = 1f }
-			};
-			controller.enablePhysics = false;
-			controller.enableFloater = true;
-			controller.floaterDriftAmplitude = 1.2f;
-			controller.floaterDriftFrequency = 0.4f;
-			controller.floaterSpatialScale = 0.12f;
-			EditorUtility.SetDirty(controller);
-		}
-
-		private bool CurvesEqual(AnimationCurve a, AnimationCurve b)
+		// --------------------------------------------------------------------
+		private bool CurvesRoughlyEqual(AnimationCurve a, AnimationCurve b)
 		{
 			if (a.keys.Length != b.keys.Length) return false;
 			for (int i = 0; i < a.keys.Length; i++)
 			{
 				var ka = a.keys[i];
 				var kb = b.keys[i];
-				if (ka.time != kb.time || ka.value != kb.value ||
-					ka.inTangent != kb.inTangent || ka.outTangent != kb.outTangent)
+				if (!Mathf.Approximately(ka.time, kb.time) ||
+					!Mathf.Approximately(ka.value, kb.value) ||
+					!Mathf.Approximately(ka.inTangent, kb.inTangent) ||
+					!Mathf.Approximately(ka.outTangent, kb.outTangent))
 					return false;
 			}
 			return true;
 		}
 
-		private AnimationCurve CreateLinearCurve()
-		{
-			var c = new AnimationCurve();
-			float[] times = { 0f, 0.33f, 0.66f, 1f };
-			for (int i = 0; i < times.Length; i++)
-			{
-				var k = new Keyframe(times[i], 1f, 0f, 0f);
-				c.AddKey(k);
-				AnimationUtility.SetKeyBroken(c, i, true);
-				AnimationUtility.SetKeyLeftTangentMode(c, i, AnimationUtility.TangentMode.Free);
-				AnimationUtility.SetKeyRightTangentMode(c, i, AnimationUtility.TangentMode.Free);
-			}
-			return c;
-		}
-
-		private AnimationCurve CreateScaleUpCurve()
-		{
-			var c = new AnimationCurve();
-			float[] times = { 0f, 0.33f, 0.66f, 1f };
-			float[] vals = { 0f, 0.66f, 1.33f, 2f };
-			float slope = 2f;
-			for (int i = 0; i < times.Length; i++)
-			{
-				var k = new Keyframe(times[i], vals[i], slope, slope);
-				c.AddKey(k);
-				AnimationUtility.SetKeyBroken(c, i, true);
-				AnimationUtility.SetKeyLeftTangentMode(c, i, AnimationUtility.TangentMode.Free);
-				AnimationUtility.SetKeyRightTangentMode(c, i, AnimationUtility.TangentMode.Free);
-			}
-			return c;
-		}
-
 		private AnimationCurve CreateScaleDownCurve()
 		{
 			var c = new AnimationCurve();
-			float[] times = { 0f, 0.33f, 0.66f, 1f };
-			float[] vals = { 2f, 1.33f, 0.66f, 0f };
-			float slope = -2f;
-			for (int i = 0; i < times.Length; i++)
+			c.AddKey(new Keyframe(0f, 2f, -2f, -2f));
+			c.AddKey(new Keyframe(1f, 0f, -2f, -2f));
+			for (int i = 0; i < c.keys.Length; i++)
 			{
-				var k = new Keyframe(times[i], vals[i], slope, slope);
-				c.AddKey(k);
 				AnimationUtility.SetKeyBroken(c, i, true);
 				AnimationUtility.SetKeyLeftTangentMode(c, i, AnimationUtility.TangentMode.Free);
 				AnimationUtility.SetKeyRightTangentMode(c, i, AnimationUtility.TangentMode.Free);
 			}
 			return c;
+		}
+
+		// --------------------------------------------------------------------
+		private void ApplyBurstPreset(ParticleController c)
+		{
+			c.particleCount = 32;
+			c.lifetime = 1.5f;
+			c.lifetimeVariation = 0.3f;
+			c.radius = 0.03f;
+			c.color = new Color(1f, 0.8f, 0.3f);
+			c.scaleCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 2f);
+			c.cycleTime = 0.1f;
+			c.pulses = new List<ParticleController.Pulse> { new ParticleController.Pulse { start = 0f, end = 0.1f } };
+			c.enablePhysics = true;
+			c.gravity = 15f;
+			c.velocityMagnitude = new Vector3(3f, 8f, 3f);
+			c.enableCollision = true;
+			c.bounceDamping = 0.7f;
+			c.enableFloater = true;
+			c.floaterDriftAmplitude = 2f;
+			c.floaterDriftFrequency = 0.25f;
+			c.floaterSpatialScale = 0.08f;
+			EditorUtility.SetDirty(c);
+		}
+
+		private void ApplyContinuousPreset(ParticleController c)
+		{
+			c.particleCount = 8;
+			c.lifetime = 2f;
+			c.lifetimeVariation = 1f;
+			c.radius = 0.02f;
+			c.color = Color.cyan;
+			c.scaleCurve = AnimationCurve.Linear(0f, 1f, 1f, 1f);
+			c.cycleTime = 0.05f;
+			c.pulses = new List<ParticleController.Pulse> { new ParticleController.Pulse { start = 0f, end = 1f } };
+			c.enablePhysics = false;
+			c.enableFloater = true;
+			c.floaterDriftAmplitude = 1.2f;
+			c.floaterDriftFrequency = 0.4f;
+			c.floaterSpatialScale = 0.12f;
+			EditorUtility.SetDirty(c);
 		}
 	}
 }

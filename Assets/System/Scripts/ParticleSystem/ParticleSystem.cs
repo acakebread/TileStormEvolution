@@ -1,46 +1,55 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
+using Unity.Mathematics;
 
 namespace MassiveHadronLtd
 {
-	public struct ParticleUpdateContext
-	{
-		public ParticleController controller;
-		public float deltaTime;
-		public float normalizedLife;
-	}
-
 	public abstract class ParticleBehaviour
 	{
-		public virtual void Update(ref ParticleUpdateContext ctx, Particle particle) { }
+		public virtual void Update(Particle particle, float deltaTime = 0f) { }//0f for initialise
 	}
 
 	public abstract class Particle
 	{
+		public int poolIndex;
+		public int vertexIndex;
 		public float life;
 		public float duration;
 		public float initialRadius;
-		public int vertexIndex;
-		public int poolIndex;
 		public Vector3 position;
 		public Vector3 delta;
 		public float radius;
 		public Color color;
+		public float fadeStartTime;
+
+		public readonly struct ScaleTable
+		{
+			public readonly float[] values;
+			public readonly int resolution;  // e.g., 32
+
+			public ScaleTable(float[] v, int r) { values = v; resolution = r; }
+
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			public float Evaluate(float norm)
+			{
+				int i = (int)(norm * (resolution - 1));
+				float frac = norm * (resolution - 1f) - i;
+				return math.lerp(values[i], values[i + 1], frac);  // Use math.lerp for Burst if needed
+			}
+		}
+
+		public ScaleTable scaleTable;  // Set on spawn
 
 		public ParticleBehaviour behaviour;
 
-		public virtual void Update(ref ParticleUpdateContext ctx)
+		public virtual void Update(float deltaTime = 0f)//0f for initialise
 		{
-			float norm = ctx.normalizedLife;
-
-			float a = (norm < ctx.controller.fadeStartTime || Mathf.Approximately(ctx.controller.fadeStartTime, 1f))
-				? 1f
-				: Mathf.Clamp01(1f - ((norm - ctx.controller.fadeStartTime) / (1f - ctx.controller.fadeStartTime)));
-			color.a = a;
-
-			radius = initialRadius * ctx.controller.scaleCurve.Evaluate(norm);
-
-			behaviour?.Update(ref ctx, this);
+			float norm = 1f - life / duration;
+			color.a = (norm < fadeStartTime || Mathf.Approximately(fadeStartTime, 1f)) ? 1f : Mathf.Clamp01(1f - ((norm - fadeStartTime) / (1f - fadeStartTime)));
+			//radius = initialRadius * controller.scaleCurve.Evaluate(norm);
+			radius = initialRadius * scaleTable.Evaluate(norm);
+			behaviour?.Update(this, deltaTime);
 		}
 	}
 
@@ -74,7 +83,6 @@ namespace MassiveHadronLtd
 		public int ActiveParticleCount => activeParticles.Count;
 
 		public ParticleController Controller { get; protected set; }
-		protected ParticleUpdateContext updateCtx = new();
 
 		protected ParticleSystem(Material particleMaterial, ParticleController controller)
 		{
@@ -132,13 +140,11 @@ namespace MassiveHadronLtd
 
 		public abstract Particle AllocateParticle();
 
-		public virtual void UpdateParticles()
+		public virtual void UpdateParticles(float deltaTime = 0f)//0f for initialise
 		{
 			if (Controller == null) return;
 
 			float dt = Time.deltaTime;
-			updateCtx.controller = Controller;
-			updateCtx.deltaTime = dt;
 
 			viewCount = 0;
 			for (int i = 0; i < MaxViewCache; i++)
@@ -157,9 +163,7 @@ namespace MassiveHadronLtd
 					DeactivateParticle(p, i);
 					continue;
 				}
-
-				updateCtx.normalizedLife = 1f - (p.life / p.duration);
-				p.Update(ref updateCtx);
+				p.Update(deltaTime);
 			}
 		}
 
