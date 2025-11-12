@@ -47,13 +47,13 @@ namespace MassiveHadronLtd
 
 		private Vector3 _phase;
 
-		public void Initialize(Vector3 spawnPosition)
+		public override void Initialize(Particle p)
 		{
 			float scale = spatialScale;
 			_phase = new Vector3(
-				Mathf.PerlinNoise(spawnPosition.x * scale, spawnPosition.z * scale) * 100f,
-				Mathf.PerlinNoise(spawnPosition.x * scale, spawnPosition.y * scale) * 100f,
-				Mathf.PerlinNoise(spawnPosition.z * scale, spawnPosition.y * scale) * 100f
+				Mathf.PerlinNoise(p.position.x * scale, p.position.z * scale) * 100f,
+				Mathf.PerlinNoise(p.position.x * scale, p.position.y * scale) * 100f,
+				Mathf.PerlinNoise(p.position.z * scale, p.position.y * scale) * 100f
 			);
 		}
 
@@ -305,11 +305,9 @@ namespace MassiveHadronLtd
 					driftFrequency = floaterDriftFrequency,
 					spatialScale = floaterSpatialScale
 				};
-				floater.Initialize(p.position);
 				p.behaviour = floater;
 			}
-
-			p.Update(0f);
+			p.Initialize();
 		}
 
 #if UNITY_EDITOR

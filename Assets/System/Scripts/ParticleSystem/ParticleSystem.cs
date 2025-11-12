@@ -1,12 +1,11 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
-using Unity.Mathematics;
 
 namespace MassiveHadronLtd
 {
 	public abstract class ParticleBehaviour
 	{
+		public virtual void Initialize(Particle p) { }
 		public virtual void Update(Particle particle, float deltaTime = 0f) { }
 	}
 
@@ -16,24 +15,26 @@ namespace MassiveHadronLtd
 		public int vertexIndex;
 		public float life;
 		public float duration;
-		public float initialRadius;
 		public Vector3 position;
 		public Vector3 delta;
+		public float initialRadius;
 		public float radius;
 		public Color color;
 		public float fadeStartTime;
-
-		// Reference to shared table from controller
 		public ParticleController.ScaleTable scaleTable;
 
 		public ParticleBehaviour behaviour;
 
+		public virtual void Initialize() 
+		{
+			Update();
+			behaviour?.Initialize(this);
+		}
+
 		public virtual void Update(float deltaTime = 0f)
 		{
 			float norm = 1f - life / duration;
-			color.a = (norm < fadeStartTime || Mathf.Approximately(fadeStartTime, 1f))
-				? 1f : Mathf.Clamp01(1f - ((norm - fadeStartTime) / (1f - fadeStartTime)));
-
+			color.a = (norm < fadeStartTime || Mathf.Approximately(fadeStartTime, 1f)) ? 1f : Mathf.Clamp01(1f - ((norm - fadeStartTime) / (1f - fadeStartTime)));
 			radius = initialRadius * scaleTable.Evaluate(norm);
 			behaviour?.Update(this, deltaTime);
 		}
