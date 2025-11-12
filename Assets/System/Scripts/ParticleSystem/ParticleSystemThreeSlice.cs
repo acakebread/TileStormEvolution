@@ -60,7 +60,7 @@ namespace MassiveHadronLtd
 				poolIndex = idx,
 				life = -1f,
 				position = Vector3.zero,
-				delta = Vector3.zero,
+				oldPosition = Vector3.zero,
 				radius = 0f,
 				color = Color.clear
 			};

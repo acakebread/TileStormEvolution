@@ -3,47 +3,39 @@ using System.Collections.Generic;
 
 namespace MassiveHadronLtd
 {
-	public abstract class ParticleBehaviour
-	{
-		public virtual void Initialize(Particle p) { }
-		public virtual void Update(Particle particle, float deltaTime = 0f) { }
-	}
-
 	public abstract class Particle
 	{
 		public int poolIndex;
 		public int vertexIndex;
 		public float life;
 		public float duration;
+		
 		public Vector3 position;
-		public Vector3 delta;
-		public float initialRadius;
+		public Vector3 oldPosition;
+		public Vector3 delta => position - oldPosition;
+
 		public float radius;
 		public Color color;
-		public float fadeStartTime;
-		public ParticleController.ScaleTable scaleTable;
 
-		public ParticleBehaviour behaviour;
+		public List<ParticleBehaviour> behaviours = new();
 
-		public virtual void Initialize() 
+		public virtual void Initialize()
 		{
+			foreach (var b in behaviours) b.Initialize(this);
 			Update();
-			behaviour?.Initialize(this);
 		}
 
 		public virtual void Update(float deltaTime = 0f)
 		{
-			float norm = 1f - life / duration;
-			color.a = (norm < fadeStartTime || Mathf.Approximately(fadeStartTime, 1f)) ? 1f : Mathf.Clamp01(1f - ((norm - fadeStartTime) / (1f - fadeStartTime)));
-			radius = initialRadius * scaleTable.Evaluate(norm);
-			behaviour?.Update(this, deltaTime);
+			foreach (var b in behaviours) b.Update(this, deltaTime);
 		}
-	}
 
-	public class ParticleMesh
-	{
-		public Mesh mesh;
-		public Matrix4x4 viewMatrix;
+		public T GetBehaviour<T>() where T : ParticleBehaviour
+		{
+			foreach (var b in behaviours)
+				if (b is T tb) return tb;
+			return null;
+		}
 	}
 
 	public abstract class ParticleSystem
@@ -63,8 +55,15 @@ namespace MassiveHadronLtd
 		protected List<Vector2> uvs;
 
 		protected bool coloursUpdatedThisFrame;
-		protected readonly ParticleMesh[] particleMeshes = new ParticleMesh[MaxViewCache];
-		protected int viewCount = 0;
+
+		private class ParticleMesh
+		{
+			public Mesh mesh;
+			public Matrix4x4 viewMatrix;
+		}
+
+		private readonly ParticleMesh[] particleMeshes = new ParticleMesh[MaxViewCache];
+		private int viewCount = 0;
 
 		public int ViewCount => viewCount;
 		public int ActiveParticleCount => activeParticles.Count;

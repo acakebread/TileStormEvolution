@@ -31,7 +31,7 @@ namespace MassiveHadronLtd
 			}
 
 			mat.SetPass(0);
-			Graphics.DrawMeshNow(mesh, controller.transform.localToWorldMatrix);
+			Graphics.DrawMeshNow(mesh, Matrix4x4.identity);
 		}
 
 		private static Material GetCyanDebugMaterial()
