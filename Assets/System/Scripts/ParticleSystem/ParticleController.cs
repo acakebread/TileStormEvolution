@@ -18,16 +18,16 @@ namespace MassiveHadronLtd
 		public float groundHeight;
 		public bool enableCollision;
 
-		public override void Update(ref ParticleUpdateContext ctx, Particle p)
+		public override void Update(Particle p, float deltaTime)
 		{
-			velocity.y -= gravity * ctx.deltaTime;
+			velocity.y -= gravity * deltaTime;
 			velocity *= 1f - friction;
 
 			if (enableCollision)
 				p.position.y = Mathf.Max(p.position.y, groundHeight);
 
 			p.delta = -p.position;
-			p.position += velocity * ctx.deltaTime;
+			p.position += velocity * deltaTime;
 
 			if (enableCollision && velocity.y < 0f && p.position.y <= groundHeight)
 			{
@@ -58,9 +58,10 @@ namespace MassiveHadronLtd
 			);
 		}
 
-		public override void Update(ref ParticleUpdateContext ctx, Particle p)
+		public override void Update(Particle p, float deltaTime)
 		{
-			float t = ctx.normalizedLife * 10f;
+			float norm = 1f - p.life / p.duration;
+			float t = norm * 10f;
 			float phaseX = _phase.x + t * driftFrequency;
 			float phaseY = _phase.y + t * driftFrequency;
 			float phaseZ = _phase.z + t * driftFrequency;
@@ -72,7 +73,7 @@ namespace MassiveHadronLtd
 			);
 
 			p.delta = -p.position;
-			p.position += drift * ctx.deltaTime;
+			p.position += drift * deltaTime;
 			p.delta += p.position;
 		}
 	}
@@ -154,7 +155,24 @@ namespace MassiveHadronLtd
 				customParticleSystem = new ParticleSystemThreeSlice(particleMaterial, this);
 			else
 				customParticleSystem = new ParticleSystemQuad(particleMaterial, this);
+
+			RebakeScaleTable();
 		}
+
+		public void RebakeScaleTable()
+		{
+			float[] values = new float[ScaleTableResolution];
+			for (int i = 0; i < ScaleTableResolution; i++)
+			{
+				float t = i / (float)(ScaleTableResolution - 1);
+				values[i] = scaleCurve.Evaluate(t);
+			}
+			_bakedScaleTable = new Particle.ScaleTable(values, ScaleTableResolution);
+		}
+
+		[SerializeField, HideInInspector] private Particle.ScaleTable _bakedScaleTable;  // Editor-visible
+		private const int ScaleTableResolution = 32;  // Tune: 32-64 ideal
+		public Particle.ScaleTable GetScaleTable() => _bakedScaleTable;  // For ParticleSystem impls
 
 		private void OnEnable()
 		{
@@ -187,7 +205,7 @@ namespace MassiveHadronLtd
 		{
 			if (!updateParticles || customParticleSystem == null) return;
 
-			customParticleSystem.UpdateParticles();
+			customParticleSystem.UpdateParticles(Time.deltaTime);
 
 			lastTimelinePosition = timelinePosition;
 			timelinePosition += Time.deltaTime;
@@ -245,6 +263,8 @@ namespace MassiveHadronLtd
 			p.initialRadius = radius;
 			p.radius = radius;
 			p.color = color;
+			p.fadeStartTime = fadeStartTime;
+			p.scaleTable = GetScaleTable();
 
 			if (enablePhysics && (gravity != 0f || velocity != Vector3.zero))
 			{
@@ -272,13 +292,7 @@ namespace MassiveHadronLtd
 				p.behaviour = floater;
 			}
 
-			var ctx = new ParticleUpdateContext
-			{
-				controller = this,
-				deltaTime = 0f,
-				normalizedLife = 0f
-			};
-			p.Update(ref ctx);
+			p.Update(0f);//0f for initialise
 		}
 
 #if UNITY_EDITOR
