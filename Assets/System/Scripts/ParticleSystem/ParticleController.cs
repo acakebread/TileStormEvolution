@@ -9,74 +9,6 @@ using UnityEditor;
 
 namespace MassiveHadronLtd
 {
-	public class PhysicsParticleBehaviour : ParticleBehaviour
-	{
-		public Vector3 velocity;
-		public float gravity;
-		public float friction;
-		public float bounceDamping;
-		public float groundHeight;
-		public bool enableCollision;
-
-		public override void Update(Particle p, float deltaTime)
-		{
-			velocity.y -= gravity * deltaTime;
-			velocity *= 1f - friction;
-
-			if (enableCollision)
-				p.position.y = Mathf.Max(p.position.y, groundHeight);
-
-			p.delta = -p.position;
-			p.position += velocity * deltaTime;
-
-			if (enableCollision && velocity.y < 0f && p.position.y <= groundHeight)
-			{
-				p.position.y = groundHeight;
-				velocity.y = -velocity.y * bounceDamping;
-			}
-
-			p.delta += p.position;
-		}
-	}
-
-	public class FloaterParticleBehaviour : ParticleBehaviour
-	{
-		public float driftAmplitude = 1.5f;
-		public float driftFrequency = 0.3f;
-		public float spatialScale = 1f;
-
-		private Vector3 _phase;
-
-		public override void Initialize(Particle p)
-		{
-			float scale = spatialScale;
-			_phase = new Vector3(
-				Mathf.PerlinNoise(p.position.x * scale, p.position.z * scale) * 100f,
-				Mathf.PerlinNoise(p.position.x * scale, p.position.y * scale) * 100f,
-				Mathf.PerlinNoise(p.position.z * scale, p.position.y * scale) * 100f
-			);
-		}
-
-		public override void Update(Particle p, float deltaTime)
-		{
-			float norm = 1f - p.life / p.duration;
-			float t = norm * 10f;
-			float phaseX = _phase.x + t * driftFrequency;
-			float phaseY = _phase.y + t * driftFrequency;
-			float phaseZ = _phase.z + t * driftFrequency;
-
-			Vector3 drift = new Vector3(
-				Mathf.Sin(phaseX) * driftAmplitude,
-				Mathf.Sin(phaseY) * driftAmplitude * 0.6f,
-				Mathf.Sin(phaseZ) * driftAmplitude
-			);
-
-			p.delta = -p.position;
-			p.position += drift * deltaTime;
-			p.delta += p.position;
-		}
-	}
-
 	public class ParticleController : MonoBehaviour
 	{
 		[Header("Debug")]
@@ -277,37 +209,46 @@ namespace MassiveHadronLtd
 			p.duration = life;
 			p.life = life;
 			p.position = position;
-			p.initialRadius = radius;
+			p.oldPosition = position;
 			p.radius = radius;
 			p.color = color;
-			p.fadeStartTime = fadeStartTime;
-			p.scaleTable = _sharedScaleTable;  // Reference only!
 
-			if (enablePhysics && (gravity != 0f || velocity != Vector3.zero))
+			// ------------------------------------------------------------
+			// 1. ALWAYS add colour & scale behaviours
+			// ------------------------------------------------------------
+			var colourBh = new ParticleBehaviourColour { fadeStartTime = fadeStartTime };
+			var scaleBh = new ParticleBehaviourScale { scaleTable = _sharedScaleTable, initialRadius = radius };
+
+			p.behaviours.Add(colourBh);
+			p.behaviours.Add(scaleBh);
+
+			// ------------------------------------------------------------
+			// 2. OPTIONAL physics
+			// ------------------------------------------------------------
+			if (enablePhysics)
 			{
-				var phys = new PhysicsParticleBehaviour
+				p.behaviours.Add(new ParticlePhysicsBehaviour
 				{
 					velocity = velocity,
-					gravity = gravity,
-					friction = friction,
-					bounceDamping = bounceDamping,
-					groundHeight = groundHeight,
-					enableCollision = enableCollision
-				};
-				p.behaviour = phys;
+					gravity = this.gravity,
+					friction = this.friction
+				});
+
+				if (enableCollision)
+				{
+					p.behaviours.Add(new ParticleGroundCollisionBehaviour
+					{
+						restitution = bounceDamping,
+						groundHeight = groundHeight
+					});
+				}
 			}
 
-			if (enableFloater)
-			{
-				var floater = new FloaterParticleBehaviour
-				{
-					driftAmplitude = floaterDriftAmplitude,
-					driftFrequency = floaterDriftFrequency,
-					spatialScale = floaterSpatialScale
-				};
-				p.behaviour = floater;
-			}
-			p.Initialize();
+			// ------------------------------------------------------------
+			// 3. (Future) add any extra custom behaviours here
+			// ------------------------------------------------------------
+
+			p.Initialize();               // runs Initialize() on every behaviour
 		}
 
 #if UNITY_EDITOR
