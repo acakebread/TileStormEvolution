@@ -31,12 +31,12 @@ namespace MassiveHadronLtd
 		[Header("Physics")]
 		public bool enablePhysics = false;
 		public float gravity = 10f;
-		[Range(0f, 1f)] public float friction = 0.01f;
+		[Range(0f, 1f)] public float airFriction = 0.01f;
 		public Vector3 velocityBias = Vector3.zero;
 		public Vector3 velocityMagnitude = Vector3.one;
 		public bool enableCollision = false;
 		public float groundHeight = 0f;
-		public float bounceDamping = 0.8f;
+		public float bounceFriction = 0.2f;
 
 		[Header("Floater Behaviour")]
 		public bool enableFloater = false;
@@ -231,14 +231,14 @@ namespace MassiveHadronLtd
 				{
 					velocity = velocity,
 					gravity = this.gravity,
-					friction = this.friction
+					friction = this.airFriction
 				});
 
 				if (enableCollision)
 				{
 					p.behaviours.Add(new ParticleGroundCollisionBehaviour
 					{
-						restitution = bounceDamping,
+						friction = bounceFriction,
 						groundHeight = groundHeight
 					});
 				}

@@ -19,16 +19,9 @@ namespace MassiveHadronLtd
 
 		public List<ParticleBehaviour> behaviours = new();
 
-		public virtual void Initialize()
-		{
-			foreach (var b in behaviours) b.Initialize(this);
-			Update();
-		}
+		public virtual void Initialize() { foreach (var b in behaviours) b.Initialize(this); }
 
-		public virtual void Update(float deltaTime = 0f)
-		{
-			foreach (var b in behaviours) b.Update(this, deltaTime);
-		}
+		public virtual void Update(float deltaTime = 0f) { foreach (var b in behaviours) b.Update(this, deltaTime); }
 
 		public T GetBehaviour<T>() where T : ParticleBehaviour
 		{

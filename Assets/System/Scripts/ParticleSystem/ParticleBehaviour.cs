@@ -3,52 +3,40 @@ using UnityEngine;
 namespace MassiveHadronLtd
 {
 	// --------------------------------------------------------------------
-	// Base class – unchanged signature, but now works with a LIST of behaviours
+	// Base class
 	// --------------------------------------------------------------------
 	public abstract class ParticleBehaviour
 	{
 		protected ParticleBehaviour() { }
 		public virtual void Initialize(Particle p) { }
-		public virtual void Update(Particle particle, float deltaTime = 0f) { }
+		public virtual void Update(Particle p, float deltaTime = 0f) { }
 	}
 
-	// --------------------------------------------------------------------
-	// 1. Colour – pulls the alpha-fade logic out of Particle.Update()
-	// --------------------------------------------------------------------
 	public class ParticleBehaviourColour : ParticleBehaviour
 	{
-		public float fadeStartTime = 1f;               // 0-1 normalised lifetime
+		public float fadeStartTime = 1f;// 0-1 normalised lifetime
 
-		public override void Update(Particle particle, float deltaTime = 0f)
+		public override void Update(Particle p, float deltaTime = 0f)
 		{
-			float norm = 1f - particle.life / particle.duration;
-			float alpha = (norm < fadeStartTime || Mathf.Approximately(fadeStartTime, 1f))
-				? 1f
-				: Mathf.Clamp01(1f - ((norm - fadeStartTime) / (1f - fadeStartTime)));
-
-			// keep RGB, only touch A
-			particle.color.a = alpha;
+			float norm = 1f - p.life / p.duration;
+			p.color.a = (norm < fadeStartTime || fadeStartTime >= 1f) ? 1f : Mathf.Clamp01(1f - ((norm - fadeStartTime) / (1f - fadeStartTime)));// keep RGB, only touch A
 		}
 	}
 
-	// --------------------------------------------------------------------
-	// 2. Scale – evaluates the shared scale table (or a curve if you prefer)
-	// --------------------------------------------------------------------
 	public class ParticleBehaviourScale : ParticleBehaviour
 	{
 		public float initialRadius;
 		public ParticleController.ScaleTable scaleTable;
 
-		public override void Update(Particle particle, float deltaTime = 0f)
+		public override void Initialize(Particle p) => Update(p);
+
+		public override void Update(Particle p, float deltaTime = 0f)
 		{
-			float norm = 1f - particle.life / particle.duration;
-			particle.radius = initialRadius * scaleTable.Evaluate(norm);
+			float norm = 1f - p.life / p.duration;
+			p.radius = initialRadius * scaleTable.Evaluate(norm);
 		}
 	}
 
-	// --------------------------------------------------------------------
-	// Existing physics behaviour – unchanged (just for reference)
-	// --------------------------------------------------------------------
 	public class ParticlePhysicsBehaviour : ParticleBehaviour
 	{
 		public Vector3 velocity;
@@ -71,7 +59,7 @@ namespace MassiveHadronLtd
 
 	public class ParticleGroundCollisionBehaviour : ParticleBehaviour
 	{
-		public float restitution = 0.8f;
+		public float friction = 0.2f;
 		public float groundHeight = 0f;
 
 		private ParticlePhysicsBehaviour _physics;
@@ -93,10 +81,8 @@ namespace MassiveHadronLtd
 			if (p.position.y <= groundHeight + 0.001f && _physics.velocity.y < 0f)
 			{
 				p.position.y = groundHeight;
-				_physics.velocity.y = -_physics.velocity.y * restitution;
+				_physics.velocity.y = -_physics.velocity.y * (1f - friction);
 			}
-
-			// delta remains correct — collision correction is part of motion
 		}
 	}
 }

@@ -40,12 +40,12 @@ namespace MassiveHadronLtd
 			EditorGUILayout.PropertyField(serializedObject.FindProperty("enablePhysics"));
 			EditorGUI.BeginDisabledGroup(!controller.enablePhysics);
 			EditorGUILayout.PropertyField(serializedObject.FindProperty("gravity"));
-			EditorGUILayout.PropertyField(serializedObject.FindProperty("friction"));
+			EditorGUILayout.PropertyField(serializedObject.FindProperty("airFriction"));
 			EditorGUILayout.PropertyField(serializedObject.FindProperty("velocityBias"));
 			EditorGUILayout.PropertyField(serializedObject.FindProperty("velocityMagnitude"));
 			EditorGUILayout.PropertyField(serializedObject.FindProperty("enableCollision"));
 			EditorGUILayout.PropertyField(serializedObject.FindProperty("groundHeight"));
-			EditorGUILayout.PropertyField(serializedObject.FindProperty("bounceDamping"));
+			EditorGUILayout.PropertyField(serializedObject.FindProperty("bounceFriction"));
 			EditorGUI.EndDisabledGroup();
 
 			// ----- Floater Behaviour --------------------------------------
@@ -331,7 +331,7 @@ namespace MassiveHadronLtd
 			c.gravity = 15f;
 			c.velocityMagnitude = new Vector3(3f, 8f, 3f);
 			c.enableCollision = true;
-			c.bounceDamping = 0.7f;
+			c.bounceFriction = 0.7f;
 			c.enableFloater = true;
 			c.floaterDriftAmplitude = 2f;
 			c.floaterDriftFrequency = 0.25f;
