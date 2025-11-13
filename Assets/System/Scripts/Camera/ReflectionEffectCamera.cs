@@ -277,6 +277,7 @@ namespace MassiveHadronLtd
 				textureCamera.CopyFrom(mainCamera);
 				textureCamera.clearFlags = mainCamera.clearFlags;
 				textureCamera.cullingMask = mainCamera.cullingMask;
+				textureCamera.cullingMask &= ~(1 << LayerMask.NameToLayer("TransparentFX"));
 				textureCamera.targetTexture = renderTexture;
 				textureCamera.depth = mainCamera.depth - 1;
 				var data = obj.AddComponent<UniversalAdditionalCameraData>();

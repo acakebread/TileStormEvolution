@@ -155,6 +155,7 @@ namespace MassiveHadronLtd
 		public virtual void Render(Camera renderingCamera)
 		{
 			if (renderingCamera == null) return;
+			if ((renderingCamera.cullingMask & (1 << LayerMask.NameToLayer("TransparentFX"))) == 0) return;
 
 			if (!coloursUpdatedThisFrame)
 			{
