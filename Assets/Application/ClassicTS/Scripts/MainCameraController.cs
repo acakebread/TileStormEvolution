@@ -28,7 +28,6 @@ namespace ClassicTilestorm
 
 		public string PreviewModeToCameraMode(PreviewMode mode) => mode switch
 		{
-			//PreviewMode.Direct => CameraModeRegistry.Direct,
 			PreviewMode.Editor => CameraModeRegistry.Editor,
 			PreviewMode.Player => CameraModeRegistry.Follow,
 			PreviewMode.Cinema => UnityEngine.Random.Range(0, 7) switch { 0 or 1 or 2 => CameraModeRegistry.Orbit, _ => CameraModeRegistry.Path },
@@ -81,16 +80,18 @@ namespace ClassicTilestorm
 		protected override (Vector3 srcPos, Vector3 dstPos) GetInitialCameraPositions()
 		{
 			if (mapManager == null)
-				return (new Vector3(0f, 14f, -14f), Vector3.zero);//Classic TS defaults
+				return (new Vector3(0f, 14f, -14f), Vector3.zero);
 
 			var dstPos = new Vector3(mapManager.Width * 0.5f, 0f, mapManager.Height * 0.5f);
-			var srcPos = dstPos + new Vector3(0f, 14f, -14f);//Classic TS defaults
+			var srcPos = dstPos + new Vector3(0f, 14f, -14f);
 
-			if (mapManager.Waypoints?.Length > 0 && mapManager.Waypoints[0].bCamera)
+			if (mapManager.Waypoints?.Length > 0)
 			{
 				var firstWaypoint = mapManager.Waypoints[0];
-				if (firstWaypoint.vSrc != null) srcPos = firstWaypoint.vSrc.ToVector3();
-				if (firstWaypoint.vDst != null) dstPos = firstWaypoint.vDst.ToVector3();
+				if (firstWaypoint.vSrc != null && firstWaypoint.vSrc.IsValidVector())
+					srcPos = firstWaypoint.vSrc.ToVector3();
+				if (firstWaypoint.vDst != null && firstWaypoint.vDst.IsValidVector())
+					dstPos = firstWaypoint.vDst.ToVector3();
 			}
 
 			return (srcPos, dstPos);
@@ -154,24 +155,30 @@ namespace ClassicTilestorm
 			RegisterCamera(new GameCameraOrbit(camera) { iorigin = srcPos, itarget = dstPos, targetFn = GetTargetPosition() }, CameraModeRegistry.Orbit);
 			RegisterCamera(new GameCameraPath(camera) { iorigin = srcPos, itarget = dstPos, pointsFn = GetFocusPoints(), targetFn = GetTargetPosition() }, CameraModeRegistry.Path);
 
-			// Register modes using GameModes
 			GameModes.RegisterAllModes(RegisterMode);
 		}
 
 		private void OnWaypointReached(int waypointIndex)
 		{
-			if (eggbotController == null || mapManager == null || waypointIndex < 0 || waypointIndex >= mapManager.Waypoints.Length) return;
-			if (waypointIndex == 0 || waypointIndex == mapManager.Waypoints.Length - 1) return;
+			if (eggbotController == null || mapManager == null || waypointIndex < 0 || waypointIndex >= mapManager.Waypoints.Length)
+				return;
+
+			if (waypointIndex == 0 || waypointIndex == mapManager.Waypoints.Length - 1)
+				return;
 
 			var waypoint = mapManager.Waypoints[waypointIndex];
+
 			if (waypoint.vSrc == null || !waypoint.vSrc.IsValidVector())
 			{
 				SetCameraSystem(CameraModeRegistry.Follow, true);
 				return;
 			}
 
-			((GameCameraPreset)CameraSystems[CameraModeRegistry.Preset]).originFn = () => waypoint.vSrc.IsValidVector() ? waypoint.vSrc.ToVector3() : new Vector3(0f, 14f, -14f);
-			((GameCameraPreset)CameraSystems[CameraModeRegistry.Preset]).targetFn = () => waypoint.vDst != null && waypoint.vDst.IsValidVector() ? waypoint.vDst.ToVector3() : mapManager.TileWorldPosition(waypoint.nTile);
+			var presetCam = (GameCameraPreset)CameraSystems[CameraModeRegistry.Preset];
+			presetCam.originFn = () => waypoint.vSrc.IsValidVector() ? waypoint.vSrc.ToVector3() : new Vector3(0f, 14f, -14f);
+			presetCam.targetFn = () => waypoint.vDst != null && waypoint.vDst.IsValidVector()
+				? waypoint.vDst.ToVector3()
+				: mapManager.TileWorldPosition(waypoint.nTile);
 
 			SetCameraSystem(CameraModeRegistry.Preset, true);
 			OnWaypointReachedForGestures?.Invoke(true);

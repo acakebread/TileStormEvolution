@@ -146,7 +146,7 @@ namespace ClassicTilestorm
 
 			// Map name label
 			GUI.Label(new Rect(currentX, y, labelWidth, buttonHeight), "Map:");
-			currentX += labelWidth + spacing;
+			currentX += labelWidth;
 
 			GUI.Label(new Rect(currentX, y, buttonWidth, buttonHeight), PreviewSettings.LoadMapName);
 			currentX += buttonWidth + spacing;
