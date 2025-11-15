@@ -24,34 +24,30 @@ namespace ClassicTilestorm
 		public class Map
 		{
 			public string name;
-			public bool bLightTiles;
-
-			[JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
-			public string[] defs;
-
-			[JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
-			public Waypoint[] waypoints;
-
-			public int nWidth;
-			public int nHeight;
-			public int[] tiles;
-			public int[] mixed;
-
-			public Pickups Pickups;
+			//public bool bLightTiles;//not needed
 
 			[JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
 			public string szEggbotCostume;
 
 			[JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+			public string szMusic;
+
+			public Pickups Pickups;
+			public bool ShouldSerializePickups() => Pickups != null && Pickups.nPickupCount > 0;
+
+			[JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
 			public string szButtonID;
 
 			[JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
-			public string szMusic;
+			public Waypoint[] waypoints;
 
-			public bool ShouldSerializePickups()
-			{
-				return Pickups != null && Pickups.nPickupCount > 0;
-			}
+			[JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+			public string[] defs;
+
+			public int nWidth;
+			public int nHeight;
+			public int[] tiles;
+			public int[] mixed;
 		}
 
 		[Serializable]
@@ -89,6 +85,8 @@ namespace ClassicTilestorm
 
 			public Vector3 GetVSrc() => vSrc != null && vSrc.Length == 3 && IsValid(vSrc) ? new Vector3(vSrc[0], vSrc[1], vSrc[2]) : Vector3.zero;
 			public Vector3 GetVDst() => vDst != null && vDst.Length == 3 && IsValid(vDst) ? new Vector3(vDst[0], vDst[1], vDst[2]) : Vector3.zero;
+
+			public bool IsCamera() => IsValid(vSrc) && IsValid(vDst);
 
 			private bool IsValid(float[] v)
 			{
