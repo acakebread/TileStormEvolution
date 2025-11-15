@@ -88,10 +88,10 @@ namespace ClassicTilestorm
 			if (mapManager.Waypoints?.Length > 0)
 			{
 				var firstWaypoint = mapManager.Waypoints[0];
-				if (firstWaypoint.vSrc != null && firstWaypoint.vSrc.IsValidVector())
-					srcPos = firstWaypoint.vSrc.ToVector3();
-				if (firstWaypoint.vDst != null && firstWaypoint.vDst.IsValidVector())
-					dstPos = firstWaypoint.vDst.ToVector3();
+				if (firstWaypoint.vSrc != null && firstWaypoint.vSrc.Length == 3 && IsValidVector(firstWaypoint.vSrc))
+					srcPos = firstWaypoint.GetVSrc();
+				if (firstWaypoint.vDst != null && firstWaypoint.vDst.Length == 3 && IsValidVector(firstWaypoint.vDst))
+					dstPos = firstWaypoint.GetVDst();
 			}
 
 			return (srcPos, dstPos);
@@ -168,16 +168,16 @@ namespace ClassicTilestorm
 
 			var waypoint = mapManager.Waypoints[waypointIndex];
 
-			if (waypoint.vSrc == null || !waypoint.vSrc.IsValidVector())
+			if (waypoint.vSrc == null || waypoint.vSrc.Length != 3 || !IsValidVector(waypoint.vSrc))
 			{
 				SetCameraSystem(CameraModeRegistry.Follow, true);
 				return;
 			}
 
 			var presetCam = (GameCameraPreset)CameraSystems[CameraModeRegistry.Preset];
-			presetCam.originFn = () => waypoint.vSrc.IsValidVector() ? waypoint.vSrc.ToVector3() : new Vector3(0f, 14f, -14f);
-			presetCam.targetFn = () => waypoint.vDst != null && waypoint.vDst.IsValidVector()
-				? waypoint.vDst.ToVector3()
+			presetCam.originFn = () => waypoint.GetVSrc();
+			presetCam.targetFn = () => waypoint.vDst != null && waypoint.vDst.Length == 3 && IsValidVector(waypoint.vDst)
+				? waypoint.GetVDst()
 				: mapManager.TileWorldPosition(waypoint.nTile);
 
 			SetCameraSystem(CameraModeRegistry.Preset, true);
@@ -217,6 +217,15 @@ namespace ClassicTilestorm
 			eggbotController.OnWaypointReached -= OnWaypointReached;
 			eggbotController.OnPuzzleSolved -= HandlePuzzleSolved;
 			eggbotController.OnLevelCompleted -= OnLevelCompleted;
+		}
+
+		// Helper to validate vector arrays
+		private bool IsValidVector(float[] v)
+		{
+			return v != null && v.Length == 3 &&
+				   !float.IsNaN(v[0]) && !float.IsInfinity(v[0]) &&
+				   !float.IsNaN(v[1]) && !float.IsInfinity(v[1]) &&
+				   !float.IsNaN(v[2]) && !float.IsInfinity(v[2]);
 		}
 	}
 }
