@@ -184,15 +184,15 @@ namespace ClassicTilestorm
 			UpdateChanges();
 		}
 
-		public void UpdateChanges()
+		// ---------------------------------------------------------------------------
+		// Inside class MapManager (add this private method near the other helpers)
+		// ---------------------------------------------------------------------------
+		private DatabaseSerializer.DatabaseData CreateUpdatedDatabaseData()
 		{
 			if (currentMap == null)
-			{
-				Debug.LogError("Cannot update changes: map is null");
-				return;
-			}
+				throw new InvalidOperationException("Map is null – cannot create database data.");
 
-			// Update logical tile indices
+			// ---- 1. Sync logical tile indices back into the map --------------------
 			var logicalTiles = new int[Count];
 			for (int i = 0; i < Count; i++)
 			{
@@ -209,19 +209,38 @@ namespace ClassicTilestorm
 			currentMap.defs = mapDefs;
 			currentMap.waypoints = waypoints?.Select(w => w.ToSerialized()).ToArray(); // Sync waypoints
 
-			var updatedData = new DatabaseSerializer.DatabaseData
+			// ---- 2. Build the full database payload --------------------------------
+			return new DatabaseSerializer.DatabaseData
 			{
-				maps = DatabaseSerializer.Maps.Select(m => m.name == currentMap.name ? currentMap : m).ToArray(),
+				maps = DatabaseSerializer.Maps
+								.Select(m => m.name == currentMap.name ? currentMap : m)
+								.ToArray(),
 				themes = DatabaseSerializer.Themes.ToArray(),
 				tiledefs = DatabaseSerializer.TileDefs.ToArray(),
 				buttons = DatabaseSerializer.Buttons.ToArray(),
 				texture_set = DatabaseSerializer.TextureSets.ToArray()
 			};
+		}
 
+		// ---------------------------------------------------------------------------
+		// Replace the old UpdateChanges implementation
+		// ---------------------------------------------------------------------------
+		public void UpdateChanges()
+		{
+			if (currentMap == null)
+			{
+				Debug.LogError("Cannot update changes: map is null");
+				return;
+			}
+
+			var updatedData = CreateUpdatedDatabaseData();
 			DatabaseSerializer.UpdateDatabase(updatedData);
 			Debug.Log($"Map '{currentMap.name}' changes updated in memory (tiles + waypoints).");
 		}
 
+		// ---------------------------------------------------------------------------
+		// Replace the old SaveChanges implementation
+		// ---------------------------------------------------------------------------
 		public void SaveChanges()
 		{
 			if (currentMap == null)
@@ -230,19 +249,12 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			currentMap.defs = mapDefs;
-			currentMap.waypoints = waypoints?.Select(w => w.ToSerialized()).ToArray(); // Sync waypoints
-
-			DatabaseSerializer.SaveDatabase(new DatabaseSerializer.DatabaseData
-			{
-				maps = DatabaseSerializer.Maps.ToArray(),
-				themes = DatabaseSerializer.Themes.ToArray(),
-				tiledefs = DatabaseSerializer.TileDefs.ToArray(),
-				buttons = DatabaseSerializer.Buttons.ToArray(),
-				texture_set = DatabaseSerializer.TextureSets.ToArray()
-			});
+			var updatedData = CreateUpdatedDatabaseData();
+			DatabaseSerializer.SaveDatabase(updatedData);
 			Debug.Log("Database saved to disk with updated mapDefs, tiles, and waypoints");
 		}
+
+
 
 		public int GetTileDefIndexAt(int mapIndex)
 		{
