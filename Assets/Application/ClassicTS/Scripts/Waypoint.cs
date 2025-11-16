@@ -1,5 +1,5 @@
 ﻿// ---------------------------------------------------------------
-// Waypoint.cs   (runtime class – NO Newtonsoft, NO float[])
+// Waypoint.cs   (CORRECTED: with dedicated tile-space fields)
 // ---------------------------------------------------------------
 using UnityEngine;
 
@@ -11,32 +11,36 @@ namespace ClassicTilestorm
 		public string name;
 		public int nTile;
 
-		// ----------------------------------------------------------------
-		// Internal storage – nullable Vector3 (serialised as float[3] by DTO)
-		// ----------------------------------------------------------------
+		// Original world-space vectors (from JSON, with tile_origin applied on read)
 		private Vector3? vSrc;
 		private Vector3? vDst;
 
-		// ----------------------------------------------------------------
-		// Public read‑only access – returns zero if the vector is missing
-		// ----------------------------------------------------------------
+		// NEW: Tile-space vectors (computed in MapManager.SetupWaypoints)
+		private Vector3? vSrcTileSpace;
+		private Vector3? vDstTileSpace;
+
+		// --- ORIGINAL: World-space with tile_origin (legacy) ---
 		public Vector3 GetVSrc() => vSrc.HasValue && IsValid(vSrc.Value)
-			? vSrc.Value + MapManager.tile_origin//temporary adjustment until the values are adjusted to 'tile space'
+			? vSrc.Value + MapManager.tile_origin
 			: Vector3.zero;
 
 		public Vector3 GetVDst() => vDst.HasValue && IsValid(vDst.Value)
-			? vDst.Value + MapManager.tile_origin//temporary adjustment until the values are adjusted to 'tile space'
+			? vDst.Value + MapManager.tile_origin
 			: Vector3.zero;
 
-		// ----------------------------------------------------------------
-		// Camera waypoint test – both vectors must be present & valid
-		// ----------------------------------------------------------------
+		//// --- NEW: Tile-space (relative to tile center, no origin) ---
+		//public Vector3 GetVSrcTileSpace() => vSrcTileSpace.HasValue && IsValid(vSrcTileSpace.Value)
+		//	? vSrcTileSpace.Value
+		//	: Vector3.zero;
+
+		//public Vector3 GetVDstTileSpace() => vDstTileSpace.HasValue && IsValid(vDstTileSpace.Value)
+		//	? vDstTileSpace.Value
+		//	: Vector3.zero;
+
+		// Camera check uses original world vectors
 		public bool IsCamera() => vSrc.HasValue && vDst.HasValue &&
 								 IsValid(vSrc.Value) && IsValid(vDst.Value);
 
-		// ----------------------------------------------------------------
-		// Validation – NaN / Infinity guard
-		// ----------------------------------------------------------------
 		private static bool IsValid(Vector3 v)
 		{
 			return !float.IsNaN(v.x) && !float.IsInfinity(v.x) &&
@@ -44,9 +48,6 @@ namespace ClassicTilestorm
 				   !float.IsNaN(v.z) && !float.IsInfinity(v.z);
 		}
 
-		// ----------------------------------------------------------------
-		// Mutators – null = “no camera data”
-		// ----------------------------------------------------------------
 		public void SetVSrc(Vector3 vec)
 		{
 			vSrc = IsValid(vec) ? (Vector3?)vec : null;
@@ -57,9 +58,18 @@ namespace ClassicTilestorm
 			vDst = IsValid(vec) ? (Vector3?)vec : null;
 		}
 
-		// ----------------------------------------------------------------
-		// Just‑in‑time conversion from the serializer DTO
-		// ----------------------------------------------------------------
+		// --- NEW: Internal setter for tile-space (called by MapManager) ---
+		internal void SetVSrcTileSpace(Vector3 vec)
+		{
+			vSrcTileSpace = IsValid(vec) ? (Vector3?)vec : null;
+		}
+
+		internal void SetVDstTileSpace(Vector3 vec)
+		{
+			vDstTileSpace = IsValid(vec) ? (Vector3?)vec : null;
+		}
+
+		// --- Conversion from DTO ---
 		public static Waypoint FromSerialized(DatabaseSerializer.Waypoint ser)
 		{
 			if (ser == null) return null;
@@ -76,12 +86,11 @@ namespace ClassicTilestorm
 			if (ser.vDst != null && ser.vDst.Length == 3)
 				wp.vDst = new Vector3(ser.vDst[0], ser.vDst[1], ser.vDst[2]);
 
+			// Note: tile-space not set here — done in MapManager.SetupWaypoints
 			return wp;
 		}
 
-		// ----------------------------------------------------------------
-		// Just‑in‑time conversion back to the serializer DTO
-		// ----------------------------------------------------------------
+		// --- Back to DTO (only serializes original vSrc/vDst) ---
 		public DatabaseSerializer.Waypoint ToSerialized()
 		{
 			return new DatabaseSerializer.Waypoint
