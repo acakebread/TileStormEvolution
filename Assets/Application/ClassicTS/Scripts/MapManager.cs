@@ -27,13 +27,14 @@ namespace ClassicTilestorm
 
 	public class MapManager : MonoBehaviour, IMapManager
 	{
-		private DatabaseSerializer.Map currentMap;
 		private int[] indices;
 		private int[] offsets;
 		private Tile[] tiles;
 		private string[] mapDefs;
 		private string[] tileDefs;
 		private Waypoint[] waypoints;
+		private string mapName; // Replaces currentMap reference
+
 		public Waypoint[] Waypoints => waypoints;
 
 		public int[] Indices { get => indices; private set => indices = value; }
@@ -51,12 +52,18 @@ namespace ClassicTilestorm
 			mapDefs = null;
 			tileDefs = null;
 			waypoints = null;
-			currentMap = null;
+			mapName = null;
 		}
 
 		private void Initialise(DatabaseSerializer.Map map)
 		{
-			currentMap = map;
+			mapName = map?.name;
+			if (string.IsNullOrEmpty(mapName))
+			{
+				Debug.LogError("Map name is null or empty during initialization.");
+				return;
+			}
+
 			offsets = map?.mixed;
 			Width = map?.nWidth ?? 0;
 			Height = map?.nHeight ?? 0;
@@ -109,6 +116,55 @@ namespace ClassicTilestorm
 
 			InitializeWindController();
 			SetupWaypoints(map);
+
+			void SetupWaypoints(DatabaseSerializer.Map map)
+			{
+				if (map?.waypoints != null && map.waypoints.Length > 0)
+				{
+					waypoints = map.waypoints.Select(Waypoint.FromSerialized).ToArray();
+					Debug.Log($"Using {waypoints.Length} waypoints from map data: [{string.Join(", ", waypoints.Select(w => w.nTile))}]");
+					return;
+				}
+
+				var generated = new List<Waypoint>();
+				var startTile = GetStartTile();
+				var endTile = GetEndTile();
+
+				if (startTile == -1 || endTile == -1)
+				{
+					Debug.LogWarning("Cannot setup waypoints: missing start or end tile");
+					waypoints = generated.ToArray();
+					return;
+				}
+
+				generated.Add(new Waypoint { nTile = startTile });
+
+				var cur = startTile;
+				var dir = Navigation.NavToDest(this, cur, endTile);
+				if (dir != 0)
+				{
+					while (cur != endTile)
+					{
+						if (FindAdjacentConsole(cur) != -1)
+							generated.Add(new Waypoint { nTile = cur });
+
+						var next = Navigation.GetAdjacentTile(this, cur, dir);
+						if (next == -1 || next == startTile) break;
+
+						var nextTile = GetTile(next);
+						if (nextTile.Nav == 0) break;
+
+						dir = Navigation.CalculateNav(dir, nextTile.Nav);
+						if (dir == 0) break;
+
+						cur = next;
+					}
+				}
+
+				generated.Add(new Waypoint { nTile = endTile });
+				waypoints = generated.ToArray();
+				Debug.Log($"Generated {waypoints.Length} waypoints: [{string.Join(", ", waypoints.Select(w => w.nTile))}]");
+			}
 		}
 
 		public int GetOrAddMapDefIndex(string szType)
@@ -179,12 +235,16 @@ namespace ClassicTilestorm
 		}
 
 		// ---------------------------------------------------------------------------
-		// Create updated database payload (only place we write back to currentMap)
+		// Create updated database payload using mapName to locate the map
 		// ---------------------------------------------------------------------------
 		private DatabaseSerializer.DatabaseData CreateUpdatedDatabaseData()
 		{
-			if (currentMap == null)
-				throw new InvalidOperationException("Map is null – cannot create database data.");
+			if (string.IsNullOrEmpty(mapName))
+				throw new InvalidOperationException("Map name is null – cannot create database data.");
+
+			var targetMap = DatabaseSerializer.Maps.FirstOrDefault(m => m.name == mapName);
+			if (targetMap == null)
+				throw new InvalidOperationException($"Map with name '{mapName}' not found in database.");
 
 			// Sync logical tile indices back into the map
 			var logicalTiles = new int[Count];
@@ -199,15 +259,27 @@ namespace ClassicTilestorm
 				}
 			}
 
-			currentMap.tiles = logicalTiles;
-			currentMap.defs = mapDefs;
-			currentMap.waypoints = waypoints?.Select(w => w.ToSerialized()).ToArray();
+			// Clone and update the map
+			var updatedMap = new DatabaseSerializer.Map
+			{
+				name = targetMap.name,
+				szEggbotCostume = targetMap.szEggbotCostume,
+				szMusic = targetMap.szMusic,
+				Pickups = targetMap.Pickups,
+				szButtonID = targetMap.szButtonID,
+				waypoints = waypoints?.Select(w => w.ToSerialized()).ToArray(),
+				defs = mapDefs,
+				nWidth = Width,
+				nHeight = Height,
+				tiles = logicalTiles,
+				mixed = offsets
+			};
 
 			return new DatabaseSerializer.DatabaseData
 			{
 				maps = DatabaseSerializer.Maps
-								.Select(m => m.name == currentMap.name ? currentMap : m)
-								.ToArray(),
+					.Select(m => m.name == mapName ? updatedMap : m)
+					.ToArray(),
 				themes = DatabaseSerializer.Themes.ToArray(),
 				tiledefs = DatabaseSerializer.TileDefs.ToArray(),
 				buttons = DatabaseSerializer.Buttons.ToArray(),
@@ -217,22 +289,22 @@ namespace ClassicTilestorm
 
 		public void UpdateChanges()
 		{
-			if (currentMap == null)
+			if (string.IsNullOrEmpty(mapName))
 			{
-				Debug.LogError("Cannot update changes: map is null");
+				Debug.LogError("Cannot update changes: map name is null or empty");
 				return;
 			}
 
 			var updatedData = CreateUpdatedDatabaseData();
 			DatabaseSerializer.UpdateDatabase(updatedData);
-			Debug.Log($"Map '{currentMap.name}' changes updated in memory (tiles + waypoints).");
+			Debug.Log($"Map '{mapName}' changes updated in memory (tiles + waypoints).");
 		}
 
 		public void SaveChanges()
 		{
-			if (currentMap == null)
+			if (string.IsNullOrEmpty(mapName))
 			{
-				Debug.LogError("Cannot save changes: map is null");
+				Debug.LogError("Cannot save changes: map name is null or empty");
 				return;
 			}
 
@@ -253,55 +325,6 @@ namespace ClassicTilestorm
 		}
 
 		public string[] GetMapDefs() => mapDefs;
-
-		private void SetupWaypoints(DatabaseSerializer.Map map)
-		{
-			if (map?.waypoints != null && map.waypoints.Length > 0)
-			{
-				waypoints = map.waypoints.Select(Waypoint.FromSerialized).ToArray();
-				Debug.Log($"Using {waypoints.Length} waypoints from map data: [{string.Join(", ", waypoints.Select(w => w.nTile))}]");
-				return;
-			}
-
-			var generated = new List<Waypoint>();
-			var startTile = GetStartTile();
-			var endTile = GetEndTile();
-
-			if (startTile == -1 || endTile == -1)
-			{
-				Debug.LogWarning("Cannot setup waypoints: missing start or end tile");
-				waypoints = generated.ToArray();
-				return;
-			}
-
-			generated.Add(new Waypoint { nTile = startTile });
-
-			var cur = startTile;
-			var dir = Navigation.NavToDest(this, cur, endTile);
-			if (dir != 0)
-			{
-				while (cur != endTile)
-				{
-					if (FindAdjacentConsole(cur) != -1)
-						generated.Add(new Waypoint { nTile = cur });
-
-					var next = Navigation.GetAdjacentTile(this, cur, dir);
-					if (next == -1 || next == startTile) break;
-
-					var nextTile = GetTile(next);
-					if (nextTile.Nav == 0) break;
-
-					dir = Navigation.CalculateNav(dir, nextTile.Nav);
-					if (dir == 0) break;
-
-					cur = next;
-				}
-			}
-
-			generated.Add(new Waypoint { nTile = endTile });
-			waypoints = generated.ToArray();
-			Debug.Log($"Generated {waypoints.Length} waypoints: [{string.Join(", ", waypoints.Select(w => w.nTile))}]");
-		}
 
 		public int GetStartTile()
 		{
@@ -404,7 +427,7 @@ namespace ClassicTilestorm
 		public int WorldToMapIndex(Vector3 vec) => vec.x >= 0 && vec.x < Width && vec.z >= 0 && vec.z < Height ? (int)vec.z * Width + (int)vec.x : -1;
 #else
         public static readonly Vector3 tile_origin = Vector3.zero;
-        public Vector3 TileWorldPosition(int index) => new(index % Width, 0f, index /Nest Width);
+        public Vector3 TileWorldPosition(int index) => new(index % Width, 0f, index / Width);
         public int WorldToMapIndex(Vector3 vec) { vec += new Vector3(0.5f, 0f, 0.5f); return vec.x >= 0 && vec.x < Width && vec.z >= 0 && vec.z < Height ? (int)vec.z * Width + (int)vec.x : -1; }
 #endif
 
@@ -425,6 +448,12 @@ namespace ClassicTilestorm
 
 		public static MapManager Instantiate(DatabaseSerializer.Map map, Transform parent = null)
 		{
+			if (map == null || string.IsNullOrEmpty(map.name))
+			{
+				Debug.LogError("Cannot instantiate MapManager: map or map.name is null.");
+				return null;
+			}
+
 			var container = new GameObject($"Map: {map.name}");
 			if (null != parent) container.transform.SetParent(parent, false);
 			var mapManager = container.AddComponent<MapManager>();
