@@ -15,27 +15,14 @@ namespace ClassicTilestorm
 		private Vector3? vSrc;
 		private Vector3? vDst;
 
-		// NEW: Tile-space vectors (computed in MapManager.SetupWaypoints)
-		private Vector3? vSrcTileSpace;
-		private Vector3? vDstTileSpace;
-
 		// --- ORIGINAL: World-space with tile_origin (legacy) ---
 		public Vector3 GetVSrc() => vSrc.HasValue && IsValid(vSrc.Value)
-			? vSrc.Value + MapManager.tile_origin
+			? vSrc.Value
 			: Vector3.zero;
 
 		public Vector3 GetVDst() => vDst.HasValue && IsValid(vDst.Value)
-			? vDst.Value + MapManager.tile_origin
+			? vDst.Value
 			: Vector3.zero;
-
-		//// --- NEW: Tile-space (relative to tile center, no origin) ---
-		//public Vector3 GetVSrcTileSpace() => vSrcTileSpace.HasValue && IsValid(vSrcTileSpace.Value)
-		//	? vSrcTileSpace.Value
-		//	: Vector3.zero;
-
-		//public Vector3 GetVDstTileSpace() => vDstTileSpace.HasValue && IsValid(vDstTileSpace.Value)
-		//	? vDstTileSpace.Value
-		//	: Vector3.zero;
 
 		// Camera check uses original world vectors
 		public bool IsCamera() => vSrc.HasValue && vDst.HasValue &&
@@ -43,7 +30,8 @@ namespace ClassicTilestorm
 
 		private static bool IsValid(Vector3 v)
 		{
-			return !float.IsNaN(v.x) && !float.IsInfinity(v.x) &&
+			return null != v &&
+				   !float.IsNaN(v.x) && !float.IsInfinity(v.x) &&
 				   !float.IsNaN(v.y) && !float.IsInfinity(v.y) &&
 				   !float.IsNaN(v.z) && !float.IsInfinity(v.z);
 		}
@@ -56,17 +44,6 @@ namespace ClassicTilestorm
 		public void SetVDst(Vector3 vec)
 		{
 			vDst = IsValid(vec) ? (Vector3?)vec : null;
-		}
-
-		// --- NEW: Internal setter for tile-space (called by MapManager) ---
-		internal void SetVSrcTileSpace(Vector3 vec)
-		{
-			vSrcTileSpace = IsValid(vec) ? (Vector3?)vec : null;
-		}
-
-		internal void SetVDstTileSpace(Vector3 vec)
-		{
-			vDstTileSpace = IsValid(vec) ? (Vector3?)vec : null;
 		}
 
 		// --- Conversion from DTO ---

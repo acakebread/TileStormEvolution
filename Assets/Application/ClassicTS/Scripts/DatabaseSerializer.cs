@@ -236,7 +236,6 @@ namespace ClassicTilestorm
 						Debug.LogError("Bad tiledefs");
 						return null;
 					}
-					//MigrateWaypointsToTileSpace();
 
 					isLoaded = true;
 					VerifyData();
@@ -400,91 +399,5 @@ namespace ClassicTilestorm
 		{
 			Debug.Log("DatabaseSerializer: Verification complete.");
 		}
-
-		//// ---------------------------------------------------------------
-		//// DatabaseSerializer.cs   (add at the end of the file)
-		//// ---------------------------------------------------------------
-		//public static void MigrateWaypointsToTileSpace()
-		//{
-		//	//// 1. Load the current data (the same code that LoadAndGetData uses)
-		//	//var data = LoadAndGetData();
-		//	//if (data?.maps == null)
-		//	//{
-		//	//	Debug.LogError("No maps loaded – migration aborted.");
-		//	//	return;
-		//	//}
-
-		//	bool anyChanged = false;
-
-		//	foreach (var map in data.maps)
-		//	{
-		//		if (map.waypoints == null) continue;
-
-		//		// Helper – tile centre without tile_origin
-		//		Vector3 TilePos(int index) => new Vector3(index % map.nWidth, 0f, index / map.nWidth);
-
-		//		foreach (var wp in map.waypoints)
-		//		{
-		//			if (!wp.IsCamera()) continue;               // skip non-camera waypoints
-		//			var tilePos = TilePos(wp.nTile);
-
-		//			// ---- vSrc -------------------------------------------------
-		//			if (wp.vSrc != null && wp.vSrc.Length == 3)
-		//			{
-		//				var world = new Vector3(wp.vSrc[0], wp.vSrc[1], wp.vSrc[2]);
-
-		//				// Remove the old tile_origin that was baked in when the JSON was written
-		//				world -= MapManager.tile_origin;
-
-		//				// Convert to tile-space
-		//				var tileSpace = world - tilePos;
-
-		//				// Write back (rounded to 6 decimals to keep JSON tidy)
-		//				wp.vSrc = new[] {
-		//			Mathf.Round(tileSpace.x * 1e6f) / 1e6f,
-		//			Mathf.Round(tileSpace.y * 1e6f) / 1e6f,
-		//			Mathf.Round(tileSpace.z * 1e6f) / 1e6f
-		//		};
-		//				anyChanged = true;
-		//			}
-
-		//			// ---- vDst -------------------------------------------------
-		//			if (wp.vDst != null && wp.vDst.Length == 3)
-		//			{
-		//				var world = new Vector3(wp.vDst[0], wp.vDst[1], wp.vDst[2]);
-		//				world -= MapManager.tile_origin;
-		//				var tileSpace = world - tilePos;
-
-		//				wp.vDst = new[] {
-		//			Mathf.Round(tileSpace.x * 1e6f) / 1e6f,
-		//			Mathf.Round(tileSpace.y * 1e6f) / 1e6f,
-		//			Mathf.Round(tileSpace.z * 1e6f) / 1e6f
-		//		};
-		//				anyChanged = true;
-		//			}
-		//		}
-		//	}
-
-		//	if (!anyChanged)
-		//	{
-		//		Debug.Log("Migration: no waypoints needed adjustment.");
-		//		return;
-		//	}
-
-		//	//// 2. Write the migrated data back to disk
-		//	//var settings = new JsonSerializerSettings
-		//	//{
-		//	//	NullValueHandling = NullValueHandling.Ignore,
-		//	//	Formatting = Formatting.Indented          // pretty-print for easy inspection
-		//	//};
-		//	//string json = JsonConvert.SerializeObject(data, settings);
-
-		//	//string outDir = Path.Combine(Application.persistentDataPath, "Data");
-		//	//Directory.CreateDirectory(outDir);
-		//	//string outPath = Path.Combine(outDir, "database.json");
-		//	//File.WriteAllText(outPath, json);
-
-		//	//Debug.Log($"Migration complete – {data.maps.Sum(m => m.waypoints?.Length ?? 0)} waypoints updated. Saved to {outPath}");
-		//}
 	}
 }

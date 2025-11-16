@@ -256,37 +256,11 @@ namespace ClassicTilestorm
 
 		public string[] GetMapDefs() => mapDefs;
 
-		// --- Helper: tile position without tile_origin ---
-		public Vector3 TileWorldPositionNoOrigin(int index) => new Vector3(index % Width, 0f, index / Width);
-
 		private void SetupWaypoints(DatabaseSerializer.Map map)
 		{
 			if (map?.waypoints != null && map.waypoints.Length > 0)
 			{
 				waypoints = map.waypoints.Select(Waypoint.FromSerialized).ToArray();
-
-				foreach (var wp in waypoints)
-				{
-					if (!wp.IsCamera()) continue;
-
-					var tileWorldPos = TileWorldPositionNoOrigin(wp.nTile); // (x, 0, z) no origin
-
-					// Convert world-space vSrc/vDst → tile-relative
-					if (wp.GetVSrc() != Vector3.zero)
-					{
-						var worldSrc = wp.GetVSrc(); // includes tile_origin
-						var tileSpaceSrc = worldSrc - tileWorldPos;
-						wp.SetVSrcTileSpace(tileSpaceSrc);
-					}
-
-					if (wp.GetVDst() != Vector3.zero)
-					{
-						var worldDst = wp.GetVDst();
-						var tileSpaceDst = worldDst - tileWorldPos;
-						wp.SetVDstTileSpace(tileSpaceDst);
-					}
-				}
-
 				Debug.Log($"Using {waypoints.Length} waypoints from map data: [{string.Join(", ", waypoints.Select(w => w.nTile))}]");
 				return;
 			}
