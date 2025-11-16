@@ -22,27 +22,26 @@ namespace ClassicTilestorm
 		int GetStartTile();
 		int GetEndTile();
 		int FindAdjacentConsole(int nTile);
-
-		DatabaseSerializer.Waypoint[] Waypoints { get; }
+		Waypoint[] Waypoints { get; }
 	}
 
 	public class MapManager : MonoBehaviour, IMapManager
 	{
-		private DatabaseSerializer.Map currentMap;//this is going to completely replaced with a local copy of the map state
+		private DatabaseSerializer.Map currentMap;
 		private int[] indices;
 		private int[] offsets;
 		private Tile[] tiles;
-		private string[] mapDefs;//all unique defs
-		private string[] tileDefs;//map sized array of defs
-		private DatabaseSerializer.Waypoint[] waypoints;
-		public DatabaseSerializer.Waypoint[] Waypoints => waypoints;
+		private string[] mapDefs;
+		private string[] tileDefs;
+		private Waypoint[] waypoints;
+		public Waypoint[] Waypoints => waypoints;
 
 		public int[] Indices { get => indices; private set => indices = value; }
 		public Tile[] Tiles { get => tiles; private set => tiles = value; }
 
 		public int Width { get; private set; }
 		public int Height { get; private set; }
-		public int Count { get => Width * Height; }
+		public int Count => Width * Height;
 
 		private void Awake()
 		{
@@ -109,7 +108,6 @@ namespace ClassicTilestorm
 			Debug.AssertFormat(null != indices && null != offsets, "invalid map tile indices or offsets data");
 
 			InitializeWindController();
-
 			SetupWaypoints(map);
 		}
 
@@ -129,9 +127,7 @@ namespace ClassicTilestorm
 
 			mapDefs = mapDefs.Concat(new[] { szType }).ToArray();
 			Debug.Log($"Added new mapDef: szType={szType}, new index={mapDefs.Length - 1}");
-
 			UpdateChanges();
-
 			return mapDefs.Length - 1;
 		}
 
@@ -196,11 +192,11 @@ namespace ClassicTilestorm
 				return;
 			}
 
+			// Update logical tile indices
 			var logicalTiles = new int[Count];
 			for (int i = 0; i < Count; i++)
 			{
-				var szType = tileDefs[indices[i]];
-
+				var szType = tileDefs[i];
 				logicalTiles[i] = Array.IndexOf(mapDefs, szType);
 				if (logicalTiles[i] == -1)
 				{
@@ -211,6 +207,7 @@ namespace ClassicTilestorm
 
 			currentMap.tiles = logicalTiles;
 			currentMap.defs = mapDefs;
+			currentMap.waypoints = waypoints?.Select(w => w.ToSerialized()).ToArray(); // Sync waypoints
 
 			var updatedData = new DatabaseSerializer.DatabaseData
 			{
@@ -222,7 +219,7 @@ namespace ClassicTilestorm
 			};
 
 			DatabaseSerializer.UpdateDatabase(updatedData);
-			Debug.Log($"Map '{currentMap.name}' changes updated in memory.");
+			Debug.Log($"Map '{currentMap.name}' changes updated in memory (tiles + waypoints).");
 		}
 
 		public void SaveChanges()
@@ -234,6 +231,7 @@ namespace ClassicTilestorm
 			}
 
 			currentMap.defs = mapDefs;
+			currentMap.waypoints = waypoints?.Select(w => w.ToSerialized()).ToArray(); // Sync waypoints
 
 			DatabaseSerializer.SaveDatabase(new DatabaseSerializer.DatabaseData
 			{
@@ -243,7 +241,7 @@ namespace ClassicTilestorm
 				buttons = DatabaseSerializer.Buttons.ToArray(),
 				texture_set = DatabaseSerializer.TextureSets.ToArray()
 			});
-			Debug.Log("Database saved to disk with updated mapDefs and tile data");
+			Debug.Log("Database saved to disk with updated mapDefs, tiles, and waypoints");
 		}
 
 		public int GetTileDefIndexAt(int mapIndex)
@@ -260,57 +258,56 @@ namespace ClassicTilestorm
 
 		private void SetupWaypoints(DatabaseSerializer.Map map)
 		{
-			waypoints = map?.waypoints;
-			if (null != waypoints && waypoints.Length > 0)
+			if (map?.waypoints != null && map.waypoints.Length > 0)
 			{
+				waypoints = map.waypoints.Select(Waypoint.FromSerialized).ToArray();
 				Debug.Log($"Using {waypoints.Length} waypoints from map data: [{string.Join(", ", waypoints.Select(w => w.nTile))}]");
 				return;
 			}
 
-			var generatedWaypoints = new List<DatabaseSerializer.Waypoint>();
+			var generated = new List<Waypoint>();
 			var startTile = GetStartTile();
 			var endTile = GetEndTile();
 
-			if (-1 == startTile || -1 == endTile)
+			if (startTile == -1 || endTile == -1)
 			{
 				Debug.LogWarning("Cannot setup waypoints: missing start or end tile");
-				waypoints = generatedWaypoints.ToArray();
+				waypoints = generated.ToArray();
 				return;
 			}
 
-			generatedWaypoints.Add(new DatabaseSerializer.Waypoint { nTile = startTile });
+			generated.Add(new Waypoint { nTile = startTile });
 
-			var currentTile = startTile;
-			var currentDir = Navigation.NavToDest(this, currentTile, endTile);
-			if (0 != currentDir)
+			var cur = startTile;
+			var dir = Navigation.NavToDest(this, cur, endTile);
+			if (dir != 0)
 			{
-				while (currentTile != endTile)
+				while (cur != endTile)
 				{
-					if (FindAdjacentConsole(currentTile) != -1)
-						generatedWaypoints.Add(new DatabaseSerializer.Waypoint { nTile = currentTile });
+					if (FindAdjacentConsole(cur) != -1)
+						generated.Add(new Waypoint { nTile = cur });
 
-					var nextTileIndex = Navigation.GetAdjacentTile(this, currentTile, currentDir);
-					if (-1 == nextTileIndex || nextTileIndex == startTile) break;
+					var next = Navigation.GetAdjacentTile(this, cur, dir);
+					if (next == -1 || next == startTile) break;
 
-					var nextTile = GetTile(nextTileIndex);
-					if (0 == nextTile.Nav) break;
+					var nextTile = GetTile(next);
+					if (nextTile.Nav == 0) break;
 
-					currentDir = Navigation.CalculateNav(currentDir, nextTile.Nav);
-					if (0 == currentDir) break;
+					dir = Navigation.CalculateNav(dir, nextTile.Nav);
+					if (dir == 0) break;
 
-					currentTile = nextTileIndex;
+					cur = next;
 				}
 			}
 
-			generatedWaypoints.Add(new DatabaseSerializer.Waypoint { nTile = endTile });
-
-			waypoints = generatedWaypoints.ToArray();
+			generated.Add(new Waypoint { nTile = endTile });
+			waypoints = generated.ToArray();
 			Debug.Log($"Generated {waypoints.Length} waypoints: [{string.Join(", ", waypoints.Select(w => w.nTile))}]");
 		}
 
 		public int GetStartTile()
 		{
-			if (null != waypoints && 0 != waypoints.Length)
+			if (waypoints != null && waypoints.Length > 0)
 				return waypoints[0].nTile;
 
 			for (var i = 0; i < Count; ++i)
@@ -324,7 +321,7 @@ namespace ClassicTilestorm
 
 		public int GetEndTile()
 		{
-			if (null != waypoints && 0 != waypoints.Length)
+			if (waypoints != null && waypoints.Length > 0)
 				return waypoints.Last().nTile;
 
 			for (var i = 0; i < Count; ++i)
@@ -344,12 +341,10 @@ namespace ClassicTilestorm
 			foreach (var dirBit in Navigation.Directions)
 			{
 				var consoleTileIndex = Navigation.GetAdjacentTile(this, nTile, dirBit);
-				if (-1 == consoleTileIndex)
-					continue;
+				if (-1 == consoleTileIndex) continue;
 
 				var consoleTile = GetTile(consoleTileIndex);
-				if (true != consoleTile.IsConsole)
-					continue;
+				if (true != consoleTile.IsConsole) continue;
 
 				if (dirBit == Navigation.GetOppositeDirection(consoleTile.Nav))
 					return consoleTileIndex;
