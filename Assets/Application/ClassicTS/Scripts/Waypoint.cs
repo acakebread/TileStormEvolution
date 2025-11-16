@@ -1,64 +1,95 @@
+﻿// ---------------------------------------------------------------
+// Waypoint.cs   (runtime class – NO Newtonsoft, NO float[])
+// ---------------------------------------------------------------
 using UnityEngine;
 
 namespace ClassicTilestorm
 {
+	[System.Serializable]
 	public class Waypoint
 	{
 		public string name;
 		public int nTile;
-		private float[] vSrc;
-		private float[] vDst;
 
-		public Vector3 GetVSrc() => vSrc != null && vSrc.Length == 3 && IsValid(vSrc)
-			? new Vector3(vSrc[0], vSrc[1], vSrc[2])
+		// ----------------------------------------------------------------
+		// Internal storage – nullable Vector3 (serialised as float[3] by DTO)
+		// ----------------------------------------------------------------
+		private Vector3? vSrc;
+		private Vector3? vDst;
+
+		// ----------------------------------------------------------------
+		// Public read‑only access – returns zero if the vector is missing
+		// ----------------------------------------------------------------
+		public Vector3 GetVSrc() => vSrc.HasValue && IsValid(vSrc.Value)
+			? vSrc.Value + MapManager.tile_origin//temporary adjustment until the values are adjusted to 'tile space'
 			: Vector3.zero;
 
-		public Vector3 GetVDst() => vDst != null && vDst.Length == 3 && IsValid(vDst)
-			? new Vector3(vDst[0], vDst[1], vDst[2])
+		public Vector3 GetVDst() => vDst.HasValue && IsValid(vDst.Value)
+			? vDst.Value + MapManager.tile_origin//temporary adjustment until the values are adjusted to 'tile space'
 			: Vector3.zero;
 
-		public bool IsCamera() => IsValid(vSrc) && IsValid(vDst);
+		// ----------------------------------------------------------------
+		// Camera waypoint test – both vectors must be present & valid
+		// ----------------------------------------------------------------
+		public bool IsCamera() => vSrc.HasValue && vDst.HasValue &&
+								 IsValid(vSrc.Value) && IsValid(vDst.Value);
 
-		private static bool IsValid(float[] v)
+		// ----------------------------------------------------------------
+		// Validation – NaN / Infinity guard
+		// ----------------------------------------------------------------
+		private static bool IsValid(Vector3 v)
 		{
-			return v != null &&
-				   !float.IsNaN(v[0]) && !float.IsInfinity(v[0]) &&
-				   !float.IsNaN(v[1]) && !float.IsInfinity(v[1]) &&
-				   !float.IsNaN(v[2]) && !float.IsInfinity(v[2]);
+			return !float.IsNaN(v.x) && !float.IsInfinity(v.x) &&
+				   !float.IsNaN(v.y) && !float.IsInfinity(v.y) &&
+				   !float.IsNaN(v.z) && !float.IsInfinity(v.z);
 		}
 
+		// ----------------------------------------------------------------
+		// Mutators – null = “no camera data”
+		// ----------------------------------------------------------------
 		public void SetVSrc(Vector3 vec)
 		{
-			vSrc = vec == Vector3.zero ? null : new[] { vec.x, vec.y, vec.z };
+			vSrc = IsValid(vec) ? (Vector3?)vec : null;
 		}
 
 		public void SetVDst(Vector3 vec)
 		{
-			vDst = vec == Vector3.zero ? null : new[] { vec.x, vec.y, vec.z };
+			vDst = IsValid(vec) ? (Vector3?)vec : null;
 		}
 
-		// Conversion from serialized waypoint
-		public static Waypoint FromSerialized(DatabaseSerializer.Waypoint serialized)
+		// ----------------------------------------------------------------
+		// Just‑in‑time conversion from the serializer DTO
+		// ----------------------------------------------------------------
+		public static Waypoint FromSerialized(DatabaseSerializer.Waypoint ser)
 		{
-			if (serialized == null) return null;
-			return new Waypoint
+			if (ser == null) return null;
+
+			var wp = new Waypoint
 			{
-				name = serialized.name,
-				nTile = serialized.nTile,
-				vSrc = serialized.vSrc,
-				vDst = serialized.vDst
+				name = ser.name,
+				nTile = ser.nTile
 			};
+
+			if (ser.vSrc != null && ser.vSrc.Length == 3)
+				wp.vSrc = new Vector3(ser.vSrc[0], ser.vSrc[1], ser.vSrc[2]);
+
+			if (ser.vDst != null && ser.vDst.Length == 3)
+				wp.vDst = new Vector3(ser.vDst[0], ser.vDst[1], ser.vDst[2]);
+
+			return wp;
 		}
 
-		// Conversion to serialized waypoint
+		// ----------------------------------------------------------------
+		// Just‑in‑time conversion back to the serializer DTO
+		// ----------------------------------------------------------------
 		public DatabaseSerializer.Waypoint ToSerialized()
 		{
 			return new DatabaseSerializer.Waypoint
 			{
 				name = name,
 				nTile = nTile,
-				vSrc = vSrc,
-				vDst = vDst
+				vSrc = vSrc.HasValue ? new[] { vSrc.Value.x, vSrc.Value.y, vSrc.Value.z } : null,
+				vDst = vDst.HasValue ? new[] { vDst.Value.x, vDst.Value.y, vDst.Value.z } : null
 			};
 		}
 	}

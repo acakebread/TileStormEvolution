@@ -400,11 +400,17 @@ namespace ClassicTilestorm
 			}
 		}
 
-		private static readonly Vector3 tile_origin = new(0.5f, 0f, 0.5f);
+		//tile_origin adds on the centre of the default tile bounds so that the bounds line up nicely with the world space units or it compensates for the centre of the default tile bounds when casting a ray to return the correct index
 
+#if UNITY_EDITOR
+		public static readonly Vector3 tile_origin = new(0.5f, 0f, 0.5f);
 		public Vector3 TileWorldPosition(int index) => new Vector3(index % Width, 0f, index / Width) + tile_origin;
-
 		public int WorldToMapIndex(Vector3 vec) => vec.x >= 0 && vec.x < Width && vec.z >= 0 && vec.z < Height ? (int)vec.z * Width + (int)vec.x : -1;
+#else
+		public static readonly Vector3 tile_origin = Vector3.zero;
+		public Vector3 TileWorldPosition(int index) => new(index % Width, 0f, index / Width);
+		public int WorldToMapIndex(Vector3 vec) { vec += new Vector3(0.5f, 0f, 0.5f); return vec.x >= 0 && vec.x < Width && vec.z >= 0 && vec.z < Height ? (int)vec.z * Width + (int)vec.x : -1; }
+#endif
 
 		public Tile GetTile(int index)
 		{
