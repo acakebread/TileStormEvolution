@@ -55,7 +55,7 @@ namespace ClassicTilestorm
 				var mouseMoveDistance = Vector3.Distance(Input.mousePosition, mouseDownPos);
 				if (mouseMoveDistance < 5f) // Threshold: 5 pixels
 				{
-					var emptyTileDefIndex = mapManager.GetOrAddMapDefIndex("tile_empty", "Default");
+					var emptyTileDefIndex = mapManager.GetOrAddMapDefIndex("tile_empty");
 					if (emptyTileDefIndex >= 0)
 					{
 						selectedTileDefIndex = emptyTileDefIndex;
@@ -116,7 +116,7 @@ namespace ClassicTilestorm
 			if (mapIndex < 0 || mapIndex >= mapManager.Width * mapManager.Height || mapIndex != mouseDownMapIndex) return;
 
 			var selectedTileDef = DatabaseSerializer.TileDefs[tempSelectedTileDefGlobalIndex];
-			var selectedTileDefIndex = mapManager.GetOrAddMapDefIndex(selectedTileDef.szType, selectedTileDef.szTheme);
+			var selectedTileDefIndex = mapManager.GetOrAddMapDefIndex(selectedTileDef.szType);
 
 			var currentMapDefIndex = mapManager.GetTileDefIndexAt(mapIndex);
 			var tilesMatch = false;
@@ -124,7 +124,6 @@ namespace ClassicTilestorm
 			if (currentMapDefIndex >= 0 && currentMapDefIndex < mapDefs.Length)
 			{
 				var currentTileDef = mapDefs[currentMapDefIndex];
-				//tilesMatch = currentTileDef.szType == selectedTileDef.szType && currentTileDef.szTheme == selectedTileDef.szTheme;
 				tilesMatch = currentTileDef == selectedTileDef.szType;
 			}
 
@@ -134,7 +133,7 @@ namespace ClassicTilestorm
 				tempSelectedTileDefGlobalIndex = tileDefCycleList[cycleIndex];
 				PlaceholderEditorUI.Instance.SetSelectedTileDefGlobalIndex(tempSelectedTileDefGlobalIndex);
 				var newTileDef = DatabaseSerializer.TileDefs[tempSelectedTileDefGlobalIndex];
-				selectedTileDefIndex = mapManager.GetOrAddMapDefIndex(newTileDef.szType, newTileDef.szTheme);
+				selectedTileDefIndex = mapManager.GetOrAddMapDefIndex(newTileDef.szType);
 				this.selectedTileDefIndex = selectedTileDefIndex;
 				GeometryUtil.DestroyGhostTile();
 				GeometryUtil.UpdateGhostTile(camera, mapManager, newTileDef);

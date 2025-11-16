@@ -177,7 +177,7 @@ namespace ClassicTilestorm
 				var gameObject = GameObject.CreatePrimitive(PrimitiveType.Cube);
 				gameObject.GetComponent<Renderer>().material = urpMaterial;
 				gameObject.transform.SetParent(parent, false);
-				gameObject.transform.position = position + new Vector3(0f, -0.1f, 0f);
+				gameObject.transform.position = position;// + new Vector3(0f, -0.1f, 0f);//we can't do this because it gets overwritten when the level is loaded!! TileWorldPosition resets vertical offset
 				gameObject.transform.localScale = new Vector3(1f, 0.1f, 1f);
 				gameObject.name = "Fallback_Cube";
 				return gameObject;

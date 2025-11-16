@@ -248,7 +248,7 @@ namespace ClassicTilestorm
 					{
 						tempSelectedTileDefGlobalIndex = i;
 						var selectedTileDef = DatabaseSerializer.TileDefs[i];
-						int selectedMapDefIndex = mapManager.GetOrAddMapDefIndex(selectedTileDef.szType, selectedTileDef.szTheme);
+						int selectedMapDefIndex = mapManager.GetOrAddMapDefIndex(selectedTileDef.szType);
 						if (selectedMapDefIndex >= 0 && editorController.PaintMode != null)
 						{
 							editorController.PaintMode.SetTileDefIndex(selectedMapDefIndex, i);

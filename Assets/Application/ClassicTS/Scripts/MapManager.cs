@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Collections.Generic;
 using MassiveHadronLtd;
+using System;
 
 namespace ClassicTilestorm
 {
@@ -27,11 +28,12 @@ namespace ClassicTilestorm
 
 	public class MapManager : MonoBehaviour, IMapManager
 	{
+		private DatabaseSerializer.Map currentMap;//this is going to completely replaced with a local copy of the map state
 		private int[] indices;
 		private int[] offsets;
 		private Tile[] tiles;
-		private DatabaseSerializer.Map currentMap;
-		private string[] mapDefs;
+		private string[] mapDefs;//all unique defs
+		private string[] tileDefs;//map sized array of defs
 		private DatabaseSerializer.Waypoint[] waypoints;
 		public DatabaseSerializer.Waypoint[] Waypoints => waypoints;
 
@@ -48,6 +50,7 @@ namespace ClassicTilestorm
 			offsets = null;
 			tiles = null;
 			mapDefs = null;
+			tileDefs = null;
 			waypoints = null;
 			currentMap = null;
 		}
@@ -59,6 +62,7 @@ namespace ClassicTilestorm
 			Width = map?.nWidth ?? 0;
 			Height = map?.nHeight ?? 0;
 			mapDefs = map?.defs ?? new string[0];
+			tileDefs = new string[Width * Height];
 
 			void LoadTileData(int[] tileMap)
 			{
@@ -84,7 +88,7 @@ namespace ClassicTilestorm
 						Debug.LogWarning($"Null or empty szType at tileDefIndex {tileDefIndex} for tile {n}, using tile_empty");
 						szType = "tile_empty";
 					}
-
+					tileDefs[n] = szType;
 					tiles[n] = new Tile(szType);
 					if (szType == "tile_empty") continue;
 
@@ -109,7 +113,7 @@ namespace ClassicTilestorm
 			SetupWaypoints(map);
 		}
 
-		public int GetOrAddMapDefIndex(string szType, string szTheme)
+		public int GetOrAddMapDefIndex(string szType)
 		{
 			if (string.IsNullOrEmpty(szType))
 			{
@@ -123,17 +127,11 @@ namespace ClassicTilestorm
 					return i;
 			}
 
-			var tileDef = DatabaseSerializer.TileDefs.FirstOrDefault(td => td.szType == szType);
-			if (tileDef == null)
-			{
-				Debug.LogError($"TileDef not found for szType={szType}");
-				return -1;
-			}
-
 			mapDefs = mapDefs.Concat(new[] { szType }).ToArray();
 			Debug.Log($"Added new mapDef: szType={szType}, new index={mapDefs.Length - 1}");
 
-			currentMap.defs = mapDefs;
+			UpdateChanges();
+
 			return mapDefs.Length - 1;
 		}
 
@@ -164,8 +162,6 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			currentMap.tiles[index] = newTileDefIndex;
-
 			var szType = mapDefs[newTileDefIndex];
 			if (string.IsNullOrEmpty(szType))
 			{
@@ -174,10 +170,9 @@ namespace ClassicTilestorm
 			}
 
 			if (tiles[index].GameObject != null)
-			{
 				Destroy(tiles[index].GameObject);
-			}
 
+			tileDefs[index] = szType;
 			tiles[index] = new Tile(szType);
 			if (szType != "tile_empty")
 			{
@@ -189,6 +184,45 @@ namespace ClassicTilestorm
 				}
 				tiles[index].GameObject = GeometryManager.InstantiateTile(tileDef, transform, TileWorldPosition(index), tiles[index].Interactive);
 			}
+
+			UpdateChanges();
+		}
+
+		public void UpdateChanges()
+		{
+			if (currentMap == null)
+			{
+				Debug.LogError("Cannot update changes: map is null");
+				return;
+			}
+
+			var logicalTiles = new int[Count];
+			for (int i = 0; i < Count; i++)
+			{
+				var szType = tileDefs[indices[i]];
+
+				logicalTiles[i] = Array.IndexOf(mapDefs, szType);
+				if (logicalTiles[i] == -1)
+				{
+					Debug.LogWarning($"Tile type '{szType}' not in mapDefs, defaulting to 0");
+					logicalTiles[i] = 0;
+				}
+			}
+
+			currentMap.tiles = logicalTiles;
+			currentMap.defs = mapDefs;
+
+			var updatedData = new DatabaseSerializer.DatabaseData
+			{
+				maps = DatabaseSerializer.Maps.Select(m => m.name == currentMap.name ? currentMap : m).ToArray(),
+				themes = DatabaseSerializer.Themes.ToArray(),
+				tiledefs = DatabaseSerializer.TileDefs.ToArray(),
+				buttons = DatabaseSerializer.Buttons.ToArray(),
+				texture_set = DatabaseSerializer.TextureSets.ToArray()
+			};
+
+			DatabaseSerializer.UpdateDatabase(updatedData);
+			Debug.Log($"Map '{currentMap.name}' changes updated in memory.");
 		}
 
 		public void SaveChanges()
@@ -222,10 +256,7 @@ namespace ClassicTilestorm
 			return currentMap.tiles[mapIndex];
 		}
 
-		public string[] GetMapDefs()
-		{
-			return mapDefs;
-		}
+		public string[] GetMapDefs() => mapDefs;
 
 		private void SetupWaypoints(DatabaseSerializer.Map map)
 		{

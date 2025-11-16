@@ -24,26 +24,18 @@ namespace ClassicTilestorm
 		public class Map
 		{
 			public string name;
-			//public bool bLightTiles;//not needed
-
 			[JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
 			public string szEggbotCostume;
-
 			[JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
 			public string szMusic;
-
 			public Pickups Pickups;
 			public bool ShouldSerializePickups() => Pickups != null && Pickups.nPickupCount > 0;
-
 			[JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
 			public string szButtonID;
-
 			[JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
 			public Waypoint[] waypoints;
-
 			[JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
 			public string[] defs;
-
 			public int nWidth;
 			public int nHeight;
 			public int[] tiles;
@@ -76,30 +68,23 @@ namespace ClassicTilestorm
 		{
 			public string name;
 			public int nTile;
-
 			[JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
 			public float[] vSrc;
-
 			[JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
 			public float[] vDst;
-
 			public Vector3 GetVSrc() => vSrc != null && vSrc.Length == 3 && IsValid(vSrc) ? new Vector3(vSrc[0], vSrc[1], vSrc[2]) : Vector3.zero;
 			public Vector3 GetVDst() => vDst != null && vDst.Length == 3 && IsValid(vDst) ? new Vector3(vDst[0], vDst[1], vDst[2]) : Vector3.zero;
-
 			public bool IsCamera() => IsValid(vSrc) && IsValid(vDst);
-
 			private bool IsValid(float[] v)
 			{
 				return !float.IsNaN(v[0]) && !float.IsInfinity(v[0]) &&
 					   !float.IsNaN(v[1]) && !float.IsInfinity(v[1]) &&
 					   !float.IsNaN(v[2]) && !float.IsInfinity(v[2]);
 			}
-
 			public void SetVSrc(Vector3 vec)
 			{
 				vSrc = vec == Vector3.zero ? null : new[] { vec.x, vec.y, vec.z };
 			}
-
 			public void SetVDst(Vector3 vec)
 			{
 				vDst = vec == Vector3.zero ? null : new[] { vec.x, vec.y, vec.z };
@@ -353,6 +338,58 @@ namespace ClassicTilestorm
 				catch (Exception ex)
 				{
 					Debug.LogError($"Save failed: {ex.Message}\n{ex.StackTrace}");
+				}
+			}
+		}
+
+		// NEW: Update in-memory database without writing to disk
+		public static void UpdateDatabase(DatabaseData newData)
+		{
+			if (newData == null) { Debug.LogError("Cannot update with null data."); return; }
+
+			lock (lockObject)
+			{
+				if (databaseJsonFile == null)
+				{
+					Debug.LogError("Not initialized.");
+					return;
+				}
+
+				try
+				{
+					foreach (var map in newData.maps)
+					{
+						if (map == null || map.defs == null || map.defs.Any(string.IsNullOrEmpty) ||
+							map.nWidth <= 0 || map.nHeight <= 0 ||
+							map.tiles == null || map.tiles.Length != map.nWidth * map.nHeight ||
+							map.mixed == null || map.mixed.Length != map.nWidth * map.nHeight)
+						{
+							Debug.LogError("Invalid map data for update.");
+							return;
+						}
+
+						if (map.waypoints != null)
+						{
+							foreach (var wp in map.waypoints)
+							{
+								if (wp.vSrc != null && (wp.vSrc[0] == 0 && wp.vSrc[1] == 0 && wp.vSrc[2] == 0))
+									wp.vSrc = null;
+								if (wp.vDst != null && (wp.vDst[0] == 0 && wp.vDst[1] == 0 && wp.vDst[2] == 0))
+									wp.vDst = null;
+							}
+						}
+					}
+
+					data = newData;
+					isLoaded = true;
+					VerifyData();
+					OnDatabaseLoaded?.Invoke();
+
+					Debug.Log("Database updated in memory (not saved to disk).");
+				}
+				catch (Exception ex)
+				{
+					Debug.LogError($"Update failed: {ex.Message}\n{ex.StackTrace}");
 				}
 			}
 		}
