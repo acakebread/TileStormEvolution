@@ -61,17 +61,17 @@ namespace ClassicTilestorm
 			Width = map?.nWidth ?? 0;
 			Height = map?.nHeight ?? 0;
 			mapDefs = map?.defs ?? new string[0];
-			tileDefs = new string[Width * Height];
+			tileDefs = new string[Count];
 
 			void LoadTileData(int[] tileMap)
 			{
-				if (tileMap == null || tileMap.Length != Width * Height)
+				if (tileMap == null || tileMap.Length != Count)
 				{
-					Debug.LogError($"Invalid tiles data! length={(tileMap?.Length ?? -1)}, expected={Width * Height}");
+					Debug.LogError($"Invalid tiles data! length={(tileMap?.Length ?? -1)}, expected={Count}");
 					return;
 				}
 
-				tiles = new Tile[Width * Height];
+				tiles = new Tile[Count];
 				for (var n = 0; n < tileMap.Length; ++n)
 				{
 					var tileDefIndex = tileMap[n];
@@ -139,16 +139,10 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			if (currentMap == null || currentMap.tiles == null)
-			{
-				Debug.LogError("Map or tiles array is null");
-				return;
-			}
-
 			int index = z * Width + x;
-			if (index >= currentMap.tiles.Length)
+			if (index >= Count)
 			{
-				Debug.LogError($"Calculated index {index} is out of bounds for tiles array (length={currentMap.tiles.Length})");
+				Debug.LogError($"Calculated index {index} is out of bounds for tiles array (Count={Count})");
 				return;
 			}
 
@@ -185,14 +179,14 @@ namespace ClassicTilestorm
 		}
 
 		// ---------------------------------------------------------------------------
-		// Inside class MapManager (add this private method near the other helpers)
+		// Create updated database payload (only place we write back to currentMap)
 		// ---------------------------------------------------------------------------
 		private DatabaseSerializer.DatabaseData CreateUpdatedDatabaseData()
 		{
 			if (currentMap == null)
 				throw new InvalidOperationException("Map is null – cannot create database data.");
 
-			// ---- 1. Sync logical tile indices back into the map --------------------
+			// Sync logical tile indices back into the map
 			var logicalTiles = new int[Count];
 			for (int i = 0; i < Count; i++)
 			{
@@ -207,9 +201,8 @@ namespace ClassicTilestorm
 
 			currentMap.tiles = logicalTiles;
 			currentMap.defs = mapDefs;
-			currentMap.waypoints = waypoints?.Select(w => w.ToSerialized()).ToArray(); // Sync waypoints
+			currentMap.waypoints = waypoints?.Select(w => w.ToSerialized()).ToArray();
 
-			// ---- 2. Build the full database payload --------------------------------
 			return new DatabaseSerializer.DatabaseData
 			{
 				maps = DatabaseSerializer.Maps
@@ -222,9 +215,6 @@ namespace ClassicTilestorm
 			};
 		}
 
-		// ---------------------------------------------------------------------------
-		// Replace the old UpdateChanges implementation
-		// ---------------------------------------------------------------------------
 		public void UpdateChanges()
 		{
 			if (currentMap == null)
@@ -238,9 +228,6 @@ namespace ClassicTilestorm
 			Debug.Log($"Map '{currentMap.name}' changes updated in memory (tiles + waypoints).");
 		}
 
-		// ---------------------------------------------------------------------------
-		// Replace the old SaveChanges implementation
-		// ---------------------------------------------------------------------------
 		public void SaveChanges()
 		{
 			if (currentMap == null)
@@ -254,16 +241,15 @@ namespace ClassicTilestorm
 			Debug.Log("Database saved to disk with updated mapDefs, tiles, and waypoints");
 		}
 
-
-
 		public int GetTileDefIndexAt(int mapIndex)
 		{
-			if (mapIndex < 0 || mapIndex >= currentMap.tiles.Length)
+			if (mapIndex < 0 || mapIndex >= Count)
 			{
-				Debug.LogWarning($"Invalid mapIndex={mapIndex}, must be between 0 and {currentMap.tiles.Length - 1}");
+				Debug.LogWarning($"Invalid mapIndex={mapIndex}, must be between 0 and {Count - 1}");
 				return -1;
 			}
-			return currentMap.tiles[mapIndex];
+			var szType = tileDefs[mapIndex];
+			return Array.IndexOf(mapDefs, szType);
 		}
 
 		public string[] GetMapDefs() => mapDefs;
@@ -412,16 +398,14 @@ namespace ClassicTilestorm
 			}
 		}
 
-		//tile_origin adds on the centre of the default tile bounds so that the bounds line up nicely with the world space units or it compensates for the centre of the default tile bounds when casting a ray to return the correct index
-
 #if UNITY_EDITOR
 		public static readonly Vector3 tile_origin = new(0.5f, 0f, 0.5f);
 		public Vector3 TileWorldPosition(int index) => new Vector3(index % Width, 0f, index / Width) + tile_origin;
 		public int WorldToMapIndex(Vector3 vec) => vec.x >= 0 && vec.x < Width && vec.z >= 0 && vec.z < Height ? (int)vec.z * Width + (int)vec.x : -1;
 #else
-		public static readonly Vector3 tile_origin = Vector3.zero;
-		public Vector3 TileWorldPosition(int index) => new(index % Width, 0f, index / Width);
-		public int WorldToMapIndex(Vector3 vec) { vec += new Vector3(0.5f, 0f, 0.5f); return vec.x >= 0 && vec.x < Width && vec.z >= 0 && vec.z < Height ? (int)vec.z * Width + (int)vec.x : -1; }
+        public static readonly Vector3 tile_origin = Vector3.zero;
+        public Vector3 TileWorldPosition(int index) => new(index % Width, 0f, index /Nest Width);
+        public int WorldToMapIndex(Vector3 vec) { vec += new Vector3(0.5f, 0f, 0.5f); return vec.x >= 0 && vec.x < Width && vec.z >= 0 && vec.z < Height ? (int)vec.z * Width + (int)vec.x : -1; }
 #endif
 
 		public Tile GetTile(int index)

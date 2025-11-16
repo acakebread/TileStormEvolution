@@ -294,47 +294,23 @@ namespace ClassicTilestorm
 
 				try
 				{
-					foreach (var map in newData.maps)
-					{
-						if (map == null || map.defs == null || map.defs.Any(string.IsNullOrEmpty) ||
-							map.nWidth <= 0 || map.nHeight <= 0 ||
-							map.tiles == null || map.tiles.Length != map.nWidth * map.nHeight ||
-							map.mixed == null || map.mixed.Length != map.nWidth * map.nHeight)
-						{
-							Debug.LogError("Invalid map data for save.");
-							return;
-						}
+					// Reuse UpdateDatabase logic for validation and in-memory update
+					UpdateDatabase(newData);
 
-						if (map.waypoints != null)
-						{
-							foreach (var wp in map.waypoints)
-							{
-								if (wp.vSrc != null && (wp.vSrc[0] == 0 && wp.vSrc[1] == 0 && wp.vSrc[2] == 0))
-									wp.vSrc = null;
-								if (wp.vDst != null && (wp.vDst[0] == 0 && wp.vDst[1] == 0 && wp.vDst[2] == 0))
-									wp.vDst = null;
-							}
-						}
-					}
-
+					// Now serialize and write to disk
 					var settings = new JsonSerializerSettings
 					{
 						NullValueHandling = NullValueHandling.Ignore,
 						Formatting = Formatting.None
 					};
 
-					string jsonContent = JsonConvert.SerializeObject(newData, settings);
+					string jsonContent = JsonConvert.SerializeObject(data, settings); // 'data' is now updated
 
 					string outputDir = Path.Combine(Application.persistentDataPath, "Data");
 					Directory.CreateDirectory(outputDir);
 					string outputPath = Path.Combine(outputDir, "database.json");
 					File.WriteAllText(outputPath, jsonContent);
 					Debug.Log($"Saved to {outputPath}");
-
-					data = newData;
-					isLoaded = true;
-					VerifyData();
-					OnDatabaseLoaded?.Invoke();
 				}
 				catch (Exception ex)
 				{
@@ -343,7 +319,7 @@ namespace ClassicTilestorm
 			}
 		}
 
-		// NEW: Update in-memory database without writing to disk
+		// NEW: Replaces old UpdateDatabase — now just validates and updates in-memory
 		public static void UpdateDatabase(DatabaseData newData)
 		{
 			if (newData == null) { Debug.LogError("Cannot update with null data."); return; }
@@ -358,34 +334,7 @@ namespace ClassicTilestorm
 
 				try
 				{
-					foreach (var map in newData.maps)
-					{
-						if (map == null || map.defs == null || map.defs.Any(string.IsNullOrEmpty) ||
-							map.nWidth <= 0 || map.nHeight <= 0 ||
-							map.tiles == null || map.tiles.Length != map.nWidth * map.nHeight ||
-							map.mixed == null || map.mixed.Length != map.nWidth * map.nHeight)
-						{
-							Debug.LogError("Invalid map data for update.");
-							return;
-						}
-
-						if (map.waypoints != null)
-						{
-							foreach (var wp in map.waypoints)
-							{
-								if (wp.vSrc != null && (wp.vSrc[0] == 0 && wp.vSrc[1] == 0 && wp.vSrc[2] == 0))
-									wp.vSrc = null;
-								if (wp.vDst != null && (wp.vDst[0] == 0 && wp.vDst[1] == 0 && wp.vDst[2] == 0))
-									wp.vDst = null;
-							}
-						}
-					}
-
-					data = newData;
-					isLoaded = true;
-					VerifyData();
-					OnDatabaseLoaded?.Invoke();
-
+					UpdateDataInternal(newData);
 					Debug.Log("Database updated in memory (not saved to disk).");
 				}
 				catch (Exception ex)
@@ -393,6 +342,39 @@ namespace ClassicTilestorm
 					Debug.LogError($"Update failed: {ex.Message}\n{ex.StackTrace}");
 				}
 			}
+		}
+
+		// PRIVATE: Common logic used by both SaveDatabase and UpdateDatabase
+		private static void UpdateDataInternal(DatabaseData newData)
+		{
+			foreach (var map in newData.maps)
+			{
+				if (map == null || map.defs == null || map.defs.Any(string.IsNullOrEmpty) ||
+					map.nWidth <= 0 || map.nHeight <= 0 ||
+					map.tiles == null || map.tiles.Length != map.nWidth * map.nHeight ||
+					map.mixed == null || map.mixed.Length != map.nWidth * map.nHeight)
+				{
+					throw new InvalidOperationException("Invalid map data.");
+				}
+
+				if (map.waypoints != null)
+				{
+					foreach (var wp in map.waypoints)
+					{
+						if (wp.vSrc != null && wp.vSrc.Length == 3 &&
+							wp.vSrc[0] == 0 && wp.vSrc[1] == 0 && wp.vSrc[2] == 0)
+							wp.vSrc = null;
+						if (wp.vDst != null && wp.vDst.Length == 3 &&
+							wp.vDst[0] == 0 && wp.vDst[1] == 0 && wp.vDst[2] == 0)
+							wp.vDst = null;
+					}
+				}
+			}
+
+			data = newData;
+			isLoaded = true;
+			VerifyData();
+			OnDatabaseLoaded?.Invoke();
 		}
 
 		private static void VerifyData()
