@@ -121,7 +121,7 @@ namespace ClassicTilestorm
 			{
 				if (map?.waypoints != null && map.waypoints.Length > 0)
 				{
-					waypoints = map.waypoints.Select(Waypoint.FromSerialized).ToArray();
+					waypoints = map.waypoints;
 					Debug.Log($"Using {waypoints.Length} waypoints from map data: [{string.Join(", ", waypoints.Select(w => w.nTile))}]");
 					return;
 				}
@@ -267,7 +267,7 @@ namespace ClassicTilestorm
 				szMusic = targetMap.szMusic,
 				Pickups = targetMap.Pickups,
 				szButtonID = targetMap.szButtonID,
-				waypoints = waypoints?.Select(w => w.ToSerialized()).ToArray(),
+				waypoints = waypoints,
 				defs = mapDefs,
 				nWidth = Width,
 				nHeight = Height,

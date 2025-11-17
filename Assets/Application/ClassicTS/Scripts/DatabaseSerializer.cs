@@ -33,7 +33,7 @@ namespace ClassicTilestorm
 			[JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
 			public string szButtonID;
 			[JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
-			public Waypoint[] waypoints;
+			public Waypoint[] waypoints;   // ← Direct use of the real Waypoint
 			[JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
 			public string[] defs;
 			public int nWidth;
@@ -61,35 +61,6 @@ namespace ClassicTilestorm
 			public bool bSouth;
 			public bool bEast;
 			public bool bWest;
-		}
-
-		[Serializable]
-		public class Waypoint
-		{
-			public string name;
-			public int nTile;
-			[JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
-			public float[] vSrc;
-			[JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
-			public float[] vDst;
-			public Vector3 GetVSrc() => vSrc != null && vSrc.Length == 3 && IsValid(vSrc) ? new Vector3(vSrc[0], vSrc[1], vSrc[2]) : Vector3.zero;
-			public Vector3 GetVDst() => vDst != null && vDst.Length == 3 && IsValid(vDst) ? new Vector3(vDst[0], vDst[1], vDst[2]) : Vector3.zero;
-			public bool IsCamera() => IsValid(vSrc) && IsValid(vDst);
-			private bool IsValid(float[] v)
-			{
-				return null != v &&
-					   !float.IsNaN(v[0]) && !float.IsInfinity(v[0]) &&
-					   !float.IsNaN(v[1]) && !float.IsInfinity(v[1]) &&
-					   !float.IsNaN(v[2]) && !float.IsInfinity(v[2]);
-			}
-			public void SetVSrc(Vector3 vec)
-			{
-				vSrc = vec == Vector3.zero ? null : new[] { vec.x, vec.y, vec.z };
-			}
-			public void SetVDst(Vector3 vec)
-			{
-				vDst = vec == Vector3.zero ? null : new[] { vec.x, vec.y, vec.z };
-			}
 		}
 
 		[Serializable]
@@ -215,20 +186,6 @@ namespace ClassicTilestorm
 						if (map.nWidth <= 0 || map.nHeight <= 0) { Debug.LogError("Bad size"); return null; }
 						if (map.tiles == null || map.tiles.Length != map.nWidth * map.nHeight) { Debug.LogError("Bad tiles"); return null; }
 						if (map.mixed == null || map.mixed.Length != map.nWidth * map.nHeight) { Debug.LogError("Bad mixed"); return null; }
-
-						if (map.waypoints != null)
-						{
-							foreach (var wp in map.waypoints)
-							{
-								wp.vSrc = ParseVector(root, map, wp, "vSrc");
-								wp.vDst = ParseVector(root, map, wp, "vDst");
-
-								if (wp.vSrc != null && (wp.vSrc[0] == 0 && wp.vSrc[1] == 0 && wp.vSrc[2] == 0))
-									wp.vSrc = null;
-								if (wp.vDst != null && (wp.vDst[0] == 0 && wp.vDst[1] == 0 && wp.vDst[2] == 0))
-									wp.vDst = null;
-							}
-						}
 					}
 
 					if (data.tiledefs == null || data.tiledefs.Any(td => string.IsNullOrEmpty(td?.szType)))
@@ -252,34 +209,6 @@ namespace ClassicTilestorm
 			}
 		}
 
-		private static float[] ParseVector(JObject root, Map map, Waypoint wp, string field)
-		{
-			var mapToken = root["maps"]?.Children<JObject>().FirstOrDefault(m => m["name"]?.ToString() == map.name);
-			if (mapToken == null) return null;
-
-			var wpToken = mapToken["waypoints"]?.Children<JObject>().FirstOrDefault(w => w["name"]?.ToString() == wp.name);
-			if (wpToken == null) return null;
-
-			var vecToken = wpToken[field];
-			if (vecToken == null || vecToken.Type == JTokenType.Null) return null;
-
-			if (vecToken.Type == JTokenType.Array)
-			{
-				var arr = (JArray)vecToken;
-				if (arr.Count != 3) { Debug.LogWarning($"Invalid vector array for {field} in {wp.name}: expected 3 values."); return null; }
-				return new float[] { arr[0].Value<float>(), arr[1].Value<float>(), arr[2].Value<float>() };
-			}
-
-			if (vecToken.Type == JTokenType.Object)
-			{
-				Debug.LogError($"Legacy vector format {{fX,fY,fZ}} detected in {wp.name}.{field}. This is no longer supported. Convert your data to [x,y,z].");
-				return null;
-			}
-
-			Debug.LogWarning($"Invalid vector format for {field} in {wp.name}: {vecToken.Type}");
-			return null;
-		}
-
 		public static void SaveDatabase(DatabaseData newData)
 		{
 			if (newData == null) { Debug.LogError("Cannot save null data."); return; }
@@ -294,17 +223,15 @@ namespace ClassicTilestorm
 
 				try
 				{
-					// Reuse UpdateDatabase logic for validation and in-memory update
-					UpdateDatabase(newData);
+					UpdateDataInternal(newData);
 
-					// Now serialize and write to disk
 					var settings = new JsonSerializerSettings
 					{
 						NullValueHandling = NullValueHandling.Ignore,
 						Formatting = Formatting.None
 					};
 
-					string jsonContent = JsonConvert.SerializeObject(data, settings); // 'data' is now updated
+					string jsonContent = JsonConvert.SerializeObject(data, settings);
 
 					string outputDir = Path.Combine(Application.persistentDataPath, "Data");
 					Directory.CreateDirectory(outputDir);
@@ -319,7 +246,6 @@ namespace ClassicTilestorm
 			}
 		}
 
-		// NEW: Replaces old UpdateDatabase — now just validates and updates in-memory
 		public static void UpdateDatabase(DatabaseData newData)
 		{
 			if (newData == null) { Debug.LogError("Cannot update with null data."); return; }
@@ -344,7 +270,6 @@ namespace ClassicTilestorm
 			}
 		}
 
-		// PRIVATE: Common logic used by both SaveDatabase and UpdateDatabase
 		private static void UpdateDataInternal(DatabaseData newData)
 		{
 			foreach (var map in newData.maps)
@@ -355,19 +280,6 @@ namespace ClassicTilestorm
 					map.mixed == null || map.mixed.Length != map.nWidth * map.nHeight)
 				{
 					throw new InvalidOperationException("Invalid map data.");
-				}
-
-				if (map.waypoints != null)
-				{
-					foreach (var wp in map.waypoints)
-					{
-						if (wp.vSrc != null && wp.vSrc.Length == 3 &&
-							wp.vSrc[0] == 0 && wp.vSrc[1] == 0 && wp.vSrc[2] == 0)
-							wp.vSrc = null;
-						if (wp.vDst != null && wp.vDst.Length == 3 &&
-							wp.vDst[0] == 0 && wp.vDst[1] == 0 && wp.vDst[2] == 0)
-							wp.vDst = null;
-					}
 				}
 			}
 

@@ -1,7 +1,8 @@
 ﻿// ---------------------------------------------------------------
-// Waypoint.cs   (CORRECTED: with dedicated tile-space fields)
+// Waypoint.cs   – THE ONE AND ONLY Waypoint class in the entire project
 // ---------------------------------------------------------------
 using UnityEngine;
+using Newtonsoft.Json;
 
 namespace ClassicTilestorm
 {
@@ -11,72 +12,42 @@ namespace ClassicTilestorm
 		public string name;
 		public int nTile;
 
-		// Original world-space vectors (from JSON, with tile_origin applied on read)
-		private Vector3? vSrc;
-		private Vector3? vDst;
+		[JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+		public float[] vSrc;
 
-		// --- ORIGINAL: World-space with tile_origin (legacy) ---
-		public Vector3 GetVSrc() => vSrc.HasValue && IsValid(vSrc.Value)
-			? vSrc.Value
+		[JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+		public float[] vDst;
+
+		// --------------------------------------------------------------------
+		// Runtime helpers (exactly the same as before)
+		// --------------------------------------------------------------------
+		public Vector3 GetVSrc() => vSrc != null && vSrc.Length == 3 && IsValid(vSrc)
+			? new Vector3(vSrc[0], vSrc[1], vSrc[2])
 			: Vector3.zero;
 
-		public Vector3 GetVDst() => vDst.HasValue && IsValid(vDst.Value)
-			? vDst.Value
+		public Vector3 GetVDst() => vDst != null && vDst.Length == 3 && IsValid(vDst)
+			? new Vector3(vDst[0], vDst[1], vDst[2])
 			: Vector3.zero;
 
-		// Camera check uses original world vectors
-		public bool IsCamera() => vSrc.HasValue && vDst.HasValue &&
-								 IsValid(vSrc.Value) && IsValid(vDst.Value);
+		public bool IsCamera() => vSrc != null && vSrc.Length == 3 && IsValid(vSrc) &&
+								  vDst != null && vDst.Length == 3 && IsValid(vDst);
 
-		private static bool IsValid(Vector3 v)
+		private static bool IsValid(float[] v)
 		{
-			return null != v &&
-				   !float.IsNaN(v.x) && !float.IsInfinity(v.x) &&
-				   !float.IsNaN(v.y) && !float.IsInfinity(v.y) &&
-				   !float.IsNaN(v.z) && !float.IsInfinity(v.z);
+			return v != null &&
+				   !float.IsNaN(v[0]) && !float.IsInfinity(v[0]) &&
+				   !float.IsNaN(v[1]) && !float.IsInfinity(v[1]) &&
+				   !float.IsNaN(v[2]) && !float.IsInfinity(v[2]);
 		}
 
 		public void SetVSrc(Vector3 vec)
 		{
-			vSrc = IsValid(vec) ? (Vector3?)vec : null;
+			vSrc = vec == Vector3.zero ? null : new[] { vec.x, vec.y, vec.z };
 		}
 
 		public void SetVDst(Vector3 vec)
 		{
-			vDst = IsValid(vec) ? (Vector3?)vec : null;
-		}
-
-		// --- Conversion from DTO ---
-		public static Waypoint FromSerialized(DatabaseSerializer.Waypoint ser)
-		{
-			if (ser == null) return null;
-
-			var wp = new Waypoint
-			{
-				name = ser.name,
-				nTile = ser.nTile
-			};
-
-			if (ser.vSrc != null && ser.vSrc.Length == 3)
-				wp.vSrc = new Vector3(ser.vSrc[0], ser.vSrc[1], ser.vSrc[2]);
-
-			if (ser.vDst != null && ser.vDst.Length == 3)
-				wp.vDst = new Vector3(ser.vDst[0], ser.vDst[1], ser.vDst[2]);
-
-			// Note: tile-space not set here — done in MapManager.SetupWaypoints
-			return wp;
-		}
-
-		// --- Back to DTO (only serializes original vSrc/vDst) ---
-		public DatabaseSerializer.Waypoint ToSerialized()
-		{
-			return new DatabaseSerializer.Waypoint
-			{
-				name = name,
-				nTile = nTile,
-				vSrc = vSrc.HasValue ? new[] { vSrc.Value.x, vSrc.Value.y, vSrc.Value.z } : null,
-				vDst = vDst.HasValue ? new[] { vDst.Value.x, vDst.Value.y, vDst.Value.z } : null
-			};
+			vDst = vec == Vector3.zero ? null : new[] { vec.x, vec.y, vec.z };
 		}
 	}
 }
