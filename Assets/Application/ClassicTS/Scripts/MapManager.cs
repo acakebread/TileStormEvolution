@@ -42,8 +42,8 @@ namespace ClassicTilestorm
 		// ------------------------------------------------------------------
 		public Map CurrentMap => currentMap;
 
-		public int Width => currentMap?.nWidth ?? 0;
-		public int Height => currentMap?.nHeight ?? 0;
+		public int Width => currentMap?.width ?? 0;
+		public int Height => currentMap?.height ?? 0;
 		public int Count => Width * Height;
 
 		public int[] Indices => indices;
@@ -201,14 +201,14 @@ namespace ClassicTilestorm
 			var updatedMap = new Map
 			{
 				name = currentMap.name,
-				szEggbotCostume = currentMap.szEggbotCostume,
-				szMusic = currentMap.szMusic,
+				character = currentMap.character,
+				music = currentMap.music,
 				Pickups = currentMap.Pickups,
-				szButtonID = currentMap.szButtonID,
+				button = currentMap.button,
 				waypoints = currentMap.waypoints,
 				defs = currentMap.defs,
-				nWidth = currentMap.nWidth,
-				nHeight = currentMap.nHeight,
+				width = currentMap.width,
+				height = currentMap.height,
 				tiles = logicalTiles,
 				mixed = currentMap.mixed
 			};

@@ -47,13 +47,13 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			SkyboxUtility.SetSkybox(PreviewSettings.SkycubesPath, currentMap.szMusic);
+			SkyboxUtility.SetSkybox(PreviewSettings.SkycubesPath, currentMap.music);
 
 			if (null != mapManager) Destroy(mapManager.gameObject);
 			mapManager = MapManager.Instantiate(currentMap, transform);
 
 			if (null != eggbotController) Destroy(eggbotController.gameObject);
-			eggbotController = EggbotController.Instantiate(currentMap.szEggbotCostume, transform);
+			eggbotController = EggbotController.Instantiate(currentMap.character, transform);
 			if (null != eggbotController) eggbotController.Initialise(mapManager);
 			if (null != cameraController) cameraController.Initialise(mapManager, eggbotController);
 

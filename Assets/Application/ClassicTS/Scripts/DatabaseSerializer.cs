@@ -79,7 +79,7 @@ namespace ClassicTilestorm
 					// Basic validation
 					foreach (var map in data.maps)
 					{
-						if (map == null || string.IsNullOrEmpty(map.name) || map.nWidth <= 0 || map.nHeight <= 0)
+						if (map == null || string.IsNullOrEmpty(map.name) || map.width <= 0 || map.height <= 0)
 						{
 							Debug.LogError("Invalid map in database.json");
 							data = null;
