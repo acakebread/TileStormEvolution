@@ -130,12 +130,12 @@ namespace ClassicTilestorm
 
 			if (currentMap.defs != null)
 			{
-				int existing = System.Array.IndexOf(currentMap.defs, szType);
+				int existing = Array.IndexOf(currentMap.defs, szType);
 				if (existing != -1) return existing;
 			}
 
 			// Grow defs array
-			var oldDefs = currentMap.defs ?? System.Array.Empty<string>();
+			var oldDefs = currentMap.defs ?? Array.Empty<string>();
 			var newDefs = new string[oldDefs.Length + 1];
 			oldDefs.CopyTo(newDefs, 0);
 			newDefs[oldDefs.Length] = szType;
@@ -193,14 +193,14 @@ namespace ClassicTilestorm
 		private DatabaseSerializer.DatabaseData CreateUpdatedDatabaseData()
 		{
 			if (currentMap == null)
-				throw new System.InvalidOperationException("No current map set.");
+				throw new InvalidOperationException("No current map set.");
 
 			// Convert tileDefs back to logical indices
 			var logicalTiles = new int[Count];
 			for (int i = 0; i < Count; i++)
 			{
 				string szType = tileDefs[i];
-				logicalTiles[i] = System.Array.IndexOf(currentMap.defs, szType);
+				logicalTiles[i] = Array.IndexOf(currentMap.defs, szType);
 				if (logicalTiles[i] == -1)
 				{
 					Debug.LogWarning($"Tile type '{szType}' not in mapDefs, defaulting to 0");
