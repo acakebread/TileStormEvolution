@@ -1,6 +1,6 @@
 ﻿// ResourceManager.cs — FINAL HYBRID VERSION (transition-safe)
 
-//#define USING_INDIVIDUAL_MAPS
+#define USING_INDIVIDUAL_MAPS
 
 using UnityEngine;
 using System.Collections.Generic;
