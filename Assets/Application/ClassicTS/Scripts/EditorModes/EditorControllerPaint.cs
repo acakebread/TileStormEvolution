@@ -118,15 +118,7 @@ namespace ClassicTilestorm
 			var selectedTileDef = DatabaseSerializer.TileDefs[tempSelectedTileDefGlobalIndex];
 			var selectedTileDefIndex = mapManager.GetOrAddMapDefIndex(selectedTileDef.szType);
 
-			var currentMapDefIndex = mapManager.GetTileDefIndexAt(mapIndex);
-			var tilesMatch = false;
-			var mapDefs = mapManager.GetMapDefs();
-			if (currentMapDefIndex >= 0 && currentMapDefIndex < mapDefs.Length)
-			{
-				var currentTileDef = mapDefs[currentMapDefIndex];
-				tilesMatch = currentTileDef == selectedTileDef.szType;
-			}
-
+			var tilesMatch = mapManager.GetTileDefAtIndex(mapIndex) == selectedTileDef.szType;
 			if (tilesMatch && tileDefCycleList != null && tileDefCycleList.Count > 1)
 			{
 				cycleIndex = (cycleIndex + 1) % tileDefCycleList.Count;

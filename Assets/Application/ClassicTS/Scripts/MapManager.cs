@@ -313,18 +313,15 @@ namespace ClassicTilestorm
 			Debug.Log("Database saved to disk with updated mapDefs, tiles, and waypoints");
 		}
 
-		public int GetTileDefIndexAt(int mapIndex)
+		public string GetTileDefAtIndex(int mapIndex)
 		{
 			if (mapIndex < 0 || mapIndex >= Count)
 			{
 				Debug.LogWarning($"Invalid mapIndex={mapIndex}, must be between 0 and {Count - 1}");
-				return -1;
+				return null;
 			}
-			var szType = tileDefs[mapIndex];
-			return Array.IndexOf(mapDefs, szType);
+			return tileDefs[mapIndex];
 		}
-
-		public string[] GetMapDefs() => mapDefs;
 
 		public int GetStartTile()
 		{
