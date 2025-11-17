@@ -215,7 +215,6 @@ namespace ClassicTilestorm
 				mixed = currentMap.mixed
 			};
 
-			// This is the ONLY call to ResourceManager from MapManager for saving
 			ResourceManager.ApplyMapChanges(updatedMap);
 		}
 
