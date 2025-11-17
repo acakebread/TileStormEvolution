@@ -149,12 +149,16 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   loadMapName: Industrial 01
-  scramble: 1
-  show_hidden_tiles: 0
-  show_tile_selection: 0
-  databaseJsonFile: {fileID: 4900000, guid: 96c40ca8617a15a4590b9728c168e29a, type: 3}
+  scrambled: 1
+  difficulty: 0
+  showHiddenTiles: 0
+  showTileSelection: 0
+  databaseJsonFile: {fileID: 4900000, guid: 152e982e9505e074d988ae08ffe29046, type: 3}
   geometryPath: ClassicTS/Geometry/
   texturePath: ClassicTS/Textures/
+  materialPath: ClassicTS/Materials/
+  skycubesPath: ClassicTS/SkyCubes/
+  previewMode: 1
 --- !u!4 &757022235
 Transform:
   m_ObjectHideFlags: 0

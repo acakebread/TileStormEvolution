@@ -121,14 +121,6 @@ namespace AssetViewerNamespace
 					if ("tile_empty" == szType || "tile_invisible" == szType)
 						continue;
 
-					//string szTheme = map.defs[defIndex].szTheme;
-					//if (string.IsNullOrEmpty(szType))
-					//{
-					//	Debug.LogWarning($"Null or empty szType at defIndex {defIndex} in map {map.name}");
-					//	continue;
-					//}
-
-					//DatabaseSerializer.TileDef tileDef = DatabaseSerializer.TileDefs.FirstOrDefault(td => td.szType == szType && td.szTheme == szTheme);
 					DatabaseUniversalSerializer.TileDef tileDef = DatabaseUniversalSerializer.TileDefs.FirstOrDefault(td => td.szType == szType);
 					if (tileDef == null)
 					{
@@ -165,12 +157,6 @@ namespace AssetViewerNamespace
 						cube.SetActive(false);
 					}
 
-					//TextureSet textureSet = GetTextureForTileDef(tileDef, szTheme);
-					//if (textureSet != null && textureSet.frames != null && textureSet.frames.Length > 0)
-					//{
-					//	TileAnimator animator = tileObj.AddComponent<TileAnimator>();
-					//	animator.Initialize(textureSet);
-					//}
 					var textureFrames = TextureSetManager.GetTextureFrames(tileDef.szTheme);
 					if (textureFrames?.Length > 0)
 					{

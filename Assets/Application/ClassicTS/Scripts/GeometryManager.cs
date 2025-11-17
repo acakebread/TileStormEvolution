@@ -90,7 +90,7 @@ namespace ClassicTilestorm
 					pointLight.range = 1f;
 					pointLight.shadows = LightShadows.None;
 
-					var targetRenderer = animator.GetComponentInChildren<MeshRenderer>(true);
+					var targetRenderer = gameObject.GetComponentInChildren<MeshRenderer>(true);
 					if (targetRenderer != null)
 					{
 						// Load the preallocated material
@@ -103,24 +103,21 @@ namespace ClassicTilestorm
 							emissiveMaterial.EnableKeyword("_EMISSION");
 							emissiveMaterial.SetColor("_EmissionColor", new Color(0f, 1f, 0f) * 2.0f); // Green emission
 						}
-
 						// Apply the preallocated material to the target renderer
-						targetRenderer.material = emissiveMaterial;// new Material(emissiveMaterial); // Use a new instance to avoid shared material issues
-						Material activeMaterial = targetRenderer.material;
+						targetRenderer.material = emissiveMaterial; // new Material(emissiveMaterial); // Use a new instance to avoid shared material issues
 
 						// Sync with TextureSetAnimator
 						var textureAnimator = gameObject.GetComponent<TextureSetAnimator>();
 						if (textureAnimator != null)
 						{
-							textureAnimator.ApplyTexture(0); // Initial sync
+							textureAnimator.ApplyFrame(0); // Initial sync - calls ApplyFrame(0) which sets mainTexture
 							textureAnimator.OnTextureChanged += (newTexture) =>
 							{
 								if (targetRenderer != null && targetRenderer.material != null)
 								{
-									targetRenderer.material.mainTexture = null;
 									Material mat = targetRenderer.material;
-									mat.SetTexture("_EmissionMap", newTexture); // Update emission map
-									//Debug.Log("Emission Map updated: " + newTexture.name + ", Material Instance: " + mat.GetInstanceID());
+									mat.mainTexture = null; // Clear main texture (base color stays black)
+									mat.SetTexture("_EmissionMap", newTexture); // Update emission map with animated texture
 								}
 							};
 						}

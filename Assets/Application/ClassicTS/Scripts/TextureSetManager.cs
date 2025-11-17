@@ -1,38 +1,37 @@
-using UnityEngine;
-using System.Linq;
+﻿using UnityEngine;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace ClassicTilestorm
 {
-	public struct TextureFrame
-	{
-		public Texture2D texture;
-		public float duration;
-	}
-
 	public static class TextureSetManager
 	{
-		private static Dictionary<string, TextureFrame[]> textureAnimations = new();
+		private static readonly Dictionary<string, TextureFrame[]> cache = new();
 
-		public static TextureFrame[] GetTextureFrames(string szTheme)
+		public static TextureFrame[] GetTextureFrames(string themeName)
 		{
-			DatabaseSerializer.Theme theme = DatabaseSerializer.Themes.FirstOrDefault(t => t.name == szTheme);
+			if (string.IsNullOrEmpty(themeName)) return null;
+			if (cache.TryGetValue(themeName, out var cached)) return cached;
+
+			var theme = DatabaseSerializer.Themes.FirstOrDefault(t => t.name == themeName);
 			if (theme == null || string.IsNullOrEmpty(theme.szTileTextureSet)) return null;
 
-			DatabaseSerializer.TextureSet textureSet = DatabaseSerializer.TextureSets.FirstOrDefault(ts => ts.name == theme.szTileTextureSet);
-			if (textureSet == null || textureSet.frames == null || textureSet.frames.Length <= 0) return null;
+			var textureSet = DatabaseSerializer.TextureSets.FirstOrDefault(ts => ts.name == theme.szTileTextureSet);
+			if (textureSet == null || textureSet.frames == null || textureSet.frames.Length == 0) return null;
 
-			var frames = new TextureFrame[textureSet.frames.Length];
-
+			// Resolve textures from szTexture → Texture2D at runtime
 			for (int i = 0; i < textureSet.frames.Length; i++)
 			{
-				var frame = textureSet.frames[i];
-				frames[i].texture = TextureManager.Get(frame.szTexture);
-				frames[i].duration = frame.fDuration > 0 ? frame.fDuration : 1f; // Default to 1s if 0
+				var f = textureSet.frames[i];
+				if (f.texture == null && !string.IsNullOrEmpty(f.szTexture))
+				{
+					f.texture = TextureManager.Get(f.szTexture);
+					textureSet.frames[i] = f; // write back only the texture
+				}
 			}
 
-			textureAnimations[szTheme] = frames;
-			return frames;
+			cache[themeName] = textureSet.frames;
+			return textureSet.frames;
 		}
 	}
 }

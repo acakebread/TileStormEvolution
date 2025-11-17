@@ -20,9 +20,6 @@ namespace ClassicTilestorm
 			public TextureSet[] texture_set;
 		}
 
-		// All these classes are now the real ones from their own files
-		// → Map and Waypoint are no longer nested here
-
 		[Serializable]
 		public class TileDef
 		{
@@ -67,22 +64,6 @@ namespace ClassicTilestorm
 			public float fUVdownY;
 			public float fUVdownW;
 			public float fUVdownH;
-		}
-
-		[Serializable]
-		public class TextureSet
-		{
-			public string name;
-			public bool bAlphaTest;
-			public TextureFrame[] frames;
-		}
-
-		[Serializable]
-		public class TextureFrame
-		{
-			public string name;
-			public string szTexture;
-			public float fDuration;
 		}
 
 		private static TextAsset databaseJsonFile;
