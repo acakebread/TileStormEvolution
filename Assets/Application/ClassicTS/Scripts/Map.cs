@@ -1,7 +1,4 @@
-// ---------------------------------------------------------------
-// Map.cs   – THE ONE AND ONLY Map class used everywhere
-// ---------------------------------------------------------------
-using UnityEngine;
+// Map.cs — CLEAN OUTPUT ONLY + FULL BACKWARD COMPATIBILITY
 using Newtonsoft.Json;
 
 namespace ClassicTilestorm
@@ -9,35 +6,46 @@ namespace ClassicTilestorm
 	[System.Serializable]
 	public class Map
 	{
+		// NEW CLEAN PUBLIC FIELDS — these are the ones that get serialized
 		public string name;
+		public string character;
+		public string music;
+		public string button;
+		public int width;
+		public int height;
 
-		[JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
-		public string szEggbotCostume;
-
-		[JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
-		public string szMusic;
-
-		public Pickups Pickups;
-
-		// Needed so Json.NET doesn’t serialize empty Pickups objects
-		public bool ShouldSerializePickups() => Pickups != null && Pickups.nPickupCount > 0;
-
-		[JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
-		public string szButtonID;
-
-		[JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
 		public Waypoint[] waypoints;
-
-		[JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
 		public string[] defs;
-
-		public int nWidth;
-		public int nHeight;
 		public int[] tiles;
 		public int[] mixed;
+		public Pickups Pickups;
+
+		public bool ShouldSerializePickups() => Pickups != null && Pickups.nPickupCount > 0;
+
+		// BACKWARD COMPATIBILITY: Read old field names from JSON, but NEVER write them
+		[JsonProperty("szEggbotCostume")] private string LegacyEggbot { set => character = value; }
+		[JsonProperty("szMusic")] private string LegacyMusic { set => music = value; }
+		[JsonProperty("szButtonID")] private string LegacyButton { set => button = value; }
+		[JsonProperty("nWidth")] private int LegacyWidth { set => width = value; }
+		[JsonProperty("nHeight")] private int LegacyHeight { set => height = value; }
+
+		// Optional: Keep old public names working in C# code (with warning)
+		[JsonIgnore, System.Obsolete("Use 'character' instead", false)]
+		public string szEggbotCostume { get => character; set => character = value; }
+
+		[JsonIgnore, System.Obsolete("Use 'music' instead", false)]
+		public string szMusic { get => music; set => music = value; }
+
+		[JsonIgnore, System.Obsolete("Use 'button' instead", false)]
+		public string szButtonID { get => button; set => button = value; }
+
+		[JsonIgnore, System.Obsolete("Use 'width' instead", false)]
+		public int nWidth { get => width; set => width = value; }
+
+		[JsonIgnore, System.Obsolete("Use 'height' instead", false)]
+		public int nHeight { get => height; set => height = value; }
 	}
 
-	// Pickups is only used inside Map – keep it here to avoid another file
 	[System.Serializable]
 	public class Pickups
 	{
