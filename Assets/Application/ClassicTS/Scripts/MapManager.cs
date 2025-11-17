@@ -30,13 +30,9 @@ namespace ClassicTilestorm
 	public class MapManager : MonoBehaviour, IMapManager
 	{
 		// ------------------------------------------------------------------
-		// Authoritative source of truth
-		// ------------------------------------------------------------------
-		[SerializeField, HideInInspector] private Map currentMap;
-
-		// ------------------------------------------------------------------
 		// Runtime-only mutable state
 		// ------------------------------------------------------------------
+		private Map currentMap;
 		private int[] indices;                    // Scrambled/solved visual indices
 		private Tile[] tiles;                     // Instantiated runtime Tile objects
 		private string[] tileDefs;                // Cached szType string per map index (for fast lookup & saving)
