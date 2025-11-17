@@ -40,7 +40,6 @@ namespace ClassicTilestorm
 		private int[] indices;                    // Scrambled/solved visual indices
 		private Tile[] tiles;                     // Instantiated runtime Tile objects
 		private string[] tileDefs;                // Cached szType string per map index (for fast lookup & saving)
-		private Waypoint[] waypoints;             // May be generated or overridden at runtime
 
 		// ------------------------------------------------------------------
 		// IMapData / IMapManager forwarded properties
@@ -53,19 +52,18 @@ namespace ClassicTilestorm
 
 		public int[] Indices => indices;
 
-		public Waypoint[] Waypoints => waypoints ?? currentMap?.waypoints ?? System.Array.Empty<Waypoint>();
+		public Waypoint[] Waypoints => currentMap?.waypoints ?? Array.Empty<Waypoint>();
 
 		private void Awake()
 		{
 			indices = null;
 			tiles = null;
 			tileDefs = null;
-			waypoints = null;
 		}
 
 		private void Initialise(Map map)
 		{
-			currentMap = map ?? throw new System.ArgumentNullException(nameof(map));
+			currentMap = map ?? throw new ArgumentNullException(nameof(map));
 
 			if (string.IsNullOrEmpty(currentMap.name))
 			{
@@ -190,9 +188,6 @@ namespace ClassicTilestorm
 		// -----------------------------------------------------------------------
 		// Database update / save logic
 		// -----------------------------------------------------------------------
-		// REMOVE: CreateUpdatedDatabaseData(), UpdateChanges(), SaveChanges()
-
-		// ADD THIS ONE METHOD ONLY:
 		private void ApplyCurrentMapChanges()
 		{
 			if (currentMap == null) return;
@@ -212,7 +207,7 @@ namespace ClassicTilestorm
 				szMusic = currentMap.szMusic,
 				Pickups = currentMap.Pickups,
 				szButtonID = currentMap.szButtonID,
-				waypoints = waypoints ?? currentMap.waypoints,
+				waypoints = currentMap.waypoints,
 				defs = currentMap.defs,
 				nWidth = currentMap.nWidth,
 				nHeight = currentMap.nHeight,
@@ -224,7 +219,6 @@ namespace ClassicTilestorm
 			ResourceManager.ApplyMapChanges(updatedMap);
 		}
 
-		// Now replace your old UpdateChanges() and SaveChanges():
 		public void UpdateChanges()
 		{
 			ApplyCurrentMapChanges();
@@ -301,9 +295,7 @@ namespace ClassicTilestorm
 
 		public void Scramble()
 		{
-			indices = Enumerable.Range(0, Count)
-				.Select(n => n + (currentMap.mixed?[n] ?? 0))
-				.ToArray();
+			indices = Enumerable.Range(0, Count).Select(n => n + (currentMap.mixed?[n] ?? 0)).ToArray();
 			UpdateTileObjectNamesAndPositions();
 		}
 
@@ -359,8 +351,7 @@ namespace ClassicTilestorm
 		{
 			if (currentMap.waypoints != null && currentMap.waypoints.Length > 0)
 			{
-				waypoints = currentMap.waypoints;
-				Debug.Log($"Using {waypoints.Length} predefined waypoints.");
+				Debug.Log($"Using {currentMap.waypoints.Length} predefined waypoints.");
 				return;
 			}
 
@@ -370,7 +361,7 @@ namespace ClassicTilestorm
 
 			if (start == -1 || end == -1)
 			{
-				waypoints = generated.ToArray();
+				currentMap.waypoints = generated.ToArray();
 				return;
 			}
 
@@ -399,8 +390,8 @@ namespace ClassicTilestorm
 			}
 
 			generated.Add(new Waypoint { nTile = end });
-			waypoints = generated.ToArray();
-			Debug.Log($"Generated {waypoints.Length} waypoints.");
+			currentMap.waypoints = generated.ToArray();
+			Debug.Log($"Generated {currentMap.waypoints.Length} waypoints.");
 		}
 
 		public static MapManager Instantiate(Map map, Transform parent = null)
