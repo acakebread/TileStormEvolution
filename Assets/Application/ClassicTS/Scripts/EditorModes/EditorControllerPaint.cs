@@ -25,7 +25,7 @@ namespace ClassicTilestorm
 		public void SetTileDefIndex(int tileDefIndex, int globalIndex)
 		{
 			selectedTileDefIndex = tileDefIndex;
-			UpdateTileCycleList(DatabaseSerializer.TileDefs[globalIndex].szType);
+			UpdateTileCycleList(ResourceManager.TileDefs[globalIndex].szType);
 			cycleIndex = tileDefCycleList.IndexOf(globalIndex);
 			if (cycleIndex < 0) cycleIndex = 0;
 		}
@@ -36,9 +36,9 @@ namespace ClassicTilestorm
 			if (!camera || PlaceholderEditorUI.Instance.IsGuiControlActive() || EventSystem.current.IsPointerOverGameObject()) return;
 
 			var tempSelectedTileDefGlobalIndex = PlaceholderEditorUI.Instance.GetSelectedTileDefGlobalIndex();
-			if (tempSelectedTileDefGlobalIndex >= 0 && tempSelectedTileDefGlobalIndex < DatabaseSerializer.TileDefs.Count)
+			if (tempSelectedTileDefGlobalIndex >= 0 && tempSelectedTileDefGlobalIndex < ResourceManager.TileDefs.Count)
 			{
-				var tileDef = DatabaseSerializer.TileDefs[tempSelectedTileDefGlobalIndex];
+				var tileDef = ResourceManager.TileDefs[tempSelectedTileDefGlobalIndex];
 				GeometryUtil.UpdateGhostTile(camera, mapManager, tileDef);
 			}
 			else
@@ -115,7 +115,7 @@ namespace ClassicTilestorm
 			var mapIndex = mapManager.WorldToMapIndex(worldPos);
 			if (mapIndex < 0 || mapIndex >= mapManager.Width * mapManager.Height || mapIndex != mouseDownMapIndex) return;
 
-			var selectedTileDef = DatabaseSerializer.TileDefs[tempSelectedTileDefGlobalIndex];
+			var selectedTileDef = ResourceManager.TileDefs[tempSelectedTileDefGlobalIndex];
 			var selectedTileDefIndex = mapManager.GetOrAddMapDefIndex(selectedTileDef.szType);
 
 			var tilesMatch = mapManager.GetTileDefAtIndex(mapIndex) == selectedTileDef.szType;
@@ -124,7 +124,7 @@ namespace ClassicTilestorm
 				cycleIndex = (cycleIndex + 1) % tileDefCycleList.Count;
 				tempSelectedTileDefGlobalIndex = tileDefCycleList[cycleIndex];
 				PlaceholderEditorUI.Instance.SetSelectedTileDefGlobalIndex(tempSelectedTileDefGlobalIndex);
-				var newTileDef = DatabaseSerializer.TileDefs[tempSelectedTileDefGlobalIndex];
+				var newTileDef = ResourceManager.TileDefs[tempSelectedTileDefGlobalIndex];
 				selectedTileDefIndex = mapManager.GetOrAddMapDefIndex(newTileDef.szType);
 				this.selectedTileDefIndex = selectedTileDefIndex;
 				GeometryUtil.DestroyGhostTile();
@@ -168,9 +168,9 @@ namespace ClassicTilestorm
 
 			tileDefCycleList = new List<int>();
 
-			for (var i = 0; i < DatabaseSerializer.TileDefs.Count; i++)
+			for (var i = 0; i < ResourceManager.TileDefs.Count; i++)
 			{
-				if (DatabaseSerializer.TileDefs[i].szType == derivedBaseTileType)
+				if (ResourceManager.TileDefs[i].szType == derivedBaseTileType)
 				{
 					tileDefCycleList.Add(i);
 					break;
@@ -179,9 +179,9 @@ namespace ClassicTilestorm
 
 			foreach (var suffix in selectedGroup)
 			{
-				for (var i = 0; i < DatabaseSerializer.TileDefs.Count; i++)
+				for (var i = 0; i < ResourceManager.TileDefs.Count; i++)
 				{
-					if (DatabaseSerializer.TileDefs[i].szType == derivedBaseTileType + suffix)
+					if (ResourceManager.TileDefs[i].szType == derivedBaseTileType + suffix)
 					{
 						tileDefCycleList.Add(i);
 						break;

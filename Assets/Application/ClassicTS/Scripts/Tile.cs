@@ -20,7 +20,7 @@ public struct Tile
 
 	public Tile(string szType)
 	{
-		var def = DatabaseSerializer.TileDefs.FirstOrDefault(td => td.szType == szType);
+		var def = ResourceManager.TileDefs.FirstOrDefault(td => td.szType == szType);
 		flags = def == null ? 0 : CombineFlags(def);
 		GameObject = null;
 

@@ -231,12 +231,12 @@ namespace ClassicTilestorm
 				scrollPosition = GUI.BeginScrollView(
 					scrollViewRect,
 					scrollPosition,
-					new Rect(0, 0, tileSelectorWidth - 40, DatabaseSerializer.TileDefs.Count * 40)
+					new Rect(0, 0, tileSelectorWidth - 40, ResourceManager.TileDefs.Count * 40)
 				);
 
-				for (int i = 0; i < DatabaseSerializer.TileDefs.Count; i++)
+				for (int i = 0; i < ResourceManager.TileDefs.Count; i++)
 				{
-					var tileDef = DatabaseSerializer.TileDefs[i];
+					var tileDef = ResourceManager.TileDefs[i];
 					string displayName = $"{tileDef.szType} ({tileDef.szTheme})";
 					Rect buttonRect = new Rect(0, i * 40, tileSelectorWidth - 40, 35);
 
@@ -247,7 +247,7 @@ namespace ClassicTilestorm
 					if (GUI.Button(buttonRect, displayName))
 					{
 						tempSelectedTileDefGlobalIndex = i;
-						var selectedTileDef = DatabaseSerializer.TileDefs[i];
+						var selectedTileDef = ResourceManager.TileDefs[i];
 						int selectedMapDefIndex = mapManager.GetOrAddMapDefIndex(selectedTileDef.szType);
 						if (selectedMapDefIndex >= 0 && editorController.PaintMode != null)
 						{
