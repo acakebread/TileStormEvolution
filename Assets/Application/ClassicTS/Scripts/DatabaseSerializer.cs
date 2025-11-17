@@ -16,8 +16,8 @@ namespace ClassicTilestorm
 			public Map[] maps;
 			public Theme[] themes;
 			public TileDef[] tiledefs;
-			public Button[] buttons;
 			public TextureSet[] texture_set;
+			public Button[] buttons;//not currently used
 		}
 
 		private static TextAsset databaseJsonFile;
@@ -30,8 +30,8 @@ namespace ClassicTilestorm
 		public static IReadOnlyList<Map> Maps => LoadAndGetData()?.maps ?? Array.Empty<Map>();
 		public static IReadOnlyList<Theme> Themes => LoadAndGetData()?.themes ?? Array.Empty<Theme>();
 		public static IReadOnlyList<TileDef> TileDefs => LoadAndGetData()?.tiledefs ?? Array.Empty<TileDef>();
-		public static IReadOnlyList<Button> Buttons => LoadAndGetData()?.buttons ?? Array.Empty<Button>();
 		public static IReadOnlyList<TextureSet> TextureSets => LoadAndGetData()?.texture_set ?? Array.Empty<TextureSet>();
+		public static IReadOnlyList<Button> Buttons => LoadAndGetData()?.buttons ?? Array.Empty<Button>();
 
 		public static void Init(TextAsset jsonFile, Action<TextAsset> saveAction = null)
 		{

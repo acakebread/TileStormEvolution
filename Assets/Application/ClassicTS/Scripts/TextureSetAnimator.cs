@@ -41,9 +41,9 @@ namespace ClassicTilestorm
 			if (frames == null || frames.Length <= 1) return;
 
 			timer += Time.deltaTime;
-			if (timer >= frames[currentFrame].Duration)  // ← clean, safe, read-only
+			if (timer >= frames[currentFrame].fDuration)  // ← clean, safe, read-only
 			{
-				timer -= frames[currentFrame].Duration;
+				timer -= frames[currentFrame].fDuration;
 				currentFrame = (currentFrame + 1) % frames.Length;
 				ApplyFrame(currentFrame);
 			}
