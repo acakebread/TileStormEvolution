@@ -22,7 +22,7 @@ namespace ClassicTilestorm
 		}
 
 		// Update or create the ghost tile at the mouse position
-		public static void UpdateGhostTile(Camera camera, MapManager mapManager, DatabaseSerializer.TileDef tileDef)
+		public static void UpdateGhostTile(Camera camera, MapManager mapManager, TileDef tileDef)
 		{
 			if (camera == null || mapManager == null || tileDef == null) return;
 

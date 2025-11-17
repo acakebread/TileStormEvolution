@@ -20,52 +20,6 @@ namespace ClassicTilestorm
 			public TextureSet[] texture_set;
 		}
 
-		[Serializable]
-		public class TileDef
-		{
-			public string szTheme;
-			public string szType;
-			public string szGeom;
-			public bool bSlide;
-			public bool bRoll;
-			public bool bDock;
-			public bool bConsole;
-			public bool bDoor;
-			public bool bStart;
-			public bool bEnd;
-			public int nPickup;
-			public bool bPuzzleBlock;
-			public bool bNorth;
-			public bool bSouth;
-			public bool bEast;
-			public bool bWest;
-		}
-
-		[Serializable]
-		public class Theme
-		{
-			public string name;
-			public string szTileTextureSet;
-		}
-
-		[Serializable]
-		public class Button
-		{
-			public string name;
-			public string szTexture;
-			public string szButtonText;
-			public float fWidth;
-			public float fHeight;
-			public float fUVupX;
-			public float fUVupY;
-			public float fUVupW;
-			public float fUVupH;
-			public float fUVdownX;
-			public float fUVdownY;
-			public float fUVdownW;
-			public float fUVdownH;
-		}
-
 		private static TextAsset databaseJsonFile;
 		private static Action<TextAsset> saveDelegate;
 		private static DatabaseData data;
@@ -121,7 +75,7 @@ namespace ClassicTilestorm
 					};
 					var serializer = JsonSerializer.CreateDefault(settings);
 
-					data = new DatabaseData();
+					data = new();
 					data.maps = root["maps"]?.ToObject<Map[]>(serializer);
 					data.themes = root["themes"]?.ToObject<Theme[]>(serializer);
 					data.tiledefs = root["tiledefs"]?.ToObject<TileDef[]>(serializer);

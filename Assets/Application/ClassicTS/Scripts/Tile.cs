@@ -24,7 +24,7 @@ public struct Tile
 		flags = def == null ? 0 : CombineFlags(def);
 		GameObject = null;
 
-		static int CombineFlags(DatabaseSerializer.TileDef d)
+		static int CombineFlags(TileDef d)
 		{
 			int f = 0;
 			if (d.bNorth) f |= North;
