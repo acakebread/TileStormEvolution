@@ -89,7 +89,6 @@ namespace ClassicTilestorm
 			{
 				var firstWaypoint = mapManager.Waypoints[0];
 				var tilePos = mapManager.TileWorldPosition(firstWaypoint.nTile);
-
 				srcPos = firstWaypoint.GetVSrc() + tilePos;
 				dstPos = firstWaypoint.GetVDst() + tilePos;
 			}
