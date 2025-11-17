@@ -20,27 +20,8 @@ namespace ClassicTilestorm
 			public TextureSet[] texture_set;
 		}
 
-		[Serializable]
-		public class Map
-		{
-			public string name;
-			[JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
-			public string szEggbotCostume;
-			[JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
-			public string szMusic;
-			public Pickups Pickups;
-			public bool ShouldSerializePickups() => Pickups != null && Pickups.nPickupCount > 0;
-			[JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
-			public string szButtonID;
-			[JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
-			public Waypoint[] waypoints;   // ← Direct use of the real Waypoint
-			[JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
-			public string[] defs;
-			public int nWidth;
-			public int nHeight;
-			public int[] tiles;
-			public int[] mixed;
-		}
+		// All these classes are now the real ones from their own files
+		// → Map and Waypoint are no longer nested here
 
 		[Serializable]
 		public class TileDef
@@ -61,12 +42,6 @@ namespace ClassicTilestorm
 			public bool bSouth;
 			public bool bEast;
 			public bool bWest;
-		}
-
-		[Serializable]
-		public class Pickups
-		{
-			public int nPickupCount;
 		}
 
 		[Serializable]

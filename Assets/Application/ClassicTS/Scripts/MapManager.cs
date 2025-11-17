@@ -55,7 +55,7 @@ namespace ClassicTilestorm
 			mapName = null;
 		}
 
-		private void Initialise(DatabaseSerializer.Map map)
+		private void Initialise(Map map)
 		{
 			mapName = map?.name;
 			if (string.IsNullOrEmpty(mapName))
@@ -117,7 +117,7 @@ namespace ClassicTilestorm
 			InitializeWindController();
 			SetupWaypoints(map);
 
-			void SetupWaypoints(DatabaseSerializer.Map map)
+			void SetupWaypoints(Map map)
 			{
 				if (map?.waypoints != null && map.waypoints.Length > 0)
 				{
@@ -260,7 +260,7 @@ namespace ClassicTilestorm
 			}
 
 			// Clone and update the map
-			var updatedMap = new DatabaseSerializer.Map
+			var updatedMap = new Map
 			{
 				name = targetMap.name,
 				szEggbotCostume = targetMap.szEggbotCostume,
@@ -443,7 +443,7 @@ namespace ClassicTilestorm
 			return ray.GetPoint(distance);
 		}
 
-		public static MapManager Instantiate(DatabaseSerializer.Map map, Transform parent = null)
+		public static MapManager Instantiate(Map map, Transform parent = null)
 		{
 			if (map == null || string.IsNullOrEmpty(map.name))
 			{
