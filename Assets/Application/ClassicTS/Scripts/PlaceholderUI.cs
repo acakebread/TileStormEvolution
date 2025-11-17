@@ -105,9 +105,9 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			var currentIndex = DatabaseSerializer.Maps.ToList().FindIndex(m => m.name == PreviewSettings.LoadMapName);
-			currentIndex = (DatabaseSerializer.Maps.Count + currentIndex + delta) % DatabaseSerializer.Maps.Count;
-			PreviewSettings.LoadMapName = DatabaseSerializer.Maps[currentIndex].name;
+			var currentIndex = ResourceManager.Maps.ToList().FindIndex(m => m.name == PreviewSettings.LoadMapName);
+			currentIndex = (ResourceManager.Maps.Count + currentIndex + delta) % ResourceManager.Maps.Count;
+			PreviewSettings.LoadMapName = ResourceManager.Maps[currentIndex].name;
 			mainController.LoadMap();
 		}
 
