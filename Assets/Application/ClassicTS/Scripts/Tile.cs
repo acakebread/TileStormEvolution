@@ -1,5 +1,4 @@
 using UnityEngine;
-using System.Linq;
 using ClassicTilestorm;
 
 public struct Tile
@@ -18,9 +17,8 @@ public struct Tile
 	private readonly int flags;
 	private static readonly int navMask = North | South | East | West;
 
-	public Tile(string szType)
+	public Tile(TileDef def)
 	{
-		var def = ResourceManager.TileDefs.FirstOrDefault(td => td.szType == szType);
 		flags = def == null ? 0 : CombineFlags(def);
 		GameObject = null;
 

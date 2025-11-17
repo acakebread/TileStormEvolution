@@ -98,7 +98,8 @@ namespace ClassicTilestorm
 					szType = "tile_empty";
 
 				tileDefs[n] = szType;
-				tiles[n] = new Tile(szType);
+				var def = ResourceManager.TileDefs.FirstOrDefault(td => td.szType == szType);
+				tiles[n] = new Tile(def);
 
 				if (szType == "tile_empty") continue;
 
@@ -166,7 +167,8 @@ namespace ClassicTilestorm
 				Destroy(tiles[index].GameObject);
 
 			tileDefs[index] = szType;
-			tiles[index] = new Tile(szType);
+			var def = ResourceManager.TileDefs.FirstOrDefault(td => td.szType == szType);
+			tiles[index] = new Tile(def);
 
 			if (szType != "tile_empty")
 			{
