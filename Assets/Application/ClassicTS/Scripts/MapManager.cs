@@ -108,7 +108,7 @@ namespace ClassicTilestorm
 
 				if (szType == "tile_empty") continue;
 
-				var tileDef = DatabaseSerializer.TileDefs.FirstOrDefault(td => td.szType == szType);
+				var tileDef = ResourceManager.GetTileDef(szType);
 				if (tileDef == null)
 				{
 					Debug.LogError($"TileDef not found for szType={szType} at tile {n}");
@@ -176,7 +176,7 @@ namespace ClassicTilestorm
 
 			if (szType != "tile_empty")
 			{
-				var tileDef = DatabaseSerializer.TileDefs.FirstOrDefault(td => td.szType == szType);
+				var tileDef = ResourceManager.GetTileDef(szType);
 				if (tileDef != null)
 				{
 					tiles[index].GameObject = GeometryManager.InstantiateTile(
@@ -190,22 +190,19 @@ namespace ClassicTilestorm
 		// -----------------------------------------------------------------------
 		// Database update / save logic
 		// -----------------------------------------------------------------------
-		private DatabaseSerializer.DatabaseData CreateUpdatedDatabaseData()
-		{
-			if (currentMap == null)
-				throw new InvalidOperationException("No current map set.");
+		// REMOVE: CreateUpdatedDatabaseData(), UpdateChanges(), SaveChanges()
 
-			// Convert tileDefs back to logical indices
+		// ADD THIS ONE METHOD ONLY:
+		private void ApplyCurrentMapChanges()
+		{
+			if (currentMap == null) return;
+
 			var logicalTiles = new int[Count];
 			for (int i = 0; i < Count; i++)
 			{
 				string szType = tileDefs[i];
 				logicalTiles[i] = Array.IndexOf(currentMap.defs, szType);
-				if (logicalTiles[i] == -1)
-				{
-					Debug.LogWarning($"Tile type '{szType}' not in mapDefs, defaulting to 0");
-					logicalTiles[i] = 0;
-				}
+				if (logicalTiles[i] == -1) logicalTiles[i] = 0;
 			}
 
 			var updatedMap = new Map
@@ -223,32 +220,21 @@ namespace ClassicTilestorm
 				mixed = currentMap.mixed
 			};
 
-			return new DatabaseSerializer.DatabaseData
-			{
-				maps = DatabaseSerializer.Maps
-					.Select(m => m.name == currentMap.name ? updatedMap : m)
-					.ToArray(),
-				themes = DatabaseSerializer.Themes.ToArray(),
-				tiledefs = DatabaseSerializer.TileDefs.ToArray(),
-				buttons = DatabaseSerializer.Buttons.ToArray(),
-				texture_set = DatabaseSerializer.TextureSets.ToArray()
-			};
+			// This is the ONLY call to ResourceManager from MapManager for saving
+			ResourceManager.ApplyMapChanges(updatedMap);
 		}
 
+		// Now replace your old UpdateChanges() and SaveChanges():
 		public void UpdateChanges()
 		{
-			if (currentMap == null) return;
-			var data = CreateUpdatedDatabaseData();
-			DatabaseSerializer.UpdateDatabase(data);
-			Debug.Log($"Map '{currentMap.name}' changes updated in memory.");
+			ApplyCurrentMapChanges();
+			ResourceManager.UpdateChanges();  // just forwards to serializer
 		}
 
 		public void SaveChanges()
 		{
-			if (currentMap == null) return;
-			var data = CreateUpdatedDatabaseData();
-			DatabaseSerializer.SaveDatabase(data);
-			Debug.Log($"Database saved to disk with updated map '{currentMap.name}'.");
+			ApplyCurrentMapChanges();
+			ResourceManager.SaveToDisk();     // saves + triggers saveDelegate
 		}
 
 		public string GetTileDefAtIndex(int mapIndex)

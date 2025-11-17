@@ -75,7 +75,7 @@ namespace ClassicTilestorm
 			gameObject.name = tileDef.szGeom.Replace(".x", "");
 
 			// Apply texture animation
-			var theme = DatabaseSerializer.Themes.FirstOrDefault(t => t.name == tileDef.szTheme);
+			var theme = ResourceManager.GetTheme(tileDef.szTheme);
 			if (null != theme)
 			{
 				var animator = gameObject.AddComponent<TextureSetAnimator>();

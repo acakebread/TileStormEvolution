@@ -48,7 +48,7 @@ namespace ClassicTilestorm
 			}
 		}
 
-		private static DatabaseData LoadAndGetData()
+		public static DatabaseData LoadAndGetData()
 		{
 			lock (lockObject)
 			{
@@ -106,6 +106,7 @@ namespace ClassicTilestorm
 
 					isLoaded = true;
 					VerifyData();
+					ResourceManager.Initialize(data);
 					OnDatabaseLoaded?.Invoke();
 					return data;
 				}
@@ -141,7 +142,7 @@ namespace ClassicTilestorm
 						Formatting = Formatting.None
 					};
 
-					string jsonContent = JsonConvert.SerializeObject(data, settings);
+					string jsonContent = JsonConvert.SerializeObject(ResourceManager.GetCurrentDatabaseData(), settings);
 
 					string outputDir = Path.Combine(Application.persistentDataPath, "Data");
 					Directory.CreateDirectory(outputDir);
