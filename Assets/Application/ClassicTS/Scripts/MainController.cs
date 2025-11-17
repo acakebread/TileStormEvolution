@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using System.Linq;
 using MassiveHadronLtd;
 
@@ -20,6 +20,7 @@ namespace ClassicTilestorm
 			editorController = gameObject.AddComponent<EditorController>();
 			cameraController = gameObject.AddComponent<MainCameraController>();
 			DatabaseSerializer.Init(PreviewSettings.DatabaseJsonFile, (asset) => { PreviewSettings.DatabaseJsonFile = asset; });
+			ResourceManager.Initialize(); // ← This is the only place it should be called
 			LoadMap(PreviewSettings.LoadMapName);
 			SetPreviewMode(PreviewSettings.CurrentMode);//invoke to enable and disable game and editor controllers - ToDo improve this
 		}
@@ -39,10 +40,10 @@ namespace ClassicTilestorm
 		{
 			if (null == (mapName = mapName ?? PreviewSettings.LoadMapName)) return;
 
-			var currentMap = DatabaseSerializer.Maps.FirstOrDefault(m => m.name == mapName) ?? DatabaseSerializer.Maps.FirstOrDefault();
+			var currentMap = ResourceManager.Maps.FirstOrDefault(m => m.name == mapName) ?? ResourceManager.Maps.FirstOrDefault();
 			if (null == currentMap)
 			{
-				Debug.LogError($"No map found for mapName={mapName}! Available maps: {string.Join(", ", DatabaseSerializer.Maps.Select(m => m.name))}");
+				Debug.LogError($"No map found for mapName={mapName}! Available maps: {string.Join(", ", ResourceManager.Maps.Select(m => m.name))}");
 				return;
 			}
 

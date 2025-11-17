@@ -1,4 +1,4 @@
-﻿// ResourceManager.cs — FINAL CLEAN VERSION
+﻿// ResourceManager.cs — FINAL FIXED VERSION (owns init, no circular calls)
 using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,9 +14,21 @@ namespace ClassicTilestorm
 		public static IList<Theme> Themes => _data?.themes ?? new Theme[0];
 		public static IList<TextureSet> TextureSets => _data?.texture_set ?? new TextureSet[0];
 
-		internal static void Initialize(DatabaseSerializer.DatabaseData data)
+		public static bool IsInitialized => _data != null;
+
+		public static void Initialize()
 		{
+			if (_data != null) return;
+
+			var data = DatabaseSerializer.LoadData();
+			if (data == null)
+			{
+				Debug.LogError("ResourceManager failed to initialize: DatabaseSerializer returned null");
+				return;
+			}
+
 			_data = data;
+			Debug.Log($"ResourceManager initialized with {data.maps.Length} maps, {data.tiledefs.Length} tiledefs");
 		}
 
 		public static TileDef GetTileDef(string szType) =>
@@ -31,7 +43,6 @@ namespace ClassicTilestorm
 			string.IsNullOrEmpty(name) ? null :
 				_data?.texture_set.FirstOrDefault(ts => ts?.name == name);
 
-		// MapManager calls this when it has changes
 		public static void ApplyMapChanges(Map updatedMap)
 		{
 			if (_data == null || updatedMap == null) return;
@@ -46,19 +57,8 @@ namespace ClassicTilestorm
 			}
 		}
 
-		// NEW: These are the only two methods MapManager should call
-		public static void UpdateChanges()
-		{
-			DatabaseSerializer.UpdateDatabase(GetCurrentDatabaseData());
-			Debug.Log("Map changes updated in memory (via ResourceManager).");
-		}
-
-		public static void SaveToDisk()
-		{
-			DatabaseSerializer.SaveDatabase(GetCurrentDatabaseData());
-			Debug.Log("Database saved to disk (via ResourceManager).");
-		}
-
+		public static void UpdateChanges() => DatabaseSerializer.UpdateDatabase(GetCurrentDatabaseData());
+		public static void SaveToDisk() => DatabaseSerializer.SaveDatabase(GetCurrentDatabaseData());
 		public static DatabaseSerializer.DatabaseData GetCurrentDatabaseData() => _data;
 	}
 }
