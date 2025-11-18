@@ -1,0 +1,1516 @@
+{
+  "definitions": [
+    {
+      "id": "Alpha Test",
+      "model": "editor_quad",
+      "textureBank": "Alpha Test"
+    },
+    {
+      "id": "Caustic",
+      "model": "tile_flat",
+      "textureBank": "Caustic"
+    },
+    {
+      "id": "toxic pipe join leak ew",
+      "model": "ss_tile_pipejoin_leak_ew",
+      "textureBank": "Toxic Pipes"
+    },
+    {
+      "id": "toxic pipe join leak ns",
+      "model": "ss_tile_pipejoin_leak_ns",
+      "textureBank": "Toxic Pipes"
+    },
+    {
+      "id": "ss tile door start ns",
+      "model": "ss_tile_door_ns",
+      "textureBank": "Industrial",
+      "flags": "Start,Door",
+      "connections": "NS"
+    },
+    {
+      "id": "ss tile door start ew",
+      "model": "ss_tile_door_ew",
+      "textureBank": "Industrial",
+      "flags": "Start,Door",
+      "connections": "EW"
+    },
+    {
+      "id": "ss tile door end ns",
+      "model": "ss_tile_door_ns",
+      "textureBank": "Industrial",
+      "flags": "End,Door",
+      "connections": "NS"
+    },
+    {
+      "id": "ss tile door end ew",
+      "model": "ss_tile_door_ew",
+      "textureBank": "Industrial",
+      "flags": "End,Door",
+      "connections": "EW"
+    },
+    {
+      "id": "ss tile console n",
+      "model": "ss_console_n",
+      "textureBank": "Industrial",
+      "flags": "Console",
+      "connections": "N"
+    },
+    {
+      "id": "ss tile console e",
+      "model": "ss_console_e",
+      "textureBank": "Industrial",
+      "flags": "Console",
+      "connections": "E"
+    },
+    {
+      "id": "ss tile console s",
+      "model": "ss_console_s",
+      "textureBank": "Industrial",
+      "flags": "Console",
+      "connections": "S"
+    },
+    {
+      "id": "ss tile console w",
+      "model": "ss_console_w",
+      "textureBank": "Industrial",
+      "flags": "Console",
+      "connections": "W"
+    },
+    {
+      "id": "ss toxic pipe ns",
+      "model": "ss_tile_pipe_ns",
+      "textureBank": "Industrial"
+    },
+    {
+      "id": "ss toxic pipe ew",
+      "model": "ss_tile_pipe_ew",
+      "textureBank": "Industrial"
+    },
+    {
+      "id": "ss toxic pipe ne",
+      "model": "ss_tile_pipe_corner_ne",
+      "textureBank": "Industrial"
+    },
+    {
+      "id": "ss toxic pipe nw",
+      "model": "ss_tile_pipe_corner_nw",
+      "textureBank": "Industrial"
+    },
+    {
+      "id": "ss toxic pipe se",
+      "model": "ss_tile_pipe_corner_se",
+      "textureBank": "Industrial"
+    },
+    {
+      "id": "ss toxic pipe sw",
+      "model": "ss_tile_pipe_corner_sw",
+      "textureBank": "Industrial"
+    },
+    {
+      "id": "ss toxic pipe nesw",
+      "model": "ss_tile_pipe_mid",
+      "textureBank": "Industrial"
+    },
+    {
+      "id": "ss toxic pipe join ns",
+      "model": "ss_tile_pipejoin_ns",
+      "textureBank": "Industrial"
+    },
+    {
+      "id": "ss toxic pipe join ew",
+      "model": "ss_tile_pipejoin_ew",
+      "textureBank": "Industrial"
+    },
+    {
+      "id": "ss toxic pipe floor n",
+      "model": "ss_tile_pipefloor_n",
+      "textureBank": "Industrial"
+    },
+    {
+      "id": "ss toxic pipe floor e",
+      "model": "ss_tile_pipefloor_e",
+      "textureBank": "Industrial"
+    },
+    {
+      "id": "ss toxic pipe floor s",
+      "model": "ss_tile_pipefloor_s",
+      "textureBank": "Industrial"
+    },
+    {
+      "id": "ss toxic pipe floor w",
+      "model": "ss_tile_pipefloor_w",
+      "textureBank": "Industrial"
+    },
+    {
+      "id": "ss tile boundary",
+      "model": "ss_tile_boundary",
+      "textureBank": "Industrial"
+    },
+    {
+      "id": "ss tile boundary 1",
+      "model": "ss_tile_boundary_pitted",
+      "textureBank": "Industrial"
+    },
+    {
+      "id": "ss tile boundary 2",
+      "model": "ss_tile_boundary_02",
+      "textureBank": "Industrial"
+    },
+    {
+      "id": "ss tile boundary 3",
+      "model": "ss_tile_boundary_03",
+      "textureBank": "Industrial"
+    },
+    {
+      "id": "ss tile boundary 4",
+      "model": "ss_tile_boundary_plate",
+      "textureBank": "Industrial"
+    },
+    {
+      "id": "ss tile slide",
+      "model": "ss_tile_slide_plain",
+      "textureBank": "Industrial",
+      "flags": "Slide,Roll"
+    },
+    {
+      "id": "ss tile static nesw",
+      "model": "ss_tile_nesw_static",
+      "textureBank": "Industrial",
+      "connections": "NSEW"
+    },
+    {
+      "id": "ss tile static ns",
+      "model": "ss_tile_ns_static",
+      "textureBank": "Industrial",
+      "connections": "NS"
+    },
+    {
+      "id": "ss tile static ew",
+      "model": "ss_tile_ew_static",
+      "textureBank": "Industrial",
+      "connections": "EW"
+    },
+    {
+      "id": "ss tile static se",
+      "model": "ss_tile_se_corner_static",
+      "textureBank": "Industrial",
+      "connections": "SE"
+    },
+    {
+      "id": "ss tile static sw",
+      "model": "ss_tile_sw_corner_static",
+      "textureBank": "Industrial",
+      "connections": "SW"
+    },
+    {
+      "id": "ss tile static ne",
+      "model": "ss_tile_ne_corner_static",
+      "textureBank": "Industrial",
+      "connections": "NE"
+    },
+    {
+      "id": "ss tile static nw",
+      "model": "ss_tile_nw_corner_static",
+      "textureBank": "Industrial",
+      "connections": "NW"
+    },
+    {
+      "id": "ss tile nesw",
+      "model": "ss_tile_nesw",
+      "textureBank": "Industrial",
+      "flags": "Slide",
+      "connections": "NSEW"
+    },
+    {
+      "id": "ss tile ns",
+      "model": "ss_tile_ns",
+      "textureBank": "Industrial",
+      "flags": "Slide",
+      "connections": "NS"
+    },
+    {
+      "id": "ss tile ew",
+      "model": "ss_tile_ew",
+      "textureBank": "Industrial",
+      "flags": "Slide",
+      "connections": "EW"
+    },
+    {
+      "id": "ss tile corner se",
+      "model": "ss_tile_se_corner",
+      "textureBank": "Industrial",
+      "flags": "Slide",
+      "connections": "SE"
+    },
+    {
+      "id": "ss tile corner sw",
+      "model": "ss_tile_sw_corner",
+      "textureBank": "Industrial",
+      "flags": "Slide",
+      "connections": "SW"
+    },
+    {
+      "id": "ss tile corner ne",
+      "model": "ss_tile_ne_corner",
+      "textureBank": "Industrial",
+      "flags": "Slide",
+      "connections": "NE"
+    },
+    {
+      "id": "ss tile corner nw",
+      "model": "ss_tile_nw_corner",
+      "textureBank": "Industrial",
+      "flags": "Slide",
+      "connections": "NW"
+    },
+    {
+      "id": "ss wall n",
+      "model": "ss_wall_n",
+      "textureBank": "Industrial"
+    },
+    {
+      "id": "ss wall e",
+      "model": "ss_wall_e",
+      "textureBank": "Industrial"
+    },
+    {
+      "id": "ss wall s",
+      "model": "ss_wall_s",
+      "textureBank": "Industrial"
+    },
+    {
+      "id": "ss wall w",
+      "model": "ss_wall_w",
+      "textureBank": "Industrial"
+    },
+    {
+      "id": "ss wall se",
+      "model": "ss_wall_corner_se",
+      "textureBank": "Industrial"
+    },
+    {
+      "id": "ss wall sw",
+      "model": "ss_wall_corner_sw",
+      "textureBank": "Industrial"
+    },
+    {
+      "id": "ss wall ne",
+      "model": "ss_wall_corner_ne",
+      "textureBank": "Industrial"
+    },
+    {
+      "id": "ss wall nw",
+      "model": "ss_wall_corner_nw",
+      "textureBank": "Industrial"
+    },
+    {
+      "id": "ss boundary edge n",
+      "model": "ss_tile_n_boundary_edge",
+      "textureBank": "Industrial"
+    },
+    {
+      "id": "ss boundary edge e",
+      "model": "ss_tile_e_boundary_edge",
+      "textureBank": "Industrial"
+    },
+    {
+      "id": "ss boundary edge s",
+      "model": "ss_tile_s_boundary_edge",
+      "textureBank": "Industrial"
+    },
+    {
+      "id": "ss boundary edge w",
+      "model": "ss_tile_w_boundary_edge",
+      "textureBank": "Industrial"
+    },
+    {
+      "id": "ss boundary corner ne",
+      "model": "ss_tile_ne_boundary_corner",
+      "textureBank": "Industrial"
+    },
+    {
+      "id": "ss boundary corner nw",
+      "model": "ss_tile_nw_boundary_corner",
+      "textureBank": "Industrial"
+    },
+    {
+      "id": "ss boundary corner se",
+      "model": "ss_tile_se_boundary_corner",
+      "textureBank": "Industrial"
+    },
+    {
+      "id": "ss boundary corner sw",
+      "model": "ss_tile_sw_boundary_corner",
+      "textureBank": "Industrial"
+    },
+    {
+      "id": "ss boundary corner small ne",
+      "model": "ss_tile_ne_boundary_sml_corner",
+      "textureBank": "Industrial"
+    },
+    {
+      "id": "ss boundary corner small nw",
+      "model": "ss_tile_nw_boundary_sml_corner",
+      "textureBank": "Industrial"
+    },
+    {
+      "id": "ss boundary corner small se",
+      "model": "ss_tile_se_boundary_sml_corner",
+      "textureBank": "Industrial"
+    },
+    {
+      "id": "ss boundary corner small sw",
+      "model": "ss_tile_sw_boundary_sml_corner",
+      "textureBank": "Industrial"
+    },
+    {
+      "id": "egy tile door start ns",
+      "model": "egy_tile_ns_door",
+      "textureBank": "Egypt",
+      "flags": "Start,Door",
+      "connections": "NS"
+    },
+    {
+      "id": "egy tile door start ew",
+      "model": "egy_tile_ew_door",
+      "textureBank": "Egypt",
+      "flags": "Start,Door",
+      "connections": "EW"
+    },
+    {
+      "id": "egy tile door end ns",
+      "model": "egy_tile_ns_door",
+      "textureBank": "Egypt",
+      "flags": "End,Door",
+      "connections": "NS"
+    },
+    {
+      "id": "egy tile door end ew",
+      "model": "egy_tile_ew_door",
+      "textureBank": "Egypt",
+      "flags": "End,Door",
+      "connections": "EW"
+    },
+    {
+      "id": "egy tile console n",
+      "model": "egy_console_n",
+      "textureBank": "Egypt",
+      "flags": "Console",
+      "connections": "N"
+    },
+    {
+      "id": "egy tile console e",
+      "model": "egy_console_e",
+      "textureBank": "Egypt",
+      "flags": "Console",
+      "connections": "E"
+    },
+    {
+      "id": "egy tile console s",
+      "model": "egy_console_s",
+      "textureBank": "Egypt",
+      "flags": "Console",
+      "connections": "S"
+    },
+    {
+      "id": "egy tile console w",
+      "model": "egy_console_w",
+      "textureBank": "Egypt",
+      "flags": "Console",
+      "connections": "W"
+    },
+    {
+      "id": "egy tile boundary",
+      "model": "egy_tile_boundary",
+      "textureBank": "Egypt"
+    },
+    {
+      "id": "egy boundary obelisk",
+      "model": "egy_tile_boundary_oblisk",
+      "textureBank": "Egypt"
+    },
+    {
+      "id": "egy tile pyramid",
+      "model": "egy_tile_boundary_pyramid",
+      "textureBank": "Egypt"
+    },
+    {
+      "id": "egy tile slide",
+      "model": "egy_tile_slide",
+      "textureBank": "Egypt",
+      "flags": "Slide,Roll"
+    },
+    {
+      "id": "egy tile static nesw",
+      "model": "egy_tile_nsew_static",
+      "textureBank": "Egypt",
+      "connections": "NSEW"
+    },
+    {
+      "id": "egy tile static ns",
+      "model": "egy_tile_ns_static",
+      "textureBank": "Egypt",
+      "connections": "NS"
+    },
+    {
+      "id": "egy tile static ew",
+      "model": "egy_tile_ew_static",
+      "textureBank": "Egypt",
+      "connections": "EW"
+    },
+    {
+      "id": "egy tile static se",
+      "model": "egy_tile_se_corner_static",
+      "textureBank": "Egypt",
+      "connections": "SE"
+    },
+    {
+      "id": "egy tile static sw",
+      "model": "egy_tile_sw_corner_static",
+      "textureBank": "Egypt",
+      "connections": "SW"
+    },
+    {
+      "id": "egy tile static ne",
+      "model": "egy_tile_ne_corner_static",
+      "textureBank": "Egypt",
+      "connections": "NE"
+    },
+    {
+      "id": "egy tile static nw",
+      "model": "egy_tile_nw_corner_static",
+      "textureBank": "Egypt",
+      "connections": "NW"
+    },
+    {
+      "id": "egy tile nesw",
+      "model": "egy_tile_nsew",
+      "textureBank": "Egypt",
+      "flags": "Slide",
+      "connections": "NSEW"
+    },
+    {
+      "id": "egy tile ns",
+      "model": "egy_tile_ns",
+      "textureBank": "Egypt",
+      "flags": "Slide",
+      "connections": "NS"
+    },
+    {
+      "id": "egy tile ew",
+      "model": "egy_tile_ew",
+      "textureBank": "Egypt",
+      "flags": "Slide",
+      "connections": "EW"
+    },
+    {
+      "id": "egy tile corner se",
+      "model": "egy_tile_se_corner",
+      "textureBank": "Egypt",
+      "flags": "Slide",
+      "connections": "SE"
+    },
+    {
+      "id": "egy tile corner sw",
+      "model": "egy_tile_sw_corner",
+      "textureBank": "Egypt",
+      "flags": "Slide",
+      "connections": "SW"
+    },
+    {
+      "id": "egy tile corner ne",
+      "model": "egy_tile_ne_corner",
+      "textureBank": "Egypt",
+      "flags": "Slide",
+      "connections": "NE"
+    },
+    {
+      "id": "egy tile corner nw",
+      "model": "egy_tile_nw_corner",
+      "textureBank": "Egypt",
+      "flags": "Slide",
+      "connections": "NW"
+    },
+    {
+      "id": "egy tutan bottom ew",
+      "model": "egy_tile_boundary_tut_bot_ew",
+      "textureBank": "Egypt"
+    },
+    {
+      "id": "egy tutan top ew",
+      "model": "egy_tile_boundary_tut_top_ew",
+      "textureBank": "Egypt"
+    },
+    {
+      "id": "egy tutan top we",
+      "model": "egy_tile_boundary_tut_top_we",
+      "textureBank": "Egypt"
+    },
+    {
+      "id": "egy tutan bottom we",
+      "model": "egy_tile_boundary_tut_bot_we",
+      "textureBank": "Egypt"
+    },
+    {
+      "id": "egy tutan top ns",
+      "model": "egy_tile_boundary_tut_top_ns",
+      "textureBank": "Egypt"
+    },
+    {
+      "id": "egy tutan bottom ns",
+      "model": "egy_tile_boundary_tut_bot_ns",
+      "textureBank": "Egypt"
+    },
+    {
+      "id": "egy tutan top sn",
+      "model": "egy_tile_boundary_tut_top_sn",
+      "textureBank": "Egypt"
+    },
+    {
+      "id": "egy tutan bottom sn",
+      "model": "egy_tile_boundary_tut_bot_sn",
+      "textureBank": "Egypt"
+    },
+    {
+      "id": "egy boundary ne",
+      "model": "egy_tile_ne_boundary_corner",
+      "textureBank": "Egypt"
+    },
+    {
+      "id": "egy boundary nw",
+      "model": "egy_tile_nw_boundary_corner",
+      "textureBank": "Egypt"
+    },
+    {
+      "id": "egy boundary se",
+      "model": "egy_tile_se_boundary_corner",
+      "textureBank": "Egypt"
+    },
+    {
+      "id": "egy boundary sw",
+      "model": "egy_tile_sw_boundary_corner",
+      "textureBank": "Egypt"
+    },
+    {
+      "id": "egy boundary small ne",
+      "model": "egy_tile_ne_boundary_sml_corner",
+      "textureBank": "Egypt"
+    },
+    {
+      "id": "egy boundary small nw",
+      "model": "egy_tile_nw_boundary_sml_corner",
+      "textureBank": "Egypt"
+    },
+    {
+      "id": "egy boundary small se",
+      "model": "egy_tile_se_boundary_sml_corner",
+      "textureBank": "Egypt"
+    },
+    {
+      "id": "egy boundary small sw",
+      "model": "egy_tile_sw_boundary_sml_corner",
+      "textureBank": "Egypt"
+    },
+    {
+      "id": "egy boundary n",
+      "model": "egy_tile_n_boundary_edge",
+      "textureBank": "Egypt"
+    },
+    {
+      "id": "egy boundary s",
+      "model": "egy_tile_s_boundary_edge",
+      "textureBank": "Egypt"
+    },
+    {
+      "id": "egy boundary e",
+      "model": "egy_tile_e_boundary_edge",
+      "textureBank": "Egypt"
+    },
+    {
+      "id": "egy boundary w",
+      "model": "egy_tile_w_boundary_edge",
+      "textureBank": "Egypt"
+    },
+    {
+      "id": "egy anubis head we",
+      "model": "egy_anubis_head_we",
+      "textureBank": "Egypt"
+    },
+    {
+      "id": "egy anubis tail we",
+      "model": "egy_anubis_tail_we",
+      "textureBank": "Egypt"
+    },
+    {
+      "id": "egy anumbis tail ew",
+      "model": "egy_anubis_tail_ew",
+      "textureBank": "Egypt"
+    },
+    {
+      "id": "egy anubis head ew",
+      "model": "egy_anubis_head_ew",
+      "textureBank": "Egypt"
+    },
+    {
+      "id": "egy anubis head ns",
+      "model": "egy_anubis_head_ns",
+      "textureBank": "Egypt"
+    },
+    {
+      "id": "egy anubis tail ns",
+      "model": "egy_anubis_tail_ns",
+      "textureBank": "Egypt"
+    },
+    {
+      "id": "egy anubis head sn",
+      "model": "egy_anubis_head_sn",
+      "textureBank": "Egypt"
+    },
+    {
+      "id": "egy anubis tail sn",
+      "model": "egy_anubis_tail_sn",
+      "textureBank": "Egypt"
+    },
+    {
+      "id": "egy sphynx head we",
+      "model": "egy_sphinx_head_we",
+      "textureBank": "Egypt"
+    },
+    {
+      "id": "egy sphynx tail we",
+      "model": "egy_sphinx_tail_we",
+      "textureBank": "Egypt"
+    },
+    {
+      "id": "egy sphynx tail ew",
+      "model": "egy_sphinx_tail_ew",
+      "textureBank": "Egypt"
+    },
+    {
+      "id": "egy sphynx head ew",
+      "model": "egy_sphinx_head_ew",
+      "textureBank": "Egypt"
+    },
+    {
+      "id": "egy sphynx head ns",
+      "model": "egy_sphinx_head_ns",
+      "textureBank": "Egypt"
+    },
+    {
+      "id": "egy sphynx tail ns",
+      "model": "egy_sphinx_tail_ns",
+      "textureBank": "Egypt"
+    },
+    {
+      "id": "egy sphynx head sn",
+      "model": "egy_sphinx_head_sn",
+      "textureBank": "Egypt"
+    },
+    {
+      "id": "egy sphynx tail sn",
+      "model": "egy_sphinx_tail_sn",
+      "textureBank": "Egypt"
+    },
+    {
+      "id": "med tile door start ns",
+      "model": "med_tile_ns_door",
+      "textureBank": "Medieval",
+      "flags": "Start,Door",
+      "connections": "NS"
+    },
+    {
+      "id": "med tile door start ew",
+      "model": "med_tile_ew_door",
+      "textureBank": "Medieval",
+      "flags": "Start,Door",
+      "connections": "EW"
+    },
+    {
+      "id": "med tile door end ns",
+      "model": "med_tile_ns_door",
+      "textureBank": "Medieval",
+      "flags": "End,Door",
+      "connections": "NS"
+    },
+    {
+      "id": "med tile door end ew",
+      "model": "med_tile_ew_door",
+      "textureBank": "Medieval",
+      "flags": "End,Door",
+      "connections": "EW"
+    },
+    {
+      "id": "med tile console n",
+      "model": "med_console_n",
+      "textureBank": "Medieval",
+      "flags": "Console",
+      "connections": "N"
+    },
+    {
+      "id": "med tile console e",
+      "model": "med_console_e",
+      "textureBank": "Medieval",
+      "flags": "Console",
+      "connections": "E"
+    },
+    {
+      "id": "med tile console s",
+      "model": "med_console_s",
+      "textureBank": "Medieval",
+      "flags": "Console",
+      "connections": "S"
+    },
+    {
+      "id": "med tile console w",
+      "model": "med_console_w",
+      "textureBank": "Medieval",
+      "flags": "Console",
+      "connections": "W"
+    },
+    {
+      "id": "med tile boundary",
+      "model": "med_tile_boundary",
+      "textureBank": "Medieval"
+    },
+    {
+      "id": "med tile slide",
+      "model": "egy_tile_slide",
+      "textureBank": "Medieval",
+      "flags": "Slide,Roll"
+    },
+    {
+      "id": "med tile static nesw",
+      "model": "med_tile_nsew_static",
+      "textureBank": "Medieval",
+      "connections": "NSEW"
+    },
+    {
+      "id": "med tile static ns",
+      "model": "med_tile_ns_static",
+      "textureBank": "Medieval",
+      "connections": "NS"
+    },
+    {
+      "id": "med tile static ew",
+      "model": "med_tile_ew_static",
+      "textureBank": "Medieval",
+      "connections": "EW"
+    },
+    {
+      "id": "med tile static se",
+      "model": "med_tile_se_corner_static",
+      "textureBank": "Medieval",
+      "connections": "SE"
+    },
+    {
+      "id": "med tile static sw",
+      "model": "med_tile_sw_corner_static",
+      "textureBank": "Medieval",
+      "connections": "SW"
+    },
+    {
+      "id": "med tile static ne",
+      "model": "med_tile_ne_corner_static",
+      "textureBank": "Medieval",
+      "connections": "NE"
+    },
+    {
+      "id": "med tile static nw",
+      "model": "med_tile_nw_corner_static",
+      "textureBank": "Medieval",
+      "connections": "NW"
+    },
+    {
+      "id": "med tile nesw",
+      "model": "med_tile_nsew",
+      "textureBank": "Medieval",
+      "flags": "Slide",
+      "connections": "NSEW"
+    },
+    {
+      "id": "med tile ns",
+      "model": "med_tile_ns",
+      "textureBank": "Medieval",
+      "flags": "Slide",
+      "connections": "NS"
+    },
+    {
+      "id": "med tile ew",
+      "model": "med_tile_ew",
+      "textureBank": "Medieval",
+      "flags": "Slide",
+      "connections": "EW"
+    },
+    {
+      "id": "med tile corner se",
+      "model": "med_tile_se_corner",
+      "textureBank": "Medieval",
+      "flags": "Slide",
+      "connections": "SE"
+    },
+    {
+      "id": "med tile corner sw",
+      "model": "med_tile_sw_corner",
+      "textureBank": "Medieval",
+      "flags": "Slide",
+      "connections": "SW"
+    },
+    {
+      "id": "med tile corner ne",
+      "model": "med_tile_ne_corner",
+      "textureBank": "Medieval",
+      "flags": "Slide",
+      "connections": "NE"
+    },
+    {
+      "id": "med tile corner nw",
+      "model": "med_tile_nw_corner",
+      "textureBank": "Medieval",
+      "flags": "Slide",
+      "connections": "NW"
+    },
+    {
+      "id": "med boundary ne",
+      "model": "med_tile_ne_boundary_corner",
+      "textureBank": "Medieval"
+    },
+    {
+      "id": "med boundary nw",
+      "model": "med_tile_nw_boundary_corner",
+      "textureBank": "Medieval"
+    },
+    {
+      "id": "med boundary se",
+      "model": "med_tile_se_boundary_corner",
+      "textureBank": "Medieval"
+    },
+    {
+      "id": "med boundary sw",
+      "model": "med_tile_sw_boundary_corner",
+      "textureBank": "Medieval"
+    },
+    {
+      "id": "med boundary small ne",
+      "model": "med_tile_ne_boundary_sml_corner",
+      "textureBank": "Medieval"
+    },
+    {
+      "id": "med boundary small nw",
+      "model": "med_tile_nw_boundary_sml_corner",
+      "textureBank": "Medieval"
+    },
+    {
+      "id": "med boundary small se",
+      "model": "med_tile_se_boundary_sml_corner",
+      "textureBank": "Medieval"
+    },
+    {
+      "id": "med boundary small sw",
+      "model": "med_tile_sw_boundary_sml_corner",
+      "textureBank": "Medieval"
+    },
+    {
+      "id": "med boundary n",
+      "model": "med_tile_n_boundary_edge",
+      "textureBank": "Medieval"
+    },
+    {
+      "id": "med boundary e",
+      "model": "med_tile_e_boundary_edge",
+      "textureBank": "Medieval"
+    },
+    {
+      "id": "med boundary s",
+      "model": "med_tile_s_boundary_edge",
+      "textureBank": "Medieval"
+    },
+    {
+      "id": "med boundary w",
+      "model": "med_tile_w_boundary_edge",
+      "textureBank": "Medieval"
+    },
+    {
+      "id": "med boundary house blue ew",
+      "model": "med_tile_sml_blue_hse_ew",
+      "textureBank": "Medieval"
+    },
+    {
+      "id": "med boundary house blue ns",
+      "model": "med_tile_sml_blue_hse_ns",
+      "textureBank": "Medieval"
+    },
+    {
+      "id": "med boundary house red ew",
+      "model": "med_tile_sml_red_hse_ew",
+      "textureBank": "Medieval"
+    },
+    {
+      "id": "med boundary house red ns",
+      "model": "med_tile_sml_red_hse_ns",
+      "textureBank": "Medieval"
+    },
+    {
+      "id": "med boundary house big blue ns",
+      "model": "med_tile_big_blue_hse_ns",
+      "textureBank": "Medieval"
+    },
+    {
+      "id": "med boundary house big blue ew",
+      "model": "med_tile_big_blue_hse_ew",
+      "textureBank": "Medieval"
+    },
+    {
+      "id": "med boundary house big red ns",
+      "model": "med_tile_big_red_hse_ns",
+      "textureBank": "Medieval"
+    },
+    {
+      "id": "med boundary house big red ew",
+      "model": "med_tile_big_red_hse_ew",
+      "textureBank": "Medieval"
+    },
+    {
+      "id": "med boundary cage n",
+      "model": "med_tile_n_boundary_cage",
+      "textureBank": "Medieval"
+    },
+    {
+      "id": "med boundary cage e",
+      "model": "med_tile_e_boundary_cage",
+      "textureBank": "Medieval"
+    },
+    {
+      "id": "med boudary cage s",
+      "model": "med_tile_s_boundary_cage",
+      "textureBank": "Medieval"
+    },
+    {
+      "id": "med boundary cage w",
+      "model": "med_tile_w_boundary_cage",
+      "textureBank": "Medieval"
+    },
+    {
+      "id": "med boundary stocks ns",
+      "model": "med_tile_ns_stocks",
+      "textureBank": "Medieval"
+    },
+    {
+      "id": "med boundary stocks ew",
+      "model": "med_tile_ew_stocks",
+      "textureBank": "Medieval"
+    },
+    {
+      "id": "med boundary well ew",
+      "model": "med_tile_ew_well",
+      "textureBank": "Medieval"
+    },
+    {
+      "id": "med boundary well ns",
+      "model": "med_tile_ns_well",
+      "textureBank": "Medieval"
+    },
+    {
+      "id": "med boundary tent blue",
+      "model": "med_tile_tent_blue",
+      "textureBank": "Medieval"
+    },
+    {
+      "id": "med boudary tent green",
+      "model": "med_tile_tent_green",
+      "textureBank": "Medieval"
+    },
+    {
+      "id": "jun tile door start ns",
+      "model": "jun_tile_ns_door",
+      "textureBank": "Jungle",
+      "flags": "Start,Door",
+      "connections": "NS"
+    },
+    {
+      "id": "jun tile door start ew",
+      "model": "jun_tile_ew_door",
+      "textureBank": "Jungle",
+      "flags": "Start,Door",
+      "connections": "EW"
+    },
+    {
+      "id": "jun tile door end ns",
+      "model": "jun_tile_ns_door",
+      "textureBank": "Jungle",
+      "flags": "End,Door",
+      "connections": "NS"
+    },
+    {
+      "id": "jun tile door end ew",
+      "model": "jun_tile_ew_door",
+      "textureBank": "Jungle",
+      "flags": "End,Door",
+      "connections": "EW"
+    },
+    {
+      "id": "jun tile console n",
+      "model": "jun_console_n",
+      "textureBank": "Jungle",
+      "flags": "Console",
+      "connections": "N"
+    },
+    {
+      "id": "jun tile console e",
+      "model": "jun_console_e",
+      "textureBank": "Jungle",
+      "flags": "Console",
+      "connections": "E"
+    },
+    {
+      "id": "jun tile console s",
+      "model": "jun_console_s",
+      "textureBank": "Jungle",
+      "flags": "Console",
+      "connections": "S"
+    },
+    {
+      "id": "jun tile console w",
+      "model": "jun_console_w",
+      "textureBank": "Jungle",
+      "flags": "Console",
+      "connections": "W"
+    },
+    {
+      "id": "jun tile boundary",
+      "model": "jun_tile_boundary",
+      "textureBank": "Jungle"
+    },
+    {
+      "id": "jun tile bound pyramid",
+      "model": "jun_tile_boundary_pyramid",
+      "textureBank": "Jungle"
+    },
+    {
+      "id": "jun tile slide",
+      "model": "jun_tile_slide",
+      "textureBank": "Jungle",
+      "flags": "Slide,Roll"
+    },
+    {
+      "id": "jun tile static nesw",
+      "model": "jun_tile_nsew_static",
+      "textureBank": "Jungle",
+      "connections": "NSEW"
+    },
+    {
+      "id": "jun tile static ns",
+      "model": "jun_tile_ns_static",
+      "textureBank": "Jungle",
+      "connections": "NS"
+    },
+    {
+      "id": "jun tile static ew",
+      "model": "jun_tile_ew_static",
+      "textureBank": "Jungle",
+      "connections": "EW"
+    },
+    {
+      "id": "jun tile static se",
+      "model": "jun_tile_se_corner_static",
+      "textureBank": "Jungle",
+      "connections": "SE"
+    },
+    {
+      "id": "jun tile static sw",
+      "model": "jun_tile_sw_corner_static",
+      "textureBank": "Jungle",
+      "connections": "SW"
+    },
+    {
+      "id": "jun tile static ne",
+      "model": "jun_tile_ne_corner_static",
+      "textureBank": "Jungle",
+      "connections": "NE"
+    },
+    {
+      "id": "jun tile static nw",
+      "model": "jun_tile_nw_corner_static",
+      "textureBank": "Jungle",
+      "connections": "NW"
+    },
+    {
+      "id": "jun tile nesw",
+      "model": "jun_tile_nsew",
+      "textureBank": "Jungle",
+      "flags": "Slide",
+      "connections": "NSEW"
+    },
+    {
+      "id": "jun tile ns",
+      "model": "jun_tile_ns",
+      "textureBank": "Jungle",
+      "flags": "Slide",
+      "connections": "NS"
+    },
+    {
+      "id": "jun tile ew",
+      "model": "jun_tile_ew",
+      "textureBank": "Jungle",
+      "flags": "Slide",
+      "connections": "EW"
+    },
+    {
+      "id": "jun tile corner se",
+      "model": "jun_tile_se_corner",
+      "textureBank": "Jungle",
+      "flags": "Slide",
+      "connections": "SE"
+    },
+    {
+      "id": "jun tile corner sw",
+      "model": "jun_tile_sw_corner",
+      "textureBank": "Jungle",
+      "flags": "Slide",
+      "connections": "SW"
+    },
+    {
+      "id": "jun tile corner ne",
+      "model": "jun_tile_ne_corner",
+      "textureBank": "Jungle",
+      "flags": "Slide",
+      "connections": "NE"
+    },
+    {
+      "id": "jun tile corner nw",
+      "model": "jun_tile_nw_corner",
+      "textureBank": "Jungle",
+      "flags": "Slide",
+      "connections": "NW"
+    },
+    {
+      "id": "jun tile stone nesw",
+      "model": "jun_tile_stone_nsew",
+      "textureBank": "Jungle",
+      "flags": "Slide",
+      "connections": "NSEW"
+    },
+    {
+      "id": "jun tile stone ns",
+      "model": "jun_tile_stone_ns",
+      "textureBank": "Jungle",
+      "flags": "Slide",
+      "connections": "NS"
+    },
+    {
+      "id": "jun tile stone ew",
+      "model": "jun_tile_stone_ew",
+      "textureBank": "Jungle",
+      "flags": "Slide",
+      "connections": "EW"
+    },
+    {
+      "id": "jun tile stone ne",
+      "model": "jun_tile_stone_ne_corner",
+      "textureBank": "Jungle",
+      "flags": "Slide",
+      "connections": "NE"
+    },
+    {
+      "id": "juin tile stone nw",
+      "model": "jun_tile_stone_nw_corner",
+      "textureBank": "Jungle",
+      "flags": "Slide",
+      "connections": "NW"
+    },
+    {
+      "id": "jun tile stone se",
+      "model": "jun_tile_stone_se_corner",
+      "textureBank": "Jungle",
+      "flags": "Slide",
+      "connections": "SE"
+    },
+    {
+      "id": "jun tile stone sw",
+      "model": "jun_tile_stone_sw_corner",
+      "textureBank": "Jungle",
+      "flags": "Slide",
+      "connections": "SW"
+    },
+    {
+      "id": "jun boundary earth",
+      "model": "jun_boundary_earth",
+      "textureBank": "Jungle"
+    },
+    {
+      "id": "jun boundary grass",
+      "model": "jun_boundary_grass",
+      "textureBank": "Jungle"
+    },
+    {
+      "id": "jun boundary earth grass n",
+      "model": "jun_boundary_grass_earth_n_01",
+      "textureBank": "Jungle"
+    },
+    {
+      "id": "jun boundary earth grass e",
+      "model": "jun_boundary_grass_earth_e_01",
+      "textureBank": "Jungle"
+    },
+    {
+      "id": "jun boundary earth grass s",
+      "model": "jun_boundary_grass_earth_s_01",
+      "textureBank": "Jungle"
+    },
+    {
+      "id": "jun boundary earth grass w",
+      "model": "jun_boundary_grass_earth_w_01",
+      "textureBank": "Jungle"
+    },
+    {
+      "id": "jun boundary earth grass ne",
+      "model": "jun_boundary_earth_grass_corner_ne",
+      "textureBank": "Jungle"
+    },
+    {
+      "id": "jun boundary earth grass nw",
+      "model": "jun_boundary_earth_grass_corner_nw",
+      "textureBank": "Jungle"
+    },
+    {
+      "id": "jun boundary earth grass se",
+      "model": "jun_boundary_earth_grass_corner_se",
+      "textureBank": "Jungle"
+    },
+    {
+      "id": "jun boundary earth grass sw",
+      "model": "jun_boundary_earth_grass_corner_sw",
+      "textureBank": "Jungle"
+    },
+    {
+      "id": "jun boundary grass earth n",
+      "model": "jun_boundary_grass_earth_n",
+      "textureBank": "Jungle"
+    },
+    {
+      "id": "jun boundary grass earth e",
+      "model": "jun_boundary_grass_earth_e",
+      "textureBank": "Jungle"
+    },
+    {
+      "id": "jun boundary grass earth s",
+      "model": "jun_boundary_grass_earth_s",
+      "textureBank": "Jungle"
+    },
+    {
+      "id": "jun boundary grass earth w",
+      "model": "jun_boundary_grass_earth_w",
+      "textureBank": "Jungle"
+    },
+    {
+      "id": "jun boundary grass earth ne",
+      "model": "jun_boundary_grass_earth_corner_ne",
+      "textureBank": "Jungle"
+    },
+    {
+      "id": "jun boundary grass earth nw",
+      "model": "jun_boundary_grass_earth_corner_nw",
+      "textureBank": "Jungle"
+    },
+    {
+      "id": "jun boundary grass earth se",
+      "model": "jun_boundary_grass_earth_corner_se",
+      "textureBank": "Jungle"
+    },
+    {
+      "id": "jun boundary grass earth sw",
+      "model": "jun_boundary_grass_earth_corner_sw",
+      "textureBank": "Jungle"
+    },
+    {
+      "id": "jun tree single",
+      "model": "jun_boundary_tree_single",
+      "textureBank": "Jungle"
+    },
+    {
+      "id": "jun tree plant",
+      "model": "jun_boundary_tree_plant",
+      "textureBank": "Jungle"
+    },
+    {
+      "id": "jun tree double",
+      "model": "jun_boundary_tree_double",
+      "textureBank": "Jungle"
+    },
+    {
+      "id": "jun plant",
+      "model": "jun_boundary_plant",
+      "textureBank": "Jungle"
+    },
+    {
+      "id": "jun boundary n",
+      "model": "jun_tile_n_boundary_edge",
+      "textureBank": "Jungle"
+    },
+    {
+      "id": "jun boundary e",
+      "model": "jun_tile_e_boundary_edge",
+      "textureBank": "Jungle"
+    },
+    {
+      "id": "jun boundary s",
+      "model": "jun_tile_s_boundary_edge",
+      "textureBank": "Jungle"
+    },
+    {
+      "id": "jun boundary w",
+      "model": "jun_tile_w_boundary_edge",
+      "textureBank": "Jungle"
+    },
+    {
+      "id": "jun boundary ne",
+      "model": "jun_tile_ne_boundary_corner",
+      "textureBank": "Jungle"
+    },
+    {
+      "id": "jun boundary nw",
+      "model": "jun_tile_nw_boundary_corner",
+      "textureBank": "Jungle"
+    },
+    {
+      "id": "jun boundary se",
+      "model": "jun_tile_se_boundary_corner",
+      "textureBank": "Jungle"
+    },
+    {
+      "id": "jun boundary sw",
+      "model": "jun_tile_sw_boundary_corner",
+      "textureBank": "Jungle"
+    },
+    {
+      "id": "jun boundary small ne",
+      "model": "jun_tile_ne_boundary_sml_corner",
+      "textureBank": "Jungle"
+    },
+    {
+      "id": "jun boundary small nw",
+      "model": "jun_tile_nw_boundary_sml_corner",
+      "textureBank": "Jungle"
+    },
+    {
+      "id": "jun boundary small se",
+      "model": "jun_tile_se_boundary_sml_corner",
+      "textureBank": "Jungle"
+    },
+    {
+      "id": "jun boundary small sw",
+      "model": "jun_tile_sw_boundary_sml_corner",
+      "textureBank": "Jungle"
+    },
+    {
+      "id": "jun temple nw",
+      "model": "jun_boundary_temple_nw",
+      "textureBank": "Jungle"
+    },
+    {
+      "id": "jun temple ne",
+      "model": "jun_boundary_temple_ne",
+      "textureBank": "Jungle"
+    },
+    {
+      "id": "jun temple sw",
+      "model": "jun_boundary_temple_sw",
+      "textureBank": "Jungle"
+    },
+    {
+      "id": "jun temple se",
+      "model": "jun_boundary_temple_se",
+      "textureBank": "Jungle"
+    },
+    {
+      "id": "jun statue n",
+      "model": "jun_boundary_statue_n",
+      "textureBank": "Jungle"
+    },
+    {
+      "id": "jun statue e",
+      "model": "jun_boundary_statue_e",
+      "textureBank": "Jungle"
+    },
+    {
+      "id": "jun statue s",
+      "model": "jun_boundary_statue_s",
+      "textureBank": "Jungle"
+    },
+    {
+      "id": "jun statue w",
+      "model": "jun_boundary_statue_w",
+      "textureBank": "Jungle"
+    },
+    {
+      "id": "mud pool ne",
+      "model": "jun_mudpool_ne",
+      "textureBank": "Mud Pit"
+    },
+    {
+      "id": "mud pool nw",
+      "model": "jun_mudpool_nw",
+      "textureBank": "Mud Pit"
+    },
+    {
+      "id": "mud pool se",
+      "model": "jun_mudpool_se",
+      "textureBank": "Mud Pit"
+    },
+    {
+      "id": "mud pool sw",
+      "model": "jun_mudpool_sw",
+      "textureBank": "Mud Pit"
+    },
+    {
+      "id": "Eggbot",
+      "model": "eggbot_default",
+      "textureBank": "Eggbot Default"
+    },
+    {
+      "id": "Eggbot",
+      "model": "eggbot_ind",
+      "textureBank": "Eggbot Industrial"
+    },
+    {
+      "id": "Eggbot",
+      "model": "eggbot_egy",
+      "textureBank": "Eggbot Egypt"
+    },
+    {
+      "id": "Eggbot",
+      "model": "eggbot_med",
+      "textureBank": "Eggbot Medieval"
+    },
+    {
+      "id": "Eggbot",
+      "model": "eggbot_jun",
+      "textureBank": "Eggbot Jungle"
+    },
+    {
+      "id": "Texture Test",
+      "model": "tile_flat",
+      "textureBank": "Texture Test"
+    },
+    {
+      "id": "tile_empty",
+      "textureBank": "Default"
+    },
+    {
+      "id": "tile_invisible",
+      "textureBank": "Default",
+      "flags": "Slide,Roll,Dock"
+    },
+    {
+      "id": "Slide",
+      "model": "ss_tile_slide",
+      "textureBank": "Default",
+      "flags": "Roll,Dock"
+    },
+    {
+      "id": "coin",
+      "model": "coin",
+      "textureBank": "coin",
+      "pickup": "Coin"
+    }
+  ]
+}
