@@ -68,7 +68,7 @@ namespace ClassicTilestorm
 					};
 					var serializer = JsonSerializer.CreateDefault(settings);
 
-					data = new DatabaseData();
+					data = new();
 					data.maps = root["maps"]?.ToObject<Map[]>(serializer) ?? Array.Empty<Map>();
 					data.definitions = root["definitions"]?.ToObject<Definition[]>(serializer) ?? Array.Empty<Definition>();
 					data.texturebank = root["texturebank"]?.ToObject<TextureBank[]>(serializer) ?? Array.Empty<TextureBank>();

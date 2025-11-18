@@ -16,7 +16,6 @@ namespace ClassicTilestorm
 		// Public access — maps prefer individual files, everything else from DatabaseSerializer
 		public static IList<Map> Maps => _individualMaps ?? _db?.maps ?? new Map[0];
 		public static IList<Definition> Definitions => _db?.definitions ?? new Definition[0];
-		//public static IList<Theme> Themes => _db?.themes ?? new Theme[0];
 		public static IList<TextureBank> TextureSets => _db?.texturebank ?? new TextureBank[0];
 		public static IList<Button> Buttons => _db?.buttons ?? new Button[0];
 
@@ -55,7 +54,7 @@ namespace ClassicTilestorm
 		public static Definition GetDefinition(string szType) =>
 			string.IsNullOrEmpty(szType) ? null : _db?.definitions.FirstOrDefault(td => td?.szType == szType);
 
-		public static TextureBank GetTextureSet(string name) =>
+		public static TextureBank GetTextureBank(string name) =>
 			string.IsNullOrEmpty(name) ? null : _db?.texturebank.FirstOrDefault(ts => ts?.name == name);
 
 		// ──────────────────────────────────────────────────────────────

@@ -90,8 +90,8 @@ namespace ClassicTilestorm
 			for (int n = 0; n < tileMap.Length; ++n)
 			{
 				int definitionIndex = tileMap[n];
-				string szType = (definitionIndex >= 0 && definitionIndex < currentMap.defs?.Length)
-					? currentMap.defs[definitionIndex]
+				string szType = (definitionIndex >= 0 && definitionIndex < currentMap.table?.Length)
+					? currentMap.table[definitionIndex]
 					: "tile_empty";
 
 				if (string.IsNullOrEmpty(szType))
@@ -121,18 +121,18 @@ namespace ClassicTilestorm
 				return -1;
 			}
 
-			if (currentMap.defs != null)
+			if (currentMap.table != null)
 			{
-				int existing = Array.IndexOf(currentMap.defs, szType);
+				int existing = Array.IndexOf(currentMap.table, szType);
 				if (existing != -1) return existing;
 			}
 
 			// Grow defs array
-			var oldDefs = currentMap.defs ?? Array.Empty<string>();
+			var oldDefs = currentMap.table ?? Array.Empty<string>();
 			var newDefs = new string[oldDefs.Length + 1];
 			oldDefs.CopyTo(newDefs, 0);
 			newDefs[oldDefs.Length] = szType;
-			currentMap.defs = newDefs;
+			currentMap.table = newDefs;
 
 			Debug.Log($"Added new mapDef: szType={szType}, new index={oldDefs.Length}");
 			UpdateChanges();
@@ -148,13 +148,13 @@ namespace ClassicTilestorm
 			}
 
 			int index = z * Width + x;
-			if (newDeinitionfIndex < 0 || newDeinitionfIndex >= currentMap.defs.Length)
+			if (newDeinitionfIndex < 0 || newDeinitionfIndex >= currentMap.table.Length)
 			{
 				Debug.LogError($"Invalid newDefinitionIndex={newDeinitionfIndex}");
 				return;
 			}
 
-			string szType = currentMap.defs[newDeinitionfIndex];
+			string szType = currentMap.table[newDeinitionfIndex];
 			if (string.IsNullOrEmpty(szType))
 			{
 				Debug.LogError($"Empty szType at index {newDeinitionfIndex}");
@@ -192,7 +192,7 @@ namespace ClassicTilestorm
 			for (int i = 0; i < Count; i++)
 			{
 				string szType = definitions[i];
-				logicalTiles[i] = Array.IndexOf(currentMap.defs, szType);
+				logicalTiles[i] = Array.IndexOf(currentMap.table, szType);
 				if (logicalTiles[i] == -1) logicalTiles[i] = 0;
 			}
 
@@ -204,7 +204,7 @@ namespace ClassicTilestorm
 				Pickups = currentMap.Pickups,
 				button = currentMap.button,
 				waypoints = currentMap.waypoints,
-				defs = currentMap.defs,
+				table = currentMap.table,
 				width = currentMap.width,
 				height = currentMap.height,
 				tiles = logicalTiles,
