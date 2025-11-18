@@ -36,6 +36,8 @@ public static class DefinitionConverter
 			if (old.bRoll) flags.Add("Roll");
 			if (old.bDock) flags.Add("Dock");
 			if (old.bDoor) flags.Add("Door");
+			if (old.bPuzzleBlock) flags.Add("PuzzleBlock");
+
 			if (flags.Count > 0)
 				def.flags = string.Join(",", flags);
 			// else: leave null → won't be serialized
@@ -59,10 +61,6 @@ public static class DefinitionConverter
 				4 => "Ammo",
 				_ => null  // ← becomes "None" only if needed later
 			};
-
-			if (old.bPuzzleBlock)
-				def.isPuzzleBlock = true;
-			// else: false by default, not serialized
 
 			newDefs.Add(def);
 		}

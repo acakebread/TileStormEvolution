@@ -11,19 +11,20 @@ namespace ClassicTilestorm
 		public string id;
 		public string model;
 		public string textureBank;
-		public string flags;
+		public string flags;        // ← PuzzleBlock now lives here!
 		public string connections;
-		public string pickup;           // only present if not None
-		public bool isPuzzleBlock;
+		public string pickup;       // only serialized if not None
 
-		// LEGACY COMPATIBILITY — NEVER SERIALIZED
+		// ── LEGACY COMPATIBILITY GETTERS (never serialized) ─────────────────────
 		[JsonIgnore] public string szType => id ?? "";
 		[JsonIgnore] public string szGeom => model ?? "";
 		[JsonIgnore] public string szBank => textureBank ?? "Default";
+
 		[JsonIgnore] public bool bNorth => HasConnection('N');
 		[JsonIgnore] public bool bSouth => HasConnection('S');
 		[JsonIgnore] public bool bEast => HasConnection('E');
 		[JsonIgnore] public bool bWest => HasConnection('W');
+
 		[JsonIgnore] public bool bStart => HasFlag("Start");
 		[JsonIgnore] public bool bEnd => HasFlag("End");
 		[JsonIgnore] public bool bConsole => HasFlag("Console");
@@ -31,19 +32,46 @@ namespace ClassicTilestorm
 		[JsonIgnore] public bool bRoll => HasFlag("Roll");
 		[JsonIgnore] public bool bDock => HasFlag("Dock");
 		[JsonIgnore] public bool bDoor => HasFlag("Door");
-		[JsonIgnore] public int nPickup => pickup switch { "Coin" => 1, "Key" => 2, "Health" => 3, "Ammo" => 4, _ => 0 };
-		[JsonIgnore] public bool bPuzzleBlock => isPuzzleBlock;
+		[JsonIgnore] public bool bPuzzleBlock => HasFlag("PuzzleBlock");  // ← NOW IN FLAGS!
 
-		// helpers...
-		private HashSet<string> _flagSet;
-		public bool HasFlag(string flag) =>
-			(_flagSet ??= new HashSet<string>((flags ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim().ToLowerInvariant())))
-			.Contains(flag.ToLowerInvariant());
+		[JsonIgnore]
+		public int nPickup => pickup switch
+		{
+			"Coin" => 1,
+			"Key" => 2,
+			"Health" => 3,
+			"Ammo" => 4,
+			_ => 0
+		};
 
-		private HashSet<char> _connSet;
-		public bool HasConnection(char dir) =>
-			(_connSet ??= new HashSet<char>((connections ?? "").ToUpperInvariant()))
-			.Contains(char.ToUpperInvariant(dir));
+		// ── INTERNAL HELPERS ───────────────────────────────────────────────────
+		private HashSet<string> _flagCache;
+		public bool HasFlag(string flag)
+		{
+			if (_flagCache == null)
+			{
+				_flagCache = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+				if (!string.IsNullOrEmpty(flags))
+				{
+					foreach (var f in flags.Split(new[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries))
+						_flagCache.Add(f.Trim());
+				}
+			}
+			return _flagCache.Contains(flag);
+		}
+
+		private HashSet<char> _connCache;
+		public bool HasConnection(char dir)
+		{
+			if (_connCache == null)
+			{
+				_connCache = new HashSet<char>();
+				if (!string.IsNullOrEmpty(connections))
+					foreach (char c in connections.ToUpperInvariant())
+						_connCache.Add(c);
+			}
+			return _connCache.Contains(char.ToUpperInvariant(dir));
+		}
 	}
 
 	public static class DefinitionExtensions
