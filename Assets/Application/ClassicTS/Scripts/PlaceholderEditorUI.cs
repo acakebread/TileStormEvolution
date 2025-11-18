@@ -50,7 +50,7 @@ namespace ClassicTilestorm
 		private Texture2D toggleHoverBackgroundTexture;
 
 		private bool gridLinesEnabled = true;
-		private int tempSelectedTileDefGlobalIndex = 0;
+		private int tempSelectedDefinitionGlobalIndex = 0;
 		public EditorController.EditorMode currentMode = EditorController.EditorMode.Drag;
 
 		private void Awake()
@@ -231,29 +231,29 @@ namespace ClassicTilestorm
 				scrollPosition = GUI.BeginScrollView(
 					scrollViewRect,
 					scrollPosition,
-					new Rect(0, 0, tileSelectorWidth - 40, DatabaseSerializer.TileDefs.Count * 40)
+					new Rect(0, 0, tileSelectorWidth - 40, ResourceManager.Definitions.Count * 40)
 				);
 
-				for (int i = 0; i < DatabaseSerializer.TileDefs.Count; i++)
+				for (int i = 0; i < ResourceManager.Definitions.Count; i++)
 				{
-					var tileDef = DatabaseSerializer.TileDefs[i];
-					string displayName = $"{tileDef.szType} ({tileDef.szTheme})";
-					Rect buttonRect = new Rect(0, i * 40, tileSelectorWidth - 40, 35);
+					var definition = ResourceManager.Definitions[i];
+					string displayName = $"{definition.szType} ({definition.szBank})";
+					Rect buttonRect = new(0, i * 40, tileSelectorWidth - 40, 35);
 
-					if (i == tempSelectedTileDefGlobalIndex)
+					if (i == tempSelectedDefinitionGlobalIndex)
 					{
 						GUI.color = Color.green;
 					}
 					if (GUI.Button(buttonRect, displayName))
 					{
-						tempSelectedTileDefGlobalIndex = i;
-						var selectedTileDef = DatabaseSerializer.TileDefs[i];
-						int selectedMapDefIndex = mapManager.GetOrAddMapDefIndex(selectedTileDef.szType);
+						tempSelectedDefinitionGlobalIndex = i;
+						var selectedDefinition = ResourceManager.Definitions[i];
+						int selectedMapDefIndex = mapManager.GetOrAddMapDefIndex(selectedDefinition.szType);
 						if (selectedMapDefIndex >= 0 && editorController.PaintMode != null)
 						{
-							editorController.PaintMode.SetTileDefIndex(selectedMapDefIndex, i);
+							editorController.PaintMode.SetDeinitionfIndex(selectedMapDefIndex, i);
 							GeometryUtil.DestroyGhostTile();
-							GeometryUtil.UpdateGhostTile(camera, mapManager, selectedTileDef);
+							GeometryUtil.UpdateGhostTile(camera, mapManager, selectedDefinition);
 						}
 					}
 					GUI.color = Color.white;
@@ -283,14 +283,14 @@ namespace ClassicTilestorm
 			return gridLinesEnabled;
 		}
 
-		public int GetSelectedTileDefGlobalIndex()
+		public int GetSelectedDefinitionGlobalIndex()
 		{
-			return tempSelectedTileDefGlobalIndex;
+			return tempSelectedDefinitionGlobalIndex;
 		}
 
-		public void SetSelectedTileDefGlobalIndex(int index)
+		public void SetSelectedDefinitionGlobalIndex(int index)
 		{
-			tempSelectedTileDefGlobalIndex = index;
+			tempSelectedDefinitionGlobalIndex = index;
 		}
 	}
 }

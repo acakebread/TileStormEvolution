@@ -8,25 +8,25 @@ namespace ClassicTilestorm
 	public class EditorControllerPaint : EditorControllerMovement
 	{
 		private MapManager mapManager;
-		private int selectedTileDefIndex;
+		private int selectedDefinitionIndex;
 		private Vector3 mouseDownPos; // For RMB deletion
 		private Vector3 mouseDownPosLMB; // For LMB placement
 		private int mouseDownMapIndex = -1; // Map index on LMB down
-		private List<int> tileDefCycleList; // List of TileDef indices for cycling
+		private List<int> definitionCycleList; // List of definition indices for cycling
 		private int cycleIndex = 0; // Current position in cycle list
 
-		public EditorControllerPaint(Camera camera, MapManager map, int tileDefIndex) : base(camera)
+		public EditorControllerPaint(Camera camera, MapManager map, int definitionIndex) : base(camera)
 		{
 			mapManager = map;
-			selectedTileDefIndex = tileDefIndex;
-			tileDefCycleList = new List<int>();
+			selectedDefinitionIndex = definitionIndex;
+			definitionCycleList = new List<int>();
 		}
 
-		public void SetTileDefIndex(int tileDefIndex, int globalIndex)
+		public void SetDeinitionfIndex(int definitionIndex, int globalIndex)
 		{
-			selectedTileDefIndex = tileDefIndex;
-			UpdateTileCycleList(DatabaseSerializer.TileDefs[globalIndex].szType);
-			cycleIndex = tileDefCycleList.IndexOf(globalIndex);
+			selectedDefinitionIndex = definitionIndex;
+			UpdateTileCycleList(ResourceManager.Definitions[globalIndex].szType);
+			cycleIndex = definitionCycleList.IndexOf(globalIndex);
 			if (cycleIndex < 0) cycleIndex = 0;
 		}
 
@@ -35,11 +35,11 @@ namespace ClassicTilestorm
 			base.Update();
 			if (!camera || PlaceholderEditorUI.Instance.IsGuiControlActive() || EventSystem.current.IsPointerOverGameObject()) return;
 
-			var tempSelectedTileDefGlobalIndex = PlaceholderEditorUI.Instance.GetSelectedTileDefGlobalIndex();
-			if (tempSelectedTileDefGlobalIndex >= 0 && tempSelectedTileDefGlobalIndex < DatabaseSerializer.TileDefs.Count)
+			var tempSelectedDefinitionGlobalIndex = PlaceholderEditorUI.Instance.GetSelectedDefinitionGlobalIndex();
+			if (tempSelectedDefinitionGlobalIndex >= 0 && tempSelectedDefinitionGlobalIndex < ResourceManager.Definitions.Count)
 			{
-				var tileDef = DatabaseSerializer.TileDefs[tempSelectedTileDefGlobalIndex];
-				GeometryUtil.UpdateGhostTile(camera, mapManager, tileDef);
+				var definition = ResourceManager.Definitions[tempSelectedDefinitionGlobalIndex];
+				GeometryUtil.UpdateGhostTile(camera, mapManager, definition);
 			}
 			else
 			{
@@ -55,10 +55,10 @@ namespace ClassicTilestorm
 				var mouseMoveDistance = Vector3.Distance(Input.mousePosition, mouseDownPos);
 				if (mouseMoveDistance < 5f) // Threshold: 5 pixels
 				{
-					var emptyTileDefIndex = mapManager.GetOrAddMapDefIndex("tile_empty");
-					if (emptyTileDefIndex >= 0)
+					var emptyDefinitionIndex = mapManager.GetOrAddMapDefIndex("tile_empty");
+					if (emptyDefinitionIndex >= 0)
 					{
-						selectedTileDefIndex = emptyTileDefIndex;
+						selectedDefinitionIndex = emptyDefinitionIndex;
 						PlaceTileAtMousePosition();
 					}
 				}
@@ -83,7 +83,7 @@ namespace ClassicTilestorm
 
 			if (Input.GetMouseButtonUp(0))
 			{
-				HandleTilePlacement(tempSelectedTileDefGlobalIndex);
+				HandleTilePlacement(tempSelectedDefinitionGlobalIndex);
 			}
 		}
 
@@ -102,10 +102,10 @@ namespace ClassicTilestorm
 			var x = mapIndex % mapManager.Width;
 			var z = mapIndex / mapManager.Width;
 
-			mapManager.UpdateTileAt(x, z, selectedTileDefIndex);
+			mapManager.UpdateTileAt(x, z, selectedDefinitionIndex);
 		}
 
-		private void HandleTilePlacement(int tempSelectedTileDefGlobalIndex)
+		private void HandleTilePlacement(int tempSelectedDefinitionGlobalIndex)
 		{
 			var ray = camera.ScreenPointToRay(Input.mousePosition);
 			var plane = new Plane(Vector3.up, Vector3.zero);
@@ -115,25 +115,25 @@ namespace ClassicTilestorm
 			var mapIndex = mapManager.WorldToMapIndex(worldPos);
 			if (mapIndex < 0 || mapIndex >= mapManager.Width * mapManager.Height || mapIndex != mouseDownMapIndex) return;
 
-			var selectedTileDef = DatabaseSerializer.TileDefs[tempSelectedTileDefGlobalIndex];
-			var selectedTileDefIndex = mapManager.GetOrAddMapDefIndex(selectedTileDef.szType);
+			var selectedDefinition = ResourceManager.Definitions[tempSelectedDefinitionGlobalIndex];
+			var selectedDefinitionIndex = mapManager.GetOrAddMapDefIndex(selectedDefinition.szType);
 
-			var tilesMatch = mapManager.GetTileDefAtIndex(mapIndex) == selectedTileDef.szType;
-			if (tilesMatch && tileDefCycleList != null && tileDefCycleList.Count > 1)
+			var tilesMatch = mapManager.GetDefinitionAtIndex(mapIndex) == selectedDefinition.szType;
+			if (tilesMatch && definitionCycleList != null && definitionCycleList.Count > 1)
 			{
-				cycleIndex = (cycleIndex + 1) % tileDefCycleList.Count;
-				tempSelectedTileDefGlobalIndex = tileDefCycleList[cycleIndex];
-				PlaceholderEditorUI.Instance.SetSelectedTileDefGlobalIndex(tempSelectedTileDefGlobalIndex);
-				var newTileDef = DatabaseSerializer.TileDefs[tempSelectedTileDefGlobalIndex];
-				selectedTileDefIndex = mapManager.GetOrAddMapDefIndex(newTileDef.szType);
-				this.selectedTileDefIndex = selectedTileDefIndex;
+				cycleIndex = (cycleIndex + 1) % definitionCycleList.Count;
+				tempSelectedDefinitionGlobalIndex = definitionCycleList[cycleIndex];
+				PlaceholderEditorUI.Instance.SetSelectedDefinitionGlobalIndex(tempSelectedDefinitionGlobalIndex);
+				var newDefinition = ResourceManager.Definitions[tempSelectedDefinitionGlobalIndex];
+				selectedDefinitionIndex = mapManager.GetOrAddMapDefIndex(newDefinition.szType);
+				this.selectedDefinitionIndex = selectedDefinitionIndex;
 				GeometryUtil.DestroyGhostTile();
-				GeometryUtil.UpdateGhostTile(camera, mapManager, newTileDef);
+				GeometryUtil.UpdateGhostTile(camera, mapManager, newDefinition);
 				PlaceTileAtMousePosition();
 			}
 			else
 			{
-				this.selectedTileDefIndex = selectedTileDefIndex;
+				this.selectedDefinitionIndex = selectedDefinitionIndex;
 				PlaceTileAtMousePosition();
 			}
 
@@ -166,24 +166,24 @@ namespace ClassicTilestorm
 			else
 				selectedGroup = singleDirections;
 
-			tileDefCycleList = new List<int>();
+			definitionCycleList = new List<int>();
 
-			for (var i = 0; i < DatabaseSerializer.TileDefs.Count; i++)
+			for (var i = 0; i < ResourceManager.Definitions.Count; i++)
 			{
-				if (DatabaseSerializer.TileDefs[i].szType == derivedBaseTileType)
+				if (ResourceManager.Definitions[i].szType == derivedBaseTileType)
 				{
-					tileDefCycleList.Add(i);
+					definitionCycleList.Add(i);
 					break;
 				}
 			}
 
 			foreach (var suffix in selectedGroup)
 			{
-				for (var i = 0; i < DatabaseSerializer.TileDefs.Count; i++)
+				for (var i = 0; i < ResourceManager.Definitions.Count; i++)
 				{
-					if (DatabaseSerializer.TileDefs[i].szType == derivedBaseTileType + suffix)
+					if (ResourceManager.Definitions[i].szType == derivedBaseTileType + suffix)
 					{
-						tileDefCycleList.Add(i);
+						definitionCycleList.Add(i);
 						break;
 					}
 				}

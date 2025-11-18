@@ -1,59 +1,60 @@
+﻿// TextureSetAnimator.cs — Final
 using UnityEngine;
 
 namespace ClassicTilestorm
 {
 	public class TextureSetAnimator : MonoBehaviour
 	{
-		private TextureFrame[] frames = null;
-		private MeshRenderer target = null;
-		private int frame = 0;
-		private float timer = 0f;
+		private TextureFrame[] _frames;
+		private MeshRenderer _targetRenderer;
+		private int _currentFrame = 0;
+		private float _timer = 0f;
 
-		public delegate void TextureChangedHandler(Texture newTexture);
+		public delegate void TextureChangedHandler(Texture2D newTexture);
 		public event TextureChangedHandler OnTextureChanged;
 
-		public void ApplyTexture(int index)
+		public void Initialize(TextureSequence sequence)
 		{
-			if (target == null || frames[index].texture == null) return;
-			if (null == target.material) target.material = new Material(Shader.Find("Universal Render Pipeline/Simple Lit"));
-
-			target.material.mainTexture = frames[index].texture;
-			OnTextureChanged?.Invoke(frames[index].texture); // Notify listeners
-		}
-
-		public void Initialize(TextureFrame[] frames)
-		{
-			target = GetComponentInChildren<MeshRenderer>();
-			if (null == frames || null == target)
+			_targetRenderer = GetComponentInChildren<MeshRenderer>(true);
+			if (_targetRenderer == null || sequence == null || sequence.ResolvedFrames.Length == 0)
 			{
 				Destroy(this);
 				return;
 			}
 
-			// Apply first frame
-			this.frames = frames;
-			frame = 0;
-			timer = 0f;
-			ApplyTexture(frame);
+			_frames = sequence.ResolvedFrames;
+			_currentFrame = 0;
+			_timer = 0f;
+			ApplyFrame(0);
+		}
+
+		public void ApplyFrame(int index)
+		{
+			if (_targetRenderer.material == null)
+				_targetRenderer.material = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+
+			var tex = _frames[index].texture;
+			_targetRenderer.material.mainTexture = tex;
+			OnTextureChanged?.Invoke(tex);
 		}
 
 		void Update()
 		{
-			if (frames == null || frames.Length <= 1)
-				return;
+			if (_frames.Length <= 1) return;
 
-			timer += Time.deltaTime;
-			if (timer >= frames[frame].duration)
+			_timer += Time.deltaTime;
+			if (_timer >= _frames[_currentFrame].fDuration)
 			{
-				timer -= frames[frame].duration;
-				frame = (frame + 1) % frames.Length;
-				ApplyTexture(frame);
+				_timer -= _frames[_currentFrame].fDuration;
+				_currentFrame = (_currentFrame + 1) % _frames.Length;
+				ApplyFrame(_currentFrame);
 			}
 		}
 
 		void OnDestroy()
 		{
-			if (target != null && target.material != null) Destroy(target.material);
+			if (_targetRenderer != null && _targetRenderer.material != null)
+				Destroy(_targetRenderer.material);
 		}
 	}
 }

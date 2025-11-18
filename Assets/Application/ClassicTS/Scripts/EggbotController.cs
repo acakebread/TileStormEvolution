@@ -33,7 +33,7 @@ namespace ClassicTilestorm
 
 		public int NavDirection(IMapManager map) => Navigation.NavToDest(map, currentTile, map.Waypoints[dstWaypoint].nTile);
 
-		private void Awake() 
+		private void Awake()
 		{
 			dstWaypoint = 1;
 			mod1 = mod2 = 0f;
@@ -199,10 +199,10 @@ namespace ClassicTilestorm
 		{
 			costume = string.IsNullOrEmpty(costume) ? "Eggbot Default" : costume;
 			var eggbotController = new GameObject($"Eggbot: {costume}");
-			
+
 			if (null != parent) eggbotController.transform.SetParent(parent, false);
 
-			var def = DatabaseSerializer.TileDefs.FirstOrDefault(td => td.szType == "Eggbot" && td.szTheme == costume);
+			var def = ResourceManager.Definitions.FirstOrDefault(td => td.szType == "Eggbot" && td.szBank == costume);
 			if (null == def?.szGeom) { Debug.LogError("Initialize: Invalid Eggbot geometry"); return null; }
 
 			var mesh = GeometryManager.InstantiatePrefab(def, eggbotController.transform, Vector3.zero);

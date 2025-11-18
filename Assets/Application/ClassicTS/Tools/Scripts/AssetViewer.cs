@@ -121,42 +121,34 @@ namespace AssetViewerNamespace
 					if ("tile_empty" == szType || "tile_invisible" == szType)
 						continue;
 
-					//string szTheme = map.defs[defIndex].szTheme;
-					//if (string.IsNullOrEmpty(szType))
-					//{
-					//	Debug.LogWarning($"Null or empty szType at defIndex {defIndex} in map {map.name}");
-					//	continue;
-					//}
-
-					//DatabaseSerializer.TileDef tileDef = DatabaseSerializer.TileDefs.FirstOrDefault(td => td.szType == szType && td.szTheme == szTheme);
-					DatabaseUniversalSerializer.TileDef tileDef = DatabaseUniversalSerializer.TileDefs.FirstOrDefault(td => td.szType == szType);
-					if (tileDef == null)
+					DatabaseUniversalSerializer.TileDef definition = DatabaseUniversalSerializer.TileDefs.FirstOrDefault(td => td.szType == szType);
+					if (definition == null)
 					{
 						//Debug.LogWarning($"TileDef not found for szType={szType}, szTheme={szTheme} at ({x}, {z}) in map {map.name}");
 						Debug.LogWarning($"TileDef not found for szType={szType} at ({x}, {z}) in map {map.name}");
 						continue;
 					}
 
-					GameObject tileObj = new GameObject($"{tileDef.szType}_{x}_{z}");
+					GameObject tileObj = new GameObject($"{definition.szType}_{x}_{z}");
 					tileObj.transform.SetParent(mapRoot.transform, false);
 					tileObj.transform.position = new Vector3(x, 0f, z);
 					if (flip)
 						tileObj.transform.rotation = Quaternion.AngleAxis(180, Vector3.up);
 
-					string geomPath = $"{PreviewSettings.GeometryPath}{tileDef.szGeom}".Replace(".x", "");
+					string geomPath = $"{PreviewSettings.GeometryPath}{definition.szGeom}".Replace(".x", "");
 					GameObject geomAsset = Resources.Load<GameObject>(geomPath);
 					if (geomAsset != null)
 					{
 						GameObject geomInstance = Instantiate(geomAsset, tileObj.transform);
 						geomInstance.transform.localPosition = Vector3.zero;
-						geomInstance.name = tileDef.szGeom;
+						geomInstance.name = definition.szGeom;
 
 						mapCentre += tileObj.transform.position;
 						activeTileCount++;
 					}
 					else
 					{
-						Debug.LogWarning($"Geometry not found at {geomPath} for TileDef {tileDef.szType}");
+						Debug.LogWarning($"Geometry not found at {geomPath} for TileDef {definition.szType}");
 						GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
 						cube.transform.SetParent(tileObj.transform, false);
 						cube.transform.localPosition = Vector3.zero;
@@ -165,22 +157,17 @@ namespace AssetViewerNamespace
 						cube.SetActive(false);
 					}
 
-					//TextureSet textureSet = GetTextureForTileDef(tileDef, szTheme);
-					//if (textureSet != null && textureSet.frames != null && textureSet.frames.Length > 0)
-					//{
-					//	TileAnimator animator = tileObj.AddComponent<TileAnimator>();
-					//	animator.Initialize(textureSet);
-					//}
-					var textureFrames = TextureSetManager.GetTextureFrames(tileDef.szTheme);
+					var textureFrames = TextureSetManager.GetTextureFrames(definition.szTheme);
 					if (textureFrames?.Length > 0)
 					{
 						var animator = tileObj.AddComponent<TextureSetAnimator>();
-						animator.Initialize(textureFrames);
+						//animator.Initialize(textureFrames);
+						animator.Initialize(TextureSetManager.GetTextureSequence(definition.szTheme));
 					}
 					else
 					{
 						//Debug.LogWarning($"No valid texture set for TileDef {tileDef.szType}, szTheme={szTheme}");
-						Debug.LogWarning($"No valid texture set for TileDef {tileDef.szType}");
+						Debug.LogWarning($"No valid texture set for Definition {definition.szType}");
 					}
 				}
 			}

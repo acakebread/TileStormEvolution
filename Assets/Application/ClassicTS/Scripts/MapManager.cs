@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿// MapManager.cs
+using UnityEngine;
 using System.Linq;
 using System.Collections.Generic;
 using MassiveHadronLtd;
@@ -23,147 +24,92 @@ namespace ClassicTilestorm
 		int GetEndTile();
 		int FindAdjacentConsole(int nTile);
 		Waypoint[] Waypoints { get; }
+		Map CurrentMap { get; } // optional – useful for editor tools
 	}
 
 	public class MapManager : MonoBehaviour, IMapManager
 	{
-		private int[] indices;
-		private int[] offsets;
-		private Tile[] tiles;
-		private string[] mapDefs;
-		private string[] tileDefs;
-		private Waypoint[] waypoints;
-		private string mapName; // Replaces currentMap reference
+		// ------------------------------------------------------------------
+		// Runtime-only mutable state
+		// ------------------------------------------------------------------
+		private Map currentMap;
+		private int[] indices;                    // Scrambled/solved visual indices
+		private Tile[] tiles;                     // Instantiated runtime Tile objects
+		private string[] definitions;             // Cached szType string per map index (for fast lookup & saving)
 
-		public Waypoint[] Waypoints => waypoints;
+		// ------------------------------------------------------------------
+		// IMapData / IMapManager forwarded properties
+		// ------------------------------------------------------------------
+		public Map CurrentMap => currentMap;
 
-		public int[] Indices { get => indices; private set => indices = value; }
-		public Tile[] Tiles { get => tiles; private set => tiles = value; }
-
-		public int Width { get; private set; }
-		public int Height { get; private set; }
+		public int Width => currentMap?.width ?? 0;
+		public int Height => currentMap?.height ?? 0;
 		public int Count => Width * Height;
+
+		public int[] Indices => indices;
+
+		public Waypoint[] Waypoints => currentMap?.waypoints ?? Array.Empty<Waypoint>();
 
 		private void Awake()
 		{
 			indices = null;
-			offsets = null;
 			tiles = null;
-			mapDefs = null;
-			tileDefs = null;
-			waypoints = null;
-			mapName = null;
+			definitions = null;
 		}
 
-		private void Initialise(DatabaseSerializer.Map map)
+		private void Initialise(Map map)
 		{
-			mapName = map?.name;
-			if (string.IsNullOrEmpty(mapName))
+			currentMap = map ?? throw new ArgumentNullException(nameof(map));
+
+			if (string.IsNullOrEmpty(currentMap.name))
 			{
 				Debug.LogError("Map name is null or empty during initialization.");
 				return;
 			}
 
-			offsets = map?.mixed;
-			Width = map?.nWidth ?? 0;
-			Height = map?.nHeight ?? 0;
-			mapDefs = map?.defs ?? new string[0];
-			tileDefs = new string[Count];
+			LoadTileData(currentMap.tiles);
 
-			void LoadTileData(int[] tileMap)
-			{
-				if (tileMap == null || tileMap.Length != Count)
-				{
-					Debug.LogError($"Invalid tiles data! length={(tileMap?.Length ?? -1)}, expected={Count}");
-					return;
-				}
-
-				tiles = new Tile[Count];
-				for (var n = 0; n < tileMap.Length; ++n)
-				{
-					var tileDefIndex = tileMap[n];
-					if (tileDefIndex < 0 || tileDefIndex >= mapDefs.Length)
-					{
-						Debug.LogWarning($"Invalid tileDefIndex={tileDefIndex} at tile {n}, expected range [0, {mapDefs.Length - 1}]");
-						continue;
-					}
-
-					var szType = mapDefs[tileDefIndex];
-					if (string.IsNullOrEmpty(szType))
-					{
-						Debug.LogWarning($"Null or empty szType at tileDefIndex {tileDefIndex} for tile {n}, using tile_empty");
-						szType = "tile_empty";
-					}
-					tileDefs[n] = szType;
-					tiles[n] = new Tile(szType);
-					if (szType == "tile_empty") continue;
-
-					var tileDef = DatabaseSerializer.TileDefs.FirstOrDefault(td => td.szType == szType);
-					if (tileDef == null)
-					{
-						Debug.LogError($"TileDef not found for szType={szType} at tileDefIndex={tileDefIndex} for tile {n}");
-						continue;
-					}
-					tiles[n].GameObject = GeometryManager.InstantiateTile(tileDef, transform, TileWorldPosition(n), tiles[n].Interactive);
-				}
-			}
-
-			LoadTileData(map.tiles);
-
-			if (PreviewSettings.Scrambled) Scramble(); else Solve();
-
-			Debug.AssertFormat(null != indices && null != offsets, "invalid map tile indices or offsets data");
+			if (PreviewSettings.Scrambled) Scramble();
+			else Solve();
 
 			InitializeWindController();
-			SetupWaypoints(map);
+			SetupWaypoints();
+		}
 
-			void SetupWaypoints(DatabaseSerializer.Map map)
+		private void LoadTileData(int[] tileMap)
+		{
+			if (tileMap == null || tileMap.Length != Count)
 			{
-				if (map?.waypoints != null && map.waypoints.Length > 0)
+				Debug.LogError($"Invalid tiles data! length={(tileMap?.Length ?? -1)}, expected={Count}");
+				return;
+			}
+
+			tiles = new Tile[Count];
+			definitions = new string[Count];
+
+			for (int n = 0; n < tileMap.Length; ++n)
+			{
+				int definitionIndex = tileMap[n];
+				string szType = (definitionIndex >= 0 && definitionIndex < currentMap.table?.Length)
+					? currentMap.table[definitionIndex]
+					: "tile_empty";
+
+				if (string.IsNullOrEmpty(szType))
+					szType = "tile_empty";
+
+				definitions[n] = szType;
+				var definition = ResourceManager.Definitions.FirstOrDefault(td => td.szType == szType);
+				tiles[n] = new Tile(definition);
+
+				if (szType == "tile_empty") continue;
+				if (definition == null)
 				{
-					waypoints = map.waypoints.Select(Waypoint.FromSerialized).ToArray();
-					Debug.Log($"Using {waypoints.Length} waypoints from map data: [{string.Join(", ", waypoints.Select(w => w.nTile))}]");
-					return;
+					Debug.LogError($"Definition not found for szType={szType} at tile {n}");
+					continue;
 				}
 
-				var generated = new List<Waypoint>();
-				var startTile = GetStartTile();
-				var endTile = GetEndTile();
-
-				if (startTile == -1 || endTile == -1)
-				{
-					Debug.LogWarning("Cannot setup waypoints: missing start or end tile");
-					waypoints = generated.ToArray();
-					return;
-				}
-
-				generated.Add(new Waypoint { nTile = startTile });
-
-				var cur = startTile;
-				var dir = Navigation.NavToDest(this, cur, endTile);
-				if (dir != 0)
-				{
-					while (cur != endTile)
-					{
-						if (FindAdjacentConsole(cur) != -1)
-							generated.Add(new Waypoint { nTile = cur });
-
-						var next = Navigation.GetAdjacentTile(this, cur, dir);
-						if (next == -1 || next == startTile) break;
-
-						var nextTile = GetTile(next);
-						if (nextTile.Nav == 0) break;
-
-						dir = Navigation.CalculateNav(dir, nextTile.Nav);
-						if (dir == 0) break;
-
-						cur = next;
-					}
-				}
-
-				generated.Add(new Waypoint { nTile = endTile });
-				waypoints = generated.ToArray();
-				Debug.Log($"Generated {waypoints.Length} waypoints: [{string.Join(", ", waypoints.Select(w => w.nTile))}]");
+				tiles[n].GameObject = GeometryManager.InstantiateTile(
+					definition, transform, TileWorldPosition(n), tiles[n].Interactive);
 			}
 		}
 
@@ -175,178 +121,123 @@ namespace ClassicTilestorm
 				return -1;
 			}
 
-			for (int i = 0; i < mapDefs.Length; i++)
+			if (currentMap.table != null)
 			{
-				if (mapDefs[i] == szType)
-					return i;
+				int existing = Array.IndexOf(currentMap.table, szType);
+				if (existing != -1) return existing;
 			}
 
-			mapDefs = mapDefs.Concat(new[] { szType }).ToArray();
-			Debug.Log($"Added new mapDef: szType={szType}, new index={mapDefs.Length - 1}");
+			// Grow defs array
+			var oldDefs = currentMap.table ?? Array.Empty<string>();
+			var newDefs = new string[oldDefs.Length + 1];
+			oldDefs.CopyTo(newDefs, 0);
+			newDefs[oldDefs.Length] = szType;
+			currentMap.table = newDefs;
+
+			Debug.Log($"Added new mapDef: szType={szType}, new index={oldDefs.Length}");
 			UpdateChanges();
-			return mapDefs.Length - 1;
+			return oldDefs.Length;
 		}
 
-		public void UpdateTileAt(int x, int z, int newTileDefIndex)
+		public void UpdateTileAt(int x, int z, int newDeinitionfIndex)
 		{
 			if (x < 0 || x >= Width || z < 0 || z >= Height)
 			{
-				Debug.LogError($"Invalid coordinates: ({x}, {z}) outside map bounds (Width={Width}, Height={Height})");
+				Debug.LogError($"Invalid coordinates: ({x}, {z}) outside map bounds ({Width}x{Height})");
 				return;
 			}
 
 			int index = z * Width + x;
-			if (index >= Count)
+			if (newDeinitionfIndex < 0 || newDeinitionfIndex >= currentMap.table.Length)
 			{
-				Debug.LogError($"Calculated index {index} is out of bounds for tiles array (Count={Count})");
+				Debug.LogError($"Invalid newDefinitionIndex={newDeinitionfIndex}");
 				return;
 			}
 
-			if (newTileDefIndex < 0 || newTileDefIndex >= mapDefs.Length)
-			{
-				Debug.LogError($"Invalid newTileDefIndex={newTileDefIndex}, must be between 0 and {mapDefs.Length - 1}");
-				return;
-			}
-
-			var szType = mapDefs[newTileDefIndex];
+			string szType = currentMap.table[newDeinitionfIndex];
 			if (string.IsNullOrEmpty(szType))
 			{
-				Debug.LogError($"Null or empty szType at tileDefIndex {newTileDefIndex} for tile ({x}, {z})");
+				Debug.LogError($"Empty szType at index {newDeinitionfIndex}");
 				return;
 			}
 
 			if (tiles[index].GameObject != null)
 				Destroy(tiles[index].GameObject);
 
-			tileDefs[index] = szType;
-			tiles[index] = new Tile(szType);
+			definitions[index] = szType;
+			var def = ResourceManager.Definitions.FirstOrDefault(td => td.szType == szType);
+			tiles[index] = new Tile(def);
+
 			if (szType != "tile_empty")
 			{
-				var tileDef = DatabaseSerializer.TileDefs.FirstOrDefault(td => td.szType == szType);
-				if (tileDef == null)
+				var definition = ResourceManager.GetDefinition(szType);
+				if (definition != null)
 				{
-					Debug.LogError($"TileDef not found for szType={szType} at tileDefIndex={newTileDefIndex} for tile ({x}, {z})");
-					return;
+					tiles[index].GameObject = GeometryManager.InstantiateTile(
+						definition, transform, TileWorldPosition(index), tiles[index].Interactive);
 				}
-				tiles[index].GameObject = GeometryManager.InstantiateTile(tileDef, transform, TileWorldPosition(index), tiles[index].Interactive);
 			}
 
 			UpdateChanges();
 		}
 
-		// ---------------------------------------------------------------------------
-		// Create updated database payload using mapName to locate the map
-		// ---------------------------------------------------------------------------
-		private DatabaseSerializer.DatabaseData CreateUpdatedDatabaseData()
+		// -----------------------------------------------------------------------
+		// Database update
+		// -----------------------------------------------------------------------
+		// In MapManager.cs — just replace these methods
+
+		private void ApplyCurrentMapChanges()
 		{
-			if (string.IsNullOrEmpty(mapName))
-				throw new InvalidOperationException("Map name is null – cannot create database data.");
+			if (currentMap == null) return;
 
-			var targetMap = DatabaseSerializer.Maps.FirstOrDefault(m => m.name == mapName);
-			if (targetMap == null)
-				throw new InvalidOperationException($"Map with name '{mapName}' not found in database.");
-
-			// Sync logical tile indices back into the map
 			var logicalTiles = new int[Count];
 			for (int i = 0; i < Count; i++)
 			{
-				var szType = tileDefs[i];
-				logicalTiles[i] = Array.IndexOf(mapDefs, szType);
-				if (logicalTiles[i] == -1)
-				{
-					Debug.LogWarning($"Tile type '{szType}' not in mapDefs, defaulting to 0");
-					logicalTiles[i] = 0;
-				}
+				string szType = definitions[i];
+				logicalTiles[i] = Array.IndexOf(currentMap.table, szType);
+				if (logicalTiles[i] == -1) logicalTiles[i] = 0; // fallback
 			}
 
-			// Clone and update the map
-			var updatedMap = new DatabaseSerializer.Map
-			{
-				name = targetMap.name,
-				szEggbotCostume = targetMap.szEggbotCostume,
-				szMusic = targetMap.szMusic,
-				Pickups = targetMap.Pickups,
-				szButtonID = targetMap.szButtonID,
-				waypoints = waypoints?.Select(w => w.ToSerialized()).ToArray(),
-				defs = mapDefs,
-				nWidth = Width,
-				nHeight = Height,
-				tiles = logicalTiles,
-				mixed = offsets
-			};
-
-			return new DatabaseSerializer.DatabaseData
-			{
-				maps = DatabaseSerializer.Maps
-					.Select(m => m.name == mapName ? updatedMap : m)
-					.ToArray(),
-				themes = DatabaseSerializer.Themes.ToArray(),
-				tiledefs = DatabaseSerializer.TileDefs.ToArray(),
-				buttons = DatabaseSerializer.Buttons.ToArray(),
-				texture_set = DatabaseSerializer.TextureSets.ToArray()
-			};
+			currentMap.tiles = logicalTiles;                    // Mutate in place
+			ResourceManager.ApplyMapChanges(currentMap);       // Survives map switching
 		}
 
 		public void UpdateChanges()
 		{
-			if (string.IsNullOrEmpty(mapName))
-			{
-				Debug.LogError("Cannot update changes: map name is null or empty");
-				return;
-			}
-
-			var updatedData = CreateUpdatedDatabaseData();
-			DatabaseSerializer.UpdateDatabase(updatedData);
-			Debug.Log($"Map '{mapName}' changes updated in memory (tiles + waypoints).");
+			ApplyCurrentMapChanges();
+			// No extra call — DatabaseSerializer is stateless, no sync needed
 		}
 
 		public void SaveChanges()
 		{
-			if (string.IsNullOrEmpty(mapName))
-			{
-				Debug.LogError("Cannot save changes: map name is null or empty");
-				return;
-			}
-
-			var updatedData = CreateUpdatedDatabaseData();
-			DatabaseSerializer.SaveDatabase(updatedData);
-			Debug.Log("Database saved to disk with updated mapDefs, tiles, and waypoints");
+			ApplyCurrentMapChanges();
+			ResourceManager.SaveToDisk();  // Only this writes to disk
 		}
 
-		public string GetTileDefAtIndex(int mapIndex)
+		public string GetDefinitionAtIndex(int mapIndex)
 		{
-			if (mapIndex < 0 || mapIndex >= Count)
-			{
-				Debug.LogWarning($"Invalid mapIndex={mapIndex}, must be between 0 and {Count - 1}");
-				return null;
-			}
-			return tileDefs[mapIndex];
+			if (mapIndex < 0 || mapIndex >= Count) return null;
+			return definitions[mapIndex];
 		}
 
 		public int GetStartTile()
 		{
-			if (waypoints != null && waypoints.Length > 0)
-				return waypoints[0].nTile;
+			if (Waypoints.Length > 0) return Waypoints[0].nTile;
 
-			for (var i = 0; i < Count; ++i)
-			{
-				if (GetTile(i).IsStart)
-					return i;
-			}
+			for (int i = 0; i < Count; ++i)
+				if (GetTile(i).IsStart) return i;
+
 			Debug.LogError("No start tile found!");
 			return -1;
 		}
 
 		public int GetEndTile()
 		{
-			if (waypoints != null && waypoints.Length > 0)
-				return waypoints.Last().nTile;
+			if (Waypoints.Length > 0) return Waypoints.Last().nTile;
 
-			for (var i = 0; i < Count; ++i)
-			{
-				if (GetTile(i).IsEnd)
-					return i;
-			}
+			for (int i = 0; i < Count; ++i)
+				if (GetTile(i).IsEnd) return i;
+
 			Debug.LogError("No end tile found!");
 			return -1;
 		}
@@ -354,18 +245,16 @@ namespace ClassicTilestorm
 		public int FindAdjacentConsole(int nTile)
 		{
 			var tile = GetTile(nTile);
-			if (0 == tile.Nav) return -1;
+			if (tile.Nav == 0) return -1;
 
 			foreach (var dirBit in Navigation.Directions)
 			{
-				var consoleTileIndex = Navigation.GetAdjacentTile(this, nTile, dirBit);
-				if (-1 == consoleTileIndex) continue;
+				int consoleIndex = Navigation.GetAdjacentTile(this, nTile, dirBit);
+				if (consoleIndex == -1) continue;
 
-				var consoleTile = GetTile(consoleTileIndex);
-				if (true != consoleTile.IsConsole) continue;
-
-				if (dirBit == Navigation.GetOppositeDirection(consoleTile.Nav))
-					return consoleTileIndex;
+				var consoleTile = GetTile(consoleIndex);
+				if (consoleTile.IsConsole && dirBit == Navigation.GetOppositeDirection(consoleTile.Nav))
+					return consoleIndex;
 			}
 			return -1;
 		}
@@ -380,19 +269,16 @@ namespace ClassicTilestorm
 				if (tiles[n].GameObject == null) continue;
 				var sway = tiles[n].GameObject.GetComponent<MorphGeomSway>();
 				if (sway != null)
-				{
-					var position = TileWorldPosition(n);
-					swayComponents.Add((sway, position));
-				}
+					swayComponents.Add((sway, TileWorldPosition(n)));
 			}
 
 			windController.Initialize(swayComponents);
-			Debug.Log($"WindController initialized with {swayComponents.Count} MorphGeomSway components.");
+			Debug.Log($"WindController initialized with {swayComponents.Count} sway components.");
 		}
 
 		public void Scramble()
 		{
-			indices = Enumerable.Range(0, Count).Select(n => n + offsets[n]).ToArray();
+			indices = Enumerable.Range(0, Count).Select(n => n + (currentMap.mixed?[n] ?? 0)).ToArray();
 			UpdateTileObjectNamesAndPositions();
 		}
 
@@ -405,15 +291,17 @@ namespace ClassicTilestorm
 		private void UpdateTileObjectNamesAndPositions()
 		{
 			Debug.AssertFormat(indices.Length > 0 && indices.Length == tiles.Length, "mismatched tiles and indices");
+
 			for (var n = 0; n < indices.Length; ++n)
 			{
 				var gameObject = tiles[indices[n]].GameObject;
 				if (null == gameObject) continue;
+
 				var position = TileWorldPosition(n);
 				gameObject.transform.position = position;
 				position -= tile_origin;
 #if DEBUG
-				gameObject.name = $"{gameObject.GetComponent<RTTI>()?.tileDef.szType ?? "Empty"} ({position.x},{position.z})";
+				gameObject.name = $"{gameObject.GetComponent<RTTI>()?.definition.szType ?? "Empty"} ({position.x},{position.z})";
 #endif
 			}
 		}
@@ -430,32 +318,79 @@ namespace ClassicTilestorm
 
 		public Tile GetTile(int index)
 		{
-			if (index < 0 || index >= Indices.Length || Width <= 0) return default;
-			var dataIndex = Indices[index];
+			if (index < 0 || index >= indices.Length || Width <= 0) return default;
+			int dataIndex = indices[index];
 			return dataIndex >= 0 && dataIndex < tiles.Length ? tiles[dataIndex] : default;
 		}
 
 		public static Vector3 ScreenToWorld(Camera camera, Vector3 screenPos)
 		{
 			var ray = camera.ScreenPointToRay(screenPos);
-			var mapPlane = new Plane(Vector3.up, Vector3.zero);
-			if (!mapPlane.Raycast(ray, out float distance)) return Vector3.zero;
-			return ray.GetPoint(distance);
+			var plane = new Plane(Vector3.up, Vector3.zero);
+			return plane.Raycast(ray, out float d) ? ray.GetPoint(d) : Vector3.zero;
 		}
 
-		public static MapManager Instantiate(DatabaseSerializer.Map map, Transform parent = null)
+		private void SetupWaypoints()
+		{
+			if (currentMap.waypoints != null && currentMap.waypoints.Length > 0)
+			{
+				Debug.Log($"Using {currentMap.waypoints.Length} predefined waypoints.");
+				return;
+			}
+
+			var generated = new List<Waypoint>();
+			int start = GetStartTile();
+			int end = GetEndTile();
+
+			if (start == -1 || end == -1)
+			{
+				currentMap.waypoints = generated.ToArray();
+				return;
+			}
+
+			generated.Add(new Waypoint { nTile = start });
+
+			int cur = start;
+			int dir = Navigation.NavToDest(this, cur, end);
+			if (dir != 0)
+			{
+				while (cur != end)
+				{
+					if (FindAdjacentConsole(cur) != -1)
+						generated.Add(new Waypoint { nTile = cur });
+
+					int next = Navigation.GetAdjacentTile(this, cur, dir);
+					if (next == -1 || next == start) break;
+
+					var nextTile = GetTile(next);
+					if (nextTile.Nav == 0) break;
+
+					dir = Navigation.CalculateNav(dir, nextTile.Nav);
+					if (dir == 0) break;
+
+					cur = next;
+				}
+			}
+
+			generated.Add(new Waypoint { nTile = end });
+			currentMap.waypoints = generated.ToArray();
+			Debug.Log($"Generated {currentMap.waypoints.Length} waypoints.");
+		}
+
+		public static MapManager Instantiate(Map map, Transform parent = null)
 		{
 			if (map == null || string.IsNullOrEmpty(map.name))
 			{
-				Debug.LogError("Cannot instantiate MapManager: map or map.name is null.");
+				Debug.LogError("Cannot instantiate MapManager: invalid map or name.");
 				return null;
 			}
 
-			var container = new GameObject($"Map: {map.name}");
-			if (null != parent) container.transform.SetParent(parent, false);
-			var mapManager = container.AddComponent<MapManager>();
-			mapManager.Initialise(map);
-			return mapManager;
+			var go = new GameObject($"Map: {map.name}");
+			if (parent != null) go.transform.SetParent(parent, false);
+
+			var manager = go.AddComponent<MapManager>();
+			manager.Initialise(map);
+			return manager;
 		}
 	}
 }
