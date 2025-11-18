@@ -15,8 +15,11 @@ namespace ClassicTilestorm
 		{
 			public Map[] maps;
 			public Definition[] definitions;
-			public TextureBank[] texturebank;
+			public TextureBank[] textureBanks;
 			public Button[] buttons;
+
+			[JsonIgnore]
+			public TextureBank[] TextureBanks => textureBanks ?? Array.Empty<TextureBank>();
 		}
 
 		private static TextAsset databaseJsonFile;
@@ -71,7 +74,7 @@ namespace ClassicTilestorm
 					data = new();
 					data.maps = root["maps"]?.ToObject<Map[]>(serializer) ?? Array.Empty<Map>();
 					data.definitions = root["definitions"]?.ToObject<Definition[]>(serializer) ?? Array.Empty<Definition>();
-					data.texturebank = root["texturebank"]?.ToObject<TextureBank[]>(serializer) ?? Array.Empty<TextureBank>();
+					data.textureBanks = root["textureBanks"]?.ToObject<TextureBank[]>(serializer) ?? Array.Empty<TextureBank>();
 					data.buttons = root["buttons"]?.ToObject<Button[]>(serializer) ?? Array.Empty<Button>();
 
 					// Basic validation

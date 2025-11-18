@@ -32,7 +32,7 @@ namespace ClassicTilestorm
 		[JsonIgnore] public bool bRoll => HasFlag("Roll");
 		[JsonIgnore] public bool bDock => HasFlag("Dock");
 		[JsonIgnore] public bool bDoor => HasFlag("Door");
-		[JsonIgnore] public bool bPuzzleBlock => HasFlag("PuzzleBlock");  // ← NOW IN FLAGS!
+		[JsonIgnore] public bool bPuzzleBlock => HasFlag("PuzzleBlock");
 
 		[JsonIgnore]
 		public int nPickup => pickup switch
