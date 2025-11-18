@@ -182,8 +182,10 @@ namespace ClassicTilestorm
 		}
 
 		// -----------------------------------------------------------------------
-		// Database update / save logic
+		// Database update
 		// -----------------------------------------------------------------------
+		// In MapManager.cs — just replace these methods
+
 		private void ApplyCurrentMapChanges()
 		{
 			if (currentMap == null) return;
@@ -193,37 +195,23 @@ namespace ClassicTilestorm
 			{
 				string szType = definitions[i];
 				logicalTiles[i] = Array.IndexOf(currentMap.table, szType);
-				if (logicalTiles[i] == -1) logicalTiles[i] = 0;
+				if (logicalTiles[i] == -1) logicalTiles[i] = 0; // fallback
 			}
 
-			var updatedMap = new Map
-			{
-				name = currentMap.name,
-				character = currentMap.character,
-				music = currentMap.music,
-				Pickups = currentMap.Pickups,
-				button = currentMap.button,
-				waypoints = currentMap.waypoints,
-				table = currentMap.table,
-				width = currentMap.width,
-				height = currentMap.height,
-				tiles = logicalTiles,
-				mixed = currentMap.mixed
-			};
-
-			ResourceManager.ApplyMapChanges(updatedMap);
+			currentMap.tiles = logicalTiles;                    // Mutate in place
+			ResourceManager.ApplyMapChanges(currentMap);       // Survives map switching
 		}
 
 		public void UpdateChanges()
 		{
 			ApplyCurrentMapChanges();
-			ResourceManager.UpdateChanges();  // just forwards to serializer
+			// No extra call — DatabaseSerializer is stateless, no sync needed
 		}
 
 		public void SaveChanges()
 		{
 			ApplyCurrentMapChanges();
-			ResourceManager.SaveToDisk();     // saves + triggers saveDelegate
+			ResourceManager.SaveToDisk();  // Only this writes to disk
 		}
 
 		public string GetDefinitionAtIndex(int mapIndex)

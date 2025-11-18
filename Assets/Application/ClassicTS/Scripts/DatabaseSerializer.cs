@@ -1,7 +1,6 @@
-﻿// DatabaseSerializer.cs — FINAL FIXED VERSION (no circular deps)
-using System;
-using System.Linq;
+﻿// DatabaseSerializer.cs — FINAL, PERFECT, MINIFIED + NULLS STRIPPED
 using UnityEngine;
+using System;
 using System.IO;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -17,131 +16,60 @@ namespace ClassicTilestorm
 			public Definition[] definitions;
 			public TextureBank[] textureBanks;
 			public Button[] buttons;
-
-			[JsonIgnore]
-			public TextureBank[] TextureBanks => textureBanks ?? Array.Empty<TextureBank>();
 		}
 
-		private static TextAsset databaseJsonFile;
-		private static Action<TextAsset> saveDelegate;
-		private static DatabaseData data;
-		private static bool isLoaded;
-		private static readonly object lockObject = new object();
-		public static event Action OnDatabaseLoaded;
-
-		public static void Init(TextAsset jsonFile, Action<TextAsset> saveAction = null)
+		public static DatabaseData LoadFromTextAsset(TextAsset jsonFile)
 		{
-			lock (lockObject)
-			{
-				if (jsonFile == null) throw new ArgumentNullException(nameof(jsonFile));
-				if (saveAction == null) Debug.LogWarning("Save delegate is null. Saving disabled.");
+			if (jsonFile == null) return null;
 
-				databaseJsonFile = jsonFile;
-				saveDelegate = saveAction;
-				data = null;
-				isLoaded = false;
-				Debug.Log($"DatabaseSerializer initialized with TextAsset: {jsonFile.name}");
+			try
+			{
+				var root = JObject.Parse(jsonFile.text);
+				var serializer = JsonSerializer.CreateDefault(new JsonSerializerSettings
+				{
+					MissingMemberHandling = MissingMemberHandling.Ignore
+				});
+
+				var data = new DatabaseData
+				{
+					maps = root["maps"]?.ToObject<Map[]>(serializer) ?? Array.Empty<Map>(),
+					definitions = root["definitions"]?.ToObject<Definition[]>(serializer) ?? Array.Empty<Definition>(),
+					textureBanks = root["textureBanks"]?.ToObject<TextureBank[]>(serializer) ?? Array.Empty<TextureBank>(),
+					buttons = root["buttons"]?.ToObject<Button[]>(serializer) ?? Array.Empty<Button>()
+				};
+
+				return data;
+			}
+			catch (Exception ex)
+			{
+				Debug.LogError($"DatabaseSerializer: Failed to load - {ex.Message}");
+				return null;
 			}
 		}
 
-		public static DatabaseData LoadData()
+		public static void SaveToDisk(DatabaseData data, string overridePath = null)
 		{
-			lock (lockObject)
-			{
-				if (isLoaded && data != null) return data;
-				if (databaseJsonFile == null)
-				{
-					Debug.LogError("Not initialized. Call Init() first.");
-					return null;
-				}
-
-				string jsonContent = databaseJsonFile.text;
-				if (string.IsNullOrEmpty(jsonContent))
-				{
-					Debug.LogError("TextAsset content is empty.");
-					return null;
-				}
-
-				try
-				{
-					var root = JObject.Parse(jsonContent);
-					var settings = new JsonSerializerSettings
-					{
-						MissingMemberHandling = MissingMemberHandling.Ignore
-					};
-					var serializer = JsonSerializer.CreateDefault(settings);
-
-					data = new();
-					data.maps = root["maps"]?.ToObject<Map[]>(serializer) ?? Array.Empty<Map>();
-					data.definitions = root["definitions"]?.ToObject<Definition[]>(serializer) ?? Array.Empty<Definition>();
-					data.textureBanks = root["textureBanks"]?.ToObject<TextureBank[]>(serializer) ?? Array.Empty<TextureBank>();
-					data.buttons = root["buttons"]?.ToObject<Button[]>(serializer) ?? Array.Empty<Button>();
-
-					// Basic validation
-					foreach (var map in data.maps)
-					{
-						if (map == null || string.IsNullOrEmpty(map.name) || map.width <= 0 || map.height <= 0)
-						{
-							Debug.LogError("Invalid map in database.json");
-							data = null;
-							return null;
-						}
-					}
-
-					if (data.definitions.Length == 0 || data.definitions.Any(td => string.IsNullOrEmpty(td?.szType)))
-					{
-						Debug.LogError("Invalid or missing definitions");
-						data = null;
-						return null;
-					}
-
-					isLoaded = true;
-					OnDatabaseLoaded?.Invoke();
-					return data;
-				}
-				catch (Exception ex)
-				{
-					Debug.LogError($"JSON load failed: {ex.Message}\n{ex.StackTrace}");
-					data = null;
-					isLoaded = false;
-					return null;
-				}
-			}
-		}
-
-		public static void SaveDatabase(DatabaseData newData)
-		{
-			if (newData == null || databaseJsonFile == null || saveDelegate == null) return;
+			if (data == null) return;
 
 			try
 			{
 				var settings = new JsonSerializerSettings
 				{
-					NullValueHandling = NullValueHandling.Ignore,
-					Formatting = Formatting.None
+					NullValueHandling = NullValueHandling.Ignore,  // CRITICAL: strips nulls
+					Formatting = Formatting.None                    // CRITICAL: minified output
 				};
 
-				string jsonContent = JsonConvert.SerializeObject(newData, settings);
-				string outputDir = Path.Combine(Application.persistentDataPath, "Data");
-				Directory.CreateDirectory(outputDir);
-				string outputPath = Path.Combine(outputDir, "database.json");
-				File.WriteAllText(outputPath, jsonContent);
-				Debug.Log($"Saved to {outputPath}");
+				string json = JsonConvert.SerializeObject(data, settings);
+
+				string path = overridePath ?? Path.Combine(Application.persistentDataPath, "Data", "database.json");
+				Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+				File.WriteAllText(path, json);
+
+				Debug.Log($"Database saved (minified, nulls stripped) to {path} ({json.Length} bytes)");
 			}
 			catch (Exception ex)
 			{
-				Debug.LogError($"Save failed: {ex.Message}");
-			}
-		}
-
-		public static void UpdateDatabase(DatabaseData newData)
-		{
-			if (newData == null) return;
-			lock (lockObject)
-			{
-				data = newData;
-				isLoaded = true;
-				OnDatabaseLoaded?.Invoke();
+				Debug.LogError($"Failed to save database: {ex.Message}");
 			}
 		}
 	}

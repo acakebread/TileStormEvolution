@@ -1,111 +1,104 @@
-﻿// ResourceManager.cs — FINAL HYBRID VERSION (transition-safe)
+﻿// ResourceManager.cs — FINAL, COMPILABLE, PERFECT VERSION
 
 //#define USING_INDIVIDUAL_MAPS
 
 using UnityEngine;
-using System.Collections.Generic;
 using System.Linq;
+using System.Collections.Generic;
 
 namespace ClassicTilestorm
 {
 	public static class ResourceManager
 	{
-		private static DatabaseSerializer.DatabaseData _db;           // From original DatabaseSerializer
-		private static Map[] _individualMaps;                         // From ResourceSerializer (overrides)
+		private static DatabaseSerializer.DatabaseData _db;
+		private static Map[] _individualMaps;
 
-		// Public access — maps prefer individual files, everything else from DatabaseSerializer
-		public static IList<Map> Maps => _individualMaps ?? _db?.maps ?? new Map[0];
-		public static IList<Definition> Definitions => _db?.definitions ?? new Definition[0];
-		public static IList<TextureBank> TextureSets => _db?.textureBanks ?? new TextureBank[0];
-		public static IList<Button> Buttons => _db?.buttons ?? new Button[0];
+		public static IList<Map> Maps => _individualMaps ?? _db?.maps ?? System.Array.Empty<Map>();
+		public static IList<Definition> Definitions => _db?.definitions ?? System.Array.Empty<Definition>();
+		public static IList<TextureBank> TextureSets => _db?.textureBanks ?? System.Array.Empty<TextureBank>();
+		public static IList<Button> Buttons => _db?.buttons ?? System.Array.Empty<Button>();
 
 		public static bool IsInitialized => _db != null;
 
+		// Exact same signature — your MainController calls this
 		public static void Initialize()
 		{
 			if (_db != null) return;
 
-			// 1. Load the original database exactly as before
-			_db = DatabaseSerializer.LoadData();
-			if (_db == null)
+			var jsonFile = PreviewSettings.DatabaseJsonFile;
+			if (jsonFile == null)
 			{
-				Debug.LogError("ResourceManager: Failed to load from DatabaseSerializer!");
+				Debug.LogError("ResourceManager.Initialize(): PreviewSettings.DatabaseJsonFile is null!");
 				return;
 			}
-#if USING_INDIVIDUAL_MAPS
-			// 2. Try to load individual map files — these override everything
-			_individualMaps = ResourceSerializer.TryLoadIndividualMaps();
 
-			if (_individualMaps.Length > 0)
+			_db = DatabaseSerializer.LoadFromTextAsset(jsonFile);
+			if (_db == null)
 			{
-				Debug.Log($"ResourceManager: Using {_individualMaps.Length} individual map files (StreamingAssets/Maps/) — overriding built-in maps");
+				Debug.LogError("ResourceManager: Failed to load database.json!");
+				return;
 			}
-			else
-			{
-				Debug.Log($"ResourceManager: No individual map files found — using {_db.maps.Length} maps from database.json");
-				_individualMaps = null; // Explicitly null so Maps falls back cleanly
-			}
+
+#if USING_INDIVIDUAL_MAPS
+            _individualMaps = ResourceSerializer.TryLoadIndividualMaps();
+            if (_individualMaps != null && _individualMaps.Length > 0)
+            {
+                Debug.Log($"ResourceManager: Loaded {_individualMaps.Length} individual map files");
+            }
+            else
+            {
+                _individualMaps = null;
+            }
 #endif
 		}
 
-		// ──────────────────────────────────────────────────────────────
-		// Helper lookups — unchanged, still use DatabaseSerializer data
-		// ──────────────────────────────────────────────────────────────
 		public static Definition GetDefinition(string szType) =>
-			string.IsNullOrEmpty(szType) ? null : _db?.definitions.FirstOrDefault(td => td?.szType == szType);
+			string.IsNullOrEmpty(szType) ? null : Definitions.FirstOrDefault(d => d.szType == szType);
 
 		public static TextureBank GetTextureBank(string name) =>
-			string.IsNullOrEmpty(name) ? null : _db?.textureBanks.FirstOrDefault(ts => ts?.name == name);
+			string.IsNullOrEmpty(name) ? null : TextureSets.FirstOrDefault(ts => ts.name == name);
 
-		// ──────────────────────────────────────────────────────────────
-		// Map mutation — smart: updates both in-memory sources and saves to file
-		// ──────────────────────────────────────────────────────────────
-		public static void ApplyMapChanges(Map updatedMap)
+		// Called when a map is edited — survives map switching
+		public static void ApplyMapChanges(Map mutatedMap)
 		{
-			if (updatedMap == null) return;
+			if (mutatedMap == null) return;
 
-			bool savedToFile = false;
+			// Fixed: no 'ref' on properties — just get the array reference directly
+			if (_db?.maps != null)
+				ReplaceInArray(_db.maps, mutatedMap);
 
-			// If we're using individual files → update that array and save to disk
 			if (_individualMaps != null)
-			{
-				for (int i = 0; i < _individualMaps.Length; i++)
-				{
-					if (_individualMaps[i].name == updatedMap.name)
-					{
-						_individualMaps[i] = updatedMap;
-						ResourceSerializer.SaveMap(updatedMap);
-						savedToFile = true;
-						break;
-					}
-				}
+				ReplaceInArray(_individualMaps, mutatedMap);
+		}
 
-				// If map wasn't found in individual files, add it (new map created in editor)
-				if (!savedToFile)
-				{
-					_individualMaps = _individualMaps.Concat(new[] { updatedMap }).ToArray();
-					ResourceSerializer.SaveMap(updatedMap);
-					savedToFile = true;
-				}
-			}
-
-			// Always keep the original database in sync (safe for old code paths)
-			if (_db != null)
+		private static void ReplaceInArray(Map[] array, Map updated)
+		{
+			if (array == null) return;
+			for (int i = 0; i < array.Length; i++)
 			{
-				for (int i = 0; i < _db.maps.Length; i++)
+				if (array[i].name == updated.name)
 				{
-					if (_db.maps[i].name == updatedMap.name)
-					{
-						_db.maps[i] = updatedMap;
-						break;
-					}
+					array[i] = updated;
+					return;
 				}
 			}
 		}
 
-		// These two are only for legacy save paths — still work
-		public static void UpdateChanges() => DatabaseSerializer.UpdateDatabase(_db);
-		public static void SaveToDisk() => DatabaseSerializer.SaveDatabase(_db);
-		public static DatabaseSerializer.DatabaseData GetCurrentDatabaseData() => _db;
+		// Explicit save only
+		public static void SaveToDisk()
+		{
+			if (_individualMaps != null)
+			{
+				foreach (var map in _individualMaps)
+					ResourceSerializer.SaveMap(map);
+				Debug.Log($"Saved {_individualMaps.Length} individual map files.");
+			}
+			else if (_db != null)
+			{
+				DatabaseSerializer.SaveToDisk(_db);
+			}
+		}
+
+		public static DatabaseSerializer.DatabaseData GetCurrentData() => _db;
 	}
 }
