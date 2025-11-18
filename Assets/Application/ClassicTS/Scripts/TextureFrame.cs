@@ -13,8 +13,8 @@ namespace ClassicTilestorm
 		[JsonIgnore] public Texture2D texture;
 
 		// Serialized fields
-		public float fDuration;
 		public string name;
+		public float fDuration;
 		public string szTexture;
 	}
 }

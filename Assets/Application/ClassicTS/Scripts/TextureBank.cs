@@ -6,7 +6,7 @@ using Newtonsoft.Json;
 namespace ClassicTilestorm
 {
 	[System.Serializable]
-	public class TextureSet
+	public class TextureBank
 	{
 		public string name;
 		public bool bAlphaTest;

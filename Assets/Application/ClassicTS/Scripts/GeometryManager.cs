@@ -5,7 +5,7 @@ using MassiveHadronLtd;
 
 namespace ClassicTilestorm
 {
-	public class RTTI : MonoBehaviour { public TileDef tileDef; }
+	public class RTTI : MonoBehaviour { public Definition definition; }
 
 	public static class GeometryManager
 	{
@@ -35,98 +35,90 @@ namespace ClassicTilestorm
 			return prefab;
 		}
 
-		// Workaround for the fact that TileDefs are really prefab definitions
-		public static GameObject InstantiatePrefab(TileDef tileDef, Transform parent, Vector3 position) => InstantiateTile(tileDef, parent, position);
+		// Workaround for the fact that Definitions are really prefab definitions
+		public static GameObject InstantiatePrefab(Definition definition, Transform parent, Vector3 position) => InstantiateTile(definition, parent, position);
 
-		// Instantiates a GameObject based on TileDef, with optional texture animation and collider
-		public static GameObject InstantiateTile(TileDef tileDef, Transform parent, Vector3 position, bool interactive = false)
+		// Instantiates a GameObject based on Definition, with optional texture animation and collider
+		public static GameObject InstantiateTile(Definition definition, Transform parent, Vector3 position, bool interactive = false)
 		{
-			if (null == tileDef || string.IsNullOrEmpty(tileDef.szGeom))
+			if (null == definition || string.IsNullOrEmpty(definition.szGeom))
 			{
-				if (tileDef.szType == "tile_invisible")
+				if (definition.szType == "tile_invisible")
 				{
 					if (PreviewSettings.ShowHiddenTiles)
 					{
 						var debug_tile = CreateDebugTile(parent, position);
 #if DEBUG
-						debug_tile.AddComponent<RTTI>().tileDef = tileDef; // This is for debug in editor only - do not use RTTI
+						debug_tile.AddComponent<RTTI>().definition = definition; // This is for debug in editor only - do not use RTTI
 #endif
 						return debug_tile;
 					}
 					return null;
 				}
 
-				Debug.LogWarning("GeometryManager: Invalid TileDef or geometry name.");
+				Debug.LogWarning("GeometryManager: Invalid Definition or geometry name.");
 				var result = CreateFallbackTile(parent, position);
 #if DEBUG
-				result.AddComponent<RTTI>().tileDef = tileDef; // This is for debug in editor only - do not use RTTI
+				result.AddComponent<RTTI>().definition = definition; // This is for debug in editor only - do not use RTTI
 #endif
 				return result;
 			}
 
-			var prefab = GetPrefab(tileDef.szGeom);
+			var prefab = GetPrefab(definition.szGeom);
 			if (null == prefab)
 			{
-				Debug.LogWarning($"GeometryManager: Prefab {tileDef.szGeom} not found for TileDef {tileDef.szType}.");
+				Debug.LogWarning($"GeometryManager: Prefab {definition.szGeom} not found for Definition {definition.szType}.");
 				return CreateFallbackTile(parent, position);
 			}
 
 			var gameObject = Object.Instantiate(prefab, position, Quaternion.identity, parent);
-			gameObject.name = tileDef.szGeom.Replace(".x", "");
+			gameObject.name = definition.szGeom.Replace(".x", "");
 
 			// Apply texture animation
-			var theme = ResourceManager.GetTheme(tileDef.szTheme);
-			if (null != theme)
+			var animator = gameObject.AddComponent<TextureSetAnimator>();
+			animator.Initialize(TextureSetManager.GetTextureFrames(definition.szBank));
+
+			if ("Caustic" == definition.szBank)
 			{
-				var animator = gameObject.AddComponent<TextureSetAnimator>();
-				animator.Initialize(TextureSetManager.GetTextureFrames(tileDef.szTheme));
+				var pointLight = gameObject.AddComponent<Light>();
+				pointLight.type = LightType.Point;
+				pointLight.color = Color.green;
+				pointLight.intensity = 1f;
+				pointLight.range = 1f;
+				pointLight.shadows = LightShadows.None;
 
-				if ("Caustic" == tileDef.szTheme)
+				var targetRenderer = gameObject.GetComponentInChildren<MeshRenderer>(true);
+				if (targetRenderer != null)
 				{
-					var pointLight = gameObject.AddComponent<Light>();
-					pointLight.type = LightType.Point;
-					pointLight.color = Color.green;
-					pointLight.intensity = 1f;
-					pointLight.range = 1f;
-					pointLight.shadows = LightShadows.None;
-
-					var targetRenderer = gameObject.GetComponentInChildren<MeshRenderer>(true);
-					if (targetRenderer != null)
+					// Load the preallocated material
+					Material emissiveMaterial = MaterialManager.Get("toxic");
+					if (emissiveMaterial == null)
 					{
-						// Load the preallocated material
-						Material emissiveMaterial = MaterialManager.Get("toxic");
-						if (emissiveMaterial == null)
-						{
-							Debug.LogWarning("Preallocated material 'toxic' not found. Creating fallback.");
-							emissiveMaterial = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-							emissiveMaterial.SetColor("_BaseColor", new Color(0f, 0f, 0f, 1f)); // Black with full alpha
-							emissiveMaterial.EnableKeyword("_EMISSION");
-							emissiveMaterial.SetColor("_EmissionColor", new Color(0f, 1f, 0f) * 2.0f); // Green emission
-						}
-						// Apply the preallocated material to the target renderer
-						targetRenderer.material = emissiveMaterial; // new Material(emissiveMaterial); // Use a new instance to avoid shared material issues
+						Debug.LogWarning("Preallocated material 'toxic' not found. Creating fallback.");
+						emissiveMaterial = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+						emissiveMaterial.SetColor("_BaseColor", new Color(0f, 0f, 0f, 1f)); // Black with full alpha
+						emissiveMaterial.EnableKeyword("_EMISSION");
+						emissiveMaterial.SetColor("_EmissionColor", new Color(0f, 1f, 0f) * 2.0f); // Green emission
+					}
+					// Apply the preallocated material to the target renderer
+					targetRenderer.material = emissiveMaterial; // new Material(emissiveMaterial); // Use a new instance to avoid shared material issues
 
-						// Sync with TextureSetAnimator
-						var textureAnimator = gameObject.GetComponent<TextureSetAnimator>();
-						if (textureAnimator != null)
+					// Sync with TextureSetAnimator
+					var textureAnimator = gameObject.GetComponent<TextureSetAnimator>();
+					if (textureAnimator != null)
+					{
+						textureAnimator.ApplyFrame(0); // Initial sync - calls ApplyFrame(0) which sets mainTexture
+						textureAnimator.OnTextureChanged += (newTexture) =>
 						{
-							textureAnimator.ApplyFrame(0); // Initial sync - calls ApplyFrame(0) which sets mainTexture
-							textureAnimator.OnTextureChanged += (newTexture) =>
+							if (targetRenderer != null && targetRenderer.material != null)
 							{
-								if (targetRenderer != null && targetRenderer.material != null)
-								{
-									Material mat = targetRenderer.material;
-									mat.mainTexture = null; // Clear main texture (base color stays black)
-									mat.SetTexture("_EmissionMap", newTexture); // Update emission map with animated texture
-								}
-							};
-						}
+								Material mat = targetRenderer.material;
+								mat.mainTexture = null; // Clear main texture (base color stays black)
+								mat.SetTexture("_EmissionMap", newTexture); // Update emission map with animated texture
+							}
+						};
 					}
 				}
-			}
-			else
-			{
-				Debug.LogWarning($"GeometryManager: No theme found for {tileDef.szTheme}, type {tileDef.szType}.");
 			}
 
 			// Add collider for interactive tiles
@@ -137,7 +129,7 @@ namespace ClassicTilestorm
 				collider.center = new Vector3(0f, -0.05f, 0f);
 			}
 #if DEBUG
-			gameObject.AddComponent<RTTI>().tileDef = tileDef; // This is for debug in editor only - do not use RTTI
+			gameObject.AddComponent<RTTI>().definition = definition; // This is for debug in editor only - do not use RTTI
 #endif
 
 			var meshRenderer = gameObject.GetComponentInChildren<MeshRenderer>(true);

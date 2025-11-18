@@ -17,12 +17,12 @@ public struct Tile
 	private readonly int flags;
 	private static readonly int navMask = North | South | East | West;
 
-	public Tile(TileDef def)
+	public Tile(Definition def)
 	{
 		flags = def == null ? 0 : CombineFlags(def);
 		GameObject = null;
 
-		static int CombineFlags(TileDef d)
+		static int CombineFlags(Definition d)
 		{
 			int f = 0;
 			if (d.bNorth) f |= North;

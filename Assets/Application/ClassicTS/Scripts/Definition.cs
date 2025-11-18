@@ -3,9 +3,9 @@ using System;
 namespace ClassicTilestorm
 {
 	[Serializable]
-	public class TileDef
+	public class Definition
 	{
-		public string szTheme;
+		public string szBank;
 		public string szType;
 		public string szGeom;
 		public bool bSlide;

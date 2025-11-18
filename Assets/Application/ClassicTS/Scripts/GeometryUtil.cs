@@ -22,9 +22,9 @@ namespace ClassicTilestorm
 		}
 
 		// Update or create the ghost tile at the mouse position
-		public static void UpdateGhostTile(Camera camera, MapManager mapManager, TileDef tileDef)
+		public static void UpdateGhostTile(Camera camera, MapManager mapManager, Definition definition)
 		{
-			if (camera == null || mapManager == null || tileDef == null) return;
+			if (camera == null || mapManager == null || definition == null) return;
 
 			// Get mouse world position on the XZ plane
 			Ray ray = camera.ScreenPointToRay(Input.mousePosition);
@@ -42,12 +42,12 @@ namespace ClassicTilestorm
 				Vector3 snappedPos = mapManager.TileWorldPosition(mapIndex);
 
 				// Create or update ghost tile
-				if (ghostTile == null)// || ghostTile.GetComponent<RTTI>()?.tileDef != tileDef)// do not use RTTI - it's debug only || ghostTile.GetComponent<RTTI>()?.tileDef != tileDef)
+				if (ghostTile == null)// || ghostTile.GetComponent<RTTI>()?.definition != definition)// do not use RTTI - it's debug only || ghostTile.GetComponent<RTTI>()?.definition != definition)
 				{
 					//if (ghostTile != null)
 					//	Object.Destroy(ghostTile);
 
-					ghostTile = GeometryManager.InstantiateTile(tileDef, mapManager.transform, snappedPos, false);
+					ghostTile = GeometryManager.InstantiateTile(definition, mapManager.transform, snappedPos, false);
 					if (ghostTile != null)
 					{
 						// Remove TextureSetAnimator

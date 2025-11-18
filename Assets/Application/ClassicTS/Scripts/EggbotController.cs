@@ -202,7 +202,7 @@ namespace ClassicTilestorm
 
 			if (null != parent) eggbotController.transform.SetParent(parent, false);
 
-			var def = ResourceManager.TileDefs.FirstOrDefault(td => td.szType == "Eggbot" && td.szTheme == costume);
+			var def = ResourceManager.Definitions.FirstOrDefault(td => td.szType == "Eggbot" && td.szBank == costume);
 			if (null == def?.szGeom) { Debug.LogError("Initialize: Invalid Eggbot geometry"); return null; }
 
 			var mesh = GeometryManager.InstantiatePrefab(def, eggbotController.transform, Vector3.zero);

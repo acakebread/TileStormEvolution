@@ -13,10 +13,13 @@ namespace ClassicTilestorm
 			if (string.IsNullOrEmpty(themeName)) return null;
 			if (cache.TryGetValue(themeName, out var cached)) return cached;
 
-			var theme = ResourceManager.Themes.FirstOrDefault(t => t.name == themeName);
-			if (theme == null || string.IsNullOrEmpty(theme.szTileTextureSet)) return null;
+			//var theme = ResourceManager.Themes.FirstOrDefault(t => t.name == themeName);
+			//if (theme == null || string.IsNullOrEmpty(theme.szTileTextureSet)) return null;
 
-			var textureSet = ResourceManager.TextureSets.FirstOrDefault(ts => ts.name == theme.szTileTextureSet);
+			//var textureSet = ResourceManager.TextureSets.FirstOrDefault(ts => ts.name == theme.szTileTextureSet);
+			//if (textureSet == null || textureSet.frames == null || textureSet.frames.Length == 0) return null;
+
+			var textureSet = ResourceManager.TextureSets.FirstOrDefault(ts => ts.name == themeName);//bypass 'theme' system - use theme string directly as TextureSet.name
 			if (textureSet == null || textureSet.frames == null || textureSet.frames.Length == 0) return null;
 
 			// Resolve textures from szTexture → Texture2D at runtime

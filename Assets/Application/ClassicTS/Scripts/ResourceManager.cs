@@ -1,6 +1,6 @@
 ﻿// ResourceManager.cs — FINAL HYBRID VERSION (transition-safe)
 
-#define USING_INDIVIDUAL_MAPS
+//#define USING_INDIVIDUAL_MAPS
 
 using UnityEngine;
 using System.Collections.Generic;
@@ -15,9 +15,9 @@ namespace ClassicTilestorm
 
 		// Public access — maps prefer individual files, everything else from DatabaseSerializer
 		public static IList<Map> Maps => _individualMaps ?? _db?.maps ?? new Map[0];
-		public static IList<TileDef> TileDefs => _db?.tiledefs ?? new TileDef[0];
-		public static IList<Theme> Themes => _db?.themes ?? new Theme[0];
-		public static IList<TextureSet> TextureSets => _db?.texture_set ?? new TextureSet[0];
+		public static IList<Definition> Definitions => _db?.definitions ?? new Definition[0];
+		//public static IList<Theme> Themes => _db?.themes ?? new Theme[0];
+		public static IList<TextureBank> TextureSets => _db?.texturebank ?? new TextureBank[0];
 		public static IList<Button> Buttons => _db?.buttons ?? new Button[0];
 
 		public static bool IsInitialized => _db != null;
@@ -52,14 +52,11 @@ namespace ClassicTilestorm
 		// ──────────────────────────────────────────────────────────────
 		// Helper lookups — unchanged, still use DatabaseSerializer data
 		// ──────────────────────────────────────────────────────────────
-		public static TileDef GetTileDef(string szType) =>
-			string.IsNullOrEmpty(szType) ? null : _db?.tiledefs.FirstOrDefault(td => td?.szType == szType);
+		public static Definition GetDefinition(string szType) =>
+			string.IsNullOrEmpty(szType) ? null : _db?.definitions.FirstOrDefault(td => td?.szType == szType);
 
-		public static Theme GetTheme(string themeName) =>
-			string.IsNullOrEmpty(themeName) ? null : _db?.themes.FirstOrDefault(t => t?.name == themeName);
-
-		public static TextureSet GetTextureSet(string name) =>
-			string.IsNullOrEmpty(name) ? null : _db?.texture_set.FirstOrDefault(ts => ts?.name == name);
+		public static TextureBank GetTextureSet(string name) =>
+			string.IsNullOrEmpty(name) ? null : _db?.texturebank.FirstOrDefault(ts => ts?.name == name);
 
 		// ──────────────────────────────────────────────────────────────
 		// Map mutation — smart: updates both in-memory sources and saves to file

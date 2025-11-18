@@ -35,7 +35,7 @@ namespace ClassicTilestorm
 		private Map currentMap;
 		private int[] indices;                    // Scrambled/solved visual indices
 		private Tile[] tiles;                     // Instantiated runtime Tile objects
-		private string[] tileDefs;                // Cached szType string per map index (for fast lookup & saving)
+		private string[] definitions;             // Cached szType string per map index (for fast lookup & saving)
 
 		// ------------------------------------------------------------------
 		// IMapData / IMapManager forwarded properties
@@ -54,7 +54,7 @@ namespace ClassicTilestorm
 		{
 			indices = null;
 			tiles = null;
-			tileDefs = null;
+			definitions = null;
 		}
 
 		private void Initialise(Map map)
@@ -85,33 +85,31 @@ namespace ClassicTilestorm
 			}
 
 			tiles = new Tile[Count];
-			tileDefs = new string[Count];
+			definitions = new string[Count];
 
 			for (int n = 0; n < tileMap.Length; ++n)
 			{
-				int tileDefIndex = tileMap[n];
-				string szType = (tileDefIndex >= 0 && tileDefIndex < currentMap.defs?.Length)
-					? currentMap.defs[tileDefIndex]
+				int definitionIndex = tileMap[n];
+				string szType = (definitionIndex >= 0 && definitionIndex < currentMap.defs?.Length)
+					? currentMap.defs[definitionIndex]
 					: "tile_empty";
 
 				if (string.IsNullOrEmpty(szType))
 					szType = "tile_empty";
 
-				tileDefs[n] = szType;
-				var def = ResourceManager.TileDefs.FirstOrDefault(td => td.szType == szType);
-				tiles[n] = new Tile(def);
+				definitions[n] = szType;
+				var definition = ResourceManager.Definitions.FirstOrDefault(td => td.szType == szType);
+				tiles[n] = new Tile(definition);
 
 				if (szType == "tile_empty") continue;
-
-				var tileDef = ResourceManager.GetTileDef(szType);
-				if (tileDef == null)
+				if (definition == null)
 				{
-					Debug.LogError($"TileDef not found for szType={szType} at tile {n}");
+					Debug.LogError($"Definition not found for szType={szType} at tile {n}");
 					continue;
 				}
 
 				tiles[n].GameObject = GeometryManager.InstantiateTile(
-					tileDef, transform, TileWorldPosition(n), tiles[n].Interactive);
+					definition, transform, TileWorldPosition(n), tiles[n].Interactive);
 			}
 		}
 
@@ -141,7 +139,7 @@ namespace ClassicTilestorm
 			return oldDefs.Length;
 		}
 
-		public void UpdateTileAt(int x, int z, int newTileDefIndex)
+		public void UpdateTileAt(int x, int z, int newDeinitionfIndex)
 		{
 			if (x < 0 || x >= Width || z < 0 || z >= Height)
 			{
@@ -150,33 +148,33 @@ namespace ClassicTilestorm
 			}
 
 			int index = z * Width + x;
-			if (newTileDefIndex < 0 || newTileDefIndex >= currentMap.defs.Length)
+			if (newDeinitionfIndex < 0 || newDeinitionfIndex >= currentMap.defs.Length)
 			{
-				Debug.LogError($"Invalid newTileDefIndex={newTileDefIndex}");
+				Debug.LogError($"Invalid newDefinitionIndex={newDeinitionfIndex}");
 				return;
 			}
 
-			string szType = currentMap.defs[newTileDefIndex];
+			string szType = currentMap.defs[newDeinitionfIndex];
 			if (string.IsNullOrEmpty(szType))
 			{
-				Debug.LogError($"Empty szType at index {newTileDefIndex}");
+				Debug.LogError($"Empty szType at index {newDeinitionfIndex}");
 				return;
 			}
 
 			if (tiles[index].GameObject != null)
 				Destroy(tiles[index].GameObject);
 
-			tileDefs[index] = szType;
-			var def = ResourceManager.TileDefs.FirstOrDefault(td => td.szType == szType);
+			definitions[index] = szType;
+			var def = ResourceManager.Definitions.FirstOrDefault(td => td.szType == szType);
 			tiles[index] = new Tile(def);
 
 			if (szType != "tile_empty")
 			{
-				var tileDef = ResourceManager.GetTileDef(szType);
-				if (tileDef != null)
+				var definition = ResourceManager.GetDefinition(szType);
+				if (definition != null)
 				{
 					tiles[index].GameObject = GeometryManager.InstantiateTile(
-						tileDef, transform, TileWorldPosition(index), tiles[index].Interactive);
+						definition, transform, TileWorldPosition(index), tiles[index].Interactive);
 				}
 			}
 
@@ -193,7 +191,7 @@ namespace ClassicTilestorm
 			var logicalTiles = new int[Count];
 			for (int i = 0; i < Count; i++)
 			{
-				string szType = tileDefs[i];
+				string szType = definitions[i];
 				logicalTiles[i] = Array.IndexOf(currentMap.defs, szType);
 				if (logicalTiles[i] == -1) logicalTiles[i] = 0;
 			}
@@ -228,10 +226,10 @@ namespace ClassicTilestorm
 			ResourceManager.SaveToDisk();     // saves + triggers saveDelegate
 		}
 
-		public string GetTileDefAtIndex(int mapIndex)
+		public string GetDefinitionAtIndex(int mapIndex)
 		{
 			if (mapIndex < 0 || mapIndex >= Count) return null;
-			return tileDefs[mapIndex];
+			return definitions[mapIndex];
 		}
 
 		public int GetStartTile()
@@ -315,7 +313,7 @@ namespace ClassicTilestorm
 				gameObject.transform.position = position;
 				position -= tile_origin;
 #if DEBUG
-				gameObject.name = $"{gameObject.GetComponent<RTTI>()?.tileDef.szType ?? "Empty"} ({position.x},{position.z})";
+				gameObject.name = $"{gameObject.GetComponent<RTTI>()?.definition.szType ?? "Empty"} ({position.x},{position.z})";
 #endif
 			}
 		}

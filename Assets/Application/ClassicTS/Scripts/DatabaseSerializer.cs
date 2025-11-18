@@ -14,9 +14,8 @@ namespace ClassicTilestorm
 		public class DatabaseData
 		{
 			public Map[] maps;
-			public Theme[] themes;
-			public TileDef[] tiledefs;
-			public TextureSet[] texture_set;
+			public Definition[] definitions;
+			public TextureBank[] texturebank;
 			public Button[] buttons;
 		}
 
@@ -71,10 +70,9 @@ namespace ClassicTilestorm
 
 					data = new DatabaseData();
 					data.maps = root["maps"]?.ToObject<Map[]>(serializer) ?? Array.Empty<Map>();
-					data.themes = root["themes"]?.ToObject<Theme[]>(serializer) ?? Array.Empty<Theme>();
-					data.tiledefs = root["tiledefs"]?.ToObject<TileDef[]>(serializer) ?? Array.Empty<TileDef>();
+					data.definitions = root["definitions"]?.ToObject<Definition[]>(serializer) ?? Array.Empty<Definition>();
+					data.texturebank = root["texturebank"]?.ToObject<TextureBank[]>(serializer) ?? Array.Empty<TextureBank>();
 					data.buttons = root["buttons"]?.ToObject<Button[]>(serializer) ?? Array.Empty<Button>();
-					data.texture_set = root["texture_set"]?.ToObject<TextureSet[]>(serializer) ?? Array.Empty<TextureSet>();
 
 					// Basic validation
 					foreach (var map in data.maps)
@@ -87,9 +85,9 @@ namespace ClassicTilestorm
 						}
 					}
 
-					if (data.tiledefs.Length == 0 || data.tiledefs.Any(td => string.IsNullOrEmpty(td?.szType)))
+					if (data.definitions.Length == 0 || data.definitions.Any(td => string.IsNullOrEmpty(td?.szType)))
 					{
-						Debug.LogError("Invalid or missing tiledefs");
+						Debug.LogError("Invalid or missing definitions");
 						data = null;
 						return null;
 					}
