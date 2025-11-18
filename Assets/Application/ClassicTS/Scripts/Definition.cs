@@ -10,15 +10,15 @@ namespace ClassicTilestorm
 	{
 		public string id;
 		public string model;
-		public string textureBank;
-		public string flags;        // ← PuzzleBlock now lives here!
+		public string texture;
+		public string flags;
 		public string connections;
-		public string pickup;       // only serialized if not None
+		public string pickup;// only serialized if not None
 
 		// ── LEGACY COMPATIBILITY GETTERS (never serialized) ─────────────────────
 		[JsonIgnore] public string szType => id ?? "";
 		[JsonIgnore] public string szGeom => model ?? "";
-		[JsonIgnore] public string szBank => textureBank ?? "Default";
+		[JsonIgnore] public string szBank => texture ?? "Default";
 
 		[JsonIgnore] public bool bNorth => HasConnection('N');
 		[JsonIgnore] public bool bSouth => HasConnection('S');

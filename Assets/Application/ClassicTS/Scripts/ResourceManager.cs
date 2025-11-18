@@ -15,7 +15,7 @@ namespace ClassicTilestorm
 
 		public static IList<Map> Maps => _individualMaps ?? _db?.maps ?? System.Array.Empty<Map>();
 		public static IList<Definition> Definitions => _db?.definitions ?? System.Array.Empty<Definition>();
-		public static IList<TextureBank> TextureSets => _db?.textureBanks ?? System.Array.Empty<TextureBank>();
+		public static IList<TextureSequence> TextureSets => _db?.textures ?? System.Array.Empty<TextureSequence>();
 		public static IList<Button> Buttons => _db?.buttons ?? System.Array.Empty<Button>();
 
 		public static bool IsInitialized => _db != null;
@@ -52,11 +52,11 @@ namespace ClassicTilestorm
 #endif
 		}
 
-		public static Definition GetDefinition(string szType) =>
-			string.IsNullOrEmpty(szType) ? null : Definitions.FirstOrDefault(d => d.szType == szType);
+		public static Definition GetDefinition(string id) =>
+			string.IsNullOrEmpty(id) ? null : Definitions.FirstOrDefault(d => d.szType == id);
 
-		public static TextureBank GetTextureBank(string name) =>
-			string.IsNullOrEmpty(name) ? null : TextureSets.FirstOrDefault(ts => ts.name == name);
+		public static TextureSequence GetTextureSequence(string id) =>
+			string.IsNullOrEmpty(id) ? null : TextureSets.FirstOrDefault(ts => ts.name == id);
 
 		// Called when a map is edited — survives map switching
 		public static void ApplyMapChanges(Map mutatedMap)

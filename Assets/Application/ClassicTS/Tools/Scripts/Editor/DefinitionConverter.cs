@@ -24,7 +24,7 @@ public static class DefinitionConverter
 			{
 				id = old.szType?.Trim(),
 				model = !string.IsNullOrEmpty(old.szGeom) ? old.szGeom.Replace(".x", "").Trim() : null,
-				textureBank = !string.IsNullOrEmpty(old.szBank) ? old.szBank.Trim() : "Default"
+				texture = !string.IsNullOrEmpty(old.szBank) ? old.szBank.Trim() : "Default"
 			};
 
 			// Flags - only add if true

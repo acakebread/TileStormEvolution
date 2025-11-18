@@ -74,8 +74,8 @@ namespace ClassicTilestorm
 			gameObject.name = definition.szGeom.Replace(".x", "");
 
 			// Apply texture animation
-			var animator = gameObject.AddComponent<TextureSetAnimator>();
-			animator.Initialize(TextureSetManager.GetTextureFrames(definition.szBank));
+			var textureAnimator = gameObject.AddComponent<TextureSetAnimator>();
+			textureAnimator.Initialize(TextureSetManager.GetTextureSequence(definition.szBank));
 
 			if ("Caustic" == definition.szBank)
 			{
@@ -103,20 +103,16 @@ namespace ClassicTilestorm
 					targetRenderer.material = emissiveMaterial; // new Material(emissiveMaterial); // Use a new instance to avoid shared material issues
 
 					// Sync with TextureSetAnimator
-					var textureAnimator = gameObject.GetComponent<TextureSetAnimator>();
-					if (textureAnimator != null)
+					textureAnimator.ApplyFrame(0); // Initial sync - calls ApplyFrame(0) which sets mainTexture
+					textureAnimator.OnTextureChanged += (newTexture) =>
 					{
-						textureAnimator.ApplyFrame(0); // Initial sync - calls ApplyFrame(0) which sets mainTexture
-						textureAnimator.OnTextureChanged += (newTexture) =>
+						if (targetRenderer != null && targetRenderer.material != null)
 						{
-							if (targetRenderer != null && targetRenderer.material != null)
-							{
-								Material mat = targetRenderer.material;
-								mat.mainTexture = null; // Clear main texture (base color stays black)
-								mat.SetTexture("_EmissionMap", newTexture); // Update emission map with animated texture
-							}
-						};
-					}
+							Material mat = targetRenderer.material;
+							mat.mainTexture = null; // Clear main texture (base color stays black)
+							mat.SetTexture("_EmissionMap", newTexture); // Update emission map with animated texture
+						}
+					};
 				}
 			}
 

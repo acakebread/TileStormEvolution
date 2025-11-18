@@ -14,7 +14,7 @@ namespace ClassicTilestorm
 		{
 			public Map[] maps;
 			public Definition[] definitions;
-			public TextureBank[] textureBanks;
+			public TextureSequence[] textures;
 			public Button[] buttons;
 		}
 
@@ -34,7 +34,7 @@ namespace ClassicTilestorm
 				{
 					maps = root["maps"]?.ToObject<Map[]>(serializer) ?? Array.Empty<Map>(),
 					definitions = root["definitions"]?.ToObject<Definition[]>(serializer) ?? Array.Empty<Definition>(),
-					textureBanks = root["textureBanks"]?.ToObject<TextureBank[]>(serializer) ?? Array.Empty<TextureBank>(),
+					textures = root["textures"]?.ToObject<TextureSequence[]>(serializer) ?? Array.Empty<TextureSequence>(),
 					buttons = root["buttons"]?.ToObject<Button[]>(serializer) ?? Array.Empty<Button>()
 				};
 

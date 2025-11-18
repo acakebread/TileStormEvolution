@@ -161,7 +161,8 @@ namespace AssetViewerNamespace
 					if (textureFrames?.Length > 0)
 					{
 						var animator = tileObj.AddComponent<TextureSetAnimator>();
-						animator.Initialize(textureFrames);
+						//animator.Initialize(textureFrames);
+						animator.Initialize(TextureSetManager.GetTextureSequence(definition.szTheme));
 					}
 					else
 					{

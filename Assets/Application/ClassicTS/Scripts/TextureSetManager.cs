@@ -1,40 +1,52 @@
-﻿using UnityEngine;
-using System.Collections.Generic;
+﻿// TextureSetManager.cs — Final Version
 using System.Linq;
+using System.Collections.Generic;
 
 namespace ClassicTilestorm
 {
 	public static class TextureSetManager
 	{
-		private static readonly Dictionary<string, TextureFrame[]> cache = new();
+		private static readonly Dictionary<string, TextureSequence> _cache = new();
 
-		public static TextureFrame[] GetTextureFrames(string themeName)
+		public static TextureSequence GetTextureSequence(string id)
 		{
-			if (string.IsNullOrEmpty(themeName)) return null;
-			if (cache.TryGetValue(themeName, out var cached)) return cached;
+			if (string.IsNullOrEmpty(id)) return null;
 
-			//var theme = ResourceManager.Themes.FirstOrDefault(t => t.name == themeName);
-			//if (theme == null || string.IsNullOrEmpty(theme.szTileTextureSet)) return null;
+			if (_cache.TryGetValue(id, out var cached))
+				return cached;
 
-			//var textureSet = ResourceManager.TextureSets.FirstOrDefault(ts => ts.name == theme.szTileTextureSet);
-			//if (textureSet == null || textureSet.frames == null || textureSet.frames.Length == 0) return null;
+			var sequence = ResourceManager.TextureSets.FirstOrDefault(ts => ts.name == id);
+			if (sequence == null) return null;
 
-			var textureSet = ResourceManager.TextureSets.FirstOrDefault(ts => ts.name == themeName);//bypass 'theme' system - use theme string directly as TextureSet.name
-			if (textureSet == null || textureSet.frames == null || textureSet.frames.Length == 0) return null;
+			// Work on a copy so we can mutate safely
+			var frames = sequence.ResolvedFrames; // triggers shorthand → frame conversion if needed
+			var framesArray = frames.ToArray(); // copy for mutation
+			bool modified = false;
 
-			// Resolve textures from szTexture → Texture2D at runtime
-			for (int i = 0; i < textureSet.frames.Length; i++)
+			for (int i = 0; i < framesArray.Length; i++)
 			{
-				var f = textureSet.frames[i];
-				if (f.texture == null && !string.IsNullOrEmpty(f.szTexture))
+				var frame = framesArray[i];
+				if (frame.texture == null && !string.IsNullOrEmpty(frame.textureName))
 				{
-					f.texture = TextureManager.Get(f.szTexture);
-					textureSet.frames[i] = f; // write back only the texture
+					frame.texture = TextureManager.Get(frame.textureName);
+					framesArray[i] = frame;
+					modified = true;
 				}
 			}
 
-			cache[themeName] = textureSet.frames;
-			return textureSet.frames;
+			if (modified)
+			{
+				sequence.SetResolvedFrames(framesArray); // write back loaded textures
+			}
+
+			_cache[id] = sequence;
+			return sequence;
 		}
+
+		// Legacy support — old code continues to work perfectly
+		public static TextureFrame[] GetTextureFrames(string id)
+			=> GetTextureSequence(id)?.ResolvedFrames ?? System.Array.Empty<TextureFrame>();
+
+		public static void ClearCache() => _cache.Clear();
 	}
 }
