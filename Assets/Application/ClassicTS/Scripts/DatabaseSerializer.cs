@@ -1,5 +1,4 @@
-﻿// DatabaseSerializer.cs — FINAL, PERFECT, MINIFIED + NULLS STRIPPED
-using UnityEngine;
+﻿using UnityEngine;
 using System;
 using System.IO;
 using Newtonsoft.Json;

@@ -7,6 +7,17 @@ namespace ClassicTilestorm
 {
 	public static class AtomicMapExporter
 	{
+		[System.Serializable]
+		public class AtomicMap
+		{
+			public Map map;
+			public Definition[] definitions;
+			public TextureSequence[] textures;
+			public string version = "1.0";
+			public string author = "Player";
+			public string exportedFrom = "ClassicTilestorm";
+		}
+
 		private const string ExportFolder = "Maps";
 
 		public static void Export(Map map, string overridePath = null)
