@@ -20,7 +20,6 @@ namespace ClassicTilestorm
 
 		public static bool IsInitialized => _db != null;
 
-		// Exact same signature — your MainController calls this
 		public static void Initialize()
 		{
 			if (_db != null) return;
@@ -35,20 +34,33 @@ namespace ClassicTilestorm
 			_db = DatabaseSerializer.LoadFromTextAsset(jsonFile);
 			if (_db == null)
 			{
-				Debug.LogError("ResourceManager: Failed to load database.json!");
-				return;
+				Debug.LogWarning("ResourceManager: Failed to load mutable database.json (corrupted or outdated?). Replacing with pristine version...");
+
+				PreviewSettings.ResetMutableDatabaseToDefault();
+
+				// Re-get the TextAsset — it will now read the freshly restored file
+				jsonFile = PreviewSettings.DatabaseJsonFile;
+				_db = DatabaseSerializer.LoadFromTextAsset(jsonFile);
+
+				if (_db == null)
+				{
+					Debug.LogError("ResourceManager: FATAL — Even the pristine database failed to load. Cannot continue.");
+					return;
+				}
+
+				Debug.Log("ResourceManager: Successfully recovered using internal pristine database.json");
 			}
 
 #if USING_INDIVIDUAL_MAPS
-            _individualMaps = ResourceSerializer.TryLoadIndividualMaps();
-            if (_individualMaps != null && _individualMaps.Length > 0)
-            {
-                Debug.Log($"ResourceManager: Loaded {_individualMaps.Length} individual map files");
-            }
-            else
-            {
-                _individualMaps = null;
-            }
+			_individualMaps = ResourceSerializer.TryLoadIndividualMaps();
+			if (_individualMaps != null && _individualMaps.Length > 0)
+			{
+				Debug.Log($"ResourceManager: Loaded {_individualMaps.Length} individual map files (overriding bundled maps)");
+			}
+			else
+			{
+				_individualMaps = null; // explicitly null so Maps getter falls back to _db.maps
+			}
 #endif
 		}
 

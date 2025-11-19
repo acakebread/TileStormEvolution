@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using System.IO;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -142,6 +142,32 @@ namespace ClassicTilestorm
 		void Awake()
 		{
 			instance = this;
+		}
+
+		public static void ResetMutableDatabaseToDefault()
+		{
+			if (instance == null || instance.databaseJsonFile == null)
+			{
+				Debug.LogError("PreviewSettings.ResetMutableDatabaseToDefault(): instance or source databaseJsonFile is null.");
+				return;
+			}
+
+			string targetPath = GetDatabaseFilePath();
+			if (string.IsNullOrEmpty(targetPath))
+			{
+				Debug.LogError("PreviewSettings.ResetMutableDatabaseToDefault(): target path is null.");
+				return;
+			}
+
+			string freshContent = instance.databaseJsonFile.text;
+			if (string.IsNullOrEmpty(freshContent))
+			{
+				Debug.LogError("PreviewSettings.ResetMutableDatabaseToDefault(): source TextAsset content is empty.");
+				return;
+			}
+
+			SerializerUtility.WriteText(targetPath, freshContent);
+			Debug.Log($"PreviewSettings: Overwrote corrupted mutable database with pristine internal copy → {targetPath}");
 		}
 
 		public static string GetDatabaseFilePath()
