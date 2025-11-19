@@ -42,12 +42,14 @@ namespace ClassicTilestorm
 
 		public void SetVSrc(Vector3 vec)
 		{
-			vSrc = vec == Vector3.zero ? null : new[] { vec.x, vec.y, vec.z };
+			float[] temp = new[] { vec.x, vec.y, vec.z };
+			vSrc = IsValid(temp) ? temp : null;
 		}
 
 		public void SetVDst(Vector3 vec)
 		{
-			vDst = vec == Vector3.zero ? null : new[] { vec.x, vec.y, vec.z };
+			float[] temp = new[] { vec.x, vec.y, vec.z };
+			vDst = IsValid(temp) ? temp : null;
 		}
 	}
 }
