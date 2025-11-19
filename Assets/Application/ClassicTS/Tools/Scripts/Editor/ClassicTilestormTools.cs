@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEditor;
 using System.IO;
 using System.Collections.Generic;
+using System.Linq;
 using Newtonsoft.Json;
 
 namespace ClassicTilestorm.Editor
@@ -36,20 +37,19 @@ namespace ClassicTilestorm.Editor
 
 		private void ExportAllMapsAsAtomic()
 		{
-			// ------------------------------------------------------------------
-			// 1. Load the database exactly like runtime does
-			// ------------------------------------------------------------------
-			var db = DatabaseSerializer.LoadFromTextAsset(databaseJson);
-			if (db == null || db.maps == null)
+			// Use the NEW unified serializer
+			var db = ResourceSerializer.DeserializeDatabase(databaseJson.text);
+			if (db == null || db.maps == null || db.maps.Length == 0)
 			{
 				Debug.LogError("Failed to parse database.json – aborting export.");
 				return;
 			}
 
-			// Temporarily inject into ResourceManager so AtomicMapExporter can see everything
-			typeof(ResourceManager)
-				.GetField("_db", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
-				?.SetValue(null, db);
+			// Temporarily inject into ResourceManager so ExportAtomicMap can resolve dependencies
+			var field = typeof(ResourceManager).GetField("_db",
+				System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+			var previous = field?.GetValue(null);
+			field?.SetValue(null, db);
 
 			string outputFolder = Path.Combine(Application.dataPath, "StreamingAssets", "Maps");
 			Directory.CreateDirectory(outputFolder);
@@ -59,18 +59,19 @@ namespace ClassicTilestorm.Editor
 			{
 				if (map == null) continue;
 				string path = Path.Combine(outputFolder, $"{map.name}.json");
-				AtomicMapExporter.Export(map, path);
+				ResourceFileIO.ExportAtomicMap(map, path);
 				count++;
 			}
+
+			// Restore previous state
+			field?.SetValue(null, previous);
 
 			Debug.Log($"Batch export complete: {count} full AtomicMap files → Assets/StreamingAssets/Maps/");
 			AssetDatabase.Refresh();
 		}
 	}
 
-	// ----------------------------------------------------------------------
-	// Updated DefinitionConverter – now with FULL OldDefinition class
-	// ----------------------------------------------------------------------
+	// Updated DefinitionConverter – still works on raw TextAsset
 	public static class DefinitionConverter
 	{
 		[System.Serializable]
@@ -97,7 +98,7 @@ namespace ClassicTilestorm.Editor
 			string json = File.ReadAllText(fullPath);
 			var wrapper = JsonConvert.DeserializeObject<OldDatabaseWrapper>(json);
 
-			if (wrapper?.definitions == null)
+			if (wrapper?.definitions == null || wrapper.definitions.Length == 0)
 			{
 				Debug.LogError("No definitions found in database.json");
 				return;
@@ -114,7 +115,6 @@ namespace ClassicTilestorm.Editor
 					texture = !string.IsNullOrEmpty(old.szBank) ? old.szBank.Trim() : "Default"
 				};
 
-				// Flags
 				var flags = new List<string>();
 				if (old.bStart) flags.Add("Start");
 				if (old.bEnd) flags.Add("End");
@@ -126,7 +126,6 @@ namespace ClassicTilestorm.Editor
 				if (old.bPuzzleBlock) flags.Add("PuzzleBlock");
 				if (flags.Count > 0) def.flags = string.Join(",", flags);
 
-				// Connections
 				var dirs = new List<char>();
 				if (old.bNorth) dirs.Add('N');
 				if (old.bSouth) dirs.Add('S');
@@ -134,7 +133,6 @@ namespace ClassicTilestorm.Editor
 				if (old.bWest) dirs.Add('W');
 				if (dirs.Count > 0) def.connections = new string(dirs.ToArray());
 
-				// Pickup
 				def.pickup = old.nPickup switch
 				{
 					1 => "Coin",

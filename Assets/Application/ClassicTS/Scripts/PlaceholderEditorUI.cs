@@ -345,7 +345,7 @@ namespace ClassicTilestorm
 
 		public void ExportCurrentMapAsAtomic()
 		{
-			AtomicMapExporter.Export(mapManager.CurrentMap);
+			ResourceFileIO.ExportAtomicMap(mapManager.CurrentMap);
 		}
 	}
 }

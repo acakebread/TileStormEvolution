@@ -405,5 +405,35 @@ namespace ClassicTilestorm
 			manager.Initialise(map);
 			return manager;
 		}
+
+		public void SaveCurrentMap()
+		{
+			if (currentMap == null)
+			{
+				Debug.LogError("Cannot save: No current map loaded.");
+				return;
+			}
+
+			// Update the map's tile indices from current visual layout
+			currentMap.tiles = indices.Select(i => Array.IndexOf(definitions, definitions[i])).ToArray();
+
+			// If using individual maps override → save as single file
+#if USING_INDIVIDUAL_MAPS
+    if (ResourceManager.Maps is Map[] individualMaps && individualMaps.Length > 0)
+    {
+        ResourceFileIO.SaveIndividualMap(currentMap);
+        Debug.Log($"Saved individual map: {currentMap.name}");
+        return;
+    }
+#endif
+
+			// Otherwise save full database
+			var db = ResourceManager.GetCurrentData();
+			if (db != null)
+			{
+				ResourceFileIO.SaveDatabase(db);
+				Debug.Log($"Saved full database (map: {currentMap.name})");
+			}
+		}
 	}
 }
