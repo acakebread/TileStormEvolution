@@ -1,4 +1,4 @@
-﻿// ResourceFileIO.cs — ONLY PLACE THAT TOUCHES THE DISK
+﻿// ResourceFileIO.cs — FINAL VERSION (no folder spam!)
 using UnityEngine;
 using System.IO;
 using System.Linq;
@@ -11,17 +11,20 @@ namespace ClassicTilestorm
 		private static readonly string ExportFolder = Path.Combine(Application.persistentDataPath, "Maps");
 		private static readonly string IndividualMapsFolder = Path.Combine(Application.streamingAssetsPath, "Maps");
 
-		static ResourceFileIO()
+		// Only create folders WHEN NEEDED — no more empty folders on every run!
+		private static void EnsureFolder(string path)
 		{
-			Directory.CreateDirectory(DatabaseFolder);
-			Directory.CreateDirectory(ExportFolder);
-			Directory.CreateDirectory(IndividualMapsFolder);
+			if (!Directory.Exists(path))
+				Directory.CreateDirectory(path);
 		}
 
 		// ─────── Mutable Database (persistentDataPath) ───────
 		public static TextAsset GetMutableDatabaseTextAsset(TextAsset pristine)
 		{
-			string path = Path.Combine(DatabaseFolder, pristine.name.EndsWith(".json") ? pristine.name : pristine.name + ".json");
+			EnsureFolder(DatabaseFolder);
+
+			string fileName = pristine.name.EndsWith(".json") ? pristine.name : pristine.name + ".json";
+			string path = Path.Combine(DatabaseFolder, fileName);
 
 			if (!File.Exists(path))
 			{
@@ -36,24 +39,33 @@ namespace ClassicTilestorm
 
 		public static void OverwriteMutableDatabaseWithPristine(TextAsset pristine)
 		{
-			string path = Path.Combine(DatabaseFolder, pristine.name.EndsWith(".json") ? pristine.name : pristine.name + ".json");
+			EnsureFolder(DatabaseFolder);
+
+			string fileName = pristine.name.EndsWith(".json") ? pristine.name : pristine.name + ".json";
+			string path = Path.Combine(DatabaseFolder, fileName);
 			File.WriteAllText(path, pristine.text);
 			Debug.Log($"ResourceFileIO: Restored pristine database → {path}");
 		}
 
 		public static void SaveDatabase(ResourceSerializer.DatabaseData data)
 		{
+			EnsureFolder(DatabaseFolder);
+
 			string path = Path.Combine(DatabaseFolder, "database.json");
 			string json = ResourceSerializer.SerializeDatabase(data, pretty: false);
 			File.WriteAllText(path, json);
 			Debug.Log($"ResourceFileIO: Saved full database → {path}");
 		}
 
-		// ─────── Individual Maps (StreamingAssets) ───────
+		// ─────── Individual Maps (StreamingAssets/Maps) ───────
 		public static Map[] LoadIndividualMaps()
 		{
+			EnsureFolder(IndividualMapsFolder); // Only creates when actually loading
+
+			if (!Directory.Exists(IndividualMapsFolder))
+				return System.Array.Empty<Map>();
+
 			var list = new System.Collections.Generic.List<Map>();
-			if (!Directory.Exists(IndividualMapsFolder)) return list.ToArray();
 
 			foreach (string file in Directory.GetFiles(IndividualMapsFolder, "*.json"))
 			{
@@ -73,12 +85,15 @@ namespace ClassicTilestorm
 					Debug.LogError($"ResourceFileIO: Failed to load individual map {file}: {ex.Message}");
 				}
 			}
+
 			return list.ToArray();
 		}
 
 		public static bool SaveIndividualMap(Map map)
 		{
 			if (map == null || string.IsNullOrEmpty(map.name)) return false;
+
+			EnsureFolder(IndividualMapsFolder); // Only creates when saving
 
 			string safeName = string.Join("_", map.name.Split(Path.GetInvalidFileNameChars()));
 			string path = Path.Combine(IndividualMapsFolder, safeName + ".json");
@@ -88,18 +103,23 @@ namespace ClassicTilestorm
 			return true;
 		}
 
-		// ─────── Atomic Export ───────
+		// ─────── Atomic Export (persistentDataPath/Maps) ───────
 		public static void ExportAtomicMap(Map map, string overridePath = null)
 		{
+			if (map == null) return;
+
+			EnsureFolder(ExportFolder); // Only creates when exporting
+
 			var usedTypes = map.table?.Where(t => !string.IsNullOrEmpty(t)).Distinct() ?? System.Array.Empty<string>();
-			var usedDefs = ResourceManager.Definitions.Where(d => usedTypes.Contains(d.szType)).ToArray();
-			var usedBanks = usedDefs.Where(d => !string.IsNullOrEmpty(d.szBank)).Select(d => d.szBank).Distinct();
+			var usedDefs = ResourceManager.Definitions.Where(d => usedTypes.Contains(d.id)).ToArray();
+			var usedBanks = usedDefs.Where(d => !string.IsNullOrEmpty(d.texture)).Select(d => d.texture).Distinct();
 			var usedTextures = ResourceManager.TextureSets.Where(ts => usedBanks.Contains(ts.name)).ToArray();
 
 			string json = ResourceSerializer.SerializeAtomic(map, usedDefs, usedTextures);
 
 			string folder = string.IsNullOrEmpty(overridePath) ? ExportFolder : Path.GetDirectoryName(overridePath);
-			Directory.CreateDirectory(folder);
+			EnsureFolder(folder);
+
 			string path = string.IsNullOrEmpty(overridePath)
 				? Path.Combine(folder, $"{map.name}.json")
 				: overridePath;
