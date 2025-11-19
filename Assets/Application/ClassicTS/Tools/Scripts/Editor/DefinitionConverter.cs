@@ -3,7 +3,6 @@ using UnityEditor;
 using Newtonsoft.Json;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using ClassicTilestorm;
 
 public static class DefinitionConverter
