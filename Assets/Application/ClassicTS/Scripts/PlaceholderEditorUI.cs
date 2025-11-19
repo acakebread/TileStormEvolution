@@ -85,9 +85,51 @@ namespace ClassicTilestorm
 			return GUIUtility.hotControl != 0 || isMouseOverTileSelector || EventSystem.current.IsPointerOverGameObject();
 		}
 
+		//public bool IsMouseOverGui()
+		//{
+		//	return isMouseOverTileSelector || GUIManager.IsMouseOverGui();
+		//}
+
+		// Replace your current IsMouseOverGui() with this version:
 		public bool IsMouseOverGui()
 		{
-			return isMouseOverTileSelector || GUIManager.IsMouseOverGui();
+			// 1. First: the tile selector (right panel) — already tracked accurately
+			if (isMouseOverTileSelector)
+				return true;
+
+			// 2. Convert mouse position to GUI coordinates (Y flipped)
+			Vector2 mousePos = Input.mousePosition;
+			mousePos.y = Screen.height - mousePos.y;
+
+			// 3. Left-side control panel (Drag/Paint/Save/Grid buttons)
+			float panelBottomY = GetPanelBottomY();
+			float leftPanelX = margin;
+			float leftPanelY = panelBottomY + spacing;
+			float leftPanelWidth = buttonWidth + 20f;  // a little padding
+			float leftPanelHeight = buttonHeight * 4 + spacing * 4;
+
+			Rect leftPanelRect = new Rect(leftPanelX, leftPanelY, leftPanelWidth, leftPanelHeight);
+			if (leftPanelRect.Contains(mousePos))
+				return true;
+
+			// 4. Right-side tile selector (only when Paint mode and expanded/visible)
+			if (currentMode == EditorController.EditorMode.Paint)
+			{
+				float tileSelectorX = Screen.width - tileSelectorWidth - margin;
+				float tileSelectorY = panelBottomY + spacing;
+				float tileSelectorHeight = Screen.height - tileSelectorY - margin;
+
+				Rect tileSelectorRect = new Rect(tileSelectorX, tileSelectorY, tileSelectorWidth, tileSelectorHeight);
+				if (tileSelectorRect.Contains(mousePos))
+					return true;
+			}
+
+			// 5. Optional: top-right "Export Atomic Map" button
+			Rect exportButtonRect = new Rect(Screen.width - 190, 50, 180, 50);
+			if (exportButtonRect.Contains(mousePos))
+				return true;
+
+			return false;
 		}
 
 		public bool IsMouseInsideWindow()
@@ -160,10 +202,10 @@ namespace ClassicTilestorm
 			Rect paintButtonRect = new Rect(margin, panelBottomY + spacing + buttonHeight + spacing, buttonWidth, buttonHeight);
 			Rect saveButtonRect = new Rect(margin, panelBottomY + spacing + 2 * (buttonHeight + spacing), buttonWidth, buttonHeight);
 			Rect gridToggleRect = new Rect(margin, panelBottomY + spacing + 3 * (buttonHeight + spacing), buttonWidth, buttonHeight);
-			GUIManager.RegisterGuiRect(dragButtonRect);
-			GUIManager.RegisterGuiRect(paintButtonRect);
-			GUIManager.RegisterGuiRect(saveButtonRect);
-			GUIManager.RegisterGuiRect(gridToggleRect);
+			//GUIManager.RegisterGuiRect(dragButtonRect);
+			//GUIManager.RegisterGuiRect(paintButtonRect);
+			//GUIManager.RegisterGuiRect(saveButtonRect);
+			//GUIManager.RegisterGuiRect(gridToggleRect);
 
 			GUIStyle toggleStyle = new GUIStyle(GUI.skin.toggle);
 			toggleStyle.normal.background = toggleOffBackgroundTexture;
@@ -228,14 +270,14 @@ namespace ClassicTilestorm
 				float tileSelectorY = panelBottomY + spacing;
 				float tileSelectorHeight = Screen.height - tileSelectorY - margin;
 				Rect tileSelectorRect = new Rect(tileSelectorX, tileSelectorY, tileSelectorWidth, tileSelectorHeight);
-				GUIManager.RegisterGuiRect(tileSelectorRect);
+				//GUIManager.RegisterGuiRect(tileSelectorRect);
 
 				GUIStyle panelStyle = new GUIStyle(GUI.skin.box);
 				panelStyle.normal.background = panelBackgroundTexture;
 				GUI.Box(tileSelectorRect, "Tile Selector", panelStyle);
 
 				Rect scrollViewRect = new Rect(tileSelectorX + 10, tileSelectorY + 30, tileSelectorWidth - 20, tileSelectorHeight - 40);
-				GUIManager.RegisterGuiRect(scrollViewRect);
+				//GUIManager.RegisterGuiRect(scrollViewRect);
 				scrollPosition = GUI.BeginScrollView(
 					scrollViewRect,
 					scrollPosition,
