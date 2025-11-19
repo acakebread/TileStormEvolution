@@ -1,5 +1,4 @@
-﻿// ResourceManager.cs — HIGH-LEVEL API ONLY
-using UnityEngine;
+﻿using UnityEngine;
 using System.Linq;
 
 namespace ClassicTilestorm

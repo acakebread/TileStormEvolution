@@ -1,5 +1,4 @@
-﻿// TextureSequence.cs — FINAL, COMPILING, WORKING VERSION
-using System;
+﻿using System;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
@@ -7,7 +6,7 @@ using UnityEngine;
 namespace ClassicTilestorm
 {
 	[Serializable]
-	[JsonConverter(typeof(TextureSequenceConverter))]  // This applies the magic
+	[JsonConverter(typeof(TextureSequenceConverter))]
 	public class TextureSequence
 	{
 		public string id;

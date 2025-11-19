@@ -1,5 +1,4 @@
-﻿// ResourceSerializer.cs — PURE SERIALIZER, NO FILE I/O WHATSOEVER
-using UnityEngine;
+﻿using UnityEngine;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 

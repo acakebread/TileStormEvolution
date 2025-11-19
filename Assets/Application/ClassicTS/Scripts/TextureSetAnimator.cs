@@ -1,5 +1,4 @@
-﻿// TextureSetAnimator.cs — Final
-using UnityEngine;
+﻿using UnityEngine;
 
 namespace ClassicTilestorm
 {

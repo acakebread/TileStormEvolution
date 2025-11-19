@@ -1,5 +1,4 @@
-﻿// ResourceFileIO.cs — FINAL VERSION (no folder spam!)
-using UnityEngine;
+﻿using UnityEngine;
 using System.IO;
 using System.Linq;
 
@@ -11,7 +10,7 @@ namespace ClassicTilestorm
 		private static readonly string ExportFolder = Path.Combine(Application.persistentDataPath, "Maps");
 		private static readonly string IndividualMapsFolder = Path.Combine(Application.streamingAssetsPath, "Maps");
 
-		// Only create folders WHEN NEEDED — no more empty folders on every run!
+		// Only create folders WHEN NEEDED
 		private static void EnsureFolder(string path)
 		{
 			if (!Directory.Exists(path))

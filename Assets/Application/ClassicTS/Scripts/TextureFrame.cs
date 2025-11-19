@@ -1,18 +1,16 @@
-﻿// TextureFrame.cs
-using UnityEngine;
+﻿using UnityEngine;
 using Newtonsoft.Json;
 
 namespace ClassicTilestorm
 {
 	[System.Serializable]
-	public class TextureFrame  // ← class, not struct — this is correct!
+	public class TextureFrame
 	{
 		[JsonIgnore] public Texture2D runtimeTexture;
 
 		[JsonProperty("texture")] public string textureName;
 		[JsonProperty("duration")] public float duration;
 
-		// Legacy shims — old code still works
 		[JsonIgnore]
 		public Texture2D texture
 		{

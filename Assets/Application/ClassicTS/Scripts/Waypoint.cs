@@ -1,5 +1,5 @@
 ﻿// ---------------------------------------------------------------
-// Waypoint.cs   – THE ONE AND ONLY Waypoint class in the entire project
+// Waypoint.cs
 // ---------------------------------------------------------------
 using UnityEngine;
 using Newtonsoft.Json;

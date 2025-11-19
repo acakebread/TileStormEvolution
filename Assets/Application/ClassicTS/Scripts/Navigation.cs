@@ -2,12 +2,10 @@ namespace ClassicTilestorm
 {
 	public static class Navigation
 	{
-		// CHANGED: Made public for access from MapManager.FindAdjacentConsole
+		// Public for access from MapManager.FindAdjacentConsole
 		public static readonly int[] Directions = { Tile.North, Tile.South, Tile.East, Tile.West };
 		public static float DirToAngle(int dir) => new float[] { 0f, 0f, 180f, 0f, 90f, 45f, 135f, 90f, -90f, -45f, -135f, -90f, 0f, 0f, 180f, 0f }[dir & 0xF];
 		public static int GetOppositeDirection(int dir) => ((dir & Tile.North) << 1) | ((dir & Tile.South) >> 1) | ((dir & Tile.East) << 1) | ((dir & Tile.West) >> 1);
-
-		// REMOVED: All waypoint-specific code (fields, SetupWaypoints, GenerateWaypoints, GetStartTile, GetEndTile, FindAdjacentConsole)
 
 		//Classic TS legacy function - returns tile index in direction
 		public static int LineOfSight(IMapManager map, int src, int dst, int dir)
