@@ -90,21 +90,21 @@ namespace ClassicTilestorm
 			for (int n = 0; n < tileMap.Length; ++n)
 			{
 				int definitionIndex = tileMap[n];
-				string szType = (definitionIndex >= 0 && definitionIndex < currentMap.table?.Length)
+				string id = (definitionIndex >= 0 && definitionIndex < currentMap.table?.Length)
 					? currentMap.table[definitionIndex]
 					: "tile_empty";
 
-				if (string.IsNullOrEmpty(szType))
-					szType = "tile_empty";
+				if (string.IsNullOrEmpty(id))
+					id = "tile_empty";
 
-				definitions[n] = szType;
-				var definition = ResourceManager.Definitions.FirstOrDefault(td => td.szType == szType);
+				definitions[n] = id;
+				var definition = ResourceManager.Definitions.FirstOrDefault(td => td.id == id);
 				tiles[n] = new Tile(definition);
 
-				if (szType == "tile_empty") continue;
+				if (id == "tile_empty") continue;
 				if (definition == null)
 				{
-					Debug.LogError($"Definition not found for szType={szType} at tile {n}");
+					Debug.LogError($"Definition not found for id={id} at tile {n}");
 					continue;
 				}
 
@@ -113,17 +113,17 @@ namespace ClassicTilestorm
 			}
 		}
 
-		public int GetOrAddMapDefIndex(string szType)
+		public int GetOrAddMapDefIndex(string id)
 		{
-			if (string.IsNullOrEmpty(szType))
+			if (string.IsNullOrEmpty(id))
 			{
-				Debug.LogError($"Invalid tile definition: szType={szType}");
+				Debug.LogError($"Invalid tile definition: id={id}");
 				return -1;
 			}
 
 			if (currentMap.table != null)
 			{
-				int existing = Array.IndexOf(currentMap.table, szType);
+				int existing = Array.IndexOf(currentMap.table, id);
 				if (existing != -1) return existing;
 			}
 
@@ -131,11 +131,10 @@ namespace ClassicTilestorm
 			var oldDefs = currentMap.table ?? Array.Empty<string>();
 			var newDefs = new string[oldDefs.Length + 1];
 			oldDefs.CopyTo(newDefs, 0);
-			newDefs[oldDefs.Length] = szType;
+			newDefs[oldDefs.Length] = id;
 			currentMap.table = newDefs;
 
-			Debug.Log($"Added new mapDef: szType={szType}, new index={oldDefs.Length}");
-			UpdateChanges();
+			Debug.Log($"Added new mapDef: id={id}, new index={oldDefs.Length}");
 			return oldDefs.Length;
 		}
 
@@ -154,23 +153,23 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			string szType = currentMap.table[newDeinitionfIndex];
-			if (string.IsNullOrEmpty(szType))
+			string id = currentMap.table[newDeinitionfIndex];
+			if (string.IsNullOrEmpty(id))
 			{
-				Debug.LogError($"Empty szType at index {newDeinitionfIndex}");
+				Debug.LogError($"Empty id at index {newDeinitionfIndex}");
 				return;
 			}
 
 			if (tiles[index].GameObject != null)
 				Destroy(tiles[index].GameObject);
 
-			definitions[index] = szType;
-			var def = ResourceManager.Definitions.FirstOrDefault(td => td.szType == szType);
+			definitions[index] = id;
+			var def = ResourceManager.Definitions.FirstOrDefault(td => td.id == id);
 			tiles[index] = new Tile(def);
 
-			if (szType != "tile_empty")
+			if (id != "tile_empty")
 			{
-				var definition = ResourceManager.GetDefinition(szType);
+				var definition = ResourceManager.GetDefinition(id);
 				if (definition != null)
 				{
 					tiles[index].GameObject = GeometryManager.InstantiateTile(
@@ -184,22 +183,36 @@ namespace ClassicTilestorm
 		// -----------------------------------------------------------------------
 		// Database update
 		// -----------------------------------------------------------------------
-		// In MapManager.cs — just replace these methods
-
 		private void ApplyCurrentMapChanges()
 		{
 			if (currentMap == null) return;
 
-			var logicalTiles = new int[Count];
-			for (int i = 0; i < Count; i++)
+			// Step 1: Collect all IDs actually used on the map right now
+			var usedIds = new HashSet<string>();
+			for (int i = 0; i < definitions.Length; i++)
 			{
-				string szType = definitions[i];
-				logicalTiles[i] = Array.IndexOf(currentMap.table, szType);
-				if (logicalTiles[i] == -1) logicalTiles[i] = 0; // fallback
+				string id = definitions[i];
+				if (!string.IsNullOrEmpty(id))
+					usedIds.Add(id);
 			}
 
-			currentMap.tiles = logicalTiles;                    // Mutate in place
-			ResourceManager.ApplyMapChanges(currentMap);       // Survives map switching
+			// Step 2: Rebuild compact table containing only used IDs
+			var newTable = usedIds.OrderBy(x => x).ToArray();  // stable order
+
+			// Step 3: Remap every tile index to the new compact table
+			var logicalTiles = new int[Count];
+			for (int i = 0; i < definitions.Length; i++)
+			{
+				string id = definitions[i];
+				int newIndex = Array.IndexOf(newTable, id);
+				logicalTiles[i] = newIndex; // guaranteed valid because we built from definitions[]
+			}
+
+			// Step 4: Apply — table is now clean, indices valid
+			currentMap.table = newTable;
+			currentMap.tiles = logicalTiles;
+
+			ResourceManager.ApplyMapChanges(currentMap);
 		}
 
 		public void UpdateChanges()
@@ -301,7 +314,7 @@ namespace ClassicTilestorm
 				gameObject.transform.position = position;
 				position -= tile_origin;
 #if DEBUG
-				gameObject.name = $"{gameObject.GetComponent<RTTI>()?.definition.szType ?? "Empty"} ({position.x},{position.z})";
+				gameObject.name = $"{gameObject.GetComponent<RTTI>()?.definition.id ?? "Empty"} ({position.x},{position.z})";
 #endif
 			}
 		}
