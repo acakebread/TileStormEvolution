@@ -48,7 +48,7 @@ namespace ClassicTilestorm
 			var camera = controller.activeSystem?.camera;
 			editorUI.Initialize(this, mapManager, camera);
 
-			gridLines = null != mapManager ? GridLinesHelper.CreateGridLines(transform, mapManager.Width, mapManager.Height) : null;
+			gridLines = null != mapManager ? GridLinesHelper.CreateGridLines(transform, mapManager.Width, mapManager.Height, 0f, MapManager.tile_origin.x - 0.5f) : null;
 			UpdateGridLines(editorUI.GetGridLinesEnabled() & isActiveAndEnabled);
 
 			if (isActiveAndEnabled) OnEnable();
