@@ -1,75 +1,76 @@
-//// AtomicMapExporter.cs � ZERO changes to MapManager, 100% safe
-//using UnityEngine;
-//using System.IO;
-//using System.Linq;
-//using Newtonsoft.Json;
+﻿using System.IO;
+using System.Linq;
+using UnityEngine;
+using Newtonsoft.Json;
 
-//namespace ClassicTilestorm
-//{
-//	public static class AtomicMapExporter
-//	{
-//		private static readonly JsonSerializerSettings JsonSettings = new()
-//		{
-//			NullValueHandling = NullValueHandling.Ignore,
-//			Formatting = Formatting.Indented
-//		};
+namespace ClassicTilestorm
+{
+	public static class AtomicMapExporter
+	{
+		private const string ExportFolder = "Maps";
 
-//		public static void ExportCurrentMap(string customName = null)
-//		{
-//			var mapManager = FindObjectOfType<MapManager>();
-//			if (mapManager == null)
-//			{
-//				Debug.LogError("No MapManager found in scene!");
-//				return;
-//			}
+		public static void Export(Map map, string overridePath = null)
+		{
+			if (map == null || string.IsNullOrEmpty(map.name))
+			{
+				Debug.LogError("AtomicMapExporter: Cannot export – map is null or has no name.");
+				return;
+			}
 
-//			var map = mapManager.CurrentMap;
-//			if (map == null || string.IsNullOrEmpty(map.name))
-//			{
-//				Debug.LogError("Current map is invalid!");
-//				return;
-//			}
+			// 1. Used tile types
+			var usedTypes = map.table?
+				.Where(t => !string.IsNullOrEmpty(t))
+				.Distinct()
+				.ToArray() ?? System.Array.Empty<string>();
 
-//			// Collect all used definition types from the map
-//			var usedTypes = map.table?
-//				.Where(t => !string.IsNullOrEmpty(t))
-//				.Distinct()
-//				.ToArray() ?? System.Array.Empty<string>();
+			// 2. Only used definitions
+			var usedDefs = ResourceManager.Definitions
+				.Where(d => usedTypes.Contains(d.szType))
+				.ToArray();
 
-//			// Get definitions used in this map
-//			var usedDefs = ResourceManager.Definitions
-//				.Where(d => usedTypes.Contains(d.szType))
-//				.ToArray();
+			// 3. Only used texture banks
+			var usedBankNames = usedDefs
+				.Where(d => !string.IsNullOrEmpty(d.szBank))
+				.Select(d => d.szBank)
+				.Distinct()
+				.ToArray();
 
-//			// Get texture banks used by these definitions
-//			var usedTextureIds = usedDefs
-//				.Where(d => !string.IsNullOrEmpty(d.szBank))
-//				.Select(d => d.szBank)
-//				.Distinct()
-//				.ToArray();
+			var usedTextures = ResourceManager.TextureSets
+				.Where(ts => usedBankNames.Contains(ts.name))
+				.ToArray();
 
-//			var usedTextures = ResourceManager.TextureSets
-//				.Where(ts => usedTextureIds.Contains(ts.name))
-//				.ToArray();
+			// 4. Build AtomicMap (uses your existing AtomicMap class!)
+			var atomic = new AtomicMap
+			{
+				map = map,
+				definitions = usedDefs,
+				textures = usedTextures
+			};
 
-//			var atomic = new AtomicMap
-//			{
-//				map = map,
-//				definitions = usedDefs,
-//				textures = usedTextures
-//			};
+			// 5. Serialize nicely
+			var settings = new JsonSerializerSettings
+			{
+				NullValueHandling = NullValueHandling.Ignore,
+				Formatting = Formatting.Indented
+			};
 
-//			string fileName = customName ?? map.name;
-//			string path = Path.Combine(Application.persistentDataPath, "Maps", $"{fileName}.json");
-//			Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+			string json = JsonConvert.SerializeObject(atomic, settings);
 
-//			string json = JsonConvert.SerializeObject(atomic, JsonSettings);
-//			File.WriteAllText(path, json);
+			// 6. Write file
+			string folder = string.IsNullOrEmpty(overridePath)
+				? Path.Combine(Application.persistentDataPath, ExportFolder)
+				: Path.GetDirectoryName(overridePath)!;
 
-//			Debug.Log($"Atomic map exported: {path}");
-//			Debug.Log($"   Map: {map.name} ({map.width}x{map.height})");
-//			Debug.Log($"   Definitions: {usedDefs.Length}");
-//			Debug.Log($"   Textures: {usedTextures.Length}");
-//		}
-//	}
-//}
+			Directory.CreateDirectory(folder);
+
+			string filePath = string.IsNullOrEmpty(overridePath)
+				? Path.Combine(folder, $"{map.name}.json")
+				: overridePath;
+
+			File.WriteAllText(filePath, json);
+
+			Debug.Log($"[AtomicMap] Exported → {filePath}\n" +
+					  $"   Definitions: {usedDefs.Length} | Textures: {usedTextures.Length}");
+		}
+	}
+}

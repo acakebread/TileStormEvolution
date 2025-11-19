@@ -345,63 +345,68 @@ namespace ClassicTilestorm
 
 		public void ExportCurrentMapAsAtomic()
 		{
-			if (mapManager == null)
-			{
-				Debug.LogError("MapManager not initialized in editor UI!");
-				return;
-			}
-
-			var map = mapManager.CurrentMap;
-			if (map == null || string.IsNullOrEmpty(map.name))
-			{
-				Debug.LogError("No valid map loaded!");
-				return;
-			}
-
-			// Collect all tile types used in the map
-			var usedTypes = map.table?
-				.Where(t => !string.IsNullOrEmpty(t))
-				.Distinct()
-				.ToArray() ?? System.Array.Empty<string>();
-
-			// Get only the definitions actually used
-			var usedDefs = ResourceManager.Definitions
-				.Where(d => usedTypes.Contains(d.szType))
-				.ToArray();
-
-			// Get texture banks used by these definitions
-			var usedTextureIds = usedDefs
-				.Where(d => !string.IsNullOrEmpty(d.szBank))
-				.Select(d => d.szBank)
-				.Distinct()
-				.ToArray();
-
-			var usedTextures = ResourceManager.TextureSets
-				.Where(ts => usedTextureIds.Contains(ts.name))
-				.ToArray();
-
-			var atomic = new AtomicMap
-			{
-				map = map,
-				definitions = usedDefs,
-				textures = usedTextures
-			};
-
-			var settings = new Newtonsoft.Json.JsonSerializerSettings
-			{
-				NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore,
-				Formatting = Newtonsoft.Json.Formatting.Indented
-			};
-
-			string json = Newtonsoft.Json.JsonConvert.SerializeObject(atomic, settings);
-			string folder = System.IO.Path.Combine(Application.persistentDataPath, "Maps");
-			System.IO.Directory.CreateDirectory(folder);
-			string path = System.IO.Path.Combine(folder, $"{map.name}.json");
-
-			System.IO.File.WriteAllText(path, json);
-
-			Debug.Log($"ATOMIC MAP EXPORTED: {path}");
-			Debug.Log($"   Map: {map.name} | Definitions: {usedDefs.Length} | Textures: {usedTextures.Length}");
+			AtomicMapExporter.Export(mapManager.CurrentMap);
 		}
+
+		//public void ExportCurrentMapAsAtomic()
+		//{
+		//	if (mapManager == null)
+		//	{
+		//		Debug.LogError("MapManager not initialized in editor UI!");
+		//		return;
+		//	}
+
+		//	var map = mapManager.CurrentMap;
+		//	if (map == null || string.IsNullOrEmpty(map.name))
+		//	{
+		//		Debug.LogError("No valid map loaded!");
+		//		return;
+		//	}
+
+		//	// Collect all tile types used in the map
+		//	var usedTypes = map.table?
+		//		.Where(t => !string.IsNullOrEmpty(t))
+		//		.Distinct()
+		//		.ToArray() ?? System.Array.Empty<string>();
+
+		//	// Get only the definitions actually used
+		//	var usedDefs = ResourceManager.Definitions
+		//		.Where(d => usedTypes.Contains(d.szType))
+		//		.ToArray();
+
+		//	// Get texture banks used by these definitions
+		//	var usedTextureIds = usedDefs
+		//		.Where(d => !string.IsNullOrEmpty(d.szBank))
+		//		.Select(d => d.szBank)
+		//		.Distinct()
+		//		.ToArray();
+
+		//	var usedTextures = ResourceManager.TextureSets
+		//		.Where(ts => usedTextureIds.Contains(ts.name))
+		//		.ToArray();
+
+		//	var atomic = new AtomicMap
+		//	{
+		//		map = map,
+		//		definitions = usedDefs,
+		//		textures = usedTextures
+		//	};
+
+		//	var settings = new Newtonsoft.Json.JsonSerializerSettings
+		//	{
+		//		NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore,
+		//		Formatting = Newtonsoft.Json.Formatting.Indented
+		//	};
+
+		//	string json = Newtonsoft.Json.JsonConvert.SerializeObject(atomic, settings);
+		//	string folder = System.IO.Path.Combine(Application.persistentDataPath, "Maps");
+		//	System.IO.Directory.CreateDirectory(folder);
+		//	string path = System.IO.Path.Combine(folder, $"{map.name}.json");
+
+		//	System.IO.File.WriteAllText(path, json);
+
+		//	Debug.Log($"ATOMIC MAP EXPORTED: {path}");
+		//	Debug.Log($"   Map: {map.name} | Definitions: {usedDefs.Length} | Textures: {usedTextures.Length}");
+		//}
 	}
 }
