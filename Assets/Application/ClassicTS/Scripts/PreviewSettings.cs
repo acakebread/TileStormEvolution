@@ -1,17 +1,13 @@
 ﻿using UnityEngine;
-using System.IO;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
-using System.Diagnostics;
-using Debug = UnityEngine.Debug;
 using MassiveHadronLtd;
 
 namespace ClassicTilestorm
 {
 	public enum PreviewMode
 	{
-		//Direct,
 		Editor,
 		Player,
 		Cinema
@@ -19,16 +15,15 @@ namespace ClassicTilestorm
 
 	public class PreviewSettings : MonoBehaviour
 	{
-		// Public constant for the subfolder name in persistentDataPath (can be empty for root)
 		public const string MutableDatabaseSubfolder = "Data";
 
 		[Header("map to load")]
 		[SerializeField] private string loadMapName = "Industrial 01";
-		public static string LoadMapName 
-		{ 
-			get => PlayerPrefsX.GetString("LastLoadedMap", instance.loadMapName);//restore previous session map
-			set 
-			{ 
+		public static string LoadMapName
+		{
+			get => PlayerPrefsX.GetString("LastLoadedMap", instance.loadMapName);
+			set
+			{
 				instance.loadMapName = value;
 				PlayerPrefsX.SetString("LastLoadedMap", value, true);
 			}
@@ -52,60 +47,32 @@ namespace ClassicTilestorm
 
 		[Header("resource paths")]
 		[SerializeField] private TextAsset databaseJsonFile;
+
+		/// <summary>
+		/// The original pristine database that ships with the game (never modified)
+		/// </summary>
+		public static TextAsset PristineDatabaseJsonFile => instance?.databaseJsonFile;
+
+		/// <summary>
+		/// The current mutable database (auto-copied to persistentDataPath if missing)
+		/// </summary>
 		public static TextAsset DatabaseJsonFile
 		{
 			get
 			{
-				if (instance == null || instance.databaseJsonFile == null)
+				if (instance == null)
 				{
-					Debug.LogWarning("PreviewSettings instance or databaseJsonFile is null.");
+					Debug.LogError("PreviewSettings.instance is null! Make sure a GameObject with PreviewSettings exists in the scene.");
 					return null;
 				}
 
-				string targetPath = GetDatabaseFilePath();
-				string fileContent = SerializerUtility.ReadText(targetPath);
-				if (string.IsNullOrEmpty(fileContent))
+				if (instance.databaseJsonFile == null)
 				{
-					// File doesn't exist; copy from source TextAsset
-					fileContent = instance.databaseJsonFile.text;
-					if (string.IsNullOrEmpty(fileContent))
-					{
-						Debug.LogError("PreviewSettings: Source TextAsset content is null or empty.");
-						return null;
-					}
-
-					SerializerUtility.WriteText(targetPath, fileContent);
-					// File is now written, re-read to confirm
-					fileContent = SerializerUtility.ReadText(targetPath);
-					if (string.IsNullOrEmpty(fileContent))
-					{
-						Debug.LogError("PreviewSettings: Failed to read text after writing to disk.");
-						return null;
-					}
+					Debug.LogError("PreviewSettings: No pristine databaseJsonFile assigned in the Inspector!");
+					return null;
 				}
 
-				TextAsset textAsset = new TextAsset(fileContent);
-				textAsset.name = instance.databaseJsonFile.name;
-				return textAsset;
-			}
-			set
-			{
-				if (value == null)
-				{
-					Debug.LogError("PreviewSettings: Cannot set DatabaseJsonFile to null.");
-					return;
-				}
-
-				string targetPath = GetDatabaseFilePath();
-				if (string.IsNullOrEmpty(targetPath))
-				{
-					Debug.LogError("PreviewSettings: Cannot set DatabaseJsonFile because target path is null.");
-					return;
-				}
-
-				SerializerUtility.WriteText(targetPath, value.text);
-				instance.databaseJsonFile = value;
-				Debug.Log($"PreviewSettings: Updated DatabaseJsonFile and saved to {targetPath}");
+				return ResourceFileIO.GetMutableDatabaseTextAsset(instance.databaseJsonFile);
 			}
 		}
 
@@ -123,10 +90,8 @@ namespace ClassicTilestorm
 
 		[Header("Game Mode")]
 		[SerializeField] private PreviewMode previewMode = PreviewMode.Player;
-
 		public static PreviewMode CurrentMode
 		{
-
 			get => (PreviewMode)PlayerPrefsX.GetInt("PreviousMode", (int)instance.previewMode);
 			set
 			{
@@ -138,62 +103,7 @@ namespace ClassicTilestorm
 			}
 		}
 
-		private static PreviewSettings instance;
-		void Awake()
-		{
-			instance = this;
-		}
-
-		public static void ResetMutableDatabaseToDefault()
-		{
-			if (instance == null || instance.databaseJsonFile == null)
-			{
-				Debug.LogError("PreviewSettings.ResetMutableDatabaseToDefault(): instance or source databaseJsonFile is null.");
-				return;
-			}
-
-			string targetPath = GetDatabaseFilePath();
-			if (string.IsNullOrEmpty(targetPath))
-			{
-				Debug.LogError("PreviewSettings.ResetMutableDatabaseToDefault(): target path is null.");
-				return;
-			}
-
-			string freshContent = instance.databaseJsonFile.text;
-			if (string.IsNullOrEmpty(freshContent))
-			{
-				Debug.LogError("PreviewSettings.ResetMutableDatabaseToDefault(): source TextAsset content is empty.");
-				return;
-			}
-
-			SerializerUtility.WriteText(targetPath, freshContent);
-			Debug.Log($"PreviewSettings: Overwrote corrupted mutable database with pristine internal copy → {targetPath}");
-		}
-
-		public static string GetDatabaseFilePath()
-		{
-			if (instance == null || instance.databaseJsonFile == null)
-			{
-				Debug.LogError("PreviewSettings: instance or databaseJsonFile is null.");
-				return null;
-			}
-
-			string targetFolder = string.IsNullOrEmpty(MutableDatabaseSubfolder)
-				? Application.persistentDataPath
-				: Path.Combine(Application.persistentDataPath, MutableDatabaseSubfolder);
-			string fullFileName = instance.databaseJsonFile.name.EndsWith(".json")
-				? instance.databaseJsonFile.name
-				: instance.databaseJsonFile.name + ".json";
-			return Path.Combine(targetFolder, fullFileName);
-		}
-
-		public static string GetDatabaseFolderPath()
-		{
-			return string.IsNullOrEmpty(MutableDatabaseSubfolder)
-				? Application.persistentDataPath
-				: Path.Combine(Application.persistentDataPath, MutableDatabaseSubfolder);
-		}
-
+		// ─────── Editor button helper (only thing that needs the path) ───────
 #if UNITY_EDITOR
 		[CustomEditor(typeof(PreviewSettings))]
 		private class PreviewSettingsEditor : Editor
@@ -201,35 +111,24 @@ namespace ClassicTilestorm
 			public override void OnInspectorGUI()
 			{
 				DrawDefaultInspector();
-				EditorGUILayout.Space();
+				EditorGUILayout.Space(10);
 
-				if (GUILayout.Button("Locate Mutable Database"))
+				if (GUILayout.Button("Locate Mutable Database", GUILayout.Height(30)))
 				{
-					string targetFolder = GetDatabaseFolderPath();
-					if (!Directory.Exists(targetFolder))
-					{
-						Directory.CreateDirectory(targetFolder);
-						Debug.Log($"Created directory: {targetFolder}");
-					}
-
-					try
-					{
-						string normalizedPath = targetFolder.Replace("/", Path.DirectorySeparatorChar.ToString());
-						Process.Start(new ProcessStartInfo
-						{
-							FileName = normalizedPath,
-							UseShellExecute = true,
-							Verb = "open"
-						});
-						Debug.Log($"Opened file explorer at: {normalizedPath}");
-					}
-					catch (System.Exception ex)
-					{
-						Debug.LogError($"Failed to open file explorer at {targetFolder}: {ex.Message}");
-					}
+					string folder = System.IO.Path.Combine(Application.persistentDataPath, "Data");
+					System.IO.Directory.CreateDirectory(folder);
+					EditorUtility.RevealInFinder(folder);
+					Debug.Log($"Opened mutable database folder: {folder}");
 				}
 			}
 		}
 #endif
+
+		private static PreviewSettings instance;
+
+		private void Awake()
+		{
+			instance = this;
+		}
 	}
 }

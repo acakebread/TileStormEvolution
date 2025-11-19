@@ -24,43 +24,39 @@ namespace ClassicTilestorm
 		{
 			if (_db != null) return;
 
-			var jsonFile = PreviewSettings.DatabaseJsonFile;
-			if (jsonFile == null)
+			var pristine = PreviewSettings.PristineDatabaseJsonFile;
+			if (pristine == null)
 			{
-				Debug.LogError("ResourceManager.Initialize(): PreviewSettings.DatabaseJsonFile is null!");
+				Debug.LogError("ResourceManager: Pristine database TextAsset is missing!");
 				return;
 			}
 
-			_db = DatabaseSerializer.LoadFromTextAsset(jsonFile);
+			var mutable = ResourceFileIO.GetMutableDatabaseTextAsset(pristine);
+			_db = ResourceSerializer.DeserializeDatabase(mutable.text);
+
 			if (_db == null)
 			{
-				Debug.LogWarning("ResourceManager: Failed to load mutable database.json (corrupted or outdated?). Replacing with pristine version...");
+				Debug.LogWarning("Mutable database corrupted or invalid → restoring from pristine copy");
+				ResourceFileIO.OverwriteMutableDatabaseWithPristine(pristine);
 
-				PreviewSettings.ResetMutableDatabaseToDefault();
-
-				// Re-get the TextAsset — it will now read the freshly restored file
-				jsonFile = PreviewSettings.DatabaseJsonFile;
-				_db = DatabaseSerializer.LoadFromTextAsset(jsonFile);
+				mutable = ResourceFileIO.GetMutableDatabaseTextAsset(pristine);
+				_db = ResourceSerializer.DeserializeDatabase(mutable.text);
 
 				if (_db == null)
 				{
-					Debug.LogError("ResourceManager: FATAL — Even the pristine database failed to load. Cannot continue.");
+					Debug.LogError("FATAL: Even pristine database failed to load. Cannot continue.");
 					return;
 				}
 
-				Debug.Log("ResourceManager: Successfully recovered using internal pristine database.json");
+				Debug.Log("Successfully recovered database from pristine version.");
 			}
 
 #if USING_INDIVIDUAL_MAPS
-			_individualMaps = ResourceSerializer.TryLoadIndividualMaps();
-			if (_individualMaps != null && _individualMaps.Length > 0)
-			{
-				Debug.Log($"ResourceManager: Loaded {_individualMaps.Length} individual map files (overriding bundled maps)");
-			}
-			else
-			{
-				_individualMaps = null; // explicitly null so Maps getter falls back to _db.maps
-			}
+    _individualMaps = ResourceFileIO.LoadIndividualMaps();
+    if (_individualMaps != null && _individualMaps.Length > 0)
+        Debug.Log($"ResourceManager: Loaded {_individualMaps.Length} individual map files (overriding bundled)");
+    else
+        _individualMaps = null;
 #endif
 		}
 
@@ -96,19 +92,26 @@ namespace ClassicTilestorm
 			}
 		}
 
-		// Explicit save only
+		// ResourceManager.cs — FINAL SaveToDisk (uses ResourceFileIO only)
 		public static void SaveToDisk()
 		{
-			if (_individualMaps != null)
+			if (_individualMaps != null && _individualMaps.Length > 0)
 			{
 				foreach (var map in _individualMaps)
-					ResourceSerializer.SaveMap(map);
-				Debug.Log($"Saved {_individualMaps.Length} individual map files.");
+					ResourceFileIO.SaveIndividualMap(map);
+
+				Debug.Log($"ResourceManager: Saved {_individualMaps.Length} individual map files.");
+				return;
 			}
-			else if (_db != null)
+
+			if (_db != null)
 			{
-				DatabaseSerializer.SaveToDisk(_db);
+				ResourceFileIO.SaveDatabase(_db);
+				Debug.Log("ResourceManager: Saved full database.json");
+				return;
 			}
+
+			Debug.LogWarning("ResourceManager.SaveToDisk(): Nothing to save — no data loaded.");
 		}
 
 		public static DatabaseSerializer.DatabaseData GetCurrentData() => _db;
