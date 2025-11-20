@@ -84,11 +84,6 @@ namespace ClassicTilestorm
 			return GUIUtility.hotControl != 0 || isMouseOverTileSelector || EventSystem.current.IsPointerOverGameObject();
 		}
 
-		//public bool IsMouseOverGui()
-		//{
-		//	return isMouseOverTileSelector || GUIManager.IsMouseOverGui();
-		//}
-
 		// Replace your current IsMouseOverGui() with this version:
 		public bool IsMouseOverGui()
 		{
@@ -188,23 +183,12 @@ namespace ClassicTilestorm
 		{
 			if (!editorController || !mapManager || !camera) return;
 
-			GUI.backgroundColor = new Color(0.2f, 0.8f, 1f);
-			if (GUI.Button(new Rect(Screen.width - 180, 60, 170, 40), "Export Atomic Map"))
-			{
-				ExportCurrentMapAsAtomic();
-			}
-			GUI.backgroundColor = Color.white;
-
 			float panelBottomY = GetPanelBottomY();
-
 			Rect dragButtonRect = new Rect(margin, panelBottomY + spacing, buttonWidth, buttonHeight);
 			Rect paintButtonRect = new Rect(margin, panelBottomY + spacing + buttonHeight + spacing, buttonWidth, buttonHeight);
 			Rect saveButtonRect = new Rect(margin, panelBottomY + spacing + 2 * (buttonHeight + spacing), buttonWidth, buttonHeight);
-			Rect gridToggleRect = new Rect(margin, panelBottomY + spacing + 3 * (buttonHeight + spacing), buttonWidth, buttonHeight);
-			//GUIManager.RegisterGuiRect(dragButtonRect);
-			//GUIManager.RegisterGuiRect(paintButtonRect);
-			//GUIManager.RegisterGuiRect(saveButtonRect);
-			//GUIManager.RegisterGuiRect(gridToggleRect);
+			Rect exptButtonRect = new Rect(margin, panelBottomY + spacing + 3 * (buttonHeight + spacing), buttonWidth, buttonHeight);
+			Rect gridToggleRect = new Rect(margin, panelBottomY + spacing + 4 * (buttonHeight + spacing), buttonWidth, buttonHeight);
 
 			GUIStyle toggleStyle = new GUIStyle(GUI.skin.toggle);
 			toggleStyle.normal.background = toggleOffBackgroundTexture;
@@ -231,6 +215,16 @@ namespace ClassicTilestorm
 			saveButtonStyle.fixedHeight = buttonHeight;
 			if (GUI.Button(saveButtonRect, "Save", saveButtonStyle))
 				mapManager.SaveChanges();
+
+			GUIStyle exportButtonStyle = new GUIStyle(GUI.skin.button);
+			exportButtonStyle.normal.background = saveBackgroundTexture;
+			exportButtonStyle.padding = new RectOffset(10, 10, 5, 5);
+			exportButtonStyle.fontSize = 14;
+			exportButtonStyle.alignment = TextAnchor.MiddleCenter;
+			exportButtonStyle.fixedWidth = buttonWidth;
+			exportButtonStyle.fixedHeight = buttonHeight;
+			if (GUI.Button(exptButtonRect, "Export", exportButtonStyle))
+				ExportCurrentMapAsAtomic();
 
 			GUIStyle gridButtonStyle = new GUIStyle(GUI.skin.button);
 			gridButtonStyle.normal.background = gridButtonBackgroundTexture;
@@ -269,14 +263,12 @@ namespace ClassicTilestorm
 				float tileSelectorY = panelBottomY + spacing;
 				float tileSelectorHeight = Screen.height - tileSelectorY - margin;
 				Rect tileSelectorRect = new Rect(tileSelectorX, tileSelectorY, tileSelectorWidth, tileSelectorHeight);
-				//GUIManager.RegisterGuiRect(tileSelectorRect);
 
 				GUIStyle panelStyle = new GUIStyle(GUI.skin.box);
 				panelStyle.normal.background = panelBackgroundTexture;
 				GUI.Box(tileSelectorRect, "Tile Selector", panelStyle);
 
 				Rect scrollViewRect = new Rect(tileSelectorX + 10, tileSelectorY + 30, tileSelectorWidth - 20, tileSelectorHeight - 40);
-				//GUIManager.RegisterGuiRect(scrollViewRect);
 				scrollPosition = GUI.BeginScrollView(
 					scrollViewRect,
 					scrollPosition,
@@ -344,7 +336,7 @@ namespace ClassicTilestorm
 
 		public void ExportCurrentMapAsAtomic()
 		{
-			ResourceFileIO.ExportAtomicMap(mapManager.CurrentMap);
+			ResourceSerializer.ExportAtomicMap(mapManager.CurrentMap);
 		}
 	}
 }

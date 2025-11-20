@@ -72,7 +72,7 @@ namespace ClassicTilestorm
 					return null;
 				}
 
-				return ResourceFileIO.GetMutableDatabaseTextAsset(instance.databaseJsonFile);
+				return ResourceSerializer.GetMutableDatabaseTextAsset(instance.databaseJsonFile);
 			}
 		}
 

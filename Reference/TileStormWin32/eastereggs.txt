@@ -1,0 +1,37 @@
+TileStorm has a number of embedded 'Easter Eggs'. They range in functionality and many of them are there simply to aid debugging, but I included some to help people that had bought TileStorm along if they were stuck. These codes are also useful to people that want to review or develop for TileStorm as they allow instant access to the whole game.
+
+Under normal circumstances when you complete TileStorm a secret level (Eggbot's Disco) is revealed and a new puzzle is presented to you. In the secret level the number '1969' is clearly presented to you and it is left to you to figure out what to do. If you are smart enough you'll enter the code and find that an entire 'Eliza' mini game is opened up to you and loads of cheat codes are revealed as long as you keep 'talking' to me. Here are the instructions to fast track you to this stage of the game:
+
+The first thing you need to do in TileStorm to access the Easter Eggs is to activate the cheat system. This is done by simply entering 1969
+Go to the industrial section and select these levels and these levels only. 1,9,6,9 - this activates cheats. If you dial this again cheats are deactivated; so don't!
+You need to type 1969 once in each session to activate cheats, after that all other codes will work, so if you quit the next time you play type 1969 again to enable cheats once more.
+
+
+Now here is an complete list of Easter Eggs that are available. In each case you need to go to the Industrial level (as before) and enter the new codes:
+
+
+1911 - unlock all levels in Egypt
+1912 - unlock all levels in Medieval
+1913 - unlock all levels in Jungle
+1914 - unlock all levels
+1919 - mark all levels as solved (except level 1) - this will unlock Eggbot's Disco - the secret level - you will need to make sure you solve level 1 at least though
+9811 - change star colour to red - permanent change
+9812 - change star colour to green - permanent change
+9813 - change star colour to blue - permanent change
+9842 - for disco lights! 9842 again to turn them off
+9851 - speed up Eggbot - four different speeds - keep entering code and Eggbot will get faster and faster to a point before he goes back to normal speed
+9861 - auto complete maps (where possible - some maps need to re-use tiles, so they cannot be auto solved)
+9862 - go first person (toggle) - walk round levels from Eggbot's perspective - use with 'auto complete' code
+
+9911 for the editor, but you are not supposed to know about that! You can't save and it is not a proper feature, so that's why it is buried in an Easter Egg, but I might make it a full feature at some future point - the best thing to look at is the group editor - you can see all the game models.
+
+others of less interest include:
+
+9821 - change ambient light colour to red
+9822 - change ambient light colour to green
+9823 - change ambient light colour to blue
+9824 - change ambient light colour to white
+9831 - change diffuse light colour to red
+9832 - change diffuse light colour to green
+9833 - change diffuse light colour to blue
+9834 - change diffuse light colour to white

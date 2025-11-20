@@ -26,15 +26,15 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			var mutable = ResourceFileIO.GetMutableDatabaseTextAsset(pristine);
+			var mutable = ResourceSerializer.GetMutableDatabaseTextAsset(pristine);
 			_db = ResourceSerializer.DeserializeDatabase(mutable.text);
 
 			if (_db == null)
 			{
 				Debug.LogWarning("Mutable database corrupted → restoring pristine copy");
-				ResourceFileIO.OverwriteMutableDatabaseWithPristine(pristine);
+				ResourceSerializer.OverwriteMutableDatabaseWithPristine(pristine);
 
-				mutable = ResourceFileIO.GetMutableDatabaseTextAsset(pristine);
+				mutable = ResourceSerializer.GetMutableDatabaseTextAsset(pristine);
 				_db = ResourceSerializer.DeserializeDatabase(mutable.text);
 
 				if (_db == null)
@@ -76,14 +76,14 @@ namespace ClassicTilestorm
 			if (_individualMaps != null && _individualMaps.Length > 0)
 			{
 				foreach (var map in _individualMaps)
-					ResourceFileIO.SaveIndividualMap(map);
+					ResourceSerializer.SaveIndividualMap(map);
 				Debug.Log($"Saved {_individualMaps.Length} individual maps");
 				return;
 			}
 
 			if (_db != null)
 			{
-				ResourceFileIO.SaveDatabase(_db);
+				ResourceSerializer.SaveDatabase(_db);
 				Debug.Log("Saved full database.json");
 			}
 		}

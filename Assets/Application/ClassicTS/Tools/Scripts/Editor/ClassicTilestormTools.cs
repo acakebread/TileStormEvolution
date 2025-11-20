@@ -59,7 +59,7 @@ namespace ClassicTilestorm.Editor
 			{
 				if (map == null) continue;
 				string path = Path.Combine(outputFolder, $"{map.name}.json");
-				ResourceFileIO.ExportAtomicMap(map, path);
+				ResourceSerializer.ExportAtomicMap(map, path);
 				count++;
 			}
 
