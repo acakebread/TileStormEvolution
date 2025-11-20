@@ -186,12 +186,13 @@ namespace ClassicTilestorm
 			if (!editorController || !mapManager || !camera) return;
 
 			float panelBottomY = GetPanelBottomY();
-			Rect dragButtonRect = new Rect(margin, panelBottomY + spacing, buttonWidth, buttonHeight);
-			Rect paintButtonRect = new Rect(margin, panelBottomY + spacing + (buttonHeight + spacing), buttonWidth, buttonHeight);
-			Rect saveButtonRect = new Rect(margin, panelBottomY + spacing + 2 * (buttonHeight + spacing), buttonWidth, buttonHeight);
-			Rect reloadButtonRect = new Rect(margin, panelBottomY + spacing + 3 * (buttonHeight + spacing), buttonWidth, buttonHeight);
-			Rect exptButtonRect = new Rect(margin, panelBottomY + spacing + 4 * (buttonHeight + spacing), buttonWidth, buttonHeight);
-			Rect gridToggleRect = new Rect(margin, panelBottomY + spacing + 5 * (buttonHeight + spacing), buttonWidth, buttonHeight);
+			Rect gridToggleRect = new Rect(margin, panelBottomY + spacing + 0 * (buttonHeight + spacing), buttonWidth, buttonHeight);
+			Rect dragButtonRect = new Rect(margin, panelBottomY + spacing + 1 * (buttonHeight + spacing), buttonWidth, buttonHeight);
+			Rect paintButtonRect = new Rect(margin, panelBottomY + spacing + 2 * (buttonHeight + spacing), buttonWidth, buttonHeight);
+			Rect saveButtonRect = new Rect(margin, panelBottomY + spacing + 3 * (buttonHeight + spacing), buttonWidth, buttonHeight);
+			Rect reloadButtonRect = new Rect(margin, panelBottomY + spacing + 4 * (buttonHeight + spacing), buttonWidth, buttonHeight);
+			Rect exptButtonRect = new Rect(margin, panelBottomY + spacing + 5 * (buttonHeight + spacing), buttonWidth, buttonHeight);
+			Rect importButtonRect = new Rect(margin, panelBottomY + spacing + 6 * (buttonHeight + spacing), buttonWidth, buttonHeight);
 
 			GUIStyle toggleStyle = new GUIStyle(GUI.skin.toggle);
 			toggleStyle.normal.background = toggleOffBackgroundTexture;
@@ -270,6 +271,29 @@ namespace ClassicTilestorm
 			{
 				gridLinesEnabled = !gridLinesEnabled;
 				editorController.UpdateGridLines(gridLinesEnabled);
+			}
+
+			// === IMPORT MAP BUTTON ===
+			GUIStyle importButtonStyle = new GUIStyle(GUI.skin.button);
+			importButtonStyle.normal.background = reloadBackgroundTexture; // reuse blue style
+			importButtonStyle.padding = new RectOffset(10, 10, 5, 5);
+			importButtonStyle.fontSize = 14;
+			importButtonStyle.alignment = TextAnchor.MiddleCenter;
+			importButtonStyle.fixedWidth = buttonWidth;
+			importButtonStyle.fixedHeight = buttonHeight;
+
+			if (GUI.Button(importButtonRect, "Import Map", importButtonStyle))
+			{
+				string path = EditorUtility.OpenFilePanel(
+					"Import Atomic Map",
+					ResourceSerializer.GetExportFolder(),
+					"json"
+				);
+
+				if (!string.IsNullOrEmpty(path))
+				{
+					ResourceSerializer.ImportAtomicMapFromFile(path);
+				}
 			}
 
 			// Mode switching
