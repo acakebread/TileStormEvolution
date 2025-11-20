@@ -191,7 +191,11 @@ namespace ClassicTilestorm
 			for (int i = 0; i < definitions.Length; i++)
 			{
 				string id = definitions[i];
-				if (string.IsNullOrEmpty(id)) continue;
+				if (string.IsNullOrEmpty(id))
+				{
+					Debug.LogError("invalid id");
+					continue;
+				}
 
 				if (!consolidatedTableMap.ContainsKey(id))
 					consolidatedTableMap[id] = 0;
