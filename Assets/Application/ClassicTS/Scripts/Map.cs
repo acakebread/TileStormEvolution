@@ -1,3 +1,5 @@
+using Newtonsoft.Json;
+
 namespace ClassicTilestorm
 {
 	[System.Serializable]
@@ -16,7 +18,16 @@ namespace ClassicTilestorm
 		public int[] mixed;
 		public Pickups Pickups;
 
+		// Atomic fields — ignored during normal serialization
+		[JsonIgnore] public Definition[] definitions;
+		[JsonIgnore] public TextureSequence[] textures;
+		[JsonIgnore] public string version = "1.0";
+		[JsonIgnore] public string author = "Player";
+		[JsonIgnore] public string exportedFrom = "ClassicTilestorm";
+
 		public bool ShouldSerializePickups() => Pickups != null && Pickups.nPickupCount > 0;
+
+		[JsonIgnore] public bool IsAtomic => definitions?.Length > 0 || textures?.Length > 0;
 	}
 
 	[System.Serializable]

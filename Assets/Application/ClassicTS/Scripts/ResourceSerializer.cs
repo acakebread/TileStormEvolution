@@ -3,6 +3,8 @@ using System.IO;
 using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Newtonsoft.Json.Serialization;
+using System.Reflection;
 
 namespace ClassicTilestorm
 {
@@ -151,24 +153,30 @@ namespace ClassicTilestorm
 		}
 
 		// ─────── ATOMIC EXPORT ───────
-		[System.Serializable]
-		public class AtomicMap
+		private class AtomicExportResolver : DefaultContractResolver
 		{
-			public Map map;
-			public Definition[] definitions;
-			public TextureSequence[] textures;
-			public string version = "2.0";
-			public string author = "Player";
-			public string exportedFrom = "ClassicTilestorm";
-		}
+			protected override JsonProperty CreateProperty(MemberInfo member, MemberSerialization memberSerialization)
+			{
+				var property = base.CreateProperty(member, memberSerialization);
 
-		public static string SerializeAtomic(AtomicMap atomic, bool pretty = true)
-			=> JsonConvert.SerializeObject(atomic, pretty ? Pretty : Minified);
+				if (property.Ignored && member.DeclaringType == typeof(Map))
+				{
+					if (member.Name is "definitions" or "textures" or "version" or "author" or "exportedFrom")
+					{
+						property.Ignored = false;
+						property.ShouldSerialize = _ => true;
+					}
+				}
+
+				return property;
+			}
+		}
 
 		public static void ExportAtomicMap(Map map, string overridePath = null)
 		{
 			if (map == null) return;
 
+			// Collect used definitions & textures
 			var usedTypes = map.table?
 				.Where(t => !string.IsNullOrEmpty(t))
 				.Distinct()
@@ -188,22 +196,37 @@ namespace ClassicTilestorm
 				.Where(ts => usedBanks.Contains(ts.name))
 				.ToArray();
 
-			var atomic = new AtomicMap
+			// Inject atomic data
+			map.definitions = usedDefs;
+			map.textures = usedTextures;
+			map.version = "1.0";
+			map.author = "Player";
+			map.exportedFrom = "ClassicTilestorm";
+
+			try
 			{
-				map = map,
-				definitions = usedDefs,
-				textures = usedTextures
-			};
+				var settings = new JsonSerializerSettings
+				{
+					NullValueHandling = NullValueHandling.Ignore,
+					Formatting = Formatting.Indented,
+					ContractResolver = new AtomicExportResolver()  // Clean, readable, works everywhere
+				};
 
-			string json = SerializeAtomic(atomic, pretty: true);
+				string json = JsonConvert.SerializeObject(map, settings);
 
-			EnsureFolder(ExportFolder);
-			string path = string.IsNullOrEmpty(overridePath)
-				? Path.Combine(ExportFolder, $"{map.name}.json")
-				: overridePath;
+				EnsureFolder(ExportFolder);
+				string path = string.IsNullOrEmpty(overridePath)
+					? Path.Combine(ExportFolder, $"{map.name}.json")
+					: overridePath;
 
-			File.WriteAllText(path, json);
-			Debug.Log($"ATOMIC MAP EXPORTED → {path}");
+				File.WriteAllText(path, json);
+				Debug.Log($"ATOMIC MAP EXPORTED → {path}");
+			}
+			finally
+			{
+				map.definitions = null;
+				map.textures = null;
+			}
 		}
 	}
 }
