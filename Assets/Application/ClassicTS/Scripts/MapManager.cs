@@ -34,7 +34,7 @@ namespace ClassicTilestorm
 		private Map currentMap;
 		private int[] indices;                    // Scrambled/solved visual indices
 		private Tile[] tiles;                     // Instantiated runtime Tile objects
-		private string[] definitions;             // Cached szType string per map index (for fast lookup & saving)
+		private string[] definitions;             // Cached 'id' string per map index (for fast lookup & saving)
 
 		// ------------------------------------------------------------------
 		// IMapData / IMapManager forwarded properties
@@ -186,29 +186,37 @@ namespace ClassicTilestorm
 		{
 			if (currentMap == null) return;
 
-			// Step 1: Collect all IDs actually used on the map right now
-			var usedIds = new HashSet<string>();
+			// Step 1: Count frequency of each ID
+			var consolidatedTableMap = new Dictionary<string, int>();
 			for (int i = 0; i < definitions.Length; i++)
 			{
 				string id = definitions[i];
-				if (!string.IsNullOrEmpty(id))
-					usedIds.Add(id);
+				if (string.IsNullOrEmpty(id)) continue;
+
+				if (!consolidatedTableMap.ContainsKey(id))
+					consolidatedTableMap[id] = 0;
+				consolidatedTableMap[id]++;
 			}
 
-			// Step 2: Rebuild compact table containing only used IDs
-			var newTable = usedIds.OrderBy(x => x).ToArray();  // stable order
+			// Step 2: Build list of IDs sorted by frequency (highest first)
+			var consolidatedTableList = consolidatedTableMap
+				.OrderByDescending(kvp => kvp.Value) // sort by frequency
+				.Select(kvp => kvp.Key)              // extract keys in that order
+				.ToList();
 
-			// Step 3: Remap every tile index to the new compact table
+			// Step 3: Convert to array
+			var consolidatedTable = consolidatedTableList.ToArray();
+
+			// Step 4: Remap every tile index to the new compact table
 			var logicalTiles = new int[Count];
 			for (int i = 0; i < definitions.Length; i++)
 			{
 				string id = definitions[i];
-				int newIndex = Array.IndexOf(newTable, id);
-				logicalTiles[i] = newIndex; // guaranteed valid because we built from definitions[]
+				logicalTiles[i] = Array.IndexOf(consolidatedTable, id); // guaranteed valid
 			}
 
-			// Step 4: Apply — table is now clean, indices valid
-			currentMap.table = newTable;
+			// Step 5: Apply changes
+			currentMap.table = consolidatedTable;
 			currentMap.tiles = logicalTiles;
 
 			ResourceManager.ApplyMapChanges(currentMap);
