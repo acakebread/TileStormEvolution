@@ -184,12 +184,12 @@ namespace ClassicTilestorm
 				.ToArray() ?? System.Array.Empty<string>();
 
 			var usedDefs = ResourceManager.Definitions
-				.Where(d => usedTypes.Contains(d.szType))
+				.Where(d => usedTypes.Contains(d.id))
 				.ToArray();
 
 			var usedBanks = usedDefs
-				.Where(d => !string.IsNullOrEmpty(d.szBank))
-				.Select(d => d.szBank)
+				.Where(d => !string.IsNullOrEmpty(d.texture))
+				.Select(d => d.texture)
 				.Distinct()
 				.ToArray();
 

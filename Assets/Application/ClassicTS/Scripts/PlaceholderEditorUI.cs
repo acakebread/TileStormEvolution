@@ -278,7 +278,7 @@ namespace ClassicTilestorm
 				for (int i = 0; i < ResourceManager.Definitions.Count; i++)
 				{
 					var definition = ResourceManager.Definitions[i];
-					string displayName = $"{definition.szType} ({definition.szBank})";
+					string displayName = $"{definition.id} ({definition.texture})";
 					Rect buttonRect = new(0, i * 40, tileSelectorWidth - 40, 35);
 
 					if (i == tempSelectedDefinitionGlobalIndex)
@@ -289,7 +289,7 @@ namespace ClassicTilestorm
 					{
 						tempSelectedDefinitionGlobalIndex = i;
 						var selectedDefinition = ResourceManager.Definitions[i];
-						int selectedMapDefIndex = mapManager.GetOrAddMapDefIndex(selectedDefinition.szType);
+						int selectedMapDefIndex = mapManager.GetOrAddMapDefIndex(selectedDefinition.id);
 						if (selectedMapDefIndex >= 0 && editorController.PaintMode != null)
 						{
 							editorController.PaintMode.SetDeinitionfIndex(selectedMapDefIndex, i);

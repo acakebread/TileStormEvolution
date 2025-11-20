@@ -40,9 +40,9 @@ namespace ClassicTilestorm
 		// Instantiates a GameObject based on Definition, with optional texture animation and collider
 		public static GameObject InstantiateTile(Definition definition, Transform parent, Vector3 position, bool interactive = false)
 		{
-			if (null == definition || string.IsNullOrEmpty(definition.szGeom))
+			if (null == definition || string.IsNullOrEmpty(definition.model))
 			{
-				if (definition.szType == "tile_invisible")
+				if (definition.id == "tile_invisible")
 				{
 					if (PreviewSettings.ShowHiddenTiles)
 					{
@@ -63,21 +63,21 @@ namespace ClassicTilestorm
 				return result;
 			}
 
-			var prefab = GetPrefab(definition.szGeom);
+			var prefab = GetPrefab(definition.model);
 			if (null == prefab)
 			{
-				Debug.LogWarning($"GeometryManager: Prefab {definition.szGeom} not found for Definition {definition.szType}.");
+				Debug.LogWarning($"GeometryManager: Prefab {definition.model} not found for Definition {definition.id}.");
 				return CreateFallbackTile(parent, position);
 			}
 
 			var gameObject = Object.Instantiate(prefab, position, Quaternion.identity, parent);
-			gameObject.name = definition.szGeom.Replace(".x", "");
+			gameObject.name = definition.model.Replace(".x", "");
 
 			// Apply texture animation
 			var textureAnimator = gameObject.AddComponent<TextureSetAnimator>();
-			textureAnimator.Initialize(TextureSetManager.GetTextureSequence(definition.szBank));
+			textureAnimator.Initialize(TextureSetManager.GetTextureSequence(definition.texture));
 
-			if ("Caustic" == definition.szBank)
+			if ("Caustic" == definition.texture)
 			{
 				var pointLight = gameObject.AddComponent<Light>();
 				pointLight.type = LightType.Point;

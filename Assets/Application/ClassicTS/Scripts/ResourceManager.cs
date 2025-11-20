@@ -52,7 +52,7 @@ namespace ClassicTilestorm
 		}
 
 		public static Definition GetDefinition(string id)
-			=> string.IsNullOrEmpty(id) ? null : Definitions.FirstOrDefault(d => d.szType == id);
+			=> string.IsNullOrEmpty(id) ? null : Definitions.FirstOrDefault(d => d.id == id);
 
 		public static TextureSequence GetTextureSequence(string id)
 			=> string.IsNullOrEmpty(id) ? null : TextureSets.FirstOrDefault(ts => ts.name == id);

@@ -25,7 +25,7 @@ namespace ClassicTilestorm
 		public void SetDeinitionfIndex(int definitionIndex, int globalIndex)
 		{
 			selectedDefinitionIndex = definitionIndex;
-			UpdateTileCycleList(ResourceManager.Definitions[globalIndex].szType);
+			UpdateTileCycleList(ResourceManager.Definitions[globalIndex].id);
 			cycleIndex = definitionCycleList.IndexOf(globalIndex);
 			if (cycleIndex < 0) cycleIndex = 0;
 		}
@@ -116,16 +116,16 @@ namespace ClassicTilestorm
 			if (mapIndex < 0 || mapIndex >= mapManager.Width * mapManager.Height || mapIndex != mouseDownMapIndex) return;
 
 			var selectedDefinition = ResourceManager.Definitions[tempSelectedDefinitionGlobalIndex];
-			var selectedDefinitionIndex = mapManager.GetOrAddMapDefIndex(selectedDefinition.szType);
+			var selectedDefinitionIndex = mapManager.GetOrAddMapDefIndex(selectedDefinition.id);
 
-			var tilesMatch = mapManager.GetDefinitionAtIndex(mapIndex) == selectedDefinition.szType;
+			var tilesMatch = mapManager.GetDefinitionAtIndex(mapIndex) == selectedDefinition.id;
 			if (tilesMatch && definitionCycleList != null && definitionCycleList.Count > 1)
 			{
 				cycleIndex = (cycleIndex + 1) % definitionCycleList.Count;
 				tempSelectedDefinitionGlobalIndex = definitionCycleList[cycleIndex];
 				PlaceholderEditorUI.Instance.SetSelectedDefinitionGlobalIndex(tempSelectedDefinitionGlobalIndex);
 				var newDefinition = ResourceManager.Definitions[tempSelectedDefinitionGlobalIndex];
-				selectedDefinitionIndex = mapManager.GetOrAddMapDefIndex(newDefinition.szType);
+				selectedDefinitionIndex = mapManager.GetOrAddMapDefIndex(newDefinition.id);
 				this.selectedDefinitionIndex = selectedDefinitionIndex;
 				GeometryUtil.DestroyGhostTile();
 				GeometryUtil.UpdateGhostTile(camera, mapManager, newDefinition);
@@ -147,12 +147,12 @@ namespace ClassicTilestorm
 			var doubleDiagonal = new[] { " nw", " ne", " se", " sw" };
 			string[] selectedGroup = null;
 
-			var derivedBaseTileType = currentTileType;
+			var derivedBaseTileId = currentTileType;
 			foreach (var suffix in singleDirections.Concat(doubleLinear).Concat(doubleDiagonal))
 			{
 				if (currentTileType.EndsWith(suffix))
 				{
-					derivedBaseTileType = currentTileType.Substring(0, currentTileType.Length - suffix.Length);
+					derivedBaseTileId = currentTileType.Substring(0, currentTileType.Length - suffix.Length);
 					break;
 				}
 			}
@@ -170,7 +170,7 @@ namespace ClassicTilestorm
 
 			for (var i = 0; i < ResourceManager.Definitions.Count; i++)
 			{
-				if (ResourceManager.Definitions[i].szType == derivedBaseTileType)
+				if (ResourceManager.Definitions[i].id == derivedBaseTileId)
 				{
 					definitionCycleList.Add(i);
 					break;
@@ -181,7 +181,7 @@ namespace ClassicTilestorm
 			{
 				for (var i = 0; i < ResourceManager.Definitions.Count; i++)
 				{
-					if (ResourceManager.Definitions[i].szType == derivedBaseTileType + suffix)
+					if (ResourceManager.Definitions[i].id == derivedBaseTileId + suffix)
 					{
 						definitionCycleList.Add(i);
 						break;
