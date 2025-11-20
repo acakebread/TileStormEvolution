@@ -25,13 +25,13 @@ namespace ClassicTilestorm
 		[JsonIgnore] public bool bEast => HasConnection('E');
 		[JsonIgnore] public bool bWest => HasConnection('W');
 
+		[JsonIgnore] public bool bDoor => HasFlag("Door");//we will move over to this and store the start with the map instead of the def
 		[JsonIgnore] public bool bStart => HasFlag("Start");
 		[JsonIgnore] public bool bEnd => HasFlag("End");
 		[JsonIgnore] public bool bConsole => HasFlag("Console");
 		[JsonIgnore] public bool bSlide => HasFlag("Slide");
 		[JsonIgnore] public bool bRoll => HasFlag("Roll");
 		[JsonIgnore] public bool bDock => HasFlag("Dock");
-		[JsonIgnore] public bool bDoor => HasFlag("Door");
 		[JsonIgnore] public bool bPuzzleBlock => HasFlag("PuzzleBlock");
 
 		[JsonIgnore]
