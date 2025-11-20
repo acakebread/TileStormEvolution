@@ -3,8 +3,6 @@ using System.IO;
 using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using Newtonsoft.Json.Serialization;
-using System.Reflection;
 
 namespace ClassicTilestorm
 {
@@ -29,7 +27,7 @@ namespace ClassicTilestorm
 			try
 			{
 				var root = JObject.Parse(json);
-				var serializer = JsonSerializer.CreateDefault();// (Minified);
+				var serializer = JsonSerializer.CreateDefault();
 
 				var data = new DatabaseData
 				{
@@ -62,10 +60,9 @@ namespace ClassicTilestorm
 			JsonSerializerSettings settings = new()
 			{
 				NullValueHandling = NullValueHandling.Ignore,
-				MissingMemberHandling = MissingMemberHandling.Ignore
+				MissingMemberHandling = MissingMemberHandling.Ignore,
+				Formatting = verbose ? Formatting.Indented : Formatting.None,
 			};
-
-			if (verbose) settings.Formatting = Formatting.Indented;
 
 			string json = JsonConvert.SerializeObject(data, settings); 
 			string path = string.IsNullOrEmpty(overridePath) ? Path.Combine(DatabaseFolder, "database.json") : overridePath;
@@ -74,82 +71,7 @@ namespace ClassicTilestorm
 			File.WriteAllText(path, json);
 		}
 
-		// ─────── ATOMIC EXPORT ───────
-		private class AtomicExportResolver : DefaultContractResolver
-		{
-			protected override JsonProperty CreateProperty(MemberInfo member, MemberSerialization memberSerialization)
-			{
-				var property = base.CreateProperty(member, memberSerialization);
-				if (property.Ignored && member.DeclaringType == typeof(Map))
-				{
-					if (member.Name is "definitions" or "textures" or "version" or "author" or "exportedFrom")
-					{
-						property.Ignored = false;
-						property.ShouldSerialize = _ => true;
-					}
-				}
-				return property;
-			}
-		}
-
-		public static void ExportAtomicMap(Map map, string overridePath = null)
-		{
-			if (map == null) return;
-
-			// Collect used definitions & textures
-			var usedTypes = map.table?
-				.Where(t => !string.IsNullOrEmpty(t))
-				.Distinct()
-				.ToArray() ?? System.Array.Empty<string>();
-
-			var usedDefs = ResourceManager.Definitions
-				.Where(d => usedTypes.Contains(d.id))
-				.ToArray();
-
-			var usedBanks = usedDefs
-				.Where(d => !string.IsNullOrEmpty(d.texture))
-				.Select(d => d.texture)
-				.Distinct()
-				.ToArray();
-
-			var usedTextures = ResourceManager.TextureSets
-				.Where(ts => usedBanks.Contains(ts.name))
-				.ToArray();
-
-			// Inject atomic data
-			map.definitions = usedDefs;
-			map.textures = usedTextures;
-			map.version = "1.0";
-			map.author = "Player";
-			map.exportedFrom = "ClassicTilestorm";
-
-			try
-			{
-				var settings = new JsonSerializerSettings
-				{
-					NullValueHandling = NullValueHandling.Ignore,
-					Formatting = Formatting.Indented,
-					ContractResolver = new AtomicExportResolver()  // Clean, readable, works everywhere
-				};
-
-				string json = JsonConvert.SerializeObject(map, settings);
-
-				EnsureFolder(ExportFolder);
-				string path = string.IsNullOrEmpty(overridePath)
-					? Path.Combine(ExportFolder, $"{map.name}.json")
-					: overridePath;
-
-				File.WriteAllText(path, json);
-				Debug.Log($"ATOMIC MAP EXPORTED → {path}");
-			}
-			finally
-			{
-				map.definitions = null;
-				map.textures = null;
-			}
-		}
-
-		public static void ImportAtomicMapFromFile(string filePath)
+		public static void ImportAtomicMap(string filePath)
 		{
 			if (!File.Exists(filePath))
 			{
@@ -203,6 +125,60 @@ namespace ClassicTilestorm
 			catch (System.Exception e)
 			{
 				Debug.LogError($"Import failed: {e.Message}");
+			}
+		}
+
+		public static void ExportAtomicMap(Map map, string overridePath = null, bool verbose = false)
+		{
+			if (map == null) return;
+
+			// Collect used definitions & textures
+			var usedTypes = map.table?
+				.Where(t => !string.IsNullOrEmpty(t))
+				.Distinct()
+				.ToArray() ?? System.Array.Empty<string>();
+
+			var usedDefs = ResourceManager.Definitions
+				.Where(d => usedTypes.Contains(d.id))
+				.ToArray();
+
+			var usedBanks = usedDefs
+				.Where(d => !string.IsNullOrEmpty(d.texture))
+				.Select(d => d.texture)
+				.Distinct()
+				.ToArray();
+
+			var usedTextures = ResourceManager.TextureSets
+				.Where(ts => usedBanks.Contains(ts.name))
+				.ToArray();
+
+			// Inject atomic data
+			map.definitions = usedDefs;
+			map.textures = usedTextures;
+			map.version = "1.0";
+			map.author = "Player";
+			map.exportedFrom = "ClassicTilestorm";
+
+			try
+			{
+				var settings = new JsonSerializerSettings
+				{
+					NullValueHandling = NullValueHandling.Ignore,
+					Formatting = verbose ? Formatting.Indented : Formatting.None,
+				};
+
+				string json = JsonConvert.SerializeObject(map, settings);
+
+				EnsureFolder(ExportFolder);
+				string path = string.IsNullOrEmpty(overridePath) ? Path.Combine(ExportFolder, $"{map.name}.json") : overridePath;
+
+				File.WriteAllText(path, json);
+				Debug.Log($"ATOMIC MAP EXPORTED → {path}");
+			}
+			finally
+			{
+				map.definitions = null;
+				map.textures = null;
 			}
 		}
 	}

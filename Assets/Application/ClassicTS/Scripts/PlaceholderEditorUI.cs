@@ -211,6 +211,20 @@ namespace ClassicTilestorm
 			bool dragToggled = GUI.Toggle(dragButtonRect, currentMode == EditorController.EditorMode.Drag, "Drag", toggleStyle);
 			bool paintToggled = GUI.Toggle(paintButtonRect, currentMode == EditorController.EditorMode.Paint, "Paint", toggleStyle);
 
+			// === GRID TOGGLE ===
+			GUIStyle gridButtonStyle = new GUIStyle(GUI.skin.button);
+			gridButtonStyle.normal.background = gridButtonBackgroundTexture;
+			gridButtonStyle.padding = new RectOffset(10, 10, 5, 5);
+			gridButtonStyle.fontSize = 14;
+			gridButtonStyle.alignment = TextAnchor.MiddleCenter;
+			gridButtonStyle.fixedWidth = buttonWidth;
+			gridButtonStyle.fixedHeight = buttonHeight;
+			if (GUI.Button(gridToggleRect, gridLinesEnabled ? "Hide Grid" : "Show Grid", gridButtonStyle))
+			{
+				gridLinesEnabled = !gridLinesEnabled;
+				editorController.UpdateGridLines(gridLinesEnabled);
+			}
+
 			// === SAVE DATABASE BUTTON ===
 			GUIStyle saveButtonStyle = new GUIStyle(GUI.skin.button);
 			saveButtonStyle.normal.background = saveBackgroundTexture;
@@ -223,7 +237,7 @@ namespace ClassicTilestorm
 			if (GUI.Button(saveButtonRect, "Save Database", saveButtonStyle))
 			{
 #if UNITY_EDITOR
-				ResourceManager.SaveDatabaseToProject();
+				ResourceManager.SaveDatabase();
 #else
                 Debug.Log("Save Database only works in Editor");
 #endif
@@ -241,7 +255,7 @@ namespace ClassicTilestorm
 			if (GUI.Button(reloadButtonRect, "Reload Database", reloadButtonStyle))
 			{
 #if UNITY_EDITOR
-				ResourceManager.ReloadDatabase();
+				ResourceManager.LoadDatabase();
 				Debug.Log("Database reloaded from original project asset");
 #else
                 Debug.Log("Reload Database only works in Editor");
@@ -257,22 +271,8 @@ namespace ClassicTilestorm
 			exportButtonStyle.fixedWidth = buttonWidth;
 			exportButtonStyle.fixedHeight = buttonHeight;
 			if (GUI.Button(exptButtonRect, "Export", exportButtonStyle))
-				ExportCurrentMapAsAtomic();
-
-			// === GRID TOGGLE ===
-			GUIStyle gridButtonStyle = new GUIStyle(GUI.skin.button);
-			gridButtonStyle.normal.background = gridButtonBackgroundTexture;
-			gridButtonStyle.padding = new RectOffset(10, 10, 5, 5);
-			gridButtonStyle.fontSize = 14;
-			gridButtonStyle.alignment = TextAnchor.MiddleCenter;
-			gridButtonStyle.fixedWidth = buttonWidth;
-			gridButtonStyle.fixedHeight = buttonHeight;
-			if (GUI.Button(gridToggleRect, gridLinesEnabled ? "Hide Grid" : "Show Grid", gridButtonStyle))
-			{
-				gridLinesEnabled = !gridLinesEnabled;
-				editorController.UpdateGridLines(gridLinesEnabled);
-			}
-
+				ExportCurrentMapAsAtomic();         
+			
 			// === IMPORT MAP BUTTON ===
 			GUIStyle importButtonStyle = new GUIStyle(GUI.skin.button);
 			importButtonStyle.normal.background = reloadBackgroundTexture; // reuse blue style
@@ -292,7 +292,7 @@ namespace ClassicTilestorm
 
 				if (!string.IsNullOrEmpty(path))
 				{
-					ResourceSerializer.ImportAtomicMapFromFile(path);
+					ResourceSerializer.ImportAtomicMap(path);
 
 					// Optional: auto-reload if same name
 					var main = FindFirstObjectByType<MainController>();

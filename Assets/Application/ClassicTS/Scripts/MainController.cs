@@ -19,7 +19,7 @@ namespace ClassicTilestorm
 			gameController = gameObject.AddComponent<GameController>();
 			editorController = gameObject.AddComponent<EditorController>();
 			cameraController = gameObject.AddComponent<MainCameraController>();
-			ResourceManager.Initialize();
+			ResourceManager.LoadDatabase();
 			LoadMap(PreviewSettings.LoadMapName);
 			SetPreviewMode(PreviewSettings.CurrentMode);//invoke to enable and disable game and editor controllers - ToDo improve this
 		}
@@ -63,9 +63,7 @@ namespace ClassicTilestorm
 		public void ReloadCurrentMap()
 		{
 			if (mapManager?.CurrentMap != null)
-			{
 				LoadMap(mapManager.CurrentMap.name);
-			}
 		}
 
 		public void Scramble() { if (null != mapManager) mapManager.Scramble(); }
