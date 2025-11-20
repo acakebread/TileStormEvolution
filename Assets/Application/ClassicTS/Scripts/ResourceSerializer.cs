@@ -256,7 +256,7 @@ namespace ClassicTilestorm
 					return;
 				}
 
-				// STRIP atomic-only fields — NEVER let them into the master database
+				// STRIP atomic-only fields — this is the ONLY thing Import should do
 				importedMap.definitions = null;
 				importedMap.textures = null;
 				importedMap.version = null;
@@ -286,19 +286,7 @@ namespace ClassicTilestorm
 
 				ResourceManager.ApplyMapChanges(importedMap);
 
-				// NO AUTO-SAVE TO PROJECT — user must click "Save Database" manually
-
-				// Reload current map if it's the one we imported
-				var currentManager = Object.FindFirstObjectByType<MapManager>(); // Fixed obsolete warning
-				if (currentManager != null && currentManager.CurrentMap.name == importedMap.name)
-				{
-					var parent = currentManager.transform.parent;
-					Object.Destroy(currentManager.gameObject);
-					MapManager.Instantiate(importedMap, parent);
-					Debug.Log($"Currently active map reloaded after import: {importedMap.name}");
-				}
-
-				Debug.Log($"Map imported successfully: {importedMap.name}");
+				Debug.Log($"Map imported into database: {importedMap.name}");
 			}
 			catch (System.Exception e)
 			{

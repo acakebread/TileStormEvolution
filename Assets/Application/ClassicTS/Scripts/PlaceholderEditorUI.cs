@@ -293,6 +293,17 @@ namespace ClassicTilestorm
 				if (!string.IsNullOrEmpty(path))
 				{
 					ResourceSerializer.ImportAtomicMapFromFile(path);
+
+					// Optional: auto-reload if same name
+					var main = FindFirstObjectByType<MainController>();
+					if (main != null && mapManager != null)
+					{
+						string importedName = System.IO.Path.GetFileNameWithoutExtension(path);
+						if (mapManager.CurrentMap.name == importedName)
+						{
+							main.ReloadCurrentMap();
+						}
+					}
 				}
 			}
 
