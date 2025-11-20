@@ -97,13 +97,19 @@ namespace ClassicTilestorm
 		public static string SerializeDatabase(DatabaseData data, bool pretty = false)
 			=> JsonConvert.SerializeObject(data, pretty ? Pretty : Minified);
 
-		public static void SaveDatabase(DatabaseData data)
+		// Add this method to ResourceSerializer.cs — that's literally it
+		public static void SaveDatabase(DatabaseData data, string overridePath = null)
 		{
-			EnsureFolder(DatabaseFolder);
-			string path = Path.Combine(DatabaseFolder, "database.json");
-			string json = SerializeDatabase(data, false);
+			if (data == null) return;
+
+			string json = JsonConvert.SerializeObject(data, Minified); // ← Uses your shared Minified settings
+
+			string path = string.IsNullOrEmpty(overridePath)
+				? Path.Combine(DatabaseFolder, "database.json")
+				: overridePath;
+
+			EnsureFolder(Path.GetDirectoryName(path));
 			File.WriteAllText(path, json);
-			Debug.Log($"ResourceSerializer: Saved full database → {path}");
 		}
 
 		// ─────── INDIVIDUAL MAPS (StreamingAssets) ───────

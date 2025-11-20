@@ -1,5 +1,12 @@
 ﻿using UnityEngine;
 using System.Linq;
+using Newtonsoft.Json;
+
+
+#if UNITY_EDITOR
+using UnityEditor;
+using System.IO;
+#endif
 
 namespace ClassicTilestorm
 {
@@ -31,32 +38,16 @@ namespace ClassicTilestorm
 			var pristine = PreviewSettings.PristineDatabaseJsonFile;
 			if (pristine == null)
 			{
-				Debug.LogError("ResourceManager: Pristine database TextAsset missing in Preview... assign it in PreviewSettings!");
+				Debug.LogError("ResourceManager: PristineDatabaseJsonFile not assigned in PreviewSettings!");
 				return;
 			}
 
-			var mutable = ResourceSerializer.GetMutableDatabaseTextAsset(pristine);
-			_db = ResourceSerializer.DeserializeDatabase(mutable.text);
-
-			if (_db == null)
-			{
-				Debug.LogWarning("Mutable database corrupted → restoring pristine copy");
-				ResourceSerializer.OverwriteMutableDatabaseWithPristine(pristine);
-
-				mutable = ResourceSerializer.GetMutableDatabaseTextAsset(pristine);
-				_db = ResourceSerializer.DeserializeDatabase(mutable.text);
-
-				if (_db == null)
-				{
-					Debug.LogError("FATAL: Even pristine database failed to load!");
-					return;
-				}
-			}
+			_db = ResourceSerializer.DeserializeDatabase(pristine.text);
 
 #if USING_INDIVIDUAL_MAPS
-            _individualMaps = ResourceFileIO.LoadIndividualMaps();
-            if (_individualMaps != null && _individualMaps.Length > 0)
-                Debug.Log($"ResourceManager: Loaded {_individualMaps.Length} individual maps (overriding bundled)");
+    _individualMaps = ResourceFileIO.LoadIndividualMaps();
+    if (_individualMaps != null && _individualMaps.Length > 0)
+        Debug.Log($"ResourceManager: Loaded {_individualMaps.Length} individual maps (overriding bundled)");
 #endif
 		}
 
@@ -98,5 +89,45 @@ namespace ClassicTilestorm
 		}
 
 		public static DatabaseData GetCurrentData() => _db;
+
+		public static void ReloadDatabase()
+		{
+			_db = null;
+			_individualMaps = null;
+			Initialize();
+			Debug.Log("Database reloaded from PristineDatabaseJsonFile");
+		}
+
+#if UNITY_EDITOR
+		public static void SaveDatabaseToProject()
+		{
+			if (_db == null)
+			{
+				Debug.LogError("Cannot save: database not loaded");
+				return;
+			}
+
+			var pristine = PreviewSettings.PristineDatabaseJsonFile;
+			if (pristine == null)
+			{
+				Debug.LogError("PreviewSettings.PristineDatabaseJsonFile is not assigned!");
+				return;
+			}
+
+			string assetPath = AssetDatabase.GetAssetPath(pristine);
+			if (string.IsNullOrEmpty(assetPath) || assetPath.Contains("Resources/unity_builtin_extra"))
+			{
+				Debug.LogError("Cannot save to project: not a real project asset.");
+				return;
+			}
+
+			string fullPath = Path.GetFullPath(assetPath);
+
+			ResourceSerializer.SaveDatabase(_db, fullPath);
+
+			AssetDatabase.ImportAsset(assetPath, ImportAssetOptions.ForceUpdate);
+			Debug.Log($"[Editor] Database saved to project asset → {assetPath}");
+		}
+#endif
 	}
 }

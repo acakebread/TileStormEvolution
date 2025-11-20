@@ -1,6 +1,11 @@
+﻿// File: PlaceholderEditorUI.cs
 using UnityEngine;
 using MassiveHadronLtd;
 using UnityEngine.EventSystems;
+
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace ClassicTilestorm
 {
@@ -29,7 +34,7 @@ namespace ClassicTilestorm
 
 		private readonly float margin = 10f;
 		private readonly float spacing = 10f;
-		private readonly float buttonWidth = 100f;
+		private readonly float buttonWidth = 125f;
 		private readonly float buttonHeight = 30f;
 		private float tileSelectorWidth = 120f;
 		private readonly float fullWidth = 300f;
@@ -44,6 +49,7 @@ namespace ClassicTilestorm
 
 		private Texture2D panelBackgroundTexture;
 		private Texture2D saveBackgroundTexture;
+		private Texture2D reloadBackgroundTexture;   // ← NEW: created once in Awake
 		private Texture2D gridButtonBackgroundTexture;
 		private Texture2D toggleOffBackgroundTexture;
 		private Texture2D toggleOnBackgroundTexture;
@@ -64,6 +70,7 @@ namespace ClassicTilestorm
 
 			panelBackgroundTexture = TextureUtils.MakeTex(4, 4, new Color(0.2f, 0.2f, 0.4f, 0.75f));
 			saveBackgroundTexture = TextureUtils.MakeTex(4, 4, new Color(0.8f, 0.2f, 0.2f, 1f));
+			reloadBackgroundTexture = TextureUtils.MakeTex(4, 4, new Color(0.2f, 0.6f, 1f, 1f));  // ← blue reload button
 			gridButtonBackgroundTexture = TextureUtils.MakeTex(4, 4, new Color(0.5f, 0.5f, 0.5f, 1f));
 			toggleOffBackgroundTexture = TextureUtils.MakeTex(4, 4, new Color(0.3f, 0.3f, 0.3f, 1f));
 			toggleOnBackgroundTexture = TextureUtils.MakeTex(4, 4, new Color(0.3f, 0.6f, 0.3f, 1f));
@@ -84,29 +91,25 @@ namespace ClassicTilestorm
 			return GUIUtility.hotControl != 0 || isMouseOverTileSelector || EventSystem.current.IsPointerOverGameObject();
 		}
 
-		// Replace your current IsMouseOverGui() with this version:
 		public bool IsMouseOverGui()
 		{
-			// 1. First: the tile selector (right panel) � already tracked accurately
+			// unchanged – left exactly as you had it
 			if (isMouseOverTileSelector)
 				return true;
 
-			// 2. Convert mouse position to GUI coordinates (Y flipped)
 			Vector2 mousePos = Input.mousePosition;
 			mousePos.y = Screen.height - mousePos.y;
 
-			// 3. Left-side control panel (Drag/Paint/Save/Grid buttons)
 			float panelBottomY = GetPanelBottomY();
 			float leftPanelX = margin;
 			float leftPanelY = panelBottomY + spacing;
-			float leftPanelWidth = buttonWidth + 20f;  // a little padding
-			float leftPanelHeight = buttonHeight * 4 + spacing * 4;
+			float leftPanelWidth = buttonWidth + 20f;
+			float leftPanelHeight = buttonHeight * 6 + spacing * 6; // now 6 buttons
 
 			Rect leftPanelRect = new Rect(leftPanelX, leftPanelY, leftPanelWidth, leftPanelHeight);
 			if (leftPanelRect.Contains(mousePos))
 				return true;
 
-			// 4. Right-side tile selector (only when Paint mode and expanded/visible)
 			if (currentMode == EditorController.EditorMode.Paint)
 			{
 				float tileSelectorX = Screen.width - tileSelectorWidth - margin;
@@ -118,7 +121,6 @@ namespace ClassicTilestorm
 					return true;
 			}
 
-			// 5. Optional: top-right "Export Atomic Map" button
 			Rect exportButtonRect = new Rect(Screen.width - 190, 50, 180, 50);
 			if (exportButtonRect.Contains(mousePos))
 				return true;
@@ -185,10 +187,11 @@ namespace ClassicTilestorm
 
 			float panelBottomY = GetPanelBottomY();
 			Rect dragButtonRect = new Rect(margin, panelBottomY + spacing, buttonWidth, buttonHeight);
-			Rect paintButtonRect = new Rect(margin, panelBottomY + spacing + buttonHeight + spacing, buttonWidth, buttonHeight);
+			Rect paintButtonRect = new Rect(margin, panelBottomY + spacing + (buttonHeight + spacing), buttonWidth, buttonHeight);
 			Rect saveButtonRect = new Rect(margin, panelBottomY + spacing + 2 * (buttonHeight + spacing), buttonWidth, buttonHeight);
-			Rect exptButtonRect = new Rect(margin, panelBottomY + spacing + 3 * (buttonHeight + spacing), buttonWidth, buttonHeight);
-			Rect gridToggleRect = new Rect(margin, panelBottomY + spacing + 4 * (buttonHeight + spacing), buttonWidth, buttonHeight);
+			Rect reloadButtonRect = new Rect(margin, panelBottomY + spacing + 3 * (buttonHeight + spacing), buttonWidth, buttonHeight);
+			Rect exptButtonRect = new Rect(margin, panelBottomY + spacing + 4 * (buttonHeight + spacing), buttonWidth, buttonHeight);
+			Rect gridToggleRect = new Rect(margin, panelBottomY + spacing + 5 * (buttonHeight + spacing), buttonWidth, buttonHeight);
 
 			GUIStyle toggleStyle = new GUIStyle(GUI.skin.toggle);
 			toggleStyle.normal.background = toggleOffBackgroundTexture;
@@ -200,12 +203,14 @@ namespace ClassicTilestorm
 			toggleStyle.padding = new RectOffset(10, 10, 5, 5);
 			toggleStyle.fontSize = 14;
 			toggleStyle.alignment = TextAnchor.MiddleCenter;
+			toggleStyle.alignment = TextAnchor.MiddleCenter;
 			toggleStyle.fixedWidth = buttonWidth;
 			toggleStyle.fixedHeight = buttonHeight;
 
 			bool dragToggled = GUI.Toggle(dragButtonRect, currentMode == EditorController.EditorMode.Drag, "Drag", toggleStyle);
 			bool paintToggled = GUI.Toggle(paintButtonRect, currentMode == EditorController.EditorMode.Paint, "Paint", toggleStyle);
 
+			// === SAVE DATABASE BUTTON ===
 			GUIStyle saveButtonStyle = new GUIStyle(GUI.skin.button);
 			saveButtonStyle.normal.background = saveBackgroundTexture;
 			saveButtonStyle.padding = new RectOffset(10, 10, 5, 5);
@@ -213,9 +218,36 @@ namespace ClassicTilestorm
 			saveButtonStyle.alignment = TextAnchor.MiddleCenter;
 			saveButtonStyle.fixedWidth = buttonWidth;
 			saveButtonStyle.fixedHeight = buttonHeight;
-			if (GUI.Button(saveButtonRect, "Save", saveButtonStyle))
-				mapManager.SaveChanges();
 
+			if (GUI.Button(saveButtonRect, "Save Database", saveButtonStyle))
+			{
+#if UNITY_EDITOR
+				ResourceManager.SaveDatabaseToProject();
+#else
+                Debug.Log("Save Database only works in Editor");
+#endif
+			}
+
+			// === RELOAD DATABASE BUTTON ===
+			GUIStyle reloadButtonStyle = new GUIStyle(GUI.skin.button);
+			reloadButtonStyle.normal.background = reloadBackgroundTexture;  // ← uses pre-made texture
+			reloadButtonStyle.padding = new RectOffset(10, 10, 5, 5);
+			reloadButtonStyle.fontSize = 14;
+			reloadButtonStyle.alignment = TextAnchor.MiddleCenter;
+			reloadButtonStyle.fixedWidth = buttonWidth;
+			reloadButtonStyle.fixedHeight = buttonHeight;
+
+			if (GUI.Button(reloadButtonRect, "Reload Database", reloadButtonStyle))
+			{
+#if UNITY_EDITOR
+				ResourceManager.ReloadDatabase();
+				Debug.Log("Database reloaded from original project asset");
+#else
+                Debug.Log("Reload Database only works in Editor");
+#endif
+			}
+
+			// === EXPORT BUTTON ===
 			GUIStyle exportButtonStyle = new GUIStyle(GUI.skin.button);
 			exportButtonStyle.normal.background = saveBackgroundTexture;
 			exportButtonStyle.padding = new RectOffset(10, 10, 5, 5);
@@ -226,6 +258,7 @@ namespace ClassicTilestorm
 			if (GUI.Button(exptButtonRect, "Export", exportButtonStyle))
 				ExportCurrentMapAsAtomic();
 
+			// === GRID TOGGLE ===
 			GUIStyle gridButtonStyle = new GUIStyle(GUI.skin.button);
 			gridButtonStyle.normal.background = gridButtonBackgroundTexture;
 			gridButtonStyle.padding = new RectOffset(10, 10, 5, 5);
@@ -235,21 +268,19 @@ namespace ClassicTilestorm
 			gridButtonStyle.fixedHeight = buttonHeight;
 			if (GUI.Button(gridToggleRect, gridLinesEnabled ? "Hide Grid" : "Show Grid", gridButtonStyle))
 			{
-				Debug.Log("Grid Toggle Clicked!");
 				gridLinesEnabled = !gridLinesEnabled;
 				editorController.UpdateGridLines(gridLinesEnabled);
 			}
 
+			// Mode switching
 			if (dragToggled && currentMode != EditorController.EditorMode.Drag)
 			{
-				Debug.Log("Drag Mode Selected");
 				currentMode = EditorController.EditorMode.Drag;
 				editorController.SetMode(EditorController.EditorMode.Drag);
 				GeometryUtil.HideGhostTile();
 			}
 			else if (paintToggled && currentMode != EditorController.EditorMode.Paint)
 			{
-				Debug.Log("Paint Mode Selected");
 				currentMode = EditorController.EditorMode.Paint;
 				editorController.SetMode(EditorController.EditorMode.Paint);
 				targetWidth = collapsedWidth;
@@ -257,6 +288,7 @@ namespace ClassicTilestorm
 				animationStartTime = Time.time;
 			}
 
+			// === TILE SELECTOR (unchanged) ===
 			if (currentMode == EditorController.EditorMode.Paint)
 			{
 				float tileSelectorX = Screen.width - tileSelectorWidth - margin;
@@ -308,6 +340,7 @@ namespace ClassicTilestorm
 		{
 			if (panelBackgroundTexture != null) Destroy(panelBackgroundTexture);
 			if (saveBackgroundTexture != null) Destroy(saveBackgroundTexture);
+			if (reloadBackgroundTexture != null) Destroy(reloadBackgroundTexture);     // ← cleaned up
 			if (gridButtonBackgroundTexture != null) Destroy(gridButtonBackgroundTexture);
 			if (toggleOffBackgroundTexture != null) Destroy(toggleOffBackgroundTexture);
 			if (toggleOnBackgroundTexture != null) Destroy(toggleOnBackgroundTexture);
