@@ -13,7 +13,6 @@ namespace ClassicTilestorm
 		// ─────── FOLDERS ───
 		private static readonly string DatabaseFolder = Path.Combine(Application.persistentDataPath, "Data");
 		private static readonly string ExportFolder = Path.Combine(Application.persistentDataPath, "Maps");
-		private static readonly string IndividualMapsFolder = Path.Combine(Application.streamingAssetsPath, "Maps");
 
 		public static string GetExportFolder() => ExportFolder;
 
@@ -23,46 +22,6 @@ namespace ClassicTilestorm
 				Directory.CreateDirectory(path);
 		}
 
-		// ─────── MUTABLE DATABASE (persistentDataPath) ───────
-		public static TextAsset GetMutableDatabaseTextAsset(TextAsset pristine)
-		{
-			EnsureFolder(DatabaseFolder);
-
-			string fileName = pristine.name.EndsWith(".json") ? pristine.name : pristine.name + ".json";
-			string path = Path.Combine(DatabaseFolder, fileName);
-
-			if (!File.Exists(path))
-			{
-				File.WriteAllText(path, pristine.text);
-				Debug.Log($"ResourceSerializer: Created mutable database → {path}");
-			}
-
-			return new TextAsset(File.ReadAllText(path)) { name = pristine.name };
-		}
-
-		public static void OverwriteMutableDatabaseWithPristine(TextAsset pristine)
-		{
-			EnsureFolder(DatabaseFolder);
-
-			string fileName = pristine.name.EndsWith(".json") ? pristine.name : pristine.name + ".json";
-			string path = Path.Combine(DatabaseFolder, fileName);
-			File.WriteAllText(path, pristine.text);
-			Debug.Log($"ResourceSerializer: Restored pristine database → {path}");
-		}
-
-		// ─────── DATABASE SERIALIZATION ───────
-		private static readonly JsonSerializerSettings Minified = new()
-		{
-			NullValueHandling = NullValueHandling.Ignore,
-			MissingMemberHandling = MissingMemberHandling.Ignore
-		};
-
-		private static readonly JsonSerializerSettings Pretty = new()
-		{
-			NullValueHandling = NullValueHandling.Ignore,
-			Formatting = Formatting.Indented
-		};
-
 		public static DatabaseData DeserializeDatabase(string json)
 		{
 			if (string.IsNullOrEmpty(json)) return null;
@@ -70,7 +29,7 @@ namespace ClassicTilestorm
 			try
 			{
 				var root = JObject.Parse(json);
-				var serializer = JsonSerializer.CreateDefault(Minified);
+				var serializer = JsonSerializer.CreateDefault();// (Minified);
 
 				var data = new DatabaseData
 				{
@@ -80,8 +39,7 @@ namespace ClassicTilestorm
 					buttons = root["buttons"]?.ToObject<Button[]>(serializer) ?? System.Array.Empty<Button>()
 				};
 
-				if (data.maps == null || data.definitions == null || data.textures == null ||
-					data.maps.Length == 0 || data.definitions.Length == 0 || data.textures.Length == 0)
+				if (data.maps == null || data.definitions == null || data.textures == null || data.maps.Length == 0 || data.definitions.Length == 0 || data.textures.Length == 0)
 				{
 					Debug.LogError("ResourceSerializer: Database failed validation");
 					return null;
@@ -96,68 +54,24 @@ namespace ClassicTilestorm
 			}
 		}
 
-		public static string SerializeDatabase(DatabaseData data, bool pretty = false)
-			=> JsonConvert.SerializeObject(data, pretty ? Pretty : Minified);
-
-		// Add this method to ResourceSerializer.cs — that's literally it
-		public static void SaveDatabase(DatabaseData data, string overridePath = null)
+		public static void SaveDatabase(DatabaseData data, string overridePath = null, bool verbose = false)
 		{
 			if (data == null) return;
 
-			string json = JsonConvert.SerializeObject(data, Minified); // ← Uses your shared Minified settings
+			// Minified settings by default
+			JsonSerializerSettings settings = new()
+			{
+				NullValueHandling = NullValueHandling.Ignore,
+				MissingMemberHandling = MissingMemberHandling.Ignore
+			};
 
-			string path = string.IsNullOrEmpty(overridePath)
-				? Path.Combine(DatabaseFolder, "database.json")
-				: overridePath;
+			if (verbose) settings.Formatting = Formatting.Indented;
+
+			string json = JsonConvert.SerializeObject(data, settings); 
+			string path = string.IsNullOrEmpty(overridePath) ? Path.Combine(DatabaseFolder, "database.json") : overridePath;
 
 			EnsureFolder(Path.GetDirectoryName(path));
 			File.WriteAllText(path, json);
-		}
-
-		// ─────── INDIVIDUAL MAPS (StreamingAssets) ───────
-		public static Map DeserializeMap(string json)
-			=> string.IsNullOrEmpty(json) ? null : JsonConvert.DeserializeObject<Map>(json, Minified);
-
-		public static string SerializeMap(Map map, bool pretty = false)
-			=> JsonConvert.SerializeObject(map, pretty ? Pretty : Minified);
-
-		public static Map[] LoadIndividualMaps()
-		{
-			if (!Directory.Exists(IndividualMapsFolder)) return System.Array.Empty<Map>();
-
-			var list = new System.Collections.Generic.List<Map>();
-			foreach (string file in Directory.GetFiles(IndividualMapsFolder, "*.json"))
-			{
-				try
-				{
-					string json = File.ReadAllText(file);
-					var map = DeserializeMap(json);
-					if (map != null)
-					{
-						if (string.IsNullOrEmpty(map.name))
-							map.name = Path.GetFileNameWithoutExtension(file);
-						list.Add(map);
-					}
-				}
-				catch (System.Exception ex)
-				{
-					Debug.LogError($"Failed to load individual map {file}: {ex.Message}");
-				}
-			}
-			return list.ToArray();
-		}
-
-		public static bool SaveIndividualMap(Map map)
-		{
-			if (map == null || string.IsNullOrEmpty(map.name)) return false;
-
-			EnsureFolder(IndividualMapsFolder);
-			string safeName = string.Join("_", map.name.Split(Path.GetInvalidFileNameChars()));
-			string path = Path.Combine(IndividualMapsFolder, safeName + ".json");
-			string json = SerializeMap(map, false);
-			File.WriteAllText(path, json);
-			Debug.Log($"Saved individual map → {path}");
-			return true;
 		}
 
 		// ─────── ATOMIC EXPORT ───────
@@ -166,7 +80,6 @@ namespace ClassicTilestorm
 			protected override JsonProperty CreateProperty(MemberInfo member, MemberSerialization memberSerialization)
 			{
 				var property = base.CreateProperty(member, memberSerialization);
-
 				if (property.Ignored && member.DeclaringType == typeof(Map))
 				{
 					if (member.Name is "definitions" or "textures" or "version" or "author" or "exportedFrom")
@@ -175,7 +88,6 @@ namespace ClassicTilestorm
 						property.ShouldSerialize = _ => true;
 					}
 				}
-
 				return property;
 			}
 		}

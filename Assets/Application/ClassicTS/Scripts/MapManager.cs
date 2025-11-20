@@ -232,12 +232,6 @@ namespace ClassicTilestorm
 			// No extra call — DatabaseSerializer is stateless, no sync needed
 		}
 
-		public void SaveChanges()
-		{
-			ApplyCurrentMapChanges();
-			ResourceManager.SaveToDisk();  // Only this writes to disk
-		}
-
 		public string GetDefinitionAtIndex(int mapIndex)
 		{
 			if (mapIndex < 0 || mapIndex >= Count) return null;

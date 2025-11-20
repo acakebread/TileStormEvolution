@@ -47,34 +47,7 @@ namespace ClassicTilestorm
 
 		[Header("resource paths")]
 		[SerializeField] private TextAsset databaseJsonFile;
-
-		/// <summary>
-		/// The original pristine database that ships with the game (never modified)
-		/// </summary>
-		public static TextAsset PristineDatabaseJsonFile => instance?.databaseJsonFile;
-
-		/// <summary>
-		/// The current mutable database (auto-copied to persistentDataPath if missing)
-		/// </summary>
-		public static TextAsset DatabaseJsonFile
-		{
-			get
-			{
-				if (instance == null)
-				{
-					Debug.LogError("PreviewSettings.instance is null! Make sure a GameObject with PreviewSettings exists in the scene.");
-					return null;
-				}
-
-				if (instance.databaseJsonFile == null)
-				{
-					Debug.LogError("PreviewSettings: No pristine databaseJsonFile assigned in the Inspector!");
-					return null;
-				}
-
-				return ResourceSerializer.GetMutableDatabaseTextAsset(instance.databaseJsonFile);
-			}
-		}
+		public static TextAsset DatabaseJsonFile => instance.databaseJsonFile;
 
 		[SerializeField, ResourcePath] private string geometryPath = "ClassicTS/Geometry/";
 		public static string GeometryPath => instance.geometryPath;
