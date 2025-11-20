@@ -3,9 +3,18 @@ using System.Linq;
 
 namespace ClassicTilestorm
 {
+	[System.Serializable]
+	public class DatabaseData
+	{
+		public Map[] maps;
+		public Definition[] definitions;
+		public TextureSequence[] textures;
+		public Button[] buttons;
+	}
+
 	public static class ResourceManager
 	{
-		private static ResourceSerializer.DatabaseData _db;
+		private static DatabaseData _db;
 		private static Map[] _individualMaps;
 
 		public static System.Collections.Generic.IList<Map> Maps => _individualMaps ?? _db?.maps ?? System.Array.Empty<Map>();
@@ -88,6 +97,6 @@ namespace ClassicTilestorm
 			}
 		}
 
-		public static ResourceSerializer.DatabaseData GetCurrentData() => _db;
+		public static DatabaseData GetCurrentData() => _db;
 	}
 }
