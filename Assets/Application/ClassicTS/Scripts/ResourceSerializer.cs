@@ -15,6 +15,8 @@ namespace ClassicTilestorm
 		private static readonly string ExportFolder = Path.Combine(Application.persistentDataPath, "Maps");
 		private static readonly string IndividualMapsFolder = Path.Combine(Application.streamingAssetsPath, "Maps");
 
+		public static string GetExportFolder() => ExportFolder;
+
 		private static void EnsureFolder(string path)
 		{
 			if (!Directory.Exists(path))
@@ -232,6 +234,63 @@ namespace ClassicTilestorm
 			{
 				map.definitions = null;
 				map.textures = null;
+			}
+		}
+
+		public static void ImportAtomicMapFromFile(string filePath)
+		{
+			if (!File.Exists(filePath))
+			{
+				Debug.LogError($"Import failed: File not found → {filePath}");
+				return;
+			}
+
+			try
+			{
+				string json = File.ReadAllText(filePath);
+				var importedMap = JsonConvert.DeserializeObject<Map>(json);
+
+				if (importedMap == null || string.IsNullOrEmpty(importedMap.name))
+				{
+					Debug.LogError("Import failed: Invalid map or missing name");
+					return;
+				}
+
+				// STRIP atomic-only fields — this is the ONLY thing Import should do
+				importedMap.definitions = null;
+				importedMap.textures = null;
+				importedMap.version = null;
+				importedMap.author = null;
+				importedMap.exportedFrom = null;
+
+				var db = ResourceManager.GetCurrentData();
+				if (db?.maps == null)
+				{
+					Debug.LogError("Database not loaded");
+					return;
+				}
+
+				int existingIndex = System.Array.FindIndex(db.maps, m => m.name == importedMap.name);
+				if (existingIndex >= 0)
+				{
+					db.maps[existingIndex] = importedMap;
+					Debug.Log($"Imported map replaced existing: {importedMap.name}");
+				}
+				else
+				{
+					var list = db.maps.ToList();
+					list.Add(importedMap);
+					db.maps = list.ToArray();
+					Debug.Log($"Imported new map added: {importedMap.name}");
+				}
+
+				ResourceManager.ApplyMapChanges(importedMap);
+
+				Debug.Log($"Map imported into database: {importedMap.name}");
+			}
+			catch (System.Exception e)
+			{
+				Debug.LogError($"Import failed: {e.Message}");
 			}
 		}
 	}
