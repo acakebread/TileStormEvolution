@@ -404,7 +404,7 @@ namespace ClassicTilestorm
 
 		public void ExportCurrentMapAsAtomic()
 		{
-			ResourceSerializer.ExportAtomicMap(mapManager.CurrentMap);
+			ResourceSerializer.ExportAtomicMap(mapManager.CurrentMap, verbose : true);
 		}
 	}
 }

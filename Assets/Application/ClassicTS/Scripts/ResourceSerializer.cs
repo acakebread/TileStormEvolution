@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Newtonsoft.Json.Serialization;
 
 namespace ClassicTilestorm
 {
@@ -165,6 +166,7 @@ namespace ClassicTilestorm
 				{
 					NullValueHandling = NullValueHandling.Ignore,
 					Formatting = verbose ? Formatting.Indented : Formatting.None,
+					ContractResolver = new AtomicExportResolver()
 				};
 
 				string json = JsonConvert.SerializeObject(map, settings);
@@ -179,6 +181,23 @@ namespace ClassicTilestorm
 			{
 				map.definitions = null;
 				map.textures = null;
+			}
+		}
+
+		private class AtomicExportResolver : DefaultContractResolver
+		{
+			protected override JsonProperty CreateProperty(System.Reflection.MemberInfo member, MemberSerialization memberSerialization)
+			{
+				var property = base.CreateProperty(member, memberSerialization);
+				if (property.Ignored && member.DeclaringType == typeof(Map))
+				{
+					if (member.Name is "definitions" or "textures" or "version" or "author" or "exportedFrom")
+					{
+						property.Ignored = false;
+						property.ShouldSerialize = _ => true;
+					}
+				}
+				return property;
 			}
 		}
 	}
