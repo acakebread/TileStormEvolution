@@ -18,7 +18,7 @@ namespace ClassicTilestorm
 		public int[] mixed;
 		public Pickups Pickups;
 
-		// Atomic fields — ignored during normal serialization
+		// Atomic fields - ignored during normal serialization
 		[JsonIgnore] public Definition[] definitions;
 		[JsonIgnore] public TextureSequence[] textures;
 		[JsonIgnore] public string version = "1.0";
