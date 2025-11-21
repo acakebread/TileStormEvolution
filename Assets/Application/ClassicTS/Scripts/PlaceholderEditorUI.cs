@@ -404,7 +404,78 @@ namespace ClassicTilestorm
 
 		public void ExportCurrentMapAsAtomic()
 		{
-			ResourceSerializer.ExportAtomicMap(mapManager.CurrentMap, PreviewSettings.ExportFolder, true);
+#if UNITY_EDITOR
+			if (mapManager?.CurrentMap == null)
+			{
+				EditorUtility.DisplayDialog("Export Error", "No map is currently loaded.", "OK");
+				return;
+			}
+
+			var map = mapManager.CurrentMap;
+			string originalName = map.name;
+
+			// Start from last remembered folder, fallback to default export folder
+			string lastFolder = PlayerPrefs.GetString("ClassicTilestorm_LastExportFolder", PreviewSettingsStatic.ExportFolder);
+			System.IO.Directory.CreateDirectory(lastFolder);
+
+			string initialPath = System.IO.Path.Combine(lastFolder, originalName + ".json");
+
+			string path = EditorUtility.SaveFilePanel(
+				"Export Map As Atomic JSON",
+				lastFolder,
+				originalName + ".json",
+				"json");
+
+			if (string.IsNullOrEmpty(path))
+			{
+				Debug.Log("Export cancelled by user.");
+				return;
+			}
+
+			string chosenFolder = System.IO.Path.GetDirectoryName(path);
+			string chosenName = System.IO.Path.GetFileNameWithoutExtension(path);
+
+			// Remember this folder for next time
+			PlayerPrefs.SetString("ClassicTilestorm_LastExportFolder", chosenFolder);
+			PlayerPrefs.Save();
+
+			bool nameChanged = !string.Equals(originalName, chosenName, System.StringComparison.Ordinal);
+
+			try
+			{
+				if (nameChanged)
+				{
+					map.name = chosenName;
+					Debug.Log($"Exporting map as: {chosenName}");
+				}
+
+				ResourceSerializer.ExportAtomicMap(map, chosenFolder, true);
+
+				EditorUtility.DisplayDialog(
+					"Export Successful",
+					$"Map exported successfully!\n\n→ {path}",
+					"OK");
+
+				Debug.Log($"Map exported: {path}");
+			}
+			catch (System.Exception ex)
+			{
+				EditorUtility.DisplayDialog("Export Failed", $"Error during export:\n{ex.Message}", "OK");
+				Debug.LogError($"Export failed: {ex}");
+			}
+			finally
+			{
+				// Always restore original name — critical!
+				if (nameChanged)
+					map.name = originalName;
+			}
+
+			// Optional: Update the "Locate Export Folder" button to point to the new location
+			// (It already uses PreviewSettingsStatic.ExportFolder, but now user can go anywhere)
+
+#else
+    Debug.Log("Export only available in Unity Editor");
+#endif
 		}
 
 #if UNITY_EDITOR
