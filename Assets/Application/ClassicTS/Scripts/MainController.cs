@@ -19,7 +19,7 @@ namespace ClassicTilestorm
 			gameController = gameObject.AddComponent<GameController>();
 			editorController = gameObject.AddComponent<EditorController>();
 			cameraController = gameObject.AddComponent<MainCameraController>();
-			ResourceManager.LoadDatabase();
+			ResourceManager.Initialise(PreviewSettings.DatabaseJsonFile);
 			LoadMap(PreviewSettings.LoadMapName);
 			SetPreviewMode(PreviewSettings.CurrentMode);//invoke to enable and disable game and editor controllers - ToDo improve this
 		}

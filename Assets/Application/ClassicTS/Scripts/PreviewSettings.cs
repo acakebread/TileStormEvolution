@@ -86,12 +86,12 @@ namespace ClassicTilestorm
 				DrawDefaultInspector();
 				EditorGUILayout.Space(10);
 
-				if (GUILayout.Button("Locate Mutable Database", GUILayout.Height(30)))
+				if (GUILayout.Button("Locate Export Folder", GUILayout.Height(30)))
 				{
-					string folder = System.IO.Path.Combine(Application.persistentDataPath, "Data");
+					string folder = ExportFolder;
 					System.IO.Directory.CreateDirectory(folder);
 					EditorUtility.RevealInFinder(folder);
-					Debug.Log($"Opened mutable database folder: {folder}");
+					Debug.Log($"Opened export folder: {folder}");
 				}
 			}
 		}
@@ -99,9 +99,15 @@ namespace ClassicTilestorm
 
 		private static PreviewSettings instance;
 
-		private void Awake()
-		{
-			instance = this;
-		}
+		private void Awake() => instance = this;
+
+		public static string DatabaseFolder => PreviewSettingsStatic.DatabaseFolder;
+		public static string ExportFolder => PreviewSettingsStatic.ExportFolder;
+	}
+
+	public static class PreviewSettingsStatic
+	{
+		public static readonly string DatabaseFolder = System.IO.Path.Combine(Application.persistentDataPath, "Data");
+		public static readonly string ExportFolder = System.IO.Path.Combine(Application.persistentDataPath, "Maps");
 	}
 }

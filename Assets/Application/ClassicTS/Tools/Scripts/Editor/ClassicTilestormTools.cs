@@ -38,7 +38,7 @@ namespace ClassicTilestorm.Editor
 		private void ExportAllMapsAsAtomic()
 		{
 			// Use the NEW unified serializer
-			var db = ResourceSerializer.DeserializeDatabase(databaseJson.text);
+			var db = ResourceSerializer.LoadDatabase(databaseJson.text);
 			if (db == null || db.maps == null || db.maps.Length == 0)
 			{
 				Debug.LogError("Failed to parse database.json – aborting export.");

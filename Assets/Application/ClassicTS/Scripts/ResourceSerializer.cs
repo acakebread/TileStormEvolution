@@ -9,19 +9,9 @@ namespace ClassicTilestorm
 {
 	public static class ResourceSerializer
 	{
-		// ─────── FOLDERS ───
-		private static readonly string DatabaseFolder = Path.Combine(Application.persistentDataPath, "Data");
-		private static readonly string ExportFolder = Path.Combine(Application.persistentDataPath, "Maps");
+		private static void EnsureFolder(string path) { if (!Directory.Exists(path)) Directory.CreateDirectory(path); }//helper
 
-		public static string GetExportFolder() => ExportFolder;
-
-		private static void EnsureFolder(string path)
-		{
-			if (!Directory.Exists(path))
-				Directory.CreateDirectory(path);
-		}
-
-		public static DatabaseData DeserializeDatabase(string json)
+		public static DatabaseData LoadDatabase(string json)
 		{
 			if (string.IsNullOrEmpty(json)) return null;
 
@@ -53,36 +43,35 @@ namespace ClassicTilestorm
 			}
 		}
 
-		public static void SaveDatabase(DatabaseData data, string overridePath = null, bool verbose = false)
+		public static void SaveDatabase(DatabaseData data, string filepath = null, bool verbose = false)
 		{
 			if (data == null) return;
 
-			// Minified settings by default
 			JsonSerializerSettings settings = new()
 			{
 				NullValueHandling = NullValueHandling.Ignore,
 				MissingMemberHandling = MissingMemberHandling.Ignore,
-				Formatting = verbose ? Formatting.Indented : Formatting.None,
+				Formatting = verbose ? Formatting.Indented : Formatting.None,// 'minified' or verbose
 			};
 
-			string json = JsonConvert.SerializeObject(data, settings); 
-			string path = string.IsNullOrEmpty(overridePath) ? Path.Combine(DatabaseFolder, "database.json") : overridePath;
+			string json = JsonConvert.SerializeObject(data, settings);
+			string path = string.IsNullOrEmpty(filepath) ? Path.Combine(Application.persistentDataPath, "database.json") : filepath;
 
 			EnsureFolder(Path.GetDirectoryName(path));
 			File.WriteAllText(path, json);
 		}
 
-		public static void ImportAtomicMap(string filePath)
+		public static void ImportAtomicMap(string filepath)
 		{
-			if (!File.Exists(filePath))
+			if (!File.Exists(filepath))
 			{
-				Debug.LogError($"Import failed: File not found → {filePath}");
+				Debug.LogError($"Import failed: File not found → {filepath}");
 				return;
 			}
 
 			try
 			{
-				string json = File.ReadAllText(filePath);
+				string json = File.ReadAllText(filepath);
 				var importedMap = JsonConvert.DeserializeObject<Map>(json);
 
 				if (importedMap == null || string.IsNullOrEmpty(importedMap.name))
@@ -98,7 +87,7 @@ namespace ClassicTilestorm
 				importedMap.author = null;
 				importedMap.exportedFrom = null;
 
-				var db = ResourceManager.GetCurrentData();
+				var db = ResourceManager.database;
 				if (db?.maps == null)
 				{
 					Debug.LogError("Database not loaded");
@@ -129,7 +118,7 @@ namespace ClassicTilestorm
 			}
 		}
 
-		public static void ExportAtomicMap(Map map, string overridePath = null, bool verbose = false)
+		public static void ExportAtomicMap(Map map, string filepath = null, bool verbose = false)
 		{
 			if (map == null) return;
 
@@ -171,8 +160,9 @@ namespace ClassicTilestorm
 
 				string json = JsonConvert.SerializeObject(map, settings);
 
-				EnsureFolder(ExportFolder);
-				string path = string.IsNullOrEmpty(overridePath) ? Path.Combine(ExportFolder, $"{map.name}.json") : overridePath;
+				var folder = string.IsNullOrEmpty(filepath) ? Application.persistentDataPath : filepath;
+				EnsureFolder(folder);
+				string path = Path.Combine(folder, $"{map.name}.json");
 
 				File.WriteAllText(path, json);
 				Debug.Log($"ATOMIC MAP EXPORTED → {path}");

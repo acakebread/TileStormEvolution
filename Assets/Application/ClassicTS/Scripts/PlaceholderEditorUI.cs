@@ -237,7 +237,7 @@ namespace ClassicTilestorm
 			if (GUI.Button(saveButtonRect, "Save Database", saveButtonStyle))
 			{
 #if UNITY_EDITOR
-				ResourceManager.SaveDatabase();
+				SaveDatabase();
 #else
                 Debug.Log("Save Database only works in Editor");
 #endif
@@ -255,7 +255,7 @@ namespace ClassicTilestorm
 			if (GUI.Button(reloadButtonRect, "Reload Database", reloadButtonStyle))
 			{
 #if UNITY_EDITOR
-				ResourceManager.LoadDatabase();
+				LoadDatabase();
 				Debug.Log("Database reloaded from original project asset");
 #else
                 Debug.Log("Reload Database only works in Editor");
@@ -286,7 +286,7 @@ namespace ClassicTilestorm
 			{
 				string path = EditorUtility.OpenFilePanel(
 					"Import Atomic Map",
-					ResourceSerializer.GetExportFolder(),
+					PreviewSettings.ExportFolder,
 					"json"
 				);
 
@@ -404,7 +404,55 @@ namespace ClassicTilestorm
 
 		public void ExportCurrentMapAsAtomic()
 		{
-			ResourceSerializer.ExportAtomicMap(mapManager.CurrentMap, verbose : true);
+			ResourceSerializer.ExportAtomicMap(mapManager.CurrentMap, PreviewSettings.ExportFolder, true);
 		}
+
+#if UNITY_EDITOR
+		private void LoadDatabase()
+		{
+			var dbAsset = PreviewSettings.DatabaseJsonFile;
+
+			if (dbAsset == null)
+			{
+				Debug.LogError("ResourceManager: DatabaseJsonFile not assigned in PreviewSettings!");
+				return;
+			}
+
+			var _db = ResourceSerializer.LoadDatabase(dbAsset.text);
+			Debug.Log("Database loaded from DatabaseJsonFile");
+
+			ResourceManager.database = _db;
+		}
+
+		private void SaveDatabase()
+		{
+			var _db = ResourceManager.database;
+
+			if (_db == null)
+			{
+				Debug.LogError("Cannot save: database not loaded");
+				return;
+			}
+
+			var dbAsset = PreviewSettings.DatabaseJsonFile;
+
+			if (dbAsset == null)
+			{
+				Debug.LogError("PreviewSettings.DatabaseJsonFile is not assigned!");
+				return;
+			}
+
+			string assetPath = AssetDatabase.GetAssetPath(dbAsset);
+			if (string.IsNullOrEmpty(assetPath) || assetPath.Contains("Resources/unity_builtin_extra"))
+			{
+				Debug.LogError("Cannot save to project: not a real project asset.");
+				return;
+			}
+
+			string fullPath = System.IO.Path.GetFullPath(assetPath);
+
+			ResourceSerializer.SaveDatabase(_db, fullPath);
+		}
+#endif
 	}
 }
