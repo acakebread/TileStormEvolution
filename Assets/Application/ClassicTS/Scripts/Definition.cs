@@ -15,11 +15,6 @@ namespace ClassicTilestorm
 		public string connections;
 		public string pickup;// only serialized if not None
 
-		// ── LEGACY COMPATIBILITY GETTERS (never serialized) ─────────────────────
-		//[JsonIgnore] public string szType => id ?? "";
-		//[JsonIgnore] public string szGeom => model ?? "";
-		//[JsonIgnore] public string szBank => texture ?? "Default";
-
 		[JsonIgnore] public bool bNorth => HasConnection('N');
 		[JsonIgnore] public bool bSouth => HasConnection('S');
 		[JsonIgnore] public bool bEast => HasConnection('E');
