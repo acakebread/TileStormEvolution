@@ -11,6 +11,18 @@ namespace ClassicTilestorm
 	{
 		private static void EnsureFolder(string path) { if (!Directory.Exists(path)) Directory.CreateDirectory(path); }//helper
 
+		public static void Initialise(TextAsset json)
+		{
+			if (json == null)
+			{
+				Debug.LogError("ResourceManager: invalid DatabaseJsonFile");
+				return;
+			}
+
+			ResourceManager.database = LoadDatabase(json.text);
+			Debug.Log("Database loaded from DatabaseJsonFile");
+		}
+		
 		public static DatabaseData LoadDatabase(string json)
 		{
 			if (string.IsNullOrEmpty(json)) return null;

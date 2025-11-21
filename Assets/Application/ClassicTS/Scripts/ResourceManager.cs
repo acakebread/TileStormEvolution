@@ -1,5 +1,4 @@
-﻿using UnityEngine;
-using System.Linq;
+﻿using System.Linq;
 
 namespace ClassicTilestorm
 {
@@ -36,18 +35,6 @@ namespace ClassicTilestorm
 					if (array[i].name == updated.name)
 					{ array[i] = updated; return; }
 			}
-		}
-
-		public static void Initialise(TextAsset json)
-		{
-			if (json == null)
-			{
-				Debug.LogError("ResourceManager: invalid DatabaseJsonFile");
-				return;
-			}
-
-			_db = ResourceSerializer.LoadDatabase(json.text);
-			Debug.Log("Database loaded from DatabaseJsonFile");
 		}
 	}
 }

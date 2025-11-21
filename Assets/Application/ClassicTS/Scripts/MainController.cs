@@ -19,7 +19,7 @@ namespace ClassicTilestorm
 			gameController = gameObject.AddComponent<GameController>();
 			editorController = gameObject.AddComponent<EditorController>();
 			cameraController = gameObject.AddComponent<MainCameraController>();
-			ResourceManager.Initialise(PreviewSettings.DatabaseJsonFile);
+			ResourceSerializer.Initialise(PreviewSettings.DatabaseJsonFile);
 			LoadMap(PreviewSettings.LoadMapName);
 			SetPreviewMode(PreviewSettings.CurrentMode);//invoke to enable and disable game and editor controllers - ToDo improve this
 		}
@@ -54,8 +54,8 @@ namespace ClassicTilestorm
 			if (null != eggbotController) Destroy(eggbotController.gameObject);
 			eggbotController = EggbotController.Instantiate(currentMap.character, transform);
 			if (null != eggbotController) eggbotController.Initialise(mapManager);
-			if (null != cameraController) cameraController.Initialise(mapManager, eggbotController);
 
+			if (null != cameraController) cameraController.Initialise(mapManager, eggbotController);
 			if (null != gameController) gameController.Initialise();
 			if (null != editorController) editorController.Initialise(mapManager);
 		}
