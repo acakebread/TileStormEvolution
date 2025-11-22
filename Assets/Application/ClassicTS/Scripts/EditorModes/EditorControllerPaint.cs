@@ -66,10 +66,7 @@ namespace ClassicTilestorm
 			if (Input.GetMouseButtonUp(1))
 			{
 				if (Vector3.Distance(Input.mousePosition, mouseDownPos) < 5f)
-				{
-					//SetSelectedDefinitionById("tile_empty");
 					PlaceTileAtMousePosition("tile_empty");
-				}
 			}
 
 			if (Input.GetMouseButtonDown(0))
