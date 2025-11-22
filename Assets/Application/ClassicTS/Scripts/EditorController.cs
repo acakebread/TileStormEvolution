@@ -12,7 +12,6 @@ namespace ClassicTilestorm
 		private EditorControllerDrag dragMode;
 		private EditorControllerPaint paintMode;
 		public enum EditorMode { Drag, Paint }
-		private PlaceholderUI placeholderUI;
 		private PlaceholderEditorUI editorUI;
 
 		// Public getter for paintMode
@@ -22,9 +21,7 @@ namespace ClassicTilestorm
 		{
 			if (!FindAnyObjectByType<EventSystem>()) new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
 
-			placeholderUI = FindAnyObjectByType<PlaceholderUI>();
 			editorUI = FindAnyObjectByType<PlaceholderEditorUI>();
-			if (null == placeholderUI) Debug.LogWarning("PlaceholderUI not found in scene!");
 			if (null == editorUI) Debug.LogWarning("PlaceholderEditorUI not found in scene!");
 
 			GeometryUtil.InitializeGhostMaterial();

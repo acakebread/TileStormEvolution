@@ -182,7 +182,8 @@ namespace ClassicTilestorm
 		// -----------------------------------------------------------------------
 		// Database update
 		// -----------------------------------------------------------------------
-		private void ApplyCurrentMapChanges()
+
+		public void UpdateChanges()
 		{
 			if (currentMap == null) return;
 
@@ -224,12 +225,6 @@ namespace ClassicTilestorm
 			currentMap.tiles = logicalTiles;
 
 			ResourceManager.ApplyMapChanges(currentMap);
-		}
-
-		public void UpdateChanges()
-		{
-			ApplyCurrentMapChanges();
-			// No extra call — DatabaseSerializer is stateless, no sync needed
 		}
 
 		public string GetDefinitionAtIndex(int mapIndex)
