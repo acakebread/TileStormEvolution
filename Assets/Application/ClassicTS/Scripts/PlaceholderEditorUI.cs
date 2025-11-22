@@ -235,13 +235,7 @@ namespace ClassicTilestorm
 			saveButtonStyle.fixedHeight = buttonHeight;
 
 			if (GUI.Button(saveButtonRect, "Save Database", saveButtonStyle))
-			{
-#if UNITY_EDITOR
 				SaveDatabase();
-#else
-                Debug.Log("Save Database only works in Editor");
-#endif
-			}
 
 			// === RELOAD DATABASE BUTTON ===
 			GUIStyle reloadButtonStyle = new GUIStyle(GUI.skin.button);
@@ -253,14 +247,7 @@ namespace ClassicTilestorm
 			reloadButtonStyle.fixedHeight = buttonHeight;
 
 			if (GUI.Button(reloadButtonRect, "Reload Database", reloadButtonStyle))
-			{
-#if UNITY_EDITOR
 				LoadDatabase();
-				Debug.Log("Database reloaded from original project asset");
-#else
-                Debug.Log("Reload Database only works in Editor");
-#endif
-			}
 
 			// === EXPORT BUTTON ===
 			GUIStyle exportButtonStyle = new GUIStyle(GUI.skin.button);
@@ -484,7 +471,6 @@ namespace ClassicTilestorm
 #endif
 		}
 
-#if UNITY_EDITOR
 		private void LoadDatabase()
 		{
 			var dbAsset = PreviewSettings.DatabaseJsonFile;
@@ -496,13 +482,13 @@ namespace ClassicTilestorm
 			}
 
 			var _db = ResourceSerializer.LoadDatabase(dbAsset.text);
-			Debug.Log("Database loaded from DatabaseJsonFile");
-
+			Debug.Log("Database loaded from original project DatabaseJsonFile");
 			ResourceManager.database = _db;
 		}
 
 		private void SaveDatabase()
 		{
+#if UNITY_EDITOR
 			var _db = ResourceManager.database;
 
 			if (_db == null)
@@ -512,7 +498,6 @@ namespace ClassicTilestorm
 			}
 
 			var dbAsset = PreviewSettings.DatabaseJsonFile;
-
 			if (dbAsset == null)
 			{
 				Debug.LogError("PreviewSettings.DatabaseJsonFile is not assigned!");
@@ -527,9 +512,10 @@ namespace ClassicTilestorm
 			}
 
 			string fullPath = System.IO.Path.GetFullPath(assetPath);
-
 			ResourceSerializer.SaveDatabase(_db, fullPath);
-		}
+#else
+            Debug.Log("Save Database only works in Editor");
 #endif
+		}
 	}
 }
