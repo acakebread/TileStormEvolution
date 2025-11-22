@@ -271,7 +271,7 @@ namespace ClassicTilestorm
 			exportButtonStyle.fixedWidth = buttonWidth;
 			exportButtonStyle.fixedHeight = buttonHeight;
 			if (GUI.Button(exptButtonRect, "Export", exportButtonStyle))
-				ExportCurrentMapAsAtomic();         
+				ExportMapAsAtomic();         
 			
 			// === IMPORT MAP BUTTON ===
 			GUIStyle importButtonStyle = new GUIStyle(GUI.skin.button);
@@ -283,29 +283,7 @@ namespace ClassicTilestorm
 			importButtonStyle.fixedHeight = buttonHeight;
 
 			if (GUI.Button(importButtonRect, "Import Map", importButtonStyle))
-			{
-				string path = EditorUtility.OpenFilePanel(
-					"Import Atomic Map",
-					PreviewSettings.ExportFolder,
-					"json"
-				);
-
-				if (!string.IsNullOrEmpty(path))
-				{
-					ResourceSerializer.ImportAtomicMap(path);
-
-					// Optional: auto-reload if same name
-					var main = FindFirstObjectByType<MainController>();
-					if (main != null && mapManager != null)
-					{
-						string importedName = System.IO.Path.GetFileNameWithoutExtension(path);
-						if (mapManager.CurrentMap.name == importedName)
-						{
-							main.ReloadCurrentMap();
-						}
-					}
-				}
-			}
+				ImportMapAsAtomic();
 
 			// Mode switching
 			if (dragToggled && currentMode != EditorController.EditorMode.Drag)
@@ -402,7 +380,36 @@ namespace ClassicTilestorm
 			tempSelectedDefinitionGlobalIndex = index;
 		}
 
-		public void ExportCurrentMapAsAtomic()
+		public void ImportMapAsAtomic()
+		{
+#if UNITY_EDITOR
+			string path = EditorUtility.OpenFilePanel(
+					"Import Atomic Map",
+					PreviewSettings.ExportFolder,
+					"json"
+				);
+
+			if (!string.IsNullOrEmpty(path))
+			{
+				ResourceSerializer.ImportAtomicMap(path);
+
+				// Optional: auto-reload if same name
+				var main = FindFirstObjectByType<MainController>();
+				if (main != null && mapManager != null)
+				{
+					string importedName = System.IO.Path.GetFileNameWithoutExtension(path);
+					if (mapManager.CurrentMap.name == importedName)
+					{
+						main.ReloadCurrentMap();
+					}
+				}
+			}
+#else
+    Debug.Log("Import currently only available in Unity Editor");
+#endif
+		}
+
+		public void ExportMapAsAtomic()
 		{
 #if UNITY_EDITOR
 			if (mapManager?.CurrentMap == null)
@@ -472,9 +479,8 @@ namespace ClassicTilestorm
 
 			// Optional: Update the "Locate Export Folder" button to point to the new location
 			// (It already uses PreviewSettingsStatic.ExportFolder, but now user can go anywhere)
-
 #else
-    Debug.Log("Export only available in Unity Editor");
+    Debug.Log("Export currently only available in Unity Editor");
 #endif
 		}
 
