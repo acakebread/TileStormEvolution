@@ -9,6 +9,7 @@ namespace ClassicTilestorm
 	{
 		private MapManager mapManager;
 		private string selectedDefinitionId = "tile_empty";
+		private Definition selectedDefinition;
 		private Vector3 mouseDownPos;
 		private Vector3 mouseDownPosLMB;
 		private int mouseDownMapIndex = -1;
@@ -18,21 +19,33 @@ namespace ClassicTilestorm
 		public EditorControllerPaint(Camera camera, MapManager map, string definitionId = "tile_empty") : base(camera)
 		{
 			mapManager = map;
-			selectedDefinitionId = definitionId;
+			SetSelectedDefinitionById(definitionId);
 			definitionCycleList = new List<string>();
-			UpdateTileCycleList(definitionId);
+			UpdateTileCycleList(selectedDefinitionId);
 		}
 
-		// Called from UI - we ignore the int index, only use globalIndex to find the definition
-		public void SetDeinitionfIndex(int definitionIndex, int globalIndex)
+		public void SetSelectedDefinition(Definition def)
 		{
-			if (globalIndex >= 0 && globalIndex < ResourceManager.Definitions.Count)
+			if (def == null)
 			{
-				selectedDefinitionId = ResourceManager.Definitions[globalIndex].id;
-				UpdateTileCycleList(selectedDefinitionId);
-				cycleIndex = definitionCycleList.IndexOf(selectedDefinitionId);
-				if (cycleIndex < 0) cycleIndex = 0;
+				selectedDefinition = ResourceManager.GetDefinition("tile_empty");
+				selectedDefinitionId = "tile_empty";
 			}
+			else
+			{
+				selectedDefinition = def;
+				selectedDefinitionId = def.id;
+			}
+
+			UpdateTileCycleList(selectedDefinitionId);
+			cycleIndex = definitionCycleList.IndexOf(selectedDefinitionId);
+			if (cycleIndex < 0) cycleIndex = 0;
+		}
+
+		private void SetSelectedDefinitionById(string id)
+		{
+			var def = ResourceManager.GetDefinition(id);
+			SetSelectedDefinition(def ?? ResourceManager.GetDefinition("tile_empty"));
 		}
 
 		public override void Update()
@@ -40,16 +53,10 @@ namespace ClassicTilestorm
 			base.Update();
 			if (!camera || PlaceholderEditorUI.Instance.IsGuiControlActive() || EventSystem.current.IsPointerOverGameObject()) return;
 
-			var tempSelectedDefinitionGlobalIndex = PlaceholderEditorUI.Instance.GetSelectedDefinitionGlobalIndex();
-			if (tempSelectedDefinitionGlobalIndex >= 0 && tempSelectedDefinitionGlobalIndex < ResourceManager.Definitions.Count)
-			{
-				var definition = ResourceManager.Definitions[tempSelectedDefinitionGlobalIndex];
-				GeometryUtil.UpdateGhostTile(camera, mapManager, definition);
-			}
+			if (selectedDefinition != null)
+				GeometryUtil.UpdateGhostTile(camera, mapManager, selectedDefinition);
 			else
-			{
 				GeometryUtil.HideGhostTile();
-			}
 
 			// Right-click = erase
 			if (Input.GetMouseButtonDown(1))
@@ -59,12 +66,11 @@ namespace ClassicTilestorm
 			{
 				if (Vector3.Distance(Input.mousePosition, mouseDownPos) < 5f)
 				{
-					selectedDefinitionId = "tile_empty";
+					SetSelectedDefinitionById("tile_empty");
 					PlaceTileAtMousePosition();
 				}
 			}
 
-			// Left-click placement + cycling
 			if (Input.GetMouseButtonDown(0))
 			{
 				mouseDownPosLMB = Input.mousePosition;
@@ -83,7 +89,7 @@ namespace ClassicTilestorm
 
 			if (Input.GetMouseButtonUp(0))
 			{
-				HandleTilePlacement(tempSelectedDefinitionGlobalIndex);
+				HandleTilePlacement();
 			}
 		}
 
@@ -98,10 +104,10 @@ namespace ClassicTilestorm
 			var x = mapIndex % mapManager.Width;
 			var z = mapIndex / mapManager.Width;
 
-			mapManager.UpdateTileAt(x, z, selectedDefinitionId); // STRING ONLY
+			mapManager.UpdateTileAt(x, z, selectedDefinitionId);
 		}
 
-		private void HandleTilePlacement(int tempSelectedGlobalIndex)
+		private void HandleTilePlacement()
 		{
 			var ray = camera.ScreenPointToRay(Input.mousePosition);
 			var plane = new Plane(Vector3.up, Vector3.zero);
@@ -111,24 +117,27 @@ namespace ClassicTilestorm
 			var mapIndex = mapManager.WorldToMapIndex(worldPos);
 			if (mapIndex < 0 || mapIndex != mouseDownMapIndex) return;
 
-			var selectedDef = ResourceManager.Definitions[tempSelectedGlobalIndex];
-			string targetId = selectedDef.id;
 			string currentId = mapManager.GetDefinitionAtIndex(mapIndex);
 
-			if (currentId == targetId && definitionCycleList.Count > 1)
+			if (currentId == selectedDefinitionId && definitionCycleList.Count > 1)
 			{
 				cycleIndex = (cycleIndex + 1) % definitionCycleList.Count;
-				targetId = definitionCycleList[cycleIndex];
+				string nextId = definitionCycleList[cycleIndex];
+				var nextDef = ResourceManager.GetDefinition(nextId);
 
-				var nextDef = ResourceManager.Definitions.First(d => d.id == targetId);
-				int nextGlobalIndex = ResourceManager.Definitions.IndexOf(nextDef);
+				if (nextDef != null)
+				{
+					selectedDefinition = nextDef;
+					selectedDefinitionId = nextId;
 
-				PlaceholderEditorUI.Instance.SetSelectedDefinitionGlobalIndex(nextGlobalIndex);
-				GeometryUtil.DestroyGhostTile();
-				GeometryUtil.UpdateGhostTile(camera, mapManager, nextDef);
+					int globalIndex = ResourceManager.Definitions.IndexOf(nextDef);
+					PlaceholderEditorUI.Instance.SetSelectedDefinitionGlobalIndex(globalIndex);
+
+					GeometryUtil.DestroyGhostTile();
+					GeometryUtil.UpdateGhostTile(camera, mapManager, nextDef);
+				}
 			}
 
-			selectedDefinitionId = targetId;
 			PlaceTileAtMousePosition();
 			mouseDownMapIndex = -1;
 		}
@@ -138,42 +147,34 @@ namespace ClassicTilestorm
 			var singleDirections = new[] { " n", " e", " s", " w" };
 			var doubleLinear = new[] { " we", " ns", " ew", " sn" };
 			var doubleDiagonal = new[] { " nw", " ne", " se", " sw" };
-			string[] selectedGroup = null;
+			string[] selectedGroup = singleDirections;
 
-			var derivedBaseTileId = currentTileType;
+			string baseId = currentTileType;
 			foreach (var suffix in singleDirections.Concat(doubleLinear).Concat(doubleDiagonal))
 			{
 				if (currentTileType.EndsWith(suffix))
 				{
-					derivedBaseTileId = currentTileType.Substring(0, currentTileType.Length - suffix.Length);
+					baseId = currentTileType.Substring(0, currentTileType.Length - suffix.Length);
+					if (doubleLinear.Any(s => currentTileType.EndsWith(s)))
+						selectedGroup = doubleLinear;
+					else if (doubleDiagonal.Any(s => currentTileType.EndsWith(s)))
+						selectedGroup = doubleDiagonal;
 					break;
 				}
 			}
 
-			if (singleDirections.Any(suffix => currentTileType.EndsWith(suffix)))
-				selectedGroup = singleDirections;
-			else if (doubleLinear.Any(suffix => currentTileType.EndsWith(suffix)))
-				selectedGroup = doubleLinear;
-			else if (doubleDiagonal.Any(suffix => currentTileType.EndsWith(suffix)))
-				selectedGroup = doubleDiagonal;
-			else
-				selectedGroup = singleDirections;
-
 			definitionCycleList = new List<string>();
 
-			// Always add the base (no suffix) first — but only if it actually exists
-			if (ResourceManager.Definitions.Any(d => d.id == derivedBaseTileId))
-				definitionCycleList.Add(derivedBaseTileId);
+			if (ResourceManager.Definitions.Any(d => d.id == baseId))
+				definitionCycleList.Add(baseId);
 
-			// Then add directional variants in the correct group
 			foreach (var suffix in selectedGroup)
 			{
-				string candidate = derivedBaseTileId + suffix;
+				string candidate = baseId + suffix;
 				if (ResourceManager.Definitions.Any(d => d.id == candidate))
 					definitionCycleList.Add(candidate);
 			}
 
-			// Fallback: if nothing was added, just use the current tile
 			if (definitionCycleList.Count == 0)
 				definitionCycleList.Add(currentTileType);
 		}

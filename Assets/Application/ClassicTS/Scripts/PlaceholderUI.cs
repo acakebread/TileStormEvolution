@@ -25,6 +25,7 @@ namespace ClassicTilestorm
 		private readonly float buttonStartX = 10f; // Left margin for buttons
 		private readonly float spacing = 10f;
 		private readonly float labelWidth = 50f;
+		private readonly float mapNameWidth = 120f;
 		private readonly float panelGap = 5f;
 		private readonly Color panelColor = new Color(0.2f, 0.2f, 0.4f, 0.75f);
 		private readonly Color selectedTextColor = Color.green;
@@ -148,8 +149,8 @@ namespace ClassicTilestorm
 			GUI.Label(new Rect(currentX, y, labelWidth, buttonHeight), "Map:");
 			currentX += labelWidth;
 
-			GUI.Label(new Rect(currentX, y, buttonWidth, buttonHeight), PreviewSettings.LoadMapName);
-			currentX += buttonWidth + spacing;
+			GUI.Label(new Rect(currentX, y, mapNameWidth, buttonHeight), PreviewSettings.LoadMapName);
+			currentX += mapNameWidth + spacing;
 
 			// Mode buttons with custom colors
 			GUIStyle modeButtonStyle = new GUIStyle(GUI.skin.button);

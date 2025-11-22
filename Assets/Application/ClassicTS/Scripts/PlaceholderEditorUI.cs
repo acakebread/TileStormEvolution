@@ -48,7 +48,7 @@ namespace ClassicTilestorm
 
 		private Texture2D panelBackgroundTexture;
 		private Texture2D saveBackgroundTexture;
-		private Texture2D reloadBackgroundTexture;   // ← NEW: created once in Awake
+		private Texture2D reloadBackgroundTexture;
 		private Texture2D gridButtonBackgroundTexture;
 		private Texture2D toggleOffBackgroundTexture;
 		private Texture2D toggleOnBackgroundTexture;
@@ -69,7 +69,7 @@ namespace ClassicTilestorm
 
 			panelBackgroundTexture = TextureUtils.MakeTex(4, 4, new Color(0.2f, 0.2f, 0.4f, 0.75f));
 			saveBackgroundTexture = TextureUtils.MakeTex(4, 4, new Color(0.8f, 0.2f, 0.2f, 1f));
-			reloadBackgroundTexture = TextureUtils.MakeTex(4, 4, new Color(0.2f, 0.6f, 1f, 1f));  // ← blue reload button
+			reloadBackgroundTexture = TextureUtils.MakeTex(4, 4, new Color(0.2f, 0.6f, 1f, 1f));
 			gridButtonBackgroundTexture = TextureUtils.MakeTex(4, 4, new Color(0.5f, 0.5f, 0.5f, 1f));
 			toggleOffBackgroundTexture = TextureUtils.MakeTex(4, 4, new Color(0.3f, 0.3f, 0.3f, 1f));
 			toggleOnBackgroundTexture = TextureUtils.MakeTex(4, 4, new Color(0.3f, 0.6f, 0.3f, 1f));
@@ -324,8 +324,7 @@ namespace ClassicTilestorm
 
 						if (editorController.PaintMode != null)
 						{
-							// We don't care about map-local index anymore
-							editorController.PaintMode.SetDeinitionfIndex(0, i); // 0 is ignored
+							editorController.PaintMode.SetSelectedDefinition(selectedDefinition);
 							GeometryUtil.DestroyGhostTile();
 							GeometryUtil.UpdateGhostTile(camera, mapManager, selectedDefinition);
 						}
@@ -341,7 +340,7 @@ namespace ClassicTilestorm
 		{
 			if (panelBackgroundTexture != null) Destroy(panelBackgroundTexture);
 			if (saveBackgroundTexture != null) Destroy(saveBackgroundTexture);
-			if (reloadBackgroundTexture != null) Destroy(reloadBackgroundTexture);     // ← cleaned up
+			if (reloadBackgroundTexture != null) Destroy(reloadBackgroundTexture);
 			if (gridButtonBackgroundTexture != null) Destroy(gridButtonBackgroundTexture);
 			if (toggleOffBackgroundTexture != null) Destroy(toggleOffBackgroundTexture);
 			if (toggleOnBackgroundTexture != null) Destroy(toggleOnBackgroundTexture);
@@ -485,6 +484,11 @@ namespace ClassicTilestorm
 			var _db = ResourceSerializer.LoadDatabase(dbAsset.text);
 			Debug.Log("Database loaded from original project DatabaseJsonFile");
 			ResourceManager.database = _db;
+
+			// Optional: auto-reload if same name
+			var main = FindFirstObjectByType<MainController>();
+			if (main != null && mapManager != null)
+				main.ReloadCurrentMap();
 		}
 
 		private void SaveDatabase()
