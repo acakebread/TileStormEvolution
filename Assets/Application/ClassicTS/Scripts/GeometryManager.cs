@@ -55,7 +55,7 @@ namespace ClassicTilestorm
 					return null;
 				}
 
-				Debug.LogWarning("GeometryManager: Invalid Definition or geometry name.");
+				Debug.LogWarning("GeometryManager: Invalid Definition or geometry name." + definition.id);
 				var result = CreateFallbackTile(parent, position);
 #if DEBUG
 				result.AddComponent<RTTI>().definition = definition; // This is for debug in editor only - do not use RTTI

@@ -55,7 +55,8 @@ namespace ClassicTilestorm
 		private Texture2D toggleHoverBackgroundTexture;
 
 		private bool gridLinesEnabled = true;
-		private int tempSelectedDefinitionGlobalIndex = 0;
+		private string selectedDefinitionId = "tile_empty";
+
 		public EditorController.EditorMode currentMode = EditorController.EditorMode.Drag;
 
 		private void Awake()
@@ -312,23 +313,24 @@ namespace ClassicTilestorm
 					string displayName = $"{definition.id} ({definition.texture})";
 					Rect buttonRect = new(0, i * 40, tileSelectorWidth - 40, 35);
 
-					if (i == tempSelectedDefinitionGlobalIndex)
+					// Highlight using string ID comparison — no index!
+					if (definition.id == selectedDefinitionId)
 					{
 						GUI.color = Color.green;
 					}
 
 					if (GUI.Button(buttonRect, displayName))
 					{
-						tempSelectedDefinitionGlobalIndex = i;
-						var selectedDefinition = ResourceManager.Definitions[i];
+						selectedDefinitionId = definition.id;  // Store string
 
 						if (editorController.PaintMode != null)
 						{
-							editorController.PaintMode.SetSelectedDefinition(selectedDefinition);
+							editorController.PaintMode.SetSelectedDefinition(definition);
 							GeometryUtil.DestroyGhostTile();
-							GeometryUtil.UpdateGhostTile(camera, mapManager, selectedDefinition);
+							GeometryUtil.UpdateGhostTile(camera, mapManager, definition);
 						}
 					}
+
 					GUI.color = Color.white;
 				}
 
@@ -357,14 +359,15 @@ namespace ClassicTilestorm
 			return gridLinesEnabled;
 		}
 
-		public int GetSelectedDefinitionGlobalIndex()
+		public string GetSelectedDefinitionId()
 		{
-			return tempSelectedDefinitionGlobalIndex;
+			return selectedDefinitionId;
 		}
 
-		public void SetSelectedDefinitionGlobalIndex(int index)
+		public void SetSelectedDefinitionId(string id)
 		{
-			tempSelectedDefinitionGlobalIndex = index;
+			if (!string.IsNullOrEmpty(id))
+				selectedDefinitionId = id;
 		}
 
 		public void ImportMapAsAtomic()

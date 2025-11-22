@@ -53,6 +53,7 @@ namespace ClassicTilestorm
 			base.Update();
 			if (!camera || PlaceholderEditorUI.Instance.IsGuiControlActive() || EventSystem.current.IsPointerOverGameObject()) return;
 
+			// Ghost tile follows selectedDefinition (object)
 			if (selectedDefinition != null)
 				GeometryUtil.UpdateGhostTile(camera, mapManager, selectedDefinition);
 			else
@@ -66,8 +67,8 @@ namespace ClassicTilestorm
 			{
 				if (Vector3.Distance(Input.mousePosition, mouseDownPos) < 5f)
 				{
-					SetSelectedDefinitionById("tile_empty");
-					PlaceTileAtMousePosition();
+					//SetSelectedDefinitionById("tile_empty");
+					PlaceTileAtMousePosition("tile_empty");
 				}
 			}
 
@@ -93,7 +94,7 @@ namespace ClassicTilestorm
 			}
 		}
 
-		public void PlaceTileAtMousePosition()
+		private void PlaceTileAtMousePosition(string defID)
 		{
 			if (PlaceholderEditorUI.Instance.IsGuiControlActive()) return;
 
@@ -104,7 +105,7 @@ namespace ClassicTilestorm
 			var x = mapIndex % mapManager.Width;
 			var z = mapIndex / mapManager.Width;
 
-			mapManager.UpdateTileAt(x, z, selectedDefinitionId);
+			mapManager.UpdateTileAt(x, z, defID);
 		}
 
 		private void HandleTilePlacement()
@@ -130,15 +131,15 @@ namespace ClassicTilestorm
 					selectedDefinition = nextDef;
 					selectedDefinitionId = nextId;
 
-					int globalIndex = ResourceManager.Definitions.IndexOf(nextDef);
-					PlaceholderEditorUI.Instance.SetSelectedDefinitionGlobalIndex(globalIndex);
+					// Tell UI to highlight this tile — using string only
+					PlaceholderEditorUI.Instance.SetSelectedDefinitionId(nextId);
 
 					GeometryUtil.DestroyGhostTile();
 					GeometryUtil.UpdateGhostTile(camera, mapManager, nextDef);
 				}
 			}
 
-			PlaceTileAtMousePosition();
+			PlaceTileAtMousePosition(selectedDefinitionId);
 			mouseDownMapIndex = -1;
 		}
 
