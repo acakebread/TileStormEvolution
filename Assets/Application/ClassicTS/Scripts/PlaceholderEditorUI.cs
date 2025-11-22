@@ -1,5 +1,4 @@
-﻿// File: PlaceholderEditorUI.cs
-using UnityEngine;
+﻿using UnityEngine;
 using MassiveHadronLtd;
 using UnityEngine.EventSystems;
 
@@ -317,14 +316,16 @@ namespace ClassicTilestorm
 					{
 						GUI.color = Color.green;
 					}
+
 					if (GUI.Button(buttonRect, displayName))
 					{
 						tempSelectedDefinitionGlobalIndex = i;
 						var selectedDefinition = ResourceManager.Definitions[i];
-						int selectedMapDefIndex = mapManager.GetOrAddMapDefIndex(selectedDefinition.id);
-						if (selectedMapDefIndex >= 0 && editorController.PaintMode != null)
+
+						if (editorController.PaintMode != null)
 						{
-							editorController.PaintMode.SetDeinitionfIndex(selectedMapDefIndex, i);
+							// We don't care about map-local index anymore
+							editorController.PaintMode.SetDeinitionfIndex(0, i); // 0 is ignored
 							GeometryUtil.DestroyGhostTile();
 							GeometryUtil.UpdateGhostTile(camera, mapManager, selectedDefinition);
 						}

@@ -45,7 +45,7 @@ namespace ClassicTilestorm
 			var camera = controller.activeSystem?.camera;
 			editorUI.Initialize(this, mapManager, camera);
 
-			gridLines = null != mapManager ? GridLinesHelper.CreateGridLines(transform, mapManager.Width, mapManager.Height, 0f, MapManager.tile_origin.x - 0.5f) : null;
+			gridLines = null != mapManager ? GridLinesHelper.CreateGridLines(transform, mapManager.Width, mapManager.Height, 0f, MapManager.tile_origin.x - 0.5f) : null;//workaround for tile offset - should be done properly MapManager.tile_origin.x - 0.5f
 			UpdateGridLines(editorUI.GetGridLinesEnabled() & isActiveAndEnabled);
 
 			if (isActiveAndEnabled) OnEnable();
@@ -79,7 +79,7 @@ namespace ClassicTilestorm
 			if (!TryGetComponent<MainCameraController>(out var controller)) return;
 			var camera = controller.activeSystem?.camera;
 			dragMode = new EditorControllerDrag(camera);
-			paintMode = new EditorControllerPaint(camera, mapManager, 0);
+			paintMode = new EditorControllerPaint(camera, mapManager, "tile_empty");
 			activeMode = editorUI.currentMode == EditorMode.Drag ? dragMode : paintMode;
 			controller.UpdateGestureControllerState();
 		}

@@ -1,8 +1,8 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 using System.Linq;
 using System.Collections.Generic;
 using MassiveHadronLtd;
-using System;
 
 namespace ClassicTilestorm
 {
@@ -112,33 +112,11 @@ namespace ClassicTilestorm
 			}
 		}
 
-		public int GetOrAddMapDefIndex(string id)
+		public void UpdateTileAt(int x, int z, string id)
 		{
 			if (string.IsNullOrEmpty(id))
-			{
-				Debug.LogError($"Invalid tile definition: id={id}");
-				return -1;
-			}
+				id = "tile_empty";
 
-			if (currentMap.table != null)
-			{
-				int existing = Array.IndexOf(currentMap.table, id);
-				if (existing != -1) return existing;
-			}
-
-			// Grow defs array
-			var oldDefs = currentMap.table ?? Array.Empty<string>();
-			var newDefs = new string[oldDefs.Length + 1];
-			oldDefs.CopyTo(newDefs, 0);
-			newDefs[oldDefs.Length] = id;
-			currentMap.table = newDefs;
-
-			Debug.Log($"Added new mapDef: id={id}, new index={oldDefs.Length}");
-			return oldDefs.Length;
-		}
-
-		public void UpdateTileAt(int x, int z, int newDeinitionfIndex)
-		{
 			if (x < 0 || x >= Width || z < 0 || z >= Height)
 			{
 				Debug.LogError($"Invalid coordinates: ({x}, {z}) outside map bounds ({Width}x{Height})");
@@ -146,36 +124,36 @@ namespace ClassicTilestorm
 			}
 
 			int index = z * Width + x;
-			if (newDeinitionfIndex < 0 || newDeinitionfIndex >= currentMap.table.Length)
-			{
-				Debug.LogError($"Invalid newDefinitionIndex={newDeinitionfIndex}");
-				return;
-			}
 
-			string id = currentMap.table[newDeinitionfIndex];
-			if (string.IsNullOrEmpty(id))
-			{
-				Debug.LogError($"Empty id at index {newDeinitionfIndex}");
-				return;
-			}
+			// Update fast cache
+			definitions[index] = id;
 
+			// Destroy old visual
 			if (tiles[index].GameObject != null)
 				Destroy(tiles[index].GameObject);
 
-			definitions[index] = id;
-			var def = ResourceManager.Definitions.FirstOrDefault(td => td.id == id);
+			// Create new visual
+			var def = ResourceManager.GetDefinition(id);
 			tiles[index] = new Tile(def);
 
-			if (id != "tile_empty")
+			if (id != "tile_empty" && def != null)
 			{
-				var definition = ResourceManager.GetDefinition(id);
-				if (definition != null)
-				{
-					tiles[index].GameObject = GeometryManager.InstantiateTile(
-						definition, transform, TileWorldPosition(index), tiles[index].Interactive);
-				}
+				tiles[index].GameObject = GeometryManager.InstantiateTile(
+					def, transform, TileWorldPosition(index), tiles[index].Interactive);
 			}
 
+			// Ensure the string ID exists in the table (for save compatibility)
+			if (currentMap.table == null || !Array.Exists(currentMap.table, s => s == id))
+			{
+				var list = currentMap.table != null
+					? new List<string>(currentMap.table)
+					: new List<string>();
+				if (!list.Contains(id))
+					list.Add(id);
+				currentMap.table = list.ToArray();
+			}
+
+			// Rebuild compact indices for saving - this keeps file size small
 			UpdateChanges();
 		}
 
