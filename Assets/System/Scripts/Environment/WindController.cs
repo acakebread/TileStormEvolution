@@ -23,17 +23,14 @@ namespace MassiveHadronLtd
 		[SerializeField] private float gustSharpness = 1f; // Controls sharpness of gust transitions
 
 		private List<(MorphGeomSway sway, Vector3 position)> swayComponents = new();
+		public List<(MorphGeomSway sway, Vector3 position)> SwayComponents { get => swayComponents; }
 
-		// Initialize with MorphGeomSway components and their world positions
-		public void Initialize(IEnumerable<(MorphGeomSway sway, Vector3 position)> components)
+		private void Awake() => swayComponents.Clear();
+
+		public void AddSway(MorphGeomSway sway, Vector3 position)
 		{
-			swayComponents.Clear();
-			swayComponents.AddRange(components);
-			foreach (var (sway, _) in swayComponents)
-			{
-				sway.SetSwayVector(Vector3.zero); // Reset to ensure external control
-				sway.useExternalSwayVector = true;
-			}
+			swayComponents.Add((sway, position));
+			sway.SetSwayVector(Vector3.zero); // Reset to ensure external control
 		}
 
 		private void Update()

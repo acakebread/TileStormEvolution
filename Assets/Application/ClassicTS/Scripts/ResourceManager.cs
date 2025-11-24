@@ -24,10 +24,10 @@ namespace ClassicTilestorm
 		public static Definition GetDefinition(string id) => string.IsNullOrEmpty(id) ? null : Definitions.FirstOrDefault(d => d.id == id);
 		public static TextureSequence GetTextureSequence(string id) => string.IsNullOrEmpty(id) ? null : TextureSets.FirstOrDefault(ts => ts.name == id);
 
-		public static void ApplyMapChanges(Map mutatedMap)
+		public static void ApplyMapChanges(Map modifiedMap)
 		{
-			if (mutatedMap == null) return;
-			if (_db?.maps != null) ReplaceInArray(_db.maps, mutatedMap);
+			if (modifiedMap == null) return;
+			if (_db?.maps != null) ReplaceInArray(_db.maps, modifiedMap);
 
 			static void ReplaceInArray(Map[] array, Map updated)
 			{

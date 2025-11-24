@@ -13,6 +13,8 @@ namespace MassiveHadronLtd
 		[SerializeField] public Vector3 externalSwayVector = Vector3.zero;
 		[SerializeField] public float swayInfluencePower = 2f; // Power for non-linear rotation influence
 
+		protected override void Awake() => base.Awake();
+
 		public void SetPhase(float normalizedPhase)
 		{
 			phase = Mathf.Clamp01(normalizedPhase);
@@ -20,6 +22,7 @@ namespace MassiveHadronLtd
 
 		public void SetSwayVector(Vector3 swayVector)
 		{
+			useExternalSwayVector = true;
 			externalSwayVector = swayVector;
 		}
 

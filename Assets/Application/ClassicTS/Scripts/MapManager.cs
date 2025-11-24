@@ -49,6 +49,30 @@ namespace ClassicTilestorm
 
 		public Waypoint[] Waypoints => currentMap?.waypoints ?? Array.Empty<Waypoint>();
 
+#if UNITY_EDITOR
+		public static readonly Vector3 tile_origin = new(0.5f, 0f, 0.5f);
+		public Vector3 TileWorldPosition(int index) => new Vector3(index % Width, 0f, index / Width) + tile_origin;
+		public int WorldToMapIndex(Vector3 vec) => vec.x >= 0 && vec.x < Width && vec.z >= 0 && vec.z < Height ? (int)vec.z * Width + (int)vec.x : -1;
+#else
+        public static readonly Vector3 tile_origin = Vector3.zero;
+        public Vector3 TileWorldPosition(int index) => new(index % Width, 0f, index / Width);
+        public int WorldToMapIndex(Vector3 vec) { vec += new Vector3(0.5f, 0f, 0.5f); return vec.x >= 0 && vec.x < Width && vec.z >= 0 && vec.z < Height ? (int)vec.z * Width + (int)vec.x : -1; }
+#endif
+
+		public Tile GetTile(int index)
+		{
+			if (index < 0 || index >= indices.Length || Width <= 0) return default;
+			int dataIndex = indices[index];
+			return dataIndex >= 0 && dataIndex < tiles.Length ? tiles[dataIndex] : default;
+		}
+
+		public static Vector3 ScreenToWorld(Camera camera, Vector3 screenPos)
+		{
+			var ray = camera.ScreenPointToRay(screenPos);
+			var plane = new Plane(Vector3.up, Vector3.zero);
+			return plane.Raycast(ray, out float d) ? ray.GetPoint(d) : Vector3.zero;
+		}
+
 		private void Awake()
 		{
 			indices = null;
@@ -112,99 +136,6 @@ namespace ClassicTilestorm
 			}
 		}
 
-		public void UpdateTileAt(int x, int z, string id)
-		{
-			if (string.IsNullOrEmpty(id))
-				id = "tile_empty";
-
-			if (x < 0 || x >= Width || z < 0 || z >= Height)
-			{
-				Debug.LogError($"Invalid coordinates: ({x}, {z}) outside map bounds ({Width}x{Height})");
-				return;
-			}
-
-			int index = z * Width + x;
-
-			// Update fast cache
-			definitions[index] = id;
-
-			// Destroy old visual
-			if (tiles[index].GameObject != null)
-				Destroy(tiles[index].GameObject);
-
-			// Create new visual
-			var def = ResourceManager.GetDefinition(id);
-			tiles[index] = new Tile(def);
-
-			if (id != "tile_empty" && def != null)
-			{
-				tiles[index].GameObject = GeometryManager.InstantiateTile(
-					def, transform, TileWorldPosition(index), tiles[index].Interactive);
-			}
-
-			// Ensure the string ID exists in the table (for save compatibility)
-			if (currentMap.table == null || !Array.Exists(currentMap.table, s => s == id))
-			{
-				var list = currentMap.table != null
-					? new List<string>(currentMap.table)
-					: new List<string>();
-				if (!list.Contains(id))
-					list.Add(id);
-				currentMap.table = list.ToArray();
-			}
-
-			// Rebuild compact indices for saving - this keeps file size small
-			UpdateChanges();
-		}
-
-		// -----------------------------------------------------------------------
-		// Database update
-		// -----------------------------------------------------------------------
-
-		public void UpdateChanges()
-		{
-			if (currentMap == null) return;
-
-			// Step 1: Count frequency of each ID
-			var consolidatedTableMap = new Dictionary<string, int>();
-			for (int i = 0; i < definitions.Length; i++)
-			{
-				string id = definitions[i];
-				if (string.IsNullOrEmpty(id))
-				{
-					Debug.LogError("invalid id");
-					continue;
-				}
-
-				if (!consolidatedTableMap.ContainsKey(id))
-					consolidatedTableMap[id] = 0;
-				consolidatedTableMap[id]++;
-			}
-
-			// Step 2: Build list of IDs sorted by frequency (highest first)
-			var consolidatedTableList = consolidatedTableMap
-				.OrderByDescending(kvp => kvp.Value) // sort by frequency
-				.Select(kvp => kvp.Key)              // extract keys in that order
-				.ToList();
-
-			// Step 3: Convert to array
-			var consolidatedTable = consolidatedTableList.ToArray();
-
-			// Step 4: Remap every tile index to the new compact table
-			var logicalTiles = new int[Count];
-			for (int i = 0; i < definitions.Length; i++)
-			{
-				string id = definitions[i];
-				logicalTiles[i] = Array.IndexOf(consolidatedTable, id); // guaranteed valid
-			}
-
-			// Step 5: Apply changes
-			currentMap.table = consolidatedTable;
-			currentMap.tiles = logicalTiles;
-
-			ResourceManager.ApplyMapChanges(currentMap);
-		}
-
 		public string GetDefinitionAtIndex(int mapIndex)
 		{
 			if (mapIndex < 0 || mapIndex >= Count) return null;
@@ -250,23 +181,6 @@ namespace ClassicTilestorm
 			return -1;
 		}
 
-		private void InitializeWindController()
-		{
-			var windController = gameObject.AddComponent<WindController>();
-			var swayComponents = new List<(MorphGeomSway sway, Vector3 position)>();
-
-			for (int n = 0; n < tiles.Length; ++n)
-			{
-				if (tiles[n].GameObject == null) continue;
-				var sway = tiles[n].GameObject.GetComponent<MorphGeomSway>();
-				if (sway != null)
-					swayComponents.Add((sway, TileWorldPosition(n)));
-			}
-
-			windController.Initialize(swayComponents);
-			Debug.Log($"WindController initialized with {swayComponents.Count} sway components.");
-		}
-
 		public void Scramble()
 		{
 			indices = Enumerable.Range(0, Count).Select(n => n + (currentMap.mixed?[n] ?? 0)).ToArray();
@@ -290,35 +204,11 @@ namespace ClassicTilestorm
 
 				var position = TileWorldPosition(n);
 				gameObject.transform.position = position;
-				position -= tile_origin;
 #if DEBUG
+				position -= tile_origin;
 				gameObject.name = $"{gameObject.GetComponent<RTTI>()?.definition.id ?? "Empty"} ({position.x},{position.z})";
 #endif
 			}
-		}
-
-#if UNITY_EDITOR
-		public static readonly Vector3 tile_origin = new(0.5f, 0f, 0.5f);
-		public Vector3 TileWorldPosition(int index) => new Vector3(index % Width, 0f, index / Width) + tile_origin;
-		public int WorldToMapIndex(Vector3 vec) => vec.x >= 0 && vec.x < Width && vec.z >= 0 && vec.z < Height ? (int)vec.z * Width + (int)vec.x : -1;
-#else
-        public static readonly Vector3 tile_origin = Vector3.zero;
-        public Vector3 TileWorldPosition(int index) => new(index % Width, 0f, index / Width);
-        public int WorldToMapIndex(Vector3 vec) { vec += new Vector3(0.5f, 0f, 0.5f); return vec.x >= 0 && vec.x < Width && vec.z >= 0 && vec.z < Height ? (int)vec.z * Width + (int)vec.x : -1; }
-#endif
-
-		public Tile GetTile(int index)
-		{
-			if (index < 0 || index >= indices.Length || Width <= 0) return default;
-			int dataIndex = indices[index];
-			return dataIndex >= 0 && dataIndex < tiles.Length ? tiles[dataIndex] : default;
-		}
-
-		public static Vector3 ScreenToWorld(Camera camera, Vector3 screenPos)
-		{
-			var ray = camera.ScreenPointToRay(screenPos);
-			var plane = new Plane(Vector3.up, Vector3.zero);
-			return plane.Raycast(ray, out float d) ? ray.GetPoint(d) : Vector3.zero;
 		}
 
 		private void SetupWaypoints()
@@ -366,6 +256,77 @@ namespace ClassicTilestorm
 			generated.Add(new Waypoint { nTile = end });
 			currentMap.waypoints = generated.ToArray();
 			Debug.Log($"Generated {currentMap.waypoints.Length} waypoints.");
+		}
+
+		// -----------------------------------------------------------------------
+		// map editing
+		// -----------------------------------------------------------------------
+
+		public void UpdateTileAt(int x, int z, string id)
+		{
+			if (string.IsNullOrEmpty(id))
+				id = "tile_empty";
+
+			if (x < 0 || x >= Width || z < 0 || z >= Height)
+			{
+				Debug.LogError($"Invalid coordinates: ({x}, {z}) outside map bounds ({Width}x{Height})");
+				return;
+			}
+
+			int index = z * Width + x;
+
+			// Update fast cache
+			definitions[index] = id;
+
+			// Destroy old visual
+			if (tiles[index].GameObject != null)
+				Destroy(tiles[index].GameObject);
+
+			// Create new visual
+			var def = ResourceManager.GetDefinition(id);
+			tiles[index] = new Tile(def);
+
+			if (id != "tile_empty" && def != null)
+			{
+				tiles[index].GameObject = GeometryManager.InstantiateTile(
+					def, transform, TileWorldPosition(index), tiles[index].Interactive);
+			}
+
+			// Ensure the string ID exists in the table (for save compatibility)
+			if (currentMap.table == null || !Array.Exists(currentMap.table, s => s == id))
+			{
+				var list = currentMap.table != null
+					? new List<string>(currentMap.table)
+					: new List<string>();
+				if (!list.Contains(id))
+					list.Add(id);
+				currentMap.table = list.ToArray();
+			}
+
+			// Rebuild compact indices for saving - this keeps file size small
+			currentMap.Consolidate(definitions);//ToDo refactor this so that it is only invoked on save database or export - no need to optimise map data on every edit
+
+			ResourceManager.ApplyMapChanges(currentMap);
+		}
+
+		//public void Consolidate() => currentMap?.Consolidate(definitions);
+
+		// -----------------------------------------------------------------------
+		// Environmental effects - ToDo refactor into separate script
+		// -----------------------------------------------------------------------
+
+		private void InitializeWindController()
+		{
+			WindController windController = null;
+			for (int n = 0; n < tiles.Length; ++n)
+			{
+				if (null == tiles[n].GameObject) continue;
+				var sway = tiles[n].GameObject.GetComponent<MorphGeomSway>();
+				if (null == sway) continue;
+				windController = windController ?? gameObject.AddComponent<WindController>();
+				windController.AddSway(sway, TileWorldPosition(n));
+			}
+			if (null != windController) Debug.Log($"WindController initialized with {windController.SwayComponents.Count} sway components.");
 		}
 
 		public static MapManager Instantiate(Map map, Transform parent = null)
