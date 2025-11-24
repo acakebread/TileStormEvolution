@@ -90,9 +90,6 @@ namespace ClassicTilestorm
 			return changed;
 		}
 
-
-
-		// Add this inside the Map class (at the bottom is fine)
 		public enum Anchor
 		{
 			TopLeft, TopCenter, TopRight,
@@ -195,7 +192,7 @@ namespace ClassicTilestorm
 				}
 			}
 
-			// === 4. Remap mixed[] — YOUR GENIUS, OPTIMIZED ===
+			// === 4. Remap mixed[]
 			var newMixed = new int[newSize]; // defaults to 0
 
 			if (mixed != null && mixed.Length == oldWidth * oldHeight)
