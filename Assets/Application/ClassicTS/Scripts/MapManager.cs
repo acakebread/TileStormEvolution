@@ -1,7 +1,7 @@
 ﻿using System;
-using UnityEngine;
-using System.Linq;
 using System.Collections.Generic;
+using System.Linq;
+using UnityEngine;
 using MassiveHadronLtd;
 
 namespace ClassicTilestorm
@@ -23,7 +23,7 @@ namespace ClassicTilestorm
 		int GetEndTile();
 		int FindAdjacentConsole(int nTile);
 		Waypoint[] Waypoints { get; }
-		Map CurrentMap { get; } // optional – useful for editor tools
+		Map CurrentMap { get; }
 	}
 
 	public class MapManager : MonoBehaviour, IMapManager
@@ -33,8 +33,21 @@ namespace ClassicTilestorm
 		// ------------------------------------------------------------------
 		private Map currentMap;
 		private int[] indices;                    // Scrambled/solved visual indices
-		private Tile[] tiles;                     // Instantiated runtime Tile objects
-		private string[] definitions;             // Cached 'id' string per map index (for fast lookup & saving)
+
+		// ONE source of truth per map slot
+		private MapTile[] mapTiles;
+
+		private struct MapTile
+		{
+			public string definitionId;   // e.g. "tile_grass", "tile_empty"
+			public Tile tile;             // Runtime Tile with flags + GameObject
+
+			public MapTile(string id, Tile t)
+			{
+				definitionId = id;
+				tile = t;
+			}
+		}
 
 		// ------------------------------------------------------------------
 		// IMapData / IMapManager forwarded properties
@@ -59,11 +72,18 @@ namespace ClassicTilestorm
         public int WorldToMapIndex(Vector3 vec) { vec += new Vector3(0.5f, 0f, 0.5f); return vec.x >= 0 && vec.x < Width && vec.z >= 0 && vec.z < Height ? (int)vec.z * Width + (int)vec.x : -1; }
 #endif
 
+		public enum Anchor
+		{
+			TopLeft, TopCenter, TopRight,
+			MiddleLeft, Center, MiddleRight,
+			BottomLeft, BottomCenter, BottomRight
+		}
+
 		public Tile GetTile(int index)
 		{
-			if (index < 0 || index >= indices.Length || Width <= 0) return default;
+			if (index < 0 || index >= indices.Length || Width <= 0 || mapTiles == null) return default;
 			int dataIndex = indices[index];
-			return dataIndex >= 0 && dataIndex < tiles.Length ? tiles[dataIndex] : default;
+			return dataIndex >= 0 && dataIndex < mapTiles.Length ? mapTiles[dataIndex].tile : default;
 		}
 
 		public static Vector3 ScreenToWorld(Camera camera, Vector3 screenPos)
@@ -76,8 +96,7 @@ namespace ClassicTilestorm
 		private void Awake()
 		{
 			indices = null;
-			tiles = null;
-			definitions = null;
+			mapTiles = null;
 		}
 
 		private void Initialise(Map map)
@@ -107,8 +126,7 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			tiles = new Tile[Count];
-			definitions = new string[Count];
+			mapTiles = new MapTile[Count];
 
 			for (int n = 0; n < tileMap.Length; ++n)
 			{
@@ -120,26 +138,24 @@ namespace ClassicTilestorm
 				if (string.IsNullOrEmpty(id))
 					id = "tile_empty";
 
-				definitions[n] = id;
 				var definition = ResourceManager.Definitions.FirstOrDefault(td => td.id == id);
-				tiles[n] = new Tile(definition);
+				var tile = new Tile(definition);
 
-				if (id == "tile_empty") continue;
-				if (definition == null)
+				if (id != "tile_empty" && definition != null)
 				{
-					Debug.LogError($"Definition not found for id={id} at tile {n}");
-					continue;
+					tile.GameObject = GeometryManager.InstantiateTile(
+						definition, transform, TileWorldPosition(n), tile.Interactive);
 				}
 
-				tiles[n].GameObject = GeometryManager.InstantiateTile(
-					definition, transform, TileWorldPosition(n), tiles[n].Interactive);
+				mapTiles[n] = new MapTile(id, tile);
 			}
 		}
 
+		// Editor-only – returns the source definition ID at map index (only valid when not scrambled)
 		public string GetDefinitionAtIndex(int mapIndex)
 		{
-			if (mapIndex < 0 || mapIndex >= Count) return null;
-			return definitions[mapIndex];
+			if (mapIndex < 0 || mapIndex >= Count || mapTiles == null) return null;
+			return mapTiles[mapIndex].definitionId;
 		}
 
 		public int GetStartTile()
@@ -195,18 +211,22 @@ namespace ClassicTilestorm
 
 		private void UpdateTileObjectNamesAndPositions()
 		{
-			Debug.AssertFormat(indices.Length > 0 && indices.Length == tiles.Length, "mismatched tiles and indices");
+			Debug.Assert(indices != null && indices.Length == mapTiles?.Length,
+				"mismatched tiles and indices");
 
-			for (var n = 0; n < indices.Length; ++n)
+			for (int n = 0; n < indices.Length; ++n)
 			{
-				var gameObject = tiles[indices[n]].GameObject;
-				if (null == gameObject) continue;
+				var mapTile = mapTiles[indices[n]];
+				var go = mapTile.tile.GameObject;
+				if (go == null) continue;
 
 				var position = TileWorldPosition(n);
-				gameObject.transform.position = position;
+				go.transform.position = position;
+
 #if DEBUG
 				position -= tile_origin;
-				gameObject.name = $"{gameObject.GetComponent<RTTI>()?.definition.id ?? "Empty"} ({position.x},{position.z})";
+				var id = string.IsNullOrEmpty(mapTile.definitionId) ? "Empty" : mapTile.definitionId;
+				go.name = $"{id} ({position.x},{position.z})";
 #endif
 			}
 		}
@@ -259,9 +279,8 @@ namespace ClassicTilestorm
 		}
 
 		// -----------------------------------------------------------------------
-		// map editing
+		// Map editing
 		// -----------------------------------------------------------------------
-
 		public void UpdateTileAt(int x, int z, string id)
 		{
 			if (string.IsNullOrEmpty(id))
@@ -275,22 +294,20 @@ namespace ClassicTilestorm
 
 			int index = z * Width + x;
 
-			// Update fast cache
-			definitions[index] = id;
-
 			// Destroy old visual
-			if (tiles[index].GameObject != null)
-				Destroy(tiles[index].GameObject);
+			if (mapTiles[index].tile.GameObject != null)
+				Destroy(mapTiles[index].tile.GameObject);
 
-			// Create new visual
 			var def = ResourceManager.GetDefinition(id);
-			tiles[index] = new Tile(def);
+			var newTile = new Tile(def);
 
 			if (id != "tile_empty" && def != null)
 			{
-				tiles[index].GameObject = GeometryManager.InstantiateTile(
-					def, transform, TileWorldPosition(index), tiles[index].Interactive);
+				newTile.GameObject = GeometryManager.InstantiateTile(
+					def, transform, TileWorldPosition(index), newTile.Interactive);
 			}
+
+			mapTiles[index] = new MapTile(id, newTile);
 
 			// Ensure the string ID exists in the table (for save compatibility)
 			if (currentMap.table == null || !Array.Exists(currentMap.table, s => s == id))
@@ -303,30 +320,33 @@ namespace ClassicTilestorm
 				currentMap.table = list.ToArray();
 			}
 
-			// Rebuild compact indices for saving - this keeps file size small
-			currentMap.Consolidate(definitions);//ToDo refactor this so that it is only invoked on save database or export - no need to optimise map data on every edit
+			// Rebuild compact indices for saving
+			var definitions = mapTiles.Select(mt => mt.definitionId).ToArray();
+			currentMap.Consolidate(definitions);
 
 			ResourceManager.ApplyMapChanges(currentMap);
 		}
 
-		//public void Consolidate() => currentMap?.Consolidate(definitions);
-
 		// -----------------------------------------------------------------------
-		// Environmental effects - ToDo refactor into separate script
+		// Environmental effects
 		// -----------------------------------------------------------------------
-
 		private void InitializeWindController()
 		{
 			WindController windController = null;
-			for (int n = 0; n < tiles.Length; ++n)
+			for (int n = 0; n < mapTiles.Length; ++n)
 			{
-				if (null == tiles[n].GameObject) continue;
-				var sway = tiles[n].GameObject.GetComponent<MorphGeomSway>();
-				if (null == sway) continue;
+				var go = mapTiles[n].tile.GameObject;
+				if (go == null) continue;
+
+				var sway = go.GetComponent<MorphGeomSway>();
+				if (sway == null) continue;
+
 				windController = windController ?? gameObject.AddComponent<WindController>();
 				windController.AddSway(sway, TileWorldPosition(n));
 			}
-			if (null != windController) Debug.Log($"WindController initialized with {windController.SwayComponents.Count} sway components.");
+
+			if (windController != null)
+				Debug.Log($"WindController initialized with {windController.SwayComponents.Count} sway components.");
 		}
 
 		public static MapManager Instantiate(Map map, Transform parent = null)
