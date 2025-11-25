@@ -2,10 +2,6 @@
 using MassiveHadronLtd;
 using UnityEngine.EventSystems;
 
-#if UNITY_EDITOR
-using UnityEditor;
-#endif
-
 namespace ClassicTilestorm
 {
 	public class PlaceholderEditorUI : MonoBehaviour
@@ -160,9 +156,8 @@ namespace ClassicTilestorm
 				else
 				{
 					if (wasMouseOverTileSelector)
-					{
 						mouseExitTime = Time.time;
-					}
+
 					if (mouseExitTime > 0f && Time.time - mouseExitTime >= autoHideDelay && targetWidth != collapsedWidth)
 					{
 						targetWidth = collapsedWidth;
@@ -186,13 +181,14 @@ namespace ClassicTilestorm
 			if (!editorController || !mapManager || !camera) return;
 
 			float panelBottomY = GetPanelBottomY();
-			Rect gridToggleRect = new Rect(margin, panelBottomY + spacing + 0 * (buttonHeight + spacing), buttonWidth, buttonHeight);
-			Rect dragButtonRect = new Rect(margin, panelBottomY + spacing + 1 * (buttonHeight + spacing), buttonWidth, buttonHeight);
-			Rect paintButtonRect = new Rect(margin, panelBottomY + spacing + 2 * (buttonHeight + spacing), buttonWidth, buttonHeight);
-			Rect saveButtonRect = new Rect(margin, panelBottomY + spacing + 3 * (buttonHeight + spacing), buttonWidth, buttonHeight);
-			Rect reloadButtonRect = new Rect(margin, panelBottomY + spacing + 4 * (buttonHeight + spacing), buttonWidth, buttonHeight);
-			Rect exptButtonRect = new Rect(margin, panelBottomY + spacing + 5 * (buttonHeight + spacing), buttonWidth, buttonHeight);
-			Rect importButtonRect = new Rect(margin, panelBottomY + spacing + 6 * (buttonHeight + spacing), buttonWidth, buttonHeight);
+			Rect gridToggleRect = new (margin, panelBottomY + spacing + 0 * (buttonHeight + spacing), buttonWidth, buttonHeight);
+			Rect dragButtonRect = new (margin, panelBottomY + spacing + 1 * (buttonHeight + spacing), buttonWidth, buttonHeight);
+			Rect paintButtonRect = new (margin, panelBottomY + spacing + 2 * (buttonHeight + spacing), buttonWidth, buttonHeight);
+			Rect resizeButtonRect = new(margin, panelBottomY + spacing + 3 * (buttonHeight + spacing), buttonWidth, buttonHeight);
+			Rect saveButtonRect = new (margin, panelBottomY + spacing + 4 * (buttonHeight + spacing), buttonWidth, buttonHeight);
+			Rect reloadButtonRect = new (margin, panelBottomY + spacing + 5 * (buttonHeight + spacing), buttonWidth, buttonHeight);
+			Rect exptButtonRect = new (margin, panelBottomY + spacing + 6 * (buttonHeight + spacing), buttonWidth, buttonHeight);
+			Rect importButtonRect = new (margin, panelBottomY + spacing + 7 * (buttonHeight + spacing), buttonWidth, buttonHeight);
 
 			GUIStyle toggleStyle = new GUIStyle(GUI.skin.toggle);
 			toggleStyle.normal.background = toggleOffBackgroundTexture;
@@ -208,9 +204,6 @@ namespace ClassicTilestorm
 			toggleStyle.fixedWidth = buttonWidth;
 			toggleStyle.fixedHeight = buttonHeight;
 
-			bool dragToggled = GUI.Toggle(dragButtonRect, currentMode == EditorController.EditorMode.Drag, "Drag", toggleStyle);
-			bool paintToggled = GUI.Toggle(paintButtonRect, currentMode == EditorController.EditorMode.Paint, "Paint", toggleStyle);
-
 			// === GRID TOGGLE ===
 			GUIStyle gridButtonStyle = new GUIStyle(GUI.skin.button);
 			gridButtonStyle.normal.background = gridButtonBackgroundTexture;
@@ -225,6 +218,21 @@ namespace ClassicTilestorm
 				editorController.UpdateGridLines(gridLinesEnabled);
 			}
 
+			bool dragToggled = GUI.Toggle(dragButtonRect, currentMode == EditorController.EditorMode.Drag, "Drag", toggleStyle);
+			bool paintToggled = GUI.Toggle(paintButtonRect, currentMode == EditorController.EditorMode.Paint, "Paint", toggleStyle);
+
+			// === RESIZE TEST BUTTON ===
+			GUIStyle resizeButtonStyle = new GUIStyle(GUI.skin.button);
+			resizeButtonStyle.normal.background = reloadBackgroundTexture;
+			resizeButtonStyle.padding = new RectOffset(10, 10, 5, 5);
+			resizeButtonStyle.fontSize = 14;
+			resizeButtonStyle.alignment = TextAnchor.MiddleCenter;
+			resizeButtonStyle.fixedWidth = buttonWidth;
+			resizeButtonStyle.fixedHeight = buttonHeight;
+
+			if (GUI.Button(resizeButtonRect, "Resize Test", resizeButtonStyle))
+				editorController.ResizeMapTest();
+
 			// === SAVE DATABASE BUTTON ===
 			GUIStyle saveButtonStyle = new GUIStyle(GUI.skin.button);
 			saveButtonStyle.normal.background = saveBackgroundTexture;
@@ -235,7 +243,7 @@ namespace ClassicTilestorm
 			saveButtonStyle.fixedHeight = buttonHeight;
 
 			if (GUI.Button(saveButtonRect, "Save Database", saveButtonStyle))
-				SaveDatabase();
+				editorController.SaveDatabase();
 
 			// === RELOAD DATABASE BUTTON ===
 			GUIStyle reloadButtonStyle = new GUIStyle(GUI.skin.button);
@@ -247,7 +255,7 @@ namespace ClassicTilestorm
 			reloadButtonStyle.fixedHeight = buttonHeight;
 
 			if (GUI.Button(reloadButtonRect, "Reload Database", reloadButtonStyle))
-				LoadDatabase();
+				editorController.LoadDatabase();
 
 			// === EXPORT BUTTON ===
 			GUIStyle exportButtonStyle = new GUIStyle(GUI.skin.button);
@@ -258,7 +266,7 @@ namespace ClassicTilestorm
 			exportButtonStyle.fixedWidth = buttonWidth;
 			exportButtonStyle.fixedHeight = buttonHeight;
 			if (GUI.Button(exptButtonRect, "Export", exportButtonStyle))
-				ExportMapAsAtomic();         
+				editorController.ExportMapAsAtomic();         
 			
 			// === IMPORT MAP BUTTON ===
 			GUIStyle importButtonStyle = new GUIStyle(GUI.skin.button);
@@ -270,7 +278,7 @@ namespace ClassicTilestorm
 			importButtonStyle.fixedHeight = buttonHeight;
 
 			if (GUI.Button(importButtonRect, "Import Map", importButtonStyle))
-				ImportMapAsAtomic();
+				editorController.ImportMapAsAtomic();
 
 			// Mode switching
 			if (dragToggled && currentMode != EditorController.EditorMode.Drag)
@@ -301,11 +309,7 @@ namespace ClassicTilestorm
 				GUI.Box(tileSelectorRect, "Tile Selector", panelStyle);
 
 				Rect scrollViewRect = new Rect(tileSelectorX + 10, tileSelectorY + 30, tileSelectorWidth - 20, tileSelectorHeight - 40);
-				scrollPosition = GUI.BeginScrollView(
-					scrollViewRect,
-					scrollPosition,
-					new Rect(0, 0, tileSelectorWidth - 40, ResourceManager.Definitions.Count * 40)
-				);
+				scrollPosition = GUI.BeginScrollView(scrollViewRect, scrollPosition, new Rect(0, 0, tileSelectorWidth - 40, ResourceManager.Definitions.Count * 40));
 
 				for (int i = 0; i < ResourceManager.Definitions.Count; i++)
 				{
@@ -315,9 +319,7 @@ namespace ClassicTilestorm
 
 					// Highlight using string ID comparison — no index!
 					if (definition.id == selectedDefinitionId)
-					{
 						GUI.color = Color.green;
-					}
 
 					if (GUI.Button(buttonRect, displayName))
 					{
@@ -368,162 +370,6 @@ namespace ClassicTilestorm
 		{
 			if (!string.IsNullOrEmpty(id))
 				selectedDefinitionId = id;
-		}
-
-		public void ImportMapAsAtomic()
-		{
-#if UNITY_EDITOR
-			string path = EditorUtility.OpenFilePanel(
-					"Import Atomic Map",
-					PreviewSettings.ExportFolder,
-					"json"
-				);
-
-			if (!string.IsNullOrEmpty(path))
-			{
-				ResourceSerializer.ImportAtomicMap(path);
-
-				// Optional: auto-reload if same name
-				var main = FindFirstObjectByType<MainController>();
-				if (main != null && mapManager != null)
-				{
-					string importedName = System.IO.Path.GetFileNameWithoutExtension(path);
-					if (mapManager.CurrentMap.name == importedName)
-					{
-						main.ReloadCurrentMap();
-					}
-				}
-			}
-#else
-    Debug.Log("Import currently only available in Unity Editor");
-#endif
-		}
-
-		public void ExportMapAsAtomic()
-		{
-#if UNITY_EDITOR
-			if (mapManager?.CurrentMap == null)
-			{
-				EditorUtility.DisplayDialog("Export Error", "No map is currently loaded.", "OK");
-				return;
-			}
-
-			var map = mapManager.CurrentMap;
-			string originalName = map.name;
-
-			// Start from last remembered folder, fallback to default export folder
-			string lastFolder = PlayerPrefs.GetString("ClassicTilestorm_LastExportFolder", PreviewSettingsStatic.ExportFolder);
-			System.IO.Directory.CreateDirectory(lastFolder);
-
-			string initialPath = System.IO.Path.Combine(lastFolder, originalName + ".json");
-
-			string path = EditorUtility.SaveFilePanel(
-				"Export Map As Atomic JSON",
-				lastFolder,
-				originalName + ".json",
-				"json");
-
-			if (string.IsNullOrEmpty(path))
-			{
-				Debug.Log("Export cancelled by user.");
-				return;
-			}
-
-			string chosenFolder = System.IO.Path.GetDirectoryName(path);
-			string chosenName = System.IO.Path.GetFileNameWithoutExtension(path);
-
-			// Remember this folder for next time
-			PlayerPrefs.SetString("ClassicTilestorm_LastExportFolder", chosenFolder);
-			PlayerPrefs.Save();
-
-			bool nameChanged = !string.Equals(originalName, chosenName, System.StringComparison.Ordinal);
-
-			try
-			{
-				if (nameChanged)
-				{
-					map.name = chosenName;
-					Debug.Log($"Exporting map as: {chosenName}");
-				}
-
-				ResourceSerializer.ExportAtomicMap(map, chosenFolder, true);
-
-				EditorUtility.DisplayDialog(
-					"Export Successful",
-					$"Map exported successfully!\n\n→ {path}",
-					"OK");
-
-				Debug.Log($"Map exported: {path}");
-			}
-			catch (System.Exception ex)
-			{
-				EditorUtility.DisplayDialog("Export Failed", $"Error during export:\n{ex.Message}", "OK");
-				Debug.LogError($"Export failed: {ex}");
-			}
-			finally
-			{
-				// Always restore original name — critical!
-				if (nameChanged)
-					map.name = originalName;
-			}
-
-			// Optional: Update the "Locate Export Folder" button to point to the new location
-			// (It already uses PreviewSettingsStatic.ExportFolder, but now user can go anywhere)
-#else
-    Debug.Log("Export currently only available in Unity Editor");
-#endif
-		}
-
-		private void LoadDatabase()
-		{
-			var dbAsset = PreviewSettings.DatabaseJsonFile;
-
-			if (dbAsset == null)
-			{
-				Debug.LogError("ResourceManager: DatabaseJsonFile not assigned in PreviewSettings!");
-				return;
-			}
-
-			var _db = ResourceSerializer.LoadDatabase(dbAsset.text);
-			Debug.Log("Database loaded from original project DatabaseJsonFile");
-			ResourceManager.database = _db;
-
-			// Optional: auto-reload if same name
-			var main = FindFirstObjectByType<MainController>();
-			if (main != null && mapManager != null)
-				main.ReloadCurrentMap();
-		}
-
-		private void SaveDatabase()
-		{
-#if UNITY_EDITOR
-			var _db = ResourceManager.database;
-
-			if (_db == null)
-			{
-				Debug.LogError("Cannot save: database not loaded");
-				return;
-			}
-
-			var dbAsset = PreviewSettings.DatabaseJsonFile;
-			if (dbAsset == null)
-			{
-				Debug.LogError("PreviewSettings.DatabaseJsonFile is not assigned!");
-				return;
-			}
-
-			string assetPath = AssetDatabase.GetAssetPath(dbAsset);
-			if (string.IsNullOrEmpty(assetPath) || assetPath.Contains("Resources/unity_builtin_extra"))
-			{
-				Debug.LogError("Cannot save to project: not a real project asset.");
-				return;
-			}
-
-			string fullPath = System.IO.Path.GetFullPath(assetPath);
-			ResourceSerializer.SaveDatabase(_db, fullPath);
-#else
-            Debug.Log("Save Database only works in Editor");
-#endif
 		}
 	}
 }
