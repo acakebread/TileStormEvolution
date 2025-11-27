@@ -76,22 +76,44 @@ namespace ClassicTilestorm
 			}
 		}
 
-		public static void SaveDatabase(DatabaseData data, string filepath = null, bool verbose = false)
+		public static void SaveDatabase(DatabaseData data, string filepath = null, bool verbose = false, bool cropAllMaps = true)
 		{
 			if (data == null) return;
 
-			JsonSerializerSettings settings = new()
+			Map[] mapsToSave = data.maps;
+
+			if (cropAllMaps && data.maps != null)
 			{
-				NullValueHandling = NullValueHandling.Ignore,
-				MissingMemberHandling = MissingMemberHandling.Ignore,
-				Formatting = verbose ? Formatting.Indented : Formatting.None,// 'minified' or verbose
+				mapsToSave = data.maps
+					.Select(m => m?.CreateCroppedCopy() ?? m)
+					.ToArray();
+
+				Debug.Log($"Saving database with {mapsToSave.Length} cropped maps");
+			}
+
+			var saveData = new DatabaseData
+			{
+				maps = mapsToSave,
+				definitions = data.definitions,
+				textures = data.textures,
+				buttons = data.buttons
 			};
 
-			string json = JsonConvert.SerializeObject(data, settings);
-			string path = string.IsNullOrEmpty(filepath) ? Path.Combine(Application.persistentDataPath, "database.json") : filepath;
+			var settings = new JsonSerializerSettings
+			{
+				NullValueHandling = NullValueHandling.Ignore,
+				Formatting = verbose ? Formatting.Indented : Formatting.None,
+			};
+
+			string json = JsonConvert.SerializeObject(saveData, settings);
+			string path = string.IsNullOrEmpty(filepath)
+				? Path.Combine(Application.persistentDataPath, "database.json")
+				: filepath;
 
 			EnsureFolder(Path.GetDirectoryName(path));
 			File.WriteAllText(path, json);
+
+			Debug.Log($"Database saved {(cropAllMaps ? "with all maps cropped" : "preserving original sizes")} → {path}");
 		}
 
 		public static void ImportAtomicMap(string filepath)
@@ -151,11 +173,14 @@ namespace ClassicTilestorm
 			}
 		}
 
-		public static void ExportAtomicMap(Map map, string filepath = null, bool verbose = false)
+		public static void ExportAtomicMap(Map originalMap, string filepath = null, bool verbose = false)
 		{
-			if (map == null) return;
+			if (originalMap == null) return;
 
-			// Collect used definitions & textures
+			// THIS IS THE KEY: Work on a cropped copy — original stays untouched
+			var map = originalMap.CreateCroppedCopy();
+
+			// Collect used definitions & textures (from original — safer)
 			var usedTypes = map.table?
 				.Where(t => !string.IsNullOrEmpty(t))
 				.Distinct()
@@ -198,10 +223,11 @@ namespace ClassicTilestorm
 				string path = Path.Combine(folder, $"{map.name}.json");
 
 				File.WriteAllText(path, json);
-				Debug.Log($"ATOMIC MAP EXPORTED → {path}");
+				Debug.Log($"ATOMIC MAP EXPORTED (auto-cropped) → {path} ({map.width}x{map.height})");
 			}
 			finally
 			{
+				// Clean up atomic fields — not needed anymore
 				map.definitions = null;
 				map.textures = null;
 			}

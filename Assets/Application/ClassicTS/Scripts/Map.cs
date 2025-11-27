@@ -276,150 +276,22 @@ namespace ClassicTilestorm
 			return maxX >= 0 ? (minX, minZ, maxX, maxZ) : (0, 0, -1, -1);
 		}
 
+		/// <summary>
+		/// Returns a cropped copy of this map for serialization/export only.
+		/// Original map is untouched. Used automatically during export.
+		/// </summary>
+		public Map CreateCroppedCopy()
+		{
+			// Clone the map first (deep enough for our needs)
+			var copy = JsonConvert.DeserializeObject<Map>(JsonConvert.SerializeObject(this));
 
-		///// <summary>
-		///// Crops the map to the smallest rectangle that contains all non-empty tiles.
-		///// Content is aligned to bottom-left (0,0). All data preserved.
-		///// </summary>
-		///// <summary>
-		///// Crops the map to the smallest rectangle containing all non-empty tiles.
-		///// Content is moved to (0,0). All data (mixed[], waypoints, attachments) fully preserved.
-		///// Works 100% reliably — even on maps with content far from origin.
-		///// </summary>
-		//public bool CropToContent()
-		//{
-		//	if (tiles == null || tiles.Length == 0 || width <= 0 || height <= 0) return false;
+			// Now safely crop the copy
+			bool cropped = copy.CropToContent();
 
-		//	int minX = width, maxX = -1, minZ = height, maxZ = -1;
-		//	int emptyIdx = table != null ? Array.IndexOf(table, "tile_empty") : -1;
+			if (cropped)
+				Debug.Log($"[Export] Map '{copy.name}' auto-cropped to {copy.width}x{copy.height}");
 
-		//	// Find bounds of actual content
-		//	for (int i = 0; i < tiles.Length; i++)
-		//	{
-		//		int t = tiles[i];
-		//		bool isEmpty = t < 0 ||
-		//					   t == emptyIdx ||
-		//					   (table != null && t < table.Length && table[t] == "tile_empty");
-		//		if (isEmpty) continue;
-
-		//		int x = i % width;
-		//		int z = i / width;
-		//		minX = x;
-		//		maxX = Mathf.Max(maxX, x);
-		//		minZ = Mathf.Min(minZ, z);
-		//		maxZ = Mathf.Max(maxZ, z);
-		//	}
-
-		//	if (maxX < minX) return false; // no content
-
-		//	int cropWidth = maxX - minX + 1;
-		//	int cropHeight = maxZ - minZ + 1;
-
-		//	// Ensure tile_empty exists (same as Resize does)
-		//	int emptyIndex = table != null ? Array.IndexOf(table, "tile_empty") : -1;
-		//	if (emptyIndex == -1 && table != null)
-		//	{
-		//		var list = table.ToList();
-		//		list.Add("tile_empty");
-		//		table = list.ToArray();
-		//		emptyIndex = table.Length - 1;
-		//	}
-
-		//	int newSize = cropWidth * cropHeight;
-
-		//	// === Manual resize using TopLeft logic (safe, no rejection) ===
-		//	var newTiles = new int[newSize];
-		//	Array.Fill(newTiles, emptyIndex);
-
-		//	// Copy only the cropped region (from min→max)
-		//	for (int z = minZ; z <= maxZ; z++)
-		//		for (int x = minX; x <= maxX; x++)
-		//		{
-		//			int oldIdx = z * width + x;
-		//			if (oldIdx >= tiles.Length) continue;
-		//			int newX = x - minX;
-		//			int newZ = z - minZ;
-		//			newTiles[newZ * cropWidth + newX] = tiles[oldIdx];
-		//		}
-
-		//	// === Remap mixed[] exactly like Resize() does ===
-		//	var newMixed = new int[newSize];
-		//	if (mixed != null && mixed.Length == width * height)
-		//	{
-		//		for (int z = minZ; z <= maxZ; z++)
-		//			for (int x = minX; x <= maxX; x++)
-		//			{
-		//				int oldIdx = z * width + x;
-		//				int delta = mixed[oldIdx];
-		//				if (delta == 0) continue;
-
-		//				int oldSrc = oldIdx + delta;
-		//				if (oldSrc < 0 || oldSrc >= mixed.Length) continue;
-
-		//				int srcX = oldSrc % width;
-		//				int srcZ = oldSrc / width;
-
-		//				// Only copy if source was also inside crop bounds
-		//				if (srcX < minX || srcX > maxX || srcZ < minZ || srcZ > maxZ) continue;
-
-		//				int newX = x - minX;
-		//				int newZ = z - minZ;
-		//				int newSrcX = srcX - minX;
-		//				int newSrcZ = srcZ - minZ;
-
-		//				int newPos = newZ * cropWidth + newX;
-		//				int newSrcPos = newSrcZ * cropWidth + newSrcX;
-		//				newMixed[newPos] = newSrcPos - newPos;
-		//			}
-		//	}
-
-		//	// === Remap waypoints & attachments ===
-		//	if (waypoints != null)
-		//	{
-		//		foreach (var wp in waypoints)
-		//		{
-		//			if (wp.tile < 0) continue;
-		//			int x = wp.tile % width;
-		//			int z = wp.tile / width;
-		//			if (x < minX || x > maxX || z < minZ || z > maxZ)
-		//			{
-		//				wp.tile = -1;
-		//				continue;
-		//			}
-		//			int nx = x - minX;
-		//			int nz = z - minZ;
-		//			wp.tile = nz * cropWidth + nx;
-		//		}
-		//	}
-
-		//	if (attachments != null)
-		//	{
-		//		foreach (var att in attachments)
-		//		{
-		//			if (att.tile < 0) continue;
-		//			int x = att.tile % width;
-		//			int z = att.tile / width;
-		//			if (x < minX || x > maxX || z < minZ || z > maxZ)
-		//			{
-		//				att.tile = -1;
-		//				continue;
-		//			}
-		//			int nx = x - minX;
-		//			int nz = z - minZ;
-		//			att.tile = nz * cropWidth + nx;
-		//		}
-		//	}
-
-		//	// === Apply ===
-		//	width = cropWidth;
-		//	height = cropHeight;
-		//	tiles = newTiles;
-		//	mixed = newMixed;
-
-		//	Consolidate();
-
-		//	Debug.Log($"Map '{name}' cropped to {cropWidth}x{cropHeight} and shifted to (0,0). Success.");
-		//	return true;
-		//}
+			return copy;
+		}
 	}
 }
