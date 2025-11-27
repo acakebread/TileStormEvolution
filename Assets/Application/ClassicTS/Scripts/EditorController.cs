@@ -206,7 +206,7 @@ namespace ClassicTilestorm
 				}
 			}
 #else
-    Debug.Log("Import currently only available in Unity Editor");
+			Debug.Log("Import currently only available in Unity Editor");
 #endif
 		}
 
@@ -271,7 +271,7 @@ namespace ClassicTilestorm
 			// Optional: Update the "Locate Export Folder" button to point to the new location
 			// (It already uses PreviewSettingsStatic.ExportFolder, but now user can go anywhere)
 #else
-    Debug.Log("Export currently only available in Unity Editor");
+			Debug.Log("Export currently only available in Unity Editor");
 #endif
 		}
 	}
