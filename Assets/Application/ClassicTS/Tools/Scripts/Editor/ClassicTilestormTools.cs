@@ -1,9 +1,7 @@
-﻿// Assets/Editor/ClassicTilestormTools.cs
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEditor;
 using System.IO;
 using System.Collections.Generic;
-using System.Linq;
 using Newtonsoft.Json;
 
 namespace ClassicTilestorm.Editor
