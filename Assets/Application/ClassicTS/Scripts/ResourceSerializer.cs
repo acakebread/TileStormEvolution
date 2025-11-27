@@ -173,12 +173,12 @@ namespace ClassicTilestorm
 			}
 		}
 
-		public static void ExportAtomicMap(Map originalMap, string filepath = null, bool verbose = false)
+		public static void ExportAtomicMap(Map originalMap, string filepath = null, bool verbose = false, bool crop = true)
 		{
 			if (originalMap == null) return;
 
 			// THIS IS THE KEY: Work on a cropped copy — original stays untouched
-			var map = originalMap.CreateCroppedCopy();
+			var map = crop ? originalMap.CreateCroppedCopy() : originalMap;
 
 			// Collect used definitions & textures (from original — safer)
 			var usedTypes = map.table?
