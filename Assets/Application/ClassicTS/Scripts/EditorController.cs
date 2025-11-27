@@ -120,7 +120,22 @@ namespace ClassicTilestorm
 			if (null == mapManager || null == mapManager.CurrentMap) return;
 			//mapManager.CurrentMap.Resize(64, 64, Map.Anchor.Center);
 			if (mapManager.CurrentMap.Resize(64, 64, Map.Anchor.Center))
+			{
+				mapManager.CurrentMap.Consolidate();
 				ResourceManager.ApplyMapChanges(mapManager.CurrentMap);
+			}
+			var main = FindFirstObjectByType<MainController>();
+			if (null != main) main.ReloadCurrentMap();
+		}
+
+		public void CropMapTest()
+		{
+			if (null == mapManager || null == mapManager.CurrentMap) return;
+			if (mapManager.CurrentMap.CropToContent())
+			{
+				mapManager.CurrentMap.Consolidate();
+				ResourceManager.ApplyMapChanges(mapManager.CurrentMap);
+			}
 			var main = FindFirstObjectByType<MainController>();
 			if (null != main) main.ReloadCurrentMap();
 		}

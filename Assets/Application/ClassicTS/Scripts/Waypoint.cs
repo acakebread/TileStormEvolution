@@ -1,8 +1,6 @@
-﻿// ---------------------------------------------------------------
-// Waypoint.cs
-// ---------------------------------------------------------------
-using UnityEngine;
+﻿using UnityEngine;
 using Newtonsoft.Json;
+using MassiveHadronLtd;
 
 namespace ClassicTilestorm
 {
@@ -10,7 +8,7 @@ namespace ClassicTilestorm
 	public class Waypoint
 	{
 		public string name;
-		public int nTile;
+		public int tile;
 
 		[JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
 		public float[] vSrc;
@@ -18,38 +16,10 @@ namespace ClassicTilestorm
 		[JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
 		public float[] vDst;
 
-		// --------------------------------------------------------------------
-		// Runtime helpers (exactly the same as before)
-		// --------------------------------------------------------------------
-		public Vector3 GetVSrc() => vSrc != null && vSrc.Length == 3 && IsValid(vSrc)
-			? new Vector3(vSrc[0], vSrc[1], vSrc[2])
-			: Vector3.zero;
+		// CLEAN, READ/WRITE, NEVER SERIALIZED
+		[JsonIgnore] public Vector3 VSrc { get => Vector3Serialization.ToVector3(vSrc); set => vSrc = Vector3Serialization.FromVector3(value); }
+		[JsonIgnore] public Vector3 VDst { get => Vector3Serialization.ToVector3(vDst); set => vDst = Vector3Serialization.FromVector3(value); }
 
-		public Vector3 GetVDst() => vDst != null && vDst.Length == 3 && IsValid(vDst)
-			? new Vector3(vDst[0], vDst[1], vDst[2])
-			: Vector3.zero;
-
-		public bool IsCamera() => vSrc != null && vSrc.Length == 3 && IsValid(vSrc) &&
-								  vDst != null && vDst.Length == 3 && IsValid(vDst);
-
-		private static bool IsValid(float[] v)
-		{
-			return v != null &&
-				   !float.IsNaN(v[0]) && !float.IsInfinity(v[0]) &&
-				   !float.IsNaN(v[1]) && !float.IsInfinity(v[1]) &&
-				   !float.IsNaN(v[2]) && !float.IsInfinity(v[2]);
-		}
-
-		public void SetVSrc(Vector3 vec)
-		{
-			float[] temp = new[] { vec.x, vec.y, vec.z };
-			vSrc = IsValid(temp) ? temp : null;
-		}
-
-		public void SetVDst(Vector3 vec)
-		{
-			float[] temp = new[] { vec.x, vec.y, vec.z };
-			vDst = IsValid(temp) ? temp : null;
-		}
+		public bool IsCamera() => Vector3Serialization.IsValid(vSrc) && Vector3Serialization.IsValid(vDst);
 	}
 }

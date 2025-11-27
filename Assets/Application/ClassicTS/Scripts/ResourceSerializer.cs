@@ -7,6 +7,27 @@ using Newtonsoft.Json.Serialization;
 
 namespace ClassicTilestorm
 {
+	public static class JsonSetup
+	{
+		private static bool _initialized = false;
+
+		[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+		public static void Init()
+		{
+			if (_initialized) return;
+
+			// Create settings once
+			var settings = new JsonSerializerSettings();
+			settings.Converters.Add(new MapAttachmentConverter());
+
+			// Apply to ALL future JsonConvert calls
+			JsonConvert.DefaultSettings = () => settings;
+
+			_initialized = true;
+			Debug.Log("MapAttachmentConverter registered globally (Unity-compatible)");
+		}
+	}
+
 	public static class ResourceSerializer
 	{
 		private static void EnsureFolder(string path) { if (!Directory.Exists(path)) Directory.CreateDirectory(path); }//helper
@@ -18,7 +39,7 @@ namespace ClassicTilestorm
 				Debug.LogError("ResourceManager: invalid DatabaseJsonFile");
 				return;
 			}
-
+			JsonSetup.Init();
 			ResourceManager.database = LoadDatabase(json.text);
 			Debug.Log("Database loaded from DatabaseJsonFile");
 		}

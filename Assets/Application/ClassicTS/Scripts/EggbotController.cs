@@ -31,7 +31,7 @@ namespace ClassicTilestorm
 		public event System.Action<int> OnPuzzleSolved;
 		public event System.Action OnLevelCompleted;
 
-		public int NavDirection(IMapManager map) => Navigation.NavToDest(map, currentTile, map.Waypoints[dstWaypoint].nTile);
+		public int NavDirection(IMapManager map) => Navigation.NavToDest(map, currentTile, map.Waypoints[dstWaypoint].tile);
 
 		private void Awake()
 		{
@@ -48,7 +48,7 @@ namespace ClassicTilestorm
 			if (null == map || -1 == currentTile) { Debug.LogError("Initialize: Invalid setup"); return; }
 
 			transform.position = targetPosition = map.TileWorldPosition(currentTile);
-			var yaw = map.Waypoints?.Length > 1 ? Navigation.DirToAngle(Navigation.NavToDest(map, map.Waypoints[0].nTile, map.Waypoints[1].nTile)) : 0f;
+			var yaw = map.Waypoints?.Length > 1 ? Navigation.DirToAngle(Navigation.NavToDest(map, map.Waypoints[0].tile, map.Waypoints[1].tile)) : 0f;
 			transform.rotation = Quaternion.Euler(0f, yaw, 0f);
 		}
 
@@ -81,7 +81,7 @@ namespace ClassicTilestorm
 			{
 				if (actionQueue.Count > 0) { actionQueue.Dequeue()?.Invoke(); return; }
 
-				var destinationTile = map.Waypoints[dstWaypoint].nTile;
+				var destinationTile = map.Waypoints[dstWaypoint].tile;
 				if (TestSpin(destinationTile)) return;
 				if (TestMove(destinationTile)) return;
 				if (TestTurn(destinationTile)) return;

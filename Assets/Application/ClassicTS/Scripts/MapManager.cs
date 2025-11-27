@@ -160,7 +160,7 @@ namespace ClassicTilestorm
 
 		public int GetStartTile()
 		{
-			if (Waypoints.Length > 0) return Waypoints[0].nTile;
+			if (Waypoints.Length > 0) return Waypoints[0].tile;
 
 			for (int i = 0; i < Count; ++i)
 				if (GetTile(i).IsStart) return i;
@@ -171,7 +171,7 @@ namespace ClassicTilestorm
 
 		public int GetEndTile()
 		{
-			if (Waypoints.Length > 0) return Waypoints.Last().nTile;
+			if (Waypoints.Length > 0) return Waypoints.Last().tile;
 
 			for (int i = 0; i < Count; ++i)
 				if (GetTile(i).IsEnd) return i;
@@ -249,7 +249,7 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			generated.Add(new Waypoint { nTile = start });
+			generated.Add(new Waypoint { tile = start });
 
 			int cur = start;
 			int dir = Navigation.NavToDest(this, cur, end);
@@ -258,7 +258,7 @@ namespace ClassicTilestorm
 				while (cur != end)
 				{
 					if (FindAdjacentConsole(cur) != -1)
-						generated.Add(new Waypoint { nTile = cur });
+						generated.Add(new Waypoint { tile = cur });
 
 					int next = Navigation.GetAdjacentTile(this, cur, dir);
 					if (next == -1 || next == start) break;
@@ -273,7 +273,7 @@ namespace ClassicTilestorm
 				}
 			}
 
-			generated.Add(new Waypoint { nTile = end });
+			generated.Add(new Waypoint { tile = end });
 			currentMap.waypoints = generated.ToArray();
 			Debug.Log($"Generated {currentMap.waypoints.Length} waypoints.");
 		}
@@ -320,9 +320,8 @@ namespace ClassicTilestorm
 				currentMap.table = list.ToArray();
 			}
 
-			// Rebuild compact indices for saving
-			var definitions = mapTiles.Select(mt => mt.definitionId).ToArray();
-			currentMap.Consolidate(definitions);
+			currentMap.tiles[index] = Array.IndexOf(currentMap.table, id);
+			currentMap.Consolidate();// Rebuild compact indices for saving
 
 			ResourceManager.ApplyMapChanges(currentMap);
 		}

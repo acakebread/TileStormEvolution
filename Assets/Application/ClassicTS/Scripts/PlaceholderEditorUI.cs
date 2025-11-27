@@ -185,10 +185,11 @@ namespace ClassicTilestorm
 			Rect dragButtonRect = new (margin, panelBottomY + spacing + 1 * (buttonHeight + spacing), buttonWidth, buttonHeight);
 			Rect paintButtonRect = new (margin, panelBottomY + spacing + 2 * (buttonHeight + spacing), buttonWidth, buttonHeight);
 			Rect resizeButtonRect = new(margin, panelBottomY + spacing + 3 * (buttonHeight + spacing), buttonWidth, buttonHeight);
-			Rect saveButtonRect = new (margin, panelBottomY + spacing + 4 * (buttonHeight + spacing), buttonWidth, buttonHeight);
-			Rect reloadButtonRect = new (margin, panelBottomY + spacing + 5 * (buttonHeight + spacing), buttonWidth, buttonHeight);
-			Rect exptButtonRect = new (margin, panelBottomY + spacing + 6 * (buttonHeight + spacing), buttonWidth, buttonHeight);
-			Rect importButtonRect = new (margin, panelBottomY + spacing + 7 * (buttonHeight + spacing), buttonWidth, buttonHeight);
+			Rect cropButtonRect = new(margin, panelBottomY + spacing + 4 * (buttonHeight + spacing), buttonWidth, buttonHeight);
+			Rect saveButtonRect = new (margin, panelBottomY + spacing + 5 * (buttonHeight + spacing), buttonWidth, buttonHeight);
+			Rect reloadButtonRect = new (margin, panelBottomY + spacing + 6 * (buttonHeight + spacing), buttonWidth, buttonHeight);
+			Rect exptButtonRect = new (margin, panelBottomY + spacing + 7 * (buttonHeight + spacing), buttonWidth, buttonHeight);
+			Rect importButtonRect = new (margin, panelBottomY + spacing + 8 * (buttonHeight + spacing), buttonWidth, buttonHeight);
 
 			GUIStyle toggleStyle = new GUIStyle(GUI.skin.toggle);
 			toggleStyle.normal.background = toggleOffBackgroundTexture;
@@ -232,6 +233,9 @@ namespace ClassicTilestorm
 
 			if (GUI.Button(resizeButtonRect, "Resize Test", resizeButtonStyle))
 				editorController.ResizeMapTest();
+
+			if (GUI.Button(cropButtonRect, "Crop Test", resizeButtonStyle))// reuse resizeButtonStyle
+				editorController.CropMapTest();
 
 			// === SAVE DATABASE BUTTON ===
 			GUIStyle saveButtonStyle = new GUIStyle(GUI.skin.button);
