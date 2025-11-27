@@ -118,8 +118,7 @@ namespace ClassicTilestorm
 		public void ResizeMapTest(int x = 64, int z = 64)
 		{
 			if (null == mapManager || null == mapManager.CurrentMap) return;
-			//mapManager.CurrentMap.Resize(64, 64, Map.Anchor.Center);
-			if (mapManager.CurrentMap.Resize(64, 64, Map.Anchor.Center))
+			if (mapManager.CurrentMap.Resize(x, z, Map.Anchor.Center))
 			{
 				mapManager.CurrentMap.Consolidate();
 				ResourceManager.ApplyMapChanges(mapManager.CurrentMap);
