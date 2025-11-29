@@ -40,49 +40,19 @@ namespace ClassicTilestorm.Editor
 
 				string assetPath = AssetDatabase.GetAssetPath(databasePBF);
 				string filePath = Path.GetFullPath(assetPath);
-				//filePath.Replace(".pbf", ".json").Trim();
-				//Debug.Log(filePath);
-
-
-				//	string filePath = Application.streamingAssetsPath + "/ClassicTS/database.bin";
-					try
-					{
-						string jsonOutput = ParseDatabase(filePath);
-						string outputPath = filePath.Replace(".pbf", ".json").Trim();
-						File.WriteAllText(outputPath, jsonOutput);
-						Debug.Log($"Exported to {outputPath}\n{jsonOutput.Substring(0, Mathf.Min(500, jsonOutput.Length))}");
-					}
-					catch (Exception ex)
-					{
-						Debug.LogError($"Error parsing file: {ex.Message}");
-					}
+				try
+				{
+					string jsonOutput = ParseDatabase(filePath);
+					string outputPath = filePath.Replace(".pbf", ".json").Trim();
+					File.WriteAllText(outputPath, jsonOutput);
+					Debug.Log($"Exported to {outputPath}\n{jsonOutput.Substring(0, Mathf.Min(500, jsonOutput.Length))}");
 				}
+				catch (Exception ex)
+				{
+					Debug.LogError($"Error parsing file: {ex.Message}");
+				}
+			}
 		}
-
-		//void Start()
-		//{
-		//	// Ensure includeCompressedBytes is false when boundMaps is true
-		//	if (boundMaps)
-		//		includeCompressedBytes = false;
-
-		//	string filePath = Application.streamingAssetsPath + "/ClassicTS/database.bin";
-		//	try
-		//	{
-		//		string jsonOutput = ParseDatabase(filePath);
-		//		string outputPath = Application.persistentDataPath + "/TileStormDatabase.json";
-		//		File.WriteAllText(outputPath, jsonOutput);
-		//		Debug.Log($"Exported to {outputPath}\n{jsonOutput.Substring(0, Mathf.Min(500, jsonOutput.Length))}");
-		//	}
-		//	catch (Exception ex)
-		//	{
-		//		Debug.LogError($"Error parsing file: {ex.Message}");
-		//	}
-		//}
-
-
-
-
-
 
 		public static string ParseDatabase(string filePath)
 		{
