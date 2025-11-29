@@ -32,15 +32,15 @@ namespace ClassicTilestorm
 		// Runtime-only mutable state
 		// ------------------------------------------------------------------
 		private Map currentMap;
-		private int[] indices;                    // Scrambled/solved visual indices
+		private int[] indices;// Scrambled/solved visual indices
 
 		// ONE source of truth per map slot
 		private MapTile[] mapTiles;
 
 		private struct MapTile
 		{
-			public string definitionId;   // e.g. "tile_grass", "tile_empty"
-			public Tile tile;             // Runtime Tile with flags + GameObject
+			public string definitionId;// e.g. "tile_grass", "tile_empty"
+			public Tile tile;// Runtime Tile with flags + GameObject
 
 			public MapTile(string id, Tile t)
 			{
@@ -111,7 +111,7 @@ namespace ClassicTilestorm
 
 			LoadTileData(currentMap.tiles);
 
-			if (PreviewSettings.Scrambled) Scramble();
+			if (PreviewSettings.Scrambled) Preset();
 			else Solve();
 
 			InitializeWindController();
@@ -197,21 +197,24 @@ namespace ClassicTilestorm
 			return -1;
 		}
 
-		//public void Scramble()
-		//{
-		//	indices = Enumerable.Range(0, Count).Select(n => n + (currentMap.mixed?[n] ?? 0)).ToArray();
-		//	UpdateTileObjectNamesAndPositions();
-		//}
-
-		//public void Solve()
-		//{
-		//	indices = Enumerable.Range(0, Count).ToArray();
-		//	UpdateTileObjectNamesAndPositions();
-		//}
+		public void Preset()
+		{
+			indices = Enumerable.Range(0, Count).ToArray();
+			UpdateTileObjectNamesAndPositions();
+		}
 
 		public void Scramble()
 		{
-			indices = Enumerable.Range(0, Count).ToArray();
+			const int iterations = 16;
+
+			//indices = Enumerable.Range(0, Count).ToArray();
+			for (var n = 0; n < indices.Length * iterations; ++n)
+			{
+				var stride = (UnityEngine.Random.value > 0.5f ? Width : 1) * (UnityEngine.Random.value > 0.5f ? 1 : -1);
+				var tileStrip = TileStripHelper.GetTileStrip(this, n % indices.Length, stride, true);
+				TileStripHelper.RollStrip(this, tileStrip);
+			}
+
 			UpdateTileObjectNamesAndPositions();
 		}
 

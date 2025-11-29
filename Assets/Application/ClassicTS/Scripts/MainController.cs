@@ -66,6 +66,8 @@ namespace ClassicTilestorm
 				LoadMap(mapManager.CurrentMap.name);
 		}
 
+		public void Preset() { if (null != mapManager) mapManager.Preset(); }
+
 		public void Scramble() { if (null != mapManager) mapManager.Scramble(); }
 
 		public void Solve()

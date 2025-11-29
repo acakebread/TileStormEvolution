@@ -20,7 +20,7 @@ namespace ClassicTilestorm
 		private readonly float animationSpeed = 300f; // Pixels per second for animation
 
 		// Button layout constants
-		private readonly float buttonWidth = 100f;
+		private readonly float buttonWidth = 90f;
 		private readonly float buttonHeight = 30f;
 		private readonly float buttonStartX = 10f; // Left margin for buttons
 		private readonly float spacing = 10f;
@@ -227,6 +227,9 @@ namespace ClassicTilestorm
 			currentX += buttonWidth + spacing;
 
 			if (GUI.Button(new Rect(currentX, y, buttonWidth, buttonHeight), "Reload")) ChangeMap(0);
+			currentX += buttonWidth + spacing;
+
+			if (GUI.Button(new Rect(currentX, y, buttonWidth, buttonHeight), "Preset")) mainController.Preset();
 			currentX += buttonWidth + spacing;
 
 			if (GUI.Button(new Rect(currentX, y, buttonWidth, buttonHeight), "Scramble")) mainController.Scramble();
