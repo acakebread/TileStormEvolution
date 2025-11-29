@@ -197,15 +197,27 @@ namespace ClassicTilestorm
 			return -1;
 		}
 
+		//public void Scramble()
+		//{
+		//	indices = Enumerable.Range(0, Count).Select(n => n + (currentMap.mixed?[n] ?? 0)).ToArray();
+		//	UpdateTileObjectNamesAndPositions();
+		//}
+
+		//public void Solve()
+		//{
+		//	indices = Enumerable.Range(0, Count).ToArray();
+		//	UpdateTileObjectNamesAndPositions();
+		//}
+
 		public void Scramble()
 		{
-			indices = Enumerable.Range(0, Count).Select(n => n + (currentMap.mixed?[n] ?? 0)).ToArray();
+			indices = Enumerable.Range(0, Count).ToArray();
 			UpdateTileObjectNamesAndPositions();
 		}
 
 		public void Solve()
 		{
-			indices = Enumerable.Range(0, Count).ToArray();
+			indices = Enumerable.Range(0, Count).Select(n => n + (currentMap.solve?[n] ?? 0)).ToArray();
 			UpdateTileObjectNamesAndPositions();
 		}
 

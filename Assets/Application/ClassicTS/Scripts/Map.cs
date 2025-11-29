@@ -19,7 +19,9 @@ namespace ClassicTilestorm
 		public Waypoint[] waypoints;
 		public string[] table;
 		public int[] tiles;
-		public int[] mixed;
+		public int[] mixed;//legacy
+		public int[] solve;
+
 		public MapAttachment[] attachments = Array.Empty<MapAttachment>();
 
 		// Atomic fields - ignored during normal serialization
@@ -29,6 +31,8 @@ namespace ClassicTilestorm
 		[JsonIgnore] public string author = "Player";
 		[JsonIgnore] public string exportedFrom = "ClassicTilestorm";
 
+		public bool ShouldSerializemixed() => mixed != null && mixed.Length > 0;//legacy
+		public bool ShouldSerializesolve() => solve != null && solve.Length > 0;
 		public bool ShouldSerializewaypoints() => waypoints != null && waypoints.Length > 0;
 		public bool ShouldSerializeattachments() => attachments != null && attachments.Length > 0;
 
@@ -169,19 +173,19 @@ namespace ClassicTilestorm
 					}
 				}
 
-			// mixed[] — fully preserved
-			var newMixed = new int[newSize];
-			if (mixed != null && mixed.Length == oldWidth * oldHeight)
+			// solve[] — fully preserved
+			var newSolve = new int[newSize];
+			if (solve != null && solve.Length == oldWidth * oldHeight)
 			{
 				for (int z = 0; z < oldHeight; z++)
 					for (int x = 0; x < oldWidth; x++)
 					{
 						int oldIdx = z * oldWidth + x;
-						int delta = mixed[oldIdx];
+						int delta = solve[oldIdx];
 						if (delta == 0) continue;
 
 						int srcIdx = oldIdx + delta;
-						if (srcIdx < 0 || srcIdx >= mixed.Length) continue;
+						if (srcIdx < 0 || srcIdx >= solve.Length) continue;
 
 						int srcX = srcIdx % oldWidth;
 						int srcZ = srcIdx / oldWidth;
@@ -196,7 +200,7 @@ namespace ClassicTilestorm
 						{
 							int newPos = nz * newWidth + nx;
 							int newSrc = nsz * newWidth + nsx;
-							newMixed[newPos] = newSrc - newPos;
+							newSolve[newPos] = newSrc - newPos;
 						}
 					}
 			}
@@ -221,7 +225,7 @@ namespace ClassicTilestorm
 			width = newWidth;
 			height = newHeight;
 			tiles = newTiles;
-			mixed = newMixed;
+			solve = newSolve;
 
 			return true;
 		}
