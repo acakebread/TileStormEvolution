@@ -47,7 +47,7 @@ namespace ClassicTilestorm
 			while (true)
 			{
 				tile = map.GetTile(lastIndex + stride);
-				if (!tile.IsSlide || tile.IsDock || (!difficult && tile.IsRoll)) break;
+				if (!tile.IsMove || tile.IsDock || (!difficult && tile.IsRoll)) break;
 				lastIndex += stride;
 			}
 
@@ -72,7 +72,7 @@ namespace ClassicTilestorm
 				}
 				else
 				{
-					if (!tile.IsSlide) break;
+					if (!tile.IsMove) break;
 					if (!difficult && !tile.IsDock && !tile.IsRoll) break;
 				}
 				strip.First -= stride;

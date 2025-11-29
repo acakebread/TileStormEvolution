@@ -24,7 +24,7 @@ namespace ClassicTilestorm
 		[JsonIgnore] public bool bStart => HasFlag("Start");
 		[JsonIgnore] public bool bEnd => HasFlag("End");
 		[JsonIgnore] public bool bConsole => HasFlag("Console");
-		[JsonIgnore] public bool bSlide => HasFlag("Slide");
+		[JsonIgnore] public bool bMove => HasFlag("Move");
 		[JsonIgnore] public bool bRoll => HasFlag("Roll");
 		[JsonIgnore] public bool bDock => HasFlag("Dock");
 		[JsonIgnore] public bool bPuzzleBlock => HasFlag("PuzzleBlock");
