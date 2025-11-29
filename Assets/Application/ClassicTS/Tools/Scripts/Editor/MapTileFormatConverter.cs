@@ -176,7 +176,7 @@ namespace ClassicTilestorm.Editor
 		{
 			// These allow us to read/write the fields during conversion
 			public int[] mixed;  // legacy
-			public int[] solve;  // new
+			//public int[] solve;  // new
 		}
 	}
 }

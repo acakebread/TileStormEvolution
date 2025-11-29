@@ -19,7 +19,6 @@ namespace ClassicTilestorm
 		public Waypoint[] waypoints;
 		public string[] table;
 		public int[] tiles;
-		public int[] mixed;//legacy
 		public int[] solve;
 
 		public MapAttachment[] attachments = Array.Empty<MapAttachment>();
@@ -31,7 +30,6 @@ namespace ClassicTilestorm
 		[JsonIgnore] public string author = "Player";
 		[JsonIgnore] public string exportedFrom = "ClassicTilestorm";
 
-		public bool ShouldSerializemixed() => mixed != null && mixed.Length > 0;//legacy
 		public bool ShouldSerializesolve() => solve != null && solve.Length > 0;
 		public bool ShouldSerializewaypoints() => waypoints != null && waypoints.Length > 0;
 		public bool ShouldSerializeattachments() => attachments != null && attachments.Length > 0;
