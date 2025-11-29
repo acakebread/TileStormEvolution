@@ -41,7 +41,7 @@ namespace ClassicTilestorm
 			strip.Count = 1;
 
 			if (0 == stride)
-				return strip;
+				return strip;//return invalid strip as 'fail' condition
 
 			var lastIndex = startIndex;
 			while (true)
