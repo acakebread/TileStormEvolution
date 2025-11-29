@@ -36,7 +36,7 @@ namespace ClassicTilestorm
 		{
 			var strip = new TileStrip { First = -1, Count = 0, Stride = 0 };
 			var tile = map.GetTile(startIndex);
-			if (!tile.Interactive) return strip;
+			if (!tile.IsDrag) return strip;
 			strip.First = startIndex;
 			strip.Count = 1;
 
@@ -47,40 +47,47 @@ namespace ClassicTilestorm
 			while (true)
 			{
 				tile = map.GetTile(lastIndex + stride);
-				if (!tile.IsMove || tile.IsDock || (!difficult && tile.IsRoll)) break;
+				if (!tile.IsDrag) break;//skip all movable tiles
+				lastIndex += stride;
+			}
+
+			while (difficult)
+			{
+				tile = map.GetTile(lastIndex + stride);
+				if (!(tile.IsDrag | tile.IsRoll)) break;
 				lastIndex += stride;
 			}
 
 			while (true)
 			{
 				tile = map.GetTile(lastIndex + stride);
-				if (!tile.IsRoll) break;
+				if (!(tile.IsDock | tile.IsRoll)) break;
 				lastIndex += stride;
 			}
 
-			if (!map.GetTile(lastIndex).IsRoll)
-				return strip;
-
-			var testDock = difficult && map.GetTile(lastIndex).IsDock;
+			var lastTile = map.GetTile(lastIndex);
+			if (!(lastTile.IsRoll | lastTile.IsDock))
+				return strip;//return invalid strip as 'fail' condition
 
 			while (true)
 			{
 				tile = map.GetTile(strip.First - stride);
-				if (testDock)
-				{
-					if (!tile.IsDock) break;
-				}
-				else
-				{
-					if (!tile.IsMove) break;
-					if (!difficult && !tile.IsDock && !tile.IsRoll) break;
-				}
+				if (!(tile.IsDock | tile.IsRoll)) break;
+				strip.First -= stride;
+			}
+
+			var testRoll = difficult && map.GetTile(lastIndex).IsRoll;
+
+			while (testRoll)
+			{
+				tile = map.GetTile(strip.First - stride);
+				if (!(tile.IsDrag | tile.IsRoll | tile.IsDock)) break;
 				strip.First -= stride;
 			}
 
 			strip.Count = (lastIndex - strip.First) / stride + 1;
 			strip.Stride = stride;
-			return strip;
+			return strip;//return draggable strip
 		}
 
 		public static void ResetStrip(IMapManager map, in TileStrip strip)

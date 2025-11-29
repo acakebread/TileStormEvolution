@@ -144,7 +144,7 @@ namespace ClassicTilestorm
 				if (id != "tile_empty" && definition != null)
 				{
 					tile.GameObject = GeometryManager.InstantiateTile(
-						definition, transform, TileWorldPosition(n), tile.Interactive);
+						definition, transform, TileWorldPosition(n), tile.IsDrag);
 				}
 
 				mapTiles[n] = new MapTile(id, tile);
@@ -304,7 +304,7 @@ namespace ClassicTilestorm
 			if (id != "tile_empty" && def != null)
 			{
 				newTile.GameObject = GeometryManager.InstantiateTile(
-					def, transform, TileWorldPosition(index), newTile.Interactive);
+					def, transform, TileWorldPosition(index), newTile.IsDrag);
 			}
 
 			mapTiles[index] = new MapTile(id, newTile);

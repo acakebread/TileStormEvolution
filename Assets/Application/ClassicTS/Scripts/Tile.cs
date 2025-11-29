@@ -8,7 +8,7 @@ namespace ClassicTilestorm
 		public const int South = 1 << 1;   // 0b00000000010
 		public const int East = 1 << 2;    // 0b00000000100
 		public const int West = 1 << 3;    // 0b00000001000
-		public const int Move = 1 << 4;    // 0b00000010000
+		public const int Drag = 1 << 4;    // 0b00000010000
 		public const int Roll = 1 << 5;    // 0b00000100000
 		public const int Dock = 1 << 6;    // 0b00001000000
 		public const int Start = 1 << 7;   // 0b00010000000
@@ -31,9 +31,9 @@ namespace ClassicTilestorm
 				if (d.bSouth) f |= South;
 				if (d.bEast) f |= East;
 				if (d.bWest) f |= West;
-				if (d.bDock) f |= Dock;
+				if (d.bDrag) f |= Drag;
 				if (d.bRoll) f |= Roll;
-				if (d.bMove) f |= Move;
+				if (d.bDock) f |= Dock;
 				if (d.bStart) f |= Start;
 				if (d.bEnd) f |= End;
 				if (d.bDoor) f |= Door;
@@ -45,10 +45,9 @@ namespace ClassicTilestorm
 		public readonly bool IsStart => (flags & Start) != 0;
 		public readonly bool IsEnd => (flags & End) != 0;
 		public readonly bool IsConsole => (flags & Console) != 0;
-		public readonly bool IsMove => (flags & Move) != 0;
+		public readonly bool IsDrag => (flags & Drag) != 0;
 		public readonly bool IsDock => (flags & Dock) != 0;
 		public readonly bool IsRoll => (flags & Roll) != 0;
-		public readonly bool Interactive => !(IsDock || IsRoll) && IsMove;
 		public readonly int Nav => flags & navMask;
 
 		public GameObject GameObject;

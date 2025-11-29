@@ -50,7 +50,7 @@ namespace ClassicTilestorm
 			var vert = MapManager.ScreenToWorld(camera, screenPos);
 			var index = imap.WorldToMapIndex(vert);
 			var tile = imap.GetTile(index);
-			if (false == tile.Interactive) return;
+			if (false == tile.IsDrag) return;
 
 			last = vert;
 			delta = Vector3.zero;
