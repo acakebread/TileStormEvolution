@@ -77,7 +77,6 @@ namespace ClassicTilestorm
 			}
 
 			var testRoll = difficult && map.GetTile(lastIndex).IsRoll;
-
 			while (testRoll)
 			{
 				tile = map.GetTile(strip.First - stride);
