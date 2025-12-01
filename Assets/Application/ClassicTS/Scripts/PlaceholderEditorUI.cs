@@ -7,7 +7,7 @@ namespace ClassicTilestorm
 {
 	public class PlaceholderEditorUI : MonoBehaviour
 	{
-		private float panelBottomY = 10f;
+		private float panelYoffset = 10f;
 
 		private const float margin = 10f;
 		private const float spacing = 10f;
@@ -35,7 +35,7 @@ namespace ClassicTilestorm
 		public event Action OnCropMapTestRequested;
 		public event Action<Definition> OnTileSelected;
 
-		public void Initialize(float bottomY) => panelBottomY = bottomY;
+		public void Initialize(float yOffset) => panelYoffset = yOffset;
 
 		public bool IsGuiControlActive()
 			=> GUIUtility.hotControl != 0 || isMouseOverTileSelector || (EventSystem.current && EventSystem.current.IsPointerOverGameObject());
@@ -53,12 +53,12 @@ namespace ClassicTilestorm
 			Vector2 mousePos = Input.mousePosition;
 			mousePos.y = Screen.height - mousePos.y;
 
-			float leftY = panelBottomY + spacing;
+			float leftY = panelYoffset + spacing;
 			if (new Rect(margin, leftY, buttonWidth + 20f, buttonHeight * 9 + spacing * 9).Contains(mousePos))
 				return true;
 
 			float tx = Screen.width - tileSelectorWidth - margin;
-			float ty = panelBottomY + spacing;
+			float ty = panelYoffset + spacing;
 			float th = Screen.height - ty - margin;
 			return new Rect(tx, ty, tileSelectorWidth, th).Contains(mousePos);
 		}
@@ -71,7 +71,7 @@ namespace ClassicTilestorm
 			bool wasOver = isMouseOverTileSelector;
 
 			float x = Screen.width - tileSelectorWidth - margin;
-			float y = panelBottomY + spacing;
+			float y = panelYoffset + spacing;
 			float h = Screen.height - y - margin;
 
 			isMouseOverTileSelector = new Rect(x, y, tileSelectorWidth, h).Contains(mp);
@@ -183,7 +183,7 @@ namespace ClassicTilestorm
 
 		public void DrawMainUI(string mode, bool gridVisible)
 		{
-			float y = panelBottomY + spacing;
+			float y = panelYoffset + spacing;
 
 			Color prevColor = GUI.color;
 			Color prevContentColor = GUI.contentColor;
@@ -222,7 +222,7 @@ namespace ClassicTilestorm
 		public void DrawPaintUI(string selectedId)
 		{
 			float tx = Screen.width - tileSelectorWidth - margin;
-			float ty = panelBottomY + spacing;
+			float ty = panelYoffset + spacing;
 			float th = Screen.height - ty - margin;
 			Rect selectorRect = new Rect(tx, ty, tileSelectorWidth, th);
 
