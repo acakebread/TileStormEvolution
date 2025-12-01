@@ -16,10 +16,10 @@ namespace ClassicTilestorm
 		private void Awake()
 		{
 			if (!FindAnyObjectByType<EventSystem>()) new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
+			ResourceSerializer.Initialise(PreviewSettings.DatabaseJsonFile);
+			cameraController = gameObject.AddComponent<MainCameraController>();
 			gameController = gameObject.AddComponent<GameController>();
 			editorController = gameObject.AddComponent<EditorController>();
-			cameraController = gameObject.AddComponent<MainCameraController>();
-			ResourceSerializer.Initialise(PreviewSettings.DatabaseJsonFile);
 			LoadMap(PreviewSettings.LoadMapName);
 			SetPreviewMode(PreviewSettings.CurrentMode);//invoke to enable and disable game and editor controllers - ToDo improve this
 		}

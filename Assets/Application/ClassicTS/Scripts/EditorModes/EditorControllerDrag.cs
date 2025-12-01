@@ -10,10 +10,7 @@ namespace ClassicTilestorm
 		private Vector3 cameraStartPosition;
 		private Plane dragPlane;
 
-		public EditorControllerDrag(Camera camera, EditorController editorController)
-			: base(camera, editorController)  // passes to base
-		{
-		}
+		public EditorControllerDrag(EditorController editorController) : base(editorController) { }
 
 		public override void Update()
 		{

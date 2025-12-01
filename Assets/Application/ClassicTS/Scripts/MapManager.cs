@@ -24,6 +24,9 @@ namespace ClassicTilestorm
 		int FindAdjacentConsole(int nTile);
 		Waypoint[] Waypoints { get; }
 		Map CurrentMap { get; }
+		Transform CurrentTransform { get; }
+		string GetDefinitionAtIndex(int mapIndex);
+		void UpdateTileAt(int x, int z, string id);
 	}
 
 	public class MapManager : MonoBehaviour, IMapManager
@@ -53,6 +56,7 @@ namespace ClassicTilestorm
 		// IMapData / IMapManager forwarded properties
 		// ------------------------------------------------------------------
 		public Map CurrentMap => currentMap;
+		public Transform CurrentTransform => transform;
 
 		public int Width => currentMap?.width ?? 0;
 		public int Height => currentMap?.height ?? 0;

@@ -1,176 +1,82 @@
 using UnityEngine;
-using System.Collections.Generic;
-using System.Linq;
 using UnityEngine.EventSystems;
+using System.Collections.Generic;
 
 namespace ClassicTilestorm
 {
 	public class EditorControllerPaint : EditorControllerMovement
 	{
-		private MapManager mapManager;
-		private string selectedDefinitionId = "tile_empty";
-		private Definition selectedDefinition;
 		private Vector3 mouseDownPos;
-		private Vector3 mouseDownPosLMB;
-		private int mouseDownMapIndex = -1;
-		private List<string> definitionCycleList;
+
+		private string selectedDefinitionId = "tile_empty";
+		public string SelectedDefinitionID => selectedDefinitionId;
+		private List<string> definitionCycleList = new();
 		private int cycleIndex = 0;
 
-		public EditorControllerPaint(Camera camera, MapManager map, EditorController editorController, string definitionId = "tile_empty")
-			: base(camera, editorController)
-		{
-			mapManager = map;
-			SetSelectedDefinitionById(definitionId);
-			definitionCycleList = new List<string>();
-			UpdateTileCycleList(selectedDefinitionId);
-		}
-
-		public void SetSelectedDefinition(Definition def)
-		{
-			if (def == null)
-			{
-				selectedDefinition = ResourceManager.GetDefinition("tile_empty");
-				selectedDefinitionId = "tile_empty";
-			}
-			else
-			{
-				selectedDefinition = def;
-				selectedDefinitionId = def.id;
-			}
-
-			UpdateTileCycleList(selectedDefinitionId);
-			cycleIndex = definitionCycleList.IndexOf(selectedDefinitionId);
-			if (cycleIndex < 0) cycleIndex = 0;
-		}
-
-		private void SetSelectedDefinitionById(string id)
-		{
-			var def = ResourceManager.GetDefinition(id);
-			SetSelectedDefinition(def ?? ResourceManager.GetDefinition("tile_empty"));
-		}
+		public EditorControllerPaint(EditorController editorController) : base(editorController) { }
 
 		public override void Update()
 		{
 			base.Update();
 			if (!camera || editorController.GetEditorUI().IsGuiControlActive() || EventSystem.current.IsPointerOverGameObject()) return;
 
-			if (selectedDefinition != null)
-				GeometryUtil.UpdateGhostTile(camera, mapManager, selectedDefinition);
+			if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1))
+				mouseDownPos = Input.mousePosition;//store mouse down position
+
+			if (Input.GetMouseButtonUp(0) && Vector3.Distance(Input.mousePosition, mouseDownPos) < 5f)
+				EditMapTile(selectedDefinitionId);//place a tile
+
+			if (Input.GetMouseButtonUp(1) && Vector3.Distance(Input.mousePosition, mouseDownPos) < 5f)
+				EditMapTile();//remove a tile - null ID to remove
+
+			var selectedDefinition = ResourceManager.GetDefinition(selectedDefinitionId);
+			if (null != selectedDefinition)
+				GeometryUtil.UpdateGhostTile(camera, editorController.iMapManager, selectedDefinition);
+		}
+
+		private void EditMapTile(string defID = null)
+		{
+			var worldPos = MapManager.ScreenToWorld(camera, Input.mousePosition);
+			var mapIndex = editorController.iMapManager.WorldToMapIndex(worldPos);
+			if (-1 == mapIndex) return;
+
+			if (null != defID)
+			{
+				var currentId = editorController.iMapManager.GetDefinitionAtIndex(mapIndex);
+				if (currentId == selectedDefinitionId && definitionCycleList.Count > 1)
+				{
+					cycleIndex = (cycleIndex + 1) % definitionCycleList.Count;
+					selectedDefinitionId = definitionCycleList[cycleIndex];
+					GeometryUtil.DestroyGhostTile();
+					defID = selectedDefinitionId;
+				}
+			}
+			else
+				defID = "tile_empty";
+
+			var x = mapIndex % editorController.iMapManager.Width;
+			var z = mapIndex / editorController.iMapManager.Width;
+			editorController.iMapManager.UpdateTileAt(x, z, defID);
+		}
+
+		public void SetSelectedDefinitionById(string id)
+		{
+			selectedDefinitionId = id;
+			if (null == id)
+			{
+				Debug.LogError("null definition in EditorControllerPaint::SetSelectedDefinition");
+				return;
+			}
+
+			definitionCycleList = ResourceManager.DefinitionNavGroup(selectedDefinitionId);
+			cycleIndex = definitionCycleList.IndexOf(selectedDefinitionId);
+
+			GeometryUtil.DestroyGhostTile();
+			var selectedDefinition = ResourceManager.GetDefinition(selectedDefinitionId);
+			if (null != selectedDefinition)
+				GeometryUtil.UpdateGhostTile(camera, editorController.iMapManager, selectedDefinition);
 			else
 				GeometryUtil.HideGhostTile();
-
-			if (Input.GetMouseButtonDown(1))
-				mouseDownPos = Input.mousePosition;
-
-			if (Input.GetMouseButtonUp(1))
-			{
-				if (Vector3.Distance(Input.mousePosition, mouseDownPos) < 5f)
-					PlaceTileAtMousePosition("tile_empty");
-			}
-
-			if (Input.GetMouseButtonDown(0))
-			{
-				mouseDownPosLMB = Input.mousePosition;
-				var ray = camera.ScreenPointToRay(mouseDownPosLMB);
-				var plane = new Plane(Vector3.up, Vector3.zero);
-				if (plane.Raycast(ray, out float enter))
-				{
-					Vector3 worldPos = ray.GetPoint(enter);
-					mouseDownMapIndex = mapManager.WorldToMapIndex(worldPos);
-				}
-				else
-				{
-					mouseDownMapIndex = -1;
-				}
-			}
-
-			if (Input.GetMouseButtonUp(0))
-			{
-				HandleTilePlacement();
-			}
-		}
-
-		private void PlaceTileAtMousePosition(string defID)
-		{
-			if (editorController.GetEditorUI().IsGuiControlActive()) return;
-
-			var worldPos = MapManager.ScreenToWorld(camera, Input.mousePosition);
-			var mapIndex = mapManager.WorldToMapIndex(worldPos);
-			if (mapIndex == -1) return;
-
-			var x = mapIndex % mapManager.Width;
-			var z = mapIndex / mapManager.Width;
-
-			mapManager.UpdateTileAt(x, z, defID);
-		}
-
-		private void HandleTilePlacement()
-		{
-			var ray = camera.ScreenPointToRay(Input.mousePosition);
-			var plane = new Plane(Vector3.up, Vector3.zero);
-			if (!plane.Raycast(ray, out float enter)) return;
-
-			var worldPos = ray.GetPoint(enter);
-			var mapIndex = mapManager.WorldToMapIndex(worldPos);
-			if (mapIndex < 0 || mapIndex != mouseDownMapIndex) return;
-
-			string currentId = mapManager.GetDefinitionAtIndex(mapIndex);
-
-			if (currentId == selectedDefinitionId && definitionCycleList.Count > 1)
-			{
-				cycleIndex = (cycleIndex + 1) % definitionCycleList.Count;
-				string nextId = definitionCycleList[cycleIndex];
-				var nextDef = ResourceManager.GetDefinition(nextId);
-
-				if (nextDef != null)
-				{
-					selectedDefinition = nextDef;
-					selectedDefinitionId = nextId;
-
-					GeometryUtil.DestroyGhostTile();
-					GeometryUtil.UpdateGhostTile(camera, mapManager, nextDef);
-				}
-			}
-
-			PlaceTileAtMousePosition(selectedDefinitionId);
-			mouseDownMapIndex = -1;
-		}
-
-		private void UpdateTileCycleList(string currentTileType)
-		{
-			var singleDirections = new[] { " n", " e", " s", " w" };
-			var doubleLinear = new[] { " we", " ns", " ew", " sn" };
-			var doubleDiagonal = new[] { " nw", " ne", " se", " sw" };
-			string[] selectedGroup = singleDirections;
-
-			string baseId = currentTileType;
-			foreach (var suffix in singleDirections.Concat(doubleLinear).Concat(doubleDiagonal))
-			{
-				if (currentTileType.EndsWith(suffix))
-				{
-					baseId = currentTileType.Substring(0, currentTileType.Length - suffix.Length);
-					if (doubleLinear.Any(s => currentTileType.EndsWith(s)))
-						selectedGroup = doubleLinear;
-					else if (doubleDiagonal.Any(s => currentTileType.EndsWith(s)))
-						selectedGroup = doubleDiagonal;
-					break;
-				}
-			}
-
-			definitionCycleList = new List<string>();
-
-			if (ResourceManager.Definitions.Any(d => d.id == baseId))
-				definitionCycleList.Add(baseId);
-
-			foreach (var suffix in selectedGroup)
-			{
-				string candidate = baseId + suffix;
-				if (ResourceManager.Definitions.Any(d => d.id == candidate))
-					definitionCycleList.Add(candidate);
-			}
-
-			if (definitionCycleList.Count == 0)
-				definitionCycleList.Add(currentTileType);
 		}
 	}
 }

@@ -33,7 +33,7 @@ namespace ClassicTilestorm
 		public event Action OnImportMapRequested;
 		public event Action OnResizeMapTestRequested;
 		public event Action OnCropMapTestRequested;
-		public event Action<Definition> OnTileSelected;
+		public event Action<string> OnTileSelected;
 
 		public void Initialize(float yOffset) => panelYoffset = yOffset;
 
@@ -42,7 +42,7 @@ namespace ClassicTilestorm
 
 		public bool IsMouseInsideWindow()
 		{
-			Vector2 p = Input.mousePosition;
+			var p = Input.mousePosition;
 			return p.x >= 0 && p.x <= Screen.width && p.y >= 0 && p.y <= Screen.height;
 		}
 
@@ -65,14 +65,14 @@ namespace ClassicTilestorm
 
 		public void UpdatePaintMode()
 		{
-			Vector2 mp = Input.mousePosition;
+			var mp = Input.mousePosition;
 			mp.y = Screen.height - mp.y;
 
-			bool wasOver = isMouseOverTileSelector;
+			var wasOver = isMouseOverTileSelector;
 
-			float x = Screen.width - tileSelectorWidth - margin;
-			float y = panelYoffset + spacing;
-			float h = Screen.height - y - margin;
+			var x = Screen.width - tileSelectorWidth - margin;
+			var y = panelYoffset + spacing;
+			var h = Screen.height - y - margin;
 
 			isMouseOverTileSelector = new Rect(x, y, tileSelectorWidth, h).Contains(mp);
 
@@ -99,7 +99,7 @@ namespace ClassicTilestorm
 			}
 
 			// Smooth animation
-			float t = Mathf.Clamp01((Time.time - animationStartTime) / animationDuration);
+			var t = Mathf.Clamp01((Time.time - animationStartTime) / animationDuration);
 			tileSelectorWidth = Mathf.Lerp(tileSelectorWidth, targetWidth, t);
 		}
 
@@ -143,9 +143,9 @@ namespace ClassicTilestorm
 
 		public void DrawPaintUI(string selectedId)
 		{
-			float tx = Screen.width - tileSelectorWidth - margin;
-			float ty = panelYoffset + spacing;
-			float th = Screen.height - ty - margin;
+			var tx = Screen.width - tileSelectorWidth - margin;
+			var ty = panelYoffset + spacing;
+			var th = Screen.height - ty - margin;
 			Rect selectorRect = new Rect(tx, ty, tileSelectorWidth, th);
 
 			GUI.backgroundColor = new Color(0.2f, 0.2f, 0.4f, 0.75f);
@@ -159,11 +159,11 @@ namespace ClassicTilestorm
 			for (int i = 0; i < ResourceManager.Definitions.Count; i++)
 			{
 				var def = ResourceManager.Definitions[i];
-				string label = $"{def.id} ({def.texture})";
-				Rect btn = new Rect(0, i * 40, tileSelectorWidth - 40, 35);
+				var label = $"{def.id} ({def.texture})";
+				Rect btn = new(0, i * 40, tileSelectorWidth - 40, 35);
 
 				if (def.id == selectedId) GUI.color = Color.green;
-				if (GUI.Button(btn, label)) OnTileSelected?.Invoke(def);
+				if (GUI.Button(btn, label)) OnTileSelected?.Invoke(def.id);
 				GUI.color = Color.white;
 			}
 			GUI.EndScrollView();

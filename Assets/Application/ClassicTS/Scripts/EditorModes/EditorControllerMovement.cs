@@ -4,9 +4,8 @@ namespace ClassicTilestorm
 {
 	public abstract class EditorControllerMovement
 	{
-		protected Camera camera;
-		protected static float yaw;
-		protected static float pitch;
+		protected float yaw;
+		protected float pitch;
 		protected float lookSpeedH = 2f;
 		protected float lookSpeedV = 2f;
 		protected float zoomSpeed = 12f;
@@ -15,31 +14,24 @@ namespace ClassicTilestorm
 
 		protected EditorController editorController;
 
-		public EditorControllerMovement(Camera camera, EditorController controller = null)
+		protected Camera camera 
 		{
-			this.camera = camera;
-			this.editorController = controller;
-
-			if (null != camera)
+			get
 			{
-				yaw = camera.transform.eulerAngles.y;
-				pitch = camera.transform.eulerAngles.x;
+				if (editorController.TryGetComponent<MainCameraController>(out var controller)) return controller.activeSystem?.camera;
+				return null;
 			}
-			skipNextScroll = false;
-			didGainFocus = false;
 		}
 
-		public virtual void Initialize()
+		public EditorControllerMovement(EditorController controller = null)
 		{
-			if (null == camera) return;
-			yaw = camera.transform.eulerAngles.y;
-			pitch = camera.transform.eulerAngles.x;
+			editorController = controller;
+			skipNextScroll = didGainFocus = false;
 		}
 
 		public virtual void Update()
 		{
-			if (!camera) return;
-
+			if (null == camera) return;
 			var cameraTransform = camera.transform;
 
 			var ui = editorController?.GetEditorUI();
@@ -72,7 +64,11 @@ namespace ClassicTilestorm
 			cameraTransform.Translate(translation, Space.Self);
 
 			if (isMouseInside && (Input.GetMouseButton(0) || Input.GetMouseButton(1)))
+			{
+				yaw = camera.transform.eulerAngles.y;
+				pitch = camera.transform.eulerAngles.x; 
 				didGainFocus = false;
+			}
 		}
 
 		public virtual void OnApplicationFocus(bool hasFocus)

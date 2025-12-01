@@ -4,10 +4,8 @@ using MassiveHadronLtd;
 
 namespace ClassicTilestorm
 {
-    [RequireComponent(typeof(GameController))]
     public class PlaceholderUI : MonoBehaviour
     {
-        // Events that GameController will subscribe to
         public event Action<PreviewMode> OnModeChanged;
         public event Action<int> OnChangeMapRequested; // delta or 0 for reload
         public event Action OnPresetRequested;

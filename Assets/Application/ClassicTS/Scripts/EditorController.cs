@@ -19,11 +19,11 @@ namespace ClassicTilestorm
 
 		private EditorMode currentMode = EditorMode.Drag;
 		private bool gridLinesEnabled = true;
-		private string selectedDefinitionId = "tile_empty";
 
 		private PlaceholderEditorUI editorUI;
 
 		public EditorControllerPaint PaintMode => paintMode;
+		public IMapManager iMapManager => mapManager;
 		public PlaceholderEditorUI GetEditorUI() => editorUI;
 
 		private void Awake()
@@ -40,6 +40,9 @@ namespace ClassicTilestorm
 			editorUI.OnImportMapRequested += ImportMapAsAtomic;
 			editorUI.OnResizeMapTestRequested += () => ResizeMapTest(64, 64);
 			editorUI.OnCropMapTestRequested += CropMapTest;
+
+			dragMode = new EditorControllerDrag(this);
+			paintMode = new EditorControllerPaint(this);
 		}
 
 		public void Initialise(MapManager map)
@@ -55,9 +58,7 @@ namespace ClassicTilestorm
 			float bottomY = placeholderUI ? placeholderUI.GetPanelBottomY() : 10f;
 			editorUI.Initialize(bottomY);
 
-			gridLines = mapManager != null
-				? GridLinesHelper.CreateGridLines(transform, mapManager.Width, mapManager.Height, 0f, MapManager.tile_origin.x - 0.5f)
-				: null;
+			gridLines = null != mapManager ? GridLinesHelper.CreateGridLines(transform, mapManager.Width, mapManager.Height, 0f, MapManager.tile_origin.x - 0.5f) : null;
 
 			UpdateGridLines(gridLinesEnabled);
 
@@ -72,8 +73,6 @@ namespace ClassicTilestorm
 
 		private void Update()
 		{
-			if (!TryGetComponent<MainCameraController>(out var _)) return;
-
 			if (Input.GetMouseButtonUp(0) && GUIUtility.hotControl != 0)
 				GUIUtility.hotControl = 0;
 
@@ -87,7 +86,7 @@ namespace ClassicTilestorm
 		{
 			editorUI.DrawMainUI(currentMode.ToString(), gridLinesEnabled);
 			if (currentMode == EditorMode.Paint)
-				editorUI.DrawPaintUI(selectedDefinitionId);
+				editorUI.DrawPaintUI(paintMode.SelectedDefinitionID);
 		}
 
 		void OnEnable()
@@ -95,13 +94,9 @@ namespace ClassicTilestorm
 			editorUI.enabled = true;
 			UpdateGridLines(gridLinesEnabled);
 
-			if (!TryGetComponent<MainCameraController>(out var controller)) return;
-			var camera = controller.activeSystem?.camera;
-
-			dragMode = new EditorControllerDrag(camera, this);
-			paintMode = new EditorControllerPaint(camera, mapManager, this, selectedDefinitionId);
-
 			activeMode = currentMode == EditorMode.Drag ? dragMode : paintMode;
+
+			if (!TryGetComponent<MainCameraController>(out var controller)) return;
 			controller.UpdateGestureControllerState();
 		}
 
@@ -111,25 +106,20 @@ namespace ClassicTilestorm
 			editorUI.enabled = false;
 		}
 
+		public void OnApplicationFocus(bool hasFocus) => activeMode?.OnApplicationFocus(hasFocus);
+
 		private void HandleModeChanged(string mode)
 		{
 			if (System.Enum.TryParse<EditorMode>(mode, out var newMode) && currentMode != newMode)
-				SetMode(newMode);
+			{
+				currentMode = newMode;
+				activeMode = newMode == EditorMode.Drag ? dragMode : paintMode;
+				if (currentMode != EditorMode.Paint)
+					GeometryUtil.HideGhostTile();
+			}
 		}
 
-		private void HandleTileSelected(Definition def)
-		{
-			selectedDefinitionId = def.id;
-			paintMode.SetSelectedDefinition(def);
-		}
-
-		public void SetMode(EditorMode mode)
-		{
-			currentMode = mode;
-			activeMode = mode == EditorMode.Drag ? dragMode : paintMode;
-			if (currentMode == EditorMode.Drag)
-				GeometryUtil.HideGhostTile();
-		}
+		private void HandleTileSelected(string defId) => paintMode.SetSelectedDefinitionById(defId);
 
 		void Destroy()
 		{
@@ -164,8 +154,8 @@ namespace ClassicTilestorm
 				mapManager.CurrentMap.Consolidate();
 				ResourceManager.ApplyMapChanges(mapManager.CurrentMap);
 			}
-			var main = FindFirstObjectByType<MainController>();
-			if (main != null) main.ReloadCurrentMap();
+			if (!TryGetComponent<MainController>(out var main)) return;
+			main.ReloadCurrentMap();
 		}
 
 		public void CropMapTest()
@@ -176,8 +166,8 @@ namespace ClassicTilestorm
 				mapManager.CurrentMap.Consolidate();
 				ResourceManager.ApplyMapChanges(mapManager.CurrentMap);
 			}
-			var main = FindFirstObjectByType<MainController>();
-			if (main != null) main.ReloadCurrentMap();
+			if (!TryGetComponent<MainController>(out var main)) return;
+			main.ReloadCurrentMap();
 		}
 
 		public void LoadDatabase()
@@ -200,8 +190,8 @@ namespace ClassicTilestorm
 			if (_db == null) return;
 
 			ResourceManager.database = _db;
-			var main = FindFirstObjectByType<MainController>();
-			if (main != null) main.ReloadCurrentMap();
+			if (!TryGetComponent<MainController>(out var main)) return;
+			main.ReloadCurrentMap();
 		}
 
 		public void SaveDatabase()
@@ -244,7 +234,7 @@ namespace ClassicTilestorm
 				string importedName = System.IO.Path.GetFileNameWithoutExtension(path);
 				if (mapManager != null && mapManager.CurrentMap != null && mapManager.CurrentMap.name == importedName)
 				{
-					var main = FindFirstObjectByType<MainController>();
+					if (!TryGetComponent<MainController>(out var main)) return;
 					if (main != null) main.ReloadCurrentMap();
 				}
 			}

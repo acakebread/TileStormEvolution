@@ -11,83 +11,56 @@ namespace ClassicTilestorm
 		// Initialize the ghost material
 		public static void InitializeGhostMaterial()
 		{
-			if (ghostMaterial == null)
+			if (null == ghostMaterial)
 			{
 				ghostMaterial = MaterialUtils.CreateTransparentUnlitMaterial(new Color(1f, 1f, 1f, 0.5f));
-				if (ghostMaterial == null)
-				{
+				if (null == ghostMaterial)
 					Debug.LogError("GeometryUtil: Failed to create transparent unlit material.");
-				}
 			}
 		}
 
 		// Update or create the ghost tile at the mouse position
-		public static void UpdateGhostTile(Camera camera, MapManager mapManager, Definition definition)
+		public static void UpdateGhostTile(Camera camera, IMapManager mapManager, Definition definition)
 		{
-			if (camera == null || mapManager == null || definition == null) return;
+			if (mapManager == null || definition == null) return;
+			//if (null != ghostTile) Object.Destroy(ghostTile);
 
-			// Get mouse world position on the XZ plane
-			Ray ray = camera.ScreenPointToRay(Input.mousePosition);
-			Plane plane = new Plane(Vector3.up, Vector3.zero); // Assume y=0 for map
-			if (plane.Raycast(ray, out float enter))
+			// Create or update ghost tile
+			if (null == ghostTile)// || ghostTile.GetComponent<RTTI>()?.definition != definition)// do not use RTTI - it's debug only || ghostTile.GetComponent<RTTI>()?.definition != definition)
 			{
-				Vector3 worldPos = ray.GetPoint(enter);
-				int mapIndex = mapManager.WorldToMapIndex(worldPos);
-				if (mapIndex < 0 || mapIndex >= mapManager.Count)
+				ghostTile = GeometryManager.InstantiateTile(definition, mapManager.CurrentTransform, Vector3.zero, false);
+				if (null != ghostTile)
 				{
-					if (ghostTile != null)
-						ghostTile.SetActive(false);
-					return;
-				}
-				Vector3 snappedPos = mapManager.TileWorldPosition(mapIndex);
+					// Remove TextureSetAnimator
+					foreach (var iter in ghostTile.GetComponentsInChildren<TextureSetAnimator>())
+						iter.enabled = false;
 
-				// Create or update ghost tile
-				if (ghostTile == null)// || ghostTile.GetComponent<RTTI>()?.definition != definition)// do not use RTTI - it's debug only || ghostTile.GetComponent<RTTI>()?.definition != definition)
-				{
-					//if (ghostTile != null)
-					//	Object.Destroy(ghostTile);
+					// Apply ghost material to all renderers
+					foreach (var renderer in ghostTile.GetComponentsInChildren<MeshRenderer>())
+						renderer.material = ghostMaterial;
 
-					ghostTile = GeometryManager.InstantiateTile(definition, mapManager.transform, snappedPos, false);
-					if (ghostTile != null)
-					{
-						// Remove TextureSetAnimator
-						foreach (var iter in ghostTile.GetComponentsInChildren<TextureSetAnimator>())
-						{
-							iter.enabled = false;
-							//Object.Destroy(iter);
-						}                       
-						// Apply ghost material to all renderers
-						foreach (var renderer in ghostTile.GetComponentsInChildren<MeshRenderer>())
-						{
-							renderer.material = ghostMaterial;
-						}
-						// Remove colliders to prevent raycast interference
-						foreach (var collider in ghostTile.GetComponentsInChildren<Collider>())
-						{
-							Object.Destroy(collider);
-						}
-						// Remove MorphGeomSway
-						foreach (var iter in ghostTile.GetComponentsInChildren<MorphGeomSway>())
-						{
-							Object.Destroy(iter);
-						}
+					// Remove colliders to prevent raycast interference
+					foreach (var collider in ghostTile.GetComponentsInChildren<Collider>())
+						Object.Destroy(collider);
 
-						ghostTile.name = "GhostTile";
-					}
-				}
+					// Remove MorphGeomSway
+					foreach (var iter in ghostTile.GetComponentsInChildren<MorphGeomSway>())
+						Object.Destroy(iter);
 
-				// Update position and visibility
-				if (ghostTile != null)
-				{
-					ghostTile.transform.position = snappedPos;
-					ghostTile.SetActive(true);
+					ghostTile.name = "GhostTile";
 				}
 			}
-			else
-			{
-				if (ghostTile != null)
-					ghostTile.SetActive(false);
-			}
+
+			if (null == camera) return;
+			if (null == ghostTile) return;
+
+			var worldPos = MapManager.ScreenToWorld(camera, Input.mousePosition);
+			var mapIndex = mapManager.WorldToMapIndex(worldPos);
+
+			// Update position and visibility
+			ghostTile.SetActive(-1 != mapIndex);
+			if (-1 == mapIndex) return;
+			ghostTile.transform.position = mapManager.TileWorldPosition(mapIndex);//snappedPos
 		}
 
 		// Hide the ghost tile
@@ -106,9 +79,5 @@ namespace ClassicTilestorm
 				ghostTile = null;
 			}
 		}
-
-		// For debugging
-		public static bool IsGhostTileActive() => ghostTile != null && ghostTile.activeSelf;
-		public static Vector3 GetGhostTilePosition() => ghostTile != null ? ghostTile.transform.position : Vector3.zero;
 	}
 }
