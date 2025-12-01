@@ -113,10 +113,7 @@ namespace ClassicTilestorm
 		}
 
 		// Get the bottom Y position of the panel in GUI coordinates
-		public float GetPanelBottomY()
-		{
-			return guiRect.y + guiRect.height;
-		}
+		public float GetPanelBottomY() => guiRect.height;//just return the height now - we are no longer attempting to animate the editor rect... guiRect.y + guiRect.height;
 
 		private void OnGUI()
 		{

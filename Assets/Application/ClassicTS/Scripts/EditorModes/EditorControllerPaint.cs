@@ -127,8 +127,6 @@ namespace ClassicTilestorm
 					selectedDefinition = nextDef;
 					selectedDefinitionId = nextId;
 
-					editorController.GetEditorUI().SetSelectedDefinitionId(nextId);
-
 					GeometryUtil.DestroyGhostTile();
 					GeometryUtil.UpdateGhostTile(camera, mapManager, nextDef);
 				}

@@ -14,7 +14,13 @@ namespace ClassicTilestorm
 		private EditorControllerMovement activeMode;
 		private EditorControllerDrag dragMode;
 		private EditorControllerPaint paintMode;
+
 		public enum EditorMode { Drag, Paint }
+
+		private EditorMode currentMode = EditorMode.Drag;
+		private bool gridLinesEnabled = true;
+		private string selectedDefinitionId = "tile_empty";
+
 		private PlaceholderEditorUI editorUI;
 
 		public EditorControllerPaint PaintMode => paintMode;
@@ -24,6 +30,16 @@ namespace ClassicTilestorm
 		{
 			editorUI = gameObject.AddComponent<PlaceholderEditorUI>();
 			GeometryUtil.InitializeGhostMaterial();
+
+			editorUI.OnModeChanged += HandleModeChanged;
+			editorUI.OnGridLinesToggled += UpdateGridLines;
+			editorUI.OnTileSelected += HandleTileSelected;
+			editorUI.OnSaveDatabaseRequested += SaveDatabase;
+			editorUI.OnReloadDatabaseRequested += LoadDatabase;
+			editorUI.OnExportMapRequested += ExportMapAsAtomic;
+			editorUI.OnImportMapRequested += ImportMapAsAtomic;
+			editorUI.OnResizeMapTestRequested += () => ResizeMapTest(64, 64);
+			editorUI.OnCropMapTestRequested += CropMapTest;
 		}
 
 		public void Initialise(MapManager map)
@@ -35,101 +51,109 @@ namespace ClassicTilestorm
 
 			mapManager = map;
 
-			var camera = controller.activeSystem?.camera;
-			editorUI.Initialize(mapManager);
+			var placeholderUI = FindAnyObjectByType<PlaceholderUI>();
+			float bottomY = placeholderUI ? placeholderUI.GetPanelBottomY() : 10f;
+			editorUI.Initialize(mapManager, bottomY);
 
-			gridLines = null != mapManager
+			gridLines = mapManager != null
 				? GridLinesHelper.CreateGridLines(transform, mapManager.Width, mapManager.Height, 0f, MapManager.tile_origin.x - 0.5f)
 				: null;
 
-			UpdateGridLines(editorUI.GetGridLinesEnabled() & isActiveAndEnabled);
+			UpdateGridLines(gridLinesEnabled);
 
 			if (isActiveAndEnabled) OnEnable();
 		}
 
 		public void UpdateGridLines(bool value)
 		{
-			if (null != gridLines) gridLines.SetActive(value);
+			if (gridLines != null) gridLines.SetActive(value);
+			gridLinesEnabled = value;
 		}
 
 		private void Update()
 		{
-			if (!TryGetComponent<MainCameraController>(out var controller)) return;
+			if (!TryGetComponent<MainCameraController>(out var _)) return;
 
 			if (Input.GetMouseButtonUp(0) && GUIUtility.hotControl != 0)
 				GUIUtility.hotControl = 0;
 
 			activeMode?.Update();
 
-			if (editorUI.currentMode != (activeMode == dragMode ? EditorMode.Drag : EditorMode.Paint))
-				SetMode(editorUI.currentMode);
+			if (currentMode == EditorMode.Paint)
+				editorUI.UpdatePaintMode();
+		}
+
+		private void OnGUI()
+		{
+			editorUI.DrawMainUI(currentMode.ToString(), gridLinesEnabled);
+			if (currentMode == EditorMode.Paint)
+				editorUI.DrawPaintUI(selectedDefinitionId);
 		}
 
 		void OnEnable()
 		{
 			editorUI.enabled = true;
-			UpdateGridLines(editorUI.GetGridLinesEnabled());
+			UpdateGridLines(gridLinesEnabled);
 
 			if (!TryGetComponent<MainCameraController>(out var controller)) return;
 			var camera = controller.activeSystem?.camera;
 
 			dragMode = new EditorControllerDrag(camera, this);
-			paintMode = new EditorControllerPaint(camera, mapManager, this, "tile_empty");
+			paintMode = new EditorControllerPaint(camera, mapManager, this, selectedDefinitionId);
 
-			// === CORRECT EVENT NAMES ===
-			editorUI.OnModeChanged += SetMode;
-			editorUI.OnGridLinesToggled += UpdateGridLines;
-			editorUI.OnTileSelected += paintMode.SetSelectedDefinition;
-
-			editorUI.OnSaveDatabaseRequested += SaveDatabase;
-			editorUI.OnReloadDatabaseRequested += LoadDatabase;
-			editorUI.OnExportMapRequested += ExportMapAsAtomic;
-			editorUI.OnImportMapRequested += ImportMapAsAtomic;
-			editorUI.OnResizeMapTestRequested += () => ResizeMapTest(64, 64);
-			editorUI.OnCropMapTestRequested += CropMapTest;
-
-			activeMode = editorUI.currentMode == EditorMode.Drag ? dragMode : paintMode;
+			activeMode = currentMode == EditorMode.Drag ? dragMode : paintMode;
 			controller.UpdateGestureControllerState();
 		}
 
 		void OnDisable()
 		{
-			if (editorUI == null) return;
-
-			editorUI.OnModeChanged -= SetMode;
-			editorUI.OnGridLinesToggled -= UpdateGridLines;
-			editorUI.OnTileSelected -= paintMode.SetSelectedDefinition;
-
-			editorUI.OnSaveDatabaseRequested -= SaveDatabase;
-			editorUI.OnReloadDatabaseRequested -= LoadDatabase;
-			editorUI.OnExportMapRequested -= ExportMapAsAtomic;
-			editorUI.OnImportMapRequested -= ImportMapAsAtomic;
-			editorUI.OnResizeMapTestRequested -= () => ResizeMapTest(64, 64);
-			editorUI.OnCropMapTestRequested -= CropMapTest;
-
 			if (gridLines != null) gridLines.SetActive(false);
 			editorUI.enabled = false;
 		}
 
+		private void HandleModeChanged(string mode)
+		{
+			if (System.Enum.TryParse<EditorMode>(mode, out var newMode) && currentMode != newMode)
+				SetMode(newMode);
+		}
+
+		private void HandleTileSelected(Definition def)
+		{
+			selectedDefinitionId = def.id;
+			paintMode.SetSelectedDefinition(def);
+		}
+
+		public void SetMode(EditorMode mode)
+		{
+			currentMode = mode;
+			activeMode = mode == EditorMode.Drag ? dragMode : paintMode;
+			if (currentMode == EditorMode.Drag)
+				GeometryUtil.HideGhostTile();
+		}
+
 		void Destroy()
 		{
-			if (gridLines != null) Destroy(gridLines);
+			if (gridLines != null)
+			{
+				Destroy(gridLines);
+				gridLines = null;
+			}
 		}
 
 		void OnDestroy()
 		{
 			Destroy();
 			GeometryUtil.DestroyGhostTile();
-		}
 
-		public void OnApplicationFocus(bool hasFocus)
-		{
-			activeMode?.OnApplicationFocus(hasFocus);
-		}
-
-		public void SetMode(EditorMode mode)
-		{
-			activeMode = mode == EditorMode.Drag ? dragMode : paintMode;
+			editorUI.OnModeChanged -= HandleModeChanged;
+			editorUI.OnGridLinesToggled -= UpdateGridLines;
+			editorUI.OnTileSelected -= HandleTileSelected;
+			editorUI.OnSaveDatabaseRequested -= SaveDatabase;
+			editorUI.OnReloadDatabaseRequested -= LoadDatabase;
+			editorUI.OnExportMapRequested -= ExportMapAsAtomic;
+			editorUI.OnImportMapRequested -= ImportMapAsAtomic;
+			editorUI.OnResizeMapTestRequested -= () => ResizeMapTest(64, 64);
+			editorUI.OnCropMapTestRequested -= CropMapTest;
 		}
 
 		public void ResizeMapTest(int x = 64, int z = 64)
@@ -263,7 +287,7 @@ namespace ClassicTilestorm
 			{
 				if (nameChanged) map.name = chosenName;
 				ResourceSerializer.ExportAtomicMap(map, chosenFolder, true);
-				EditorUtility.DisplayDialog("Export Successful", $"Map exported successfully!\n\n→ {path}", "OK");
+				EditorUtility.DisplayDialog("Export Successful", $"Map exported successfully!\n\nPath: {path}", "OK");
 				Debug.Log($"Map exported: {path}");
 			}
 			catch (System.Exception ex)
