@@ -113,7 +113,7 @@ namespace ClassicTilestorm
 
 			GuiUtils.ColoredButton(new Rect(margin, y + 0 * (buttonHeight + spacing), buttonWidth, buttonHeight),
 				gridVisible ? "Hide Grid" : "Show Grid",
-				new Color(0.5f, 0.5f, 0.5f),
+				new Color(0.25f, 0.75f, 0.25f),
 				() => OnGridLinesToggled?.Invoke(!gridVisible));
 
 			GUI.contentColor = mode == "Drag" ? Color.cyan : Color.white;

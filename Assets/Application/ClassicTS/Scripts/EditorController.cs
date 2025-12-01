@@ -54,8 +54,8 @@ namespace ClassicTilestorm
 
 			mapManager = map;
 
-			var placeholderUI = FindAnyObjectByType<PlaceholderUI>();
-			float bottomY = placeholderUI ? placeholderUI.GetPanelBottomY() : 10f;
+			TryGetComponent<PlaceholderUI>(out var placeholderUI);
+			var bottomY = placeholderUI ? placeholderUI.GetPanelBottomY() : 10f;
 			editorUI.Initialize(bottomY);
 
 			gridLines = null != mapManager ? GridLinesHelper.CreateGridLines(transform, mapManager.Width, mapManager.Height, 0f, MapManager.tile_origin.x - 0.5f) : null;
