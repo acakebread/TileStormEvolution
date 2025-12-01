@@ -17,7 +17,6 @@ namespace ClassicTilestorm
 		public enum EditorMode { Drag, Paint }
 		private PlaceholderEditorUI editorUI;
 
-		// Public getter for paintMode
 		public EditorControllerPaint PaintMode => paintMode;
 		public PlaceholderEditorUI GetEditorUI() => editorUI;
 
@@ -37,26 +36,30 @@ namespace ClassicTilestorm
 			mapManager = map;
 
 			var camera = controller.activeSystem?.camera;
-			editorUI.Initialize(this, mapManager, camera);
+			editorUI.Initialize(mapManager, camera);
 
-			gridLines = null != mapManager ? GridLinesHelper.CreateGridLines(transform, mapManager.Width, mapManager.Height, 0f, MapManager.tile_origin.x - 0.5f) : null;//workaround for tile offset - should be done properly MapManager.tile_origin.x - 0.5f
+			gridLines = null != mapManager
+				? GridLinesHelper.CreateGridLines(transform, mapManager.Width, mapManager.Height, 0f, MapManager.tile_origin.x - 0.5f)
+				: null;
+
 			UpdateGridLines(editorUI.GetGridLinesEnabled() & isActiveAndEnabled);
 
 			if (isActiveAndEnabled) OnEnable();
 		}
 
-		public void UpdateGridLines(bool value) { if (null != gridLines) gridLines.SetActive(value); }
+		public void UpdateGridLines(bool value)
+		{
+			if (null != gridLines) gridLines.SetActive(value);
+		}
 
 		private void Update()
 		{
 			if (!TryGetComponent<MainCameraController>(out var controller)) return;
-			var camera = controller.activeSystem?.camera;
 
 			if (Input.GetMouseButtonUp(0) && GUIUtility.hotControl != 0)
 				GUIUtility.hotControl = 0;
 
-			if (null != activeMode)
-				activeMode.Update();
+			activeMode?.Update();
 
 			if (editorUI.currentMode != (activeMode == dragMode ? EditorMode.Drag : EditorMode.Paint))
 				SetMode(editorUI.currentMode);
@@ -69,10 +72,21 @@ namespace ClassicTilestorm
 
 			if (!TryGetComponent<MainCameraController>(out var controller)) return;
 			var camera = controller.activeSystem?.camera;
+
 			dragMode = new EditorControllerDrag(camera, this);
 			paintMode = new EditorControllerPaint(camera, mapManager, this, "tile_empty");
 
+			// === CORRECT EVENT NAMES ===
+			editorUI.OnModeChanged += SetMode;
+			editorUI.OnGridLinesToggled += UpdateGridLines;
 			editorUI.OnTileSelected += paintMode.SetSelectedDefinition;
+
+			editorUI.OnSaveDatabaseRequested += SaveDatabase;
+			editorUI.OnReloadDatabaseRequested += LoadDatabase;
+			editorUI.OnExportMapRequested += ExportMapAsAtomic;
+			editorUI.OnImportMapRequested += ImportMapAsAtomic;
+			editorUI.OnResizeMapTestRequested += () => ResizeMapTest(64, 64);
+			editorUI.OnCropMapTestRequested += CropMapTest;
 
 			activeMode = editorUI.currentMode == EditorMode.Drag ? dragMode : paintMode;
 			controller.UpdateGestureControllerState();
@@ -80,14 +94,26 @@ namespace ClassicTilestorm
 
 		void OnDisable()
 		{
-			if (null != gridLines) gridLines.SetActive(false); // Only deactivate grid lines, don't reset UI state
+			if (editorUI == null) return;
+
+			editorUI.OnModeChanged -= SetMode;
+			editorUI.OnGridLinesToggled -= UpdateGridLines;
 			editorUI.OnTileSelected -= paintMode.SetSelectedDefinition;
+
+			editorUI.OnSaveDatabaseRequested -= SaveDatabase;
+			editorUI.OnReloadDatabaseRequested -= LoadDatabase;
+			editorUI.OnExportMapRequested -= ExportMapAsAtomic;
+			editorUI.OnImportMapRequested -= ImportMapAsAtomic;
+			editorUI.OnResizeMapTestRequested -= () => ResizeMapTest(64, 64);
+			editorUI.OnCropMapTestRequested -= CropMapTest;
+
+			if (gridLines != null) gridLines.SetActive(false);
 			editorUI.enabled = false;
 		}
 
 		void Destroy()
 		{
-			if (null != gridLines) Destroy(gridLines);
+			if (gridLines != null) Destroy(gridLines);
 		}
 
 		void OnDestroy()
@@ -98,7 +124,7 @@ namespace ClassicTilestorm
 
 		public void OnApplicationFocus(bool hasFocus)
 		{
-			if (null != activeMode) activeMode.OnApplicationFocus(hasFocus);
+			activeMode?.OnApplicationFocus(hasFocus);
 		}
 
 		public void SetMode(EditorMode mode)
@@ -108,51 +134,56 @@ namespace ClassicTilestorm
 
 		public void ResizeMapTest(int x = 64, int z = 64)
 		{
-			if (null == mapManager || null == mapManager.CurrentMap) return;
+			if (mapManager == null || mapManager.CurrentMap == null) return;
 			if (mapManager.CurrentMap.Resize(x, z, Map.Anchor.Center))
 			{
 				mapManager.CurrentMap.Consolidate();
 				ResourceManager.ApplyMapChanges(mapManager.CurrentMap);
 			}
 			var main = FindFirstObjectByType<MainController>();
-			if (null != main) main.ReloadCurrentMap();
+			if (main != null) main.ReloadCurrentMap();
 		}
 
 		public void CropMapTest()
 		{
-			if (null == mapManager || null == mapManager.CurrentMap) return;
+			if (mapManager == null || mapManager.CurrentMap == null) return;
 			if (mapManager.CurrentMap.CropToContent())
 			{
 				mapManager.CurrentMap.Consolidate();
 				ResourceManager.ApplyMapChanges(mapManager.CurrentMap);
 			}
 			var main = FindFirstObjectByType<MainController>();
-			if (null != main) main.ReloadCurrentMap();
+			if (main != null) main.ReloadCurrentMap();
 		}
 
 		public void LoadDatabase()
 		{
 			var dbAsset = PreviewSettings.DatabaseJsonFile;
-
 			if (dbAsset == null)
 			{
-				Debug.LogError("ResourceManager: DatabaseJsonFile not assigned in PreviewSettings!");
+				Debug.LogError("PreviewSettings.DatabaseJsonFile is not assigned!");
 				return;
 			}
 
-			var _db = ResourceSerializer.LoadDatabase(dbAsset.text);
-			Debug.Log("Database loaded from original project DatabaseJsonFile");
-			ResourceManager.database = _db;
+			string path = AssetDatabase.GetAssetPath(dbAsset);
+			if (string.IsNullOrEmpty(path))
+			{
+				Debug.LogError("DatabaseJsonFile has no valid path.");
+				return;
+			}
 
-			// Optional: auto-reload if same name
+			var _db = ResourceSerializer.LoadDatabase(path);
+			if (_db == null) return;
+
+			ResourceManager.database = _db;
 			var main = FindFirstObjectByType<MainController>();
-			if (null != main) main.ReloadCurrentMap();
+			if (main != null) main.ReloadCurrentMap();
 		}
 
 		public void SaveDatabase()
 		{
 #if UNITY_EDITOR
-			if (null == ResourceManager.database)
+			if (ResourceManager.database == null)
 			{
 				Debug.LogError("Cannot save: database not loaded");
 				return;
@@ -183,21 +214,18 @@ namespace ClassicTilestorm
 		{
 #if UNITY_EDITOR
 			string path = EditorUtility.OpenFilePanel("Import Atomic Map", PreviewSettings.ExportFolder, "json");
-
 			if (!string.IsNullOrEmpty(path))
 			{
 				ResourceSerializer.ImportAtomicMap(path);
-
-				// Optional: auto-reload if same name
 				string importedName = System.IO.Path.GetFileNameWithoutExtension(path);
-				if (null != mapManager && mapManager.CurrentMap.name == importedName)
-				{ 
+				if (mapManager != null && mapManager.CurrentMap != null && mapManager.CurrentMap.name == importedName)
+				{
 					var main = FindFirstObjectByType<MainController>();
-					if (null != main) main.ReloadCurrentMap();
+					if (main != null) main.ReloadCurrentMap();
 				}
 			}
 #else
-			Debug.Log("Import currently only available in Unity Editor");
+            Debug.Log("Import currently only available in Unity Editor");
 #endif
 		}
 
@@ -212,8 +240,6 @@ namespace ClassicTilestorm
 
 			var map = mapManager.CurrentMap;
 			string originalName = map.name;
-
-			// Start from last remembered folder, fallback to default export folder
 			string lastFolder = PlayerPrefs.GetString("ClassicTilestorm_LastExportFolder", PreviewSettingsStatic.ExportFolder);
 			System.IO.Directory.CreateDirectory(lastFolder);
 
@@ -228,8 +254,6 @@ namespace ClassicTilestorm
 
 			string chosenFolder = System.IO.Path.GetDirectoryName(path);
 			string chosenName = System.IO.Path.GetFileNameWithoutExtension(path);
-
-			// Remember this folder for next time
 			PlayerPrefs.SetString("ClassicTilestorm_LastExportFolder", chosenFolder);
 			PlayerPrefs.Save();
 
@@ -237,14 +261,9 @@ namespace ClassicTilestorm
 
 			try
 			{
-				if (nameChanged)
-				{
-					map.name = chosenName;
-					Debug.Log($"Exporting map as: {chosenName}");
-				}
-
+				if (nameChanged) map.name = chosenName;
 				ResourceSerializer.ExportAtomicMap(map, chosenFolder, true);
-				EditorUtility.DisplayDialog( "Export Successful", $"Map exported successfully!\n\n→ {path}", "OK");
+				EditorUtility.DisplayDialog("Export Successful", $"Map exported successfully!\n\n→ {path}", "OK");
 				Debug.Log($"Map exported: {path}");
 			}
 			catch (System.Exception ex)
@@ -254,15 +273,10 @@ namespace ClassicTilestorm
 			}
 			finally
 			{
-				// Always restore original name — critical!
-				if (nameChanged)
-					map.name = originalName;
+				if (nameChanged) map.name = originalName;
 			}
-
-			// Optional: Update the "Locate Export Folder" button to point to the new location
-			// (It already uses PreviewSettingsStatic.ExportFolder, but now user can go anywhere)
 #else
-			Debug.Log("Export currently only available in Unity Editor");
+            Debug.Log("Export currently only available in Unity Editor");
 #endif
 		}
 	}

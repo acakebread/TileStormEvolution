@@ -6,7 +6,6 @@ namespace ClassicTilestorm
 {
 	public class PlaceholderEditorUI : MonoBehaviour
 	{
-		private EditorController editorController;
 		private MapManager mapManager;
 		private new Camera camera;
 
@@ -38,6 +37,15 @@ namespace ClassicTilestorm
 
 		public EditorController.EditorMode currentMode = EditorController.EditorMode.Drag;
 
+		// === EVENTS ONLY — NO DIRECT EditorController CALLS ===
+		public event System.Action<EditorController.EditorMode> OnModeChanged;
+		public event System.Action<bool> OnGridLinesToggled;
+		public event System.Action OnSaveDatabaseRequested;
+		public event System.Action OnReloadDatabaseRequested;
+		public event System.Action OnExportMapRequested;
+		public event System.Action OnImportMapRequested;
+		public event System.Action OnResizeMapTestRequested;
+		public event System.Action OnCropMapTestRequested;
 		public event System.Action<Definition> OnTileSelected;
 
 		private void Awake()
@@ -53,9 +61,8 @@ namespace ClassicTilestorm
 			targetWidth = collapsedWidth;
 		}
 
-		public void Initialize(EditorController controller, MapManager map, Camera cam)
+		public void Initialize(MapManager map, Camera cam)
 		{
-			editorController = controller;
 			mapManager = map;
 			camera = cam;
 		}
@@ -64,7 +71,6 @@ namespace ClassicTilestorm
 
 		public bool IsMouseOverGui()
 		{
-			// unchanged – left exactly as you had it
 			if (isMouseOverTileSelector)
 				return true;
 
@@ -75,7 +81,7 @@ namespace ClassicTilestorm
 			float leftPanelX = margin;
 			float leftPanelY = panelBottomY + spacing;
 			float leftPanelWidth = buttonWidth + 20f;
-			float leftPanelHeight = buttonHeight * 6 + spacing * 6; // now 6 buttons
+			float leftPanelHeight = buttonHeight * 6 + spacing * 6;
 
 			Rect leftPanelRect = new Rect(leftPanelX, leftPanelY, leftPanelWidth, leftPanelHeight);
 			if (leftPanelRect.Contains(mousePos))
@@ -153,18 +159,18 @@ namespace ClassicTilestorm
 
 		private void OnGUI()
 		{
-			if (!editorController || !mapManager || !camera) return;
+			if (!mapManager || !camera) return;
 
 			float panelBottomY = GetPanelBottomY();
-			Rect gridToggleRect = new (margin, panelBottomY + spacing + 0 * (buttonHeight + spacing), buttonWidth, buttonHeight);
-			Rect dragButtonRect = new (margin, panelBottomY + spacing + 1 * (buttonHeight + spacing), buttonWidth, buttonHeight);
-			Rect paintButtonRect = new (margin, panelBottomY + spacing + 2 * (buttonHeight + spacing), buttonWidth, buttonHeight);
+			Rect gridToggleRect = new(margin, panelBottomY + spacing + 0 * (buttonHeight + spacing), buttonWidth, buttonHeight);
+			Rect dragButtonRect = new(margin, panelBottomY + spacing + 1 * (buttonHeight + spacing), buttonWidth, buttonHeight);
+			Rect paintButtonRect = new(margin, panelBottomY + spacing + 2 * (buttonHeight + spacing), buttonWidth, buttonHeight);
 			Rect resizeButtonRect = new(margin, panelBottomY + spacing + 3 * (buttonHeight + spacing), buttonWidth, buttonHeight);
 			Rect cropButtonRect = new(margin, panelBottomY + spacing + 4 * (buttonHeight + spacing), buttonWidth, buttonHeight);
-			Rect saveButtonRect = new (margin, panelBottomY + spacing + 5 * (buttonHeight + spacing), buttonWidth, buttonHeight);
-			Rect reloadButtonRect = new (margin, panelBottomY + spacing + 6 * (buttonHeight + spacing), buttonWidth, buttonHeight);
-			Rect exptButtonRect = new (margin, panelBottomY + spacing + 7 * (buttonHeight + spacing), buttonWidth, buttonHeight);
-			Rect importButtonRect = new (margin, panelBottomY + spacing + 8 * (buttonHeight + spacing), buttonWidth, buttonHeight);
+			Rect saveButtonRect = new(margin, panelBottomY + spacing + 5 * (buttonHeight + spacing), buttonWidth, buttonHeight);
+			Rect reloadButtonRect = new(margin, panelBottomY + spacing + 6 * (buttonHeight + spacing), buttonWidth, buttonHeight);
+			Rect exptButtonRect = new(margin, panelBottomY + spacing + 7 * (buttonHeight + spacing), buttonWidth, buttonHeight);
+			Rect importButtonRect = new(margin, panelBottomY + spacing + 8 * (buttonHeight + spacing), buttonWidth, buttonHeight);
 
 			GUIStyle toggleStyle = new GUIStyle(GUI.skin.toggle);
 			toggleStyle.normal.background = toggleOffBackgroundTexture;
@@ -175,7 +181,6 @@ namespace ClassicTilestorm
 			toggleStyle.onActive.background = toggleOnBackgroundTexture;
 			toggleStyle.padding = new RectOffset(10, 10, 5, 5);
 			toggleStyle.fontSize = 14;
-			toggleStyle.alignment = TextAnchor.MiddleCenter;
 			toggleStyle.alignment = TextAnchor.MiddleCenter;
 			toggleStyle.fixedWidth = buttonWidth;
 			toggleStyle.fixedHeight = buttonHeight;
@@ -191,7 +196,7 @@ namespace ClassicTilestorm
 			if (GUI.Button(gridToggleRect, gridLinesEnabled ? "Hide Grid" : "Show Grid", gridButtonStyle))
 			{
 				gridLinesEnabled = !gridLinesEnabled;
-				editorController.UpdateGridLines(gridLinesEnabled);
+				OnGridLinesToggled?.Invoke(gridLinesEnabled);
 			}
 
 			bool dragToggled = GUI.Toggle(dragButtonRect, currentMode == EditorController.EditorMode.Drag, "Drag", toggleStyle);
@@ -207,10 +212,10 @@ namespace ClassicTilestorm
 			resizeButtonStyle.fixedHeight = buttonHeight;
 
 			if (GUI.Button(resizeButtonRect, "Resize Test", resizeButtonStyle))
-				editorController.ResizeMapTest();
+				OnResizeMapTestRequested?.Invoke();
 
-			if (GUI.Button(cropButtonRect, "Crop Test", resizeButtonStyle))// reuse resizeButtonStyle
-				editorController.CropMapTest();
+			if (GUI.Button(cropButtonRect, "Crop Test", resizeButtonStyle))
+				OnCropMapTestRequested?.Invoke();
 
 			// === SAVE DATABASE BUTTON ===
 			GUIStyle saveButtonStyle = new GUIStyle(GUI.skin.button);
@@ -222,11 +227,11 @@ namespace ClassicTilestorm
 			saveButtonStyle.fixedHeight = buttonHeight;
 
 			if (GUI.Button(saveButtonRect, "Save Database", saveButtonStyle))
-				editorController.SaveDatabase();
+				OnSaveDatabaseRequested?.Invoke();
 
 			// === RELOAD DATABASE BUTTON ===
 			GUIStyle reloadButtonStyle = new GUIStyle(GUI.skin.button);
-			reloadButtonStyle.normal.background = reloadBackgroundTexture;  // ← uses pre-made texture
+			reloadButtonStyle.normal.background = reloadBackgroundTexture;
 			reloadButtonStyle.padding = new RectOffset(10, 10, 5, 5);
 			reloadButtonStyle.fontSize = 14;
 			reloadButtonStyle.alignment = TextAnchor.MiddleCenter;
@@ -234,7 +239,7 @@ namespace ClassicTilestorm
 			reloadButtonStyle.fixedHeight = buttonHeight;
 
 			if (GUI.Button(reloadButtonRect, "Reload Database", reloadButtonStyle))
-				editorController.LoadDatabase();
+				OnReloadDatabaseRequested?.Invoke();
 
 			// === EXPORT BUTTON ===
 			GUIStyle exportButtonStyle = new GUIStyle(GUI.skin.button);
@@ -245,11 +250,11 @@ namespace ClassicTilestorm
 			exportButtonStyle.fixedWidth = buttonWidth;
 			exportButtonStyle.fixedHeight = buttonHeight;
 			if (GUI.Button(exptButtonRect, "Export", exportButtonStyle))
-				editorController.ExportMapAsAtomic();         
-			
+				OnExportMapRequested?.Invoke();
+
 			// === IMPORT MAP BUTTON ===
 			GUIStyle importButtonStyle = new GUIStyle(GUI.skin.button);
-			importButtonStyle.normal.background = reloadBackgroundTexture; // reuse blue style
+			importButtonStyle.normal.background = reloadBackgroundTexture;
 			importButtonStyle.padding = new RectOffset(10, 10, 5, 5);
 			importButtonStyle.fontSize = 14;
 			importButtonStyle.alignment = TextAnchor.MiddleCenter;
@@ -257,25 +262,25 @@ namespace ClassicTilestorm
 			importButtonStyle.fixedHeight = buttonHeight;
 
 			if (GUI.Button(importButtonRect, "Import Map", importButtonStyle))
-				editorController.ImportMapAsAtomic();
+				OnImportMapRequested?.Invoke();
 
 			// Mode switching
 			if (dragToggled && currentMode != EditorController.EditorMode.Drag)
 			{
 				currentMode = EditorController.EditorMode.Drag;
-				editorController.SetMode(EditorController.EditorMode.Drag);
+				OnModeChanged?.Invoke(EditorController.EditorMode.Drag);
 				GeometryUtil.HideGhostTile();
 			}
 			else if (paintToggled && currentMode != EditorController.EditorMode.Paint)
 			{
 				currentMode = EditorController.EditorMode.Paint;
-				editorController.SetMode(EditorController.EditorMode.Paint);
+				OnModeChanged?.Invoke(EditorController.EditorMode.Paint);
 				targetWidth = collapsedWidth;
 				tileSelectorWidth = collapsedWidth;
 				animationStartTime = Time.time;
 			}
 
-			// === TILE SELECTOR (unchanged) ===
+			// === TILE SELECTOR ===
 			if (currentMode == EditorController.EditorMode.Paint)
 			{
 				float tileSelectorX = Screen.width - tileSelectorWidth - margin;
@@ -296,14 +301,13 @@ namespace ClassicTilestorm
 					string displayName = $"{definition.id} ({definition.texture})";
 					Rect buttonRect = new(0, i * 40, tileSelectorWidth - 40, 35);
 
-					// Highlight using string ID comparison — no index!
 					if (definition.id == selectedDefinitionId)
 						GUI.color = Color.green;
 
 					if (GUI.Button(buttonRect, displayName))
 					{
 						selectedDefinitionId = definition.id;
-						OnTileSelected?.Invoke(definition);  // This is all the UI should do
+						OnTileSelected?.Invoke(definition);
 					}
 
 					GUI.color = Color.white;
@@ -325,9 +329,7 @@ namespace ClassicTilestorm
 		}
 
 		public void SetGridLinesEnabled(bool enabled) => gridLinesEnabled = enabled;
-
 		public bool GetGridLinesEnabled() => gridLinesEnabled;
-
 		public void SetSelectedDefinitionId(string id)
 		{
 			if (!string.IsNullOrEmpty(id))
