@@ -5,17 +5,21 @@ namespace ClassicTilestorm
 	public abstract class EditorControllerMovement
 	{
 		protected Camera camera;
-		protected static float yaw; // Static to share across instances
-		protected static float pitch; // Static to share across instances
+		protected static float yaw;
+		protected static float pitch;
 		protected float lookSpeedH = 2f;
 		protected float lookSpeedV = 2f;
 		protected float zoomSpeed = 12f;
 		protected bool skipNextScroll;
 		protected bool didGainFocus;
 
-		public EditorControllerMovement(Camera camera)
+		protected EditorController editorController;
+
+		public EditorControllerMovement(Camera camera, EditorController controller = null)
 		{
 			this.camera = camera;
+			this.editorController = controller;
+
 			if (null != camera)
 			{
 				yaw = camera.transform.eulerAngles.y;
@@ -38,9 +42,12 @@ namespace ClassicTilestorm
 
 			var cameraTransform = camera.transform;
 
-			// Handle rotation (right mouse or touch)
-			var isGuiControlActive = PlaceholderEditorUI.Instance.IsGuiControlActive();
-			if ((Input.GetMouseButton(1) || Input.touchCount > 0) && !isGuiControlActive && !didGainFocus)
+			var ui = editorController?.GetEditorUI();
+			bool isGuiActive = ui?.IsGuiControlActive() ?? false;
+			bool isMouseInside = ui?.IsMouseInsideWindow() ?? true;
+			bool isMouseOverGui = ui?.IsMouseOverGui() ?? false;
+
+			if ((Input.GetMouseButton(1) || Input.touchCount > 0) && !isGuiActive && !didGainFocus)
 			{
 				var pointerX = Input.GetAxis("Mouse X");
 				var pointerY = Input.GetAxis("Mouse Y");
@@ -54,19 +61,17 @@ namespace ClassicTilestorm
 				cameraTransform.eulerAngles = new Vector3(pitch, yaw, 0f);
 			}
 
-			// Zoom with mouse wheel
-			if (PlaceholderEditorUI.Instance.IsMouseInsideWindow() && !PlaceholderEditorUI.Instance.IsMouseOverGui())
+			if (isMouseInside && !isMouseOverGui)
 			{
 				var scroll = skipNextScroll ? 0f : Input.GetAxis("Mouse ScrollWheel");
 				cameraTransform.Translate(0, 0, scroll * zoomSpeed, Space.Self);
 				skipNextScroll = false;
 			}
 
-			// Translation (WASD movement)
 			var translation = GetInputTranslationDirection() * zoomSpeed * Time.deltaTime;
 			cameraTransform.Translate(translation, Space.Self);
 
-			if (PlaceholderEditorUI.Instance.IsMouseInsideWindow() && (Input.GetMouseButton(0) || Input.GetMouseButton(1)))
+			if (isMouseInside && (Input.GetMouseButton(0) || Input.GetMouseButton(1)))
 				didGainFocus = false;
 		}
 

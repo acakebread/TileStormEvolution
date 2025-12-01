@@ -16,7 +16,8 @@ namespace ClassicTilestorm
 		private List<string> definitionCycleList;
 		private int cycleIndex = 0;
 
-		public EditorControllerPaint(Camera camera, MapManager map, string definitionId = "tile_empty") : base(camera)
+		public EditorControllerPaint(Camera camera, MapManager map, EditorController editorController, string definitionId = "tile_empty")
+			: base(camera, editorController)
 		{
 			mapManager = map;
 			SetSelectedDefinitionById(definitionId);
@@ -51,15 +52,13 @@ namespace ClassicTilestorm
 		public override void Update()
 		{
 			base.Update();
-			if (!camera || PlaceholderEditorUI.Instance.IsGuiControlActive() || EventSystem.current.IsPointerOverGameObject()) return;
+			if (!camera || editorController.GetEditorUI().IsGuiControlActive() || EventSystem.current.IsPointerOverGameObject()) return;
 
-			// Ghost tile follows selectedDefinition (object)
 			if (selectedDefinition != null)
 				GeometryUtil.UpdateGhostTile(camera, mapManager, selectedDefinition);
 			else
 				GeometryUtil.HideGhostTile();
 
-			// Right-click = erase
 			if (Input.GetMouseButtonDown(1))
 				mouseDownPos = Input.mousePosition;
 
@@ -93,7 +92,7 @@ namespace ClassicTilestorm
 
 		private void PlaceTileAtMousePosition(string defID)
 		{
-			if (PlaceholderEditorUI.Instance.IsGuiControlActive()) return;
+			if (editorController.GetEditorUI().IsGuiControlActive()) return;
 
 			var worldPos = MapManager.ScreenToWorld(camera, Input.mousePosition);
 			var mapIndex = mapManager.WorldToMapIndex(worldPos);
@@ -128,8 +127,7 @@ namespace ClassicTilestorm
 					selectedDefinition = nextDef;
 					selectedDefinitionId = nextId;
 
-					// Tell UI to highlight this tile — using string only
-					PlaceholderEditorUI.Instance.SetSelectedDefinitionId(nextId);
+					editorController.GetEditorUI().SetSelectedDefinitionId(nextId);
 
 					GeometryUtil.DestroyGhostTile();
 					GeometryUtil.UpdateGhostTile(camera, mapManager, nextDef);

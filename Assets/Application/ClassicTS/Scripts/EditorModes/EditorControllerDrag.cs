@@ -10,7 +10,10 @@ namespace ClassicTilestorm
 		private Vector3 cameraStartPosition;
 		private Plane dragPlane;
 
-		public EditorControllerDrag(Camera camera) : base(camera) { }
+		public EditorControllerDrag(Camera camera, EditorController editorController)
+			: base(camera, editorController)  // passes to base
+		{
+		}
 
 		public override void Update()
 		{
@@ -20,11 +23,10 @@ namespace ClassicTilestorm
 			var wasDragging = dragging;
 			var cameraTransform = camera.transform;
 
-			// Use PlaceholderEditorUI for GUI checks
-			var isGuiControlActive = PlaceholderEditorUI.Instance.IsGuiControlActive();
+			var ui = editorController.GetEditorUI();
+			var isGuiControlActive = ui.IsGuiControlActive();
 
-			// Handle mouse button down
-			if (Input.GetMouseButtonDown(0) && !PlaceholderEditorUI.Instance.IsMouseOverGui())
+			if (Input.GetMouseButtonDown(0) && !ui.IsMouseOverGui())
 			{
 				dragging = true;
 				isDraggingWithLeftMouse = true;
@@ -45,7 +47,6 @@ namespace ClassicTilestorm
 				}
 			}
 
-			// Handle plane-based dragging
 			if (dragging && wasDragging && isDraggingWithLeftMouse && Input.GetMouseButton(0) && !isGuiControlActive)
 			{
 				cameraTransform.position = cameraStartPosition;
@@ -58,7 +59,6 @@ namespace ClassicTilestorm
 				}
 			}
 
-			// Stop dragging when mouse button is released
 			if (!Input.GetMouseButton(0))
 			{
 				dragging = false;

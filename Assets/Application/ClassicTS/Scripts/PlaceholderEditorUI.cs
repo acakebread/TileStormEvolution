@@ -6,23 +6,6 @@ namespace ClassicTilestorm
 {
 	public class PlaceholderEditorUI : MonoBehaviour
 	{
-		private static PlaceholderEditorUI instance;
-		public static PlaceholderEditorUI Instance
-		{
-			get
-			{
-				if (instance == null)
-				{
-					instance = FindAnyObjectByType<PlaceholderEditorUI>();
-					if (instance == null)
-					{
-						Debug.LogError("PlaceholderEditorUI not found in scene!");
-					}
-				}
-				return instance;
-			}
-		}
-
 		private EditorController editorController;
 		private MapManager mapManager;
 		private new Camera camera;
@@ -55,15 +38,10 @@ namespace ClassicTilestorm
 
 		public EditorController.EditorMode currentMode = EditorController.EditorMode.Drag;
 
+		public event System.Action<Definition> OnTileSelected;
+
 		private void Awake()
 		{
-			if (instance != null && instance != this)
-			{
-				Destroy(gameObject);
-				return;
-			}
-			instance = this;
-
 			panelBackgroundTexture = TextureUtils.MakeTex(4, 4, new Color(0.2f, 0.2f, 0.4f, 0.75f));
 			saveBackgroundTexture = TextureUtils.MakeTex(4, 4, new Color(0.8f, 0.2f, 0.2f, 1f));
 			reloadBackgroundTexture = TextureUtils.MakeTex(4, 4, new Color(0.2f, 0.6f, 1f, 1f));
@@ -82,10 +60,7 @@ namespace ClassicTilestorm
 			camera = cam;
 		}
 
-		public bool IsGuiControlActive()
-		{
-			return GUIUtility.hotControl != 0 || isMouseOverTileSelector || EventSystem.current.IsPointerOverGameObject();
-		}
+		public bool IsGuiControlActive() => GUIUtility.hotControl != 0 || isMouseOverTileSelector || EventSystem.current.IsPointerOverGameObject();
 
 		public bool IsMouseOverGui()
 		{
@@ -327,14 +302,8 @@ namespace ClassicTilestorm
 
 					if (GUI.Button(buttonRect, displayName))
 					{
-						selectedDefinitionId = definition.id;  // Store string
-
-						if (editorController.PaintMode != null)
-						{
-							editorController.PaintMode.SetSelectedDefinition(definition);
-							GeometryUtil.DestroyGhostTile();
-							GeometryUtil.UpdateGhostTile(camera, mapManager, definition);
-						}
+						selectedDefinitionId = definition.id;
+						OnTileSelected?.Invoke(definition);  // This is all the UI should do
 					}
 
 					GUI.color = Color.white;
@@ -355,20 +324,9 @@ namespace ClassicTilestorm
 			if (toggleHoverBackgroundTexture != null) Destroy(toggleHoverBackgroundTexture);
 		}
 
-		public void SetGridLinesEnabled(bool enabled)
-		{
-			gridLinesEnabled = enabled;
-		}
+		public void SetGridLinesEnabled(bool enabled) => gridLinesEnabled = enabled;
 
-		public bool GetGridLinesEnabled()
-		{
-			return gridLinesEnabled;
-		}
-
-		public string GetSelectedDefinitionId()
-		{
-			return selectedDefinitionId;
-		}
+		public bool GetGridLinesEnabled() => gridLinesEnabled;
 
 		public void SetSelectedDefinitionId(string id)
 		{

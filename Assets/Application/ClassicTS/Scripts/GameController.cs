@@ -4,6 +4,11 @@ namespace ClassicTilestorm
 {
 	public class GameController : MonoBehaviour
 	{
+		public void Awake()
+		{
+			gameObject.AddComponent<PlaceholderUI>();
+		}
+
 		public void Initialise()
 		{
 			//set default system

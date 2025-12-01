@@ -1,6 +1,5 @@
 ﻿using UnityEngine;
 using MassiveHadronLtd;
-using UnityEngine.EventSystems;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -20,14 +19,11 @@ namespace ClassicTilestorm
 
 		// Public getter for paintMode
 		public EditorControllerPaint PaintMode => paintMode;
+		public PlaceholderEditorUI GetEditorUI() => editorUI;
 
 		private void Awake()
 		{
-			if (!FindAnyObjectByType<EventSystem>()) new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
-
-			editorUI = FindAnyObjectByType<PlaceholderEditorUI>();
-			if (null == editorUI) Debug.LogWarning("PlaceholderEditorUI not found in scene!");
-
+			editorUI = gameObject.AddComponent<PlaceholderEditorUI>();
 			GeometryUtil.InitializeGhostMaterial();
 		}
 
@@ -40,12 +36,6 @@ namespace ClassicTilestorm
 
 			mapManager = map;
 
-			editorUI = FindAnyObjectByType<PlaceholderEditorUI>();
-			if (null == editorUI)
-			{
-				Debug.LogError("PlaceholderEditorUI not found in scene!");
-				return;
-			}
 			var camera = controller.activeSystem?.camera;
 			editorUI.Initialize(this, mapManager, camera);
 
@@ -74,16 +64,16 @@ namespace ClassicTilestorm
 
 		void OnEnable()
 		{
-			if (null != editorUI)
-			{
-				editorUI.enabled = true;
-				UpdateGridLines(editorUI.GetGridLinesEnabled());
-			}
+			editorUI.enabled = true;
+			UpdateGridLines(editorUI.GetGridLinesEnabled());
 
 			if (!TryGetComponent<MainCameraController>(out var controller)) return;
 			var camera = controller.activeSystem?.camera;
-			dragMode = new EditorControllerDrag(camera);
-			paintMode = new EditorControllerPaint(camera, mapManager, "tile_empty");
+			dragMode = new EditorControllerDrag(camera, this);
+			paintMode = new EditorControllerPaint(camera, mapManager, this, "tile_empty");
+
+			editorUI.OnTileSelected += paintMode.SetSelectedDefinition;
+
 			activeMode = editorUI.currentMode == EditorMode.Drag ? dragMode : paintMode;
 			controller.UpdateGestureControllerState();
 		}
@@ -91,7 +81,8 @@ namespace ClassicTilestorm
 		void OnDisable()
 		{
 			if (null != gridLines) gridLines.SetActive(false); // Only deactivate grid lines, don't reset UI state
-			if (null != editorUI) editorUI.enabled = false;
+			editorUI.OnTileSelected -= paintMode.SetSelectedDefinition;
+			editorUI.enabled = false;
 		}
 
 		void Destroy()

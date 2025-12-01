@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using System.Linq;
 using MassiveHadronLtd;
+using UnityEngine.EventSystems;
 
 namespace ClassicTilestorm
 {
@@ -14,8 +15,7 @@ namespace ClassicTilestorm
 
 		private void Awake()
 		{
-			gameObject.AddComponent<PlaceholderUI>();
-			gameObject.AddComponent<PlaceholderEditorUI>();
+			if (!FindAnyObjectByType<EventSystem>()) new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
 			gameController = gameObject.AddComponent<GameController>();
 			editorController = gameObject.AddComponent<EditorController>();
 			cameraController = gameObject.AddComponent<MainCameraController>();
