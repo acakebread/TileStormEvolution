@@ -235,7 +235,7 @@ namespace ClassicTilestorm
 				if (mapManager != null && mapManager.CurrentMap != null && mapManager.CurrentMap.name == importedName)
 				{
 					if (!TryGetComponent<MainController>(out var main)) return;
-					if (main != null) main.ReloadCurrentMap();
+					main.ReloadCurrentMap();
 				}
 			}
 #else
