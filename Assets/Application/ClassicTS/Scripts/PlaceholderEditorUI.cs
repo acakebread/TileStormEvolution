@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using UnityEngine.EventSystems;
 using System;
+using MassiveHadronLtd;
 
 namespace ClassicTilestorm
 {
@@ -109,10 +110,9 @@ namespace ClassicTilestorm
 
 		private static void InitStaticTextures()
 		{
-			// These are created ONCE, when the editor loads or script recompiles
-			solidWhite = CreateTex(Color.white);
-			solidDark = CreateTex(new Color(0.75f, 0.75f, 0.75f));
-			solidBright = CreateTex(new Color(1.15f, 1.15f, 1.15f));
+			solidWhite = TextureUtils.MakeTex(1, 1, Color.white);
+			solidDark = TextureUtils.MakeTex(1, 1, new Color(0.75f, 0.75f, 0.75f));
+			solidBright = TextureUtils.MakeTex(1, 1, new Color(1.15f, 1.15f, 1.15f));
 		}
 		private static void EnsureStyles()
 		{
@@ -179,14 +179,6 @@ namespace ClassicTilestorm
 			GUI.color = prevColor;
 			GUI.contentColor = prevContentColor;
 			GUI.backgroundColor = prevBackground;
-		}
-
-		private static Texture2D CreateTex(Color col)
-		{
-			var tex = new Texture2D(1, 1, TextureFormat.RGBA32, false);
-			tex.SetPixel(0, 0, col);
-			tex.Apply();
-			return tex;
 		}
 
 		public void DrawMainUI(string mode, bool gridVisible)
