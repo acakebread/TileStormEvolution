@@ -58,7 +58,6 @@ namespace ClassicTilestorm
 			var bottomY = placeholderUI ? placeholderUI.GetPanelBottomY() : 10f;
 			editorUI.Initialize(bottomY);
 
-			//gridLines = null != mapManager ? GridLinesHelper.CreateGridLines(transform, mapManager.Width, mapManager.Height) : null;//, extension: 16 - disable oversize for now
 			gridLines = null != mapManager ? GridLinesHelper.CreateGridLines(transform, mapManager.Width, mapManager.Height, extension: 16) : null;
 			if (null != gridLines)
 				gridLines.transform.localPosition = MapManager.tile_origin + new Vector3(-0.5f, 0f, -0.5f);//workaround for tile offset in mapmanager
