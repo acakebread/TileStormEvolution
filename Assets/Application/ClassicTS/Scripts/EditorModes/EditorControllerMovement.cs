@@ -65,10 +65,15 @@ namespace ClassicTilestorm
 
 			if (isMouseInside && (Input.GetMouseButton(0) || Input.GetMouseButton(1)))
 			{
-				yaw = camera.transform.eulerAngles.y;
-				pitch = camera.transform.eulerAngles.x; 
+				OnEnable();
 				didGainFocus = false;
 			}
+		}
+
+		public void OnEnable()
+		{
+			yaw = camera.transform.eulerAngles.y;
+			pitch = camera.transform.eulerAngles.x;
 		}
 
 		public virtual void OnApplicationFocus(bool hasFocus)

@@ -97,6 +97,7 @@ namespace ClassicTilestorm
 			UpdateGridLines(gridLinesEnabled);
 
 			activeMode = currentMode == EditorMode.Drag ? dragMode : paintMode;
+			activeMode.OnEnable();
 
 			if (!TryGetComponent<MainCameraController>(out var controller)) return;
 			controller.UpdateGestureControllerState();
@@ -116,6 +117,7 @@ namespace ClassicTilestorm
 			{
 				currentMode = newMode;
 				activeMode = newMode == EditorMode.Drag ? dragMode : paintMode;
+				activeMode.OnEnable();
 				if (currentMode != EditorMode.Paint)
 					GeometryUtil.HideGhostTile();
 			}
