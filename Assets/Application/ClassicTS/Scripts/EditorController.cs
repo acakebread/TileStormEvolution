@@ -108,6 +108,7 @@ namespace ClassicTilestorm
 		{
 			if (gridLines != null) gridLines.SetActive(false);
 			editorUI.enabled = false;
+			EditorUtil.DestroyGhostTile();
 		}
 
 		public void OnApplicationFocus(bool hasFocus) => activeMode?.OnApplicationFocus(hasFocus);
