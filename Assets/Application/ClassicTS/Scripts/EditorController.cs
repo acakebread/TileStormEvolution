@@ -58,7 +58,9 @@ namespace ClassicTilestorm
 			var bottomY = placeholderUI ? placeholderUI.GetPanelBottomY() : 10f;
 			editorUI.Initialize(bottomY);
 
-			gridLines = null != mapManager ? GridLinesHelper.CreateGridLines(transform, mapManager.Width, mapManager.Height, 0f, MapManager.tile_origin.x - 0.5f) : null;
+			gridLines = null != mapManager ? GridLinesHelper.CreateGridLines(transform, mapManager.Width, mapManager.Height) : null;
+			if (null != gridLines)
+				gridLines.transform.localPosition = MapManager.tile_origin + new Vector3(-0.5f, 0f, -0.5f);//workaround for tile offset in mapmanager
 
 			UpdateGridLines(gridLinesEnabled);
 
@@ -169,30 +171,6 @@ namespace ClassicTilestorm
 			if (!TryGetComponent<MainController>(out var main)) return;
 			main.ReloadCurrentMap();
 		}
-
-		//public void LoadExternalDatabase()//ToDo make work outside editor
-		//{
-		//	var dbAsset = PreviewSettings.DatabaseJsonFile;
-		//	if (dbAsset == null)
-		//	{
-		//		Debug.LogError("PreviewSettings.DatabaseJsonFile is not assigned!");
-		//		return;
-		//	}
-
-		//	string path = AssetDatabase.GetAssetPath(dbAsset);
-		//	if (string.IsNullOrEmpty(path))
-		//	{
-		//		Debug.LogError("DatabaseJsonFile has no valid path.");
-		//		return;
-		//	}
-
-		//	var _db = ResourceSerializer.LoadDatabase(path);
-		//	if (_db == null) return;
-
-		//	ResourceManager.database = _db;
-		//	if (!TryGetComponent<MainController>(out var main)) return;
-		//	main.ReloadCurrentMap();
-		//}
 
 		public void LoadDatabase()
 		{
@@ -318,3 +296,28 @@ namespace ClassicTilestorm
 		}
 	}
 }
+
+
+//public void LoadExternalDatabase()//ToDo make work outside editor
+//{
+//	var dbAsset = PreviewSettings.DatabaseJsonFile;
+//	if (dbAsset == null)
+//	{
+//		Debug.LogError("PreviewSettings.DatabaseJsonFile is not assigned!");
+//		return;
+//	}
+
+//	string path = AssetDatabase.GetAssetPath(dbAsset);
+//	if (string.IsNullOrEmpty(path))
+//	{
+//		Debug.LogError("DatabaseJsonFile has no valid path.");
+//		return;
+//	}
+
+//	var _db = ResourceSerializer.LoadDatabase(path);
+//	if (_db == null) return;
+
+//	ResourceManager.database = _db;
+//	if (!TryGetComponent<MainController>(out var main)) return;
+//	main.ReloadCurrentMap();
+//}

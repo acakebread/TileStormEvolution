@@ -4,58 +4,62 @@ namespace MassiveHadronLtd
 {
 	public static class GridLinesHelper
 	{
-		public static GameObject CreateGridLines(Transform parentTransform, int width, int height, float y = 0f, float offset = 0f, Color? color = null)
+		public static GameObject CreateGridLines(Transform parentTransform, int width, int height, Color? color = null)
 		{
-			// Destroy existing grid lines if they exist
-			var existingGridLines = parentTransform.Find("GridLines");
-			if (existingGridLines != null)
-			{
-				Object.Destroy(existingGridLines.gameObject);
-			}
+			// Destroy existing grid lines
+			var existing = parentTransform.Find("GridLines");
+			if (existing != null)
+				Object.Destroy(existing.gameObject);
 
-			// Create new grid lines object
+			// Create container (will be positioned by the caller)
 			var gridLinesObject = new GameObject("GridLines");
-			gridLinesObject.transform.SetParent(parentTransform, false);
+			var gridTransform = gridLinesObject.transform;
+			gridTransform.SetParent(parentTransform, false);
+			gridTransform.localPosition = Vector3.zero;   // Explicitly clean
+			gridTransform.localRotation = Quaternion.identity;
 
-			// Use faint grey as default, allow override
+			// Material
 			var gridColor = color ?? new Color(0.5f, 0.5f, 0.5f, 0.3f);
 			var gridMaterial = MaterialUtils.CreateTransparentUnlitMaterial(gridColor);
+
 			if (gridMaterial == null)
 			{
 				Debug.LogError("GridLinesHelper: Failed to create grid line material.");
+				return gridLinesObject;
 			}
 
-			// Create vertical lines (along X)
+			// === Vertical lines (constant X) ===
 			for (int x = 0; x <= width; x++)
 			{
-				float xPos = x + offset;
 				var lineObj = new GameObject($"VerticalLine_{x}");
-				lineObj.transform.SetParent(gridLinesObject.transform, false);
+				lineObj.transform.SetParent(gridTransform, false);
+
 				var lr = lineObj.AddComponent<LineRenderer>();
 				lr.material = gridMaterial;
-				lr.startWidth = 0.02f;
-				lr.endWidth = 0.02f;
-				lr.useWorldSpace = true;
+				lr.startWidth = lr.endWidth = 0.02f;
 				lr.positionCount = 2;
-				lr.SetPosition(0, new Vector3(xPos, y, 0 + offset));
-				lr.SetPosition(1, new Vector3(xPos, y, height + offset));
+				lr.useWorldSpace = false;
+
+				lr.SetPosition(0, new Vector3(x, 0f, 0f));
+				lr.SetPosition(1, new Vector3(x, 0f, height));
 			}
 
-			// Create horizontal lines (along Z)
+			// === Horizontal lines (constant Z) ===
 			for (int z = 0; z <= height; z++)
 			{
-				float zPos = z + offset;
 				var lineObj = new GameObject($"HorizontalLine_{z}");
-				lineObj.transform.SetParent(gridLinesObject.transform, false);
+				lineObj.transform.SetParent(gridTransform, false);
+
 				var lr = lineObj.AddComponent<LineRenderer>();
 				lr.material = gridMaterial;
-				lr.startWidth = 0.02f;
-				lr.endWidth = 0.02f;
-				lr.useWorldSpace = true;
+				lr.startWidth = lr.endWidth = 0.02f;
 				lr.positionCount = 2;
-				lr.SetPosition(0, new Vector3(0 + offset, y, zPos));
-				lr.SetPosition(1, new Vector3(width + offset, y, zPos));
+				lr.useWorldSpace = false;
+
+				lr.SetPosition(0, new Vector3(0f, 0f, z));
+				lr.SetPosition(1, new Vector3(width, 0f, z));
 			}
+
 			return gridLinesObject;
 		}
 	}
