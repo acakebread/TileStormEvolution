@@ -170,28 +170,51 @@ namespace ClassicTilestorm
 			main.ReloadCurrentMap();
 		}
 
+		//public void LoadExternalDatabase()//ToDo make work outside editor
+		//{
+		//	var dbAsset = PreviewSettings.DatabaseJsonFile;
+		//	if (dbAsset == null)
+		//	{
+		//		Debug.LogError("PreviewSettings.DatabaseJsonFile is not assigned!");
+		//		return;
+		//	}
+
+		//	string path = AssetDatabase.GetAssetPath(dbAsset);
+		//	if (string.IsNullOrEmpty(path))
+		//	{
+		//		Debug.LogError("DatabaseJsonFile has no valid path.");
+		//		return;
+		//	}
+
+		//	var _db = ResourceSerializer.LoadDatabase(path);
+		//	if (_db == null) return;
+
+		//	ResourceManager.database = _db;
+		//	if (!TryGetComponent<MainController>(out var main)) return;
+		//	main.ReloadCurrentMap();
+		//}
+
 		public void LoadDatabase()
 		{
 			var dbAsset = PreviewSettings.DatabaseJsonFile;
 			if (dbAsset == null)
 			{
-				Debug.LogError("PreviewSettings.DatabaseJsonFile is not assigned!");
+				Debug.LogError("PreviewSettings.DatabaseJsonFile is not assigned in PreviewSettings!");
 				return;
 			}
 
-			string path = AssetDatabase.GetAssetPath(dbAsset);
-			if (string.IsNullOrEmpty(path))
+			ResourceSerializer.Initialise(dbAsset);
+
+			if (ResourceManager.database == null)
 			{
-				Debug.LogError("DatabaseJsonFile has no valid path.");
+				Debug.LogError("Failed to load database from DatabaseJsonFile!");
 				return;
 			}
 
-			var _db = ResourceSerializer.LoadDatabase(path);
-			if (_db == null) return;
-
-			ResourceManager.database = _db;
-			if (!TryGetComponent<MainController>(out var main)) return;
-			main.ReloadCurrentMap();
+			if (TryGetComponent<MainController>(out var main))
+			{
+				main.ReloadCurrentMap();
+			}
 		}
 
 		public void SaveDatabase()
