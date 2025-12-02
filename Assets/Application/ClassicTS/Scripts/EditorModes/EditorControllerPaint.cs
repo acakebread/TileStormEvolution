@@ -31,7 +31,7 @@ namespace ClassicTilestorm
 
 			var selectedDefinition = ResourceManager.GetDefinition(selectedDefinitionId);
 			if (null != selectedDefinition)
-				GeometryUtil.UpdateGhostTile(camera, editorController.iMapManager, selectedDefinition);
+				EditorUtil.UpdateGhostTile(camera, editorController.iMapManager, selectedDefinition);
 		}
 
 		private void EditMapTile(string defID = null)
@@ -47,7 +47,7 @@ namespace ClassicTilestorm
 				{
 					cycleIndex = (cycleIndex + 1) % definitionCycleList.Count;
 					selectedDefinitionId = definitionCycleList[cycleIndex];
-					GeometryUtil.DestroyGhostTile();
+					EditorUtil.DestroyGhostTile();
 					defID = selectedDefinitionId;
 				}
 			}
@@ -71,12 +71,12 @@ namespace ClassicTilestorm
 			definitionCycleList = ResourceManager.DefinitionNavGroup(selectedDefinitionId);
 			cycleIndex = definitionCycleList.IndexOf(selectedDefinitionId);
 
-			GeometryUtil.DestroyGhostTile();
+			EditorUtil.DestroyGhostTile();
 			var selectedDefinition = ResourceManager.GetDefinition(selectedDefinitionId);
 			if (null != selectedDefinition)
-				GeometryUtil.UpdateGhostTile(camera, editorController.iMapManager, selectedDefinition);
+				EditorUtil.UpdateGhostTile(camera, editorController.iMapManager, selectedDefinition);
 			else
-				GeometryUtil.HideGhostTile();
+				EditorUtil.HideGhostTile();
 		}
 	}
 }

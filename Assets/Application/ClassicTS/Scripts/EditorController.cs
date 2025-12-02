@@ -29,7 +29,7 @@ namespace ClassicTilestorm
 		private void Awake()
 		{
 			editorUI = gameObject.AddComponent<PlaceholderEditorUI>();
-			GeometryUtil.InitializeGhostMaterial();
+			EditorUtil.InitializeGhostMaterial();
 
 			editorUI.OnModeChanged += HandleModeChanged;
 			editorUI.OnGridLinesToggled += UpdateGridLines;
@@ -120,7 +120,7 @@ namespace ClassicTilestorm
 				activeMode = newMode == EditorMode.Drag ? dragMode : paintMode;
 				activeMode.OnEnable();
 				if (currentMode != EditorMode.Paint)
-					GeometryUtil.HideGhostTile();
+					EditorUtil.HideGhostTile();
 			}
 		}
 
@@ -138,7 +138,7 @@ namespace ClassicTilestorm
 		void OnDestroy()
 		{
 			Destroy();
-			GeometryUtil.DestroyGhostTile();
+			EditorUtil.DestroyGhostTile();
 
 			editorUI.OnModeChanged -= HandleModeChanged;
 			editorUI.OnGridLinesToggled -= UpdateGridLines;
