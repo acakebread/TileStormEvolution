@@ -58,6 +58,9 @@ namespace ClassicTilestorm
 			var bottomY = placeholderUI ? placeholderUI.GetPanelBottomY() : 10f;
 			editorUI.Initialize(bottomY);
 
+			//if (mapManager != null)
+			//	mapManager.OnMapStructureChanged += HandleMapStructureChanged;
+
 			gridLines = null != mapManager ? GridLinesHelper.CreateGridLines(transform, mapManager.Width, mapManager.Height, extension: 16) : null;
 			if (null != gridLines)
 				gridLines.transform.localPosition = MapManager.tile_origin + new Vector3(-0.5f, 0f, -0.5f);//workaround for tile offset in mapmanager
@@ -66,6 +69,24 @@ namespace ClassicTilestorm
 
 			if (isActiveAndEnabled) OnEnable();
 		}
+
+		//private void HandleMapStructureChanged()
+		//{
+		//	// Recreate grid lines for new size
+		//	if (gridLines != null)
+		//	{
+		//		Destroy(gridLines);
+		//		gridLines = null;
+		//	}
+
+		//	if (mapManager != null)
+		//	{
+		//		gridLines = GridLinesHelper.CreateGridLines(transform, mapManager.Width, mapManager.Height, extension: 16);
+		//		if (gridLines != null)
+		//			gridLines.transform.localPosition = MapManager.tile_origin + new Vector3(-0.5f, 0f, -0.5f);
+		//		UpdateGridLines(gridLinesEnabled);
+		//	}
+		//}
 
 		public void UpdateGridLines(bool value)
 		{
@@ -128,11 +149,13 @@ namespace ClassicTilestorm
 
 		void Destroy()
 		{
-			if (gridLines != null)
+			if (null != gridLines)
 			{
 				Destroy(gridLines);
 				gridLines = null;
 			}
+			//if (null != mapManager)
+			//	mapManager.OnMapStructureChanged -= HandleMapStructureChanged;
 		}
 
 		void OnDestroy()
@@ -173,6 +196,17 @@ namespace ClassicTilestorm
 			}
 			if (!TryGetComponent<MainController>(out var main)) return;
 			main.ReloadCurrentMap();
+		}
+
+		public void OnMapChanged(bool resized = false)
+		{
+			if (mapManager == null || mapManager.CurrentMap == null) return;
+			if (resized) mapManager.CurrentMap.Consolidate();
+			ResourceManager.ApplyMapChanges(mapManager.CurrentMap);
+			if (!resized) return;
+			if (!TryGetComponent<MainController>(out var main)) return;
+			main.ReloadCurrentMap();
+			//HandleMapStructureChanged();
 		}
 
 		public void LoadDatabase()

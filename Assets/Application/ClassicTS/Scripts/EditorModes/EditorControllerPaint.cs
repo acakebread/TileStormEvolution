@@ -37,26 +37,33 @@ namespace ClassicTilestorm
 		private void EditMapTile(string defID = null)
 		{
 			var worldPos = MapManager.ScreenToWorld(camera, Input.mousePosition);
-			var mapIndex = editorController.iMapManager.WorldToMapIndex(worldPos);
-			if (-1 == mapIndex) return;
 
 			if (null != defID)
 			{
-				var currentId = editorController.iMapManager.GetDefinitionAtIndex(mapIndex);
-				if (currentId == selectedDefinitionId && definitionCycleList.Count > 1)
+				var mapIndex = editorController.iMapManager.WorldToMapIndex(worldPos);
+				if (-1 != mapIndex)
 				{
-					cycleIndex = (cycleIndex + 1) % definitionCycleList.Count;
-					selectedDefinitionId = definitionCycleList[cycleIndex];
-					EditorUtil.DestroyGhostTile();
-					defID = selectedDefinitionId;
+					var currentId = editorController.iMapManager.GetDefinitionAtIndex(mapIndex);
+					if (currentId == selectedDefinitionId && definitionCycleList.Count > 1)
+					{
+						cycleIndex = (cycleIndex + 1) % definitionCycleList.Count;
+						selectedDefinitionId = definitionCycleList[cycleIndex];
+						EditorUtil.DestroyGhostTile();
+						defID = selectedDefinitionId;
+					}
 				}
 			}
 			else
 				defID = "tile_empty";
 
-			var x = mapIndex % editorController.iMapManager.Width;
-			var z = mapIndex / editorController.iMapManager.Width;
-			editorController.iMapManager.UpdateTileAt(x, z, defID);
+			//var x = mapIndex % editorController.iMapManager.Width;
+			//var z = mapIndex / editorController.iMapManager.Width;
+			//editorController.iMapManager.UpdateTileAt(x, z, defID);
+
+			var snappedPos = editorController.iMapManager.SnappedMapPosition(worldPos);
+			//editorController.iMapManager.UpdateTileAt((int)snappedPos.x, (int)snappedPos.z, defID);
+			var resized = editorController.iMapManager.UpdateTileAt((int)Mathf.Floor(snappedPos.x), (int)Mathf.Floor(snappedPos.z), defID);
+			editorController.OnMapChanged(resized);
 		}
 
 		public void SetSelectedDefinitionById(string id)

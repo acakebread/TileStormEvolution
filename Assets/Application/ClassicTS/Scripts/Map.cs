@@ -134,7 +134,7 @@ namespace ClassicTilestorm
 		}
 
 		// THE REAL, BULLETPROOF ENGINE — does everything correctly
-		private bool RepositionAndResize(int newWidth, int newHeight, int offsetX, int offsetZ)
+		public bool RepositionAndResize(int newWidth, int newHeight, int offsetX, int offsetZ)
 		{
 			if (newWidth <= 0 || newHeight <= 0) return false;
 
