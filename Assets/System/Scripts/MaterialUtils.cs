@@ -373,5 +373,54 @@ namespace MassiveHadronLtd
 			material.shader = unlitShader;
 			return material;
 		}
+
+		//public static Material CreateTransparentLineMaterial(Color color)
+		//{
+		//	// Sprites/Default supports vertex colors (required for LineRenderer gradients)
+		//	var shader = Shader.Find("Sprites/Default");
+		//	if (!shader)
+		//	{
+		//		Debug.LogError("MaterialUtils: Sprites/Default shader not found! Falling back to Transparent Unlit.");
+		//		return CreateTransparentUnlitMaterial(color);
+		//	}
+
+		//	var mat = new Material(shader)
+		//	{
+		//		renderQueue = (int)RenderQueue.Transparent
+		//	};
+
+		//	mat.SetColor("_Color", color);
+		//	return mat;
+		//}
+
+		public static Material CreateTransparentLineMaterial(Color color)
+		{
+			// Sprites/Default is perfect: supports vertex colors + tint + alpha
+			var shader = Shader.Find("Sprites/Default");
+			if (!shader)
+			{
+				Debug.LogWarning("MaterialUtils: Sprites/Default shader not found! Falling back to URP Unlit (no vertex color support).");
+				return CreateTransparentUnlitMaterial(color);
+			}
+
+			var mat = new Material(shader)
+			{
+				name = "TransparentLineMaterial",
+				renderQueue = (int)RenderQueue.Transparent,
+				hideFlags = HideFlags.HideAndDontSave // optional: cleaner in editor
+			};
+
+			mat.SetColor("_Color", color);
+			mat.SetInt("_ZWrite", 0);
+			mat.SetInt("_Cull", (int)UnityEngine.Rendering.CullMode.Off);
+			mat.EnableKeyword("_ALPHATEST_ON"); // optional: better edge behavior
+			mat.SetOverrideTag("RenderType", "Transparent");
+			mat.SetFloat("_Surface", 1f);
+			mat.SetFloat("_BlendOp", (float)UnityEngine.Rendering.BlendOp.Add);
+			mat.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+			mat.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+
+			return mat;
+		}
 	}
 }

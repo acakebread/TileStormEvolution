@@ -4,148 +4,158 @@ namespace MassiveHadronLtd
 {
 	public static class GridLinesHelper
 	{
+		// Final colors
+		private static readonly Color MainColor = new Color(0.3f, 0.3f, 0.9f, 0.5f);
+		private static readonly Color ExtendedColor = new Color(0.4f, 0.4f, 0.4f, 0.5f);
+
+		private static Material _lineMat;
+		private static Material LineMat => _lineMat ??= MaterialUtils.CreateTransparentLineMaterial(Color.white);
+
+		private static Material _mainMat;
+		private static Material MainMat => _mainMat ??= MaterialUtils.CreateTransparentUnlitMaterial(MainColor);
+
 		public static GameObject CreateGridLines(
 			Transform parentTransform,
 			int width,
 			int height,
-			int extension = 0,
-			Color? color = null,
+			int extension = 8,
 			Color? extendedColor = null)
 		{
 			var existing = parentTransform.Find("GridLines");
-			if (existing != null)
-				Object.Destroy(existing.gameObject);
+			if (existing != null) Object.Destroy(existing.gameObject);
 
-			var gridLinesObject = new GameObject("GridLines");
-			var gridTransform = gridLinesObject.transform;
-			gridTransform.SetParent(parentTransform, false);
-			gridTransform.localPosition = Vector3.zero;
-			gridTransform.localRotation = Quaternion.identity;
+			var gridObj = new GameObject("GridLines");
+			var t = gridObj.transform;
+			t.SetParent(parentTransform, false);
+			t.localPosition = Vector3.zero;
 
-			// Materials
-			var mainColor = color ?? new Color(0.5f, 0.5f, 0.5f, 0.3f);
-			var mainMaterial = MaterialUtils.CreateTransparentUnlitMaterial(mainColor);
+			var extColor = extendedColor ?? ExtendedColor;
 
-			Material extendedMaterial = null;
-			if (extension > 0)
+			if (extension <= 0)
 			{
-				var extColor = extendedColor ?? new Color(0.4f, 0.4f, 0.9f, 0.3f); // ← Debug blue
-				extendedMaterial = MaterialUtils.CreateTransparentUnlitMaterial(extColor);
+				for (int x = 0; x <= width; x++) DrawMainLine(t, new(x, 0, 0), new(x, 0, height));
+				for (int z = 0; z <= height; z++) DrawMainLine(t, new(0, 0, z), new(width, 0, z));
+				return gridObj;
 			}
 
-			if (mainMaterial == null)
+			float x0 = -extension;
+			float x1 = 0f;
+			float x2 = width;
+			float x3 = width + extension;
+
+			float z0 = -extension;
+			float z1 = 0f;
+			float z2 = height;
+			float z3 = height + extension;
+
+			// Fade factor: 0 = fully visible (at main edge), 1 = fully transparent (at outer edge)
+			float Fade(float coord, float inner, float outer)
 			{
-				Debug.LogError("GridLinesHelper: Failed to create main grid material.");
-				return gridLinesObject;
+				if (coord >= inner && coord <= outer) return 0f;
+				float dist = coord < inner ? inner - coord : coord - outer;
+				return Mathf.Clamp01(dist / extension);
 			}
 
-			int totalSizeX = width + 2 * extension;
-			int totalSizeZ = height + 2 * extension;
-
-			float offsetX = -extension;
-			float offsetZ = -extension;
-
-			// ====================================================================
-			// 1. VERTICAL LINES (constant X)
-			// ====================================================================
-			for (int x = 0; x <= totalSizeX; x++)
+			void DrawFadedLine(Vector3 a, Vector3 b, string name = "ExtLine")
 			{
-				float posX = x + offsetX;
-				bool isMainX = x >= extension && x <= width + extension;
+				float fadeA = 0f, fadeB = 0f;
 
-				if (isMainX)
-				{
-					// Main vertical line: only main height
-					CreateLine(gridTransform, mainMaterial,
-						new Vector3(posX, 0f, 0f),
-						new Vector3(posX, 0f, height),
-						$"V_Main_{x}");
+				// X-axis fade
+				fadeA = Mathf.Max(fadeA, Fade(a.x, 0f, width));
+				fadeB = Mathf.Max(fadeB, Fade(b.x, 0f, width));
 
-					// Add extended TOP and BOTTOM segments on main X lines
-					if (extension > 0)
-					{
-						// Top extension
-						CreateLine(gridTransform, extendedMaterial,
-							new Vector3(posX, 0f, height),
-							new Vector3(posX, 0f, height + extension),
-							$"V_Ext_Top_{x}");
+				// Z-axis fade
+				fadeA = Mathf.Max(fadeA, Fade(a.z, 0f, height));
+				fadeB = Mathf.Max(fadeB, Fade(b.z, 0f, height));
 
-						// Bottom extension
-						CreateLine(gridTransform, extendedMaterial,
-							new Vector3(posX, 0f, -extension),
-							new Vector3(posX, 0f, 0f),
-							$"V_Ext_Bottom_{x}");
-					}
-				}
-				else if (extension > 0)
-				{
-					// Fully extended vertical lines (left/right borders)
-					CreateLine(gridTransform, extendedMaterial,
-						new Vector3(posX, 0f, offsetZ),
-						new Vector3(posX, 0f, offsetZ + totalSizeZ),
-						$"V_Ext_Full_{x}");
-				}
+				// Corner bonus: multiplicative fade (feels more natural)
+				if ((a.x < 0f || a.x > width) && (a.z < 0f || a.z > height))
+					fadeA = 1f - (1f - fadeA) * (1f - Fade(a.z, 0f, height));
+				if ((b.x < 0f || b.x > width) && (b.z < 0f || b.z > height))
+					fadeB = 1f - (1f - fadeB) * (1f - Fade(b.z, 0f, height));
+
+				var go = new GameObject(name);
+				go.transform.SetParent(t, false);
+				var lr = go.AddComponent<LineRenderer>();
+				lr.material = LineMat;
+				lr.startWidth = lr.endWidth = 0.025f;
+				lr.positionCount = 2;
+				lr.useWorldSpace = false;
+				lr.SetPosition(0, a);
+				lr.SetPosition(1, b);
+
+				Color cA = extColor; cA.a *= (1f - fadeA);
+				Color cB = extColor; cB.a *= (1f - fadeB);
+
+				lr.startColor = cA;
+				lr.endColor = cB;
 			}
 
-			// ====================================================================
-			// 2. HORIZONTAL LINES (constant Z)
-			// ====================================================================
-			for (int z = 0; z <= totalSizeZ; z++)
+			// === CORNER ZONES (own outer border) ===
+			for (int i = 0; i <= extension; i++)
 			{
-				float posZ = z + offsetZ;
-				bool isMainZ = z >= extension && z <= height + extension;
+				float px, pz;
 
-				if (isMainZ)
-				{
-					// Main horizontal line: only main width
-					CreateLine(gridTransform, mainMaterial,
-						new Vector3(0f, 0f, posZ),
-						new Vector3(width, 0f, posZ),
-						$"H_Main_{z}");
+				// Top-Left
+				px = x0 + i; pz = z0 + i;
+				DrawFadedLine(new(px, 0, z0), new(px, 0, z1), $"TL_V_{i}");
+				DrawFadedLine(new(x0, 0, pz), new(x1, 0, pz), $"TL_H_{i}");
 
-					// Add extended LEFT and RIGHT segments on main Z lines
-					if (extension > 0)
-					{
-						// Left extension
-						CreateLine(gridTransform, extendedMaterial,
-							new Vector3(-extension, 0f, posZ),
-							new Vector3(0f, 0f, posZ),
-							$"H_Ext_Left_{z}");
+				// Top-Right
+				px = x2 + i;
+				DrawFadedLine(new(px, 0, z0), new(px, 0, z1), $"TR_V_{i}");
+				DrawFadedLine(new(x2, 0, pz), new(x3, 0, pz), $"TR_H_{i}");
 
-						// Right extension
-						CreateLine(gridTransform, extendedMaterial,
-							new Vector3(width, 0f, posZ),
-							new Vector3(width + extension, 0f, posZ),
-							$"H_Ext_Right_{z}");
-					}
-				}
-				else if (extension > 0)
-				{
-					// Fully extended horizontal lines (top/bottom borders)
-					CreateLine(gridTransform, extendedMaterial,
-						new Vector3(offsetX, 0f, posZ),
-						new Vector3(offsetX + totalSizeX, 0f, posZ),
-						$"H_Ext_Full_{z}");
-				}
+				// Bottom-Left
+				px = x0 + i; pz = z2 + i;
+				DrawFadedLine(new(px, 0, z2), new(px, 0, z3), $"BL_V_{i}");
+				DrawFadedLine(new(x0, 0, pz), new(x1, 0, pz), $"BL_H_{i}");
+
+				// Bottom-Right
+				px = x2 + i;
+				DrawFadedLine(new(px, 0, z2), new(px, 0, z3), $"BR_V_{i}");
+				DrawFadedLine(new(x2, 0, pz), new(x3, 0, pz), $"BR_H_{i}");
 			}
 
-			return gridLinesObject;
+			// === EDGE ZONES (inner sides only) ===
+			for (int x = 1; x < width; x++)
+			{
+				DrawFadedLine(new(x, 0, z2), new(x, 0, z3), $"Top_V_{x}");
+				DrawFadedLine(new(x, 0, z0), new(x, 0, z1), $"Bot_V_{x}");
+			}
+			for (int z = 1; z < height; z++)
+			{
+				DrawFadedLine(new(x0, 0, z), new(x1, 0, z), $"Left_H_{z}");
+				DrawFadedLine(new(x2, 0, z), new(x3, 0, z), $"Right_H_{z}");
+			}
+			for (int i = 1; i < extension; i++)
+			{
+				DrawFadedLine(new(x1, 0, z2 + i), new(x2, 0, z2 + i), $"Top_H_{i}");
+				DrawFadedLine(new(x1, 0, z0 + i), new(x2, 0, z0 + i), $"Bot_H_{i}");
+				DrawFadedLine(new(x0 + i, 0, z1), new(x0 + i, 0, z2), $"Left_V_{i}");
+				DrawFadedLine(new(x2 + i, 0, z1), new(x2 + i, 0, z2), $"Right_V_{i}");
+			}
+
+			// === MAIN GRID (solid) ===
+			for (int x = 0; x <= width; x++)
+				DrawMainLine(t, new(x, 0, 0), new(x, 0, height));
+			for (int z = 0; z <= height; z++)
+				DrawMainLine(t, new(0, 0, z), new(width, 0, z));
+
+			return gridObj;
 		}
 
-		private static void CreateLine(Transform parent, Material mat, Vector3 start, Vector3 end, string name)
+		private static void DrawMainLine(Transform parent, Vector3 a, Vector3 b)
 		{
-			if (mat == null) return;
-
-			var obj = new GameObject(name);
-			obj.transform.SetParent(parent, false);
-
-			var lr = obj.AddComponent<LineRenderer>();
-			lr.material = mat;
+			var go = new GameObject("MainLine");
+			go.transform.SetParent(parent, false);
+			var lr = go.AddComponent<LineRenderer>();
+			lr.material = MainMat;
 			lr.startWidth = lr.endWidth = 0.02f;
 			lr.positionCount = 2;
 			lr.useWorldSpace = false;
-			lr.SetPosition(0, start);
-			lr.SetPosition(1, end);
+			lr.SetPosition(0, a);
+			lr.SetPosition(1, b);
 		}
 	}
 }
