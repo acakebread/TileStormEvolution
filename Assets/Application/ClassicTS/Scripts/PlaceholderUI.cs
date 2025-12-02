@@ -31,11 +31,11 @@ namespace ClassicTilestorm
         private const float mapNameWidth = 120f;
         private const float panelGap = 5f;
 
-        private readonly Color panelColor = new Color(0.2f, 0.2f, 0.4f, 0.75f);
+        private readonly Color panelColor = new (0.2f, 0.2f, 0.4f, 0.75f);
         private readonly Color selectedTextColor = Color.green;
-        private readonly Color unselectedTextColor = new Color(0.5f, 0.8f, 0.5f);
-        private readonly Color modeUnselectedBg = new Color(0.1f, 0.3f, 0.1f);
-        private readonly Color modeSelectedBg = new Color(0.4f, 0.4f, 0.15f);
+        private readonly Color unselectedTextColor = new (0.5f, 0.8f, 0.5f);
+        private readonly Color modeUnselectedBg = new (0.1f, 0.3f, 0.1f);
+        private readonly Color modeSelectedBg = new (0.4f, 0.4f, 0.15f);
 
         private Texture2D panelTexture;
         
@@ -111,17 +111,20 @@ namespace ClassicTilestorm
             currentX += mapNameWidth + spacing;
 
             // Mode buttons (Editor / Player / Cinema)
-            DrawModeButton(ref currentX, y, "Editor", PreviewMode.Editor);
-            DrawModeButton(ref currentX, y, "Player", PreviewMode.Player);
-            DrawModeButton(ref currentX, y, "Cinema", PreviewMode.Cinema);
+            DrawModeButton(currentX, y, "Editor", PreviewMode.Editor);
+			currentX += buttonWidth + spacing;
+			DrawModeButton(currentX, y, "Player", PreviewMode.Player);
+			currentX += buttonWidth + spacing;
+            DrawModeButton(currentX, y, "Cinema", PreviewMode.Cinema);
+			currentX += buttonWidth + spacing;
 
             currentX += 20;
 
             // Navigation & action buttons using GuiUtils
-            GuiUtils.ColoredButton(new Rect(currentX, y, buttonWidth, buttonHeight), "<< Level", new Color(0.3f, 0.6f, 1f), () => OnChangeMapRequested?.Invoke(-1));
+            GuiUtils.ColoredRepeatButton(new Rect(currentX, y, buttonWidth, buttonHeight), "<< Level", new Color(0.3f, 0.6f, 1f), () => OnChangeMapRequested?.Invoke(-1), initialDelay: 0.25f);
             currentX += buttonWidth + spacing;
 
-            GuiUtils.ColoredButton(new Rect(currentX, y, buttonWidth, buttonHeight), "Level >>", new Color(0.3f, 0.6f, 1f), () => OnChangeMapRequested?.Invoke(1));
+            GuiUtils.ColoredRepeatButton(new Rect(currentX, y, buttonWidth, buttonHeight), "Level >>", new Color(0.3f, 0.6f, 1f), () => OnChangeMapRequested?.Invoke(1), initialDelay: 0.25f);
             currentX += buttonWidth + spacing;
 
             GuiUtils.ColoredButton(new Rect(currentX, y, buttonWidth, buttonHeight), "Reload", new Color(0.6f, 0.6f, 0.2f), () => OnChangeMapRequested?.Invoke(0));
@@ -130,40 +133,38 @@ namespace ClassicTilestorm
             GuiUtils.ColoredButton(new Rect(currentX, y, buttonWidth, buttonHeight), "Preset", new Color(0.2f, 0.8f, 0.2f), () => OnPresetRequested?.Invoke());
             currentX += buttonWidth + spacing;
 
-            GuiUtils.ColoredButton(new Rect(currentX, y, buttonWidth, buttonHeight), "Scramble", new Color(0.8f, 0.6f, 0.2f), () => OnScrambleRequested?.Invoke());
+            GuiUtils.ColoredRepeatButton(new Rect(currentX, y, buttonWidth, buttonHeight), "Scramble", new Color(0.8f, 0.6f, 0.2f), () => OnScrambleRequested?.Invoke(), initialDelay: 0.1f, repeatInterval: 0f);
             currentX += buttonWidth + spacing;
 
             GuiUtils.ColoredButton(new Rect(currentX, y, buttonWidth, buttonHeight), "Solve", new Color(0.8f, 0.2f, 0.2f), () => OnSolveRequested?.Invoke());
 
             guiRect.height = panelHeight;
-        }
 
-		private void DrawModeButton(ref float currentX, float y, string label, PreviewMode mode)
-		{
-			bool isSelected = PreviewSettings.CurrentMode == mode;
-			Color buttonColor = isSelected ? modeSelectedBg : modeUnselectedBg;
-			Color textColor = isSelected ? selectedTextColor : unselectedTextColor;
+			void DrawModeButton(float currentX, float y, string label, PreviewMode mode)
+			{
+				bool isSelected = PreviewSettings.CurrentMode == mode;
+				Color buttonColor = isSelected ? modeSelectedBg : modeUnselectedBg;
+				Color textColor = isSelected ? selectedTextColor : unselectedTextColor;
 
-			// Save state
-			Color prevContent = GUI.contentColor;
+				// Save state
+				Color prevContent = GUI.contentColor;
 
-			// This is the key: force the text color that ColoredButton will use
-			GUI.contentColor = textColor;
+				// This is the key: force the text color that ColoredButton will use
+				GUI.contentColor = textColor;
 
-			GuiUtils.ColoredButton(
-				new Rect(currentX, y, buttonWidth, buttonHeight),
-				label,
-				buttonColor,
-				() =>
-				{
-					PreviewSettings.CurrentMode = mode;
-					OnModeChanged?.Invoke(mode);
-				});
+				GuiUtils.ColoredButton(
+					new Rect(currentX, y, buttonWidth, buttonHeight),
+					label,
+					buttonColor,
+					() =>
+					{
+						PreviewSettings.CurrentMode = mode;
+						OnModeChanged?.Invoke(mode);
+					});
 
-			// Restore
-			GUI.contentColor = prevContent;
-
-			currentX += buttonWidth + spacing;
+				// Restore
+				GUI.contentColor = prevContent;
+			}
 		}
 	}
 }

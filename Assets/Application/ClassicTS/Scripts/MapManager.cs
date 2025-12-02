@@ -135,9 +135,7 @@ namespace ClassicTilestorm
 			for (int n = 0; n < tileMap.Length; ++n)
 			{
 				int definitionIndex = tileMap[n];
-				string id = (definitionIndex >= 0 && definitionIndex < currentMap.table?.Length)
-					? currentMap.table[definitionIndex]
-					: "tile_empty";
+				string id = (definitionIndex >= 0 && definitionIndex < currentMap.table?.Length) ? currentMap.table[definitionIndex] : "tile_empty";
 
 				if (string.IsNullOrEmpty(id))
 					id = "tile_empty";
@@ -146,10 +144,7 @@ namespace ClassicTilestorm
 				var tile = new Tile(definition);
 
 				if (id != "tile_empty" && definition != null)
-				{
-					tile.GameObject = GeometryManager.InstantiateTile(
-						definition, transform, TileWorldPosition(n), tile.IsDrag);
-				}
+					tile.GameObject = GeometryManager.InstantiateTile( definition, transform, TileWorldPosition(n), tile.IsDrag);
 
 				mapTiles[n] = new MapTile(id, tile);
 			}
@@ -209,7 +204,7 @@ namespace ClassicTilestorm
 
 		public void Scramble()
 		{
-			const int iterations = 16;
+			const int iterations = 1;// 16;
 
 			//indices = Enumerable.Range(0, Count).ToArray();
 			for (var n = 0; n < indices.Length * iterations; ++n)
@@ -321,19 +316,14 @@ namespace ClassicTilestorm
 			var newTile = new Tile(def);
 
 			if (id != "tile_empty" && def != null)
-			{
-				newTile.GameObject = GeometryManager.InstantiateTile(
-					def, transform, TileWorldPosition(index), newTile.IsDrag);
-			}
+				newTile.GameObject = GeometryManager.InstantiateTile(def, transform, TileWorldPosition(index), newTile.IsDrag);
 
 			mapTiles[index] = new MapTile(id, newTile);
 
 			// Ensure the string ID exists in the table (for save compatibility)
 			if (currentMap.table == null || !Array.Exists(currentMap.table, s => s == id))
 			{
-				var list = currentMap.table != null
-					? new List<string>(currentMap.table)
-					: new List<string>();
+				var list = currentMap.table != null ? new List<string>(currentMap.table) : new List<string>();
 				if (!list.Contains(id))
 					list.Add(id);
 				currentMap.table = list.ToArray();

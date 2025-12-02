@@ -80,5 +80,83 @@ namespace MassiveHadronLtd
 			GUI.contentColor = prevContentColor;
 			GUI.backgroundColor = prevBackground;
 		}
+
+
+
+		public static void ColoredRepeatButton(
+			Rect rect,
+			string text,
+			Color color,
+			System.Action onRepeat = null,
+			float initialDelay = 0f,      // Delay BEFORE repeating (after first fire)
+			float repeatInterval = 0.05f)
+		{
+			EnsureStyles();
+
+			int id = GUIUtility.GetControlID(FocusType.Passive);
+			var state = GUIUtility.GetStateObject(typeof(HoldState), id) as HoldState ?? new HoldState();
+
+			// Save colors
+			Color oldColor = GUI.color;
+			Color oldBg = GUI.backgroundColor;
+			Color oldContent = GUI.contentColor;
+
+			GUI.backgroundColor = color;
+			GUI.contentColor = Color.white;
+			GUI.color = Color.white;
+
+			Event e = Event.current;
+			bool mouseDown = e.type == EventType.MouseDown && rect.Contains(e.mousePosition);
+			bool mouseUp = e.type == EventType.MouseUp;
+
+			// Visual feedback when held
+			if (state.isPressed)
+				GUI.backgroundColor = color * 0.8f;
+
+			GUI.Button(rect, text, coloredButtonStyle);
+
+			// === INPUT & FIRE LOGIC ===
+			if (mouseDown)
+			{
+				GUIUtility.hotControl = id;
+				state.isPressed = true;
+
+				// FIRST FIRE: IMMEDIATE (this is the key fix!)
+				onRepeat?.Invoke();
+
+				// Schedule the NEXT fire after the initial delay
+				state.nextFireTime = Time.time + initialDelay;
+				e.Use(); // consume the event
+			}
+
+			// REPEATING WHILE HELD
+			if (state.isPressed && GUIUtility.hotControl == id)
+			{
+				if (Time.time >= state.nextFireTime)
+				{
+					onRepeat?.Invoke();
+					state.nextFireTime = Time.time + repeatInterval;
+				}
+			}
+
+			// RELEASE
+			if (mouseUp && GUIUtility.hotControl == id)
+			{
+				GUIUtility.hotControl = 0;
+				state.isPressed = false;
+			}
+
+			// Restore
+			GUI.color = oldColor;
+			GUI.backgroundColor = oldBg;
+			GUI.contentColor = oldContent;
+		}
+
+		// Don't forget this class (add if missing)
+		private class HoldState
+		{
+			public float nextFireTime;
+			public bool isPressed;
+		}
 	}
 }
