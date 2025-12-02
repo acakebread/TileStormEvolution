@@ -209,16 +209,13 @@ namespace ClassicTilestorm
 
 		public void Scramble()
 		{
-			const int iterations = 1;// 16;
-
-			//indices = Enumerable.Range(0, Count).ToArray();
+			const int iterations = 1;//increase for more scrambling per iteration
 			for (var n = 0; n < indices.Length * iterations; ++n)
 			{
 				var stride = (UnityEngine.Random.value > 0.5f ? Width : 1) * (UnityEngine.Random.value > 0.5f ? 1 : -1);
 				var tileStrip = TileStripHelper.GetTileStrip(this, n % indices.Length, stride, true);
 				TileStripHelper.RollStrip(this, tileStrip);
 			}
-
 			UpdateTileObjectNamesAndPositions();
 		}
 
