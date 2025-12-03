@@ -248,7 +248,7 @@ namespace ClassicTilestorm
 		/// <summary>
 		/// Returns the actual used bounds of the map (non-empty tiles only).
 		/// </summary>
-		private (int minX, int minZ, int maxX, int maxZ) GetContentBounds()
+		public (int minX, int minZ, int maxX, int maxZ) GetContentBounds()
 		{
 			if (tiles == null || tiles.Length == 0 || width <= 0 || height <= 0)
 				return (0, 0, -1, -1);

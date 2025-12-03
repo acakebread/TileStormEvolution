@@ -26,7 +26,7 @@ namespace ClassicTilestorm
 		Map CurrentMap { get; }
 		Transform CurrentTransform { get; }
 		string GetDefinitionAtIndex(int mapIndex);
-		bool UpdateTileAt(int x, int z, string id, bool expand = true);
+		bool UpdateTileAt(int x, int z, string id, bool expand = true, Action<bool, Vector3> onEdited = null);
 		Vector3 SnappedMapPosition(Vector3 vec);
 	}
 
@@ -301,14 +301,15 @@ namespace ClassicTilestorm
 		// Map editing
 		// -----------------------------------------------------------------------
 
-		public bool UpdateTileAt(int x, int z, string id, bool expand = true)
+		public bool UpdateTileAt(int x, int z, string id, bool expand = true, Action<bool, Vector3> onEdited = null)
 		{
-			var result = expand ? UpdateTileAtSmart(x, z, id) : UpdateTileAtRestricted(x, z, id);
-
-			return result;
+			if (expand)
+				return UpdateTileAtSmart(x, z, id, onEdited);
+			else
+				return UpdateTileAtRestricted(x, z, id, onEdited);
 		}
 
-		private bool UpdateTileAtRestricted(int x, int z, string id)
+		private bool UpdateTileAtRestricted(int x, int z, string id, Action<bool, Vector3> onEdited = null)
 		{
 			if (string.IsNullOrEmpty(id))
 				id = "tile_empty";
@@ -329,81 +330,143 @@ namespace ClassicTilestorm
 			var newTile = new Tile(def);
 
 			if (id != "tile_empty" && def != null)
-				newTile.GameObject = GeometryManager.InstantiateTile(def, transform, TileWorldPosition(index), newTile.IsDrag);
+			{
+				newTile.GameObject = GeometryManager.InstantiateTile(
+					def, transform, TileWorldPosition(index), newTile.IsDrag);
+			}
 
 			mapTiles[index] = new MapTile(id, newTile);
 
-			// Ensure the string ID exists in the table (for save compatibility)
+			// Update string table
 			if (currentMap.table == null || !Array.Exists(currentMap.table, s => s == id))
 			{
 				var list = currentMap.table != null ? new List<string>(currentMap.table) : new List<string>();
-				if (!list.Contains(id))
-					list.Add(id);
+				if (!list.Contains(id)) list.Add(id);
 				currentMap.table = list.ToArray();
 			}
 
 			currentMap.tiles[index] = Array.IndexOf(currentMap.table, id);
-			currentMap.Consolidate();// Rebuild compact indices for saving
-			return false;// false for now because return value indicates map size change at the moment - will change to whether tile was added or not later
+			currentMap.Consolidate();
+
+			// No resize possible in restricted mode
+			onEdited?.Invoke(false, Vector3.zero);
+
+			return true; // Success!
 		}
 
+		private const int MAP_MAX_SIZE = 64;
+
 		/// <summary>
-		/// Places a tile at any coordinate — automatically expands if needed, crops if appropriate.
-		/// Returns true if the map bounds changed (resized or cropped), so caller can reload.
+		/// Places a tile at any (x,z). Expands/crops intelligently with hard size limits.
+		/// Returns true if tile was successfully placed/removed.
+		/// Calls onEdited only on success, with (resized, originWorldDelta).
 		/// </summary>
-		private bool UpdateTileAtSmart(int x, int z, string id)
+		private bool UpdateTileAtSmart(int x, int z, string id, Action<bool, Vector3>? onEdited = null)
 		{
 			if (string.IsNullOrEmpty(id))
 				id = "tile_empty";
 
-			bool wasEmpty = id == "tile_empty";
-			bool extentsChanged = false;
+			int oldWidth = Width;
+			int oldHeight = Height;
 
-			// If in bounds → just place normally
-			if (x >= 0 && x < Width && z >= 0 && z < Height)
+			var oldBounds = currentMap.GetContentBounds();
+
+			Vector3 originDelta = Vector3.zero;
+			bool sizeChanged = false;
+
+			// === 1. Expand — only negative axes shift origin ===
+			if (x < 0 || x >= Width || z < 0 || z >= Height)
 			{
-				UpdateTileAtRestricted(x, z, id);
-			}
-			else
-			{
-				// Need to expand
-				int requiredMinX = Mathf.Min(0, x);
-				int requiredMinZ = Mathf.Min(0, z);
-				int requiredMaxX = Mathf.Max(Width - 1, x);
-				int requiredMaxZ = Mathf.Max(Height - 1, z);
+				int minX = Mathf.Min(0, x);
+				int minZ = Mathf.Min(0, z);
+				int maxX = Mathf.Max(Width - 1, x);
+				int maxZ = Mathf.Max(Height - 1, z);
 
-				int newWidth = requiredMaxX - requiredMinX + 1;
-				int newHeight = requiredMaxZ - requiredMinZ + 1;
+				int newWidth = maxX - minX + 1;
+				int newHeight = maxZ - minZ + 1;
 
-				int offsetX = -requiredMinX;
-				int offsetZ = -requiredMinZ;
+				// HARD LIMIT: Prevent gargantuan maps
+				if (newWidth > MAP_MAX_SIZE || newHeight > MAP_MAX_SIZE)
+				{
+					Debug.LogWarning($"Map placement rejected: would exceed max size ({MAP_MAX_SIZE}x{MAP_MAX_SIZE})");
+					onEdited?.Invoke(false, Vector3.zero);
+					return false; // Fail silently (or play sound, show toast, etc.)
+				}
+
+				int offsetX = -minX;
+				int offsetZ = -minZ;
 
 				currentMap.RepositionAndResize(newWidth, newHeight, offsetX, offsetZ);
 
-				DestroyAllTiles();
-				LoadTileData(currentMap.tiles);
+				// Only apply delta for axes that were negative
+				if (x < 0) originDelta.x = offsetX;
+				if (z < 0) originDelta.z = offsetZ;
 
-				// Coordinates now valid
-				int newX = x + offsetX;
-				int newZ = z + offsetZ;
-				UpdateTileAtRestricted(newX, newZ, id);
+				x += offsetX;
+				z += offsetZ;
 
-				extentsChanged = true;
+				sizeChanged = true;
 			}
 
-			// Always try to crop after placing empty (or after expansion — might have empty borders now)
-			if (wasEmpty || extentsChanged)
+			// === 2. Place tile ===
+			int index = z * Width + x;
+
+			if (currentMap.table == null || !Array.Exists(currentMap.table, s => s == id))
 			{
+				var list = currentMap.table != null ? new List<string>(currentMap.table) : new List<string>();
+				if (!list.Contains(id)) list.Add(id);
+				currentMap.table = list.ToArray();
+			}
+
+			currentMap.tiles[index] = Array.IndexOf(currentMap.table, id);
+
+			// === 3. Crop — add delta only if left/top content was removed ===
+			if (id == "tile_empty" || sizeChanged)
+			{
+				var newBounds = currentMap.GetContentBounds();
+
 				if (currentMap.CropToContent())
 				{
-					DestroyAllTiles();
-					LoadTileData(currentMap.tiles);
-					extentsChanged = true;
+					originDelta += new Vector3(
+						oldBounds.minX - newBounds.minX,
+						0,
+						oldBounds.minZ - newBounds.minZ
+					);
+					sizeChanged = true;
 				}
 			}
+
+			// === 4. Rebuild visuals ===
+			bool boundsChanged = sizeChanged || Width != oldWidth || Height != oldHeight;
+
+			if (boundsChanged)
+			{
+				DestroyAllTiles();
+				LoadTileData(currentMap.tiles);
+			}
+			else
+			{
+				// Fast single-tile update
+				var def = ResourceManager.GetDefinition(id);
+				var newTile = new Tile(def);
+
+				if (mapTiles[index].tile.GameObject != null)
+					Destroy(mapTiles[index].tile.GameObject);
+
+				if (id != "tile_empty" && def != null)
+				{
+					newTile.GameObject = GeometryManager.InstantiateTile(
+						def, transform, TileWorldPosition(index), newTile.IsDrag);
+				}
+
+				mapTiles[index] = new MapTile(id, newTile);
+			}
+
 			currentMap.Consolidate();
 
-			return extentsChanged;
+			// Success!
+			onEdited?.Invoke(boundsChanged, originDelta);
+			return true;
 		}
 
 		// -----------------------------------------------------------------------

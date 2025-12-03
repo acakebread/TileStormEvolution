@@ -127,12 +127,24 @@ namespace ClassicTilestorm
 			editorUI.OnImportMapRequested -= ImportMapAsAtomic;
 		}
 
-		public void OnMapChanged(bool resized = false)
+		public void OnMapChanged(bool resized, Vector3 originDelta)
 		{
-			if (mapManager == null || mapManager.CurrentMap == null) return;
+			if (mapManager == null) return;
+
 			ResourceManager.ApplyMapChanges(mapManager.CurrentMap);
-			if (!resized) return;
-			UpdateGridLines();
+
+			if (resized)
+			{
+				UpdateGridLines();
+
+				// Adjust editor camera to stay glued to map content
+				if (originDelta != Vector3.zero)
+				{
+					if (!TryGetComponent<MainCameraController>(out var controller)) return;
+					var editorCam = controller.activeSystem as GameCameraEditor;
+					if (null != editorCam) editorCam.camera.transform.position += originDelta;
+				}
+			}
 		}
 
 		public void LoadDatabase()

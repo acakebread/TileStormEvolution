@@ -42,6 +42,16 @@ namespace ClassicTilestorm
 			gestureController.OnMapUpdated += CheckDisableDrag;
 		}
 
+		//ToDo potentially make generic for all cameras
+		public void AdjustEditorCameraForMapShift(Vector3 delta)
+		{
+			if (activeSystem is GameCameraEditor editorCam)
+			{
+				editorCam.iorigin += delta;
+				editorCam.itarget += delta;
+			}
+		}
+
 		private void CheckDisableDrag(IMapManager imap)
 		{
 			if (eggbotController != null && eggbotController.NavDirection(imap) != 0)
