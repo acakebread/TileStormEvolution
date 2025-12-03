@@ -126,7 +126,10 @@ namespace ClassicTilestorm
 			GUI.contentColor = mode == "Paint" ? Color.cyan : Color.white;
 			if (GUI.Button(new Rect(margin, y + 2 * (buttonHeight + spacing), buttonWidth, buttonHeight), "Paint"))
 				OnModeChanged?.Invoke("Paint");
-			GUI.contentColor = Color.white;
+
+			GUI.contentColor = mode == "Waypoint" ? Color.cyan : Color.white;
+			if (GUI.Button(new Rect(margin, y + 3 * (buttonHeight + spacing), buttonWidth, buttonHeight), "Waypoint"))
+				OnModeChanged?.Invoke("Waypoint");
 
 			GUI.color = Color.white;
 			GUI.contentColor = Color.white;

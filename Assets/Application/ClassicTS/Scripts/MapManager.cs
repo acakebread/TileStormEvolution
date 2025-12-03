@@ -361,7 +361,7 @@ namespace ClassicTilestorm
 		/// Returns true if tile was successfully placed/removed.
 		/// Calls onEdited only on success, with (resized, originWorldDelta).
 		/// </summary>
-		private bool UpdateTileAtSmart(int x, int z, string id, Action<bool, Vector3>? onEdited = null)
+		private bool UpdateTileAtSmart(int x, int z, string id, Action<bool, Vector3> onEdited = null)
 		{
 			if (string.IsNullOrEmpty(id))
 				id = "tile_empty";
