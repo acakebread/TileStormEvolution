@@ -2,6 +2,7 @@
 using UnityEngine.EventSystems;
 using System;
 using MassiveHadronLtd;
+using System.Linq;
 
 namespace ClassicTilestorm
 {
@@ -141,6 +142,10 @@ namespace ClassicTilestorm
 			GUI.backgroundColor = prevBgColor;
 		}
 
+		// Add these fields to your PlaceholderEditorUI class
+		private float cachedContentHeight = -1f;
+		private int cachedCount = -1;
+
 		public void DrawPaintUI(string selectedId)
 		{
 			var tx = Screen.width - tileSelectorWidth - margin;
@@ -153,19 +158,44 @@ namespace ClassicTilestorm
 			GUI.backgroundColor = Color.white;
 
 			Rect view = new Rect(tx + 10, ty + 30, tileSelectorWidth - 20, th - 40);
-			scrollPosition = GUI.BeginScrollView(view, scrollPosition,
-				new Rect(0, 0, tileSelectorWidth - 40, ResourceManager.Definitions.Count * 40));
 
-			for (int i = 0; i < ResourceManager.Definitions.Count; i++)
+			// Cache count and height
+			int count = ResourceManager.Definitions.Count;
+			if (cachedCount != count)
 			{
-				var def = ResourceManager.Definitions[i];
-				var label = $"{def.id} ({def.texture})";
-				Rect btn = new(0, i * 40, tileSelectorWidth - 40, 35);
+				cachedCount = count;
+				cachedContentHeight = count * 40f;
+			}
 
-				if (def.id == selectedId) GUI.color = Color.green;
-				if (GUI.Button(btn, label)) OnTileSelected?.Invoke(def.id);
+			scrollPosition = GUI.BeginScrollView(view, scrollPosition,
+				new Rect(0, 0, tileSelectorWidth - 40, cachedContentHeight));
+
+			// Virtual scrolling: only draw visible items
+			int itemHeight = 40;
+			int firstVisible = Mathf.FloorToInt(scrollPosition.y / itemHeight);
+			int lastVisible = firstVisible + Mathf.CeilToInt(view.height / itemHeight) + 2;
+			firstVisible = Mathf.Max(0, firstVisible);
+			lastVisible = Mathf.Min(lastVisible, count);
+
+			var definitions = ResourceManager.Definitions;
+
+			for (int i = firstVisible; i < lastVisible; i++)
+			{
+				// This works with IList<T> — use ElementAt (slightly slower but safe)
+				var def = definitions.ElementAt(i);
+				string label = $"{def.id} ({def.texture})";
+
+				Rect btn = new Rect(0, i * itemHeight, tileSelectorWidth - 40, 35);
+
+				if (def.id == selectedId)
+					GUI.color = Color.green;
+
+				if (GUI.Button(btn, label))
+					OnTileSelected?.Invoke(def.id);
+
 				GUI.color = Color.white;
 			}
+
 			GUI.EndScrollView();
 		}
 	}

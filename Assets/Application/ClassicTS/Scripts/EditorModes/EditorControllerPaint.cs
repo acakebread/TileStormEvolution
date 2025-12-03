@@ -57,13 +57,10 @@ namespace ClassicTilestorm
 				defID = "tile_empty";
 
 			var snappedPos = editorController.iMapManager.SnappedMapPosition(worldPos);
-			//var resized = editorController.iMapManager.UpdateTileAt((int)Mathf.Floor(snappedPos.x), (int)Mathf.Floor(snappedPos.z), defID);
-			//editorController.OnMapChanged(resized);
 
-			// Clean, direct, future-proof
 			editorController.iMapManager.UpdateTileAt(
-				(int)Mathf.Floor(snappedPos.x),
-				(int)Mathf.Floor(snappedPos.z),
+				Mathf.FloorToInt(snappedPos.x),
+				Mathf.FloorToInt(snappedPos.z),
 				defID,
 				expand: true,
 				onEdited: editorController.OnMapChanged // now receives (resized, originDelta)

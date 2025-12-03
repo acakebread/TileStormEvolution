@@ -143,6 +143,8 @@ namespace ClassicTilestorm
 					if (!TryGetComponent<MainCameraController>(out var controller)) return;
 					var editorCam = controller.activeSystem as GameCameraEditor;
 					if (null != editorCam) editorCam.camera.transform.position += originDelta;
+					var eggbot = transform.GetComponentInChildren<EggbotController>();
+					if (null != eggbot) eggbot.OnMapOriginShift(mapManager, originDelta);
 				}
 			}
 		}

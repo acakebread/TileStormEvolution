@@ -195,6 +195,52 @@ namespace ClassicTilestorm
 			OnLevelCompleted = null;
 		}
 
+		/// <summary>
+		/// Called when the map origin shifts due to expand/crop.
+		/// Updates currentTile and snaps position to new grid.
+		/// </summary>
+		/// <param name="originDelta">World-space shift of the map origin (in tile units)</param>
+		public void OnMapOriginShift(IMapManager map, Vector3 originDelta)
+		{
+			if (originDelta == Vector3.zero) return;
+
+			int deltaX = Mathf.RoundToInt(originDelta.x);
+			int deltaZ = Mathf.RoundToInt(originDelta.z);
+
+			if (deltaX == 0 && deltaZ == 0) return;
+
+			// Get current world position before we lose context
+			Vector3 oldWorldPos = transform.position;
+
+			// Calculate old grid position (reverse-engineer from world pos)
+			// This works because TileWorldPosition(index) = (x, 0, z) + tile_origin
+			Vector3 localPos = oldWorldPos - MapManager.tile_origin; // remove origin offset
+			int oldX = Mathf.RoundToInt(localPos.x);
+			int oldZ = Mathf.RoundToInt(localPos.z);
+
+			// Apply delta
+			int newX = oldX + deltaX;
+			int newZ = oldZ + deltaZ;
+
+			var mapManager = map;
+
+			if (newX < 0 || newX >= mapManager.Width || newZ < 0 || newZ >= mapManager.Height)
+			{
+				// Eggbot was cropped out — snap to nearest valid tile or start?
+				currentTile = mapManager.GetStartTile();
+			}
+			else
+			{
+				currentTile = newZ * mapManager.Width + newX;
+			}
+
+			// Snap position to new grid
+			transform.position = mapManager.TileWorldPosition(currentTile);
+
+			// Optional: preserve sub-tile offset (e.g. during movement)
+			// But for editor, we want clean snap
+		}
+
 		public static EggbotController Instantiate(string costume = "Eggbot Default", Transform parent = null)
 		{
 			costume = string.IsNullOrEmpty(costume) ? "Eggbot Default" : costume;
