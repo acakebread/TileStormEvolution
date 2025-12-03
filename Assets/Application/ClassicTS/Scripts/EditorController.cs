@@ -62,7 +62,7 @@ namespace ClassicTilestorm
 		void OnEnable()
 		{
 			if (!TryGetComponent<MainCameraController>(out var controller)) return;
-			controller.SetCameraSystem(CameraModeRegistry.Editor, true);
+			controller.SetCameraSystem(CameraModeRegistry.Editor, false);
 			controller.UpdateGestureControllerState();
 
 			editorUI.enabled = true;
