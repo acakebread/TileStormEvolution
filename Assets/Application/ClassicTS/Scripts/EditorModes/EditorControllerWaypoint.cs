@@ -22,21 +22,23 @@ namespace ClassicTilestorm
 		{
 			base.OnEnable();
 			SelectedWaypointIndex = -1;  // Critical!
-			EditorUtil.HideGhostTile();
+
 			EditorUtil.DestroyWaypointVisuals();
-			RefreshVisuals();  // This will show all as green/cyan
-			Debug.Log("Waypoint Editor Active");
+			EditorUtil.ForceWaypointMarkersRebuild(
+				editorController.iMapManager,
+				editorController.iMapManager.CurrentMap?.waypoints ?? new Waypoint[0],
+				-1
+			);
 		}
 
 		public override void OnDisable()
 		{
 			base.OnDisable();
-			EditorUtil.HideGhostTile();
-			EditorUtil.DestroyWaypointVisuals();  // This was missing or not called correctly
-		}
 
-		private Vector3 lastValidMouseWorldPos = Vector3.zero;
-		private bool hasValidMousePos = false;
+			EditorUtil.HideWaypointCursor();
+			EditorUtil.DestroyWaypointVisuals();
+			EditorUtil.ForceWaypointMarkersRebuild(editorController.iMapManager, new Waypoint[0], -1);
+		}
 
 		private void AddWaypointAtCursor()
 		{
@@ -59,6 +61,40 @@ namespace ClassicTilestorm
 			Debug.Log($"Added new waypoint #{SelectedWaypointIndex} — click map to place it");
 		}
 
+		private void SelectWaypoint(int index)
+		{
+			SelectedWaypointIndex = index;
+			EditorUtil.ForceWaypointMarkersRebuild(editorController.iMapManager,
+				editorController.iMapManager.CurrentMap.waypoints, index);
+		}
+
+		private void DeleteWaypoint(int index)
+		{
+			var map = editorController.iMapManager.CurrentMap;
+			var list = map.waypoints.ToList();
+			list.RemoveAt(index);
+			map.waypoints = list.ToArray();
+
+			if (SelectedWaypointIndex >= map.waypoints.Length)
+				SelectedWaypointIndex = map.waypoints.Length - 1;
+
+			EditorUtil.ForceWaypointMarkersRebuild(editorController.iMapManager, map.waypoints, SelectedWaypointIndex);
+		}
+
+		private void MoveWaypoint(int index, int direction)
+		{
+			var map = editorController.iMapManager.CurrentMap;
+			var list = map.waypoints.ToList();
+			int newIdx = index + direction;
+			if (newIdx < 0 || newIdx >= list.Count) return;
+
+			(list[index], list[newIdx]) = (list[newIdx], list[index]);
+			map.waypoints = list.ToArray();
+			SelectedWaypointIndex = newIdx;
+
+			EditorUtil.ForceWaypointMarkersRebuild(editorController.iMapManager, map.waypoints, newIdx);
+		}
+
 		private void AddWaypointAtTile(int tile)
 		{
 			var map = editorController.iMapManager.CurrentMap;
@@ -73,48 +109,18 @@ namespace ClassicTilestorm
 			map.waypoints = list.ToArray();
 
 			SelectedWaypointIndex = list.Count - 1;
-			RefreshVisuals();
+
+			EditorUtil.ForceWaypointMarkersRebuild(editorController.iMapManager, map.waypoints, SelectedWaypointIndex);
 		}
 
-		// Fix marker colors — only selected is blue
 		private void RefreshVisuals()
 		{
 			var map = editorController.iMapManager.CurrentMap;
 			EditorUtil.UpdateWaypointMarkers(
 				editorController.iMapManager,
 				map.waypoints,
-				SelectedWaypointIndex  // Only this one is blue
+				SelectedWaypointIndex
 			);
-		}
-
-		private void SelectWaypoint(int index)
-		{
-			SelectedWaypointIndex = index;
-			RefreshVisuals();
-		}
-
-		private void DeleteWaypoint(int index)
-		{
-			var map = editorController.iMapManager.CurrentMap;
-			var list = map.waypoints.ToList();
-			list.RemoveAt(index);
-			map.waypoints = list.ToArray();
-			if (SelectedWaypointIndex >= map.waypoints.Length)
-				SelectedWaypointIndex = map.waypoints.Length - 1;
-			RefreshVisuals();
-		}
-
-		private void MoveWaypoint(int index, int direction)
-		{
-			var map = editorController.iMapManager.CurrentMap;
-			var list = map.waypoints.ToList();
-			int newIdx = index + direction;
-			if (newIdx < 0 || newIdx >= list.Count) return;
-
-			(list[index], list[newIdx]) = (list[newIdx], list[index]);
-			map.waypoints = list.ToArray();
-			SelectedWaypointIndex = newIdx;
-			RefreshVisuals();
 		}
 
 		public override void Update()
@@ -128,31 +134,28 @@ namespace ClassicTilestorm
 			var snapped = editorController.iMapManager.SnappedMapPosition(worldPos);
 			int tileIndex = editorController.iMapManager.WorldToMapIndex(snapped);
 
-			if (tileIndex >= 0)
-			{
-				lastValidMouseWorldPos = snapped;
-				hasValidMousePos = true;
-			}
+			// Update cursor only
+			EditorUtil.UpdateWaypointCursor(camera, editorController.iMapManager, worldPos);
 
-			EditorUtil.UpdateWaypointGhost(camera, editorController.iMapManager, worldPos);
-
-			if (Input.GetMouseButtonDown(0))
+			// ONLY handle input — NO RefreshVisuals() here!
+			if (Input.GetMouseButtonDown(0) && tileIndex >= 0)
 			{
-				if (tileIndex >= 0)
+				if (SelectedWaypointIndex >= 0)
 				{
-					if (SelectedWaypointIndex >= 0)
-					{
-						editorController.iMapManager.CurrentMap.waypoints[SelectedWaypointIndex].tile = tileIndex;
-					}
-					else
-					{
-						AddWaypointAtTile(tileIndex);
-					}
-					RefreshVisuals();
+					editorController.iMapManager.CurrentMap.waypoints[SelectedWaypointIndex].tile = tileIndex;
 				}
-			}
+				else
+				{
+					AddWaypointAtTile(tileIndex);
+					return; // AddWaypointAtTile already calls ForceRebuild
+				}
 
-			RefreshVisuals();
+				EditorUtil.ForceWaypointMarkersRebuild(
+					editorController.iMapManager,
+					editorController.iMapManager.CurrentMap.waypoints,
+					SelectedWaypointIndex
+				);
+			}
 		}
 	}
 }

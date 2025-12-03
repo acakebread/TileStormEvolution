@@ -106,6 +106,8 @@ namespace ClassicTilestorm
 
 		private void OnDisable()
 		{
+			activeMode?.OnDisable();
+
 			if (gridLines != null) gridLines.SetActive(false);
 			editorUI.enabled = false;
 			EditorUtil.DestroyGhostTile();
@@ -147,6 +149,8 @@ namespace ClassicTilestorm
 			if (currentMode == newMode)
 				return;
 
+			activeMode?.OnDisable();
+
 			currentMode = newMode;
 
 			activeMode = newMode switch
@@ -158,9 +162,6 @@ namespace ClassicTilestorm
 			};
 
 			activeMode?.OnEnable();
-
-			if (currentMode != EditorMode.Paint)
-				EditorUtil.HideGhostTile();
 		}
 
 		private void OnModeChanged(string modeName)

@@ -34,6 +34,8 @@ namespace ClassicTilestorm
 				EditorUtil.UpdateGhostTile(camera, editorController.iMapManager, selectedDefinition);
 		}
 
+		public override void OnDisable() => EditorUtil.HideGhostTile();
+
 		private void EditMapTile(string defID = null)
 		{
 			var worldPos = MapManager.ScreenToWorld(camera, Input.mousePosition);
