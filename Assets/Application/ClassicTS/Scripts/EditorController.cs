@@ -45,7 +45,7 @@ namespace ClassicTilestorm
 		{
 			mapManager = map;
 			UpdateGridLines();
-			if (null != gridLines) gridLines.SetActive(gridEnabled);
+			if (null != gridLines) gridLines.SetActive(isActiveAndEnabled && gridEnabled);
 		}
 
 		private void UpdateGridLines()
