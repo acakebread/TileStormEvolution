@@ -99,31 +99,14 @@ namespace ClassicTilestorm
 
 
 		//waypoint visualisation system
-		private static readonly System.Collections.Generic.List<GameObject> waypointMarkers = new();
-		private static Material waypointMaterialNormal;
-		private static Material waypointMaterialSelected;
-		private static Material waypointMaterialCamera;
-
+		private static System.Collections.Generic.List<GameObject> waypointMarkers = new();
 		private static GameObject waypointCursor;
 		private static Material waypointCursorMaterial;
 
 		public static void InitializeWaypointMaterials()
 		{
-			if (waypointMaterialNormal == null)
-				waypointMaterialNormal = MaterialUtils.CreateTransparentUnlitMaterial(new Color(0f, 1f, 0f, 0.3f));
-
-			if (waypointMaterialSelected == null)
-				waypointMaterialSelected = MaterialUtils.CreateTransparentUnlitMaterial(new Color(0f, 0.7f, 1f, 0.6f));
-
-			if (waypointMaterialCamera == null)
-				waypointMaterialCamera = MaterialUtils.CreateTransparentUnlitMaterial(new Color(0f, 1f, 1f, 0.4f));
-
-			if (waypointMaterialInvalid == null)
-				waypointMaterialInvalid = MaterialUtils.CreateTransparentUnlitMaterial(new Color(1f, 0.5f, 0f, 0.5f));
-
-			// BRIGHT YELLOW PULSING CURSOR
 			if (waypointCursorMaterial == null)
-				waypointCursorMaterial = MaterialUtils.CreateTransparentUnlitMaterial(new Color(1f, 1f, 0f, 0.8f));
+				waypointCursorMaterial = MaterialUtils.CreateTransparentUnlitMaterial(new Color(1f, 1f, 0f, 0.8f)); // Yellow cursor
 		}
 
 		public static void UpdateWaypointCursor(Camera cam, IMapManager mapManager, Vector3 mouseWorldPos)
@@ -132,9 +115,11 @@ namespace ClassicTilestorm
 
 			if (waypointCursor == null)
 			{
-				waypointCursor = CreateWaypointMarker(Vector3.zero, waypointCursorMaterial);
-				waypointCursor.name = "WaypointCursor";
+				waypointCursor = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+				Object.DestroyImmediate(waypointCursor.GetComponent<Collider>());
+				waypointCursor.GetComponent<MeshRenderer>().material = waypointCursorMaterial;
 				waypointCursor.transform.localScale = new Vector3(0.9f, 0.015f, 0.9f);
+				waypointCursor.name = "WaypointCursor";
 			}
 
 			var snapped = mapManager.SnappedMapPosition(mouseWorldPos);
@@ -142,18 +127,11 @@ namespace ClassicTilestorm
 
 			if (tile >= 0)
 			{
-				waypointCursor.transform.position = snapped + new Vector3(0, 0.01f, 0);
+				waypointCursor.transform.position = snapped + Vector3.up * 0.01f;
+				waypointCursor.SetActive(true);
 
-				// Pulsing scale + alpha
 				float pulse = 1f + Mathf.Sin(Time.time * 4f) * 0.15f;
 				waypointCursor.transform.localScale = new Vector3(0.9f, 0.015f, 0.9f) * pulse;
-
-				var mr = waypointCursor.GetComponent<MeshRenderer>();
-				var col = waypointCursorMaterial.color;
-				col.a = 0.7f + Mathf.Sin(Time.time * 5f) * 0.2f;
-				mr.material.color = col;
-
-				waypointCursor.SetActive(true);
 			}
 			else
 			{
@@ -161,122 +139,47 @@ namespace ClassicTilestorm
 			}
 		}
 
-		public static void HideWaypointCursor()
-		{
-			if (waypointCursor != null)
-				waypointCursor.SetActive(false);
-		}
-
-		public static void DestroyWaypointVisuals()
-		{
-			if (waypointCursor)
-			{
-				Object.Destroy(waypointCursor);
-				waypointCursor = null;
-			}
-
-			foreach (var m in waypointMarkers)
-				if (m) Object.Destroy(m);
-			waypointMarkers.Clear();
-
-			// CRITICAL: Reset cache so next map loads fresh
-			lastWaypointCount = -1;
-			lastSelectedIndex = -1;
-			lastWaypoints = null;
-		}
-
-		private static Material waypointMaterialInvalid;
-
-		private static int lastWaypointCount = -1;
-		private static int lastSelectedIndex = -1;
-		private static Waypoint[] lastWaypoints = null;
-
 		public static void UpdateWaypointMarkers(IMapManager mapManager, Waypoint[] waypoints, int selectedIndex = -1)
 		{
-			InitializeWaypointMaterials();
-
-			bool needsRebuild =
-				waypoints == null ||
-				lastWaypoints == null ||
-				waypoints.Length != lastWaypointCount ||
-				selectedIndex != lastSelectedIndex ||
-				!waypoints.SequenceEqual(lastWaypoints); // deep check if anything changed
-
-			// Only rebuild if something changed
-			if (!needsRebuild)
-				return;
-
-			// === FULL REBUILD ===
 			// Destroy old
 			foreach (var m in waypointMarkers)
-				if (m) Object.Destroy(m);
+				if (m) Object.DestroyImmediate(m);
 			waypointMarkers.Clear();
 
-			if (waypoints == null || waypoints.Length == 0)
-			{
-				lastWaypointCount = 0;
-				lastWaypoints = null;
-				return;
-			}
+			if (waypoints == null) return;
 
 			for (int i = 0; i < waypoints.Length; i++)
 			{
 				var wp = waypoints[i];
 				if (wp.tile < 0 || wp.tile >= mapManager.Count) continue;
 
-				var pos = mapManager.TileWorldPosition(wp.tile) + new Vector3(0, 0.02f, 0);
+				var pos = mapManager.TileWorldPosition(wp.tile) + Vector3.up * 0.02f;
 
-				Material mat = waypointMaterialNormal; // default green
+				var go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+				Object.DestroyImmediate(go.GetComponent<Collider>());
+				go.transform.position = pos;
+				go.transform.localScale = new Vector3(0.8f, 0.01f, 0.8f);
 
+				var mr = go.GetComponent<MeshRenderer>();
 				if (i == selectedIndex)
-					mat = waypointMaterialSelected;     // BLUE = selected
-				else if (wp.IsCamera())                 // ONLY if not selected!
-					mat = waypointMaterialCamera;       // CYAN = camera waypoint
+					mr.material = MaterialUtils.CreateTransparentUnlitMaterial(new Color(0f, 0.7f, 1f, 0.7f)); // Blue
+				else if (wp.IsCamera())
+					mr.material = MaterialUtils.CreateTransparentUnlitMaterial(new Color(0f, 1f, 1f, 0.5f)); // Cyan
+				else
+					mr.material = MaterialUtils.CreateTransparentUnlitMaterial(new Color(0f, 1f, 0f, 0.4f)); // Green
 
-				var marker = CreateWaypointMarker(pos, mat);
-				marker.name = $"WP_{i}_{(i == selectedIndex ? "SELECTED" : wp.IsCamera() ? "CAM" : "NORMAL")}";
-
-				// ADD PULSING ONLY TO SELECTED
-				if (i == selectedIndex)
-				{
-					var pulse = marker.AddComponent<WaypointPulse>();
-					pulse.intensity = 1.5f;
-					pulse.speed = 2.5f;
-				}
-
-				waypointMarkers.Add(marker);
+				waypointMarkers.Add(go);
 			}
-
-			// Cache state
-			lastWaypointCount = waypoints.Length;
-			lastSelectedIndex = selectedIndex;
-			lastWaypoints = waypoints.ToArray(); // copy
 		}
 
-		private static GameObject CreateWaypointMarker(Vector3 pos, Material mat)
+		public static void DestroyWaypointVisuals()
 		{
-			var go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-			go.transform.localScale = new Vector3(0.8f, 0.01f, 0.8f);
-			go.transform.position = pos;
-			Object.Destroy(go.GetComponent<Collider>());
+			if (waypointCursor) Object.DestroyImmediate(waypointCursor);
+			waypointCursor = null;
 
-			var mr = go.GetComponent<MeshRenderer>();
-			mr.material = mat;
-			mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-			mr.receiveShadows = false;
-
-			return go;
-		}
-
-		public static void ForceWaypointMarkersRebuild(IMapManager mapManager, Waypoint[] waypoints, int selectedIndex = -1)
-		{
-			// Reset cache to force full rebuild next time
-			lastWaypointCount = -1;
-			lastSelectedIndex = -1;
-			lastWaypoints = null;
-
-			// Immediate rebuild
-			UpdateWaypointMarkers(mapManager, waypoints, selectedIndex);
+			foreach (var m in waypointMarkers)
+				if (m) Object.DestroyImmediate(m);
+			waypointMarkers.Clear();
 		}
 	}
 

@@ -66,6 +66,8 @@ namespace ClassicTilestorm
 				var eggbotController = GetComponentInChildren<EggbotController>(true);
 				if (null != eggbotController) eggbotController.gameObject.SetActive(false);
 			}
+
+			waypointMode?.OnMapChanged();
 		}
 
 		private void UpdateGridLines()
