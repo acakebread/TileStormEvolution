@@ -76,7 +76,7 @@ namespace ClassicTilestorm
         public static readonly Vector3 tile_origin = Vector3.zero;
         public Vector3 TileWorldPosition(int index) => new(index % Width, 0f, index / Width);
         public int WorldToMapIndex(Vector3 vec) { vec += new Vector3(0.5f, 0f, 0.5f); return vec.x >= 0 && vec.x < Width && vec.z >= 0 && vec.z < Height ? (int)vec.z * Width + (int)vec.x : -1; }
-		public Vector3 SnappedMapPosition(Vector3 vec) => new Vector3(Mathf.FloorToInt(vec.x), 0f, Mathf.FloorToInt(vec.z));
+		public Vector3 SnappedMapPosition(Vector3 vec) => new Vector3(Mathf.FloorToInt(vec.x + 0.5f), 0f, Mathf.FloorToInt(vec.z + 0.5f));
 #endif
 
 		public enum Anchor
