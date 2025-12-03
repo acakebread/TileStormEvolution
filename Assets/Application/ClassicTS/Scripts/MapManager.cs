@@ -26,7 +26,7 @@ namespace ClassicTilestorm
 		Map CurrentMap { get; }
 		Transform CurrentTransform { get; }
 		string GetDefinitionAtIndex(int mapIndex);
-		bool UpdateTileAt(int x, int z, string id, bool bounded = false);
+		bool UpdateTileAt(int x, int z, string id, bool expand = true);
 		Vector3 SnappedMapPosition(Vector3 vec);
 	}
 
@@ -78,8 +78,6 @@ namespace ClassicTilestorm
         public int WorldToMapIndex(Vector3 vec) { vec += new Vector3(0.5f, 0f, 0.5f); return vec.x >= 0 && vec.x < Width && vec.z >= 0 && vec.z < Height ? (int)vec.z * Width + (int)vec.x : -1; }
 		public Vector3 SnappedMapPosition(Vector3 vec) => new Vector3(Mathf.Floor(vec.x), 0f, Mathf.Floor(vec.z));
 #endif
-
-		//public event System.Action OnMapStructureChanged; // Fired when size changes (resize/crop)
 
 		public enum Anchor
 		{
@@ -303,17 +301,14 @@ namespace ClassicTilestorm
 		// Map editing
 		// -----------------------------------------------------------------------
 
-		public bool UpdateTileAt(int x, int z, string id, bool bounded = false)
+		public bool UpdateTileAt(int x, int z, string id, bool expand = true)
 		{
-			//if (bounded || (x >= 0 && x < Width && z >= 0 && z < Height))
-			if (bounded)
-				UpdateTileAtRestricted(x, z, id);
-			else
-				return UpdateTileAtSmart(x, z, id);
-			return false;
+			var result = expand ? UpdateTileAtSmart(x, z, id) : UpdateTileAtRestricted(x, z, id);
+
+			return result;
 		}
 
-		private void UpdateTileAtRestricted(int x, int z, string id)
+		private bool UpdateTileAtRestricted(int x, int z, string id)
 		{
 			if (string.IsNullOrEmpty(id))
 				id = "tile_empty";
@@ -321,7 +316,7 @@ namespace ClassicTilestorm
 			if (x < 0 || x >= Width || z < 0 || z >= Height)
 			{
 				Debug.LogError($"Invalid coordinates: ({x}, {z}) outside map bounds ({Width}x{Height})");
-				return;
+				return false;
 			}
 
 			int index = z * Width + x;
@@ -349,8 +344,7 @@ namespace ClassicTilestorm
 
 			currentMap.tiles[index] = Array.IndexOf(currentMap.table, id);
 			currentMap.Consolidate();// Rebuild compact indices for saving
-
-			//ResourceManager.ApplyMapChanges(currentMap);
+			return false;// false for now because return value indicates map size change at the moment - will change to whether tile was added or not later
 		}
 
 		/// <summary>
@@ -363,7 +357,7 @@ namespace ClassicTilestorm
 				id = "tile_empty";
 
 			bool wasEmpty = id == "tile_empty";
-			bool structureChanged = false;
+			bool extentsChanged = false;
 
 			// If in bounds → just place normally
 			if (x >= 0 && x < Width && z >= 0 && z < Height)
@@ -385,8 +379,6 @@ namespace ClassicTilestorm
 				int offsetZ = -requiredMinZ;
 
 				currentMap.RepositionAndResize(newWidth, newHeight, offsetX, offsetZ);
-				//currentMap.Consolidate();
-				//ResourceManager.ApplyMapChanges(currentMap);
 
 				DestroyAllTiles();
 				LoadTileData(currentMap.tiles);
@@ -395,30 +387,23 @@ namespace ClassicTilestorm
 				int newX = x + offsetX;
 				int newZ = z + offsetZ;
 				UpdateTileAtRestricted(newX, newZ, id);
-				//currentMap.Consolidate();
 
-				structureChanged = true;
+				extentsChanged = true;
 			}
 
 			// Always try to crop after placing empty (or after expansion — might have empty borders now)
-			if (wasEmpty || structureChanged)
+			if (wasEmpty || extentsChanged)
 			{
 				if (currentMap.CropToContent())
 				{
-					//currentMap.Consolidate();
-					//ResourceManager.ApplyMapChanges(currentMap);
-					structureChanged = true;
+					DestroyAllTiles();
+					LoadTileData(currentMap.tiles);
+					extentsChanged = true;
 				}
 			}
-
-			//if (structureChanged)
-			//	OnMapStructureChanged?.Invoke();
-
-			//DestroyAllTiles();
-			//LoadTileData(currentMap.tiles); 
 			currentMap.Consolidate();
 
-			return structureChanged;
+			return extentsChanged;
 		}
 
 		// -----------------------------------------------------------------------

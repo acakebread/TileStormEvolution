@@ -36,14 +36,9 @@ namespace ClassicTilestorm
 			editorUI.OnReloadDatabaseRequested += LoadDatabase;
 			editorUI.OnExportMapRequested += ExportMapAsAtomic;
 			editorUI.OnImportMapRequested += ImportMapAsAtomic;
-			//editorUI.OnResizeMapTestRequested += () => ResizeMapTest(64, 64);
-			//editorUI.OnCropMapTestRequested += CropMapTest;
 
 			dragMode = new EditorControllerDrag(this);
 			paintMode = new EditorControllerPaint(this);
-
-			//if (mapManager != null)
-			//	mapManager.OnMapStructureChanged += HandleMapStructureChanged;
 		}
 
 		public void Initialise(MapManager map)
@@ -130,21 +125,13 @@ namespace ClassicTilestorm
 			editorUI.OnReloadDatabaseRequested -= LoadDatabase;
 			editorUI.OnExportMapRequested -= ExportMapAsAtomic;
 			editorUI.OnImportMapRequested -= ImportMapAsAtomic;
-			//editorUI.OnResizeMapTestRequested -= () => ResizeMapTest(64, 64);
-			//editorUI.OnCropMapTestRequested -= CropMapTest;
-			//if (null != mapManager)
-			//	mapManager.OnMapStructureChanged -= HandleMapStructureChanged;
 		}
 
 		public void OnMapChanged(bool resized = false)
 		{
 			if (mapManager == null || mapManager.CurrentMap == null) return;
-			if (resized) mapManager.CurrentMap.Consolidate();
 			ResourceManager.ApplyMapChanges(mapManager.CurrentMap);
 			if (!resized) return;
-			if (!TryGetComponent<MainController>(out var main)) return;
-			//main.ReloadCurrentMap();
-			//HandleMapStructureChanged();
 			UpdateGridLines();
 		}
 
@@ -272,30 +259,6 @@ namespace ClassicTilestorm
 		}
 	}
 }
-
-//public void ResizeMapTest(int x = 64, int z = 64)
-//{
-//	if (mapManager == null || mapManager.CurrentMap == null) return;
-//	if (mapManager.CurrentMap.Resize(x, z, Map.Anchor.Center))
-//	{
-//		mapManager.CurrentMap.Consolidate();
-//		ResourceManager.ApplyMapChanges(mapManager.CurrentMap);
-//	}
-//	if (!TryGetComponent<MainController>(out var main)) return;
-//	main.ReloadCurrentMap();
-//}
-
-//public void CropMapTest()
-//{
-//	if (mapManager == null || mapManager.CurrentMap == null) return;
-//	if (mapManager.CurrentMap.CropToContent())
-//	{
-//		mapManager.CurrentMap.Consolidate();
-//		ResourceManager.ApplyMapChanges(mapManager.CurrentMap);
-//	}
-//	if (!TryGetComponent<MainController>(out var main)) return;
-//	main.ReloadCurrentMap();
-//}
 
 //public void LoadExternalDatabase()//ToDo make work outside editor
 //{
