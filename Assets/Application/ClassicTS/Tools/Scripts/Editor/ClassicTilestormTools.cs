@@ -131,14 +131,14 @@ namespace ClassicTilestorm.Editor
 				if (old.bWest) dirs.Add('W');
 				if (dirs.Count > 0) def.connections = new string(dirs.ToArray());
 
-				def.pickup = old.nPickup switch
-				{
-					1 => "Coin",
-					2 => "Key",
-					3 => "Health",
-					4 => "Ammo",
-					_ => null
-				};
+				//def.pickup = old.nPickup switch
+				//{
+				//	1 => "Coin",
+				//	2 => "Key",
+				//	3 => "Health",
+				//	4 => "Ammo",
+				//	_ => null
+				//};
 
 				newDefs.Add(def);
 			}

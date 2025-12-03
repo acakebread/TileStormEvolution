@@ -13,7 +13,7 @@ namespace ClassicTilestorm
 		public string texture;
 		public string flags;
 		public string connections;
-		public string pickup;// only serialized if not None
+		//public string pickup;// only serialized if not None
 
 		[JsonIgnore] public bool bNorth => HasConnection('N');
 		[JsonIgnore] public bool bSouth => HasConnection('S');
@@ -29,15 +29,15 @@ namespace ClassicTilestorm
 		[JsonIgnore] public bool bDock => HasFlag("Dock");
 		[JsonIgnore] public bool bPuzzleBlock => HasFlag("PuzzleBlock");
 
-		[JsonIgnore]
-		public int nPickup => pickup switch
-		{
-			"Coin" => 1,
-			"Key" => 2,
-			"Health" => 3,
-			"Ammo" => 4,
-			_ => 0
-		};
+		//[JsonIgnore]
+		//public int nPickup => pickup switch
+		//{
+		//	"Coin" => 1,
+		//	"Key" => 2,
+		//	"Health" => 3,
+		//	"Ammo" => 4,
+		//	_ => 0
+		//};
 
 		// ── INTERNAL HELPERS ───────────────────────────────────────────────────
 		private HashSet<string> _flagCache;
