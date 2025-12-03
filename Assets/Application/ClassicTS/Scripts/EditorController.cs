@@ -60,6 +60,12 @@ namespace ClassicTilestorm
 			UpdateGridLines();
 			if (gridLines != null)
 				gridLines.SetActive(isActiveAndEnabled && gridEnabled);
+
+			if (isActiveAndEnabled)
+			{
+				var eggbotController = GetComponentInChildren<EggbotController>(true);
+				if (null != eggbotController) eggbotController.gameObject.SetActive(false);
+			}
 		}
 
 		private void UpdateGridLines()
@@ -89,6 +95,9 @@ namespace ClassicTilestorm
 				controller.UpdateGestureControllerState();
 			}
 
+			var eggbotController = GetComponentInChildren<EggbotController>(true);
+			if (null != eggbotController) eggbotController.gameObject.SetActive(false);
+
 			editorUI.enabled = true;
 			if (gridLines != null) gridLines.SetActive(gridEnabled);
 
@@ -100,6 +109,9 @@ namespace ClassicTilestorm
 			if (gridLines != null) gridLines.SetActive(false);
 			editorUI.enabled = false;
 			EditorUtil.DestroyGhostTile();
+
+			var eggbotController = GetComponentInChildren<EggbotController>(true);
+			if (null != eggbotController) eggbotController.gameObject.SetActive(true);
 		}
 
 		private void Update()
@@ -119,6 +131,9 @@ namespace ClassicTilestorm
 
 			if (currentMode == EditorMode.Paint)
 				editorUI.DrawPaintUI(paintMode.SelectedDefinitionID);
+
+			if (currentMode == EditorMode.Waypoint && mapManager?.CurrentMap?.waypoints != null)
+				editorUI.DrawWaypointUI(mapManager.CurrentMap.waypoints, waypointMode.SelectedWaypointIndex);
 		}
 
 		public void OnApplicationFocus(bool hasFocus)

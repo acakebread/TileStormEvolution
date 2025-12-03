@@ -34,6 +34,20 @@ namespace ClassicTilestorm
 		public event Action OnImportMapRequested;
 		public event Action<string> OnTileSelected;
 
+		public event Action<int> OnWaypointSelected;        // User clicked a waypoint
+		public event Action OnWaypointAddRequested;         // Add new waypoint button
+		public event Action<int> OnWaypointMoveUp;
+		public event Action<int> OnWaypointMoveDown;
+		public event Action<int> OnWaypointDelete;
+		private float waypointPanelWidth = 120f;
+		private float waypointTargetWidth = 120f;
+		private float waypointMouseExitTime = 0f;
+		private bool isMouseOverWaypointPanel = false;
+		private const float waypointAutoHideDelay = 1f;
+		private Vector2 waypointScrollPosition = Vector2.zero;
+		private float waypointAnimationStartTime = 0f;
+		private const float waypointAnimationDuration = 0.3f;
+
 		public void Start()
 		{
 			TryGetComponent<PlaceholderUI>(out var placeholderUI);
@@ -200,6 +214,140 @@ namespace ClassicTilestorm
 			}
 
 			GUI.EndScrollView();
+		}
+
+		public void DrawWaypointUI(Waypoint[] waypoints, int selectedIndex = -1)
+		{
+			const float margin = 10f;
+			const float collapsedW = 120f;
+			const float fullW = 340f;
+
+			float x = Screen.width - waypointPanelWidth - margin;
+			float y = panelYoffset + spacing;
+			float h = Screen.height - y - margin;
+
+			Rect panelRect = new Rect(x, y, waypointPanelWidth, h);
+
+			// === Hover/expand logic (unchanged) ===
+			Vector2 mp = Input.mousePosition;
+			mp.y = Screen.height - mp.y;
+
+			bool wasOver = isMouseOverWaypointPanel;
+			isMouseOverWaypointPanel = panelRect.Contains(mp);
+
+			if (isMouseOverWaypointPanel && !wasOver)
+			{
+				waypointTargetWidth = fullW;
+				waypointAnimationStartTime = Time.time;
+			}
+			else if (!isMouseOverWaypointPanel && wasOver)
+			{
+				waypointMouseExitTime = Time.time;
+			}
+
+			if (!isMouseOverWaypointPanel && Time.time - waypointMouseExitTime > waypointAutoHideDelay)
+				waypointTargetWidth = collapsedW;
+
+			if (waypointPanelWidth != waypointTargetWidth)
+			{
+				float t = (Time.time - waypointAnimationStartTime) / waypointAnimationDuration;
+				waypointPanelWidth = Mathf.Lerp(waypointPanelWidth, waypointTargetWidth, t);
+				if (t >= 1f) waypointPanelWidth = waypointTargetWidth;
+			}
+
+			// === Draw panel ===
+			GUI.backgroundColor = new Color(0.15f, 0.3f, 0.42f, 0.92f);
+			GUI.Box(panelRect, "");
+			GUI.backgroundColor = Color.white;
+
+			GUI.Label(new Rect(x + 10, y + 5, waypointPanelWidth - 20, 25), "Waypoints");
+
+			if (waypoints == null || waypoints.Length == 0)
+			{
+				GUI.Label(new Rect(x + 10, y + 40, waypointPanelWidth - 20, 50),
+					"No waypoints\nClick map to add first one");
+				return;
+			}
+
+			// === Scrollable list ===
+			Rect scrollRect = new Rect(x + 10, y + 35, waypointPanelWidth - 20, h - 180);
+			waypointScrollPosition = GUI.BeginScrollView(scrollRect, waypointScrollPosition,
+				new Rect(0, 0, waypointPanelWidth - 40, waypoints.Length * 46f));
+
+			for (int i = 0; i < waypoints.Length; i++)
+			{
+				var wp = waypoints[i];
+				string name = string.IsNullOrEmpty(wp.name) ? "<unnamed>" : wp.name;
+				string cam = wp.IsCamera() ? " [Cam]" : "";
+				string status = wp.tile < 0 ? " [UNPLACED — click map]" : $" [{wp.tile}]";
+				string label = $"{i:00}: {name}{status}{cam}";
+
+				Rect r = new Rect(0, i * 46f, waypointPanelWidth - 40, 42);
+
+				// Color logic: unplaced = orange, selected = blue, both = orange-blue mix
+				if (wp.tile < 0)
+					GUI.color = new Color(1f, 0.6f, 0.2f);      // Orange for unplaced
+				else if (i == selectedIndex)
+					GUI.color = new Color(0.3f, 0.8f, 1f);      // Blue for selected
+				else
+					GUI.color = Color.white;
+
+				if (GUI.Button(r, label))
+					OnWaypointSelected?.Invoke(i);
+
+				GUI.color = Color.white;
+			}
+			GUI.EndScrollView();
+
+			// === Control Panel ===
+			float controlY = y + h - 140;
+
+			// Selected info
+			if (selectedIndex >= 0 && selectedIndex < waypoints.Length)
+			{
+				var selWp = waypoints[selectedIndex];
+				GUI.Label(new Rect(x + 10, controlY, waypointPanelWidth - 20, 20),
+					$"Selected: {selectedIndex} — {selWp.name ?? "<unnamed>"}");
+
+				if (selWp.tile < 0)
+				{
+					GUI.color = new Color(1f, 0.7f, 0.3f);
+					GUI.Label(new Rect(x + 10, controlY + 22, waypointPanelWidth - 20, 40),
+						"This waypoint is unplaced.\nClick on the map to place it.");
+					GUI.color = Color.white;
+					controlY += 20;
+				}
+			}
+			else
+			{
+				GUI.Label(new Rect(x + 10, controlY, waypointPanelWidth - 20, 20), "No waypoint selected");
+			}
+
+			controlY += 40;
+
+			// Move buttons
+			GUI.enabled = selectedIndex > 0;
+			if (GUI.Button(new Rect(x + 10, controlY, 100, 30), "Move Up"))
+				OnWaypointMoveUp?.Invoke(selectedIndex);
+
+			GUI.enabled = selectedIndex >= 0 && selectedIndex < waypoints.Length - 1;
+			if (GUI.Button(new Rect(x + 120, controlY, 100, 30), "Move Down"))
+				OnWaypointMoveDown?.Invoke(selectedIndex);
+
+			GUI.enabled = true;
+			controlY += 38;
+
+			// Delete
+			GUI.color = new Color(1f, 0.4f, 0.4f);
+			if (GUI.Button(new Rect(x + 10, controlY, waypointPanelWidth - 20, 32), "Delete Selected"))
+				OnWaypointDelete?.Invoke(selectedIndex);
+			GUI.color = Color.white;
+
+			controlY += 40;
+
+			// Add New
+			if (GUI.Button(new Rect(x + 10, controlY, waypointPanelWidth - 20, 32), "Add New Waypoint"))
+				OnWaypointAddRequested?.Invoke();
 		}
 	}
 }

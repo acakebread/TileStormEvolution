@@ -4,13 +4,11 @@ namespace ClassicTilestorm
 {
 	public abstract class EditorControllerMovement
 	{
-		protected float yaw;
-		protected float pitch;
-		protected float lookSpeedH = 2f;
-		protected float lookSpeedV = 2f;
-		protected float zoomSpeed = 12f;
-		protected bool skipNextScroll;
-		protected bool didGainFocus;
+		private float lookSpeedH = 2f;
+		private float lookSpeedV = 2f;
+		private float zoomSpeed = 12f;
+		private bool skipNextScroll;
+		private bool didGainFocus;
 
 		protected EditorController editorController;
 
@@ -48,9 +46,11 @@ namespace ClassicTilestorm
 					pointerX = Input.touches[0].deltaPosition.x * 0.05f;
 					pointerY = Input.touches[0].deltaPosition.y * 0.05f;
 				}
-				yaw += lookSpeedH * pointerX;
-				pitch -= lookSpeedV * pointerY;
-				cameraTransform.eulerAngles = new Vector3(pitch, yaw, 0f);
+
+				var eulers = camera.transform.eulerAngles;
+				eulers.y += lookSpeedH * pointerX;//yaw
+				eulers.x -= lookSpeedV * pointerY;//pitch
+				cameraTransform.eulerAngles = eulers;
 			}
 
 			if (isMouseInside && !isMouseOverGui)
@@ -63,18 +63,12 @@ namespace ClassicTilestorm
 			var translation = GetInputTranslationDirection() * zoomSpeed * Time.deltaTime;
 			cameraTransform.Translate(translation, Space.Self);
 
-			if (isMouseInside && (Input.GetMouseButton(0) || Input.GetMouseButton(1)))
-			{
-				OnEnable();
-				didGainFocus = false;
-			}
+			if (isMouseInside && (Input.GetMouseButton(0) || Input.GetMouseButton(1))) didGainFocus = false;
 		}
 
-		public void OnEnable()
-		{
-			yaw = camera.transform.eulerAngles.y;
-			pitch = camera.transform.eulerAngles.x;
-		}
+		public virtual void OnEnable() { }
+
+		public virtual void OnDisable() { }
 
 		public virtual void OnApplicationFocus(bool hasFocus)
 		{

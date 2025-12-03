@@ -5,6 +5,7 @@ namespace ClassicTilestorm
 {
 	public static class EditorUtil
 	{
+		//ghost tile system
 		private static GameObject ghostTile;
 		private static Material ghostMaterial;        // default valid color (white 0.5 alpha)
 		private static Material ghostMaterialInvalid; // invalid color (red 0.5 alpha)
@@ -93,6 +94,104 @@ namespace ClassicTilestorm
 				Object.Destroy(ghostTile);
 				ghostTile = null;
 			}
+		}
+
+
+		//waypoint visualisation system
+		private static GameObject waypointGhost;
+		private static readonly System.Collections.Generic.List<GameObject> waypointMarkers = new();
+		private static Material waypointMaterialNormal;
+		private static Material waypointMaterialSelected;
+		private static Material waypointMaterialCamera;
+
+		public static void UpdateWaypointGhost(Camera cam, IMapManager mapManager, Vector3 mouseWorldPos)
+		{
+			InitializeWaypointMaterials();
+
+			if (waypointGhost == null)
+			{
+				waypointGhost = CreateWaypointMarker(Vector3.zero, waypointMaterialNormal);
+				waypointGhost.name = "WaypointGhost";
+			}
+
+			var snapped = mapManager.SnappedMapPosition(mouseWorldPos);
+			waypointGhost.transform.position = snapped + new Vector3(0, 0.01f, 0); // Slightly above ground
+			waypointGhost.SetActive(true);
+		}
+
+		private static Material waypointMaterialInvalid;
+
+		public static void InitializeWaypointMaterials()
+		{
+			if (waypointMaterialNormal == null)
+				waypointMaterialNormal = MaterialUtils.CreateTransparentUnlitMaterial(new Color(0f, 1f, 0f, 0.3f));
+			if (waypointMaterialSelected == null)
+				waypointMaterialSelected = MaterialUtils.CreateTransparentUnlitMaterial(new Color(0f, 0.7f, 1f, 0.6f));
+			if (waypointMaterialCamera == null)
+				waypointMaterialCamera = MaterialUtils.CreateTransparentUnlitMaterial(new Color(0f, 1f, 1f, 0.4f));
+			if (waypointMaterialInvalid == null)
+				waypointMaterialInvalid = MaterialUtils.CreateTransparentUnlitMaterial(new Color(1f, 0.5f, 0f, 0.5f)); // Orange
+		}
+
+		public static void UpdateWaypointMarkers(IMapManager mapManager, Waypoint[] waypoints, int selectedIndex = -1)
+		{
+			InitializeWaypointMaterials();
+
+			// Destroy old
+			foreach (var m in waypointMarkers) if (m) Object.Destroy(m);
+			waypointMarkers.Clear();
+
+			if (waypoints == null || waypoints.Length == 0) return;
+
+			for (int i = 0; i < waypoints.Length; i++)
+			{
+				var wp = waypoints[i];
+				if (wp.tile < 0 || wp.tile >= mapManager.Count) continue;
+
+				var pos = mapManager.TileWorldPosition(wp.tile) + new Vector3(0, 0.02f, 0);
+
+				Material mat;
+				if (i == selectedIndex)
+					mat = waypointMaterialSelected;                    // Blue = selected
+				else if (wp.tile < 0)
+					mat = waypointMaterialInvalid ?? waypointMaterialNormal; // Optional: red/orange for unplaced
+				else if (wp.IsCamera())
+					mat = waypointMaterialCamera;                      // Cyan = camera
+				else
+					mat = waypointMaterialNormal;                      // Green = normal
+
+				var marker = CreateWaypointMarker(pos, mat);
+				marker.name = $"WP_{i}_{(i == selectedIndex ? "SELECTED" : wp.IsCamera() ? "CAM" : "NORMAL")}";
+				waypointMarkers.Add(marker);
+			}
+		}
+
+		private static GameObject CreateWaypointMarker(Vector3 pos, Material mat)
+		{
+			var go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+			go.transform.localScale = new Vector3(0.8f, 0.01f, 0.8f);
+			go.transform.position = pos;
+			Object.Destroy(go.GetComponent<Collider>());
+
+			var mr = go.GetComponent<MeshRenderer>();
+			mr.material = mat;
+			mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+			mr.receiveShadows = false;
+
+			return go;
+		}
+
+		public static void HideWaypointGhost()
+		{
+			if (waypointGhost != null) waypointGhost.SetActive(false);
+		}
+
+		public static void DestroyWaypointVisuals()
+		{
+			if (waypointGhost) Object.Destroy(waypointGhost);
+			foreach (var m in waypointMarkers) if (m) Object.Destroy(m);
+			waypointMarkers.Clear();
+			waypointGhost = null;
 		}
 	}
 }
