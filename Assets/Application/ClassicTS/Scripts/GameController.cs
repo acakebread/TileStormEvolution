@@ -24,12 +24,6 @@ namespace ClassicTilestorm
 		{
 			PreviewSettings.CurrentMode = mode;
 			mainController.SetPreviewMode(mode);
-
-			// Fix grid staying visible in Player/Cinema mode
-			if (mainController.TryGetComponent<EditorController>(out var editorController))
-			{
-				editorController.UpdateGridLines(mode == PreviewMode.Editor);
-			}
 		}
 
 		private void HandleChangeMap(int delta)

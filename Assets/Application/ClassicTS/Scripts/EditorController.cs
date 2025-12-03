@@ -10,21 +10,19 @@ namespace ClassicTilestorm
 	public class EditorController : MonoBehaviour
 	{
 		private MapManager mapManager;
-		private GameObject gridLines;
 		private EditorControllerMovement activeMode;
 		private EditorControllerDrag dragMode;
 		private EditorControllerPaint paintMode;
 
-		public enum EditorMode { Drag, Paint }
-
+		private enum EditorMode { Drag, Paint }
 		private EditorMode currentMode = EditorMode.Drag;
-		private bool gridLinesEnabled = true;
-
 		private PlaceholderEditorUI editorUI;
 
-		public EditorControllerPaint PaintMode => paintMode;
 		public IMapManager iMapManager => mapManager;
 		public PlaceholderEditorUI GetEditorUI() => editorUI;
+
+		private GameObject gridLines;
+		private bool gridEnabled = true;
 
 		private void Awake()
 		{
@@ -32,66 +30,58 @@ namespace ClassicTilestorm
 			EditorUtil.InitializeGhostMaterial();
 
 			editorUI.OnModeChanged += HandleModeChanged;
-			editorUI.OnGridLinesToggled += UpdateGridLines;
+			editorUI.OnGridLinesToggled += EnableGridLines;
 			editorUI.OnTileSelected += HandleTileSelected;
 			editorUI.OnSaveDatabaseRequested += SaveDatabase;
 			editorUI.OnReloadDatabaseRequested += LoadDatabase;
 			editorUI.OnExportMapRequested += ExportMapAsAtomic;
 			editorUI.OnImportMapRequested += ImportMapAsAtomic;
-			editorUI.OnResizeMapTestRequested += () => ResizeMapTest(64, 64);
-			editorUI.OnCropMapTestRequested += CropMapTest;
+			//editorUI.OnResizeMapTestRequested += () => ResizeMapTest(64, 64);
+			//editorUI.OnCropMapTestRequested += CropMapTest;
 
 			dragMode = new EditorControllerDrag(this);
 			paintMode = new EditorControllerPaint(this);
+
+			//if (mapManager != null)
+			//	mapManager.OnMapStructureChanged += HandleMapStructureChanged;
 		}
 
 		public void Initialise(MapManager map)
 		{
-			Destroy();
-
-			if (!TryGetComponent<MainCameraController>(out var controller)) return;
-			controller.SetCameraSystem(CameraModeRegistry.Editor, true);
-
 			mapManager = map;
-
-			TryGetComponent<PlaceholderUI>(out var placeholderUI);
-			var bottomY = placeholderUI ? placeholderUI.GetPanelBottomY() : 10f;
-			editorUI.Initialize(bottomY);
-
-			//if (mapManager != null)
-			//	mapManager.OnMapStructureChanged += HandleMapStructureChanged;
-
-			gridLines = null != mapManager ? GridLinesHelper.CreateGridLines(transform, mapManager.Width, mapManager.Height, extension: 16) : null;
-			if (null != gridLines)
-				gridLines.transform.localPosition = MapManager.tile_origin + new Vector3(-0.5f, 0f, -0.5f);//workaround for tile offset in mapmanager
-
-			UpdateGridLines(gridLinesEnabled);
-
-			if (isActiveAndEnabled) OnEnable();
+			UpdateGridLines();
+			if (null != gridLines) gridLines.SetActive(gridEnabled);
 		}
 
-		//private void HandleMapStructureChanged()
-		//{
-		//	// Recreate grid lines for new size
-		//	if (gridLines != null)
-		//	{
-		//		Destroy(gridLines);
-		//		gridLines = null;
-		//	}
-
-		//	if (mapManager != null)
-		//	{
-		//		gridLines = GridLinesHelper.CreateGridLines(transform, mapManager.Width, mapManager.Height, extension: 16);
-		//		if (gridLines != null)
-		//			gridLines.transform.localPosition = MapManager.tile_origin + new Vector3(-0.5f, 0f, -0.5f);
-		//		UpdateGridLines(gridLinesEnabled);
-		//	}
-		//}
-
-		public void UpdateGridLines(bool value)
+		private void UpdateGridLines()
 		{
-			if (gridLines != null) gridLines.SetActive(value);
-			gridLinesEnabled = value;
+			var active = gridLines ? gridLines.activeSelf : false;
+			Destroy(gridLines);
+			gridLines = GridLinesHelper.CreateGridLines(transform, mapManager ? mapManager.Width : 32, mapManager ? mapManager.Height : 32, extension: 16);
+			gridLines.transform.localPosition = MapManager.tile_origin + new Vector3(-0.5f, 0f, -0.5f);
+			gridLines.SetActive(active);
+		}
+
+		private void EnableGridLines(bool value) { gridEnabled = value; if (null == gridLines) return; gridLines.SetActive(value); }
+
+		void OnEnable()
+		{
+			if (!TryGetComponent<MainCameraController>(out var controller)) return;
+			controller.SetCameraSystem(CameraModeRegistry.Editor, true);
+			controller.UpdateGestureControllerState();
+
+			editorUI.enabled = true;
+			if (null != gridLines) gridLines.SetActive(gridEnabled);
+
+			activeMode = currentMode == EditorMode.Drag ? dragMode : paintMode;
+			activeMode.OnEnable();
+		}
+
+		void OnDisable()
+		{
+			if (null != gridLines) gridLines.SetActive(false);
+			editorUI.enabled = false;
+			EditorUtil.DestroyGhostTile();
 		}
 
 		private void Update()
@@ -107,28 +97,9 @@ namespace ClassicTilestorm
 
 		private void OnGUI()
 		{
-			editorUI.DrawMainUI(currentMode.ToString(), gridLinesEnabled);
+			editorUI.DrawMainUI(currentMode.ToString(), gridEnabled);
 			if (currentMode == EditorMode.Paint)
 				editorUI.DrawPaintUI(paintMode.SelectedDefinitionID);
-		}
-
-		void OnEnable()
-		{
-			editorUI.enabled = true;
-			UpdateGridLines(gridLinesEnabled);
-
-			activeMode = currentMode == EditorMode.Drag ? dragMode : paintMode;
-			activeMode.OnEnable();
-
-			if (!TryGetComponent<MainCameraController>(out var controller)) return;
-			controller.UpdateGestureControllerState();
-		}
-
-		void OnDisable()
-		{
-			if (gridLines != null) gridLines.SetActive(false);
-			editorUI.enabled = false;
-			EditorUtil.DestroyGhostTile();
 		}
 
 		public void OnApplicationFocus(bool hasFocus) => activeMode?.OnApplicationFocus(hasFocus);
@@ -147,55 +118,22 @@ namespace ClassicTilestorm
 
 		private void HandleTileSelected(string defId) => paintMode.SetSelectedDefinitionById(defId);
 
-		void Destroy()
-		{
-			if (null != gridLines)
-			{
-				Destroy(gridLines);
-				gridLines = null;
-			}
-			//if (null != mapManager)
-			//	mapManager.OnMapStructureChanged -= HandleMapStructureChanged;
-		}
-
 		void OnDestroy()
 		{
-			Destroy();
+			if (null != gridLines) Destroy(gridLines);
 			EditorUtil.DestroyGhostTile();
 
 			editorUI.OnModeChanged -= HandleModeChanged;
-			editorUI.OnGridLinesToggled -= UpdateGridLines;
+			editorUI.OnGridLinesToggled -= EnableGridLines;
 			editorUI.OnTileSelected -= HandleTileSelected;
 			editorUI.OnSaveDatabaseRequested -= SaveDatabase;
 			editorUI.OnReloadDatabaseRequested -= LoadDatabase;
 			editorUI.OnExportMapRequested -= ExportMapAsAtomic;
 			editorUI.OnImportMapRequested -= ImportMapAsAtomic;
-			editorUI.OnResizeMapTestRequested -= () => ResizeMapTest(64, 64);
-			editorUI.OnCropMapTestRequested -= CropMapTest;
-		}
-
-		public void ResizeMapTest(int x = 64, int z = 64)
-		{
-			if (mapManager == null || mapManager.CurrentMap == null) return;
-			if (mapManager.CurrentMap.Resize(x, z, Map.Anchor.Center))
-			{
-				mapManager.CurrentMap.Consolidate();
-				ResourceManager.ApplyMapChanges(mapManager.CurrentMap);
-			}
-			if (!TryGetComponent<MainController>(out var main)) return;
-			main.ReloadCurrentMap();
-		}
-
-		public void CropMapTest()
-		{
-			if (mapManager == null || mapManager.CurrentMap == null) return;
-			if (mapManager.CurrentMap.CropToContent())
-			{
-				mapManager.CurrentMap.Consolidate();
-				ResourceManager.ApplyMapChanges(mapManager.CurrentMap);
-			}
-			if (!TryGetComponent<MainController>(out var main)) return;
-			main.ReloadCurrentMap();
+			//editorUI.OnResizeMapTestRequested -= () => ResizeMapTest(64, 64);
+			//editorUI.OnCropMapTestRequested -= CropMapTest;
+			//if (null != mapManager)
+			//	mapManager.OnMapStructureChanged -= HandleMapStructureChanged;
 		}
 
 		public void OnMapChanged(bool resized = false)
@@ -205,8 +143,9 @@ namespace ClassicTilestorm
 			ResourceManager.ApplyMapChanges(mapManager.CurrentMap);
 			if (!resized) return;
 			if (!TryGetComponent<MainController>(out var main)) return;
-			main.ReloadCurrentMap();
+			//main.ReloadCurrentMap();
 			//HandleMapStructureChanged();
+			UpdateGridLines();
 		}
 
 		public void LoadDatabase()
@@ -334,6 +273,29 @@ namespace ClassicTilestorm
 	}
 }
 
+//public void ResizeMapTest(int x = 64, int z = 64)
+//{
+//	if (mapManager == null || mapManager.CurrentMap == null) return;
+//	if (mapManager.CurrentMap.Resize(x, z, Map.Anchor.Center))
+//	{
+//		mapManager.CurrentMap.Consolidate();
+//		ResourceManager.ApplyMapChanges(mapManager.CurrentMap);
+//	}
+//	if (!TryGetComponent<MainController>(out var main)) return;
+//	main.ReloadCurrentMap();
+//}
+
+//public void CropMapTest()
+//{
+//	if (mapManager == null || mapManager.CurrentMap == null) return;
+//	if (mapManager.CurrentMap.CropToContent())
+//	{
+//		mapManager.CurrentMap.Consolidate();
+//		ResourceManager.ApplyMapChanges(mapManager.CurrentMap);
+//	}
+//	if (!TryGetComponent<MainController>(out var main)) return;
+//	main.ReloadCurrentMap();
+//}
 
 //public void LoadExternalDatabase()//ToDo make work outside editor
 //{

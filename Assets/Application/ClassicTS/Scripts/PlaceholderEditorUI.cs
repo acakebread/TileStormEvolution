@@ -31,11 +31,15 @@ namespace ClassicTilestorm
 		public event Action OnReloadDatabaseRequested;
 		public event Action OnExportMapRequested;
 		public event Action OnImportMapRequested;
-		public event Action OnResizeMapTestRequested;
-		public event Action OnCropMapTestRequested;
+		//public event Action OnResizeMapTestRequested;
+		//public event Action OnCropMapTestRequested;
 		public event Action<string> OnTileSelected;
 
-		public void Initialize(float yOffset) => panelYoffset = yOffset;
+		public void Start()
+		{
+			TryGetComponent<PlaceholderUI>(out var placeholderUI);
+			panelYoffset = placeholderUI ? placeholderUI.GetPanelBottomY() : 10f;
+		}
 
 		public bool IsGuiControlActive()
 			=> GUIUtility.hotControl != 0 || isMouseOverTileSelector || (EventSystem.current && EventSystem.current.IsPointerOverGameObject());
@@ -129,8 +133,8 @@ namespace ClassicTilestorm
 			GUI.contentColor = Color.white;
 			GUI.backgroundColor = Color.white;
 
-			GuiUtils.ColoredButton(new Rect(margin, y + 3 * (buttonHeight + spacing), buttonWidth, buttonHeight), "Resize Test", new Color(0.7f, 0.6f, 0.2f), OnResizeMapTestRequested);
-			GuiUtils.ColoredButton(new Rect(margin, y + 4 * (buttonHeight + spacing), buttonWidth, buttonHeight), "Crop Test", new Color(0.7f, 0.6f, 0.2f), OnCropMapTestRequested);
+			//GuiUtils.ColoredButton(new Rect(margin, y + 3 * (buttonHeight + spacing), buttonWidth, buttonHeight), "Resize Test", new Color(0.7f, 0.6f, 0.2f), OnResizeMapTestRequested);
+			//GuiUtils.ColoredButton(new Rect(margin, y + 4 * (buttonHeight + spacing), buttonWidth, buttonHeight), "Crop Test", new Color(0.7f, 0.6f, 0.2f), OnCropMapTestRequested);
 			GuiUtils.ColoredButton(new Rect(margin, y + 5 * (buttonHeight + spacing), buttonWidth, buttonHeight), "Import Map", new Color(0.2f, 0.6f, 1f), OnImportMapRequested);
 			GuiUtils.ColoredButton(new Rect(margin, y + 6 * (buttonHeight + spacing), buttonWidth, buttonHeight), "Export Map", new Color(0.8f, 0.2f, 0.2f), OnExportMapRequested);
 			GuiUtils.ColoredButton(new Rect(margin, y + 7 * (buttonHeight + spacing), buttonWidth, buttonHeight), "Reload Database", new Color(0.2f, 0.6f, 1f), OnReloadDatabaseRequested);

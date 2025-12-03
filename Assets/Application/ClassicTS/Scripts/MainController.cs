@@ -60,11 +60,7 @@ namespace ClassicTilestorm
 			if (null != editorController) editorController.Initialise(mapManager);
 		}
 
-		public void ReloadCurrentMap()
-		{
-			if (mapManager?.CurrentMap != null)
-				LoadMap(mapManager.CurrentMap.name);
-		}
+		public void ReloadCurrentMap() { if (null != mapManager && null != mapManager.CurrentMap) LoadMap(mapManager.CurrentMap.name); }
 
 		public void Preset() { if (null != mapManager) mapManager.Preset(); }
 

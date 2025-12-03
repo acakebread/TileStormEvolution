@@ -127,6 +127,11 @@ namespace ClassicTilestorm
 			SetupWaypoints();
 		}
 
+		private void DestroyAllTiles()
+		{
+			for (int i = transform.childCount - 1; i >= 0; i--) Destroy(transform.GetChild(i).gameObject);
+		}
+
 		private void LoadTileData(int[] tileMap)
 		{
 			if (tileMap == null || tileMap.Length != Count)
@@ -308,7 +313,7 @@ namespace ClassicTilestorm
 			return false;
 		}
 
-		public void UpdateTileAtRestricted(int x, int z, string id)
+		private void UpdateTileAtRestricted(int x, int z, string id)
 		{
 			if (string.IsNullOrEmpty(id))
 				id = "tile_empty";
@@ -352,7 +357,7 @@ namespace ClassicTilestorm
 		/// Places a tile at any coordinate — automatically expands if needed, crops if appropriate.
 		/// Returns true if the map bounds changed (resized or cropped), so caller can reload.
 		/// </summary>
-		public bool UpdateTileAtSmart(int x, int z, string id)
+		private bool UpdateTileAtSmart(int x, int z, string id)
 		{
 			if (string.IsNullOrEmpty(id))
 				id = "tile_empty";
@@ -383,6 +388,7 @@ namespace ClassicTilestorm
 				//currentMap.Consolidate();
 				//ResourceManager.ApplyMapChanges(currentMap);
 
+				DestroyAllTiles();
 				LoadTileData(currentMap.tiles);
 
 				// Coordinates now valid
@@ -408,6 +414,8 @@ namespace ClassicTilestorm
 			//if (structureChanged)
 			//	OnMapStructureChanged?.Invoke();
 
+			//DestroyAllTiles();
+			//LoadTileData(currentMap.tiles); 
 			currentMap.Consolidate();
 
 			return structureChanged;
