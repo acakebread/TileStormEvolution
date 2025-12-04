@@ -36,7 +36,6 @@ namespace ClassicTilestorm
 		private void Awake()
 		{
 			editorUI = gameObject.AddComponent<PlaceholderEditorUI>();
-			EditorUtil.InitializeGhostMaterial();
 
 			editorUI.OnModeChanged += OnModeChanged;
 			editorUI.OnGridLinesToggled += OnGridLinesToggled;
@@ -65,9 +64,8 @@ namespace ClassicTilestorm
 			{
 				var eggbotController = GetComponentInChildren<EggbotController>(true);
 				if (null != eggbotController) eggbotController.gameObject.SetActive(false);
+				waypointMode?.OnMapChanged();
 			}
-
-			waypointMode?.OnMapChanged();
 		}
 
 		private void UpdateGridLines()
@@ -213,7 +211,7 @@ namespace ClassicTilestorm
 					}
 
 					var eggbot = transform.GetComponentInChildren<EggbotController>();
-					eggbot?.OnMapOriginShift(mapManager, originDelta);
+					if (null != eggbot) eggbot.OnMapOriginShift(mapManager, originDelta);
 				}
 			}
 		}

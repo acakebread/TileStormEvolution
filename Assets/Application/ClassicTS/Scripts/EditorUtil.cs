@@ -33,6 +33,7 @@ namespace ClassicTilestorm
 		public static void UpdateGhostTile(Camera camera, IMapManager mapManager, Definition definition)
 		{
 			if (mapManager == null || definition == null) return;
+			InitializeGhostMaterial();
 
 			// Create ghost tile if needed (or if definition changed)
 			if (ghostTile == null)
