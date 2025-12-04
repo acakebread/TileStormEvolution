@@ -166,7 +166,7 @@ namespace ClassicTilestorm
 				var wp = waypoints[i];
 				string cam = wp.IsCamera() ? " [Cam]" : "";
 				string status = wp.tile < 0 ? " [UNPLACED]" : $" [{wp.tile}]";
-				string label = $"{i:00}: WP{i}{status}{cam}";
+				string label = $"WP{i:00}{status}{cam}";
 
 				var btn = new Rect(0, i * 46f, r.width - 40, 42);
 

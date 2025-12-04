@@ -58,11 +58,8 @@ namespace ClassicTilestorm
 			if (!isMouseOverGui && !isGuiActive)
 			{
 				var scroll = skipNextScroll ? 0f : Input.GetAxis("Mouse ScrollWheel");
-				if (scroll != 0f)
-				{
-					cameraTransform.Translate(0, 0, scroll * zoomSpeed, Space.Self);
-					skipNextScroll = false;
-				}
+				if (scroll != 0f) cameraTransform.Translate(0, 0, scroll * zoomSpeed, Space.Self);
+				skipNextScroll = false;
 			}
 
 			// WASD movement
