@@ -272,11 +272,11 @@ namespace MassiveHadronLtd
 			{
 				bool wasOver = IsMouseOver;
 
-				// Detection zone uses the EXPANDED width so it feels instant
-				float detectX = Screen.width - expandedWidth - 10f;
+				// do not use expanded width!!!!
+				float detectX = Screen.width - CurrentWidth - 10f;
 				detectionRect.x = detectX;
 				detectionRect.y = 20f;
-				detectionRect.width = expandedWidth + 20f; // a little extra grace
+				detectionRect.width = CurrentWidth + 20f;
 				detectionRect.height = Screen.height - 40f;
 
 				flippedMousePos = Input.mousePosition;

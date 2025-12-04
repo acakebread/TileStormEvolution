@@ -19,6 +19,23 @@ namespace ClassicTilestorm
 		private readonly GuiUtils.AutoHidePanel sidePanel = new(collapsed: 120f, expanded: 340f, delay: 1f, animDur: 0.3f);
 		private Vector2 scrollPos = Vector2.zero;
 
+		public override bool IsMouseOverModeGui()
+		{
+			if (editorController.CurrentMode != EditorController.EditorMode.Paint)
+				return false;
+
+			// Use the actual animated panel rect
+			var panelRect = sidePanel.GetRect(20f, 20f);
+			panelRect.x = Screen.width - panelRect.xMax + 20f; // because GetRect returns left-aligned
+															   // Actually better: let AutoHidePanel expose screen-space rect properly, but for now:
+			float panelWidth = sidePanel.CurrentWidth;
+			var screenRect = new Rect(Screen.width - panelWidth - 20f, 20f, panelWidth, Screen.height - 40f);
+
+			Vector2 mouse = Input.mousePosition;
+			mouse.y = Screen.height - mouse.y;
+			return screenRect.Contains(mouse);
+		}
+
 		public EditorControllerPaint(EditorController editorController) : base(editorController) { }
 
 		public override void Update()

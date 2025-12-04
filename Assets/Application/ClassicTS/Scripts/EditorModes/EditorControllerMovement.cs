@@ -23,6 +23,8 @@ namespace ClassicTilestorm
 			}
 		}
 
+		public virtual bool IsMouseOverModeGui() => false;//default behaviour
+
 		public EditorControllerMovement(EditorController controller = null)
 		{
 			editorController = controller;

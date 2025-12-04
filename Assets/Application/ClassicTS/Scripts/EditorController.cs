@@ -159,13 +159,9 @@ namespace ClassicTilestorm
 			if (new Rect(margin, leftY, buttonWidth + 20f, buttonHeight * 9 + spacing * 9).Contains(mousePos))
 				return true;
 
-			// Right side panel (only when not in Drag mode)
-			if (CurrentMode != EditorMode.Drag)
-			{
-				float detectW = 340f;
-				var rect = new Rect(Screen.width - detectW - 10f, 20f, detectW, Screen.height - 40f);
-				return rect.Contains(mousePos);
-			}
+			// Delegate mode-specific GUI detection to the active mode
+			if (activeMode != null)
+				return activeMode.IsMouseOverModeGui();
 
 			return false;
 		}
