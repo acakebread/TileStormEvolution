@@ -61,6 +61,7 @@ namespace ClassicTilestorm
 
 		public void UpdateEggbot(IMapManager map)
 		{
+			if (!isActiveAndEnabled) return;
 			stateTimer += Time.deltaTime;
 			switch (currentState)
 			{

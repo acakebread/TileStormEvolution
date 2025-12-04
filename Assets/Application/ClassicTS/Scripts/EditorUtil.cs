@@ -119,7 +119,7 @@ namespace ClassicTilestorm
 				Object.DestroyImmediate(waypointCursor.GetComponent<Collider>());
 				waypointCursor.GetComponent<MeshRenderer>().material = waypointCursorMaterial;
 				waypointCursor.transform.localScale = new Vector3(0.9f, 0.015f, 0.9f);
-				waypointCursor.name = "WaypointCursor";
+				waypointCursor.name = "Waypoint Cursor";
 			}
 
 			var snapped = mapManager.SnappedMapPosition(mouseWorldPos);
@@ -156,6 +156,7 @@ namespace ClassicTilestorm
 				var pos = mapManager.TileWorldPosition(wp.tile) + Vector3.up * 0.02f;
 
 				var go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+				go.name = $"Waypoint {i}";
 				Object.DestroyImmediate(go.GetComponent<Collider>());
 				go.transform.position = pos;
 				go.transform.localScale = new Vector3(0.8f, 0.01f, 0.8f);

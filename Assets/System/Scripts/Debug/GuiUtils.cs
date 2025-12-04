@@ -193,7 +193,7 @@ namespace MassiveHadronLtd
 				var wasOver = IsMouseOver;
 
 				// Always detect using expanded zone — this is the magic that makes it feel perfect
-				float detectW = expandedWidth;
+				float detectW = CurrentWidth;
 				var rect = new Rect(Screen.width - detectW - 10f, 20f, detectW, Screen.height - 40f);
 				Vector2 mp = Input.mousePosition;
 				mp.y = Screen.height - mp.y;
