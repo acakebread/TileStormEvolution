@@ -241,9 +241,8 @@ namespace ClassicTilestorm
 					// full-width clickable button inside the scroll content
 					GUI.backgroundColor = (i == SelectedWaypointIndex) ? new Color(0.3f, 0.8f, 1f, 0.9f) : Color.white;
 					if (GUI.Button(new Rect(0f, y, contentRect.width, buttonHeight), label))
-					{
 						SelectWaypoint(i);
-					}
+
 					GUI.backgroundColor = Color.white;
 
 					y += buttonHeight + spacing;

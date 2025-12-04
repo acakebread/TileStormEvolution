@@ -129,15 +129,8 @@ namespace ClassicTilestorm
 
 			GUILayout.Label("Tiles", EditorStyles.boldLabel);
 
-			// ---- HARD LOCKED SCROLL VIEW (NO LAYOUT, NO HORIZONTAL BAR EVER) ----
-
 			float scrollBarWidth = 12f;
-			Rect scrollRect = new Rect(
-				0f,
-				25f,
-				panelRect.width,
-				panelRect.height - 25f
-			);
+			Rect scrollRect = new Rect(0f, 25f, panelRect.width, panelRect.height - 25f);
 
 			// Compute total content height explicitly
 			int count = ResourceManager.Definitions.Count;
@@ -145,21 +138,10 @@ namespace ClassicTilestorm
 			float contentHeight = count * (buttonHeight + 4f);
 
 			// LOCKED CONTENT WIDTH = VIEW WIDTH (THIS IS THE KEY)
-			Rect contentRect = new Rect(
-				0f,
-				0f,
-				scrollRect.width - scrollBarWidth - 10,
-				contentHeight
-			);
+			Rect contentRect = new Rect(0f, 0f, scrollRect.width - scrollBarWidth - 10, contentHeight);
 
 			// Actual GUI scroll view (NOT GUILayout)
-			scrollPos = GUI.BeginScrollView(
-				scrollRect,
-				scrollPos,
-				contentRect,
-				false,
-				true
-			);
+			scrollPos = GUI.BeginScrollView(scrollRect, scrollPos, contentRect, false, true);
 
 			float y = 0f;
 
@@ -168,16 +150,10 @@ namespace ClassicTilestorm
 				var def = ResourceManager.Definitions.ElementAt(i);
 				string label = $"{def.id} ({def.texture})";
 
-				GUI.backgroundColor = (def.id == selectedDefinitionId)
-					? new Color(0.3f, 0.8f, 1f, 0.9f)
-					: Color.white;
+				GUI.backgroundColor = (def.id == selectedDefinitionId) ? new Color(0.3f, 0.8f, 1f, 0.9f) : Color.white;
 
-				if (GUI.Button(
-					new Rect(0f, y, contentRect.width, buttonHeight),
-					label))
-				{
+				if (GUI.Button( new Rect(0f, y, contentRect.width, buttonHeight), label))
 					SetSelectedDefinitionById(def.id);
-				}
 
 				y += buttonHeight + 4f;
 			}
