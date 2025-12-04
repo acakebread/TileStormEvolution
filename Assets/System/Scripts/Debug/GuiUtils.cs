@@ -163,6 +163,79 @@ namespace MassiveHadronLtd
 			public bool isPressed;
 		}
 
+		//public class AutoHidePanel
+		//{
+		//	public float CurrentWidth { get; private set; }
+		//	public bool IsMouseOver { get; private set; }
+
+		//	private readonly float collapsedWidth;
+		//	private readonly float expandedWidth;
+		//	private readonly float autoHideDelay;
+		//	private readonly float animationDuration;
+
+		//	private float targetWidth;
+		//	private float animationStartTime;
+		//	private float mouseExitTime;
+
+		//	public AutoHidePanel(float collapsed = 120f, float expanded = 340f, float delay = 1f, float animDur = 0.3f)
+		//	{
+		//		collapsedWidth = collapsed;
+		//		expandedWidth = expanded;
+		//		autoHideDelay = delay;
+		//		animationDuration = animDur;
+
+		//		CurrentWidth = collapsedWidth;
+		//		targetWidth = collapsedWidth;
+		//	}
+
+		//	public void Update(bool forceExpanded = false)
+		//	{
+		//		var wasOver = IsMouseOver;
+
+		//		// Always detect using expanded zone — this is the magic that makes it feel perfect
+		//		float detectW = CurrentWidth;
+		//		var rect = new Rect(Screen.width - detectW - 10f, 20f, detectW, Screen.height - 40f);
+		//		Vector2 mp = Input.mousePosition;
+		//		mp.y = Screen.height - mp.y;
+
+		//		IsMouseOver = rect.Contains(mp) || forceExpanded;
+
+		//		// Expand
+		//		if (IsMouseOver && !wasOver)
+		//		{
+		//			targetWidth = expandedWidth;
+		//			animationStartTime = Time.time;
+		//			mouseExitTime = 0f;
+		//		}
+
+		//		// Start collapse timer
+		//		if (!IsMouseOver && wasOver && mouseExitTime == 0f)
+		//			mouseExitTime = Time.time;
+
+		//		// Collapse after delay
+		//		if (!IsMouseOver && mouseExitTime > 0f && Time.time - mouseExitTime >= autoHideDelay)
+		//		{
+		//			targetWidth = collapsedWidth;
+		//			animationStartTime = Time.time;
+		//			mouseExitTime = 0f;
+		//		}
+
+		//		// Animate
+		//		float t = Mathf.Clamp01((Time.time - animationStartTime) / animationDuration);
+		//		CurrentWidth = Mathf.Lerp(CurrentWidth, targetWidth, t);
+		//	}
+
+		//	public Rect GetRect(float topOffset = 20f, float bottomMargin = 20f)
+		//	{
+		//		float x = Screen.width - CurrentWidth - 10f;
+		//		float y = topOffset;
+		//		float h = Screen.height - y - bottomMargin;
+		//		return new Rect(x, y, CurrentWidth, h);
+		//	}
+
+		//	public bool IsGuiActive() => GUIUtility.hotControl != 0 || IsMouseOver;
+		//}
+
 		public class AutoHidePanel
 		{
 			public float CurrentWidth { get; private set; }
@@ -192,8 +265,8 @@ namespace MassiveHadronLtd
 			{
 				var wasOver = IsMouseOver;
 
-				// Always detect using expanded zone — this is the magic that makes it feel perfect
-				float detectW = CurrentWidth;
+				// CRITICAL FIX: Always use expanded width for detection zone
+				float detectW = expandedWidth;
 				var rect = new Rect(Screen.width - detectW - 10f, 20f, detectW, Screen.height - 40f);
 				Vector2 mp = Input.mousePosition;
 				mp.y = Screen.height - mp.y;

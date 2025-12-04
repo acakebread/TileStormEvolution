@@ -36,10 +36,10 @@ namespace ClassicTilestorm
 		public event Action<string> OnTileSelected;
 
 		public event Action<int> OnWaypointSelected;
-		public event Action OnWaypointAddRequested;
 		public event Action<int> OnWaypointMoveUp;
 		public event Action<int> OnWaypointMoveDown;
-		public event Action<int> OnWaypointDelete;
+		//public event Action<int> OnWaypointDelete;
+		//public event Action OnWaypointAddRequested;
 
 		private void Start()
 		{

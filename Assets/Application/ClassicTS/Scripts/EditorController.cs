@@ -131,8 +131,8 @@ namespace ClassicTilestorm
 			if (currentMode == EditorMode.Paint)
 				editorUI.DrawPaintUI(paintMode.SelectedDefinitionID);
 
-			if (currentMode == EditorMode.Waypoint && mapManager?.CurrentMap?.waypoints != null)
-				editorUI.DrawWaypointUI(mapManager.CurrentMap.waypoints, waypointMode.SelectedWaypointIndex);
+			//if (currentMode == EditorMode.Waypoint && mapManager?.CurrentMap?.waypoints != null)
+			//	editorUI.DrawWaypointUI(mapManager.CurrentMap.waypoints, waypointMode.SelectedWaypointIndex);
 
 			activeMode?.OnGui();
 		}
