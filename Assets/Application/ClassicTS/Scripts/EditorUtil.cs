@@ -163,11 +163,11 @@ namespace ClassicTilestorm
 
 				var mr = go.GetComponent<MeshRenderer>();
 				if (i == selectedIndex)
-					mr.material = MaterialUtils.CreateTransparentUnlitMaterial(new Color(0f, 0.7f, 1f, 0.7f)); // Blue
+					mr.material = MaterialUtils.CreateTransparentUnlitMaterial(new Color(0f, 1f, 0f, 0.4f)); // Green
 				else if (wp.IsCamera())
 					mr.material = MaterialUtils.CreateTransparentUnlitMaterial(new Color(0f, 1f, 1f, 0.5f)); // Cyan
 				else
-					mr.material = MaterialUtils.CreateTransparentUnlitMaterial(new Color(0f, 1f, 0f, 0.4f)); // Green
+					mr.material = MaterialUtils.CreateTransparentUnlitMaterial(new Color(0f, 0.7f, 1f, 0.7f)); // Blue
 
 				waypointMarkers.Add(go);
 			}

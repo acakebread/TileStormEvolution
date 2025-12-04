@@ -123,8 +123,10 @@ namespace ClassicTilestorm
 
 			activeMode?.Update();
 
-			if (currentMode == EditorMode.Paint)
-				editorUI.UpdatePaintMode();
+			//if (currentMode == EditorMode.Paint)
+			//	editorUI.UpdatePaintMode();
+
+			editorUI.UpdateMode(currentMode?.ToString());
 		}
 
 		private void OnGUI()

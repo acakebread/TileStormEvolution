@@ -15,16 +15,24 @@ namespace ClassicTilestorm
 		private const float buttonWidth = 135f;
 		private const float buttonHeight = 30f;
 
+		// === Shared Panel System (used by BOTH Paint and Waypoint modes) ===
 		private float tileSelectorWidth = 120f;
-		private const float fullWidth = 300f;
-		private const float collapsedWidth = 120f;
+		private const float fullWidth = 340f;         // Expanded width (both panels)
+		private const float collapsedWidth = 120f;    // Collapsed width
+		private float targetWidth = 120f;
 		private float mouseExitTime = 0f;
 		private bool isMouseOverTileSelector = false;
 		private const float autoHideDelay = 1f;
-		private float targetWidth = 120f;
 		private float animationStartTime = 0f;
 		private const float animationDuration = 0.3f;
-		private Vector2 scrollPosition = Vector2.zero;
+
+		// Separate scroll positions for each panel
+		private Vector2 tileScrollPosition = Vector2.zero;
+		private Vector2 waypointScrollPosition = Vector2.zero;
+
+		// Paint-specific caching
+		private float cachedContentHeight = -1f;
+		private int cachedCount = -1;
 
 		public event Action<string> OnModeChanged;
 		public event Action<bool> OnGridLinesToggled;
@@ -34,19 +42,11 @@ namespace ClassicTilestorm
 		public event Action OnImportMapRequested;
 		public event Action<string> OnTileSelected;
 
-		public event Action<int> OnWaypointSelected;        // User clicked a waypoint
-		public event Action OnWaypointAddRequested;         // Add new waypoint button
+		public event Action<int> OnWaypointSelected;
+		public event Action OnWaypointAddRequested;
 		public event Action<int> OnWaypointMoveUp;
 		public event Action<int> OnWaypointMoveDown;
 		public event Action<int> OnWaypointDelete;
-		private float waypointPanelWidth = 120f;
-		private float waypointTargetWidth = 120f;
-		private float waypointMouseExitTime = 0f;
-		private bool isMouseOverWaypointPanel = false;
-		private const float waypointAutoHideDelay = 1f;
-		private Vector2 waypointScrollPosition = Vector2.zero;
-		private float waypointAnimationStartTime = 0f;
-		private const float waypointAnimationDuration = 0.3f;
 
 		public void Start()
 		{
@@ -65,49 +65,51 @@ namespace ClassicTilestorm
 
 		public bool IsMouseOverGui()
 		{
-			if (isMouseOverTileSelector) return true;
-
 			Vector2 mousePos = Input.mousePosition;
 			mousePos.y = Screen.height - mousePos.y;
 
+			// Left button panel
 			float leftY = panelYoffset + spacing;
 			if (new Rect(margin, leftY, buttonWidth + 20f, buttonHeight * 9 + spacing * 9).Contains(mousePos))
 				return true;
 
-			float tx = Screen.width - tileSelectorWidth - margin;
-			float ty = panelYoffset + spacing;
-			float th = Screen.height - ty - margin;
-			return new Rect(tx, ty, tileSelectorWidth, th).Contains(mousePos);
+			// Right panel — always detect using full width zone (prevents input blocking)
+			float rx = Screen.width - fullWidth - margin;
+			float ry = panelYoffset + spacing;
+			float rh = Screen.height - ry - margin;
+			return new Rect(rx, ry, fullWidth, rh).Contains(mousePos);
 		}
 
-		public void UpdatePaintMode()
+		public void UpdateMode(string mode)
 		{
-			var mp = Input.mousePosition;
-			mp.y = Screen.height - mp.y;
-
 			var wasOver = isMouseOverTileSelector;
 
-			var x = Screen.width - tileSelectorWidth - margin;
+			// Use maximum detection zone for both modes
+			float detectionWidth = fullWidth;
+			var x = Screen.width - detectionWidth - margin;
 			var y = panelYoffset + spacing;
 			var h = Screen.height - y - margin;
 
-			isMouseOverTileSelector = new Rect(x, y, tileSelectorWidth, h).Contains(mp);
+			Vector2 mp = Input.mousePosition;
+			mp.y = Screen.height - mp.y;
 
-			// EXPAND: when mouse enters
+			isMouseOverTileSelector = new Rect(x, y, detectionWidth, h).Contains(mp);
+
+			// Expand on enter
 			if (isMouseOverTileSelector && !wasOver)
 			{
 				targetWidth = fullWidth;
 				animationStartTime = Time.time;
-				mouseExitTime = 0f; // cancel any collapse timer
+				mouseExitTime = 0f;
 			}
 
-			// COLLAPSE: start timer only once when mouse leaves
+			// Start collapse timer when leaving
 			if (!isMouseOverTileSelector && wasOver && mouseExitTime == 0f)
 			{
 				mouseExitTime = Time.time;
 			}
 
-			// After 1 second away → collapse
+			// Collapse after delay
 			if (!isMouseOverTileSelector && mouseExitTime > 0f && Time.time - mouseExitTime >= autoHideDelay)
 			{
 				targetWidth = collapsedWidth;
@@ -115,8 +117,8 @@ namespace ClassicTilestorm
 				mouseExitTime = 0f;
 			}
 
-			// Smooth animation
-			var t = Mathf.Clamp01((Time.time - animationStartTime) / animationDuration);
+			// Animate width
+			float t = Mathf.Clamp01((Time.time - animationStartTime) / animationDuration);
 			tileSelectorWidth = Mathf.Lerp(tileSelectorWidth, targetWidth, t);
 		}
 
@@ -159,10 +161,6 @@ namespace ClassicTilestorm
 			GUI.backgroundColor = prevBgColor;
 		}
 
-		// Add these fields to your PlaceholderEditorUI class
-		private float cachedContentHeight = -1f;
-		private int cachedCount = -1;
-
 		public void DrawPaintUI(string selectedId)
 		{
 			var tx = Screen.width - tileSelectorWidth - margin;
@@ -176,7 +174,6 @@ namespace ClassicTilestorm
 
 			Rect view = new Rect(tx + 10, ty + 30, tileSelectorWidth - 20, th - 40);
 
-			// Cache count and height
 			int count = ResourceManager.Definitions.Count;
 			if (cachedCount != count)
 			{
@@ -184,12 +181,11 @@ namespace ClassicTilestorm
 				cachedContentHeight = count * 40f;
 			}
 
-			scrollPosition = GUI.BeginScrollView(view, scrollPosition,
+			tileScrollPosition = GUI.BeginScrollView(view, tileScrollPosition,
 				new Rect(0, 0, tileSelectorWidth - 40, cachedContentHeight));
 
-			// Virtual scrolling: only draw visible items
 			int itemHeight = 40;
-			int firstVisible = Mathf.FloorToInt(scrollPosition.y / itemHeight);
+			int firstVisible = Mathf.FloorToInt(tileScrollPosition.y / itemHeight);
 			int lastVisible = firstVisible + Mathf.CeilToInt(view.height / itemHeight) + 2;
 			firstVisible = Mathf.Max(0, firstVisible);
 			lastVisible = Mathf.Min(lastVisible, count);
@@ -198,7 +194,6 @@ namespace ClassicTilestorm
 
 			for (int i = firstVisible; i < lastVisible; i++)
 			{
-				// This works with IList<T> — use ElementAt (slightly slower but safe)
 				var def = definitions.ElementAt(i);
 				string label = $"{def.id} ({def.texture})";
 
@@ -218,77 +213,42 @@ namespace ClassicTilestorm
 
 		public void DrawWaypointUI(Waypoint[] waypoints, int selectedIndex = -1)
 		{
-			const float margin = 10f;
-			const float collapsedW = 120f;
-			const float fullW = 340f;
-
-			float x = Screen.width - waypointPanelWidth - margin;
+			float x = Screen.width - tileSelectorWidth - margin;
 			float y = panelYoffset + spacing;
 			float h = Screen.height - y - margin;
 
-			Rect panelRect = new Rect(x, y, waypointPanelWidth, h);
+			Rect panelRect = new Rect(x, y, tileSelectorWidth, h);
 
-			// === Hover/expand logic (unchanged) ===
-			Vector2 mp = Input.mousePosition;
-			mp.y = Screen.height - mp.y;
-
-			bool wasOver = isMouseOverWaypointPanel;
-			isMouseOverWaypointPanel = panelRect.Contains(mp);
-
-			if (isMouseOverWaypointPanel && !wasOver)
-			{
-				waypointTargetWidth = fullW;
-				waypointAnimationStartTime = Time.time;
-			}
-			else if (!isMouseOverWaypointPanel && wasOver)
-			{
-				waypointMouseExitTime = Time.time;
-			}
-
-			if (!isMouseOverWaypointPanel && Time.time - waypointMouseExitTime > waypointAutoHideDelay)
-				waypointTargetWidth = collapsedW;
-
-			if (waypointPanelWidth != waypointTargetWidth)
-			{
-				float t = (Time.time - waypointAnimationStartTime) / waypointAnimationDuration;
-				waypointPanelWidth = Mathf.Lerp(waypointPanelWidth, waypointTargetWidth, t);
-				if (t >= 1f) waypointPanelWidth = waypointTargetWidth;
-			}
-
-			// === Draw panel ===
 			GUI.backgroundColor = new Color(0.15f, 0.3f, 0.42f, 0.92f);
 			GUI.Box(panelRect, "");
 			GUI.backgroundColor = Color.white;
 
-			GUI.Label(new Rect(x + 10, y + 5, waypointPanelWidth - 20, 25), "Waypoints");
+			GUI.Label(new Rect(x + 10, y + 5, tileSelectorWidth - 20, 25), "Waypoints");
 
 			if (waypoints == null || waypoints.Length == 0)
 			{
-				GUI.Label(new Rect(x + 10, y + 40, waypointPanelWidth - 20, 50),
-					"No waypoints\nClick map to add first one");
+				GUI.Label(new Rect(x + 10, y + 40, tileSelectorWidth - 20, 50),
+					"No waypoints\nClick map to add");
 				return;
 			}
 
-			// === Scrollable list ===
-			Rect scrollRect = new Rect(x + 10, y + 35, waypointPanelWidth - 20, h - 180);
+			Rect scrollRect = new Rect(x + 10, y + 35, tileSelectorWidth - 20, h - 180);
 			waypointScrollPosition = GUI.BeginScrollView(scrollRect, waypointScrollPosition,
-				new Rect(0, 0, waypointPanelWidth - 40, waypoints.Length * 46f));
+				new Rect(0, 0, tileSelectorWidth - 40, waypoints.Length * 46f));
 
 			for (int i = 0; i < waypoints.Length; i++)
 			{
 				var wp = waypoints[i];
-				string name = string.IsNullOrEmpty(wp.name) ? "<unnamed>" : wp.name;
 				string cam = wp.IsCamera() ? " [Cam]" : "";
-				string status = wp.tile < 0 ? " [UNPLACED — click map]" : $" [{wp.tile}]";
-				string label = $"{i:00}: {name}{status}{cam}";
+				string status = wp.tile < 0 ? " [UNPLACED]" : $" [{wp.tile}]";
+				string label = $"{i:00}: WP{i}{status}{cam}";
 
-				Rect r = new Rect(0, i * 46f, waypointPanelWidth - 40, 42);
+				Rect r = new Rect(0, i * 46f, tileSelectorWidth - 40, 42);
 
-				// Color logic: unplaced = orange, selected = blue, both = orange-blue mix
 				if (wp.tile < 0)
-					GUI.color = new Color(1f, 0.6f, 0.2f);      // Orange for unplaced
+					GUI.color = new Color(1f, 0.6f, 0.2f);
 				else if (i == selectedIndex)
-					GUI.color = new Color(0.3f, 0.8f, 1f);      // Blue for selected
+					GUI.color = new Color(0.3f, 0.8f, 1f);
 				else
 					GUI.color = Color.white;
 
@@ -299,33 +259,8 @@ namespace ClassicTilestorm
 			}
 			GUI.EndScrollView();
 
-			// === Control Panel ===
-			float controlY = y + h - 140;
+			float controlY = y + h - 120;
 
-			// Selected info
-			if (selectedIndex >= 0 && selectedIndex < waypoints.Length)
-			{
-				var selWp = waypoints[selectedIndex];
-				GUI.Label(new Rect(x + 10, controlY, waypointPanelWidth - 20, 20),
-					$"Selected: {selectedIndex} — {selWp.name ?? "<unnamed>"}");
-
-				if (selWp.tile < 0)
-				{
-					GUI.color = new Color(1f, 0.7f, 0.3f);
-					GUI.Label(new Rect(x + 10, controlY + 22, waypointPanelWidth - 20, 40),
-						"This waypoint is unplaced.\nClick on the map to place it.");
-					GUI.color = Color.white;
-					controlY += 20;
-				}
-			}
-			else
-			{
-				GUI.Label(new Rect(x + 10, controlY, waypointPanelWidth - 20, 20), "No waypoint selected");
-			}
-
-			controlY += 40;
-
-			// Move buttons
 			GUI.enabled = selectedIndex > 0;
 			if (GUI.Button(new Rect(x + 10, controlY, 100, 30), "Move Up"))
 				OnWaypointMoveUp?.Invoke(selectedIndex);
@@ -335,19 +270,15 @@ namespace ClassicTilestorm
 				OnWaypointMoveDown?.Invoke(selectedIndex);
 
 			GUI.enabled = true;
-			controlY += 38;
-
-			// Delete
-			GUI.color = new Color(1f, 0.4f, 0.4f);
-			if (GUI.Button(new Rect(x + 10, controlY, waypointPanelWidth - 20, 32), "Delete Selected"))
-				OnWaypointDelete?.Invoke(selectedIndex);
-			GUI.color = Color.white;
+			controlY += 40;
+			if (GUI.Button(new Rect(x + 10, controlY, tileSelectorWidth - 20, 32), "Add New"))
+				OnWaypointAddRequested?.Invoke();
 
 			controlY += 40;
-
-			// Add New
-			if (GUI.Button(new Rect(x + 10, controlY, waypointPanelWidth - 20, 32), "Add New Waypoint"))
-				OnWaypointAddRequested?.Invoke();
+			GUI.color = Color.red;
+			if (GUI.Button(new Rect(x + 10, controlY, tileSelectorWidth - 20, 32), "Delete Selected"))
+				OnWaypointDelete?.Invoke(selectedIndex);
+			GUI.color = Color.white;
 		}
 	}
 }
