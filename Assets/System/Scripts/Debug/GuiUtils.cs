@@ -286,5 +286,83 @@ namespace MassiveHadronLtd
 
 			public bool IsGuiActive() => GUIUtility.hotControl != 0 || IsMouseOver;
 		}
+
+		public static class PopupConfirm
+		{
+			private static int activePopupId = -1;
+
+			public static bool WorldPositionPopup(
+				Camera camera,
+				Vector3 worldPos,
+				Vector2 screenOffset,
+				Vector2 size,
+				string title,
+				string message = null,
+				string confirmText = "Confirm",
+				string cancelText = "Cancel",
+				Color? titleColor = null,
+				System.Action onConfirm = null)
+			{
+				if (camera == null) return false;
+
+				Vector3 sp = camera.WorldToScreenPoint(worldPos);
+				if (sp.z <= 0) return false;
+
+				sp.y = Screen.height - sp.y;
+				var rect = new Rect(sp.x + screenOffset.x, sp.y + screenOffset.y, size.x, size.y);
+				int id = worldPos.GetHashCode() ^ title.GetHashCode();
+
+				// Only one popup at a time
+				if (activePopupId != -1 && activePopupId != id)
+					return false;
+
+				activePopupId = id;
+
+				GUI.Box(rect, "", GUI.skin.window);
+				GUILayout.BeginArea(rect);
+				GUILayout.BeginVertical();
+				GUILayout.Space(12);
+
+				Color prev = GUI.color;
+				GUI.color = titleColor ?? Color.white;
+				GUILayout.Label(title, EditorStyles.boldLabel);
+				GUI.color = prev;
+
+				if (!string.IsNullOrEmpty(message))
+					GUILayout.Label(message);
+
+				GUILayout.Space(10);
+				GUILayout.BeginHorizontal();
+				GUILayout.FlexibleSpace();
+
+				bool result = false;
+
+				if (GUILayout.Button(confirmText, GUILayout.Width(90)))
+				{
+					onConfirm?.Invoke();
+					result = true;
+					activePopupId = -1; // close immediately
+				}
+
+				if (GUILayout.Button(cancelText, GUILayout.Width(90)))
+				{
+					result = true;
+					activePopupId = -1;
+				}
+
+				GUILayout.FlexibleSpace();
+				GUILayout.EndHorizontal();
+				GUILayout.Space(8);
+				GUILayout.EndVertical();
+				GUILayout.EndArea();
+
+				return result;
+			}
+
+			public static void Dismiss()
+			{
+				activePopupId = -1;
+			}
+		}
 	}
 }

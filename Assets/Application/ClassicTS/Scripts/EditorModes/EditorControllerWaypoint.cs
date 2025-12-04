@@ -4,6 +4,7 @@ using System.Linq;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using static MassiveHadronLtd.GuiUtils;
 
 namespace ClassicTilestorm
 {
@@ -50,6 +51,7 @@ namespace ClassicTilestorm
 			EditorUtil.DestroyWaypointVisuals();
 			pendingAddTile = -1;
 			pendingDeleteIndex = -1;
+			PopupConfirm.Dismiss();
 		}
 
 		public void OnMapChanged()
@@ -301,75 +303,52 @@ namespace ClassicTilestorm
 			GUILayout.EndVertical();
 			GUILayout.EndArea();
 
-			// ——— ADD CONFIRMATION POPUP ———
+			// ADD POPUP
 			if (pendingAddTile >= 0)
 			{
-				Vector3 pos = editorController.iMapManager.TileWorldPosition(pendingAddTile) + Vector3.up * 0.6f;
-				Vector3 sp = camera.WorldToScreenPoint(pos);
-				if (sp.z > 0)
-				{
-					sp.y = Screen.height - sp.y;
-					Rect r = new Rect(sp.x - 100, sp.y - 40, 200, 80);
-					GUI.Box(r, "", GUI.skin.window);
-					GUILayout.BeginArea(r);
-					GUILayout.BeginVertical();
-					GUILayout.Space(10);
-					GUILayout.Label("Add waypoint here?", EditorStyles.boldLabel);
-					GUILayout.BeginHorizontal();
-					GUILayout.FlexibleSpace();
-					if (GUILayout.Button("Add", GUILayout.Width(80))) { AddWaypointAtTile(pendingAddTile); pendingAddTile = -1; }
-					if (GUILayout.Button("Cancel", GUILayout.Width(80))) pendingAddTile = -1;
-					GUILayout.FlexibleSpace();
-					GUILayout.EndHorizontal();
-					GUILayout.Space(10);
-					GUILayout.EndVertical();
-					GUILayout.EndArea();
+				var pos = editorController.iMapManager.TileWorldPosition(pendingAddTile) + Vector3.up * 0.6f;
 
-					if (Input.GetMouseButtonDown(0))
+				bool confirmed = PopupConfirm.WorldPositionPopup(
+					camera, pos,
+					new Vector2(-100, -40), new Vector2(200, 80),
+					"Add waypoint here?",
+					confirmText: "Add", cancelText: "Cancel",
+					onConfirm: () =>
 					{
-						Vector2 m = Input.mousePosition; m.y = Screen.height - m.y;
-						if (!r.Contains(m)) pendingAddTile = -1;
-					}
-				}
-				else pendingAddTile = -1;
+						AddWaypointAtTile(pendingAddTile);
+						pendingAddTile = -1;
+					});
+
+				if (confirmed)
+					pendingAddTile = -1;
+
+				if (camera.WorldToScreenPoint(pos).z <= 0)
+					pendingAddTile = -1;
 			}
 
-			// ——— DELETE CONFIRMATION POPUP ———
+			// DELETE POPUP
 			if (pendingDeleteIndex >= 0 && pendingDeleteIndex < waypoints.Length)
 			{
 				var wp = waypoints[pendingDeleteIndex];
-				Vector3 pos = editorController.iMapManager.TileWorldPosition(wp.tile) + Vector3.up * 0.8f;
-				Vector3 sp = camera.WorldToScreenPoint(pos);
-				if (sp.z > 0)
-				{
-					sp.y = Screen.height - sp.y;
-					Rect r = new Rect(sp.x - 110, sp.y - 50, 220, 100);
-					GUI.Box(r, "", GUI.skin.window);
-					GUILayout.BeginArea(r);
-					GUILayout.BeginVertical();
-					GUILayout.Space(12);
-					GUI.color = Color.red;
-					GUILayout.Label("Delete waypoint?", EditorStyles.boldLabel);
-					GUI.color = Color.white;
-					GUILayout.Label($"WP{pendingDeleteIndex:00} at tile {wp.tile}");
-					GUILayout.Space(8);
-					GUILayout.BeginHorizontal();
-					GUILayout.FlexibleSpace();
-					if (GUILayout.Button("Delete", GUILayout.Width(90))) { DeleteWaypoint(pendingDeleteIndex); pendingDeleteIndex = -1; }
-					if (GUILayout.Button("Cancel", GUILayout.Width(90))) pendingDeleteIndex = -1;
-					GUILayout.FlexibleSpace();
-					GUILayout.EndHorizontal();
-					GUILayout.Space(8);
-					GUILayout.EndVertical();
-					GUILayout.EndArea();
+				var pos = editorController.iMapManager.TileWorldPosition(wp.tile) + Vector3.up * 0.8f;
 
-					if (Input.GetMouseButtonDown(0))
+				bool confirmed = PopupConfirm.WorldPositionPopup(
+					camera, pos,
+					new Vector2(-110, -50), new Vector2(220, 100),
+					"Delete waypoint?",
+					$"WP{pendingDeleteIndex:00} at tile {wp.tile}",
+					"Delete", "Cancel", Color.red,
+					() =>
 					{
-						Vector2 m = Input.mousePosition; m.y = Screen.height - m.y;
-						if (!r.Contains(m)) pendingDeleteIndex = -1;
-					}
-				}
-				else pendingDeleteIndex = -1;
+						DeleteWaypoint(pendingDeleteIndex);
+						pendingDeleteIndex = -1;
+					});
+
+				if (confirmed)
+					pendingDeleteIndex = -1;
+
+				if (camera.WorldToScreenPoint(pos).z <= 0)
+					pendingDeleteIndex = -1;
 			}
 		}
 	}
