@@ -18,8 +18,6 @@ namespace ClassicTilestorm
 
 		private readonly GuiUtils.AutoHidePanel sidePanel = new(collapsed: 120f, expanded: 340f, delay: 1f, animDur: 0.3f);
 		private Vector2 scrollPos = Vector2.zero;
-		private float cachedContentHeight = -1f;
-		private int cachedCount = -1;
 
 		public EditorControllerPaint(EditorController editorController) : base(editorController) { }
 
@@ -108,11 +106,6 @@ namespace ClassicTilestorm
 			GUILayout.Label("Tiles", EditorStyles.boldLabel);
 
 			int count = ResourceManager.Definitions.Count;
-			if (cachedCount != count)
-			{
-				cachedCount = count;
-				cachedContentHeight = count * 40f;
-			}
 
 			scrollPos = GUILayout.BeginScrollView(scrollPos);
 
