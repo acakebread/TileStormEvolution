@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using MassiveHadronLtd;
+using UnityEngine;
 
 namespace ClassicTilestorm
 {
@@ -55,7 +56,7 @@ namespace ClassicTilestorm
 			}
 
 			// Mouse wheel zoom — only when not over GUI
-			if (!isMouseOverGui && !isGuiActive)
+			if (!isMouseOverGui && !isGuiActive && GuiUtils.IsMouseInsideWindow())
 			{
 				var scroll = skipNextScroll ? 0f : Input.GetAxis("Mouse ScrollWheel");
 				if (scroll != 0f) cameraTransform.Translate(0, 0, scroll * zoomSpeed, Space.Self);

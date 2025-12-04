@@ -4,6 +4,12 @@ namespace MassiveHadronLtd
 {
     public static class GuiUtils
     {
+		public static bool IsMouseInsideWindow()
+		{
+			var pos = Input.mousePosition;
+			return pos.x >= 0 && pos.y >= 0 && pos.x < Screen.width && pos.y < Screen.height;
+		}
+
 		private static GUIStyle coloredButtonStyle;
 		private static Texture2D solidWhite;
 		private static Texture2D solidDark;
