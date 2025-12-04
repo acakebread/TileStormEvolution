@@ -20,7 +20,7 @@ namespace ClassicTilestorm
 
 		// Separate scroll positions
 		private Vector2 tileScrollPosition = Vector2.zero;
-		private Vector2 waypointScrollPosition = Vector2.zero;
+		//private Vector2 waypointScrollPosition = Vector2.zero;
 
 		// Paint tile list caching
 		private float cachedContentHeight = -1f;
@@ -35,9 +35,9 @@ namespace ClassicTilestorm
 		public event Action OnImportMapRequested;
 		public event Action<string> OnTileSelected;
 
-		public event Action<int> OnWaypointSelected;
-		public event Action<int> OnWaypointMoveUp;
-		public event Action<int> OnWaypointMoveDown;
+		//public event Action<int> OnWaypointSelected;
+		//public event Action<int> OnWaypointMoveUp;
+		//public event Action<int> OnWaypointMoveDown;
 		//public event Action<int> OnWaypointDelete;
 		//public event Action OnWaypointAddRequested;
 
@@ -140,57 +140,57 @@ namespace ClassicTilestorm
 			GUI.EndScrollView();
 		}
 
-		public void DrawWaypointUI(Waypoint[] waypoints, int selectedIndex = -1)
-		{
-			var r = sidePanel.GetRect(panelYoffset + spacing, 20f);
+		//public void DrawWaypointUI(Waypoint[] waypoints, int selectedIndex = -1)
+		//{
+		//	var r = sidePanel.GetRect(panelYoffset + spacing, 20f);
 
-			GUI.backgroundColor = new Color(0.15f, 0.3f, 0.42f, 0.92f);
-			GUI.Box(r, "");
-			GUI.backgroundColor = Color.white;
+		//	GUI.backgroundColor = new Color(0.15f, 0.3f, 0.42f, 0.92f);
+		//	GUI.Box(r, "");
+		//	GUI.backgroundColor = Color.white;
 
-			GUI.Label(new Rect(r.x + 10, r.y + 5, r.width - 20, 25), "Waypoints");
+		//	GUI.Label(new Rect(r.x + 10, r.y + 5, r.width - 20, 25), "Waypoints");
 
-			if (waypoints == null || waypoints.Length == 0)
-			{
-				GUI.Label(new Rect(r.x + 10, r.y + 40, r.width - 20, 60),
-					"No waypoints\nLeft-click map to add",
-					new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter });
-				return;
-			}
+		//	if (waypoints == null || waypoints.Length == 0)
+		//	{
+		//		GUI.Label(new Rect(r.x + 10, r.y + 40, r.width - 20, 60),
+		//			"No waypoints\nLeft-click map to add",
+		//			new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter });
+		//		return;
+		//	}
 
-			// Scrollable list
-			var scrollRect = new Rect(r.x + 10, r.y + 35, r.width - 20, r.height - 100);
-			waypointScrollPosition = GUI.BeginScrollView(scrollRect, waypointScrollPosition,
-				new Rect(0, 0, r.width - 40, waypoints.Length * 46f));
+		//	// Scrollable list
+		//	var scrollRect = new Rect(r.x + 10, r.y + 35, r.width - 20, r.height - 100);
+		//	waypointScrollPosition = GUI.BeginScrollView(scrollRect, waypointScrollPosition,
+		//		new Rect(0, 0, r.width - 40, waypoints.Length * 46f));
 
-			for (int i = 0; i < waypoints.Length; i++)
-			{
-				var wp = waypoints[i];
-				string cam = wp.IsCamera() ? " [Cam]" : "";
-				string label = $"WP{i:00}{cam} [{wp.tile}]";
+		//	for (int i = 0; i < waypoints.Length; i++)
+		//	{
+		//		var wp = waypoints[i];
+		//		string cam = wp.IsCamera() ? " [Cam]" : "";
+		//		string label = $"WP{i:00}{cam} [{wp.tile}]";
 
-				var btn = new Rect(0, i * 46f, r.width - 40, 42);
-				GUI.color = (i == selectedIndex) ? new Color(0.3f, 0.8f, 1f) : Color.white;
+		//		var btn = new Rect(0, i * 46f, r.width - 40, 42);
+		//		GUI.color = (i == selectedIndex) ? new Color(0.3f, 0.8f, 1f) : Color.white;
 
-				if (GUI.Button(btn, label))
-					OnWaypointSelected?.Invoke(i);
+		//		if (GUI.Button(btn, label))
+		//			OnWaypointSelected?.Invoke(i);
 
-				GUI.color = Color.white;
-			}
-			GUI.EndScrollView();
+		//		GUI.color = Color.white;
+		//	}
+		//	GUI.EndScrollView();
 
-			// Move Up / Move Down buttons only
-			float btnY = r.y + r.height - 50;
+		//	// Move Up / Move Down buttons only
+		//	float btnY = r.y + r.height - 50;
 
-			GUI.enabled = selectedIndex > 0;
-			if (GUI.Button(new Rect(r.x + 10, btnY, 100, 30), "Move Up"))
-				OnWaypointMoveUp?.Invoke(selectedIndex);
+		//	GUI.enabled = selectedIndex > 0;
+		//	if (GUI.Button(new Rect(r.x + 10, btnY, 100, 30), "Move Up"))
+		//		OnWaypointMoveUp?.Invoke(selectedIndex);
 
-			GUI.enabled = selectedIndex >= 0 && selectedIndex < waypoints.Length - 1;
-			if (GUI.Button(new Rect(r.x + 120, btnY, 100, 30), "Move Down"))
-				OnWaypointMoveDown?.Invoke(selectedIndex);
+		//	GUI.enabled = selectedIndex >= 0 && selectedIndex < waypoints.Length - 1;
+		//	if (GUI.Button(new Rect(r.x + 120, btnY, 100, 30), "Move Down"))
+		//		OnWaypointMoveDown?.Invoke(selectedIndex);
 
-			GUI.enabled = true;
-		}
+		//	GUI.enabled = true;
+		//}
 	}
 }

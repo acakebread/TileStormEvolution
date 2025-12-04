@@ -1,6 +1,9 @@
+using MassiveHadronLtd;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using System.Collections.Generic;
+using UnityEditor;
 
 namespace ClassicTilestorm
 {
@@ -13,6 +16,11 @@ namespace ClassicTilestorm
 		private List<string> definitionCycleList = new();
 		private int cycleIndex = 0;
 
+		private readonly GuiUtils.AutoHidePanel sidePanel = new(collapsed: 120f, expanded: 340f, delay: 1f, animDur: 0.3f);
+		private Vector2 scrollPos = Vector2.zero;
+		private float cachedContentHeight = -1f;
+		private int cachedCount = -1;
+
 		public EditorControllerPaint(EditorController editorController) : base(editorController) { }
 
 		public override void Update()
@@ -21,16 +29,16 @@ namespace ClassicTilestorm
 			if (!camera || editorController.GetEditorUI().IsGuiControlActive() || EventSystem.current.IsPointerOverGameObject()) return;
 
 			if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1))
-				mouseDownPos = Input.mousePosition;//store mouse down position
+				mouseDownPos = Input.mousePosition;
 
 			if (Input.GetMouseButtonUp(0) && Vector3.Distance(Input.mousePosition, mouseDownPos) < 5f)
-				EditMapTile(selectedDefinitionId);//place a tile
+				EditMapTile(selectedDefinitionId);
 
 			if (Input.GetMouseButtonUp(1) && Vector3.Distance(Input.mousePosition, mouseDownPos) < 5f)
-				EditMapTile();//remove a tile - null ID to remove
+				EditMapTile();
 
 			var selectedDefinition = ResourceManager.GetDefinition(selectedDefinitionId);
-			if (null != selectedDefinition)
+			if (selectedDefinition != null)
 				EditorUtil.UpdateGhostTile(camera, editorController.iMapManager, selectedDefinition);
 		}
 
@@ -40,10 +48,10 @@ namespace ClassicTilestorm
 		{
 			var worldPos = MapManager.ScreenToWorld(camera, Input.mousePosition);
 
-			if (null != defID)
+			if (defID != null)
 			{
 				var mapIndex = editorController.iMapManager.WorldToMapIndex(worldPos);
-				if (-1 != mapIndex)
+				if (mapIndex != -1)
 				{
 					var currentId = editorController.iMapManager.GetDefinitionAtIndex(mapIndex);
 					if (currentId == selectedDefinitionId && definitionCycleList.Count > 1)
@@ -65,28 +73,70 @@ namespace ClassicTilestorm
 				Mathf.FloorToInt(snappedPos.z),
 				defID,
 				expand: true,
-				onEdited: editorController.OnMapChanged // now receives (resized, originDelta)
+				onEdited: editorController.OnMapChanged
 			);
 		}
 
 		public void SetSelectedDefinitionById(string id)
 		{
-			selectedDefinitionId = id;
-			if (null == id)
-			{
-				Debug.LogError("null definition in EditorControllerPaint::SetSelectedDefinition");
-				return;
-			}
+			selectedDefinitionId = id ?? "tile_empty";
 
 			definitionCycleList = ResourceManager.DefinitionNavGroup(selectedDefinitionId);
 			cycleIndex = definitionCycleList.IndexOf(selectedDefinitionId);
 
 			EditorUtil.DestroyGhostTile();
-			var selectedDefinition = ResourceManager.GetDefinition(selectedDefinitionId);
-			if (null != selectedDefinition)
-				EditorUtil.UpdateGhostTile(camera, editorController.iMapManager, selectedDefinition);
+			var def = ResourceManager.GetDefinition(selectedDefinitionId);
+			if (def != null)
+				EditorUtil.UpdateGhostTile(camera, editorController.iMapManager, def);
 			else
 				EditorUtil.HideGhostTile();
+		}
+
+		public override void OnGui()
+		{
+			if (editorController.CurrentMode != EditorController.EditorMode.Paint || camera == null) return;
+
+			sidePanel.Update();
+			Rect panel = sidePanel.GetRect(20f, 20f);
+
+			GUI.backgroundColor = new Color(0.2f, 0.2f, 0.4f, 0.75f);
+			GUI.Box(panel, "Tile Selector");
+			GUI.backgroundColor = Color.white;
+
+			GUILayout.BeginArea(panel);
+			GUILayout.BeginVertical();
+			GUILayout.Label("Tiles", EditorStyles.boldLabel);
+
+			int count = ResourceManager.Definitions.Count;
+			if (cachedCount != count)
+			{
+				cachedCount = count;
+				cachedContentHeight = count * 40f;
+			}
+
+			scrollPos = GUILayout.BeginScrollView(scrollPos);
+
+			for (int i = 0; i < count; i++)
+			{
+				var def = ResourceManager.Definitions.ElementAt(i);
+				string label = $"{def.id} ({def.texture})";
+
+				GUILayout.BeginHorizontal();
+
+				GUI.backgroundColor = (def.id == selectedDefinitionId)
+					? new Color(0.3f, 0.8f, 1f, 0.9f)
+					: Color.white;
+
+				if (GUILayout.Button(label, GUILayout.Height(36)))
+					SetSelectedDefinitionById(def.id);
+
+				GUI.backgroundColor = Color.white;
+				GUILayout.EndHorizontal();
+			}
+
+			GUILayout.EndScrollView();
+			GUILayout.EndVertical();
+			GUILayout.EndArea();
 		}
 	}
 }
