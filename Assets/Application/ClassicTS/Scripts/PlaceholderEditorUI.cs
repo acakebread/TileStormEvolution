@@ -15,25 +15,18 @@ namespace ClassicTilestorm
 		private const float buttonWidth = 135f;
 		private const float buttonHeight = 30f;
 
-		// === Shared Panel System (used by BOTH Paint and Waypoint modes) ===
-		private float tileSelectorWidth = 120f;
-		private const float fullWidth = 340f;         // Expanded width (both panels)
-		private const float collapsedWidth = 120f;    // Collapsed width
-		private float targetWidth = 120f;
-		private float mouseExitTime = 0f;
-		private bool isMouseOverTileSelector = false;
-		private const float autoHideDelay = 1f;
-		private float animationStartTime = 0f;
-		private const float animationDuration = 0.3f;
+		// ONE shared auto-hiding side panel — handles both Paint and Waypoint perfectly
+		private readonly GuiUtils.AutoHidePanel sidePanel = new(collapsed: 120f, expanded: 340f, delay: 1f, animDur: 0.3f);
 
-		// Separate scroll positions for each panel
+		// Separate scroll positions
 		private Vector2 tileScrollPosition = Vector2.zero;
 		private Vector2 waypointScrollPosition = Vector2.zero;
 
-		// Paint-specific caching
+		// Paint tile list caching
 		private float cachedContentHeight = -1f;
 		private int cachedCount = -1;
 
+		// Events
 		public event Action<string> OnModeChanged;
 		public event Action<bool> OnGridLinesToggled;
 		public event Action OnSaveDatabaseRequested;
@@ -48,89 +41,41 @@ namespace ClassicTilestorm
 		public event Action<int> OnWaypointMoveDown;
 		public event Action<int> OnWaypointDelete;
 
-		public void Start()
+		private void Start()
 		{
-			TryGetComponent<PlaceholderUI>(out var placeholderUI);
-			panelYoffset = placeholderUI ? placeholderUI.GetPanelBottomY() : 10f;
+			if (TryGetComponent<PlaceholderUI>(out var placeholderUI))
+				panelYoffset = placeholderUI.GetPanelBottomY();
+			else
+				panelYoffset = 10f;
 		}
 
 		public bool IsGuiControlActive()
-			=> GUIUtility.hotControl != 0 || isMouseOverTileSelector || (EventSystem.current && EventSystem.current.IsPointerOverGameObject());
-
-		public bool IsMouseInsideWindow()
-		{
-			var p = Input.mousePosition;
-			return p.x >= 0 && p.x <= Screen.width && p.y >= 0 && p.y <= Screen.height;
-		}
+			=> sidePanel.IsGuiActive() || (EventSystem.current && EventSystem.current.IsPointerOverGameObject());
 
 		public bool IsMouseOverGui()
 		{
 			Vector2 mousePos = Input.mousePosition;
 			mousePos.y = Screen.height - mousePos.y;
 
-			// Left button panel
+			// Left button column
 			float leftY = panelYoffset + spacing;
 			if (new Rect(margin, leftY, buttonWidth + 20f, buttonHeight * 9 + spacing * 9).Contains(mousePos))
 				return true;
 
-			// Right panel — always detect using full width zone (prevents input blocking)
-			float rx = Screen.width - fullWidth - margin;
-			float ry = panelYoffset + spacing;
-			float rh = Screen.height - ry - margin;
-			return new Rect(rx, ry, fullWidth, rh).Contains(mousePos);
-		}
-
-		public void UpdateMode(string mode)
-		{
-			var wasOver = isMouseOverTileSelector;
-
-			// Use maximum detection zone for both modes
-			float detectionWidth = fullWidth;
-			var x = Screen.width - detectionWidth - margin;
-			var y = panelYoffset + spacing;
-			var h = Screen.height - y - margin;
-
-			Vector2 mp = Input.mousePosition;
-			mp.y = Screen.height - mp.y;
-
-			isMouseOverTileSelector = new Rect(x, y, detectionWidth, h).Contains(mp);
-
-			// Expand on enter
-			if (isMouseOverTileSelector && !wasOver)
-			{
-				targetWidth = fullWidth;
-				animationStartTime = Time.time;
-				mouseExitTime = 0f;
-			}
-
-			// Start collapse timer when leaving
-			if (!isMouseOverTileSelector && wasOver && mouseExitTime == 0f)
-			{
-				mouseExitTime = Time.time;
-			}
-
-			// Collapse after delay
-			if (!isMouseOverTileSelector && mouseExitTime > 0f && Time.time - mouseExitTime >= autoHideDelay)
-			{
-				targetWidth = collapsedWidth;
-				animationStartTime = Time.time;
-				mouseExitTime = 0f;
-			}
-
-			// Animate width
-			float t = Mathf.Clamp01((Time.time - animationStartTime) / animationDuration);
-			tileSelectorWidth = Mathf.Lerp(tileSelectorWidth, targetWidth, t);
+			// Right side panel (uses expanded detection zone)
+			return sidePanel.IsMouseOver;
 		}
 
 		public void DrawMainUI(string mode, bool gridVisible)
 		{
+			// This single line updates hover detection + animation for BOTH modes
+			sidePanel.Update();
+
 			float y = panelYoffset + spacing;
 
-			Color prevColor = GUI.color;
-			Color prevContentColor = GUI.contentColor;
-			Color prevBgColor = GUI.backgroundColor;
-
-			GuiUtils.ColoredButton(new Rect(margin, y + 0 * (buttonHeight + spacing), buttonWidth, buttonHeight),
+			// === Left Column Buttons ===
+			GuiUtils.ColoredButton(
+				new Rect(margin, y + 0 * (buttonHeight + spacing), buttonWidth, buttonHeight),
 				gridVisible ? "Hide Grid" : "Show Grid",
 				new Color(0.25f, 0.75f, 0.25f),
 				() => OnGridLinesToggled?.Invoke(!gridVisible));
@@ -147,32 +92,23 @@ namespace ClassicTilestorm
 			if (GUI.Button(new Rect(margin, y + 3 * (buttonHeight + spacing), buttonWidth, buttonHeight), "Waypoint"))
 				OnModeChanged?.Invoke("Waypoint");
 
-			GUI.color = Color.white;
 			GUI.contentColor = Color.white;
-			GUI.backgroundColor = Color.white;
 
 			GuiUtils.ColoredButton(new Rect(margin, y + 5 * (buttonHeight + spacing), buttonWidth, buttonHeight), "Import Map", new Color(0.2f, 0.6f, 1f), OnImportMapRequested);
 			GuiUtils.ColoredButton(new Rect(margin, y + 6 * (buttonHeight + spacing), buttonWidth, buttonHeight), "Export Map", new Color(0.8f, 0.2f, 0.2f), OnExportMapRequested);
 			GuiUtils.ColoredButton(new Rect(margin, y + 7 * (buttonHeight + spacing), buttonWidth, buttonHeight), "Reload Database", new Color(0.2f, 0.6f, 1f), OnReloadDatabaseRequested);
 			GuiUtils.ColoredButton(new Rect(margin, y + 8 * (buttonHeight + spacing), buttonWidth, buttonHeight), "Save Database", new Color(0.8f, 0.2f, 0.2f), OnSaveDatabaseRequested);
-
-			GUI.color = prevColor;
-			GUI.contentColor = prevContentColor;
-			GUI.backgroundColor = prevBgColor;
 		}
 
 		public void DrawPaintUI(string selectedId)
 		{
-			var tx = Screen.width - tileSelectorWidth - margin;
-			var ty = panelYoffset + spacing;
-			var th = Screen.height - ty - margin;
-			Rect selectorRect = new Rect(tx, ty, tileSelectorWidth, th);
+			var r = sidePanel.GetRect(panelYoffset + spacing, 20f);
 
 			GUI.backgroundColor = new Color(0.2f, 0.2f, 0.4f, 0.75f);
-			GUI.Box(selectorRect, "Tile Selector");
+			GUI.Box(r, "Tile Selector");
 			GUI.backgroundColor = Color.white;
 
-			Rect view = new Rect(tx + 10, ty + 30, tileSelectorWidth - 20, th - 40);
+			var view = new Rect(r.x + 10, r.y + 30, r.width - 20, r.height - 40);
 
 			int count = ResourceManager.Definitions.Count;
 			if (cachedCount != count)
@@ -182,29 +118,22 @@ namespace ClassicTilestorm
 			}
 
 			tileScrollPosition = GUI.BeginScrollView(view, tileScrollPosition,
-				new Rect(0, 0, tileSelectorWidth - 40, cachedContentHeight));
+				new Rect(0, 0, r.width - 40, cachedContentHeight));
 
 			int itemHeight = 40;
-			int firstVisible = Mathf.FloorToInt(tileScrollPosition.y / itemHeight);
-			int lastVisible = firstVisible + Mathf.CeilToInt(view.height / itemHeight) + 2;
-			firstVisible = Mathf.Max(0, firstVisible);
-			lastVisible = Mathf.Min(lastVisible, count);
+			int first = Mathf.FloorToInt(tileScrollPosition.y / itemHeight);
+			int last = first + Mathf.CeilToInt(view.height / itemHeight) + 2;
+			first = Mathf.Max(0, first);
+			last = Mathf.Min(last, count);
 
-			var definitions = ResourceManager.Definitions;
-
-			for (int i = firstVisible; i < lastVisible; i++)
+			for (int i = first; i < last; i++)
 			{
-				var def = definitions.ElementAt(i);
+				var def = ResourceManager.Definitions.ElementAt(i);
 				string label = $"{def.id} ({def.texture})";
+				var btn = new Rect(0, i * itemHeight, r.width - 40, 35);
 
-				Rect btn = new Rect(0, i * itemHeight, tileSelectorWidth - 40, 35);
-
-				if (def.id == selectedId)
-					GUI.color = Color.green;
-
-				if (GUI.Button(btn, label))
-					OnTileSelected?.Invoke(def.id);
-
+				if (def.id == selectedId) GUI.color = Color.green;
+				if (GUI.Button(btn, label)) OnTileSelected?.Invoke(def.id);
 				GUI.color = Color.white;
 			}
 
@@ -213,28 +142,24 @@ namespace ClassicTilestorm
 
 		public void DrawWaypointUI(Waypoint[] waypoints, int selectedIndex = -1)
 		{
-			float x = Screen.width - tileSelectorWidth - margin;
-			float y = panelYoffset + spacing;
-			float h = Screen.height - y - margin;
-
-			Rect panelRect = new Rect(x, y, tileSelectorWidth, h);
+			var r = sidePanel.GetRect(panelYoffset + spacing, 20f);
 
 			GUI.backgroundColor = new Color(0.15f, 0.3f, 0.42f, 0.92f);
-			GUI.Box(panelRect, "");
+			GUI.Box(r, "");
 			GUI.backgroundColor = Color.white;
 
-			GUI.Label(new Rect(x + 10, y + 5, tileSelectorWidth - 20, 25), "Waypoints");
+			GUI.Label(new Rect(r.x + 10, r.y + 5, r.width - 20, 25), "Waypoints");
 
 			if (waypoints == null || waypoints.Length == 0)
 			{
-				GUI.Label(new Rect(x + 10, y + 40, tileSelectorWidth - 20, 50),
+				GUI.Label(new Rect(r.x + 10, r.y + 40, r.width - 20, 50),
 					"No waypoints\nClick map to add");
 				return;
 			}
 
-			Rect scrollRect = new Rect(x + 10, y + 35, tileSelectorWidth - 20, h - 180);
+			var scrollRect = new Rect(r.x + 10, r.y + 35, r.width - 20, r.height - 180);
 			waypointScrollPosition = GUI.BeginScrollView(scrollRect, waypointScrollPosition,
-				new Rect(0, 0, tileSelectorWidth - 40, waypoints.Length * 46f));
+				new Rect(0, 0, r.width - 40, waypoints.Length * 46f));
 
 			for (int i = 0; i < waypoints.Length; i++)
 			{
@@ -243,40 +168,38 @@ namespace ClassicTilestorm
 				string status = wp.tile < 0 ? " [UNPLACED]" : $" [{wp.tile}]";
 				string label = $"{i:00}: WP{i}{status}{cam}";
 
-				Rect r = new Rect(0, i * 46f, tileSelectorWidth - 40, 42);
+				var btn = new Rect(0, i * 46f, r.width - 40, 42);
 
-				if (wp.tile < 0)
-					GUI.color = new Color(1f, 0.6f, 0.2f);
-				else if (i == selectedIndex)
-					GUI.color = new Color(0.3f, 0.8f, 1f);
-				else
-					GUI.color = Color.white;
+				if (wp.tile < 0) GUI.color = new Color(1f, 0.6f, 0.2f);
+				else if (i == selectedIndex) GUI.color = new Color(0.3f, 0.8f, 1f);
+				else GUI.color = Color.white;
 
-				if (GUI.Button(r, label))
+				if (GUI.Button(btn, label))
 					OnWaypointSelected?.Invoke(i);
 
 				GUI.color = Color.white;
 			}
 			GUI.EndScrollView();
 
-			float controlY = y + h - 120;
+			float controlY = r.y + r.height - 120;
 
 			GUI.enabled = selectedIndex > 0;
-			if (GUI.Button(new Rect(x + 10, controlY, 100, 30), "Move Up"))
+			if (GUI.Button(new Rect(r.x + 10, controlY, 100, 30), "Move Up"))
 				OnWaypointMoveUp?.Invoke(selectedIndex);
 
 			GUI.enabled = selectedIndex >= 0 && selectedIndex < waypoints.Length - 1;
-			if (GUI.Button(new Rect(x + 120, controlY, 100, 30), "Move Down"))
+			if (GUI.Button(new Rect(r.x + 120, controlY, 100, 30), "Move Down"))
 				OnWaypointMoveDown?.Invoke(selectedIndex);
 
 			GUI.enabled = true;
 			controlY += 40;
-			if (GUI.Button(new Rect(x + 10, controlY, tileSelectorWidth - 20, 32), "Add New"))
+
+			if (GUI.Button(new Rect(r.x + 10, controlY, r.width - 20, 32), "Add New"))
 				OnWaypointAddRequested?.Invoke();
 
 			controlY += 40;
 			GUI.color = Color.red;
-			if (GUI.Button(new Rect(x + 10, controlY, tileSelectorWidth - 20, 32), "Delete Selected"))
+			if (GUI.Button(new Rect(r.x + 10, controlY, r.width - 20, 32), "Delete Selected"))
 				OnWaypointDelete?.Invoke(selectedIndex);
 			GUI.color = Color.white;
 		}

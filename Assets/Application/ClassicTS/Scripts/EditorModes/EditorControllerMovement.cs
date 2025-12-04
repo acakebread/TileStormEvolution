@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 namespace ClassicTilestorm
 {
@@ -12,11 +12,12 @@ namespace ClassicTilestorm
 
 		protected EditorController editorController;
 
-		protected Camera camera 
+		protected Camera camera
 		{
 			get
 			{
-				if (editorController.TryGetComponent<MainCameraController>(out var controller)) return controller.activeSystem?.camera;
+				if (editorController.TryGetComponent<MainCameraController>(out var controller))
+					return controller.activeSystem?.camera;
 				return null;
 			}
 		}
@@ -29,14 +30,14 @@ namespace ClassicTilestorm
 
 		public virtual void Update()
 		{
-			if (null == camera) return;
+			if (camera == null) return;
 			var cameraTransform = camera.transform;
 
 			var ui = editorController?.GetEditorUI();
 			bool isGuiActive = ui?.IsGuiControlActive() ?? false;
-			bool isMouseInside = ui?.IsMouseInsideWindow() ?? true;
 			bool isMouseOverGui = ui?.IsMouseOverGui() ?? false;
 
+			// Right-click or touch drag → rotate camera
 			if ((Input.GetMouseButton(1) || Input.touchCount > 0) && !isGuiActive && !didGainFocus)
 			{
 				var pointerX = Input.GetAxis("Mouse X");
@@ -47,27 +48,32 @@ namespace ClassicTilestorm
 					pointerY = Input.touches[0].deltaPosition.y * 0.05f;
 				}
 
-				var eulers = camera.transform.eulerAngles;
-				eulers.y += lookSpeedH * pointerX;//yaw
-				eulers.x -= lookSpeedV * pointerY;//pitch
+				var eulers = cameraTransform.eulerAngles;
+				eulers.y += lookSpeedH * pointerX;
+				eulers.x -= lookSpeedV * pointerY;
 				cameraTransform.eulerAngles = eulers;
 			}
 
-			if (isMouseInside && !isMouseOverGui)
+			// Mouse wheel zoom — only when not over GUI
+			if (!isMouseOverGui && !isGuiActive)
 			{
 				var scroll = skipNextScroll ? 0f : Input.GetAxis("Mouse ScrollWheel");
-				cameraTransform.Translate(0, 0, scroll * zoomSpeed, Space.Self);
-				skipNextScroll = false;
+				if (scroll != 0f)
+				{
+					cameraTransform.Translate(0, 0, scroll * zoomSpeed, Space.Self);
+					skipNextScroll = false;
+				}
 			}
 
+			// WASD movement
 			var translation = GetInputTranslationDirection() * zoomSpeed * Time.deltaTime;
 			cameraTransform.Translate(translation, Space.Self);
 
-			if (isMouseInside && (Input.GetMouseButton(0) || Input.GetMouseButton(1))) didGainFocus = false;
+			if (Input.GetMouseButton(0) || Input.GetMouseButton(1))
+				didGainFocus = false;
 		}
 
 		public virtual void OnEnable() { }
-
 		public virtual void OnDisable() { }
 
 		public virtual void OnApplicationFocus(bool hasFocus)
@@ -86,7 +92,9 @@ namespace ClassicTilestorm
 			if (Input.GetKey(KeyCode.Q)) direction += Vector3.down;
 			if (Input.GetKey(KeyCode.E)) direction += Vector3.up;
 
-			if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) direction *= zoomSpeed * 0.5f;
+			if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))
+				direction *= 2f; // faster movement with shift
+
 			return direction;
 		}
 	}
