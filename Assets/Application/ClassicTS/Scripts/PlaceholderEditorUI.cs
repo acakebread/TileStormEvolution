@@ -152,12 +152,14 @@ namespace ClassicTilestorm
 
 			if (waypoints == null || waypoints.Length == 0)
 			{
-				GUI.Label(new Rect(r.x + 10, r.y + 40, r.width - 20, 50),
-					"No waypoints\nClick map to add");
+				GUI.Label(new Rect(r.x + 10, r.y + 40, r.width - 20, 60),
+					"No waypoints\nLeft-click map to add",
+					new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter });
 				return;
 			}
 
-			var scrollRect = new Rect(r.x + 10, r.y + 35, r.width - 20, r.height - 180);
+			// Scrollable list
+			var scrollRect = new Rect(r.x + 10, r.y + 35, r.width - 20, r.height - 100);
 			waypointScrollPosition = GUI.BeginScrollView(scrollRect, waypointScrollPosition,
 				new Rect(0, 0, r.width - 40, waypoints.Length * 46f));
 
@@ -165,14 +167,10 @@ namespace ClassicTilestorm
 			{
 				var wp = waypoints[i];
 				string cam = wp.IsCamera() ? " [Cam]" : "";
-				string status = wp.tile < 0 ? " [UNPLACED]" : $" [{wp.tile}]";
-				string label = $"WP{i:00}{status}{cam}";
+				string label = $"WP{i:00}{cam} [{wp.tile}]";
 
 				var btn = new Rect(0, i * 46f, r.width - 40, 42);
-
-				if (wp.tile < 0) GUI.color = new Color(1f, 0.6f, 0.2f);
-				else if (i == selectedIndex) GUI.color = new Color(0.3f, 0.8f, 1f);
-				else GUI.color = Color.white;
+				GUI.color = (i == selectedIndex) ? new Color(0.3f, 0.8f, 1f) : Color.white;
 
 				if (GUI.Button(btn, label))
 					OnWaypointSelected?.Invoke(i);
@@ -181,27 +179,18 @@ namespace ClassicTilestorm
 			}
 			GUI.EndScrollView();
 
-			float controlY = r.y + r.height - 120;
+			// Move Up / Move Down buttons only
+			float btnY = r.y + r.height - 50;
 
 			GUI.enabled = selectedIndex > 0;
-			if (GUI.Button(new Rect(r.x + 10, controlY, 100, 30), "Move Up"))
+			if (GUI.Button(new Rect(r.x + 10, btnY, 100, 30), "Move Up"))
 				OnWaypointMoveUp?.Invoke(selectedIndex);
 
 			GUI.enabled = selectedIndex >= 0 && selectedIndex < waypoints.Length - 1;
-			if (GUI.Button(new Rect(r.x + 120, controlY, 100, 30), "Move Down"))
+			if (GUI.Button(new Rect(r.x + 120, btnY, 100, 30), "Move Down"))
 				OnWaypointMoveDown?.Invoke(selectedIndex);
 
 			GUI.enabled = true;
-			controlY += 40;
-
-			if (GUI.Button(new Rect(r.x + 10, controlY, r.width - 20, 32), "Add New"))
-				OnWaypointAddRequested?.Invoke();
-
-			controlY += 40;
-			GUI.color = Color.red;
-			if (GUI.Button(new Rect(r.x + 10, controlY, r.width - 20, 32), "Delete Selected"))
-				OnWaypointDelete?.Invoke(selectedIndex);
-			GUI.color = Color.white;
 		}
 	}
 }

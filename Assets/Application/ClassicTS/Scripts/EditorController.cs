@@ -133,6 +133,8 @@ namespace ClassicTilestorm
 
 			if (currentMode == EditorMode.Waypoint && mapManager?.CurrentMap?.waypoints != null)
 				editorUI.DrawWaypointUI(mapManager.CurrentMap.waypoints, waypointMode.SelectedWaypointIndex);
+
+			activeMode?.OnGui();
 		}
 
 		public void OnApplicationFocus(bool hasFocus)

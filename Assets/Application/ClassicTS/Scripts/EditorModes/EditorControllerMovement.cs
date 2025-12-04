@@ -74,6 +74,8 @@ namespace ClassicTilestorm
 		public virtual void OnEnable() { }
 		public virtual void OnDisable() { }
 
+		public virtual void OnGui() { }
+
 		public virtual void OnApplicationFocus(bool hasFocus)
 		{
 			if (hasFocus) skipNextScroll = true;
