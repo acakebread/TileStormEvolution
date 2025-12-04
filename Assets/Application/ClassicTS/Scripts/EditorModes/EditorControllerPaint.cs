@@ -1,4 +1,4 @@
-using MassiveHadronLtd;
+﻿using MassiveHadronLtd;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -95,39 +95,82 @@ namespace ClassicTilestorm
 			if (editorController.CurrentMode != EditorController.EditorMode.Paint || camera == null) return;
 
 			sidePanel.Update();
-			Rect panel = sidePanel.GetRect(20f, 20f);
 
+			// Optional: keep panel open while using it
+			if (sidePanel.IsGuiActive())
+				sidePanel.ForceExpand();
+
+			Rect panelRect = sidePanel.GetRect(20f, 20f);
+
+			// Draw background box
 			GUI.backgroundColor = new Color(0.2f, 0.2f, 0.4f, 0.75f);
-			GUI.Box(panel, "Tile Selector");
+			GUI.Box(panelRect, "Tile Selector", EditorStyles.toolbarButton);
 			GUI.backgroundColor = Color.white;
 
-			GUILayout.BeginArea(panel);
+			GUILayout.BeginArea(panelRect);
 			GUILayout.BeginVertical();
+
 			GUILayout.Label("Tiles", EditorStyles.boldLabel);
 
-			int count = ResourceManager.Definitions.Count;
+			// ---- HARD LOCKED SCROLL VIEW (NO LAYOUT, NO HORIZONTAL BAR EVER) ----
 
-			scrollPos = GUILayout.BeginScrollView(scrollPos);
+			float scrollBarWidth = 12f;
+			Rect scrollRect = new Rect(
+				0f,
+				25f,
+				panelRect.width,
+				panelRect.height - 25f
+			);
+
+			// Compute total content height explicitly
+			int count = ResourceManager.Definitions.Count;
+			float buttonHeight = 36f;
+			float contentHeight = count * (buttonHeight + 4f);
+
+			// LOCKED CONTENT WIDTH = VIEW WIDTH (THIS IS THE KEY)
+			Rect contentRect = new Rect(
+				0f,
+				0f,
+				scrollRect.width - scrollBarWidth - 10,
+				contentHeight
+			);
+
+			// Actual GUI scroll view (NOT GUILayout)
+			scrollPos = GUI.BeginScrollView(
+				scrollRect,
+				scrollPos,
+				contentRect,
+				false,
+				true
+			);
+
+			float y = 0f;
 
 			for (int i = 0; i < count; i++)
 			{
 				var def = ResourceManager.Definitions.ElementAt(i);
 				string label = $"{def.id} ({def.texture})";
 
-				GUILayout.BeginHorizontal();
-
 				GUI.backgroundColor = (def.id == selectedDefinitionId)
 					? new Color(0.3f, 0.8f, 1f, 0.9f)
 					: Color.white;
 
-				if (GUILayout.Button(label, GUILayout.Height(36)))
+				if (GUI.Button(
+					new Rect(0f, y, contentRect.width, buttonHeight),
+					label))
+				{
 					SetSelectedDefinitionById(def.id);
+				}
 
-				GUI.backgroundColor = Color.white;
-				GUILayout.EndHorizontal();
+				y += buttonHeight + 4f;
 			}
 
-			GUILayout.EndScrollView();
+			GUI.backgroundColor = Color.white;
+
+			GUI.EndScrollView();
+
+			// ---------------------------------------------------------------
+
 			GUILayout.EndVertical();
 			GUILayout.EndArea();
 		}

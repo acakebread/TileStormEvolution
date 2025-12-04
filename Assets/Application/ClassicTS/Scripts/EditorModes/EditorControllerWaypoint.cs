@@ -195,31 +195,52 @@ namespace ClassicTilestorm
 			}
 			else
 			{
-				// Scrollable list
-				scrollPos = GUILayout.BeginScrollView(scrollPos, GUILayout.Height(panel.height - 110));
+				// ---------- Scrollable list (manual, layout-free) ----------
+				// Reserve space at the bottom for the Move Up / Move Down buttons + tip
+				float reservedBottom = 110f; // same as your earlier layout: panel.height - 110
+				float topOffset = 25f;       // offset to leave space for the "Waypoints" label
+				float scrollHeight = Mathf.Max(0f, panel.height - reservedBottom);
 
+				// Scroll rect is relative to the BeginArea origin (0,0)
+				Rect scrollRect = new Rect(0f, topOffset, panel.width, scrollHeight);
+
+				// compute content height explicitly
+				int count = waypoints.Length;
+				float buttonHeight = 36f;
+				float spacing = 4f;
+				float contentHeight = count * (buttonHeight + spacing);
+
+				// shrink content width slightly to avoid rounding overflow
+				float scrollBarWidth = 12f;
+				float epsilon = 10f;
+				Rect contentRect = new Rect(0f, 0f, Mathf.Max(1f, scrollRect.width - scrollBarWidth - epsilon), contentHeight);
+
+				// Begin manual scroll view (no horizontal scrollbar)
+				scrollPos = GUI.BeginScrollView(scrollRect, scrollPos, contentRect, false, true);
+
+				float y = 0f;
 				for (int i = 0; i < waypoints.Length; i++)
 				{
 					var wp = waypoints[i];
 					string cam = wp.IsCamera() ? " [Cam]" : "";
 					string label = $"WP{i:00}{cam} [{wp.tile}]";
 
-					GUILayout.BeginHorizontal();
-
-					// Full-width clickable button
+					// full-width clickable button inside the scroll content
 					GUI.backgroundColor = (i == SelectedWaypointIndex) ? new Color(0.3f, 0.8f, 1f, 0.9f) : Color.white;
-					if (GUILayout.Button(label, GUILayout.Height(36)))
+					if (GUI.Button(new Rect(0f, y, contentRect.width, buttonHeight), label))
 					{
 						SelectWaypoint(i);
 					}
 					GUI.backgroundColor = Color.white;
 
-					GUILayout.EndHorizontal();
+					y += buttonHeight + spacing;
 				}
 
-				GUILayout.EndScrollView();
+				GUI.EndScrollView();
 
-				// ——— Move Up / Move Down Buttons ———
+				// ---------- Move Up / Move Down buttons (outside the scroll view) ----------
+				Rect buttonsArea = new Rect(0f, scrollRect.y + scrollRect.height + 6f, panel.width, reservedBottom);
+				GUILayout.BeginArea(buttonsArea);
 				GUILayout.BeginHorizontal();
 				GUILayout.FlexibleSpace();
 
@@ -257,9 +278,12 @@ namespace ClassicTilestorm
 				GUILayout.FlexibleSpace();
 				GUILayout.EndHorizontal();
 
+				// Tip text below buttons
 				GUILayout.Space(4);
 				GUILayout.Label("Tip: Left-click map to add • Right-click waypoint to delete",
 					new GUIStyle(GUI.skin.label) { fontSize = 10, alignment = TextAnchor.MiddleCenter });
+
+				GUILayout.EndArea();
 			}
 
 			GUILayout.EndVertical();

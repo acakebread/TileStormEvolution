@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using UnityEditor;
+using UnityEngine;
 
 namespace MassiveHadronLtd
 {
@@ -236,6 +237,7 @@ namespace MassiveHadronLtd
 		//	public bool IsGuiActive() => GUIUtility.hotControl != 0 || IsMouseOver;
 		//}
 
+
 		public class AutoHidePanel
 		{
 			public float CurrentWidth { get; private set; }
@@ -247,10 +249,14 @@ namespace MassiveHadronLtd
 			private readonly float animationDuration;
 
 			private float targetWidth;
-			private float animationStartTime;
+			private float animationVelocity;
 			private float mouseExitTime;
 
-			public AutoHidePanel(float collapsed = 120f, float expanded = 340f, float delay = 1f, float animDur = 0.3f)
+			// Cached to avoid allocations
+			private Rect detectionRect;
+			private Vector2 flippedMousePos;
+
+			public AutoHidePanel(float collapsed = 120f, float expanded = 340f, float delay = 1f, float animDur = 0.25f)
 			{
 				collapsedWidth = collapsed;
 				expandedWidth = expanded;
@@ -259,43 +265,45 @@ namespace MassiveHadronLtd
 
 				CurrentWidth = collapsedWidth;
 				targetWidth = collapsedWidth;
+				detectionRect = new Rect();
 			}
 
 			public void Update(bool forceExpanded = false)
 			{
-				var wasOver = IsMouseOver;
+				bool wasOver = IsMouseOver;
 
-				// CRITICAL FIX: Always use expanded width for detection zone
-				float detectW = expandedWidth;
-				var rect = new Rect(Screen.width - detectW - 10f, 20f, detectW, Screen.height - 40f);
-				Vector2 mp = Input.mousePosition;
-				mp.y = Screen.height - mp.y;
+				// Detection zone uses the EXPANDED width so it feels instant
+				float detectX = Screen.width - expandedWidth - 10f;
+				detectionRect.x = detectX;
+				detectionRect.y = 20f;
+				detectionRect.width = expandedWidth + 20f; // a little extra grace
+				detectionRect.height = Screen.height - 40f;
 
-				IsMouseOver = rect.Contains(mp) || forceExpanded;
+				flippedMousePos = Input.mousePosition;
+				flippedMousePos.y = Screen.height - flippedMousePos.y;
 
-				// Expand
+				IsMouseOver = detectionRect.Contains(flippedMousePos) || forceExpanded;
+
+				// Expand instantly on enter
 				if (IsMouseOver && !wasOver)
 				{
 					targetWidth = expandedWidth;
-					animationStartTime = Time.time;
 					mouseExitTime = 0f;
 				}
 
-				// Start collapse timer
-				if (!IsMouseOver && wasOver && mouseExitTime == 0f)
+				// Start timer when mouse leaves
+				if (!IsMouseOver && wasOver && mouseExitTime <= 0f)
 					mouseExitTime = Time.time;
 
 				// Collapse after delay
 				if (!IsMouseOver && mouseExitTime > 0f && Time.time - mouseExitTime >= autoHideDelay)
 				{
 					targetWidth = collapsedWidth;
-					animationStartTime = Time.time;
 					mouseExitTime = 0f;
 				}
 
-				// Animate
-				float t = Mathf.Clamp01((Time.time - animationStartTime) / animationDuration);
-				CurrentWidth = Mathf.Lerp(CurrentWidth, targetWidth, t);
+				// Smooth animation
+				CurrentWidth = Mathf.SmoothDamp(CurrentWidth, targetWidth, ref animationVelocity, animationDuration);
 			}
 
 			public Rect GetRect(float topOffset = 20f, float bottomMargin = 20f)
@@ -304,6 +312,44 @@ namespace MassiveHadronLtd
 				float y = topOffset;
 				float h = Screen.height - y - bottomMargin;
 				return new Rect(x, y, CurrentWidth, h);
+			}
+
+			/// <summary>
+			/// Draw the panel content — this version GUARANTEES no horizontal scrollbar
+			/// </summary>
+			public void DrawGUI()
+			{
+				Rect panelRect = GetRect();
+
+				// This is the key: BeginArea completely isolates layout → no scrollbars ever
+				GUILayout.BeginArea(panelRect);
+
+				GUILayout.BeginVertical(GUILayout.Width(panelRect.width));
+
+				// YOUR ACTUAL PANEL CONTENT GOES HERE
+				// Example (replace with your real GUI):
+				GUILayout.Box("Auto-Hide Panel", GUILayout.ExpandWidth(true));
+				GUILayout.Space(10);
+
+				GUILayout.Label("This panel will never show a horizontal scrollbar!", EditorStyles.wordWrappedLabel);
+
+				if (GUILayout.Button("Test Button", GUILayout.Height(30)))
+					Debug.Log("Button clicked!");
+
+				// Add as many controls as you want — no horizontal bar will appear
+				for (int i = 0; i < 20; i++)
+					GUILayout.Label($"Item {i + 1}");
+
+				// END OF YOUR CONTENT
+
+				GUILayout.EndVertical();
+				GUILayout.EndArea();
+			}
+
+			public void ForceExpand()
+			{
+				targetWidth = expandedWidth;
+				mouseExitTime = 0f;
 			}
 
 			public bool IsGuiActive() => GUIUtility.hotControl != 0 || IsMouseOver;
