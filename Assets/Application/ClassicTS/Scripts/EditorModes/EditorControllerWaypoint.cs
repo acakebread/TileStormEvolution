@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -64,7 +64,7 @@ namespace ClassicTilestorm
 			var newWp = new Waypoint
 			{
 				name = $"Waypoint {map.waypoints?.Length ?? 0}",
-				tile = -1  // Unplaced � user must click map
+				tile = -1  // Unplaced — user must click map
 			};
 
 			var list = map.waypoints?.ToList() ?? new List<Waypoint>();
@@ -120,6 +120,9 @@ namespace ClassicTilestorm
 			RebuildMarkers();
 		}
 
+		private int draggingIndex = -1;
+		private int originalTile = -1;
+
 		public override void Update()
 		{
 			base.Update();
@@ -130,30 +133,86 @@ namespace ClassicTilestorm
 				return;
 
 			var worldPos = MapManager.ScreenToWorld(camera, Input.mousePosition);
+			var snapped = editorController.iMapManager.SnappedMapPosition(worldPos);
+			int tileUnderMouse = editorController.iMapManager.WorldToMapIndex(snapped);
 
-			// Yellow pulsing cursor
-			EditorUtil.UpdateWaypointCursor(camera, editorController.iMapManager, worldPos);
+			bool hasSelection = SelectedWaypointIndex >= 0;
+			bool selectedIsUnplaced = hasSelection &&
+				editorController.iMapManager.CurrentMap.waypoints[SelectedWaypointIndex].tile < 0;
 
-			// Left click = place/move selected waypoint
+			// SHOW YELLOW PULSING CURSOR IF:
+			// • Nothing selected OR
+			// • Selected waypoint has no tile yet (just added from list)
+			bool showCursor = !hasSelection || selectedIsUnplaced;
+
+			if (showCursor && tileUnderMouse >= 0)
+			{
+				EditorUtil.UpdateWaypointCursor(camera, editorController.iMapManager, worldPos);
+			}
+			else
+			{
+				EditorUtil.HideWaypointCursor();
+			}
+
+			// LEFT CLICK DOWN
 			if (Input.GetMouseButtonDown(0))
 			{
-				var snapped = editorController.iMapManager.SnappedMapPosition(worldPos);
-				int tile = editorController.iMapManager.WorldToMapIndex(snapped);
+				Ray ray = camera.ScreenPointToRay(Input.mousePosition);
 
-				if (tile >= 0)
+				// 1. Clicked on an existing waypoint marker?
+				if (Physics.Raycast(ray, out RaycastHit hit))
 				{
-					if (SelectedWaypointIndex >= 0)
+					if (hit.collider && hit.collider.gameObject.name.StartsWith("WP"))
 					{
-						editorController.iMapManager.CurrentMap.waypoints[SelectedWaypointIndex].tile = tile;
+						if (int.TryParse(hit.collider.gameObject.name.Substring(2), out int index))
+						{
+							SelectWaypoint(index);
+							draggingIndex = index;
+							originalTile = editorController.iMapManager.CurrentMap.waypoints[index].tile;
+							return;
+						}
+					}
+				}
+
+				// 2. Clicked empty tile AND (no selection OR selected is unplaced) → place it
+				if (tileUnderMouse >= 0 && (!hasSelection || selectedIsUnplaced))
+				{
+					if (hasSelection)
+					{
+						// Place the currently selected (unplaced) waypoint
+						editorController.iMapManager.CurrentMap.waypoints[SelectedWaypointIndex].tile = tileUnderMouse;
 					}
 					else
 					{
-						AddWaypointAtTile(tile);
-						return;
+						// Create brand new
+						AddWaypointAtTile(tileUnderMouse);
 					}
+					RebuildMarkers();
+					return;
+				}
+			}
 
+			// DRAG SELECTED WAYPOINT
+			if (draggingIndex >= 0 && Input.GetMouseButton(0))
+			{
+				if (tileUnderMouse >= 0)
+				{
+					editorController.iMapManager.CurrentMap.waypoints[draggingIndex].tile = tileUnderMouse;
 					RebuildMarkers();
 				}
+			}
+
+			// DROP
+			if (draggingIndex >= 0 && Input.GetMouseButtonUp(0))
+			{
+				if (tileUnderMouse < 0)
+				{
+					// Revert to original
+					editorController.iMapManager.CurrentMap.waypoints[draggingIndex].tile = originalTile;
+					RebuildMarkers();
+				}
+				draggingIndex = -1;
+				originalTile = -1;
 			}
 		}
 	}

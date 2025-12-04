@@ -109,6 +109,12 @@ namespace ClassicTilestorm
 				waypointCursorMaterial = MaterialUtils.CreateTransparentUnlitMaterial(new Color(1f, 1f, 0f, 0.8f)); // Yellow cursor
 		}
 
+		public static void HideWaypointCursor()
+		{
+			if (waypointCursor != null)
+				waypointCursor.SetActive(false);
+		}
+
 		public static void UpdateWaypointCursor(Camera cam, IMapManager mapManager, Vector3 mouseWorldPos)
 		{
 			InitializeWaypointMaterials();
@@ -119,7 +125,7 @@ namespace ClassicTilestorm
 				Object.DestroyImmediate(waypointCursor.GetComponent<Collider>());
 				waypointCursor.GetComponent<MeshRenderer>().material = waypointCursorMaterial;
 				waypointCursor.transform.localScale = new Vector3(0.9f, 0.015f, 0.9f);
-				waypointCursor.name = "Waypoint Cursor";
+				waypointCursor.name = "WP_Cursor";
 			}
 
 			var snapped = mapManager.SnappedMapPosition(mouseWorldPos);
@@ -130,7 +136,8 @@ namespace ClassicTilestorm
 				waypointCursor.transform.position = snapped + Vector3.up * 0.01f;
 				waypointCursor.SetActive(true);
 
-				float pulse = 1f + Mathf.Sin(Time.time * 4f) * 0.15f;
+				// PULSING — restored and improved
+				float pulse = 1f + Mathf.Sin(Time.time * 5f) * 0.2f;
 				waypointCursor.transform.localScale = new Vector3(0.9f, 0.015f, 0.9f) * pulse;
 			}
 			else
@@ -146,7 +153,7 @@ namespace ClassicTilestorm
 				if (m) Object.DestroyImmediate(m);
 			waypointMarkers.Clear();
 
-			if (waypoints == null) return;
+			if (waypoints == null || waypoints.Length == 0) return;
 
 			for (int i = 0; i < waypoints.Length; i++)
 			{
@@ -156,18 +163,33 @@ namespace ClassicTilestorm
 				var pos = mapManager.TileWorldPosition(wp.tile) + Vector3.up * 0.02f;
 
 				var go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-				go.name = $"Waypoint {i}";
-				Object.DestroyImmediate(go.GetComponent<Collider>());
+				go.name = $"WP{i}"; // Short name: WP0, WP1, etc. — perfect for hierarchy
+
+				// Keep collider for clicking, make it trigger so it doesn't block anything
+				var col = go.GetComponent<Collider>();
+				if (col) col.isTrigger = true;
+
 				go.transform.position = pos;
 				go.transform.localScale = new Vector3(0.8f, 0.01f, 0.8f);
 
 				var mr = go.GetComponent<MeshRenderer>();
+
 				if (i == selectedIndex)
-					mr.material = MaterialUtils.CreateTransparentUnlitMaterial(new Color(0f, 1f, 0f, 0.4f)); // Green
+				{
+					// Selected = bright green + pulsing
+					mr.material = MaterialUtils.CreateTransparentUnlitMaterial(new Color(0f, 1f, 0f, 0.7f));
+					var pulse = go.AddComponent<WaypointPulse>();
+					pulse.intensity = 2.1f;
+					pulse.speed = 3.2f;
+				}
 				else if (wp.IsCamera())
-					mr.material = MaterialUtils.CreateTransparentUnlitMaterial(new Color(0f, 1f, 1f, 0.5f)); // Cyan
+				{
+					mr.material = MaterialUtils.CreateTransparentUnlitMaterial(new Color(0f, 1f, 1f, 0.5f));
+				}
 				else
-					mr.material = MaterialUtils.CreateTransparentUnlitMaterial(new Color(0f, 0.7f, 1f, 0.7f)); // Blue
+				{
+					mr.material = MaterialUtils.CreateTransparentUnlitMaterial(new Color(0f, 0.7f, 1f, 0.7f));
+				}
 
 				waypointMarkers.Add(go);
 			}
