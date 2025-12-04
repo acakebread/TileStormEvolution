@@ -60,10 +60,10 @@ namespace ClassicTilestorm
 			if (gridLines != null)
 				gridLines.SetActive(isActiveAndEnabled && gridEnabled);
 
+			var eggbotController = GetComponentInChildren<EggbotController>();
+			if (null != eggbotController) eggbotController.gameObject.SetActive(!isActiveAndEnabled);
 			if (isActiveAndEnabled)
 			{
-				var eggbotController = GetComponentInChildren<EggbotController>(true);
-				if (null != eggbotController) eggbotController.gameObject.SetActive(false);
 				waypointMode?.OnMapChanged();
 			}
 		}
