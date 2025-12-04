@@ -8,6 +8,9 @@ namespace ClassicTilestorm
 	public class EditorControllerWaypoint : EditorControllerMovement
 	{
 		public int SelectedWaypointIndex { get; private set; } = -1;
+		private bool isInPlacementMode = false;  // Are we currently placing a new waypoint?
+		private int draggingIndex = -1;
+		private int originalTile = -1;
 
 		public EditorControllerWaypoint(EditorController editorController) : base(editorController)
 		{
@@ -58,21 +61,14 @@ namespace ClassicTilestorm
 
 		private void AddWaypointAtCursor()
 		{
-			var map = editorController.iMapManager.CurrentMap;
-			if (map == null) return;
+			// Toggle placement mode
+			isInPlacementMode = !isInPlacementMode;
 
-			var newWp = new Waypoint
+			if (isInPlacementMode)
 			{
-				name = $"Waypoint {map.waypoints?.Length ?? 0}",
-				tile = -1  // Unplaced — user must click map
-			};
-
-			var list = map.waypoints?.ToList() ?? new List<Waypoint>();
-			list.Add(newWp);
-			map.waypoints = list.ToArray();
-
-			SelectedWaypointIndex = list.Count - 1;
-			RebuildMarkers();
+				SelectWaypoint(-1); // Deselect current
+				RebuildMarkers();
+			}
 		}
 
 		private void AddWaypointAtTile(int tile)
@@ -120,9 +116,6 @@ namespace ClassicTilestorm
 			RebuildMarkers();
 		}
 
-		private int draggingIndex = -1;
-		private int originalTile = -1;
-
 		public override void Update()
 		{
 			base.Update();
@@ -137,15 +130,9 @@ namespace ClassicTilestorm
 			int tileUnderMouse = editorController.iMapManager.WorldToMapIndex(snapped);
 
 			bool hasSelection = SelectedWaypointIndex >= 0;
-			bool selectedIsUnplaced = hasSelection &&
-				editorController.iMapManager.CurrentMap.waypoints[SelectedWaypointIndex].tile < 0;
 
-			// SHOW YELLOW PULSING CURSOR IF:
-			// • Nothing selected OR
-			// • Selected waypoint has no tile yet (just added from list)
-			bool showCursor = !hasSelection || selectedIsUnplaced;
-
-			if (showCursor && tileUnderMouse >= 0)
+			// === YELLOW CURSOR: Only show in placement mode (not when just hovering normally) ===
+			if (isInPlacementMode && tileUnderMouse >= 0)
 			{
 				EditorUtil.UpdateWaypointCursor(camera, editorController.iMapManager, worldPos);
 			}
@@ -154,18 +141,24 @@ namespace ClassicTilestorm
 				EditorUtil.HideWaypointCursor();
 			}
 
-			// LEFT CLICK DOWN
+			// === LEFT CLICK ===
 			if (Input.GetMouseButtonDown(0))
 			{
 				Ray ray = camera.ScreenPointToRay(Input.mousePosition);
 
-				// 1. Clicked on an existing waypoint marker?
+				// 1. Clicked on an existing waypoint?
 				if (Physics.Raycast(ray, out RaycastHit hit))
 				{
 					if (hit.collider && hit.collider.gameObject.name.StartsWith("WP"))
 					{
 						if (int.TryParse(hit.collider.gameObject.name.Substring(2), out int index))
 						{
+							// If in placement mode → cancel it
+							if (isInPlacementMode)
+							{
+								isInPlacementMode = false;
+							}
+
 							SelectWaypoint(index);
 							draggingIndex = index;
 							originalTile = editorController.iMapManager.CurrentMap.waypoints[index].tile;
@@ -174,25 +167,22 @@ namespace ClassicTilestorm
 					}
 				}
 
-				// 2. Clicked empty tile AND (no selection OR selected is unplaced) → place it
-				if (tileUnderMouse >= 0 && (!hasSelection || selectedIsUnplaced))
+				// 2. In placement mode and clicked valid tile → CREATE NEW
+				if (isInPlacementMode && tileUnderMouse >= 0)
 				{
-					if (hasSelection)
-					{
-						// Place the currently selected (unplaced) waypoint
-						editorController.iMapManager.CurrentMap.waypoints[SelectedWaypointIndex].tile = tileUnderMouse;
-					}
-					else
-					{
-						// Create brand new
-						AddWaypointAtTile(tileUnderMouse);
-					}
-					RebuildMarkers();
+					AddWaypointAtTile(tileUnderMouse);
+					isInPlacementMode = false; // Done placing
 					return;
+				}
+
+				// 3. Clicked empty space while not placing → do nothing (or optionally deselect)
+				if (!hasSelection && !isInPlacementMode)
+				{
+					SelectWaypoint(-1); // Optional: deselect all
 				}
 			}
 
-			// DRAG SELECTED WAYPOINT
+			// === DRAG EXISTING WAYPOINT ===
 			if (draggingIndex >= 0 && Input.GetMouseButton(0))
 			{
 				if (tileUnderMouse >= 0)
@@ -202,17 +192,22 @@ namespace ClassicTilestorm
 				}
 			}
 
-			// DROP
+			// === DROP (validate or revert) ===
 			if (draggingIndex >= 0 && Input.GetMouseButtonUp(0))
 			{
 				if (tileUnderMouse < 0)
 				{
-					// Revert to original
 					editorController.iMapManager.CurrentMap.waypoints[draggingIndex].tile = originalTile;
 					RebuildMarkers();
 				}
 				draggingIndex = -1;
 				originalTile = -1;
+			}
+
+			// === ESCAPE cancels placement mode ===
+			if (Input.GetKeyDown(KeyCode.Escape))
+			{
+				isInPlacementMode = false;
 			}
 		}
 	}
