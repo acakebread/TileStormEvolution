@@ -24,7 +24,7 @@ namespace ClassicTilestorm
 		public override void Update()
 		{
 			base.Update();
-			if (!camera || editorController.GetEditorUI().IsGuiControlActive() || EventSystem.current.IsPointerOverGameObject()) return;
+			if (!camera || editorController.IsGuiControlActive() || EventSystem.current.IsPointerOverGameObject()) return;
 
 			if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1))
 				mouseDownPos = Input.mousePosition;

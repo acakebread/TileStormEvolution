@@ -34,9 +34,8 @@ namespace ClassicTilestorm
 			if (camera == null) return;
 			var cameraTransform = camera.transform;
 
-			var ui = editorController?.GetEditorUI();
-			bool isGuiActive = ui?.IsGuiControlActive() ?? false;
-			bool isMouseOverGui = ui?.IsMouseOverGui() ?? false;
+			bool isGuiActive = editorController.IsGuiControlActive();
+			bool isMouseOverGui = editorController.IsMouseOverGui();
 
 			// Right-click or touch drag → rotate camera
 			if ((Input.GetMouseButton(1) || Input.touchCount > 0) && !isGuiActive && !didGainFocus)

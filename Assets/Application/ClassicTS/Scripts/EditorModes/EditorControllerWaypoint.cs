@@ -97,7 +97,7 @@ namespace ClassicTilestorm
 			base.Update();
 
 			if (camera == null ||
-				editorController.GetEditorUI().IsGuiControlActive() ||
+				editorController.IsGuiControlActive() ||
 				(EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()))
 				return;
 
