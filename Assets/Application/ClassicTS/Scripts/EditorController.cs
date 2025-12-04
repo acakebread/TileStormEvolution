@@ -169,31 +169,23 @@ namespace ClassicTilestorm
 		private void DrawMainUI(string mode, bool gridVisible)
 		{
 			float y = panelYoffset + spacing;
-
-			GuiUtils.ColoredButton(
-				new Rect(margin, y + 0 * (buttonHeight + spacing), buttonWidth, buttonHeight),
-				gridVisible ? "Hide Grid" : "Show Grid",
-				new Color(0.25f, 0.75f, 0.25f),
-				() => OnGridLinesToggled(!gridVisible));
+			if (GuiUtils.ColoredButton(new Rect(margin, y + 0 * (buttonHeight + spacing), buttonWidth, buttonHeight),gridVisible ? "Hide Grid" : "Show Grid",new Color(0.25f, 0.75f, 0.25f))) OnGridLinesToggled(!gridVisible);
 
 			GUI.contentColor = mode == "Drag" ? Color.cyan : Color.white;
-			if (GUI.Button(new Rect(margin, y + 1 * (buttonHeight + spacing), buttonWidth, buttonHeight), "Drag"))
-				SetEditorMode(EditorMode.Drag);
+			if (GUI.Button(new Rect(margin, y + 1 * (buttonHeight + spacing), buttonWidth, buttonHeight), "Drag")) SetEditorMode(EditorMode.Drag);
 
 			GUI.contentColor = mode == "Paint" ? Color.cyan : Color.white;
-			if (GUI.Button(new Rect(margin, y + 2 * (buttonHeight + spacing), buttonWidth, buttonHeight), "Paint"))
-				SetEditorMode(EditorMode.Paint);
+			if (GUI.Button(new Rect(margin, y + 2 * (buttonHeight + spacing), buttonWidth, buttonHeight), "Paint")) SetEditorMode(EditorMode.Paint);
 
 			GUI.contentColor = mode == "Waypoint" ? Color.cyan : Color.white;
-			if (GUI.Button(new Rect(margin, y + 3 * (buttonHeight + spacing), buttonWidth, buttonHeight), "Waypoint"))
-				SetEditorMode(EditorMode.Waypoint);
+			if (GUI.Button(new Rect(margin, y + 3 * (buttonHeight + spacing), buttonWidth, buttonHeight), "Waypoint")) SetEditorMode(EditorMode.Waypoint);
 
 			GUI.contentColor = Color.white;
 
-			GuiUtils.ColoredButton(new Rect(margin, y + 5 * (buttonHeight + spacing), buttonWidth, buttonHeight), "Import Map", new Color(0.2f, 0.6f, 1f), () => ImportMapAsAtomic());
-			GuiUtils.ColoredButton(new Rect(margin, y + 6 * (buttonHeight + spacing), buttonWidth, buttonHeight), "Export Map", new Color(0.8f, 0.2f, 0.2f), () => ExportMapAsAtomic());
-			GuiUtils.ColoredButton(new Rect(margin, y + 7 * (buttonHeight + spacing), buttonWidth, buttonHeight), "(Re)Load Database", new Color(0.2f, 0.6f, 1f), () => LoadDatabase());
-			GuiUtils.ColoredButton(new Rect(margin, y + 8 * (buttonHeight + spacing), buttonWidth, buttonHeight), "Save Database", new Color(0.8f, 0.2f, 0.2f), () => SaveDatabase());
+			if (GuiUtils.ColoredButton(new Rect(margin, y + 5 * (buttonHeight + spacing), buttonWidth, buttonHeight), "Import Map", new Color(0.2f, 0.6f, 1f))) ImportMapAsAtomic();
+			if (GuiUtils.ColoredButton(new Rect(margin, y + 6 * (buttonHeight + spacing), buttonWidth, buttonHeight), "Export Map", new Color(0.8f, 0.2f, 0.2f))) ExportMapAsAtomic();
+			if (GuiUtils.ColoredButton(new Rect(margin, y + 7 * (buttonHeight + spacing), buttonWidth, buttonHeight), "(Re)Load Database", new Color(0.2f, 0.6f, 1f))) LoadDatabase();
+			if (GuiUtils.ColoredButton(new Rect(margin, y + 8 * (buttonHeight + spacing), buttonWidth, buttonHeight), "Save Database", new Color(0.8f, 0.2f, 0.2f))) SaveDatabase();
 		}
 
 		// ===================================================================

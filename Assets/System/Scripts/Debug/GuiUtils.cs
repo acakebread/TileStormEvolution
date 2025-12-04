@@ -61,7 +61,7 @@ namespace MassiveHadronLtd
 			coloredButtonStyle.onFocused.textColor = textCol;
 		}
 
-		public static void ColoredButton(Rect r, string text, Color col, System.Action onClick)
+		public static bool ColoredButton(Rect r, string text, Color col, System.Action onClick = null)
 		{
 			EnsureStyles();
 
@@ -79,16 +79,18 @@ namespace MassiveHadronLtd
 			// GUI.color must be white or it will still tint the text!
 			GUI.color = Color.white;
 
-			if (GUI.Button(r, text, coloredButtonStyle))
+			bool result;
+			if (result = GUI.Button(r, text, coloredButtonStyle))
 				onClick?.Invoke();
 
 			// Restore everything
 			GUI.color = prevColor;
 			GUI.contentColor = prevContentColor;
 			GUI.backgroundColor = prevBackground;
+			return result;
 		}
 
-		public static void ColoredRepeatButton(
+		public static bool ColoredRepeatButton(
 			Rect rect,
 			string text,
 			Color color,
@@ -118,6 +120,7 @@ namespace MassiveHadronLtd
 			if (state.isPressed)
 				GUI.backgroundColor = color * 0.8f;
 
+			bool result =false;
 			GUI.Button(rect, text, coloredButtonStyle);
 
 			// === INPUT & FIRE LOGIC ===
@@ -139,6 +142,7 @@ namespace MassiveHadronLtd
 			{
 				if (Time.time >= state.nextFireTime)
 				{
+					result = true;
 					onRepeat?.Invoke();
 					state.nextFireTime = Time.time + repeatInterval;
 				}
@@ -155,6 +159,7 @@ namespace MassiveHadronLtd
 			GUI.color = oldColor;
 			GUI.backgroundColor = oldBg;
 			GUI.contentColor = oldContent;
+			return result;
 		}
 
 		// Don't forget this class (add if missing)
