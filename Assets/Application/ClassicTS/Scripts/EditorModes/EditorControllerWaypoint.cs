@@ -272,7 +272,8 @@ namespace ClassicTilestorm
 			for (int i = 0; i < waypoints.Length; i++)
 			{
 				var wp = waypoints[i];
-				var vp = null != editorController ? editorController.iMapManager.GetViewpoint(wp) : null;
+				//var vp = null != editorController ? editorController.iMapManager.GetViewpoint(wp) : null;
+				var vp = null != editorController ? editorController.iMapManager.GetView(wp) : null;
 
 				string cam = null != vp ? " [Cam]" : "";
 				string label = $"WP{i:00}{cam} [{wp}]";

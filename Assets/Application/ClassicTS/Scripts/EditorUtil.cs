@@ -160,7 +160,7 @@ namespace ClassicTilestorm
 				var wp = waypoints[i];
 				if (wp < 0 || wp >= mapManager.Count) continue;
 
-				var vp = mapManager.GetViewpoint(wp);
+				var vp = mapManager.GetView(wp); //mapManager.GetViewpoint(wp);
 				var pos = mapManager.TileWorldPosition(wp) + Vector3.up * 0.02f;
 
 				var go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);

@@ -98,7 +98,8 @@ namespace ClassicTilestorm
 			if (mapManager.Waypoints.Length > 0)
 			{
 				var tile = mapManager.GetWaypoint(0);
-				var vp = mapManager.GetViewpoint(tile);
+				//var vp = mapManager.GetViewpoint(tile);
+				var vp = mapManager.GetView(tile);
 				if (null != vp)
 				{
 					//has camera settings (Viewpoint)
@@ -181,7 +182,8 @@ namespace ClassicTilestorm
 				return;
 
 			var tile = mapManager.GetWaypoint(waypointIndex);
-			var vp = mapManager.GetViewpoint(tile);
+			//var vp = mapManager.GetViewpoint(tile);
+			var vp = mapManager.GetView(tile);
 			if (null == vp)
 			{
 				SetCameraSystem(CameraModeRegistry.Follow, true);
