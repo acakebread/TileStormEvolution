@@ -16,7 +16,7 @@ namespace ClassicTilestorm
 		public int width;
 		public int height;
 
-		public int[] waypoints; //public Waypoint[] waypoints;
+		public int[] waypoints;
 		public string[] table;
 		public int[] tiles;
 		public int[] solve;
@@ -211,12 +211,9 @@ namespace ClassicTilestorm
 				int z = idx / oldWidth;
 				int nx = x + offsetX;
 				int nz = z + offsetZ;
-				idx = (nx >= 0 && nx < newWidth && nz >= 0 && nz < newHeight)
-					? nz * newWidth + nx
-					: -1;
+				idx = (nx >= 0 && nx < newWidth && nz >= 0 && nz < newHeight) ? nz * newWidth + nx : -1;
 			}
 
-			//if (waypoints != null) foreach (var wp in waypoints) Remap(ref wp.tile);//no longer needed
 			if (attachments != null) foreach (var a in attachments) Remap(ref a.tile);
 
 			// Apply
@@ -228,7 +225,6 @@ namespace ClassicTilestorm
 			return true;
 		}
 
-		// NOW CropToContent IS PERFECT — ONE LINE OF LOGIC
 		public bool CropToContent()
 		{
 			var (minX, minZ, maxX, maxZ) = GetContentBounds();
@@ -282,23 +278,8 @@ namespace ClassicTilestorm
 		/// Returns a cropped copy of this map for serialization/export only.
 		/// Original map is untouched. Used automatically during export.
 		/// </summary>
-		//public Map CreateCroppedCopy()
-		//{
-		//	// Clone the map first (deep enough for our needs)
-		//	var copy = JsonConvert.DeserializeObject<Map>(JsonConvert.SerializeObject(this));
-
-		//	// Now safely crop the copy
-		//	bool cropped = copy.CropToContent();
-
-		//	if (cropped)
-		//		Debug.Log($"[Export] Map '{copy.name}' auto-cropped to {copy.width}x{copy.height}");
-
-		//	return copy;
-		//}
-
 		public Map CreateCroppedCopy()
 		{
-			// Manual, fast clone — only what CropToContent() actually touches
 			var copy = new Map
 			{
 				name = name,
@@ -315,9 +296,7 @@ namespace ClassicTilestorm
 				table = table != null ? (string[])table.Clone() : null,
 
 				// attachments: we need real copies because Remap(ref a.tile) modifies them
-				attachments = attachments != null
-					? attachments.Select(a => a.ShallowClone()).ToArray()
-					: Array.Empty<MapAttachment>()
+				attachments = null != attachments ? attachments.Select(a => a.ShallowClone()).ToArray() : Array.Empty<MapAttachment>()
 			};
 
 			bool cropped = copy.CropToContent();

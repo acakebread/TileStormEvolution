@@ -89,10 +89,7 @@ namespace ClassicTilestorm
 		public void SetWaypointTiles(int[] tiles)//new placeholder method
 		{
 			if (currentMap != null)
-			{
 				currentMap.waypoints = tiles ?? Array.Empty<int>();
-				//RebuildRichWaypoints();
-			}
 		}
 
 		/// <summary>
