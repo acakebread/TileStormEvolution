@@ -14,25 +14,30 @@ namespace ClassicTilestorm
 
 		private int draggingIndex = -1;
 		private int originalTile = -1;
-		private int pendingAddTile = -1;
-		private int pendingDeleteIndex = -1;
+
+		private int pendingTile = -1;
+		private int pendingWaypoint = -1;
+		private enum PendingAction { None, Add, Delete }
+		private PendingAction pendingAction = PendingAction.None;
+		private Vector2 pendingPopupScreenPos = Vector2.zero;
+
+		private Vector3 clickStartPos;
+		private int clickStartTile = -1;
+		private int potentialWaypointHit = -1;
+
 		private Vector2 scrollPos = Vector2.zero;
 
-		// Our own animated panel — uses your existing GuiUtils.AutoHidePanel perfectly
-		private readonly GuiUtils.AutoHidePanel sidePanel = new(
+		private readonly AutoHidePanel sidePanel = new(
 			collapsed: 120f, expanded: 340f, delay: 1.5f, animDur: 0.25f);
 
 		public override bool IsMouseOverModeGui()
 		{
-			if (editorController.CurrentMode != EditorController.EditorMode.Waypoint)
-				return false;
+			if (editorController.CurrentMode != EditorController.EditorMode.Waypoint) return false;
 
-			float panelWidth = sidePanel.CurrentWidth;
-			var screenRect = new Rect(Screen.width - panelWidth - 20f, 20f, panelWidth, Screen.height - 40f);
-
-			Vector2 mouse = Input.mousePosition;
-			mouse.y = Screen.height - mouse.y;
-			return screenRect.Contains(mouse);
+			float w = sidePanel.CurrentWidth;
+			var rect = new Rect(Screen.width - w - 20f, 20f, w, Screen.height - 40f);
+			var mouse = Input.mousePosition; mouse.y = Screen.height - mouse.y;
+			return rect.Contains(mouse);
 		}
 
 		public EditorControllerWaypoint(EditorController editorController) : base(editorController) { }
@@ -49,9 +54,7 @@ namespace ClassicTilestorm
 		{
 			base.OnDisable();
 			EditorUtil.DestroyWaypointVisuals();
-			pendingAddTile = -1;
-			pendingDeleteIndex = -1;
-			PopupConfirm.Dismiss();
+			pendingAction = PendingAction.None;
 		}
 
 		public void OnMapChanged()
@@ -111,8 +114,7 @@ namespace ClassicTilestorm
 		{
 			base.Update();
 
-			if (camera == null ||
-				editorController.IsGuiControlActive() ||
+			if (camera == null || editorController.IsGuiControlActive() ||
 				(EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()))
 				return;
 
@@ -120,42 +122,72 @@ namespace ClassicTilestorm
 			var snapped = editorController.iMapManager.SnappedMapPosition(worldPos);
 			int tileUnderMouse = editorController.iMapManager.WorldToMapIndex(snapped);
 
-			// Left click
-			if (Input.GetMouseButtonDown(0))
+			// === CLICK DETECTION (shared for left & right) ===
+			if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1))
 			{
-				Ray ray = camera.ScreenPointToRay(Input.mousePosition);
-				if (Physics.Raycast(ray, out RaycastHit hit) && hit.collider?.name.StartsWith("WP") == true)
-				{
-					if (int.TryParse(hit.collider.name.Substring(2), out int index))
-					{
-						SelectWaypoint(index);
-						draggingIndex = index;
-						originalTile = editorController.iMapManager.CurrentMap.waypoints[index].tile;
-						pendingAddTile = pendingDeleteIndex = -1;
-						return;
-					}
-				}
-
-				if (tileUnderMouse >= 0)
-					pendingAddTile = tileUnderMouse;
+				clickStartPos = Input.mousePosition;
+				clickStartTile = tileUnderMouse;
+				potentialWaypointHit = TryHitWaypoint(out int hitIndex) ? hitIndex : -1;
 			}
 
-			// Right click
-			if (Input.GetMouseButtonDown(1))
+			// === LEFT CLICK RELEASE - ADD or DRAG ===
+			if (Input.GetMouseButtonUp(0))
 			{
-				Ray ray = camera.ScreenPointToRay(Input.mousePosition);
-				if (Physics.Raycast(ray, out RaycastHit hit) && hit.collider?.name.StartsWith("WP") == true)
+				bool wasClick = Vector3.Distance(Input.mousePosition, clickStartPos) < 6f;
+
+				if (draggingIndex >= 0)
 				{
-					if (int.TryParse(hit.collider.name.Substring(2), out int index))
+					// Was dragging a waypoint
+					if (!wasClick && tileUnderMouse < 0)
 					{
-						SelectWaypoint(index);
-						pendingDeleteIndex = index;
+						// Revert if dropped outside map
+						var map = editorController.iMapManager.CurrentMap;
+						if (map?.waypoints != null && draggingIndex < map.waypoints.Length)
+							map.waypoints[draggingIndex].tile = originalTile;
+						RebuildMarkers();
+					}
+					draggingIndex = -1;
+					originalTile = -1;
+				}
+				else if (wasClick && clickStartTile >= 0 && potentialWaypointHit < 0)
+				{
+					// True click on empty tile → prepare to add
+					pendingTile = clickStartTile;
+					pendingAction = PendingAction.Add;
+
+					var _worldPos = editorController.iMapManager.TileWorldPosition(clickStartTile) + Vector3.up * 0.6f;
+					var sp = camera.WorldToScreenPoint(_worldPos);
+					sp.y = Screen.height - sp.y;
+					pendingPopupScreenPos = sp;
+				}
+			}
+
+			// === RIGHT CLICK RELEASE - DELETE ===
+			if (Input.GetMouseButtonUp(1))
+			{
+				bool wasClick = Vector3.Distance(Input.mousePosition, clickStartPos) < 6f;
+
+				if (wasClick && potentialWaypointHit >= 0)
+				{
+					SelectWaypoint(potentialWaypointHit);
+
+					var map = editorController.iMapManager.CurrentMap;
+					if (map?.waypoints != null && potentialWaypointHit < map.waypoints.Length)
+					{
+						pendingTile = map.waypoints[potentialWaypointHit].tile;
+						pendingWaypoint = potentialWaypointHit;
+						pendingAction = PendingAction.Delete;
+
+						var _worldPos = editorController.iMapManager.TileWorldPosition(clickStartTile) + Vector3.up * 0.6f;
+						var sp = camera.WorldToScreenPoint(_worldPos);
+						sp.y = Screen.height - sp.y;
+						pendingPopupScreenPos = sp;
 					}
 				}
 			}
 
-			// Drag on map
-			if (draggingIndex >= 0 && Input.GetMouseButton(0) && tileUnderMouse >= 0)
+			// === DRAG EXISTING WAYPOINT (left button held) ===
+			if (Input.GetMouseButton(0) && draggingIndex >= 0 && tileUnderMouse >= 0)
 			{
 				var map = editorController.iMapManager.CurrentMap;
 				if (map?.waypoints != null && draggingIndex < map.waypoints.Length)
@@ -165,18 +197,23 @@ namespace ClassicTilestorm
 				}
 			}
 
-			if (draggingIndex >= 0 && Input.GetMouseButtonUp(0))
+			// Start drag only if we clicked a waypoint and are now moving
+			if (Input.GetMouseButtonDown(0) && potentialWaypointHit >= 0)
 			{
-				if (tileUnderMouse < 0)
-				{
-					var map = editorController.iMapManager.CurrentMap;
-					if (map?.waypoints != null && draggingIndex < map.waypoints.Length)
-						map.waypoints[draggingIndex].tile = originalTile;
-					RebuildMarkers();
-				}
-				draggingIndex = -1;
-				originalTile = -1;
+				SelectWaypoint(potentialWaypointHit);
+				draggingIndex = potentialWaypointHit;
+				originalTile = editorController.iMapManager.CurrentMap.waypoints[potentialWaypointHit].tile;
+				pendingAction = PendingAction.None; // cancel any pending add
 			}
+		}
+
+		private bool TryHitWaypoint(out int index)
+		{
+			index = -1;
+			var ray = camera.ScreenPointToRay(Input.mousePosition);
+			if (!Physics.Raycast(ray, out RaycastHit hit)) return false;
+			if (!hit.collider.name.StartsWith("WP")) return false;
+			return int.TryParse(hit.collider.name.Substring(2), out index);
 		}
 
 		public override void OnGui()
@@ -187,9 +224,7 @@ namespace ClassicTilestorm
 			if (map == null) return;
 			Waypoint[] waypoints = map.waypoints ?? System.Array.Empty<Waypoint>();
 
-			// Update side panel animation
 			sidePanel.Update();
-
 			Rect panel = sidePanel.GetRect(20f, 20f);
 
 			GUI.backgroundColor = new Color(0.15f, 0.3f, 0.42f, 0.95f);
@@ -208,147 +243,110 @@ namespace ClassicTilestorm
 					new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter });
 				GUILayout.FlexibleSpace();
 			}
-			else
-			{
-				// ---------- Scrollable list (manual, layout-free) ----------
-				// Reserve space at the bottom for the Move Up / Move Down buttons + tip
-				float reservedBottom = 110f; // same as your earlier layout: panel.height - 110
-				float topOffset = 25f;       // offset to leave space for the "Waypoints" label
-				float scrollHeight = Mathf.Max(0f, panel.height - reservedBottom);
-
-				// Scroll rect is relative to the BeginArea origin (0,0)
-				Rect scrollRect = new Rect(0f, topOffset, panel.width, scrollHeight);
-
-				// compute content height explicitly
-				int count = waypoints.Length;
-				float buttonHeight = 36f;
-				float spacing = 4f;
-				float contentHeight = count * (buttonHeight + spacing);
-
-				// shrink content width slightly to avoid rounding overflow
-				float scrollBarWidth = 12f;
-				float epsilon = 10f;
-				Rect contentRect = new Rect(0f, 0f, Mathf.Max(1f, scrollRect.width - scrollBarWidth - epsilon), contentHeight);
-
-				// Begin manual scroll view (no horizontal scrollbar)
-				scrollPos = GUI.BeginScrollView(scrollRect, scrollPos, contentRect, false, true);
-
-				float y = 0f;
-				for (int i = 0; i < waypoints.Length; i++)
-				{
-					var wp = waypoints[i];
-					string cam = wp.IsCamera() ? " [Cam]" : "";
-					string label = $"WP{i:00}{cam} [{wp.tile}]";
-
-					// full-width clickable button inside the scroll content
-					GUI.backgroundColor = (i == SelectedWaypointIndex) ? new Color(0.3f, 0.8f, 1f, 0.9f) : Color.white;
-					if (GUI.Button(new Rect(0f, y, contentRect.width, buttonHeight), label))
-						SelectWaypoint(i);
-
-					GUI.backgroundColor = Color.white;
-
-					y += buttonHeight + spacing;
-				}
-
-				GUI.EndScrollView();
-
-				// ---------- Move Up / Move Down buttons (outside the scroll view) ----------
-				Rect buttonsArea = new Rect(0f, scrollRect.y + scrollRect.height + 6f, panel.width, reservedBottom);
-				GUILayout.BeginArea(buttonsArea);
-				GUILayout.BeginHorizontal();
-				GUILayout.FlexibleSpace();
-
-				GUI.enabled = SelectedWaypointIndex > 0;
-				if (GUILayout.Button("Move Up", GUILayout.Width(100), GUILayout.Height(30)))
-				{
-					if (SelectedWaypointIndex > 0)
-					{
-						var list = waypoints.ToList();
-						var temp = list[SelectedWaypointIndex];
-						list[SelectedWaypointIndex] = list[SelectedWaypointIndex - 1];
-						list[SelectedWaypointIndex - 1] = temp;
-						map.waypoints = list.ToArray();
-						SelectedWaypointIndex--;
-						RebuildMarkers();
-					}
-				}
-
-				GUI.enabled = SelectedWaypointIndex >= 0 && SelectedWaypointIndex < waypoints.Length - 1;
-				if (GUILayout.Button("Move Down", GUILayout.Width(100), GUILayout.Height(30)))
-				{
-					if (SelectedWaypointIndex >= 0 && SelectedWaypointIndex < waypoints.Length - 1)
-					{
-						var list = waypoints.ToList();
-						var temp = list[SelectedWaypointIndex];
-						list[SelectedWaypointIndex] = list[SelectedWaypointIndex + 1];
-						list[SelectedWaypointIndex + 1] = temp;
-						map.waypoints = list.ToArray();
-						SelectedWaypointIndex++;
-						RebuildMarkers();
-					}
-				}
-
-				GUI.enabled = true;
-				GUILayout.FlexibleSpace();
-				GUILayout.EndHorizontal();
-
-				// Tip text below buttons
-				GUILayout.Space(4);
-				GUILayout.Label("Tip: Left-click map to add • Right-click waypoint to delete",
-					new GUIStyle(GUI.skin.label) { fontSize = 10, alignment = TextAnchor.MiddleCenter });
-
-				GUILayout.EndArea();
-			}
+			else DrawWaypointList(waypoints, panel.height);
 
 			GUILayout.EndVertical();
 			GUILayout.EndArea();
 
-			// ADD POPUP
-			if (pendingAddTile >= 0)
+			// ———————— POPUPS ————————
+			if (pendingAction == PendingAction.Add)
+				DrawAddPopup();
+
+			if (pendingAction == PendingAction.Delete)
+				DrawDeletePopup();
+		}
+
+		private void DrawWaypointList(Waypoint[] waypoints, float panelHeight)
+		{
+			const float reservedBottom = 110f;
+			const float topOffset = 25f;
+			float scrollHeight = Mathf.Max(0f, panelHeight - reservedBottom);
+
+			Rect scrollRect = new Rect(0f, topOffset, Screen.width, scrollHeight); // width doesn't matter, we clamp
+			Rect contentRect = new Rect(0f, 0f, 320f, waypoints.Length * 40f);
+
+			scrollPos = GUI.BeginScrollView(scrollRect, scrollPos, contentRect, false, true);
+
+			float y = 0f;
+			for (int i = 0; i < waypoints.Length; i++)
 			{
-				var pos = editorController.iMapManager.TileWorldPosition(pendingAddTile) + Vector3.up * 0.6f;
+				var wp = waypoints[i];
+				string cam = wp.IsCamera() ? " [Cam]" : "";
+				string label = $"WP{i:00}{cam} [{wp.tile}]";
 
-				bool confirmed = PopupConfirm.WorldPositionPopup(
-					camera, pos,
-					new Vector2(-100, -40), new Vector2(200, 80),
-					"Add waypoint here?",
-					confirmText: "Add", cancelText: "Cancel",
-					onConfirm: () =>
-					{
-						AddWaypointAtTile(pendingAddTile);
-						pendingAddTile = -1;
-					});
+				GUI.backgroundColor = (i == SelectedWaypointIndex) ? new Color(0.3f, 0.8f, 1f, 0.9f) : Color.white;
+				if (GUI.Button(new Rect(4f, y, contentRect.width - 20f, 36f), label))
+					SelectWaypoint(i);
+				GUI.backgroundColor = Color.white;
 
-				if (confirmed)
-					pendingAddTile = -1;
-
-				if (camera.WorldToScreenPoint(pos).z <= 0)
-					pendingAddTile = -1;
+				y += 40f;
 			}
 
-			// DELETE POPUP
-			if (pendingDeleteIndex >= 0 && pendingDeleteIndex < waypoints.Length)
+			GUI.EndScrollView();
+
+			// Bottom buttons
+			Rect buttonsArea = new Rect(0f, scrollRect.y + scrollRect.height + 6f, 340f, reservedBottom);
+			GUILayout.BeginArea(buttonsArea);
+			GUILayout.BeginHorizontal();
+			GUILayout.FlexibleSpace();
+
+			GUI.enabled = SelectedWaypointIndex > 0;
+			if (GUILayout.Button("Move Up", GUILayout.Width(100), GUILayout.Height(30)))
+				MoveWaypoint(SelectedWaypointIndex, -1);
+
+			GUI.enabled = SelectedWaypointIndex >= 0 && SelectedWaypointIndex < waypoints.Length - 1;
+			if (GUILayout.Button("Move Down", GUILayout.Width(100), GUILayout.Height(30)))
+				MoveWaypoint(SelectedWaypointIndex, +1);
+
+			GUI.enabled = true;
+			GUILayout.FlexibleSpace();
+			GUILayout.EndHorizontal();
+
+			GUILayout.Space(4);
+			GUILayout.Label("Tip: Left-click map to add • Right-click waypoint to delete",
+				new GUIStyle(GUI.skin.label) { fontSize = 10, alignment = TextAnchor.MiddleCenter });
+			GUILayout.EndArea();
+		}
+
+		private void MoveWaypoint(int index, int direction)
+		{
+			var map = editorController.iMapManager.CurrentMap;
+			var list = map.waypoints.ToList();
+			var temp = list[index];
+			list[index] = list[index + direction];
+			list[index + direction] = temp;
+			map.waypoints = list.ToArray();
+			SelectedWaypointIndex += direction;
+			RebuildMarkers();
+		}
+
+		private void DrawAddPopup()
+		{
+			var sp = pendingPopupScreenPos;
+			sp.x -= 120;
+			sp.y -= 55;
+
+			if (PopupConfirm.Show(sp, new Vector2(240, 110), "Add waypoint here?",
+				$"WP{pendingWaypoint:00} at tile {pendingTile}",
+				yesText: "Add", noText: "Cancel", titleColor: Color.cyan,
+				onYes: () => AddWaypointAtTile(pendingTile)))
 			{
-				var wp = waypoints[pendingDeleteIndex];
-				var pos = editorController.iMapManager.TileWorldPosition(wp.tile) + Vector3.up * 0.8f;
+				pendingAction = PendingAction.None;
+			}
+		}
 
-				bool confirmed = PopupConfirm.WorldPositionPopup(
-					camera, pos,
-					new Vector2(-110, -50), new Vector2(220, 100),
-					"Delete waypoint?",
-					$"WP{pendingDeleteIndex:00} at tile {wp.tile}",
-					"Delete", "Cancel", Color.red,
-					() =>
-					{
-						DeleteWaypoint(pendingDeleteIndex);
-						pendingDeleteIndex = -1;
-					});
+		private void DrawDeletePopup()
+		{
+			var sp = pendingPopupScreenPos;
+			sp.x -= 120;
+			sp.y -= 55;
 
-				if (confirmed)
-					pendingDeleteIndex = -1;
-
-				if (camera.WorldToScreenPoint(pos).z <= 0)
-					pendingDeleteIndex = -1;
+			if (PopupConfirm.Show(sp, new Vector2(240, 110), "Delete waypoint?",
+				$"WP{pendingWaypoint:00} at tile {pendingTile}",
+				"Delete", "Cancel", Color.red,
+				() => DeleteWaypoint(pendingWaypoint)))
+			{
+				pendingAction = PendingAction.None;
 			}
 		}
 	}

@@ -289,79 +289,88 @@ namespace MassiveHadronLtd
 
 		public static class PopupConfirm
 		{
-			private static int activePopupId = -1;
+			private static readonly GUIStyle centeredStyle;
+			private static readonly GUIStyle titleStyle;
 
-			public static bool WorldPositionPopup(
-				Camera camera,
-				Vector3 worldPos,
-				Vector2 screenOffset,
+			static PopupConfirm()
+			{
+				centeredStyle = new GUIStyle(EditorStyles.label)
+				{
+					alignment = TextAnchor.MiddleCenter,
+					wordWrap = true,
+					fontSize = 12,
+					normal = { textColor = Color.white },
+					hover = { textColor = Color.white },
+					active = { textColor = Color.white },
+					focused = { textColor = Color.white }
+				};
+
+				titleStyle = new GUIStyle(EditorStyles.boldLabel)
+				{
+					alignment = TextAnchor.MiddleCenter,
+					fontSize = 16,
+					normal = { textColor = Color.white },
+					hover = { textColor = Color.white },
+					active = { textColor = Color.white },
+					focused = { textColor = Color.white },
+					margin = new RectOffset(0, 0, 6, 10)
+				};
+			}
+
+			public static bool Show(
+				Vector2 screenPos,
 				Vector2 size,
 				string title,
 				string message = null,
-				string confirmText = "Confirm",
-				string cancelText = "Cancel",
+				string yesText = "Yes",
+				string noText = "No",
 				Color? titleColor = null,
-				System.Action onConfirm = null)
+				System.Action onYes = null)
 			{
-				if (camera == null) return false;
-
-				Vector3 sp = camera.WorldToScreenPoint(worldPos);
-				if (sp.z <= 0) return false;
-
-				sp.y = Screen.height - sp.y;
-				var rect = new Rect(sp.x + screenOffset.x, sp.y + screenOffset.y, size.x, size.y);
-				int id = worldPos.GetHashCode() ^ title.GetHashCode();
-
-				// Only one popup at a time
-				if (activePopupId != -1 && activePopupId != id)
-					return false;
-
-				activePopupId = id;
-
-				GUI.Box(rect, "", GUI.skin.window);
-				GUILayout.BeginArea(rect);
-				GUILayout.BeginVertical();
-				GUILayout.Space(12);
-
-				Color prev = GUI.color;
-				GUI.color = titleColor ?? Color.white;
-				GUILayout.Label(title, EditorStyles.boldLabel);
-				GUI.color = prev;
-
-				if (!string.IsNullOrEmpty(message))
-					GUILayout.Label(message);
-
-				GUILayout.Space(10);
-				GUILayout.BeginHorizontal();
-				GUILayout.FlexibleSpace();
-
+				var rect = new Rect(screenPos.x, screenPos.y, size.x, size.y);
 				bool result = false;
 
-				if (GUILayout.Button(confirmText, GUILayout.Width(90)))
-				{
-					onConfirm?.Invoke();
-					result = true;
-					activePopupId = -1; // close immediately
-				}
+				// This is literally how Unity does all its popups
+				GUI.Box(rect, "", GUI.skin.window);
 
-				if (GUILayout.Button(cancelText, GUILayout.Width(90)))
+				GUILayout.BeginArea(rect);
 				{
-					result = true;
-					activePopupId = -1;
-				}
+					GUILayout.Space(12);
 
-				GUILayout.FlexibleSpace();
-				GUILayout.EndHorizontal();
-				GUILayout.Space(8);
-				GUILayout.EndVertical();
+					GUI.color = titleColor ?? new Color(0.3f, 0.9f, 1f);
+					GUILayout.Label(title, titleStyle);
+					GUI.color = Color.white;
+
+					if (!string.IsNullOrEmpty(message))
+						GUILayout.Label(message, centeredStyle);
+
+					GUILayout.FlexibleSpace();
+
+					GUILayout.BeginHorizontal();
+					GUILayout.FlexibleSpace();
+
+					GUI.backgroundColor = new Color(0.2f, 0.95f, 0.2f);
+					if (GUILayout.Button(yesText, GUILayout.Width(90), GUILayout.Height(30)))
+					{
+						onYes?.Invoke();
+						result = true;
+					}
+
+					GUILayout.Space(16);
+
+					GUI.backgroundColor = new Color(0.95f, 0.25f, 0.25f);
+					if (GUILayout.Button(noText, GUILayout.Width(90), GUILayout.Height(30)))
+						result = true;
+
+					GUI.backgroundColor = Color.white;
+					GUILayout.FlexibleSpace();
+					GUILayout.EndHorizontal();
+
+					GUILayout.Space(14);
+				}
 				GUILayout.EndArea();
 
 				return result;
-			}
-
-			public static void Dismiss()
-			{
-				activePopupId = -1;
 			}
 		}
 	}
