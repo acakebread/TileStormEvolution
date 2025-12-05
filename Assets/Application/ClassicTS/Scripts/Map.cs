@@ -204,17 +204,18 @@ namespace ClassicTilestorm
 			}
 
 			// Waypoints & attachments
-			void Remap(ref int idx)
+			int Remap(int idx)
 			{
-				if (idx < 0) return;
+				if (idx < 0) return idx;
 				int x = idx % oldWidth;
 				int z = idx / oldWidth;
 				int nx = x + offsetX;
 				int nz = z + offsetZ;
-				idx = (nx >= 0 && nx < newWidth && nz >= 0 && nz < newHeight) ? nz * newWidth + nx : -1;
+				return (nx >= 0 && nx < newWidth && nz >= 0 && nz < newHeight) ? nz * newWidth + nx : -1;
 			}
 
-			if (attachments != null) foreach (var a in attachments) Remap(ref a.tile);
+			if (waypoints != null) for (var n = 0; n < waypoints.Length; ++n) waypoints[n] = Remap(waypoints[n]);
+			if (attachments != null) foreach (var a in attachments) a.tile = Remap(a.tile);
 
 			// Apply
 			width = newWidth;
