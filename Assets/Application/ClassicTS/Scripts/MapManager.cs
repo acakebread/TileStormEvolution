@@ -30,7 +30,8 @@ namespace ClassicTilestorm
 		Vector3 SnappedMapPosition(Vector3 vec);
 
 		public int GetWaypoint(int index);
-		public Viewpoint GetViewpoint(int tile);
+		View GetView(int tile);
+		//Viewpoint GetViewpoint(int tile);
 	}
 
 	public class MapManager : MonoBehaviour, IMapManager
@@ -97,18 +98,31 @@ namespace ClassicTilestorm
 			BottomLeft, BottomCenter, BottomRight
 		}
 
-		public Viewpoint GetViewpoint(int tile)
+		public View GetView(int tile)
 		{
-			var attachments = currentMap?.attachments;
-			if (attachments == null || tile < 0 || tile >= currentMap.tiles.Length)
+			if (currentMap?.attachments == null || tile < 0 || tile >= currentMap.tiles.Length)
 				return null;
 
 			foreach (var att in currentMap.attachments)
 			{
-				if (att is Viewpoint vp && att.tile == tile) return vp;
+				if (att is View view && att.tile == tile)
+					return view;
 			}
 			return null;
 		}
+
+		//public Viewpoint GetViewpoint(int tile)
+		//{
+		//	var attachments = currentMap?.attachments;
+		//	if (attachments == null || tile < 0 || tile >= currentMap.tiles.Length)
+		//		return null;
+
+		//	foreach (var att in currentMap.attachments)
+		//	{
+		//		if (att is Viewpoint vp && att.tile == tile) return vp;
+		//	}
+		//	return null;
+		//}
 
 		public Tile GetTile(int index)
 		{
