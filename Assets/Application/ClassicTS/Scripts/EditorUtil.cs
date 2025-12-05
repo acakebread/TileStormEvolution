@@ -146,7 +146,7 @@ namespace ClassicTilestorm
 			}
 		}
 
-		public static void UpdateWaypointMarkers(IMapManager mapManager, Waypoint[] waypoints, int selectedIndex = -1)
+		public static void UpdateWaypointMarkers(IMapManager mapManager, int[] waypoints, int selectedIndex = -1)
 		{
 			// Destroy old
 			foreach (var m in waypointMarkers)
@@ -158,9 +158,10 @@ namespace ClassicTilestorm
 			for (int i = 0; i < waypoints.Length; i++)
 			{
 				var wp = waypoints[i];
-				if (wp.tile < 0 || wp.tile >= mapManager.Count) continue;
+				if (wp < 0 || wp >= mapManager.Count) continue;
 
-				var pos = mapManager.TileWorldPosition(wp.tile) + Vector3.up * 0.02f;
+				var vp = mapManager.GetViewpoint(wp);
+				var pos = mapManager.TileWorldPosition(wp) + Vector3.up * 0.02f;
 
 				var go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
 				go.name = $"WP{i}"; // Short name: WP0, WP1, etc. — perfect for hierarchy
@@ -182,7 +183,7 @@ namespace ClassicTilestorm
 					pulse.intensity = 2.1f;
 					pulse.speed = 3.2f;
 				}
-				else if (wp.IsCamera())
+				else if (null != vp)//has viewpoint
 				{
 					mr.material = MaterialUtils.CreateTransparentUnlitMaterial(new Color(0f, 1f, 1f, 0.5f));
 				}

@@ -1,7 +1,9 @@
-﻿// MapAttachment.cs
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
+using System.Collections.Generic;
+using System.Reflection;
+using System.Linq;
 
 namespace ClassicTilestorm
 {
@@ -15,6 +17,8 @@ namespace ClassicTilestorm
 
 		[JsonIgnore]
 		public virtual string TypeName => GetType().Name;
+
+		public MapAttachment ShallowClone() => (MapAttachment)MemberwiseClone();
 	}
 
 	public class MapAttachmentConverter : JsonConverter
@@ -34,10 +38,12 @@ namespace ClassicTilestorm
 			MapAttachment result = typeName switch
 			{
 				"Emitter" => new Emitter(),
+				"Viewpoint" => new Viewpoint(),
+				"Pickup" => new Pickup(),
 				_ => new Emitter()
 			};
 
-			// Remove our converter temporarily to prevent recursion during Populate
+			// Prevent recursion during Populate
 			var converters = serializer.Converters;
 			bool removed = converters.Remove(this);
 			try
@@ -46,7 +52,7 @@ namespace ClassicTilestorm
 			}
 			finally
 			{
-				if (removed) converters.Insert(0, this); // put it back
+				if (removed) converters.Insert(0, this);
 			}
 
 			return result;
@@ -54,17 +60,65 @@ namespace ClassicTilestorm
 
 		public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
 		{
-			// Temporarily remove ourselves from the converter list
+			if (value == null)
+			{
+				writer.WriteNull();
+				return;
+			}
+
+			var attachment = (MapAttachment)value;
+
+			writer.WriteStartObject();
+
+			writer.WritePropertyName("type");
+			writer.WriteValue(attachment.type ?? attachment.GetType().Name);
+
 			var converters = serializer.Converters;
 			bool removed = converters.Remove(this);
+
 			try
 			{
-				serializer.Serialize(writer, value);
+				// Collect all public instance fields from the type hierarchy
+				var type = value.GetType();
+				var fieldList = new List<(FieldInfo field, int order)>();
+
+				while (type != null)
+				{
+					foreach (var field in type.GetFields(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly))
+					{
+						var jp = field.GetCustomAttribute<JsonPropertyAttribute>();
+						int ord = jp != null ? jp.Order : int.MaxValue;
+						fieldList.Add((field, ord));
+					}
+					type = type.BaseType;
+				}
+
+				// Sort by JsonProperty Order, then by name
+				fieldList = fieldList.OrderBy(x => x.order).ThenBy(x => x.field.Name).ToList();
+
+				foreach (var (field, _) in fieldList)
+				{
+					if (Attribute.IsDefined(field, typeof(JsonIgnoreAttribute))) continue;
+					if (field.Name == nameof(MapAttachment.type)) continue; // already written
+
+					var fieldValue = field.GetValue(value);
+					if (fieldValue == null && serializer.NullValueHandling == NullValueHandling.Ignore)
+						continue;
+
+					var jsonProp = field.GetCustomAttribute<JsonPropertyAttribute>();
+					string propertyName = jsonProp?.PropertyName ?? field.Name;
+
+					writer.WritePropertyName(propertyName);
+					serializer.Serialize(writer, fieldValue);
+				}
 			}
 			finally
 			{
-				if (removed) converters.Insert(0, this);
+				if (removed)
+					converters.Insert(0, this);
 			}
+
+			writer.WriteEndObject();
 		}
 	}
 }

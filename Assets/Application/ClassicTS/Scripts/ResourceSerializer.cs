@@ -4,6 +4,8 @@ using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
+using System.Reflection;
+using System;
 
 namespace ClassicTilestorm
 {
@@ -16,15 +18,38 @@ namespace ClassicTilestorm
 		{
 			if (_initialized) return;
 
-			// Create settings once
-			var settings = new JsonSerializerSettings();
-			settings.Converters.Add(new MapAttachmentConverter());
+			var settings = new JsonSerializerSettings
+			{
+				Converters = { new MapAttachmentConverter() },
+				NullValueHandling = NullValueHandling.Ignore,
+				// This works on ALL versions of Json.NET
+				ContractResolver = new UnityContractResolver()
+			};
 
-			// Apply to ALL future JsonConvert calls
 			JsonConvert.DefaultSettings = () => settings;
-
 			_initialized = true;
-			Debug.Log("MapAttachmentConverter registered globally (Unity-compatible)");
+			Debug.Log("Json.NET configured to serialize public fields (Unity-compatible)");
+		}
+	}
+
+	public class UnityContractResolver : DefaultContractResolver
+	{
+		protected override JsonProperty CreateProperty(MemberInfo member, MemberSerialization memberSerialization)
+		{
+			var property = base.CreateProperty(member, memberSerialization);
+
+			// Force serialization of public fields (vSrc, vDst, pickupType, etc.)
+			if (member is FieldInfo field)
+			{
+				if (field.IsPublic && !Attribute.IsDefined(field, typeof(JsonIgnoreAttribute)))
+				{
+					property.Ignored = false;
+					property.Readable = true;
+					property.Writable = true;
+				}
+			}
+
+			return property;
 		}
 	}
 
@@ -233,7 +258,7 @@ namespace ClassicTilestorm
 			}
 		}
 
-		private class AtomicExportResolver : DefaultContractResolver
+		private class AtomicExportResolver : UnityContractResolver
 		{
 			protected override JsonProperty CreateProperty(System.Reflection.MemberInfo member, MemberSerialization memberSerialization)
 			{

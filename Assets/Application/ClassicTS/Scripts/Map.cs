@@ -16,7 +16,7 @@ namespace ClassicTilestorm
 		public int width;
 		public int height;
 
-		public Waypoint[] waypoints;
+		public int[] waypoints;
 		public string[] table;
 		public int[] tiles;
 		public int[] solve;
@@ -211,12 +211,9 @@ namespace ClassicTilestorm
 				int z = idx / oldWidth;
 				int nx = x + offsetX;
 				int nz = z + offsetZ;
-				idx = (nx >= 0 && nx < newWidth && nz >= 0 && nz < newHeight)
-					? nz * newWidth + nx
-					: -1;
+				idx = (nx >= 0 && nx < newWidth && nz >= 0 && nz < newHeight) ? nz * newWidth + nx : -1;
 			}
 
-			if (waypoints != null) foreach (var wp in waypoints) Remap(ref wp.tile);
 			if (attachments != null) foreach (var a in attachments) Remap(ref a.tile);
 
 			// Apply
@@ -228,7 +225,6 @@ namespace ClassicTilestorm
 			return true;
 		}
 
-		// NOW CropToContent IS PERFECT — ONE LINE OF LOGIC
 		public bool CropToContent()
 		{
 			var (minX, minZ, maxX, maxZ) = GetContentBounds();
@@ -284,10 +280,25 @@ namespace ClassicTilestorm
 		/// </summary>
 		public Map CreateCroppedCopy()
 		{
-			// Clone the map first (deep enough for our needs)
-			var copy = JsonConvert.DeserializeObject<Map>(JsonConvert.SerializeObject(this));
+			var copy = new Map
+			{
+				name = name,
+				character = character,
+				music = music,
+				button = button,
+				width = width,
+				height = height,
 
-			// Now safely crop the copy
+				// These are the ONLY fields CropToContent() and RepositionAndResize() mutate:
+				waypoints = waypoints != null ? (int[])waypoints.Clone() : null,
+				tiles = tiles != null ? (int[])tiles.Clone() : null,
+				solve = solve != null ? (int[])solve.Clone() : null,
+				table = table != null ? (string[])table.Clone() : null,
+
+				// attachments: we need real copies because Remap(ref a.tile) modifies them
+				attachments = null != attachments ? attachments.Select(a => a.ShallowClone()).ToArray() : Array.Empty<MapAttachment>()
+			};
+
 			bool cropped = copy.CropToContent();
 
 			if (cropped)

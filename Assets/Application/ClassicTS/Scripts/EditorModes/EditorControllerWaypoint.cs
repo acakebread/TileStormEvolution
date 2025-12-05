@@ -1,9 +1,8 @@
-﻿using MassiveHadronLtd;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Linq;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using System.Collections.Generic;
 using static MassiveHadronLtd.GuiUtils;
 
 namespace ClassicTilestorm
@@ -70,7 +69,7 @@ namespace ClassicTilestorm
 
 			EditorUtil.UpdateWaypointMarkers(
 				editorController.iMapManager,
-				map.waypoints ?? System.Array.Empty<Waypoint>(),
+				editorController.iMapManager.Waypoints,
 				SelectedWaypointIndex
 			);
 		}
@@ -86,10 +85,9 @@ namespace ClassicTilestorm
 			var map = editorController?.iMapManager?.CurrentMap;
 			if (map == null) return;
 
-			var wp = new Waypoint { name = $"Waypoint {map.waypoints?.Length ?? 0}", tile = tile };
-			var list = map.waypoints?.ToList() ?? new List<Waypoint>();
-			list.Add(wp);
-			map.waypoints = list.ToArray();
+			var list = editorController.iMapManager.Waypoints?.ToList() ?? new List<int>();
+			list.Add(tile);
+			editorController.iMapManager.Waypoints = list.ToArray();
 
 			SelectedWaypointIndex = list.Count - 1;
 			RebuildMarkers();
@@ -143,7 +141,7 @@ namespace ClassicTilestorm
 						// Revert if dropped outside map
 						var map = editorController.iMapManager.CurrentMap;
 						if (map?.waypoints != null && draggingIndex < map.waypoints.Length)
-							map.waypoints[draggingIndex].tile = originalTile;
+							editorController.iMapManager.Waypoints[draggingIndex] = originalTile;// map.waypoints[draggingIndex].tile = originalTile;
 						RebuildMarkers();
 					}
 					draggingIndex = -1;
@@ -174,7 +172,7 @@ namespace ClassicTilestorm
 					var map = editorController.iMapManager.CurrentMap;
 					if (map?.waypoints != null && potentialWaypointHit < map.waypoints.Length)
 					{
-						pendingTile = map.waypoints[potentialWaypointHit].tile;
+						pendingTile = editorController.iMapManager.Waypoints[potentialWaypointHit];
 						pendingWaypoint = potentialWaypointHit;
 						pendingAction = PendingAction.Delete;
 
@@ -192,8 +190,11 @@ namespace ClassicTilestorm
 				var map = editorController.iMapManager.CurrentMap;
 				if (map?.waypoints != null && draggingIndex < map.waypoints.Length)
 				{
-					map.waypoints[draggingIndex].tile = tileUnderMouse;
-					RebuildMarkers();
+					if (map.waypoints[draggingIndex] != tileUnderMouse)
+					{
+						map.waypoints[draggingIndex] = tileUnderMouse;
+						RebuildMarkers();
+					}
 				}
 			}
 
@@ -202,7 +203,7 @@ namespace ClassicTilestorm
 			{
 				SelectWaypoint(potentialWaypointHit);
 				draggingIndex = potentialWaypointHit;
-				originalTile = editorController.iMapManager.CurrentMap.waypoints[potentialWaypointHit].tile;
+				originalTile = editorController.iMapManager.Waypoints[potentialWaypointHit];
 				pendingAction = PendingAction.None; // cancel any pending add
 			}
 		}
@@ -222,7 +223,7 @@ namespace ClassicTilestorm
 
 			var map = editorController?.iMapManager?.CurrentMap;
 			if (map == null) return;
-			Waypoint[] waypoints = map.waypoints ?? System.Array.Empty<Waypoint>();
+			int[] waypoints = editorController?.iMapManager.Waypoints ?? System.Array.Empty<int>();
 
 			sidePanel.Update();
 			Rect panel = sidePanel.GetRect(20f, 20f);
@@ -256,13 +257,13 @@ namespace ClassicTilestorm
 				DrawDeletePopup();
 		}
 
-		private void DrawWaypointList(Waypoint[] waypoints, float panelHeight)
+		private void DrawWaypointList(int[] waypoints, float panelHeight)
 		{
 			const float reservedBottom = 110f;
 			const float topOffset = 25f;
 			float scrollHeight = Mathf.Max(0f, panelHeight - reservedBottom);
 
-			Rect scrollRect = new Rect(0f, topOffset, Screen.width, scrollHeight); // width doesn't matter, we clamp
+			Rect scrollRect = new Rect(0f, topOffset, Screen.width, scrollHeight);
 			Rect contentRect = new Rect(0f, 0f, 320f, waypoints.Length * 40f);
 
 			scrollPos = GUI.BeginScrollView(scrollRect, scrollPos, contentRect, false, true);
@@ -271,8 +272,10 @@ namespace ClassicTilestorm
 			for (int i = 0; i < waypoints.Length; i++)
 			{
 				var wp = waypoints[i];
-				string cam = wp.IsCamera() ? " [Cam]" : "";
-				string label = $"WP{i:00}{cam} [{wp.tile}]";
+				var vp = null != editorController ? editorController.iMapManager.GetViewpoint(wp) : null;
+
+				string cam = null != vp ? " [Cam]" : "";// wp.IsCamera() ? " [Cam]" : "";
+				string label = $"WP{i:00}{cam} [{wp}]";
 
 				GUI.backgroundColor = (i == SelectedWaypointIndex) ? new Color(0.3f, 0.8f, 1f, 0.9f) : Color.white;
 				if (GUI.Button(new Rect(4f, y, contentRect.width - 20f, 36f), label))

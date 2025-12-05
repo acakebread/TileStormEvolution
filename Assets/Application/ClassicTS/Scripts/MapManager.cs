@@ -22,12 +22,15 @@ namespace ClassicTilestorm
 		int GetStartTile();
 		int GetEndTile();
 		int FindAdjacentConsole(int nTile);
-		Waypoint[] Waypoints { get; }
+		int[] Waypoints { set; get; }
 		Map CurrentMap { get; }
 		Transform CurrentTransform { get; }
 		string GetDefinitionAtIndex(int mapIndex);
 		bool UpdateTileAt(int x, int z, string id, bool expand = true, Action<bool, Vector3> onEdited = null);
 		Vector3 SnappedMapPosition(Vector3 vec);
+
+		public int GetWaypoint(int index);
+		public Viewpoint GetViewpoint(int tile);
 	}
 
 	public class MapManager : MonoBehaviour, IMapManager
@@ -65,7 +68,15 @@ namespace ClassicTilestorm
 
 		public int[] Indices => indices;
 
-		public Waypoint[] Waypoints => currentMap?.waypoints ?? Array.Empty<Waypoint>();
+		public int[] Waypoints { get => currentMap?.waypoints; set { if (null != currentMap) currentMap.waypoints = value; } }
+
+		public void SetWaypointTiles(int[] tiles)//new placeholder method
+		{
+			if (currentMap != null)
+				currentMap.waypoints = tiles ?? Array.Empty<int>();
+		}
+
+		public int GetWaypoint(int index) => (index >= 0 && null != currentMap?.waypoints) ? index < currentMap.waypoints.Length ? currentMap.waypoints[index] : -1 : -1;
 
 #if UNITY_EDITOR
 		public static readonly Vector3 tile_origin = new(0.5f, 0f, 0.5f);
@@ -84,6 +95,19 @@ namespace ClassicTilestorm
 			TopLeft, TopCenter, TopRight,
 			MiddleLeft, Center, MiddleRight,
 			BottomLeft, BottomCenter, BottomRight
+		}
+
+		public Viewpoint GetViewpoint(int tile)
+		{
+			var attachments = currentMap?.attachments;
+			if (attachments == null || tile < 0 || tile >= currentMap.tiles.Length)
+				return null;
+
+			foreach (var att in currentMap.attachments)
+			{
+				if (att is Viewpoint vp && att.tile == tile) return vp;
+			}
+			return null;
 		}
 
 		public Tile GetTile(int index)
@@ -167,7 +191,7 @@ namespace ClassicTilestorm
 
 		public int GetStartTile()
 		{
-			if (Waypoints.Length > 0) return Waypoints[0].tile;
+			if (Waypoints.Length > 0) return Waypoints[0];
 
 			for (int i = 0; i < Count; ++i)
 				if (GetTile(i).IsStart) return i;
@@ -178,7 +202,7 @@ namespace ClassicTilestorm
 
 		public int GetEndTile()
 		{
-			if (Waypoints.Length > 0) return Waypoints.Last().tile;
+			if (Waypoints.Length > 0) return Waypoints.Last();
 
 			for (int i = 0; i < Count; ++i)
 				if (GetTile(i).IsEnd) return i;
@@ -258,17 +282,17 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			var generated = new List<Waypoint>();
+			var generated = new List<int>();
 			int start = GetStartTile();
 			int end = GetEndTile();
 
 			if (start == -1 || end == -1)
 			{
-				currentMap.waypoints = generated.ToArray();
+				Waypoints = generated.ToArray();
 				return;
 			}
 
-			generated.Add(new Waypoint { tile = start });
+			generated.Add(start);
 
 			int cur = start;
 			int dir = Navigation.NavToDest(this, cur, end);
@@ -277,7 +301,7 @@ namespace ClassicTilestorm
 				while (cur != end)
 				{
 					if (FindAdjacentConsole(cur) != -1)
-						generated.Add(new Waypoint { tile = cur });
+						generated.Add(cur);
 
 					int next = Navigation.GetAdjacentTile(this, cur, dir);
 					if (next == -1 || next == start) break;
@@ -292,8 +316,10 @@ namespace ClassicTilestorm
 				}
 			}
 
-			generated.Add(new Waypoint { tile = end });
-			currentMap.waypoints = generated.ToArray();
+			generated.Add(end);
+
+			Waypoints = generated.ToArray();
+
 			Debug.Log($"Generated {currentMap.waypoints.Length} waypoints.");
 		}
 
@@ -464,7 +490,6 @@ namespace ClassicTilestorm
 
 			currentMap.Consolidate();
 
-			// Success!
 			onEdited?.Invoke(boundsChanged, originDelta);
 			return true;
 		}
