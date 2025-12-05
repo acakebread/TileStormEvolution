@@ -282,12 +282,44 @@ namespace ClassicTilestorm
 		/// Returns a cropped copy of this map for serialization/export only.
 		/// Original map is untouched. Used automatically during export.
 		/// </summary>
+		//public Map CreateCroppedCopy()
+		//{
+		//	// Clone the map first (deep enough for our needs)
+		//	var copy = JsonConvert.DeserializeObject<Map>(JsonConvert.SerializeObject(this));
+
+		//	// Now safely crop the copy
+		//	bool cropped = copy.CropToContent();
+
+		//	if (cropped)
+		//		Debug.Log($"[Export] Map '{copy.name}' auto-cropped to {copy.width}x{copy.height}");
+
+		//	return copy;
+		//}
+
 		public Map CreateCroppedCopy()
 		{
-			// Clone the map first (deep enough for our needs)
-			var copy = JsonConvert.DeserializeObject<Map>(JsonConvert.SerializeObject(this));
+			// Manual, fast clone — only what CropToContent() actually touches
+			var copy = new Map
+			{
+				name = name,
+				character = character,
+				music = music,
+				button = button,
+				width = width,
+				height = height,
 
-			// Now safely crop the copy
+				// These are the ONLY fields CropToContent() and RepositionAndResize() mutate:
+				waypoints = waypoints != null ? (int[])waypoints.Clone() : null,
+				tiles = tiles != null ? (int[])tiles.Clone() : null,
+				solve = solve != null ? (int[])solve.Clone() : null,
+				table = table != null ? (string[])table.Clone() : null,
+
+				// attachments: we need real copies because Remap(ref a.tile) modifies them
+				attachments = attachments != null
+					? attachments.Select(a => a.ShallowClone()).ToArray()
+					: Array.Empty<MapAttachment>()
+			};
+
 			bool cropped = copy.CropToContent();
 
 			if (cropped)

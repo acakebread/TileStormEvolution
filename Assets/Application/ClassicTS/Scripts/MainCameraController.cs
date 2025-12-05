@@ -97,7 +97,7 @@ namespace ClassicTilestorm
 
 			if (mapManager.Waypoints?.Length > 0 && mapManager.Waypoints[0].IsCamera())
 			{
-				var firstWaypoint = mapManager.Waypoints[0];
+				var firstWaypoint = mapManager.GetWaypoint(0); //mapManager.Waypoints[0];
 				var tilePos = mapManager.TileWorldPosition(firstWaypoint.tile);
 				srcPos = firstWaypoint.VSrc + tilePos;
 				dstPos = firstWaypoint.VDst + tilePos;
@@ -175,7 +175,7 @@ namespace ClassicTilestorm
 			if (waypointIndex == 0 || waypointIndex == mapManager.Waypoints.Length - 1)
 				return;
 
-			var waypoint = mapManager.Waypoints[waypointIndex];
+			var waypoint = mapManager.GetWaypoint(waypointIndex); //mapManager.Waypoints[waypointIndex];
 
 			if (!waypoint.IsCamera())
 			{
