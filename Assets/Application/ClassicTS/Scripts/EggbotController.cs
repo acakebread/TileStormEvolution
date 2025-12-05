@@ -31,7 +31,8 @@ namespace ClassicTilestorm
 		public event System.Action<int> OnPuzzleSolved;
 		public event System.Action OnLevelCompleted;
 
-		public int NavDirection(IMapManager map) => Navigation.NavToDest(map, currentTile, map.GetWaypoint(dstWaypoint).tile);
+		//public int NavDirection(IMapManager map) => Navigation.NavToDest(map, currentTile, map.GetWaypoint(dstWaypoint).tile);
+		public int NavDirection(IMapManager map) => Navigation.NavToDest(map, currentTile, map.GetWaypointIndex(dstWaypoint));
 
 		private void Awake()
 		{
@@ -48,7 +49,8 @@ namespace ClassicTilestorm
 			if (null == map || -1 == currentTile) { Debug.LogError("Initialize: Invalid setup"); return; }
 
 			transform.position = targetPosition = map.TileWorldPosition(currentTile);
-			var yaw = map.Waypoints?.Length > 1 ? Navigation.DirToAngle(Navigation.NavToDest(map, map.Waypoints[0].tile, map.Waypoints[1].tile)) : 0f;
+			//var yaw = map.Waypoints?.Length > 1 ? Navigation.DirToAngle(Navigation.NavToDest(map, map.Waypoints[0].tile, map.Waypoints[1].tile)) : 0f;
+			var yaw = map.WaypointIndices?.Length > 1 ? Navigation.DirToAngle(Navigation.NavToDest(map, map.WaypointIndices[0], map.WaypointIndices[1])) : 0f;
 			transform.rotation = Quaternion.Euler(0f, yaw, 0f);
 		}
 
@@ -82,7 +84,8 @@ namespace ClassicTilestorm
 			{
 				if (actionQueue.Count > 0) { actionQueue.Dequeue()?.Invoke(); return; }
 
-				var destinationTile = map.GetWaypoint(dstWaypoint).tile;
+				//var destinationTile = map.GetWaypoint(dstWaypoint).tile;
+				var destinationTile = map.GetWaypointIndex(dstWaypoint);
 				if (TestSpin(destinationTile)) return;
 				if (TestMove(destinationTile)) return;
 				if (TestTurn(destinationTile)) return;
@@ -93,7 +96,8 @@ namespace ClassicTilestorm
 					if (null == map) return false;
 					if (currentTile != destinationTile || (destinationTile != map.GetEndTile() && destinationTile != map.GetStartTile())) return false;
 					if (destinationTile == map.GetEndTile()) { OnLevelCompleted?.Invoke(); }
-					dstWaypoint = (dstWaypoint + 1) % map.Waypoints.Length;
+					//dstWaypoint = (dstWaypoint + 1) % map.Waypoints.Length;
+					dstWaypoint = (dstWaypoint + 1) % map.WaypointIndices.Length;
 					startYaw = transform.eulerAngles.y;
 					targetYaw = transform.eulerAngles.y + SpinAngle;
 					actionQueue.Enqueue(() => SetState(State.TURN, 1.5f));
@@ -107,7 +111,8 @@ namespace ClassicTilestorm
 					if (currentTile == destinationTile)
 					{
 						OnWaypointReached?.Invoke(dstWaypoint);
-						dstWaypoint = (dstWaypoint + 1) % map.Waypoints.Length;
+						//dstWaypoint = (dstWaypoint + 1) % map.Waypoints.Length;
+						dstWaypoint = (dstWaypoint + 1) % map.WaypointIndices.Length;
 						return false;
 					}
 

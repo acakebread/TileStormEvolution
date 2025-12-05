@@ -95,9 +95,11 @@ namespace ClassicTilestorm
 			var dstPos = new Vector3(mapManager.Width * 0.5f, 0f, mapManager.Height * 0.5f);
 			var srcPos = dstPos + new Vector3(0f, 14f, -14f);
 
-			if (mapManager.Waypoints?.Length > 0)
+			//if (mapManager.Waypoints?.Length > 0)
+			if (mapManager.WaypointIndices.Length > 0)
 			{
-				var tile = mapManager.GetWaypoint(0).tile;
+				//var tile = mapManager.GetWaypoint(0).tile;
+				var tile = mapManager.GetWaypointIndex(0);
 				var vp = mapManager.GetViewpoint(tile);
 				if (null != vp)
 				{
@@ -127,7 +129,8 @@ namespace ClassicTilestorm
 
 			Func<IReadOnlyList<Vector3>> focusFunc = () =>
 			{
-				var waypoints = mapManager.Waypoints.Select(w => mapManager.TileWorldPosition(w.tile)).ToList();
+				//var waypoints = mapManager.Waypoints.Select(w => mapManager.TileWorldPosition(w.tile)).ToList();
+				var waypoints = mapManager.WaypointIndices.Select(w => mapManager.TileWorldPosition(w)).ToList();
 				spatialSystem.SetPoints(waypoints);
 
 				focusFunc = () =>
@@ -182,10 +185,12 @@ namespace ClassicTilestorm
 
 		private void OnWaypointReached(int waypointIndex)
 		{
-			if (eggbotController == null || mapManager == null || waypointIndex < 0 || waypointIndex >= mapManager.Waypoints.Length)
+			//if (eggbotController == null || mapManager == null || waypointIndex < 0 || waypointIndex >= mapManager.Waypoints.Length)
+			if (eggbotController == null || mapManager == null || waypointIndex < 0 || waypointIndex >= mapManager.WaypointIndices.Length)
 				return;
 
-			if (waypointIndex == 0 || waypointIndex == mapManager.Waypoints.Length - 1)
+			//if (waypointIndex == 0 || waypointIndex == mapManager.Waypoints.Length - 1)
+			if (waypointIndex == 0 || waypointIndex == mapManager.WaypointIndices.Length - 1)
 				return;
 
 			//var waypoint = mapManager.GetWaypoint(waypointIndex);
@@ -200,7 +205,8 @@ namespace ClassicTilestorm
 			//presetCam.originFn = () => waypoint.VSrc + tilePos;
 			//presetCam.targetFn = () => waypoint.VDst + tilePos;
 
-			var tile = mapManager.GetWaypoint(waypointIndex).tile;
+			//var tile = mapManager.GetWaypoint(waypointIndex).tile;
+			var tile = mapManager.GetWaypointIndex(waypointIndex);
 			var vp = mapManager.GetViewpoint(tile);
 			if (null == vp)
 			{

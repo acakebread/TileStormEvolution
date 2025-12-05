@@ -146,7 +146,61 @@ namespace ClassicTilestorm
 			}
 		}
 
-		public static void UpdateWaypointMarkers(IMapManager mapManager, Waypoint[] waypoints, int selectedIndex = -1)
+		//public static void UpdateWaypointMarkers(IMapManager mapManager, Waypoint[] waypoints, int selectedIndex = -1)
+		//{
+		//	// Destroy old
+		//	foreach (var m in waypointMarkers)
+		//		if (m) Object.DestroyImmediate(m);
+		//	waypointMarkers.Clear();
+
+		//	if (waypoints == null || waypoints.Length == 0) return;
+
+		//	for (int i = 0; i < waypoints.Length; i++)
+		//	{
+		//		var wp = waypoints[i];
+		//		if (wp.tile < 0 || wp.tile >= mapManager.Count) continue;
+
+		//		var vp = mapManager.GetViewpoint(wp.tile);
+		//		var pos = mapManager.TileWorldPosition(wp.tile) + Vector3.up * 0.02f;
+
+		//		var go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+		//		go.name = $"WP{i}"; // Short name: WP0, WP1, etc. — perfect for hierarchy
+
+		//		// Keep collider for clicking, make it trigger so it doesn't block anything
+		//		var col = go.GetComponent<Collider>();
+		//		if (col) col.isTrigger = true;
+
+		//		go.transform.position = pos;
+		//		go.transform.localScale = new Vector3(0.8f, 0.01f, 0.8f);
+
+		//		var mr = go.GetComponent<MeshRenderer>();
+
+		//		if (i == selectedIndex)
+		//		{
+		//			// Selected = bright green + pulsing
+		//			mr.material = MaterialUtils.CreateTransparentUnlitMaterial(new Color(0f, 1f, 0f, 0.7f));
+		//			var pulse = go.AddComponent<WaypointPulse>();
+		//			pulse.intensity = 2.1f;
+		//			pulse.speed = 3.2f;
+		//		}
+		//		//else if (wp.IsCamera())
+		//		//{
+		//		//	mr.material = MaterialUtils.CreateTransparentUnlitMaterial(new Color(0f, 1f, 1f, 0.5f));
+		//		//}
+		//		else if (null != vp)//has viewpoint
+		//		{
+		//			mr.material = MaterialUtils.CreateTransparentUnlitMaterial(new Color(0f, 1f, 1f, 0.5f));
+		//		}
+		//		else
+		//		{
+		//			mr.material = MaterialUtils.CreateTransparentUnlitMaterial(new Color(0f, 0.7f, 1f, 0.7f));
+		//		}
+
+		//		waypointMarkers.Add(go);
+		//	}
+		//}
+
+		public static void UpdateWaypointMarkers(IMapManager mapManager, int[] waypoints, int selectedIndex = -1)
 		{
 			// Destroy old
 			foreach (var m in waypointMarkers)
@@ -158,10 +212,10 @@ namespace ClassicTilestorm
 			for (int i = 0; i < waypoints.Length; i++)
 			{
 				var wp = waypoints[i];
-				if (wp.tile < 0 || wp.tile >= mapManager.Count) continue;
+				if (wp < 0 || wp >= mapManager.Count) continue;
 
-				var vp = mapManager.GetViewpoint(wp.tile);
-				var pos = mapManager.TileWorldPosition(wp.tile) + Vector3.up * 0.02f;
+				var vp = mapManager.GetViewpoint(wp);
+				var pos = mapManager.TileWorldPosition(wp) + Vector3.up * 0.02f;
 
 				var go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
 				go.name = $"WP{i}"; // Short name: WP0, WP1, etc. — perfect for hierarchy
@@ -183,10 +237,6 @@ namespace ClassicTilestorm
 					pulse.intensity = 2.1f;
 					pulse.speed = 3.2f;
 				}
-				//else if (wp.IsCamera())
-				//{
-				//	mr.material = MaterialUtils.CreateTransparentUnlitMaterial(new Color(0f, 1f, 1f, 0.5f));
-				//}
 				else if (null != vp)//has viewpoint
 				{
 					mr.material = MaterialUtils.CreateTransparentUnlitMaterial(new Color(0f, 1f, 1f, 0.5f));
