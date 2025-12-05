@@ -85,7 +85,8 @@ namespace ClassicTilestorm
 			var map = editorController?.iMapManager?.CurrentMap;
 			if (map == null) return;
 
-			var wp = new Waypoint { name = $"Waypoint {map.waypoints?.Length ?? 0}", tile = tile };
+			//var wp = new Waypoint { name = $"Waypoint {map.waypoints?.Length ?? 0}", tile = tile };
+			var wp = new Waypoint { tile = tile };
 			var list = editorController.iMapManager.Waypoints?.ToList() ?? new List<Waypoint>();
 			list.Add(wp);
 			editorController.iMapManager.SetWaypointTiles(list.Select(wp => wp.tile).ToArray());
@@ -273,7 +274,9 @@ namespace ClassicTilestorm
 			for (int i = 0; i < waypoints.Length; i++)
 			{
 				var wp = waypoints[i];
-				string cam = wp.IsCamera() ? " [Cam]" : "";
+				var vp = null != editorController ? editorController.iMapManager.GetViewpoint(wp.tile) : null;
+
+				string cam = null != vp ? " [Cam]" : "";// wp.IsCamera() ? " [Cam]" : "";
 				string label = $"WP{i:00}{cam} [{wp.tile}]";
 
 				GUI.backgroundColor = (i == SelectedWaypointIndex) ? new Color(0.3f, 0.8f, 1f, 0.9f) : Color.white;

@@ -160,6 +160,7 @@ namespace ClassicTilestorm
 				var wp = waypoints[i];
 				if (wp.tile < 0 || wp.tile >= mapManager.Count) continue;
 
+				var vp = mapManager.GetViewpoint(wp.tile);
 				var pos = mapManager.TileWorldPosition(wp.tile) + Vector3.up * 0.02f;
 
 				var go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
@@ -182,7 +183,11 @@ namespace ClassicTilestorm
 					pulse.intensity = 2.1f;
 					pulse.speed = 3.2f;
 				}
-				else if (wp.IsCamera())
+				//else if (wp.IsCamera())
+				//{
+				//	mr.material = MaterialUtils.CreateTransparentUnlitMaterial(new Color(0f, 1f, 1f, 0.5f));
+				//}
+				else if (null != vp)//has viewpoint
 				{
 					mr.material = MaterialUtils.CreateTransparentUnlitMaterial(new Color(0f, 1f, 1f, 0.5f));
 				}

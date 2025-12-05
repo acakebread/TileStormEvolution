@@ -31,7 +31,7 @@ namespace ClassicTilestorm
 		public event System.Action<int> OnPuzzleSolved;
 		public event System.Action OnLevelCompleted;
 
-		public int NavDirection(IMapManager map) => Navigation.NavToDest(map, currentTile, map.Waypoints[dstWaypoint].tile);
+		public int NavDirection(IMapManager map) => Navigation.NavToDest(map, currentTile, map.GetWaypoint(dstWaypoint).tile);
 
 		private void Awake()
 		{
@@ -82,7 +82,7 @@ namespace ClassicTilestorm
 			{
 				if (actionQueue.Count > 0) { actionQueue.Dequeue()?.Invoke(); return; }
 
-				var destinationTile = map.Waypoints[dstWaypoint].tile;
+				var destinationTile = map.GetWaypoint(dstWaypoint).tile;
 				if (TestSpin(destinationTile)) return;
 				if (TestMove(destinationTile)) return;
 				if (TestTurn(destinationTile)) return;

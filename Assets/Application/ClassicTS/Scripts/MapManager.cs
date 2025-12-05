@@ -30,7 +30,9 @@ namespace ClassicTilestorm
 		Vector3 SnappedMapPosition(Vector3 vec);
 
 		public void SetWaypointTiles(int[] tiles);//placeholder method
+		public Waypoint GetWaypoint(int index);
 		public void SetWaypoint(int index, int tile);
+		public Viewpoint GetViewpoint(int tile);
 	}
 
 	public class MapManager : MonoBehaviour, IMapManager
@@ -100,31 +102,31 @@ namespace ClassicTilestorm
 		{
 			var tiles = currentMap?.waypoints;
 			if (tiles == null || index < 0 || index >= tiles.Length)
-				return new Waypoint { name = $"Invalid_{index}", tile = -1 };
+				return new Waypoint { tile = -1 };//return new Waypoint { name = $"Invalid_{index}", tile = -1 };
 
 			int tile = tiles[index];
 
 			var wp = new Waypoint
 			{
-				name = $"WP{index:00}",
+				//name = $"WP{index:00}",
 				tile = tile
 			};
 
-			// Look for a matching Viewpoint attachment
-			if (currentMap?.attachments != null && currentMap.attachments.Length > 0)
-		    {
-				foreach (var att in currentMap.attachments)
-				{
-					if (att is Viewpoint vp && vp.tile == tile)
-					{
-						if (!string.IsNullOrEmpty(vp.name))
-							wp.name = vp.name;
-						wp.vSrc = vp.vSrc;
-						wp.vDst = vp.vDst;
-						break; // first match wins
-					}
-				}
-			}
+			//// Look for a matching Viewpoint attachment
+			//if (currentMap?.attachments != null && currentMap.attachments.Length > 0)
+		 //   {
+			//	foreach (var att in currentMap.attachments)
+			//	{
+			//		if (att is Viewpoint vp && vp.tile == tile)
+			//		{
+			//			if (!string.IsNullOrEmpty(vp.name))
+			//				wp.name = vp.name;
+			//			//wp.vSrc = vp.vSrc;
+			//			//wp.vDst = vp.vDst;
+			//			break; // first match wins
+			//		}
+			//	}
+			//}
 
 			return wp;
 		}
@@ -157,6 +159,19 @@ namespace ClassicTilestorm
 			TopLeft, TopCenter, TopRight,
 			MiddleLeft, Center, MiddleRight,
 			BottomLeft, BottomCenter, BottomRight
+		}
+
+		public Viewpoint GetViewpoint(int tile)
+		{
+			var attachments = currentMap?.attachments;
+			if (attachments == null || tile < 0 || tile >= currentMap.tiles.Length)
+				return null;
+
+			foreach (var att in currentMap.attachments)
+			{
+				if (att is Viewpoint vp && att.tile == tile) return vp;
+			}
+			return null;
 		}
 
 		public Tile GetTile(int index)
