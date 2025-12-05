@@ -274,7 +274,7 @@ namespace ClassicTilestorm
 				var wp = waypoints[i];
 				var vp = null != editorController ? editorController.iMapManager.GetViewpoint(wp) : null;
 
-				string cam = null != vp ? " [Cam]" : "";// wp.IsCamera() ? " [Cam]" : "";
+				string cam = null != vp ? " [Cam]" : "";
 				string label = $"WP{i:00}{cam} [{wp}]";
 
 				GUI.backgroundColor = (i == SelectedWaypointIndex) ? new Color(0.3f, 0.8f, 1f, 0.9f) : Color.white;
