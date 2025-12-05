@@ -211,7 +211,7 @@ namespace ClassicTilestorm
 							editorCam.camera.transform.position += originDelta;
 					}
 
-					var eggbot = transform.GetComponentInChildren<EggbotController>();
+					var eggbot = transform.GetComponentInChildren<EggbotController>(true);
 					if (null != eggbot) eggbot.OnMapOriginShift(mapManager, originDelta);
 				}
 			}
@@ -243,7 +243,7 @@ namespace ClassicTilestorm
 			}
 
 			if (TryGetComponent<MainController>(out var main))
-				OnChangeMapRequested?.Invoke(0);// main.ReloadCurrentMap();
+				OnChangeMapRequested?.Invoke(0);
 		}
 
 		public void SaveDatabase()
@@ -288,7 +288,7 @@ namespace ClassicTilestorm
 				if (mapManager?.CurrentMap != null && mapManager.CurrentMap.name == importedName)
 				{
 					if (TryGetComponent<MainController>(out var main))
-						OnChangeMapRequested?.Invoke(0);//main.ReloadCurrentMap();
+						OnChangeMapRequested?.Invoke(0);
 				}
 			}
 #else
