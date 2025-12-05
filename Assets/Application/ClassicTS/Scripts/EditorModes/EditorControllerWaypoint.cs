@@ -70,7 +70,8 @@ namespace ClassicTilestorm
 
 			EditorUtil.UpdateWaypointMarkers(
 				editorController.iMapManager,
-				map.waypoints ?? System.Array.Empty<Waypoint>(),
+				//map.waypoints ?? System.Array.Empty<Waypoint>(),
+				editorController.iMapManager.Waypoints,
 				SelectedWaypointIndex
 			);
 		}
@@ -87,9 +88,11 @@ namespace ClassicTilestorm
 			if (map == null) return;
 
 			var wp = new Waypoint { name = $"Waypoint {map.waypoints?.Length ?? 0}", tile = tile };
-			var list = map.waypoints?.ToList() ?? new List<Waypoint>();
+			//var list = map.waypoints?.ToList() ?? new List<Waypoint>();
+			var list = editorController.iMapManager.Waypoints?.ToList() ?? new List<Waypoint>();//I made this change
 			list.Add(wp);
-			map.waypoints = list.ToArray();
+			//map.waypoints = list.ToArray();
+			editorController.iMapManager.SetWaypointTiles(list.Select(wp => wp.tile).ToArray());
 
 			SelectedWaypointIndex = list.Count - 1;
 			RebuildMarkers();
@@ -143,7 +146,7 @@ namespace ClassicTilestorm
 						// Revert if dropped outside map
 						var map = editorController.iMapManager.CurrentMap;
 						if (map?.waypoints != null && draggingIndex < map.waypoints.Length)
-							map.waypoints[draggingIndex].tile = originalTile;
+							editorController.iMapManager.Waypoints[draggingIndex].tile = originalTile;// map.waypoints[draggingIndex].tile = originalTile;
 						RebuildMarkers();
 					}
 					draggingIndex = -1;
@@ -174,7 +177,8 @@ namespace ClassicTilestorm
 					var map = editorController.iMapManager.CurrentMap;
 					if (map?.waypoints != null && potentialWaypointHit < map.waypoints.Length)
 					{
-						pendingTile = map.waypoints[potentialWaypointHit].tile;
+						//pendingTile = map.waypoints[potentialWaypointHit].tile;
+						pendingTile = editorController.iMapManager.Waypoints[potentialWaypointHit].tile;
 						pendingWaypoint = potentialWaypointHit;
 						pendingAction = PendingAction.Delete;
 
@@ -192,7 +196,8 @@ namespace ClassicTilestorm
 				var map = editorController.iMapManager.CurrentMap;
 				if (map?.waypoints != null && draggingIndex < map.waypoints.Length)
 				{
-					map.waypoints[draggingIndex].tile = tileUnderMouse;
+					//map.waypoints[draggingIndex].tile = tileUnderMouse;
+					editorController.iMapManager.Waypoints[draggingIndex].tile = tileUnderMouse;
 					RebuildMarkers();
 				}
 			}
@@ -202,7 +207,8 @@ namespace ClassicTilestorm
 			{
 				SelectWaypoint(potentialWaypointHit);
 				draggingIndex = potentialWaypointHit;
-				originalTile = editorController.iMapManager.CurrentMap.waypoints[potentialWaypointHit].tile;
+				//originalTile = editorController.iMapManager.CurrentMap.waypoints[potentialWaypointHit].tile;
+				originalTile = editorController.iMapManager.Waypoints[potentialWaypointHit].tile;
 				pendingAction = PendingAction.None; // cancel any pending add
 			}
 		}
@@ -222,7 +228,8 @@ namespace ClassicTilestorm
 
 			var map = editorController?.iMapManager?.CurrentMap;
 			if (map == null) return;
-			Waypoint[] waypoints = map.waypoints ?? System.Array.Empty<Waypoint>();
+			//Waypoint[] waypoints = map.waypoints ?? System.Array.Empty<Waypoint>();
+			Waypoint[] waypoints = editorController?.iMapManager.Waypoints ?? System.Array.Empty<Waypoint>();
 
 			sidePanel.Update();
 			Rect panel = sidePanel.GetRect(20f, 20f);

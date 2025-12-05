@@ -16,7 +16,7 @@ namespace ClassicTilestorm
 		public int width;
 		public int height;
 
-		public Waypoint[] waypoints;
+		public int[] waypoints; //public Waypoint[] waypoints;
 		public string[] table;
 		public int[] tiles;
 		public int[] solve;
@@ -216,7 +216,7 @@ namespace ClassicTilestorm
 					: -1;
 			}
 
-			if (waypoints != null) foreach (var wp in waypoints) Remap(ref wp.tile);
+			//if (waypoints != null) foreach (var wp in waypoints) Remap(ref wp.tile);//no longer needed
 			if (attachments != null) foreach (var a in attachments) Remap(ref a.tile);
 
 			// Apply
