@@ -32,6 +32,7 @@ namespace ClassicTilestorm
 		private bool gridEnabled = true;
 
 		public IMapManager iMapManager => mapManager;
+		public event System.Action<int> OnChangeMapRequested; // delta or 0 for reload
 
 		private void Awake()
 		{
@@ -242,7 +243,7 @@ namespace ClassicTilestorm
 			}
 
 			if (TryGetComponent<MainController>(out var main))
-				main.ReloadCurrentMap();
+				OnChangeMapRequested?.Invoke(0);// main.ReloadCurrentMap();
 		}
 
 		public void SaveDatabase()
@@ -287,7 +288,7 @@ namespace ClassicTilestorm
 				if (mapManager?.CurrentMap != null && mapManager.CurrentMap.name == importedName)
 				{
 					if (TryGetComponent<MainController>(out var main))
-						main.ReloadCurrentMap();
+						OnChangeMapRequested?.Invoke(0);//main.ReloadCurrentMap();
 				}
 			}
 #else

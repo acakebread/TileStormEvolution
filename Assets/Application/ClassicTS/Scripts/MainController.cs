@@ -58,9 +58,10 @@ namespace ClassicTilestorm
 			if (null != cameraController) cameraController.Initialise(mapManager, eggbotController);
 			if (null != gameController) gameController.Initialise();
 			if (null != editorController) editorController.Initialise(mapManager);
+			if (null != editorController && null != gameController) editorController.OnChangeMapRequested += gameController.HandleChangeMap;
 		}
 
-		public void ReloadCurrentMap() { if (null != mapManager && null != mapManager.CurrentMap) LoadMap(mapManager.CurrentMap.name); }
+		//public void ReloadCurrentMap() { if (null != mapManager && null != mapManager.CurrentMap) LoadMap(mapManager.CurrentMap.name); }
 
 		public void Preset() { if (null != mapManager) mapManager.Preset(); }
 

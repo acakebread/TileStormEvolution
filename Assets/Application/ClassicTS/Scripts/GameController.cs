@@ -26,8 +26,13 @@ namespace ClassicTilestorm
 			mainController.SetPreviewMode(mode);
 		}
 
-		private void HandleChangeMap(int delta)
+		//temporary workaround for double events from ongui (due to camera stack) - hopefully this will go away when full ui is implemented
+		private int guard = 0;
+		public void Update() => guard = 0;
+
+		public void HandleChangeMap(int delta)
 		{
+			if (++guard > 1) return;
 			var maps = ResourceManager.Maps;
 			if (maps == null || maps.Count == 0) return;
 
