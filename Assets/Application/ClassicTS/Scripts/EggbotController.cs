@@ -12,7 +12,7 @@ namespace ClassicTilestorm
 		private float stateTimer;
 		private float stateDuration;
 
-		private float walkSpeed = 6f;
+		private readonly float walkSpeed = 6f;
 		private Vector3 startPosition;
 		private Vector3 targetPosition;
 		private float startYaw;
