@@ -13,22 +13,6 @@ namespace ClassicTilestorm
 	{
 		private static bool _initialized = false;
 
-		//[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
-		//public static void Init()
-		//{
-		//	if (_initialized) return;
-
-		//	// Create settings once
-		//	var settings = new JsonSerializerSettings();
-		//	settings.Converters.Add(new MapAttachmentConverter());
-
-		//	// Apply to ALL future JsonConvert calls
-		//	JsonConvert.DefaultSettings = () => settings;
-
-		//	_initialized = true;
-		//	Debug.Log("MapAttachmentConverter registered globally (Unity-compatible)");
-		//}
-
 		[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
 		public static void Init()
 		{
@@ -274,26 +258,7 @@ namespace ClassicTilestorm
 			}
 		}
 
-		//private class AtomicExportResolver : DefaultContractResolver
-		//{
-		//	protected override JsonProperty CreateProperty(System.Reflection.MemberInfo member, MemberSerialization memberSerialization)
-		//	{
-		//		var property = base.CreateProperty(member, memberSerialization);
-		//		if (property.Ignored && member.DeclaringType == typeof(Map))
-		//		{
-		//			if (member.Name is "definitions" or "textures" or "version" or "author" or "exportedFrom")
-		//			{
-		//				property.Ignored = false;
-		//				property.ShouldSerialize = _ => true;
-		//			}
-		//		}
-		//		return property;
-		//	}
-		//}
-
-		// In ResourceSerializer.cs, change AtomicExportResolver base class
-
-		private class AtomicExportResolver : UnityContractResolver  // Change to inherit from UnityContractResolver
+		private class AtomicExportResolver : UnityContractResolver
 		{
 			protected override JsonProperty CreateProperty(System.Reflection.MemberInfo member, MemberSerialization memberSerialization)
 			{

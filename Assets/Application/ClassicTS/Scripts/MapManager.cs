@@ -30,6 +30,7 @@ namespace ClassicTilestorm
 		Vector3 SnappedMapPosition(Vector3 vec);
 
 		public void SetWaypointTiles(int[] tiles);//placeholder method
+		public void SetWaypoint(int index, int tile);
 	}
 
 	public class MapManager : MonoBehaviour, IMapManager
@@ -66,10 +67,6 @@ namespace ClassicTilestorm
 		public int Count => Width * Height;
 
 		public int[] Indices => indices;
-
-		//public Waypoint[] Waypoints => currentMap?.waypoints ?? Array.Empty<Waypoint>();
-		//private Waypoint[] _richWaypoints; // rebuilt on map load from attachments
-		//public Waypoint[] Waypoints => _richWaypoints ?? Array.Empty<Waypoint>();
 
 		public Waypoint[] Waypoints
 		{
@@ -135,6 +132,17 @@ namespace ClassicTilestorm
 			return wp;
 		}
 
+		public void SetWaypoint(int index, int tile)
+		{
+			var tiles = currentMap?.waypoints;
+			if (tiles == null || index < 0 || index >= tiles.Length)
+			{
+				Debug.LogError($"Invalid_{index}");
+				return;
+			}
+			currentMap.waypoints[index] = tile;
+		}
+
 #if UNITY_EDITOR
 		public static readonly Vector3 tile_origin = new(0.5f, 0f, 0.5f);
 		public Vector3 TileWorldPosition(int index) => new Vector3(index % Width, 0f, index / Width) + tile_origin;
@@ -189,52 +197,9 @@ namespace ClassicTilestorm
 			if (PreviewSettings.Scrambled) Preset();
 			else Solve();
 
-			//RebuildRichWaypoints();
-
 			InitializeWindController();
 			SetupWaypoints();
 		}
-
-		//private void RebuildRichWaypoints()
-		//{
-		//	if (currentMap == null)
-		//	{
-		//		_richWaypoints = Array.Empty<Waypoint>();
-		//		return;
-		//	}
-
-		//	var indices = currentMap.waypoints ?? Array.Empty<int>();
-		//	var list = new List<Waypoint>(indices.Length);
-
-		//	foreach (int tile in indices)
-		//	{
-		//		// Default waypoint with no camera
-		//		var wp = new Waypoint
-		//		{
-		//			name = $"WP{list.Count}",
-		//			tile = tile
-		//		};
-
-		//		// Search attachments for a Viewpoint on this tile
-		//		if (currentMap.attachments != null)
-		//		{
-		//			foreach (var att in currentMap.attachments)
-		//			{
-		//				if (att is Viewpoint vp && vp.tile == tile)
-		//				{
-		//					wp.name = vp.name ?? wp.name;
-		//					wp.vSrc = vp.vSrc;
-		//					wp.vDst = vp.vDst;
-		//					break;
-		//				}
-		//			}
-		//		}
-
-		//		list.Add(wp);
-		//	}
-
-		//	_richWaypoints = list.ToArray();
-		//}
 
 		private void DestroyAllTiles()
 		{
@@ -373,12 +338,6 @@ namespace ClassicTilestorm
 			int start = GetStartTile();
 			int end = GetEndTile();
 
-			//if (start == -1 || end == -1)
-			//{
-			//	currentMap.waypoints = generated.ToArray();
-			//	return;
-			//}
-
 			if (start == -1 || end == -1)
 			{
 				SetWaypointTiles(generated.Select(wp => wp.tile).ToArray());
@@ -410,8 +369,6 @@ namespace ClassicTilestorm
 			}
 
 			generated.Add(new Waypoint { tile = end });
-			//currentMap.waypoints = generated.ToArray();//ToDo update the map array
-			//_richWaypoints = generated.ToArray();
 
 			SetWaypointTiles(generated.Select(wp => wp.tile).ToArray());
 
