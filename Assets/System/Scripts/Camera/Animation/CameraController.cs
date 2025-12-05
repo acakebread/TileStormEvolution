@@ -85,6 +85,7 @@ namespace MassiveHadronLtd
 			activeSystem?.CopyFrom(cameraSystems.ContainsKey(modeSystem) ? cameraSystems[modeSystem] : null);
 			//activeSystem?.Start();
 			activeSystem?.OnEnable();
+			activeSystem?.Update();//force initilaise
 
 			bool AreSystemsInSameMode(string system1, string system2) => modes.Any(mode => mode.Value.Contains(system1) && mode.Value.Contains(system2));
 		}
