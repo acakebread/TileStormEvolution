@@ -69,7 +69,7 @@ namespace ClassicTilestorm
 
 			EditorUtil.UpdateWaypointMarkers(
 				editorController.iMapManager,
-				editorController.iMapManager.WaypointIndices,
+				editorController.iMapManager.Waypoints,
 				SelectedWaypointIndex
 			);
 		}
@@ -85,20 +85,9 @@ namespace ClassicTilestorm
 			var map = editorController?.iMapManager?.CurrentMap;
 			if (map == null) return;
 
-			//var list = editorController.iMapManager.Waypoints?.ToList() ?? new List<Waypoint>();
-			//var wp = new Waypoint { tile = tile };//var wp = new Waypoint { name = $"Waypoint {map.waypoints?.Length ?? 0}", tile = tile };
-			//list.Add(wp);
-			//editorController.iMapManager.SetWaypointTiles(list.Select(wp => wp.tile).ToArray());
-
-			//var list = new List<int>();// editorController.iMapManager.Waypoints?.ToList() ?? new List<Waypoint>();
-			//for (var n = 0; n < editorController.iMapManager.Waypoints.Length; n++)
-			//	list.Add(editorController.iMapManager.Waypoints[n].tile);
-			//for (var n = 0; n < editorController.iMapManager.WaypointIndices.Length; n++)
-			//list.Add(editorController.iMapManager.WaypointIndices[n]);
-
-			var list = editorController.iMapManager.WaypointIndices?.ToList() ?? new List<int>();
+			var list = editorController.iMapManager.Waypoints?.ToList() ?? new List<int>();
 			list.Add(tile);
-			editorController.iMapManager.SetWaypointTiles(list.ToArray());
+			editorController.iMapManager.Waypoints = list.ToArray();
 
 			SelectedWaypointIndex = list.Count - 1;
 			RebuildMarkers();
@@ -152,8 +141,7 @@ namespace ClassicTilestorm
 						// Revert if dropped outside map
 						var map = editorController.iMapManager.CurrentMap;
 						if (map?.waypoints != null && draggingIndex < map.waypoints.Length)
-							//editorController.iMapManager.Waypoints[draggingIndex].tile = originalTile;// map.waypoints[draggingIndex].tile = originalTile;
-							editorController.iMapManager.WaypointIndices[draggingIndex] = originalTile;// map.waypoints[draggingIndex].tile = originalTile;
+							editorController.iMapManager.Waypoints[draggingIndex] = originalTile;// map.waypoints[draggingIndex].tile = originalTile;
 						RebuildMarkers();
 					}
 					draggingIndex = -1;
@@ -184,8 +172,7 @@ namespace ClassicTilestorm
 					var map = editorController.iMapManager.CurrentMap;
 					if (map?.waypoints != null && potentialWaypointHit < map.waypoints.Length)
 					{
-						//pendingTile = editorController.iMapManager.Waypoints[potentialWaypointHit].tile;
-						pendingTile = editorController.iMapManager.WaypointIndices[potentialWaypointHit];
+						pendingTile = editorController.iMapManager.Waypoints[potentialWaypointHit];
 						pendingWaypoint = potentialWaypointHit;
 						pendingAction = PendingAction.Delete;
 
@@ -203,10 +190,9 @@ namespace ClassicTilestorm
 				var map = editorController.iMapManager.CurrentMap;
 				if (map?.waypoints != null && draggingIndex < map.waypoints.Length)
 				{
-					//if (editorController.iMapManager.Waypoints[draggingIndex].tile != tileUnderMouse)
-					if (editorController.iMapManager.WaypointIndices[draggingIndex] != tileUnderMouse)
+					if (map.waypoints[draggingIndex] != tileUnderMouse)
 					{
-						editorController.iMapManager.SetWaypoint(draggingIndex, tileUnderMouse);
+						map.waypoints[draggingIndex] = tileUnderMouse;
 						RebuildMarkers();
 					}
 				}
@@ -217,8 +203,7 @@ namespace ClassicTilestorm
 			{
 				SelectWaypoint(potentialWaypointHit);
 				draggingIndex = potentialWaypointHit;
-				//originalTile = editorController.iMapManager.Waypoints[potentialWaypointHit].tile;
-				originalTile = editorController.iMapManager.WaypointIndices[potentialWaypointHit];
+				originalTile = editorController.iMapManager.Waypoints[potentialWaypointHit];
 				pendingAction = PendingAction.None; // cancel any pending add
 			}
 		}
@@ -238,8 +223,7 @@ namespace ClassicTilestorm
 
 			var map = editorController?.iMapManager?.CurrentMap;
 			if (map == null) return;
-			//Waypoint[] waypoints = editorController?.iMapManager.Waypoints ?? System.Array.Empty<Waypoint>();
-			int[] waypoints = editorController?.iMapManager.WaypointIndices ?? System.Array.Empty<int>();
+			int[] waypoints = editorController?.iMapManager.Waypoints ?? System.Array.Empty<int>();
 
 			sidePanel.Update();
 			Rect panel = sidePanel.GetRect(20f, 20f);
@@ -272,60 +256,6 @@ namespace ClassicTilestorm
 			if (pendingAction == PendingAction.Delete)
 				DrawDeletePopup();
 		}
-
-		//private void DrawWaypointList(Waypoint[] waypoints, float panelHeight)
-		//{
-		//	const float reservedBottom = 110f;
-		//	const float topOffset = 25f;
-		//	float scrollHeight = Mathf.Max(0f, panelHeight - reservedBottom);
-
-		//	Rect scrollRect = new Rect(0f, topOffset, Screen.width, scrollHeight);
-		//	Rect contentRect = new Rect(0f, 0f, 320f, waypoints.Length * 40f);
-
-		//	scrollPos = GUI.BeginScrollView(scrollRect, scrollPos, contentRect, false, true);
-
-		//	float y = 0f;
-		//	for (int i = 0; i < waypoints.Length; i++)
-		//	{
-		//		var wp = waypoints[i];
-		//		var vp = null != editorController ? editorController.iMapManager.GetViewpoint(wp.tile) : null;
-
-		//		string cam = null != vp ? " [Cam]" : "";// wp.IsCamera() ? " [Cam]" : "";
-		//		string label = $"WP{i:00}{cam} [{wp.tile}]";
-
-		//		GUI.backgroundColor = (i == SelectedWaypointIndex) ? new Color(0.3f, 0.8f, 1f, 0.9f) : Color.white;
-		//		if (GUI.Button(new Rect(4f, y, contentRect.width - 20f, 36f), label))
-		//			SelectWaypoint(i);
-		//		GUI.backgroundColor = Color.white;
-
-		//		y += 40f;
-		//	}
-
-		//	GUI.EndScrollView();
-
-		//	// Bottom buttons
-		//	Rect buttonsArea = new Rect(0f, scrollRect.y + scrollRect.height + 6f, 340f, reservedBottom);
-		//	GUILayout.BeginArea(buttonsArea);
-		//	GUILayout.BeginHorizontal();
-		//	GUILayout.FlexibleSpace();
-
-		//	GUI.enabled = SelectedWaypointIndex > 0;
-		//	if (GUILayout.Button("Move Up", GUILayout.Width(100), GUILayout.Height(30)))
-		//		MoveWaypoint(SelectedWaypointIndex, -1);
-
-		//	GUI.enabled = SelectedWaypointIndex >= 0 && SelectedWaypointIndex < waypoints.Length - 1;
-		//	if (GUILayout.Button("Move Down", GUILayout.Width(100), GUILayout.Height(30)))
-		//		MoveWaypoint(SelectedWaypointIndex, +1);
-
-		//	GUI.enabled = true;
-		//	GUILayout.FlexibleSpace();
-		//	GUILayout.EndHorizontal();
-
-		//	GUILayout.Space(4);
-		//	GUILayout.Label("Tip: Left-click map to add • Right-click waypoint to delete",
-		//		new GUIStyle(GUI.skin.label) { fontSize = 10, alignment = TextAnchor.MiddleCenter });
-		//	GUILayout.EndArea();
-		//}
 
 		private void DrawWaypointList(int[] waypoints, float panelHeight)
 		{

@@ -22,19 +22,14 @@ namespace ClassicTilestorm
 		int GetStartTile();
 		int GetEndTile();
 		int FindAdjacentConsole(int nTile);
-		//Waypoint[] Waypoints { get; }
-		int[] WaypointIndices { get; }
+		int[] Waypoints { set; get; }
 		Map CurrentMap { get; }
 		Transform CurrentTransform { get; }
 		string GetDefinitionAtIndex(int mapIndex);
 		bool UpdateTileAt(int x, int z, string id, bool expand = true, Action<bool, Vector3> onEdited = null);
 		Vector3 SnappedMapPosition(Vector3 vec);
 
-		public int GetWaypointIndex(int index);
-
-		public void SetWaypointTiles(int[] tiles);//placeholder method
-		//public Waypoint GetWaypoint(int index);
-		public void SetWaypoint(int index, int tile);
+		public int GetWaypoint(int index);
 		public Viewpoint GetViewpoint(int tile);
 	}
 
@@ -73,24 +68,7 @@ namespace ClassicTilestorm
 
 		public int[] Indices => indices;
 
-		//public Waypoint[] Waypoints
-		//{
-		//	get
-		//	{
-		//		int[] tiles = currentMap?.waypoints;
-		//		if (tiles == null || tiles.Length == 0)
-		//			return Array.Empty<Waypoint>();
-
-		//		var list = new Waypoint[tiles.Length];
-		//		for (int i = 0; i < tiles.Length; i++)
-		//			list[i] = GetWaypoint(i);
-		//		return list;
-		//	}
-		//}
-
-		public int[] WaypointIndices => currentMap?.waypoints;
-
-		public int[] WaypointTiles => currentMap?.waypoints ?? Array.Empty<int>();
+		public int[] Waypoints { get => currentMap?.waypoints; set { if (null != currentMap) currentMap.waypoints = value; } }
 
 		public void SetWaypointTiles(int[] tiles)//new placeholder method
 		{
@@ -98,63 +76,7 @@ namespace ClassicTilestorm
 				currentMap.waypoints = tiles ?? Array.Empty<int>();
 		}
 
-		public int GetWaypointIndex(int index)
-		{
-			var tiles = currentMap?.waypoints;
-			if (tiles == null || index < 0 || index >= tiles.Length)
-				return -1;
-
-			return tiles[index];
-		}
-
-
-		///// <summary>
-		///// Returns a fully populated Waypoint for the given index, built from int[] + attachments
-		///// This replaces the old _richWaypoints array — no caching, no waste
-		///// </summary>
-		//public Waypoint GetWaypoint(int index)
-		//{
-		//	var tiles = currentMap?.waypoints;
-		//	if (tiles == null || index < 0 || index >= tiles.Length)
-		//		return new Waypoint { tile = -1 };//return new Waypoint { name = $"Invalid_{index}", tile = -1 };
-
-		//	int tile = tiles[index];
-
-		//	var wp = new Waypoint
-		//	{
-		//		//name = $"WP{index:00}",
-		//		tile = tile
-		//	};
-
-		//	//// Look for a matching Viewpoint attachment
-		//	//if (currentMap?.attachments != null && currentMap.attachments.Length > 0)
-		// //   {
-		//	//	foreach (var att in currentMap.attachments)
-		//	//	{
-		//	//		if (att is Viewpoint vp && vp.tile == tile)
-		//	//		{
-		//	//			if (!string.IsNullOrEmpty(vp.name))
-		//	//				wp.name = vp.name;
-		//	//			//wp.vSrc = vp.vSrc;
-		//	//			//wp.vDst = vp.vDst;
-		//	//			break; // first match wins
-		//	//		}
-		//	//	}
-		//	//}
-
-		//	return wp;
-		//}
-
-		public void SetWaypoint(int index, int tile)
-		{
-			var tiles = currentMap?.waypoints;
-			if (tiles == null || index < 0 || index >= tiles.Length)
-			{
-				Debug.LogError($"Invalid_{index}");
-				return;
-			}
-			currentMap.waypoints[index] = tile;
-		}
+		public int GetWaypoint(int index) => (index >= 0 && null != currentMap?.waypoints) ? index < currentMap.waypoints.Length ? currentMap.waypoints[index] : -1 : -1;
 
 #if UNITY_EDITOR
 		public static readonly Vector3 tile_origin = new(0.5f, 0f, 0.5f);
@@ -269,8 +191,7 @@ namespace ClassicTilestorm
 
 		public int GetStartTile()
 		{
-			//if (Waypoints.Length > 0) return Waypoints[0].tile;
-			if (WaypointIndices.Length > 0) return WaypointIndices[0];
+			if (Waypoints.Length > 0) return Waypoints[0];
 
 			for (int i = 0; i < Count; ++i)
 				if (GetTile(i).IsStart) return i;
@@ -281,8 +202,7 @@ namespace ClassicTilestorm
 
 		public int GetEndTile()
 		{
-			//if (Waypoints.Length > 0) return Waypoints.Last().tile;
-			if (WaypointIndices.Length > 0) return WaypointIndices.Last();
+			if (Waypoints.Length > 0) return Waypoints.Last();
 
 			for (int i = 0; i < Count; ++i)
 				if (GetTile(i).IsEnd) return i;
@@ -354,55 +274,6 @@ namespace ClassicTilestorm
 			}
 		}
 
-		//private void SetupWaypoints()
-		//{
-		//	if (currentMap.waypoints != null && currentMap.waypoints.Length > 0)
-		//	{
-		//		Debug.Log($"Using {currentMap.waypoints.Length} predefined waypoints.");
-		//		return;
-		//	}
-
-		//	var generated = new List<Waypoint>();
-		//	int start = GetStartTile();
-		//	int end = GetEndTile();
-
-		//	if (start == -1 || end == -1)
-		//	{
-		//		SetWaypointTiles(generated.Select(wp => wp.tile).ToArray());
-		//		return;
-		//	}
-
-		//	generated.Add(new Waypoint { tile = start });
-
-		//	int cur = start;
-		//	int dir = Navigation.NavToDest(this, cur, end);
-		//	if (dir != 0)
-		//	{
-		//		while (cur != end)
-		//		{
-		//			if (FindAdjacentConsole(cur) != -1)
-		//				generated.Add(new Waypoint { tile = cur });
-
-		//			int next = Navigation.GetAdjacentTile(this, cur, dir);
-		//			if (next == -1 || next == start) break;
-
-		//			var nextTile = GetTile(next);
-		//			if (nextTile.Nav == 0) break;
-
-		//			dir = Navigation.CalculateNav(dir, nextTile.Nav);
-		//			if (dir == 0) break;
-
-		//			cur = next;
-		//		}
-		//	}
-
-		//	generated.Add(new Waypoint { tile = end });
-
-		//	SetWaypointTiles(generated.Select(wp => wp.tile).ToArray());
-
-		//	Debug.Log($"Generated {currentMap.waypoints.Length} waypoints.");
-		//}
-
 		private void SetupWaypoints()
 		{
 			if (currentMap.waypoints != null && currentMap.waypoints.Length > 0)
@@ -417,7 +288,7 @@ namespace ClassicTilestorm
 
 			if (start == -1 || end == -1)
 			{
-				SetWaypointTiles(generated.ToArray());
+				Waypoints = generated.ToArray();
 				return;
 			}
 
@@ -447,7 +318,7 @@ namespace ClassicTilestorm
 
 			generated.Add(end);
 
-			SetWaypointTiles(generated.ToArray());
+			Waypoints = generated.ToArray();
 
 			Debug.Log($"Generated {currentMap.waypoints.Length} waypoints.");
 		}
@@ -502,7 +373,6 @@ namespace ClassicTilestorm
 
 			currentMap.tiles[index] = Array.IndexOf(currentMap.table, id);
 			currentMap.Consolidate();
-			//RebuildRichWaypoints();
 
 			// No resize possible in restricted mode
 			onEdited?.Invoke(false, Vector3.zero);
@@ -619,9 +489,7 @@ namespace ClassicTilestorm
 			}
 
 			currentMap.Consolidate();
-			//RebuildRichWaypoints();
 
-			// Success!
 			onEdited?.Invoke(boundsChanged, originDelta);
 			return true;
 		}
