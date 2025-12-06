@@ -226,7 +226,7 @@ namespace ClassicTilestorm
 			int[] waypoints = editorController?.iMapManager.Waypoints ?? System.Array.Empty<int>();
 
 			sidePanel.Update();
-			Rect panel = sidePanel.GetRect(20f, 20f);
+			Rect panel = sidePanel.GetRect();
 
 			GUI.backgroundColor = new Color(0.15f, 0.3f, 0.42f, 0.95f);
 			GUI.Box(panel, "");
@@ -263,8 +263,13 @@ namespace ClassicTilestorm
 			const float topOffset = 25f;
 			float scrollHeight = Mathf.Max(0f, panelHeight - reservedBottom);
 
-			Rect scrollRect = new Rect(0f, topOffset, Screen.width, scrollHeight);
-			Rect contentRect = new Rect(0f, 0f, 320f, waypoints.Length * 40f);
+			Rect panelRect = sidePanel.GetRect();
+			Rect scrollRect = new Rect(0f, topOffset, panelRect.width, scrollHeight);
+
+			float scrollBarWidth = 12f;
+			float contentWidth = scrollRect.width - scrollBarWidth;  // Critical: correct width
+
+			Rect contentRect = new Rect(0f, 0f, scrollRect.width - scrollBarWidth - 10, waypoints.Length * 40f);
 
 			scrollPos = GUI.BeginScrollView(scrollRect, scrollPos, contentRect, false, true);
 
@@ -272,19 +277,22 @@ namespace ClassicTilestorm
 			for (int i = 0; i < waypoints.Length; i++)
 			{
 				var wp = waypoints[i];
-				var vp = null != editorController ? editorController.iMapManager.GetView(wp) : null;
-
-				string cam = null != vp ? " [Cam]" : "";
+				var vp = editorController?.iMapManager?.GetView(wp);
+				string cam = vp != null ? " [Cam]" : "";
 				string label = $"WP{i:00}{cam} [{wp}]";
 
-				GUI.backgroundColor = (i == SelectedWaypointIndex) ? new Color(0.3f, 0.8f, 1f, 0.9f) : Color.white;
-				if (GUI.Button(new Rect(4f, y, contentRect.width - 20f, 36f), label))
+				GUI.backgroundColor = (i == SelectedWaypointIndex)
+					? new Color(0.3f, 0.8f, 1f, 0.9f)
+					: Color.white;
+
+				// FULL WIDTH BUTTON — starts at x=0, full content width
+				if (GUI.Button(new Rect(0f, y, contentRect.width, 36f), label))
 					SelectWaypoint(i);
+
 				GUI.backgroundColor = Color.white;
 
 				y += 40f;
 			}
-
 			GUI.EndScrollView();
 
 			// Bottom buttons

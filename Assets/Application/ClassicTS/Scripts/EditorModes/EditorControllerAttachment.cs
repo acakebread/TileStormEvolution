@@ -225,7 +225,7 @@ namespace ClassicTilestorm
 			var attachments = map.attachments ?? System.Array.Empty<MapAttachment>();
 
 			sidePanel.Update();
-			Rect panel = sidePanel.GetRect(20f, 20f);
+			Rect panel = sidePanel.GetRect();
 
 			GUI.backgroundColor = new Color(0.15f, 0.3f, 0.42f, 0.95f);
 			GUI.Box(panel, "");
@@ -261,8 +261,16 @@ namespace ClassicTilestorm
 			const float topOffset = 25f;
 			float scrollHeight = Mathf.Max(0f, panelHeight - reservedBottom);
 
-			Rect scrollRect = new Rect(0f, topOffset, Screen.width, scrollHeight);
-			Rect contentRect = new Rect(0f, 0f, 320f, attachments.Length * 40f);
+			Rect panelRect = sidePanel.GetRect();
+
+			// Use the actual panel width for scroll area
+			Rect scrollRect = new Rect(0f, topOffset, panelRect.width, scrollHeight);
+
+			// Important: subtract only the scrollbar width (not hardcoded values!)
+			float scrollBarWidth = 12f;
+			float contentWidth = scrollRect.width - scrollBarWidth;
+
+			Rect contentRect = new Rect(0f, 0f, scrollRect.width - scrollBarWidth - 10, attachments.Length * 40f);
 
 			scrollPos = GUI.BeginScrollView(scrollRect, scrollPos, contentRect, false, true);
 
@@ -270,11 +278,22 @@ namespace ClassicTilestorm
 			for (int i = 0; i < attachments.Length; i++)
 			{
 				var att = attachments[i];
-				string label = $"ATT{i:00} [{att.tile}] {att.type}";
+				string typeLabel = att.type;
+				string extra = "";
 
-				GUI.backgroundColor = (i == SelectedAttachmentIndex) ? new Color(0.3f, 0.8f, 1f, 0.9f) : Color.white;
-				if (GUI.Button(new Rect(4f, y, contentRect.width - 20f, 36f), label))
+				if (att is Emitter emitter && emitter.vDir != null)
+					extra = $" → {Vector3Serialization.ToVector3(emitter.vDir):F1}";
+
+				string label = $"ATT{i:00} [{att.tile}] {typeLabel}{extra}";
+
+				GUI.backgroundColor = (i == SelectedAttachmentIndex)
+					? new Color(0.3f, 0.8f, 1f, 0.9f)
+					: Color.white;
+
+				// FULL WIDTH BUTTON — starts at 0, uses full content width
+				if (GUI.Button(new Rect(0f, y, contentRect.width, 36f), label))
 					SelectAttachment(i);
+
 				GUI.backgroundColor = Color.white;
 
 				y += 40f;
@@ -282,18 +301,11 @@ namespace ClassicTilestorm
 
 			GUI.EndScrollView();
 
-			Rect buttonsArea = new Rect(0f, scrollRect.y + scrollRect.height + 6f, 340f, reservedBottom);
+			// Bottom buttons area — now uses panel width too!
+			Rect buttonsArea = new Rect(0f, scrollRect.y + scrollRect.height + 6f, panelRect.width, reservedBottom);
 			GUILayout.BeginArea(buttonsArea);
 			GUILayout.BeginHorizontal();
 			GUILayout.FlexibleSpace();
-
-			GUI.enabled = SelectedAttachmentIndex > 0;
-			if (GUILayout.Button("Move Up", GUILayout.Width(100), GUILayout.Height(30)))
-				MoveAttachment(SelectedAttachmentIndex, -1);
-
-			GUI.enabled = SelectedAttachmentIndex >= 0 && SelectedAttachmentIndex < attachments.Length - 1;
-			if (GUILayout.Button("Move Down", GUILayout.Width(100), GUILayout.Height(30)))
-				MoveAttachment(SelectedAttachmentIndex, +1);
 
 			GUI.enabled = true;
 			GUILayout.FlexibleSpace();
@@ -305,18 +317,18 @@ namespace ClassicTilestorm
 			GUILayout.EndArea();
 		}
 
-		private void MoveAttachment(int index, int direction)
-		{
-			var map = editorController.iMapManager.CurrentMap;
-			var list = new List<MapAttachment>(map.attachments);
-			var temp = list[index];
-			list[index] = list[index + direction];
-			list[index + direction] = temp;
-			map.attachments = list.ToArray();
-			SelectedAttachmentIndex += direction;
-			RebuildMarkers();
-			editorController.OnMapChanged();
-		}
+		//private void MoveAttachment(int index, int direction)
+		//{
+		//	var map = editorController.iMapManager.CurrentMap;
+		//	var list = new List<MapAttachment>(map.attachments);
+		//	var temp = list[index];
+		//	list[index] = list[index + direction];
+		//	list[index + direction] = temp;
+		//	map.attachments = list.ToArray();
+		//	SelectedAttachmentIndex += direction;
+		//	RebuildMarkers();
+		//	editorController.OnMapChanged();
+		//}
 
 		private void DrawAddPopup()
 		{

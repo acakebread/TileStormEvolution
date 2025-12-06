@@ -25,7 +25,7 @@ namespace ClassicTilestorm
 				return false;
 
 			// Use the actual animated panel rect
-			var panelRect = sidePanel.GetRect(20f, 20f);
+			var panelRect = sidePanel.GetRect();
 			panelRect.x = Screen.width - panelRect.xMax + 20f; // because GetRect returns left-aligned
 															   // Actually better: let AutoHidePanel expose screen-space rect properly, but for now:
 			float panelWidth = sidePanel.CurrentWidth;
@@ -117,7 +117,7 @@ namespace ClassicTilestorm
 			if (sidePanel.IsGuiActive())
 				sidePanel.ForceExpand();
 
-			Rect panelRect = sidePanel.GetRect(20f, 20f);
+			Rect panelRect = sidePanel.GetRect();
 
 			// Draw background box
 			GUI.backgroundColor = new Color(0.2f, 0.2f, 0.4f, 0.75f);

@@ -238,7 +238,7 @@ namespace MassiveHadronLtd
 				CurrentWidth = Mathf.SmoothDamp(CurrentWidth, targetWidth, ref animationVelocity, animationDuration);
 			}
 
-			public Rect GetRect(float topOffset = 20f, float bottomMargin = 20f)
+			public Rect GetRect(float topOffset = 40f, float bottomMargin = 20f)
 			{
 				float x = Screen.width - CurrentWidth - 10f;
 				float y = topOffset;
