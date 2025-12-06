@@ -6,7 +6,6 @@ using static MassiveHadronLtd.GuiUtils;
 using static ClassicTilestorm.EditorController;
 using UnityEditor;
 using UnityEngine.EventSystems;
-using MassiveHadronLtd;
 
 namespace ClassicTilestorm
 {
@@ -41,13 +40,22 @@ namespace ClassicTilestorm
 			return rect.Contains(mouse);
 		}
 
-		public EditorControllerAttachment(EditorController editorController) : base(editorController) { }
+		public EditorControllerAttachment(EditorController editorController) : base(editorController) 
+		{
+			//if (editorController.GetComponent<ViewGizmoRenderer>() == null)
+			//{
+			//	var gizmo = editorController.gameObject.AddComponent<ViewGizmoRenderer>();
+			//	//gizmo.hideFlags = HideFlags.HideInInspector;
+			//}
+		}
 
+		//private ViewGizmoRenderer viewGizmo;
 		public override void OnEnable()
 		{
 			base.OnEnable();
 			SelectedAttachmentIndex = -1;
 			EditorUtil.DestroyAttachmentVisuals();
+			EditorUtil.DestroyViewFrustumMarker();
 			RebuildMarkers();
 		}
 
@@ -56,6 +64,7 @@ namespace ClassicTilestorm
 			base.OnDisable();
 			EditorUtil.DestroyAttachmentVisuals();
 			pendingAction = PendingAction.None;
+			EditorUtil.DestroyViewFrustumMarker();
 		}
 
 		public void OnMapChanged()
@@ -82,36 +91,17 @@ namespace ClassicTilestorm
 		{
 			SelectedAttachmentIndex = index;
 			RebuildMarkers();
-		}
 
-		private void AddAttachmentAtTile(int tile)
-		{
+			EditorUtil.DestroyViewFrustumMarker();
+
 			var map = editorController?.iMapManager?.CurrentMap;
-			if (map == null) return;
-
-			var list = new List<MapAttachment>(map.attachments ?? System.Array.Empty<MapAttachment>());
-			list.Add(new Emitter { tile = tile });
-			map.attachments = list.ToArray();
-
-			SelectedAttachmentIndex = list.Count - 1;
-			RebuildMarkers();
-			editorController.OnMapChanged();
-		}
-
-		private void DeleteAttachment(int index)
-		{
-			var map = editorController?.iMapManager?.CurrentMap;
-			if (map == null || map.attachments == null || index < 0 || index >= map.attachments.Length) return;
-
-			var list = new List<MapAttachment>(map.attachments);
-			list.RemoveAt(index);
-			map.attachments = list.ToArray();
-
-			if (SelectedAttachmentIndex >= list.Count)
-				SelectedAttachmentIndex = list.Count - 1;
-
-			RebuildMarkers();
-			editorController.OnMapChanged();
+			if (map?.attachments != null && index >= 0 && index < map.attachments.Length)
+			{
+				if (map.attachments[index] is View view)
+				{
+					EditorUtil.UpdateViewFrustumMarker(view, editorController.iMapManager);
+				}
+			}
 		}
 
 		public override void Update()
@@ -325,19 +315,6 @@ namespace ClassicTilestorm
 			GUILayout.EndArea();
 		}
 
-		//private void MoveAttachment(int index, int direction)
-		//{
-		//	var map = editorController.iMapManager.CurrentMap;
-		//	var list = new List<MapAttachment>(map.attachments);
-		//	var temp = list[index];
-		//	list[index] = list[index + direction];
-		//	list[index + direction] = temp;
-		//	map.attachments = list.ToArray();
-		//	SelectedAttachmentIndex += direction;
-		//	RebuildMarkers();
-		//	editorController.OnMapChanged();
-		//}
-
 		private void DrawAddPopup()
 		{
 			var sp = pendingPopupScreenPos;
@@ -371,12 +348,13 @@ namespace ClassicTilestorm
 			}
 		}
 
+		// Replace AddAttachmentAtTileWithType with this clean version
 		private void AddAttachmentAtTileWithType(int tile, System.Type type)
 		{
 			var map = editorController?.iMapManager?.CurrentMap;
 			if (map == null) return;
 
-			MapAttachment newAtt = type.Name switch
+			MapAttachment newAttachment = type.Name switch
 			{
 				"Emitter" => new Emitter { tile = tile, LookAt = Vector3.forward },
 				"View" => new View { tile = tile },
@@ -384,15 +362,17 @@ namespace ClassicTilestorm
 				_ => null
 			};
 
-			if (newAtt == null) return;
+			if (newAttachment == null) return;
 
-			var list = new List<MapAttachment>(map.attachments ?? System.Array.Empty<MapAttachment>());
-			list.Add(newAtt);
-			map.attachments = list.ToArray();
-
-			SelectedAttachmentIndex = list.Count - 1;
-			RebuildMarkers();
-			editorController.OnMapChanged();
+			// Show frustum if we just added a View
+			if (newAttachment is View view)
+			{
+				EditorUtil.UpdateViewFrustumMarker(view, editorController.iMapManager);
+			}
+			else
+			{
+				EditorUtil.DestroyViewFrustumMarker();
+			}
 		}
 
 		private void DrawDeletePopup()
@@ -439,6 +419,7 @@ namespace ClassicTilestorm
 				map.attachments = list.ToArray();
 				RebuildMarkers();
 				editorController.OnMapChanged();
+				EditorUtil.DestroyViewFrustumMarker();
 			});
 
 			options.Add("Cancel");

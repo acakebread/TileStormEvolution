@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.Rendering;
 
 namespace MassiveHadronLtd
@@ -421,6 +421,44 @@ namespace MassiveHadronLtd
 			mat.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
 
 			return mat;
+		}
+
+		public static Material CreateAdditiveUnlitMaterial(Color color)
+		{
+			var unlitShader = Shader.Find("Universal Render Pipeline/Unlit") ?? Shader.Find("Unlit/Color");
+			if (!unlitShader)
+			{
+				Debug.LogError("CreateAdditiveUnlitMaterial: No Unlit shader found!");
+				return null;
+			}
+
+			var material = new Material(unlitShader)
+			{
+				renderQueue = (int)RenderQueue.Transparent,
+				hideFlags = HideFlags.HideAndDontSave
+			};
+
+			// Set base color (with alpha for transparency)
+			material.SetColor("_BaseColor", color);
+
+			// ADDITIVE BLENDING — SrcAlpha + One = glowing overlap!
+			material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+			material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.One);  // ← This is the magic line!
+			material.SetInt("_ZWrite", 0);
+			material.SetInt("_Cull", (int)UnityEngine.Rendering.CullMode.Off);
+
+			// Enable transparent mode
+			material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+			material.DisableKeyword("_SURFACE_TYPE_OPAQUE");
+			material.DisableKeyword("_ALPHATEST_ON");
+			material.EnableKeyword("_ALPHABLEND_ON");
+			material.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+
+			// URP tags for transparent queue
+			material.SetOverrideTag("RenderType", "Transparent");
+			material.SetOverrideTag("Queue", "Transparent");
+
+			return material;
 		}
 	}
 }
