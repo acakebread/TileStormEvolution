@@ -10,73 +10,102 @@ namespace ClassicTilestorm
 	{
 		public View() { type = "View"; }
 
-		// The one and only source of truth: 7 floats
+		// The single source of truth: 7 floats
 		// [0..2] = position.xyz
-		// [3..6] = squaternion (qx, qy, qz, qw) — magnitude = distance
+		// [3..6] = squaternion (qx,qy,qz,qw) — magnitude = distance
 		[JsonProperty(Order = 10)]
 		public float[] data;
 
 		// ─────────────────────────────────────────────────────────────────────
-		// Public read/write accessors — VSrc and VDst are now SETTABLE
-		// Setting either one instantly rebuilds the full 7-float data blob
+		// FULLY READ/WRITE PROPERTIES — ALL MUTATIONS REBUILD DATA
 		// ─────────────────────────────────────────────────────────────────────
-		[JsonIgnore] public Vector3 Position => Squatrix7.GetPosition(data);
+		[JsonIgnore]
+		public Vector3 Position
+		{
+			get => Squatrix7.GetPosition(data);
+			set => Rebuild(position: value);
+		}
 
-		[JsonIgnore] public Quaternion Rotation => Squatrix7.GetRotation(data);
+		[JsonIgnore]
+		public Quaternion Rotation
+		{
+			get => Squatrix7.GetRotation(data);
+			set => Rebuild(rotation: value);
+		}
 
-		[JsonIgnore] public float Distance => Squatrix7.GetDistance(data);
+		[JsonIgnore]
+		public float Distance
+		{
+			get => Squatrix7.GetDistance(data);
+			set => Rebuild(distance: value);
+		}
 
-		[JsonIgnore] public Vector3 LookAt => Squatrix7.GetLookAt(data);
+		[JsonIgnore]
+		public Vector3 LookAt
+		{
+			get => Squatrix7.GetLookAt(data);
+			set => Rebuild(lookAt: value);
+		}
 
-		// Backward compatibility — READ-ONLY for old code that only reads
-		// But now also WRITABLE so editors/tools can still do view.VSrc = ...;
+		// Backward compatibility — still fully writable!
 		[JsonIgnore]
 		public Vector3 VSrc
 		{
 			get => Position;
-			set => RebuildFromSrcAndDst(value, LookAt);
+			set => Rebuild(position: value);
 		}
 
 		[JsonIgnore]
 		public Vector3 VDst
 		{
 			get => LookAt;
-			set => RebuildFromSrcAndDst(Position, value);
+			set => Rebuild(lookAt: value);
 		}
 
 		// ─────────────────────────────────────────────────────────────────────
-		// Core rebuild logic — called whenever VSrc or VDst is written to
+		// Smart rebuild — only overwrites what changed, preserves rest when possible
 		// ─────────────────────────────────────────────────────────────────────
-		private void RebuildFromSrcAndDst(Vector3 src, Vector3 dst)
+		private void Rebuild(
+			Vector3? position = null,
+			Quaternion? rotation = null,
+			float? distance = null,
+			Vector3? lookAt = null)
 		{
-			Vector3 dir = dst - src;
-			float distance = dir.magnitude;
-			Quaternion rotation = distance > 0.001f
-				? Quaternion.LookRotation(dir, Vector3.up)
-				: Quaternion.identity;
+			// Start from current known good state
+			Vector3 pos = position ?? Position;
+			Quaternion rot = rotation ?? Rotation;
+			float dist = distance ?? Distance;
 
-			// Allocate once, reuse if possible
+			// If LookAt was set, recompute rotation + distance from it
+			if (lookAt.HasValue)
+			{
+				Vector3 dir = lookAt.Value - pos;
+				dist = dir.magnitude;
+				rot = dist > 0.001f ? Quaternion.LookRotation(dir, Vector3.up) : Quaternion.identity;
+			}
+
+			// If only distance changed, preserve rotation direction
+			if (distance.HasValue && !rotation.HasValue && !lookAt.HasValue)
+			{
+				rot = Rotation; // keep current rotation
+			}
+
+			// Allocate if needed
 			if (data == null || data.Length != 7)
 				data = new float[7];
 
-			data[0] = src.x;
-			data[1] = src.y;
-			data[2] = src.z;
+			// Write position
+			data[0] = pos.x;
+			data[1] = pos.y;
+			data[2] = pos.z;
 
-			var qscale = Squaternion.Encode(rotation, distance);
+			// Encode rotation + distance into squaternion
+			var qscale = Squaternion.Encode(rot.normalized, dist);
+
 			data[3] = qscale.x;
 			data[4] = qscale.y;
 			data[5] = qscale.z;
 			data[6] = qscale.w;
-		}
-
-		// Optional: ensure data exists even if someone creates a View manually
-		public void EnsureValidData()
-		{
-			if (data == null || data.Length != 7)
-			{
-				RebuildFromSrcAndDst(Vector3.zero, Vector3.forward * 10f);
-			}
 		}
 	}
 }
