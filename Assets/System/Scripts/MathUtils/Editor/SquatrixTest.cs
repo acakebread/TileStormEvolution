@@ -17,6 +17,6 @@ public class SquatrixTest : EditorWindow
 
 		//Debug.Log(allPass ? "SQUATRIX IS PERFECT" : "SQUATRIX HAS FAILED");
 
-		Squatrix.TestRoundTrip();
+		LossySquatrix.TestRoundTrip();
 	}
 }

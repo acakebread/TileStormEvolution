@@ -88,7 +88,7 @@ namespace ClassicTilestorm.Editor
 						obj.Remove("data");
 
 						obj["type"] = "View";
-						obj["data"] = new JArray(Squatrix7.Encode(src, rot, dist));
+						obj["data"] = new JArray(Squatrix.Encode(src, rot, dist));
 
 						converted++;
 					}

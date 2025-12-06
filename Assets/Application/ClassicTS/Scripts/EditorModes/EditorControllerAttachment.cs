@@ -149,7 +149,7 @@ namespace ClassicTilestorm
 					draggingIndex = -1;
 					originalTile = -1;
 				}
-				
+
 				if (wasClick && clickStartTile >= 0)
 				{
 					pendingTile = clickStartTile;
@@ -255,8 +255,16 @@ namespace ClassicTilestorm
 				DrawDeletePopup();
 		}
 
+		private GUIStyle leftButtonStyle;
 		private void DrawAttachmentList(MapAttachment[] attachments, float panelHeight)
 		{
+			if (leftButtonStyle == null)
+			{
+				leftButtonStyle = new GUIStyle(GUI.skin.button);
+				leftButtonStyle.alignment = TextAnchor.MiddleLeft;   // This is the key line
+				leftButtonStyle.padding.left = 12;                  // Optional: nice left indent
+			}
+
 			const float reservedBottom = 110f;
 			const float topOffset = 25f;
 			float scrollHeight = Mathf.Max(0f, panelHeight - reservedBottom);
@@ -281,8 +289,8 @@ namespace ClassicTilestorm
 				string typeLabel = att.type;
 				string extra = "";
 
-				if (att is Emitter emitter && emitter.vDir != null)
-					extra = $" → {Vector3Serialization.ToVector3(emitter.vDir):F1}";
+				if (att is Emitter emitter && emitter.LookAt != null)
+					extra = $" → {emitter.LookAt:F1}";
 
 				string label = $"ATT{i:00} [{att.tile}] {typeLabel}{extra}";
 
@@ -291,7 +299,7 @@ namespace ClassicTilestorm
 					: Color.white;
 
 				// FULL WIDTH BUTTON — starts at 0, uses full content width
-				if (GUI.Button(new Rect(0f, y, contentRect.width, 36f), label))
+				if (GUI.Button(new Rect(0f, y, contentRect.width, 36f), label, leftButtonStyle))
 					SelectAttachment(i);
 
 				GUI.backgroundColor = Color.white;
@@ -337,20 +345,20 @@ namespace ClassicTilestorm
 			sp.y -= 55;
 
 			var options = new List<string>
-	{
-		"Add Emitter",
-		"Add View",
-		"Add Pickup",
-		"Cancel"
-	};
+			{
+				"Add Emitter",
+				"Add View",
+				"Add Pickup",
+				"Cancel"
+			};
 
 			var actions = new List<System.Action>
-	{
-		() => AddAttachmentAtTileWithType(pendingTile, typeof(Emitter)),
-		() => AddAttachmentAtTileWithType(pendingTile, typeof(View)),
-		() => AddAttachmentAtTileWithType(pendingTile, typeof(Pickup)),
-		() => { } // Cancel
-    };
+			{
+				() => AddAttachmentAtTileWithType(pendingTile, typeof(Emitter)),
+				() => AddAttachmentAtTileWithType(pendingTile, typeof(View)),
+				() => AddAttachmentAtTileWithType(pendingTile, typeof(Pickup)),
+				() => { } // Cancel
+			};
 
 			if (PopupMenu.Show(sp, new Vector2(260, 30 + options.Count * 26),
 				$"Add to Tile {pendingTile}", options.ToArray(), i =>
@@ -370,7 +378,7 @@ namespace ClassicTilestorm
 
 			MapAttachment newAtt = type.Name switch
 			{
-				"Emitter" => new Emitter { tile = tile, Dir = Vector3.forward },
+				"Emitter" => new Emitter { tile = tile, LookAt = Vector3.forward },
 				"View" => new View { tile = tile },
 				"Pickup" => new Pickup { tile = tile },
 				_ => null
@@ -409,8 +417,8 @@ namespace ClassicTilestorm
 			foreach (var item in attsOnTile)
 			{
 				string label = item.att.type;
-				if (item.att is Emitter e && e.vDir != null)
-					label += $" → {Vector3Serialization.ToVector3(e.vDir):F1}";
+				if (item.att is Emitter e && e.LookAt != null)
+					label += $" → {e.LookAt:F1}";
 				options.Add($"Delete {label}");
 				int capturedIndex = item.idx;
 				actions.Add(() =>

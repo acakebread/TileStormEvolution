@@ -257,8 +257,16 @@ namespace ClassicTilestorm
 				DrawDeletePopup();
 		}
 
+		private GUIStyle leftButtonStyle; 
 		private void DrawWaypointList(int[] waypoints, float panelHeight)
 		{
+			if (leftButtonStyle == null)
+			{
+				leftButtonStyle = new GUIStyle(GUI.skin.button);
+				leftButtonStyle.alignment = TextAnchor.MiddleLeft;   // This is the key line
+				leftButtonStyle.padding.left = 12;                  // Optional: nice left indent
+			}
+
 			const float reservedBottom = 110f;
 			const float topOffset = 25f;
 			float scrollHeight = Mathf.Max(0f, panelHeight - reservedBottom);
@@ -286,7 +294,7 @@ namespace ClassicTilestorm
 					: Color.white;
 
 				// FULL WIDTH BUTTON — starts at x=0, full content width
-				if (GUI.Button(new Rect(0f, y, contentRect.width, 36f), label))
+				if (GUI.Button(new Rect(0f, y, contentRect.width, 36f), label, leftButtonStyle))
 					SelectWaypoint(i);
 
 				GUI.backgroundColor = Color.white;

@@ -23,21 +23,21 @@ namespace ClassicTilestorm
 		[JsonIgnore]
 		public Vector3 Position
 		{
-			get => Squatrix7.GetPosition(data);
+			get => Squatrix.GetPosition(data);
 			set => Rebuild(position: value);
 		}
 
 		[JsonIgnore]
 		public Quaternion Rotation
 		{
-			get => Squatrix7.GetRotation(data);
+			get => Squatrix.GetRotation(data);
 			set => Rebuild(rotation: value);
 		}
 
 		[JsonIgnore]
 		public float Distance
 		{
-			get => Squatrix7.GetDistance(data);
+			get => Squatrix.GetDistance(data);
 			set => Rebuild(distance: value);
 		}
 
@@ -47,7 +47,7 @@ namespace ClassicTilestorm
 		[JsonIgnore]
 		public Vector3 LookAt
 		{
-			get => Squatrix7.GetLookAt(data);
+			get => Squatrix.GetLookAt(data);
 			set => Rebuild(lookAt: value);
 		}
 

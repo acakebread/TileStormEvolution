@@ -107,9 +107,17 @@ namespace ClassicTilestorm
 				EditorUtil.HideGhostTile();
 		}
 
+		private GUIStyle leftButtonStyle; 
 		public override void OnGui()
 		{
 			if (editorController.CurrentMode != EditorController.EditorMode.Paint || camera == null) return;
+
+			if (leftButtonStyle == null)
+			{
+				leftButtonStyle = new GUIStyle(GUI.skin.button);
+				leftButtonStyle.alignment = TextAnchor.MiddleLeft;   // This is the key line
+				leftButtonStyle.padding.left = 12;                  // Optional: nice left indent
+			}
 
 			sidePanel.Update();
 
@@ -152,7 +160,7 @@ namespace ClassicTilestorm
 
 				GUI.backgroundColor = (def.id == selectedDefinitionId) ? new Color(0.3f, 0.8f, 1f, 0.9f) : Color.white;
 
-				if (GUI.Button( new Rect(0f, y, contentRect.width, buttonHeight), label))
+				if (GUI.Button( new Rect(0f, y, contentRect.width, buttonHeight), label, leftButtonStyle))
 					SetSelectedDefinitionById(def.id);
 
 				y += buttonHeight + 4f;
