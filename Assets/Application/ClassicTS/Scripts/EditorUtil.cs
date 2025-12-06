@@ -99,9 +99,8 @@ namespace ClassicTilestorm
 			}
 		}
 
-
 		//waypoint visualisation system
-		private static System.Collections.Generic.List<GameObject> waypointMarkers = new();
+		private static List<GameObject> waypointMarkers = new();
 		private static GameObject waypointCursor;
 		private static Material waypointCursorMaterial;
 
@@ -329,7 +328,8 @@ namespace ClassicTilestorm
 				return;
 
 			var go = new GameObject("ViewFrustum_Gizmo");
-			go.hideFlags = HideFlags.HideAndDontSave;
+			//go.hideFlags = HideFlags.HideAndDontSave;
+			go.layer = LayerMask.NameToLayer("ViewGizmos");
 
 			var mf = go.AddComponent<MeshFilter>();
 			var mr = go.AddComponent<MeshRenderer>();

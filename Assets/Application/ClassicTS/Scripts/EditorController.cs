@@ -73,8 +73,17 @@ namespace ClassicTilestorm
 			int height = mapManager ? mapManager.Height : 32;
 
 			gridLines = GridLinesHelper.CreateGridLines(transform, width, height, extension: 16);
+			//gridLines.layer = LayerMask.NameToLayer("ViewGizmos");
+			SetLayerRecursively(gridLines.transform, LayerMask.NameToLayer("ViewGizmos"));
 			gridLines.transform.localPosition = MapManager.tile_origin + new Vector3(-0.5f, 0f, -0.5f);
 			gridLines.SetActive(wasActive);
+
+			void SetLayerRecursively(Transform parent, int layer)
+			{
+				parent.gameObject.layer = layer;
+				foreach (Transform child in parent)
+					SetLayerRecursively(child, layer);
+			}
 		}
 
 		private void OnGridLinesToggled(bool value)

@@ -135,6 +135,8 @@ namespace MassiveHadronLtd
 			InitializeEffect();
 			previousEffectMode = effectMode;
 			StoreMaterialPropertyValues();
+
+			mainCamera.cullingMask |= 1 << LayerMask.NameToLayer("ViewGizmos");
 		}
 
 		private void InitializeEffect()
@@ -246,8 +248,7 @@ namespace MassiveHadronLtd
 						effectMaterial.SetPass(0);
 						cmd.DrawMesh(effectMesh, Matrix4x4.identity, effectMaterial, 0, 0);
 					}
-				}
-				);
+				});
 			}
 		}
 

@@ -442,10 +442,10 @@ namespace MassiveHadronLtd
 			material.SetColor("_BaseColor", color);
 
 			// ADDITIVE BLENDING — SrcAlpha + One = glowing overlap!
-			material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-			material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.One);  // ← This is the magic line!
+			material.SetInt("_SrcBlend", (int)BlendMode.SrcAlpha);
+			material.SetInt("_DstBlend", (int)BlendMode.One);  // ← This is the magic line!
 			material.SetInt("_ZWrite", 0);
-			material.SetInt("_Cull", (int)UnityEngine.Rendering.CullMode.Off);
+			material.SetInt("_Cull", (int)CullMode.Off);
 
 			// Enable transparent mode
 			material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
