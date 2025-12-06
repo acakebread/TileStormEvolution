@@ -1,7 +1,6 @@
-// File: Assets/Application/ClassicTS/Scripts/View.cs
+﻿// File: Assets/Scripts/ClassicTilestorm/View.cs
 using UnityEngine;
 using Newtonsoft.Json;
-using System.Runtime.Serialization;
 using MassiveHadronLtd;
 
 namespace ClassicTilestorm
@@ -11,80 +10,72 @@ namespace ClassicTilestorm
 	{
 		public View() { type = "View"; }
 
-		[JsonProperty(Order = 10, NullValueHandling = NullValueHandling.Ignore)]
-		public float[] position;
+		// The one and only source of truth: 7 floats
+		// [0..2] = position.xyz
+		// [3..6] = squaternion (qx, qy, qz, qw) — magnitude = distance
+		[JsonProperty(Order = 10)]
+		public float[] data;
 
-		[JsonProperty(Order = 11, NullValueHandling = NullValueHandling.Ignore)]
-		public float[] qscale;
+		// ─────────────────────────────────────────────────────────────────────
+		// Public read/write accessors — VSrc and VDst are now SETTABLE
+		// Setting either one instantly rebuilds the full 7-float data blob
+		// ─────────────────────────────────────────────────────────────────────
+		[JsonIgnore] public Vector3 Position => Squatrix7.GetPosition(data);
 
-		// Legacy support � old format
-		[JsonProperty("vSrc", Order = 100, NullValueHandling = NullValueHandling.Ignore)]
-		private float[] legacyVSrc;
+		[JsonIgnore] public Quaternion Rotation => Squatrix7.GetRotation(data);
 
-		[JsonProperty("vDst", Order = 101, NullValueHandling = NullValueHandling.Ignore)]
-		private float[] legacyVDst;
+		[JsonIgnore] public float Distance => Squatrix7.GetDistance(data);
 
-		// Public accessors
-		[JsonIgnore] public Vector3 Position => Vector3Serialization.ToVector3(position);
+		[JsonIgnore] public Vector3 LookAt => Squatrix7.GetLookAt(data);
 
+		// Backward compatibility — READ-ONLY for old code that only reads
+		// But now also WRITABLE so editors/tools can still do view.VSrc = ...;
 		[JsonIgnore]
-		public Quaternion Rotation
+		public Vector3 VSrc
 		{
-			get
-			{
-				if (qscale != null && qscale.Length == 4)
-				{
-					var v4 = Vector4Serialization.ToVector4(qscale);
-					if (Squaternion.Decode(v4, out Quaternion q, out _))
-						return q;
-				}
-				return Quaternion.identity;
-			}
+			get => Position;
+			set => RebuildFromSrcAndDst(value, LookAt);
 		}
 
 		[JsonIgnore]
-		public float Distance
+		public Vector3 VDst
 		{
-			get
-			{
-				if (qscale != null && qscale.Length == 4)
-				{
-					var v4 = Vector4Serialization.ToVector4(qscale);
-					if (Squaternion.Decode(v4, out _, out float s))
-						return Mathf.Abs(s);
-				}
-				return 10f;
-			}
+			get => LookAt;
+			set => RebuildFromSrcAndDst(Position, value);
 		}
 
-		[JsonIgnore] public Vector3 LookAt => Position + Rotation * Vector3.forward * Distance;
-
-		// Backward compatibility � old code keeps working
-		[JsonIgnore] public Vector3 VSrc => Position;
-		[JsonIgnore] public Vector3 VDst => LookAt;
-
-		[OnDeserialized]
-		private void OnDeserialized(StreamingContext context)
+		// ─────────────────────────────────────────────────────────────────────
+		// Core rebuild logic — called whenever VSrc or VDst is written to
+		// ─────────────────────────────────────────────────────────────────────
+		private void RebuildFromSrcAndDst(Vector3 src, Vector3 dst)
 		{
-			if ((position == null || position.Length != 3 || qscale == null || qscale.Length != 4) &&
-				legacyVSrc != null && legacyVDst != null &&
-				legacyVSrc.Length == 3 && legacyVDst.Length == 3)
+			Vector3 dir = dst - src;
+			float distance = dir.magnitude;
+			Quaternion rotation = distance > 0.001f
+				? Quaternion.LookRotation(dir, Vector3.up)
+				: Quaternion.identity;
+
+			// Allocate once, reuse if possible
+			if (data == null || data.Length != 7)
+				data = new float[7];
+
+			data[0] = src.x;
+			data[1] = src.y;
+			data[2] = src.z;
+
+			var qscale = Squaternion.Encode(rotation, distance);
+			data[3] = qscale.x;
+			data[4] = qscale.y;
+			data[5] = qscale.z;
+			data[6] = qscale.w;
+		}
+
+		// Optional: ensure data exists even if someone creates a View manually
+		public void EnsureValidData()
+		{
+			if (data == null || data.Length != 7)
 			{
-				Vector3 src = new Vector3(legacyVSrc[0], legacyVSrc[1], legacyVSrc[2]);
-				Vector3 dst = new Vector3(legacyVDst[0], legacyVDst[1], legacyVDst[2]);
-
-				Vector3 forward = dst - src;
-				float distance = forward.magnitude;
-				Quaternion rot = distance > 0.001f
-					? Quaternion.LookRotation(forward, Vector3.up)
-					: Quaternion.identity;
-
-				position = new[] { src.x, src.y, src.z };
-				qscale = Vector4Serialization.FromVector4(Squaternion.Encode(rot, distance));
-
-				// Clean up legacy data
-				legacyVSrc = null;
-				legacyVDst = null;
+				RebuildFromSrcAndDst(Vector3.zero, Vector3.forward * 10f);
 			}
 		}
 	}
