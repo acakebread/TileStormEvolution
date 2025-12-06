@@ -37,9 +37,9 @@ namespace ClassicTilestorm
 
 			MapAttachment result = typeName switch
 			{
-				"Emitter" => new Emitter(),
 				"View" => new View(),
-				"Viewpoint" => new Viewpoint(),
+				"Emitter" => new Emitter(),
+				//"Viewpoint" => new Viewpoint(),
 				"Pickup" => new Pickup(),
 				_ => new Emitter()
 			};
