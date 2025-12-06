@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using MassiveHadronLtd;
+using System.Linq;
 
 namespace ClassicTilestorm
 {
@@ -204,6 +205,64 @@ namespace ClassicTilestorm
 			foreach (var m in waypointMarkers)
 				if (m) Object.DestroyImmediate(m);
 			waypointMarkers.Clear();
+		}
+
+		// === ATTACHMENT MARKERS ===
+		private static readonly System.Collections.Generic.List<GameObject> attachmentMarkers = new();
+		public static void UpdateAttachmentMarkers(IMapManager mapManager, int[] tiles, int selectedIndex)
+		{
+			DestroyAttachmentVisuals();
+
+			if (tiles == null || tiles.Length == 0) return;
+
+			for (int i = 0; i < tiles.Length; i++)
+			{
+				int tile = tiles[i];
+				if (tile < 0) continue;
+
+				Vector3 pos = mapManager.TileWorldPosition(tile) + Vector3.up * 0.02f;
+
+				var go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+				go.name = $"WP{i}";
+				go.transform.position = pos;
+				go.transform.localScale = new Vector3(0.8f, 0.01f, 0.8f);
+
+				var mr = go.GetComponent<MeshRenderer>();
+				if (i == selectedIndex)
+				{
+					mr.material = MaterialUtils.CreateTransparentUnlitMaterial(new Color(0f, 1f, 0f, 0.7f));
+					var pulse = go.AddComponent<WaypointPulse>();
+					pulse.intensity = 2.1f;
+					pulse.speed = 3.2f;
+				}
+				else
+				{
+					mr.material = MaterialUtils.CreateTransparentUnlitMaterial(new Color(0f, 0.7f, 1f, 0.7f));
+				}
+
+				var col = go.GetComponent<Collider>();
+				if (col) col.isTrigger = true;
+
+				attachmentMarkers.Add(go);
+			}
+		}
+
+		public static void DestroyAttachmentVisuals()
+		{
+			foreach (var m in attachmentMarkers)
+				if (m) Object.DestroyImmediate(m);
+			attachmentMarkers.Clear();
+		}
+	}
+
+	public class AttachmentMarkerClick : MonoBehaviour
+	{
+		public int tileIndex;
+		public System.Action onClick;
+
+		private void OnMouseDown()
+		{
+			onClick?.Invoke();
 		}
 	}
 

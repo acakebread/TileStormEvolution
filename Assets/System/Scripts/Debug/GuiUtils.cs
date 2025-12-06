@@ -373,5 +373,32 @@ namespace MassiveHadronLtd
 				return result;
 			}
 		}
+
+		public static class PopupMenu
+		{
+			public static bool Show(Vector2 screenPos, Vector2 size, string title, string[] options, System.Action<int> onSelect)
+			{
+				var rect = new Rect(screenPos.x, screenPos.y, size.x, size.y);
+
+				if (Event.current.type == EventType.MouseDown && !rect.Contains(Event.current.mousePosition))
+				{
+					onSelect?.Invoke(-1);
+					return true;
+				}
+
+				GUI.Box(rect, title, GUI.skin.window);
+
+				for (int i = 0; i < options.Length; i++)
+				{
+					if (GUI.Button(new Rect(rect.x + 8, rect.y + 30 + i * 26, rect.width - 16, 24), options[i]))
+					{
+						onSelect?.Invoke(i);
+						return true;
+					}
+				}
+
+				return false; // keep open
+			}
+		}
 	}
 }

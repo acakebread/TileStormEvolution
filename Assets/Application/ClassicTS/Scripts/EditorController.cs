@@ -16,8 +16,9 @@ namespace ClassicTilestorm
 		private EditorControllerDrag dragMode;
 		private EditorControllerPaint paintMode;
 		private EditorControllerWaypoint waypointMode;
+		private EditorControllerAttachment attachmentMode;
 
-		public enum EditorMode { Drag, Paint, Waypoint }
+		public enum EditorMode { Drag, Paint, Waypoint, Attachment }
 		private EditorMode? currentMode = null;
 		public EditorMode CurrentMode => currentMode ?? EditorMode.Drag;
 
@@ -40,6 +41,7 @@ namespace ClassicTilestorm
 			dragMode = new EditorControllerDrag(this);
 			paintMode = new EditorControllerPaint(this);
 			waypointMode = new EditorControllerWaypoint(this);
+			attachmentMode = new EditorControllerAttachment(this); 
 
 			SetEditorMode(EditorMode.Drag);
 
@@ -138,6 +140,7 @@ namespace ClassicTilestorm
 				EditorMode.Drag => dragMode,
 				EditorMode.Paint => paintMode,
 				EditorMode.Waypoint => waypointMode,
+				EditorMode.Attachment => attachmentMode,
 				_ => dragMode
 			};
 
@@ -180,6 +183,9 @@ namespace ClassicTilestorm
 
 			GUI.contentColor = mode == "Waypoint" ? Color.cyan : Color.white;
 			if (GUI.Button(new Rect(margin, y + 3 * (buttonHeight + spacing), buttonWidth, buttonHeight), "Waypoint")) SetEditorMode(EditorMode.Waypoint);
+
+			GUI.contentColor = CurrentMode == EditorMode.Attachment ? Color.cyan : Color.white;
+			if (GUI.Button(new Rect(margin, y + 4 * (buttonHeight + spacing), buttonWidth, buttonHeight), "Attachments")) SetEditorMode(EditorMode.Attachment);
 
 			GUI.contentColor = Color.white;
 
