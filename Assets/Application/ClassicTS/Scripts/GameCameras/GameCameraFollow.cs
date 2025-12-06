@@ -21,6 +21,7 @@ namespace ClassicTilestorm
 			smoothing = 64f;
 			fieldOfView = 20f;
 			postProcessingEnabled = true;
+			UpdateCamera();
 		}
 
 		public override void Update()
@@ -35,7 +36,11 @@ namespace ClassicTilestorm
 			var origin = itarget - deltaHorizontal * (IdealDistance * IdealDistanceHorizontalScale);
 			origin.y = itarget.y + IdealDistance;
 			iorigin = Vector3.Lerp(iorigin, origin, followLerp);
+			UpdateCamera();
+		}
 
+		private void UpdateCamera()
+		{
 			if (null == camera) return;
 			camera.transform.position = iorigin;
 			var direction = itarget - iorigin;

@@ -60,7 +60,7 @@ namespace MassiveHadronLtd
 
 		public void SetCameraSystem(string system, bool background = false)
 		{
-			//if (currentSystem == system) return;
+			//if (currentSystem == system) return;//there may be an optimisation here but currently we still need to copy some properties even if the system is the same so disable for now
 			if (!cameraSystems.ContainsKey(system))
 			{
 				Debug.LogWarning($"Invalid camera mode: {system}. Falling back to '{DefaultSystem}'.");
@@ -83,9 +83,8 @@ namespace MassiveHadronLtd
 			activeSystem?.OnDisable();
 			currentSystem = system;
 			activeSystem?.CopyFrom(cameraSystems.ContainsKey(modeSystem) ? cameraSystems[modeSystem] : null);
-			//activeSystem?.Start();
+			activeSystem?.Start();
 			activeSystem?.OnEnable();
-			activeSystem?.Update();//force initilaise
 
 			bool AreSystemsInSameMode(string system1, string system2) => modes.Any(mode => mode.Value.Contains(system1) && mode.Value.Contains(system2));
 		}
@@ -107,7 +106,6 @@ namespace MassiveHadronLtd
 
 			cameraSystems[system] = camera;
 			cameraSystems[system].Awake();
-			cameraSystems[system].Start();//ToDo defer start until just before first enable
 		}
 
 		protected void RegisterMode(string modeId, string[] systems)

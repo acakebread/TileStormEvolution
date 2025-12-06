@@ -10,15 +10,16 @@ namespace ClassicTilestorm
 	{
 		public View() { type = "View"; }
 
-		// The single source of truth: 7 floats
-		// [0..2] = position.xyz
-		// [3..6] = squaternion (qx,qy,qz,qw) — magnitude = distance
+		// Single source of truth: 7 floats
+		// [0..2] → position.x, y, z
+		// [3..6] → squaternion (qx, qy, qz, qw) — magnitude = distance
 		[JsonProperty(Order = 10)]
 		public float[] data;
 
-		// ─────────────────────────────────────────────────────────────────────
-		// FULLY READ/WRITE PROPERTIES — ALL MUTATIONS REBUILD DATA
-		// ─────────────────────────────────────────────────────────────────────
+		// ==================================================================
+		// FULLY READ/WRITE PROPERTIES — ALL MUTATIONS UPDATE `data` INSTANTLY
+		// ==================================================================
+
 		[JsonIgnore]
 		public Vector3 Position
 		{
@@ -40,6 +41,9 @@ namespace ClassicTilestorm
 			set => Rebuild(distance: value);
 		}
 
+		/// <summary>
+		/// Look-at point in world space. Setting this preserves current camera roll.
+		/// </summary>
 		[JsonIgnore]
 		public Vector3 LookAt
 		{
@@ -47,7 +51,7 @@ namespace ClassicTilestorm
 			set => Rebuild(lookAt: value);
 		}
 
-		// Backward compatibility — still fully writable!
+		// Backward compatibility — fully writable!
 		[JsonIgnore]
 		public Vector3 VSrc
 		{
@@ -62,35 +66,59 @@ namespace ClassicTilestorm
 			set => Rebuild(lookAt: value);
 		}
 
-		// ─────────────────────────────────────────────────────────────────────
-		// Smart rebuild — only overwrites what changed, preserves rest when possible
-		// ─────────────────────────────────────────────────────────────────────
+		// ==================================================================
+		// SMART REBUILD — preserves roll when LookAt is changed
+		// ==================================================================
 		private void Rebuild(
 			Vector3? position = null,
 			Quaternion? rotation = null,
 			float? distance = null,
 			Vector3? lookAt = null)
 		{
-			// Start from current known good state
+			// Start from current valid state
 			Vector3 pos = position ?? Position;
 			Quaternion rot = rotation ?? Rotation;
 			float dist = distance ?? Distance;
 
-			// If LookAt was set, recompute rotation + distance from it
+			// If LookAt was provided, recompute rotation + distance while PRESERVING ROLL
 			if (lookAt.HasValue)
 			{
-				Vector3 dir = lookAt.Value - pos;
-				dist = dir.magnitude;
-				rot = dist > 0.001f ? Quaternion.LookRotation(dir, Vector3.up) : Quaternion.identity;
+				Vector3 target = lookAt.Value;
+				Vector3 toTarget = target - pos;
+
+				if (toTarget.sqrMagnitude < 0.0001f)
+				{
+					// Degenerate: same point — keep current rotation and set distance to 0
+					dist = 0f;
+				}
+				else
+				{
+					Vector3 newForward = toTarget.normalized;
+					dist = toTarget.magnitude;
+
+					// Current up vector in world space
+					Vector3 currentUp = rot * Vector3.up;
+
+					// Project current up onto plane perpendicular to new forward → preserves roll
+					Vector3 preservedUp = Vector3.ProjectOnPlane(currentUp, newForward);
+
+					// Fallback if projection collapses (looking straight up/down)
+					if (preservedUp.sqrMagnitude < 0.01f)
+						preservedUp = Vector3.up;
+
+					preservedUp = preservedUp.normalized;
+
+					rot = Quaternion.LookRotation(newForward, preservedUp);
+				}
 			}
 
-			// If only distance changed, preserve rotation direction
-			if (distance.HasValue && !rotation.HasValue && !lookAt.HasValue)
+			// If only distance changed, keep current rotation (including roll)
+			if (distance.HasValue && rotation == null && lookAt == null)
 			{
-				rot = Rotation; // keep current rotation
+				rot = Rotation; // preserve full orientation
 			}
 
-			// Allocate if needed
+			// Ensure data array exists
 			if (data == null || data.Length != 7)
 				data = new float[7];
 
@@ -106,6 +134,15 @@ namespace ClassicTilestorm
 			data[4] = qscale.y;
 			data[5] = qscale.z;
 			data[6] = qscale.w;
+		}
+
+		// Optional: ensure valid data on awake / enable
+		public void OnEnable()
+		{
+			if (data == null || data.Length != 7)
+			{
+				Rebuild(position: Vector3.zero, distance: 10f);
+			}
 		}
 	}
 }
