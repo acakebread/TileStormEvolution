@@ -1,4 +1,5 @@
-﻿using UnityEditor;
+﻿using System.Collections.Generic;
+using UnityEditor;
 using UnityEngine;
 
 namespace MassiveHadronLtd
@@ -398,6 +399,67 @@ namespace MassiveHadronLtd
 				}
 
 				return false; // keep open
+			}
+		}
+
+		// ─────────────────────────────────────────────────────────────────────────────
+		// PURE GUI POPUP — knows nothing about MapAttachment, View, Emitter, etc.
+		// ─────────────────────────────────────────────────────────────────────────────
+		public static class PopupAttachmentAdd
+		{
+			public static bool Show(
+				Vector2 screenPos,
+				int tileIndex,
+				System.Action<int> onSelect) // 0=Emitter, 1=View, 2=Pickup, -1=Cancel
+			{
+				var options = new[] { "Add Emitter", "Add View", "Add Pickup", "Cancel" };
+
+				return PopupMenu.Show(screenPos, new Vector2(260, 30 + options.Length * 26),
+					$"Add to Tile {tileIndex}", options, i =>
+					{
+						onSelect?.Invoke(i < 3 ? i : -1); // -1 for Cancel
+					});
+			}
+		}
+
+		public static class PopupAttachmentDelete
+		{
+			public static bool Show(
+				Vector2 screenPos,
+				int tileIndex,
+				int attachmentCount,
+				System.Action<int> onSelect) // 0..count-1 = single delete, count = delete all (only if >1), count+1 = cancel
+			{
+				if (attachmentCount == 0) return true;
+
+				var options = new List<string>();
+
+				// Always show individual deletes
+				for (int i = 0; i < attachmentCount; i++)
+					options.Add($"Delete attachment {i + 1}");
+
+				// Only show "Delete All" if more than one
+				int deleteAllIndex = -1;
+				if (attachmentCount > 1)
+				{
+					deleteAllIndex = options.Count;
+					options.Add("Delete All on this tile");
+				}
+
+				options.Add("Cancel");
+				int cancelIndex = options.Count - 1;
+
+				return PopupMenu.Show(screenPos, new Vector2(320, 30 + options.Count * 26),
+					$"Tile {tileIndex} — {attachmentCount} attachment(s)",
+					options.ToArray(), i =>
+					{
+						if (i < attachmentCount)
+							onSelect?.Invoke(i);                    // single delete
+						else if (i == deleteAllIndex)
+							onSelect?.Invoke(-2);                   // special code for "delete all"
+						else if (i == cancelIndex)
+							onSelect?.Invoke(-1);                   // cancel
+					});
 			}
 		}
 	}

@@ -382,16 +382,16 @@ namespace ClassicTilestorm
 		}
 	}
 
-	public class AttachmentMarkerClick : MonoBehaviour
-	{
-		public int tileIndex;
-		public System.Action onClick;
+	//public class AttachmentMarkerClick : MonoBehaviour
+	//{
+	//	public int tileIndex;
+	//	public System.Action onClick;
 
-		private void OnMouseDown()
-		{
-			onClick?.Invoke();
-		}
-	}
+	//	private void OnMouseDown()
+	//	{
+	//		onClick?.Invoke();
+	//	}
+	//}
 
 	public class WaypointPulse : MonoBehaviour
 	{

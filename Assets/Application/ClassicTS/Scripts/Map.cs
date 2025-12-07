@@ -3,6 +3,7 @@ using UnityEngine;
 using Newtonsoft.Json;
 using MassiveHadronLtd;
 using System.Linq;
+using System.Collections.Generic;
 
 namespace ClassicTilestorm
 {
@@ -306,6 +307,48 @@ namespace ClassicTilestorm
 				Debug.Log($"[Export] Map '{copy.name}' auto-cropped to {copy.width}x{copy.height}");
 
 			return copy;
+		}
+
+		// ─────────────────────────────────────────────────────────────────────
+		// CLEAN, SAFE, RUNTIME-FRIENDLY ATTACHMENT MANAGEMENT
+		// ─────────────────────────────────────────────────────────────────────
+		public void AddAttachment(MapAttachment attachment)
+		{
+			if (attachment == null) return;
+
+			var list = attachments?.ToList() ?? new List<MapAttachment>();
+			list.Add(attachment);
+			attachments = list.ToArray();
+		}
+
+		public bool RemoveAttachment(MapAttachment attachment)
+		{
+			if (attachment == null || attachments == null || attachments.Length == 0)
+				return false;
+
+			int index = Array.IndexOf(attachments, attachment);
+			if (index < 0) return false;
+
+			var list = attachments.ToList();
+			list.RemoveAt(index);
+			attachments = list.ToArray();
+			return true;
+		}
+
+		public void RemoveAllAttachmentsOnTile(int tileIndex)
+		{
+			if (attachments == null || attachments.Length == 0 || tileIndex < 0)
+				return;
+
+			attachments = attachments.Where(a => a.tile != tileIndex).ToArray();
+		}
+
+		public MapAttachment[] GetAttachmentsOnTile(int tileIndex)
+		{
+			if (attachments == null || tileIndex < 0)
+				return Array.Empty<MapAttachment>();
+
+			return attachments.Where(a => a.tile == tileIndex).ToArray();
 		}
 	}
 }

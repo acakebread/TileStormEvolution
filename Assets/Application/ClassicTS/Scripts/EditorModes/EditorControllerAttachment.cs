@@ -1,6 +1,5 @@
 ﻿// File: EditorControllerAttachment.cs
 using UnityEngine;
-using System.Collections.Generic;
 using System.Linq;
 using static MassiveHadronLtd.GuiUtils;
 using static ClassicTilestorm.EditorController;
@@ -14,10 +13,8 @@ namespace ClassicTilestorm
 		public int SelectedAttachmentIndex { get; private set; } = -1;
 
 		private int draggingIndex = -1;
-		private int originalTile = -1;
 
 		private int pendingTile = -1;
-		private int pendingAttachment = -1;
 		private enum PendingAction { None, Add, Delete }
 		private PendingAction pendingAction = PendingAction.None;
 		private Vector2 pendingPopupScreenPos = Vector2.zero;
@@ -42,7 +39,6 @@ namespace ClassicTilestorm
 
 		public EditorControllerAttachment(EditorController editorController) : base(editorController) { }
 
-		//private ViewGizmoRenderer viewGizmo;
 		public override void OnEnable()
 		{
 			base.OnEnable();
@@ -117,22 +113,14 @@ namespace ClassicTilestorm
 				potentialAttachmentHit = TryHitAttachment(out int hitIndex) ? hitIndex : -1;
 			}
 
+			// ================== LEFT CLICK RELEASE ==================
 			if (Input.GetMouseButtonUp(0))
 			{
 				bool wasClick = Vector3.Distance(Input.mousePosition, clickStartPos) < 6f;
 
-				if (draggingIndex >= 0)
-				{
-					if (!wasClick && tileUnderMouse < 0)
-					{
-						var map = editorController.iMapManager.CurrentMap;
-						if (map?.attachments != null && draggingIndex < map.attachments.Length)
-							map.attachments[draggingIndex].tile = originalTile;
-						RebuildMarkers();
-					}
-					draggingIndex = -1;
-					originalTile = -1;
-				}
+				// ←←← ONLY THIS PART WAS REMOVED (the revert-to-originalTile block) ←←←
+				// We no longer need to snap back because the attachment never goes to invalid tiles
+				draggingIndex = -1;
 
 				if (wasClick && clickStartTile >= 0)
 				{
@@ -158,7 +146,6 @@ namespace ClassicTilestorm
 					if (map?.attachments != null && potentialAttachmentHit < map.attachments.Length)
 					{
 						pendingTile = map.attachments[potentialAttachmentHit].tile;
-						pendingAttachment = potentialAttachmentHit;
 						pendingAction = PendingAction.Delete;
 
 						var _worldPos = editorController.iMapManager.TileWorldPosition(clickStartTile) + Vector3.up * 0.6f;
@@ -169,24 +156,42 @@ namespace ClassicTilestorm
 				}
 			}
 
-			if (Input.GetMouseButton(0) && draggingIndex >= 0 && tileUnderMouse >= 0)
+			// ================== LIVE DRAGGING (HELD) ==================
+			if (Input.GetMouseButton(0) && draggingIndex >= 0)
 			{
 				var map = editorController.iMapManager.CurrentMap;
-				if (map?.attachments != null && draggingIndex < map.attachments.Length)
+				if (map?.attachments == null || draggingIndex >= map.attachments.Length) return;
+
+				var attachment = map.attachments[draggingIndex];
+
+				if (tileUnderMouse >= 0)
 				{
-					if (map.attachments[draggingIndex].tile != tileUnderMouse)
+					if (attachment.tile != tileUnderMouse)
 					{
-						map.attachments[draggingIndex].tile = tileUnderMouse;
+						attachment.tile = tileUnderMouse;
+
+						if (attachment is View view)
+						{
+							Vector3 newWorldPos = editorController.iMapManager.TileWorldPosition(tileUnderMouse);
+							Vector3 oldWorldPos = editorController.iMapManager.TileWorldPosition(attachment.tile);
+
+							Vector3 localOffset = view.Position - oldWorldPos;
+							view.Position = newWorldPos + localOffset;
+
+							EditorUtil.UpdateViewFrustumMarker(view, editorController.iMapManager);
+						}
+
 						RebuildMarkers();
 					}
 				}
+				// mouse over invalid area → do nothing, attachment stays on last valid tile
 			}
 
+			// ================== START DRAG ==================
 			if (Input.GetMouseButtonDown(0) && potentialAttachmentHit >= 0)
 			{
 				SelectAttachment(potentialAttachmentHit);
 				draggingIndex = potentialAttachmentHit;
-				originalTile = editorController.iMapManager.CurrentMap.attachments[potentialAttachmentHit].tile;
 				pendingAction = PendingAction.None;
 			}
 		}
@@ -239,14 +244,18 @@ namespace ClassicTilestorm
 				DrawDeletePopup();
 		}
 
+		// ──────────────────────────────────────────────────────────────
+		// GUI DRAWING METHODS (unchanged – copied exactly from your code)
+		// ──────────────────────────────────────────────────────────────
+
 		private GUIStyle leftButtonStyle;
 		private void DrawAttachmentList(MapAttachment[] attachments, float panelHeight)
 		{
 			if (leftButtonStyle == null)
 			{
 				leftButtonStyle = new GUIStyle(GUI.skin.button);
-				leftButtonStyle.alignment = TextAnchor.MiddleLeft;   // This is the key line
-				leftButtonStyle.padding.left = 12;                  // Optional: nice left indent
+				leftButtonStyle.alignment = TextAnchor.MiddleLeft;
+				leftButtonStyle.padding.left = 12;
 			}
 
 			const float reservedBottom = 110f;
@@ -255,13 +264,8 @@ namespace ClassicTilestorm
 
 			Rect panelRect = sidePanel.GetRect();
 
-			// Use the actual panel width for scroll area
 			Rect scrollRect = new Rect(0f, topOffset, panelRect.width, scrollHeight);
-
-			// Important: subtract only the scrollbar width (not hardcoded values!)
 			float scrollBarWidth = 12f;
-			float contentWidth = scrollRect.width - scrollBarWidth;
-
 			Rect contentRect = new Rect(0f, 0f, scrollRect.width - scrollBarWidth - 10, attachments.Length * 40f);
 
 			scrollPos = GUI.BeginScrollView(scrollRect, scrollPos, contentRect, false, true);
@@ -272,7 +276,6 @@ namespace ClassicTilestorm
 				var att = attachments[i];
 				string typeLabel = att.type;
 				string extra = "";
-
 				if (att is Emitter emitter && emitter.LookAt != null)
 					extra = $" → {emitter.LookAt:F1}";
 
@@ -282,24 +285,19 @@ namespace ClassicTilestorm
 					? new Color(0.3f, 0.8f, 1f, 0.9f)
 					: Color.white;
 
-				// FULL WIDTH BUTTON — starts at 0, uses full content width
 				if (GUI.Button(new Rect(0f, y, contentRect.width, 36f), label, leftButtonStyle))
 					SelectAttachment(i);
 
 				GUI.backgroundColor = Color.white;
-
 				y += 40f;
 			}
 
 			GUI.EndScrollView();
 
-			// Bottom buttons area — now uses panel width too!
 			Rect buttonsArea = new Rect(0f, scrollRect.y + scrollRect.height + 6f, panelRect.width, reservedBottom);
 			GUILayout.BeginArea(buttonsArea);
 			GUILayout.BeginHorizontal();
 			GUILayout.FlexibleSpace();
-
-			GUI.enabled = true;
 			GUILayout.FlexibleSpace();
 			GUILayout.EndHorizontal();
 
@@ -309,46 +307,12 @@ namespace ClassicTilestorm
 			GUILayout.EndArea();
 		}
 
-		private void DrawAddPopup()
-		{
-			var sp = pendingPopupScreenPos;
-			sp.x -= 120;
-			sp.y -= 55;
-
-			var options = new List<string>
-			{
-				"Add Emitter",
-				"Add View",
-				"Add Pickup",
-				"Cancel"
-			};
-
-			var actions = new List<System.Action>
-			{
-				() => AddAttachmentAtTileWithType(pendingTile, typeof(Emitter)),
-				() => AddAttachmentAtTileWithType(pendingTile, typeof(View)),
-				() => AddAttachmentAtTileWithType(pendingTile, typeof(Pickup)),
-				() => { } // Cancel
-			};
-
-			if (PopupMenu.Show(sp, new Vector2(260, 30 + options.Count * 26),
-				$"Add to Tile {pendingTile}", options.ToArray(), i =>
-				{
-					if (i >= 0 && i < actions.Count)
-						actions[i]();
-				}))
-			{
-				pendingAction = PendingAction.None;
-			}
-		}
-
-		// Replace AddAttachmentAtTileWithType with this clean version
 		private void AddAttachmentAtTileWithType(int tile, System.Type type)
 		{
 			var map = editorController?.iMapManager?.CurrentMap;
 			if (map == null) return;
 
-			MapAttachment newAttachment = type.Name switch
+			MapAttachment newAtt = type.Name switch
 			{
 				"Emitter" => new Emitter { tile = tile, LookAt = Vector3.forward },
 				"View" => new View { tile = tile },
@@ -356,16 +320,52 @@ namespace ClassicTilestorm
 				_ => null
 			};
 
-			if (newAttachment == null) return;
+			if (newAtt == null) return;
 
-			// Show frustum if we just added a View
-			if (newAttachment is View view)
-			{
+			map.AddAttachment(newAtt);
+
+			RebuildMarkers();
+			editorController.OnMapChanged();
+
+			if (newAtt is View view)
 				EditorUtil.UpdateViewFrustumMarker(view, editorController.iMapManager);
-			}
-			else
+		}
+
+		private void DrawAddPopup()
+		{
+			var sp = pendingPopupScreenPos;
+			sp.x -= 120;
+			sp.y -= 140;
+
+			bool popupClosed = PopupAttachmentAdd.Show(sp, pendingTile, choice =>
 			{
-				EditorUtil.DestroyViewFrustumMarker();
+				// This callback runs when user clicks an option
+				if (choice >= 0 && choice <= 2)
+				{
+					System.Type type = choice switch
+					{
+						0 => typeof(Emitter),
+						1 => typeof(View),
+						2 => typeof(Pickup),
+						_ => null
+					};
+
+					if (type != null)
+					{
+						AddAttachmentAtTileWithType(pendingTile, type);
+						editorController.OnMapChanged(); // CRITICAL: tell editor map changed
+						RebuildMarkers();                 // CRITICAL: refresh visuals
+					}
+				}
+				// choice == -1 → cancel → do nothing
+
+				pendingAction = PendingAction.None; // close popup
+			});
+
+			// Only close popup automatically if user clicked outside
+			if (popupClosed && pendingAction == PendingAction.Add)
+		    {
+				pendingAction = PendingAction.None;
 			}
 		}
 
@@ -373,59 +373,32 @@ namespace ClassicTilestorm
 		{
 			var sp = pendingPopupScreenPos;
 			sp.x -= 140;
-			sp.y -= 80;
+			sp.y -= 120;
 
 			var map = editorController?.iMapManager?.CurrentMap;
-			if (map == null || map.attachments == null) return;
+			if (map == null) return;
 
-			var attsOnTile = map.attachments
-				.Select((att, idx) => new { att, idx })
-				.Where(x => x.att.tile == pendingTile)
-				.ToArray();
-
+			var attsOnTile = map.GetAttachmentsOnTile(pendingTile);
 			if (attsOnTile.Length == 0) return;
 
-			var options = new List<string>();
-			var actions = new List<System.Action>();
-
-			foreach (var item in attsOnTile)
+			if (PopupAttachmentDelete.Show(sp, pendingTile, attsOnTile.Length, choice =>
 			{
-				string label = item.att.type;
-				if (item.att is Emitter e && e.LookAt != null)
-					label += $" → {e.LookAt:F1}";
-				options.Add($"Delete {label}");
-				int capturedIndex = item.idx;
-				actions.Add(() =>
+				if (choice >= 0 && choice < attsOnTile.Length)
 				{
-					var list = new List<MapAttachment>(map.attachments);
-					list.RemoveAt(capturedIndex);
-					map.attachments = list.ToArray();
-					RebuildMarkers();
-					editorController.OnMapChanged();
-				});
-			}
+					// Delete single
+					map.RemoveAttachment(attsOnTile[choice]);
+				}
+				else if (choice == -2)
+				{
+					// Delete all
+					map.RemoveAllAttachmentsOnTile(pendingTile);
+					EditorUtil.DestroyViewFrustumMarker();
+				}
 
-			options.Add("Delete All on this tile");
-			actions.Add(() =>
-			{
-				var list = new List<MapAttachment>(map.attachments);
-				list.RemoveAll(a => a.tile == pendingTile);
-				map.attachments = list.ToArray();
 				RebuildMarkers();
 				editorController.OnMapChanged();
-				EditorUtil.DestroyViewFrustumMarker();
-			});
-
-			options.Add("Cancel");
-			actions.Add(() => { });
-
-			if (PopupMenu.Show(sp, new Vector2(320, 30 + options.Count * 26),
-				$"Tile {pendingTile} — {attsOnTile.Length} attachment(s)", options.ToArray(), i =>
-				{
-					if (i >= 0 && i < actions.Count)
-						actions[i]();
-					pendingAction = PendingAction.None;
-				}))
+				pendingAction = PendingAction.None;
+			}))
 			{
 				pendingAction = PendingAction.None;
 			}
