@@ -339,11 +339,17 @@ namespace ClassicTilestorm
 			// Create two materials
 			var materials = new Material[2];
 
+			var shader = Shader.Find("Hidden/URPGizmoAdditive");
+
 			// Submesh 0: Sides — cyan
-			materials[0] = MaterialUtils.CreateAdditiveUnlitMaterial(new Color(0.05f, 0.15f, 0.2f, 1f)); 
+			//materials[0] = MaterialUtils.CreateAdditiveUnlitMaterial(new Color(0.05f, 0.15f, 0.2f, 1f));
+			materials[0] = new Material(shader) { hideFlags = HideFlags.HideAndDontSave };
+			materials[0].SetColor("_BaseColor", new Color(0.05f, 0.15f, 0.2f, 1f));
 
 			// Submesh 1: Top & Bottom — different cyan
-			materials[1] = MaterialUtils.CreateAdditiveUnlitMaterial(new Color(0.03f, 0.1f, 0.15f, 1f));
+			//materials[1] = MaterialUtils.CreateAdditiveUnlitMaterial(new Color(0.03f, 0.1f, 0.15f, 1f));
+			materials[1] = new Material(shader) { hideFlags = HideFlags.HideAndDontSave };
+			materials[1].SetColor("_BaseColor", new Color(0.03f, 0.1f, 0.15f, 1f));
 
 			mr.materials = materials;
 
