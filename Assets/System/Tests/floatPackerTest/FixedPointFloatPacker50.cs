@@ -2,13 +2,13 @@
 using UnityEngine;
 
 /// <summary>
-/// Packs 3 signed 16-bit integers (-32768..32767) into 2 floats (48 bits total).
+/// Packs 3 signed 16-bit integers (-32768..32767) into 2 floats (48 bits total - testing 50bit).
 /// Layout:
 ///   float a : bits 0..15 = X, bits 16..23 = Z >> 8
 ///   float b : bits 0..15 = Y, bits 16..23 = Z & 255
-/// Safe because we offset to positive → sign bit = 0 → bits up to 23 are fully usable.
+/// Safe because we offset to positive → sign bit = 0 → bits up to 23 are fully usable. - testing full range 0->24 - seems to pass so 50 bit works
 /// </summary>
-public static class FixedPointFloatPacker48
+public static class FixedPointFloatPacker50
 {
 	const int BITS = 16;
 	const int OFFSET = 1 << (BITS - 1);  // 32768
@@ -33,8 +33,8 @@ public static class FixedPointFloatPacker48
 		iy &= MASK;
 		iz &= MASK;
 
-		int z_hi = (iz >> 8) & 0xFF;
-		int z_lo = iz & 0xFF;
+		int z_hi = (iz >> 8) & 0xFF;//test for spare bit - 'randomise' it to make sure there are no errors in encode /decode
+		int z_lo = iz & 0xFF;//test for spare bit - 'randomise' it to make sure there are no errors in encode /decode
 
 		// Pack into 24-bit values → perfectly safe because positive and < 2^24
 		uint ua = (uint)ix | ((uint)z_hi << 16);  // X + Z_hi  → 24 bits

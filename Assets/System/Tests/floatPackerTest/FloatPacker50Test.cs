@@ -1,13 +1,12 @@
 using UnityEngine;
-using System;
 
 /// <summary>
-/// Test the baseline 45-bit packer.
+/// Test the baseline 50-bit packer.
 /// 1) Test full integer domain [-16383..16383]
 /// 2) Test sub-range near zero for fractional-like precision (we treat floats as if they are fractional values)
 /// Reports max absolute error per component.
 /// </summary>
-public class FloatPacker48Test : MonoBehaviour
+public class FloatPacker50Test : MonoBehaviour
 {
 	void Start()
 	{
@@ -36,8 +35,8 @@ public class FloatPacker48Test : MonoBehaviour
 			float y = ((float)ix) / (1 << 24) * MAX_RANGE;
 			float z = ((float)ix) / (1 << 24) * MAX_RANGE;
 
-			FixedPointFloatPacker48.Pack(x, y, z, out float a, out float b);
-			FixedPointFloatPacker48.Unpack(a, b, out float rx, out float ry, out float rz);
+			FixedPointFloatPacker50.Pack(x, y, z, out float a, out float b);
+			FixedPointFloatPacker50.Unpack(a, b, out float rx, out float ry, out float rz);
 
 			int ex = Mathf.Abs((int)rx - ix);
 			int ey = Mathf.Abs((int)ry - iy);
@@ -64,8 +63,8 @@ public class FloatPacker48Test : MonoBehaviour
 			float y = (float)(rng.NextDouble() * 2.0 * range - range);
 			float z = (float)(rng.NextDouble() * 2.0 * range - range);
 
-			FixedPointFloatPacker48.Pack(x, y, z, out float a, out float b);
-			FixedPointFloatPacker48.Unpack(a, b, out float rx, out float ry, out float rz);
+			FixedPointFloatPacker50.Pack(x, y, z, out float a, out float b);
+			FixedPointFloatPacker50.Unpack(a, b, out float rx, out float ry, out float rz);
 
 			float ex = Mathf.Abs(rx - x);
 			float ey = Mathf.Abs(ry - y);
