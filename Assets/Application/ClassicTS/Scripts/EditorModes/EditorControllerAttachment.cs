@@ -40,14 +40,7 @@ namespace ClassicTilestorm
 			return rect.Contains(mouse);
 		}
 
-		public EditorControllerAttachment(EditorController editorController) : base(editorController) 
-		{
-			//if (editorController.GetComponent<ViewGizmoRenderer>() == null)
-			//{
-			//	var gizmo = editorController.gameObject.AddComponent<ViewGizmoRenderer>();
-			//	//gizmo.hideFlags = HideFlags.HideInInspector;
-			//}
-		}
+		public EditorControllerAttachment(EditorController editorController) : base(editorController) { }
 
 		//private ViewGizmoRenderer viewGizmo;
 		public override void OnEnable()
@@ -69,8 +62,9 @@ namespace ClassicTilestorm
 
 		public void OnMapChanged()
 		{
-			if (editorController.CurrentMode == EditorMode.Attachment)
-				RebuildMarkers();
+			if (editorController.CurrentMode != EditorMode.Attachment) return;
+			RebuildMarkers();
+			EditorUtil.DestroyViewFrustumMarker();
 		}
 
 		private void RebuildMarkers()

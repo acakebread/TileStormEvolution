@@ -444,6 +444,11 @@ namespace MassiveHadronLtd
 			// ADDITIVE BLENDING — SrcAlpha + One = glowing overlap!
 			material.SetInt("_SrcBlend", (int)BlendMode.SrcAlpha);
 			material.SetInt("_DstBlend", (int)BlendMode.One);  // ← This is the magic line!
+
+			//// Transparent = 3000, so 3500+ ensures it draws last
+			//material.SetInt("_ZTest", (int)CompareFunction.Disabled);
+			//material.renderQueue = 4000;
+
 			material.SetInt("_ZWrite", 0);
 			material.SetInt("_Cull", (int)CullMode.Off);
 
