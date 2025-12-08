@@ -206,68 +206,6 @@ namespace ClassicTilestorm
 		// === VIEW FRUSTUM MARKER ===
 		private static GameObject viewFrustumMarker;
 
-		//private static Mesh CreateViewFrustumMesh(float distance)
-		//{
-		//	const float GameFOV = 20f;//temporarily fixed to 20 until the property can be stored with the View class
-		//	const float Near = 0.5f;
-		//	float Far = Mathf.Max(distance, Near + 0.1f);
-
-		//	float aspect = 16f / 9f;
-		//	float halfFov = GameFOV * 0.5f * Mathf.Deg2Rad;
-		//	float t = Mathf.Tan(halfFov);
-
-		//	float nh = Near * t * 2f;
-		//	float nw = nh * aspect;
-		//	float fh = Far * t * 2f;
-		//	float fw = fh * aspect;
-
-		//	Vector3[] near = {
-		//new(-nw/2, -nh/2, Near),  // 0 bottom-left
-		//      new( nw/2, -nh/2, Near),  // 1 bottom-right
-		//      new( nw/2,  nh/2, Near),  // 2 top-right
-		//      new(-nw/2,  nh/2, Near)   // 3 top-left
-		//  };
-
-		//	Vector3[] far = {
-		//new(-fw/2, -fh/2, Far),   // 4
-		//      new( fw/2, -fh/2, Far),   // 5
-		//      new( fw/2,  fh/2, Far),   // 6
-		//      new(-fw/2,  fh/2, Far)    // 7
-		//  };
-
-		//	var mesh = new Mesh();
-		//	var verts = new List<Vector3>();
-		//	verts.AddRange(near);
-		//	verts.AddRange(far);
-
-		//	var sideTris = new List<int>(); // submesh 0 → LEFT + RIGHT only
-		//	var capTris = new List<int>(); // submesh 1 → TOP + BOTTOM (slanted + caps)
-
-		//	// ===== LEFT FACE =====
-		//	sideTris.AddRange(new[] { 0, 3, 7 });
-		//	sideTris.AddRange(new[] { 0, 7, 4 });
-
-		//	// ===== RIGHT FACE =====
-		//	sideTris.AddRange(new[] { 1, 5, 6 });
-		//	sideTris.AddRange(new[] { 1, 6, 2 });
-
-		//	// ===== TOP SLOPE =====
-		//	capTris.AddRange(new[] { 3, 2, 6 });
-		//	capTris.AddRange(new[] { 3, 6, 7 });
-
-		//	// ===== BOTTOM SLOPE =====
-		//	capTris.AddRange(new[] { 0, 4, 5 });
-		//	capTris.AddRange(new[] { 0, 5, 1 });
-
-		//	mesh.subMeshCount = 2;
-		//	mesh.SetVertices(verts);
-		//	mesh.SetTriangles(sideTris, 0); // sides only
-		//	mesh.SetTriangles(capTris, 1);  // top + bottom
-
-		//	mesh.RecalculateBounds();
-		//	return mesh;
-		//}
-
 		private static Mesh CreateViewFrustumMesh(float distance)
 		{
 			const float GameFOV = 20f;
@@ -363,45 +301,6 @@ namespace ClassicTilestorm
 			var mr = go.AddComponent<MeshRenderer>();
 
 			mf.mesh = CreateViewFrustumMesh(view.Distance);
-
-			//// Create two materials
-			//var shader = Shader.Find("Hidden/URPGizmoAdditive");
-			//var materials = new[]
-			//{
-			//	new Material(shader) { hideFlags = HideFlags.HideAndDontSave },
-			//	new Material(shader) { hideFlags = HideFlags.HideAndDontSave }
-			//};
-
-			//// Submesh 0: Sides — cyan
-			//materials[0].SetColor("_BaseColor", new Color(0.05f, 0.15f, 0.2f, 1f));
-
-			//// Submesh 1: Top & Bottom — different cyan
-			//materials[1].SetColor("_BaseColor", new Color(0.03f, 0.1f, 0.15f, 1f));
-
-			//mr.materials = materials;
-
-			//// Inside UpdateViewFrustumMarker, replace the shader line with:
-			//string shaderName = useAdditiveGizmos
-			//	? "Hidden/URPGizmoAdditive"
-			//	: "Hidden/URPGizmoTransparent";
-
-			//var shader = Shader.Find(shaderName);
-
-			//var materials = new Material[4]
-			//{
-			//	new Material(shader), // 0: Sides – Outside
-			//	new Material(shader), // 1: Sides – Inside (darker)
-			//	new Material(shader), // 2: Top/Bottom – Outside
-			//	new Material(shader), // 3: Top/Bottom – Inside (darker)
-			//};
-
-			//// Bright cyan-ish for sides
-			//materials[0].SetColor("_BaseColor", new Color(0.05f, 0.30f, 0.40f, 0.95f));
-			//materials[1].SetColor("_BaseColor", new Color(0.01f, 0.06f, 0.10f, 0.70f));
-
-			//// Slightly different tone for top/bottom caps
-			//materials[2].SetColor("_BaseColor", new Color(0.03f, 0.22f, 0.30f, 0.85f));
-			//materials[3].SetColor("_BaseColor", new Color(0.008f, 0.04f, 0.07f, 0.60f));
 
 			var transparentShader = Shader.Find("Hidden/URPGizmoTransparent");
 			var additiveShader = Shader.Find("Hidden/URPGizmoAdditive");
