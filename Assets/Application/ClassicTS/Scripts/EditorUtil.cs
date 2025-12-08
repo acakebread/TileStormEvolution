@@ -136,48 +136,7 @@ namespace ClassicTilestorm
 				markerCursorMaterial = MaterialUtils.CreateTransparentUnlitMaterial(new Color(1f, 1f, 0f, 0.8f)); // Yellow pulsing cursor
 		}
 
-		public static void ShowMarkerCursor(Camera cam, IMapManager mapManager, Vector3 mouseWorldPos)
-		{
-			InitializeMarkerMaterials();
-
-			if (markerCursor == null)
-			{
-				markerCursor = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-				Object.DestroyImmediate(markerCursor.GetComponent<Collider>());
-				markerCursor.GetComponent<MeshRenderer>().material = markerCursorMaterial;
-				markerCursor.name = "MARKER_CURSOR";
-				markerCursor.transform.localScale = new Vector3(0.9f, 0.015f, 0.9f);
-			}
-
-			var snapped = mapManager.SnappedMapPosition(mouseWorldPos);
-			int tile = mapManager.WorldToMapIndex(snapped);
-
-			if (tile >= 0)
-			{
-				markerCursor.transform.position = snapped + Vector3.up * 0.01f;
-				markerCursor.SetActive(true);
-
-				// Pulsing flat disc effect
-				float pulse = 1f + Mathf.Sin(Time.time * 5f) * 0.2f;
-				markerCursor.transform.localScale = new Vector3(0.9f, 0.015f, 0.9f) * pulse;
-			}
-			else
-			{
-				markerCursor.SetActive(false);
-			}
-		}
-
-		public static void HideMarkerCursor()
-		{
-			if (markerCursor != null)
-				markerCursor.SetActive(false);
-		}
-
-		public static void UpdateMapMarkers(
-			IMapManager mapManager,
-			int[] tiles,
-			int selectedIndex = -1,
-			MarkerType type = MarkerType.Undefined)
+		public static void UpdateMapMarkers(IMapManager mapManager, int[] tiles, int selectedIndex = -1, MarkerType type = MarkerType.Undefined)
 		{
 			ClearMapMarkers();
 
@@ -191,7 +150,8 @@ namespace ClassicTilestorm
 				Vector3 pos = mapManager.TileWorldPosition(tile) + Vector3.up * 0.02f;
 
 				var go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-				go.name = $"MARKER_{type}_{tile}";
+				go.name = $"GIZMO_MARKER_{type}_{tile}";
+				go.layer = LayerMask.NameToLayer("Editor");
 				go.transform.position = pos;
 				go.transform.localScale = new Vector3(0.8f, 0.8f, 0.8f);
 
@@ -308,7 +268,6 @@ namespace ClassicTilestorm
 			return mesh;
 		}
 
-
 		public static void UpdateViewFrustumMarker(View view, IMapManager mapManager)
 		{
 			DestroyViewFrustumMarker();
@@ -316,9 +275,9 @@ namespace ClassicTilestorm
 			if (view == null || view.data == null || view.data.Length < 7 || view.Distance < 0.02f)
 				return;
 
-			var go = new GameObject("ViewFrustum_Gizmo");
+			var go = new GameObject("GIZMO_VIEWFRUSTUM");
 			//go.hideFlags = HideFlags.HideAndDontSave;
-			go.layer = LayerMask.NameToLayer("ViewGizmos");
+			go.layer = LayerMask.NameToLayer("Editor");
 
 			var mf = go.AddComponent<MeshFilter>();
 			var mr = go.AddComponent<MeshRenderer>();

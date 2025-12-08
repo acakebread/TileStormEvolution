@@ -136,7 +136,7 @@ namespace MassiveHadronLtd
 			previousEffectMode = effectMode;
 			StoreMaterialPropertyValues();
 
-			mainCamera.cullingMask |= 1 << LayerMask.NameToLayer("ViewGizmos");
+			mainCamera.cullingMask |= 1 << LayerMask.NameToLayer("Editor");
 		}
 
 		private void InitializeEffect()

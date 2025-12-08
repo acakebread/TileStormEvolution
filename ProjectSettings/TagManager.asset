@@ -36,7 +36,7 @@ TagManager:
   - 
   - 
   - 
-  - ViewGizmos
+  - Editor
   m_SortingLayers:
   - name: Default
     uniqueID: 0
