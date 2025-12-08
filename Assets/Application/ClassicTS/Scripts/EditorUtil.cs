@@ -122,10 +122,10 @@ namespace ClassicTilestorm
 
 			if (waypointCursor == null)
 			{
-				waypointCursor = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+				waypointCursor = GameObject.CreatePrimitive(PrimitiveType.Sphere);
 				Object.DestroyImmediate(waypointCursor.GetComponent<Collider>());
 				waypointCursor.GetComponent<MeshRenderer>().material = waypointCursorMaterial;
-				waypointCursor.transform.localScale = new Vector3(0.9f, 0.015f, 0.9f);
+				waypointCursor.transform.localScale = new Vector3(0.8f, 0.8f, 0.8f);
 				waypointCursor.name = "WP_Cursor";
 			}
 
@@ -164,7 +164,7 @@ namespace ClassicTilestorm
 				var vp = mapManager.GetView(wp); //mapManager.GetViewpoint(wp);
 				var pos = mapManager.TileWorldPosition(wp) + Vector3.up * 0.02f;
 
-				var go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+				var go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
 				go.name = $"WP{i}"; // Short name: WP0, WP1, etc. — perfect for hierarchy
 
 				// Keep collider for clicking, make it trigger so it doesn't block anything
@@ -172,7 +172,7 @@ namespace ClassicTilestorm
 				if (col) col.isTrigger = true;
 
 				go.transform.position = pos;
-				go.transform.localScale = new Vector3(0.8f, 0.01f, 0.8f);
+				go.transform.localScale = new Vector3(0.8f, 0.8f, 0.8f);
 
 				var mr = go.GetComponent<MeshRenderer>();
 
@@ -208,7 +208,7 @@ namespace ClassicTilestorm
 		}
 
 		// === ATTACHMENT MARKERS ===
-		private static readonly System.Collections.Generic.List<GameObject> attachmentMarkers = new();
+		private static readonly List<GameObject> attachmentMarkers = new();
 		public static void UpdateAttachmentMarkers(IMapManager mapManager, int[] tiles, int selectedIndex)
 		{
 			DestroyAttachmentVisuals();
@@ -222,10 +222,10 @@ namespace ClassicTilestorm
 
 				Vector3 pos = mapManager.TileWorldPosition(tile) + Vector3.up * 0.02f;
 
-				var go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+				var go = GameObject.CreatePrimitive(PrimitiveType.Sphere); 
 				go.name = $"ATT_{tile}";
 				go.transform.position = pos;
-				go.transform.localScale = new Vector3(0.8f, 0.01f, 0.8f);
+				go.transform.localScale = new Vector3(0.8f, 0.8f, 0.8f);
 
 				var mr = go.GetComponent<MeshRenderer>();
 				if (i == selectedIndex)
@@ -337,18 +337,17 @@ namespace ClassicTilestorm
 			mf.mesh = CreateViewFrustumMesh(view.Distance);
 
 			// Create two materials
-			var materials = new Material[2];
-
 			var shader = Shader.Find("Hidden/URPGizmoAdditive");
+			var materials = new[]
+			{
+				new Material(shader) { hideFlags = HideFlags.HideAndDontSave },
+				new Material(shader) { hideFlags = HideFlags.HideAndDontSave }
+			};
 
 			// Submesh 0: Sides — cyan
-			//materials[0] = MaterialUtils.CreateAdditiveUnlitMaterial(new Color(0.05f, 0.15f, 0.2f, 1f));
-			materials[0] = new Material(shader) { hideFlags = HideFlags.HideAndDontSave };
 			materials[0].SetColor("_BaseColor", new Color(0.05f, 0.15f, 0.2f, 1f));
 
 			// Submesh 1: Top & Bottom — different cyan
-			//materials[1] = MaterialUtils.CreateAdditiveUnlitMaterial(new Color(0.03f, 0.1f, 0.15f, 1f));
-			materials[1] = new Material(shader) { hideFlags = HideFlags.HideAndDontSave };
 			materials[1].SetColor("_BaseColor", new Color(0.03f, 0.1f, 0.15f, 1f));
 
 			mr.materials = materials;
@@ -382,17 +381,6 @@ namespace ClassicTilestorm
 		}
 	}
 
-	//public class AttachmentMarkerClick : MonoBehaviour
-	//{
-	//	public int tileIndex;
-	//	public System.Action onClick;
-
-	//	private void OnMouseDown()
-	//	{
-	//		onClick?.Invoke();
-	//	}
-	//}
-
 	public class WaypointPulse : MonoBehaviour
 	{
 		public float intensity = 1.5f;
@@ -407,7 +395,7 @@ namespace ClassicTilestorm
 
 		private void Update()
 		{
-			float pulse = 1f + (Mathf.Sin(Time.time * speed) * 0.5f + 0.5f) * (intensity - 1f);
+			float pulse = 0.75f + (Mathf.Sin(Time.time * speed) * 0.25f + 0.25f) * (intensity - 1f);
 			transform.localScale = baseScale * pulse;
 		}
 	}

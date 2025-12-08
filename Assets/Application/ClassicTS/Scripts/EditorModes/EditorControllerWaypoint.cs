@@ -343,7 +343,7 @@ namespace ClassicTilestorm
 		{
 			var sp = pendingPopupScreenPos;
 			sp.x -= 120;
-			sp.y -= 55;
+			sp.y -= 110;
 
 			if (PopupConfirm.Show(sp, new Vector2(240, 110), "Add waypoint here?",
 				$"WP{pendingWaypoint:00} at tile {pendingTile}",
@@ -358,7 +358,7 @@ namespace ClassicTilestorm
 		{
 			var sp = pendingPopupScreenPos;
 			sp.x -= 120;
-			sp.y -= 55;
+			sp.y -= 110;
 
 			if (PopupConfirm.Show(sp, new Vector2(240, 110), "Delete waypoint?",
 				$"WP{pendingWaypoint:00} at tile {pendingTile}",
