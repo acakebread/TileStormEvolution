@@ -56,6 +56,7 @@ namespace ClassicTilestorm
 			EditorUtil.DestroyMarkerVisuals();
 			pendingAction = PendingAction.None;
 			EditorUtil.DestroyViewFrustumMarker();
+			EditorUtil.HideTransformGizmo();
 		}
 
 		public void OnMapChanged()
@@ -90,13 +91,18 @@ namespace ClassicTilestorm
 			if (map?.attachments != null && index >= 0 && index < map.attachments.Length)
 			{
 				if (map.attachments[index] is View view)
+				{
 					EditorUtil.UpdateViewFrustumMarker(view, editorController.iMapManager);
-			}
+					EditorUtil.ShowTransformGizmo(view, editorController.iMapManager);				}
+				}
 		}
 
 		public override void Update()
 		{
 			base.Update();
+
+			if (EditorUtil.HandleTransformGizmoInput(camera))
+				return;
 
 			if (camera == null || editorController.IsGuiControlActive() ||
 				(EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()))
