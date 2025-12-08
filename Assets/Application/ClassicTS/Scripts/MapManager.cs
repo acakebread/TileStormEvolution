@@ -72,12 +72,6 @@ namespace ClassicTilestorm
 
 		public int[] Waypoints { get => currentMap?.waypoints; set { if (null != currentMap) currentMap.waypoints = value; } }
 
-		public void SetWaypointTiles(int[] tiles)//new placeholder method
-		{
-			if (currentMap != null)
-				currentMap.waypoints = tiles ?? Array.Empty<int>();
-		}
-
 		public int GetWaypoint(int index) => (index >= 0 && null != currentMap?.waypoints) ? index < currentMap.waypoints.Length ? currentMap.waypoints[index] : -1 : -1;
 
 #if UNITY_EDITOR
@@ -113,19 +107,6 @@ namespace ClassicTilestorm
 			}
 			return null;
 		}
-
-		//public Viewpoint GetViewpoint(int tile)
-		//{
-		//	var attachments = currentMap?.attachments;
-		//	if (attachments == null || tile < 0 || tile >= currentMap.tiles.Length)
-		//		return null;
-
-		//	foreach (var att in currentMap.attachments)
-		//	{
-		//		if (att is Viewpoint vp && att.tile == tile) return vp;
-		//	}
-		//	return null;
-		//}
 
 		public Tile GetTile(int index)
 		{

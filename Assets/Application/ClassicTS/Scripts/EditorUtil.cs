@@ -126,7 +126,7 @@ namespace ClassicTilestorm
 				Object.DestroyImmediate(waypointCursor.GetComponent<Collider>());
 				waypointCursor.GetComponent<MeshRenderer>().material = waypointCursorMaterial;
 				waypointCursor.transform.localScale = new Vector3(0.8f, 0.8f, 0.8f);
-				waypointCursor.name = "WP_Cursor";
+				waypointCursor.name = "MARKER_GIZMO_CURSOR";
 			}
 
 			var snapped = mapManager.SnappedMapPosition(mouseWorldPos);
@@ -161,13 +161,12 @@ namespace ClassicTilestorm
 				var wp = waypoints[i];
 				if (wp < 0 || wp >= mapManager.Count) continue;
 
-				var vp = mapManager.GetView(wp); //mapManager.GetViewpoint(wp);
+				var vp = mapManager.GetView(wp);
 				var pos = mapManager.TileWorldPosition(wp) + Vector3.up * 0.02f;
 
 				var go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-				go.name = $"WP{i}"; // Short name: WP0, WP1, etc. — perfect for hierarchy
+				go.name = $"MARKER_GIZMO_{waypoints[i]}";
 
-				// Keep collider for clicking, make it trigger so it doesn't block anything
 				var col = go.GetComponent<Collider>();
 				if (col) col.isTrigger = true;
 
@@ -184,7 +183,7 @@ namespace ClassicTilestorm
 					pulse.intensity = 2.1f;
 					pulse.speed = 3.2f;
 				}
-				else if (null != vp)//has viewpoint
+				else if (null != vp)//has view
 				{
 					mr.material = MaterialUtils.CreateTransparentUnlitMaterial(new Color(0f, 1f, 1f, 0.5f));
 				}
@@ -222,8 +221,8 @@ namespace ClassicTilestorm
 
 				Vector3 pos = mapManager.TileWorldPosition(tile) + Vector3.up * 0.02f;
 
-				var go = GameObject.CreatePrimitive(PrimitiveType.Sphere); 
-				go.name = $"ATT_{tile}";
+				var go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+				go.name = $"MARKER_GIZMO_{tile}";
 				go.transform.position = pos;
 				go.transform.localScale = new Vector3(0.8f, 0.8f, 0.8f);
 
@@ -259,7 +258,7 @@ namespace ClassicTilestorm
 
 		private static Mesh CreateViewFrustumMesh(float distance)
 		{
-			const float GameFOV = 20f;
+			const float GameFOV = 20f;//temporarily fixed to 20 until the property can be stored with the View class
 			const float Near = 0.5f;
 			float Far = Mathf.Max(distance, Near + 0.1f);
 

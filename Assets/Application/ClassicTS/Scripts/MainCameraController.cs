@@ -98,14 +98,13 @@ namespace ClassicTilestorm
 			if (mapManager.Waypoints.Length > 0)
 			{
 				var tile = mapManager.GetWaypoint(0);
-				//var vp = mapManager.GetViewpoint(tile);
-				var vp = mapManager.GetView(tile);
-				if (null != vp)
+				var view = mapManager.GetView(tile);
+				if (null != view)
 				{
-					//has camera settings (Viewpoint)
+					//has camera settings (View)
 					var tilePos = mapManager.TileWorldPosition(tile);
-					srcPos = vp.VSrc + tilePos;
-					dstPos = vp.VDst + tilePos;
+					srcPos = view.VSrc + tilePos;
+					dstPos = view.VDst + tilePos;
 				}
 			}
 
@@ -182,19 +181,18 @@ namespace ClassicTilestorm
 				return;
 
 			var tile = mapManager.GetWaypoint(waypointIndex);
-			//var vp = mapManager.GetViewpoint(tile);
-			var vp = mapManager.GetView(tile);
-			if (null == vp)
+			var view = mapManager.GetView(tile);
+			if (null == view)
 			{
 				SetCameraSystem(CameraModeRegistry.Follow, true);
 				return;
 			}
 
-			//has camera settings (Viewpoint)
+			//has camera settings (View)
 			var presetCam = (GameCameraPreset)CameraSystems[CameraModeRegistry.Preset];
 			var tilePos = mapManager.TileWorldPosition(tile);
-			presetCam.originFn = () => vp.VSrc + tilePos;
-			presetCam.targetFn = () => vp.VDst + tilePos;
+			presetCam.originFn = () => view.VSrc + tilePos;
+			presetCam.targetFn = () => view.VDst + tilePos;
 
 			SetCameraSystem(CameraModeRegistry.Preset, true);
 			OnWaypointReachedForGestures?.Invoke(true);

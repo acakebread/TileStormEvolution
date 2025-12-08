@@ -39,7 +39,6 @@ namespace ClassicTilestorm
 			{
 				"View" => new View(),
 				"Emitter" => new Emitter(),
-				//"Viewpoint" => new Viewpoint(),
 				"Pickup" => new Pickup(),
 				_ => new Emitter()
 			};

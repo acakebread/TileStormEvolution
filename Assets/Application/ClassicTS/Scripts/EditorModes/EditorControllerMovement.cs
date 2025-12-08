@@ -12,6 +12,7 @@ namespace ClassicTilestorm
 		private bool didGainFocus;
 
 		protected EditorController editorController;
+		protected int HitTile(Vector3 mousePos) => editorController.iMapManager.CameraHitTile(camera, mousePos);
 
 		protected Camera camera
 		{

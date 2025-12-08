@@ -196,8 +196,6 @@ namespace ClassicTilestorm
 			}
 		}
 
-		private int HitTile(Vector3 mousePos) => editorController.iMapManager.CameraHitTile(camera, mousePos);
-
 		private MapAttachment[] MapAttachments(int tileIndex)
 		{
 			var map = editorController.currentMap;

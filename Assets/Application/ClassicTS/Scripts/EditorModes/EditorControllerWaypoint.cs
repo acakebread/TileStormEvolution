@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using System.Collections.Generic;
 using static MassiveHadronLtd.GuiUtils;
+using System;
 
 namespace ClassicTilestorm
 {
@@ -125,7 +126,7 @@ namespace ClassicTilestorm
 			{
 				clickStartPos = Input.mousePosition;
 				clickStartTile = tileUnderMouse;
-				potentialWaypointHit = TryHitWaypoint(out int hitIndex) ? hitIndex : -1;
+				potentialWaypointHit = IndexOfWaypoint(HitTile(Input.mousePosition));
 			}
 
 			// === LEFT CLICK RELEASE - ADD or DRAG ===
@@ -208,13 +209,10 @@ namespace ClassicTilestorm
 			}
 		}
 
-		private bool TryHitWaypoint(out int index)
+		private int IndexOfWaypoint(int tileIndex)
 		{
-			index = -1;
-			var ray = camera.ScreenPointToRay(Input.mousePosition);
-			if (!Physics.Raycast(ray, out RaycastHit hit)) return false;
-			if (!hit.collider.name.StartsWith("WP")) return false;
-			return int.TryParse(hit.collider.name.Substring(2), out index);
+			var map = editorController.currentMap;
+			return null != map && null != map.waypoints && map.waypoints.Contains(tileIndex) ? Array.IndexOf(map.waypoints, tileIndex) : -1;
 		}
 
 		public override void OnGui()
