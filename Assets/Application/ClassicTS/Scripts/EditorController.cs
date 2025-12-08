@@ -22,6 +22,16 @@ namespace ClassicTilestorm
 		private EditorMode? currentMode = null;
 		public EditorMode CurrentMode => currentMode ?? EditorMode.Drag;
 
+		public Camera editorCamera
+		{
+			get
+			{
+				if (TryGetComponent<MainCameraController>(out var controller))
+					return controller.activeSystem?.camera;
+				return null;
+			}
+		}
+
 		// UI state
 		private float panelYoffset = 10f;
 		private const float margin = 10f;

@@ -12,17 +12,9 @@ namespace ClassicTilestorm
 		private bool didGainFocus;
 
 		protected EditorController editorController;
-		protected int HitTile(Vector3 mousePos) => editorController.iMapManager.CameraHitTile(camera, mousePos);
+		protected int HitTile(Vector3 mousePos) => editorController.iMapManager.CameraHitTile(editorCamera, mousePos);
 
-		protected Camera camera
-		{
-			get
-			{
-				if (editorController.TryGetComponent<MainCameraController>(out var controller))
-					return controller.activeSystem?.camera;
-				return null;
-			}
-		}
+		protected Camera editorCamera => editorController.editorCamera;
 
 		public virtual bool IsMouseOverModeGui() => false;//default behaviour
 
@@ -34,8 +26,8 @@ namespace ClassicTilestorm
 
 		public virtual void Update()
 		{
-			if (camera == null) return;
-			var cameraTransform = camera.transform;
+			if (editorCamera == null) return;
+			var cameraTransform = editorCamera.transform;
 
 			bool isGuiActive = editorController.IsGuiControlActive();
 			bool isMouseOverGui = editorController.IsMouseOverGui();

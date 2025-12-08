@@ -41,7 +41,7 @@ namespace ClassicTilestorm
 		public override void Update()
 		{
 			base.Update();
-			if (!camera || editorController.IsGuiControlActive() || EventSystem.current.IsPointerOverGameObject()) return;
+			if (!editorCamera || editorController.IsGuiControlActive() || EventSystem.current.IsPointerOverGameObject()) return;
 
 			if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1))
 				mouseDownPos = Input.mousePosition;
@@ -54,14 +54,14 @@ namespace ClassicTilestorm
 
 			var selectedDefinition = ResourceManager.GetDefinition(selectedDefinitionId);
 			if (selectedDefinition != null)
-				EditorUtil.UpdateGhostTile(camera, editorController.iMapManager, selectedDefinition);
+				EditorUtil.UpdateGhostTile(editorCamera, editorController.iMapManager, selectedDefinition);
 		}
 
 		public override void OnDisable() => EditorUtil.HideGhostTile();
 
 		private void EditMapTile(string defID = null)
 		{
-			var worldPos = MapManager.ScreenToWorld(camera, Input.mousePosition);
+			var worldPos = MapManager.ScreenToWorld(editorCamera, Input.mousePosition);
 
 			if (defID != null)
 			{
@@ -102,7 +102,7 @@ namespace ClassicTilestorm
 			EditorUtil.DestroyGhostTile();
 			var def = ResourceManager.GetDefinition(selectedDefinitionId);
 			if (def != null)
-				EditorUtil.UpdateGhostTile(camera, editorController.iMapManager, def);
+				EditorUtil.UpdateGhostTile(editorCamera, editorController.iMapManager, def);
 			else
 				EditorUtil.HideGhostTile();
 		}
@@ -110,7 +110,7 @@ namespace ClassicTilestorm
 		private GUIStyle leftButtonStyle; 
 		public override void OnGui()
 		{
-			if (editorController.CurrentMode != EditorController.EditorMode.Paint || camera == null) return;
+			if (editorController.CurrentMode != EditorController.EditorMode.Paint || editorCamera == null) return;
 
 			if (leftButtonStyle == null)
 			{

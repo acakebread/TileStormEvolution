@@ -109,11 +109,11 @@ namespace ClassicTilestorm
 		{
 			base.Update();
 
-			if (camera == null || editorController.IsGuiControlActive() ||
+			if (editorCamera == null || editorController.IsGuiControlActive() ||
 				(EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()))
 				return;
 
-			var worldPos = MapManager.ScreenToWorld(camera, Input.mousePosition);
+			var worldPos = MapManager.ScreenToWorld(editorCamera, Input.mousePosition);
 			var snapped = editorController.iMapManager.SnappedMapPosition(worldPos);
 			int tileUnderMouse = editorController.iMapManager.WorldToMapIndex(snapped);
 
@@ -151,7 +151,7 @@ namespace ClassicTilestorm
 					pendingAction = PendingAction.Add;
 
 					var _worldPos = editorController.iMapManager.TileWorldPosition(clickStartTile) + Vector3.up * 0.6f;
-					var sp = camera.WorldToScreenPoint(_worldPos);
+					var sp = editorCamera.WorldToScreenPoint(_worldPos);
 					sp.y = Screen.height - sp.y;
 					pendingPopupScreenPos = sp;
 				}
@@ -174,7 +174,7 @@ namespace ClassicTilestorm
 						pendingAction = PendingAction.Delete;
 
 						var _worldPos = editorController.iMapManager.TileWorldPosition(clickStartTile) + Vector3.up * 0.6f;
-						var sp = camera.WorldToScreenPoint(_worldPos);
+						var sp = editorCamera.WorldToScreenPoint(_worldPos);
 						sp.y = Screen.height - sp.y;
 						pendingPopupScreenPos = sp;
 					}
@@ -213,7 +213,7 @@ namespace ClassicTilestorm
 
 		public override void OnGui()
 		{
-			if (editorController.CurrentMode != EditorController.EditorMode.Waypoint || camera == null) return;
+			if (editorController.CurrentMode != EditorController.EditorMode.Waypoint || editorCamera == null) return;
 
 			var map = editorController?.iMapManager?.CurrentMap;
 			if (map == null) return;

@@ -15,10 +15,10 @@ namespace ClassicTilestorm
 		public override void Update()
 		{
 			base.Update();
-			if (!camera) return;
+			if (!editorCamera) return;
 
 			var wasDragging = dragging;
-			var cameraTransform = camera.transform;
+			var cameraTransform = editorCamera.transform;
 
 			bool isGuiControlActive = editorController.IsGuiControlActive();
 			bool isMouseOverGui = editorController.IsMouseOverGui();
@@ -28,7 +28,7 @@ namespace ClassicTilestorm
 				dragging = true;
 				isDraggingWithLeftMouse = true;
 				cameraStartPosition = cameraTransform.position;
-				var ray = camera.ScreenPointToRay(Input.mousePosition);
+				var ray = editorCamera.ScreenPointToRay(Input.mousePosition);
 				if (Physics.Raycast(ray, out RaycastHit hit))
 				{
 					dragPlane = new Plane(Vector3.up, new Vector3(0f, hit.point.y, 0f));
@@ -47,7 +47,7 @@ namespace ClassicTilestorm
 			if (dragging && wasDragging && isDraggingWithLeftMouse && Input.GetMouseButton(0) && !isGuiControlActive)
 			{
 				cameraTransform.position = cameraStartPosition;
-				var currentRay = camera.ScreenPointToRay(Input.mousePosition);
+				var currentRay = editorCamera.ScreenPointToRay(Input.mousePosition);
 				if (dragPlane.Raycast(currentRay, out float enter))
 				{
 					var currentWorldPoint = currentRay.GetPoint(enter);
