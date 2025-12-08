@@ -99,34 +99,35 @@ namespace ClassicTilestorm
 			}
 		}
 
-		//waypoint visualisation system
-		private static List<GameObject> waypointMarkers = new();
-		private static GameObject waypointCursor;
-		private static Material waypointCursorMaterial;
+		// === UNIFIED MARKER SYSTEM ===
+		private static readonly List<GameObject> mapMarkers = new();
+		private static GameObject markerCursor;
+		private static Material markerCursorMaterial;
 
-		public static void InitializeWaypointMaterials()
+		public enum MarkerType
 		{
-			if (waypointCursorMaterial == null)
-				waypointCursorMaterial = MaterialUtils.CreateTransparentUnlitMaterial(new Color(1f, 1f, 0f, 0.8f)); // Yellow cursor
+			Waypoint,
+			Attachment,
+			Custom // for future use
 		}
 
-		public static void HideWaypointCursor()
+		public static void InitializeMarkerMaterials()
 		{
-			if (waypointCursor != null)
-				waypointCursor.SetActive(false);
+			if (markerCursorMaterial == null)
+				markerCursorMaterial = MaterialUtils.CreateTransparentUnlitMaterial(new Color(1f, 1f, 0f, 0.8f)); // Yellow pulsing cursor
 		}
 
-		public static void UpdateWaypointCursor(Camera cam, IMapManager mapManager, Vector3 mouseWorldPos)
+		public static void ShowMarkerCursor(Camera cam, IMapManager mapManager, Vector3 mouseWorldPos)
 		{
-			InitializeWaypointMaterials();
+			InitializeMarkerMaterials();
 
-			if (waypointCursor == null)
+			if (markerCursor == null)
 			{
-				waypointCursor = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-				Object.DestroyImmediate(waypointCursor.GetComponent<Collider>());
-				waypointCursor.GetComponent<MeshRenderer>().material = waypointCursorMaterial;
-				waypointCursor.transform.localScale = new Vector3(0.8f, 0.8f, 0.8f);
-				waypointCursor.name = "MARKER_GIZMO_CURSOR";
+				markerCursor = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+				Object.DestroyImmediate(markerCursor.GetComponent<Collider>());
+				markerCursor.GetComponent<MeshRenderer>().material = markerCursorMaterial;
+				markerCursor.name = "MARKER_CURSOR";
+				markerCursor.transform.localScale = new Vector3(0.9f, 0.015f, 0.9f);
 			}
 
 			var snapped = mapManager.SnappedMapPosition(mouseWorldPos);
@@ -134,101 +135,67 @@ namespace ClassicTilestorm
 
 			if (tile >= 0)
 			{
-				waypointCursor.transform.position = snapped + Vector3.up * 0.01f;
-				waypointCursor.SetActive(true);
+				markerCursor.transform.position = snapped + Vector3.up * 0.01f;
+				markerCursor.SetActive(true);
 
-				// PULSING — restored and improved
+				// Pulsing flat disc effect
 				float pulse = 1f + Mathf.Sin(Time.time * 5f) * 0.2f;
-				waypointCursor.transform.localScale = new Vector3(0.9f, 0.015f, 0.9f) * pulse;
+				markerCursor.transform.localScale = new Vector3(0.9f, 0.015f, 0.9f) * pulse;
 			}
 			else
 			{
-				waypointCursor.SetActive(false);
+				markerCursor.SetActive(false);
 			}
 		}
 
-		public static void UpdateWaypointMarkers(IMapManager mapManager, int[] waypoints, int selectedIndex = -1)
+		public static void HideMarkerCursor()
 		{
-			// Destroy old
-			foreach (var m in waypointMarkers)
-				if (m) Object.DestroyImmediate(m);
-			waypointMarkers.Clear();
-
-			if (waypoints == null || waypoints.Length == 0) return;
-
-			for (int i = 0; i < waypoints.Length; i++)
-			{
-				var wp = waypoints[i];
-				if (wp < 0 || wp >= mapManager.Count) continue;
-
-				var vp = mapManager.GetView(wp);
-				var pos = mapManager.TileWorldPosition(wp) + Vector3.up * 0.02f;
-
-				var go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-				go.name = $"MARKER_GIZMO_{waypoints[i]}";
-
-				var col = go.GetComponent<Collider>();
-				if (col) col.isTrigger = true;
-
-				go.transform.position = pos;
-				go.transform.localScale = new Vector3(0.8f, 0.8f, 0.8f);
-
-				var mr = go.GetComponent<MeshRenderer>();
-
-				if (i == selectedIndex)
-				{
-					// Selected = bright green + pulsing
-					mr.material = MaterialUtils.CreateTransparentUnlitMaterial(new Color(0f, 1f, 0f, 0.7f));
-					var pulse = go.AddComponent<WaypointPulse>();
-					pulse.intensity = 2.1f;
-					pulse.speed = 3.2f;
-				}
-				else if (null != vp)//has view
-				{
-					mr.material = MaterialUtils.CreateTransparentUnlitMaterial(new Color(0f, 1f, 1f, 0.5f));
-				}
-				else
-				{
-					mr.material = MaterialUtils.CreateTransparentUnlitMaterial(new Color(0f, 0.7f, 1f, 0.7f));
-				}
-
-				waypointMarkers.Add(go);
-			}
+			if (markerCursor != null)
+				markerCursor.SetActive(false);
 		}
 
-		public static void DestroyWaypointVisuals()
+		public static void UpdateMapMarkers(
+			IMapManager mapManager,
+			int[] tiles,
+			int selectedIndex = -1,
+			MarkerType type = MarkerType.Waypoint)
 		{
-			if (waypointCursor) Object.DestroyImmediate(waypointCursor);
-			waypointCursor = null;
-
-			foreach (var m in waypointMarkers)
-				if (m) Object.DestroyImmediate(m);
-			waypointMarkers.Clear();
-		}
-
-		// === ATTACHMENT MARKERS ===
-		private static readonly List<GameObject> attachmentMarkers = new();
-		public static void UpdateAttachmentMarkers(IMapManager mapManager, int[] tiles, int selectedIndex)
-		{
-			DestroyAttachmentVisuals();
+			ClearMapMarkers();
 
 			if (tiles == null || tiles.Length == 0) return;
 
 			for (int i = 0; i < tiles.Length; i++)
 			{
 				int tile = tiles[i];
-				if (tile < 0) continue;
+				if (tile < 0 || tile >= mapManager.Count) continue;
 
 				Vector3 pos = mapManager.TileWorldPosition(tile) + Vector3.up * 0.02f;
 
 				var go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-				go.name = $"MARKER_GIZMO_{tile}";
+				go.name = $"MARKER_{type}_{tile}";
 				go.transform.position = pos;
 				go.transform.localScale = new Vector3(0.8f, 0.8f, 0.8f);
 
 				var mr = go.GetComponent<MeshRenderer>();
+				var col = go.GetComponent<Collider>();
+				if (col) col.isTrigger = true;
+
+				// Base color logic
+				Color baseColor = type switch
+				{
+					MarkerType.Waypoint => new Color(0f, 0.7f, 1f, 0.7f),     // Blue
+					MarkerType.Attachment => new Color(0f, 0.7f, 1f, 0.7f),   // Same blue (or change if desired)
+					_ => new Color(0f, 0.7f, 1f, 0.7f)
+				};
+
+				// Special cases
+				bool hasView = type == MarkerType.Waypoint && mapManager.GetView(tile) != null;
+				if (hasView)
+					baseColor = new Color(0f, 1f, 1f, 0.5f); // Cyan for camera waypoints
+
 				if (i == selectedIndex)
 				{
+					// Selected: bright green + pulsing
 					mr.material = MaterialUtils.CreateTransparentUnlitMaterial(new Color(0f, 1f, 0f, 0.7f));
 					var pulse = go.AddComponent<WaypointPulse>();
 					pulse.intensity = 2.1f;
@@ -236,21 +203,25 @@ namespace ClassicTilestorm
 				}
 				else
 				{
-					mr.material = MaterialUtils.CreateTransparentUnlitMaterial(new Color(0f, 0.7f, 1f, 0.7f));
+					mr.material = MaterialUtils.CreateTransparentUnlitMaterial(baseColor);
 				}
 
-				var col = go.GetComponent<Collider>();
-				if (col) col.isTrigger = true;
-
-				attachmentMarkers.Add(go);
+				mapMarkers.Add(go);
 			}
 		}
 
-		public static void DestroyAttachmentVisuals()
+		public static void ClearMapMarkers()
 		{
-			foreach (var m in attachmentMarkers)
+			foreach (var m in mapMarkers)
 				if (m) Object.DestroyImmediate(m);
-			attachmentMarkers.Clear();
+			mapMarkers.Clear();
+		}
+
+		public static void DestroyMarkerVisuals()
+		{
+			ClearMapMarkers();
+			if (markerCursor) Object.DestroyImmediate(markerCursor);
+			markerCursor = null;
 		}
 
 		// === VIEW FRUSTUM MARKER ===

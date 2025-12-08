@@ -45,7 +45,7 @@ namespace ClassicTilestorm
 		{
 			base.OnEnable();
 			SelectedAttachmentIndex = -1;
-			EditorUtil.DestroyAttachmentVisuals();
+			EditorUtil.DestroyMarkerVisuals();
 			EditorUtil.DestroyViewFrustumMarker();
 			RebuildMarkers();
 		}
@@ -53,7 +53,7 @@ namespace ClassicTilestorm
 		public override void OnDisable()
 		{
 			base.OnDisable();
-			EditorUtil.DestroyAttachmentVisuals();
+			EditorUtil.DestroyMarkerVisuals();
 			pendingAction = PendingAction.None;
 			EditorUtil.DestroyViewFrustumMarker();
 		}
@@ -76,7 +76,7 @@ namespace ClassicTilestorm
 				.Distinct()
 				.ToArray() ?? System.Array.Empty<int>();
 
-			EditorUtil.UpdateAttachmentMarkers(editorController.iMapManager, tiles, SelectedAttachmentIndex);
+			EditorUtil.UpdateMapMarkers(editorController.iMapManager, tiles, SelectedAttachmentIndex);
 		}
 
 		private void SelectAttachment(int index)
