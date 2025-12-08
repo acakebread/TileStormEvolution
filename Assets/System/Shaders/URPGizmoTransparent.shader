@@ -1,28 +1,32 @@
-Shader "Hidden/URPGizmoAdditive"
+﻿Shader "Hidden/URPGizmoTransparent"
 {
     Properties
     {
-        _BaseColor ("Base Color", Color) = (1,1,1,1)
+        _BaseColor ("Base Color", Color) = (1,1,1,0.6)
     }
+
     SubShader
     {
         Tags
         {
             "RenderType"="Transparent"
-            "Queue"="Overlay"        // Ensures it draws last
+            "Queue"="Transparent+500"           // After most geometry, before Overlay gizmos
+            "IgnoreProjector"="True"
+            "ForceNoShadowCasting"="True"
             "RenderPipeline"="UniversalPipeline"
+            "PreviewType"="Plane"
         }
         LOD 100
 
+        // ──────────────────────────────────────────────────────────────
         Pass
         {
-            Name "GizmoAdditive"
+            Name "GizmoTransparent"
 
-            // Core settings
-            ZWrite Off                 // Do not write depth
+            ZWrite Off
             ZTest Always               // Always pass depth test
-            Blend SrcAlpha One          // Additive blending
-            Cull Back                   // render only front face    Off// Render both sides
+            Blend SrcAlpha OneMinusSrcAlpha   // Classic alpha transparency
+            Cull Back                         // Front faces only (we have proper inside/outside geometry now)
 
             HLSLPROGRAM
             #pragma vertex vert
@@ -54,6 +58,8 @@ Shader "Hidden/URPGizmoAdditive"
             }
             ENDHLSL
         }
+        // ──────────────────────────────────────────────────────────────
     }
+
     FallBack Off
 }
