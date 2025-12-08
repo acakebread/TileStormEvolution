@@ -469,19 +469,20 @@ namespace ClassicTilestorm
 			return handled;
 		}
 
-		// ——————— POSITION DRAG ———————
+		// ——————— POSITION DRAG (NOW FULL 3D – VIEW-PLANE DRAG) ———————
 		private static bool isDraggingPosition = false;
-		private static Vector3 dragOffset;
+		private static Plane dragPlane;           // <-- ADD THIS FIELD
+		private static Vector3 dragStartPoint;    // <-- ADD THIS FIELD
 
 		private static void StartDraggingPosition(Camera cam)
 		{
-			Plane plane = new Plane(Vector3.up, transformGizmoRoot.transform.position);
-			Ray ray = cam.ScreenPointToRay(Input.mousePosition);
+			// Create a plane that faces the camera (perpendicular to view direction)
+			dragPlane = new Plane(-cam.transform.forward, transformGizmoRoot.transform.position);
 
-			if (plane.Raycast(ray, out float enter))
+			Ray ray = cam.ScreenPointToRay(Input.mousePosition);
+			if (dragPlane.Raycast(ray, out float enter))
 			{
-				Vector3 hit = ray.GetPoint(enter);
-				dragOffset = transformGizmoRoot.transform.position - hit;
+				dragStartPoint = ray.GetPoint(enter);
 			}
 
 			isDraggingPosition = true;
@@ -489,17 +490,22 @@ namespace ClassicTilestorm
 
 		private static void ContinueDragPosition(Camera cam)
 		{
-			Plane plane = new Plane(Vector3.up, transformGizmoRoot.transform.position);
 			Ray ray = cam.ScreenPointToRay(Input.mousePosition);
 
-			if (plane.Raycast(ray, out float enter))
+			if (dragPlane.Raycast(ray, out float enter))
 			{
-				Vector3 worldPoint = ray.GetPoint(enter) + dragOffset;
-				Vector3 localOffset = worldPoint - activeMapManager.TileWorldPosition(activeEditingView.tile);
-				activeEditingView.Position = localOffset;
+				Vector3 currentPoint = ray.GetPoint(enter);
+				Vector3 delta = currentPoint - dragStartPoint;
+
+				// Apply delta in world space
+				Vector3 newWorldPos = transformGizmoRoot.transform.position + delta;
+				activeEditingView.Position = newWorldPos - activeMapManager.TileWorldPosition(activeEditingView.tile);
 
 				UpdateTransformGizmoVisuals();
 				UpdateViewFrustumMarker(activeEditingView, activeMapManager);
+
+				// Critical: update reference point for smooth 1:1 movement
+				dragStartPoint = currentPoint;
 			}
 		}
 
