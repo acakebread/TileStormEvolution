@@ -348,8 +348,6 @@ namespace ClassicTilestorm
 			return mesh;
 		}
 
-		private static bool useAdditiveGizmos = false; // toggle with a key if you want
-
 		public static void UpdateViewFrustumMarker(View view, IMapManager mapManager)
 		{
 			DestroyViewFrustumMarker();
