@@ -558,7 +558,7 @@ namespace ClassicTilestorm
 			if (tangent.sqrMagnitude < 0.01f) tangent = Vector3.Cross(rotationAxis, Vector3.up);
 
 			float signedDist = Vector3.Dot(delta, tangent.normalized);
-			float angle = signedDist * 120f;
+			float angle = signedDist * 40f;
 
 			Quaternion deltaRot = Quaternion.AngleAxis(angle, rotationAxis);
 			startViewRotation = deltaRot * startViewRotation;

@@ -22,6 +22,7 @@ namespace ClassicTilestorm
 		[JsonIgnore] public Vector3 VDst { get => LookAt; set => Rebuild(lookAt: value); }
 
 		public const float MAX_DISTANCE = 64f;
+		public const float FOV = 20f;//ToDo make View.FOV dynamic property
 
 		private void Rebuild(
 			Vector3? position = null,

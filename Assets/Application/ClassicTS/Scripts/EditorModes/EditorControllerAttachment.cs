@@ -26,6 +26,8 @@ namespace ClassicTilestorm
 
 		private Vector2 scrollPos = Vector2.zero;
 
+		private ViewPreview viewPreview;
+
 		private readonly AutoHidePanel sidePanel = new(
 			collapsed: 120f, expanded: 340f, delay: 1.5f, animDur: 0.25f);
 
@@ -48,6 +50,10 @@ namespace ClassicTilestorm
 			EditorUtil.DestroyMarkerVisuals();
 			EditorUtil.DestroyViewFrustumMarker();
 			RebuildMarkers();
+
+			// Create preview
+			viewPreview = ViewPreview.Create();
+			viewPreview.Hide();
 		}
 
 		public override void OnDisable()
@@ -57,6 +63,7 @@ namespace ClassicTilestorm
 			pendingAction = PendingAction.None;
 			EditorUtil.DestroyViewFrustumMarker();
 			EditorUtil.HideTransformGizmo();
+			viewPreview?.Hide();
 		}
 
 		public void OnMapChanged()
@@ -88,6 +95,7 @@ namespace ClassicTilestorm
 
 			EditorUtil.DestroyViewFrustumMarker();
 			EditorUtil.HideTransformGizmo();
+			viewPreview.Hide();
 
 			var map = editorController?.iMapManager?.CurrentMap;
 			if (map?.attachments != null && index >= 0 && index < map.attachments.Length)
@@ -97,6 +105,8 @@ namespace ClassicTilestorm
 					SnapViewDistanceToGround(view, editorController.iMapManager);
 					EditorUtil.UpdateViewFrustumMarker(view, editorController.iMapManager);
 					EditorUtil.ShowTransformGizmo(view, editorController.iMapManager, editorCamera);
+					// SHOW PREVIEW
+					viewPreview.Show(view, editorController.iMapManager);
 				}
 			}
 		}
@@ -167,6 +177,7 @@ namespace ClassicTilestorm
 							SnapViewDistanceToGround(view, editorController.iMapManager);
 							EditorUtil.UpdateViewFrustumMarker(view, editorController.iMapManager);
 							EditorUtil.ShowTransformGizmo(view, editorController.iMapManager, editorCamera);
+							viewPreview.Show(view, editorController.iMapManager); // keep preview
 						}
 						moved = true;
 					}
