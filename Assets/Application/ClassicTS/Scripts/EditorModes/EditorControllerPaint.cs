@@ -129,13 +129,13 @@ namespace ClassicTilestorm
 
 			// Draw background box
 			GUI.backgroundColor = new Color(0.2f, 0.2f, 0.4f, 0.75f);
-			GUI.Box(panelRect, "Tile Selector", EditorStyles.toolbarButton);
+			//GUI.Box(panelRect, "Tile Selector", EditorStyles.toolbarButton);
 			GUI.backgroundColor = Color.white;
 
 			GUILayout.BeginArea(panelRect);
 			GUILayout.BeginVertical();
 
-			GUILayout.Label("Tiles", EditorStyles.boldLabel);
+			//GUILayout.Label("Tiles", EditorStyles.boldLabel);
 
 			float scrollBarWidth = 12f;
 			Rect scrollRect = new Rect(0f, 25f, panelRect.width, panelRect.height - 25f);

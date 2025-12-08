@@ -255,7 +255,7 @@ namespace ClassicTilestorm
 			GUILayout.BeginArea(panel);
 			GUILayout.BeginVertical();
 
-			GUILayout.Label("Attachments", EditorStyles.boldLabel);
+			//GUILayout.Label("Attachments", EditorStyles.boldLabel);
 
 			if (attachments.Length == 0)
 			{
