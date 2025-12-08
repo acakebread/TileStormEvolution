@@ -1,102 +1,86 @@
-﻿using System.Collections.Generic;
-using UnityEditor;
+﻿using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace MassiveHadronLtd
 {
-    public static class GuiUtils
-    {
+	public static class GuiUtils
+	{
 		public static bool IsMouseInsideWindow()
 		{
 			var pos = Input.mousePosition;
 			return pos.x >= 0 && pos.y >= 0 && pos.x < Screen.width && pos.y < Screen.height;
 		}
 
-		private static GUIStyle coloredButtonStyle;
+		// ─────────────────────────────────────────────────────────────────────
+		// Colored Button & Repeat Button (runtime-safe)
+		// ─────────────────────────────────────────────────────────────────────
 		private static Texture2D solidWhite;
 		private static Texture2D solidDark;
 		private static Texture2D solidBright;
+		private static GUIStyle coloredButtonStyle;
 
-		private static void InitStaticTextures()
+		private static Texture2D MakeTex(int w, int h, Color col)
 		{
-			solidWhite = TextureUtils.MakeTex(1, 1, Color.white);
-			solidDark = TextureUtils.MakeTex(1, 1, new Color(0.75f, 0.75f, 0.75f));
-			solidBright = TextureUtils.MakeTex(1, 1, new Color(1.15f, 1.15f, 1.15f));
+			Color[] pix = new Color[w * h];
+			for (int i = 0; i < pix.Length; i++) pix[i] = col;
+			Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+			tex.SetPixels(pix);
+			tex.Apply();
+			return tex;
 		}
+
 		private static void EnsureStyles()
 		{
 			if (coloredButtonStyle != null) return;
-			if (solidWhite == null) InitStaticTextures();
 
-			coloredButtonStyle = new GUIStyle();
+			solidWhite = MakeTex(2, 2, Color.white);
+			solidDark = MakeTex(2, 2, new Color(0.75f, 0.75f, 0.75f));
+			solidBright = MakeTex(2, 2, new Color(1.15f, 1.15f, 1.15f));
 
-			coloredButtonStyle.font = GUI.skin.button.font;
-			if (coloredButtonStyle.font == null)
-				coloredButtonStyle.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-
-			coloredButtonStyle.fontSize = 12;
-			coloredButtonStyle.fontStyle = FontStyle.Bold;
-			coloredButtonStyle.alignment = TextAnchor.MiddleCenter;
-
-			// Proper button look
-			coloredButtonStyle.border = new RectOffset(8, 8, 8, 8);
-			coloredButtonStyle.padding = new RectOffset(4, 4, 4, 4);
-
-			// Backgrounds
-			coloredButtonStyle.normal.background = solidWhite;
-			coloredButtonStyle.hover.background = solidBright;
-			coloredButtonStyle.active.background = solidDark;
-			coloredButtonStyle.onNormal.background = solidWhite;
-			coloredButtonStyle.onHover.background = solidBright;
-			coloredButtonStyle.onActive.background = solidDark;
-
-			// TEXT — NOW IT WILL ACTUALLY SHOW (WHITE, NOT BLACK)
-			Color textCol = Color.white;
-			coloredButtonStyle.normal.textColor = textCol;
-			coloredButtonStyle.hover.textColor = textCol;
-			coloredButtonStyle.active.textColor = textCol;
-			coloredButtonStyle.focused.textColor = textCol;
-			coloredButtonStyle.onNormal.textColor = textCol;
-			coloredButtonStyle.onHover.textColor = textCol;
-			coloredButtonStyle.onActive.textColor = textCol;
-			coloredButtonStyle.onFocused.textColor = textCol;
+			coloredButtonStyle = new GUIStyle(GUI.skin.button)
+			{
+				fontStyle = FontStyle.Bold,
+				alignment = TextAnchor.MiddleCenter,
+				border = new RectOffset(8, 8, 8, 8),
+				padding = new RectOffset(4, 4, 4, 4),
+				normal = { background = solidWhite, textColor = Color.white },
+				hover = { background = solidBright, textColor = Color.white },
+				active = { background = solidDark, textColor = Color.white },
+				onNormal = { background = solidWhite },
+				onHover = { background = solidBright },
+				onActive = { background = solidDark }
+			};
 		}
 
-		public static bool ColoredButton(Rect r, string text, Color col, System.Action onClick = null)
+		public static bool ColoredButton(Rect r, string text, Color col, Action onClick = null)
 		{
 			EnsureStyles();
 
-			// Save everything
+			Color prevBg = GUI.backgroundColor;
+			Color prevContent = GUI.contentColor;
 			Color prevColor = GUI.color;
-			Color prevContentColor = GUI.contentColor;
-			Color prevBackground = GUI.backgroundColor;
 
-			// Set background tint (this colors the button)
 			GUI.backgroundColor = col;
-
-			// CRITICAL: Force content color to white so text stays white
 			GUI.contentColor = Color.white;
-
-			// GUI.color must be white or it will still tint the text!
 			GUI.color = Color.white;
 
-			bool result;
-			if (result = GUI.Button(r, text, coloredButtonStyle))
-				onClick?.Invoke();
+			bool clicked = GUI.Button(r, text, coloredButtonStyle);
+			if (clicked) onClick?.Invoke();
 
-			// Restore everything
+			GUI.backgroundColor = prevBg;
+			GUI.contentColor = prevContent;
 			GUI.color = prevColor;
-			GUI.contentColor = prevContentColor;
-			GUI.backgroundColor = prevBackground;
-			return result;
+
+			return clicked;
 		}
 
 		public static bool ColoredRepeatButton(
 			Rect rect,
 			string text,
 			Color color,
-			System.Action onRepeat = null,
-			float initialDelay = 0f,      // Delay BEFORE repeating (after first fire)
+			Action onRepeat = null,
+			float initialDelay = 0f,
 			float repeatInterval = 0.05f)
 		{
 			EnsureStyles();
@@ -104,72 +88,62 @@ namespace MassiveHadronLtd
 			int id = GUIUtility.GetControlID(FocusType.Passive);
 			var state = GUIUtility.GetStateObject(typeof(HoldState), id) as HoldState ?? new HoldState();
 
-			// Save colors
-			Color oldColor = GUI.color;
 			Color oldBg = GUI.backgroundColor;
 			Color oldContent = GUI.contentColor;
+			Color oldColor = GUI.color;
 
-			GUI.backgroundColor = color;
+			GUI.backgroundColor = state.isPressed ? color * 0.8f : color;
 			GUI.contentColor = Color.white;
 			GUI.color = Color.white;
 
-			Event e = Event.current;
-			bool mouseDown = e.type == EventType.MouseDown && rect.Contains(e.mousePosition);
-			bool mouseUp = e.type == EventType.MouseUp;
-
-			// Visual feedback when held
-			if (state.isPressed)
-				GUI.backgroundColor = color * 0.8f;
-
-			bool result =false;
 			GUI.Button(rect, text, coloredButtonStyle);
 
-			// === INPUT & FIRE LOGIC ===
-			if (mouseDown)
+			Event e = Event.current;
+			bool inRect = rect.Contains(e.mousePosition);
+			bool fired = false;
+
+			if (e.type == EventType.MouseDown && inRect && GUIUtility.hotControl == 0)
 			{
 				GUIUtility.hotControl = id;
 				state.isPressed = true;
-
-				// FIRST FIRE: IMMEDIATE (this is the key fix!)
 				onRepeat?.Invoke();
-
-				// Schedule the NEXT fire after the initial delay
+				fired = true;
 				state.nextFireTime = Time.time + initialDelay;
-				e.Use(); // consume the event
+				e.Use();
 			}
 
-			// REPEATING WHILE HELD
 			if (state.isPressed && GUIUtility.hotControl == id)
 			{
 				if (Time.time >= state.nextFireTime)
 				{
-					result = true;
 					onRepeat?.Invoke();
+					fired = true;
 					state.nextFireTime = Time.time + repeatInterval;
 				}
 			}
 
-			// RELEASE
-			if (mouseUp && GUIUtility.hotControl == id)
+			if (e.type == EventType.MouseUp && GUIUtility.hotControl == id)
 			{
 				GUIUtility.hotControl = 0;
 				state.isPressed = false;
 			}
 
-			// Restore
-			GUI.color = oldColor;
 			GUI.backgroundColor = oldBg;
 			GUI.contentColor = oldContent;
-			return result;
+			GUI.color = oldColor;
+
+			return fired;
 		}
 
-		// Don't forget this class (add if missing)
 		private class HoldState
 		{
-			public float nextFireTime;
 			public bool isPressed;
+			public float nextFireTime;
 		}
 
+		// ─────────────────────────────────────────────────────────────────────
+		// AutoHidePanel — EXACT original constructor signature restored
+		// ─────────────────────────────────────────────────────────────────────
 		public class AutoHidePanel
 		{
 			public float CurrentWidth { get; private set; }
@@ -184,8 +158,7 @@ namespace MassiveHadronLtd
 			private float animationVelocity;
 			private float mouseExitTime;
 
-			// Cached to avoid allocations
-			private Rect detectionRect;
+			private Rect detectionRect = new Rect();
 			private Vector2 flippedMousePos;
 
 			public AutoHidePanel(float collapsed = 120f, float expanded = 340f, float delay = 1f, float animDur = 0.25f)
@@ -197,15 +170,14 @@ namespace MassiveHadronLtd
 
 				CurrentWidth = collapsedWidth;
 				targetWidth = collapsedWidth;
-				detectionRect = new Rect();
 			}
 
 			public void Update(bool forceExpanded = false)
 			{
 				if (Input.GetMouseButton(0) || Input.GetMouseButton(1)) return;
+
 				bool wasOver = IsMouseOver;
 
-				// do not use expanded width!!!!
 				float detectX = Screen.width - CurrentWidth - 10f;
 				detectionRect.x = detectX;
 				detectionRect.y = 20f;
@@ -217,25 +189,21 @@ namespace MassiveHadronLtd
 
 				IsMouseOver = detectionRect.Contains(flippedMousePos) || forceExpanded;
 
-				// Expand instantly on enter
 				if (IsMouseOver && !wasOver)
 				{
 					targetWidth = expandedWidth;
 					mouseExitTime = 0f;
 				}
 
-				// Start timer when mouse leaves
 				if (!IsMouseOver && wasOver && mouseExitTime <= 0f)
 					mouseExitTime = Time.time;
 
-				// Collapse after delay
 				if (!IsMouseOver && mouseExitTime > 0f && Time.time - mouseExitTime >= autoHideDelay)
 				{
 					targetWidth = collapsedWidth;
 					mouseExitTime = 0f;
 				}
 
-				// Smooth animation
 				CurrentWidth = Mathf.SmoothDamp(CurrentWidth, targetWidth, ref animationVelocity, animationDuration);
 			}
 
@@ -247,34 +215,18 @@ namespace MassiveHadronLtd
 				return new Rect(x, y, CurrentWidth, h);
 			}
 
-			/// <summary>
-			/// Draw the panel content — this version GUARANTEES no horizontal scrollbar
-			/// </summary>
 			public void DrawGUI()
 			{
 				Rect panelRect = GetRect();
-
-				// This is the key: BeginArea completely isolates layout → no scrollbars ever
 				GUILayout.BeginArea(panelRect);
-
 				GUILayout.BeginVertical(GUILayout.Width(panelRect.width));
-
-				// YOUR ACTUAL PANEL CONTENT GOES HERE
-				// Example (replace with your real GUI):
+				// Your content goes here — kept as-is for compatibility
 				GUILayout.Box("Auto-Hide Panel", GUILayout.ExpandWidth(true));
 				GUILayout.Space(10);
-
-				GUILayout.Label("This panel will never show a horizontal scrollbar!", EditorStyles.wordWrappedLabel);
-
 				if (GUILayout.Button("Test Button", GUILayout.Height(30)))
-					Debug.Log("Button clicked!");
-
-				// Add as many controls as you want — no horizontal bar will appear
+					UnityEngine.Debug.Log("Button clicked!");
 				for (int i = 0; i < 20; i++)
 					GUILayout.Label($"Item {i + 1}");
-
-				// END OF YOUR CONTENT
-
 				GUILayout.EndVertical();
 				GUILayout.EndArea();
 			}
@@ -288,36 +240,35 @@ namespace MassiveHadronLtd
 			public bool IsGuiActive() => GUIUtility.hotControl != 0 || IsMouseOver;
 		}
 
+		// ─────────────────────────────────────────────────────────────────────
+		// Popup System — EXACT original signatures restored
+		// ─────────────────────────────────────────────────────────────────────
+		private static class PopupStyles
+		{
+			internal static readonly GUIStyle window = new GUIStyle(GUI.skin.window) { padding = new RectOffset(12, 12, 10, 12) };
+			internal static readonly GUIStyle title = new GUIStyle(GUI.skin.label)
+			{
+				fontSize = 16,
+				fontStyle = FontStyle.Bold,
+				alignment = TextAnchor.MiddleCenter,
+				margin = new RectOffset(0, 0, 6, 10)
+			};
+			internal static readonly GUIStyle message = new GUIStyle(GUI.skin.label)
+			{
+				alignment = TextAnchor.MiddleCenter,
+				wordWrap = true,
+				fontSize = 12
+			};
+			internal static readonly GUIStyle button = new GUIStyle(GUI.skin.button) { fixedHeight = 30, fontStyle = FontStyle.Bold };
+
+			static PopupStyles()
+			{
+				title.normal.textColor = message.normal.textColor = Color.white;
+			}
+		}
+
 		public static class PopupConfirm
 		{
-			private static readonly GUIStyle centeredStyle;
-			private static readonly GUIStyle titleStyle;
-
-			static PopupConfirm()
-			{
-				centeredStyle = new GUIStyle(EditorStyles.label)
-				{
-					alignment = TextAnchor.MiddleCenter,
-					wordWrap = true,
-					fontSize = 12,
-					normal = { textColor = Color.white },
-					hover = { textColor = Color.white },
-					active = { textColor = Color.white },
-					focused = { textColor = Color.white }
-				};
-
-				titleStyle = new GUIStyle(EditorStyles.boldLabel)
-				{
-					alignment = TextAnchor.MiddleCenter,
-					fontSize = 16,
-					normal = { textColor = Color.white },
-					hover = { textColor = Color.white },
-					active = { textColor = Color.white },
-					focused = { textColor = Color.white },
-					margin = new RectOffset(0, 0, 6, 10)
-				};
-			}
-
 			public static bool Show(
 				Vector2 screenPos,
 				Vector2 size,
@@ -326,24 +277,20 @@ namespace MassiveHadronLtd
 				string yesText = "Yes",
 				string noText = "No",
 				Color? titleColor = null,
-				System.Action onYes = null)
+				Action onYes = null)
 			{
-				var rect = new Rect(screenPos.x, screenPos.y, size.x, size.y);
-				bool result = false;
+				Rect rect = new Rect(screenPos.x - size.x * 0.5f, screenPos.y - size.y * 0.5f, size.x, size.y);
 
-				// This is literally how Unity does all its popups
-				GUI.Box(rect, "", GUI.skin.window);
-
+				GUI.Box(rect, "", PopupStyles.window);
 				GUILayout.BeginArea(rect);
 				{
 					GUILayout.Space(12);
-
 					GUI.color = titleColor ?? new Color(0.3f, 0.9f, 1f);
-					GUILayout.Label(title, titleStyle);
+					GUILayout.Label(title, PopupStyles.title);
 					GUI.color = Color.white;
 
 					if (!string.IsNullOrEmpty(message))
-						GUILayout.Label(message, centeredStyle);
+						GUILayout.Label(message, PopupStyles.message);
 
 					GUILayout.FlexibleSpace();
 
@@ -351,17 +298,18 @@ namespace MassiveHadronLtd
 					GUILayout.FlexibleSpace();
 
 					GUI.backgroundColor = new Color(0.2f, 0.95f, 0.2f);
-					if (GUILayout.Button(yesText, GUILayout.Width(90), GUILayout.Height(30)))
+					if (GUILayout.Button(yesText, PopupStyles.button, GUILayout.Width(90), GUILayout.Height(30)))
 					{
 						onYes?.Invoke();
-						result = true;
+						GUI.backgroundColor = Color.white;
+						return true;
 					}
 
 					GUILayout.Space(16);
 
 					GUI.backgroundColor = new Color(0.95f, 0.25f, 0.25f);
-					if (GUILayout.Button(noText, GUILayout.Width(90), GUILayout.Height(30)))
-						result = true;
+					if (GUILayout.Button(noText, PopupStyles.button, GUILayout.Width(90), GUILayout.Height(30)))
+						return true;
 
 					GUI.backgroundColor = Color.white;
 					GUILayout.FlexibleSpace();
@@ -371,22 +319,18 @@ namespace MassiveHadronLtd
 				}
 				GUILayout.EndArea();
 
-				return result;
+				if (Event.current.type == EventType.MouseDown && !rect.Contains(Event.current.mousePosition))
+					return true;
+
+				return false;
 			}
 		}
 
 		public static class PopupMenu
 		{
-			public static bool Show(Vector2 screenPos, Vector2 size, string title, string[] options, System.Action<int> onSelect)
+			public static bool Show(Vector2 screenPos, Vector2 size, string title, string[] options, Action<int> onSelect)
 			{
-				var rect = new Rect(screenPos.x, screenPos.y, size.x, size.y);
-
-				if (Event.current.type == EventType.MouseDown && !rect.Contains(Event.current.mousePosition))
-				{
-					onSelect?.Invoke(-1);
-					return true;
-				}
-
+				Rect rect = new Rect(screenPos.x, screenPos.y, size.x, size.y);
 				GUI.Box(rect, title, GUI.skin.window);
 
 				for (int i = 0; i < options.Length; i++)
@@ -398,63 +342,51 @@ namespace MassiveHadronLtd
 					}
 				}
 
-				return false; // keep open
+				if (Event.current.type == EventType.MouseDown && !rect.Contains(Event.current.mousePosition))
+				{
+					onSelect?.Invoke(-1);
+					return true;
+				}
+
+				return false;
 			}
 		}
 
-		// ─────────────────────────────────────────────────────────────────────────────
-		// PURE GUI POPUP — knows nothing about MapAttachment, View, Emitter, etc.
-		// ─────────────────────────────────────────────────────────────────────────────
 		public static class PopupAttachmentAdd
 		{
-			public static bool Show(
-				Vector2 screenPos,
-				int tileIndex,
-				System.Action<int> onSelect) // 0=Emitter, 1=View, 2=Pickup, -1=Cancel
+			public static bool Show(Vector2 screenPos, int tileIndex, Action<int> onSelect)
 			{
 				var options = new[] { "Add Emitter", "Add View", "Add Pickup", "Cancel" };
-
 				return PopupMenu.Show(screenPos, new Vector2(260, 30 + options.Length * 26),
-					$"Add to Tile {tileIndex}", options, i =>
-					{
-						onSelect?.Invoke(i < 3 ? i : -1); // -1 for Cancel
-					});
+					$"Add to Tile {tileIndex}", options, i => onSelect?.Invoke(i < 3 ? i : -1));
 			}
 		}
 
 		public static class PopupAttachmentDelete
 		{
-			public static bool Show(Vector2 screenPos, int tileIndex, string[] text, System.Action<int> onSelect) // 0..count-1 = single delete, count = delete all (only if >1), count+1 = cancel
+			public static bool Show(Vector2 screenPos, int tileIndex, string[] text, Action<int> onSelect)
 			{
 				if (text.Length == 0) return true;
 
 				var options = new List<string>();
-
-				// Always show individual deletes
 				for (int i = 0; i < text.Length; i++)
 					options.Add($"Delete {text[i]}");
 
-				// Only show "Delete All" if more than one
 				int deleteAllIndex = -1;
 				if (text.Length > 1)
 				{
 					deleteAllIndex = options.Count;
 					options.Add("Delete All on this tile");
 				}
-
 				options.Add("Cancel");
-				int cancelIndex = options.Count - 1;
 
 				return PopupMenu.Show(screenPos, new Vector2(320, 30 + options.Count * 26),
 					$"Tile {tileIndex} — {text.Length} attachment(s)",
 					options.ToArray(), i =>
 					{
-						if (i < text.Length)
-							onSelect?.Invoke(i);                    // single delete
-						else if (i == deleteAllIndex)
-							onSelect?.Invoke(-2);                   // special code for "delete all"
-						else if (i == cancelIndex)
-							onSelect?.Invoke(-1);                   // cancel
+						if (i < text.Length) onSelect?.Invoke(i);
+						else if (i == deleteAllIndex) onSelect?.Invoke(-2);
+						else onSelect?.Invoke(-1);
 					});
 			}
 		}
