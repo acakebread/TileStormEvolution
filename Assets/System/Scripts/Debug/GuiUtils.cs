@@ -80,7 +80,7 @@ namespace MassiveHadronLtd
 			string text,
 			Color color,
 			Action onRepeat = null,
-			float initialDelay = 0f,
+			float initialDelay = 0f,      // Delay BEFORE repeating (after first fire)
 			float repeatInterval = 0.05f)
 		{
 			EnsureStyles();
@@ -88,51 +88,63 @@ namespace MassiveHadronLtd
 			int id = GUIUtility.GetControlID(FocusType.Passive);
 			var state = GUIUtility.GetStateObject(typeof(HoldState), id) as HoldState ?? new HoldState();
 
+			// Save colors
+			Color oldColor = GUI.color;
 			Color oldBg = GUI.backgroundColor;
 			Color oldContent = GUI.contentColor;
-			Color oldColor = GUI.color;
 
-			GUI.backgroundColor = state.isPressed ? color * 0.8f : color;
+			GUI.backgroundColor = color;
 			GUI.contentColor = Color.white;
 			GUI.color = Color.white;
 
+			Event e = Event.current;
+			bool mouseDown = e.type == EventType.MouseDown && rect.Contains(e.mousePosition);
+			bool mouseUp = e.type == EventType.MouseUp;
+
+			// Visual feedback when held
+			if (state.isPressed)
+				GUI.backgroundColor = color * 0.8f;
+
+			bool result = false;
 			GUI.Button(rect, text, coloredButtonStyle);
 
-			Event e = Event.current;
-			bool inRect = rect.Contains(e.mousePosition);
-			bool fired = false;
-
-			if (e.type == EventType.MouseDown && inRect && GUIUtility.hotControl == 0)
+			// === INPUT & FIRE LOGIC ===
+			if (mouseDown)
 			{
 				GUIUtility.hotControl = id;
 				state.isPressed = true;
+
+				// FIRST FIRE: IMMEDIATE (this is the key fix!)
 				onRepeat?.Invoke();
-				fired = true;
+
+				// Schedule the NEXT fire after the initial delay
 				state.nextFireTime = Time.time + initialDelay;
-				e.Use();
+				e.Use(); // consume the event
 			}
 
+			// REPEATING WHILE HELD
 			if (state.isPressed && GUIUtility.hotControl == id)
 			{
 				if (Time.time >= state.nextFireTime)
 				{
+					result = true;
 					onRepeat?.Invoke();
-					fired = true;
 					state.nextFireTime = Time.time + repeatInterval;
 				}
 			}
 
-			if (e.type == EventType.MouseUp && GUIUtility.hotControl == id)
+			// RELEASE
+			if (mouseUp && GUIUtility.hotControl == id)
 			{
 				GUIUtility.hotControl = 0;
 				state.isPressed = false;
 			}
 
+			// Restore
+			GUI.color = oldColor;
 			GUI.backgroundColor = oldBg;
 			GUI.contentColor = oldContent;
-			GUI.color = oldColor;
-
-			return fired;
+			return result;
 		}
 
 		private class HoldState

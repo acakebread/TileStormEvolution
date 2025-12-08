@@ -88,7 +88,7 @@ namespace ClassicTilestorm
 
 			GUI.Box(new Rect(previewRect.x - 2, previewRect.y - 2, previewRect.width + 4, previewRect.height + 4), "");
 			GUI.DrawTexture(previewRect, renderTexture, ScaleMode.StretchToFill, false);
-			GUI.Label(new Rect(previewRect.x + 8, previewRect.y + 8, previewRect.width - 16, 20), "Camera Preview", GUI.skin.name);
+			GUI.Label(new Rect(previewRect.x + 8, previewRect.y + 8, previewRect.width - 16, 20), "Camera Preview");
 		}
 
 		private void OnDestroy()

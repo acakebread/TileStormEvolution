@@ -615,7 +615,7 @@ namespace ClassicTilestorm
 				mr.material.SetFloat("_Alpha", 0.7f);
 
 				var col = ring.AddComponent<MeshCollider>();
-				col.convex = true;
+				//col.convex = true;
 			}
 
 			return orbiter;
