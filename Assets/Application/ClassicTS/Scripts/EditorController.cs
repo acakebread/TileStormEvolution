@@ -35,6 +35,8 @@ namespace ClassicTilestorm
 		public IMapManager iMapManager => mapManager;
 		public event System.Action<int> OnChangeMapRequested; // delta or 0 for reload
 
+		public Map currentMap => null != mapManager ? mapManager.CurrentMap : null;
+
 		private void Awake()
 		{
 			// Modes

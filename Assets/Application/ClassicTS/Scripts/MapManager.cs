@@ -29,9 +29,10 @@ namespace ClassicTilestorm
 		bool UpdateTileAt(int x, int z, string id, bool expand = true, Action<bool, Vector3> onEdited = null);
 		Vector3 SnappedMapPosition(Vector3 vec);
 
-		public int GetWaypoint(int index);
+		int GetWaypoint(int index);
 		View GetView(int tile);
-		//Viewpoint GetViewpoint(int tile);
+
+		int CameraHitTile(Camera camera, Vector3 position);
 	}
 
 	public class MapManager : MonoBehaviour, IMapManager
@@ -97,6 +98,8 @@ namespace ClassicTilestorm
 			MiddleLeft, Center, MiddleRight,
 			BottomLeft, BottomCenter, BottomRight
 		}
+
+		public int CameraHitTile(Camera camera, Vector3 position) => WorldToMapIndex(ScreenToWorld(camera, position));
 
 		public View GetView(int tile)
 		{

@@ -14,6 +14,7 @@ namespace ClassicTilestorm
 
 		private int draggingTile = -1;
 		private int[] draggedAttachmentIndices = System.Array.Empty<int>();
+		//private MapAttachment[] draggedAttachments = System.Array.Empty<MapAttachment>();
 
 		private int pendingTile = -1;
 		private enum PendingAction { None, Add, Delete }
@@ -110,7 +111,9 @@ namespace ClassicTilestorm
 				clickStartPos = Input.mousePosition;
 				clickStartTile = tileUnderMouse;
 
-				if (TryHitAttachmentMarker(out int hitTile))
+				var hitTile = HitTile(Input.mousePosition);
+				var attachments = MapAttachments(hitTile);
+				if (null != attachments)
 				{
 					var map = editorController.iMapManager.CurrentMap;
 
@@ -161,7 +164,8 @@ namespace ClassicTilestorm
 			{
 				bool wasClick = Vector3.Distance(Input.mousePosition, clickStartPos) < 6f;
 
-				if (wasClick && clickStartTile >= 0 && !TryHitAttachmentMarker(out _))
+				var attachments = MapAttachments(HitTile(Input.mousePosition));
+				if (wasClick && clickStartTile >= 0 && null == attachments)
 				{
 					pendingTile = clickStartTile;
 					pendingAction = PendingAction.Add;
@@ -192,33 +196,17 @@ namespace ClassicTilestorm
 			}
 		}
 
-		private int HitTile(Vector3 mousePos)
+		private int HitTile(Vector3 mousePos) => editorController.iMapManager.CameraHitTile(camera, mousePos);
+
+		private MapAttachment[] MapAttachments(int tileIndex)
 		{
-			var tileIndex = -1;
-			var ray = camera.ScreenPointToRay(mousePos);
-			if (!Physics.Raycast(ray, out RaycastHit hit)) return -1;
-
-			if (hit.collider.name.StartsWith("ATT_"))
+			var map = editorController.currentMap;
+			if (null != map && null != map.attachments && map.IsValidTile(tileIndex))
 			{
-				string num = hit.collider.name.Substring(4);
-				if (int.TryParse(num, out tileIndex))
-					return tileIndex;
+				var result = map.attachments.Where(x => x.tile == tileIndex).ToArray();
+				return result.Length > 0 ? result : null;
 			}
-			return -1;
-		}
-
-		private bool TryHitAttachmentMarker(out int tileIndex)
-		{
-			tileIndex = -1;
-			var ray = camera.ScreenPointToRay(Input.mousePosition);
-			if (!Physics.Raycast(ray, out RaycastHit hit)) return false;
-
-			if (hit.collider.name.StartsWith("ATT_"))
-			{
-				string num = hit.collider.name.Substring(4);
-				return int.TryParse(num, out tileIndex);
-			}
-			return false;
+			return null;
 		}
 
 		public override void OnGui()

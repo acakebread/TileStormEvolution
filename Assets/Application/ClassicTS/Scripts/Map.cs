@@ -37,6 +37,8 @@ namespace ClassicTilestorm
 
 		[JsonIgnore] public bool IsAtomic => definitions?.Length > 0 || textures?.Length > 0;
 
+		public bool IsValidTile(int index) => index >= 0 && index < width * height;
+
 		/// <summary>
 		/// Rebuilds the optimal frequency-sorted table and remaps tiles.
 		/// Returns true if any changes were made (table or tiles changed).
