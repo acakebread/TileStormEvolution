@@ -209,7 +209,7 @@ namespace ClassicTilestorm
 		private static Mesh CreateViewFrustumMesh(float distance)
 		{
 			const float GameFOV = 20f;
-			const float Near = 0.5f;
+			const float Near = 0.25f;
 			float Far = Mathf.Max(distance, Near + 0.1f);
 
 			float aspect = 16f / 9f;
@@ -356,7 +356,7 @@ namespace ClassicTilestorm
 
 
 		// ===================================================================
-		// TRANSFORM GIZMO FOR VIEW ATTACHMENTS (Position + Rotation)
+		// TRANSFORM GIZMO – FULL 3D + SCREEN-SPACE CONSTANT SIZE (FIXED)
 		// ===================================================================
 
 		private static GameObject transformGizmoRoot;
@@ -367,13 +367,26 @@ namespace ClassicTilestorm
 
 		private const float GIZMO_SCALE = 1.5f;
 		private const float HANDLE_SIZE = 0.18f;
-		private const float ORBITER_RADIUS = 1f;//1.8f;
+		private const float ORBITER_RADIUS = 1f;
 
-		public static void ShowTransformGizmo(View view, IMapManager mapManager)
+		private const float TARGET_SCREEN_SIZE = 60f; // pixels
+
+		// ——————— DRAG STATE ———————
+		private static bool isDraggingPosition = false;
+		private static Plane dragPlane;
+		private static Vector3 dragStartPoint;
+
+		private static bool isDraggingRotation = false;
+		private static Transform draggedRing;
+		private static Vector3 rotationAxis;
+		private static Quaternion startViewRotation;
+		private static Vector3 startMouseWorldPos;
+
+		public static void ShowTransformGizmo(View view, IMapManager mapManager, Camera cam)
 		{
 			HideTransformGizmo();
 
-			if (view == null || mapManager == null) return;
+			if (view == null || mapManager == null || cam == null) return;
 
 			activeEditingView = view;
 			activeMapManager = mapManager;
@@ -384,58 +397,75 @@ namespace ClassicTilestorm
 			positionHandle = CreatePositionHandle(transformGizmoRoot.transform);
 			rotationOrbiter = CreateRotationOrbiter(transformGizmoRoot.transform);
 
-			UpdateTransformGizmoVisuals();
+			UpdateTransformGizmoVisuals(cam);
 		}
 
 		public static void HideTransformGizmo()
 		{
 			if (transformGizmoRoot != null)
-			{
 				Object.Destroy(transformGizmoRoot);
-				transformGizmoRoot = null;
-			}
-			rotationOrbiter = positionHandle = null;
+
+			transformGizmoRoot = rotationOrbiter = positionHandle = null;
 			activeEditingView = null;
 			activeMapManager = null;
 
-			isDraggingPosition = false;
-			isDraggingRotation = false;
+			isDraggingPosition = isDraggingRotation = false;
 			draggedRing = null;
 		}
 
-		public static void UpdateTransformGizmoVisuals()
+		public static void UpdateTransformGizmoVisuals(Camera cam)
 		{
-			if (activeEditingView == null || transformGizmoRoot == null || activeMapManager == null) return;
+			if (activeEditingView == null || transformGizmoRoot == null || activeMapManager == null || cam == null) return;
 
 			Vector3 worldPos = activeMapManager.TileWorldPosition(activeEditingView.tile) + activeEditingView.Position;
 			transformGizmoRoot.transform.position = worldPos;
 
 			if (rotationOrbiter != null)
 				rotationOrbiter.transform.rotation = activeEditingView.Rotation;
+
+			ApplyScreenSpaceScale(cam);
+		}
+
+		public static void UpdateGizmoScreenSize(Camera cam)
+		{
+			if (cam != null && transformGizmoRoot != null)
+				ApplyScreenSpaceScale(cam);
+		}
+
+		private static void ApplyScreenSpaceScale(Camera cam)
+		{
+			if (cam == null || transformGizmoRoot == null) return;
+
+			float distance = Vector3.Distance(cam.transform.position, transformGizmoRoot.transform.position);
+			float fovRad = cam.fieldOfView * Mathf.Deg2Rad;
+
+			float scale = distance * Mathf.Tan(fovRad * 0.5f) * 2f;
+			scale = TARGET_SCREEN_SIZE * scale / Screen.height;
+
+			transformGizmoRoot.transform.localScale = Vector3.one * scale;
 		}
 
 		public static bool HandleTransformGizmoInput(Camera cam)
 		{
 			if (activeEditingView == null || cam == null || transformGizmoRoot == null) return false;
 
+			UpdateGizmoScreenSize(cam); // keep perfect size
+
 			Ray ray = cam.ScreenPointToRay(Input.mousePosition);
 			bool handled = false;
 
-			// === POSITION HANDLE ===
+			// POSITION
 			if (positionHandle != null)
 			{
 				var col = positionHandle.GetComponent<Collider>();
-				if (col && col.Raycast(ray, out RaycastHit hit, Mathf.Infinity))
+				if (col && col.Raycast(ray, out RaycastHit hit, Mathf.Infinity) && Input.GetMouseButtonDown(0))
 				{
-					if (Input.GetMouseButtonDown(0))
-					{
-						StartDraggingPosition(cam);
-						handled = true;
-					}
+					StartDraggingPosition(cam);
+					handled = true;
 				}
 			}
 
-			// === ROTATION RINGS - START DRAG ===
+			// ROTATION
 			if (!handled && Input.GetMouseButtonDown(0) && rotationOrbiter != null)
 			{
 				foreach (Transform ring in rotationOrbiter.transform)
@@ -450,7 +480,6 @@ namespace ClassicTilestorm
 				}
 			}
 
-			// === CONTINUE DRAG ===
 			if (Input.GetMouseButton(0))
 			{
 				if (isDraggingPosition) ContinueDragPosition(cam);
@@ -458,32 +487,22 @@ namespace ClassicTilestorm
 				handled = true;
 			}
 
-			// === RELEASE ===
 			if (Input.GetMouseButtonUp(0))
 			{
-				isDraggingPosition = false;
-				isDraggingRotation = false;
+				isDraggingPosition = isDraggingRotation = false;
 				draggedRing = null;
 			}
 
 			return handled;
 		}
 
-		// ——————— POSITION DRAG (NOW FULL 3D – VIEW-PLANE DRAG) ———————
-		private static bool isDraggingPosition = false;
-		private static Plane dragPlane;           // <-- ADD THIS FIELD
-		private static Vector3 dragStartPoint;    // <-- ADD THIS FIELD
-
+		// ——————— POSITION DRAG (FULL 3D) ———————
 		private static void StartDraggingPosition(Camera cam)
 		{
-			// Create a plane that faces the camera (perpendicular to view direction)
 			dragPlane = new Plane(-cam.transform.forward, transformGizmoRoot.transform.position);
-
 			Ray ray = cam.ScreenPointToRay(Input.mousePosition);
 			if (dragPlane.Raycast(ray, out float enter))
-			{
 				dragStartPoint = ray.GetPoint(enter);
-			}
 
 			isDraggingPosition = true;
 		}
@@ -491,36 +510,25 @@ namespace ClassicTilestorm
 		private static void ContinueDragPosition(Camera cam)
 		{
 			Ray ray = cam.ScreenPointToRay(Input.mousePosition);
-
 			if (dragPlane.Raycast(ray, out float enter))
 			{
-				Vector3 currentPoint = ray.GetPoint(enter);
-				Vector3 delta = currentPoint - dragStartPoint;
+				Vector3 current = ray.GetPoint(enter);
+				Vector3 delta = current - dragStartPoint;
 
-				// Apply delta in world space
-				Vector3 newWorldPos = transformGizmoRoot.transform.position + delta;
-				activeEditingView.Position = newWorldPos - activeMapManager.TileWorldPosition(activeEditingView.tile);
+				Vector3 newWorld = transformGizmoRoot.transform.position + delta;
+				activeEditingView.Position = newWorld - activeMapManager.TileWorldPosition(activeEditingView.tile);
 
-				UpdateTransformGizmoVisuals();
+				UpdateTransformGizmoVisuals(cam);
 				UpdateViewFrustumMarker(activeEditingView, activeMapManager);
-
-				// Critical: update reference point for smooth 1:1 movement
-				dragStartPoint = currentPoint;
+				dragStartPoint = current;
 			}
 		}
 
-		// ——————— ROTATION DRAG (FIXED & STABLE) ———————
-		private static bool isDraggingRotation = false;
-		private static Transform draggedRing;
-		private static Vector3 rotationAxis;
-		private static Quaternion startViewRotation;
-		private static Vector3 startMouseWorldPos;
-
+		// ——————— ROTATION DRAG (UNCHANGED & WORKING) ———————
 		private static void StartDraggingRotation(Camera cam, Transform ring)
 		{
 			draggedRing = ring;
 			rotationAxis = ring.up;
-
 			startViewRotation = activeEditingView.Rotation;
 
 			Plane plane = new Plane(rotationAxis, transformGizmoRoot.transform.position);
@@ -545,23 +553,20 @@ namespace ClassicTilestorm
 
 			if (delta.sqrMagnitude < 0.0001f) return;
 
-			// Project drag onto tangent direction (perpendicular to axis and view direction)
 			Vector3 camToGizmo = (transformGizmoRoot.transform.position - cam.transform.position).normalized;
 			Vector3 tangent = Vector3.Cross(rotationAxis, camToGizmo);
 			if (tangent.sqrMagnitude < 0.01f) tangent = Vector3.Cross(rotationAxis, Vector3.up);
 
 			float signedDist = Vector3.Dot(delta, tangent.normalized);
-			float angle = signedDist * 120f; // Sensitivity — tweak 100–180
+			float angle = signedDist * 120f;
 
-			Quaternion deltaRot = Quaternion.AngleAxis(angle, rotationAxis);// need to work out the input angular change based on the plane
-			//activeEditingView.Rotation = deltaRot * startViewRotation;//this was badly wrong!!!
+			Quaternion deltaRot = Quaternion.AngleAxis(angle, rotationAxis);
 			startViewRotation = deltaRot * startViewRotation;
 			activeEditingView.Rotation = startViewRotation;
 
-			UpdateTransformGizmoVisuals();
+			UpdateTransformGizmoVisuals(cam);
 			UpdateViewFrustumMarker(activeEditingView, activeMapManager);
 
-			// Update start pos for next frame (important!)
 			startMouseWorldPos = currentMousePos;
 		}
 
@@ -569,10 +574,12 @@ namespace ClassicTilestorm
 		private static GameObject CreatePositionHandle(Transform parent)
 		{
 			var go = new GameObject("PositionHandle");
+			go.layer = LayerMask.NameToLayer("Editor");
 			go.transform.SetParent(parent, false);
 			go.transform.localScale = Vector3.one * HANDLE_SIZE * GIZMO_SCALE;
 
 			var sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+			sphere.layer = LayerMask.NameToLayer("Editor");
 			sphere.transform.SetParent(go.transform, false);
 			Object.Destroy(sphere.GetComponent<Collider>());
 

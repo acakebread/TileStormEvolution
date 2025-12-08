@@ -21,6 +21,8 @@ namespace ClassicTilestorm
 		[JsonIgnore] public Vector3 VSrc { get => Position; set => Rebuild(position: value); }
 		[JsonIgnore] public Vector3 VDst { get => LookAt; set => Rebuild(lookAt: value); }
 
+		public const float MAX_DISTANCE = 64f;
+
 		private void Rebuild(
 			Vector3? position = null,
 			Quaternion? rotation = null,

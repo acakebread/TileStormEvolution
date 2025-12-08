@@ -94,16 +94,29 @@ namespace ClassicTilestorm
 			{
 				if (map.attachments[index] is View view)
 				{
+					SnapViewDistanceToGround(view, editorController.iMapManager);
 					EditorUtil.UpdateViewFrustumMarker(view, editorController.iMapManager);
-					EditorUtil.ShowTransformGizmo(view, editorController.iMapManager);				}
+					EditorUtil.ShowTransformGizmo(view, editorController.iMapManager, editorCamera);
 				}
+			}
 		}
 
 		public override void Update()
 		{
 			base.Update();
 
-			EditorUtil.HandleTransformGizmoInput(editorCamera);// if (EditorUtil.HandleTransformGizmoInput(camera)) return;
+			if (EditorUtil.HandleTransformGizmoInput(editorCamera))
+			{
+				//very inefficient because it destroys and creates mesh every fram while gizmo is visible but I can refactor later
+
+				var map = editorController.currentMap;
+				if (map?.attachments != null && SelectedAttachmentIndex >= 0 && SelectedAttachmentIndex < map.attachments.Length)
+				{
+					if (map.attachments[SelectedAttachmentIndex] is View view)
+						SnapViewDistanceToGround(view, editorController.iMapManager);
+				}
+				//return;//DO NOT do this - blocks lots of behaviour
+			}
 
 			if (editorCamera == null || editorController.IsGuiControlActive() ||
 				(EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()))
@@ -127,11 +140,7 @@ namespace ClassicTilestorm
 					if (Input.GetMouseButtonDown(0))
 					{
 						draggingTile = hitTile;
-						draggedAttachmentIndices = map.attachments
-							.Select((a, i) => new { a, i })
-							.Where(x => x.a.tile == hitTile)
-							.Select(x => x.i)
-							.ToArray();
+						draggedAttachmentIndices = map.attachments.Select((a, i) => new { a, i }).Where(x => x.a.tile == hitTile).Select(x => x.i).ToArray();
 
 						if (draggedAttachmentIndices.Length > 0)
 							SelectAttachment(draggedAttachmentIndices[0]);
@@ -155,8 +164,9 @@ namespace ClassicTilestorm
 
 						if (att is View view)
 						{
+							SnapViewDistanceToGround(view, editorController.iMapManager);
 							EditorUtil.UpdateViewFrustumMarker(view, editorController.iMapManager);
-							EditorUtil.ShowTransformGizmo(view, editorController.iMapManager);
+							EditorUtil.ShowTransformGizmo(view, editorController.iMapManager, editorCamera);
 						}
 						moved = true;
 					}
@@ -382,6 +392,31 @@ namespace ClassicTilestorm
 
 			if (closed && pendingAction == PendingAction.Delete)
 				pendingAction = PendingAction.None;
+		}
+
+		public static void SnapViewDistanceToGround(View view, IMapManager mapManager)
+		{
+			if (view == null || mapManager == null) return;
+
+			Vector3 origin = mapManager.TileWorldPosition(view.tile) + view.Position;
+			Vector3 forward = view.Rotation * Vector3.forward;
+
+			// Raycast down from camera position along view direction to hit Y=0
+			Plane ground = new Plane(Vector3.up, Vector3.zero);
+			Ray ray = new Ray(origin, forward);
+
+			if (ground.Raycast(ray, out float enter))
+			{
+				float distance = enter;
+				if (distance > 0.1f) // avoid tiny values
+				{
+					view.Distance = Mathf.Min(distance, View.MAX_DISTANCE);
+					return;
+				}
+			}
+
+			// No hit or behind camera → clamp to max
+			view.Distance = View.MAX_DISTANCE;
 		}
 	}
 }
