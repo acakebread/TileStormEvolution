@@ -76,7 +76,7 @@ namespace ClassicTilestorm
 				.Distinct()
 				.ToArray() ?? System.Array.Empty<int>();
 
-			EditorUtil.UpdateMapMarkers(editorController.iMapManager, tiles, SelectedAttachmentIndex);
+			EditorUtil.UpdateMapMarkers(editorController.iMapManager, tiles, SelectedAttachmentIndex, EditorUtil.MarkerType.Attachment);
 		}
 
 		private void SelectAttachment(int index)

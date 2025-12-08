@@ -1,6 +1,5 @@
 ﻿using UnityEngine;
 using MassiveHadronLtd;
-using System.Linq;
 using System.Collections.Generic;
 
 namespace ClassicTilestorm
@@ -100,12 +99,32 @@ namespace ClassicTilestorm
 		}
 
 		// === UNIFIED MARKER SYSTEM ===
+		private class MarkerPulse : MonoBehaviour
+		{
+			public float intensity = 1.5f;
+			public float speed = 2.5f;
+
+			private Vector3 baseScale;
+
+			private void Awake()
+			{
+				baseScale = transform.localScale;
+			}
+
+			private void Update()
+			{
+				float pulse = 0.75f + (Mathf.Sin(Time.time * speed) * 0.25f + 0.25f) * (intensity - 1f);
+				transform.localScale = baseScale * pulse;
+			}
+		}
+
 		private static readonly List<GameObject> mapMarkers = new();
 		private static GameObject markerCursor;
 		private static Material markerCursorMaterial;
 
 		public enum MarkerType
 		{
+			Undefined,
 			Waypoint,
 			Attachment,
 			Custom // for future use
@@ -158,7 +177,7 @@ namespace ClassicTilestorm
 			IMapManager mapManager,
 			int[] tiles,
 			int selectedIndex = -1,
-			MarkerType type = MarkerType.Waypoint)
+			MarkerType type = MarkerType.Undefined)
 		{
 			ClearMapMarkers();
 
@@ -185,7 +204,7 @@ namespace ClassicTilestorm
 				{
 					MarkerType.Waypoint => new Color(0f, 0.7f, 1f, 0.7f),     // Blue
 					MarkerType.Attachment => new Color(0f, 0.7f, 1f, 0.7f),   // Same blue (or change if desired)
-					_ => new Color(0f, 0.7f, 1f, 0.7f)
+					_ => new Color(0f, 0.7f, 1f, 0.7f)//undefined
 				};
 
 				// Special cases
@@ -197,7 +216,7 @@ namespace ClassicTilestorm
 				{
 					// Selected: bright green + pulsing
 					mr.material = MaterialUtils.CreateTransparentUnlitMaterial(new Color(0f, 1f, 0f, 0.7f));
-					var pulse = go.AddComponent<WaypointPulse>();
+					var pulse = go.AddComponent<MarkerPulse>();
 					pulse.intensity = 2.1f;
 					pulse.speed = 3.2f;
 				}
@@ -348,25 +367,6 @@ namespace ClassicTilestorm
 					Object.DestroyImmediate(viewFrustumMarker);
 				viewFrustumMarker = null;
 			}
-		}
-	}
-
-	public class WaypointPulse : MonoBehaviour
-	{
-		public float intensity = 1.5f;
-		public float speed = 2.5f;
-
-		private Vector3 baseScale;
-
-		private void Awake()
-		{
-			baseScale = transform.localScale;
-		}
-
-		private void Update()
-		{
-			float pulse = 0.75f + (Mathf.Sin(Time.time * speed) * 0.25f + 0.25f) * (intensity - 1f);
-			transform.localScale = baseScale * pulse;
 		}
 	}
 }

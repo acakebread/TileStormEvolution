@@ -68,11 +68,7 @@ namespace ClassicTilestorm
 			var map = editorController?.iMapManager?.CurrentMap;
 			if (map == null) return;
 
-			EditorUtil.UpdateMapMarkers(
-				editorController.iMapManager,
-				editorController.iMapManager.Waypoints,
-				SelectedWaypointIndex
-			);
+			EditorUtil.UpdateMapMarkers(editorController.iMapManager, editorController.iMapManager.Waypoints, SelectedWaypointIndex, EditorUtil.MarkerType.Waypoint);
 		}
 
 		private void SelectWaypoint(int index)
