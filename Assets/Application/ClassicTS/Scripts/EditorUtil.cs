@@ -547,7 +547,7 @@ namespace ClassicTilestorm
 			float signedDist = Vector3.Dot(delta, tangent.normalized);
 			float angle = signedDist * 120f; // Sensitivity — tweak 100–180
 
-			Quaternion deltaRot = Quaternion.AngleAxis(-angle, rotationAxis);// had to negate the angle to make it work properly
+			Quaternion deltaRot = Quaternion.AngleAxis(angle, rotationAxis);// need to work out the input angular change based on the plane
 			//activeEditingView.Rotation = deltaRot * startViewRotation;//this was badly wrong!!!
 			startViewRotation = deltaRot * startViewRotation;
 			activeEditingView.Rotation = startViewRotation;

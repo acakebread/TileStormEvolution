@@ -424,23 +424,19 @@ namespace MassiveHadronLtd
 
 		public static class PopupAttachmentDelete
 		{
-			public static bool Show(
-				Vector2 screenPos,
-				int tileIndex,
-				int attachmentCount,
-				System.Action<int> onSelect) // 0..count-1 = single delete, count = delete all (only if >1), count+1 = cancel
+			public static bool Show(Vector2 screenPos, int tileIndex, string[] text, System.Action<int> onSelect) // 0..count-1 = single delete, count = delete all (only if >1), count+1 = cancel
 			{
-				if (attachmentCount == 0) return true;
+				if (text.Length == 0) return true;
 
 				var options = new List<string>();
 
 				// Always show individual deletes
-				for (int i = 0; i < attachmentCount; i++)
-					options.Add($"Delete attachment {i + 1}");
+				for (int i = 0; i < text.Length; i++)
+					options.Add($"Delete {text[i]}");
 
 				// Only show "Delete All" if more than one
 				int deleteAllIndex = -1;
-				if (attachmentCount > 1)
+				if (text.Length > 1)
 				{
 					deleteAllIndex = options.Count;
 					options.Add("Delete All on this tile");
@@ -450,10 +446,10 @@ namespace MassiveHadronLtd
 				int cancelIndex = options.Count - 1;
 
 				return PopupMenu.Show(screenPos, new Vector2(320, 30 + options.Count * 26),
-					$"Tile {tileIndex} — {attachmentCount} attachment(s)",
+					$"Tile {tileIndex} — {text.Length} attachment(s)",
 					options.ToArray(), i =>
 					{
-						if (i < attachmentCount)
+						if (i < text.Length)
 							onSelect?.Invoke(i);                    // single delete
 						else if (i == deleteAllIndex)
 							onSelect?.Invoke(-2);                   // special code for "delete all"

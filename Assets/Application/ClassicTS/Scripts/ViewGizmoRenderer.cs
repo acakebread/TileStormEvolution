@@ -116,7 +116,7 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			var mapManager = Object.FindFirstObjectByType<MapManager>();
+			var mapManager = FindFirstObjectByType<MapManager>();
 			if (!mapManager)
 			{
 				Hide();

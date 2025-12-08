@@ -64,6 +64,7 @@ namespace ClassicTilestorm
 			if (editorController.CurrentMode != EditorMode.Attachment) return;
 			RebuildMarkers();
 			EditorUtil.DestroyViewFrustumMarker();
+			EditorUtil.HideTransformGizmo();
 		}
 
 		private void RebuildMarkers()
@@ -86,6 +87,7 @@ namespace ClassicTilestorm
 			RebuildMarkers();
 
 			EditorUtil.DestroyViewFrustumMarker();
+			EditorUtil.HideTransformGizmo();
 
 			var map = editorController?.iMapManager?.CurrentMap;
 			if (map?.attachments != null && index >= 0 && index < map.attachments.Length)
@@ -101,8 +103,7 @@ namespace ClassicTilestorm
 		{
 			base.Update();
 
-			if (EditorUtil.HandleTransformGizmoInput(camera))
-				return;
+			EditorUtil.HandleTransformGizmoInput(camera);// if (EditorUtil.HandleTransformGizmoInput(camera)) return;
 
 			if (camera == null || editorController.IsGuiControlActive() ||
 				(EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()))
@@ -153,8 +154,10 @@ namespace ClassicTilestorm
 						att.tile = tileUnderMouse;
 
 						if (att is View view)
+						{
 							EditorUtil.UpdateViewFrustumMarker(view, editorController.iMapManager);
-
+							EditorUtil.ShowTransformGizmo(view, editorController.iMapManager);
+						}
 						moved = true;
 					}
 				}
@@ -306,7 +309,7 @@ namespace ClassicTilestorm
 
 			MapAttachment newAtt = type.Name switch
 			{
-				"Emitter" => new Emitter { tile = tile, LookAt = Vector3.forward },
+				"Emitter" => new Emitter { tile = tile, Position = Vector3.up, LookAt = Vector3.up },
 				"View" => new View { tile = tile, Position = (Vector3.up + Vector3.back) * 8, LookAt = (Vector3.forward + Vector3.down) * 4 },
 				"Pickup" => new Pickup { tile = tile },
 				_ => null
@@ -359,7 +362,9 @@ namespace ClassicTilestorm
 			var attsOnTile = map.GetAttachmentsOnTile(pendingTile);
 			if (attsOnTile.Length == 0) return;
 
-			bool closed = PopupAttachmentDelete.Show(sp, pendingTile, attsOnTile.Length, choice =>
+			var types = attsOnTile.Select(a => a.GetType().Name).ToArray();
+
+			bool closed = PopupAttachmentDelete.Show(sp, pendingTile, types, choice =>
 			{
 				if (choice >= 0 && choice < attsOnTile.Length)
 					map.RemoveAttachment(attsOnTile[choice]);
@@ -367,6 +372,7 @@ namespace ClassicTilestorm
 				{
 					map.RemoveAllAttachmentsOnTile(pendingTile);
 					EditorUtil.DestroyViewFrustumMarker();
+					EditorUtil.HideTransformGizmo();
 				}
 
 				RebuildMarkers();
