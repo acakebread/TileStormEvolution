@@ -223,7 +223,7 @@ namespace ClassicTilestorm
 				Vector3 pos = mapManager.TileWorldPosition(tile) + Vector3.up * 0.02f;
 
 				var go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-				go.name = $"WP{i}";
+				go.name = $"ATT_{tile}";
 				go.transform.position = pos;
 				go.transform.localScale = new Vector3(0.8f, 0.01f, 0.8f);
 
