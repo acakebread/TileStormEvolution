@@ -157,11 +157,16 @@ namespace ClassicTilestorm
 				bc.size = new Vector3(1f, 1f, 0.02f);   // thin plate
 
 				MeshRenderer mr = quad.GetComponent<MeshRenderer>();
-				mr.material = MaterialUtils.CreateTransparentUnlitMaterial(f.Item2);
+				//mr.material = MaterialUtils.CreateTransparentUnlitMaterial(f.Item2);
+				var additiveShader = Shader.Find("Hidden/URPGizmoSolid");
+				mr.material = new Material(additiveShader);
+				mr.material.SetColor("_BaseColor", f.Item2);
+
 				Object.Destroy(quad.GetComponent<Collider>());
 
 				FaceTag tag = quad.AddComponent<FaceTag>();
 				tag.normal = f.Item1;
+				tag.originalColor = f.Item2;
 			}
 
 			return go;
@@ -170,6 +175,7 @@ namespace ClassicTilestorm
 		private class FaceTag : MonoBehaviour
 		{
 			public Vector3 normal;
+			public Color originalColor;   // store the RGB + initial alpha
 		}
 
 		private static void StartPositionDrag(Ray ray, Camera cam, RaycastHit hit)
@@ -227,6 +233,7 @@ namespace ClassicTilestorm
 		private static GameObject CreateRotationOrbiter(Transform parent)
 		{
 			GameObject orb = new GameObject("RotationOrbiter");
+			orb.layer = LayerMask.NameToLayer("Editor");
 			orb.transform.SetParent(parent, false);
 
 			Color[] colors = { new Color(1f, 0.3f, 0.3f), new Color(0.3f, 1f, 0.3f), new Color(0.3f, 0.6f, 1f) };
@@ -243,8 +250,11 @@ namespace ClassicTilestorm
 				ring.transform.localScale = new Vector3(1f, 1f, 1f);
 
 				MeshRenderer mr = ring.GetComponent<MeshRenderer>();
-				mr.material = MaterialUtils.CreateTransparentUnlitMaterial(colors[i]);
-				mr.material.SetFloat("_Alpha", 0.7f);
+				//mr.material = MaterialUtils.CreateTransparentUnlitMaterial(colors[i]);
+				//mr.material.SetFloat("_Alpha", 0.7f);
+				var editorShader = Shader.Find("Hidden/URPGizmoSolid");
+				mr.material = new Material(editorShader);
+				mr.material.SetColor("_BaseColor", colors[i]);
 
 				ring.AddComponent<MeshCollider>();
 			}
@@ -319,18 +329,34 @@ namespace ClassicTilestorm
 			{
 				bool sameAxis = Mathf.Abs(Vector3.Dot(f.normal, tag.normal)) > 0.9f;
 				Color c = sameAxis ? Color.yellow : new Color(1f, 1f, 1f, 0.55f);
-				f.GetComponent<MeshRenderer>().material.color = c;
+				//f.GetComponent<MeshRenderer>().material.color = c;
+				f.GetComponent<MeshRenderer>().material.SetColor("_BaseColor", c);
 			}
 		}
 
 		private static void ResetHover()
 		{
 			if (positionHandle == null) return;
-			foreach (MeshRenderer mr in positionHandle.GetComponentsInChildren<MeshRenderer>())
-			{
-				Color baseCol = mr.material.color;
-				mr.material.color = new Color(baseCol.r, baseCol.g, baseCol.b, 0.55f);
-			}
+			//foreach (MeshRenderer mr in positionHandle.GetComponentsInChildren<MeshRenderer>())
+			//{
+			//	//Color baseCol = mr.material.color;
+			//	//mr.material.color = new Color(baseCol.r, baseCol.g, baseCol.b, 0.55f);
+
+			//	Color baseCol = Color.white;
+			//	mr.GetComponent<MeshRenderer>().material.SetColor("_BaseColor", new Color(baseCol.r, baseCol.g, baseCol.b, 0.55f));
+			//}
+
+			//foreach (MeshRenderer mr in positionHandle.GetComponentsInChildren<MeshRenderer>())
+			//{
+			//	Color baseCol = mr.material.GetColor("_BaseColor");
+			//	mr.material.SetColor("_BaseColor", new Color(baseCol.r, baseCol.g, baseCol.b, 0.55f));
+			//}
+
+foreach (FaceTag f in positionHandle.GetComponentsInChildren<FaceTag>())
+{
+    Color c = new Color(f.originalColor.r, f.originalColor.g, f.originalColor.b, 0.55f);
+    f.GetComponent<MeshRenderer>().material.SetColor("_BaseColor", c);
+}
 		}
 
 		// ===================================================================
@@ -346,7 +372,7 @@ namespace ClassicTilestorm
 			return go;
 		}
 
-		private static Mesh GenerateTorusMesh(int segments = 48, int sides = 16, float radius = 1f, float tube = 0.1f)
+		private static Mesh GenerateTorusMesh(int segments = 48, int sides = 16, float radius = 1f, float tube = 0.05f)
 		{
 			var mesh = new Mesh { name = "GizmoTorus" };
 

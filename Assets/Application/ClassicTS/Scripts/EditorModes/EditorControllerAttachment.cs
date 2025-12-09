@@ -339,7 +339,21 @@ namespace ClassicTilestorm
 			editorController.OnMapChanged();
 
 			if (newAtt is View view)
+			{
 				EditorUtil.UpdateViewFrustumMarker(view, editorController.iMapManager);
+				EditorTransformUtil.ShowTransformGizmo(view, editorController.iMapManager, editorCamera);
+				viewPreview.Show(view, editorController.iMapManager);
+
+				SelectAttachment(System.Array.IndexOf(map.attachments, newAtt));
+				//var hitTile = newAtt.tile;
+				//var attachments = MapAttachments(hitTile);
+				//if (null != attachments)
+				//{
+				//	draggedAttachments = map.attachments.Where(x => x.tile == hitTile).ToArray();
+				//	if (draggedAttachments.Length > 0)
+				//		SelectAttachment(System.Array.IndexOf(map.attachments, draggedAttachments[0]));
+				//}
+			}
 		}
 
 		private void DrawAddPopup()
