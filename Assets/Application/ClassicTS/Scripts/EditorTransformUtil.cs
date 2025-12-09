@@ -402,33 +402,51 @@ namespace ClassicTilestorm
 		{
 			GameObject go = new GameObject();
 			go.layer = LayerMask.NameToLayer("Editor");
+
+			// === Visual torus (thin) ===
 			MeshFilter mf = go.AddComponent<MeshFilter>();
-			go.AddComponent<MeshRenderer>();
-			mf.mesh = GenerateTorusMesh();
+			MeshRenderer mr = go.AddComponent<MeshRenderer>();
+
+			// Thin visual mesh
+			mf.mesh = GenerateTorusMesh(segments: 48, sides: 32, radius: 1f, tube: 0.02f);
+
+			// Optional: higher sides (32 instead of 16) for smoother look when close-up
+			var editorShader = Shader.Find("Hidden/URPGizmoSolid");
+			mr.material = new Material(editorShader);
+			// color will be set later
+
+			// === Thick collider (separate mesh) ===
+			MeshCollider mc = go.AddComponent<MeshCollider>();
+			mc.sharedMesh = GenerateTorusMesh(segments: 32, sides: 16, radius: 1f, tube: 0.05f); // thicker = easier to click
+			//mc.convex = true; // Important! Allows raycasting against generated mesh reliably
+
 			return go;
 		}
 
-		private static Mesh GenerateTorusMesh(int segments = 48, int sides = 16, float radius = 1f, float tube = 0.05f)
+		private static Mesh GenerateTorusMesh(int segments = 48, int sides = 32, float radius = 1f, float tube = 0.02f)
 		{
-			var mesh = new Mesh { name = "GizmoTorus" };
-
+			var mesh = new Mesh { name = "GizmoTorus_Visual" };
 			var vertices = new List<Vector3>();
 			var normals = new List<Vector3>();
 			var triangles = new List<int>();
 
+			int vertexCount = (segments + 1) * (sides + 1);
+
 			for (int seg = 0; seg <= segments; seg++)
 			{
 				float u = seg * Mathf.PI * 2f / segments;
-				float cu = Mathf.Cos(u), su = Mathf.Sin(u);
+				float cu = Mathf.Cos(u);
+				float su = Mathf.Sin(u);
 
 				for (int side = 0; side <= sides; side++)
 				{
 					float v = side * Mathf.PI * 2f / sides;
-					float cv = Mathf.Cos(v), sv = Mathf.Sin(v);
+					float cv = Mathf.Cos(v);
+					float sv = Mathf.Sin(v);
 
 					float r = radius + tube * cv;
 					vertices.Add(new Vector3(r * cu, tube * sv, r * su));
-					normals.Add(new Vector3(cv * cu, sv, cv * su));
+					normals.Add(new Vector3(cv * cu, sv, cv * su).normalized);
 				}
 			}
 
@@ -453,6 +471,8 @@ namespace ClassicTilestorm
 			mesh.SetNormals(normals);
 			mesh.SetTriangles(triangles, 0);
 			mesh.RecalculateBounds();
+			mesh.Optimize();
+
 			return mesh;
 		}
 	}
