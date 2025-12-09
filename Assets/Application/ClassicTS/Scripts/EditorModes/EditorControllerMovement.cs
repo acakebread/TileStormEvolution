@@ -1,95 +1,42 @@
-﻿using MassiveHadronLtd;
+﻿// File: EditorControllerMovement.cs
 using UnityEngine;
 
 namespace ClassicTilestorm
 {
 	public abstract class EditorControllerMovement
 	{
-		private float lookSpeedH = 2f;
-		private float lookSpeedV = 2f;
-		private float zoomSpeed = 12f;
-		private bool skipNextScroll;
-		private bool didGainFocus;
-
 		protected EditorController editorController;
-		protected int HitTile(Vector3 mousePos) => editorController.iMapManager.CameraHitTile(editorCamera, mousePos);
+		protected Camera editorCamera => editorController?.editorCamera;
 
-		protected Camera editorCamera => editorController.editorCamera;
+		protected int HitTile(Vector3 mousePos) =>
+			editorController.iMapManager.CameraHitTile(editorCamera, mousePos);
 
-		public virtual bool IsMouseOverModeGui() => false;//default behaviour
+		public virtual bool IsMouseOverModeGui() => false;
 
 		public EditorControllerMovement(EditorController controller = null)
 		{
 			editorController = controller;
-			skipNextScroll = didGainFocus = false;
 		}
 
 		public virtual void Update()
 		{
-			if (editorCamera == null) return;
-			var cameraTransform = editorCamera.transform;
-
-			bool isGuiActive = editorController.IsGuiControlActive();
-			bool isMouseOverGui = editorController.IsMouseOverGui();
-
-			// Right-click or touch drag → rotate camera
-			if ((Input.GetMouseButton(1) || Input.touchCount > 0) && !isGuiActive && !didGainFocus)
+			// Only move main editor camera if not overridden elsewhere
+			if (editorCamera != null && ShouldUseMainCameraThisFrame())
 			{
-				var pointerX = Input.GetAxis("Mouse X");
-				var pointerY = Input.GetAxis("Mouse Y");
-				if (Input.touchCount > 0)
-				{
-					pointerX = Input.touches[0].deltaPosition.x * 0.05f;
-					pointerY = Input.touches[0].deltaPosition.y * 0.05f;
-				}
-
-				var eulers = cameraTransform.eulerAngles;
-				eulers.y += lookSpeedH * pointerX;
-				eulers.x -= lookSpeedV * pointerY;
-				cameraTransform.eulerAngles = eulers;
+				EditorCameraMovement.UpdateCamera(editorCamera.transform);
 			}
-
-			// Mouse wheel zoom — only when not over GUI
-			if (!isMouseOverGui && !isGuiActive && GuiUtils.IsMouseInsideWindow())
-			{
-				var scroll = skipNextScroll ? 0f : Input.GetAxis("Mouse ScrollWheel");
-				if (scroll != 0f) cameraTransform.Translate(0, 0, scroll * zoomSpeed, Space.Self);
-				skipNextScroll = false;
-			}
-
-			// WASD movement
-			var translation = GetInputTranslationDirection() * zoomSpeed * Time.deltaTime;
-			cameraTransform.Translate(translation, Space.Self);
-
-			if (Input.GetMouseButton(0) || Input.GetMouseButton(1))
-				didGainFocus = false;
 		}
+
+		// This will be overridden in Attachment mode to detect preview interaction
+		protected virtual bool ShouldUseMainCameraThisFrame() => true;
 
 		public virtual void OnEnable() { }
 		public virtual void OnDisable() { }
-
 		public virtual void OnGui() { }
 
 		public virtual void OnApplicationFocus(bool hasFocus)
 		{
-			if (hasFocus) skipNextScroll = true;
-			if (hasFocus) didGainFocus = true;
-		}
-
-		protected Vector3 GetInputTranslationDirection()
-		{
-			Vector3 direction = Vector3.zero;
-			if (Input.GetKey(KeyCode.W)) direction += Vector3.forward;
-			if (Input.GetKey(KeyCode.S)) direction += Vector3.back;
-			if (Input.GetKey(KeyCode.A)) direction += Vector3.left;
-			if (Input.GetKey(KeyCode.D)) direction += Vector3.right;
-			if (Input.GetKey(KeyCode.Q)) direction += Vector3.down;
-			if (Input.GetKey(KeyCode.E)) direction += Vector3.up;
-
-			if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))
-				direction *= 2f; // faster movement with shift
-
-			return direction;
+			EditorCameraMovement.OnApplicationFocus(hasFocus);
 		}
 	}
 }

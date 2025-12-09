@@ -29,10 +29,10 @@ namespace ClassicTilestorm
 			void OnDestroy() => commands.Clear();
 		}
 
-		private Camera previewCam;
+		public Camera previewCam;
 		private GameObject camGO;
 		private RenderTexture renderTexture;
-		private Rect previewRect;
+		public Rect previewRect { get; private set; }  // Add this getter
 
 		private const float PREVIEW_HEIGHT = 200f;
 		private const float MARGIN = 10f;
@@ -158,7 +158,7 @@ namespace ClassicTilestorm
 
 			previewRect = new Rect(
 				MARGIN,
-				Screen.height - PREVIEW_HEIGHT - MARGIN,
+				Screen.height - PREVIEW_HEIGHT - MARGIN * 2,
 				previewWidth,
 				PREVIEW_HEIGHT
 			);
