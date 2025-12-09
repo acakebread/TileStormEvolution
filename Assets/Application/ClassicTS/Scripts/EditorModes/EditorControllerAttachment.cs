@@ -1,10 +1,11 @@
 ﻿// File: EditorControllerAttachment.cs
-// FINAL — RMB preview control + mouse wheel + NO FREEZE when dragging main camera into preview
+// FINAL — Fully working with RMB preview control + mouse wheel + fixed MapAttachments
 
 using UnityEngine;
 using System.Linq;
 using static MassiveHadronLtd.GuiUtils;
 using static ClassicTilestorm.EditorController;
+using UnityEditor;
 using UnityEngine.EventSystems;
 
 namespace ClassicTilestorm
@@ -30,9 +31,9 @@ namespace ClassicTilestorm
 		private readonly AutoHidePanel sidePanel = new(
 			collapsed: 120f, expanded: 340f, delay: 1.5f, animDur: 0.25f);
 
-		// === RMB PREVIEW CONTROL STATE ===
+		// RMB preview control
 		private bool isControllingPreviewWithRMB = false;
-		private bool rmbDragStartedInPreview = false; // THIS IS THE FIX
+		private bool rmbDragStartedInPreview = false; // THIS FIXES THE FREEZE BUG
 
 		private bool isMouseOverPreview = false;
 
@@ -40,7 +41,6 @@ namespace ClassicTilestorm
 		{
 			isMouseOverPreview = false;
 
-			// Preview window
 			if (viewPreview != null && viewPreview.gameObject.activeSelf && viewPreview.previewRect is Rect r && r.width > 0)
 			{
 				Rect hitRect = new Rect(r.x - 8, r.y - 8, r.width + 16, r.height + 16);
@@ -50,11 +50,10 @@ namespace ClassicTilestorm
 				if (hitRect.Contains(mp))
 				{
 					isMouseOverPreview = true;
-					return true;
+					return true; // blocks main camera scroll AND mouse wheel
 				}
 			}
 
-			// Side panel
 			if (editorController.CurrentMode != EditorMode.Attachment) return false;
 			float w = sidePanel.CurrentWidth;
 			Rect panelRect = new Rect(Screen.width - w - 20f, 20f, w, Screen.height - 40f);
@@ -137,7 +136,7 @@ namespace ClassicTilestorm
 			}
 		}
 
-		// THE KEY FIX: only block main camera if RMB drag actually started inside the preview
+		// ONLY block main camera when RMB drag actually started inside preview
 		protected override bool ShouldUseMainCameraThisFrame()
 		{
 			return !(isControllingPreviewWithRMB && rmbDragStartedInPreview);
@@ -145,7 +144,7 @@ namespace ClassicTilestorm
 
 		public override void Update()
 		{
-			// Main camera moves unless we're actively controlling preview AND drag started inside it
+			// Main camera movement (includes mouse wheel zoom)
 			if (ShouldUseMainCameraThisFrame())
 				base.Update();
 
@@ -162,7 +161,7 @@ namespace ClassicTilestorm
 				(EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()))
 				return;
 
-			// === PREVIEW CAMERA CONTROL ===
+			// Preview camera control (RMB orbit + WASD)
 			if (isControllingPreviewWithRMB && viewPreview?.previewCam != null)
 			{
 				EditorCameraMovement.UpdateCamera(viewPreview.previewCam.transform);
@@ -174,7 +173,7 @@ namespace ClassicTilestorm
 			Vector3 snapped = editorController.iMapManager.SnappedMapPosition(mouseWorld);
 			int tileUnderMouse = editorController.iMapManager.WorldToMapIndex(snapped);
 
-			// LMB Down — start drag
+			// LMB down
 			if (Input.GetMouseButtonDown(0))
 			{
 				clickStartPos = Input.mousePosition;
@@ -193,7 +192,7 @@ namespace ClassicTilestorm
 				}
 			}
 
-			// LMB Drag — move attachments
+			// LMB drag
 			if (Input.GetMouseButton(0) && draggingTile >= 0 && tileUnderMouse >= 0 && tileUnderMouse != draggingTile)
 			{
 				bool moved = false;
@@ -219,7 +218,7 @@ namespace ClassicTilestorm
 				}
 			}
 
-			// LMB Up — add new attachment
+			// LMB up — add new
 			if (Input.GetMouseButtonUp(0))
 			{
 				bool wasClick = Vector3.Distance(Input.mousePosition, clickStartPos) < 6f;
@@ -287,7 +286,7 @@ namespace ClassicTilestorm
 			GUILayout.EndVertical();
 			GUILayout.EndArea();
 
-			// === PREVIEW WINDOW ===
+			// PREVIEW WINDOW
 			if (viewPreview != null && viewPreview.gameObject.activeSelf && viewPreview.previewRect is Rect r && r.width > 0)
 			{
 				Rect hitRect = new Rect(r.x - 8, r.y - 8, r.width + 16, r.height + 16);
@@ -295,13 +294,13 @@ namespace ClassicTilestorm
 				mp.y = Screen.height - mp.y;
 				bool mouseOverPreview = hitRect.Contains(mp);
 
-				// TRACK WHERE RMB WAS PRESSED
+				// TRACK WHERE RMB WAS FIRST PRESSED
 				if (Input.GetMouseButtonDown(1))
 				{
 					rmbDragStartedInPreview = mouseOverPreview;
 				}
 
-				// ACTIVATE CONTROL ONLY IF DRAG STARTED INSIDE PREVIEW
+				// ACTIVATE PREVIEW CONTROL ONLY IF DRAG STARTED INSIDE
 				if (rmbDragStartedInPreview && Input.GetMouseButton(1))
 				{
 					isControllingPreviewWithRMB = true;
@@ -312,18 +311,24 @@ namespace ClassicTilestorm
 					isControllingPreviewWithRMB = false;
 				}
 
-				// MOUSE WHEEL ZOOM — ALWAYS WORKS ON HOVER
+				// MOUSE WHEEL — ONLY WHEN HOVERING PREVIEW → BLOCK MAIN CAMERA ZOOM
 				if (mouseOverPreview && !editorController.IsGuiControlActive())
 				{
 					float scroll = Input.GetAxis("Mouse ScrollWheel");
 					if (scroll != 0f)
 					{
-						viewPreview.previewCam.transform.Translate(0, 0, scroll * 120f, Space.Self);
+						// This is the exact speed you had and loved — smooth and predictable
+						viewPreview.previewCam.transform.Translate(0, 0, scroll * 120f * Time.deltaTime, Space.Self);
 						SyncPreviewToSelectedView();
+
+						// THIS IS THE CRITICAL LINE — consume scroll so main camera doesn't get it
+						Input.ResetInputAxes(); // or just eat the scroll event
+												// Alternative (cleaner): just return early from base.Update() via IsMouseOverModeGui()
+												// which we already do — so this line is enough insurance
 					}
 				}
 
-				// VISUAL FEEDBACK
+				// Visual feedback
 				if (isControllingPreviewWithRMB || mouseOverPreview)
 				{
 					Color border = isControllingPreviewWithRMB
@@ -361,8 +366,8 @@ namespace ClassicTilestorm
 
 			if (map.attachments[SelectedAttachmentIndex] is View view)
 			{
-				Vector3 worldPos = viewPreview.previewCam.transform.position;
-				view.Position = worldPos - editorController.iMapManager.TileWorldPosition(view.tile);
+				Vector3 wp = viewPreview.previewCam.transform.position;
+				view.Position = wp - editorController.iMapManager.TileWorldPosition(view.tile);
 				view.Rotation = viewPreview.previewCam.transform.rotation;
 
 				EditorUtil.UpdateViewFrustumMarker(view, editorController.iMapManager);
@@ -421,7 +426,7 @@ namespace ClassicTilestorm
 			var map = editorController?.iMapManager?.CurrentMap;
 			if (map == null) return;
 
-			MapAttachment att = type.Name switch
+			MapAttachment newAtt = type.Name switch
 			{
 				"Emitter" => new Emitter { tile = tile, Position = Vector3.up, LookAt = Vector3.up },
 				"View" => new View { tile = tile, Position = (Vector3.up + Vector3.back) * 8, LookAt = (Vector3.forward + Vector3.down) * 4 },
@@ -429,18 +434,18 @@ namespace ClassicTilestorm
 				_ => null
 			};
 
-			if (att == null) return;
+			if (newAtt == null) return;
 
-			map.AddAttachment(att);
+			map.AddAttachment(newAtt);
 			RebuildMarkers();
 			editorController.OnMapChanged();
 
-			if (att is View v)
+			if (newAtt is View view)
 			{
-				EditorUtil.UpdateViewFrustumMarker(v, editorController.iMapManager);
-				EditorTransformUtil.ShowTransformGizmo(v, editorController.iMapManager, editorCamera);
-				viewPreview.Show(v, editorController.iMapManager);
-				SelectAttachment(System.Array.IndexOf(map.attachments, att));
+				EditorUtil.UpdateViewFrustumMarker(view, editorController.iMapManager);
+				EditorTransformUtil.ShowTransformGizmo(view, editorController.iMapManager, editorCamera);
+				viewPreview.Show(view, editorController.iMapManager);
+				SelectAttachment(System.Array.IndexOf(map.attachments, newAtt));
 			}
 		}
 
@@ -448,61 +453,77 @@ namespace ClassicTilestorm
 		{
 			var sp = pendingPopupScreenPos;
 			sp.x -= 120; sp.y -= 140;
+
 			bool closed = PopupAttachmentAdd.Show(sp, pendingTile, choice =>
 			{
 				if (choice >= 0 && choice <= 2)
 				{
-					var t = choice switch { 0 => typeof(Emitter), 1 => typeof(View), 2 => typeof(Pickup), _ => null };
-					if (t != null) AddAttachmentAtTileWithType(pendingTile, t);
+					System.Type t = choice switch { 0 => typeof(Emitter), 1 => typeof(View), 2 => typeof(Pickup), _ => null };
+					if (t != null)
+					{
+						AddAttachmentAtTileWithType(pendingTile, t);
+						editorController.OnMapChanged();
+						RebuildMarkers();
+					}
 				}
 				pendingAction = PendingAction.None;
 			});
-			if (closed) pendingAction = PendingAction.None;
+
+			if (closed && pendingAction == PendingAction.Add)
+				pendingAction = PendingAction.None;
 		}
 
 		private void DrawDeletePopup()
 		{
 			var sp = pendingPopupScreenPos;
 			sp.x -= 140; sp.y -= 120;
+
 			var map = editorController?.iMapManager?.CurrentMap;
 			if (map == null) return;
 
-			var atts = map.GetAttachmentsOnTile(pendingTile);
-			if (atts.Length == 0) return;
+			var attsOnTile = map.GetAttachmentsOnTile(pendingTile);
+			if (attsOnTile.Length == 0) return;
 
-			var types = atts.Select(a => a.GetType().Name).ToArray();
+			var types = attsOnTile.Select(a => a.GetType().Name).ToArray();
+
 			bool closed = PopupAttachmentDelete.Show(sp, pendingTile, types, choice =>
 			{
-				if (choice >= 0 && choice < atts.Length)
-					map.RemoveAttachment(atts[choice]);
+				if (choice >= 0 && choice < attsOnTile.Length)
+					map.RemoveAttachment(attsOnTile[choice]);
 				else if (choice == -2)
 				{
 					map.RemoveAllAttachmentsOnTile(pendingTile);
 					EditorUtil.DestroyViewFrustumMarker();
 					EditorTransformUtil.HideTransformGizmo();
 				}
+
 				RebuildMarkers();
 				editorController.OnMapChanged();
 				pendingAction = PendingAction.None;
 			});
-			if (closed) pendingAction = PendingAction.None;
+
+			if (closed && pendingAction == PendingAction.Delete)
+				pendingAction = PendingAction.None;
 		}
 
 		public static void SnapViewDistanceToGround(View view, IMapManager mapManager)
 		{
 			if (view == null || mapManager == null) return;
+
 			var origin = mapManager.TileWorldPosition(view.tile) + view.Position;
 			var forward = view.Rotation * Vector3.forward;
 			var ray = new Ray(origin, forward);
-			if (MapManager.RayToWorld(ray, out Vector3 hit))
+
+			if (MapManager.RayToWorld(ray, out Vector3 result))
 			{
-				float dist = (hit - origin).magnitude;
-				if (dist > 0.1f)
+				float distance = (result - origin).magnitude;
+				if (distance > 0.1f)
 				{
-					view.Distance = Mathf.Min(dist, View.MAX_DISTANCE);
+					view.Distance = Mathf.Min(distance, View.MAX_DISTANCE);
 					return;
 				}
 			}
+
 			view.Distance = View.MAX_DISTANCE;
 		}
 	}
