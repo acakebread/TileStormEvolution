@@ -287,7 +287,6 @@ namespace ClassicTilestorm
 			GUILayout.EndArea();
 
 			// PREVIEW WINDOW
-			// PREVIEW WINDOW – FIXED RMB release + scroll + visual feedback
 			if (viewPreview != null && viewPreview.gameObject.activeSelf && viewPreview.previewRect is Rect r && r.width > 0)
 			{
 				Rect hitRect = new Rect(r.x - 8, r.y - 8, r.width + 16, r.height + 16);
@@ -295,37 +294,41 @@ namespace ClassicTilestorm
 				mp.y = Screen.height - mp.y;
 				bool mouseOverPreview = hitRect.Contains(mp);
 
-				// === RMB STATE TRACKING ===
+				// TRACK WHERE RMB WAS FIRST PRESSED
 				if (Input.GetMouseButtonDown(1))
 				{
-					rmbDragStartedInPreview = mouseOverPreview; // only remember where it STARTED
+					rmbDragStartedInPreview = mouseOverPreview;
 				}
 
-				// Activate preview control ONLY if drag began inside the preview
+				// ACTIVATE PREVIEW CONTROL ONLY IF DRAG STARTED INSIDE
 				if (rmbDragStartedInPreview && Input.GetMouseButton(1))
 				{
 					isControllingPreviewWithRMB = true;
 				}
 
-				// ALWAYS deactivate on release – no matter where the mouse is now
 				if (Input.GetMouseButtonUp(1))
 				{
 					isControllingPreviewWithRMB = false;
-					// rmbDragStartedInPreview = false; // optional – reset for next press
 				}
 
-				// === MOUSE WHEEL ZOOM (smooth, original speed) ===
+				// MOUSE WHEEL — ONLY WHEN HOVERING PREVIEW → BLOCK MAIN CAMERA ZOOM
 				if (mouseOverPreview && !editorController.IsGuiControlActive())
 				{
 					float scroll = Input.GetAxis("Mouse ScrollWheel");
 					if (scroll != 0f)
 					{
+						// This is the exact speed you had and loved — smooth and predictable
 						viewPreview.previewCam.transform.Translate(0, 0, scroll * 120f * Time.deltaTime, Space.Self);
 						SyncPreviewToSelectedView();
+
+						// THIS IS THE CRITICAL LINE — consume scroll so main camera doesn't get it
+						Input.ResetInputAxes(); // or just eat the scroll event
+												// Alternative (cleaner): just return early from base.Update() via IsMouseOverModeGui()
+												// which we already do — so this line is enough insurance
 					}
 				}
 
-				// === VISUAL FEEDBACK ===
+				// Visual feedback
 				if (isControllingPreviewWithRMB || mouseOverPreview)
 				{
 					Color border = isControllingPreviewWithRMB
@@ -340,7 +343,6 @@ namespace ClassicTilestorm
 					GUI.DrawTexture(new Rect(hitRect.xMax, hitRect.y, t, hitRect.height), Texture2D.whiteTexture);
 					GUI.color = Color.white;
 
-					// "Preview Active" label only while RMB is actually held
 					if (isControllingPreviewWithRMB)
 					{
 						GUI.color = Color.black;
