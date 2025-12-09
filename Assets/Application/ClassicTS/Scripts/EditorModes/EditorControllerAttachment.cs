@@ -405,16 +405,13 @@ namespace ClassicTilestorm
 		{
 			if (view == null || mapManager == null) return;
 
-			Vector3 origin = mapManager.TileWorldPosition(view.tile) + view.Position;
-			Vector3 forward = view.Rotation * Vector3.forward;
+			var origin = mapManager.TileWorldPosition(view.tile) + view.Position;
+			var forward = view.Rotation * Vector3.forward;
+			var ray = new Ray(origin, forward);// create ray from camera position along view direction
 
-			// Raycast down from camera position along view direction to hit Y=0
-			Plane ground = new Plane(Vector3.up, Vector3.zero);
-			Ray ray = new Ray(origin, forward);
-
-			if (ground.Raycast(ray, out float enter))
+			if (MapManager.RayToWorld(ray, out Vector3 result))
 			{
-				float distance = enter;
+				float distance = (result - origin).magnitude;
 				if (distance > 0.1f) // avoid tiny values
 				{
 					view.Distance = Mathf.Min(distance, View.MAX_DISTANCE);

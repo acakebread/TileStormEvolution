@@ -115,12 +115,28 @@ namespace ClassicTilestorm
 			return dataIndex >= 0 && dataIndex < mapTiles.Length ? mapTiles[dataIndex].tile : default;
 		}
 
+		public static bool RayToWorld(Ray ray, out Vector3 point)
+		{
+			point = Vector3.zero;
+			var plane = new Plane(Vector3.up, Vector3.zero);
+			if (plane.Raycast(ray, out float d))
+			{
+				point = ray.GetPoint(d);
+				return true;
+			}
+			return false;
+		}
+
 		public static Vector3 ScreenToWorld(Camera camera, Vector3 screenPos)
 		{
-			var ray = camera.ScreenPointToRay(screenPos);
-			var plane = new Plane(Vector3.up, Vector3.zero);
-			return plane.Raycast(ray, out float d) ? ray.GetPoint(d) : Vector3.zero;
+			RayToWorld(camera.ScreenPointToRay(screenPos), out Vector3 result);
+			return result;
 		}
+		//{
+		//	var ray = camera.ScreenPointToRay(screenPos);
+		//	var plane = new Plane(Vector3.up, Vector3.zero);
+		//	return plane.Raycast(ray, out float d) ? ray.GetPoint(d) : Vector3.zero;
+		//}
 
 		private void Awake()
 		{
