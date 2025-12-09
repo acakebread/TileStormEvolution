@@ -92,7 +92,7 @@ namespace ClassicTilestorm
 			groundMat = new Material(shader)
 			{
 				hideFlags = HideFlags.HideAndDontSave,
-				renderQueue = (int)UnityEngine.Rendering.RenderQueue.Geometry
+				renderQueue = (int)RenderQueue.Geometry
 			};
 			groundMat.SetFloat("_Surface", 0f);   // Opaque
 			groundMat.SetTexture("_BaseMap", groundTex);
