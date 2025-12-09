@@ -1,7 +1,6 @@
 ﻿// File: EditorTransformUtil.cs
 using UnityEngine;
 using System.Collections.Generic;
-using MassiveHadronLtd;
 
 namespace ClassicTilestorm
 {
@@ -26,6 +25,12 @@ namespace ClassicTilestorm
 		private static Vector3 rotationAxis;
 		private static Quaternion startRotation;
 		private static Vector3 startMouseWorld;
+
+		private class RingTag : MonoBehaviour
+		{
+			public Vector3 axis;       // rotation axis
+			public Color originalColor;
+		}
 
 		// ===================================================================
 		// PUBLIC API – EXACTLY what you already call
@@ -132,9 +137,6 @@ namespace ClassicTilestorm
 			go.transform.SetParent(parent, false);
 
 			// THIS IS THE IMPORTANT PART – collider on the root so your old code works
-			//SphereCollider sc = go.AddComponent<SphereCollider>();
-			//sc.radius = 0.3f;
-
 			var faces = new[]
 			{
 				(Vector3.right,   new Color(0.95f, 0.25f, 0.25f, 0.55f)),
@@ -157,7 +159,6 @@ namespace ClassicTilestorm
 				bc.size = new Vector3(1f, 1f, 0.02f);   // thin plate
 
 				MeshRenderer mr = quad.GetComponent<MeshRenderer>();
-				//mr.material = MaterialUtils.CreateTransparentUnlitMaterial(f.Item2);
 				var additiveShader = Shader.Find("Hidden/URPGizmoSolid");
 				mr.material = new Material(additiveShader);
 				mr.material.SetColor("_BaseColor", f.Item2);
@@ -244,20 +245,23 @@ namespace ClassicTilestorm
 				GameObject ring = CreateTorus();
 				ring.name = "Ring_" + "XYZ"[i];
 				ring.transform.SetParent(orb.transform, false);
-//				ring.transform.localRotation = Quaternion.FromToRotation(new Vector3(axes[i].y, axes[i].z, axes[i].x), axes[i]);
-				ring.transform.rotation = Quaternion.FromToRotation(new Vector3(axes[i].y, axes[i].z, axes[i].x), axes[i]);//move to screen space
-				//ring.transform.localScale = new Vector3(1f, 0.001f, 1f);
-				ring.transform.localScale = new Vector3(1f, 1f, 1f);
+				//ring.transform.localRotation = Quaternion.FromToRotation(new Vector3(axes[i].y, axes[i].z, axes[i].x), axes[i]);
+				ring.transform.rotation = Quaternion.FromToRotation(new Vector3(axes[i].y, axes[i].z, axes[i].x), axes[i]);
+				ring.transform.localScale = Vector3.one;
 
 				MeshRenderer mr = ring.GetComponent<MeshRenderer>();
-				//mr.material = MaterialUtils.CreateTransparentUnlitMaterial(colors[i]);
-				//mr.material.SetFloat("_Alpha", 0.7f);
 				var editorShader = Shader.Find("Hidden/URPGizmoSolid");
 				mr.material = new Material(editorShader);
 				mr.material.SetColor("_BaseColor", colors[i]);
 
 				ring.AddComponent<MeshCollider>();
+
+				// --- Add the ring tag ---
+				RingTag tag = ring.AddComponent<RingTag>();
+				tag.axis = axes[i];
+				tag.originalColor = colors[i];
 			}
+
 			return orb;
 		}
 
@@ -312,51 +316,83 @@ namespace ClassicTilestorm
 		// ===================================================================
 		private static void DoHover(Ray ray)
 		{
+			if (draggingPosition || draggingRotation) return;
+
 			if (!Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, 1 << LayerMask.NameToLayer("Editor")))
 			{
 				ResetHover();
 				return;
 			}
 
-			FaceTag tag = hit.transform.GetComponent<FaceTag>();
-			if (tag == null || !hit.collider.transform.IsChildOf(positionHandle.transform))
+			// Check for cube faces first
+			FaceTag faceTag = hit.transform.GetComponent<FaceTag>();
+			if (faceTag != null && hit.collider.transform.IsChildOf(positionHandle.transform))
 			{
-				ResetHover();
-				return;
-			}
+				// Highlight faces
+				foreach (FaceTag f in positionHandle.GetComponentsInChildren<FaceTag>())
+				{
+					bool sameAxis = Mathf.Abs(Vector3.Dot(f.normal, faceTag.normal)) > 0.9f;
+					Color c = sameAxis ? Color.yellow : new Color(f.originalColor.r, f.originalColor.g, f.originalColor.b, 0.55f);
+					f.GetComponent<MeshRenderer>().material.SetColor("_BaseColor", c);
+				}
 
-			foreach (FaceTag f in positionHandle.GetComponentsInChildren<FaceTag>())
+				// Reset rings
+				if (rotationOrbiter != null)
+				{
+					foreach (RingTag r in rotationOrbiter.GetComponentsInChildren<RingTag>())
+					{
+						Color c = new Color(r.originalColor.r, r.originalColor.g, r.originalColor.b, 0.55f);
+						r.GetComponent<MeshRenderer>().material.SetColor("_BaseColor", c);
+					}
+				}
+			}
+			else
 			{
-				bool sameAxis = Mathf.Abs(Vector3.Dot(f.normal, tag.normal)) > 0.9f;
-				Color c = sameAxis ? Color.yellow : new Color(1f, 1f, 1f, 0.55f);
-				//f.GetComponent<MeshRenderer>().material.color = c;
-				f.GetComponent<MeshRenderer>().material.SetColor("_BaseColor", c);
+				// Check for rings
+				RingTag ringTag = hit.transform.GetComponent<RingTag>();
+				if (ringTag != null)
+				{
+					foreach (RingTag r in rotationOrbiter.GetComponentsInChildren<RingTag>())
+					{
+						bool sameAxis = Mathf.Abs(Vector3.Dot(r.axis, ringTag.axis)) > 0.9f;
+						Color c = sameAxis ? Color.yellow : new Color(r.originalColor.r, r.originalColor.g, r.originalColor.b, 0.55f);
+						r.GetComponent<MeshRenderer>().material.SetColor("_BaseColor", c);
+					}
+
+					// Reset cube faces
+					foreach (FaceTag f in positionHandle.GetComponentsInChildren<FaceTag>())
+					{
+						Color c = new Color(f.originalColor.r, f.originalColor.g, f.originalColor.b, 0.55f);
+						f.GetComponent<MeshRenderer>().material.SetColor("_BaseColor", c);
+					}
+				}
+				else
+				{
+					// Nothing hovered – reset everything
+					ResetHover();
+				}
 			}
 		}
 
 		private static void ResetHover()
 		{
-			if (positionHandle == null) return;
-			//foreach (MeshRenderer mr in positionHandle.GetComponentsInChildren<MeshRenderer>())
-			//{
-			//	//Color baseCol = mr.material.color;
-			//	//mr.material.color = new Color(baseCol.r, baseCol.g, baseCol.b, 0.55f);
+			if (positionHandle != null)
+			{
+				foreach (FaceTag f in positionHandle.GetComponentsInChildren<FaceTag>())
+				{
+					Color c = new Color(f.originalColor.r, f.originalColor.g, f.originalColor.b, 0.55f);
+					f.GetComponent<MeshRenderer>().material.SetColor("_BaseColor", c);
+				}
+			}
 
-			//	Color baseCol = Color.white;
-			//	mr.GetComponent<MeshRenderer>().material.SetColor("_BaseColor", new Color(baseCol.r, baseCol.g, baseCol.b, 0.55f));
-			//}
-
-			//foreach (MeshRenderer mr in positionHandle.GetComponentsInChildren<MeshRenderer>())
-			//{
-			//	Color baseCol = mr.material.GetColor("_BaseColor");
-			//	mr.material.SetColor("_BaseColor", new Color(baseCol.r, baseCol.g, baseCol.b, 0.55f));
-			//}
-
-foreach (FaceTag f in positionHandle.GetComponentsInChildren<FaceTag>())
-{
-    Color c = new Color(f.originalColor.r, f.originalColor.g, f.originalColor.b, 0.55f);
-    f.GetComponent<MeshRenderer>().material.SetColor("_BaseColor", c);
-}
+			if (rotationOrbiter != null)
+			{
+				foreach (RingTag r in rotationOrbiter.GetComponentsInChildren<RingTag>())
+				{
+					Color c = new Color(r.originalColor.r, r.originalColor.g, r.originalColor.b, 0.55f);
+					r.GetComponent<MeshRenderer>().material.SetColor("_BaseColor", c);
+				}
+			}
 		}
 
 		// ===================================================================
