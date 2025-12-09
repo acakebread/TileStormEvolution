@@ -1,11 +1,23 @@
-using UnityEngine;
+﻿using UnityEngine;
 using System.Collections.Generic;
 
 namespace MassiveHadronLtd
 {
 	public static class FrustumPlaneIntersection
 	{
-		public static bool GenerateFrustumPlaneIntersectionMesh(Camera camera, Vector3 planeNormal, float planeOffset, Mesh targetMesh)
+		//private const float WANG_TILE_DENSITY = 0.0625f;
+		// 1 tile every 16m (1/16 = 0.0625) – adjust if needed
+
+		//private const float WANG_TILE_DENSITY = 0.015625f;
+		// 1 tile every 16m (1/64 = 0.015625)
+
+		//private const float WANG_TILE_DENSITY = 0.25f;
+		// 1 tile every 4m (1/4 = 0.25)
+
+		private const float WANG_TILE_DENSITY = 1f;
+		// 1 tile every 1m
+
+		public static bool GenerateFrustumPlaneIntersectionMesh(Camera camera, Vector3 planeNormal, float planeOffset, Mesh targetMesh, bool wang = false)
 		{
 			if (!camera || planeNormal == Vector3.zero)
 			{
@@ -133,7 +145,11 @@ namespace MassiveHadronLtd
 			for (int i = 0; i < pointCount; i++)
 			{
 				vertices[i] = anglePairs[i].point;
-				uvs[i] = GetUVFromPosition(vertices[i], planeNormal);
+
+				if (wang)
+					uvs[i] = GetWangUV(vertices[i], planeNormal);
+				else
+					uvs[i] = GetUVFromPosition(vertices[i], planeNormal);
 			}
 
 			// Ensure winding matches planeNormal (we want triangles to face the planeNormal direction)
@@ -208,7 +224,7 @@ namespace MassiveHadronLtd
 			return n.normalized;
 		}
 
-		private static Vector2 GetUVFromPosition(Vector3 position, Vector3 planeNormal)
+		private static Vector2 GetUVFromPosition(Vector3 position, Vector3 planeNormal, bool wang = false)
 		{
 			// Project world position onto a 2D plane based on planeNormal
 			Vector3 absNormal = new Vector3(Mathf.Abs(planeNormal.x), Mathf.Abs(planeNormal.y), Mathf.Abs(planeNormal.z));
@@ -227,6 +243,33 @@ namespace MassiveHadronLtd
 				// Z-dominant: use XY for UVs
 				return new Vector2(position.x, position.y) * 1f;
 			}
+		}
+
+		private static Vector2 GetWangUV(Vector3 position, Vector3 planeNormal)
+		{
+			// Base UV same as before: choose projection axes based on plane orientation
+			Vector3 absNormal = new Vector3(Mathf.Abs(planeNormal.x), Mathf.Abs(planeNormal.y), Mathf.Abs(planeNormal.z));
+			Vector2 uv;
+
+			if (absNormal.y > absNormal.x && absNormal.y > absNormal.z)
+			{
+				// Ground-like plane → XZ
+				uv = new Vector2(position.x, position.z);
+			}
+			else if (absNormal.x > absNormal.z)
+			{
+				// X dominant → YZ
+				uv = new Vector2(position.y, position.z);
+			}
+			else
+			{
+				// Z dominant → XY
+				uv = new Vector2(position.x, position.y);
+			}
+
+			// Convert world-space metres → tile-space
+			// WANG_TILE_DENSITY = tiles per meter
+			return uv * WANG_TILE_DENSITY;
 		}
 	}
 }

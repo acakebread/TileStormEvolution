@@ -147,7 +147,9 @@ namespace MassiveHadronLtd
 			{
 				if (noiseTexture == null)
 				{
-					noiseTexture = TextureUtils.GeneratePerlinNoiseTexture();
+					//noiseTexture = TextureUtils.GeneratePerlinNoiseTexture();
+					//noiseTexture = TextureUtils.GenerateWangTileAtlas();
+					noiseTexture = WangTileGenerator.GenerateWangTileAtlas();
 					isTextureDynamic = true;
 				}
 				else
@@ -181,7 +183,8 @@ namespace MassiveHadronLtd
 				case EffectMode.SurfaceFilm:
 					SetupRenderTexture("MirrorWithFilmRT");
 					effectMesh = new Mesh();
-					effectMaterial = MaterialUtils.CreateMirrorWithFilmOpaque(renderTexture, mirrorTint, noiseTexture, filmIntensity, noiseScale);
+					//effectMaterial = MaterialUtils.CreateMirrorWithFilmOpaque(renderTexture, mirrorTint, noiseTexture, filmIntensity, noiseScale);
+					effectMaterial = MaterialUtils.CreatePerlinWangOpaque(renderTexture, mirrorTint, noiseTexture, filmIntensity, noiseScale);
 					isMaterialDynamic = true;
 					SetupTextureCamera();
 					reflectionCamera.targetTexture = renderTexture;
@@ -242,7 +245,8 @@ namespace MassiveHadronLtd
 				(cmd, cam) =>
 				{
 					if (effectMesh == null) return;
-					FrustumPlaneIntersection.GenerateFrustumPlaneIntersectionMesh(mainCamera, planeNormal, offset, effectMesh);
+					//FrustumPlaneIntersection.GenerateFrustumPlaneIntersectionMesh(mainCamera, planeNormal, offset, effectMesh);
+					FrustumPlaneIntersection.GenerateFrustumPlaneIntersectionMesh(mainCamera, planeNormal, offset, effectMesh, true);
 					if (effectMesh != null && effectMesh.vertexCount >= 3 && effectMesh.triangles.Length >= 3 && effectMaterial != null)
 					{
 						effectMaterial.SetPass(0);

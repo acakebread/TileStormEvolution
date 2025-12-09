@@ -89,6 +89,34 @@ namespace MassiveHadronLtd
 			return mat;
 		}
 
+		public static Material CreatePerlinWangOpaque(
+			RenderTexture reflectionTexture,
+			Color dimColor,
+			Texture2D noiseTexture,
+			float filmIntensity = 0.2f,
+			float noiseScale = 1f)
+		{
+			var shader = Shader.Find("Unlit/URPPerlinWangOpaque");
+			if (!shader)
+			{
+				Debug.LogError("Unlit/URPPerlinWangOpaque not found!");
+				return new Material(Shader.Find("Universal Render Pipeline/Unlit"));
+			}
+
+			var mat = new Material(shader)
+			{
+				renderQueue = (int)RenderQueue.Geometry
+			};
+
+			mat.SetTexture("_MainTex", reflectionTexture);
+			mat.SetColor("_DimColor", dimColor);
+			mat.SetTexture("_NoiseTex", noiseTexture);
+			mat.SetFloat("_FilmIntensity", filmIntensity);
+			mat.SetFloat("_NoiseScale", noiseScale);
+
+			return mat;
+		}
+
 		public static Material CreateFrostedMaterial(Color baseColor, float frostRadius = 64f, RenderTexture reflectionTexture = null, Texture2D noiseTexture = null, float noiseStrength = 0.02f)
 		{
 			var frostedShader = Shader.Find("Unlit/URPFrosted");
