@@ -13,8 +13,7 @@ namespace ClassicTilestorm
 		public int SelectedAttachmentIndex { get; private set; } = -1;
 
 		private int draggingTile = -1;
-		private int[] draggedAttachmentIndices = System.Array.Empty<int>();
-		//private MapAttachment[] draggedAttachments = System.Array.Empty<MapAttachment>();
+		private MapAttachment[] draggedAttachments = System.Array.Empty<MapAttachment>();
 
 		private int pendingTile = -1;
 		private enum PendingAction { None, Add, Delete }
@@ -150,10 +149,9 @@ namespace ClassicTilestorm
 					if (Input.GetMouseButtonDown(0))
 					{
 						draggingTile = hitTile;
-						draggedAttachmentIndices = map.attachments.Select((a, i) => new { a, i }).Where(x => x.a.tile == hitTile).Select(x => x.i).ToArray();
-
-						if (draggedAttachmentIndices.Length > 0)
-							SelectAttachment(draggedAttachmentIndices[0]);
+						draggedAttachments = map.attachments.Where(x => x.tile == hitTile).ToArray();
+						if (draggedAttachments.Length > 0)
+							SelectAttachment(System.Array.IndexOf(map.attachments, draggedAttachments[0]));
 					}
 				}
 			}
@@ -164,10 +162,8 @@ namespace ClassicTilestorm
 				if (map?.attachments == null) return;
 
 				bool moved = false;
-
-				foreach (int idx in draggedAttachmentIndices)
+				foreach (var att in draggedAttachments)
 				{
-					var att = map.attachments[idx];
 					if (att.tile == draggingTile)
 					{
 						att.tile = tileUnderMouse;
@@ -207,7 +203,7 @@ namespace ClassicTilestorm
 				}
 
 				draggingTile = -1;
-				draggedAttachmentIndices = System.Array.Empty<int>();
+				draggedAttachments = System.Array.Empty<MapAttachment>();
 			}
 
 			if (Input.GetMouseButtonUp(1) && Vector3.Distance(Input.mousePosition, clickStartPos) < 6f)
@@ -255,7 +251,7 @@ namespace ClassicTilestorm
 			GUILayout.BeginArea(panel);
 			GUILayout.BeginVertical();
 
-			//GUILayout.Label("Attachments", EditorStyles.boldLabel);
+			//GUILayout.Label("Attachments", EditorStyles.boldLabel);//had to comment out because it breaks builds
 
 			if (attachments.Length == 0)
 			{

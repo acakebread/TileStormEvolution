@@ -229,7 +229,7 @@ namespace ClassicTilestorm
 			GUILayout.BeginArea(panel);
 			GUILayout.BeginVertical();
 
-			//GUILayout.Label("Waypoints", EditorStyles.boldLabel);
+			//GUILayout.Label("Waypoints", EditorStyles.boldLabel);//had to comment out because it breaks builds
 
 			if (waypoints.Length == 0)
 			{
