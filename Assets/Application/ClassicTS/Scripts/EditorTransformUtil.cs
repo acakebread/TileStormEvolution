@@ -90,15 +90,17 @@ namespace ClassicTilestorm
 			// Click
 			if (Input.GetMouseButtonDown(0))
 			{
-				Collider col = positionHandle.GetComponent<Collider>();
-				if (col && col.Raycast(ray, out RaycastHit hit, Mathf.Infinity))
+				if (Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, 1 << LayerMask.NameToLayer("Editor")))
 				{
-					StartPositionDrag(ray, cam, hit);
-					handled = true;
-				}
-				else if (TryStartRotationDrag(ray))
-				{
-					handled = true;
+					if (hit.transform.IsChildOf(positionHandle.transform))
+					{
+						StartPositionDrag(ray, cam, hit);
+						handled = true;
+					}
+					else if (TryStartRotationDrag(ray))
+					{
+						handled = true;
+					}
 				}
 			}
 
@@ -130,8 +132,8 @@ namespace ClassicTilestorm
 			go.transform.SetParent(parent, false);
 
 			// THIS IS THE IMPORTANT PART – collider on the root so your old code works
-			SphereCollider sc = go.AddComponent<SphereCollider>();
-			sc.radius = 0.3f;
+			//SphereCollider sc = go.AddComponent<SphereCollider>();
+			//sc.radius = 0.3f;
 
 			var faces = new[]
 			{
@@ -151,6 +153,8 @@ namespace ClassicTilestorm
 				quad.transform.localScale = Vector3.one * 0.5f;
 				quad.transform.localPosition = -f.Item1 * 0.25f;
 				quad.transform.rotation = Quaternion.LookRotation(f.Item1);
+				BoxCollider bc = quad.AddComponent<BoxCollider>();
+				bc.size = new Vector3(1f, 1f, 0.02f);   // thin plate
 
 				MeshRenderer mr = quad.GetComponent<MeshRenderer>();
 				mr.material = MaterialUtils.CreateTransparentUnlitMaterial(f.Item2);
@@ -170,11 +174,23 @@ namespace ClassicTilestorm
 
 		private static void StartPositionDrag(Ray ray, Camera cam, RaycastHit hit)
 		{
-			lockedAxis = Vector3.zero;
 			FaceTag tag = hit.transform.GetComponent<FaceTag>();
-			if (tag != null) lockedAxis = tag.normal;
 
-			dragPlane = new Plane(-cam.transform.forward, root.transform.position);
+			if (tag != null)
+			{
+				// Primary axis we are locking movement ALONG
+				lockedAxis = tag.normal.normalized;
+
+				// Drag plane is the plane *perpendicular* to clicked axis
+				dragPlane = new Plane(lockedAxis, root.transform.position);
+			}
+			else
+			{
+				// fallback, shouldn’t normally happen
+				lockedAxis = Vector3.zero;
+				dragPlane = new Plane(-cam.transform.forward, root.transform.position);
+			}
+
 			if (dragPlane.Raycast(ray, out float enter))
 				dragStartPoint = ray.GetPoint(enter);
 
@@ -184,13 +200,16 @@ namespace ClassicTilestorm
 		private static void ContinuePositionDrag(Camera cam)
 		{
 			Ray ray = cam.ScreenPointToRay(Input.mousePosition);
-			if (!dragPlane.Raycast(ray, out float enter)) return;
+			if (!dragPlane.Raycast(ray, out float enter))
+				return;
 
 			Vector3 cur = ray.GetPoint(enter);
 			Vector3 delta = cur - dragStartPoint;
 
+			// Remove any delta along the locked axis
+			// (because this axis defines the plane normal)
 			if (lockedAxis != Vector3.zero)
-				delta = Vector3.ProjectOnPlane(delta, lockedAxis);
+				delta -= Vector3.Project(delta, lockedAxis);
 
 			Vector3 newPos = root.transform.position + delta;
 			activeView.Position = newPos - mapManager.TileWorldPosition(activeView.tile);
@@ -200,6 +219,7 @@ namespace ClassicTilestorm
 
 			dragStartPoint = cur;
 		}
+
 
 		// ===================================================================
 		// ROTATION – your exact working code
