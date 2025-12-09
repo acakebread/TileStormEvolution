@@ -1,10 +1,33 @@
-﻿using UnityEngine;
+﻿using System;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 
 namespace ClassicTilestorm
 {
 	public class ViewPreview : MonoBehaviour
 	{
+		private class CameraCommandProvider : MonoBehaviour, ICommandBufferProvider
+		{
+			private readonly Dictionary<RenderPassEvent, Action<RasterCommandBuffer, Camera>> commands = new();
+
+			public void RegisterCommand(RenderPassEvent evt, Action<RasterCommandBuffer, Camera> command) => commands[evt] = command;
+
+			public bool HasCommands(RenderPassEvent evt) => commands.ContainsKey(evt) && commands[evt] != null;
+
+			public void ExecuteCommands(RenderPassEvent evt, RasterCommandBuffer commandBuffer, Camera camera)
+			{
+				if (commands.ContainsKey(evt) && commands[evt] != null)
+				{
+					try { commands[evt].Invoke(commandBuffer, camera); }
+					catch (Exception e) { Debug.LogError($"CameraCommandProvider: Error executing command for event {evt}, camera {camera.name}: {e.Message}"); }
+				}
+			}
+
+			void OnDestroy() => commands.Clear();
+		}
+
 		private Camera previewCam;
 		private GameObject camGO;
 		private RenderTexture renderTexture;
@@ -75,7 +98,7 @@ namespace ClassicTilestorm
 			groundMat.SetColor("_BaseColor", Color.white);
 
 			// Add custom URP command provider
-			var provider = camGO.AddComponent<MassiveHadronLtd.ReflectionEffectCamera.CameraCommandProvider>();
+			var provider = camGO.AddComponent<CameraCommandProvider>();
 
 			// Register draw command
 			provider.RegisterCommand(
@@ -274,7 +297,7 @@ namespace ClassicTilestorm
 					int rx = (x == size) ? 0 : x;
 					int ry = (y == size) ? 0 : y;
 
-					grid[x, y] = Random.value;
+					grid[x, y] = UnityEngine.Random.value;
 				}
 			}
 

@@ -9,7 +9,7 @@ namespace MassiveHadronLtd
 	[RequireComponent(typeof(Camera))]
 	public class ReflectionEffectCamera : MonoBehaviour
 	{
-		public class CameraCommandProvider : MonoBehaviour, ICommandBufferProvider
+		private class CameraCommandProvider : MonoBehaviour, ICommandBufferProvider
 		{
 			private readonly Dictionary<RenderPassEvent, Action<RasterCommandBuffer, Camera>> commands = new();
 
