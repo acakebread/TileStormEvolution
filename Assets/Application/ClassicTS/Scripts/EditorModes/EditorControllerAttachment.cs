@@ -61,7 +61,7 @@ namespace ClassicTilestorm
 			EditorUtil.DestroyMarkerVisuals();
 			pendingAction = PendingAction.None;
 			EditorUtil.DestroyViewFrustumMarker();
-			EditorUtil.HideTransformGizmo();
+			EditorTransformUtil.HideTransformGizmo();
 			viewPreview?.Hide();
 		}
 
@@ -70,7 +70,7 @@ namespace ClassicTilestorm
 			if (editorController.CurrentMode != EditorMode.Attachment) return;
 			RebuildMarkers();
 			EditorUtil.DestroyViewFrustumMarker();
-			EditorUtil.HideTransformGizmo();
+			EditorTransformUtil.HideTransformGizmo();
 		}
 
 		private void RebuildMarkers()
@@ -93,7 +93,7 @@ namespace ClassicTilestorm
 			RebuildMarkers();
 
 			EditorUtil.DestroyViewFrustumMarker();
-			EditorUtil.HideTransformGizmo();
+			EditorTransformUtil.HideTransformGizmo();
 			viewPreview.Hide();
 
 			var map = editorController?.iMapManager?.CurrentMap;
@@ -103,7 +103,7 @@ namespace ClassicTilestorm
 				{
 					SnapViewDistanceToGround(view, editorController.iMapManager);
 					EditorUtil.UpdateViewFrustumMarker(view, editorController.iMapManager);
-					EditorUtil.ShowTransformGizmo(view, editorController.iMapManager, editorCamera);
+					EditorTransformUtil.ShowTransformGizmo(view, editorController.iMapManager, editorCamera);
 					// SHOW PREVIEW
 					viewPreview.Show(view, editorController.iMapManager);
 				}
@@ -114,7 +114,7 @@ namespace ClassicTilestorm
 		{
 			base.Update();
 
-			if (EditorUtil.HandleTransformGizmoInput(editorCamera))
+			if (EditorTransformUtil.HandleTransformGizmoInput(editorCamera))
 			{
 				//very inefficient because it destroys and creates mesh every fram while gizmo is visible but I can refactor later
 
@@ -172,7 +172,7 @@ namespace ClassicTilestorm
 						{
 							SnapViewDistanceToGround(view, editorController.iMapManager);
 							EditorUtil.UpdateViewFrustumMarker(view, editorController.iMapManager);
-							EditorUtil.ShowTransformGizmo(view, editorController.iMapManager, editorCamera);
+							EditorTransformUtil.ShowTransformGizmo(view, editorController.iMapManager, editorCamera);
 							viewPreview.Show(view, editorController.iMapManager); // keep preview
 						}
 						moved = true;
@@ -389,7 +389,7 @@ namespace ClassicTilestorm
 				{
 					map.RemoveAllAttachmentsOnTile(pendingTile);
 					EditorUtil.DestroyViewFrustumMarker();
-					EditorUtil.HideTransformGizmo();
+					EditorTransformUtil.HideTransformGizmo();
 				}
 
 				RebuildMarkers();

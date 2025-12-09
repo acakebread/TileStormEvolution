@@ -355,329 +355,329 @@ namespace ClassicTilestorm
 		}
 
 
-		// ===================================================================
-		// TRANSFORM GIZMO – FULL 3D + SCREEN-SPACE CONSTANT SIZE (FIXED)
-		// ===================================================================
+		//// ===================================================================
+		//// TRANSFORM GIZMO – FULL 3D + SCREEN-SPACE CONSTANT SIZE (FIXED)
+		//// ===================================================================
 
-		private static GameObject transformGizmoRoot;
-		private static GameObject rotationOrbiter;
-		private static GameObject positionHandle;
-		private static View activeEditingView;
-		private static IMapManager activeMapManager;
-
-		private const float GIZMO_SCALE = 1.5f;
-		private const float HANDLE_SIZE = 0.18f;
-		private const float ORBITER_RADIUS = 1f;
-
-		private const float TARGET_SCREEN_SIZE = 60f; // pixels
-
-		// ——————— DRAG STATE ———————
-		private static bool isDraggingPosition = false;
-		private static Plane dragPlane;
-		private static Vector3 dragStartPoint;
-
-		private static bool isDraggingRotation = false;
-		private static Transform draggedRing;
-		private static Vector3 rotationAxis;
-		private static Quaternion startViewRotation;
-		private static Vector3 startMouseWorldPos;
-
-		public static void ShowTransformGizmo(View view, IMapManager mapManager, Camera cam)
-		{
-			HideTransformGizmo();
-
-			if (view == null || mapManager == null || cam == null) return;
-
-			activeEditingView = view;
-			activeMapManager = mapManager;
-
-			transformGizmoRoot = new GameObject("GIZMO_TRANSFORM_ROOT");
-			transformGizmoRoot.layer = LayerMask.NameToLayer("Editor");
-
-			positionHandle = CreatePositionHandle(transformGizmoRoot.transform);
-			rotationOrbiter = CreateRotationOrbiter(transformGizmoRoot.transform);
-
-			UpdateTransformGizmoVisuals(cam);
-		}
-
-		public static void HideTransformGizmo()
-		{
-			if (transformGizmoRoot != null)
-				Object.Destroy(transformGizmoRoot);
-
-			transformGizmoRoot = rotationOrbiter = positionHandle = null;
-			activeEditingView = null;
-			activeMapManager = null;
-
-			isDraggingPosition = isDraggingRotation = false;
-			draggedRing = null;
-		}
-
-		public static void UpdateTransformGizmoVisuals(Camera cam)
-		{
-			if (activeEditingView == null || transformGizmoRoot == null || activeMapManager == null || cam == null) return;
-
-			Vector3 worldPos = activeMapManager.TileWorldPosition(activeEditingView.tile) + activeEditingView.Position;
-			transformGizmoRoot.transform.position = worldPos;
-
-			if (rotationOrbiter != null)
-				rotationOrbiter.transform.rotation = activeEditingView.Rotation;
-
-			ApplyScreenSpaceScale(cam);
-		}
-
-		public static void UpdateGizmoScreenSize(Camera cam)
-		{
-			if (cam != null && transformGizmoRoot != null)
-				ApplyScreenSpaceScale(cam);
-		}
-
-		private static void ApplyScreenSpaceScale(Camera cam)
-		{
-			if (cam == null || transformGizmoRoot == null) return;
-
-			float distance = Vector3.Distance(cam.transform.position, transformGizmoRoot.transform.position);
-			float fovRad = cam.fieldOfView * Mathf.Deg2Rad;
-
-			float scale = distance * Mathf.Tan(fovRad * 0.5f) * 2f;
-			scale = TARGET_SCREEN_SIZE * scale / Screen.height;
-
-			transformGizmoRoot.transform.localScale = Vector3.one * scale;
-		}
-
-		public static bool HandleTransformGizmoInput(Camera cam)
-		{
-			if (activeEditingView == null || cam == null || transformGizmoRoot == null) return false;
-
-			UpdateGizmoScreenSize(cam); // keep perfect size
-
-			Ray ray = cam.ScreenPointToRay(Input.mousePosition);
-			bool handled = false;
-
-			// POSITION
-			if (positionHandle != null)
-			{
-				var col = positionHandle.GetComponent<Collider>();
-				if (col && col.Raycast(ray, out RaycastHit hit, Mathf.Infinity) && Input.GetMouseButtonDown(0))
-				{
-					StartDraggingPosition(cam);
-					handled = true;
-				}
-			}
-
-			// ROTATION
-			if (!handled && Input.GetMouseButtonDown(0) && rotationOrbiter != null)
-			{
-				foreach (Transform ring in rotationOrbiter.transform)
-				{
-					var col = ring.GetComponent<Collider>();
-					if (col && col.Raycast(ray, out RaycastHit hit, Mathf.Infinity))
-					{
-						StartDraggingRotation(cam, ring);
-						handled = true;
-						break;
-					}
-				}
-			}
-
-			if (Input.GetMouseButton(0))
-			{
-				if (isDraggingPosition) ContinueDragPosition(cam);
-				if (isDraggingRotation) ContinueDragRotation(cam);
-				handled = true;
-			}
-
-			if (Input.GetMouseButtonUp(0))
-			{
-				isDraggingPosition = isDraggingRotation = false;
-				draggedRing = null;
-			}
-
-			return handled;
-		}
-
-		// ——————— POSITION DRAG (FULL 3D) ———————
-		private static void StartDraggingPosition(Camera cam)
-		{
-			dragPlane = new Plane(-cam.transform.forward, transformGizmoRoot.transform.position);
-			Ray ray = cam.ScreenPointToRay(Input.mousePosition);
-			if (dragPlane.Raycast(ray, out float enter))
-				dragStartPoint = ray.GetPoint(enter);
-
-			isDraggingPosition = true;
-		}
-
-		private static void ContinueDragPosition(Camera cam)
-		{
-			Ray ray = cam.ScreenPointToRay(Input.mousePosition);
-			if (dragPlane.Raycast(ray, out float enter))
-			{
-				Vector3 current = ray.GetPoint(enter);
-				Vector3 delta = current - dragStartPoint;
-
-				Vector3 newWorld = transformGizmoRoot.transform.position + delta;
-				activeEditingView.Position = newWorld - activeMapManager.TileWorldPosition(activeEditingView.tile);
-
-				UpdateTransformGizmoVisuals(cam);
-				UpdateViewFrustumMarker(activeEditingView, activeMapManager);
-				dragStartPoint = current;
-			}
-		}
-
-		// ——————— ROTATION DRAG (UNCHANGED & WORKING) ———————
-		private static void StartDraggingRotation(Camera cam, Transform ring)
-		{
-			draggedRing = ring;
-			rotationAxis = ring.up;
-			startViewRotation = activeEditingView.Rotation;
-
-			Plane plane = new Plane(rotationAxis, transformGizmoRoot.transform.position);
-			Ray ray = cam.ScreenPointToRay(Input.mousePosition);
-			plane.Raycast(ray, out float enter);
-			startMouseWorldPos = ray.GetPoint(enter);
-
-			isDraggingRotation = true;
-		}
-
-		private static void ContinueDragRotation(Camera cam)
-		{
-			if (draggedRing == null) return;
-
-			Plane plane = new Plane(rotationAxis, transformGizmoRoot.transform.position);
-			Ray ray = cam.ScreenPointToRay(Input.mousePosition);
-
-			if (!plane.Raycast(ray, out float enter)) return;
-
-			Vector3 currentMousePos = ray.GetPoint(enter);
-			Vector3 delta = currentMousePos - startMouseWorldPos;
-
-			if (delta.sqrMagnitude < 0.0001f) return;
-
-			Vector3 camToGizmo = (transformGizmoRoot.transform.position - cam.transform.position).normalized;
-			Vector3 tangent = Vector3.Cross(rotationAxis, camToGizmo);
-			if (tangent.sqrMagnitude < 0.01f) tangent = Vector3.Cross(rotationAxis, Vector3.up);
-
-			float signedDist = Vector3.Dot(delta, tangent.normalized);
-			float angle = signedDist * 40f;
-
-			Quaternion deltaRot = Quaternion.AngleAxis(angle, rotationAxis);
-			startViewRotation = deltaRot * startViewRotation;
-			activeEditingView.Rotation = startViewRotation;
-
-			UpdateTransformGizmoVisuals(cam);
-			UpdateViewFrustumMarker(activeEditingView, activeMapManager);
-
-			startMouseWorldPos = currentMousePos;
-		}
-
-		// ——————— GIZMO CONSTRUCTION ———————
-		private static GameObject CreatePositionHandle(Transform parent)
-		{
-			var go = new GameObject("PositionHandle");
-			go.layer = LayerMask.NameToLayer("Editor");
-			go.transform.SetParent(parent, false);
-			go.transform.localScale = Vector3.one * HANDLE_SIZE * GIZMO_SCALE;
-
-			var sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-			sphere.layer = LayerMask.NameToLayer("Editor");
-			sphere.transform.SetParent(go.transform, false);
-			Object.Destroy(sphere.GetComponent<Collider>());
-
-			var mr = sphere.GetComponent<MeshRenderer>();
-			mr.material = MaterialUtils.CreateTransparentUnlitMaterial(new Color(1f, 1f, 1f, 0.75f));
-
-			var col = go.AddComponent<SphereCollider>();
-			col.radius = 1.6f;
-
-			return go;
-		}
-
-		private static GameObject CreateRotationOrbiter(Transform parent)
-		{
-			var orbiter = new GameObject("RotationOrbiter");
-			orbiter.transform.SetParent(parent, false);
-
-			Color[] colors = { new Color(1f, 0.3f, 0.3f), new Color(0.3f, 1f, 0.3f), new Color(0.3f, 0.6f, 1f) };
-			Vector3[] axes = { Vector3.right, Vector3.up, Vector3.forward };
-
-			for (int i = 0; i < 3; i++)
-			{
-				var ring = CreateTorusPrimitive();
-				ring.name = $"Ring_{"XYZ"[i]}";
-				ring.transform.SetParent(orbiter.transform, false);
-				//ring.transform.localRotation = Quaternion.FromToRotation(Vector3.forward, axes[i]);
-				ring.transform.localRotation = Quaternion.FromToRotation(new Vector3(axes[i].y, axes[i].z, axes[i].x), axes[i]);//corrected way to get the croass product axis
-				//ring.transform.localScale = Vector3.one * ORBITER_RADIUS;
-				ring.transform.localScale = new Vector3(1f, 0.001f, 1f) * ORBITER_RADIUS;//flatten into 'rings'
-
-				var mr = ring.GetComponent<MeshRenderer>();
-				mr.material = MaterialUtils.CreateTransparentUnlitMaterial(colors[i]);
-				mr.material.SetFloat("_Alpha", 0.7f);
-
-				var col = ring.AddComponent<MeshCollider>();
-				//col.convex = true;//this causes warnings and doesn't seem to do anything
-			}
-
-			return orbiter;
-		}
-
-		private static GameObject CreateTorusPrimitive()
-		{
-			var go = new GameObject();
-			go.layer = LayerMask.NameToLayer("Editor");
-
-			var mf = go.AddComponent<MeshFilter>();
-			var mr = go.AddComponent<MeshRenderer>();
-			mf.mesh = GenerateTorusMesh(48, 16, 1f, 0.04f);
-			return go;
-		}
-
-		private static Mesh GenerateTorusMesh(int segments = 48, int sides = 16, float radius = 1f, float tube = 0.1f)
-		{
-			var mesh = new Mesh { name = "GizmoTorus" };
-
-			var vertices = new List<Vector3>();
-			var normals = new List<Vector3>();
-			var triangles = new List<int>();
-
-			for (int seg = 0; seg <= segments; seg++)
-			{
-				float u = seg * Mathf.PI * 2f / segments;
-				float cu = Mathf.Cos(u), su = Mathf.Sin(u);
-
-				for (int side = 0; side <= sides; side++)
-				{
-					float v = side * Mathf.PI * 2f / sides;
-					float cv = Mathf.Cos(v), sv = Mathf.Sin(v);
-
-					float r = radius + tube * cv;
-					vertices.Add(new Vector3(r * cu, tube * sv, r * su));
-					normals.Add(new Vector3(cv * cu, sv, cv * su));
-				}
-			}
-
-			for (int seg = 0; seg < segments; seg++)
-			{
-				int base1 = seg * (sides + 1);
-				int base2 = (seg + 1) * (sides + 1);
-
-				for (int side = 0; side < sides; side++)
-				{
-					int a = base1 + side;
-					int b = base1 + side + 1;
-					int c = base2 + side + 1;
-					int d = base2 + side;
-
-					triangles.Add(a); triangles.Add(b); triangles.Add(c);
-					triangles.Add(a); triangles.Add(c); triangles.Add(d);
-				}
-			}
-
-			mesh.SetVertices(vertices);
-			mesh.SetNormals(normals);
-			mesh.SetTriangles(triangles, 0);
-			mesh.RecalculateBounds();
-			return mesh;
-		}
+		//private static GameObject transformGizmoRoot;
+		//private static GameObject rotationOrbiter;
+		//private static GameObject positionHandle;
+		//private static View activeEditingView;
+		//private static IMapManager activeMapManager;
+
+		//private const float GIZMO_SCALE = 1.5f;
+		//private const float HANDLE_SIZE = 0.18f;
+		//private const float ORBITER_RADIUS = 1f;
+
+		//private const float TARGET_SCREEN_SIZE = 60f; // pixels
+
+		//// ——————— DRAG STATE ———————
+		//private static bool isDraggingPosition = false;
+		//private static Plane dragPlane;
+		//private static Vector3 dragStartPoint;
+
+		//private static bool isDraggingRotation = false;
+		//private static Transform draggedRing;
+		//private static Vector3 rotationAxis;
+		//private static Quaternion startViewRotation;
+		//private static Vector3 startMouseWorldPos;
+
+		//public static void ShowTransformGizmo(View view, IMapManager mapManager, Camera cam)
+		//{
+		//	HideTransformGizmo();
+
+		//	if (view == null || mapManager == null || cam == null) return;
+
+		//	activeEditingView = view;
+		//	activeMapManager = mapManager;
+
+		//	transformGizmoRoot = new GameObject("GIZMO_TRANSFORM_ROOT");
+		//	transformGizmoRoot.layer = LayerMask.NameToLayer("Editor");
+
+		//	positionHandle = CreatePositionHandle(transformGizmoRoot.transform);
+		//	rotationOrbiter = CreateRotationOrbiter(transformGizmoRoot.transform);
+
+		//	UpdateTransformGizmoVisuals(cam);
+		//}
+
+		//public static void HideTransformGizmo()
+		//{
+		//	if (transformGizmoRoot != null)
+		//		Object.Destroy(transformGizmoRoot);
+
+		//	transformGizmoRoot = rotationOrbiter = positionHandle = null;
+		//	activeEditingView = null;
+		//	activeMapManager = null;
+
+		//	isDraggingPosition = isDraggingRotation = false;
+		//	draggedRing = null;
+		//}
+
+		//public static void UpdateTransformGizmoVisuals(Camera cam)
+		//{
+		//	if (activeEditingView == null || transformGizmoRoot == null || activeMapManager == null || cam == null) return;
+
+		//	Vector3 worldPos = activeMapManager.TileWorldPosition(activeEditingView.tile) + activeEditingView.Position;
+		//	transformGizmoRoot.transform.position = worldPos;
+
+		//	if (rotationOrbiter != null)
+		//		rotationOrbiter.transform.rotation = activeEditingView.Rotation;
+
+		//	ApplyScreenSpaceScale(cam);
+		//}
+
+		//public static void UpdateGizmoScreenSize(Camera cam)
+		//{
+		//	if (cam != null && transformGizmoRoot != null)
+		//		ApplyScreenSpaceScale(cam);
+		//}
+
+		//private static void ApplyScreenSpaceScale(Camera cam)
+		//{
+		//	if (cam == null || transformGizmoRoot == null) return;
+
+		//	float distance = Vector3.Distance(cam.transform.position, transformGizmoRoot.transform.position);
+		//	float fovRad = cam.fieldOfView * Mathf.Deg2Rad;
+
+		//	float scale = distance * Mathf.Tan(fovRad * 0.5f) * 2f;
+		//	scale = TARGET_SCREEN_SIZE * scale / Screen.height;
+
+		//	transformGizmoRoot.transform.localScale = Vector3.one * scale;
+		//}
+
+		//public static bool HandleTransformGizmoInput(Camera cam)
+		//{
+		//	if (activeEditingView == null || cam == null || transformGizmoRoot == null) return false;
+
+		//	UpdateGizmoScreenSize(cam); // keep perfect size
+
+		//	Ray ray = cam.ScreenPointToRay(Input.mousePosition);
+		//	bool handled = false;
+
+		//	// POSITION
+		//	if (positionHandle != null)
+		//	{
+		//		var col = positionHandle.GetComponent<Collider>();
+		//		if (col && col.Raycast(ray, out RaycastHit hit, Mathf.Infinity) && Input.GetMouseButtonDown(0))
+		//		{
+		//			StartDraggingPosition(cam);
+		//			handled = true;
+		//		}
+		//	}
+
+		//	// ROTATION
+		//	if (!handled && Input.GetMouseButtonDown(0) && rotationOrbiter != null)
+		//	{
+		//		foreach (Transform ring in rotationOrbiter.transform)
+		//		{
+		//			var col = ring.GetComponent<Collider>();
+		//			if (col && col.Raycast(ray, out RaycastHit hit, Mathf.Infinity))
+		//			{
+		//				StartDraggingRotation(cam, ring);
+		//				handled = true;
+		//				break;
+		//			}
+		//		}
+		//	}
+
+		//	if (Input.GetMouseButton(0))
+		//	{
+		//		if (isDraggingPosition) ContinueDragPosition(cam);
+		//		if (isDraggingRotation) ContinueDragRotation(cam);
+		//		handled = true;
+		//	}
+
+		//	if (Input.GetMouseButtonUp(0))
+		//	{
+		//		isDraggingPosition = isDraggingRotation = false;
+		//		draggedRing = null;
+		//	}
+
+		//	return handled;
+		//}
+
+		//// ——————— POSITION DRAG (FULL 3D) ———————
+		//private static void StartDraggingPosition(Camera cam)
+		//{
+		//	dragPlane = new Plane(-cam.transform.forward, transformGizmoRoot.transform.position);
+		//	Ray ray = cam.ScreenPointToRay(Input.mousePosition);
+		//	if (dragPlane.Raycast(ray, out float enter))
+		//		dragStartPoint = ray.GetPoint(enter);
+
+		//	isDraggingPosition = true;
+		//}
+
+		//private static void ContinueDragPosition(Camera cam)
+		//{
+		//	Ray ray = cam.ScreenPointToRay(Input.mousePosition);
+		//	if (dragPlane.Raycast(ray, out float enter))
+		//	{
+		//		Vector3 current = ray.GetPoint(enter);
+		//		Vector3 delta = current - dragStartPoint;
+
+		//		Vector3 newWorld = transformGizmoRoot.transform.position + delta;
+		//		activeEditingView.Position = newWorld - activeMapManager.TileWorldPosition(activeEditingView.tile);
+
+		//		UpdateTransformGizmoVisuals(cam);
+		//		UpdateViewFrustumMarker(activeEditingView, activeMapManager);
+		//		dragStartPoint = current;
+		//	}
+		//}
+
+		//// ——————— ROTATION DRAG (UNCHANGED & WORKING) ———————
+		//private static void StartDraggingRotation(Camera cam, Transform ring)
+		//{
+		//	draggedRing = ring;
+		//	rotationAxis = ring.up;
+		//	startViewRotation = activeEditingView.Rotation;
+
+		//	Plane plane = new Plane(rotationAxis, transformGizmoRoot.transform.position);
+		//	Ray ray = cam.ScreenPointToRay(Input.mousePosition);
+		//	plane.Raycast(ray, out float enter);
+		//	startMouseWorldPos = ray.GetPoint(enter);
+
+		//	isDraggingRotation = true;
+		//}
+
+		//private static void ContinueDragRotation(Camera cam)
+		//{
+		//	if (draggedRing == null) return;
+
+		//	Plane plane = new Plane(rotationAxis, transformGizmoRoot.transform.position);
+		//	Ray ray = cam.ScreenPointToRay(Input.mousePosition);
+
+		//	if (!plane.Raycast(ray, out float enter)) return;
+
+		//	Vector3 currentMousePos = ray.GetPoint(enter);
+		//	Vector3 delta = currentMousePos - startMouseWorldPos;
+
+		//	if (delta.sqrMagnitude < 0.0001f) return;
+
+		//	Vector3 camToGizmo = (transformGizmoRoot.transform.position - cam.transform.position).normalized;
+		//	Vector3 tangent = Vector3.Cross(rotationAxis, camToGizmo);
+		//	if (tangent.sqrMagnitude < 0.01f) tangent = Vector3.Cross(rotationAxis, Vector3.up);
+
+		//	float signedDist = Vector3.Dot(delta, tangent.normalized);
+		//	float angle = signedDist * 40f;
+
+		//	Quaternion deltaRot = Quaternion.AngleAxis(angle, rotationAxis);
+		//	startViewRotation = deltaRot * startViewRotation;
+		//	activeEditingView.Rotation = startViewRotation;
+
+		//	UpdateTransformGizmoVisuals(cam);
+		//	UpdateViewFrustumMarker(activeEditingView, activeMapManager);
+
+		//	startMouseWorldPos = currentMousePos;
+		//}
+
+		//// ——————— GIZMO CONSTRUCTION ———————
+		//private static GameObject CreatePositionHandle(Transform parent)
+		//{
+		//	var go = new GameObject("PositionHandle");
+		//	go.layer = LayerMask.NameToLayer("Editor");
+		//	go.transform.SetParent(parent, false);
+		//	go.transform.localScale = Vector3.one * HANDLE_SIZE * GIZMO_SCALE;
+
+		//	var sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+		//	sphere.layer = LayerMask.NameToLayer("Editor");
+		//	sphere.transform.SetParent(go.transform, false);
+		//	Object.Destroy(sphere.GetComponent<Collider>());
+
+		//	var mr = sphere.GetComponent<MeshRenderer>();
+		//	mr.material = MaterialUtils.CreateTransparentUnlitMaterial(new Color(1f, 1f, 1f, 0.75f));
+
+		//	var col = go.AddComponent<SphereCollider>();
+		//	col.radius = 1.6f;
+
+		//	return go;
+		//}
+
+		//private static GameObject CreateRotationOrbiter(Transform parent)
+		//{
+		//	var orbiter = new GameObject("RotationOrbiter");
+		//	orbiter.transform.SetParent(parent, false);
+
+		//	Color[] colors = { new Color(1f, 0.3f, 0.3f), new Color(0.3f, 1f, 0.3f), new Color(0.3f, 0.6f, 1f) };
+		//	Vector3[] axes = { Vector3.right, Vector3.up, Vector3.forward };
+
+		//	for (int i = 0; i < 3; i++)
+		//	{
+		//		var ring = CreateTorusPrimitive();
+		//		ring.name = $"Ring_{"XYZ"[i]}";
+		//		ring.transform.SetParent(orbiter.transform, false);
+		//		//ring.transform.localRotation = Quaternion.FromToRotation(Vector3.forward, axes[i]);
+		//		ring.transform.localRotation = Quaternion.FromToRotation(new Vector3(axes[i].y, axes[i].z, axes[i].x), axes[i]);//corrected way to get the croass product axis
+		//		//ring.transform.localScale = Vector3.one * ORBITER_RADIUS;
+		//		ring.transform.localScale = new Vector3(1f, 0.001f, 1f) * ORBITER_RADIUS;//flatten into 'rings'
+
+		//		var mr = ring.GetComponent<MeshRenderer>();
+		//		mr.material = MaterialUtils.CreateTransparentUnlitMaterial(colors[i]);
+		//		mr.material.SetFloat("_Alpha", 0.7f);
+
+		//		var col = ring.AddComponent<MeshCollider>();
+		//		//col.convex = true;//this causes warnings and doesn't seem to do anything
+		//	}
+
+		//	return orbiter;
+		//}
+
+		//private static GameObject CreateTorusPrimitive()
+		//{
+		//	var go = new GameObject();
+		//	go.layer = LayerMask.NameToLayer("Editor");
+
+		//	var mf = go.AddComponent<MeshFilter>();
+		//	var mr = go.AddComponent<MeshRenderer>();
+		//	mf.mesh = GenerateTorusMesh(48, 16, 1f, 0.04f);
+		//	return go;
+		//}
+
+		//private static Mesh GenerateTorusMesh(int segments = 48, int sides = 16, float radius = 1f, float tube = 0.1f)
+		//{
+		//	var mesh = new Mesh { name = "GizmoTorus" };
+
+		//	var vertices = new List<Vector3>();
+		//	var normals = new List<Vector3>();
+		//	var triangles = new List<int>();
+
+		//	for (int seg = 0; seg <= segments; seg++)
+		//	{
+		//		float u = seg * Mathf.PI * 2f / segments;
+		//		float cu = Mathf.Cos(u), su = Mathf.Sin(u);
+
+		//		for (int side = 0; side <= sides; side++)
+		//		{
+		//			float v = side * Mathf.PI * 2f / sides;
+		//			float cv = Mathf.Cos(v), sv = Mathf.Sin(v);
+
+		//			float r = radius + tube * cv;
+		//			vertices.Add(new Vector3(r * cu, tube * sv, r * su));
+		//			normals.Add(new Vector3(cv * cu, sv, cv * su));
+		//		}
+		//	}
+
+		//	for (int seg = 0; seg < segments; seg++)
+		//	{
+		//		int base1 = seg * (sides + 1);
+		//		int base2 = (seg + 1) * (sides + 1);
+
+		//		for (int side = 0; side < sides; side++)
+		//		{
+		//			int a = base1 + side;
+		//			int b = base1 + side + 1;
+		//			int c = base2 + side + 1;
+		//			int d = base2 + side;
+
+		//			triangles.Add(a); triangles.Add(b); triangles.Add(c);
+		//			triangles.Add(a); triangles.Add(c); triangles.Add(d);
+		//		}
+		//	}
+
+		//	mesh.SetVertices(vertices);
+		//	mesh.SetNormals(normals);
+		//	mesh.SetTriangles(triangles, 0);
+		//	mesh.RecalculateBounds();
+		//	return mesh;
+		//}
 	}
 }
