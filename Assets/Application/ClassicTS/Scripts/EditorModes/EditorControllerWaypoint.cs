@@ -29,11 +29,13 @@ namespace ClassicTilestorm
 		{
 			if (editorController.CurrentMode != EditorController.EditorMode.Waypoint) return false;
 
-			float w = sidePanel.CurrentWidth;
-			var rect = new Rect(Screen.width - w - 20f, 20f, w, Screen.height - 40f);
-			var mouse = Input.mousePosition; mouse.y = Screen.height - mouse.y;
-			return rect.Contains(mouse);
+			Rect panelRect = sidePanel.GetPanelRect();
+			Vector2 mouse = Input.mousePosition;
+			mouse.y = Screen.height - mouse.y;
+
+			return panelRect.Contains(mouse);
 		}
+
 
 		public EditorControllerWaypoint(EditorController editorController) : base(editorController) { }
 

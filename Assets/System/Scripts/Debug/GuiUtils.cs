@@ -402,6 +402,10 @@ namespace MassiveHadronLtd
 				Items = items.ToList();
 			}
 
+			public void Clear() => Items.Clear();
+
+			public void AddItem(ListViewItem item) => Items.Add(item);
+
 			public void Draw(Rect rect)
 			{
 				if (leftButton == null)
