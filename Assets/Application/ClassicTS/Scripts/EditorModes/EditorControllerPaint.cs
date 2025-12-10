@@ -1,9 +1,7 @@
 ﻿using MassiveHadronLtd;
 using System.Linq;
 using UnityEngine;
-using UnityEngine.EventSystems;
 using System.Collections.Generic;
-using UnityEditor;
 
 namespace ClassicTilestorm
 {
@@ -41,7 +39,7 @@ namespace ClassicTilestorm
 		public override void Update()
 		{
 			base.Update();
-			if (!editorCamera || editorController.IsGuiControlActive() || EventSystem.current.IsPointerOverGameObject()) return;
+			if (!editorCamera || IsGuiControlActive()) return;
 
 			if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1))
 				mouseDownPos = Input.mousePosition;

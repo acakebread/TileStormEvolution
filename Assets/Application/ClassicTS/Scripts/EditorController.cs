@@ -1,6 +1,5 @@
 ﻿using UnityEngine;
 using MassiveHadronLtd;
-using UnityEngine.EventSystems;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -45,7 +44,7 @@ namespace ClassicTilestorm
 		public IMapManager iMapManager => mapManager;
 		public event System.Action<int> OnChangeMapRequested; // delta or 0 for reload
 
-		public Map currentMap => null != mapManager ? mapManager.CurrentMap : null;
+		public Map currentMap => mapManager?.CurrentMap;
 
 		private void Awake()
 		{
@@ -145,10 +144,7 @@ namespace ClassicTilestorm
 			activeMode?.OnGui();
 		}
 
-		public void OnApplicationFocus(bool hasFocus)
-		{
-			activeMode?.OnApplicationFocus(hasFocus);
-		}
+		public void OnApplicationFocus(bool hasFocus) => activeMode?.OnApplicationFocus(hasFocus);
 
 		private void SetEditorMode(EditorMode newMode)
 		{
@@ -173,8 +169,6 @@ namespace ClassicTilestorm
 		// ===================================================================
 		// UI & Input Detection (formerly in PlaceholderEditorUI)
 		// ===================================================================
-
-		public bool IsGuiControlActive() => GUIUtility.hotControl != 0 || (EventSystem.current && EventSystem.current.IsPointerOverGameObject());
 
 		public bool IsMouseOverGui()
 		{

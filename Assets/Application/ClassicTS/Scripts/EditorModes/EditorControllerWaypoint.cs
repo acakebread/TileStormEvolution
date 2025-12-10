@@ -1,7 +1,5 @@
 ﻿using System.Linq;
-using UnityEditor;
 using UnityEngine;
-using UnityEngine.EventSystems;
 using System.Collections.Generic;
 using static MassiveHadronLtd.GuiUtils;
 using System;
@@ -109,8 +107,7 @@ namespace ClassicTilestorm
 		{
 			base.Update();
 
-			if (editorCamera == null || editorController.IsGuiControlActive() ||
-				(EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()))
+			if (editorCamera == null || IsGuiControlActive())
 				return;
 
 			var worldPos = MapManager.ScreenToWorld(editorCamera, Input.mousePosition);
@@ -339,13 +336,29 @@ namespace ClassicTilestorm
 			sp.x -= 120;
 			sp.y -= 110;
 
-			if (PopupConfirm.Show(sp, new Vector2(240, 110), "Add waypoint here?",
-				$"WP{pendingWaypoint:00} at tile {pendingTile}",
-				yesText: "Add", noText: "Cancel", titleColor: Color.cyan,
-				onYes: () => AddWaypointAtTile(pendingTile)))
+			var items = new List<PopupItem>
 			{
+				// Info line (non-clickable)
+				new PopupItem($"WP{pendingWaypoint:00} at tile {pendingTile}", null, null, spacerHeight: 0),
+
+				PopupItem.Spacer(6),
+
+				// Add waypoint
+				new PopupItem("Add", () =>
+				{
+					AddWaypointAtTile(pendingTile);
+				}, colorOverride: Color.cyan),
+
+				PopupItem.Spacer(4),
+
+				// Cancel
+				new PopupItem("Cancel", null, Color.yellow)
+			};
+
+			bool closed = PopupMenu.Show(sp, "Add Waypoint?", items);
+
+			if (closed)
 				pendingAction = PendingAction.None;
-			}
 		}
 
 		private void DrawDeletePopup()
@@ -354,13 +367,29 @@ namespace ClassicTilestorm
 			sp.x -= 120;
 			sp.y -= 110;
 
-			if (PopupConfirm.Show(sp, new Vector2(240, 110), "Delete waypoint?",
-				$"WP{pendingWaypoint:00} at tile {pendingTile}",
-				"Delete", "Cancel", Color.red,
-				() => DeleteWaypoint(pendingWaypoint)))
+			var items = new List<PopupItem>
 			{
+				// Info line (non-clickable)
+				new PopupItem($"WP{pendingWaypoint:00} at tile {pendingTile}", null, null, spacerHeight: 0),
+
+				PopupItem.Spacer(6),
+
+				// Delete waypoint
+				new PopupItem("Delete", () =>
+				{
+					DeleteWaypoint(pendingWaypoint);
+				}, colorOverride: Color.red),
+
+				PopupItem.Spacer(4),
+
+				// Cancel
+				new PopupItem("Cancel", null, Color.yellow)
+			};
+
+			bool closed = PopupMenu.Show(sp, "Delete Waypoint?", items);
+
+			if (closed)
 				pendingAction = PendingAction.None;
-			}
 		}
 	}
 }

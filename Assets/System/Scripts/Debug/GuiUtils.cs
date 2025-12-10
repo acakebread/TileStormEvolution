@@ -236,7 +236,7 @@ namespace MassiveHadronLtd
 				GUILayout.Box("Auto-Hide Panel", GUILayout.ExpandWidth(true));
 				GUILayout.Space(10);
 				if (GUILayout.Button("Test Button", GUILayout.Height(30)))
-					UnityEngine.Debug.Log("Button clicked!");
+					Debug.Log("Button clicked!");
 				for (int i = 0; i < 20; i++)
 					GUILayout.Label($"Item {i + 1}");
 				GUILayout.EndVertical();
@@ -279,127 +279,80 @@ namespace MassiveHadronLtd
 			}
 		}
 
-		public static class PopupConfirm
+		public class PopupItem
 		{
-			public static bool Show(
-				Vector2 screenPos,
-				Vector2 size,
-				string title,
-				string message = null,
-				string yesText = "Yes",
-				string noText = "No",
-				Color? titleColor = null,
-				Action onYes = null)
+			public string label;
+			public Action action;
+			public Color? colorOverride;
+			public int spacerHeight;
+
+			// Primary ctor
+			public PopupItem(string label, Action action = null, Color? colorOverride = null, int spacerHeight = 8)
 			{
-				Rect rect = new Rect(screenPos.x - size.x * 0.5f, screenPos.y - size.y * 0.5f, size.x, size.y);
-
-				GUI.Box(rect, "", PopupStyles.window);
-				GUILayout.BeginArea(rect);
-				{
-					GUILayout.Space(12);
-					GUI.color = titleColor ?? new Color(0.3f, 0.9f, 1f);
-					GUILayout.Label(title, PopupStyles.title);
-					GUI.color = Color.white;
-
-					if (!string.IsNullOrEmpty(message))
-						GUILayout.Label(message, PopupStyles.message);
-
-					GUILayout.FlexibleSpace();
-
-					GUILayout.BeginHorizontal();
-					GUILayout.FlexibleSpace();
-
-					GUI.backgroundColor = new Color(0.2f, 0.95f, 0.2f);
-					if (GUILayout.Button(yesText, PopupStyles.button, GUILayout.Width(90), GUILayout.Height(30)))
-					{
-						onYes?.Invoke();
-						GUI.backgroundColor = Color.white;
-						return true;
-					}
-
-					GUILayout.Space(16);
-
-					GUI.backgroundColor = new Color(0.95f, 0.25f, 0.25f);
-					if (GUILayout.Button(noText, PopupStyles.button, GUILayout.Width(90), GUILayout.Height(30)))
-						return true;
-
-					GUI.backgroundColor = Color.white;
-					GUILayout.FlexibleSpace();
-					GUILayout.EndHorizontal();
-
-					GUILayout.Space(14);
-				}
-				GUILayout.EndArea();
-
-				if (Event.current.type == EventType.MouseDown && !rect.Contains(Event.current.mousePosition))
-					return true;
-
-				return false;
+				this.label = label;
+				this.action = action;
+				this.colorOverride = colorOverride;
+				this.spacerHeight = spacerHeight;
 			}
+
+			// Spacer helper
+			public static PopupItem Spacer(int height = 8) => new PopupItem(null, null, null, height);
 		}
 
 		public static class PopupMenu
 		{
-			public static bool Show(Vector2 screenPos, Vector2 size, string title, string[] options, Action<int> onSelect)
+			public static bool Show(Vector2 screenPos, string title, List<PopupItem> items)
 			{
-				Rect rect = new Rect(screenPos.x, screenPos.y, size.x, size.y);
-				GUI.Box(rect, title, GUI.skin.window);
+				float height = 34f;
+				foreach (var it in items)
+					height += (it.label == null) ? it.spacerHeight : 26f;
 
-				for (int i = 0; i < options.Length; i++)
+				var rect = new Rect(screenPos.x, screenPos.y, 260f, height);
+
+				// 1. Draw the window background only
+				GUI.Box(rect, GUIContent.none, GUI.skin.window);
+
+				// 2. Draw the title manually (centered)
+				var titleStyle = new GUIStyle(GUI.skin.label)
 				{
-					if (GUI.Button(new Rect(rect.x + 8, rect.y + 30 + i * 26, rect.width - 16, 24), options[i]))
+					alignment = TextAnchor.MiddleCenter,
+					fontStyle = FontStyle.Bold
+				};
+
+				Rect titleRect = new Rect(rect.x, rect.y + 5, rect.width, 24f);
+				GUI.Label(titleRect, title, titleStyle);
+
+				float y = rect.y + 30f;
+				foreach (var item in items)
+				{
+					if (item.label == null)
 					{
-						onSelect?.Invoke(i);
+						y += item.spacerHeight;
+						continue;
+					}
+
+					var btnRect = new Rect(rect.x + 8f, y, rect.width - 16f, 24f);
+
+					var oldColor = GUI.color;
+					if (item.colorOverride.HasValue)
+						GUI.color = item.colorOverride.Value;
+
+					if (GUI.Button(btnRect, item.label))
+					{
+						GUI.color = oldColor;
+						item.action?.Invoke();
 						return true;
 					}
+
+					GUI.color = oldColor;
+					y += 26f;
 				}
 
+				// Click outside closes popup
 				if (Event.current.type == EventType.MouseDown && !rect.Contains(Event.current.mousePosition))
-				{
-					onSelect?.Invoke(-1);
 					return true;
-				}
 
 				return false;
-			}
-		}
-
-		public static class PopupAttachmentAdd
-		{
-			public static bool Show(Vector2 screenPos, int tileIndex, Action<int> onSelect)
-			{
-				var options = new[] { "Add Emitter", "Add View", "Add Pickup", "Cancel" };
-				return PopupMenu.Show(screenPos, new Vector2(260, 30 + options.Length * 26),
-					$"Add to Tile {tileIndex}", options, i => onSelect?.Invoke(i < 3 ? i : -1));
-			}
-		}
-
-		public static class PopupAttachmentDelete
-		{
-			public static bool Show(Vector2 screenPos, int tileIndex, string[] text, Action<int> onSelect)
-			{
-				if (text.Length == 0) return true;
-
-				var options = new List<string>();
-				for (int i = 0; i < text.Length; i++)
-					options.Add($"Delete {text[i]}");
-
-				int deleteAllIndex = -1;
-				if (text.Length > 1)
-				{
-					deleteAllIndex = options.Count;
-					options.Add("Delete All on this tile");
-				}
-				options.Add("Cancel");
-
-				return PopupMenu.Show(screenPos, new Vector2(320, 30 + options.Count * 26),
-					$"Tile {tileIndex} — {text.Length} attachment(s)",
-					options.ToArray(), i =>
-					{
-						if (i < text.Length) onSelect?.Invoke(i);
-						else if (i == deleteAllIndex) onSelect?.Invoke(-2);
-						else onSelect?.Invoke(-1);
-					});
 			}
 		}
 	}

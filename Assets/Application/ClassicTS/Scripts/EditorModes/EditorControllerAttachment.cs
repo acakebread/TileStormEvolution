@@ -1,12 +1,9 @@
-﻿// File: EditorControllerAttachment.cs
-// FINAL — Fully working with RMB preview control + mouse wheel + fixed MapAttachments
-
-using UnityEngine;
+﻿using UnityEngine;
 using System.Linq;
 using static MassiveHadronLtd.GuiUtils;
 using static ClassicTilestorm.EditorController;
 using UnityEditor;
-using UnityEngine.EventSystems;
+using System.Collections.Generic;
 
 namespace ClassicTilestorm
 {
@@ -35,12 +32,11 @@ namespace ClassicTilestorm
 		private bool isControllingPreviewWithRMB = false;
 		private bool rmbDragStartedInPreview = false; // THIS FIXES THE FREEZE BUG
 
-		private bool isMouseOverPreview = false;
-		private bool isPreviewFocus = false;
+		//private bool isMouseOverPreview = false;
 
 		public override bool IsMouseOverGui()
 		{
-			isMouseOverPreview = false;
+			//isMouseOverPreview = false;
 
 			if (viewPreview != null && viewPreview.gameObject.activeSelf && viewPreview.previewRect is Rect r && r.width > 0)
 			{
@@ -50,7 +46,7 @@ namespace ClassicTilestorm
 
 				if (hitRect.Contains(mp))
 				{
-					isMouseOverPreview = true;
+					//isMouseOverPreview = true;
 					return true; // blocks main camera scroll AND mouse wheel
 				}
 			}
@@ -158,8 +154,7 @@ namespace ClassicTilestorm
 				}
 			}
 
-			if (editorCamera == null || editorController.IsGuiControlActive() ||
-				(EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()))
+			if (editorCamera == null || IsGuiControlActive())
 				return;
 
 			// Preview camera control (RMB orbit + WASD)
@@ -313,7 +308,7 @@ namespace ClassicTilestorm
 				}
 
 				// MOUSE WHEEL — ONLY WHEN HOVERING PREVIEW → BLOCK MAIN CAMERA ZOOM
-				if (mouseOverPreview && !editorController.IsGuiControlActive())
+				if (mouseOverPreview && !IsGuiControlActive())
 				{
 					float scroll = Input.GetAxis("Mouse ScrollWheel");
 					if (scroll != 0f)
@@ -455,31 +450,50 @@ namespace ClassicTilestorm
 		private void DrawAddPopup()
 		{
 			var sp = pendingPopupScreenPos;
-			sp.x -= 120; sp.y -= 140;
+			sp.x -= 120;
+			sp.y -= 140;
 
-			bool closed = PopupAttachmentAdd.Show(sp, pendingTile, choice =>
+			var items = new List<PopupItem>
 			{
-				if (choice >= 0 && choice <= 2)
+				new PopupItem("Emitter", () =>
 				{
-					System.Type t = choice switch { 0 => typeof(Emitter), 1 => typeof(View), 2 => typeof(Pickup), _ => null };
-					if (t != null)
-					{
-						AddAttachmentAtTileWithType(pendingTile, t);
-						editorController.OnMapChanged();
-						RebuildMarkers();
-					}
-				}
-				pendingAction = PendingAction.None;
-			});
+					AddAttachmentAtTileWithType(pendingTile, typeof(Emitter));
+					editorController.OnMapChanged();
+					RebuildMarkers();
+				}),
 
-			if (closed && pendingAction == PendingAction.Add)
+				new PopupItem("View", () =>
+				{
+					AddAttachmentAtTileWithType(pendingTile, typeof(View));
+					editorController.OnMapChanged();
+					RebuildMarkers();
+				}),
+
+
+				new PopupItem("Pickup", () =>
+				{
+					AddAttachmentAtTileWithType(pendingTile, typeof(Pickup));
+					editorController.OnMapChanged();
+					RebuildMarkers();
+				}),
+
+				PopupItem.Spacer(),
+
+				// no null needed
+				new PopupItem("Cancel", colorOverride: Color.yellow)
+			};
+
+			bool closed = PopupMenu.Show(sp, "Add Attachment", items);
+
+			if (closed)
 				pendingAction = PendingAction.None;
 		}
 
 		private void DrawDeletePopup()
 		{
 			var sp = pendingPopupScreenPos;
-			sp.x -= 140; sp.y -= 120;
+			sp.x -= 140;
+			sp.y -= 120;
 
 			var map = editorController?.iMapManager?.CurrentMap;
 			if (map == null) return;
@@ -487,25 +501,45 @@ namespace ClassicTilestorm
 			var attsOnTile = map.GetAttachmentsOnTile(pendingTile);
 			if (attsOnTile.Length == 0) return;
 
-			var types = attsOnTile.Select(a => a.GetType().Name).ToArray();
+			var items = new List<PopupItem>();
 
-			bool closed = PopupAttachmentDelete.Show(sp, pendingTile, types, choice =>
+			// 1. Individual delete items
+			foreach (var att in attsOnTile)
 			{
-				if (choice >= 0 && choice < attsOnTile.Length)
-					map.RemoveAttachment(attsOnTile[choice]);
-				else if (choice == -2)
+				string label = $"Delete {att.GetType().Name}";
+				var localAtt = att; // capture for action
+
+				items.Add(new PopupItem(label, () =>
 				{
-					map.RemoveAllAttachmentsOnTile(pendingTile);
-					EditorUtil.DestroyViewFrustumMarker();
-					EditorTransformUtil.HideTransformGizmo();
-				}
+					map.RemoveAttachment(localAtt);
+					RebuildMarkers();
+					editorController.OnMapChanged();
+				}));
+			}
+
+			// 2. Spacer
+			items.Add(PopupItem.Spacer());
+
+			// 3. Delete All button
+			items.Add(new PopupItem("Delete All", () =>
+			{
+				map.RemoveAllAttachmentsOnTile(pendingTile);
+
+				EditorUtil.DestroyViewFrustumMarker();
+				EditorTransformUtil.HideTransformGizmo();
 
 				RebuildMarkers();
 				editorController.OnMapChanged();
-				pendingAction = PendingAction.None;
-			});
+			}, colorOverride: Color.red));
 
-			if (closed && pendingAction == PendingAction.Delete)
+			// 4. Cancel
+			items.Add(new PopupItem("Cancel", colorOverride: Color.yellow));
+
+
+			// Show popup
+			bool closed = PopupMenu.Show(sp, "Delete Attachment(s)", items);
+
+			if (closed)
 				pendingAction = PendingAction.None;
 		}
 
