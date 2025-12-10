@@ -11,6 +11,9 @@ namespace ClassicTilestorm
 	{
 		public int SelectedAttachmentIndex { get; private set; } = -1;
 
+		private Vector3 clickStartPos;
+		private int clickStartTile = -1;
+
 		private int draggingTile = -1;
 		private MapAttachment[] draggedAttachments = System.Array.Empty<MapAttachment>();
 
@@ -19,16 +22,12 @@ namespace ClassicTilestorm
 		private PendingAction pendingAction = PendingAction.None;
 		private Vector2 pendingPopupScreenPos = Vector2.zero;
 
-		private Vector3 clickStartPos;
-		private int clickStartTile = -1;
-
 		private ViewPreview viewPreview;
-
-		// RMB preview control
 		private bool isControllingPreviewWithRMB = false;
-		private bool rmbDragStartedInPreview = false; // THIS FIXES THE FREEZE BUG
-
+		private bool rmbDragStartedInPreview = false;
 		private bool isMouseOverPreview = false;
+
+		private readonly AutoHidePanel sidePanel = new AutoHidePanel( collapsed: 120f, expanded: 340f, delay: 1.5f, animDur: 0.25f, defaultPos: new Vector2(0f, 40f) );
 
 		public override bool IsMouseOverGui()
 		{
@@ -58,16 +57,7 @@ namespace ClassicTilestorm
 			return panelRect.Contains(mouse);
 		}
 
-
 		public EditorControllerAttachment(EditorController controller) : base(controller) { }
-
-		private readonly AutoHidePanel sidePanel = new AutoHidePanel(
-			collapsed: 120f,
-			expanded: 340f,
-			delay: 1.5f,
-			animDur: 0.25f,
-			defaultPos: new Vector2(0f, 40f)
-		);
 
 		public override void OnEnable()
 		{
@@ -98,14 +88,10 @@ namespace ClassicTilestorm
 			rmbDragStartedInPreview = false;
 		}
 
-		//// ONLY block main camera when RMB drag actually started inside preview
-		//protected override bool ShouldUseMainCameraThisFrame()
-		//{
-		//	return !(isControllingPreviewWithRMB && rmbDragStartedInPreview);
-		//}
-
 		public override void Update()
 		{
+			IsMouseOverGui();//invoke
+
 			// TRACK WHERE RMB WAS FIRST PRESSED
 			if (Input.GetMouseButtonDown(1))
 			{
@@ -123,17 +109,21 @@ namespace ClassicTilestorm
 				isControllingPreviewWithRMB = false;
 			}
 			viewPreview.isInFocus = isMouseOverPreview;
-			viewPreview.inInUse = false;
-			if (isControllingPreviewWithRMB && viewPreview?.previewCam != null)
-			{
-				viewPreview.inInUse = true;
+			viewPreview.inInUse = isControllingPreviewWithRMB;
 
+			if (isControllingPreviewWithRMB || (!Input.GetMouseButton(1) && isMouseOverPreview))
+			{
+				if (viewPreview?.previewCam == null) return;
+
+				// Preview camera control (RMB orbit + WASD)
 				EditorCameraMovement.UpdateCamera(viewPreview.previewCam.transform);
 				SyncPreviewToSelectedView();
 				return;
 			}
-			if (!editorCamera || rmbDragStartedInPreview || ((!rmbDragStartedInPreview && IsMouseOverGui()) || IsGuiControlActive()))
-				return;
+
+			if (!editorCamera) return;
+			if (viewPreview.inInUse) return;
+			if ((!isMouseOverPreview && IsMouseOverGui()) || IsGuiControlActive()) return;
 			base.Update();
 
 			// Gizmo handling
@@ -147,13 +137,6 @@ namespace ClassicTilestorm
 
 			if (editorCamera == null || IsGuiControlActive())
 				return;
-
-			//// Preview camera control (RMB orbit + WASD)
-			//if (isControllingPreviewWithRMB && viewPreview?.previewCam != null)
-			//{
-			//	EditorCameraMovement.UpdateCamera(viewPreview.previewCam.transform);
-			//	SyncPreviewToSelectedView();
-			//}
 
 			// Tile picking
 			Vector3 mouseWorld = MapManager.ScreenToWorld(editorCamera, Input.mousePosition);
