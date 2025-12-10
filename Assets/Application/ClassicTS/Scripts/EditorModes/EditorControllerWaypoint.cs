@@ -23,10 +23,7 @@ namespace ClassicTilestorm
 		private int clickStartTile = -1;
 		private int potentialWaypointHit = -1;
 
-		private Vector2 scrollPos = Vector2.zero;
-
-		private readonly AutoHidePanel sidePanel = new(
-			collapsed: 120f, expanded: 340f, delay: 1.5f, animDur: 0.25f);
+		private readonly AutoHidePanelV2 sidePanel = new(120f, 340f, 1.5f, 0.25f);
 
 		public override bool IsMouseOverGui()
 		{
@@ -210,112 +207,52 @@ namespace ClassicTilestorm
 
 		public override void OnGui()
 		{
-			if (editorController.CurrentMode != EditorController.EditorMode.Waypoint || editorCamera == null) return;
-
-			var map = editorController?.iMapManager?.CurrentMap;
-			if (map == null) return;
-			int[] waypoints = editorController?.iMapManager.Waypoints ?? System.Array.Empty<int>();
+			if (editorController.CurrentMode != EditorController.EditorMode.Waypoint)
+				return;
 
 			sidePanel.Update();
-			Rect panel = sidePanel.GetRect();
 
-			GUI.backgroundColor = new Color(0.15f, 0.3f, 0.42f, 0.95f);
-			GUI.Box(panel, "");
-			GUI.backgroundColor = Color.white;
+			// Build ListView items
+			var wp = editorController.iMapManager.Waypoints ?? Array.Empty<int>();
+			var items = new List<ListViewItem>();
 
-			GUILayout.BeginArea(panel);
-			GUILayout.BeginVertical();
-
-			//GUILayout.Label("Waypoints", EditorStyles.boldLabel);//had to comment out because it breaks builds
-
-			if (waypoints.Length == 0)
+			for (int i = 0; i < wp.Length; i++)
 			{
-				GUILayout.FlexibleSpace();
-				GUILayout.Label("No waypoints\nLeft-click map to add",
-					new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter });
-				GUILayout.FlexibleSpace();
-			}
-			else DrawWaypointList(waypoints, panel.height);
+				int idx = i;
+				bool selected = idx == SelectedWaypointIndex;
 
-			GUILayout.EndVertical();
-			GUILayout.EndArea();
-
-			// ———————— POPUPS ————————
-			if (pendingAction == PendingAction.Add)
-				DrawAddPopup();
-
-			if (pendingAction == PendingAction.Delete)
-				DrawDeletePopup();
-		}
-
-		private GUIStyle leftButtonStyle; 
-		private void DrawWaypointList(int[] waypoints, float panelHeight)
-		{
-			if (leftButtonStyle == null)
-			{
-				leftButtonStyle = new GUIStyle(GUI.skin.button);
-				leftButtonStyle.alignment = TextAnchor.MiddleLeft;   // This is the key line
-				leftButtonStyle.padding.left = 12;                  // Optional: nice left indent
+				items.Add(new ListViewItem(
+					label: $"WP{idx:00} [{wp[i]}]",
+					onClick: () => SelectWaypoint(idx),
+					selected: selected
+				));
 			}
 
-			const float reservedBottom = 110f;
-			const float topOffset = 25f;
-			float scrollHeight = Mathf.Max(0f, panelHeight - reservedBottom);
+			sidePanel.List.SetItems(items);
 
-			Rect panelRect = sidePanel.GetRect();
-			Rect scrollRect = new Rect(0f, topOffset, panelRect.width, scrollHeight);
+			// Build dynamic Move buttons
+			sidePanel.Buttons.Clear();
 
-			float scrollBarWidth = 12f;
-			float contentWidth = scrollRect.width - scrollBarWidth;  // Critical: correct width
+			// Up button always visible
+			sidePanel.Buttons.Add(new ListViewButton(
+				"Move Up",
+				() => MoveWaypoint(SelectedWaypointIndex, -1),
+				enabled: SelectedWaypointIndex > 0
+			));
 
-			Rect contentRect = new Rect(0f, 0f, scrollRect.width - scrollBarWidth - 10, waypoints.Length * 40f);
+			// Down button always visible
+			sidePanel.Buttons.Add(new ListViewButton(
+				"Move Down",
+				() => MoveWaypoint(SelectedWaypointIndex, +1),
+				enabled: SelectedWaypointIndex >= 0 && SelectedWaypointIndex < wp.Length - 1
+			));
 
-			scrollPos = GUI.BeginScrollView(scrollRect, scrollPos, contentRect, false, true);
+			// Draw entire panel
+			sidePanel.Draw();
 
-			float y = 0f;
-			for (int i = 0; i < waypoints.Length; i++)
-			{
-				var wp = waypoints[i];
-				var vp = editorController?.iMapManager?.GetView(wp);
-				string cam = vp != null ? " [Cam]" : "";
-				string label = $"WP{i:00}{cam} [{wp}]";
-
-				GUI.backgroundColor = (i == SelectedWaypointIndex)
-					? new Color(0.3f, 0.8f, 1f, 0.9f)
-					: Color.white;
-
-				// FULL WIDTH BUTTON — starts at x=0, full content width
-				if (GUI.Button(new Rect(0f, y, contentRect.width, 36f), label, leftButtonStyle))
-					SelectWaypoint(i);
-
-				GUI.backgroundColor = Color.white;
-
-				y += 40f;
-			}
-			GUI.EndScrollView();
-
-			// Bottom buttons
-			Rect buttonsArea = new Rect(0f, scrollRect.y + scrollRect.height + 6f, 340f, reservedBottom);
-			GUILayout.BeginArea(buttonsArea);
-			GUILayout.BeginHorizontal();
-			GUILayout.FlexibleSpace();
-
-			GUI.enabled = SelectedWaypointIndex > 0;
-			if (GUILayout.Button("Move Up", GUILayout.Width(100), GUILayout.Height(30)))
-				MoveWaypoint(SelectedWaypointIndex, -1);
-
-			GUI.enabled = SelectedWaypointIndex >= 0 && SelectedWaypointIndex < waypoints.Length - 1;
-			if (GUILayout.Button("Move Down", GUILayout.Width(100), GUILayout.Height(30)))
-				MoveWaypoint(SelectedWaypointIndex, +1);
-
-			GUI.enabled = true;
-			GUILayout.FlexibleSpace();
-			GUILayout.EndHorizontal();
-
-			GUILayout.Space(4);
-			GUILayout.Label("Tip: Left-click map to add • Right-click waypoint to delete",
-				new GUIStyle(GUI.skin.label) { fontSize = 10, alignment = TextAnchor.MiddleCenter });
-			GUILayout.EndArea();
+			// Popups
+			if (pendingAction == PendingAction.Add) DrawAddPopup();
+			if (pendingAction == PendingAction.Delete) DrawDeletePopup();
 		}
 
 		private void MoveWaypoint(int index, int direction)
@@ -339,7 +276,7 @@ namespace ClassicTilestorm
 			var items = new List<PopupItem>
 			{
 				// Info line (non-clickable)
-				new PopupItem($"WP{pendingWaypoint:00} at tile {pendingTile}", null, null, spacerHeight: 0),
+				new PopupItem($"WP{editorController.iMapManager.Waypoints.Length:00} at tile {pendingTile}", null, null, spacerHeight: 0),
 
 				PopupItem.Spacer(6),
 

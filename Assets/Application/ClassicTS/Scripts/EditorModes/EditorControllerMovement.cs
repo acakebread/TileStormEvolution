@@ -24,6 +24,7 @@ namespace ClassicTilestorm
 			if (editorCamera != null && ShouldUseMainCameraThisFrame()) EditorCameraMovement.UpdateCamera(editorCamera.transform);
 		}
 
+		//public virtual void Start() { }
 		public virtual void OnEnable() { }
 		public virtual void OnDisable() { }
 		public virtual void OnGui() { }
