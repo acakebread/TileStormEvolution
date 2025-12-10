@@ -13,11 +13,10 @@ namespace ClassicTilestorm
 
 		private Vector3 mouseDownPos;
 
-		private int draggingTile = -1;
-		private MapAttachment[] draggedAttachments = System.Array.Empty<MapAttachment>();
+		private MapAttachment[] selectedAttachments = System.Array.Empty<MapAttachment>();
 
 		private int pendingTile = -1;
-		private enum PendingAction { None, Wait, Add, Delete, Select }
+		private enum PendingAction { None, Wait, Add, Delete, Select, Drag }
 		private PendingAction pendingAction = PendingAction.None;
 		private Vector2 pendingPopupScreenPos = Vector2.zero;
 
@@ -143,8 +142,6 @@ namespace ClassicTilestorm
 				supressPopup = true;
 			}
 
-			//if (AttachmentsContainsTransform(draggedAttachments)) supressPopup = true;
-
 			if (editorCamera == null || IsGuiControlActive()) return;
 
 			// Tile picking
@@ -154,27 +151,28 @@ namespace ClassicTilestorm
 			bool wasClick = Vector3.Distance(Input.mousePosition, mouseDownPos) < 8f; // slightly more forgiving than 6
 
 			// === 4. LMB: START DRAGGING EXISTING ATTACHMENTS ===
-			if (Input.GetMouseButtonDown(0))
+			if (Input.GetMouseButtonDown(0))// && pendingAction != PendingAction.Drag)
 			{
 				int hitTile = HitTile(Input.mousePosition);
-				pendingTile = hitTile;
-				var atts = GetAttachmentsOnTile(hitTile);
-
-				if (atts != null && atts.Length > 0)
+				if (null == selectedAttachments || selectedAttachments.Length < 1 || hitTile != selectedAttachments[0].tile)
 				{
-					draggingTile = hitTile;
-					draggedAttachments = atts;
+					pendingTile = hitTile;
+					var atts = GetAttachmentsOnTile(hitTile);
+					selectedAttachments = null;
 
-					if (draggedAttachments.Length > 0)
-						SelectAttachments(draggedAttachments);
+					if (atts != null && atts.Length > 0)
+					{
+						selectedAttachments = atts;
+						if (selectedAttachments.Length > 0)
+							SelectAttachments(selectedAttachments);
+					}
 				}
-				// If no attachments → draggingTile stays -1 → we'll treat it as a potential "add" click
 			}
 
 			// === 5. LMB DRAG: MOVE ATTACHMENTS ===
-			if (Input.GetMouseButton(0) && draggingTile >= 0 && tileUnderMouse >= 0 && tileUnderMouse != draggingTile)
+			if (Input.GetMouseButton(0) && tileUnderMouse >= 0 && null != selectedAttachments)
 			{
-				foreach (var att in draggedAttachments)
+				foreach (var att in selectedAttachments)
 				{
 					att.tile = tileUnderMouse;
 					if (att is View v)
@@ -185,35 +183,44 @@ namespace ClassicTilestorm
 						viewPreview.Show(v, editorController.iMapManager);
 					}
 				}
-				draggingTile = tileUnderMouse;
 				RebuildMarkers();
 			}
 
-			if (supressPopup) pendingAction = PendingAction.Wait;
+			supressPopup |= pendingAction == PendingAction.Wait;//| pendingAction == PendingAction.Drag;
 
 			// === 6. LMB UP: ADD NEW ATTACHMENT IF IT WAS A CLICK ON EMPTY TILE ===
-			if (Input.GetMouseButtonUp(0) && pendingAction == PendingAction.None)
+			if (Input.GetMouseButtonUp(0) && !supressPopup)
 			{
-				if (draggingTile == -1) // ← We didn't drag anything → it was a click
+				var attachmentCount = selectedAttachments?.Length;
+				//pendingAction = attachmentCount > 0 ? PendingAction.Select : PendingAction.Add;
+				if (attachmentCount > 0)
 				{
-					var hasAttachments = draggedAttachments?.Length > 0;
-					if (pendingTile >= 0 && !hasAttachments)
+					if (attachmentCount > 1)
 					{
-						pendingAction = PendingAction.Add;
+						pendingAction = PendingAction.Select;
 						var wp = editorController.iMapManager.TileWorldPosition(pendingTile) + Vector3.up * 0.6f;
 						var sp = editorCamera.WorldToScreenPoint(wp);
 						sp.y = Screen.height - sp.y;
 						pendingPopupScreenPos = sp;
 					}
+					else
+					{
+						pendingAction = PendingAction.None;
+						SelectAttachments(selectedAttachments);
+					}
 				}
-
-				// Always clean up
-				draggingTile = -1;
-				draggedAttachments = System.Array.Empty<MapAttachment>();
+				else
+				{
+					pendingAction = PendingAction.Add;
+					var wp = editorController.iMapManager.TileWorldPosition(pendingTile) + Vector3.up * 0.6f;
+					var sp = editorCamera.WorldToScreenPoint(wp);
+					sp.y = Screen.height - sp.y;
+					pendingPopupScreenPos = sp;
+				}
 			}
 
 			// === 7. RMB UP: DELETE IF IT WAS A SHORT CLICK (not a drag/orbit) ===
-			if (Input.GetMouseButtonUp(1) && pendingAction == PendingAction.None)
+			if (Input.GetMouseButtonUp(1) && !supressPopup)
 			{
 				if (wasClick)
 				{
@@ -255,11 +262,11 @@ namespace ClassicTilestorm
 				string extra = att is Emitter e && e.LookAt != null ? $" to {e.LookAt:F1}" : "";
 				string label = $"{att.GetType().Name} [{att.tile}]{extra}";
 
-				int index = i; // capture for closure
+				//int index = i; // capture for closure
 				sidePanel.List.AddItem(new ListViewItem(
 					label,
 					() => SelectAttachments(new MapAttachment[] { att }),
-					selected: index == SelectedAttachmentIndex
+					selected: null != selectedAttachments && selectedAttachments.Contains(att)//index == SelectedAttachmentIndex
 				));
 			}
 
@@ -292,11 +299,7 @@ namespace ClassicTilestorm
 			var map = editorController?.iMapManager?.CurrentMap;
 			if (map == null) return;
 
-			var tiles = map.attachments?
-				.Where(a => a.tile >= 0)
-				.Select(a => a.tile)
-				.Distinct()
-				.ToArray() ?? System.Array.Empty<int>();
+			var tiles = map.attachments?.Where(a => a.tile >= 0).Select(a => a.tile).Distinct().ToArray() ?? System.Array.Empty<int>();
 
 			var markerIndexTile = SelectedAttachmentIndex >= 0 && SelectedAttachmentIndex < editorController.iMapManager.CurrentMap.attachments.Length ? editorController.iMapManager.CurrentMap.attachments[SelectedAttachmentIndex].tile : -1;
 			var selection = System.Array.IndexOf(tiles, markerIndexTile);
@@ -305,7 +308,8 @@ namespace ClassicTilestorm
 
 		private void SelectAttachments(MapAttachment[] attachments)
 		{
-			var index = SelectedAttachmentIndex = System.Array.IndexOf(editorController.iMapManager.CurrentMap.attachments, attachments[0]);
+			selectedAttachments = attachments;
+			var index = SelectedAttachmentIndex = attachments?.Length > 0 ? System.Array.IndexOf(editorController.iMapManager.CurrentMap.attachments, attachments[0]) : -1;
 			RebuildMarkers();
 			EditorUtil.DestroyViewFrustumMarker();
 			EditorTransformUtil.HideTransformGizmo();
@@ -321,15 +325,6 @@ namespace ClassicTilestorm
 				EditorTransformUtil.ShowTransformGizmo(view, editorController.iMapManager, editorCamera);
 				viewPreview.Show(view, editorController.iMapManager);
 			}
-		}
-
-		private bool AttachmentsContainsTransform(MapAttachment[] attachments)
-		{
-			foreach (var att in attachments)
-			{
-				if (att is View) return true;
-			}
-			return false;
 		}
 
 		private void SyncPreviewToSelectedView()
@@ -395,7 +390,7 @@ namespace ClassicTilestorm
 				new PopupItem("View", () => AddAttachmentAtTileWithType(pendingTile, typeof(View))),
 				new PopupItem("Pickup", () => AddAttachmentAtTileWithType(pendingTile, typeof(Pickup))),
 				PopupItem.Spacer(),
-				new PopupItem("Cancel", colorOverride: Color.yellow)
+				new PopupItem("Cancel", ()=>{ SelectAttachments(null);}, colorOverride: Color.yellow)
 			};
 
 			bool closed = PopupMenu.Show(sp, "Add Attachment", items);
@@ -424,6 +419,7 @@ namespace ClassicTilestorm
 				items.Add(new PopupItem(label, () =>
 				{
 					map.RemoveAttachment(localAtt);
+					SelectAttachments(null);
 					EditorUtil.DestroyViewFrustumMarker();
 					EditorTransformUtil.HideTransformGizmo();
 					RebuildMarkers();
@@ -439,6 +435,7 @@ namespace ClassicTilestorm
 				items.Add(new PopupItem("Delete All", () =>
 				{
 					map.RemoveAllAttachmentsOnTile(pendingTile);
+					SelectAttachments(null);
 					EditorUtil.DestroyViewFrustumMarker();
 					EditorTransformUtil.HideTransformGizmo();
 					RebuildMarkers();
@@ -485,16 +482,18 @@ namespace ClassicTilestorm
 
 				items.Add(new PopupItem(label, () =>
 				{
+					pendingAction = PendingAction.Drag;
 					SelectAttachments(new MapAttachment[] { att });
 				}));
 			}
 
-			// Only show "Delete All" if more than one
+			// Only show "Select All" if more than one
 			if (atts.Length > 1)
 			{
 				items.Add(PopupItem.Spacer());
 				items.Add(new PopupItem("Select All", () =>
 				{
+					pendingAction = PendingAction.Drag;
 					SelectAttachments(atts);
 				}, colorOverride: Color.green));
 			}
@@ -504,7 +503,11 @@ namespace ClassicTilestorm
 
 			bool closed = PopupMenu.Show(sp, $"Select ({atts.Length})", items);
 			if (closed)
+			{
+				if (pendingAction != PendingAction.Drag)
+					SelectAttachments(null);
 				pendingAction = PendingAction.Wait;
+			}
 		}
 
 		private static void SnapViewDistanceToGround(View view, IMapManager mapManager)
