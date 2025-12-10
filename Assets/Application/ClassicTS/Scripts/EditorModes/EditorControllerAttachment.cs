@@ -261,7 +261,6 @@ namespace ClassicTilestorm
 				int index = i; // capture for closure
 				sidePanel.List.AddItem(new ListViewItem(
 					label,
-					//() => SelectAttachment(index),
 					() => SelectAttachments(new MapAttachment[] { att }),
 					selected: index == SelectedAttachmentIndex
 				));
