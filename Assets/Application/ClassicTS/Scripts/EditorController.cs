@@ -186,10 +186,6 @@ namespace ClassicTilestorm
 			if (new Rect(margin, leftY, buttonWidth + 20f, buttonHeight * 9 + spacing * 9).Contains(mousePos))
 				return true;
 
-			// Delegate mode-specific GUI detection to the active mode
-			if (activeMode != null)
-				return activeMode.IsMouseOverModeGui();
-
 			return false;
 		}
 

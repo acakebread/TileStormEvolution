@@ -19,7 +19,7 @@ namespace ClassicTilestorm
 		private readonly GuiUtils.AutoHidePanel sidePanel = new(collapsed: 120f, expanded: 340f, delay: 1f, animDur: 0.3f);
 		private Vector2 scrollPos = Vector2.zero;
 
-		public override bool IsMouseOverModeGui()
+		public override bool IsMouseOverGui()
 		{
 			if (editorController.CurrentMode != EditorController.EditorMode.Paint)
 				return false;

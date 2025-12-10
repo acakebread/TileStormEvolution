@@ -30,7 +30,7 @@ namespace ClassicTilestorm
 		private readonly AutoHidePanel sidePanel = new(
 			collapsed: 120f, expanded: 340f, delay: 1.5f, animDur: 0.25f);
 
-		public override bool IsMouseOverModeGui()
+		public override bool IsMouseOverGui()
 		{
 			if (editorController.CurrentMode != EditorController.EditorMode.Waypoint) return false;
 

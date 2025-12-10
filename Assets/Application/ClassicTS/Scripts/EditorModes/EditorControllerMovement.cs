@@ -8,23 +8,16 @@ namespace ClassicTilestorm
 		protected EditorController editorController;
 		protected Camera editorCamera => editorController?.editorCamera;
 
-		protected int HitTile(Vector3 mousePos) =>
-			editorController.iMapManager.CameraHitTile(editorCamera, mousePos);
+		protected int HitTile(Vector3 mousePos) => editorController.iMapManager.CameraHitTile(editorCamera, mousePos);
 
-		public virtual bool IsMouseOverModeGui() => false;
+		public virtual bool IsMouseOverGui() => editorController.IsMouseOverGui();
 
-		public EditorControllerMovement(EditorController controller = null)
-		{
-			editorController = controller;
-		}
+		public EditorControllerMovement(EditorController controller = null) => editorController = controller;
 
 		public virtual void Update()
 		{
 			// Only move main editor camera if not overridden elsewhere
-			if (editorCamera != null && ShouldUseMainCameraThisFrame())
-			{
-				EditorCameraMovement.UpdateCamera(editorCamera.transform);
-			}
+			if (editorCamera != null && ShouldUseMainCameraThisFrame()) EditorCameraMovement.UpdateCamera(editorCamera.transform);
 		}
 
 		// This will be overridden in Attachment mode to detect preview interaction
@@ -34,9 +27,6 @@ namespace ClassicTilestorm
 		public virtual void OnDisable() { }
 		public virtual void OnGui() { }
 
-		public virtual void OnApplicationFocus(bool hasFocus)
-		{
-			EditorCameraMovement.OnApplicationFocus(hasFocus);
-		}
+		public virtual void OnApplicationFocus(bool hasFocus) => EditorCameraMovement.OnApplicationFocus(hasFocus);
 	}
 }

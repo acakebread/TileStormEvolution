@@ -38,7 +38,7 @@ namespace ClassicTilestorm
 		private bool isMouseOverPreview = false;
 		private bool isPreviewFocus = false;
 
-		public override bool IsMouseOverModeGui()
+		public override bool IsMouseOverGui()
 		{
 			isMouseOverPreview = false;
 
