@@ -165,13 +165,12 @@ namespace ClassicTilestorm
 			int tileUnderMouse = editorController.iMapManager.WorldToMapIndex(snapped);
 
 			// === 5. LMB: START DRAGGING EXISTING ATTACHMENTS ===
-			if (Input.GetMouseButtonDown(0))// && pendingAction != PendingAction.Drag)
+			if (Input.GetMouseButtonDown(0))
 			{
-				int hitTile = HitTile(Input.mousePosition);
-				if (null == selectedAttachments || selectedAttachments.Length < 1 || hitTile != selectedAttachments[0].tile)
+				pendingTile = HitTile(Input.mousePosition);
+				if (-1 != pendingTile && (null == selectedAttachments || selectedAttachments.Length < 1 || pendingTile != selectedAttachments[0].tile))
 				{
-					pendingTile = hitTile;
-					var atts = GetAttachmentsOnTile(hitTile);
+					var atts = GetAttachmentsOnTile(pendingTile);
 					selectedAttachments = null;
 
 					if (atts != null && atts.Length > 0)
@@ -225,11 +224,14 @@ namespace ClassicTilestorm
 				}
 				else
 				{
-					pendingAction = PendingAction.Add;
-					var wp = editorController.iMapManager.TileWorldPosition(pendingTile) + Vector3.up * 0.6f;
-					var sp = editorCamera.WorldToScreenPoint(wp);
-					sp.y = Screen.height - sp.y;
-					pendingPopupScreenPos = sp;
+					if (-1 != pendingTile)
+					{
+						pendingAction = PendingAction.Add;
+						var wp = editorController.iMapManager.TileWorldPosition(pendingTile) + Vector3.up * 0.6f;
+						var sp = editorCamera.WorldToScreenPoint(wp);
+						sp.y = Screen.height - sp.y;
+						pendingPopupScreenPos = sp;
+					}
 				}
 			}
 
