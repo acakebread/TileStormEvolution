@@ -155,105 +155,6 @@ namespace MassiveHadronLtd
 		}
 
 		// ─────────────────────────────────────────────────────────────────────
-		// AutoHidePanel — EXACT original constructor signature restored
-		// ─────────────────────────────────────────────────────────────────────
-		public class AutoHidePanel
-		{
-			public float CurrentWidth { get; private set; }
-			public bool IsMouseOver { get; private set; }
-
-			private readonly float collapsedWidth;
-			private readonly float expandedWidth;
-			private readonly float autoHideDelay;
-			private readonly float animationDuration;
-
-			private float targetWidth;
-			private float animationVelocity;
-			private float mouseExitTime;
-
-			private Rect detectionRect = new Rect();
-			private Vector2 flippedMousePos;
-
-			public AutoHidePanel(float collapsed = 120f, float expanded = 340f, float delay = 1f, float animDur = 0.25f)
-			{
-				collapsedWidth = collapsed;
-				expandedWidth = expanded;
-				autoHideDelay = delay;
-				animationDuration = animDur;
-
-				CurrentWidth = collapsedWidth;
-				targetWidth = collapsedWidth;
-			}
-
-			public void Update(bool forceExpanded = false)
-			{
-				if (Input.GetMouseButton(0) || Input.GetMouseButton(1)) return;
-
-				bool wasOver = IsMouseOver;
-
-				float detectX = Screen.width - CurrentWidth - 10f;
-				detectionRect.x = detectX;
-				detectionRect.y = 20f;
-				detectionRect.width = CurrentWidth + 20f;
-				detectionRect.height = Screen.height - 40f;
-
-				flippedMousePos = Input.mousePosition;
-				flippedMousePos.y = Screen.height - flippedMousePos.y;
-
-				IsMouseOver = detectionRect.Contains(flippedMousePos) || forceExpanded;
-
-				if (IsMouseOver && !wasOver)
-				{
-					targetWidth = expandedWidth;
-					mouseExitTime = 0f;
-				}
-
-				if (!IsMouseOver && wasOver && mouseExitTime <= 0f)
-					mouseExitTime = Time.time;
-
-				if (!IsMouseOver && mouseExitTime > 0f && Time.time - mouseExitTime >= autoHideDelay)
-				{
-					targetWidth = collapsedWidth;
-					mouseExitTime = 0f;
-				}
-
-				CurrentWidth = Mathf.SmoothDamp(CurrentWidth, targetWidth, ref animationVelocity, animationDuration);
-			}
-
-			public Rect GetRect(float topOffset = 40f, float bottomMargin = 20f)
-			{
-				float x = Screen.width - CurrentWidth - 10f;
-				float y = topOffset;
-				float h = Screen.height - y - bottomMargin;
-				return new Rect(x, y, CurrentWidth, h);
-			}
-
-			public void DrawGUI()
-			{
-				Rect panelRect = GetRect();
-				GUILayout.BeginArea(panelRect);
-				GUILayout.BeginVertical(GUILayout.Width(panelRect.width));
-				// Your content goes here — kept as-is for compatibility
-				GUILayout.Box("Auto-Hide Panel", GUILayout.ExpandWidth(true));
-				GUILayout.Space(10);
-				if (GUILayout.Button("Test Button", GUILayout.Height(30)))
-					Debug.Log("Button clicked!");
-				for (int i = 0; i < 20; i++)
-					GUILayout.Label($"Item {i + 1}");
-				GUILayout.EndVertical();
-				GUILayout.EndArea();
-			}
-
-			public void ForceExpand()
-			{
-				targetWidth = expandedWidth;
-				mouseExitTime = 0f;
-			}
-
-			public bool IsGuiActive() => GUIUtility.hotControl != 0 || IsMouseOver;
-		}
-
-		// ─────────────────────────────────────────────────────────────────────
 		// Popup System — EXACT original signatures restored
 		// ─────────────────────────────────────────────────────────────────────
 		private static class PopupStyles
@@ -445,7 +346,7 @@ namespace MassiveHadronLtd
 
 
 
-		public class AutoHidePanelV2
+		public class AutoHidePanel
 		{
 			public float CurrentWidth { get; private set; }
 			public bool IsMouseOver { get; private set; }
@@ -461,9 +362,10 @@ namespace MassiveHadronLtd
 			public ListView List { get; private set; } = new();
 			public List<ListViewButton> Buttons { get; private set; } = new();
 
+			private string footnote;
 			public Vector2 DefaultPosition { get; private set; } = new(0f, 40f);
 
-			public AutoHidePanelV2(float collapsed, float expanded, float delay, float animDur, Vector2? defaultPos = null)
+			public AutoHidePanel(float collapsed, float expanded, float delay, float animDur, Vector2? defaultPos = null)
 			{
 				collapsedWidth = collapsed;
 				expandedWidth = expanded;
@@ -510,17 +412,31 @@ namespace MassiveHadronLtd
 				);
 			}
 
+			public void SetFootnote(string text)
+			{
+				footnote = text;
+			}
+
 			public void Draw()
 			{
 				Rect panel = GetPanelRect();
 				GUI.Box(panel, GUIContent.none);
 
-				// Draw ListView
-				float buttonRowHeight = 40f; // reserve space for static buttons
-				Rect listRect = new Rect(panel.x, panel.y, panel.width, panel.height - buttonRowHeight - 6f);
+				// Reserve space for buttons + optional footnote
+				float buttonRowHeight = Buttons.Count > 0 ? 40f : 0f;
+				float footnoteHeight = !string.IsNullOrEmpty(footnote) ? 28f : 0f;
+
+				Rect listRect = new Rect(
+					panel.x,
+					panel.y,
+					panel.width,
+					panel.height - buttonRowHeight - 6f - footnoteHeight
+				);
+
+				// Draw the ListView
 				List.Draw(listRect);
 
-				// Draw static buttons at bottom
+				// Draw buttons at bottom
 				float y = panel.y + listRect.height + 4f;
 				Rect btnRect = new Rect(panel.x + 6f, y, panel.width - 12f, 36f);
 
@@ -533,7 +449,7 @@ namespace MassiveHadronLtd
 					var oldColor = GUI.color;
 					if (btn.ColorOverride.HasValue) GUI.color = btn.ColorOverride.Value;
 
-					GUI.enabled = btn.Enabled; // <-- enable/disable dynamically
+					GUI.enabled = btn.Enabled;
 					if (GUILayout.Button(btn.Label, GUILayout.Width(100), GUILayout.Height(30)))
 						btn.OnClick?.Invoke();
 					GUI.enabled = true;
@@ -544,12 +460,27 @@ namespace MassiveHadronLtd
 				GUILayout.FlexibleSpace();
 				GUILayout.EndHorizontal();
 				GUILayout.EndArea();
+
+				// Draw footnote below buttons
+				if (!string.IsNullOrEmpty(footnote))
+				{
+					Rect footRect = new Rect(panel.x + 6f, panel.y + panel.height - footnoteHeight - 4f, panel.width - 12f, footnoteHeight);
+					GUI.Label(footRect, footnote, new GUIStyle(GUI.skin.label)
+					{
+						alignment = TextAnchor.MiddleCenter,
+						fontSize = 10
+					});
+				}
 			}
 
+			public void ForceExpand()
+			{
+				targetWidth = expandedWidth;
+				exitTime = 0;
+			}
+
+			public bool IsGuiActive() => GUIUtility.hotControl != 0 || IsMouseOver;
 		}
-
-
-
 
 
 

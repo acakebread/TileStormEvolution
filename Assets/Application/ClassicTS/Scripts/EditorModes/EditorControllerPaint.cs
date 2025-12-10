@@ -13,7 +13,7 @@ namespace ClassicTilestorm
 		private List<string> definitionCycleList = new();
 		private int cycleIndex = 0;
 
-		private readonly AutoHidePanelV2 sidePanel = new(collapsed: 120f, expanded: 340f, delay: 1f, animDur: 0.3f);
+		private readonly AutoHidePanel sidePanel = new(collapsed: 120f, expanded: 340f, delay: 1f, animDur: 0.3f);
 
 		private GUIStyle leftButtonStyle;
 

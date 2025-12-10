@@ -57,7 +57,7 @@ namespace ClassicTilestorm
 
 		public EditorControllerAttachment(EditorController controller) : base(controller) { }
 
-		private readonly AutoHidePanelV2 sidePanel = new AutoHidePanelV2(
+		private readonly AutoHidePanel sidePanel = new AutoHidePanel(
 			collapsed: 120f,
 			expanded: 340f,
 			delay: 1.5f,
@@ -88,51 +88,36 @@ namespace ClassicTilestorm
 
 			sidePanel.Update();
 
-			// Draw panel background
-			Rect panelRect = sidePanel.GetPanelRect();
-			GUI.backgroundColor = new Color(0.15f, 0.3f, 0.42f, 0.95f);
-			GUI.Box(panelRect, "");
-			GUI.backgroundColor = Color.white;
-
-			GUILayout.BeginArea(panelRect);
-			GUILayout.BeginVertical();
-
-			// Populate ListView with attachments
+			// Clear previous list
 			sidePanel.List.Clear();
-			var attachments = map.attachments ?? System.Array.Empty<MapAttachment>();
 
-			foreach (var att in attachments)
+			// Populate ListView
+			var attachments = map.attachments ?? System.Array.Empty<MapAttachment>();
+			for (int i = 0; i < attachments.Length; i++)
 			{
+				var att = attachments[i];
 				string extra = att is Emitter e && e.LookAt != null ? $" to {e.LookAt:F1}" : "";
 				string label = $"{att.GetType().Name} [{att.tile}]{extra}";
 
-				// Create a ListViewItem and add it
+				int index = i; // capture for closure
 				sidePanel.List.AddItem(new ListViewItem(
-					label, // label text
-					() =>
-					{
-						int index = System.Array.IndexOf(map.attachments, att);
-						SelectAttachment(index);
-					},
-					selected: System.Array.IndexOf(map.attachments, att) == SelectedAttachmentIndex // selected state
+					label,
+					() => SelectAttachment(index),
+					selected: index == SelectedAttachmentIndex
 				));
 			}
 
-			// Draw the ListView
-			sidePanel.List.Draw(new Rect(0, 0, panelRect.width, panelRect.height - 40f));
+			// Optional footnote
+			sidePanel.SetFootnote("Hold RMB on preview to orbit • Scroll to zoom • LMB: place/move • RMB on tile: delete");
 
-			// Draw footer text
-			GUILayout.FlexibleSpace();
-			GUILayout.Label("Hold RMB on preview to orbit • Scroll to zoom\nLMB: place/move • RMB on tile: delete",
-				new GUIStyle(GUI.skin.label) { fontSize = 10, alignment = TextAnchor.MiddleCenter });
-
-			GUILayout.EndVertical();
-			GUILayout.EndArea();
+			// Draw the panel
+			sidePanel.Draw();
 
 			// Draw popups
 			if (pendingAction == PendingAction.Add) DrawAddPopup();
 			if (pendingAction == PendingAction.Delete) DrawDeletePopup();
 		}
+
 
 
 		public override void OnDisable()

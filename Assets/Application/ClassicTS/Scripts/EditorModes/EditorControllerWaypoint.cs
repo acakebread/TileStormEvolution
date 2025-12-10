@@ -23,7 +23,7 @@ namespace ClassicTilestorm
 		private int clickStartTile = -1;
 		private int potentialWaypointHit = -1;
 
-		private readonly AutoHidePanelV2 sidePanel = new(120f, 340f, 1.5f, 0.25f);
+		private readonly AutoHidePanel sidePanel = new(120f, 340f, 1.5f, 0.25f);
 
 		public override bool IsMouseOverGui()
 		{
