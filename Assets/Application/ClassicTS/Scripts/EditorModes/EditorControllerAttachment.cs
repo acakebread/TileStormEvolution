@@ -381,38 +381,15 @@ namespace ClassicTilestorm
 
 			var items = new List<PopupItem>
 			{
-				new PopupItem("Emitter", () =>
-				{
-					AddAttachmentAtTileWithType(pendingTile, typeof(Emitter));
-					editorController.OnMapChanged();
-					RebuildMarkers();
-				}),
-
-				new PopupItem("View", () =>
-				{
-					AddAttachmentAtTileWithType(pendingTile, typeof(View));
-					editorController.OnMapChanged();
-					RebuildMarkers();
-				}),
-
-
-				new PopupItem("Pickup", () =>
-				{
-					AddAttachmentAtTileWithType(pendingTile, typeof(Pickup));
-					editorController.OnMapChanged();
-					RebuildMarkers();
-				}),
-
+				new PopupItem("Emitter", () => AddAttachmentAtTileWithType(pendingTile, typeof(Emitter))),
+				new PopupItem("View", () => AddAttachmentAtTileWithType(pendingTile, typeof(View))),
+				new PopupItem("Pickup", () => AddAttachmentAtTileWithType(pendingTile, typeof(Pickup))),
 				PopupItem.Spacer(),
-
-				// no null needed
 				new PopupItem("Cancel", colorOverride: Color.yellow)
 			};
 
 			bool closed = PopupMenu.Show(sp, "Add Attachment", items);
-
-			if (closed)
-				pendingAction = PendingAction.Wait;
+			if (closed) pendingAction = PendingAction.Wait;
 		}
 
 		private void DrawDeletePopup()
@@ -429,12 +406,11 @@ namespace ClassicTilestorm
 
 			var items = new List<PopupItem>();
 
-			// 1. Individual delete items
+			// Individual delete buttons
 			foreach (var att in attsOnTile)
 			{
 				string label = $"Delete {att.GetType().Name}";
-				var localAtt = att; // capture for action
-
+				var localAtt = att;
 				items.Add(new PopupItem(label, () =>
 				{
 					map.RemoveAttachment(localAtt);
@@ -443,30 +419,25 @@ namespace ClassicTilestorm
 				}));
 			}
 
-			// 2. Spacer
-			items.Add(PopupItem.Spacer());
-
-			// 3. Delete All button
-			items.Add(new PopupItem("Delete All", () =>
+			// Only show "Delete All" if more than one
+			if (attsOnTile.Length > 1)
 			{
-				map.RemoveAllAttachmentsOnTile(pendingTile);
+				items.Add(PopupItem.Spacer());
+				items.Add(new PopupItem("Delete All", () =>
+				{
+					map.RemoveAllAttachmentsOnTile(pendingTile);
+					EditorUtil.DestroyViewFrustumMarker();
+					EditorTransformUtil.HideTransformGizmo();
+					RebuildMarkers();
+					editorController.OnMapChanged();
+				}, colorOverride: Color.red));
+			}
 
-				EditorUtil.DestroyViewFrustumMarker();
-				EditorTransformUtil.HideTransformGizmo();
-
-				RebuildMarkers();
-				editorController.OnMapChanged();
-			}, colorOverride: Color.red));
-
-			// 4. Cancel
+			items.Add(PopupItem.Spacer());
 			items.Add(new PopupItem("Cancel", colorOverride: Color.yellow));
 
-
-			// Show popup
 			bool closed = PopupMenu.Show(sp, "Delete Attachment(s)", items);
-
-			if (closed)
-				pendingAction = PendingAction.Wait;
+			if (closed) pendingAction = PendingAction.Wait;
 		}
 
 		public static void SnapViewDistanceToGround(View view, IMapManager mapManager)
