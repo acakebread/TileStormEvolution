@@ -280,6 +280,10 @@ namespace ClassicTilestorm
 			RebuildMarkers();
 			EditorUtil.DestroyViewFrustumMarker();
 			EditorTransformUtil.HideTransformGizmo();
+			viewPreview.Hide();
+			isControllingPreviewWithRMB = false;
+			rmbDragStartedInPreview = false;
+			isMouseOverPreview = false;
 		}
 
 		private void RebuildMarkers()
@@ -329,7 +333,6 @@ namespace ClassicTilestorm
 				Vector3 wp = viewPreview.previewCam.transform.position;
 				view.Position = wp - editorController.iMapManager.TileWorldPosition(view.tile);
 				view.Rotation = viewPreview.previewCam.transform.rotation;
-
 				EditorUtil.UpdateViewFrustumMarker(view, editorController.iMapManager);
 				EditorTransformUtil.UpdateTransformGizmoVisuals(editorCamera);
 			}

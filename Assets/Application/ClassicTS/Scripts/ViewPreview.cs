@@ -144,7 +144,7 @@ namespace ClassicTilestorm
 			previewCam.transform.position = worldPos;
 			previewCam.transform.rotation = currentView.Rotation;
 
-			previewCam.fieldOfView = View.FOV;
+			previewCam.fieldOfView = currentView.FOV;
 
 			previewCam.nearClipPlane = 0.1f;
 			previewCam.farClipPlane = 999;
@@ -161,7 +161,7 @@ namespace ClassicTilestorm
 
 			previewRect = new Rect(
 				MARGIN,
-				Screen.height - PREVIEW_HEIGHT - MARGIN * 2,
+				Screen.height - PREVIEW_HEIGHT - MARGIN,
 				previewWidth,
 				PREVIEW_HEIGHT
 			);

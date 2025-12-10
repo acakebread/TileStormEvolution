@@ -17,12 +17,13 @@ namespace ClassicTilestorm
 		[JsonIgnore] public Quaternion Rotation { get => Squatrix.GetRotation(data); set => Rebuild(rotation: value); }
 		[JsonIgnore] public float Distance { get => Squatrix.GetDistance(data); set => Rebuild(distance: value); }
 		[JsonIgnore] public Vector3 LookAt { get => Squatrix.GetLookAt(data); set => Rebuild(lookAt: value); }
+		[JsonIgnore] public float FOV { get => DEFAULT_FOV; set { Debug.Log("ToDo set View::FOV"); } }
 
 		[JsonIgnore] public Vector3 VSrc { get => Position; set => Rebuild(position: value); }
 		[JsonIgnore] public Vector3 VDst { get => LookAt; set => Rebuild(lookAt: value); }
 
 		public const float MAX_DISTANCE = 64f;
-		public const float FOV = 20f;//ToDo make View.FOV dynamic property
+		public const float DEFAULT_FOV = 20f;//ToDo make View.FOV dynamic property
 
 		private void Rebuild(
 			Vector3? position = null,
