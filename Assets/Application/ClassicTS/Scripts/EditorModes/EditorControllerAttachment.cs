@@ -372,7 +372,6 @@ namespace ClassicTilestorm
 				EditorTransformUtil.ShowTransformGizmo(view, editorController.iMapManager, editorCamera);
 				viewPreview.Show(view, editorController.iMapManager);
 			}
-			//SelectAttachment(System.Array.IndexOf(map.attachments, newAtt));
 			SelectAttachments(new MapAttachment[] { newAtt });
 		}
 
