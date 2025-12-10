@@ -31,8 +31,8 @@ namespace ClassicTilestorm
 
 		public override void Update()
 		{
+			if (!editorCamera || IsMouseOverGui() || IsGuiControlActive()) return;
 			base.Update();
-			if (!editorCamera || IsGuiControlActive()) return;
 
 			if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1))
 				mouseDownPos = Input.mousePosition;
@@ -98,7 +98,7 @@ namespace ClassicTilestorm
 				EditorUtil.HideGhostTile();
 		}
 
-		public override void OnGui()
+		public override void OnGUI()
 		{
 			if (editorController.CurrentMode != EditorController.EditorMode.Paint || editorCamera == null) return;
 

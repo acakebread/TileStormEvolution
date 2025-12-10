@@ -426,14 +426,14 @@ namespace MassiveHadronLtd
 				float buttonRowHeight = Buttons.Count > 0 ? 40f : 0f;
 				float footnoteHeight = !string.IsNullOrEmpty(footnote) ? 28f : 0f;
 
+				// Draw the ListView
 				Rect listRect = new Rect(
-					panel.x,
+					panel.x + 6f,                  // move 6 pixels right
 					panel.y,
-					panel.width,
+					panel.width - 6f,              // shrink width by 6 so it fits
 					panel.height - buttonRowHeight - 6f - footnoteHeight
 				);
 
-				// Draw the ListView
 				List.Draw(listRect);
 
 				// Draw buttons at bottom

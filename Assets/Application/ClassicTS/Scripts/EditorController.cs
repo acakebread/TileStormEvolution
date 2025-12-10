@@ -141,7 +141,7 @@ namespace ClassicTilestorm
 		private void OnGUI()
 		{
 			DrawMainUI(CurrentMode.ToString(), gridEnabled);
-			activeMode?.OnGui();
+			activeMode?.OnGUI();
 		}
 
 		public void OnApplicationFocus(bool hasFocus) => activeMode?.OnApplicationFocus(hasFocus);

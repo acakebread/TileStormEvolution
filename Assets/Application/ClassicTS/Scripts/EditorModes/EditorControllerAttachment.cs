@@ -28,11 +28,12 @@ namespace ClassicTilestorm
 		private bool isControllingPreviewWithRMB = false;
 		private bool rmbDragStartedInPreview = false; // THIS FIXES THE FREEZE BUG
 
-		//private bool isMouseOverPreview = false;
+		private bool isMouseOverPreview = false;
 
 		public override bool IsMouseOverGui()
 		{
 			// Check preview first
+			isMouseOverPreview = false;
 			if (viewPreview != null && viewPreview.gameObject.activeSelf && viewPreview.previewRect is Rect r && r.width > 0)
 			{
 				Rect hitRect = new Rect(r.x - 8, r.y - 8, r.width + 16, r.height + 16);
@@ -40,7 +41,10 @@ namespace ClassicTilestorm
 				mp.y = Screen.height - mp.y;
 
 				if (hitRect.Contains(mp))
+				{
+					isMouseOverPreview = true;
 					return true; // block main camera scroll AND mouse wheel
+				}
 			}
 
 			// Only relevant in Attachment mode
@@ -79,47 +83,6 @@ namespace ClassicTilestorm
 			sidePanel.List.Clear(); // clear old items
 		}
 
-		public override void OnGui()
-		{
-			if (editorController.CurrentMode != EditorMode.Attachment || editorCamera == null) return;
-
-			var map = editorController?.iMapManager?.CurrentMap;
-			if (map == null) return;
-
-			sidePanel.Update();
-
-			// Clear previous list
-			sidePanel.List.Clear();
-
-			// Populate ListView
-			var attachments = map.attachments ?? System.Array.Empty<MapAttachment>();
-			for (int i = 0; i < attachments.Length; i++)
-			{
-				var att = attachments[i];
-				string extra = att is Emitter e && e.LookAt != null ? $" to {e.LookAt:F1}" : "";
-				string label = $"{att.GetType().Name} [{att.tile}]{extra}";
-
-				int index = i; // capture for closure
-				sidePanel.List.AddItem(new ListViewItem(
-					label,
-					() => SelectAttachment(index),
-					selected: index == SelectedAttachmentIndex
-				));
-			}
-
-			// Optional footnote
-			sidePanel.SetFootnote("Hold RMB on preview to orbit • Scroll to zoom • LMB: place/move • RMB on tile: delete");
-
-			// Draw the panel
-			sidePanel.Draw();
-
-			// Draw popups
-			if (pendingAction == PendingAction.Add) DrawAddPopup();
-			if (pendingAction == PendingAction.Delete) DrawDeletePopup();
-		}
-
-
-
 		public override void OnDisable()
 		{
 			base.OnDisable();
@@ -135,59 +98,43 @@ namespace ClassicTilestorm
 			rmbDragStartedInPreview = false;
 		}
 
-		public void OnMapChanged()
-		{
-			if (editorController.CurrentMode != EditorMode.Attachment) return;
-			RebuildMarkers();
-			EditorUtil.DestroyViewFrustumMarker();
-			EditorTransformUtil.HideTransformGizmo();
-		}
-
-		private void RebuildMarkers()
-		{
-			var map = editorController?.iMapManager?.CurrentMap;
-			if (map == null) return;
-
-			var tiles = map.attachments?
-				.Where(a => a.tile >= 0)
-				.Select(a => a.tile)
-				.Distinct()
-				.ToArray() ?? System.Array.Empty<int>();
-
-			EditorUtil.UpdateMapMarkers(editorController.iMapManager, tiles, SelectedAttachmentIndex, EditorUtil.MarkerType.Attachment);
-		}
-
-		private void SelectAttachment(int index)
-		{
-			SelectedAttachmentIndex = index;
-			RebuildMarkers();
-			EditorUtil.DestroyViewFrustumMarker();
-			EditorTransformUtil.HideTransformGizmo();
-			viewPreview.Hide();
-
-			var map = editorController?.iMapManager?.CurrentMap;
-			if (map?.attachments == null || index < 0 || index >= map.attachments.Length) return;
-
-			if (map.attachments[index] is View view)
-			{
-				SnapViewDistanceToGround(view, editorController.iMapManager);
-				EditorUtil.UpdateViewFrustumMarker(view, editorController.iMapManager);
-				EditorTransformUtil.ShowTransformGizmo(view, editorController.iMapManager, editorCamera);
-				viewPreview.Show(view, editorController.iMapManager);
-			}
-		}
-
-		// ONLY block main camera when RMB drag actually started inside preview
-		protected override bool ShouldUseMainCameraThisFrame()
-		{
-			return !(isControllingPreviewWithRMB && rmbDragStartedInPreview);
-		}
+		//// ONLY block main camera when RMB drag actually started inside preview
+		//protected override bool ShouldUseMainCameraThisFrame()
+		//{
+		//	return !(isControllingPreviewWithRMB && rmbDragStartedInPreview);
+		//}
 
 		public override void Update()
 		{
-			// Main camera movement (includes mouse wheel zoom)
-			if (ShouldUseMainCameraThisFrame())
-				base.Update();
+			// TRACK WHERE RMB WAS FIRST PRESSED
+			if (Input.GetMouseButtonDown(1))
+			{
+				rmbDragStartedInPreview = isMouseOverPreview;
+			}
+
+			// ACTIVATE PREVIEW CONTROL ONLY IF DRAG STARTED INSIDE
+			if (rmbDragStartedInPreview && Input.GetMouseButton(1))
+			{
+				isControllingPreviewWithRMB = true;
+			}
+
+			if (Input.GetMouseButtonUp(1))
+			{
+				isControllingPreviewWithRMB = false;
+			}
+			viewPreview.isInFocus = isMouseOverPreview;
+			viewPreview.inInUse = false;
+			if (isControllingPreviewWithRMB && viewPreview?.previewCam != null)
+			{
+				viewPreview.inInUse = true;
+
+				EditorCameraMovement.UpdateCamera(viewPreview.previewCam.transform);
+				SyncPreviewToSelectedView();
+				return;
+			}
+			if (!editorCamera || rmbDragStartedInPreview || ((!rmbDragStartedInPreview && IsMouseOverGui()) || IsGuiControlActive()))
+				return;
+			base.Update();
 
 			// Gizmo handling
 			if (EditorTransformUtil.HandleTransformGizmoInput(editorCamera))
@@ -201,12 +148,12 @@ namespace ClassicTilestorm
 			if (editorCamera == null || IsGuiControlActive())
 				return;
 
-			// Preview camera control (RMB orbit + WASD)
-			if (isControllingPreviewWithRMB && viewPreview?.previewCam != null)
-			{
-				EditorCameraMovement.UpdateCamera(viewPreview.previewCam.transform);
-				SyncPreviewToSelectedView();
-			}
+			//// Preview camera control (RMB orbit + WASD)
+			//if (isControllingPreviewWithRMB && viewPreview?.previewCam != null)
+			//{
+			//	EditorCameraMovement.UpdateCamera(viewPreview.previewCam.transform);
+			//	SyncPreviewToSelectedView();
+			//}
 
 			// Tile picking
 			Vector3 mouseWorld = MapManager.ScreenToWorld(editorCamera, Input.mousePosition);
@@ -291,6 +238,88 @@ namespace ClassicTilestorm
 				}
 			}
 		}
+
+		public override void OnGUI()
+		{
+			if (editorController.CurrentMode != EditorMode.Attachment || editorCamera == null) return;
+
+			var map = editorController?.iMapManager?.CurrentMap;
+			if (map == null) return;
+
+			sidePanel.Update();
+
+			// Clear previous list
+			sidePanel.List.Clear();
+
+			// Populate ListView
+			var attachments = map.attachments ?? System.Array.Empty<MapAttachment>();
+			for (int i = 0; i < attachments.Length; i++)
+			{
+				var att = attachments[i];
+				string extra = att is Emitter e && e.LookAt != null ? $" to {e.LookAt:F1}" : "";
+				string label = $"{att.GetType().Name} [{att.tile}]{extra}";
+
+				int index = i; // capture for closure
+				sidePanel.List.AddItem(new ListViewItem(
+					label,
+					() => SelectAttachment(index),
+					selected: index == SelectedAttachmentIndex
+				));
+			}
+
+			// Optional footnote
+			sidePanel.SetFootnote("Hold RMB on preview to orbit • Scroll to zoom • LMB: place/move • RMB on tile: delete");
+
+			// Draw the panel
+			sidePanel.Draw();
+
+			// Draw popups
+			if (pendingAction == PendingAction.Add) DrawAddPopup();
+			if (pendingAction == PendingAction.Delete) DrawDeletePopup();
+		}
+
+		public void OnMapChanged()
+		{
+			if (editorController.CurrentMode != EditorMode.Attachment) return;
+			RebuildMarkers();
+			EditorUtil.DestroyViewFrustumMarker();
+			EditorTransformUtil.HideTransformGizmo();
+		}
+
+		private void RebuildMarkers()
+		{
+			var map = editorController?.iMapManager?.CurrentMap;
+			if (map == null) return;
+
+			var tiles = map.attachments?
+				.Where(a => a.tile >= 0)
+				.Select(a => a.tile)
+				.Distinct()
+				.ToArray() ?? System.Array.Empty<int>();
+
+			EditorUtil.UpdateMapMarkers(editorController.iMapManager, tiles, SelectedAttachmentIndex, EditorUtil.MarkerType.Attachment);
+		}
+
+		private void SelectAttachment(int index)
+		{
+			SelectedAttachmentIndex = index;
+			RebuildMarkers();
+			EditorUtil.DestroyViewFrustumMarker();
+			EditorTransformUtil.HideTransformGizmo();
+			viewPreview.Hide();
+
+			var map = editorController?.iMapManager?.CurrentMap;
+			if (map?.attachments == null || index < 0 || index >= map.attachments.Length) return;
+
+			if (map.attachments[index] is View view)
+			{
+				SnapViewDistanceToGround(view, editorController.iMapManager);
+				EditorUtil.UpdateViewFrustumMarker(view, editorController.iMapManager);
+				EditorTransformUtil.ShowTransformGizmo(view, editorController.iMapManager, editorCamera);
+				viewPreview.Show(view, editorController.iMapManager);
+			}
+		}
+
 
 		private void SyncPreviewToSelectedView()
 		{

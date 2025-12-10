@@ -104,10 +104,8 @@ namespace ClassicTilestorm
 
 		public override void Update()
 		{
+			if (!editorCamera || IsMouseOverGui() || IsGuiControlActive()) return;
 			base.Update();
-
-			if (editorCamera == null || IsGuiControlActive())
-				return;
 
 			var worldPos = MapManager.ScreenToWorld(editorCamera, Input.mousePosition);
 			var snapped = editorController.iMapManager.SnappedMapPosition(worldPos);
@@ -207,7 +205,7 @@ namespace ClassicTilestorm
 			return null != map && null != map.waypoints && map.waypoints.Contains(tileIndex) ? Array.IndexOf(map.waypoints, tileIndex) : -1;
 		}
 
-		public override void OnGui()
+		public override void OnGUI()
 		{
 			if (editorController.CurrentMode != EditorController.EditorMode.Waypoint)
 				return;

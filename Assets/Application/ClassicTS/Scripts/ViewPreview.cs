@@ -32,7 +32,10 @@ namespace ClassicTilestorm
 		public Camera previewCam;
 		private GameObject camGO;
 		private RenderTexture renderTexture;
-		public Rect previewRect { get; private set; }  // Add this getter
+		public Rect previewRect { get; private set; }
+		public bool inInUse = false;
+		public bool isInFocus = false;
+
 
 		private const float PREVIEW_HEIGHT = 200f;
 		private const float MARGIN = 10f;
@@ -166,6 +169,33 @@ namespace ClassicTilestorm
 			GUI.Box(new Rect(previewRect.x - 2, previewRect.y - 2, previewRect.width + 4, previewRect.height + 4), "");
 			GUI.DrawTexture(previewRect, renderTexture, ScaleMode.StretchToFill, false);
 			GUI.Label(new Rect(previewRect.x + 8, previewRect.y + 8, previewRect.width - 16, 20), "Camera Preview");
+
+			// Visual feedback
+			if (inInUse || isInFocus)
+			{
+				Color border = inInUse
+					? new Color(0.3f, 0.9f, 1f, 1f)
+					: new Color(0.7f, 0.9f, 1f, 0.7f);
+				float t = inInUse ? 3.5f : 1.8f;
+
+				var hitRect = previewRect;
+
+				GUI.color = border;
+				GUI.DrawTexture(new Rect(hitRect.x - t, hitRect.y - t, hitRect.width + t * 2, t), Texture2D.whiteTexture);
+				GUI.DrawTexture(new Rect(hitRect.x - t, hitRect.yMax, hitRect.width + t * 2, t), Texture2D.whiteTexture);
+				GUI.DrawTexture(new Rect(hitRect.x - t, hitRect.y, t, hitRect.height), Texture2D.whiteTexture);
+				GUI.DrawTexture(new Rect(hitRect.xMax, hitRect.y, t, hitRect.height), Texture2D.whiteTexture);
+				GUI.color = Color.white;
+
+				if (inInUse)
+				{
+					GUI.color = Color.black;
+					GUI.Label(new Rect(hitRect.xMax - 179, hitRect.y - 29, 170, 22), " Preview Active");
+					GUI.color = new Color(0.3f, 0.9f, 1f);
+					GUI.Label(new Rect(hitRect.xMax - 180, hitRect.y - 30, 170, 22), " Preview Active");
+					GUI.color = Color.white;
+				}
+			}
 		}
 
 		private void OnDestroy()
