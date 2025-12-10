@@ -11,14 +11,13 @@ namespace ClassicTilestorm
 	{
 		public int SelectedAttachmentIndex { get; private set; } = -1;
 
-		private Vector3 clickStartPos;
-		private int clickStartTile = -1;
+		private Vector3 mouseDownPos;
 
 		private int draggingTile = -1;
 		private MapAttachment[] draggedAttachments = System.Array.Empty<MapAttachment>();
 
 		private int pendingTile = -1;
-		private enum PendingAction { None, Add, Delete }
+		private enum PendingAction { None, Wait, Add, Delete }
 		private PendingAction pendingAction = PendingAction.None;
 		private Vector2 pendingPopupScreenPos = Vector2.zero;
 
@@ -90,15 +89,20 @@ namespace ClassicTilestorm
 
 		public override void Update()
 		{
-			IsMouseOverGui();//invoke
+			IsMouseOverGui();
 
-			// TRACK WHERE RMB WAS FIRST PRESSED
+			// === 1. TRACK MOUSE DOWN POSITION FOR BOTH BUTTONS ===
+			if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1))
+			{
+				mouseDownPos = Input.mousePosition;
+			}
+
+			// === 2. PREVIEW CAMERA CONTROL (RMB orbit in preview window) ===
 			if (Input.GetMouseButtonDown(1))
 			{
 				rmbDragStartedInPreview = isMouseOverPreview;
 			}
 
-			// ACTIVATE PREVIEW CONTROL ONLY IF DRAG STARTED INSIDE
 			if (rmbDragStartedInPreview && Input.GetMouseButton(1))
 			{
 				isControllingPreviewWithRMB = true;
@@ -107,23 +111,26 @@ namespace ClassicTilestorm
 			if (Input.GetMouseButtonUp(1))
 			{
 				isControllingPreviewWithRMB = false;
+				rmbDragStartedInPreview = false; // reset for next time
 			}
+
 			viewPreview.isInFocus = isMouseOverPreview;
 			viewPreview.inInUse = isControllingPreviewWithRMB;
 
 			if (isControllingPreviewWithRMB || (!Input.GetMouseButton(1) && isMouseOverPreview))
 			{
-				if (viewPreview?.previewCam == null) return;
-
-				// Preview camera control (RMB orbit + WASD)
-				EditorCameraMovement.UpdateCamera(viewPreview.previewCam.transform);
-				SyncPreviewToSelectedView();
+				if (viewPreview?.previewCam != null)
+				{
+					EditorCameraMovement.UpdateCamera(viewPreview.previewCam.transform);
+					SyncPreviewToSelectedView();
+				}
 				return;
 			}
 
-			if (!editorCamera) return;
-			if (viewPreview.inInUse) return;
-			if ((!isMouseOverPreview && IsMouseOverGui()) || IsGuiControlActive()) return;
+			// === 3. NORMAL EDITOR INPUT ===
+			if (!editorCamera || viewPreview.inInUse || IsMouseOverGui() || IsGuiControlActive())
+				return;
+
 			base.Update();
 
 			// Gizmo handling
@@ -135,34 +142,31 @@ namespace ClassicTilestorm
 				}
 			}
 
-			if (editorCamera == null || IsGuiControlActive())
-				return;
+			if (editorCamera == null || IsGuiControlActive()) return;
 
 			// Tile picking
 			Vector3 mouseWorld = MapManager.ScreenToWorld(editorCamera, Input.mousePosition);
 			Vector3 snapped = editorController.iMapManager.SnappedMapPosition(mouseWorld);
 			int tileUnderMouse = editorController.iMapManager.WorldToMapIndex(snapped);
 
-			// LMB down
+			// === 4. LMB: START DRAGGING EXISTING ATTACHMENTS ===
 			if (Input.GetMouseButtonDown(0))
 			{
-				clickStartPos = Input.mousePosition;
-				clickStartTile = tileUnderMouse;
-
 				int hitTile = HitTile(Input.mousePosition);
 				var atts = GetAttachmentsOnTile(hitTile);
-				if (atts != null)
+
+				if (atts != null && atts.Length > 0)
 				{
 					draggingTile = hitTile;
-					draggedAttachments = editorController.iMapManager.CurrentMap.attachments
-						.Where(x => x.tile == hitTile).ToArray();
+					draggedAttachments = atts;
 
 					if (draggedAttachments.Length > 0)
 						SelectAttachment(System.Array.IndexOf(editorController.iMapManager.CurrentMap.attachments, draggedAttachments[0]));
 				}
+				// If no attachments → draggingTile stays -1 → we'll treat it as a potential "add" click
 			}
 
-			// LMB drag
+			// === 5. LMB DRAG: MOVE ATTACHMENTS ===
 			if (Input.GetMouseButton(0) && draggingTile >= 0 && tileUnderMouse >= 0 && tileUnderMouse != draggingTile)
 			{
 				bool moved = false;
@@ -188,38 +192,50 @@ namespace ClassicTilestorm
 				}
 			}
 
-			// LMB up — add new
-			if (Input.GetMouseButtonUp(0))
+			// === 6. LMB UP: ADD NEW ATTACHMENT IF IT WAS A CLICK ON EMPTY TILE ===
+			if (Input.GetMouseButtonUp(0) && pendingAction == PendingAction.None)
 			{
-				bool wasClick = Vector3.Distance(Input.mousePosition, clickStartPos) < 6f;
-				if (wasClick && clickStartTile >= 0 && GetAttachmentsOnTile(HitTile(Input.mousePosition)) == null)
+				if (draggingTile == -1) // ← We didn't drag anything → it was a click
 				{
-					pendingTile = clickStartTile;
-					pendingAction = PendingAction.Add;
-					var wp = editorController.iMapManager.TileWorldPosition(clickStartTile) + Vector3.up * 0.6f;
-					var sp = editorCamera.WorldToScreenPoint(wp);
-					sp.y = Screen.height - sp.y;
-					pendingPopupScreenPos = sp;
+					int hitTile = HitTile(Input.mousePosition);
+					if (hitTile >= 0 && GetAttachmentsOnTile(hitTile) == null)
+					{
+						pendingTile = hitTile;
+						pendingAction = PendingAction.Add;
+
+						var wp = editorController.iMapManager.TileWorldPosition(hitTile) + Vector3.up * 0.6f;
+						var sp = editorCamera.WorldToScreenPoint(wp);
+						sp.y = Screen.height - sp.y;
+						pendingPopupScreenPos = sp;
+					}
 				}
 
+				// Always clean up
 				draggingTile = -1;
 				draggedAttachments = System.Array.Empty<MapAttachment>();
 			}
 
-			// RMB click — delete
-			if (Input.GetMouseButtonUp(1) && Vector3.Distance(Input.mousePosition, clickStartPos) < 6f)
+			// === 7. RMB UP: DELETE IF IT WAS A SHORT CLICK (not a drag/orbit) ===
+			if (Input.GetMouseButtonUp(1) && pendingAction == PendingAction.None)
 			{
-				int hitTile = HitTile(clickStartPos);
-				if (hitTile != -1)
+				bool wasClick = Vector3.Distance(Input.mousePosition, mouseDownPos) < 8f; // slightly more forgiving than 6
+
+				if (wasClick)
 				{
-					pendingTile = hitTile;
-					pendingAction = PendingAction.Delete;
-					var wp = editorController.iMapManager.TileWorldPosition(hitTile) + Vector3.up * 0.6f;
-					var sp = editorCamera.WorldToScreenPoint(wp);
-					sp.y = Screen.height - sp.y;
-					pendingPopupScreenPos = sp;
+					int hitTile = HitTile(mouseDownPos); // use down pos = more reliable
+					if (hitTile >= 0 && GetAttachmentsOnTile(hitTile)?.Length > 0)
+					{
+						pendingTile = hitTile;
+						pendingAction = PendingAction.Delete;
+
+						var wp = editorController.iMapManager.TileWorldPosition(hitTile) + Vector3.up * 0.6f;
+						var sp = editorCamera.WorldToScreenPoint(wp);
+						sp.y = Screen.height - sp.y;
+						pendingPopupScreenPos = sp;
+					}
 				}
 			}
+			if (pendingAction == PendingAction.Wait) pendingAction = PendingAction.None;
 		}
 
 		public override void OnGUI()
@@ -353,8 +369,8 @@ namespace ClassicTilestorm
 				EditorUtil.UpdateViewFrustumMarker(view, editorController.iMapManager);
 				EditorTransformUtil.ShowTransformGizmo(view, editorController.iMapManager, editorCamera);
 				viewPreview.Show(view, editorController.iMapManager);
-				SelectAttachment(System.Array.IndexOf(map.attachments, newAtt));
 			}
+			SelectAttachment(System.Array.IndexOf(map.attachments, newAtt));
 		}
 
 		private void DrawAddPopup()
@@ -396,7 +412,7 @@ namespace ClassicTilestorm
 			bool closed = PopupMenu.Show(sp, "Add Attachment", items);
 
 			if (closed)
-				pendingAction = PendingAction.None;
+				pendingAction = PendingAction.Wait;
 		}
 
 		private void DrawDeletePopup()
@@ -450,7 +466,7 @@ namespace ClassicTilestorm
 			bool closed = PopupMenu.Show(sp, "Delete Attachment(s)", items);
 
 			if (closed)
-				pendingAction = PendingAction.None;
+				pendingAction = PendingAction.Wait;
 		}
 
 		public static void SnapViewDistanceToGround(View view, IMapManager mapManager)
