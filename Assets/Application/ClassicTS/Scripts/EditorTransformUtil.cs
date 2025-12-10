@@ -21,10 +21,11 @@ namespace ClassicTilestorm
 		private static Vector3 lockedAxis = Vector3.zero;
 
 		private static bool draggingRotation;
-		private static Transform draggedRing;
 		private static Vector3 rotationAxis;
 		private static Quaternion startRotation;
 		private static Vector3 startMouseWorld;
+
+		private static bool wasActive = false;
 
 		private class RingTag : MonoBehaviour
 		{
@@ -88,6 +89,7 @@ namespace ClassicTilestorm
 
 			Ray ray = cam.ScreenPointToRay(Input.mousePosition);
 			bool handled = false;
+			bool _wasActive = wasActive;
 
 			// Hover
 			DoHover(ray);
@@ -107,6 +109,7 @@ namespace ClassicTilestorm
 						handled = true;
 					}
 				}
+				wasActive = handled;
 			}
 
 			// Drag
@@ -122,9 +125,10 @@ namespace ClassicTilestorm
 			{
 				draggingPosition = draggingRotation = false;
 				lockedAxis = Vector3.zero;
+				wasActive = false;
 			}
 
-			return handled;
+			return handled || _wasActive;
 		}
 
 		// ===================================================================
@@ -272,7 +276,6 @@ namespace ClassicTilestorm
 				Collider c = ring.GetComponent<Collider>();
 				if (c && c.Raycast(ray, out _, Mathf.Infinity))
 				{
-					draggedRing = ring;
 					rotationAxis = ring.up;
 					startRotation = activeView.Rotation;
 

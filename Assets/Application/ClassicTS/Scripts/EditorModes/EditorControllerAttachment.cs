@@ -143,6 +143,8 @@ namespace ClassicTilestorm
 				supressPopup = true;
 			}
 
+			//if (AttachmentsContainsTransform(draggedAttachments)) supressPopup = true;
+
 			if (editorCamera == null || IsGuiControlActive()) return;
 
 			// Tile picking
@@ -155,6 +157,7 @@ namespace ClassicTilestorm
 			if (Input.GetMouseButtonDown(0))
 			{
 				int hitTile = HitTile(Input.mousePosition);
+				pendingTile = hitTile;
 				var atts = GetAttachmentsOnTile(hitTile);
 
 				if (atts != null && atts.Length > 0)
@@ -193,13 +196,11 @@ namespace ClassicTilestorm
 			{
 				if (draggingTile == -1) // ← We didn't drag anything → it was a click
 				{
-					int hitTile = HitTile(Input.mousePosition);
-					if (hitTile >= 0 && GetAttachmentsOnTile(hitTile) == null)
+					var hasAttachments = draggedAttachments?.Length > 0;
+					if (pendingTile >= 0 && !hasAttachments)
 					{
-						pendingTile = hitTile;
 						pendingAction = PendingAction.Add;
-
-						var wp = editorController.iMapManager.TileWorldPosition(hitTile) + Vector3.up * 0.6f;
+						var wp = editorController.iMapManager.TileWorldPosition(pendingTile) + Vector3.up * 0.6f;
 						var sp = editorCamera.WorldToScreenPoint(wp);
 						sp.y = Screen.height - sp.y;
 						pendingPopupScreenPos = sp;
@@ -320,6 +321,15 @@ namespace ClassicTilestorm
 				EditorTransformUtil.ShowTransformGizmo(view, editorController.iMapManager, editorCamera);
 				viewPreview.Show(view, editorController.iMapManager);
 			}
+		}
+
+		private bool AttachmentsContainsTransform(MapAttachment[] attachments)
+		{
+			foreach (var att in attachments)
+			{
+				if (att is View) return true;
+			}
+			return false;
 		}
 
 		private void SyncPreviewToSelectedView()
