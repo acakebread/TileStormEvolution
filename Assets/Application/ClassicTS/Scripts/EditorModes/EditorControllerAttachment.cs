@@ -116,6 +116,8 @@ namespace ClassicTilestorm
 				if (viewPreview?.previewCam != null)
 				{
 					EditorCameraMovement.UpdateCamera(viewPreview.previewCam.transform);
+					if (SelectedAttachmentIndex >= 0 && editorController.currentMap?.attachments?[SelectedAttachmentIndex] is View view)
+						SnapViewDistanceToGround(view, editorController.iMapManager);
 					SyncPreviewToSelectedView();
 				}
 				return;
@@ -131,9 +133,7 @@ namespace ClassicTilestorm
 			if (EditorTransformUtil.HandleTransformGizmoInput(editorCamera))
 			{
 				if (SelectedAttachmentIndex >= 0 && editorController.currentMap?.attachments?[SelectedAttachmentIndex] is View view)
-				{
 					SnapViewDistanceToGround(view, editorController.iMapManager);
-				}
 			}
 
 			if (editorCamera == null || IsGuiControlActive()) return;
