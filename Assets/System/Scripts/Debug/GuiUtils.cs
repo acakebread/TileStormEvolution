@@ -205,35 +205,56 @@ namespace MassiveHadronLtd
 		{
 			public static bool Show(Vector2 screenPos, string title, List<PopupItem> items)
 			{
-				float height = 34f;
+				const float WIDTH = 260f;
+				const float ITEM_HEIGHT = 26f;
+				const float SPACER_DEFAULT = 8f;
+				const float TITLE_HEIGHT = 34f;
+				const float PADDING_BOTTOM = 8f;
+
+				// Calculate total height
+				float height = TITLE_HEIGHT;
 				foreach (var it in items)
-					height += (it.label == null) ? it.spacerHeight : 26f;
+					height += (it.label == null) ? (it.spacerHeight > 0 ? it.spacerHeight : SPACER_DEFAULT) : ITEM_HEIGHT;
+				height += PADDING_BOTTOM;
 
-				var rect = new Rect(screenPos.x, screenPos.y, 260f, height);
+				// === AUTO POSITIONING: Center horizontally, place above cursor ===
+				float x = screenPos.x - WIDTH * 0.5f;  // center horizontally
+				float y = screenPos.y - height - 10f; // place above cursor with small gap
 
-				// 1. Draw the window background only
+				// Clamp to screen bounds to avoid going off-screen
+				if (x < 10f) x = 10f;
+				if (x + WIDTH > Screen.width - 10f) x = Screen.width - WIDTH - 10f;
+				if (y < 10f) y = screenPos.y + 20f; // if no room above, place below instead
+				if (y + height > Screen.height - 10f) y = Screen.height - height - 10f;
+
+				var rect = new Rect(x, y, WIDTH, height);
+
+				// 1. Draw the window background
 				GUI.Box(rect, GUIContent.none, GUI.skin.window);
 
-				// 2. Draw the title manually (centered)
+				// 2. Draw the title
 				var titleStyle = new GUIStyle(GUI.skin.label)
 				{
 					alignment = TextAnchor.MiddleCenter,
-					fontStyle = FontStyle.Bold
+					fontStyle = FontStyle.Bold,
+					fontSize = 14
 				};
+				titleStyle.normal.textColor = Color.white;
 
 				Rect titleRect = new Rect(rect.x, rect.y + 5, rect.width, 24f);
 				GUI.Label(titleRect, title, titleStyle);
 
-				float y = rect.y + 30f;
+				// 3. Draw items
+				float yOffset = rect.y + TITLE_HEIGHT;
 				foreach (var item in items)
 				{
 					if (item.label == null)
 					{
-						y += item.spacerHeight;
+						yOffset += item.spacerHeight > 0 ? item.spacerHeight : SPACER_DEFAULT;
 						continue;
 					}
 
-					var btnRect = new Rect(rect.x + 8f, y, rect.width - 16f, 24f);
+					var btnRect = new Rect(rect.x + 8f, yOffset, rect.width - 16f, ITEM_HEIGHT - 2f);
 
 					var oldColor = GUI.color;
 					if (item.colorOverride.HasValue)
@@ -243,14 +264,14 @@ namespace MassiveHadronLtd
 					{
 						GUI.color = oldColor;
 						item.action?.Invoke();
-						return true;
+						return true; // closed
 					}
 
 					GUI.color = oldColor;
-					y += 26f;
+					yOffset += ITEM_HEIGHT;
 				}
 
-				// Click outside closes popup
+				// Click outside closes
 				if (Event.current.type == EventType.MouseDown && !rect.Contains(Event.current.mousePosition))
 					return true;
 

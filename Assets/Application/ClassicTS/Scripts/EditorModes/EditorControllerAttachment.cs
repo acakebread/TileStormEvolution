@@ -12,6 +12,8 @@ namespace ClassicTilestorm
 		public int SelectedAttachmentIndex { get; private set; } = -1;
 
 		private Vector3 mouseDownPos;
+		private bool mouseMovedBeyondThreshold; // NEW: tracks if mouse ever left the click radius
+		private const float CLICK_THRESHOLD = 8f; // same as before
 
 		private MapAttachment[] selectedAttachments = System.Array.Empty<MapAttachment>();
 
@@ -96,13 +98,26 @@ namespace ClassicTilestorm
 			//IsMouseOverGUI();
 			IsMouseOverPreview();
 
-			// === 1. TRACK MOUSE DOWN POSITION FOR BOTH BUTTONS ===
+			// === 1. TRACK MOUSE DOWN POSITION AND RESET FLAG ===
 			if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1))
+			{
 				mouseDownPos = Input.mousePosition;
-
-			// === 2. PREVIEW CAMERA CONTROL (RMB orbit in preview window) ===
-			if (Input.GetMouseButtonDown(1))
+				mouseMovedBeyondThreshold = false; // Reset on every new press
 				rmbDragStartedInPreview = isMouseOverPreview;
+			}
+
+			// === 2. CONTINUOUSLY CHECK DURING DRAG IF MOUSE LEAVES CLICK RADIUS ===
+			if (Input.GetMouseButton(0) || Input.GetMouseButton(1))
+			{
+				float currentDist = Vector3.Distance(Input.mousePosition, mouseDownPos);
+				if (currentDist >= CLICK_THRESHOLD)
+				{
+					mouseMovedBeyondThreshold = true; // Once true, stays true until next press
+				}
+			}
+
+			// === 3. DETERMINE IF IT WAS A CLEAN CLICK (never left threshold) ===
+			bool wasClick = !mouseMovedBeyondThreshold;
 
 			if (rmbDragStartedInPreview && Input.GetMouseButton(1))
 				isControllingPreviewWithRMB = true;
@@ -128,7 +143,7 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			// === 3. NORMAL EDITOR INPUT ===
+			// === 4. NORMAL EDITOR INPUT ===
 			if (!editorCamera || viewPreview.inInUse || IsMouseOverGUI() || IsGuiControlActive())
 				return;
 
@@ -148,9 +163,8 @@ namespace ClassicTilestorm
 			Vector3 mouseWorld = MapManager.ScreenToWorld(editorCamera, Input.mousePosition);
 			Vector3 snapped = editorController.iMapManager.SnappedMapPosition(mouseWorld);
 			int tileUnderMouse = editorController.iMapManager.WorldToMapIndex(snapped);
-			bool wasClick = Vector3.Distance(Input.mousePosition, mouseDownPos) < 8f; // slightly more forgiving than 6
 
-			// === 4. LMB: START DRAGGING EXISTING ATTACHMENTS ===
+			// === 5. LMB: START DRAGGING EXISTING ATTACHMENTS ===
 			if (Input.GetMouseButtonDown(0))// && pendingAction != PendingAction.Drag)
 			{
 				int hitTile = HitTile(Input.mousePosition);
@@ -169,7 +183,7 @@ namespace ClassicTilestorm
 				}
 			}
 
-			// === 5. LMB DRAG: MOVE ATTACHMENTS ===
+			// === 6. LMB DRAG: MOVE ATTACHMENTS ===
 			if (Input.GetMouseButton(0) && tileUnderMouse >= 0 && null != selectedAttachments)
 			{
 				foreach (var att in selectedAttachments)
@@ -188,7 +202,7 @@ namespace ClassicTilestorm
 
 			supressPopup |= pendingAction == PendingAction.Wait;//| pendingAction == PendingAction.Drag;
 
-			// === 6. LMB UP: ADD NEW ATTACHMENT IF IT WAS A CLICK ON EMPTY TILE ===
+			// === 7. LMB UP: ADD NEW ATTACHMENT IF IT WAS A CLICK ON EMPTY TILE ===
 			if (Input.GetMouseButtonUp(0) && !supressPopup)
 			{
 				var attachmentCount = selectedAttachments?.Length;
@@ -219,7 +233,7 @@ namespace ClassicTilestorm
 				}
 			}
 
-			// === 7. RMB UP: DELETE IF IT WAS A SHORT CLICK (not a drag/orbit) ===
+			// === 8. RMB UP: DELETE IF IT WAS A SHORT CLICK (not a drag/orbit) ===
 			if (Input.GetMouseButtonUp(1) && !supressPopup)
 			{
 				if (wasClick)
@@ -381,8 +395,6 @@ namespace ClassicTilestorm
 		private void DrawAddPopup()
 		{
 			var sp = pendingPopupScreenPos;
-			sp.x -= 120;
-			sp.y -= 140;
 
 			var items = new List<PopupItem>
 			{
@@ -400,8 +412,6 @@ namespace ClassicTilestorm
 		private void DrawDeletePopup()
 		{
 			var sp = pendingPopupScreenPos;
-			sp.x -= 140;
-			sp.y -= 120;
 
 			var map = editorController?.iMapManager?.CurrentMap;
 			if (map == null) return;
@@ -454,8 +464,6 @@ namespace ClassicTilestorm
 		private void DrawSelectPopup()
 		{
 			var sp = pendingPopupScreenPos;
-			sp.x -= 130;
-			sp.y -= 100;
 
 			var map = editorController.iMapManager.CurrentMap;
 			var atts = map.GetAttachmentsOnTile(pendingTile);
