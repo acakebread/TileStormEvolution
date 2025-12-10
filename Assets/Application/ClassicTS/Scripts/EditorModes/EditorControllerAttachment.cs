@@ -28,6 +28,8 @@ namespace ClassicTilestorm
 
 		private readonly AutoHidePanel sidePanel = new AutoHidePanel( collapsed: 120f, expanded: 340f, delay: 1.5f, animDur: 0.25f, defaultPos: new Vector2(0f, 40f) );
 
+		private bool supressPopup = true;
+
 		public override bool IsMouseOverGUI()
 		{
 			// Check preview first
@@ -116,7 +118,7 @@ namespace ClassicTilestorm
 				if (viewPreview?.previewCam != null)
 				{
 					EditorCameraMovement.UpdateCamera(viewPreview.previewCam.transform);
-					if (SelectedAttachmentIndex >= 0 && editorController.currentMap?.attachments?[SelectedAttachmentIndex] is View view)
+					if (SelectedAttachmentIndex >= 0 && SelectedAttachmentIndex < editorController.iMapManager.CurrentMap.attachments.Length && editorController.currentMap?.attachments?[SelectedAttachmentIndex] is View view)
 						SnapViewDistanceToGround(view, editorController.iMapManager);
 					SyncPreviewToSelectedView();
 				}
@@ -132,8 +134,9 @@ namespace ClassicTilestorm
 			// Gizmo handling
 			if (EditorTransformUtil.HandleTransformGizmoInput(editorCamera))
 			{
-				if (SelectedAttachmentIndex >= 0 && editorController.currentMap?.attachments?[SelectedAttachmentIndex] is View view)
+				if (SelectedAttachmentIndex >= 0 && SelectedAttachmentIndex < editorController.iMapManager.CurrentMap.attachments.Length && editorController.currentMap?.attachments?[SelectedAttachmentIndex] is View view)
 					SnapViewDistanceToGround(view, editorController.iMapManager);
+				supressPopup = true;
 			}
 
 			if (editorCamera == null || IsGuiControlActive()) return;
@@ -187,6 +190,8 @@ namespace ClassicTilestorm
 				}
 			}
 
+			if (supressPopup) pendingAction = PendingAction.Wait;
+
 			// === 6. LMB UP: ADD NEW ATTACHMENT IF IT WAS A CLICK ON EMPTY TILE ===
 			if (Input.GetMouseButtonUp(0) && pendingAction == PendingAction.None)
 			{
@@ -228,7 +233,9 @@ namespace ClassicTilestorm
 					}
 				}
 			}
+
 			if (pendingAction == PendingAction.Wait) pendingAction = PendingAction.None;
+			supressPopup = false;
 		}
 
 		public override void OnGUI()
@@ -410,7 +417,10 @@ namespace ClassicTilestorm
 				items.Add(new PopupItem(label, () =>
 				{
 					map.RemoveAttachment(localAtt);
+					EditorUtil.DestroyViewFrustumMarker();
+					EditorTransformUtil.HideTransformGizmo();
 					RebuildMarkers();
+					viewPreview.Hide(); 
 					editorController.OnMapChanged();
 				}));
 			}
@@ -425,6 +435,7 @@ namespace ClassicTilestorm
 					EditorUtil.DestroyViewFrustumMarker();
 					EditorTransformUtil.HideTransformGizmo();
 					RebuildMarkers();
+					viewPreview.Hide(); 
 					editorController.OnMapChanged();
 				}, colorOverride: Color.red));
 			}
