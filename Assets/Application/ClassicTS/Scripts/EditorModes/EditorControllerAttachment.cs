@@ -36,6 +36,7 @@ namespace ClassicTilestorm
 		private bool rmbDragStartedInPreview = false; // THIS FIXES THE FREEZE BUG
 
 		private bool isMouseOverPreview = false;
+		private bool isPreviewFocus = false;
 
 		public override bool IsMouseOverModeGui()
 		{
@@ -325,6 +326,8 @@ namespace ClassicTilestorm
 						Input.ResetInputAxes(); // or just eat the scroll event
 												// Alternative (cleaner): just return early from base.Update() via IsMouseOverModeGui()
 												// which we already do — so this line is enough insurance
+
+						Debug.Log("axes cleared");
 					}
 				}
 
