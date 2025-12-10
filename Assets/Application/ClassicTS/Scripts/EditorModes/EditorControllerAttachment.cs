@@ -32,7 +32,19 @@ namespace ClassicTilestorm
 
 		public override bool IsMouseOverGUI()
 		{
-			// Check preview first
+			// Only relevant in Attachment mode
+			if (editorController.CurrentMode != EditorMode.Attachment) return false;
+
+			// Use the panel's actual rect
+			Rect panelRect = sidePanel.GetPanelRect();
+			Vector2 mouse = Input.mousePosition;
+			mouse.y = Screen.height - mouse.y;
+
+			return panelRect.Contains(mouse);
+		}
+
+		private bool IsMouseOverPreview()
+		{
 			isMouseOverPreview = false;
 			if (viewPreview != null && viewPreview.gameObject.activeSelf && viewPreview.previewRect is Rect r && r.width > 0)
 			{
@@ -46,16 +58,7 @@ namespace ClassicTilestorm
 					return true; // block main camera scroll AND mouse wheel
 				}
 			}
-
-			// Only relevant in Attachment mode
-			if (editorController.CurrentMode != EditorMode.Attachment) return false;
-
-			// Use the panel's actual rect
-			Rect panelRect = sidePanel.GetPanelRect();
-			Vector2 mouse = Input.mousePosition;
-			mouse.y = Screen.height - mouse.y;
-
-			return panelRect.Contains(mouse);
+			return false;
 		}
 
 		public EditorControllerAttachment(EditorController controller) : base(controller) { }
@@ -91,7 +94,8 @@ namespace ClassicTilestorm
 
 		public override void Update()
 		{
-			IsMouseOverGUI();
+			//IsMouseOverGUI();
+			IsMouseOverPreview();
 
 			// === 1. TRACK MOUSE DOWN POSITION FOR BOTH BUTTONS ===
 			if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1))
@@ -167,27 +171,19 @@ namespace ClassicTilestorm
 			// === 5. LMB DRAG: MOVE ATTACHMENTS ===
 			if (Input.GetMouseButton(0) && draggingTile >= 0 && tileUnderMouse >= 0 && tileUnderMouse != draggingTile)
 			{
-				bool moved = false;
 				foreach (var att in draggedAttachments)
 				{
-					if (att.tile == draggingTile)
+					att.tile = tileUnderMouse;
+					if (att is View v)
 					{
-						att.tile = tileUnderMouse;
-						if (att is View v)
-						{
-							SnapViewDistanceToGround(v, editorController.iMapManager);
-							EditorUtil.UpdateViewFrustumMarker(v, editorController.iMapManager);
-							EditorTransformUtil.ShowTransformGizmo(v, editorController.iMapManager, editorCamera);
-							viewPreview.Show(v, editorController.iMapManager);
-						}
-						moved = true;
+						SnapViewDistanceToGround(v, editorController.iMapManager);
+						EditorUtil.UpdateViewFrustumMarker(v, editorController.iMapManager);
+						EditorTransformUtil.ShowTransformGizmo(v, editorController.iMapManager, editorCamera);
+						viewPreview.Show(v, editorController.iMapManager);
 					}
 				}
-				if (moved)
-				{
-					draggingTile = tileUnderMouse;
-					RebuildMarkers();
-				}
+				draggingTile = tileUnderMouse;
+				RebuildMarkers();
 			}
 
 			if (supressPopup) pendingAction = PendingAction.Wait;
@@ -478,6 +474,16 @@ namespace ClassicTilestorm
 				{
 					SelectAttachments(new MapAttachment[] { att });
 				}));
+			}
+
+			// Only show "Delete All" if more than one
+			if (atts.Length > 1)
+			{
+				items.Add(PopupItem.Spacer());
+				items.Add(new PopupItem("Select All", () =>
+				{
+					SelectAttachments(atts);
+				}, colorOverride: Color.green));
 			}
 
 			items.Add(PopupItem.Spacer());
