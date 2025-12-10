@@ -1,7 +1,6 @@
-﻿using MassiveHadronLtd;
-using System.Linq;
-using UnityEngine;
+﻿using UnityEngine;
 using System.Collections.Generic;
+using static MassiveHadronLtd.GuiUtils;
 
 namespace ClassicTilestorm
 {
@@ -14,27 +13,21 @@ namespace ClassicTilestorm
 		private List<string> definitionCycleList = new();
 		private int cycleIndex = 0;
 
-		private readonly GuiUtils.AutoHidePanel sidePanel = new(collapsed: 120f, expanded: 340f, delay: 1f, animDur: 0.3f);
-		private Vector2 scrollPos = Vector2.zero;
+		private readonly AutoHidePanelV2 sidePanel = new(collapsed: 120f, expanded: 340f, delay: 1f, animDur: 0.3f);
+
+		private GUIStyle leftButtonStyle;
+
+		public EditorControllerPaint(EditorController editorController) : base(editorController) { }
 
 		public override bool IsMouseOverGui()
 		{
-			if (editorController.CurrentMode != EditorController.EditorMode.Paint)
-				return false;
+			if (editorController.CurrentMode != EditorController.EditorMode.Paint) return false;
 
-			// Use the actual animated panel rect
-			var panelRect = sidePanel.GetRect();
-			panelRect.x = Screen.width - panelRect.xMax + 20f; // because GetRect returns left-aligned
-															   // Actually better: let AutoHidePanel expose screen-space rect properly, but for now:
-			float panelWidth = sidePanel.CurrentWidth;
-			var screenRect = new Rect(Screen.width - panelWidth - 20f, 20f, panelWidth, Screen.height - 40f);
-
+			Rect panelRect = sidePanel.GetPanelRect();
 			Vector2 mouse = Input.mousePosition;
 			mouse.y = Screen.height - mouse.y;
-			return screenRect.Contains(mouse);
+			return panelRect.Contains(mouse);
 		}
-
-		public EditorControllerPaint(EditorController editorController) : base(editorController) { }
 
 		public override void Update()
 		{
@@ -105,73 +98,35 @@ namespace ClassicTilestorm
 				EditorUtil.HideGhostTile();
 		}
 
-		private GUIStyle leftButtonStyle; 
 		public override void OnGui()
 		{
 			if (editorController.CurrentMode != EditorController.EditorMode.Paint || editorCamera == null) return;
 
 			if (leftButtonStyle == null)
 			{
-				leftButtonStyle = new GUIStyle(GUI.skin.button);
-				leftButtonStyle.alignment = TextAnchor.MiddleLeft;   // This is the key line
-				leftButtonStyle.padding.left = 12;                  // Optional: nice left indent
+				leftButtonStyle = new GUIStyle(GUI.skin.button)
+				{
+					alignment = TextAnchor.MiddleLeft,
+					padding = new RectOffset(12, 4, 4, 4)
+				};
 			}
 
 			sidePanel.Update();
 
-			// Optional: keep panel open while using it
-			if (sidePanel.IsGuiActive())
-				sidePanel.ForceExpand();
-
-			Rect panelRect = sidePanel.GetRect();
-
-			// Draw background box
-			GUI.backgroundColor = new Color(0.2f, 0.2f, 0.4f, 0.75f);
-			//GUI.Box(panelRect, "Tile Selector", EditorStyles.toolbarButton);
-			GUI.backgroundColor = Color.white;
-
-			GUILayout.BeginArea(panelRect);
-			GUILayout.BeginVertical();
-
-			//GUILayout.Label("Tiles", EditorStyles.boldLabel);
-
-			float scrollBarWidth = 12f;
-			Rect scrollRect = new Rect(0f, 25f, panelRect.width, panelRect.height - 25f);
-
-			// Compute total content height explicitly
-			int count = ResourceManager.Definitions.Count;
-			float buttonHeight = 36f;
-			float contentHeight = count * (buttonHeight + 4f);
-
-			// LOCKED CONTENT WIDTH = VIEW WIDTH (THIS IS THE KEY)
-			Rect contentRect = new Rect(0f, 0f, scrollRect.width - scrollBarWidth - 10, contentHeight);
-
-			// Actual GUI scroll view (NOT GUILayout)
-			scrollPos = GUI.BeginScrollView(scrollRect, scrollPos, contentRect, false, true);
-
-			float y = 0f;
-
-			for (int i = 0; i < count; i++)
+			// Clear old items and populate ListView
+			sidePanel.List.Clear();
+			foreach (var def in ResourceManager.Definitions)
 			{
-				var def = ResourceManager.Definitions.ElementAt(i);
 				string label = $"{def.id} ({def.texture})";
-
-				GUI.backgroundColor = (def.id == selectedDefinitionId) ? new Color(0.3f, 0.8f, 1f, 0.9f) : Color.white;
-
-				if (GUI.Button( new Rect(0f, y, contentRect.width, buttonHeight), label, leftButtonStyle))
-					SetSelectedDefinitionById(def.id);
-
-				y += buttonHeight + 4f;
+				sidePanel.List.AddItem(new ListViewItem(
+					label,
+					() => SetSelectedDefinitionById(def.id),
+					def.id == selectedDefinitionId
+				));
 			}
 
-			GUI.backgroundColor = Color.white;
-
-			GUI.EndScrollView();
-
-			// ---------------------------------------------------------------
-
-			GUILayout.EndVertical();
-			GUILayout.EndArea();
+			// Draw the panel (background + list)
+			sidePanel.Draw();
 		}
 	}
 }
