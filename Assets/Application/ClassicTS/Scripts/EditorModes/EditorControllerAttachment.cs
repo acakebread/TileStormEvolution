@@ -17,7 +17,7 @@ namespace ClassicTilestorm
 		private MapAttachment[] draggedAttachments = System.Array.Empty<MapAttachment>();
 
 		private int pendingTile = -1;
-		private enum PendingAction { None, Wait, Add, Delete }
+		private enum PendingAction { None, Wait, Add, Delete, Select }
 		private PendingAction pendingAction = PendingAction.None;
 		private Vector2 pendingPopupScreenPos = Vector2.zero;
 
@@ -28,7 +28,7 @@ namespace ClassicTilestorm
 
 		private readonly AutoHidePanel sidePanel = new AutoHidePanel( collapsed: 120f, expanded: 340f, delay: 1.5f, animDur: 0.25f, defaultPos: new Vector2(0f, 40f) );
 
-		public override bool IsMouseOverGui()
+		public override bool IsMouseOverGUI()
 		{
 			// Check preview first
 			isMouseOverPreview = false;
@@ -89,7 +89,7 @@ namespace ClassicTilestorm
 
 		public override void Update()
 		{
-			IsMouseOverGui();
+			IsMouseOverGUI();
 
 			// === 1. TRACK MOUSE DOWN POSITION FOR BOTH BUTTONS ===
 			if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1))
@@ -128,7 +128,7 @@ namespace ClassicTilestorm
 			}
 
 			// === 3. NORMAL EDITOR INPUT ===
-			if (!editorCamera || viewPreview.inInUse || IsMouseOverGui() || IsGuiControlActive())
+			if (!editorCamera || viewPreview.inInUse || IsMouseOverGUI() || IsGuiControlActive())
 				return;
 
 			base.Update();
@@ -148,6 +148,7 @@ namespace ClassicTilestorm
 			Vector3 mouseWorld = MapManager.ScreenToWorld(editorCamera, Input.mousePosition);
 			Vector3 snapped = editorController.iMapManager.SnappedMapPosition(mouseWorld);
 			int tileUnderMouse = editorController.iMapManager.WorldToMapIndex(snapped);
+			bool wasClick = Vector3.Distance(Input.mousePosition, mouseDownPos) < 8f; // slightly more forgiving than 6
 
 			// === 4. LMB: START DRAGGING EXISTING ATTACHMENTS ===
 			if (Input.GetMouseButtonDown(0))
@@ -218,8 +219,6 @@ namespace ClassicTilestorm
 			// === 7. RMB UP: DELETE IF IT WAS A SHORT CLICK (not a drag/orbit) ===
 			if (Input.GetMouseButtonUp(1) && pendingAction == PendingAction.None)
 			{
-				bool wasClick = Vector3.Distance(Input.mousePosition, mouseDownPos) < 8f; // slightly more forgiving than 6
-
 				if (wasClick)
 				{
 					int hitTile = HitTile(mouseDownPos); // use down pos = more reliable
@@ -275,6 +274,7 @@ namespace ClassicTilestorm
 			// Draw popups
 			if (pendingAction == PendingAction.Add) DrawAddPopup();
 			if (pendingAction == PendingAction.Delete) DrawDeletePopup();
+			if (pendingAction == PendingAction.Select) DrawSelectPopup();
 		}
 
 		public void OnMapChanged()
@@ -318,7 +318,6 @@ namespace ClassicTilestorm
 				viewPreview.Show(view, editorController.iMapManager);
 			}
 		}
-
 
 		private void SyncPreviewToSelectedView()
 		{
@@ -440,7 +439,52 @@ namespace ClassicTilestorm
 			if (closed) pendingAction = PendingAction.Wait;
 		}
 
-		public static void SnapViewDistanceToGround(View view, IMapManager mapManager)
+		private void DrawSelectPopup()
+		{
+			var sp = pendingPopupScreenPos;
+			sp.x -= 130;
+			sp.y -= 100;
+
+			var map = editorController.iMapManager.CurrentMap;
+			var atts = map.GetAttachmentsOnTile(pendingTile);
+			if (atts == null || atts.Length == 0)
+			{
+				pendingAction = PendingAction.None;
+				return;
+			}
+
+			var items = new List<PopupItem>();
+
+			foreach (var att in atts)
+			{
+				string label = att.GetType().Name;
+
+				// Only add extra info for Emitter if LookAt is not the default up vector
+				if (att is Emitter e && e.LookAt != null && e.LookAt != Vector3.up)
+				{
+					float distance = e.LookAt.magnitude;
+					label += $" to {distance:F1}";
+				}
+
+				label += $" [tile {att.tile}]";
+
+				int index = System.Array.IndexOf(map.attachments, att);
+
+				items.Add(new PopupItem(label, () =>
+				{
+					SelectAttachment(index);
+				}));
+			}
+
+			items.Add(PopupItem.Spacer());
+			items.Add(new PopupItem("Cancel", colorOverride: Color.yellow));
+
+			bool closed = PopupMenu.Show(sp, $"Select ({atts.Length})", items);
+			if (closed)
+				pendingAction = PendingAction.Wait;
+		}
+
+		private static void SnapViewDistanceToGround(View view, IMapManager mapManager)
 		{
 			if (view == null || mapManager == null) return;
 

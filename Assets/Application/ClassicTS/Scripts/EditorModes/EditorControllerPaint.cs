@@ -19,7 +19,7 @@ namespace ClassicTilestorm
 
 		public EditorControllerPaint(EditorController editorController) : base(editorController) { }
 
-		public override bool IsMouseOverGui()
+		public override bool IsMouseOverGUI()
 		{
 			if (editorController.CurrentMode != EditorController.EditorMode.Paint) return false;
 
@@ -31,7 +31,7 @@ namespace ClassicTilestorm
 
 		public override void Update()
 		{
-			if (!editorCamera || IsMouseOverGui() || IsGuiControlActive()) return;
+			if (!editorCamera || IsMouseOverGUI() || IsGuiControlActive()) return;
 			base.Update();
 
 			if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1))

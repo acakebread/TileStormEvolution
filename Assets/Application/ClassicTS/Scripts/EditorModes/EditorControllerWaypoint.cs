@@ -25,7 +25,7 @@ namespace ClassicTilestorm
 
 		private readonly AutoHidePanel sidePanel = new(120f, 340f, 1.5f, 0.25f);
 
-		public override bool IsMouseOverGui()
+		public override bool IsMouseOverGUI()
 		{
 			if (editorController.CurrentMode != EditorController.EditorMode.Waypoint) return false;
 
@@ -104,7 +104,7 @@ namespace ClassicTilestorm
 
 		public override void Update()
 		{
-			if (!editorCamera || IsMouseOverGui() || IsGuiControlActive()) return;
+			if (!editorCamera || IsMouseOverGUI() || IsGuiControlActive()) return;
 			base.Update();
 
 			var worldPos = MapManager.ScreenToWorld(editorCamera, Input.mousePosition);
@@ -132,7 +132,7 @@ namespace ClassicTilestorm
 						// Revert if dropped outside map
 						var map = editorController.iMapManager.CurrentMap;
 						if (map?.waypoints != null && draggingIndex < map.waypoints.Length)
-							editorController.iMapManager.Waypoints[draggingIndex] = originalTile;// map.waypoints[draggingIndex].tile = originalTile;
+							editorController.iMapManager.Waypoints[draggingIndex] = originalTile;
 						RebuildMarkers();
 					}
 					draggingIndex = -1;
