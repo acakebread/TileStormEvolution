@@ -93,20 +93,14 @@ namespace ClassicTilestorm
 
 			// === 1. TRACK MOUSE DOWN POSITION FOR BOTH BUTTONS ===
 			if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1))
-			{
 				mouseDownPos = Input.mousePosition;
-			}
 
 			// === 2. PREVIEW CAMERA CONTROL (RMB orbit in preview window) ===
 			if (Input.GetMouseButtonDown(1))
-			{
 				rmbDragStartedInPreview = isMouseOverPreview;
-			}
 
 			if (rmbDragStartedInPreview && Input.GetMouseButton(1))
-			{
 				isControllingPreviewWithRMB = true;
-			}
 
 			if (Input.GetMouseButtonUp(1))
 			{
@@ -162,7 +156,7 @@ namespace ClassicTilestorm
 					draggedAttachments = atts;
 
 					if (draggedAttachments.Length > 0)
-						SelectAttachment(System.Array.IndexOf(editorController.iMapManager.CurrentMap.attachments, draggedAttachments[0]));
+						SelectAttachments(draggedAttachments);
 				}
 				// If no attachments → draggingTile stays -1 → we'll treat it as a potential "add" click
 			}
@@ -260,7 +254,8 @@ namespace ClassicTilestorm
 				int index = i; // capture for closure
 				sidePanel.List.AddItem(new ListViewItem(
 					label,
-					() => SelectAttachment(index),
+					//() => SelectAttachment(index),
+					() => SelectAttachments(new MapAttachment[] { att }),
 					selected: index == SelectedAttachmentIndex
 				));
 			}
@@ -296,12 +291,14 @@ namespace ClassicTilestorm
 				.Distinct()
 				.ToArray() ?? System.Array.Empty<int>();
 
-			EditorUtil.UpdateMapMarkers(editorController.iMapManager, tiles, SelectedAttachmentIndex, EditorUtil.MarkerType.Attachment);
+			var markerIndexTile = SelectedAttachmentIndex >= 0 && SelectedAttachmentIndex < editorController.iMapManager.CurrentMap.attachments.Length ? editorController.iMapManager.CurrentMap.attachments[SelectedAttachmentIndex].tile : -1;
+			var selection = System.Array.IndexOf(tiles, markerIndexTile);
+			EditorUtil.UpdateMapMarkers(editorController.iMapManager, tiles, selection, EditorUtil.MarkerType.Attachment);
 		}
 
-		private void SelectAttachment(int index)
+		private void SelectAttachments(MapAttachment[] attachments)
 		{
-			SelectedAttachmentIndex = index;
+			var index = SelectedAttachmentIndex = System.Array.IndexOf(editorController.iMapManager.CurrentMap.attachments, attachments[0]);
 			RebuildMarkers();
 			EditorUtil.DestroyViewFrustumMarker();
 			EditorTransformUtil.HideTransformGizmo();
@@ -360,7 +357,6 @@ namespace ClassicTilestorm
 			if (newAtt == null) return;
 
 			map.AddAttachment(newAtt);
-			RebuildMarkers();
 			editorController.OnMapChanged();
 
 			if (newAtt is View view)
@@ -369,7 +365,8 @@ namespace ClassicTilestorm
 				EditorTransformUtil.ShowTransformGizmo(view, editorController.iMapManager, editorCamera);
 				viewPreview.Show(view, editorController.iMapManager);
 			}
-			SelectAttachment(System.Array.IndexOf(map.attachments, newAtt));
+			//SelectAttachment(System.Array.IndexOf(map.attachments, newAtt));
+			SelectAttachments(new MapAttachment[] { newAtt });
 		}
 
 		private void DrawAddPopup()
@@ -468,11 +465,9 @@ namespace ClassicTilestorm
 
 				label += $" [tile {att.tile}]";
 
-				int index = System.Array.IndexOf(map.attachments, att);
-
 				items.Add(new PopupItem(label, () =>
 				{
-					SelectAttachment(index);
+					SelectAttachments(new MapAttachment[] { att });
 				}));
 			}
 
