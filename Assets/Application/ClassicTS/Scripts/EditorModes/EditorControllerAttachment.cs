@@ -136,8 +136,11 @@ namespace ClassicTilestorm
 				{
 					EditorCameraMovement.UpdateCamera(viewPreview.previewCam.transform);
 					if (SelectedAttachmentIndex >= 0 && SelectedAttachmentIndex < editorController.iMapManager.CurrentMap.attachments.Length && editorController.currentMap?.attachments?[SelectedAttachmentIndex] is View view)
+					{
+						SyncPreviewToSelectedView();
 						SnapViewDistanceToGround(view, editorController.iMapManager);
-					SyncPreviewToSelectedView();
+						SyncPreviewToSelectedView();
+					}
 				}
 				return;
 			}
@@ -163,23 +166,6 @@ namespace ClassicTilestorm
 			int tileUnderMouse = editorController.iMapManager.WorldToMapIndex(snapped);
 
 			// === 5. LMB: START DRAGGING EXISTING ATTACHMENTS ===
-			//if (Input.GetMouseButtonDown(0))
-			//{
-			//	pendingTile = HitTile(Input.mousePosition);
-			//	if (-1 != pendingTile && (null == selectedAttachments || selectedAttachments.Length < 1 || pendingTile != selectedAttachments[0].tile))
-			//	{
-			//		var atts = GetAttachmentsOnTile(pendingTile);
-			//		selectedAttachments = null;
-
-			//		if (atts != null && atts.Length > 0)
-			//		{
-			//			selectedAttachments = atts;
-			//			if (selectedAttachments.Length > 0)
-			//				SelectAttachments(selectedAttachments);
-			//		}
-			//	}
-			//}
-
 			if (!supressPopup && Input.GetMouseButtonDown(0))
 			{
 				pendingTile = HitTile(Input.mousePosition);
