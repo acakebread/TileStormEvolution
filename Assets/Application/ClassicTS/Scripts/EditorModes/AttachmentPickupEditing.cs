@@ -1,11 +1,12 @@
+// AttachmentPickupEditing.cs
 namespace ClassicTilestorm
 {
-	public static class AttachmentPickupEditing
+	public class AttachmentPickupEditing : AttachmentEditing
 	{
-		// Add pickup-specific editing logic here in the future
+		public static readonly AttachmentPickupEditing Instance = new();
 
-		public static void HandleSelectionChanged(EditorControllerAttachment editor) { }
-		public static void HandleDrag(EditorControllerAttachment editor, Pickup pickup) { }
-		public static void DrawGUI(EditorControllerAttachment editor) { }
+		public override void HandleSelectionChanged(EditorControllerAttachment editor) { }
+		public override void HandleDrag(EditorControllerAttachment editor, MapAttachment attachment) { }
+		protected override void DrawTypeSpecificGUI(EditorControllerAttachment editor) { }
 	}
 }

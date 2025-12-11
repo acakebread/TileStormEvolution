@@ -201,7 +201,7 @@ namespace ClassicTilestorm
 			sidePanel.SetFootnote("Hold RMB on preview to orbit • Scroll to zoom • LMB: place/move in/move • RMB on tile: delete");
 			sidePanel.Draw();
 
-			AttachmentViewEditing.DrawGUI(this);
+			AttachmentEditing.DrawGUI(this);
 		}
 
 		public void OnMapChanged()
@@ -240,7 +240,8 @@ namespace ClassicTilestorm
 			EditorTransformUtil.HideTransformGizmo();
 			viewPreview.Hide();
 
-			AttachmentViewEditing.HandleSelectionChanged(this);
+			var typeEditor = AttachmentEditing.GetCurrentEditor(this);
+			typeEditor?.HandleSelectionChanged(this);
 		}
 
 		private int GetTileUnderMouse()
@@ -270,7 +271,8 @@ namespace ClassicTilestorm
 			foreach (var att in selectedAttachments)
 			{
 				att.tile = tileUnderMouse;
-				if (att is View v) AttachmentViewEditing.HandleDrag(this, v);
+				var typeEditor = AttachmentEditing.GetCurrentEditor(this);
+				typeEditor?.HandleDrag(this, att);
 			}
 		}
 

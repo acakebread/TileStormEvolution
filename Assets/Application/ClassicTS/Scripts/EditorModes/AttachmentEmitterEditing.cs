@@ -1,12 +1,13 @@
+// AttachmentEmitterEditing.cs
 namespace ClassicTilestorm
 {
-	public static class AttachmentEmitterEditing
+	public class AttachmentEmitterEditing : AttachmentEditing
 	{
-		// Add emitter-specific editing logic here in the future
-		// e.g. special gizmos, preview windows, custom popups, etc.
+		public static readonly AttachmentEmitterEditing Instance = new();
 
-		public static void HandleSelectionChanged(EditorControllerAttachment editor) { }
-		public static void HandleDrag(EditorControllerAttachment editor, Emitter emitter) { }
-		public static void DrawGUI(EditorControllerAttachment editor) { }
+		// Override when needed
+		public override void HandleSelectionChanged(EditorControllerAttachment editor) { }
+		public override void HandleDrag(EditorControllerAttachment editor, MapAttachment attachment) { }
+		protected override void DrawTypeSpecificGUI(EditorControllerAttachment editor) { }
 	}
 }
