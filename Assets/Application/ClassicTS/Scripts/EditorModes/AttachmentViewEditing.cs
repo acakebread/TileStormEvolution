@@ -24,7 +24,7 @@ namespace ClassicTilestorm
 			EditorTransformUtil.ShowAt(worldPos, view.Rotation, editor.editorCamera);
 
 			SnapViewDistanceToGround(view, editor.editorController.iMapManager);
-			EditorUtil.UpdateViewFrustumMarker(view, editor.editorController.iMapManager);
+			EditorFrustumUtil.UpdateViewFrustumMarker(view, editor.editorController.iMapManager);
 			editor.viewPreview.Show(view, editor.editorController.iMapManager);
 		}
 
@@ -33,7 +33,7 @@ namespace ClassicTilestorm
 			if (attachment is View view)
 			{
 				SnapViewDistanceToGround(view, editor.editorController.iMapManager);
-				EditorUtil.UpdateViewFrustumMarker(view, editor.editorController.iMapManager);
+				EditorFrustumUtil.UpdateViewFrustumMarker(view, editor.editorController.iMapManager);
 
 				Vector3 worldPos = editor.editorController.iMapManager.TileWorldPosition(view.tile) + view.Position;
 				EditorTransformUtil.ShowAt(worldPos, view.Rotation, editor.editorCamera);
@@ -70,7 +70,7 @@ namespace ClassicTilestorm
 			EditorTransformUtil.UpdateTransform(worldPos, view.Rotation, editor.editorCamera);
 
 			// Update frustum marker
-			EditorUtil.UpdateViewFrustumMarker(view, editor.editorController.iMapManager);
+			EditorFrustumUtil.UpdateViewFrustumMarker(view, editor.editorController.iMapManager);
 		}
 
 		private static void SyncPreviewToView(EditorControllerAttachment editor, ViewPreview viewPreview, View view)
@@ -95,7 +95,7 @@ namespace ClassicTilestorm
 				view.Rotation = newWorldRot;
 
 				SnapViewDistanceToGround(view, editor.editorController.iMapManager);
-				EditorUtil.UpdateViewFrustumMarker(view, editor.editorController.iMapManager);
+				EditorFrustumUtil.UpdateViewFrustumMarker(view, editor.editorController.iMapManager);
 
 				// Also update preview window to stay in sync
 				editor.viewPreview.Show(view, editor.editorController.iMapManager);
@@ -108,7 +108,7 @@ namespace ClassicTilestorm
 
 		private static void UpdateVisuals(EditorControllerAttachment editor, View view)
 		{
-			EditorUtil.UpdateViewFrustumMarker(view, editor.editorController.iMapManager);
+			EditorFrustumUtil.UpdateViewFrustumMarker(view, editor.editorController.iMapManager);
 			EditorTransformUtil.UpdateTransformGizmoVisuals(editor.editorCamera);
 		}
 

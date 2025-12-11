@@ -55,22 +55,23 @@ namespace ClassicTilestorm
 		public override void OnEnable()
 		{
 			base.OnEnable();
-			EditorUtil.DestroyMarkerVisuals();
-			EditorUtil.DestroyViewFrustumMarker();
+			EditorMarkerUtil.ClearMapMarkers();
+			EditorFrustumUtil.DestroyViewFrustumMarker();
 			RebuildMarkers();
 
 			viewPreview = ViewPreview.Create();
 			viewPreview.Hide();
 
 			sidePanel.List.Clear();
+			supressInput = true;
 		}
 
 		public override void OnDisable()
 		{
 			base.OnDisable();
-			EditorUtil.DestroyMarkerVisuals();
+			EditorMarkerUtil.ClearMapMarkers();
 			pendingAction = PendingAction.None;
-			EditorUtil.DestroyViewFrustumMarker();
+			EditorFrustumUtil.DestroyViewFrustumMarker();
 			EditorTransformUtil.HideTransformGizmo();
 
 			viewPreview?.Hide();
@@ -200,7 +201,7 @@ namespace ClassicTilestorm
 		{
 			if (editorController.CurrentMode != EditorMode.Attachment) return;
 			RebuildMarkers();
-			EditorUtil.DestroyViewFrustumMarker();
+			EditorFrustumUtil.DestroyViewFrustumMarker();
 			EditorTransformUtil.HideTransformGizmo();
 			viewPreview.Hide();
 			isControllingPreviewWithRMB = false;
@@ -226,7 +227,7 @@ namespace ClassicTilestorm
 
 			int selection = System.Array.IndexOf(tiles, selectedTile);
 
-			EditorUtil.UpdateMapMarkers(editorController.iMapManager, tiles, selection, EditorUtil.MarkerType.Attachment);
+			EditorMarkerUtil.UpdateMapMarkers(editorController.iMapManager, tiles, selection, EditorMarkerUtil.MarkerType.Attachment);
 		}
 
 		public void SelectAttachments(MapAttachment[] attachments)
@@ -234,7 +235,7 @@ namespace ClassicTilestorm
 			selectedAttachments = attachments;
 
 			RebuildMarkers();
-			EditorUtil.DestroyViewFrustumMarker();
+			EditorFrustumUtil.DestroyViewFrustumMarker();
 			EditorTransformUtil.HideTransformGizmo();
 			viewPreview.Hide();
 

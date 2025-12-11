@@ -113,334 +113,346 @@ namespace ClassicTilestorm
 			}
 		}
 
-		// === UNIFIED MARKER SYSTEM ===
-		private class MarkerPulse : MonoBehaviour
-		{
-			public float intensity = 1.5f;
-			public float speed = 2.5f;
+		//// === UNIFIED MARKER SYSTEM ===
+		//private class MarkerPulse : MonoBehaviour
+		//{
+		//	public float intensity = 1.5f;
+		//	public float speed = 2.5f;
 
-			private Vector3 baseScale;
+		//	private Vector3 baseScale;
 
-			private void Awake()
-			{
-				baseScale = transform.localScale;
-			}
+		//	private void Awake()
+		//	{
+		//		baseScale = transform.localScale;
+		//	}
 
-			private void Update()
-			{
-				float pulse = 0.75f + (Mathf.Sin(Time.time * speed) * 0.25f + 0.25f) * (intensity - 1f);
-				transform.localScale = baseScale * pulse;
-			}
-		}
+		//	private void Update()
+		//	{
+		//		float pulse = 0.75f + (Mathf.Sin(Time.time * speed) * 0.25f + 0.25f) * (intensity - 1f);
+		//		transform.localScale = baseScale * pulse;
+		//	}
+		//}
 
-		private static readonly List<GameObject> mapMarkers = new();
-		private static readonly Dictionary<int, GameObject> tileToMarker = new(); // tile index → marker GO
-		private static GameObject markerCursor;
-		private static Material markerCursorMaterial;
+		//private static readonly List<GameObject> mapMarkers = new();
+		//private static GameObject markerCursor;
+		//private static Material markerCursorMaterial;
 
-		public enum MarkerType
-		{
-			Undefined,
-			Waypoint,
-			Attachment,
-			Custom // for future use
-		}
+		//public enum MarkerType
+		//{
+		//	Undefined,
+		//	Waypoint,
+		//	Attachment,
+		//	Custom // for future use
+		//}
 
-		public static void InitializeMarkerMaterials()
-		{
-			if (markerCursorMaterial == null)
-				markerCursorMaterial = MaterialUtils.CreateTransparentUnlitMaterial(new Color(1f, 1f, 0f, 0.8f)); // Yellow pulsing cursor
-		}
+		//public static void InitializeMarkerMaterials()
+		//{
+		//	if (markerCursorMaterial == null)
+		//		markerCursorMaterial = MaterialUtils.CreateTransparentUnlitMaterial(new Color(1f, 1f, 0f, 0.8f)); // Yellow pulsing cursor
+		//}
 
-		public static void UpdateMapMarkers(IMapManager mapManager, int[] tiles, int selectedIndex = -1, MarkerType type = MarkerType.Undefined)
-		{
-			if (tiles == null || tiles.Length == 0 || SphereMesh == null)
-			{
-				ClearMapMarkers();
-				return;
-			}
+		//public static void UpdateMapMarkers(IMapManager mapManager, int[] tiles, int selectedIndex = -1, MarkerType type = MarkerType.Undefined)
+		//{
+		//	// Only clear and fully rebuild when the tile list actually changes
+		//	// (Compare length first — cheap, then content if needed)
+		//	bool needsRebuild = mapMarkers.Count != tiles?.Length;
 
-			var currentTiles = new HashSet<int>();
+		//	if (!needsRebuild && tiles != null)
+		//	{
+		//		for (int i = 0; i < tiles.Length; i++)
+		//		{
+		//			if (tiles[i] != GetTileIndexFromMarker(mapMarkers[i]))
+		//			{
+		//				needsRebuild = true;
+		//				break;
+		//			}
+		//		}
+		//	}
 
-			for (int i = 0; i < tiles.Length; i++)
-			{
-				int tile = tiles[i];
-				if (tile < 0 || tile >= mapManager.Count) continue;
+		//	if (needsRebuild)
+		//	{
+		//		ClearMapMarkers(); // Only destroys when actually needed
 
-				currentTiles.Add(tile);
+		//		if (tiles == null || tiles.Length == 0 || SphereMesh == null) return;
 
-				Vector3 pos = mapManager.TileWorldPosition(tile) + Vector3.up * 0.02f;
-				bool isSelected = (i == selectedIndex);
-				bool hasView = type == MarkerType.Waypoint && mapManager.GetView(tile) != null;
+		//		for (int i = 0; i < tiles.Length; i++)
+		//		{
+		//			int tile = tiles[i];
+		//			if (tile < 0 || tile >= mapManager.Count) continue;
 
-				Color baseColor = type switch
-				{
-					MarkerType.Waypoint => hasView ? new Color(0f, 1f, 1f, 0.5f) : new Color(0f, 0.7f, 1f, 0.7f),
-					MarkerType.Attachment => new Color(0f, 0.7f, 1f, 0.7f),
-					_ => new Color(0f, 0.7f, 1f, 0.7f)
-				};
+		//			Vector3 pos = mapManager.TileWorldPosition(tile) + Vector3.up * 0.02f;
 
-				if (tileToMarker.TryGetValue(tile, out GameObject marker))
-				{
-					// Update existing
-					marker.transform.position = pos;
+		//			var go = new GameObject($"GIZMO_MARKER_{type}_{tile}");
+		//			go.layer = LayerMask.NameToLayer("Editor");
+		//			go.transform.position = pos;
+		//			go.transform.localScale = Vector3.one * 0.8f * 0.5f;
 
-					var mr = marker.GetComponent<MeshRenderer>();
-					var pulse = marker.GetComponent<MarkerPulse>();
+		//			var mf = go.AddComponent<MeshFilter>();
+		//			var mr = go.AddComponent<MeshRenderer>();
+		//			mf.sharedMesh = SphereMesh;
 
-					if (isSelected)
-					{
-						mr.material = MaterialUtils.CreateTransparentUnlitMaterial(new Color(0f, 1f, 0f, 0.7f));
-						if (pulse == null) pulse = marker.AddComponent<MarkerPulse>();
-						pulse.intensity = 2.1f;
-						pulse.speed = 3.2f;
-					}
-					else
-					{
-						if (pulse != null) Object.DestroyImmediate(pulse);
-						mr.material = MaterialUtils.CreateTransparentUnlitMaterial(baseColor);
-					}
-				}
-				else
-				{
-					// Create new
-					var go = new GameObject($"GIZMO_MARKER_{type}_{tile}");
-					go.layer = LayerMask.NameToLayer("Editor");
-					go.transform.position = pos;
-					go.transform.localScale = Vector3.one * 0.8f * 0.5f;
+		//			mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+		//			mr.receiveShadows = false;
+		//			mr.lightProbeUsage = UnityEngine.Rendering.LightProbeUsage.Off;
+		//			mr.reflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.Off;
 
-					var mf = go.AddComponent<MeshFilter>();
-					var mr = go.AddComponent<MeshRenderer>();
+		//			TryAddTriggerCollider(go);
 
-					mf.sharedMesh = SphereMesh;
+		//			bool isSelected = (i == selectedIndex);
+		//			bool hasView = type == MarkerType.Waypoint && mapManager.GetView(tile) != null;
 
-					mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-					mr.receiveShadows = false;
-					mr.lightProbeUsage = UnityEngine.Rendering.LightProbeUsage.Off;
-					mr.reflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.Off;
+		//			Color baseColor = type switch
+		//			{
+		//				MarkerType.Waypoint => hasView ? new Color(0f, 1f, 1f, 0.5f) : new Color(0f, 0.7f, 1f, 0.7f),
+		//				MarkerType.Attachment => new Color(0f, 0.7f, 1f, 0.7f),
+		//				_ => new Color(0f, 0.7f, 1f, 0.7f)
+		//			};
 
-					TryAddTriggerCollider(go);
+		//			if (isSelected)
+		//			{
+		//				mr.material = MaterialUtils.CreateTransparentUnlitMaterial(new Color(0f, 1f, 0f, 0.7f));
+		//				var pulse = go.AddComponent<MarkerPulse>();
+		//				pulse.intensity = 2.1f;
+		//				pulse.speed = 3.2f;
+		//			}
+		//			else
+		//			{
+		//				mr.material = MaterialUtils.CreateTransparentUnlitMaterial(baseColor);
+		//			}
 
-					mr.material = MaterialUtils.CreateTransparentUnlitMaterial(isSelected ? new Color(0f, 1f, 0f, 0.7f) : baseColor);
+		//			mapMarkers.Add(go);
+		//		}
+		//	}
+		//	else
+		//	{
+		//		// List hasn't changed — just update positions and selection state (very cheap)
+		//		for (int i = 0; i < mapMarkers.Count; i++)
+		//		{
+		//			int tile = tiles[i];
+		//			Vector3 pos = mapManager.TileWorldPosition(tile) + Vector3.up * 0.02f;
+		//			mapMarkers[i].transform.position = pos;
 
-					if (isSelected)
-					{
-						var pulse = go.AddComponent<MarkerPulse>();
-						pulse.intensity = 2.1f;
-						pulse.speed = 3.2f;
-					}
+		//			bool isSelected = (i == selectedIndex);
+		//			bool hasView = type == MarkerType.Waypoint && mapManager.GetView(tile) != null;
 
-					mapMarkers.Add(go);
-					tileToMarker[tile] = go;
-				}
-			}
+		//			Color targetColor = isSelected
+		//				? new Color(0f, 1f, 0f, 0.7f)
+		//				: (hasView ? new Color(0f, 1f, 1f, 0.5f) : new Color(0f, 0.7f, 1f, 0.7f));
 
-			// Remove markers for tiles no longer present
-			for (int i = mapMarkers.Count - 1; i >= 0; i--)
-			{
-				var go = mapMarkers[i];
-				if (go == null) continue;
+		//			var mr = mapMarkers[i].GetComponent<MeshRenderer>();
+		//			var pulse = mapMarkers[i].GetComponent<MarkerPulse>();
 
-				string name = go.name;
-				int lastUnderscore = name.LastIndexOf('_');
-				if (lastUnderscore != -1 && int.TryParse(name.Substring(lastUnderscore + 1), out int tileIndex))
-				{
-					if (!currentTiles.Contains(tileIndex))
-					{
-						tileToMarker.Remove(tileIndex);
-						mapMarkers.RemoveAt(i);
-						Object.DestroyImmediate(go);
-					}
-				}
-			}
-		}
+		//			mr.material = MaterialUtils.CreateTransparentUnlitMaterial(targetColor);
 
-		public static void ClearMapMarkers()
-		{
-			foreach (var go in mapMarkers)
-				if (go) Object.DestroyImmediate(go);
+		//			if (isSelected)
+		//			{
+		//				if (pulse == null) pulse = mapMarkers[i].AddComponent<MarkerPulse>();
+		//				pulse.intensity = 2.1f;
+		//				pulse.speed = 3.2f;
+		//			}
+		//			else
+		//			{
+		//				if (pulse != null) Object.DestroyImmediate(pulse);
+		//			}
+		//		}
+		//	}
+		//}
 
-			mapMarkers.Clear();
-			tileToMarker.Clear();
-		}
+		//// Helper to extract tile index from name (safe and simple)
+		//private static int GetTileIndexFromMarker(GameObject marker)
+		//{
+		//	if (marker == null) return -1;
+		//	string name = marker.name;
+		//	int lastUnderscore = name.LastIndexOf('_');
+		//	if (lastUnderscore == -1) return -1;
+		//	return int.TryParse(name.Substring(lastUnderscore + 1), out int index) ? index : -1;
+		//}
 
-		// Safely add a trigger collider only if physics module exists
-		private static void TryAddTriggerCollider(GameObject go)
-		{
-			var colliderType = System.Type.GetType("UnityEngine.SphereCollider, UnityEngine");
-			if (colliderType != null)
-			{
-				var col = go.AddComponent(colliderType) as Collider;
-				if (col != null)
-					col.isTrigger = true;
-			}
-		}
+		//public static void ClearMapMarkers()
+		//{
+		//	foreach (var go in mapMarkers)
+		//		if (go) Object.DestroyImmediate(go);
 
-		public static void DestroyMarkerVisuals()
-		{
-			ClearMapMarkers();
-			if (markerCursor) Object.DestroyImmediate(markerCursor);
-			markerCursor = null;
-		}
+		//	mapMarkers.Clear();
+		//}
 
-		// === VIEW FRUSTUM MARKER ===
-		private static GameObject viewFrustumMarker;
-		private static Mesh cachedFrustumMesh;
-		private static float cachedFrustumDistance = -1f;
+		//// Safely add a trigger collider only if physics module exists
+		//private static void TryAddTriggerCollider(GameObject go)
+		//{
+		//	var colliderType = System.Type.GetType("UnityEngine.SphereCollider, UnityEngine");
+		//	if (colliderType != null)
+		//	{
+		//		var col = go.AddComponent(colliderType) as Collider;
+		//		if (col != null)
+		//			col.isTrigger = true;
+		//	}
+		//}
 
-		private static Mesh CreateViewFrustumMesh(float distance)
-		{
-			const float GameFOV = 20f;
-			const float Near = 0.25f;
-			float Far = Mathf.Max(distance, Near + 0.1f);
+		//public static void DestroyMarkerVisuals()
+		//{
+		//	ClearMapMarkers();
+		//	if (markerCursor) Object.DestroyImmediate(markerCursor);
+		//	markerCursor = null;
+		//}
 
-			float aspect = 16f / 9f;
-			float halfFov = GameFOV * 0.5f * Mathf.Deg2Rad;
-			float t = Mathf.Tan(halfFov);
+		//// === VIEW FRUSTUM MARKER ===
+		//private static GameObject viewFrustumMarker;
+		//private static Mesh cachedFrustumMesh;
+		//private static float cachedFrustumDistance = -1f;
 
-			float nh = Near * t * 2f;
-			float nw = nh * aspect;
-			float fh = Far * t * 2f;
-			float fw = fh * aspect;
+		//private static Mesh CreateViewFrustumMesh(float distance)
+		//{
+		//	const float GameFOV = 20f;
+		//	const float Near = 0.25f;
+		//	float Far = Mathf.Max(distance, Near + 0.1f);
 
-			Vector3[] near = {
-				new(-nw/2, -nh/2, Near),
-				new( nw/2, -nh/2, Near),
-				new( nw/2,  nh/2, Near),
-				new(-nw/2,  nh/2, Near)
-			};
+		//	float aspect = 16f / 9f;
+		//	float halfFov = GameFOV * 0.5f * Mathf.Deg2Rad;
+		//	float t = Mathf.Tan(halfFov);
 
-			Vector3[] far = {
-				new(-fw/2, -fh/2, Far),
-				new( fw/2, -fh/2, Far),
-				new( fw/2,  fh/2, Far),
-				new(-fw/2,  fh/2, Far)
-			};
+		//	float nh = Near * t * 2f;
+		//	float nw = nh * aspect;
+		//	float fh = Far * t * 2f;
+		//	float fw = fh * aspect;
 
-			var mesh = new Mesh { name = "ViewFrustum_DoubleSided_4Mat" };
+		//	Vector3[] near = {
+		//		new(-nw/2, -nh/2, Near),
+		//		new( nw/2, -nh/2, Near),
+		//		new( nw/2,  nh/2, Near),
+		//		new(-nw/2,  nh/2, Near)
+		//	};
 
-			var verts = new List<Vector3>();
-			verts.AddRange(near);
-			verts.AddRange(far);
-			mesh.SetVertices(verts);
+		//	Vector3[] far = {
+		//		new(-fw/2, -fh/2, Far),
+		//		new( fw/2, -fh/2, Far),
+		//		new( fw/2,  fh/2, Far),
+		//		new(-fw/2,  fh/2, Far)
+		//	};
 
-			var sideOutside = new List<int>();
-			var sideInside = new List<int>();
-			var capOutside = new List<int>();
-			var capInside = new List<int>();
+		//	var mesh = new Mesh { name = "ViewFrustum_DoubleSided_4Mat" };
 
-			// LEFT FACE
-			sideOutside.AddRange(new[] { 0, 4, 7 }); sideOutside.AddRange(new[] { 0, 7, 3 });
-			sideInside.AddRange(new[] { 0, 7, 4 }); sideInside.AddRange(new[] { 0, 3, 7 });
+		//	var verts = new List<Vector3>();
+		//	verts.AddRange(near);
+		//	verts.AddRange(far);
+		//	mesh.SetVertices(verts);
 
-			// RIGHT FACE
-			sideOutside.AddRange(new[] { 1, 2, 6 }); sideOutside.AddRange(new[] { 1, 6, 5 });
-			sideInside.AddRange(new[] { 1, 6, 2 }); sideInside.AddRange(new[] { 1, 5, 6 });
+		//	var sideOutside = new List<int>();
+		//	var sideInside = new List<int>();
+		//	var capOutside = new List<int>();
+		//	var capInside = new List<int>();
 
-			// TOP SLOPE
-			capOutside.AddRange(new[] { 3, 7, 6 }); capOutside.AddRange(new[] { 3, 6, 2 });
-			capInside.AddRange(new[] { 3, 6, 7 }); capInside.AddRange(new[] { 3, 2, 6 });
+		//	// LEFT FACE
+		//	sideOutside.AddRange(new[] { 0, 4, 7 }); sideOutside.AddRange(new[] { 0, 7, 3 });
+		//	sideInside.AddRange(new[] { 0, 7, 4 }); sideInside.AddRange(new[] { 0, 3, 7 });
 
-			// BOTTOM SLOPE
-			capOutside.AddRange(new[] { 0, 1, 5 }); capOutside.AddRange(new[] { 0, 5, 4 });
-			capInside.AddRange(new[] { 0, 5, 1 }); capInside.AddRange(new[] { 0, 4, 5 });
+		//	// RIGHT FACE
+		//	sideOutside.AddRange(new[] { 1, 2, 6 }); sideOutside.AddRange(new[] { 1, 6, 5 });
+		//	sideInside.AddRange(new[] { 1, 6, 2 }); sideInside.AddRange(new[] { 1, 5, 6 });
 
-			mesh.subMeshCount = 4;
-			mesh.SetTriangles(sideOutside, 0);
-			mesh.SetTriangles(sideInside, 1);
-			mesh.SetTriangles(capOutside, 2);
-			mesh.SetTriangles(capInside, 3);
+		//	// TOP SLOPE
+		//	capOutside.AddRange(new[] { 3, 7, 6 }); capOutside.AddRange(new[] { 3, 6, 2 });
+		//	capInside.AddRange(new[] { 3, 6, 7 }); capInside.AddRange(new[] { 3, 2, 6 });
 
-			mesh.RecalculateBounds();
-			return mesh;
-		}
+		//	// BOTTOM SLOPE
+		//	capOutside.AddRange(new[] { 0, 1, 5 }); capOutside.AddRange(new[] { 0, 5, 4 });
+		//	capInside.AddRange(new[] { 0, 5, 1 }); capInside.AddRange(new[] { 0, 4, 5 });
 
-		public static void UpdateViewFrustumMarker(View view, IMapManager mapManager)
-		{
-			if (view == null || view.data == null || view.data.Length < 7 || view.Distance < 0.02f)
-			{
-				DestroyViewFrustumMarker();
-				return;
-			}
+		//	mesh.subMeshCount = 4;
+		//	mesh.SetTriangles(sideOutside, 0);
+		//	mesh.SetTriangles(sideInside, 1);
+		//	mesh.SetTriangles(capOutside, 2);
+		//	mesh.SetTriangles(capInside, 3);
 
-			Vector3 worldPos = mapManager.TileWorldPosition(view.tile) + view.Position;
-			Vector3 forward = (view.LookAt - view.Position).normalized;
-			if (forward.sqrMagnitude < 0.001f) forward = Vector3.forward;
+		//	mesh.RecalculateBounds();
+		//	return mesh;
+		//}
 
-			Quaternion rot = view.Rotation;
-			Vector3 up = Vector3.ProjectOnPlane(rot * Vector3.up, forward);
-			if (up.sqrMagnitude < 0.01f) up = Vector3.up;
-			else up = up.normalized;
+		//public static void UpdateViewFrustumMarker(View view, IMapManager mapManager)
+		//{
+		//	if (view == null || view.data == null || view.data.Length < 7 || view.Distance < 0.02f)
+		//	{
+		//		DestroyViewFrustumMarker();
+		//		return;
+		//	}
 
-			Quaternion targetRotation = Quaternion.LookRotation(forward, up);
+		//	Vector3 worldPos = mapManager.TileWorldPosition(view.tile) + view.Position;
+		//	Vector3 forward = (view.LookAt - view.Position).normalized;
+		//	if (forward.sqrMagnitude < 0.001f) forward = Vector3.forward;
 
-			// Create once
-			if (viewFrustumMarker == null)
-			{
-				viewFrustumMarker = new GameObject("GIZMO_VIEWFRUSTUM");
-				viewFrustumMarker.layer = LayerMask.NameToLayer("Editor");
+		//	Quaternion rot = view.Rotation;
+		//	Vector3 up = Vector3.ProjectOnPlane(rot * Vector3.up, forward);
+		//	if (up.sqrMagnitude < 0.01f) up = Vector3.up;
+		//	else up = up.normalized;
 
-				var mf = viewFrustumMarker.AddComponent<MeshFilter>();
-				var mr = viewFrustumMarker.AddComponent<MeshRenderer>();
+		//	Quaternion targetRotation = Quaternion.LookRotation(forward, up);
 
-				var transparentShader = Shader.Find("Hidden/URPGizmoTransparent");
-				var additiveShader = Shader.Find("Hidden/URPGizmoAdditive");
+		//	// Create once
+		//	if (viewFrustumMarker == null)
+		//	{
+		//		viewFrustumMarker = new GameObject("GIZMO_VIEWFRUSTUM");
+		//		viewFrustumMarker.layer = LayerMask.NameToLayer("Editor");
 
-				var materials = new Material[4]
-				{
-			new Material(additiveShader),
-			new Material(transparentShader),
-			new Material(additiveShader),
-			new Material(transparentShader)
-				};
+		//		var mf = viewFrustumMarker.AddComponent<MeshFilter>();
+		//		var mr = viewFrustumMarker.AddComponent<MeshRenderer>();
 
-				materials[0].SetColor("_BaseColor", new Color(0.05f, 0.30f, 0.40f, 1f));
-				materials[1].SetColor("_BaseColor", new Color(0.3f, 0.6f, 0.9f, 0.20f));
-				materials[2].SetColor("_BaseColor", new Color(0.03f, 0.22f, 0.30f, 1f));
-				materials[3].SetColor("_BaseColor", new Color(0.1f, 0.5f, 0.8f, 0.20f));
+		//		var transparentShader = Shader.Find("Hidden/URPGizmoTransparent");
+		//		var additiveShader = Shader.Find("Hidden/URPGizmoAdditive");
 
-				foreach (var m in materials)
-					m.hideFlags = HideFlags.HideAndDontSave;
+		//		var materials = new Material[4]
+		//		{
+		//	new Material(additiveShader),
+		//	new Material(transparentShader),
+		//	new Material(additiveShader),
+		//	new Material(transparentShader)
+		//		};
 
-				mr.materials = materials;
-			}
+		//		materials[0].SetColor("_BaseColor", new Color(0.05f, 0.30f, 0.40f, 1f));
+		//		materials[1].SetColor("_BaseColor", new Color(0.3f, 0.6f, 0.9f, 0.20f));
+		//		materials[2].SetColor("_BaseColor", new Color(0.03f, 0.22f, 0.30f, 1f));
+		//		materials[3].SetColor("_BaseColor", new Color(0.1f, 0.5f, 0.8f, 0.20f));
 
-			// Only regenerate mesh if distance changed significantly
-			if (!Mathf.Approximately(cachedFrustumDistance, view.Distance))
-			{
-				if (cachedFrustumMesh != null)
-					Object.DestroyImmediate(cachedFrustumMesh);
+		//		foreach (var m in materials)
+		//			m.hideFlags = HideFlags.HideAndDontSave;
 
-				cachedFrustumMesh = CreateViewFrustumMesh(view.Distance);
-				cachedFrustumDistance = view.Distance;
+		//		mr.materials = materials;
+		//	}
 
-				var mf = viewFrustumMarker.GetComponent<MeshFilter>();
-				mf.sharedMesh = cachedFrustumMesh;
-			}
+		//	// Only regenerate mesh if distance changed significantly
+		//	if (!Mathf.Approximately(cachedFrustumDistance, view.Distance))
+		//	{
+		//		if (cachedFrustumMesh != null)
+		//			Object.DestroyImmediate(cachedFrustumMesh);
 
-			// Fast update
-			viewFrustumMarker.transform.position = worldPos;
-			viewFrustumMarker.transform.rotation = targetRotation;
-			viewFrustumMarker.SetActive(true);
-		}
+		//		cachedFrustumMesh = CreateViewFrustumMesh(view.Distance);
+		//		cachedFrustumDistance = view.Distance;
 
-		public static void DestroyViewFrustumMarker()
-		{
-			if (viewFrustumMarker != null)
-			{
-				if (Application.isPlaying)
-					Object.Destroy(viewFrustumMarker);
-				else
-					Object.DestroyImmediate(viewFrustumMarker);
-				viewFrustumMarker = null;
-			}
+		//		var mf = viewFrustumMarker.GetComponent<MeshFilter>();
+		//		mf.sharedMesh = cachedFrustumMesh;
+		//	}
 
-			if (cachedFrustumMesh != null)
-			{
-				Object.DestroyImmediate(cachedFrustumMesh);
-				cachedFrustumMesh = null;
-				cachedFrustumDistance = -1f;
-			}
-		}
+		//	// Fast update
+		//	viewFrustumMarker.transform.position = worldPos;
+		//	viewFrustumMarker.transform.rotation = targetRotation;
+		//	viewFrustumMarker.SetActive(true);
+		//}
+
+		//public static void DestroyViewFrustumMarker()
+		//{
+		//	if (viewFrustumMarker != null)
+		//	{
+		//		if (Application.isPlaying)
+		//			Object.Destroy(viewFrustumMarker);
+		//		else
+		//			Object.DestroyImmediate(viewFrustumMarker);
+		//		viewFrustumMarker = null;
+		//	}
+
+		//	if (cachedFrustumMesh != null)
+		//	{
+		//		Object.DestroyImmediate(cachedFrustumMesh);
+		//		cachedFrustumMesh = null;
+		//		cachedFrustumDistance = -1f;
+		//	}
+		//}
 	}
 }

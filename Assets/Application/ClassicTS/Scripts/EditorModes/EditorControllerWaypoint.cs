@@ -43,14 +43,14 @@ namespace ClassicTilestorm
 		{
 			base.OnEnable();
 			SelectedWaypointIndex = -1;
-			EditorUtil.DestroyMarkerVisuals();
+			EditorMarkerUtil.ClearMapMarkers();
 			RebuildMarkers();
 		}
 
 		public override void OnDisable()
 		{
 			base.OnDisable();
-			EditorUtil.DestroyMarkerVisuals();
+			EditorMarkerUtil.ClearMapMarkers();
 			pendingAction = PendingAction.None;
 		}
 
@@ -65,7 +65,7 @@ namespace ClassicTilestorm
 			var map = editorController?.iMapManager?.CurrentMap;
 			if (map == null) return;
 
-			EditorUtil.UpdateMapMarkers(editorController.iMapManager, editorController.iMapManager.Waypoints, SelectedWaypointIndex, EditorUtil.MarkerType.Waypoint);
+			EditorMarkerUtil.UpdateMapMarkers(editorController.iMapManager, editorController.iMapManager.Waypoints, SelectedWaypointIndex, EditorMarkerUtil.MarkerType.Waypoint);
 		}
 
 		private void SelectWaypoint(int index)
