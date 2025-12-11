@@ -204,6 +204,7 @@ namespace ClassicTilestorm
 			viewPreview.Hide();
 			isControllingPreviewWithRMB = false;
 			rmbDragStartedInPreview = false;
+			supressInput = true;
 		}
 
 		public void RebuildMarkers()
