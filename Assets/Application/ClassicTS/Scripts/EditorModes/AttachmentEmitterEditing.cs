@@ -27,7 +27,7 @@ namespace ClassicTilestorm
 			}
 		}
 
-		public static void HandleGizmoInput(EditorControllerAttachment editor)
+		public override void HandleGizmoInput(EditorControllerAttachment editor)
 		{
 			var emitter = editor.selectedAttachments?.OfType<Emitter>().FirstOrDefault();
 			if (emitter == null) return;

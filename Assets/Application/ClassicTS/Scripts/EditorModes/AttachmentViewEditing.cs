@@ -84,7 +84,7 @@ namespace ClassicTilestorm
 		// GIZMO INPUT — NOW CORRECT (with missing line restored)
 		// ===================================================================
 
-		public static void HandleGizmoInput(EditorControllerAttachment editor)
+		public override void HandleGizmoInput(EditorControllerAttachment editor)
 		{
 			var view = GetSelectedView(editor);
 			if (view == null) return;

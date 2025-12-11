@@ -86,7 +86,8 @@ namespace ClassicTilestorm
 
 			if (EditorTransformUtil.HandleTransformGizmoInput(editorCamera))
 			{
-				AttachmentViewEditing.HandleGizmoInput(this);
+				var typeEditor = AttachmentEditing.GetCurrentEditor(this);
+				typeEditor?.HandleGizmoInput(this);
 				supressInput = true;
 			}
 

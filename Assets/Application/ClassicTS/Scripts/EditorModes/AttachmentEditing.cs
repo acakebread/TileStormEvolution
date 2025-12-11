@@ -27,6 +27,7 @@ namespace ClassicTilestorm
 
 		public virtual void HandleSelectionChanged(EditorControllerAttachment editor) { }
 		public virtual void HandleDrag(EditorControllerAttachment editor, MapAttachment attachment) { }
+		public virtual void HandleGizmoInput(EditorControllerAttachment editor) { }
 
 		// === Generic popup implementations (exactly as before) ===
 
