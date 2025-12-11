@@ -154,7 +154,11 @@ namespace ClassicTilestorm
 			if (EditorTransformUtil.HandleTransformGizmoInput(editorCamera))
 			{
 				if (SelectedAttachmentIndex >= 0 && SelectedAttachmentIndex < editorController.iMapManager.CurrentMap.attachments.Length && editorController.currentMap?.attachments?[SelectedAttachmentIndex] is View view)
+				{
 					SnapViewDistanceToGround(view, editorController.iMapManager);
+					EditorUtil.UpdateViewFrustumMarker(view, editorController.iMapManager);
+					EditorTransformUtil.UpdateTransformGizmoVisuals(editorCamera);
+				}
 				supressPopup = true;
 			}
 
