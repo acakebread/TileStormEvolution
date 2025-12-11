@@ -97,18 +97,35 @@ namespace ClassicTilestorm
 			// Click
 			if (Input.GetMouseButtonDown(0))
 			{
-				if (Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, 1 << LayerMask.NameToLayer("Editor")))
+				RaycastHit[] hits = Physics.RaycastAll(ray, Mathf.Infinity, 1 << LayerMask.NameToLayer("Editor"));
+				// Sort by distance: closest first (standard Physics.Raycast behavior)
+				System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+
+				handled = false;
+
+				foreach (RaycastHit hit in hits)
 				{
-					if (hit.transform.IsChildOf(positionHandle.transform))
+					// Prioritize FaceTag (position handle faces) over everything else
+					FaceTag faceTag = hit.transform.GetComponent<FaceTag>();
+					if (faceTag != null)
 					{
 						StartPositionDrag(ray, cam, hit);
 						handled = true;
+						break; // Stop after handling position - highest priority
 					}
-					else if (TryStartRotationDrag(ray))
+
+					// Only if no FaceTag was hit, check for RingTag (rotation rings)
+					RingTag ringTag = hit.transform.GetComponent<RingTag>();
+					if (ringTag != null)
 					{
-						handled = true;
+						if (TryStartRotationDrag(ray))
+						{
+							handled = true;
+							break;
+						}
 					}
 				}
+
 				wasActive = handled;
 			}
 
