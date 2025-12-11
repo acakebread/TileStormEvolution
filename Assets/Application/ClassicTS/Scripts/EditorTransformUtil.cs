@@ -42,7 +42,7 @@ namespace ClassicTilestorm
 		// NEW PURE WORLD-SPACE API
 		// ===================================================================
 
-		public static void ShowAt(Vector3 worldPosition, Quaternion worldRotation, Camera editorCamera, bool worldSapce = false)
+		public static void ShowAt(Vector3 worldPosition, Quaternion worldRotation, Camera editorCamera, bool worldSpace = false)
 		{
 			Hide();
 
@@ -53,12 +53,12 @@ namespace ClassicTilestorm
 			rotationOrbiter = CreateRotationOrbiter(root.transform);
 
 			root.transform.position = worldPosition;
-			root.transform.rotation = worldSapce ? quaternion.identity : worldRotation;
+			root.transform.rotation = worldSpace ? quaternion.identity : worldRotation;
 
 			UpdateVisuals(editorCamera);
 		}
 
-		public static bool HandleInput(Camera editorCamera, out Vector3 newWorldPosition, out Quaternion newWorldRotation, bool worldSapce = false)
+		public static bool HandleInput(Camera editorCamera, out Vector3 newWorldPosition, out Quaternion newWorldRotation, bool worldSpace = false)
 		{
 			newWorldPosition = root ? root.transform.position : Vector3.zero;
 			newWorldRotation = rotationOrbiter ? rotationOrbiter.transform.rotation : Quaternion.identity;
@@ -96,7 +96,7 @@ namespace ClassicTilestorm
 
 				if (posHit.HasValue)
 				{
-					StartPositionDrag(ray, editorCamera, posHit.Value, worldSapce);
+					StartPositionDrag(ray, editorCamera, posHit.Value, worldSpace);
 					handled = true;
 				}
 				else if (ringHit.HasValue)
@@ -227,7 +227,7 @@ namespace ClassicTilestorm
 			return go;
 		}
 
-		private static void StartPositionDrag(Ray ray, Camera cam, RaycastHit hit, bool worldSapce = false)
+		private static void StartPositionDrag(Ray ray, Camera cam, RaycastHit hit, bool worldSpace = false)
 		{
 			FaceTag tag = hit.transform.GetComponent<FaceTag>();
 
@@ -239,7 +239,7 @@ namespace ClassicTilestorm
 			else
 			{
 				lockedAxis = Vector3.zero;
-				dragPlane = new Plane(worldSapce ? - cam.transform.forward : dragPlane.normal, root.transform.position);
+				dragPlane = new Plane(worldSpace ? - cam.transform.forward : dragPlane.normal, root.transform.position);
 			}
 
 			if (dragPlane.Raycast(ray, out float enter))
