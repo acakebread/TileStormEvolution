@@ -21,6 +21,21 @@ namespace MassiveHadronLtd
 			};
 		}
 
+		// New symmetric Decode method
+		public static void Decode(float[] d, out Vector3 position, out Quaternion rotation, out float distance)
+		{
+			position = GetPosition(d);
+			rotation = GetRotation(d);
+			distance = GetDistance(d);
+		}
+
+		// Optional: tuple-based version for modern C# (if you're using C# 7.0+)
+		public static (Vector3 position, Quaternion rotation, float distance) DecodeTuple(float[] d)
+		{
+			return (GetPosition(d), GetRotation(d), GetDistance(d));
+		}
+
+		// Existing helper methods (unchanged)
 		public static Vector3 GetPosition(float[] d) =>
 			d != null && d.Length >= 3 ? new Vector3(d[0], d[1], d[2]) : Vector3.zero;
 
@@ -35,7 +50,7 @@ namespace MassiveHadronLtd
 			d != null && d.Length >= 7 ? d[6] : 10f;
 
 		public static Vector3 GetDirection(float[] d) =>
-		    GetRotation(d) * Vector3.forward;
+			GetRotation(d) * Vector3.forward;
 
 		public static Vector3 GetLookAt(float[] d) =>
 			GetPosition(d) + GetDirection(d) * GetDistance(d);
