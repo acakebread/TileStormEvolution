@@ -97,33 +97,35 @@ namespace ClassicTilestorm
 			// Click
 			if (Input.GetMouseButtonDown(0))
 			{
-				RaycastHit[] hits = Physics.RaycastAll(ray, Mathf.Infinity, 1 << LayerMask.NameToLayer("Editor"));
-				// Sort by distance: closest first (standard Physics.Raycast behavior)
+				var hits = Physics.RaycastAll(ray, Mathf.Infinity, 1 << LayerMask.NameToLayer("Editor"));
 				System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
 
-				handled = false;
+				RaycastHit? posHit = null;
+				RaycastHit? ringHit = null;
 
-				foreach (RaycastHit hit in hits)
+				foreach (var h in hits)
 				{
-					// Prioritize FaceTag (position handle faces) over everything else
-					FaceTag faceTag = hit.transform.GetComponent<FaceTag>();
-					if (faceTag != null)
+					if (h.transform.IsChildOf(positionHandle.transform))
 					{
-						StartPositionDrag(ray, cam, hit);
-						handled = true;
-						break; // Stop after handling position - highest priority
+						posHit = h;
+						break;
 					}
+					if (ringHit == null && h.transform.GetComponent<RingTag>() != null)
+					{
+						ringHit = h;
+					}
+				}
 
-					// Only if no FaceTag was hit, check for RingTag (rotation rings)
-					RingTag ringTag = hit.transform.GetComponent<RingTag>();
-					if (ringTag != null)
-					{
-						if (TryStartRotationDrag(ray))
-						{
-							handled = true;
-							break;
-						}
-					}
+				// PRIORITY: position handle
+				if (posHit.HasValue)
+				{
+					StartPositionDrag(ray, cam, posHit.Value);
+					handled = true;
+				}
+				else if (ringHit.HasValue)
+				{
+					if (TryStartRotationDrag(ray))
+						handled = true;
 				}
 
 				wasActive = handled;
@@ -338,7 +340,37 @@ namespace ClassicTilestorm
 		{
 			if (draggingPosition || draggingRotation) return;
 
-			if (!Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, 1 << LayerMask.NameToLayer("Editor")))
+			var hits = Physics.RaycastAll(ray, Mathf.Infinity, 1 << LayerMask.NameToLayer("Editor"));
+			if (hits.Length == 0)
+			{
+				ResetHover();
+				return;
+			}
+
+			System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+
+			RaycastHit? faceHit = null;
+			RaycastHit? ringHit = null;
+
+			foreach (var h in hits)
+			{
+				if (h.transform.GetComponent<FaceTag>() != null &&
+					h.transform.IsChildOf(positionHandle.transform))
+				{
+					faceHit = h;
+					break;
+				}
+				if (ringHit == null && h.transform.GetComponent<RingTag>() != null)
+				{
+					ringHit = h;
+				}
+			}
+
+			// PRIORITY: faces
+			RaycastHit hit;
+			if (faceHit.HasValue) hit = faceHit.Value;
+			else if (ringHit.HasValue) hit = ringHit.Value;
+			else
 			{
 				ResetHover();
 				return;
@@ -438,7 +470,7 @@ namespace ClassicTilestorm
 			// === Thick collider (separate mesh) ===
 			MeshCollider mc = go.AddComponent<MeshCollider>();
 			mc.sharedMesh = GenerateTorusMesh(segments: 32, sides: 16, radius: 1f, tube: 0.05f); // thicker = easier to click
-			//mc.convex = true; // Important! Allows raycasting against generated mesh reliably
+																								 //mc.convex = true; // Important! Allows raycasting against generated mesh reliably
 
 			return go;
 		}
