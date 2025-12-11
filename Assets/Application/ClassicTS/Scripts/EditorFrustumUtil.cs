@@ -7,23 +7,126 @@ namespace ClassicTilestorm
 	public static class EditorFrustumUtil
 	{
 		private static GameObject viewFrustumMarker;
+		private static Mesh cachedFrustumMesh;
+		private static float cachedFrustumDistance = -1f;
 
-		public static Mesh CreateViewFrustumMesh(float far)
+		// ===================================================================
+		// NEW PURE WORLD-SPACE API
+		// ===================================================================
+		public static void ShowAt(Vector3 worldPosition, Quaternion worldRotation, float distance)
 		{
-			// Exact same implementation as before (unchanged)
-			var mesh = new Mesh();
-			var verts = new List<Vector3>
+			if (distance < 0.02f)
 			{
-				new Vector3(-1, -1, 0),
-				new Vector3( 1, -1, 0),
-				new Vector3( 1,  1, 0),
-				new Vector3(-1,  1, 0),
-				new Vector3(-2, -2, far),
-				new Vector3( 2, -2, far),
-				new Vector3( 2,  2, far),
-				new Vector3(-2,  2, far)
+				Hide();
+				return;
+			}
+
+			// Create once
+			if (viewFrustumMarker == null)
+			{
+				viewFrustumMarker = new GameObject("GIZMO_VIEWFRUSTUM");
+				viewFrustumMarker.layer = LayerMask.NameToLayer("Editor");
+
+				var mf = viewFrustumMarker.AddComponent<MeshFilter>();
+				var mr = viewFrustumMarker.AddComponent<MeshRenderer>();
+
+				var transparentShader = Shader.Find("Hidden/URPGizmoTransparent");
+				var additiveShader = Shader.Find("Hidden/URPGizmoAdditive");
+
+				var materials = new Material[4]
+				{
+					new Material(additiveShader),
+					new Material(transparentShader),
+					new Material(additiveShader),
+					new Material(transparentShader)
+				};
+
+				materials[0].SetColor("_BaseColor", new Color(0.05f, 0.30f, 0.40f, 1f));
+				materials[1].SetColor("_BaseColor", new Color(0.3f, 0.6f, 0.9f, 0.20f));
+				materials[2].SetColor("_BaseColor", new Color(0.03f, 0.22f, 0.30f, 1f));
+				materials[3].SetColor("_BaseColor", new Color(0.1f, 0.5f, 0.8f, 0.20f));
+
+				foreach (var m in materials)
+					m.hideFlags = HideFlags.HideAndDontSave;
+
+				mr.materials = materials;
+			}
+
+			// Regenerate mesh only if distance changed
+			if (!Mathf.Approximately(cachedFrustumDistance, distance))
+			{
+				if (cachedFrustumMesh != null)
+					Object.DestroyImmediate(cachedFrustumMesh);
+
+				cachedFrustumMesh = CreateViewFrustumMesh(distance);
+				cachedFrustumDistance = distance;
+
+				var mf = viewFrustumMarker.GetComponent<MeshFilter>();
+				mf.sharedMesh = cachedFrustumMesh;
+			}
+
+			// Fast update
+			viewFrustumMarker.transform.position = worldPosition;
+			viewFrustumMarker.transform.rotation = worldRotation;
+			viewFrustumMarker.SetActive(true);
+		}
+
+		public static void Hide()
+		{
+			if (viewFrustumMarker != null)
+			{
+				if (Application.isPlaying)
+					Object.Destroy(viewFrustumMarker);
+				else
+					Object.DestroyImmediate(viewFrustumMarker);
+				viewFrustumMarker = null;
+			}
+
+			if (cachedFrustumMesh != null)
+			{
+				Object.DestroyImmediate(cachedFrustumMesh);
+				cachedFrustumMesh = null;
+			}
+			cachedFrustumDistance = -1f;
+		}
+
+		// ===================================================================
+		// CORRECT FRUSTUM MESH (from your reliable version)
+		// ===================================================================
+		private static Mesh CreateViewFrustumMesh(float distance)
+		{
+			const float GameFOV = 20f;
+			const float Near = 0.25f;
+			float Far = Mathf.Max(distance, Near + 0.1f);
+
+			float aspect = 16f / 9f;
+			float halfFov = GameFOV * 0.5f * Mathf.Deg2Rad;
+			float t = Mathf.Tan(halfFov);
+
+			float nh = Near * t * 2f;
+			float nw = nh * aspect;
+			float fh = Far * t * 2f;
+			float fw = fh * aspect;
+
+			Vector3[] near = {
+				new(-nw/2, -nh/2, Near),
+				new( nw/2, -nh/2, Near),
+				new( nw/2,  nh/2, Near),
+				new(-nw/2,  nh/2, Near)
 			};
 
+			Vector3[] far = {
+				new(-fw/2, -fh/2, Far),
+				new( fw/2, -fh/2, Far),
+				new( fw/2,  fh/2, Far),
+				new(-fw/2,  fh/2, Far)
+			};
+
+			var mesh = new Mesh { name = "ViewFrustum_DoubleSided_4Mat" };
+
+			var verts = new List<Vector3>();
+			verts.AddRange(near);
+			verts.AddRange(far);
 			mesh.SetVertices(verts);
 
 			var sideOutside = new List<int>();
@@ -55,69 +158,6 @@ namespace ClassicTilestorm
 
 			mesh.RecalculateBounds();
 			return mesh;
-		}
-
-		public static void UpdateViewFrustumMarker(View view, IMapManager mapManager)
-		{
-			DestroyViewFrustumMarker();
-
-			if (view == null || view.data == null || view.data.Length < 7 || view.Distance < 0.02f)
-				return;
-
-			var go = new GameObject("GIZMO_VIEWFRUSTUM");
-			go.layer = LayerMask.NameToLayer("Editor");
-
-			var mf = go.AddComponent<MeshFilter>();
-			var mr = go.AddComponent<MeshRenderer>();
-
-			mf.mesh = CreateViewFrustumMesh(view.Distance);
-
-			var transparentShader = Shader.Find("Hidden/URPGizmoTransparent");
-			var additiveShader = Shader.Find("Hidden/URPGizmoAdditive");
-
-			var materials = new Material[4]
-			{
-				new Material(additiveShader),
-				new Material(transparentShader),
-				new Material(additiveShader),
-				new Material(transparentShader)
-			};
-
-			materials[0].SetColor("_BaseColor", new Color(0.05f, 0.30f, 0.40f, 1f));
-			materials[1].SetColor("_BaseColor", new Color(0.3f, 0.6f, 0.9f, 0.20f));
-			materials[2].SetColor("_BaseColor", new Color(0.03f, 0.22f, 0.30f, 1f));
-			materials[3].SetColor("_BaseColor", new Color(0.1f, 0.5f, 0.8f, 0.20f));
-
-			foreach (var m in materials)
-				m.hideFlags = HideFlags.HideAndDontSave;
-
-			mr.materials = materials;
-
-			Vector3 worldPos = mapManager.TileWorldPosition(view.tile) + view.Position;
-			Vector3 forward = (view.LookAt - view.Position).normalized;
-			if (forward.sqrMagnitude < 0.001f) forward = Vector3.forward;
-
-			Quaternion rot = view.Rotation;
-			Vector3 up = Vector3.ProjectOnPlane(rot * Vector3.up, forward);
-			if (up.sqrMagnitude < 0.01f) up = Vector3.up;
-			else up = up.normalized;
-
-			go.transform.position = worldPos;
-			go.transform.rotation = Quaternion.LookRotation(forward, up);
-
-			viewFrustumMarker = go;
-		}
-
-		public static void DestroyViewFrustumMarker()
-		{
-			if (viewFrustumMarker != null)
-			{
-				if (Application.isPlaying)
-					Object.Destroy(viewFrustumMarker);
-				else
-					Object.DestroyImmediate(viewFrustumMarker);
-				viewFrustumMarker = null;
-			}
 		}
 	}
 }

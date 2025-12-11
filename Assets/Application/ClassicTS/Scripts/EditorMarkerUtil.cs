@@ -7,7 +7,6 @@ namespace ClassicTilestorm
 {
 	public static class EditorMarkerUtil
 	{
-		// === UNIFIED MARKER SYSTEM ===
 		private class MarkerPulse : MonoBehaviour
 		{
 			public float intensity = 1.5f;
@@ -27,7 +26,7 @@ namespace ClassicTilestorm
 			}
 		}
 
-		// === SAFE SPHERE MESH (cached, no collider ever added) ===
+		// === SAFE SPHERE MESH ===
 		private static Mesh sphereMesh;
 		public static Mesh SphereMesh
 		{
@@ -52,55 +51,39 @@ namespace ClassicTilestorm
 			Attachment
 		}
 
-		public static void UpdateMapMarkers(IMapManager mapManager, int[] tiles, int selectedIndex = -1, MarkerType type = MarkerType.Undefined)
+		// ===================================================================
+		// NEW DECOUPLED API — world positions + optional colors
+		// ===================================================================
+		public static void ShowMarkers(Vector3[] worldPositions, Color[] colors = null, int selectedIndex = -1)
 		{
 			ClearMapMarkers();
 
-			if (tiles == null || tiles.Length == 0 || SphereMesh == null) return;
+			if (worldPositions == null || worldPositions.Length == 0 || SphereMesh == null) return;
 
-			for (int i = 0; i < tiles.Length; i++)
+			for (int i = 0; i < worldPositions.Length; i++)
 			{
-				int tile = tiles[i];
-				if (tile < 0 || tile >= mapManager.Count) continue;
+				Vector3 pos = worldPositions[i];
 
-				Vector3 pos = mapManager.TileWorldPosition(tile) + Vector3.up * 0.02f;
-
-				// === CREATE SPHERE WITHOUT ANY COLLIDER (WebGL-safe) ===
-				var go = new GameObject($"GIZMO_MARKER_{type}_{tile}");
+				var go = new GameObject($"GIZMO_MARKER_{i}");
 				go.layer = LayerMask.NameToLayer("Editor");
-				go.transform.position = pos;
-				go.transform.localScale = Vector3.one * 0.8f * 0.5f; // additional * 0.5f for fbx sphere that is double size
+				go.transform.position = pos + Vector3.up * 0.02f;
+				go.transform.localScale = Vector3.one * 0.8f * 0.5f;
 
 				var mf = go.AddComponent<MeshFilter>();
 				var mr = go.AddComponent<MeshRenderer>();
-
 				mf.sharedMesh = SphereMesh;
 
-				// Optimize renderer for gizmo use
 				mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
 				mr.receiveShadows = false;
 				mr.lightProbeUsage = UnityEngine.Rendering.LightProbeUsage.Off;
 				mr.reflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.Off;
 
-				// Optional: add collider only via reflection (completely safe)
 				TryAddTriggerCollider(go);
 
-				// Base color logic
-				Color baseColor = type switch
-				{
-					MarkerType.Waypoint => new Color(0f, 0.7f, 1f, 0.7f),
-					MarkerType.Attachment => new Color(0f, 0.7f, 1f, 0.7f),
-					_ => new Color(0f, 0.7f, 1f, 0.7f)
-				};
-
-				// Special cases
-				bool hasView = type == MarkerType.Waypoint && mapManager.GetView(tile) != null;
-				if (hasView)
-					baseColor = new Color(0f, 1f, 1f, 0.5f); // Cyan for camera waypoints
+				Color baseColor = (colors != null && i < colors.Length) ? colors[i] : new Color(0f, 0.7f, 1f, 0.7f);
 
 				if (i == selectedIndex)
 				{
-					// Selected: bright green + pulsing
 					mr.material = MaterialUtils.CreateTransparentUnlitMaterial(new Color(0f, 1f, 0f, 0.7f));
 					var pulse = go.AddComponent<MarkerPulse>();
 					pulse.intensity = 2.1f;
@@ -125,19 +108,57 @@ namespace ClassicTilestorm
 			mapMarkers.Clear();
 		}
 
-		// Keep existing helper (unchanged)
 		private static void TryAddTriggerCollider(GameObject go)
 		{
-			// Implementation assumed to exist elsewhere or via reflection
-			// Left as-is — safe and unchanged
+			var colliderType = System.Type.GetType("UnityEngine.SphereCollider, UnityEngine");
+			if (colliderType != null)
+			{
+				var col = go.AddComponent(colliderType) as Collider;
+				if (col != null)
+					col.isTrigger = true;
+			}
 		}
 
-		// Legacy aliases for backward compatibility during transition
-		[System.Obsolete("Use EditorMarkerUtil.UpdateMapMarkers instead")]
-		public static void UpdateMarkerVisuals(IMapManager mapManager, int[] tiles, int selectedIndex = -1, MarkerType type = MarkerType.Undefined)
-			=> UpdateMapMarkers(mapManager, tiles, selectedIndex, type);
+		//// ===================================================================
+		//// TEMPORARY WRAPPER — preserves exact old behavior (including GetView check)
+		//// ===================================================================
+		//[System.Obsolete("Use EditorMarkerUtil.ShowMarkers(worldPositions, colors, selectedIndex) instead. Will be removed later.")]
+		//public static void UpdateMapMarkers(IMapManager mapManager, int[] tiles, int selectedIndex = -1, MarkerType type = MarkerType.Undefined)
+		//{
+		//	if (tiles == null || tiles.Length == 0 || SphereMesh == null)
+		//	{
+		//		ClearMapMarkers();
+		//		return;
+		//	}
 
-		[System.Obsolete("Use EditorMarkerUtil.ClearMapMarkers instead")]
-		public static void DestroyMarkerVisuals() => ClearMapMarkers();
+		//	var positions = new Vector3[tiles.Length];
+		//	var colors = new Color[tiles.Length];
+
+		//	for (int i = 0; i < tiles.Length; i++)
+		//	{
+		//		int tile = tiles[i];
+		//		if (tile < 0 || tile >= mapManager.Count)
+		//		{
+		//			positions[i] = Vector3.zero;
+		//			colors[i] = new Color(0f, 0.7f, 1f, 0.7f);
+		//			continue;
+		//		}
+
+		//		positions[i] = mapManager.TileWorldPosition(tile);
+
+		//		bool hasView = type == MarkerType.Waypoint && mapManager.GetView(tile) != null;
+		//		colors[i] = hasView ? new Color(0f, 1f, 1f, 0.5f) : new Color(0f, 0.7f, 1f, 0.7f);
+		//	}
+
+		//	ShowMarkers(positions, colors, selectedIndex);
+		//}
+
+		//// Legacy aliases
+		//[System.Obsolete("Use EditorMarkerUtil.ShowMarkers instead")]
+		//public static void UpdateMarkerVisuals(IMapManager mapManager, int[] tiles, int selectedIndex = -1, MarkerType type = MarkerType.Undefined)
+		//	=> UpdateMapMarkers(mapManager, tiles, selectedIndex, type);
+
+		//[System.Obsolete("Use EditorMarkerUtil.ClearMapMarkers instead")]
+		//public static void DestroyMarkerVisuals() => ClearMapMarkers();
 	}
 }

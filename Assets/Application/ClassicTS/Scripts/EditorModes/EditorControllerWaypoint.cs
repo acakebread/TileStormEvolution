@@ -65,7 +65,7 @@ namespace ClassicTilestorm
 			var map = editorController?.iMapManager?.CurrentMap;
 			if (map == null) return;
 
-			EditorMarkerUtil.UpdateMapMarkers(editorController.iMapManager, editorController.iMapManager.Waypoints, SelectedWaypointIndex, EditorMarkerUtil.MarkerType.Waypoint);
+			UpdateMapMarkers(editorController.iMapManager, editorController.iMapManager.Waypoints, SelectedWaypointIndex, EditorMarkerUtil.MarkerType.Waypoint);
 		}
 
 		private void SelectWaypoint(int index)
@@ -327,6 +327,36 @@ namespace ClassicTilestorm
 
 			if (closed)
 				pendingAction = PendingAction.None;
+		}
+
+		private static void UpdateMapMarkers(IMapManager mapManager, int[] tiles, int selectedIndex = -1, EditorMarkerUtil.MarkerType type = EditorMarkerUtil.MarkerType.Undefined)
+		{
+			if (tiles == null || tiles.Length == 0 || EditorMarkerUtil.SphereMesh == null)
+			{
+				EditorMarkerUtil.ClearMapMarkers();
+				return;
+			}
+
+			var positions = new Vector3[tiles.Length];
+			var colors = new Color[tiles.Length];
+
+			for (int i = 0; i < tiles.Length; i++)
+			{
+				int tile = tiles[i];
+				if (tile < 0 || tile >= mapManager.Count)
+				{
+					positions[i] = Vector3.zero;
+					colors[i] = new Color(0f, 0.7f, 1f, 0.7f);
+					continue;
+				}
+
+				positions[i] = mapManager.TileWorldPosition(tile);
+
+				bool hasView = type == EditorMarkerUtil.MarkerType.Waypoint && mapManager.GetView(tile) != null;
+				colors[i] = hasView ? new Color(0f, 1f, 1f, 0.5f) : new Color(0f, 0.7f, 1f, 0.7f);
+			}
+
+			EditorMarkerUtil.ShowMarkers(positions, colors, selectedIndex);
 		}
 	}
 }

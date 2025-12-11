@@ -56,7 +56,7 @@ namespace ClassicTilestorm
 		{
 			base.OnEnable();
 			EditorMarkerUtil.ClearMapMarkers();
-			EditorFrustumUtil.DestroyViewFrustumMarker();
+			EditorFrustumUtil.Hide();
 			RebuildMarkers();
 
 			viewPreview = ViewPreview.Create();
@@ -71,7 +71,7 @@ namespace ClassicTilestorm
 			base.OnDisable();
 			EditorMarkerUtil.ClearMapMarkers();
 			pendingAction = PendingAction.None;
-			EditorFrustumUtil.DestroyViewFrustumMarker();
+			EditorFrustumUtil.Hide();
 			EditorTransformUtil.HideTransformGizmo();
 
 			viewPreview?.Hide();
@@ -201,7 +201,7 @@ namespace ClassicTilestorm
 		{
 			if (editorController.CurrentMode != EditorMode.Attachment) return;
 			RebuildMarkers();
-			EditorFrustumUtil.DestroyViewFrustumMarker();
+			EditorFrustumUtil.Hide();
 			EditorTransformUtil.HideTransformGizmo();
 			viewPreview.Hide();
 			isControllingPreviewWithRMB = false;
@@ -227,7 +227,7 @@ namespace ClassicTilestorm
 
 			int selection = System.Array.IndexOf(tiles, selectedTile);
 
-			EditorMarkerUtil.UpdateMapMarkers(editorController.iMapManager, tiles, selection, EditorMarkerUtil.MarkerType.Attachment);
+			UpdateMapMarkers(editorController.iMapManager, tiles, selection, EditorMarkerUtil.MarkerType.Attachment);
 		}
 
 		public void SelectAttachments(MapAttachment[] attachments)
@@ -235,7 +235,7 @@ namespace ClassicTilestorm
 			selectedAttachments = attachments;
 
 			RebuildMarkers();
-			EditorFrustumUtil.DestroyViewFrustumMarker();
+			EditorFrustumUtil.Hide();
 			EditorTransformUtil.HideTransformGizmo();
 			viewPreview.Hide();
 
@@ -370,5 +370,35 @@ namespace ClassicTilestorm
 		public void ClearPendingAction() => pendingAction = PendingAction.Wait;
 		public Vector2 PendingPopupScreenPos => pendingPopupScreenPos;
 		public int PendingTile => pendingTile;
+
+		private static void UpdateMapMarkers(IMapManager mapManager, int[] tiles, int selectedIndex = -1, EditorMarkerUtil.MarkerType type = EditorMarkerUtil.MarkerType.Undefined)
+		{
+			if (tiles == null || tiles.Length == 0 || EditorMarkerUtil.SphereMesh == null)
+			{
+				EditorMarkerUtil.ClearMapMarkers();
+				return;
+			}
+
+			var positions = new Vector3[tiles.Length];
+			var colors = new Color[tiles.Length];
+
+			for (int i = 0; i < tiles.Length; i++)
+			{
+				int tile = tiles[i];
+				if (tile < 0 || tile >= mapManager.Count)
+				{
+					positions[i] = Vector3.zero;
+					colors[i] = new Color(0f, 0.7f, 1f, 0.7f);
+					continue;
+				}
+
+				positions[i] = mapManager.TileWorldPosition(tile);
+
+				bool hasView = type == EditorMarkerUtil.MarkerType.Waypoint && mapManager.GetView(tile) != null;
+				colors[i] = hasView ? new Color(0f, 1f, 1f, 0.5f) : new Color(0f, 0.7f, 1f, 0.7f);
+			}
+
+			EditorMarkerUtil.ShowMarkers(positions, colors, selectedIndex);
+		}
 	}
 }

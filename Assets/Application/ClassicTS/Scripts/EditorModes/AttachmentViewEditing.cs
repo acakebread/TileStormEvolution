@@ -24,7 +24,7 @@ namespace ClassicTilestorm
 			EditorTransformUtil.ShowAt(worldPos, view.Rotation, editor.editorCamera);
 
 			SnapViewDistanceToGround(view, editor.editorController.iMapManager);
-			EditorFrustumUtil.UpdateViewFrustumMarker(view, editor.editorController.iMapManager);
+			UpdateViewFrustumMarker(view, editor.editorController.iMapManager);
 			editor.viewPreview.Show(view, editor.editorController.iMapManager);
 		}
 
@@ -33,7 +33,7 @@ namespace ClassicTilestorm
 			if (attachment is View view)
 			{
 				SnapViewDistanceToGround(view, editor.editorController.iMapManager);
-				EditorFrustumUtil.UpdateViewFrustumMarker(view, editor.editorController.iMapManager);
+				UpdateViewFrustumMarker(view, editor.editorController.iMapManager);
 
 				Vector3 worldPos = editor.editorController.iMapManager.TileWorldPosition(view.tile) + view.Position;
 				EditorTransformUtil.ShowAt(worldPos, view.Rotation, editor.editorCamera);
@@ -70,7 +70,7 @@ namespace ClassicTilestorm
 			EditorTransformUtil.UpdateTransform(worldPos, view.Rotation, editor.editorCamera);
 
 			// Update frustum marker
-			EditorFrustumUtil.UpdateViewFrustumMarker(view, editor.editorController.iMapManager);
+			UpdateViewFrustumMarker(view, editor.editorController.iMapManager);
 		}
 
 		private static void SyncPreviewToView(EditorControllerAttachment editor, ViewPreview viewPreview, View view)
@@ -95,7 +95,7 @@ namespace ClassicTilestorm
 				view.Rotation = newWorldRot;
 
 				SnapViewDistanceToGround(view, editor.editorController.iMapManager);
-				EditorFrustumUtil.UpdateViewFrustumMarker(view, editor.editorController.iMapManager);
+				UpdateViewFrustumMarker(view, editor.editorController.iMapManager);
 
 				// Also update preview window to stay in sync
 				editor.viewPreview.Show(view, editor.editorController.iMapManager);
@@ -108,7 +108,7 @@ namespace ClassicTilestorm
 
 		private static void UpdateVisuals(EditorControllerAttachment editor, View view)
 		{
-			EditorFrustumUtil.UpdateViewFrustumMarker(view, editor.editorController.iMapManager);
+			UpdateViewFrustumMarker(view, editor.editorController.iMapManager);
 			EditorTransformUtil.UpdateTransformGizmoVisuals(editor.editorCamera);
 		}
 
@@ -138,6 +138,32 @@ namespace ClassicTilestorm
 			}
 
 			view.Distance = View.MAX_DISTANCE;
+		}
+
+		// ===================================================================
+		// MOVED: Obsolete wrapper — exact same behavior, now local
+		// ===================================================================
+		private static void UpdateViewFrustumMarker(View view, IMapManager mapManager)
+		{
+			if (view == null || view.data == null || view.data.Length < 7 || view.Distance < 0.02f)
+			{
+				EditorFrustumUtil.Hide();
+				return;
+			}
+
+			Vector3 worldPos = mapManager.TileWorldPosition(view.tile) + view.Position;
+
+			Vector3 forward = (view.LookAt - view.Position).normalized;
+			if (forward.sqrMagnitude < 0.001f) forward = Vector3.forward;
+
+			Quaternion rot = view.Rotation;
+			Vector3 up = Vector3.ProjectOnPlane(rot * Vector3.up, forward);
+			if (up.sqrMagnitude < 0.01f) up = Vector3.up;
+			else up = up.normalized;
+
+			Quaternion targetRotation = Quaternion.LookRotation(forward, up);
+
+			EditorFrustumUtil.ShowAt(worldPos, targetRotation, view.Distance);
 		}
 	}
 }
