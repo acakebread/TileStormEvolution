@@ -27,7 +27,7 @@ namespace ClassicTilestorm
 		private bool rmbDragStartedInPreview = false;
 		private bool isMouseOverPreview = false;
 
-		private readonly AutoHidePanel sidePanel = new AutoHidePanel( collapsed: 120f, expanded: 340f, delay: 1.5f, animDur: 0.25f, defaultPos: new Vector2(0f, 40f) );
+		private readonly AutoHidePanel sidePanel = new AutoHidePanel(collapsed: 120f, expanded: 340f, delay: 1.5f, animDur: 0.25f, defaultPos: new Vector2(0f, 40f));
 
 		private bool supressPopup = true;
 
@@ -135,11 +135,10 @@ namespace ClassicTilestorm
 				if (viewPreview?.previewCam != null)
 				{
 					EditorCameraMovement.UpdateCamera(viewPreview.previewCam.transform);
-					if (SelectedAttachmentIndex >= 0 && SelectedAttachmentIndex < editorController.iMapManager.CurrentMap.attachments.Length && editorController.currentMap?.attachments?[SelectedAttachmentIndex] is View view)
+					var view = GetSelectedView();
+					if (view != null)
 					{
-						SyncPreviewToSelectedView();
-						SnapViewDistanceToGround(view, editorController.iMapManager);
-						SyncPreviewToSelectedView();
+						SyncPreviewToSelectedViewWithGroundSnap();
 					}
 				}
 				return;
@@ -153,11 +152,11 @@ namespace ClassicTilestorm
 			// Gizmo handling
 			if (EditorTransformUtil.HandleTransformGizmoInput(editorCamera))
 			{
-				if (SelectedAttachmentIndex >= 0 && SelectedAttachmentIndex < editorController.iMapManager.CurrentMap.attachments.Length && editorController.currentMap?.attachments?[SelectedAttachmentIndex] is View view)
+				var view = GetSelectedView();
+				if (view != null)
 				{
 					SnapViewDistanceToGround(view, editorController.iMapManager);
-					EditorUtil.UpdateViewFrustumMarker(view, editorController.iMapManager);
-					EditorTransformUtil.UpdateTransformGizmoVisuals(editorCamera);
+					UpdateSelectedViewVisuals(view);
 				}
 				supressPopup = true;
 			}
@@ -198,7 +197,7 @@ namespace ClassicTilestorm
 					if (att is View v)
 					{
 						SnapViewDistanceToGround(v, editorController.iMapManager);
-						EditorUtil.UpdateViewFrustumMarker(v, editorController.iMapManager);
+						UpdateSelectedViewVisuals(v);
 						EditorTransformUtil.ShowTransformGizmo(v, editorController.iMapManager, editorCamera);
 						viewPreview.Show(v, editorController.iMapManager);
 					}
@@ -212,7 +211,6 @@ namespace ClassicTilestorm
 			if (Input.GetMouseButtonUp(0) && !supressPopup)
 			{
 				var attachmentCount = selectedAttachments?.Length;
-				//pendingAction = attachmentCount > 0 ? PendingAction.Select : PendingAction.Add;
 				if (attachmentCount > 0)
 				{
 					if (attachmentCount > 1)
@@ -285,11 +283,10 @@ namespace ClassicTilestorm
 				string extra = att is Emitter e && e.LookAt != null ? $" to {e.LookAt:F1}" : "";
 				string label = $"{att.GetType().Name} [{att.tile}]{extra}";
 
-				//int index = i; // capture for closure
 				sidePanel.List.AddItem(new ListViewItem(
 					label,
 					() => SelectAttachments(new MapAttachment[] { att }),
-					selected: null != selectedAttachments && selectedAttachments.Contains(att)//index == SelectedAttachmentIndex
+					selected: null != selectedAttachments && selectedAttachments.Contains(att)
 				));
 			}
 
@@ -338,32 +335,49 @@ namespace ClassicTilestorm
 			EditorTransformUtil.HideTransformGizmo();
 			viewPreview.Hide();
 
-			var map = editorController?.iMapManager?.CurrentMap;
-			if (map?.attachments == null || index < 0 || index >= map.attachments.Length) return;
-
-			if (map.attachments[index] is View view)
+			var view = GetSelectedView();
+			if (view != null)
 			{
 				SnapViewDistanceToGround(view, editorController.iMapManager);
-				EditorUtil.UpdateViewFrustumMarker(view, editorController.iMapManager);
+				UpdateSelectedViewVisuals(view);
 				EditorTransformUtil.ShowTransformGizmo(view, editorController.iMapManager, editorCamera);
 				viewPreview.Show(view, editorController.iMapManager);
 			}
 		}
 
+		private View GetSelectedView()
+		{
+			if (SelectedAttachmentIndex < 0) return null;
+			var map = editorController.iMapManager.CurrentMap;
+			if (map?.attachments == null || SelectedAttachmentIndex >= map.attachments.Length) return null;
+			return map.attachments[SelectedAttachmentIndex] as View;
+		}
+
 		private void SyncPreviewToSelectedView()
 		{
-			if (SelectedAttachmentIndex < 0) return;
-			var map = editorController.iMapManager.CurrentMap;
-			if (map?.attachments == null || SelectedAttachmentIndex >= map.attachments.Length) return;
+			var view = GetSelectedView();
+			if (view == null) return;
 
-			if (map.attachments[SelectedAttachmentIndex] is View view)
-			{
-				Vector3 wp = viewPreview.previewCam.transform.position;
-				view.Position = wp - editorController.iMapManager.TileWorldPosition(view.tile);
-				view.Rotation = viewPreview.previewCam.transform.rotation;
-				EditorUtil.UpdateViewFrustumMarker(view, editorController.iMapManager);
-				EditorTransformUtil.UpdateTransformGizmoVisuals(editorCamera);
-			}
+			Vector3 wp = viewPreview.previewCam.transform.position;
+			view.Position = wp - editorController.iMapManager.TileWorldPosition(view.tile);
+			view.Rotation = viewPreview.previewCam.transform.rotation;
+			UpdateSelectedViewVisuals(view);
+		}
+
+		private void SyncPreviewToSelectedViewWithGroundSnap()
+		{
+			var view = GetSelectedView();
+			if (view == null) return;
+
+			SyncPreviewToSelectedView();
+			SnapViewDistanceToGround(view, editorController.iMapManager);
+			SyncPreviewToSelectedView();
+		}
+
+		private void UpdateSelectedViewVisuals(View view)
+		{
+			EditorUtil.UpdateViewFrustumMarker(view, editorController.iMapManager);
+			EditorTransformUtil.UpdateTransformGizmoVisuals(editorCamera);
 		}
 
 		private MapAttachment[] GetAttachmentsOnTile(int tileIndex)
@@ -442,7 +456,7 @@ namespace ClassicTilestorm
 					EditorUtil.DestroyViewFrustumMarker();
 					EditorTransformUtil.HideTransformGizmo();
 					RebuildMarkers();
-					viewPreview.Hide(); 
+					viewPreview.Hide();
 					editorController.OnMapChanged();
 				}));
 			}
@@ -458,7 +472,7 @@ namespace ClassicTilestorm
 					EditorUtil.DestroyViewFrustumMarker();
 					EditorTransformUtil.HideTransformGizmo();
 					RebuildMarkers();
-					viewPreview.Hide(); 
+					viewPreview.Hide();
 					editorController.OnMapChanged();
 				}, colorOverride: Color.red));
 			}
