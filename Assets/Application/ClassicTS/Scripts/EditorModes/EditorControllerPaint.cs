@@ -46,10 +46,10 @@ namespace ClassicTilestorm
 
 			var selectedDefinition = ResourceManager.GetDefinition(selectedDefinitionId);
 			if (selectedDefinition != null)
-				EditorUtil.UpdateGhostTile(editorCamera, editorController.iMapManager, selectedDefinition);
+				EditorMeshUtil.UpdateGhostMesh(editorCamera, editorController.iMapManager, selectedDefinition);
 		}
 
-		public override void OnDisable() => EditorUtil.HideGhostTile();
+		public override void OnDisable() => EditorMeshUtil.HideGhostMesh();
 
 		private void EditMapTile(string defID = null)
 		{
@@ -65,7 +65,7 @@ namespace ClassicTilestorm
 					{
 						cycleIndex = (cycleIndex + 1) % definitionCycleList.Count;
 						selectedDefinitionId = definitionCycleList[cycleIndex];
-						EditorUtil.DestroyGhostTile();
+						EditorMeshUtil.DestroyGhostMesh();
 						defID = selectedDefinitionId;
 					}
 				}
@@ -91,12 +91,12 @@ namespace ClassicTilestorm
 			definitionCycleList = ResourceManager.DefinitionNavGroup(selectedDefinitionId);
 			cycleIndex = definitionCycleList.IndexOf(selectedDefinitionId);
 
-			EditorUtil.DestroyGhostTile();
+			EditorMeshUtil.DestroyGhostMesh();
 			var def = ResourceManager.GetDefinition(selectedDefinitionId);
 			if (def != null)
-				EditorUtil.UpdateGhostTile(editorCamera, editorController.iMapManager, def);
+				EditorMeshUtil.UpdateGhostMesh(editorCamera, editorController.iMapManager, def);
 			else
-				EditorUtil.HideGhostTile();
+				EditorMeshUtil.HideGhostMesh();
 		}
 
 		public override void OnGUI()

@@ -124,7 +124,7 @@ namespace ClassicTilestorm
 		{
 			activeMode?.OnDisable();
 			if (gridLines != null) gridLines.SetActive(false);
-			EditorUtil.DestroyGhostTile();
+			EditorMeshUtil.DestroyGhostMesh();
 
 			var eggbotController = GetComponentInChildren<EggbotController>(true);
 			if (null != eggbotController) eggbotController.gameObject.SetActive(true);
@@ -241,7 +241,7 @@ namespace ClassicTilestorm
 		private void OnDestroy()
 		{
 			if (gridLines != null) Destroy(gridLines);
-			EditorUtil.DestroyGhostTile();
+			EditorMeshUtil.DestroyGhostMesh();
 		}
 
 		public void LoadDatabase()

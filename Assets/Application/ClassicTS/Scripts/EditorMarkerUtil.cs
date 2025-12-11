@@ -118,47 +118,5 @@ namespace ClassicTilestorm
 					col.isTrigger = true;
 			}
 		}
-
-		//// ===================================================================
-		//// TEMPORARY WRAPPER — preserves exact old behavior (including GetView check)
-		//// ===================================================================
-		//[System.Obsolete("Use EditorMarkerUtil.ShowMarkers(worldPositions, colors, selectedIndex) instead. Will be removed later.")]
-		//public static void UpdateMapMarkers(IMapManager mapManager, int[] tiles, int selectedIndex = -1, MarkerType type = MarkerType.Undefined)
-		//{
-		//	if (tiles == null || tiles.Length == 0 || SphereMesh == null)
-		//	{
-		//		ClearMapMarkers();
-		//		return;
-		//	}
-
-		//	var positions = new Vector3[tiles.Length];
-		//	var colors = new Color[tiles.Length];
-
-		//	for (int i = 0; i < tiles.Length; i++)
-		//	{
-		//		int tile = tiles[i];
-		//		if (tile < 0 || tile >= mapManager.Count)
-		//		{
-		//			positions[i] = Vector3.zero;
-		//			colors[i] = new Color(0f, 0.7f, 1f, 0.7f);
-		//			continue;
-		//		}
-
-		//		positions[i] = mapManager.TileWorldPosition(tile);
-
-		//		bool hasView = type == MarkerType.Waypoint && mapManager.GetView(tile) != null;
-		//		colors[i] = hasView ? new Color(0f, 1f, 1f, 0.5f) : new Color(0f, 0.7f, 1f, 0.7f);
-		//	}
-
-		//	ShowMarkers(positions, colors, selectedIndex);
-		//}
-
-		//// Legacy aliases
-		//[System.Obsolete("Use EditorMarkerUtil.ShowMarkers instead")]
-		//public static void UpdateMarkerVisuals(IMapManager mapManager, int[] tiles, int selectedIndex = -1, MarkerType type = MarkerType.Undefined)
-		//	=> UpdateMapMarkers(mapManager, tiles, selectedIndex, type);
-
-		//[System.Obsolete("Use EditorMarkerUtil.ClearMapMarkers instead")]
-		//public static void DestroyMarkerVisuals() => ClearMapMarkers();
 	}
 }

@@ -292,7 +292,7 @@ namespace ClassicTilestorm
 			orb.layer = LayerMask.NameToLayer("Editor");
 			orb.transform.SetParent(parent, false);
 
-			Color[] colors = { new Color(1f, 0.3f, 0.3f), new Color(0.3f, 1f, 0.3f), new Color(0.3f, 0.6f, 1f) };
+			Color[] colors = { new Color(0.3f, 1f, 0.3f), new Color(1f, 0.3f, 0.3f), new Color(0.3f, 0.6f, 1f) };
 			Vector3[] axes = { Vector3.right, Vector3.up, Vector3.forward };
 
 			for (int i = 0; i < 3; i++)
