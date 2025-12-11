@@ -15,7 +15,7 @@ namespace ClassicTilestorm
 			if (emitter == null) return;
 
 			Vector3 worldPos = editor.editorController.iMapManager.TileWorldPosition(emitter.tile) + emitter.Position;
-			EditorTransformUtil.ShowAt(worldPos, emitter.Rotation, editor.editorCamera);
+			EditorTransformUtil.UpdateTransform(worldPos, emitter.Rotation, editor.editorCamera);
 		}
 
 		public override void HandleDrag(EditorControllerAttachment editor, MapAttachment attachment)

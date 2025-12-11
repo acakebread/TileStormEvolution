@@ -67,7 +67,7 @@ namespace ClassicTilestorm
 
 			// CRITICAL: Update main scene gizmo to match new View transform
 			Vector3 worldPos = editor.editorController.iMapManager.TileWorldPosition(view.tile) + view.Position;
-			EditorTransformUtil.ShowAt(worldPos, view.Rotation, editor.editorCamera);
+			EditorTransformUtil.UpdateTransform(worldPos, view.Rotation, editor.editorCamera);
 
 			// Update frustum marker
 			EditorUtil.UpdateViewFrustumMarker(view, editor.editorController.iMapManager);

@@ -58,6 +58,25 @@ namespace ClassicTilestorm
 			UpdateVisuals(editorCamera);
 		}
 
+		public static void UpdateTransform(Vector3 worldPosition, Quaternion worldRotation, Camera editorCamera, bool worldSpace = false)
+		{
+			bool needsCreation = (root == null);
+
+			if (needsCreation)
+			{
+				// First time: create it properly
+				ShowAt(worldPosition, worldRotation, editorCamera, worldSpace);
+				return;
+			}
+
+			// Update existing gizmo without recreating
+			root.transform.position = worldPosition;
+			root.transform.rotation = worldSpace ? Quaternion.identity : worldRotation;
+
+			// Still update scale to keep it screen-size consistent
+			UpdateVisuals(editorCamera);
+		}
+
 		public static bool HandleInput(Camera editorCamera, out Vector3 newWorldPosition, out Quaternion newWorldRotation, bool worldSpace = false)
 		{
 			newWorldPosition = root ? root.transform.position : Vector3.zero;
