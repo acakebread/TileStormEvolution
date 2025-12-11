@@ -136,7 +136,8 @@ namespace ClassicTilestorm
 			{
 				if (draggingPosition) ContinuePositionDrag(cam);
 				if (draggingRotation) ContinueRotationDrag(cam);
-				handled = true;
+				handled = draggingPosition | draggingRotation;
+				wasActive |= handled;
 			}
 
 			// Release

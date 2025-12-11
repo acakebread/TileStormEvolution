@@ -155,7 +155,7 @@ namespace ClassicTilestorm
 				supressPopup = true;
 			}
 
-			if (editorCamera == null || IsGuiControlActive()) return;
+			if (IsGuiControlActive()) return;//crucial to block popup input - need to rethink the whole system to remove the need for nasty stuff like this
 
 			// Tile picking
 			Vector3 mouseWorld = MapManager.ScreenToWorld(editorCamera, Input.mousePosition);
@@ -163,25 +163,44 @@ namespace ClassicTilestorm
 			int tileUnderMouse = editorController.iMapManager.WorldToMapIndex(snapped);
 
 			// === 5. LMB: START DRAGGING EXISTING ATTACHMENTS ===
-			if (Input.GetMouseButtonDown(0))
+			//if (Input.GetMouseButtonDown(0))
+			//{
+			//	pendingTile = HitTile(Input.mousePosition);
+			//	if (-1 != pendingTile && (null == selectedAttachments || selectedAttachments.Length < 1 || pendingTile != selectedAttachments[0].tile))
+			//	{
+			//		var atts = GetAttachmentsOnTile(pendingTile);
+			//		selectedAttachments = null;
+
+			//		if (atts != null && atts.Length > 0)
+			//		{
+			//			selectedAttachments = atts;
+			//			if (selectedAttachments.Length > 0)
+			//				SelectAttachments(selectedAttachments);
+			//		}
+			//	}
+			//}
+
+			if (!supressPopup && Input.GetMouseButtonDown(0))
 			{
 				pendingTile = HitTile(Input.mousePosition);
-				if (-1 != pendingTile && (null == selectedAttachments || selectedAttachments.Length < 1 || pendingTile != selectedAttachments[0].tile))
-				{
-					var atts = GetAttachmentsOnTile(pendingTile);
-					selectedAttachments = null;
 
-					if (atts != null && atts.Length > 0)
+				// Case 1: Clicked on invalid tile (-1) → always clear selection
+				if (pendingTile == -1) SelectAttachments(null);
+				// Case 2: Clicked on a valid tile
+				else
+				{
+					// Check if this tile is already the selected one
+					bool alreadySelected = selectedAttachments != null && selectedAttachments.Length > 0 && selectedAttachments[0].tile == pendingTile;
+					if (!alreadySelected)
 					{
-						selectedAttachments = atts;
-						if (selectedAttachments.Length > 0)
-							SelectAttachments(selectedAttachments);
+						selectedAttachments = GetAttachmentsOnTile(pendingTile);
+						SelectAttachments(selectedAttachments);
 					}
 				}
 			}
 
 			// === 6. LMB DRAG: MOVE ATTACHMENTS ===
-			if (Input.GetMouseButton(0) && tileUnderMouse >= 0 && null != selectedAttachments)
+			if (!supressPopup && Input.GetMouseButton(0) && tileUnderMouse >= 0 && null != selectedAttachments)
 			{
 				foreach (var att in selectedAttachments)
 				{
