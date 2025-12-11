@@ -1,6 +1,7 @@
 ﻿// EditorTransformUtil.cs
 using UnityEngine;
 using System.Collections.Generic;
+using Unity.Mathematics;
 
 namespace ClassicTilestorm
 {
@@ -41,7 +42,7 @@ namespace ClassicTilestorm
 		// NEW PURE WORLD-SPACE API
 		// ===================================================================
 
-		public static void ShowAt(Vector3 worldPosition, Quaternion worldRotation, Camera editorCamera)
+		public static void ShowAt(Vector3 worldPosition, Quaternion worldRotation, Camera editorCamera, bool worldSapce = false)
 		{
 			Hide();
 
@@ -52,13 +53,12 @@ namespace ClassicTilestorm
 			rotationOrbiter = CreateRotationOrbiter(root.transform);
 
 			root.transform.position = worldPosition;
-			if (rotationOrbiter != null)
-				rotationOrbiter.transform.rotation = worldRotation;
+			root.transform.rotation = worldSapce ? quaternion.identity : worldRotation;
 
 			UpdateVisuals(editorCamera);
 		}
 
-		public static bool HandleInput(Camera editorCamera, out Vector3 newWorldPosition, out Quaternion newWorldRotation)
+		public static bool HandleInput(Camera editorCamera, out Vector3 newWorldPosition, out Quaternion newWorldRotation, bool worldSapce = false)
 		{
 			newWorldPosition = root ? root.transform.position : Vector3.zero;
 			newWorldRotation = rotationOrbiter ? rotationOrbiter.transform.rotation : Quaternion.identity;
@@ -96,7 +96,7 @@ namespace ClassicTilestorm
 
 				if (posHit.HasValue)
 				{
-					StartPositionDrag(ray, editorCamera, posHit.Value);
+					StartPositionDrag(ray, editorCamera, posHit.Value, worldSapce);
 					handled = true;
 				}
 				else if (ringHit.HasValue)
@@ -227,7 +227,7 @@ namespace ClassicTilestorm
 			return go;
 		}
 
-		private static void StartPositionDrag(Ray ray, Camera cam, RaycastHit hit)
+		private static void StartPositionDrag(Ray ray, Camera cam, RaycastHit hit, bool worldSapce = false)
 		{
 			FaceTag tag = hit.transform.GetComponent<FaceTag>();
 
@@ -239,7 +239,7 @@ namespace ClassicTilestorm
 			else
 			{
 				lockedAxis = Vector3.zero;
-				dragPlane = new Plane(-cam.transform.forward, root.transform.position);
+				dragPlane = new Plane(worldSapce ? - cam.transform.forward : dragPlane.normal, root.transform.position);
 			}
 
 			if (dragPlane.Raycast(ray, out float enter))
@@ -335,8 +335,9 @@ namespace ClassicTilestorm
 
 			float angle = Vector3.Dot(delta, tangent.normalized) * 40f;
 			Quaternion deltaRot = Quaternion.AngleAxis(angle, rotationAxis);
-			rotationOrbiter.transform.rotation = deltaRot * startRotation;
-			startRotation = rotationOrbiter.transform.rotation;//critical!!!
+			root.transform.rotation = deltaRot * startRotation;
+			startRotation = root.transform.rotation;//critical!!!
+
 			startMouseWorld = cur;
 		}
 
