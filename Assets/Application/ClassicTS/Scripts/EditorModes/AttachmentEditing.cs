@@ -64,6 +64,7 @@ namespace ClassicTilestorm
 				{
 					map.RemoveAttachment(localAtt);
 					editor.SelectAttachments(null);
+					EditorPrimitiveUtil.HideCone();
 					EditorFrustumUtil.Hide();
 					EditorTransformUtil.HideTransformGizmo();
 					editor.RebuildMarkers();
@@ -79,6 +80,7 @@ namespace ClassicTilestorm
 				{
 					map.RemoveAllAttachmentsOnTile(editor.PendingTile);
 					editor.SelectAttachments(null);
+					EditorPrimitiveUtil.HideCone();
 					EditorFrustumUtil.Hide();
 					EditorTransformUtil.HideTransformGizmo();
 					editor.RebuildMarkers();

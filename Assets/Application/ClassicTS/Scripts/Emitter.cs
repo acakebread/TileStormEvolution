@@ -8,7 +8,17 @@ namespace ClassicTilestorm
 	[System.Serializable]
 	public sealed class Emitter : MapAttachment
 	{
-		public Emitter() => type = "Emitter";
+		public Emitter()
+		{
+			type = "Emitter";
+
+			// Ensure valid default data right after construction/deserialization
+			if (data == null || data.Length != 7)
+			{
+				// Default: position at origin, looking straight UP, distance 10
+				Rebuild(position: Vector3.zero, rotation: Quaternion.LookRotation(Vector3.up), distance: 10f);
+			}
+		}
 
 		// Single source of truth: 7 floats (Squatrix format)
 		// [0..2] → position.x, y, z
@@ -55,9 +65,12 @@ namespace ClassicTilestorm
 		[JsonIgnore]
 		public Vector3 Direction
 		{
-			get => Rotation * Vector3.forward;
+			get => Squatrix.GetDirection(data);
 			set => Rebuild(rotation: Quaternion.LookRotation(value));
 		}
+
+		public const float DEFAULT_APEX = 20f;//ToDo make Emitter.Apex dynamic property
+		[JsonIgnore] public float Apex { get => DEFAULT_APEX; set { Debug.Log("ToDo set Emitter::Apex"); } }
 
 		// ==================================================================
 		// SMART REBUILD — preserves roll when LookAt is changed
@@ -115,16 +128,6 @@ namespace ClassicTilestorm
 			data[4] = encoded[4];
 			data[5] = encoded[5];
 			data[6] = encoded[6];
-		}
-
-		// Ensure valid data when the object is deserialized or enabled
-		public void OnEnable()
-		{
-			if (data == null || data.Length != 7)
-			{
-				// Default: 10 units in front of origin, looking toward +Z
-				Rebuild(position: Vector3.zero, rotation: Quaternion.identity, distance: 10f);
-			}
 		}
 	}
 }

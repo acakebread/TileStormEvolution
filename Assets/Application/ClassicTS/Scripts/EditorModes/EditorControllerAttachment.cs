@@ -56,6 +56,7 @@ namespace ClassicTilestorm
 		{
 			base.OnEnable();
 			EditorMarkerUtil.ClearMapMarkers();
+			EditorPrimitiveUtil.HideCone();
 			EditorFrustumUtil.Hide();
 			RebuildMarkers();
 
@@ -71,6 +72,7 @@ namespace ClassicTilestorm
 			base.OnDisable();
 			EditorMarkerUtil.ClearMapMarkers();
 			pendingAction = PendingAction.None;
+			EditorPrimitiveUtil.HideCone();
 			EditorFrustumUtil.Hide();
 			EditorTransformUtil.HideTransformGizmo();
 
@@ -201,6 +203,7 @@ namespace ClassicTilestorm
 		{
 			if (editorController.CurrentMode != EditorMode.Attachment) return;
 			RebuildMarkers();
+			EditorPrimitiveUtil.HideCone();
 			EditorFrustumUtil.Hide();
 			EditorTransformUtil.HideTransformGizmo();
 			viewPreview.Hide();
@@ -235,6 +238,7 @@ namespace ClassicTilestorm
 			selectedAttachments = attachments;
 
 			RebuildMarkers();
+			EditorPrimitiveUtil.HideCone();
 			EditorFrustumUtil.Hide();
 			EditorTransformUtil.HideTransformGizmo();
 			viewPreview.Hide();

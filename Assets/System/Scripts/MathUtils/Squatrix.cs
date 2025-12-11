@@ -8,8 +8,6 @@ namespace MassiveHadronLtd
 		public static float[] Encode(Vector3 position, Quaternion rotation, float distance)
 		{
 			var q3 = Quaternion3.Encode(rotation.normalized);
-			//float absDist = Mathf.Abs(distance);
-			//if (distance < 0f) q3 = -q3; // optional: encode sign in quat (rarely needed)
 
 			return new float[7]
 			{
@@ -19,7 +17,7 @@ namespace MassiveHadronLtd
 				q3.x,
 				q3.y,
 				q3.z,
-				distance//absDist
+				distance
 			};
 		}
 
@@ -36,7 +34,10 @@ namespace MassiveHadronLtd
 		public static float GetDistance(float[] d) =>
 			d != null && d.Length >= 7 ? d[6] : 10f;
 
+		public static Vector3 GetDirection(float[] d) =>
+		    GetRotation(d) * Vector3.forward;
+
 		public static Vector3 GetLookAt(float[] d) =>
-			GetPosition(d) + GetRotation(d) * Vector3.forward * GetDistance(d);
+			GetPosition(d) + GetDirection(d) * GetDistance(d);
 	}
 }
