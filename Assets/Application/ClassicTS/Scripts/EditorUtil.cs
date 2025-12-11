@@ -134,6 +134,7 @@ namespace ClassicTilestorm
 		}
 
 		private static readonly List<GameObject> mapMarkers = new();
+		private static readonly Dictionary<int, GameObject> tileToMarker = new(); // tile index → marker GO
 		private static GameObject markerCursor;
 		private static Material markerCursorMaterial;
 
@@ -151,68 +152,116 @@ namespace ClassicTilestorm
 				markerCursorMaterial = MaterialUtils.CreateTransparentUnlitMaterial(new Color(1f, 1f, 0f, 0.8f)); // Yellow pulsing cursor
 		}
 
-		// === FULLY WEBGL-SAFE MARKER CREATION ===
 		public static void UpdateMapMarkers(IMapManager mapManager, int[] tiles, int selectedIndex = -1, MarkerType type = MarkerType.Undefined)
 		{
-			ClearMapMarkers();
+			if (tiles == null || tiles.Length == 0 || SphereMesh == null)
+			{
+				ClearMapMarkers();
+				return;
+			}
 
-			if (tiles == null || tiles.Length == 0 || SphereMesh == null) return;
+			var currentTiles = new HashSet<int>();
 
 			for (int i = 0; i < tiles.Length; i++)
 			{
 				int tile = tiles[i];
 				if (tile < 0 || tile >= mapManager.Count) continue;
 
+				currentTiles.Add(tile);
+
 				Vector3 pos = mapManager.TileWorldPosition(tile) + Vector3.up * 0.02f;
+				bool isSelected = (i == selectedIndex);
+				bool hasView = type == MarkerType.Waypoint && mapManager.GetView(tile) != null;
 
-				// === CREATE SPHERE WITHOUT ANY COLLIDER (WebGL-safe) ===
-				var go = new GameObject($"GIZMO_MARKER_{type}_{tile}");
-				go.layer = LayerMask.NameToLayer("Editor");
-				go.transform.position = pos;
-				go.transform.localScale = Vector3.one * 0.8f * 0.5f;// additional * 0.5f for fbx spehere that is double size
-
-				var mf = go.AddComponent<MeshFilter>();
-				var mr = go.AddComponent<MeshRenderer>();
-
-				mf.sharedMesh = SphereMesh;
-
-				// Optimize renderer for gizmo use
-				mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-				mr.receiveShadows = false;
-				mr.lightProbeUsage = UnityEngine.Rendering.LightProbeUsage.Off;
-				mr.reflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.Off;
-
-				// Optional: add collider only via reflection (completely safe)
-				TryAddTriggerCollider(go);
-
-				// Base color logic
 				Color baseColor = type switch
 				{
-					MarkerType.Waypoint => new Color(0f, 0.7f, 1f, 0.7f),
+					MarkerType.Waypoint => hasView ? new Color(0f, 1f, 1f, 0.5f) : new Color(0f, 0.7f, 1f, 0.7f),
 					MarkerType.Attachment => new Color(0f, 0.7f, 1f, 0.7f),
 					_ => new Color(0f, 0.7f, 1f, 0.7f)
 				};
 
-				// Special cases
-				bool hasView = type == MarkerType.Waypoint && mapManager.GetView(tile) != null;
-				if (hasView)
-					baseColor = new Color(0f, 1f, 1f, 0.5f); // Cyan for camera waypoints
-
-				if (i == selectedIndex)
+				if (tileToMarker.TryGetValue(tile, out GameObject marker))
 				{
-					// Selected: bright green + pulsing
-					mr.material = MaterialUtils.CreateTransparentUnlitMaterial(new Color(0f, 1f, 0f, 0.7f));
-					var pulse = go.AddComponent<MarkerPulse>();
-					pulse.intensity = 2.1f;
-					pulse.speed = 3.2f;
+					// Update existing
+					marker.transform.position = pos;
+
+					var mr = marker.GetComponent<MeshRenderer>();
+					var pulse = marker.GetComponent<MarkerPulse>();
+
+					if (isSelected)
+					{
+						mr.material = MaterialUtils.CreateTransparentUnlitMaterial(new Color(0f, 1f, 0f, 0.7f));
+						if (pulse == null) pulse = marker.AddComponent<MarkerPulse>();
+						pulse.intensity = 2.1f;
+						pulse.speed = 3.2f;
+					}
+					else
+					{
+						if (pulse != null) Object.DestroyImmediate(pulse);
+						mr.material = MaterialUtils.CreateTransparentUnlitMaterial(baseColor);
+					}
 				}
 				else
 				{
-					mr.material = MaterialUtils.CreateTransparentUnlitMaterial(baseColor);
-				}
+					// Create new
+					var go = new GameObject($"GIZMO_MARKER_{type}_{tile}");
+					go.layer = LayerMask.NameToLayer("Editor");
+					go.transform.position = pos;
+					go.transform.localScale = Vector3.one * 0.8f * 0.5f;
 
-				mapMarkers.Add(go);
+					var mf = go.AddComponent<MeshFilter>();
+					var mr = go.AddComponent<MeshRenderer>();
+
+					mf.sharedMesh = SphereMesh;
+
+					mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+					mr.receiveShadows = false;
+					mr.lightProbeUsage = UnityEngine.Rendering.LightProbeUsage.Off;
+					mr.reflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.Off;
+
+					TryAddTriggerCollider(go);
+
+					mr.material = MaterialUtils.CreateTransparentUnlitMaterial(isSelected ? new Color(0f, 1f, 0f, 0.7f) : baseColor);
+
+					if (isSelected)
+					{
+						var pulse = go.AddComponent<MarkerPulse>();
+						pulse.intensity = 2.1f;
+						pulse.speed = 3.2f;
+					}
+
+					mapMarkers.Add(go);
+					tileToMarker[tile] = go;
+				}
 			}
+
+			// Remove markers for tiles no longer present
+			for (int i = mapMarkers.Count - 1; i >= 0; i--)
+			{
+				var go = mapMarkers[i];
+				if (go == null) continue;
+
+				string name = go.name;
+				int lastUnderscore = name.LastIndexOf('_');
+				if (lastUnderscore != -1 && int.TryParse(name.Substring(lastUnderscore + 1), out int tileIndex))
+				{
+					if (!currentTiles.Contains(tileIndex))
+					{
+						tileToMarker.Remove(tileIndex);
+						mapMarkers.RemoveAt(i);
+						Object.DestroyImmediate(go);
+					}
+				}
+			}
+		}
+
+		public static void ClearMapMarkers()
+		{
+			foreach (var go in mapMarkers)
+				if (go) Object.DestroyImmediate(go);
+
+			mapMarkers.Clear();
+			tileToMarker.Clear();
 		}
 
 		// Safely add a trigger collider only if physics module exists
@@ -227,13 +276,6 @@ namespace ClassicTilestorm
 			}
 		}
 
-		public static void ClearMapMarkers()
-		{
-			foreach (var m in mapMarkers)
-				if (m) Object.DestroyImmediate(m);
-			mapMarkers.Clear();
-		}
-
 		public static void DestroyMarkerVisuals()
 		{
 			ClearMapMarkers();
@@ -243,6 +285,8 @@ namespace ClassicTilestorm
 
 		// === VIEW FRUSTUM MARKER ===
 		private static GameObject viewFrustumMarker;
+		private static Mesh cachedFrustumMesh;
+		private static float cachedFrustumDistance = -1f;
 
 		private static Mesh CreateViewFrustumMesh(float distance)
 		{
@@ -313,39 +357,11 @@ namespace ClassicTilestorm
 
 		public static void UpdateViewFrustumMarker(View view, IMapManager mapManager)
 		{
-			DestroyViewFrustumMarker();
-
 			if (view == null || view.data == null || view.data.Length < 7 || view.Distance < 0.02f)
-				return;
-
-			var go = new GameObject("GIZMO_VIEWFRUSTUM");
-			go.layer = LayerMask.NameToLayer("Editor");
-
-			var mf = go.AddComponent<MeshFilter>();
-			var mr = go.AddComponent<MeshRenderer>();
-
-			mf.mesh = CreateViewFrustumMesh(view.Distance);
-
-			var transparentShader = Shader.Find("Hidden/URPGizmoTransparent");
-			var additiveShader = Shader.Find("Hidden/URPGizmoAdditive");
-
-			var materials = new Material[4]
 			{
-				new Material(additiveShader),
-				new Material(transparentShader),
-				new Material(additiveShader),
-				new Material(transparentShader)
-			};
-
-			materials[0].SetColor("_BaseColor", new Color(0.05f, 0.30f, 0.40f, 1f));
-			materials[1].SetColor("_BaseColor", new Color(0.3f, 0.6f, 0.9f, 0.20f));
-			materials[2].SetColor("_BaseColor", new Color(0.03f, 0.22f, 0.30f, 1f));
-			materials[3].SetColor("_BaseColor", new Color(0.1f, 0.5f, 0.8f, 0.20f));
-
-			foreach (var m in materials)
-				m.hideFlags = HideFlags.HideAndDontSave;
-
-			mr.materials = materials;
+				DestroyViewFrustumMarker();
+				return;
+			}
 
 			Vector3 worldPos = mapManager.TileWorldPosition(view.tile) + view.Position;
 			Vector3 forward = (view.LookAt - view.Position).normalized;
@@ -356,10 +372,56 @@ namespace ClassicTilestorm
 			if (up.sqrMagnitude < 0.01f) up = Vector3.up;
 			else up = up.normalized;
 
-			go.transform.position = worldPos;
-			go.transform.rotation = Quaternion.LookRotation(forward, up);
+			Quaternion targetRotation = Quaternion.LookRotation(forward, up);
 
-			viewFrustumMarker = go;
+			// Create once
+			if (viewFrustumMarker == null)
+			{
+				viewFrustumMarker = new GameObject("GIZMO_VIEWFRUSTUM");
+				viewFrustumMarker.layer = LayerMask.NameToLayer("Editor");
+
+				var mf = viewFrustumMarker.AddComponent<MeshFilter>();
+				var mr = viewFrustumMarker.AddComponent<MeshRenderer>();
+
+				var transparentShader = Shader.Find("Hidden/URPGizmoTransparent");
+				var additiveShader = Shader.Find("Hidden/URPGizmoAdditive");
+
+				var materials = new Material[4]
+				{
+			new Material(additiveShader),
+			new Material(transparentShader),
+			new Material(additiveShader),
+			new Material(transparentShader)
+				};
+
+				materials[0].SetColor("_BaseColor", new Color(0.05f, 0.30f, 0.40f, 1f));
+				materials[1].SetColor("_BaseColor", new Color(0.3f, 0.6f, 0.9f, 0.20f));
+				materials[2].SetColor("_BaseColor", new Color(0.03f, 0.22f, 0.30f, 1f));
+				materials[3].SetColor("_BaseColor", new Color(0.1f, 0.5f, 0.8f, 0.20f));
+
+				foreach (var m in materials)
+					m.hideFlags = HideFlags.HideAndDontSave;
+
+				mr.materials = materials;
+			}
+
+			// Only regenerate mesh if distance changed significantly
+			if (!Mathf.Approximately(cachedFrustumDistance, view.Distance))
+			{
+				if (cachedFrustumMesh != null)
+					Object.DestroyImmediate(cachedFrustumMesh);
+
+				cachedFrustumMesh = CreateViewFrustumMesh(view.Distance);
+				cachedFrustumDistance = view.Distance;
+
+				var mf = viewFrustumMarker.GetComponent<MeshFilter>();
+				mf.sharedMesh = cachedFrustumMesh;
+			}
+
+			// Fast update
+			viewFrustumMarker.transform.position = worldPos;
+			viewFrustumMarker.transform.rotation = targetRotation;
+			viewFrustumMarker.SetActive(true);
 		}
 
 		public static void DestroyViewFrustumMarker()
@@ -371,6 +433,13 @@ namespace ClassicTilestorm
 				else
 					Object.DestroyImmediate(viewFrustumMarker);
 				viewFrustumMarker = null;
+			}
+
+			if (cachedFrustumMesh != null)
+			{
+				Object.DestroyImmediate(cachedFrustumMesh);
+				cachedFrustumMesh = null;
+				cachedFrustumDistance = -1f;
 			}
 		}
 	}
