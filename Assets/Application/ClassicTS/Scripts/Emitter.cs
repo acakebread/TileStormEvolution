@@ -110,12 +110,11 @@ namespace ClassicTilestorm
 			data[1] = pos.y;
 			data[2] = pos.z;
 
-			// Encode rotation + distance into squaternion
-			var qscale = Squaternion.Encode(rot.normalized, dist);
-			data[3] = qscale.x;
-			data[4] = qscale.y;
-			data[5] = qscale.z;
-			data[6] = qscale.w;
+			var encoded = Squatrix.Encode(pos, rot, dist);
+			data[3] = encoded[3];
+			data[4] = encoded[4];
+			data[5] = encoded[5];
+			data[6] = encoded[6];
 		}
 
 		// Ensure valid data when the object is deserialized or enabled

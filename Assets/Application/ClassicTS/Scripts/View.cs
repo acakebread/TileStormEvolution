@@ -64,7 +64,6 @@ namespace ClassicTilestorm
 			data[1] = pos.y;
 			data[2] = pos.z;
 
-			// THIS IS THE ONLY CHANGE: use new Squatrix.Encode
 			var encoded = Squatrix.Encode(pos, rot, dist);
 			data[3] = encoded[3];
 			data[4] = encoded[4];
