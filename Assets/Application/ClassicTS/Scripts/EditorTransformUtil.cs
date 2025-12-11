@@ -42,7 +42,7 @@ namespace ClassicTilestorm
 		// NEW PURE WORLD-SPACE API
 		// ===================================================================
 
-		public static void ShowAt(Vector3 worldPosition, Quaternion worldRotation, Camera editorCamera, bool worldSapce = false)
+		public static void ShowAt(Vector3 worldPosition, Quaternion worldRotation, Camera editorCamera, bool worldSpace = false)
 		{
 			Hide();
 
@@ -53,7 +53,7 @@ namespace ClassicTilestorm
 			rotationOrbiter = CreateRotationOrbiter(root.transform);
 
 			root.transform.position = worldPosition;
-			root.transform.rotation = worldSapce ? quaternion.identity : worldRotation;
+			root.transform.rotation = worldSpace ? quaternion.identity : worldRotation;
 
 			UpdateVisuals(editorCamera);
 		}
