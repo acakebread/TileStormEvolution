@@ -88,7 +88,6 @@ namespace ClassicTilestorm
 			{
 				AttachmentViewEditing.HandleGizmoInput(this);
 				supressInput = true;
-				Debug.Log("HandleTransformGizmoInput");
 			}
 
 			if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1))
