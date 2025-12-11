@@ -1,4 +1,4 @@
-// AttachmentViewEditing.cs
+﻿// AttachmentViewEditing.cs
 using UnityEngine;
 using System.Linq;
 
@@ -20,9 +20,12 @@ namespace ClassicTilestorm
 			var view = GetSelectedView(editor);
 			if (view == null) return;
 
+			Vector3 worldPos = editor.editorController.iMapManager.TileWorldPosition(view.tile) + view.Position;
+			EditorTransformUtil.ShowAt(worldPos, view.Rotation, editor.editorCamera);
+
 			SnapViewDistanceToGround(view, editor.editorController.iMapManager);
-			UpdateVisuals(editor, view);
-			ShowGizmoAndPreview(editor, view);
+			EditorUtil.UpdateViewFrustumMarker(view, editor.editorController.iMapManager);
+			editor.viewPreview.Show(view, editor.editorController.iMapManager);
 		}
 
 		public override void HandleDrag(EditorControllerAttachment editor, MapAttachment attachment)
@@ -30,8 +33,10 @@ namespace ClassicTilestorm
 			if (attachment is View view)
 			{
 				SnapViewDistanceToGround(view, editor.editorController.iMapManager);
-				UpdateVisuals(editor, view);
-				ShowGizmoAndPreview(editor, view);
+				EditorUtil.UpdateViewFrustumMarker(view, editor.editorController.iMapManager);
+
+				Vector3 worldPos = editor.editorController.iMapManager.TileWorldPosition(view.tile) + view.Position;
+				EditorTransformUtil.ShowAt(worldPos, view.Rotation, editor.editorCamera);
 			}
 		}
 
@@ -40,33 +45,66 @@ namespace ClassicTilestorm
 			// Future: View-specific inspector panel here
 		}
 
-		// Static methods used directly from main controller (preview & gizmo input)
+		// ===================================================================
+		// PREVIEW CAMERA SYNC — NOW FULLY FIXED
+		// ===================================================================
+
 		public static void HandlePreviewCameraSync(EditorControllerAttachment editor, ViewPreview viewPreview)
 		{
 			var view = GetSelectedView(editor);
 			if (view == null) return;
 
-			SyncPreviewToView(editor, viewPreview, view);
+			// First: sync preview cam → View properties
+			Vector3 wp = viewPreview.previewCam.transform.position;
+			view.Position = wp - editor.editorController.iMapManager.TileWorldPosition(view.tile);
+			view.Rotation = viewPreview.previewCam.transform.rotation;
+
+			// Apply ground snap
 			SnapViewDistanceToGround(view, editor.editorController.iMapManager);
+
+			// Second: sync back View → preview cam (ensures perfect consistency)
 			SyncPreviewToView(editor, viewPreview, view);
+
+			// CRITICAL: Update main scene gizmo to match new View transform
+			Vector3 worldPos = editor.editorController.iMapManager.TileWorldPosition(view.tile) + view.Position;
+			EditorTransformUtil.ShowAt(worldPos, view.Rotation, editor.editorCamera);
+
+			// Update frustum marker
+			EditorUtil.UpdateViewFrustumMarker(view, editor.editorController.iMapManager);
 		}
+
+		private static void SyncPreviewToView(EditorControllerAttachment editor, ViewPreview viewPreview, View view)
+		{
+			Vector3 tileWorld = editor.editorController.iMapManager.TileWorldPosition(view.tile);
+			viewPreview.previewCam.transform.position = tileWorld + view.Position;
+			viewPreview.previewCam.transform.rotation = view.Rotation;
+		}
+
+		// ===================================================================
+		// GIZMO INPUT — NOW CORRECT (with missing line restored)
+		// ===================================================================
 
 		public static void HandleGizmoInput(EditorControllerAttachment editor)
 		{
 			var view = GetSelectedView(editor);
 			if (view == null) return;
 
-			SnapViewDistanceToGround(view, editor.editorController.iMapManager);
-			UpdateVisuals(editor, view);
+			if (EditorTransformUtil.HandleInput(editor.editorCamera, out Vector3 newWorldPos, out Quaternion newWorldRot))
+			{
+				view.Position = newWorldPos - editor.editorController.iMapManager.TileWorldPosition(view.tile);
+				view.Rotation = newWorldRot;
+
+				SnapViewDistanceToGround(view, editor.editorController.iMapManager);
+				EditorUtil.UpdateViewFrustumMarker(view, editor.editorController.iMapManager);
+
+				// Also update preview window to stay in sync
+				editor.viewPreview.Show(view, editor.editorController.iMapManager);
+			}
 		}
 
-		private static void SyncPreviewToView(EditorControllerAttachment editor, ViewPreview viewPreview, View view)
-		{
-			Vector3 wp = viewPreview.previewCam.transform.position;
-			view.Position = wp - editor.editorController.iMapManager.TileWorldPosition(view.tile);
-			view.Rotation = viewPreview.previewCam.transform.rotation;
-			UpdateVisuals(editor, view);
-		}
+		// ===================================================================
+		// UTILITIES
+		// ===================================================================
 
 		private static void UpdateVisuals(EditorControllerAttachment editor, View view)
 		{
@@ -76,7 +114,8 @@ namespace ClassicTilestorm
 
 		private static void ShowGizmoAndPreview(EditorControllerAttachment editor, View view)
 		{
-			EditorTransformUtil.ShowTransformGizmo(view, editor.editorController.iMapManager, editor.editorCamera);
+			Vector3 worldPos = editor.editorController.iMapManager.TileWorldPosition(view.tile) + view.Position;
+			EditorTransformUtil.ShowAt(worldPos, view.Rotation, editor.editorCamera);
 			editor.viewPreview.Show(view, editor.editorController.iMapManager);
 		}
 
