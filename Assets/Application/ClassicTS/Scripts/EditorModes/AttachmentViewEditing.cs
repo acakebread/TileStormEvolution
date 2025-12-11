@@ -1,6 +1,5 @@
 // AttachmentViewEditing.cs
 using UnityEngine;
-using UnityEditor;
 using System.Linq;
 
 namespace ClassicTilestorm
@@ -13,11 +12,7 @@ namespace ClassicTilestorm
 		{
 			if (editor.selectedAttachments != null && editor.selectedAttachments.Length > 0)
 				return editor.selectedAttachments.OfType<View>().FirstOrDefault();
-
-			if (editor.SelectedAttachmentIndex < 0) return null;
-			var map = editor.editorController.iMapManager.CurrentMap;
-			if (map?.attachments == null || editor.SelectedAttachmentIndex >= map.attachments.Length) return null;
-			return map.attachments[editor.SelectedAttachmentIndex] as View;
+			return null;
 		}
 
 		public override void HandleSelectionChanged(EditorControllerAttachment editor)

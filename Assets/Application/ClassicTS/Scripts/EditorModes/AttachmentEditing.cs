@@ -2,6 +2,7 @@
 using UnityEngine;
 using System.Collections.Generic;
 using static MassiveHadronLtd.GuiUtils;
+using System.Linq;
 
 namespace ClassicTilestorm
 {
@@ -142,10 +143,14 @@ namespace ClassicTilestorm
 			if (editor.selectedAttachments == null || editor.selectedAttachments.Length == 0)
 				return null;
 
+			// Prioritize View because it has the most visual editing needs
+			if (editor.selectedAttachments.Any(att => att is View))
+				return AttachmentViewEditing.Instance;
+
+			// Otherwise, use the primary (first) attachment type
 			var primary = editor.selectedAttachments[0];
 			return primary switch
 			{
-				View => AttachmentViewEditing.Instance,
 				Emitter => AttachmentEmitterEditing.Instance,
 				Pickup => AttachmentPickupEditing.Instance,
 				_ => null

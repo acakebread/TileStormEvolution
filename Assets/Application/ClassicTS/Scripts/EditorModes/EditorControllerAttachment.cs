@@ -8,8 +8,6 @@ namespace ClassicTilestorm
 {
 	public class EditorControllerAttachment : EditorControllerMovement
 	{
-		public int SelectedAttachmentIndex { get; private set; } = -1;
-
 		private Vector3 mouseDownPos;
 		private bool mouseMovedBeyondThreshold;
 		private const float CLICK_THRESHOLD = 8f;
@@ -28,7 +26,7 @@ namespace ClassicTilestorm
 
 		private readonly AutoHidePanel sidePanel = new AutoHidePanel(collapsed: 120f, expanded: 340f, delay: 1.5f, animDur: 0.25f, defaultPos: new Vector2(0f, 40f));
 
-		private bool supressPopup = true;
+		private bool supressInput = true;
 
 		public override bool IsMouseOverGUI()
 		{
@@ -64,7 +62,6 @@ namespace ClassicTilestorm
 		public override void OnEnable()
 		{
 			base.OnEnable();
-			SelectedAttachmentIndex = -1;
 			EditorUtil.DestroyMarkerVisuals();
 			EditorUtil.DestroyViewFrustumMarker();
 			RebuildMarkers();
@@ -138,7 +135,7 @@ namespace ClassicTilestorm
 			if (EditorTransformUtil.HandleTransformGizmoInput(editorCamera))
 			{
 				AttachmentViewEditing.HandleGizmoInput(this);
-				supressPopup = true;
+				supressInput = true;
 			}
 
 			if (IsGuiControlActive()) return;
@@ -146,33 +143,33 @@ namespace ClassicTilestorm
 			int tileUnderMouse = GetTileUnderMouse();
 
 			// LMB Down: select attachments
-			if (!supressPopup && Input.GetMouseButtonDown(0))
+			if (!supressInput && Input.GetMouseButtonDown(0))
 			{
 				pendingTile = HitTile(Input.mousePosition);
 				HandleLeftMouseDown(pendingTile);
 			}
 
 			// LMB Drag: move attachments
-			if (!supressPopup && Input.GetMouseButton(0) && tileUnderMouse >= 0 && selectedAttachments != null)
+			if (!supressInput && Input.GetMouseButton(0) && tileUnderMouse >= 0 && selectedAttachments != null)
 			{
 				HandleDrag(tileUnderMouse);
 				RebuildMarkers();
 			}
 
-			supressPopup |= pendingAction == PendingAction.Wait;
+			supressInput |= pendingAction == PendingAction.Wait;
 
 			// LMB Up: popups (only on clean click)
-			if (Input.GetMouseButtonUp(0) && !supressPopup && wasClick)
+			if (Input.GetMouseButtonUp(0) && !supressInput && wasClick)
 			{
 				HandleLeftMouseUpOnCleanClick();
 			}
 
 			// RMB Up: delete popup
-			if (Input.GetMouseButtonUp(1) && !supressPopup && wasClick)
+			if (Input.GetMouseButtonUp(1) && !supressInput && wasClick)
 				HandleRightMouseUp(wasClick);
 
 			if (pendingAction == PendingAction.Wait) pendingAction = PendingAction.None;
-			supressPopup = false;
+			supressInput = false;
 		}
 
 		public override void OnGUI()
@@ -221,19 +218,25 @@ namespace ClassicTilestorm
 			var map = editorController?.iMapManager?.CurrentMap;
 			if (map == null) return;
 
-			var tiles = map.attachments?.Where(a => a.tile >= 0).Select(a => a.tile).Distinct().ToArray() ?? System.Array.Empty<int>();
-			int markerIndexTile = SelectedAttachmentIndex >= 0 && SelectedAttachmentIndex < map.attachments?.Length
-				? map.attachments[SelectedAttachmentIndex].tile : -1;
-			int selection = System.Array.IndexOf(tiles, markerIndexTile);
+			var tiles = map.attachments?
+				.Where(a => a.tile >= 0)
+				.Select(a => a.tile)
+				.Distinct()
+				.ToArray() ?? System.Array.Empty<int>();
+
+			// Determine selected tile from current selection
+			int selectedTile = (selectedAttachments != null && selectedAttachments.Length > 0)
+				? selectedAttachments[0].tile
+				: -1;
+
+			int selection = System.Array.IndexOf(tiles, selectedTile);
+
 			EditorUtil.UpdateMapMarkers(editorController.iMapManager, tiles, selection, EditorUtil.MarkerType.Attachment);
 		}
 
 		public void SelectAttachments(MapAttachment[] attachments)
 		{
 			selectedAttachments = attachments;
-			SelectedAttachmentIndex = attachments?.Length > 0
-				? System.Array.IndexOf(editorController.iMapManager.CurrentMap.attachments, attachments[0])
-				: -1;
 
 			RebuildMarkers();
 			EditorUtil.DestroyViewFrustumMarker();
