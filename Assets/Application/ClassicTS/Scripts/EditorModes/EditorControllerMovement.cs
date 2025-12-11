@@ -5,8 +5,8 @@ namespace ClassicTilestorm
 {
 	public abstract class EditorControllerMovement
 	{
-		protected EditorController editorController;
-		protected Camera editorCamera => editorController?.editorCamera;
+		public EditorController editorController;
+		public Camera editorCamera => editorController?.editorCamera;
 
 		protected int HitTile(Vector3 mousePos) => editorController.iMapManager.CameraHitTile(editorCamera, mousePos);
 

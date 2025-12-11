@@ -1,6 +1,7 @@
-﻿// File: EditorTransformUtil.cs
+﻿// EditorTransformUtil.cs
 using UnityEngine;
 using System.Collections.Generic;
+using Unity.Mathematics;
 
 namespace ClassicTilestorm
 {
@@ -9,12 +10,10 @@ namespace ClassicTilestorm
 		private static GameObject root;
 		private static GameObject positionHandle;
 		private static GameObject rotationOrbiter;
-		private static View activeView;
-		private static IMapManager mapManager;
 
 		private const float TARGET_SCREEN_SIZE = 60f;
 
-		// drag state
+		// Drag state
 		private static bool draggingPosition;
 		private static Plane dragPlane;
 		private static Vector3 dragStartPoint;
@@ -29,20 +28,23 @@ namespace ClassicTilestorm
 
 		private class RingTag : MonoBehaviour
 		{
-			public Vector3 axis;       // rotation axis
+			public Vector3 axis;
+			public Color originalColor;
+		}
+
+		private class FaceTag : MonoBehaviour
+		{
+			public Vector3 normal;
 			public Color originalColor;
 		}
 
 		// ===================================================================
-		// PUBLIC API – EXACTLY what you already call
+		// NEW PURE WORLD-SPACE API
 		// ===================================================================
-		public static void ShowTransformGizmo(View view, IMapManager mgr, Camera cam)
-		{
-			HideTransformGizmo();
-			if (view == null || mgr == null || cam == null) return;
 
-			activeView = view;
-			mapManager = mgr;
+		public static void ShowAt(Vector3 worldPosition, Quaternion worldRotation, Camera editorCamera, bool worldSapce = false)
+		{
+			Hide();
 
 			root = new GameObject("GIZMO_ROOT");
 			root.layer = LayerMask.NameToLayer("Editor");
@@ -50,51 +52,27 @@ namespace ClassicTilestorm
 			positionHandle = CreatePositionHandle(root.transform);
 			rotationOrbiter = CreateRotationOrbiter(root.transform);
 
-			UpdateTransformGizmoVisuals(cam);
+			root.transform.position = worldPosition;
+			root.transform.rotation = worldSapce ? quaternion.identity : worldRotation;
+
+			UpdateVisuals(editorCamera);
 		}
 
-		public static void HideTransformGizmo()
+		public static bool HandleInput(Camera editorCamera, out Vector3 newWorldPosition, out Quaternion newWorldRotation, bool worldSapce = false)
 		{
-			if (root != null) Object.Destroy(root);
+			newWorldPosition = root ? root.transform.position : Vector3.zero;
+			newWorldRotation = rotationOrbiter ? rotationOrbiter.transform.rotation : Quaternion.identity;
 
-			root = positionHandle = rotationOrbiter = null;
-			activeView = null;
-			mapManager = null;
+			if (root == null || editorCamera == null) return false;
 
-			draggingPosition = draggingRotation = false;
-			lockedAxis = Vector3.zero;
-		}
+			UpdateVisuals(editorCamera);
 
-		public static void UpdateTransformGizmoVisuals(Camera cam)
-		{
-			if (activeView == null || root == null || mapManager == null || cam == null) return;
-
-			Vector3 worldPos = mapManager.TileWorldPosition(activeView.tile) + activeView.Position;
-			root.transform.position = worldPos;
-
-			if (rotationOrbiter != null)
-				rotationOrbiter.transform.rotation = activeView.Rotation;
-
-			float dist = Vector3.Distance(cam.transform.position, root.transform.position);
-			float scale = dist * Mathf.Tan(cam.fieldOfView * 0.5f * Mathf.Deg2Rad) * 2f;
-			scale = TARGET_SCREEN_SIZE * scale / Screen.height;
-			root.transform.localScale = Vector3.one * scale;
-		}
-
-		public static bool HandleTransformGizmoInput(Camera cam)
-		{
-			if (activeView == null || cam == null || root == null) return false;
-
-			UpdateTransformGizmoVisuals(cam);
-
-			Ray ray = cam.ScreenPointToRay(Input.mousePosition);
+			Ray ray = editorCamera.ScreenPointToRay(Input.mousePosition);
 			bool handled = false;
 			bool _wasActive = wasActive;
 
-			// Hover
 			DoHover(ray);
 
-			// Click
 			if (Input.GetMouseButtonDown(0))
 			{
 				var hits = Physics.RaycastAll(ray, Mathf.Infinity, 1 << LayerMask.NameToLayer("Editor"));
@@ -116,10 +94,9 @@ namespace ClassicTilestorm
 					}
 				}
 
-				// PRIORITY: position handle
 				if (posHit.HasValue)
 				{
-					StartPositionDrag(ray, cam, posHit.Value);
+					StartPositionDrag(ray, editorCamera, posHit.Value, worldSapce);
 					handled = true;
 				}
 				else if (ringHit.HasValue)
@@ -131,16 +108,14 @@ namespace ClassicTilestorm
 				wasActive = handled;
 			}
 
-			// Drag
 			if (Input.GetMouseButton(0))
 			{
-				if (draggingPosition) ContinuePositionDrag(cam);
-				if (draggingRotation) ContinueRotationDrag(cam);
-				handled = draggingPosition | draggingRotation;
+				if (draggingPosition) ContinuePositionDrag(editorCamera);
+				if (draggingRotation) ContinueRotationDrag(editorCamera);
+				handled = draggingPosition || draggingRotation;
 				wasActive |= handled;
 			}
 
-			// Release
 			if (Input.GetMouseButtonUp(0))
 			{
 				draggingPosition = draggingRotation = false;
@@ -148,19 +123,73 @@ namespace ClassicTilestorm
 				wasActive = false;
 			}
 
+			if (handled || _wasActive)
+			{
+				newWorldPosition = root.transform.position;
+				newWorldRotation = rotationOrbiter.transform.rotation;
+			}
+
 			return handled || _wasActive;
 		}
 
+		public static void UpdateVisuals(Camera editorCamera)
+		{
+			if (root == null || editorCamera == null) return;
+
+			float dist = Vector3.Distance(editorCamera.transform.position, root.transform.position);
+			float scale = dist * Mathf.Tan(editorCamera.fieldOfView * 0.5f * Mathf.Deg2Rad) * 2f;
+			scale = TARGET_SCREEN_SIZE * scale / Screen.height;
+			root.transform.localScale = Vector3.one * Mathf.Max(scale, 0.01f);
+		}
+
+		public static void Hide()
+		{
+			if (root != null)
+				Object.DestroyImmediate(root);
+
+			root = positionHandle = rotationOrbiter = null;
+			draggingPosition = draggingRotation = false;
+			lockedAxis = Vector3.zero;
+			wasActive = false;
+		}
+
 		// ===================================================================
-		// POSITION HANDLE – works with your original picking code
+		// BACKWARD-COMPATIBLE WRAPPERS (so your existing code compiles unchanged)
 		// ===================================================================
+
+		public static void ShowTransformGizmo(View view, IMapManager mgr, Camera cam)
+		{
+			if (view == null || mgr == null || cam == null) return;
+
+			Vector3 worldPos = mgr.TileWorldPosition(view.tile) + view.Position;
+			ShowAt(worldPos, view.Rotation, cam);
+		}
+
+		public static void HideTransformGizmo()
+		{
+			Hide();
+		}
+
+		public static void UpdateTransformGizmoVisuals(Camera cam)
+		{
+			UpdateVisuals(cam);
+		}
+
+		public static bool HandleTransformGizmoInput(Camera cam)
+		{
+			return HandleInput(cam, out _, out _);
+		}
+
+		// ===================================================================
+		// POSITION HANDLE
+		// ===================================================================
+
 		private static GameObject CreatePositionHandle(Transform parent)
 		{
 			GameObject go = new GameObject("PositionHandle");
 			go.layer = LayerMask.NameToLayer("Editor");
 			go.transform.SetParent(parent, false);
 
-			// THIS IS THE IMPORTANT PART – collider on the root so your old code works
 			var faces = new[]
 			{
 				(Vector3.right,   new Color(0.95f, 0.25f, 0.25f, 0.55f)),
@@ -179,15 +208,16 @@ namespace ClassicTilestorm
 				quad.transform.localScale = Vector3.one * 0.5f;
 				quad.transform.localPosition = -f.Item1 * 0.25f;
 				quad.transform.rotation = Quaternion.LookRotation(f.Item1);
+
 				BoxCollider bc = quad.AddComponent<BoxCollider>();
-				bc.size = new Vector3(1f, 1f, 0.02f);   // thin plate
+				bc.size = new Vector3(1f, 1f, 0.02f);
 
 				MeshRenderer mr = quad.GetComponent<MeshRenderer>();
-				var additiveShader = Shader.Find("Hidden/URPGizmoSolid");
-				mr.material = new Material(additiveShader);
+				var shader = Shader.Find("Hidden/URPGizmoSolid");
+				mr.material = new Material(shader);
 				mr.material.SetColor("_BaseColor", f.Item2);
 
-				Object.Destroy(quad.GetComponent<Collider>());
+				Object.DestroyImmediate(quad.GetComponent<Collider>());
 
 				FaceTag tag = quad.AddComponent<FaceTag>();
 				tag.normal = f.Item1;
@@ -197,29 +227,19 @@ namespace ClassicTilestorm
 			return go;
 		}
 
-		private class FaceTag : MonoBehaviour
-		{
-			public Vector3 normal;
-			public Color originalColor;   // store the RGB + initial alpha
-		}
-
-		private static void StartPositionDrag(Ray ray, Camera cam, RaycastHit hit)
+		private static void StartPositionDrag(Ray ray, Camera cam, RaycastHit hit, bool worldSapce = false)
 		{
 			FaceTag tag = hit.transform.GetComponent<FaceTag>();
 
 			if (tag != null)
 			{
-				// Primary axis we are locking movement ALONG
 				lockedAxis = tag.normal.normalized;
-
-				// Drag plane is the plane *perpendicular* to clicked axis
 				dragPlane = new Plane(lockedAxis, root.transform.position);
 			}
 			else
 			{
-				// fallback, shouldn’t normally happen
 				lockedAxis = Vector3.zero;
-				dragPlane = new Plane(-cam.transform.forward, root.transform.position);
+				dragPlane = new Plane(worldSapce ? - cam.transform.forward : dragPlane.normal, root.transform.position);
 			}
 
 			if (dragPlane.Raycast(ray, out float enter))
@@ -231,30 +251,22 @@ namespace ClassicTilestorm
 		private static void ContinuePositionDrag(Camera cam)
 		{
 			Ray ray = cam.ScreenPointToRay(Input.mousePosition);
-			if (!dragPlane.Raycast(ray, out float enter))
-				return;
+			if (!dragPlane.Raycast(ray, out float enter)) return;
 
 			Vector3 cur = ray.GetPoint(enter);
 			Vector3 delta = cur - dragStartPoint;
 
-			// Remove any delta along the locked axis
-			// (because this axis defines the plane normal)
 			if (lockedAxis != Vector3.zero)
 				delta -= Vector3.Project(delta, lockedAxis);
 
-			Vector3 newPos = root.transform.position + delta;
-			activeView.Position = newPos - mapManager.TileWorldPosition(activeView.tile);
-
-			UpdateTransformGizmoVisuals(cam);
-			EditorUtil.UpdateViewFrustumMarker(activeView, mapManager);
-
+			root.transform.position += delta;
 			dragStartPoint = cur;
 		}
 
+		// ===================================================================
+		// ROTATION ORBITER
+		// ===================================================================
 
-		// ===================================================================
-		// ROTATION – your exact working code
-		// ===================================================================
 		private static GameObject CreateRotationOrbiter(Transform parent)
 		{
 			GameObject orb = new GameObject("RotationOrbiter");
@@ -269,18 +281,15 @@ namespace ClassicTilestorm
 				GameObject ring = CreateTorus();
 				ring.name = "Ring_" + "XYZ"[i];
 				ring.transform.SetParent(orb.transform, false);
-				//ring.transform.localRotation = Quaternion.FromToRotation(new Vector3(axes[i].y, axes[i].z, axes[i].x), axes[i]);
 				ring.transform.rotation = Quaternion.FromToRotation(new Vector3(axes[i].y, axes[i].z, axes[i].x), axes[i]);
-				ring.transform.localScale = Vector3.one;
 
 				MeshRenderer mr = ring.GetComponent<MeshRenderer>();
-				var editorShader = Shader.Find("Hidden/URPGizmoSolid");
-				mr.material = new Material(editorShader);
+				var shader = Shader.Find("Hidden/URPGizmoSolid");
+				mr.material = new Material(shader);
 				mr.material.SetColor("_BaseColor", colors[i]);
 
 				ring.AddComponent<MeshCollider>();
 
-				// --- Add the ring tag ---
 				RingTag tag = ring.AddComponent<RingTag>();
 				tag.axis = axes[i];
 				tag.originalColor = colors[i];
@@ -297,7 +306,7 @@ namespace ClassicTilestorm
 				if (c && c.Raycast(ray, out _, Mathf.Infinity))
 				{
 					rotationAxis = ring.up;
-					startRotation = activeView.Rotation;
+					startRotation = rotationOrbiter.transform.rotation;
 
 					Plane p = new Plane(rotationAxis, root.transform.position);
 					p.Raycast(ray, out float enter);
@@ -326,17 +335,16 @@ namespace ClassicTilestorm
 
 			float angle = Vector3.Dot(delta, tangent.normalized) * 40f;
 			Quaternion deltaRot = Quaternion.AngleAxis(angle, rotationAxis);
-			startRotation = deltaRot * activeView.Rotation;
-			activeView.Rotation = startRotation;
+			root.transform.rotation = deltaRot * startRotation;
+			startRotation = root.transform.rotation;//critical!!!
 
-			UpdateTransformGizmoVisuals(cam);
-			EditorUtil.UpdateViewFrustumMarker(activeView, mapManager);
 			startMouseWorld = cur;
 		}
 
 		// ===================================================================
-		// HOVER (yellow highlight)
+		// HOVER
 		// ===================================================================
+
 		private static void DoHover(Ray ray)
 		{
 			if (draggingPosition || draggingRotation) return;
@@ -355,8 +363,7 @@ namespace ClassicTilestorm
 
 			foreach (var h in hits)
 			{
-				if (h.transform.GetComponent<FaceTag>() != null &&
-					h.transform.IsChildOf(positionHandle.transform))
+				if (h.transform.GetComponent<FaceTag>() != null && h.transform.IsChildOf(positionHandle.transform))
 				{
 					faceHit = h;
 					break;
@@ -367,7 +374,6 @@ namespace ClassicTilestorm
 				}
 			}
 
-			// PRIORITY: faces
 			RaycastHit hit;
 			if (faceHit.HasValue) hit = faceHit.Value;
 			else if (ringHit.HasValue) hit = ringHit.Value;
@@ -377,11 +383,9 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			// Check for cube faces first
 			FaceTag faceTag = hit.transform.GetComponent<FaceTag>();
 			if (faceTag != null && hit.collider.transform.IsChildOf(positionHandle.transform))
 			{
-				// Highlight faces
 				foreach (FaceTag f in positionHandle.GetComponentsInChildren<FaceTag>())
 				{
 					bool sameAxis = Mathf.Abs(Vector3.Dot(f.normal, faceTag.normal)) > 0.9f;
@@ -389,19 +393,14 @@ namespace ClassicTilestorm
 					f.GetComponent<MeshRenderer>().material.SetColor("_BaseColor", c);
 				}
 
-				// Reset rings
-				if (rotationOrbiter != null)
+				foreach (RingTag r in rotationOrbiter.GetComponentsInChildren<RingTag>())
 				{
-					foreach (RingTag r in rotationOrbiter.GetComponentsInChildren<RingTag>())
-					{
-						Color c = new Color(r.originalColor.r, r.originalColor.g, r.originalColor.b, 0.55f);
-						r.GetComponent<MeshRenderer>().material.SetColor("_BaseColor", c);
-					}
+					Color c = new Color(r.originalColor.r, r.originalColor.g, r.originalColor.b, 0.55f);
+					r.GetComponent<MeshRenderer>().material.SetColor("_BaseColor", c);
 				}
 			}
 			else
 			{
-				// Check for rings
 				RingTag ringTag = hit.transform.GetComponent<RingTag>();
 				if (ringTag != null)
 				{
@@ -412,7 +411,6 @@ namespace ClassicTilestorm
 						r.GetComponent<MeshRenderer>().material.SetColor("_BaseColor", c);
 					}
 
-					// Reset cube faces
 					foreach (FaceTag f in positionHandle.GetComponentsInChildren<FaceTag>())
 					{
 						Color c = new Color(f.originalColor.r, f.originalColor.g, f.originalColor.b, 0.55f);
@@ -421,7 +419,6 @@ namespace ClassicTilestorm
 				}
 				else
 				{
-					// Nothing hovered – reset everything
 					ResetHover();
 				}
 			}
@@ -449,29 +446,24 @@ namespace ClassicTilestorm
 		}
 
 		// ===================================================================
-		// TORUS MESH (your exact code)
+		// TORUS MESH
 		// ===================================================================
+
 		private static GameObject CreateTorus()
 		{
 			GameObject go = new GameObject();
 			go.layer = LayerMask.NameToLayer("Editor");
 
-			// === Visual torus (thin) ===
 			MeshFilter mf = go.AddComponent<MeshFilter>();
 			MeshRenderer mr = go.AddComponent<MeshRenderer>();
 
-			// Thin visual mesh
 			mf.mesh = GenerateTorusMesh(segments: 48, sides: 32, radius: 1f, tube: 0.02f);
 
-			// Optional: higher sides (32 instead of 16) for smoother look when close-up
-			var editorShader = Shader.Find("Hidden/URPGizmoSolid");
-			mr.material = new Material(editorShader);
-			// color will be set later
+			var shader = Shader.Find("Hidden/URPGizmoSolid");
+			mr.material = new Material(shader);
 
-			// === Thick collider (separate mesh) ===
 			MeshCollider mc = go.AddComponent<MeshCollider>();
-			mc.sharedMesh = GenerateTorusMesh(segments: 32, sides: 16, radius: 1f, tube: 0.05f); // thicker = easier to click
-																								 //mc.convex = true; // Important! Allows raycasting against generated mesh reliably
+			mc.sharedMesh = GenerateTorusMesh(segments: 32, sides: 16, radius: 1f, tube: 0.05f);
 
 			return go;
 		}
@@ -482,8 +474,6 @@ namespace ClassicTilestorm
 			var vertices = new List<Vector3>();
 			var normals = new List<Vector3>();
 			var triangles = new List<int>();
-
-			int vertexCount = (segments + 1) * (sides + 1);
 
 			for (int seg = 0; seg <= segments; seg++)
 			{
