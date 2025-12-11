@@ -1,6 +1,6 @@
 // EditorFrustumUtil.cs
-using System.Collections.Generic;
 using UnityEngine;
+using System.Collections.Generic;
 
 namespace ClassicTilestorm
 {
@@ -9,11 +9,20 @@ namespace ClassicTilestorm
 		private static GameObject viewFrustumMarker;
 		private static Mesh cachedFrustumMesh;
 		private static float cachedFrustumDistance = -1f;
+		private static float cachedFrustumFOV = -1f;
 
 		// ===================================================================
-		// NEW PURE WORLD-SPACE API
+		// INITIAL SHOW (creates if needed)
 		// ===================================================================
-		public static void ShowAt(Vector3 worldPosition, Quaternion worldRotation, float distance)
+		public static void ShowAt(Vector3 worldPosition, Quaternion worldRotation, float distance, float fov)
+		{
+			UpdateFrustum(worldPosition, worldRotation, distance, fov);
+		}
+
+		// ===================================================================
+		// EFFICIENT UPDATE (reuses object, only regenerates mesh when distance or FOV changes)
+		// ===================================================================
+		public static void UpdateFrustum(Vector3 worldPosition, Quaternion worldRotation, float distance, float fov)
 		{
 			if (distance < 0.02f)
 			{
@@ -52,20 +61,21 @@ namespace ClassicTilestorm
 				mr.materials = materials;
 			}
 
-			// Regenerate mesh only if distance changed
-			if (!Mathf.Approximately(cachedFrustumDistance, distance))
+			// Regenerate mesh only if distance OR FOV changed
+			if (!Mathf.Approximately(cachedFrustumDistance, distance) || !Mathf.Approximately(cachedFrustumFOV, fov))
 			{
 				if (cachedFrustumMesh != null)
 					Object.DestroyImmediate(cachedFrustumMesh);
 
-				cachedFrustumMesh = CreateViewFrustumMesh(distance);
+				cachedFrustumMesh = CreateViewFrustumMesh(distance, fov);
 				cachedFrustumDistance = distance;
+				cachedFrustumFOV = fov;
 
 				var mf = viewFrustumMarker.GetComponent<MeshFilter>();
 				mf.sharedMesh = cachedFrustumMesh;
 			}
 
-			// Fast update
+			// Fast transform update
 			viewFrustumMarker.transform.position = worldPosition;
 			viewFrustumMarker.transform.rotation = worldRotation;
 			viewFrustumMarker.SetActive(true);
@@ -88,19 +98,19 @@ namespace ClassicTilestorm
 				cachedFrustumMesh = null;
 			}
 			cachedFrustumDistance = -1f;
+			cachedFrustumFOV = -1f;
 		}
 
 		// ===================================================================
-		// CORRECT FRUSTUM MESH (from your reliable version)
+		// CORRECT FRUSTUM MESH — uses actual FOV and distance
 		// ===================================================================
-		private static Mesh CreateViewFrustumMesh(float distance)
+		private static Mesh CreateViewFrustumMesh(float distance, float fov)
 		{
-			const float GameFOV = 20f;
 			const float Near = 0.25f;
 			float Far = Mathf.Max(distance, Near + 0.1f);
 
 			float aspect = 16f / 9f;
-			float halfFov = GameFOV * 0.5f * Mathf.Deg2Rad;
+			float halfFov = fov * 0.5f * Mathf.Deg2Rad;
 			float t = Mathf.Tan(halfFov);
 
 			float nh = Near * t * 2f;

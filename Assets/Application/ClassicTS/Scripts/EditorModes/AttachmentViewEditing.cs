@@ -141,7 +141,7 @@ namespace ClassicTilestorm
 		}
 
 		// ===================================================================
-		// MOVED: Obsolete wrapper — exact same behavior, now local
+		// MOVED & UPDATED: Local wrapper — preserves original behavior but uses new API with FOV
 		// ===================================================================
 		private static void UpdateViewFrustumMarker(View view, IMapManager mapManager)
 		{
@@ -163,7 +163,8 @@ namespace ClassicTilestorm
 
 			Quaternion targetRotation = Quaternion.LookRotation(forward, up);
 
-			EditorFrustumUtil.ShowAt(worldPos, targetRotation, view.Distance);
+			// Use UpdateFrustum for efficiency (handles mesh regeneration on FOV/distance change)
+			EditorFrustumUtil.UpdateFrustum(worldPos, targetRotation, view.Distance, view.FOV);
 		}
 	}
 }
