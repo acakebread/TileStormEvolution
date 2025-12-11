@@ -29,10 +29,10 @@ namespace ClassicTilestorm
 		{
 			if (editorController.CurrentMode != EditorController.EditorMode.Waypoint) return false;
 
+			if (base.IsMouseOverGUI()) return true;
 			Rect panelRect = sidePanel.GetPanelRect();
 			Vector2 mouse = Input.mousePosition;
 			mouse.y = Screen.height - mouse.y;
-
 			return panelRect.Contains(mouse);
 		}
 
@@ -104,8 +104,8 @@ namespace ClassicTilestorm
 
 		public override void Update()
 		{
-			if (!editorCamera || IsMouseOverGUI() || IsGuiControlActive()) return;
 			base.Update();
+			if (!editorCamera || IsMouseOverGUI() || IsGuiControlActive()) return;
 
 			var worldPos = MapManager.ScreenToWorld(editorCamera, Input.mousePosition);
 			var snapped = editorController.iMapManager.SnappedMapPosition(worldPos);

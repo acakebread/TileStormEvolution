@@ -36,11 +36,10 @@ namespace ClassicTilestorm
 			// Only relevant in Attachment mode
 			if (editorController.CurrentMode != EditorMode.Attachment) return false;
 
-			// Use the panel's actual rect
+			if (base.IsMouseOverGUI()) return true;
 			Rect panelRect = sidePanel.GetPanelRect();
 			Vector2 mouse = Input.mousePosition;
 			mouse.y = Screen.height - mouse.y;
-
 			return panelRect.Contains(mouse);
 		}
 
@@ -144,8 +143,7 @@ namespace ClassicTilestorm
 			}
 
 			// === 4. NORMAL EDITOR INPUT ===
-			if (!editorCamera || viewPreview.inInUse || IsMouseOverGUI() || IsGuiControlActive())
-				return;
+			if (viewPreview.inInUse) return;
 
 			base.Update();
 

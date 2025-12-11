@@ -9,18 +9,19 @@ public static class EditorCameraMovement
 	private const float ZoomSpeed = 12f;
 	private const float MoveSpeedMultiplier = 1f;
 
-	public static void UpdateCamera(Transform camTransform, bool allowInput = true)
+	private static bool focus = false; 
+	public static void UpdateCamera(Transform camTransform, bool isMouseOverGui = false, bool allowInput = true)
 	{
 		if (camTransform == null || !allowInput) return;
 
 		var camera = camTransform.GetComponent<Camera>();
 		if (camera == null) return;
 
-		bool isGuiActive = UnityEngine.EventSystems.EventSystem.current?.IsPointerOverGameObject() ?? false;
-		bool isMouseOverGui = false; // You can extend this if needed
+		if ((Input.GetMouseButtonDown(1) || Input.touchCount > 0))
+			focus = !isMouseOverGui;
 
 		// Right mouse button or touch = orbit
-		if ((Input.GetMouseButton(1) || Input.touchCount > 0) && !isGuiActive)
+		if (focus && (Input.GetMouseButton(1) || Input.touchCount > 0))
 		{
 			float pointerX = Input.GetAxis("Mouse X");
 			float pointerY = Input.GetAxis("Mouse Y");
@@ -37,8 +38,11 @@ public static class EditorCameraMovement
 			camTransform.eulerAngles = eulers;
 		}
 
+		if (Input.GetMouseButtonUp(1))// || Input.touchCount == 0)//this doesn't work for obvious reasons if (Input.GetMouseButtonUp(1) || Input.touchCount == 0)
+			focus = false;
+
 		// Mouse wheel zoom (only if not over GUI)
-		if (!isMouseOverGui && !isGuiActive && GuiUtils.IsMouseInsideWindow())
+		if (!isMouseOverGui && GuiUtils.IsMouseInsideWindow())
 		{
 			float scroll = Input.GetAxis("Mouse ScrollWheel");
 			if (scroll != 0f)

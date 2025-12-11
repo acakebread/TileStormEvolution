@@ -23,6 +23,7 @@ namespace ClassicTilestorm
 		{
 			if (editorController.CurrentMode != EditorController.EditorMode.Paint) return false;
 
+			if (base.IsMouseOverGUI()) return true;
 			Rect panelRect = sidePanel.GetPanelRect();
 			Vector2 mouse = Input.mousePosition;
 			mouse.y = Screen.height - mouse.y;
@@ -31,8 +32,8 @@ namespace ClassicTilestorm
 
 		public override void Update()
 		{
-			if (!editorCamera || IsMouseOverGUI() || IsGuiControlActive()) return;
 			base.Update();
+			if (!editorCamera || IsMouseOverGUI() || IsGuiControlActive()) return;
 
 			if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1))
 				mouseDownPos = Input.mousePosition;
