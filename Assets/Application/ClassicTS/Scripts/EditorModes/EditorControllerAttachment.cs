@@ -22,7 +22,6 @@ namespace ClassicTilestorm
 		public ViewPreview viewPreview;
 		private bool isControllingPreviewWithRMB = false;
 		private bool rmbDragStartedInPreview = false;
-		private bool isMouseOverPreview = false;
 
 		private readonly AutoHidePanel sidePanel = new AutoHidePanel(collapsed: 120f, expanded: 340f, delay: 1.5f, animDur: 0.25f, defaultPos: new Vector2(0f, 40f));
 
@@ -41,18 +40,12 @@ namespace ClassicTilestorm
 
 		private bool IsMouseOverPreview()
 		{
-			isMouseOverPreview = false;
 			if (viewPreview != null && viewPreview.gameObject.activeSelf && viewPreview.previewRect is Rect r && r.width > 0)
 			{
 				Rect hitRect = new Rect(r.x - 8, r.y - 8, r.width + 16, r.height + 16);
 				Vector2 mp = Input.mousePosition;
 				mp.y = Screen.height - mp.y;
-
-				if (hitRect.Contains(mp))
-				{
-					isMouseOverPreview = true;
-					return true;
-				}
+				return hitRect.Contains(mp);
 			}
 			return false;
 		}
@@ -89,7 +82,14 @@ namespace ClassicTilestorm
 
 		public override void Update()
 		{
-			IsMouseOverPreview();
+			var isMouseOverPreview = IsMouseOverPreview();
+
+			if (EditorTransformUtil.HandleTransformGizmoInput(editorCamera))
+			{
+				AttachmentViewEditing.HandleGizmoInput(this);
+				supressInput = true;
+				Debug.Log("HandleTransformGizmoInput");
+			}
 
 			if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1))
 			{
@@ -120,7 +120,8 @@ namespace ClassicTilestorm
 
 			if (isControllingPreviewWithRMB || (!Input.GetMouseButton(1) && isMouseOverPreview))
 			{
-				if (viewPreview?.previewCam != null)
+				float scroll = Input.GetAxis("Mouse ScrollWheel");
+				if (isControllingPreviewWithRMB || scroll != 0f)
 				{
 					EditorCameraMovement.UpdateCamera(viewPreview.previewCam.transform);
 					AttachmentViewEditing.HandlePreviewCameraSync(this, viewPreview);
@@ -131,12 +132,6 @@ namespace ClassicTilestorm
 			if (viewPreview.inInUse) return;
 
 			base.Update();
-
-			if (EditorTransformUtil.HandleTransformGizmoInput(editorCamera))
-			{
-				AttachmentViewEditing.HandleGizmoInput(this);
-				supressInput = true;
-			}
 
 			if (IsGuiControlActive()) return;
 
@@ -210,7 +205,6 @@ namespace ClassicTilestorm
 			viewPreview.Hide();
 			isControllingPreviewWithRMB = false;
 			rmbDragStartedInPreview = false;
-			isMouseOverPreview = false;
 		}
 
 		public void RebuildMarkers()
