@@ -258,7 +258,7 @@ namespace ClassicTilestorm
 			else
 			{
 				lockedAxis = Vector3.zero;
-				dragPlane = new Plane(worldSpace ? - cam.transform.forward : dragPlane.normal, root.transform.position);
+				dragPlane = new Plane(worldSpace ? -cam.transform.forward : dragPlane.normal, root.transform.position);
 			}
 
 			if (dragPlane.Raycast(ray, out float enter))
@@ -285,11 +285,6 @@ namespace ClassicTilestorm
 		// ===================================================================
 		// ROTATION ORBITER
 		// ===================================================================
-
-		private static Vector2 startMouseScreen;
-		private static Vector2 startTangentScreen;
-		private static float ringWorldRadius;
-		private static Vector3 ringStartPointWorld;
 
 		private static GameObject CreateRotationOrbiter(Transform parent)
 		{
@@ -327,60 +322,14 @@ namespace ClassicTilestorm
 			foreach (Transform ring in rotationOrbiter.transform)
 			{
 				Collider c = ring.GetComponent<Collider>();
-				if (c && c.Raycast(ray, out RaycastHit hit, Mathf.Infinity))
+				if (c && c.Raycast(ray, out _, Mathf.Infinity))
 				{
-					// rotationAxis in world space (ring.up is world-up for the ring)
-					rotationAxis = ring.up.normalized;
+					rotationAxis = ring.up;
 					startRotation = rotationOrbiter.transform.rotation;
 
-					// Compute plane of the ring (world space)
-					Plane ringPlane = new Plane(rotationAxis, root.transform.position);
-
-					// Ray -> plane intersection => an initial mouse world point (on plane)
-					if (!ringPlane.Raycast(ray, out float enter)) return false;
-					Vector3 mousePlanePoint = ray.GetPoint(enter);
-
-					// Compute vector from center to that clicked point, project to plane to ensure orthogonality
-					Vector3 center = root.transform.position;
-					Vector3 vecFromCenter = mousePlanePoint - center;
-					vecFromCenter -= Vector3.Project(vecFromCenter, rotationAxis); // lie fully in ring plane
-
-					// If click is almost exactly on axis (very small) then fallback to cross with camera up
-					if (vecFromCenter.sqrMagnitude < 0.0001f)
-					{
-						// pick a fallback direction in plane
-						vecFromCenter = Vector3.Cross(rotationAxis, (Camera.main ? Camera.main.transform.forward : Vector3.forward));
-						vecFromCenter -= Vector3.Project(vecFromCenter, rotationAxis);
-						if (vecFromCenter.sqrMagnitude < 0.0001f)
-							vecFromCenter = Vector3.right; // last resort
-					}
-
-					// Determine ring radius in world space. The torus was generated with radius=1f (local),
-					// so world radius is root's lossy scale (assuming uniform scale).
-					ringWorldRadius = root.transform.lossyScale.x * 1f;
-					// Determine exact point on ring circle nearest to click
-					Vector3 ringPoint = center + vecFromCenter.normalized * ringWorldRadius;
-					ringStartPointWorld = ringPoint;
-
-					// Tangent at that point (world space) — along the ring circle
-					Vector3 tangentWorld = Vector3.Cross(rotationAxis, (ringPoint - center)).normalized;
-
-					// Convert the tangent into screen-space vector
-					Vector3 screenP = Camera.current != null ? Camera.current.WorldToScreenPoint(ringPoint) : Camera.main.WorldToScreenPoint(ringPoint);
-					Vector3 screenT = Camera.current != null ? Camera.current.WorldToScreenPoint(ringPoint + tangentWorld) : Camera.main.WorldToScreenPoint(ringPoint + tangentWorld);
-
-					startTangentScreen = new Vector2(screenT.x - screenP.x, screenT.y - screenP.y);
-					if (startTangentScreen.sqrMagnitude < 0.000001f)
-					{
-						// fallback: use camera-facing tangent (project camera dir into plane)
-						Vector3 camDir = (center - (Camera.current ? Camera.current.transform.position : Camera.main.transform.position)).normalized;
-						tangentWorld = Vector3.Cross(rotationAxis, camDir).normalized;
-						screenT = (Camera.current ? Camera.current.WorldToScreenPoint(ringPoint + tangentWorld) : Camera.main.WorldToScreenPoint(ringPoint + tangentWorld));
-						startTangentScreen = new Vector2(screenT.x - screenP.x, screenT.y - screenP.y);
-					}
-
-					// record start mouse screen pos
-					startMouseScreen = Input.mousePosition;
+					Plane p = new Plane(rotationAxis, root.transform.position);
+					p.Raycast(ray, out float enter);
+					startMouseWorld = ray.GetPoint(enter);
 
 					draggingRotation = true;
 					return true;
@@ -391,37 +340,24 @@ namespace ClassicTilestorm
 
 		private static void ContinueRotationDrag(Camera cam)
 		{
-			if (!draggingRotation) return;
+			Plane plane = new Plane(rotationAxis, root.transform.position);
+			Ray ray = cam.ScreenPointToRay(Input.mousePosition);
+			if (!plane.Raycast(ray, out float enter)) return;
 
-			// Mouse delta in screen pixels
-			Vector2 curMouse = Input.mousePosition;
-			Vector2 mouseDelta = curMouse - startMouseScreen;
+			Vector3 cur = ray.GetPoint(enter);
+			Vector3 delta = cur - startMouseWorld;
+			if (delta.sqrMagnitude < 0.0001f) return;
 
-			if (mouseDelta.sqrMagnitude < 0.0001f) return;
+			Vector3 camDir = (root.transform.position - cam.transform.position).normalized;
+			Vector3 tangent = Vector3.Cross(rotationAxis, camDir);
+			if (tangent.sqrMagnitude < 0.01f) tangent = Vector3.Cross(rotationAxis, Vector3.up);
 
-			// Project mouse delta onto the screen-space tangent that we computed at drag start
-			Vector2 tangent = startTangentScreen;
-			if (tangent.sqrMagnitude < 0.000001f) return;
-			Vector2 tangentN = tangent.normalized;
-
-			// scalar movement along tangent (in pixels)
-			float moveAlong = Vector2.Dot(mouseDelta, tangentN);
-
-			// Convert pixels -> angle. Sensitivity chosen so ~100px -> ~90 degrees, tweak if needed.
-			float sensitivity = 90f / 100f; // degrees per 100 pixels
-			float angle = moveAlong * sensitivity;
-
-			// Apply rotation around rotationAxis (world-space)
+			float angle = Vector3.Dot(delta, tangent.normalized) * 40f;
 			Quaternion deltaRot = Quaternion.AngleAxis(angle, rotationAxis);
-			rotationOrbiter.transform.rotation = deltaRot * startRotation;
+			root.transform.rotation = deltaRot * startRotation;
+			startRotation = root.transform.rotation;//critical!!!
 
-			// Do not incrementally update startRotation here — keep startRotation fixed at initial drag
-			// so angle is always relative to startRotation. If you prefer incremental (smoother for some input),
-			// you can update startRotation = rotationOrbiter.transform.rotation; startMouseScreen = curMouse;
-
-			// Optionally: update startMouseScreen/startRotation each frame to treat input as incremental:
-			// startRotation = rotationOrbiter.transform.rotation;
-			// startMouseScreen = curMouse;
+			startMouseWorld = cur;
 		}
 
 		// ===================================================================
