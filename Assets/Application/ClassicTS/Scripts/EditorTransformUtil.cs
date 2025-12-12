@@ -62,20 +62,15 @@ namespace ClassicTilestorm
 
 		public static void UpdateTransform(Vector3 worldPosition, Quaternion worldRotation, Camera editorCamera, bool worldSpace = false)
 		{
-			bool needsCreation = (root == null);
-
-			if (needsCreation)
+			if (root == null)
 			{
-				// First time: create it properly
 				ShowAt(worldPosition, worldRotation, editorCamera, worldSpace);
 				return;
 			}
 
-			// Update existing gizmo without recreating
 			root.transform.position = worldPosition;
 			root.transform.rotation = worldSpace ? Quaternion.identity : worldRotation;
 
-			// Still update scale to keep it screen-size consistent
 			UpdateVisuals(editorCamera);
 		}
 
@@ -172,8 +167,7 @@ namespace ClassicTilestorm
 
 		public static void Hide()
 		{
-			if (root != null)
-				Object.DestroyImmediate(root);
+			if (root != null) Object.DestroyImmediate(root);
 
 			if (screenCircle != null)
 				Object.DestroyImmediate(screenCircle);
@@ -186,31 +180,19 @@ namespace ClassicTilestorm
 		}
 
 		// ===================================================================
-		// BACKWARD-COMPATIBLE WRAPPERS (so your existing code compiles unchanged)
+		// BACKWARD-COMPATIBLE WRAPPERS
 		// ===================================================================
 
 		public static void ShowTransformGizmo(View view, IMapManager mgr, Camera cam)
 		{
 			if (view == null || mgr == null || cam == null) return;
-
 			Vector3 worldPos = mgr.TileWorldPosition(view.tile) + view.Position;
 			ShowAt(worldPos, view.Rotation, cam);
 		}
 
-		public static void HideTransformGizmo()
-		{
-			Hide();
-		}
-
-		public static void UpdateTransformGizmoVisuals(Camera cam)
-		{
-			UpdateVisuals(cam);
-		}
-
-		public static bool HandleTransformGizmoInput(Camera cam)
-		{
-			return HandleInput(cam, out _, out _);
-		}
+		public static void HideTransformGizmo() => Hide();
+		public static void UpdateTransformGizmoVisuals(Camera cam) => UpdateVisuals(cam);
+		public static bool HandleTransformGizmoInput(Camera cam) => HandleInput(cam, out _, out _);
 
 		// ===================================================================
 		// POSITION HANDLE
@@ -271,7 +253,7 @@ namespace ClassicTilestorm
 			else
 			{
 				lockedAxis = Vector3.zero;
-				dragPlane = new Plane(worldSpace ? - cam.transform.forward : dragPlane.normal, root.transform.position);
+				dragPlane = new Plane(worldSpace ? -cam.transform.forward : dragPlane.normal, root.transform.position);
 			}
 
 			if (dragPlane.Raycast(ray, out float enter))
@@ -298,11 +280,6 @@ namespace ClassicTilestorm
 		// ===================================================================
 		// ROTATION ORBITER
 		// ===================================================================
-
-		private static Vector2 startMouseScreen;
-		private static Vector2 startTangentScreen;
-		private static float ringWorldRadius;
-		private static Vector3 ringStartPointWorld;
 
 		private static GameObject CreateRotationOrbiter(Transform parent)
 		{
@@ -342,58 +319,12 @@ namespace ClassicTilestorm
 				Collider c = ring.GetComponent<Collider>();
 				if (c && c.Raycast(ray, out RaycastHit hit, Mathf.Infinity))
 				{
-					// rotationAxis in world space (ring.up is world-up for the ring)
-					rotationAxis = ring.up.normalized;
-					startRotation = rotationOrbiter.transform.rotation;
+					rotationAxis = ring.up;
+					startRotation = root.transform.rotation;
 
-					// Compute plane of the ring (world space)
-					Plane ringPlane = new Plane(rotationAxis, root.transform.position);
-
-					// Ray -> plane intersection => an initial mouse world point (on plane)
-					if (!ringPlane.Raycast(ray, out float enter)) return false;
-					Vector3 mousePlanePoint = ray.GetPoint(enter);
-
-					// Compute vector from center to that clicked point, project to plane to ensure orthogonality
-					Vector3 center = root.transform.position;
-					Vector3 vecFromCenter = mousePlanePoint - center;
-					vecFromCenter -= Vector3.Project(vecFromCenter, rotationAxis); // lie fully in ring plane
-
-					// If click is almost exactly on axis (very small) then fallback to cross with camera up
-					if (vecFromCenter.sqrMagnitude < 0.0001f)
-					{
-						// pick a fallback direction in plane
-						vecFromCenter = Vector3.Cross(rotationAxis, (Camera.main ? Camera.main.transform.forward : Vector3.forward));
-						vecFromCenter -= Vector3.Project(vecFromCenter, rotationAxis);
-						if (vecFromCenter.sqrMagnitude < 0.0001f)
-							vecFromCenter = Vector3.right; // last resort
-					}
-
-					// Determine ring radius in world space. The torus was generated with radius=1f (local),
-					// so world radius is root's lossy scale (assuming uniform scale).
-					ringWorldRadius = root.transform.lossyScale.x * 1f;
-					// Determine exact point on ring circle nearest to click
-					Vector3 ringPoint = center + vecFromCenter.normalized * ringWorldRadius;
-					ringStartPointWorld = ringPoint;
-
-					// Tangent at that point (world space) — along the ring circle
-					Vector3 tangentWorld = Vector3.Cross(rotationAxis, (ringPoint - center)).normalized;
-
-					// Convert the tangent into screen-space vector
-					Vector3 screenP = Camera.current != null ? Camera.current.WorldToScreenPoint(ringPoint) : Camera.main.WorldToScreenPoint(ringPoint);
-					Vector3 screenT = Camera.current != null ? Camera.current.WorldToScreenPoint(ringPoint + tangentWorld) : Camera.main.WorldToScreenPoint(ringPoint + tangentWorld);
-
-					startTangentScreen = new Vector2(screenT.x - screenP.x, screenT.y - screenP.y);
-					if (startTangentScreen.sqrMagnitude < 0.000001f)
-					{
-						// fallback: use camera-facing tangent (project camera dir into plane)
-						Vector3 camDir = (center - (Camera.current ? Camera.current.transform.position : Camera.main.transform.position)).normalized;
-						tangentWorld = Vector3.Cross(rotationAxis, camDir).normalized;
-						screenT = (Camera.current ? Camera.current.WorldToScreenPoint(ringPoint + tangentWorld) : Camera.main.WorldToScreenPoint(ringPoint + tangentWorld));
-						startTangentScreen = new Vector2(screenT.x - screenP.x, screenT.y - screenP.y);
-					}
-
-					// record start mouse screen pos
-					startMouseScreen = Input.mousePosition;
+					Plane p = new Plane(rotationAxis, root.transform.position);
+					if (p.Raycast(ray, out float enter))
+						startMouseWorld = ray.GetPoint(enter);
 
 					draggingRotation = true;
 					return true;
@@ -406,33 +337,24 @@ namespace ClassicTilestorm
 		{
 			if (!draggingRotation) return;
 
-			// Mouse delta in screen pixels
-			Vector2 curMouse = Input.mousePosition;
-			Vector2 mouseDelta = curMouse - startMouseScreen;
+			Ray ray = cam.ScreenPointToRay(Input.mousePosition);
+			Plane plane = new Plane(rotationAxis, root.transform.position);
+			if (!plane.Raycast(ray, out float enter)) return;
 
-			if (mouseDelta.sqrMagnitude < 0.0001f) return;
+			Vector3 cur = ray.GetPoint(enter);
+			Vector3 delta = startMouseWorld - cur;
+			if (delta.sqrMagnitude < 0.0001f) return;
 
-			// Project mouse delta onto the screen-space tangent that we computed at drag start
-			Vector2 tangent = startTangentScreen;
-			if (tangent.sqrMagnitude < 0.000001f) return;
-			Vector2 tangentN = tangent.normalized;
+			Vector3 camDir = (root.transform.position - cam.transform.position).normalized;
+			Vector3 tangent = Vector3.Cross(rotationAxis, camDir);
+			if (tangent.sqrMagnitude < 0.01f) tangent = Vector3.Cross(rotationAxis, Vector3.up);
 
-			// scalar movement along tangent (in pixels)
-			float moveAlong = Vector2.Dot(mouseDelta, tangentN);
-
-			// Convert pixels -> angle. Sensitivity chosen so ~100px -> ~90 degrees, tweak if needed.
-			float sensitivity = 90f / 100f; // degrees per 100 pixels
-			float angle = moveAlong * sensitivity;
-
-			// Apply rotation around rotationAxis (world-space) **to the root so cube rotates**
+			float angle = Vector3.Dot(delta, tangent.normalized) * 40f;
 			Quaternion deltaRot = Quaternion.AngleAxis(angle, rotationAxis);
-			root.transform.rotation = deltaRot * root.transform.rotation;
+			root.transform.rotation = deltaRot * startRotation; // rotate cube
+			startRotation = root.transform.rotation; // critical incremental update
 
-			// Also rotate the rotationOrbiter so rings stay in sync
-			rotationOrbiter.transform.rotation = deltaRot * rotationOrbiter.transform.rotation;
-
-			// Update startMouseScreen for incremental rotation
-			startMouseScreen = curMouse;
+			startMouseWorld = cur;
 		}
 
 		// ===================================================================
@@ -581,34 +503,34 @@ namespace ClassicTilestorm
 					float cv = Mathf.Cos(v);
 					float sv = Mathf.Sin(v);
 
-					float r = radius + tube * cv;
-					vertices.Add(new Vector3(r * cu, tube * sv, r * su));
-					normals.Add(new Vector3(cv * cu, sv, cv * su).normalized);
+					Vector3 pos = new Vector3((radius + tube * cv) * cu, tube * sv, (radius + tube * cv) * su);
+					Vector3 n = (pos - new Vector3(radius * cu, 0f, radius * su)).normalized;
+
+					vertices.Add(pos);
+					normals.Add(n);
 				}
 			}
 
 			for (int seg = 0; seg < segments; seg++)
 			{
-				int base1 = seg * (sides + 1);
-				int base2 = (seg + 1) * (sides + 1);
-
 				for (int side = 0; side < sides; side++)
 				{
-					int a = base1 + side;
-					int b = base1 + side + 1;
-					int c = base2 + side + 1;
-					int d = base2 + side;
+					int current = side + seg * (sides + 1);
+					int next = current + sides + 1;
 
-					triangles.Add(a); triangles.Add(b); triangles.Add(c);
-					triangles.Add(a); triangles.Add(c); triangles.Add(d);
+					triangles.Add(current);
+					triangles.Add(next);
+					triangles.Add(current + 1);
+
+					triangles.Add(current + 1);
+					triangles.Add(next);
+					triangles.Add(next + 1);
 				}
 			}
 
 			mesh.SetVertices(vertices);
 			mesh.SetNormals(normals);
 			mesh.SetTriangles(triangles, 0);
-			mesh.RecalculateBounds();
-			mesh.Optimize();
 
 			return mesh;
 		}
@@ -628,7 +550,7 @@ namespace ClassicTilestorm
 			mf.mesh = GenerateCircleMesh(0.5f, 64); // radius 0.5 units
 			var shader = Shader.Find("Universal Render Pipeline/Unlit");
 			mr.material = new Material(shader);
-			mr.material.SetColor("_BaseColor", new Color(0.9f, 0.9f, 0.9f, 1f));
+			mr.material.SetColor("_BaseColor", new Color(0.8f, 0.6f, 0.8f, 1f));
 			mr.enabled = true;
 
 			return go;
