@@ -20,6 +20,12 @@ public static class EditorCameraMovement
 		if ((Input.GetMouseButtonDown(1) || Input.touchCount > 0))
 			focus = !isMouseOverGui;
 
+		if (didGameFocus)
+		{
+			didGameFocus = false;
+			return;
+		}
+
 		// Right mouse button or touch = orbit
 		if (focus && (Input.GetMouseButton(1) || Input.touchCount > 0))
 		{
@@ -71,11 +77,11 @@ public static class EditorCameraMovement
 	}
 
 	// Optional: skip next scroll on focus gain (same behavior as before)
-	private static bool skipNextScroll = false;
+	private static bool didGameFocus = true;
 	public static void OnApplicationFocus(bool hasFocus)
 	{
-		if (hasFocus) skipNextScroll = true;
+		if (hasFocus) didGameFocus = true;
 	}
 
-	public static bool ShouldSkipScroll() { bool s = skipNextScroll; skipNextScroll = false; return s; }
+	public static bool ShouldSkipScroll() { bool s = didGameFocus; didGameFocus = false; return s; }
 }
