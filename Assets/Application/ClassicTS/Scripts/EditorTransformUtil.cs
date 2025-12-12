@@ -55,22 +55,27 @@ namespace ClassicTilestorm
 			root.transform.position = worldPosition;
 			root.transform.rotation = worldSpace ? quaternion.identity : worldRotation;
 
-			screenCircle = CreateScreenCircle(root.transform);
-
+			screenCircle = CreateScreenCircle(root.transform); 
+			
 			UpdateVisuals(editorCamera);
 		}
 
 		public static void UpdateTransform(Vector3 worldPosition, Quaternion worldRotation, Camera editorCamera, bool worldSpace = false)
 		{
-			if (root == null)
+			bool needsCreation = (root == null);
+
+			if (needsCreation)
 			{
+				// First time: create it properly
 				ShowAt(worldPosition, worldRotation, editorCamera, worldSpace);
 				return;
 			}
 
+			// Update existing gizmo without recreating
 			root.transform.position = worldPosition;
 			root.transform.rotation = worldSpace ? Quaternion.identity : worldRotation;
 
+			// Still update scale to keep it screen-size consistent
 			UpdateVisuals(editorCamera);
 		}
 
@@ -167,7 +172,8 @@ namespace ClassicTilestorm
 
 		public static void Hide()
 		{
-			if (root != null) Object.DestroyImmediate(root);
+			if (root != null)
+				Object.DestroyImmediate(root);
 
 			if (screenCircle != null)
 				Object.DestroyImmediate(screenCircle);
@@ -180,19 +186,31 @@ namespace ClassicTilestorm
 		}
 
 		// ===================================================================
-		// BACKWARD-COMPATIBLE WRAPPERS
+		// BACKWARD-COMPATIBLE WRAPPERS (so your existing code compiles unchanged)
 		// ===================================================================
 
 		public static void ShowTransformGizmo(View view, IMapManager mgr, Camera cam)
 		{
 			if (view == null || mgr == null || cam == null) return;
+
 			Vector3 worldPos = mgr.TileWorldPosition(view.tile) + view.Position;
 			ShowAt(worldPos, view.Rotation, cam);
 		}
 
-		public static void HideTransformGizmo() => Hide();
-		public static void UpdateTransformGizmoVisuals(Camera cam) => UpdateVisuals(cam);
-		public static bool HandleTransformGizmoInput(Camera cam) => HandleInput(cam, out _, out _);
+		public static void HideTransformGizmo()
+		{
+			Hide();
+		}
+
+		public static void UpdateTransformGizmoVisuals(Camera cam)
+		{
+			UpdateVisuals(cam);
+		}
+
+		public static bool HandleTransformGizmoInput(Camera cam)
+		{
+			return HandleInput(cam, out _, out _);
+		}
 
 		// ===================================================================
 		// POSITION HANDLE
@@ -317,14 +335,14 @@ namespace ClassicTilestorm
 			foreach (Transform ring in rotationOrbiter.transform)
 			{
 				Collider c = ring.GetComponent<Collider>();
-				if (c && c.Raycast(ray, out RaycastHit hit, Mathf.Infinity))
+				if (c && c.Raycast(ray, out _, Mathf.Infinity))
 				{
 					rotationAxis = ring.up;
-					startRotation = root.transform.rotation;
+					startRotation = rotationOrbiter.transform.rotation;
 
 					Plane p = new Plane(rotationAxis, root.transform.position);
-					if (p.Raycast(ray, out float enter))
-						startMouseWorld = ray.GetPoint(enter);
+					p.Raycast(ray, out float enter);
+					startMouseWorld = ray.GetPoint(enter);
 
 					draggingRotation = true;
 					return true;
@@ -335,14 +353,12 @@ namespace ClassicTilestorm
 
 		private static void ContinueRotationDrag(Camera cam)
 		{
-			if (!draggingRotation) return;
-
-			Ray ray = cam.ScreenPointToRay(Input.mousePosition);
 			Plane plane = new Plane(rotationAxis, root.transform.position);
+			Ray ray = cam.ScreenPointToRay(Input.mousePosition);
 			if (!plane.Raycast(ray, out float enter)) return;
 
 			Vector3 cur = ray.GetPoint(enter);
-			Vector3 delta = startMouseWorld - cur;
+			Vector3 delta = cur - startMouseWorld;
 			if (delta.sqrMagnitude < 0.0001f) return;
 
 			Vector3 camDir = (root.transform.position - cam.transform.position).normalized;
@@ -351,8 +367,8 @@ namespace ClassicTilestorm
 
 			float angle = Vector3.Dot(delta, tangent.normalized) * 40f;
 			Quaternion deltaRot = Quaternion.AngleAxis(angle, rotationAxis);
-			root.transform.rotation = deltaRot * startRotation; // rotate cube
-			startRotation = root.transform.rotation; // critical incremental update
+			root.transform.rotation = deltaRot * startRotation;
+			startRotation = root.transform.rotation;//critical!!!
 
 			startMouseWorld = cur;
 		}
@@ -503,34 +519,34 @@ namespace ClassicTilestorm
 					float cv = Mathf.Cos(v);
 					float sv = Mathf.Sin(v);
 
-					Vector3 pos = new Vector3((radius + tube * cv) * cu, tube * sv, (radius + tube * cv) * su);
-					Vector3 n = (pos - new Vector3(radius * cu, 0f, radius * su)).normalized;
-
-					vertices.Add(pos);
-					normals.Add(n);
+					float r = radius + tube * cv;
+					vertices.Add(new Vector3(r * cu, tube * sv, r * su));
+					normals.Add(new Vector3(cv * cu, sv, cv * su).normalized);
 				}
 			}
 
 			for (int seg = 0; seg < segments; seg++)
 			{
+				int base1 = seg * (sides + 1);
+				int base2 = (seg + 1) * (sides + 1);
+
 				for (int side = 0; side < sides; side++)
 				{
-					int current = side + seg * (sides + 1);
-					int next = current + sides + 1;
+					int a = base1 + side;
+					int b = base1 + side + 1;
+					int c = base2 + side + 1;
+					int d = base2 + side;
 
-					triangles.Add(current);
-					triangles.Add(next);
-					triangles.Add(current + 1);
-
-					triangles.Add(current + 1);
-					triangles.Add(next);
-					triangles.Add(next + 1);
+					triangles.Add(a); triangles.Add(b); triangles.Add(c);
+					triangles.Add(a); triangles.Add(c); triangles.Add(d);
 				}
 			}
 
 			mesh.SetVertices(vertices);
 			mesh.SetNormals(normals);
 			mesh.SetTriangles(triangles, 0);
+			mesh.RecalculateBounds();
+			mesh.Optimize();
 
 			return mesh;
 		}
@@ -550,7 +566,7 @@ namespace ClassicTilestorm
 			mf.mesh = GenerateCircleMesh(0.5f, 64); // radius 0.5 units
 			var shader = Shader.Find("Universal Render Pipeline/Unlit");
 			mr.material = new Material(shader);
-			mr.material.SetColor("_BaseColor", new Color(0.8f, 0.6f, 0.8f, 1f));
+			mr.material.SetColor("_BaseColor", new Color(0.9f, 0.9f, 0.9f, 1f));
 			mr.enabled = true;
 
 			return go;
