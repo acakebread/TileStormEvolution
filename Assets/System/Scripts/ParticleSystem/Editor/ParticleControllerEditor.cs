@@ -17,6 +17,14 @@ namespace MassiveHadronLtd
 
 		public override void OnInspectorGUI()
 		{
+			// === RESTORE MISSING SCRIPT FIELD ===
+			var script = MonoScript.FromMonoBehaviour((ParticleController)target);
+			EditorGUI.BeginDisabledGroup(true);
+			EditorGUILayout.ObjectField("Script", script, typeof(MonoScript), false);
+			EditorGUI.EndDisabledGroup();
+
+			EditorGUILayout.Space();
+
 			var controller = (ParticleController)target;
 			serializedObject.Update();
 
