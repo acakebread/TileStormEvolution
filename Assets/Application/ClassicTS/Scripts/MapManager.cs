@@ -108,6 +108,19 @@ namespace ClassicTilestorm
 			return null;
 		}
 
+		public Emitter GetEmitter(int tile)
+		{
+			if (currentMap?.attachments == null || tile < 0 || tile >= currentMap.tiles.Length)
+				return null;
+
+			foreach (var att in currentMap.attachments)
+			{
+				if (att is Emitter emitter && att.tile == tile)
+					return emitter;
+			}
+			return null;
+		}
+
 		public Tile GetTile(int index)
 		{
 			if (index < 0 || index >= indices.Length || Width <= 0 || mapTiles == null) return default;

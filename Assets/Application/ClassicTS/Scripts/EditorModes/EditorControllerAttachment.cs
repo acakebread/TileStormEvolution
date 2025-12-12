@@ -371,7 +371,12 @@ namespace ClassicTilestorm
 
 		public void AddNewAttachment(int tile, System.Type type) => AddAttachmentAtTileWithType(tile, type);
 		public PendingAction CurrentPendingAction => pendingAction;
-		public void ClearPendingAction() => pendingAction = PendingAction.Wait;
+		public void ClearPendingAction()
+		{
+			selectedAttachments = null;
+			pendingTile = -1;
+			pendingAction = PendingAction.Wait;
+		}
 		public Vector2 PendingPopupScreenPos => pendingPopupScreenPos;
 		public int PendingTile => pendingTile;
 
