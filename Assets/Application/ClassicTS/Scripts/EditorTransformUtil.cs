@@ -265,7 +265,10 @@ namespace ClassicTilestorm
 
 			if (tag != null)
 			{
-				lockedAxis = tag.normal.normalized;
+				// Convert face normal (local) into world space
+				lockedAxis = (root.transform.rotation * tag.normal).normalized;
+
+				// Create correct plane
 				dragPlane = new Plane(lockedAxis, root.transform.position);
 			}
 			else
