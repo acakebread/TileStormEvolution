@@ -55,6 +55,8 @@ namespace ClassicTilestorm
 			root.transform.position = worldPosition;
 			root.transform.rotation = worldSpace ? quaternion.identity : worldRotation;
 
+			screenCircle = CreateScreenCircle(root.transform);
+
 			UpdateVisuals(editorCamera);
 		}
 
@@ -159,12 +161,23 @@ namespace ClassicTilestorm
 			float scale = dist * Mathf.Tan(editorCamera.fieldOfView * 0.5f * Mathf.Deg2Rad) * 2f;
 			scale = TARGET_SCREEN_SIZE * scale / Screen.height;
 			root.transform.localScale = Vector3.one * Mathf.Max(scale, 0.01f);
+
+			if (screenCircle != null)
+			{
+				// Face the camera
+				screenCircle.transform.rotation = Quaternion.LookRotation(screenCircle.transform.position - editorCamera.transform.position);
+				screenCircle.transform.localScale = Vector3.one * 2.2f;
+			}
 		}
 
 		public static void Hide()
 		{
 			if (root != null)
 				Object.DestroyImmediate(root);
+
+			if (screenCircle != null)
+				Object.DestroyImmediate(screenCircle);
+			screenCircle = null;
 
 			root = positionHandle = rotationOrbiter = null;
 			draggingPosition = draggingRotation = false;
@@ -258,7 +271,7 @@ namespace ClassicTilestorm
 			else
 			{
 				lockedAxis = Vector3.zero;
-				dragPlane = new Plane(worldSpace ? -cam.transform.forward : dragPlane.normal, root.transform.position);
+				dragPlane = new Plane(worldSpace ? - cam.transform.forward : dragPlane.normal, root.transform.position);
 			}
 
 			if (dragPlane.Raycast(ray, out float enter))
@@ -285,6 +298,11 @@ namespace ClassicTilestorm
 		// ===================================================================
 		// ROTATION ORBITER
 		// ===================================================================
+
+		private static Vector2 startMouseScreen;
+		private static Vector2 startTangentScreen;
+		private static float ringWorldRadius;
+		private static Vector3 ringStartPointWorld;
 
 		private static GameObject CreateRotationOrbiter(Transform parent)
 		{
@@ -322,14 +340,60 @@ namespace ClassicTilestorm
 			foreach (Transform ring in rotationOrbiter.transform)
 			{
 				Collider c = ring.GetComponent<Collider>();
-				if (c && c.Raycast(ray, out _, Mathf.Infinity))
+				if (c && c.Raycast(ray, out RaycastHit hit, Mathf.Infinity))
 				{
-					rotationAxis = ring.up;
+					// rotationAxis in world space (ring.up is world-up for the ring)
+					rotationAxis = ring.up.normalized;
 					startRotation = rotationOrbiter.transform.rotation;
 
-					Plane p = new Plane(rotationAxis, root.transform.position);
-					p.Raycast(ray, out float enter);
-					startMouseWorld = ray.GetPoint(enter);
+					// Compute plane of the ring (world space)
+					Plane ringPlane = new Plane(rotationAxis, root.transform.position);
+
+					// Ray -> plane intersection => an initial mouse world point (on plane)
+					if (!ringPlane.Raycast(ray, out float enter)) return false;
+					Vector3 mousePlanePoint = ray.GetPoint(enter);
+
+					// Compute vector from center to that clicked point, project to plane to ensure orthogonality
+					Vector3 center = root.transform.position;
+					Vector3 vecFromCenter = mousePlanePoint - center;
+					vecFromCenter -= Vector3.Project(vecFromCenter, rotationAxis); // lie fully in ring plane
+
+					// If click is almost exactly on axis (very small) then fallback to cross with camera up
+					if (vecFromCenter.sqrMagnitude < 0.0001f)
+					{
+						// pick a fallback direction in plane
+						vecFromCenter = Vector3.Cross(rotationAxis, (Camera.main ? Camera.main.transform.forward : Vector3.forward));
+						vecFromCenter -= Vector3.Project(vecFromCenter, rotationAxis);
+						if (vecFromCenter.sqrMagnitude < 0.0001f)
+							vecFromCenter = Vector3.right; // last resort
+					}
+
+					// Determine ring radius in world space. The torus was generated with radius=1f (local),
+					// so world radius is root's lossy scale (assuming uniform scale).
+					ringWorldRadius = root.transform.lossyScale.x * 1f;
+					// Determine exact point on ring circle nearest to click
+					Vector3 ringPoint = center + vecFromCenter.normalized * ringWorldRadius;
+					ringStartPointWorld = ringPoint;
+
+					// Tangent at that point (world space) — along the ring circle
+					Vector3 tangentWorld = Vector3.Cross(rotationAxis, (ringPoint - center)).normalized;
+
+					// Convert the tangent into screen-space vector
+					Vector3 screenP = Camera.current != null ? Camera.current.WorldToScreenPoint(ringPoint) : Camera.main.WorldToScreenPoint(ringPoint);
+					Vector3 screenT = Camera.current != null ? Camera.current.WorldToScreenPoint(ringPoint + tangentWorld) : Camera.main.WorldToScreenPoint(ringPoint + tangentWorld);
+
+					startTangentScreen = new Vector2(screenT.x - screenP.x, screenT.y - screenP.y);
+					if (startTangentScreen.sqrMagnitude < 0.000001f)
+					{
+						// fallback: use camera-facing tangent (project camera dir into plane)
+						Vector3 camDir = (center - (Camera.current ? Camera.current.transform.position : Camera.main.transform.position)).normalized;
+						tangentWorld = Vector3.Cross(rotationAxis, camDir).normalized;
+						screenT = (Camera.current ? Camera.current.WorldToScreenPoint(ringPoint + tangentWorld) : Camera.main.WorldToScreenPoint(ringPoint + tangentWorld));
+						startTangentScreen = new Vector2(screenT.x - screenP.x, screenT.y - screenP.y);
+					}
+
+					// record start mouse screen pos
+					startMouseScreen = Input.mousePosition;
 
 					draggingRotation = true;
 					return true;
@@ -340,24 +404,35 @@ namespace ClassicTilestorm
 
 		private static void ContinueRotationDrag(Camera cam)
 		{
-			Plane plane = new Plane(rotationAxis, root.transform.position);
-			Ray ray = cam.ScreenPointToRay(Input.mousePosition);
-			if (!plane.Raycast(ray, out float enter)) return;
+			if (!draggingRotation) return;
 
-			Vector3 cur = ray.GetPoint(enter);
-			Vector3 delta = cur - startMouseWorld;
-			if (delta.sqrMagnitude < 0.0001f) return;
+			// Mouse delta in screen pixels
+			Vector2 curMouse = Input.mousePosition;
+			Vector2 mouseDelta = curMouse - startMouseScreen;
 
-			Vector3 camDir = (root.transform.position - cam.transform.position).normalized;
-			Vector3 tangent = Vector3.Cross(rotationAxis, camDir);
-			if (tangent.sqrMagnitude < 0.01f) tangent = Vector3.Cross(rotationAxis, Vector3.up);
+			if (mouseDelta.sqrMagnitude < 0.0001f) return;
 
-			float angle = Vector3.Dot(delta, tangent.normalized) * 40f;
+			// Project mouse delta onto the screen-space tangent that we computed at drag start
+			Vector2 tangent = startTangentScreen;
+			if (tangent.sqrMagnitude < 0.000001f) return;
+			Vector2 tangentN = tangent.normalized;
+
+			// scalar movement along tangent (in pixels)
+			float moveAlong = Vector2.Dot(mouseDelta, tangentN);
+
+			// Convert pixels -> angle. Sensitivity chosen so ~100px -> ~90 degrees, tweak if needed.
+			float sensitivity = 90f / 100f; // degrees per 100 pixels
+			float angle = moveAlong * sensitivity;
+
+			// Apply rotation around rotationAxis (world-space) **to the root so cube rotates**
 			Quaternion deltaRot = Quaternion.AngleAxis(angle, rotationAxis);
-			root.transform.rotation = deltaRot * startRotation;
-			startRotation = root.transform.rotation;//critical!!!
+			root.transform.rotation = deltaRot * root.transform.rotation;
 
-			startMouseWorld = cur;
+			// Also rotate the rotationOrbiter so rings stay in sync
+			rotationOrbiter.transform.rotation = deltaRot * rotationOrbiter.transform.rotation;
+
+			// Update startMouseScreen for incremental rotation
+			startMouseScreen = curMouse;
 		}
 
 		// ===================================================================
@@ -535,6 +610,62 @@ namespace ClassicTilestorm
 			mesh.RecalculateBounds();
 			mesh.Optimize();
 
+			return mesh;
+		}
+
+		private static GameObject screenCircle;
+
+		private static GameObject CreateScreenCircle(Transform parent)
+		{
+			GameObject go = new GameObject("ScreenCircle");
+			go.layer = LayerMask.NameToLayer("Editor");
+			go.transform.SetParent(parent, false);
+			go.transform.localPosition = Vector3.zero;
+
+			MeshFilter mf = go.AddComponent<MeshFilter>();
+			MeshRenderer mr = go.AddComponent<MeshRenderer>();
+
+			mf.mesh = GenerateCircleMesh(0.5f, 64); // radius 0.5 units
+			var shader = Shader.Find("Universal Render Pipeline/Unlit");
+			mr.material = new Material(shader);
+			mr.material.SetColor("_BaseColor", new Color(0.9f, 0.9f, 0.9f, 1f));
+			mr.enabled = true;
+
+			return go;
+		}
+
+		private static Mesh GenerateCircleMesh(float radius, int segments)
+		{
+			Mesh mesh = new Mesh();
+			List<Vector3> verts = new List<Vector3>();
+			List<int> tris = new List<int>();
+
+			// Circle as a thin ring (two vertices per segment)
+			float thickness = 0.04f;
+			for (int i = 0; i < segments; i++)
+			{
+				float angle0 = i * Mathf.PI * 2f / segments;
+				float angle1 = ((i + 1) % segments) * Mathf.PI * 2f / segments;
+
+				Vector3 p0 = new Vector3(Mathf.Cos(angle0), Mathf.Sin(angle0), 0) * radius;
+				Vector3 p1 = new Vector3(Mathf.Cos(angle1), Mathf.Sin(angle1), 0) * radius;
+
+				Vector3 p0o = p0 * (1 - thickness);
+				Vector3 p1o = p1 * (1 - thickness);
+
+				int idx = verts.Count;
+				verts.Add(p0o);
+				verts.Add(p0);
+				verts.Add(p1);
+				verts.Add(p1o);
+
+				tris.Add(idx); tris.Add(idx + 2); tris.Add(idx + 1);
+				tris.Add(idx); tris.Add(idx + 3); tris.Add(idx + 2);
+			}
+
+			mesh.SetVertices(verts);
+			mesh.SetTriangles(tris, 0);
+			mesh.RecalculateNormals();
 			return mesh;
 		}
 	}
