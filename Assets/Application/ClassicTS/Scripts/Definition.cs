@@ -13,31 +13,22 @@ namespace ClassicTilestorm
 		public string texture;
 		public string flags;
 		public string connections;
-		//public string pickup;// only serialized if not None
 
 		[JsonIgnore] public bool bNorth => HasConnection('N');
 		[JsonIgnore] public bool bSouth => HasConnection('S');
 		[JsonIgnore] public bool bEast => HasConnection('E');
 		[JsonIgnore] public bool bWest => HasConnection('W');
 
-		[JsonIgnore] public bool bDoor => HasFlag("Door");//we will move over to this and store the start with the map instead of the def
-		[JsonIgnore] public bool bStart => HasFlag("Start");
-		[JsonIgnore] public bool bEnd => HasFlag("End");
-		[JsonIgnore] public bool bConsole => HasFlag("Console");
 		[JsonIgnore] public bool bDrag => HasFlag("Drag");
 		[JsonIgnore] public bool bRoll => HasFlag("Roll");
 		[JsonIgnore] public bool bDock => HasFlag("Dock");
-		[JsonIgnore] public bool bPuzzleBlock => HasFlag("PuzzleBlock");
 
-		//[JsonIgnore]
-		//public int nPickup => pickup switch
-		//{
-		//	"Coin" => 1,
-		//	"Key" => 2,
-		//	"Health" => 3,
-		//	"Ammo" => 4,
-		//	_ => 0
-		//};
+		[JsonIgnore] public bool bDoor => HasFlag("Door");//door flag should replace start and end which should be stored with the waypoints instead
+		[JsonIgnore] public bool bStart => HasFlag("Start");
+		[JsonIgnore] public bool bEnd => HasFlag("End");
+		[JsonIgnore] public bool bConsole => HasFlag("Console");
+
+		[JsonIgnore] public bool bPuzzleBlock => HasFlag("PuzzleBlock");
 
 		// ── INTERNAL HELPERS ───────────────────────────────────────────────────
 		private HashSet<string> _flagCache;

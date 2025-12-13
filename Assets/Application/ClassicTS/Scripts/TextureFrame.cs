@@ -18,11 +18,11 @@ namespace ClassicTilestorm
 			set => runtimeTexture = value;
 		}
 
-		[JsonIgnore] public string szTexture => textureName ?? "";
-		[JsonIgnore] public float fDuration => duration;
+		//[JsonIgnore] public string szTexture => textureName ?? "";
+		//[JsonIgnore] public float fDuration => duration;
 
 		// Modern clean accessors
-		[JsonIgnore] public string TextureName => textureName ?? "";
-		[JsonIgnore] public float Duration => duration;
+		//[JsonIgnore] public string TextureName => textureName ?? "";
+		//[JsonIgnore] public float Duration => duration;
 	}
 }

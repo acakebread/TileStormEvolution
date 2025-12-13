@@ -1,5 +1,4 @@
 using UnityEngine;
-using System.Collections.Generic;
 using MassiveHadronLtd;
 
 namespace ClassicTilestorm
@@ -8,37 +7,17 @@ namespace ClassicTilestorm
 
 	public static class GeometryManager
 	{
-		private static readonly Dictionary<string, GameObject> prefabCache = new();
+		private static string geometryPath = null;//"ClassicTS/Geometry/"
+		public static string GeometryPath { get => geometryPath ?? PreviewSettings.GeometryPath; set => geometryPath = value; }
 
-		// Loads a prefab from Resources, caching it for performance
-		private static GameObject GetPrefab(string geomName)
-		{
-			if (string.IsNullOrEmpty(geomName))
-			{
-				Debug.LogWarning("GeometryManager: Empty geometry name provided.");
-				return null;
-			}
+		private static string texturePath = null;//"ClassicTS/Textures/"
+		public static string TexturePath { get => texturePath ?? PreviewSettings.TexturePath; set => texturePath = value; }
 
-			if (prefabCache.TryGetValue(geomName, out var prefab))
-				return prefab;
-
-			var path = $"{PreviewSettings.GeometryPath}{geomName}".Replace(".x", "");
-			prefab = Resources.Load<GameObject>(path);
-			if (prefab == null)
-			{
-				Debug.LogWarning($"GeometryManager: Prefab not found at {path}");
-				return null;
-			}
-
-			prefabCache[geomName] = prefab;
-			return prefab;
-		}
-
-		// Workaround for the fact that Definitions are really prefab definitions
-		public static GameObject InstantiatePrefab(Definition definition, Transform parent, Vector3 position) => InstantiateTile(definition, parent, position);
+		private static string materialPath = null;//"ClassicTS/Materials/"
+		public static string MaterialPath { get => materialPath ?? PreviewSettings.MaterialPath; set => materialPath = value; }
 
 		// Instantiates a GameObject based on Definition, with optional texture animation and collider
-		public static GameObject InstantiateTile(Definition definition, Transform parent, Vector3 position, bool interactive = false)
+		public static GameObject InstantiateTileWithAllProperties(Definition definition, Transform parent, Vector3 position, bool interactive = false)
 		{
 			if (null == definition || string.IsNullOrEmpty(definition.model))
 			{
@@ -63,19 +42,14 @@ namespace ClassicTilestorm
 				return result;
 			}
 
-			var prefab = GetPrefab(definition.model);
-			if (null == prefab)
-			{
-				Debug.LogWarning($"GeometryManager: Prefab {definition.model} not found for Definition {definition.id}.");
-				return CreateFallbackTile(parent, position);
-			}
-
-			var gameObject = Object.Instantiate(prefab, position, Quaternion.identity, parent);
-			gameObject.name = definition.model.Replace(".x", "");
+			//var prefabPath = $"{GeometryPath}{definition.model.Replace(".x", "")}";
+			var prefabPath = $"{GeometryPath}{definition.model}";
+			var gameObject = PrefabFactory.InstantiatePrefab(prefabPath, position, Quaternion.identity, parent);
 
 			// Apply texture animation
 			var textureAnimator = gameObject.AddComponent<TextureSetAnimator>();
-			textureAnimator.Initialize(TextureSetManager.GetTextureSequence(definition.texture));
+			//textureAnimator.Initialize(TextureSetManager.GetTextureSequence(definition.texture));
+			textureAnimator.Initialize(TextureSetManager.GetTextureSequence(definition.texture, TexturePath));
 
 			if ("Caustic" == definition.texture)
 			{
@@ -90,7 +64,9 @@ namespace ClassicTilestorm
 				if (targetRenderer != null)
 				{
 					// Load the preallocated material
-					Material emissiveMaterial = MaterialManager.Get("toxic");
+					//Material emissiveMaterial = MaterialCache.Get("toxic");
+					var materialPath = $"{MaterialPath}toxic";
+					Material emissiveMaterial = MaterialCache.Get(materialPath);
 					if (emissiveMaterial == null)
 					{
 						Debug.LogWarning("Preallocated material 'toxic' not found. Creating fallback.");
@@ -218,8 +194,5 @@ namespace ClassicTilestorm
 
 			return spareTile;
 		}
-
-		// Clears cache (optional, for resource management)
-		public static void ClearCache() => prefabCache.Clear();
 	}
 }

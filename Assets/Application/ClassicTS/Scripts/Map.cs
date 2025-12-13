@@ -24,18 +24,9 @@ namespace ClassicTilestorm
 
 		public MapAttachment[] attachments = Array.Empty<MapAttachment>();
 
-		// Atomic fields - ignored during normal serialization
-		[JsonIgnore] public Definition[] definitions;
-		[JsonIgnore] public TextureSequence[] textures;
-		[JsonIgnore] public string version = "1.0";
-		[JsonIgnore] public string author = "Player";
-		[JsonIgnore] public string exportedFrom = "ClassicTilestorm";
-
 		public bool ShouldSerializesolve() => solve != null && solve.Length > 0;
 		public bool ShouldSerializewaypoints() => waypoints != null && waypoints.Length > 0;
 		public bool ShouldSerializeattachments() => attachments != null && attachments.Length > 0;
-
-		[JsonIgnore] public bool IsAtomic => definitions?.Length > 0 || textures?.Length > 0;
 
 		public bool IsValidTile(int index) => index >= 0 && index < width * height;
 
@@ -352,5 +343,14 @@ namespace ClassicTilestorm
 
 			return attachments.Where(a => a.tile == tileIndex).ToArray();
 		}
+
+
+		// Atomic fields - ignored during normal serialization - this needs to be removed from here and implemented properly as a utility for the serialiser
+		[JsonIgnore] public Definition[] definitions;
+		[JsonIgnore] public TextureSequence[] textures;
+		[JsonIgnore] public string version = "1.0";
+		[JsonIgnore] public string author = "Player";
+		[JsonIgnore] public string exportedFrom = "ClassicTilestorm"; 
+		//[JsonIgnore] public bool IsAtomic => definitions?.Length > 0 || textures?.Length > 0;
 	}
 }

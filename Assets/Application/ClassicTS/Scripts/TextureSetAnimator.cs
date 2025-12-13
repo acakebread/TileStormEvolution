@@ -42,9 +42,9 @@ namespace ClassicTilestorm
 			if (_frames.Length <= 1) return;
 
 			_timer += Time.deltaTime;
-			if (_timer >= _frames[_currentFrame].fDuration)
+			if (_timer >= _frames[_currentFrame].duration)
 			{
-				_timer -= _frames[_currentFrame].fDuration;
+				_timer -= _frames[_currentFrame].duration;
 				_currentFrame = (_currentFrame + 1) % _frames.Length;
 				ApplyFrame(_currentFrame);
 			}
