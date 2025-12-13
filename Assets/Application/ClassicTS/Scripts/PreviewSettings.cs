@@ -61,6 +61,9 @@ namespace ClassicTilestorm
 		[SerializeField, ResourcePath] private string skycubesPath = "ClassicTS/SkyCubes/";
 		public static string SkycubesPath => instance.skycubesPath;
 
+		[SerializeField, ResourcePath] private string prefabPath = "ClassicTS/Prefabs/";
+		public static string PrefabPath => instance.prefabPath;
+
 		[Header("Game Mode")]
 		[SerializeField] private PreviewMode previewMode = PreviewMode.Player;
 		public static PreviewMode CurrentMode

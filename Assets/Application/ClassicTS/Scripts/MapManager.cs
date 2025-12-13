@@ -173,6 +173,7 @@ namespace ClassicTilestorm
 			else Solve();
 
 			InitializeWindController();
+			RebuildEmitterVisuals();
 			SetupWaypoints();
 		}
 
@@ -356,10 +357,14 @@ namespace ClassicTilestorm
 
 		public bool UpdateTileAt(int x, int z, string id, bool expand = true, Action<bool, Vector3> onEdited = null)
 		{
+			bool result;
 			if (expand)
-				return UpdateTileAtSmart(x, z, id, onEdited);
+				result = UpdateTileAtSmart(x, z, id, onEdited);
 			else
-				return UpdateTileAtRestricted(x, z, id, onEdited);
+				result = UpdateTileAtRestricted(x, z, id, onEdited);
+
+			RebuildEmitterVisuals(); // Safe to call — destroys and recreates only emitters
+			return result;
 		}
 
 		private bool UpdateTileAtRestricted(int x, int z, string id, Action<bool, Vector3> onEdited = null)
@@ -541,6 +546,105 @@ namespace ClassicTilestorm
 
 			if (windController != null)
 				Debug.Log($"WindController initialized with {windController.SwayComponents.Count} sway components.");
+		}
+
+		// -----------------------------------------------------------------------
+		// Emitter visualization (runtime)
+		// -----------------------------------------------------------------------
+		private readonly Dictionary<Emitter, GameObject> emitterInstances = new();
+
+		private void InstantiateEmitter(Emitter emitter)
+		{
+			if (emitter == null || string.IsNullOrEmpty(emitter.variant)) return;
+
+			string prefabName = emitter.variant switch
+			{
+				"flame" => "flame",
+				"spark" => "spark",
+				_ => null
+			};
+
+			if (string.IsNullOrEmpty(prefabName)) return;
+
+			Vector3 tileWorld = TileWorldPosition(emitter.tile);
+			Vector3 worldPos = tileWorld + emitter.Position;
+
+			GameObject go = PrefabFactory.InstantiatePrefab($"{PreviewSettings.PrefabPath}{prefabName}", CurrentTransform);
+			if (go != null)
+			{
+				go.transform.position = worldPos;
+				go.transform.rotation = emitter.Rotation;
+				go.name = $"Emitter_{prefabName}_{emitter.tile}";
+
+				emitterInstances[emitter] = go;
+			}
+		}
+
+		private void DestroyAllEmitters()
+		{
+			foreach (var go in emitterInstances.Values)
+			{
+				if (go != null) Destroy(go);
+			}
+			emitterInstances.Clear();
+		}
+
+		// -----------------------------------------------------------------------
+		// Emitter runtime instances
+		// -----------------------------------------------------------------------
+		private readonly Dictionary<Emitter, GameObject> emitterGameObjects = new();
+
+		private void RebuildEmitterVisuals()
+		{
+			// Clean up old ones
+			foreach (var go in emitterGameObjects.Values)
+			{
+				if (go != null) Destroy(go);
+			}
+			emitterGameObjects.Clear();
+
+			if (currentMap?.attachments == null) return;
+
+			foreach (var att in currentMap.attachments)
+			{
+				if (att is Emitter emitter && !string.IsNullOrEmpty(emitter.variant))
+				{
+					string prefabName = emitter.variant switch
+					{
+						"flame" => "flame",
+						"spark" => "spark",
+						_ => null
+					};
+
+					if (prefabName == null) continue;
+
+					Vector3 worldPos = TileWorldPosition(emitter.tile) + emitter.Position;
+
+					GameObject go = PrefabFactory.InstantiatePrefab(
+						$"{PreviewSettings.PrefabPath}{prefabName}",
+						transform // parent under the map
+					);
+
+					if (go != null)
+					{
+						go.transform.position = worldPos;
+						go.transform.rotation = emitter.Rotation;
+						go.name = $"Emitter_{prefabName}_tile{emitter.tile}";
+
+						emitterGameObjects[emitter] = go;
+					}
+				}
+			}
+		}
+
+		private void UpdateEmitterInstance(Emitter emitter)
+		{
+			if (emitter == null || !emitterGameObjects.TryGetValue(emitter, out GameObject go) || go == null)
+				return;
+
+			Vector3 worldPos = TileWorldPosition(emitter.tile) + emitter.Position;
+			go.transform.position = worldPos;
+			go.transform.rotation = emitter.Rotation;
 		}
 
 		public static MapManager Instantiate(Map map, Transform parent = null)
