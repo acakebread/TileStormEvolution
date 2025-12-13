@@ -40,7 +40,7 @@ namespace ClassicTilestorm
 				"View" => new View(),
 				"Emitter" => new Emitter(),
 				"Pickup" => new Pickup(),
-				_ => new Emitter()
+				_ => new Pickup()
 			};
 
 			// Prevent recursion during Populate

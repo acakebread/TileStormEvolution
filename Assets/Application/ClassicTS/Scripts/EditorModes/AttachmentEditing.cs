@@ -35,7 +35,18 @@ namespace ClassicTilestorm
 		{
 			var items = new List<PopupItem>
 			{
-				new PopupItem("Emitter", () => editor.AddNewAttachment(editor.PendingTile, typeof(Emitter))),
+				new PopupItem("Emitter [flame]", () =>
+				{
+					var emitter = editor.AddNewAttachment(editor.PendingTile, typeof(Emitter)) as Emitter;
+					if (emitter != null)
+						emitter.variant = "flame";
+				}),
+				new PopupItem("Emitter [spark]", () =>
+				{
+					var emitter = editor.AddNewAttachment(editor.PendingTile, typeof(Emitter)) as Emitter;
+					if (emitter != null)
+						emitter.variant = "spark";
+				}),
 				new PopupItem("View", () => editor.AddNewAttachment(editor.PendingTile, typeof(View))),
 				new PopupItem("Pickup", () => editor.AddNewAttachment(editor.PendingTile, typeof(Pickup))),
 				PopupItem.Spacer(),

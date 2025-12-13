@@ -18,6 +18,9 @@ namespace ClassicTilestorm
 				// Default: position at origin, looking straight UP, distance 10
 				Rebuild(position: Vector3.zero, rotation: Quaternion.LookRotation(Vector3.up), distance: 10f);
 			}
+
+			// Default for new property
+			variant = null;
 		}
 
 		// Single source of truth: 7 floats (Squatrix format)
@@ -25,6 +28,11 @@ namespace ClassicTilestorm
 		// [3..6] → squaternion (qx, qy, qz, qw) — magnitude = distance
 		[JsonProperty(Order = 10)]
 		public float[] data;
+
+		// NEW PROPERTY: variant string, optional in JSON
+		[JsonProperty(Order = 20)]
+		public string variant;
+		public bool ShouldSerializevariant() => !string.IsNullOrEmpty(variant);
 
 		// ==================================================================
 		// FULLY READ/WRITE PROPERTIES — ALL MUTATIONS UPDATE `data` INSTANTLY
