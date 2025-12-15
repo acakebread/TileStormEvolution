@@ -127,8 +127,8 @@ namespace ClassicTilestorm
 								var pointLight = gameObject.AddComponent<Light>();
 								pointLight.type = LightType.Point;
 								pointLight.color = material.GetColor("_EmissionColor"); // Use actual emission color if available
-								pointLight.intensity = 2f; // Adjust based on desired brightness
-								pointLight.range = 3f;     // Adjust based on object size
+								pointLight.intensity = 1f; // Adjust based on desired brightness
+								pointLight.range = 1f;     // Adjust based on object size
 								pointLight.shadows = LightShadows.None;
 							}
 						}
