@@ -72,7 +72,7 @@ namespace ClassicTilestorm
 				}
 			}
 
-			if (null != definition.material)
+			if (!string.IsNullOrEmpty(definition.material))
 			{ 
 				var targetRenderer = gameObject.GetComponentInChildren<MeshRenderer>(true);
 				if (targetRenderer != null)
