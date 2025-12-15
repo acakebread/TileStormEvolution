@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using MassiveHadronLtd;
 
 namespace ClassicTilestorm
@@ -14,30 +14,35 @@ namespace ClassicTilestorm
 		private static string materialPath = null;//"ClassicTS/Materials/"
 		private static string MaterialPath { get => materialPath ?? PreviewSettings.MaterialPath; set => materialPath = value; }
 
-		public static GameObject Instantiate(Definition definition, Transform parent = null)
+		public static GameObject Instantiate(
+			Definition definition,
+			Vector3? position = null,
+			Quaternion? rotation = null,
+			Transform parent = null)
 		{
-			var gameObject = PrefabFactory.InstantiatePrefab($"{GeometryPath}{definition.model}", parent);
-			AppyDefinitionProperties(gameObject, definition);
-			return gameObject;
-		}
+			if (definition == null || string.IsNullOrEmpty(definition.model))
+				return null; // or handle fallback as needed
 
-		public static GameObject Instantiate(Definition definition, Vector3 position, Transform parent = null)
-		{
-			var gameObject = PrefabFactory.InstantiatePrefab($"{GeometryPath}{definition.model}", position, parent);
-			AppyDefinitionProperties(gameObject, definition);
-			return gameObject;
-		}
+			string prefabPath = $"{GeometryPath}{definition.model}";
 
-		public static GameObject Instantiate(Definition definition, Vector3 position, Quaternion rotation, Transform parent = null)
-		{
-			var gameObject = PrefabFactory.InstantiatePrefab($"{GeometryPath}{definition.model}", position, rotation, parent);
-			AppyDefinitionProperties(gameObject, definition);
-			return gameObject;
-		}
+			GameObject gameObject;
 
-		private static void AppyDefinitionProperties(GameObject gameObject, Definition definition)
-		{
-			if (null == gameObject) return;
+			// Decide which PrefabFactory overload to use based on what's provided
+			if (position.HasValue && rotation.HasValue)
+			{
+				gameObject = PrefabFactory.InstantiatePrefab(prefabPath, position.Value, rotation.Value, parent);
+			}
+			else if (position.HasValue)
+			{
+				gameObject = PrefabFactory.InstantiatePrefab(prefabPath, position.Value, parent);
+			}
+			else
+			{
+				gameObject = PrefabFactory.InstantiatePrefab(prefabPath, parent);
+			}
+
+			if (null == gameObject) return null;
+			//Apply Definition Properties
 
 			//temporary special placeholder flag setting for special properties in absence of definition editor 
 			var meshRenderer = gameObject.GetComponentInChildren<MeshRenderer>(true);//Workaround until the definition editor is implemented
@@ -114,6 +119,8 @@ namespace ClassicTilestorm
 #if DEBUG
 			gameObject.AddComponent<RTTI>().definition = definition; // This is for debug in editor only - do not use RTTI
 #endif
+
+			return gameObject;
 		}
 
 		//ToDo implement instead of legacy pass through

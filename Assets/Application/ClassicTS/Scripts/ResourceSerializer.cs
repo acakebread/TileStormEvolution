@@ -222,7 +222,7 @@ namespace ClassicTilestorm
 				.ToArray();
 
 			var usedTextures = ResourceManager.TextureSets
-				.Where(ts => usedBanks.Contains(ts.name))
+				.Where(ts => usedBanks.Contains(ts.id))
 				.ToArray();
 
 			// Inject atomic data
