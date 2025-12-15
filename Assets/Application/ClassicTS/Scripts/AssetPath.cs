@@ -1,6 +1,4 @@
-using ClassicTilestorm;
-
-namespace MassiveHadronLtd
+namespace ClassicTilestorm
 {
 	public static class AssetPath
 	{
