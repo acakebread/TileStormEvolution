@@ -45,19 +45,8 @@ namespace ClassicTilestorm
 			//Apply Definition Properties
 
 			//temporary special placeholder flag setting for special properties in absence of definition editor 
-
 			if (definition.model.Contains("tree"))
-			{
-				Debug.Log(definition.model);
 				definition.bSway = true;
-			}
-
-			//var meshRenderer = gameObject.GetComponentInChildren<MeshRenderer>(true);//Workaround until the definition editor is implemented
-			//if (null != meshRenderer)
-			//{
-			//	var filter = meshRenderer.GetComponent<MeshFilter>();
-			//	definition.bSway = filter != null && filter.IsRuntimeWritable();
-			//}
 
 			if ("Caustic" == definition.texture)
 				definition.material = "toxic";
