@@ -9,6 +9,7 @@ namespace ClassicTilestorm
 		private static GameObject ghostMesh;
 		private static Material ghostMaterial;        // default valid color (white 0.5 alpha)
 		private static Material ghostMaterialInvalid; // invalid color (red 0.5 alpha)
+		private static Definition currentDefinition;
 
 		// Initialize the ghost materials
 		public static void InitializeGhostMaterial()
@@ -35,25 +36,33 @@ namespace ClassicTilestorm
 			InitializeGhostMaterial();
 
 			// Create ghost mesh if needed (or if definition changed)
-			if (ghostMesh == null)
+			if (ghostMesh == null || currentDefinition?.model != definition.model)
 			{
-				ghostMesh = DefinitionFactory.InstantiateTile(definition, mapManager.CurrentTransform.parent, Vector3.zero);
+				if (ghostMesh != null)
+					Object.DestroyImmediate(ghostMesh);
+
+				string prefabPath = DefinitionFactory.GetGeometryPrefabPath(definition.model);
+				if (string.IsNullOrEmpty(prefabPath))
+				{
+					ghostMesh = null;
+					return;
+				}
+
+				// Direct, clean, raw instantiation — no runtime junk added
+				ghostMesh = PrefabFactory.Instantiate(prefabPath, parent: mapManager.CurrentTransform.parent);
+
 				if (ghostMesh != null)
 				{
-					// Remove TextureSetAnimator
-					foreach (var anim in ghostMesh.GetComponentsInChildren<TextureSetAnimator>())
-						anim.enabled = false;
-
-					// Remove colliders to prevent raycast interference
-					foreach (var collider in ghostMesh.GetComponentsInChildren<Collider>())
-						Object.Destroy(collider);
-
-					// Remove MorphGeomSway
-					foreach (var sway in ghostMesh.GetComponentsInChildren<MorphGeomSway>())
-						Object.Destroy(sway);
-
 					ghostMesh.name = "GhostMesh";
+
+					// Optional: strip any colliders that might be baked into prefab
+					foreach (var collider in ghostMesh.GetComponentsInChildren<Collider>())
+						Object.DestroyImmediate(collider);
+
+					// No need to remove TextureSetAnimator, MorphGeomSway, etc. — they were never added!
 				}
+
+				currentDefinition = definition; // track for change detection
 			}
 
 			if (camera == null || ghostMesh == null) return;

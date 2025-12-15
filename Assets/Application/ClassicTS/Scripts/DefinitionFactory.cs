@@ -30,27 +30,34 @@ namespace ClassicTilestorm
 			// Decide which PrefabFactory overload to use based on what's provided
 			if (position.HasValue && rotation.HasValue)
 			{
-				gameObject = PrefabFactory.InstantiatePrefab(prefabPath, position.Value, rotation.Value, parent);
+				gameObject = PrefabFactory.Instantiate(prefabPath, position.Value, rotation.Value, parent);
 			}
 			else if (position.HasValue)
 			{
-				gameObject = PrefabFactory.InstantiatePrefab(prefabPath, position.Value, parent);
+				gameObject = PrefabFactory.Instantiate(prefabPath, position.Value, parent);
 			}
 			else
 			{
-				gameObject = PrefabFactory.InstantiatePrefab(prefabPath, parent);
+				gameObject = PrefabFactory.Instantiate(prefabPath, parent);
 			}
 
 			if (null == gameObject) return null;
 			//Apply Definition Properties
 
 			//temporary special placeholder flag setting for special properties in absence of definition editor 
-			var meshRenderer = gameObject.GetComponentInChildren<MeshRenderer>(true);//Workaround until the definition editor is implemented
-			if (null != meshRenderer)
+
+			if (definition.model.Contains("tree"))
 			{
-				var filter = meshRenderer.GetComponent<MeshFilter>();
-				definition.bSway = filter != null && filter.IsRuntimeWritable();
+				Debug.Log(definition.model);
+				definition.bSway = true;
 			}
+
+			//var meshRenderer = gameObject.GetComponentInChildren<MeshRenderer>(true);//Workaround until the definition editor is implemented
+			//if (null != meshRenderer)
+			//{
+			//	var filter = meshRenderer.GetComponent<MeshFilter>();
+			//	definition.bSway = filter != null && filter.IsRuntimeWritable();
+			//}
 
 			if ("Caustic" == definition.texture)
 				definition.material = "toxic";
@@ -136,6 +143,14 @@ namespace ClassicTilestorm
 			}
 
 			return Instantiate(definition, position, Quaternion.identity, parent);
+		}
+
+		public static string GetGeometryPrefabPath(string modelName)
+		{
+			if (string.IsNullOrEmpty(modelName))
+				return null;
+
+			return $"{GeometryPath}{modelName}";
 		}
 	}
 

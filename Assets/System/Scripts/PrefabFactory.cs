@@ -36,7 +36,7 @@ namespace MassiveHadronLtd
 			static string StripExtensions(string path) => ResourcePathUtils.NormalizeForResourcesLoad(path, ModelExtensions);
 		}
 
-		public static GameObject InstantiatePrefab(string fullPath, Transform parent = null)
+		public static GameObject Instantiate(string fullPath, Transform parent = null)
 		{
 			var prefab = GetPrefab(fullPath);
 			if (prefab == null) return null;
@@ -46,9 +46,9 @@ namespace MassiveHadronLtd
 			return go;
 		}
 
-		public static GameObject InstantiatePrefab(string fullPath, Vector3 position, Transform parent = null)
+		public static GameObject Instantiate(string fullPath, Vector3 position, Transform parent = null)
 		{
-			var go = InstantiatePrefab(fullPath, parent);
+			var go = Instantiate(fullPath, parent);
 			if (go != null)
 			{
 				go.transform.position = position;
@@ -57,9 +57,9 @@ namespace MassiveHadronLtd
 			return go;
 		}
 
-		public static GameObject InstantiatePrefab(string fullPath, Vector3 position, Quaternion rotation, Transform parent = null)
+		public static GameObject Instantiate(string fullPath, Vector3 position, Quaternion rotation, Transform parent = null)
 		{
-			var go = InstantiatePrefab(fullPath, parent);
+			var go = Instantiate(fullPath, parent);
 			if (go != null)
 			{
 				go.transform.position = position;

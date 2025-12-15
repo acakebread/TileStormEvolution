@@ -563,7 +563,7 @@ namespace ClassicTilestorm
 			Vector3 tileWorld = TileWorldPosition(emitter.tile);
 			Vector3 worldPos = tileWorld + emitter.Position;
 
-			GameObject go = PrefabFactory.InstantiatePrefab($"{PreviewSettings.PrefabPath}{prefabName}", CurrentTransform);
+			GameObject go = PrefabFactory.Instantiate($"{PreviewSettings.PrefabPath}{prefabName}", CurrentTransform);
 			if (go != null)
 			{
 				go.transform.position = worldPos;
@@ -614,7 +614,7 @@ namespace ClassicTilestorm
 
 					Vector3 worldPos = TileWorldPosition(emitter.tile) + emitter.Position;
 
-					GameObject go = PrefabFactory.InstantiatePrefab(
+					GameObject go = PrefabFactory.Instantiate(
 						$"{PreviewSettings.PrefabPath}{prefabName}",
 						transform // parent under the map
 					);
