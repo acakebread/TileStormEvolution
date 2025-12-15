@@ -12,78 +12,48 @@ namespace ClassicTilestorm
 		public string model;
 		public string texture;
 		public string material;
-		public string flags;         // comma/space separated flags, e.g. "Drag, Roll, Dock"
-		public string connections;   // e.g. "NSEW"
+		public string flags;         // comma/space separated, e.g. "Drag, Roll, Dock"
+		public string connections;   // e.g. "NSEW" (uppercase, no separators)
 
-		// ── CONNECTIONS (read-only, as before) ─────────────────────────────────
-		[JsonIgnore] public bool bNorth => HasConnection('N');
-		[JsonIgnore] public bool bSouth => HasConnection('S');
-		[JsonIgnore] public bool bEast => HasConnection('E');
-		[JsonIgnore] public bool bWest => HasConnection('W');
-
-		// ── FLAGS (now settable – changes affect the 'flags' string) ───────────
+		// ── CONNECTIONS (now settable – changes affect the 'connections' string) ──
 		[JsonIgnore]
-		public bool bDrag
+		public bool bNorth
 		{
-			get => HasFlag("Drag");
-			set => SetFlag("Drag", value);
+			get => HasConnection('N');
+			set => SetConnection('N', value);
 		}
 
 		[JsonIgnore]
-		public bool bRoll
+		public bool bSouth
 		{
-			get => HasFlag("Roll");
-			set => SetFlag("Roll", value);
+			get => HasConnection('S');
+			set => SetConnection('S', value);
 		}
 
 		[JsonIgnore]
-		public bool bDock
+		public bool bEast
 		{
-			get => HasFlag("Dock");
-			set => SetFlag("Dock", value);
+			get => HasConnection('E');
+			set => SetConnection('E', value);
 		}
 
 		[JsonIgnore]
-		public bool bDoor
+		public bool bWest
 		{
-			get => HasFlag("Door");
-			set => SetFlag("Door", value);
+			get => HasConnection('W');
+			set => SetConnection('W', value);
 		}
 
-		[JsonIgnore]
-		public bool bStart
-		{
-			get => HasFlag("Start");
-			set => SetFlag("Start", value);
-		}
-
-		[JsonIgnore]
-		public bool bEnd
-		{
-			get => HasFlag("End");
-			set => SetFlag("End", value);
-		}
-
-		[JsonIgnore]
-		public bool bConsole
-		{
-			get => HasFlag("Console");
-			set => SetFlag("Console", value);
-		}
-
-		[JsonIgnore]
-		public bool bPuzzleBlock
-		{
-			get => HasFlag("PuzzleBlock");
-			set => SetFlag("PuzzleBlock", value);
-		}
-
-		[JsonIgnore]
-		public bool bSway
-		{
-			get => HasFlag("Sway");
-			set => SetFlag("Sway", value);
-		}
+		// ── FLAGS (settable, as before) ───────────────────────────────────────
+		[JsonIgnore] public bool bDrag { get => HasFlag("Drag"); set => SetFlag("Drag", value); }
+		[JsonIgnore] public bool bRoll { get => HasFlag("Roll"); set => SetFlag("Roll", value); }
+		[JsonIgnore] public bool bDock { get => HasFlag("Dock"); set => SetFlag("Dock", value); }
+		[JsonIgnore] public bool bDoor { get => HasFlag("Door"); set => SetFlag("Door", value); }
+		[JsonIgnore] public bool bStart { get => HasFlag("Start"); set => SetFlag("Start", value); }
+		[JsonIgnore] public bool bEnd { get => HasFlag("End"); set => SetFlag("End", value); }
+		[JsonIgnore] public bool bConsole { get => HasFlag("Console"); set => SetFlag("Console", value); }
+		[JsonIgnore] public bool bPuzzleBlock { get => HasFlag("PuzzleBlock"); set => SetFlag("PuzzleBlock", value); }
+		[JsonIgnore] public bool bSway { get => HasFlag("Sway"); set => SetFlag("Sway", value); }
 
 		// ── CONDITIONAL SERIALIZATION ─────────────────────────────────────────
 		public bool ShouldSerializetexture() => !string.IsNullOrEmpty(texture);
@@ -104,18 +74,11 @@ namespace ClassicTilestorm
 		public bool HasConnection(char dir)
 		{
 			if (_connCache == null)
-			{
-				_connCache = new HashSet<char>();
-				if (!string.IsNullOrEmpty(connections))
-				{
-					foreach (char c in connections.ToUpperInvariant())
-						_connCache.Add(c);
-				}
-			}
+				RebuildConnectionCache();
+
 			return _connCache.Contains(char.ToUpperInvariant(dir));
 		}
 
-		// Called whenever we modify the flags string externally or via properties
 		private void RebuildFlagCache()
 		{
 			_flagCache = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -131,16 +94,29 @@ namespace ClassicTilestorm
 			}
 		}
 
-		// Core method used by all boolean setters
+		private void RebuildConnectionCache()
+		{
+			_connCache = new HashSet<char>();
+
+			if (!string.IsNullOrEmpty(connections))
+			{
+				foreach (char c in connections)
+				{
+					if (char.IsLetter(c))
+						_connCache.Add(char.ToUpperInvariant(c));
+				}
+			}
+		}
+
+		// ── FLAG MUTATION ─────────────────────────────────────────────────────
 		private void SetFlag(string flag, bool enabled)
 		{
-			// Ensure cache exists so we can read from it safely
 			if (_flagCache == null)
 				RebuildFlagCache();
 
 			bool currentlyHas = _flagCache.Contains(flag, StringComparer.OrdinalIgnoreCase);
 
-			if (enabled == currentlyHas) return; // no change
+			if (enabled == currentlyHas) return;
 
 			var flagList = string.IsNullOrEmpty(flags)
 				? new List<string>()
@@ -151,19 +127,50 @@ namespace ClassicTilestorm
 
 			if (enabled)
 				flagList.Add(flag);
-			// else: already removed above
 
 			flags = string.Join(", ", flagList);
-
 			RebuildFlagCache();
+		}
+
+		// ── CONNECTION MUTATION ───────────────────────────────────────────────
+		private void SetConnection(char dirChar, bool enabled)
+		{
+			char dir = char.ToUpperInvariant(dirChar);
+
+			if (_connCache == null)
+				RebuildConnectionCache();
+
+			bool currentlyHas = _connCache.Contains(dir);
+
+			if (enabled == currentlyHas) return;
+
+			var connList = new List<char>();
+
+			if (!string.IsNullOrEmpty(connections))
+			{
+				foreach (char c in connections)
+				{
+					if (char.IsLetter(c) && char.ToUpperInvariant(c) != dir)
+						connList.Add(char.ToUpperInvariant(c));
+				}
+			}
+
+			if (enabled)
+				connList.Add(dir);
+
+			// Sort for consistency (optional, but nice: N, E, S, W)
+			connList.Sort();
+
+			connections = new string(connList.ToArray());
+			RebuildConnectionCache();
 		}
 	}
 
-	// You can keep the extension methods if you want, but the instance methods above
-	// are now more efficient and consistent with the mutable design.
+	// Optional extension (not needed anymore for core functionality)
 	public static class DefinitionExtensions
 	{
+		// Kept for backward compatibility if used elsewhere
 		public static bool HasConnection(this Definition def, char dir) =>
-			def?.connections?.IndexOf(dir, StringComparison.OrdinalIgnoreCase) >= 0;
+			def?.HasConnection(dir) ?? false;
 	}
 }
