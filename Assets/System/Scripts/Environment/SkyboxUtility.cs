@@ -9,6 +9,10 @@ namespace MassiveHadronLtd
 		private static Cubemap lastCubemap = null;
 		private static Material defaultSkyboxMaterial;
 
+		// Reusable cubemap for all 6-sided skyboxes
+		private static Cubemap reusableSixSidedCubemap = null;
+		private static int lastCubemapSize = 0;
+
 		static SkyboxUtility()
 		{
 			defaultSkyboxMaterial = RenderSettings.skybox;
@@ -22,7 +26,7 @@ namespace MassiveHadronLtd
 				return;
 			}
 
-			var skyboxPath = $"{pathPrefix}{skyboxName}".Replace(".mat", "");//var skyboxPath = $"{pathPrefix}{skyboxName}Skybox".Replace(".mat", "");
+			var skyboxPath = $"{pathPrefix}{skyboxName}".Replace(".mat", "");
 			var material = Resources.Load<Material>(skyboxPath);
 			RenderSettings.skybox = material ? material : defaultSkyboxMaterial;
 		}
@@ -58,7 +62,7 @@ namespace MassiveHadronLtd
 				return;
 			}
 
-			// Skip if already processed
+			// Skip if already processed with the same material
 			if (skyboxMaterial == lastSkyboxMaterial && lastCubemap != null)
 			{
 				waterMaterial.SetTexture("_Skybox", lastCubemap);
@@ -67,7 +71,7 @@ namespace MassiveHadronLtd
 
 			Cubemap cubemap = null;
 
-			// --- 1️⃣ Cubemap-based skyboxes ---
+			// --- 1️⃣ Cubemap-based skyboxes (e.g., Panorama or pre-baked cubemap) ---
 			if (skyboxMaterial.HasProperty("_Tex"))
 			{
 				cubemap = skyboxMaterial.GetTexture("_Tex") as Cubemap;
@@ -79,16 +83,15 @@ namespace MassiveHadronLtd
 
 			if (cubemap != null)
 			{
-				waterMaterial.SetTexture("_Skybox", cubemap);
 				lastSkyboxMaterial = skyboxMaterial;
 				lastCubemap = cubemap;
+				waterMaterial.SetTexture("_Skybox", cubemap);
 				return;
 			}
 
 			// --- 2️⃣ 6-Sided skyboxes ---
 			if (skyboxMaterial.HasProperty("_FrontTex"))
 			{
-				// Extract 6 textures
 				Texture2D front = skyboxMaterial.GetTexture("_FrontTex") as Texture2D;
 				Texture2D back = skyboxMaterial.GetTexture("_BackTex") as Texture2D;
 				Texture2D left = skyboxMaterial.GetTexture("_LeftTex") as Texture2D;
@@ -98,18 +101,27 @@ namespace MassiveHadronLtd
 
 				if (front && back && left && right && up && down)
 				{
-					int size = front.width; // assume square
-					cubemap = new Cubemap(size, TextureFormat.RGBA32, false);
+					int size = front.width;
 
-					// Copy each face (GPU->CPU readback)
-					// NOTE: This is slow at runtime, but works fine for editor/runtime previewing
-					CopyFace(cubemap, CubemapFace.PositiveZ, front);
-					CopyFace(cubemap, CubemapFace.NegativeZ, back);
-					CopyFace(cubemap, CubemapFace.NegativeX, right);
-					CopyFace(cubemap, CubemapFace.PositiveX, left);
-					CopyFace(cubemap, CubemapFace.PositiveY, down);
-					CopyFace(cubemap, CubemapFace.NegativeY, up);
-					cubemap.Apply();
+					// Reuse or create cubemap only if size changed
+					if (reusableSixSidedCubemap == null || lastCubemapSize != size)
+					{
+						// Old one will be garbage collected safely (no DestroyImmediate needed)
+						reusableSixSidedCubemap = new Cubemap(size, TextureFormat.RGBA32, false);
+						lastCubemapSize = size;
+					}
+
+					// Overwrite faces
+					CopyFace(reusableSixSidedCubemap, CubemapFace.PositiveZ, front); // +Z
+					CopyFace(reusableSixSidedCubemap, CubemapFace.NegativeZ, back);  // -Z
+					CopyFace(reusableSixSidedCubemap, CubemapFace.NegativeX, right); // -X
+					CopyFace(reusableSixSidedCubemap, CubemapFace.PositiveX, left);  // +X
+					CopyFace(reusableSixSidedCubemap, CubemapFace.PositiveY, down);  // +Y (down in skybox = up in cubemap?)
+					CopyFace(reusableSixSidedCubemap, CubemapFace.NegativeY, up);    // -Y
+
+					reusableSixSidedCubemap.Apply();
+
+					cubemap = reusableSixSidedCubemap;
 				}
 				else
 				{
@@ -119,38 +131,47 @@ namespace MassiveHadronLtd
 			}
 			else
 			{
-				Debug.LogWarning($"Skybox shader '{skyboxMaterial.shader.name}' does not expose a cubemap property.");
+				Debug.LogWarning($"Skybox shader '{skyboxMaterial.shader.name}' does not expose a cubemap or 6-face properties.");
 				cubemap = defaultCubemap;
 			}
 
+			// Final assignment and caching
 			waterMaterial.SetTexture("_Skybox", cubemap);
 			lastSkyboxMaterial = skyboxMaterial;
 			lastCubemap = cubemap;
 		}
 
 		/// <summary>
-		/// Copies a Texture2D face into a Cubemap face (CPU readback).
+		/// Copies a Texture2D face into a Cubemap face.
+		/// Optimized: uses direct GetPixels if texture is readable.
 		/// </summary>
 		private static void CopyFace(Cubemap target, CubemapFace face, Texture2D source)
 		{
-			if (source == null || target == null)
-				return;
+			if (source == null || target == null) return;
 
-			// Ensure readable texture
-			RenderTexture rt = RenderTexture.GetTemporary(source.width, source.height, 0);
+			// Fast path: texture is readable (enable "Read/Write Enabled" in import settings for best perf)
+			if (source.isReadable)
+			{
+				target.SetPixels(source.GetPixels(), face);
+				return;
+			}
+
+			// Slow path: GPU to CPU readback (only when texture is not readable)
+			RenderTexture rt = RenderTexture.GetTemporary(source.width, source.height, 0, RenderTextureFormat.ARGB32);
 			Graphics.Blit(source, rt);
+
+			RenderTexture previousActive = RenderTexture.active;
 			RenderTexture.active = rt;
 
 			Texture2D readable = new Texture2D(source.width, source.height, TextureFormat.RGBA32, false);
 			readable.ReadPixels(new Rect(0, 0, source.width, source.height), 0, 0);
 			readable.Apply();
 
-			Color[] pixels = readable.GetPixels();
-			target.SetPixels(pixels, face);
+			target.SetPixels(readable.GetPixels(), face);
 
-			RenderTexture.active = null;
+			RenderTexture.active = previousActive;
 			RenderTexture.ReleaseTemporary(rt);
-			Object.DestroyImmediate(readable);
+			Object.DestroyImmediate(readable); // Safe: temporary non-asset texture
 		}
 	}
 }
