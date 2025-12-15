@@ -47,7 +47,7 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			SkyboxUtility.SetSkybox(PreviewSettings.SkycubesPath, $"{(string.IsNullOrEmpty(currentMap.skybox) ? currentMap.music : currentMap.skybox)}Skybox");//fall back to music for now, but will be 'DefaultSkybox'
+			SkyboxUtility.SetSkybox(AssetPath.SkycubesPath, $"{(string.IsNullOrEmpty(currentMap.skybox) ? currentMap.music : currentMap.skybox)}Skybox");//fall back to music for now, but will be 'DefaultSkybox'
 
 			if (null != mapManager) Destroy(mapManager.gameObject);
 			mapManager = MapManager.Instantiate(currentMap, transform);
