@@ -11,6 +11,7 @@ namespace ClassicTilestorm
 		public string id;
 		public string model;
 		public string texture;
+		public string material;
 		public string flags;
 		public string connections;
 
@@ -29,6 +30,9 @@ namespace ClassicTilestorm
 		[JsonIgnore] public bool bConsole => HasFlag("Console");
 
 		[JsonIgnore] public bool bPuzzleBlock => HasFlag("PuzzleBlock");
+
+		public bool ShouldSerializetexture() => !string.IsNullOrEmpty(texture);
+		public bool ShouldSerializematerial() => !string.IsNullOrEmpty(material);
 
 		// ── INTERNAL HELPERS ───────────────────────────────────────────────────
 		private HashSet<string> _flagCache;

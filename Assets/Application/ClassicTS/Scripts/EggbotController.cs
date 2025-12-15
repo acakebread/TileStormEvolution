@@ -252,7 +252,7 @@ namespace ClassicTilestorm
 			var def = ResourceManager.Definitions.FirstOrDefault(td => td.id == "Eggbot" && td.texture == costume);
 			if (null == def?.model) { Debug.LogError("Initialize: Invalid Eggbot geometry"); return null; }
 
-			var mesh = DefinitionUtility.Instantiate(def, Vector3.zero, eggbotController.transform);
+			var mesh = DefinitionFactory.Instantiate(def, Vector3.zero, eggbotController.transform);
 			return eggbotController.AddComponent<EggbotController>();
 		}
 	}

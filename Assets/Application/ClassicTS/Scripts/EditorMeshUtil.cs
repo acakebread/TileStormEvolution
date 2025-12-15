@@ -37,7 +37,7 @@ namespace ClassicTilestorm
 			// Create ghost mesh if needed (or if definition changed)
 			if (ghostMesh == null)
 			{
-				ghostMesh = GeometryManager.InstantiateTileWithAllProperties(definition, mapManager.CurrentTransform.parent, Vector3.zero);
+				ghostMesh = DefinitionFactory.InstantiateTile(definition, mapManager.CurrentTransform.parent, Vector3.zero);
 				if (ghostMesh != null)
 				{
 					// Remove TextureSetAnimator

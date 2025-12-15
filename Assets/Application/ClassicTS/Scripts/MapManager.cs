@@ -204,7 +204,7 @@ namespace ClassicTilestorm
 				var tile = new Tile(definition);
 
 				if (id != "tile_empty" && definition != null)
-					tile.GameObject = GeometryManager.InstantiateTileWithAllProperties( definition, transform, TileWorldPosition(n), tile.IsDrag);
+					tile.GameObject = DefinitionFactory.InstantiateTile( definition, transform, TileWorldPosition(n));
 
 				mapTiles[n] = new MapTile(id, tile);
 			}
@@ -388,10 +388,7 @@ namespace ClassicTilestorm
 			var newTile = new Tile(def);
 
 			if (id != "tile_empty" && def != null)
-			{
-				newTile.GameObject = GeometryManager.InstantiateTileWithAllProperties(
-					def, transform, TileWorldPosition(index), newTile.IsDrag);
-			}
+				newTile.GameObject = DefinitionFactory.InstantiateTile(def, transform, TileWorldPosition(index));
 
 			mapTiles[index] = new MapTile(id, newTile);
 
@@ -512,10 +509,7 @@ namespace ClassicTilestorm
 					Destroy(mapTiles[index].tile.GameObject);
 
 				if (id != "tile_empty" && def != null)
-				{
-					newTile.GameObject = GeometryManager.InstantiateTileWithAllProperties(
-						def, transform, TileWorldPosition(index), newTile.IsDrag);
-				}
+					newTile.GameObject = DefinitionFactory.InstantiateTile(def, transform, TileWorldPosition(index));
 
 				mapTiles[index] = new MapTile(id, newTile);
 			}

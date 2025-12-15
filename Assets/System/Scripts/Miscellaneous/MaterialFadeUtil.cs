@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace MassiveHadronLtd
 {
-	public class MaterialController : MonoBehaviour
+	public class MaterialFadeUtil : MonoBehaviour
 	{
 		public Material opaque;
 		public Material transparent;

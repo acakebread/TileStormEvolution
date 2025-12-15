@@ -138,7 +138,7 @@ namespace ClassicTilestorm
 				var trailingTileIndex = strip.Indices.First() - strip.Stride;
 				var trailingPosition = map.TileWorldPosition(trailingTileIndex);
 
-				if (null == SpareTile) SpareTile = GeometryManager.CreateSpareTile(leadingTile, leadingTile.transform.parent, trailingPosition + delta);
+				if (null == SpareTile) SpareTile = GeometryFactory.CreateSpareTile(leadingTile, leadingTile.transform.parent, trailingPosition + delta);
 				if (null == SpareTile) return;
 
 				var spareRenderer = SpareTile.GetComponent<MeshRenderer>();
