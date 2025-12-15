@@ -489,5 +489,14 @@ namespace MassiveHadronLtd
 			return material;
 		}
 
+		public static Material CreateEmissiveMaterial(Color color)
+		{
+
+			var material = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+			material.SetColor("_BaseColor", new Color(0f, 0f, 0f, 1f));
+			material.EnableKeyword("_EMISSION");
+			material.SetColor("_EmissionColor", color);
+			return material;
+		}
 	}
 }

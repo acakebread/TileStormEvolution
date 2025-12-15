@@ -90,10 +90,7 @@ namespace ClassicTilestorm
 					if (material == null)
 					{
 						Debug.LogWarning("Preallocated material 'toxic' not found. Creating fallback.");
-						material = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-						material.SetColor("_BaseColor", new Color(0f, 0f, 0f, 1f)); // Black with full alpha
-						material.EnableKeyword("_EMISSION");
-						material.SetColor("_EmissionColor", new Color(0f, 1f, 0f) * 2.0f); // Green emission
+						material = MaterialUtils.CreateEmissiveMaterial(new Color(0f, 1f, 0f) * 2.0f);// Green emission
 					}
 					// Apply the preallocated material to the target renderer
 					targetRenderer.material = material;
