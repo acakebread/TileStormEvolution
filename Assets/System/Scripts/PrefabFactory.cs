@@ -33,24 +33,8 @@ namespace MassiveHadronLtd
 
 			prefabCache[loadPath] = prefab;
 			return prefab;
-		}
 
-		private static string StripExtensions(string path)
-		{
-			string normalized = path.Replace('\\', '/');
-
-			string directory = Path.GetDirectoryName(normalized).Replace('\\', '/');
-			string fileName = Path.GetFileNameWithoutExtension(normalized);
-
-			while (ModelExtensions.Contains(Path.GetExtension(fileName).ToLowerInvariant()))
-			{
-				fileName = Path.GetFileNameWithoutExtension(fileName);
-			}
-
-			if (string.IsNullOrEmpty(directory))
-				return fileName;
-
-			return $"{directory}/{fileName}";
+			static string StripExtensions(string path) => ResourcePathUtils.NormalizeForResourcesLoad(path, ModelExtensions);
 		}
 
 		public static GameObject InstantiatePrefab(string fullPath, Transform parent = null)

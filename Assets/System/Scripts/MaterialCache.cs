@@ -1,7 +1,5 @@
 using UnityEngine;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 
 namespace MassiveHadronLtd
 {
@@ -37,27 +35,8 @@ namespace MassiveHadronLtd
 
 			cache[loadPath] = material;
 			return material;
-		}
-
-		private static string StripExtensions(string path)
-		{
-			// Ensure forward slashes for Resources.Load
-			string normalized = path.Replace('\\', '/');
-
-			string directory = Path.GetDirectoryName(normalized)?.Replace('\\', '/');
-			string fileName = Path.GetFileNameWithoutExtension(normalized);
-
-			// Handle cases like "MyMaterial.mat.material" from bad exports
-			while (!string.IsNullOrEmpty(fileName) &&
-				   MaterialExtensions.Contains(Path.GetExtension(fileName).ToLowerInvariant()))
-			{
-				fileName = Path.GetFileNameWithoutExtension(fileName);
-			}
-
-			if (string.IsNullOrEmpty(directory))
-				return fileName;
-
-			return $"{directory}/{fileName}";
+		
+			static string StripExtensions(string path) => ResourcePathUtils.NormalizeForResourcesLoad(path, MaterialExtensions);
 		}
 
 		/// <summary>

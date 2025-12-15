@@ -34,26 +34,8 @@ namespace MassiveHadronLtd
 
 			cache[loadPath] = texture;
 			return texture;
-		}
 
-		private static string StripExtensions(string path)
-		{
-			// Resources.Load uses forward slashes and no extension
-			string normalized = path.Replace('\\', '/');
-
-			string directory = Path.GetDirectoryName(normalized).Replace('\\', '/');
-			string fileName = Path.GetFileNameWithoutExtension(normalized);
-
-			// In case there are multiple extensions (e.g. .tga.png from bad export), keep stripping
-			while (TextureExtensions.Contains(Path.GetExtension(fileName).ToLowerInvariant()))
-			{
-				fileName = Path.GetFileNameWithoutExtension(fileName);
-			}
-
-			if (string.IsNullOrEmpty(directory))
-				return fileName;
-
-			return $"{directory}/{fileName}";
+			static string StripExtensions(string path) => ResourcePathUtils.NormalizeForResourcesLoad(path, TextureExtensions);
 		}
 
 		public static void ClearCache() => cache.Clear();
