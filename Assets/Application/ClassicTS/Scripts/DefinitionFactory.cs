@@ -51,20 +51,19 @@ namespace ClassicTilestorm
 				collider.center = new Vector3(0f, -0.05f, 0f);
 			}
 
-			//if (definition.bSway)//ToDo add flag for sway to definition
+			var meshRenderer = gameObject.GetComponentInChildren<MeshRenderer>(true);//Workaround until the definition editor is implemented
+			if (null != meshRenderer)
 			{
-				var meshRenderer = gameObject.GetComponentInChildren<MeshRenderer>(true);
-				if (meshRenderer != null)
-				{
-					var filter = meshRenderer.GetComponent<MeshFilter>();
-					if (filter != null && filter.IsRuntimeWritable())
-					{
-						var morphGeomSway = gameObject.AddComponent<MorphGeomSway>();
-						morphGeomSway.SetCustomInfluenceVolume(Vector3.up, 0.2f);
-						morphGeomSway.swayInfluencePower = 0.5f; // More top sway
-						morphGeomSway.ConfigureSubdivision(true, 0.3f); // Enable stratification with maxSegmentLength for influence volume
-					}
-				}
+				var filter = meshRenderer.GetComponent<MeshFilter>();
+				definition.bSway = filter != null && filter.IsRuntimeWritable();
+			}
+
+			if (definition.bSway)//ToDo add flag for sway to definition
+			{
+				var morphGeomSway = gameObject.AddComponent<MorphGeomSway>();
+				morphGeomSway.SetCustomInfluenceVolume(Vector3.up, 0.2f);
+				morphGeomSway.swayInfluencePower = 0.5f; // More top sway
+				morphGeomSway.ConfigureSubdivision(true, 0.3f); // Enable stratification with maxSegmentLength for influence volume
 			}
 
 			//if (definition.material)//ToDo implement material override
@@ -127,6 +126,7 @@ namespace ClassicTilestorm
 				Debug.LogWarning("GeometryManager: Invalid Definition or geometry name." + definition.id);
 				return GeometryFactory.CreateFallbackTile(parent, position);
 			}
+
 			return Instantiate(definition, position, Quaternion.identity, parent);
 		}
 	}
