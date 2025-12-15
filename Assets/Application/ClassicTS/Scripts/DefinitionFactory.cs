@@ -72,69 +72,72 @@ namespace ClassicTilestorm
 				}
 			}
 
-			var targetRenderer = gameObject.GetComponentInChildren<MeshRenderer>(true);
-			if (targetRenderer != null)
-			{
-				// Always load the material defined in the definition
-				var materialPath = $"{AssetPath.MaterialPath}{definition.material}";
-				Material material = MaterialCache.Get(materialPath);
-
-				if (null != material)
+			if (null != definition.material)
+			{ 
+				var targetRenderer = gameObject.GetComponentInChildren<MeshRenderer>(true);
+				if (targetRenderer != null)
 				{
-					// Apply the material
-					targetRenderer.material = material;
+					// Always load the material defined in the definition
+					var materialPath = $"{AssetPath.MaterialPath}{definition.material}";
+					Material material = MaterialCache.Get(materialPath);
 
-					// Check if this material is intended to be emissive
-					bool isEmissive = MaterialUtils.isEmissive(material);
-
-					if (isEmissive && null != textureAnimator)
+					if (null != material)
 					{
-						// Initial sync
-						textureAnimator.ApplyFrame(0);
+						// Apply the material
+						targetRenderer.material = material;
 
-						// Subscribe to texture changes to drive the emission map
-						textureAnimator.OnTextureChanged += (newTexture) =>
+						// Check if this material is intended to be emissive
+						bool isEmissive = MaterialUtils.isEmissive(material);
+
+						if (isEmissive && null != textureAnimator)
 						{
-							if (null != targetRenderer && null != targetRenderer.material)
+							// Initial sync
+							textureAnimator.ApplyFrame(0);
+
+							// Subscribe to texture changes to drive the emission map
+							textureAnimator.OnTextureChanged += (newTexture) =>
 							{
-								Material mat = targetRenderer.material;
+								if (null != targetRenderer && null != targetRenderer.material)
+								{
+									Material mat = targetRenderer.material;
 
-								// Restore the original base texture (important for correct albedo)
-								mat.mainTexture = material.mainTexture;
+									// Restore the original base texture (important for correct albedo)
+									mat.mainTexture = material.mainTexture;
 
-								// Optionally restore main texture offset/scale if your original material uses tiling
-								mat.mainTextureOffset = material.mainTextureOffset;
-								mat.mainTextureScale = material.mainTextureScale;
+									// Optionally restore main texture offset/scale if your original material uses tiling
+									mat.mainTextureOffset = material.mainTextureOffset;
+									mat.mainTextureScale = material.mainTextureScale;
 
-								// Drive the emission map with the animated texture
-								mat.SetTexture("_EmissionMap", newTexture);
+									// Drive the emission map with the animated texture
+									mat.SetTexture("_EmissionMap", newTexture);
 
-								// Ensure emission is enabled in case it was disabled
-								mat.EnableKeyword("_EMISSION");
-							}
-						};
-					}
+									// Ensure emission is enabled in case it was disabled
+									mat.EnableKeyword("_EMISSION");
+								}
+							};
+						}
 
-					// Optional: Add a point light for extra glow effect when emissive
-					if (isEmissive)
-					{
-						// Avoid adding multiple lights if this runs more than once
-						var existingLight = gameObject.GetComponent<Light>();
-						if (existingLight == null)
+						// Optional: Add a point light for extra glow effect when emissive
+						if (isEmissive)
 						{
-							var pointLight = gameObject.AddComponent<Light>();
-							pointLight.type = LightType.Point;
-							pointLight.color = material.GetColor("_EmissionColor"); // Use actual emission color if available
-							pointLight.intensity = 2f; // Adjust based on desired brightness
-							pointLight.range = 3f;     // Adjust based on object size
-							pointLight.shadows = LightShadows.None;
+							// Avoid adding multiple lights if this runs more than once
+							var existingLight = gameObject.GetComponent<Light>();
+							if (existingLight == null)
+							{
+								var pointLight = gameObject.AddComponent<Light>();
+								pointLight.type = LightType.Point;
+								pointLight.color = material.GetColor("_EmissionColor"); // Use actual emission color if available
+								pointLight.intensity = 2f; // Adjust based on desired brightness
+								pointLight.range = 3f;     // Adjust based on object size
+								pointLight.shadows = LightShadows.None;
+							}
 						}
 					}
 				}
-				//else
-				//{
-				//	Debug.LogWarning($"Material not found in cache: {materialPath}");//suppress for now
-				//}
+				else
+				{
+					Debug.LogWarning($"Material not found: {definition.material}");//suppress for now
+				}
 			}
 
 #if DEBUG
@@ -143,9 +146,8 @@ namespace ClassicTilestorm
 
 			return gameObject;
 		}
-	}
-
 #if DEBUG
-	public class RTTI : MonoBehaviour { public Definition definition; }//debug class so Definition data can be seen in the inspector
+		private class RTTI : MonoBehaviour { public Definition definition; }//debug class so Definition data can be seen in the inspector
 #endif
+	}
 }
