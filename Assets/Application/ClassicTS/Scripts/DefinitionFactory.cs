@@ -131,10 +131,10 @@ namespace ClassicTilestorm
 						}
 					}
 				}
-				else
-				{
-					Debug.LogWarning($"Material not found in cache: {materialPath}");
-				}
+				//else
+				//{
+				//	Debug.LogWarning($"Material not found in cache: {materialPath}");//suppress for now
+				//}
 			}
 
 #if DEBUG
