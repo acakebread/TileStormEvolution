@@ -5,15 +5,6 @@ namespace ClassicTilestorm
 {
 	public static class DefinitionFactory
     {
-		private static string geometryPath = null;//"ClassicTS/Geometry/"
-		private static string GeometryPath { get => geometryPath ?? PreviewSettings.GeometryPath; set => geometryPath = value; }
-
-		private static string texturePath = null;//"ClassicTS/Textures/"
-		private static string TexturePath { get => texturePath ?? PreviewSettings.TexturePath; set => texturePath = value; }
-
-		private static string materialPath = null;//"ClassicTS/Materials/"
-		private static string MaterialPath { get => materialPath ?? PreviewSettings.MaterialPath; set => materialPath = value; }
-
 		public static GameObject Instantiate(
 			Definition definition,
 			Vector3? position = null,
@@ -23,7 +14,7 @@ namespace ClassicTilestorm
 			if (definition == null || string.IsNullOrEmpty(definition.model))
 				return null; // or handle fallback as needed
 
-			string prefabPath = $"{GeometryPath}{definition.model}";
+			string prefabPath = $"{AssetPath.GeometryPath}{definition.model}";
 
 			GameObject gameObject;
 
@@ -46,7 +37,7 @@ namespace ClassicTilestorm
 
 			//temporary special placeholder flag setting for special properties in absence of definition editor 
 			if (definition.model.Contains("tree"))
-				definition.bSway = true;
+				definition.bSway = true;//ToDo implement sway in definition editor - hard set to trees for now
 
 			if ("Caustic" == definition.texture)
 				definition.material = "toxic";
@@ -54,7 +45,7 @@ namespace ClassicTilestorm
 
 			// Apply texture animation
 			var textureAnimator = gameObject.AddComponent<TextureSetAnimator>();
-			textureAnimator.Initialize(TextureSetManager.GetTextureSequence(definition.texture, TexturePath));
+			textureAnimator.Initialize(TextureSetManager.GetTextureSequence(definition.texture, AssetPath.TexturePath));
 
 			// Add collider for interactive tiles
 			if (definition.bDrag)
@@ -64,7 +55,7 @@ namespace ClassicTilestorm
 				collider.center = new Vector3(0f, -0.05f, 0f);
 			}
 
-			if (definition.bSway)//ToDo add flag for sway to definition
+			if (definition.bSway)
 			{
 				var meshRenderer = gameObject.GetComponentInChildren<MeshRenderer>(true);//Workaround until the definition editor is implemented
 				if (null != meshRenderer)
@@ -94,7 +85,7 @@ namespace ClassicTilestorm
 				if (null != targetRenderer)
 				{
 					// Load the preallocated material
-					var materialPath = $"{MaterialPath}{definition.material}";
+					var materialPath = $"{AssetPath.MaterialPath}{definition.material}";
 					Material material = MaterialCache.Get(materialPath);
 					if (material == null)
 					{
@@ -126,29 +117,6 @@ namespace ClassicTilestorm
 #endif
 
 			return gameObject;
-		}
-
-		//ToDo implement instead of legacy pass through
-		public static GameObject InstantiateTile(Definition definition, Transform parent, Vector3 position)
-		{
-			if (null == definition || string.IsNullOrEmpty(definition.model))
-			{
-				if (definition?.id == "tile_invisible")
-					return PreviewSettings.ShowHiddenTiles ? GeometryFactory.CreateDebugTile(parent, position) : null;
-
-				Debug.LogWarning("GeometryManager: Invalid Definition or geometry name." + definition.id);
-				return GeometryFactory.CreateFallbackTile(parent, position);
-			}
-
-			return Instantiate(definition, position, Quaternion.identity, parent);
-		}
-
-		public static string GetGeometryPrefabPath(string modelName)
-		{
-			if (string.IsNullOrEmpty(modelName))
-				return null;
-
-			return $"{GeometryPath}{modelName}";
 		}
 	}
 

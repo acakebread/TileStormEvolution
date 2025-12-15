@@ -22,7 +22,7 @@ namespace MassiveHadronLtd
 				return;
 			}
 
-			var skyboxPath = $"{pathPrefix}{skyboxName}Skybox".Replace(".mat", "");
+			var skyboxPath = $"{pathPrefix}{skyboxName}".Replace(".mat", "");//var skyboxPath = $"{pathPrefix}{skyboxName}Skybox".Replace(".mat", "");
 			var material = Resources.Load<Material>(skyboxPath);
 			RenderSettings.skybox = material ? material : defaultSkyboxMaterial;
 		}

@@ -47,7 +47,7 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			SkyboxUtility.SetSkybox(PreviewSettings.SkycubesPath, currentMap.music);
+			SkyboxUtility.SetSkybox(PreviewSettings.SkycubesPath, $"{(string.IsNullOrEmpty(currentMap.skybox) ? currentMap.music : currentMap.skybox)}Skybox");//fall back to music for now, but will be 'DefaultSkybox'
 
 			if (null != mapManager) Destroy(mapManager.gameObject);
 			mapManager = MapManager.Instantiate(currentMap, transform);
@@ -60,6 +60,8 @@ namespace ClassicTilestorm
 			if (null != gameController) gameController.Initialise();
 			if (null != editorController) editorController.Initialise(mapManager);
 			if (null != editorController && null != gameController) editorController.OnChangeMapRequested += HandleChangeMap;
+
+			//static string SkycubesPath(string id) => string.IsNullOrEmpty(id) ? null : $"{AssetPath.SkycubesPath}{id}";
 		}
 
 		//public void ReloadCurrentMap() { if (null != mapManager && null != mapManager.CurrentMap) LoadMap(mapManager.CurrentMap.name); }

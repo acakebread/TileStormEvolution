@@ -13,6 +13,7 @@ namespace ClassicTilestorm
 		public string name;
 		public string character;
 		public string music;
+		public string skybox;
 		public string button;
 		public int width;
 		public int height;
@@ -24,6 +25,7 @@ namespace ClassicTilestorm
 
 		public MapAttachment[] attachments = Array.Empty<MapAttachment>();
 
+		public bool ShouldSerializeskybox() => !string.IsNullOrEmpty(skybox);
 		public bool ShouldSerializesolve() => solve != null && solve.Length > 0;
 		public bool ShouldSerializewaypoints() => waypoints != null && waypoints.Length > 0;
 		public bool ShouldSerializeattachments() => attachments != null && attachments.Length > 0;

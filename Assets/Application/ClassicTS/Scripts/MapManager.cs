@@ -204,7 +204,7 @@ namespace ClassicTilestorm
 				var tile = new Tile(definition);
 
 				if (id != "tile_empty" && definition != null)
-					tile.GameObject = DefinitionFactory.InstantiateTile( definition, transform, TileWorldPosition(n));
+					tile.GameObject = InstantiateTile(definition, transform, TileWorldPosition(n));
 
 				mapTiles[n] = new MapTile(id, tile);
 			}
@@ -388,7 +388,7 @@ namespace ClassicTilestorm
 			var newTile = new Tile(def);
 
 			if (id != "tile_empty" && def != null)
-				newTile.GameObject = DefinitionFactory.InstantiateTile(def, transform, TileWorldPosition(index));
+				newTile.GameObject = InstantiateTile(def, transform, TileWorldPosition(index));
 
 			mapTiles[index] = new MapTile(id, newTile);
 
@@ -509,7 +509,7 @@ namespace ClassicTilestorm
 					Destroy(mapTiles[index].tile.GameObject);
 
 				if (id != "tile_empty" && def != null)
-					newTile.GameObject = DefinitionFactory.InstantiateTile(def, transform, TileWorldPosition(index));
+					newTile.GameObject = InstantiateTile(def, transform, TileWorldPosition(index));
 
 				mapTiles[index] = new MapTile(id, newTile);
 			}
@@ -563,7 +563,7 @@ namespace ClassicTilestorm
 			Vector3 tileWorld = TileWorldPosition(emitter.tile);
 			Vector3 worldPos = tileWorld + emitter.Position;
 
-			GameObject go = PrefabFactory.Instantiate($"{PreviewSettings.PrefabPath}{prefabName}", CurrentTransform);
+			GameObject go = PrefabFactory.Instantiate(GetPrefabPath(prefabName), CurrentTransform);
 			if (go != null)
 			{
 				go.transform.position = worldPos;
@@ -572,6 +572,8 @@ namespace ClassicTilestorm
 
 				emitterInstances[emitter] = go;
 			}
+
+			static string GetPrefabPath(string id) => string.IsNullOrEmpty(id) ? null : $"{AssetPath.PrefabPath}{id}";
 		}
 
 		private void DestroyAllEmitters()
@@ -614,10 +616,7 @@ namespace ClassicTilestorm
 
 					Vector3 worldPos = TileWorldPosition(emitter.tile) + emitter.Position;
 
-					GameObject go = PrefabFactory.Instantiate(
-						$"{PreviewSettings.PrefabPath}{prefabName}",
-						transform // parent under the map
-					);
+					GameObject go = PrefabFactory.Instantiate(GetPrefabPath(prefabName), transform); // parent under the map
 
 					if (go != null)
 					{
@@ -629,6 +628,8 @@ namespace ClassicTilestorm
 					}
 				}
 			}
+
+			static string GetPrefabPath(string id) => string.IsNullOrEmpty(id) ? null : $"{AssetPath.PrefabPath}{id}";
 		}
 
 		private void UpdateEmitterInstance(Emitter emitter)
@@ -639,6 +640,20 @@ namespace ClassicTilestorm
 			Vector3 worldPos = TileWorldPosition(emitter.tile) + emitter.Position;
 			go.transform.position = worldPos;
 			go.transform.rotation = emitter.Rotation;
+		}
+
+		private static GameObject InstantiateTile(Definition definition, Transform parent, Vector3 position)
+		{
+			if (null == definition || string.IsNullOrEmpty(definition.model))
+			{
+				if (definition?.id == "tile_invisible")
+					return PreviewSettings.ShowHiddenTiles ? GeometryFactory.CreateDebugTile(parent, position) : null;
+
+				Debug.LogWarning("GeometryManager: Invalid Definition or geometry name." + definition.id);
+				return GeometryFactory.CreateFallbackTile(parent, position);
+			}
+
+			return DefinitionFactory.Instantiate(definition, position, Quaternion.identity, parent);
 		}
 
 		public static MapManager Instantiate(Map map, Transform parent = null)

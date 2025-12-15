@@ -41,7 +41,7 @@ namespace ClassicTilestorm
 				if (ghostMesh != null)
 					Object.DestroyImmediate(ghostMesh);
 
-				string prefabPath = DefinitionFactory.GetGeometryPrefabPath(definition.model);
+				string prefabPath = GetGeometryPath(definition.model);
 				if (string.IsNullOrEmpty(prefabPath))
 				{
 					ghostMesh = null;
@@ -86,6 +86,8 @@ namespace ClassicTilestorm
 
 			// Make sure ghost is visible
 			ghostMesh.SetActive(true);
+
+			static string GetGeometryPath(string modelName) => string.IsNullOrEmpty(modelName) ? null : $"{AssetPath.GeometryPath}{modelName}";
 		}
 
 		// Hide the ghost mesh
