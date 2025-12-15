@@ -66,10 +66,19 @@ namespace ClassicTilestorm
 
 			if (definition.bSway)//ToDo add flag for sway to definition
 			{
-				var morphGeomSway = gameObject.AddComponent<MorphGeomSway>();
-				morphGeomSway.SetCustomInfluenceVolume(Vector3.up, 0.2f);
-				morphGeomSway.swayInfluencePower = 0.5f; // More top sway
-				morphGeomSway.ConfigureSubdivision(true, 0.3f); // Enable stratification with maxSegmentLength for influence volume
+				var meshRenderer = gameObject.GetComponentInChildren<MeshRenderer>(true);//Workaround until the definition editor is implemented
+				if (null != meshRenderer)
+				{
+					var filter = meshRenderer.GetComponent<MeshFilter>();
+					if (filter != null && filter.IsRuntimeWritable())
+					{
+						var morphGeomSway = gameObject.AddComponent<MorphGeomSway>();
+						morphGeomSway.SetCustomInfluenceVolume(Vector3.up, 0.2f);
+						morphGeomSway.swayInfluencePower = 0.5f; // More top sway
+						morphGeomSway.ConfigureSubdivision(true, 0.3f); // Enable stratification with maxSegmentLength for influence volume
+					}
+					else Debug.LogError($"geometry not writable in: {definition.model}");
+				}
 			}
 
 			if ("toxic" == definition.material)
