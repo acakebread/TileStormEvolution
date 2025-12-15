@@ -498,5 +498,8 @@ namespace MassiveHadronLtd
 			material.SetColor("_EmissionColor", color);
 			return material;
 		}
+
+		// Check if this material is intended to be emissive
+		public static bool isEmissive(Material material) => material.IsKeywordEnabled("_EMISSION") || material.GetTexture("_EmissionMap") != null || material.GetColor("_EmissionColor").maxColorComponent > 0f;
 	}
 }
