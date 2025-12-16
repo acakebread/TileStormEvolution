@@ -73,7 +73,9 @@ public static class GeometrySearchProvider
 				foreach (var go1 in allInRoot)
 				{
 					if (go1 != null && !nameDict.ContainsKey(go1.name))
+					{
 						nameDict[go1.name] = go1;
+					}
 				}
 
 				rootCaches[cacheKey] = nameDict;
@@ -83,10 +85,14 @@ public static class GeometrySearchProvider
 
 			if (nameDict.TryGetValue(candidateName, out GameObject go))
 			{
-				if (isPreferred)
+				// Only log "Upgraded/Remapped" if we actually used a different name
+				if (isPreferred && candidateName != originalName)
 				{
 					Debug.Log($"[GeometrySearchProvider] Upgraded/Remapped: '{originalName}' → '{candidateName}' found in root '{root}'");
 				}
+				// Optional: quiet success for normal case
+				// else Debug.Log($"[GeometrySearchProvider] Found standard model '{originalName}' in root '{root}'");
+
 				return go;
 			}
 		}
