@@ -50,7 +50,7 @@ namespace ClassicTilestorm
 
 			// Point light only if emissive and we have an animator (meaning texture was applied) - placeholder only
 			if (null != textureAnimator && textureAnimator.IsEmissive)
-				LightFactory.AddPointLight(gameObject, MaterialCache.Get($"{AssetPath.MaterialPath}{definition.material}")?.GetColor("_EmissionColor") ?? Color.white);
+				LightFactory.AddPointLight(gameObject, replacement?.GetColor("_EmissionColor") ?? Color.white);
 
 			// Add collider for interactive tiles
 			if (definition.bDrag)
