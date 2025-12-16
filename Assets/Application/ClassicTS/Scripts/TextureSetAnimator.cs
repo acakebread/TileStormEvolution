@@ -32,9 +32,10 @@ namespace ClassicTilestorm
 			{
 				_targetRenderer.material = replacement;
 
-				// Emissive: preserve original albedo, use animated texture as emission map
-				replacement.mainTextureOffset = _targetRenderer.material.mainTextureOffset;
-				replacement.mainTextureScale = _targetRenderer.material.mainTextureScale;
+				// Copy tiling/offset FROM original prefab material TO the replacement
+				replacement.mainTextureOffset = _targetRenderer.sharedMaterial.mainTextureOffset;
+				replacement.mainTextureScale = _targetRenderer.sharedMaterial.mainTextureScale;
+
 				if (MaterialUtils.isEmissive(replacementMaterial))
 					replacement.EnableKeyword("_EMISSION");
 			}
