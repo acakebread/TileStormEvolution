@@ -30,21 +30,17 @@ namespace ClassicTilestorm
 			if ("Caustic" == definition.texture)
 				definition.material = "toxic";
 
+			//temporary provision to suppress texture replacement on loaded HD models
+			var renderer = gameObject.GetComponentInChildren<MeshRenderer>(true);
+			var isHD = renderer && null == renderer.material.mainTexture;
 
 			//Apply Definition Properties
+			var materialPath = $"{AssetPath.MaterialPath}{definition.material}";
+			var replacement = string.IsNullOrEmpty(definition.material) ? null : MaterialCache.Get(materialPath);
 
-			// Apply texture animation
-			Material replacement = null;
-			if (!string.IsNullOrEmpty(definition.material))
-			{
-				var materialPath = $"{AssetPath.MaterialPath}{definition.material}";
-				replacement = MaterialCache.Get(materialPath);
-			}
-
+			// Apply texture animation and / or material replacement
 			var textureAnimator = gameObject.AddComponent<TextureSetAnimator>();
-
-			var filter = gameObject.GetComponentInChildren<MeshFilter>(true);
-			if (filter && !filter.sharedMesh.name.EndsWith("_hd"))//temporary provision to suppress texture replacement on loaded HD models
+			if (isHD || null != replacement)
 			{
 				var sequence = TextureSetManager.GetTextureSequence(definition.texture, AssetPath.TexturePath);
 				textureAnimator.Initialize(sequence, replacement);
