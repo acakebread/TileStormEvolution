@@ -1,9 +1,19 @@
 fileFormatVersion: 2
-guid: 81c91135f67998f498de9df5e5265b1b
+guid: a024da454510e6642a4360be7ddbd506
 ModelImporter:
   serializedVersion: 22200
   internalIDToNameTable: []
-  externalObjects: {}
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: med_path
+    second: {fileID: 2100000, guid: 3bd6216e96854084abfa26359c218573, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: med_wall
+    second: {fileID: 2100000, guid: 3c5f567d868d35249b0aa2dad4ef5f6b, type: 2}
   materials:
     materialImportMode: 2
     materialName: 0

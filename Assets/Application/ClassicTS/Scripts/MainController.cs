@@ -15,6 +15,7 @@ namespace ClassicTilestorm
 
 		private void Awake()
 		{
+			GeometrySearchProvider.Register();//important for all resource loading
 			if (!FindAnyObjectByType<EventSystem>()) new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
 			ResourceSerializer.Initialise(PreviewSettings.DatabaseJsonFile);
 			cameraController = gameObject.AddComponent<MainCameraController>();

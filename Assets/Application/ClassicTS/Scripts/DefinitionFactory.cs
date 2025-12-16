@@ -7,21 +7,19 @@ namespace ClassicTilestorm
     {
 		public static GameObject Instantiate(Definition definition, Vector3? position = null, Quaternion? rotation = null, Transform parent = null)
 		{
-			if (null == definition || string.IsNullOrEmpty(definition.model))
-				return null; // or handle fallback as needed
+			if (definition == null || string.IsNullOrEmpty(definition.model))
+				return null;
 
-			var prefabPath = $"{AssetPath.GeometryPath}{definition.model}";
-
-			// Decide which PrefabFactory overload to use based on what's provided
+			// Just pass the model name — search happens automatically
 			GameObject gameObject;
 			if (position.HasValue && rotation.HasValue)
-				gameObject = PrefabFactory.Instantiate(prefabPath, position.Value, rotation.Value, parent);
+				gameObject = PrefabFactory.Instantiate(definition.model, position.Value, rotation.Value, parent);
 			else if (position.HasValue)
-				gameObject = PrefabFactory.Instantiate(prefabPath, position.Value, parent);
+				gameObject = PrefabFactory.Instantiate(definition.model, position.Value, parent);
 			else
-				gameObject = PrefabFactory.Instantiate(prefabPath, parent);
+				gameObject = PrefabFactory.Instantiate(definition.model, parent);
 
-			if (null == gameObject)
+			if (gameObject == null)
 				return null;
 
 			//temporary special placeholder flag setting for special properties in absence of definition editor 
@@ -43,10 +41,14 @@ namespace ClassicTilestorm
 				replacement = MaterialCache.Get(materialPath);
 			}
 
-			var sequence = TextureSetManager.GetTextureSequence(definition.texture, AssetPath.TexturePath);
-
 			var textureAnimator = gameObject.AddComponent<TextureSetAnimator>();
-			textureAnimator.Initialize(sequence, replacement);
+
+			var filter = gameObject.GetComponentInChildren<MeshFilter>(true);
+			if (filter && !filter.sharedMesh.name.EndsWith("_hd"))//temprary provision to suppress texture replacement on loaded HD models
+			{
+				var sequence = TextureSetManager.GetTextureSequence(definition.texture, AssetPath.TexturePath);
+				textureAnimator.Initialize(sequence, replacement);
+			}
 
 			// Point light only if emissive and we have an animator (meaning texture was applied) - placeholder only
 			if (null != textureAnimator && textureAnimator.IsEmissive)
