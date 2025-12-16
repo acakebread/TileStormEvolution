@@ -28,9 +28,9 @@ namespace ClassicTilestorm
 			if (definition.model.Contains("tree"))
 				definition.bSway = true;//ToDo implement sway in definition editor - hard set to trees for now
 
+			//temporary special placeholder material override for special properties in absence of definition editor 
 			if ("Caustic" == definition.texture)
 				definition.material = "toxic";
-			//temporary special placeholder flag setting for special properties in absence of definition editor 
 
 
 			//Apply Definition Properties
@@ -56,6 +56,7 @@ namespace ClassicTilestorm
 			if (definition.bDrag)
 				TileStormGeneric.AddDefaultTileCollider(gameObject);
 
+			// Add sway component for wind controller
 			if (definition.bSway)
 				MorphGeomSway.AddGeomSway(gameObject);
 
