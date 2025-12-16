@@ -1,7 +1,6 @@
 ﻿using System.Linq;
 using System.Collections.Generic;
 using MassiveHadronLtd;
-using UnityEngine;
 
 namespace ClassicTilestorm
 {
@@ -11,8 +10,6 @@ namespace ClassicTilestorm
 
 		public static TextureSequence GetTextureSequence(string id, string path)
 		{
-			//var _id = System.IO.Path.GetFileNameWithoutExtension(path);
-
 			if (string.IsNullOrEmpty(id)) return null;
 
 			if (_cache.TryGetValue(id, out var cached))

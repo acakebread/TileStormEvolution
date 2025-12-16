@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
 using static MassiveHadronLtd.GuiUtils;
+using System.Linq;
 
 namespace ClassicTilestorm
 {
@@ -88,7 +89,7 @@ namespace ClassicTilestorm
 		{
 			selectedDefinitionId = id ?? "tile_empty";
 
-			definitionCycleList = ResourceManager.DefinitionNavGroup(selectedDefinitionId);
+			definitionCycleList = DefinitionNavGroup(selectedDefinitionId);
 			cycleIndex = definitionCycleList.IndexOf(selectedDefinitionId);
 
 			EditorMeshUtil.DestroyGhostMesh();
@@ -128,6 +129,46 @@ namespace ClassicTilestorm
 
 			// Draw the panel (background + list)
 			sidePanel.Draw();
+		}
+
+
+		private static List<string> DefinitionNavGroup(string referenceDef)
+		{
+			var singleDirections = new[] { " n", " e", " s", " w" };
+			var doubleLinear = new[] { " we", " ns", " ew", " sn" };
+			var doubleDiagonal = new[] { " nw", " ne", " se", " sw" };
+			var selectedGroup = singleDirections;
+
+			var baseId = referenceDef;
+			foreach (var suffix in singleDirections.Concat(doubleLinear).Concat(doubleDiagonal))
+			{
+				if (referenceDef.EndsWith(suffix))
+				{
+					baseId = referenceDef.Substring(0, referenceDef.Length - suffix.Length);
+					if (doubleLinear.Any(s => referenceDef.EndsWith(s)))
+						selectedGroup = doubleLinear;
+					else if (doubleDiagonal.Any(s => referenceDef.EndsWith(s)))
+						selectedGroup = doubleDiagonal;
+					break;
+				}
+			}
+
+			var cycleList = new List<string>();
+
+			if (ResourceManager.Definitions.Any(d => d.id == baseId))
+				cycleList.Add(baseId);
+
+			foreach (var suffix in selectedGroup)
+			{
+				var candidate = baseId + suffix;
+				if (ResourceManager.Definitions.Any(d => d.id == candidate))
+					cycleList.Add(candidate);
+			}
+
+			if (0 == cycleList.Count)
+				cycleList.Add(referenceDef);
+
+			return cycleList;
 		}
 	}
 }

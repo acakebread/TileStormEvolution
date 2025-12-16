@@ -36,44 +36,5 @@ namespace ClassicTilestorm
 					{ array[i] = updated; return; }
 			}
 		}
-
-		public static System.Collections.Generic.List<string> DefinitionNavGroup(string referenceDef)
-		{
-			var singleDirections = new[] { " n", " e", " s", " w" };
-			var doubleLinear = new[] { " we", " ns", " ew", " sn" };
-			var doubleDiagonal = new[] { " nw", " ne", " se", " sw" };
-			var selectedGroup = singleDirections;
-
-			var baseId = referenceDef;
-			foreach (var suffix in singleDirections.Concat(doubleLinear).Concat(doubleDiagonal))
-			{
-				if (referenceDef.EndsWith(suffix))
-				{
-					baseId = referenceDef.Substring(0, referenceDef.Length - suffix.Length);
-					if (doubleLinear.Any(s => referenceDef.EndsWith(s)))
-						selectedGroup = doubleLinear;
-					else if (doubleDiagonal.Any(s => referenceDef.EndsWith(s)))
-						selectedGroup = doubleDiagonal;
-					break;
-				}
-			}
-
-			var cycleList = new System.Collections.Generic.List<string>();
-
-			if (Definitions.Any(d => d.id == baseId))
-				cycleList.Add(baseId);
-
-			foreach (var suffix in selectedGroup)
-			{
-				var candidate = baseId + suffix;
-				if (Definitions.Any(d => d.id == candidate))
-					cycleList.Add(candidate);
-			}
-
-			if (0 == cycleList.Count)
-				cycleList.Add(referenceDef);
-
-			return cycleList;
-		}
 	}
 }
