@@ -22,7 +22,7 @@ namespace ClassicTilestorm
 		public Tile(Definition def)
 		{
 			flags = def == null ? 0 : CombineFlags(def);
-			GameObject = null;
+			gameObject = null;
 
 			static int CombineFlags(Definition d)
 			{
@@ -50,6 +50,6 @@ namespace ClassicTilestorm
 		public readonly bool IsRoll => (flags & Roll) != 0;
 		public readonly int Nav => flags & navMask;
 
-		public GameObject GameObject;
+		public GameObject gameObject;
 	}
 }

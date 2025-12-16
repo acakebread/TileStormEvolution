@@ -204,7 +204,7 @@ namespace ClassicTilestorm
 				var tile = new Tile(definition);
 
 				if (id != "tile_empty" && definition != null)
-					tile.GameObject = InstantiateTile(definition, transform, TileWorldPosition(n));
+					tile.gameObject = InstantiateTile(definition, transform, TileWorldPosition(n));
 
 				mapTiles[n] = new MapTile(id, tile);
 			}
@@ -288,7 +288,7 @@ namespace ClassicTilestorm
 			for (int n = 0; n < indices.Length; ++n)
 			{
 				var mapTile = mapTiles[indices[n]];
-				var go = mapTile.tile.GameObject;
+				var go = mapTile.tile.gameObject;
 				if (go == null) continue;
 
 				var position = TileWorldPosition(n);
@@ -381,14 +381,14 @@ namespace ClassicTilestorm
 			int index = z * Width + x;
 
 			// Destroy old visual
-			if (mapTiles[index].tile.GameObject != null)
-				Destroy(mapTiles[index].tile.GameObject);
+			if (mapTiles[index].tile.gameObject != null)
+				Destroy(mapTiles[index].tile.gameObject);
 
 			var def = ResourceManager.GetDefinition(id);
 			var newTile = new Tile(def);
 
 			if (id != "tile_empty" && def != null)
-				newTile.GameObject = InstantiateTile(def, transform, TileWorldPosition(index));
+				newTile.gameObject = InstantiateTile(def, transform, TileWorldPosition(index));
 
 			mapTiles[index] = new MapTile(id, newTile);
 
@@ -505,11 +505,11 @@ namespace ClassicTilestorm
 				var def = ResourceManager.GetDefinition(id);
 				var newTile = new Tile(def);
 
-				if (mapTiles[index].tile.GameObject != null)
-					Destroy(mapTiles[index].tile.GameObject);
+				if (mapTiles[index].tile.gameObject != null)
+					Destroy(mapTiles[index].tile.gameObject);
 
 				if (id != "tile_empty" && def != null)
-					newTile.GameObject = InstantiateTile(def, transform, TileWorldPosition(index));
+					newTile.gameObject = InstantiateTile(def, transform, TileWorldPosition(index));
 
 				mapTiles[index] = new MapTile(id, newTile);
 			}
@@ -528,7 +528,7 @@ namespace ClassicTilestorm
 			WindController windController = null;
 			for (int n = 0; n < mapTiles.Length; ++n)
 			{
-				var go = mapTiles[n].tile.GameObject;
+				var go = mapTiles[n].tile.gameObject;
 				if (go == null) continue;
 
 				var sway = go.GetComponent<MorphGeomSway>();

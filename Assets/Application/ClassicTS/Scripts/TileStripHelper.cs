@@ -94,7 +94,7 @@ namespace ClassicTilestorm
 			if (null == strip.Indices) return;
 			foreach (var index in strip.Indices)
 			{
-				var gameObject = map.GetTile(index).GameObject;
+				var gameObject = map.GetTile(index).gameObject;
 				if (null != gameObject)
 					gameObject.transform.position = map.TileWorldPosition(index);
 			}
@@ -121,7 +121,7 @@ namespace ClassicTilestorm
 			UpdateSpareTile(map, strip, delta, delta != Vector3.zero);
 			foreach (var index in strip.Indices)
 			{
-				var gameObject = map.GetTile(index).GameObject;
+				var gameObject = map.GetTile(index).gameObject;
 				if (null != gameObject)
 					gameObject.transform.position += delta;
 			}
@@ -132,7 +132,7 @@ namespace ClassicTilestorm
 				if (strip.Count <= 1) return;
 
 				var leadingTileIndex = strip.Indices.Last();
-				var leadingTile = map.GetTile(leadingTileIndex).GameObject;
+				var leadingTile = map.GetTile(leadingTileIndex).gameObject;
 				if (null == leadingTile) { if (null != SpareTile) SpareTile.SetActive(false); return; }
 
 				var trailingTileIndex = strip.Indices.First() - strip.Stride;

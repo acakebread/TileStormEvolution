@@ -83,5 +83,35 @@ namespace MassiveHadronLtd
 			phase = Mathf.Clamp01(phase);
 			swayInfluencePower = Mathf.Max(0.1f, swayInfluencePower);
 		}
+
+		public struct MorphGeomSwayParameters
+		{
+			public Vector3 normal;
+			public float offset;
+			public float swayInfluencePower;
+		}
+
+		public static MorphGeomSway AddGeomSway(GameObject gameObject, MorphGeomSwayParameters? parameters = null)
+		{
+			var filter = gameObject.GetComponentInChildren<MeshFilter>(true);
+			if (null == filter || !filter.IsRuntimeWritable())
+			{
+				Debug.LogError($"geometry not writable in: {gameObject.name}");
+				return null;
+			}
+
+			//defaults
+			var normal = parameters.HasValue ? parameters.Value.normal : Vector3.up;
+			var offset = null != parameters ? 0.2f : 0f;
+			var swayInfluencePower = 0.5f; // More top sway
+			var maxSegmentLength = 0.3f; // Enable stratification with maxSegmentLength for influence volume
+			var enabled = 0f != maxSegmentLength;
+
+			var morphGeomSway = gameObject.AddComponent<MorphGeomSway>();
+			morphGeomSway.SetCustomInfluenceVolume(normal, 0.2f);
+			morphGeomSway.swayInfluencePower = swayInfluencePower;
+			morphGeomSway.ConfigureSubdivision(enabled, maxSegmentLength);
+			return morphGeomSway;
+		}
 	}
 }
