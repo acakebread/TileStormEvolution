@@ -7,14 +7,14 @@ namespace ClassicTilestorm
 	{
 		private TextureFrame[] _frames;
 		private MeshRenderer _targetRenderer;
-		private Material replacementMaterial;
+		private Material _replacementMaterial;  // renamed for clarity
 		private int _currentFrame = 0;
 		private float _timer = 0f;
 
 		public delegate void TextureChangedHandler(Texture2D newTexture);
 		public event TextureChangedHandler OnTextureChanged;
 
-		[HideInInspector] public bool IsEmissive => MaterialUtils.isEmissive(replacementMaterial);
+		[HideInInspector] public bool IsEmissive => _replacementMaterial != null && MaterialUtils.isEmissive(_replacementMaterial);
 
 		public void Initialize(TextureSequence sequence, Material replacement = null)
 		{
@@ -26,17 +26,18 @@ namespace ClassicTilestorm
 			}
 
 			_frames = sequence.ResolvedFrames;
-			replacementMaterial = replacement;
+			_replacementMaterial = replacement;
 
-			if (replacement)
+			if (replacement != null)
 			{
+				// Apply replacement material (this instances it)
 				_targetRenderer.material = replacement;
 
-				// Copy tiling/offset FROM original prefab material TO the replacement
+				// Preserve original tiling/offset from prefab
 				replacement.mainTextureOffset = _targetRenderer.sharedMaterial.mainTextureOffset;
 				replacement.mainTextureScale = _targetRenderer.sharedMaterial.mainTextureScale;
 
-				if (MaterialUtils.isEmissive(replacementMaterial))
+				if (MaterialUtils.isEmissive(replacement))
 					replacement.EnableKeyword("_EMISSION");
 			}
 
@@ -48,23 +49,26 @@ namespace ClassicTilestorm
 
 		public void ApplyFrame(int index)
 		{
-			if (_targetRenderer.material == null)
-				_targetRenderer.material = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-
+			if (_targetRenderer.material == null) return;
 			if (_frames == null || index < 0 || index >= _frames.Length) return;
 
 			var tex = _frames[index].texture;
-			_targetRenderer.material.mainTexture = tex; // replace main texture for animation
 
-			if (MaterialUtils.isEmissive(replacementMaterial))
+			// Always animate main texture
+			_targetRenderer.material.mainTexture = tex;
+
+			// If using a replacement material that's emissive, also animate emission map
+			if (_replacementMaterial != null && MaterialUtils.isEmissive(_replacementMaterial))
+			{
 				_targetRenderer.material.SetTexture("_EmissionMap", tex);
+			}
 
 			OnTextureChanged?.Invoke(tex);
 		}
 
 		void Update()
 		{
-			if (_frames.Length <= 1) return;
+			if (_frames == null || _frames.Length <= 1) return;
 
 			_timer += Time.deltaTime;
 			if (_timer >= _frames[_currentFrame].duration)
@@ -75,11 +79,8 @@ namespace ClassicTilestorm
 			}
 		}
 
-		void OnDestroy()
-		{
-			//not sure how to handle this - I don't think we allocate replacement any more
-			//if (_targetRenderer != null && _targetRenderer.material != null && _targetRenderer.material != _baseMaterial)//_baseMaterial = legacy property
-			//	Destroy(_targetRenderer.material);  // Only destroy if we instanced it
-		}
+		// Safe to leave empty — no manual material allocation
+		// Unity handles cleanup of instanced materials
+		// void OnDestroy() { }
 	}
 }
