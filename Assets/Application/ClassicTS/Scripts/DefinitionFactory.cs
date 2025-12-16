@@ -44,7 +44,7 @@ namespace ClassicTilestorm
 			var textureAnimator = gameObject.AddComponent<TextureSetAnimator>();
 
 			var filter = gameObject.GetComponentInChildren<MeshFilter>(true);
-			if (filter && !filter.sharedMesh.name.EndsWith("_hd"))//temprary provision to suppress texture replacement on loaded HD models
+			if (filter && !filter.sharedMesh.name.EndsWith("_hd"))//temporary provision to suppress texture replacement on loaded HD models
 			{
 				var sequence = TextureSetManager.GetTextureSequence(definition.texture, AssetPath.TexturePath);
 				textureAnimator.Initialize(sequence, replacement);
