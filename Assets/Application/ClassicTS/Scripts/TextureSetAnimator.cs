@@ -7,16 +7,16 @@ namespace ClassicTilestorm
 	{
 		private TextureFrame[] _frames;
 		private MeshRenderer _targetRenderer;
-		private Material _baseMaterial;  // Store reference to original material
+		private Material replacementMaterial;
 		private int _currentFrame = 0;
 		private float _timer = 0f;
 
 		public delegate void TextureChangedHandler(Texture2D newTexture);
 		public event TextureChangedHandler OnTextureChanged;
 
-		[HideInInspector] public bool IsEmissive { get; private set; }
+		[HideInInspector] public bool IsEmissive => MaterialUtils.isEmissive(replacementMaterial);
 
-		public void Initialize(TextureSequence sequence, Material baseMaterial = null)
+		public void Initialize(TextureSequence sequence, Material replacement = null)
 		{
 			_targetRenderer = GetComponentInChildren<MeshRenderer>(true);
 			if (_targetRenderer == null || sequence == null || sequence.ResolvedFrames.Length == 0)
@@ -26,7 +26,19 @@ namespace ClassicTilestorm
 			}
 
 			_frames = sequence.ResolvedFrames;
-			_baseMaterial = baseMaterial;  // Store for emissive case
+			replacementMaterial = replacement;
+
+			if (replacement)
+			{
+				_targetRenderer.material = replacement;
+
+				// Emissive: preserve original albedo, use animated texture as emission map
+				replacement.mainTextureOffset = _targetRenderer.material.mainTextureOffset;
+				replacement.mainTextureScale = _targetRenderer.material.mainTextureScale;
+				if (MaterialUtils.isEmissive(replacementMaterial))
+					replacement.EnableKeyword("_EMISSION");
+			}
+
 			_currentFrame = 0;
 			_timer = 0f;
 
@@ -41,21 +53,10 @@ namespace ClassicTilestorm
 			if (_frames == null || index < 0 || index >= _frames.Length) return;
 
 			var tex = _frames[index].texture;
+			_targetRenderer.material.mainTexture = tex; // replace main texture for animation
 
-			if (IsEmissive && _baseMaterial != null)
-			{
-				// Emissive: preserve original albedo, use animated texture as emission map
-				_targetRenderer.material.mainTexture = _baseMaterial.mainTexture;
-				_targetRenderer.material.mainTextureOffset = _baseMaterial.mainTextureOffset;
-				_targetRenderer.material.mainTextureScale = _baseMaterial.mainTextureScale;
+			if (MaterialUtils.isEmissive(replacementMaterial))
 				_targetRenderer.material.SetTexture("_EmissionMap", tex);
-				_targetRenderer.material.EnableKeyword("_EMISSION");
-			}
-			else
-			{
-				// Standard: direct replace main texture
-				_targetRenderer.material.mainTexture = tex;
-			}
 
 			OnTextureChanged?.Invoke(tex);
 		}
@@ -75,40 +76,9 @@ namespace ClassicTilestorm
 
 		void OnDestroy()
 		{
-			if (_targetRenderer != null && _targetRenderer.material != null && _targetRenderer.material != _baseMaterial)
-				Destroy(_targetRenderer.material);  // Only destroy if we instanced it
-		}
-
-		public static TextureSetAnimator SetupAnimation(
-			GameObject gameObject,
-			TextureSequence sequence,
-			Material baseMaterial)
-		{
-			if (gameObject == null || baseMaterial == null) return null;
-
-			var renderer = gameObject.GetComponentInChildren<MeshRenderer>(true);
-			if (renderer == null) return null;
-
-			bool hasFrames = sequence != null && sequence.ResolvedFrames.Length > 0;
-			bool isEmissive = MaterialUtils.isEmissive(baseMaterial);
-
-			if (!hasFrames)
-			{
-				renderer.material = baseMaterial;
-				return null;
-			}
-
-			// Instance material if we're going to modify it (always for safety when texture exists)
-			var instanceMat = new Material(baseMaterial);
-			renderer.material = instanceMat;
-
-			var animator = gameObject.AddComponent<TextureSetAnimator>();
-			animator.IsEmissive = isEmissive;
-
-			// Pass baseMaterial so ApplyFrame knows the original albedo
-			animator.Initialize(sequence, baseMaterial);
-
-			return animator;
+			//not sure how to handle this - I don't think we allocate replacement any more
+			//if (_targetRenderer != null && _targetRenderer.material != null && _targetRenderer.material != _baseMaterial)//_baseMaterial = legacy property
+			//	Destroy(_targetRenderer.material);  // Only destroy if we instanced it
 		}
 	}
 }

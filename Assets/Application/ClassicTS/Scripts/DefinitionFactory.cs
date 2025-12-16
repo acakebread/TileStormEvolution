@@ -36,8 +36,21 @@ namespace ClassicTilestorm
 			//Apply Definition Properties
 
 			// Apply texture animation
+			Material replacement = null;
+			if (!string.IsNullOrEmpty(definition.material))
+			{
+				var materialPath = $"{AssetPath.MaterialPath}{definition.material}";
+				replacement = MaterialCache.Get(materialPath);
+			}
+
+			var sequence = TextureSetManager.GetTextureSequence(definition.texture, AssetPath.TexturePath);
+
 			var textureAnimator = gameObject.AddComponent<TextureSetAnimator>();
-			textureAnimator.Initialize(TextureSetManager.GetTextureSequence(definition.texture, AssetPath.TexturePath));
+			textureAnimator.Initialize(sequence, replacement);
+
+			// Point light only if emissive and we have an animator (meaning texture was applied) - placeholder only
+			if (null != textureAnimator && textureAnimator.IsEmissive)
+				LightFactory.AddPointLight(gameObject, MaterialCache.Get($"{AssetPath.MaterialPath}{definition.material}")?.GetColor("_EmissionColor") ?? Color.white);
 
 			// Add collider for interactive tiles
 			if (definition.bDrag)
@@ -45,26 +58,6 @@ namespace ClassicTilestorm
 
 			if (definition.bSway)
 				MorphGeomSway.AddGeomSway(gameObject);
-
-			if (!string.IsNullOrEmpty(definition.material))
-			{
-				var animator = TextureSetManager.ApplyMaterialAndTexture(gameObject, definition.texture, definition.material, AssetPath.TexturePath, AssetPath.MaterialPath);
-
-				// Point light only if emissive and we have an animator (meaning texture was applied)
-				if (animator != null && animator.IsEmissive)
-				{
-					var existingLight = gameObject.GetComponent<Light>();
-					if (existingLight == null)
-					{
-						var pointLight = gameObject.AddComponent<Light>();
-						pointLight.type = LightType.Point;
-						pointLight.color = MaterialCache.Get($"{AssetPath.MaterialPath}{definition.material}")?.GetColor("_EmissionColor") ?? Color.white;
-						pointLight.intensity = 1f;
-						pointLight.range = 1f;
-						pointLight.shadows = LightShadows.None;
-					}
-				}
-			}
 
 #if DEBUG
 			gameObject.AddComponent<RTTI>().definition = definition; // This is for development debug in editor only - do not use RTTI elsewhere
