@@ -80,7 +80,7 @@ namespace ClassicTilestorm
 
 			if (EditorTransformUtil.HandleTransformGizmoInput(editorCamera))
 			{
-				var typeEditor = AttachmentEditing.GetCurrentEditor(this);
+				var typeEditor = AttachmentEditing.GetCurrentEditor(selectedAttachments);
 				typeEditor?.HandleGizmoInput(this);
 				supressInput = true;
 			}
@@ -207,16 +207,14 @@ namespace ClassicTilestorm
 			EditorTransformUtil.HideTransformGizmo();
 			viewPreview.Hide();
 
-			var typeEditor = AttachmentEditing.GetCurrentEditor(this);
+			var typeEditor = AttachmentEditing.GetCurrentEditor(selectedAttachments);
 			typeEditor?.HandleSelectionChanged(this);
 		}
 
 		private int GetTileUnderMouse()
 		{
 			if (!editorCamera) return -1;
-			Vector3 mouseWorld = MapManager.ScreenToWorld(editorCamera, Input.mousePosition);
-			Vector3 snapped = editorController.iMapManager.SnappedMapPosition(mouseWorld);
-			return editorController.iMapManager.WorldToMapIndex(snapped);
+			return editorController.iMapManager.WorldToMapIndex(MapManager.ScreenToWorld(editorCamera, Input.mousePosition));
 		}
 
 		private void HandleLeftMouseDown(int tile)
@@ -239,7 +237,7 @@ namespace ClassicTilestorm
 			foreach (var att in selectedAttachments)
 			{
 				att.tile = tileUnderMouse;
-				var typeEditor = AttachmentEditing.GetCurrentEditor(this);
+				var typeEditor = AttachmentEditing.GetCurrentEditor(selectedAttachments);
 				typeEditor?.HandleDrag(this, att);
 			}
 		}

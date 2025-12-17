@@ -64,7 +64,8 @@ namespace ClassicTilestorm
 			sidePanel.Draw();
 
 			// === TYPE-SPECIFIC GUI (e.g. future sliders, buttons) ===
-			GetCurrentEditor(editor)?.DrawTypeSpecificGUI(editor);
+			//GetCurrentEditor(editor)?.DrawTypeSpecificGUI(editor);
+			GetCurrentEditor(editor.selectedAttachments)?.DrawTypeSpecificGUI(editor);
 		}
 
 		// Virtual methods - override in derived classes when needed
@@ -193,17 +194,17 @@ namespace ClassicTilestorm
 		}
 
 		// Helper to get the correct derived editor based on selection
-		public static AttachmentEditing GetCurrentEditor(EditorControllerAttachment editor)
+		public static AttachmentEditing GetCurrentEditor(MapAttachment[] selectedAttachments)
 		{
-			if (editor.selectedAttachments == null || editor.selectedAttachments.Length == 0)
+			if (selectedAttachments == null || selectedAttachments.Length == 0)
 				return null;
 
 			// Prioritize View because it has the most visual editing needs
-			if (editor.selectedAttachments.Any(att => att is View))
+			if (selectedAttachments.Any(att => att is View))
 				return AttachmentViewEditing.Instance;
 
 			// Otherwise, use the primary (first) attachment type
-			var primary = editor.selectedAttachments[0];
+			var primary = selectedAttachments[0];
 			return primary switch
 			{
 				Emitter => AttachmentEmitterEditing.Instance,

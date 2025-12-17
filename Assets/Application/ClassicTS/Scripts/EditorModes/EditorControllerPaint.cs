@@ -72,7 +72,7 @@ namespace ClassicTilestorm
 			else
 				defID = "tile_empty";
 
-			var snappedPos = editorController.iMapManager.SnappedMapPosition(worldPos);
+			var snappedPos = MapManager.SnappedMapPosition(worldPos);
 
 			editorController.iMapManager.UpdateTileAt(
 				Mathf.FloorToInt(snappedPos.x),

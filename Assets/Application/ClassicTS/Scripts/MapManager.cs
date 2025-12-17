@@ -27,7 +27,6 @@ namespace ClassicTilestorm
 		Transform CurrentTransform { get; }
 		string GetDefinitionAtIndex(int mapIndex);
 		bool UpdateTileAt(int x, int z, string id, bool expand = true, Action<bool, Vector3> onEdited = null);
-		Vector3 SnappedMapPosition(Vector3 vec);
 
 		int GetWaypoint(int index);
 		View GetView(int tile);
@@ -86,12 +85,12 @@ namespace ClassicTilestorm
 		public static readonly Vector3 tile_origin = new(0.5f, 0f, 0.5f);
 		public Vector3 TileWorldPosition(int index) => new Vector3(index % Width, 0f, index / Width) + tile_origin;
 		public int WorldToMapIndex(Vector3 vec) => vec.x >= 0 && vec.x < Width && vec.z >= 0 && vec.z < Height ? (int)vec.z * Width + (int)vec.x : -1;
-		public Vector3 SnappedMapPosition(Vector3 vec) => new Vector3(Mathf.FloorToInt(vec.x), 0f, Mathf.FloorToInt(vec.z)) + tile_origin;
+		public static Vector3 SnappedMapPosition(Vector3 vec) => new Vector3(Mathf.FloorToInt(vec.x), 0f, Mathf.FloorToInt(vec.z)) + tile_origin;
 #else
         public static readonly Vector3 tile_origin = Vector3.zero;
         public Vector3 TileWorldPosition(int index) => new(index % Width, 0f, index / Width);
         public int WorldToMapIndex(Vector3 vec) { vec += new Vector3(0.5f, 0f, 0.5f); return vec.x >= 0 && vec.x < Width && vec.z >= 0 && vec.z < Height ? (int)vec.z * Width + (int)vec.x : -1; }
-		public Vector3 SnappedMapPosition(Vector3 vec) => new Vector3(Mathf.FloorToInt(vec.x + 0.5f), 0f, Mathf.FloorToInt(vec.z + 0.5f));
+		public static Vector3 SnappedMapPosition(Vector3 vec) => new Vector3(Mathf.FloorToInt(vec.x + 0.5f), 0f, Mathf.FloorToInt(vec.z + 0.5f));
 #endif
 
 		public int CameraHitTile(Camera camera, Vector3 position) => WorldToMapIndex(ScreenToWorld(camera, position));
@@ -130,9 +129,12 @@ namespace ClassicTilestorm
 
 		public static Vector3 ScreenToWorld(Camera camera, Vector3 screenPos)
 		{
+			if (null == camera) return Vector3.negativeInfinity;
 			RayToWorld(camera.ScreenPointToRay(screenPos), out Vector3 result);
 			return result;
 		}
+
+		public static Vector3 ScreenToWorldSnapped(Camera camera, Vector3 screenPos) => SnappedMapPosition(ScreenToWorld(camera, Input.mousePosition));
 
 		private void Awake()
 		{

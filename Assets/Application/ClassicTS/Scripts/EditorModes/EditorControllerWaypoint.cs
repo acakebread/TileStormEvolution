@@ -205,7 +205,7 @@ namespace ClassicTilestorm
 		{
 			if (!editorCamera) return -1;
 			Vector3 mouseWorld = MapManager.ScreenToWorld(editorCamera, Input.mousePosition);
-			Vector3 snapped = editorController.iMapManager.SnappedMapPosition(mouseWorld);
+			Vector3 snapped = MapManager.SnappedMapPosition(mouseWorld);
 			return editorController.iMapManager.WorldToMapIndex(snapped);
 		}
 

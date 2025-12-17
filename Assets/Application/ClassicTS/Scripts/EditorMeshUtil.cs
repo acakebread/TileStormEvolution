@@ -69,7 +69,7 @@ namespace ClassicTilestorm
 
 			// Update position
 			var worldPos = MapManager.ScreenToWorld(camera, Input.mousePosition);
-			ghostMesh.transform.position = mapManager.SnappedMapPosition(worldPos);
+			ghostMesh.transform.position = MapManager.SnappedMapPosition(worldPos);
 
 			// === ToDo IMPLEMENTED ===
 			var mapIndex = mapManager.WorldToMapIndex(worldPos);
