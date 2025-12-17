@@ -35,19 +35,6 @@ namespace ClassicTilestorm
 		{
 			var items = new List<PopupItem>
 			{
-				//new PopupItem("Emitter [flame]", () =>
-				//{
-				//	var emitter = editor.AddNewAttachment(editor.PendingTile, typeof(Emitter)) as Emitter;
-				//	if (emitter != null)
-				//		emitter.variant = "flame";
-				//}),
-				//new PopupItem("Emitter [spark]", () =>
-				//{
-				//	var emitter = editor.AddNewAttachment(editor.PendingTile, typeof(Emitter)) as Emitter;
-				//	if (emitter != null)
-				//		emitter.variant = "spark";
-				//}),
-
 				new PopupItem("Emitter [flame]", () =>
 				{
 					AttachmentEmitterEditing.Instance.AddNewEmitter(editor, editor.PendingTile, "flame");
@@ -84,10 +71,8 @@ namespace ClassicTilestorm
 				{
 					map.RemoveAttachment(localAtt);
 
-					if (localAtt is Emitter emitter)
-					{
-						editor.editorController.iMapManager.DestroyEmitterInstance(emitter);
-					}
+					editor.editorController.iMapManager.DestroyAttachmentInstance(localAtt);
+
 					editor.SelectAttachments(null);
 					EditorPrimitiveUtil.HideCone();
 					EditorFrustumUtil.Hide();
@@ -105,11 +90,8 @@ namespace ClassicTilestorm
 				{
 					map.RemoveAllAttachmentsOnTile(editor.PendingTile);
 
-					var removedEmitters = attsOnTile.OfType<Emitter>();
-					foreach (var e in removedEmitters)
-					{
-						editor.editorController.iMapManager.DestroyEmitterInstance(e);
-					}
+					foreach (var att in attsOnTile)
+						editor.editorController.iMapManager.DestroyAttachmentInstance(att);
 
 					editor.SelectAttachments(null);
 					EditorPrimitiveUtil.HideCone();

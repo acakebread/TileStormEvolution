@@ -369,11 +369,10 @@ namespace ClassicTilestorm
 
 			map.AddAttachment(newAtt);
 
-			if (newAtt is Emitter) editorController.iMapManager.RefreshEmitterInstance(newAtt as Emitter);//nothing happens
 			editorController.OnMapChanged();
 			SelectAttachments(new MapAttachment[] { newAtt });
 
-			return newAtt; // ← Now returns the created object
+			return newAtt;
 		}
 
 		public PendingAction CurrentPendingAction => pendingAction;

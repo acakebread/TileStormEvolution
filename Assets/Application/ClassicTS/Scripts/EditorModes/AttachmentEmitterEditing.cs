@@ -29,7 +29,7 @@ namespace ClassicTilestorm
 			map.AddAttachment(emitter);
 
 			// This now creates the GameObject if needed
-			editor.editorController.iMapManager.RefreshEmitterInstance(emitter);
+			editor.editorController.iMapManager.RefreshAttachmentInstance(emitter);
 
 			editor.editorController.OnMapChanged();
 			editor.SelectAttachments(new MapAttachment[] { emitter });
@@ -61,7 +61,7 @@ namespace ClassicTilestorm
 		{
 			if (attachment is Emitter emitter)
 			{
-				editor.editorController.iMapManager.RefreshEmitterInstance(emitter);
+				editor.editorController.iMapManager.RefreshAttachmentInstance(emitter);
 
 				Vector3 worldPos = editor.editorController.iMapManager.TileWorldPosition(emitter.tile) + emitter.Position;
 				EditorTransformUtil.ShowAt(worldPos, emitter.Rotation, editor.editorCamera);
@@ -80,7 +80,7 @@ namespace ClassicTilestorm
 			{
 				emitter.Position = newWorldPos - editor.editorController.iMapManager.TileWorldPosition(emitter.tile);
 				emitter.Rotation = newWorldRot;
-				editor.editorController.iMapManager.RefreshEmitterInstance(emitter);
+				editor.editorController.iMapManager.RefreshAttachmentInstance(emitter);
 
 				// Update cone after transform change
 				Vector3 worldPos = editor.editorController.iMapManager.TileWorldPosition(emitter.tile) + emitter.Position;
