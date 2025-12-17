@@ -8,6 +8,7 @@ public static class EditorCameraMovement
 	private const float LookSpeedV = 2f;
 	private const float ZoomSpeed = 12f;
 	private const float MoveSpeedMultiplier = 1f;
+	private static float MoveSpeedModifier = 1f;
 
 	private static bool focus = false; 
 	public static void UpdateCamera(Transform camTransform, bool isMouseOverGui = false, bool allowInput = true)
@@ -47,16 +48,20 @@ public static class EditorCameraMovement
 		if (Input.GetMouseButtonUp(1))// || Input.touchCount == 0)//this doesn't work for obvious reasons if (Input.GetMouseButtonUp(1) || Input.touchCount == 0)
 			focus = false;
 
+		if (Input.GetKeyDown(KeyCode.Tab))
+			MoveSpeedModifier = 0.1f / MoveSpeedModifier;
+
+		// WASDQE movement
+		Vector3 translation = GetInputTranslationDirection() * ZoomSpeed * MoveSpeedMultiplier * MoveSpeedModifier * Time.deltaTime;
+
 		// Mouse wheel zoom (only if not over GUI)
 		if (!isMouseOverGui && GuiUtils.IsMouseInsideWindow())
 		{
 			float scroll = Input.GetAxis("Mouse ScrollWheel");
 			if (scroll != 0f)
-				camTransform.Translate(0, 0, scroll * ZoomSpeed, Space.Self);
+				translation += Vector3.forward * scroll * ZoomSpeed * MoveSpeedMultiplier * MoveSpeedModifier; //camTransform.Translate(0, 0, scroll * ZoomSpeed * MoveSpeedMultiplier * MoveSpeedModifier, Space.Self);
 		}
 
-		// WASDQE movement
-		Vector3 translation = GetInputTranslationDirection() * ZoomSpeed * MoveSpeedMultiplier * Time.deltaTime;
 		camTransform.Translate(translation, Space.Self);
 	}
 
