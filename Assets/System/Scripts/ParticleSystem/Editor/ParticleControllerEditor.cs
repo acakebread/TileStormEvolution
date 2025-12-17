@@ -14,6 +14,7 @@ namespace MassiveHadronLtd
 		private int _draggedPulseIndex = -1;
 		private const float MIN_PULSE_WIDTH = 0.01f;
 		private const float HANDLE_WIDTH_NORM = 0.08f;   // visual handle size in normalized space
+		private bool _curveDirty = false;
 
 		public override void OnInspectorGUI()
 		{
@@ -71,49 +72,104 @@ namespace MassiveHadronLtd
 			EditorGUILayout.LabelField("Scale Curve (%):", EditorStyles.boldLabel);
 			EditorGUILayout.LabelField("(Y-axis: 0 = 0%, 1 = 100%, 2 = 200%)");
 
+			//var curveProp = serializedObject.FindProperty("scaleCurve");
+			//var curve = curveProp.animationCurveValue;
+
+			//// 100 px tall curve editor
+			//Rect curveRect = EditorGUILayout.GetControlRect(false, 100);
+			//AnimationCurve newCurve = EditorGUI.CurveField(curveRect, curve, Color.green, new Rect(0, 0, 1, 2));
+
+			//// Preset buttons
+			//EditorGUILayout.BeginHorizontal();
+			//if (GUILayout.Button("Linear (100%)")) newCurve = AnimationCurve.Linear(0f, 1f, 1f, 1f);
+			//if (GUILayout.Button("Scale Up (0% to 200%)")) newCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 2f);
+			//if (GUILayout.Button("Scale Down (200% to 0%)")) newCurve = CreateScaleDownCurve();
+			//EditorGUILayout.EndHorizontal();
+
 			var curveProp = serializedObject.FindProperty("scaleCurve");
 			var curve = curveProp.animationCurveValue;
 
-			// 100 px tall curve editor
-			Rect curveRect = EditorGUILayout.GetControlRect(false, 100);
-			AnimationCurve newCurve = EditorGUI.CurveField(curveRect, curve, Color.green, new Rect(0, 0, 1, 2));
+			// --- SAFE curve drawing (prevents invalid CurveEditorWindow) ---
+			EditorGUILayout.Space();
+			EditorGUILayout.LabelField("Scale Curve (%):", EditorStyles.boldLabel);
+			EditorGUILayout.LabelField("(Y-axis: 0 = 0%, 1 = 100%, 2 = 200%)");
 
-			// Preset buttons
+			// Only draw CurveField outside layout transitions
+			if (Event.current.type != EventType.Layout &&
+				Event.current.type != EventType.Repaint)
+			{
+				Rect curveRect = EditorGUILayout.GetControlRect(false, 100);
+				EditorGUI.BeginChangeCheck();
+				AnimationCurve newCurve =
+					EditorGUI.CurveField(curveRect, curve, Color.green, new Rect(0, 0, 1, 2));
+
+				if (EditorGUI.EndChangeCheck())
+				{
+					curveProp.animationCurveValue = newCurve;
+					_curveDirty = true;
+				}
+			}
+			else
+			{
+				// Fallback (no CurveEditorWindow creation)
+				EditorGUILayout.PropertyField(curveProp, GUIContent.none, GUILayout.Height(100));
+			}
+
+			// --- Preset buttons ---
 			EditorGUILayout.BeginHorizontal();
-			if (GUILayout.Button("Linear (100%)")) newCurve = AnimationCurve.Linear(0f, 1f, 1f, 1f);
-			if (GUILayout.Button("Scale Up (0% to 200%)")) newCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 2f);
-			if (GUILayout.Button("Scale Down (200% to 0%)")) newCurve = CreateScaleDownCurve();
+			if (GUILayout.Button("Linear (100%)"))
+			{
+				curveProp.animationCurveValue = AnimationCurve.Linear(0f, 1f, 1f, 1f);
+				_curveDirty = true;
+			}
+			if (GUILayout.Button("Scale Up (0% to 200%)"))
+			{
+				curveProp.animationCurveValue = AnimationCurve.EaseInOut(0f, 0f, 1f, 2f);
+				_curveDirty = true;
+			}
+			if (GUILayout.Button("Scale Down (200% to 0%)"))
+			{
+				curveProp.animationCurveValue = CreateScaleDownCurve();
+				_curveDirty = true;
+			}
 			EditorGUILayout.EndHorizontal();
 
-			// Clamp / enforce start-end keys (same logic as old version)
-			if (!CurvesRoughlyEqual(curve, newCurve))
+			// --- Clamp & enforce ONLY on mouse release ---
+			if (_curveDirty && Event.current.type == EventType.MouseUp)
 			{
-				var temp = new AnimationCurve(newCurve.keys);
-				if (temp.keys.Length < 2) temp = AnimationCurve.Linear(0f, 1f, 1f, 1f);
-				else
-				{
-					for (int i = 0; i < temp.keys.Length; i++)
-					{
-						var k = temp.keys[i];
-						k.time = Mathf.Clamp01(k.time);
-						k.value = Mathf.Clamp(k.value, 0f, 2f);
-						temp.MoveKey(i, k);
-					}
-					bool hasStart = temp.keys.Any(k => Mathf.Approximately(k.time, 0f));
-					bool hasEnd = temp.keys.Any(k => Mathf.Approximately(k.time, 1f));
-					if (!hasStart) temp.AddKey(0f, Mathf.Clamp(temp.Evaluate(0f), 0f, 2f));
-					if (!hasEnd) temp.AddKey(1f, Mathf.Clamp(temp.Evaluate(1f), 0f, 2f));
-				}
-				// Force free tangents
-				for (int i = 0; i < temp.keys.Length; i++)
-				{
-					AnimationUtility.SetKeyBroken(temp, i, true);
-					AnimationUtility.SetKeyLeftTangentMode(temp, i, AnimationUtility.TangentMode.Free);
-					AnimationUtility.SetKeyRightTangentMode(temp, i, AnimationUtility.TangentMode.Free);
-				}
-				newCurve = temp;
+				NormalizeCurve(curveProp);
+				_curveDirty = false;
 			}
-			curveProp.animationCurveValue = newCurve;
+
+			//// Clamp / enforce start-end keys (same logic as old version)
+			//if (!CurvesRoughlyEqual(curve, newCurve))
+			//{
+			//	var temp = new AnimationCurve(newCurve.keys);
+			//	if (temp.keys.Length < 2) temp = AnimationCurve.Linear(0f, 1f, 1f, 1f);
+			//	else
+			//	{
+			//		for (int i = 0; i < temp.keys.Length; i++)
+			//		{
+			//			var k = temp.keys[i];
+			//			k.time = Mathf.Clamp01(k.time);
+			//			k.value = Mathf.Clamp(k.value, 0f, 2f);
+			//			temp.MoveKey(i, k);
+			//		}
+			//		bool hasStart = temp.keys.Any(k => Mathf.Approximately(k.time, 0f));
+			//		bool hasEnd = temp.keys.Any(k => Mathf.Approximately(k.time, 1f));
+			//		if (!hasStart) temp.AddKey(0f, Mathf.Clamp(temp.Evaluate(0f), 0f, 2f));
+			//		if (!hasEnd) temp.AddKey(1f, Mathf.Clamp(temp.Evaluate(1f), 0f, 2f));
+			//	}
+			//	// Force free tangents
+			//	for (int i = 0; i < temp.keys.Length; i++)
+			//	{
+			//		AnimationUtility.SetKeyBroken(temp, i, true);
+			//		AnimationUtility.SetKeyLeftTangentMode(temp, i, AnimationUtility.TangentMode.Free);
+			//		AnimationUtility.SetKeyRightTangentMode(temp, i, AnimationUtility.TangentMode.Free);
+			//	}
+			//	newCurve = temp;
+			//}
+			//curveProp.animationCurveValue = newCurve;
 
 			// ----- PWM / Emission -----------------------------------------
 			EditorGUILayout.Space();
@@ -363,6 +419,37 @@ namespace MassiveHadronLtd
 			c.floaterDriftFrequency = 0.4f;
 			c.floaterSpatialScale = 0.12f;
 			EditorUtility.SetDirty(c);
+		}
+
+		private void NormalizeCurve(SerializedProperty curveProp)
+		{
+			var curve = curveProp.animationCurveValue;
+			var temp = new AnimationCurve(curve.keys);
+
+			if (temp.keys.Length < 2)
+				temp = AnimationCurve.Linear(0f, 1f, 1f, 1f);
+
+			for (int i = 0; i < temp.keys.Length; i++)
+			{
+				var k = temp.keys[i];
+				k.time = Mathf.Clamp01(k.time);
+				k.value = Mathf.Clamp(k.value, 0f, 2f);
+				temp.MoveKey(i, k);
+			}
+
+			if (!temp.keys.Any(k => Mathf.Approximately(k.time, 0f)))
+				temp.AddKey(0f, Mathf.Clamp(temp.Evaluate(0f), 0f, 2f));
+			if (!temp.keys.Any(k => Mathf.Approximately(k.time, 1f)))
+				temp.AddKey(1f, Mathf.Clamp(temp.Evaluate(1f), 0f, 2f));
+
+			for (int i = 0; i < temp.keys.Length; i++)
+			{
+				AnimationUtility.SetKeyBroken(temp, i, true);
+				AnimationUtility.SetKeyLeftTangentMode(temp, i, AnimationUtility.TangentMode.Free);
+				AnimationUtility.SetKeyRightTangentMode(temp, i, AnimationUtility.TangentMode.Free);
+			}
+
+			curveProp.animationCurveValue = temp;
 		}
 	}
 }
