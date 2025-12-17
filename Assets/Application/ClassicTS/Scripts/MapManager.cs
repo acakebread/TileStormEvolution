@@ -599,7 +599,8 @@ namespace ClassicTilestorm
 					"spark" => "spark",
 					_ => null
 				},
-				Pickup p => "pickup", // example — you can make this dynamic later
+				Pickup => null,// null for now p => "pickup", // example — you can make this dynamic later
+				View => null,// Views have no runtime GO — only editor helpers
 				_ => null
 			};
 
@@ -609,8 +610,26 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			Vector3 worldPos = TileWorldPosition(attachment.tile) + GetAttachmentLocalPosition(attachment);
-			Quaternion rotation = GetAttachmentRotation(attachment);
+			//Vector3 worldPos = TileWorldPosition(attachment.tile) + GetAttachmentLocalPosition(attachment);
+			//Quaternion rotation = GetAttachmentRotation(attachment);
+
+			Vector3 localPos = attachment switch
+			{
+				Emitter e => e.Position,
+				Pickup => Vector3.up * 0.5f,// floating above ground
+				View v => v.Position,
+				_ => Vector3.zero
+			};
+
+			Quaternion rotation = attachment switch
+			{
+				Emitter e => e.Rotation,
+				Pickup => Quaternion.identity,
+				View v => v.Rotation,
+				_ => Quaternion.identity
+			};
+
+			Vector3 worldPos = TileWorldPosition(attachment.tile) + localPos;
 
 			if (attachmentGameObjects.TryGetValue(attachment, out GameObject go) && go != null)
 			{

@@ -31,6 +31,29 @@ namespace ClassicTilestorm
 
 		// === Generic popup implementations (exactly as before) ===
 
+		//private static void DrawAddPopup(EditorControllerAttachment editor)
+		//{
+		//	var items = new List<PopupItem>
+		//	{
+		//		new PopupItem("Emitter [flame]", () =>
+		//		{
+		//			AttachmentEmitterEditing.Instance.AddNewEmitter(editor, editor.PendingTile, "flame");
+		//		}),
+		//		new PopupItem("Emitter [spark]", () =>
+		//		{
+		//			AttachmentEmitterEditing.Instance.AddNewEmitter(editor, editor.PendingTile, "spark");
+		//		}),
+		//		new PopupItem("View", () => editor.AddNewAttachment(editor.PendingTile, typeof(View))),
+		//		new PopupItem("Pickup", () => editor.AddNewAttachment(editor.PendingTile, typeof(Pickup))),
+		//		PopupItem.Spacer(),
+		//		new PopupItem("Cancel", () => editor.SelectAttachments(null), colorOverride: Color.yellow)
+		//	};
+
+		//	bool closed = PopupMenu.Show(editor.PendingPopupScreenPos, "Add Attachment", items);
+		//	if (closed) editor.ClearPendingAction(false);//do not clear the selection - the gizmo editor needs it!!! - whole system needs a rethink / refactor
+		//}
+
+
 		private static void DrawAddPopup(EditorControllerAttachment editor)
 		{
 			var items = new List<PopupItem>
@@ -43,14 +66,21 @@ namespace ClassicTilestorm
 				{
 					AttachmentEmitterEditing.Instance.AddNewEmitter(editor, editor.PendingTile, "spark");
 				}),
-				new PopupItem("View", () => editor.AddNewAttachment(editor.PendingTile, typeof(View))),
-				new PopupItem("Pickup", () => editor.AddNewAttachment(editor.PendingTile, typeof(Pickup))),
+				new PopupItem("View", () =>
+				{
+					AttachmentViewEditing.Instance.AddNewView(editor, editor.PendingTile);
+				}),
+				new PopupItem("Pickup", () =>
+				{
+					AttachmentPickupEditing.Instance.AddNewPickup(editor, editor.PendingTile);
+				}),
 				PopupItem.Spacer(),
-				new PopupItem("Cancel", () => editor.SelectAttachments(null), colorOverride: Color.yellow)
+				new PopupItem("Cancel", colorOverride: Color.yellow)
 			};
 
 			bool closed = PopupMenu.Show(editor.PendingPopupScreenPos, "Add Attachment", items);
-			if (closed) editor.ClearPendingAction(false);//do not clear the selection - the gizmo editor needs it!!! - whole system needs a rethink / refactor
+			if (closed)
+				editor.ClearPendingAction(false); // keep selection for gizmo
 		}
 
 		private static void DrawDeletePopup(EditorControllerAttachment editor)
@@ -150,7 +180,7 @@ namespace ClassicTilestorm
 			{
 				if (editor.pendingAction != EditorControllerAttachment.PendingAction.Drag)
 					editor.SelectAttachments(null);
-				editor.ClearPendingAction();
+				editor.ClearPendingAction(false);
 			}
 		}
 

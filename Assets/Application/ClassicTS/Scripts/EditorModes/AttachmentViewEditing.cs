@@ -106,18 +106,18 @@ namespace ClassicTilestorm
 		// UTILITIES
 		// ===================================================================
 
-		private static void UpdateVisuals(EditorControllerAttachment editor, View view)
-		{
-			UpdateViewFrustumMarker(view, editor.editorController.iMapManager);
-			EditorTransformUtil.UpdateTransformGizmoVisuals(editor.editorCamera);
-		}
+		//private static void UpdateVisuals(EditorControllerAttachment editor, View view)
+		//{
+		//	UpdateViewFrustumMarker(view, editor.editorController.iMapManager);
+		//	EditorTransformUtil.UpdateTransformGizmoVisuals(editor.editorCamera);
+		//}
 
-		private static void ShowGizmoAndPreview(EditorControllerAttachment editor, View view)
-		{
-			Vector3 worldPos = editor.editorController.iMapManager.TileWorldPosition(view.tile) + view.Position;
-			EditorTransformUtil.ShowAt(worldPos, view.Rotation, editor.editorCamera);
-			editor.viewPreview.Show(view, editor.editorController.iMapManager);
-		}
+		//private static void ShowGizmoAndPreview(EditorControllerAttachment editor, View view)
+		//{
+		//	Vector3 worldPos = editor.editorController.iMapManager.TileWorldPosition(view.tile) + view.Position;
+		//	EditorTransformUtil.ShowAt(worldPos, view.Rotation, editor.editorCamera);
+		//	editor.viewPreview.Show(view, editor.editorController.iMapManager);
+		//}
 
 		private static void SnapViewDistanceToGround(View view, IMapManager mapManager)
 		{
@@ -165,6 +165,31 @@ namespace ClassicTilestorm
 
 			// Use UpdateFrustum for efficiency (handles mesh regeneration on FOV/distance change)
 			EditorFrustumUtil.UpdateFrustum(worldPos, targetRotation, view.Distance, view.FOV);
+		}
+
+		public View AddNewView(EditorControllerAttachment editor, int tile)
+		{
+			var map = editor.editorController?.iMapManager?.CurrentMap;
+			if (map == null) return null;
+
+			var view = new View
+			{
+				tile = tile,
+				Position = (Vector3.up + Vector3.back) * 8f,
+				LookAt = (Vector3.forward + Vector3.down) * 4f
+			};
+
+			map.AddAttachment(view);
+
+			// No runtime GO needed — just editor visuals
+			editor.editorController.iMapManager.RefreshAttachmentInstance(view); // safe no-op
+
+			editor.editorController.OnMapChanged();
+			editor.SelectAttachments(new[] { view });
+
+			HandleSelectionChanged(editor); // shows frustum, gizmo, preview
+
+			return view;
 		}
 	}
 }
