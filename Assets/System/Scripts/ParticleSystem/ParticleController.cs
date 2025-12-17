@@ -67,6 +67,11 @@ namespace MassiveHadronLtd
 
 		public ScaleTable SharedScaleTable => _sharedScaleTable;
 
+		[Header("Timeline Randomisation")]
+		public bool randomiseTimelineOffset = true;
+		[Tooltip("0 = non-deterministic, otherwise stable per-instance")]
+		public int timelineSeed = 0;
+
 		public struct ScaleTable
 		{
 			public float[] values;
@@ -126,6 +131,15 @@ namespace MassiveHadronLtd
 		private void OnEnable()
 		{
 			RenderPipelineManager.beginCameraRendering += OnBeginCameraRendering;
+
+			if (randomiseTimelineOffset && cycleTime > 0f)
+			{
+				if (timelineSeed != 0)
+					Random.InitState(timelineSeed ^ GetInstanceID());
+
+				timelinePosition = Random.value * cycleTime;
+				lastTimelinePosition = timelinePosition; // CRITICAL
+			}
 		}
 
 		private void OnDisable()
