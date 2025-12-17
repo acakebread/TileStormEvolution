@@ -93,12 +93,12 @@ namespace ClassicTilestorm
 		{
 			var items = new List<PopupItem>
 			{
-				new PopupItem("Emitter [flame]", () => { AttachmentEmitterEditing.Instance.AddNewEmitter(editor, editor.PendingTile, "flame"); }),
-				new PopupItem("Emitter [spark]", () => { AttachmentEmitterEditing.Instance.AddNewEmitter(editor, editor.PendingTile, "spark"); }),
-				new PopupItem("View", () => { AttachmentViewEditing.Instance.AddNewView(editor, editor.PendingTile); }),
-				new PopupItem("Pickup", () => { AttachmentPickupEditing.Instance.AddNewPickup(editor, editor.PendingTile); }),
+				new ("Emitter [flame]", () => { AttachmentEmitterEditing.Instance.AddNewEmitter(editor, editor.PendingTile, "flame"); }),
+				new ("Emitter [spark]", () => { AttachmentEmitterEditing.Instance.AddNewEmitter(editor, editor.PendingTile, "spark"); }),
+				new ("View", () => { AttachmentViewEditing.Instance.AddNewView(editor, editor.PendingTile); }),
+				new ("Pickup", () => { AttachmentPickupEditing.Instance.AddNewPickup(editor, editor.PendingTile); }),
 				PopupItem.Spacer(),
-				new PopupItem("Cancel", colorOverride: Color.yellow)
+				new ("Cancel", colorOverride: Color.yellow)
 			};
 
 			bool closed = PopupMenu.Show(editor.PendingPopupScreenPos, "Add Attachment", items);
