@@ -22,14 +22,6 @@ namespace ClassicTilestorm
 			if (gameObject == null)
 				return null;
 
-			//temporary special placeholder flag setting for special properties in absence of definition editor 
-			if (definition.model.Contains("tree"))
-				definition.bSway = true;//ToDo implement sway in definition editor - hard set to trees for now
-
-			//temporary special placeholder material override for special properties in absence of definition editor 
-			if ("Caustic" == definition.texture)
-				definition.material = "toxic";
-
 			//temporary provision to suppress texture replacement on loaded HD models
 			var renderer = gameObject.GetComponentInChildren<MeshRenderer>(true);
 			var isHD = renderer && null == renderer.material.mainTexture;

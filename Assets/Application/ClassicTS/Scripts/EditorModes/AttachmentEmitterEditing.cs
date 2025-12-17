@@ -29,6 +29,8 @@ namespace ClassicTilestorm
 		{
 			if (attachment is Emitter emitter)
 			{
+				editor.editorController.iMapManager.UpdateEmitterInstance(emitter);
+
 				Vector3 worldPos = editor.editorController.iMapManager.TileWorldPosition(emitter.tile) + emitter.Position;
 				EditorTransformUtil.ShowAt(worldPos, emitter.Rotation, editor.editorCamera);
 
@@ -46,6 +48,7 @@ namespace ClassicTilestorm
 			{
 				emitter.Position = newWorldPos - editor.editorController.iMapManager.TileWorldPosition(emitter.tile);
 				emitter.Rotation = newWorldRot;
+				editor.editorController.iMapManager.UpdateEmitterInstance(emitter);
 
 				// Update cone after transform change
 				Vector3 worldPos = editor.editorController.iMapManager.TileWorldPosition(emitter.tile) + emitter.Position;

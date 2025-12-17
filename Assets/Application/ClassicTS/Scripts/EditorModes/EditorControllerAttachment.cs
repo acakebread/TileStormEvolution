@@ -349,29 +349,6 @@ namespace ClassicTilestorm
 			};
 		}
 
-		//private void AddAttachmentAtTileWithType(int tile, System.Type type)
-		//{
-		//	var map = editorController?.iMapManager?.CurrentMap;
-		//	if (map == null) return;
-
-		//	MapAttachment newAtt = type.Name switch
-		//	{
-		//		"Emitter" => new Emitter { tile = tile, Position = Vector3.up, LookAt = Vector3.up },
-		//		"View" => new View { tile = tile, Position = (Vector3.up + Vector3.back) * 8, LookAt = (Vector3.forward + Vector3.down) * 4 },
-		//		"Pickup" => new Pickup { tile = tile },
-		//		_ => null
-		//	};
-
-		//	if (newAtt == null) return;
-
-		//	map.AddAttachment(newAtt);
-		//	editorController.OnMapChanged();
-		//	SelectAttachments(new MapAttachment[] { newAtt });
-		//}
-
-		//public void AddNewAttachment(int tile, System.Type type) => AddAttachmentAtTileWithType(tile, type);
-
-
 		public MapAttachment AddNewAttachment(int tile, System.Type type)
 		{
 			var map = editorController?.iMapManager?.CurrentMap;
@@ -391,6 +368,8 @@ namespace ClassicTilestorm
 			newAtt.tile = tile;
 
 			map.AddAttachment(newAtt);
+
+			if (newAtt is Emitter) editorController.iMapManager.UpdateEmitterInstance(newAtt as Emitter);//nothing happens
 			editorController.OnMapChanged();
 			SelectAttachments(new MapAttachment[] { newAtt });
 

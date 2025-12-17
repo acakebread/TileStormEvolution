@@ -33,6 +33,8 @@ namespace ClassicTilestorm
 		View GetView(int tile);
 
 		int CameraHitTile(Camera camera, Vector3 position);
+
+		void UpdateEmitterInstance(Emitter emitter);
 	}
 
 	public class MapManager : MonoBehaviour, IMapManager
@@ -145,11 +147,6 @@ namespace ClassicTilestorm
 			RayToWorld(camera.ScreenPointToRay(screenPos), out Vector3 result);
 			return result;
 		}
-		//{
-		//	var ray = camera.ScreenPointToRay(screenPos);
-		//	var plane = new Plane(Vector3.up, Vector3.zero);
-		//	return plane.Raycast(ray, out float d) ? ray.GetPoint(d) : Vector3.zero;
-		//}
 
 		private void Awake()
 		{
@@ -632,7 +629,7 @@ namespace ClassicTilestorm
 			static string GetPrefabPath(string id) => string.IsNullOrEmpty(id) ? null : $"{AssetPath.PrefabPath}{id}";
 		}
 
-		private void UpdateEmitterInstance(Emitter emitter)
+		public void UpdateEmitterInstance(Emitter emitter)
 		{
 			if (emitter == null || !emitterGameObjects.TryGetValue(emitter, out GameObject go) || go == null)
 				return;
@@ -652,6 +649,14 @@ namespace ClassicTilestorm
 				Debug.LogWarning("GeometryManager: Invalid Definition or geometry name." + definition.id);
 				return GeometryFactory.CreateFallbackTile(parent, position);
 			}
+
+			//temporary special placeholder flag setting for special properties in absence of definition editor 
+			if (definition.model.Contains("tree"))
+				definition.bSway = true;//ToDo implement sway in definition editor - hard set to trees for now
+
+			//temporary special placeholder material override for special properties in absence of definition editor 
+			if ("Caustic" == definition.texture)
+				definition.material = "toxic";
 
 			return DefinitionFactory.Instantiate(definition, position, Quaternion.identity, parent);
 		}
