@@ -29,7 +29,6 @@ namespace ClassicTilestorm
 
 		public override bool IsMouseOverGUI()
 		{
-			if (editorController.CurrentMode != EditorMode.Attachment) return false;
 			if (base.IsMouseOverGUI()) return true;
 
 			Rect panelRect = sidePanel.GetPanelRect();
@@ -85,6 +84,7 @@ namespace ClassicTilestorm
 
 		public override void Update()
 		{
+			if (IsMouseOverGUI() || IsGuiControlActive()) return;
 			var isMouseOverPreview = IsMouseOverPreview();
 
 			if (EditorTransformUtil.HandleTransformGizmoInput(editorCamera))
@@ -172,7 +172,7 @@ namespace ClassicTilestorm
 
 		public override void OnGUI()
 		{
-			if (editorController.CurrentMode != EditorMode.Attachment || editorCamera == null) return;
+			if (null == editorCamera) return;
 
 			var map = editorController?.iMapManager?.CurrentMap;
 			if (map == null) return;
@@ -249,6 +249,7 @@ namespace ClassicTilestorm
 
 		private int GetTileUnderMouse()
 		{
+			if (!editorCamera) return -1;
 			Vector3 mouseWorld = MapManager.ScreenToWorld(editorCamera, Input.mousePosition);
 			Vector3 snapped = editorController.iMapManager.SnappedMapPosition(mouseWorld);
 			return editorController.iMapManager.WorldToMapIndex(snapped);

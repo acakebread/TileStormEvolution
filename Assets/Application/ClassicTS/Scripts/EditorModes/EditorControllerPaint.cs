@@ -22,8 +22,6 @@ namespace ClassicTilestorm
 
 		public override bool IsMouseOverGUI()
 		{
-			if (editorController.CurrentMode != EditorController.EditorMode.Paint) return false;
-
 			if (base.IsMouseOverGUI()) return true;
 			Rect panelRect = sidePanel.GetPanelRect();
 			Vector2 mouse = Input.mousePosition;
@@ -102,7 +100,7 @@ namespace ClassicTilestorm
 
 		public override void OnGUI()
 		{
-			if (editorController.CurrentMode != EditorController.EditorMode.Paint || editorCamera == null) return;
+			if (null == editorCamera) return;
 
 			if (leftButtonStyle == null)
 			{

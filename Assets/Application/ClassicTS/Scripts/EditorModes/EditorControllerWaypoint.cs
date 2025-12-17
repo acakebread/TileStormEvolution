@@ -27,9 +27,8 @@ namespace ClassicTilestorm
 
 		public override bool IsMouseOverGUI()
 		{
-			if (editorController.CurrentMode != EditorController.EditorMode.Waypoint) return false;
-
 			if (base.IsMouseOverGUI()) return true;
+
 			Rect panelRect = sidePanel.GetPanelRect();
 			Vector2 mouse = Input.mousePosition;
 			mouse.y = Screen.height - mouse.y;
@@ -105,11 +104,9 @@ namespace ClassicTilestorm
 		public override void Update()
 		{
 			base.Update();
-			if (!editorCamera || IsMouseOverGUI() || IsGuiControlActive()) return;
+			if (IsMouseOverGUI() || IsGuiControlActive()) return;
 
-			var worldPos = MapManager.ScreenToWorld(editorCamera, Input.mousePosition);
-			var snapped = editorController.iMapManager.SnappedMapPosition(worldPos);
-			int tileUnderMouse = editorController.iMapManager.WorldToMapIndex(snapped);
+			int tileUnderMouse = GetTileUnderMouse();
 
 			// === CLICK DETECTION (shared for left & right) ===
 			if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1))
@@ -205,11 +202,16 @@ namespace ClassicTilestorm
 			return null != map && null != map.waypoints && map.waypoints.Contains(tileIndex) ? Array.IndexOf(map.waypoints, tileIndex) : -1;
 		}
 
+		private int GetTileUnderMouse()
+		{
+			if (!editorCamera) return -1;
+			Vector3 mouseWorld = MapManager.ScreenToWorld(editorCamera, Input.mousePosition);
+			Vector3 snapped = editorController.iMapManager.SnappedMapPosition(mouseWorld);
+			return editorController.iMapManager.WorldToMapIndex(snapped);
+		}
+
 		public override void OnGUI()
 		{
-			if (editorController.CurrentMode != EditorController.EditorMode.Waypoint)
-				return;
-
 			sidePanel.Update();
 
 			// Build ListView items
