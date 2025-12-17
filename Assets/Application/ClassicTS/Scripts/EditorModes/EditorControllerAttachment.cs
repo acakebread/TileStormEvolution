@@ -369,7 +369,7 @@ namespace ClassicTilestorm
 
 			map.AddAttachment(newAtt);
 
-			if (newAtt is Emitter) editorController.iMapManager.UpdateEmitterInstance(newAtt as Emitter);//nothing happens
+			if (newAtt is Emitter) editorController.iMapManager.RefreshEmitterInstance(newAtt as Emitter);//nothing happens
 			editorController.OnMapChanged();
 			SelectAttachments(new MapAttachment[] { newAtt });
 
@@ -377,11 +377,14 @@ namespace ClassicTilestorm
 		}
 
 		public PendingAction CurrentPendingAction => pendingAction;
-		public void ClearPendingAction()
+		public void ClearPendingAction(bool clearSelection = true)
 		{
-			selectedAttachments = null;
-			pendingTile = -1;
 			pendingAction = PendingAction.Wait;
+			if (clearSelection)
+			{
+				selectedAttachments = null;
+				pendingTile = -1;
+			}
 		}
 		public Vector2 PendingPopupScreenPos => pendingPopupScreenPos;
 		public int PendingTile => pendingTile;

@@ -35,17 +35,26 @@ namespace ClassicTilestorm
 		{
 			var items = new List<PopupItem>
 			{
+				//new PopupItem("Emitter [flame]", () =>
+				//{
+				//	var emitter = editor.AddNewAttachment(editor.PendingTile, typeof(Emitter)) as Emitter;
+				//	if (emitter != null)
+				//		emitter.variant = "flame";
+				//}),
+				//new PopupItem("Emitter [spark]", () =>
+				//{
+				//	var emitter = editor.AddNewAttachment(editor.PendingTile, typeof(Emitter)) as Emitter;
+				//	if (emitter != null)
+				//		emitter.variant = "spark";
+				//}),
+
 				new PopupItem("Emitter [flame]", () =>
 				{
-					var emitter = editor.AddNewAttachment(editor.PendingTile, typeof(Emitter)) as Emitter;
-					if (emitter != null)
-						emitter.variant = "flame";
+					AttachmentEmitterEditing.Instance.AddNewEmitter(editor, editor.PendingTile, "flame");
 				}),
 				new PopupItem("Emitter [spark]", () =>
 				{
-					var emitter = editor.AddNewAttachment(editor.PendingTile, typeof(Emitter)) as Emitter;
-					if (emitter != null)
-						emitter.variant = "spark";
+					AttachmentEmitterEditing.Instance.AddNewEmitter(editor, editor.PendingTile, "spark");
 				}),
 				new PopupItem("View", () => editor.AddNewAttachment(editor.PendingTile, typeof(View))),
 				new PopupItem("Pickup", () => editor.AddNewAttachment(editor.PendingTile, typeof(Pickup))),
@@ -54,7 +63,7 @@ namespace ClassicTilestorm
 			};
 
 			bool closed = PopupMenu.Show(editor.PendingPopupScreenPos, "Add Attachment", items);
-			if (closed) editor.ClearPendingAction();
+			if (closed) editor.ClearPendingAction(false);//do not clear the selection - the gizmo editor needs it!!! - whole system needs a rethink / refactor
 		}
 
 		private static void DrawDeletePopup(EditorControllerAttachment editor)
@@ -74,6 +83,11 @@ namespace ClassicTilestorm
 				items.Add(new PopupItem(label, () =>
 				{
 					map.RemoveAttachment(localAtt);
+
+					if (localAtt is Emitter emitter)
+					{
+						editor.editorController.iMapManager.DestroyEmitterInstance(emitter);
+					}
 					editor.SelectAttachments(null);
 					EditorPrimitiveUtil.HideCone();
 					EditorFrustumUtil.Hide();
@@ -90,6 +104,13 @@ namespace ClassicTilestorm
 				items.Add(new PopupItem("Delete All", () =>
 				{
 					map.RemoveAllAttachmentsOnTile(editor.PendingTile);
+
+					var removedEmitters = attsOnTile.OfType<Emitter>();
+					foreach (var e in removedEmitters)
+					{
+						editor.editorController.iMapManager.DestroyEmitterInstance(e);
+					}
+
 					editor.SelectAttachments(null);
 					EditorPrimitiveUtil.HideCone();
 					EditorFrustumUtil.Hide();

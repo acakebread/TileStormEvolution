@@ -34,7 +34,8 @@ namespace ClassicTilestorm
 
 		int CameraHitTile(Camera camera, Vector3 position);
 
-		void UpdateEmitterInstance(Emitter emitter);
+		void RefreshEmitterInstance(Emitter emitter);
+		void DestroyEmitterInstance(Emitter emitter);
 	}
 
 	public class MapManager : MonoBehaviour, IMapManager
@@ -74,6 +75,11 @@ namespace ClassicTilestorm
 
 		public int[] Waypoints { get => currentMap?.waypoints; set { if (null != currentMap) currentMap.waypoints = value; } }
 
+		// -----------------------------------------------------------------------
+		// Emitter runtime instances
+		// -----------------------------------------------------------------------
+		private readonly Dictionary<Emitter, GameObject> emitterGameObjects = new();
+
 		public int GetWaypoint(int index) => (index >= 0 && null != currentMap?.waypoints) ? index < currentMap.waypoints.Length ? currentMap.waypoints[index] : -1 : -1;
 
 #if UNITY_EDITOR
@@ -88,13 +94,6 @@ namespace ClassicTilestorm
 		public Vector3 SnappedMapPosition(Vector3 vec) => new Vector3(Mathf.FloorToInt(vec.x + 0.5f), 0f, Mathf.FloorToInt(vec.z + 0.5f));
 #endif
 
-		public enum Anchor
-		{
-			TopLeft, TopCenter, TopRight,
-			MiddleLeft, Center, MiddleRight,
-			BottomLeft, BottomCenter, BottomRight
-		}
-
 		public int CameraHitTile(Camera camera, Vector3 position) => WorldToMapIndex(ScreenToWorld(camera, position));
 
 		public View GetView(int tile)
@@ -106,19 +105,6 @@ namespace ClassicTilestorm
 			{
 				if (att is View view && att.tile == tile)
 					return view;
-			}
-			return null;
-		}
-
-		public Emitter GetEmitter(int tile)
-		{
-			if (currentMap?.attachments == null || tile < 0 || tile >= currentMap.tiles.Length)
-				return null;
-
-			foreach (var att in currentMap.attachments)
-			{
-				if (att is Emitter emitter && att.tile == tile)
-					return emitter;
 			}
 			return null;
 		}
@@ -154,8 +140,16 @@ namespace ClassicTilestorm
 			mapTiles = null;
 		}
 
+		// Add this near the top with other methods
+		private void OnDestroy()
+		{
+			CleanupEmitters();
+		}
+
 		private void Initialise(Map map)
 		{
+			CleanupEmitters(); // <-- Add this line at the very beginning
+
 			currentMap = map ?? throw new ArgumentNullException(nameof(map));
 
 			if (string.IsNullOrEmpty(currentMap.name))
@@ -170,7 +164,11 @@ namespace ClassicTilestorm
 			else Solve();
 
 			InitializeWindController();
-			RebuildEmitterVisuals();
+
+			// After loading attachments, refresh all emitters
+			foreach (var att in CurrentMap.attachments.OfType<Emitter>())
+				RefreshEmitterInstance(att);
+
 			SetupWaypoints();
 		}
 
@@ -360,7 +358,7 @@ namespace ClassicTilestorm
 			else
 				result = UpdateTileAtRestricted(x, z, id, onEdited);
 
-			RebuildEmitterVisuals(); // Safe to call — destroys and recreates only emitters
+			//RebuildEmitterVisuals();//we need to deal with this because emitters vanish if map resized
 			return result;
 		}
 
@@ -388,6 +386,8 @@ namespace ClassicTilestorm
 				newTile.gameObject = InstantiateTile(def, transform, TileWorldPosition(index));
 
 			mapTiles[index] = new MapTile(id, newTile);
+			// ADD THIS: Even on single tile change, refresh emitters on that tile
+			RefreshEmittersOnTile(index);
 
 			// Update string table
 			if (currentMap.table == null || !Array.Exists(currentMap.table, s => s == id))
@@ -495,6 +495,9 @@ namespace ClassicTilestorm
 			{
 				DestroyAllTiles();
 				LoadTileData(currentMap.tiles);
+
+				// ADD THIS: Refresh all emitters after bounds change
+				RefreshAllEmitterInstances();
 			}
 			else
 			{
@@ -509,6 +512,9 @@ namespace ClassicTilestorm
 					newTile.gameObject = InstantiateTile(def, transform, TileWorldPosition(index));
 
 				mapTiles[index] = new MapTile(id, newTile);
+
+				// ADD THIS: Even on single tile change, refresh emitters on that tile
+				RefreshEmittersOnTile(index);
 			}
 
 			currentMap.Consolidate();
@@ -540,13 +546,42 @@ namespace ClassicTilestorm
 		}
 
 		// -----------------------------------------------------------------------
-		// Emitter visualization (runtime)
+		// Emitter runtime instance management
 		// -----------------------------------------------------------------------
-		private readonly Dictionary<Emitter, GameObject> emitterInstances = new();
 
-		private void InstantiateEmitter(Emitter emitter)
+		private void CleanupEmitters()
 		{
-			if (emitter == null || string.IsNullOrEmpty(emitter.variant)) return;
+			foreach (var emitter in emitterGameObjects.Keys.ToList())
+			{
+				DestroyEmitterInstance(emitter);
+			}
+			emitterGameObjects.Clear();
+		}
+
+		public Emitter GetEmitter(int tile)
+		{
+			if (currentMap?.attachments == null || tile < 0 || tile >= currentMap.tiles.Length)
+				return null;
+
+			foreach (var att in currentMap.attachments)
+			{
+				if (att is Emitter emitter && att.tile == tile)
+					return emitter;
+			}
+			return null;
+		}
+
+		/// <summary>
+		/// Ensures the emitter has a runtime GameObject, creates it if missing, updates transform if present.
+		/// </summary>
+		public void RefreshEmitterInstance(Emitter emitter)
+		{
+			if (emitter == null || string.IsNullOrEmpty(emitter.variant))
+			{
+				// If invalid or no variant, ensure it's destroyed
+				DestroyEmitterInstance(emitter);
+				return;
+			}
 
 			string prefabName = emitter.variant switch
 			{
@@ -555,88 +590,86 @@ namespace ClassicTilestorm
 				_ => null
 			};
 
-			if (string.IsNullOrEmpty(prefabName)) return;
-
-			Vector3 tileWorld = TileWorldPosition(emitter.tile);
-			Vector3 worldPos = tileWorld + emitter.Position;
-
-			GameObject go = PrefabFactory.Instantiate(GetPrefabPath(prefabName), CurrentTransform);
-			if (go != null)
+			if (prefabName == null)
 			{
+				DestroyEmitterInstance(emitter);
+				return;
+			}
+
+			Vector3 worldPos = TileWorldPosition(emitter.tile) + emitter.Position;
+			Quaternion rotation = emitter.Rotation;
+
+			// Try get existing
+			if (emitterGameObjects.TryGetValue(emitter, out GameObject go) && go != null)
+			{
+				// Just update transform
 				go.transform.position = worldPos;
-				go.transform.rotation = emitter.Rotation;
-				go.name = $"Emitter_{prefabName}_{emitter.tile}";
-
-				emitterInstances[emitter] = go;
+				go.transform.rotation = rotation;
+				return;
 			}
 
-			static string GetPrefabPath(string id) => string.IsNullOrEmpty(id) ? null : $"{AssetPath.PrefabPath}{id}";
+			// Otherwise: instantiate new
+			string prefabPath = $"{AssetPath.PrefabPath}{prefabName}";
+			GameObject prefab = Resources.Load<GameObject>(prefabPath); // or use your PrefabFactory
+			if (prefab == null)
+			{
+				Debug.LogWarning($"Emitter prefab not found: {prefabPath}");
+				return;
+			}
+
+			go = Instantiate(prefab, transform);
+			go.transform.position = worldPos;
+			go.transform.rotation = rotation;
+			go.name = $"Emitter_{prefabName}_tile{emitter.tile}";
+
+			emitterGameObjects[emitter] = go;
 		}
 
-		private void DestroyAllEmitters()
+		/// <summary>
+		/// Destroys the runtime GameObject for this emitter (if exists) and removes from tracking.
+		/// </summary>
+		public void DestroyEmitterInstance(Emitter emitter)
 		{
-			foreach (var go in emitterInstances.Values)
+			if (emitter == null) return;
+
+			if (emitterGameObjects.TryGetValue(emitter, out GameObject go) && go != null)
 			{
-				if (go != null) Destroy(go);
+				if (Application.isPlaying)
+					Destroy(go);
+				else
+					DestroyImmediate(go);
 			}
-			emitterInstances.Clear();
+
+			emitterGameObjects.Remove(emitter);
 		}
 
-		// -----------------------------------------------------------------------
-		// Emitter runtime instances
-		// -----------------------------------------------------------------------
-		private readonly Dictionary<Emitter, GameObject> emitterGameObjects = new();
-
-		private void RebuildEmitterVisuals()
+		/// <summary>
+		/// Refreshes all emitter instances — useful after map resize/crop
+		/// </summary>
+		private void RefreshAllEmitterInstances()
 		{
-			// Clean up old ones
-			foreach (var go in emitterGameObjects.Values)
-			{
-				if (go != null) Destroy(go);
-			}
-			emitterGameObjects.Clear();
+			if (currentMap?.attachments == null) return;
 
+			foreach (var att in currentMap.attachments.OfType<Emitter>())
+			{
+				RefreshEmitterInstance(att);
+			}
+		}
+
+		/// <summary>
+		/// Refreshes only emitters attached to a specific tile — efficient for single tile edits
+		/// </summary>
+		private void RefreshEmittersOnTile(int tileIndex)
+		{
 			if (currentMap?.attachments == null) return;
 
 			foreach (var att in currentMap.attachments)
 			{
-				if (att is Emitter emitter && !string.IsNullOrEmpty(emitter.variant))
+				if (att.tile == tileIndex && att is Emitter emitter)
 				{
-					string prefabName = emitter.variant switch
-					{
-						"flame" => "flame",
-						"spark" => "spark",
-						_ => null
-					};
-
-					if (prefabName == null) continue;
-
-					Vector3 worldPos = TileWorldPosition(emitter.tile) + emitter.Position;
-
-					GameObject go = PrefabFactory.Instantiate(GetPrefabPath(prefabName), transform); // parent under the map
-
-					if (go != null)
-					{
-						go.transform.position = worldPos;
-						go.transform.rotation = emitter.Rotation;
-						go.name = $"Emitter_{prefabName}_tile{emitter.tile}";
-
-						emitterGameObjects[emitter] = go;
-					}
+					RefreshEmitterInstance(emitter);
 				}
 			}
-
-			static string GetPrefabPath(string id) => string.IsNullOrEmpty(id) ? null : $"{AssetPath.PrefabPath}{id}";
-		}
-
-		public void UpdateEmitterInstance(Emitter emitter)
-		{
-			if (emitter == null || !emitterGameObjects.TryGetValue(emitter, out GameObject go) || go == null)
-				return;
-
-			Vector3 worldPos = TileWorldPosition(emitter.tile) + emitter.Position;
-			go.transform.position = worldPos;
-			go.transform.rotation = emitter.Rotation;
 		}
 
 		private static GameObject InstantiateTile(Definition definition, Transform parent, Vector3 position)

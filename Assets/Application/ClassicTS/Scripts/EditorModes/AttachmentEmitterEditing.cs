@@ -8,6 +8,38 @@ namespace ClassicTilestorm
 	{
 		public static readonly AttachmentEmitterEditing Instance = new();
 
+		/// <summary>
+		/// Creates a new Emitter on the given tile with the specified variant,
+		/// adds it to the map, updates runtime visuals, and selects it.
+		/// Returns the created emitter, or null on failure.
+		/// </summary>
+		public Emitter AddNewEmitter(EditorControllerAttachment editor, int tile, string variant)
+		{
+			var map = editor.editorController?.iMapManager?.CurrentMap;
+			if (map == null || string.IsNullOrEmpty(variant)) return null;
+
+			var emitter = new Emitter
+			{
+				tile = tile,
+				Position = Vector3.up,
+				LookAt = Vector3.up,
+				variant = variant  // Critical: variant must be set BEFORE RefreshEmitterInstance
+			};
+
+			map.AddAttachment(emitter);
+
+			// This now creates the GameObject if needed
+			editor.editorController.iMapManager.RefreshEmitterInstance(emitter);
+
+			editor.editorController.OnMapChanged();
+			editor.SelectAttachments(new MapAttachment[] { emitter });
+
+			// Show gizmo/cone immediately
+			HandleSelectionChanged(editor);
+
+			return emitter;
+		}
+
 		public override void HandleSelectionChanged(EditorControllerAttachment editor)
 		{
 			var emitter = editor.selectedAttachments?.OfType<Emitter>().FirstOrDefault();
@@ -29,7 +61,7 @@ namespace ClassicTilestorm
 		{
 			if (attachment is Emitter emitter)
 			{
-				editor.editorController.iMapManager.UpdateEmitterInstance(emitter);
+				editor.editorController.iMapManager.RefreshEmitterInstance(emitter);
 
 				Vector3 worldPos = editor.editorController.iMapManager.TileWorldPosition(emitter.tile) + emitter.Position;
 				EditorTransformUtil.ShowAt(worldPos, emitter.Rotation, editor.editorCamera);
@@ -48,7 +80,7 @@ namespace ClassicTilestorm
 			{
 				emitter.Position = newWorldPos - editor.editorController.iMapManager.TileWorldPosition(emitter.tile);
 				emitter.Rotation = newWorldRot;
-				editor.editorController.iMapManager.UpdateEmitterInstance(emitter);
+				editor.editorController.iMapManager.RefreshEmitterInstance(emitter);
 
 				// Update cone after transform change
 				Vector3 worldPos = editor.editorController.iMapManager.TileWorldPosition(emitter.tile) + emitter.Position;
