@@ -233,10 +233,9 @@ namespace ClassicTilestorm
 		private void HandleDrag(int tileUnderMouse)
 		{
 			foreach (var att in selectedAttachments)
-			{
 				att.tile = tileUnderMouse;
-				AttachmentEditing.HandleDrag(this, att);
-			}
+
+			AttachmentEditing.HandleDrag(this);
 		}
 
 		// New: Only called on clean click (no drag)

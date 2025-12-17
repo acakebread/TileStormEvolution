@@ -76,7 +76,12 @@ namespace ClassicTilestorm
 		public static void HandleSelectionChanged(EditorControllerAttachment editor) => GetCurrentEditor(editor.selectedAttachments)?.OnHandleSelectionChanged(editor);
 		protected virtual void OnHandleSelectionChanged(EditorControllerAttachment editor) { }
 
-		public static void HandleDrag(EditorControllerAttachment editor, MapAttachment attachment) => GetCurrentEditor(editor.selectedAttachments)?.OnHandleDrag(editor, attachment);
+		public static void HandleDrag(EditorControllerAttachment editor)
+		{
+			var typeEditor = GetCurrentEditor(editor.selectedAttachments);
+			if (null == typeEditor) return;
+			foreach (var att in editor.selectedAttachments) typeEditor?.OnHandleDrag(editor, att);
+		}
 		protected virtual void OnHandleDrag(EditorControllerAttachment editor, MapAttachment attachment) { }
 
 		private static void DrawAddPopup(EditorControllerAttachment editor)
