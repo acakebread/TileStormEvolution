@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using static MassiveHadronLtd.GuiUtils;
 using System.Linq;
+using System;
 
 namespace ClassicTilestorm
 {
@@ -64,23 +65,27 @@ namespace ClassicTilestorm
 			sidePanel.Draw();
 
 			// === TYPE-SPECIFIC GUI (e.g. future sliders, buttons) ===
-			GetCurrentEditor(editor.selectedAttachments)?.DrawTypeSpecificGUI(editor);
+			GetEditorForSelection(editor.selectedAttachments)?.DrawTypeSpecificGUI(editor);
 		}
 
 		// Virtual methods - override in derived classes when needed
 		protected virtual void DrawTypeSpecificGUI(EditorControllerAttachment editor) { }//currently no implementations but will be used for camera FOV / emitter params etc
 
-		public static void HandleGizmoInput(EditorControllerAttachment editor) => GetCurrentEditor(editor.selectedAttachments)?.OnHandleGizmoInput(editor);
+		public static void HandleGizmoInput(EditorControllerAttachment editor) => GetEditorForSelection(editor.selectedAttachments)?.OnHandleGizmoInput(editor);
 		protected virtual void OnHandleGizmoInput(EditorControllerAttachment editor) { }
 
-		public static void HandleSelectionChanged(EditorControllerAttachment editor) => GetCurrentEditor(editor.selectedAttachments)?.OnHandleSelectionChanged(editor);
+		public static void HandleSelectionChanged(EditorControllerAttachment editor) => GetEditorForSelection(editor.selectedAttachments)?.OnHandleSelectionChanged(editor);
 		protected virtual void OnHandleSelectionChanged(EditorControllerAttachment editor) { }
 
 		public static void HandleDrag(EditorControllerAttachment editor)
 		{
-			var typeEditor = GetCurrentEditor(editor.selectedAttachments);
-			if (null == typeEditor) return;
-			foreach (var att in editor.selectedAttachments) typeEditor?.OnHandleDrag(editor, att);
+			if (editor?.selectedAttachments == null) return;
+
+			foreach (var att in editor.selectedAttachments)
+			{
+				var typeEditor = GetEditorFor(att);
+				typeEditor?.OnHandleDrag(editor, att);
+			}
 		}
 		protected virtual void OnHandleDrag(EditorControllerAttachment editor, MapAttachment attachment) { }
 
@@ -202,24 +207,34 @@ namespace ClassicTilestorm
 			}
 		}
 
-		// Helper to get the correct derived editor based on selection
-		private static AttachmentEditing GetCurrentEditor(MapAttachment[] selectedAttachments)
+		// In AttachmentEditing.cs
+
+		private static AttachmentEditing GetEditorFor(MapAttachment attachment)
+		{
+			if (attachment == null) return null;
+
+			return attachment switch
+			{
+				Emitter => AttachmentEmitterEditing.Instance,
+				View => AttachmentViewEditing.Instance,
+				Pickup => AttachmentPickupEditing.Instance,
+				_ => null
+			};
+		}
+
+		// Optional: Only if you need it for uniform selections (e.g. type-specific GUI when all same type)
+		private static AttachmentEditing GetEditorForSelection(MapAttachment[] selectedAttachments)
 		{
 			if (selectedAttachments == null || selectedAttachments.Length == 0)
 				return null;
 
-			// Prioritize View because it has the most visual editing needs
-			if (selectedAttachments.Any(att => att is View))
-				return AttachmentViewEditing.Instance;
-
-			// Otherwise, use the primary (first) attachment type
-			var primary = selectedAttachments[0];
-			return primary switch
+			var firstType = selectedAttachments[0].GetType();
+			if (selectedAttachments.All(att => att.GetType() == firstType))
 			{
-				Emitter => AttachmentEmitterEditing.Instance,
-				Pickup => AttachmentPickupEditing.Instance,
-				_ => null
-			};
+				return GetEditorFor(selectedAttachments[0]);
+			}
+
+			return null; // mixed → no shared editor
 		}
 
 		public static void UpdateMapMarkers(IMapManager mapManager, int[] tiles, int selectedIndex = -1, EditorMarkerUtil.MarkerType type = EditorMarkerUtil.MarkerType.Undefined)
