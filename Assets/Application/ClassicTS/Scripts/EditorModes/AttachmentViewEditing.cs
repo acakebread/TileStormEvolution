@@ -1,5 +1,4 @@
-﻿// AttachmentViewEditing.cs
-using UnityEngine;
+﻿using UnityEngine;
 using System.Linq;
 
 namespace ClassicTilestorm
@@ -38,11 +37,6 @@ namespace ClassicTilestorm
 				Vector3 worldPos = editor.editorController.iMapManager.TileWorldPosition(view.tile) + view.Position;
 				EditorTransformUtil.ShowAt(worldPos, view.Rotation, editor.editorCamera);
 			}
-		}
-
-		protected override void DrawTypeSpecificGUI(EditorControllerAttachment editor)
-		{
-			// Future: View-specific inspector panel here
 		}
 
 		// ===================================================================
@@ -101,23 +95,6 @@ namespace ClassicTilestorm
 				editor.viewPreview.Show(view, editor.editorController.iMapManager);
 			}
 		}
-
-		// ===================================================================
-		// UTILITIES
-		// ===================================================================
-
-		//private static void UpdateVisuals(EditorControllerAttachment editor, View view)
-		//{
-		//	UpdateViewFrustumMarker(view, editor.editorController.iMapManager);
-		//	EditorTransformUtil.UpdateTransformGizmoVisuals(editor.editorCamera);
-		//}
-
-		//private static void ShowGizmoAndPreview(EditorControllerAttachment editor, View view)
-		//{
-		//	Vector3 worldPos = editor.editorController.iMapManager.TileWorldPosition(view.tile) + view.Position;
-		//	EditorTransformUtil.ShowAt(worldPos, view.Rotation, editor.editorCamera);
-		//	editor.viewPreview.Show(view, editor.editorController.iMapManager);
-		//}
 
 		private static void SnapViewDistanceToGround(View view, IMapManager mapManager)
 		{
@@ -191,5 +168,25 @@ namespace ClassicTilestorm
 
 			return view;
 		}
+
+		// Future: View-specific inspector panel here
+		protected override void DrawTypeSpecificGUI(EditorControllerAttachment editor) { }
+
+		// ===================================================================
+		// UTILITIES (seemingly obsolete)
+		// ===================================================================
+
+		//private static void UpdateVisuals(EditorControllerAttachment editor, View view)
+		//{
+		//	UpdateViewFrustumMarker(view, editor.editorController.iMapManager);
+		//	EditorTransformUtil.UpdateTransformGizmoVisuals(editor.editorCamera);
+		//}
+
+		//private static void ShowGizmoAndPreview(EditorControllerAttachment editor, View view)
+		//{
+		//	Vector3 worldPos = editor.editorController.iMapManager.TileWorldPosition(view.tile) + view.Position;
+		//	EditorTransformUtil.ShowAt(worldPos, view.Rotation, editor.editorCamera);
+		//	editor.viewPreview.Show(view, editor.editorController.iMapManager);
+		//}
 	}
 }

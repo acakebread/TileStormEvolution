@@ -1,8 +1,5 @@
 ﻿using UnityEngine;
 using System.Linq;
-using static MassiveHadronLtd.GuiUtils;
-using static ClassicTilestorm.EditorController;
-using UnityEditor;
 
 namespace ClassicTilestorm
 {
@@ -23,18 +20,13 @@ namespace ClassicTilestorm
 		private bool isControllingPreviewWithRMB = false;
 		private bool rmbDragStartedInPreview = false;
 
-		private readonly AutoHidePanel sidePanel = new AutoHidePanel(collapsed: 120f, expanded: 340f, delay: 1.5f, animDur: 0.25f, defaultPos: new Vector2(0f, 40f));
-
 		private bool supressInput = true;
 
 		public override bool IsMouseOverGUI()
 		{
 			if (base.IsMouseOverGUI()) return true;
-
-			Rect panelRect = sidePanel.GetPanelRect();
-			Vector2 mouse = Input.mousePosition;
-			mouse.y = Screen.height - mouse.y;
-			return panelRect.Contains(mouse);
+			if (AttachmentEditing.IsMouseOverSidePanel()) return true;
+			return false;
 		}
 
 		private bool IsMouseOverPreview()
@@ -62,7 +54,6 @@ namespace ClassicTilestorm
 			viewPreview = ViewPreview.Create();
 			viewPreview.Hide();
 
-			sidePanel.List.Clear();
 			supressInput = true;
 		}
 
@@ -170,38 +161,11 @@ namespace ClassicTilestorm
 			supressInput = false;
 		}
 
-		public override void OnGUI()
-		{
-			if (null == editorCamera) return;
-
-			var map = editorController?.iMapManager?.CurrentMap;
-			if (map == null) return;
-
-			sidePanel.Update();
-			sidePanel.List.Clear();
-
-			var attachments = map.attachments ?? System.Array.Empty<MapAttachment>();
-			for (int i = 0; i < attachments.Length; i++)
-			{
-				var att = attachments[i];
-				string label = AttachmentSidePanelLabel(att);
-
-				sidePanel.List.AddItem(new ListViewItem(
-					label,
-					() => SelectAttachments(new MapAttachment[] { att }),
-					selected: selectedAttachments != null && selectedAttachments.Contains(att)
-				));
-			}
-
-			sidePanel.SetFootnote("Hold RMB on preview to orbit • Scroll to zoom • LMB: place/move in/move • RMB on tile: delete");
-			sidePanel.Draw();
-
-			AttachmentEditing.DrawGUI(this);
-		}
+		public override void OnGUI() => AttachmentEditing.DrawGUI(this);
 
 		public void OnMapChanged()
 		{
-			if (editorController.CurrentMode != EditorMode.Attachment) return;
+			if (editorController.CurrentMode != EditorController.EditorMode.Attachment) return;
 			RebuildMarkers();
 			EditorPrimitiveUtil.HideCone();
 			EditorFrustumUtil.Hide();
@@ -230,7 +194,7 @@ namespace ClassicTilestorm
 
 			int selection = System.Array.IndexOf(tiles, selectedTile);
 
-			UpdateMapMarkers(editorController.iMapManager, tiles, selection, EditorMarkerUtil.MarkerType.Attachment);
+			AttachmentEditing.UpdateMapMarkers(editorController.iMapManager, tiles, selection, EditorMarkerUtil.MarkerType.Attachment);
 		}
 
 		public void SelectAttachments(MapAttachment[] attachments)
@@ -316,11 +280,9 @@ namespace ClassicTilestorm
 				pendingTile = hitTile;
 				pendingAction = PendingAction.Delete;
 				SetPopupPosition(hitTile);
+				return;
 			}
-			else
-			{
-				SelectAttachments(null);
-			}
+			SelectAttachments(null);
 		}
 
 		private void SetPopupPosition(int tile)
@@ -339,43 +301,6 @@ namespace ClassicTilestorm
 			return result.Length > 0 ? result : null;
 		}
 
-		private string AttachmentSidePanelLabel(MapAttachment att)
-		{
-			return att switch
-			{
-				Emitter e => $"Emitter [{att.tile}]" + (e.LookAt != null && e.LookAt != Vector3.up ? $" to {e.LookAt.magnitude:F1}" : ""),
-				View => $"View [{att.tile}]",
-				Pickup => $"Pickup [{att.tile}]",
-				_ => $"{att.GetType().Name} [{att.tile}]"
-			};
-		}
-
-		public MapAttachment AddNewAttachment(int tile, System.Type type)
-		{
-			var map = editorController?.iMapManager?.CurrentMap;
-			if (map == null) return null;
-
-			MapAttachment newAtt = type.Name switch
-			{
-				"Emitter" => new Emitter { tile = tile, Position = Vector3.up, LookAt = Vector3.up },
-				"View" => new View { tile = tile, Position = (Vector3.up + Vector3.back) * 8, LookAt = (Vector3.forward + Vector3.down) * 4 },
-				"Pickup" => new Pickup { tile = tile },
-				_ => null
-			};
-
-			if (newAtt == null) return null;
-
-			// Ensure correct tile
-			newAtt.tile = tile;
-
-			map.AddAttachment(newAtt);
-
-			editorController.OnMapChanged();
-			SelectAttachments(new MapAttachment[] { newAtt });
-
-			return newAtt;
-		}
-
 		public PendingAction CurrentPendingAction => pendingAction;
 		public void ClearPendingAction(bool clearSelection = true)
 		{
@@ -388,35 +313,5 @@ namespace ClassicTilestorm
 		}
 		public Vector2 PendingPopupScreenPos => pendingPopupScreenPos;
 		public int PendingTile => pendingTile;
-
-		private static void UpdateMapMarkers(IMapManager mapManager, int[] tiles, int selectedIndex = -1, EditorMarkerUtil.MarkerType type = EditorMarkerUtil.MarkerType.Undefined)
-		{
-			if (tiles == null || tiles.Length == 0 || EditorMarkerUtil.SphereMesh == null)
-			{
-				EditorMarkerUtil.ClearMapMarkers();
-				return;
-			}
-
-			var positions = new Vector3[tiles.Length];
-			var colors = new Color[tiles.Length];
-
-			for (int i = 0; i < tiles.Length; i++)
-			{
-				int tile = tiles[i];
-				if (tile < 0 || tile >= mapManager.Count)
-				{
-					positions[i] = Vector3.zero;
-					colors[i] = new Color(0f, 0.7f, 1f, 0.7f);
-					continue;
-				}
-
-				positions[i] = mapManager.TileWorldPosition(tile);
-
-				bool hasView = type == EditorMarkerUtil.MarkerType.Waypoint && mapManager.GetView(tile) != null;
-				colors[i] = hasView ? new Color(0f, 1f, 1f, 0.5f) : new Color(0f, 0.7f, 1f, 0.7f);
-			}
-
-			EditorMarkerUtil.ShowMarkers(positions, colors, selectedIndex);
-		}
 	}
 }
