@@ -80,8 +80,7 @@ namespace ClassicTilestorm
 
 			if (EditorTransformUtil.HandleTransformGizmoInput(editorCamera))
 			{
-				var typeEditor = AttachmentEditing.GetCurrentEditor(selectedAttachments);
-				typeEditor?.HandleGizmoInput(this);
+				AttachmentEditing.HandleGizmoInput(this);
 				supressInput = true;
 			}
 
@@ -207,8 +206,7 @@ namespace ClassicTilestorm
 			EditorTransformUtil.HideTransformGizmo();
 			viewPreview.Hide();
 
-			var typeEditor = AttachmentEditing.GetCurrentEditor(selectedAttachments);
-			typeEditor?.HandleSelectionChanged(this);
+			AttachmentEditing.HandleSelectionChanged(this);
 		}
 
 		private int GetTileUnderMouse()
@@ -237,8 +235,7 @@ namespace ClassicTilestorm
 			foreach (var att in selectedAttachments)
 			{
 				att.tile = tileUnderMouse;
-				var typeEditor = AttachmentEditing.GetCurrentEditor(selectedAttachments);
-				typeEditor?.HandleDrag(this, att);
+				AttachmentEditing.HandleDrag(this, att);
 			}
 		}
 

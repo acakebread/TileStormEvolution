@@ -28,12 +28,12 @@ namespace ClassicTilestorm
 			editor.SelectAttachments(new[] { pickup });
 
 			// Optional: show gizmo if you want to position pickups
-			HandleSelectionChanged(editor);
+			OnHandleSelectionChanged(editor);
 
 			return pickup;
 		}
 
-		public override void HandleSelectionChanged(EditorControllerAttachment editor)
+		protected override void OnHandleSelectionChanged(EditorControllerAttachment editor)
 		{
 			var pickup = editor.selectedAttachments?.OfType<Pickup>().FirstOrDefault();
 			if (pickup == null) return;
@@ -42,7 +42,7 @@ namespace ClassicTilestorm
 			EditorTransformUtil.ShowAt(worldPos, Quaternion.identity, editor.editorCamera);
 		}
 
-		public override void HandleGizmoInput(EditorControllerAttachment editor)
+		protected override void OnHandleGizmoInput(EditorControllerAttachment editor)
 		{
 			var pickup = editor.selectedAttachments?.OfType<Pickup>().FirstOrDefault();
 			if (pickup == null) return;

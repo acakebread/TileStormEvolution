@@ -35,12 +35,12 @@ namespace ClassicTilestorm
 			editor.SelectAttachments(new MapAttachment[] { emitter });
 
 			// Show gizmo/cone immediately
-			HandleSelectionChanged(editor);
+			OnHandleSelectionChanged(editor);
 
 			return emitter;
 		}
 
-		public override void HandleSelectionChanged(EditorControllerAttachment editor)
+		protected override void OnHandleSelectionChanged(EditorControllerAttachment editor)
 		{
 			var emitter = editor.selectedAttachments?.OfType<Emitter>().FirstOrDefault();
 			if (emitter == null)
@@ -57,7 +57,7 @@ namespace ClassicTilestorm
 			EditorPrimitiveUtil.UpdateCone(worldPos, emitter.Rotation, emitter.Distance, emitter.Apex);
 		}
 
-		public override void HandleDrag(EditorControllerAttachment editor, MapAttachment attachment)
+		protected override void OnHandleDrag(EditorControllerAttachment editor, MapAttachment attachment)
 		{
 			if (attachment is Emitter emitter)
 			{
@@ -71,7 +71,7 @@ namespace ClassicTilestorm
 			}
 		}
 
-		public override void HandleGizmoInput(EditorControllerAttachment editor)
+		protected override void OnHandleGizmoInput(EditorControllerAttachment editor)
 		{
 			var emitter = editor.selectedAttachments?.OfType<Emitter>().FirstOrDefault();
 			if (emitter == null) return;

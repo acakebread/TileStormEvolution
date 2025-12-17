@@ -14,7 +14,7 @@ namespace ClassicTilestorm
 			return null;
 		}
 
-		public override void HandleSelectionChanged(EditorControllerAttachment editor)
+		protected override void OnHandleSelectionChanged(EditorControllerAttachment editor)
 		{
 			var view = GetSelectedView(editor);
 			if (view == null) return;
@@ -27,7 +27,7 @@ namespace ClassicTilestorm
 			editor.viewPreview.Show(view, editor.editorController.iMapManager);
 		}
 
-		public override void HandleDrag(EditorControllerAttachment editor, MapAttachment attachment)
+		protected override void OnHandleDrag(EditorControllerAttachment editor, MapAttachment attachment)
 		{
 			if (attachment is View view)
 			{
@@ -78,7 +78,7 @@ namespace ClassicTilestorm
 		// GIZMO INPUT — NOW CORRECT (with missing line restored)
 		// ===================================================================
 
-		public override void HandleGizmoInput(EditorControllerAttachment editor)
+		protected override void OnHandleGizmoInput(EditorControllerAttachment editor)
 		{
 			var view = GetSelectedView(editor);
 			if (view == null) return;
@@ -164,7 +164,7 @@ namespace ClassicTilestorm
 			editor.editorController.OnMapChanged();
 			editor.SelectAttachments(new[] { view });
 
-			HandleSelectionChanged(editor); // shows frustum, gizmo, preview
+			OnHandleSelectionChanged(editor); // shows frustum, gizmo, preview
 
 			return view;
 		}

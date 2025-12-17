@@ -64,16 +64,20 @@ namespace ClassicTilestorm
 			sidePanel.Draw();
 
 			// === TYPE-SPECIFIC GUI (e.g. future sliders, buttons) ===
-			//GetCurrentEditor(editor)?.DrawTypeSpecificGUI(editor);
 			GetCurrentEditor(editor.selectedAttachments)?.DrawTypeSpecificGUI(editor);
 		}
 
 		// Virtual methods - override in derived classes when needed
 		protected virtual void DrawTypeSpecificGUI(EditorControllerAttachment editor) { }//currently no implementations but will be used for camera FOV / emitter params etc
 
-		public virtual void HandleSelectionChanged(EditorControllerAttachment editor) { }
-		public virtual void HandleDrag(EditorControllerAttachment editor, MapAttachment attachment) { }
-		public virtual void HandleGizmoInput(EditorControllerAttachment editor) { }
+		public static void HandleGizmoInput(EditorControllerAttachment editor) => GetCurrentEditor(editor.selectedAttachments)?.OnHandleGizmoInput(editor);
+		protected virtual void OnHandleGizmoInput(EditorControllerAttachment editor) { }
+
+		public static void HandleSelectionChanged(EditorControllerAttachment editor) => GetCurrentEditor(editor.selectedAttachments)?.OnHandleSelectionChanged(editor);
+		protected virtual void OnHandleSelectionChanged(EditorControllerAttachment editor) { }
+
+		public static void HandleDrag(EditorControllerAttachment editor, MapAttachment attachment) => GetCurrentEditor(editor.selectedAttachments)?.OnHandleDrag(editor, attachment);
+		protected virtual void OnHandleDrag(EditorControllerAttachment editor, MapAttachment attachment) { }
 
 		private static void DrawAddPopup(EditorControllerAttachment editor)
 		{
@@ -194,7 +198,7 @@ namespace ClassicTilestorm
 		}
 
 		// Helper to get the correct derived editor based on selection
-		public static AttachmentEditing GetCurrentEditor(MapAttachment[] selectedAttachments)
+		private static AttachmentEditing GetCurrentEditor(MapAttachment[] selectedAttachments)
 		{
 			if (selectedAttachments == null || selectedAttachments.Length == 0)
 				return null;
