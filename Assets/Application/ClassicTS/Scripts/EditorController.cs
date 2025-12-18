@@ -176,7 +176,7 @@ namespace ClassicTilestorm
 
 		private void DrawMainUI(string mode, bool gridVisible)
 		{
-			float y = panelYoffset + spacing;
+			var y = panelYoffset + spacing;
 			if (GuiUtils.ColoredButton(new Rect(margin, y + 0 * (buttonHeight + spacing), buttonWidth, buttonHeight),gridVisible ? "Hide Grid" : "Show Grid",new Color(0.25f, 0.75f, 0.25f))) OnGridLinesToggled(!gridVisible);
 
 			GUI.contentColor = mode == "Drag" ? Color.cyan : Color.white;
@@ -190,8 +190,6 @@ namespace ClassicTilestorm
 
 			GUI.contentColor = (currentMode ?? EditorMode.Drag) == EditorMode.Attachment ? Color.cyan : Color.white;
 			if (GUI.Button(new Rect(margin, y + 4 * (buttonHeight + spacing), buttonWidth, buttonHeight), "Attachments")) SetEditorMode(EditorMode.Attachment);
-
-			GUI.contentColor = Color.white;
 
 			var mainController = GetComponent<MainController>();
 			if (GuiUtils.ColoredButton(new Rect(margin, y + 5 * (buttonHeight + spacing), buttonWidth, buttonHeight), "Import Map", new Color(0.2f, 0.6f, 1f)))
