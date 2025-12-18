@@ -94,9 +94,8 @@ namespace ClassicTilestorm
 
 		private static void SyncPreviewToView(EditorControllerAttachment editor, ViewPreview viewPreview, View view)
 		{
-			Vector3 worldPos = MapManager.WorldPosition(view.tile, view.Position);
-			viewPreview.previewCam.transform.position = worldPos;
-			viewPreview.previewCam.transform.rotation = view.Rotation;
+			viewPreview.previewCam.transform.position = MapManager.WorldPosition(view.tile, view.Position);
+			viewPreview.previewCam.transform.rotation = MapManager.WorldRotation(view.tile, view.Rotation);
 		}
 
 		private static void SnapViewDistanceToGround(View view, IMapManager mapManager)
