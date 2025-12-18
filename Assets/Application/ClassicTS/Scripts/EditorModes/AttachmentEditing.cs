@@ -81,25 +81,11 @@ namespace ClassicTilestorm
 
 		protected virtual void OnUpdateDragGizmo(EditorControllerAttachment editor, MapAttachment attachment)
 		{
-			// Default fallback gizmo (rarely used)
-			Vector3 worldPos = editor.editorController.iMapManager.TileWorldPosition(attachment.tile);
-			Quaternion worldRot = Quaternion.identity;
-
-			if (attachment is Emitter e)
-			{
-				worldPos += e.Position;
-				worldRot = e.Rotation;
-			}
-			else if (attachment is View v)
-			{
-				worldPos += v.Position;
-				worldRot = v.Rotation;
-			}
-			else if (attachment is Pickup)
-			{
-				//worldPos += Vector3.up * 0.5f;//pickup has no transform at the moment so this is pointless
+			if (attachment is not ITransformableAttachment transformable)
 				return;
-			}
+
+			Vector3 worldPos = editor.editorController.iMapManager.TileWorldPosition(attachment.tile) + transformable.Position;
+			Quaternion worldRot = transformable.Rotation;
 
 			EditorTransformUtil.ShowAt(worldPos, worldRot, editor.editorCamera);
 		}

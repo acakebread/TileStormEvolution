@@ -6,7 +6,7 @@ using MassiveHadronLtd;
 namespace ClassicTilestorm
 {
 	[System.Serializable]
-	public sealed class Emitter : MapAttachment
+	public sealed class Emitter : MapAttachment, ITransformableAttachment
 	{
 		public Emitter()
 		{
@@ -22,6 +22,9 @@ namespace ClassicTilestorm
 			// Default for new property
 			variant = null;
 		}
+
+		[JsonIgnore]
+		public override bool HasTransform => true;
 
 		// Single source of truth: 7 floats (Squatrix format)
 		// [0..2] → position.x, y, z

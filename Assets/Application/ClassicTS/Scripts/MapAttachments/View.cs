@@ -6,9 +6,12 @@ using MassiveHadronLtd;
 namespace ClassicTilestorm
 {
 	[System.Serializable]
-	public sealed class View : MapAttachment
+	public sealed class View : MapAttachment, ITransformableAttachment
 	{
 		public View() { type = "View"; }
+
+		[JsonIgnore]
+		public override bool HasTransform => true;
 
 		[JsonProperty(Order = 10)]
 		public float[] data;
