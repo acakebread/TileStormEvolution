@@ -16,7 +16,6 @@ namespace ClassicTilestorm
 		public MapAttachment[] selectedAttachments = System.Array.Empty<MapAttachment>();
 		public enum PendingAction { None, Wait, Add, Delete, Select, Drag }
 		public PendingAction pendingAction = PendingAction.None;
-		private Vector2 pendingPopupScreenPos = Vector2.zero;
 		public ViewPreview viewPreview;
 
 		public override bool IsMouseOverGUI()
@@ -279,7 +278,7 @@ namespace ClassicTilestorm
 			var wp = editorController.iMapManager.TileWorldPosition(tile) + Vector3.up * 0.6f;
 			var sp = editorCamera.WorldToScreenPoint(wp);
 			sp.y = Screen.height - sp.y;
-			pendingPopupScreenPos = sp;
+			AttachmentEditing.pendingPopupScreenPos = sp;
 		}
 
 		private MapAttachment[] GetAttachmentsOnTile(int tileIndex)
@@ -300,7 +299,6 @@ namespace ClassicTilestorm
 				pendingTile = -1;
 			}
 		}
-		public Vector2 PendingPopupScreenPos => pendingPopupScreenPos;
 		public int PendingTile => pendingTile;
 	}
 }

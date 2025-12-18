@@ -11,6 +11,8 @@ namespace ClassicTilestorm
 		private static readonly AutoHidePanel sidePanel = new AutoHidePanel(
 			collapsed: 120f, expanded: 340f, delay: 1.5f, animDur: 0.25f, defaultPos: new Vector2(0f, 40f));
 
+		public static Vector2 pendingPopupScreenPos;
+
 		public static bool IsMouseOverSidePanel()
 		{
 			Rect panelRect = sidePanel.GetPanelRect();
@@ -102,7 +104,7 @@ namespace ClassicTilestorm
 				new ("Cancel", colorOverride: Color.yellow)
 			};
 
-			bool closed = PopupMenu.Show(editor.PendingPopupScreenPos, "Add Attachment", items);
+			bool closed = PopupMenu.Show(pendingPopupScreenPos, "Add Attachment", items);
 			if (closed)
 				editor.ClearPendingAction(false); // keep selection for gizmo
 		}
@@ -160,7 +162,7 @@ namespace ClassicTilestorm
 			items.Add(PopupItem.Spacer());
 			items.Add(new PopupItem("Cancel", colorOverride: Color.yellow));
 
-			bool closed = PopupMenu.Show(editor.PendingPopupScreenPos, "Delete Attachment(s)", items);
+			bool closed = PopupMenu.Show(pendingPopupScreenPos, "Delete Attachment(s)", items);
 			if (closed) editor.ClearPendingAction();
 		}
 
@@ -199,7 +201,7 @@ namespace ClassicTilestorm
 			items.Add(PopupItem.Spacer());
 			items.Add(new PopupItem("Cancel", colorOverride: Color.yellow));
 
-			bool closed = PopupMenu.Show(editor.PendingPopupScreenPos, $"Select ({atts.Length})", items);
+			bool closed = PopupMenu.Show(pendingPopupScreenPos, $"Select ({atts.Length})", items);
 			if (closed)
 			{
 				if (editor.pendingAction != EditorControllerAttachment.PendingAction.Drag)

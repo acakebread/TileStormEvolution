@@ -125,6 +125,7 @@ namespace ClassicTilestorm
 		{
 			currentView = view;
 			mapManager = manager;
+			inInUse = true;
 			gameObject.SetActive(true);
 		}
 
@@ -132,6 +133,7 @@ namespace ClassicTilestorm
 		{
 			currentView = null;
 			mapManager = null;
+			inInUse = false;
 			gameObject.SetActive(false);
 		}
 
