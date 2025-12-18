@@ -74,16 +74,17 @@ namespace ClassicTilestorm
 		{
 			base.Update();
 
+			viewPreview.isInFocus = IsMouseOverPreview();
 			if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1))
-				rmbDragStartedInPreview = IsMouseOverPreview();
+				rmbDragStartedInPreview = viewPreview.isInFocus;
 
 			var touch = Input.GetMouseButton(0) || Input.GetMouseButton(1);
 			if (!touch) rmbDragStartedInPreview = false;
 
-			viewPreview.inInUse = rmbDragStartedInPreview || (!touch && IsMouseOverPreview());
+			viewPreview.inInUse = rmbDragStartedInPreview || (!touch && viewPreview.isInFocus);
 			if (viewPreview.inInUse) supressInput = true;
 
-			if (rmbDragStartedInPreview || (!Input.GetMouseButton(1) && IsMouseOverPreview()))
+			if (rmbDragStartedInPreview || (!Input.GetMouseButton(1) && viewPreview.isInFocus))
 			{
 				EditorCameraMovement.UpdateCamera(viewPreview.previewCam.transform);
 				AttachmentViewEditing.HandlePreviewCameraSync(this, viewPreview);
