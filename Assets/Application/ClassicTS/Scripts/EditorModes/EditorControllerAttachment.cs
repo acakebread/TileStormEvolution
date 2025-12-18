@@ -8,20 +8,16 @@ namespace ClassicTilestorm
 		private Vector3 mouseDownPos;
 		private bool mouseMovedBeyondThreshold;
 		private const float CLICK_THRESHOLD = 8f;
-
-		public MapAttachment[] selectedAttachments = System.Array.Empty<MapAttachment>();
+		private bool rmbDragStartedInPreview = false;
+		private int lastDragTile = -1;  // Tracks the last tile we dragged to
+		private bool supressInput = true;
 
 		private int pendingTile = -1;
+		public MapAttachment[] selectedAttachments = System.Array.Empty<MapAttachment>();
 		public enum PendingAction { None, Wait, Add, Delete, Select, Drag }
 		public PendingAction pendingAction = PendingAction.None;
 		private Vector2 pendingPopupScreenPos = Vector2.zero;
-
 		public ViewPreview viewPreview;
-		private bool isControllingPreviewWithRMB = false;
-		private bool rmbDragStartedInPreview = false;
-		private int lastDragTile = -1;  // Tracks the last tile we dragged to
-
-		private bool supressInput = true;
 
 		public override bool IsMouseOverGUI()
 		{
@@ -70,7 +66,7 @@ namespace ClassicTilestorm
 			viewPreview?.Hide();
 			if (viewPreview != null) Object.Destroy(viewPreview.gameObject);
 
-			isControllingPreviewWithRMB = false;
+			viewPreview.inInUse = false;
 			rmbDragStartedInPreview = false;
 		}
 
@@ -101,21 +97,20 @@ namespace ClassicTilestorm
 			bool wasClick = !mouseMovedBeyondThreshold;
 
 			if (rmbDragStartedInPreview && Input.GetMouseButton(1))
-				isControllingPreviewWithRMB = true;
+				viewPreview.inInUse = true;
 
 			if (Input.GetMouseButtonUp(1))
 			{
-				isControllingPreviewWithRMB = false;
+				viewPreview.inInUse = false;
 				rmbDragStartedInPreview = false;
 			}
 
 			viewPreview.isInFocus = isMouseOverPreview;
-			viewPreview.inInUse = isControllingPreviewWithRMB;
 
-			if (isControllingPreviewWithRMB || (!Input.GetMouseButton(1) && isMouseOverPreview))
+			if (viewPreview.inInUse || (!Input.GetMouseButton(1) && isMouseOverPreview))
 			{
 				float scroll = Input.GetAxis("Mouse ScrollWheel");
-				if (isControllingPreviewWithRMB || scroll != 0f)
+				if (viewPreview.inInUse || scroll != 0f)
 				{
 					EditorCameraMovement.UpdateCamera(viewPreview.previewCam.transform);
 					AttachmentViewEditing.HandlePreviewCameraSync(this, viewPreview);
@@ -148,14 +143,14 @@ namespace ClassicTilestorm
 			supressInput |= pendingAction == PendingAction.Wait;
 
 			// LMB Up: popups (only on clean click)
-			if (Input.GetMouseButtonUp(0) && !supressInput && wasClick)
+			if (!supressInput && Input.GetMouseButtonUp(0) && wasClick)
 			{
 				lastDragTile = -1;
 				HandleLeftMouseUpOnCleanClick();
 			}
 
 			// RMB Up: delete popup
-			if (Input.GetMouseButtonUp(1) && !supressInput && wasClick)
+			if (!supressInput && Input.GetMouseButtonUp(1) && wasClick)
 				HandleRightMouseUp(wasClick);
 
 			if (pendingAction == PendingAction.Wait) pendingAction = PendingAction.None;
@@ -169,14 +164,12 @@ namespace ClassicTilestorm
 			bool tileChanged = tileUnderMouse != lastDragTile;
 
 			foreach (var att in selectedAttachments)
-			{
 				att.tile = tileUnderMouse;
-			}
 
 			if (tileChanged)
 			{
-				AttachmentEditing.RefreshDragVisuals(this);
 				lastDragTile = tileUnderMouse;
+				AttachmentEditing.RefreshDragVisuals(this);
 			}
 		}
 
@@ -188,7 +181,7 @@ namespace ClassicTilestorm
 			EditorFrustumUtil.Hide();
 			EditorTransformUtil.HideTransformGizmo();
 			viewPreview.Hide();
-			isControllingPreviewWithRMB = false;
+			viewPreview.inInUse = false;
 			rmbDragStartedInPreview = false;
 			supressInput = true;
 		}
@@ -205,9 +198,7 @@ namespace ClassicTilestorm
 				.ToArray() ?? System.Array.Empty<int>();
 
 			// Determine selected tile from current selection
-			int selectedTile = (selectedAttachments != null && selectedAttachments.Length > 0)
-				? selectedAttachments[0].tile
-				: -1;
+			int selectedTile = (selectedAttachments != null && selectedAttachments.Length > 0) ? selectedAttachments[0].tile : -1;
 
 			int selection = System.Array.IndexOf(tiles, selectedTile);
 

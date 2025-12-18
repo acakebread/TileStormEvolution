@@ -36,7 +36,6 @@ namespace ClassicTilestorm
 		public bool inInUse = false;
 		public bool isInFocus = false;
 
-
 		private const float PREVIEW_HEIGHT = 200f;
 		private const float MARGIN = 10f;
 
