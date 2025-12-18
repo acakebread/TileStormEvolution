@@ -21,7 +21,7 @@ namespace ClassicTilestorm
 
 			editor.editorController.iMapManager.RefreshAttachmentInstance(pickup);
 
-			editor.editorController.OnMapChanged();
+			editor.editorController.OnMapEdited();
 			editor.SelectAttachments(new[] { pickup });
 
 			return pickup;

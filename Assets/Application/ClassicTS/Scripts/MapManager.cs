@@ -147,6 +147,8 @@ namespace ClassicTilestorm
 		private void OnDestroy()
 		{
 			CleanupAttachmentInstances();
+			if (ReferenceEquals(MapAttachmentExtensions.CurrentMapManager, this))
+				MapAttachmentExtensions.ClearActiveMapManager();
 			instance = null;
 		}
 
@@ -156,6 +158,8 @@ namespace ClassicTilestorm
 
 			currentMap = map ?? throw new ArgumentNullException(nameof(map));
 			instance = this;
+
+			MapAttachmentExtensions.SetActiveMapManager(this);
 
 			if (string.IsNullOrEmpty(currentMap.name))
 			{

@@ -30,7 +30,7 @@ namespace ClassicTilestorm
 			// This now creates the GameObject if needed
 			editor.editorController.iMapManager.RefreshAttachmentInstance(emitter);
 
-			editor.editorController.OnMapChanged();
+			editor.editorController.OnMapEdited();
 			editor.SelectAttachments(new MapAttachment[] { emitter });
 
 			// Show gizmo/cone immediately

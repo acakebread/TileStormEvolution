@@ -79,7 +79,7 @@ namespace ClassicTilestorm
 				Mathf.FloorToInt(snappedPos.z),
 				defID,
 				expand: true,
-				onEdited: editorController.OnMapChanged
+				onEdited: editorController.OnMapEdited
 			);
 		}
 

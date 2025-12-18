@@ -133,7 +133,7 @@ namespace ClassicTilestorm
 					EditorTransformUtil.HideTransformGizmo();
 					editor.RebuildMarkers();
 					editor.viewPreview.Hide();
-					editor.editorController.OnMapChanged();
+					editor.editorController.OnMapEdited();
 				}));
 			}
 
@@ -153,7 +153,7 @@ namespace ClassicTilestorm
 					EditorTransformUtil.HideTransformGizmo();
 					editor.RebuildMarkers();
 					editor.viewPreview.Hide();
-					editor.editorController.OnMapChanged();
+					editor.editorController.OnMapEdited();
 				}, colorOverride: Color.red));
 			}
 
