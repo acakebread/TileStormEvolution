@@ -24,6 +24,7 @@ namespace ClassicTilestorm
 			cameraController = gameObject.AddComponent<MainCameraController>();
 			gameController = gameObject.AddComponent<GameController>();
 			editorController = gameObject.AddComponent<EditorController>();
+			OnChangeMapRequested += HandleChangeMap;
 			LoadMap(PreviewSettings.LoadMapName);
 			SetPreviewMode(PreviewSettings.CurrentMode);//invoke to enable and disable game and editor controllers - ToDo improve this
 		}
@@ -56,14 +57,14 @@ namespace ClassicTilestorm
 			if (null != mapManager) DestroyImmediate(mapManager.gameObject);
 			mapManager = MapManager.Instantiate(currentMap, transform);
 
-			if (null != eggbotController) Destroy(eggbotController.gameObject);
+			if (null != eggbotController) DestroyImmediate(eggbotController.gameObject);
 			eggbotController = EggbotController.Instantiate(currentMap.character, transform);
 			if (null != eggbotController) eggbotController.Initialise(mapManager);
 
 			if (null != cameraController) cameraController.Initialise(mapManager, eggbotController);
 			if (null != gameController) gameController.Initialise();
 			if (null != editorController) editorController.Initialise(mapManager);
-			if (null != editorController && null != gameController) OnChangeMapRequested += HandleChangeMap;
+			//if (null != editorController && null != gameController) OnChangeMapRequested += HandleChangeMap;
 
 			//static string SkycubesPath(string id) => string.IsNullOrEmpty(id) ? null : $"{AssetPath.SkycubesPath}{id}";
 		}
