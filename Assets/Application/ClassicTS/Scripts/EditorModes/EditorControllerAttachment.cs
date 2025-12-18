@@ -9,7 +9,7 @@ namespace ClassicTilestorm
 		private bool mouseMovedBeyondThreshold;
 		private const float CLICK_THRESHOLD = 8f;
 		private bool rmbDragStartedInPreview = false;
-		private int lastDragTile = -1;  // Tracks the last tile we dragged to
+		private int lastDragTile = -1;
 		private bool supressInput = true;
 
 		private int pendingTile = -1;
@@ -52,6 +52,7 @@ namespace ClassicTilestorm
 			viewPreview.Hide();
 
 			supressInput = true;
+			rmbDragStartedInPreview = false;
 		}
 
 		public override void OnDisable()
@@ -65,9 +66,6 @@ namespace ClassicTilestorm
 
 			viewPreview?.Hide();
 			if (viewPreview != null) Object.Destroy(viewPreview.gameObject);
-
-			viewPreview.inInUse = false;
-			rmbDragStartedInPreview = false;
 		}
 
 		public override void Update()
@@ -103,7 +101,6 @@ namespace ClassicTilestorm
 			{
 				mouseDownPos = Input.mousePosition;
 				mouseMovedBeyondThreshold = false;
-				//rmbDragStartedInPreview = isMouseOverPreview;
 			}
 
 			if (Input.GetMouseButton(0) || Input.GetMouseButton(1))
