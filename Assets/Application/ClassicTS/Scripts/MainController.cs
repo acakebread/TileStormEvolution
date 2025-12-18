@@ -2,6 +2,7 @@
 using System.Linq;
 using MassiveHadronLtd;
 using UnityEngine.EventSystems;
+using UnityEditor;
 
 namespace ClassicTilestorm
 {
@@ -12,6 +13,8 @@ namespace ClassicTilestorm
 		private MapManager mapManager;
 		private EggbotController eggbotController;
 		private MainCameraController cameraController;
+
+		public event System.Action<int> OnChangeMapRequested;
 
 		private void Awake()
 		{
@@ -60,7 +63,7 @@ namespace ClassicTilestorm
 			if (null != cameraController) cameraController.Initialise(mapManager, eggbotController);
 			if (null != gameController) gameController.Initialise();
 			if (null != editorController) editorController.Initialise(mapManager);
-			if (null != editorController && null != gameController) editorController.OnChangeMapRequested += HandleChangeMap;
+			if (null != editorController && null != gameController) OnChangeMapRequested += HandleChangeMap;
 
 			//static string SkycubesPath(string id) => string.IsNullOrEmpty(id) ? null : $"{AssetPath.SkycubesPath}{id}";
 		}
@@ -103,6 +106,126 @@ namespace ClassicTilestorm
 		{
 			if (null != mapManager) mapManager.Solve();
 			if (null != cameraController) cameraController.OnMapSolved();
+		}
+
+		public void LoadDatabase()
+		{
+			var dbAsset = PreviewSettings.DatabaseJsonFile;
+			if (dbAsset == null)
+			{
+				Debug.LogError("PreviewSettings.DatabaseJsonFile is not assigned in PreviewSettings!");
+				return;
+			}
+
+			ResourceSerializer.Initialise(dbAsset);
+
+			if (ResourceManager.database == null)
+			{
+				Debug.LogError("Failed to load database from DatabaseJsonFile!");
+				return;
+			}
+
+			OnChangeMapRequested?.Invoke(0);
+		}
+
+		public void SaveDatabase()
+		{
+#if UNITY_EDITOR
+			if (ResourceManager.database == null)
+			{
+				Debug.LogError("Cannot save: database not loaded");
+				return;
+			}
+
+			var database = PreviewSettings.DatabaseJsonFile;
+			if (database == null)
+			{
+				Debug.LogError("PreviewSettings.DatabaseJsonFile is not assigned!");
+				return;
+			}
+
+			string assetPath = AssetDatabase.GetAssetPath(database);
+			if (string.IsNullOrEmpty(assetPath) || assetPath.Contains("Resources/unity_builtin_extra"))
+			{
+				Debug.LogError("Cannot save to project: not a real project asset.");
+				return;
+			}
+
+			string fullPath = System.IO.Path.GetFullPath(assetPath);
+			ResourceSerializer.SaveDatabase(ResourceManager.database, fullPath);
+#else
+			Debug.Log("Save Database only works in Editor");
+#endif
+		}
+
+		public void ImportMapAsAtomic()
+		{
+#if UNITY_EDITOR
+			string path = EditorUtility.OpenFilePanel("Import Atomic Map", PreviewSettings.ExportFolder, "json");
+			if (!string.IsNullOrEmpty(path))
+			{
+				ResourceSerializer.ImportAtomicMap(path);
+				string importedName = System.IO.Path.GetFileNameWithoutExtension(path);
+
+				if (mapManager?.CurrentMap != null && mapManager.CurrentMap.name == importedName)
+				{
+					OnChangeMapRequested?.Invoke(0);
+				}
+			}
+#else
+			Debug.Log("Import currently only available in Unity Editor");
+#endif
+		}
+
+		public void ExportMapAsAtomic()
+		{
+#if UNITY_EDITOR
+			if (mapManager?.CurrentMap == null)
+			{
+				EditorUtility.DisplayDialog("Export Error", "No map is currently loaded.", "OK");
+				return;
+			}
+
+			var map = mapManager.CurrentMap;
+			string originalName = map.name;
+			string lastFolder = PlayerPrefs.GetString("ClassicTilestorm_LastExportFolder", PreviewSettingsStatic.ExportFolder);
+			System.IO.Directory.CreateDirectory(lastFolder);
+
+			string initialPath = System.IO.Path.Combine(lastFolder, originalName + ".json");
+			string path = EditorUtility.SaveFilePanel("Export Map As Atomic JSON", lastFolder, originalName + ".json", "json");
+
+			if (string.IsNullOrEmpty(path))
+			{
+				Debug.Log("Export cancelled by user.");
+				return;
+			}
+
+			string chosenFolder = System.IO.Path.GetDirectoryName(path);
+			string chosenName = System.IO.Path.GetFileNameWithoutExtension(path);
+			PlayerPrefs.SetString("ClassicTilestorm_LastExportFolder", chosenFolder);
+			PlayerPrefs.Save();
+
+			bool nameChanged = !string.Equals(originalName, chosenName, System.StringComparison.Ordinal);
+
+			try
+			{
+				if (nameChanged) map.name = chosenName;
+				ResourceSerializer.ExportAtomicMap(map, chosenFolder, true);
+				EditorUtility.DisplayDialog("Export Successful", $"Map exported successfully!\n\nPath: {path}", "OK");
+				Debug.Log($"Map exported: {path}");
+			}
+			catch (System.Exception ex)
+			{
+				EditorUtility.DisplayDialog("Export Failed", $"Error during export:\n{ex.Message}", "OK");
+				Debug.LogError($"Export failed: {ex}");
+			}
+			finally
+			{
+				if (nameChanged) map.name = originalName;
+			}
+#else
+			Debug.Log("Export currently only available in Unity Editor");
+#endif
 		}
 	}
 }

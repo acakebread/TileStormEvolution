@@ -1,10 +1,6 @@
 ﻿using UnityEngine;
 using MassiveHadronLtd;
 
-#if UNITY_EDITOR
-using UnityEditor;
-#endif
-
 namespace ClassicTilestorm
 {
 	public class EditorController : MonoBehaviour
@@ -147,15 +143,11 @@ namespace ClassicTilestorm
 
 		public bool IsMouseOverGui()
 		{
-			Vector2 mousePos = Input.mousePosition;
+			var mousePos = Input.mousePosition;
 			mousePos.y = Screen.height - mousePos.y;
-
 			// Left column buttons
-			float leftY = panelYoffset + spacing;
-			if (new Rect(margin, leftY, buttonWidth + 20f, buttonHeight * 9 + spacing * 9).Contains(mousePos))
-				return true;
-
-			return false;
+			var leftY = panelYoffset + spacing;
+			return new Rect(margin, leftY, buttonWidth + 20f, buttonHeight * 9 + spacing * 9).Contains(mousePos);
 		}
 
 		private void DrawMainUI(string mode, bool gridVisible)
@@ -177,10 +169,18 @@ namespace ClassicTilestorm
 
 			GUI.contentColor = Color.white;
 
-			if (GuiUtils.ColoredButton(new Rect(margin, y + 5 * (buttonHeight + spacing), buttonWidth, buttonHeight), "Import Map", new Color(0.2f, 0.6f, 1f))) ImportMapAsAtomic();
-			if (GuiUtils.ColoredButton(new Rect(margin, y + 6 * (buttonHeight + spacing), buttonWidth, buttonHeight), "Export Map", new Color(0.8f, 0.2f, 0.2f))) ExportMapAsAtomic();
-			if (GuiUtils.ColoredButton(new Rect(margin, y + 7 * (buttonHeight + spacing), buttonWidth, buttonHeight), "(Re)Load Database", new Color(0.2f, 0.6f, 1f))) LoadDatabase();
-			if (GuiUtils.ColoredButton(new Rect(margin, y + 8 * (buttonHeight + spacing), buttonWidth, buttonHeight), "Save Database", new Color(0.8f, 0.2f, 0.2f))) SaveDatabase();
+			var mainController = GetComponent<MainController>();
+			if (GuiUtils.ColoredButton(new Rect(margin, y + 5 * (buttonHeight + spacing), buttonWidth, buttonHeight), "Import Map", new Color(0.2f, 0.6f, 1f)))
+				mainController.ImportMapAsAtomic();
+
+			if (GuiUtils.ColoredButton(new Rect(margin, y + 6 * (buttonHeight + spacing), buttonWidth, buttonHeight), "Export Map", new Color(0.8f, 0.2f, 0.2f)))
+				mainController.ExportMapAsAtomic();
+
+			if (GuiUtils.ColoredButton(new Rect(margin, y + 7 * (buttonHeight + spacing), buttonWidth, buttonHeight), "(Re)Load Database", new Color(0.2f, 0.6f, 1f)))
+				mainController.LoadDatabase();
+
+			if (GuiUtils.ColoredButton(new Rect(margin, y + 8 * (buttonHeight + spacing), buttonWidth, buttonHeight), "Save Database", new Color(0.8f, 0.2f, 0.2f)))
+				mainController.SaveDatabase();
 		}
 
 		// ===================================================================
@@ -209,128 +209,6 @@ namespace ClassicTilestorm
 				var eggbotController = Eggbot();
 				if (null != eggbotController) eggbotController.OnMapOriginShift(mapManager, originDelta);
 			}
-		}
-
-		public void LoadDatabase()
-		{
-			var dbAsset = PreviewSettings.DatabaseJsonFile;
-			if (dbAsset == null)
-			{
-				Debug.LogError("PreviewSettings.DatabaseJsonFile is not assigned in PreviewSettings!");
-				return;
-			}
-
-			ResourceSerializer.Initialise(dbAsset);
-
-			if (ResourceManager.database == null)
-			{
-				Debug.LogError("Failed to load database from DatabaseJsonFile!");
-				return;
-			}
-
-			if (TryGetComponent<MainController>(out var main))
-				OnChangeMapRequested?.Invoke(0);
-		}
-
-		public void SaveDatabase()
-		{
-#if UNITY_EDITOR
-			if (ResourceManager.database == null)
-			{
-				Debug.LogError("Cannot save: database not loaded");
-				return;
-			}
-
-			var database = PreviewSettings.DatabaseJsonFile;
-			if (database == null)
-			{
-				Debug.LogError("PreviewSettings.DatabaseJsonFile is not assigned!");
-				return;
-			}
-
-			string assetPath = AssetDatabase.GetAssetPath(database);
-			if (string.IsNullOrEmpty(assetPath) || assetPath.Contains("Resources/unity_builtin_extra"))
-			{
-				Debug.LogError("Cannot save to project: not a real project asset.");
-				return;
-			}
-
-			string fullPath = System.IO.Path.GetFullPath(assetPath);
-			ResourceSerializer.SaveDatabase(ResourceManager.database, fullPath);
-#else
-			Debug.Log("Save Database only works in Editor");
-#endif
-		}
-
-		public void ImportMapAsAtomic()
-		{
-#if UNITY_EDITOR
-			string path = EditorUtility.OpenFilePanel("Import Atomic Map", PreviewSettings.ExportFolder, "json");
-			if (!string.IsNullOrEmpty(path))
-			{
-				ResourceSerializer.ImportAtomicMap(path);
-				string importedName = System.IO.Path.GetFileNameWithoutExtension(path);
-
-				if (mapManager?.CurrentMap != null && mapManager.CurrentMap.name == importedName)
-				{
-					if (TryGetComponent<MainController>(out var main))
-						OnChangeMapRequested?.Invoke(0);
-				}
-			}
-#else
-			Debug.Log("Import currently only available in Unity Editor");
-#endif
-		}
-
-		public void ExportMapAsAtomic()
-		{
-#if UNITY_EDITOR
-			if (mapManager?.CurrentMap == null)
-			{
-				EditorUtility.DisplayDialog("Export Error", "No map is currently loaded.", "OK");
-				return;
-			}
-
-			var map = mapManager.CurrentMap;
-			string originalName = map.name;
-			string lastFolder = PlayerPrefs.GetString("ClassicTilestorm_LastExportFolder", PreviewSettingsStatic.ExportFolder);
-			System.IO.Directory.CreateDirectory(lastFolder);
-
-			string initialPath = System.IO.Path.Combine(lastFolder, originalName + ".json");
-			string path = EditorUtility.SaveFilePanel("Export Map As Atomic JSON", lastFolder, originalName + ".json", "json");
-
-			if (string.IsNullOrEmpty(path))
-			{
-				Debug.Log("Export cancelled by user.");
-				return;
-			}
-
-			string chosenFolder = System.IO.Path.GetDirectoryName(path);
-			string chosenName = System.IO.Path.GetFileNameWithoutExtension(path);
-			PlayerPrefs.SetString("ClassicTilestorm_LastExportFolder", chosenFolder);
-			PlayerPrefs.Save();
-
-			bool nameChanged = !string.Equals(originalName, chosenName, System.StringComparison.Ordinal);
-
-			try
-			{
-				if (nameChanged) map.name = chosenName;
-				ResourceSerializer.ExportAtomicMap(map, chosenFolder, true);
-				EditorUtility.DisplayDialog("Export Successful", $"Map exported successfully!\n\nPath: {path}", "OK");
-				Debug.Log($"Map exported: {path}");
-			}
-			catch (System.Exception ex)
-			{
-				EditorUtility.DisplayDialog("Export Failed", $"Error during export:\n{ex.Message}", "OK");
-				Debug.LogError($"Export failed: {ex}");
-			}
-			finally
-			{
-				if (nameChanged) map.name = originalName;
-			}
-#else
-			Debug.Log("Export currently only available in Unity Editor");
-#endif
 		}
 	}
 }
