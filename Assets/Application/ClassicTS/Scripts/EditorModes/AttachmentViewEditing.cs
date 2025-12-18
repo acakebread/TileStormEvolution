@@ -21,13 +21,12 @@ namespace ClassicTilestorm
 
 			map.AddAttachment(view);
 
-			// No runtime GO needed — just editor visuals
-			editor.editorController.iMapManager.RefreshAttachmentInstance(view); // safe no-op
+			editor.editorController.iMapManager.RefreshAttachmentInstance(view);
 
 			editor.editorController.OnMapChanged();
 			editor.SelectAttachments(new[] { view });
 
-			OnHandleSelectionChanged(editor); // shows frustum, gizmo, preview
+			OnHandleSelectionChanged(editor);
 
 			return view;
 		}
@@ -38,6 +37,7 @@ namespace ClassicTilestorm
 			if (view == null) return;
 
 			var worldPos = MapManager.WorldPosition(view.tile, view.Position);
+
 			EditorTransformUtil.ShowAt(worldPos, view.Rotation, editor.editorCamera);
 
 			SnapViewDistanceToGround(view, editor.editorController.iMapManager);
@@ -50,7 +50,7 @@ namespace ClassicTilestorm
 			if (attachment is View view)
 			{
 				editor.viewPreview.Show(view, editor.editorController.iMapManager);
-				UpdateViewFrustumMarker(view, editor.editorController.iMapManager); // your existing method
+				UpdateViewFrustumMarker(view, editor.editorController.iMapManager);
 			}
 		}
 
@@ -67,43 +67,36 @@ namespace ClassicTilestorm
 				SnapViewDistanceToGround(view, editor.editorController.iMapManager);
 				UpdateViewFrustumMarker(view, editor.editorController.iMapManager);
 
-				// Also update preview window to stay in sync
 				editor.viewPreview.Show(view, editor.editorController.iMapManager);
 			}
 		}
-
-		// ===================================================================
-		// PREVIEW CAMERA SYNC — NOW FULLY FIXED
-		// ===================================================================
 
 		public static void HandlePreviewCameraSync(EditorControllerAttachment editor, ViewPreview viewPreview)
 		{
 			var view = editor.selectedAttachments?.OfType<View>().FirstOrDefault();
 			if (view == null) return;
 
-			// First: sync preview cam → View properties
+			// Sync preview cam → View
 			Vector3 wp = viewPreview.previewCam.transform.position;
-			view.Position = wp - editor.editorController.iMapManager.TileWorldPosition(view.tile);
+			view.Position = MapManager.LocalPosition(view.tile, wp);
 			view.Rotation = viewPreview.previewCam.transform.rotation;
 
-			// Apply ground snap
 			SnapViewDistanceToGround(view, editor.editorController.iMapManager);
 
-			// Second: sync back View → preview cam (ensures perfect consistency)
+			// Sync back View → preview cam
 			SyncPreviewToView(editor, viewPreview, view);
 
-			// CRITICAL: Update main scene gizmo to match new View transform
-			Vector3 worldPos = editor.editorController.iMapManager.TileWorldPosition(view.tile) + view.Position;
+			// Update scene gizmo
+			Vector3 worldPos = MapManager.WorldPosition(view.tile, view.Position);
 			EditorTransformUtil.UpdateTransform(worldPos, view.Rotation, editor.editorCamera);
 
-			// Update frustum marker
 			UpdateViewFrustumMarker(view, editor.editorController.iMapManager);
 		}
 
 		private static void SyncPreviewToView(EditorControllerAttachment editor, ViewPreview viewPreview, View view)
 		{
-			Vector3 tileWorld = editor.editorController.iMapManager.TileWorldPosition(view.tile);
-			viewPreview.previewCam.transform.position = tileWorld + view.Position;
+			Vector3 worldPos = MapManager.WorldPosition(view.tile, view.Position);
+			viewPreview.previewCam.transform.position = worldPos;
 			viewPreview.previewCam.transform.rotation = view.Rotation;
 		}
 
@@ -111,7 +104,7 @@ namespace ClassicTilestorm
 		{
 			if (view == null || mapManager == null) return;
 
-			var origin = mapManager.TileWorldPosition(view.tile) + view.Position;
+			var origin = MapManager.WorldPosition(view.tile, view.Position);
 			var forward = view.Rotation * Vector3.forward;
 			var ray = new Ray(origin, forward);
 
@@ -136,7 +129,7 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			Vector3 worldPos = mapManager.TileWorldPosition(view.tile) + view.Position;
+			Vector3 worldPos = MapManager.WorldPosition(view.tile, view.Position);
 
 			Vector3 forward = (view.LookAt - view.Position).normalized;
 			if (forward.sqrMagnitude < 0.001f) forward = Vector3.forward;
@@ -148,11 +141,9 @@ namespace ClassicTilestorm
 
 			Quaternion targetRotation = Quaternion.LookRotation(forward, up);
 
-			// Use UpdateFrustum for efficiency (handles mesh regeneration on FOV/distance change)
 			EditorFrustumUtil.UpdateFrustum(worldPos, targetRotation, view.Distance, view.FOV);
 		}
 
-		// Future: View-specific inspector panel here
 		protected override void DrawTypeSpecificGUI(EditorControllerAttachment editor) { }
 	}
 }
