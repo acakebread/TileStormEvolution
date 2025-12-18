@@ -29,3 +29,11 @@ MonoBehaviour:
     replacement: med_corner_static_se_hd
   - legacyName: med_tile_sw_corner_static
     replacement: med_corner_static_sw_hd
+  - legacyName: med_tile_ne_corner
+    replacement: med_corner_ne_hd
+  - legacyName: med_tile_nw_corner
+    replacement: med_corner_nw_hd
+  - legacyName: med_tile_se_corner
+    replacement: med_corner_se_hd
+  - legacyName: med_tile_sw_corner
+    replacement: med_corner_sw_hd

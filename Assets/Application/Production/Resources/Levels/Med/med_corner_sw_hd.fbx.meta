@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: 3a962f81af3df514c8e96a43080e6521
+guid: 5b89e766054d72c498466a332b951983
 ModelImporter:
   serializedVersion: 22200
   internalIDToNameTable: []
@@ -8,22 +8,12 @@ ModelImporter:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
       name: med_path
-    second: {fileID: 2100000, guid: 3d8b86452dc1da44d8d0c199fba7a44f, type: 2}
+    second: {fileID: 2100000, guid: 13b860c8d78a04948be6b31cb91b968c, type: 2}
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
       name: med_wall
-    second: {fileID: 2100000, guid: e8aa92515e69509408833b5c9c7f0ecf, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: med_wall_shields
-    second: {fileID: 2100000, guid: 7b485d6b088fbe3419ac91b1b3f9ad4d, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: med_wall_shields_pattern
-    second: {fileID: 2100000, guid: 8f66400e2b9862a4cbf0753f1b240e65, type: 2}
+    second: {fileID: 2100000, guid: 483d9814dcb94884d93d24ba960c2f3c, type: 2}
   materials:
     materialImportMode: 2
     materialName: 0
