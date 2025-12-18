@@ -374,27 +374,3 @@ namespace ClassicTilestorm
 		}
 	}
 }
-
-//public void LoadExternalDatabase()//ToDo make work outside editor
-//{
-//	var dbAsset = PreviewSettings.DatabaseJsonFile;
-//	if (dbAsset == null)
-//	{
-//		Debug.LogError("PreviewSettings.DatabaseJsonFile is not assigned!");
-//		return;
-//	}
-
-//	string path = AssetDatabase.GetAssetPath(dbAsset);
-//	if (string.IsNullOrEmpty(path))
-//	{
-//		Debug.LogError("DatabaseJsonFile has no valid path.");
-//		return;
-//	}
-
-//	var _db = ResourceSerializer.LoadDatabase(path);
-//	if (_db == null) return;
-
-//	ResourceManager.database = _db;
-//	if (!TryGetComponent<MainController>(out var main)) return;
-//	main.ReloadCurrentMap();
-//}

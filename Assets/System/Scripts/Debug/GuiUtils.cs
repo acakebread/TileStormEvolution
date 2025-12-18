@@ -42,6 +42,7 @@ namespace MassiveHadronLtd
 			coloredButtonStyle = new GUIStyle(GUI.skin.button)
 			{
 				fontStyle = FontStyle.Bold,
+				fontSize = 13,
 				alignment = TextAnchor.MiddleCenter,
 				border = new RectOffset(8, 8, 8, 8),
 				padding = new RectOffset(4, 4, 4, 4),
@@ -279,7 +280,6 @@ namespace MassiveHadronLtd
 			}
 		}
 
-
 		public struct ListViewItem
 		{
 			public string Label;
@@ -309,8 +309,6 @@ namespace MassiveHadronLtd
 				Enabled = enabled;
 			}
 		}
-
-
 
 		public class ListView
 		{
@@ -364,8 +362,6 @@ namespace MassiveHadronLtd
 				GUI.EndScrollView();
 			}
 		}
-
-
 
 		public class AutoHidePanel
 		{
@@ -502,8 +498,5 @@ namespace MassiveHadronLtd
 
 			public bool IsGuiActive() => GUIUtility.hotControl != 0 || IsMouseOver;
 		}
-
-
-
 	}
 }

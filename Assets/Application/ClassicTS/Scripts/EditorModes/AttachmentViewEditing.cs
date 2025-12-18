@@ -77,9 +77,8 @@ namespace ClassicTilestorm
 			if (view == null) return;
 
 			// Sync preview cam → View
-			Vector3 wp = viewPreview.previewCam.transform.position;
-			view.Position = MapManager.LocalPosition(view.tile, wp);
-			view.Rotation = viewPreview.previewCam.transform.rotation;
+			view.Position = MapManager.LocalPosition(view.tile, viewPreview.previewCam.transform.position);
+			view.Rotation = MapManager.LocalRotation(view.tile, viewPreview.previewCam.transform.rotation);
 
 			SnapViewDistanceToGround(view, editor.editorController.iMapManager);
 
