@@ -50,7 +50,7 @@ namespace ClassicTilestorm
 
 			SkyboxUtility.SetSkybox(AssetPath.SkycubesPath, $"{(string.IsNullOrEmpty(currentMap.skybox) ? currentMap.music : currentMap.skybox)}Skybox");//fall back to music for now, but will be 'DefaultSkybox'
 
-			if (null != mapManager) Destroy(mapManager.gameObject);
+			if (null != mapManager) DestroyImmediate(mapManager.gameObject);
 			mapManager = MapManager.Instantiate(currentMap, transform);
 
 			if (null != eggbotController) Destroy(eggbotController.gameObject);

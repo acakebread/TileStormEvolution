@@ -12,13 +12,24 @@ namespace ClassicTilestorm
 
 		public bool IsGuiControlActive() => GUIUtility.hotControl != 0 || (EventSystem.current && EventSystem.current.IsPointerOverGameObject());
 		public virtual bool IsMouseOverGUI() => editorController.IsMouseOverGui() | IsGuiControlActive();
+		protected virtual bool IsMouseOverPreview() => false;
 
 		public EditorControllerMovement(EditorController controller = null) => editorController = controller;
 
+		private bool touchStartOverGui = false;
 		public virtual void Update()
 		{
-			//if (!IsMouseOverGUI())
-				EditorCameraMovement.UpdateCamera(editorCamera ? editorCamera.transform : null, isMouseOverGui : IsMouseOverGUI());
+			if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1))
+				touchStartOverGui = IsMouseOverGUI() || IsMouseOverPreview();
+
+			var allowScroll = !(IsMouseOverGUI() || IsMouseOverPreview());
+			if (Input.GetMouseButton(0) || Input.GetMouseButton(1))
+				allowScroll = !touchStartOverGui;
+			else
+				touchStartOverGui = false;
+
+			if (!touchStartOverGui)
+				EditorCameraMovement.UpdateCamera(editorCamera ? editorCamera.transform : null, isMouseOverGui: !allowScroll);
 		}
 
 		//public virtual void Start() { }//ToDo

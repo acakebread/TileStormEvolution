@@ -1,6 +1,5 @@
-// File: EditorCameraMovement.cs
-using MassiveHadronLtd;
 using UnityEngine;
+using MassiveHadronLtd;
 
 public static class EditorCameraMovement
 {
@@ -58,11 +57,12 @@ public static class EditorCameraMovement
 		if (!isMouseOverGui && GuiUtils.IsMouseInsideWindow())
 		{
 			float scroll = Input.GetAxis("Mouse ScrollWheel");
-			if (scroll != 0f)
+			if (scroll != 0f)			
 				translation += Vector3.forward * scroll * ZoomSpeed * MoveSpeedMultiplier * MoveSpeedModifier; //camTransform.Translate(0, 0, scroll * ZoomSpeed * MoveSpeedMultiplier * MoveSpeedModifier, Space.Self);
 		}
 
-		camTransform.Translate(translation, Space.Self);
+		if (!isMouseOverGui)
+			camTransform.Translate(translation, Space.Self);
 	}
 
 	private static Vector3 GetInputTranslationDirection()
@@ -74,19 +74,13 @@ public static class EditorCameraMovement
 		if (Input.GetKey(KeyCode.D)) dir += Vector3.right;
 		if (Input.GetKey(KeyCode.Q)) dir += Vector3.down;
 		if (Input.GetKey(KeyCode.E)) dir += Vector3.up;
-
-		if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))
-			dir *= 2f;
-
+		if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) dir *= 2f;
 		return dir;
 	}
 
 	// Optional: skip next scroll on focus gain (same behavior as before)
 	private static bool didGameFocus = true;
-	public static void OnApplicationFocus(bool hasFocus)
-	{
-		if (hasFocus) didGameFocus = true;
-	}
+	public static void OnApplicationFocus(bool hasFocus) => didGameFocus |= hasFocus;
 
 	public static bool ShouldSkipScroll() { bool s = didGameFocus; didGameFocus = false; return s; }
 }

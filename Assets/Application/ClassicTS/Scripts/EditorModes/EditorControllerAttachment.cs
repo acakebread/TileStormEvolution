@@ -26,7 +26,7 @@ namespace ClassicTilestorm
 			return false;
 		}
 
-		private bool IsMouseOverPreview()
+		protected override bool IsMouseOverPreview()
 		{
 			if (viewPreview != null && viewPreview.gameObject.activeSelf && viewPreview.previewRect is Rect r && r.width > 0)
 			{
@@ -72,8 +72,25 @@ namespace ClassicTilestorm
 
 		public override void Update()
 		{
+			base.Update();
+
+			if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1))
+				rmbDragStartedInPreview = IsMouseOverPreview();
+
+			var touch = Input.GetMouseButton(0) || Input.GetMouseButton(1);
+			if (!touch) rmbDragStartedInPreview = false;
+
+			viewPreview.inInUse = rmbDragStartedInPreview || (!touch && IsMouseOverPreview());
+			if (viewPreview.inInUse) supressInput = true;
+
+			if (rmbDragStartedInPreview || (!Input.GetMouseButton(1) && IsMouseOverPreview()))
+			{
+				EditorCameraMovement.UpdateCamera(viewPreview.previewCam.transform);
+				AttachmentViewEditing.HandlePreviewCameraSync(this, viewPreview);
+				return;
+			}
+
 			if (IsMouseOverGUI() || IsGuiControlActive()) return;
-			var isMouseOverPreview = IsMouseOverPreview();
 
 			if (EditorTransformUtil.HandleTransformGizmoInput(editorCamera))
 			{
@@ -85,7 +102,7 @@ namespace ClassicTilestorm
 			{
 				mouseDownPos = Input.mousePosition;
 				mouseMovedBeyondThreshold = false;
-				rmbDragStartedInPreview = isMouseOverPreview;
+				//rmbDragStartedInPreview = isMouseOverPreview;
 			}
 
 			if (Input.GetMouseButton(0) || Input.GetMouseButton(1))
@@ -95,32 +112,6 @@ namespace ClassicTilestorm
 			}
 
 			bool wasClick = !mouseMovedBeyondThreshold;
-
-			if (rmbDragStartedInPreview && Input.GetMouseButton(1))
-				viewPreview.inInUse = true;
-
-			if (Input.GetMouseButtonUp(1))
-			{
-				viewPreview.inInUse = false;
-				rmbDragStartedInPreview = false;
-			}
-
-			viewPreview.isInFocus = isMouseOverPreview;
-
-			if (viewPreview.inInUse || (!Input.GetMouseButton(1) && isMouseOverPreview))
-			{
-				float scroll = Input.GetAxis("Mouse ScrollWheel");
-				if (viewPreview.inInUse || scroll != 0f)
-				{
-					EditorCameraMovement.UpdateCamera(viewPreview.previewCam.transform);
-					AttachmentViewEditing.HandlePreviewCameraSync(this, viewPreview);
-				}
-				return;
-			}
-
-			if (viewPreview.inInUse) return;
-
-			base.Update();
 
 			if (IsGuiControlActive()) return;
 

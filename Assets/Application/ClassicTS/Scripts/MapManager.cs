@@ -157,7 +157,6 @@ namespace ClassicTilestorm
 			CleanupAttachmentInstances();
 
 			currentMap = map ?? throw new ArgumentNullException(nameof(map));
-			instance = this;
 
 			MapAttachmentExtensions.SetActiveMapManager(this);
 
@@ -707,6 +706,7 @@ namespace ClassicTilestorm
 
 			var manager = go.AddComponent<MapManager>();
 			manager.Initialise(map);
+			instance = go.GetComponent<MapManager>();
 			return manager;
 		}
 	}
