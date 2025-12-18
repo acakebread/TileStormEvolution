@@ -100,7 +100,6 @@ namespace ClassicTilestorm
 
 		private void UpdateGridLines()
 		{
-			var wasActive = null !=  gridLines && gridLines.activeSelf;
 			if (null != gridLines) Destroy(gridLines);
 
 			var width = mapManager ? mapManager.Width : 32;
@@ -109,7 +108,7 @@ namespace ClassicTilestorm
 			gridLines = GridLinesHelper.CreateGridLines(transform, width, height, extension: 16);
 			gridLines.transform.SetLayer(LayerMask.NameToLayer("Editor"));
 			gridLines.transform.localPosition = MapManager.tile_origin + new Vector3(-0.5f, 0f, -0.5f);
-			gridLines.SetActive(wasActive);
+			gridLines.SetActive(gridEnabled && isActiveAndEnabled);
 		}
 
 		private void OnGridLinesToggled(bool value)
