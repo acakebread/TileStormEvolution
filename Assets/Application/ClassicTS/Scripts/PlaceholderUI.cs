@@ -84,78 +84,89 @@ namespace ClassicTilestorm
             guiRect.y = newY;
         }
 
-        public float GetPanelBottomY() => guiRect.height + (guiRect.y >= 0 ? guiRect.y : 0);
+		public float GetPanelBottomY() => guiRect.height + (guiRect.y >= 0 ? guiRect.y : 0);
 
-        private void OnGUI()
-        {
-            if (guiRect.y < -90 && !isGuiVisible) return;
+		private static bool hasDrawnThisFrame = false;
 
-            GUIManager.RegisterGuiRect(new Rect(0, guiRect.y - panelGap, Screen.width, guiRect.height + 2 * panelGap));
+		private void LateUpdate()
+		{
+			hasDrawnThisFrame = false;
+		}
 
-            GUI.skin.button.fontSize = 16;
-            GUI.skin.label.fontSize = 16;
+		private void OnGUI()
+		{
+			// Visibility check first (safe and cheap)
+			if (guiRect.y < -90 && !isGuiVisible)
+				return;
 
-            float currentX = buttonStartX;
-            float y = guiRect.y;
-            float panelHeight = buttonHeight + (2 * panelGap);
-            float panelY = y - panelGap;
+			// ALWAYS run this setup — needed for input handling
+			GUIManager.RegisterGuiRect(new Rect(0, guiRect.y - panelGap, Screen.width, guiRect.height + 2 * panelGap));
 
-            // Background panel
-            GUIStyle panelStyle = new GUIStyle(GUI.skin.box);
-            panelStyle.normal.background = panelTexture;
-            GUI.Box(new Rect(0, panelY, Screen.width, panelHeight), "", panelStyle);
+			GUI.skin.button.fontSize = 16;
+			GUI.skin.label.fontSize = 16;
 
-            // Map name
-            GUI.Label(new Rect(currentX, y, labelWidth, buttonHeight), "Map:");
-            currentX += labelWidth;
+			float currentX = buttonStartX;
+			float y = guiRect.y;
+			float panelHeight = buttonHeight + (2 * panelGap);
+			float panelY = y - panelGap;
 
-            GUI.Label(new Rect(currentX, y, mapNameWidth, buttonHeight), PreviewSettings.LoadMapName);
-            currentX += mapNameWidth + spacing;
+			// Draw background ONLY once per frame on Repaint
+			if (Event.current.type == EventType.Repaint && !hasDrawnThisFrame)
+			{
+				GUIStyle panelStyle = new GUIStyle(GUI.skin.box);
+				panelStyle.normal.background = panelTexture;
+				GUI.Box(new Rect(0, panelY, Screen.width, panelHeight), "", panelStyle);
 
-            // Mode buttons (Editor / Player / Cinema)
-            DrawModeButton(currentX, y, "Editor", PreviewMode.Editor);
+				hasDrawnThisFrame = true; // Mark background as drawn
+			}
+
+			// ALWAYS run labels and ALL buttons — critical for layout, hover, clicks, repeat
+			GUI.Label(new Rect(currentX, y, labelWidth, buttonHeight), "Map:");
+			currentX += labelWidth;
+
+			GUI.Label(new Rect(currentX, y, mapNameWidth, buttonHeight), PreviewSettings.LoadMapName);
+			currentX += mapNameWidth + spacing;
+
+			DrawModeButton(currentX, y, "Editor", PreviewMode.Editor);
 			currentX += buttonWidth + spacing;
 			DrawModeButton(currentX, y, "Player", PreviewMode.Player);
 			currentX += buttonWidth + spacing;
-            DrawModeButton(currentX, y, "Cinema", PreviewMode.Cinema);
+			DrawModeButton(currentX, y, "Cinema", PreviewMode.Cinema);
 			currentX += buttonWidth + spacing;
 
-            currentX += 20;
+			currentX += 20;
 
-            // Navigation & action buttons using GuiUtils
-            GuiUtils.ColoredRepeatButton(new Rect(currentX, y, buttonWidth, buttonHeight), "<< Level", new Color(0.3f, 0.6f, 1f), () => OnChangeMapRequested?.Invoke(-1), initialDelay: 0.25f);
-            currentX += buttonWidth + spacing;
+			GuiUtils.ColoredRepeatButton(new Rect(currentX, y, buttonWidth, buttonHeight), "<< Level", new Color(0.3f, 0.6f, 1f), () => OnChangeMapRequested?.Invoke(-1), initialDelay: 0.25f);
+			currentX += buttonWidth + spacing;
 
-            GuiUtils.ColoredRepeatButton(new Rect(currentX, y, buttonWidth, buttonHeight), "Level >>", new Color(0.3f, 0.6f, 1f), () => OnChangeMapRequested?.Invoke(1), initialDelay: 0.25f);
-            currentX += buttonWidth + spacing;
+			GuiUtils.ColoredRepeatButton(new Rect(currentX, y, buttonWidth, buttonHeight), "Level >>", new Color(0.3f, 0.6f, 1f), () => OnChangeMapRequested?.Invoke(1), initialDelay: 0.25f);
+			currentX += buttonWidth + spacing;
 
-            GuiUtils.ColoredButton(new Rect(currentX, y, buttonWidth, buttonHeight), "Reload", new Color(0.6f, 0.6f, 0.2f), () => OnChangeMapRequested?.Invoke(0));
-            currentX += buttonWidth + spacing;
+			GuiUtils.ColoredButton(new Rect(currentX, y, buttonWidth, buttonHeight), "Reload", new Color(0.6f, 0.6f, 0.2f), () => OnChangeMapRequested?.Invoke(0));
+			currentX += buttonWidth + spacing;
 
-            GuiUtils.ColoredButton(new Rect(currentX, y, buttonWidth, buttonHeight), "Preset", new Color(0.2f, 0.8f, 0.2f), () => OnPresetRequested?.Invoke());
-            currentX += buttonWidth + spacing;
+			GuiUtils.ColoredButton(new Rect(currentX, y, buttonWidth, buttonHeight), "Preset", new Color(0.2f, 0.8f, 0.2f), () => OnPresetRequested?.Invoke());
+			currentX += buttonWidth + spacing;
 
-            GuiUtils.ColoredRepeatButton(new Rect(currentX, y, buttonWidth, buttonHeight), "Scramble", new Color(0.8f, 0.6f, 0.2f), () => OnScrambleRequested?.Invoke(), initialDelay: 0.1f, repeatInterval: 0f);
-            currentX += buttonWidth + spacing;
+			GuiUtils.ColoredRepeatButton(new Rect(currentX, y, buttonWidth, buttonHeight), "Scramble", new Color(0.8f, 0.6f, 0.2f), () => OnScrambleRequested?.Invoke(), initialDelay: 0.1f, repeatInterval: 0f);
+			currentX += buttonWidth + spacing;
 
-            GuiUtils.ColoredButton(new Rect(currentX, y, buttonWidth, buttonHeight), "Solve", new Color(0.8f, 0.2f, 0.2f), () => OnSolveRequested?.Invoke());
+			GuiUtils.ColoredButton(new Rect(currentX, y, buttonWidth, buttonHeight), "Solve", new Color(0.8f, 0.2f, 0.2f), () => OnSolveRequested?.Invoke());
 
-            guiRect.height = panelHeight;
+			guiRect.height = panelHeight;
 
-			void DrawModeButton(float currentX, float y, string label, PreviewMode mode)
+			// Local DrawModeButton (unchanged)
+			void DrawModeButton(float cx, float cy, string label, PreviewMode mode)
 			{
 				bool isSelected = PreviewSettings.CurrentMode == mode;
 				Color buttonColor = isSelected ? modeSelectedBg : modeUnselectedBg;
 				Color textColor = isSelected ? selectedTextColor : unselectedTextColor;
 
-				// Save state
 				Color prevContent = GUI.contentColor;
-
-				// This is the key: force the text color that ColoredButton will use
 				GUI.contentColor = textColor;
 
 				GuiUtils.ColoredButton(
-					new Rect(currentX, y, buttonWidth, buttonHeight),
+					new Rect(cx, cy, buttonWidth, buttonHeight),
 					label,
 					buttonColor,
 					() =>
@@ -164,7 +175,6 @@ namespace ClassicTilestorm
 						OnModeChanged?.Invoke(mode);
 					});
 
-				// Restore
 				GUI.contentColor = prevContent;
 			}
 		}

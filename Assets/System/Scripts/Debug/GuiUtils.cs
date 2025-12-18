@@ -82,15 +82,20 @@ namespace MassiveHadronLtd
 			string text,
 			Color color,
 			Action onRepeat = null,
-			float initialDelay = 0f,      // Delay BEFORE repeating (after first fire)
+			float initialDelay = 0f,      // Delay before repeating starts (after first immediate fire)
 			float repeatInterval = 0.05f)
 		{
 			EnsureStyles();
 
 			int id = GUIUtility.GetControlID(FocusType.Passive);
-			var state = GUIUtility.GetStateObject(typeof(HoldState), id) as HoldState ?? new HoldState();
+			var state = GUIUtility.GetStateObject(typeof(HoldState), id) as HoldState;
+			if (state == null)
+			{
+				state = new HoldState();
+				GUIUtility.GetStateObject(typeof(HoldState), id); // registers it
+			}
 
-			// Save colors
+			// Save original colors
 			Color oldColor = GUI.color;
 			Color oldBg = GUI.backgroundColor;
 			Color oldContent = GUI.contentColor;
@@ -116,18 +121,25 @@ namespace MassiveHadronLtd
 				GUIUtility.hotControl = id;
 				state.isPressed = true;
 
-				// FIRST FIRE: IMMEDIATE (this is the key fix!)
+				// First fire is immediate
 				onRepeat?.Invoke();
 
-				// Schedule the NEXT fire after the initial delay
+				// Schedule first repeat after initial delay
 				state.nextFireTime = Time.time + initialDelay;
-				e.Use(); // consume the event
+
+				e.Use();
 			}
 
-			// REPEATING WHILE HELD
+			// Repeating while held down
 			if (state.isPressed && GUIUtility.hotControl == id)
 			{
-				if (Time.time >= state.nextFireTime)
+				bool isEditorPaused = false;
+#if UNITY_EDITOR
+				isEditorPaused = UnityEditor.EditorApplication.isPaused;
+#endif
+
+				// Only allow repeats when the editor is NOT paused
+				if (!isEditorPaused && Time.time >= state.nextFireTime)
 				{
 					result = true;
 					onRepeat?.Invoke();
@@ -135,17 +147,18 @@ namespace MassiveHadronLtd
 				}
 			}
 
-			// RELEASE
+			// Release
 			if (mouseUp && GUIUtility.hotControl == id)
 			{
 				GUIUtility.hotControl = 0;
 				state.isPressed = false;
 			}
 
-			// Restore
+			// Restore colors
 			GUI.color = oldColor;
 			GUI.backgroundColor = oldBg;
 			GUI.contentColor = oldContent;
+
 			return result;
 		}
 
