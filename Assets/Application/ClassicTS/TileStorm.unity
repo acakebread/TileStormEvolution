@@ -300,6 +300,7 @@ MonoBehaviour:
   texturePath: ClassicTS/Textures/
   materialPath: ClassicTS/Materials/
   skycubesPath: ClassicTS/SkyCubes/
+  prefabPath: ClassicTS/Prefabs/
   previewMode: 0
 --- !u!4 &862124737
 Transform:
@@ -345,7 +346,7 @@ Light:
   serializedVersion: 11
   m_Type: 1
   m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_Intensity: 1
+  m_Intensity: 0.5
   m_Range: 10
   m_SpotAngle: 30
   m_InnerSpotAngle: 21.80208
