@@ -7,16 +7,34 @@ namespace ClassicTilestorm
 	{
 		public static readonly AttachmentViewEditing Instance = new();
 
-		private static View GetSelectedView(EditorControllerAttachment editor)
+		public View AddNewView(EditorControllerAttachment editor, int tile)
 		{
-			if (editor.selectedAttachments != null && editor.selectedAttachments.Length > 0)
-				return editor.selectedAttachments.OfType<View>().FirstOrDefault();
-			return null;
+			var map = editor.editorController?.iMapManager?.CurrentMap;
+			if (map == null) return null;
+
+			var view = new View
+			{
+				tile = tile,
+				Position = (Vector3.up + Vector3.back) * 8f,
+				LookAt = (Vector3.forward + Vector3.down) * 4f
+			};
+
+			map.AddAttachment(view);
+
+			// No runtime GO needed — just editor visuals
+			editor.editorController.iMapManager.RefreshAttachmentInstance(view); // safe no-op
+
+			editor.editorController.OnMapChanged();
+			editor.SelectAttachments(new[] { view });
+
+			OnHandleSelectionChanged(editor); // shows frustum, gizmo, preview
+
+			return view;
 		}
 
 		protected override void OnHandleSelectionChanged(EditorControllerAttachment editor)
 		{
-			var view = GetSelectedView(editor);
+			var view = editor.selectedAttachments?.OfType<View>().FirstOrDefault();
 			if (view == null) return;
 
 			Vector3 worldPos = editor.editorController.iMapManager.TileWorldPosition(view.tile) + view.Position;
@@ -27,15 +45,30 @@ namespace ClassicTilestorm
 			editor.viewPreview.Show(view, editor.editorController.iMapManager);
 		}
 
-		protected override void OnHandleDrag(EditorControllerAttachment editor, MapAttachment attachment)
+		protected override void OnRefreshDragVisuals(EditorControllerAttachment editor, MapAttachment attachment)
 		{
 			if (attachment is View view)
 			{
+				editor.viewPreview.Show(view, editor.editorController.iMapManager);
+				UpdateViewFrustumMarker(view, editor.editorController.iMapManager); // your existing method
+			}
+		}
+
+		protected override void OnHandleGizmoInput(EditorControllerAttachment editor)
+		{
+			var view = editor.selectedAttachments?.OfType<View>().FirstOrDefault();
+			if (view == null) return;
+
+			if (EditorTransformUtil.HandleInput(editor.editorCamera, out Vector3 newWorldPos, out Quaternion newWorldRot))
+			{
+				view.Position = newWorldPos - editor.editorController.iMapManager.TileWorldPosition(view.tile);
+				view.Rotation = newWorldRot;
+
 				SnapViewDistanceToGround(view, editor.editorController.iMapManager);
 				UpdateViewFrustumMarker(view, editor.editorController.iMapManager);
 
-				Vector3 worldPos = editor.editorController.iMapManager.TileWorldPosition(view.tile) + view.Position;
-				EditorTransformUtil.ShowAt(worldPos, view.Rotation, editor.editorCamera);
+				// Also update preview window to stay in sync
+				editor.viewPreview.Show(view, editor.editorController.iMapManager);
 			}
 		}
 
@@ -45,7 +78,7 @@ namespace ClassicTilestorm
 
 		public static void HandlePreviewCameraSync(EditorControllerAttachment editor, ViewPreview viewPreview)
 		{
-			var view = GetSelectedView(editor);
+			var view = editor.selectedAttachments?.OfType<View>().FirstOrDefault();
 			if (view == null) return;
 
 			// First: sync preview cam → View properties
@@ -74,28 +107,6 @@ namespace ClassicTilestorm
 			viewPreview.previewCam.transform.rotation = view.Rotation;
 		}
 
-		// ===================================================================
-		// GIZMO INPUT — NOW CORRECT (with missing line restored)
-		// ===================================================================
-
-		protected override void OnHandleGizmoInput(EditorControllerAttachment editor)
-		{
-			var view = GetSelectedView(editor);
-			if (view == null) return;
-
-			if (EditorTransformUtil.HandleInput(editor.editorCamera, out Vector3 newWorldPos, out Quaternion newWorldRot))
-			{
-				view.Position = newWorldPos - editor.editorController.iMapManager.TileWorldPosition(view.tile);
-				view.Rotation = newWorldRot;
-
-				SnapViewDistanceToGround(view, editor.editorController.iMapManager);
-				UpdateViewFrustumMarker(view, editor.editorController.iMapManager);
-
-				// Also update preview window to stay in sync
-				editor.viewPreview.Show(view, editor.editorController.iMapManager);
-			}
-		}
-
 		private static void SnapViewDistanceToGround(View view, IMapManager mapManager)
 		{
 			if (view == null || mapManager == null) return;
@@ -117,9 +128,6 @@ namespace ClassicTilestorm
 			view.Distance = View.MAX_DISTANCE;
 		}
 
-		// ===================================================================
-		// MOVED & UPDATED: Local wrapper — preserves original behavior but uses new API with FOV
-		// ===================================================================
 		private static void UpdateViewFrustumMarker(View view, IMapManager mapManager)
 		{
 			if (view == null || view.data == null || view.data.Length < 7 || view.Distance < 0.02f)
@@ -144,49 +152,7 @@ namespace ClassicTilestorm
 			EditorFrustumUtil.UpdateFrustum(worldPos, targetRotation, view.Distance, view.FOV);
 		}
 
-		public View AddNewView(EditorControllerAttachment editor, int tile)
-		{
-			var map = editor.editorController?.iMapManager?.CurrentMap;
-			if (map == null) return null;
-
-			var view = new View
-			{
-				tile = tile,
-				Position = (Vector3.up + Vector3.back) * 8f,
-				LookAt = (Vector3.forward + Vector3.down) * 4f
-			};
-
-			map.AddAttachment(view);
-
-			// No runtime GO needed — just editor visuals
-			editor.editorController.iMapManager.RefreshAttachmentInstance(view); // safe no-op
-
-			editor.editorController.OnMapChanged();
-			editor.SelectAttachments(new[] { view });
-
-			OnHandleSelectionChanged(editor); // shows frustum, gizmo, preview
-
-			return view;
-		}
-
 		// Future: View-specific inspector panel here
 		protected override void DrawTypeSpecificGUI(EditorControllerAttachment editor) { }
-
-		// ===================================================================
-		// UTILITIES (seemingly obsolete)
-		// ===================================================================
-
-		//private static void UpdateVisuals(EditorControllerAttachment editor, View view)
-		//{
-		//	UpdateViewFrustumMarker(view, editor.editorController.iMapManager);
-		//	EditorTransformUtil.UpdateTransformGizmoVisuals(editor.editorCamera);
-		//}
-
-		//private static void ShowGizmoAndPreview(EditorControllerAttachment editor, View view)
-		//{
-		//	Vector3 worldPos = editor.editorController.iMapManager.TileWorldPosition(view.tile) + view.Position;
-		//	EditorTransformUtil.ShowAt(worldPos, view.Rotation, editor.editorCamera);
-		//	editor.viewPreview.Show(view, editor.editorController.iMapManager);
-		//}
 	}
 }

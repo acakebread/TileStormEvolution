@@ -19,6 +19,7 @@ namespace ClassicTilestorm
 		public ViewPreview viewPreview;
 		private bool isControllingPreviewWithRMB = false;
 		private bool rmbDragStartedInPreview = false;
+		private int lastDragTile = -1;  // Tracks the last tile we dragged to
 
 		private bool supressInput = true;
 
@@ -149,6 +150,7 @@ namespace ClassicTilestorm
 			// LMB Up: popups (only on clean click)
 			if (Input.GetMouseButtonUp(0) && !supressInput && wasClick)
 			{
+				lastDragTile = -1;
 				HandleLeftMouseUpOnCleanClick();
 			}
 
@@ -161,6 +163,22 @@ namespace ClassicTilestorm
 		}
 
 		public override void OnGUI() => AttachmentEditing.DrawGUI(this);
+
+		private void HandleDrag(int tileUnderMouse)
+		{
+			bool tileChanged = tileUnderMouse != lastDragTile;
+
+			foreach (var att in selectedAttachments)
+			{
+				att.tile = tileUnderMouse;
+			}
+
+			if (tileChanged)
+			{
+				AttachmentEditing.RefreshDragVisuals(this);
+				lastDragTile = tileUnderMouse;
+			}
+		}
 
 		public void OnMapChanged()
 		{
@@ -206,7 +224,12 @@ namespace ClassicTilestorm
 			EditorTransformUtil.HideTransformGizmo();
 			viewPreview.Hide();
 
-			AttachmentEditing.HandleSelectionChanged(this);
+			// Only show editing helpers if exactly ONE attachment selected
+			if (attachments != null && attachments.Length == 1)
+			{
+				AttachmentEditing.HandleSelectionChanged(this);
+				AttachmentEditing.HandleGizmoInput(this); // if needed on select
+			}
 		}
 
 		private int GetTileUnderMouse()
@@ -228,14 +251,6 @@ namespace ClassicTilestorm
 					SelectAttachments(selectedAttachments);
 				}
 			}
-		}
-
-		private void HandleDrag(int tileUnderMouse)
-		{
-			foreach (var att in selectedAttachments)
-				att.tile = tileUnderMouse;
-
-			AttachmentEditing.HandleDrag(this);
 		}
 
 		// New: Only called on clean click (no drag)

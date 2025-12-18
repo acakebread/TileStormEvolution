@@ -77,17 +77,32 @@ namespace ClassicTilestorm
 		public static void HandleSelectionChanged(EditorControllerAttachment editor) => GetEditorForSelection(editor.selectedAttachments)?.OnHandleSelectionChanged(editor);
 		protected virtual void OnHandleSelectionChanged(EditorControllerAttachment editor) { }
 
-		public static void HandleDrag(EditorControllerAttachment editor)
-		{
-			if (editor?.selectedAttachments == null) return;
+		protected virtual void OnRefreshDragVisuals(EditorControllerAttachment editor, MapAttachment attachment) { }
 
-			foreach (var att in editor.selectedAttachments)
+		protected virtual void OnUpdateDragGizmo(EditorControllerAttachment editor, MapAttachment attachment)
+		{
+			// Default fallback gizmo (rarely used)
+			Vector3 worldPos = editor.editorController.iMapManager.TileWorldPosition(attachment.tile);
+			Quaternion worldRot = Quaternion.identity;
+
+			if (attachment is Emitter e)
 			{
-				var typeEditor = GetEditorFor(att);
-				typeEditor?.OnHandleDrag(editor, att);
+				worldPos += e.Position;
+				worldRot = e.Rotation;
 			}
+			else if (attachment is View v)
+			{
+				worldPos += v.Position;
+				worldRot = v.Rotation;
+			}
+			else if (attachment is Pickup)
+			{
+				//worldPos += Vector3.up * 0.5f;//pickup has no transform at the moment so this is pointless
+				return;
+			}
+
+			EditorTransformUtil.ShowAt(worldPos, worldRot, editor.editorCamera);
 		}
-		protected virtual void OnHandleDrag(EditorControllerAttachment editor, MapAttachment attachment) { }
 
 		private static void DrawAddPopup(EditorControllerAttachment editor)
 		{
@@ -207,8 +222,6 @@ namespace ClassicTilestorm
 			}
 		}
 
-		// In AttachmentEditing.cs
-
 		private static AttachmentEditing GetEditorFor(MapAttachment attachment)
 		{
 			if (attachment == null) return null;
@@ -235,6 +248,32 @@ namespace ClassicTilestorm
 			}
 
 			return null; // mixed → no shared editor
+		}
+
+		public static void RefreshDragVisuals(EditorControllerAttachment editor)
+		{
+			if (editor?.selectedAttachments == null || editor.selectedAttachments.Length == 0) return;
+
+			// Always refresh runtime GameObjects (particles, etc.) — safe for all types
+			foreach (var att in editor.selectedAttachments)
+				editor.editorController.iMapManager.RefreshAttachmentInstance(att);
+
+			// === ONLY if SINGLE selection: update type-specific helpers and gizmo ===
+			if (editor.selectedAttachments.Length == 1)
+			{
+				var att = editor.selectedAttachments[0];
+				var typeEditor = GetEditorFor(att);
+				typeEditor?.OnRefreshDragVisuals(editor, att);
+				typeEditor?.OnUpdateDragGizmo(editor, att);
+			}
+			else
+			{
+				// MULTI selection: explicitly hide everything
+				EditorTransformUtil.HideTransformGizmo();
+				EditorPrimitiveUtil.HideCone();
+				editor.viewPreview.Hide();
+				EditorFrustumUtil.Hide(); // if you have this method
+			}
 		}
 
 		public static void UpdateMapMarkers(IMapManager mapManager, int[] tiles, int selectedIndex = -1, EditorMarkerUtil.MarkerType type = EditorMarkerUtil.MarkerType.Undefined)

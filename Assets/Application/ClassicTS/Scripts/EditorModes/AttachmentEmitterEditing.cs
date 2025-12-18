@@ -1,4 +1,3 @@
-// AttachmentEmitterEditing.cs
 using System.Linq;
 using UnityEngine;
 
@@ -43,32 +42,13 @@ namespace ClassicTilestorm
 		protected override void OnHandleSelectionChanged(EditorControllerAttachment editor)
 		{
 			var emitter = editor.selectedAttachments?.OfType<Emitter>().FirstOrDefault();
-			if (emitter == null)
-			{
-				EditorPrimitiveUtil.HideCone();
-				return;
-			}
+			if (emitter == null) return;
 
 			Vector3 worldPos = editor.editorController.iMapManager.TileWorldPosition(emitter.tile) + emitter.Position;
 			EditorTransformUtil.UpdateTransform(worldPos, emitter.Rotation, editor.editorCamera);
 
 			// Show cone: tip at emitter, pointing along rotation, using Distance and Apex
-			emitter.Distance = 5f;
 			EditorPrimitiveUtil.UpdateCone(worldPos, emitter.Rotation, emitter.Distance, emitter.Apex);
-		}
-
-		protected override void OnHandleDrag(EditorControllerAttachment editor, MapAttachment attachment)
-		{
-			if (attachment is Emitter emitter)
-			{
-				editor.editorController.iMapManager.RefreshAttachmentInstance(emitter);
-
-				Vector3 worldPos = editor.editorController.iMapManager.TileWorldPosition(emitter.tile) + emitter.Position;
-				EditorTransformUtil.ShowAt(worldPos, emitter.Rotation, editor.editorCamera);
-
-				emitter.Distance = 5f;
-				EditorPrimitiveUtil.UpdateCone(worldPos, emitter.Rotation, emitter.Distance, emitter.Apex);
-			}
 		}
 
 		protected override void OnHandleGizmoInput(EditorControllerAttachment editor)
@@ -83,13 +63,18 @@ namespace ClassicTilestorm
 				editor.editorController.iMapManager.RefreshAttachmentInstance(emitter);
 
 				// Update cone after transform change
+				EditorPrimitiveUtil.UpdateCone(newWorldPos, emitter.Rotation, emitter.Distance, emitter.Apex);
+			}
+		}
+
+		protected override void OnRefreshDragVisuals(EditorControllerAttachment editor, MapAttachment attachment)
+		{
+			if (attachment is Emitter emitter)
+			{
 				Vector3 worldPos = editor.editorController.iMapManager.TileWorldPosition(emitter.tile) + emitter.Position;
 				emitter.Distance = 5f;
 				EditorPrimitiveUtil.UpdateCone(worldPos, emitter.Rotation, emitter.Distance, emitter.Apex);
 			}
 		}
-
-		// Optional: hide cone when deselected (in base class or controller if needed)
-		// Currently handled by HideCone() in HandleSelectionChanged when emitter == null
 	}
 }
