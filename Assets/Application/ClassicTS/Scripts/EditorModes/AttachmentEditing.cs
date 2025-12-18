@@ -84,8 +84,8 @@ namespace ClassicTilestorm
 			if (attachment is not ITransformableAttachment transformable)
 				return;
 
-			Vector3 worldPos = editor.editorController.iMapManager.TileWorldPosition(attachment.tile) + transformable.Position;
-			Quaternion worldRot = transformable.Rotation;
+			var worldPos = MapManager.WorldPosition(attachment.tile, transformable.Position);
+			var worldRot = MapManager.WorldRotation(attachment.tile, transformable.Rotation);
 
 			EditorTransformUtil.ShowAt(worldPos, worldRot, editor.editorCamera);
 		}

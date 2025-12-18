@@ -193,7 +193,7 @@ namespace ClassicTilestorm
 		{
 			if (view == null || mgr == null || cam == null) return;
 
-			Vector3 worldPos = mgr.TileWorldPosition(view.tile) + view.Position;
+			var worldPos = MapManager.WorldPosition(view.tile, view.Position);
 			ShowAt(worldPos, view.Rotation, cam);
 		}
 

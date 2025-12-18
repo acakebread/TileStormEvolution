@@ -37,7 +37,7 @@ namespace ClassicTilestorm
 			var view = editor.selectedAttachments?.OfType<View>().FirstOrDefault();
 			if (view == null) return;
 
-			Vector3 worldPos = editor.editorController.iMapManager.TileWorldPosition(view.tile) + view.Position;
+			var worldPos = MapManager.WorldPosition(view.tile, view.Position);
 			EditorTransformUtil.ShowAt(worldPos, view.Rotation, editor.editorCamera);
 
 			SnapViewDistanceToGround(view, editor.editorController.iMapManager);
@@ -61,8 +61,8 @@ namespace ClassicTilestorm
 
 			if (EditorTransformUtil.HandleInput(editor.editorCamera, out Vector3 newWorldPos, out Quaternion newWorldRot))
 			{
-				view.Position = newWorldPos - editor.editorController.iMapManager.TileWorldPosition(view.tile);
-				view.Rotation = newWorldRot;
+				view.Position = MapManager.LocalPosition(view.tile, newWorldPos);
+				view.Rotation = MapManager.LocalRotation(view.tile, newWorldRot);
 
 				SnapViewDistanceToGround(view, editor.editorController.iMapManager);
 				UpdateViewFrustumMarker(view, editor.editorController.iMapManager);

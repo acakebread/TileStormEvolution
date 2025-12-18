@@ -44,7 +44,7 @@ namespace ClassicTilestorm
 			var emitter = editor.selectedAttachments?.OfType<Emitter>().FirstOrDefault();
 			if (emitter == null) return;
 
-			Vector3 worldPos = editor.editorController.iMapManager.TileWorldPosition(emitter.tile) + emitter.Position;
+			var worldPos = MapManager.WorldPosition(emitter.tile, emitter.Position);
 			EditorTransformUtil.UpdateTransform(worldPos, emitter.Rotation, editor.editorCamera);
 
 			// Show cone: tip at emitter, pointing along rotation, using Distance and Apex
@@ -58,8 +58,8 @@ namespace ClassicTilestorm
 
 			if (EditorTransformUtil.HandleInput(editor.editorCamera, out Vector3 newWorldPos, out Quaternion newWorldRot))
 			{
-				emitter.Position = newWorldPos - editor.editorController.iMapManager.TileWorldPosition(emitter.tile);
-				emitter.Rotation = newWorldRot;
+				emitter.Position = MapManager.LocalPosition(emitter.tile, newWorldPos);
+				emitter.Rotation = MapManager.LocalRotation(emitter.tile, newWorldRot);
 				editor.editorController.iMapManager.RefreshAttachmentInstance(emitter);
 
 				// Update cone after transform change
@@ -71,7 +71,7 @@ namespace ClassicTilestorm
 		{
 			if (attachment is Emitter emitter)
 			{
-				Vector3 worldPos = editor.editorController.iMapManager.TileWorldPosition(emitter.tile) + emitter.Position;
+				var worldPos = MapManager.WorldPosition(emitter.tile, emitter.Position);
 				EditorPrimitiveUtil.UpdateCone(worldPos, emitter.Rotation, emitter.Distance, emitter.Apex);
 			}
 		}

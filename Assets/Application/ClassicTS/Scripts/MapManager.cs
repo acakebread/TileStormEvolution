@@ -93,6 +93,8 @@ namespace ClassicTilestorm
 		public static Vector3 SnappedMapPosition(Vector3 vec) => new Vector3(Mathf.FloorToInt(vec.x + 0.5f), 0f, Mathf.FloorToInt(vec.z + 0.5f));
 #endif
 
+		private static MapManager instance;
+
 		public int CameraHitTile(Camera camera, Vector3 position) => WorldToMapIndex(ScreenToWorld(camera, position));
 
 		public View GetView(int tile)
@@ -142,10 +144,10 @@ namespace ClassicTilestorm
 			mapTiles = null;
 		}
 
-		// Add this near the top with other methods
 		private void OnDestroy()
 		{
 			CleanupAttachmentInstances();
+			instance = null;
 		}
 
 		private void Initialise(Map map)
@@ -153,6 +155,7 @@ namespace ClassicTilestorm
 			CleanupAttachmentInstances();
 
 			currentMap = map ?? throw new ArgumentNullException(nameof(map));
+			instance = this;
 
 			if (string.IsNullOrEmpty(currentMap.name))
 			{
@@ -672,22 +675,11 @@ namespace ClassicTilestorm
 			attachmentGameObjects.Remove(attachment);
 		}
 
-		// Helper methods to avoid duplication
-		private Vector3 GetAttachmentLocalPosition(MapAttachment att) => att switch
-		{
-			Emitter e => e.Position,
-			View v => v.Position,
-			Pickup p => Vector3.up * 0.5f, // example
-			_ => Vector3.zero
-		};
+		public static Quaternion LocalRotation(int tileIndex, Quaternion worldRotation) => worldRotation;//just pass through
+		public static Quaternion WorldRotation(int tileIndex, Quaternion localRotation) => localRotation;//just pass through
 
-		private Quaternion GetAttachmentRotation(MapAttachment att) => att switch
-		{
-			Emitter e => e.Rotation,
-			View v => v.Rotation,
-			Pickup p => Quaternion.identity,
-			_ => Quaternion.identity
-		};
+		public static Vector3 LocalPosition(int tileIndex, Vector3 worldPosition) => instance == null || tileIndex < 0 ? worldPosition : worldPosition - instance.TileWorldPosition(tileIndex);
+		public static Vector3 WorldPosition(int tileIndex, Vector3 localPosition) => instance == null || tileIndex < 0 ? localPosition : localPosition + instance.TileWorldPosition(tileIndex);
 
 		private void CleanupAttachmentInstances() // rename from CleanupEmitters
 		{

@@ -76,6 +76,8 @@ namespace ClassicTilestorm
 				waypointMode?.OnMapChanged();
 				attachmentMode?.OnMapChanged();
 			}
+
+			MapAttachmentExtensions.SetCurrentMapManager(mapManager);
 		}
 
 		private void UpdateGridLines()
@@ -128,6 +130,8 @@ namespace ClassicTilestorm
 
 			var eggbotController = GetComponentInChildren<EggbotController>(true);
 			if (null != eggbotController) eggbotController.gameObject.SetActive(true);
+
+			MapAttachmentExtensions.ClearCurrentMapManager();
 		}
 
 		private void Update()
@@ -236,12 +240,15 @@ namespace ClassicTilestorm
 			}
 
 			waypointMode?.OnMapChanged();
+
+			MapAttachmentExtensions.SetCurrentMapManager(mapManager);
 		}
 
 		private void OnDestroy()
 		{
 			if (gridLines != null) Destroy(gridLines);
 			EditorMeshUtil.DestroyGhostMesh();
+			MapAttachmentExtensions.ClearCurrentMapManager();
 		}
 
 		public void LoadDatabase()
