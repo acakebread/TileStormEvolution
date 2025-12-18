@@ -192,7 +192,7 @@ namespace ClassicTilestorm
 
 				Debug.Log($"Map imported into database: {importedMap.name}");
 			}
-			catch (System.Exception e)
+			catch (Exception e)
 			{
 				Debug.LogError($"Import failed: {e.Message}");
 			}

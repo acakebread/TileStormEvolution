@@ -90,7 +90,7 @@ namespace ClassicTilestorm
 
 			if (IsMouseOverGUI() || IsGuiControlActive()) return;
 
-			if (EditorTransformUtil.HandleTransformGizmoInput(editorCamera))
+			if (EditorTransformUtil.HandleTransformGizmoInput(camera))
 			{
 				AttachmentEditing.HandleGizmoInput(this);
 				supressInput = true;
@@ -161,17 +161,21 @@ namespace ClassicTilestorm
 			}
 		}
 
-		public void OnMapChanged()
+		public override void OnMapChanged()
 		{
-			if (editorController.CurrentMode != EditorController.EditorMode.Attachment) return;
-			RebuildMarkers();
-			EditorPrimitiveUtil.HideCone();
-			EditorFrustumUtil.Hide();
-			EditorTransformUtil.HideTransformGizmo();
-			viewPreview.Hide();
-			viewPreview.inInUse = false;
-			rmbDragStartedInPreview = false;
-			supressInput = true;
+			if (active)
+			{
+				RebuildMarkers();
+				EditorPrimitiveUtil.HideCone();
+				EditorFrustumUtil.Hide();
+				EditorTransformUtil.HideTransformGizmo();
+				viewPreview.Hide();
+				viewPreview.inInUse = false;
+				rmbDragStartedInPreview = false;
+				supressInput = true;
+			}
+			else
+				Debug.LogError("EditorControllerAttachment::OnMapChanged");
 		}
 
 		public void RebuildMarkers()
@@ -213,8 +217,8 @@ namespace ClassicTilestorm
 
 		private int GetTileUnderMouse()
 		{
-			if (!editorCamera) return -1;
-			return editorController.iMapManager.WorldToMapIndex(MapManager.ScreenToWorld(editorCamera, Input.mousePosition));
+			if (!camera) return -1;
+			return editorController.iMapManager.WorldToMapIndex(MapManager.ScreenToWorld(camera, Input.mousePosition));
 		}
 
 		private void HandleLeftMouseDown(int tile)
@@ -276,14 +280,14 @@ namespace ClassicTilestorm
 		private void SetPopupPosition(int tile)
 		{
 			var wp = editorController.iMapManager.TileWorldPosition(tile) + Vector3.up * 0.6f;
-			var sp = editorCamera.WorldToScreenPoint(wp);
+			var sp = camera.WorldToScreenPoint(wp);
 			sp.y = Screen.height - sp.y;
 			AttachmentEditing.pendingPopupScreenPos = sp;
 		}
 
 		private MapAttachment[] GetAttachmentsOnTile(int tileIndex)
 		{
-			var map = editorController.currentMap;
+			var map = currentMap;
 			if (map == null || map.attachments == null || !map.IsValidTile(tileIndex)) return null;
 			var result = map.attachments.Where(x => x.tile == tileIndex).ToArray();
 			return result.Length > 0 ? result : null;

@@ -37,7 +37,7 @@ namespace ClassicTilestorm
 			var view = editor.selectedAttachments?.OfType<View>().FirstOrDefault();
 			if (view == null) return;
 
-			EditorTransformUtil.ShowAt(MapManager.WorldPosition(view.tile, view.Position), view.Rotation, editor.editorCamera);
+			EditorTransformUtil.ShowAt(MapManager.WorldPosition(view.tile, view.Position), view.Rotation, editor.camera);
 			OnRefreshDragVisuals(editor, view);
 		}
 
@@ -55,7 +55,7 @@ namespace ClassicTilestorm
 			var view = editor.selectedAttachments?.OfType<View>().FirstOrDefault();
 			if (view == null) return;
 
-			if (EditorTransformUtil.HandleInput(editor.editorCamera, out Vector3 newWorldPos, out Quaternion newWorldRot))
+			if (EditorTransformUtil.HandleInput(editor.camera, out Vector3 newWorldPos, out Quaternion newWorldRot))
 			{
 				view.Position = MapManager.LocalPosition(view.tile, newWorldPos);
 				view.Rotation = MapManager.LocalRotation(view.tile, newWorldRot);
@@ -81,7 +81,7 @@ namespace ClassicTilestorm
 
 			// Update scene gizmo
 			Vector3 worldPos = MapManager.WorldPosition(view.tile, view.Position);
-			EditorTransformUtil.UpdateTransform(worldPos, view.Rotation, editor.editorCamera);
+			EditorTransformUtil.UpdateTransform(worldPos, view.Rotation, editor.camera);
 		}
 
 		private static void SnapViewDistanceToGround(View view, IMapManager mapManager)

@@ -10,8 +10,9 @@ namespace ClassicTilestorm
 	public class EditorController : MonoBehaviour
 	{
 		private MapManager mapManager;
-		private EditorControllerMovement activeMode;
+		public IMapManager iMapManager => mapManager;
 
+		private EditorControllerMovement activeMode;
 		private EditorControllerDrag dragMode;
 		private EditorControllerPaint paintMode;
 		private EditorControllerWaypoint waypointMode;
@@ -20,16 +21,6 @@ namespace ClassicTilestorm
 		public enum EditorMode { Drag, Paint, Waypoint, Attachment }
 		private EditorMode? currentMode = null;
 		public EditorMode CurrentMode => currentMode ?? EditorMode.Drag;
-
-		public Camera editorCamera
-		{
-			get
-			{
-				if (TryGetComponent<MainCameraController>(out var controller))
-					return controller.activeSystem?.camera;
-				return null;
-			}
-		}
 
 		// UI state
 		private float panelYoffset = 10f;
@@ -41,68 +32,18 @@ namespace ClassicTilestorm
 		private GameObject gridLines;
 		private bool gridEnabled = true;
 
-		public IMapManager iMapManager => mapManager;
 		public event System.Action<int> OnChangeMapRequested; // delta or 0 for reload
-
-		public Map currentMap => mapManager?.CurrentMap;
 
 		private void Awake()
 		{
+			panelYoffset = PlaceholderUI.PanelBottomY;
+
 			// Modes
 			dragMode = new EditorControllerDrag(this);
 			paintMode = new EditorControllerPaint(this);
 			waypointMode = new EditorControllerWaypoint(this);
 			attachmentMode = new EditorControllerAttachment(this); 
-
-			SetEditorMode(EditorMode.Drag);
-
-			// Try to detect bottom panel offset from existing PlaceholderUI (optional compatibility)
-			if (TryGetComponent<PlaceholderUI>(out var placeholderUI))
-				panelYoffset = placeholderUI.GetPanelBottomY();
-		}
-
-		public void Initialise(MapManager map)
-		{
-			mapManager = map;
-			UpdateGridLines();
-			if (gridLines != null)
-				gridLines.SetActive(isActiveAndEnabled && gridEnabled);
-
-			var eggbotController = GetComponentInChildren<EggbotController>();
-			if (null != eggbotController) eggbotController.gameObject.SetActive(!isActiveAndEnabled);
-
-			if (isActiveAndEnabled)
-			{
-				waypointMode?.OnMapChanged();
-				attachmentMode?.OnMapChanged();
-			}
-		}
-
-		private void UpdateGridLines()
-		{
-			bool wasActive = gridLines != null && gridLines.activeSelf;
-			if (gridLines != null) Destroy(gridLines);
-
-			int width = mapManager ? mapManager.Width : 32;
-			int height = mapManager ? mapManager.Height : 32;
-
-			gridLines = GridLinesHelper.CreateGridLines(transform, width, height, extension: 16);
-			SetLayerRecursively(gridLines.transform, LayerMask.NameToLayer("Editor"));
-			gridLines.transform.localPosition = MapManager.tile_origin + new Vector3(-0.5f, 0f, -0.5f);
-			gridLines.SetActive(wasActive);
-
-			void SetLayerRecursively(Transform parent, int layer)
-			{
-				parent.gameObject.layer = layer;
-				foreach (Transform child in parent)
-					SetLayerRecursively(child, layer);
-			}
-		}
-
-		private void OnGridLinesToggled(bool value)
-		{
-			gridEnabled = value;
-			if (gridLines != null) gridLines.SetActive(value);
+			SetEditorMode(EditorMode.Drag);//default
 		}
 
 		private void OnEnable()
@@ -112,29 +53,21 @@ namespace ClassicTilestorm
 				controller.SetCameraSystem(CameraModeRegistry.Editor, false);
 				controller.UpdateGestureControllerState();
 			}
-
-			var eggbotController = GetComponentInChildren<EggbotController>(true);
-			if (null != eggbotController) eggbotController.gameObject.SetActive(false);
-
 			if (gridLines != null) gridLines.SetActive(gridEnabled);
 			activeMode?.OnEnable();
+			EnableEggbot(false);
 		}
 
 		private void OnDisable()
 		{
 			activeMode?.OnDisable();
 			if (gridLines != null) gridLines.SetActive(false);
-			EditorMeshUtil.DestroyGhostMesh();
-
-			var eggbotController = GetComponentInChildren<EggbotController>(true);
-			if (null != eggbotController) eggbotController.gameObject.SetActive(true);
+			EnableEggbot(true);
 		}
 
 		private void Update()
 		{
-			if (Input.GetMouseButtonUp(0) && GUIUtility.hotControl != 0)
-				GUIUtility.hotControl = 0;
-
+			if (Input.GetMouseButtonUp(0) && GUIUtility.hotControl != 0) GUIUtility.hotControl = 0;
 			activeMode?.Update();
 		}
 
@@ -146,14 +79,57 @@ namespace ClassicTilestorm
 
 		public void OnApplicationFocus(bool hasFocus) => activeMode?.OnApplicationFocus(hasFocus);
 
+		private void OnDestroy()
+		{
+			if (null != gridLines) Destroy(gridLines);
+			dragMode?.OnDestroy();
+			paintMode?.OnDestroy();
+			waypointMode?.OnDestroy();
+			attachmentMode?.OnDestroy();
+		}
+
+		private EggbotController Eggbot() => GetComponentInChildren<EggbotController>(true);
+
+		private void EnableEggbot(bool value)
+		{
+			var eggbotController = Eggbot();
+			if (null != eggbotController) eggbotController.gameObject.SetActive(value);
+		}
+
+		public void Initialise(MapManager map)
+		{
+			mapManager = map;
+			UpdateGridLines();
+			if (gridLines != null) gridLines.SetActive(isActiveAndEnabled && gridEnabled);
+			activeMode?.OnMapChanged();
+			EnableEggbot(!isActiveAndEnabled);
+		}
+
+		private void UpdateGridLines()
+		{
+			var wasActive = null !=  gridLines && gridLines.activeSelf;
+			if (null != gridLines) Destroy(gridLines);
+
+			var width = mapManager ? mapManager.Width : 32;
+			var height = mapManager ? mapManager.Height : 32;
+
+			gridLines = GridLinesHelper.CreateGridLines(transform, width, height, extension: 16);
+			gridLines.transform.SetLayer(LayerMask.NameToLayer("Editor"));
+			gridLines.transform.localPosition = MapManager.tile_origin + new Vector3(-0.5f, 0f, -0.5f);
+			gridLines.SetActive(wasActive);
+		}
+
+		private void OnGridLinesToggled(bool value)
+		{
+			gridEnabled = value;
+			if (null != gridLines) gridLines.SetActive(value);
+		}
+
 		private void SetEditorMode(EditorMode newMode)
 		{
 			if (currentMode == newMode) return;
-
 			activeMode?.OnDisable();
-
 			currentMode = newMode;
-
 			activeMode = newMode switch
 			{
 				EditorMode.Drag => dragMode,
@@ -162,7 +138,6 @@ namespace ClassicTilestorm
 				EditorMode.Attachment => attachmentMode,
 				_ => dragMode
 			};
-
 			activeMode?.OnEnable();
 		}
 
@@ -215,31 +190,25 @@ namespace ClassicTilestorm
 		public void OnMapEdited(bool resized = false, Vector3 originDelta = default)
 		{
 			if (mapManager == null) return;
-
 			ResourceManager.ApplyMapChanges(mapManager.CurrentMap);
-
-			if (resized)
-			{
-				UpdateGridLines();
-
-				if (originDelta != Vector3.zero)
-				{
-					if (TryGetComponent<MainCameraController>(out var controller))
-					{
-						if (controller.activeSystem is GameCameraEditor editorCam)
-							editorCam.camera.transform.position += originDelta;
-					}
-
-					var eggbot = transform.GetComponentInChildren<EggbotController>(true);
-					if (null != eggbot) eggbot.OnMapOriginShift(mapManager, originDelta);
-				}
-			}
+			if (resized) OnMapResized(originDelta);
 		}
 
-		private void OnDestroy()
+		private void OnMapResized(Vector3 originDelta = default)
 		{
-			if (gridLines != null) Destroy(gridLines);
-			EditorMeshUtil.DestroyGhostMesh();
+			if (mapManager == null) return;
+			UpdateGridLines();
+			if (Vector3.zero != originDelta)
+			{
+				if (TryGetComponent<MainCameraController>(out var controller))
+				{
+					if (controller.activeSystem is GameCameraEditor editorCam)
+						editorCam.camera.transform.position += originDelta;
+				}
+
+				var eggbotController = Eggbot();
+				if (null != eggbotController) eggbotController.OnMapOriginShift(mapManager, originDelta);
+			}
 		}
 
 		public void LoadDatabase()

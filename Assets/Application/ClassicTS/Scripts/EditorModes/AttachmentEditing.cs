@@ -89,7 +89,7 @@ namespace ClassicTilestorm
 			var worldPos = MapManager.WorldPosition(attachment.tile, transformable.Position);
 			var worldRot = MapManager.WorldRotation(attachment.tile, transformable.Rotation);
 
-			EditorTransformUtil.ShowAt(worldPos, worldRot, editor.editorCamera);
+			EditorTransformUtil.ShowAt(worldPos, worldRot, editor.camera);
 		}
 
 		private static void DrawAddPopup(EditorControllerAttachment editor)

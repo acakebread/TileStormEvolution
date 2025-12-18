@@ -6,10 +6,10 @@ namespace MassiveHadronLtd
 {
 	public static class TransformExt
 	{
-		public static void SetLayer(this Transform src, int layer)
+		public static void SetLayer(this Transform src, int layer, bool recursive = true)
 		{
 			src.gameObject.layer = layer;
-			foreach (Transform child in src) { child.SetLayer(layer); }
+			if (recursive) foreach (Transform child in src) child.SetLayer(layer);
 		}
 
 		public static void SetRenderersEnabled(this Transform src, bool state)

@@ -32,7 +32,7 @@ namespace ClassicTilestorm
 		public override void Update()
 		{
 			base.Update();
-			if (!editorCamera || IsMouseOverGUI() || IsGuiControlActive()) return;
+			if (!camera || IsMouseOverGUI() || IsGuiControlActive()) return;
 
 			if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1))
 				mouseDownPos = Input.mousePosition;
@@ -45,14 +45,16 @@ namespace ClassicTilestorm
 
 			var selectedDefinition = ResourceManager.GetDefinition(selectedDefinitionId);
 			if (selectedDefinition != null)
-				EditorMeshUtil.UpdateGhostMesh(editorCamera, editorController.iMapManager, selectedDefinition);
+				EditorMeshUtil.UpdateGhostMesh(camera, editorController.iMapManager, selectedDefinition);
 		}
 
 		public override void OnDisable() => EditorMeshUtil.HideGhostMesh();
 
+		public override void OnDestroy() => EditorMeshUtil.DestroyGhostMesh();
+
 		private void EditMapTile(string defID = null)
 		{
-			var worldPos = MapManager.ScreenToWorld(editorCamera, Input.mousePosition);
+			var worldPos = MapManager.ScreenToWorld(camera, Input.mousePosition);
 
 			if (defID != null)
 			{
@@ -93,14 +95,14 @@ namespace ClassicTilestorm
 			EditorMeshUtil.DestroyGhostMesh();
 			var def = ResourceManager.GetDefinition(selectedDefinitionId);
 			if (def != null)
-				EditorMeshUtil.UpdateGhostMesh(editorCamera, editorController.iMapManager, def);
+				EditorMeshUtil.UpdateGhostMesh(camera, editorController.iMapManager, def);
 			else
 				EditorMeshUtil.HideGhostMesh();
 		}
 
 		public override void OnGUI()
 		{
-			if (null == editorCamera) return;
+			if (null == camera) return;
 
 			if (leftButtonStyle == null)
 			{
@@ -128,7 +130,6 @@ namespace ClassicTilestorm
 			// Draw the panel (background + list)
 			sidePanel.Draw();
 		}
-
 
 		private static List<string> DefinitionNavGroup(string referenceDef)
 		{

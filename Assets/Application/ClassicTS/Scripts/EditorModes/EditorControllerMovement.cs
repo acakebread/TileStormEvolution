@@ -6,13 +6,15 @@ namespace ClassicTilestorm
 	public abstract class EditorControllerMovement
 	{
 		public EditorController editorController;
-		public Camera editorCamera => editorController?.editorCamera;
+		public Camera camera { get { if (editorController.TryGetComponent<MainCameraController>(out var controller)) return controller.activeSystem?.camera; return null; } }
 
-		protected int HitTile(Vector3 mousePos) => editorController.iMapManager.CameraHitTile(editorCamera, mousePos);
+		protected int HitTile(Vector3 mousePos) => editorController.iMapManager.CameraHitTile(camera, mousePos);
 
 		public bool IsGuiControlActive() => GUIUtility.hotControl != 0 || (EventSystem.current && EventSystem.current.IsPointerOverGameObject());
 		public virtual bool IsMouseOverGUI() => editorController.IsMouseOverGui() | IsGuiControlActive();
 		protected virtual bool IsMouseOverPreview() => false;
+		protected Map currentMap => editorController?.iMapManager?.CurrentMap;
+		public virtual void OnMapChanged() { }
 
 		public EditorControllerMovement(EditorController controller = null) => editorController = controller;
 
@@ -29,13 +31,16 @@ namespace ClassicTilestorm
 				touchStartOverGui = false;
 
 			if (!touchStartOverGui)
-				EditorCameraMovement.UpdateCamera(editorCamera ? editorCamera.transform : null, isMouseOverGui: !allowScroll);
+				EditorCameraMovement.UpdateCamera(camera ? camera.transform : null, isMouseOverGui: !allowScroll);
 		}
 
 		//public virtual void Start() { }//ToDo
-		public virtual void OnEnable() { }
-		public virtual void OnDisable() { }
+
+		protected bool active = false;
+		public virtual void OnEnable() => active = true;
+		public virtual void OnDisable() => active = false;
 		public virtual void OnGUI() { }
+		public virtual void OnDestroy() { }
 
 		public virtual void OnApplicationFocus(bool hasFocus) => EditorCameraMovement.OnApplicationFocus(hasFocus);
 	}

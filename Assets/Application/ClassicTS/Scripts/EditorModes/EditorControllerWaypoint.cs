@@ -52,10 +52,12 @@ namespace ClassicTilestorm
 			pendingAction = PendingAction.None;
 		}
 
-		public void OnMapChanged()
+		public override void OnMapChanged()
 		{
-			if (editorController.CurrentMode == EditorController.EditorMode.Waypoint)
+			if (active)
 				RebuildMarkers();
+			else
+				Debug.LogError("EditorControllerWaypoint::OnMapChanged");
 		}
 
 		private void RebuildMarkers()
@@ -141,7 +143,7 @@ namespace ClassicTilestorm
 					pendingAction = PendingAction.Add;
 
 					var _worldPos = editorController.iMapManager.TileWorldPosition(clickStartTile) + Vector3.up * 0.6f;
-					var sp = editorCamera.WorldToScreenPoint(_worldPos);
+					var sp = camera.WorldToScreenPoint(_worldPos);
 					sp.y = Screen.height - sp.y;
 					pendingPopupScreenPos = sp;
 				}
@@ -164,7 +166,7 @@ namespace ClassicTilestorm
 						pendingAction = PendingAction.Delete;
 
 						var _worldPos = editorController.iMapManager.TileWorldPosition(clickStartTile) + Vector3.up * 0.6f;
-						var sp = editorCamera.WorldToScreenPoint(_worldPos);
+						var sp = camera.WorldToScreenPoint(_worldPos);
 						sp.y = Screen.height - sp.y;
 						pendingPopupScreenPos = sp;
 					}
@@ -197,14 +199,14 @@ namespace ClassicTilestorm
 
 		private int IndexOfWaypoint(int tileIndex)
 		{
-			var map = editorController.currentMap;
+			var map = currentMap;
 			return null != map && null != map.waypoints && map.waypoints.Contains(tileIndex) ? Array.IndexOf(map.waypoints, tileIndex) : -1;
 		}
 
 		private int GetTileUnderMouse()
 		{
-			if (!editorCamera) return -1;
-			Vector3 mouseWorld = MapManager.ScreenToWorld(editorCamera, Input.mousePosition);
+			if (!camera) return -1;
+			Vector3 mouseWorld = MapManager.ScreenToWorld(camera, Input.mousePosition);
 			Vector3 snapped = MapManager.SnappedMapPosition(mouseWorld);
 			return editorController.iMapManager.WorldToMapIndex(snapped);
 		}

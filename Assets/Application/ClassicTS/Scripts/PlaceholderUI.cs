@@ -41,7 +41,9 @@ namespace ClassicTilestorm
         
         private void Awake() => panelTexture = TextureUtils.MakeTex(1, 1, panelColor);
 
-        private void Update()
+        public static int PanelBottomY => 40;// guiRect.height;
+
+		private void Update()
         {
             // Handle arrow key navigation
             if (InputUtility.GetKeyRepeat(KeyCode.LeftArrow)) OnChangeMapRequested?.Invoke(-1);
