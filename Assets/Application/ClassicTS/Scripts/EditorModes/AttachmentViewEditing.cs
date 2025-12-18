@@ -83,19 +83,13 @@ namespace ClassicTilestorm
 			SnapViewDistanceToGround(view, editor.editorController.iMapManager);
 
 			// Sync back View → preview cam
-			SyncPreviewToView(editor, viewPreview, view);
+			viewPreview.previewCam.transform.SetPositionAndRotation(MapManager.WorldPosition(view.tile, view.Position), MapManager.WorldRotation(view.tile, view.Rotation));
 
 			// Update scene gizmo
 			Vector3 worldPos = MapManager.WorldPosition(view.tile, view.Position);
 			EditorTransformUtil.UpdateTransform(worldPos, view.Rotation, editor.editorCamera);
 
 			UpdateViewFrustumMarker(view, editor.editorController.iMapManager);
-		}
-
-		private static void SyncPreviewToView(EditorControllerAttachment editor, ViewPreview viewPreview, View view)
-		{
-			viewPreview.previewCam.transform.position = MapManager.WorldPosition(view.tile, view.Position);
-			viewPreview.previewCam.transform.rotation = MapManager.WorldRotation(view.tile, view.Rotation);
 		}
 
 		private static void SnapViewDistanceToGround(View view, IMapManager mapManager)
