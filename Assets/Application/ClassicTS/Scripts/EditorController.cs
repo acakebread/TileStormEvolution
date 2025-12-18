@@ -5,8 +5,8 @@ namespace ClassicTilestorm
 {
 	public class EditorController : MonoBehaviour
 	{
-		private MapManager mapManager;
 		public IMapManager iMapManager => mapManager;
+		private MapManager mapManager;
 
 		private EditorControllerMovement activeMode;
 		private EditorControllerDrag dragMode;
@@ -14,9 +14,11 @@ namespace ClassicTilestorm
 		private EditorControllerWaypoint waypointMode;
 		private EditorControllerAttachment attachmentMode;
 
-		public enum EditorMode { Drag, Paint, Waypoint, Attachment }
+		private enum EditorMode { Drag, Paint, Waypoint, Attachment }
 		private EditorMode? currentMode = null;
-		public EditorMode CurrentMode => currentMode ?? EditorMode.Drag;
+
+		private GameObject gridLines;
+		private bool gridEnabled = true;
 
 		// UI state
 		private float panelYoffset = 10f;
@@ -24,11 +26,6 @@ namespace ClassicTilestorm
 		private const float spacing = 10f;
 		private const float buttonWidth = 135f;
 		private const float buttonHeight = 30f;
-
-		private GameObject gridLines;
-		private bool gridEnabled = true;
-
-		public event System.Action<int> OnChangeMapRequested; // delta or 0 for reload
 
 		private void Awake()
 		{
@@ -69,7 +66,7 @@ namespace ClassicTilestorm
 
 		private void OnGUI()
 		{
-			DrawMainUI(CurrentMode.ToString(), gridEnabled);
+			DrawMainUI((currentMode ?? EditorMode.Drag).ToString(), gridEnabled);
 			activeMode?.OnGUI();
 		}
 
@@ -138,7 +135,35 @@ namespace ClassicTilestorm
 		}
 
 		// ===================================================================
-		// UI & Input Detection (formerly in PlaceholderEditorUI)
+		// Map actions
+		// ===================================================================
+
+		public void OnMapEdited(bool resized = false, Vector3 originDelta = default)
+		{
+			if (mapManager == null) return;
+			ResourceManager.ApplyMapChanges(mapManager.CurrentMap);
+			if (resized) OnMapResized(originDelta);
+		}
+
+		private void OnMapResized(Vector3 originDelta = default)
+		{
+			if (mapManager == null) return;
+			UpdateGridLines();
+			if (Vector3.zero != originDelta)
+			{
+				if (TryGetComponent<MainCameraController>(out var controller))
+				{
+					if (controller.activeSystem is GameCameraEditor editorCam)
+						editorCam.camera.transform.position += originDelta;
+				}
+
+				var eggbotController = Eggbot();
+				if (null != eggbotController) eggbotController.OnMapOriginShift(mapManager, originDelta);
+			}
+		}
+
+		// ===================================================================
+		// UI & Input Detection
 		// ===================================================================
 
 		public bool IsMouseOverGui()
@@ -164,7 +189,7 @@ namespace ClassicTilestorm
 			GUI.contentColor = mode == "Waypoint" ? Color.cyan : Color.white;
 			if (GUI.Button(new Rect(margin, y + 3 * (buttonHeight + spacing), buttonWidth, buttonHeight), "Waypoint")) SetEditorMode(EditorMode.Waypoint);
 
-			GUI.contentColor = CurrentMode == EditorMode.Attachment ? Color.cyan : Color.white;
+			GUI.contentColor = (currentMode ?? EditorMode.Drag) == EditorMode.Attachment ? Color.cyan : Color.white;
 			if (GUI.Button(new Rect(margin, y + 4 * (buttonHeight + spacing), buttonWidth, buttonHeight), "Attachments")) SetEditorMode(EditorMode.Attachment);
 
 			GUI.contentColor = Color.white;
@@ -181,34 +206,6 @@ namespace ClassicTilestorm
 
 			if (GuiUtils.ColoredButton(new Rect(margin, y + 8 * (buttonHeight + spacing), buttonWidth, buttonHeight), "Save Database", new Color(0.8f, 0.2f, 0.2f)))
 				mainController.SaveDatabase();
-		}
-
-		// ===================================================================
-		// Map / Database actions (unchanged logic)
-		// ===================================================================
-
-		public void OnMapEdited(bool resized = false, Vector3 originDelta = default)
-		{
-			if (mapManager == null) return;
-			ResourceManager.ApplyMapChanges(mapManager.CurrentMap);
-			if (resized) OnMapResized(originDelta);
-		}
-
-		private void OnMapResized(Vector3 originDelta = default)
-		{
-			if (mapManager == null) return;
-			UpdateGridLines();
-			if (Vector3.zero != originDelta)
-			{
-				if (TryGetComponent<MainCameraController>(out var controller))
-				{
-					if (controller.activeSystem is GameCameraEditor editorCam)
-						editorCam.camera.transform.position += originDelta;
-				}
-
-				var eggbotController = Eggbot();
-				if (null != eggbotController) eggbotController.OnMapOriginShift(mapManager, originDelta);
-			}
 		}
 	}
 }

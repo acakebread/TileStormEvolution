@@ -14,7 +14,7 @@ namespace ClassicTilestorm
 		private EggbotController eggbotController;
 		private MainCameraController cameraController;
 
-		public event System.Action<int> OnChangeMapRequested;
+		public event System.Action<int> OnChangeMapRequested; // delta or 0 for reload
 
 		private void Awake()
 		{
