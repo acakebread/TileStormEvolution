@@ -20,6 +20,7 @@ namespace ClassicTilestorm
 			};
 
 			map.AddAttachment(view);
+			SnapViewDistanceToGround(view, editor.editorController.iMapManager);
 
 			editor.editorController.iMapManager.RefreshAttachmentInstance(view);
 
@@ -36,13 +37,8 @@ namespace ClassicTilestorm
 			var view = editor.selectedAttachments?.OfType<View>().FirstOrDefault();
 			if (view == null) return;
 
-			var worldPos = MapManager.WorldPosition(view.tile, view.Position);
-
-			EditorTransformUtil.ShowAt(worldPos, view.Rotation, editor.editorCamera);
-
-			SnapViewDistanceToGround(view, editor.editorController.iMapManager);
-			UpdateViewFrustumMarker(view, editor.editorController.iMapManager);
-			editor.viewPreview.Show(view, editor.editorController.iMapManager);
+			EditorTransformUtil.ShowAt(MapManager.WorldPosition(view.tile, view.Position), view.Rotation, editor.editorCamera);
+			OnRefreshDragVisuals(editor, view);
 		}
 
 		protected override void OnRefreshDragVisuals(EditorControllerAttachment editor, MapAttachment attachment)
@@ -65,9 +61,8 @@ namespace ClassicTilestorm
 				view.Rotation = MapManager.LocalRotation(view.tile, newWorldRot);
 
 				SnapViewDistanceToGround(view, editor.editorController.iMapManager);
+				editor.viewPreview.previewCam.transform.SetPositionAndRotation(MapManager.WorldPosition(view.tile, view.Position), MapManager.WorldRotation(view.tile, view.Rotation));// Sync back View → preview cam
 				UpdateViewFrustumMarker(view, editor.editorController.iMapManager);
-
-				editor.viewPreview.Show(view, editor.editorController.iMapManager);
 			}
 		}
 
@@ -81,15 +76,12 @@ namespace ClassicTilestorm
 			view.Rotation = MapManager.LocalRotation(view.tile, viewPreview.previewCam.transform.rotation);
 
 			SnapViewDistanceToGround(view, editor.editorController.iMapManager);
-
-			// Sync back View → preview cam
-			viewPreview.previewCam.transform.SetPositionAndRotation(MapManager.WorldPosition(view.tile, view.Position), MapManager.WorldRotation(view.tile, view.Rotation));
+			viewPreview.previewCam.transform.SetPositionAndRotation(MapManager.WorldPosition(view.tile, view.Position), MapManager.WorldRotation(view.tile, view.Rotation));// Sync back View → preview cam
+			UpdateViewFrustumMarker(view, editor.editorController.iMapManager);
 
 			// Update scene gizmo
 			Vector3 worldPos = MapManager.WorldPosition(view.tile, view.Position);
 			EditorTransformUtil.UpdateTransform(worldPos, view.Rotation, editor.editorCamera);
-
-			UpdateViewFrustumMarker(view, editor.editorController.iMapManager);
 		}
 
 		private static void SnapViewDistanceToGround(View view, IMapManager mapManager)
