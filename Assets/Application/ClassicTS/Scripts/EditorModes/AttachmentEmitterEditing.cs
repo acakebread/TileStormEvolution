@@ -72,7 +72,6 @@ namespace ClassicTilestorm
 			if (attachment is Emitter emitter)
 			{
 				Vector3 worldPos = editor.editorController.iMapManager.TileWorldPosition(emitter.tile) + emitter.Position;
-				emitter.Distance = 5f;
 				EditorPrimitiveUtil.UpdateCone(worldPos, emitter.Rotation, emitter.Distance, emitter.Apex);
 			}
 		}
