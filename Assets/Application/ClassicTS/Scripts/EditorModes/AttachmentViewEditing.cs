@@ -19,16 +19,11 @@ namespace ClassicTilestorm
 				LookAt = (Vector3.forward + Vector3.down) * 4f
 			};
 
-			map.AddAttachment(view);
 			SnapViewDistanceToGround(view, editor.editorController.iMapManager);
-
-			editor.editorController.iMapManager.RefreshAttachmentInstance(view);
-
-			editor.editorController.OnMapEdited();
+			editor.iMapManager.AddAttachment(view);
+			editor.editorController.OnMapEdited();//ToDo remove this and invoke delegate
 			editor.SelectAttachments(new[] { view });
-
 			OnHandleSelectionChanged(editor);
-
 			return view;
 		}
 

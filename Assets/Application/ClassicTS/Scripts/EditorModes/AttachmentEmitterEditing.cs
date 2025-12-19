@@ -25,14 +25,9 @@ namespace ClassicTilestorm
 				variant = variant  // Critical: variant must be set BEFORE RefreshEmitterInstance
 			};
 
-			map.AddAttachment(emitter);
-
-			// This now creates the GameObject if needed
-			editor.editorController.iMapManager.RefreshAttachmentInstance(emitter);
-
-			editor.editorController.OnMapEdited();
+			editor.iMapManager.AddAttachment(emitter);
+			editor.editorController.OnMapEdited();//ToDo remove this and invoke delegate
 			editor.SelectAttachments(new MapAttachment[] { emitter });
-
 			// Show gizmo/cone immediately
 			OnHandleSelectionChanged(editor);
 

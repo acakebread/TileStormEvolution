@@ -125,10 +125,7 @@ namespace ClassicTilestorm
 				var localAtt = att;
 				items.Add(new PopupItem(label, () =>
 				{
-					map.RemoveAttachment(localAtt);
-
-					editor.editorController.iMapManager.DestroyAttachmentInstance(localAtt);
-
+					editor.iMapManager.RemoveAttachment(localAtt);
 					editor.SelectAttachments(null);
 					EditorPrimitiveUtil.HideCone();
 					EditorFrustumUtil.Hide();
@@ -144,11 +141,7 @@ namespace ClassicTilestorm
 				items.Add(PopupItem.Spacer());
 				items.Add(new PopupItem("Delete All", () =>
 				{
-					map.RemoveAllAttachmentsOnTile(editor.PendingTile);
-
-					foreach (var att in attsOnTile)
-						editor.editorController.iMapManager.DestroyAttachmentInstance(att);
-
+					editor.iMapManager.RemoveAllAttachmentsOnTile(editor.PendingTile);
 					editor.SelectAttachments(null);
 					EditorPrimitiveUtil.HideCone();
 					EditorFrustumUtil.Hide();

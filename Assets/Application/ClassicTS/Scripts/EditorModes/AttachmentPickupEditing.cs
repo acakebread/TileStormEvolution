@@ -6,8 +6,7 @@ namespace ClassicTilestorm
 
 		public Pickup AddNewPickup(EditorControllerAttachment editor, int tile)
 		{
-			var map = editor.editorController?.iMapManager?.CurrentMap;
-			if (map == null) return null;
+			if (null == editor.currentMap) return null;
 
 			var pickup = new Pickup
 			{
@@ -17,13 +16,9 @@ namespace ClassicTilestorm
 				respawn = false
 			};
 
-			map.AddAttachment(pickup);
-
-			editor.editorController.iMapManager.RefreshAttachmentInstance(pickup);
-
-			editor.editorController.OnMapEdited();
+			editor.iMapManager.AddAttachment(pickup);
+			editor.editorController.OnMapEdited();//ToDo remove this and invoke delegate
 			editor.SelectAttachments(new[] { pickup });
-
 			return pickup;
 		}
 	}

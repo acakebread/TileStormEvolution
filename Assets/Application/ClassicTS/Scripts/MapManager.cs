@@ -35,6 +35,10 @@ namespace ClassicTilestorm
 
 		void RefreshAttachmentInstance(MapAttachment attachment);
 		void DestroyAttachmentInstance(MapAttachment attachment);
+
+		void AddAttachment(MapAttachment attachment);
+		bool RemoveAttachment(MapAttachment attachment);
+		void RemoveAllAttachmentsOnTile(int tileIndex);
 	}
 
 	public class MapManager : MonoBehaviour, IMapManager
@@ -93,7 +97,13 @@ namespace ClassicTilestorm
 		public static Vector3 SnappedMapPosition(Vector3 vec) => new Vector3(Mathf.FloorToInt(vec.x + 0.5f), 0f, Mathf.FloorToInt(vec.z + 0.5f));
 #endif
 
+		//statci helpers rely on instance - work out how to remove these later
 		private static MapManager instance;
+		public static Quaternion LocalRotation(int tileIndex, Quaternion worldRotation) => worldRotation;//just pass through
+		public static Quaternion WorldRotation(int tileIndex, Quaternion localRotation) => localRotation;//just pass through
+
+		public static Vector3 LocalPosition(int tileIndex, Vector3 worldPosition) => instance == null || tileIndex < 0 ? worldPosition : worldPosition - instance.TileWorldPosition(tileIndex);
+		public static Vector3 WorldPosition(int tileIndex, Vector3 localPosition) => instance == null || tileIndex < 0 ? localPosition : localPosition + instance.TileWorldPosition(tileIndex);
 
 		public int CameraHitTile(Camera camera, Vector3 position) => WorldToMapIndex(ScreenToWorld(camera, position));
 
@@ -678,12 +688,6 @@ namespace ClassicTilestorm
 			attachmentGameObjects.Remove(attachment);
 		}
 
-		public static Quaternion LocalRotation(int tileIndex, Quaternion worldRotation) => worldRotation;//just pass through
-		public static Quaternion WorldRotation(int tileIndex, Quaternion localRotation) => localRotation;//just pass through
-
-		public static Vector3 LocalPosition(int tileIndex, Vector3 worldPosition) => instance == null || tileIndex < 0 ? worldPosition : worldPosition - instance.TileWorldPosition(tileIndex);
-		public static Vector3 WorldPosition(int tileIndex, Vector3 localPosition) => instance == null || tileIndex < 0 ? localPosition : localPosition + instance.TileWorldPosition(tileIndex);
-
 		private void CleanupAttachmentInstances() // rename from CleanupEmitters
 		{
 			foreach (var att in attachmentGameObjects.Keys.ToList())
@@ -691,6 +695,27 @@ namespace ClassicTilestorm
 				DestroyAttachmentInstance(att);
 			}
 			attachmentGameObjects.Clear();
+		}
+
+		public void AddAttachment(MapAttachment attachment)
+		{
+			currentMap.AddAttachment(attachment);
+			RefreshAttachmentInstance(attachment);
+		}
+
+		public bool RemoveAttachment(MapAttachment attachment)
+		{
+			var result = currentMap.RemoveAttachment(attachment);
+			DestroyAttachmentInstance(attachment); 
+			return result;
+		}
+
+		public void RemoveAllAttachmentsOnTile(int tileIndex)
+		{
+			currentMap.RemoveAllAttachmentsOnTile(tileIndex);
+			var attsOnTile = currentMap.GetAttachmentsOnTile(tileIndex);
+			foreach (var att in attsOnTile)
+				DestroyAttachmentInstance(att);
 		}
 
 		public static MapManager Instantiate(Map map, Transform parent = null)
