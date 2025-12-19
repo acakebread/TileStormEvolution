@@ -14,6 +14,7 @@ namespace ClassicTilestorm
 		private int dragIndex = -1;
 		private const float gridSize = 1.0f;
 		public event System.Action<IMapManager> OnMapUpdated;
+		private Vector3 accumulatedDiscarded = Vector3.zero;
 
 		public void Initialise(Camera camera, IMapManager imap)
 		{
@@ -54,6 +55,7 @@ namespace ClassicTilestorm
 
 			last = vert;
 			delta = Vector3.zero;
+			accumulatedDiscarded = Vector3.zero;
 			dragIndex = index;
 			tileStrip = default;
 		}
@@ -65,7 +67,10 @@ namespace ClassicTilestorm
 			DebugVisualizationHelper.HighlightStrip(imap, tileStrip, false);
 
 			var vert = MapManager.ScreenToWorld(camera, screenPos);
-			TryDrag(vert - last);
+			var rawOffset = vert - last;
+
+			TryDrag(rawOffset + accumulatedDiscarded);
+
 			last = vert;
 
 			DebugVisualizationHelper.HighlightStrip(imap, tileStrip, tileStrip.Count > 1);
@@ -88,6 +93,8 @@ namespace ClassicTilestorm
 		{
 			delta += offset;
 
+			bool moved = false;
+
 			for (var axis = 0; axis < 2; ++axis)
 			{
 				TileStripHelper.ResetStrip(imap, tileStrip);
@@ -103,6 +110,7 @@ namespace ClassicTilestorm
 				tileStrip = TileStripHelper.GetTileStrip(imap, dragIndex, stride, PreviewSettings.Difficulty);
 				if (tileStrip.Count <= 1)
 				{
+					// Cannot move on this axis — discard this component, but save it for later
 					if (isX) delta.x = 0;
 					else delta.z = 0;
 					continue;
@@ -117,8 +125,30 @@ namespace ClassicTilestorm
 					tileStrip = TileStripHelper.GetTileStrip(imap, dragIndex, stride, PreviewSettings.Difficulty);
 				}
 
-				delta = isX ? new Vector3(val % gridSize, 0, 0) : new Vector3(0, 0, val % gridSize);
-				break;
+				// Keep remainder on the active axis
+				float remainder = val % gridSize;
+				delta = isX ? new Vector3(remainder, 0, 0) : new Vector3(0, 0, remainder);
+
+				moved = true;
+				break; // Success on one axis — exit loop
+			}
+
+			if (!moved)
+			{
+				// Neither axis could move — accumulate the entire delta as discarded
+				accumulatedDiscarded += delta;
+				delta = Vector3.zero;
+			}
+			else
+			{
+				// We successfully moved on one axis — the other axis's component was discarded
+				// Save it (note: delta now only has remainder on active axis, so subtract that)
+				Vector3 discardedThisFrame = offset + (accumulatedDiscarded - delta); // better way:
+
+				// Simpler: the discarded part is everything except the active remainder
+				accumulatedDiscarded = Vector3.zero; // clear old
+				if (Mathf.Abs(delta.x) > 0.001f) accumulatedDiscarded.z += offset.z; // if X was active, Z was discarded
+				if (Mathf.Abs(delta.z) > 0.001f) accumulatedDiscarded.x += offset.x; // if Z was active, X was discarded
 			}
 
 			if (snap)
