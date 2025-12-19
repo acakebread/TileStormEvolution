@@ -91,8 +91,8 @@ namespace ClassicTilestorm
 
 		public void Initialise(MapManager map)
 		{
-			if (!isActiveAndEnabled) return;
 			mapManager = map;
+			if (!isActiveAndEnabled) return;
 			UpdateGridLines();
 			if (gridLines != null) gridLines.SetActive(isActiveAndEnabled && gridEnabled);
 			activeMode?.OnMapChanged();
