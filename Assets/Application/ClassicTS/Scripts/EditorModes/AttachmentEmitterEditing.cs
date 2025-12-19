@@ -15,20 +15,29 @@ namespace ClassicTilestorm
 		public Emitter AddNewEmitter(EditorControllerAttachment editor, int tile, string variant)
 		{
 			var map = editor.editorController?.iMapManager?.CurrentMap;
-			if (map == null || string.IsNullOrEmpty(variant)) return null;
+			var mapManager = editor.editorController?.iMapManager;
+			if (map == null || mapManager == null || string.IsNullOrEmpty(variant)) return null;
+
+			// Get accurate geometry bounds from MapManager
+			Bounds tileBounds = mapManager.GetTileGeometryBounds(tile);
+
+			// Compute placement height (editor-specific logic: offset, etc.)
+			float localY = ComputeEmitterPlacementHeight(editor, tile, tileBounds);
+
+			Vector3 tileWorldCenter = mapManager.TileWorldPosition(tile);
 
 			var emitter = new Emitter
 			{
 				tile = tile,
-				Position = Vector3.up,
-				LookAt = Vector3.up,
-				variant = variant  // Critical: variant must be set BEFORE RefreshEmitterInstance
+				Position = new Vector3(0f, localY, 0f),
+				LookAt = new Vector3(0f, localY + 1f, 0f),//LookAt = tileWorldCenter + new Vector3(0f, 2f, 4f), // Your preferred default bias
+				variant = variant
 			};
 
-			editor.iMapManager.AddAttachment(emitter);
-			editor.editorController.OnMapEdited();//ToDo remove this and invoke delegate
+			mapManager.AddAttachment(emitter);
+			editor.editorController.OnMapEdited();
 			editor.SelectAttachments(new MapAttachment[] { emitter });
-			// Show gizmo/cone immediately
+
 			OnHandleSelectionChanged(editor);
 
 			return emitter;
@@ -69,6 +78,22 @@ namespace ClassicTilestorm
 				var worldPos = MapManager.WorldPosition(emitter.tile, emitter.Position);
 				EditorPrimitiveUtil.UpdateCone(worldPos, emitter.Rotation, emitter.Distance, emitter.Apex);
 			}
+		}
+
+		/// <summary>
+		/// Computes the ideal local Y position for placing an emitter on top of the tile geometry.
+		/// Adds a small offset to prevent z-fighting.
+		/// </summary>
+		private static float ComputeEmitterPlacementHeight(EditorControllerAttachment editor, int tile, Bounds tileBounds)
+		{
+			var mapManager = editor.editorController?.iMapManager;
+			if (mapManager == null) return 1f;
+
+			Vector3 tileWorldCenter = mapManager.TileWorldPosition(tile);
+			float topYWorld = tileBounds.max.y;
+
+			// Convert to local space and add small lift
+			return (topYWorld - tileWorldCenter.y) + 0.05f;
 		}
 	}
 }

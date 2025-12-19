@@ -39,6 +39,8 @@ namespace ClassicTilestorm
 		void AddAttachment(MapAttachment attachment);
 		bool RemoveAttachment(MapAttachment attachment);
 		void RemoveAllAttachmentsOnTile(int tileIndex);
+
+		public Bounds GetTileGeometryBounds(int tileIndex);
 	}
 
 	public class MapManager : MonoBehaviour, IMapManager
@@ -726,6 +728,52 @@ namespace ClassicTilestorm
 			var attsOnTile = currentMap.GetAttachmentsOnTile(tileIndex);
 			foreach (var att in attsOnTile)
 				DestroyAttachmentInstance(att);
+		}
+
+		/// <summary>
+		/// Returns the world-space bounds of the highest rendered geometry that is centered within the given tile.
+		/// Uses a tight horizontal threshold to avoid considering geometry from adjacent tiles or edge decorations (e.g. battlements).
+		/// Returns a default 1x1x1 bounds centered 0.5 units above the tile if no suitable renderer is found.
+		/// </summary>
+		public Bounds GetTileGeometryBounds(int tileIndex)
+		{
+			if (tileIndex < 0 || tileIndex >= Count)
+			{
+				Vector3 center = TileWorldPosition(tileIndex);
+				return new Bounds(center + Vector3.up * 0.5f, new Vector3(1f, 1f, 1f));
+			}
+
+			Vector3 tileCenter = TileWorldPosition(tileIndex);
+			const float horizontalThreshold = 0.7f; // Safe within 1x1 tile, avoids parapets/towers edges
+
+			Bounds bestBounds = default;
+			float bestTopY = tileCenter.y;
+			bool foundAny = false;
+
+			foreach (Renderer renderer in GetComponentsInChildren<Renderer>(true))
+			{
+				if (!renderer.gameObject.activeInHierarchy) continue;
+
+				Bounds bounds = renderer.bounds;
+				Vector3 boundsCenterXZ = new Vector3(bounds.center.x, tileCenter.y, bounds.center.z);
+
+				if (Vector3.Distance(boundsCenterXZ, tileCenter) < horizontalThreshold)
+				{
+					if (bounds.max.y > bestTopY)
+					{
+						bestTopY = bounds.max.y;
+						bestBounds = bounds;
+						foundAny = true;
+					}
+				}
+			}
+
+			if (!foundAny)
+			{
+				bestBounds = new Bounds(tileCenter + Vector3.up * 0.5f, new Vector3(1f, 1f, 1f));
+			}
+
+			return bestBounds;
 		}
 
 		public static MapManager Instantiate(Map map, Transform parent = null)
