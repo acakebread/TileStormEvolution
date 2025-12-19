@@ -54,7 +54,7 @@ namespace ClassicTilestorm
 
 		public override void OnMapChanged()
 		{
-			if (active)
+			if (enabled)
 				RebuildMarkers();
 			else
 				Debug.LogError("EditorControllerWaypoint::OnMapChanged");

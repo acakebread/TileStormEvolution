@@ -16,7 +16,6 @@ namespace ClassicTilestorm
 		public MapAttachment[] selectedAttachments = System.Array.Empty<MapAttachment>();
 		public enum PendingAction { None, Wait, Add, Delete, Select }
 		public PendingAction pendingAction = PendingAction.None;
-		public ViewPreview viewPreview;
 
 		public override bool IsMouseOverGUI()
 		{
@@ -27,14 +26,7 @@ namespace ClassicTilestorm
 
 		protected override bool IsMouseOverPreview()
 		{
-			if (viewPreview != null && viewPreview.gameObject.activeSelf && viewPreview.previewRect is Rect r && r.width > 0)
-			{
-				Rect hitRect = new Rect(r.x - 8, r.y - 8, r.width + 16, r.height + 16);
-				Vector2 mp = Input.mousePosition;
-				mp.y = Screen.height - mp.y;
-				return hitRect.Contains(mp);
-			}
-			return false;
+			return ViewPreviewUtil.IsMouseOverPreview();
 		}
 
 		public EditorControllerAttachment(EditorController controller) : base(controller) { }
@@ -47,8 +39,7 @@ namespace ClassicTilestorm
 			EditorFrustumUtil.Hide();
 			RebuildMarkers();
 
-			viewPreview = ViewPreview.Create();
-			viewPreview.Hide();
+			ViewPreviewUtil.Hide();
 
 			supressInput = true;
 			rmbDragStartedInPreview = false;
@@ -62,31 +53,43 @@ namespace ClassicTilestorm
 			EditorPrimitiveUtil.HideCone();
 			EditorFrustumUtil.Hide();
 			EditorTransformUtil.HideTransformGizmo();
-			viewPreview?.Hide();
-
-			if (viewPreview != null) Object.Destroy(viewPreview.gameObject);
+			ViewPreviewUtil.Cleanup();
 		}
 
 		public override void Update()
 		{
 			base.Update();
 
-			viewPreview.isInFocus = IsMouseOverPreview();
-			if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1))
-				rmbDragStartedInPreview = viewPreview.isInFocus;
+			// === VIEW PREVIEW INTERACTION (clean, faithful to original) ===
+			ViewPreviewUtil.SetInFocus(ViewPreviewUtil.IsMouseOverPreview());
 
-			var touch = Input.GetMouseButton(0) || Input.GetMouseButton(1);
-			if (!touch) rmbDragStartedInPreview = false;
+			// Detect if RMB was pressed THIS FRAME while mouse was over preview
+			if (Input.GetMouseButtonDown(1))
+				rmbDragStartedInPreview = ViewPreviewUtil.IsInFocus;
 
-			viewPreview.inInUse = rmbDragStartedInPreview || (!touch && viewPreview.isInFocus);
-			if (viewPreview.inInUse) supressInput = true;
+			// Clear the drag flag when no mouse buttons are pressed
+			if (!Input.GetMouseButton(0) && !Input.GetMouseButton(1))
+				rmbDragStartedInPreview = false;
 
-			if (rmbDragStartedInPreview || (!Input.GetMouseButton(1) && viewPreview.isInFocus))
+			// "In use" = actively orbiting with RMB (strong border + "Preview Active")
+			ViewPreviewUtil.SetInUse(rmbDragStartedInPreview);
+
+			// Full preview camera control active if:
+			// - We're in RMB orbit mode, OR
+			// - Mouse is hovering over preview with no RMB held (soft focus)
+			bool previewControlsActive = rmbDragStartedInPreview || (!Input.GetMouseButton(1) && ViewPreviewUtil.IsInFocus);
+
+			if (previewControlsActive)
 			{
-				EditorCameraMovement.UpdateCamera(viewPreview.previewCam.transform);
-				AttachmentViewEditing.HandlePreviewCameraSync(this, viewPreview);
-				return;
+				EditorCameraMovement.UpdateCamera(ViewPreviewUtil.PreviewCamera.transform);
+				AttachmentViewEditing.HandlePreviewCameraSync(this);
+
+				supressInput = true;
+				return; // Block normal map input while using preview
 			}
+
+			// Always update the preview render when visible
+			ViewPreviewUtil.Update();
 
 			if (IsMouseOverGUI() || IsGuiControlActive()) return;
 
@@ -145,7 +148,11 @@ namespace ClassicTilestorm
 			supressInput = false;
 		}
 
-		public override void OnGUI() => AttachmentEditing.DrawGUI(this);
+		public override void OnGUI()
+		{
+			AttachmentEditing.DrawGUI(this);
+			ViewPreviewUtil.OnGUI();
+		}
 
 		private void HandleDrag(int tileUnderMouse)
 		{
@@ -170,14 +177,13 @@ namespace ClassicTilestorm
 
 		public override void OnMapChanged()
 		{
-			if (active)
+			if (enabled)
 			{
 				RebuildMarkers();
 				EditorPrimitiveUtil.HideCone();
 				EditorFrustumUtil.Hide();
 				EditorTransformUtil.HideTransformGizmo();
-				viewPreview.Hide();
-				viewPreview.inInUse = false;
+				ViewPreviewUtil.Hide();
 				rmbDragStartedInPreview = false;
 				supressInput = true;
 			}
@@ -211,7 +217,7 @@ namespace ClassicTilestorm
 			EditorPrimitiveUtil.HideCone();
 			EditorTransformUtil.HideTransformGizmo();
 			EditorFrustumUtil.Hide();
-			viewPreview.Hide();
+			ViewPreviewUtil.Hide();
 
 			// Only show editing helpers if exactly ONE attachment selected
 			if (attachments != null && attachments.Length == 1)

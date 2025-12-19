@@ -21,7 +21,7 @@ namespace ClassicTilestorm
 
 			SnapViewDistanceToGround(view, editor.iMapManager);
 			editor.iMapManager.AddAttachment(view);
-			editor.editorController.OnMapEdited();//ToDo remove this and invoke delegate
+			editor.editorController.OnMapEdited(); // ToDo: replace with delegate
 			editor.SelectAttachments(new[] { view });
 			OnHandleSelectionChanged(editor);
 			return view;
@@ -40,7 +40,8 @@ namespace ClassicTilestorm
 		{
 			if (attachment is View view)
 			{
-				editor.viewPreview.Show(view, editor.iMapManager);
+				// Use the static utility instead of editor.viewPreview
+				ViewPreviewUtil.Show(view, editor.iMapManager);
 				UpdateViewFrustumMarker(view, editor.iMapManager);
 			}
 		}
@@ -56,25 +57,46 @@ namespace ClassicTilestorm
 				view.Rotation = MapManager.LocalRotation(view.tile, newWorldRot);
 
 				SnapViewDistanceToGround(view, editor.iMapManager);
-				editor.viewPreview.previewCam.transform.SetPositionAndRotation(MapManager.WorldPosition(view.tile, view.Position), MapManager.WorldRotation(view.tile, view.Rotation));// Sync back View → preview cam
+
+				// Sync back: View → Preview Camera
+				var previewTransform = ViewPreviewUtil.PreviewCameraTransform;
+				if (previewTransform != null)
+				{
+					previewTransform.position = MapManager.WorldPosition(view.tile, view.Position);
+					previewTransform.rotation = MapManager.WorldRotation(view.tile, view.Rotation);
+				}
+
+				// Force immediate render update
+				ViewPreviewUtil.Update();
+
 				UpdateViewFrustumMarker(view, editor.iMapManager);
 			}
 		}
 
-		public static void HandlePreviewCameraSync(EditorControllerAttachment editor, ViewPreview viewPreview)
+		// Updated signature: no longer needs ViewPreview parameter
+		public static void HandlePreviewCameraSync(EditorControllerAttachment editor)
 		{
 			var view = editor.selectedAttachments?.OfType<View>().FirstOrDefault();
 			if (view == null) return;
 
-			// Sync preview cam → View
-			view.Position = MapManager.LocalPosition(view.tile, viewPreview.previewCam.transform.position);
-			view.Rotation = MapManager.LocalRotation(view.tile, viewPreview.previewCam.transform.rotation);
+			var previewTransform = ViewPreviewUtil.PreviewCameraTransform;
+			if (previewTransform == null) return;
+
+			// Sync: Preview Camera → View
+			view.Position = MapManager.LocalPosition(view.tile, previewTransform.position);
+			view.Rotation = MapManager.LocalRotation(view.tile, previewTransform.rotation);
 
 			SnapViewDistanceToGround(view, editor.iMapManager);
-			viewPreview.previewCam.transform.SetPositionAndRotation(MapManager.WorldPosition(view.tile, view.Position), MapManager.WorldRotation(view.tile, view.Rotation));// Sync back View → preview cam
+
+			// Sync back: View → Preview Camera (prevents drift)
+			previewTransform.position = MapManager.WorldPosition(view.tile, view.Position);
+			previewTransform.rotation = MapManager.WorldRotation(view.tile, view.Rotation);
+
+			// Update preview and markers
+			ViewPreviewUtil.Update();
 			UpdateViewFrustumMarker(view, editor.iMapManager);
 
-			// Update scene gizmo
+			// Update scene view gizmo
 			Vector3 worldPos = MapManager.WorldPosition(view.tile, view.Position);
 			EditorTransformUtil.UpdateTransform(worldPos, view.Rotation, editor.camera);
 		}

@@ -35,11 +35,10 @@ namespace ClassicTilestorm
 				EditorCameraMovement.UpdateCamera(camera ? camera.transform : null, isMouseOverGui: !allowScroll);
 		}
 
+		protected bool enabled = false;
 		//public virtual void Start() { }//ToDo
-
-		protected bool active = false;
-		public virtual void OnEnable() => active = true;
-		public virtual void OnDisable() => active = false;
+		public virtual void OnEnable() => enabled = true;
+		public virtual void OnDisable() => enabled = false;
 		public virtual void OnGUI() { }
 		public virtual void OnDestroy() { }
 
