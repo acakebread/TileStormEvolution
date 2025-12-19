@@ -14,8 +14,8 @@ namespace ClassicTilestorm
 		/// </summary>
 		public Emitter AddNewEmitter(EditorControllerAttachment editor, int tile, string variant)
 		{
-			var map = editor.editorController?.iMapManager?.CurrentMap;
-			var mapManager = editor.editorController?.iMapManager;
+			var map = editor.currentMap;
+			var mapManager = editor.iMapManager;
 			if (map == null || mapManager == null || string.IsNullOrEmpty(variant)) return null;
 
 			// Get accurate geometry bounds from MapManager

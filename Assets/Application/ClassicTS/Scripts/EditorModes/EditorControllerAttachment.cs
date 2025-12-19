@@ -9,12 +9,12 @@ namespace ClassicTilestorm
 		private bool mouseMovedBeyondThreshold;
 		private const float CLICK_THRESHOLD = 8f;
 		private bool rmbDragStartedInPreview = false;
-		private int lastDragTile = -1;
 		private bool supressInput = true;
 
 		private int pendingTile = -1;
+		private int lastDragTile = -1;
 		public MapAttachment[] selectedAttachments = System.Array.Empty<MapAttachment>();
-		public enum PendingAction { None, Wait, Add, Delete, Select, Drag }
+		public enum PendingAction { None, Wait, Add, Delete, Select }
 		public PendingAction pendingAction = PendingAction.None;
 		public ViewPreview viewPreview;
 
@@ -57,13 +57,13 @@ namespace ClassicTilestorm
 		public override void OnDisable()
 		{
 			base.OnDisable();
-			EditorMarkerUtil.ClearMapMarkers();
 			pendingAction = PendingAction.None;
+			EditorMarkerUtil.ClearMapMarkers();
 			EditorPrimitiveUtil.HideCone();
 			EditorFrustumUtil.Hide();
 			EditorTransformUtil.HideTransformGizmo();
-
 			viewPreview?.Hide();
+
 			if (viewPreview != null) Object.Destroy(viewPreview.gameObject);
 		}
 
@@ -157,7 +157,14 @@ namespace ClassicTilestorm
 			if (tileChanged)
 			{
 				lastDragTile = tileUnderMouse;
-				AttachmentEditing.RefreshDragVisuals(this);
+
+				if (null != selectedAttachments && 0 != selectedAttachments.Length)
+				{
+					// refresh runtime GameObjects (particles, etc.)
+					foreach (var att in selectedAttachments)
+						iMapManager.RefreshAttachmentInstance(att);
+					AttachmentEditing.RefreshDragVisuals(this);
+				}
 			}
 		}
 
@@ -200,11 +207,10 @@ namespace ClassicTilestorm
 		public void SelectAttachments(MapAttachment[] attachments)
 		{
 			selectedAttachments = attachments;
-
 			RebuildMarkers();
 			EditorPrimitiveUtil.HideCone();
-			EditorFrustumUtil.Hide();
 			EditorTransformUtil.HideTransformGizmo();
+			EditorFrustumUtil.Hide();
 			viewPreview.Hide();
 
 			// Only show editing helpers if exactly ONE attachment selected

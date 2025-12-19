@@ -602,9 +602,7 @@ namespace ClassicTilestorm
 		private void RefreshAllAttachmentInstances()
 		{
 			foreach (var att in CurrentMap.attachments)
-			{
 				RefreshAttachmentInstance(att);
-			}
 		}
 
 		private void RefreshAttachmentsOnTile(int tileIndex)
@@ -768,12 +766,7 @@ namespace ClassicTilestorm
 				}
 			}
 
-			if (!foundAny)
-			{
-				bestBounds = new Bounds(tileCenter + Vector3.up * 0.5f, new Vector3(1f, 1f, 1f));
-			}
-
-			return bestBounds;
+			return foundAny ? bestBounds : new Bounds(tileCenter + Vector3.up * 0.5f, new Vector3(1f, 1f, 1f));
 		}
 
 		public static MapManager Instantiate(Map map, Transform parent = null)

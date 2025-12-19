@@ -8,8 +8,7 @@ namespace ClassicTilestorm
 {
 	public abstract class AttachmentEditing
 	{
-		private static readonly AutoHidePanel sidePanel = new AutoHidePanel(
-			collapsed: 120f, expanded: 340f, delay: 1.5f, animDur: 0.25f, defaultPos: new Vector2(0f, 40f));
+		private static readonly AutoHidePanel sidePanel = new AutoHidePanel( collapsed: 120f, expanded: 340f, delay: 1.5f, animDur: 0.25f, defaultPos: new Vector2(0f, 40f));
 
 		public static Vector2 pendingPopupScreenPos;
 
@@ -25,10 +24,7 @@ namespace ClassicTilestorm
 		{
 			return att switch
 			{
-				Emitter e => $"Emitter [{att.tile}]" +
-							 (e.LookAt.sqrMagnitude > 0.01f && e.LookAt != Vector3.up
-							  ? $" → {e.LookAt.magnitude:F1}"
-							  : ""),
+				Emitter e => $"Emitter [{att.tile}]" + (e.LookAt.sqrMagnitude > 0.01f && e.LookAt != Vector3.up ? $" → {e.LookAt.magnitude:F1}" : ""),
 				View => $"View [{att.tile}]",
 				Pickup p => $"Pickup [{att.tile}] ({p.amount})",
 				_ => $"{att.TypeName} [{att.tile}]"
@@ -48,7 +44,7 @@ namespace ClassicTilestorm
 			sidePanel.Update();
 			sidePanel.List.Clear();
 
-			var map = editor.editorController?.iMapManager?.CurrentMap;
+			var map = editor.currentMap;
 			if (map != null && map.attachments != null)
 			{
 				foreach (var att in map.attachments)
@@ -58,7 +54,7 @@ namespace ClassicTilestorm
 					sidePanel.List.AddItem(new ListViewItem(
 						label,
 						() => editor.SelectAttachments(new[] { att }),
-						selected: editor.selectedAttachments != null && editor.selectedAttachments.Contains(att)
+						selected: null  != editor.selectedAttachments && editor.selectedAttachments.Contains(att)
 					));
 				}
 			}
@@ -96,10 +92,10 @@ namespace ClassicTilestorm
 		{
 			var items = new List<PopupItem>
 			{
-				new ("Emitter [flame]", () => { AttachmentEmitterEditing.Instance.AddNewEmitter(editor, editor.PendingTile, "flame"); }),
-				new ("Emitter [spark]", () => { AttachmentEmitterEditing.Instance.AddNewEmitter(editor, editor.PendingTile, "spark"); }),
-				new ("View", () => { AttachmentViewEditing.Instance.AddNewView(editor, editor.PendingTile); }),
-				new ("Pickup", () => { AttachmentPickupEditing.Instance.AddNewPickup(editor, editor.PendingTile); }),
+				new ("Emitter [flame]", () => AttachmentEmitterEditing.Instance.AddNewEmitter(editor, editor.PendingTile, "flame")),
+				new ("Emitter [spark]", () => AttachmentEmitterEditing.Instance.AddNewEmitter(editor, editor.PendingTile, "spark")),
+				new ("View", () => AttachmentViewEditing.Instance.AddNewView(editor, editor.PendingTile)),
+				new ("Pickup", () => AttachmentPickupEditing.Instance.AddNewPickup(editor, editor.PendingTile)),
 				PopupItem.Spacer(),
 				new ("Cancel", colorOverride: Color.yellow)
 			};
@@ -111,7 +107,7 @@ namespace ClassicTilestorm
 
 		private static void DrawDeletePopup(EditorControllerAttachment editor)
 		{
-			var map = editor.editorController?.iMapManager?.CurrentMap;
+			var map = editor.currentMap;
 			if (map == null) return;
 
 			var attsOnTile = map.GetAttachmentsOnTile(editor.PendingTile);
@@ -127,11 +123,6 @@ namespace ClassicTilestorm
 				{
 					editor.iMapManager.RemoveAttachment(localAtt);
 					editor.SelectAttachments(null);
-					EditorPrimitiveUtil.HideCone();
-					EditorFrustumUtil.Hide();
-					EditorTransformUtil.HideTransformGizmo();
-					editor.RebuildMarkers();
-					editor.viewPreview.Hide();
 					editor.editorController.OnMapEdited();
 				}));
 			}
@@ -143,11 +134,6 @@ namespace ClassicTilestorm
 				{
 					editor.iMapManager.RemoveAllAttachmentsOnTile(editor.PendingTile);
 					editor.SelectAttachments(null);
-					EditorPrimitiveUtil.HideCone();
-					EditorFrustumUtil.Hide();
-					EditorTransformUtil.HideTransformGizmo();
-					editor.RebuildMarkers();
-					editor.viewPreview.Hide();
 					editor.editorController.OnMapEdited();
 				}, colorOverride: Color.red));
 			}
@@ -161,9 +147,10 @@ namespace ClassicTilestorm
 
 		private static void DrawSelectPopup(EditorControllerAttachment editor)
 		{
-			var map = editor.editorController.iMapManager.CurrentMap;
+			var map = editor.currentMap;
 			var atts = map.GetAttachmentsOnTile(editor.PendingTile);
 			if (atts == null || atts.Length == 0) return;
+			var wasCancelled = true;//sentinel to clear selection when mouse off menu
 
 			var items = new List<PopupItem>();
 
@@ -176,7 +163,7 @@ namespace ClassicTilestorm
 
 				items.Add(new PopupItem(label, () =>
 				{
-					editor.pendingAction = EditorControllerAttachment.PendingAction.Drag;
+					wasCancelled = false;
 					editor.SelectAttachments(new MapAttachment[] { att });
 				}));
 			}
@@ -186,7 +173,7 @@ namespace ClassicTilestorm
 				items.Add(PopupItem.Spacer());
 				items.Add(new PopupItem("Select All", () =>
 				{
-					editor.pendingAction = EditorControllerAttachment.PendingAction.Drag;
+					wasCancelled = false;
 					editor.SelectAttachments(atts);
 				}, colorOverride: Color.green));
 			}
@@ -197,64 +184,39 @@ namespace ClassicTilestorm
 			bool closed = PopupMenu.Show(pendingPopupScreenPos, $"Select ({atts.Length})", items);
 			if (closed)
 			{
-				if (editor.pendingAction != EditorControllerAttachment.PendingAction.Drag)
-					editor.SelectAttachments(null);
+				if (wasCancelled) editor.SelectAttachments(null);
 				editor.ClearPendingAction(false);
 			}
 		}
 
-		private static AttachmentEditing GetEditorFor(MapAttachment attachment)
+		private static AttachmentEditing GetEditorFor(MapAttachment attachment) => attachment switch
 		{
-			if (attachment == null) return null;
+			null => null,
+			Emitter => AttachmentEmitterEditing.Instance,
+			View => AttachmentViewEditing.Instance,
+			Pickup => AttachmentPickupEditing.Instance,
+			_ => null // unknown attachment type
+		};
 
-			return attachment switch
-			{
-				Emitter => AttachmentEmitterEditing.Instance,
-				View => AttachmentViewEditing.Instance,
-				Pickup => AttachmentPickupEditing.Instance,
-				_ => null
-			};
-		}
-
-		// Optional: Only if you need it for uniform selections (e.g. type-specific GUI when all same type)
+		// return null unless uniform selections (e.g. type-specific GUI when all same type)
 		private static AttachmentEditing GetEditorForSelection(MapAttachment[] selectedAttachments)
 		{
-			if (selectedAttachments == null || selectedAttachments.Length == 0)
-				return null;
+			if (null == selectedAttachments || 0 == selectedAttachments.Length) return null;
 
 			var firstType = selectedAttachments[0].GetType();
 			if (selectedAttachments.All(att => att.GetType() == firstType))
-			{
 				return GetEditorFor(selectedAttachments[0]);
-			}
 
-			return null; // mixed → no shared editor
+			return null;
 		}
 
 		public static void RefreshDragVisuals(EditorControllerAttachment editor)
 		{
-			if (editor?.selectedAttachments == null || editor.selectedAttachments.Length == 0) return;
-
-			// Always refresh runtime GameObjects (particles, etc.) — safe for all types
-			foreach (var att in editor.selectedAttachments)
-				editor.editorController.iMapManager.RefreshAttachmentInstance(att);
-
-			// === ONLY if SINGLE selection: update type-specific helpers and gizmo ===
-			if (editor.selectedAttachments.Length == 1)
-			{
-				var att = editor.selectedAttachments[0];
-				var typeEditor = GetEditorFor(att);
-				typeEditor?.OnRefreshDragVisuals(editor, att);
-				typeEditor?.OnUpdateDragGizmo(editor, att);
-			}
-			else
-			{
-				// MULTI selection: explicitly hide everything
-				EditorTransformUtil.HideTransformGizmo();
-				EditorPrimitiveUtil.HideCone();
-				editor.viewPreview.Hide();
-				EditorFrustumUtil.Hide(); // if you have this method
-			}
+			if (null == editor?.selectedAttachments || 1 != editor.selectedAttachments.Length) return;
+			var att = editor.selectedAttachments[0];
+			var typeEditor = GetEditorFor(att);
+			typeEditor?.OnRefreshDragVisuals(editor, att);
+			typeEditor?.OnUpdateDragGizmo(editor, att);
 		}
 
 		public static void UpdateMapMarkers(IMapManager mapManager, int[] tiles, int selectedIndex = -1, EditorMarkerUtil.MarkerType type = EditorMarkerUtil.MarkerType.Undefined)
