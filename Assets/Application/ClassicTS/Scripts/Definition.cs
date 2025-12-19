@@ -54,6 +54,7 @@ namespace ClassicTilestorm
 		[JsonIgnore] public bool bConsole { get => HasFlag("Console"); set => SetFlag("Console", value); }
 		[JsonIgnore] public bool bPuzzleBlock { get => HasFlag("PuzzleBlock"); set => SetFlag("PuzzleBlock", value); }
 		[JsonIgnore] public bool bSway { get => HasFlag("Sway"); set => SetFlag("Sway", value); }
+		[JsonIgnore] public bool bWash { get => HasFlag("Wash"); set => SetFlag("Wash", value); }
 
 		// ── CONDITIONAL SERIALIZATION ─────────────────────────────────────────
 		public bool ShouldSerializetexture() => !string.IsNullOrEmpty(texture);

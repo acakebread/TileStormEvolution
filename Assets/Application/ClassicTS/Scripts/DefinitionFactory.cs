@@ -50,6 +50,10 @@ namespace ClassicTilestorm
 			if (definition.bSway)
 				MorphGeomSway.AddGeomSway(gameObject);
 
+			// Add wash component for water bobbing
+			if (definition.bWash)
+				TilePhysicsWash.AddWash(gameObject);
+
 #if DEBUG
 			gameObject.AddComponent<RTTI>().definition = definition; // This is for development debug in editor only - do not use RTTI elsewhere
 #endif
