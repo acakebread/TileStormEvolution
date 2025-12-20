@@ -41,7 +41,7 @@ namespace ClassicTilestorm
 		bool RemoveAttachment(MapAttachment attachment);
 		void RemoveAllAttachmentsOnTile(int tileIndex);
 
-		Action<bool, Vector3> OnMapEdited { get; set; }
+		Action<IMapManager, bool, Vector3> OnMapEdited { get; set; }
 	}
 
 	public class MapManager : MonoBehaviour, IMapManager
@@ -74,8 +74,8 @@ namespace ClassicTilestorm
 		public Transform CurrentTransform => transform;
 
 		// Replace the field
-		private Action<bool, Vector3> onMapEdited;
-		public Action<bool, Vector3> OnMapEdited
+		private Action<IMapManager, bool, Vector3> onMapEdited;
+		public Action<IMapManager, bool, Vector3> OnMapEdited
 		{
 			get => onMapEdited;
 			set => onMapEdited = value;
@@ -430,8 +430,7 @@ namespace ClassicTilestorm
 			currentMap.Consolidate();
 
 			// No resize possible in restricted mode
-			//onEdited?.Invoke(false, Vector3.zero);
-			OnMapEdited?.Invoke(false, Vector3.zero);
+			OnMapEdited?.Invoke(this, false, Vector3.zero);
 			return true; // Success!
 		}
 
@@ -546,8 +545,7 @@ namespace ClassicTilestorm
 
 			currentMap.Consolidate();
 
-			//onEdited?.Invoke(boundsChanged, originDelta);
-			OnMapEdited?.Invoke(boundsChanged, originDelta);
+			OnMapEdited?.Invoke(this, boundsChanged, originDelta);
 			return true;
 		}
 
@@ -719,14 +717,14 @@ namespace ClassicTilestorm
 		{
 			currentMap.AddAttachment(attachment);
 			RefreshAttachmentInstance(attachment);
-			OnMapEdited?.Invoke(false, Vector3.zero);
+			OnMapEdited?.Invoke(this, false, Vector3.zero);
 		}
 
 		public bool RemoveAttachment(MapAttachment attachment)
 		{
 			var result = currentMap.RemoveAttachment(attachment);
 			DestroyAttachmentInstance(attachment);
-			OnMapEdited?.Invoke(false, Vector3.zero);
+			OnMapEdited?.Invoke(this, false, Vector3.zero);
 			return result;
 		}
 
@@ -738,7 +736,7 @@ namespace ClassicTilestorm
 				currentMap.RemoveAttachment(att); 
 				DestroyAttachmentInstance(att);
 			}
-			OnMapEdited?.Invoke(false, Vector3.zero);
+			OnMapEdited?.Invoke(this, false, Vector3.zero);
 		}
 
 		/// <summary>

@@ -42,6 +42,8 @@ namespace ClassicTilestorm
 			SetState(State.IDLE, 1f);
 		}
 
+		private System.Action _unsubscribeAction;
+
 		public void Initialise(IMapManager map)
 		{
 			currentTile = map.GetStartTile();
@@ -50,6 +52,14 @@ namespace ClassicTilestorm
 			transform.position = targetPosition = map.TileWorldPosition(currentTile);
 			var yaw = map.Waypoints?.Length > 1 ? Navigation.DirToAngle(Navigation.NavToDest(map, map.Waypoints[0], map.Waypoints[1])) : 0f;
 			transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+
+			map.OnMapEdited += HandleMapEdited;// Subscribe to map changes
+			_unsubscribeAction = () => map.OnMapEdited -= HandleMapEdited;// Capture the map instance in a closure
+		}
+
+		private void HandleMapEdited(IMapManager mapManager, bool resized, Vector3 originDelta)
+		{
+			if (resized) OnMapOriginShift(mapManager, originDelta);
 		}
 
 		private void SetState(State state, float duration = 0f)
@@ -194,6 +204,8 @@ namespace ClassicTilestorm
 			OnWaypointReached = null;
 			OnPuzzleSolved = null;
 			OnLevelCompleted = null;
+			_unsubscribeAction?.Invoke();
+			_unsubscribeAction = null; // Optional: prevent reuse
 		}
 
 		/// <summary>
@@ -201,7 +213,7 @@ namespace ClassicTilestorm
 		/// Updates currentTile and snaps position to new grid.
 		/// </summary>
 		/// <param name="originDelta">World-space shift of the map origin (in tile units)</param>
-		public void OnMapOriginShift(IMapManager map, Vector3 originDelta)
+		private void OnMapOriginShift(IMapManager map, Vector3 originDelta)
 		{
 			if (originDelta == Vector3.zero) return;
 

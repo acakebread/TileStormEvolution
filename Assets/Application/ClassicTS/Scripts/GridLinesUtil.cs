@@ -59,7 +59,7 @@ namespace ClassicTilestorm
 
 		public static void UpdateSize(int width, int height)
 		{
-			if (currentGrid == null || (width == currentWidth && height == currentHeight))
+			if (null == currentGrid || (width == currentWidth && height == currentHeight))
 				return;
 
 			var parent = currentGrid.transform.parent;

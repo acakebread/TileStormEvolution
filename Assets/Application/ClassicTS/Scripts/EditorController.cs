@@ -38,6 +38,16 @@ namespace ClassicTilestorm
 			SetEditorMode(EditorMode.Drag);//default
 		}
 
+		public void Initialise(MapManager map)
+		{
+			mapManager = map;
+			mapManager.OnMapEdited += HandleMapEdited;// Subscribe to map changes
+			if (!isActiveAndEnabled) return;
+			UpdateGridLines(gridEnabled);
+			activeMode?.OnMapLoaded();
+			EnableEggbot(false);
+		}
+
 		private void OnEnable()
 		{
 			if (TryGetComponent<MainCameraController>(out var controller))
@@ -77,23 +87,10 @@ namespace ClassicTilestorm
 			attachmentMode?.OnDestroy();
 		}
 
-		private EggbotController Eggbot() => GetComponentInChildren<EggbotController>(true);
-
 		private void EnableEggbot(bool value)
 		{
-			var eggbotController = Eggbot();
+			var eggbotController = GetComponentInChildren<EggbotController>(true);
 			if (null != eggbotController) eggbotController.gameObject.SetActive(value);
-		}
-
-		public void Initialise(MapManager map)
-		{
-			mapManager = map;
-			// Subscribe to map changes
-			mapManager.OnMapEdited += HandleMapEdited;
-			if (!isActiveAndEnabled) return;
-			UpdateGridLines(gridEnabled);
-			activeMode?.OnMapLoaded();
-			EnableEggbot(false);
 		}
 
 		private void UpdateGridLines(bool enabled = true) => GridLinesUtil.Show(transform, mapManager ? mapManager.Width : 32, mapManager ? mapManager.Height : 32, gridEnabled = enabled);
@@ -120,34 +117,16 @@ namespace ClassicTilestorm
 		// Map actions
 		// ===================================================================
 
-		private void HandleMapEdited(bool resized, Vector3 originDelta)
+		private void HandleMapEdited(IMapManager mapManager,bool resized, Vector3 originDelta)
 		{
 			if (mapManager == null) return;
 			ResourceManager.ApplyMapChanges(mapManager.CurrentMap);
-			if (resized) OnMapResized(originDelta);
-		}
-
-		private void OnMapResized(Vector3 originDelta = default)
-		{
-			if (mapManager == null) return;
-
-			if (gridEnabled && isActiveAndEnabled)
-			{
-				int width = mapManager.Width;
-				int height = mapManager.Height;
-				GridLinesUtil.UpdateSize(width, height);
-			}
-			if (Vector3.zero != originDelta)
-			{
-				if (TryGetComponent<MainCameraController>(out var controller))
-				{
-					if (controller.activeSystem is GameCameraEditor editorCam)
-						editorCam.camera.transform.position += originDelta;
-				}
-
-				var eggbotController = Eggbot();
-				if (null != eggbotController) eggbotController.OnMapOriginShift(mapManager, originDelta);
-			}
+			if (!resized) return;
+			if (gridEnabled) GridLinesUtil.UpdateSize(mapManager.Width, mapManager.Height);
+			if (Vector3.zero == originDelta) return;
+			if (!TryGetComponent<MainCameraController>(out var controller)) return;
+			if (controller.activeSystem is GameCameraEditor editorCam)
+				editorCam.camera.transform.position += originDelta;
 		}
 
 		// ===================================================================

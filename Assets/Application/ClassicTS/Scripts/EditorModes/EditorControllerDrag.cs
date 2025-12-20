@@ -20,10 +20,8 @@ namespace ClassicTilestorm
 			var wasDragging = dragging;
 			var cameraTransform = camera.transform;
 
-			bool isGuiControlActive = IsGuiControlActive();
-			bool isMouseOverGui = editorController.IsMouseOverGui();
 
-			if (Input.GetMouseButtonDown(0) && !isMouseOverGui)
+			if (Input.GetMouseButtonDown(0) && !IsMouseOverGUI())
 			{
 				dragging = true;
 				isDraggingWithLeftMouse = true;
@@ -44,7 +42,7 @@ namespace ClassicTilestorm
 				}
 			}
 
-			if (dragging && wasDragging && isDraggingWithLeftMouse && Input.GetMouseButton(0) && !isGuiControlActive)
+			if (dragging && wasDragging && isDraggingWithLeftMouse && Input.GetMouseButton(0) && !IsGuiControlActive())
 			{
 				cameraTransform.position = cameraStartPosition;
 				var currentRay = camera.ScreenPointToRay(Input.mousePosition);

@@ -1,52 +1,12 @@
 ﻿using UnityEngine;
+using System.Linq;
 using System.Collections.Generic;
 using static MassiveHadronLtd.GuiUtils;
-using System.Linq;
-using System;
 
 namespace ClassicTilestorm
 {
 	public abstract class AttachmentEditing
 	{
-		private static readonly AutoHidePanel sidePanel = new(collapsed: 120f, expanded: 340f, delay: 1.5f, animDur: 0.25f, defaultPos: new Vector2(0f, 40f));
-		public static bool IsMouseOverSidePanel() => sidePanel.GetPanelRect().Contains(new Vector2(Input.mousePosition.x, Screen.height - Input.mousePosition.y));
-
-		private static string GetAttachmentLabel(MapAttachment att)
-		{
-			return att switch
-			{
-				Emitter e => $"Emitter [{att.tile}]" + (e.LookAt.sqrMagnitude > 0.01f && e.LookAt != Vector3.up ? $" → {e.LookAt.magnitude:F1}" : ""),
-				View => $"View [{att.tile}]",
-				Pickup p => $"Pickup [{att.tile}] ({p.amount})",
-				_ => $"{att.TypeName} [{att.tile}]"
-			};
-		}
-
-		public static void DrawSidePanel(EditorControllerAttachment editor)
-		{
-			// === SIDE PANEL: Now owned here ===
-			sidePanel.Update();
-			sidePanel.List.Clear();
-
-			var map = editor.currentMap;
-			if (map != null && map.attachments != null)
-			{
-				foreach (var att in map.attachments)
-				{
-					string label = GetAttachmentLabel(att);
-
-					sidePanel.List.AddItem(new ListViewItem(
-						label,
-						() => editor.SelectAttachments(new[] { att }),
-						selected: null  != editor.selectedAttachments && editor.selectedAttachments.Contains(att)
-					));
-				}
-			}
-
-			sidePanel.SetFootnote("Hold RMB on preview to orbit • Scroll to zoom • LMB: place/move • RMB on tile: delete");
-			sidePanel.Draw();
-		}
-
 		public static void HandleGizmoInput(EditorControllerAttachment editor) => GetEditorForSelection(editor.selectedAttachments)?.OnHandleGizmoInput(editor);
 		protected virtual void OnHandleGizmoInput(EditorControllerAttachment editor) { }
 

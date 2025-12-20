@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System.Linq;
+using static MassiveHadronLtd.GuiUtils;
 
 namespace ClassicTilestorm
 {
@@ -19,10 +20,45 @@ namespace ClassicTilestorm
 		private PendingAction pendingAction = PendingAction.None;
 		private Vector2 pendingPopupScreenPos;
 
+		private static readonly AutoHidePanel sidePanel = new(collapsed: 120f, expanded: 340f, delay: 1.5f, animDur: 0.25f, defaultPos: new Vector2(0f, 40f));
+		private static bool IsMouseOverSidePanel() => sidePanel.GetPanelRect().Contains(new Vector2(Input.mousePosition.x, Screen.height - Input.mousePosition.y));
+
+		public static void DrawSidePanel(EditorControllerAttachment editor)
+		{
+			sidePanel.Update();
+			sidePanel.List.Clear();
+
+			var map = editor.currentMap;
+			if (map != null && map.attachments != null)
+			{
+				foreach (var att in map.attachments)
+				{
+					var label = GetAttachmentLabel(att);
+
+					sidePanel.List.AddItem(new ListViewItem(
+						label,
+						() => editor.SelectAttachments(new[] { att }),
+						selected: null != editor.selectedAttachments && editor.selectedAttachments.Contains(att)
+					));
+				}
+			}
+
+			sidePanel.SetFootnote("Hold RMB on preview to orbit • Scroll to zoom • LMB: place/move • RMB on tile: delete");
+			sidePanel.Draw();
+
+			static string GetAttachmentLabel(MapAttachment att) => att switch
+			{
+				Emitter e => $"Emitter [{att.tile}]" + (e.LookAt.sqrMagnitude > 0.01f && e.LookAt != Vector3.up ? $" → {e.LookAt.magnitude:F1}" : ""),
+				View => $"View [{att.tile}]",
+				Pickup p => $"Pickup [{att.tile}] ({p.amount})",
+				_ => $"{att.TypeName} [{att.tile}]"
+			};
+		}
+
 		public override bool IsMouseOverGUI()
 		{
 			if (base.IsMouseOverGUI()) return true;
-			if (AttachmentEditing.IsMouseOverSidePanel()) return true;
+			if (IsMouseOverSidePanel()) return true;
 			return false;
 		}
 
@@ -141,15 +177,15 @@ namespace ClassicTilestorm
 
 		public override void OnGUI()
 		{
+			DrawSidePanel(this);
+			ViewPreviewUtil.OnGUI();
+
 			switch (pendingAction)
 			{
 				case PendingAction.Add: AttachmentEditing.DrawAddPopup(this, pendingPopupScreenPos); break;
 				case PendingAction.Delete: AttachmentEditing.DrawDeletePopup(this, pendingPopupScreenPos); break;
 				case PendingAction.Select: AttachmentEditing.DrawSelectPopup(this, pendingPopupScreenPos); break;
 			}
-
-			AttachmentEditing.DrawSidePanel(this);
-			ViewPreviewUtil.OnGUI();
 		}
 
 		private void HandleDrag(int tileUnderMouse)
