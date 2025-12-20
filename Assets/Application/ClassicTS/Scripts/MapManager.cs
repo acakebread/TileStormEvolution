@@ -33,7 +33,7 @@ namespace ClassicTilestorm
 
 		int CameraHitTile(Camera camera, Vector3 position);
 
-		bool UpdateTileAt(int x, int z, string id, bool expand = true, Action<bool, Vector3> onEdited = null);
+		bool UpdateTileAt(int x, int z, string id, bool expand = true);
 		void RefreshAttachmentInstance(MapAttachment attachment);
 		void DestroyAttachmentInstance(MapAttachment attachment);
 
@@ -379,19 +379,19 @@ namespace ClassicTilestorm
 		// Map editing
 		// -----------------------------------------------------------------------
 
-		public bool UpdateTileAt(int x, int z, string id, bool expand = true, Action<bool, Vector3> onEdited = null)
+		public bool UpdateTileAt(int x, int z, string id, bool expand = true)
 		{
 			bool result;
 			if (expand)
-				result = UpdateTileAtSmart(x, z, id, onEdited);
+				result = UpdateTileAtSmart(x, z, id);
 			else
-				result = UpdateTileAtRestricted(x, z, id, onEdited);
+				result = UpdateTileAtRestricted(x, z, id);
 
 			//RebuildEmitterVisuals();//we need to deal with this because emitters vanish if map resized
 			return result;
 		}
 
-		private bool UpdateTileAtRestricted(int x, int z, string id, Action<bool, Vector3> onEdited = null)
+		private bool UpdateTileAtRestricted(int x, int z, string id)
 		{
 			if (string.IsNullOrEmpty(id))
 				id = "tile_empty";
