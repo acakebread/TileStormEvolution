@@ -17,7 +17,6 @@ namespace ClassicTilestorm
 			};
 
 			editor.iMapManager.AddAttachment(pickup);
-			editor.editorController.OnMapEdited();//ToDo remove this and invoke delegate
 			editor.SelectAttachments(new[] { pickup });
 			return pickup;
 		}

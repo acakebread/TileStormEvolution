@@ -14,6 +14,12 @@ namespace MassiveHadronLtd
 		private static Material _mainMat;
 		private static Material MainMat => _mainMat ??= MaterialUtils.CreateTransparentUnlitMaterial(MainColor);
 
+		public class GridLinesInfo : MonoBehaviour
+		{
+			public int Width = -1;
+			public int Height = -1;
+		}
+
 		public static GameObject CreateGridLines(
 			Transform parentTransform,
 			int width,
@@ -24,7 +30,7 @@ namespace MassiveHadronLtd
 			var existing = parentTransform.Find("GridLines");
 			if (existing != null) Object.Destroy(existing.gameObject);
 
-			var gridObj = new GameObject("GridLines");
+			var gridObj = new GameObject("GridLines", typeof (GridLinesInfo));
 			var t = gridObj.transform;
 			t.SetParent(parentTransform, false);
 			t.localPosition = Vector3.zero;
@@ -141,6 +147,10 @@ namespace MassiveHadronLtd
 				DrawMainLine(t, new(x, 0, 0), new(x, 0, height));
 			for (int z = 0; z <= height; z++)
 				DrawMainLine(t, new(0, 0, z), new(width, 0, z));
+
+			var gridLinesInfo = gridObj.GetComponent<GridLinesInfo>();
+			gridLinesInfo.Width = width;
+			gridLinesInfo.Height = height;
 
 			return gridObj;
 		}

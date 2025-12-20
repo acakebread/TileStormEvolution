@@ -40,7 +40,10 @@ namespace ClassicTilestorm
 		bool RemoveAttachment(MapAttachment attachment);
 		void RemoveAllAttachmentsOnTile(int tileIndex);
 
-		public Bounds GetTileGeometryBounds(int tileIndex);
+		Bounds GetTileGeometryBounds(int tileIndex);
+
+		// Change this to include useful parameters
+		Action<bool, Vector3> OnMapEdited { get; set; }
 	}
 
 	public class MapManager : MonoBehaviour, IMapManager
@@ -71,6 +74,14 @@ namespace ClassicTilestorm
 		// ------------------------------------------------------------------
 		public Map CurrentMap => currentMap;
 		public Transform CurrentTransform => transform;
+
+		// Replace the field
+		private Action<bool, Vector3> onMapEdited;
+		public Action<bool, Vector3> OnMapEdited
+		{
+			get => onMapEdited;
+			set => onMapEdited = value;
+		}
 
 		public int Width => currentMap?.width ?? 0;
 		public int Height => currentMap?.height ?? 0;
@@ -421,8 +432,8 @@ namespace ClassicTilestorm
 			currentMap.Consolidate();
 
 			// No resize possible in restricted mode
-			onEdited?.Invoke(false, Vector3.zero);
-
+			//onEdited?.Invoke(false, Vector3.zero);
+			OnMapEdited?.Invoke(false, Vector3.zero);
 			return true; // Success!
 		}
 
@@ -537,7 +548,8 @@ namespace ClassicTilestorm
 
 			currentMap.Consolidate();
 
-			onEdited?.Invoke(boundsChanged, originDelta);
+			//onEdited?.Invoke(boundsChanged, originDelta);
+			OnMapEdited?.Invoke(boundsChanged, originDelta);
 			return true;
 		}
 
@@ -698,7 +710,7 @@ namespace ClassicTilestorm
 			attachmentGameObjects.Remove(attachment);
 		}
 
-		private void CleanupAttachmentInstances() // rename from CleanupEmitters
+		private void CleanupAttachmentInstances()
 		{
 			foreach (var att in attachmentGameObjects.Keys.ToList())
 			{
@@ -711,21 +723,22 @@ namespace ClassicTilestorm
 		{
 			currentMap.AddAttachment(attachment);
 			RefreshAttachmentInstance(attachment);
+			OnMapEdited?.Invoke(false, Vector3.zero);
 		}
 
 		public bool RemoveAttachment(MapAttachment attachment)
 		{
 			var result = currentMap.RemoveAttachment(attachment);
-			DestroyAttachmentInstance(attachment); 
+			DestroyAttachmentInstance(attachment);
+			OnMapEdited?.Invoke(false, Vector3.zero);
 			return result;
 		}
 
 		public void RemoveAllAttachmentsOnTile(int tileIndex)
 		{
-			currentMap.RemoveAllAttachmentsOnTile(tileIndex);
 			var attsOnTile = currentMap.GetAttachmentsOnTile(tileIndex);
-			foreach (var att in attsOnTile)
-				DestroyAttachmentInstance(att);
+			foreach (var att in attsOnTile) DestroyAttachmentInstance(att);
+			OnMapEdited?.Invoke(false, Vector3.zero);
 		}
 
 		/// <summary>

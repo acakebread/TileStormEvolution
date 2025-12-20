@@ -86,12 +86,9 @@ namespace ClassicTilestorm
 
 		public float GetPanelBottomY() => guiRect.height + (guiRect.y >= 0 ? guiRect.y : 0);
 
+		//I don't think this cures anything
 		private static bool hasDrawnThisFrame = false;
-
-		private void LateUpdate()
-		{
-			hasDrawnThisFrame = false;
-		}
+		private void LateUpdate() => hasDrawnThisFrame = false;
 
 		private void OnGUI()
 		{

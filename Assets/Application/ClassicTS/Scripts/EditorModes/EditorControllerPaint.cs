@@ -80,8 +80,8 @@ namespace ClassicTilestorm
 				Mathf.FloorToInt(snappedPos.x),
 				Mathf.FloorToInt(snappedPos.z),
 				defID,
-				expand: true,
-				onEdited: editorController.OnMapEdited
+				expand: true//,
+				//onEdited: editorController.OnMapEdited
 			);
 		}
 

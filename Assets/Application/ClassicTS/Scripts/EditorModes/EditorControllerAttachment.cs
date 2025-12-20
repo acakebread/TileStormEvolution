@@ -175,7 +175,7 @@ namespace ClassicTilestorm
 			}
 		}
 
-		public override void OnMapChanged()
+		public override void OnMapLoaded()
 		{
 			if (enabled)
 			{
@@ -188,7 +188,7 @@ namespace ClassicTilestorm
 				supressInput = true;
 			}
 			else
-				Debug.LogError("EditorControllerAttachment::OnMapChanged");
+				Debug.LogError("EditorControllerAttachment::OnMapLoaded");
 		}
 
 		public void RebuildMarkers()

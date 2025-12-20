@@ -21,7 +21,6 @@ namespace ClassicTilestorm
 
 			SnapViewDistanceToGround(view, editor.iMapManager);
 			editor.iMapManager.AddAttachment(view);
-			editor.editorController.OnMapEdited(); // ToDo: replace with delegate
 			editor.SelectAttachments(new[] { view });
 			OnHandleSelectionChanged(editor);
 			return view;

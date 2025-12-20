@@ -52,12 +52,12 @@ namespace ClassicTilestorm
 			pendingAction = PendingAction.None;
 		}
 
-		public override void OnMapChanged()
+		public override void OnMapLoaded()
 		{
 			if (enabled)
 				RebuildMarkers();
 			else
-				Debug.LogError("EditorControllerWaypoint::OnMapChanged");
+				Debug.LogError("EditorControllerWaypoint::OnMapLoaded");
 		}
 
 		private void RebuildMarkers()

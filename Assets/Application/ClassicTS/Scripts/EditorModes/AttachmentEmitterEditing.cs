@@ -35,7 +35,6 @@ namespace ClassicTilestorm
 			};
 
 			mapManager.AddAttachment(emitter);
-			editor.editorController.OnMapEdited();
 			editor.SelectAttachments(new MapAttachment[] { emitter });
 
 			OnHandleSelectionChanged(editor);

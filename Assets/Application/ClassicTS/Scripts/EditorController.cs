@@ -17,7 +17,6 @@ namespace ClassicTilestorm
 		private enum EditorMode { Drag, Paint, Waypoint, Attachment }
 		private EditorMode? currentMode = null;
 
-		private GameObject gridLines;
 		private bool gridEnabled = true;
 
 		// UI state
@@ -46,7 +45,7 @@ namespace ClassicTilestorm
 				controller.SetCameraSystem(CameraModeRegistry.Editor, false);
 				controller.UpdateGestureControllerState();
 			}
-			if (gridLines != null) gridLines.SetActive(gridEnabled);
+			UpdateGridLines(gridEnabled);
 			activeMode?.OnEnable();
 			EnableEggbot(false);
 		}
@@ -54,7 +53,7 @@ namespace ClassicTilestorm
 		private void OnDisable()
 		{
 			activeMode?.OnDisable();
-			if (gridLines != null) gridLines.SetActive(false);
+			GridLinesUtil.Hide();
 			EnableEggbot(true);
 		}
 
@@ -74,7 +73,8 @@ namespace ClassicTilestorm
 
 		private void OnDestroy()
 		{
-			if (null != gridLines) Destroy(gridLines);
+			GridLinesUtil.Hide();
+			if (null != mapManager) mapManager.OnMapEdited -= HandleMapEdited;
 			dragMode?.OnDestroy();
 			paintMode?.OnDestroy();
 			waypointMode?.OnDestroy();
@@ -92,31 +92,17 @@ namespace ClassicTilestorm
 		public void Initialise(MapManager map)
 		{
 			mapManager = map;
+			// Subscribe to map changes
+			mapManager.OnMapEdited += HandleMapEdited;
 			if (!isActiveAndEnabled) return;
-			UpdateGridLines();
-			if (gridLines != null) gridLines.SetActive(isActiveAndEnabled && gridEnabled);
-			activeMode?.OnMapChanged();
-			EnableEggbot(!isActiveAndEnabled);
+			UpdateGridLines(gridEnabled);
+			activeMode?.OnMapLoaded();
+			EnableEggbot(false);
 		}
 
-		private void UpdateGridLines()
-		{
-			if (null != gridLines) Destroy(gridLines);
+		private void UpdateGridLines(bool enabled = true) => GridLinesUtil.Show(transform, mapManager ? mapManager.Width : 32, mapManager ? mapManager.Height : 32, gridEnabled = enabled);
 
-			var width = mapManager ? mapManager.Width : 32;
-			var height = mapManager ? mapManager.Height : 32;
-
-			gridLines = GridLinesHelper.CreateGridLines(transform, width, height, extension: 16);
-			gridLines.transform.SetLayer(LayerMask.NameToLayer("Editor"));
-			gridLines.transform.localPosition = MapManager.tile_origin + new Vector3(-0.5f, 0f, -0.5f);
-			gridLines.SetActive(gridEnabled && isActiveAndEnabled);
-		}
-
-		private void OnGridLinesToggled(bool value)
-		{
-			gridEnabled = value;
-			if (null != gridLines) gridLines.SetActive(value);
-		}
+		private void OnGridLinesToggled(bool value) => UpdateGridLines(gridEnabled = value);
 
 		private void SetEditorMode(EditorMode newMode)
 		{
@@ -138,7 +124,7 @@ namespace ClassicTilestorm
 		// Map actions
 		// ===================================================================
 
-		public void OnMapEdited(bool resized = false, Vector3 originDelta = default)
+		private void HandleMapEdited(bool resized, Vector3 originDelta)
 		{
 			if (mapManager == null) return;
 			ResourceManager.ApplyMapChanges(mapManager.CurrentMap);
@@ -148,7 +134,13 @@ namespace ClassicTilestorm
 		private void OnMapResized(Vector3 originDelta = default)
 		{
 			if (mapManager == null) return;
-			UpdateGridLines();
+
+			if (gridEnabled && isActiveAndEnabled)
+			{
+				int width = mapManager.Width;
+				int height = mapManager.Height;
+				GridLinesUtil.UpdateSize(width, height);
+			}
 			if (Vector3.zero != originDelta)
 			{
 				if (TryGetComponent<MainCameraController>(out var controller))
@@ -168,11 +160,8 @@ namespace ClassicTilestorm
 
 		public bool IsMouseOverGui()
 		{
-			var mousePos = Input.mousePosition;
-			mousePos.y = Screen.height - mousePos.y;
-			// Left column buttons
-			var leftY = panelYoffset + spacing;
-			return new Rect(margin, leftY, buttonWidth + 20f, buttonHeight * 9 + spacing * 9).Contains(mousePos);
+			var leftY = panelYoffset + spacing;// Left column buttons
+			return new Rect(margin, leftY, buttonWidth + 20f, buttonHeight * 9 + spacing * 9).Contains(new Vector3(Input.mousePosition.x, Screen.height - Input.mousePosition.y, Input.mousePosition.z));
 		}
 
 		private void DrawMainUI(string mode, bool gridVisible)
@@ -180,7 +169,7 @@ namespace ClassicTilestorm
 			Color prevContentColor = GUI.contentColor;
 
 			var y = panelYoffset + spacing;
-			if (GuiUtils.ColoredButton(new Rect(margin, y + 0 * (buttonHeight + spacing), buttonWidth, buttonHeight),gridVisible ? "Hide Grid" : "Show Grid",new Color(0.25f, 0.75f, 0.25f))) OnGridLinesToggled(!gridVisible);
+			if (GuiUtils.ColoredButton(new Rect(margin, y + 0 * (buttonHeight + spacing), buttonWidth, buttonHeight), gridVisible ? "Hide Grid" : "Show Grid", new Color(0.25f, 0.75f, 0.25f))) OnGridLinesToggled(!gridVisible);
 
 			GUI.contentColor = mode == "Drag" ? Color.cyan : Color.white;
 			if (GUI.Button(new Rect(margin, y + 1 * (buttonHeight + spacing), buttonWidth, buttonHeight), "Drag")) SetEditorMode(EditorMode.Drag);

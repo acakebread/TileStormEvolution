@@ -15,7 +15,7 @@ namespace ClassicTilestorm
 		protected virtual bool IsMouseOverPreview() => false;
 		public Map currentMap => editorController?.iMapManager?.CurrentMap;
 		public IMapManager iMapManager => editorController?.iMapManager;
-		public virtual void OnMapChanged() { }
+		public virtual void OnMapLoaded() { }
 
 		public EditorControllerMovement(EditorController controller = null) => editorController = controller;
 

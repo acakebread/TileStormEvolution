@@ -123,7 +123,6 @@ namespace ClassicTilestorm
 				{
 					editor.iMapManager.RemoveAttachment(localAtt);
 					editor.SelectAttachments(null);
-					editor.editorController.OnMapEdited();
 				}));
 			}
 
@@ -134,7 +133,6 @@ namespace ClassicTilestorm
 				{
 					editor.iMapManager.RemoveAllAttachmentsOnTile(editor.PendingTile);
 					editor.SelectAttachments(null);
-					editor.editorController.OnMapEdited();
 				}, colorOverride: Color.red));
 			}
 
