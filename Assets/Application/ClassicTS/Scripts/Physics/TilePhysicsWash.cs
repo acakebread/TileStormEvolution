@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 namespace MassiveHadronLtd
 {
@@ -18,11 +18,17 @@ namespace MassiveHadronLtd
 
 		private void Update()
 		{
-			var phase = transform.position.x * 1.618f + transform.position.z * 0.618f;  // Golden ratio inspired � excellent for breaking patterns
-			var scale = Mathf.Sin(Time.time * speed + phase + 0.5f * Mathf.Sin(Time.time * speed * 0.77f + phase));
+			var phase = transform.position.x * 1.618f + transform.position.z * 0.618f;  // Keeps no diagonal stripes
+
+			var inner = Mathf.Sin(Time.time * speed * 0.77f + phase);
+			var angle = Time.time * speed + phase + 0.5f * inner;  // Your approved wobble strength
+			var scale = Mathf.Sin(angle);
+
+			// Remap scale from [-1, 1] → [-magnitude, 0]
+			var offsetAmount = -magnitude * (scale * 0.5f + 0.5f);  // Clean, predictable, hits exactly 0 and -magnitude
 
 			transform.position -= displacement;
-			displacement = magnitude * scale * normal - magnitude * normal;
+			displacement = offsetAmount * normal;
 			transform.position += displacement;
 		}
 
