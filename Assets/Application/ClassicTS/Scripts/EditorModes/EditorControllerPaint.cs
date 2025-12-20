@@ -45,7 +45,7 @@ namespace ClassicTilestorm
 
 			var selectedDefinition = ResourceManager.GetDefinition(selectedDefinitionId);
 			if (selectedDefinition != null)
-				EditorMeshUtil.UpdateGhostMesh(camera, editorController.iMapManager, selectedDefinition);
+				EditorMeshUtil.UpdateGhostMesh(camera, iMapManager, selectedDefinition);
 		}
 
 		public override void OnDisable() => EditorMeshUtil.HideGhostMesh();
@@ -58,10 +58,10 @@ namespace ClassicTilestorm
 
 			if (defID != null)
 			{
-				var mapIndex = editorController.iMapManager.WorldToMapIndex(worldPos);
+				var mapIndex = iMapManager.WorldToMapIndex(worldPos);
 				if (mapIndex != -1)
 				{
-					var currentId = editorController.iMapManager.GetDefinitionAtIndex(mapIndex);
+					var currentId = iMapManager.GetDefinitionAtIndex(mapIndex);
 					if (currentId == selectedDefinitionId && definitionCycleList.Count > 1)
 					{
 						cycleIndex = (cycleIndex + 1) % definitionCycleList.Count;
@@ -75,14 +75,7 @@ namespace ClassicTilestorm
 				defID = "tile_empty";
 
 			var snappedPos = MapManager.SnappedMapPosition(worldPos);
-
-			editorController.iMapManager.UpdateTileAt(
-				Mathf.FloorToInt(snappedPos.x),
-				Mathf.FloorToInt(snappedPos.z),
-				defID,
-				expand: true//,
-				//onEdited: editorController.OnMapEdited
-			);
+			iMapManager.UpdateTileAt(Mathf.FloorToInt(snappedPos.x), Mathf.FloorToInt(snappedPos.z), defID, expand: true);
 		}
 
 		public void SetSelectedDefinitionById(string id)
@@ -95,7 +88,7 @@ namespace ClassicTilestorm
 			EditorMeshUtil.DestroyGhostMesh();
 			var def = ResourceManager.GetDefinition(selectedDefinitionId);
 			if (def != null)
-				EditorMeshUtil.UpdateGhostMesh(camera, editorController.iMapManager, def);
+				EditorMeshUtil.UpdateGhostMesh(camera, iMapManager, def);
 			else
 				EditorMeshUtil.HideGhostMesh();
 		}

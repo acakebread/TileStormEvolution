@@ -14,31 +14,19 @@ namespace ClassicTilestorm
 		/// </summary>
 		public Emitter AddNewEmitter(EditorControllerAttachment editor, int tile, string variant)
 		{
-			var map = editor.currentMap;
-			var mapManager = editor.iMapManager;
-			if (map == null || mapManager == null || string.IsNullOrEmpty(variant)) return null;
+			if (editor.currentMap == null || editor.iMapManager == null || string.IsNullOrEmpty(variant)) return null;
 
-			// Get accurate geometry bounds from MapManager
-			Bounds tileBounds = mapManager.GetTileGeometryBounds(tile);
-
-			// Compute placement height (editor-specific logic: offset, etc.)
-			float localY = ComputeEmitterPlacementHeight(editor, tile, tileBounds);
-
-			Vector3 tileWorldCenter = mapManager.TileWorldPosition(tile);
-
+			var localY = ComputeEmitterPlacementHeight(editor, tile);
 			var emitter = new Emitter
 			{
 				tile = tile,
 				Position = new Vector3(0f, localY, 0f),
-				LookAt = new Vector3(0f, localY + 1f, 0f),//LookAt = tileWorldCenter + new Vector3(0f, 2f, 4f), // Your preferred default bias
+				LookAt = new Vector3(0f, localY + 1f, 0f),
 				variant = variant
 			};
 
-			mapManager.AddAttachment(emitter);
+			editor.iMapManager.AddAttachment(emitter);
 			editor.SelectAttachments(new MapAttachment[] { emitter });
-
-			OnHandleSelectionChanged(editor);
-
 			return emitter;
 		}
 
@@ -63,7 +51,7 @@ namespace ClassicTilestorm
 			{
 				emitter.Position = MapManager.LocalPosition(emitter.tile, newWorldPos);
 				emitter.Rotation = MapManager.LocalRotation(emitter.tile, newWorldRot);
-				editor.editorController.iMapManager.RefreshAttachmentInstance(emitter);
+				editor.iMapManager.RefreshAttachmentInstance(emitter);
 
 				// Update cone after transform change
 				EditorPrimitiveUtil.UpdateCone(newWorldPos, emitter.Rotation, emitter.Distance, emitter.Apex);
@@ -83,13 +71,14 @@ namespace ClassicTilestorm
 		/// Computes the ideal local Y position for placing an emitter on top of the tile geometry.
 		/// Adds a small offset to prevent z-fighting.
 		/// </summary>
-		private static float ComputeEmitterPlacementHeight(EditorControllerAttachment editor, int tile, Bounds tileBounds)
+		private static float ComputeEmitterPlacementHeight(EditorControllerAttachment editor, int tile)
 		{
-			var mapManager = editor.editorController?.iMapManager;
-			if (mapManager == null) return 1f;
+			if (editor.iMapManager == null) return 1f;
 
-			Vector3 tileWorldCenter = mapManager.TileWorldPosition(tile);
-			float topYWorld = tileBounds.max.y;
+			// Get accurate geometry bounds from MapManager
+			var tileBounds = editor.iMapManager.GetTileGeometryBounds(tile);
+			var tileWorldCenter = editor.iMapManager.TileWorldPosition(tile);
+			var topYWorld = tileBounds.max.y;
 
 			// Convert to local space and add small lift
 			return (topYWorld - tileWorldCenter.y) + 0.05f;

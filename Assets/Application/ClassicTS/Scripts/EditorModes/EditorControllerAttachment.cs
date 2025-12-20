@@ -13,7 +13,7 @@ namespace ClassicTilestorm
 
 		private int pendingTile = -1;
 		private int lastDragTile = -1;
-		public MapAttachment[] selectedAttachments = System.Array.Empty<MapAttachment>();
+		public MapAttachment[] selectedAttachments = null;
 		public enum PendingAction { None, Wait, Add, Delete, Select }
 		public PendingAction pendingAction = PendingAction.None;
 
@@ -24,22 +24,19 @@ namespace ClassicTilestorm
 			return false;
 		}
 
-		protected override bool IsMouseOverPreview()
-		{
-			return ViewPreviewUtil.IsMouseOverPreview();
-		}
+		protected override bool IsMouseOverPreview() => ViewPreviewUtil.IsMouseOverPreview();
 
 		public EditorControllerAttachment(EditorController controller) : base(controller) { }
 
 		public override void OnEnable()
 		{
 			base.OnEnable();
+			pendingAction = PendingAction.None;
 			EditorMarkerUtil.ClearMapMarkers();
 			EditorPrimitiveUtil.HideCone();
 			EditorFrustumUtil.Hide();
-			RebuildMarkers();
-
 			ViewPreviewUtil.Hide();
+			RebuildMarkers();
 
 			supressInput = true;
 			rmbDragStartedInPreview = false;
@@ -156,23 +153,21 @@ namespace ClassicTilestorm
 
 		private void HandleDrag(int tileUnderMouse)
 		{
-			bool tileChanged = tileUnderMouse != lastDragTile;
+			if (lastDragTile == tileUnderMouse)
+				return;
 
+			lastDragTile = tileUnderMouse;
+
+			if (null == selectedAttachments || 0 == selectedAttachments.Length)
+				return;
+
+			// refresh runtime GameObjects (particles, etc.)
 			foreach (var att in selectedAttachments)
-				att.tile = tileUnderMouse;
-
-			if (tileChanged)
 			{
-				lastDragTile = tileUnderMouse;
-
-				if (null != selectedAttachments && 0 != selectedAttachments.Length)
-				{
-					// refresh runtime GameObjects (particles, etc.)
-					foreach (var att in selectedAttachments)
-						iMapManager.RefreshAttachmentInstance(att);
-					AttachmentEditing.RefreshDragVisuals(this);
-				}
+				att.tile = tileUnderMouse;
+				iMapManager.RefreshAttachmentInstance(att);
 			}
+			AttachmentEditing.RefreshDragVisuals(this);
 		}
 
 		public override void OnMapLoaded()
@@ -193,7 +188,7 @@ namespace ClassicTilestorm
 
 		public void RebuildMarkers()
 		{
-			var map = editorController?.iMapManager?.CurrentMap;
+			var map = currentMap;
 			if (map == null) return;
 
 			var tiles = map.attachments?
@@ -204,10 +199,8 @@ namespace ClassicTilestorm
 
 			// Determine selected tile from current selection
 			int selectedTile = (selectedAttachments != null && selectedAttachments.Length > 0) ? selectedAttachments[0].tile : -1;
-
 			int selection = System.Array.IndexOf(tiles, selectedTile);
-
-			AttachmentEditing.UpdateMapMarkers(editorController.iMapManager, tiles, selection, EditorMarkerUtil.MarkerType.Attachment);
+			AttachmentEditing.UpdateMapMarkers(iMapManager, tiles, selection, EditorMarkerUtil.MarkerType.Attachment);
 		}
 
 		public void SelectAttachments(MapAttachment[] attachments)
@@ -230,7 +223,7 @@ namespace ClassicTilestorm
 		private int GetTileUnderMouse()
 		{
 			if (!camera) return -1;
-			return editorController.iMapManager.WorldToMapIndex(MapManager.ScreenToWorld(camera, Input.mousePosition));
+			return iMapManager.WorldToMapIndex(MapManager.ScreenToWorld(camera, Input.mousePosition));
 		}
 
 		private void HandleLeftMouseDown(int tile)
@@ -291,7 +284,7 @@ namespace ClassicTilestorm
 
 		private void SetPopupPosition(int tile)
 		{
-			var wp = editorController.iMapManager.TileWorldPosition(tile) + Vector3.up * 0.6f;
+			var wp = iMapManager.TileWorldPosition(tile) + Vector3.up * 0.6f;
 			var sp = camera.WorldToScreenPoint(wp);
 			sp.y = Screen.height - sp.y;
 			AttachmentEditing.pendingPopupScreenPos = sp;

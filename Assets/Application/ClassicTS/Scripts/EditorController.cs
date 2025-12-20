@@ -57,11 +57,7 @@ namespace ClassicTilestorm
 			EnableEggbot(true);
 		}
 
-		private void Update()
-		{
-			if (Input.GetMouseButtonUp(0) && GUIUtility.hotControl != 0) GUIUtility.hotControl = 0;
-			activeMode?.Update();
-		}
+		private void Update() => activeMode?.Update();
 
 		private void OnGUI()
 		{

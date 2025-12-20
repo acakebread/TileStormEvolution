@@ -7,15 +7,9 @@ namespace ClassicTilestorm
 	{
 		private static List<Rect> guiRects = new List<Rect>();
 
-		public static void RegisterGuiRect(Rect rect)
-		{
-			guiRects.Add(rect);
-		}
+		public static void RegisterGuiRect(Rect rect) => guiRects.Add(rect);
 
-		public static void ResetGuiState()
-		{
-			guiRects.Clear();
-		}
+		public static void ResetGuiState() => guiRects.Clear();
 
 		public static bool IsMouseOverGui()
 		{

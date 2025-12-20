@@ -62,10 +62,10 @@ namespace ClassicTilestorm
 
 		private void RebuildMarkers()
 		{
-			var map = editorController?.iMapManager?.CurrentMap;
+			var map = currentMap;
 			if (map == null) return;
 
-			AttachmentEditing.UpdateMapMarkers(editorController.iMapManager, editorController.iMapManager.Waypoints, SelectedWaypointIndex, EditorMarkerUtil.MarkerType.Waypoint);
+			AttachmentEditing.UpdateMapMarkers(iMapManager, iMapManager.Waypoints, SelectedWaypointIndex, EditorMarkerUtil.MarkerType.Waypoint);
 		}
 
 		private void SelectWaypoint(int index)
@@ -76,12 +76,12 @@ namespace ClassicTilestorm
 
 		private void AddWaypointAtTile(int tile)
 		{
-			var map = editorController?.iMapManager?.CurrentMap;
+			var map = currentMap;
 			if (map == null) return;
 
-			var list = editorController.iMapManager.Waypoints?.ToList() ?? new List<int>();
+			var list = iMapManager.Waypoints?.ToList() ?? new List<int>();
 			list.Add(tile);
-			editorController.iMapManager.Waypoints = list.ToArray();
+			iMapManager.Waypoints = list.ToArray();
 
 			SelectedWaypointIndex = list.Count - 1;
 			RebuildMarkers();
@@ -89,7 +89,7 @@ namespace ClassicTilestorm
 
 		private void DeleteWaypoint(int index)
 		{
-			var map = editorController?.iMapManager?.CurrentMap;
+			var map = currentMap;
 			if (map == null || map.waypoints == null || index < 0 || index >= map.waypoints.Length) return;
 
 			var list = map.waypoints.ToList();
@@ -128,9 +128,9 @@ namespace ClassicTilestorm
 					if (!wasClick && tileUnderMouse < 0)
 					{
 						// Revert if dropped outside map
-						var map = editorController.iMapManager.CurrentMap;
+						var map = iMapManager.CurrentMap;
 						if (map?.waypoints != null && draggingIndex < map.waypoints.Length)
-							editorController.iMapManager.Waypoints[draggingIndex] = originalTile;
+							iMapManager.Waypoints[draggingIndex] = originalTile;
 						RebuildMarkers();
 					}
 					draggingIndex = -1;
@@ -142,7 +142,7 @@ namespace ClassicTilestorm
 					pendingTile = clickStartTile;
 					pendingAction = PendingAction.Add;
 
-					var _worldPos = editorController.iMapManager.TileWorldPosition(clickStartTile) + Vector3.up * 0.6f;
+					var _worldPos = iMapManager.TileWorldPosition(clickStartTile) + Vector3.up * 0.6f;
 					var sp = camera.WorldToScreenPoint(_worldPos);
 					sp.y = Screen.height - sp.y;
 					pendingPopupScreenPos = sp;
@@ -158,14 +158,14 @@ namespace ClassicTilestorm
 				{
 					SelectWaypoint(potentialWaypointHit);
 
-					var map = editorController.iMapManager.CurrentMap;
+					var map = iMapManager.CurrentMap;
 					if (map?.waypoints != null && potentialWaypointHit < map.waypoints.Length)
 					{
-						pendingTile = editorController.iMapManager.Waypoints[potentialWaypointHit];
+						pendingTile = iMapManager.Waypoints[potentialWaypointHit];
 						pendingWaypoint = potentialWaypointHit;
 						pendingAction = PendingAction.Delete;
 
-						var _worldPos = editorController.iMapManager.TileWorldPosition(clickStartTile) + Vector3.up * 0.6f;
+						var _worldPos = iMapManager.TileWorldPosition(clickStartTile) + Vector3.up * 0.6f;
 						var sp = camera.WorldToScreenPoint(_worldPos);
 						sp.y = Screen.height - sp.y;
 						pendingPopupScreenPos = sp;
@@ -176,7 +176,7 @@ namespace ClassicTilestorm
 			// === DRAG EXISTING WAYPOINT (left button held) ===
 			if (Input.GetMouseButton(0) && draggingIndex >= 0 && tileUnderMouse >= 0)
 			{
-				var map = editorController.iMapManager.CurrentMap;
+				var map = iMapManager.CurrentMap;
 				if (map?.waypoints != null && draggingIndex < map.waypoints.Length)
 				{
 					if (map.waypoints[draggingIndex] != tileUnderMouse)
@@ -192,7 +192,7 @@ namespace ClassicTilestorm
 			{
 				SelectWaypoint(potentialWaypointHit);
 				draggingIndex = potentialWaypointHit;
-				originalTile = editorController.iMapManager.Waypoints[potentialWaypointHit];
+				originalTile = iMapManager.Waypoints[potentialWaypointHit];
 				pendingAction = PendingAction.None; // cancel any pending add
 			}
 		}
@@ -208,7 +208,7 @@ namespace ClassicTilestorm
 			if (!camera) return -1;
 			Vector3 mouseWorld = MapManager.ScreenToWorld(camera, Input.mousePosition);
 			Vector3 snapped = MapManager.SnappedMapPosition(mouseWorld);
-			return editorController.iMapManager.WorldToMapIndex(snapped);
+			return iMapManager.WorldToMapIndex(snapped);
 		}
 
 		public override void OnGUI()
@@ -216,7 +216,7 @@ namespace ClassicTilestorm
 			sidePanel.Update();
 
 			// Build ListView items
-			var wp = editorController.iMapManager.Waypoints ?? Array.Empty<int>();
+			var wp = iMapManager.Waypoints ?? Array.Empty<int>();
 			var items = new List<ListViewItem>();
 
 			for (int i = 0; i < wp.Length; i++)
@@ -260,7 +260,7 @@ namespace ClassicTilestorm
 
 		private void MoveWaypoint(int index, int direction)
 		{
-			var map = editorController.iMapManager.CurrentMap;
+			var map = iMapManager.CurrentMap;
 			var list = map.waypoints.ToList();
 			var temp = list[index];
 			list[index] = list[index + direction];
@@ -279,20 +279,11 @@ namespace ClassicTilestorm
 			var items = new List<PopupItem>
 			{
 				// Info line (non-clickable)
-				new PopupItem($"WP{editorController.iMapManager.Waypoints.Length:00} at tile {pendingTile}", null, null, spacerHeight: 0),
-
+				new PopupItem($"WP{iMapManager.Waypoints.Length:00} at tile {pendingTile}", null, null, spacerHeight: 0),
 				PopupItem.Spacer(6),
-
-				// Add waypoint
-				new PopupItem("Add", () =>
-				{
-					AddWaypointAtTile(pendingTile);
-				}, colorOverride: Color.cyan),
-
+				new PopupItem("Add", () => { AddWaypointAtTile(pendingTile); }, colorOverride: Color.cyan),// Add waypoint
 				PopupItem.Spacer(4),
-
-				// Cancel
-				new PopupItem("Cancel", null, Color.yellow)
+				new PopupItem("Cancel", null, Color.yellow)// Cancel
 			};
 
 			bool closed = PopupMenu.Show(sp, "Add Waypoint?", items);
@@ -311,19 +302,10 @@ namespace ClassicTilestorm
 			{
 				// Info line (non-clickable)
 				new PopupItem($"WP{pendingWaypoint:00} at tile {pendingTile}", null, null, spacerHeight: 0),
-
 				PopupItem.Spacer(6),
-
-				// Delete waypoint
-				new PopupItem("Delete", () =>
-				{
-					DeleteWaypoint(pendingWaypoint);
-				}, colorOverride: Color.red),
-
+				new PopupItem("Delete", () => { DeleteWaypoint(pendingWaypoint); }, colorOverride: Color.red), // Delete waypoint
 				PopupItem.Spacer(4),
-
-				// Cancel
-				new PopupItem("Cancel", null, Color.yellow)
+				new PopupItem("Cancel", null, Color.yellow)// Cancel
 			};
 
 			bool closed = PopupMenu.Show(sp, "Delete Waypoint?", items);

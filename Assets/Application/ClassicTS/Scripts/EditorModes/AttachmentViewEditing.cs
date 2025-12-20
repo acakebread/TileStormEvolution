@@ -9,8 +9,7 @@ namespace ClassicTilestorm
 
 		public View AddNewView(EditorControllerAttachment editor, int tile)
 		{
-			var map = editor.currentMap;
-			if (map == null) return null;
+			if (editor.currentMap == null) return null;
 
 			var view = new View
 			{
@@ -22,7 +21,6 @@ namespace ClassicTilestorm
 			SnapViewDistanceToGround(view, editor.iMapManager);
 			editor.iMapManager.AddAttachment(view);
 			editor.SelectAttachments(new[] { view });
-			OnHandleSelectionChanged(editor);
 			return view;
 		}
 
