@@ -18,7 +18,7 @@ namespace MassiveHadronLtd
 
 		private void Update()
 		{
-			var phase = transform.position.x + transform.position.z;
+			var phase = transform.position.x * 1.618f + transform.position.z * 0.618f;  // Golden ratio inspired – excellent for breaking patterns
 			var scale = Mathf.Sin(Time.time * speed + phase + 0.5f * Mathf.Sin(Time.time * speed * 0.77f + phase));
 
 			transform.position -= displacement;
