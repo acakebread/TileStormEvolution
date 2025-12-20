@@ -5,6 +5,8 @@ namespace ClassicTilestorm
 {
 	public class EditorControllerAttachment : EditorControllerMovement
 	{
+		public MapAttachment[] selectedAttachments = null;
+
 		private Vector3 mouseDownPos;
 		private bool mouseMovedBeyondThreshold;
 		private const float CLICK_THRESHOLD = 8f;
@@ -13,9 +15,9 @@ namespace ClassicTilestorm
 
 		private int pendingTile = -1;
 		private int lastDragTile = -1;
-		public MapAttachment[] selectedAttachments = null;
-		public enum PendingAction { None, Wait, Add, Delete, Select }
-		public PendingAction pendingAction = PendingAction.None;
+		private enum PendingAction { None, Wait, Add, Delete, Select }
+		private PendingAction pendingAction = PendingAction.None;
+		private Vector2 pendingPopupScreenPos;
 
 		public override bool IsMouseOverGUI()
 		{
@@ -31,26 +33,18 @@ namespace ClassicTilestorm
 		public override void OnEnable()
 		{
 			base.OnEnable();
-			pendingAction = PendingAction.None;
-			EditorMarkerUtil.ClearMapMarkers();
-			EditorPrimitiveUtil.HideCone();
-			EditorFrustumUtil.Hide();
-			ViewPreviewUtil.Hide();
-			RebuildMarkers();
-
 			supressInput = true;
 			rmbDragStartedInPreview = false;
+			pendingAction = PendingAction.None;
+			HideAllGizmos();
+			RebuildMarkers();
 		}
 
 		public override void OnDisable()
 		{
 			base.OnDisable();
 			pendingAction = PendingAction.None;
-			EditorMarkerUtil.ClearMapMarkers();
-			EditorPrimitiveUtil.HideCone();
-			EditorFrustumUtil.Hide();
-			EditorTransformUtil.HideTransformGizmo();
-			ViewPreviewUtil.Cleanup();
+			HideAllGizmos();
 		}
 
 		public override void Update()
@@ -147,7 +141,14 @@ namespace ClassicTilestorm
 
 		public override void OnGUI()
 		{
-			AttachmentEditing.DrawGUI(this);
+			switch (pendingAction)
+			{
+				case PendingAction.Add: AttachmentEditing.DrawAddPopup(this, pendingPopupScreenPos); break;
+				case PendingAction.Delete: AttachmentEditing.DrawDeletePopup(this, pendingPopupScreenPos); break;
+				case PendingAction.Select: AttachmentEditing.DrawSelectPopup(this, pendingPopupScreenPos); break;
+			}
+
+			AttachmentEditing.DrawSidePanel(this);
 			ViewPreviewUtil.OnGUI();
 		}
 
@@ -174,13 +175,10 @@ namespace ClassicTilestorm
 		{
 			if (enabled)
 			{
-				RebuildMarkers();
-				EditorPrimitiveUtil.HideCone();
-				EditorFrustumUtil.Hide();
-				EditorTransformUtil.HideTransformGizmo();
-				ViewPreviewUtil.Hide();
-				rmbDragStartedInPreview = false;
 				supressInput = true;
+				rmbDragStartedInPreview = false;
+				HideAllGizmos();
+				RebuildMarkers();
 			}
 			else
 				Debug.LogError("EditorControllerAttachment::OnMapLoaded");
@@ -188,36 +186,24 @@ namespace ClassicTilestorm
 
 		public void RebuildMarkers()
 		{
-			var map = currentMap;
-			if (map == null) return;
-
-			var tiles = map.attachments?
-				.Where(a => a.tile >= 0)
-				.Select(a => a.tile)
-				.Distinct()
-				.ToArray() ?? System.Array.Empty<int>();
+			if (null == currentMap) return;
+			var tiles = currentMap.attachments?.Where(a => a.tile >= 0).Select(a => a.tile).Distinct().ToArray() ?? System.Array.Empty<int>();
 
 			// Determine selected tile from current selection
-			int selectedTile = (selectedAttachments != null && selectedAttachments.Length > 0) ? selectedAttachments[0].tile : -1;
-			int selection = System.Array.IndexOf(tiles, selectedTile);
+			var selectedTile = (selectedAttachments != null && selectedAttachments.Length > 0) ? selectedAttachments[0].tile : -1;
+			var selection = System.Array.IndexOf(tiles, selectedTile);
 			AttachmentEditing.UpdateMapMarkers(iMapManager, tiles, selection, EditorMarkerUtil.MarkerType.Attachment);
 		}
 
 		public void SelectAttachments(MapAttachment[] attachments)
 		{
 			selectedAttachments = attachments;
+			HideAllGizmos();
 			RebuildMarkers();
-			EditorPrimitiveUtil.HideCone();
-			EditorTransformUtil.HideTransformGizmo();
-			EditorFrustumUtil.Hide();
-			ViewPreviewUtil.Hide();
 
-			// Only show editing helpers if exactly ONE attachment selected
-			if (attachments != null && attachments.Length == 1)
-			{
-				AttachmentEditing.HandleSelectionChanged(this);
-				AttachmentEditing.HandleGizmoInput(this); // if needed on select
-			}
+			if (null == attachments || 1 != attachments.Length) return;// Only show editing helpers if exactly ONE attachment selected
+			AttachmentEditing.HandleSelectionChanged(this);
+			AttachmentEditing.HandleGizmoInput(this); // if needed on select
 		}
 
 		private int GetTileUnderMouse()
@@ -228,11 +214,11 @@ namespace ClassicTilestorm
 
 		private void HandleLeftMouseDown(int tile)
 		{
-			if (tile == -1)
+			if (-1 == tile)
 				SelectAttachments(null);
 			else
 			{
-				bool alreadySelected = selectedAttachments?.Length > 0 && selectedAttachments[0].tile == tile;
+				var alreadySelected = selectedAttachments?.Length > 0 && selectedAttachments[0].tile == tile;
 				if (!alreadySelected)
 				{
 					selectedAttachments = GetAttachmentsOnTile(tile);
@@ -287,7 +273,7 @@ namespace ClassicTilestorm
 			var wp = iMapManager.TileWorldPosition(tile) + Vector3.up * 0.6f;
 			var sp = camera.WorldToScreenPoint(wp);
 			sp.y = Screen.height - sp.y;
-			AttachmentEditing.pendingPopupScreenPos = sp;
+			pendingPopupScreenPos = sp;
 		}
 
 		private MapAttachment[] GetAttachmentsOnTile(int tileIndex)
@@ -298,7 +284,6 @@ namespace ClassicTilestorm
 			return result.Length > 0 ? result : null;
 		}
 
-		public PendingAction CurrentPendingAction => pendingAction;
 		public void ClearPendingAction(bool clearSelection = true)
 		{
 			pendingAction = PendingAction.Wait;
@@ -309,5 +294,14 @@ namespace ClassicTilestorm
 			}
 		}
 		public int PendingTile => pendingTile;
+
+		private void HideAllGizmos()
+		{
+			EditorPrimitiveUtil.HideCone();
+			EditorFrustumUtil.Hide();
+			EditorTransformUtil.HideTransformGizmo();
+			ViewPreviewUtil.Hide();
+			EditorMarkerUtil.ClearMapMarkers();
+		}
 	}
 }

@@ -64,7 +64,6 @@ namespace ClassicTilestorm
 			if (null != cameraController) cameraController.Initialise(mapManager, eggbotController);
 			if (null != gameController) gameController.Initialise();
 			if (null != editorController) editorController.Initialise(mapManager);
-			//if (null != editorController && null != gameController) OnChangeMapRequested += HandleChangeMap;
 
 			//static string SkycubesPath(string id) => string.IsNullOrEmpty(id) ? null : $"{AssetPath.SkycubesPath}{id}";
 		}
@@ -169,9 +168,7 @@ namespace ClassicTilestorm
 				string importedName = System.IO.Path.GetFileNameWithoutExtension(path);
 
 				if (mapManager?.CurrentMap != null && mapManager.CurrentMap.name == importedName)
-				{
 					OnChangeMapRequested?.Invoke(0);
-				}
 			}
 #else
 			Debug.Log("Import currently only available in Unity Editor");

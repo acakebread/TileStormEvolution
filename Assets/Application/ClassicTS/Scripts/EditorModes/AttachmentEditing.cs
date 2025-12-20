@@ -10,8 +10,6 @@ namespace ClassicTilestorm
 	{
 		private static readonly AutoHidePanel sidePanel = new AutoHidePanel( collapsed: 120f, expanded: 340f, delay: 1.5f, animDur: 0.25f, defaultPos: new Vector2(0f, 40f));
 
-		public static Vector2 pendingPopupScreenPos;
-
 		public static bool IsMouseOverSidePanel()
 		{
 			Rect panelRect = sidePanel.GetPanelRect();
@@ -31,15 +29,8 @@ namespace ClassicTilestorm
 			};
 		}
 
-		public static void DrawGUI(EditorControllerAttachment editor)
+		public static void DrawSidePanel(EditorControllerAttachment editor)
 		{
-			if (editor.CurrentPendingAction == EditorControllerAttachment.PendingAction.Add)
-				DrawAddPopup(editor);
-			if (editor.CurrentPendingAction == EditorControllerAttachment.PendingAction.Delete)
-				DrawDeletePopup(editor);
-			if (editor.CurrentPendingAction == EditorControllerAttachment.PendingAction.Select)
-				DrawSelectPopup(editor);
-
 			// === SIDE PANEL: Now owned here ===
 			sidePanel.Update();
 			sidePanel.List.Clear();
@@ -84,11 +75,10 @@ namespace ClassicTilestorm
 
 			var worldPos = MapManager.WorldPosition(attachment.tile, transformable.Position);
 			var worldRot = MapManager.WorldRotation(attachment.tile, transformable.Rotation);
-
 			EditorTransformUtil.ShowAt(worldPos, worldRot, editor.camera);
 		}
 
-		private static void DrawAddPopup(EditorControllerAttachment editor)
+		public static void DrawAddPopup(EditorControllerAttachment editor, Vector2 position)
 		{
 			var items = new List<PopupItem>
 			{
@@ -100,12 +90,12 @@ namespace ClassicTilestorm
 				new ("Cancel", colorOverride: Color.yellow)
 			};
 
-			bool closed = PopupMenu.Show(pendingPopupScreenPos, "Add Attachment", items);
+			bool closed = PopupMenu.Show(position, "Add Attachment", items);
 			if (closed)
 				editor.ClearPendingAction(false); // keep selection for gizmo
 		}
 
-		private static void DrawDeletePopup(EditorControllerAttachment editor)
+		public static void DrawDeletePopup(EditorControllerAttachment editor, Vector2 position)
 		{
 			var map = editor.currentMap;
 			if (map == null) return;
@@ -139,11 +129,11 @@ namespace ClassicTilestorm
 			items.Add(PopupItem.Spacer());
 			items.Add(new PopupItem("Cancel", colorOverride: Color.yellow));
 
-			bool closed = PopupMenu.Show(pendingPopupScreenPos, "Delete Attachment(s)", items);
+			bool closed = PopupMenu.Show(position, "Delete Attachment(s)", items);
 			if (closed) editor.ClearPendingAction();
 		}
 
-		private static void DrawSelectPopup(EditorControllerAttachment editor)
+		public static void DrawSelectPopup(EditorControllerAttachment editor, Vector2 position)
 		{
 			var map = editor.currentMap;
 			var atts = map.GetAttachmentsOnTile(editor.PendingTile);
@@ -179,7 +169,7 @@ namespace ClassicTilestorm
 			items.Add(PopupItem.Spacer());
 			items.Add(new PopupItem("Cancel", colorOverride: Color.yellow));
 
-			bool closed = PopupMenu.Show(pendingPopupScreenPos, $"Select ({atts.Length})", items);
+			bool closed = PopupMenu.Show(position, $"Select ({atts.Length})", items);
 			if (closed)
 			{
 				if (wasCancelled) editor.SelectAttachments(null);

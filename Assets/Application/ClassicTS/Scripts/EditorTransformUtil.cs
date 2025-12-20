@@ -191,26 +191,16 @@ namespace ClassicTilestorm
 
 		public static void ShowTransformGizmo(View view, IMapManager mgr, Camera cam)
 		{
-			if (view == null || mgr == null || cam == null) return;
-
+			if (null == view || null == mgr || null == cam) return;
 			var worldPos = MapManager.WorldPosition(view.tile, view.Position);
 			ShowAt(worldPos, view.Rotation, cam);
 		}
 
-		public static void HideTransformGizmo()
-		{
-			Hide();
-		}
+		public static void HideTransformGizmo() => Hide();
 
-		public static void UpdateTransformGizmoVisuals(Camera cam)
-		{
-			UpdateVisuals(cam);
-		}
+		public static void UpdateTransformGizmoVisuals(Camera cam) => UpdateVisuals(cam);
 
-		public static bool HandleTransformGizmoInput(Camera cam)
-		{
-			return HandleInput(cam, out _, out _);
-		}
+		public static bool HandleTransformGizmoInput(Camera cam) => HandleInput(cam, out _, out _);
 
 		// ===================================================================
 		// POSITION HANDLE
@@ -336,7 +326,6 @@ namespace ClassicTilestorm
 		private static Vector2 startMouseScreen;
 		private static Vector2 startTangentScreen;
 		private static float ringWorldRadius;
-		private static Vector3 ringStartPointWorld;
 
 		private static bool TryStartRotationDrag(Ray ray)
 		{
@@ -376,7 +365,6 @@ namespace ClassicTilestorm
 					ringWorldRadius = root.transform.lossyScale.x * 1f;
 					// Determine exact point on ring circle nearest to click
 					Vector3 ringPoint = center + vecFromCenter.normalized * ringWorldRadius;
-					ringStartPointWorld = ringPoint;
 
 					// Tangent at that point (world space) — along the ring circle
 					Vector3 tangentWorld = Vector3.Cross(rotationAxis, (ringPoint - center)).normalized;

@@ -9,7 +9,7 @@ namespace ClassicTilestorm
 
 		public View AddNewView(EditorControllerAttachment editor, int tile)
 		{
-			if (editor.currentMap == null) return null;
+			if (null == editor.currentMap) return null;
 
 			var view = new View
 			{
@@ -27,7 +27,7 @@ namespace ClassicTilestorm
 		protected override void OnHandleSelectionChanged(EditorControllerAttachment editor)
 		{
 			var view = editor.selectedAttachments?.OfType<View>().FirstOrDefault();
-			if (view == null) return;
+			if (null == view) return;
 
 			EditorTransformUtil.ShowAt(MapManager.WorldPosition(view.tile, view.Position), view.Rotation, editor.camera);
 			OnRefreshDragVisuals(editor, view);
@@ -46,7 +46,7 @@ namespace ClassicTilestorm
 		protected override void OnHandleGizmoInput(EditorControllerAttachment editor)
 		{
 			var view = editor.selectedAttachments?.OfType<View>().FirstOrDefault();
-			if (view == null) return;
+			if (null == view) return;
 
 			if (EditorTransformUtil.HandleInput(editor.camera, out Vector3 newWorldPos, out Quaternion newWorldRot))
 			{
@@ -57,7 +57,7 @@ namespace ClassicTilestorm
 
 				// Sync back: View → Preview Camera
 				var previewTransform = ViewPreviewUtil.PreviewCameraTransform;
-				if (previewTransform != null)
+				if (null != previewTransform)
 				{
 					previewTransform.position = MapManager.WorldPosition(view.tile, view.Position);
 					previewTransform.rotation = MapManager.WorldRotation(view.tile, view.Rotation);
@@ -74,10 +74,10 @@ namespace ClassicTilestorm
 		public static void HandlePreviewCameraSync(EditorControllerAttachment editor)
 		{
 			var view = editor.selectedAttachments?.OfType<View>().FirstOrDefault();
-			if (view == null) return;
+			if (null == view) return;
 
 			var previewTransform = ViewPreviewUtil.PreviewCameraTransform;
-			if (previewTransform == null) return;
+			if (null == previewTransform) return;
 
 			// Sync: Preview Camera → View
 			view.Position = MapManager.LocalPosition(view.tile, previewTransform.position);
@@ -94,8 +94,7 @@ namespace ClassicTilestorm
 			UpdateViewFrustumMarker(view, editor.iMapManager);
 
 			// Update scene view gizmo
-			Vector3 worldPos = MapManager.WorldPosition(view.tile, view.Position);
-			EditorTransformUtil.UpdateTransform(worldPos, view.Rotation, editor.camera);
+			EditorTransformUtil.UpdateTransform(previewTransform.position, view.Rotation, editor.camera);
 		}
 
 		private static void SnapViewDistanceToGround(View view, IMapManager mapManager)
@@ -121,7 +120,7 @@ namespace ClassicTilestorm
 
 		private static void UpdateViewFrustumMarker(View view, IMapManager mapManager)
 		{
-			if (view == null || view.data == null || view.data.Length < 7 || view.Distance < 0.02f)
+			if (null == view || null == view.data || view.data.Length < 7 || view.Distance < 0.02f)
 			{
 				EditorFrustumUtil.Hide();
 				return;

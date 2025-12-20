@@ -22,17 +22,18 @@ namespace ClassicTilestorm
 		int GetStartTile();
 		int GetEndTile();
 		int FindAdjacentConsole(int nTile);
-		int[] Waypoints { set; get; }
 		Map CurrentMap { get; }
 		Transform CurrentTransform { get; }
-		string GetDefinitionAtIndex(int mapIndex);
-		bool UpdateTileAt(int x, int z, string id, bool expand = true, Action<bool, Vector3> onEdited = null);
 
+		int[] Waypoints { set; get; }
+		string GetDefinitionAtIndex(int mapIndex);
 		int GetWaypoint(int index);
 		View GetView(int tile);
+		Bounds GetTileGeometryBounds(int tileIndex);
 
 		int CameraHitTile(Camera camera, Vector3 position);
 
+		bool UpdateTileAt(int x, int z, string id, bool expand = true, Action<bool, Vector3> onEdited = null);
 		void RefreshAttachmentInstance(MapAttachment attachment);
 		void DestroyAttachmentInstance(MapAttachment attachment);
 
@@ -40,9 +41,6 @@ namespace ClassicTilestorm
 		bool RemoveAttachment(MapAttachment attachment);
 		void RemoveAllAttachmentsOnTile(int tileIndex);
 
-		Bounds GetTileGeometryBounds(int tileIndex);
-
-		// Change this to include useful parameters
 		Action<bool, Vector3> OnMapEdited { get; set; }
 	}
 
@@ -713,9 +711,7 @@ namespace ClassicTilestorm
 		private void CleanupAttachmentInstances()
 		{
 			foreach (var att in attachmentGameObjects.Keys.ToList())
-			{
 				DestroyAttachmentInstance(att);
-			}
 			attachmentGameObjects.Clear();
 		}
 
@@ -737,7 +733,11 @@ namespace ClassicTilestorm
 		public void RemoveAllAttachmentsOnTile(int tileIndex)
 		{
 			var attsOnTile = currentMap.GetAttachmentsOnTile(tileIndex);
-			foreach (var att in attsOnTile) DestroyAttachmentInstance(att);
+			foreach (var att in attsOnTile)
+			{
+				currentMap.RemoveAttachment(att); 
+				DestroyAttachmentInstance(att);
+			}
 			OnMapEdited?.Invoke(false, Vector3.zero);
 		}
 
