@@ -52,19 +52,11 @@ namespace ClassicTilestorm
 			pendingAction = PendingAction.None;
 		}
 
-		public override void OnMapLoaded()
-		{
-			if (enabled)
-				RebuildMarkers();
-			else
-				Debug.LogError("EditorControllerWaypoint::OnMapLoaded");
-		}
+		public override void OnMapLoaded() => RebuildMarkers();
 
 		private void RebuildMarkers()
 		{
-			var map = currentMap;
-			if (map == null) return;
-
+			if (currentMap == null) return;
 			AttachmentEditing.UpdateMapMarkers(iMapManager, iMapManager.Waypoints, SelectedWaypointIndex, EditorMarkerUtil.MarkerType.Waypoint);
 		}
 

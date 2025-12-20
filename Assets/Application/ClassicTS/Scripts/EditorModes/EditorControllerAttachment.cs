@@ -106,12 +106,12 @@ namespace ClassicTilestorm
 
 			if (IsGuiControlActive()) return;
 
-			int tileUnderMouse = GetTileUnderMouse();
+			int tileUnderMouse = HitTile(Input.mousePosition);
 
 			// LMB Down: select attachments
 			if (!supressInput && Input.GetMouseButtonDown(0))
 			{
-				pendingTile = HitTile(Input.mousePosition);
+				pendingTile = tileUnderMouse;
 				HandleLeftMouseDown(pendingTile);
 			}
 
@@ -173,18 +173,13 @@ namespace ClassicTilestorm
 
 		public override void OnMapLoaded()
 		{
-			if (enabled)
-			{
-				supressInput = true;
-				rmbDragStartedInPreview = false;
-				HideAllGizmos();
-				RebuildMarkers();
-			}
-			else
-				Debug.LogError("EditorControllerAttachment::OnMapLoaded");
+			supressInput = true;
+			rmbDragStartedInPreview = false;
+			HideAllGizmos();
+			RebuildMarkers();
 		}
 
-		public void RebuildMarkers()
+		private void RebuildMarkers()
 		{
 			if (null == currentMap) return;
 			var tiles = currentMap.attachments?.Where(a => a.tile >= 0).Select(a => a.tile).Distinct().ToArray() ?? System.Array.Empty<int>();
@@ -204,12 +199,6 @@ namespace ClassicTilestorm
 			if (null == attachments || 1 != attachments.Length) return;// Only show editing helpers if exactly ONE attachment selected
 			AttachmentEditing.HandleSelectionChanged(this);
 			AttachmentEditing.HandleGizmoInput(this); // if needed on select
-		}
-
-		private int GetTileUnderMouse()
-		{
-			if (!camera) return -1;
-			return iMapManager.WorldToMapIndex(MapManager.ScreenToWorld(camera, Input.mousePosition));
 		}
 
 		private void HandleLeftMouseDown(int tile)
@@ -284,15 +273,8 @@ namespace ClassicTilestorm
 			return result.Length > 0 ? result : null;
 		}
 
-		public void ClearPendingAction(bool clearSelection = true)
-		{
-			pendingAction = PendingAction.Wait;
-			if (clearSelection)
-			{
-				selectedAttachments = null;
-				pendingTile = -1;
-			}
-		}
+		public void ClearPendingAction() => pendingAction = PendingAction.Wait;
+
 		public int PendingTile => pendingTile;
 
 		private void HideAllGizmos()

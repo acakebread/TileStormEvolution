@@ -140,7 +140,5 @@ namespace ClassicTilestorm
 
 			EditorFrustumUtil.UpdateFrustum(worldPos, targetRotation, view.Distance, view.FOV);
 		}
-
-		protected override void DrawTypeSpecificGUI(EditorControllerAttachment editor) { }
 	}
 }

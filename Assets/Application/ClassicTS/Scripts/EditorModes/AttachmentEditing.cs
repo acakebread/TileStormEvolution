@@ -8,15 +8,8 @@ namespace ClassicTilestorm
 {
 	public abstract class AttachmentEditing
 	{
-		private static readonly AutoHidePanel sidePanel = new AutoHidePanel( collapsed: 120f, expanded: 340f, delay: 1.5f, animDur: 0.25f, defaultPos: new Vector2(0f, 40f));
-
-		public static bool IsMouseOverSidePanel()
-		{
-			Rect panelRect = sidePanel.GetPanelRect();
-			Vector2 mouse = Input.mousePosition;
-			mouse.y = Screen.height - mouse.y;
-			return panelRect.Contains(mouse);
-		}
+		private static readonly AutoHidePanel sidePanel = new(collapsed: 120f, expanded: 340f, delay: 1.5f, animDur: 0.25f, defaultPos: new Vector2(0f, 40f));
+		public static bool IsMouseOverSidePanel() => sidePanel.GetPanelRect().Contains(new Vector2(Input.mousePosition.x, Screen.height - Input.mousePosition.y));
 
 		private static string GetAttachmentLabel(MapAttachment att)
 		{
@@ -52,13 +45,7 @@ namespace ClassicTilestorm
 
 			sidePanel.SetFootnote("Hold RMB on preview to orbit • Scroll to zoom • LMB: place/move • RMB on tile: delete");
 			sidePanel.Draw();
-
-			// === TYPE-SPECIFIC GUI (e.g. future sliders, buttons) ===
-			GetEditorForSelection(editor.selectedAttachments)?.DrawTypeSpecificGUI(editor);
 		}
-
-		// Virtual methods - override in derived classes when needed
-		protected virtual void DrawTypeSpecificGUI(EditorControllerAttachment editor) { }//currently no implementations but will be used for camera FOV / emitter params etc
 
 		public static void HandleGizmoInput(EditorControllerAttachment editor) => GetEditorForSelection(editor.selectedAttachments)?.OnHandleGizmoInput(editor);
 		protected virtual void OnHandleGizmoInput(EditorControllerAttachment editor) { }
@@ -67,7 +54,6 @@ namespace ClassicTilestorm
 		protected virtual void OnHandleSelectionChanged(EditorControllerAttachment editor) { }
 
 		protected virtual void OnRefreshDragVisuals(EditorControllerAttachment editor, MapAttachment attachment) { }
-
 		protected virtual void OnUpdateDragGizmo(EditorControllerAttachment editor, MapAttachment attachment)
 		{
 			if (attachment is not ITransformableAttachment transformable)
@@ -90,9 +76,9 @@ namespace ClassicTilestorm
 				new ("Cancel", colorOverride: Color.yellow)
 			};
 
-			bool closed = PopupMenu.Show(position, "Add Attachment", items);
+			var closed = PopupMenu.Show(position, "Add Attachment", items);
 			if (closed)
-				editor.ClearPendingAction(false); // keep selection for gizmo
+				editor.ClearPendingAction();
 		}
 
 		public static void DrawDeletePopup(EditorControllerAttachment editor, Vector2 position)
@@ -129,8 +115,9 @@ namespace ClassicTilestorm
 			items.Add(PopupItem.Spacer());
 			items.Add(new PopupItem("Cancel", colorOverride: Color.yellow));
 
-			bool closed = PopupMenu.Show(position, "Delete Attachment(s)", items);
-			if (closed) editor.ClearPendingAction();
+			var closed = PopupMenu.Show(position, "Delete Attachment(s)", items);
+			if (closed)
+				editor.ClearPendingAction();
 		}
 
 		public static void DrawSelectPopup(EditorControllerAttachment editor, Vector2 position)
@@ -169,11 +156,11 @@ namespace ClassicTilestorm
 			items.Add(PopupItem.Spacer());
 			items.Add(new PopupItem("Cancel", colorOverride: Color.yellow));
 
-			bool closed = PopupMenu.Show(position, $"Select ({atts.Length})", items);
+			var closed = PopupMenu.Show(position, $"Select ({atts.Length})", items);
 			if (closed)
 			{
 				if (wasCancelled) editor.SelectAttachments(null);
-				editor.ClearPendingAction(false);
+				editor.ClearPendingAction();
 			}
 		}
 
