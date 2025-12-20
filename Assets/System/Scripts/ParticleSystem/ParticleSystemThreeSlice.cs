@@ -126,7 +126,8 @@ namespace MassiveHadronLtd
 					delta += (p.radius - tang) * cross;
 				}
 
-				float velComp = tang > 0.0001f ? Mathf.Max(0, tang - p.radius) / tang : 0f;
+				delta *= 0.5f;
+				float velComp = tang > 0.0001f ? Mathf.Max(0, tang - p.radius * 2f) / tang : 0f;
 				Vector3 half = velComp * delta;
 				Vector3 headB = pos + half;
 				Vector3 tailB = pos - half;

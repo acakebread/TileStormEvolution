@@ -60,7 +60,7 @@ MonoBehaviour:
   velocityBias: {x: 0, y: 2, z: 0}
   velocityMagnitude: {x: 2, y: 4, z: 2}
   enableCollision: 1
-  groundHeight: 0
+  groundHeight: 0.2
   bounceFriction: 0.2
   enableFloater: 0
   floaterDriftAmplitude: 1.5
