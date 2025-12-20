@@ -59,7 +59,7 @@ namespace ClassicTilestorm
 		public float Distance
 		{
 			//get => Squatrix.GetDistance(data);
-			get => 5f;//todo set default to 5 Squatrix.GetDistance(data);
+			get => 1f;//todo set default to 1 Squatrix.GetDistance(data);
 			set => Rebuild(distance: value);
 		}
 
