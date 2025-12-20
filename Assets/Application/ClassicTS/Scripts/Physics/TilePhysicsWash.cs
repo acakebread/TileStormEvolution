@@ -19,7 +19,7 @@ namespace MassiveHadronLtd
 		private void Update()
 		{
 			var phase = transform.position.x + transform.position.z;
-			var scale = Mathf.Sin(Time.time * speed + phase) * (1f + 0.3f * Mathf.Sin(Time.time * speed * 0.77f + phase));
+			var scale = Mathf.Sin(Time.time * speed + phase + 0.5f * Mathf.Sin(Time.time * speed * 0.77f + phase));
 
 			transform.position -= displacement;
 			displacement = magnitude * scale * normal - magnitude * normal;
