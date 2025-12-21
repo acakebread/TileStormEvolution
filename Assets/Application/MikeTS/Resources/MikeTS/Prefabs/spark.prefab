@@ -50,17 +50,17 @@ MonoBehaviour:
   lifetime: 0.75
   lifetimeVariation: 0.5
   useThreeZoneSlicing: 1
-  particleMaterial: {fileID: 2100000, guid: 02223f9d74ca8f74999a27cdc04e130f, type: 2}
-  color: {r: 0.688, g: 0.9510066, b: 1, a: 1}
-  radius: 0.02
+  particleMaterial: {fileID: 2100000, guid: a708e038c5fdd4a4e9763b8fb788c260, type: 2}
+  color: {r: 0.34117648, g: 0.83137256, b: 0.83137256, a: 1}
+  radius: 0.01
   fadeStartTime: 0.8
   enablePhysics: 1
   gravity: 10
-  airFriction: 0.03
-  velocityBias: {x: 0, y: 3.57, z: 0}
-  velocityMagnitude: {x: 4, y: 9, z: 4}
+  airFriction: 0
+  velocityBias: {x: 0, y: 2, z: 0}
+  velocityMagnitude: {x: 2, y: 4, z: 2}
   enableCollision: 1
-  groundHeight: 0
+  groundHeight: 0.2
   bounceFriction: 0.2
   enableFloater: 0
   floaterDriftAmplitude: 1.5
@@ -79,13 +79,22 @@ MonoBehaviour:
       inWeight: 0.33333334
       outWeight: 0.33333334
     - serializedVersion: 3
+      time: 0.8747922
+      value: 0.8746694
+      inSlope: -0.52971077
+      outSlope: -0.43028197
+      tangentMode: 1
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.54827666
+    - serializedVersion: 3
       time: 1
       value: 0.061325073
-      inSlope: -1.2397904
+      inSlope: -6.379128
       outSlope: 0
       tangentMode: 1
       weightedMode: 0
-      inWeight: 0.07608694
+      inWeight: 0.036231875
       outWeight: 0.33333334
     m_PreInfinity: 2
     m_PostInfinity: 2
@@ -98,3 +107,5 @@ MonoBehaviour:
     end: 0.015
   - start: 0.64
     end: 0.68
+  randomiseTimelineOffset: 1
+  timelineSeed: 0

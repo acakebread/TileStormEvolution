@@ -75,11 +75,11 @@ namespace MassiveHadronLtd
 
 		protected virtual void SetupURPMaterial()
 		{
-			if (material.shader.name != "MassiveHadronLtd/Unlit/AdditiveParticles")
-			{
-				var s = Shader.Find("MassiveHadronLtd/Unlit/AdditiveParticles");
-				if (s) material.shader = s;
-			}
+			//if (material.shader.name != "MassiveHadronLtd/Unlit/AdditiveParticles")
+			//{
+			//	var s = Shader.Find("MassiveHadronLtd/Unlit/AdditiveParticles");
+			//	if (s) material.shader = s;
+			//}
 			material.SetColor("_BaseColor", Color.white);
 			material.SetFloat("_ZWrite", 0);
 			material.SetFloat("_Cull", (float)UnityEngine.Rendering.CullMode.Off);
