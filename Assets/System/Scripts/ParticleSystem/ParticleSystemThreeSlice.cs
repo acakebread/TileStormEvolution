@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using System.Collections.Generic;
 
 namespace MassiveHadronLtd
@@ -105,8 +105,8 @@ namespace MassiveHadronLtd
 				if (p.life <= 0f) continue;
 
 				Vector3 pos = p.position;
-				Vector3 delta = p.delta;
 				Vector3 toCam = (pos - camPos).normalized;
+				Vector3 delta = p.delta; // full head-to-tail vector
 
 				Vector3 tangent;
 				if (delta.sqrMagnitude > 0.000001f)
@@ -118,23 +118,34 @@ namespace MassiveHadronLtd
 						tangent = Vector3.Cross(Vector3.up, toCam).normalized;
 				}
 
+				// Project delta onto plane perpendicular to view
 				float dot = Vector3.Dot(delta, toCam);
-				float tang = (delta - dot * toCam).magnitude;
-				if (tang < p.radius)
+				Vector3 perp = delta - dot * toCam;
+				float tang = perp.magnitude;
+
+				// Key fix: only apply correction if tang < radius
+				// And crucially: extend the *half* delta, not the full
+				Vector3 halfDelta = delta * 0.5f;
+				Vector3 halfPerp = perp * 0.5f;
+				float halfTang = tang * 0.5f;
+
+				if (halfTang < p.radius)
 				{
-					Vector3 cross = Vector3.Cross(toCam, tangent);
-					delta += (p.radius - tang) * cross;
+					Vector3 cross = Vector3.Cross(toCam, tangent).normalized;
+					halfDelta += (p.radius - halfTang) * cross;
 				}
 
-				delta *= 0.5f;
-				float velComp = tang > 0.0001f ? Mathf.Max(0, tang - p.radius * 2f) / tang : 0f;
-				Vector3 half = velComp * delta;
-				Vector3 headB = pos + half;
-				Vector3 tailB = pos - half;
+				// Velocity stretch: extra length beyond spherical part
+				float velComp = halfTang > 0.0001f ? Mathf.Max(0f, halfTang - p.radius) / halfTang : 0f;
+				Vector3 stretchedHalf = velComp * halfDelta;
 
-				Vector3 head = pos + delta;
-				Vector3 tail = pos - delta;
+				Vector3 head = pos + halfDelta;
+				Vector3 tail = pos - halfDelta;
+				Vector3 headB = pos + stretchedHalf;
+				Vector3 tailB = pos - stretchedHalf;
+
 				Vector3 rad = tangent * p.radius;
+
 				int v = p.vertexIndex;
 
 				verts[v + 0] = head - rad; verts[v + 1] = head + rad;
@@ -145,3 +156,59 @@ namespace MassiveHadronLtd
 		}
 	}
 }
+
+
+
+//my fix - not sure if better or worse than current version|
+
+//protected override void UpdateMesh(Camera renderingCamera, List<Vector3> verts, List<Color> cols)
+//{
+//	Matrix4x4 view = renderingCamera.worldToCameraMatrix;
+//	Matrix4x4 camToWorld = view.inverse;
+//	Vector3 camPos = camToWorld.MultiplyPoint(Vector3.zero);
+//	Vector3 camUp = camToWorld.MultiplyVector(Vector3.up).normalized;
+
+//	for (int i = 0; i < activeParticles.Count; i++)
+//	{
+//		Particle p = activeParticles[i];
+//		if (p.life <= 0f) continue;
+
+//		Vector3 pos = p.position;
+//		Vector3 toCam = (pos - camPos).normalized;
+//		Vector3 delta = p.delta * 0.5f;//hate this
+//		var radius_double = p.radius * 2f;//and hate this
+
+//		Vector3 tangent;
+//		if (delta.sqrMagnitude > 0.000001f)
+//			tangent = Vector3.Cross(delta, toCam).normalized;
+//		else
+//		{
+//			tangent = Vector3.Cross(camUp, toCam).normalized;
+//			if (tangent.sqrMagnitude < 0.01f)
+//				tangent = Vector3.Cross(Vector3.up, toCam).normalized;
+//		}
+
+//		float dot = Vector3.Dot(delta, toCam);
+//		float tang = (delta - dot * toCam).magnitude;
+//		if (tang < radius_double)
+//		{
+//			Vector3 cross = Vector3.Cross(toCam, tangent);
+//			delta += (radius_double - tang) * cross;
+//		}
+
+//		float velComp = tang > 0.0001f ? Mathf.Max(0, tang - radius_double) / tang : 0f;
+//		Vector3 half = velComp * delta;
+//		Vector3 headB = pos + half;
+//		Vector3 tailB = pos - half;
+
+//		Vector3 head = pos + delta;
+//		Vector3 tail = pos - delta;
+//		Vector3 rad = tangent * radius_double;
+//		int v = p.vertexIndex;
+
+//		verts[v + 0] = head - rad; verts[v + 1] = head + rad;
+//		verts[v + 2] = headB - rad; verts[v + 3] = headB + rad;
+//		verts[v + 4] = tailB - rad; verts[v + 5] = tailB + rad;
+//		verts[v + 6] = tail - rad; verts[v + 7] = tail + rad;
+//	}
+//}

@@ -209,6 +209,8 @@ MonoBehaviour:
   pulses:
   - start: -0.01
     end: 1
+  randomiseTimelineOffset: 1
+  timelineSeed: 0
 --- !u!4 &182906322
 Transform:
   m_ObjectHideFlags: 0
@@ -363,6 +365,8 @@ MonoBehaviour:
   pulses:
   - start: -0.01
     end: 1
+  randomiseTimelineOffset: 1
+  timelineSeed: 0
 --- !u!4 &902300768
 Transform:
   m_ObjectHideFlags: 0
@@ -394,7 +398,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &1081262123
 Transform:
   m_ObjectHideFlags: 0
@@ -483,6 +487,8 @@ MonoBehaviour:
   pulses:
   - start: -0.01
     end: 1
+  randomiseTimelineOffset: 1
+  timelineSeed: 0
 --- !u!1 &1143789306
 GameObject:
   m_ObjectHideFlags: 0
@@ -593,7 +599,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   lookSpeedH: 2
   lookSpeedV: 2
-  zoomSpeed: 2
+  zoomSpeed: 0.15
   dragSpeed: 2
 --- !u!114 &1143789311
 MonoBehaviour:
@@ -686,7 +692,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &1458804428
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -707,16 +713,16 @@ MonoBehaviour:
   useThreeZoneSlicing: 1
   particleMaterial: {fileID: 2100000, guid: 768f74481b2e255418cb3964b87965e8, type: 2}
   color: {r: 0.3584906, g: 0.3584906, b: 0.3584906, a: 1}
-  radius: 0.25
-  fadeStartTime: 0.5
-  enablePhysics: 0
+  radius: 0.1
+  fadeStartTime: 1
+  enablePhysics: 1
   gravity: 0
-  airFriction: 0.01
-  velocityBias: {x: 0, y: 0, z: 64}
+  airFriction: 0
+  velocityBias: {x: 0, y: 0, z: 12}
   velocityMagnitude: {x: 0, y: 0, z: 0}
   enableCollision: 0
   groundHeight: 0
-  bounceFriction: 0.2
+  bounceFriction: 0
   enableFloater: 0
   floaterDriftAmplitude: 1.5
   floaterDriftFrequency: 0.3
@@ -769,6 +775,8 @@ MonoBehaviour:
   pulses:
   - start: -0.01
     end: 0
+  randomiseTimelineOffset: 1
+  timelineSeed: 0
 --- !u!4 &1458804429
 Transform:
   m_ObjectHideFlags: 0
@@ -778,7 +786,7 @@ Transform:
   m_GameObject: {fileID: 1458804427}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 1, z: 0}
+  m_LocalPosition: {x: 0, y: 1, z: -2}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -949,7 +957,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!20 &1760635932
 Camera:
   m_ObjectHideFlags: 0
@@ -1013,6 +1021,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d110705e5a497ce49956c64ecbd5594b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  focusDistanceMultiplier: 3
 --- !u!114 &1760635934
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1089,7 +1098,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &1910858983
 Transform:
   m_ObjectHideFlags: 0
@@ -1187,6 +1196,8 @@ MonoBehaviour:
   pulses:
   - start: -0.01
     end: 0
+  randomiseTimelineOffset: 1
+  timelineSeed: 0
 --- !u!1 &1959222889
 GameObject:
   m_ObjectHideFlags: 0
@@ -1370,7 +1381,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &2063531461
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1453,6 +1464,8 @@ MonoBehaviour:
   pulses:
   - start: 0
     end: 1
+  randomiseTimelineOffset: 1
+  timelineSeed: 0
 --- !u!4 &2063531462
 Transform:
   m_ObjectHideFlags: 0
