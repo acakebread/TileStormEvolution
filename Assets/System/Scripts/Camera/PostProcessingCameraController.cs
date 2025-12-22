@@ -10,10 +10,7 @@ namespace MassiveHadronLtd
 		public Transform dofTarget { get; set; } // for DepthOfField
 
 		[Header("Bokeh Focus Distance Compensation")]
-		[Tooltip("Adjust this value in Play mode until the target at a known distance is perfectly sharp. " +
-				 "Common values: 2.0-3.0 for longer focal lengths (e.g., 100-200mm), closer to 1.0 for wide (e.g., 35mm). " +
-				 "Tune once per typical DoF preset.")]
-		public float focusDistanceMultiplier = 3f; // Start with your observed value (~3)
+		public float focusDistanceMultiplier = 1f;
 
 		private Volume volume => GetComponentInChildren<Volume>(true);
 

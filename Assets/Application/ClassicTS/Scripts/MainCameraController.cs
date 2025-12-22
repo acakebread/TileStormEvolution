@@ -147,6 +147,12 @@ namespace ClassicTilestorm
 			}
 
 			postProcessingController = InitialisePostProcessingController(camera);
+			var postProcessingCamera = postProcessingController.GetComponent<Camera>();
+			if (null != postProcessingCamera)//ensure clip planes are synchronised - important for depth of field
+			{
+				postProcessingCamera.nearClipPlane = camera.nearClipPlane;
+				postProcessingCamera.farClipPlane = camera.farClipPlane;
+			}
 
 			static PostProcessingCameraController InitialisePostProcessingController(Camera camera)
 			{
