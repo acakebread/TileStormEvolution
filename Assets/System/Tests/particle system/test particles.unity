@@ -251,12 +251,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 391604674}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1143789309}
+  m_Father: {fileID: 1760635935}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &391604676
 MonoBehaviour:
@@ -274,7 +274,7 @@ MonoBehaviour:
   priority: 0
   blendDistance: 0
   weight: 1
-  sharedProfile: {fileID: 11400000, guid: 0bd949236225da9469d229c64885842c, type: 2}
+  sharedProfile: {fileID: 11400000, guid: d0bfe6afc66d86741b5df737f902d9f6, type: 2}
 --- !u!1 &902300766
 GameObject:
   m_ObjectHideFlags: 0
@@ -398,7 +398,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &1081262123
 Transform:
   m_ObjectHideFlags: 0
@@ -432,7 +432,7 @@ MonoBehaviour:
   lifetime: 0.75
   lifetimeVariation: 0.5
   useThreeZoneSlicing: 1
-  particleMaterial: {fileID: 2100000, guid: c4ea243ec29dc2a44973f161147204e7, type: 2}
+  particleMaterial: {fileID: 2100000, guid: 02223f9d74ca8f74999a27cdc04e130f, type: 2}
   color: {r: 0.34069067, g: 0.8301887, b: 0.8301887, a: 1}
   radius: 0.01
   fadeStartTime: 0.49
@@ -441,7 +441,7 @@ MonoBehaviour:
   airFriction: 0.01
   velocityBias: {x: 0, y: -0.5, z: 0}
   velocityMagnitude: {x: 1, y: 0.1, z: 0.5}
-  enableCollision: 0
+  enableCollision: 1
   groundHeight: 0.1
   bounceFriction: 0.2
   enableFloater: 0
@@ -549,7 +549,7 @@ Camera:
     y: 0
     width: 1
     height: 1
-  near clip plane: 0.1
+  near clip plane: 0.01
   far clip plane: 1000
   field of view: 60
   orthographic: 0
@@ -582,7 +582,6 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 391604675}
   - {fileID: 1760635935}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -600,7 +599,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   lookSpeedH: 2
   lookSpeedV: 2
-  zoomSpeed: 1
+  zoomSpeed: 0.15
   dragSpeed: 2
 --- !u!114 &1143789311
 MonoBehaviour:
@@ -618,8 +617,7 @@ MonoBehaviour:
   m_RequiresDepthTextureOption: 2
   m_RequiresOpaqueTextureOption: 2
   m_CameraType: 0
-  m_Cameras:
-  - {fileID: 1760635932}
+  m_Cameras: []
   m_RendererIndex: -1
   m_VolumeLayerMask:
     serializedVersion: 2
@@ -654,7 +652,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1143789306}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: debe350cb86502644be674b7e850e7b1, type: 3}
   m_Name: 
@@ -694,7 +692,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &1458804428
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -959,7 +957,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!20 &1760635932
 Camera:
   m_ObjectHideFlags: 0
@@ -991,9 +989,9 @@ Camera:
     y: 0
     width: 1
     height: 1
-  near clip plane: 0.1
+  near clip plane: 0.3
   far clip plane: 1000
-  field of view: 60
+  field of view: 20
   orthographic: 0
   orthographic size: 5
   m_Depth: -1
@@ -1023,7 +1021,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d110705e5a497ce49956c64ecbd5594b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  focusDistanceMultiplier: 1
+  focusDistanceMultiplier: 3
 --- !u!114 &1760635934
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1037,7 +1035,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_RenderShadows: 0
-  m_RequiresDepthTextureOption: 1
+  m_RequiresDepthTextureOption: 2
   m_RequiresOpaqueTextureOption: 2
   m_CameraType: 1
   m_Cameras: []
@@ -1080,7 +1078,8 @@ Transform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 391604675}
   m_Father: {fileID: 1143789309}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1910858981
