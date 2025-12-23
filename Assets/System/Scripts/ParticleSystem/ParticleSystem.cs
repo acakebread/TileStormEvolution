@@ -80,9 +80,10 @@ namespace MassiveHadronLtd
 			//	var s = Shader.Find("MassiveHadronLtd/Unlit/AdditiveParticles");
 			//	if (s) material.shader = s;
 			//}
-			material.SetColor("_BaseColor", Color.white);
-			material.SetFloat("_ZWrite", 0);
-			material.SetFloat("_Cull", (float)UnityEngine.Rendering.CullMode.Off);
+			//material.SetColor("_BaseColor", Color.white);
+			//material.SetFloat("_ZWrite", 0);
+			//material.SetFloat("_Cull", (float)UnityEngine.Rendering.CullMode.Off);
+			//material.shader = Shader.Find("MassiveHadronLtd/Unlit/AdditiveParticlesEmissive");
 			material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent + 100;
 		}
 
@@ -155,7 +156,8 @@ namespace MassiveHadronLtd
 		public virtual void Render(Camera renderingCamera)
 		{
 			if (renderingCamera == null) return;
-			if ((renderingCamera.cullingMask & (1 << LayerMask.NameToLayer("TransparentFX"))) == 0) return;
+			//if ((renderingCamera.cullingMask & (1 << LayerMask.NameToLayer("TransparentFX"))) == 0) return;
+			if ((renderingCamera.cullingMask & (1 << Controller.gameObject.layer)) == 0) return;
 
 			if (!coloursUpdatedThisFrame)
 			{
@@ -178,7 +180,11 @@ namespace MassiveHadronLtd
 			}
 			ReportViewRendered(view);
 			pm = particleMeshes[slot];
-			Graphics.DrawMesh(pm.mesh, Matrix4x4.identity, material, 0, renderingCamera);
+			//Graphics.DrawMesh(pm.mesh, Matrix4x4.identity, material, 0, renderingCamera);
+			//int transparentFXLayer = LayerMask.NameToLayer("TransparentFX");
+			//Graphics.DrawMesh(pm.mesh, Matrix4x4.identity, material, transparentFXLayer, renderingCamera);
+			int currentFXLayer = Controller.gameObject.layer;
+			Graphics.DrawMesh(pm.mesh, Matrix4x4.identity, material, currentFXLayer, renderingCamera);
 		}
 
 		protected virtual void UpdateColors() { }
