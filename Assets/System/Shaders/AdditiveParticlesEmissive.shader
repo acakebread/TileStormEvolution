@@ -10,7 +10,7 @@ Shader "MassiveHadronLtd/Unlit/AdditiveParticlesEmissive"
     }
     SubShader
     {
-        Tags { "RenderType"="Transparent" "Queue"="AlphaTest" "RenderPipeline"="UniversalPipeline" "IgnoreProjector"="True" }
+        Tags { "RenderType"="Transparent" "Queue"="Transparent" "RenderPipeline"="UniversalPipeline" "IgnoreProjector"="True" }
         LOD 100
 
         Blend One One

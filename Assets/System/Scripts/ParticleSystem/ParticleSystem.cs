@@ -80,10 +80,9 @@ namespace MassiveHadronLtd
 			//	var s = Shader.Find("MassiveHadronLtd/Unlit/AdditiveParticles");
 			//	if (s) material.shader = s;
 			//}
-			//material.SetColor("_BaseColor", Color.white);
-			//material.SetFloat("_ZWrite", 0);
-			//material.SetFloat("_Cull", (float)UnityEngine.Rendering.CullMode.Off);
-			material.shader = Shader.Find("MassiveHadronLtd/Unlit/AdditiveParticlesEmissive");
+			material.SetColor("_BaseColor", Color.white);
+			material.SetFloat("_ZWrite", 0);
+			material.SetFloat("_Cull", (float)UnityEngine.Rendering.CullMode.Off);
 			material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent + 100;
 		}
 
@@ -179,9 +178,7 @@ namespace MassiveHadronLtd
 			}
 			ReportViewRendered(view);
 			pm = particleMeshes[slot];
-			//Graphics.DrawMesh(pm.mesh, Matrix4x4.identity, material, 0, renderingCamera);
-			int transparentFXLayer = LayerMask.NameToLayer("TransparentFX");
-			Graphics.DrawMesh(pm.mesh, Matrix4x4.identity, material, transparentFXLayer, renderingCamera);
+			Graphics.DrawMesh(pm.mesh, Matrix4x4.identity, material, 0, renderingCamera);
 		}
 
 		protected virtual void UpdateColors() { }
