@@ -20,7 +20,7 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: spark
+  m_Name: particle test spark
   m_Shader: {fileID: 4800000, guid: db3190ecbb4cdbf45be2478e0f412e35, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
@@ -105,7 +105,6 @@ Material:
     - _Blend: 2
     - _BlendModePreserveSpecular: 0
     - _BlendOp: 0
-    - _BloomBoost: 5
     - _BumpScale: 1
     - _CameraFadingEnabled: 0
     - _CameraFarFadeDistance: 2
@@ -125,7 +124,6 @@ Material:
     - _DstBlendAlpha: 1
     - _EmissionBoost: 1
     - _EmissionEnabled: 0
-    - _EmissionIntensity: 1
     - _EnvironmentReflections: 0
     - _FlipbookMode: 0
     - _GlossMapScale: 0
@@ -141,8 +139,6 @@ Material:
     - _SampleGI: 0
     - _Smoothness: 1
     - _SmoothnessTextureChannel: 0
-    - _SoftParticles: 0
-    - _SoftParticlesDistance: 1
     - _SoftParticlesEnabled: 0
     - _SoftParticlesFarFadeDistance: 1
     - _SoftParticlesNearFadeDistance: 0
