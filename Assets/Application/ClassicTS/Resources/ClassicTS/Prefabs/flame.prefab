@@ -52,7 +52,7 @@ MonoBehaviour:
   lifetime: 0.5
   lifetimeVariation: 0.25
   useThreeZoneSlicing: 0
-  particleMaterial: {fileID: 2100000, guid: 02223f9d74ca8f74999a27cdc04e130f, type: 2}
+  particleMaterial: {fileID: 2100000, guid: 2a8c41278b0fd1a44ab307dea2fce6e2, type: 2}
   color: {r: 0.5377358, g: 0.14410335, b: 0.04819329, a: 1}
   radius: 0.12
   fadeStartTime: 0.5
