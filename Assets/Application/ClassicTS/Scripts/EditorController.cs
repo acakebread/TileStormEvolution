@@ -18,6 +18,7 @@ namespace ClassicTilestorm
 		private EditorMode? currentMode = null;
 
 		private bool gridEnabled = true;
+		private bool dofEnabled = false;
 
 		// UI state
 		private float panelYoffset = 10f;
@@ -56,6 +57,7 @@ namespace ClassicTilestorm
 				controller.UpdateGestureControllerState();
 			}
 			UpdateGridLines(gridEnabled);
+			UpdateDOF(dofEnabled);
 			activeMode?.OnEnable();
 			EnableEggbot(false);
 		}
@@ -64,6 +66,7 @@ namespace ClassicTilestorm
 		{
 			activeMode?.OnDisable();
 			GridLinesUtil.Hide();
+			//UpdateDOF(true);
 			EnableEggbot(true);
 		}
 
@@ -94,8 +97,15 @@ namespace ClassicTilestorm
 		}
 
 		private void UpdateGridLines(bool enabled = true) => GridLinesUtil.Show(transform, mapManager ? mapManager.Width : 32, mapManager ? mapManager.Height : 32, gridEnabled = enabled);
+		private void UpdateDOF(bool enabled = true)
+		{
+			if (!TryGetComponent<MainCameraController>(out var controller)) return;
+			if (controller.activeSystem is GameCameraEditor editorCam)
+				editorCam.postProcessingEnabled = enabled;
+		}
 
 		private void OnGridLinesToggled(bool value) => UpdateGridLines(gridEnabled = value);
+		private void OnDofToggled(bool value) => UpdateDOF(dofEnabled = value);
 
 		private void SetEditorMode(EditorMode newMode)
 		{
@@ -146,31 +156,33 @@ namespace ClassicTilestorm
 			var y = panelYoffset + spacing;
 			if (GuiUtils.ColoredButton(new Rect(margin, y + 0 * (buttonHeight + spacing), buttonWidth, buttonHeight), gridVisible ? "Hide Grid" : "Show Grid", new Color(0.25f, 0.75f, 0.25f))) OnGridLinesToggled(!gridVisible);
 
+			if (GuiUtils.ColoredButton(new Rect(margin, y + 1 * (buttonHeight + spacing), buttonWidth, buttonHeight), dofEnabled ? "Disable DOF" : "Enable DOF", new Color(0.25f, 0.75f, 0.25f))) OnDofToggled(!dofEnabled);
+
 			GUI.contentColor = mode == "Drag" ? Color.cyan : Color.white;
-			if (GUI.Button(new Rect(margin, y + 1 * (buttonHeight + spacing), buttonWidth, buttonHeight), "Drag")) SetEditorMode(EditorMode.Drag);
+			if (GUI.Button(new Rect(margin, y + 2 * (buttonHeight + spacing), buttonWidth, buttonHeight), "Drag")) SetEditorMode(EditorMode.Drag);
 
 			GUI.contentColor = mode == "Paint" ? Color.cyan : Color.white;
-			if (GUI.Button(new Rect(margin, y + 2 * (buttonHeight + spacing), buttonWidth, buttonHeight), "Paint")) SetEditorMode(EditorMode.Paint);
+			if (GUI.Button(new Rect(margin, y + 3 * (buttonHeight + spacing), buttonWidth, buttonHeight), "Paint")) SetEditorMode(EditorMode.Paint);
 
 			GUI.contentColor = mode == "Waypoint" ? Color.cyan : Color.white;
-			if (GUI.Button(new Rect(margin, y + 3 * (buttonHeight + spacing), buttonWidth, buttonHeight), "Waypoint")) SetEditorMode(EditorMode.Waypoint);
+			if (GUI.Button(new Rect(margin, y + 4 * (buttonHeight + spacing), buttonWidth, buttonHeight), "Waypoint")) SetEditorMode(EditorMode.Waypoint);
 
 			GUI.contentColor = (currentMode ?? EditorMode.Drag) == EditorMode.Attachment ? Color.cyan : Color.white;
-			if (GUI.Button(new Rect(margin, y + 4 * (buttonHeight + spacing), buttonWidth, buttonHeight), "Attachments")) SetEditorMode(EditorMode.Attachment);
+			if (GUI.Button(new Rect(margin, y + 5 * (buttonHeight + spacing), buttonWidth, buttonHeight), "Attachments")) SetEditorMode(EditorMode.Attachment);
 
 			GUI.contentColor = prevContentColor;
 
 			var mainController = GetComponent<MainController>();
-			if (GuiUtils.ColoredButton(new Rect(margin, y + 5 * (buttonHeight + spacing), buttonWidth, buttonHeight), "Import Map", new Color(0.2f, 0.6f, 1f)))
+			if (GuiUtils.ColoredButton(new Rect(margin, y + 6 * (buttonHeight + spacing), buttonWidth, buttonHeight), "Import Map", new Color(0.2f, 0.6f, 1f)))
 				mainController.ImportMapAsAtomic();
 
-			if (GuiUtils.ColoredButton(new Rect(margin, y + 6 * (buttonHeight + spacing), buttonWidth, buttonHeight), "Export Map", new Color(0.8f, 0.2f, 0.2f)))
+			if (GuiUtils.ColoredButton(new Rect(margin, y + 7 * (buttonHeight + spacing), buttonWidth, buttonHeight), "Export Map", new Color(0.8f, 0.2f, 0.2f)))
 				mainController.ExportMapAsAtomic();
 
-			if (GuiUtils.ColoredButton(new Rect(margin, y + 7 * (buttonHeight + spacing), buttonWidth, buttonHeight), "(Re)Load Database", new Color(0.2f, 0.6f, 1f)))
+			if (GuiUtils.ColoredButton(new Rect(margin, y + 8 * (buttonHeight + spacing), buttonWidth, buttonHeight), "(Re)Load Database", new Color(0.2f, 0.6f, 1f)))
 				mainController.LoadDatabase();
 
-			if (GuiUtils.ColoredButton(new Rect(margin, y + 8 * (buttonHeight + spacing), buttonWidth, buttonHeight), "Save Database", new Color(0.8f, 0.2f, 0.2f)))
+			if (GuiUtils.ColoredButton(new Rect(margin, y + 9 * (buttonHeight + spacing), buttonWidth, buttonHeight), "Save Database", new Color(0.8f, 0.2f, 0.2f)))
 				mainController.SaveDatabase();
 		}
 	}

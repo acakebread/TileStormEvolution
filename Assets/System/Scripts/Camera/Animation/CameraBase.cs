@@ -37,7 +37,7 @@ namespace MassiveHadronLtd
 		protected float smoothing = 64f;// Default Smoothing Rate
 		protected const float TargetFPS = 60f;
 
-		protected bool postProcessingEnabled
+		public bool postProcessingEnabled
 		{
 			get => null != controller ? controller.enabled : false;
 			set { if (null != controller) controller.enabled = value; }
