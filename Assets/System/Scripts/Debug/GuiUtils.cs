@@ -457,20 +457,14 @@ namespace MassiveHadronLtd
 				float footnoteHeight = !string.IsNullOrEmpty(footnote) ? 28f : 0f;
 
 				// Draw the ListView
-				Rect listRect = new Rect(
-					panel.x + 6f,                  // move 6 pixels right
-					panel.y,
-					panel.width - 6f,              // shrink width by 6 so it fits
-					panel.height - buttonRowHeight - 6f - footnoteHeight
-				);
-
+				Rect listRect = new(panel.x + 6f, panel.y, panel.width - 6f, panel.height - buttonRowHeight - 6f - footnoteHeight);// move 6 pixels right and shrink width by 6 so it fits
 				List.Draw(listRect);
 
 				// Draw buttons at bottom
 				float y = panel.y + listRect.height + 4f;
-				Rect btnRect = new Rect(panel.x + 6f, y, panel.width - 12f, 36f);
+				Rect btnRect = new (panel.x + 6f, y, panel.width - 12f, 36f);
 
-				GUILayout.BeginArea(new Rect(btnRect.x, btnRect.y, btnRect.width, btnRect.height));
+				GUILayout.BeginArea(new (btnRect.x, btnRect.y, btnRect.width, btnRect.height));
 				GUILayout.BeginHorizontal();
 				GUILayout.FlexibleSpace();
 
@@ -494,7 +488,7 @@ namespace MassiveHadronLtd
 				// Draw footnote below buttons
 				if (!string.IsNullOrEmpty(footnote))
 				{
-					Rect footRect = new Rect(panel.x + 6f, panel.y + panel.height - footnoteHeight - 4f, panel.width - 12f, footnoteHeight);
+					Rect footRect = new (panel.x + 6f, panel.y + panel.height - footnoteHeight - 4f, panel.width - 12f, footnoteHeight);
 					GUI.Label(footRect, footnote, new GUIStyle(GUI.skin.label)
 					{
 						alignment = TextAnchor.MiddleCenter,
