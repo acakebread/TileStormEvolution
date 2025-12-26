@@ -21,13 +21,8 @@ namespace ClassicTilestorm
 		private Vector2 pendingPopupScreenPos;
 
 		private static readonly AutoHidePanel sidePanel = new(collapsed: 120f, expanded: 340f, delay: 1.5f, animDur: 0.25f, defaultPos: new Vector2(0f, 40f));
-		private static bool IsMouseOverSidePanel() => sidePanel.GetPanelRect().Contains(new Vector2(Input.mousePosition.x, Screen.height - Input.mousePosition.y));
 
-		public override bool IsMouseOverGUI()
-		{
-			if (base.IsMouseOverGUI()) return true;
-			return IsMouseOverSidePanel();
-		}
+		public override bool IsMouseOverGUI() => base.IsMouseOverGUI() || sidePanel.IsMouseOver;
 
 		public static void DrawSidePanel(EditorControllerAttachment editor)
 		{

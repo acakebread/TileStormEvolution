@@ -146,20 +146,9 @@ namespace MassiveHadronLtd
 				CurrentWidth = Mathf.SmoothDamp(CurrentWidth, targetWidth, ref animVel, animDuration);
 			}
 
-			public Rect GetPanelRect(float margin = 20f)
-			{
-				return new Rect(
-					Screen.width - CurrentWidth - 10f,
-					DefaultPosition.y,
-					CurrentWidth,
-					Screen.height - DefaultPosition.y - margin
-				);
-			}
+			public Rect GetPanelRect(float margin = 20f) => new Rect( Screen.width - CurrentWidth - 10f, DefaultPosition.y, CurrentWidth, Screen.height - DefaultPosition.y - margin );
 
-			public void SetFootnote(string text)
-			{
-				footnote = text;
-			}
+			public void SetFootnote(string text) => footnote = text;
 
 			public void Draw()
 			{
