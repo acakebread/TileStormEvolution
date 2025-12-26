@@ -130,11 +130,7 @@ namespace ClassicTilestorm
 					// True click on empty tile → prepare to add
 					pendingTile = clickStartTile;
 					pendingAction = PendingAction.Add;
-
-					var _worldPos = iMapManager.TileWorldPosition(clickStartTile) + Vector3.up * 0.6f;
-					var sp = camera.WorldToScreenPoint(_worldPos);
-					sp.y = Screen.height - sp.y;
-					pendingPopupScreenPos = sp;
+					SetPopupPosition(clickStartTile);
 				}
 			}
 
@@ -153,11 +149,7 @@ namespace ClassicTilestorm
 						pendingTile = iMapManager.Waypoints[potentialWaypointHit];
 						pendingWaypoint = potentialWaypointHit;
 						pendingAction = PendingAction.Delete;
-
-						var _worldPos = iMapManager.TileWorldPosition(clickStartTile) + Vector3.up * 0.6f;
-						var sp = camera.WorldToScreenPoint(_worldPos);
-						sp.y = Screen.height - sp.y;
-						pendingPopupScreenPos = sp;
+						SetPopupPosition(clickStartTile);
 					}
 				}
 			}
@@ -184,6 +176,14 @@ namespace ClassicTilestorm
 				originalTile = iMapManager.Waypoints[potentialWaypointHit];
 				pendingAction = PendingAction.None; // cancel any pending add
 			}
+		}
+
+		private void SetPopupPosition(int tile)
+		{
+			var wp = iMapManager.TileWorldPosition(tile);
+			var sp = camera.WorldToScreenPoint(wp);
+			sp.y = Screen.height - sp.y;
+			pendingPopupScreenPos = sp;
 		}
 
 		private int IndexOfWaypoint(int tileIndex)
@@ -261,10 +261,6 @@ namespace ClassicTilestorm
 
 		private void DrawAddPopup()
 		{
-			var sp = pendingPopupScreenPos;
-			sp.x -= 120;
-			sp.y -= 110;
-
 			var items = new List<PopupItem>
 			{
 				// Info line (non-clickable)
@@ -275,7 +271,7 @@ namespace ClassicTilestorm
 				new PopupItem("Cancel", null, Color.yellow)// Cancel
 			};
 
-			bool closed = PopupMenu.Show(sp, "Add Waypoint?", items);
+			bool closed = PopupMenu.Show(pendingPopupScreenPos, "Add Waypoint?", items);
 
 			if (closed)
 				pendingAction = PendingAction.None;
@@ -283,10 +279,6 @@ namespace ClassicTilestorm
 
 		private void DrawDeletePopup()
 		{
-			var sp = pendingPopupScreenPos;
-			sp.x -= 120;
-			sp.y -= 110;
-
 			var items = new List<PopupItem>
 			{
 				// Info line (non-clickable)
@@ -297,7 +289,7 @@ namespace ClassicTilestorm
 				new PopupItem("Cancel", null, Color.yellow)// Cancel
 			};
 
-			bool closed = PopupMenu.Show(sp, "Delete Waypoint?", items);
+			bool closed = PopupMenu.Show(pendingPopupScreenPos, "Delete Waypoint?", items);
 
 			if (closed)
 				pendingAction = PendingAction.None;

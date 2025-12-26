@@ -294,7 +294,7 @@ namespace ClassicTilestorm
 
 		private void SetPopupPosition(int tile)
 		{
-			var wp = iMapManager.TileWorldPosition(tile) + Vector3.up * 0.6f;
+			var wp = iMapManager.TileWorldPosition(tile);
 			var sp = camera.WorldToScreenPoint(wp);
 			sp.y = Screen.height - sp.y;
 			pendingPopupScreenPos = sp;
