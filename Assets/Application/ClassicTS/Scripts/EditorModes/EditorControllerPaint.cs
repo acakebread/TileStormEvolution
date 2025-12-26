@@ -15,19 +15,15 @@ namespace ClassicTilestorm
 		private int cycleIndex = 0;
 
 		private readonly AutoHidePanel sidePanel = new(collapsed: 120f, expanded: 340f, delay: 1f, animDur: 0.3f);
-
-		private GUIStyle leftButtonStyle;
-
-		public EditorControllerPaint(EditorController editorController) : base(editorController) { }
+		private bool IsMouseOverSidePanel() => sidePanel.GetPanelRect().Contains(new Vector2(Input.mousePosition.x, Screen.height - Input.mousePosition.y));
 
 		public override bool IsMouseOverGUI()
 		{
 			if (base.IsMouseOverGUI()) return true;
-			Rect panelRect = sidePanel.GetPanelRect();
-			Vector2 mouse = Input.mousePosition;
-			mouse.y = Screen.height - mouse.y;
-			return panelRect.Contains(mouse);
+			return IsMouseOverSidePanel();
 		}
+
+		public EditorControllerPaint(EditorController editorController) : base(editorController) { }
 
 		public override void Update()
 		{
@@ -96,15 +92,6 @@ namespace ClassicTilestorm
 		public override void OnGUI()
 		{
 			if (null == camera) return;
-
-			if (leftButtonStyle == null)
-			{
-				leftButtonStyle = new GUIStyle(GUI.skin.button)
-				{
-					alignment = TextAnchor.MiddleLeft,
-					padding = new RectOffset(12, 4, 4, 4)
-				};
-			}
 
 			sidePanel.Update();
 

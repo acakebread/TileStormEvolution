@@ -23,6 +23,12 @@ namespace ClassicTilestorm
 		private static readonly AutoHidePanel sidePanel = new(collapsed: 120f, expanded: 340f, delay: 1.5f, animDur: 0.25f, defaultPos: new Vector2(0f, 40f));
 		private static bool IsMouseOverSidePanel() => sidePanel.GetPanelRect().Contains(new Vector2(Input.mousePosition.x, Screen.height - Input.mousePosition.y));
 
+		public override bool IsMouseOverGUI()
+		{
+			if (base.IsMouseOverGUI()) return true;
+			return IsMouseOverSidePanel();
+		}
+
 		public static void DrawSidePanel(EditorControllerAttachment editor)
 		{
 			sidePanel.Update();
@@ -53,13 +59,6 @@ namespace ClassicTilestorm
 				Pickup p => $"Pickup [{att.tile}] ({p.amount})",
 				_ => $"{att.TypeName} [{att.tile}]"
 			};
-		}
-
-		public override bool IsMouseOverGUI()
-		{
-			if (base.IsMouseOverGUI()) return true;
-			if (IsMouseOverSidePanel()) return true;
-			return false;
 		}
 
 		protected override bool IsMouseOverPreview() => ViewPreviewUtil.IsMouseOverPreview();

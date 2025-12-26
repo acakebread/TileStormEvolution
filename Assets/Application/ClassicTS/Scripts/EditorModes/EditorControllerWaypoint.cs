@@ -23,16 +23,13 @@ namespace ClassicTilestorm
 		private int clickStartTile = -1;
 		private int potentialWaypointHit = -1;
 
-		private readonly AutoHidePanel sidePanel = new(120f, 340f, 1.5f, 0.25f);
+		private static readonly AutoHidePanel sidePanel = new(120f, 340f, 1.5f, 0.25f);
+		private static bool IsMouseOverSidePanel() => sidePanel.GetPanelRect().Contains(new Vector2(Input.mousePosition.x, Screen.height - Input.mousePosition.y));
 
 		public override bool IsMouseOverGUI()
 		{
 			if (base.IsMouseOverGUI()) return true;
-
-			Rect panelRect = sidePanel.GetPanelRect();
-			Vector2 mouse = Input.mousePosition;
-			mouse.y = Screen.height - mouse.y;
-			return panelRect.Contains(mouse);
+			return IsMouseOverSidePanel();
 		}
 
 		public EditorControllerWaypoint(EditorController editorController) : base(editorController) { }
