@@ -130,7 +130,7 @@ namespace ClassicTilestorm
 					// True click on empty tile → prepare to add
 					pendingTile = clickStartTile;
 					pendingAction = PendingAction.Add;
-					SetPopupPosition(clickStartTile);
+					SetPopupPosition();
 				}
 			}
 
@@ -149,7 +149,7 @@ namespace ClassicTilestorm
 						pendingTile = iMapManager.Waypoints[potentialWaypointHit];
 						pendingWaypoint = potentialWaypointHit;
 						pendingAction = PendingAction.Delete;
-						SetPopupPosition(clickStartTile);
+						SetPopupPosition();
 					}
 				}
 			}
@@ -178,13 +178,7 @@ namespace ClassicTilestorm
 			}
 		}
 
-		private void SetPopupPosition(int tile)
-		{
-			var wp = iMapManager.TileWorldPosition(tile);
-			var sp = camera.WorldToScreenPoint(wp);
-			sp.y = Screen.height - sp.y;
-			pendingPopupScreenPos = sp;
-		}
+		private void SetPopupPosition() => pendingPopupScreenPos = Input.mousePosition;
 
 		private int IndexOfWaypoint(int tileIndex)
 		{

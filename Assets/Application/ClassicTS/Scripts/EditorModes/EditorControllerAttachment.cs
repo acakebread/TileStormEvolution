@@ -261,14 +261,14 @@ namespace ClassicTilestorm
 				if (pendingTile != -1)
 				{
 					pendingAction = PendingAction.Add;
-					SetPopupPosition(pendingTile);
+					SetPopupPosition();
 				}
 			}
 			else if (attachmentsOnDownTile.Length > 1)
 			{
 				// Only show multi-select if there were multiple on the original tile
 				pendingAction = PendingAction.Select;
-				SetPopupPosition(pendingTile);
+				SetPopupPosition();
 			}
 			else
 			{
@@ -286,19 +286,13 @@ namespace ClassicTilestorm
 			{
 				pendingTile = hitTile;
 				pendingAction = PendingAction.Delete;
-				SetPopupPosition(hitTile);
+				SetPopupPosition();
 				return;
 			}
 			SelectAttachments(null);
 		}
 
-		private void SetPopupPosition(int tile)
-		{
-			var wp = iMapManager.TileWorldPosition(tile);
-			var sp = camera.WorldToScreenPoint(wp);
-			sp.y = Screen.height - sp.y;
-			pendingPopupScreenPos = sp;
-		}
+		private void SetPopupPosition() => pendingPopupScreenPos = Input.mousePosition;
 
 		private MapAttachment[] GetAttachmentsOnTile(int tileIndex)
 		{
