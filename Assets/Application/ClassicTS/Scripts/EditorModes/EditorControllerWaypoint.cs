@@ -27,6 +27,8 @@ namespace ClassicTilestorm
 
 		public override bool IsMouseOverGUI() => base.IsMouseOverGUI() || sidePanel.IsMouseOver;
 
+		public override void OnMapLoaded() => RebuildMarkers();
+
 		public EditorControllerWaypoint(EditorController editorController) : base(editorController) { }
 
 		public override void OnEnable()
@@ -42,48 +44,6 @@ namespace ClassicTilestorm
 			base.OnDisable();
 			EditorMarkerUtil.ClearMapMarkers();
 			pendingAction = PendingAction.None;
-		}
-
-		public override void OnMapLoaded() => RebuildMarkers();
-
-		private void RebuildMarkers()
-		{
-			if (currentMap == null) return;
-			AttachmentEditing.UpdateMapMarkers(iMapManager, iMapManager.Waypoints, SelectedWaypointIndex, EditorMarkerUtil.MarkerType.Waypoint);
-		}
-
-		private void SelectWaypoint(int index)
-		{
-			SelectedWaypointIndex = index;
-			RebuildMarkers();
-		}
-
-		private void AddWaypointAtTile(int tile)
-		{
-			var map = currentMap;
-			if (map == null) return;
-
-			var list = iMapManager.Waypoints?.ToList() ?? new List<int>();
-			list.Add(tile);
-			iMapManager.Waypoints = list.ToArray();
-
-			SelectedWaypointIndex = list.Count - 1;
-			RebuildMarkers();
-		}
-
-		private void DeleteWaypoint(int index)
-		{
-			var map = currentMap;
-			if (map == null || map.waypoints == null || index < 0 || index >= map.waypoints.Length) return;
-
-			var list = map.waypoints.ToList();
-			list.RemoveAt(index);
-			map.waypoints = list.ToArray();
-
-			if (SelectedWaypointIndex >= list.Count)
-				SelectedWaypointIndex = list.Count - 1;
-
-			RebuildMarkers();
 		}
 
 		public override void Update()
@@ -173,13 +133,55 @@ namespace ClassicTilestorm
 			}
 		}
 
-		private void SetPopupPosition() => pendingPopupScreenPos = Input.mousePosition;
+		public override void OnGUI()
+		{
+			DrawSidePanel();
+			// Popups
+			if (pendingAction == PendingAction.Add) DrawAddPopup();
+			if (pendingAction == PendingAction.Delete) DrawDeletePopup();
+		}
 
-		private int IndexOfWaypoint(int tileIndex)
+		private void RebuildMarkers()
+		{
+			if (currentMap == null) return;
+			AttachmentEditing.UpdateMapMarkers(iMapManager, iMapManager.Waypoints, SelectedWaypointIndex, EditorMarkerUtil.MarkerType.Waypoint);
+		}
+
+		private void SelectWaypoint(int index)
+		{
+			SelectedWaypointIndex = index;
+			RebuildMarkers();
+		}
+
+		private void AddWaypointAtTile(int tile)
 		{
 			var map = currentMap;
-			return null != map && null != map.waypoints && map.waypoints.Contains(tileIndex) ? Array.IndexOf(map.waypoints, tileIndex) : -1;
+			if (map == null) return;
+
+			var list = iMapManager.Waypoints?.ToList() ?? new List<int>();
+			list.Add(tile);
+			iMapManager.Waypoints = list.ToArray();
+
+			SelectedWaypointIndex = list.Count - 1;
+			RebuildMarkers();
 		}
+
+		private void DeleteWaypoint(int index)
+		{
+			var map = currentMap;
+			if (map == null || map.waypoints == null || index < 0 || index >= map.waypoints.Length) return;
+
+			var list = map.waypoints.ToList();
+			list.RemoveAt(index);
+			map.waypoints = list.ToArray();
+
+			if (SelectedWaypointIndex >= list.Count)
+				SelectedWaypointIndex = list.Count - 1;
+
+			RebuildMarkers();
+		}
+
+		private int IndexOfWaypoint(int tileIndex) => null != currentMap && null != currentMap.waypoints && currentMap.waypoints.Contains(tileIndex) ? Array.IndexOf(currentMap.waypoints, tileIndex) : -1;
 
 		private int GetTileUnderMouse()
 		{
@@ -187,44 +189,6 @@ namespace ClassicTilestorm
 			Vector3 mouseWorld = MapManager.ScreenToWorld(camera, Input.mousePosition);
 			Vector3 snapped = MapManager.SnappedMapPosition(mouseWorld);
 			return iMapManager.WorldToMapIndex(snapped);
-		}
-
-		public override void OnGUI()
-		{
-			sidePanel.Update();
-
-			// Build ListView items
-			var wp = iMapManager.Waypoints ?? Array.Empty<int>();
-			var items = new List<ListViewItem>();
-
-			for (int i = 0; i < wp.Length; i++)
-				items.Add(new ListViewItem(label: $"WP{i:00} [{wp[i]}]", onClick: () => SelectWaypoint(i), selected: i == SelectedWaypointIndex));
-
-			sidePanel.List.SetItems(items);
-
-			// Build dynamic Move buttons
-			sidePanel.Buttons.Clear();
-
-			// Up button always visible
-			sidePanel.Buttons.Add(new ListViewButton(
-				"Move Up",
-				() => MoveWaypoint(SelectedWaypointIndex, -1),
-				enabled: SelectedWaypointIndex > 0
-			));
-
-			// Down button always visible
-			sidePanel.Buttons.Add(new ListViewButton(
-				"Move Down",
-				() => MoveWaypoint(SelectedWaypointIndex, +1),
-				enabled: SelectedWaypointIndex >= 0 && SelectedWaypointIndex < wp.Length - 1
-			));
-
-			// Draw entire panel
-			sidePanel.Draw();
-
-			// Popups
-			if (pendingAction == PendingAction.Add) DrawAddPopup();
-			if (pendingAction == PendingAction.Delete) DrawDeletePopup();
 		}
 
 		private void MoveWaypoint(int index, int direction)
@@ -238,6 +202,8 @@ namespace ClassicTilestorm
 			SelectedWaypointIndex += direction;
 			RebuildMarkers();
 		}
+
+		private void SetPopupPosition() => pendingPopupScreenPos = Input.mousePosition;
 
 		private void DrawAddPopup()
 		{
@@ -269,6 +235,32 @@ namespace ClassicTilestorm
 
 			if (false == PopupMenu.Show(pendingPopupScreenPos, "Delete Waypoint?", items))
 				pendingAction = PendingAction.None;
+		}
+
+		private void DrawSidePanel()
+		{
+			sidePanel.Update();
+
+			// Build ListView items
+			var wp = iMapManager.Waypoints ?? Array.Empty<int>();
+			var items = new List<ListViewItem>();
+
+			for (int i = 0; i < wp.Length; i++)
+				items.Add(new ListViewItem(label: $"WP{i:00} [{wp[i]}]", onClick: () => SelectWaypoint(i), selected: i == SelectedWaypointIndex));
+
+			sidePanel.List.SetItems(items);
+
+			// Build dynamic Move buttons
+			sidePanel.Buttons.Clear();
+
+			// Up button always visible
+			sidePanel.Buttons.Add(new ListViewButton("Move Up", () => MoveWaypoint(SelectedWaypointIndex, -1), enabled: SelectedWaypointIndex > 0));
+
+			// Down button always visible
+			sidePanel.Buttons.Add(new ListViewButton("Move Down", () => MoveWaypoint(SelectedWaypointIndex, +1), enabled: SelectedWaypointIndex >= 0 && SelectedWaypointIndex < wp.Length - 1));
+
+			// Draw entire panel
+			sidePanel.Draw();
 		}
 	}
 }

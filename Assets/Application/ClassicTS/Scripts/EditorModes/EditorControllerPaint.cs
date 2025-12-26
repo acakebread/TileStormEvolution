@@ -14,7 +14,7 @@ namespace ClassicTilestorm
 		private List<string> definitionCycleList = new();
 		private int cycleIndex = 0;
 
-		private readonly AutoHidePanel sidePanel = new(collapsed: 120f, expanded: 340f, delay: 1f, animDur: 0.3f);
+		private static readonly AutoHidePanel sidePanel = new(collapsed: 120f, expanded: 340f, delay: 1f, animDur: 0.3f);
 		public override bool IsMouseOverGUI() => base.IsMouseOverGUI() || sidePanel.IsMouseOver;
 
 		public EditorControllerPaint(EditorController editorController) : base(editorController) { }
@@ -37,6 +37,8 @@ namespace ClassicTilestorm
 			if (selectedDefinition != null)
 				EditorMeshUtil.UpdateGhostMesh(camera, iMapManager, selectedDefinition);
 		}
+
+		public override void OnGUI() => DrawSidePanel();
 
 		public override void OnDisable() => EditorMeshUtil.HideGhostMesh();
 
@@ -68,7 +70,7 @@ namespace ClassicTilestorm
 			iMapManager.UpdateTileAt(Mathf.FloorToInt(snappedPos.x), Mathf.FloorToInt(snappedPos.z), defID, expand: true);
 		}
 
-		public void SetSelectedDefinitionById(string id)
+		private void SetSelectedDefinitionById(string id)
 		{
 			selectedDefinitionId = id ?? "tile_empty";
 
@@ -81,28 +83,6 @@ namespace ClassicTilestorm
 				EditorMeshUtil.UpdateGhostMesh(camera, iMapManager, def);
 			else
 				EditorMeshUtil.HideGhostMesh();
-		}
-
-		public override void OnGUI()
-		{
-			if (null == camera) return;
-
-			sidePanel.Update();
-
-			// Clear old items and populate ListView
-			sidePanel.List.Clear();
-			foreach (var def in ResourceManager.Definitions)
-			{
-				string label = $"{def.id} ({def.texture})";
-				sidePanel.List.AddItem(new ListViewItem(
-					label,
-					() => SetSelectedDefinitionById(def.id),
-					def.id == selectedDefinitionId
-				));
-			}
-
-			// Draw the panel (background + list)
-			sidePanel.Draw();
 		}
 
 		private static List<string> DefinitionNavGroup(string referenceDef)
@@ -142,6 +122,25 @@ namespace ClassicTilestorm
 				cycleList.Add(referenceDef);
 
 			return cycleList;
+		}
+
+		private void DrawSidePanel()
+		{
+			sidePanel.Update();
+
+			// Clear old items and populate ListView
+			sidePanel.List.Clear();
+			foreach (var def in ResourceManager.Definitions)
+			{
+				sidePanel.List.AddItem(new ListViewItem(
+					$"{def.id} ({def.texture})",
+					() => SetSelectedDefinitionById(def.id),
+					def.id == selectedDefinitionId
+				));
+			}
+
+			// Draw the panel (background + list)
+			sidePanel.Draw();
 		}
 	}
 }

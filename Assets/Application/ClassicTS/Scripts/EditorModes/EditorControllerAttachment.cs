@@ -24,38 +24,6 @@ namespace ClassicTilestorm
 
 		public override bool IsMouseOverGUI() => base.IsMouseOverGUI() || sidePanel.IsMouseOver;
 
-		public static void DrawSidePanel(EditorControllerAttachment editor)
-		{
-			sidePanel.Update();
-			sidePanel.List.Clear();
-
-			var map = editor.currentMap;
-			if (map != null && map.attachments != null)
-			{
-				foreach (var att in map.attachments)
-				{
-					var label = GetAttachmentLabel(att);
-
-					sidePanel.List.AddItem(new ListViewItem(
-						label,
-						() => editor.SelectAttachments(new[] { att }),
-						selected: null != editor.selectedAttachments && editor.selectedAttachments.Contains(att)
-					));
-				}
-			}
-
-			sidePanel.SetFootnote("Hold RMB on preview to orbit • Scroll to zoom • LMB: place/move • RMB on tile: delete");
-			sidePanel.Draw();
-
-			static string GetAttachmentLabel(MapAttachment att) => att switch
-			{
-				Emitter e => $"Emitter [{att.tile}]" + (e.LookAt.sqrMagnitude > 0.01f && e.LookAt != Vector3.up ? $" → {e.LookAt.magnitude:F1}" : ""),
-				View => $"View [{att.tile}]",
-				Pickup p => $"Pickup [{att.tile}] ({p.amount})",
-				_ => $"{att.TypeName} [{att.tile}]"
-			};
-		}
-
 		protected override bool IsMouseOverPreview() => ViewPreviewUtil.IsMouseOverPreview();
 
 		public EditorControllerAttachment(EditorController controller) : base(controller) { }
@@ -171,7 +139,7 @@ namespace ClassicTilestorm
 
 		public override void OnGUI()
 		{
-			DrawSidePanel(this);
+			DrawSidePanel();
 			ViewPreviewUtil.OnGUI();
 
 			switch (pendingAction)
@@ -308,6 +276,36 @@ namespace ClassicTilestorm
 			EditorTransformUtil.HideTransformGizmo();
 			ViewPreviewUtil.Hide();
 			EditorMarkerUtil.ClearMapMarkers();
+		}
+
+		private void DrawSidePanel()
+		{
+			sidePanel.Update();
+			sidePanel.List.Clear();
+
+			var map = currentMap;
+			if (map != null && map.attachments != null)
+			{
+				foreach (var att in map.attachments)
+				{
+					sidePanel.List.AddItem(new ListViewItem(
+						GetAttachmentLabel(att),
+						() => SelectAttachments(new[] { att }),
+						selected: null != selectedAttachments && selectedAttachments.Contains(att)
+					));
+				}
+			}
+
+			sidePanel.SetFootnote("Hold RMB on preview to orbit • Scroll to zoom • LMB: place/move • RMB on tile: delete");
+			sidePanel.Draw();
+
+			static string GetAttachmentLabel(MapAttachment att) => att switch
+			{
+				Emitter e => $"Emitter [{att.tile}]" + (e.LookAt.sqrMagnitude > 0.01f && e.LookAt != Vector3.up ? $" → {e.LookAt.magnitude:F1}" : ""),
+				View => $"View [{att.tile}]",
+				Pickup p => $"Pickup [{att.tile}] ({p.amount})",
+				_ => $"{att.TypeName} [{att.tile}]"
+			};
 		}
 	}
 }
