@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using MassiveHadronLtd;
+using UnityEngine.Rendering;
 
 namespace ClassicTilestorm
 {
@@ -19,6 +20,7 @@ namespace ClassicTilestorm
 
 		private bool gridEnabled = true;
 		private bool dofEnabled = false;
+		private Volume getVolume(GameObject root) => root.GetComponentInChildren<Volume>(true);
 
 		// UI state
 		private float panelYoffset = 10f;
@@ -26,6 +28,9 @@ namespace ClassicTilestorm
 		private const float spacing = 10f;
 		private const float buttonWidth = 135f;
 		private const float buttonHeight = 30f;
+
+		private MainCameraController mainCameraController { get { TryGetComponent<MainCameraController>(out var controller); return controller; } }
+		private GameCameraEditor gameCameraEditor { get { if (null != mainCameraController && mainCameraController.activeSystem is GameCameraEditor editorCam) return editorCam; return null; } }
 
 		private void Awake()
 		{
@@ -66,11 +71,21 @@ namespace ClassicTilestorm
 		{
 			activeMode?.OnDisable();
 			GridLinesUtil.Hide();
-			//UpdateDOF(true);
 			EnableEggbot(true);
 		}
 
-		private void Update() => activeMode?.Update();
+		private void Update() 
+		{ 
+			activeMode?.Update();
+
+			var cameraEditor = gameCameraEditor;
+			if (null != cameraEditor)
+			{
+				var volume = getVolume(cameraEditor.controller.gameObject);
+				var distance  = (cameraEditor.controller.transform.position - MapManager.CameraToWorld(cameraEditor.camera)).magnitude;
+				VolumeUtils.SetDepthOfFieldDistance(volume, Mathf.Max(Mathf.Min(distance, cameraEditor.controller.transform.position.y * 3f), 1f));
+			}
+		}
 
 		private void OnGUI()
 		{
@@ -99,9 +114,13 @@ namespace ClassicTilestorm
 		private void UpdateGridLines(bool enabled = true) => GridLinesUtil.Show(transform, mapManager ? mapManager.Width : 32, mapManager ? mapManager.Height : 32, gridEnabled = enabled);
 		private void UpdateDOF(bool enabled = true)
 		{
-			if (!TryGetComponent<MainCameraController>(out var controller)) return;
-			if (controller.activeSystem is GameCameraEditor editorCam)
-				editorCam.postProcessingEnabled = enabled;
+			if (null != gameCameraEditor)
+			{
+				var volume = getVolume(gameCameraEditor.controller.gameObject);
+				volume.enabled = enabled;
+				VolumeUtils.EnableDepthOfField(volume, enabled);
+				VolumeUtils.SetDepthOfFieldDistance(volume, 8f);
+			}
 		}
 
 		private void OnGridLinesToggled(bool value) => UpdateGridLines(gridEnabled = value);

@@ -1,7 +1,6 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.Rendering;
-using UnityEngine.Rendering.Universal;
 
 namespace MassiveHadronLtd
 {
@@ -13,16 +12,7 @@ namespace MassiveHadronLtd
 		public float focusDistanceMultiplier = 1f;
 
 		private Volume volume => GetComponentInChildren<Volume>(true);
-
-		private DepthOfField depthOfField
-		{
-			get
-			{
-				if (null == volume || null == volume.profile) return null;
-				volume.profile.TryGet<DepthOfField>(out var result);
-				return result;
-			}
-		}
+		private Coroutine dofCoroutine;
 
 		private void OnEnable()
 		{
@@ -33,13 +23,10 @@ namespace MassiveHadronLtd
 			}
 
 			volume.enabled = true;
+			VolumeUtils.EnableDepthOfField(volume, true);
 
-			var dof = depthOfField;
-			if (null != dof)
-			{
-				dof.active = true;
-				StartCoroutine(DepthOfFieldUpdate());
-			}
+			// Start and store the reference
+			dofCoroutine = StartCoroutine(DepthOfFieldUpdate());
 		}
 
 		private IEnumerator DepthOfFieldUpdate()
@@ -48,24 +35,25 @@ namespace MassiveHadronLtd
 			{
 				if (null != dofTarget)
 				{
-					float worldDistance = (dofTarget.position - transform.position).magnitude;
-					depthOfField.focusDistance.Override(worldDistance * focusDistanceMultiplier);
+					var worldDistance = (dofTarget.position - transform.position).magnitude;
+					VolumeUtils.SetDepthOfFieldDistance(volume, worldDistance * focusDistanceMultiplier);
 				}
-
 				yield return null;
 			}
 		}
 
 		private void OnDisable()
 		{
+			if (dofCoroutine != null)
+			{
+				StopCoroutine(dofCoroutine);  // This stops the infinite loop
+				dofCoroutine = null;
+			}
+
 			if (null == volume) return;
 
 			volume.enabled = false;
-
-			var dof = depthOfField;
-			if (null == dof) return;
-
-			dof.active = false;
+			VolumeUtils.EnableDepthOfField(volume, false);
 		}
 	}
 }

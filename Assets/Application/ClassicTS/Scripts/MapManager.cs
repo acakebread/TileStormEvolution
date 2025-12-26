@@ -157,6 +157,15 @@ namespace ClassicTilestorm
 			return result;
 		}
 
+		public static Vector3 CameraToWorld(Camera camera, Vector3 direction = default)
+		{
+			if (null == camera) return Vector3.negativeInfinity;
+			if (default == direction) direction = Camera.main.transform.forward;
+			var ray = new Ray(camera.transform.position, direction);
+			RayToWorld(ray, out Vector3 result);
+			return result;
+		}
+
 		public static Vector3 ScreenToWorldSnapped(Camera camera, Vector3 screenPos) => SnappedMapPosition(ScreenToWorld(camera, Input.mousePosition));
 
 		private void Awake()
