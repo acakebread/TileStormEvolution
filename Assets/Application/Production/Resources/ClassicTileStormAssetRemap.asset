@@ -37,3 +37,9 @@ MonoBehaviour:
     replacement: med_corner_se_hd
   - legacyName: med_tile_sw_corner
     replacement: med_corner_sw_hd
+  - legacyName: med_tile_sw_corner
+    replacement: med_corner_sw_hd
+  - legacyName: med_tile_sw_corner
+    replacement: med_corner_sw_hd
+  - legacyName: med_tile_ew_door
+    replacement: med_gate_ew_hd
