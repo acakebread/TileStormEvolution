@@ -113,7 +113,7 @@ namespace MassiveHadronLtd
 					{
 						GUI.color = oldColor;
 						item.action?.Invoke();
-						return true; // closed
+						return false;// closed
 					}
 
 					GUI.color = oldColor;
@@ -122,9 +122,9 @@ namespace MassiveHadronLtd
 
 				// Click outside closes
 				if (Event.current.type == EventType.MouseDown && !rect.Contains(Event.current.mousePosition))
-					return true;
+					return false;// closed
 
-				return false;
+				return true;//still active
 			}
 		}
 	}

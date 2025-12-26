@@ -36,8 +36,7 @@ namespace ClassicTilestorm
 				new ("Cancel", colorOverride: Color.yellow)
 			};
 
-			var closed = PopupMenu.Show(position, "Add Attachment", items);
-			if (closed)
+			if (false == PopupMenu.Show(position, "Add Attachment", items))
 				editor.ClearPendingAction();
 		}
 
@@ -75,8 +74,7 @@ namespace ClassicTilestorm
 			items.Add(PopupItem.Spacer());
 			items.Add(new PopupItem("Cancel", colorOverride: Color.yellow));
 
-			var closed = PopupMenu.Show(position, "Delete Attachment(s)", items);
-			if (closed)
+			if (false == PopupMenu.Show(position, "Delete Attachment(s)", items))
 				editor.ClearPendingAction();
 		}
 
@@ -116,8 +114,7 @@ namespace ClassicTilestorm
 			items.Add(PopupItem.Spacer());
 			items.Add(new PopupItem("Cancel", colorOverride: Color.yellow));
 
-			var closed = PopupMenu.Show(position, $"Select ({atts.Length})", items);
-			if (closed)
+			if (false == PopupMenu.Show(position, $"Select ({atts.Length})", items))
 			{
 				if (wasCancelled) editor.SelectAttachments(null);
 				editor.ClearPendingAction();

@@ -198,16 +198,7 @@ namespace ClassicTilestorm
 			var items = new List<ListViewItem>();
 
 			for (int i = 0; i < wp.Length; i++)
-			{
-				int idx = i;
-				bool selected = idx == SelectedWaypointIndex;
-
-				items.Add(new ListViewItem(
-					label: $"WP{idx:00} [{wp[i]}]",
-					onClick: () => SelectWaypoint(idx),
-					selected: selected
-				));
-			}
+				items.Add(new ListViewItem(label: $"WP{i:00} [{wp[i]}]", onClick: () => SelectWaypoint(i), selected: i == SelectedWaypointIndex));
 
 			sidePanel.List.SetItems(items);
 
@@ -260,9 +251,7 @@ namespace ClassicTilestorm
 				new PopupItem("Cancel", null, Color.yellow)// Cancel
 			};
 
-			bool closed = PopupMenu.Show(pendingPopupScreenPos, "Add Waypoint?", items);
-
-			if (closed)
+			if (false == PopupMenu.Show(pendingPopupScreenPos, "Add Waypoint?", items))
 				pendingAction = PendingAction.None;
 		}
 
@@ -278,9 +267,7 @@ namespace ClassicTilestorm
 				new PopupItem("Cancel", null, Color.yellow)// Cancel
 			};
 
-			bool closed = PopupMenu.Show(pendingPopupScreenPos, "Delete Waypoint?", items);
-
-			if (closed)
+			if (false == PopupMenu.Show(pendingPopupScreenPos, "Delete Waypoint?", items))
 				pendingAction = PendingAction.None;
 		}
 	}
