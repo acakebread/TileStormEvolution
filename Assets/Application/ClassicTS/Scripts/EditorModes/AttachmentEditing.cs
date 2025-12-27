@@ -83,34 +83,34 @@ namespace ClassicTilestorm
 		public static void DrawAddPopup(AttachmentEditContext context, Vector2 position)
 		{
 			var items = new List<PopupItem>
-	{
-		new ("Emitter [flame]", () =>
-		{
-			var e = AttachmentEmitterEditing.Instance.CreateEmitter(context.MapManager, context.PendingTile, "flame");
-			if (e != null)
-				Select(new[] { e }, context.MapManager, context.SceneCamera);
-		}),
-		new ("Emitter [spark]", () =>
-		{
-			var e = AttachmentEmitterEditing.Instance.CreateEmitter(context.MapManager, context.PendingTile, "spark");
-			if (e != null)
-				Select(new[] { e }, context.MapManager, context.SceneCamera);
-		}),
-		new ("View", () =>
-		{
-			var v = AttachmentViewEditing.Instance.CreateView(context.MapManager, context.PendingTile);
-			if (v != null)
-				Select(new[] { v }, context.MapManager, context.SceneCamera);
-		}),
-		new ("Pickup", () =>
-		{
-			var p = AttachmentPickupEditing.Instance.CreatePickup(context.MapManager, context.PendingTile);
-			if (p != null)
-				Select(new[] { p }, context.MapManager, context.SceneCamera);
-		}),
-		PopupItem.Spacer(),
-		new ("Cancel", () => { }, colorOverride: Color.yellow)
-	};
+			{
+				new ("Emitter [flame]", () =>
+				{
+					var e = AttachmentEmitterEditing.Instance.CreateEmitter(context.MapManager, context.PendingTile, "flame");
+					if (e != null)
+						Select(new[] { e }, context.MapManager, context.SceneCamera);
+				}),
+				new ("Emitter [spark]", () =>
+				{
+					var e = AttachmentEmitterEditing.Instance.CreateEmitter(context.MapManager, context.PendingTile, "spark");
+					if (e != null)
+						Select(new[] { e }, context.MapManager, context.SceneCamera);
+				}),
+				new ("View", () =>
+				{
+					var v = AttachmentViewEditing.Instance.CreateView(context.MapManager, context.PendingTile);
+					if (v != null)
+						Select(new[] { v }, context.MapManager, context.SceneCamera);
+				}),
+				new ("Pickup", () =>
+				{
+					var p = AttachmentPickupEditing.Instance.CreatePickup(context.MapManager, context.PendingTile);
+					if (p != null)
+						Select(new[] { p }, context.MapManager, context.SceneCamera);
+				}),
+				PopupItem.Spacer(),
+				new ("Cancel", () => { }, colorOverride: Color.yellow)
+			};
 
 			if (!PopupMenu.Show(position, "Add Attachment", items))
 				context.ClearPendingAction();
