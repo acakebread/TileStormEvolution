@@ -7,9 +7,9 @@ namespace ClassicTilestorm
 	{
 		public static readonly AttachmentViewEditing Instance = new();
 
-		public View AddNewView(EditorControllerAttachment editor, int tile)
+		public View CreateView(IMapManager mapManager, int tile)
 		{
-			if (null == editor.currentMap) return null;
+			if (mapManager == null) return null;
 
 			var view = new View
 			{
@@ -18,9 +18,8 @@ namespace ClassicTilestorm
 				LookAt = (Vector3.forward + Vector3.down) * 4f
 			};
 
-			SnapViewDistanceToGround(view);
-			editor.iMapManager.AddAttachment(view);
-			editor.SelectAttachments(new[] { view });
+			SnapViewDistanceToGround(view); // unchanged, uses static MapManager
+			mapManager.AddAttachment(view);
 			return view;
 		}
 
@@ -30,15 +29,14 @@ namespace ClassicTilestorm
 			if (null == view) return;
 
 			EditorTransformUtil.ShowAt(MapManager.WorldPosition(view.tile, view.Position), view.Rotation, editor.camera);
-			OnRefreshDragVisuals(editor, view);
+			OnRefreshDragVisuals(editor.iMapManager, view);
 		}
 
-		protected override void OnRefreshDragVisuals(EditorControllerAttachment editor, MapAttachment attachment)
+		protected override void OnRefreshDragVisuals(IMapManager mapManager, MapAttachment attachment)
 		{
 			if (attachment is View view)
 			{
-				// Use the static utility instead of editor.viewPreview
-				ViewPreviewUtil.Show(view, editor.iMapManager);
+				ViewPreviewUtil.Show(view, mapManager);
 				UpdateViewFrustumMarker(view);
 			}
 		}

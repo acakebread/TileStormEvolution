@@ -4,20 +4,19 @@ namespace ClassicTilestorm
 	{
 		public static readonly AttachmentPickupEditing Instance = new();
 
-		public Pickup AddNewPickup(EditorControllerAttachment editor, int tile)
+		public Pickup CreatePickup(IMapManager mapManager, int tile)
 		{
-			if (null == editor.currentMap) return null;
+			if (mapManager == null) return null;
 
 			var pickup = new Pickup
 			{
 				tile = tile,
-				pickupType = 0,// default type
+				pickupType = 0,
 				amount = 1,
 				respawn = false
 			};
 
-			editor.iMapManager.AddAttachment(pickup);
-			editor.SelectAttachments(new[] { pickup });
+			mapManager.AddAttachment(pickup);
 			return pickup;
 		}
 	}

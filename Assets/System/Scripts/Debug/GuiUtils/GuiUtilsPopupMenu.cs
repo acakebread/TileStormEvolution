@@ -103,17 +103,34 @@ namespace MassiveHadronLtd
 						continue;
 					}
 
-					var btnRect = new Rect(rect.x + 8f, yOffset, rect.width - 16f, ITEM_HEIGHT - 2f);
+					var itemRect = new Rect(rect.x + 8f, yOffset, rect.width - 16f, ITEM_HEIGHT - 2f);
 
 					var oldColor = GUI.color;
 					if (item.colorOverride.HasValue)
 						GUI.color = item.colorOverride.Value;
 
-					if (GUI.Button(btnRect, item.label))
+					if (item.action != null)
 					{
-						GUI.color = oldColor;
-						item.action?.Invoke();
-						return false;// closed
+						// Interactive button - use standard button style
+						if (GUI.Button(itemRect, item.label, PopupStyles.button))
+						{
+							GUI.color = oldColor;
+							item.action?.Invoke();
+							return false; // popup closed
+						}
+					}
+					else
+					{
+						// Non-interactive label - centered, bold for headers/Cancel
+						var labelStyle = new GUIStyle(GUI.skin.label)
+						{
+							alignment = TextAnchor.MiddleCenter,
+							fontStyle = FontStyle.Bold,
+							fontSize = 12
+						};
+						labelStyle.normal.textColor = GUI.color; // respect color override
+
+						GUI.Label(itemRect, item.label, labelStyle);
 					}
 
 					GUI.color = oldColor;

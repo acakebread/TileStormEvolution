@@ -7,16 +7,11 @@ namespace ClassicTilestorm
 	{
 		public static readonly AttachmentEmitterEditing Instance = new();
 
-		/// <summary>
-		/// Creates a new Emitter on the given tile with the specified variant,
-		/// adds it to the map, updates runtime visuals, and selects it.
-		/// Returns the created emitter, or null on failure.
-		/// </summary>
-		public Emitter AddNewEmitter(EditorControllerAttachment editor, int tile, string variant)
+		public Emitter CreateEmitter(IMapManager mapManager, int tile, string variant)
 		{
-			if (editor.currentMap == null || editor.iMapManager == null || string.IsNullOrEmpty(variant)) return null;
+			if (mapManager == null || string.IsNullOrEmpty(variant)) return null;
 
-			var localY = ComputeEmitterPlacementHeight(editor, tile);
+			var localY = ComputeEmitterPlacementHeight(mapManager, tile);
 			var emitter = new Emitter
 			{
 				tile = tile,
@@ -25,8 +20,7 @@ namespace ClassicTilestorm
 				variant = variant
 			};
 
-			editor.iMapManager.AddAttachment(emitter);
-			editor.SelectAttachments(new MapAttachment[] { emitter });
+			mapManager.AddAttachment(emitter);
 			return emitter;
 		}
 
@@ -58,7 +52,7 @@ namespace ClassicTilestorm
 			}
 		}
 
-		protected override void OnRefreshDragVisuals(EditorControllerAttachment editor, MapAttachment attachment)
+		protected override void OnRefreshDragVisuals(IMapManager mapManager, MapAttachment attachment)
 		{
 			if (attachment is Emitter emitter)
 			{
@@ -67,21 +61,13 @@ namespace ClassicTilestorm
 			}
 		}
 
-		/// <summary>
-		/// Computes the ideal local Y position for placing an emitter on top of the tile geometry.
-		/// Adds a small offset to prevent z-fighting.
-		/// </summary>
-		private static float ComputeEmitterPlacementHeight(EditorControllerAttachment editor, int tile)
+		// Update the helper to take mapManager
+		private static float ComputeEmitterPlacementHeight(IMapManager mapManager, int tile)
 		{
-			if (editor.iMapManager == null) return 1f;
-
-			// Get accurate geometry bounds from MapManager
-			var tileBounds = editor.iMapManager.GetTileGeometryBounds(tile);
-			var tileWorldCenter = editor.iMapManager.TileWorldPosition(tile);
-			var topYWorld = tileBounds.max.y;
-
-			// Convert to local space and add small lift
-			return (topYWorld - tileWorldCenter.y) + 0.05f;
+			if (mapManager == null) return 1f;
+			var tileBounds = mapManager.GetTileGeometryBounds(tile);
+			var tileWorldCenter = mapManager.TileWorldPosition(tile);
+			return (tileBounds.max.y - tileWorldCenter.y) + 0.05f;
 		}
 	}
 }

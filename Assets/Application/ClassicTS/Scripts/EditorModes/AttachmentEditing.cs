@@ -46,27 +46,43 @@ namespace ClassicTilestorm
 		public static void HandleSelectionChanged(EditorControllerAttachment editor) => GetEditorForSelection(selectedAttachments)?.OnHandleSelectionChanged(editor);
 		protected virtual void OnHandleSelectionChanged(EditorControllerAttachment editor) { }
 
-		protected virtual void OnRefreshDragVisuals(EditorControllerAttachment editor, MapAttachment attachment) { }
-		protected virtual void OnUpdateDragGizmo(EditorControllerAttachment editor, MapAttachment attachment)
+		protected virtual void OnRefreshDragVisuals(IMapManager mapManager, MapAttachment attachment) { }
+		protected virtual void OnUpdateDragGizmo(MapAttachment attachment, Camera camera)
 		{
 			if (attachment is not ITransformableAttachment transformable)
 				return;
 
 			var worldPos = MapManager.WorldPosition(attachment.tile, transformable.Position);
 			var worldRot = MapManager.WorldRotation(attachment.tile, transformable.Rotation);
-			EditorTransformUtil.ShowAt(worldPos, worldRot, editor.camera);
+			EditorTransformUtil.ShowAt(worldPos, worldRot, camera);
 		}
 
 		public static void DrawAddPopup(EditorControllerAttachment editor, Vector2 position)
 		{
 			var items = new List<PopupItem>
 			{
-				new ("Emitter [flame]", () => AttachmentEmitterEditing.Instance.AddNewEmitter(editor, editor.PendingTile, "flame")),
-				new ("Emitter [spark]", () => AttachmentEmitterEditing.Instance.AddNewEmitter(editor, editor.PendingTile, "spark")),
-				new ("View", () => AttachmentViewEditing.Instance.AddNewView(editor, editor.PendingTile)),
-				new ("Pickup", () => AttachmentPickupEditing.Instance.AddNewPickup(editor, editor.PendingTile)),
+				new ("Emitter [flame]", () =>
+				{
+					var e = AttachmentEmitterEditing.Instance.CreateEmitter(editor.iMapManager, editor.PendingTile, "flame");
+					if (e != null) editor.SelectAttachments(new[] { e });
+				}),
+				new ("Emitter [spark]", () =>
+				{
+					var e = AttachmentEmitterEditing.Instance.CreateEmitter(editor.iMapManager, editor.PendingTile, "spark");
+					if (e != null) editor.SelectAttachments(new[] { e });
+				}),
+				new ("View", () =>
+				{
+					var v = AttachmentViewEditing.Instance.CreateView(editor.iMapManager, editor.PendingTile);
+					if (v != null) editor.SelectAttachments(new[] { v });
+				}),
+				new ("Pickup", () =>
+				{
+					var p = AttachmentPickupEditing.Instance.CreatePickup(editor.iMapManager, editor.PendingTile);
+					if (p != null) editor.SelectAttachments(new[] { p });
+				}),
 				PopupItem.Spacer(),
-				new ("Cancel", colorOverride: Color.yellow)
+				new ("Cancel", () => { },colorOverride: Color.yellow)
 			};
 
 			if (false == PopupMenu.Show(position, "Add Attachment", items))
@@ -103,7 +119,7 @@ namespace ClassicTilestorm
 			}
 
 			items.Add(PopupItem.Spacer());
-			items.Add(new PopupItem("Cancel", colorOverride: Color.yellow));
+			items.Add(new PopupItem("Cancel", () => { }, colorOverride: Color.yellow));
 
 			if (false == PopupMenu.Show(position, "Delete Attachment(s)", items))
 				editor.ClearPendingAction();
@@ -143,7 +159,7 @@ namespace ClassicTilestorm
 			}
 
 			items.Add(PopupItem.Spacer());
-			items.Add(new PopupItem("Cancel", colorOverride: Color.yellow));
+			items.Add(new PopupItem("Cancel", () => { }, colorOverride: Color.yellow));
 
 			if (false == PopupMenu.Show(position, $"Select ({atts.Length})", items))
 			{
@@ -175,11 +191,11 @@ namespace ClassicTilestorm
 
 		public static void RefreshDragVisuals(EditorControllerAttachment editor)
 		{
-			if (null == selectedAttachments || 1 != selectedAttachments.Length) return;
+			if (selectedAttachments == null || selectedAttachments.Length != 1) return;
 			var att = selectedAttachments[0];
 			var typeEditor = GetEditorFor(att);
-			typeEditor?.OnRefreshDragVisuals(editor, att);
-			typeEditor?.OnUpdateDragGizmo(editor, att);
+			typeEditor?.OnRefreshDragVisuals(editor.iMapManager, att);
+			typeEditor?.OnUpdateDragGizmo(att, editor.camera);
 		}
 
 		public static void UpdateMapMarkers(IMapManager mapManager, int[] tiles, int selectedIndex = -1, EditorMarkerUtil.MarkerType type = EditorMarkerUtil.MarkerType.Undefined)

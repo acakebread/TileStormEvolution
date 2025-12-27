@@ -198,7 +198,7 @@ namespace ClassicTilestorm
 				PopupItem.Spacer(6),
 				new ("Add", () => AddWaypointAtTile(pendingTile), colorOverride: Color.cyan),// Add waypoint
 				PopupItem.Spacer(4),
-				new ("Cancel", null, Color.yellow)// Cancel
+				new ("Cancel", () => { }, Color.yellow)// Cancel
 			};
 
 			if (false == PopupMenu.Show(clickStartPos, "Add Waypoint?", items))
@@ -214,7 +214,7 @@ namespace ClassicTilestorm
 				PopupItem.Spacer(6),
 				new ("Delete", () => DeleteWaypoint(pendingWaypoint), colorOverride: Color.red), // Delete waypoint
 				PopupItem.Spacer(4),
-				new ("Cancel", null, Color.yellow)// Cancel
+				new ("Cancel", () => { }, Color.yellow )// Cancel
 			};
 
 			if (false == PopupMenu.Show(pendingPopupScreenPos, "Delete Waypoint?", items))
