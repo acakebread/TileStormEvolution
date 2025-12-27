@@ -140,17 +140,14 @@ namespace ClassicTilestorm
 
 			if (PendingAction.None == pendingAction) return;
 
-			var active = true;
-			var context = new AttachmentEditing.AttachmentEditContext(iMapManager, camera, pendingTile);
 			switch (pendingAction)
 			{
-				case PendingAction.Add: active = AttachmentEditing.DrawAddPopup(context, mouseDownPos); break;
-				case PendingAction.Delete: active = AttachmentEditing.DrawDeletePopup(context, mouseDownPos); break;
-				case PendingAction.Select: active = AttachmentEditing.DrawSelectPopup(context, mouseDownPos); break;
+				case PendingAction.Add: if (AttachmentEditing.DrawAddPopup(mouseDownPos,iMapManager, camera, pendingTile)) return; break;
+				case PendingAction.Delete: if (AttachmentEditing.DrawDeletePopup(mouseDownPos, iMapManager, camera, pendingTile)) return; break;
+				case PendingAction.Select: if (AttachmentEditing.DrawSelectPopup(mouseDownPos, iMapManager, camera, pendingTile)) return; break;
 			}
-
-			if (active) return;
 			pendingAction = PendingAction.None;
+			pendingTile = -1;
 			supressInput = true;
 		}
 
@@ -170,8 +167,7 @@ namespace ClassicTilestorm
 				iMapManager.RefreshAttachmentInstance(att);
 			}
 
-			var context = new AttachmentEditing.AttachmentEditContext(iMapManager, camera, pendingTile);
-			AttachmentEditing.RefreshDragVisuals(context);
+			AttachmentEditing.RefreshDragVisuals(iMapManager, camera);
 		}
 
 		public override void OnMapLoaded()
