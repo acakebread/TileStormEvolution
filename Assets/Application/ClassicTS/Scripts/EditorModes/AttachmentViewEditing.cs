@@ -7,7 +7,7 @@ namespace ClassicTilestorm
 	{
 		public static readonly AttachmentViewEditing Instance = new();
 
-		public View CreateView(IMapManager mapManager, int tile)
+		public static View CreateView(IMapManager mapManager, int tile)
 		{
 			if (mapManager == null) return null;
 

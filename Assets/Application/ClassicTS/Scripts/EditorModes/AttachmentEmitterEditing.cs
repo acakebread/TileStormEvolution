@@ -7,7 +7,7 @@ namespace ClassicTilestorm
 	{
 		public static readonly AttachmentEmitterEditing Instance = new();
 
-		public Emitter CreateEmitter(IMapManager mapManager, int tile, string variant)
+		public static Emitter CreateEmitter(IMapManager mapManager, int tile, string variant)
 		{
 			if (mapManager == null || string.IsNullOrEmpty(variant)) return null;
 

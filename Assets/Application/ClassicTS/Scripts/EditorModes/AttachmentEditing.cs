@@ -68,25 +68,25 @@ namespace ClassicTilestorm
 			{
 				new ("Emitter [flame]", () =>
 				{
-					var e = AttachmentEmitterEditing.Instance.CreateEmitter(mapManager, pendingTile, "flame");
+					var e = AttachmentEmitterEditing.CreateEmitter(mapManager, pendingTile, "flame");
 					if (e != null)
 						Select(new[] { e }, mapManager, sceneCamera);
 				}),
 				new ("Emitter [spark]", () =>
 				{
-					var e = AttachmentEmitterEditing.Instance.CreateEmitter(mapManager, pendingTile, "spark");
+					var e = AttachmentEmitterEditing.CreateEmitter(mapManager, pendingTile, "spark");
 					if (e != null)
 						Select(new[] { e }, mapManager, sceneCamera);
 				}),
 				new ("View", () =>
 				{
-					var v = AttachmentViewEditing.Instance.CreateView(mapManager, pendingTile);
+					var v = AttachmentViewEditing.CreateView(mapManager, pendingTile);
 					if (v != null)
 						Select(new[] { v }, mapManager, sceneCamera);
 				}),
 				new ("Pickup", () =>
 				{
-					var p = AttachmentPickupEditing.Instance.CreatePickup(mapManager, pendingTile);
+					var p = AttachmentPickupEditing.CreatePickup(mapManager, pendingTile);
 					if (p != null)
 						Select(new[] { p }, mapManager, sceneCamera);
 				}),
