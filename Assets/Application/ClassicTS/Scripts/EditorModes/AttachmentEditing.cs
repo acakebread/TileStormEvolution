@@ -12,16 +12,12 @@ namespace ClassicTilestorm
 			public readonly IMapManager MapManager;
 			public readonly Camera SceneCamera;
 			public readonly int PendingTile;
-			public readonly Map CurrentMap;
-			public readonly System.Action ClearPendingAction;
 
-			public AttachmentEditContext(IMapManager mapManager, Camera sceneCamera, int pendingTile, Map currentMap, System.Action clearPendingAction)
+			public AttachmentEditContext(IMapManager mapManager, Camera sceneCamera, int pendingTile)
 			{
 				MapManager = mapManager;
 				SceneCamera = sceneCamera;
 				PendingTile = pendingTile;
-				CurrentMap = currentMap;
-				ClearPendingAction = clearPendingAction;
 			}
 		}
 
@@ -80,7 +76,7 @@ namespace ClassicTilestorm
 			EditorTransformUtil.ShowAt(worldPos, worldRot, camera);
 		}
 
-		public static void DrawAddPopup(AttachmentEditContext context, Vector2 position)
+		public static bool DrawAddPopup(AttachmentEditContext context, Vector2 position)
 		{
 			var items = new List<PopupItem>
 			{
@@ -112,15 +108,13 @@ namespace ClassicTilestorm
 				new ("Cancel", () => { }, colorOverride: Color.yellow)
 			};
 
-			if (!PopupMenu.Show(position, "Add Attachment", items))
-				context.ClearPendingAction();
+			return PopupMenu.Show(position, "Add Attachment", items);
 		}
 
-		public static void DrawDeletePopup(AttachmentEditContext context, Vector2 position)
+		public static bool DrawDeletePopup(AttachmentEditContext context, Vector2 position)
 		{
-			if (context.CurrentMap == null) return;
-			var attsOnTile = context.CurrentMap.GetAttachmentsOnTile(context.PendingTile);
-			if (attsOnTile.Length == 0) return;
+			var attsOnTile = context.MapManager.CurrentMap.GetAttachmentsOnTile(context.PendingTile);
+			if (attsOnTile.Length == 0) return false;
 
 			var items = new List<PopupItem>();
 
@@ -148,15 +142,13 @@ namespace ClassicTilestorm
 			items.Add(PopupItem.Spacer());
 			items.Add(new PopupItem("Cancel", () => { }, colorOverride: Color.yellow));
 
-			if (!PopupMenu.Show(position, "Delete Attachment(s)", items))
-				context.ClearPendingAction();
+			return PopupMenu.Show(position, "Delete Attachment(s)", items);
 		}
 
-		public static void DrawSelectPopup(AttachmentEditContext context, Vector2 position)
+		public static bool DrawSelectPopup(AttachmentEditContext context, Vector2 position)
 		{
-			if (context.CurrentMap == null) return;
-			var atts = context.CurrentMap.GetAttachmentsOnTile(context.PendingTile);
-			if (atts == null || atts.Length == 0) return;
+			var atts = context.MapManager.CurrentMap.GetAttachmentsOnTile(context.PendingTile);
+			if (atts == null || atts.Length == 0) return false;
 
 			var wasCancelled = true;
 
@@ -189,12 +181,10 @@ namespace ClassicTilestorm
 			items.Add(PopupItem.Spacer());
 			items.Add(new PopupItem("Cancel", () => { }, colorOverride: Color.yellow));
 
-			if (!PopupMenu.Show(position, $"Select ({atts.Length})", items))
-			{
-				if (wasCancelled)
-					Select(null, context.MapManager, context.SceneCamera);
-				context.ClearPendingAction();
-			}
+			var result = PopupMenu.Show(position, $"Select ({atts.Length})", items);
+			if (!result && wasCancelled)
+				Select(null, context.MapManager, context.SceneCamera);
+			return result;
 		}
 
 		public static void RefreshDragVisuals(AttachmentEditContext context)

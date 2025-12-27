@@ -14,11 +14,8 @@ namespace ClassicTilestorm
 
 		private int pendingTile = -1;
 		private int lastDragTile = -1;
-		private enum PendingAction { None, Wait, Add, Delete, Select }
+		private enum PendingAction { None, Add, Delete, Select }
 		private PendingAction pendingAction = PendingAction.None;
-		public void ClearPendingAction() => pendingAction = PendingAction.Wait;
-
-		public int PendingTile => pendingTile;
 
 		private static readonly AutoHidePanel sidePanel = new(collapsed: 120f, expanded: 340f, delay: 1.5f, animDur: 0.25f, defaultPos: new Vector2(0f, 40f));
 
@@ -86,6 +83,12 @@ namespace ClassicTilestorm
 				supressInput = true;
 			}
 
+			if (supressInput)
+			{
+				supressInput = false;
+				return;
+			}
+
 			if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1))
 			{
 				mouseDownPos = Input.mousePosition;
@@ -118,8 +121,6 @@ namespace ClassicTilestorm
 				AttachmentEditing.RebuildMarkers(iMapManager);
 			}
 
-			supressInput |= pendingAction == PendingAction.Wait;
-
 			// LMB Up: popups (only on clean click)
 			if (!supressInput && Input.GetMouseButtonUp(0) && wasClick)
 			{
@@ -130,9 +131,6 @@ namespace ClassicTilestorm
 			// RMB Up: delete popup
 			if (!supressInput && Input.GetMouseButtonUp(1) && wasClick)
 				HandleRightMouseUp(wasClick);
-
-			if (pendingAction == PendingAction.Wait) pendingAction = PendingAction.None;
-			supressInput = false;
 		}
 
 		public override void OnGUI()
@@ -140,14 +138,20 @@ namespace ClassicTilestorm
 			DrawSidePanel();
 			ViewPreviewUtil.OnGUI();
 
-			var context = new AttachmentEditing.AttachmentEditContext(iMapManager, camera, PendingTile, currentMap, ClearPendingAction);
+			if (PendingAction.None == pendingAction) return;
 
+			var active = true;
+			var context = new AttachmentEditing.AttachmentEditContext(iMapManager, camera, pendingTile);
 			switch (pendingAction)
 			{
-				case PendingAction.Add: AttachmentEditing.DrawAddPopup(context, mouseDownPos); break;
-				case PendingAction.Delete: AttachmentEditing.DrawDeletePopup(context, mouseDownPos); break;
-				case PendingAction.Select: AttachmentEditing.DrawSelectPopup(context, mouseDownPos); break;
+				case PendingAction.Add: active = AttachmentEditing.DrawAddPopup(context, mouseDownPos); break;
+				case PendingAction.Delete: active = AttachmentEditing.DrawDeletePopup(context, mouseDownPos); break;
+				case PendingAction.Select: active = AttachmentEditing.DrawSelectPopup(context, mouseDownPos); break;
 			}
+
+			if (active) return;
+			pendingAction = PendingAction.None;
+			supressInput = true;
 		}
 
 		private void HandleDrag(int tileUnderMouse)
@@ -166,7 +170,7 @@ namespace ClassicTilestorm
 				iMapManager.RefreshAttachmentInstance(att);
 			}
 
-			var context = new AttachmentEditing.AttachmentEditContext(iMapManager, camera, PendingTile, currentMap, ClearPendingAction);
+			var context = new AttachmentEditing.AttachmentEditContext(iMapManager, camera, pendingTile);
 			AttachmentEditing.RefreshDragVisuals(context);
 		}
 
