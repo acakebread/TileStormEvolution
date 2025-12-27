@@ -1,8 +1,8 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using UnityEngine;
 using System.Collections.Generic;
 using static MassiveHadronLtd.GuiUtils;
-using System;
 
 namespace ClassicTilestorm
 {
@@ -85,7 +85,6 @@ namespace ClassicTilestorm
 					// True click on empty tile → prepare to add
 					pendingTile = clickStartTile;
 					pendingAction = PendingAction.Add;
-					SetPopupPosition();
 				}
 			}
 
@@ -104,7 +103,6 @@ namespace ClassicTilestorm
 						pendingTile = iMapManager.Waypoints[potentialWaypointHit];
 						pendingWaypoint = potentialWaypointHit;
 						pendingAction = PendingAction.Delete;
-						SetPopupPosition();
 					}
 				}
 			}
@@ -131,6 +129,8 @@ namespace ClassicTilestorm
 				originalTile = iMapManager.Waypoints[potentialWaypointHit];
 				pendingAction = PendingAction.None; // cancel any pending add
 			}
+
+			int IndexOfWaypoint(int tileIndex) => null != currentMap && null != currentMap.waypoints && currentMap.waypoints.Contains(tileIndex) ? Array.IndexOf(currentMap.waypoints, tileIndex) : -1;
 		}
 
 		public override void OnGUI()
@@ -141,11 +141,7 @@ namespace ClassicTilestorm
 			if (pendingAction == PendingAction.Delete) DrawDeletePopup();
 		}
 
-		private void RebuildMarkers()
-		{
-			if (currentMap == null) return;
-			AttachmentEditing.UpdateMapMarkers(iMapManager, iMapManager.Waypoints, SelectedWaypointIndex, EditorMarkerUtil.MarkerType.Waypoint);
-		}
+		private void RebuildMarkers() => AttachmentEditing.UpdateMapMarkers(iMapManager, iMapManager.Waypoints, SelectedWaypointIndex, EditorMarkerUtil.MarkerType.Waypoint);
 
 		private void SelectWaypoint(int index)
 		{
@@ -155,33 +151,23 @@ namespace ClassicTilestorm
 
 		private void AddWaypointAtTile(int tile)
 		{
-			var map = currentMap;
-			if (map == null) return;
+			if (null == iMapManager) return;
 
 			var list = iMapManager.Waypoints?.ToList() ?? new List<int>();
 			list.Add(tile);
 			iMapManager.Waypoints = list.ToArray();
 
-			SelectedWaypointIndex = list.Count - 1;
-			RebuildMarkers();
+			SelectWaypoint(list.Count - 1);
 		}
 
 		private void DeleteWaypoint(int index)
 		{
-			var map = currentMap;
-			if (map == null || map.waypoints == null || index < 0 || index >= map.waypoints.Length) return;
-
-			var list = map.waypoints.ToList();
+			if (null == currentMap || null == currentMap.waypoints || index < 0 || index >= currentMap.waypoints.Length) return;
+			var list = currentMap.waypoints.ToList();
 			list.RemoveAt(index);
-			map.waypoints = list.ToArray();
-
-			if (SelectedWaypointIndex >= list.Count)
-				SelectedWaypointIndex = list.Count - 1;
-
-			RebuildMarkers();
+			currentMap.waypoints = list.ToArray();
+			SelectWaypoint(-1);
 		}
-
-		private int IndexOfWaypoint(int tileIndex) => null != currentMap && null != currentMap.waypoints && currentMap.waypoints.Contains(tileIndex) ? Array.IndexOf(currentMap.waypoints, tileIndex) : -1;
 
 		private int GetTileUnderMouse()
 		{
@@ -203,21 +189,19 @@ namespace ClassicTilestorm
 			RebuildMarkers();
 		}
 
-		private void SetPopupPosition() => pendingPopupScreenPos = Input.mousePosition;
-
 		private void DrawAddPopup()
 		{
 			var items = new List<PopupItem>
 			{
 				// Info line (non-clickable)
-				new PopupItem($"WP{iMapManager.Waypoints.Length:00} at tile {pendingTile}", null, null, spacerHeight: 0),
+				new ($"WP{iMapManager.Waypoints.Length:00} at tile {pendingTile}", null, null, spacerHeight: 0),
 				PopupItem.Spacer(6),
-				new PopupItem("Add", () => { AddWaypointAtTile(pendingTile); }, colorOverride: Color.cyan),// Add waypoint
+				new ("Add", () => AddWaypointAtTile(pendingTile), colorOverride: Color.cyan),// Add waypoint
 				PopupItem.Spacer(4),
-				new PopupItem("Cancel", null, Color.yellow)// Cancel
+				new ("Cancel", null, Color.yellow)// Cancel
 			};
 
-			if (false == PopupMenu.Show(pendingPopupScreenPos, "Add Waypoint?", items))
+			if (false == PopupMenu.Show(clickStartPos, "Add Waypoint?", items))
 				pendingAction = PendingAction.None;
 		}
 
@@ -226,11 +210,11 @@ namespace ClassicTilestorm
 			var items = new List<PopupItem>
 			{
 				// Info line (non-clickable)
-				new PopupItem($"WP{pendingWaypoint:00} at tile {pendingTile}", null, null, spacerHeight: 0),
+				new ($"WP{pendingWaypoint:00} at tile {pendingTile}", null, null, spacerHeight: 0),
 				PopupItem.Spacer(6),
-				new PopupItem("Delete", () => { DeleteWaypoint(pendingWaypoint); }, colorOverride: Color.red), // Delete waypoint
+				new ("Delete", () => DeleteWaypoint(pendingWaypoint), colorOverride: Color.red), // Delete waypoint
 				PopupItem.Spacer(4),
-				new PopupItem("Cancel", null, Color.yellow)// Cancel
+				new ("Cancel", null, Color.yellow)// Cancel
 			};
 
 			if (false == PopupMenu.Show(pendingPopupScreenPos, "Delete Waypoint?", items))
@@ -239,8 +223,6 @@ namespace ClassicTilestorm
 
 		private void DrawSidePanel()
 		{
-			sidePanel.Update();
-
 			// Build ListView items
 			var wp = iMapManager.Waypoints ?? Array.Empty<int>();
 			var items = new List<ListViewItem>();

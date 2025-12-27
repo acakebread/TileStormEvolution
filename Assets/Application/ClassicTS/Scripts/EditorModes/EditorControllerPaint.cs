@@ -126,18 +126,12 @@ namespace ClassicTilestorm
 
 		private void DrawSidePanel()
 		{
-			sidePanel.Update();
-
 			// Clear old items and populate ListView
-			sidePanel.List.Clear();
+			var items = new List<ListViewItem>();
+
 			foreach (var def in ResourceManager.Definitions)
-			{
-				sidePanel.List.AddItem(new ListViewItem(
-					$"{def.id} ({def.texture})",
-					() => SetSelectedDefinitionById(def.id),
-					def.id == selectedDefinitionId
-				));
-			}
+				items.Add(new ListViewItem($"{def.id} ({def.texture})", () => SetSelectedDefinitionById(def.id), def.id == selectedDefinitionId));
+			sidePanel.List.SetItems(items);
 
 			// Draw the panel (background + list)
 			sidePanel.Draw();

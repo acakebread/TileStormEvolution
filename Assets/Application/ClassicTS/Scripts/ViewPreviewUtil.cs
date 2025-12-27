@@ -116,7 +116,6 @@ namespace ClassicTilestorm
 		public static bool IsMouseOverPreview()
 		{
 			if (!isVisible || PreviewRect.width <= 0) return false;
-
 			Rect hitRect = new Rect(PreviewRect.x - 8, PreviewRect.y - 8, PreviewRect.width + 16, PreviewRect.height + 16);
 			Vector2 mp = Input.mousePosition;
 			mp.y = Screen.height - mp.y;

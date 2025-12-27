@@ -12,7 +12,6 @@ namespace ClassicTilestorm
 
 		public bool IsGuiControlActive() => GUIUtility.hotControl != 0 || (EventSystem.current && EventSystem.current.IsPointerOverGameObject());
 		public virtual bool IsMouseOverGUI() => editorController.IsMouseOverGui() | IsGuiControlActive();
-		protected virtual bool IsMouseOverPreview() => false;
 		public Map currentMap => editorController?.iMapManager?.CurrentMap;
 		public IMapManager iMapManager => editorController?.iMapManager;
 		public virtual void OnMapLoaded() { }
@@ -26,9 +25,9 @@ namespace ClassicTilestorm
 				GUIUtility.hotControl = 0;
 
 			if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1))
-				touchStartOverGui = IsMouseOverGUI() || IsMouseOverPreview();
+				touchStartOverGui = IsMouseOverGUI() || ViewPreviewUtil.IsMouseOverPreview();
 
-			var allowScroll = !(IsMouseOverGUI() || IsMouseOverPreview());
+			var allowScroll = !(IsMouseOverGUI() || ViewPreviewUtil.IsMouseOverPreview());
 			if (Input.GetMouseButton(0) || Input.GetMouseButton(1))
 				allowScroll = !touchStartOverGui;
 			else

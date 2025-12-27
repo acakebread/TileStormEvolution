@@ -122,7 +122,7 @@ namespace MassiveHadronLtd
 					DefaultPosition = defaultPos.Value;
 			}
 
-			public void Update()
+			private void Update()
 			{
 				if (Input.GetMouseButton(0) || Input.GetMouseButton(1)) return;
 
@@ -152,6 +152,8 @@ namespace MassiveHadronLtd
 
 			public void Draw()
 			{
+				Update();
+
 				Rect panel = GetPanelRect();
 				GUI.Box(panel, GUIContent.none);
 

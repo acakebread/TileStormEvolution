@@ -7,10 +7,43 @@ namespace ClassicTilestorm
 {
 	public abstract class AttachmentEditing
 	{
-		public static void HandleGizmoInput(EditorControllerAttachment editor) => GetEditorForSelection(editor.selectedAttachments)?.OnHandleGizmoInput(editor);
+		public static MapAttachment[] selectedAttachments = null;
+
+		public static void RebuildMarkers(IMapManager iMapManager)
+		{
+			if (null == iMapManager?.CurrentMap) return;
+			var tiles = iMapManager?.CurrentMap.attachments?.Where(a => a.tile >= 0).Select(a => a.tile).Distinct().ToArray() ?? System.Array.Empty<int>();
+
+			// Determine selected tile from current selection
+			var selectedTile = (selectedAttachments != null && selectedAttachments.Length > 0) ? selectedAttachments[0].tile : -1;
+			var selection = System.Array.IndexOf(tiles, selectedTile);
+			UpdateMapMarkers(iMapManager, tiles, selection, EditorMarkerUtil.MarkerType.Attachment);
+		}
+
+		public static void HideAllGizmos()
+		{
+			EditorPrimitiveUtil.HideCone();
+			EditorFrustumUtil.Hide();
+			EditorTransformUtil.HideTransformGizmo();
+			ViewPreviewUtil.Hide();
+			EditorMarkerUtil.ClearMapMarkers();
+		}
+
+		//public void SelectAttachments(MapAttachment[] attachments)
+		//{
+		//	selectedAttachments = attachments;
+		//	HideAllGizmos();
+		//	RebuildMarkers();
+
+		//	if (null == attachments || 1 != attachments.Length) return;// Only show editing helpers if exactly ONE attachment selected
+		//	AttachmentEditing.HandleSelectionChanged(this);
+		//	AttachmentEditing.HandleGizmoInput(this); // if needed on select
+		//}
+
+		public static void HandleGizmoInput(EditorControllerAttachment editor) => GetEditorForSelection(selectedAttachments)?.OnHandleGizmoInput(editor);
 		protected virtual void OnHandleGizmoInput(EditorControllerAttachment editor) { }
 
-		public static void HandleSelectionChanged(EditorControllerAttachment editor) => GetEditorForSelection(editor.selectedAttachments)?.OnHandleSelectionChanged(editor);
+		public static void HandleSelectionChanged(EditorControllerAttachment editor) => GetEditorForSelection(selectedAttachments)?.OnHandleSelectionChanged(editor);
 		protected virtual void OnHandleSelectionChanged(EditorControllerAttachment editor) { }
 
 		protected virtual void OnRefreshDragVisuals(EditorControllerAttachment editor, MapAttachment attachment) { }
@@ -42,10 +75,8 @@ namespace ClassicTilestorm
 
 		public static void DrawDeletePopup(EditorControllerAttachment editor, Vector2 position)
 		{
-			var map = editor.currentMap;
-			if (map == null) return;
-
-			var attsOnTile = map.GetAttachmentsOnTile(editor.PendingTile);
+			if (null == editor.currentMap) return;
+			var attsOnTile = editor.currentMap.GetAttachmentsOnTile(editor.PendingTile);
 			if (attsOnTile.Length == 0) return;
 
 			var items = new List<PopupItem>();
@@ -80,8 +111,8 @@ namespace ClassicTilestorm
 
 		public static void DrawSelectPopup(EditorControllerAttachment editor, Vector2 position)
 		{
-			var map = editor.currentMap;
-			var atts = map.GetAttachmentsOnTile(editor.PendingTile);
+			if (null == editor.currentMap) return;
+			var atts = editor.currentMap.GetAttachmentsOnTile(editor.PendingTile);
 			if (atts == null || atts.Length == 0) return;
 			var wasCancelled = true;//sentinel to clear selection when mouse off menu
 
@@ -144,8 +175,8 @@ namespace ClassicTilestorm
 
 		public static void RefreshDragVisuals(EditorControllerAttachment editor)
 		{
-			if (null == editor?.selectedAttachments || 1 != editor.selectedAttachments.Length) return;
-			var att = editor.selectedAttachments[0];
+			if (null == selectedAttachments || 1 != selectedAttachments.Length) return;
+			var att = selectedAttachments[0];
 			var typeEditor = GetEditorFor(att);
 			typeEditor?.OnRefreshDragVisuals(editor, att);
 			typeEditor?.OnUpdateDragGizmo(editor, att);

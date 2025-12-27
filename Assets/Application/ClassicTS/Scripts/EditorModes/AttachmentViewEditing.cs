@@ -18,7 +18,7 @@ namespace ClassicTilestorm
 				LookAt = (Vector3.forward + Vector3.down) * 4f
 			};
 
-			SnapViewDistanceToGround(view, editor.iMapManager);
+			SnapViewDistanceToGround(view);
 			editor.iMapManager.AddAttachment(view);
 			editor.SelectAttachments(new[] { view });
 			return view;
@@ -26,7 +26,7 @@ namespace ClassicTilestorm
 
 		protected override void OnHandleSelectionChanged(EditorControllerAttachment editor)
 		{
-			var view = editor.selectedAttachments?.OfType<View>().FirstOrDefault();
+			var view = selectedAttachments?.OfType<View>().FirstOrDefault();
 			if (null == view) return;
 
 			EditorTransformUtil.ShowAt(MapManager.WorldPosition(view.tile, view.Position), view.Rotation, editor.camera);
@@ -39,13 +39,13 @@ namespace ClassicTilestorm
 			{
 				// Use the static utility instead of editor.viewPreview
 				ViewPreviewUtil.Show(view, editor.iMapManager);
-				UpdateViewFrustumMarker(view, editor.iMapManager);
+				UpdateViewFrustumMarker(view);
 			}
 		}
 
 		protected override void OnHandleGizmoInput(EditorControllerAttachment editor)
 		{
-			var view = editor.selectedAttachments?.OfType<View>().FirstOrDefault();
+			var view = selectedAttachments?.OfType<View>().FirstOrDefault();
 			if (null == view) return;
 
 			if (EditorTransformUtil.HandleInput(editor.camera, out Vector3 newWorldPos, out Quaternion newWorldRot))
@@ -53,7 +53,7 @@ namespace ClassicTilestorm
 				view.Position = MapManager.LocalPosition(view.tile, newWorldPos);
 				view.Rotation = MapManager.LocalRotation(view.tile, newWorldRot);
 
-				SnapViewDistanceToGround(view, editor.iMapManager);
+				SnapViewDistanceToGround(view);
 
 				// Sync back: View → Preview Camera
 				var previewTransform = ViewPreviewUtil.PreviewCameraTransform;
@@ -66,14 +66,14 @@ namespace ClassicTilestorm
 				// Force immediate render update
 				ViewPreviewUtil.Update();
 
-				UpdateViewFrustumMarker(view, editor.iMapManager);
+				UpdateViewFrustumMarker(view);
 			}
 		}
 
 		// Updated signature: no longer needs ViewPreview parameter
 		public static void HandlePreviewCameraSync(EditorControllerAttachment editor)
 		{
-			var view = editor.selectedAttachments?.OfType<View>().FirstOrDefault();
+			var view = selectedAttachments?.OfType<View>().FirstOrDefault();
 			if (null == view) return;
 
 			var previewTransform = ViewPreviewUtil.PreviewCameraTransform;
@@ -83,7 +83,7 @@ namespace ClassicTilestorm
 			view.Position = MapManager.LocalPosition(view.tile, previewTransform.position);
 			view.Rotation = MapManager.LocalRotation(view.tile, previewTransform.rotation);
 
-			SnapViewDistanceToGround(view, editor.iMapManager);
+			SnapViewDistanceToGround(view);
 
 			// Sync back: View → Preview Camera (prevents drift)
 			previewTransform.position = MapManager.WorldPosition(view.tile, view.Position);
@@ -91,15 +91,15 @@ namespace ClassicTilestorm
 
 			// Update preview and markers
 			ViewPreviewUtil.Update();
-			UpdateViewFrustumMarker(view, editor.iMapManager);
+			UpdateViewFrustumMarker(view);
 
 			// Update scene view gizmo
 			EditorTransformUtil.UpdateTransform(previewTransform.position, view.Rotation, editor.camera);
 		}
 
-		private static void SnapViewDistanceToGround(View view, IMapManager mapManager)
+		private static void SnapViewDistanceToGround(View view)
 		{
-			if (view == null || mapManager == null) return;
+			if (null == view) return;
 
 			var origin = MapManager.WorldPosition(view.tile, view.Position);
 			var forward = view.Rotation * Vector3.forward;
@@ -118,7 +118,7 @@ namespace ClassicTilestorm
 			view.Distance = View.MAX_DISTANCE;
 		}
 
-		private static void UpdateViewFrustumMarker(View view, IMapManager mapManager)
+		private static void UpdateViewFrustumMarker(View view)
 		{
 			if (null == view || null == view.data || view.data.Length < 7 || view.Distance < 0.02f)
 			{
