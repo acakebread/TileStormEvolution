@@ -101,8 +101,6 @@ namespace ClassicTilestorm
 					mouseMovedBeyondThreshold = true;
 			}
 
-			bool wasClick = !mouseMovedBeyondThreshold;
-
 			if (IsGuiControlActive()) return;
 
 			int tileUnderMouse = HitTile(Input.mousePosition);
@@ -120,6 +118,8 @@ namespace ClassicTilestorm
 				HandleDrag(tileUnderMouse);
 				AttachmentEditing.RebuildMarkers(iMapManager);
 			}
+
+			bool wasClick = !mouseMovedBeyondThreshold;
 
 			// LMB Up: popups (only on clean click)
 			if (!supressInput && Input.GetMouseButtonUp(0) && wasClick)
