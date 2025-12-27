@@ -7,6 +7,24 @@ namespace ClassicTilestorm
 {
 	public abstract class AttachmentEditing
 	{
+		public readonly struct AttachmentEditContext
+		{
+			public readonly IMapManager MapManager;
+			public readonly Camera SceneCamera;
+			public readonly int PendingTile;
+			public readonly Map CurrentMap;
+			public readonly System.Action ClearPendingAction;
+
+			public AttachmentEditContext(IMapManager mapManager, Camera sceneCamera, int pendingTile, Map currentMap, System.Action clearPendingAction)
+			{
+				MapManager = mapManager;
+				SceneCamera = sceneCamera;
+				PendingTile = pendingTile;
+				CurrentMap = currentMap;
+				ClearPendingAction = clearPendingAction;
+			}
+		}
+
 		public static MapAttachment[] selectedAttachments = null;
 
 		public static void RebuildMarkers(IMapManager iMapManager)
@@ -29,22 +47,27 @@ namespace ClassicTilestorm
 			EditorMarkerUtil.ClearMapMarkers();
 		}
 
-		//public void SelectAttachments(MapAttachment[] attachments)
-		//{
-		//	selectedAttachments = attachments;
-		//	HideAllGizmos();
-		//	RebuildMarkers();
+		public static void Select(MapAttachment[] attachments, IMapManager mapManager, Camera camera)
+		{
+			selectedAttachments = attachments;
+			HideAllGizmos();
+			RebuildMarkers(mapManager);
 
-		//	if (null == attachments || 1 != attachments.Length) return;// Only show editing helpers if exactly ONE attachment selected
-		//	AttachmentEditing.HandleSelectionChanged(this);
-		//	AttachmentEditing.HandleGizmoInput(this); // if needed on select
-		//}
+			if (attachments == null || attachments.Length != 1) return;
 
-		public static void HandleGizmoInput(EditorControllerAttachment editor) => GetEditorForSelection(selectedAttachments)?.OnHandleGizmoInput(editor);
-		protected virtual void OnHandleGizmoInput(EditorControllerAttachment editor) { }
+			HandleSelectionChanged(mapManager, camera);
+			HandleGizmoInput(mapManager, camera);
+		}
 
-		public static void HandleSelectionChanged(EditorControllerAttachment editor) => GetEditorForSelection(selectedAttachments)?.OnHandleSelectionChanged(editor);
-		protected virtual void OnHandleSelectionChanged(EditorControllerAttachment editor) { }
+		public static void HandleGizmoInput(IMapManager mapManager, Camera camera)
+			=> GetEditorForSelection(selectedAttachments)?.OnHandleGizmoInput(mapManager, camera);
+
+		protected virtual void OnHandleGizmoInput(IMapManager mapManager, Camera camera) { }
+
+		public static void HandleSelectionChanged(IMapManager mapManager, Camera camera)
+			=> GetEditorForSelection(selectedAttachments)?.OnHandleSelectionChanged(mapManager, camera);
+
+		protected virtual void OnHandleSelectionChanged(IMapManager mapManager, Camera camera) { }
 
 		protected virtual void OnRefreshDragVisuals(IMapManager mapManager, MapAttachment attachment) { }
 		protected virtual void OnUpdateDragGizmo(MapAttachment attachment, Camera camera)
@@ -57,42 +80,46 @@ namespace ClassicTilestorm
 			EditorTransformUtil.ShowAt(worldPos, worldRot, camera);
 		}
 
-		public static void DrawAddPopup(EditorControllerAttachment editor, Vector2 position)
+		public static void DrawAddPopup(AttachmentEditContext context, Vector2 position)
 		{
 			var items = new List<PopupItem>
-			{
-				new ("Emitter [flame]", () =>
-				{
-					var e = AttachmentEmitterEditing.Instance.CreateEmitter(editor.iMapManager, editor.PendingTile, "flame");
-					if (e != null) editor.SelectAttachments(new[] { e });
-				}),
-				new ("Emitter [spark]", () =>
-				{
-					var e = AttachmentEmitterEditing.Instance.CreateEmitter(editor.iMapManager, editor.PendingTile, "spark");
-					if (e != null) editor.SelectAttachments(new[] { e });
-				}),
-				new ("View", () =>
-				{
-					var v = AttachmentViewEditing.Instance.CreateView(editor.iMapManager, editor.PendingTile);
-					if (v != null) editor.SelectAttachments(new[] { v });
-				}),
-				new ("Pickup", () =>
-				{
-					var p = AttachmentPickupEditing.Instance.CreatePickup(editor.iMapManager, editor.PendingTile);
-					if (p != null) editor.SelectAttachments(new[] { p });
-				}),
-				PopupItem.Spacer(),
-				new ("Cancel", () => { },colorOverride: Color.yellow)
-			};
+	{
+		new ("Emitter [flame]", () =>
+		{
+			var e = AttachmentEmitterEditing.Instance.CreateEmitter(context.MapManager, context.PendingTile, "flame");
+			if (e != null)
+				Select(new[] { e }, context.MapManager, context.SceneCamera);
+		}),
+		new ("Emitter [spark]", () =>
+		{
+			var e = AttachmentEmitterEditing.Instance.CreateEmitter(context.MapManager, context.PendingTile, "spark");
+			if (e != null)
+				Select(new[] { e }, context.MapManager, context.SceneCamera);
+		}),
+		new ("View", () =>
+		{
+			var v = AttachmentViewEditing.Instance.CreateView(context.MapManager, context.PendingTile);
+			if (v != null)
+				Select(new[] { v }, context.MapManager, context.SceneCamera);
+		}),
+		new ("Pickup", () =>
+		{
+			var p = AttachmentPickupEditing.Instance.CreatePickup(context.MapManager, context.PendingTile);
+			if (p != null)
+				Select(new[] { p }, context.MapManager, context.SceneCamera);
+		}),
+		PopupItem.Spacer(),
+		new ("Cancel", () => { }, colorOverride: Color.yellow)
+	};
 
-			if (false == PopupMenu.Show(position, "Add Attachment", items))
-				editor.ClearPendingAction();
+			if (!PopupMenu.Show(position, "Add Attachment", items))
+				context.ClearPendingAction();
 		}
 
-		public static void DrawDeletePopup(EditorControllerAttachment editor, Vector2 position)
+		public static void DrawDeletePopup(AttachmentEditContext context, Vector2 position)
 		{
-			if (null == editor.currentMap) return;
-			var attsOnTile = editor.currentMap.GetAttachmentsOnTile(editor.PendingTile);
+			if (context.CurrentMap == null) return;
+			var attsOnTile = context.CurrentMap.GetAttachmentsOnTile(context.PendingTile);
 			if (attsOnTile.Length == 0) return;
 
 			var items = new List<PopupItem>();
@@ -103,8 +130,8 @@ namespace ClassicTilestorm
 				var localAtt = att;
 				items.Add(new PopupItem(label, () =>
 				{
-					editor.iMapManager.RemoveAttachment(localAtt);
-					editor.SelectAttachments(null);
+					context.MapManager.RemoveAttachment(localAtt);
+					Select(null, context.MapManager, context.SceneCamera);
 				}));
 			}
 
@@ -113,24 +140,25 @@ namespace ClassicTilestorm
 				items.Add(PopupItem.Spacer());
 				items.Add(new PopupItem("Delete All", () =>
 				{
-					editor.iMapManager.RemoveAllAttachmentsOnTile(editor.PendingTile);
-					editor.SelectAttachments(null);
+					context.MapManager.RemoveAllAttachmentsOnTile(context.PendingTile);
+					Select(null, context.MapManager, context.SceneCamera);
 				}, colorOverride: Color.red));
 			}
 
 			items.Add(PopupItem.Spacer());
 			items.Add(new PopupItem("Cancel", () => { }, colorOverride: Color.yellow));
 
-			if (false == PopupMenu.Show(position, "Delete Attachment(s)", items))
-				editor.ClearPendingAction();
+			if (!PopupMenu.Show(position, "Delete Attachment(s)", items))
+				context.ClearPendingAction();
 		}
 
-		public static void DrawSelectPopup(EditorControllerAttachment editor, Vector2 position)
+		public static void DrawSelectPopup(AttachmentEditContext context, Vector2 position)
 		{
-			if (null == editor.currentMap) return;
-			var atts = editor.currentMap.GetAttachmentsOnTile(editor.PendingTile);
+			if (context.CurrentMap == null) return;
+			var atts = context.CurrentMap.GetAttachmentsOnTile(context.PendingTile);
 			if (atts == null || atts.Length == 0) return;
-			var wasCancelled = true;//sentinel to clear selection when mouse off menu
+
+			var wasCancelled = true;
 
 			var items = new List<PopupItem>();
 
@@ -144,7 +172,7 @@ namespace ClassicTilestorm
 				items.Add(new PopupItem(label, () =>
 				{
 					wasCancelled = false;
-					editor.SelectAttachments(new MapAttachment[] { att });
+					Select(new[] { att }, context.MapManager, context.SceneCamera);
 				}));
 			}
 
@@ -154,18 +182,28 @@ namespace ClassicTilestorm
 				items.Add(new PopupItem("Select All", () =>
 				{
 					wasCancelled = false;
-					editor.SelectAttachments(atts);
+					Select(atts, context.MapManager, context.SceneCamera);
 				}, colorOverride: Color.green));
 			}
 
 			items.Add(PopupItem.Spacer());
 			items.Add(new PopupItem("Cancel", () => { }, colorOverride: Color.yellow));
 
-			if (false == PopupMenu.Show(position, $"Select ({atts.Length})", items))
+			if (!PopupMenu.Show(position, $"Select ({atts.Length})", items))
 			{
-				if (wasCancelled) editor.SelectAttachments(null);
-				editor.ClearPendingAction();
+				if (wasCancelled)
+					Select(null, context.MapManager, context.SceneCamera);
+				context.ClearPendingAction();
 			}
+		}
+
+		public static void RefreshDragVisuals(AttachmentEditContext context)
+		{
+			if (selectedAttachments == null || selectedAttachments.Length != 1) return;
+			var att = selectedAttachments[0];
+			var typeEditor = GetEditorFor(att);
+			typeEditor?.OnRefreshDragVisuals(context.MapManager, att);
+			typeEditor?.OnUpdateDragGizmo(att, context.SceneCamera);
 		}
 
 		private static AttachmentEditing GetEditorFor(MapAttachment attachment) => attachment switch
@@ -187,15 +225,6 @@ namespace ClassicTilestorm
 				return GetEditorFor(selectedAttachments[0]);
 
 			return null;
-		}
-
-		public static void RefreshDragVisuals(EditorControllerAttachment editor)
-		{
-			if (selectedAttachments == null || selectedAttachments.Length != 1) return;
-			var att = selectedAttachments[0];
-			var typeEditor = GetEditorFor(att);
-			typeEditor?.OnRefreshDragVisuals(editor.iMapManager, att);
-			typeEditor?.OnUpdateDragGizmo(att, editor.camera);
 		}
 
 		public static void UpdateMapMarkers(IMapManager mapManager, int[] tiles, int selectedIndex = -1, EditorMarkerUtil.MarkerType type = EditorMarkerUtil.MarkerType.Undefined)

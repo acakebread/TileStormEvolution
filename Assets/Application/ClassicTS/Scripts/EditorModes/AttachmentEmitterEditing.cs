@@ -24,30 +24,28 @@ namespace ClassicTilestorm
 			return emitter;
 		}
 
-		protected override void OnHandleSelectionChanged(EditorControllerAttachment editor)
+		protected override void OnHandleSelectionChanged(IMapManager mapManager, Camera camera)
 		{
 			var emitter = selectedAttachments?.OfType<Emitter>().FirstOrDefault();
 			if (emitter == null) return;
 
 			var worldPos = MapManager.WorldPosition(emitter.tile, emitter.Position);
-			EditorTransformUtil.UpdateTransform(worldPos, emitter.Rotation, editor.camera);
+			EditorTransformUtil.UpdateTransform(worldPos, emitter.Rotation, camera);
 
-			// Show cone: tip at emitter, pointing along rotation, using Distance and Apex
 			EditorPrimitiveUtil.UpdateCone(worldPos, emitter.Rotation, emitter.Distance, emitter.Apex);
 		}
 
-		protected override void OnHandleGizmoInput(EditorControllerAttachment editor)
+		protected override void OnHandleGizmoInput(IMapManager mapManager, Camera camera)
 		{
 			var emitter = selectedAttachments?.OfType<Emitter>().FirstOrDefault();
 			if (emitter == null) return;
 
-			if (EditorTransformUtil.HandleInput(editor.camera, out Vector3 newWorldPos, out Quaternion newWorldRot))
+			if (EditorTransformUtil.HandleInput(camera, out Vector3 newWorldPos, out Quaternion newWorldRot))
 			{
 				emitter.Position = MapManager.LocalPosition(emitter.tile, newWorldPos);
 				emitter.Rotation = MapManager.LocalRotation(emitter.tile, newWorldRot);
-				editor.iMapManager.RefreshAttachmentInstance(emitter);
+				mapManager.RefreshAttachmentInstance(emitter);
 
-				// Update cone after transform change
 				EditorPrimitiveUtil.UpdateCone(newWorldPos, emitter.Rotation, emitter.Distance, emitter.Apex);
 			}
 		}

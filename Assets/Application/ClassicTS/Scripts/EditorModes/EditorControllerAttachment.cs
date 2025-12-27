@@ -69,7 +69,7 @@ namespace ClassicTilestorm
 			if (previewControlsActive)
 			{
 				EditorCameraMovement.UpdateCamera(ViewPreviewUtil.PreviewCamera.transform);
-				AttachmentViewEditing.HandlePreviewCameraSync(this);
+				AttachmentViewEditing.HandlePreviewCameraSync(iMapManager, camera);
 
 				supressInput = true;
 				return; // Block normal map input while using preview
@@ -82,7 +82,7 @@ namespace ClassicTilestorm
 
 			if (EditorTransformUtil.HandleTransformGizmoInput(camera))
 			{
-				AttachmentEditing.HandleGizmoInput(this);
+				AttachmentEditing.HandleGizmoInput(iMapManager, camera);
 				supressInput = true;
 			}
 
@@ -140,23 +140,14 @@ namespace ClassicTilestorm
 			DrawSidePanel();
 			ViewPreviewUtil.OnGUI();
 
+			var context = new AttachmentEditing.AttachmentEditContext(iMapManager, camera, PendingTile, currentMap, ClearPendingAction);
+
 			switch (pendingAction)
 			{
-				case PendingAction.Add: AttachmentEditing.DrawAddPopup(this, mouseDownPos); break;
-				case PendingAction.Delete: AttachmentEditing.DrawDeletePopup(this, mouseDownPos); break;
-				case PendingAction.Select: AttachmentEditing.DrawSelectPopup(this, mouseDownPos); break;
+				case PendingAction.Add: AttachmentEditing.DrawAddPopup(context, mouseDownPos); break;
+				case PendingAction.Delete: AttachmentEditing.DrawDeletePopup(context, mouseDownPos); break;
+				case PendingAction.Select: AttachmentEditing.DrawSelectPopup(context, mouseDownPos); break;
 			}
-		}
-
-		public void SelectAttachments(MapAttachment[] attachments)
-		{
-			AttachmentEditing.selectedAttachments = attachments;
-			AttachmentEditing.HideAllGizmos();
-			AttachmentEditing.RebuildMarkers(iMapManager);
-
-			if (null == attachments || 1 != attachments.Length) return;// Only show editing helpers if exactly ONE attachment selected
-			AttachmentEditing.HandleSelectionChanged(this);
-			AttachmentEditing.HandleGizmoInput(this); // if needed on select
 		}
 
 		private void HandleDrag(int tileUnderMouse)
@@ -166,16 +157,17 @@ namespace ClassicTilestorm
 
 			lastDragTile = tileUnderMouse;
 
-			if (null == AttachmentEditing.selectedAttachments || 0 == AttachmentEditing.selectedAttachments.Length)
+			if (AttachmentEditing.selectedAttachments == null || AttachmentEditing.selectedAttachments.Length == 0)
 				return;
 
-			// refresh runtime GameObjects (particles, etc.)
 			foreach (var att in AttachmentEditing.selectedAttachments)
 			{
 				att.tile = tileUnderMouse;
 				iMapManager.RefreshAttachmentInstance(att);
 			}
-			AttachmentEditing.RefreshDragVisuals(this);
+
+			var context = new AttachmentEditing.AttachmentEditContext(iMapManager, camera, PendingTile, currentMap, ClearPendingAction);
+			AttachmentEditing.RefreshDragVisuals(context);
 		}
 
 		public override void OnMapLoaded()
@@ -189,14 +181,14 @@ namespace ClassicTilestorm
 		private void HandleLeftMouseDown(int tile)
 		{
 			if (-1 == tile)
-				SelectAttachments(null);
+				AttachmentEditing.Select(null, iMapManager, camera);
 			else
 			{
 				var alreadySelected = AttachmentEditing.selectedAttachments?.Length > 0 && AttachmentEditing.selectedAttachments[0].tile == tile;
 				if (!alreadySelected)
 				{
 					AttachmentEditing.selectedAttachments = GetAttachmentsOnTile(tile);
-					SelectAttachments(AttachmentEditing.selectedAttachments);
+					AttachmentEditing.Select(AttachmentEditing.selectedAttachments, iMapManager, camera);
 				}
 			}
 		}
@@ -220,7 +212,7 @@ namespace ClassicTilestorm
 			{
 				// Single attachment on original tile → ensure it's selected (may have been dragged back)
 				pendingAction = PendingAction.None;
-				SelectAttachments(attachmentsOnDownTile);
+				AttachmentEditing.Select(attachmentsOnDownTile, iMapManager, camera);
 			}
 		}
 
@@ -234,7 +226,7 @@ namespace ClassicTilestorm
 				pendingAction = PendingAction.Delete;
 				return;
 			}
-			SelectAttachments(null);
+			AttachmentEditing.Select(null, iMapManager, camera);
 		}
 
 		private MapAttachment[] GetAttachmentsOnTile(int tileIndex)
@@ -250,7 +242,7 @@ namespace ClassicTilestorm
 			var atts = currentMap.attachments ?? System.Array.Empty<MapAttachment>();
 			var items = new System.Collections.Generic.List<ListViewItem>(); 
 			foreach (var att in atts)
-				items.Add(new ListViewItem(GetAttachmentLabel(att),() => SelectAttachments(new[] { att }),selected: null != AttachmentEditing.selectedAttachments && AttachmentEditing.selectedAttachments.Contains(att)));
+				items.Add(new ListViewItem(GetAttachmentLabel(att),() => AttachmentEditing.Select(new[] { att }, iMapManager, camera), selected: null != AttachmentEditing.selectedAttachments && AttachmentEditing.selectedAttachments.Contains(att)));
 			sidePanel.List.SetItems(items);
 			sidePanel.SetFootnote("Hold RMB on preview to orbit • Scroll to zoom • LMB: place/move • RMB on tile: delete");
 			sidePanel.Draw();
