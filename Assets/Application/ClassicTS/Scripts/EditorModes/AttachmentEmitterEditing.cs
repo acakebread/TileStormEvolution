@@ -36,7 +36,7 @@ namespace ClassicTilestorm
 		protected override void OnHandleSelectionChanged(IMapManager mapManager, Camera camera)
 		{
 			var emitter = selectedAttachments?.OfType<Emitter>().FirstOrDefault();
-			if (emitter == null) return;
+			if (null == emitter) return;
 
 			var worldPos = MapManager.WorldPosition(emitter.tile, emitter.Position);
 			EditorTransformUtil.UpdateTransform(worldPos, emitter.Rotation, camera);
@@ -47,7 +47,7 @@ namespace ClassicTilestorm
 		protected override void OnHandleGizmoInput(IMapManager mapManager, Camera camera)
 		{
 			var emitter = selectedAttachments?.OfType<Emitter>().FirstOrDefault();
-			if (emitter == null) return;
+			if (null == emitter) return;
 
 			if (EditorTransformUtil.HandleInput(camera, out Vector3 newWorldPos, out Quaternion newWorldRot))
 			{
