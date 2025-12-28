@@ -6,7 +6,7 @@ namespace ClassicTilestorm
 
 		public static Pickup CreatePickup(IMapManager mapManager, int tile)
 		{
-			if (mapManager == null) return null;
+			if (null == mapManager) return null;
 
 			var pickup = new Pickup
 			{

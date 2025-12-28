@@ -9,7 +9,7 @@ namespace ClassicTilestorm
 
 		public static Emitter CreateEmitter(IMapManager mapManager, int tile, string variant)
 		{
-			if (mapManager == null || string.IsNullOrEmpty(variant)) return null;
+			if (null == mapManager || string.IsNullOrEmpty(variant)) return null;
 
 			var localY = ComputeEmitterPlacementHeight(mapManager, tile);
 			var emitter = new Emitter
@@ -22,6 +22,15 @@ namespace ClassicTilestorm
 
 			mapManager.AddAttachment(emitter);
 			return emitter;
+
+			// Update the helper to take mapManager
+			static float ComputeEmitterPlacementHeight(IMapManager mapManager, int tile)
+			{
+				if (null == mapManager) return 1f;
+				var tileBounds = mapManager.GetTileGeometryBounds(tile);
+				var tileWorldCenter = mapManager.TileWorldPosition(tile);
+				return (tileBounds.max.y - tileWorldCenter.y) + 0.05f;
+			}
 		}
 
 		protected override void OnHandleSelectionChanged(IMapManager mapManager, Camera camera)
@@ -57,15 +66,6 @@ namespace ClassicTilestorm
 				var worldPos = MapManager.WorldPosition(emitter.tile, emitter.Position);
 				EditorPrimitiveUtil.UpdateCone(worldPos, emitter.Rotation, emitter.Distance, emitter.Apex);
 			}
-		}
-
-		// Update the helper to take mapManager
-		private static float ComputeEmitterPlacementHeight(IMapManager mapManager, int tile)
-		{
-			if (mapManager == null) return 1f;
-			var tileBounds = mapManager.GetTileGeometryBounds(tile);
-			var tileWorldCenter = mapManager.TileWorldPosition(tile);
-			return (tileBounds.max.y - tileWorldCenter.y) + 0.05f;
 		}
 	}
 }

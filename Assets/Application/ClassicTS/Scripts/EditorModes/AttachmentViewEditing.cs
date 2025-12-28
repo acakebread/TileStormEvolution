@@ -9,7 +9,7 @@ namespace ClassicTilestorm
 
 		public static View CreateView(IMapManager mapManager, int tile)
 		{
-			if (mapManager == null) return null;
+			if (null == mapManager) return null;
 
 			var view = new View
 			{
@@ -35,7 +35,7 @@ namespace ClassicTilestorm
 		protected override void OnHandleSelectionChanged(IMapManager mapManager, Camera camera)
 		{
 			var view = selectedAttachments?.OfType<View>().FirstOrDefault();
-			if (view == null) return;
+			if (null == view) return;
 
 			var worldPos = MapManager.WorldPosition(view.tile, view.Position);
 			EditorTransformUtil.ShowAt(worldPos, view.Rotation, camera);
@@ -45,7 +45,7 @@ namespace ClassicTilestorm
 		protected override void OnHandleGizmoInput(IMapManager mapManager, Camera camera)
 		{
 			var view = selectedAttachments?.OfType<View>().FirstOrDefault();
-			if (view == null) return;
+			if (null == view) return;
 
 			if (EditorTransformUtil.HandleInput(camera, out Vector3 newWorldPos, out Quaternion newWorldRot))
 			{
@@ -69,7 +69,7 @@ namespace ClassicTilestorm
 		public static void HandlePreviewCameraSync(IMapManager mapManager, Camera camera)
 		{
 			var view = selectedAttachments?.OfType<View>().FirstOrDefault();
-			if (view == null) return;
+			if (null == view) return;
 
 			var previewTransform = ViewPreviewUtil.PreviewCameraTransform;
 			if (previewTransform == null) return;
