@@ -23,13 +23,11 @@ namespace ClassicTilestorm
 			return view;
 		}
 
-		protected override void OnRefreshDragVisuals(IMapManager mapManager, MapAttachment attachment)
+		protected override void OnHandleDragInput(IMapManager mapManager, MapAttachment attachment)
 		{
-			if (attachment is View view)
-			{
-				ViewPreviewUtil.Show(view, mapManager);
-				UpdateViewFrustumMarker(view);
-			}
+			if (attachment is not View view) return;
+			ViewPreviewUtil.Show(view, mapManager);
+			UpdateViewFrustumMarker(view);
 		}
 
 		protected override void OnHandleSelectionChanged(IMapManager mapManager, Camera camera)
@@ -39,7 +37,7 @@ namespace ClassicTilestorm
 
 			var worldPos = MapManager.WorldPosition(view.tile, view.Position);
 			EditorTransformUtil.ShowAt(worldPos, view.Rotation, camera);
-			OnRefreshDragVisuals(mapManager, view); // already decoupled
+			OnHandleDragInput(mapManager, view); // already decoupled
 		}
 
 		protected override void OnHandleGizmoInput(IMapManager mapManager, Camera camera)

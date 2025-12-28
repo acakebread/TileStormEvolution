@@ -167,7 +167,7 @@ namespace ClassicTilestorm
 				iMapManager.RefreshAttachmentInstance(att);
 			}
 
-			AttachmentEditing.RefreshDragVisuals(iMapManager, camera);
+			AttachmentEditing.HandleDragInput(iMapManager, camera);
 		}
 
 		public override void OnMapLoaded()

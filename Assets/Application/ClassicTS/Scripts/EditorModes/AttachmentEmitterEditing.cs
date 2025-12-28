@@ -59,13 +59,11 @@ namespace ClassicTilestorm
 			}
 		}
 
-		protected override void OnRefreshDragVisuals(IMapManager mapManager, MapAttachment attachment)
+		protected override void OnHandleDragInput(IMapManager mapManager, MapAttachment attachment)
 		{
-			if (attachment is Emitter emitter)
-			{
-				var worldPos = MapManager.WorldPosition(emitter.tile, emitter.Position);
-				EditorPrimitiveUtil.UpdateCone(worldPos, emitter.Rotation, emitter.Distance, emitter.Apex);
-			}
+			if (attachment is not Emitter emitter) return;
+			var worldPos = MapManager.WorldPosition(emitter.tile, emitter.Position);
+			EditorPrimitiveUtil.UpdateCone(worldPos, emitter.Rotation, emitter.Distance, emitter.Apex);
 		}
 	}
 }

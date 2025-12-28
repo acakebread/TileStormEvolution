@@ -152,15 +152,6 @@ namespace ClassicTilestorm
 			return result;
 		}
 
-		public static void RefreshDragVisuals(IMapManager mapManager, Camera camera)
-		{
-			if (null == selectedAttachments || 1 != selectedAttachments.Length) return;
-			var att = selectedAttachments[0];
-			var typeEditor = GetEditorFor(att);
-			typeEditor?.OnRefreshDragVisuals(mapManager, att);
-			typeEditor?.OnUpdateDragGizmo(att, camera);
-		}
-
 		private static AttachmentEditing GetEditorFor(MapAttachment attachment) => attachment switch
 		{
 			null => null,
@@ -212,20 +203,22 @@ namespace ClassicTilestorm
 			EditorMarkerUtil.ShowMarkers(positions, colors, selectedIndex);
 		}
 
-		public static void HandleGizmoInput(IMapManager mapManager, Camera camera) => GetEditorForSelection(selectedAttachments)?.OnHandleGizmoInput(mapManager, camera);
 		public static void HandleSelectionChanged(IMapManager mapManager, Camera camera) => GetEditorForSelection(selectedAttachments)?.OnHandleSelectionChanged(mapManager, camera);
-
-		protected virtual void OnHandleGizmoInput(IMapManager mapManager, Camera camera) { }
-		protected virtual void OnHandleSelectionChanged(IMapManager mapManager, Camera camera) { }
-		protected virtual void OnRefreshDragVisuals(IMapManager mapManager, MapAttachment attachment) { }
-		protected virtual void OnUpdateDragGizmo(MapAttachment attachment, Camera camera)
+		public static void HandleGizmoInput(IMapManager mapManager, Camera camera) => GetEditorForSelection(selectedAttachments)?.OnHandleGizmoInput(mapManager, camera);
+		public static void HandleDragInput(IMapManager mapManager, Camera camera)
 		{
-			if (attachment is not ITransformableAttachment transformable)
-				return;
-
+			if (null == selectedAttachments || 1 != selectedAttachments.Length) return;
+			var attachment = selectedAttachments[0];
+			var typeEditor = GetEditorFor(attachment);
+			typeEditor?.OnHandleDragInput(mapManager, attachment);
+			if (attachment is not ITransformableAttachment transformable) return;
 			var worldPos = MapManager.WorldPosition(attachment.tile, transformable.Position);
 			var worldRot = MapManager.WorldRotation(attachment.tile, transformable.Rotation);
 			EditorTransformUtil.ShowAt(worldPos, worldRot, camera);
 		}
+
+		protected virtual void OnHandleSelectionChanged(IMapManager mapManager, Camera camera) { }
+		protected virtual void OnHandleGizmoInput(IMapManager mapManager, Camera camera) { }
+		protected virtual void OnHandleDragInput(IMapManager mapManager, MapAttachment attachment) { }
 	}
 }
