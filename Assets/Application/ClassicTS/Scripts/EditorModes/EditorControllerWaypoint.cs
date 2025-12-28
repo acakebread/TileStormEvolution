@@ -77,7 +77,7 @@ namespace ClassicTilestorm
 			// === LEFT CLICK RELEASE - ADD or DRAG ===
 			if (Input.GetMouseButtonUp(0))
 			{
-				if (wasClick && pendingTile >= 0)
+				if (wasClick && pendingTile >= 0 && null != currentMap && null != currentMap.waypoints && false == currentMap.waypoints.Contains(pendingTile))
 					pendingAction = PendingAction.Add;
 			}
 

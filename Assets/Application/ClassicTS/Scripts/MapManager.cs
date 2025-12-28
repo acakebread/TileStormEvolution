@@ -41,6 +41,8 @@ namespace ClassicTilestorm
 		bool RemoveAttachment(MapAttachment attachment);
 		void RemoveAllAttachmentsOnTile(int tileIndex);
 
+		WaypointAttachment[] GetWaypointAttachments();
+
 		Action<IMapManager, bool, Vector3> OnMapEdited { get; set; }
 	}
 
@@ -746,6 +748,19 @@ namespace ClassicTilestorm
 				DestroyAttachmentInstance(att);
 			}
 			OnMapEdited?.Invoke(this, false, Vector3.zero);
+		}
+
+		public WaypointAttachment[] GetWaypointAttachments()
+		{
+			var wp = currentMap?.waypoints;
+			if (wp == null || wp.Length == 0) return System.Array.Empty<WaypointAttachment>();
+
+			var result = new WaypointAttachment[wp.Length];
+			for (int i = 0; i < wp.Length; i++)
+			{
+				result[i] = new WaypointAttachment(i, wp[i]);
+			}
+			return result;
 		}
 
 		/// <summary>
