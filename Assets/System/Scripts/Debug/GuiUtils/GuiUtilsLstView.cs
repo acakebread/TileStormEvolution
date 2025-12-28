@@ -10,10 +10,10 @@ namespace MassiveHadronLtd
 		public struct ListViewItem
 		{
 			public string Label;
-			public Action OnClick;
+			public Action<int> OnClick;
 			public bool IsSelected;
 
-			public ListViewItem(string label, Action onClick, bool selected = false)
+			public ListViewItem(string label, Action<int> onClick, bool selected = false)
 			{
 				Label = label;
 				OnClick = onClick;
@@ -80,7 +80,7 @@ namespace MassiveHadronLtd
 						Color.white;
 
 					if (GUI.Button(new Rect(0, y, contentRect.width, itemHeight - 4), item.Label, leftButton))
-						item.OnClick?.Invoke();
+						item.OnClick?.Invoke(Items.IndexOf(item));
 
 					GUI.backgroundColor = Color.white;
 					y += itemHeight;

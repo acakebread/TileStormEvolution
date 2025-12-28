@@ -3,47 +3,20 @@ using System.Linq;
 
 namespace ClassicTilestorm
 {
-	public class AttachmentViewEditing : AttachmentEditing
+	public static class AttachmentViewEditing
 	{
-		public static readonly AttachmentViewEditing Instance = new();
-
-		public static View CreateView(IMapManager mapManager, int tile)
+		public static void OnSelectionChanged(IMapManager mapManager, Camera camera)
 		{
-			if (null == mapManager) return null;
-
-			var view = new View
-			{
-				tile = tile,
-				Position = (Vector3.up + Vector3.back) * 8f,
-				LookAt = (Vector3.forward + Vector3.down) * 4f
-			};
-
-			SnapViewDistanceToGround(view); // unchanged, uses static MapManager
-			mapManager.AddAttachment(view);
-			return view;
-		}
-
-		protected override void OnHandleDragInput(IMapManager mapManager, MapAttachment attachment)
-		{
-			if (attachment is not View view) return;
-			ViewPreviewUtil.Show(view, mapManager);
-			UpdateViewFrustumMarker(view);
-		}
-
-		protected override void OnHandleSelectionChanged(IMapManager mapManager, Camera camera)
-		{
-			var view = selectedAttachments?.OfType<View>().FirstOrDefault();
-			if (null == view) return;
+			var view = (View)AttachmentEditing.selectedAttachments![0];
 
 			var worldPos = MapManager.WorldPosition(view.tile, view.Position);
 			EditorTransformUtil.ShowAt(worldPos, view.Rotation, camera);
-			OnHandleDragInput(mapManager, view); // already decoupled
+			OnDragInput(mapManager); // reuse
 		}
 
-		protected override void OnHandleGizmoInput(IMapManager mapManager, Camera camera)
+		public static void OnGizmoInput(IMapManager mapManager, Camera camera)
 		{
-			var view = selectedAttachments?.OfType<View>().FirstOrDefault();
-			if (null == view) return;
+			var view = (View)AttachmentEditing.selectedAttachments![0];
 
 			if (EditorTransformUtil.HandleInput(camera, out Vector3 newWorldPos, out Quaternion newWorldRot))
 			{
@@ -64,10 +37,33 @@ namespace ClassicTilestorm
 			}
 		}
 
+		public static void OnDragInput(IMapManager mapManager)
+		{
+			var view = (View)AttachmentEditing.selectedAttachments![0];
+			ViewPreviewUtil.Show(view, mapManager);
+			UpdateViewFrustumMarker(view);
+		}
+
+		public static View CreateView(IMapManager mapManager, int tile)
+		{
+			if (null == mapManager) return null;
+
+			var view = new View
+			{
+				tile = tile,
+				Position = (Vector3.up + Vector3.back) * 8f,
+				LookAt = (Vector3.forward + Vector3.down) * 4f
+			};
+
+			SnapViewDistanceToGround(view); // unchanged, uses static MapManager
+			mapManager.AddAttachment(view);
+			return view;
+		}
+
 		public static void HandlePreviewCameraSync(IMapManager mapManager, Camera camera)
 		{
-			var view = selectedAttachments?.OfType<View>().FirstOrDefault();
-			if (null == view) return;
+			if (AttachmentEditing.selectedAttachments?.FirstOrDefault() is not View view)
+				return;
 
 			var previewTransform = ViewPreviewUtil.PreviewCameraTransform;
 			if (previewTransform == null) return;
@@ -82,7 +78,6 @@ namespace ClassicTilestorm
 
 			ViewPreviewUtil.Update();
 			UpdateViewFrustumMarker(view);
-
 			EditorTransformUtil.UpdateTransform(previewTransform.position, view.Rotation, camera);
 		}
 

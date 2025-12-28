@@ -8,7 +8,7 @@ namespace ClassicTilestorm
 		public EditorController editorController;
 		public Camera camera { get { if (editorController.TryGetComponent<MainCameraController>(out var controller)) return controller.activeSystem?.camera; return null; } }
 
-		protected int HitTile(Vector3 mousePos) => iMapManager.CameraHitTile(camera, mousePos);
+		protected int HitTile(Vector3 position) => iMapManager.CameraHitTile(camera, position);
 
 		public bool IsGuiControlActive() => GUIUtility.hotControl != 0 || (EventSystem.current && EventSystem.current.IsPointerOverGameObject());
 		public virtual bool IsMouseOverGUI() => editorController.IsMouseOverGui() | IsGuiControlActive();

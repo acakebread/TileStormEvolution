@@ -26,7 +26,7 @@ namespace ClassicTilestorm
 		{
 			if (length < 0.02f || apexAngle <= 0f || apexAngle >= 180f)
 			{
-				HideCone();
+				Hide();
 				return;
 			}
 
@@ -86,7 +86,7 @@ namespace ClassicTilestorm
 			coneMarker.SetActive(true);
 		}
 
-		public static void HideCone()
+		public static void Hide()
 		{
 			if (coneMarker != null)
 			{

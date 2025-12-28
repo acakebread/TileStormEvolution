@@ -3,9 +3,38 @@ using UnityEngine;
 
 namespace ClassicTilestorm
 {
-	public class AttachmentEmitterEditing : AttachmentEditing
+	public static class AttachmentEmitterEditing
 	{
-		public static readonly AttachmentEmitterEditing Instance = new();
+		public static void OnSelectionChanged(IMapManager mapManager, Camera camera)
+		{
+			var emitter = (Emitter)AttachmentEditing.selectedAttachments![0];
+
+			var worldPos = MapManager.WorldPosition(emitter.tile, emitter.Position);
+			EditorTransformUtil.UpdateTransform(worldPos, emitter.Rotation, camera);
+
+			EditorPrimitiveUtil.UpdateCone(worldPos, emitter.Rotation, emitter.Distance, emitter.Apex);
+		}
+
+		public static void OnGizmoInput(IMapManager mapManager, Camera camera)
+		{
+			var emitter = (Emitter)AttachmentEditing.selectedAttachments![0];
+
+			if (EditorTransformUtil.HandleInput(camera, out Vector3 newWorldPos, out Quaternion newWorldRot))
+			{
+				emitter.Position = MapManager.LocalPosition(emitter.tile, newWorldPos);
+				emitter.Rotation = MapManager.LocalRotation(emitter.tile, newWorldRot);
+				mapManager.RefreshAttachmentInstance(emitter);
+
+				EditorPrimitiveUtil.UpdateCone(newWorldPos, emitter.Rotation, emitter.Distance, emitter.Apex);
+			}
+		}
+
+		public static void OnDragInput(IMapManager mapManager)
+		{
+			var emitter = (Emitter)AttachmentEditing.selectedAttachments![0];
+			var worldPos = MapManager.WorldPosition(emitter.tile, emitter.Position);
+			EditorPrimitiveUtil.UpdateCone(worldPos, emitter.Rotation, emitter.Distance, emitter.Apex);
+		}
 
 		public static Emitter CreateEmitter(IMapManager mapManager, int tile, string variant)
 		{
@@ -31,39 +60,6 @@ namespace ClassicTilestorm
 				var tileWorldCenter = mapManager.TileWorldPosition(tile);
 				return (tileBounds.max.y - tileWorldCenter.y) + 0.05f;
 			}
-		}
-
-		protected override void OnHandleSelectionChanged(IMapManager mapManager, Camera camera)
-		{
-			var emitter = selectedAttachments?.OfType<Emitter>().FirstOrDefault();
-			if (null == emitter) return;
-
-			var worldPos = MapManager.WorldPosition(emitter.tile, emitter.Position);
-			EditorTransformUtil.UpdateTransform(worldPos, emitter.Rotation, camera);
-
-			EditorPrimitiveUtil.UpdateCone(worldPos, emitter.Rotation, emitter.Distance, emitter.Apex);
-		}
-
-		protected override void OnHandleGizmoInput(IMapManager mapManager, Camera camera)
-		{
-			var emitter = selectedAttachments?.OfType<Emitter>().FirstOrDefault();
-			if (null == emitter) return;
-
-			if (EditorTransformUtil.HandleInput(camera, out Vector3 newWorldPos, out Quaternion newWorldRot))
-			{
-				emitter.Position = MapManager.LocalPosition(emitter.tile, newWorldPos);
-				emitter.Rotation = MapManager.LocalRotation(emitter.tile, newWorldRot);
-				mapManager.RefreshAttachmentInstance(emitter);
-
-				EditorPrimitiveUtil.UpdateCone(newWorldPos, emitter.Rotation, emitter.Distance, emitter.Apex);
-			}
-		}
-
-		protected override void OnHandleDragInput(IMapManager mapManager, MapAttachment attachment)
-		{
-			if (attachment is not Emitter emitter) return;
-			var worldPos = MapManager.WorldPosition(emitter.tile, emitter.Position);
-			EditorPrimitiveUtil.UpdateCone(worldPos, emitter.Rotation, emitter.Distance, emitter.Apex);
 		}
 	}
 }

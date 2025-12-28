@@ -21,9 +21,9 @@ namespace ClassicTilestorm
 
 		public static void HideAllGizmos()
 		{
-			EditorPrimitiveUtil.HideCone();
+			EditorTransformUtil.Hide();
+			EditorPrimitiveUtil.Hide();
 			EditorFrustumUtil.Hide();
-			EditorTransformUtil.HideTransformGizmo();
 			ViewPreviewUtil.Hide();
 			EditorMarkerUtil.ClearMapMarkers();
 		}
@@ -127,30 +127,9 @@ namespace ClassicTilestorm
 			return result;
 		}
 
-		private static AttachmentEditing GetEditorFor(MapAttachment attachment) => attachment switch
-		{
-			null => null,
-			Emitter => AttachmentEmitterEditing.Instance,
-			View => AttachmentViewEditing.Instance,
-			Pickup => AttachmentPickupEditing.Instance,
-			_ => null // unknown attachment type
-		};
-
-		// return null unless uniform selections (e.g. type-specific GUI when all same type)
-		private static AttachmentEditing GetEditorForSelection(MapAttachment[] selectedAttachments)
-		{
-			if (null == selectedAttachments || 0 == selectedAttachments.Length) return null;
-
-			var firstType = selectedAttachments[0].GetType();
-			if (selectedAttachments.All(att => att.GetType() == firstType))
-				return GetEditorFor(selectedAttachments[0]);
-
-			return null;
-		}
-
 		public static void UpdateMapMarkers(IMapManager mapManager, int[] tiles, int selectedIndex = -1, EditorMarkerUtil.MarkerType type = EditorMarkerUtil.MarkerType.Undefined)
 		{
-			if (tiles == null || tiles.Length == 0 || EditorMarkerUtil.SphereMesh == null)
+			if (null == tiles || 0 == tiles.Length)
 			{
 				EditorMarkerUtil.ClearMapMarkers();
 				return;
@@ -178,23 +157,74 @@ namespace ClassicTilestorm
 			EditorMarkerUtil.ShowMarkers(positions, colors, selectedIndex);
 		}
 
-		public static void HandleSelectionChanged(IMapManager mapManager, Camera camera) => GetEditorForSelection(selectedAttachments)?.OnHandleSelectionChanged(mapManager, camera);
-		public static void HandleGizmoInput(IMapManager mapManager, Camera camera) => GetEditorForSelection(selectedAttachments)?.OnHandleGizmoInput(mapManager, camera);
+		public static void HandleSelectionChanged(IMapManager mapManager, Camera camera)
+		{
+			if (null == selectedAttachments || 0 == selectedAttachments.Length) return;
+
+			// We only support uniform selection for type-specific GUI
+			var firstType = selectedAttachments[0].GetType();
+			if (!selectedAttachments.All(a => a.GetType() == firstType)) return;
+
+			switch (selectedAttachments[0])
+			{
+				case Emitter:
+					AttachmentEmitterEditing.OnSelectionChanged(mapManager, camera);
+					break;
+				case View:
+					AttachmentViewEditing.OnSelectionChanged(mapManager, camera);
+					break;
+				case Pickup:
+					AttachmentPickupEditing.OnSelectionChanged(mapManager, camera);
+					break;
+			}
+		}
+
+		public static void HandleGizmoInput(IMapManager mapManager, Camera camera)
+		{
+			if (null == selectedAttachments || 0 == selectedAttachments.Length) return;
+
+			var firstType = selectedAttachments[0].GetType();
+			if (!selectedAttachments.All(a => a.GetType() == firstType)) return;
+
+			switch (selectedAttachments[0])
+			{
+				case Emitter:
+					AttachmentEmitterEditing.OnGizmoInput(mapManager, camera);
+					break;
+				case View:
+					AttachmentViewEditing.OnGizmoInput(mapManager, camera);
+					break;
+				case Pickup:
+					AttachmentPickupEditing.OnGizmoInput(mapManager, camera);
+					break;
+			}
+		}
+
 		public static void HandleDragInput(IMapManager mapManager, Camera camera)
 		{
 			if (null == selectedAttachments || 1 != selectedAttachments.Length) return;
+
 			var attachment = selectedAttachments[0];
+
 			if (attachment is ITransformableAttachment transformable)
 			{
 				var worldPos = MapManager.WorldPosition(attachment.tile, transformable.Position);
 				var worldRot = MapManager.WorldRotation(attachment.tile, transformable.Rotation);
 				EditorTransformUtil.ShowAt(worldPos, worldRot, camera);
 			}
-			GetEditorFor(attachment)?.OnHandleDragInput(mapManager, attachment);
-		}
 
-		protected virtual void OnHandleSelectionChanged(IMapManager mapManager, Camera camera) { }
-		protected virtual void OnHandleGizmoInput(IMapManager mapManager, Camera camera) { }
-		protected virtual void OnHandleDragInput(IMapManager mapManager, MapAttachment attachment) { }
+			switch (attachment)
+			{
+				case Emitter:
+					AttachmentEmitterEditing.OnDragInput(mapManager);
+					break;
+				case View:
+					AttachmentViewEditing.OnDragInput(mapManager);
+					break;
+				case Pickup:
+					AttachmentPickupEditing.OnDragInput(mapManager);
+					break;
+			}
+		}
 	}
 }

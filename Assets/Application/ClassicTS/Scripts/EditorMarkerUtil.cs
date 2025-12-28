@@ -28,7 +28,7 @@ namespace ClassicTilestorm
 
 		// === SAFE SPHERE MESH ===
 		private static Mesh sphereMesh;
-		public static Mesh SphereMesh
+		private static Mesh SphereMesh
 		{
 			get
 			{
@@ -100,6 +100,7 @@ namespace ClassicTilestorm
 
 		public static void ClearMapMarkers()
 		{
+			if (null == SphereMesh) return;
 			foreach (var go in mapMarkers)
 			{
 				if (go != null)

@@ -130,7 +130,7 @@ namespace ClassicTilestorm
 			var items = new List<ListViewItem>();
 
 			foreach (var def in ResourceManager.Definitions)
-				items.Add(new ListViewItem($"{def.id} ({def.texture})", () => SetSelectedDefinitionById(def.id), def.id == selectedDefinitionId));
+				items.Add(new ListViewItem($"{def.id} ({def.texture})", (x) => SetSelectedDefinitionById(def.id), def.id == selectedDefinitionId));
 			sidePanel.List.SetItems(items);
 
 			// Draw the panel (background + list)

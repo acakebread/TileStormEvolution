@@ -9,11 +9,10 @@ namespace ClassicTilestorm
 		private Vector3 mouseDownPos;
 		private bool mouseMovedBeyondThreshold;
 		private const float CLICK_THRESHOLD = 8f;
-		private bool rmbDragStartedInPreview = false;
+		private bool rmbDownInPreview = false;
 		private bool supressInput = true;
 
 		private int pendingTile = -1;
-		private int lastDragTile = -1;
 		private enum PendingAction { None, Add, Delete, Select }
 		private PendingAction pendingAction = PendingAction.None;
 
@@ -21,13 +20,21 @@ namespace ClassicTilestorm
 
 		public override bool IsMouseOverGUI() => base.IsMouseOverGUI() || sidePanel.IsMouseOver;
 
+		public override void OnMapLoaded()
+		{
+			supressInput = true;
+			rmbDownInPreview = false;
+			AttachmentEditing.HideAllGizmos();
+			AttachmentEditing.RebuildMarkers(iMapManager);
+		}
+
 		public EditorControllerAttachment(EditorController controller) : base(controller) { }
 
 		public override void OnEnable()
 		{
 			base.OnEnable();
 			supressInput = true;
-			rmbDragStartedInPreview = false;
+			rmbDownInPreview = false;
 			pendingAction = PendingAction.None;
 			AttachmentEditing.HideAllGizmos();
 			AttachmentEditing.RebuildMarkers(iMapManager);
@@ -49,19 +56,19 @@ namespace ClassicTilestorm
 
 			// Detect if RMB was pressed THIS FRAME while mouse was over preview
 			if (Input.GetMouseButtonDown(1))
-				rmbDragStartedInPreview = ViewPreviewUtil.IsInFocus;
+				rmbDownInPreview = ViewPreviewUtil.IsInFocus;
 
 			// Clear the drag flag when no mouse buttons are pressed
 			if (!Input.GetMouseButton(0) && !Input.GetMouseButton(1))
-				rmbDragStartedInPreview = false;
+				rmbDownInPreview = false;
 
 			// "In use" = actively orbiting with RMB (strong border + "Preview Active")
-			ViewPreviewUtil.SetInUse(rmbDragStartedInPreview);
+			ViewPreviewUtil.SetInUse(rmbDownInPreview);
 
 			// Full preview camera control active if:
 			// - We're in RMB orbit mode, OR
 			// - Mouse is hovering over preview with no RMB held (soft focus)
-			bool previewControlsActive = rmbDragStartedInPreview || (!Input.GetMouseButton(1) && ViewPreviewUtil.IsInFocus);
+			var previewControlsActive = rmbDownInPreview || (!Input.GetMouseButton(1) && ViewPreviewUtil.IsInFocus);
 
 			if (previewControlsActive)
 			{
@@ -103,7 +110,7 @@ namespace ClassicTilestorm
 
 			if (IsGuiControlActive()) return;
 
-			int tileUnderMouse = HitTile(Input.mousePosition);
+			var tileUnderMouse = HitTile(Input.mousePosition);
 
 			// LMB Down: select attachments
 			if (!supressInput && Input.GetMouseButtonDown(0))
@@ -119,18 +126,15 @@ namespace ClassicTilestorm
 				AttachmentEditing.RebuildMarkers(iMapManager);
 			}
 
-			bool wasClick = !mouseMovedBeyondThreshold;
-
 			// LMB Up: popups (only on clean click)
-			if (!supressInput && Input.GetMouseButtonUp(0) && wasClick)
+			if (!supressInput && Input.GetMouseButtonUp(0) && !mouseMovedBeyondThreshold)//was click = !mouseMovedBeyondThreshold
 			{
-				lastDragTile = -1;
 				HandleLeftMouseUpOnCleanClick();
 			}
 
 			// RMB Up: delete popup
-			if (!supressInput && Input.GetMouseButtonUp(1) && wasClick)
-				HandleRightMouseUp(wasClick);
+			if (!supressInput && Input.GetMouseButtonUp(1) && !mouseMovedBeyondThreshold)//was click = !mouseMovedBeyondThreshold
+				HandleRightMouseUp();
 		}
 
 		public override void OnGUI()
@@ -139,6 +143,7 @@ namespace ClassicTilestorm
 			ViewPreviewUtil.OnGUI();
 
 			if (PendingAction.None == pendingAction) return;
+			supressInput = true;
 
 			switch (pendingAction)
 			{
@@ -148,15 +153,14 @@ namespace ClassicTilestorm
 			}
 			pendingAction = PendingAction.None;
 			pendingTile = -1;
-			supressInput = true;
 		}
 
 		private void HandleDrag(int tileUnderMouse)
 		{
-			if (lastDragTile == tileUnderMouse)
+			if (pendingTile == tileUnderMouse)
 				return;
 
-			lastDragTile = tileUnderMouse;
+			pendingTile = tileUnderMouse;
 
 			if (AttachmentEditing.selectedAttachments == null || AttachmentEditing.selectedAttachments.Length == 0)
 				return;
@@ -170,19 +174,9 @@ namespace ClassicTilestorm
 			AttachmentEditing.HandleDragInput(iMapManager, camera);
 		}
 
-		public override void OnMapLoaded()
-		{
-			supressInput = true;
-			rmbDragStartedInPreview = false;
-			AttachmentEditing.HideAllGizmos();
-			AttachmentEditing.RebuildMarkers(iMapManager);
-		}
-
 		private void HandleLeftMouseDown(int tile)
 		{
-			if (-1 == tile)
-				AttachmentEditing.Select(null, iMapManager, camera);
-			else
+			if (-1 != tile)
 			{
 				var alreadySelected = AttachmentEditing.selectedAttachments?.Length > 0 && AttachmentEditing.selectedAttachments[0].tile == tile;
 				if (!alreadySelected)
@@ -190,7 +184,9 @@ namespace ClassicTilestorm
 					AttachmentEditing.selectedAttachments = GetAttachmentsOnTile(tile);
 					AttachmentEditing.Select(AttachmentEditing.selectedAttachments, iMapManager, camera);
 				}
+				return;
 			}
+			AttachmentEditing.Select(null, iMapManager, camera);
 		}
 
 		// New: Only called on clean click (no drag)
@@ -216,9 +212,8 @@ namespace ClassicTilestorm
 			}
 		}
 
-		private void HandleRightMouseUp(bool wasClick)
+		private void HandleRightMouseUp()
 		{
-			if (!wasClick) return;
 			int hitTile = HitTile(mouseDownPos);
 			if (hitTile >= 0 && GetAttachmentsOnTile(hitTile)?.Length > 0)
 			{
@@ -242,7 +237,7 @@ namespace ClassicTilestorm
 			var atts = currentMap.attachments ?? System.Array.Empty<MapAttachment>();
 			var items = new System.Collections.Generic.List<ListViewItem>(); 
 			foreach (var att in atts)
-				items.Add(new ListViewItem(GetAttachmentLabel(att),() => AttachmentEditing.Select(new[] { att }, iMapManager, camera), selected: null != AttachmentEditing.selectedAttachments && AttachmentEditing.selectedAttachments.Contains(att)));
+				items.Add(new ListViewItem(GetAttachmentLabel(att),(x) => AttachmentEditing.Select(new[] { att }, iMapManager, camera), selected: null != AttachmentEditing.selectedAttachments && AttachmentEditing.selectedAttachments.Contains(att)));
 			sidePanel.List.SetItems(items);
 			sidePanel.SetFootnote("Hold RMB on preview to orbit • Scroll to zoom • LMB: place/move • RMB on tile: delete");
 			sidePanel.Draw();

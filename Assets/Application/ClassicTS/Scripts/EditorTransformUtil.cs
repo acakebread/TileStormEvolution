@@ -196,8 +196,6 @@ namespace ClassicTilestorm
 			ShowAt(worldPos, view.Rotation, cam);
 		}
 
-		public static void HideTransformGizmo() => Hide();
-
 		public static void UpdateTransformGizmoVisuals(Camera cam) => UpdateVisuals(cam);
 
 		public static bool HandleTransformGizmoInput(Camera cam) => HandleInput(cam, out _, out _);

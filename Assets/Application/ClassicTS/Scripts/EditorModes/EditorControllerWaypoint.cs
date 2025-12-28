@@ -8,20 +8,16 @@ namespace ClassicTilestorm
 {
 	public class EditorControllerWaypoint : EditorControllerMovement
 	{
-		public int SelectedWaypointIndex { get; private set; } = -1;
-
-		private int draggingIndex = -1;
-		private int originalTile = -1;
+		private Vector3 mouseDownPos;
+		private bool mouseMovedBeyondThreshold;
+		private const float CLICK_THRESHOLD = 8f;
+		private bool supressInput = true;
 
 		private int pendingTile = -1;
-		private int pendingWaypoint = -1;
+		private int pendingWaypoint = -1;//this is effectively 'selectedAttachments'
+
 		private enum PendingAction { None, Add, Delete }
 		private PendingAction pendingAction = PendingAction.None;
-		private Vector2 pendingPopupScreenPos = Vector2.zero;
-
-		private Vector3 clickStartPos;
-		private int clickStartTile = -1;
-		private int potentialWaypointHit = -1;
 
 		private static readonly AutoHidePanel sidePanel = new(120f, 340f, 1.5f, 0.25f);
 
@@ -29,20 +25,22 @@ namespace ClassicTilestorm
 
 		public override void OnMapLoaded() => RebuildMarkers();
 
+		private void RebuildMarkers() => AttachmentEditing.UpdateMapMarkers(iMapManager, iMapManager.Waypoints, pendingWaypoint, EditorMarkerUtil.MarkerType.Waypoint);
+
 		public EditorControllerWaypoint(EditorController editorController) : base(editorController) { }
 
 		public override void OnEnable()
 		{
 			base.OnEnable();
-			SelectedWaypointIndex = -1;
-			EditorMarkerUtil.ClearMapMarkers();
+			pendingWaypoint = -1;
+			AttachmentEditing.HideAllGizmos();
 			RebuildMarkers();
 		}
 
 		public override void OnDisable()
 		{
 			base.OnDisable();
-			EditorMarkerUtil.ClearMapMarkers();
+			AttachmentEditing.HideAllGizmos();
 			pendingAction = PendingAction.None;
 		}
 
@@ -51,101 +49,93 @@ namespace ClassicTilestorm
 			base.Update();
 			if (IsMouseOverGUI() || IsGuiControlActive()) return;
 
-			int tileUnderMouse = GetTileUnderMouse();
+			if (supressInput)
+			{
+				supressInput = false;
+				return;
+			}
+
+			var tileUnderMouse = HitTile(Input.mousePosition);
 
 			// === CLICK DETECTION (shared for left & right) ===
 			if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1))
 			{
-				clickStartPos = Input.mousePosition;
-				clickStartTile = tileUnderMouse;
-				potentialWaypointHit = IndexOfWaypoint(HitTile(Input.mousePosition));
+				mouseDownPos = Input.mousePosition;
+				mouseMovedBeyondThreshold = false;
+				pendingTile = tileUnderMouse;
+				pendingWaypoint = null != currentMap && null != currentMap.waypoints && currentMap.waypoints.Contains(pendingTile) ? Array.IndexOf(currentMap.waypoints, pendingTile) : -1;
 			}
+
+			if (Input.GetMouseButton(0) || Input.GetMouseButton(1))
+			{
+				if (Vector3.Distance(Input.mousePosition, mouseDownPos) >= CLICK_THRESHOLD)
+					mouseMovedBeyondThreshold = true;
+			}
+
+			var wasClick = !mouseMovedBeyondThreshold;
 
 			// === LEFT CLICK RELEASE - ADD or DRAG ===
 			if (Input.GetMouseButtonUp(0))
 			{
-				bool wasClick = Vector3.Distance(Input.mousePosition, clickStartPos) < 6f;
-
-				if (draggingIndex >= 0)
-				{
-					// Was dragging a waypoint
-					if (!wasClick && tileUnderMouse < 0)
-					{
-						// Revert if dropped outside map
-						var map = iMapManager.CurrentMap;
-						if (map?.waypoints != null && draggingIndex < map.waypoints.Length)
-							iMapManager.Waypoints[draggingIndex] = originalTile;
-						RebuildMarkers();
-					}
-					draggingIndex = -1;
-					originalTile = -1;
-				}
-				else if (wasClick && clickStartTile >= 0 && potentialWaypointHit < 0)
-				{
-					// True click on empty tile → prepare to add
-					pendingTile = clickStartTile;
+				if (wasClick && pendingTile >= 0)
 					pendingAction = PendingAction.Add;
-				}
 			}
 
 			// === RIGHT CLICK RELEASE - DELETE ===
 			if (Input.GetMouseButtonUp(1))
 			{
-				bool wasClick = Vector3.Distance(Input.mousePosition, clickStartPos) < 6f;
-
-				if (wasClick && potentialWaypointHit >= 0)
+				if (wasClick && pendingWaypoint >= 0)
 				{
-					SelectWaypoint(potentialWaypointHit);
+					SelectWaypoint(pendingWaypoint);
 
 					var map = iMapManager.CurrentMap;
-					if (map?.waypoints != null && potentialWaypointHit < map.waypoints.Length)
+					if (map?.waypoints != null && pendingWaypoint < map.waypoints.Length)
 					{
-						pendingTile = iMapManager.Waypoints[potentialWaypointHit];
-						pendingWaypoint = potentialWaypointHit;
+						pendingTile = iMapManager.Waypoints[pendingWaypoint];
 						pendingAction = PendingAction.Delete;
 					}
 				}
 			}
 
 			// === DRAG EXISTING WAYPOINT (left button held) ===
-			if (Input.GetMouseButton(0) && draggingIndex >= 0 && tileUnderMouse >= 0)
+			if (Input.GetMouseButton(0) && pendingWaypoint >= 0 && tileUnderMouse >= 0)
 			{
 				var map = iMapManager.CurrentMap;
-				if (map?.waypoints != null && draggingIndex < map.waypoints.Length)
+				if (map?.waypoints != null && pendingWaypoint < map.waypoints.Length)
 				{
-					if (map.waypoints[draggingIndex] != tileUnderMouse)
+					if (map.waypoints[pendingWaypoint] != tileUnderMouse)
 					{
-						map.waypoints[draggingIndex] = tileUnderMouse;
+						map.waypoints[pendingWaypoint] = tileUnderMouse;
 						RebuildMarkers();
 					}
 				}
 			}
 
 			// Start drag only if we clicked a waypoint and are now moving
-			if (Input.GetMouseButtonDown(0) && potentialWaypointHit >= 0)
+			if (Input.GetMouseButtonDown(0) && pendingWaypoint >= 0)
 			{
-				SelectWaypoint(potentialWaypointHit);
-				draggingIndex = potentialWaypointHit;
-				originalTile = iMapManager.Waypoints[potentialWaypointHit];
+				SelectWaypoint(pendingWaypoint);
 				pendingAction = PendingAction.None; // cancel any pending add
 			}
-
-			int IndexOfWaypoint(int tileIndex) => null != currentMap && null != currentMap.waypoints && currentMap.waypoints.Contains(tileIndex) ? Array.IndexOf(currentMap.waypoints, tileIndex) : -1;
 		}
 
 		public override void OnGUI()
 		{
 			DrawSidePanel();
 			// Popups
-			if (pendingAction == PendingAction.Add) DrawAddPopup();
-			if (pendingAction == PendingAction.Delete) DrawDeletePopup();
-		}
+			if (PendingAction.None == pendingAction) return;
+			supressInput = true;
 
-		private void RebuildMarkers() => AttachmentEditing.UpdateMapMarkers(iMapManager, iMapManager.Waypoints, SelectedWaypointIndex, EditorMarkerUtil.MarkerType.Waypoint);
+			switch (pendingAction)
+			{
+				case PendingAction.Add: if (DrawAddPopup()) return; break;
+				case PendingAction.Delete: if (DrawDeletePopup()) return; break;
+			}
+		}
 
 		private void SelectWaypoint(int index)
 		{
-			SelectedWaypointIndex = index;
+			pendingWaypoint = index;
 			RebuildMarkers();
 		}
 
@@ -169,14 +159,6 @@ namespace ClassicTilestorm
 			SelectWaypoint(-1);
 		}
 
-		private int GetTileUnderMouse()
-		{
-			if (!camera) return -1;
-			Vector3 mouseWorld = MapManager.ScreenToWorld(camera, Input.mousePosition);
-			Vector3 snapped = MapManager.SnappedMapPosition(mouseWorld);
-			return iMapManager.WorldToMapIndex(snapped);
-		}
-
 		private void MoveWaypoint(int index, int direction)
 		{
 			var map = iMapManager.CurrentMap;
@@ -185,11 +167,11 @@ namespace ClassicTilestorm
 			list[index] = list[index + direction];
 			list[index + direction] = temp;
 			map.waypoints = list.ToArray();
-			SelectedWaypointIndex += direction;
+			pendingWaypoint += direction;
 			RebuildMarkers();
 		}
 
-		private void DrawAddPopup()
+		private bool DrawAddPopup()
 		{
 			var items = new List<PopupItem>
 			{
@@ -201,11 +183,15 @@ namespace ClassicTilestorm
 				new ("Cancel", () => { }, Color.yellow)// Cancel
 			};
 
-			if (false == PopupMenu.Show(clickStartPos, "Add Waypoint?", items))
+			if (false == PopupMenu.Show(mouseDownPos, "Add Waypoint?", items))
+			{
 				pendingAction = PendingAction.None;
+				return false;
+			}
+			return true;
 		}
 
-		private void DrawDeletePopup()
+		private bool DrawDeletePopup()
 		{
 			var items = new List<PopupItem>
 			{
@@ -217,8 +203,12 @@ namespace ClassicTilestorm
 				new ("Cancel", () => { }, Color.yellow )// Cancel
 			};
 
-			if (false == PopupMenu.Show(pendingPopupScreenPos, "Delete Waypoint?", items))
+			if (false == PopupMenu.Show(mouseDownPos, "Delete Waypoint?", items))
+			{
 				pendingAction = PendingAction.None;
+				return false;
+			}
+			return true;
 		}
 
 		private void DrawSidePanel()
@@ -228,7 +218,7 @@ namespace ClassicTilestorm
 			var items = new List<ListViewItem>();
 
 			for (int i = 0; i < wp.Length; i++)
-				items.Add(new ListViewItem(label: $"WP{i:00} [{wp[i]}]", onClick: () => SelectWaypoint(i), selected: i == SelectedWaypointIndex));
+				items.Add(new ListViewItem(label: $"WP{i:00} [{wp[i]}]", onClick: (x) => SelectWaypoint(x), selected: i == pendingWaypoint));
 
 			sidePanel.List.SetItems(items);
 
@@ -236,10 +226,10 @@ namespace ClassicTilestorm
 			sidePanel.Buttons.Clear();
 
 			// Up button always visible
-			sidePanel.Buttons.Add(new ListViewButton("Move Up", () => MoveWaypoint(SelectedWaypointIndex, -1), enabled: SelectedWaypointIndex > 0));
+			sidePanel.Buttons.Add(new ListViewButton("Move Up", () => MoveWaypoint(pendingWaypoint, -1), enabled: pendingWaypoint > 0));
 
 			// Down button always visible
-			sidePanel.Buttons.Add(new ListViewButton("Move Down", () => MoveWaypoint(SelectedWaypointIndex, +1), enabled: SelectedWaypointIndex >= 0 && SelectedWaypointIndex < wp.Length - 1));
+			sidePanel.Buttons.Add(new ListViewButton("Move Down", () => MoveWaypoint(pendingWaypoint, +1), enabled: pendingWaypoint >= 0 && pendingWaypoint < wp.Length - 1));
 
 			// Draw entire panel
 			sidePanel.Draw();
