@@ -14,16 +14,10 @@ namespace ClassicTilestorm
 		public static IMapManager CurrentMapManager => _currentMapManager;
 
 		// Called automatically by MapManager
-		internal static void SetActiveMapManager(IMapManager mapManager)
-		{
-			_currentMapManager = mapManager;
-		}
+		internal static void SetActiveMapManager(IMapManager mapManager) => _currentMapManager = mapManager;
 
 		// Called automatically by MapManager
-		internal static void ClearActiveMapManager()
-		{
-			_currentMapManager = null;
-		}
+		internal static void ClearActiveMapManager() => _currentMapManager = null;
 
 		// Internal duplicate of MapManager's TileWorldPosition logic
 		private static Vector3 GetTileWorldPosition(int tileIndex)

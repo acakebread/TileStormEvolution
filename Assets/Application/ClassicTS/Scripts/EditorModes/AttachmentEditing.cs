@@ -41,6 +41,7 @@ namespace ClassicTilestorm
 
 		public static bool DrawAddPopup(Vector2 position, IMapManager mapManager, Camera sceneCamera, int pendingTile)
 		{
+			var wasCancelled = true;
 			var items = new List<PopupItem>
 			{
 				new ("Emitter [flame]", () => Select(new[] { AttachmentEmitterEditing.CreateEmitter(mapManager, pendingTile, "flame") }, mapManager, sceneCamera)),
@@ -50,7 +51,10 @@ namespace ClassicTilestorm
 				PopupItem.Spacer(),
 				new ("Cancel", () => { }, colorOverride: Color.yellow)
 			};
-			return PopupMenu.Show(position, "Add Attachment", items);
+			var result = PopupMenu.Show(position, "Add Attachment", items);
+			if (!result && wasCancelled)
+				Select(null, mapManager, sceneCamera);
+			return result;
 		}
 
 		public static bool DrawDeletePopup(Vector2 position, IMapManager mapManager, Camera sceneCamera, int pendingTile)
@@ -58,6 +62,7 @@ namespace ClassicTilestorm
 			var attsOnTile = mapManager.CurrentMap.GetAttachmentsOnTile(pendingTile);
 			if (attsOnTile.Length == 0) return false;
 
+			var wasCancelled = true;
 			var items = new List<PopupItem>();
 			foreach (var att in attsOnTile)
 			{
@@ -82,7 +87,11 @@ namespace ClassicTilestorm
 
 			items.Add(PopupItem.Spacer());
 			items.Add(new PopupItem("Cancel", () => { }, colorOverride: Color.yellow));
-			return PopupMenu.Show(position, "Delete Attachment(s)", items);
+
+			var result = PopupMenu.Show(position, "Delete Attachment(s)", items);
+			if (!result && wasCancelled)
+				Select(null, mapManager, sceneCamera);
+			return result;
 		}
 
 		public static bool DrawSelectPopup(Vector2 position, IMapManager mapManager, Camera sceneCamera, int pendingTile)

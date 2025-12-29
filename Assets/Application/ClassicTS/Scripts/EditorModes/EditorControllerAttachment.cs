@@ -74,7 +74,6 @@ namespace ClassicTilestorm
 			{
 				EditorCameraMovement.UpdateCamera(ViewPreviewUtil.PreviewCamera.transform);
 				AttachmentViewEditing.HandlePreviewCameraSync(iMapManager, camera);
-
 				supressInput = true;
 				return; // Block normal map input while using preview
 			}
@@ -108,32 +107,20 @@ namespace ClassicTilestorm
 					mouseMovedBeyondThreshold = true;
 			}
 
-			if (IsGuiControlActive()) return;
-
-			var tileUnderMouse = HitTile(Input.mousePosition);
-
 			// LMB Down: select attachments
-			if (!supressInput && Input.GetMouseButtonDown(0))
-			{
-				pendingTile = tileUnderMouse;
-				HandleLeftMouseDown(pendingTile);
-			}
+			if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1))
+				HandleMouseDown();
 
 			// LMB Drag: move attachments
-			if (!supressInput && Input.GetMouseButton(0) && tileUnderMouse >= 0 && AttachmentEditing.selectedAttachments != null)
-			{
-				HandleDrag(tileUnderMouse);
-				AttachmentEditing.RebuildMarkers(iMapManager);
-			}
+			if (Input.GetMouseButton(0))
+				HandleDrag();//drag must come after down - tightly coupled order
 
 			// LMB Up: popups (only on clean click)
-			if (!supressInput && Input.GetMouseButtonUp(0) && !mouseMovedBeyondThreshold)//was click = !mouseMovedBeyondThreshold
-			{
-				HandleLeftMouseUpOnCleanClick();
-			}
+			if (Input.GetMouseButtonUp(0) && !mouseMovedBeyondThreshold)//was click = !mouseMovedBeyondThreshold
+				HandleLeftMouseUp();
 
 			// RMB Up: delete popup
-			if (!supressInput && Input.GetMouseButtonUp(1) && !mouseMovedBeyondThreshold)//was click = !mouseMovedBeyondThreshold
+			if (Input.GetMouseButtonUp(1) && !mouseMovedBeyondThreshold)//was click = !mouseMovedBeyondThreshold
 				HandleRightMouseUp();
 		}
 
@@ -151,13 +138,31 @@ namespace ClassicTilestorm
 				case PendingAction.Delete: if (AttachmentEditing.DrawDeletePopup(mouseDownPos, iMapManager, camera, pendingTile)) return; break;
 				case PendingAction.Select: if (AttachmentEditing.DrawSelectPopup(mouseDownPos, iMapManager, camera, pendingTile)) return; break;
 			}
+			//AttachmentEditing.Select(null, iMapManager, camera);
 			pendingAction = PendingAction.None;
 			pendingTile = -1;
 		}
 
-		private void HandleDrag(int tileUnderMouse)
+		private void HandleMouseDown()
 		{
-			if (pendingTile == tileUnderMouse)
+			pendingTile = HitTile(Input.mousePosition);
+			if (-1 != pendingTile)
+			{
+				var alreadySelected = AttachmentEditing.selectedAttachments?.Length > 0 && AttachmentEditing.selectedAttachments[0].tile == pendingTile;
+				if (!alreadySelected)
+				{
+					AttachmentEditing.selectedAttachments = GetAttachmentsOnTile(pendingTile);
+					AttachmentEditing.Select(AttachmentEditing.selectedAttachments, iMapManager, camera);
+				}
+				return;
+			}
+			AttachmentEditing.Select(null, iMapManager, camera);
+		}
+
+		private void HandleDrag()
+		{
+			var tileUnderMouse = HitTile(Input.mousePosition); 
+			if (-1 == tileUnderMouse || pendingTile == tileUnderMouse || null == AttachmentEditing.selectedAttachments)
 				return;
 
 			pendingTile = tileUnderMouse;
@@ -172,25 +177,11 @@ namespace ClassicTilestorm
 			}
 
 			AttachmentEditing.HandleDragInput(iMapManager, camera);
-		}
-
-		private void HandleLeftMouseDown(int tile)
-		{
-			if (-1 != tile)
-			{
-				var alreadySelected = AttachmentEditing.selectedAttachments?.Length > 0 && AttachmentEditing.selectedAttachments[0].tile == tile;
-				if (!alreadySelected)
-				{
-					AttachmentEditing.selectedAttachments = GetAttachmentsOnTile(tile);
-					AttachmentEditing.Select(AttachmentEditing.selectedAttachments, iMapManager, camera);
-				}
-				return;
-			}
-			AttachmentEditing.Select(null, iMapManager, camera);
+			AttachmentEditing.RebuildMarkers(iMapManager);
 		}
 
 		// New: Only called on clean click (no drag)
-		private void HandleLeftMouseUpOnCleanClick()
+		private void HandleLeftMouseUp()
 		{
 			var attachmentsOnDownTile = GetAttachmentsOnTile(pendingTile);
 
@@ -226,9 +217,8 @@ namespace ClassicTilestorm
 
 		private MapAttachment[] GetAttachmentsOnTile(int tileIndex)
 		{
-			var map = currentMap;
-			if (map == null || map.attachments == null || !map.IsValidTile(tileIndex)) return null;
-			var result = map.attachments.Where(x => x.tile == tileIndex).ToArray();
+			if (currentMap == null || currentMap.attachments == null || !currentMap.IsValidTile(tileIndex)) return null;
+			var result = currentMap.attachments.Where(x => x.tile == tileIndex).ToArray();
 			return result.Length > 0 ? result : null;
 		}
 
