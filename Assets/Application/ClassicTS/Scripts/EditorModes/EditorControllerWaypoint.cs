@@ -14,7 +14,6 @@ namespace ClassicTilestorm
 		private bool supressInput = true;
 
 		private int pendingTile = -1;
-		private int pendingWaypoint = -1;//this is effectively 'selectedAttachments'
 
 		private enum PendingAction { None, Add, Delete }
 		private PendingAction pendingAction = PendingAction.None;
@@ -25,14 +24,18 @@ namespace ClassicTilestorm
 
 		public override void OnMapLoaded() => RebuildMarkers();
 
-		private void RebuildMarkers() => AttachmentEditing.UpdateMapMarkers(iMapManager, iMapManager.Waypoints, pendingWaypoint, EditorMarkerUtil.MarkerType.Waypoint);
+		private void RebuildMarkers()
+		{
+			// Use current pendingWaypoint index for marker highlight
+			AttachmentEditing.UpdateMapMarkers(iMapManager, iMapManager.Waypoints, pendingWaypoint, EditorMarkerUtil.MarkerType.Waypoint);
+		}
 
 		public EditorControllerWaypoint(EditorController editorController) : base(editorController) { }
 
 		public override void OnEnable()
 		{
 			base.OnEnable();
-			pendingWaypoint = -1;
+			pendingWaypoint = -1; // This will clear shared selection
 			AttachmentEditing.HideAllGizmos();
 			RebuildMarkers();
 		}
@@ -57,13 +60,21 @@ namespace ClassicTilestorm
 
 			var tileUnderMouse = HitTile(Input.mousePosition);
 
-			// === CLICK DETECTION (shared for left & right) ===
 			if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1))
 			{
 				mouseDownPos = Input.mousePosition;
 				mouseMovedBeyondThreshold = false;
 				pendingTile = tileUnderMouse;
-				pendingWaypoint = null != currentMap && null != currentMap.waypoints && currentMap.waypoints.Contains(pendingTile) ? Array.IndexOf(currentMap.waypoints, pendingTile) : -1;
+
+				// Update pendingWaypoint based on what's under mouse
+				if (currentMap?.waypoints != null && currentMap.waypoints.Contains(pendingTile))
+				{
+					pendingWaypoint = Array.IndexOf(currentMap.waypoints, pendingTile);
+				}
+				else
+				{
+					pendingWaypoint = -1;
+				}
 			}
 
 			if (Input.GetMouseButton(0) || Input.GetMouseButton(1))
@@ -74,20 +85,16 @@ namespace ClassicTilestorm
 
 			var wasClick = !mouseMovedBeyondThreshold;
 
-			// === LEFT CLICK RELEASE - ADD or DRAG ===
 			if (Input.GetMouseButtonUp(0))
 			{
-				if (wasClick && pendingTile >= 0 && null != currentMap && null != currentMap.waypoints && false == currentMap.waypoints.Contains(pendingTile))
+				if (wasClick && pendingTile >= 0 && currentMap?.waypoints != null && !currentMap.waypoints.Contains(pendingTile))
 					pendingAction = PendingAction.Add;
 			}
 
-			// === RIGHT CLICK RELEASE - DELETE ===
 			if (Input.GetMouseButtonUp(1))
 			{
 				if (wasClick && pendingWaypoint >= 0)
 				{
-					SelectWaypoint(pendingWaypoint);
-
 					var map = iMapManager.CurrentMap;
 					if (map?.waypoints != null && pendingWaypoint < map.waypoints.Length)
 					{
@@ -97,7 +104,6 @@ namespace ClassicTilestorm
 				}
 			}
 
-			// === DRAG EXISTING WAYPOINT (left button held) ===
 			if (Input.GetMouseButton(0) && pendingWaypoint >= 0 && tileUnderMouse >= 0)
 			{
 				var map = iMapManager.CurrentMap;
@@ -111,19 +117,17 @@ namespace ClassicTilestorm
 				}
 			}
 
-			// Start drag only if we clicked a waypoint and are now moving
 			if (Input.GetMouseButtonDown(0) && pendingWaypoint >= 0)
 			{
-				SelectWaypoint(pendingWaypoint);
-				pendingAction = PendingAction.None; // cancel any pending add
+				pendingAction = PendingAction.None;
 			}
 		}
 
 		public override void OnGUI()
 		{
 			DrawSidePanel();
-			// Popups
-			if (PendingAction.None == pendingAction) return;
+
+			if (pendingAction == PendingAction.None) return;
 			supressInput = true;
 
 			switch (pendingAction)
@@ -133,10 +137,40 @@ namespace ClassicTilestorm
 			}
 		}
 
-		private void SelectWaypoint(int index)
+		// ===================================================================
+		// pendingWaypoint is now a PROPERTY — no backing field
+		// It transparently converts to/from WaypointAttachment.waypointIndex
+		// ===================================================================
+		private int pendingWaypoint
 		{
-			pendingWaypoint = index;
-			RebuildMarkers();
+			get
+			{
+				var selected = AttachmentEditing.selectedAttachments;
+				if (selected == null || selected.Length == 0) return -1;
+				if (selected[0] is Waypoint wa)
+					return wa.waypointIndex;
+				return -1;
+			}
+			set
+			{
+				if (value < 0)
+				{
+					AttachmentEditing.Select(null, iMapManager, camera);
+					RebuildMarkers();
+					return;
+				}
+
+				if (currentMap?.waypoints == null || value >= currentMap.waypoints.Length)
+				{
+					AttachmentEditing.Select(null, iMapManager, camera);
+					RebuildMarkers();
+					return;
+				}
+
+				var att = new Waypoint(value, currentMap.waypoints[value]);
+				AttachmentEditing.Select(new[] { att }, iMapManager, camera);
+				RebuildMarkers();
+			}
 		}
 
 		private void AddWaypointAtTile(int tile)
@@ -147,7 +181,7 @@ namespace ClassicTilestorm
 			list.Add(tile);
 			iMapManager.Waypoints = list.ToArray();
 
-			SelectWaypoint(list.Count - 1);
+			pendingWaypoint = list.Count - 1; // Uses setter → creates proxy and syncs
 		}
 
 		private void DeleteWaypoint(int index)
@@ -156,7 +190,8 @@ namespace ClassicTilestorm
 			var list = currentMap.waypoints.ToList();
 			list.RemoveAt(index);
 			currentMap.waypoints = list.ToArray();
-			SelectWaypoint(-1);
+
+			pendingWaypoint = -1; // Uses setter → clears selection
 		}
 
 		private void MoveWaypoint(int index, int direction)
@@ -167,20 +202,19 @@ namespace ClassicTilestorm
 			list[index] = list[index + direction];
 			list[index + direction] = temp;
 			map.waypoints = list.ToArray();
-			pendingWaypoint += direction;
-			RebuildMarkers();
+
+			pendingWaypoint = index + direction; // Uses setter → updates proxy
 		}
 
 		private bool DrawAddPopup()
 		{
 			var items = new List<PopupItem>
 			{
-				// Info line (non-clickable)
 				new ($"WP{iMapManager.Waypoints.Length:00} at tile {pendingTile}", null, null, spacerHeight: 0),
 				PopupItem.Spacer(6),
-				new ("Add", () => AddWaypointAtTile(pendingTile), colorOverride: Color.cyan),// Add waypoint
+				new ("Add", () => AddWaypointAtTile(pendingTile), colorOverride: Color.cyan),
 				PopupItem.Spacer(4),
-				new ("Cancel", () => { }, Color.yellow)// Cancel
+				new ("Cancel", () => { }, Color.yellow)
 			};
 
 			if (false == PopupMenu.Show(mouseDownPos, "Add Waypoint?", items))
@@ -195,12 +229,11 @@ namespace ClassicTilestorm
 		{
 			var items = new List<PopupItem>
 			{
-				// Info line (non-clickable)
 				new ($"WP{pendingWaypoint:00} at tile {pendingTile}", null, null, spacerHeight: 0),
 				PopupItem.Spacer(6),
-				new ("Delete", () => DeleteWaypoint(pendingWaypoint), colorOverride: Color.red), // Delete waypoint
+				new ("Delete", () => DeleteWaypoint(pendingWaypoint), colorOverride: Color.red),
 				PopupItem.Spacer(4),
-				new ("Cancel", () => { }, Color.yellow )// Cancel
+				new ("Cancel", () => { }, Color.yellow )
 			};
 
 			if (false == PopupMenu.Show(mouseDownPos, "Delete Waypoint?", items))
@@ -213,25 +246,23 @@ namespace ClassicTilestorm
 
 		private void DrawSidePanel()
 		{
-			// Build ListView items
 			var wp = iMapManager.Waypoints ?? Array.Empty<int>();
 			var items = new List<ListViewItem>();
 
 			for (int i = 0; i < wp.Length; i++)
-				items.Add(new ListViewItem(label: $"WP{i:00} [{wp[i]}]", onClick: (x) => SelectWaypoint(x), selected: i == pendingWaypoint));
+			{
+				items.Add(new ListViewItem(
+					label: $"WP{i:00} [{wp[i]}]",
+					onClick: (x) => pendingWaypoint = x, // Uses setter → creates proxy
+					selected: i == pendingWaypoint)); // Uses getter
+			}
 
 			sidePanel.List.SetItems(items);
 
-			// Build dynamic Move buttons
 			sidePanel.Buttons.Clear();
-
-			// Up button always visible
 			sidePanel.Buttons.Add(new ListViewButton("Move Up", () => MoveWaypoint(pendingWaypoint, -1), enabled: pendingWaypoint > 0));
-
-			// Down button always visible
 			sidePanel.Buttons.Add(new ListViewButton("Move Down", () => MoveWaypoint(pendingWaypoint, +1), enabled: pendingWaypoint >= 0 && pendingWaypoint < wp.Length - 1));
 
-			// Draw entire panel
 			sidePanel.Draw();
 		}
 	}

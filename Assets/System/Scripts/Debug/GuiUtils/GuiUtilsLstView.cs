@@ -13,7 +13,7 @@ namespace MassiveHadronLtd
 			public Action<int> OnClick;
 			public bool IsSelected;
 
-			public ListViewItem(string label, Action<int> onClick, bool selected = false)
+			public ListViewItem(string label, Action<int> onClick = null, bool selected = false)
 			{
 				Label = label;
 				OnClick = onClick;
