@@ -5,18 +5,23 @@ using static MassiveHadronLtd.GuiUtils;
 
 namespace ClassicTilestorm
 {
-	public abstract class AttachmentEditing
+	public static class AttachmentEditing
 	{
 		public static MapAttachment[] selectedAttachments = null;
 
-		public static void RebuildMarkers(IMapManager iMapManager)
+		public static void RebuildMarkers(IMapManager iMapManager, EditorMarkerUtil.MarkerType type = EditorMarkerUtil.MarkerType.Undefined)
 		{
 			if (null == iMapManager?.CurrentMap) return;
 			// Determine selected tile from current selection
 			var selectedTile = (selectedAttachments != null && selectedAttachments.Length > 0) ? selectedAttachments[0].tile : -1;
-			var tiles = iMapManager?.CurrentMap.attachments?.Where(a => a.tile >= 0).Select(a => a.tile).Distinct().ToArray() ?? System.Array.Empty<int>();
+			var tiles = type switch
+			{
+				EditorMarkerUtil.MarkerType.Waypoint => iMapManager?.CurrentMap.waypoints,
+				EditorMarkerUtil.MarkerType.Attachment => iMapManager?.CurrentMap.attachments?.Where(a => a.tile >= 0).Select(a => a.tile).Distinct().ToArray() ?? System.Array.Empty<int>(),
+				_ => null
+			};
 			var selection = System.Array.IndexOf(tiles, selectedTile);
-			UpdateMapMarkers(iMapManager, tiles, selection, EditorMarkerUtil.MarkerType.Attachment);
+			UpdateMapMarkers(iMapManager, tiles, selection, type);
 		}
 
 		public static void HideAllGizmos()
@@ -32,7 +37,7 @@ namespace ClassicTilestorm
 		{
 			selectedAttachments = null != attachments && null != attachments[0] ? attachments : null;
 			HideAllGizmos();
-			RebuildMarkers(mapManager);
+			RebuildMarkers(mapManager, EditorMarkerUtil.MarkerType.Attachment);//ToDo get type of attachment[0] and see if it is a waypoint or not
 
 			if (null == selectedAttachments || 1 != selectedAttachments.Length) return;
 			HandleSelectionChanged(mapManager, camera);
@@ -136,6 +141,25 @@ namespace ClassicTilestorm
 			return result;
 		}
 
+		public static void RefreshAttachmentInstances(IMapManager mapManager, int tile)
+		{
+			foreach (var att in selectedAttachments)
+			{
+				att.tile = tile;
+				switch (att)
+				{
+					case Waypoint:
+						mapManager.CurrentMap.waypoints[(att as Waypoint).waypointIndex] = tile; 
+						break;
+					case Emitter:
+					case Pickup:
+					case View:
+						mapManager.RefreshAttachmentInstance(att);
+						break;
+				};
+			}
+		}
+
 		public static void UpdateMapMarkers(IMapManager mapManager, int[] tiles, int selectedIndex = -1, EditorMarkerUtil.MarkerType type = EditorMarkerUtil.MarkerType.Undefined)
 		{
 			if (null == tiles || 0 == tiles.Length)
@@ -224,6 +248,9 @@ namespace ClassicTilestorm
 
 			switch (attachment)
 			{
+				case Waypoint:
+					AttachmentWaypointEditing.OnDragInput(mapManager);
+					break;
 				case Emitter:
 					AttachmentEmitterEditing.OnDragInput(mapManager);
 					break;

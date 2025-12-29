@@ -25,7 +25,7 @@ namespace ClassicTilestorm
 			supressInput = true;
 			rmbDownInPreview = false;
 			AttachmentEditing.HideAllGizmos();
-			AttachmentEditing.RebuildMarkers(iMapManager);
+			AttachmentEditing.RebuildMarkers(iMapManager, EditorMarkerUtil.MarkerType.Attachment);
 		}
 
 		public EditorControllerAttachment(EditorController controller) : base(controller) { }
@@ -37,7 +37,7 @@ namespace ClassicTilestorm
 			rmbDownInPreview = false;
 			pendingAction = PendingAction.None;
 			AttachmentEditing.HideAllGizmos();
-			AttachmentEditing.RebuildMarkers(iMapManager);
+			AttachmentEditing.RebuildMarkers(iMapManager, EditorMarkerUtil.MarkerType.Attachment);
 		}
 
 		public override void OnDisable()
@@ -108,7 +108,7 @@ namespace ClassicTilestorm
 					mouseMovedBeyondThreshold = true;
 			}
 
-			// LMB Down: select attachments
+			// Mouse Down: select attachments
 			if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1))
 				HandleMouseDown();
 
@@ -141,7 +141,6 @@ namespace ClassicTilestorm
 			}
 
 			pendingAction = PendingAction.None;
-			//pendingTile = -1;
 		}
 
 		private void HandleMouseDown()
@@ -163,22 +162,13 @@ namespace ClassicTilestorm
 		private void HandleDrag()
 		{
 			var tileUnderMouse = HitTile(Input.mousePosition); 
-			if (-1 == tileUnderMouse || pendingTile == tileUnderMouse || null == AttachmentEditing.selectedAttachments)
+			if (-1 == tileUnderMouse || pendingTile == tileUnderMouse || null == AttachmentEditing.selectedAttachments || 0 == AttachmentEditing.selectedAttachments.Length)
 				return;
 
 			pendingTile = tileUnderMouse;
-
-			if (AttachmentEditing.selectedAttachments == null || AttachmentEditing.selectedAttachments.Length == 0)
-				return;
-
-			foreach (var att in AttachmentEditing.selectedAttachments)
-			{
-				att.tile = tileUnderMouse;
-				iMapManager.RefreshAttachmentInstance(att);
-			}
-
+			AttachmentEditing.RefreshAttachmentInstances(iMapManager, tileUnderMouse);
 			AttachmentEditing.HandleDragInput(iMapManager, camera);
-			AttachmentEditing.RebuildMarkers(iMapManager);
+			AttachmentEditing.RebuildMarkers(iMapManager, EditorMarkerUtil.MarkerType.Attachment);
 		}
 
 		// New: Only called on clean click (no drag)
