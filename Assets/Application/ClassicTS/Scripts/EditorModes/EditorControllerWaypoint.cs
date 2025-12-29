@@ -43,6 +43,7 @@ namespace ClassicTilestorm
 		public override void OnDisable()
 		{
 			base.OnDisable();
+			AttachmentEditing.selectedAttachments = null;
 			AttachmentEditing.HideAllGizmos();
 			pendingAction = PendingAction.None;
 		}
@@ -98,7 +99,6 @@ namespace ClassicTilestorm
 			}
 
 			pendingAction = PendingAction.None;
-			pendingWaypoint = -1;
 		}
 
 		private void HandleLeftMouseDown()
@@ -165,7 +165,7 @@ namespace ClassicTilestorm
 			var list = iMapManager.Waypoints?.ToList() ?? new List<int>();
 			list.Add(tile);
 			iMapManager.Waypoints = list.ToArray();
-			pendingWaypoint = list.Count - 1; // Uses setter → creates proxy and syncs
+			pendingWaypoint = list.Count - 1;
 		}
 
 		private void DeleteWaypoint(int index)
@@ -174,7 +174,7 @@ namespace ClassicTilestorm
 			var list = currentMap.waypoints.ToList();
 			list.RemoveAt(index);
 			currentMap.waypoints = list.ToArray();
-			pendingWaypoint = -1; // Uses setter → clears selection
+			pendingWaypoint = -1;
 		}
 
 		private void MoveWaypoint(int index, int direction)
@@ -182,11 +182,12 @@ namespace ClassicTilestorm
 			var list = currentMap.waypoints.ToList();
 			(list[index + direction], list[index]) = (list[index], list[index + direction]);//swap index values
 			currentMap.waypoints = list.ToArray();
-			pendingWaypoint = index + direction; // Uses setter → updates proxy
+			pendingWaypoint = index + direction;
 		}
 
 		private bool DrawAddPopup()
 		{
+			var wasCancelled = true;
 			var items = new List<PopupItem>
 			{
 				new ($"WP{currentMap.waypoints.Length:00} at tile {pendingTile}", null, null, spacerHeight: 0),
@@ -195,12 +196,15 @@ namespace ClassicTilestorm
 				PopupItem.Spacer(4),
 				new ("Cancel", () => { }, Color.yellow)
 			};
-
-			return PopupMenu.Show(mouseDownPos, "Add Waypoint?", items);
+			var result = PopupMenu.Show(mouseDownPos, "Add Waypoint?", items);
+			if (!result && wasCancelled)
+				pendingWaypoint = -1;
+			return result;
 		}
 
 		private bool DrawDeletePopup()
 		{
+			var wasCancelled = true;
 			var items = new List<PopupItem>
 			{
 				new ($"WP{pendingWaypoint:00} at tile {pendingTile}", null, null, spacerHeight: 0),
@@ -209,7 +213,10 @@ namespace ClassicTilestorm
 				PopupItem.Spacer(4),
 				new ("Cancel", () => { }, Color.yellow )
 			};
-			return PopupMenu.Show(mouseDownPos, "Delete Waypoint?", items);
+			var result = PopupMenu.Show(mouseDownPos, "Delete Waypoint?", items);
+			if (!result && wasCancelled)
+				pendingWaypoint = -1;
+			return result;
 		}
 
 		private void DrawSidePanel()

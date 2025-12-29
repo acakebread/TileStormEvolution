@@ -43,6 +43,7 @@ namespace ClassicTilestorm
 		public override void OnDisable()
 		{
 			base.OnDisable();
+			AttachmentEditing.selectedAttachments = null;
 			pendingAction = PendingAction.None;
 			AttachmentEditing.HideAllGizmos();
 		}
@@ -138,9 +139,9 @@ namespace ClassicTilestorm
 				case PendingAction.Delete: if (AttachmentEditing.DrawDeletePopup(mouseDownPos, iMapManager, camera, pendingTile)) return; break;
 				case PendingAction.Select: if (AttachmentEditing.DrawSelectPopup(mouseDownPos, iMapManager, camera, pendingTile)) return; break;
 			}
-			//AttachmentEditing.Select(null, iMapManager, camera);
+
 			pendingAction = PendingAction.None;
-			pendingTile = -1;
+			//pendingTile = -1;
 		}
 
 		private void HandleMouseDown()
