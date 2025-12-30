@@ -2,7 +2,6 @@
 using System.Linq;
 using System.Collections.Generic;
 using static MassiveHadronLtd.GuiUtils;
-using System;
 using UnityEngine.EventSystems;
 
 namespace ClassicTilestorm
@@ -52,6 +51,7 @@ namespace ClassicTilestorm
 			var wasCancelled = true;
 			var items = new List<PopupItem>
 			{
+				new ($"Waypoint [WP{mapManager.CurrentMap.waypoints.Length:00}]", () => { AttachmentWaypointEditing.CreateWaypoint(mapManager, CurrentPendingTile) ; AttachmentEditing.pendingAction = AttachmentEditing.PendingAction.None; }),
 				new ("Emitter [flame]", () => Select(new[] { AttachmentEmitterEditing.CreateEmitter(mapManager, pendingTile, "flame") }, mapManager, sceneCamera)),
 				new ("Emitter [spark]", () => Select(new[] { AttachmentEmitterEditing.CreateEmitter(mapManager, pendingTile, "spark") }, mapManager, sceneCamera)),
 				new ("View", () => Select(new[] { AttachmentViewEditing.CreateView(mapManager, pendingTile) }, mapManager, sceneCamera)),
@@ -59,7 +59,7 @@ namespace ClassicTilestorm
 				PopupItem.Spacer(),
 				new ("Cancel", () => { }, colorOverride: Color.yellow)
 			};
-			var result = PopupMenu.Show(position, "Add Attachment", items);
+			var result = PopupMenu.Show(position, $"Add Attachment at tile {CurrentPendingTile}", items);
 			if (!result && wasCancelled)
 				Select(null, mapManager, sceneCamera);
 			return result;
@@ -67,7 +67,8 @@ namespace ClassicTilestorm
 
 		public static bool DrawDeletePopup(Vector2 position, IMapManager mapManager, Camera sceneCamera, int pendingTile)
 		{
-			var attsOnTile = mapManager.CurrentMap.GetAttachmentsOnTile(pendingTile);
+			//var attsOnTile = mapManager.CurrentMap.GetAttachmentsOnTile(pendingTile);
+			var attsOnTile = GetAttachmentsOnTile(mapManager, pendingTile);
 			if (attsOnTile.Length == 0) return false;
 
 			var wasCancelled = true;
@@ -75,6 +76,9 @@ namespace ClassicTilestorm
 			foreach (var att in attsOnTile)
 			{
 				string label = $"Delete {att.GetType().Name}";
+				if (att is Waypoint wp)
+					label = $"WP{wp.waypointIndex:00} at tile {CurrentPendingTile}";
+
 				var localAtt = att;
 				items.Add(new PopupItem(label, () =>
 				{
@@ -104,7 +108,8 @@ namespace ClassicTilestorm
 
 		public static bool DrawSelectPopup(Vector2 position, IMapManager mapManager, Camera sceneCamera, int pendingTile)
 		{
-			var atts = mapManager.CurrentMap.GetAttachmentsOnTile(pendingTile);
+			//var atts = mapManager.CurrentMap.GetAttachmentsOnTile(pendingTile);
+			var atts = GetAttachmentsOnTile(mapManager, pendingTile);
 			if (atts == null || atts.Length == 0) return false;
 
 			var wasCancelled = true;
@@ -289,19 +294,15 @@ namespace ClassicTilestorm
 
 
 		// === NEW: Shared input state for both controllers ===
+		public static readonly AutoHidePanel sidePanel = new(collapsed: 120f, expanded: 340f, delay: 1.5f, animDur: 0.25f, defaultPos: new Vector2(0f, 40f));
 		public static Vector3 mouseDownPos;
 		private static bool mouseMovedBeyondThreshold;
 		private const float CLICK_THRESHOLD = 8f;
 		private static bool rmbDownInPreview = false;
-		private static bool supressInput = true;
+		public static bool supressInput = true;
 
 		// === NEW: Core shared update logic ===
-		public static void UpdateSharedInput(
-			Camera camera,
-			IMapManager iMapManager,
-			EditorMarkerUtil.MarkerType markerType,
-			Func<bool> isMouseOverGUI,           // Includes side panel check
-			Func<int> hitTileDelegate)           // HitTile(mousePos) wrapper
+		public static void Update(Camera camera, IMapManager iMapManager, EditorMarkerUtil.MarkerType markerType, bool isMouseOverGUI)
 		{
 			// === VIEW PREVIEW INTERACTION ===
 			ViewPreviewUtil.SetInFocus(ViewPreviewUtil.IsMouseOverPreview());
@@ -326,7 +327,7 @@ namespace ClassicTilestorm
 
 			ViewPreviewUtil.Update();
 
-			if (isMouseOverGUI() || IsGuiControlActive())
+			if (isMouseOverGUI || IsGuiControlActive())
 			{
 				supressInput = false;
 				return;
@@ -359,7 +360,7 @@ namespace ClassicTilestorm
 
 			// Mouse events
 			if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1))
-				HandleMouseDownShared(iMapManager, hitTileDelegate, camera);
+				HandleMouseDownShared(iMapManager, iMapManager.CameraHitTile(camera, Input.mousePosition), camera);
 
 			if (Input.GetMouseButton(0))
 				HandleDrag(iMapManager, camera, markerType);
@@ -368,21 +369,20 @@ namespace ClassicTilestorm
 				HandleLeftMouseUpShared(iMapManager, camera, markerType);
 
 			if (Input.GetMouseButtonUp(1) && !mouseMovedBeyondThreshold)
-				HandleRightMouseUpShared(iMapManager, hitTileDelegate, camera);
+				HandleRightMouseUpShared(iMapManager, iMapManager.CameraHitTile(camera, Input.mousePosition), camera);
 		}
 
 		// === Shared mouse handlers ===
-		private static void HandleMouseDownShared(IMapManager iMapManager, Func<int> hitTile, Camera camera)
+		private static void HandleMouseDownShared(IMapManager iMapManager, int tile, Camera camera)
 		{
-			int hit = hitTile();
-			CurrentPendingTile = hit;
+			CurrentPendingTile = tile;
 
-			if (hit != -1)
+			if (tile != -1)
 			{
-				var alreadySelected = selectedAttachments?.Length > 0 && selectedAttachments[0].tile == hit;
+				var alreadySelected = selectedAttachments?.Length > 0 && selectedAttachments[0].tile == tile;
 				if (!alreadySelected)
 				{
-					selectedAttachments = GetAttachmentsOnTile(iMapManager, hit);
+					selectedAttachments = GetAttachmentsOnTile(iMapManager, tile);
 					Select(selectedAttachments, iMapManager, camera);
 				}
 				return;
@@ -412,12 +412,11 @@ namespace ClassicTilestorm
 			RebuildMarkers(iMapManager, markerType);
 		}
 
-		private static void HandleRightMouseUpShared(IMapManager iMapManager, Func<int> hitTileAtDownPos, Camera camera)
+		private static void HandleRightMouseUpShared(IMapManager iMapManager, int tile, Camera camera)
 		{
-			int hitTile = hitTileAtDownPos();
-			if (hitTile >= 0 && GetAttachmentsOnTile(iMapManager, hitTile)?.Length > 0)
+			if (tile >= 0 && GetAttachmentsOnTile(iMapManager, tile)?.Length > 0)
 			{
-				CurrentPendingTile = hitTile;
+				CurrentPendingTile = tile;
 				pendingAction = PendingAction.Delete;
 				return;
 			}
@@ -431,6 +430,7 @@ namespace ClassicTilestorm
 			rmbDownInPreview = false;
 			pendingAction = PendingAction.None;
 			selectedAttachments = null;
+			CurrentPendingTile = -1;//had to add this, not sure why but onmapchaged was invoking click events after unification
 			HideAllGizmos();
 		}
 
@@ -446,5 +446,29 @@ namespace ClassicTilestorm
 		}
 
 		public static bool IsGuiControlActive() => GUIUtility.hotControl != 0 || (EventSystem.current && EventSystem.current.IsPointerOverGameObject());
+
+		public static void OnGUI(IMapManager iMapManager, Camera camera)
+		{
+			ViewPreviewUtil.OnGUI();
+
+			if (pendingAction == PendingAction.None) return;
+			supressInput = true;
+
+			// Use shared popups
+			switch (pendingAction)
+			{
+				case PendingAction.Add:
+					if (DrawAddPopup(mouseDownPos, iMapManager, camera, CurrentPendingTile)) return;
+					break;
+				case PendingAction.Delete:
+					if (DrawDeletePopup(mouseDownPos, iMapManager, camera, CurrentPendingTile)) return;
+					break;
+				case PendingAction.Select:
+					if (DrawSelectPopup(mouseDownPos, iMapManager, camera, CurrentPendingTile)) return;
+					break;
+			}
+
+			pendingAction = PendingAction.None;
+		}
 	}
 }
