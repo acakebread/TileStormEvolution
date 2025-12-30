@@ -43,8 +43,7 @@ namespace ClassicTilestorm
 		void RemoveAllAttachmentsOnTile(int tileIndex);
 
 		MapAttachment[] attachments { get; set; }
-
-		Waypoint[] GetWaypointAttachments();
+		Waypoint[] waypointAttachments { get; }//set; 
 
 		Action<IMapManager, bool, Vector3> OnMapEdited { get; set; }
 	}
@@ -795,15 +794,16 @@ namespace ClassicTilestorm
 			OnMapEdited?.Invoke(this, false, Vector3.zero);
 		}
 
-		public Waypoint[] GetWaypointAttachments()
+		public Waypoint[] waypointAttachments
 		{
-			var wp = currentMap.waypoints;
-			if (wp == null || wp.Length == 0) return Array.Empty<Waypoint>();
-
-			var result = new Waypoint[wp.Length];
-			for (int i = 0; i < wp.Length; i++)
-				result[i] = new Waypoint(i, wp[i]);
-			return result;
+			get
+			{
+				if (null == currentMap.waypoints || 0 == currentMap.waypoints.Length) return Array.Empty<Waypoint>();
+				var result = new Waypoint[currentMap.waypoints.Length];
+				for (int i = 0; i < currentMap.waypoints.Length; i++)
+					result[i] = new Waypoint(i, currentMap.waypoints[i]);
+				return result;
+			}
 		}
 
 		public MapAttachment[] attachments
@@ -811,17 +811,7 @@ namespace ClassicTilestorm
 			get
 			{
 				var real = currentMap.attachments ?? Array.Empty<MapAttachment>();
-
-				var waypointList = new List<MapAttachment>();
-				if (currentMap.waypoints != null)
-				{
-					for (int i = 0; i < currentMap.waypoints.Length; i++)
-					{
-						int tile = currentMap.waypoints[i];
-						if (tile >= 0) waypointList.Add(new Waypoint(i, tile));
-					}
-				}
-				return real.Concat(waypointList).ToArray();
+				return real.Concat(waypointAttachments).ToArray();
 			}
 			set
 			{
@@ -831,35 +821,6 @@ namespace ClassicTilestorm
 					currentMap.waypoints = Array.Empty<int>();
 					return;
 				}
-
-				//var realAttachments = new List<MapAttachment>();
-				//var waypointMap = new Dictionary<int, int>();
-
-				//foreach (var att in value)
-				//{
-				//	if (att is Waypoint wp)
-				//		waypointMap[wp.waypointIndex] = wp.tile;
-				//	else if (att != null)
-				//		realAttachments.Add(att);
-				//}
-
-				//// Rebuild waypoints
-				//if (waypointMap.Count > 0)
-				//{
-				//	int maxIdx = waypointMap.Keys.Max();
-				//	var waypoints = new int[maxIdx + 1];
-				//	for (int i = 0; i < waypoints.Length; i++)
-				//		waypoints[i] = -1;
-
-				//	foreach (var kvp in waypointMap)
-				//		if (kvp.Key >= 0 && kvp.Key < waypoints.Length)
-				//			waypoints[kvp.Key] = kvp.Value;
-
-				//	currentMap.waypoints = waypoints;
-				//}
-				//else
-				//	currentMap.waypoints = Array.Empty<int>();
-
 
 				var waypoints = new List<int>();
 				var realAttachments = new List<MapAttachment>();

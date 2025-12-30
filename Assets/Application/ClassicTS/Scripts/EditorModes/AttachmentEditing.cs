@@ -2,11 +2,16 @@
 using System.Linq;
 using System.Collections.Generic;
 using static MassiveHadronLtd.GuiUtils;
+using System;
+using UnityEngine.EventSystems;
 
 namespace ClassicTilestorm
 {
 	public static class AttachmentEditing
 	{
+		public enum PendingAction { None, Add, Delete, Select }
+		public static PendingAction pendingAction = PendingAction.None;
+
 		public static MapAttachment[] selectedAttachments = null;
 
 		// Shared across both attachment and waypoint editing modes
@@ -148,6 +153,13 @@ namespace ClassicTilestorm
 			}
 		}
 
+		public static MapAttachment[] GetAttachmentsOnTile(IMapManager mapManager, int tileIndex)
+		{
+			if (mapManager?.CurrentMap == null || mapManager?.attachments == null || !mapManager.CurrentMap.IsValidTile(tileIndex)) return null;
+			var result = mapManager.attachments.Where(x => x.tile == tileIndex).ToArray();
+			return result.Length > 0 ? result : null;
+		}
+
 		public static void UpdateMapMarkers(IMapManager mapManager, int[] tiles, int selectedIndex = -1, EditorMarkerUtil.MarkerType type = EditorMarkerUtil.MarkerType.Undefined)
 		{
 			if (null == tiles || 0 == tiles.Length)
@@ -273,5 +285,166 @@ namespace ClassicTilestorm
 			HandleDragInput(mapManager, camera);
 			RebuildMarkers(mapManager, type);
 		}
+
+
+
+		// === NEW: Shared input state for both controllers ===
+		public static Vector3 mouseDownPos;
+		private static bool mouseMovedBeyondThreshold;
+		private const float CLICK_THRESHOLD = 8f;
+		private static bool rmbDownInPreview = false;
+		private static bool supressInput = true;
+
+		// === NEW: Core shared update logic ===
+		public static void UpdateSharedInput(
+			Camera camera,
+			IMapManager iMapManager,
+			EditorMarkerUtil.MarkerType markerType,
+			Func<bool> isMouseOverGUI,           // Includes side panel check
+			Func<int> hitTileDelegate)           // HitTile(mousePos) wrapper
+		{
+			// === VIEW PREVIEW INTERACTION ===
+			ViewPreviewUtil.SetInFocus(ViewPreviewUtil.IsMouseOverPreview());
+
+			if (Input.GetMouseButtonDown(1))
+				rmbDownInPreview = ViewPreviewUtil.IsInFocus;
+
+			if (!Input.GetMouseButton(0) && !Input.GetMouseButton(1))
+				rmbDownInPreview = false;
+
+			ViewPreviewUtil.SetInUse(rmbDownInPreview);
+
+			var previewControlsActive = rmbDownInPreview || (!Input.GetMouseButton(1) && ViewPreviewUtil.IsInFocus);
+
+			if (previewControlsActive)
+			{
+				EditorCameraMovement.UpdateCamera(ViewPreviewUtil.PreviewCamera.transform);
+				AttachmentViewEditing.HandlePreviewCameraSync(iMapManager, camera);
+				supressInput = true;
+				return;
+			}
+
+			ViewPreviewUtil.Update();
+
+			if (isMouseOverGUI() || IsGuiControlActive())
+			{
+				supressInput = false;
+				return;
+			}
+
+			if (EditorTransformUtil.HandleTransformGizmoInput(camera))
+			{
+				HandleGizmoInput(iMapManager, camera);
+				supressInput = true;
+			}
+
+			if (supressInput)
+			{
+				supressInput = false;
+				return;
+			}
+
+			// Track click vs drag
+			if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1))
+			{
+				mouseDownPos = Input.mousePosition;
+				mouseMovedBeyondThreshold = false;
+			}
+
+			if (Input.GetMouseButton(0) || Input.GetMouseButton(1))
+			{
+				if (Vector3.Distance(Input.mousePosition, mouseDownPos) >= CLICK_THRESHOLD)
+					mouseMovedBeyondThreshold = true;
+			}
+
+			// Mouse events
+			if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1))
+				HandleMouseDownShared(iMapManager, hitTileDelegate, camera);
+
+			if (Input.GetMouseButton(0))
+				HandleDrag(iMapManager, camera, markerType);
+
+			if (Input.GetMouseButtonUp(0) && !mouseMovedBeyondThreshold)
+				HandleLeftMouseUpShared(iMapManager, camera, markerType);
+
+			if (Input.GetMouseButtonUp(1) && !mouseMovedBeyondThreshold)
+				HandleRightMouseUpShared(iMapManager, hitTileDelegate, camera);
+		}
+
+		// === Shared mouse handlers ===
+		private static void HandleMouseDownShared(IMapManager iMapManager, Func<int> hitTile, Camera camera)
+		{
+			int hit = hitTile();
+			CurrentPendingTile = hit;
+
+			if (hit != -1)
+			{
+				var alreadySelected = selectedAttachments?.Length > 0 && selectedAttachments[0].tile == hit;
+				if (!alreadySelected)
+				{
+					selectedAttachments = GetAttachmentsOnTile(iMapManager, hit);
+					Select(selectedAttachments, iMapManager, camera);
+				}
+				return;
+			}
+			Select(null, iMapManager, camera);
+		}
+
+		private static void HandleLeftMouseUpShared(IMapManager iMapManager, Camera camera, EditorMarkerUtil.MarkerType markerType)
+		{
+			var attachmentsOnTile = GetAttachmentsOnTile(iMapManager, CurrentPendingTile);
+
+			if (attachmentsOnTile == null || attachmentsOnTile.Length == 0)
+			{
+				if (CurrentPendingTile != -1)
+					pendingAction = PendingAction.Add;
+			}
+			else if (attachmentsOnTile.Length > 1)
+			{
+				pendingAction = PendingAction.Select;
+			}
+			else
+			{
+				pendingAction = PendingAction.None;
+				Select(attachmentsOnTile, iMapManager, camera);
+			}
+
+			RebuildMarkers(iMapManager, markerType);
+		}
+
+		private static void HandleRightMouseUpShared(IMapManager iMapManager, Func<int> hitTileAtDownPos, Camera camera)
+		{
+			int hitTile = hitTileAtDownPos();
+			if (hitTile >= 0 && GetAttachmentsOnTile(iMapManager, hitTile)?.Length > 0)
+			{
+				CurrentPendingTile = hitTile;
+				pendingAction = PendingAction.Delete;
+				return;
+			}
+			Select(null, iMapManager, camera);
+		}
+
+		// === Reset state helpers ===
+		public static void ResetInputState()
+		{
+			supressInput = true;
+			rmbDownInPreview = false;
+			pendingAction = PendingAction.None;
+			selectedAttachments = null;
+			HideAllGizmos();
+		}
+
+		public static void OnEnableShared(IMapManager iMapManager, EditorMarkerUtil.MarkerType markerType)
+		{
+			ResetInputState();
+			RebuildMarkers(iMapManager, markerType);
+		}
+
+		public static void OnDisableShared()
+		{
+			ResetInputState();
+		}
+
+		public static bool IsGuiControlActive() => GUIUtility.hotControl != 0 || (EventSystem.current && EventSystem.current.IsPointerOverGameObject());
 	}
 }
