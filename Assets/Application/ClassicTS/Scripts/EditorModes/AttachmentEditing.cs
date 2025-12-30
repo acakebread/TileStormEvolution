@@ -3,6 +3,7 @@ using System.Linq;
 using System.Collections.Generic;
 using static MassiveHadronLtd.GuiUtils;
 using UnityEngine.EventSystems;
+using System;
 
 namespace ClassicTilestorm
 {
@@ -21,8 +22,8 @@ namespace ClassicTilestorm
 			if (null == iMapManager) return;
 			// Determine selected tile from current selection
 			var selectedTile = (selectedAttachments != null && selectedAttachments.Length > 0) ? selectedAttachments[0].tile : -1;
-			var tiles = iMapManager?.attachments?.Where(a => a.tile >= 0).Select(a => a.tile).Distinct().ToArray() ?? System.Array.Empty<int>();
-			var selection = System.Array.IndexOf(tiles, selectedTile);
+			var tiles = iMapManager?.attachments?.Where(a => a.tile >= 0).Select(a => a.tile).Distinct().ToArray() ?? Array.Empty<int>();
+			var selection = Array.IndexOf(tiles, selectedTile);
 			UpdateMapMarkers(iMapManager, tiles, selection, type);
 		}
 
@@ -67,7 +68,6 @@ namespace ClassicTilestorm
 
 		public static bool DrawDeletePopup(Vector2 position, IMapManager mapManager, Camera sceneCamera, int pendingTile)
 		{
-			//var attsOnTile = mapManager.CurrentMap.GetAttachmentsOnTile(pendingTile);
 			var attsOnTile = GetAttachmentsOnTile(mapManager, pendingTile);
 			if (attsOnTile.Length == 0) return false;
 
@@ -108,7 +108,6 @@ namespace ClassicTilestorm
 
 		public static bool DrawSelectPopup(Vector2 position, IMapManager mapManager, Camera sceneCamera, int pendingTile)
 		{
-			//var atts = mapManager.CurrentMap.GetAttachmentsOnTile(pendingTile);
 			var atts = GetAttachmentsOnTile(mapManager, pendingTile);
 			if (atts == null || atts.Length == 0) return false;
 
@@ -447,14 +446,114 @@ namespace ClassicTilestorm
 
 		public static bool IsGuiControlActive() => GUIUtility.hotControl != 0 || (EventSystem.current && EventSystem.current.IsPointerOverGameObject());
 
-		public static void OnGUI(IMapManager iMapManager, Camera camera)
+		// === Add these two private methods inside the AttachmentEditing class ===
+
+		private static void DrawSidePanelAttachment(IMapManager iMapManager, Camera camera, Map currentMap)
+		{
+			var atts = currentMap.attachments ?? System.Array.Empty<MapAttachment>();
+			var items = new System.Collections.Generic.List<ListViewItem>();
+			foreach (var att in atts)
+			{
+				items.Add(new ListViewItem(
+					GetAttachmentLabel(att),
+					(x) => Select(new[] { att }, iMapManager, camera),
+					selected: selectedAttachments != null && selectedAttachments.Contains(att)
+				));
+			}
+
+			sidePanel.List.SetItems(items);
+			sidePanel.SetFootnote("Hold RMB on preview to orbit • Scroll to zoom • LMB: place/move • RMB on tile: delete");
+			sidePanel.Draw();
+
+			static string GetAttachmentLabel(MapAttachment att) => att switch
+			{
+				Emitter e => $"Emitter [{att.tile}]" + (e.LookAt.sqrMagnitude > 0.01f && e.LookAt != Vector3.up ? $" → {e.LookAt.magnitude:F1}" : ""),
+				View => $"View [{att.tile}]",
+				Pickup p => $"Pickup [{att.tile}] ({p.amount})",
+				_ => $"{att.TypeName} [{att.tile}]"
+			};
+		}
+
+		private static void DrawSidePanelWaypoint(IMapManager iMapManager, Camera camera, Map currentMap)
+		{
+			Waypoint selectedWaypoint = selectedAttachments?.Length > 0 ? selectedAttachments[0] as Waypoint : null;
+
+			var wpArray = currentMap.waypoints ?? Array.Empty<int>();
+			var items = new List<ListViewItem>();
+
+			var waypointAttachments = iMapManager.waypointAttachments;
+
+			for (int i = 0; i < wpArray.Length; i++)
+			{
+				int tile = wpArray[i];
+				var waypoint = waypointAttachments.FirstOrDefault(w => w.waypointIndex == i);
+
+				items.Add(new ListViewItem(
+					label: $"WP{i:00} [tile {tile}]",
+					onClick: (x) =>
+					{
+						if (waypoint != null)
+							Select(new[] { waypoint }, iMapManager, camera);
+					},
+					selected: selectedWaypoint?.waypointIndex == i
+				));
+			}
+
+			sidePanel.List.SetItems(items);
+
+			// Move Up / Down buttons
+			sidePanel.Buttons.Clear();
+
+			bool canMoveUp = selectedWaypoint != null && selectedWaypoint.waypointIndex > 0;
+			bool canMoveDown = selectedWaypoint != null &&
+							   selectedWaypoint.waypointIndex >= 0 &&
+							   selectedWaypoint.waypointIndex < wpArray.Length - 1;
+
+			sidePanel.Buttons.Add(new ListViewButton("Move Up", () => MoveWaypoint(selectedWaypoint, -1), enabled: canMoveUp));
+			sidePanel.Buttons.Add(new ListViewButton("Move Down", () => MoveWaypoint(selectedWaypoint, +1), enabled: canMoveDown));
+
+			sidePanel.Draw();
+
+			void MoveWaypoint(Waypoint wp, int direction)
+			{
+				if (wp == null) return;
+
+				int oldIndex = wp.waypointIndex;
+				int newIndex = oldIndex + direction;
+				if (newIndex < 0 || newIndex >= currentMap.waypoints.Length) return;
+
+				var list = currentMap.waypoints.ToList();
+				(list[oldIndex], list[newIndex]) = (list[newIndex], list[oldIndex]);
+				currentMap.waypoints = list.ToArray();
+
+				var movedWaypoint = new Waypoint(newIndex, list[newIndex]);
+				Select(new[] { movedWaypoint }, iMapManager, camera);
+
+				RebuildMarkers(iMapManager, EditorMarkerUtil.MarkerType.Waypoint);
+			}
+		}
+
+		// === Replace the existing OnGUI method with this enhanced version ===
+
+		public static void OnGUI(IMapManager iMapManager, Camera camera, EditorMarkerUtil.MarkerType markerType)
 		{
 			ViewPreviewUtil.OnGUI();
 
+			// Draw the appropriate side panel based on mode
+			if (markerType == EditorMarkerUtil.MarkerType.Attachment)
+			{
+				DrawSidePanelAttachment(iMapManager, camera, iMapManager.CurrentMap);
+			}
+			else if (markerType == EditorMarkerUtil.MarkerType.Waypoint)
+			{
+				DrawSidePanelWaypoint(iMapManager, camera, iMapManager.CurrentMap);
+			}
+
+			// Handle pending popups (Add/Delete/Select)
 			if (pendingAction == PendingAction.None) return;
+
 			supressInput = true;
 
-			// Use shared popups
 			switch (pendingAction)
 			{
 				case PendingAction.Add:
