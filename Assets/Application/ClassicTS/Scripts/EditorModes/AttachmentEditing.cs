@@ -9,6 +9,9 @@ namespace ClassicTilestorm
 	{
 		public static MapAttachment[] selectedAttachments = null;
 
+		// Shared across both attachment and waypoint editing modes
+		public static int CurrentPendingTile { get; set; } = -1;
+
 		public static void RebuildMarkers(IMapManager iMapManager, EditorMarkerUtil.MarkerType type = EditorMarkerUtil.MarkerType.Undefined)
 		{
 			if (null == iMapManager?.CurrentMap) return;
@@ -146,10 +149,10 @@ namespace ClassicTilestorm
 			foreach (var att in selectedAttachments)
 			{
 				att.tile = tile;
-				switch (att)
+				switch (att)//this will move to IMapManager when is supports Waypoint classes directly
 				{
 					case Waypoint:
-						mapManager.CurrentMap.waypoints[(att as Waypoint).waypointIndex] = tile; 
+						mapManager.CurrentMap.waypoints[(att as Waypoint).waypointIndex] = tile;
 						break;
 					case Emitter:
 					case Pickup:
@@ -200,6 +203,9 @@ namespace ClassicTilestorm
 
 			switch (selectedAttachments[0])
 			{
+				case Waypoint:
+					AttachmentWaypointEditing.OnSelectionChanged(mapManager, camera);
+					break;
 				case Emitter:
 					AttachmentEmitterEditing.OnSelectionChanged(mapManager, camera);
 					break;
@@ -221,6 +227,9 @@ namespace ClassicTilestorm
 
 			switch (selectedAttachments[0])
 			{
+				case Waypoint:
+					AttachmentWaypointEditing.OnGizmoInput(mapManager, camera);
+					break;
 				case Emitter:
 					AttachmentEmitterEditing.OnGizmoInput(mapManager, camera);
 					break;
@@ -261,6 +270,23 @@ namespace ClassicTilestorm
 					AttachmentPickupEditing.OnDragInput(mapManager);
 					break;
 			}
+		}
+
+		// Shared drag logic
+		public static void HandleDrag(IMapManager mapManager, Camera camera, EditorMarkerUtil.MarkerType type)
+		{
+			var tileUnderMouse = mapManager.CameraHitTile(camera, Input.mousePosition);
+
+			if (tileUnderMouse == -1 ||
+				tileUnderMouse == CurrentPendingTile ||
+				selectedAttachments == null ||
+				selectedAttachments.Length == 0)
+				return;
+
+			CurrentPendingTile = tileUnderMouse;
+			RefreshAttachmentInstances(mapManager, tileUnderMouse);
+			HandleDragInput(mapManager, camera);
+			RebuildMarkers(mapManager, type);
 		}
 	}
 }

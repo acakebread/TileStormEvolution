@@ -41,6 +41,8 @@ namespace ClassicTilestorm
 		bool RemoveAttachment(MapAttachment attachment);
 		void RemoveAllAttachmentsOnTile(int tileIndex);
 
+		MapAttachment[] attachments { get; set; }
+
 		Waypoint[] GetWaypointAttachments();
 
 		Action<IMapManager, bool, Vector3> OnMapEdited { get; set; }
@@ -640,6 +642,7 @@ namespace ClassicTilestorm
 			// Let each type decide its prefab and behavior
 			string prefabName = attachment switch
 			{
+				Waypoint => null,
 				Emitter e => e.variant switch
 				{
 					"flame" => "flame",
@@ -662,6 +665,7 @@ namespace ClassicTilestorm
 
 			Vector3 localPos = attachment switch
 			{
+				Waypoint w => Vector3.zero,
 				Emitter e => e.Position,
 				Pickup => Vector3.up * 0.5f,// floating above ground
 				View v => v.Position,
@@ -670,6 +674,7 @@ namespace ClassicTilestorm
 
 			Quaternion rotation = attachment switch
 			{
+				Waypoint w => Quaternion.identity,
 				Emitter e => e.Rotation,
 				Pickup => Quaternion.identity,
 				View v => v.Rotation,
@@ -752,7 +757,7 @@ namespace ClassicTilestorm
 
 		public Waypoint[] GetWaypointAttachments()
 		{
-			var wp = currentMap?.waypoints;
+			var wp = currentMap.waypoints;
 			if (wp == null || wp.Length == 0) return System.Array.Empty<Waypoint>();
 
 			var result = new Waypoint[wp.Length];
@@ -761,6 +766,64 @@ namespace ClassicTilestorm
 				result[i] = new Waypoint(i, wp[i]);
 			}
 			return result;
+		}
+
+		public MapAttachment[] attachments
+		{
+			get
+			{
+				var real = currentMap.attachments ?? Array.Empty<MapAttachment>();
+
+				var waypointList = new List<MapAttachment>();
+				if (currentMap.waypoints != null)
+				{
+					for (int i = 0; i < currentMap.waypoints.Length; i++)
+					{
+						int tile = currentMap.waypoints[i];
+						if (tile >= 0) waypointList.Add(new Waypoint(i, tile));
+					}
+				}
+				return real.Concat(waypointList).ToArray();
+			}
+			set
+			{
+				if (value == null)
+				{
+					currentMap.attachments = Array.Empty<MapAttachment>();
+					currentMap.waypoints = Array.Empty<int>();
+					return;
+				}
+
+				var realAttachments = new List<MapAttachment>();
+				var waypointMap = new Dictionary<int, int>();
+
+				foreach (var att in value)
+				{
+					if (att is Waypoint wp)
+						waypointMap[wp.waypointIndex] = wp.tile;
+					else if (att != null)
+						realAttachments.Add(att);
+				}
+
+				// Rebuild waypoints
+				if (waypointMap.Count > 0)
+				{
+					int maxIdx = waypointMap.Keys.Max();
+					var waypoints = new int[maxIdx + 1];
+					for (int i = 0; i < waypoints.Length; i++)
+						waypoints[i] = -1;
+
+					foreach (var kvp in waypointMap)
+						if (kvp.Key >= 0 && kvp.Key < waypoints.Length)
+							waypoints[kvp.Key] = kvp.Value;
+
+					currentMap.waypoints = waypoints;
+				}
+				else
+					currentMap.waypoints = Array.Empty<int>();
+
+				currentMap.attachments = realAttachments.ToArray();
+			}
 		}
 
 		/// <summary>

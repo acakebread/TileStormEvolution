@@ -13,8 +13,6 @@ namespace ClassicTilestorm
 		private const float CLICK_THRESHOLD = 8f;
 		private bool supressInput = true;
 
-		private int pendingTile = -1;
-
 		private enum PendingAction { None, Add, Delete }
 		private PendingAction pendingAction = PendingAction.None;
 
@@ -31,7 +29,7 @@ namespace ClassicTilestorm
 		public override void OnEnable()
 		{
 			base.OnEnable();
-			pendingWaypoint = -1; // This will clear shared selection
+			supressInput = true;
 			AttachmentEditing.HideAllGizmos();
 			RebuildMarkers();
 		}
@@ -68,17 +66,16 @@ namespace ClassicTilestorm
 					mouseMovedBeyondThreshold = true;
 			}
 
-			// Mouse Down: select attachments
 			if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1))
 				HandleMouseDown();
 
 			if (Input.GetMouseButton(0))
-				HandleDrag();//drag must come after down - tightly coupled order
+				HandleDrag();
 
-			if (Input.GetMouseButtonUp(0) && !mouseMovedBeyondThreshold)//was click = !mouseMovedBeyondThreshold
+			if (Input.GetMouseButtonUp(0) && !mouseMovedBeyondThreshold)
 				HandleLeftMouseUp();
 
-			if (Input.GetMouseButtonUp(1) && !mouseMovedBeyondThreshold)//was click = !mouseMovedBeyondThreshold
+			if (Input.GetMouseButtonUp(1) && !mouseMovedBeyondThreshold)
 				HandleRightMouseUp();
 		}
 
@@ -101,54 +98,43 @@ namespace ClassicTilestorm
 		private void HandleMouseDown()
 		{
 			var tileUnderMouse = HitTile(Input.mousePosition);
-			// Update pendingWaypoint based on what's under mouse
+			AttachmentEditing.CurrentPendingTile = tileUnderMouse;
+
 			if (currentMap?.waypoints != null && currentMap.waypoints.Contains(tileUnderMouse))
 				pendingWaypoint = Array.IndexOf(currentMap.waypoints, tileUnderMouse);
 			else
 				pendingWaypoint = -1;
 		}
 
-		private void HandleDrag()
-		{
-			var tileUnderMouse = HitTile(Input.mousePosition);
-			if (-1 == tileUnderMouse || pendingTile == tileUnderMouse || null == AttachmentEditing.selectedAttachments || 0 == AttachmentEditing.selectedAttachments.Length)
-				return;
-
-			pendingTile = tileUnderMouse;
-			AttachmentEditing.RefreshAttachmentInstances(iMapManager, tileUnderMouse);
-			AttachmentEditing.HandleDragInput(iMapManager, camera);
-			AttachmentEditing.RebuildMarkers(iMapManager, EditorMarkerUtil.MarkerType.Waypoint);
-		}
+		private void HandleDrag() => AttachmentEditing.HandleDrag(iMapManager, camera, EditorMarkerUtil.MarkerType.Waypoint);
 
 		private void HandleLeftMouseUp()
 		{
 			var tileUnderMouse = HitTile(Input.mousePosition);
-			pendingTile = tileUnderMouse;
+			AttachmentEditing.CurrentPendingTile = tileUnderMouse;
 
-			// Update pendingWaypoint based on what's under mouse
-			if (currentMap?.waypoints != null && currentMap.waypoints.Contains(pendingTile))
-				pendingWaypoint = Array.IndexOf(currentMap.waypoints, pendingTile);
+			if (currentMap?.waypoints != null && currentMap.waypoints.Contains(tileUnderMouse))
+				pendingWaypoint = Array.IndexOf(currentMap.waypoints, tileUnderMouse);
 			else
 				pendingWaypoint = -1;
 
-			if (pendingTile >= 0 && currentMap?.waypoints != null && !currentMap.waypoints.Contains(pendingTile))
+			if (tileUnderMouse >= 0 && currentMap?.waypoints != null && !currentMap.waypoints.Contains(tileUnderMouse))
 				pendingAction = PendingAction.Add;
 		}
 
 		private void HandleRightMouseUp()
 		{
 			var tileUnderMouse = HitTile(Input.mousePosition);
-			pendingTile = tileUnderMouse;
+			AttachmentEditing.CurrentPendingTile = tileUnderMouse;
 
-			// Update pendingWaypoint based on what's under mouse
-			if (currentMap?.waypoints != null && currentMap.waypoints.Contains(pendingTile))
-				pendingWaypoint = Array.IndexOf(currentMap.waypoints, pendingTile);
+			if (currentMap?.waypoints != null && currentMap.waypoints.Contains(tileUnderMouse))
+				pendingWaypoint = Array.IndexOf(currentMap.waypoints, tileUnderMouse);
 			else
 				pendingWaypoint = -1;
 
 			if (pendingWaypoint >= 0 && currentMap?.waypoints != null && pendingWaypoint < currentMap.waypoints.Length)
 			{
-				pendingTile = currentMap.waypoints[pendingWaypoint];
+				AttachmentEditing.CurrentPendingTile = currentMap.waypoints[pendingWaypoint];
 				pendingAction = PendingAction.Delete;
 			}
 		}
@@ -172,10 +158,11 @@ namespace ClassicTilestorm
 			pendingWaypoint = -1;
 		}
 
-		private void MoveWaypoint(int index, int direction)
+		private void MoveWaypoint(Waypoint wp, int direction)
 		{
+			var index = wp.waypointIndex;
 			var list = currentMap.waypoints.ToList();
-			(list[index + direction], list[index]) = (list[index], list[index + direction]);//swap index values
+			(list[index + direction], list[index]) = (list[index], list[index + direction]);
 			currentMap.waypoints = list.ToArray();
 			pendingWaypoint = index + direction;
 		}
@@ -185,9 +172,9 @@ namespace ClassicTilestorm
 			var wasCancelled = true;
 			var items = new List<PopupItem>
 			{
-				new ($"WP{currentMap.waypoints.Length:00} at tile {pendingTile}", null, null, spacerHeight: 0),
+				new ($"WP{currentMap.waypoints.Length:00} at tile {AttachmentEditing.CurrentPendingTile}", null, null, spacerHeight: 0),
 				PopupItem.Spacer(6),
-				new ("Add", () => { AddWaypointAtTile(pendingTile); pendingAction = PendingAction.None; }, colorOverride: Color.cyan),
+				new ("Add", () => { AddWaypointAtTile(AttachmentEditing.CurrentPendingTile); pendingAction = PendingAction.None; }, colorOverride: Color.cyan),
 				PopupItem.Spacer(4),
 				new ("Cancel", () => { }, Color.yellow)
 			};
@@ -202,7 +189,7 @@ namespace ClassicTilestorm
 			var wasCancelled = true;
 			var items = new List<PopupItem>
 			{
-				new ($"WP{pendingWaypoint:00} at tile {pendingTile}", null, null, spacerHeight: 0),
+				new ($"WP{pendingWaypoint:00} at tile {AttachmentEditing.CurrentPendingTile}", null, null, spacerHeight: 0),
 				PopupItem.Spacer(6),
 				new ("Delete", () => {DeleteWaypoint(pendingWaypoint); pendingAction = PendingAction.None;}, colorOverride: Color.red),
 				PopupItem.Spacer(4),
@@ -220,26 +207,21 @@ namespace ClassicTilestorm
 			var items = new List<ListViewItem>();
 
 			for (int i = 0; i < wp.Length; i++)
-			{
-				items.Add(new ListViewItem(
-					label: $"WP{i:00} [{wp[i]}]",
-					onClick: (x) => pendingWaypoint = x, // Uses setter → creates proxy
-					selected: i == pendingWaypoint)); // Uses getter
-			}
+				items.Add(new ListViewItem(label: $"WP{i:00} [{wp[i]}]", onClick: (x) => pendingWaypoint = x, selected: i == selectedWaypoint?.waypointIndex));
 
 			sidePanel.List.SetItems(items);
 
 			sidePanel.Buttons.Clear();
-			sidePanel.Buttons.Add(new ListViewButton("Move Up", () => MoveWaypoint(pendingWaypoint, -1), enabled: pendingWaypoint > 0));
-			sidePanel.Buttons.Add(new ListViewButton("Move Down", () => MoveWaypoint(pendingWaypoint, +1), enabled: pendingWaypoint >= 0 && pendingWaypoint < wp.Length - 1));
-
+			sidePanel.Buttons.Add(new ListViewButton("Move Up", () => MoveWaypoint(selectedWaypoint, -1), enabled: selectedWaypoint?.waypointIndex > 0));
+			sidePanel.Buttons.Add(new ListViewButton("Move Down", () => MoveWaypoint(selectedWaypoint, +1), enabled: selectedWaypoint?.waypointIndex >= 0 && selectedWaypoint?.waypointIndex < wp.Length - 1));
 			sidePanel.Draw();
 		}
 
-		// ===================================================================
-		// pendingWaypoint is now a PROPERTY — no backing field
-		// It transparently converts to/from WaypointAttachment.waypointIndex
-		// ===================================================================
+		private Waypoint selectedWaypoint
+		{
+			get => null != AttachmentEditing.selectedAttachments && AttachmentEditing.selectedAttachments.Length > 0 ? AttachmentEditing.selectedAttachments[0] as Waypoint : null;
+		}
+
 		private int pendingWaypoint
 		{
 			get
@@ -251,14 +233,7 @@ namespace ClassicTilestorm
 			}
 			set
 			{
-				if (value < 0)
-				{
-					AttachmentEditing.Select(null, iMapManager, camera);
-					RebuildMarkers();
-					return;
-				}
-
-				if (currentMap?.waypoints == null || value >= currentMap.waypoints.Length)
+				if (value < 0 || currentMap?.waypoints == null || value >= currentMap.waypoints.Length)
 				{
 					AttachmentEditing.Select(null, iMapManager, camera);
 					RebuildMarkers();
@@ -269,20 +244,6 @@ namespace ClassicTilestorm
 				AttachmentEditing.Select(new[] { att }, iMapManager, camera);
 				RebuildMarkers();
 			}
-		}
-
-		private MapAttachment[] GetAttachmentsOnTile(int tileIndex)
-		{
-			if (currentMap?.waypoints == null || !currentMap.IsValidTile(tileIndex))
-				return null;
-
-			var waypointsOnTile = currentMap.waypoints
-				.Select((tile, index) => new { tile, index })
-				.Where(x => x.tile == tileIndex)
-				.Select(x => new Waypoint(x.index, tileIndex))
-				.ToArray();
-
-			return waypointsOnTile.Length > 0 ? waypointsOnTile : null;
 		}
 	}
 }
