@@ -43,8 +43,8 @@ namespace ClassicTilestorm
 		{
 			base.OnDisable();
 			AttachmentEditing.selectedAttachments = null;
-			pendingAction = PendingAction.None;
 			AttachmentEditing.HideAllGizmos();
+			pendingAction = PendingAction.None;
 		}
 
 		public override void Update()

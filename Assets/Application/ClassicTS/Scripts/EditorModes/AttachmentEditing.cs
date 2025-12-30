@@ -14,15 +14,10 @@ namespace ClassicTilestorm
 
 		public static void RebuildMarkers(IMapManager iMapManager, EditorMarkerUtil.MarkerType type = EditorMarkerUtil.MarkerType.Undefined)
 		{
-			if (null == iMapManager?.CurrentMap) return;
+			if (null == iMapManager) return;
 			// Determine selected tile from current selection
 			var selectedTile = (selectedAttachments != null && selectedAttachments.Length > 0) ? selectedAttachments[0].tile : -1;
-			var tiles = type switch
-			{
-				EditorMarkerUtil.MarkerType.Waypoint => iMapManager?.CurrentMap.waypoints,
-				EditorMarkerUtil.MarkerType.Attachment => iMapManager?.CurrentMap.attachments?.Where(a => a.tile >= 0).Select(a => a.tile).Distinct().ToArray() ?? System.Array.Empty<int>(),
-				_ => null
-			};
+			var tiles = iMapManager?.attachments?.Where(a => a.tile >= 0).Select(a => a.tile).Distinct().ToArray() ?? System.Array.Empty<int>();
 			var selection = System.Array.IndexOf(tiles, selectedTile);
 			UpdateMapMarkers(iMapManager, tiles, selection, type);
 		}
@@ -149,17 +144,7 @@ namespace ClassicTilestorm
 			foreach (var att in selectedAttachments)
 			{
 				att.tile = tile;
-				switch (att)//this will move to IMapManager when is supports Waypoint classes directly
-				{
-					case Waypoint:
-						mapManager.CurrentMap.waypoints[(att as Waypoint).waypointIndex] = tile;
-						break;
-					case Emitter:
-					case Pickup:
-					case View:
-						mapManager.RefreshAttachmentInstance(att);
-						break;
-				};
+				mapManager.RefreshAttachmentInstance(att);
 			}
 		}
 

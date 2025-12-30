@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using MassiveHadronLtd;
+using UnityEngine.Rendering;
 
 namespace ClassicTilestorm
 {
@@ -639,6 +640,9 @@ namespace ClassicTilestorm
 		{
 			if (attachment == null) return;
 
+			if (attachment is Waypoint wp)
+				CurrentMap.waypoints[wp.waypointIndex] = wp.tile;
+
 			// Let each type decide its prefab and behavior
 			string prefabName = attachment switch
 			{
@@ -731,14 +735,50 @@ namespace ClassicTilestorm
 
 		public void AddAttachment(MapAttachment attachment)
 		{
-			currentMap.AddAttachment(attachment);
+			if (attachment is Waypoint waypoint)
+			{
+				// Rebuild waypoints
+				var waypoints = new int[currentMap.waypoints.Length + 1];
+				foreach (var att in attachments)
+				{
+					if (att is Waypoint wp)
+						waypoints[wp.waypointIndex] = wp.tile;
+				}
+				waypoints[waypoint.waypointIndex] = waypoint.tile;
+				currentMap.waypoints = waypoints;
+			}
+			else
+				currentMap.AddAttachment(attachment);
 			RefreshAttachmentInstance(attachment);
 			OnMapEdited?.Invoke(this, false, Vector3.zero);
 		}
 
 		public bool RemoveAttachment(MapAttachment attachment)
 		{
-			var result = currentMap.RemoveAttachment(attachment);
+			var result = false;
+
+			if (attachment is Waypoint waypoint)
+			{
+				// Shift indices down
+				foreach (var att in attachments)
+				{
+					if (att is Waypoint wp && wp.waypointIndex > waypoint.waypointIndex)
+						wp.waypointIndex--;
+				}
+
+				// Instead of trying to remove by reference, rebuild the waypoint array without this index
+				var newWaypoints = new List<int>();
+				foreach (var att in attachments)
+				{
+					if (att is Waypoint wp && wp.waypointIndex != waypoint.waypointIndex)
+						newWaypoints.Add(wp.tile);
+				}
+
+				currentMap.waypoints = newWaypoints.ToArray();
+			}
+			else
+				result = currentMap.RemoveAttachment(attachment); 
+
 			DestroyAttachmentInstance(attachment);
 			OnMapEdited?.Invoke(this, false, Vector3.zero);
 			return result;
@@ -758,13 +798,11 @@ namespace ClassicTilestorm
 		public Waypoint[] GetWaypointAttachments()
 		{
 			var wp = currentMap.waypoints;
-			if (wp == null || wp.Length == 0) return System.Array.Empty<Waypoint>();
+			if (wp == null || wp.Length == 0) return Array.Empty<Waypoint>();
 
 			var result = new Waypoint[wp.Length];
 			for (int i = 0; i < wp.Length; i++)
-			{
 				result[i] = new Waypoint(i, wp[i]);
-			}
 			return result;
 		}
 
@@ -794,30 +832,52 @@ namespace ClassicTilestorm
 					return;
 				}
 
+				//var realAttachments = new List<MapAttachment>();
+				//var waypointMap = new Dictionary<int, int>();
+
+				//foreach (var att in value)
+				//{
+				//	if (att is Waypoint wp)
+				//		waypointMap[wp.waypointIndex] = wp.tile;
+				//	else if (att != null)
+				//		realAttachments.Add(att);
+				//}
+
+				//// Rebuild waypoints
+				//if (waypointMap.Count > 0)
+				//{
+				//	int maxIdx = waypointMap.Keys.Max();
+				//	var waypoints = new int[maxIdx + 1];
+				//	for (int i = 0; i < waypoints.Length; i++)
+				//		waypoints[i] = -1;
+
+				//	foreach (var kvp in waypointMap)
+				//		if (kvp.Key >= 0 && kvp.Key < waypoints.Length)
+				//			waypoints[kvp.Key] = kvp.Value;
+
+				//	currentMap.waypoints = waypoints;
+				//}
+				//else
+				//	currentMap.waypoints = Array.Empty<int>();
+
+
+				var waypoints = new List<int>();
 				var realAttachments = new List<MapAttachment>();
-				var waypointMap = new Dictionary<int, int>();
 
 				foreach (var att in value)
 				{
 					if (att is Waypoint wp)
-						waypointMap[wp.waypointIndex] = wp.tile;
+						waypoints.Add(wp.tile);
 					else if (att != null)
 						realAttachments.Add(att);
 				}
 
 				// Rebuild waypoints
-				if (waypointMap.Count > 0)
+				if (waypoints.Count > 0)
 				{
-					int maxIdx = waypointMap.Keys.Max();
-					var waypoints = new int[maxIdx + 1];
-					for (int i = 0; i < waypoints.Length; i++)
-						waypoints[i] = -1;
-
-					foreach (var kvp in waypointMap)
-						if (kvp.Key >= 0 && kvp.Key < waypoints.Length)
-							waypoints[kvp.Key] = kvp.Value;
-
-					currentMap.waypoints = waypoints;
+					currentMap.waypoints = new int[waypoints.Count];
+					for (int i = 0; i < waypoints.Count; i++)
+						currentMap.waypoints[i] = waypoints[i];
 				}
 				else
 					currentMap.waypoints = Array.Empty<int>();

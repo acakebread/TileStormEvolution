@@ -11,7 +11,10 @@ namespace ClassicTilestorm
 		public static Waypoint CreateWaypoint(IMapManager mapManager, int tile)
 		{
 			if (null == mapManager) return null;
-			return null;
+			var index = null != mapManager.CurrentMap.waypoints ? mapManager.CurrentMap.waypoints.Length : 0;
+			var waypoint = new Waypoint(index, tile);
+			mapManager.AddAttachment(waypoint);
+			return waypoint;
 		}
 	}
 }
