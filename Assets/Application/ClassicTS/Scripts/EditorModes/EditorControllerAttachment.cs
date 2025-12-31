@@ -417,7 +417,6 @@ namespace ClassicTilestorm
 		// ===================================================================
 		private bool DrawAddPopup()
 		{
-			var wasCancelled = true;
 			var items = new List<PopupItem>
 			{
 				new($"Waypoint [WP{currentMap.waypoints.Length:00}]", () => {WaypointAttachmentHandler.Create(iMapManager, pendingTile); pendingAction = PendingAction.None; }, colorOverride: Color.lightSteelBlue),
@@ -430,7 +429,7 @@ namespace ClassicTilestorm
 			};
 
 			var result = PopupMenu.Show(mouseDownPos, $"Add Attachment at tile {pendingTile}", items);
-			if (!result && wasCancelled)
+			if (!result)
 				Select();
 			return result;
 		}
@@ -440,7 +439,6 @@ namespace ClassicTilestorm
 			var attsOnTile = GetAttachmentsOnTile(pendingTile);
 			if (0 == attsOnTile.Length) return false;
 
-			var wasCancelled = true;
 			var items = new List<PopupItem>();
 
 			foreach (var att in attsOnTile)
@@ -460,7 +458,7 @@ namespace ClassicTilestorm
 			items.Add(new PopupItem("Cancel", () => { }, colorOverride: Color.yellow));
 
 			var result = PopupMenu.Show(mouseDownPos, "Delete Attachment" + (attsOnTile.Length > 1 ? "(s)" : ""), items);
-			if (!result && wasCancelled)
+			if (!result)
 				Select();
 			return result;
 		}
