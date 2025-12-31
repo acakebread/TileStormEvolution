@@ -52,6 +52,8 @@ namespace MassiveHadronLtd
 		{
 			public static bool Show(Vector2 screenPos, string title, List<PopupItem> items)
 			{
+				MarkGuiActive();
+
 				screenPos.y = Screen.height - screenPos.y;//invert screen coords for GUI
 
 				const float WIDTH = 260f;

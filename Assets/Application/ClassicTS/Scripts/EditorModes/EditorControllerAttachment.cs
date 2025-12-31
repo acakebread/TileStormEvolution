@@ -24,7 +24,6 @@ namespace ClassicTilestorm
 		private bool mouseMovedBeyondThreshold;
 		private const float CLICK_THRESHOLD = 8f;
 		private bool rmbDownInPreview = false;
-		private bool supressInput = true;
 
 		// ===================================================================
 		// Current mode - used for panel and marker styling
@@ -86,28 +85,22 @@ namespace ClassicTilestorm
 			{
 				EditorCameraMovement.UpdateCamera(ViewPreviewUtil.PreviewCamera.transform);
 				ViewAttachmentHandler.HandlePreviewCameraSync(iMapManager, camera, selection);
-				supressInput = true;
 				return;
 			}
 
 			ViewPreviewUtil.Update();
 
-			if (IsMouseOverGUI() || IsGuiControlActive())
-			{
-				supressInput = true;
-				return;
-			}
+			if (IsMouseOverGUI() || IsGuiControlActive()) return;
 
 			if (EditorTransformUtil.HandleTransformGizmoInput(camera))
 			{
 				HandleGizmoInput();
-				supressInput = true;
+				return;
 			}
 
-			if (supressInput)
+			if (WasGuiActiveLastFrame)
 			{
-				supressInput = false;
-				return;
+				return; // Skip input this frame — GUI consumed it last frame
 			}
 
 			if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1))
@@ -149,7 +142,6 @@ namespace ClassicTilestorm
 				DrawSidePanelAttachment(); // includes Undefined and Attachment
 
 			if (pendingAction == PendingAction.None) return;
-			supressInput = true;
 
 			switch (pendingAction)
 			{
@@ -301,7 +293,6 @@ namespace ClassicTilestorm
 		// ===================================================================
 		private void ResetInputState()
 		{
-			supressInput = true;
 			rmbDownInPreview = false;
 			currentMode = Mode.Undefined;
 			selection = null;

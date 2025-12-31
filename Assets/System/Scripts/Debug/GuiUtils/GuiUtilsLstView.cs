@@ -154,6 +154,9 @@ namespace MassiveHadronLtd
 			{
 				Update();
 
+				if (IsMouseOver)
+					MarkGuiActive();
+
 				Rect panel = GetPanelRect();
 				GUI.Box(panel, GUIContent.none);
 

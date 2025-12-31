@@ -10,6 +10,33 @@ namespace MassiveHadronLtd
 			return pos.x >= 0 && pos.y >= 0 && pos.x < Screen.width && pos.y < Screen.height;
 		}
 
+		// Was any GuiUtils GUI active during the PREVIOUS OnGUI frame?
+		private static bool _wasGuiActivePreviousFrame = false;
+		public static bool WasGuiActiveLastFrame => _wasGuiActivePreviousFrame;
+
+		// Is GuiUtils GUI active during the CURRENT OnGUI frame?
+		private static bool _isGuiActiveThisFrame = false;
+
+		/// <summary>
+		/// Call ONCE at the very start of your top-level OnGUI method
+		/// </summary>
+		public static void BeginOnGUIFrame()
+		{
+			_wasGuiActivePreviousFrame = _isGuiActiveThisFrame;
+			_isGuiActiveThisFrame = false;
+		}
+
+		/// <summary>
+		/// Call whenever a GuiUtils element is hovered, clicked, or otherwise consumes input
+		/// </summary>
+		public static void MarkGuiActive()
+		{
+			_isGuiActiveThisFrame = true;
+			// Optional: also track native hotControl changes
+			if (GUIUtility.hotControl != 0)
+				_isGuiActiveThisFrame = true;
+		}
+
 		private static Texture2D MakeTex(int w, int h, Color col)
 		{
 			Color[] pix = new Color[w * h];
@@ -18,6 +45,33 @@ namespace MassiveHadronLtd
 			tex.SetPixels(pix);
 			tex.Apply();
 			return tex;
+		}
+
+		private class FrameManager : MonoBehaviour
+		{
+			private void Awake()
+			{
+				hideFlags = HideFlags.HideAndDontSave;
+				DontDestroyOnLoad(gameObject);
+				gameObject.name = "_GuiUtils_FrameManager";
+			}
+
+			// Runs AFTER all regular Update() calls
+			private void LateUpdate()
+			{
+				_wasGuiActivePreviousFrame = _isGuiActiveThisFrame;
+				_isGuiActiveThisFrame = false;
+			}
+		}
+
+		// Static constructor: creates the manager automatically on first access
+		static GuiUtils()
+		{
+			// Create hidden GameObject that lives forever and runs Update()
+			var go = new GameObject("_GuiUtils_Internal");
+			go.hideFlags = HideFlags.HideAndDontSave;
+			Object.DontDestroyOnLoad(go);
+			go.AddComponent<FrameManager>();
 		}
 	}
 }
