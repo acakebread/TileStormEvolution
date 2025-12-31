@@ -1,28 +1,28 @@
-﻿using UnityEngine;
-using System.Linq;
+﻿using System.Linq;
+using UnityEngine;
 
 namespace ClassicTilestorm
 {
-	public static class AttachmentViewEditing
+	internal class ViewAttachmentHandler : IEditorAttachmentHandler
 	{
-		public static void OnSelectionChanged(IMapManager mapManager, Camera camera, MapAttachment[] selection)
-		{
-			var view = (View)selection![0];
+		public static readonly ViewAttachmentHandler Instance = new();
 
+		public void OnSelectionChanged(IMapManager mapManager, Camera camera, MapAttachment[] selection)
+		{
+			var view = (View)selection[0];
 			var worldPos = MapManager.WorldPosition(view.tile, view.Position);
 			EditorTransformUtil.ShowAt(worldPos, view.Rotation, camera);
-			OnDragInput(mapManager, selection); // reuse
+			OnDragInput(mapManager, selection);
 		}
 
-		public static void OnGizmoInput(IMapManager mapManager, Camera camera, MapAttachment[] selection)
+		public void OnGizmoInput(IMapManager mapManager, Camera camera, MapAttachment[] selection)
 		{
-			var view = (View)selection![0];
+			var view = (View)selection[0];
 
 			if (EditorTransformUtil.HandleInput(camera, out Vector3 newWorldPos, out Quaternion newWorldRot))
 			{
 				view.Position = MapManager.LocalPosition(view.tile, newWorldPos);
 				view.Rotation = MapManager.LocalRotation(view.tile, newWorldRot);
-
 				SnapViewDistanceToGround(view);
 
 				var previewTransform = ViewPreviewUtil.PreviewCameraTransform;
@@ -37,16 +37,16 @@ namespace ClassicTilestorm
 			}
 		}
 
-		public static void OnDragInput(IMapManager mapManager, MapAttachment[] selection)
+		public void OnDragInput(IMapManager mapManager, MapAttachment[] selection)
 		{
-			var view = (View)selection![0];
+			var view = (View)selection[0];
 			ViewPreviewUtil.Show(view, mapManager);
 			UpdateViewFrustumMarker(view);
 		}
 
 		public static View Create(IMapManager mapManager, int tile)
 		{
-			if (null == mapManager) return null;
+			if (mapManager == null) return null;
 
 			var view = new View
 			{
@@ -55,22 +55,19 @@ namespace ClassicTilestorm
 				LookAt = (Vector3.forward + Vector3.down) * 4f
 			};
 
-			SnapViewDistanceToGround(view); // unchanged, uses static MapManager
+			SnapViewDistanceToGround(view);
 			mapManager.AddAttachment(view);
 			return view;
 		}
 
 		public static void HandlePreviewCameraSync(IMapManager mapManager, Camera camera, MapAttachment[] selection)
 		{
-			if (selection?.FirstOrDefault() is not View view)
-				return;
-
+			if (selection?.FirstOrDefault() is not View view) return;
 			var previewTransform = ViewPreviewUtil.PreviewCameraTransform;
 			if (previewTransform == null) return;
 
 			view.Position = MapManager.LocalPosition(view.tile, previewTransform.position);
 			view.Rotation = MapManager.LocalRotation(view.tile, previewTransform.rotation);
-
 			SnapViewDistanceToGround(view);
 
 			previewTransform.position = MapManager.WorldPosition(view.tile, view.Position);
@@ -83,8 +80,7 @@ namespace ClassicTilestorm
 
 		private static void SnapViewDistanceToGround(View view)
 		{
-			if (null == view) return;
-
+			if (view == null) return;
 			var origin = MapManager.WorldPosition(view.tile, view.Position);
 			var forward = view.Rotation * Vector3.forward;
 			var ray = new Ray(origin, forward);
@@ -104,24 +100,21 @@ namespace ClassicTilestorm
 
 		private static void UpdateViewFrustumMarker(View view)
 		{
-			if (null == view || null == view.data || view.data.Length < 7 || view.Distance < 0.02f)
+			if (view == null || view.data == null || view.data.Length < 7 || view.Distance < 0.02f)
 			{
 				EditorFrustumUtil.Hide();
 				return;
 			}
 
 			Vector3 worldPos = MapManager.WorldPosition(view.tile, view.Position);
-
 			Vector3 forward = (view.LookAt - view.Position).normalized;
 			if (forward.sqrMagnitude < 0.001f) forward = Vector3.forward;
 
 			Quaternion rot = view.Rotation;
 			Vector3 up = Vector3.ProjectOnPlane(rot * Vector3.up, forward);
-			if (up.sqrMagnitude < 0.01f) up = Vector3.up;
-			else up = up.normalized;
+			up = up.sqrMagnitude < 0.01f ? Vector3.up : up.normalized;
 
 			Quaternion targetRotation = Quaternion.LookRotation(forward, up);
-
 			EditorFrustumUtil.UpdateFrustum(worldPos, targetRotation, view.Distance, view.FOV);
 		}
 	}

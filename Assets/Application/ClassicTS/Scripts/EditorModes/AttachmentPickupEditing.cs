@@ -1,13 +1,8 @@
-using UnityEngine;
-
 namespace ClassicTilestorm
 {
-	public static class AttachmentPickupEditing
+	internal class PickupAttachmentHandler : IEditorAttachmentHandler
 	{
-		// Pickup currently has no special gizmo/drag/selection visuals
-		public static void OnSelectionChanged(IMapManager mapManager, Camera camera, MapAttachment[] selection) { }
-		public static void OnGizmoInput(IMapManager mapManager, Camera camera, MapAttachment[] selection) { }
-		public static void OnDragInput(IMapManager mapManager, MapAttachment[] selection) { }
+		public static readonly PickupAttachmentHandler Instance = new();
 
 		public static Pickup Create(IMapManager mapManager, int tile)
 		{
