@@ -180,7 +180,7 @@ namespace ClassicTilestorm
 				if (!alreadySelected) Select(GetAttachmentsOnTile(pendingTile));
 				return;
 			}
-			Select(null);
+			Select();
 		}
 
 		private void HandleLeftMouseUp()
@@ -214,7 +214,7 @@ namespace ClassicTilestorm
 				pendingAction = PendingAction.Delete;
 				return;
 			}
-			Select(null);
+			Select();
 		}
 
 		private void HandleDrag()
@@ -249,7 +249,10 @@ namespace ClassicTilestorm
 		// ===================================================================
 		// Selection & Gizmos
 		// ===================================================================
-		private void Select(MapAttachment[] attachments)
+
+		private void Select(MapAttachment attachment) => Select(attachment == null ? null : new[] { attachment });
+
+		private void Select(MapAttachment[] attachments = null)
 		{
 			selection = attachments?.Length > 0 ? attachments : null;
 
@@ -357,7 +360,7 @@ namespace ClassicTilestorm
 			var items = new List<ListViewItem>();
 
 			foreach (var att in atts)
-				items.Add(new(GetAttachmentLabel(att), (_) => Select(new[] { att }), selected: null != selection && selection.Contains(att)));
+				items.Add(new(GetAttachmentLabel(att), (_) => Select(att), selected: null != selection && selection.Contains(att)));
 
 			sidePanel.List.SetItems(items);
 			sidePanel.SetFootnote("Hold RMB on preview to orbit • Scroll to zoom • LMB: place/move • RMB on tile: delete");
@@ -384,7 +387,7 @@ namespace ClassicTilestorm
 				var waypoint = waypointAttachments.FirstOrDefault(w => w.waypointIndex == i);
 				items.Add(new(label: $"WP{i:00} [tile {waypointAttachments[i].tile}]", onClick: (_) =>
 				{
-					if (null != waypoint) Select(new[] { waypoint });
+					if (null != waypoint) Select(waypoint);
 				}, selected: selectedWaypoint?.waypointIndex == i));
 			}
 
@@ -413,31 +416,31 @@ namespace ClassicTilestorm
 				currentMap.waypoints = list.ToArray();
 
 				var movedWaypoint = new Waypoint(newIndex, list[newIndex]);
-				Select(new[] { movedWaypoint });
+				Select(movedWaypoint);
 				RebuildMarkers();
 			}
 		}
 
 		// ===================================================================
-		// Popups (unchanged — wasCancelled pattern preserved)
+		// Popups
 		// ===================================================================
 		private bool DrawAddPopup()
 		{
 			var wasCancelled = true;
 			var items = new List<PopupItem>
 			{
-				new($"Waypoint [WP{currentMap.waypoints.Length:00}]", () => { WaypointAttachmentHandler.Create(iMapManager, pendingTile); pendingAction = PendingAction.None; }, colorOverride: Color.lightSteelBlue),
-				new("Emitter [flame]", () => Select(new[] { EmitterAttachmentHandler.Create(iMapManager, pendingTile, "flame") }), colorOverride: Color.cyan),
-				new("Emitter [spark]", () => Select(new[] { EmitterAttachmentHandler.Create(iMapManager, pendingTile, "spark") }), colorOverride: Color.cyan),
-				new("View", () => Select(new[] { ViewAttachmentHandler.Create(iMapManager, pendingTile) }), colorOverride: Color.cyan),
-				new("Pickup", () => Select(new[] { PickupAttachmentHandler.Create(iMapManager, pendingTile) }), colorOverride: Color.cyan),
+				new($"Waypoint [WP{currentMap.waypoints.Length:00}]", () => {WaypointAttachmentHandler.Create(iMapManager, pendingTile); pendingAction = PendingAction.None; }, colorOverride: Color.lightSteelBlue),
+				new("Emitter [flame]", () => Select(EmitterAttachmentHandler.Create(iMapManager, pendingTile, "flame")), colorOverride: Color.cyan),
+				new("Emitter [spark]", () => Select(EmitterAttachmentHandler.Create(iMapManager, pendingTile, "spark")), colorOverride: Color.cyan),
+				new("View", () => Select(ViewAttachmentHandler.Create(iMapManager, pendingTile)), colorOverride: Color.cyan),
+				new("Pickup", () => Select(PickupAttachmentHandler.Create(iMapManager, pendingTile)), colorOverride: Color.cyan),
 				PopupItem.Spacer(),
 				new("Cancel", () => {}, colorOverride: Color.yellow)
 			};
 
 			var result = PopupMenu.Show(mouseDownPos, $"Add Attachment at tile {pendingTile}", items);
 			if (!result && wasCancelled)
-				Select(null);
+				Select();
 			return result;
 		}
 
@@ -453,13 +456,13 @@ namespace ClassicTilestorm
 			{
 				var localAtt = att;
 				string label = att is Waypoint wp ? $"Delete WP{wp.waypointIndex:00} [{pendingTile}]" : $"Delete {att.GetType().Name} [{pendingTile}]";
-				items.Add(new PopupItem(label, () => { iMapManager.RemoveAttachment(localAtt); Select(null); }, colorOverride: Color.softRed));
+				items.Add(new PopupItem(label, () => { iMapManager.RemoveAttachment(localAtt); Select(); }, colorOverride: Color.softRed));
 			}
 
 			if (attsOnTile.Length > 1)
 			{
 				items.Add(PopupItem.Spacer());
-				items.Add(new PopupItem("Delete All", () => { iMapManager.RemoveAttachments(attsOnTile); Select(null); }, colorOverride: Color.red));
+				items.Add(new PopupItem("Delete All", () => { iMapManager.RemoveAttachments(attsOnTile); Select(); }, colorOverride: Color.red));
 			}
 
 			items.Add(PopupItem.Spacer());
@@ -467,7 +470,7 @@ namespace ClassicTilestorm
 
 			var result = PopupMenu.Show(mouseDownPos, "Delete Attachment" + (attsOnTile.Length > 1 ? "(s)" : ""), items);
 			if (!result && wasCancelled)
-				Select(null);
+				Select();
 			return result;
 		}
 
@@ -486,7 +489,7 @@ namespace ClassicTilestorm
 					label += $" to {e.LookAt.magnitude:F1}";
 				label += $" [tile {att.tile}]";
 
-				items.Add(new (label, () => { wasCancelled = false; Select(new[] { att }); }));
+				items.Add(new (label, () => { wasCancelled = false; Select(att); }));
 			}
 
 			if (atts.Length > 1)
@@ -500,7 +503,7 @@ namespace ClassicTilestorm
 
 			var result = PopupMenu.Show(mouseDownPos, $"Select ({atts.Length})", items);
 			if (!result && wasCancelled)
-				Select(null);
+				Select();
 			return result;
 		}
 	}
