@@ -429,8 +429,7 @@ namespace ClassicTilestorm
 			};
 
 			var result = PopupMenu.Show(mouseDownPos, $"Add Attachment at tile {pendingTile}", items);
-			if (!result)
-				Select();
+			if (!result) Select();
 			return result;
 		}
 
@@ -445,21 +444,20 @@ namespace ClassicTilestorm
 			{
 				var localAtt = att;
 				string label = att is Waypoint wp ? $"Delete WP{wp.waypointIndex:00} [{pendingTile}]" : $"Delete {att.GetType().Name} [{pendingTile}]";
-				items.Add(new PopupItem(label, () => { iMapManager.RemoveAttachment(localAtt); Select(); }, colorOverride: Color.softRed));
+				items.Add(new PopupItem(label, () => iMapManager.RemoveAttachment(localAtt), colorOverride: Color.softRed));
 			}
 
 			if (attsOnTile.Length > 1)
 			{
 				items.Add(PopupItem.Spacer());
-				items.Add(new PopupItem("Delete All", () => { iMapManager.RemoveAttachments(attsOnTile); Select(); }, colorOverride: Color.red));
+				items.Add(new PopupItem("Delete All", () => iMapManager.RemoveAttachments(attsOnTile), colorOverride: Color.red));
 			}
 
 			items.Add(PopupItem.Spacer());
 			items.Add(new PopupItem("Cancel", () => { }, colorOverride: Color.yellow));
 
 			var result = PopupMenu.Show(mouseDownPos, "Delete Attachment" + (attsOnTile.Length > 1 ? "(s)" : ""), items);
-			if (!result)
-				Select();
+			if (!result) Select();
 			return result;
 		}
 
@@ -491,8 +489,7 @@ namespace ClassicTilestorm
 			items.Add(new PopupItem("Cancel", () => { }, colorOverride: Color.yellow));
 
 			var result = PopupMenu.Show(mouseDownPos, $"Select ({atts.Length})", items);
-			if (!result && wasCancelled)
-				Select();
+			if (!result && wasCancelled) Select();
 			return result;
 		}
 	}
