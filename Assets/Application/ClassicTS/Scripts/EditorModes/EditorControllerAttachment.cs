@@ -94,7 +94,7 @@ namespace ClassicTilestorm
 
 			if (IsMouseOverGUI() || IsGuiControlActive())
 			{
-				supressInput = false;
+				supressInput = true;
 				return;
 			}
 
@@ -174,7 +174,7 @@ namespace ClassicTilestorm
 		{
 			pendingTile = iMapManager.CameraHitTile(camera, Input.mousePosition);
 
-			if (pendingTile != -1)
+			if (-1 != pendingTile)
 			{
 				var alreadySelected = selection?.Length > 0 && selection[0].tile == pendingTile;
 				if (!alreadySelected) Select(GetAttachmentsOnTile(pendingTile));
@@ -187,9 +187,9 @@ namespace ClassicTilestorm
 		{
 			var attachmentsOnTile = GetAttachmentsOnTile(pendingTile);
 
-			if (attachmentsOnTile == null || attachmentsOnTile.Length == 0)
+			if (null == attachmentsOnTile || 0 == attachmentsOnTile.Length)
 			{
-				if (pendingTile != -1)
+				if (-1 != pendingTile)
 					pendingAction = PendingAction.Add;
 			}
 			else if (attachmentsOnTile.Length > 1)
@@ -219,16 +219,12 @@ namespace ClassicTilestorm
 
 		private void HandleDrag()
 		{
-			var tileUnderMouse = iMapManager.CameraHitTile(camera, Input.mousePosition);
-
-			if (tileUnderMouse == -1 ||
-				tileUnderMouse == pendingTile ||
-				selection == null ||
-				selection.Length == 0)
+			var tile = iMapManager.CameraHitTile(camera, Input.mousePosition);
+			if (tile == pendingTile || tile == -1 || selection == null || selection.Length == 0)
 				return;
 
-			pendingTile = tileUnderMouse;
-			RefreshAttachmentInstances(tileUnderMouse);
+			pendingTile = tile;
+			RefreshAttachmentInstances(tile);
 			HandleDragInput();
 			RebuildMarkers();
 		}
@@ -456,7 +452,7 @@ namespace ClassicTilestorm
 		private bool DrawDeletePopup()
 		{
 			var attsOnTile = GetAttachmentsOnTile(pendingTile);
-			if (attsOnTile.Length == 0) return false;
+			if (0 == attsOnTile.Length) return false;
 
 			var wasCancelled = true;
 			var items = new List<PopupItem>();
@@ -471,42 +467,7 @@ namespace ClassicTilestorm
 			if (attsOnTile.Length > 1)
 			{
 				items.Add(PopupItem.Spacer());
-				items.Add(new PopupItem("Delete All", () =>
-				{
-					// 1. Remove all regular attachments on the tile
-					iMapManager.RemoveAllAttachmentsOnTile(pendingTile);
-
-					// 2. Remove all waypoints that point to this tile
-					var waypointsToRemove = new List<int>();
-					for (int i = 0; i < currentMap.waypoints.Length; i++)
-					{
-						if (currentMap.waypoints[i] == pendingTile)
-							waypointsToRemove.Add(i);
-					}
-
-					// Remove from highest index to lowest to avoid index shifting issues
-					foreach (int index in waypointsToRemove.OrderByDescending(i => i))
-					{
-						var list = currentMap.waypoints.ToList();
-						list.RemoveAt(index);
-						currentMap.waypoints = list.ToArray();
-
-						// Also remove the virtual waypoint attachment
-						var waypointAtt = iMapManager.waypointAttachments.FirstOrDefault(w => w.waypointIndex == index);
-						if (waypointAtt != null)
-							iMapManager.RemoveAttachment(waypointAtt);
-
-						// Re-index remaining waypoints (higher indices shift down)
-						foreach (var wp in iMapManager.waypointAttachments)
-						{
-							if (wp.waypointIndex > index)
-								wp.waypointIndex--;
-						}
-					}
-					
-					Select(null);
-					RebuildMarkers();
-				}, colorOverride: Color.red));
+				items.Add(new PopupItem("Delete All", () => { iMapManager.RemoveAttachments(attsOnTile); Select(null); }, colorOverride: Color.red));
 			}
 
 			items.Add(PopupItem.Spacer());

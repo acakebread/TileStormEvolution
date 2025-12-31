@@ -40,6 +40,7 @@ namespace ClassicTilestorm
 
 		void AddAttachment(MapAttachment attachment);
 		bool RemoveAttachment(MapAttachment attachment);
+		bool RemoveAttachments(MapAttachment[] attachmentArray);
 		void RemoveAllAttachmentsOnTile(int tileIndex);
 
 		MapAttachment[] attachments { get; set; }
@@ -750,6 +751,14 @@ namespace ClassicTilestorm
 				currentMap.AddAttachment(attachment);
 			RefreshAttachmentInstance(attachment);
 			OnMapEdited?.Invoke(this, false, Vector3.zero);
+		}
+
+		public bool RemoveAttachments(MapAttachment[] attachmentArray)
+		{
+			bool result = false;
+			foreach (var att in attachmentArray)
+				result |= RemoveAttachment(att);
+			return result;
 		}
 
 		public bool RemoveAttachment(MapAttachment attachment)
