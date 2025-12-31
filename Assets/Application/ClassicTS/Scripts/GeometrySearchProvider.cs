@@ -45,7 +45,12 @@ public static class GeometrySearchProvider
 
 		// PHASE 1: Try the preferred (remapped/HD) name across all roots
 		GameObject preferred = FindInAnyRoot(preferredName, isPreferred: true, originalName: cleanName);
-		if (preferred != null) return preferred;
+		if (preferred != null)
+		{
+			if (preferredName != cleanName)
+				preferred.tag = "Respawn";//HD flag!
+			return preferred;
+		}
 
 		// PHASE 2: If preferred not found and it's different from original, fall back to legacy
 		if (preferredName != cleanName)
@@ -96,71 +101,71 @@ public static class GeometrySearchProvider
 				return go;
 			}
 		}
-
 		return null;
 	}
-
-	//private static GameObject FindModelByName(string modelName)
-	//{
-	//	if (string.IsNullOrEmpty(modelName)) return null;
-
-	//	string cleanName = Path.GetFileNameWithoutExtension(modelName).Trim();
-	//	string hdName = cleanName + "_hd";
-
-	//	// PHASE 1: Try HD version across all roots
-	//	GameObject hd = FindInAnyRoot(hdName, isHd: true);
-	//	if (hd != null) return hd;
-
-	//	// PHASE 2: Fall back to legacy
-	//	GameObject legacy = FindInAnyRoot(cleanName, isHd: false);
-	//	if (legacy != null) return legacy;
-
-	//	Debug.LogWarning($"[GeometrySearchProvider] Model '{modelName}' not found (neither '{hdName}' nor '{cleanName}') in any root.");
-	//	return null;
-	//}
-
-	//private static GameObject FindInAnyRoot(string candidateName, bool isHd)
-	//{
-	//	foreach (string root in searchRoots)
-	//	{
-	//		// Normalize root for cache key
-	//		string cacheKey = string.IsNullOrEmpty(root) ? "" : root;
-
-	//		// Build cache on-demand for this root
-	//		if (!rootCaches.TryGetValue(cacheKey, out var nameDict))
-	//		{
-	//			nameDict = new Dictionary<string, GameObject>(System.StringComparer.OrdinalIgnoreCase);
-
-	//			string loadPath = root; // empty string = all Resources
-	//			GameObject[] allInRoot = Resources.LoadAll<GameObject>(loadPath);
-
-	//			foreach (var go1 in allInRoot)
-	//			{
-	//				if (go1 != null && !nameDict.ContainsKey(go1.name))
-	//				{
-	//					nameDict[go1.name] = go1;
-	//				}
-	//			}
-
-	//			rootCaches[cacheKey] = nameDict;
-
-	//			Debug.Log($"[GeometrySearchProvider] Scanned root '{loadPath}' → {allInRoot.Length} assets cached.");
-	//		}
-
-	//		// Now lookup by name (fast)
-	//		if (nameDict.TryGetValue(candidateName, out GameObject go))
-	//		{
-	//			if (isHd)
-	//			{
-	//				Debug.Log($"[GeometrySearchProvider] Upgraded: '{Path.GetFileNameWithoutExtension(candidateName)}' → HD version found in root '{root}'");
-	//			}
-	//			return go;
-	//		}
-	//	}
-
-	//	return null;
-	//}
 }
+
+
+//private static GameObject FindModelByName(string modelName)
+//{
+//	if (string.IsNullOrEmpty(modelName)) return null;
+
+//	string cleanName = Path.GetFileNameWithoutExtension(modelName).Trim();
+//	string hdName = cleanName + "_hd";
+
+//	// PHASE 1: Try HD version across all roots
+//	GameObject hd = FindInAnyRoot(hdName, isHd: true);
+//	if (hd != null) return hd;
+
+//	// PHASE 2: Fall back to legacy
+//	GameObject legacy = FindInAnyRoot(cleanName, isHd: false);
+//	if (legacy != null) return legacy;
+
+//	Debug.LogWarning($"[GeometrySearchProvider] Model '{modelName}' not found (neither '{hdName}' nor '{cleanName}') in any root.");
+//	return null;
+//}
+
+//private static GameObject FindInAnyRoot(string candidateName, bool isHd)
+//{
+//	foreach (string root in searchRoots)
+//	{
+//		// Normalize root for cache key
+//		string cacheKey = string.IsNullOrEmpty(root) ? "" : root;
+
+//		// Build cache on-demand for this root
+//		if (!rootCaches.TryGetValue(cacheKey, out var nameDict))
+//		{
+//			nameDict = new Dictionary<string, GameObject>(System.StringComparer.OrdinalIgnoreCase);
+
+//			string loadPath = root; // empty string = all Resources
+//			GameObject[] allInRoot = Resources.LoadAll<GameObject>(loadPath);
+
+//			foreach (var go1 in allInRoot)
+//			{
+//				if (go1 != null && !nameDict.ContainsKey(go1.name))
+//				{
+//					nameDict[go1.name] = go1;
+//				}
+//			}
+
+//			rootCaches[cacheKey] = nameDict;
+
+//			Debug.Log($"[GeometrySearchProvider] Scanned root '{loadPath}' → {allInRoot.Length} assets cached.");
+//		}
+
+//		// Now lookup by name (fast)
+//		if (nameDict.TryGetValue(candidateName, out GameObject go))
+//		{
+//			if (isHd)
+//			{
+//				Debug.Log($"[GeometrySearchProvider] Upgraded: '{Path.GetFileNameWithoutExtension(candidateName)}' → HD version found in root '{root}'");
+//			}
+//			return go;
+//		}
+//	}
+
+//	return null;
+//}
 
 //using UnityEngine;
 //using MassiveHadronLtd;

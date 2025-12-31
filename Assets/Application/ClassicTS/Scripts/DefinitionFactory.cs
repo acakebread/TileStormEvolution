@@ -23,8 +23,7 @@ namespace ClassicTilestorm
 				return null;
 
 			//temporary provision to suppress texture replacement on loaded HD models
-			var renderer = gameObject.GetComponentInChildren<MeshRenderer>(true);
-			var isHD = renderer && null == renderer.material.mainTexture;
+			var isHD = gameObject.CompareTag("Respawn");//HD flag!
 
 			//Apply Definition Properties
 			var materialPath = $"{AssetPath.MaterialPath}{definition.material}";
@@ -32,7 +31,7 @@ namespace ClassicTilestorm
 
 			// Apply texture animation and / or material replacement
 			var textureAnimator = gameObject.AddComponent<TextureSetAnimator>();
-			if (isHD || null != replacement)
+			if (!isHD && null == replacement)
 			{
 				var sequence = TextureSetManager.GetTextureSequence(definition.texture, AssetPath.TexturePath);
 				textureAnimator.Initialize(sequence, replacement);
