@@ -828,35 +828,36 @@ namespace ClassicTilestorm
 			}
 			set
 			{
-				if (value == null)
+				if (null == value)
 				{
 					currentMap.attachments = Array.Empty<MapAttachment>();
 					currentMap.waypoints = Array.Empty<int>();
 					return;
 				}
 
-				var waypoints = new List<int>();
 				var realAttachments = new List<MapAttachment>();
+				var waypointsList = new List<(int index, int tile)>();
 
 				foreach (var att in value)
 				{
 					if (att is Waypoint wp)
-						waypoints.Add(wp.tile);
+						waypointsList.Add((wp.waypointIndex, wp.tile));
 					else if (att != null)
 						realAttachments.Add(att);
 				}
 
-				// Rebuild waypoints
-				if (waypoints.Count > 0)
-				{
-					currentMap.waypoints = new int[waypoints.Count];
-					for (int i = 0; i < waypoints.Count; i++)
-						currentMap.waypoints[i] = waypoints[i];
-				}
-				else
-					currentMap.waypoints = Array.Empty<int>();
-
 				currentMap.attachments = realAttachments.ToArray();
+
+				if (waypointsList.Count == 0)
+					currentMap.waypoints = Array.Empty<int>();
+				else
+				{
+					int maxIndex = waypointsList.Max(x => x.index);
+					var waypoints = new int[maxIndex + 1];
+					foreach (var (index, tile) in waypointsList)
+						waypoints[index] = tile;
+					currentMap.waypoints = waypoints;
+				}
 			}
 		}
 
