@@ -244,6 +244,21 @@ namespace ClassicTilestorm
 		private void Select(MapAttachment[] attachments, Camera camera)
 		{
 			selectedAttachments = attachments?.Length > 0 ? attachments : null;
+
+			if (selectedAttachments != null && selectedAttachments.Length > 0)
+			{
+				if (selectedAttachments.Length == 1)
+				{
+					currentMode = selectedAttachments[0] is Waypoint
+						? EditorMarkerUtil.MarkerType.Waypoint
+						: EditorMarkerUtil.MarkerType.Attachment;
+				}
+				else
+				{
+					currentMode = EditorMarkerUtil.MarkerType.Attachment;
+				}
+			}
+
 			HideAllGizmos();
 			RebuildMarkers(currentMode);
 
@@ -372,7 +387,15 @@ namespace ClassicTilestorm
 		{
 			ViewPreviewUtil.OnGUI();
 
-			DrawSidePanelAttachment();
+			// Draw correct panel based on currentMode
+			if (currentMode == EditorMarkerUtil.MarkerType.Waypoint)
+			{
+				DrawSidePanelWaypoint();
+			}
+			else
+			{
+				DrawSidePanelAttachment(); // includes Undefined and Attachment
+			}
 
 			if (pendingAction == PendingAction.None) return;
 
