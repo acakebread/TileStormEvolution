@@ -220,12 +220,24 @@ namespace ClassicTilestorm
 		private void HandleDrag()
 		{
 			var tile = iMapManager.CameraHitTile(camera, Input.mousePosition);
-			if (tile == pendingTile || tile == -1 || selection == null || selection.Length == 0)
+			if (tile == pendingTile || -1 == tile || null == selection || 0 == selection.Length)
 				return;
 
 			pendingTile = tile;
-			RefreshAttachmentInstances(tile);
-			HandleDragInput();
+			if (null == selection) return;
+			foreach (var att in selection)
+			{
+				att.tile = pendingTile;
+				iMapManager.RefreshAttachmentInstance(att);
+			}
+			if (null == selection || 1 != selection.Length) return;
+			if (selection[0] is ITransformableAttachment transformable)
+			{
+				var worldPos = MapManager.WorldPosition(selection[0].tile, transformable.Position);
+				var worldRot = MapManager.WorldRotation(selection[0].tile, transformable.Rotation);
+				EditorTransformUtil.ShowAt(worldPos, worldRot, camera);
+			}
+			selection[0].OnDragInput(iMapManager, selection);
 			RebuildMarkers();
 		}
 
@@ -256,16 +268,11 @@ namespace ClassicTilestorm
 			RebuildMarkers();
 
 			if (null == selection || 1 != selection.Length) return;
-			HandleSelectionChanged();
-			HandleGizmoInput();
-		}
-
-		private void HandleSelectionChanged()
-		{
 			if (null == selection || 0 == selection.Length) return;
 			var firstType = selection[0].GetType();
 			if (!selection.All(a => a.GetType() == firstType)) return;
 			selection[0].OnSelectionChanged(iMapManager, camera, selection);
+			HandleGizmoInput();
 		}
 
 		private void HandleGizmoInput()
@@ -274,18 +281,6 @@ namespace ClassicTilestorm
 			var firstType = selection[0].GetType();
 			if (!selection.All(a => a.GetType() == firstType)) return;
 			selection[0].OnGizmoInput(iMapManager, camera, selection);
-		}
-
-		private void HandleDragInput()
-		{
-			if (null == selection || 1 != selection.Length) return;
-			if (selection[0] is ITransformableAttachment transformable)
-			{
-				var worldPos = MapManager.WorldPosition(selection[0].tile, transformable.Position);
-				var worldRot = MapManager.WorldRotation(selection[0].tile, transformable.Rotation);
-				EditorTransformUtil.ShowAt(worldPos, worldRot, camera);
-			}
-			selection[0].OnDragInput(iMapManager, selection);
 		}
 
 		// ===================================================================
@@ -315,16 +310,6 @@ namespace ClassicTilestorm
 		{
 			if (null == currentMap || !currentMap.IsValidTile(tileIndex)) return Array.Empty<MapAttachment>();
 			return iMapManager.attachments?.Where(x => x.tile == tileIndex).ToArray() ?? Array.Empty<MapAttachment>();
-		}
-
-		private void RefreshAttachmentInstances(int tile)
-		{
-			if (selection == null) return;
-			foreach (var att in selection)
-			{
-				att.tile = tile;
-				iMapManager.RefreshAttachmentInstance(att);
-			}
 		}
 
 		private void RebuildMarkers()
