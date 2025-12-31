@@ -23,7 +23,8 @@ namespace ClassicTilestorm
 				return null;
 
 			//temporary provision to suppress texture replacement on loaded HD models
-			var isHD = gameObject.CompareTag("Respawn");//HD flag!
+			var renderers = gameObject.GetComponentsInChildren<MeshRenderer>(true);
+			var isHD = (renderers.Length == 1 && renderers[0].sharedMaterials.Length >= 2) || renderers.Length >= 2;//gameObject.CompareTag("Respawn");//HD flag!
 
 			//Apply Definition Properties
 			var materialPath = $"{AssetPath.MaterialPath}{definition.material}";

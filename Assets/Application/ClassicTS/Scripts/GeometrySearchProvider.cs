@@ -17,8 +17,8 @@ public static class GeometrySearchProvider
 		if (hasRegistered) return;
 		hasRegistered = true;
 
-		string geometryPath = AssetPath.GeometryPath;
-		string configuredRoot = string.IsNullOrWhiteSpace(geometryPath)
+		var geometryPath = AssetPath.GeometryPath;
+		var configuredRoot = string.IsNullOrWhiteSpace(geometryPath)
 			? null
 			: geometryPath.Replace("\\", "/").Trim('/');
 
@@ -38,24 +38,19 @@ public static class GeometrySearchProvider
 	{
 		if (string.IsNullOrEmpty(modelName)) return null;
 
-		string cleanName = Path.GetFileNameWithoutExtension(modelName).Trim();
+		var cleanName = Path.GetFileNameWithoutExtension(modelName).Trim();
 
 		// NEW: Use remap table — may return a completely different name or the same
-		string preferredName = ClassicTileStormAssetRemapHelper.RemapName(cleanName);
+		var preferredName = ClassicTileStormAssetRemapHelper.RemapName(cleanName);
 
 		// PHASE 1: Try the preferred (remapped/HD) name across all roots
-		GameObject preferred = FindInAnyRoot(preferredName, isPreferred: true, originalName: cleanName);
-		if (preferred != null)
-		{
-			if (preferredName != cleanName)
-				preferred.tag = "Respawn";//HD flag!
-			return preferred;
-		}
+		var preferred = FindInAnyRoot(preferredName, isPreferred: true, originalName: cleanName);
+		if (null != preferred) return preferred;
 
 		// PHASE 2: If preferred not found and it's different from original, fall back to legacy
 		if (preferredName != cleanName)
 		{
-			GameObject legacy = FindInAnyRoot(cleanName, isPreferred: false, originalName: cleanName);
+			var legacy = FindInAnyRoot(cleanName, isPreferred: false, originalName: cleanName);
 			if (legacy != null) return legacy;
 		}
 
@@ -67,7 +62,7 @@ public static class GeometrySearchProvider
 	{
 		foreach (string root in searchRoots)
 		{
-			string cacheKey = string.IsNullOrEmpty(root) ? "" : root;
+			var cacheKey = string.IsNullOrEmpty(root) ? "" : root;
 
 			if (!rootCaches.TryGetValue(cacheKey, out var nameDict))
 			{
