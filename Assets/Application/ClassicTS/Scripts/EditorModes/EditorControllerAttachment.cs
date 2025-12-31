@@ -1,31 +1,20 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 using System.Linq;
 using System.Collections.Generic;
 using static MassiveHadronLtd.GuiUtils;
-using UnityEngine.EventSystems;
-using System;
 
 namespace ClassicTilestorm
 {
 	public class EditorControllerAttachment : EditorControllerMovement
 	{
 		// ===================================================================
-		// Public static selection — required by external code
-		// ===================================================================
-		public static MapAttachment[] selectedAttachments = null;
-
-		// ===================================================================
-		// Current mode - used for panel and marker styling
-		// ===================================================================
-		private EditorMarkerUtil.MarkerType currentMode = EditorMarkerUtil.MarkerType.Undefined;
-
-		// ===================================================================
 		// Pending state
 		// ===================================================================
+		private MapAttachment[] selection = null;
 		private enum PendingAction { None, Add, Delete, Select }
 		private PendingAction pendingAction = PendingAction.None;
-
-		private int currentPendingTile = -1;
+		private int pendingTile = -1;
 
 		// ===================================================================
 		// Shared input state
@@ -36,6 +25,13 @@ namespace ClassicTilestorm
 		private const float CLICK_THRESHOLD = 8f;
 		private bool rmbDownInPreview = false;
 		private bool supressInput = true;
+
+		// ===================================================================
+		// Current mode - used for panel and marker styling
+		// ===================================================================
+
+		public enum Mode { Undefined, Mixed, Waypoint, Attachment }//there will be several new modes based on context
+		private Mode currentMode = Mode.Undefined;
 
 		// ===================================================================
 		// Constructor
@@ -50,32 +46,21 @@ namespace ClassicTilestorm
 		public override void OnMapLoaded()
 		{
 			ResetInputState();
-			RebuildMarkers(currentMode);
+			RebuildMarkers();
 		}
 
 		public override void OnEnable()
 		{
 			base.OnEnable();
-			currentMode = EditorMarkerUtil.MarkerType.Attachment; // default to attachment mode
+			currentMode = Mode.Attachment; // default to attachment mode
 			ResetInputState();
-			RebuildMarkers(currentMode);
+			RebuildMarkers();
 		}
 
 		public override void OnDisable()
 		{
 			base.OnDisable();
 			ResetInputState();
-		}
-
-		private void ResetInputState()
-		{
-			supressInput = true;
-			rmbDownInPreview = false;
-			pendingAction = PendingAction.None;
-			selectedAttachments = null;
-			currentPendingTile = -1;
-			currentMode = EditorMarkerUtil.MarkerType.Undefined;
-			HideAllGizmos();
 		}
 
 		// ===================================================================
@@ -100,7 +85,7 @@ namespace ClassicTilestorm
 			if (previewControlsActive)
 			{
 				EditorCameraMovement.UpdateCamera(ViewPreviewUtil.PreviewCamera.transform);
-				AttachmentViewEditing.HandlePreviewCameraSync(iMapManager, camera);
+				AttachmentViewEditing.HandlePreviewCameraSync(iMapManager, camera, selection);
 				supressInput = true;
 				return;
 			}
@@ -115,7 +100,7 @@ namespace ClassicTilestorm
 
 			if (EditorTransformUtil.HandleTransformGizmoInput(camera))
 			{
-				HandleGizmoInput(iMapManager, camera);
+				HandleGizmoInput();
 				supressInput = true;
 			}
 
@@ -138,247 +123,17 @@ namespace ClassicTilestorm
 			}
 
 			if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1))
-				HandleMouseDownShared(iMapManager.CameraHitTile(camera, Input.mousePosition), camera);
+				HandleMouseDown();
 
 			if (Input.GetMouseButton(0))
-				HandleDrag(iMapManager, camera, currentMode);
+				HandleDrag();
 
 			if (Input.GetMouseButtonUp(0) && !mouseMovedBeyondThreshold)
-				HandleLeftMouseUpShared(camera, currentMode);
+				HandleLeftMouseUp();
 
 			if (Input.GetMouseButtonUp(1) && !mouseMovedBeyondThreshold)
-				HandleRightMouseUpShared(iMapManager.CameraHitTile(camera, Input.mousePosition), camera);
+				HandleRightMouseUp();
 		}
-
-		// ===================================================================
-		// Input Handlers — now using currentMode
-		// ===================================================================
-		private void HandleMouseDownShared(int tile, Camera camera)
-		{
-			currentPendingTile = tile;
-
-			if (tile != -1)
-			{
-				var alreadySelected = selectedAttachments?.Length > 0 && selectedAttachments[0].tile == tile;
-				if (!alreadySelected)
-				{
-					selectedAttachments = GetAttachmentsOnTile(tile);
-
-
-					// === MODE SWITCHING LOGIC — EXACTLY AS YOU SPECIFIED ===
-					if (selectedAttachments == null || selectedAttachments.Length == 0)
-					{
-						// Do nothing — keep currentMode as is (panel stays)
-					}
-					else if (selectedAttachments.Length == 1)
-					{
-						currentMode = selectedAttachments[0] is Waypoint
-							? EditorMarkerUtil.MarkerType.Waypoint
-							: EditorMarkerUtil.MarkerType.Attachment;
-					}
-					else // Length > 1
-					{
-						currentMode = EditorMarkerUtil.MarkerType.Attachment;
-					}
-					// === END OF MODE SWITCHING ===
-
-					Select(selectedAttachments, camera);
-				}
-				return;
-			}
-			Select(null, camera);
-		}
-
-		private void HandleLeftMouseUpShared(Camera camera, EditorMarkerUtil.MarkerType markerType)
-		{
-			var attachmentsOnTile = GetAttachmentsOnTile(currentPendingTile);
-
-			if (attachmentsOnTile == null || attachmentsOnTile.Length == 0)
-			{
-				if (currentPendingTile != -1)
-					pendingAction = PendingAction.Add;
-			}
-			else if (attachmentsOnTile.Length > 1)
-			{
-				pendingAction = PendingAction.Select;
-			}
-			else
-			{
-				pendingAction = PendingAction.None;
-				Select(attachmentsOnTile, camera);
-			}
-
-			RebuildMarkers(markerType);
-		}
-
-		private void HandleRightMouseUpShared(int tile, Camera camera)
-		{
-			if (tile >= 0 && GetAttachmentsOnTile(tile)?.Length > 0)
-			{
-				currentPendingTile = tile;
-				pendingAction = PendingAction.Delete;
-				return;
-			}
-			Select(null, camera);
-		}
-
-		private void HandleDrag(IMapManager mapManager, Camera camera, EditorMarkerUtil.MarkerType type)
-		{
-			var tileUnderMouse = mapManager.CameraHitTile(camera, Input.mousePosition);
-
-			if (tileUnderMouse == -1 ||
-				tileUnderMouse == currentPendingTile ||
-				selectedAttachments == null ||
-				selectedAttachments.Length == 0)
-				return;
-
-			currentPendingTile = tileUnderMouse;
-			RefreshAttachmentInstances(mapManager, tileUnderMouse);
-			HandleDragInput(mapManager, camera);
-			RebuildMarkers(type);
-		}
-
-		// ===================================================================
-		// Selection & Gizmos
-		// ===================================================================
-		private void Select(MapAttachment[] attachments, Camera camera)
-		{
-			selectedAttachments = attachments?.Length > 0 ? attachments : null;
-
-			if (selectedAttachments != null && selectedAttachments.Length > 0)
-			{
-				if (selectedAttachments.Length == 1)
-				{
-					currentMode = selectedAttachments[0] is Waypoint
-						? EditorMarkerUtil.MarkerType.Waypoint
-						: EditorMarkerUtil.MarkerType.Attachment;
-				}
-				else
-				{
-					currentMode = EditorMarkerUtil.MarkerType.Attachment;
-				}
-			}
-
-			HideAllGizmos();
-			RebuildMarkers(currentMode);
-
-			if (selectedAttachments == null || selectedAttachments.Length != 1) return;
-			HandleSelectionChanged(iMapManager, camera);
-			HandleGizmoInput(iMapManager, camera);
-		}
-
-		private void HandleSelectionChanged(IMapManager mapManager, Camera camera)
-		{
-			if (selectedAttachments == null || selectedAttachments.Length == 0) return;
-			var firstType = selectedAttachments[0].GetType();
-			if (!selectedAttachments.All(a => a.GetType() == firstType)) return;
-
-			switch (selectedAttachments[0])
-			{
-				case Waypoint: AttachmentWaypointEditing.OnSelectionChanged(mapManager, camera); break;
-				case Emitter: AttachmentEmitterEditing.OnSelectionChanged(mapManager, camera); break;
-				case View: AttachmentViewEditing.OnSelectionChanged(mapManager, camera); break;
-				case Pickup: AttachmentPickupEditing.OnSelectionChanged(mapManager, camera); break;
-			}
-		}
-
-		private void HandleGizmoInput(IMapManager mapManager, Camera camera)
-		{
-			if (selectedAttachments == null || selectedAttachments.Length == 0) return;
-			var firstType = selectedAttachments[0].GetType();
-			if (!selectedAttachments.All(a => a.GetType() == firstType)) return;
-
-			switch (selectedAttachments[0])
-			{
-				case Waypoint: AttachmentWaypointEditing.OnGizmoInput(mapManager, camera); break;
-				case Emitter: AttachmentEmitterEditing.OnGizmoInput(mapManager, camera); break;
-				case View: AttachmentViewEditing.OnGizmoInput(mapManager, camera); break;
-				case Pickup: AttachmentPickupEditing.OnGizmoInput(mapManager, camera); break;
-			}
-		}
-
-		private void HandleDragInput(IMapManager mapManager, Camera camera)
-		{
-			if (selectedAttachments == null || selectedAttachments.Length != 1) return;
-
-			var attachment = selectedAttachments[0];
-
-			if (attachment is ITransformableAttachment transformable)
-			{
-				var worldPos = MapManager.WorldPosition(attachment.tile, transformable.Position);
-				var worldRot = MapManager.WorldRotation(attachment.tile, transformable.Rotation);
-				EditorTransformUtil.ShowAt(worldPos, worldRot, camera);
-			}
-
-			switch (attachment)
-			{
-				case Waypoint: AttachmentWaypointEditing.OnDragInput(mapManager); break;
-				case Emitter: AttachmentEmitterEditing.OnDragInput(mapManager); break;
-				case View: AttachmentViewEditing.OnDragInput(mapManager); break;
-				case Pickup: AttachmentPickupEditing.OnDragInput(mapManager); break;
-			}
-		}
-
-		// ===================================================================
-		// Helpers
-		// ===================================================================
-		private void HideAllGizmos()
-		{
-			EditorTransformUtil.Hide();
-			EditorPrimitiveUtil.Hide();
-			EditorFrustumUtil.Hide();
-			ViewPreviewUtil.Hide();
-			EditorMarkerUtil.ClearMapMarkers();
-		}
-
-		private MapAttachment[] GetAttachmentsOnTile(int tileIndex)
-		{
-			if (iMapManager?.CurrentMap == null || !iMapManager.CurrentMap.IsValidTile(tileIndex)) return Array.Empty<MapAttachment>();
-			return iMapManager.attachments?.Where(x => x.tile == tileIndex).ToArray() ?? Array.Empty<MapAttachment>();
-		}
-
-		private void RefreshAttachmentInstances(IMapManager mapManager, int tile)
-		{
-			if (selectedAttachments == null) return;
-			foreach (var att in selectedAttachments)
-			{
-				att.tile = tile;
-				mapManager.RefreshAttachmentInstance(att);
-			}
-		}
-
-		private void RebuildMarkers(EditorMarkerUtil.MarkerType type)
-		{
-			var selectedTile = (selectedAttachments != null && selectedAttachments.Length > 0) ? selectedAttachments[0].tile : -1;
-			var tiles = iMapManager?.attachments?.Where(a => a.tile >= 0).Select(a => a.tile).Distinct().ToArray() ?? Array.Empty<int>();
-			var selection = Array.IndexOf(tiles, selectedTile);
-			UpdateMapMarkers(iMapManager, tiles, selection, type);
-		}
-
-		private void UpdateMapMarkers(IMapManager mapManager, int[] tiles, int selectedIndex = -1, EditorMarkerUtil.MarkerType type = EditorMarkerUtil.MarkerType.Undefined)
-		{
-			if (tiles == null || tiles.Length == 0)
-			{
-				EditorMarkerUtil.ClearMapMarkers();
-				return;
-			}
-
-			var positions = new Vector3[tiles.Length];
-			var colors = new Color[tiles.Length];
-
-			for (var i = 0; i < tiles.Length; i++)
-			{
-				var tile = tiles[i];
-				positions[i] = tile < 0 || tile >= mapManager.Count ? Vector3.zero : mapManager.TileWorldPosition(tile);
-
-				bool hasView = type == EditorMarkerUtil.MarkerType.Waypoint && mapManager.GetView(tile) != null;
-				colors[i] = hasView ? new Color(0f, 1f, 1f, 0.5f) : new Color(0f, 0.7f, 1f, 0.7f);
-			}
-
-			EditorMarkerUtil.ShowMarkers(positions, colors, selectedIndex);
-		}
-
-		private static bool IsGuiControlActive() => GUIUtility.hotControl != 0 || (EventSystem.current && EventSystem.current.IsPointerOverGameObject());
 
 		// ===================================================================
 		// GUI — currently only draws attachment panel (waypoint panel ready below)
@@ -388,17 +143,12 @@ namespace ClassicTilestorm
 			ViewPreviewUtil.OnGUI();
 
 			// Draw correct panel based on currentMode
-			if (currentMode == EditorMarkerUtil.MarkerType.Waypoint)
-			{
+			if (currentMode == Mode.Waypoint)
 				DrawSidePanelWaypoint();
-			}
 			else
-			{
 				DrawSidePanelAttachment(); // includes Undefined and Attachment
-			}
 
 			if (pendingAction == PendingAction.None) return;
-
 			supressInput = true;
 
 			switch (pendingAction)
@@ -418,21 +168,232 @@ namespace ClassicTilestorm
 		}
 
 		// ===================================================================
+		// Input Handlers — now using currentMode
+		// ===================================================================
+		private void HandleMouseDown()
+		{
+			pendingTile = iMapManager.CameraHitTile(camera, Input.mousePosition);
+
+			if (pendingTile != -1)
+			{
+				var alreadySelected = selection?.Length > 0 && selection[0].tile == pendingTile;
+				if (!alreadySelected)
+				{
+					Select(GetAttachmentsOnTile(pendingTile));
+				}
+				return;
+			}
+			Select(null);
+		}
+
+		private void HandleLeftMouseUp()
+		{
+			var attachmentsOnTile = GetAttachmentsOnTile(pendingTile);
+
+			if (attachmentsOnTile == null || attachmentsOnTile.Length == 0)
+			{
+				if (pendingTile != -1)
+					pendingAction = PendingAction.Add;
+			}
+			else if (attachmentsOnTile.Length > 1)
+			{
+				pendingAction = PendingAction.Select;
+			}
+			else
+			{
+				pendingAction = PendingAction.None;
+				Select(attachmentsOnTile);
+			}
+
+			RebuildMarkers();
+		}
+
+		private void HandleRightMouseUp()
+		{
+			var tile = iMapManager.CameraHitTile(camera, Input.mousePosition);
+			if (tile >= 0 && GetAttachmentsOnTile(tile)?.Length > 0)
+			{
+				pendingTile = tile;
+				pendingAction = PendingAction.Delete;
+				return;
+			}
+			Select(null);
+		}
+
+		private void HandleDrag()
+		{
+			var tileUnderMouse = iMapManager.CameraHitTile(camera, Input.mousePosition);
+
+			if (tileUnderMouse == -1 ||
+				tileUnderMouse == pendingTile ||
+				selection == null ||
+				selection.Length == 0)
+				return;
+
+			pendingTile = tileUnderMouse;
+			RefreshAttachmentInstances(tileUnderMouse);
+			HandleDragInput();
+			RebuildMarkers();
+		}
+
+		// ===================================================================
+		// Selection & Gizmos
+		// ===================================================================
+		private void Select(MapAttachment[] attachments)
+		{
+			selection = attachments?.Length > 0 ? attachments : null;
+
+			if (null != selection && selection.Length > 0)
+			{
+				if (selection == null || selection.Length == 0)
+				{
+					// Do nothing — keep currentMode as is (panel stays)
+				}
+				else if (selection.Length == 1)
+				{
+					currentMode = selection[0] is Waypoint ? Mode.Waypoint : Mode.Attachment;
+				}
+				else // Length > 1
+				{
+					currentMode = Mode.Attachment;
+				}
+			}
+
+			HideAllGizmos();
+			RebuildMarkers();
+
+			if (null == selection || 1 != selection.Length) return;
+			HandleSelectionChanged();
+			HandleGizmoInput();
+		}
+
+		private void HandleSelectionChanged()
+		{
+			if (null == selection || 0 == selection.Length) return;
+			var firstType = selection[0].GetType();
+			if (!selection.All(a => a.GetType() == firstType)) return;
+
+			switch (selection[0])
+			{
+				case Waypoint: AttachmentWaypointEditing.OnSelectionChanged(iMapManager, camera, selection); break;
+				case Emitter: AttachmentEmitterEditing.OnSelectionChanged(iMapManager, camera, selection); break;
+				case View: AttachmentViewEditing.OnSelectionChanged(iMapManager, camera, selection); break;
+				case Pickup: AttachmentPickupEditing.OnSelectionChanged(iMapManager, camera, selection); break;
+			}
+		}
+
+		private void HandleGizmoInput()
+		{
+			if (selection == null || selection.Length == 0) return;
+			var firstType = selection[0].GetType();
+			if (!selection.All(a => a.GetType() == firstType)) return;
+
+			switch (selection[0])
+			{
+				case Waypoint: AttachmentWaypointEditing.OnGizmoInput(iMapManager, camera, selection); break;
+				case Emitter: AttachmentEmitterEditing.OnGizmoInput(iMapManager, camera, selection); break;
+				case View: AttachmentViewEditing.OnGizmoInput(iMapManager, camera, selection); break;
+				case Pickup: AttachmentPickupEditing.OnGizmoInput(iMapManager, camera, selection); break;
+			}
+		}
+
+		private void HandleDragInput()
+		{
+			if (selection == null || selection.Length != 1) return;
+
+			var attachment = selection[0];
+
+			if (attachment is ITransformableAttachment transformable)
+			{
+				var worldPos = MapManager.WorldPosition(attachment.tile, transformable.Position);
+				var worldRot = MapManager.WorldRotation(attachment.tile, transformable.Rotation);
+				EditorTransformUtil.ShowAt(worldPos, worldRot, camera);
+			}
+
+			switch (attachment)
+			{
+				case Waypoint: AttachmentWaypointEditing.OnDragInput(iMapManager, selection); break;
+				case Emitter: AttachmentEmitterEditing.OnDragInput(iMapManager, selection); break;
+				case View: AttachmentViewEditing.OnDragInput(iMapManager, selection); break;
+				case Pickup: AttachmentPickupEditing.OnDragInput(iMapManager, selection); break;
+			}
+		}
+
+		// ===================================================================
+		// Helpers
+		// ===================================================================
+		private void ResetInputState()
+		{
+			supressInput = true;
+			rmbDownInPreview = false;
+			currentMode = Mode.Undefined;
+			selection = null;
+			pendingAction = PendingAction.None;
+			pendingTile = -1;
+			HideAllGizmos();
+		}
+
+		private void HideAllGizmos()
+		{
+			EditorTransformUtil.Hide();
+			EditorPrimitiveUtil.Hide();
+			EditorFrustumUtil.Hide();
+			ViewPreviewUtil.Hide();
+			EditorMarkerUtil.ClearMapMarkers();
+		}
+
+		private MapAttachment[] GetAttachmentsOnTile(int tileIndex)
+		{
+			if (iMapManager?.CurrentMap == null || !iMapManager.CurrentMap.IsValidTile(tileIndex)) return Array.Empty<MapAttachment>();
+			return iMapManager.attachments?.Where(x => x.tile == tileIndex).ToArray() ?? Array.Empty<MapAttachment>();
+		}
+
+		private void RefreshAttachmentInstances(int tile)
+		{
+			if (selection == null) return;
+			foreach (var att in selection)
+			{
+				att.tile = tile;
+				iMapManager.RefreshAttachmentInstance(att);
+			}
+		}
+
+		private void RebuildMarkers()
+		{
+			var tiles = iMapManager?.attachments?.Where(a => a.tile >= 0).Select(a => a.tile).Distinct().ToArray() ?? null;
+			if (null == tiles)
+			{
+				EditorMarkerUtil.ClearMapMarkers();
+				return;
+			}
+
+			var positions = new Vector3[tiles.Length];
+			var colors = new Color[tiles.Length];
+
+			for (var i = 0; i < tiles.Length; i++)
+			{
+				var tile = tiles[i];
+				positions[i] = tile < 0 || tile >= iMapManager.Count ? Vector3.zero : iMapManager.TileWorldPosition(tile);
+
+				var hasView = currentMode == Mode.Waypoint && null != iMapManager.GetView(tile);
+				colors[i] = hasView ? new Color(0f, 1f, 1f, 0.5f) : new Color(0f, 0.7f, 1f, 0.7f);
+			}
+
+			var selectedTile = (null != selection && selection.Length > 0) ? selection[0].tile : -1;
+			var selectedIndex = Array.IndexOf(tiles, selectedTile);
+			EditorMarkerUtil.ShowMarkers(positions, colors, selectedIndex);
+		}
+
+		// ===================================================================
 		// Side Panels
 		// ===================================================================
 		private void DrawSidePanelAttachment()
 		{
-			var atts = currentMap.attachments ?? Array.Empty<MapAttachment>();
+			var atts = iMapManager?.attachments ?? Array.Empty<MapAttachment>();
 			var items = new List<ListViewItem>();
 
 			foreach (var att in atts)
-			{
-				items.Add(new ListViewItem(
-					GetAttachmentLabel(att),
-					(_) => Select(new[] { att }, camera),
-					selected: selectedAttachments != null && selectedAttachments.Contains(att)
-				));
-			}
+				items.Add(new(GetAttachmentLabel(att), (_) => Select(new[] { att }), selected: null != selection && selection.Contains(att)));
 
 			sidePanel.List.SetItems(items);
 			sidePanel.SetFootnote("Hold RMB on preview to orbit • Scroll to zoom • LMB: place/move • RMB on tile: delete");
@@ -447,62 +408,53 @@ namespace ClassicTilestorm
 			};
 		}
 
-		// WAYPOINT PANEL — lifted and ready
 		private void DrawSidePanelWaypoint()
 		{
-			Waypoint selectedWaypoint = selectedAttachments?.Length > 0 ? selectedAttachments[0] as Waypoint : null;
+			var selectedWaypoint = selection?.Length > 0 ? selection[0] as Waypoint : null;
 
 			var wpArray = currentMap.waypoints ?? Array.Empty<int>();
 			var items = new List<ListViewItem>();
 
-			var waypointAttachments = iMapManager.waypointAttachments;
+			var waypointAttachments = iMapManager.waypointAttachments;//cached
 
-			for (int i = 0; i < wpArray.Length; i++)
+			for (var i = 0; i < wpArray.Length; i++)
 			{
-				int tile = wpArray[i];
+				var tile = wpArray[i];
 				var waypoint = waypointAttachments.FirstOrDefault(w => w.waypointIndex == i);
-
-				items.Add(new ListViewItem(
-					label: $"WP{i:00} [tile {tile}]",
-					onClick: (_) =>
-					{
-						if (waypoint != null)
-							Select(new[] { waypoint }, camera);
-					},
-					selected: selectedWaypoint?.waypointIndex == i
-				));
+				items.Add(new(label: $"WP{i:00} [tile {tile}]", onClick: (_) =>
+				{
+					if (null != waypoint) Select(new[] { waypoint });
+				}, selected: selectedWaypoint?.waypointIndex == i));
 			}
 
 			sidePanel.List.SetItems(items);
 
 			sidePanel.Buttons.Clear();
 
-			bool canMoveUp = selectedWaypoint != null && selectedWaypoint.waypointIndex > 0;
-			bool canMoveDown = selectedWaypoint != null &&
-							   selectedWaypoint.waypointIndex >= 0 &&
-							   selectedWaypoint.waypointIndex < wpArray.Length - 1;
+			var canMoveUp = null != selectedWaypoint && selectedWaypoint.waypointIndex > 0;
+			var canMoveDown = null != selectedWaypoint && selectedWaypoint.waypointIndex >= 0 && selectedWaypoint.waypointIndex < wpArray.Length - 1;
 
-			sidePanel.Buttons.Add(new ListViewButton("Move Up", () => MoveWaypoint(selectedWaypoint, -1), enabled: canMoveUp));
-			sidePanel.Buttons.Add(new ListViewButton("Move Down", () => MoveWaypoint(selectedWaypoint, +1), enabled: canMoveDown));
+			sidePanel.Buttons.Add(new("Move Up", () => MoveWaypoint(selectedWaypoint, -1), enabled: canMoveUp));
+			sidePanel.Buttons.Add(new("Move Down", () => MoveWaypoint(selectedWaypoint, +1), enabled: canMoveDown));
 
 			sidePanel.Draw();
-		}
 
-		private void MoveWaypoint(Waypoint wp, int direction)
-		{
-			if (wp == null) return;
+			void MoveWaypoint(Waypoint wp, int direction)
+			{
+				if (null == wp) return;
 
-			int oldIndex = wp.waypointIndex;
-			int newIndex = oldIndex + direction;
-			if (newIndex < 0 || newIndex >= currentMap.waypoints.Length) return;
+				var oldIndex = wp.waypointIndex;
+				var newIndex = oldIndex + direction;
+				if (newIndex < 0 || newIndex >= currentMap.waypoints.Length) return;
 
-			var list = currentMap.waypoints.ToList();
-			(list[oldIndex], list[newIndex]) = (list[newIndex], list[oldIndex]);
-			currentMap.waypoints = list.ToArray();
+				var list = currentMap.waypoints.ToList();
+				(list[oldIndex], list[newIndex]) = (list[newIndex], list[oldIndex]);
+				currentMap.waypoints = list.ToArray();
 
-			var movedWaypoint = new Waypoint(newIndex, list[newIndex]);
-			Select(new[] { movedWaypoint }, camera);
-			RebuildMarkers(currentMode);
+				var movedWaypoint = new Waypoint(newIndex, list[newIndex]);
+				Select(new[] { movedWaypoint });
+				RebuildMarkers();
+			}
 		}
 
 		// ===================================================================
@@ -513,28 +465,24 @@ namespace ClassicTilestorm
 			var wasCancelled = true;
 			var items = new List<PopupItem>
 			{
-				new($"Waypoint [WP{currentMap.waypoints.Length:00}]", () =>
-				{
-					AttachmentWaypointEditing.CreateWaypoint(iMapManager, currentPendingTile);
-					pendingAction = PendingAction.None;
-				}),
-				new("Emitter [flame]", () => Select(new[] { AttachmentEmitterEditing.CreateEmitter(iMapManager, currentPendingTile, "flame") }, camera)),
-				new("Emitter [spark]", () => Select(new[] { AttachmentEmitterEditing.CreateEmitter(iMapManager, currentPendingTile, "spark") }, camera)),
-				new("View", () => Select(new[] { AttachmentViewEditing.CreateView(iMapManager, currentPendingTile) }, camera)),
-				new("Pickup", () => Select(new[] { AttachmentPickupEditing.CreatePickup(iMapManager, currentPendingTile) }, camera)),
+				new($"Waypoint [WP{currentMap.waypoints.Length:00}]", () => { AttachmentWaypointEditing.Create(iMapManager, pendingTile); pendingAction = PendingAction.None; }, colorOverride: Color.lightSteelBlue),
+				new("Emitter [flame]", () => Select(new[] { AttachmentEmitterEditing.Create(iMapManager, pendingTile, "flame") }), colorOverride: Color.cyan),
+				new("Emitter [spark]", () => Select(new[] { AttachmentEmitterEditing.Create(iMapManager, pendingTile, "spark") }), colorOverride: Color.cyan),
+				new("View", () => Select(new[] { AttachmentViewEditing.Create(iMapManager, pendingTile) }), colorOverride: Color.cyan),
+				new("Pickup", () => Select(new[] { AttachmentPickupEditing.Create(iMapManager, pendingTile) }), colorOverride: Color.cyan),
 				PopupItem.Spacer(),
 				new("Cancel", () => {}, colorOverride: Color.yellow)
 			};
 
-			var result = PopupMenu.Show(mouseDownPos, $"Add Attachment at tile {currentPendingTile}", items);
+			var result = PopupMenu.Show(mouseDownPos, $"Add Attachment at tile {pendingTile}", items);
 			if (!result && wasCancelled)
-				Select(null, camera);
+				Select(null);
 			return result;
 		}
 
 		private bool DrawDeletePopup()
 		{
-			var attsOnTile = GetAttachmentsOnTile(currentPendingTile);
+			var attsOnTile = GetAttachmentsOnTile(pendingTile);
 			if (attsOnTile.Length == 0) return false;
 
 			var wasCancelled = true;
@@ -543,12 +491,8 @@ namespace ClassicTilestorm
 			foreach (var att in attsOnTile)
 			{
 				var localAtt = att;
-				string label = att is Waypoint wp ? $"WP{wp.waypointIndex:00} at tile {currentPendingTile}" : $"Delete {att.GetType().Name}";
-				items.Add(new PopupItem(label, () =>
-				{
-					iMapManager.RemoveAttachment(localAtt);
-					Select(null, camera);
-				}));
+				string label = att is Waypoint wp ? $"Delete WP{wp.waypointIndex:00} [{pendingTile}]" : $"Delete {att.GetType().Name} [{pendingTile}]";
+				items.Add(new PopupItem(label, () => { iMapManager.RemoveAttachment(localAtt); Select(null); }, colorOverride: Color.softRed));
 			}
 
 			if (attsOnTile.Length > 1)
@@ -556,15 +500,14 @@ namespace ClassicTilestorm
 				items.Add(PopupItem.Spacer());
 				items.Add(new PopupItem("Delete All", () =>
 				{
-					// === FIXED: Delete BOTH regular attachments AND waypoints on this tile ===
 					// 1. Remove all regular attachments on the tile
-					iMapManager.RemoveAllAttachmentsOnTile(currentPendingTile);
+					iMapManager.RemoveAllAttachmentsOnTile(pendingTile);
 
 					// 2. Remove all waypoints that point to this tile
 					var waypointsToRemove = new List<int>();
 					for (int i = 0; i < currentMap.waypoints.Length; i++)
 					{
-						if (currentMap.waypoints[i] == currentPendingTile)
+						if (currentMap.waypoints[i] == pendingTile)
 							waypointsToRemove.Add(i);
 					}
 
@@ -587,25 +530,24 @@ namespace ClassicTilestorm
 								wp.waypointIndex--;
 						}
 					}
-					// === END OF FIX ===
-
-					Select(null, camera);
-					RebuildMarkers(currentMode);
+					
+					Select(null);
+					RebuildMarkers();
 				}, colorOverride: Color.red));
 			}
 
 			items.Add(PopupItem.Spacer());
 			items.Add(new PopupItem("Cancel", () => { }, colorOverride: Color.yellow));
 
-			var result = PopupMenu.Show(mouseDownPos, "Delete Attachment(s)", items);
+			var result = PopupMenu.Show(mouseDownPos, "Delete Attachment" + (attsOnTile.Length > 1 ? "(s)" : ""), items);
 			if (!result && wasCancelled)
-				Select(null, camera);
+				Select(null);
 			return result;
 		}
 
 		private bool DrawSelectPopup()
 		{
-			var atts = GetAttachmentsOnTile(currentPendingTile);
+			var atts = GetAttachmentsOnTile(pendingTile);
 			if (atts.Length == 0) return false;
 
 			var wasCancelled = true;
@@ -618,21 +560,13 @@ namespace ClassicTilestorm
 					label += $" to {e.LookAt.magnitude:F1}";
 				label += $" [tile {att.tile}]";
 
-				items.Add(new PopupItem(label, () =>
-				{
-					wasCancelled = false;
-					Select(new[] { att }, camera);
-				}));
+				items.Add(new (label, () => { wasCancelled = false; Select(new[] { att }); }));
 			}
 
 			if (atts.Length > 1)
 			{
 				items.Add(PopupItem.Spacer());
-				items.Add(new PopupItem("Select All", () =>
-				{
-					wasCancelled = false;
-					Select(atts, camera);
-				}, colorOverride: Color.green));
+				items.Add(new ("Select All", () => { wasCancelled = false; Select(atts); }, colorOverride: Color.green));
 			}
 
 			items.Add(PopupItem.Spacer());
@@ -640,7 +574,7 @@ namespace ClassicTilestorm
 
 			var result = PopupMenu.Show(mouseDownPos, $"Select ({atts.Length})", items);
 			if (!result && wasCancelled)
-				Select(null, camera);
+				Select(null);
 			return result;
 		}
 	}

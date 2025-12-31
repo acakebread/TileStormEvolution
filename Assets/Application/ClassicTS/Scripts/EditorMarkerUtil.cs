@@ -44,13 +44,6 @@ namespace ClassicTilestorm
 
 		private static readonly List<GameObject> mapMarkers = new();
 
-		public enum MarkerType
-		{
-			Undefined,
-			Waypoint,
-			Attachment
-		}
-
 		// ===================================================================
 		// NEW DECOUPLED API — world positions + optional colors
 		// ===================================================================

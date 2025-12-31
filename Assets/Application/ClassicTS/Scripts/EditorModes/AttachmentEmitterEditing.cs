@@ -4,9 +4,9 @@ namespace ClassicTilestorm
 {
 	public static class AttachmentEmitterEditing
 	{
-		public static void OnSelectionChanged(IMapManager mapManager, Camera camera)
+		public static void OnSelectionChanged(IMapManager mapManager, Camera camera, MapAttachment[] selection)
 		{
-			var emitter = (Emitter)EditorControllerAttachment.selectedAttachments![0];
+			var emitter = (Emitter)selection![0];
 
 			var worldPos = MapManager.WorldPosition(emitter.tile, emitter.Position);
 			EditorTransformUtil.UpdateTransform(worldPos, emitter.Rotation, camera);
@@ -14,9 +14,9 @@ namespace ClassicTilestorm
 			EditorPrimitiveUtil.UpdateCone(worldPos, emitter.Rotation, emitter.Distance, emitter.Apex);
 		}
 
-		public static void OnGizmoInput(IMapManager mapManager, Camera camera)
+		public static void OnGizmoInput(IMapManager mapManager, Camera camera, MapAttachment[] selection)
 		{
-			var emitter = (Emitter)EditorControllerAttachment.selectedAttachments![0];
+			var emitter = (Emitter)selection![0];
 
 			if (EditorTransformUtil.HandleInput(camera, out Vector3 newWorldPos, out Quaternion newWorldRot))
 			{
@@ -28,14 +28,14 @@ namespace ClassicTilestorm
 			}
 		}
 
-		public static void OnDragInput(IMapManager mapManager)
+		public static void OnDragInput(IMapManager mapManager, MapAttachment[] selection)
 		{
-			var emitter = (Emitter)EditorControllerAttachment.selectedAttachments![0];
+			var emitter = (Emitter)selection![0];
 			var worldPos = MapManager.WorldPosition(emitter.tile, emitter.Position);
 			EditorPrimitiveUtil.UpdateCone(worldPos, emitter.Rotation, emitter.Distance, emitter.Apex);
 		}
 
-		public static Emitter CreateEmitter(IMapManager mapManager, int tile, string variant)
+		public static Emitter Create(IMapManager mapManager, int tile, string variant)
 		{
 			if (null == mapManager || string.IsNullOrEmpty(variant)) return null;
 

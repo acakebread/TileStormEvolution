@@ -5,18 +5,18 @@ namespace ClassicTilestorm
 {
 	public static class AttachmentViewEditing
 	{
-		public static void OnSelectionChanged(IMapManager mapManager, Camera camera)
+		public static void OnSelectionChanged(IMapManager mapManager, Camera camera, MapAttachment[] selection)
 		{
-			var view = (View)EditorControllerAttachment.selectedAttachments![0];
+			var view = (View)selection![0];
 
 			var worldPos = MapManager.WorldPosition(view.tile, view.Position);
 			EditorTransformUtil.ShowAt(worldPos, view.Rotation, camera);
-			OnDragInput(mapManager); // reuse
+			OnDragInput(mapManager, selection); // reuse
 		}
 
-		public static void OnGizmoInput(IMapManager mapManager, Camera camera)
+		public static void OnGizmoInput(IMapManager mapManager, Camera camera, MapAttachment[] selection)
 		{
-			var view = (View)EditorControllerAttachment.selectedAttachments![0];
+			var view = (View)selection![0];
 
 			if (EditorTransformUtil.HandleInput(camera, out Vector3 newWorldPos, out Quaternion newWorldRot))
 			{
@@ -37,14 +37,14 @@ namespace ClassicTilestorm
 			}
 		}
 
-		public static void OnDragInput(IMapManager mapManager)
+		public static void OnDragInput(IMapManager mapManager, MapAttachment[] selection)
 		{
-			var view = (View)EditorControllerAttachment.selectedAttachments![0];
+			var view = (View)selection![0];
 			ViewPreviewUtil.Show(view, mapManager);
 			UpdateViewFrustumMarker(view);
 		}
 
-		public static View CreateView(IMapManager mapManager, int tile)
+		public static View Create(IMapManager mapManager, int tile)
 		{
 			if (null == mapManager) return null;
 
@@ -60,9 +60,9 @@ namespace ClassicTilestorm
 			return view;
 		}
 
-		public static void HandlePreviewCameraSync(IMapManager mapManager, Camera camera)
+		public static void HandlePreviewCameraSync(IMapManager mapManager, Camera camera, MapAttachment[] selection)
 		{
-			if (EditorControllerAttachment.selectedAttachments?.FirstOrDefault() is not View view)
+			if (selection?.FirstOrDefault() is not View view)
 				return;
 
 			var previewTransform = ViewPreviewUtil.PreviewCameraTransform;

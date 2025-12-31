@@ -5,11 +5,11 @@ namespace ClassicTilestorm
 	public static class AttachmentPickupEditing
 	{
 		// Pickup currently has no special gizmo/drag/selection visuals
-		public static void OnSelectionChanged(IMapManager mapManager, Camera camera) { }
-		public static void OnGizmoInput(IMapManager mapManager, Camera camera) { }
-		public static void OnDragInput(IMapManager mapManager) { }
+		public static void OnSelectionChanged(IMapManager mapManager, Camera camera, MapAttachment[] selection) { }
+		public static void OnGizmoInput(IMapManager mapManager, Camera camera, MapAttachment[] selection) { }
+		public static void OnDragInput(IMapManager mapManager, MapAttachment[] selection) { }
 
-		public static Pickup CreatePickup(IMapManager mapManager, int tile)
+		public static Pickup Create(IMapManager mapManager, int tile)
 		{
 			if (mapManager == null) return null;
 
