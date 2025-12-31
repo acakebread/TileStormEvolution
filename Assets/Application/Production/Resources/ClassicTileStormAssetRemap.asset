@@ -43,7 +43,7 @@ MonoBehaviour:
     replacement: med_gate_ew_hd
   - legacyName: med_tile_boundary
     replacement: med_tile_boundary_hd
-  - legacyName: med_tile_n_boundary_cage
+  - legacyName: med_tile_n_boudary_cage
     replacement: med_tile_n_boundary_cage_hd
   - legacyName: med_tile_e_boundary_cage
     replacement: med_tile_e_boundary_cage_hd
