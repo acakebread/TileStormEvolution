@@ -38,7 +38,7 @@ namespace ClassicTilestorm
 		// ===================================================================
 		public EditorControllerAttachment(EditorController controller) : base(controller) { }
 
-		public override bool IsMouseOverGUI() => base.IsMouseOverGUI() || sidePanel.IsMouseOver;
+		protected override bool IsMouseOverGUI() => base.IsMouseOverGUI() || sidePanel.IsMouseOver;
 
 		// ===================================================================
 		// Lifecycle
@@ -344,7 +344,7 @@ namespace ClassicTilestorm
 
 		private MapAttachment[] GetAttachmentsOnTile(int tileIndex)
 		{
-			if (iMapManager?.CurrentMap == null || !iMapManager.CurrentMap.IsValidTile(tileIndex)) return Array.Empty<MapAttachment>();
+			if (null == currentMap || currentMap.IsValidTile(tileIndex)) return Array.Empty<MapAttachment>();
 			return iMapManager.attachments?.Where(x => x.tile == tileIndex).ToArray() ?? Array.Empty<MapAttachment>();
 		}
 

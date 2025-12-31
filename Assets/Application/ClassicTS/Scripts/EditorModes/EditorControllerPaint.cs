@@ -15,7 +15,7 @@ namespace ClassicTilestorm
 		private int cycleIndex = 0;
 
 		private static readonly AutoHidePanel sidePanel = new(collapsed: 120f, expanded: 340f, delay: 1f, animDur: 0.3f);
-		public override bool IsMouseOverGUI() => base.IsMouseOverGUI() || sidePanel.IsMouseOver;
+		protected override bool IsMouseOverGUI() => base.IsMouseOverGUI() || sidePanel.IsMouseOver;
 
 		public EditorControllerPaint(EditorController editorController) : base(editorController) { }
 
