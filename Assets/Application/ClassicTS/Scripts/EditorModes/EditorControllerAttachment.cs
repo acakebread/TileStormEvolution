@@ -318,7 +318,7 @@ namespace ClassicTilestorm
 
 		private MapAttachment[] GetAttachmentsOnTile(int tileIndex)
 		{
-			if (null == currentMap || !currentMap.IsValidTile(tileIndex)) return Array.Empty<MapAttachment>();
+			if (null == iMapManager || !iMapManager.IsValidTile(tileIndex)) return Array.Empty<MapAttachment>();
 			return iMapManager.attachments?.Where(x => x.tile == tileIndex).ToArray() ?? Array.Empty<MapAttachment>();
 		}
 
@@ -406,7 +406,7 @@ namespace ClassicTilestorm
 
 				var oldIndex = wp.waypointIndex;
 				var newIndex = oldIndex + direction;
-				if (newIndex < 0 || newIndex >= currentMap.waypoints.Length) return;
+				if (newIndex < 0 || newIndex >= waypointAttachments.Length) return;
 
 				var list = currentMap.waypoints.ToList();
 				(list[oldIndex], list[newIndex]) = (list[newIndex], list[oldIndex]);

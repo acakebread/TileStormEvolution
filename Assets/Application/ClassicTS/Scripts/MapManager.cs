@@ -22,6 +22,8 @@ namespace ClassicTilestorm
 		Tile GetTile(int index);
 		int GetStartTile();
 		int GetEndTile();
+		bool IsValidTile(int index);
+
 		int FindAdjacentConsole(int nTile);
 		Map CurrentMap { get; }
 		Transform CurrentTransform { get; }
@@ -135,6 +137,8 @@ namespace ClassicTilestorm
 			}
 			return null;
 		}
+
+		public bool IsValidTile(int index) => currentMap.IsValidTile(index);
 
 		public Tile GetTile(int index)
 		{
