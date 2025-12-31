@@ -7,7 +7,7 @@ namespace ClassicTilestorm
 	{
 		public static void OnSelectionChanged(IMapManager mapManager, Camera camera)
 		{
-			var view = (View)AttachmentEditing.selectedAttachments![0];
+			var view = (View)EditorControllerAttachment.selectedAttachments![0];
 
 			var worldPos = MapManager.WorldPosition(view.tile, view.Position);
 			EditorTransformUtil.ShowAt(worldPos, view.Rotation, camera);
@@ -16,7 +16,7 @@ namespace ClassicTilestorm
 
 		public static void OnGizmoInput(IMapManager mapManager, Camera camera)
 		{
-			var view = (View)AttachmentEditing.selectedAttachments![0];
+			var view = (View)EditorControllerAttachment.selectedAttachments![0];
 
 			if (EditorTransformUtil.HandleInput(camera, out Vector3 newWorldPos, out Quaternion newWorldRot))
 			{
@@ -39,7 +39,7 @@ namespace ClassicTilestorm
 
 		public static void OnDragInput(IMapManager mapManager)
 		{
-			var view = (View)AttachmentEditing.selectedAttachments![0];
+			var view = (View)EditorControllerAttachment.selectedAttachments![0];
 			ViewPreviewUtil.Show(view, mapManager);
 			UpdateViewFrustumMarker(view);
 		}
@@ -62,7 +62,7 @@ namespace ClassicTilestorm
 
 		public static void HandlePreviewCameraSync(IMapManager mapManager, Camera camera)
 		{
-			if (AttachmentEditing.selectedAttachments?.FirstOrDefault() is not View view)
+			if (EditorControllerAttachment.selectedAttachments?.FirstOrDefault() is not View view)
 				return;
 
 			var previewTransform = ViewPreviewUtil.PreviewCameraTransform;
