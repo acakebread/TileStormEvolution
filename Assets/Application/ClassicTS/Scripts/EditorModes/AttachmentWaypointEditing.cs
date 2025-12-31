@@ -1,17 +1,16 @@
-using UnityEngine;
-
 namespace ClassicTilestorm
 {
-	public static class AttachmentWaypointEditing
+	internal class WaypointAttachmentHandler : IEditorAttachmentHandler
 	{
-		public static void OnSelectionChanged(IMapManager mapManager, Camera camera) { }
-		public static void OnGizmoInput(IMapManager mapManager, Camera camera) { }
-		public static void OnDragInput(IMapManager mapManager) { }
+		public static readonly WaypointAttachmentHandler Instance = new();
 
-		public static Waypoint CreateWaypoint(IMapManager mapManager, int tile)
+		public static Waypoint Create(IMapManager mapManager, int tile)
 		{
-			if (null == mapManager) return null;
-			return null;
+			if (mapManager == null) return null;
+			var index = mapManager.CurrentMap.waypoints?.Length ?? 0;
+			var waypoint = new Waypoint(index, tile);
+			mapManager.AddAttachment(waypoint);
+			return waypoint;
 		}
 	}
 }

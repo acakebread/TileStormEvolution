@@ -5,15 +5,15 @@ namespace ClassicTilestorm
 {
 	public abstract class EditorControllerMovement
 	{
-		public EditorController editorController;
-		public Camera camera { get { if (editorController.TryGetComponent<MainCameraController>(out var controller)) return controller.activeSystem?.camera; return null; } }
+		private EditorController editorController;
+		protected Camera camera { get { if (editorController.TryGetComponent<MainCameraController>(out var controller)) return controller.activeSystem?.camera; return null; } }
 
 		protected int HitTile(Vector3 position) => iMapManager.CameraHitTile(camera, position);
 
-		public bool IsGuiControlActive() => GUIUtility.hotControl != 0 || (EventSystem.current && EventSystem.current.IsPointerOverGameObject());
-		public virtual bool IsMouseOverGUI() => editorController.IsMouseOverGui() | IsGuiControlActive();
-		public Map currentMap => editorController?.iMapManager?.CurrentMap;
-		public IMapManager iMapManager => editorController?.iMapManager;
+		protected bool IsGuiControlActive() => GUIUtility.hotControl != 0 || (EventSystem.current && EventSystem.current.IsPointerOverGameObject());
+		protected virtual bool IsMouseOverGUI() => editorController.IsMouseOverGui() | IsGuiControlActive();
+		protected Map currentMap => editorController?.iMapManager?.CurrentMap;
+		protected IMapManager iMapManager => editorController?.iMapManager;
 		public virtual void OnMapLoaded() { }
 
 		public EditorControllerMovement(EditorController controller = null) => editorController = controller;

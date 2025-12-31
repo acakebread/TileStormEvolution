@@ -12,10 +12,11 @@ namespace ClassicTilestorm
 		private EditorControllerMovement activeMode;
 		private EditorControllerDrag dragMode;
 		private EditorControllerPaint paintMode;
-		private EditorControllerWaypoint waypointMode;
+		//private EditorControllerWaypoint waypointMode;
 		private EditorControllerAttachment attachmentMode;
 
-		private enum EditorMode { Drag, Paint, Waypoint, Attachment }
+		//private enum EditorMode { Drag, Paint, Waypoint, Attachment }
+		private enum EditorMode { Drag, Paint, Attachment }
 		private EditorMode? currentMode = null;
 
 		private bool gridEnabled = true;
@@ -39,7 +40,7 @@ namespace ClassicTilestorm
 			// Modes
 			dragMode = new EditorControllerDrag(this);
 			paintMode = new EditorControllerPaint(this);
-			waypointMode = new EditorControllerWaypoint(this);
+			//waypointMode = new EditorControllerWaypoint(this);
 			attachmentMode = new EditorControllerAttachment(this); 
 			SetEditorMode(EditorMode.Drag);//default
 		}
@@ -101,7 +102,7 @@ namespace ClassicTilestorm
 			if (null != mapManager) mapManager.OnMapEdited -= HandleMapEdited;
 			dragMode?.OnDestroy();
 			paintMode?.OnDestroy();
-			waypointMode?.OnDestroy();
+			//waypointMode?.OnDestroy();
 			attachmentMode?.OnDestroy();
 		}
 
@@ -135,7 +136,7 @@ namespace ClassicTilestorm
 			{
 				EditorMode.Drag => dragMode,
 				EditorMode.Paint => paintMode,
-				EditorMode.Waypoint => waypointMode,
+				//EditorMode.Waypoint => waypointMode,
 				EditorMode.Attachment => attachmentMode,
 				_ => dragMode
 			};
@@ -172,36 +173,37 @@ namespace ClassicTilestorm
 		{
 			Color prevContentColor = GUI.contentColor;
 
+			var ct = 0;
 			var y = panelYoffset + spacing;
-			if (GuiUtils.ColoredButton(new Rect(margin, y + 0 * (buttonHeight + spacing), buttonWidth, buttonHeight), gridVisible ? "Hide Grid" : "Show Grid", new Color(0.25f, 0.75f, 0.25f))) OnGridLinesToggled(!gridVisible);
+			if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), gridVisible ? "Hide Grid" : "Show Grid", new Color(0.25f, 0.75f, 0.25f))) OnGridLinesToggled(!gridVisible);
 
-			if (GuiUtils.ColoredButton(new Rect(margin, y + 1 * (buttonHeight + spacing), buttonWidth, buttonHeight), dofEnabled ? "Disable DOF" : "Enable DOF", new Color(0.25f, 0.75f, 0.25f))) OnDofToggled(!dofEnabled);
+			if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), dofEnabled ? "Disable DOF" : "Enable DOF", new Color(0.25f, 0.75f, 0.25f))) OnDofToggled(!dofEnabled);
 
 			GUI.contentColor = mode == "Drag" ? Color.cyan : Color.white;
-			if (GUI.Button(new Rect(margin, y + 2 * (buttonHeight + spacing), buttonWidth, buttonHeight), "Drag")) SetEditorMode(EditorMode.Drag);
+			if (GUI.Button(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "Drag")) SetEditorMode(EditorMode.Drag);
 
 			GUI.contentColor = mode == "Paint" ? Color.cyan : Color.white;
-			if (GUI.Button(new Rect(margin, y + 3 * (buttonHeight + spacing), buttonWidth, buttonHeight), "Paint")) SetEditorMode(EditorMode.Paint);
+			if (GUI.Button(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "Paint")) SetEditorMode(EditorMode.Paint);
 
-			GUI.contentColor = mode == "Waypoint" ? Color.cyan : Color.white;
-			if (GUI.Button(new Rect(margin, y + 4 * (buttonHeight + spacing), buttonWidth, buttonHeight), "Waypoint")) SetEditorMode(EditorMode.Waypoint);
+			//GUI.contentColor = mode == "Waypoint" ? Color.cyan : Color.white;
+			//if (GUI.Button(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "Waypoint")) SetEditorMode(EditorMode.Waypoint);
 
 			GUI.contentColor = (currentMode ?? EditorMode.Drag) == EditorMode.Attachment ? Color.cyan : Color.white;
-			if (GUI.Button(new Rect(margin, y + 5 * (buttonHeight + spacing), buttonWidth, buttonHeight), "Attachments")) SetEditorMode(EditorMode.Attachment);
+			if (GUI.Button(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "Attachments")) SetEditorMode(EditorMode.Attachment);
 
 			GUI.contentColor = prevContentColor;
 
 			var mainController = GetComponent<MainController>();
-			if (GuiUtils.ColoredButton(new Rect(margin, y + 6 * (buttonHeight + spacing), buttonWidth, buttonHeight), "Import Map", new Color(0.2f, 0.6f, 1f)))
+			if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "Import Map", new Color(0.2f, 0.6f, 1f)))
 				mainController.ImportMapAsAtomic();
 
-			if (GuiUtils.ColoredButton(new Rect(margin, y + 7 * (buttonHeight + spacing), buttonWidth, buttonHeight), "Export Map", new Color(0.8f, 0.2f, 0.2f)))
+			if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "Export Map", new Color(0.8f, 0.2f, 0.2f)))
 				mainController.ExportMapAsAtomic();
 
-			if (GuiUtils.ColoredButton(new Rect(margin, y + 8 * (buttonHeight + spacing), buttonWidth, buttonHeight), "(Re)Load Database", new Color(0.2f, 0.6f, 1f)))
+			if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "(Re)Load Database", new Color(0.2f, 0.6f, 1f)))
 				mainController.LoadDatabase();
 
-			if (GuiUtils.ColoredButton(new Rect(margin, y + 9 * (buttonHeight + spacing), buttonWidth, buttonHeight), "Save Database", new Color(0.8f, 0.2f, 0.2f)))
+			if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "Save Database", new Color(0.8f, 0.2f, 0.2f)))
 				mainController.SaveDatabase();
 		}
 	}
