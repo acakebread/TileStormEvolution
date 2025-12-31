@@ -48,9 +48,17 @@ namespace MassiveHadronLtd
 			public static PopupItem Spacer(int height = 8) => new PopupItem(null, null, null, height);
 		}
 
+		public enum PopupResult
+		{
+			StillOpen,
+			ClosedByAction,     // a button with action was clicked
+			ClosedByCancel,     // explicit Cancel button clicked (optional)
+			ClosedByClickOutside
+		}
+
 		public static class PopupMenu
 		{
-			public static bool Show(Vector2 screenPos, string title, List<PopupItem> items)
+			public static PopupResult Show(Vector2 screenPos, string title, List<PopupItem> items)
 			{
 				MarkGuiActive();
 
@@ -118,7 +126,7 @@ namespace MassiveHadronLtd
 						{
 							GUI.color = oldColor;
 							item.action?.Invoke();
-							return false; // popup closed
+							return PopupResult.ClosedByAction;
 						}
 					}
 					else
@@ -141,9 +149,9 @@ namespace MassiveHadronLtd
 
 				// Click outside closes
 				if (Event.current.type == EventType.MouseDown && !rect.Contains(Event.current.mousePosition))
-					return false;// closed
+					return PopupResult.ClosedByClickOutside;
 
-				return true;//still active
+				return PopupResult.StillOpen;
 			}
 		}
 	}

@@ -417,21 +417,26 @@ namespace ClassicTilestorm
 		// ===================================================================
 		private bool DrawAddPopup()
 		{
-			var wasCancelled = true;
 			var items = new List<PopupItem>
 			{
-				new($"Waypoint [WP{currentMap.waypoints.Length:00}]", () => { wasCancelled = false; Select(WaypointAttachmentHandler.Create(iMapManager, pendingTile)); }, colorOverride: Color.lightSteelBlue),
-				new("Emitter [flame]", () => { wasCancelled = false; Select(EmitterAttachmentHandler.Create(iMapManager, pendingTile, "flame")); }, colorOverride: Color.cyan),
-				new("Emitter [spark]", () => { wasCancelled = false; Select(EmitterAttachmentHandler.Create(iMapManager, pendingTile, "spark")); }, colorOverride: Color.cyan),
-				new("View", () => { wasCancelled = false; Select(ViewAttachmentHandler.Create(iMapManager, pendingTile)); }, colorOverride: Color.cyan),
-				new("Pickup", () => { wasCancelled = false; Select(PickupAttachmentHandler.Create(iMapManager, pendingTile)); }, colorOverride: Color.cyan),
+				new($"Waypoint [WP{currentMap.waypoints.Length:00}]", () => Select(WaypointAttachmentHandler.Create(iMapManager, pendingTile)), colorOverride: Color.lightSteelBlue),
+				new("Emitter [flame]", () => Select(EmitterAttachmentHandler.Create(iMapManager, pendingTile, "flame")), colorOverride: Color.cyan),
+				new("Emitter [spark]", () => Select(EmitterAttachmentHandler.Create(iMapManager, pendingTile, "spark")), colorOverride: Color.cyan),
+				new("View", () => Select(ViewAttachmentHandler.Create(iMapManager, pendingTile)), colorOverride: Color.cyan),
+				new("Pickup", () => Select(PickupAttachmentHandler.Create(iMapManager, pendingTile)), colorOverride: Color.cyan),
 				PopupItem.Spacer(),
 				new("Cancel", () => {}, colorOverride: Color.yellow)
 			};
 
 			var result = PopupMenu.Show(mouseDownPos, $"Add Attachment at tile {pendingTile}", items);
-			if (!result && wasCancelled) Select();
-			return result;
+
+			if (result == PopupResult.ClosedByAction)
+				return false; // action already invoked inside popup
+
+			if (result == PopupResult.ClosedByClickOutside || result == PopupResult.ClosedByCancel)
+				Select(); // explicit deselect
+
+			return result == PopupResult.StillOpen;
 		}
 
 		private bool DrawDeletePopup()
@@ -458,8 +463,8 @@ namespace ClassicTilestorm
 			items.Add(new PopupItem("Cancel", () => { }, colorOverride: Color.yellow));
 
 			var result = PopupMenu.Show(mouseDownPos, "Delete Attachment" + (attsOnTile.Length > 1 ? "(s)" : ""), items);
-			if (!result) Select();
-			return result;
+			if (result != PopupResult.StillOpen) Select();
+			return result == PopupResult.StillOpen;
 		}
 
 		private bool DrawSelectPopup()
@@ -467,7 +472,6 @@ namespace ClassicTilestorm
 			var atts = GetAttachmentsOnTile(pendingTile);
 			if (atts.Length == 0) return false;
 
-			var wasCancelled = true;
 			var items = new List<PopupItem>();
 
 			foreach (var att in atts)
@@ -477,21 +481,27 @@ namespace ClassicTilestorm
 					label += $" to {e.LookAt.magnitude:F1}";
 				label += $" [tile {att.tile}]";
 
-				items.Add(new (label, () => { wasCancelled = false; Select(att); }));
+				items.Add(new (label, () => Select(att)));
 			}
 
 			if (atts.Length > 1)
 			{
 				items.Add(PopupItem.Spacer());
-				items.Add(new ("Select All", () => { wasCancelled = false; Select(atts); }, colorOverride: Color.green));
+				items.Add(new ("Select All", () => Select(atts), colorOverride: Color.green));
 			}
 
 			items.Add(PopupItem.Spacer());
 			items.Add(new PopupItem("Cancel", () => { }, colorOverride: Color.yellow));
 
 			var result = PopupMenu.Show(mouseDownPos, $"Select ({atts.Length})", items);
-			if (!result && wasCancelled) Select();
-			return result;
+
+			if (result == PopupResult.ClosedByAction)
+				return false; // action already invoked inside popup
+
+			if (result == PopupResult.ClosedByClickOutside || result == PopupResult.ClosedByCancel)
+				Select(); // explicit deselect
+
+			return result == PopupResult.StillOpen;
 		}
 	}
 }
