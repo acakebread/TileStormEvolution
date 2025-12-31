@@ -417,19 +417,20 @@ namespace ClassicTilestorm
 		// ===================================================================
 		private bool DrawAddPopup()
 		{
+			var wasCancelled = true;
 			var items = new List<PopupItem>
 			{
-				new($"Waypoint [WP{currentMap.waypoints.Length:00}]", () => {WaypointAttachmentHandler.Create(iMapManager, pendingTile); pendingAction = PendingAction.None; }, colorOverride: Color.lightSteelBlue),
-				new("Emitter [flame]", () => Select(EmitterAttachmentHandler.Create(iMapManager, pendingTile, "flame")), colorOverride: Color.cyan),
-				new("Emitter [spark]", () => Select(EmitterAttachmentHandler.Create(iMapManager, pendingTile, "spark")), colorOverride: Color.cyan),
-				new("View", () => Select(ViewAttachmentHandler.Create(iMapManager, pendingTile)), colorOverride: Color.cyan),
-				new("Pickup", () => Select(PickupAttachmentHandler.Create(iMapManager, pendingTile)), colorOverride: Color.cyan),
+				new($"Waypoint [WP{currentMap.waypoints.Length:00}]", () => { wasCancelled = false; Select(WaypointAttachmentHandler.Create(iMapManager, pendingTile)); }, colorOverride: Color.lightSteelBlue),
+				new("Emitter [flame]", () => { wasCancelled = false; Select(EmitterAttachmentHandler.Create(iMapManager, pendingTile, "flame")); }, colorOverride: Color.cyan),
+				new("Emitter [spark]", () => { wasCancelled = false; Select(EmitterAttachmentHandler.Create(iMapManager, pendingTile, "spark")); }, colorOverride: Color.cyan),
+				new("View", () => { wasCancelled = false; Select(ViewAttachmentHandler.Create(iMapManager, pendingTile)); }, colorOverride: Color.cyan),
+				new("Pickup", () => { wasCancelled = false; Select(PickupAttachmentHandler.Create(iMapManager, pendingTile)); }, colorOverride: Color.cyan),
 				PopupItem.Spacer(),
 				new("Cancel", () => {}, colorOverride: Color.yellow)
 			};
 
 			var result = PopupMenu.Show(mouseDownPos, $"Add Attachment at tile {pendingTile}", items);
-			if (!result) Select();
+			if (!result && wasCancelled) Select();
 			return result;
 		}
 
