@@ -1,19 +1,24 @@
 fileFormatVersion: 2
-guid: 1c63b99d811f9ff428904a01ef12af3e
+guid: 8d7a5a76a9719e54587046cddc0d672c
 ModelImporter:
-  serializedVersion: 22200
+  serializedVersion: 24200
   internalIDToNameTable: []
   externalObjects:
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
-      name: med_path
-    second: {fileID: 2100000, guid: 3bd6216e96854084abfa26359c218573, type: 2}
+      name: med_tile_boundary_cage
+    second: {fileID: 2100000, guid: 31623e890caa1cf4fbed34a7a2ad3421, type: 2}
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
-      name: med_wall
-    second: {fileID: 2100000, guid: 3c5f567d868d35249b0aa2dad4ef5f6b, type: 2}
+      name: med_tile_boundary_cobbles
+    second: {fileID: 2100000, guid: 16208bab2359eab42ac9d7d16ead9f8c, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: med_tile_boundary_sides
+    second: {fileID: 2100000, guid: aa61484a78af3ca4faae6df2984ba1fd, type: 2}
   materials:
     materialImportMode: 2
     materialName: 0
@@ -66,6 +71,9 @@ ModelImporter:
     maxBonesPerVertex: 4
     minBoneWeight: 0.001
     optimizeBones: 1
+    generateMeshLods: 0
+    meshLodGenerationFlags: 0
+    maximumMeshLod: -1
     meshOptimizationFlags: -1
     indexFormat: 0
     secondaryUVAngleDistortion: 8
