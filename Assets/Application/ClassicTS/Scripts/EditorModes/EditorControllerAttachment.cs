@@ -556,8 +556,41 @@ namespace ClassicTilestorm
 				items.Add(PopupItem.Spacer());
 				items.Add(new PopupItem("Delete All", () =>
 				{
+					// === FIXED: Delete BOTH regular attachments AND waypoints on this tile ===
+					// 1. Remove all regular attachments on the tile
 					iMapManager.RemoveAllAttachmentsOnTile(currentPendingTile);
+
+					// 2. Remove all waypoints that point to this tile
+					var waypointsToRemove = new List<int>();
+					for (int i = 0; i < currentMap.waypoints.Length; i++)
+					{
+						if (currentMap.waypoints[i] == currentPendingTile)
+							waypointsToRemove.Add(i);
+					}
+
+					// Remove from highest index to lowest to avoid index shifting issues
+					foreach (int index in waypointsToRemove.OrderByDescending(i => i))
+					{
+						var list = currentMap.waypoints.ToList();
+						list.RemoveAt(index);
+						currentMap.waypoints = list.ToArray();
+
+						// Also remove the virtual waypoint attachment
+						var waypointAtt = iMapManager.waypointAttachments.FirstOrDefault(w => w.waypointIndex == index);
+						if (waypointAtt != null)
+							iMapManager.RemoveAttachment(waypointAtt);
+
+						// Re-index remaining waypoints (higher indices shift down)
+						foreach (var wp in iMapManager.waypointAttachments)
+						{
+							if (wp.waypointIndex > index)
+								wp.waypointIndex--;
+						}
+					}
+					// === END OF FIX ===
+
 					Select(null, camera);
+					RebuildMarkers(currentMode);
 				}, colorOverride: Color.red));
 			}
 
