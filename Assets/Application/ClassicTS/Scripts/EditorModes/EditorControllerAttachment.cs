@@ -232,6 +232,18 @@ namespace ClassicTilestorm
 			}
 			HandleDragInput();
 			RebuildMarkers();
+
+			void HandleDragInput()
+			{
+				if (null == selection || 1 != selection.Length) return;
+				if (selection[0] is ITransformableAttachment transformable)
+				{
+					var worldPos = MapManager.WorldPosition(selection[0].tile, transformable.Position);
+					var worldRot = MapManager.WorldRotation(selection[0].tile, transformable.Rotation);
+					EditorTransformUtil.ShowAt(worldPos, worldRot, camera);
+				}
+				selection[0].OnDragInput(iMapManager, selection);
+			}
 		}
 
 		// ===================================================================
@@ -263,14 +275,14 @@ namespace ClassicTilestorm
 			if (null == selection || 1 != selection.Length) return;
 			HandleSelectionChanged();
 			HandleGizmoInput();
-		}
 
-		private void HandleSelectionChanged()
-		{
-			if (null == selection || 0 == selection.Length) return;
-			var firstType = selection[0].GetType();
-			if (!selection.All(a => a.GetType() == firstType)) return;
-			selection[0].OnSelectionChanged(iMapManager, camera, selection);
+			void HandleSelectionChanged()
+			{
+				if (null == selection || 0 == selection.Length) return;
+				var firstType = selection[0].GetType();
+				if (!selection.All(a => a.GetType() == firstType)) return;
+				selection[0].OnSelectionChanged(iMapManager, camera, selection);
+			}
 		}
 
 		private void HandleGizmoInput()
@@ -279,18 +291,6 @@ namespace ClassicTilestorm
 			var firstType = selection[0].GetType();
 			if (!selection.All(a => a.GetType() == firstType)) return;
 			selection[0].OnGizmoInput(iMapManager, camera, selection);
-		}
-
-		private void HandleDragInput()
-		{
-			if (null == selection || 1 != selection.Length) return;
-			if (selection[0] is ITransformableAttachment transformable)
-			{
-				var worldPos = MapManager.WorldPosition(selection[0].tile, transformable.Position);
-				var worldRot = MapManager.WorldRotation(selection[0].tile, transformable.Rotation);
-				EditorTransformUtil.ShowAt(worldPos, worldRot, camera);
-			}
-			selection[0].OnDragInput(iMapManager, selection);
 		}
 
 		// ===================================================================
@@ -376,16 +376,13 @@ namespace ClassicTilestorm
 		{
 			var selectedWaypoint = selection?.Length > 0 ? selection[0] as Waypoint : null;
 
-			var wpArray = currentMap.waypoints ?? Array.Empty<int>();
 			var items = new List<ListViewItem>();
-
 			var waypointAttachments = iMapManager.waypointAttachments;//cached
 
-			for (var i = 0; i < wpArray.Length; i++)
+			for (var i = 0; i < waypointAttachments.Length; i++)
 			{
-				var tile = wpArray[i];
 				var waypoint = waypointAttachments.FirstOrDefault(w => w.waypointIndex == i);
-				items.Add(new(label: $"WP{i:00} [tile {tile}]", onClick: (_) =>
+				items.Add(new(label: $"WP{i:00} [tile {waypointAttachments[i].tile}]", onClick: (_) =>
 				{
 					if (null != waypoint) Select(new[] { waypoint });
 				}, selected: selectedWaypoint?.waypointIndex == i));
@@ -396,7 +393,7 @@ namespace ClassicTilestorm
 			sidePanel.Buttons.Clear();
 
 			var canMoveUp = null != selectedWaypoint && selectedWaypoint.waypointIndex > 0;
-			var canMoveDown = null != selectedWaypoint && selectedWaypoint.waypointIndex >= 0 && selectedWaypoint.waypointIndex < wpArray.Length - 1;
+			var canMoveDown = null != selectedWaypoint && selectedWaypoint.waypointIndex >= 0 && selectedWaypoint.waypointIndex < waypointAttachments.Length - 1;
 
 			sidePanel.Buttons.Add(new("Move Up", () => MoveWaypoint(selectedWaypoint, -1), enabled: canMoveUp));
 			sidePanel.Buttons.Add(new("Move Down", () => MoveWaypoint(selectedWaypoint, +1), enabled: canMoveDown));
