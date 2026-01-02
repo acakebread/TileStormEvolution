@@ -29,6 +29,35 @@ namespace ClassicTilestorm
 			}
 		}
 
+		[Header("geometry loading")]
+		[SerializeField]
+		private bool remapGeometry = true;
+
+		public static bool RemapGeometry
+		{
+			get => PlayerPrefsX.GetBool("RemapGeometry", instance?.remapGeometry ?? true);
+			set
+			{
+				if (instance == null) return;
+
+				// Always update the serialized field and PlayerPrefs
+				instance.remapGeometry = value;
+				PlayerPrefsX.SetBool("RemapGeometry", value, true);
+
+				// Always trigger the side effects when set via code or OnValidate
+				// (We know it's a meaningful change because either:
+				//  - It came from OnValidate (inspector toggle)
+				//  - Or from external code that explicitly wants the change)
+				OnRemapGeometryChanged?.Invoke(value);
+				PrefabFactory.ClearCache();
+				GeometrySearchProvider.UseRemapping = value; // Optional: direct sync for safety
+
+				Debug.Log($"[PreviewSettings] Remap Geometry set to: {value}. Cache cleared.");
+			}
+		}
+
+		public static event System.Action<bool> OnRemapGeometryChanged;
+
 		[Header("load map scrambled or solved")]
 		[SerializeField] private bool scrambled = true;
 		public static bool Scrambled => instance.scrambled;
@@ -102,7 +131,35 @@ namespace ClassicTilestorm
 
 		private static PreviewSettings instance;
 
-		private void Awake() => instance = this;
+		private void Awake()
+		{
+			instance = this;
+
+			// Apply persisted value (or default) to the global toggle
+			GeometrySearchProvider.UseRemapping = RemapGeometry;
+
+			// Subscribe to future changes (from code or other UI)
+			OnRemapGeometryChanged += (enabled) =>
+			{
+				GeometrySearchProvider.UseRemapping = enabled;
+			};
+		}
+
+		private void OnValidate()
+		{
+			if (instance == this && Application.isPlaying) // Only during play mode runtime changes
+			{
+				// Get the CURRENT persisted value (without using the field as default!)
+				bool persistedValue = PlayerPrefsX.GetBool("RemapGeometry", true); // true = original default if key missing
+
+				// If the inspector field differs from what is currently persisted...
+				if (remapGeometry != persistedValue)
+				{
+					// Push the new inspector value through the proper channel
+					RemapGeometry = remapGeometry;
+				}
+			}
+		}
 
 		public static string DatabaseFolder => PreviewSettingsStatic.DatabaseFolder;
 		public static string ExportFolder => PreviewSettingsStatic.ExportFolder;

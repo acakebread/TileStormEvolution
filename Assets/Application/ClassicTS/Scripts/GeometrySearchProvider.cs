@@ -40,21 +40,27 @@ public static class GeometrySearchProvider
 
 		var cleanName = Path.GetFileNameWithoutExtension(modelName).Trim();
 
-		// NEW: Use remap table — may return a completely different name or the same
-		var preferredName = ClassicTileStormAssetRemapHelper.RemapName(cleanName);
+		string targetName = cleanName;
 
-		// PHASE 1: Try the preferred (remapped/HD) name across all roots
-		var preferred = FindInAnyRoot(preferredName, isPreferred: true, originalName: cleanName);
-		if (null != preferred) return preferred;
-
-		// PHASE 2: If preferred not found and it's different from original, fall back to legacy
-		if (preferredName != cleanName)
+		// Only apply remapping if enabled
+		if (UseRemapping)
 		{
-			var legacy = FindInAnyRoot(cleanName, isPreferred: false, originalName: cleanName);
-			if (legacy != null) return legacy;
-		}
+			var preferredName = ClassicTileStormAssetRemapHelper.RemapName(cleanName);
+			if (preferredName != cleanName)
+			{
+				// PHASE 1: Try preferred (remapped) name
+				var preferred = FindInAnyRoot(preferredName, isPreferred: true, originalName: cleanName);
+				if (preferred != null) return preferred;
 
-		Debug.LogWarning($"[GeometrySearchProvider] Model '{modelName}' ('{cleanName}') not found — neither preferred nor legacy version.");
+				// PHASE 2: Fall back to original
+				targetName = cleanName;
+			}
+		}
+		// If remapping is disabled, or remap returned same name, just use original
+		var result = FindInAnyRoot(targetName, isPreferred: false, originalName: cleanName);
+		if (result != null) return result;
+
+		Debug.LogWarning($"[GeometrySearchProvider] Model '{modelName}' ('{cleanName}') not found.");
 		return null;
 	}
 
@@ -97,6 +103,23 @@ public static class GeometrySearchProvider
 			}
 		}
 		return null;
+	}
+
+	// NEW: Global toggle for remapping behavior
+	private static bool useRemapping = true;
+	public static bool UseRemapping
+	{
+		get => useRemapping;
+		set
+		{
+			if (useRemapping != value)
+			{
+				useRemapping = value;
+				// When toggled, clear the root caches so next lookup rescans with new logic
+				rootCaches.Clear();
+				Debug.Log($"[GeometrySearchProvider] Geometry remapping {(value ? "enabled" : "disabled")}. Caches cleared.");
+			}
+		}
 	}
 }
 
