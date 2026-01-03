@@ -18,7 +18,8 @@ namespace ClassicTilestorm
 
 		private void Awake()
 		{
-			GeometrySearchProvider.Register();//important for all resource loading
+			GeometrySearchProvider.Register(PreviewSettings.RemapGeometry);//important for all resource loading
+			PrefabFactory.CustomSearchProvider = GeometrySearchProvider.FindModelByName;
 			PreviewSettings.OnRemapGeometryChanged += (value) =>
 			{
 				GeometrySearchProvider.UseRemapping = value;

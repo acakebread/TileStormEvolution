@@ -42,7 +42,6 @@ namespace ClassicTilestorm
 
 				instance.remapGeometry = value;
 				PlayerPrefsX.SetBool("RemapGeometry", value, true);
-				//OnRemapGeometryChanged?.Invoke(value);
 			}
 		}
 
@@ -143,10 +142,7 @@ namespace ClassicTilestorm
 
 				// BUT: Defer the event invoke and geometry refresh until safe (after OnValidate)
 #if UNITY_EDITOR
-				EditorApplication.delayCall += () =>
-				{
-					OnRemapGeometryChanged?.Invoke(remapGeometry);
-				};
+				EditorApplication.delayCall += () => OnRemapGeometryChanged?.Invoke(remapGeometry);
 #else
 			    // In builds (unlikely to hit this path), invoke immediately
 				OnRemapGeometryChanged?.Invoke(remapGeometry);
