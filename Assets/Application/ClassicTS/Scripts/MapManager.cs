@@ -44,6 +44,8 @@ namespace ClassicTilestorm
 		bool RemoveAttachments(MapAttachment[] attachmentArray);
 		void RemoveAllAttachmentsOnTile(int tileIndex);
 
+		void RefreshGeometry();
+
 		MapAttachment[] attachments { get; set; }
 		Waypoint[] waypointAttachments { get; }//set; 
 
@@ -211,9 +213,7 @@ namespace ClassicTilestorm
 
 			InitializeWindController();
 
-			// Refresh ALL visual attachments on load
-			foreach (var att in CurrentMap.attachments)
-				RefreshAttachmentInstance(att);
+			RefreshAllAttachmentInstances();
 
 			SetupWaypoints();
 		}
@@ -396,6 +396,13 @@ namespace ClassicTilestorm
 		// Map editing
 		// -----------------------------------------------------------------------
 
+		public void RefreshGeometry()
+		{
+			DestroyAllTiles();
+			LoadTileData(currentMap.tiles);
+			RefreshAllAttachmentInstances();
+		}
+
 		public bool UpdateTileAt(int x, int z, string id, bool expand = true)
 		{
 			bool result;
@@ -540,7 +547,6 @@ namespace ClassicTilestorm
 			{
 				DestroyAllTiles();
 				LoadTileData(currentMap.tiles);
-
 				RefreshAllAttachmentInstances();
 			}
 			else
@@ -600,7 +606,13 @@ namespace ClassicTilestorm
 			}
 
 			//temporary special placeholder flag setting for special properties in absence of definition editor 
-			if (definition.model.Contains("tree"))
+			//if (definition.model.Contains("tree"))
+			if (definition.model.Equals("jun_boundary_tree_double") || 
+				definition.model.Equals("jun_boundary_tree_double") ||
+				definition.model.Equals("jun_boundary_tree_plant") ||
+				definition.model.Equals("jun_boundary_tree_plant") ||
+				definition.model.Equals("jun_boundary_tree_single") ||
+				definition.model.Equals("jun_boundary_tree_single"))
 				definition.bSway = true;//ToDo implement sway in definition editor - hard set to trees for now
 
 			//temporary special placeholder flag setting for special properties in absence of definition editor 
@@ -611,7 +623,7 @@ namespace ClassicTilestorm
 				definition.model.Equals("jun_tile_se_corner") ||
 				definition.model.Equals("jun_tile_sw_corner") ||
 				definition.model.Equals("jun_tile_nsew"))
-				definition.bWash= true;//ToDo implement sway in definition editor - hard set to jungle drag tiles for now
+				definition.bWash = true;//ToDo implement sway in definition editor - hard set to jungle drag tiles for now
 
 			//temporary special placeholder material override for special properties in absence of definition editor 
 			if ("Caustic" == definition.texture)

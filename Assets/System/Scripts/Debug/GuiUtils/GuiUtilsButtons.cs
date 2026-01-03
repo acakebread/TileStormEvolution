@@ -28,13 +28,20 @@ namespace MassiveHadronLtd
 				alignment = TextAnchor.MiddleCenter,
 				border = new RectOffset(8, 8, 8, 8),
 				padding = new RectOffset(4, 4, 4, 4),
-				normal = { background = solidWhite, textColor = Color.white },
-				hover = { background = solidBright, textColor = Color.white },
-				active = { background = solidDark, textColor = Color.white },
+				normal = { background = solidWhite },
+				hover = { background = solidBright },
+				active = { background = solidDark },
 				onNormal = { background = solidWhite },
 				onHover = { background = solidBright },
 				onActive = { background = solidDark }
 			};
+
+			// Important: set text color globally for the style
+			coloredButtonStyle.normal.textColor = Color.white;
+			coloredButtonStyle.hover.textColor = Color.white;
+			coloredButtonStyle.active.textColor = Color.white;
+			coloredButtonStyle.onNormal.textColor = Color.white;
+			// etc. if needed
 		}
 
 		private class HoldState
@@ -47,21 +54,13 @@ namespace MassiveHadronLtd
 		{
 			EnsureStyles();
 
-			Color prevBg = GUI.backgroundColor;
-			Color prevContent = GUI.contentColor;
-			Color prevColor = GUI.color;
-
-			GUI.backgroundColor = col;
-			GUI.contentColor = Color.white;
-			GUI.color = Color.white;
+			Color prev = GUI.backgroundColor;
+			GUI.backgroundColor = col;                    // Only tint — don't touch content/color
 
 			bool clicked = GUI.Button(r, text, coloredButtonStyle);
 			if (clicked) onClick?.Invoke();
 
-			GUI.backgroundColor = prevBg;
-			GUI.contentColor = prevContent;
-			GUI.color = prevColor;
-
+			GUI.backgroundColor = prev;
 			return clicked;
 		}
 
@@ -70,7 +69,7 @@ namespace MassiveHadronLtd
 			string text,
 			Color color,
 			Action onRepeat = null,
-			float initialDelay = 0f,      // Delay before repeating starts (after first immediate fire)
+			float initialDelay = 0f,
 			float repeatInterval = 0.05f)
 		{
 			EnsureStyles();
@@ -80,72 +79,68 @@ namespace MassiveHadronLtd
 			if (state == null)
 			{
 				state = new HoldState();
-				GUIUtility.GetStateObject(typeof(HoldState), id); // registers it
+				GUIUtility.GetStateObject(typeof(HoldState), id);
 			}
 
-			// Save original colors
-			Color oldColor = GUI.color;
-			Color oldBg = GUI.backgroundColor;
-			Color oldContent = GUI.contentColor;
-
+			Color prevBg = GUI.backgroundColor;
 			GUI.backgroundColor = color;
-			GUI.contentColor = Color.white;
-			GUI.color = Color.white;
 
 			Event e = Event.current;
 			bool mouseDown = e.type == EventType.MouseDown && rect.Contains(e.mousePosition);
-			bool mouseUp = e.type == EventType.MouseUp;
-
-			// Visual feedback when held
-			if (state.isPressed)
-				GUI.backgroundColor = color * 0.8f;
+			bool mouseUp = e.type == EventType.MouseUp && GUIUtility.hotControl == id;
 
 			bool result = false;
+
+			// Draw the button with normal tint — lets hover work, brief press flash, etc.
 			GUI.Button(rect, text, coloredButtonStyle);
 
-			// === INPUT & FIRE LOGIC ===
+			// === VISUAL FEEDBACK FOR HELD STATE ===
+			if (state.isPressed && GUIUtility.hotControl == id)
+			{
+				// Draw a semi-transparent dark overlay when held
+				Color overlay = new Color(0f, 0f, 0f, 0.35f); // dark overlay
+				GUI.color = overlay;
+				GUI.DrawTexture(rect, Texture2D.whiteTexture);
+				GUI.color = Color.white;
+			}
+
+			// === INPUT LOGIC ===
 			if (mouseDown)
 			{
 				GUIUtility.hotControl = id;
 				state.isPressed = true;
-
-				// First fire is immediate
 				onRepeat?.Invoke();
-
-				// Schedule first repeat after initial delay
 				state.nextFireTime = Time.time + initialDelay;
-
 				e.Use();
 			}
 
-			// Repeating while held down
 			if (state.isPressed && GUIUtility.hotControl == id)
 			{
-				bool isEditorPaused = false;
 #if UNITY_EDITOR
-				isEditorPaused = UnityEditor.EditorApplication.isPaused;
-#endif
-
-				// Only allow repeats when the editor is NOT paused
+				bool isEditorPaused = UnityEditor.EditorApplication.isPaused;
 				if (!isEditorPaused && Time.time >= state.nextFireTime)
 				{
 					result = true;
 					onRepeat?.Invoke();
 					state.nextFireTime = Time.time + repeatInterval;
 				}
+#else
+        if (Time.time >= state.nextFireTime)
+        {
+            result = true;
+            onRepeat?.Invoke();
+            state.nextFireTime = Time.time + repeatInterval;
+        }
+#endif
 			}
 
-			// Release
-			if (mouseUp && GUIUtility.hotControl == id)
+			if (mouseUp)
 			{
 				GUIUtility.hotControl = 0;
 				state.isPressed = false;
 			}
 
-			// Restore colors
-			GUI.color = oldColor;
-			GUI.backgroundColor = oldBg;
-			GUI.contentColor = oldContent;
+			GUI.backgroundColor = prevBg;
 
 			return result;
 		}

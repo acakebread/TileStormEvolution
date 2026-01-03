@@ -86,10 +86,6 @@ namespace ClassicTilestorm
 
 		public float GetPanelBottomY() => guiRect.height + (guiRect.y >= 0 ? guiRect.y : 0);
 
-		//I don't think this cures anything
-		private static bool hasDrawnThisFrame = false;
-		private void LateUpdate() => hasDrawnThisFrame = false;
-
 		private void OnGUI()
 		{
 			// Visibility check first (safe and cheap)
@@ -107,17 +103,10 @@ namespace ClassicTilestorm
 			float panelHeight = buttonHeight + (2 * panelGap);
 			float panelY = y - panelGap;
 
-			// Draw background ONLY once per frame on Repaint
-			if (Event.current.type == EventType.Repaint && !hasDrawnThisFrame)
-			{
-				GUIStyle panelStyle = new GUIStyle(GUI.skin.box);
-				panelStyle.normal.background = panelTexture;
-				GUI.Box(new Rect(0, panelY, Screen.width, panelHeight), "", panelStyle);
+			// Draw background EVERY Repaint — no conditional, no flag
+			GUI.Box(new Rect(0, panelY, Screen.width, panelHeight), "", new GUIStyle(GUI.skin.box) { normal = { background = panelTexture } });
 
-				hasDrawnThisFrame = true; // Mark background as drawn
-			}
-
-			// ALWAYS run labels and ALL buttons — critical for layout, hover, clicks, repeat
+			// ALWAYS draw all buttons and labels — critical for input + visuals
 			GUI.Label(new Rect(currentX, y, labelWidth, buttonHeight), "Map:");
 			currentX += labelWidth;
 
@@ -152,7 +141,6 @@ namespace ClassicTilestorm
 
 			guiRect.height = panelHeight;
 
-			// Local DrawModeButton (unchanged)
 			void DrawModeButton(float cx, float cy, string label, PreviewMode mode)
 			{
 				bool isSelected = PreviewSettings.CurrentMode == mode;
@@ -175,5 +163,95 @@ namespace ClassicTilestorm
 				GUI.contentColor = prevContent;
 			}
 		}
+
+		////I don't think this cures anything
+		//private static bool hasDrawnThisFrame = false;
+		//private void LateUpdate() => hasDrawnThisFrame = false;
+
+		//private void OnGUI()
+		//{
+		//	// Visibility check first (safe and cheap)
+		//	if (guiRect.y < -90 && !isGuiVisible)
+		//		return;
+
+		//	// ALWAYS run this setup — needed for input handling
+		//	GUIManager.RegisterGuiRect(new Rect(0, guiRect.y - panelGap, Screen.width, guiRect.height + 2 * panelGap));
+
+		//	GUI.skin.button.fontSize = 16;
+		//	GUI.skin.label.fontSize = 16;
+
+		//	float currentX = buttonStartX;
+		//	float y = guiRect.y;
+		//	float panelHeight = buttonHeight + (2 * panelGap);
+		//	float panelY = y - panelGap;
+
+		//	// Draw background ONLY once per frame on Repaint
+		//	if (Event.current.type == EventType.Repaint && !hasDrawnThisFrame)
+		//	{
+		//		GUIStyle panelStyle = new GUIStyle(GUI.skin.box);
+		//		panelStyle.normal.background = panelTexture;
+		//		GUI.Box(new Rect(0, panelY, Screen.width, panelHeight), "", panelStyle);
+
+		//		hasDrawnThisFrame = true; // Mark background as drawn
+		//	}
+
+		//	// ALWAYS run labels and ALL buttons — critical for layout, hover, clicks, repeat
+		//	GUI.Label(new Rect(currentX, y, labelWidth, buttonHeight), "Map:");
+		//	currentX += labelWidth;
+
+		//	GUI.Label(new Rect(currentX, y, mapNameWidth, buttonHeight), PreviewSettings.LoadMapName);
+		//	currentX += mapNameWidth + spacing;
+
+		//	DrawModeButton(currentX, y, "Editor", PreviewMode.Editor);
+		//	currentX += buttonWidth + spacing;
+		//	DrawModeButton(currentX, y, "Player", PreviewMode.Player);
+		//	currentX += buttonWidth + spacing;
+		//	DrawModeButton(currentX, y, "Cinema", PreviewMode.Cinema);
+		//	currentX += buttonWidth + spacing;
+
+		//	currentX += 20;
+
+		//	GuiUtils.ColoredRepeatButton(new Rect(currentX, y, buttonWidth, buttonHeight), "<< Level", new Color(0.3f, 0.6f, 1f), () => OnChangeMapRequested?.Invoke(-1), initialDelay: 0.35f);
+		//	currentX += buttonWidth + spacing;
+
+		//	GuiUtils.ColoredRepeatButton(new Rect(currentX, y, buttonWidth, buttonHeight), "Level >>", new Color(0.3f, 0.6f, 1f), () => OnChangeMapRequested?.Invoke(1), initialDelay: 0.35f);
+		//	currentX += buttonWidth + spacing;
+
+		//	GuiUtils.ColoredButton(new Rect(currentX, y, buttonWidth, buttonHeight), "Reload", new Color(0.6f, 0.6f, 0.2f), () => OnChangeMapRequested?.Invoke(0));
+		//	currentX += buttonWidth + spacing;
+
+		//	GuiUtils.ColoredButton(new Rect(currentX, y, buttonWidth, buttonHeight), "Preset", new Color(0.2f, 0.8f, 0.2f), () => OnPresetRequested?.Invoke());
+		//	currentX += buttonWidth + spacing;
+
+		//	GuiUtils.ColoredRepeatButton(new Rect(currentX, y, buttonWidth, buttonHeight), "Scramble", new Color(0.8f, 0.6f, 0.2f), () => OnScrambleRequested?.Invoke(), initialDelay: 0.1f, repeatInterval: 0f);
+		//	currentX += buttonWidth + spacing;
+
+		//	GuiUtils.ColoredButton(new Rect(currentX, y, buttonWidth, buttonHeight), "Solve", new Color(0.8f, 0.2f, 0.2f), () => OnSolveRequested?.Invoke());
+
+		//	guiRect.height = panelHeight;
+
+		//	// Local DrawModeButton (unchanged)
+		//	void DrawModeButton(float cx, float cy, string label, PreviewMode mode)
+		//	{
+		//		bool isSelected = PreviewSettings.CurrentMode == mode;
+		//		Color buttonColor = isSelected ? modeSelectedBg : modeUnselectedBg;
+		//		Color textColor = isSelected ? selectedTextColor : unselectedTextColor;
+
+		//		Color prevContent = GUI.contentColor;
+		//		GUI.contentColor = textColor;
+
+		//		GuiUtils.ColoredButton(
+		//			new Rect(cx, cy, buttonWidth, buttonHeight),
+		//			label,
+		//			buttonColor,
+		//			() =>
+		//			{
+		//				PreviewSettings.CurrentMode = mode;
+		//				OnModeChanged?.Invoke(mode);
+		//			});
+
+		//		GUI.contentColor = prevContent;
+		//	}
+		//}
 	}
 }

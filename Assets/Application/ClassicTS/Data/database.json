@@ -31756,7 +31756,7 @@
         "med boundary house big red ns",
         "med boundary house blue ns",
         "med boundary s",
-        "med boudary tent green",
+        "med boundary tent green",
         "med boundary ne",
         "med boundary nw",
         "med boundary stocks ns",
@@ -32597,7 +32597,7 @@
         "med tile ew",
         "med tile static nw",
         "med tile static sw",
-        "med boudary cage s",
+        "med boundary cage s",
         "med boundary se",
         "med boundary sw",
         "med tile ns",
@@ -37099,7 +37099,7 @@
         "med boundary tent blue",
         "med tile static ew",
         "med boundary house blue ns",
-        "med boudary tent green",
+        "med boundary tent green",
         "med boundary well ew",
         "med tile console n",
         "med tile door end ew",
@@ -38144,7 +38144,7 @@
         "med boundary house blue ns",
         "med boundary nw",
         "med tile console s",
-        "med boudary tent green",
+        "med boundary tent green",
         "med boundary cage w",
         "med boundary se",
         "med boundary stocks ew",
@@ -39744,7 +39744,7 @@
         "med tile console n",
         "med tile corner ne",
         "med tile corner se",
-        "med boudary tent green",
+        "med boundary tent green",
         "med boundary tent blue",
         "med tile console s",
         "med tile door end ns",
@@ -40674,7 +40674,7 @@
         "med tile static ns",
         "med boundary house big red ns",
         "med tile slide",
-        "med boudary tent green",
+        "med boundary tent green",
         "med boundary house big red ew",
         "med boundary ne",
         "med boundary se",
@@ -46231,7 +46231,7 @@
         "med tile corner sw",
         "med tile corner ne",
         "med tile corner nw",
-        "med boudary cage s",
+        "med boundary cage s",
         "med boundary house big blue ew",
         "med boundary house big blue ns",
         "med boundary se",
@@ -64778,7 +64778,7 @@
       "texture": "Medieval"
     },
     {
-      "id": "med boudary cage s",
+      "id": "med boundary cage s",
       "model": "med_tile_s_boundary_cage",
       "texture": "Medieval"
     },
@@ -64813,7 +64813,7 @@
       "texture": "Medieval"
     },
     {
-      "id": "med boudary tent green",
+      "id": "med boundary tent green",
       "model": "med_tile_tent_green",
       "texture": "Medieval"
     },
@@ -65263,6 +65263,14 @@
       "id": "Eggbot",
       "model": "eggbot_default",
       "texture": "Eggbot Default"
+    },
+    {
+      "id": "med_tile_boundary_grass_hd",
+      "model": "med_tile_boundary_grass_hd"
+    },
+    {
+      "id": "med_tile_boundary_tree_01_hd",
+      "model": "med_tile_boundary_tree_01_hd"
     },
     {
       "id": "Eggbot",

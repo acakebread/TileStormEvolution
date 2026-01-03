@@ -5,12 +5,11 @@ namespace ClassicTilestorm
 	public class GameController : MonoBehaviour
 	{
 		private PlaceholderUI placeholderUI;
-		private MainController mainController;
+		private MainController mainController => GetComponent<MainController>();
 
 		public void Awake()
 		{
 			placeholderUI = gameObject.AddComponent<PlaceholderUI>();
-			mainController = GetComponent<MainController>();
 
 			// Subscribe to UI events
 			placeholderUI.OnModeChanged += HandleModeChanged;
@@ -37,6 +36,11 @@ namespace ClassicTilestorm
 		{
 			if (TryGetComponent<MainCameraController>(out var controller))
 				controller.UpdateGestureControllerState();
+
+			//possibly move here
+			//if (null != eggbotController) DestroyImmediate(eggbotController.gameObject);
+			//eggbotController = EggbotController.Instantiate(currentMap.character, transform);
+			//if (null != eggbotController) eggbotController.Initialise(mapManager);
 		}
 	}
 }

@@ -40,19 +40,9 @@ namespace ClassicTilestorm
 			{
 				if (instance == null) return;
 
-				// Always update the serialized field and PlayerPrefs
 				instance.remapGeometry = value;
 				PlayerPrefsX.SetBool("RemapGeometry", value, true);
-
-				// Always trigger the side effects when set via code or OnValidate
-				// (We know it's a meaningful change because either:
-				//  - It came from OnValidate (inspector toggle)
-				//  - Or from external code that explicitly wants the change)
-				OnRemapGeometryChanged?.Invoke(value);
-				PrefabFactory.ClearCache();
-				GeometrySearchProvider.UseRemapping = value; // Optional: direct sync for safety
-
-				Debug.Log($"[PreviewSettings] Remap Geometry set to: {value}. Cache cleared.");
+				//OnRemapGeometryChanged?.Invoke(value);
 			}
 		}
 
@@ -134,30 +124,33 @@ namespace ClassicTilestorm
 		private void Awake()
 		{
 			instance = this;
-
-			// Apply persisted value (or default) to the global toggle
-			GeometrySearchProvider.UseRemapping = RemapGeometry;
-
-			// Subscribe to future changes (from code or other UI)
-			OnRemapGeometryChanged += (enabled) =>
-			{
-				GeometrySearchProvider.UseRemapping = enabled;
-			};
+			remapGeometry = RemapGeometry;
 		}
 
 		private void OnValidate()
 		{
-			if (instance == this && Application.isPlaying) // Only during play mode runtime changes
-			{
-				// Get the CURRENT persisted value (without using the field as default!)
-				bool persistedValue = PlayerPrefsX.GetBool("RemapGeometry", true); // true = original default if key missing
+			// Skip runtime-specific actions when not in play mode
+			if (!Application.isPlaying) return;
 
-				// If the inspector field differs from what is currently persisted...
-				if (remapGeometry != persistedValue)
+			if (instance != this) return; // Ensure it's the runtime instance
+
+			var persistedValue = PlayerPrefsX.GetBool("RemapGeometry", remapGeometry);
+
+			if (remapGeometry != persistedValue)
+			{
+				// Still persist the value immediately
+				RemapGeometry = remapGeometry;
+
+				// BUT: Defer the event invoke and geometry refresh until safe (after OnValidate)
+#if UNITY_EDITOR
+				EditorApplication.delayCall += () =>
 				{
-					// Push the new inspector value through the proper channel
-					RemapGeometry = remapGeometry;
-				}
+					OnRemapGeometryChanged?.Invoke(remapGeometry);
+				};
+#else
+			    // In builds (unlikely to hit this path), invoke immediately
+				OnRemapGeometryChanged?.Invoke(remapGeometry);
+#endif
 			}
 		}
 

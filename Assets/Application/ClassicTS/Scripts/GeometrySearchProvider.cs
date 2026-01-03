@@ -17,6 +17,16 @@ public static class GeometrySearchProvider
 		if (hasRegistered) return;
 		hasRegistered = true;
 
+		// Apply persisted value (or default) to the global toggle
+		UseRemapping = PreviewSettings.RemapGeometry;
+
+		//// Subscribe to future changes (from code or other UI)
+		//PreviewSettings.OnRemapGeometryChanged += (enabled) =>
+		//{
+		//	UseRemapping = enabled;
+		//	//iMapManager.RefreshGeometry();
+		//};
+
 		var geometryPath = AssetPath.GeometryPath;
 		var configuredRoot = string.IsNullOrWhiteSpace(geometryPath)
 			? null
