@@ -19,6 +19,14 @@ namespace ClassicTilestorm
 			else
 				gameObject = PrefabFactory.Instantiate(definition.model, parent);
 
+			//GameObject gameObject;
+			//if (position.HasValue && rotation.HasValue)
+			//	gameObject = Assets.ModelAssets.Instantiate(definition.model, position.Value, rotation.Value, parent);
+			//else if (position.HasValue)
+			//	gameObject = Assets.ModelAssets.Instantiate(definition.model, position.Value, parent);
+			//else
+			//	gameObject = Assets.ModelAssets.Instantiate(definition.model, parent);
+
 			if (gameObject == null)
 				return null;
 

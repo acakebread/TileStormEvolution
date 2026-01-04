@@ -3,6 +3,7 @@ using System.Linq;
 using MassiveHadronLtd;
 using UnityEngine.EventSystems;
 using UnityEditor;
+using ClassicTilestorm.Assets;
 
 namespace ClassicTilestorm
 {
@@ -26,6 +27,14 @@ namespace ClassicTilestorm
 				PrefabFactory.ClearCache();
 				mapManager?.RefreshGeometry();
 			};
+
+			//AssetConfiguration.Initialize(); // Sets initial remapper + roots
+			//PreviewSettings.OnRemapGeometryChanged += (enabled) =>
+			//{
+			//	ModelAssets.NameRemapper = enabled ? ClassicTileStormAssetRemapHelper.RemapName : null;
+			//	AssetConfiguration.ClearAllCaches();  // This clears the model cache — crucial
+			//	mapManager?.RefreshGeometry();
+			//};
 
 			if (!FindAnyObjectByType<EventSystem>()) new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
 			ResourceSerializer.Initialise(PreviewSettings.DatabaseJsonFile);
@@ -60,7 +69,10 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			SkyboxUtility.SetSkybox(AssetPath.SkycubesPath, $"{(string.IsNullOrEmpty(currentMap.skybox) ? currentMap.music : currentMap.skybox)}Skybox");//fall back to music for now, but will be 'DefaultSkybox'
+			//SkyboxUtility.SetSkybox(AssetPath.SkycubesPath, $"{(string.IsNullOrEmpty(currentMap.skybox) ? currentMap.music : currentMap.skybox)}Skybox");//fall back to music for now, but will be 'DefaultSkybox'
+
+			var skyName = string.IsNullOrEmpty(currentMap.skybox) ? currentMap.music : currentMap.skybox;
+			SkyboxUtility.SetSkybox($"{AssetPath.SkycubesPath}{skyName}");
 
 			if (null != mapManager) DestroyImmediate(mapManager.gameObject);
 			mapManager = MapManager.Instantiate(currentMap, transform);
