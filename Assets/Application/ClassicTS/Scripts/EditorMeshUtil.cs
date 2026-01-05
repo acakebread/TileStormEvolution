@@ -49,8 +49,8 @@ namespace ClassicTilestorm
 				}
 
 				// Direct, clean, raw instantiation — no runtime junk added
-				ghostMesh = PrefabFactory.Instantiate(prefabPath, parent: mapManager.CurrentTransform.parent);
-				//ghostMesh = Assets.ModelAssets.Instantiate(prefabPath, parent: mapManager.CurrentTransform.parent);
+				//ghostMesh = PrefabFactory.Instantiate(prefabPath, parent: mapManager.CurrentTransform.parent);
+				ghostMesh = Assets.ModelAssets.Instantiate(prefabPath, parent: mapManager.CurrentTransform.parent);
 
 				if (ghostMesh != null)
 				{

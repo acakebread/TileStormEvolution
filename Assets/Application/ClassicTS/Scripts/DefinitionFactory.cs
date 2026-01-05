@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using MassiveHadronLtd;
+using ClassicTilestorm.Assets;
 
 namespace ClassicTilestorm
 {
@@ -13,21 +14,13 @@ namespace ClassicTilestorm
 			// Just pass the model name — search happens automatically
 			GameObject gameObject;
 			if (position.HasValue && rotation.HasValue)
-				gameObject = PrefabFactory.Instantiate(definition.model, position.Value, rotation.Value, parent);
+				gameObject = ModelAssets.Instantiate(definition.model, position.Value, rotation.Value, parent);
 			else if (position.HasValue)
-				gameObject = PrefabFactory.Instantiate(definition.model, position.Value, parent);
+				gameObject = ModelAssets.Instantiate(definition.model, position.Value, parent);
 			else
-				gameObject = PrefabFactory.Instantiate(definition.model, parent);
+				gameObject = ModelAssets.Instantiate(definition.model, parent);
 
-			//GameObject gameObject;
-			//if (position.HasValue && rotation.HasValue)
-			//	gameObject = Assets.ModelAssets.Instantiate(definition.model, position.Value, rotation.Value, parent);
-			//else if (position.HasValue)
-			//	gameObject = Assets.ModelAssets.Instantiate(definition.model, position.Value, parent);
-			//else
-			//	gameObject = Assets.ModelAssets.Instantiate(definition.model, parent);
-
-			if (gameObject == null)
+			if (null == gameObject)
 				return null;
 
 			//temporary provision to suppress texture replacement on loaded HD models
@@ -35,12 +28,11 @@ namespace ClassicTilestorm
 			var isHD = (renderers.Length == 1 && renderers[0].sharedMaterials.Length >= 2) || renderers.Length >= 2;//gameObject.CompareTag("Respawn");//HD flag!
 
 			//Apply Definition Properties
-			var materialPath = $"{AssetPath.MaterialPath}{definition.material}";
-			var replacement = string.IsNullOrEmpty(definition.material) ? null : MaterialCache.Get(materialPath);
+			var replacement = MaterialAssets.Find(definition.material);
 
 			// Apply texture animation and / or material replacement
 			var textureAnimator = gameObject.AddComponent<TextureSetAnimator>();
-			if (!isHD && null == replacement)
+			if (!isHD)
 			{
 				var sequence = TextureSetManager.GetTextureSequence(definition.texture, AssetPath.TexturePath);
 				textureAnimator.Initialize(sequence, replacement);

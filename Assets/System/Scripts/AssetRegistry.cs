@@ -6,65 +6,85 @@ namespace MassiveHadronLtd
 {
 	public static class AssetRegistry<T> where T : UnityEngine.Object
 	{
-		private static readonly HashSet<string> SearchRoots = new(StringComparer.OrdinalIgnoreCase);
-		private static readonly Dictionary<string, T> Cache = new(StringComparer.OrdinalIgnoreCase);
+		// Separate root lists for models and prefabs (since both are GameObject)
+		private static readonly HashSet<string> ModelRoots = new(StringComparer.OrdinalIgnoreCase);
+		private static readonly HashSet<string> PrefabRoots = new(StringComparer.OrdinalIgnoreCase);
+		private static readonly HashSet<string> MaterialRoots = new(StringComparer.OrdinalIgnoreCase);
 
-		public static Func<string, T> CustomProvider { get; set; }
+		private static readonly Dictionary<string, T> ModelCache = new(StringComparer.OrdinalIgnoreCase);
+		private static readonly Dictionary<string, T> PrefabCache = new(StringComparer.OrdinalIgnoreCase);
+		private static readonly Dictionary<string, T> MaterialCache = new(StringComparer.OrdinalIgnoreCase);
+
 		public static Func<string, string> NameRemapper { get; set; }
 
 		public static void RegisterRoot(string root)
 		{
 			if (!string.IsNullOrWhiteSpace(root))
-				SearchRoots.Add(root.Trim('/'));
+				ModelRoots.Add(root.Trim('/'));
 		}
 
-		public static void ClearCache() => Cache.Clear();
+		public static void RegisterPrefabRoot(string root)
+		{
+			if (!string.IsNullOrWhiteSpace(root))
+				PrefabRoots.Add(root.Trim('/'));
+		}
 
-		public static T Find(string assetName)
+		public static void RegisterMaterialRoot(string root)
+		{
+			if (!string.IsNullOrWhiteSpace(root))
+				MaterialRoots.Add(root.Trim('/'));
+		}
+
+		public static void ClearCache() => ModelCache.Clear();
+		public static void ClearPrefabCache() => PrefabCache.Clear();
+		public static void ClearMaterialCache() => MaterialCache.Clear();
+
+		public static T Find(string assetName) => Find(assetName, ModelCache, ModelRoots);
+
+		public static T FindPrefab(string assetName) => Find(assetName, PrefabCache, PrefabRoots);
+
+		public static T FindMaterial(string assetName) => Find(assetName, MaterialCache, MaterialRoots);
+
+		private static T Find(string assetName, Dictionary<string, T> cache, HashSet<string> roots)
 		{
 			if (string.IsNullOrEmpty(assetName)) return null;
 
 			string key = assetName.Trim();
 
-			if (Cache.TryGetValue(key, out var cached)) return cached;
-
-			string originalLookup = key;
+			if (cache.TryGetValue(key, out var cached)) return cached;
 
 			T asset = null;
 
-			// Always try remapped first if remapper set
-			if (NameRemapper != null)
+			if (null != NameRemapper)
 			{
 				string remapped = NameRemapper(key);
 				if (remapped != key)
 				{
-					asset = TryLoad(remapped);
+					asset = TryLoad(remapped, roots);
 					if (asset != null)
 					{
-						Cache[key] = asset;
-						Cache[remapped] = asset;
+						cache[key] = asset;
+						cache[remapped] = asset;
 						return asset;
 					}
-					// IMPORTANT: Do NOT return null here — fall through to original
 				}
 			}
 
-			// Always try original name (fallback)
-			asset = TryLoad(originalLookup) ?? CustomProvider?.Invoke(originalLookup);
+			asset = TryLoad(key, roots);
 
-			if (asset != null)
-				Cache[key] = asset;
+			if (null != asset)
+				cache[key] = asset;
 
 			return asset;
 		}
 
-		private static T TryLoad(string name)
+		private static T TryLoad(string name, HashSet<string> roots)
 		{
-			foreach (var root in SearchRoots)
+			foreach (var root in roots)
 			{
 				string path = string.IsNullOrEmpty(root) ? name : $"{root}/{name}";
 				var loaded = Resources.Load<T>(path);
-				if (loaded != null) return loaded;
+				if (null != loaded) return loaded;
 			}
 			return null;
 		}

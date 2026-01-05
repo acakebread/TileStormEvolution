@@ -4,17 +4,17 @@ namespace ClassicTilestorm.Assets
 	{
 		public static void Initialize()
 		{
-			// Geometry models
-			ModelAssets.RegisterRoot(AssetPath.GeometryPath);
-			ModelAssets.RegisterRoot("Levels");
 			ModelAssets.NameRemapper = ClassicTileStormAssetRemapHelper.RemapName;
 
-			// Runtime prefabs (flame, spark, etc.)
-			PrefabAssets.RegisterRoot(AssetPath.PrefabPath);
+			// FIX: Trim and normalize the path — this is critical
+			string geometryRoot = AssetPath.GeometryPath.Trim('/').Trim();
+			ModelAssets.RegisterRoot(geometryRoot);
 
-			// All materials — including skyboxes
-			MaterialAssets.RegisterRoot(AssetPath.MaterialPath);
-			MaterialAssets.RegisterRoot(AssetPath.SkycubesPath);
+			ModelAssets.RegisterRoot("Levels");
+			ModelAssets.RegisterRoot("Levels/Med");
+			PrefabAssets.RegisterRoot(AssetPath.PrefabPath.Trim('/').Trim());
+			MaterialAssets.RegisterRoot(AssetPath.MaterialPath.Trim('/').Trim());
+			MaterialAssets.RegisterRoot(AssetPath.SkycubesPath.Trim('/').Trim());
 		}
 
 		public static void ClearAllCaches()

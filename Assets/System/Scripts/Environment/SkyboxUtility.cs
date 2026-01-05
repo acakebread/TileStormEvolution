@@ -41,10 +41,11 @@ namespace MassiveHadronLtd
 
 			string noExtension = Path.GetFileNameWithoutExtension(normalized);
 
-			string loadKey = noExtension.EndsWith("Skybox", System.StringComparison.OrdinalIgnoreCase)
-				? noExtension
-				: noExtension + "Skybox";
+			//string loadKey = noExtension.EndsWith("Skybox", System.StringComparison.OrdinalIgnoreCase)
+			//	? noExtension
+			//	: noExtension + "Skybox";
 
+			string loadKey = noExtension;
 			string directory = Path.GetDirectoryName(normalized)?.Replace("\\", "/").Trim('/') ?? "";
 			string fullLoadPath = string.IsNullOrEmpty(directory) ? loadKey : directory + "/" + loadKey;
 

@@ -19,22 +19,14 @@ namespace ClassicTilestorm
 
 		private void Awake()
 		{
-			GeometrySearchProvider.Register(PreviewSettings.RemapGeometry);//important for all resource loading
-			PrefabFactory.CustomSearchProvider = GeometrySearchProvider.FindModelByName;
+			AssetConfiguration.Initialize(); // Sets initial remapper + roots
+			AssetRegistry<GameObject>.NameRemapper = PreviewSettings.RemapGeometry ? ClassicTileStormAssetRemapHelper.RemapName : null;
 			PreviewSettings.OnRemapGeometryChanged += (value) =>
 			{
-				GeometrySearchProvider.UseRemapping = value;
-				PrefabFactory.ClearCache();
+				AssetRegistry<GameObject>.NameRemapper = value ? ClassicTileStormAssetRemapHelper.RemapName : null;
+				ModelAssets.ClearCache();
 				mapManager?.RefreshGeometry();
 			};
-
-			//AssetConfiguration.Initialize(); // Sets initial remapper + roots
-			//PreviewSettings.OnRemapGeometryChanged += (enabled) =>
-			//{
-			//	ModelAssets.NameRemapper = enabled ? ClassicTileStormAssetRemapHelper.RemapName : null;
-			//	AssetConfiguration.ClearAllCaches();  // This clears the model cache — crucial
-			//	mapManager?.RefreshGeometry();
-			//};
 
 			if (!FindAnyObjectByType<EventSystem>()) new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
 			ResourceSerializer.Initialise(PreviewSettings.DatabaseJsonFile);
@@ -71,7 +63,8 @@ namespace ClassicTilestorm
 
 			//SkyboxUtility.SetSkybox(AssetPath.SkycubesPath, $"{(string.IsNullOrEmpty(currentMap.skybox) ? currentMap.music : currentMap.skybox)}Skybox");//fall back to music for now, but will be 'DefaultSkybox'
 
-			var skyName = string.IsNullOrEmpty(currentMap.skybox) ? currentMap.music : currentMap.skybox;
+			//var skyName = string.IsNullOrEmpty(currentMap.skybox) ? currentMap.music : currentMap.skybox;
+			var skyName = string.IsNullOrEmpty(currentMap.skybox) ? $"{currentMap.music}Skybox" : currentMap.skybox;
 			SkyboxUtility.SetSkybox($"{AssetPath.SkycubesPath}{skyName}");
 
 			if (null != mapManager) DestroyImmediate(mapManager.gameObject);
