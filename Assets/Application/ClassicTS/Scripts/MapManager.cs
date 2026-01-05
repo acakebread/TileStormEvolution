@@ -710,19 +710,8 @@ namespace ClassicTilestorm
 			}
 
 			// Instantiate new
-			string prefabPath = $"{AssetPath.PrefabPath}{prefabName}";
-			GameObject prefab = Resources.Load<GameObject>(prefabPath);
-			if (prefab == null)
-			{
-				Debug.LogWarning($"Attachment prefab not found: {prefabPath}");
-				return;
-			}
-
-			go = Instantiate(prefab, transform);
-			go.transform.position = worldPos;
-			go.transform.rotation = rotation;
+			go = Assets.PrefabAssets.Instantiate(prefabName, worldPos, rotation, transform);
 			go.name = $"{attachment.TypeName}_{prefabName}_tile{attachment.tile}";
-
 			attachmentGameObjects[attachment] = go;
 		}
 

@@ -14,11 +14,14 @@ namespace ClassicTilestorm
 		private MapManager mapManager;
 		private EggbotController eggbotController;
 		private MainCameraController cameraController;
+		//private AudioManager audioManager;
 
 		public event System.Action<int> OnChangeMapRequested; // delta or 0 for reload
 
 		private void Awake()
 		{
+			// === ADD AUDIO MANAGER AUTOMATICALLY ===
+			gameObject.AddComponent<AudioManager>(); //audioManager = gameObject.AddComponent<AudioManager>();
 			AssetConfiguration.Initialize(); // Sets initial remapper + roots
 			AssetRegistry<GameObject>.NameRemapper = PreviewSettings.RemapGeometry ? ClassicTileStormAssetRemapHelper.RemapName : null;
 			PreviewSettings.OnRemapGeometryChanged += (value) =>
@@ -61,6 +64,13 @@ namespace ClassicTilestorm
 				return;
 			}
 
+			//// Sound effect
+			//AudioManager.PlaySound(SoundAssets.Find("jump"));
+
+			// Music
+			//AudioManager.PlayMusic(currentMap.music, loop: true);
+			//AudioManager.PlayMusic(MusicAssets.Find(currentMap.music));
+
 			//SkyboxUtility.SetSkybox(AssetPath.SkycubesPath, $"{(string.IsNullOrEmpty(currentMap.skybox) ? currentMap.music : currentMap.skybox)}Skybox");//fall back to music for now, but will be 'DefaultSkybox'
 
 			//var skyName = string.IsNullOrEmpty(currentMap.skybox) ? currentMap.music : currentMap.skybox;
@@ -75,7 +85,7 @@ namespace ClassicTilestorm
 			if (null != eggbotController) eggbotController.Initialise(mapManager);
 
 			if (null != cameraController) cameraController.Initialise(mapManager, eggbotController);
-			if (null != gameController) gameController.Initialise();
+			if (null != gameController) gameController.Initialise(mapManager);
 			if (null != editorController) editorController.Initialise(mapManager);
 
 			//static string SkycubesPath(string id) => string.IsNullOrEmpty(id) ? null : $"{AssetPath.SkycubesPath}{id}";

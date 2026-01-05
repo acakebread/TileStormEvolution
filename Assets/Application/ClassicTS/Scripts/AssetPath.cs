@@ -16,5 +16,11 @@ namespace ClassicTilestorm
 
 		private static string skycubesPath = null;//"ClassicTS/SkyCubes/"
 		public static string SkycubesPath { get => skycubesPath ?? PreviewSettings.SkycubesPath; set => skycubesPath = value; }
+
+		private static string soundPath = null;//"ClassicTS/Sounds/"
+		public static string SoundPath { get => soundPath ?? PreviewSettings.SoundPath; set => soundPath = value; }
+
+		private static string musicPath = null;//"ClassicTS/Music/"
+		public static string MusicPath { get => musicPath ?? PreviewSettings.MusicPath; set => musicPath = value; }
 	}
 }

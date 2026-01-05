@@ -1,3 +1,4 @@
+using MassiveHadronLtd;
 using UnityEngine;
 
 namespace ClassicTilestorm
@@ -6,6 +7,7 @@ namespace ClassicTilestorm
 	{
 		private PlaceholderUI placeholderUI;
 		private MainController mainController => GetComponent<MainController>();
+		private MapManager mapManager => null != mainController ? mainController.GetComponentInChildren<MapManager>(true) : null;
 
 		public void Awake()
 		{
@@ -25,8 +27,9 @@ namespace ClassicTilestorm
 			mainController.SetPreviewMode(mode);
 		}
 
-		public void Initialise()
+		public void Initialise(MapManager map)
 		{
+			if (isActiveAndEnabled) AudioManager.PlayMusic(map.CurrentMap.music, loop: true);
 			if (!TryGetComponent<MainCameraController>(out var controller)) return;
 			controller.SetCameraSystem(CameraModeRegistry.Follow, true);
 			controller.SetCameraSystem(CameraModeRegistry.Path, true);
@@ -37,10 +40,17 @@ namespace ClassicTilestorm
 			if (TryGetComponent<MainCameraController>(out var controller))
 				controller.UpdateGestureControllerState();
 
+			// Music
+			if (null != mapManager) AudioManager.PlayMusic(mapManager.CurrentMap.music, loop: true);
+			//AudioManager.PlayMusic(MusicAssets.Find(currentMap.music));
+
+
 			//possibly move here
 			//if (null != eggbotController) DestroyImmediate(eggbotController.gameObject);
 			//eggbotController = EggbotController.Instantiate(currentMap.character, transform);
 			//if (null != eggbotController) eggbotController.Initialise(mapManager);
 		}
+
+		void OnDisable() => AudioManager.StopMusic();
 	}
 }

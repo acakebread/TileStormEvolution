@@ -82,6 +82,12 @@ namespace ClassicTilestorm
 		[SerializeField, ResourcePath] private string prefabPath = "ClassicTS/Prefabs/";
 		public static string PrefabPath => instance.prefabPath;
 
+		[SerializeField, ResourcePath] private string soundPath = "ClassicTS/Sounds/";
+		public static string SoundPath => instance.soundPath;
+
+		[SerializeField, ResourcePath] private string musicPath = "ClassicTS/Music/";
+		public static string MusicPath => instance.musicPath;
+
 		[Header("Game Mode")]
 		[SerializeField] private PreviewMode previewMode = PreviewMode.Player;
 		public static PreviewMode CurrentMode

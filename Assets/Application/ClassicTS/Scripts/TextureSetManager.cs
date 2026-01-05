@@ -1,6 +1,5 @@
 ﻿using System.Linq;
 using System.Collections.Generic;
-using MassiveHadronLtd;
 
 namespace ClassicTilestorm
 {
@@ -28,8 +27,7 @@ namespace ClassicTilestorm
 				var frame = framesArray[i];
 				if (frame.texture == null && !string.IsNullOrEmpty(frame.textureName))
 				{
-					var texturePath = $"{path}{frame.textureName}";
-					frame.texture = TextureCache.Get(texturePath);
+					frame.texture = Assets.Texture2DAssets.Find(frame.textureName);
 					framesArray[i] = frame;
 					modified = true;
 				}
