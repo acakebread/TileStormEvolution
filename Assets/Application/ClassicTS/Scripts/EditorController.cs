@@ -14,7 +14,6 @@ namespace ClassicTilestorm
 		private EditorControllerPaint paintMode;
 		private EditorControllerAttachment attachmentMode;
 
-		//private enum EditorMode { Drag, Paint, Waypoint, Attachment }
 		private enum EditorMode { Drag, Paint, Attachment }
 		private EditorMode? currentMode = null;
 
@@ -159,11 +158,7 @@ namespace ClassicTilestorm
 		// UI & Input Detection
 		// ===================================================================
 
-		public bool IsMouseOverGui()
-		{
-			var leftY = panelYoffset + spacing;// Left column buttons
-			return new Rect(margin, leftY, buttonWidth + 20f, buttonHeight * 9 + spacing * 9).Contains(new Vector3(Input.mousePosition.x, Screen.height - Input.mousePosition.y, Input.mousePosition.z));
-		}
+		public bool IsMouseOverGui() => new Rect(margin, panelYoffset + spacing, buttonWidth + 20f, buttonHeight * 9 + spacing * 9).Contains(new Vector3(Input.mousePosition.x, Screen.height - Input.mousePosition.y, Input.mousePosition.z));
 
 		private void DrawMainUI(string mode, bool gridVisible)
 		{

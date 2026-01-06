@@ -4,7 +4,6 @@ namespace ClassicTilestorm
 {
 	public static class LightFactory
 	{
-		// Start is called once before the first execution of Update after the MonoBehaviour is created
 		public static Light AddPointLight(GameObject gameObject, Color color, float intensity = 1f, float range = 1f)
 		{
 			var existingLight = gameObject.GetComponent<Light>();

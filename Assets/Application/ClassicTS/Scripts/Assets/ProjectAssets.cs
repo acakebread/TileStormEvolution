@@ -109,7 +109,7 @@ namespace ClassicTilestorm.Assets
 	}
 
 	/// <summary>
-	/// Typed access to materials (including skyboxes)
+	/// Typed access to materials
 	/// </summary>
 	public static class MaterialAssets
 	{
@@ -118,6 +118,19 @@ namespace ClassicTilestorm.Assets
 		public static Material Find(string materialName) => AssetRegistry<Material>.FindMaterial(materialName);
 	}
 
+	/// <summary>
+	/// Typed access to skybox assets (materials)
+	/// </summary>
+	public static class SkyboxAssets
+	{
+		public static void RegisterRoot(string root) => AssetRegistry<Material>.RegisterMaterialRoot(root);
+		public static void ClearCache() => AssetRegistry<Material>.ClearMaterialCache();
+		public static Material Find(string skyboxName) => AssetRegistry<Material>.FindSkybox(skyboxName);
+	}
+
+	/// <summary>
+	/// Typed access to sound assets (AudioClips)
+	/// </summary>
 	public static class SoundAssets
 	{
 		public static void RegisterRoot(string root) => AssetRegistry<AudioClip>.RegisterSoundRoot(root);
@@ -125,6 +138,9 @@ namespace ClassicTilestorm.Assets
 		public static AudioClip Find(string clipName) => AssetRegistry<AudioClip>.FindSound(clipName);
 	}
 
+	/// <summary>
+	/// Typed access to music assets (AudioClips)
+	/// </summary>
 	public static class MusicAssets
 	{
 		public static void RegisterRoot(string root) => AssetRegistry<AudioClip>.RegisterMusicRoot(root);

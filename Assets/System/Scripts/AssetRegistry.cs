@@ -86,6 +86,7 @@ namespace MassiveHadronLtd
 		public static T FindTexture(string assetName) => Find(assetName, TextureCache, TextureRoots);
 		public static T FindTexture2D(string assetName) => Find(assetName, Texture2DCache, Texture2DRoots);
 		public static T FindMaterial(string assetName) => Find(assetName, MaterialCache, MaterialRoots);
+		public static T FindSkybox(string assetName) => Find(assetName, MaterialCache, MaterialRoots);
 
 		// Non-generic Find methods for AudioClip
 		public static AudioClip FindSound(string clipName) => FindAudioClip(clipName, SoundCache, SoundRoots);

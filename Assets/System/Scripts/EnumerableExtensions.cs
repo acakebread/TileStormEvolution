@@ -40,7 +40,7 @@ namespace MassiveHadronLtd
 }
 
 
-//untesced bidirectional version below
+//untested bidirectional version below
 
 ///// <summary>
 ///// Returns distinct items sorted by frequency (descending), then by item itself.

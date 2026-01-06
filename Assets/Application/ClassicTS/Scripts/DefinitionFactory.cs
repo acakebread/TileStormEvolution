@@ -34,7 +34,8 @@ namespace ClassicTilestorm
 			var textureAnimator = gameObject.AddComponent<TextureSetAnimator>();
 			if (!isHD)
 			{
-				var sequence = TextureSetManager.GetTextureSequence(definition.texture, AssetPath.TexturePath);
+				//var sequence = TextureSetManager.GetTextureSequence(definition.texture, AssetPath.TexturePath);
+				var sequence = TextureSetManager.GetTextureSequence(definition.texture);
 				textureAnimator.Initialize(sequence, replacement);
 			}
 

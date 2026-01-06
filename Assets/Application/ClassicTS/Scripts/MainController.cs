@@ -81,7 +81,8 @@ namespace ClassicTilestorm
 
 			//var skyName = string.IsNullOrEmpty(currentMap.skybox) ? currentMap.music : currentMap.skybox;
 			var skyName = string.IsNullOrEmpty(currentMap.skybox) ? $"{currentMap.music}Skybox" : currentMap.skybox;
-			SkyboxUtility.SetSkybox($"{AssetPath.SkycubesPath}{skyName}");
+			//SkyboxUtility.SetSkybox($"{AssetPath.SkycubesPath}{skyName}");
+			SkyboxUtility.SetSkybox(skyName);
 
 			if (null != mapManager) DestroyImmediate(mapManager.gameObject);
 			mapManager = MapManager.Instantiate(currentMap, transform);
