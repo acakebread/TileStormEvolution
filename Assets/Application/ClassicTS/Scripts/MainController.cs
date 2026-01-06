@@ -14,7 +14,6 @@ namespace ClassicTilestorm
 		private MapManager mapManager;
 		private EggbotController eggbotController;
 		private MainCameraController cameraController;
-		//private AudioManager audioManager;
 
 		public event System.Action<int> OnChangeMapRequested; // delta or 0 for reload
 
@@ -33,9 +32,9 @@ namespace ClassicTilestorm
 
 			if (!FindAnyObjectByType<EventSystem>()) new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
 			ResourceSerializer.Initialise(PreviewSettings.DatabaseJsonFile);
-			cameraController = gameObject.AddComponent<MainCameraController>();
 			gameController = gameObject.AddComponent<GameController>();
 			editorController = gameObject.AddComponent<EditorController>();
+			cameraController = gameObject.AddComponent<MainCameraController>();
 			OnChangeMapRequested += HandleChangeMap;
 			LoadMap(PreviewSettings.LoadMapName);
 			SetPreviewMode(PreviewSettings.CurrentMode);//invoke to enable and disable game and editor controllers - ToDo improve this
@@ -43,6 +42,13 @@ namespace ClassicTilestorm
 
 		private int guard = 0;//temporary workaround for double events from ongui (due to camera stack) - hopefully this will go away when full ui is implemented
 		private void Update() { guard = 0; if (null != eggbotController) eggbotController.UpdateEggbot(mapManager); }
+
+		//public void SetGeometryMode(bool value)
+		//{
+		//	AssetRegistry<GameObject>.NameRemapper = value ? ClassicTileStormAssetRemapHelper.RemapName : null;
+		//	ModelAssets.ClearCache();
+		//	mapManager?.RefreshGeometry();
+		//}
 
 		public void SetPreviewMode(PreviewMode mode)
 		{

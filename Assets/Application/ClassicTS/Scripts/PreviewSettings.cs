@@ -39,9 +39,10 @@ namespace ClassicTilestorm
 			set
 			{
 				if (instance == null) return;
-
+				if (instance.remapGeometry == value) return;
 				instance.remapGeometry = value;
 				PlayerPrefsX.SetBool("RemapGeometry", value, true);
+				OnRemapGeometryChanged?.Invoke(instance.remapGeometry);
 			}
 		}
 
@@ -139,21 +140,21 @@ namespace ClassicTilestorm
 
 			if (instance != this) return; // Ensure it's the runtime instance
 
-			var persistedValue = PlayerPrefsX.GetBool("RemapGeometry", remapGeometry);
+//			var persistedValue = PlayerPrefsX.GetBool("RemapGeometry", remapGeometry);
 
-			if (remapGeometry != persistedValue)
-			{
-				// Still persist the value immediately
-				RemapGeometry = remapGeometry;
+//			if (remapGeometry != persistedValue)
+//			{
+//				// Still persist the value immediately
+//				RemapGeometry = remapGeometry;
 
-				// BUT: Defer the event invoke and geometry refresh until safe (after OnValidate)
-#if UNITY_EDITOR
-				EditorApplication.delayCall += () => OnRemapGeometryChanged?.Invoke(remapGeometry);
-#else
-			    // In builds (unlikely to hit this path), invoke immediately
-				OnRemapGeometryChanged?.Invoke(remapGeometry);
-#endif
-			}
+//				// BUT: Defer the event invoke and geometry refresh until safe (after OnValidate)
+//#if UNITY_EDITOR
+//				EditorApplication.delayCall += () => OnRemapGeometryChanged?.Invoke(remapGeometry);
+//#else
+//			    // In builds (unlikely to hit this path), invoke immediately
+//				OnRemapGeometryChanged?.Invoke(remapGeometry);
+//#endif
+//			}
 		}
 
 		public static string DatabaseFolder => PreviewSettingsStatic.DatabaseFolder;
