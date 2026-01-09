@@ -9,7 +9,7 @@ public class ParticleTest : MonoBehaviour
 	void Awake()
 	{
 		// Find all ParticleController instances in the scene, unsorted for performance
-		controllers = Object.FindObjectsByType<ParticleController>(FindObjectsSortMode.None);
+		controllers = FindObjectsByType<ParticleController>(FindObjectsSortMode.None);
 		buttonStates = new bool[controllers.Length];
 	}
 

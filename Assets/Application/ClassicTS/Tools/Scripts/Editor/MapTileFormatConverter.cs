@@ -169,7 +169,7 @@ namespace ClassicTilestorm.Editor
 			public MapWrapper[] maps;
 			public Definition[] definitions;
 			public TextureSequence[] textures;
-			public Button[] buttons;
+			public Legacy.Button[] buttons;
 		}
 
 		private class MapWrapper : Map

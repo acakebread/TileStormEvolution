@@ -31,6 +31,10 @@ namespace ClassicTilestorm
 		private MainCameraController mainCameraController { get { TryGetComponent<MainCameraController>(out var controller); return controller; } }
 		private GameCameraEditor gameCameraEditor { get { if (null != mainCameraController && mainCameraController.activeSystem is GameCameraEditor editorCam) return editorCam; return null; } }
 
+		//private DefinitionEditor definitionEditor => FindAnyObjectByType<DefinitionEditor>();
+		private DefinitionEditor _definitionEditor = null;
+		private DefinitionEditor definitionEditor { get { if (null == _definitionEditor) _definitionEditor = gameObject.AddComponent<DefinitionEditor>(); return _definitionEditor; } }
+
 		private void Awake()
 		{
 			panelYoffset = PlaceholderUI.PanelBottomY;
@@ -171,6 +175,10 @@ namespace ClassicTilestorm
 			if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), gridVisible ? "Hide Grid" : "Show Grid", new Color(0.25f, 0.75f, 0.25f))) OnGridLinesToggled(!gridVisible);
 
 			if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), dofEnabled ? "Disable DOF" : "Enable DOF", new Color(0.25f, 0.75f, 0.25f))) OnDofToggled(!dofEnabled);
+
+			//if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "Definition Editor", new Color(0.6f, 0.3f, 0.8f))) UIController.OpenPanel<DefinitionEditorPanel>();
+
+			//if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "Effect Editor", new Color(0.6f, 0.3f, 0.8f))) UIController.OpenPanel<EffectEditorPanel>();
 
 			GUI.contentColor = mode == "Drag" ? Color.cyan : Color.white;
 			if (GUI.Button(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "Drag")) SetEditorMode(EditorMode.Drag);
