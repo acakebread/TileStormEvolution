@@ -1,7 +1,9 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
 using System.Collections.Generic;
-using TMPro; // if using TextMeshPro for better text
+using TMPro;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 
 namespace ClassicTilestorm
 {
@@ -10,49 +12,53 @@ namespace ClassicTilestorm
 		[Header("UI References")]
 		[SerializeField] private Button closeButton;
 		[SerializeField] private ScrollRect definitionScrollView;
-		[SerializeField] private Transform contentParent;           // usually ScrollView → Viewport → Content
-		[SerializeField] private GameObject definitionListItemPrefab; // prefab with Button + Text (TMP or legacy)
-		[SerializeField] private RawImage previewImage;             // RawImage that will show the RenderTexture
+		[SerializeField] private Transform contentParent;
+		[SerializeField] private GameObject definitionListItemPrefab;
+		[SerializeField] private RawImage previewImage;
 
 		[Header("Preview Settings")]
-		[SerializeField] private Vector2 previewResolution = new Vector2(256, 256);
-		[SerializeField] private float previewCameraDistance = 5f;
-		[SerializeField] private Vector3 previewCameraOffset = new Vector3(0, 1.5f, -5f);
+		[SerializeField] private Vector2 previewResolution = new Vector2(320, 240); // fixed 4:3
+		[SerializeField] private float cameraDistance = 5f;              // horizontal distance from origin
+		[SerializeField] private float cameraHeight = 3f;                // vertical height above origin
+		[SerializeField] private float cameraTiltAngle = 15f;            // downward look angle
+		[SerializeField] private float cameraOrbitSpeed = 20f;           // degrees per second (0 = no orbit)
+		[SerializeField] private Color backgroundColor = new Color(0.08f, 0.10f, 0.15f);
 
 		private RenderTexture previewRenderTexture;
 		private Camera previewCamera;
 		private GameObject previewRoot;
+		private GameObject currentModelInstance;
 		private string selectedDefinitionId;
 
 		private readonly List<GameObject> spawnedListItems = new();
+
+		// Ground plane
+		private Mesh groundMesh;
+		private Material groundMat;
+
+		private float orbitAngle = 0f; // accumulated rotation for camera orbit
 
 		protected override void Awake()
 		{
 			base.Awake();
 
-			// Optional: code wiring for close button
 			if (closeButton != null)
 				closeButton.onClick.AddListener(() => gameObject.SetActive(false));
 
-			// Safety check
 			if (contentParent == null)
 				contentParent = definitionScrollView?.content;
 
 			if (contentParent == null)
-				Debug.LogError("DefinitionEditorPanel: Content parent not assigned!", this);
+				Debug.LogError("Content parent not assigned!", this);
 		}
 
 		public override void OnPanelOpened()
 		{
 			base.OnPanelOpened();
-
-			Debug.Log("Definition Editor opened - loading definitions...");
-
 			CleanupPreview();
 			CreatePreviewSetup();
 			RefreshDefinitionList();
 
-			// Optional: auto-select first definition
 			if (ResourceManager.Definitions.Count > 0)
 				SelectDefinition(ResourceManager.Definitions[0].id);
 		}
@@ -64,100 +70,125 @@ namespace ClassicTilestorm
 			ClearListItems();
 		}
 
-		private void OnDestroy()
+		private void Update()
+		{
+			if (previewCamera != null && previewRenderTexture != null)
+			{
+				previewCamera.Render();
+			}
+
+			// Orbit the camera around Y-axis (model & ground stay still)
+			if (cameraOrbitSpeed > 0.01f)
+			{
+				orbitAngle += cameraOrbitSpeed * Time.deltaTime;
+				UpdateCameraOrbit();
+			}
+		}
+
+		protected override void OnDestroy()
 		{
 			CleanupPreview();
+			base.OnDestroy();
 		}
+
+		// List population unchanged...
 
 		private void RefreshDefinitionList()
 		{
 			ClearListItems();
+			if (ResourceManager.Definitions.Count == 0) return;
 
-			if (ResourceManager.Definitions == null || ResourceManager.Definitions.Count == 0)
-			{
-				Debug.LogWarning("No definitions found in ResourceManager!");
-				return;
-			}
+			var vlg = contentParent.GetComponent<VerticalLayoutGroup>();
+			var csf = contentParent.GetComponent<ContentSizeFitter>();
+			bool vlgWas = vlg?.enabled ?? false;
+			bool csfWas = csf?.enabled ?? false;
+
+			if (vlg) vlg.enabled = false;
+			if (csf) csf.enabled = false;
 
 			foreach (var def in ResourceManager.Definitions)
-			{
 				CreateDefinitionListItem(def);
-			}
 
-			// Optional: force layout rebuild
+			if (vlg) vlg.enabled = vlgWas;
+			if (csf) csf.enabled = csfWas;
+
 			LayoutRebuilder.ForceRebuildLayoutImmediate(contentParent as RectTransform);
 		}
 
 		private void ClearListItems()
 		{
 			foreach (var item in spawnedListItems)
-				if (item != null) Destroy(item);
+				if (item) Destroy(item);
 			spawnedListItems.Clear();
 		}
 
 		private void CreateDefinitionListItem(Definition def)
 		{
-			if (definitionListItemPrefab == null) return;
+			if (!definitionListItemPrefab) return;
 
-			var itemGO = Instantiate(definitionListItemPrefab, contentParent);
-			spawnedListItems.Add(itemGO);
+			var go = Instantiate(definitionListItemPrefab, contentParent);
+			spawnedListItems.Add(go);
 
-			var item = itemGO.GetComponent<DefinitionListItem>();
-			if (item == null)
-			{
-				Debug.LogError("Definition list item prefab is missing DefinitionListItem component!", itemGO);
-				return;
-			}
+			var item = go.GetComponent<DefinitionListItem>();
+			if (!item) return;
 
 			item.Initialize(def.id, SelectDefinition);
 
-			// Initial selection state
+			if (item.label)
+			{
+				item.label.richText = false;
+				item.label.enableAutoSizing = false;
+				item.label.fontSize = 20;
+				item.label.text = $"{def.id} ({def.model ?? "—"})";
+			}
+
 			item.SetSelected(def.id == selectedDefinitionId);
 		}
 
 		private void SelectDefinition(string defId)
 		{
 			if (string.IsNullOrEmpty(defId)) return;
-
 			selectedDefinitionId = defId;
 
-			// Update all items' visual state
 			foreach (var go in spawnedListItems)
 			{
-				if (go == null) continue;
+				if (!go) continue;
 				var item = go.GetComponent<DefinitionListItem>();
-				if (item != null)
-				{
-					item.SetSelected(item.DefinitionId == selectedDefinitionId);
-				}
+				if (item) item.SetSelected(item.DefinitionId == selectedDefinitionId);
 			}
 
 			UpdatePreview(defId);
 		}
 
-		// ── Preview System ─────────────────────────────────────────────────────
+		// ── Preview Setup ──────────────────────────────────────────────────────
 
 		private void CreatePreviewSetup()
 		{
-			if (previewImage == null) return;
+			if (!previewImage) return;
 
-			// Create root for preview objects
 			previewRoot = new GameObject("DefinitionPreviewRoot");
-			previewRoot.hideFlags = HideFlags.HideAndDontSave;
 
-			// Create camera
-			var camGO = new GameObject("PreviewCam");
-			camGO.transform.SetParent(previewRoot.transform);
+			var camGO = new GameObject("PreviewCamera");
 			previewCamera = camGO.AddComponent<Camera>();
+			camGO.transform.SetParent(null); // Camera independent
+
+			int editorLayer = LayerMask.NameToLayer("Editor");
+			if (editorLayer == -1)
+			{
+				Debug.LogError("Layer 'Editor' not found!");
+				return;
+			}
+
+			previewCamera.enabled = false;
+			previewCamera.cullingMask = 1 << editorLayer;
 			previewCamera.clearFlags = CameraClearFlags.SolidColor;
-			previewCamera.backgroundColor = new Color(0.1f, 0.1f, 0.15f);
-			previewCamera.cullingMask = 1 << LayerMask.NameToLayer("Default"); // adjust if needed
+			previewCamera.backgroundColor = backgroundColor;
 			previewCamera.orthographic = false;
 			previewCamera.fieldOfView = 60f;
-			previewCamera.nearClipPlane = 0.1f;
-			previewCamera.farClipPlane = 100f;
+			previewCamera.nearClipPlane = 0.03f;
+			previewCamera.farClipPlane = 50f;
+			previewCamera.aspect = (float)previewResolution.x / previewResolution.y;
 
-			// Render Texture
 			previewRenderTexture = new RenderTexture(
 				(int)previewResolution.x,
 				(int)previewResolution.y,
@@ -166,63 +197,147 @@ namespace ClassicTilestorm
 
 			previewCamera.targetTexture = previewRenderTexture;
 			previewImage.texture = previewRenderTexture;
+
+			CreatePreviewGroundPlane();
+
+			// Initial camera position
+			UpdateCameraOrbit();
+		}
+
+		private void CreatePreviewGroundPlane()
+		{
+			groundMesh = new Mesh();
+			groundMesh.vertices = new[]
+			{
+				new Vector3(-50, -0.02f, -50),
+				new Vector3(-50, -0.02f,  50),
+				new Vector3( 50, -0.02f,  50),
+				new Vector3( 50, -0.02f, -50)
+			};
+			groundMesh.triangles = new[] { 0, 1, 2, 0, 2, 3 };
+			groundMesh.uv = new Vector2[]
+			{
+				new Vector2(0, 0),
+				new Vector2(0, 10),
+				new Vector2(10, 10),
+				new Vector2(10, 0)
+			};
+			groundMesh.RecalculateNormals();
+
+			var shader = Shader.Find("Universal Render Pipeline/Unlit");
+			groundMat = new Material(shader);
+			groundMat.color = new Color(0.16f, 0.18f, 0.22f);
+
+			var provider = previewRoot.AddComponent<SimpleCommandProvider>();
+			provider.RegisterCommand(RenderPassEvent.BeforeRenderingOpaques, (cmd, cam) =>
+			{
+				if (!groundMesh || !groundMat) return;
+				cmd.DrawMesh(groundMesh, Matrix4x4.identity, groundMat);
+			});
 		}
 
 		private void UpdatePreview(string defId)
 		{
-			if (previewCamera == null || string.IsNullOrEmpty(defId))
+			if (!previewCamera || string.IsNullOrEmpty(defId))
 			{
-				previewImage.enabled = false;
+				if (previewImage) previewImage.enabled = false;
 				return;
 			}
 
-			previewImage.enabled = true;
+			if (previewImage) previewImage.enabled = true;
 
-			// Clear previous model
-			foreach (Transform child in previewRoot.transform)
-				if (child.name != "PreviewCam")
-					Destroy(child.gameObject);
+			if (currentModelInstance) Destroy(currentModelInstance);
 
 			var def = ResourceManager.GetDefinition(defId);
 			if (def == null || string.IsNullOrEmpty(def.model)) return;
 
-			// Here you need to instantiate your model
-			// This part depends heavily on how your models are loaded!
-			// Example placeholder - replace with your real loading system
-
-			GameObject modelPrefab = Resources.Load<GameObject>(def.model); // ← CHANGE THIS
-			if (modelPrefab == null)
+			currentModelInstance = DefinitionFactory.Instantiate(def, parent: previewRoot.transform);
+			if (!currentModelInstance)
 			{
-				Debug.LogWarning($"Could not load model for definition: {def.model}");
+				Debug.LogError($"Failed to instantiate: {def.model}");
 				return;
 			}
 
-			var modelInstance = Instantiate(modelPrefab, previewRoot.transform);
-			modelInstance.transform.localPosition = Vector3.zero;
-			modelInstance.transform.localRotation = Quaternion.identity;
+			currentModelInstance.transform.localPosition = Vector3.zero;
+			currentModelInstance.transform.localRotation = Quaternion.identity;
 
-			// Position camera nicely
-			previewCamera.transform.localPosition = previewCameraOffset;
-			previewCamera.transform.LookAt(Vector3.zero + new Vector3(0, 1f, 0)); // look slightly above center
+			SetLayerRecursively(currentModelInstance, LayerMask.NameToLayer("Editor"));
+
+			// Reset orbit angle to start from front
+			orbitAngle = 0f;
+			UpdateCameraOrbit();
+		}
+
+		private void UpdateCameraOrbit()
+		{
+			if (!previewCamera) return;
+
+			// Orbit around Y-axis at fixed distance/height
+			float x = Mathf.Sin(orbitAngle * Mathf.Deg2Rad) * cameraDistance;
+			float z = Mathf.Cos(orbitAngle * Mathf.Deg2Rad) * cameraDistance;
+
+			previewCamera.transform.position = new Vector3(x, cameraHeight, z);
+
+			// Look at origin (model center)
+			previewCamera.transform.LookAt(Vector3.up * 1f);
+
+			// Apply extra downward tilt if desired
+			previewCamera.transform.Rotate(Vector3.right, cameraTiltAngle, Space.Self);
+		}
+
+		private void SetLayerRecursively(GameObject obj, int layer)
+		{
+			if (!obj) return;
+			obj.layer = layer;
+			foreach (Transform child in obj.transform)
+				SetLayerRecursively(child.gameObject, layer);
 		}
 
 		private void CleanupPreview()
 		{
-			if (previewRenderTexture != null)
+			if (previewRenderTexture)
 			{
 				previewRenderTexture.Release();
 				previewRenderTexture = null;
 			}
 
-			if (previewRoot != null)
+			if (currentModelInstance)
+			{
+				Destroy(currentModelInstance);
+				currentModelInstance = null;
+			}
+
+			if (groundMesh) Destroy(groundMesh);
+			if (groundMat) Destroy(groundMat);
+
+			if (previewRoot)
 			{
 				Destroy(previewRoot);
 				previewRoot = null;
 			}
 
 			previewCamera = null;
-			if (previewImage != null)
-				previewImage.texture = null;
+			if (previewImage) previewImage.texture = null;
+		}
+
+		private class SimpleCommandProvider : MonoBehaviour, ICommandBufferProvider
+		{
+			private System.Action<RasterCommandBuffer, Camera> opaquesAction;
+
+			public void RegisterCommand(RenderPassEvent evt, System.Action<RasterCommandBuffer, Camera> action)
+			{
+				if (evt == RenderPassEvent.BeforeRenderingOpaques)
+					opaquesAction = action;
+			}
+
+			public bool HasCommands(RenderPassEvent evt) =>
+				evt == RenderPassEvent.BeforeRenderingOpaques && opaquesAction != null;
+
+			public void ExecuteCommands(RenderPassEvent evt, RasterCommandBuffer cmd, Camera cam)
+			{
+				if (evt == RenderPassEvent.BeforeRenderingOpaques)
+					opaquesAction?.Invoke(cmd, cam);
+			}
 		}
 	}
 }

@@ -7,7 +7,7 @@ namespace ClassicTilestorm
 	public class DefinitionListItem : MonoBehaviour
 	{
 		[SerializeField] private Button button;
-		[SerializeField] private TMPro.TMP_Text label; // optional reference
+		[SerializeField] public TMPro.TMP_Text label; // optional reference
 
 		public string DefinitionId { get; private set; }
 

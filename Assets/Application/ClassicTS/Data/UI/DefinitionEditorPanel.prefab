@@ -8,6 +8,18 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 3395792895522728240}
     m_Modifications:
+    - target: {fileID: 1098905271716015371, guid: 12c148cb91b8ea94784af9de3f13f97b, type: 3}
+      propertyPath: m_Color.b
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1098905271716015371, guid: 12c148cb91b8ea94784af9de3f13f97b, type: 3}
+      propertyPath: m_Color.g
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1098905271716015371, guid: 12c148cb91b8ea94784af9de3f13f97b, type: 3}
+      propertyPath: m_Color.r
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 7083413008020066523, guid: 12c148cb91b8ea94784af9de3f13f97b, type: 3}
       propertyPath: m_Pivot.x
       value: 0.5
@@ -342,9 +354,12 @@ MonoBehaviour:
   contentParent: {fileID: 4343362275747073472}
   definitionListItemPrefab: {fileID: 2666612880733850823, guid: 607e9adf037f28e4bad8d495388c761f, type: 3}
   previewImage: {fileID: 887984126197869973}
-  previewResolution: {x: 256, y: 256}
-  previewCameraDistance: 5
-  previewCameraOffset: {x: 0, y: 1.5, z: -5}
+  previewResolution: {x: 320, y: 240}
+  cameraDistance: 3
+  cameraHeight: 2
+  cameraTiltAngle: 15
+  cameraOrbitSpeed: 20
+  backgroundColor: {r: 0.08, g: 0.1, b: 0.15, a: 1}
 --- !u!1001 &8816697584499309400
 PrefabInstance:
   m_ObjectHideFlags: 0
