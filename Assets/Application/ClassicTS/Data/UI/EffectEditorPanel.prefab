@@ -18,27 +18,27 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 64761661253646833, guid: db967f6b5eada254cbf1778c34ec3611, type: 3}
       propertyPath: m_AnchorMax.x
-      value: 1
+      value: 0.5
       objectReference: {fileID: 0}
     - target: {fileID: 64761661253646833, guid: db967f6b5eada254cbf1778c34ec3611, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 1
+      value: 0.5
       objectReference: {fileID: 0}
     - target: {fileID: 64761661253646833, guid: db967f6b5eada254cbf1778c34ec3611, type: 3}
       propertyPath: m_AnchorMin.x
-      value: 0
+      value: 0.5
       objectReference: {fileID: 0}
     - target: {fileID: 64761661253646833, guid: db967f6b5eada254cbf1778c34ec3611, type: 3}
       propertyPath: m_AnchorMin.y
-      value: 0
+      value: 0.5
       objectReference: {fileID: 0}
     - target: {fileID: 64761661253646833, guid: db967f6b5eada254cbf1778c34ec3611, type: 3}
       propertyPath: m_SizeDelta.x
-      value: -512
+      value: 1024
       objectReference: {fileID: 0}
     - target: {fileID: 64761661253646833, guid: db967f6b5eada254cbf1778c34ec3611, type: 3}
       propertyPath: m_SizeDelta.y
-      value: -128
+      value: 768
       objectReference: {fileID: 0}
     - target: {fileID: 64761661253646833, guid: db967f6b5eada254cbf1778c34ec3611, type: 3}
       propertyPath: m_LocalPosition.x
@@ -92,20 +92,28 @@ PrefabInstance:
       propertyPath: m_Name
       value: EffectEditorPanel
       objectReference: {fileID: 0}
+    - target: {fileID: 1429712228705100016, guid: db967f6b5eada254cbf1778c34ec3611, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4291126401872810043, guid: db967f6b5eada254cbf1778c34ec3611, type: 3}
+      propertyPath: m_text
+      value: Effects
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 1429712228705100016, guid: db967f6b5eada254cbf1778c34ec3611, type: 3}
       insertIndex: -1
-      addedObject: {fileID: -7099655131761948654}
+      addedObject: {fileID: -6012674175598658845}
   m_SourcePrefab: {fileID: 100100000, guid: db967f6b5eada254cbf1778c34ec3611, type: 3}
 --- !u!1 &4695226594433876902 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 1429712228705100016, guid: db967f6b5eada254cbf1778c34ec3611, type: 3}
   m_PrefabInstance: {fileID: 5980657178767074134}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &-7099655131761948654
+--- !u!114 &-6012674175598658845
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -120,5 +128,5 @@ MonoBehaviour:
   draggable: 1
   resizable: 1
   resizeBorder: 32
-  minSize: {x: 150, y: 100}
+  minSize: {x: 100, y: 100}
   closeButton: {fileID: 0}
