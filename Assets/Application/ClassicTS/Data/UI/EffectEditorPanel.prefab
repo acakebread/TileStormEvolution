@@ -117,4 +117,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 76264ea6a5cbfb14198b6ab9b53f3bc5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ClassicTilestorm.EffectEditorPanel
+  draggable: 1
+  resizable: 1
+  resizeBorder: 32
+  minSize: {x: 150, y: 100}
   closeButton: {fileID: 0}

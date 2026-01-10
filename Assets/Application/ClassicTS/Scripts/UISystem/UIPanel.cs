@@ -10,20 +10,18 @@ namespace ClassicTilestorm
 		[Header("Drag & Resize")]
 		[SerializeField] private bool draggable = true;
 		[SerializeField] private bool resizable = true;
-
 		[SerializeField, Tooltip("Resize grab zone thickness in pixels")]
-		private float resizeBorder = 16f; // increased from 8f
-
+		private float resizeBorder = 32f; // increased from 8f
 		[SerializeField] private Vector2 minSize = new Vector2(150, 100);
 
 		private RectTransform rect;
 		private Canvas canvas;
-
+		private RectTransform parentRect;
 		private bool isPointerDown;
 		private Vector2 pointerStart;
-		private Vector2 sizeStart;
-		private Vector2 posStart;
-
+		private Vector2 offsetMinStart;
+		private Vector2 offsetMaxStart;
+		private Vector2 parentSize;
 		private Edge dragEdge;
 
 		// Represents which edges are being modified (can be all for drag)
@@ -43,6 +41,7 @@ namespace ClassicTilestorm
 			if (rect != null) return;
 			rect = GetComponent<RectTransform>();
 			canvas = GetComponentInParent<Canvas>();
+			parentRect = rect.parent as RectTransform;
 		}
 
 		public void OnPointerDown(PointerEventData eventData)
@@ -58,8 +57,9 @@ namespace ClassicTilestorm
 			RectTransformUtility.ScreenPointToLocalPointInRectangle(canvas.transform as RectTransform,
 				eventData.position, eventData.pressEventCamera, out pointerStart);
 
-			sizeStart = rect.sizeDelta;
-			posStart = rect.anchoredPosition;
+			offsetMinStart = rect.offsetMin;
+			offsetMaxStart = rect.offsetMax;
+			parentSize = parentRect.rect.size;
 
 			dragEdge = Edge.All; // default: drag entire panel
 
@@ -71,7 +71,6 @@ namespace ClassicTilestorm
 
 				// Thicker edges for easier detection
 				float cornerExtra = resizeBorder * 0.5f;
-
 				bool left = local.x < r.xMin + resizeBorder;
 				bool right = local.x > r.xMax - resizeBorder;
 				bool top = local.y > r.yMax - resizeBorder;
@@ -95,6 +94,9 @@ namespace ClassicTilestorm
 				if (e != Edge.None) dragEdge = e;
 			}
 
+			if (dragEdge == Edge.All && !draggable)
+				return;
+
 			isPointerDown = true;
 			transform.SetAsLastSibling();
 		}
@@ -115,33 +117,63 @@ namespace ClassicTilestorm
 
 			Vector2 delta = local - pointerStart;
 
-			Vector2 newSize = sizeStart;
-			Vector2 newPos = posStart;
+			Vector2 offsetMinNew = offsetMinStart;
+			Vector2 offsetMaxNew = offsetMaxStart;
 
-			// Horizontal resizing
-			if (dragEdge.HasFlag(Edge.Left)) { newSize.x -= delta.x; newPos.x += delta.x * 0.5f; }
-			if (dragEdge.HasFlag(Edge.Right)) { newSize.x += delta.x; newPos.x += delta.x * 0.5f; }
+			if (dragEdge.HasFlag(Edge.Left)) offsetMinNew.x += delta.x;
+			if (dragEdge.HasFlag(Edge.Right)) offsetMaxNew.x += delta.x;
+			if (dragEdge.HasFlag(Edge.Bottom)) offsetMinNew.y += delta.y;
+			if (dragEdge.HasFlag(Edge.Top)) offsetMaxNew.y += delta.y;
 
-			// Vertical resizing
-			if (dragEdge.HasFlag(Edge.Bottom)) { newSize.y -= delta.y; newPos.y += delta.y * 0.5f; }
-			if (dragEdge.HasFlag(Edge.Top)) { newSize.y += delta.y; newPos.y += delta.y * 0.5f; }
+			bool isResizing = dragEdge != Edge.All;
 
-			newSize.x = Mathf.Max(minSize.x, newSize.x);
-			newSize.y = Mathf.Max(minSize.y, newSize.y);
+			if (isResizing)
+			{
+				Vector2 anchorDelta = rect.anchorMax - rect.anchorMin;
+				Vector2 stretch = new Vector2(anchorDelta.x * parentSize.x, anchorDelta.y * parentSize.y);
+				Vector2 offsetDeltaNew = offsetMaxNew - offsetMinNew;
+				Vector2 actualNew = stretch + offsetDeltaNew;
 
-			rect.sizeDelta = newSize;
-			rect.anchoredPosition = newPos;
+				// Clamp x
+				if (actualNew.x < minSize.x)
+				{
+					float deficit = minSize.x - actualNew.x;
+					float leftW = dragEdge.HasFlag(Edge.Left) ? 1f : 0f;
+					float rightW = dragEdge.HasFlag(Edge.Right) ? 1f : 0f;
+					float totalW = leftW + rightW;
+					if (totalW > 0)
+					{
+						offsetMinNew.x -= deficit * leftW / totalW;
+						offsetMaxNew.x += deficit * rightW / totalW;
+					}
+				}
+
+				// Clamp y
+				if (actualNew.y < minSize.y)
+				{
+					float deficit = minSize.y - actualNew.y;
+					float bottomW = dragEdge.HasFlag(Edge.Bottom) ? 1f : 0f;
+					float topW = dragEdge.HasFlag(Edge.Top) ? 1f : 0f;
+					float totalW = bottomW + topW;
+					if (totalW > 0)
+					{
+						offsetMinNew.y -= deficit * bottomW / totalW;
+						offsetMaxNew.y += deficit * topW / totalW;
+					}
+				}
+			}
+
+			rect.offsetMin = offsetMinNew;
+			rect.offsetMax = offsetMaxNew;
 		}
 
 		private bool IsPointerOverInteractableUI(PointerEventData eventData)
 		{
 			var results = new List<RaycastResult>();
 			EventSystem.current.RaycastAll(eventData, results);
-
 			foreach (var r in results)
 			{
 				if (r.gameObject == gameObject) continue;
-
 				if (r.gameObject.GetComponent<Selectable>() ||
 					r.gameObject.GetComponent<ScrollRect>() ||
 					r.gameObject.GetComponent<Scrollbar>())
@@ -151,7 +183,6 @@ namespace ClassicTilestorm
 		}
 
 		// ── Lifecycle / overrides ──────────────────────────────
-
 		protected virtual void OnDisable()
 		{
 			var controller = UIController.Instance;

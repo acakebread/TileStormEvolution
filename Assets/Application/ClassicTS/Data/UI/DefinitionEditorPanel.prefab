@@ -34,11 +34,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 64761661253646833, guid: db967f6b5eada254cbf1778c34ec3611, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 572
+      value: 800
       objectReference: {fileID: 0}
     - target: {fileID: 64761661253646833, guid: db967f6b5eada254cbf1778c34ec3611, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 456
+      value: 600
       objectReference: {fileID: 0}
     - target: {fileID: 64761661253646833, guid: db967f6b5eada254cbf1778c34ec3611, type: 3}
       propertyPath: m_LocalPosition.x
@@ -119,7 +119,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ClassicTilestorm.DefinitionEditorPanel
   draggable: 1
   resizable: 1
-  resizeBorder: 12
-  minSize: {x: 200, y: 120}
-  maxSize: {x: 3000, y: 3000}
+  resizeBorder: 32
+  minSize: {x: 150, y: 100}
   closeButton: {fileID: 0}
