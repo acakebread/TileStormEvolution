@@ -127,6 +127,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ClassicTilestorm.EffectEditorPanel
   draggable: 1
   resizable: 1
-  resizeBorder: 32
-  minSize: {x: 100, y: 100}
+  resizeBorder: 16
+  minSize: {x: 256, y: 100}
   closeButton: {fileID: 0}

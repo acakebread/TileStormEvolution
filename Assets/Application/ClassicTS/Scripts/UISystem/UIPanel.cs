@@ -11,7 +11,7 @@ namespace ClassicTilestorm
 		[SerializeField] private bool draggable = true;
 		[SerializeField] private bool resizable = true;
 		[SerializeField, Tooltip("Resize grab zone thickness in pixels")]
-		private float resizeBorder = 32f; // increased from 8f
+		private float resizeBorder = 16f; // increased from 8f
 		[SerializeField] private Vector2 minSize = new Vector2(256, 100);
 
 		private RectTransform rect;
