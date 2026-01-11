@@ -8,6 +8,25 @@ using MassiveHadronLtd;
 
 namespace ClassicTilestorm
 {
+	public static class Matrix4x4Extensions
+	{
+		public static bool IsFinite(this Matrix4x4 matrix)
+		{
+			for (int i = 0; i < 4; i++)
+			{
+				for (int j = 0; j < 4; j++)
+				{
+					float val = matrix[i, j];
+					if (float.IsNaN(val) || float.IsInfinity(val))
+					{
+						return false;
+					}
+				}
+			}
+			return true;
+		}
+	}
+
 	public class DefinitionEditorPanel : UIPanel
 	{
 		[Header("UI References")]
@@ -34,7 +53,6 @@ namespace ClassicTilestorm
 		private RenderTexture previewRenderTexture;
 		private Camera previewCamera;
 		private GameObject previewRoot;
-		private GameObject currentModelInstance;
 		private string selectedDefinitionId;
 
 		private readonly List<GameObject> spawnedListItems = new();
@@ -43,6 +61,9 @@ namespace ClassicTilestorm
 		private Mesh groundMesh;
 		private Material groundMat;
 		private Texture2D groundTex;
+
+		// Model render data (no GameObject instantiation needed later)
+		private RenderModelData currentModelData;
 
 		private float orbitAngle = 0f;
 
@@ -81,8 +102,6 @@ namespace ClassicTilestorm
 
 		private void Update()
 		{
-			// This is crucial - we need to render the camera every frame
-			// so the CommandBufferFeature can execute our ICommandBufferProvider commands
 			if (previewCamera != null && previewRenderTexture != null && previewRenderTexture.IsCreated())
 			{
 				previewCamera.Render();
@@ -170,15 +189,8 @@ namespace ClassicTilestorm
 			previewCamera = camGO.AddComponent<Camera>();
 			camGO.transform.SetParent(previewRoot.transform);
 
-			int editorLayer = LayerMask.NameToLayer("Editor");
-			if (editorLayer == -1)
-			{
-				Debug.LogError("Layer 'Editor' not found!");
-				return;
-			}
-
 			previewCamera.enabled = false;
-			previewCamera.cullingMask = 0;// 1 << editorLayer;
+			previewCamera.cullingMask = 1 << LayerMask.NameToLayer("Water"); ;//we are trying to eliminate this
 			previewCamera.clearFlags = CameraClearFlags.SolidColor;
 			previewCamera.backgroundColor = backgroundColor;
 			previewCamera.orthographic = false;
@@ -207,7 +219,6 @@ namespace ClassicTilestorm
 
 		private void CreateGroundPlane()
 		{
-			// Mesh
 			groundMesh = new Mesh { name = "PreviewGroundMesh" };
 
 			float half = groundSize;
@@ -231,10 +242,8 @@ namespace ClassicTilestorm
 
 			groundMesh.RecalculateNormals();
 
-			// Texture (placeholder - replace later with real one)
 			groundTex = TextureUtils.GenerateXorTexture256();
 
-			// Material
 			var shader = Shader.Find("Universal Render Pipeline/Unlit");
 			if (shader == null)
 			{
@@ -257,43 +266,46 @@ namespace ClassicTilestorm
 		{
 			var provider = camGO.AddComponent<CommandBufferProvider>();
 
-			provider.RegisterCommand(
-				RenderPassEvent.BeforeRenderingOpaques,
-				(cmd, cam) =>
-				{
-					if (groundMesh == null || groundMat == null) return;
-					cmd.DrawMesh(groundMesh, Matrix4x4.identity, groundMat, 0, 0);
-				});
+			provider.RegisterCommand(RenderPassEvent.BeforeRenderingOpaques, (cmd, cam) =>
+			{
+				// Force clear every frame (color + depth) - this is what makes it reliable
+				cmd.ClearRenderTarget(true, true, backgroundColor, 1.0f);
 
-			Debug.Log("[DefinitionPreview] Command provider attached - ground should appear when camera renders");
+				// Ground (proven to work)
+				if (groundMesh != null && groundMat != null)
+				{
+					cmd.DrawMesh(groundMesh, Matrix4x4.identity, groundMat, 0, 0);
+				}
+
+				// Model - real textures/materials from factory, correct 5-param overload
+				if (currentModelData != null)
+				{
+					foreach (var instance in currentModelData.meshInstances)
+					{
+						if (instance.mesh == null) continue;
+
+						for (int s = 0; s < instance.subMeshCount; s++)
+						{
+							var mat = s < instance.materials.Length ? instance.materials[s] : instance.materials[0];
+							if (mat == null) continue;
+
+							// Correct overload: 5 parameters (submesh + shader pass)
+							cmd.DrawMesh(instance.mesh, instance.localToWorld, mat, s, 0);
+						}
+					}
+				}
+			});
 		}
 
 		private void UpdatePreview(string defId)
 		{
-			if (!previewCamera || string.IsNullOrEmpty(defId))
-			{
-				if (previewImage) previewImage.enabled = false;
-				return;
-			}
-
-			if (previewImage) previewImage.enabled = true;
-
-			if (currentModelInstance) Destroy(currentModelInstance);
+			currentModelData = null;
 
 			var def = ResourceManager.GetDefinition(defId);
 			if (def == null || string.IsNullOrEmpty(def.model)) return;
 
-			currentModelInstance = DefinitionFactory.Instantiate(def, parent: previewRoot.transform);
-			if (!currentModelInstance)
-			{
-				Debug.LogError($"Failed to instantiate: {def.model}");
-				return;
-			}
-
-			currentModelInstance.transform.localPosition = Vector3.zero;
-			currentModelInstance.transform.localRotation = Quaternion.identity;
-
-			SetLayerRecursively(currentModelInstance, LayerMask.NameToLayer("Editor"));
+			// Use factory - no GameObject needed
+			currentModelData = RenderModelFactory.Create(def, Vector3.zero, Quaternion.identity, Vector3.one);
 
 			orbitAngle = 0f;
 			UpdateCameraOrbit();
@@ -363,13 +375,6 @@ namespace ClassicTilestorm
 				previewRenderTexture = null;
 			}
 
-			if (currentModelInstance)
-			{
-				Destroy(currentModelInstance);
-				currentModelInstance = null;
-			}
-
-			// Ground cleanup
 			if (groundMesh) DestroyImmediate(groundMesh);
 			if (groundMat) DestroyImmediate(groundMat);
 			if (groundTex) DestroyImmediate(groundTex);
@@ -441,7 +446,7 @@ namespace ClassicTilestorm
 					}
 					catch (System.Exception ex)
 					{
-						Debug.LogError($"Preview ground command failed: {ex.Message}");
+						Debug.LogError($"Preview command failed: {ex.Message}");
 					}
 				}
 			}

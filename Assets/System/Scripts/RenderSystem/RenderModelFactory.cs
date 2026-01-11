@@ -35,13 +35,29 @@ namespace MassiveHadronLtd
 		{
 			Matrix4x4 rootMatrix = Matrix4x4.TRS(rootPos, rootRot, rootScale);
 
-			// Get all MeshFilters + MeshRenderers in prefab (without instantiating)
 			var filters = prefabRoot.GetComponentsInChildren<MeshFilter>(true);
 			var renderers = prefabRoot.GetComponentsInChildren<MeshRenderer>(true);
 
 			if (filters.Length == 0) return;
 
-			// Very naive version - assumes mesh filter & renderer indices match
+			// Temporary HD check logic (same as DefinitionFactory)
+			bool isHD = (renderers.Length == 1 && renderers[0].sharedMaterials.Length >= 2) || renderers.Length >= 2;
+
+			// Definition material override
+			Material replacement = null;
+			if (!string.IsNullOrEmpty(def.material))
+			{
+				replacement = MaterialAssets.Find(def.material);
+			}
+
+			// Texture sequence
+			TextureSequence sequence = null;
+			if (!isHD && !string.IsNullOrEmpty(def.texture))
+			{
+				sequence = TextureSetManager.GetTextureSequence(def.texture);
+			}
+
+			// Loop through filters/renderers (naive index matching — works for most prefabs)
 			for (int i = 0; i < Mathf.Min(filters.Length, renderers.Length); i++)
 			{
 				var filter = filters[i];
@@ -52,25 +68,44 @@ namespace MassiveHadronLtd
 				var localToRoot = filter.transform.localToWorldMatrix;
 				var worldMatrix = rootMatrix * localToRoot;
 
-				var mats = renderer.sharedMaterials;
+				// Start with prefab materials
+				Material[] mats = renderer.sharedMaterials;
 
-				// Apply definition material override if present
-				if (!string.IsNullOrEmpty(def.material))
+				// Apply material replacement
+				if (replacement != null)
 				{
-					var overrideMat = MaterialAssets.Find(def.material);
-					if (overrideMat != null)
+					mats = new Material[mats.Length];
+					for (int j = 0; j < mats.Length; j++)
 					{
-						mats = new Material[mats.Length];
-						for (int j = 0; j < mats.Length; j++)
-							mats[j] = overrideMat;
+						mats[j] = replacement;
+					}
+				}
+
+				// Apply texture animation override (same as DefinitionFactory)
+				if (sequence != null && sequence.ResolvedFrames.Length > 0)
+				{
+					// For non-HD: override base texture with first frame (animation happens later if needed)
+					var firstTex = sequence.ResolvedFrames[0].texture;
+					if (firstTex != null)
+					{
+						foreach (var mat in mats)
+						{
+							if (mat != null)
+							{
+								mat.mainTexture = firstTex;
+								if (MaterialUtils.isEmissive(mat))
+								{
+									mat.SetTexture("_EmissionMap", firstTex);
+									mat.SetColor("_EmissionColor", Color.white * 2f); // boost for visibility
+									mat.EnableKeyword("_EMISSION");
+								}
+							}
+						}
 					}
 				}
 
 				target.AddMeshInstance(filter.sharedMesh, mats, worldMatrix);
 			}
-
-			// Todo: handle texture animation sequence if needed (later)
-			// Todo: handle child prefabs / nested hierarchies
 		}
 	}
 }
