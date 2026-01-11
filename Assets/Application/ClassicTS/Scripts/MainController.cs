@@ -22,8 +22,8 @@ namespace ClassicTilestorm
 			// === ADD AUDIO MANAGER AUTOMATICALLY ===
 			gameObject.AddComponent<AudioManager>(); //audioManager = gameObject.AddComponent<AudioManager>();
 			AssetConfiguration.Initialize(); // Sets initial remapper + roots
-			AssetRegistry<GameObject>.NameRemapper = PreviewSettings.RemapGeometry ? ClassicTileStormAssetRemapHelper.RemapName : null;
-			PreviewSettings.OnRemapGeometryChanged += (value) =>
+			AssetRegistry<GameObject>.NameRemapper = ApplicationSettings.RemapGeometry ? ClassicTileStormAssetRemapHelper.RemapName : null;
+			ApplicationSettings.OnRemapGeometryChanged += (value) =>
 			{
 				AssetRegistry<GameObject>.NameRemapper = value ? ClassicTileStormAssetRemapHelper.RemapName : null;
 				ModelAssets.ClearCache();
@@ -31,13 +31,13 @@ namespace ClassicTilestorm
 			};
 
 			if (!FindAnyObjectByType<EventSystem>()) new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
-			ResourceSerializer.Initialise(PreviewSettings.DatabaseJsonFile);
+			ResourceSerializer.Initialise(ApplicationSettings.DatabaseJsonFile);
 			gameController = gameObject.AddComponent<GameController>();
 			editorController = gameObject.AddComponent<EditorController>();
 			cameraController = gameObject.AddComponent<MainCameraController>();
 			OnChangeMapRequested += HandleChangeMap;
-			LoadMap(PreviewSettings.LoadMapName);
-			SetPreviewMode(PreviewSettings.CurrentMode);//invoke to enable and disable game and editor controllers - ToDo improve this
+			LoadMap(ApplicationSettings.LoadMapName);
+			SetPreviewMode(ApplicationSettings.CurrentMode);//invoke to enable and disable game and editor controllers - ToDo improve this
 		}
 
 		private int guard = 0;//temporary workaround for double events from ongui (due to camera stack) - hopefully this will go away when full ui is implemented
@@ -50,18 +50,18 @@ namespace ClassicTilestorm
 		//	mapManager?.RefreshGeometry();
 		//}
 
-		public void SetPreviewMode(PreviewMode mode)
+		public void SetPreviewMode(ApplicationMode mode)
 		{
 			if (null == cameraController) return;
 
 			cameraController.SetCameraMode(GameModes.GetModeString(mode));
-			editorController.enabled = mode == PreviewMode.Editor;
-			gameController.enabled = mode != PreviewMode.Editor;
+			editorController.enabled = mode == ApplicationMode.Editor;
+			gameController.enabled = mode != ApplicationMode.Editor;
 		}
 
 		public void LoadMap(string mapName = null)
 		{
-			if (null == (mapName = mapName ?? PreviewSettings.LoadMapName)) return;
+			if (null == (mapName = mapName ?? ApplicationSettings.LoadMapName)) return;
 
 			var currentMap = ResourceManager.Maps.FirstOrDefault(m => m.name == mapName) ?? ResourceManager.Maps.FirstOrDefault();
 			if (null == currentMap)
@@ -109,7 +109,7 @@ namespace ClassicTilestorm
 			int currentIndex = -1;
 			for (int i = 0; i < maps.Count; i++)
 			{
-				if (maps[i]?.name == PreviewSettings.LoadMapName)
+				if (maps[i]?.name == ApplicationSettings.LoadMapName)
 				{
 					currentIndex = i;
 					break;
@@ -122,7 +122,7 @@ namespace ClassicTilestorm
 			if (delta != 0)
 			{
 				currentIndex = (currentIndex + delta + maps.Count) % maps.Count;
-				PreviewSettings.LoadMapName = maps[currentIndex].name;
+				ApplicationSettings.LoadMapName = maps[currentIndex].name;
 			}
 
 			LoadMap();
@@ -140,7 +140,7 @@ namespace ClassicTilestorm
 
 		public void LoadDatabase()
 		{
-			var dbAsset = PreviewSettings.DatabaseJsonFile;
+			var dbAsset = ApplicationSettings.DatabaseJsonFile;
 			if (dbAsset == null)
 			{
 				Debug.LogError("PreviewSettings.DatabaseJsonFile is not assigned in PreviewSettings!");
@@ -167,7 +167,7 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			var database = PreviewSettings.DatabaseJsonFile;
+			var database = ApplicationSettings.DatabaseJsonFile;
 			if (database == null)
 			{
 				Debug.LogError("PreviewSettings.DatabaseJsonFile is not assigned!");
@@ -191,7 +191,7 @@ namespace ClassicTilestorm
 		public void ImportMapAsAtomic()
 		{
 #if UNITY_EDITOR
-			string path = EditorUtility.OpenFilePanel("Import Atomic Map", PreviewSettings.ExportFolder, "json");
+			string path = EditorUtility.OpenFilePanel("Import Atomic Map", ApplicationSettings.ExportFolder, "json");
 			if (!string.IsNullOrEmpty(path))
 			{
 				ResourceSerializer.ImportAtomicMap(path);

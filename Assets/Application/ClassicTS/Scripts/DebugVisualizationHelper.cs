@@ -8,7 +8,7 @@ namespace ClassicTilestorm
 
 		public static void HighlightStrip(IMapManager map, in TileStrip strip, bool highlight)
 		{
-			if (!PreviewSettings.ShowTileSelection) return;
+			if (!ApplicationSettings.ShowTileSelection) return;
 			if (null == strip.Indices) return;
 
 			foreach (var tileIndex in strip.Indices)

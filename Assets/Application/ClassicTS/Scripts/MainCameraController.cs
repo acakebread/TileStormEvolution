@@ -26,11 +26,11 @@ namespace ClassicTilestorm
 
 		private CameraBase cameraSystem => activeSystem;
 
-		public string PreviewModeToCameraMode(PreviewMode mode) => mode switch
+		public string PreviewModeToCameraMode(ApplicationMode mode) => mode switch
 		{
-			PreviewMode.Editor => CameraModeRegistry.Editor,
-			PreviewMode.Player => CameraModeRegistry.Follow,
-			PreviewMode.Cinema => UnityEngine.Random.Range(0, 7) switch { 0 or 1 or 2 => CameraModeRegistry.Orbit, _ => CameraModeRegistry.Path },
+			ApplicationMode.Editor => CameraModeRegistry.Editor,
+			ApplicationMode.Player => CameraModeRegistry.Follow,
+			ApplicationMode.Cinema => UnityEngine.Random.Range(0, 7) switch { 0 or 1 or 2 => CameraModeRegistry.Orbit, _ => CameraModeRegistry.Path },
 			_ => CameraModeRegistry.Absent
 		};
 
@@ -62,7 +62,7 @@ namespace ClassicTilestorm
 
 		private bool GestureControllerEnabled { set { gestureControllerEnabled = value; UpdateGestureControllerState(); } }
 
-		public void UpdateGestureControllerState() => gestureController.enabled = gestureControllerEnabled && PreviewMode.Player == PreviewSettings.CurrentMode;
+		public void UpdateGestureControllerState() => gestureController.enabled = gestureControllerEnabled && ApplicationMode.Player == ApplicationSettings.CurrentMode;
 
 		private void OnWaypointGesturesEnable(bool value) => GestureControllerEnabled = value;
 
@@ -78,7 +78,7 @@ namespace ClassicTilestorm
 				eggbotController.OnLevelCompleted += OnLevelCompleted;
 				eggbotController.OnPuzzleSolved += HandlePuzzleSolved;
 			}
-			var initialMode = PreviewModeToCameraMode(PreviewSettings.CurrentMode);
+			var initialMode = PreviewModeToCameraMode(ApplicationSettings.CurrentMode);
 			Initialise(initialMode ?? CameraModeRegistry.Preset);
 			GestureControllerEnabled = false;
 			UpdateGestureControllerState();

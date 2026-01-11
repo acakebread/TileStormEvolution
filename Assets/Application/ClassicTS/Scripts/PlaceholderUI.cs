@@ -6,7 +6,7 @@ namespace ClassicTilestorm
 {
     public class PlaceholderUI : MonoBehaviour
     {
-        public event Action<PreviewMode> OnModeChanged;
+        public event Action<ApplicationMode> OnModeChanged;
         public event Action<int> OnChangeMapRequested; // delta or 0 for reload
         public event Action OnPresetRequested;
         public event Action OnScrambleRequested;
@@ -50,7 +50,7 @@ namespace ClassicTilestorm
             if (InputUtility.GetKeyRepeat(KeyCode.RightArrow)) OnChangeMapRequested?.Invoke(1);
 
             // Always visible in Editor mode
-            if (PreviewSettings.CurrentMode == PreviewMode.Editor)
+            if (ApplicationSettings.CurrentMode == ApplicationMode.Editor)
             {
                 targetY = panelGap;
                 isGuiVisible = true;
@@ -110,14 +110,14 @@ namespace ClassicTilestorm
 			GUI.Label(new Rect(currentX, y, labelWidth, buttonHeight), "Map:");
 			currentX += labelWidth;
 
-			GUI.Label(new Rect(currentX, y, mapNameWidth, buttonHeight), PreviewSettings.LoadMapName);
+			GUI.Label(new Rect(currentX, y, mapNameWidth, buttonHeight), ApplicationSettings.LoadMapName);
 			currentX += mapNameWidth + spacing;
 
-			DrawModeButton(currentX, y, "Editor", PreviewMode.Editor);
+			DrawModeButton(currentX, y, "Editor", ApplicationMode.Editor);
 			currentX += buttonWidth + spacing;
-			DrawModeButton(currentX, y, "Player", PreviewMode.Player);
+			DrawModeButton(currentX, y, "Player", ApplicationMode.Player);
 			currentX += buttonWidth + spacing;
-			DrawModeButton(currentX, y, "Cinema", PreviewMode.Cinema);
+			DrawModeButton(currentX, y, "Cinema", ApplicationMode.Cinema);
 			currentX += buttonWidth + spacing;
 
 			currentX += 20;
@@ -141,9 +141,9 @@ namespace ClassicTilestorm
 
 			guiRect.height = panelHeight;
 
-			void DrawModeButton(float cx, float cy, string label, PreviewMode mode)
+			void DrawModeButton(float cx, float cy, string label, ApplicationMode mode)
 			{
-				bool isSelected = PreviewSettings.CurrentMode == mode;
+				bool isSelected = ApplicationSettings.CurrentMode == mode;
 				Color buttonColor = isSelected ? modeSelectedBg : modeUnselectedBg;
 				Color textColor = isSelected ? selectedTextColor : unselectedTextColor;
 
@@ -156,7 +156,7 @@ namespace ClassicTilestorm
 					buttonColor,
 					() =>
 					{
-						PreviewSettings.CurrentMode = mode;
+						ApplicationSettings.CurrentMode = mode;
 						OnModeChanged?.Invoke(mode);
 					});
 

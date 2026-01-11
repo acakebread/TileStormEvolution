@@ -341,7 +341,7 @@ GameObject:
   - component: {fileID: 862124737}
   - component: {fileID: 862124736}
   m_Layer: 0
-  m_Name: PreviewSettings
+  m_Name: ApplicationSettings
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

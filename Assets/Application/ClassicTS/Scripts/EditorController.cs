@@ -31,10 +31,6 @@ namespace ClassicTilestorm
 		private MainCameraController mainCameraController { get { TryGetComponent<MainCameraController>(out var controller); return controller; } }
 		private GameCameraEditor gameCameraEditor { get { if (null != mainCameraController && mainCameraController.activeSystem is GameCameraEditor editorCam) return editorCam; return null; } }
 
-		//private DefinitionEditor definitionEditor => FindAnyObjectByType<DefinitionEditor>();
-		private DefinitionEditor _definitionEditor = null;
-		private DefinitionEditor definitionEditor { get { if (null == _definitionEditor) _definitionEditor = gameObject.AddComponent<DefinitionEditor>(); return _definitionEditor; } }
-
 		private void Awake()
 		{
 			panelYoffset = PlaceholderUI.PanelBottomY;
@@ -170,7 +166,7 @@ namespace ClassicTilestorm
 
 			var ct = 0;
 			var y = panelYoffset + spacing;
-			if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), PreviewSettings.RemapGeometry ? "Remap" : "Classic", new Color(0.45f, 0.25f, 0.25f))) PreviewSettings.RemapGeometry = !PreviewSettings.RemapGeometry;
+			if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), ApplicationSettings.RemapGeometry ? "Remap" : "Classic", new Color(0.45f, 0.25f, 0.25f))) ApplicationSettings.RemapGeometry = !ApplicationSettings.RemapGeometry;
 
 			if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), gridVisible ? "Hide Grid" : "Show Grid", new Color(0.25f, 0.75f, 0.25f))) OnGridLinesToggled(!gridVisible);
 

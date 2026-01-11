@@ -101,7 +101,7 @@ namespace ClassicTilestorm
 
 				var stride = val > 0f ? (isX ? 1 : imap.Width) : (isX ? -1 : -imap.Width);
 
-				tileStrip = TileStripHelper.GetTileStrip(imap, dragIndex, stride, PreviewSettings.Difficulty);
+				tileStrip = TileStripHelper.GetTileStrip(imap, dragIndex, stride, ApplicationSettings.Difficulty);
 				if (tileStrip.Count <= 1)
 				{
 					isX = !isX;
@@ -114,7 +114,7 @@ namespace ClassicTilestorm
 					if (!TileStripHelper.RollStrip(imap, tileStrip)) break;
 					OnMapUpdated?.Invoke(imap);
 					dragIndex += tileStrip.Stride;
-					tileStrip = TileStripHelper.GetTileStrip(imap, dragIndex, stride, PreviewSettings.Difficulty);
+					tileStrip = TileStripHelper.GetTileStrip(imap, dragIndex, stride, ApplicationSettings.Difficulty);
 				}
 
 				var mod = val % gridSize;

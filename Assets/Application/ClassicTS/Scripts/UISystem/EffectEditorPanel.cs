@@ -8,7 +8,7 @@ namespace ClassicTilestorm
 		[Header("UI References (optional for testing)")]
 		[SerializeField] private Button closeButton;
 
-		private void Awake()
+		protected override void Awake()
 		{
 			// Optional: connect close button in code (or do it in Inspector)
 			if (closeButton != null)
