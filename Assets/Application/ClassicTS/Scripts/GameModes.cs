@@ -24,17 +24,17 @@ namespace ClassicTilestorm
 		public const string Cinema = "CINEMA";
 
 		// Mapping from PreviewMode to (GameMode string, CameraModeRegistry array)
-		private static readonly Dictionary<PreviewMode, (string Mode, string[] CameraModes)> ModeMap = new()
+		private static readonly Dictionary<ApplicationMode, (string Mode, string[] CameraModes)> ModeMap = new()
 		{
 			//{ PreviewMode.Direct, (Direct, new[] { CameraModeRegistry.Direct }) },
-			{ PreviewMode.Editor, (Editor, new[] { CameraModeRegistry.Editor }) },
-			{ PreviewMode.Player, (Player, new[] { CameraModeRegistry.Follow, CameraModeRegistry.Preset }) },
-			{ PreviewMode.Cinema, (Cinema, new[] { CameraModeRegistry.Path, CameraModeRegistry.Orbit }) }
+			{ ApplicationMode.Editor, (Editor, new[] { CameraModeRegistry.Editor }) },
+			{ ApplicationMode.Player, (Player, new[] { CameraModeRegistry.Follow, CameraModeRegistry.Preset }) },
+			{ ApplicationMode.Cinema, (Cinema, new[] { CameraModeRegistry.Path, CameraModeRegistry.Orbit }) }
 		};
 
 		// Methods to access the mapping
-		public static string GetModeString(PreviewMode mode) => ModeMap.TryGetValue(mode, out var value) ? value.Mode : CameraModeRegistry.Absent;
-		public static string[] GetCameraModes(PreviewMode mode) => ModeMap.TryGetValue(mode, out var value) ? value.CameraModes : Array.Empty<string>();
+		public static string GetModeString(ApplicationMode mode) => ModeMap.TryGetValue(mode, out var value) ? value.Mode : CameraModeRegistry.Absent;
+		public static string[] GetCameraModes(ApplicationMode mode) => ModeMap.TryGetValue(mode, out var value) ? value.CameraModes : Array.Empty<string>();
 
 		// Method to register all modes (used in MainCameraController)
 		public static void RegisterAllModes(Action<string, string[]> registerAction)

@@ -83,7 +83,7 @@ namespace ClassicTilestorm
 					maps = root["maps"]?.ToObject<Map[]>(serializer) ?? System.Array.Empty<Map>(),
 					definitions = root["definitions"]?.ToObject<Definition[]>(serializer) ?? System.Array.Empty<Definition>(),
 					textures = root["textures"]?.ToObject<TextureSequence[]>(serializer) ?? System.Array.Empty<TextureSequence>(),
-					buttons = root["buttons"]?.ToObject<Button[]>(serializer) ?? System.Array.Empty<Button>()
+					buttons = root["buttons"]?.ToObject<Legacy.Button[]>(serializer) ?? System.Array.Empty<Legacy.Button>()
 				};
 
 				if (data.maps == null || data.definitions == null || data.textures == null || data.maps.Length == 0 || data.definitions.Length == 0 || data.textures.Length == 0)

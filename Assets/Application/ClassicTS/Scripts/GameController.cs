@@ -21,9 +21,9 @@ namespace ClassicTilestorm
 			placeholderUI.OnSolveRequested += () => mainController.Solve();
 		}
 
-		private void HandleModeChanged(PreviewMode mode)
+		private void HandleModeChanged(ApplicationMode mode)
 		{
-			PreviewSettings.CurrentMode = mode;
+			ApplicationSettings.CurrentMode = mode;
 			mainController.SetPreviewMode(mode);
 		}
 

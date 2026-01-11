@@ -166,11 +166,15 @@ namespace ClassicTilestorm
 
 			var ct = 0;
 			var y = panelYoffset + spacing;
-			if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), PreviewSettings.RemapGeometry ? "Remap" : "Classic", new Color(0.45f, 0.25f, 0.25f))) PreviewSettings.RemapGeometry = !PreviewSettings.RemapGeometry;
+			if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), ApplicationSettings.RemapGeometry ? "Remap" : "Classic", new Color(0.45f, 0.25f, 0.25f))) ApplicationSettings.RemapGeometry = !ApplicationSettings.RemapGeometry;
 
 			if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), gridVisible ? "Hide Grid" : "Show Grid", new Color(0.25f, 0.75f, 0.25f))) OnGridLinesToggled(!gridVisible);
 
 			if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), dofEnabled ? "Disable DOF" : "Enable DOF", new Color(0.25f, 0.75f, 0.25f))) OnDofToggled(!dofEnabled);
+
+			if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "Definition Editor", new Color(0.6f, 0.3f, 0.8f))) UIController.OpenPanel<DefinitionEditorPanel>();
+
+			if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "Effect Editor", new Color(0.6f, 0.3f, 0.8f))) UIController.OpenPanel<EffectEditorPanel>();
 
 			GUI.contentColor = mode == "Drag" ? Color.cyan : Color.white;
 			if (GUI.Button(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "Drag")) SetEditorMode(EditorMode.Drag);

@@ -262,145 +262,39 @@ namespace MassiveHadronLtd
 			atlas.Apply();
 			return atlas;
 		}
+
+		/// <summary>
+		/// Generates a classic 256x256 XOR RGB test texture.
+		/// R = x
+		/// G = y
+		/// B = x XOR y
+		/// This produces all possible 8-bit combinations and a strong diagnostic pattern.
+		/// </summary>
+		public static Texture2D GenerateXorTexture256()
+		{
+			const int size = 256;
+
+			Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false)
+			{
+				wrapMode = TextureWrapMode.Repeat,
+				filterMode = FilterMode.Point,
+				hideFlags = HideFlags.HideAndDontSave
+			};
+
+			for (int y = 0; y < size; y++)
+			{
+				for (int x = 0; x < size; x++)
+				{
+					byte r = (byte)x;           // 0..255 across X
+					byte g = (byte)y;           // 0..255 across Y
+					byte b = (byte)(x ^ y);     // XOR pattern
+
+					tex.SetPixel(x, y, new Color32(r, g, b, 255));
+				}
+			}
+
+			tex.Apply(false, true);
+			return tex;
+		}
 	}
 }
-
-
-//Two ChatGTP alternatives
-
-///// <summary>
-///// Drop-in replacement for GeneratePerlinNoiseTexture but produces 
-///// seamless, tileable noise using internally wrapped value-noise.
-///// </summary>
-//public static Texture2D GeneratePerlinNoiseTexture(int width = 256, int height = 256, float scale = 10f)
-//{
-//	if (width <= 0 || height <= 0)
-//	{
-//		Debug.LogError($"TextureUtils: Invalid texture dimensions (width: {width}, height: {height})");
-//		return null;
-//	}
-
-//	// If non-square texture requested, generate square seamless first
-//	int size = Mathf.Max(width, height);
-
-//	// Generate seamless noise using full 0-1 range
-//	Texture2D seamless = GenerateSeamlessValueNoise(size, 0f, 1f);
-
-//	// If caller wants non-square texture, resample down
-//	if (width != size || height != size)
-//	{
-//		Texture2D resized = new Texture2D(width, height, TextureFormat.RGBA32, false)
-//		{
-//			wrapMode = TextureWrapMode.Repeat,
-//			filterMode = FilterMode.Bilinear
-//		};
-
-//		// Blit scaled copy
-//		for (int y = 0; y < height; y++)
-//		{
-//			float v = (float)y / height;
-//			for (int x = 0; x < width; x++)
-//			{
-//				float u = (float)x / width;
-//				resized.SetPixel(x, y, seamless.GetPixelBilinear(u, v));
-//			}
-//		}
-
-//		resized.Apply();
-//		return resized;
-//	}
-
-//	// Square: just return the seamless texture
-//	return seamless;
-//}
-
-
-
-///// <summary>
-///// Drop-in seamless replacement for GeneratePerlinNoiseTexture.
-///// Ignores Perlin limitations and produces a tileable noise texture
-///// using the seamless value noise generator.
-///// </summary>
-//public static Texture2D GeneratePerlinNoiseTexture(int width = 256, int height = 256, float scale = 10f)
-//{
-//	// NOTE:
-//	// We ignore scale (Perlin’s frequency) because seamless value noise
-//	// handles frequency differently. Instead we map scale roughly to
-//	// noise “detail”.
-//	// Higher scale → more noisy texture.
-
-//	int size = Mathf.Max(width, height);
-
-//	// Map "scale" to value-noise sampling density (empirical)
-//	float brightnessMin = 0f;
-//	float brightnessMax = 1f;
-
-//	// To emulate Perlin's "scale" idea:
-//	// - low scale = broad gradients (blurrier)
-//	// - high scale = sharp/more random
-//	// We achieve this by sampling a larger/smaller underlying grid.
-//	int effectiveSize = Mathf.Clamp(Mathf.RoundToInt(size * (scale / 10f)), 32, 1024);
-
-//	Texture2D baseTex = GenerateSeamlessValueNoise(effectiveSize, brightnessMin, brightnessMax);
-
-//	// Now resize to requested width/height if needed
-//	if (width != effectiveSize || height != effectiveSize)
-//	{
-//		Texture2D resized = new Texture2D(width, height, TextureFormat.RGBA32, false)
-//		{
-//			wrapMode = TextureWrapMode.Repeat,
-//			filterMode = FilterMode.Bilinear
-//		};
-
-//		for (int y = 0; y < height; y++)
-//		{
-//			float v = (float)y / height;
-//			for (int x = 0; x < width; x++)
-//			{
-//				float u = (float)x / width;
-//				resized.SetPixel(x, y, baseTex.GetPixelBilinear(u, v));
-//			}
-//		}
-
-//		resized.Apply();
-//		return resized;
-//	}
-
-//	return baseTex;
-//}
-
-
-
-//return old version - this does not wrap repeat properly!!!
-
-
-
-///// <summary>
-///// Generates a Perlin noise texture for use in shaders (e.g., frosted glass effect).
-///// </summary>
-///// <param name="width">The width of the texture in pixels (default: 256).</param>
-///// <param name="height">The height of the texture in pixels (default: 256).</param>
-///// <param name="scale">The scale of the Perlin noise pattern (default: 10).</param>
-///// <returns>A Texture2D with Perlin noise, or null if width/height are invalid.</returns>
-//public static Texture2D GeneratePerlinNoiseTexture(int width = 256, int height = 256, float scale = 10f)
-//{
-//	if (width <= 0 || height <= 0)
-//	{
-//		Debug.LogError($"TextureUtils: Invalid texture dimensions (width: {width}, height: {height})");
-//		return null;
-//	}
-
-//	Texture2D texture = new Texture2D(width, height, TextureFormat.RGB24, false);
-//	for (int y = 0; y < height; y++)
-//	{
-//		for (int x = 0; x < width; x++)
-//		{
-//			float sample = Mathf.PerlinNoise(x / (float)width * scale, y / (float)height * scale);
-//			texture.SetPixel(x, y, new Color(sample, sample, sample, 1));
-//		}
-//	}
-//	texture.Apply();
-//	texture.wrapMode = TextureWrapMode.Repeat; // Ensures seamless tiling
-//	texture.filterMode = FilterMode.Bilinear; // Smooths the noise
-//	return texture;
-//}

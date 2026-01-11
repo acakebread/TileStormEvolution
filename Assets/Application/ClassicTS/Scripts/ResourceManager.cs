@@ -8,7 +8,7 @@ namespace ClassicTilestorm
 		public Map[] maps;
 		public Definition[] definitions;
 		public TextureSequence[] textures;
-		public Button[] buttons;
+		public Legacy.Button[] buttons;
 	}
 
 	public static class ResourceManager
@@ -19,7 +19,7 @@ namespace ClassicTilestorm
 		public static System.Collections.Generic.IList<Map> Maps => _db?.maps ?? System.Array.Empty<Map>();
 		public static System.Collections.Generic.IList<Definition> Definitions => _db?.definitions ?? System.Array.Empty<Definition>();
 		public static System.Collections.Generic.IList<TextureSequence> TextureSets => _db?.textures ?? System.Array.Empty<TextureSequence>();
-		public static System.Collections.Generic.IList<Button> Buttons => _db?.buttons ?? System.Array.Empty<Button>();
+		public static System.Collections.Generic.IList<Legacy.Button> Buttons => _db?.buttons ?? System.Array.Empty<Legacy.Button>();
 
 		public static Definition GetDefinition(string id) => string.IsNullOrEmpty(id) ? null : Definitions.FirstOrDefault(d => d.id == id);
 		public static TextureSequence GetTextureSequence(string id) => string.IsNullOrEmpty(id) ? null : TextureSets.FirstOrDefault(ts => ts.id == id);

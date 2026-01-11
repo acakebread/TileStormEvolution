@@ -1,6 +1,6 @@
 using System;
 
-namespace ClassicTilestorm
+namespace ClassicTilestorm.Legacy
 {
 	[Serializable]
 	public class Button

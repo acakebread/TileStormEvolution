@@ -6,14 +6,14 @@ using MassiveHadronLtd;
 
 namespace ClassicTilestorm
 {
-	public enum PreviewMode
+	public enum ApplicationMode
 	{
 		Editor,
 		Player,
 		Cinema
 	}
 
-	public class PreviewSettings : MonoBehaviour
+	public class ApplicationSettings : MonoBehaviour
 	{
 		public const string MutableDatabaseSubfolder = "Data";
 
@@ -90,10 +90,10 @@ namespace ClassicTilestorm
 		public static string MusicPath => instance.musicPath;
 
 		[Header("Game Mode")]
-		[SerializeField] private PreviewMode previewMode = PreviewMode.Player;
-		public static PreviewMode CurrentMode
+		[SerializeField] private ApplicationMode previewMode = ApplicationMode.Player;
+		public static ApplicationMode CurrentMode
 		{
-			get => (PreviewMode)PlayerPrefsX.GetInt("PreviousMode", (int)instance.previewMode);
+			get => (ApplicationMode)PlayerPrefsX.GetInt("PreviousMode", (int)instance.previewMode);
 			set
 			{
 				if (instance != null)
@@ -106,8 +106,8 @@ namespace ClassicTilestorm
 
 		// ─────── Editor button helper (only thing that needs the path) ───────
 #if UNITY_EDITOR
-		[CustomEditor(typeof(PreviewSettings))]
-		private class PreviewSettingsEditor : Editor
+		[CustomEditor(typeof(ApplicationSettings))]
+		private class PreviewSettingsEditor : UnityEditor.Editor
 		{
 			public override void OnInspectorGUI()
 			{
@@ -125,7 +125,7 @@ namespace ClassicTilestorm
 		}
 #endif
 
-		private static PreviewSettings instance;
+		private static ApplicationSettings instance;
 
 		private void Awake()
 		{

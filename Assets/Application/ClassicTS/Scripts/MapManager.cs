@@ -208,7 +208,7 @@ namespace ClassicTilestorm
 
 			LoadTileData(currentMap.tiles);
 
-			if (PreviewSettings.Scrambled) Preset();
+			if (ApplicationSettings.Scrambled) Preset();
 			else Solve();
 
 			InitializeWindController();
@@ -599,7 +599,7 @@ namespace ClassicTilestorm
 			if (null == definition || string.IsNullOrEmpty(definition.model))
 			{
 				if (definition?.id == "tile_invisible")
-					return PreviewSettings.ShowHiddenTiles ? GeometryFactory.CreateDebugTile(parent, position) : null;
+					return ApplicationSettings.ShowHiddenTiles ? GeometryFactory.CreateDebugTile(parent, position) : null;
 
 				Debug.LogWarning("GeometryManager: Invalid Definition or geometry name." + definition.id);
 				return GeometryFactory.CreateFallbackTile(parent, position);
