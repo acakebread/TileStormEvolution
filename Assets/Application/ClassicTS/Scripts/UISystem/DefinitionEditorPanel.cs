@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.EventSystems;
+using MassiveHadronLtd;
 
 namespace ClassicTilestorm
 {
@@ -22,7 +23,13 @@ namespace ClassicTilestorm
 		[SerializeField] private float cameraHeight = 3f;
 		[SerializeField] private float cameraTiltAngle = 15f;
 		[SerializeField] private float cameraOrbitSpeed = 0f;
-		[SerializeField] private Color backgroundColor = new Color(0.08f, 0.10f, 0.15f);
+		[SerializeField] private Color backgroundColor = new Color(0f, 0.33f, 1f);
+
+		[Header("Preview Ground Plane")]
+		[SerializeField] private Color groundColor = new Color(1f, 1f, 1f);
+		[SerializeField] private float groundSize = 8f;           // half-extent
+		[SerializeField] private float groundY = -0.02f;
+		[SerializeField] private float groundUVScale = 10f;
 
 		private RenderTexture previewRenderTexture;
 		private Camera previewCamera;
@@ -32,8 +39,10 @@ namespace ClassicTilestorm
 
 		private readonly List<GameObject> spawnedListItems = new();
 
+		// Ground plane resources
 		private Mesh groundMesh;
 		private Material groundMat;
+		private Texture2D groundTex;
 
 		private float orbitAngle = 0f;
 
@@ -72,8 +81,12 @@ namespace ClassicTilestorm
 
 		private void Update()
 		{
-			if (previewCamera && previewRenderTexture)
+			// This is crucial - we need to render the camera every frame
+			// so the CommandBufferFeature can execute our ICommandBufferProvider commands
+			if (previewCamera != null && previewRenderTexture != null && previewRenderTexture.IsCreated())
+			{
 				previewCamera.Render();
+			}
 
 			if (cameraOrbitSpeed > 0.01f)
 			{
@@ -145,7 +158,7 @@ namespace ClassicTilestorm
 			UpdatePreview(defId);
 		}
 
-		// ──────────────────────── PREVIEW ─────────────────────────
+		// ──────────────────────── PREVIEW SETUP ─────────────────────────
 
 		private void CreatePreviewSetup()
 		{
@@ -155,7 +168,7 @@ namespace ClassicTilestorm
 
 			var camGO = new GameObject("PreviewCamera");
 			previewCamera = camGO.AddComponent<Camera>();
-			camGO.transform.SetParent(null);
+			camGO.transform.SetParent(previewRoot.transform);
 
 			int editorLayer = LayerMask.NameToLayer("Editor");
 			if (editorLayer == -1)
@@ -165,7 +178,7 @@ namespace ClassicTilestorm
 			}
 
 			previewCamera.enabled = false;
-			previewCamera.cullingMask = 1 << editorLayer;
+			previewCamera.cullingMask = 0;// 1 << editorLayer;
 			previewCamera.clearFlags = CameraClearFlags.SolidColor;
 			previewCamera.backgroundColor = backgroundColor;
 			previewCamera.orthographic = false;
@@ -181,46 +194,78 @@ namespace ClassicTilestorm
 				RenderTextureFormat.ARGB32);
 
 			previewRenderTexture.Create();
-
 			previewCamera.targetTexture = previewRenderTexture;
 			previewImage.texture = previewRenderTexture;
 
-			CreatePreviewGroundPlane();
+			CreateGroundPlane();
+			AttachCommandProvider(camGO);
+
 			CreatePreviewRaycastBlocker();
 
 			UpdateCameraOrbit();
 		}
 
-		private void CreatePreviewGroundPlane()
+		private void CreateGroundPlane()
 		{
-			groundMesh = new Mesh();
+			// Mesh
+			groundMesh = new Mesh { name = "PreviewGroundMesh" };
+
+			float half = groundSize;
 			groundMesh.vertices = new[]
 			{
-				new Vector3(-50, -0.02f, -50),
-				new Vector3(-50, -0.02f,  50),
-				new Vector3( 50, -0.02f,  50),
-				new Vector3( 50, -0.02f, -50)
+				new Vector3(-half, groundY, -half),
+				new Vector3(-half, groundY,  half),
+				new Vector3( half, groundY,  half),
+				new Vector3( half, groundY, -half),
 			};
+
 			groundMesh.triangles = new[] { 0, 1, 2, 0, 2, 3 };
-			groundMesh.uv = new Vector2[]
+
+			groundMesh.uv = new[]
 			{
-				new Vector2(0,0),
-				new Vector2(0,10),
-				new Vector2(10,10),
-				new Vector2(10,0)
+				new Vector2(0, 0),
+				new Vector2(0, groundUVScale),
+				new Vector2(groundUVScale, groundUVScale),
+				new Vector2(groundUVScale, 0)
 			};
+
 			groundMesh.RecalculateNormals();
 
-			var shader = Shader.Find("Universal Render Pipeline/Unlit");
-			groundMat = new Material(shader);
-			groundMat.color = new Color(0.16f, 0.18f, 0.22f);
+			// Texture (placeholder - replace later with real one)
+			groundTex = TextureUtils.GenerateXorTexture256();
 
-			var provider = previewRoot.AddComponent<SimpleCommandProvider>();
-			provider.RegisterCommand(RenderPassEvent.BeforeRenderingOpaques, (cmd, cam) =>
+			// Material
+			var shader = Shader.Find("Universal Render Pipeline/Unlit");
+			if (shader == null)
 			{
-				if (!groundMesh || !groundMat) return;
-				cmd.DrawMesh(groundMesh, Matrix4x4.identity, groundMat);
-			});
+				Debug.LogError("URP Unlit shader not found!");
+				return;
+			}
+
+			groundMat = new Material(shader)
+			{
+				name = "PreviewGroundMat",
+				hideFlags = HideFlags.HideAndDontSave
+			};
+
+			groundMat.SetFloat("_Surface", 0f);
+			groundMat.SetTexture("_BaseMap", groundTex);
+			groundMat.SetColor("_BaseColor", groundColor);
+		}
+
+		private void AttachCommandProvider(GameObject camGO)
+		{
+			var provider = camGO.AddComponent<CommandBufferProvider>();
+
+			provider.RegisterCommand(
+				RenderPassEvent.BeforeRenderingOpaques,
+				(cmd, cam) =>
+				{
+					if (groundMesh == null || groundMat == null) return;
+					cmd.DrawMesh(groundMesh, Matrix4x4.identity, groundMat, 0, 0);
+				});
+
+			Debug.Log("[DefinitionPreview] Command provider attached - ground should appear when camera renders");
 		}
 
 		private void UpdatePreview(string defId)
@@ -312,7 +357,7 @@ namespace ClassicTilestorm
 
 		private void CleanupPreview()
 		{
-			if (previewRenderTexture)
+			if (previewRenderTexture != null)
 			{
 				previewRenderTexture.Release();
 				previewRenderTexture = null;
@@ -324,8 +369,14 @@ namespace ClassicTilestorm
 				currentModelInstance = null;
 			}
 
-			if (groundMesh) Destroy(groundMesh);
-			if (groundMat) Destroy(groundMat);
+			// Ground cleanup
+			if (groundMesh) DestroyImmediate(groundMesh);
+			if (groundMat) DestroyImmediate(groundMat);
+			if (groundTex) DestroyImmediate(groundTex);
+
+			groundMesh = null;
+			groundMat = null;
+			groundTex = null;
 
 			if (previewRoot)
 			{
@@ -335,26 +386,6 @@ namespace ClassicTilestorm
 
 			previewCamera = null;
 			if (previewImage) previewImage.texture = null;
-		}
-
-		private class SimpleCommandProvider : MonoBehaviour, ICommandBufferProvider
-		{
-			private System.Action<RasterCommandBuffer, Camera> opaquesAction;
-
-			public void RegisterCommand(RenderPassEvent evt, System.Action<RasterCommandBuffer, Camera> action)
-			{
-				if (evt == RenderPassEvent.BeforeRenderingOpaques)
-					opaquesAction = action;
-			}
-
-			public bool HasCommands(RenderPassEvent evt) =>
-				evt == RenderPassEvent.BeforeRenderingOpaques && opaquesAction != null;
-
-			public void ExecuteCommands(RenderPassEvent evt, RasterCommandBuffer cmd, Camera cam)
-			{
-				if (evt == RenderPassEvent.BeforeRenderingOpaques)
-					opaquesAction?.Invoke(cmd, cam);
-			}
 		}
 
 		// ───────────────────── CAMERA INPUT ─────────────────────
@@ -385,6 +416,37 @@ namespace ClassicTilestorm
 			{
 				panel.ZoomPreviewCamera(e.scrollDelta.y);
 			}
+		}
+
+		// ───────────────────── COMMAND BUFFER PROVIDER ─────────────────────
+
+		private class CommandBufferProvider : MonoBehaviour, ICommandBufferProvider
+		{
+			private readonly Dictionary<RenderPassEvent, System.Action<RasterCommandBuffer, Camera>> commands = new();
+
+			public void RegisterCommand(RenderPassEvent evt, System.Action<RasterCommandBuffer, Camera> action)
+			{
+				commands[evt] = action;
+			}
+
+			public bool HasCommands(RenderPassEvent evt) => commands.ContainsKey(evt);
+
+			public void ExecuteCommands(RenderPassEvent evt, RasterCommandBuffer commandBuffer, Camera camera)
+			{
+				if (commands.TryGetValue(evt, out var action))
+				{
+					try
+					{
+						action?.Invoke(commandBuffer, camera);
+					}
+					catch (System.Exception ex)
+					{
+						Debug.LogError($"Preview ground command failed: {ex.Message}");
+					}
+				}
+			}
+
+			private void OnDestroy() => commands.Clear();
 		}
 	}
 }

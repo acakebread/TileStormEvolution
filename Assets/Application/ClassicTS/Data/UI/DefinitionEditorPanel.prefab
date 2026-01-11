@@ -359,7 +359,11 @@ MonoBehaviour:
   cameraHeight: 2
   cameraTiltAngle: 15
   cameraOrbitSpeed: 20
-  backgroundColor: {r: 0.08, g: 0.1, b: 0.15, a: 1}
+  backgroundColor: {r: 0, g: 0.3333335, b: 1, a: 1}
+  groundColor: {r: 1, g: 1, b: 1, a: 1}
+  groundSize: 8
+  groundY: -0.02
+  groundUVScale: 10
 --- !u!1001 &8816697584499309400
 PrefabInstance:
   m_ObjectHideFlags: 0
