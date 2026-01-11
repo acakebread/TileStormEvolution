@@ -1,7 +1,6 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
 using System.Collections.Generic;
-using TMPro;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.EventSystems;
