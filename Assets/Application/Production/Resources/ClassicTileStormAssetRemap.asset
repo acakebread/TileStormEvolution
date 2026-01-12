@@ -63,3 +63,15 @@ MonoBehaviour:
     replacement: med_tile_ns_boundary_stocks_hd
   - legacyName: med_tile_ew_stocks
     replacement: med_tile_ew_boundary_stocks_hd
+  - legacyName: med_tile_ew_well
+    replacement: med_tile_ew_boundary_well_hd
+  - legacyName: med_tile_ns_well
+    replacement: med_tile_ns_boundary_well_hd
+  - legacyName: med_tile_ne_boundary_sml_corner
+    replacement: med_tile_ne_boundary_edge_sml_corner_hd
+  - legacyName: med_tile_nw_boundary_sml_corner
+    replacement: med_tile_nw_boundary_edge_sml_corner_hd
+  - legacyName: med_tile_se_boundary_sml_corner
+    replacement: med_tile_se_boundary_edge_sml_corner_hd
+  - legacyName: med_tile_sw_boundary_sml_corner
+    replacement: med_tile_sw_boundary_edge_sml_corner_hd
