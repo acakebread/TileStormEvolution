@@ -46,8 +46,8 @@ namespace ClassicTilestorm
 		private void Update()
         {
             // Handle arrow key navigation
-            if (InputUtility.GetKeyRepeat(KeyCode.LeftArrow)) OnChangeMapRequested?.Invoke(-1);
-            if (InputUtility.GetKeyRepeat(KeyCode.RightArrow)) OnChangeMapRequested?.Invoke(1);
+            if (InputUtility.GetKeyRepeat(KeyCode.Minus)) OnChangeMapRequested?.Invoke(-1);
+            if (InputUtility.GetKeyRepeat(KeyCode.Equals)) OnChangeMapRequested?.Invoke(1);
 
             // Always visible in Editor mode
             if (ApplicationSettings.CurrentMode == ApplicationMode.Editor)

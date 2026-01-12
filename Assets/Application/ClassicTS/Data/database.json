@@ -64572,7 +64572,7 @@
     },
     {
       "id": "med tile slide",
-      "model": "egy_tile_slide",
+      "model": "med_tile_slide",
       "texture": "Medieval",
       "flags": "Roll"
     },

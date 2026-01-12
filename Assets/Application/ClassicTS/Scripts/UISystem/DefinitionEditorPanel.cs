@@ -20,27 +20,31 @@ namespace ClassicTilestorm
 
 		[Header("Preview Settings - Camera")]
 		[SerializeField] private float defaultFOV = 60f;
-		[SerializeField] private float sizeToDistanceFactor = 1f;     // main tuning knob
-		[SerializeField] private float defaultTiltAngle = 30f;          // degrees down
-		[SerializeField] private float minTiltAngle = 5f;
-		[SerializeField] private float maxTiltAngle = 80f;
+		[SerializeField] private float sizeToDistanceFactor = 1f;
+		[SerializeField] private float defaultTiltAngle = 30f;
+		[SerializeField] private float minTiltAngle = 0f;
+		[SerializeField] private float maxTiltAngle = 90f;
 		[SerializeField] private float minDistance = 0.8f;
-		[SerializeField] private float maxDistance = 40f;
+		[SerializeField] private float maxDistance = 10f;
 
 		[SerializeField] private float dragOrbitSensitivity = 0.2f;
 		[SerializeField] private float dragTiltSensitivity = 0.2f;
 		[SerializeField] private float scrollZoomSensitivity = 0.5f;
 
-		[SerializeField] private float autoRotateSpeed = 15f;           // degrees per second
+		[SerializeField] private float autoRotateSpeed = 15f;
 
 		[Header("Preview Ground Plane")]
 		[SerializeField] private Color groundColor = new Color(1f, 1f, 1f);
 		[SerializeField] private float groundSize = 2.5f;
 		[SerializeField] private float groundY = -0.02f;
-		[SerializeField] private float groundUVScale = 10f;
+		[SerializeField] private float groundUVScale = 1f;
 
 		[Header("Ground Texture Override")]
 		[SerializeField] private Texture2D groundOverrideTexture;
+
+		//command buffer light
+		private static readonly int MainLightPositionID = Shader.PropertyToID("_MainLightPosition");
+		private static readonly int MainLightColorID = Shader.PropertyToID("_MainLightColor");
 
 		// ── Runtime ───────────────────────────────────────────────────────
 		private RenderTexture previewRenderTexture;
@@ -58,7 +62,7 @@ namespace ClassicTilestorm
 		// Camera control
 		private Vector3 gimbalPosition;
 		private float currentOrbitAngle = 0f;
-		private float currentTiltAngle;     // downward tilt
+		private float currentTiltAngle;
 		private float currentDistance;
 
 		// Idle autorotate
@@ -183,7 +187,7 @@ namespace ClassicTilestorm
 
 		// ──────────────────────── PREVIEW SETUP ──────────────────────────
 
-		private void CreatePreviewSetup()
+		private void CreatePreviewSetup()//I would like preview camera setup to not be dependant on previewRoot / rect - I would like the render texture to be passed in - the preview camera and command buffer features are going to be moved out of this class into a separate helper script
 		{
 			if (!previewImage) return;
 
@@ -196,9 +200,8 @@ namespace ClassicTilestorm
 			camGO.transform.SetParent(previewRoot.transform);
 
 			previewCamera.enabled = false;
-			previewCamera.cullingMask = 1 << LayerMask.NameToLayer("Water");
+			previewCamera.cullingMask = 0;// 1 << LayerMask.NameToLayer("Water"); //I don't want to have to use a layer flag but we have to for lighting - I want procudral light added if possible to command buffer
 			previewCamera.clearFlags = CameraClearFlags.SolidColor;
-			//previewCamera.backgroundColor = new Color(0f, 0.25f, 0.75f, 1f);
 			ColorUtility.TryParseHtmlString("#21B2E1", out Color hashColor);
 			previewCamera.backgroundColor = hashColor;
 			previewCamera.orthographic = false;
@@ -248,28 +251,7 @@ namespace ClassicTilestorm
 
 		private void CreateGroundPlane()
 		{
-			groundMesh = new Mesh { name = "PreviewGroundMesh" };
-
-			float half = groundSize;
-			groundMesh.vertices = new[]
-			{
-				new Vector3(-half, groundY, -half),
-				new Vector3(-half, groundY,  half),
-				new Vector3( half, groundY,  half),
-				new Vector3( half, groundY, -half),
-			};
-
-			groundMesh.triangles = new[] { 0, 1, 2, 0, 2, 3 };
-
-			groundMesh.uv = new[]
-			{
-				new Vector2(0, 0),
-				new Vector2(0, groundUVScale),
-				new Vector2(groundUVScale, groundUVScale),
-				new Vector2(groundUVScale, 0)
-			};
-
-			groundMesh.RecalculateNormals();
+			groundMesh = MeshUtils.GenerateQuadXZ(groundSize, groundUVScale, "PreviewGroundMesh");
 
 			groundTex = groundOverrideTexture != null ? groundOverrideTexture : TextureUtils.GenerateXorTexture256();
 
@@ -291,17 +273,33 @@ namespace ClassicTilestorm
 
 			provider.RegisterCommand(RenderPassEvent.BeforeRenderingOpaques, (cmd, cam) =>
 			{
-				//cmd.ClearRenderTarget(true, true, cam.backgroundColor, 1.0f);
+				// ── Fake main directional light ────────────────────────────────────────
 
+				// Desired light direction (towards light source) — example: classic 3/4 top-down
+				// You can make this dynamic: e.g. from camera orbit or fixed
+				Vector3 lightDirTowardsSource = new Vector3(0.5f, 1f, -0.3f).normalized; // tweak as needed
+
+				// For directional: position.w = 0? Wait no → URP uses .w = 1 for directional
+				// Direction is actually -light forward (convention in URP)
+				Vector4 mainLightPos = new Vector4(lightDirTowardsSource.x, lightDirTowardsSource.y, lightDirTowardsSource.z, 1.0f);  // .w = 1 → directional
+
+				Color lightColorAndIntensity = new Color(0.75f, 0.75f, 0.75f);
+
+				cmd.SetGlobalVector(MainLightPositionID, mainLightPos);
+				cmd.SetGlobalVector(MainLightColorID, lightColorAndIntensity.linear); // use linear if HDR
+
+				// Optional: early clear if you want full control (requires camera clearFlags = Nothing)
+				// cmd.ClearRenderTarget(true, true, backgroundColor, 1.0f);
+
+				// ── Then your existing draws ───────────────────────────────────────────
 				if (groundMesh != null && groundMat != null)
-					cmd.DrawMesh(groundMesh, Matrix4x4.identity, groundMat, 0, 0);
+					cmd.DrawMesh(groundMesh, Matrix4x4.Translate(Vector3.up * groundY), groundMat, 0, 0);
 
 				if (currentModelData != null)
 				{
 					foreach (var instance in currentModelData.meshInstances)
 					{
 						if (instance.mesh == null) continue;
-
 						for (int s = 0; s < instance.subMeshCount; s++)
 						{
 							var mat = s < instance.materials.Length ? instance.materials[s] : instance.materials[0];

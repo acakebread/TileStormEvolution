@@ -358,10 +358,10 @@ MonoBehaviour:
   defaultFOV: 60
   sizeToDistanceFactor: 1
   defaultTiltAngle: 30
-  minTiltAngle: 5
-  maxTiltAngle: 80
+  minTiltAngle: 0
+  maxTiltAngle: 90
   minDistance: 0.8
-  maxDistance: 40
+  maxDistance: 10
   dragOrbitSensitivity: 0.2
   dragTiltSensitivity: 0.2
   scrollZoomSensitivity: 0.5
