@@ -8,25 +8,6 @@ using MassiveHadronLtd;
 
 namespace ClassicTilestorm
 {
-	public static class Matrix4x4Extensions
-	{
-		public static bool IsFinite(this Matrix4x4 matrix)
-		{
-			for (int i = 0; i < 4; i++)
-			{
-				for (int j = 0; j < 4; j++)
-				{
-					float val = matrix[i, j];
-					if (float.IsNaN(val) || float.IsInfinity(val))
-					{
-						return false;
-					}
-				}
-			}
-			return true;
-		}
-	}
-
 	public class DefinitionEditorPanel : UIPanel
 	{
 		[Header("UI References")]
@@ -46,9 +27,12 @@ namespace ClassicTilestorm
 
 		[Header("Preview Ground Plane")]
 		[SerializeField] private Color groundColor = new Color(1f, 1f, 1f);
-		[SerializeField] private float groundSize = 8f;           // half-extent
+		[SerializeField] private float groundSize = 8f;
 		[SerializeField] private float groundY = -0.02f;
 		[SerializeField] private float groundUVScale = 10f;
+
+		[Header("Ground Texture Override")]
+		[SerializeField] private Texture2D groundOverrideTexture;
 
 		private RenderTexture previewRenderTexture;
 		private Camera previewCamera;
@@ -57,15 +41,20 @@ namespace ClassicTilestorm
 
 		private readonly List<GameObject> spawnedListItems = new();
 
-		// Ground plane resources
 		private Mesh groundMesh;
 		private Material groundMat;
 		private Texture2D groundTex;
-
-		// Model render data (no GameObject instantiation needed later)
 		private RenderModelData currentModelData;
 
 		private float orbitAngle = 0f;
+
+		// ─── Idle autorotate ───
+		private float lastInputTime = -999f;
+		private const float AutoRotateDelay = 3f;
+
+		// ─── RT resize tracking ───
+		private RectTransform previewRect;
+		private Vector2 lastPreviewSize;
 
 		private RectTransform previewRaycastBlocker;
 
@@ -104,10 +93,11 @@ namespace ClassicTilestorm
 		{
 			if (previewCamera != null && previewRenderTexture != null && previewRenderTexture.IsCreated())
 			{
+				HandleRenderTextureResize();
 				previewCamera.Render();
 			}
 
-			if (cameraOrbitSpeed > 0.01f)
+			if (cameraOrbitSpeed > 0.01f && Time.unscaledTime - lastInputTime > AutoRotateDelay)
 			{
 				orbitAngle += cameraOrbitSpeed * Time.deltaTime;
 				UpdateCameraOrbit();
@@ -167,6 +157,8 @@ namespace ClassicTilestorm
 
 			selectedDefinitionId = defId;
 
+			lastInputTime = -999f; // treat as idle so autorotate starts immediately
+
 			foreach (var go in spawnedListItems)
 			{
 				if (!go) continue;
@@ -183,6 +175,8 @@ namespace ClassicTilestorm
 		{
 			if (!previewImage) return;
 
+			previewRect = previewImage.GetComponent<RectTransform>();
+
 			previewRoot = new GameObject("DefinitionPreviewRoot");
 
 			var camGO = new GameObject("PreviewCamera");
@@ -190,14 +184,13 @@ namespace ClassicTilestorm
 			camGO.transform.SetParent(previewRoot.transform);
 
 			previewCamera.enabled = false;
-			previewCamera.cullingMask = 1 << LayerMask.NameToLayer("Water"); ;//we are trying to eliminate this
+			previewCamera.cullingMask = 1 << LayerMask.NameToLayer("Water");
 			previewCamera.clearFlags = CameraClearFlags.SolidColor;
 			previewCamera.backgroundColor = backgroundColor;
 			previewCamera.orthographic = false;
 			previewCamera.fieldOfView = 60f;
 			previewCamera.nearClipPlane = 0.03f;
 			previewCamera.farClipPlane = 50f;
-			previewCamera.aspect = (float)previewResolution.x / previewResolution.y;
 
 			previewRenderTexture = new RenderTexture(
 				(int)previewResolution.x,
@@ -211,10 +204,33 @@ namespace ClassicTilestorm
 
 			CreateGroundPlane();
 			AttachCommandProvider(camGO);
-
 			CreatePreviewRaycastBlocker();
 
+			lastPreviewSize = Vector2.zero;
 			UpdateCameraOrbit();
+		}
+
+		private void HandleRenderTextureResize()
+		{
+			if (!previewRect || !previewRenderTexture) return;
+
+			Vector2 size = previewRect.rect.size;
+			if (size == lastPreviewSize || size.x < 16 || size.y < 16) return;
+
+			lastPreviewSize = size;
+
+			int w = Mathf.RoundToInt(size.x);
+			int h = Mathf.RoundToInt(size.y);
+
+			if (previewRenderTexture.width == w && previewRenderTexture.height == h) return;
+
+			previewRenderTexture.Release();
+			previewRenderTexture = new RenderTexture(w, h, 24, RenderTextureFormat.ARGB32);
+			previewRenderTexture.Create();
+
+			previewCamera.targetTexture = previewRenderTexture;
+			previewCamera.aspect = (float)w / h;
+			previewImage.texture = previewRenderTexture;
 		}
 
 		private void CreateGroundPlane()
@@ -242,15 +258,9 @@ namespace ClassicTilestorm
 
 			groundMesh.RecalculateNormals();
 
-			groundTex = TextureUtils.GenerateXorTexture256();
+			groundTex = groundOverrideTexture != null ? groundOverrideTexture : TextureUtils.GenerateXorTexture256();
 
 			var shader = Shader.Find("Universal Render Pipeline/Unlit");
-			if (shader == null)
-			{
-				Debug.LogError("URP Unlit shader not found!");
-				return;
-			}
-
 			groundMat = new Material(shader)
 			{
 				name = "PreviewGroundMat",
@@ -268,16 +278,11 @@ namespace ClassicTilestorm
 
 			provider.RegisterCommand(RenderPassEvent.BeforeRenderingOpaques, (cmd, cam) =>
 			{
-				// Force clear every frame (color + depth) - this is what makes it reliable
 				cmd.ClearRenderTarget(true, true, backgroundColor, 1.0f);
 
-				// Ground (proven to work)
 				if (groundMesh != null && groundMat != null)
-				{
 					cmd.DrawMesh(groundMesh, Matrix4x4.identity, groundMat, 0, 0);
-				}
 
-				// Model - real textures/materials from factory, correct 5-param overload
 				if (currentModelData != null)
 				{
 					foreach (var instance in currentModelData.meshInstances)
@@ -288,8 +293,6 @@ namespace ClassicTilestorm
 						{
 							var mat = s < instance.materials.Length ? instance.materials[s] : instance.materials[0];
 							if (mat == null) continue;
-
-							// Correct overload: 5 parameters (submesh + shader pass)
 							cmd.DrawMesh(instance.mesh, instance.localToWorld, mat, s, 0);
 						}
 					}
@@ -304,27 +307,25 @@ namespace ClassicTilestorm
 			var def = ResourceManager.GetDefinition(defId);
 			if (def == null || string.IsNullOrEmpty(def.model)) return;
 
-			// Use factory - no GameObject needed
 			currentModelData = RenderModelFactory.Create(def, Vector3.zero, Quaternion.identity, Vector3.one);
-
 			orbitAngle = 0f;
 			UpdateCameraOrbit();
 		}
 
 		private void UpdateCameraOrbit()
 		{
-			if (!previewCamera) return;
-
 			float x = Mathf.Sin(orbitAngle * Mathf.Deg2Rad) * cameraDistance;
 			float z = Mathf.Cos(orbitAngle * Mathf.Deg2Rad) * cameraDistance;
 
 			previewCamera.transform.position = new Vector3(x, cameraHeight, z);
-			previewCamera.transform.LookAt(Vector3.up * 1f);
+			previewCamera.transform.LookAt(Vector3.up * (null != currentModelData ? currentModelData.bounds.max.y * 0.75f : 1f));
 			previewCamera.transform.Rotate(Vector3.right, cameraTiltAngle, Space.Self);
 		}
 
 		public void DragPreviewCamera(Vector2 delta)
 		{
+			lastInputTime = Time.unscaledTime;
+
 			orbitAngle += delta.x * 0.25f;
 			cameraHeight -= delta.y * 0.02f;
 			cameraHeight = Mathf.Clamp(cameraHeight, 0.5f, 10f);
@@ -333,17 +334,11 @@ namespace ClassicTilestorm
 
 		public void ZoomPreviewCamera(float scroll)
 		{
+			lastInputTime = Time.unscaledTime;
+
 			cameraDistance -= scroll * 0.3f;
 			cameraDistance = Mathf.Clamp(cameraDistance, 1f, 20f);
 			UpdateCameraOrbit();
-		}
-
-		private void SetLayerRecursively(GameObject obj, int layer)
-		{
-			if (!obj) return;
-			obj.layer = layer;
-			foreach (Transform child in obj.transform)
-				SetLayerRecursively(child.gameObject, layer);
 		}
 
 		private void CreatePreviewRaycastBlocker()
@@ -377,17 +372,10 @@ namespace ClassicTilestorm
 
 			if (groundMesh) DestroyImmediate(groundMesh);
 			if (groundMat) DestroyImmediate(groundMat);
-			if (groundTex) DestroyImmediate(groundTex);
-
-			groundMesh = null;
-			groundMat = null;
-			groundTex = null;
+			if (groundTex && groundTex != groundOverrideTexture) DestroyImmediate(groundTex);
 
 			if (previewRoot)
-			{
 				Destroy(previewRoot);
-				previewRoot = null;
-			}
 
 			previewCamera = null;
 			if (previewImage) previewImage.texture = null;
@@ -408,6 +396,7 @@ namespace ClassicTilestorm
 			public void OnPointerDown(PointerEventData e)
 			{
 				last = e.position;
+				panel.lastInputTime = Time.unscaledTime;
 			}
 
 			public void OnDrag(PointerEventData e)
@@ -440,10 +429,7 @@ namespace ClassicTilestorm
 			{
 				if (commands.TryGetValue(evt, out var action))
 				{
-					try
-					{
-						action?.Invoke(commandBuffer, camera);
-					}
+					try { action?.Invoke(commandBuffer, camera); }
 					catch (System.Exception ex)
 					{
 						Debug.LogError($"Preview command failed: {ex.Message}");

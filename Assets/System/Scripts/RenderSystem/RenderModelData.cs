@@ -24,7 +24,7 @@ namespace MassiveHadronLtd
 	public class RenderModelData
 	{
 		public readonly List<MeshInstanceInfo> meshInstances = new();
-		public Bounds bounds = new Bounds(Vector3.zero, Vector3.one * 10f);
+		public Bounds bounds = new Bounds(Vector3.zero, Vector3.one * 1f);
 
 		public void Clear()
 		{

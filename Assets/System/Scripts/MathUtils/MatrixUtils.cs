@@ -74,5 +74,21 @@ namespace MassiveHadronLtd
 			result.SetColumn(3, new Vector4(reflectedPosition.x, reflectedPosition.y, reflectedPosition.z, 1));
 			return result;
 		}
+
+		public static bool IsFinite(this Matrix4x4 matrix)
+		{
+			for (int i = 0; i < 4; i++)
+			{
+				for (int j = 0; j < 4; j++)
+				{
+					float val = matrix[i, j];
+					if (float.IsNaN(val) || float.IsInfinity(val))
+					{
+						return false;
+					}
+				}
+			}
+			return true;
+		}
 	}
 }
