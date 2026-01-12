@@ -65260,35 +65260,35 @@
       "texture": "Mud Pit"
     },
     {
+      "id": "med tile boundary grass hd",
+      "model": "med_tile_boundary_grass_hd"
+    },
+    {
+      "id": "med tile boundary tree 01 hd",
+      "model": "med_tile_boundary_tree_01_hd"
+    },
+    {
       "id": "Eggbot",
       "model": "eggbot_default",
       "texture": "Eggbot Default"
     },
     {
-      "id": "med_tile_boundary_grass_hd",
-      "model": "med_tile_boundary_grass_hd"
-    },
-    {
-      "id": "med_tile_boundary_tree_01_hd",
-      "model": "med_tile_boundary_tree_01_hd"
-    },
-    {
-      "id": "Eggbot",
+      "id": "Eggbot Industrial",
       "model": "eggbot_ind",
       "texture": "Eggbot Industrial"
     },
     {
-      "id": "Eggbot",
+      "id": "Eggbot Egypt",
       "model": "eggbot_egy",
       "texture": "Eggbot Egypt"
     },
     {
-      "id": "Eggbot",
+      "id": "Eggbot Medieval",
       "model": "eggbot_med",
       "texture": "Eggbot Medieval"
     },
     {
-      "id": "Eggbot",
+      "id": "Eggbot Jungle",
       "model": "eggbot_jun",
       "texture": "Eggbot Jungle"
     },

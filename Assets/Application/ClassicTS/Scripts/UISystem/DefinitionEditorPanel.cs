@@ -16,24 +16,33 @@ namespace ClassicTilestorm
 		[SerializeField] private Transform contentParent;
 		[SerializeField] private GameObject definitionListItemPrefab;
 		[SerializeField] private RawImage previewImage;
-
-		[Header("Preview Settings")]
 		[SerializeField] private Vector2 previewResolution = new Vector2(320, 240);
-		[SerializeField] private float cameraDistance = 5f;
-		[SerializeField] private float cameraHeight = 3f;
-		[SerializeField] private float cameraTiltAngle = 15f;
-		[SerializeField] private float cameraOrbitSpeed = 0f;
-		[SerializeField] private Color backgroundColor = new Color(0f, 0.33f, 1f);
+
+		[Header("Preview Settings - Camera")]
+		[SerializeField] private float defaultFOV = 60f;
+		[SerializeField] private float sizeToDistanceFactor = 1f;     // main tuning knob
+		[SerializeField] private float defaultTiltAngle = 30f;          // degrees down
+		[SerializeField] private float minTiltAngle = 5f;
+		[SerializeField] private float maxTiltAngle = 80f;
+		[SerializeField] private float minDistance = 0.8f;
+		[SerializeField] private float maxDistance = 40f;
+
+		[SerializeField] private float dragOrbitSensitivity = 0.2f;
+		[SerializeField] private float dragTiltSensitivity = 0.2f;
+		[SerializeField] private float scrollZoomSensitivity = 0.5f;
+
+		[SerializeField] private float autoRotateSpeed = 15f;           // degrees per second
 
 		[Header("Preview Ground Plane")]
 		[SerializeField] private Color groundColor = new Color(1f, 1f, 1f);
-		[SerializeField] private float groundSize = 8f;
+		[SerializeField] private float groundSize = 2.5f;
 		[SerializeField] private float groundY = -0.02f;
 		[SerializeField] private float groundUVScale = 10f;
 
 		[Header("Ground Texture Override")]
 		[SerializeField] private Texture2D groundOverrideTexture;
 
+		// ── Runtime ───────────────────────────────────────────────────────
 		private RenderTexture previewRenderTexture;
 		private Camera previewCamera;
 		private GameObject previewRoot;
@@ -46,19 +55,23 @@ namespace ClassicTilestorm
 		private Texture2D groundTex;
 		private RenderModelData currentModelData;
 
-		private float orbitAngle = 0f;
+		// Camera control
+		private Vector3 gimbalPosition;
+		private float currentOrbitAngle = 0f;
+		private float currentTiltAngle;     // downward tilt
+		private float currentDistance;
 
-		// ─── Idle autorotate ───
+		// Idle autorotate
 		private float lastInputTime = -999f;
 		private const float AutoRotateDelay = 3f;
 
-		// ─── RT resize tracking ───
+		// RT resize tracking
 		private RectTransform previewRect;
 		private Vector2 lastPreviewSize;
 
 		private RectTransform previewRaycastBlocker;
 
-		// ─────────────────────────────────────────────────────────────
+		// ────────────────────────────────────────────────────────────────
 
 		protected override void Awake()
 		{
@@ -97,10 +110,10 @@ namespace ClassicTilestorm
 				previewCamera.Render();
 			}
 
-			if (cameraOrbitSpeed > 0.01f && Time.unscaledTime - lastInputTime > AutoRotateDelay)
+			if (autoRotateSpeed > 0.01f && Time.unscaledTime - lastInputTime > AutoRotateDelay)
 			{
-				orbitAngle += cameraOrbitSpeed * Time.deltaTime;
-				UpdateCameraOrbit();
+				currentOrbitAngle -= autoRotateSpeed * Time.deltaTime;
+				UpdateCameraTransform();
 			}
 		}
 
@@ -110,7 +123,7 @@ namespace ClassicTilestorm
 			base.OnDestroy();
 		}
 
-		// ─────────────────────────── LIST ───────────────────────────
+		// ─────────────────────────── LIST ────────────────────────────────
 
 		private void RefreshDefinitionList()
 		{
@@ -156,7 +169,6 @@ namespace ClassicTilestorm
 			if (string.IsNullOrEmpty(defId)) return;
 
 			selectedDefinitionId = defId;
-
 			lastInputTime = -999f; // treat as idle so autorotate starts immediately
 
 			foreach (var go in spawnedListItems)
@@ -169,7 +181,7 @@ namespace ClassicTilestorm
 			UpdatePreview(defId);
 		}
 
-		// ──────────────────────── PREVIEW SETUP ─────────────────────────
+		// ──────────────────────── PREVIEW SETUP ──────────────────────────
 
 		private void CreatePreviewSetup()
 		{
@@ -186,9 +198,11 @@ namespace ClassicTilestorm
 			previewCamera.enabled = false;
 			previewCamera.cullingMask = 1 << LayerMask.NameToLayer("Water");
 			previewCamera.clearFlags = CameraClearFlags.SolidColor;
-			previewCamera.backgroundColor = backgroundColor;
+			//previewCamera.backgroundColor = new Color(0f, 0.25f, 0.75f, 1f);
+			ColorUtility.TryParseHtmlString("#21B2E1", out Color hashColor);
+			previewCamera.backgroundColor = hashColor;
 			previewCamera.orthographic = false;
-			previewCamera.fieldOfView = 60f;
+			previewCamera.fieldOfView = defaultFOV;
 			previewCamera.nearClipPlane = 0.03f;
 			previewCamera.farClipPlane = 50f;
 
@@ -207,7 +221,6 @@ namespace ClassicTilestorm
 			CreatePreviewRaycastBlocker();
 
 			lastPreviewSize = Vector2.zero;
-			UpdateCameraOrbit();
 		}
 
 		private void HandleRenderTextureResize()
@@ -278,7 +291,7 @@ namespace ClassicTilestorm
 
 			provider.RegisterCommand(RenderPassEvent.BeforeRenderingOpaques, (cmd, cam) =>
 			{
-				cmd.ClearRenderTarget(true, true, backgroundColor, 1.0f);
+				//cmd.ClearRenderTarget(true, true, cam.backgroundColor, 1.0f);
 
 				if (groundMesh != null && groundMat != null)
 					cmd.DrawMesh(groundMesh, Matrix4x4.identity, groundMat, 0, 0);
@@ -308,37 +321,71 @@ namespace ClassicTilestorm
 			if (def == null || string.IsNullOrEmpty(def.model)) return;
 
 			currentModelData = RenderModelFactory.Create(def, Vector3.zero, Quaternion.identity, Vector3.one);
-			orbitAngle = 0f;
-			UpdateCameraOrbit();
+
+			// Reset camera for new model
+			float modelSize = currentModelData?.bounds.size.magnitude ?? 5f;
+			currentDistance = modelSize * sizeToDistanceFactor;
+			currentDistance = Mathf.Clamp(currentDistance, minDistance, maxDistance);
+
+			currentTiltAngle = defaultTiltAngle;
+			currentOrbitAngle = 0f;
+
+			UpdateCameraTransform();
 		}
 
-		private void UpdateCameraOrbit()
+		private void UpdateCameraTransform()
 		{
-			float x = Mathf.Sin(orbitAngle * Mathf.Deg2Rad) * cameraDistance;
-			float z = Mathf.Cos(orbitAngle * Mathf.Deg2Rad) * cameraDistance;
+			if (previewCamera == null) return;
 
-			previewCamera.transform.position = new Vector3(x, cameraHeight, z);
-			previewCamera.transform.LookAt(Vector3.up * (null != currentModelData ? currentModelData.bounds.max.y * 0.75f : 1f));
-			previewCamera.transform.Rotate(Vector3.right, cameraTiltAngle, Space.Self);
+			// Gimbal (target) position
+			var gimbalY = currentModelData != null ? currentModelData.bounds.max.y * 0.5f : 1f;
+
+			gimbalPosition = Vector3.up * gimbalY;
+
+			// ─── Build camera transform in requested order ───────────────────────
+
+			// 1. Start with identity rotation
+			Quaternion rotation = Quaternion.identity;
+
+			// 2. First apply orbit rotation around world Y-axis
+			rotation *= Quaternion.Euler(0f, currentOrbitAngle, 0f);
+
+			// 3. Then apply tilt (pitch down) around the *local* X-axis after orbit
+			rotation *= Quaternion.Euler(currentTiltAngle, 0f, 0f);
+
+			// 4. Direction the camera is facing (forward = -Z in Unity convention)
+			Vector3 forward = rotation * Vector3.forward;
+
+			// 5. Camera position = gimbal - forward * distance
+			//    (because we want to look towards the gimbal)
+			Vector3 cameraPosition = gimbalPosition - forward * currentDistance;
+
+			// ─── Apply to transform ──────────────────────────────────────────────
+			previewCamera.transform.position = cameraPosition;
+			previewCamera.transform.rotation = rotation;
 		}
+
+		// ───────────────────── CAMERA INPUT ──────────────────────────────
 
 		public void DragPreviewCamera(Vector2 delta)
 		{
 			lastInputTime = Time.unscaledTime;
 
-			orbitAngle += delta.x * 0.25f;
-			cameraHeight -= delta.y * 0.02f;
-			cameraHeight = Mathf.Clamp(cameraHeight, 0.5f, 10f);
-			UpdateCameraOrbit();
+			currentOrbitAngle += delta.x * dragOrbitSensitivity;
+			currentTiltAngle -= delta.y * dragTiltSensitivity;
+			currentTiltAngle = Mathf.Clamp(currentTiltAngle, minTiltAngle, maxTiltAngle);
+
+			UpdateCameraTransform();
 		}
 
 		public void ZoomPreviewCamera(float scroll)
 		{
 			lastInputTime = Time.unscaledTime;
 
-			cameraDistance -= scroll * 0.3f;
-			cameraDistance = Mathf.Clamp(cameraDistance, 1f, 20f);
-			UpdateCameraOrbit();
+			currentDistance -= scroll * scrollZoomSensitivity;
+			currentDistance = Mathf.Clamp(currentDistance, minDistance, maxDistance);
+
+			UpdateCameraTransform();
 		}
 
 		private void CreatePreviewRaycastBlocker()
@@ -381,12 +428,12 @@ namespace ClassicTilestorm
 			if (previewImage) previewImage.texture = null;
 		}
 
-		// ───────────────────── CAMERA INPUT ─────────────────────
+		// ───────────────────── CAMERA INPUT HELPER ───────────────────────
 
 		private class PreviewCameraInput : MonoBehaviour, IPointerDownHandler, IDragHandler, IScrollHandler
 		{
 			private DefinitionEditorPanel panel;
-			private Vector2 last;
+			private Vector2 lastPos;
 
 			private void Awake()
 			{
@@ -395,14 +442,14 @@ namespace ClassicTilestorm
 
 			public void OnPointerDown(PointerEventData e)
 			{
-				last = e.position;
+				lastPos = e.position;
 				panel.lastInputTime = Time.unscaledTime;
 			}
 
 			public void OnDrag(PointerEventData e)
 			{
-				Vector2 delta = e.position - last;
-				last = e.position;
+				Vector2 delta = e.position - lastPos;
+				lastPos = e.position;
 				panel.DragPreviewCamera(delta);
 			}
 
@@ -412,7 +459,7 @@ namespace ClassicTilestorm
 			}
 		}
 
-		// ───────────────────── COMMAND BUFFER PROVIDER ─────────────────────
+		// ───────────────────── COMMAND BUFFER PROVIDER ───────────────────
 
 		private class CommandBufferProvider : MonoBehaviour, ICommandBufferProvider
 		{
