@@ -86,26 +86,26 @@ public class CommandBufferFeature : ScriptableRendererFeature
 
 	public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
 	{
-		//var cam = renderingData.cameraData.camera;
-		//var provider = cam.GetComponent<ICommandBufferProvider>();
-		//if (provider == null)
-		//{
-		//	//Debug.Log($"No ICommandBufferProvider found for {cam.name}");
-		//	return;
-		//}
+		var cam = renderingData.cameraData.camera;
+		var provider = cam.GetComponent<ICommandBufferProvider>();
+		if (provider == null)
+		{
+			//Debug.Log($"No ICommandBufferProvider found for {cam.name}");
+			return;
+		}
 
-		//foreach (RenderPassEvent evt in System.Enum.GetValues(typeof(RenderPassEvent)))
-		//{
-		//	if (provider.HasCommands(evt))
-		//	{
-		//		if (!renderPasses.ContainsKey(evt))
-		//		{
-		//			renderPasses[evt] = new CommandBufferPass(evt);
-		//		}
-		//		renderer.EnqueuePass(renderPasses[evt]);
-		//		//Debug.Log($"Enqueued CommandBufferPass for {cam.name} at {evt}");
-		//	}
-		//}
+		foreach (RenderPassEvent evt in System.Enum.GetValues(typeof(RenderPassEvent)))
+		{
+			if (provider.HasCommands(evt))
+			{
+				if (!renderPasses.ContainsKey(evt))
+				{
+					renderPasses[evt] = new CommandBufferPass(evt);
+				}
+				renderer.EnqueuePass(renderPasses[evt]);
+				//Debug.Log($"Enqueued CommandBufferPass for {cam.name} at {evt}");
+			}
+		}
 	}
 
 	protected override void Dispose(bool disposing)
