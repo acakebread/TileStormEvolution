@@ -198,7 +198,12 @@ namespace ClassicTilestorm
 			sceneGo.transform.SetParent(transform, false);
 
 			commandScene = sceneGo.AddComponent<CommandRenderScene>();
-			commandScene.Initialize(previewRenderTexture, hashColor, defaultFOV);
+			commandScene = CommandRenderScene.CreateAndInitialize(
+				transform,
+				previewRenderTexture,
+				hashColor,
+				defaultFOV
+			);
 
 			CreateGroundPlane();
 

@@ -18,48 +18,37 @@ namespace MassiveHadronLtd
 
 		public CommandRenderCamera Camera => renderCamera;
 
-		private void Awake()
+		public void Initialize(CommandRenderCamera camera)
 		{
-			if (renderCamera == null)
-			{
-				renderCamera = CommandRenderCamera.Create(transform, null, Color.black, 60f);
-				ConnectHook();
-			}
+			renderCamera = camera;
+			renderCamera.SetCommandProvider(this);  // Connect hook
 		}
 
-		public void Initialize(
+		// Convenience: create everything together (optional)
+		public static CommandRenderScene CreateAndInitialize(
+			Transform parent,
 			RenderTexture targetRT,
 			Color background,
-			float fov = 60f,
-			string cameraName = "PreviewCamera")
+			float fov = 60f)
 		{
-			if (renderCamera == null)
-			{
-				renderCamera = CommandRenderCamera.Create(transform, targetRT, background, fov, cameraName);
-				ConnectHook();
-			}
-			else
-			{
-				renderCamera.SetTargetTexture(targetRT);
-				renderCamera.SetBackgroundColor(background);
-				renderCamera.SetFieldOfView(fov);
-			}
+			var sceneGo = new GameObject("CommandRenderScene");
+			if (parent != null)
+				sceneGo.transform.SetParent(parent, false);
+
+			var scene = sceneGo.AddComponent<CommandRenderScene>();
+
+			var cam = CommandRenderCamera.Create(
+				sceneGo.transform,
+				targetRT,
+				background,
+				fov
+			);
+
+			scene.Initialize(cam);
+			return scene;
 		}
 
-		private void ConnectHook()
-		{
-			var hook = renderCamera.GetComponent<CommandCameraHook>();
-			if (hook == null)
-			{
-				hook = renderCamera.gameObject.AddComponent<CommandCameraHook>();
-			}
-			hook.Provider = this;
-		}
-
-		public void SetModels(CommandRenderModelData[] data)
-		{
-			models = data;
-		}
+		public void SetModels(CommandRenderModelData[] data) => models = data;
 
 		public void SetLight(Vector3 direction, Color color)
 		{
@@ -67,42 +56,30 @@ namespace MassiveHadronLtd
 			lightColor = color;
 		}
 
-		public void Render()
-		{
-			renderCamera?.Render();
-		}
+		public void Render() => renderCamera?.Render();
 
 		// ─────────────── ICommandBufferProvider ───────────────
 
-		public bool HasCommands(RenderPassEvent evt)
-		{
-			return evt == RenderPassEvent.BeforeRenderingOpaques;
-		}
+		public bool HasCommands(RenderPassEvent evt) => evt == RenderPassEvent.BeforeRenderingOpaques;
 
 		public void ExecuteCommands(RenderPassEvent evt, RasterCommandBuffer cmd, Camera camera)
 		{
-			if (evt != RenderPassEvent.BeforeRenderingOpaques || models == null)
-				return;
+			if (evt != RenderPassEvent.BeforeRenderingOpaques || models == null) return;
 
-			// Fake main light
-			Vector4 mainLightPos = new Vector4(lightDirection.x, lightDirection.y, lightDirection.z, 1f);
-			cmd.SetGlobalVector(MainLightPositionID, mainLightPos);
+			Vector4 pos = new Vector4(lightDirection.x, lightDirection.y, lightDirection.z, 1f);
+			cmd.SetGlobalVector(MainLightPositionID, pos);
 			cmd.SetGlobalVector(MainLightColorID, lightColor.linear);
 
-			// Draw models
 			foreach (var model in models)
 			{
 				if (model == null) continue;
-
 				foreach (var inst in model.meshInstances)
 				{
 					if (inst.mesh == null) continue;
-
 					for (int s = 0; s < inst.subMeshCount; s++)
 					{
 						var mat = s < inst.materials.Length ? inst.materials[s] : inst.materials[0];
 						if (mat == null) continue;
-
 						cmd.DrawMesh(inst.mesh, inst.localToWorld, mat, s, 0);
 					}
 				}

@@ -4,13 +4,10 @@ using UnityEngine.Rendering.Universal;
 
 namespace MassiveHadronLtd
 {
-	/// <summary>
-	/// Manages the Unity Camera used for command-buffer based rendering.
-	/// Pure camera wrapper — no knowledge of models, lights or command buffers.
-	/// </summary>
 	public sealed class CommandRenderCamera : MonoBehaviour
 	{
 		private Camera cam;
+		private CommandCameraHook hook;
 
 		public Camera Camera => cam;
 
@@ -19,28 +16,26 @@ namespace MassiveHadronLtd
 			cam = GetComponent<Camera>();
 			if (cam == null)
 			{
-				Debug.LogError($"{nameof(CommandRenderCamera)} requires a Camera component on the same GameObject.", this);
+				Debug.LogError("CommandRenderCamera requires a Camera component.", this);
 				enabled = false;
 				return;
 			}
 
 			cam.enabled = false;
-			cam.cullingMask = 0; // We render everything manually via command buffers
+			cam.cullingMask = 0;
 
-			// Ensure URP additional data exists
 			if (!cam.TryGetComponent<UniversalAdditionalCameraData>(out _))
-			{
 				gameObject.AddComponent<UniversalAdditionalCameraData>();
-			}
+
+			hook = gameObject.GetComponent<CommandCameraHook>();
+			if (hook == null)
+				hook = gameObject.AddComponent<CommandCameraHook>();
 		}
 
-		/// <summary>
-		/// Factory method to create a new render camera setup
-		/// </summary>
 		public static CommandRenderCamera Create(
-			Transform parent,
-			RenderTexture targetTexture,
-			Color backgroundColor,
+			Transform parent = null,
+			RenderTexture target = null,
+			Color background = default,
 			float fov = 60f,
 			string name = "CommandRenderCamera")
 		{
@@ -48,41 +43,49 @@ namespace MassiveHadronLtd
 			if (parent != null)
 				go.transform.SetParent(parent, false);
 
-			var cameraComp = go.AddComponent<Camera>();
-			cameraComp.clearFlags = CameraClearFlags.SolidColor;
-			cameraComp.backgroundColor = backgroundColor;
-			cameraComp.fieldOfView = fov;
-			cameraComp.nearClipPlane = 0.03f;
-			cameraComp.farClipPlane = 50f;
-			cameraComp.targetTexture = targetTexture;
+			var camera = go.AddComponent<Camera>();
+			camera.clearFlags = CameraClearFlags.SolidColor;
+			camera.backgroundColor = background;
+			camera.fieldOfView = fov;
+			camera.nearClipPlane = 0.03f;
+			camera.farClipPlane = 50f;
+			camera.targetTexture = target;
+			camera.aspect = target != null ? (float)target.width / target.height : 16f / 9f;
 
 			go.AddComponent<UniversalAdditionalCameraData>();
 
 			return go.AddComponent<CommandRenderCamera>();
 		}
 
-		public void SetTargetTexture(RenderTexture rt) => Camera.targetTexture = rt;
-		public void SetFieldOfView(float fov) => Camera.fieldOfView = fov;
-		public void SetBackgroundColor(Color color) => Camera.backgroundColor = color;
-		public void SetAspect(float aspect) => Camera.aspect = aspect;
-		public void Render() => Camera?.Render();
+		// Public setters
+		public void SetTargetTexture(RenderTexture rt)
+		{
+			cam.targetTexture = rt;
+			if (rt != null)
+				cam.aspect = (float)rt.width / rt.height;
+		}
+
+		public void SetBackgroundColor(Color color) => cam.backgroundColor = color;
+		public void SetFieldOfView(float fov) => cam.fieldOfView = fov;
+		public void SetAspect(float aspect) => cam.aspect = aspect;
+
+		public void Render() => cam?.Render();
+
+		// Hook connection (called by scene)
+		internal void SetCommandProvider(ICommandBufferProvider provider)
+		{
+			if (hook != null)
+				hook.Provider = provider;
+		}
 	}
 
-	// ────────────────────────────────────────────────────────────────
-	// Hook — forwards everything to the actual provider (CommandRenderScene)
-	// ────────────────────────────────────────────────────────────────
 	internal class CommandCameraHook : MonoBehaviour, ICommandBufferProvider
 	{
 		public ICommandBufferProvider Provider { get; set; }
 
-		public bool HasCommands(RenderPassEvent evt)
-		{
-			return Provider?.HasCommands(evt) ?? false;
-		}
+		public bool HasCommands(RenderPassEvent evt) => Provider?.HasCommands(evt) ?? false;
 
 		public void ExecuteCommands(RenderPassEvent evt, RasterCommandBuffer cmd, Camera camera)
-		{
-			Provider?.ExecuteCommands(evt, cmd, camera);
-		}
+			=> Provider?.ExecuteCommands(evt, cmd, camera);
 	}
 }
