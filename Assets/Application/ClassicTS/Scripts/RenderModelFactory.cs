@@ -1,8 +1,8 @@
-using ClassicTilestorm;
+ï»¿using UnityEngine;
+using MassiveHadronLtd;
 using ClassicTilestorm.Assets;
-using UnityEngine;
 
-namespace MassiveHadronLtd
+namespace ClassicTilestorm
 {
 	public static class RenderModelFactory
 	{
@@ -24,7 +24,7 @@ namespace MassiveHadronLtd
 			}
 
 			// We need the mesh(es) and materials from the prefab
-			// This is the tricky part — we have to traverse the prefab hierarchy without instantiating
+			// This is the tricky part â€” we have to traverse the prefab hierarchy without instantiating
 			CollectMeshRenderers(modelPrefab, definition, position, rotation, scale, data);
 
 			return data;
@@ -46,18 +46,14 @@ namespace MassiveHadronLtd
 			// Definition material override
 			Material replacement = null;
 			if (!string.IsNullOrEmpty(def.material))
-			{
 				replacement = MaterialAssets.Find(def.material);
-			}
 
 			// Texture sequence
 			TextureSequence sequence = null;
 			if (!isHD && !string.IsNullOrEmpty(def.texture))
-			{
 				sequence = TextureSetManager.GetTextureSequence(def.texture);
-			}
 
-			// Loop through filters/renderers (naive index matching — works for most prefabs)
+			// Loop through filters/renderers (naive index matching â€” works for most prefabs)
 			for (int i = 0; i < Mathf.Min(filters.Length, renderers.Length); i++)
 			{
 				var filter = filters[i];
@@ -71,16 +67,6 @@ namespace MassiveHadronLtd
 				// Start with prefab materials
 				Material[] mats = renderer.sharedMaterials;
 
-				// Apply material replacement
-				if (replacement != null)
-				{
-					mats = new Material[mats.Length];
-					for (int j = 0; j < mats.Length; j++)
-					{
-						mats[j] = replacement;
-					}
-				}
-
 				// Apply texture animation override (same as DefinitionFactory)
 				if (sequence != null && sequence.ResolvedFrames.Length > 0)
 				{
@@ -93,12 +79,8 @@ namespace MassiveHadronLtd
 							if (mat != null)
 							{
 								mat.mainTexture = firstTex;
-								if (MaterialUtils.isEmissive(mat))
-								{
-									mat.SetTexture("_EmissionMap", firstTex);
-									mat.SetColor("_EmissionColor", Color.white * 2f); // boost for visibility
-									mat.EnableKeyword("_EMISSION");
-								}
+								if (MaterialUtils.isEmissive(replacement))
+									mat.color = replacement.GetColor("_EmissionColor"); // forget the emission just use the color
 							}
 						}
 					}

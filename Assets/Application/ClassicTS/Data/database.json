@@ -63806,7 +63806,8 @@
     {
       "id": "Caustic",
       "model": "tile_flat",
-      "texture": "Caustic"
+      "texture": "Caustic",
+      "material": "toxic"
     },
     {
       "id": "toxic pipe join leak ew",
