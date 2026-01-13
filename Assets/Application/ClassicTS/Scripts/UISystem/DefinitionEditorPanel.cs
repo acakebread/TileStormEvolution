@@ -43,6 +43,8 @@ namespace ClassicTilestorm
 		// ── Runtime ───────────────────────────────────────────────────────
 		private RenderTexture previewRenderTexture;
 		private CommandRenderScene commandScene;
+		private CommandRenderCamera commandCamera;      // ← Direct reference to the camera
+
 		private string selectedDefinitionId;
 
 		private readonly List<GameObject> spawnedListItems = new();
@@ -97,10 +99,10 @@ namespace ClassicTilestorm
 
 		private void Update()
 		{
-			if (commandScene != null && previewRenderTexture != null && previewRenderTexture.IsCreated())
+			if (commandCamera != null && previewRenderTexture != null && previewRenderTexture.IsCreated())
 			{
 				HandleRenderTextureResize();
-				commandScene.Render();
+				commandCamera.Render();
 			}
 
 			if (autoRotateSpeed > 0.01f && Time.unscaledTime - lastInputTime > AutoRotateDelay)
@@ -193,21 +195,24 @@ namespace ClassicTilestorm
 			previewRenderTexture.Create();
 			previewImage.texture = previewRenderTexture;
 
-			// ── Create the command rendering scene ───────────────────────
-			var sceneGo = new GameObject("CommandPreviewScene");
+			// Create camera directly (no parent at first, or set it)
+			commandCamera = new CommandRenderCamera(
+				transform,                      // parent under panel, or null / other object
+				previewRenderTexture,
+				hashColor,
+				defaultFOV,
+				"PreviewCamera"
+			);
+
+			// Create scene and connect
+			var sceneGo = new GameObject("CommandRenderScene");
 			sceneGo.transform.SetParent(transform, false);
 
 			commandScene = sceneGo.AddComponent<CommandRenderScene>();
-			commandScene = CommandRenderScene.CreateAndInitialize(
-				transform,
-				previewRenderTexture,
-				hashColor,
-				defaultFOV
-			);
+			commandCamera.AssignCommandProvider(commandScene);
 
 			CreateGroundPlane();
 
-			// Add input handler if missing
 			if (!previewImage.gameObject.TryGetComponent<PreviewCameraInput>(out _))
 				previewImage.gameObject.AddComponent<PreviewCameraInput>();
 
@@ -216,7 +221,7 @@ namespace ClassicTilestorm
 
 		private void HandleRenderTextureResize()
 		{
-			if (previewRect == null || previewRenderTexture == null) return;
+			if (!previewRect || !previewRenderTexture) return;
 
 			Vector2 size = previewRect.rect.size;
 			if (size == lastPreviewSize || size.x < 16 || size.y < 16) return;
@@ -226,14 +231,16 @@ namespace ClassicTilestorm
 			int w = Mathf.RoundToInt(size.x);
 			int h = Mathf.RoundToInt(size.y);
 
-			if (previewRenderTexture.width == w && previewRenderTexture.height == h) return;
+			if (previewRenderTexture.width == w && previewRenderTexture.height == h)
+				return;
 
 			previewRenderTexture.Release();
 			previewRenderTexture = new RenderTexture(w, h, 24, RenderTextureFormat.ARGB32);
 			previewRenderTexture.Create();
 
-			commandScene.Camera.SetTargetTexture(previewRenderTexture);
-			commandScene.Camera.SetAspect((float)w / h);
+			commandCamera.targetTexture = previewRenderTexture;
+			commandCamera.aspect = (float)w / h;
+
 			previewImage.texture = previewRenderTexture;
 		}
 
@@ -269,7 +276,6 @@ namespace ClassicTilestorm
 
 			currentModelData = RenderModelFactory.Create(def, Vector3.zero, Quaternion.identity, Vector3.one);
 
-			// Reset camera for new model
 			float modelSize = currentModelData?.bounds.size.magnitude ?? 5f;
 			currentDistance = modelSize * sizeToDistanceFactor;
 			currentDistance = Mathf.Clamp(currentDistance, minDistance, maxDistance);
@@ -279,13 +285,12 @@ namespace ClassicTilestorm
 
 			UpdateCameraTransform();
 
-			// Send both ground and model to renderer
 			commandScene.SetModels(new[] { groundModelData, currentModelData });
 		}
 
 		private void UpdateCameraTransform()
 		{
-			if (commandScene == null || commandScene.Camera?.Camera == null) return;
+			if (commandCamera == null) return;
 
 			var gimbalY = currentModelData != null ? currentModelData.bounds.max.y * 0.5f : 1f;
 			gimbalPosition = Vector3.up * gimbalY;
@@ -294,9 +299,8 @@ namespace ClassicTilestorm
 			Vector3 forward = rotation * Vector3.forward;
 			Vector3 cameraPosition = gimbalPosition - forward * currentDistance;
 
-			var cam = commandScene.Camera.Camera;
-			cam.transform.position = cameraPosition;
-			cam.transform.rotation = rotation;
+			commandCamera.position = cameraPosition;
+			commandCamera.rotation = rotation;
 		}
 
 		// ───────────────────── CAMERA INPUT ──────────────────────────────
@@ -335,13 +339,18 @@ namespace ClassicTilestorm
 			if (groundTex != null && groundTex != groundOverrideTexture)
 				DestroyImmediate(groundTex);
 
+			commandCamera?.Destroy();
+			commandCamera = null;
+
 			if (commandScene != null)
+			{
 				Destroy(commandScene.gameObject);
+				commandScene = null;
+			}
 
 			commandScene = null;
-
-			if (previewImage != null)
-				previewImage.texture = null;
+			commandCamera = null;
+			if (previewImage) previewImage.texture = null;
 		}
 
 		// ───────────────────── CAMERA INPUT HELPER ───────────────────────

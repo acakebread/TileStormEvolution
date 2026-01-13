@@ -4,81 +4,84 @@ using UnityEngine.Rendering.Universal;
 
 namespace MassiveHadronLtd
 {
-	public sealed class CommandRenderCamera : MonoBehaviour
+	// ========================================
+	// CommandRenderCamera.cs  – fixed version
+	// ========================================
+
+	public class CommandRenderCamera
 	{
-		private Camera cam;
+		private Camera Camera { get; set; }
+		private GameObject cameraGameObject;
 		private CommandCameraHook hook;
 
-		public Camera Camera => cam;
+		// Quick direct accessors (unchanged)
+		public Transform transform => Camera.transform;
+		public Vector3 position { get => Camera.transform.position; set => Camera.transform.position = value; }
+		public Quaternion rotation { get => Camera.transform.rotation; set => Camera.transform.rotation = value; }
+		public float fieldOfView { get => Camera.fieldOfView; set => Camera.fieldOfView = value; }
+		public Color backgroundColor { get => Camera.backgroundColor; set => Camera.backgroundColor = value; }
+		public float aspect { get => Camera.aspect; set => Camera.aspect = value; }
+		public RenderTexture targetTexture { get => Camera.targetTexture; set => Camera.targetTexture = value; }
 
-		private void Awake()
-		{
-			cam = GetComponent<Camera>();
-			if (cam == null)
-			{
-				Debug.LogError("CommandRenderCamera requires a Camera component.", this);
-				enabled = false;
-				return;
-			}
-
-			cam.enabled = false;
-			cam.cullingMask = 0;
-
-			if (!cam.TryGetComponent<UniversalAdditionalCameraData>(out _))
-				gameObject.AddComponent<UniversalAdditionalCameraData>();
-
-			hook = gameObject.GetComponent<CommandCameraHook>();
-			if (hook == null)
-				hook = gameObject.AddComponent<CommandCameraHook>();
-		}
-
-		public static CommandRenderCamera Create(
-			Transform parent = null,
-			RenderTexture target = null,
-			Color background = default,
+		public CommandRenderCamera(
+			Transform desiredParent,
+			RenderTexture targetRT,
+			Color background,
 			float fov = 60f,
 			string name = "CommandRenderCamera")
 		{
-			var go = new GameObject(name);
-			if (parent != null)
-				go.transform.SetParent(parent, false);
+			cameraGameObject = new GameObject(name);
 
-			var camera = go.AddComponent<Camera>();
-			camera.clearFlags = CameraClearFlags.SolidColor;
-			camera.backgroundColor = background;
-			camera.fieldOfView = fov;
-			camera.nearClipPlane = 0.03f;
-			camera.farClipPlane = 50f;
-			camera.targetTexture = target;
-			camera.aspect = target != null ? (float)target.width / target.height : 16f / 9f;
+			Camera = cameraGameObject.AddComponent<Camera>();
+			Camera.enabled = false;
+			Camera.cullingMask = 0;
+			Camera.clearFlags = CameraClearFlags.SolidColor;
+			Camera.backgroundColor = background;
+			Camera.fieldOfView = fov;
+			Camera.nearClipPlane = 0.03f;
+			Camera.farClipPlane = 50f;
+			Camera.targetTexture = targetRT;
 
-			go.AddComponent<UniversalAdditionalCameraData>();
+			if (targetRT != null)
+				Camera.aspect = (float)targetRT.width / targetRT.height;
 
-			return go.AddComponent<CommandRenderCamera>();
+			cameraGameObject.AddComponent<UniversalAdditionalCameraData>();
+
+			// Just create the hook – do NOT assign provider here!
+			hook = cameraGameObject.AddComponent<CommandCameraHook>();
+
+			if (desiredParent != null)
+				cameraGameObject.transform.SetParent(desiredParent, false);
 		}
 
-		// Public setters
-		public void SetTargetTexture(RenderTexture rt)
-		{
-			cam.targetTexture = rt;
-			if (rt != null)
-				cam.aspect = (float)rt.width / rt.height;
-		}
+		public void Render() => Camera?.Render();
 
-		public void SetBackgroundColor(Color color) => cam.backgroundColor = color;
-		public void SetFieldOfView(float fov) => cam.fieldOfView = fov;
-		public void SetAspect(float aspect) => cam.aspect = aspect;
-
-		public void Render() => cam?.Render();
-
-		// Hook connection (called by scene)
-		internal void SetCommandProvider(ICommandBufferProvider provider)
+		// This method is now used by the scene
+		public void AssignCommandProvider(ICommandBufferProvider provider)
 		{
 			if (hook != null)
 				hook.Provider = provider;
 		}
+
+		public void Destroy()
+		{
+			if (cameraGameObject != null)
+			{
+				Object.Destroy(cameraGameObject);
+				cameraGameObject = null;
+				Camera = null;
+				hook = null;
+			}
+		}
+
+		public void SetUnityCameraParent(Transform newParent)
+		{
+			if (cameraGameObject != null)
+				cameraGameObject.transform.SetParent(newParent, false);
+		}
 	}
 
+	// Hook stays the same
 	internal class CommandCameraHook : MonoBehaviour, ICommandBufferProvider
 	{
 		public ICommandBufferProvider Provider { get; set; }
