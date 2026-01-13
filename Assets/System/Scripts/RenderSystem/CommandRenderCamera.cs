@@ -5,94 +5,84 @@ using UnityEngine.Rendering.Universal;
 namespace MassiveHadronLtd
 {
 	/// <summary>
-	/// Camera that renders arrays of CommandRenderModelData using URP command buffers.
+	/// Manages the Unity Camera used for command-buffer based rendering.
+	/// Pure camera wrapper — no knowledge of models, lights or command buffers.
 	/// </summary>
-	public sealed class CommandRenderCamera : MonoBehaviour, ICommandBufferProvider
+	public sealed class CommandRenderCamera : MonoBehaviour
 	{
-		private static readonly int MainLightPositionID = Shader.PropertyToID("_MainLightPosition");
-		private static readonly int MainLightColorID = Shader.PropertyToID("_MainLightColor");
-
 		private Camera cam;
-		private CommandRenderModelData[] models;
-
-		private Vector3 lightDir = new Vector3(0.5f, 1f, -0.3f).normalized;
-		private Color lightColor = new Color(0.75f, 0.75f, 0.75f);
 
 		public Camera Camera => cam;
 
-		/// <summary>Initialize the camera with a target RenderTexture, background color, and FOV.</summary>
-		public void Initialize(RenderTexture rt, Color background, float fov)
+		private void Awake()
 		{
-			var camGO = new GameObject("CommandRenderCamera_Internal");
-			camGO.transform.SetParent(transform, false);
-
-			cam = camGO.AddComponent<Camera>();
-			cam.enabled = false;
-			cam.cullingMask = 0; // Render everything manually
-			cam.clearFlags = CameraClearFlags.SolidColor;
-			cam.backgroundColor = background;
-			cam.fieldOfView = fov;
-			cam.nearClipPlane = 0.03f;
-			cam.farClipPlane = 50f;
-			cam.targetTexture = rt;
-
-			camGO.AddComponent<UniversalAdditionalCameraData>();
-			camGO.AddComponent<CommandCameraHook>().Owner = this;
-		}
-
-		public void SetModels(CommandRenderModelData[] data) => models = data;
-
-		public void SetLight(Vector3 dir, Color color)
-		{
-			lightDir = dir.normalized;
-			lightColor = color;
-		}
-
-		public void Render() => cam?.Render();
-
-		// ─────────────── ICommandBufferProvider ───────────────
-
-		public bool HasCommands(RenderPassEvent evt)
-			=> evt == RenderPassEvent.BeforeRenderingOpaques;
-
-		public void ExecuteCommands(RenderPassEvent evt, RasterCommandBuffer cmd, Camera camera)
-		{
-			if (evt != RenderPassEvent.BeforeRenderingOpaques || models == null) return;
-
-			// Set up fake directional light
-			Vector4 mainLightPos = new Vector4(lightDir.x, lightDir.y, lightDir.z, 1f);
-			cmd.SetGlobalVector(MainLightPositionID, mainLightPos);
-			cmd.SetGlobalVector(MainLightColorID, lightColor.linear);
-
-			// Draw all models
-			foreach (var model in models)
+			cam = GetComponent<Camera>();
+			if (cam == null)
 			{
-				if (model == null) continue;
+				Debug.LogError($"{nameof(CommandRenderCamera)} requires a Camera component on the same GameObject.", this);
+				enabled = false;
+				return;
+			}
 
-				foreach (var inst in model.meshInstances)
-				{
-					if (inst.mesh == null) continue;
+			cam.enabled = false;
+			cam.cullingMask = 0; // We render everything manually via command buffers
 
-					for (int s = 0; s < inst.subMeshCount; s++)
-					{
-						var mat = s < inst.materials.Length ? inst.materials[s] : inst.materials[0];
-						if (mat == null) continue;
-
-						cmd.DrawMesh(inst.mesh, inst.localToWorld, mat, s, 0);
-					}
-				}
+			// Ensure URP additional data exists
+			if (!cam.TryGetComponent<UniversalAdditionalCameraData>(out _))
+			{
+				gameObject.AddComponent<UniversalAdditionalCameraData>();
 			}
 		}
 
-		// ─────────────── Hook for URP to forward to this provider ───────────────
-		private class CommandCameraHook : MonoBehaviour, ICommandBufferProvider
+		/// <summary>
+		/// Factory method to create a new render camera setup
+		/// </summary>
+		public static CommandRenderCamera Create(
+			Transform parent,
+			RenderTexture targetTexture,
+			Color backgroundColor,
+			float fov = 60f,
+			string name = "CommandRenderCamera")
 		{
-			public CommandRenderCamera Owner;
+			var go = new GameObject(name);
+			if (parent != null)
+				go.transform.SetParent(parent, false);
 
-			public bool HasCommands(RenderPassEvent evt) => Owner != null && Owner.HasCommands(evt);
+			var cameraComp = go.AddComponent<Camera>();
+			cameraComp.clearFlags = CameraClearFlags.SolidColor;
+			cameraComp.backgroundColor = backgroundColor;
+			cameraComp.fieldOfView = fov;
+			cameraComp.nearClipPlane = 0.03f;
+			cameraComp.farClipPlane = 50f;
+			cameraComp.targetTexture = targetTexture;
 
-			public void ExecuteCommands(RenderPassEvent evt, RasterCommandBuffer cmd, Camera cam)
-				=> Owner?.ExecuteCommands(evt, cmd, cam);
+			go.AddComponent<UniversalAdditionalCameraData>();
+
+			return go.AddComponent<CommandRenderCamera>();
+		}
+
+		public void SetTargetTexture(RenderTexture rt) => Camera.targetTexture = rt;
+		public void SetFieldOfView(float fov) => Camera.fieldOfView = fov;
+		public void SetBackgroundColor(Color color) => Camera.backgroundColor = color;
+		public void SetAspect(float aspect) => Camera.aspect = aspect;
+		public void Render() => Camera?.Render();
+	}
+
+	// ────────────────────────────────────────────────────────────────
+	// Hook — forwards everything to the actual provider (CommandRenderScene)
+	// ────────────────────────────────────────────────────────────────
+	internal class CommandCameraHook : MonoBehaviour, ICommandBufferProvider
+	{
+		public ICommandBufferProvider Provider { get; set; }
+
+		public bool HasCommands(RenderPassEvent evt)
+		{
+			return Provider?.HasCommands(evt) ?? false;
+		}
+
+		public void ExecuteCommands(RenderPassEvent evt, RasterCommandBuffer cmd, Camera camera)
+		{
+			Provider?.ExecuteCommands(evt, cmd, camera);
 		}
 	}
 }

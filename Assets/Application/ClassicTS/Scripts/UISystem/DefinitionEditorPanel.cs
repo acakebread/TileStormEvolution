@@ -42,7 +42,7 @@ namespace ClassicTilestorm
 
 		// ── Runtime ───────────────────────────────────────────────────────
 		private RenderTexture previewRenderTexture;
-		private CommandRenderCamera commandCamera;
+		private CommandRenderScene commandScene;
 		private string selectedDefinitionId;
 
 		private readonly List<GameObject> spawnedListItems = new();
@@ -59,15 +59,12 @@ namespace ClassicTilestorm
 		private float currentTiltAngle;
 		private float currentDistance;
 
-		// Idle autorotate
 		private float lastInputTime = -999f;
 		private const float AutoRotateDelay = 3f;
 
 		// RT resize tracking
 		private RectTransform previewRect;
 		private Vector2 lastPreviewSize;
-
-		// ────────────────────────────────────────────────────────────────
 
 		protected override void Awake()
 		{
@@ -100,10 +97,10 @@ namespace ClassicTilestorm
 
 		private void Update()
 		{
-			if (commandCamera != null && previewRenderTexture != null && previewRenderTexture.IsCreated())
+			if (commandScene != null && previewRenderTexture != null && previewRenderTexture.IsCreated())
 			{
 				HandleRenderTextureResize();
-				commandCamera.Render();
+				commandScene.Render();
 			}
 
 			if (autoRotateSpeed > 0.01f && Time.unscaledTime - lastInputTime > AutoRotateDelay)
@@ -133,23 +130,23 @@ namespace ClassicTilestorm
 		private void ClearListItems()
 		{
 			foreach (var item in spawnedListItems)
-				if (item) Destroy(item);
+				if (item != null) Destroy(item);
 			spawnedListItems.Clear();
 		}
 
 		private void CreateDefinitionListItem(Definition def)
 		{
-			if (!definitionListItemPrefab) return;
+			if (definitionListItemPrefab == null) return;
 
 			var go = Instantiate(definitionListItemPrefab, contentParent);
 			spawnedListItems.Add(go);
 
 			var item = go.GetComponent<DefinitionListItem>();
-			if (!item) return;
+			if (item == null) return;
 
 			item.Initialize(def.id, SelectDefinition);
 
-			if (item.label)
+			if (item.label != null)
 			{
 				item.label.richText = false;
 				item.label.enableAutoSizing = false;
@@ -165,13 +162,13 @@ namespace ClassicTilestorm
 			if (string.IsNullOrEmpty(defId)) return;
 
 			selectedDefinitionId = defId;
-			lastInputTime = -999f; // treat as idle so autorotate starts immediately
+			lastInputTime = -999f; // Reset autorotate timer
 
 			foreach (var go in spawnedListItems)
 			{
-				if (!go) continue;
+				if (go == null) continue;
 				var item = go.GetComponent<DefinitionListItem>();
-				if (item) item.SetSelected(item.DefinitionId == selectedDefinitionId);
+				if (item != null) item.SetSelected(item.DefinitionId == selectedDefinitionId);
 			}
 
 			UpdatePreview(defId);
@@ -181,7 +178,7 @@ namespace ClassicTilestorm
 
 		private void CreatePreviewSetup()
 		{
-			if (!previewImage) return;
+			if (previewImage == null) return;
 
 			previewRect = previewImage.GetComponent<RectTransform>();
 
@@ -196,12 +193,16 @@ namespace ClassicTilestorm
 			previewRenderTexture.Create();
 			previewImage.texture = previewRenderTexture;
 
-			var go = new GameObject("CommandPreviewRenderer");
-			commandCamera = go.AddComponent<CommandRenderCamera>();
-			commandCamera.Initialize(previewRenderTexture, hashColor, defaultFOV);
+			// ── Create the command rendering scene ───────────────────────
+			var sceneGo = new GameObject("CommandPreviewScene");
+			sceneGo.transform.SetParent(transform, false);
+
+			commandScene = sceneGo.AddComponent<CommandRenderScene>();
+			commandScene.Initialize(previewRenderTexture, hashColor, defaultFOV);
 
 			CreateGroundPlane();
 
+			// Add input handler if missing
 			if (!previewImage.gameObject.TryGetComponent<PreviewCameraInput>(out _))
 				previewImage.gameObject.AddComponent<PreviewCameraInput>();
 
@@ -210,7 +211,7 @@ namespace ClassicTilestorm
 
 		private void HandleRenderTextureResize()
 		{
-			if (!previewRect || !previewRenderTexture) return;
+			if (previewRect == null || previewRenderTexture == null) return;
 
 			Vector2 size = previewRect.rect.size;
 			if (size == lastPreviewSize || size.x < 16 || size.y < 16) return;
@@ -226,8 +227,8 @@ namespace ClassicTilestorm
 			previewRenderTexture = new RenderTexture(w, h, 24, RenderTextureFormat.ARGB32);
 			previewRenderTexture.Create();
 
-			commandCamera.Camera.targetTexture = previewRenderTexture;
-			commandCamera.Camera.aspect = (float)w / h;
+			commandScene.Camera.SetTargetTexture(previewRenderTexture);
+			commandScene.Camera.SetAspect((float)w / h);
 			previewImage.texture = previewRenderTexture;
 		}
 
@@ -248,7 +249,10 @@ namespace ClassicTilestorm
 			groundMat.SetTexture("_BaseMap", groundTex);
 			groundMat.SetColor("_BaseColor", groundColor);
 
-			groundModelData = new CommandRenderModelData(groundMesh, new Material[] { groundMat }, Matrix4x4.Translate(Vector3.up * groundY));
+			groundModelData = new CommandRenderModelData(
+				groundMesh,
+				new Material[] { groundMat },
+				Matrix4x4.Translate(Vector3.up * groundY));
 		}
 
 		private void UpdatePreview(string defId)
@@ -270,13 +274,13 @@ namespace ClassicTilestorm
 
 			UpdateCameraTransform();
 
-			// Send models to command renderer
-			commandCamera.SetModels(new[] { groundModelData, currentModelData });
+			// Send both ground and model to renderer
+			commandScene.SetModels(new[] { groundModelData, currentModelData });
 		}
 
 		private void UpdateCameraTransform()
 		{
-			if (commandCamera == null || commandCamera.Camera == null) return;
+			if (commandScene == null || commandScene.Camera?.Camera == null) return;
 
 			var gimbalY = currentModelData != null ? currentModelData.bounds.max.y * 0.5f : 1f;
 			gimbalPosition = Vector3.up * gimbalY;
@@ -285,8 +289,9 @@ namespace ClassicTilestorm
 			Vector3 forward = rotation * Vector3.forward;
 			Vector3 cameraPosition = gimbalPosition - forward * currentDistance;
 
-			commandCamera.Camera.transform.position = cameraPosition;
-			commandCamera.Camera.transform.rotation = rotation;
+			var cam = commandScene.Camera.Camera;
+			cam.transform.position = cameraPosition;
+			cam.transform.rotation = rotation;
 		}
 
 		// ───────────────────── CAMERA INPUT ──────────────────────────────
@@ -322,12 +327,16 @@ namespace ClassicTilestorm
 
 			if (groundMesh) DestroyImmediate(groundMesh);
 			if (groundMat) DestroyImmediate(groundMat);
-			if (groundTex && groundTex != groundOverrideTexture) DestroyImmediate(groundTex);
+			if (groundTex != null && groundTex != groundOverrideTexture)
+				DestroyImmediate(groundTex);
 
-			if (commandCamera) Destroy(commandCamera.gameObject);
-			commandCamera = null;
+			if (commandScene != null)
+				Destroy(commandScene.gameObject);
 
-			if (previewImage) previewImage.texture = null;
+			commandScene = null;
+
+			if (previewImage != null)
+				previewImage.texture = null;
 		}
 
 		// ───────────────────── CAMERA INPUT HELPER ───────────────────────
@@ -345,19 +354,19 @@ namespace ClassicTilestorm
 			public void OnPointerDown(PointerEventData e)
 			{
 				lastPos = e.position;
-				panel.lastInputTime = Time.unscaledTime;
+				if (panel != null) panel.lastInputTime = Time.unscaledTime;
 			}
 
 			public void OnDrag(PointerEventData e)
 			{
 				Vector2 delta = e.position - lastPos;
 				lastPos = e.position;
-				panel.DragPreviewCamera(delta);
+				panel?.DragPreviewCamera(delta);
 			}
 
 			public void OnScroll(PointerEventData e)
 			{
-				panel.ZoomPreviewCamera(e.scrollDelta.y);
+				panel?.ZoomPreviewCamera(e.scrollDelta.y);
 			}
 		}
 	}
