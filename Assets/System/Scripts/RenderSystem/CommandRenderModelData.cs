@@ -6,10 +6,10 @@ namespace MassiveHadronLtd
 	public readonly struct MeshInstanceInfo
 	{
 		public readonly Mesh mesh;
-		public readonly Material[] materials;       // per submesh
+		public readonly Material[] materials;
 		public readonly Matrix4x4 localToWorld;
 		public readonly int subMeshCount;
-		public readonly int layer;                  // optional, usually same
+		public readonly int layer;
 
 		public MeshInstanceInfo(Mesh mesh, Material[] materials, Matrix4x4 localToWorld, int layer = 0)
 		{
@@ -21,15 +21,18 @@ namespace MassiveHadronLtd
 		}
 	}
 
-	public class RenderModelData
+	/// <summary>
+	/// Data container for CommandRenderCamera. Holds one or more mesh instances and bounds.
+	/// </summary>
+	public class CommandRenderModelData
 	{
 		public readonly List<MeshInstanceInfo> meshInstances = new();
-		public Bounds bounds = new Bounds(Vector3.zero, Vector3.zero);// Vector3.one * 1f);
+		public Bounds bounds = new Bounds(Vector3.zero, Vector3.zero);
 
-		public RenderModelData() { }
+		public CommandRenderModelData() { }
 
 		// Convenience constructor for a single mesh instance
-		public RenderModelData(Mesh mesh, Material[] materials, Matrix4x4 localToWorld, int layer = 0)
+		public CommandRenderModelData(Mesh mesh, Material[] materials, Matrix4x4 localToWorld, int layer = 0)
 		{
 			AddMeshInstance(mesh, materials, localToWorld, layer);
 		}
@@ -55,7 +58,6 @@ namespace MassiveHadronLtd
 				for (int y = -1; y <= 1; y += 2)
 					for (int z = -1; z <= 1; z += 2)
 					{
-						// Fixed version - using Vector3.Scale
 						Vector3 offset = Vector3.Scale(new Vector3(x, y, z), localBounds.extents);
 						corners[i++] = matrix.MultiplyPoint(localBounds.center + offset);
 					}

@@ -6,9 +6,9 @@ namespace ClassicTilestorm
 {
 	public static class RenderModelFactory
 	{
-		public static RenderModelData Create(Definition definition, Vector3 position = default, Quaternion rotation = default, Vector3 scale = default)
+		public static CommandRenderModelData Create(Definition definition, Vector3 position = default, Quaternion rotation = default, Vector3 scale = default)
 		{
-			var data = new RenderModelData();
+			var data = new CommandRenderModelData();
 
 			if (definition == null || string.IsNullOrEmpty(definition.model))
 				return data;
@@ -31,7 +31,7 @@ namespace ClassicTilestorm
 		}
 
 		private static void CollectMeshRenderers(GameObject prefabRoot, Definition def,
-			Vector3 rootPos, Quaternion rootRot, Vector3 rootScale, RenderModelData target)
+			Vector3 rootPos, Quaternion rootRot, Vector3 rootScale, CommandRenderModelData target)
 		{
 			Matrix4x4 rootMatrix = Matrix4x4.TRS(rootPos, rootRot, rootScale);
 

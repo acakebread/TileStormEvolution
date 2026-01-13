@@ -1,8 +1,6 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
 using System.Collections.Generic;
-using UnityEngine.Rendering;
-using UnityEngine.Rendering.Universal;
 using UnityEngine.EventSystems;
 using MassiveHadronLtd;
 
@@ -52,8 +50,8 @@ namespace ClassicTilestorm
 		private Mesh groundMesh;
 		private Material groundMat;
 		private Texture2D groundTex;
-		private RenderModelData currentModelData;
-		private RenderModelData groundModelData;
+		private CommandRenderModelData currentModelData;
+		private CommandRenderModelData groundModelData;
 
 		// Camera control
 		private Vector3 gimbalPosition;
@@ -250,7 +248,7 @@ namespace ClassicTilestorm
 			groundMat.SetTexture("_BaseMap", groundTex);
 			groundMat.SetColor("_BaseColor", groundColor);
 
-			groundModelData = new RenderModelData(groundMesh, new Material[] { groundMat }, Matrix4x4.Translate(Vector3.up * groundY));
+			groundModelData = new CommandRenderModelData(groundMesh, new Material[] { groundMat }, Matrix4x4.Translate(Vector3.up * groundY));
 		}
 
 		private void UpdatePreview(string defId)
