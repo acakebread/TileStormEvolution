@@ -42,14 +42,9 @@ namespace ClassicTilestorm
 		[Header("Ground Texture Override")]
 		[SerializeField] private Texture2D groundOverrideTexture;
 
-		//command buffer light
-		private static readonly int MainLightPositionID = Shader.PropertyToID("_MainLightPosition");
-		private static readonly int MainLightColorID = Shader.PropertyToID("_MainLightColor");
-
 		// ── Runtime ───────────────────────────────────────────────────────
 		private RenderTexture previewRenderTexture;
-		private Camera previewCamera;
-		private GameObject previewRoot;
+		private CommandRenderCamera commandCamera;
 		private string selectedDefinitionId;
 
 		private readonly List<GameObject> spawnedListItems = new();
@@ -58,6 +53,7 @@ namespace ClassicTilestorm
 		private Material groundMat;
 		private Texture2D groundTex;
 		private RenderModelData currentModelData;
+		private RenderModelData groundModelData;
 
 		// Camera control
 		private Vector3 gimbalPosition;
@@ -106,10 +102,10 @@ namespace ClassicTilestorm
 
 		private void Update()
 		{
-			if (previewCamera != null && previewRenderTexture != null && previewRenderTexture.IsCreated())
+			if (commandCamera != null && previewRenderTexture != null && previewRenderTexture.IsCreated())
 			{
 				HandleRenderTextureResize();
-				previewCamera.Render();
+				commandCamera.Render();
 			}
 
 			if (autoRotateSpeed > 0.01f && Time.unscaledTime - lastInputTime > AutoRotateDelay)
@@ -185,27 +181,13 @@ namespace ClassicTilestorm
 
 		// ──────────────────────── PREVIEW SETUP ──────────────────────────
 
-		private void CreatePreviewSetup()//I would like preview camera setup to not be dependant on previewRoot / rect - I would like the render texture to be passed in - the preview camera and command buffer features are going to be moved out of this class into a separate helper script
+		private void CreatePreviewSetup()
 		{
 			if (!previewImage) return;
 
 			previewRect = previewImage.GetComponent<RectTransform>();
 
-			previewRoot = new GameObject("DefinitionPreviewRoot");
-
-			var camGO = new GameObject("PreviewCamera");
-			previewCamera = camGO.AddComponent<Camera>();
-			camGO.transform.SetParent(previewRoot.transform);
-
-			previewCamera.enabled = false;
-			previewCamera.cullingMask = 0;// 1 << LayerMask.NameToLayer("Water"); //I don't want to have to use a layer flag but we have to for lighting - I want procudral light added if possible to command buffer
-			previewCamera.clearFlags = CameraClearFlags.SolidColor;
 			ColorUtility.TryParseHtmlString("#21B2E1", out Color hashColor);
-			previewCamera.backgroundColor = hashColor;
-			previewCamera.orthographic = false;
-			previewCamera.fieldOfView = defaultFOV;
-			previewCamera.nearClipPlane = 0.03f;
-			previewCamera.farClipPlane = 50f;
 
 			previewRenderTexture = new RenderTexture(
 				(int)previewResolution.x,
@@ -214,11 +196,13 @@ namespace ClassicTilestorm
 				RenderTextureFormat.ARGB32);
 
 			previewRenderTexture.Create();
-			previewCamera.targetTexture = previewRenderTexture;
 			previewImage.texture = previewRenderTexture;
 
+			var go = new GameObject("CommandPreviewRenderer");
+			commandCamera = go.AddComponent<CommandRenderCamera>();
+			commandCamera.Initialize(previewRenderTexture, hashColor, defaultFOV);
+
 			CreateGroundPlane();
-			AttachCommandProvider(camGO);
 
 			if (!previewImage.gameObject.TryGetComponent<PreviewCameraInput>(out _))
 				previewImage.gameObject.AddComponent<PreviewCameraInput>();
@@ -244,8 +228,8 @@ namespace ClassicTilestorm
 			previewRenderTexture = new RenderTexture(w, h, 24, RenderTextureFormat.ARGB32);
 			previewRenderTexture.Create();
 
-			previewCamera.targetTexture = previewRenderTexture;
-			previewCamera.aspect = (float)w / h;
+			commandCamera.Camera.targetTexture = previewRenderTexture;
+			commandCamera.Camera.aspect = (float)w / h;
 			previewImage.texture = previewRenderTexture;
 		}
 
@@ -265,50 +249,8 @@ namespace ClassicTilestorm
 			groundMat.SetFloat("_Surface", 0f);
 			groundMat.SetTexture("_BaseMap", groundTex);
 			groundMat.SetColor("_BaseColor", groundColor);
-		}
 
-		private void AttachCommandProvider(GameObject camGO)
-		{
-			var provider = camGO.AddComponent<CommandBufferProvider>();
-
-			provider.RegisterCommand(RenderPassEvent.BeforeRenderingOpaques, (cmd, cam) =>
-			{
-				// ── Fake main directional light ────────────────────────────────────────
-
-				// Desired light direction (towards light source) — example: classic 3/4 top-down
-				// You can make this dynamic: e.g. from camera orbit or fixed
-				Vector3 lightDirTowardsSource = new Vector3(0.5f, 1f, -0.3f).normalized; // tweak as needed
-
-				// For directional: position.w = 0? Wait no → URP uses .w = 1 for directional
-				// Direction is actually -light forward (convention in URP)
-				Vector4 mainLightPos = new Vector4(lightDirTowardsSource.x, lightDirTowardsSource.y, lightDirTowardsSource.z, 1.0f);  // .w = 1 → directional
-
-				Color lightColorAndIntensity = new Color(0.75f, 0.75f, 0.75f);
-
-				cmd.SetGlobalVector(MainLightPositionID, mainLightPos);
-				cmd.SetGlobalVector(MainLightColorID, lightColorAndIntensity.linear); // use linear if HDR
-
-				// Optional: early clear if you want full control (requires camera clearFlags = Nothing)
-				// cmd.ClearRenderTarget(true, true, backgroundColor, 1.0f);
-
-				// ── Then your existing draws ───────────────────────────────────────────
-				if (groundMesh != null && groundMat != null)
-					cmd.DrawMesh(groundMesh, Matrix4x4.Translate(Vector3.up * groundY), groundMat, 0, 0);
-
-				if (currentModelData != null)
-				{
-					foreach (var instance in currentModelData.meshInstances)
-					{
-						if (instance.mesh == null) continue;
-						for (int s = 0; s < instance.subMeshCount; s++)
-						{
-							var mat = s < instance.materials.Length ? instance.materials[s] : instance.materials[0];
-							if (mat == null) continue;
-							cmd.DrawMesh(instance.mesh, instance.localToWorld, mat, s, 0);
-						}
-					}
-				}
-			});
+			groundModelData = new RenderModelData(groundMesh, new Material[] { groundMat }, Matrix4x4.Translate(Vector3.up * groundY));
 		}
 
 		private void UpdatePreview(string defId)
@@ -329,38 +271,24 @@ namespace ClassicTilestorm
 			currentOrbitAngle = 0f;
 
 			UpdateCameraTransform();
+
+			// Send models to command renderer
+			commandCamera.SetModels(new[] { groundModelData, currentModelData });
 		}
 
 		private void UpdateCameraTransform()
 		{
-			if (previewCamera == null) return;
+			if (commandCamera == null || commandCamera.Camera == null) return;
 
-			// Gimbal (target) position
 			var gimbalY = currentModelData != null ? currentModelData.bounds.max.y * 0.5f : 1f;
-
 			gimbalPosition = Vector3.up * gimbalY;
 
-			// ─── Build camera transform in requested order ───────────────────────
-
-			// 1. Start with identity rotation
-			Quaternion rotation = Quaternion.identity;
-
-			// 2. First apply orbit rotation around world Y-axis
-			rotation *= Quaternion.Euler(0f, currentOrbitAngle, 0f);
-
-			// 3. Then apply tilt (pitch down) around the *local* X-axis after orbit
-			rotation *= Quaternion.Euler(currentTiltAngle, 0f, 0f);
-
-			// 4. Direction the camera is facing (forward = -Z in Unity convention)
+			Quaternion rotation = Quaternion.Euler(currentTiltAngle, currentOrbitAngle, 0f);
 			Vector3 forward = rotation * Vector3.forward;
-
-			// 5. Camera position = gimbal - forward * distance
-			//    (because we want to look towards the gimbal)
 			Vector3 cameraPosition = gimbalPosition - forward * currentDistance;
 
-			// ─── Apply to transform ──────────────────────────────────────────────
-			previewCamera.transform.position = cameraPosition;
-			previewCamera.transform.rotation = rotation;
+			commandCamera.Camera.transform.position = cameraPosition;
+			commandCamera.Camera.transform.rotation = rotation;
 		}
 
 		// ───────────────────── CAMERA INPUT ──────────────────────────────
@@ -398,10 +326,9 @@ namespace ClassicTilestorm
 			if (groundMat) DestroyImmediate(groundMat);
 			if (groundTex && groundTex != groundOverrideTexture) DestroyImmediate(groundTex);
 
-			if (previewRoot)
-				Destroy(previewRoot);
+			if (commandCamera) Destroy(commandCamera.gameObject);
+			commandCamera = null;
 
-			previewCamera = null;
 			if (previewImage) previewImage.texture = null;
 		}
 
@@ -434,34 +361,6 @@ namespace ClassicTilestorm
 			{
 				panel.ZoomPreviewCamera(e.scrollDelta.y);
 			}
-		}
-
-		// ───────────────────── COMMAND BUFFER PROVIDER ───────────────────
-
-		private class CommandBufferProvider : MonoBehaviour, ICommandBufferProvider
-		{
-			private readonly Dictionary<RenderPassEvent, System.Action<RasterCommandBuffer, Camera>> commands = new();
-
-			public void RegisterCommand(RenderPassEvent evt, System.Action<RasterCommandBuffer, Camera> action)
-			{
-				commands[evt] = action;
-			}
-
-			public bool HasCommands(RenderPassEvent evt) => commands.ContainsKey(evt);
-
-			public void ExecuteCommands(RenderPassEvent evt, RasterCommandBuffer commandBuffer, Camera camera)
-			{
-				if (commands.TryGetValue(evt, out var action))
-				{
-					try { action?.Invoke(commandBuffer, camera); }
-					catch (System.Exception ex)
-					{
-						Debug.LogError($"Preview command failed: {ex.Message}");
-					}
-				}
-			}
-
-			private void OnDestroy() => commands.Clear();
 		}
 	}
 }

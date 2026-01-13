@@ -26,6 +26,14 @@ namespace MassiveHadronLtd
 		public readonly List<MeshInstanceInfo> meshInstances = new();
 		public Bounds bounds = new Bounds(Vector3.zero, Vector3.zero);// Vector3.one * 1f);
 
+		public RenderModelData() { }
+
+		// Convenience constructor for a single mesh instance
+		public RenderModelData(Mesh mesh, Material[] materials, Matrix4x4 localToWorld, int layer = 0)
+		{
+			AddMeshInstance(mesh, materials, localToWorld, layer);
+		}
+
 		public void Clear()
 		{
 			meshInstances.Clear();
