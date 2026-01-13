@@ -73,8 +73,6 @@ namespace ClassicTilestorm
 		private RectTransform previewRect;
 		private Vector2 lastPreviewSize;
 
-		private RectTransform previewRaycastBlocker;
-
 		// ────────────────────────────────────────────────────────────────
 
 		protected override void Awake()
@@ -221,7 +219,9 @@ namespace ClassicTilestorm
 
 			CreateGroundPlane();
 			AttachCommandProvider(camGO);
-			CreatePreviewRaycastBlocker();
+
+			if (!previewImage.gameObject.TryGetComponent<PreviewCameraInput>(out _))
+				previewImage.gameObject.AddComponent<PreviewCameraInput>();
 
 			lastPreviewSize = Vector2.zero;
 		}
@@ -384,27 +384,6 @@ namespace ClassicTilestorm
 			currentDistance = Mathf.Clamp(currentDistance, minDistance, maxDistance);
 
 			UpdateCameraTransform();
-		}
-
-		private void CreatePreviewRaycastBlocker()
-		{
-			if (previewRaycastBlocker || !previewImage) return;
-
-			GameObject blocker = new GameObject("PreviewRaycastBlocker");
-			blocker.transform.SetParent(previewImage.transform, false);
-
-			var rt = blocker.AddComponent<RectTransform>();
-			rt.anchorMin = Vector2.zero;
-			rt.anchorMax = Vector2.one;
-			rt.offsetMin = Vector2.zero;
-			rt.offsetMax = Vector2.zero;
-
-			var img = blocker.AddComponent<Image>();
-			img.color = new Color(0, 0, 0, 0);
-			img.raycastTarget = true;
-
-			blocker.AddComponent<PreviewCameraInput>();
-			previewRaycastBlocker = rt;
 		}
 
 		private void CleanupPreview()
