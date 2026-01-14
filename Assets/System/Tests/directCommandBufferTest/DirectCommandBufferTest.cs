@@ -1,4 +1,6 @@
-﻿using UnityEngine;
+﻿using System;
+using System.Collections.Generic;
+using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.UI;
@@ -17,7 +19,7 @@ namespace MassiveHadronLtd
 		public Camera projectionCamera;
 
 		[Header("Virtual Command Camera")]
-		public TestCommandCamera customCam = new TestCommandCamera();
+		public TestCommandCamera customCam = new();
 
 		private RenderTexture rt;
 		private Mesh quadMesh;
@@ -40,17 +42,19 @@ namespace MassiveHadronLtd
 
 			customCam.RecalculateMatrices();
 
-			// Attach the hook to the projectionCamera GameObject
-			var hook = projectionCamera.gameObject.GetComponent<CameraCommandHook>();
-			if (hook == null)
+			var provider = projectionCamera.gameObject.AddComponent<DirectCommandProvider>();
+			if (provider == null)
 			{
-				hook = projectionCamera.gameObject.AddComponent<CameraCommandHook>();
+				Debug.LogError("DirectCommandBufferTest: Failed to add DirectCommandProvider to projectionCamera", this);
+				enabled = false;
+				return;
 			}
 
-			// Set the hook's provider reference to THIS manager
-			hook.Provider = this;
-
-			Debug.Log($"Provider hook attached to camera: {projectionCamera.name}");
+			provider.RegisterCommand(RenderPassEvent.BeforeRenderingOpaques, (cmd, cam) =>
+			{
+				cmd.ClearRenderTarget(true, true, new Color(cam.backgroundColor.r, cam.backgroundColor.g, cam.backgroundColor.b, 1f), 1f);
+				DrawTestQuad(cmd);
+			});
 		}
 
 		private void Start()
@@ -79,19 +83,8 @@ namespace MassiveHadronLtd
 			if (projectionCamera == null) return;
 
 			projectionCamera.enabled = false;
-			projectionCamera.cullingMask = 0;
-			projectionCamera.clearFlags = CameraClearFlags.SolidColor;
 
-			Color bg = projectionCamera.backgroundColor;
-			if (bg.a < 1f)
-			{
-				bg.a = 1f;
-				projectionCamera.backgroundColor = bg;
-			}
-
-			Debug.Log($"Projection camera clear color: {projectionCamera.backgroundColor}");
-
-			rt = new RenderTexture(1024, 768, 24, RenderTextureFormat.DefaultHDR)
+			rt = new RenderTexture(Screen.width, Screen.height, 24, RenderTextureFormat.DefaultHDR)
 			{
 				name = "DirectTest_RT",
 				antiAliasing = 1,
@@ -101,11 +94,6 @@ namespace MassiveHadronLtd
 
 			projectionCamera.targetTexture = rt;
 			projectionCamera.aspect = rt.width / (float)rt.height;
-
-			if (!projectionCamera.GetComponent<UniversalAdditionalCameraData>())
-			{
-				projectionCamera.gameObject.AddComponent<UniversalAdditionalCameraData>();
-			}
 
 			UpdateUI();
 		}
@@ -143,22 +131,6 @@ namespace MassiveHadronLtd
 			cmd.DrawMesh(quadMesh, objectMatrix, testMaterial, 0, 0);
 		}
 
-		// ────────────────────────────────────────────────────────────────
-		// Provider methods – called by the hook on the camera GameObject
-		// ────────────────────────────────────────────────────────────────
-
-		public bool HasCommands(RenderPassEvent evt)
-		{
-			return evt == RenderPassEvent.BeforeRenderingOpaques;
-		}
-
-		public void ExecuteCommands(RenderPassEvent evt, RasterCommandBuffer cmd, Camera camera)
-		{
-			if (evt != RenderPassEvent.BeforeRenderingOpaques) return;
-
-			DrawTestQuad(cmd);
-		}
-
 		private void OnDestroy()
 		{
 			if (rt != null) rt.Release();
@@ -166,17 +138,23 @@ namespace MassiveHadronLtd
 		}
 	}
 
-	// ────────────────────────────────────────────────────────────────
-	// Hook – attached to the projectionCamera GameObject
-	// This is what the feature finds via GetComponent<IDirectCommandProvider>()
-	// ────────────────────────────────────────────────────────────────
-	internal class CameraCommandHook : MonoBehaviour, IDirectCommandProvider
+	internal class DirectCommandProvider : MonoBehaviour, IDirectCommandProvider
 	{
-		public DirectCommandBufferTest Provider { get; set; }  // ← typed to your manager class
+		private readonly Dictionary<RenderPassEvent, Action<RasterCommandBuffer, Camera>> commands = new();
 
-		public bool HasCommands(RenderPassEvent evt) => Provider?.HasCommands(evt) ?? false;
+		public void RegisterCommand(RenderPassEvent evt, Action<RasterCommandBuffer, Camera> command) => commands[evt] = command;
 
-		public void ExecuteCommands(RenderPassEvent evt, RasterCommandBuffer cmd, Camera camera)
-			=> Provider?.ExecuteCommands(evt, cmd, camera);
+		public bool HasCommands(RenderPassEvent evt) => commands.ContainsKey(evt) && commands[evt] != null;
+
+		public void ExecuteCommands(RenderPassEvent evt, RasterCommandBuffer commandBuffer, Camera camera)
+		{
+			if (commands.ContainsKey(evt) && commands[evt] != null)
+			{
+				try { commands[evt].Invoke(commandBuffer, camera); }
+				catch (Exception e) { Debug.LogError($"DirectCommandProvider: Error executing command for event {evt}, camera {camera.name}: {e.Message}"); }
+			}
+		}
+
+		void OnDestroy() => commands.Clear();
 	}
 }
