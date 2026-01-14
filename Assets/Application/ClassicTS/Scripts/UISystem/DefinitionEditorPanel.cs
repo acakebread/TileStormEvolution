@@ -187,14 +187,7 @@ namespace ClassicTilestorm
 			ColorUtility.TryParseHtmlString("#21B2E1", out Color hashColor);
 
 			// Create camera directly (no parent at first, or set it)
-			commandCamera = new CommandRenderCamera(
-				null,// find a suitable parent object, for now null / in sceneroot
-				previewRenderTexture,
-				hashColor,
-				defaultFOV,
-				"PreviewCamera"
-			);
-
+			commandCamera = new CommandRenderCamera("PreviewCamera", previewRenderTexture, hashColor, defaultFOV);//null,// find a suitable parent object, for now null / in sceneroot
 			commandScene = new CommandRenderScene();
 			commandCamera.AssignCommandProvider(commandScene);
 

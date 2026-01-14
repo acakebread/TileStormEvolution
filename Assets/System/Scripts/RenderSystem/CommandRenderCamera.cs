@@ -24,13 +24,13 @@ namespace MassiveHadronLtd
 		public RenderTexture targetTexture { get => Camera.targetTexture; set => Camera.targetTexture = value; }
 
 		public CommandRenderCamera(
-			Transform desiredParent,
+			string name,
 			RenderTexture targetRT,
 			Color background,
 			float fov = 60f,
-			string name = "CommandRenderCamera")
+			Transform desiredParent = null)
 		{
-			cameraGameObject = new GameObject(name);
+			cameraGameObject = new GameObject(name ?? "CommandRenderCamera");
 
 			Camera = cameraGameObject.AddComponent<Camera>();
 			Camera.enabled = false;
