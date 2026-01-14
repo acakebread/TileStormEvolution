@@ -4,112 +4,115 @@ using UnityEngine.Rendering.Universal;
 using UnityEngine.Rendering.RenderGraphModule;
 using System.Collections.Generic;
 
-public interface ICommandBufferProvider
+namespace MassiveHadronLtd
 {
-	bool HasCommands(RenderPassEvent evt);
-	void ExecuteCommands(RenderPassEvent evt, RasterCommandBuffer commandBuffer, Camera camera);
-}
-
-public class CommandBufferPass : ScriptableRenderPass
-{
-	private string passNameStr;
-
-	public CommandBufferPass(RenderPassEvent renderEvent)
+	public interface ICommandBufferProvider
 	{
-		passNameStr = $"CommandBufferPass_{renderEvent}";
-		renderPassEvent = renderEvent;
+		bool HasCommands(RenderPassEvent evt);
+		void ExecuteCommands(RenderPassEvent evt, RasterCommandBuffer commandBuffer, Camera camera);
 	}
 
-	public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameData)
+	public class CommandBufferPass : ScriptableRenderPass
 	{
-		UniversalResourceData resourceData = frameData.Get<UniversalResourceData>();
-		UniversalCameraData cameraData = frameData.Get<UniversalCameraData>();
+		private string passNameStr;
 
-		Camera cam = cameraData.camera;
-		ICommandBufferProvider provider = cam.GetComponent<ICommandBufferProvider>();
-
-		if (provider == null || !provider.HasCommands(renderPassEvent))
+		public CommandBufferPass(RenderPassEvent renderEvent)
 		{
-			Debug.Log($"Skipping CommandBufferPass for {cam.name} at {renderPassEvent}: No provider or commands");
-			return;
+			passNameStr = $"CommandBufferPass_{renderEvent}";
+			renderPassEvent = renderEvent;
 		}
 
-		using (var builder = renderGraph.AddRasterRenderPass<PassData>(passNameStr, out var passData))
+		public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameData)
 		{
-			passData.camera = cam;
-			passData.provider = provider;
+			UniversalResourceData resourceData = frameData.Get<UniversalResourceData>();
+			UniversalCameraData cameraData = frameData.Get<UniversalCameraData>();
 
-			var colorTarget = resourceData.cameraColor; // Use cameraColor consistently
-			var depthTarget = resourceData.cameraDepth;
+			Camera cam = cameraData.camera;
+			ICommandBufferProvider provider = cam.GetComponent<ICommandBufferProvider>();
 
-			if (!colorTarget.IsValid())
+			if (provider == null || !provider.HasCommands(renderPassEvent))
 			{
-				Debug.LogError($"{passNameStr}: Invalid color target for Camera={cam.name}");
-				return;
-			}
-			if (renderPassEvent != RenderPassEvent.BeforeRendering && !depthTarget.IsValid())
-			{
-				Debug.LogError($"{passNameStr}: Invalid depth target for Camera={cam.name}");
+				Debug.Log($"Skipping CommandBufferPass for {cam.name} at {renderPassEvent}: No provider or commands");
 				return;
 			}
 
-			builder.SetRenderAttachment(colorTarget, 0, AccessFlags.Write);
-			if (renderPassEvent != RenderPassEvent.BeforeRendering)
-				builder.SetRenderAttachmentDepth(depthTarget, AccessFlags.ReadWrite);
-			builder.AllowPassCulling(false);
-			builder.AllowGlobalStateModification(true);
-
-			builder.SetRenderFunc((PassData data, RasterGraphContext context) =>
+			using (var builder = renderGraph.AddRasterRenderPass<PassData>(passNameStr, out var passData))
 			{
-				//Debug.Log($"Executing CommandBufferPass for {data.camera.name} at {renderPassEvent}");
-				data.provider.ExecuteCommands(renderPassEvent, context.cmd, data.camera);
-			});
-		}
-	}
+				passData.camera = cam;
+				passData.provider = provider;
 
-	private class PassData
-	{
-		public ICommandBufferProvider provider;
-		public Camera camera;
-	}
-}
+				var colorTarget = resourceData.cameraColor; // Use cameraColor consistently
+				var depthTarget = resourceData.cameraDepth;
 
-[CreateAssetMenu(menuName = "Rendering/CommandBufferFeature")]
-public class CommandBufferFeature : ScriptableRendererFeature
-{
-	private Dictionary<RenderPassEvent, CommandBufferPass> renderPasses;
-
-	public override void Create()
-	{
-		renderPasses = new Dictionary<RenderPassEvent, CommandBufferPass>();
-	}
-
-	public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
-	{
-		var cam = renderingData.cameraData.camera;
-		var provider = cam.GetComponent<ICommandBufferProvider>();
-		if (provider == null)
-		{
-			//Debug.Log($"No ICommandBufferProvider found for {cam.name}");
-			return;
-		}
-
-		foreach (RenderPassEvent evt in System.Enum.GetValues(typeof(RenderPassEvent)))
-		{
-			if (provider.HasCommands(evt))
-			{
-				if (!renderPasses.ContainsKey(evt))
+				if (!colorTarget.IsValid())
 				{
-					renderPasses[evt] = new CommandBufferPass(evt);
+					Debug.LogError($"{passNameStr}: Invalid color target for Camera={cam.name}");
+					return;
 				}
-				renderer.EnqueuePass(renderPasses[evt]);
-				//Debug.Log($"Enqueued CommandBufferPass for {cam.name} at {evt}");
+				if (renderPassEvent != RenderPassEvent.BeforeRendering && !depthTarget.IsValid())
+				{
+					Debug.LogError($"{passNameStr}: Invalid depth target for Camera={cam.name}");
+					return;
+				}
+
+				builder.SetRenderAttachment(colorTarget, 0, AccessFlags.Write);
+				if (renderPassEvent != RenderPassEvent.BeforeRendering)
+					builder.SetRenderAttachmentDepth(depthTarget, AccessFlags.ReadWrite);
+				builder.AllowPassCulling(false);
+				builder.AllowGlobalStateModification(true);
+
+				builder.SetRenderFunc((PassData data, RasterGraphContext context) =>
+				{
+					//Debug.Log($"Executing CommandBufferPass for {data.camera.name} at {renderPassEvent}");
+					data.provider.ExecuteCommands(renderPassEvent, context.cmd, data.camera);
+				});
 			}
+		}
+
+		private class PassData
+		{
+			public ICommandBufferProvider provider;
+			public Camera camera;
 		}
 	}
 
-	protected override void Dispose(bool disposing)
+	[CreateAssetMenu(menuName = "Rendering/CommandBufferFeature")]
+	public class CommandBufferFeature : ScriptableRendererFeature
 	{
-		renderPasses.Clear();
+		private Dictionary<RenderPassEvent, CommandBufferPass> renderPasses;
+
+		public override void Create()
+		{
+			renderPasses = new Dictionary<RenderPassEvent, CommandBufferPass>();
+		}
+
+		public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
+		{
+			var cam = renderingData.cameraData.camera;
+			var provider = cam.GetComponent<ICommandBufferProvider>();
+			if (provider == null)
+			{
+				//Debug.Log($"No ICommandBufferProvider found for {cam.name}");
+				return;
+			}
+
+			foreach (RenderPassEvent evt in System.Enum.GetValues(typeof(RenderPassEvent)))
+			{
+				if (provider.HasCommands(evt))
+				{
+					if (!renderPasses.ContainsKey(evt))
+					{
+						renderPasses[evt] = new CommandBufferPass(evt);
+					}
+					renderer.EnqueuePass(renderPasses[evt]);
+					//Debug.Log($"Enqueued CommandBufferPass for {cam.name} at {evt}");
+				}
+			}
+		}
+
+		protected override void Dispose(bool disposing)
+		{
+			renderPasses.Clear();
+		}
 	}
 }
