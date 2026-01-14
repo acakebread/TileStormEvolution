@@ -12,14 +12,6 @@ namespace MassiveHadronLtd
 		void ExecuteCommands(RenderPassEvent evt, RasterCommandBuffer commandBuffer, Camera camera);
 	}
 
-	// NEW small interface so we don't touch your command system
-	public interface IDirectCameraProvider
-	{
-		Matrix4x4 GetViewMatrix();
-		Matrix4x4 GetProjectionMatrix();
-		bool UseCustomCamera();
-	}
-
 	public class DirectCommandBufferPass : ScriptableRenderPass
 	{
 		private string passNameStr;
@@ -83,8 +75,6 @@ namespace MassiveHadronLtd
 		public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
 		{
 			var cam = renderingData.cameraData.camera;
-			//var pos = cam.transform.position;
-			//cam.transform.position = Vector3.back;
 
 			var provider = cam.GetComponent<IDirectCommandProvider>();
 			if (provider == null)
@@ -100,8 +90,6 @@ namespace MassiveHadronLtd
 					renderer.EnqueuePass(renderPasses[evt]);
 				}
 			}
-
-			//cam.transform.position = pos;
 		}
 
 		protected override void Dispose(bool disposing)
