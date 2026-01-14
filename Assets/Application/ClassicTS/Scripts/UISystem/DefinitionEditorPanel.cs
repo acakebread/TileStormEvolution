@@ -186,15 +186,6 @@ namespace ClassicTilestorm
 
 			ColorUtility.TryParseHtmlString("#21B2E1", out Color hashColor);
 
-			previewRenderTexture = new RenderTexture(
-				(int)previewResolution.x,
-				(int)previewResolution.y,
-				24,
-				RenderTextureFormat.ARGB32);
-
-			previewRenderTexture.Create();
-			previewImage.texture = previewRenderTexture;
-
 			// Create camera directly (no parent at first, or set it)
 			commandCamera = new CommandRenderCamera(
 				null,// find a suitable parent object, for now null / in sceneroot
@@ -210,16 +201,19 @@ namespace ClassicTilestorm
 			CreateGroundPlane();
 
 			if (!previewImage.gameObject.TryGetComponent<PreviewCameraInput>(out _))
-				previewImage.gameObject.AddComponent<PreviewCameraInput>();
-
+				previewImage.gameObject.AddComponent<PreviewCameraInput>(); 
+			
 			lastPreviewSize = Vector2.zero;
+			HandleRenderTextureResize();
 		}
 
 		private void HandleRenderTextureResize()
 		{
-			if (!previewRect || !previewRenderTexture) return;
+			if (!previewRect) return;
 
 			Vector2 size = previewRect.rect.size;
+			if (size.x == 0 || size.y == 0) size = previewResolution;//default
+
 			if (size == lastPreviewSize || size.x < 16 || size.y < 16) return;
 
 			lastPreviewSize = size;
@@ -227,10 +221,12 @@ namespace ClassicTilestorm
 			int w = Mathf.RoundToInt(size.x);
 			int h = Mathf.RoundToInt(size.y);
 
-			if (previewRenderTexture.width == w && previewRenderTexture.height == h)
+			if (previewRenderTexture && previewRenderTexture.width == w && previewRenderTexture.height == h)
 				return;
 
-			previewRenderTexture.Release();
+			if (previewRenderTexture)
+				previewRenderTexture.Release();
+
 			previewRenderTexture = new RenderTexture(w, h, 24, RenderTextureFormat.ARGB32);
 			previewRenderTexture.Create();
 
