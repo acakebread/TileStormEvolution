@@ -4,7 +4,7 @@ using UnityEngine.Rendering.Universal;
 
 namespace MassiveHadronLtd
 {
-	public sealed class CommandRenderScene : MonoBehaviour, ICommandBufferProvider
+	public class CommandRenderScene : ICommandBufferProvider
 	{
 		private static readonly int MainLightPositionID = Shader.PropertyToID("_MainLightPosition");
 		private static readonly int MainLightColorID = Shader.PropertyToID("_MainLightColor");
@@ -56,6 +56,8 @@ namespace MassiveHadronLtd
 				}
 			}
 		}
+
+		public void Destroy() { }
 
 		//none of this is currently needed but I have a nagging feeling that we may want to let the scene know about the cameras at a future point so leave commented
 		//[SerializeField] private CommandRenderCamera renderCamera;

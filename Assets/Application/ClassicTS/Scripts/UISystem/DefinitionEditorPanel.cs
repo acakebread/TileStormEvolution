@@ -208,7 +208,8 @@ namespace ClassicTilestorm
 			var sceneGo = new GameObject("CommandRenderScene");
 			sceneGo.transform.SetParent(transform, false);
 
-			commandScene = sceneGo.AddComponent<CommandRenderScene>();
+			//commandScene = sceneGo.AddComponent<CommandRenderScene>();
+			commandScene = new CommandRenderScene();
 			commandCamera.AssignCommandProvider(commandScene);
 
 			CreateGroundPlane();
@@ -341,15 +342,9 @@ namespace ClassicTilestorm
 
 			commandCamera?.Destroy();
 			commandCamera = null;
-
-			if (commandScene != null)
-			{
-				Destroy(commandScene.gameObject);
-				commandScene = null;
-			}
-
+			commandScene?.Destroy();
 			commandScene = null;
-			commandCamera = null;
+
 			if (previewImage) previewImage.texture = null;
 		}
 

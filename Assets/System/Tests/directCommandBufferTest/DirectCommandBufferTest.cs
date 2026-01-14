@@ -18,8 +18,8 @@ namespace MassiveHadronLtd
 		[Header("Projection Camera (assign external Camera here)")]
 		public Camera projectionCamera;
 
-		[Header("Virtual Command Camera")]
-		public TestCommandCamera customCam = new();
+		//[Header("Virtual Command Camera")]
+		//public TestCommandCamera customCam = new();
 
 		private RenderTexture rt;
 		private Mesh quadMesh;
@@ -40,7 +40,7 @@ namespace MassiveHadronLtd
 
 			CreateQuadMesh();
 
-			customCam.RecalculateMatrices();
+			//customCam.RecalculateMatrices();
 
 			var provider = projectionCamera.gameObject.AddComponent<DirectCommandProvider>();
 			if (provider == null)
@@ -64,9 +64,12 @@ namespace MassiveHadronLtd
 
 		private void Update()
 		{
-			customCam.position = transform.position;
-			customCam.rotation = transform.rotation;
-			customCam.RecalculateMatrices();
+			//customCam.position = transform.position;
+			//customCam.rotation = transform.rotation;
+			//customCam.RecalculateMatrices();
+
+			projectionCamera.transform.position = transform.position;
+			projectionCamera.transform.rotation = transform.rotation;
 		}
 
 		private void LateUpdate()
@@ -127,8 +130,9 @@ namespace MassiveHadronLtd
 		private void DrawTestQuad(RasterCommandBuffer cmd)
 		{
 			if (!testMaterial) return;
-			Matrix4x4 objectMatrix = Matrix4x4.TRS(customCam.position, customCam.rotation, Vector3.one).inverse;
-			cmd.DrawMesh(quadMesh, objectMatrix, testMaterial, 0, 0);
+			//Matrix4x4 objectMatrix = Matrix4x4.TRS(customCam.position, customCam.rotation, Vector3.one).inverse;
+			//cmd.DrawMesh(quadMesh, objectMatrix, testMaterial, 0, 0);
+			cmd.DrawMesh(quadMesh, Matrix4x4.identity, testMaterial, 0, 0);
 		}
 
 		private void OnDestroy()
