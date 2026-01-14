@@ -43,7 +43,7 @@ namespace ClassicTilestorm
 		// ── Runtime ───────────────────────────────────────────────────────
 		private RenderTexture previewRenderTexture;
 		private CommandRenderScene commandScene;
-		private CommandRenderCamera commandCamera;      // ← Direct reference to the camera
+		private CommandRenderCamera commandCamera;
 
 		private string selectedDefinitionId;
 
@@ -197,18 +197,13 @@ namespace ClassicTilestorm
 
 			// Create camera directly (no parent at first, or set it)
 			commandCamera = new CommandRenderCamera(
-				transform,                      // parent under panel, or null / other object
+				null,// find a suitable parent object, for now null / in sceneroot
 				previewRenderTexture,
 				hashColor,
 				defaultFOV,
 				"PreviewCamera"
 			);
 
-			// Create scene and connect
-			var sceneGo = new GameObject("CommandRenderScene");
-			sceneGo.transform.SetParent(transform, false);
-
-			//commandScene = sceneGo.AddComponent<CommandRenderScene>();
 			commandScene = new CommandRenderScene();
 			commandCamera.AssignCommandProvider(commandScene);
 
