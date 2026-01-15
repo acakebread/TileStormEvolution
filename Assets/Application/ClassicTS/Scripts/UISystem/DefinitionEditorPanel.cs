@@ -130,6 +130,19 @@ namespace ClassicTilestorm
 			{
 				repeatTimer -= Time.deltaTime;
 			}
+
+			// Home / End - simple one-shot selection, no repeat
+			if (Input.GetKeyDown(KeyCode.Home))
+			{
+				if (spawnedToggles.Count > 0)
+					SelectByIndex(0);
+			}
+
+			if (Input.GetKeyDown(KeyCode.End))
+			{
+				if (spawnedToggles.Count > 0)
+					SelectByIndex(spawnedToggles.Count - 1);
+			}
 		}
 
 		private bool AnyKeyHeld()
