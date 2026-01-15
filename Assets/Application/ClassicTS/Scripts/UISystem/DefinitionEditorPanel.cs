@@ -52,6 +52,7 @@ namespace ClassicTilestorm
 		private float repeatTimer = 0f;
 		private const float INITIAL_DELAY = 0.3f;   // time before first repeat
 		private const float REPEAT_RATE = 0.04f;    // how fast it repeats (seconds)
+		private const int PAGE_STEP = 16;           // items per PageUp/PageDown jump
 
 		private Definition CurrentDefinition =>
 			string.IsNullOrEmpty(selectedDefinitionId) ? null :
@@ -116,30 +117,47 @@ namespace ClassicTilestorm
 			orbitController.Update();
 			previewCtrl.UpdateAndRender();
 
-			// Arrow key navigation with auto-repeat
-			HandleArrowNavigation(KeyCode.UpArrow, KeyCode.LeftArrow, -1);
-			HandleArrowNavigation(KeyCode.DownArrow, KeyCode.RightArrow, +1);
-			repeatTimer -= Time.deltaTime;
+			// Arrow keys: single step with repeat
+			HandleRepeatable(KeyCode.UpArrow, KeyCode.LeftArrow, -1);
+			HandleRepeatable(KeyCode.DownArrow, KeyCode.RightArrow, +1);
 
-			void HandleArrowNavigation(KeyCode primaryKey, KeyCode secondaryKey, int direction)
+			// Page keys: jump 16 with repeat
+			HandleRepeatable(KeyCode.PageUp, default, -PAGE_STEP);
+			HandleRepeatable(KeyCode.PageDown, default, +PAGE_STEP);
+
+			// Timer decrement happens only once per frame
+			if (AnyKeyHeld())
 			{
-				// First press: immediate action
-				if (Input.GetKeyDown(primaryKey) || Input.GetKeyDown(secondaryKey))
-				{
-					ChangeSelection(direction);
-					repeatTimer = INITIAL_DELAY;
-					return;
-				}
+				repeatTimer -= Time.deltaTime;
+			}
+		}
 
-				// Holding: auto-repeat after initial delay
-				if (Input.GetKey(primaryKey) || Input.GetKey(secondaryKey))
-				{
-					if (repeatTimer <= 0f)
-					{
-						ChangeSelection(direction);
-						repeatTimer = REPEAT_RATE;
-					}
-				}
+		private bool AnyKeyHeld()
+		{
+			return Input.GetKey(KeyCode.UpArrow) || Input.GetKey(KeyCode.DownArrow) ||
+				   Input.GetKey(KeyCode.LeftArrow) || Input.GetKey(KeyCode.RightArrow) ||
+				   Input.GetKey(KeyCode.PageUp) || Input.GetKey(KeyCode.PageDown);
+		}
+
+		private void HandleRepeatable(KeyCode primary, KeyCode secondary, int direction)
+		{
+			bool down = Input.GetKeyDown(primary) || (secondary != default && Input.GetKeyDown(secondary));
+			bool held = Input.GetKey(primary) || (secondary != default && Input.GetKey(secondary));
+
+			if (!held)
+				return;
+
+			if (down)
+			{
+				ChangeSelection(direction);
+				repeatTimer = INITIAL_DELAY;
+				return;
+			}
+
+			if (repeatTimer <= 0f)
+			{
+				ChangeSelection(direction);
+				repeatTimer = REPEAT_RATE;
 			}
 		}
 
@@ -150,9 +168,17 @@ namespace ClassicTilestorm
 			int current = GetSelectedIndex();
 			int next = current + direction;
 
-			// Wrap around
-			if (next < 0) next = spawnedToggles.Count - 1;
-			if (next >= spawnedToggles.Count) next = 0;
+			// Arrows: wrap around
+			if (Mathf.Abs(direction) == 1)
+			{
+				if (next < 0) next = spawnedToggles.Count - 1;
+				if (next >= spawnedToggles.Count) next = 0;
+			}
+			// Page keys: clamp to bounds (no wrap)
+			else
+			{
+				next = Mathf.Clamp(next, 0, spawnedToggles.Count - 1);
+			}
 
 			SelectByIndex(next);
 		}
@@ -168,7 +194,7 @@ namespace ClassicTilestorm
 				CreateDefinitionListItem(def);
 
 			string id = selectedDefinitionId ?? ResourceManager.Definitions[0].id;
-			SetToggleById(id);  // This triggers selection via event
+			SetToggleById(id);
 		}
 
 		private void ClearListItems()
@@ -210,7 +236,7 @@ namespace ClassicTilestorm
 				var label = t.GetComponentInChildren<TMPro.TMP_Text>();
 				if (label != null && label.text.StartsWith(defId))
 				{
-					t.isOn = true;           // ← Triggers the onValueChanged → SelectDefinition
+					t.isOn = true;
 					ScrollToToggle(t);
 					return;
 				}
@@ -224,7 +250,7 @@ namespace ClassicTilestorm
 			SyncAllFlags();
 		}
 
-		// ───────────── ARROW KEY NAVIGATION ─────────────
+		// ───────────── HELPERS ─────────────
 
 		private int GetSelectedIndex()
 		{
@@ -238,7 +264,7 @@ namespace ClassicTilestorm
 		{
 			if (index < 0 || index >= spawnedToggles.Count) return;
 			var toggle = spawnedToggles[index];
-			toggle.isOn = true;                     // ← Same as mouse click — triggers everything
+			toggle.isOn = true;
 			ScrollToToggle(toggle);
 		}
 
@@ -249,7 +275,7 @@ namespace ClassicTilestorm
 			var rt = toggle.GetComponent<RectTransform>();
 			if (rt == null) return;
 
-			Canvas.ForceUpdateCanvases(); // Important for correct positions after layout
+			Canvas.ForceUpdateCanvases();
 
 			var viewport = definitionScrollView.viewport;
 			var content = contentParent as RectTransform;
