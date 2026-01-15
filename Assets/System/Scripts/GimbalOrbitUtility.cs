@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 using System;
-
+using System.Collections.Generic;
 namespace MassiveHadronLtd
 {
 	public class GimbalOrbitController
@@ -9,7 +9,6 @@ namespace MassiveHadronLtd
 		public float DragOrbitSensitivity { get; }
 		public float DragTiltSensitivity { get; }
 		public float ScrollZoomSensitivity { get; }
-
 		public float MinTiltAngle { get; }
 		public float MaxTiltAngle { get; }
 		public float MinDistance { get; }
@@ -22,6 +21,16 @@ namespace MassiveHadronLtd
 		public float AutoRotateSpeed { get; set; } = 15f;
 		public float AutoRotateTimeout { get; set; } = 3f;
 
+		// Inertia (disabled by default)
+		public bool EnableInertia { get; set; } = false;
+		public float InertiaDecay { get; set; } = 7f;              // 8–16 range, higher = quicker stop
+		public float InertiaMultiplier { get; set; } = 0.125f;       // Higher for noticeable coast
+
+		// Velocity history (average last few deltas on release for linear feel)
+		private readonly Queue<Vector2> velocityHistory = new Queue<Vector2>();
+		private const int VelocityHistoryLength = 5;  // last 5 frames
+		private Vector2 frameVel;
+
 		// State
 		public float CurrentOrbitAngle { get; private set; }
 		public float CurrentTiltAngle { get; private set; }
@@ -29,6 +38,9 @@ namespace MassiveHadronLtd
 
 		private Bounds currentModelBounds = new Bounds(Vector3.zero, Vector3.one * 2f);
 		private float lastInputTime = -999f;
+
+		// Inertia
+		private Vector2 currentVelocity;
 
 		public event Action OnTransformChanged;
 
@@ -41,7 +53,8 @@ namespace MassiveHadronLtd
 			float minDist = 0.8f,
 			float maxDist = 10f,
 			float sizeToDistFactor = 1f,
-			float defaultTilt = 30f)
+			float defaultTilt = 30f,
+			bool enableInertia = false)
 		{
 			DragOrbitSensitivity = dragOrbitSens;
 			DragTiltSensitivity = dragTiltSens;
@@ -52,13 +65,9 @@ namespace MassiveHadronLtd
 			MaxDistance = maxDist;
 			SizeToDistanceFactor = sizeToDistFactor;
 			DefaultTiltAngle = defaultTilt;
-
-			// No reset here - lazy init
+			EnableInertia = enableInertia;
 		}
 
-		/// <summary>
-		/// Unified reset: call with hasModel = false for no model, true for valid model + bounds
-		/// </summary>
 		public void ResetView(bool hasModel, Bounds modelBounds = default)
 		{
 			CurrentOrbitAngle = 0f;
@@ -76,18 +85,23 @@ namespace MassiveHadronLtd
 				CurrentDistance = 5f;
 			}
 
-			// Delay auto-rotate by 1 second after any reset
+			currentVelocity = Vector2.zero;
+			velocityHistory.Clear();
+
 			lastInputTime = Time.unscaledTime - AutoRotateTimeout + 1f;
 
-			// Fire event (now safe since subscription happens before first call)
 			OnTransformChanged?.Invoke();
 		}
 
 		public void ProcessDrag(Vector2 delta)
 		{
+			// Direct 1:1 during drag
 			CurrentOrbitAngle += delta.x * DragOrbitSensitivity;
 			CurrentTiltAngle -= delta.y * DragTiltSensitivity;
 			CurrentTiltAngle = Mathf.Clamp(CurrentTiltAngle, MinTiltAngle, MaxTiltAngle);
+
+			if (EnableInertia)
+				frameVel = new Vector2(delta.x * InertiaMultiplier, -delta.y * InertiaMultiplier);// Accumulate per-frame delta for release
 
 			lastInputTime = Time.unscaledTime;
 			OnTransformChanged?.Invoke();
@@ -104,18 +118,65 @@ namespace MassiveHadronLtd
 			OnTransformChanged?.Invoke();
 		}
 
+		public void EndDrag()
+		{
+			// On release: average the accumulated deltas for smooth velocity
+			if (EnableInertia && velocityHistory.Count > 0)
+			{
+				Vector2 avgVel = Vector2.zero;
+				foreach (var v in velocityHistory)
+					avgVel += v;
+
+				currentVelocity = avgVel / velocityHistory.Count;
+				velocityHistory.Clear();
+			}
+		}
+
 		public void Update()
 		{
-			if (AutoRotateSpeed == 0f || AutoRotateTimeout <= 0f)
-				return;
+			bool transformChanged = false;
 
-			if (Time.unscaledTime - lastInputTime > AutoRotateTimeout)
+			// Inertia only after release (EndDrag has been called)
+			if (EnableInertia)
 			{
-				if (Vector3.Dot(AutoRotateAxis.normalized, Vector3.up) > 0.99f)
+				// Accumulate per-frame delta for release
+				velocityHistory.Enqueue(frameVel);
+				frameVel = Vector3.zero;
+
+				// Keep only last few frames
+				if (velocityHistory.Count > VelocityHistoryLength)
+					velocityHistory.Dequeue();
+
+
+				float decay = Mathf.Exp(-InertiaDecay * Time.deltaTime);
+				currentVelocity *= decay;
+
+				if (currentVelocity.sqrMagnitude > 0.0001f)
 				{
-					CurrentOrbitAngle += AutoRotateSpeed * Time.deltaTime;
-					OnTransformChanged?.Invoke();
+					CurrentOrbitAngle += currentVelocity.x;
+					CurrentTiltAngle += currentVelocity.y;
+					CurrentTiltAngle = Mathf.Clamp(CurrentTiltAngle, MinTiltAngle, MaxTiltAngle);
+
+					transformChanged = true;
 				}
+			}
+
+			// Auto-rotate
+			if (AutoRotateSpeed != 0f && AutoRotateTimeout > 0f)
+			{
+				if (Time.unscaledTime - lastInputTime > AutoRotateTimeout)
+				{
+					if (Vector3.Dot(AutoRotateAxis.normalized, Vector3.up) > 0.99f)
+					{
+						CurrentOrbitAngle += AutoRotateSpeed * Time.deltaTime;
+						transformChanged = true;
+					}
+				}
+			}
+
+			if (transformChanged)
+			{
+				OnTransformChanged?.Invoke();
 			}
 		}
 
