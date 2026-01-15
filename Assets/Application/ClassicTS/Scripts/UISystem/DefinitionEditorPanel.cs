@@ -49,6 +49,10 @@ namespace ClassicTilestorm
 		private CommandRenderModelData currentModelData;
 		private GimbalOrbitController orbitController;
 
+		private float repeatTimer = 0f;
+		private const float INITIAL_DELAY = 0.3f;   // time before first repeat
+		private const float REPEAT_RATE = 0.04f;    // how fast it repeats (seconds)
+
 		private Definition CurrentDefinition =>
 			string.IsNullOrEmpty(selectedDefinitionId) ? null :
 			ResourceManager.GetDefinition(selectedDefinitionId);
@@ -108,8 +112,49 @@ namespace ClassicTilestorm
 		private void Update()
 		{
 			if (previewCtrl == null) return;
+
 			orbitController.Update();
 			previewCtrl.UpdateAndRender();
+
+			// Arrow key navigation with auto-repeat
+			HandleArrowNavigation(KeyCode.UpArrow, KeyCode.LeftArrow, -1);
+			HandleArrowNavigation(KeyCode.DownArrow, KeyCode.RightArrow, +1);
+			repeatTimer -= Time.deltaTime;
+
+			void HandleArrowNavigation(KeyCode primaryKey, KeyCode secondaryKey, int direction)
+			{
+				// First press: immediate action
+				if (Input.GetKeyDown(primaryKey) || Input.GetKeyDown(secondaryKey))
+				{
+					ChangeSelection(direction);
+					repeatTimer = INITIAL_DELAY;
+					return;
+				}
+
+				// Holding: auto-repeat after initial delay
+				if (Input.GetKey(primaryKey) || Input.GetKey(secondaryKey))
+				{
+					if (repeatTimer <= 0f)
+					{
+						ChangeSelection(direction);
+						repeatTimer = REPEAT_RATE;
+					}
+				}
+			}
+		}
+
+		private void ChangeSelection(int direction)
+		{
+			if (spawnedToggles.Count == 0) return;
+
+			int current = GetSelectedIndex();
+			int next = current + direction;
+
+			// Wrap around
+			if (next < 0) next = spawnedToggles.Count - 1;
+			if (next >= spawnedToggles.Count) next = 0;
+
+			SelectByIndex(next);
 		}
 
 		// ───────────────────── LIST MANAGEMENT ─────────────────────
@@ -123,7 +168,7 @@ namespace ClassicTilestorm
 				CreateDefinitionListItem(def);
 
 			string id = selectedDefinitionId ?? ResourceManager.Definitions[0].id;
-			SetToggleById(id);  // This will trigger selection via event
+			SetToggleById(id);  // This triggers selection via event
 		}
 
 		private void ClearListItems()
@@ -165,7 +210,8 @@ namespace ClassicTilestorm
 				var label = t.GetComponentInChildren<TMPro.TMP_Text>();
 				if (label != null && label.text.StartsWith(defId))
 				{
-					t.isOn = true;           // ← IMPORTANT: keep this to trigger selection!
+					t.isOn = true;           // ← Triggers the onValueChanged → SelectDefinition
+					ScrollToToggle(t);
 					return;
 				}
 			}
@@ -176,6 +222,47 @@ namespace ClassicTilestorm
 			selectedDefinitionId = defId;
 			UpdatePreview(defId);
 			SyncAllFlags();
+		}
+
+		// ───────────── ARROW KEY NAVIGATION ─────────────
+
+		private int GetSelectedIndex()
+		{
+			for (int i = 0; i < spawnedToggles.Count; i++)
+				if (spawnedToggles[i].isOn)
+					return i;
+			return 0;
+		}
+
+		private void SelectByIndex(int index)
+		{
+			if (index < 0 || index >= spawnedToggles.Count) return;
+			var toggle = spawnedToggles[index];
+			toggle.isOn = true;                     // ← Same as mouse click — triggers everything
+			ScrollToToggle(toggle);
+		}
+
+		private void ScrollToToggle(Toggle toggle)
+		{
+			if (definitionScrollView == null || toggle == null) return;
+
+			var rt = toggle.GetComponent<RectTransform>();
+			if (rt == null) return;
+
+			Canvas.ForceUpdateCanvases(); // Important for correct positions after layout
+
+			var viewport = definitionScrollView.viewport;
+			var content = contentParent as RectTransform;
+
+			Vector2 localPoint = content.InverseTransformPoint(rt.position);
+			float targetY = -localPoint.y - (rt.rect.height / 2f);
+
+			float viewportHeight = viewport.rect.height;
+			float contentHeight = content.rect.height;
+
+			float normalized = Mathf.Clamp01((targetY - viewportHeight / 2f) / (contentHeight - viewportHeight));
+
+			definitionScrollView.verticalNormalizedPosition = 1f - normalized;
 		}
 
 		// ───────────── PREVIEW ─────────────
@@ -251,7 +338,7 @@ namespace ClassicTilestorm
 				orbitController.OnTransformChanged -= ApplyCameraTransform;
 		}
 
-		// ───────────── CLEAN FLAG SETTERS ─────────────
+		// ───────────── FLAG SETTERS ─────────────
 
 		private void SetDrag(bool value, bool fromUser)
 		{
@@ -263,11 +350,7 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			if (def.bDrag != value)
-			{
-				def.bDrag = value;
-				// fromUser side-effects can go here later
-			}
+			if (def.bDrag != value) def.bDrag = value;
 
 			if (toggleDrag != null)
 			{
