@@ -152,13 +152,6 @@ namespace ClassicTilestorm
 			toggle.group = toggleGroup;
 			spawnedToggles.Add(toggle);
 
-			// Make sure the background Image is wired as Target Graphic
-			if (!toggle.targetGraphic)
-			{
-				var img = go.GetComponent<Image>();
-				if (img) toggle.targetGraphic = img;
-			}
-
 			var label = go.GetComponentInChildren<TMPro.TMP_Text>();
 			if (label)
 				label.text = $"{def.id} ({def.model ?? "—"})";
