@@ -83,3 +83,5 @@ MonoBehaviour:
     replacement: med_tile_se_boundary_corner_hd
   - legacyName: med_tile_sw_boundary_corner
     replacement: med_tile_sw_boundary_corner_hd
+  - legacyName: med_tile_nsew
+    replacement: med_nsew_hd

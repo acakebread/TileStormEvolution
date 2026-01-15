@@ -41,19 +41,23 @@ namespace ClassicTilestorm
 		[SerializeField] private Texture2D groundOverrideTexture;
 
 		// ── Runtime ───────────────────────────────────────────────────────
-		private RenderTexture previewRenderTexture;
-		private CommandRenderScene commandScene;
-		private CommandRenderCamera commandCamera;
-
-		private string selectedDefinitionId;
-
 		private readonly List<GameObject> spawnedListItems = new();
+		private string selectedDefinitionId;
+		private CommandRenderModelData currentModelData;
 
+		private CommandRenderModelData groundModelData;
 		private Mesh groundMesh;
 		private Material groundMat;
 		private Texture2D groundTex;
-		private CommandRenderModelData currentModelData;
-		private CommandRenderModelData groundModelData;
+
+		// RT resize tracking
+		private RectTransform previewRect;
+		private RenderTexture previewRenderTexture;
+		private Vector2 lastPreviewSize;
+
+		// scene
+		private CommandRenderScene commandScene;
+		private CommandRenderCamera commandCamera;
 
 		// Camera control
 		private Vector3 gimbalPosition;
@@ -63,10 +67,6 @@ namespace ClassicTilestorm
 
 		private float lastInputTime = -999f;
 		private const float AutoRotateDelay = 3f;
-
-		// RT resize tracking
-		private RectTransform previewRect;
-		private Vector2 lastPreviewSize;
 
 		protected override void Awake()
 		{
@@ -245,11 +245,7 @@ namespace ClassicTilestorm
 			groundMat.SetFloat("_Surface", 0f);
 			groundMat.SetTexture("_BaseMap", groundTex);
 			groundMat.SetColor("_BaseColor", groundColor);
-
-			groundModelData = new CommandRenderModelData(
-				groundMesh,
-				new Material[] { groundMat },
-				Matrix4x4.Translate(Vector3.up * groundY));
+			groundModelData = new CommandRenderModelData(groundMesh, new Material[] { groundMat }, Matrix4x4.Translate(Vector3.up * groundY));
 		}
 
 		private void UpdatePreview(string defId)
