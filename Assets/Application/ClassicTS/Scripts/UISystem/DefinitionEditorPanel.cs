@@ -14,8 +14,12 @@ namespace ClassicTilestorm
 		[SerializeField] private GameObject definitionListItemPrefab;
 		[SerializeField] private RawImage previewImage;
 
+		[SerializeField] private Toggle toggleDrag;
+		[SerializeField] private Toggle toggleRoll;
+		[SerializeField] private Toggle toggleDock;
+
 		[Header("Preview Settings")]
-		[SerializeField] private Color backgroundColor = new Color(0.129f, 0.698f, 0.882f); // #21B2E1
+		[SerializeField] private Color backgroundColor = new Color(0.129f, 0.698f, 0.882f);
 		[SerializeField] private float fieldOfView = 60f;
 		[SerializeField] private float sizeToDistanceFactor = 1f;
 		[SerializeField] private float defaultTiltAngle = 30f;
@@ -34,7 +38,7 @@ namespace ClassicTilestorm
 		[SerializeField] private float groundSize = 2.5f;
 		[SerializeField] private float groundY = -0.02f;
 		[SerializeField] private float groundUVScale = 1f;
-		[SerializeField] private Texture2D groundOverrideTexture; // optional
+		[SerializeField] private Texture2D groundOverrideTexture;
 
 		// ── Runtime ────────────────────────────────────────────────
 		private readonly List<Toggle> spawnedToggles = new();
@@ -44,6 +48,10 @@ namespace ClassicTilestorm
 		private PreviewSceneController previewCtrl;
 		private CommandRenderModelData currentModelData;
 		private GimbalOrbitController orbitController;
+
+		private Definition CurrentDefinition =>
+			string.IsNullOrEmpty(selectedDefinitionId) ? null :
+			ResourceManager.GetDefinition(selectedDefinitionId);
 
 		// ────────────────────────────────────────────────
 
@@ -76,6 +84,11 @@ namespace ClassicTilestorm
 			orbitController.AutoRotateSpeed = autoRotateSpeed;
 			orbitController.AutoRotateTimeout = 3f;
 			orbitController.EnableInertia = true;
+
+			// Hook up property toggles
+			if (toggleDrag) toggleDrag.onValueChanged.AddListener(v => SetDrag(v, true));
+			if (toggleRoll) toggleRoll.onValueChanged.AddListener(v => SetRoll(v, true));
+			if (toggleDock) toggleDock.onValueChanged.AddListener(v => SetDock(v, true));
 		}
 
 		protected override void OnEnable()
@@ -95,7 +108,6 @@ namespace ClassicTilestorm
 		private void Update()
 		{
 			if (previewCtrl == null) return;
-
 			orbitController.Update();
 			previewCtrl.UpdateAndRender();
 		}
@@ -111,14 +123,13 @@ namespace ClassicTilestorm
 				CreateDefinitionListItem(def);
 
 			string id = selectedDefinitionId ?? ResourceManager.Definitions[0].id;
-			SetToggleById(id);
+			SetToggleById(id);  // This will trigger selection via event
 		}
 
 		private void ClearListItems()
 		{
 			foreach (var t in spawnedToggles)
 				if (t) Destroy(t.gameObject);
-
 			spawnedToggles.Clear();
 		}
 
@@ -154,7 +165,7 @@ namespace ClassicTilestorm
 				var label = t.GetComponentInChildren<TMPro.TMP_Text>();
 				if (label != null && label.text.StartsWith(defId))
 				{
-					t.isOn = true;
+					t.isOn = true;           // ← IMPORTANT: keep this to trigger selection!
 					return;
 				}
 			}
@@ -164,9 +175,10 @@ namespace ClassicTilestorm
 		{
 			selectedDefinitionId = defId;
 			UpdatePreview(defId);
+			SyncAllFlags();
 		}
 
-		// ───────────── PREVIEW INITIALIZATION ─────────────
+		// ───────────── PREVIEW ─────────────
 
 		private void InitializePreview()
 		{
@@ -186,7 +198,6 @@ namespace ClassicTilestorm
 			};
 
 			SetupPreviewInput();
-
 			orbitController.OnTransformChanged += ApplyCameraTransform;
 		}
 
@@ -202,34 +213,30 @@ namespace ClassicTilestorm
 			);
 		}
 
-		// ───────────── PREVIEW UPDATE & CONTROL ─────────────
-
 		private void UpdatePreview(string defId)
 		{
 			currentModelData = null;
-			previewCtrl.ClearModel();  // Always start clean
+			previewCtrl.ClearModel();
 
 			var def = ResourceManager.GetDefinition(defId);
 			if (def != null && !string.IsNullOrEmpty(def.model))
 			{
 				currentModelData = RenderModelFactory.Create(def, Vector3.zero, Quaternion.identity, Vector3.one);
 				previewCtrl.SetModel(currentModelData);
-
-				orbitController.ResetView(hasModel: true, currentModelData.bounds);
+				orbitController.ResetView(true, currentModelData.bounds);
 			}
 			else
 			{
-				orbitController.ResetView(hasModel: false);
+				orbitController.ResetView(false);
 			}
 		}
 
 		private void ApplyCameraTransform()
 		{
 			if (previewCtrl?.Camera == null) return;
-
-			var (position, rotation) = orbitController.GetCameraTransform();
-			previewCtrl.Camera.position = position;
-			previewCtrl.Camera.rotation = rotation;
+			var (pos, rot) = orbitController.GetCameraTransform();
+			previewCtrl.Camera.position = pos;
+			previewCtrl.Camera.rotation = rot;
 		}
 
 		private void CleanupPreview()
@@ -239,11 +246,80 @@ namespace ClassicTilestorm
 				previewCtrl.Dispose();
 				previewCtrl = null;
 			}
-
 			currentModelData = null;
-
 			if (orbitController != null)
 				orbitController.OnTransformChanged -= ApplyCameraTransform;
+		}
+
+		// ───────────── CLEAN FLAG SETTERS ─────────────
+
+		private void SetDrag(bool value, bool fromUser)
+		{
+			var def = CurrentDefinition;
+			if (def == null)
+			{
+				toggleDrag?.SetIsOnWithoutNotify(false);
+				if (toggleDrag) toggleDrag.interactable = false;
+				return;
+			}
+
+			if (def.bDrag != value)
+			{
+				def.bDrag = value;
+				// fromUser side-effects can go here later
+			}
+
+			if (toggleDrag != null)
+			{
+				toggleDrag.SetIsOnWithoutNotify(def.bDrag);
+				toggleDrag.interactable = true;
+			}
+		}
+
+		private void SetRoll(bool value, bool fromUser)
+		{
+			var def = CurrentDefinition;
+			if (def == null)
+			{
+				toggleRoll?.SetIsOnWithoutNotify(false);
+				if (toggleRoll) toggleRoll.interactable = false;
+				return;
+			}
+
+			if (def.bRoll != value) def.bRoll = value;
+
+			if (toggleRoll != null)
+			{
+				toggleRoll.SetIsOnWithoutNotify(def.bRoll);
+				toggleRoll.interactable = true;
+			}
+		}
+
+		private void SetDock(bool value, bool fromUser)
+		{
+			var def = CurrentDefinition;
+			if (def == null)
+			{
+				toggleDock?.SetIsOnWithoutNotify(false);
+				if (toggleDock) toggleDock.interactable = false;
+				return;
+			}
+
+			if (def.bDock != value) def.bDock = value;
+
+			if (toggleDock != null)
+			{
+				toggleDock.SetIsOnWithoutNotify(def.bDock);
+				toggleDock.interactable = true;
+			}
+		}
+
+		private void SyncAllFlags()
+		{
+			var def = CurrentDefinition;
+			SetDrag(def?.bDrag ?? false, false);
+			SetRoll(def?.bRoll ?? false, false);
+			SetDock(def?.bDock ?? false, false);
 		}
 	}
 }

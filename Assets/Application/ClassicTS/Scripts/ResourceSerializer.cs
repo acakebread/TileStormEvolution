@@ -6,6 +6,7 @@ using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 using System.Reflection;
 using System;
+using UnityEditor;
 
 namespace ClassicTilestorm
 {
@@ -57,18 +58,41 @@ namespace ClassicTilestorm
 	{
 		private static void EnsureFolder(string path) { if (!Directory.Exists(path)) Directory.CreateDirectory(path); }//helper
 
-		public static void Initialise(TextAsset json)
+		private static string lastLoadedJsonHash = null;
+
+		public static void Initialise(TextAsset jsonAsset)
 		{
-			if (json == null)
+#if UNITY_EDITOR
+			if (jsonAsset != null)
 			{
-				Debug.LogError("ResourceManager: invalid DatabaseJsonFile");
+				string path = AssetDatabase.GetAssetPath(jsonAsset);
+				if (!string.IsNullOrEmpty(path))
+				{
+					AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+					AssetDatabase.Refresh();
+				}
+			}
+#endif
+
+			if (jsonAsset == null) return;
+
+			string currentHash = jsonAsset.text.GetHashCode().ToString(); // cheap hash
+
+			if (ResourceManager.database != null && currentHash == lastLoadedJsonHash)
+			{
+				Debug.Log("Database content didn't change → keeping current in-memory version");
 				return;
 			}
+
 			JsonSetup.Init();
-			ResourceManager.database = LoadDatabase(json.text);
-			Debug.Log("Database loaded from DatabaseJsonFile");
+			ResourceManager.database = null;           // important
+			ResourceManager.database = LoadDatabase(jsonAsset.text);
+
+			lastLoadedJsonHash = currentHash;
+
+			Debug.Log("Database loaded (or refreshed)");
 		}
-		
+
 		public static DatabaseData LoadDatabase(string json)
 		{
 			if (string.IsNullOrEmpty(json)) return null;
