@@ -634,6 +634,7 @@ MonoBehaviour:
   panelPrefabs:
   - {fileID: 4695226594433876902, guid: 81d0ade3e8f8df14fbbd2500e09a8d95, type: 3}
   - {fileID: 4695226594433876902, guid: d164df16686cd7b47b4dd970ba3f74bf, type: 3}
+  - {fileID: 4695226594433876902, guid: 13c21ca6cd78bfb459cc9a0428dac147, type: 3}
 --- !u!1 &1146321623
 GameObject:
   m_ObjectHideFlags: 0

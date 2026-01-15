@@ -185,6 +185,8 @@ namespace ClassicTilestorm
 		// ── Lifecycle / overrides ──────────────────────────────
 		protected virtual void Awake() { }
 
+		protected virtual void OnEnable() { }
+
 		protected virtual void OnDisable()
 		{
 			var controller = UIController.Instance;

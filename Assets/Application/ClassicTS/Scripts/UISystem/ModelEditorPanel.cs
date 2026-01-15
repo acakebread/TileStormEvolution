@@ -5,7 +5,7 @@ using MassiveHadronLtd;
 
 namespace ClassicTilestorm
 {
-	public class DefinitionEditorPanel : UIPanel
+	public class ModelEditorPanel : UIPanel
 	{
 		[Header("UI References")]
 		[SerializeField] private Button closeButton;
@@ -63,24 +63,22 @@ namespace ClassicTilestorm
 			if (!contentParent && definitionScrollView)
 				contentParent = definitionScrollView.content;
 
-			toggleGroup = contentParent.GetComponent<ToggleGroup>()
-				?? contentParent.gameObject.AddComponent<ToggleGroup>();
-
+			toggleGroup = contentParent.GetComponent<ToggleGroup>() ?? contentParent.gameObject.AddComponent<ToggleGroup>();
 			toggleGroup.allowSwitchOff = false;
 		}
 
-		public override void OnPanelOpened()
+		protected override void OnEnable()
 		{
-			base.OnPanelOpened();
+			base.OnEnable();
 			InitializePreview();
 			RefreshDefinitionList();
 		}
 
-		public override void OnPanelClosed()
+		protected override void OnDisable()
 		{
 			CleanupPreview();
 			ClearListItems();
-			base.OnPanelClosed();
+			base.OnDisable();
 		}
 
 		private void Update()
@@ -89,14 +87,14 @@ namespace ClassicTilestorm
 
 			previewCtrl.UpdateRenderTextureSizeIfNeeded();
 
-			// Auto-rotate when idle
+			// Auto-rotate
 			if (autoRotateSpeed > 0.01f && Time.unscaledTime - lastInputTime > AutoRotateDelay)
 			{
 				currentOrbitAngle -= autoRotateSpeed * Time.deltaTime;
 				UpdateCameraTransform();
 			}
 
-			// Explicit render – required because camera is disabled
+			// Very important: we must call Render explicitly
 			previewCtrl.Camera?.Render();
 		}
 
@@ -163,7 +161,7 @@ namespace ClassicTilestorm
 		private void SelectDefinition(string defId)
 		{
 			selectedDefinitionId = defId;
-			lastInputTime = -999f;
+			lastInputTime = -999f; // reset auto-rotate timer
 			UpdatePreview(defId);
 		}
 
@@ -173,9 +171,7 @@ namespace ClassicTilestorm
 		{
 			if (previewImage == null) return;
 
-			previewCtrl = new PreviewSceneController(
-				previewImage,
-				previewImage.GetComponent<RectTransform>())
+			previewCtrl = new PreviewSceneController(previewImage, previewImage.GetComponent<RectTransform>())
 			{
 				BackgroundColor = backgroundColor,
 				FieldOfView = fieldOfView,
@@ -183,9 +179,11 @@ namespace ClassicTilestorm
 				GroundSize = groundSize,
 				GroundY = groundY,
 				GroundUVScale = groundUVScale,
-				GroundOverrideTexture = groundOverrideTexture
+				GroundOverrideTexture = groundOverrideTexture,
+				// DefaultResolution = ... if you want to override it too
 			};
 
+			// Setup input callbacks
 			SetupPreviewInput();
 		}
 
@@ -200,7 +198,7 @@ namespace ClassicTilestorm
 				onDown: () => lastInputTime = Time.unscaledTime,
 				onDrag: DragPreviewCamera,
 				onScroll: ZoomPreviewCamera
-			// onUp: () => { /* optional */ }
+				//onUp:    () => { /* optional */ }
 			);
 		}
 
