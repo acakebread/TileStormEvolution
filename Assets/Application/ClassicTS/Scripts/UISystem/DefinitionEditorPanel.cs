@@ -75,6 +75,7 @@ namespace ClassicTilestorm
 
 			orbitController.AutoRotateSpeed = autoRotateSpeed;
 			orbitController.AutoRotateTimeout = 3f;
+			orbitController.EnableInertia = true;
 		}
 
 		protected override void OnEnable()
@@ -196,7 +197,8 @@ namespace ClassicTilestorm
 
 			handler.Setup(
 				onDrag: orbitController.ProcessDrag,
-				onScroll: orbitController.ProcessScroll
+				onScroll: orbitController.ProcessScroll,
+				onUp: orbitController.EndDrag
 			);
 		}
 
