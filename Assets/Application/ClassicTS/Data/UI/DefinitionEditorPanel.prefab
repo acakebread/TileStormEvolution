@@ -352,7 +352,7 @@ MonoBehaviour:
   closeButton: {fileID: 0}
   definitionScrollView: {fileID: 3592446050041274724}
   contentParent: {fileID: 4343362275747073472}
-  definitionListItemPrefab: {fileID: 2666612880733850823, guid: 607e9adf037f28e4bad8d495388c761f, type: 3}
+  definitionListItemPrefab: {fileID: 6156078273616792229, guid: 20aabc7ae462a854abd635426e95de42, type: 3}
   previewImage: {fileID: 887984126197869973}
   previewResolution: {x: 320, y: 240}
   defaultFOV: 60

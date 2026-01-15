@@ -28,11 +28,10 @@ namespace ClassicTilestorm
 		[SerializeField] private float dragOrbitSensitivity = 0.2f;
 		[SerializeField] private float dragTiltSensitivity = 0.2f;
 		[SerializeField] private float scrollZoomSensitivity = 0.5f;
-
 		[SerializeField] private float autoRotateSpeed = 15f;
 
 		[Header("Preview Ground Plane")]
-		[SerializeField] private Color groundColor = new Color(1f, 1f, 1f);
+		[SerializeField] private Color groundColor = Color.white;
 		[SerializeField] private float groundSize = 2.5f;
 		[SerializeField] private float groundY = -0.02f;
 		[SerializeField] private float groundUVScale = 1f;
@@ -40,43 +39,50 @@ namespace ClassicTilestorm
 		[Header("Ground Texture Override")]
 		[SerializeField] private Texture2D groundOverrideTexture;
 
-		// ── Runtime ───────────────────────────────────────────────────────
-		private readonly List<GameObject> spawnedListItems = new();
+		// ── Runtime ────────────────────────────────────────────────
+		private readonly List<Toggle> spawnedToggles = new();
+		private ToggleGroup toggleGroup;
 		private string selectedDefinitionId;
-		private CommandRenderModelData currentModelData;
 
+		private CommandRenderModelData currentModelData;
 		private CommandRenderModelData groundModelData;
 		private Mesh groundMesh;
 		private Material groundMat;
 		private Texture2D groundTex;
 
-		// RT resize tracking
 		private RectTransform previewRect;
 		private RenderTexture previewRenderTexture;
 		private Vector2 lastPreviewSize;
 
-		// scene
 		private CommandRenderScene commandScene;
 		private CommandRenderCamera commandCamera;
 
-		// Camera control
 		private Vector3 gimbalPosition;
-		private float currentOrbitAngle = 0f;
+		private float currentOrbitAngle;
 		private float currentTiltAngle;
 		private float currentDistance;
 
 		private float lastInputTime = -999f;
 		private const float AutoRotateDelay = 3f;
 
+		// ────────────────────────────────────────────────
+
 		protected override void Awake()
 		{
 			base.Awake();
 
-			if (closeButton != null)
+			if (closeButton)
 				closeButton.onClick.AddListener(() => gameObject.SetActive(false));
 
-			if (contentParent == null)
-				contentParent = definitionScrollView?.content;
+			if (!contentParent && definitionScrollView)
+				contentParent = definitionScrollView.content;
+
+			// Add or find the ToggleGroup on the content
+			toggleGroup = contentParent.GetComponent<ToggleGroup>();
+			if (!toggleGroup)
+				toggleGroup = contentParent.gameObject.AddComponent<ToggleGroup>();
+
+			toggleGroup.allowSwitchOff = false;
 		}
 
 		public override void OnPanelOpened()
@@ -85,9 +91,6 @@ namespace ClassicTilestorm
 			CleanupPreview();
 			CreatePreviewSetup();
 			RefreshDefinitionList();
-
-			if (ResourceManager.Definitions.Count > 0)
-				SelectDefinition(ResourceManager.Definitions[0].id);
 		}
 
 		public override void OnPanelClosed()
@@ -99,7 +102,7 @@ namespace ClassicTilestorm
 
 		private void Update()
 		{
-			if (commandCamera != null && previewRenderTexture != null && previewRenderTexture.IsCreated())
+			if (commandCamera != null && previewRenderTexture && previewRenderTexture.IsCreated())
 			{
 				HandleRenderTextureResize();
 				commandCamera.Render();
@@ -112,13 +115,7 @@ namespace ClassicTilestorm
 			}
 		}
 
-		protected override void OnDestroy()
-		{
-			CleanupPreview();
-			base.OnDestroy();
-		}
-
-		// ─────────────────────────── LIST ────────────────────────────────
+		// ───────────────────── LIST ─────────────────────
 
 		private void RefreshDefinitionList()
 		{
@@ -127,56 +124,73 @@ namespace ClassicTilestorm
 
 			foreach (var def in ResourceManager.Definitions)
 				CreateDefinitionListItem(def);
+
+			// Select first item if none selected
+			string id = selectedDefinitionId ?? ResourceManager.Definitions[0].id;
+			SetToggleById(id);
 		}
 
 		private void ClearListItems()
 		{
-			foreach (var item in spawnedListItems)
-				if (item != null) Destroy(item);
-			spawnedListItems.Clear();
+			foreach (var t in spawnedToggles)
+				if (t) Destroy(t.gameObject);
+
+			spawnedToggles.Clear();
 		}
 
 		private void CreateDefinitionListItem(Definition def)
 		{
-			if (definitionListItemPrefab == null) return;
-
 			var go = Instantiate(definitionListItemPrefab, contentParent);
-			spawnedListItems.Add(go);
+			var toggle = go.GetComponent<Toggle>();
 
-			var item = go.GetComponent<DefinitionListItem>();
-			if (item == null) return;
-
-			item.Initialize(def.id, SelectDefinition);
-
-			if (item.label != null)
+			if (!toggle)
 			{
-				item.label.richText = false;
-				item.label.enableAutoSizing = false;
-				item.label.fontSize = 20;
-				item.label.text = $"{def.id} ({def.model ?? "—"})";
+				Debug.LogError("Prefab must have a Toggle component!");
+				return;
 			}
 
-			item.SetSelected(def.id == selectedDefinitionId);
+			toggle.group = toggleGroup;
+			spawnedToggles.Add(toggle);
+
+			// Make sure the background Image is wired as Target Graphic
+			if (!toggle.targetGraphic)
+			{
+				var img = go.GetComponent<Image>();
+				if (img) toggle.targetGraphic = img;
+			}
+
+			var label = go.GetComponentInChildren<TMPro.TMP_Text>();
+			if (label)
+				label.text = $"{def.id} ({def.model ?? "—"})";
+
+			toggle.onValueChanged.AddListener(isOn =>
+			{
+				if (isOn)
+					SelectDefinition(def.id);
+			});
+		}
+
+		private void SetToggleById(string defId)
+		{
+			foreach (var t in spawnedToggles)
+			{
+				var label = t.GetComponentInChildren<TMPro.TMP_Text>();
+				if (label != null && label.text.StartsWith(defId))
+				{
+					t.isOn = true;
+					return;
+				}
+			}
 		}
 
 		private void SelectDefinition(string defId)
 		{
-			if (string.IsNullOrEmpty(defId)) return;
-
 			selectedDefinitionId = defId;
-			lastInputTime = -999f; // Reset autorotate timer
-
-			foreach (var go in spawnedListItems)
-			{
-				if (go == null) continue;
-				var item = go.GetComponent<DefinitionListItem>();
-				if (item != null) item.SetSelected(item.DefinitionId == selectedDefinitionId);
-			}
-
+			lastInputTime = -999f;
 			UpdatePreview(defId);
 		}
 
-		// ──────────────────────── PREVIEW SETUP ──────────────────────────
+		// ───────────── PREVIEW / CAMERA CODE ─────────────
 
 		private void CreatePreviewSetup()
 		{
@@ -186,16 +200,15 @@ namespace ClassicTilestorm
 
 			ColorUtility.TryParseHtmlString("#21B2E1", out Color hashColor);
 
-			// Create camera directly (no parent at first, or set it)
-			commandCamera = new CommandRenderCamera("PreviewCamera", previewRenderTexture, hashColor, defaultFOV);//null,// find a suitable parent object, for now null / in sceneroot
+			commandCamera = new CommandRenderCamera("PreviewCamera", previewRenderTexture, hashColor, defaultFOV);
 			commandScene = new CommandRenderScene();
 			commandCamera.AssignCommandProvider(commandScene);
 
 			CreateGroundPlane();
 
 			if (!previewImage.gameObject.TryGetComponent<PreviewCameraInput>(out _))
-				previewImage.gameObject.AddComponent<PreviewCameraInput>(); 
-			
+				previewImage.gameObject.AddComponent<PreviewCameraInput>();
+
 			lastPreviewSize = Vector2.zero;
 			HandleRenderTextureResize();
 		}
@@ -205,7 +218,7 @@ namespace ClassicTilestorm
 			if (!previewRect) return;
 
 			Vector2 size = previewRect.rect.size;
-			if (size.x == 0 || size.y == 0) size = previewResolution;//default
+			if (size.x == 0 || size.y == 0) size = previewResolution;
 
 			if (size == lastPreviewSize || size.x < 16 || size.y < 16) return;
 
@@ -258,8 +271,7 @@ namespace ClassicTilestorm
 			currentModelData = RenderModelFactory.Create(def, Vector3.zero, Quaternion.identity, Vector3.one);
 
 			float modelSize = currentModelData?.bounds.size.magnitude ?? 5f;
-			currentDistance = modelSize * sizeToDistanceFactor;
-			currentDistance = Mathf.Clamp(currentDistance, minDistance, maxDistance);
+			currentDistance = Mathf.Clamp(modelSize * sizeToDistanceFactor, minDistance, maxDistance);
 
 			currentTiltAngle = defaultTiltAngle;
 			currentOrbitAngle = 0f;
@@ -283,8 +295,6 @@ namespace ClassicTilestorm
 			commandCamera.position = cameraPosition;
 			commandCamera.rotation = rotation;
 		}
-
-		// ───────────────────── CAMERA INPUT ──────────────────────────────
 
 		public void DragPreviewCamera(Vector2 delta)
 		{
@@ -327,8 +337,6 @@ namespace ClassicTilestorm
 
 			if (previewImage) previewImage.texture = null;
 		}
-
-		// ───────────────────── CAMERA INPUT HELPER ───────────────────────
 
 		private class PreviewCameraInput : MonoBehaviour, IPointerDownHandler, IDragHandler, IScrollHandler
 		{
