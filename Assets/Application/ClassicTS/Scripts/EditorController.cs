@@ -176,7 +176,7 @@ namespace ClassicTilestorm
 
 			if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "Effect Editor", new Color(0.6f, 0.3f, 0.8f))) UIController.OpenPanel<EffectEditorPanel>();
 
-			if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "Model Editor", new Color(0.6f, 0.3f, 0.8f))) UIController.OpenPanel<ModelEditorPanel>();//placeholder
+			//if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "Model Editor", new Color(0.6f, 0.3f, 0.8f))) UIController.OpenPanel<ModelEditorPanel>();//placeholder
 
 			GUI.contentColor = mode == "Drag" ? Color.cyan : Color.white;
 			if (GUI.Button(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "Drag")) SetEditorMode(EditorMode.Drag);
