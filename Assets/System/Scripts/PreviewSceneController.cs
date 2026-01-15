@@ -69,6 +69,12 @@ namespace MassiveHadronLtd
 			UpdateActiveModels();
 		}
 
+		public void UpdateAndRender()
+		{
+			UpdateRenderTextureSizeIfNeeded();
+			Camera?.Render();
+		}
+
 		public void UpdateRenderTextureSizeIfNeeded()
 		{
 			EnsureInitialized();
@@ -188,9 +194,6 @@ namespace MassiveHadronLtd
 			targetRawImage.texture = null;
 		}
 
-		public void Dispose()
-		{
-			Cleanup();
-		}
+		public void Dispose() => Cleanup();
 	}
 }

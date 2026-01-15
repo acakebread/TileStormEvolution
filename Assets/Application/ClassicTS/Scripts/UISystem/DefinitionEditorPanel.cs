@@ -43,13 +43,7 @@ namespace ClassicTilestorm
 
 		private PreviewSceneController previewCtrl;
 		private CommandRenderModelData currentModelData;
-
-		private float currentOrbitAngle;
-		private float currentTiltAngle;
-		private float currentDistance;
-
-		private float lastInputTime = -999f;
-		private const float AutoRotateDelay = 3f;
+		private GimbalOrbitController orbitController;
 
 		// ────────────────────────────────────────────────
 
@@ -65,39 +59,44 @@ namespace ClassicTilestorm
 
 			toggleGroup = contentParent.GetComponent<ToggleGroup>()
 				?? contentParent.gameObject.AddComponent<ToggleGroup>();
-
 			toggleGroup.allowSwitchOff = false;
+
+			orbitController = new GimbalOrbitController(
+				dragOrbitSens: dragOrbitSensitivity,
+				dragTiltSens: dragTiltSensitivity,
+				scrollZoomSens: scrollZoomSensitivity,
+				minTilt: minTiltAngle,
+				maxTilt: maxTiltAngle,
+				minDist: minDistance,
+				maxDist: maxDistance,
+				sizeToDistFactor: sizeToDistanceFactor,
+				defaultTilt: defaultTiltAngle
+			);
+
+			orbitController.AutoRotateSpeed = autoRotateSpeed;
+			orbitController.AutoRotateTimeout = 3f;
 		}
 
-		public override void OnPanelOpened()
+		protected override void OnEnable()
 		{
-			base.OnPanelOpened();
+			base.OnEnable();
 			InitializePreview();
 			RefreshDefinitionList();
 		}
 
-		public override void OnPanelClosed()
+		protected override void OnDisable()
 		{
 			CleanupPreview();
 			ClearListItems();
-			base.OnPanelClosed();
+			base.OnDisable();
 		}
 
 		private void Update()
 		{
 			if (previewCtrl == null) return;
 
-			previewCtrl.UpdateRenderTextureSizeIfNeeded();
-
-			// Auto-rotate when idle
-			if (autoRotateSpeed > 0.01f && Time.unscaledTime - lastInputTime > AutoRotateDelay)
-			{
-				currentOrbitAngle -= autoRotateSpeed * Time.deltaTime;
-				UpdateCameraTransform();
-			}
-
-			// Explicit render – required because camera is disabled
-			previewCtrl.Camera?.Render();
+			orbitController.Update();
+			previewCtrl.UpdateAndRender();
 		}
 
 		// ───────────────────── LIST MANAGEMENT ─────────────────────
@@ -163,7 +162,6 @@ namespace ClassicTilestorm
 		private void SelectDefinition(string defId)
 		{
 			selectedDefinitionId = defId;
-			lastInputTime = -999f;
 			UpdatePreview(defId);
 		}
 
@@ -187,20 +185,18 @@ namespace ClassicTilestorm
 			};
 
 			SetupPreviewInput();
+
+			orbitController.OnTransformChanged += ApplyCameraTransform;
 		}
 
 		private void SetupPreviewInput()
 		{
 			if (!previewImage.TryGetComponent<PointerDragScrollHandler>(out var handler))
-			{
 				handler = previewImage.gameObject.AddComponent<PointerDragScrollHandler>();
-			}
 
 			handler.Setup(
-				onDown: () => lastInputTime = Time.unscaledTime,
-				onDrag: DragPreviewCamera,
-				onScroll: ZoomPreviewCamera
-			// onUp: () => { /* optional */ }
+				onDrag: orbitController.ProcessDrag,
+				onScroll: orbitController.ProcessScroll
 			);
 		}
 
@@ -209,56 +205,29 @@ namespace ClassicTilestorm
 		private void UpdatePreview(string defId)
 		{
 			currentModelData = null;
+			previewCtrl.ClearModel();  // Always start clean
 
 			var def = ResourceManager.GetDefinition(defId);
-			if (def == null || string.IsNullOrEmpty(def.model)) return;
+			if (def != null && !string.IsNullOrEmpty(def.model))
+			{
+				currentModelData = RenderModelFactory.Create(def, Vector3.zero, Quaternion.identity, Vector3.one);
+				previewCtrl.SetModel(currentModelData);
 
-			currentModelData = RenderModelFactory.Create(def, Vector3.zero, Quaternion.identity, Vector3.one);
-
-			float modelSize = currentModelData?.bounds.size.magnitude ?? 5f;
-			currentDistance = Mathf.Clamp(modelSize * sizeToDistanceFactor, minDistance, maxDistance);
-
-			currentTiltAngle = defaultTiltAngle;
-			currentOrbitAngle = 0f;
-
-			previewCtrl.SetModel(currentModelData);
-			UpdateCameraTransform();
+				orbitController.ResetView(hasModel: true, currentModelData.bounds);
+			}
+			else
+			{
+				orbitController.ResetView(hasModel: false);
+			}
 		}
 
-		private void UpdateCameraTransform()
+		private void ApplyCameraTransform()
 		{
 			if (previewCtrl?.Camera == null) return;
 
-			var gimbalY = currentModelData?.bounds.max.y * 0.5f ?? 1f;
-			var gimbalPosition = Vector3.up * gimbalY;
-
-			var rotation = Quaternion.Euler(currentTiltAngle, currentOrbitAngle, 0f);
-			var forward = rotation * Vector3.forward;
-			var cameraPosition = gimbalPosition - forward * currentDistance;
-
-			previewCtrl.Camera.position = cameraPosition;
+			var (position, rotation) = orbitController.GetCameraTransform();
+			previewCtrl.Camera.position = position;
 			previewCtrl.Camera.rotation = rotation;
-		}
-
-		public void DragPreviewCamera(Vector2 delta)
-		{
-			lastInputTime = Time.unscaledTime;
-
-			currentOrbitAngle += delta.x * dragOrbitSensitivity;
-			currentTiltAngle -= delta.y * dragTiltSensitivity;
-			currentTiltAngle = Mathf.Clamp(currentTiltAngle, minTiltAngle, maxTiltAngle);
-
-			UpdateCameraTransform();
-		}
-
-		public void ZoomPreviewCamera(float scroll)
-		{
-			lastInputTime = Time.unscaledTime;
-
-			currentDistance -= scroll * scrollZoomSensitivity;
-			currentDistance = Mathf.Clamp(currentDistance, minDistance, maxDistance);
-
-			UpdateCameraTransform();
 		}
 
 		private void CleanupPreview()
@@ -270,6 +239,9 @@ namespace ClassicTilestorm
 			}
 
 			currentModelData = null;
+
+			if (orbitController != null)
+				orbitController.OnTransformChanged -= ApplyCameraTransform;
 		}
 	}
 }
