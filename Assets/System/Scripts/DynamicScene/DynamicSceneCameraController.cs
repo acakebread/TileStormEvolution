@@ -1,18 +1,18 @@
 using UnityEngine;
 
-namespace ClassicTilestorm.Editor
+namespace MassiveHadronLtd
 {
-	public class PreviewCameraController : MonoBehaviour
+	public class DynamicSceneCameraController : MonoBehaviour
 	{
 		[SerializeField] private float distance = 5f;
 		[SerializeField] private float height = 2.5f;
 		[SerializeField] private float tiltAngle = 20f;
 		[SerializeField] private float orbitSpeed = 0f;
 
-		private PreviewSceneInstance owner;
+		private DynamicSceneInstance owner;
 		private float currentAngle = 45f;
 
-		public void Initialize(PreviewSceneInstance instance)
+		public void Initialize(DynamicSceneInstance instance)
 		{
 			owner = instance;
 			UpdateCameraPosition();

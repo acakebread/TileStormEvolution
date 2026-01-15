@@ -1,10 +1,10 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace ClassicTilestorm.Editor
+namespace MassiveHadronLtd
 {
 	[DefaultExecutionOrder(-100)]
-	public class PreviewSceneInstance : MonoBehaviour
+	public class DynamicSceneInstance : MonoBehaviour
 	{
 		[Header("References")]
 		[SerializeField] private Transform contentRoot;
@@ -12,7 +12,7 @@ namespace ClassicTilestorm.Editor
 		public Camera PreviewCamera { get; private set; }
 		public Transform ContentRoot => contentRoot;
 
-		private PreviewCameraController cameraController;
+		private DynamicSceneCameraController cameraController;
 
 		internal void Initialize(Scene previewScene)
 		{
@@ -30,7 +30,7 @@ namespace ClassicTilestorm.Editor
 			contentRoot = contentObj.transform;
 
 			// Add camera controller
-			cameraController = camObj.AddComponent<PreviewCameraController>();
+			cameraController = camObj.AddComponent<DynamicSceneCameraController>();
 			cameraController.Initialize(this);
 
 			// Optional: hide flags for cleaner hierarchy

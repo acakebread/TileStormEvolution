@@ -2,22 +2,22 @@
 using UnityEngine.SceneManagement;
 using System.Collections.Generic;
 
-namespace ClassicTilestorm.Editor
+namespace MassiveHadronLtd
 {
-	public class PreviewSceneManager : MonoBehaviour
+	public class DynamicSceneManager : MonoBehaviour
 	{
-		private static PreviewSceneManager _instance;
-		public static PreviewSceneManager Instance => _instance ??= CreateInstance();
+		private static DynamicSceneManager _instance;
+		public static DynamicSceneManager Instance => _instance ??= CreateInstance();
 
 		private const string PreviewSceneName = "PreviewScene_Dynamic";
 
-		private readonly List<PreviewSceneInstance> activePreviews = new();
+		private readonly List<DynamicSceneInstance> activePreviews = new();
 
-		private static PreviewSceneManager CreateInstance()
+		private static DynamicSceneManager CreateInstance()
 		{
 			var go = new GameObject("[PreviewSceneManager]");
 			DontDestroyOnLoad(go);
-			return go.AddComponent<PreviewSceneManager>();
+			return go.AddComponent<DynamicSceneManager>();
 		}
 
 		private void Awake()
@@ -30,7 +30,7 @@ namespace ClassicTilestorm.Editor
 			_instance = this;
 		}
 
-		public PreviewSceneInstance CreatePreviewInstance(string instanceName = "Preview")
+		public DynamicSceneInstance CreatePreviewInstance(string instanceName = "Preview")
 		{
 			// Create or get dynamic preview scene
 			Scene previewScene = GetOrCreateDynamicPreviewScene();
@@ -40,14 +40,14 @@ namespace ClassicTilestorm.Editor
 
 			SceneManager.MoveGameObjectToScene(root, previewScene);
 
-			var instance = root.AddComponent<PreviewSceneInstance>();
+			var instance = root.AddComponent<DynamicSceneInstance>();
 			instance.Initialize(previewScene);
 
 			activePreviews.Add(instance);
 			return instance;
 		}
 
-		public void DestroyPreviewInstance(PreviewSceneInstance instance)
+		public void DestroyPreviewInstance(DynamicSceneInstance instance)
 		{
 			if (instance == null) return;
 			activePreviews.Remove(instance);
