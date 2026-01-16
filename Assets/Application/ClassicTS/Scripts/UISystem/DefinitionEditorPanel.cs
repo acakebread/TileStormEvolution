@@ -148,31 +148,32 @@ namespace ClassicTilestorm
 			if (!toggle)
 			{
 				Debug.LogError("Definition list item prefab must have a Toggle component!");
+				Destroy(go);
 				return;
 			}
 
 			toggle.group = toggleGroup;
 			spawnedToggles.Add(toggle);
 
-			var label = go.GetComponentInChildren<TMPro.TMP_Text>();
-			if (label)
-				label.text = $"{def.id} ({def.model ?? "—"})";
-
+			// Your own selection logic
 			toggle.onValueChanged.AddListener(isOn =>
 			{
 				if (isOn)
 				{
 					SelectDefinition(def.id);
-
-					// Tell navigator which item was selected via mouse
-					var navigator = definitionScrollView.GetComponent<ScrollViewKeyboardNavigator>();
-					if (navigator != null)
-					{
-						int index = spawnedToggles.IndexOf(toggle);
-						navigator.NotifyItemSelected(index);
-					}
 				}
 			});
+
+			// Label
+			var label = go.GetComponentInChildren<TMPro.TMP_Text>();
+			if (label)
+				label.text = $"{def.id} ({def.model ?? "—"})";
+
+			// Optional: Add support for keyboard navigator (only if it exists)
+			if (definitionScrollView.TryGetComponent<ScrollViewKeyboardNavigator>(out _))
+			{
+				go.AddComponent(typeof(ScrollViewKeyboardNavigator.ItemSelectionHandler));
+			}
 		}
 
 		private void SetToggleById(string defId)

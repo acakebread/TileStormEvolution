@@ -261,5 +261,59 @@ namespace MassiveHadronLtd
 				   Input.GetKey(KeyCode.LeftArrow) || Input.GetKey(KeyCode.RightArrow) ||
 				   Input.GetKey(KeyCode.PageUp) || Input.GetKey(KeyCode.PageDown);
 		}
+
+		// ───────────────────────────────────────────────────────────────
+		// Nested handler for mouse/click selection - added ONLY this part
+		// ───────────────────────────────────────────────────────────────
+		[AddComponentMenu("")] // hides from component menu
+		public class ItemSelectionHandler : MonoBehaviour
+		{
+			private Selectable selectable;
+
+			private void Awake()
+			{
+				selectable = GetComponent<Selectable>();
+				if (selectable == null)
+				{
+					Debug.LogError("ItemSelectionHandler requires a Selectable (Toggle, Button, etc.)", this);
+					Destroy(this);
+				}
+			}
+
+			private void OnEnable()
+			{
+				var nav = GetComponentInParent<ScrollViewKeyboardNavigator>(true);
+				if (nav == null) return;
+
+				if (selectable is Toggle toggle)
+				{
+					toggle.onValueChanged.AddListener(isOn =>
+					{
+						if (isOn)
+						{
+							nav.NotifyItemSelected(GetIndex());
+						}
+					});
+				}
+				else if (selectable is Button button)
+				{
+					button.onClick.AddListener(() =>
+					{
+						nav.NotifyItemSelected(GetIndex());
+					});
+				}
+			}
+
+			private int GetIndex()
+			{
+				var nav = GetComponentInParent<ScrollViewKeyboardNavigator>(true);
+				if (nav != null && selectable != null)
+				{
+					int idx = nav.selectables.IndexOf(selectable);
+					if (idx >= 0) return idx;
+				}
+				return transform.GetSiblingIndex(); // fallback
+			}
+		}
 	}
 }
