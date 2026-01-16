@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
+using System;
 using System.Collections.Generic;
 using MassiveHadronLtd;
 
@@ -17,6 +18,13 @@ namespace ClassicTilestorm
 		[SerializeField] private Toggle toggleDrag;
 		[SerializeField] private Toggle toggleRoll;
 		[SerializeField] private Toggle toggleDock;
+		[SerializeField] private Toggle toggleDoor;
+		[SerializeField] private Toggle toggleStart;
+		[SerializeField] private Toggle toggleEnd;
+		[SerializeField] private Toggle toggleConsole;
+		[SerializeField] private Toggle togglePuzzleBlock;
+		[SerializeField] private Toggle toggleSway;
+		[SerializeField] private Toggle toggleWash;
 
 		[Header("Preview Settings")]
 		[SerializeField] private Color backgroundColor = new Color(0.129f, 0.698f, 0.882f);
@@ -53,6 +61,23 @@ namespace ClassicTilestorm
 			string.IsNullOrEmpty(selectedDefinitionId) ? null :
 			ResourceManager.GetDefinition(selectedDefinitionId);
 
+		// Flag bindings (clean & maintainable)
+		private readonly List<FlagBinding> flagBindings = new();
+
+		private readonly struct FlagBinding
+		{
+			public readonly Toggle Toggle;
+			public readonly Action<bool> SetValue;
+			public readonly Func<bool> GetValue;
+
+			public FlagBinding(Toggle toggle, Action<bool> setter, Func<bool> getter)
+			{
+				Toggle = toggle;
+				SetValue = setter;
+				GetValue = getter;
+			}
+		}
+
 		// ────────────────────────────────────────────────
 
 		protected override void Awake()
@@ -85,10 +110,7 @@ namespace ClassicTilestorm
 			orbitController.AutoRotateTimeout = 3f;
 			orbitController.EnableInertia = true;
 
-			// Hook up property toggles
-			if (toggleDrag) toggleDrag.onValueChanged.AddListener(v => SetDrag(v, true));
-			if (toggleRoll) toggleRoll.onValueChanged.AddListener(v => SetRoll(v, true));
-			if (toggleDock) toggleDock.onValueChanged.AddListener(v => SetDock(v, true));
+			SetupFlagBindings();
 		}
 
 		protected override void OnEnable()
@@ -113,6 +135,44 @@ namespace ClassicTilestorm
 			previewCtrl.UpdateAndRender();
 		}
 
+		// ───────────────────── FLAG BINDINGS ─────────────────────
+
+		private void SetupFlagBindings()
+		{
+			flagBindings.Clear();
+
+			AddBinding(toggleDrag, v => CurrentDefinition.bDrag = v, () => CurrentDefinition?.bDrag ?? false);
+			AddBinding(toggleRoll, v => CurrentDefinition.bRoll = v, () => CurrentDefinition?.bRoll ?? false);
+			AddBinding(toggleDock, v => CurrentDefinition.bDock = v, () => CurrentDefinition?.bDock ?? false);
+			AddBinding(toggleDoor, v => CurrentDefinition.bDoor = v, () => CurrentDefinition?.bDoor ?? false);
+			AddBinding(toggleStart, v => CurrentDefinition.bStart = v, () => CurrentDefinition?.bStart ?? false);
+			AddBinding(toggleEnd, v => CurrentDefinition.bEnd = v, () => CurrentDefinition?.bEnd ?? false);
+			AddBinding(toggleConsole, v => CurrentDefinition.bConsole = v, () => CurrentDefinition?.bConsole ?? false);
+			AddBinding(togglePuzzleBlock, v => CurrentDefinition.bPuzzleBlock = v, () => CurrentDefinition?.bPuzzleBlock ?? false);
+			AddBinding(toggleSway, v => CurrentDefinition.bSway = v, () => CurrentDefinition?.bSway ?? false);
+			AddBinding(toggleWash, v => CurrentDefinition.bWash = v, () => CurrentDefinition?.bWash ?? false);
+
+			// Hook up all toggle events once
+			foreach (var binding in flagBindings)
+			{
+				if (binding.Toggle == null) continue;
+
+				binding.Toggle.onValueChanged.AddListener(value =>
+				{
+					if (CurrentDefinition == null) return;
+					binding.SetValue(value);
+					// Optional: Mark dirty / needs save here
+					// ResourceManager.MarkDefinitionDirty(selectedDefinitionId);
+				});
+			}
+		}
+
+		private void AddBinding(Toggle toggle, Action<bool> setter, Func<bool> getter)
+		{
+			if (toggle != null)
+				flagBindings.Add(new FlagBinding(toggle, setter, getter));
+		}
+
 		// ───────────────────── LIST MANAGEMENT ─────────────────────
 
 		private void RefreshDefinitionList()
@@ -123,11 +183,8 @@ namespace ClassicTilestorm
 			foreach (var def in ResourceManager.Definitions)
 				CreateDefinitionListItem(def);
 
-			// Notify keyboard navigator that the list has changed
 			if (definitionScrollView.TryGetComponent<ScrollViewKeyboardNavigator>(out var navigator))
-			{
 				navigator.ForceRefresh();
-			}
 
 			string id = selectedDefinitionId ?? ResourceManager.Definitions[0].id;
 			SetToggleById(id);
@@ -155,25 +212,17 @@ namespace ClassicTilestorm
 			toggle.group = toggleGroup;
 			spawnedToggles.Add(toggle);
 
-			// Your own selection logic
 			toggle.onValueChanged.AddListener(isOn =>
 			{
-				if (isOn)
-				{
-					SelectDefinition(def.id);
-				}
+				if (isOn) SelectDefinition(def.id);
 			});
 
-			// Label
 			var label = go.GetComponentInChildren<TMPro.TMP_Text>();
 			if (label)
 				label.text = $"{def.id} ({def.model ?? "—"})";
 
-			// Optional: Add support for keyboard navigator (only if it exists)
 			if (definitionScrollView.TryGetComponent<ScrollViewKeyboardNavigator>(out _))
-			{
 				go.AddComponent(typeof(ScrollViewKeyboardNavigator.ItemSelectionHandler));
-			}
 		}
 
 		private void SetToggleById(string defId)
@@ -295,71 +344,22 @@ namespace ClassicTilestorm
 				orbitController.OnTransformChanged -= ApplyCameraTransform;
 		}
 
-		// ───────────── FLAG SETTERS ─────────────
-
-		private void SetDrag(bool value, bool fromUser)
-		{
-			var def = CurrentDefinition;
-			if (def == null)
-			{
-				toggleDrag?.SetIsOnWithoutNotify(false);
-				if (toggleDrag) toggleDrag.interactable = false;
-				return;
-			}
-
-			if (def.bDrag != value) def.bDrag = value;
-
-			if (toggleDrag != null)
-			{
-				toggleDrag.SetIsOnWithoutNotify(def.bDrag);
-				toggleDrag.interactable = true;
-			}
-		}
-
-		private void SetRoll(bool value, bool fromUser)
-		{
-			var def = CurrentDefinition;
-			if (def == null)
-			{
-				toggleRoll?.SetIsOnWithoutNotify(false);
-				if (toggleRoll) toggleRoll.interactable = false;
-				return;
-			}
-
-			if (def.bRoll != value) def.bRoll = value;
-
-			if (toggleRoll != null)
-			{
-				toggleRoll.SetIsOnWithoutNotify(def.bRoll);
-				toggleRoll.interactable = true;
-			}
-		}
-
-		private void SetDock(bool value, bool fromUser)
-		{
-			var def = CurrentDefinition;
-			if (def == null)
-			{
-				toggleDock?.SetIsOnWithoutNotify(false);
-				if (toggleDock) toggleDock.interactable = false;
-				return;
-			}
-
-			if (def.bDock != value) def.bDock = value;
-
-			if (toggleDock != null)
-			{
-				toggleDock.SetIsOnWithoutNotify(def.bDock);
-				toggleDock.interactable = true;
-			}
-		}
+		// ───────────── FLAG SYNC ─────────────
 
 		private void SyncAllFlags()
 		{
 			var def = CurrentDefinition;
-			SetDrag(def?.bDrag ?? false, false);
-			SetRoll(def?.bRoll ?? false, false);
-			SetDock(def?.bDock ?? false, false);
+			bool hasDefinition = def != null;
+
+			foreach (var binding in flagBindings)
+			{
+				if (binding.Toggle == null) continue;
+
+				bool value = hasDefinition ? binding.GetValue() : false;
+
+				binding.Toggle.SetIsOnWithoutNotify(value);
+				binding.Toggle.interactable = hasDefinition;
+			}
 		}
 	}
 }
