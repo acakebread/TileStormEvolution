@@ -49,11 +49,6 @@ namespace ClassicTilestorm
 		private CommandRenderModelData currentModelData;
 		private GimbalOrbitController orbitController;
 
-		private float repeatTimer = 0f;
-		private const float INITIAL_DELAY = 0.3f;   // time before first repeat
-		private const float REPEAT_RATE = 0.04f;    // how fast it repeats (seconds)
-		private const int PAGE_STEP = 16;           // items per PageUp/PageDown jump
-
 		private Definition CurrentDefinition =>
 			string.IsNullOrEmpty(selectedDefinitionId) ? null :
 			ResourceManager.GetDefinition(selectedDefinitionId);
@@ -116,84 +111,6 @@ namespace ClassicTilestorm
 
 			orbitController.Update();
 			previewCtrl.UpdateAndRender();
-
-			// Arrow keys: single step with repeat
-			HandleRepeatable(KeyCode.UpArrow, KeyCode.LeftArrow, -1);
-			HandleRepeatable(KeyCode.DownArrow, KeyCode.RightArrow, +1);
-
-			// Page keys: jump 16 with repeat
-			HandleRepeatable(KeyCode.PageUp, default, -PAGE_STEP);
-			HandleRepeatable(KeyCode.PageDown, default, +PAGE_STEP);
-
-			// Timer decrement happens only once per frame
-			if (AnyKeyHeld())
-			{
-				repeatTimer -= Time.deltaTime;
-			}
-
-			// Home / End - simple one-shot selection, no repeat
-			if (Input.GetKeyDown(KeyCode.Home))
-			{
-				if (spawnedToggles.Count > 0)
-					SelectByIndex(0);
-			}
-
-			if (Input.GetKeyDown(KeyCode.End))
-			{
-				if (spawnedToggles.Count > 0)
-					SelectByIndex(spawnedToggles.Count - 1);
-			}
-		}
-
-		private bool AnyKeyHeld()
-		{
-			return Input.GetKey(KeyCode.UpArrow) || Input.GetKey(KeyCode.DownArrow) ||
-				   Input.GetKey(KeyCode.LeftArrow) || Input.GetKey(KeyCode.RightArrow) ||
-				   Input.GetKey(KeyCode.PageUp) || Input.GetKey(KeyCode.PageDown);
-		}
-
-		private void HandleRepeatable(KeyCode primary, KeyCode secondary, int direction)
-		{
-			bool down = Input.GetKeyDown(primary) || (secondary != default && Input.GetKeyDown(secondary));
-			bool held = Input.GetKey(primary) || (secondary != default && Input.GetKey(secondary));
-
-			if (!held)
-				return;
-
-			if (down)
-			{
-				ChangeSelection(direction);
-				repeatTimer = INITIAL_DELAY;
-				return;
-			}
-
-			if (repeatTimer <= 0f)
-			{
-				ChangeSelection(direction);
-				repeatTimer = REPEAT_RATE;
-			}
-		}
-
-		private void ChangeSelection(int direction)
-		{
-			if (spawnedToggles.Count == 0) return;
-
-			int current = GetSelectedIndex();
-			int next = current + direction;
-
-			// Arrows: wrap around
-			if (Mathf.Abs(direction) == 1)
-			{
-				if (next < 0) next = spawnedToggles.Count - 1;
-				if (next >= spawnedToggles.Count) next = 0;
-			}
-			// Page keys: clamp to bounds (no wrap)
-			else
-			{
-				next = Mathf.Clamp(next, 0, spawnedToggles.Count - 1);
-			}
-
-			SelectByIndex(next);
 		}
 
 		// ───────────────────── LIST MANAGEMENT ─────────────────────
@@ -205,6 +122,12 @@ namespace ClassicTilestorm
 
 			foreach (var def in ResourceManager.Definitions)
 				CreateDefinitionListItem(def);
+
+			// Notify keyboard navigator that the list has changed
+			if (definitionScrollView.TryGetComponent<ScrollViewKeyboardNavigator>(out var navigator))
+			{
+				navigator.ForceRefresh();
+			}
 
 			string id = selectedDefinitionId ?? ResourceManager.Definitions[0].id;
 			SetToggleById(id);
@@ -238,7 +161,17 @@ namespace ClassicTilestorm
 			toggle.onValueChanged.AddListener(isOn =>
 			{
 				if (isOn)
+				{
 					SelectDefinition(def.id);
+
+					// Tell navigator which item was selected via mouse
+					var navigator = definitionScrollView.GetComponent<ScrollViewKeyboardNavigator>();
+					if (navigator != null)
+					{
+						int index = spawnedToggles.IndexOf(toggle);
+						navigator.NotifyItemSelected(index);
+					}
+				}
 			});
 		}
 
@@ -264,22 +197,6 @@ namespace ClassicTilestorm
 		}
 
 		// ───────────── HELPERS ─────────────
-
-		private int GetSelectedIndex()
-		{
-			for (int i = 0; i < spawnedToggles.Count; i++)
-				if (spawnedToggles[i].isOn)
-					return i;
-			return 0;
-		}
-
-		private void SelectByIndex(int index)
-		{
-			if (index < 0 || index >= spawnedToggles.Count) return;
-			var toggle = spawnedToggles[index];
-			toggle.isOn = true;
-			ScrollToToggle(toggle);
-		}
 
 		private void ScrollToToggle(Toggle toggle)
 		{
