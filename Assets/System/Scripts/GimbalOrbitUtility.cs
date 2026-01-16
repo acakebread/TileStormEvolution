@@ -18,7 +18,7 @@ namespace MassiveHadronLtd
 
 		// Auto-rotate
 		public Vector3 AutoRotateAxis { get; set; } = Vector3.up;
-		public float AutoRotateSpeed { get; set; } = 15f;
+		public float AutoRotateSpeed { get; set; } = -15f;
 		public float AutoRotateTimeout { get; set; } = 3f;
 
 		// Inertia (disabled by default)

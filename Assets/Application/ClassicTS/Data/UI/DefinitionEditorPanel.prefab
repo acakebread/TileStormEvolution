@@ -59,7 +59,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.RawImage
   m_Material: {fileID: 0}
-  m_Color: {r: 0.38431376, g: 0.41176474, b: 0.40784317, a: 1}
+  m_Color: {r: 0.12156863, g: 0.12156863, b: 0.12156863, a: 0.5019608}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -499,7 +499,7 @@ MonoBehaviour:
   dragOrbitSensitivity: 0.2
   dragTiltSensitivity: 0.2
   scrollZoomSensitivity: 0.5
-  autoRotateSpeed: 15
+  autoRotateSpeed: -15
   groundColor: {r: 1, g: 1, b: 1, a: 1}
   groundSize: 2.5
   groundY: -0.02
@@ -595,11 +595,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2318818697160097896, guid: 1750d1d6a61bed642b2ab94a7aaf0faf, type: 3}
       propertyPath: m_AnchorMax.x
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 2318818697160097896, guid: 1750d1d6a61bed642b2ab94a7aaf0faf, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 3173953137060017193, guid: 1750d1d6a61bed642b2ab94a7aaf0faf, type: 3}
       propertyPath: m_VerticalFit
@@ -632,6 +632,10 @@ PrefabInstance:
     - target: {fileID: 6393219735995157556, guid: 1750d1d6a61bed642b2ab94a7aaf0faf, type: 3}
       propertyPath: m_Layer
       value: 5
+      objectReference: {fileID: 0}
+    - target: {fileID: 6393219735995157556, guid: 1750d1d6a61bed642b2ab94a7aaf0faf, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 6639689892825067465, guid: 1750d1d6a61bed642b2ab94a7aaf0faf, type: 3}
       propertyPath: m_Spacing
