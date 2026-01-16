@@ -14,8 +14,8 @@ namespace MassiveHadronLtd
 		[SerializeField] private float initialRepeatDelay = 0.3f;
 		[SerializeField] private float repeatRate = 0.05f;
 
-		[Header("Scroll Settings")]
-		[SerializeField] private float scrollLerpSpeed = 12f;
+		//[Header("Scroll Settings")]
+		//[SerializeField] private float scrollLerpSpeed = 12f;
 
 		private ScrollRect scrollRect;
 		private readonly List<Selectable> selectables = new();

@@ -2,6 +2,7 @@
 using UnityEngine.UI;
 using System;
 using System.Collections.Generic;
+using TMPro;
 using MassiveHadronLtd;
 
 namespace ClassicTilestorm
@@ -11,20 +12,15 @@ namespace ClassicTilestorm
 		[Header("UI References")]
 		[SerializeField] private Button closeButton;
 		[SerializeField] private ScrollRect definitionScrollView;
-		[SerializeField] private Transform contentParent;
+		[SerializeField] private Transform contentParent;                    // list of definitions
 		[SerializeField] private GameObject definitionListItemPrefab;
+
+		[Header("Preview")]
 		[SerializeField] private RawImage previewImage;
 
-		[SerializeField] private Toggle toggleDrag;
-		[SerializeField] private Toggle toggleRoll;
-		[SerializeField] private Toggle toggleDock;
-		[SerializeField] private Toggle toggleDoor;
-		[SerializeField] private Toggle toggleStart;
-		[SerializeField] private Toggle toggleEnd;
-		[SerializeField] private Toggle toggleConsole;
-		[SerializeField] private Toggle togglePuzzleBlock;
-		[SerializeField] private Toggle toggleSway;
-		[SerializeField] private Toggle toggleWash;
+		[Header("Dynamic Properties Panel")]
+		[SerializeField] private RectTransform propertiesRect;               // ← Grid Layout Group parent
+		[SerializeField] private GameObject flagTogglePrefab;                // ← Toggle + Label prefab
 
 		[Header("Preview Settings")]
 		[SerializeField] private Color backgroundColor = new Color(0.129f, 0.698f, 0.882f);
@@ -35,7 +31,6 @@ namespace ClassicTilestorm
 		[SerializeField] private float maxTiltAngle = 90f;
 		[SerializeField] private float minDistance = 0.8f;
 		[SerializeField] private float maxDistance = 10f;
-
 		[SerializeField] private float dragOrbitSensitivity = 0.2f;
 		[SerializeField] private float dragTiltSensitivity = 0.2f;
 		[SerializeField] private float scrollZoomSensitivity = 0.5f;
@@ -48,8 +43,8 @@ namespace ClassicTilestorm
 		[SerializeField] private float groundUVScale = 1f;
 		[SerializeField] private Texture2D groundOverrideTexture;
 
-		// ── Runtime ────────────────────────────────────────────────
-		private readonly List<Toggle> spawnedToggles = new();
+		// ── Runtime ────────────────────────────────────────────────────────────
+		private readonly List<Toggle> spawnedDefinitionToggles = new();
 		private ToggleGroup toggleGroup;
 		private string selectedDefinitionId;
 
@@ -61,24 +56,43 @@ namespace ClassicTilestorm
 			string.IsNullOrEmpty(selectedDefinitionId) ? null :
 			ResourceManager.GetDefinition(selectedDefinitionId);
 
-		// Flag bindings (clean & maintainable)
-		private readonly List<FlagBinding> flagBindings = new();
+		// Dynamic flag toggles
+		private readonly List<(Toggle toggle, FlagInfo flag)> spawnedFlagControls = new();
 
-		private readonly struct FlagBinding
+		private readonly struct FlagInfo
 		{
-			public readonly Toggle Toggle;
-			public readonly Action<bool> SetValue;
-			public readonly Func<bool> GetValue;
+			public readonly string InternalName;
+			public readonly string DisplayName;
+			public readonly Func<Definition, bool> GetValue;
+			public readonly Action<Definition, bool> SetValue;
 
-			public FlagBinding(Toggle toggle, Action<bool> setter, Func<bool> getter)
+			public FlagInfo(string internalName, string displayName,
+						   Func<Definition, bool> getter,
+						   Action<Definition, bool> setter)
 			{
-				Toggle = toggle;
-				SetValue = setter;
+				InternalName = internalName;
+				DisplayName = displayName;
 				GetValue = getter;
+				SetValue = setter;
 			}
 		}
 
-		// ────────────────────────────────────────────────
+		private static readonly IReadOnlyList<FlagInfo> AllFlags = new List<FlagInfo>
+		{
+			new("Drag",        "Can Drag",        d => d.bDrag,        (d, v) => d.bDrag = v),
+			new("Roll",        "Can Roll",        d => d.bRoll,        (d, v) => d.bRoll = v),
+			new("Dock",        "Can Dock",        d => d.bDock,        (d, v) => d.bDock = v),
+			new("Door",        "Is Door",         d => d.bDoor,        (d, v) => d.bDoor = v),
+			new("Start",       "Start Point",     d => d.bStart,       (d, v) => d.bStart = v),
+			new("End",         "End Point",       d => d.bEnd,         (d, v) => d.bEnd = v),
+			new("Console",     "Has Console",     d => d.bConsole,     (d, v) => d.bConsole = v),
+			new("PuzzleBlock", "Puzzle Block",    d => d.bPuzzleBlock, (d, v) => d.bPuzzleBlock = v),
+			new("Sway",        "Sways",           d => d.bSway,        (d, v) => d.bSway = v),
+			new("Wash",        "Washable",        d => d.bWash,        (d, v) => d.bWash = v),
+            // ← Add new flags here when you create them in Definition.cs
+        };
+
+		// ───────────────────────────────────────────────────────────────────────
 
 		protected override void Awake()
 		{
@@ -104,80 +118,99 @@ namespace ClassicTilestorm
 				maxDist: maxDistance,
 				sizeToDistFactor: sizeToDistanceFactor,
 				defaultTilt: defaultTiltAngle
-			);
+			)
+			{
+				AutoRotateSpeed = autoRotateSpeed,
+				AutoRotateTimeout = 3f,
+				EnableInertia = true
+			};
 
-			orbitController.AutoRotateSpeed = autoRotateSpeed;
-			orbitController.AutoRotateTimeout = 3f;
-			orbitController.EnableInertia = true;
+			// Create dynamic flag toggles once
+			CreateFlagToggles();
 
-			SetupFlagBindings();
+			// Setup preview
+			InitializePreview();
 		}
 
 		protected override void OnEnable()
 		{
 			base.OnEnable();
-			InitializePreview();
 			RefreshDefinitionList();
 		}
 
 		protected override void OnDisable()
 		{
 			CleanupPreview();
-			ClearListItems();
+			ClearDefinitionListItems();
 			base.OnDisable();
 		}
 
 		private void Update()
 		{
 			if (previewCtrl == null) return;
-
 			orbitController.Update();
 			previewCtrl.UpdateAndRender();
 		}
 
-		// ───────────────────── FLAG BINDINGS ─────────────────────
+		// ───────────────────── DYNAMIC FLAG TOGGLES ─────────────────────────────
 
-		private void SetupFlagBindings()
+		private void CreateFlagToggles()
 		{
-			flagBindings.Clear();
-
-			AddBinding(toggleDrag, v => CurrentDefinition.bDrag = v, () => CurrentDefinition?.bDrag ?? false);
-			AddBinding(toggleRoll, v => CurrentDefinition.bRoll = v, () => CurrentDefinition?.bRoll ?? false);
-			AddBinding(toggleDock, v => CurrentDefinition.bDock = v, () => CurrentDefinition?.bDock ?? false);
-			AddBinding(toggleDoor, v => CurrentDefinition.bDoor = v, () => CurrentDefinition?.bDoor ?? false);
-			AddBinding(toggleStart, v => CurrentDefinition.bStart = v, () => CurrentDefinition?.bStart ?? false);
-			AddBinding(toggleEnd, v => CurrentDefinition.bEnd = v, () => CurrentDefinition?.bEnd ?? false);
-			AddBinding(toggleConsole, v => CurrentDefinition.bConsole = v, () => CurrentDefinition?.bConsole ?? false);
-			AddBinding(togglePuzzleBlock, v => CurrentDefinition.bPuzzleBlock = v, () => CurrentDefinition?.bPuzzleBlock ?? false);
-			AddBinding(toggleSway, v => CurrentDefinition.bSway = v, () => CurrentDefinition?.bSway ?? false);
-			AddBinding(toggleWash, v => CurrentDefinition.bWash = v, () => CurrentDefinition?.bWash ?? false);
-
-			// Hook up all toggle events once
-			foreach (var binding in flagBindings)
+			// Clear existing children
+			for (int i = propertiesRect.childCount - 1; i >= 0; i--)
 			{
-				if (binding.Toggle == null) continue;
+				Destroy(propertiesRect.GetChild(i).gameObject);
+			}
+			spawnedFlagControls.Clear();
 
-				binding.Toggle.onValueChanged.AddListener(value =>
+			foreach (var flag in AllFlags)
+			{
+				var instance = Instantiate(flagTogglePrefab, propertiesRect);
+				var toggle = instance.GetComponent<Toggle>();
+				var label = instance.GetComponentInChildren<TMP_Text>();
+
+				if (toggle == null || label == null)
 				{
-					if (CurrentDefinition == null) return;
-					binding.SetValue(value);
-					// Optional: Mark dirty / needs save here
-					// ResourceManager.MarkDefinitionDirty(selectedDefinitionId);
+					Debug.LogError("Flag toggle prefab missing Toggle or TMP_Text component!");
+					Destroy(instance);
+					continue;
+				}
+
+				label.text = flag.DisplayName;
+				toggle.isOn = false;
+
+				spawnedFlagControls.Add((toggle, flag));
+
+				// Value changed listener
+				toggle.onValueChanged.AddListener(isOn =>
+				{
+					var def = CurrentDefinition;
+					if (def == null) return;
+					flag.SetValue(def, isOn);
+					// Optional: ResourceManager.MarkDefinitionDirty(selectedDefinitionId);
 				});
 			}
 		}
 
-		private void AddBinding(Toggle toggle, Action<bool> setter, Func<bool> getter)
+		private void SyncFlagToggles()
 		{
-			if (toggle != null)
-				flagBindings.Add(new FlagBinding(toggle, setter, getter));
+			var def = CurrentDefinition;
+			bool hasDef = def != null;
+
+			foreach (var (toggle, flag) in spawnedFlagControls)
+			{
+				bool value = hasDef && flag.GetValue(def);
+				toggle.SetIsOnWithoutNotify(value);
+				toggle.interactable = hasDef;
+			}
 		}
 
-		// ───────────────────── LIST MANAGEMENT ─────────────────────
+		// ───────────────────── DEFINITION LIST ──────────────────────────────────
 
 		private void RefreshDefinitionList()
 		{
-			ClearListItems();
+			ClearDefinitionListItems();
+
 			if (ResourceManager.Definitions.Count == 0) return;
 
 			foreach (var def in ResourceManager.Definitions)
@@ -186,15 +219,15 @@ namespace ClassicTilestorm
 			if (definitionScrollView.TryGetComponent<ScrollViewKeyboardNavigator>(out var navigator))
 				navigator.ForceRefresh();
 
-			string id = selectedDefinitionId ?? ResourceManager.Definitions[0].id;
-			SetToggleById(id);
+			string initialId = selectedDefinitionId ?? ResourceManager.Definitions[0].id;
+			SetToggleById(initialId);
 		}
 
-		private void ClearListItems()
+		private void ClearDefinitionListItems()
 		{
-			foreach (var t in spawnedToggles)
+			foreach (var t in spawnedDefinitionToggles)
 				if (t) Destroy(t.gameObject);
-			spawnedToggles.Clear();
+			spawnedDefinitionToggles.Clear();
 		}
 
 		private void CreateDefinitionListItem(Definition def)
@@ -204,20 +237,20 @@ namespace ClassicTilestorm
 
 			if (!toggle)
 			{
-				Debug.LogError("Definition list item prefab must have a Toggle component!");
+				Debug.LogError("Definition list item prefab must have Toggle component!");
 				Destroy(go);
 				return;
 			}
 
 			toggle.group = toggleGroup;
-			spawnedToggles.Add(toggle);
+			spawnedDefinitionToggles.Add(toggle);
 
 			toggle.onValueChanged.AddListener(isOn =>
 			{
 				if (isOn) SelectDefinition(def.id);
 			});
 
-			var label = go.GetComponentInChildren<TMPro.TMP_Text>();
+			var label = go.GetComponentInChildren<TMP_Text>();
 			if (label)
 				label.text = $"{def.id} ({def.model ?? "—"})";
 
@@ -227,9 +260,9 @@ namespace ClassicTilestorm
 
 		private void SetToggleById(string defId)
 		{
-			foreach (var t in spawnedToggles)
+			foreach (var t in spawnedDefinitionToggles)
 			{
-				var label = t.GetComponentInChildren<TMPro.TMP_Text>();
+				var label = t.GetComponentInChildren<TMP_Text>();
 				if (label != null && label.text.StartsWith(defId))
 				{
 					t.isOn = true;
@@ -243,10 +276,16 @@ namespace ClassicTilestorm
 		{
 			selectedDefinitionId = defId;
 			UpdatePreview(defId);
-			SyncAllFlags();
+			SyncAllProperties();
 		}
 
-		// ───────────── HELPERS ─────────────
+		private void SyncAllProperties()
+		{
+			SyncFlagToggles();
+			// Add other property syncs here in future if needed
+		}
+
+		// ───────────────────── SCROLL HELPERS ───────────────────────────────────
 
 		private void ScrollToToggle(Toggle toggle)
 		{
@@ -267,11 +306,10 @@ namespace ClassicTilestorm
 			float contentHeight = content.rect.height;
 
 			float normalized = Mathf.Clamp01((targetY - viewportHeight / 2f) / (contentHeight - viewportHeight));
-
 			definitionScrollView.verticalNormalizedPosition = 1f - normalized;
 		}
 
-		// ───────────── PREVIEW ─────────────
+		// ───────────────────── PREVIEW ──────────────────────────────────────────
 
 		private void InitializePreview()
 		{
@@ -340,26 +378,9 @@ namespace ClassicTilestorm
 				previewCtrl = null;
 			}
 			currentModelData = null;
+
 			if (orbitController != null)
 				orbitController.OnTransformChanged -= ApplyCameraTransform;
-		}
-
-		// ───────────── FLAG SYNC ─────────────
-
-		private void SyncAllFlags()
-		{
-			var def = CurrentDefinition;
-			bool hasDefinition = def != null;
-
-			foreach (var binding in flagBindings)
-			{
-				if (binding.Toggle == null) continue;
-
-				bool value = hasDefinition ? binding.GetValue() : false;
-
-				binding.Toggle.SetIsOnWithoutNotify(value);
-				binding.Toggle.interactable = hasDefinition;
-			}
 		}
 	}
 }
