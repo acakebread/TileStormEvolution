@@ -57,10 +57,6 @@ namespace MassiveHadronLtd
 			HandleRepeatTimer();
 		}
 
-		// ----------------------------------------------------
-		// PUBLIC API (used by DefinitionEditorPanel)
-		// ----------------------------------------------------
-
 		public void ForceRefresh()
 		{
 			EnsureScrollRect();
@@ -74,14 +70,11 @@ namespace MassiveHadronLtd
 
 			lastSelectedIndex = index;
 
-			// Make sure the toggle is turned on so onValueChanged fires
 			if (selectables[index] is Toggle toggle)
 			{
-				toggle.isOn = true;  // This triggers the event → panel reacts
+				toggle.isOn = true;
 			}
 		}
-
-		// ----------------------------------------------------
 
 		private void EnsureScrollRect()
 		{
@@ -137,15 +130,32 @@ namespace MassiveHadronLtd
 			lastMoveDirection = direction > 0 ? 1 : -1;
 
 			int current = GetCurrentSelectedIndex();
-			int next = Mathf.Clamp(current + direction, 0, selectables.Count - 1);
+			int next = current + direction;
+
+			bool wrapped = false;
 
 			if (wrapAround && Mathf.Abs(direction) == 1)
 			{
-				if (next < 0) next = selectables.Count - 1;
-				if (next >= selectables.Count) next = 0;
+				if (next < 0)
+				{
+					next = selectables.Count - 1;
+					wrapped = true;
+					lastMoveDirection = 1;   // treat as moving down to bottom
+				}
+				else if (next >= selectables.Count)
+				{
+					next = 0;
+					wrapped = true;
+					lastMoveDirection = -1;  // treat as moving up to top
+				}
+			}
+			else
+			{
+				next = Mathf.Clamp(next, 0, selectables.Count - 1);
 			}
 
-			SelectIndex(next);
+			// Always scroll when wrapped, otherwise use normal visibility check
+			SelectIndex(next, forceScroll: wrapped || true);
 		}
 
 		private int GetCurrentSelectedIndex()
@@ -167,7 +177,7 @@ namespace MassiveHadronLtd
 
 			if (target is Toggle toggle)
 			{
-				toggle.isOn = true;  // Triggers onValueChanged → panel updates preview etc.
+				toggle.isOn = true;
 			}
 
 			if (forceScroll)
@@ -262,10 +272,8 @@ namespace MassiveHadronLtd
 				   Input.GetKey(KeyCode.PageUp) || Input.GetKey(KeyCode.PageDown);
 		}
 
-		// ───────────────────────────────────────────────────────────────
-		// Nested handler for mouse/click selection - added ONLY this part
-		// ───────────────────────────────────────────────────────────────
-		[AddComponentMenu("")] // hides from component menu
+		// ── Public nested handler for mouse selection ────────────────
+		[AddComponentMenu("")]
 		public class ItemSelectionHandler : MonoBehaviour
 		{
 			private Selectable selectable;
@@ -275,7 +283,7 @@ namespace MassiveHadronLtd
 				selectable = GetComponent<Selectable>();
 				if (selectable == null)
 				{
-					Debug.LogError("ItemSelectionHandler requires a Selectable (Toggle, Button, etc.)", this);
+					Debug.LogError("ItemSelectionHandler requires a Selectable", this);
 					Destroy(this);
 				}
 			}
@@ -289,30 +297,24 @@ namespace MassiveHadronLtd
 				{
 					toggle.onValueChanged.AddListener(isOn =>
 					{
-						if (isOn)
-						{
-							nav.NotifyItemSelected(GetIndex());
-						}
+						if (isOn) nav.NotifyItemSelected(GetIndex());
 					});
 				}
 				else if (selectable is Button button)
 				{
-					button.onClick.AddListener(() =>
-					{
-						nav.NotifyItemSelected(GetIndex());
-					});
+					button.onClick.AddListener(() => nav.NotifyItemSelected(GetIndex()));
 				}
 			}
 
 			private int GetIndex()
 			{
 				var nav = GetComponentInParent<ScrollViewKeyboardNavigator>(true);
-				if (nav != null && selectable != null)
+				if (nav != null)
 				{
 					int idx = nav.selectables.IndexOf(selectable);
 					if (idx >= 0) return idx;
 				}
-				return transform.GetSiblingIndex(); // fallback
+				return transform.GetSiblingIndex();
 			}
 		}
 	}
