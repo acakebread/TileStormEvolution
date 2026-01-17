@@ -85,7 +85,6 @@ namespace MassiveHadronLtd
 		public void RefreshSelectables()
 		{
 			EnsureScrollRect();
-
 			selectables.Clear();
 
 			if (!scrollRect || !scrollRect.content)
@@ -93,9 +92,23 @@ namespace MassiveHadronLtd
 
 			foreach (Transform child in scrollRect.content)
 			{
+				if (!child) continue;
+
 				var s = child.GetComponent<Selectable>();
-				if (s && s.IsInteractable())
-					selectables.Add(s);
+				if (!s || !s.IsInteractable())
+					continue;
+
+				selectables.Add(s);
+			}
+
+			// Clamp selection after rebuild
+			if (selectables.Count == 0)
+			{
+				lastSelectedIndex = -1;
+			}
+			else
+			{
+				lastSelectedIndex = Mathf.Clamp(lastSelectedIndex, 0, selectables.Count - 1);
 			}
 		}
 
@@ -168,21 +181,22 @@ namespace MassiveHadronLtd
 
 		private void SelectIndex(int index, bool forceScroll = true)
 		{
-			if (index < 0 || index >= selectables.Count) return;
-
-			lastSelectedIndex = index;
+			if (index < 0 || index >= selectables.Count)
+				return;
 
 			var target = selectables[index];
+			if (!target) return;
+
+			lastSelectedIndex = index;
 			target.Select();
 
 			if (target is Toggle toggle)
-			{
 				toggle.isOn = true;
-			}
 
 			if (forceScroll)
 				SmartScrollTo(target, lastMoveDirection);
 		}
+
 
 		private void SmartScrollTo(Selectable selectable, int direction)
 		{
@@ -232,11 +246,28 @@ namespace MassiveHadronLtd
 			float viewportHeight = scrollRect.viewport.rect.height;
 
 			float total = 0f;
-			foreach (var s in selectables)
-				total += s.GetComponent<RectTransform>().rect.height;
+			int count = 0;
 
-			float avg = total / selectables.Count;
-			return Mathf.Clamp(Mathf.FloorToInt((viewportHeight / avg) * pageStepMultiplier), 1, selectables.Count);
+			foreach (var s in selectables)
+			{
+				if (!s) continue;
+
+				var rt = s.GetComponent<RectTransform>();
+				if (!rt) continue;
+
+				total += rt.rect.height;
+				count++;
+			}
+
+			if (count == 0)
+				return Mathf.RoundToInt(fallbackPageStep);
+
+			float avg = total / count;
+			return Mathf.Clamp(
+				Mathf.FloorToInt((viewportHeight / avg) * pageStepMultiplier),
+				1,
+				selectables.Count
+			);
 		}
 
 		private bool GetKeyDownWithRepeat(KeyCode key)
