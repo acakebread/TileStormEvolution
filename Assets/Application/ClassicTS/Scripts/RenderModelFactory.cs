@@ -53,7 +53,7 @@ namespace ClassicTilestorm
 			if (!isHD && !string.IsNullOrEmpty(def.texture))
 				sequence = TextureSetManager.GetTextureSequence(def.texture);
 
-			// Loop through filters/renderers (naive index matching — works for most prefabs)
+			// Loop through matching filter/renderer pairs
 			for (int i = 0; i < Mathf.Min(filters.Length, renderers.Length); i++)
 			{
 				var filter = filters[i];
@@ -64,29 +64,47 @@ namespace ClassicTilestorm
 				var localToRoot = filter.transform.localToWorldMatrix;
 				var worldMatrix = rootMatrix * localToRoot;
 
-				// Start with prefab materials
-				Material[] mats = renderer.sharedMaterials;
+				// Default: use original shared materials
+				Material[] materialsToUse = renderer.sharedMaterials;
 
-				// Apply texture animation override (same as DefinitionFactory)
+				// Apply texture sequence override (only for non-HD)
 				if (sequence != null && sequence.ResolvedFrames.Length > 0)
 				{
-					// For non-HD: override base texture with first frame (animation happens later if needed)
 					var firstTex = sequence.ResolvedFrames[0].texture;
 					if (firstTex != null)
 					{
-						foreach (var mat in mats)
+						Material[] overrideMats = new Material[materialsToUse.Length];
+
+						for (int m = 0; m < materialsToUse.Length; m++)
 						{
-							if (mat != null)
+							if (materialsToUse[m] == null)
 							{
-								mat.mainTexture = firstTex;
-								if (MaterialUtils.isEmissive(replacement))
-									mat.color = replacement.GetColor("_EmissionColor"); // forget the emission just use the color
+								overrideMats[m] = null;
+								continue;
 							}
+
+							// Important: create a copy so we don't modify the asset!
+							Material copy = new Material(materialsToUse[m]);
+							copy.mainTexture = firstTex;
+
+							// Apply color override from replacement material if it exists and is emissive
+							if (replacement != null && MaterialUtils.isEmissive(replacement))
+							{
+								copy.color = replacement.GetColor("_EmissionColor");
+								// If you actually want emission too:
+								// copy.SetColor("_EmissionColor", replacement.GetColor("_EmissionColor"));
+								// copy.EnableKeyword("_EMISSION"); // ← usually needed
+							}
+
+							overrideMats[m] = copy;
 						}
+
+						materialsToUse = overrideMats;
 					}
 				}
 
-				target.AddMeshInstance(filter.sharedMesh, mats, worldMatrix);
+				// Finally — add the instance **once** with the correct materials
+				target.AddMeshInstance(filter.sharedMesh, materialsToUse, worldMatrix);
 			}
 		}
 	}
