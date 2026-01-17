@@ -3,8 +3,8 @@ using UnityEngine.UI;
 using System;
 using System.Collections.Generic;
 using TMPro;
-using MassiveHadronLtd;
 using System.Linq;
+using MassiveHadronLtd;
 
 namespace ClassicTilestorm
 {
@@ -13,7 +13,7 @@ namespace ClassicTilestorm
 		[Header("UI References")]
 		[SerializeField] private Button closeButton;
 		[SerializeField] private ScrollRect definitionScrollView;
-		[SerializeField] private Transform contentParent;                    // list of definitions
+		[SerializeField] private Transform contentParent;
 		[SerializeField] private GameObject definitionListItemPrefab;
 
 		[SerializeField] private Button ButtonInsert;
@@ -25,11 +25,11 @@ namespace ClassicTilestorm
 		[SerializeField] private RawImage previewImage;
 
 		[Header("Dynamic Properties Panel")]
-		[SerializeField] private RectTransform propertiesRect;               // ← Grid Layout Group parent
-		[SerializeField] private GameObject flagTogglePrefab;                // ← Toggle + Label prefab
+		[SerializeField] private RectTransform propertiesRect;
+		[SerializeField] private GameObject flagTogglePrefab;
 
 		[Header("Preview Settings")]
-		[SerializeField] private Color backgroundColor = new Color(0.129f, 0.698f, 0.882f); // #21B2E1
+		[SerializeField] private Color backgroundColor = new Color(0.129f, 0.698f, 0.882f);
 		[SerializeField] private float fieldOfView = 60f;
 		[SerializeField] private float sizeToDistanceFactor = 1f;
 		[SerializeField] private float defaultTiltAngle = 30f;
@@ -49,12 +49,13 @@ namespace ClassicTilestorm
 		[SerializeField] private float groundUVScale = 1f;
 		[SerializeField] private Texture2D groundOverrideTexture;
 
-		// ── Runtime ────────────────────────────────────────────────────────────
+		// Runtime
 		private readonly List<Toggle> spawnedDefinitionToggles = new();
 		private ToggleGroup toggleGroup;
 		private string selectedDefinitionId;
 
 		private PreviewSceneController previewCtrl;
+		private bool previewInitialized;
 		private CommandRenderModelData currentModelData;
 		private GimbalOrbitController orbitController;
 
@@ -62,7 +63,7 @@ namespace ClassicTilestorm
 			string.IsNullOrEmpty(selectedDefinitionId) ? null :
 			ResourceManager.GetDefinition(selectedDefinitionId);
 
-		// Dynamic flag toggles
+		// Flag system (unchanged)
 		private readonly List<(Toggle toggle, FlagInfo flag)> spawnedFlagControls = new();
 
 		private readonly struct FlagInfo
@@ -85,14 +86,11 @@ namespace ClassicTilestorm
 
 		private static readonly IReadOnlyList<FlagInfo> AllFlags = new List<FlagInfo>
 		{
-            // ── Connection directions ──────────────────────────────────────────────
-            new("North",       "Nav North",   d => d.bNorth,       (d, v) => d.bNorth = v),
+			new("North",       "Nav North",   d => d.bNorth,       (d, v) => d.bNorth = v),
 			new("East",        "Nav East",    d => d.bEast,        (d, v) => d.bEast = v),
 			new("South",       "Nav South",   d => d.bSouth,       (d, v) => d.bSouth = v),
 			new("West",        "Nav West",    d => d.bWest,        (d, v) => d.bWest = v),
-
-            // ── other properites ──────────────────────────────────────────────
-            new("Drag",        "Can Drag",        d => d.bDrag,        (d, v) => d.bDrag = v),
+			new("Drag",        "Can Drag",        d => d.bDrag,        (d, v) => d.bDrag = v),
 			new("Roll",        "Can Roll",        d => d.bRoll,        (d, v) => d.bRoll = v),
 			new("Dock",        "Can Dock",        d => d.bDock,        (d, v) => d.bDock = v),
 			new("Door",        "Is Door",         d => d.bDoor,        (d, v) => d.bDoor = v),
@@ -102,15 +100,13 @@ namespace ClassicTilestorm
 			new("PuzzleBlock", "Puzzle Block",    d => d.bPuzzleBlock, (d, v) => d.bPuzzleBlock = v),
 			new("Sway",        "Sways",           d => d.bSway,        (d, v) => d.bSway = v),
 			new("Wash",        "Bouyant",         d => d.bWash,        (d, v) => d.bWash = v),
-            // ← Add new flags here when you create them in Definition.cs
-        };
+		};
 
 		protected override void Awake()
 		{
 			base.Awake();
 
-			if (closeButton)
-				closeButton.onClick.AddListener(() => gameObject.SetActive(false));
+			if (closeButton) closeButton.onClick.AddListener(() => gameObject.SetActive(false));
 
 			if (!contentParent && definitionScrollView)
 				contentParent = definitionScrollView.content;
@@ -141,16 +137,13 @@ namespace ClassicTilestorm
 			if (ButtonMoveUp) ButtonMoveUp.onClick.AddListener(MoveDefinitionUp);
 			if (ButtonMoveDown) ButtonMoveDown.onClick.AddListener(MoveDefinitionDown);
 
-			// Create dynamic flag toggles once
 			CreateFlagToggles();
-
-			// Setup preview
-			InitializePreview();
 		}
 
 		protected override void OnEnable()
 		{
 			base.OnEnable();
+			EnsurePreviewInitialized();
 			RefreshDefinitionList();
 		}
 
@@ -161,6 +154,58 @@ namespace ClassicTilestorm
 			base.OnDisable();
 		}
 
+		private void EnsurePreviewInitialized()
+		{
+			if (previewInitialized && previewCtrl != null) return;
+
+			if (previewImage == null)
+			{
+				Debug.LogError("[DefinitionEditorPanel] previewImage is not assigned!", this);
+				return;
+			}
+
+			InitializePreview();
+
+			if (previewCtrl == null)
+			{
+				Debug.LogError("[DefinitionEditorPanel] Failed to initialize PreviewSceneController!", this);
+				return;
+			}
+
+			previewInitialized = true;
+		}
+
+		private void InitializePreview()
+		{
+			previewCtrl = new PreviewSceneController(
+				previewImage,
+				previewImage.GetComponent<RectTransform>())
+			{
+				BackgroundColor = backgroundColor,
+				FieldOfView = fieldOfView,
+				GroundColor = groundColor,
+				GroundSize = groundSize,
+				GroundY = groundY,
+				GroundUVScale = groundUVScale,
+				GroundOverrideTexture = groundOverrideTexture
+			};
+
+			SetupPreviewInput();
+			orbitController.OnTransformChanged += ApplyCameraTransform;
+		}
+
+		private void SetupPreviewInput()
+		{
+			if (!previewImage.TryGetComponent<PointerDragScrollHandler>(out var handler))
+				handler = previewImage.gameObject.AddComponent<PointerDragScrollHandler>();
+
+			handler.Setup(
+				onDrag: orbitController.ProcessDrag,
+				onScroll: orbitController.ProcessScroll,
+				onUp: orbitController.EndDrag
+			);
+		}
+
 		private void Update()
 		{
 			if (previewCtrl == null) return;
@@ -169,27 +214,212 @@ namespace ClassicTilestorm
 		}
 
 		private Toggle pendingScrollTarget;
+
 		private void LateUpdate()
 		{
-			if (pendingScrollTarget == null)
-				return;
-
-			//Canvas.ForceUpdateCanvases();
+			if (pendingScrollTarget == null) return;
 			ScrollToToggle(pendingScrollTarget);
 			pendingScrollTarget = null;
 		}
 
-		private int GetSelectedIndex()
+		// ── Definition List Management ────────────────────────────────────────
+
+		private void RefreshDefinitionList()
 		{
-			if (string.IsNullOrEmpty(selectedDefinitionId))
-				return -1;
+			ClearDefinitionListItems();
 
-			for (int i = 0; i < ResourceManager.Definitions.Count; i++)
-				if (ResourceManager.Definitions[i].id == selectedDefinitionId)
-					return i;
+			if (ResourceManager.Definitions.Count == 0)
+			{
+				selectedDefinitionId = null;
+				SyncAllProperties();
+				return;
+			}
 
-			return -1;
+			foreach (var def in ResourceManager.Definitions)
+			{
+				CreateDefinitionListItem(def);
+			}
+
+			// Restore selection or pick first
+			string targetId = selectedDefinitionId;
+			if (string.IsNullOrEmpty(targetId) && ResourceManager.Definitions.Count > 0)
+				targetId = ResourceManager.Definitions[0].id;
+
+			SetToggleById(targetId);
 		}
+
+		private void CreateDefinitionListItem(Definition def)
+		{
+			var go = Instantiate(definitionListItemPrefab, contentParent);
+			var toggle = go.GetComponent<Toggle>();
+
+			if (toggle == null)
+			{
+				Destroy(go);
+				return;
+			}
+
+			toggle.group = toggleGroup;
+			spawnedDefinitionToggles.Add(toggle);
+
+			toggle.onValueChanged.AddListener(isOn =>
+			{
+				if (isOn) SelectDefinition(def.id);
+			});
+
+			var label = go.GetComponentInChildren<TMP_Text>();
+			if (label != null)
+				label.text = $"{def.id} ({def.model ?? "—"})";
+
+			go.AddComponent<ScrollViewKeyboardNavigator.ItemSelectionHandler>();
+		}
+
+		private void ClearDefinitionListItems()
+		{
+			foreach (var t in spawnedDefinitionToggles)
+				if (t != null) Destroy(t.gameObject);
+
+			spawnedDefinitionToggles.Clear();
+		}
+
+		private void SetToggleById(string defId)
+		{
+			if (string.IsNullOrEmpty(defId)) return;
+
+			foreach (var t in spawnedDefinitionToggles)
+			{
+				if (t == null) continue;
+
+				var label = t.GetComponentInChildren<TMP_Text>();
+				if (label != null && label.text?.StartsWith(defId) == true)
+				{
+					t.SetIsOnWithoutNotify(true);
+					pendingScrollTarget = t;
+					SelectDefinition(defId); // ← manual call, safe
+					return;
+				}
+			}
+
+			// Not found → clear selection
+			selectedDefinitionId = null;
+			SyncAllProperties();
+		}
+
+		private void SelectDefinition(string defId)
+		{
+			selectedDefinitionId = defId;
+			UpdatePreview(defId);
+			SyncAllProperties();
+		}
+
+		private void SyncAllProperties()
+		{
+			SyncFlagToggles();
+			// Add more property syncs here later
+		}
+
+		private void UpdatePreview(string defId)
+		{
+			if (previewCtrl == null)
+			{
+				Debug.LogWarning("Preview controller not ready - attempting late init", this);
+				EnsurePreviewInitialized();
+				if (previewCtrl == null) return;
+			}
+
+			currentModelData = null;
+			previewCtrl.ClearModel();
+
+			var def = ResourceManager.GetDefinition(defId);
+			if (def != null && !string.IsNullOrEmpty(def.model))
+			{
+				currentModelData = RenderModelFactory.Create(def, Vector3.zero, Quaternion.identity, Vector3.one);
+
+				if (currentModelData != null)
+				{
+					previewCtrl.SetModel(currentModelData);
+					orbitController.ResetView(true, currentModelData.bounds);
+				}
+				else
+				{
+					orbitController.ResetView(false);
+				}
+			}
+			else
+			{
+				orbitController.ResetView(false);
+			}
+		}
+
+		private void ApplyCameraTransform()
+		{
+			if (previewCtrl?.Camera == null) return;
+			var (pos, rot) = orbitController.GetCameraTransform();
+			previewCtrl.Camera.position = pos;
+			previewCtrl.Camera.rotation = rot;
+		}
+
+		private void CleanupPreview()
+		{
+			if (previewCtrl != null)
+			{
+				orbitController.OnTransformChanged -= ApplyCameraTransform;
+				previewCtrl.Dispose();
+				previewCtrl = null;
+			}
+			currentModelData = null;
+			previewInitialized = false; // Force re-init next time (safer for editor)
+		}
+
+		// ── Flag Toggles (unchanged except minor safety) ──────────────────────
+
+		private void CreateFlagToggles()
+		{
+			for (int i = propertiesRect.childCount - 1; i >= 0; i--)
+				Destroy(propertiesRect.GetChild(i).gameObject);
+
+			spawnedFlagControls.Clear();
+
+			foreach (var flag in AllFlags)
+			{
+				var instance = Instantiate(flagTogglePrefab, propertiesRect);
+				var toggle = instance.GetComponent<Toggle>();
+				var label = instance.GetComponentInChildren<TMP_Text>();
+
+				if (toggle == null || label == null)
+				{
+					Destroy(instance);
+					continue;
+				}
+
+				label.text = flag.DisplayName;
+				toggle.isOn = false;
+
+				spawnedFlagControls.Add((toggle, flag));
+
+				toggle.onValueChanged.AddListener(isOn =>
+				{
+					var def = CurrentDefinition;
+					if (def == null) return;
+					flag.SetValue(def, isOn);
+				});
+			}
+		}
+
+		private void SyncFlagToggles()
+		{
+			var def = CurrentDefinition;
+			bool hasDef = def != null;
+
+			foreach (var (toggle, flag) in spawnedFlagControls)
+			{
+				bool value = hasDef && flag.GetValue(def);
+				toggle.SetIsOnWithoutNotify(value);
+				toggle.interactable = hasDef;
+			}
+		}
+
+		// ── CRUD Operations (unchanged) ───────────────────────────────────────
 
 		private void InsertDefinition()
 		{
@@ -230,187 +460,33 @@ namespace ClassicTilestorm
 			}
 			else
 			{
-				int index = GetSelectedIndex();
-				int newIndex = Mathf.Clamp(index, 0, defs.Count - 1);
-				selectedDefinitionId = defs[newIndex].id;
+				selectedDefinitionId = defs[Mathf.Clamp(GetSelectedIndex(), 0, defs.Count - 1)].id;
 			}
 
 			RefreshDefinitionList();
 		}
 
-		private void MoveDefinitionUp()
+		private void MoveDefinition(Action<string> moveAction)
 		{
 			if (ResourceManager.database == null) return;
-
-			ResourceManager.MoveDefinitionUp(selectedDefinitionId);
+			moveAction?.Invoke(selectedDefinitionId);
 			RefreshDefinitionList();
 		}
 
-		private void MoveDefinitionDown()
-		{
-			if (ResourceManager.database == null) return;
+		// Then use it like this:
+		private void MoveDefinitionUp() => MoveDefinition(ResourceManager.MoveDefinitionUp);
+		private void MoveDefinitionDown() => MoveDefinition(ResourceManager.MoveDefinitionDown);
 
-			ResourceManager.MoveDefinitionDown(selectedDefinitionId);
-			RefreshDefinitionList();
+		private int GetSelectedIndex()
+		{
+			if (string.IsNullOrEmpty(selectedDefinitionId)) return -1;
+			for (int i = 0; i < ResourceManager.Definitions.Count; i++)
+				if (ResourceManager.Definitions[i].id == selectedDefinitionId)
+					return i;
+			return -1;
 		}
 
-		// ───────────────────── DYNAMIC FLAG TOGGLES ─────────────────────────────
-
-		private void CreateFlagToggles()
-		{
-			// Clear existing children
-			for (int i = propertiesRect.childCount - 1; i >= 0; i--)
-			{
-				Destroy(propertiesRect.GetChild(i).gameObject);
-			}
-			spawnedFlagControls.Clear();
-
-			foreach (var flag in AllFlags)
-			{
-				var instance = Instantiate(flagTogglePrefab, propertiesRect);
-				var toggle = instance.GetComponent<Toggle>();
-				var label = instance.GetComponentInChildren<TMP_Text>();
-
-				if (toggle == null || label == null)
-				{
-					Debug.LogError("Flag toggle prefab missing Toggle or TMP_Text component!");
-					Destroy(instance);
-					continue;
-				}
-
-				label.text = flag.DisplayName;
-				toggle.isOn = false;
-
-				spawnedFlagControls.Add((toggle, flag));
-
-				// Value changed listener
-				toggle.onValueChanged.AddListener(isOn =>
-				{
-					var def = CurrentDefinition;
-					if (def == null) return;
-					flag.SetValue(def, isOn);
-					// Optional: ResourceManager.MarkDefinitionDirty(selectedDefinitionId);
-				});
-			}
-		}
-
-		private void SyncFlagToggles()
-		{
-			var def = CurrentDefinition;
-			bool hasDef = def != null;
-
-			foreach (var (toggle, flag) in spawnedFlagControls)
-			{
-				bool value = hasDef && flag.GetValue(def);
-				toggle.SetIsOnWithoutNotify(value);
-				toggle.interactable = hasDef;
-			}
-		}
-
-		// ───────────────────── DEFINITION LIST ──────────────────────────────────
-
-		private void RefreshDefinitionList()
-		{
-			ClearDefinitionListItems();
-
-			if (ResourceManager.Definitions.Count == 0)
-			{
-				selectedDefinitionId = null;
-				return;
-			}
-
-			// Create new list items
-			foreach (var def in ResourceManager.Definitions)
-			{
-				CreateDefinitionListItem(def);
-			}
-
-			// Try to get navigator and rebuild properly
-			if (definitionScrollView.TryGetComponent<ScrollViewKeyboardNavigator>(out var navigator))
-			{
-				// Give Unity a moment to initialize new components
-				StartCoroutine(FinishRebuild(navigator));
-			}
-
-			// Try restore previous selection or select first item
-			string targetId = selectedDefinitionId;
-			if (string.IsNullOrEmpty(targetId) && ResourceManager.Definitions.Count > 0)
-				targetId = ResourceManager.Definitions[0].id;
-
-			SetToggleById(targetId);
-		}
-
-		private System.Collections.IEnumerator FinishRebuild(ScrollViewKeyboardNavigator navigator)
-		{
-			yield return null;  // let Start/OnEnable run
-			yield return null;  // extra safety frame
-
-			navigator.ClearAndRebuild();
-		}
-
-		private void CreateDefinitionListItem(Definition def)
-		{
-			var go = Instantiate(definitionListItemPrefab, contentParent);
-			var toggle = go.GetComponent<Toggle>();
-
-			if (toggle == null)
-			{
-				Destroy(go);
-				return;
-			}
-
-			toggle.group = toggleGroup;
-			spawnedDefinitionToggles.Add(toggle);
-
-			toggle.onValueChanged.AddListener(isOn =>
-			{
-				if (isOn) SelectDefinition(def.id);
-			});
-
-			var label = go.GetComponentInChildren<TMP_Text>();
-			if (label != null)
-				label.text = $"{def.id} ({def.model ?? "—"})";
-
-			// Add the handler that talks to the navigator
-			go.AddComponent<ScrollViewKeyboardNavigator.ItemSelectionHandler>();
-		}
-
-		private void ClearDefinitionListItems()
-		{
-			foreach (var t in spawnedDefinitionToggles)
-				if (t != null) Destroy(t.gameObject);
-
-			spawnedDefinitionToggles.Clear();
-		}
-
-		private void SetToggleById(string defId)
-		{
-			foreach (var t in spawnedDefinitionToggles)
-			{
-				var label = t.GetComponentInChildren<TMP_Text>();
-				if (label != null && label.text.StartsWith(defId))
-				{
-					t.isOn = true;
-					pendingScrollTarget = t;
-					return;
-				}
-			}
-		}
-
-		private void SelectDefinition(string defId)
-		{
-			selectedDefinitionId = defId;
-			UpdatePreview(defId);
-			SyncAllProperties();
-		}
-
-		private void SyncAllProperties()
-		{
-			SyncFlagToggles();
-			// Add other property syncs here in future if needed
-		}
-
-		// ───────────────────── SCROLL HELPERS ───────────────────────────────────
+		// ── Scroll Helpers (unchanged) ────────────────────────────────────────
 
 		private void ScrollToToggle(Toggle toggle)
 		{
@@ -432,80 +508,6 @@ namespace ClassicTilestorm
 
 			float normalized = Mathf.Clamp01((targetY - viewportHeight / 2f) / (contentHeight - viewportHeight));
 			definitionScrollView.verticalNormalizedPosition = 1f - normalized;
-		}
-
-		// ───────────────────── PREVIEW ──────────────────────────────────────────
-
-		private void InitializePreview()
-		{
-			if (previewImage == null) return;
-
-			previewCtrl = new PreviewSceneController(
-				previewImage,
-				previewImage.GetComponent<RectTransform>())
-			{
-				BackgroundColor = backgroundColor,
-				FieldOfView = fieldOfView,
-				GroundColor = groundColor,
-				GroundSize = groundSize,
-				GroundY = groundY,
-				GroundUVScale = groundUVScale,
-				GroundOverrideTexture = groundOverrideTexture
-			};
-
-			SetupPreviewInput();
-			orbitController.OnTransformChanged += ApplyCameraTransform;
-		}
-
-		private void SetupPreviewInput()
-		{
-			if (!previewImage.TryGetComponent<PointerDragScrollHandler>(out var handler))
-				handler = previewImage.gameObject.AddComponent<PointerDragScrollHandler>();
-
-			handler.Setup(
-				onDrag: orbitController.ProcessDrag,
-				onScroll: orbitController.ProcessScroll,
-				onUp: orbitController.EndDrag
-			);
-		}
-
-		private void UpdatePreview(string defId)
-		{
-			currentModelData = null;
-			previewCtrl.ClearModel();
-
-			var def = ResourceManager.GetDefinition(defId);
-			if (def != null && !string.IsNullOrEmpty(def.model))
-			{
-				currentModelData = RenderModelFactory.Create(def, Vector3.zero, Quaternion.identity, Vector3.one);
-				previewCtrl.SetModel(currentModelData);
-				orbitController.ResetView(true, currentModelData.bounds);
-			}
-			else
-			{
-				orbitController.ResetView(false);
-			}
-		}
-
-		private void ApplyCameraTransform()
-		{
-			if (previewCtrl?.Camera == null) return;
-			var (pos, rot) = orbitController.GetCameraTransform();
-			previewCtrl.Camera.position = pos;
-			previewCtrl.Camera.rotation = rot;
-		}
-
-		private void CleanupPreview()
-		{
-			if (previewCtrl != null)
-			{
-				previewCtrl.Dispose();
-				previewCtrl = null;
-			}
-			currentModelData = null;
-
-			if (orbitController != null)
-				orbitController.OnTransformChanged -= ApplyCameraTransform;
 		}
 	}
 }
