@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using TMPro;
 using System.Linq;
 using MassiveHadronLtd;
+using MassiveHadronLtd.UI;
 
 namespace ClassicTilestorm
 {
@@ -27,6 +28,10 @@ namespace ClassicTilestorm
 		[Header("Dynamic Properties Panel")]
 		[SerializeField] private RectTransform propertiesRect;
 		[SerializeField] private GameObject flagTogglePrefab;
+
+		[Header("Model Selection")]
+		[SerializeField] private TMP_Dropdown modelDropdown;
+		[SerializeField] private string noneOptionText = "— None —";
 
 		[Header("Preview Settings")]
 		[SerializeField] private Color backgroundColor = new Color(0.129f, 0.698f, 0.882f);
@@ -63,7 +68,7 @@ namespace ClassicTilestorm
 			string.IsNullOrEmpty(selectedDefinitionId) ? null :
 			ResourceManager.GetDefinition(selectedDefinitionId);
 
-		// Flag system (unchanged)
+		// Flag system
 		private readonly List<(Toggle toggle, FlagInfo flag)> spawnedFlagControls = new();
 
 		private readonly struct FlagInfo
@@ -90,16 +95,16 @@ namespace ClassicTilestorm
 			new("East",        "Nav East",    d => d.bEast,        (d, v) => d.bEast = v),
 			new("South",       "Nav South",   d => d.bSouth,       (d, v) => d.bSouth = v),
 			new("West",        "Nav West",    d => d.bWest,        (d, v) => d.bWest = v),
-			new("Drag",        "Can Drag",        d => d.bDrag,        (d, v) => d.bDrag = v),
-			new("Roll",        "Can Roll",        d => d.bRoll,        (d, v) => d.bRoll = v),
-			new("Dock",        "Can Dock",        d => d.bDock,        (d, v) => d.bDock = v),
-			new("Door",        "Is Door",         d => d.bDoor,        (d, v) => d.bDoor = v),
-			new("Start",       "Start Point",     d => d.bStart,       (d, v) => d.bStart = v),
-			new("End",         "End Point",       d => d.bEnd,         (d, v) => d.bEnd = v),
-			new("Console",     "Is Console",      d => d.bConsole,     (d, v) => d.bConsole = v),
-			new("PuzzleBlock", "Puzzle Block",    d => d.bPuzzleBlock, (d, v) => d.bPuzzleBlock = v),
-			new("Sway",        "Sways",           d => d.bSway,        (d, v) => d.bSway = v),
-			new("Wash",        "Bouyant",         d => d.bWash,        (d, v) => d.bWash = v),
+			new("Drag",        "Can Drag",    d => d.bDrag,        (d, v) => d.bDrag = v),
+			new("Roll",        "Can Roll",    d => d.bRoll,        (d, v) => d.bRoll = v),
+			new("Dock",        "Can Dock",    d => d.bDock,        (d, v) => d.bDock = v),
+			new("Door",        "Is Door",     d => d.bDoor,        (d, v) => d.bDoor = v),
+			new("Start",       "Start Point", d => d.bStart,       (d, v) => d.bStart = v),
+			new("End",         "End Point",   d => d.bEnd,         (d, v) => d.bEnd = v),
+			new("Console",     "Is Console",  d => d.bConsole,     (d, v) => d.bConsole = v),
+			new("PuzzleBlock", "Puzzle Block",d => d.bPuzzleBlock, (d, v) => d.bPuzzleBlock = v),
+			new("Sway",        "Sways",       d => d.bSway,        (d, v) => d.bSway = v),
+			new("Wash",        "Bouyant",     d => d.bWash,        (d, v) => d.bWash = v),
 		};
 
 		protected override void Awake()
@@ -138,6 +143,11 @@ namespace ClassicTilestorm
 			if (ButtonMoveDown) ButtonMoveDown.onClick.AddListener(MoveDefinitionDown);
 
 			CreateFlagToggles();
+
+			if (modelDropdown != null)
+			{
+				modelDropdown.onValueChanged.AddListener(OnModelDropdownValueChanged);
+			}
 		}
 
 		protected override void OnEnable()
@@ -145,6 +155,8 @@ namespace ClassicTilestorm
 			base.OnEnable();
 			EnsurePreviewInitialized();
 			RefreshDefinitionList();
+			PopulateModelDropdown();
+			StartCoroutine(DelayedInitialSync());
 		}
 
 		protected override void OnDisable()
@@ -152,6 +164,93 @@ namespace ClassicTilestorm
 			CleanupPreview();
 			ClearDefinitionListItems();
 			base.OnDisable();
+		}
+
+		private System.Collections.IEnumerator DelayedInitialSync()
+		{
+			yield return null;
+			SyncModelDropdown();
+		}
+
+		private void SyncModelDropdown()
+		{
+			if (modelDropdown == null || modelDropdown.options.Count == 0) return;
+
+			var def = CurrentDefinition;
+			int targetIndex = 0;
+
+			if (def != null && !string.IsNullOrEmpty(def.model))
+			{
+				string modelClean = (def.model ?? "").Trim()
+					.Replace("\u00A0", " ")
+					.Replace("\u200B", "")
+					.Replace("\uFEFF", "");
+
+				targetIndex = modelDropdown.options.FindIndex(opt =>
+				{
+					string optClean = (opt.text ?? "").Trim()
+						.Replace("\u00A0", " ")
+						.Replace("\u200B", "")
+						.Replace("\uFEFF", "");
+					return string.Equals(optClean, modelClean, StringComparison.OrdinalIgnoreCase);
+				});
+
+				if (targetIndex < 0) targetIndex = 0;
+			}
+
+			modelDropdown.SetValueWithoutNotify(targetIndex);
+		}
+
+		private void PopulateModelDropdown()
+		{
+			if (modelDropdown == null) return;
+
+			modelDropdown.ClearOptions();
+
+			var modelNames = new List<string>();
+
+			foreach (var root in new[] { ApplicationSettings.GeometryPath.Trim('/'), "Levels", "Levels/Med" })
+			{
+				if (string.IsNullOrEmpty(root)) continue;
+				var gos = Resources.LoadAll<GameObject>(root);
+				foreach (var go in gos)
+					if (!string.IsNullOrEmpty(go.name))
+						modelNames.Add(go.name);
+			}
+
+			var uniqueSorted = modelNames.Distinct()
+				.OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
+				.ToList();
+
+			var options = new List<string> { noneOptionText };
+			options.AddRange(uniqueSorted);
+
+			modelDropdown.AddOptions(options);
+			modelDropdown.interactable = true;
+		}
+
+		private void OnModelDropdownValueChanged(int index)
+		{
+			if (index < 0 || index >= modelDropdown.options.Count) return;
+
+			var def = CurrentDefinition;
+			if (def == null) return;
+
+			string selectedText = modelDropdown.options[index].text;
+			string newModel = (selectedText == noneOptionText) ? null : selectedText;
+
+			if (newModel != def.model)
+			{
+				def.model = newModel;
+				UpdatePreview(selectedDefinitionId);
+			}
+		}
+
+		private void Update()
+		{
+			if (previewCtrl == null) return;
+			orbitController.Update();
+			previewCtrl.UpdateAndRender();
 		}
 
 		private void EnsurePreviewInitialized()
@@ -177,9 +276,7 @@ namespace ClassicTilestorm
 
 		private void InitializePreview()
 		{
-			previewCtrl = new PreviewSceneController(
-				previewImage,
-				previewImage.GetComponent<RectTransform>())
+			previewCtrl = new PreviewSceneController(previewImage, previewImage.GetComponent<RectTransform>())
 			{
 				BackgroundColor = backgroundColor,
 				FieldOfView = fieldOfView,
@@ -206,24 +303,6 @@ namespace ClassicTilestorm
 			);
 		}
 
-		private void Update()
-		{
-			if (previewCtrl == null) return;
-			orbitController.Update();
-			previewCtrl.UpdateAndRender();
-		}
-
-		private Toggle pendingScrollTarget;
-
-		private void LateUpdate()
-		{
-			if (pendingScrollTarget == null) return;
-			ScrollToToggle(pendingScrollTarget);
-			pendingScrollTarget = null;
-		}
-
-		// ── Definition List Management ────────────────────────────────────────
-
 		private void RefreshDefinitionList()
 		{
 			ClearDefinitionListItems();
@@ -236,11 +315,8 @@ namespace ClassicTilestorm
 			}
 
 			foreach (var def in ResourceManager.Definitions)
-			{
 				CreateDefinitionListItem(def);
-			}
 
-			// Restore selection or pick first
 			string targetId = selectedDefinitionId;
 			if (string.IsNullOrEmpty(targetId) && ResourceManager.Definitions.Count > 0)
 				targetId = ResourceManager.Definitions[0].id;
@@ -252,12 +328,7 @@ namespace ClassicTilestorm
 		{
 			var go = Instantiate(definitionListItemPrefab, contentParent);
 			var toggle = go.GetComponent<Toggle>();
-
-			if (toggle == null)
-			{
-				Destroy(go);
-				return;
-			}
+			if (toggle == null) { Destroy(go); return; }
 
 			toggle.group = toggleGroup;
 			spawnedDefinitionToggles.Add(toggle);
@@ -268,8 +339,7 @@ namespace ClassicTilestorm
 			});
 
 			var label = go.GetComponentInChildren<TMP_Text>();
-			if (label != null)
-				label.text = $"{def.id} ({def.model ?? "—"})";
+			if (label != null) label.text = $"{def.id} ({def.model ?? "—"})";
 
 			go.AddComponent<ScrollViewKeyboardNavigator.ItemSelectionHandler>();
 		}
@@ -294,13 +364,11 @@ namespace ClassicTilestorm
 				if (label != null && label.text?.StartsWith(defId) == true)
 				{
 					t.SetIsOnWithoutNotify(true);
-					pendingScrollTarget = t;
-					SelectDefinition(defId); // ← manual call, safe
+					SelectDefinition(defId);
 					return;
 				}
 			}
 
-			// Not found → clear selection
 			selectedDefinitionId = null;
 			SyncAllProperties();
 		}
@@ -310,19 +378,15 @@ namespace ClassicTilestorm
 			selectedDefinitionId = defId;
 			UpdatePreview(defId);
 			SyncAllProperties();
+			SyncModelDropdown();
 		}
 
-		private void SyncAllProperties()
-		{
-			SyncFlagToggles();
-			// Add more property syncs here later
-		}
+		private void SyncAllProperties() => SyncFlagToggles();
 
 		private void UpdatePreview(string defId)
 		{
 			if (previewCtrl == null)
 			{
-				Debug.LogWarning("Preview controller not ready - attempting late init", this);
 				EnsurePreviewInitialized();
 				if (previewCtrl == null) return;
 			}
@@ -334,21 +398,14 @@ namespace ClassicTilestorm
 			if (def != null && !string.IsNullOrEmpty(def.model))
 			{
 				currentModelData = RenderModelFactory.Create(def, Vector3.zero, Quaternion.identity, Vector3.one);
-
 				if (currentModelData != null)
 				{
 					previewCtrl.SetModel(currentModelData);
 					orbitController.ResetView(true, currentModelData.bounds);
 				}
-				else
-				{
-					orbitController.ResetView(false);
-				}
+				else orbitController.ResetView(false);
 			}
-			else
-			{
-				orbitController.ResetView(false);
-			}
+			else orbitController.ResetView(false);
 		}
 
 		private void ApplyCameraTransform()
@@ -368,10 +425,8 @@ namespace ClassicTilestorm
 				previewCtrl = null;
 			}
 			currentModelData = null;
-			previewInitialized = false; // Force re-init next time (safer for editor)
+			previewInitialized = false;
 		}
-
-		// ── Flag Toggles (unchanged except minor safety) ──────────────────────
 
 		private void CreateFlagToggles()
 		{
@@ -386,11 +441,7 @@ namespace ClassicTilestorm
 				var toggle = instance.GetComponent<Toggle>();
 				var label = instance.GetComponentInChildren<TMP_Text>();
 
-				if (toggle == null || label == null)
-				{
-					Destroy(instance);
-					continue;
-				}
+				if (toggle == null || label == null) { Destroy(instance); continue; }
 
 				label.text = flag.DisplayName;
 				toggle.isOn = false;
@@ -418,8 +469,6 @@ namespace ClassicTilestorm
 				toggle.interactable = hasDef;
 			}
 		}
-
-		// ── CRUD Operations (unchanged) ───────────────────────────────────────
 
 		private void InsertDefinition()
 		{
@@ -454,14 +503,8 @@ namespace ClassicTilestorm
 			ResourceManager.DeleteDefinition(selectedDefinitionId);
 
 			var defs = ResourceManager.Definitions.ToList();
-			if (defs.Count == 0)
-			{
-				selectedDefinitionId = null;
-			}
-			else
-			{
-				selectedDefinitionId = defs[Mathf.Clamp(GetSelectedIndex(), 0, defs.Count - 1)].id;
-			}
+			if (defs.Count == 0) selectedDefinitionId = null;
+			else selectedDefinitionId = defs[Mathf.Clamp(GetSelectedIndex(), 0, defs.Count - 1)].id;
 
 			RefreshDefinitionList();
 		}
@@ -473,7 +516,6 @@ namespace ClassicTilestorm
 			RefreshDefinitionList();
 		}
 
-		// Then use it like this:
 		private void MoveDefinitionUp() => MoveDefinition(ResourceManager.MoveDefinitionUp);
 		private void MoveDefinitionDown() => MoveDefinition(ResourceManager.MoveDefinitionDown);
 
@@ -484,30 +526,6 @@ namespace ClassicTilestorm
 				if (ResourceManager.Definitions[i].id == selectedDefinitionId)
 					return i;
 			return -1;
-		}
-
-		// ── Scroll Helpers (unchanged) ────────────────────────────────────────
-
-		private void ScrollToToggle(Toggle toggle)
-		{
-			if (definitionScrollView == null || toggle == null) return;
-
-			var rt = toggle.GetComponent<RectTransform>();
-			if (rt == null) return;
-
-			Canvas.ForceUpdateCanvases();
-
-			var viewport = definitionScrollView.viewport;
-			var content = contentParent as RectTransform;
-
-			Vector2 localPoint = content.InverseTransformPoint(rt.position);
-			float targetY = -localPoint.y - (rt.rect.height / 2f);
-
-			float viewportHeight = viewport.rect.height;
-			float contentHeight = content.rect.height;
-
-			float normalized = Mathf.Clamp01((targetY - viewportHeight / 2f) / (contentHeight - viewportHeight));
-			definitionScrollView.verticalNormalizedPosition = 1f - normalized;
 		}
 	}
 }

@@ -184,6 +184,7 @@ namespace ClassicTilestorm
 
 		// ── Lifecycle / overrides ──────────────────────────────
 		protected virtual void Awake() { }
+		protected virtual void Start() { }
 
 		protected virtual void OnEnable() { }
 
