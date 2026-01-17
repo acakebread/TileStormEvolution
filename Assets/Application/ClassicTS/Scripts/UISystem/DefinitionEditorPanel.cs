@@ -311,6 +311,7 @@ namespace ClassicTilestorm
 				targetId = ResourceManager.Definitions[0].id;
 
 			SetToggleById(targetId);
+			UpdateDeleteButtonState();
 		}
 
 		private void CreateDefinitionListItem(Definition def)
@@ -368,6 +369,7 @@ namespace ClassicTilestorm
 			UpdatePreview(defId);
 			SyncAllProperties();
 			SyncModelDropdown();
+			UpdateDeleteButtonState();
 		}
 
 		private void SyncAllProperties()
@@ -460,14 +462,8 @@ namespace ClassicTilestorm
 		{
 			if (ResourceManager.database == null) return;
 
-			int n = 1;
-			string newId;
-			do
-			{
-				newId = $"new_def_id({n:000})";
-				n++;
-			}
-			while (ResourceManager.Definitions.Any(d => d.id == newId));
+			// Much cleaner now:
+			string newId = ResourceManager.GenerateUniqueNewDefinitionId();
 
 			var def = Definition.GetDefault(newId);
 
@@ -488,6 +484,23 @@ namespace ClassicTilestorm
 			else selectedDefinitionId = defs[Mathf.Clamp(GetSelectedIndex(), 0, defs.Count - 1)].id;
 
 			RefreshDefinitionList();
+		}
+
+		// Add this new method
+		private void UpdateDeleteButtonState()
+		{
+			if (ButtonDelete == null) return;
+
+			bool hasSelection = !string.IsNullOrEmpty(selectedDefinitionId);
+			bool isUsed = hasSelection && ResourceManager.IsDefinitionUsed(selectedDefinitionId);
+
+			ButtonDelete.interactable = hasSelection && !isUsed;
+
+			// Optional: better UX — change text or tooltip when disabled
+			if (ButtonDelete.GetComponentInChildren<TMP_Text>() is TMP_Text btnText)
+			{
+				btnText.text = isUsed ? "Delete (used)" : "Delete";
+			}
 		}
 
 		private void MoveDefinition(Action<string> moveAction)

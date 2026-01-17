@@ -89,5 +89,48 @@ namespace ClassicTilestorm
 			(list[idx + 1], list[idx]) = (list[idx], list[idx + 1]);
 			_db.definitions = list.ToArray();
 		}
+
+		/// <summary>
+		/// Checks if the given definition ID is currently used in any map's tile table.
+		/// </summary>
+		public static bool IsDefinitionUsed(string defId)
+		{
+			if (string.IsNullOrEmpty(defId))
+				return false;
+
+			foreach (var map in Maps)
+			{
+				if (map?.table == null)
+					continue;
+
+				// Very fast check - most maps will fail here immediately
+				if (Array.IndexOf(map.table, defId) >= 0)
+					return true;
+			}
+
+			return false;
+		}
+
+		/// <summary>
+		/// Generates the next available unique definition ID in the format "new_def_id(001)", "new_def_id(002)", etc.
+		/// </summary>
+		public static string GenerateUniqueNewDefinitionId(string prefix = "new_def_id")
+		{
+			int n = 1;
+			string candidate;
+
+			var existingIds = Definitions
+				.Select(d => d.id)
+				.ToHashSet(StringComparer.Ordinal); // Fast lookup
+
+			do
+			{
+				candidate = $"{prefix}({n:000})";
+				n++;
+			}
+			while (existingIds.Contains(candidate));
+
+			return candidate;
+		}
 	}
 }
