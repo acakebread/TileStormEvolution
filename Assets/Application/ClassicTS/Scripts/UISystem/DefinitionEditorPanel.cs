@@ -29,7 +29,7 @@ namespace ClassicTilestorm
 		[SerializeField] private GameObject flagTogglePrefab;                // ← Toggle + Label prefab
 
 		[Header("Preview Settings")]
-		[SerializeField] private Color backgroundColor = new Color(0.129f, 0.698f, 0.882f);
+		[SerializeField] private Color backgroundColor = new Color(0.129f, 0.698f, 0.882f); // #21B2E1
 		[SerializeField] private float fieldOfView = 60f;
 		[SerializeField] private float sizeToDistanceFactor = 1f;
 		[SerializeField] private float defaultTiltAngle = 30f;
@@ -174,7 +174,7 @@ namespace ClassicTilestorm
 			if (pendingScrollTarget == null)
 				return;
 
-			Canvas.ForceUpdateCanvases();
+			//Canvas.ForceUpdateCanvases();
 			ScrollToToggle(pendingScrollTarget);
 			pendingScrollTarget = null;
 		}
