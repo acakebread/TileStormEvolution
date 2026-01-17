@@ -32,10 +32,26 @@ namespace MassiveHadronLtd
 
 		private void Update()
 		{
+			CleanupDestroyed();
+
+			// Auto-recover when list is empty but content has items now
+			if (selectables.Count == 0 && scrollRect?.content?.childCount > 0)
+			{
+				RebuildSelectables();
+			}
+
 			if (selectables.Count == 0) return;
 
 			HandleKeyboardInput();
 			HandleRepeatTimer();
+		}
+
+		private void CleanupDestroyed()
+		{
+			if (selectables.RemoveAll(s => s == null) > 0)
+			{
+				lastSelectedIndex = Mathf.Clamp(lastSelectedIndex, -1, selectables.Count - 1);
+			}
 		}
 
 		public void ForceRefresh()
@@ -45,30 +61,68 @@ namespace MassiveHadronLtd
 
 		public void ClearAndRebuild()
 		{
+			// Step 1: Remember what we want to keep selected (by index or by reference)
+			int desiredIndex = lastSelectedIndex;
+
+			// If we have a currently selected toggle, try to find it again after rebuild
+			Selectable previouslySelected = null;
+			if (lastSelectedIndex >= 0 && lastSelectedIndex < selectables.Count)
+			{
+				previouslySelected = selectables[lastSelectedIndex];
+			}
+
+			CleanupDestroyed();
 			selectables.Clear();
-			lastSelectedIndex = -1;
-			ForceRefresh();
+
+			RebuildSelectables();
+
+			// Step 2: Smartly restore selection
+			if (previouslySelected != null)
+			{
+				// Try to find the same object again (best chance after insert/delete/move)
+				int newIndex = selectables.IndexOf(previouslySelected);
+				if (newIndex >= 0)
+				{
+					lastSelectedIndex = newIndex;
+					// Optional: immediately select it visually
+					SelectIndex(newIndex, false); // false = don't force scroll yet
+					return;
+				}
+			}
+
+			// Fallback: keep the same index number if possible (good for move up/down)
+			if (desiredIndex >= 0)
+			{
+				lastSelectedIndex = Mathf.Clamp(desiredIndex, 0, selectables.Count - 1);
+			}
+			else if (selectables.Count > 0)
+			{
+				lastSelectedIndex = 0;
+			}
 		}
 
 		private void RebuildSelectables()
 		{
 			selectables.Clear();
 
-			if (scrollRect == null || scrollRect.content == null) return;
+			if (scrollRect?.content == null) return;
 
 			foreach (Transform child in scrollRect.content)
 			{
-				if (!child) continue;
-				var selectable = child.GetComponent<Selectable>();
-				if (selectable == null || !selectable.IsInteractable()) continue;
-				selectables.Add(selectable);
+				if (child == null) continue;
+				var sel = child.GetComponent<Selectable>();
+				if (sel != null && sel.IsInteractable())
+					selectables.Add(sel);
 			}
 
-			lastSelectedIndex = Mathf.Clamp(lastSelectedIndex, -1, selectables.Count - 1);
+			// IMPORTANT: do NOT reset lastSelectedIndex here anymore
+			// We handle it in ClearAndRebuild instead
 		}
 
 		private void HandleKeyboardInput()
 		{
+			CleanupDestroyed();   // ← important: clean before we try to use anything
+
 			int direction = 0;
 
 			if (GetKeyDownWithRepeat(KeyCode.UpArrow) || GetKeyDownWithRepeat(KeyCode.LeftArrow))
@@ -139,7 +193,6 @@ namespace MassiveHadronLtd
 				}
 				else if (Mathf.Abs(index - lastSelectedIndex) > 1) // big jump = page up/down/home/end
 				{
-					// Optional: extra safety for page jumps
 					StartCoroutine(ScrollAfterFrame(target));
 				}
 				else
@@ -175,7 +228,6 @@ namespace MassiveHadronLtd
 			if (scrollableHeight <= 0f)
 				return;
 
-			// Convert item bounds to content local space
 			Vector3[] itemCorners = new Vector3[4];
 			itemRT.GetWorldCorners(itemCorners);
 
@@ -185,35 +237,29 @@ namespace MassiveHadronLtd
 			float itemTop = itemCorners[1].y;
 			float itemBottom = itemCorners[0].y;
 
-			// Viewport bounds in content space
-			float vpBottom = -viewportHeight;
-
-			// Current content offset (top of viewport in content space)
 			float currentY = Mathf.Lerp(0f, -scrollableHeight, 1f - scrollRect.verticalNormalizedPosition);
 
 			float newY = currentY;
 
-			// Item above viewport → align top
 			if (itemTop > currentY)
 			{
 				newY = itemTop;
 			}
-			// Item below viewport → align bottom
 			else if (itemBottom < currentY - viewportHeight)
 			{
 				newY = itemBottom + viewportHeight;
 			}
 
-			// Clamp
 			newY = Mathf.Clamp(newY, -scrollableHeight, 0f);
 
-			// Convert back to normalized position
 			scrollRect.verticalNormalizedPosition =
 				1f - Mathf.InverseLerp(0f, -scrollableHeight, newY);
 		}
 
 		private int CalculatePageStep()
 		{
+			CleanupDestroyed();   // ← crucial: prevents MissingReferenceException here
+
 			if (scrollRect == null || scrollRect.viewport == null || selectables.Count == 0)
 				return Mathf.RoundToInt(fallbackPageStep);
 
@@ -224,7 +270,7 @@ namespace MassiveHadronLtd
 			foreach (var s in selectables)
 			{
 				var rt = s.GetComponent<RectTransform>();
-				if (!rt) continue;
+				if (rt == null) continue;
 				totalHeight += rt.rect.height;
 				count++;
 			}
@@ -270,7 +316,7 @@ namespace MassiveHadronLtd
 		}
 
 		// ──────────────────────────────────────────────────────────────
-		// Item handler (add this component to each list item prefab)
+		// Item handler (unchanged)
 		// ──────────────────────────────────────────────────────────────
 		[AddComponentMenu("")]
 		public class ItemSelectionHandler : MonoBehaviour

@@ -25,12 +25,19 @@ namespace ClassicTilestorm
 		[SerializeField] private RawImage previewImage;
 
 		[Header("Dynamic Properties Panel")]
-		[SerializeField] private RectTransform propertiesRect;
+		[SerializeField] private RectTransform flagPropertiesRect;
 		[SerializeField] private GameObject flagTogglePrefab;
+
+		[Header("ID Input")]
+		[SerializeField] private TMP_InputField IDInput;
 
 		[Header("Model Selection")]
 		[SerializeField] private TMP_Dropdown modelDropdown;
-		[SerializeField] private string noneOptionText = "— None —";
+		[SerializeField] private string noneModelOptionText = "— None —";
+
+		[Header("Texture Selection")]
+		[SerializeField] private TMP_Dropdown textureDropdown;
+		[SerializeField] private string noneTextureOptionText = "— None —";
 
 		[Header("Preview Settings")]
 		[SerializeField] private Color backgroundColor = new Color(0.129f, 0.698f, 0.882f);
@@ -213,7 +220,7 @@ namespace ClassicTilestorm
 				.OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
 				.ToList();
 
-			var options = new List<string> { noneOptionText };
+			var options = new List<string> { noneModelOptionText };
 			options.AddRange(uniqueSorted);
 
 			modelDropdown.AddOptions(options);
@@ -228,7 +235,7 @@ namespace ClassicTilestorm
 			if (def == null) return;
 
 			string selectedText = modelDropdown.options[index].text;
-			string newModel = (selectedText == noneOptionText) ? null : selectedText;
+			string newModel = (selectedText == noneModelOptionText) ? null : selectedText;
 
 			if (newModel != def.model)
 			{
@@ -306,12 +313,13 @@ namespace ClassicTilestorm
 			foreach (var def in ResourceManager.Definitions)
 				CreateDefinitionListItem(def);
 
-			string targetId = selectedDefinitionId;
-			if (string.IsNullOrEmpty(targetId) && ResourceManager.Definitions.Count > 0)
-				targetId = ResourceManager.Definitions[0].id;
+			string targetId = selectedDefinitionId ?? (ResourceManager.Definitions.Count > 0 ? ResourceManager.Definitions[0].id : null);
 
 			SetToggleById(targetId);
 			UpdateDeleteButtonState();
+
+			// ── This is the magic line ────────────────────────────
+			definitionScrollView.GetComponent<ScrollViewKeyboardNavigator>()?.ClearAndRebuild();
 		}
 
 		private void CreateDefinitionListItem(Definition def)
@@ -360,12 +368,14 @@ namespace ClassicTilestorm
 			}
 
 			selectedDefinitionId = null;
+			IDInput.text = string.Empty;
 			SyncAllProperties();
 		}
 
 		private void SelectDefinition(string defId)
 		{
 			selectedDefinitionId = defId;
+			IDInput.text = defId;
 			UpdatePreview(defId);
 			SyncAllProperties();
 			SyncModelDropdown();
@@ -430,14 +440,14 @@ namespace ClassicTilestorm
 
 		private void CreateFlagToggles()
 		{
-			for (int i = propertiesRect.childCount - 1; i >= 0; i--)
-				Destroy(propertiesRect.GetChild(i).gameObject);
+			for (int i = flagPropertiesRect.childCount - 1; i >= 0; i--)
+				Destroy(flagPropertiesRect.GetChild(i).gameObject);
 
 			spawnedFlagControls.Clear();
 
 			foreach (var flag in AllFlags)
 			{
-				var instance = Instantiate(flagTogglePrefab, propertiesRect);
+				var instance = Instantiate(flagTogglePrefab, flagPropertiesRect);
 				var toggle = instance.GetComponent<Toggle>();
 				var label = instance.GetComponentInChildren<TMP_Text>();
 
