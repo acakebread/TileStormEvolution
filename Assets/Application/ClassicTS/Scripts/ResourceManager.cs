@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 
 namespace ClassicTilestorm
 {
@@ -35,6 +36,58 @@ namespace ClassicTilestorm
 					if (array[i].name == updated.name)
 					{ array[i] = updated; return; }
 			}
+		}
+
+		// ── Added for the refactor ─────────────────────────────────────────────
+
+		public static void InsertDefinitionAfter(string afterId, Definition newDef)
+		{
+			if (_db?.definitions == null) return;
+
+			var list = _db.definitions.ToList();
+			int index = list.Count;
+
+			if (!string.IsNullOrEmpty(afterId))
+			{
+				int found = list.FindIndex(d => d.id == afterId);
+				if (found >= 0) index = found + 1;
+			}
+
+			list.Insert(index, newDef);
+			_db.definitions = list.ToArray();
+		}
+
+		public static void DeleteDefinition(string id)
+		{
+			if (_db?.definitions == null) return;
+
+			var list = _db.definitions.ToList();
+			list.RemoveAll(d => d.id == id);
+			_db.definitions = list.ToArray();
+		}
+
+		public static void MoveDefinitionUp(string id)
+		{
+			if (_db?.definitions == null) return;
+
+			var list = _db.definitions.ToList();
+			int idx = list.FindIndex(d => d.id == id);
+			if (idx <= 0) return;
+
+			(list[idx - 1], list[idx]) = (list[idx], list[idx - 1]);
+			_db.definitions = list.ToArray();
+		}
+
+		public static void MoveDefinitionDown(string id)
+		{
+			if (_db?.definitions == null) return;
+
+			var list = _db.definitions.ToList();
+			int idx = list.FindIndex(d => d.id == id);
+			if (idx < 0 || idx >= list.Count - 1) return;
+
+			(list[idx + 1], list[idx]) = (list[idx], list[idx + 1]);
+			_db.definitions = list.ToArray();
 		}
 	}
 }

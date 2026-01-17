@@ -85,14 +85,14 @@ namespace ClassicTilestorm
 
 		private static readonly IReadOnlyList<FlagInfo> AllFlags = new List<FlagInfo>
 		{
-			// ── Connection directions ──────────────────────────────────────────────
-			new("North",       "Nav North",   d => d.bNorth,       (d, v) => d.bNorth = v),
+            // ── Connection directions ──────────────────────────────────────────────
+            new("North",       "Nav North",   d => d.bNorth,       (d, v) => d.bNorth = v),
 			new("East",        "Nav East",    d => d.bEast,        (d, v) => d.bEast = v),
 			new("South",       "Nav South",   d => d.bSouth,       (d, v) => d.bSouth = v),
 			new("West",        "Nav West",    d => d.bWest,        (d, v) => d.bWest = v),
 
-			// ── other properites ──────────────────────────────────────────────
-			new("Drag",        "Can Drag",        d => d.bDrag,        (d, v) => d.bDrag = v),
+            // ── other properites ──────────────────────────────────────────────
+            new("Drag",        "Can Drag",        d => d.bDrag,        (d, v) => d.bDrag = v),
 			new("Roll",        "Can Roll",        d => d.bRoll,        (d, v) => d.bRoll = v),
 			new("Dock",        "Can Dock",        d => d.bDock,        (d, v) => d.bDock = v),
 			new("Door",        "Is Door",         d => d.bDoor,        (d, v) => d.bDoor = v),
@@ -104,8 +104,6 @@ namespace ClassicTilestorm
 			new("Wash",        "Bouyant",         d => d.bWash,        (d, v) => d.bWash = v),
             // ← Add new flags here when you create them in Definition.cs
         };
-
-		// ───────────────────────────────────────────────────────────────────────
 
 		protected override void Awake()
 		{
@@ -193,19 +191,9 @@ namespace ClassicTilestorm
 			return -1;
 		}
 
-		private void ReplaceDefinitionsArray(List<Definition> list)
-		{
-			if (ResourceManager.database == null) return;
-			ResourceManager.database.definitions = list.ToArray();
-		}
-
 		private void InsertDefinition()
 		{
 			if (ResourceManager.database == null) return;
-
-			var defs = ResourceManager.Definitions.ToList();
-			int index = GetSelectedIndex();
-			if (index < 0) index = defs.Count - 1;
 
 			int n = 1;
 			string newId;
@@ -214,7 +202,7 @@ namespace ClassicTilestorm
 				newId = $"new_tile_id({n:000})";
 				n++;
 			}
-			while (defs.Any(d => d.id == newId));
+			while (ResourceManager.Definitions.Any(d => d.id == newId));
 
 			var def = new Definition
 			{
@@ -223,8 +211,7 @@ namespace ClassicTilestorm
 				texture = "Default"
 			};
 
-			defs.Insert(index + 1, def);
-			ReplaceDefinitionsArray(defs);
+			ResourceManager.InsertDefinitionAfter(selectedDefinitionId, def);
 
 			selectedDefinitionId = def.id;
 			RefreshDefinitionList();
@@ -234,23 +221,20 @@ namespace ClassicTilestorm
 		{
 			if (ResourceManager.database == null) return;
 
-			int index = GetSelectedIndex();
-			if (index < 0) return;
+			ResourceManager.DeleteDefinition(selectedDefinitionId);
 
 			var defs = ResourceManager.Definitions.ToList();
-			defs.RemoveAt(index);
-
 			if (defs.Count == 0)
 			{
 				selectedDefinitionId = null;
 			}
 			else
 			{
+				int index = GetSelectedIndex();
 				int newIndex = Mathf.Clamp(index, 0, defs.Count - 1);
 				selectedDefinitionId = defs[newIndex].id;
 			}
 
-			ReplaceDefinitionsArray(defs);
 			RefreshDefinitionList();
 		}
 
@@ -258,15 +242,7 @@ namespace ClassicTilestorm
 		{
 			if (ResourceManager.database == null) return;
 
-			int index = GetSelectedIndex();
-			if (index <= 0) return;
-
-			var defs = ResourceManager.Definitions.ToList();
-			(defs[index - 1], defs[index]) = (defs[index], defs[index - 1]);
-
-			ReplaceDefinitionsArray(defs);
-			selectedDefinitionId = defs[index - 1].id;
-
+			ResourceManager.MoveDefinitionUp(selectedDefinitionId);
 			RefreshDefinitionList();
 		}
 
@@ -274,15 +250,7 @@ namespace ClassicTilestorm
 		{
 			if (ResourceManager.database == null) return;
 
-			int index = GetSelectedIndex();
-			if (index < 0 || index >= ResourceManager.Definitions.Count - 1) return;
-
-			var defs = ResourceManager.Definitions.ToList();
-			(defs[index + 1], defs[index]) = (defs[index], defs[index + 1]);
-
-			ReplaceDefinitionsArray(defs);
-			selectedDefinitionId = defs[index + 1].id;
-
+			ResourceManager.MoveDefinitionDown(selectedDefinitionId);
 			RefreshDefinitionList();
 		}
 
@@ -341,7 +309,6 @@ namespace ClassicTilestorm
 
 		// ───────────────────── DEFINITION LIST ──────────────────────────────────
 
-		// In RefreshDefinitionList() — this is the key method!
 		private void RefreshDefinitionList()
 		{
 			ClearDefinitionListItems();
