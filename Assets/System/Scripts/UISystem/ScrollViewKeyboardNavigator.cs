@@ -14,105 +14,60 @@ namespace MassiveHadronLtd
 		[SerializeField] private float initialRepeatDelay = 0.3f;
 		[SerializeField] private float repeatRate = 0.05f;
 
-		//[Header("Scroll Settings")]
-		//[SerializeField] private float scrollLerpSpeed = 12f;
-
 		private ScrollRect scrollRect;
 		private readonly List<Selectable> selectables = new();
 		private int lastSelectedIndex = -1;
 		private float repeatTimer;
 		private bool isRepeating;
-		private bool needsRefresh = true;
-
-		private int lastMoveDirection = 0; // -1 up, +1 down
 
 		private void Awake()
 		{
-			EnsureScrollRect();
+			scrollRect = GetComponent<ScrollRect>();
 		}
 
 		private void OnEnable()
 		{
-			needsRefresh = true;
-			repeatTimer = 0f;
-			isRepeating = false;
-		}
-
-		private void LateUpdate()
-		{
-			if (!needsRefresh) return;
-
-			needsRefresh = false;
-			RefreshSelectables();
-
-			if (lastSelectedIndex < 0 && selectables.Count > 0)
-				SelectIndex(0, false);
+			ForceRefresh();
 		}
 
 		private void Update()
 		{
 			if (selectables.Count == 0) return;
 
-			HandleKeyboardNavigation();
+			HandleKeyboardInput();
 			HandleRepeatTimer();
 		}
 
 		public void ForceRefresh()
 		{
-			EnsureScrollRect();
-			RefreshSelectables();
-			needsRefresh = false;
+			RebuildSelectables();
 		}
 
-		public void NotifyItemSelected(int index)
+		public void ClearAndRebuild()
 		{
-			if (index < 0 || index >= selectables.Count) return;
-
-			lastSelectedIndex = index;
-
-			if (selectables[index] is Toggle toggle)
-			{
-				toggle.isOn = true;
-			}
+			selectables.Clear();
+			lastSelectedIndex = -1;
+			ForceRefresh();
 		}
 
-		private void EnsureScrollRect()
+		private void RebuildSelectables()
 		{
-			if (!scrollRect)
-				scrollRect = GetComponent<ScrollRect>();
-		}
-
-		public void RefreshSelectables()
-		{
-			EnsureScrollRect();
 			selectables.Clear();
 
-			if (!scrollRect || !scrollRect.content)
-				return;
+			if (scrollRect == null || scrollRect.content == null) return;
 
 			foreach (Transform child in scrollRect.content)
 			{
 				if (!child) continue;
-
-				var s = child.GetComponent<Selectable>();
-				if (!s || !s.IsInteractable())
-					continue;
-
-				selectables.Add(s);
+				var selectable = child.GetComponent<Selectable>();
+				if (selectable == null || !selectable.IsInteractable()) continue;
+				selectables.Add(selectable);
 			}
 
-			// Clamp selection after rebuild
-			if (selectables.Count == 0)
-			{
-				lastSelectedIndex = -1;
-			}
-			else
-			{
-				lastSelectedIndex = Mathf.Clamp(lastSelectedIndex, 0, selectables.Count - 1);
-			}
+			lastSelectedIndex = Mathf.Clamp(lastSelectedIndex, -1, selectables.Count - 1);
 		}
 
-		private void HandleKeyboardNavigation()
+		private void HandleKeyboardInput()
 		{
 			int direction = 0;
 
@@ -121,71 +76,50 @@ namespace MassiveHadronLtd
 			else if (GetKeyDownWithRepeat(KeyCode.DownArrow) || GetKeyDownWithRepeat(KeyCode.RightArrow))
 				direction = +1;
 			else if (GetKeyDownWithRepeat(KeyCode.PageUp))
-				direction = -CalculateVisibleItemCount();
+				direction = -CalculatePageStep();
 			else if (GetKeyDownWithRepeat(KeyCode.PageDown))
-				direction = +CalculateVisibleItemCount();
+				direction = +CalculatePageStep();
 			else if (Input.GetKeyDown(KeyCode.Home))
 			{
-				lastMoveDirection = -1;
-				SelectIndex(0);
+				SelectIndex(0, true);
 				return;
 			}
 			else if (Input.GetKeyDown(KeyCode.End))
 			{
-				lastMoveDirection = +1;
-				SelectIndex(selectables.Count - 1);
+				SelectIndex(selectables.Count - 1, true);
 				return;
 			}
 
-			if (direction == 0)
-				return;
+			if (direction == 0) return;
 
-			lastMoveDirection = direction > 0 ? 1 : -1;
-
-			int current = GetCurrentSelectedIndex();
+			int current = Mathf.Clamp(lastSelectedIndex, 0, selectables.Count - 1);
 			int next = current + direction;
-
-			bool wrapped = false;
 
 			if (wrapAround && Mathf.Abs(direction) == 1)
 			{
-				if (next < 0)
-				{
-					next = selectables.Count - 1;
-					wrapped = true;
-					lastMoveDirection = 1;   // treat as moving down to bottom
-				}
-				else if (next >= selectables.Count)
-				{
-					next = 0;
-					wrapped = true;
-					lastMoveDirection = -1;  // treat as moving up to top
-				}
+				if (next < 0) next = selectables.Count - 1;
+				else if (next >= selectables.Count) next = 0;
 			}
 			else
 			{
 				next = Mathf.Clamp(next, 0, selectables.Count - 1);
 			}
 
-			// Always scroll when wrapped, otherwise use normal visibility check
-			SelectIndex(next, forceScroll: wrapped || true);
+			SelectIndex(next, true);
 		}
 
-		private int GetCurrentSelectedIndex()
+		public void NotifyItemSelected(int index)
 		{
-			if (lastSelectedIndex >= 0 && lastSelectedIndex < selectables.Count)
-				return lastSelectedIndex;
-
-			return 0;
+			if (index < 0 || index >= selectables.Count) return;
+			lastSelectedIndex = index;
 		}
 
-		private void SelectIndex(int index, bool forceScroll = true)
+		private void SelectIndex(int index, bool scrollToIt = true)
 		{
-			if (index < 0 || index >= selectables.Count)
-				return;
+			if (index < 0 || index >= selectables.Count) return;
 
 			var target = selectables[index];
-			if (!target) return;
+			if (target == null) return;
 
 			lastSelectedIndex = index;
 			target.Select();
@@ -193,81 +127,114 @@ namespace MassiveHadronLtd
 			if (target is Toggle toggle)
 				toggle.isOn = true;
 
-			if (forceScroll)
-				SmartScrollTo(target, lastMoveDirection);
+			if (scrollToIt)
+			{
+				if (index == 0)
+				{
+					scrollRect.verticalNormalizedPosition = 1f;
+				}
+				else if (index == selectables.Count - 1)
+				{
+					scrollRect.verticalNormalizedPosition = 0f;
+				}
+				else if (Mathf.Abs(index - lastSelectedIndex) > 1) // big jump = page up/down/home/end
+				{
+					// Optional: extra safety for page jumps
+					StartCoroutine(ScrollAfterFrame(target));
+				}
+				else
+				{
+					ScrollTo(target);
+				}
+			}
 		}
 
-
-		private void SmartScrollTo(Selectable selectable, int direction)
+		private System.Collections.IEnumerator ScrollAfterFrame(Selectable target)
 		{
-			if (!scrollRect || !scrollRect.content || !scrollRect.viewport) return;
+			yield return null;
+			ScrollTo(target);
+		}
 
-			var targetRT = selectable.GetComponent<RectTransform>();
-			var viewportRT = scrollRect.viewport;
+		private void ScrollTo(Selectable selectable)
+		{
+			if (scrollRect == null || scrollRect.content == null || scrollRect.viewport == null)
+				return;
+
+			var itemRT = selectable.GetComponent<RectTransform>();
+			if (!itemRT) return;
 
 			Canvas.ForceUpdateCanvases();
 
-			Vector3[] item = new Vector3[4];
-			Vector3[] vp = new Vector3[4];
+			RectTransform content = scrollRect.content;
+			RectTransform viewport = scrollRect.viewport;
 
-			targetRT.GetWorldCorners(item);
-			viewportRT.GetWorldCorners(vp);
+			float contentHeight = content.rect.height;
+			float viewportHeight = viewport.rect.height;
 
-			float itemTop = item[1].y;
-			float itemBottom = item[0].y;
-			float vpTop = vp[1].y;
-			float vpBottom = vp[0].y;
+			float scrollableHeight = contentHeight - viewportHeight;
+			if (scrollableHeight <= 0f)
+				return;
 
-			bool movingDown = direction > 0;
-			bool movingUp = direction < 0;
+			// Convert item bounds to content local space
+			Vector3[] itemCorners = new Vector3[4];
+			itemRT.GetWorldCorners(itemCorners);
 
-			if (movingDown && itemBottom >= vpBottom) return;
-			if (movingUp && itemTop <= vpTop) return;
+			for (int i = 0; i < 4; i++)
+				itemCorners[i] = content.InverseTransformPoint(itemCorners[i]);
 
-			float contentHeight = scrollRect.content.rect.height;
-			float viewportHeight = viewportRT.rect.height;
-			if (contentHeight <= viewportHeight) return;
+			float itemTop = itemCorners[1].y;
+			float itemBottom = itemCorners[0].y;
 
-			Vector2 local = scrollRect.content.InverseTransformPoint(targetRT.position);
+			// Viewport bounds in content space
+			float vpTop = 0f;
+			float vpBottom = -viewportHeight;
 
-			float targetY = movingDown
-				? -local.y - viewportHeight + targetRT.rect.height
-				: -local.y - targetRT.rect.height;
+			// Current content offset (top of viewport in content space)
+			float currentY = Mathf.Lerp(0f, -scrollableHeight, 1f - scrollRect.verticalNormalizedPosition);
 
-			float normalized = Mathf.Clamp01(targetY / (contentHeight - viewportHeight));
-			scrollRect.verticalNormalizedPosition = 1f - normalized;
+			float newY = currentY;
+
+			// Item above viewport → align top
+			if (itemTop > currentY)
+			{
+				newY = itemTop;
+			}
+			// Item below viewport → align bottom
+			else if (itemBottom < currentY - viewportHeight)
+			{
+				newY = itemBottom + viewportHeight;
+			}
+
+			// Clamp
+			newY = Mathf.Clamp(newY, -scrollableHeight, 0f);
+
+			// Convert back to normalized position
+			scrollRect.verticalNormalizedPosition =
+				1f - Mathf.InverseLerp(0f, -scrollableHeight, newY);
 		}
 
-		private int CalculateVisibleItemCount()
+		private int CalculatePageStep()
 		{
-			if (!scrollRect || !scrollRect.viewport || selectables.Count == 0)
+			if (scrollRect == null || scrollRect.viewport == null || selectables.Count == 0)
 				return Mathf.RoundToInt(fallbackPageStep);
 
-			float viewportHeight = scrollRect.viewport.rect.height;
-
-			float total = 0f;
+			float viewportH = scrollRect.viewport.rect.height;
+			float totalHeight = 0f;
 			int count = 0;
 
 			foreach (var s in selectables)
 			{
-				if (!s) continue;
-
 				var rt = s.GetComponent<RectTransform>();
 				if (!rt) continue;
-
-				total += rt.rect.height;
+				totalHeight += rt.rect.height;
 				count++;
 			}
 
-			if (count == 0)
-				return Mathf.RoundToInt(fallbackPageStep);
+			if (count == 0) return Mathf.RoundToInt(fallbackPageStep);
 
-			float avg = total / count;
-			return Mathf.Clamp(
-				Mathf.FloorToInt((viewportHeight / avg) * pageStepMultiplier),
-				1,
-				selectables.Count
-			);
+			float avgHeight = totalHeight / count;
+			int step = Mathf.FloorToInt((viewportH / avgHeight) * pageStepMultiplier);
+			return Mathf.Clamp(step, 1, selectables.Count);
 		}
 
 		private bool GetKeyDownWithRepeat(KeyCode key)
@@ -290,23 +257,26 @@ namespace MassiveHadronLtd
 
 		private void HandleRepeatTimer()
 		{
-			if (isRepeating && AnyNavigationKeyHeld())
+			if (isRepeating && AnyNavigationKeyPressed())
 				repeatTimer -= Time.deltaTime;
 			else
 				isRepeating = false;
 		}
 
-		private bool AnyNavigationKeyHeld()
+		private bool AnyNavigationKeyPressed()
 		{
 			return Input.GetKey(KeyCode.UpArrow) || Input.GetKey(KeyCode.DownArrow) ||
 				   Input.GetKey(KeyCode.LeftArrow) || Input.GetKey(KeyCode.RightArrow) ||
 				   Input.GetKey(KeyCode.PageUp) || Input.GetKey(KeyCode.PageDown);
 		}
 
-		// ── Public nested handler for mouse selection ────────────────
+		// ──────────────────────────────────────────────────────────────
+		// Item handler (add this component to each list item prefab)
+		// ──────────────────────────────────────────────────────────────
 		[AddComponentMenu("")]
 		public class ItemSelectionHandler : MonoBehaviour
 		{
+			private ScrollViewKeyboardNavigator navigator;
 			private Selectable selectable;
 
 			private void Awake()
@@ -314,38 +284,39 @@ namespace MassiveHadronLtd
 				selectable = GetComponent<Selectable>();
 				if (selectable == null)
 				{
-					Debug.LogError("ItemSelectionHandler requires a Selectable", this);
 					Destroy(this);
+					return;
 				}
 			}
 
 			private void OnEnable()
 			{
-				var nav = GetComponentInParent<ScrollViewKeyboardNavigator>(true);
-				if (nav == null) return;
+				TryRegister();
+			}
+
+			private void OnTransformParentChanged()
+			{
+				TryRegister();
+			}
+
+			private void TryRegister()
+			{
+				if (navigator != null) return;
+
+				navigator = GetComponentInParent<ScrollViewKeyboardNavigator>(true);
+				if (navigator == null) return;
 
 				if (selectable is Toggle toggle)
 				{
 					toggle.onValueChanged.AddListener(isOn =>
 					{
-						if (isOn) nav.NotifyItemSelected(GetIndex());
+						if (isOn)
+						{
+							int index = navigator.selectables.IndexOf(selectable);
+							if (index >= 0) navigator.NotifyItemSelected(index);
+						}
 					});
 				}
-				else if (selectable is Button button)
-				{
-					button.onClick.AddListener(() => nav.NotifyItemSelected(GetIndex()));
-				}
-			}
-
-			private int GetIndex()
-			{
-				var nav = GetComponentInParent<ScrollViewKeyboardNavigator>(true);
-				if (nav != null)
-				{
-					int idx = nav.selectables.IndexOf(selectable);
-					if (idx >= 0) return idx;
-				}
-				return transform.GetSiblingIndex();
 			}
 		}
 	}
