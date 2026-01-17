@@ -61,11 +61,10 @@ namespace MassiveHadronLtd
 
 		public void ClearAndRebuild()
 		{
-			// Step 1: Remember what we want to keep selected (by index or by reference)
+			// Try to remember meaningful context before we nuke everything
 			int desiredIndex = lastSelectedIndex;
-
-			// If we have a currently selected toggle, try to find it again after rebuild
 			Selectable previouslySelected = null;
+
 			if (lastSelectedIndex >= 0 && lastSelectedIndex < selectables.Count)
 			{
 				previouslySelected = selectables[lastSelectedIndex];
@@ -76,28 +75,38 @@ namespace MassiveHadronLtd
 
 			RebuildSelectables();
 
-			// Step 2: Smartly restore selection
+			// Smart restoration logic
 			if (previouslySelected != null)
 			{
-				// Try to find the same object again (best chance after insert/delete/move)
+				// 1. Best case: same object still exists (most common after move/insert)
 				int newIndex = selectables.IndexOf(previouslySelected);
 				if (newIndex >= 0)
 				{
 					lastSelectedIndex = newIndex;
-					// Optional: immediately select it visually
-					SelectIndex(newIndex, false); // false = don't force scroll yet
+					SelectIndex(newIndex, false); // false = no forced scroll
 					return;
 				}
 			}
 
-			// Fallback: keep the same index number if possible (good for move up/down)
-			if (desiredIndex >= 0)
+			// 2. Delete case: try to keep roughly the same position (usually selects the one above)
+			//    If we deleted item at index N, we want index N-1 (or N if at top)
+			if (desiredIndex > 0)
+			{
+				lastSelectedIndex = desiredIndex - 1;  // ← this is the key line for delete
+			}
+			else if (desiredIndex == 0 && selectables.Count > 0)
+			{
+				lastSelectedIndex = 0;                 // stay at top if deleted first item
+			}
+			else
 			{
 				lastSelectedIndex = Mathf.Clamp(desiredIndex, 0, selectables.Count - 1);
 			}
-			else if (selectables.Count > 0)
+
+			// Final safety
+			if (lastSelectedIndex >= 0 && lastSelectedIndex < selectables.Count)
 			{
-				lastSelectedIndex = 0;
+				SelectIndex(lastSelectedIndex, false);
 			}
 		}
 

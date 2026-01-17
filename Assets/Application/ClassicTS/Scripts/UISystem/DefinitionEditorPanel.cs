@@ -486,13 +486,32 @@ namespace ClassicTilestorm
 		{
 			if (ResourceManager.database == null) return;
 
+			int indexBeforeDelete = GetSelectedIndex();
+
 			ResourceManager.DeleteDefinition(selectedDefinitionId);
 
 			var defs = ResourceManager.Definitions.ToList();
-			if (defs.Count == 0) selectedDefinitionId = null;
-			else selectedDefinitionId = defs[Mathf.Clamp(GetSelectedIndex(), 0, defs.Count - 1)].id;
+			if (defs.Count == 0)
+			{
+				selectedDefinitionId = null;
+			}
+			else
+			{
+				// Prefer the item above if possible
+				int newIndex = Mathf.Max(0, indexBeforeDelete - 1);
+				if (newIndex >= defs.Count) newIndex = defs.Count - 1;
+				selectedDefinitionId = defs[newIndex].id;
+			}
 
 			RefreshDefinitionList();
+
+			// This helps the toggle UI stay in sync
+			if (!string.IsNullOrEmpty(selectedDefinitionId))
+			{
+				SetToggleById(selectedDefinitionId);
+			}
+
+			definitionScrollView.GetComponent<ScrollViewKeyboardNavigator>()?.ClearAndRebuild();
 		}
 
 		// Add this new method
