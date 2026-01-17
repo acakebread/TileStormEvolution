@@ -114,6 +114,13 @@ namespace MassiveHadronLtd
 			targetRawImage.texture = RenderTexture;
 		}
 
+		public void ApplyExternalCameraTransform(Vector3 position, Quaternion rotation)
+		{
+			if (Camera == null) return;
+			Camera.position = position;
+			Camera.rotation = rotation;
+		}
+
 		private void CreateGroundPlane()
 		{
 			var mesh = MeshUtils.GenerateQuadXZ(GroundSize, GroundUVScale, "PreviewGroundMesh");

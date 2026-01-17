@@ -10,11 +10,11 @@ namespace ClassicTilestorm
 		private MapManager mapManager;
 
 		private EditorControllerMovement activeMode;
-		private EditorControllerDrag dragMode;
+		private EditorControllerView viewMode;
 		private EditorControllerPaint paintMode;
 		private EditorControllerAttachment attachmentMode;
 
-		private enum EditorMode { Drag, Paint, Attachment }
+		private enum EditorMode { View, Paint, Attachment }
 		private EditorMode? currentMode = null;
 
 		private bool gridEnabled = true;
@@ -36,10 +36,10 @@ namespace ClassicTilestorm
 			panelYoffset = PlaceholderUI.PanelBottomY;
 
 			// Modes
-			dragMode = new EditorControllerDrag(this);
+			viewMode = new EditorControllerView(this);
 			paintMode = new EditorControllerPaint(this);
 			attachmentMode = new EditorControllerAttachment(this); 
-			SetEditorMode(EditorMode.Drag);//default
+			SetEditorMode(EditorMode.View);//default
 		}
 
 		public void Initialise(MapManager map)
@@ -87,7 +87,7 @@ namespace ClassicTilestorm
 
 		private void OnGUI()
 		{
-			DrawMainUI((currentMode ?? EditorMode.Drag).ToString(), gridEnabled);
+			DrawMainUI((currentMode ?? EditorMode.View).ToString(), gridEnabled);
 			activeMode?.OnGUI();
 		}
 
@@ -97,7 +97,7 @@ namespace ClassicTilestorm
 		{
 			GridLinesUtil.Hide();
 			if (null != mapManager) mapManager.OnMapEdited -= HandleMapEdited;
-			dragMode?.OnDestroy();
+			viewMode?.OnDestroy();
 			paintMode?.OnDestroy();
 			attachmentMode?.OnDestroy();
 		}
@@ -130,10 +130,10 @@ namespace ClassicTilestorm
 			currentMode = newMode;
 			activeMode = newMode switch
 			{
-				EditorMode.Drag => dragMode,
+				EditorMode.View => viewMode,
 				EditorMode.Paint => paintMode,
 				EditorMode.Attachment => attachmentMode,
-				_ => dragMode
+				_ => viewMode
 			};
 			activeMode?.OnEnable();
 		}
@@ -178,13 +178,13 @@ namespace ClassicTilestorm
 
 			//if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "Model Editor", new Color(0.6f, 0.3f, 0.8f))) UIController.OpenPanel<ModelEditorPanel>();//placeholder
 
-			GUI.contentColor = mode == "Drag" ? Color.cyan : Color.white;
-			if (GUI.Button(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "Drag")) SetEditorMode(EditorMode.Drag);
+			GUI.contentColor = mode == "View" ? Color.cyan : Color.white;
+			if (GUI.Button(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "View")) SetEditorMode(EditorMode.View);
 
 			GUI.contentColor = mode == "Paint" ? Color.cyan : Color.white;
 			if (GUI.Button(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "Paint")) SetEditorMode(EditorMode.Paint);
 
-			GUI.contentColor = (currentMode ?? EditorMode.Drag) == EditorMode.Attachment ? Color.cyan : Color.white;
+			GUI.contentColor = (currentMode ?? EditorMode.View) == EditorMode.Attachment ? Color.cyan : Color.white;
 			if (GUI.Button(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "Attachments")) SetEditorMode(EditorMode.Attachment);
 
 			GUI.contentColor = prevContentColor;

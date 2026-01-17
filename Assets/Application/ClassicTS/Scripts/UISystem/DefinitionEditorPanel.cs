@@ -414,8 +414,7 @@ namespace ClassicTilestorm
 		{
 			if (previewCtrl?.Camera == null) return;
 			var (pos, rot) = orbitController.GetCameraTransform();
-			previewCtrl.Camera.position = pos;
-			previewCtrl.Camera.rotation = rot;
+			previewCtrl.ApplyExternalCameraTransform(pos, rot);
 		}
 
 		private void CleanupPreview()

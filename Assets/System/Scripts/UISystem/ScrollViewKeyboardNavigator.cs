@@ -186,7 +186,6 @@ namespace MassiveHadronLtd
 			float itemBottom = itemCorners[0].y;
 
 			// Viewport bounds in content space
-			float vpTop = 0f;
 			float vpBottom = -viewportHeight;
 
 			// Current content offset (top of viewport in content space)
