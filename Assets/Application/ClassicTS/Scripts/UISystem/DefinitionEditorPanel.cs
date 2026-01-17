@@ -59,7 +59,6 @@ namespace ClassicTilestorm
 		private string selectedDefinitionId;
 
 		private PreviewSceneController previewCtrl;
-		private bool previewInitialized;
 		private CommandRenderModelData currentModelData;
 		private GimbalOrbitController orbitController;
 
@@ -173,26 +172,19 @@ namespace ClassicTilestorm
 
 		private void SyncModelDropdown()
 		{
-			if (modelDropdown == null || modelDropdown.options.Count == 0) return;
+			if (modelDropdown == null || modelDropdown.options.Count == 0)
+				return;
 
 			var def = CurrentDefinition;
 			int targetIndex = 0;
 
 			if (def != null && !string.IsNullOrEmpty(def.model))
 			{
-				string modelClean = (def.model ?? "").Trim()
-					.Replace("\u00A0", " ")
-					.Replace("\u200B", "")
-					.Replace("\uFEFF", "");
+				string modelClean = def.model.Clean();
 
 				targetIndex = modelDropdown.options.FindIndex(opt =>
-				{
-					string optClean = (opt.text ?? "").Trim()
-						.Replace("\u00A0", " ")
-						.Replace("\u200B", "")
-						.Replace("\uFEFF", "");
-					return string.Equals(optClean, modelClean, StringComparison.OrdinalIgnoreCase);
-				});
+					opt.text.CleanEquals(modelClean)
+				);
 
 				if (targetIndex < 0) targetIndex = 0;
 			}
@@ -254,7 +246,7 @@ namespace ClassicTilestorm
 
 		private void EnsurePreviewInitialized()
 		{
-			if (previewInitialized && previewCtrl != null) return;
+			if (previewCtrl != null) return;
 
 			if (previewImage == null)
 			{
@@ -269,8 +261,6 @@ namespace ClassicTilestorm
 				Debug.LogError("[DefinitionEditorPanel] Failed to initialize PreviewSceneController!", this);
 				return;
 			}
-
-			previewInitialized = true;
 		}
 
 		private void InitializePreview()
@@ -380,7 +370,18 @@ namespace ClassicTilestorm
 			SyncModelDropdown();
 		}
 
-		private void SyncAllProperties() => SyncFlagToggles();
+		private void SyncAllProperties()
+		{
+			var def = CurrentDefinition;
+			bool hasDef = def != null;
+
+			foreach (var (toggle, flag) in spawnedFlagControls)
+			{
+				bool value = hasDef && flag.GetValue(def);
+				toggle.SetIsOnWithoutNotify(value);
+				toggle.interactable = hasDef;
+			}
+		}
 
 		private void UpdatePreview(string defId)
 		{
@@ -424,7 +425,6 @@ namespace ClassicTilestorm
 				previewCtrl = null;
 			}
 			currentModelData = null;
-			previewInitialized = false;
 		}
 
 		private void CreateFlagToggles()
@@ -456,19 +456,6 @@ namespace ClassicTilestorm
 			}
 		}
 
-		private void SyncFlagToggles()
-		{
-			var def = CurrentDefinition;
-			bool hasDef = def != null;
-
-			foreach (var (toggle, flag) in spawnedFlagControls)
-			{
-				bool value = hasDef && flag.GetValue(def);
-				toggle.SetIsOnWithoutNotify(value);
-				toggle.interactable = hasDef;
-			}
-		}
-
 		private void InsertDefinition()
 		{
 			if (ResourceManager.database == null) return;
@@ -477,17 +464,12 @@ namespace ClassicTilestorm
 			string newId;
 			do
 			{
-				newId = $"new_tile_id({n:000})";
+				newId = $"new_def_id({n:000})";
 				n++;
 			}
 			while (ResourceManager.Definitions.Any(d => d.id == newId));
 
-			var def = new Definition
-			{
-				id = newId,
-				model = "tile_flat",
-				texture = "Default"
-			};
+			var def = Definition.GetDefault(newId);
 
 			ResourceManager.InsertDefinitionAfter(selectedDefinitionId, def);
 

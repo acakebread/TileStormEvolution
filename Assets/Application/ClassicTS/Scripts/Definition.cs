@@ -165,6 +165,18 @@ namespace ClassicTilestorm
 			connections = new string(connList.ToArray());
 			RebuildConnectionCache();
 		}
+
+		public static Definition GetDefault(string newId = null)
+		{
+			newId ??= MassiveHadronLtd.StringUtil.GenerateAssetId();
+
+			return new Definition
+			{
+				id = newId,
+				model = "tile_flat",
+				texture = "Default"
+			};
+		}
 	}
 
 	// Optional extension (not needed anymore for core functionality)
