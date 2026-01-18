@@ -145,23 +145,34 @@ namespace MassiveHadronLtd
 
 		private void HookToggleListener(Toggle toggle)
 		{
+			// Marker to prevent double-hooking
 			if (toggle.gameObject.GetComponent<ToggleListenerMarker>() == null)
 			{
 				toggle.gameObject.AddComponent<ToggleListenerMarker>();
 			}
 
+			// Local function to handle selection + scroll (reused)
+			void HandleSelection()
+			{
+				int index = selectables.IndexOf(toggle);
+				if (index >= 0)
+				{
+					NotifyItemSelected(index);
+					StartCoroutine(ScrollAfterFrame(toggle));
+				}
+			}
+
+			// Hook for future changes
 			toggle.onValueChanged.AddListener(isOn =>
 			{
-				if (isOn)
-				{
-					int index = selectables.IndexOf(toggle);
-					if (index >= 0)
-					{
-						NotifyItemSelected(index);
-						StartCoroutine(ScrollAfterFrame(toggle));
-					}
-				}
+				if (isOn) HandleSelection();
 			});
+
+			// Immediate check for already-on toggles (after rebuild)
+			if (toggle.isOn)
+			{
+				HandleSelection();
+			}
 		}
 
 		private void CleanupDestroyedItems()

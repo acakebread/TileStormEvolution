@@ -6,7 +6,6 @@ using TMPro;
 using System.Linq;
 using MassiveHadronLtd;
 using ClassicTilestorm.Assets;
-using System.Collections;
 
 namespace ClassicTilestorm
 {
@@ -67,7 +66,7 @@ namespace ClassicTilestorm
 		private ToggleGroup toggleGroup;
 
 		// Static: remembers last selection across panel opens/closes (runtime only)
-		private static int lastSelectedDefinitionIndex = -1;
+		private static int lastSelectedDefinitionIndex = 0;//set to first definition for launch assuming there are any definitions - may need to handle this or it might be safe anyway
 
 		private PreviewSceneController previewCtrl;
 		private CommandRenderModelData currentModelData;
@@ -335,39 +334,6 @@ namespace ClassicTilestorm
 			SetSelectedIndex(lastSelectedDefinitionIndex);
 
 			UpdateDeleteButtonState();
-			// Sync navigator index + force scroll into view after rebuild
-			var navigator = definitionScrollView?.GetComponent<ScrollViewKeyboardNavigator>();
-			if (navigator != null)
-			{
-				navigator.SyncIndexFromPanel(lastSelectedDefinitionIndex);
-
-				// Manually trigger scroll to the selected toggle
-				if (lastSelectedDefinitionIndex >= 0 && lastSelectedDefinitionIndex < spawnedDefinitionToggles.Count)
-				{
-					var selectedToggle = spawnedDefinitionToggles[lastSelectedDefinitionIndex];
-					if (selectedToggle != null)
-					{
-						StartCoroutine(ScrollToToggleAfterFrame(navigator, selectedToggle));
-					}
-				}
-			}
-		}
-
-		private IEnumerator ScrollToToggleAfterFrame(ScrollViewKeyboardNavigator navigator, Toggle toggle)
-		{
-			yield return null;
-			yield return null; // Two frames for layout to settle
-			Canvas.ForceUpdateCanvases();
-
-			// Use the same scroll logic as the navigator
-			var selectable = toggle as Selectable;
-			if (selectable != null)
-			{
-				// Call navigator's ScrollTo directly
-				// (you can make ScrollTo public or add a public wrapper)
-				// For now, duplicate the call if needed, or expose ScrollTo as public
-				navigator.StartCoroutine(navigator.ScrollAfterFrame(selectable));
-			}
 		}
 
 		private void CreateDefinitionListItem(Definition def, int index)
