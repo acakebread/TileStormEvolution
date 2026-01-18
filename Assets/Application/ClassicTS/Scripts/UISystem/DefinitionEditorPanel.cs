@@ -274,8 +274,9 @@ namespace ClassicTilestorm
 			modelDropdown.ClearOptions();
 
 			var modelNames = new List<string>();
+			var appPath = FindAnyObjectByType<ApplicationSettings>() != null ? ApplicationSettings.GeometryPath.Trim('/') : null;
 
-			foreach (var root in new[] { ApplicationSettings.GeometryPath.Trim('/'), "Levels", "Levels/Med" })
+			foreach (var root in new[] { appPath, "Levels", "Levels/Med" })
 			{
 				if (string.IsNullOrEmpty(root)) continue;
 				var gos = Resources.LoadAll<GameObject>(root);
