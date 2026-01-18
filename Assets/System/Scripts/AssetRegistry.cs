@@ -23,8 +23,8 @@ namespace MassiveHadronLtd
 		private static readonly Dictionary<string, T> MaterialCache = new(StringComparer.OrdinalIgnoreCase);
 		private static readonly Dictionary<string, T> Texture2DCache = new(StringComparer.OrdinalIgnoreCase);
 
-		private static readonly Dictionary<string, AudioClip> SoundCache = new(StringComparer.OrdinalIgnoreCase);
-		private static readonly Dictionary<string, AudioClip> MusicCache = new(StringComparer.OrdinalIgnoreCase);
+		private static readonly Dictionary<string, T> SoundCache = new(StringComparer.OrdinalIgnoreCase);
+		private static readonly Dictionary<string, T> MusicCache = new(StringComparer.OrdinalIgnoreCase);
 
 		public static Func<string, string> NameRemapper { get; set; }
 
@@ -89,8 +89,8 @@ namespace MassiveHadronLtd
 		public static T FindSkybox(string assetName) => Find(assetName, MaterialCache, MaterialRoots);
 
 		// Non-generic Find methods for AudioClip
-		public static AudioClip FindSound(string clipName) => FindAudioClip(clipName, SoundCache, SoundRoots);
-		public static AudioClip FindMusic(string clipName) => FindAudioClip(clipName, MusicCache, MusicRoots);
+		public static T FindSound(string clipName) => Find(clipName, SoundCache, SoundRoots);
+		public static T FindMusic(string clipName) => Find(clipName, MusicCache, MusicRoots);
 
 		private static T Find(string assetName, Dictionary<string, T> cache, HashSet<string> roots)
 		{
@@ -118,39 +118,6 @@ namespace MassiveHadronLtd
 			}
 
 			asset = TryLoad<T>(key, roots);
-
-			if (asset != null)
-				cache[key] = asset;
-
-			return asset;
-		}
-
-		private static AudioClip FindAudioClip(string assetName, Dictionary<string, AudioClip> cache, HashSet<string> roots)
-		{
-			if (string.IsNullOrEmpty(assetName)) return null;
-
-			string key = assetName.Trim();
-
-			if (cache.TryGetValue(key, out var cached)) return cached;
-
-			AudioClip asset = null;
-
-			if (NameRemapper != null)
-			{
-				string remapped = NameRemapper(key);
-				if (remapped != key)
-				{
-					asset = TryLoad<AudioClip>(remapped, roots);
-					if (asset != null)
-					{
-						cache[key] = asset;
-						cache[remapped] = asset;
-						return asset;
-					}
-				}
-			}
-
-			asset = TryLoad<AudioClip>(key, roots);
 
 			if (asset != null)
 				cache[key] = asset;
