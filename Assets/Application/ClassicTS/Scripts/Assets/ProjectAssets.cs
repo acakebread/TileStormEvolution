@@ -1,6 +1,8 @@
-using System;
+﻿using System;
 using UnityEngine;
 using MassiveHadronLtd;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace ClassicTilestorm.Assets
 {
@@ -41,7 +43,7 @@ namespace ClassicTilestorm.Assets
 			return instance;
 		}
 
-		// THIS IS ALL YOU NEED � direct access, used for both init and toggle
+		// THIS IS ALL YOU NEED — direct access, used for both init and toggle
 		public static Func<string, string> NameRemapper
 		{
 			get => AssetRegistry<GameObject>.NameRemapper;
@@ -58,7 +60,7 @@ namespace ClassicTilestorm.Assets
 		public static void ClearCache() => AssetRegistry<GameObject>.ClearPrefabCache();
 		public static GameObject Find(string prefabName) => AssetRegistry<GameObject>.FindPrefab(prefabName);
 
-		// === DUPLICATED FROM ModelAssets � safe and clear ===
+		// === DUPLICATED FROM ModelAssets — safe and clear ===
 		public static GameObject Instantiate(string prefabName, Transform parent = null)
 		{
 			var asset = Find(prefabName);
@@ -146,5 +148,112 @@ namespace ClassicTilestorm.Assets
 		public static void RegisterRoot(string root) => AssetRegistry<AudioClip>.RegisterMusicRoot(root);
 		public static void ClearCache() => AssetRegistry<AudioClip>.ClearMusicCache();
 		public static AudioClip Find(string clipName) => AssetRegistry<AudioClip>.FindMusic(clipName);
+	}
+}
+
+namespace ClassicTilestorm.Assets
+{
+	public static partial class ProjectAssets
+	{
+		// ──────────────────────────────────────────────────────────────
+		//  Cached name listings for all asset types (loaded only once)
+		// ──────────────────────────────────────────────────────────────
+
+		private static readonly Dictionary<Type, (List<string> Names, bool Cached)> NameCaches
+			= new Dictionary<Type, (List<string>, bool)>();
+
+		private static void EnsureCached<T>(Func<IEnumerable<string>> loadFunc) where T : UnityEngine.Object
+		{
+			var t = typeof(T);
+			if (!NameCaches.TryGetValue(t, out var entry) || !entry.Cached)
+			{
+				var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+				foreach (var name in loadFunc())
+				{
+					if (!string.IsNullOrEmpty(name))
+						names.Add(name);
+				}
+
+				NameCaches[t] = (
+					names.OrderBy(n => n, StringComparer.OrdinalIgnoreCase).ToList(),
+					true
+				);
+			}
+		}
+
+		private static IReadOnlyList<string> GetNames<T>(Func<IEnumerable<string>> loadFunc, bool forceRefresh = false)
+			where T : UnityEngine.Object
+		{
+			if (forceRefresh)
+			{
+				NameCaches[typeof(T)] = (null, false);
+			}
+
+			EnsureCached<T>(loadFunc);
+			return NameCaches[typeof(T)].Names ?? new List<string>();
+		}
+
+		// ── Public API for each major type ────────────────────────────────
+
+		public static IReadOnlyList<string> GetModelNames(bool forceRefresh = false)
+			=> GetNames<GameObject>(() => GetAssetNamesFromRoots<GameObject>(new[]
+			{
+				AssetPath.GeometryPath?.Trim('/') ?? "",
+				"Levels",
+				"Levels/Med"
+			}), forceRefresh);
+
+		public static IReadOnlyList<string> GetPrefabNames(bool forceRefresh = false)
+			=> GetNames<GameObject>(() => GetAssetNamesFromRoots<GameObject>(new[]
+			{
+				AssetPath.PrefabPath?.Trim('/') ?? ""
+			}), forceRefresh);
+
+		public static IReadOnlyList<string> GetTextureNames(bool forceRefresh = false)
+			=> GetNames<Texture>(() => GetAssetNamesFromRoots<Texture>(new[]
+			{
+				AssetPath.TexturePath?.Trim('/') ?? ""
+			}), forceRefresh);
+
+		public static IReadOnlyList<string> GetTexture2DNames(bool forceRefresh = false)
+			=> GetNames<Texture2D>(() => GetAssetNamesFromRoots<Texture2D>(new[]
+			{
+				AssetPath.TexturePath?.Trim('/') ?? ""
+			}), forceRefresh);
+
+		public static IReadOnlyList<string> GetMaterialNames(bool forceRefresh = false)
+			=> GetNames<Material>(() => GetAssetNamesFromRoots<Material>(new[]
+			{
+				AssetPath.MaterialPath?.Trim('/') ?? "",
+				AssetPath.SkycubesPath?.Trim('/') ?? ""
+			}), forceRefresh);
+
+		// Add more when needed, e.g.:
+		// public static IReadOnlyList<string> GetSoundNames(bool forceRefresh = false) { ... }
+
+		// ── Core loading helper ─────────────────────────────────────────────
+
+		private static IEnumerable<string> GetAssetNamesFromRoots<T>(string[] roots)
+			where T : UnityEngine.Object
+		{
+			foreach (var root in roots.Where(r => !string.IsNullOrEmpty(r)))
+			{
+				var assets = Resources.LoadAll<T>(root);
+				foreach (var asset in assets)
+				{
+					if (!string.IsNullOrEmpty(asset.name))
+						yield return asset.name;
+				}
+			}
+		}
+
+		/// <summary>
+		/// Force refresh all name caches (call after significant asset changes)
+		/// </summary>
+		public static void RefreshAllNameCaches()
+		{
+			NameCaches.Clear();
+		}
 	}
 }

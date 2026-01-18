@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using TMPro;
 using System.Linq;
 using MassiveHadronLtd;
+using ClassicTilestorm.Assets;
 
 namespace ClassicTilestorm
 {
@@ -273,24 +274,10 @@ namespace ClassicTilestorm
 
 			modelDropdown.ClearOptions();
 
-			var modelNames = new List<string>();
-			var appPath = FindAnyObjectByType<ApplicationSettings>() != null ? ApplicationSettings.GeometryPath.Trim('/') : null;
-
-			foreach (var root in new[] { appPath, "Levels", "Levels/Med" })
-			{
-				if (string.IsNullOrEmpty(root)) continue;
-				var gos = Resources.LoadAll<GameObject>(root);
-				foreach (var go in gos)
-					if (!string.IsNullOrEmpty(go.name))
-						modelNames.Add(go.name);
-			}
-
-			var uniqueSorted = modelNames.Distinct()
-				.OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
-				.ToList();
+			var modelNames = ProjectAssets.GetModelNames();
 
 			var options = new List<string> { noneModelOptionText };
-			options.AddRange(uniqueSorted);
+			options.AddRange(modelNames);
 
 			modelDropdown.AddOptions(options);
 			modelDropdown.interactable = true;
