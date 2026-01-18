@@ -3,7 +3,7 @@ using System.Linq;
 
 namespace ClassicTilestorm
 {
-	[System.Serializable]
+	[Serializable]
 	public class DatabaseData
 	{
 		public Map[] maps;
@@ -17,14 +17,15 @@ namespace ClassicTilestorm
 		private static DatabaseData _db;
 		public static DatabaseData database { get => _db; set => _db = value; }
 
-		public static System.Collections.Generic.IList<Map> Maps => _db?.maps ?? System.Array.Empty<Map>();
-		public static System.Collections.Generic.IList<Definition> Definitions => _db?.definitions ?? System.Array.Empty<Definition>();
-		public static System.Collections.Generic.IList<TextureSequence> TextureSets => _db?.textures ?? System.Array.Empty<TextureSequence>();
-		public static System.Collections.Generic.IList<Legacy.Button> Buttons => _db?.buttons ?? System.Array.Empty<Legacy.Button>();
+		public static System.Collections.Generic.IList<Map> Maps => _db?.maps ?? Array.Empty<Map>();
+		public static System.Collections.Generic.IList<Definition> Definitions => _db?.definitions ?? Array.Empty<Definition>();
+		public static System.Collections.Generic.IList<TextureSequence> TextureSequences => _db?.textures ?? Array.Empty<TextureSequence>();
+		public static System.Collections.Generic.IList<Legacy.Button> Buttons => _db?.buttons ?? Array.Empty<Legacy.Button>();
 
 		public static Definition GetDefinition(string id) => string.IsNullOrEmpty(id) ? null : Definitions.FirstOrDefault(d => d.id == id);
-		public static TextureSequence GetTextureSequence(string id) => string.IsNullOrEmpty(id) ? null : TextureSets.FirstOrDefault(ts => ts.id == id);
+		public static TextureSequence GetTextureSequence(string id) => string.IsNullOrEmpty(id) ? null : TextureSequences.FirstOrDefault(ts => ts.id == id);
 
+		// Data manipulation
 		public static void ApplyMapChanges(Map modifiedMap)
 		{
 			if (modifiedMap == null) return;

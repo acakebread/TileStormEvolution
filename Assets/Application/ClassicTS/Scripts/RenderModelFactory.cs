@@ -51,7 +51,7 @@ namespace ClassicTilestorm
 			// Texture sequence
 			TextureSequence sequence = null;
 			if (!isHD && !string.IsNullOrEmpty(def.texture))
-				sequence = TextureSetManager.GetTextureSequence(def.texture);
+				sequence = TextureSequenceManager.GetTextureSequence(def.texture);
 
 			// Loop through matching filter/renderer pairs
 			for (int i = 0; i < Mathf.Min(filters.Length, renderers.Length); i++)

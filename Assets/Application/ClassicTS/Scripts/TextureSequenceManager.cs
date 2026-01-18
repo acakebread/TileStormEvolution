@@ -4,7 +4,7 @@ using ClassicTilestorm.Assets;
 
 namespace ClassicTilestorm
 {
-	public static class TextureSetManager
+	public static class TextureSequenceManager
 	{
 		private static readonly Dictionary<string, TextureSequence> _cache = new();
 
@@ -15,7 +15,7 @@ namespace ClassicTilestorm
 			if (_cache.TryGetValue(id, out var cached))
 				return cached;
 
-			var sequence = ResourceManager.TextureSets.FirstOrDefault(ts => ts.id == id);
+			var sequence = ResourceManager.TextureSequences.FirstOrDefault(ts => ts.id == id);
 			if (sequence == null) return null;
 
 			// Work on a copy so we can mutate safely

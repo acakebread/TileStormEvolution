@@ -245,7 +245,7 @@ namespace ClassicTilestorm
 				.Distinct()
 				.ToArray();
 
-			var usedTextures = ResourceManager.TextureSets
+			var usedTextures = ResourceManager.TextureSequences
 				.Where(ts => usedBanks.Contains(ts.id))
 				.ToArray();
 
