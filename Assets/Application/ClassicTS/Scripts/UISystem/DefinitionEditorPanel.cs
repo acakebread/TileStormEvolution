@@ -64,15 +64,18 @@ namespace ClassicTilestorm
 		// Runtime
 		private readonly List<Toggle> spawnedDefinitionToggles = new();
 		private ToggleGroup toggleGroup;
-		private string selectedDefinitionId;
+
+		// Static: remembers last selection across panel opens/closes (runtime only)
+		private static int lastSelectedDefinitionIndex = -1;
 
 		private PreviewSceneController previewCtrl;
 		private CommandRenderModelData currentModelData;
 		private GimbalOrbitController orbitController;
 
 		private Definition CurrentDefinition =>
-			string.IsNullOrEmpty(selectedDefinitionId) ? null :
-			ResourceManager.GetDefinition(selectedDefinitionId);
+			lastSelectedDefinitionIndex >= 0 && lastSelectedDefinitionIndex < ResourceManager.Definitions.Count
+				? ResourceManager.Definitions[lastSelectedDefinitionIndex]
+				: null;
 
 		// Flag system
 		private readonly List<(Toggle toggle, FlagInfo flag)> spawnedFlagControls = new();
@@ -151,20 +154,13 @@ namespace ClassicTilestorm
 			CreateFlagToggles();
 
 			if (modelDropdown != null)
-			{
 				modelDropdown.onValueChanged.AddListener(OnModelDropdownValueChanged);
-			}
 
 			if (IDInput != null)
-			{
-				// We want to react when user FINISHES editing (presses Enter or focus lost)
 				IDInput.onEndEdit.AddListener(OnIDInputEndEdit);
-			}
 
 			if (textureDropdown != null)
-			{
 				textureDropdown.onValueChanged.AddListener(OnTextureDropdownValueChanged);
-			}
 		}
 
 		protected override void OnEnable()
@@ -188,84 +184,70 @@ namespace ClassicTilestorm
 		{
 			yield return null;
 			SyncModelDropdown();
+			SyncTextureDropdown();
 		}
 
 		private void OnIDInputEndEdit(string newId)
 		{
-			if (CurrentDefinition == null) return;
+			var def = CurrentDefinition;
+			if (def == null) return;
+
+			newId = newId?.Trim();
 			if (string.IsNullOrWhiteSpace(newId))
 			{
-				// Optional: revert to old value if user cleared it
-				IDInput.text = selectedDefinitionId;
+				IDInput.text = def.id;
 				return;
 			}
 
-			newId = newId.Trim();
+			if (newId == def.id) return;
 
-			// Same ID → nothing to do
-			if (newId == selectedDefinitionId)
-				return;
-
-			// Check if target ID already exists
-			if (ResourceManager.Definitions.Any(d => d.id == newId))
+			if (ResourceManager.Definitions.Any(d => d.id == newId && d != def))
 			{
-				// Optional: nice feedback
 				Debug.LogWarning($"ID '{newId}' already exists!");
-				IDInput.text = selectedDefinitionId; // revert
-													 // You could also show a popup/warning here
+				IDInput.text = def.id;
 				return;
 			}
 
-			// ── The actual rename ───────────────────────────────────────
-			string oldId = selectedDefinitionId;
+			def.id = newId;
+			RefreshDefinitionList();
+		}
 
-			CurrentDefinition.id = newId;
-			selectedDefinitionId = newId;
+		private void OnModelDropdownValueChanged(int index)
+		{
+			var def = CurrentDefinition;
+			if (def == null) return;
 
-			// Optional but recommended: update preview & list immediately
-			RefreshDefinitionList();           // rebuilds whole list + selects new id
-											   // or lighter version:
-											   // UpdateListItemLabel(oldId, newId);
-											   // (you'd need to implement that separately if you want to avoid full refresh)
+			string selected = index >= 0 && index < modelDropdown.options.Count
+				? modelDropdown.options[index].text
+				: null;
+
+			string newModel = (selected == noneModelOptionText) ? null : selected;
+
+			if (newModel != def.model)
+			{
+				def.model = newModel;
+				def.texture = null;
+				UpdatePreview(lastSelectedDefinitionIndex);
+				SyncTextureDropdown();
+			}
 		}
 
 		private void OnTextureDropdownValueChanged(int index)
 		{
-			if (index < 0 || index >= textureDropdown.options.Count) return;
-
 			var def = CurrentDefinition;
 			if (def == null) return;
 
-			string selectedText = textureDropdown.options[index].text;
-			string newTexture = (selectedText == noneTextureOptionText) ? null : selectedText;
+			string selected = index >= 0 && index < textureDropdown.options.Count
+				? textureDropdown.options[index].text
+				: null;
+
+			string newTexture = (selected == noneTextureOptionText) ? null : selected;
 
 			if (newTexture != def.texture)
 			{
 				def.texture = newTexture;
-				UpdatePreview(selectedDefinitionId);
+				UpdatePreview(lastSelectedDefinitionIndex);
 			}
-		}
-
-		private void SyncModelDropdown()
-		{
-			if (modelDropdown == null || modelDropdown.options.Count == 0)
-				return;
-
-			var def = CurrentDefinition;
-			int targetIndex = 0;
-
-			if (def != null && !string.IsNullOrEmpty(def.model))
-			{
-				string modelClean = def.model.Clean();
-
-				targetIndex = modelDropdown.options.FindIndex(opt =>
-					opt.text.CleanEquals(modelClean)
-				);
-
-				if (targetIndex < 0) targetIndex = 0;
-			}
-
-			modelDropdown.SetValueWithoutNotify(targetIndex);
 		}
 
 		private void PopulateModelDropdown()
@@ -283,161 +265,84 @@ namespace ClassicTilestorm
 			modelDropdown.interactable = true;
 		}
 
-		private void OnModelDropdownValueChanged(int index)
-		{
-			if (index < 0 || index >= modelDropdown.options.Count) return;
-
-			var def = CurrentDefinition;
-			if (def == null) return;
-
-			string selectedText = modelDropdown.options[index].text;
-			string newModel = (selectedText == noneModelOptionText) ? null : selectedText;
-
-			// ── Important change happens here ───────────────────────────────
-			bool modelActuallyChanged = newModel != def.model;
-
-			if (modelActuallyChanged)
-			{
-				def.model = newModel;
-				def.texture = null;
-				UpdatePreview(selectedDefinitionId);
-				SyncTextureDropdown();
-			}
-		}
-
-		private void SyncTextureDropdown()
-		{
-			if (textureDropdown == null || textureDropdown.options.Count == 0)
-				return;
-
-			var def = CurrentDefinition;
-			int targetIndex = 0;
-
-			if (def != null && !string.IsNullOrEmpty(def.texture))
-			{
-				string textureClean = def.texture.Clean(); // assuming you have .Clean() extension
-
-				targetIndex = textureDropdown.options.FindIndex(opt =>
-					opt.text.CleanEquals(textureClean)
-				);
-
-				if (targetIndex < 0) targetIndex = 0;
-			}
-
-			textureDropdown.SetValueWithoutNotify(targetIndex);
-		}
-
 		private void PopulateTextureDropdown()
 		{
 			if (textureDropdown == null) return;
 
 			textureDropdown.ClearOptions();
 
-			// Assuming you have some way to get all available texture/sequence names
-			// This is just an example — adjust to your real source
-			var textureNames = new List<string>();
-
-			foreach (var ts in ResourceManager.TextureSequences)
-			{
-				if (!string.IsNullOrEmpty(ts.id))
-					textureNames.Add(ts.id);
-			}
-
-			// Or if you load from Resources or elsewhere...
-			// var texAssets = Resources.LoadAll<Texture2D>("Textures/");
-			// foreach (var tex in texAssets) textureNames.Add(tex.name);
-
-			var uniqueSorted = textureNames
-				.Distinct()
+			var textureNames = ResourceManager.TextureSequences
+				.Where(ts => !string.IsNullOrEmpty(ts.id))
+				.Select(ts => ts.id)
+				.Distinct(StringComparer.OrdinalIgnoreCase)
 				.OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
 				.ToList();
 
 			var options = new List<string> { noneTextureOptionText };
-			options.AddRange(uniqueSorted);
+			options.AddRange(textureNames);
 
 			textureDropdown.AddOptions(options);
 			textureDropdown.interactable = true;
 		}
 
-		private void Update()
+		private void SyncModelDropdown()
 		{
-			if (previewCtrl == null) return;
-			orbitController.Update();
-			previewCtrl.UpdateAndRender();
-		}
-
-		private void EnsurePreviewInitialized()
-		{
-			if (previewCtrl != null) return;
-
-			if (previewImage == null)
+			var def = CurrentDefinition;
+			if (modelDropdown == null || def == null || string.IsNullOrEmpty(def.model))
 			{
-				Debug.LogError("[DefinitionEditorPanel] previewImage is not assigned!", this);
+				modelDropdown?.SetValueWithoutNotify(0);
 				return;
 			}
 
-			InitializePreview();
+			int index = modelDropdown.options.FindIndex(opt =>
+				opt.text.Equals(def.model, StringComparison.OrdinalIgnoreCase));
 
-			if (previewCtrl == null)
+			modelDropdown.SetValueWithoutNotify(index >= 0 ? index : 0);
+		}
+
+		private void SyncTextureDropdown()
+		{
+			var def = CurrentDefinition;
+			if (textureDropdown == null || def == null || string.IsNullOrEmpty(def.texture))
 			{
-				Debug.LogError("[DefinitionEditorPanel] Failed to initialize PreviewSceneController!", this);
+				textureDropdown?.SetValueWithoutNotify(0);
 				return;
 			}
 
-			void InitializePreview()
-			{
-				previewCtrl = new PreviewSceneController(previewImage, previewImage.GetComponent<RectTransform>())
-				{
-					BackgroundColor = backgroundColor,
-					FieldOfView = fieldOfView,
-					GroundColor = groundColor,
-					GroundSize = groundSize,
-					GroundY = groundY,
-					GroundUVScale = groundUVScale,
-					GroundOverrideTexture = groundOverrideTexture
-				};
+			int index = textureDropdown.options.FindIndex(opt =>
+				opt.text.Equals(def.texture, StringComparison.OrdinalIgnoreCase));
 
-				SetupPreviewInput();
-				orbitController.OnTransformChanged += ApplyCameraTransform;
-			}
-		}
-
-		private void SetupPreviewInput()
-		{
-			if (!previewImage.TryGetComponent<PointerDragScrollHandler>(out var handler))
-				handler = previewImage.gameObject.AddComponent<PointerDragScrollHandler>();
-
-			handler.Setup(
-				onDrag: orbitController.ProcessDrag,
-				onScroll: orbitController.ProcessScroll,
-				onUp: orbitController.EndDrag
-			);
+			textureDropdown.SetValueWithoutNotify(index >= 0 ? index : 0);
 		}
 
 		private void RefreshDefinitionList()
 		{
 			ClearDefinitionListItems();
 
-			if (ResourceManager.Definitions.Count == 0)
+			var defs = ResourceManager.Definitions;
+			if (defs.Count == 0)
 			{
-				selectedDefinitionId = null;
+				lastSelectedDefinitionIndex = -1;
 				SyncAllProperties();
 				return;
 			}
 
-			foreach (var def in ResourceManager.Definitions)
-				CreateDefinitionListItem(def);
+			for (int i = 0; i < defs.Count; i++)
+				CreateDefinitionListItem(defs[i], i);
 
-			string targetId = selectedDefinitionId ?? ResourceManager.Definitions.FirstOrDefault()?.id;
+			// Restore last known index (clamped automatically)
+			SetSelectedIndex(lastSelectedDefinitionIndex);
 
-			SetToggleById(targetId);
 			UpdateDeleteButtonState();
 
-			// ── This is the magic line ────────────────────────────
-			definitionScrollView.GetComponent<ScrollViewKeyboardNavigator>()?.ClearAndRebuild();
+			var navigator = definitionScrollView?.GetComponent<ScrollViewKeyboardNavigator>();
+			if (navigator != null)
+			{
+				StartCoroutine(navigator.ForceReselectAfterFrame(lastSelectedDefinitionIndex));
+			}
 		}
 
-		private void CreateDefinitionListItem(Definition def)
+		private void CreateDefinitionListItem(Definition def, int index)
 		{
 			var go = Instantiate(definitionListItemPrefab, contentParent);
 			var toggle = go.GetComponent<Toggle>();
@@ -448,11 +353,12 @@ namespace ClassicTilestorm
 
 			toggle.onValueChanged.AddListener(isOn =>
 			{
-				if (isOn) SelectDefinition(def.id);
+				if (isOn) SetSelectedIndex(index);
 			});
 
 			var label = go.GetComponentInChildren<TMP_Text>();
-			if (label != null) label.text = $"{def.id} ({def.model ?? "—"})";
+			if (label != null)
+				label.text = $"{def.id} ({def.model ?? "—"})";
 
 			go.AddComponent<ScrollViewKeyboardNavigator.ItemSelectionHandler>();
 		}
@@ -465,37 +371,27 @@ namespace ClassicTilestorm
 			spawnedDefinitionToggles.Clear();
 		}
 
-		private void SetToggleById(string defId)
+		private void SetSelectedIndex(int index)
 		{
-			if (string.IsNullOrEmpty(defId)) return;
+			// Clamp to valid range
+			index = Mathf.Clamp(index, -1, ResourceManager.Definitions.Count - 1);
+			lastSelectedDefinitionIndex = index;
 
-			foreach (var t in spawnedDefinitionToggles)
-			{
-				if (t == null) continue;
+			var def = CurrentDefinition;
 
-				var label = t.GetComponentInChildren<TMP_Text>();
-				if (label != null && label.text?.StartsWith(defId) == true)
-				{
-					t.SetIsOnWithoutNotify(true);
-					SelectDefinition(defId);
-					return;
-				}
-			}
+			IDInput.text = def?.id ?? "";
 
-			selectedDefinitionId = null;
-			IDInput.text = string.Empty;
 			SyncAllProperties();
-		}
-
-		private void SelectDefinition(string defId)
-		{
-			selectedDefinitionId = defId;
-			IDInput.text = defId;
-			UpdatePreview(defId);
-			SyncAllProperties();
+			UpdatePreview(index);
 			SyncModelDropdown();
 			SyncTextureDropdown();
 			UpdateDeleteButtonState();
+
+			// Highlight the toggle
+			if (index >= 0 && index < spawnedDefinitionToggles.Count)
+			{
+				spawnedDefinitionToggles[index].SetIsOnWithoutNotify(true);
+			}
 		}
 
 		private void SyncAllProperties()
@@ -511,7 +407,7 @@ namespace ClassicTilestorm
 			}
 		}
 
-		private void UpdatePreview(string defId)
+		private void UpdatePreview(int index)
 		{
 			if (previewCtrl == null)
 			{
@@ -522,7 +418,10 @@ namespace ClassicTilestorm
 			currentModelData = null;
 			previewCtrl.ClearModel();
 
-			var def = ResourceManager.GetDefinition(defId);
+			var def = (index >= 0 && index < ResourceManager.Definitions.Count)
+				? ResourceManager.Definitions[index]
+				: null;
+
 			if (def != null && !string.IsNullOrEmpty(def.model))
 			{
 				currentModelData = RenderModelFactory.Create(def, Vector3.zero, Quaternion.identity, Vector3.one);
@@ -531,9 +430,11 @@ namespace ClassicTilestorm
 					previewCtrl.SetModel(currentModelData);
 					orbitController.ResetView(true, currentModelData.bounds);
 				}
-				else orbitController.ResetView(false);
+				else
+					orbitController.ResetView(false);
 			}
-			else orbitController.ResetView(false);
+			else
+				orbitController.ResetView(false);
 		}
 
 		private void ApplyCameraTransform()
@@ -587,83 +488,118 @@ namespace ClassicTilestorm
 		{
 			if (ResourceManager.database == null) return;
 
-			// Much cleaner now:
 			string newId = ResourceManager.GenerateUniqueNewDefinitionId();
-
 			var def = Definition.GetDefault(newId);
 
-			ResourceManager.InsertDefinitionAfter(selectedDefinitionId, def);
+			int insertIndex = lastSelectedDefinitionIndex >= 0 ? lastSelectedDefinitionIndex + 1 : 0;
+			ResourceManager.InsertDefinitionAt(insertIndex, def);
 
-			selectedDefinitionId = def.id;
+			lastSelectedDefinitionIndex = insertIndex;
 			RefreshDefinitionList();
 		}
 
 		private void DeleteDefinition()
 		{
-			if (ResourceManager.database == null) return;
+			if (ResourceManager.database == null || lastSelectedDefinitionIndex < 0) return;
 
-			int indexBeforeDelete = GetSelectedIndex();
+			int indexToDelete = lastSelectedDefinitionIndex;
 
-			ResourceManager.DeleteDefinition(selectedDefinitionId);
+			ResourceManager.DeleteDefinitionAt(indexToDelete);
 
-			var defs = ResourceManager.Definitions.ToList();
+			var defs = ResourceManager.Definitions;
 			if (defs.Count == 0)
 			{
-				selectedDefinitionId = null;
+				lastSelectedDefinitionIndex = -1;
 			}
 			else
 			{
-				// Prefer the item above if possible
-				int newIndex = Mathf.Max(0, indexBeforeDelete - 1);
-				if (newIndex >= defs.Count) newIndex = defs.Count - 1;
-				selectedDefinitionId = defs[newIndex].id;
+				// Prefer previous item
+				lastSelectedDefinitionIndex = Mathf.Max(0, indexToDelete - 1);
+				if (lastSelectedDefinitionIndex >= defs.Count)
+					lastSelectedDefinitionIndex = defs.Count - 1;
 			}
 
 			RefreshDefinitionList();
-
-			// This helps the toggle UI stay in sync
-			if (!string.IsNullOrEmpty(selectedDefinitionId))
-			{
-				SetToggleById(selectedDefinitionId);
-			}
-
-			definitionScrollView.GetComponent<ScrollViewKeyboardNavigator>()?.ClearAndRebuild();
 		}
 
-		// Add this new method
+		private void MoveDefinitionUp()
+		{
+			if (lastSelectedDefinitionIndex <= 0) return;
+
+			ResourceManager.MoveDefinitionUp(lastSelectedDefinitionIndex);
+			lastSelectedDefinitionIndex--;
+			RefreshDefinitionList();
+		}
+
+		private void MoveDefinitionDown()
+		{
+			if (lastSelectedDefinitionIndex < 0 || lastSelectedDefinitionIndex >= ResourceManager.Definitions.Count - 1) return;
+
+			ResourceManager.MoveDefinitionDown(lastSelectedDefinitionIndex);
+			lastSelectedDefinitionIndex++;
+			RefreshDefinitionList();
+		}
+
 		private void UpdateDeleteButtonState()
 		{
 			if (ButtonDelete == null) return;
 
-			bool hasSelection = !string.IsNullOrEmpty(selectedDefinitionId);
-			bool isUsed = hasSelection && ResourceManager.IsDefinitionUsed(selectedDefinitionId);
+			bool hasSelection = lastSelectedDefinitionIndex >= 0;
+			bool isUsed = hasSelection && ResourceManager.IsDefinitionUsed(CurrentDefinition?.id);
 
 			ButtonDelete.interactable = hasSelection && !isUsed;
 
-			// Optional: better UX — change text or tooltip when disabled
 			if (ButtonDelete.GetComponentInChildren<TMP_Text>() is TMP_Text btnText)
-			{
 				btnText.text = isUsed ? "Delete (used)" : "Delete";
+		}
+
+		private void EnsurePreviewInitialized()
+		{
+			if (previewCtrl != null) return;
+
+			if (previewImage == null)
+			{
+				Debug.LogError("[DefinitionEditorPanel] previewImage is not assigned!", this);
+				return;
+			}
+
+			previewCtrl = new PreviewSceneController(previewImage, previewImage.GetComponent<RectTransform>())
+			{
+				BackgroundColor = backgroundColor,
+				FieldOfView = fieldOfView,
+				GroundColor = groundColor,
+				GroundSize = groundSize,
+				GroundY = groundY,
+				GroundUVScale = groundUVScale,
+				GroundOverrideTexture = groundOverrideTexture
+			};
+
+			SetupPreviewInput();
+			orbitController.OnTransformChanged += ApplyCameraTransform;
+
+			if (previewCtrl == null)
+			{
+				Debug.LogError("[DefinitionEditorPanel] Failed to initialize PreviewSceneController!", this);
 			}
 		}
 
-		private void MoveDefinition(Action<string> moveAction)
+		private void SetupPreviewInput()
 		{
-			if (ResourceManager.database == null) return;
-			moveAction?.Invoke(selectedDefinitionId);
-			RefreshDefinitionList();
+			if (!previewImage.TryGetComponent<PointerDragScrollHandler>(out var handler))
+				handler = previewImage.gameObject.AddComponent<PointerDragScrollHandler>();
+
+			handler.Setup(
+				onDrag: orbitController.ProcessDrag,
+				onScroll: orbitController.ProcessScroll,
+				onUp: orbitController.EndDrag
+			);
 		}
 
-		private void MoveDefinitionUp() => MoveDefinition(ResourceManager.MoveDefinitionUp);
-		private void MoveDefinitionDown() => MoveDefinition(ResourceManager.MoveDefinitionDown);
-
-		private int GetSelectedIndex()
+		private void Update()
 		{
-			if (string.IsNullOrEmpty(selectedDefinitionId)) return -1;
-			for (int i = 0; i < ResourceManager.Definitions.Count; i++)
-				if (ResourceManager.Definitions[i].id == selectedDefinitionId)
-					return i;
-			return -1;
+			if (previewCtrl == null) return;
+			orbitController.Update();
+			previewCtrl.UpdateAndRender();
 		}
 	}
 }
