@@ -383,23 +383,23 @@ namespace ClassicTilestorm
 				Debug.LogError("[DefinitionEditorPanel] Failed to initialize PreviewSceneController!", this);
 				return;
 			}
-		}
 
-		private void InitializePreview()
-		{
-			previewCtrl = new PreviewSceneController(previewImage, previewImage.GetComponent<RectTransform>())
+			void InitializePreview()
 			{
-				BackgroundColor = backgroundColor,
-				FieldOfView = fieldOfView,
-				GroundColor = groundColor,
-				GroundSize = groundSize,
-				GroundY = groundY,
-				GroundUVScale = groundUVScale,
-				GroundOverrideTexture = groundOverrideTexture
-			};
+				previewCtrl = new PreviewSceneController(previewImage, previewImage.GetComponent<RectTransform>())
+				{
+					BackgroundColor = backgroundColor,
+					FieldOfView = fieldOfView,
+					GroundColor = groundColor,
+					GroundSize = groundSize,
+					GroundY = groundY,
+					GroundUVScale = groundUVScale,
+					GroundOverrideTexture = groundOverrideTexture
+				};
 
-			SetupPreviewInput();
-			orbitController.OnTransformChanged += ApplyCameraTransform;
+				SetupPreviewInput();
+				orbitController.OnTransformChanged += ApplyCameraTransform;
+			}
 		}
 
 		private void SetupPreviewInput()
