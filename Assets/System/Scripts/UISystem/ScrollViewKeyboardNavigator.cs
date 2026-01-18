@@ -21,7 +21,7 @@ namespace MassiveHadronLtd
 		private float repeatTimer;
 		private bool isRepeating;
 
-		// Pending re-selection after rebuild (set by ClearAndRebuild)
+		// Pending re-selection after rebuild/content change
 		private int pendingReselectIndex = -2; // -2 = none, -1 or >=0 = target index
 
 		private void Awake()
@@ -44,7 +44,7 @@ namespace MassiveHadronLtd
 				StartCoroutine(RebuildAfterFrame());
 			}
 
-			// Apply pending re-selection (after rebuild or children change)
+			// Apply pending re-selection
 			if (pendingReselectIndex > -2)
 			{
 				SelectIndex(pendingReselectIndex, false);
@@ -57,17 +57,15 @@ namespace MassiveHadronLtd
 			HandleRepeatTimer();
 		}
 
-		private IEnumerator RebuildAfterFrame()
+		private void OnTransformChildrenChanged()
 		{
-			yield return null;
-			RebuildSelectables();
-
-			// Apply any pending re-selection after rebuild
-			if (pendingReselectIndex > -2)
+			// Content changed → trigger rebuild and re-selection
+			if (pendingReselectIndex == -2)
 			{
-				SelectIndex(pendingReselectIndex, false);
-				pendingReselectIndex = -2;
+				pendingReselectIndex = lastSelectedIndex;
 			}
+
+			StartCoroutine(RebuildAfterFrame());
 		}
 
 		public void ForceRefresh()
@@ -84,14 +82,22 @@ namespace MassiveHadronLtd
 
 			RebuildSelectables();
 
-			// Schedule re-selection for next frame (all new handlers will have registered by then)
+			// Schedule re-selection for next frame
 			pendingReselectIndex = desiredIndex;
 
-			// Smart clamp
-			if (pendingReselectIndex >= selectables.Count)
-				pendingReselectIndex = selectables.Count - 1;
-			else if (pendingReselectIndex < 0 && selectables.Count > 0)
-				pendingReselectIndex = 0;
+			// No aggressive clamping here — defer to SelectIndex
+		}
+
+		private IEnumerator RebuildAfterFrame()
+		{
+			yield return null;
+			RebuildSelectables();
+
+			if (pendingReselectIndex > -2)
+			{
+				SelectIndex(pendingReselectIndex, false);
+				pendingReselectIndex = -2;
+			}
 		}
 
 		private void RebuildSelectables()
@@ -103,10 +109,52 @@ namespace MassiveHadronLtd
 			foreach (Transform child in scrollRect.content)
 			{
 				if (child == null) continue;
+
 				var sel = child.GetComponent<Selectable>();
 				if (sel != null && sel.IsInteractable())
+				{
 					selectables.Add(sel);
+
+					if (sel is Toggle toggle && !HasToggleListener(toggle))
+					{
+						HookToggleListener(toggle);
+					}
+				}
 			}
+		}
+
+		private bool HasToggleListener(Toggle toggle)
+		{
+			return toggle.GetComponent<ToggleListenerMarker>() != null;
+		}
+
+		private void HookToggleListener(Toggle toggle)
+		{
+			if (toggle.gameObject.GetComponent<ToggleListenerMarker>() == null)
+			{
+				toggle.gameObject.AddComponent<ToggleListenerMarker>();
+			}
+
+			toggle.onValueChanged.AddListener(isOn =>
+			{
+				if (isOn)
+				{
+					int index = selectables.IndexOf(toggle);
+					if (index >= 0)
+					{
+						NotifyItemSelected(index);
+						StartCoroutine(ScrollAfterFrame(toggle));
+					}
+				}
+			});
+		}
+
+		private void CleanupDestroyedItems()
+		{
+			selectables.RemoveAll(s => s == null || !s.gameObject.activeInHierarchy);
+			// IMPORTANT: Do NOT clamp lastSelectedIndex here!
+			// We want to preserve the panel's desired index
+			// Clamping happens only in SelectIndex when we actually use it
 		}
 
 		private void HandleKeyboardInput()
@@ -161,11 +209,12 @@ namespace MassiveHadronLtd
 		{
 			if (index < 0 || index >= selectables.Count) return;
 			lastSelectedIndex = index;
-			pendingReselectIndex = -2; // Clear any pending if user selects manually
+			pendingReselectIndex = -2;
 		}
 
 		private void SelectIndex(int index, bool scrollToIt = true)
 		{
+			// Lazy clamp here - this is the ONLY place we enforce bounds
 			index = Mathf.Clamp(index, -1, selectables.Count - 1);
 			if (index < 0) return;
 
@@ -185,7 +234,7 @@ namespace MassiveHadronLtd
 		private IEnumerator ScrollAfterFrame(Selectable target)
 		{
 			yield return null;
-			if (target == null) yield break; // Safety
+			if (target == null) yield break;
 			ScrollTo(target);
 		}
 
@@ -195,7 +244,7 @@ namespace MassiveHadronLtd
 				return;
 
 			var itemRT = selectable.GetComponent<RectTransform>();
-			if (itemRT == null) return; // Prevent MissingReferenceException
+			if (itemRT == null) return;
 
 			Canvas.ForceUpdateCanvases();
 
@@ -291,66 +340,7 @@ namespace MassiveHadronLtd
 				   Input.GetKey(KeyCode.PageUp) || Input.GetKey(KeyCode.PageDown);
 		}
 
-		private void CleanupDestroyedItems()
-		{
-			selectables.RemoveAll(s => s == null || !s.gameObject.activeInHierarchy);
-			if (lastSelectedIndex >= selectables.Count)
-				lastSelectedIndex = selectables.Count - 1;
-		}
-
-		// ──────────────────────────────────────────────────────────────
-		// Item handler with delayed registration
-		// ──────────────────────────────────────────────────────────────
-		[AddComponentMenu("")]
-		public class ItemSelectionHandler : MonoBehaviour
-		{
-			private ScrollViewKeyboardNavigator navigator;
-			private Selectable selectable;
-
-			private void Awake()
-			{
-				selectable = GetComponent<Selectable>();
-				if (selectable == null)
-				{
-					Destroy(this);
-					return;
-				}
-			}
-
-			private void OnEnable()
-			{
-				StartCoroutine(TryRegisterDelayed());
-			}
-
-			private IEnumerator TryRegisterDelayed()
-			{
-				yield return null; // Wait one frame - fixes race with rebuild
-				TryRegister();
-			}
-
-			private void TryRegister()
-			{
-				if (navigator != null) return;
-
-				navigator = GetComponentInParent<ScrollViewKeyboardNavigator>(true);
-				if (navigator == null) return;
-
-				if (selectable is Toggle toggle)
-				{
-					toggle.onValueChanged.AddListener(isOn =>
-					{
-						if (isOn)
-						{
-							int index = navigator.selectables.IndexOf(selectable);
-							if (index >= 0)
-							{
-								navigator.NotifyItemSelected(index);
-								navigator.StartCoroutine(navigator.ScrollAfterFrame(selectable));
-							}
-						}
-					});
-				}
-			}
-		}
+		// Tiny marker to prevent double-hooking toggles
+		private class ToggleListenerMarker : MonoBehaviour { }
 	}
 }

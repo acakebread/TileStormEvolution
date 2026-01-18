@@ -353,8 +353,6 @@ namespace ClassicTilestorm
 			var label = go.GetComponentInChildren<TMP_Text>();
 			if (label != null)
 				label.text = $"{def.id} ({def.model ?? "—"})";
-
-			go.AddComponent<ScrollViewKeyboardNavigator.ItemSelectionHandler>();
 		}
 
 		private void ClearDefinitionListItems()
