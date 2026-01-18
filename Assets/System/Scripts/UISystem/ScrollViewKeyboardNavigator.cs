@@ -21,7 +21,8 @@ namespace MassiveHadronLtd
 		private float repeatTimer;
 		private bool isRepeating;
 
-		private int pendingSelectIndex = -2; // -2 = no pending, -1 or >=0 = select this after rebuild
+		// Pending re-selection after rebuild (set by ClearAndRebuild)
+		private int pendingReselectIndex = -2; // -2 = none, -1 or >=0 = target index
 
 		private void Awake()
 		{
@@ -37,29 +38,23 @@ namespace MassiveHadronLtd
 		{
 			CleanupDestroyedItems();
 
+			// Auto-recover if content has items but selectables is empty
 			if (selectables.Count == 0 && scrollRect?.content?.childCount > 0)
 			{
 				StartCoroutine(RebuildAfterFrame());
 			}
 
-			if (selectables.Count == 0) return;
-
-			// Apply any pending selection from previous frame/rebuild
-			if (pendingSelectIndex > -2)
+			// Apply pending re-selection (after rebuild or children change)
+			if (pendingReselectIndex > -2)
 			{
-				SelectIndex(pendingSelectIndex, false);
-				pendingSelectIndex = -2;
+				SelectIndex(pendingReselectIndex, false);
+				pendingReselectIndex = -2;
 			}
+
+			if (selectables.Count == 0) return;
 
 			HandleKeyboardInput();
 			HandleRepeatTimer();
-		}
-
-		private void CleanupDestroyedItems()
-		{
-			selectables.RemoveAll(s => s == null || !s.gameObject.activeInHierarchy);
-			if (lastSelectedIndex >= selectables.Count)
-				lastSelectedIndex = selectables.Count - 1;
 		}
 
 		private IEnumerator RebuildAfterFrame()
@@ -67,11 +62,11 @@ namespace MassiveHadronLtd
 			yield return null;
 			RebuildSelectables();
 
-			// Apply pending selection after rebuild
-			if (pendingSelectIndex > -2)
+			// Apply any pending re-selection after rebuild
+			if (pendingReselectIndex > -2)
 			{
-				SelectIndex(pendingSelectIndex, false);
-				pendingSelectIndex = -2;
+				SelectIndex(pendingReselectIndex, false);
+				pendingReselectIndex = -2;
 			}
 		}
 
@@ -89,14 +84,14 @@ namespace MassiveHadronLtd
 
 			RebuildSelectables();
 
-			// Schedule selection for next frame to avoid race with destroyed objects
-			pendingSelectIndex = desiredIndex;
+			// Schedule re-selection for next frame (all new handlers will have registered by then)
+			pendingReselectIndex = desiredIndex;
 
 			// Smart clamp
-			if (pendingSelectIndex >= selectables.Count)
-				pendingSelectIndex = selectables.Count - 1;
-			else if (pendingSelectIndex < 0 && selectables.Count > 0)
-				pendingSelectIndex = 0;
+			if (pendingReselectIndex >= selectables.Count)
+				pendingReselectIndex = selectables.Count - 1;
+			else if (pendingReselectIndex < 0 && selectables.Count > 0)
+				pendingReselectIndex = 0;
 		}
 
 		private void RebuildSelectables()
@@ -159,14 +154,14 @@ namespace MassiveHadronLtd
 
 		private void ScheduleSelect(int index)
 		{
-			pendingSelectIndex = index;
+			pendingReselectIndex = index;
 		}
 
 		public void NotifyItemSelected(int index)
 		{
 			if (index < 0 || index >= selectables.Count) return;
 			lastSelectedIndex = index;
-			pendingSelectIndex = -2; // Clear pending if user manually selects
+			pendingReselectIndex = -2; // Clear any pending if user selects manually
 		}
 
 		private void SelectIndex(int index, bool scrollToIt = true)
@@ -190,7 +185,7 @@ namespace MassiveHadronLtd
 		private IEnumerator ScrollAfterFrame(Selectable target)
 		{
 			yield return null;
-			if (target == null) yield break; // Safety against destroy race
+			if (target == null) yield break; // Safety
 			ScrollTo(target);
 		}
 
@@ -200,7 +195,7 @@ namespace MassiveHadronLtd
 				return;
 
 			var itemRT = selectable.GetComponent<RectTransform>();
-			if (itemRT == null) return; // Critical safety - prevents MissingReferenceException
+			if (itemRT == null) return; // Prevent MissingReferenceException
 
 			Canvas.ForceUpdateCanvases();
 
@@ -296,32 +291,15 @@ namespace MassiveHadronLtd
 				   Input.GetKey(KeyCode.PageUp) || Input.GetKey(KeyCode.PageDown);
 		}
 
-		public IEnumerator ForceReselectAfterFrame(int targetIndex)
+		private void CleanupDestroyedItems()
 		{
-			yield return null; // wait until end of frame — all new toggles are fully initialized
-			CleanupDestroyedItems(); // safety
-
-			// Clamp to current list
-			int clamped = Mathf.Clamp(targetIndex, -1, selectables.Count - 1);
-
-			if (clamped >= 0 && clamped < selectables.Count)
-			{
-				var target = selectables[clamped];
-				if (target != null)
-				{
-					lastSelectedIndex = clamped;
-					target.Select();
-
-					if (target is Toggle toggle)
-						toggle.isOn = true;
-
-					StartCoroutine(ScrollAfterFrame(target));
-				}
-			}
+			selectables.RemoveAll(s => s == null || !s.gameObject.activeInHierarchy);
+			if (lastSelectedIndex >= selectables.Count)
+				lastSelectedIndex = selectables.Count - 1;
 		}
 
 		// ──────────────────────────────────────────────────────────────
-		// Item handler with delayed registration to avoid race conditions
+		// Item handler with delayed registration
 		// ──────────────────────────────────────────────────────────────
 		[AddComponentMenu("")]
 		public class ItemSelectionHandler : MonoBehaviour
@@ -346,7 +324,7 @@ namespace MassiveHadronLtd
 
 			private IEnumerator TryRegisterDelayed()
 			{
-				yield return null; // Wait one frame - crucial for rebuild timing
+				yield return null; // Wait one frame - fixes race with rebuild
 				TryRegister();
 			}
 

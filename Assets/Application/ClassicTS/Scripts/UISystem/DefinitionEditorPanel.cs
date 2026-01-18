@@ -334,12 +334,6 @@ namespace ClassicTilestorm
 			SetSelectedIndex(lastSelectedDefinitionIndex);
 
 			UpdateDeleteButtonState();
-
-			var navigator = definitionScrollView?.GetComponent<ScrollViewKeyboardNavigator>();
-			if (navigator != null)
-			{
-				StartCoroutine(navigator.ForceReselectAfterFrame(lastSelectedDefinitionIndex));
-			}
 		}
 
 		private void CreateDefinitionListItem(Definition def, int index)
