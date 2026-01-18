@@ -47,7 +47,7 @@ namespace MassiveHadronLtd
 			// Apply pending re-selection
 			if (pendingReselectIndex > -2)
 			{
-				SelectIndex(pendingReselectIndex, false);
+				SelectIndex(pendingReselectIndex, true);
 				pendingReselectIndex = -2;
 			}
 
@@ -71,6 +71,21 @@ namespace MassiveHadronLtd
 		public void ForceRefresh()
 		{
 			RebuildSelectables();
+		}
+
+		public void SyncIndexFromPanel(int panelIndex)
+		{
+			//lastSelectedIndex = panelIndex;
+			pendingReselectIndex = panelIndex; // also queue for scroll/selection
+		}
+
+		public IEnumerator ScrollAfterFramePublic(Selectable target)
+		{
+			yield return null;
+			yield return null;
+			Canvas.ForceUpdateCanvases();
+			if (target == null) yield break;
+			ScrollTo(target);
 		}
 
 		public void ClearAndRebuild()
@@ -231,7 +246,7 @@ namespace MassiveHadronLtd
 				StartCoroutine(ScrollAfterFrame(target));
 		}
 
-		private IEnumerator ScrollAfterFrame(Selectable target)
+		public IEnumerator ScrollAfterFrame(Selectable target)
 		{
 			yield return null;
 			if (target == null) yield break;
