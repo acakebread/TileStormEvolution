@@ -153,6 +153,17 @@ namespace ClassicTilestorm
 			{
 				modelDropdown.onValueChanged.AddListener(OnModelDropdownValueChanged);
 			}
+
+			if (IDInput != null)
+			{
+				// We want to react when user FINISHES editing (presses Enter or focus lost)
+				IDInput.onEndEdit.AddListener(OnIDInputEndEdit);
+			}
+
+			if (textureDropdown != null)
+			{
+				textureDropdown.onValueChanged.AddListener(OnTextureDropdownValueChanged);
+			}
 		}
 
 		protected override void OnEnable()
@@ -161,6 +172,7 @@ namespace ClassicTilestorm
 			EnsurePreviewInitialized();
 			RefreshDefinitionList();
 			PopulateModelDropdown();
+			PopulateTextureDropdown();
 			StartCoroutine(DelayedInitialSync());
 		}
 
@@ -175,6 +187,62 @@ namespace ClassicTilestorm
 		{
 			yield return null;
 			SyncModelDropdown();
+		}
+
+		private void OnIDInputEndEdit(string newId)
+		{
+			if (CurrentDefinition == null) return;
+			if (string.IsNullOrWhiteSpace(newId))
+			{
+				// Optional: revert to old value if user cleared it
+				IDInput.text = selectedDefinitionId;
+				return;
+			}
+
+			newId = newId.Trim();
+
+			// Same ID → nothing to do
+			if (newId == selectedDefinitionId)
+				return;
+
+			// Check if target ID already exists
+			if (ResourceManager.Definitions.Any(d => d.id == newId))
+			{
+				// Optional: nice feedback
+				Debug.LogWarning($"ID '{newId}' already exists!");
+				IDInput.text = selectedDefinitionId; // revert
+													 // You could also show a popup/warning here
+				return;
+			}
+
+			// ── The actual rename ───────────────────────────────────────
+			string oldId = selectedDefinitionId;
+
+			CurrentDefinition.id = newId;
+			selectedDefinitionId = newId;
+
+			// Optional but recommended: update preview & list immediately
+			RefreshDefinitionList();           // rebuilds whole list + selects new id
+											   // or lighter version:
+											   // UpdateListItemLabel(oldId, newId);
+											   // (you'd need to implement that separately if you want to avoid full refresh)
+		}
+
+		private void OnTextureDropdownValueChanged(int index)
+		{
+			if (index < 0 || index >= textureDropdown.options.Count) return;
+
+			var def = CurrentDefinition;
+			if (def == null) return;
+
+			string selectedText = textureDropdown.options[index].text;
+			string newTexture = (selectedText == noneTextureOptionText) ? null : selectedText;
+
+			if (newTexture != def.texture)
+			{
+				def.texture = newTexture;
+				UpdatePreview(selectedDefinitionId);
+			}
 		}
 
 		private void SyncModelDropdown()
@@ -237,11 +305,70 @@ namespace ClassicTilestorm
 			string selectedText = modelDropdown.options[index].text;
 			string newModel = (selectedText == noneModelOptionText) ? null : selectedText;
 
-			if (newModel != def.model)
+			// ── Important change happens here ───────────────────────────────
+			bool modelActuallyChanged = newModel != def.model;
+
+			if (modelActuallyChanged)
 			{
 				def.model = newModel;
+				def.texture = null;
 				UpdatePreview(selectedDefinitionId);
+				SyncTextureDropdown();
 			}
+		}
+
+		private void SyncTextureDropdown()
+		{
+			if (textureDropdown == null || textureDropdown.options.Count == 0)
+				return;
+
+			var def = CurrentDefinition;
+			int targetIndex = 0;
+
+			if (def != null && !string.IsNullOrEmpty(def.texture))
+			{
+				string textureClean = def.texture.Clean(); // assuming you have .Clean() extension
+
+				targetIndex = textureDropdown.options.FindIndex(opt =>
+					opt.text.CleanEquals(textureClean)
+				);
+
+				if (targetIndex < 0) targetIndex = 0;
+			}
+
+			textureDropdown.SetValueWithoutNotify(targetIndex);
+		}
+
+		private void PopulateTextureDropdown()
+		{
+			if (textureDropdown == null) return;
+
+			textureDropdown.ClearOptions();
+
+			// Assuming you have some way to get all available texture/sequence names
+			// This is just an example — adjust to your real source
+			var textureNames = new List<string>();
+
+			foreach (var ts in ResourceManager.TextureSequences)
+			{
+				if (!string.IsNullOrEmpty(ts.id))
+					textureNames.Add(ts.id);
+			}
+
+			// Or if you load from Resources or elsewhere...
+			// var texAssets = Resources.LoadAll<Texture2D>("Textures/");
+			// foreach (var tex in texAssets) textureNames.Add(tex.name);
+
+			var uniqueSorted = textureNames
+				.Distinct()
+				.OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
+				.ToList();
+
+			var options = new List<string> { noneTextureOptionText };
+			options.AddRange(uniqueSorted);
+
+			textureDropdown.AddOptions(options);
+			textureDropdown.interactable = true;
 		}
 
 		private void Update()
@@ -313,7 +440,7 @@ namespace ClassicTilestorm
 			foreach (var def in ResourceManager.Definitions)
 				CreateDefinitionListItem(def);
 
-			string targetId = selectedDefinitionId ?? (ResourceManager.Definitions.Count > 0 ? ResourceManager.Definitions[0].id : null);
+			string targetId = selectedDefinitionId ?? ResourceManager.Definitions.FirstOrDefault()?.id;
 
 			SetToggleById(targetId);
 			UpdateDeleteButtonState();
@@ -379,6 +506,7 @@ namespace ClassicTilestorm
 			UpdatePreview(defId);
 			SyncAllProperties();
 			SyncModelDropdown();
+			SyncTextureDropdown();
 			UpdateDeleteButtonState();
 		}
 

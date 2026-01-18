@@ -160,23 +160,30 @@ namespace ClassicTilestorm
 				connList.Add(dir);
 
 			// Sort for consistency (optional, but nice: N, E, S, W)
-			connList.Sort();
+			connList.Sort((a, b) => GetDirectionOrder(a).CompareTo(GetDirectionOrder(b)));
 
 			connections = new string(connList.ToArray());
 			RebuildConnectionCache();
 		}
 
-		public static Definition GetDefault(string newId = null)
+		private static int GetDirectionOrder(char dir)
 		{
-			newId ??= MassiveHadronLtd.StringUtil.GenerateAssetId();
-
-			return new Definition
+			return dir switch
 			{
-				id = newId,
-				model = "tile_flat",
-				texture = "Default"
+				'N' => 0,
+				'E' => 1,
+				'S' => 2,
+				'W' => 3,
+				_ => 999   // unknown directions go last
 			};
 		}
+
+		public static Definition GetDefault(string newId = null)=> new Definition
+		{
+			id = newId ??= MassiveHadronLtd.StringUtil.GenerateAssetId(),
+			model = "tile_flat",
+			texture = "Default"
+		};
 	}
 
 	// Optional extension (not needed anymore for core functionality)
