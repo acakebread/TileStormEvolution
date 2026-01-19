@@ -60,8 +60,8 @@ namespace MassiveHadronLtd
 
 		private IEnumerator RebuildAfterFrame()
 		{
-			yield return null;
 			RebuildSelectables();
+			yield return null;
 
 			if (pendingReselectIndex > -2)
 			{
@@ -113,9 +113,7 @@ namespace MassiveHadronLtd
 
 				// Immediate check for already-on toggles (after rebuild)
 				if (toggle.isOn)
-				{
 					HandleSelection();
-				}
 			}
 		}
 
