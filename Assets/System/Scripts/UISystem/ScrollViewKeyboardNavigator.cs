@@ -42,7 +42,7 @@ namespace MassiveHadronLtd
 			// Auto-recover if content has items but selectables is empty
 			if (selectables.Count == 0 && scrollRect?.content?.childCount > 0)
 			{
-				RebuildSelectables();
+				StartCoroutine(RebuildAfterFrame());
 			}
 
 			// Apply pending re-selection
@@ -56,6 +56,18 @@ namespace MassiveHadronLtd
 
 			HandleKeyboardInput();
 			HandleRepeatTimer();
+		}
+
+		private IEnumerator RebuildAfterFrame()
+		{
+			yield return null;
+			RebuildSelectables();
+
+			if (pendingReselectIndex > -2)
+			{
+				SelectIndex(pendingReselectIndex, false);
+				pendingReselectIndex = -2;
+			}
 		}
 
 		private void RebuildSelectables()
@@ -79,31 +91,31 @@ namespace MassiveHadronLtd
 					}
 				}
 			}
-		}
 
-		private void HookToggleListener(Toggle toggle)
-		{
-			// Local function to handle selection + scroll (reused)
-			void HandleSelection()
+			void HookToggleListener(Toggle toggle)
 			{
-				int index = selectables.IndexOf(toggle);
-				if (index >= 0)
+				// Local function to handle selection + scroll (reused)
+				void HandleSelection()
 				{
-					NotifyItemSelected(index);
-					ScrollTo(toggle);
+					int index = selectables.IndexOf(toggle);
+					if (index >= 0)
+					{
+						NotifyItemSelected(index);
+						StartCoroutine(ScrollAfterFrame(toggle));
+					}
 				}
-			}
 
-			// Hook for future changes
-			toggle.onValueChanged.AddListener(isOn =>
-			{
-				if (isOn) HandleSelection();
-			});
+				// Hook for future changes
+				toggle.onValueChanged.AddListener(isOn =>
+				{
+					if (isOn) HandleSelection();
+				});
 
-			// Immediate check for already-on toggles (after rebuild)
-			if (toggle.isOn)
-			{
-				HandleSelection();
+				// Immediate check for already-on toggles (after rebuild)
+				if (toggle.isOn)
+				{
+					HandleSelection();
+				}
 			}
 		}
 
@@ -183,14 +195,18 @@ namespace MassiveHadronLtd
 				toggle.isOn = true;
 
 			if (scrollToIt)
-				ScrollTo(target);
+				StartCoroutine(ScrollAfterFrame(target));
 		}
 
+		private IEnumerator ScrollAfterFrame(Selectable target)
+		{
+			if (target == null) yield break;
+			ScrollTo(target);
+			yield return null;
+		}
 
 		private void ScrollTo(Selectable selectable)
 		{
-			if (selectable == null) return;
-
 			if (scrollRect == null || scrollRect.content == null || scrollRect.viewport == null)
 				return;
 
