@@ -1,9 +1,88 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 namespace MassiveHadronLtd
 {
+	// =========================================================================
+	// Mesh utility methods - especially useful for runtime mesh manipulation
+	// =========================================================================
 	public static class MeshUtils
 	{
+		/// <summary>
+		/// Creates a fully readable/writable copy of a mesh using SkinnedMeshRenderer + BakeMesh.
+		/// Most reliable method when original mesh has Read/Write disabled in import settings.
+		/// </summary>
+		public static Mesh CreateReadableCopyViaBake(Mesh original, string nameSuffix = "_RuntimeBaked")
+		{
+			if (original == null) return null;
+
+			var temp = new GameObject("BakeHelper")
+			{
+				hideFlags = HideFlags.HideAndDontSave
+			};
+
+			try
+			{
+				var skinned = temp.AddComponent<SkinnedMeshRenderer>();
+				skinned.sharedMesh = original;
+
+				var baked = new Mesh();
+				skinned.BakeMesh(baked, true); // true = use skinning (but works even without bones)
+
+				baked.name = (original.name ?? "Mesh") + nameSuffix;
+				baked.MarkDynamic();           // Hint: this mesh will be frequently updated
+
+				baked.RecalculateBounds();     // Just in case
+											   // baked.RecalculateNormals(); // Usually not needed after BakeMesh
+											   // baked.RecalculateTangents(); // Uncomment if you need normal maps
+
+				return baked;
+			}
+			finally
+			{
+				Object.DestroyImmediate(temp);
+			}
+		}
+
+		/// <summary>
+		/// Alternative (lighter) method using CombineMeshes.
+		/// Works in some cases, but less reliable than BakeMesh method.
+		/// </summary>
+		public static Mesh CreateReadableCopyViaCombine(Mesh original, string nameSuffix = "_RuntimeCopy")
+		{
+			if (original == null) return null;
+
+			var copy = new Mesh { name = (original.name ?? "Mesh") + nameSuffix };
+
+			var tempGO = new GameObject("TempMeshCopier")
+			{
+				hideFlags = HideFlags.HideAndDontSave
+			};
+
+			try
+			{
+				var tempFilter = tempGO.AddComponent<MeshFilter>();
+				tempFilter.sharedMesh = original;
+
+				tempGO.AddComponent<MeshRenderer>();
+
+				var combine = new CombineInstance[1];
+				combine[0].mesh = original;
+				combine[0].transform = Matrix4x4.identity;
+
+				copy.CombineMeshes(combine, true, false, false);
+
+				copy.MarkDynamic();
+				copy.RecalculateBounds();
+				copy.RecalculateNormals();     // Often needed after CombineMeshes
+
+				return copy;
+			}
+			finally
+			{
+				Object.DestroyImmediate(tempGO);
+			}
+		}
+
 		public static Mesh GenerateQuadXZ(float size = 1f, float uv_scale = 1f, string name = "Quad (default)")
 		{
 			var half = size;
@@ -17,6 +96,123 @@ namespace MassiveHadronLtd
 
 			mesh.RecalculateNormals();
 			return mesh;
+		}
+
+		/// <summary>
+		/// Creates a quad facing in the direction of the given normal.
+		/// 
+		/// - If rightDirection is provided → used as the "right" edge direction
+		/// - If rightDirection is NOT provided → tries to choose a sensible "right" vector
+		///   perpendicular to normal (prefers world axes when possible)
+		/// </summary>
+		/// <param name="size">Full side length of the square quad</param>
+		/// <param name="normal">Direction the quad should face (will be normalized)</param>
+		/// <param name="rightDirection">Optional: explicit "right" direction (will be orthogonalized to normal)</param>
+		/// <param name="uvScale">UV tiling scale</param>
+		/// <param name="name">Name for the generated mesh</param>
+		/// <returns>Quad mesh facing the requested direction</returns>
+		public static Mesh GenerateOrientedQuad(
+			float size = 1f,
+			Vector3 normal = default,
+			Vector3? rightDirection = null,
+			float uvScale = 1f,
+			string name = "OrientedQuad")
+		{
+			// Default to XY plane (facing +Z) if no normal is given
+			if (normal == default)
+			{
+				normal = Vector3.forward;  // Z+ direction → classic 2D XY quad
+			}
+
+			normal = normal.normalized;
+
+			// Determine right vector
+			Vector3 right;
+
+			if (rightDirection.HasValue && rightDirection.Value != Vector3.zero)
+			{
+				// Use provided direction, but make sure it's perpendicular to normal
+				right = Vector3.ProjectOnPlane(rightDirection.Value, normal).normalized;
+				if (right == Vector3.zero)
+				{
+					// If provided vector was parallel to normal → fallback
+					right = GetDefaultRightVector(normal);
+				}
+			}
+			else
+			{
+				// Auto choose a good perpendicular vector (tries to align with world axes)
+				right = GetDefaultRightVector(normal);
+			}
+
+			Vector3 up = Vector3.Cross(right, normal); // consistent up direction
+
+			float half = size * 0.5f;
+
+			Vector3 center = Vector3.zero; // quad centered at origin
+
+			Vector3[] vertices = new Vector3[4]
+			{
+				center - right * half - up * half,   // bottom-left
+				center - right * half + up * half,   // top-left
+				center + right * half + up * half,   // top-right
+				center + right * half - up * half,   // bottom-right
+			};
+
+			int[] triangles = new[] { 0, 1, 2, 0, 2, 3 };
+
+			Vector2[] uvs = new Vector2[4]
+			{
+				new Vector2(0,        0),
+				new Vector2(0,        uvScale),
+				new Vector2(uvScale,  uvScale),
+				new Vector2(uvScale,  0)
+			};
+
+			var mesh = new Mesh
+			{
+				name = name,
+				vertices = vertices,
+				triangles = triangles,
+				uv = uvs
+			};
+
+			mesh.RecalculateNormals();
+			// mesh.RecalculateTangents();  // only if you need normal maps
+
+			return mesh;
+		}
+
+		/// <summary>
+		/// Helper: Picks a reasonable "right" vector perpendicular to the normal
+		/// Tries to stay aligned with world axes when possible
+		/// </summary>
+		private static Vector3 GetDefaultRightVector(Vector3 normal)
+		{
+			normal = normal.normalized;
+
+			// Try to use world axes that are least parallel to normal
+			Vector3[] candidates = new[]
+			{
+				Vector3.right,
+				Vector3.up,
+				Vector3.forward
+			};
+
+			Vector3 best = Vector3.right;
+			float maxDot = -1f;
+
+			foreach (var candidate in candidates)
+			{
+				float dot = Mathf.Abs(Vector3.Dot(normal, candidate));
+				if (dot < maxDot) continue;
+
+				maxDot = dot;
+				best = candidate;
+			}
+
+			// Project onto plane perpendicular to normal
+			return Vector3.ProjectOnPlane(best, normal).normalized;
 		}
 	}
 }

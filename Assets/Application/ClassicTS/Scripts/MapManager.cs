@@ -605,30 +605,6 @@ namespace ClassicTilestorm
 				return GeometryFactory.CreateFallbackTile(parent, position);
 			}
 
-			//temporary special placeholder flag setting for special properties in absence of definition editor 
-			//if (definition.model.Contains("tree"))
-			if (definition.model.Equals("jun_boundary_tree_double") || 
-				definition.model.Equals("jun_boundary_tree_double") ||
-				definition.model.Equals("jun_boundary_tree_plant") ||
-				definition.model.Equals("jun_boundary_tree_plant") ||
-				definition.model.Equals("jun_boundary_tree_single") ||
-				definition.model.Equals("jun_boundary_tree_single"))
-				definition.bSway = true;//ToDo implement sway in definition editor - hard set to trees for now
-
-			//temporary special placeholder flag setting for special properties in absence of definition editor 
-			if (definition.model.Equals("jun_tile_ns") || 
-				definition.model.Equals("jun_tile_ew") ||
-				definition.model.Equals("jun_tile_ne_corner") ||
-				definition.model.Equals("jun_tile_nw_corner") ||
-				definition.model.Equals("jun_tile_se_corner") ||
-				definition.model.Equals("jun_tile_sw_corner") ||
-				definition.model.Equals("jun_tile_nsew"))
-				definition.bWash = true;//ToDo implement sway in definition editor - hard set to jungle drag tiles for now
-
-			//temporary special placeholder material override for special properties in absence of definition editor 
-			if ("Caustic" == definition.texture)
-				definition.material = "toxic";
-
 			return DefinitionFactory.Instantiate(definition, position, Quaternion.identity, parent);
 		}
 

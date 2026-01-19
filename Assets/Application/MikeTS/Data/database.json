@@ -62535,7 +62535,7 @@
 		},
 		{
 			"name": "Secret Level",
-			"character": "",
+			"character": "Eggbot Default",
 			"music": "Industrial",
 			"button": "ls secret",
 			"width": 26,
@@ -62560,7 +62560,7 @@
 				"ss boundary corner se",
 				"ss boundary corner nw",
 				"ss boundary corner sw",
-				"Eggbot",
+				"Eggbot Default",
 				"ss boundary corner small nw",
 				"ss boundary corner small se",
 				"ss boundary corner small sw",
@@ -64936,49 +64936,49 @@
 			"id": "jun tile nesw",
 			"model": "jun_tile_nsew",
 			"texture": "Jungle",
-			"flags": "Drag",
+			"flags": "Drag, Wash",
 			"connections": "NSEW"
 		},
 		{
 			"id": "jun tile ns",
 			"model": "jun_tile_ns",
 			"texture": "Jungle",
-			"flags": "Drag",
+			"flags": "Drag, Wash",
 			"connections": "NS"
 		},
 		{
 			"id": "jun tile ew",
 			"model": "jun_tile_ew",
 			"texture": "Jungle",
-			"flags": "Drag",
+			"flags": "Drag, Wash",
 			"connections": "EW"
 		},
 		{
 			"id": "jun tile corner se",
 			"model": "jun_tile_se_corner",
 			"texture": "Jungle",
-			"flags": "Drag",
+			"flags": "Drag, Wash",
 			"connections": "SE"
 		},
 		{
 			"id": "jun tile corner sw",
 			"model": "jun_tile_sw_corner",
 			"texture": "Jungle",
-			"flags": "Drag",
+			"flags": "Drag, Wash",
 			"connections": "SW"
 		},
 		{
 			"id": "jun tile corner ne",
 			"model": "jun_tile_ne_corner",
 			"texture": "Jungle",
-			"flags": "Drag",
+			"flags": "Drag, Wash",
 			"connections": "NE"
 		},
 		{
 			"id": "jun tile corner nw",
 			"model": "jun_tile_nw_corner",
 			"texture": "Jungle",
-			"flags": "Drag",
+			"flags": "Drag, Wash",
 			"connections": "NW"
 		},
 		{
@@ -65123,17 +65123,20 @@
 		{
 			"id": "jun tree single",
 			"model": "jun_boundary_tree_single",
-			"texture": "Jungle"
+			"texture": "Jungle",
+			"flags": "Sway"
 		},
 		{
 			"id": "jun tree plant",
 			"model": "jun_boundary_tree_plant",
-			"texture": "Jungle"
+			"texture": "Jungle",
+			"flags": "Sway"
 		},
 		{
 			"id": "jun tree double",
 			"model": "jun_boundary_tree_double",
-			"texture": "Jungle"
+			"texture": "Jungle",
+			"flags": "Sway"
 		},
 		{
 			"id": "jun plant",
