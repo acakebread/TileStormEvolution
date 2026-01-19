@@ -130,7 +130,7 @@ namespace MassiveHadronLtd
 				{
 					selectables.Add(sel);
 
-					if (sel is Toggle toggle && !HasToggleListener(toggle))
+					if (sel is Toggle toggle)
 					{
 						HookToggleListener(toggle);
 					}
@@ -138,19 +138,8 @@ namespace MassiveHadronLtd
 			}
 		}
 
-		private bool HasToggleListener(Toggle toggle)
-		{
-			return toggle.GetComponent<ToggleListenerMarker>() != null;
-		}
-
 		private void HookToggleListener(Toggle toggle)
 		{
-			// Marker to prevent double-hooking
-			if (toggle.gameObject.GetComponent<ToggleListenerMarker>() == null)
-			{
-				toggle.gameObject.AddComponent<ToggleListenerMarker>();
-			}
-
 			// Local function to handle selection + scroll (reused)
 			void HandleSelection()
 			{
@@ -365,8 +354,5 @@ namespace MassiveHadronLtd
 				   Input.GetKey(KeyCode.LeftArrow) || Input.GetKey(KeyCode.RightArrow) ||
 				   Input.GetKey(KeyCode.PageUp) || Input.GetKey(KeyCode.PageDown);
 		}
-
-		// Tiny marker to prevent double-hooking toggles
-		private class ToggleListenerMarker : MonoBehaviour { }
 	}
 }
