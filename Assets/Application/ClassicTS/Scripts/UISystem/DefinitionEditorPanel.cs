@@ -11,6 +11,8 @@ namespace ClassicTilestorm
 {
 	public class DefinitionEditorPanel : UIPanel
 	{
+		#region Serialized Fields - UI References
+
 		[Header("UI References")]
 		[SerializeField] private Button closeButton;
 		[SerializeField] private ScrollRect definitionScrollView;
@@ -32,17 +34,19 @@ namespace ClassicTilestorm
 		[Header("ID Input")]
 		[SerializeField] private TMP_InputField IDInput;
 
-		[Header("Model Selection")]
+		[Header("Dropdowns")]
 		[SerializeField] private TMP_Dropdown modelDropdown;
 		[SerializeField] private string noneModelOptionText = "— None —";
 
-		[Header("Texture Selection")]
 		[SerializeField] private TMP_Dropdown textureSequenceDropdown;
 		[SerializeField] private string noneTextureOptionText = "— None —";
 
-		[Header("Material Selection")]
 		[SerializeField] private TMP_Dropdown materialDropdown;
 		[SerializeField] private string noneMaterialOptionText = "— None —";
+
+		#endregion
+
+		#region Serialized Fields - Preview Settings
 
 		[Header("Preview Settings")]
 		[SerializeField] private Color backgroundColor = new Color(0.129f, 0.698f, 0.882f);
@@ -65,12 +69,13 @@ namespace ClassicTilestorm
 		[SerializeField] private float groundUVScale = 1f;
 		[SerializeField] private Texture2D groundOverrideTexture;
 
-		// Runtime
+		#endregion
+
+		// Runtime state
 		private readonly List<Toggle> spawnedDefinitionToggles = new();
 		private ToggleGroup toggleGroup;
 
-		// Static: remembers last selection across panel opens/closes (runtime only)
-		private static int lastSelectedDefinitionIndex = 0;//set to first definition for launch assuming there are any definitions - may need to handle this or it might be safe anyway
+		private static int lastSelectedDefinitionIndex = 0;
 
 		private PreviewSceneController previewCtrl;
 		private CommandRenderModelData currentModelData;
@@ -124,6 +129,32 @@ namespace ClassicTilestorm
 		{
 			base.Awake();
 
+			InitializeUIReferences();
+			InitializePreviewController();
+			InitializeButtons();
+			InitializeDropdownListeners();
+			CreateFlagToggles();
+		}
+
+		protected override void OnEnable()
+		{
+			base.OnEnable();
+
+			EnsurePreviewInitialized();
+			RefreshDefinitionList();
+
+			PopulateAndSyncDropdowns();
+		}
+
+		protected override void OnDisable()
+		{
+			CleanupPreview();
+			ClearDefinitionListItems();
+			base.OnDisable();
+		}
+
+		private void InitializeUIReferences()
+		{
 			if (closeButton) closeButton.onClick.AddListener(() => gameObject.SetActive(false));
 
 			if (!contentParent && definitionScrollView)
@@ -132,7 +163,10 @@ namespace ClassicTilestorm
 			toggleGroup = contentParent.GetComponent<ToggleGroup>()
 				?? contentParent.gameObject.AddComponent<ToggleGroup>();
 			toggleGroup.allowSwitchOff = false;
+		}
 
+		private void InitializePreviewController()
+		{
 			orbitController = new GimbalOrbitController(
 				dragOrbitSens: dragOrbitSensitivity,
 				dragTiltSens: dragTiltSensitivity,
@@ -142,53 +176,104 @@ namespace ClassicTilestorm
 				minDist: minDistance,
 				maxDist: maxDistance,
 				sizeToDistFactor: sizeToDistanceFactor,
-				defaultTilt: defaultTiltAngle
-			)
+				defaultTilt: defaultTiltAngle)
 			{
 				AutoRotateSpeed = autoRotateSpeed,
 				AutoRotateTimeout = 3f,
 				EnableInertia = true
 			};
+		}
 
+		private void InitializeButtons()
+		{
 			if (ButtonInsert) ButtonInsert.onClick.AddListener(InsertDefinition);
 			if (ButtonDelete) ButtonDelete.onClick.AddListener(DeleteDefinition);
 			if (ButtonMoveUp) ButtonMoveUp.onClick.AddListener(MoveDefinitionUp);
 			if (ButtonMoveDown) ButtonMoveDown.onClick.AddListener(MoveDefinitionDown);
+		}
 
-			CreateFlagToggles();
-
+		private void InitializeDropdownListeners()
+		{
 			if (modelDropdown != null)
 				modelDropdown.onValueChanged.AddListener(OnModelDropdownValueChanged);
-
-			if (IDInput != null)
-				IDInput.onEndEdit.AddListener(OnIDInputEndEdit);
 
 			if (textureSequenceDropdown != null)
 				textureSequenceDropdown.onValueChanged.AddListener(OnTextureDropdownValueChanged);
 
 			if (materialDropdown != null)
 				materialDropdown.onValueChanged.AddListener(OnMaterialDropdownValueChanged);
+
+			if (IDInput != null)
+				IDInput.onEndEdit.AddListener(OnIDInputEndEdit);
 		}
 
-		protected override void OnEnable()
+		private void PopulateAndSyncDropdowns()
 		{
-			base.OnEnable();
-			EnsurePreviewInitialized();
-			RefreshDefinitionList();
 			PopulateModelDropdown();
 			PopulateTextureDropdown();
 			PopulateMaterialDropdown();
+
 			SyncModelDropdown();
 			SyncTextureDropdown();
 			SyncMaterialDropdown();
 		}
 
-		protected override void OnDisable()
+		// ── Dropdown Helpers ────────────────────────────────────────────────────────────────
+
+		private void PopulateDropdown(TMP_Dropdown dropdown, IEnumerable<string> items, string noneOption)
 		{
-			CleanupPreview();
-			ClearDefinitionListItems();
-			base.OnDisable();
+			if (dropdown == null) return;
+
+			dropdown.ClearOptions();
+
+			var options = new List<string> { noneOption };
+			options.AddRange(items);
+
+			dropdown.AddOptions(options);
+			dropdown.interactable = true;
 		}
+
+		private void SyncDropdown(TMP_Dropdown dropdown, string currentValue, string noneOption)
+		{
+			if (dropdown == null) return;
+
+			if (string.IsNullOrEmpty(currentValue))
+			{
+				dropdown.SetValueWithoutNotify(0);
+				return;
+			}
+
+			int index = dropdown.options.FindIndex(opt =>
+				opt.text.Equals(currentValue, StringComparison.OrdinalIgnoreCase));
+
+			dropdown.SetValueWithoutNotify(index >= 0 ? index : 0);
+		}
+
+		private void PopulateModelDropdown() =>
+			PopulateDropdown(modelDropdown, ProjectAssets.GetModelNames(), noneModelOptionText);
+
+		private void PopulateTextureDropdown() =>
+			PopulateDropdown(textureSequenceDropdown,
+				ResourceManager.TextureSequences
+					.Where(ts => !string.IsNullOrEmpty(ts.id))
+					.Select(ts => ts.id)
+					.Distinct(StringComparer.OrdinalIgnoreCase)
+					.OrderBy(n => n, StringComparer.OrdinalIgnoreCase),
+				noneTextureOptionText);
+
+		private void PopulateMaterialDropdown() =>
+			PopulateDropdown(materialDropdown, ProjectAssets.GetMaterialNames(), noneMaterialOptionText);
+
+		private void SyncModelDropdown() =>
+			SyncDropdown(modelDropdown, CurrentDefinition?.model, noneModelOptionText);
+
+		private void SyncTextureDropdown() =>
+			SyncDropdown(textureSequenceDropdown, CurrentDefinition?.texture, noneTextureOptionText);
+
+		private void SyncMaterialDropdown() =>
+			SyncDropdown(materialDropdown, CurrentDefinition?.material, noneMaterialOptionText);
+
+		// ── Event Handlers ──────────────────────────────────────────────────────────────────
 
 		private void OnIDInputEndEdit(string newId)
 		{
@@ -272,100 +357,7 @@ namespace ClassicTilestorm
 			}
 		}
 
-		private void PopulateModelDropdown()
-		{
-			if (modelDropdown == null) return;
-
-			modelDropdown.ClearOptions();
-
-			var modelNames = ProjectAssets.GetModelNames();
-
-			var options = new List<string> { noneModelOptionText };
-			options.AddRange(modelNames);
-
-			modelDropdown.AddOptions(options);
-			modelDropdown.interactable = true;
-		}
-
-		private void PopulateTextureDropdown()
-		{
-			if (textureSequenceDropdown == null) return;
-
-			textureSequenceDropdown.ClearOptions();
-
-			var textureNames = ResourceManager.TextureSequences
-				.Where(ts => !string.IsNullOrEmpty(ts.id))
-				.Select(ts => ts.id)
-				.Distinct(StringComparer.OrdinalIgnoreCase)
-				.OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
-				.ToList();
-
-			var options = new List<string> { noneTextureOptionText };
-			options.AddRange(textureNames);
-
-			textureSequenceDropdown.AddOptions(options);
-			textureSequenceDropdown.interactable = true;
-		}
-
-		private void PopulateMaterialDropdown()
-		{
-			if (materialDropdown == null) return;
-
-			materialDropdown.ClearOptions();
-
-			var materialNames = ProjectAssets.GetMaterialNames();
-
-			var options = new List<string> { noneMaterialOptionText };
-			options.AddRange(materialNames);
-
-			materialDropdown.AddOptions(options);
-			materialDropdown.interactable = true;
-		}
-
-		private void SyncModelDropdown()
-		{
-			var def = CurrentDefinition;
-			if (modelDropdown == null || def == null || string.IsNullOrEmpty(def.model))
-			{
-				modelDropdown?.SetValueWithoutNotify(0);
-				return;
-			}
-
-			int index = modelDropdown.options.FindIndex(opt =>
-				opt.text.Equals(def.model, StringComparison.OrdinalIgnoreCase));
-
-			modelDropdown.SetValueWithoutNotify(index >= 0 ? index : 0);
-		}
-
-		private void SyncTextureDropdown()
-		{
-			var def = CurrentDefinition;
-			if (textureSequenceDropdown == null || def == null || string.IsNullOrEmpty(def.texture))
-			{
-				textureSequenceDropdown?.SetValueWithoutNotify(0);
-				return;
-			}
-
-			int index = textureSequenceDropdown.options.FindIndex(opt =>
-				opt.text.Equals(def.texture, StringComparison.OrdinalIgnoreCase));
-
-			textureSequenceDropdown.SetValueWithoutNotify(index >= 0 ? index : 0);
-		}
-
-		private void SyncMaterialDropdown()
-		{
-			var def = CurrentDefinition;
-			if (materialDropdown == null || def == null || string.IsNullOrEmpty(def.material))
-			{
-				materialDropdown?.SetValueWithoutNotify(0);
-				return;
-			}
-
-			int index = materialDropdown.options.FindIndex(opt =>
-				opt.text.Equals(def.material, StringComparison.OrdinalIgnoreCase));
-
-			materialDropdown.SetValueWithoutNotify(index >= 0 ? index : 0);
-		}
+		// ── Definition List Management ──────────────────────────────────────────────────────
 
 		private void RefreshDefinitionList()
 		{
@@ -382,9 +374,7 @@ namespace ClassicTilestorm
 			for (int i = 0; i < defs.Count; i++)
 				CreateDefinitionListItem(defs[i], i);
 
-			// Restore last known index (clamped automatically)
 			SetSelectedIndex(lastSelectedDefinitionIndex);
-
 			UpdateDeleteButtonState();
 		}
 
@@ -392,7 +382,11 @@ namespace ClassicTilestorm
 		{
 			var go = Instantiate(definitionListItemPrefab, contentParent);
 			var toggle = go.GetComponent<Toggle>();
-			if (toggle == null) { Destroy(go); return; }
+			if (toggle == null)
+			{
+				Destroy(go);
+				return;
+			}
 
 			toggle.group = toggleGroup;
 			spawnedDefinitionToggles.Add(toggle);
@@ -404,7 +398,7 @@ namespace ClassicTilestorm
 
 			var label = go.GetComponentInChildren<TMP_Text>();
 			if (label != null)
-				label.text = $"{def.id} ({def.model ?? "—"})";
+				label.text = $"{def.id} [{ResourceManager.DefinitionUsageCount(def.id)}]";//$"{def.id} ({def.model ?? "—"})";
 		}
 
 		private void ClearDefinitionListItems()
@@ -417,7 +411,6 @@ namespace ClassicTilestorm
 
 		private void SetSelectedIndex(int index)
 		{
-			// Clamp to valid range
 			index = Mathf.Clamp(index, -1, ResourceManager.Definitions.Count - 1);
 			lastSelectedDefinitionIndex = index;
 
@@ -432,11 +425,8 @@ namespace ClassicTilestorm
 			SyncMaterialDropdown();
 			UpdateDeleteButtonState();
 
-			// Highlight the toggle
 			if (index >= 0 && index < spawnedDefinitionToggles.Count)
-			{
 				spawnedDefinitionToggles[index].SetIsOnWithoutNotify(true);
-			}
 		}
 
 		private void SyncAllProperties()
@@ -450,6 +440,61 @@ namespace ClassicTilestorm
 				toggle.SetIsOnWithoutNotify(value);
 				toggle.interactable = hasDef;
 			}
+		}
+
+		private void UpdateDeleteButtonState()
+		{
+			if (ButtonDelete == null) return;
+
+			bool hasSelection = lastSelectedDefinitionIndex >= 0;
+			bool isUsed = hasSelection && ResourceManager.IsDefinitionUsed(CurrentDefinition?.id);
+
+			ButtonDelete.interactable = hasSelection && !isUsed;
+
+			if (ButtonDelete.GetComponentInChildren<TMP_Text>() is TMP_Text btnText)
+				btnText.text = isUsed ? "Delete (used)" : "Delete";
+		}
+
+		// ── Preview Management ──────────────────────────────────────────────────────────────
+
+		private void EnsurePreviewInitialized()
+		{
+			if (previewCtrl != null) return;
+
+			if (previewImage == null)
+			{
+				Debug.LogError("[DefinitionEditorPanel] previewImage is not assigned!", this);
+				return;
+			}
+
+			previewCtrl = new PreviewSceneController(previewImage, previewImage.GetComponent<RectTransform>())
+			{
+				BackgroundColor = backgroundColor,
+				FieldOfView = fieldOfView,
+				GroundColor = groundColor,
+				GroundSize = groundSize,
+				GroundY = groundY,
+				GroundUVScale = groundUVScale,
+				GroundOverrideTexture = groundOverrideTexture
+			};
+
+			SetupPreviewInput();
+			orbitController.OnTransformChanged += ApplyCameraTransform;
+
+			if (previewCtrl == null)
+				Debug.LogError("[DefinitionEditorPanel] Failed to initialize PreviewSceneController!", this);
+		}
+
+		private void SetupPreviewInput()
+		{
+			if (!previewImage.TryGetComponent<PointerDragScrollHandler>(out var handler))
+				handler = previewImage.gameObject.AddComponent<PointerDragScrollHandler>();
+
+			handler.Setup(
+				onDrag: orbitController.ProcessDrag,
+				onScroll: orbitController.ProcessScroll,
+				onUp: orbitController.EndDrag
+			);
 		}
 
 		private void UpdatePreview(int index)
@@ -500,6 +545,15 @@ namespace ClassicTilestorm
 			currentModelData = null;
 		}
 
+		private void Update()
+		{
+			if (previewCtrl == null) return;
+			orbitController.Update();
+			previewCtrl.UpdateAndRender();
+		}
+
+		// ── Flag Creation ───────────────────────────────────────────────────────────────────
+
 		private void CreateFlagToggles()
 		{
 			for (int i = flagPropertiesRect.childCount - 1; i >= 0; i--)
@@ -513,7 +567,11 @@ namespace ClassicTilestorm
 				var toggle = instance.GetComponent<Toggle>();
 				var label = instance.GetComponentInChildren<TMP_Text>();
 
-				if (toggle == null || label == null) { Destroy(instance); continue; }
+				if (toggle == null || label == null)
+				{
+					Destroy(instance);
+					continue;
+				}
 
 				label.text = flag.DisplayName;
 				toggle.isOn = false;
@@ -528,6 +586,8 @@ namespace ClassicTilestorm
 				});
 			}
 		}
+
+		// ── Definition CRUD Operations ──────────────────────────────────────────────────────
 
 		private void InsertDefinition()
 		{
@@ -558,7 +618,6 @@ namespace ClassicTilestorm
 			}
 			else
 			{
-				// Prefer previous item
 				lastSelectedDefinitionIndex = Mathf.Max(0, indexToDelete - 1);
 				if (lastSelectedDefinitionIndex >= defs.Count)
 					lastSelectedDefinitionIndex = defs.Count - 1;
@@ -583,68 +642,6 @@ namespace ClassicTilestorm
 			ResourceManager.MoveDefinitionDown(lastSelectedDefinitionIndex);
 			lastSelectedDefinitionIndex++;
 			RefreshDefinitionList();
-		}
-
-		private void UpdateDeleteButtonState()
-		{
-			if (ButtonDelete == null) return;
-
-			bool hasSelection = lastSelectedDefinitionIndex >= 0;
-			bool isUsed = hasSelection && ResourceManager.IsDefinitionUsed(CurrentDefinition?.id);
-
-			ButtonDelete.interactable = hasSelection && !isUsed;
-
-			if (ButtonDelete.GetComponentInChildren<TMP_Text>() is TMP_Text btnText)
-				btnText.text = isUsed ? "Delete (used)" : "Delete";
-		}
-
-		private void EnsurePreviewInitialized()
-		{
-			if (previewCtrl != null) return;
-
-			if (previewImage == null)
-			{
-				Debug.LogError("[DefinitionEditorPanel] previewImage is not assigned!", this);
-				return;
-			}
-
-			previewCtrl = new PreviewSceneController(previewImage, previewImage.GetComponent<RectTransform>())
-			{
-				BackgroundColor = backgroundColor,
-				FieldOfView = fieldOfView,
-				GroundColor = groundColor,
-				GroundSize = groundSize,
-				GroundY = groundY,
-				GroundUVScale = groundUVScale,
-				GroundOverrideTexture = groundOverrideTexture
-			};
-
-			SetupPreviewInput();
-			orbitController.OnTransformChanged += ApplyCameraTransform;
-
-			if (previewCtrl == null)
-			{
-				Debug.LogError("[DefinitionEditorPanel] Failed to initialize PreviewSceneController!", this);
-			}
-		}
-
-		private void SetupPreviewInput()
-		{
-			if (!previewImage.TryGetComponent<PointerDragScrollHandler>(out var handler))
-				handler = previewImage.gameObject.AddComponent<PointerDragScrollHandler>();
-
-			handler.Setup(
-				onDrag: orbitController.ProcessDrag,
-				onScroll: orbitController.ProcessScroll,
-				onUp: orbitController.EndDrag
-			);
-		}
-
-		private void Update()
-		{
-			if (previewCtrl == null) return;
-			orbitController.Update();
-			previewCtrl.UpdateAndRender();
 		}
 	}
 }

@@ -108,6 +108,9 @@ namespace ClassicTilestorm
 			return false;
 		}
 
+		public static int DefinitionUsageCount(string? defId) =>
+			string.IsNullOrEmpty(defId) ? 0 : Maps.Count(m => m?.table?.Contains(defId) == true);
+
 		public static string GenerateUniqueNewDefinitionId(string prefix = "new_def_id")
 		{
 			int n = 1;
