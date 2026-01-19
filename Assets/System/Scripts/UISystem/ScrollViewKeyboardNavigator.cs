@@ -200,9 +200,9 @@ namespace MassiveHadronLtd
 
 		private IEnumerator ScrollAfterFrame(Selectable target)
 		{
+			yield return null;
 			if (target == null) yield break;
 			ScrollTo(target);
-			yield return null;
 		}
 
 		private void ScrollTo(Selectable selectable)
