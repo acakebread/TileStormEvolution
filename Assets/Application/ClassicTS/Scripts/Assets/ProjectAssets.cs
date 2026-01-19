@@ -225,7 +225,12 @@ namespace ClassicTilestorm.Assets
 		public static IReadOnlyList<string> GetMaterialNames(bool forceRefresh = false)
 			=> GetNames<Material>(() => GetAssetNamesFromRoots<Material>(new[]
 			{
-				AssetPath.MaterialPath?.Trim('/') ?? "",
+				AssetPath.MaterialPath?.Trim('/') ?? ""
+			}), forceRefresh);
+
+		public static IReadOnlyList<string> GetSkycubeNames(bool forceRefresh = false)
+			=> GetNames<Material>(() => GetAssetNamesFromRoots<Material>(new[]
+			{
 				AssetPath.SkycubesPath?.Trim('/') ?? ""
 			}), forceRefresh);
 

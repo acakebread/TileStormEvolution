@@ -14,7 +14,7 @@ namespace ClassicTilestorm
 		public delegate void TextureChangedHandler(Texture2D newTexture);
 		public event TextureChangedHandler OnTextureChanged;
 
-		[HideInInspector] public bool IsEmissive => _replacementMaterial != null && MaterialUtils.isEmissive(_replacementMaterial);
+		[HideInInspector] public bool IsEmissive => _replacementMaterial != null && MaterialUtils.IsEmissive(_replacementMaterial);
 
 		public void Initialize(TextureSequence sequence, Material replacement = null)
 		{
@@ -37,7 +37,7 @@ namespace ClassicTilestorm
 				replacement.mainTextureOffset = _targetRenderer.sharedMaterial.mainTextureOffset;
 				replacement.mainTextureScale = _targetRenderer.sharedMaterial.mainTextureScale;
 
-				if (MaterialUtils.isEmissive(replacement))
+				if (MaterialUtils.IsEmissive(replacement))
 					replacement.EnableKeyword("_EMISSION");
 			}
 
@@ -58,7 +58,7 @@ namespace ClassicTilestorm
 			_targetRenderer.material.mainTexture = tex;
 
 			// If using a replacement material that's emissive, also animate emission map
-			if (_replacementMaterial != null && MaterialUtils.isEmissive(_replacementMaterial))
+			if (_replacementMaterial != null && MaterialUtils.IsEmissive(_replacementMaterial))
 			{
 				_targetRenderer.material.SetTexture("_EmissionMap", tex);
 			}

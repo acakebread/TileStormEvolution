@@ -88,12 +88,10 @@ namespace ClassicTilestorm
 							copy.mainTexture = firstTex;
 
 							// Apply color override from replacement material if it exists and is emissive
-							if (replacement != null && MaterialUtils.isEmissive(replacement))
+							if (replacement != null && MaterialUtils.IsEmissive(replacement))
 							{
-								copy.color = replacement.GetColor("_EmissionColor");
-								// If you actually want emission too:
-								// copy.SetColor("_EmissionColor", replacement.GetColor("_EmissionColor"));
-								// copy.EnableKeyword("_EMISSION"); // ← usually needed
+								var emissionColor = GetEmissionLikeColor(replacement, Color.white * 1.2f); // nice bright fallback
+								copy.color = emissionColor;
 							}
 
 							overrideMats[m] = copy;
@@ -106,6 +104,27 @@ namespace ClassicTilestorm
 				// Finally — add the instance **once** with the correct materials
 				target.AddMeshInstance(filter.sharedMesh, materialsToUse, worldMatrix);
 			}
+		}
+
+		private static Color GetEmissionLikeColor(Material mat, Color fallback = default)
+		{
+			if (mat == null) return fallback;
+
+			// Most common emission color names in order of probability
+			string[] candidates = { "_EmissionColor", "_EmissiveColor", "_TintColor", "_Color" };
+
+			foreach (var prop in candidates)
+			{
+				if (mat.HasProperty(prop))
+				{
+					var c = mat.GetColor(prop);
+					// Very small values usually aren't intended to glow
+					if (c.maxColorComponent > 0.02f)
+						return c;
+				}
+			}
+
+			return fallback;
 		}
 	}
 }

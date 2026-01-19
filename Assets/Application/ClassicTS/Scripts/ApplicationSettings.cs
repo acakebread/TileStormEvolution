@@ -69,25 +69,25 @@ namespace ClassicTilestorm
 		public static TextAsset DatabaseJsonFile => instance.databaseJsonFile;
 
 		[SerializeField, ResourcePath] private string geometryPath = "ClassicTS/Geometry/";
-		public static string GeometryPath => instance.geometryPath;
+		public static string GeometryPath => instance?.geometryPath;
 
 		[SerializeField, ResourcePath] private string texturePath = "ClassicTS/Textures/";
-		public static string TexturePath => instance.texturePath;
+		public static string TexturePath => instance?.texturePath;
 
 		[SerializeField, ResourcePath] private string materialPath = "ClassicTS/Materials/";
-		public static string MaterialPath => instance.materialPath;
+		public static string MaterialPath => instance?.materialPath;
 
 		[SerializeField, ResourcePath] private string skycubesPath = "ClassicTS/SkyCubes/";
-		public static string SkycubesPath => instance.skycubesPath;
+		public static string SkycubesPath => instance?.skycubesPath;
 
 		[SerializeField, ResourcePath] private string prefabPath = "ClassicTS/Prefabs/";
-		public static string PrefabPath => instance.prefabPath;
+		public static string PrefabPath => instance?.prefabPath;
 
 		[SerializeField, ResourcePath] private string soundPath = "ClassicTS/Sounds/";
-		public static string SoundPath => instance.soundPath;
+		public static string SoundPath => instance?.soundPath;
 
 		[SerializeField, ResourcePath] private string musicPath = "ClassicTS/Music/";
-		public static string MusicPath => instance.musicPath;
+		public static string MusicPath => instance?.musicPath;
 
 		[Header("Game Mode")]
 		[SerializeField] private ApplicationMode previewMode = ApplicationMode.Player;

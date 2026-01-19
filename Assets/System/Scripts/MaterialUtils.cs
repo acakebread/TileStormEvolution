@@ -500,6 +500,40 @@ namespace MassiveHadronLtd
 		}
 
 		// Check if this material is intended to be emissive
-		public static bool isEmissive(Material material) => null != material && (material.IsKeywordEnabled("_EMISSION") || material.GetTexture("_EmissionMap") != null || material.GetColor("_EmissionColor").maxColorComponent > 0f);
+		public static bool IsEmissive(Material material)
+		{
+			if (material == null) return false;
+
+			// Classic lit shaders
+			if (material.IsKeywordEnabled("_EMISSION"))
+				return true;
+
+			// Emission map is almost always a strong indicator
+			if (material.GetTexture("_EmissionMap") != null)
+				return true;
+
+			// Try most common emission color property names
+			string[] emissionColorNames = new[]
+			{
+				"_EmissionColor",
+				"_EmissiveColor",           // HDRP / some custom
+				"_TintColor",               // ← very common in legacy additive particles!
+				"_Color",                   // sometimes abused as emission
+				"_BaseColor",               // URP/HDRP style
+			};
+
+			foreach (var prop in emissionColorNames)
+			{
+				if (material.HasProperty(prop))
+				{
+					var color = material.GetColor(prop);
+					// Using 0.01f threshold prevents almost-black from being considered emissive
+					if (color.maxColorComponent > 0.01f)
+						return true;
+				}
+			}
+
+			return false;
+		}
 	}
 }
