@@ -32,6 +32,7 @@ namespace MassiveHadronLtd
 		private void OnEnable()
 		{
 			RebuildSelectables();
+			pendingReselectIndex = lastSelectedIndex; // queue for scroll/selection
 		}
 
 		private void Update()
@@ -75,7 +76,6 @@ namespace MassiveHadronLtd
 
 		public void SyncIndexFromPanel(int panelIndex)
 		{
-			//lastSelectedIndex = panelIndex;
 			pendingReselectIndex = panelIndex; // also queue for scroll/selection
 		}
 
