@@ -193,6 +193,7 @@ namespace ClassicTilestorm
 			yield return null;
 			SyncModelDropdown();
 			SyncTextureDropdown();
+			SyncMaterialDropdown();
 		}
 
 		private void OnIDInputEndEdit(string newId)
