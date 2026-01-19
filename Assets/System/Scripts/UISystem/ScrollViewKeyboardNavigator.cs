@@ -31,8 +31,7 @@ namespace MassiveHadronLtd
 
 		private void OnEnable()
 		{
-			RebuildSelectables();
-			pendingReselectIndex = lastSelectedIndex; // queue for scroll/selection
+			pendingReselectIndex = lastSelectedIndex;
 		}
 
 		private void Update()
