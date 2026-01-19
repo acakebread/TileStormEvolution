@@ -42,7 +42,7 @@ namespace MassiveHadronLtd
 			// Auto-recover if content has items but selectables is empty
 			if (selectables.Count == 0 && scrollRect?.content?.childCount > 0)
 			{
-				StartCoroutine(RebuildAfterFrame());
+				RebuildSelectables();
 			}
 
 			// Apply pending re-selection
@@ -56,63 +56,6 @@ namespace MassiveHadronLtd
 
 			HandleKeyboardInput();
 			HandleRepeatTimer();
-		}
-
-		private void OnTransformChildrenChanged()
-		{
-			// Content changed → trigger rebuild and re-selection
-			if (pendingReselectIndex == -2)
-			{
-				pendingReselectIndex = lastSelectedIndex;
-			}
-
-			StartCoroutine(RebuildAfterFrame());
-		}
-
-		public void ForceRefresh()
-		{
-			RebuildSelectables();
-		}
-
-		public void SyncIndexFromPanel(int panelIndex)
-		{
-			pendingReselectIndex = panelIndex; // also queue for scroll/selection
-		}
-
-		public IEnumerator ScrollAfterFramePublic(Selectable target)
-		{
-			yield return null;
-			yield return null;
-			Canvas.ForceUpdateCanvases();
-			if (target == null) yield break;
-			ScrollTo(target);
-		}
-
-		public void ClearAndRebuild()
-		{
-			int desiredIndex = lastSelectedIndex;
-
-			CleanupDestroyedItems();
-			selectables.Clear();
-
-			RebuildSelectables();
-
-			// Schedule re-selection for next frame
-			pendingReselectIndex = desiredIndex;
-
-			// No aggressive clamping here — defer to SelectIndex
-		}
-
-		private IEnumerator RebuildAfterFrame()
-		{
-			yield return null;
-			RebuildSelectables();
-
-			if (pendingReselectIndex > -2)
-			{
-				SelectIndex(pendingReselectIndex, false);
-				pendingReselectIndex = -2;
-			}
 		}
 
 		private void RebuildSelectables()
@@ -147,7 +90,7 @@ namespace MassiveHadronLtd
 				if (index >= 0)
 				{
 					NotifyItemSelected(index);
-					StartCoroutine(ScrollAfterFrame(toggle));
+					ScrollTo(toggle);
 				}
 			}
 
@@ -167,9 +110,6 @@ namespace MassiveHadronLtd
 		private void CleanupDestroyedItems()
 		{
 			selectables.RemoveAll(s => s == null || !s.gameObject.activeInHierarchy);
-			// IMPORTANT: Do NOT clamp lastSelectedIndex here!
-			// We want to preserve the panel's desired index
-			// Clamping happens only in SelectIndex when we actually use it
 		}
 
 		private void HandleKeyboardInput()
@@ -220,7 +160,7 @@ namespace MassiveHadronLtd
 			pendingReselectIndex = index;
 		}
 
-		public void NotifyItemSelected(int index)
+		private void NotifyItemSelected(int index)
 		{
 			if (index < 0 || index >= selectables.Count) return;
 			lastSelectedIndex = index;
@@ -243,18 +183,14 @@ namespace MassiveHadronLtd
 				toggle.isOn = true;
 
 			if (scrollToIt)
-				StartCoroutine(ScrollAfterFrame(target));
+				ScrollTo(target);
 		}
 
-		public IEnumerator ScrollAfterFrame(Selectable target)
-		{
-			yield return null;
-			if (target == null) yield break;
-			ScrollTo(target);
-		}
 
 		private void ScrollTo(Selectable selectable)
 		{
+			if (selectable == null) return;
+
 			if (scrollRect == null || scrollRect.content == null || scrollRect.viewport == null)
 				return;
 
