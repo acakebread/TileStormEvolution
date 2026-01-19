@@ -178,7 +178,9 @@ namespace ClassicTilestorm
 			PopulateModelDropdown();
 			PopulateTextureDropdown();
 			PopulateMaterialDropdown();
-			StartCoroutine(DelayedInitialSync());
+			SyncModelDropdown();
+			SyncTextureDropdown();
+			SyncMaterialDropdown();
 		}
 
 		protected override void OnDisable()
@@ -186,14 +188,6 @@ namespace ClassicTilestorm
 			CleanupPreview();
 			ClearDefinitionListItems();
 			base.OnDisable();
-		}
-
-		private System.Collections.IEnumerator DelayedInitialSync()
-		{
-			yield return null;
-			SyncModelDropdown();
-			SyncTextureDropdown();
-			SyncMaterialDropdown();
 		}
 
 		private void OnIDInputEndEdit(string newId)
