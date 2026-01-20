@@ -346,6 +346,33 @@ namespace ClassicTilestorm
 			return attachments.Where(a => a.tile == tileIndex).ToArray();
 		}
 
+		// in Map.cs
+		public string GetDefinitionIdAt(int tileIndex)
+		{
+			if (tiles == null || table == null || tileIndex < 0 || tileIndex >= tiles.Length)
+				return null;
+			int idx = tiles[tileIndex];
+			if (idx < 0 || idx >= table.Length) return null;
+			return table[idx];
+		}
+
+		public bool SetDefinitionIdAt(int tileIndex, string newDefId)
+		{
+			if (tiles == null || table == null || tileIndex < 0 || tileIndex >= tiles.Length)
+				return false;
+
+			int idx = Array.IndexOf(table, newDefId);
+			if (idx == -1)
+			{
+				var list = table.ToList();
+				list.Add(newDefId);
+				table = list.ToArray();
+				idx = table.Length - 1;
+			}
+
+			tiles[tileIndex] = idx;
+			return true;
+		}
 
 		// Atomic fields - ignored during normal serialization - this needs to be removed from here and implemented properly as a utility for the serialiser
 		[JsonIgnore] public Definition[] definitions;

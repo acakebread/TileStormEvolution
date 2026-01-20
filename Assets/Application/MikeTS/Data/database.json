@@ -65744,6 +65744,11 @@
 			"texture": "Marker"
 		},
 		{
+			"id": "Rainbow",
+			"alphaTest": false,
+			"texture": "rainbow"
+		},
+		{
 			"id": "coin",
 			"alphaTest": false,
 			"texture": "coin"

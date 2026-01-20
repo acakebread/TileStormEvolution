@@ -275,29 +275,39 @@ namespace ClassicTilestorm
 
 		// ── Event Handlers ──────────────────────────────────────────────────────────────────
 
-		private void OnIDInputEndEdit(string newId)
+		private void OnIDInputEndEdit(string input)
 		{
 			var def = CurrentDefinition;
 			if (def == null) return;
 
-			newId = newId?.Trim();
-			if (string.IsNullOrWhiteSpace(newId))
+			string newId = (input ?? "").Trim();
+
+			if (string.IsNullOrWhiteSpace(newId) || newId == def.id)
 			{
 				IDInput.text = def.id;
 				return;
 			}
 
-			if (newId == def.id) return;
-
-			if (ResourceManager.Definitions.Any(d => d.id == newId && d != def))
+			// Early duplicate check for nice UI feedback
+			if (ResourceManager.Definitions.Any(d => d != def && string.Equals(d.id, newId, StringComparison.Ordinal)))
 			{
 				Debug.LogWarning($"ID '{newId}' already exists!");
 				IDInput.text = def.id;
 				return;
 			}
 
-			def.id = newId;
-			RefreshDefinitionList();
+			int cellsUpdated = ResourceManager.RenameDefinitionId(def.id, newId);
+
+			if (cellsUpdated >= 0)
+			{
+				Debug.Log($"Renamed '{def.id}' → '{newId}'  (updated {cellsUpdated} placement{(cellsUpdated == 1 ? "" : "s")})");
+				RefreshDefinitionList();  // updates list + usage counts
+			}
+			else
+			{
+				// Shouldn't happen due to pre-check, but safety
+				IDInput.text = def.id;
+			}
 		}
 
 		private void OnModelDropdownValueChanged(int index)
