@@ -35,9 +35,6 @@ namespace MassiveHadronLtd
 			pendingReselectIndex = lastSelectedIndex;
 		}
 
-		// At the top of ScrollViewKeyboardNavigator
-		[SerializeField] private bool disableNavigationWhenInputFieldActive = true;
-
 		private void Update()
 		{
 			CleanupDestroyedItems();
