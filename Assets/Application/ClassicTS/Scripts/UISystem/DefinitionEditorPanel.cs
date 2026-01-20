@@ -65,7 +65,7 @@ namespace ClassicTilestorm
 		[Header("Ground Plane Settings")]
 		[SerializeField] private Color groundColor = Color.white;
 		[SerializeField] private float groundSize = 2.5f;
-		[SerializeField] private float groundY = -0.02f;
+		[SerializeField] private float groundY = -0.01f;
 		[SerializeField] private float groundUVScale = 1f;
 		[SerializeField] private Texture2D groundOverrideTexture;
 
