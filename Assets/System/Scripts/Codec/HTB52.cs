@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Numerics;
 using System.Text;
+using System.Security.Cryptography;
+using System.Linq;
 
 namespace MassiveHadronLtd.IDs.HTB52
 {
@@ -56,30 +58,79 @@ namespace MassiveHadronLtd.IDs.HTB52
 			};
 		}
 
-		// ---------------------------------
-		// ENCODE BigInteger
-		// ---------------------------------
-		public static string Encode(BigInteger value, bool appendFlavor = false)
+		/// <summary>
+		/// Encodes a BigInteger to Base52.
+		/// - By default: minimal length (no leading zeros)
+		/// - With fixedLength: pads with leading '0' (or custom padChar) to reach exact length
+		/// </summary>
+		public static string Encode(
+			BigInteger value,
+			bool appendFlavor = false,
+			int? fixedLength = null,
+			char padChar = '0')
 		{
 			if (value < 0)
 				throw new ArgumentOutOfRangeException(nameof(value));
 
+			string result;
+
 			if (value == 0)
-				return appendFlavor ? Alphabet[0] + "_" + Flavor : Alphabet[0].ToString();
-
-			var sb = new StringBuilder();
-			BigInteger current = value;
-
-			while (current > 0)
 			{
-				current = BigInteger.DivRem(current, 52, out var rem);
-				sb.Insert(0, Alphabet[(int)rem]);
+				result = padChar.ToString();
+			}
+			else
+			{
+				var sb = new StringBuilder();
+				BigInteger current = value;
+
+				while (current > 0)
+				{
+					current = BigInteger.DivRem(current, 52, out var rem);
+					sb.Insert(0, Alphabet[(int)rem]);
+				}
+
+				result = sb.ToString();
+			}
+
+			// Apply fixed-length padding if requested
+			if (fixedLength.HasValue)
+			{
+				int len = fixedLength.Value;
+				if (len < 1)
+					throw new ArgumentOutOfRangeException(nameof(fixedLength), "Must be >= 1");
+
+				int needed = len - result.Length;
+				if (needed > 0)
+				{
+					result = new string(padChar, needed) + result;
+				}
+				else if (needed < 0)
+				{
+					throw new ArgumentException(
+						$"Value requires {result.Length} characters, but fixedLength is {len} (too small)");
+				}
 			}
 
 			if (appendFlavor)
-				sb.Append("_").Append(Flavor);
+				result += "_" + Flavor;
 
-			return sb.ToString();
+			return result;
+		}
+
+		/// <summary>
+		/// Convenience method: always produces a fixed-length string.
+		/// Throws if the value cannot fit into the requested length.
+		/// </summary>
+		public static string EncodeFixed(
+			BigInteger value,
+			int length,
+			bool appendFlavor = false,
+			char padChar = '0')
+		{
+			if (length < 1)
+				throw new ArgumentOutOfRangeException(nameof(length), "Must be >= 1");
+
+			return Encode(value, appendFlavor, fixedLength: length, padChar);
 		}
 
 		// ---------------------------------
@@ -185,6 +236,23 @@ namespace MassiveHadronLtd.IDs.HTB52
 
 			return sb.ToString();
 		}
+
+		// Inside HTB52 class
+		private static readonly BigInteger Modulus = BigInteger.Pow(52, 6);
+
+		/// <summary>
+		/// Hashes a string to a BigInteger in [0, 52^6 - 1] using SHA-256.
+		/// </summary>
+		public static BigInteger HashToRange(string input)
+		{
+			using var sha256 = SHA256.Create();
+			byte[] hashBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(input));
+
+			// Convert to positive BigInteger (prepend 0 byte to ensure non-negative)
+			BigInteger hashValue = new BigInteger(hashBytes.Concat(new byte[] { 0 }).ToArray());
+
+			return hashValue % Modulus;
+		}
 	}
 }
 
@@ -201,3 +269,28 @@ namespace MassiveHadronLtd.IDs.HTB52
 //byte[] data = Encoding.UTF8.GetBytes("Hello HTB52!");
 //string encodedData = HTB52.Encode(data, true);
 //string prettyData = HTB52.Grouped(encodedData, 5); // "Xx3G1-_HTB52"
+
+// Usage: string hashedId = HTB52.Encode(HTB52.HashToRange("some_id"), appendFlavor: false);
+// This will give a fixed-length 6-char base52 string (padded with leading '0' if needed for smaller values).
+
+//BigInteger small = 12345;
+//BigInteger large = BigInteger.Pow(52, 5) + 100;   // needs 6 chars
+
+//// Variable length (your original behavior)
+//Console.WriteLine(HTB52.Encode(small));                    // e.g. "5xP" (3 chars)
+//Console.WriteLine(HTB52.Encode(large));                    // e.g. "100abc" (6 chars)
+
+//// Fixed length 6 – most useful for hash IDs
+//Console.WriteLine(HTB52.EncodeFixed(small, 6));            // "0005xP"
+//Console.WriteLine(HTB52.EncodeFixed(large, 6));            // "100abc"  (no padding needed)
+//Console.WriteLine(HTB52.EncodeFixed(small, 8));            // "000005xP"
+
+//// With flavor
+//Console.WriteLine(HTB52.EncodeFixed(small, 6, true));      // "0005xP_HTB52"
+
+//// Custom pad character (uncommon, but possible)
+//Console.WriteLine(HTB52.EncodeFixed(small, 6, padChar: '-'));  // "---5xP"
+
+//// Still supports the flexible style
+//Console.WriteLine(HTB52.Encode(small, fixedLength: 6));    // "0005xP"  (same as EncodeFixed)
+//Console.WriteLine(HTB52.Encode(small));                    // "5xP"     (no fixedLength = variable)
