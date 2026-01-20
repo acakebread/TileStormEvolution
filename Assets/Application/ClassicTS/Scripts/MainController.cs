@@ -182,7 +182,7 @@ namespace ClassicTilestorm
 			}
 
 			string fullPath = System.IO.Path.GetFullPath(assetPath);
-			ResourceSerializer.SaveDatabase(ResourceManager.database, fullPath);
+			ResourceSerializer.SaveDatabase(ResourceManager.database, fullPath, verbose:true);
 #else
 			Debug.Log("Save Database only works in Editor");
 #endif

@@ -10,6 +10,18 @@ namespace ClassicTilestorm
 	[Serializable]
 	public class Map
 	{
+		//private struct TileEntry
+		//{
+		//	public string StableId;     // hashid or null
+		//	public string DisplayName;  // current id / future name
+
+		//	public TileEntry(string displayName, string stableId = null)
+		//	{
+		//		DisplayName = displayName ?? "tile_empty";
+		//		StableId = stableId;
+		//	}
+		//}
+
 		public string name;
 		public string character;
 		public string music;
@@ -22,6 +34,42 @@ namespace ClassicTilestorm
 		public string[] table;
 		public int[] tiles;
 		public int[] solve;
+
+		[JsonIgnore]
+		private List<string> _stableIds = new List<string>();  // index-aligned with public table
+
+		// Helper to keep them in sync (call this instead of modifying table directly)
+		public void SetTileTypeAtIndex(int index, string displayName, string stableId = null)
+		{
+			// Extend lists if needed
+			while (_stableIds.Count <= index)
+				_stableIds.Add(null);
+
+			while (table == null || table.Length <= index)
+			{
+				var newTable = table != null ? table.ToList() : new List<string>();
+				newTable.Add("tile_empty");
+				table = newTable.ToArray();
+			}
+
+			_stableIds[index] = stableId;
+			table[index] = displayName ?? "tile_empty";
+		}
+
+		// ── For atomic export only (called from ExportAtomicMap) ──────────────────
+		public IEnumerable<string> GetEnrichedTableForExport()
+		{
+			if (table == null) yield break;
+
+			for (int i = 0; i < table.Length; i++)
+			{
+				string name = table[i] ?? "tile_empty";
+				string hash = (i < _stableIds.Count) ? _stableIds[i] : null;
+
+				yield return string.IsNullOrEmpty(hash) ? name : $"[{hash}]{name}";
+			}
+		}
+
 
 		public MapAttachment[] attachments = Array.Empty<MapAttachment>();
 
@@ -41,48 +89,111 @@ namespace ClassicTilestorm
 			if (tiles == null || tiles.Length == 0)
 				return false;
 
-			var map_definitions = new string[tiles.Length];
+			// 1. Build name → stableId lookup (from current state)
+			var nameToStable = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+			for (int i = 0; i < table.Length && i < _stableIds.Count; i++)
+			{
+				string name = table[i];
+				string stable = _stableIds[i];
+
+				if (!string.IsNullOrEmpty(name) && !string.IsNullOrEmpty(stable))
+				{
+					// If collision (same name, different stable) → keep first seen
+					if (!nameToStable.ContainsKey(name))
+						nameToStable[name] = stable;
+				}
+			}
+
+			// 2. Build current definitions for frequency sort
+			var mapDefinitions = new string[tiles.Length];
 			for (int i = 0; i < tiles.Length; i++)
 			{
 				int idx = tiles[i];
-				if (idx >= 0 && table != null && idx < table.Length)
-					map_definitions[i] = table[idx];
-				else
-					map_definitions[i] = "tile_empty";
+				mapDefinitions[i] = (idx >= 0 && idx < table.Length) ? table[idx] ?? "tile_empty" : "tile_empty";
 			}
 
-			bool changed = false;
+			var newFrequencyTable = mapDefinitions.ToFrequencySortedTable();
 
-			var newFrequencyTable = map_definitions.ToFrequencySortedTable();
+			bool changed = table == null || !table.SequenceEqual(newFrequencyTable);
 
-			if (table == null || !table.SequenceEqual(newFrequencyTable))
+			if (changed)
 			{
-				table = newFrequencyTable;
-				changed = true;
-			}
+				// 3. Rebuild _stableIds in new order
+				var newStableIds = new List<string>(newFrequencyTable.Length);
 
-			if (changed || tiles == null || tiles.Length != map_definitions.Length)
-			{
-				tiles = new int[map_definitions.Length];
-
-				for (int i = 0; i < map_definitions.Length; i++)
+				foreach (string name in newFrequencyTable)
 				{
-					string id = map_definitions[i];
-					if (string.IsNullOrEmpty(id))
-					{
-						Debug.LogError($"Invalid ID at index {i}");
-						tiles[i] = -1;
-						continue;
-					}
+					nameToStable.TryGetValue(name, out string carriedStable);
+					newStableIds.Add(carriedStable);  // null if no previous stable ID
+				}
 
-					int newIndex = Array.IndexOf(table, id);
+				_stableIds = newStableIds;
+				table = newFrequencyTable;
+			}
+
+			// 4. Rebuild tiles[] indices
+			if (changed || tiles.Length != mapDefinitions.Length)
+			{
+				tiles = new int[mapDefinitions.Length];
+				for (int i = 0; i < mapDefinitions.Length; i++)
+				{
+					string name = mapDefinitions[i];
+					int newIndex = Array.IndexOf(table, name);
 					tiles[i] = newIndex != -1 ? newIndex : -1;
 				}
 			}
 
-			if (changed) Debug.Log($"{name} consolidated");
+			if (changed) Debug.Log($"{name} consolidated (stable IDs preserved)");
+
 			return changed;
 		}
+		//public bool Consolidate()
+		//{
+		//	if (tiles == null || tiles.Length == 0)
+		//		return false;
+
+		//	var map_definitions = new string[tiles.Length];
+		//	for (int i = 0; i < tiles.Length; i++)
+		//	{
+		//		int idx = tiles[i];
+		//		if (idx >= 0 && table != null && idx < table.Length)
+		//			map_definitions[i] = table[idx];
+		//		else
+		//			map_definitions[i] = "tile_empty";
+		//	}
+
+		//	bool changed = false;
+
+		//	var newFrequencyTable = map_definitions.ToFrequencySortedTable();
+
+		//	if (table == null || !table.SequenceEqual(newFrequencyTable))
+		//	{
+		//		table = newFrequencyTable;
+		//		changed = true;
+		//	}
+
+		//	if (changed || tiles == null || tiles.Length != map_definitions.Length)
+		//	{
+		//		tiles = new int[map_definitions.Length];
+
+		//		for (int i = 0; i < map_definitions.Length; i++)
+		//		{
+		//			string id = map_definitions[i];
+		//			if (string.IsNullOrEmpty(id))
+		//			{
+		//				Debug.LogError($"Invalid ID at index {i}");
+		//				tiles[i] = -1;
+		//				continue;
+		//			}
+
+		//			int newIndex = Array.IndexOf(table, id);
+		//			tiles[i] = newIndex != -1 ? newIndex : -1;
+		//		}
+		//	}
+
+		//	if (changed) Debug.Log($"{name} consolidated");
+		//	return changed;
+		//}
 
 		public enum Anchor
 		{
@@ -296,12 +407,74 @@ namespace ClassicTilestorm
 				attachments = null != attachments ? attachments.Select(a => a.ShallowClone()).ToArray() : Array.Empty<MapAttachment>()
 			};
 
+			// Copy the private lists (they are List<T>, so we can clone contents)
+			copy._stableIds = _stableIds != null ? new List<string>(_stableIds) : new List<string>();
+			//copy._displayNames = _displayNames != null ? new List<string>(_displayNames) : new List<string>();
+
 			bool cropped = copy.CropToContent();
 
 			if (cropped)
 				Debug.Log($"[Export] Map '{copy.name}' auto-cropped to {copy.width}x{copy.height}");
 
 			return copy;
+		}
+
+		/// <summary>
+		/// After deserialization, parse any enriched "[hash]name" entries in table.
+		/// Splits them → populates internal _stableIds, strips prefix from public table.
+		/// Call this immediately after JsonConvert.DeserializeObject<Map>().
+		/// Safe to call multiple times (idempotent).
+		/// </summary>
+		public void NormalizeTableAfterLoad()
+		{
+			if (table == null || table.Length == 0)
+				return;
+
+			// Make sure internal list is at least as long as table
+			while (_stableIds.Count < table.Length)
+				_stableIds.Add(null);
+
+			for (int i = 0; i < table.Length; i++)
+			{
+				string entry = table[i];
+				if (string.IsNullOrWhiteSpace(entry))
+				{
+					table[i] = "tile_empty";
+					_stableIds[i] = null;
+					continue;
+				}
+
+				entry = entry.Trim();
+
+				// Check for [hash] prefix
+				if (entry.StartsWith("[") && entry.Contains("]"))
+				{
+					int closeBracket = entry.IndexOf(']');
+					if (closeBracket > 1) // at least [x]
+					{
+						string hashPart = entry.Substring(1, closeBracket - 1).Trim();
+						string namePart = entry.Substring(closeBracket + 1).Trim();
+
+						// Only accept reasonable-looking hashes (e.g. alphanumeric, 4-12 chars)
+						if (!string.IsNullOrEmpty(hashPart) && hashPart.Length >= 4 && hashPart.All(c => char.IsLetterOrDigit(c) || c == '-'))
+						{
+							_stableIds[i] = hashPart;
+							table[i] = string.IsNullOrEmpty(namePart) ? "tile_empty" : namePart;
+							continue;
+						}
+					}
+				}
+
+				// No valid prefix → treat as plain name
+				_stableIds[i] = null;
+				table[i] = entry;
+			}
+
+			// Trim any excess stable IDs (shouldn't happen, but safety)
+			if (_stableIds.Count > table.Length)
+				_stableIds.RemoveRange(table.Length, _stableIds.Count - table.Length);
+
+			Debug.Log($"Normalized map table: {_stableIds.Count(s => !string.IsNullOrEmpty(s))} entries had hash prefixes");
 		}
 
 		// ─────────────────────────────────────────────────────────────────────

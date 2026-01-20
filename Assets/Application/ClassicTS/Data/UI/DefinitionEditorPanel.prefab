@@ -7987,3 +7987,25 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9ed533539c32652428dfbc70300bde44, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DropdownAutoScroller
+
+
+
+
+all we get is the old data and that is no surprise
+
+    "test for hash" 
+
+given that you have not made any effort to iterate the table and update the_stableIds in preparation for GetEnrichedTableForExport - the critical setup is to make sure that the map data has the hash table ready when attempting to 
+
+
+
+ 			// Inject atomic data (unchanged)
+			map.definitions = usedDefs;
+			map.textures = usedTextures;
+			map.version = "1.0";
+			map.author = "Player";
+			map.exportedFrom = "ClassicTilestorm";
+
+			// ── TEMPORARILY replace table for serialization ───────────────────────────
+			var originalTable = map.table;
+			map.table = map.GetEnrichedTableForExport().ToArray();

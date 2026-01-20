@@ -2,13 +2,15 @@
 using System.Linq;
 using System.Collections.Generic;
 using Newtonsoft.Json;
+using UnityEngine;
 
 namespace ClassicTilestorm
 {
 	[Serializable]
 	public class Definition
 	{
-		public string id;
+		public string hashid;   // new: the stable hash-based ID (will later become the primary id)
+		public string id;       // current: human-friendly / legacy name (will later become name)
 		public string model;
 		public string texture;
 		public string material;
@@ -57,8 +59,13 @@ namespace ClassicTilestorm
 		[JsonIgnore] public bool bWash { get => HasFlag("Wash"); set => SetFlag("Wash", value); }
 
 		// ── CONDITIONAL SERIALIZATION ─────────────────────────────────────────
+		public bool ShouldSerializehashid() => !string.IsNullOrEmpty(hashid);
+		public bool ShouldSerializeid() => !string.IsNullOrEmpty(id);         // usually always present, but safe
+		public bool ShouldSerializemodel() => !string.IsNullOrEmpty(model);
 		public bool ShouldSerializetexture() => !string.IsNullOrEmpty(texture);
 		public bool ShouldSerializematerial() => !string.IsNullOrEmpty(material);
+		public bool ShouldSerializeflags() => !string.IsNullOrEmpty(flags);
+		public bool ShouldSerializeconnections() => !string.IsNullOrEmpty(connections);
 
 		// ── INTERNAL HELPERS ──────────────────────────────────────────────────
 		private HashSet<string> _flagCache;
@@ -178,12 +185,38 @@ namespace ClassicTilestorm
 			};
 		}
 
-		public static Definition GetDefault(string newId = null)=> new Definition
+		public static Definition GetDefault(string newId = null) => new Definition
 		{
 			id = newId ??= MassiveHadronLtd.StringUtil.GenerateAssetId(),
 			model = "tile_flat",
-			texture = "Default"
+			texture = "Default",
+			hashid = "123456"
 		};
+
+		// Inside Definition class
+
+		/// <summary>
+		/// Returns the preferred stable identifier for this definition.
+		/// During migration: prefers hashid if present, otherwise computes it from legacy id.
+		/// Does NOT mutate / populate the hashid field (read-only view).
+		/// </summary>
+		public string GetStableId()
+		{
+			if (!string.IsNullOrEmpty(hashid))
+			{
+				return hashid;
+			}
+
+			if (string.IsNullOrEmpty(id))
+			{
+				// Fallback for broken data
+				return "MISSING_" + Guid.NewGuid().ToString("N").Substring(0, 8).ToUpperInvariant();
+			}
+
+			// Use HTB50 instead of HTB52
+			var hash = MassiveHadronLtd.IDs.HTB50.HTB50.HashToRange(id);
+			return MassiveHadronLtd.IDs.HTB50.HTB50.EncodeFixed(hash, 6, appendFlavor: false);
+		}
 	}
 
 	// Optional extension (not needed anymore for core functionality)

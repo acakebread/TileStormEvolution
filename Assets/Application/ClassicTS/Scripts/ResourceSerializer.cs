@@ -184,6 +184,9 @@ namespace ClassicTilestorm
 					return;
 				}
 
+				// NEW: Normalize the imported map
+				importedMap.NormalizeTableAfterLoad();
+
 				// STRIP atomic-only fields — this is the ONLY thing Import should do
 				importedMap.definitions = null;
 				importedMap.textures = null;
@@ -226,7 +229,6 @@ namespace ClassicTilestorm
 		{
 			if (originalMap == null) return;
 
-			// THIS IS THE KEY: Work on a cropped copy — original stays untouched
 			var map = crop ? originalMap.CreateCroppedCopy() : originalMap;
 
 			// Collect used definitions & textures (from original — safer)
@@ -249,12 +251,16 @@ namespace ClassicTilestorm
 				.Where(ts => usedBanks.Contains(ts.id))
 				.ToArray();
 
-			// Inject atomic data
+			// Inject atomic data (unchanged)
 			map.definitions = usedDefs;
 			map.textures = usedTextures;
 			map.version = "1.0";
 			map.author = "Player";
 			map.exportedFrom = "ClassicTilestorm";
+
+			// ── TEMPORARILY replace table for serialization ───────────────────────────
+			var originalTable = map.table;
+			map.table = map.GetEnrichedTableForExport().ToArray();
 
 			try
 			{
@@ -276,11 +282,72 @@ namespace ClassicTilestorm
 			}
 			finally
 			{
-				// Clean up atomic fields — not needed anymore
+				map.table = originalTable;           // restore
 				map.definitions = null;
 				map.textures = null;
 			}
 		}
+
+
+		//public static void ExportAtomicMap(Map originalMap, string filepath = null, bool verbose = false, bool crop = true)
+		//{
+		//	if (originalMap == null) return;
+
+		//	// THIS IS THE KEY: Work on a cropped copy — original stays untouched
+		//	var map = crop ? originalMap.CreateCroppedCopy() : originalMap;
+
+		//	// Collect used definitions & textures (from original — safer)
+		//	var usedTypes = map.table?
+		//		.Where(t => !string.IsNullOrEmpty(t))
+		//		.Distinct()
+		//		.ToArray() ?? System.Array.Empty<string>();
+
+		//	var usedDefs = ResourceManager.Definitions
+		//		.Where(d => usedTypes.Contains(d.id))
+		//		.ToArray();
+
+		//	var usedBanks = usedDefs
+		//		.Where(d => !string.IsNullOrEmpty(d.texture))
+		//		.Select(d => d.texture)
+		//		.Distinct()
+		//		.ToArray();
+
+		//	var usedTextures = ResourceManager.TextureSequences
+		//		.Where(ts => usedBanks.Contains(ts.id))
+		//		.ToArray();
+
+		//	// Inject atomic data
+		//	map.definitions = usedDefs;
+		//	map.textures = usedTextures;
+		//	map.version = "1.0";
+		//	map.author = "Player";
+		//	map.exportedFrom = "ClassicTilestorm";
+
+		//	try
+		//	{
+		//		var settings = new JsonSerializerSettings
+		//		{
+		//			NullValueHandling = NullValueHandling.Ignore,
+		//			Formatting = verbose ? Formatting.Indented : Formatting.None,
+		//			ContractResolver = new AtomicExportResolver()
+		//		};
+
+		//		string json = JsonConvert.SerializeObject(map, settings);
+
+		//		var folder = string.IsNullOrEmpty(filepath) ? Application.persistentDataPath : filepath;
+		//		EnsureFolder(folder);
+		//		string path = Path.Combine(folder, $"{map.name}.json");
+
+		//		File.WriteAllText(path, json);
+		//		Debug.Log($"ATOMIC MAP EXPORTED (auto-cropped) → {path} ({map.width}x{map.height})");
+		//	}
+		//	finally
+		//	{
+		//		// Clean up atomic fields — not needed anymore
+		//		map.definitions = null;
+		//		map.textures = null;
+		//	}
+		//}
 
 		private class AtomicExportResolver : UnityContractResolver
 		{

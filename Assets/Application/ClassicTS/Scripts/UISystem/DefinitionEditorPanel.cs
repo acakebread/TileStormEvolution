@@ -388,6 +388,29 @@ namespace ClassicTilestorm
 			UpdateDeleteButtonState();
 		}
 
+		//private void CreateDefinitionListItem(Definition def, int index)
+		//{
+		//	var go = Instantiate(definitionListItemPrefab, contentParent);
+		//	var toggle = go.GetComponent<Toggle>();
+		//	if (toggle == null)
+		//	{
+		//		Destroy(go);
+		//		return;
+		//	}
+
+		//	toggle.group = toggleGroup;
+		//	spawnedDefinitionToggles.Add(toggle);
+
+		//	toggle.onValueChanged.AddListener(isOn =>
+		//	{
+		//		if (isOn) SetSelectedIndex(index);
+		//	});
+
+		//	var label = go.GetComponentInChildren<TMP_Text>();
+		//	if (label != null)
+		//		label.text = $"{def.id} [{ResourceManager.DefinitionUsageCount(def.id)}]";//$"{def.id} ({def.model ?? "—"})";
+		//}
+
 		private void CreateDefinitionListItem(Definition def, int index)
 		{
 			var go = Instantiate(definitionListItemPrefab, contentParent);
@@ -408,7 +431,23 @@ namespace ClassicTilestorm
 
 			var label = go.GetComponentInChildren<TMP_Text>();
 			if (label != null)
-				label.text = $"{def.id} [{ResourceManager.DefinitionUsageCount(def.id)}]";//$"{def.id} ({def.model ?? "—"})";
+			{
+				string usage = ResourceManager.DefinitionUsageCount(def.id).ToString();
+				string hashPart = "";
+
+				if (!string.IsNullOrEmpty(def.hashid))
+				{
+					hashPart = $" (hash:{def.hashid})";
+				}
+				// Optional more verbose version during early testing:
+				else if (!string.IsNullOrEmpty(def.id))
+				{
+					string computed = def.GetStableId();
+					hashPart = $" (hash:pending → {computed})";
+				}
+
+				label.text = $"{def.id} [{usage}]{hashPart}";
+			}
 		}
 
 		private void ClearDefinitionListItems()

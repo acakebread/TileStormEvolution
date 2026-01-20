@@ -432,9 +432,24 @@ namespace ClassicTilestorm
 			if (mapTiles[index].tile.gameObject != null)
 				Destroy(mapTiles[index].tile.gameObject);
 
+			// Get definition to extract hashid (stable ID)
 			var def = ResourceManager.GetDefinition(id);
-			var newTile = new Tile(def);
+			string stableId = def?.hashid;  // will be null if not set yet
 
+			// Update both table (names) and internal stableIds list
+			currentMap.SetTileTypeAtIndex(
+				currentMap.table != null && currentMap.table.Contains(id)
+					? Array.IndexOf(currentMap.table, id)
+					: currentMap.table?.Length ?? 0,
+				id,
+				stableId
+			);
+
+			// Set tile index
+			currentMap.tiles[index] = Array.IndexOf(currentMap.table, id);
+
+			// Create new visual
+			var newTile = new Tile(def);
 			if (id != "tile_empty" && def != null)
 				newTile.gameObject = InstantiateTile(def, transform, TileWorldPosition(index));
 
@@ -442,21 +457,55 @@ namespace ClassicTilestorm
 
 			RefreshAttachmentsOnTile(index);
 
-			// Update string table
-			if (currentMap.table == null || !Array.Exists(currentMap.table, s => s == id))
-			{
-				var list = currentMap.table != null ? new List<string>(currentMap.table) : new List<string>();
-				if (!list.Contains(id)) list.Add(id);
-				currentMap.table = list.ToArray();
-			}
-
-			currentMap.tiles[index] = Array.IndexOf(currentMap.table, id);
 			currentMap.Consolidate();
 
-			// No resize possible in restricted mode
+			// No resize in restricted mode
 			OnMapEdited?.Invoke(this, false, Vector3.zero);
-			return true; // Success!
+			return true;
 		}
+
+		//private bool UpdateTileAtRestricted(int x, int z, string id)
+		//{
+		//	if (string.IsNullOrEmpty(id))
+		//		id = "tile_empty";
+
+		//	if (x < 0 || x >= Width || z < 0 || z >= Height)
+		//	{
+		//		Debug.LogError($"Invalid coordinates: ({x}, {z}) outside map bounds ({Width}x{Height})");
+		//		return false;
+		//	}
+
+		//	int index = z * Width + x;
+
+		//	// Destroy old visual
+		//	if (mapTiles[index].tile.gameObject != null)
+		//		Destroy(mapTiles[index].tile.gameObject);
+
+		//	var def = ResourceManager.GetDefinition(id);
+		//	var newTile = new Tile(def);
+
+		//	if (id != "tile_empty" && def != null)
+		//		newTile.gameObject = InstantiateTile(def, transform, TileWorldPosition(index));
+
+		//	mapTiles[index] = new MapTile(id, newTile);
+
+		//	RefreshAttachmentsOnTile(index);
+
+		//	// Update string table
+		//	if (currentMap.table == null || !Array.Exists(currentMap.table, s => s == id))
+		//	{
+		//		var list = currentMap.table != null ? new List<string>(currentMap.table) : new List<string>();
+		//		if (!list.Contains(id)) list.Add(id);
+		//		currentMap.table = list.ToArray();
+		//	}
+
+		//	currentMap.tiles[index] = Array.IndexOf(currentMap.table, id);
+		//	currentMap.Consolidate();
+
+		//	// No resize possible in restricted mode
+		//	OnMapEdited?.Invoke(this, false, Vector3.zero);
+		//	return true; // Success!
+		//}
 
 		private const int MAP_MAX_SIZE = 64;
 
@@ -465,6 +514,113 @@ namespace ClassicTilestorm
 		/// Returns true if tile was successfully placed/removed.
 		/// Calls onEdited only on success, with (resized, originWorldDelta).
 		/// </summary>
+		//private bool UpdateTileAtSmart(int x, int z, string id, Action<bool, Vector3> onEdited = null)
+		//{
+		//	if (string.IsNullOrEmpty(id))
+		//		id = "tile_empty";
+
+		//	int oldWidth = Width;
+		//	int oldHeight = Height;
+
+		//	var oldBounds = currentMap.GetContentBounds();
+
+		//	Vector3 originDelta = Vector3.zero;
+		//	bool sizeChanged = false;
+
+		//	// === 1. Expand — only negative axes shift origin ===
+		//	if (x < 0 || x >= Width || z < 0 || z >= Height)
+		//	{
+		//		int minX = Mathf.Min(0, x);
+		//		int minZ = Mathf.Min(0, z);
+		//		int maxX = Mathf.Max(Width - 1, x);
+		//		int maxZ = Mathf.Max(Height - 1, z);
+
+		//		int newWidth = maxX - minX + 1;
+		//		int newHeight = maxZ - minZ + 1;
+
+		//		// HARD LIMIT: Prevent gargantuan maps
+		//		if (newWidth > MAP_MAX_SIZE || newHeight > MAP_MAX_SIZE)
+		//		{
+		//			Debug.LogWarning($"Map placement rejected: would exceed max size ({MAP_MAX_SIZE}x{MAP_MAX_SIZE})");
+		//			onEdited?.Invoke(false, Vector3.zero);
+		//			return false; // Fail silently (or play sound, show toast, etc.)
+		//		}
+
+		//		int offsetX = -minX;
+		//		int offsetZ = -minZ;
+
+		//		currentMap.RepositionAndResize(newWidth, newHeight, offsetX, offsetZ);
+
+		//		// Only apply delta for axes that were negative
+		//		if (x < 0) originDelta.x = offsetX;
+		//		if (z < 0) originDelta.z = offsetZ;
+
+		//		x += offsetX;
+		//		z += offsetZ;
+
+		//		sizeChanged = true;
+		//	}
+
+		//	// === 2. Place tile ===
+		//	int index = z * Width + x;
+
+		//	if (currentMap.table == null || !Array.Exists(currentMap.table, s => s == id))
+		//	{
+		//		var list = currentMap.table != null ? new List<string>(currentMap.table) : new List<string>();
+		//		if (!list.Contains(id)) list.Add(id);
+		//		currentMap.table = list.ToArray();
+		//	}
+
+		//	currentMap.tiles[index] = Array.IndexOf(currentMap.table, id);
+
+		//	// === 3. Crop — add delta only if left/top content was removed ===
+		//	if (id == "tile_empty" || sizeChanged)
+		//	{
+		//		var newBounds = currentMap.GetContentBounds();
+
+		//		if (currentMap.CropToContent())
+		//		{
+		//			originDelta += new Vector3(
+		//				oldBounds.minX - newBounds.minX,
+		//				0,
+		//				oldBounds.minZ - newBounds.minZ
+		//			);
+		//			sizeChanged = true;
+		//		}
+		//	}
+
+		//	// === 4. Rebuild visuals ===
+		//	bool boundsChanged = sizeChanged || Width != oldWidth || Height != oldHeight;
+
+		//	if (boundsChanged)
+		//	{
+		//		DestroyAllTiles();
+		//		LoadTileData(currentMap.tiles);
+		//		RefreshAllAttachmentInstances();
+		//	}
+		//	else
+		//	{
+		//		// Fast single-tile update
+		//		var def = ResourceManager.GetDefinition(id);
+		//		var newTile = new Tile(def);
+
+		//		if (mapTiles[index].tile.gameObject != null)
+		//			Destroy(mapTiles[index].tile.gameObject);
+
+		//		if (id != "tile_empty" && def != null)
+		//			newTile.gameObject = InstantiateTile(def, transform, TileWorldPosition(index));
+
+		//		mapTiles[index] = new MapTile(id, newTile);
+
+		//		RefreshAttachmentsOnTile(index);
+		//	}
+
+		//	currentMap.Consolidate();
+
+		//	OnMapEdited?.Invoke(this, boundsChanged, originDelta);
+		//	return true;
+		//}
+
 		private bool UpdateTileAtSmart(int x, int z, string id, Action<bool, Vector3> onEdited = null)
 		{
 			if (string.IsNullOrEmpty(id))
@@ -494,7 +650,7 @@ namespace ClassicTilestorm
 				{
 					Debug.LogWarning($"Map placement rejected: would exceed max size ({MAP_MAX_SIZE}x{MAP_MAX_SIZE})");
 					onEdited?.Invoke(false, Vector3.zero);
-					return false; // Fail silently (or play sound, show toast, etc.)
+					return false;
 				}
 
 				int offsetX = -minX;
@@ -502,7 +658,6 @@ namespace ClassicTilestorm
 
 				currentMap.RepositionAndResize(newWidth, newHeight, offsetX, offsetZ);
 
-				// Only apply delta for axes that were negative
 				if (x < 0) originDelta.x = offsetX;
 				if (z < 0) originDelta.z = offsetZ;
 
@@ -515,14 +670,27 @@ namespace ClassicTilestorm
 			// === 2. Place tile ===
 			int index = z * Width + x;
 
-			if (currentMap.table == null || !Array.Exists(currentMap.table, s => s == id))
+			// Get definition to extract hashid (stable ID)
+			var def = ResourceManager.GetDefinition(id);
+			string stableId = def?.hashid;  // null if not set yet
+
+			// Update both table and internal stableIds
+			int tableIndex;
+			if (currentMap.table != null && currentMap.table.Contains(id))
 			{
-				var list = currentMap.table != null ? new List<string>(currentMap.table) : new List<string>();
-				if (!list.Contains(id)) list.Add(id);
+				tableIndex = Array.IndexOf(currentMap.table, id);
+			}
+			else
+			{
+				var list = currentMap.table != null ? currentMap.table.ToList() : new List<string>();
+				list.Add(id);
 				currentMap.table = list.ToArray();
+				tableIndex = currentMap.table.Length - 1;
 			}
 
-			currentMap.tiles[index] = Array.IndexOf(currentMap.table, id);
+			currentMap.SetTileTypeAtIndex(tableIndex, id, stableId);
+
+			currentMap.tiles[index] = tableIndex;
 
 			// === 3. Crop — add delta only if left/top content was removed ===
 			if (id == "tile_empty" || sizeChanged)
@@ -552,7 +720,6 @@ namespace ClassicTilestorm
 			else
 			{
 				// Fast single-tile update
-				var def = ResourceManager.GetDefinition(id);
 				var newTile = new Tile(def);
 
 				if (mapTiles[index].tile.gameObject != null)

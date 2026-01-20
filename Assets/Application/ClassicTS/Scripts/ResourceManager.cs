@@ -221,5 +221,23 @@ namespace ClassicTilestorm
 
 			return changeCount;
 		}
+
+		public static Definition GetDefinitionByStableId(string stableId)
+		{
+			if (string.IsNullOrEmpty(stableId)) return null;
+
+			// Fast path: most records will eventually have hashid
+			var match = database.definitions.FirstOrDefault(d => d.hashid == stableId);
+			if (match != null) return match;
+
+			// Migration fallback: check computed value
+			return database.definitions.FirstOrDefault(d => d.GetStableId() == stableId);
+		}
+
+		// Optional: report how many still need migration
+		public static int CountDefinitionsNeedingHashMigration()
+		{
+			return database?.definitions?.Count(d => string.IsNullOrEmpty(d.hashid) && !string.IsNullOrEmpty(d.id)) ?? 0;
+		}
 	}
 }
