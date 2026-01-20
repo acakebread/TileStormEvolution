@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using System.Text;
 using System.Security.Cryptography;
+using System.Linq;
 
 namespace MassiveHadronLtd.IDs.HTB50
 {
@@ -308,6 +309,30 @@ namespace MassiveHadronLtd.IDs.HTB50
 		private static char Normalize(char c)
 		{
 			return NormalizeMap.TryGetValue(c, out var mapped) ? mapped : c;
+		}
+
+		/// <summary>
+		/// Generates a random HTB50 ID in the range [0, Modulus-1], encoded to 6 characters (padded with leading '0' if needed).
+		/// Uses cryptographically secure random bytes.
+		/// </summary>
+		public static string GenerateRandomId(int length = 6, bool appendFlavor = false, char padChar = '0')
+		{
+			// Generate random bytes (8 bytes = 64 bits, plenty for 50^6 ≈ 15.4 million)
+			byte[] randomBytes = new byte[8];
+			using (var rng = System.Security.Cryptography.RandomNumberGenerator.Create())
+			{
+				rng.GetBytes(randomBytes);
+			}
+
+			// Convert to BigInteger (ensure positive)
+			BigInteger randValue = new BigInteger(randomBytes.Concat(new byte[] { 0 }).ToArray());
+
+			// Modulo to fit within Modulus range
+			randValue = randValue % Modulus;
+			if (randValue < 0) randValue += Modulus; // ensure non-negative
+
+			// Encode to fixed-length HTB50 string
+			return EncodeFixed(randValue, length, appendFlavor, padChar);
 		}
 	}
 }

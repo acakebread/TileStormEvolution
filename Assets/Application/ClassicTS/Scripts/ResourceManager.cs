@@ -177,6 +177,7 @@ namespace ClassicTilestorm
 
 		/// <summary>
 		/// Renames a definition ID across the entire database.
+		/// Updates both the definition itself and all map placements (including internal _tileEntries).
 		/// Returns number of map cells changed, or -1 if newId already exists.
 		/// </summary>
 		public static int RenameDefinitionId(string oldId, string newId)
@@ -192,27 +193,36 @@ namespace ClassicTilestorm
 
 			foreach (var map in Maps)
 			{
-				if (map == null || map.tiles == null || map.width <= 0 || map.height <= 0)
+				if (map == null || map.tiles == null || map._tileEntries == null)
 					continue;
 
-				int size = map.width * map.height;
-				if (map.tiles.Length != size) continue; // skip corrupted maps
-
-				for (int i = 0; i < size; i++)
+				// Update internal _tileEntries (source of truth)
+				for (int i = 0; i < map._tileEntries.Count; i++)
 				{
-					string currentDefId = map.GetDefinitionIdAt(i);
-
-					if (currentDefId != null && string.Equals(currentDefId, oldId, StringComparison.Ordinal))
+					var entry = map._tileEntries[i];
+					if (string.Equals(entry.DisplayName, oldId, StringComparison.Ordinal))
 					{
-						bool success = map.SetDefinitionIdAt(i, newId);
-						if (success)
-							changeCount++;
-						// else → log warning if you want (should rarely happen)
+						map._tileEntries[i] = new Map.TileEntry(newId, entry.StableId);
+						changeCount++;
+					}
+				}
+
+				// Rebuild public table property (names only)
+				map.table = map._tileEntries.Select(e => e.DisplayName).ToArray();
+
+				// Rebuild tiles indices based on new names
+				for (int i = 0; i < map.tiles.Length; i++)
+				{
+					int idx = map.tiles[i];
+					if (idx >= 0 && idx < map.table.Length)
+					{
+						// Re-lookup index after name change
+						map.tiles[i] = Array.IndexOf(map.table, map.table[idx]);
 					}
 				}
 			}
 
-			// Rename the definition definition itself
+			// Rename the definition itself
 			var def = Definitions.FirstOrDefault(d => string.Equals(d.id, oldId, StringComparison.Ordinal));
 			if (def != null)
 			{
@@ -221,6 +231,52 @@ namespace ClassicTilestorm
 
 			return changeCount;
 		}
+		/// <summary>
+		/// Renames a definition ID across the entire database.
+		/// Returns number of map cells changed, or -1 if newId already exists.
+		/// </summary>
+		//public static int RenameDefinitionId(string oldId, string newId)
+		//{
+		//	if (string.IsNullOrEmpty(oldId) || oldId == newId)
+		//		return 0;
+
+		//	// Prevent duplicate IDs in the global definitions list
+		//	if (Definitions.Any(d => string.Equals(d.id, newId, StringComparison.Ordinal)))
+		//		return -1;
+
+		//	int changeCount = 0;
+
+		//	foreach (var map in Maps)
+		//	{
+		//		if (map == null || map.tiles == null || map.width <= 0 || map.height <= 0)
+		//			continue;
+
+		//		int size = map.width * map.height;
+		//		if (map.tiles.Length != size) continue; // skip corrupted maps
+
+		//		for (int i = 0; i < size; i++)
+		//		{
+		//			string currentDefId = map.GetDefinitionIdAt(i);
+
+		//			if (currentDefId != null && string.Equals(currentDefId, oldId, StringComparison.Ordinal))
+		//			{
+		//				bool success = map.SetDefinitionIdAt(i, newId);
+		//				if (success)
+		//					changeCount++;
+		//				// else → log warning if you want (should rarely happen)
+		//			}
+		//		}
+		//	}
+
+		//	// Rename the definition definition itself
+		//	var def = Definitions.FirstOrDefault(d => string.Equals(d.id, oldId, StringComparison.Ordinal));
+		//	if (def != null)
+		//	{
+		//		def.id = newId;
+		//	}
+
+		//	return changeCount;
+		//}
 
 		public static Definition GetDefinitionByStableId(string stableId)
 		{

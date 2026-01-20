@@ -185,37 +185,49 @@ namespace ClassicTilestorm
 			};
 		}
 
-		public static Definition GetDefault(string newId = null) => new Definition
-		{
-			id = newId ??= MassiveHadronLtd.StringUtil.GenerateAssetId(),
-			model = "tile_flat",
-			texture = "Default",
-			hashid = "123456"
-		};
+		//public static Definition GetDefault(string newId = null) => new Definition
+		//{
+		//	id = newId ?? MassiveHadronLtd.StringUtil.GenerateAssetId(),  // keep legacy ID generation if desired
+		//	model = "tile_flat",
+		//	texture = "Default",
+		//	hashid = MassiveHadronLtd.IDs.HTB50.HTB50.GenerateRandomId()  // ← new random HTB50 ID
+		//};
 
-		// Inside Definition class
+		//temporary until switch over complete then move to above version
+		public static Definition GetDefault(string newId = null)
+		{
+			string randomId = MassiveHadronLtd.StringUtil.GenerateAssetId(); // legacy style, or use Guid, etc.
+			string hashId = MassiveHadronLtd.IDs.HTB50.HTB50.EncodeFixed(
+				MassiveHadronLtd.IDs.HTB50.HTB50.HashToRange(randomId), 6, appendFlavor: false);
+
+			return new Definition
+			{
+				id = newId ?? randomId,
+				model = "tile_flat",
+				texture = "Default",
+				hashid = hashId
+			};
+		}
 
 		/// <summary>
 		/// Returns the preferred stable identifier for this definition.
-		/// During migration: prefers hashid if present, otherwise computes it from legacy id.
-		/// Does NOT mutate / populate the hashid field (read-only view).
+		/// Prefers existing hashid, otherwise computes from id, otherwise generates a new random one.
+		/// Does NOT mutate/populate hashid field.
 		/// </summary>
 		public string GetStableId()
 		{
 			if (!string.IsNullOrEmpty(hashid))
-			{
 				return hashid;
-			}
 
-			if (string.IsNullOrEmpty(id))
+			if (!string.IsNullOrEmpty(id))
 			{
-				// Fallback for broken data
-				return "MISSING_" + Guid.NewGuid().ToString("N").Substring(0, 8).ToUpperInvariant();
+				var hash = MassiveHadronLtd.IDs.HTB50.HTB50.HashToRange(id);
+				return MassiveHadronLtd.IDs.HTB50.HTB50.EncodeFixed(hash, 6, appendFlavor: false);
 			}
 
-			// Use HTB50 instead of HTB52
-			var hash = MassiveHadronLtd.IDs.HTB50.HTB50.HashToRange(id);
-			return MassiveHadronLtd.IDs.HTB50.HTB50.EncodeFixed(hash, 6, appendFlavor: false);
+			// Last resort: generate a random valid HTB50 ID
+			Debug.LogWarning($"Definition has no id or hashid — generating random stable ID.");
+			return MassiveHadronLtd.IDs.HTB50.HTB50.GenerateRandomId();
 		}
 	}
 

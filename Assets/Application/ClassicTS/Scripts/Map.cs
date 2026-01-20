@@ -1,26 +1,29 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using Newtonsoft.Json.Serialization;
 using MassiveHadronLtd;
-using System.Linq;
-using System.Collections.Generic;
 
 namespace ClassicTilestorm
 {
 	[Serializable]
 	public class Map
 	{
-		//private struct TileEntry
-		//{
-		//	public string StableId;     // hashid or null
-		//	public string DisplayName;  // current id / future name
+		[Serializable]
+		internal class TileEntry
+		{
+			public string StableId;     // hashid (can be null)
+			public string DisplayName;  // what external code sees in table[]
 
-		//	public TileEntry(string displayName, string stableId = null)
-		//	{
-		//		DisplayName = displayName ?? "tile_empty";
-		//		StableId = stableId;
-		//	}
-		//}
+			public TileEntry(string displayName, string stableId = null)
+			{
+				DisplayName = displayName ?? "tile_empty";
+				StableId = stableId;
+			}
+		}
 
 		public string name;
 		public string character;
@@ -31,47 +34,38 @@ namespace ClassicTilestorm
 		public int height;
 
 		public int[] waypoints;
-		public string[] table;
+
+
+		[JsonIgnore]
+		internal List<TileEntry> _tileEntries = new List<TileEntry>();
+
+		public string[] table
+		{
+			get => _tileEntries?.Select(e => e.DisplayName).ToArray() ?? Array.Empty<string>();
+
+			set
+			{
+				_tileEntries.Clear();
+				if (value != null)
+				{
+					foreach (string name in value)
+						_tileEntries.Add(new TileEntry(name));
+				}
+			}
+		}
+
 		public int[] tiles;
 		public int[] solve;
 
-		[JsonIgnore]
-		private List<string> _stableIds = new List<string>();  // index-aligned with public table
+		public MapAttachment[] attachments = Array.Empty<MapAttachment>();
 
-		// Helper to keep them in sync (call this instead of modifying table directly)
 		public void SetTileTypeAtIndex(int index, string displayName, string stableId = null)
 		{
-			// Extend lists if needed
-			while (_stableIds.Count <= index)
-				_stableIds.Add(null);
+			while (_tileEntries.Count <= index)
+				_tileEntries.Add(new TileEntry("tile_empty"));
 
-			while (table == null || table.Length <= index)
-			{
-				var newTable = table != null ? table.ToList() : new List<string>();
-				newTable.Add("tile_empty");
-				table = newTable.ToArray();
-			}
-
-			_stableIds[index] = stableId;
-			table[index] = displayName ?? "tile_empty";
+			_tileEntries[index] = new TileEntry(displayName ?? "tile_empty", stableId);
 		}
-
-		// ── For atomic export only (called from ExportAtomicMap) ──────────────────
-		public IEnumerable<string> GetEnrichedTableForExport()
-		{
-			if (table == null) yield break;
-
-			for (int i = 0; i < table.Length; i++)
-			{
-				string name = table[i] ?? "tile_empty";
-				string hash = (i < _stableIds.Count) ? _stableIds[i] : null;
-
-				yield return string.IsNullOrEmpty(hash) ? name : $"[{hash}]{name}";
-			}
-		}
-
-
-		public MapAttachment[] attachments = Array.Empty<MapAttachment>();
 
 		public bool ShouldSerializeskybox() => !string.IsNullOrEmpty(skybox);
 		public bool ShouldSerializesolve() => solve != null && solve.Length > 0;
@@ -80,58 +74,48 @@ namespace ClassicTilestorm
 
 		public bool IsValidTile(int index) => index >= 0 && index < width * height;
 
-		/// <summary>
-		/// Rebuilds the optimal frequency-sorted table and remaps tiles.
-		/// Returns true if any changes were made (table or tiles changed).
-		/// </summary>
+		public enum Anchor
+		{
+			TopLeft, TopCenter, TopRight,
+			MiddleLeft, Center, MiddleRight,
+			BottomLeft, BottomCenter, BottomRight
+		}
+
 		public bool Consolidate()
 		{
 			if (tiles == null || tiles.Length == 0)
 				return false;
 
-			// 1. Build name → stableId lookup (from current state)
 			var nameToStable = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-			for (int i = 0; i < table.Length && i < _stableIds.Count; i++)
+			for (int i = 0; i < _tileEntries.Count; i++)
 			{
-				string name = table[i];
-				string stable = _stableIds[i];
-
-				if (!string.IsNullOrEmpty(name) && !string.IsNullOrEmpty(stable))
+				var entry = _tileEntries[i];
+				if (!string.IsNullOrEmpty(entry.DisplayName) && !string.IsNullOrEmpty(entry.StableId))
 				{
-					// If collision (same name, different stable) → keep first seen
-					if (!nameToStable.ContainsKey(name))
-						nameToStable[name] = stable;
+					if (!nameToStable.ContainsKey(entry.DisplayName))
+						nameToStable[entry.DisplayName] = entry.StableId;
 				}
 			}
 
-			// 2. Build current definitions for frequency sort
-			var mapDefinitions = new string[tiles.Length];
-			for (int i = 0; i < tiles.Length; i++)
-			{
-				int idx = tiles[i];
-				mapDefinitions[i] = (idx >= 0 && idx < table.Length) ? table[idx] ?? "tile_empty" : "tile_empty";
-			}
+			var mapDefinitions = tiles.Select(idx =>
+				(idx >= 0 && idx < table.Length) ? table[idx] ?? "tile_empty" : "tile_empty"
+			).ToArray();
 
 			var newFrequencyTable = mapDefinitions.ToFrequencySortedTable();
 
-			bool changed = table == null || !table.SequenceEqual(newFrequencyTable);
+			bool changed = !table.SequenceEqual(newFrequencyTable);
 
 			if (changed)
 			{
-				// 3. Rebuild _stableIds in new order
-				var newStableIds = new List<string>(newFrequencyTable.Length);
-
+				var newEntries = new List<TileEntry>(newFrequencyTable.Length);
 				foreach (string name in newFrequencyTable)
 				{
-					nameToStable.TryGetValue(name, out string carriedStable);
-					newStableIds.Add(carriedStable);  // null if no previous stable ID
+					nameToStable.TryGetValue(name, out string stable);
+					newEntries.Add(new TileEntry(name, stable));
 				}
-
-				_stableIds = newStableIds;
-				table = newFrequencyTable;
+				_tileEntries = newEntries;
 			}
 
-			// 4. Rebuild tiles[] indices
 			if (changed || tiles.Length != mapDefinitions.Length)
 			{
 				tiles = new int[mapDefinitions.Length];
@@ -143,66 +127,10 @@ namespace ClassicTilestorm
 				}
 			}
 
-			if (changed) Debug.Log($"{name} consolidated (stable IDs preserved)");
-
+			if (changed) Debug.Log($"{name} consolidated");
 			return changed;
 		}
-		//public bool Consolidate()
-		//{
-		//	if (tiles == null || tiles.Length == 0)
-		//		return false;
 
-		//	var map_definitions = new string[tiles.Length];
-		//	for (int i = 0; i < tiles.Length; i++)
-		//	{
-		//		int idx = tiles[i];
-		//		if (idx >= 0 && table != null && idx < table.Length)
-		//			map_definitions[i] = table[idx];
-		//		else
-		//			map_definitions[i] = "tile_empty";
-		//	}
-
-		//	bool changed = false;
-
-		//	var newFrequencyTable = map_definitions.ToFrequencySortedTable();
-
-		//	if (table == null || !table.SequenceEqual(newFrequencyTable))
-		//	{
-		//		table = newFrequencyTable;
-		//		changed = true;
-		//	}
-
-		//	if (changed || tiles == null || tiles.Length != map_definitions.Length)
-		//	{
-		//		tiles = new int[map_definitions.Length];
-
-		//		for (int i = 0; i < map_definitions.Length; i++)
-		//		{
-		//			string id = map_definitions[i];
-		//			if (string.IsNullOrEmpty(id))
-		//			{
-		//				Debug.LogError($"Invalid ID at index {i}");
-		//				tiles[i] = -1;
-		//				continue;
-		//			}
-
-		//			int newIndex = Array.IndexOf(table, id);
-		//			tiles[i] = newIndex != -1 ? newIndex : -1;
-		//		}
-		//	}
-
-		//	if (changed) Debug.Log($"{name} consolidated");
-		//	return changed;
-		//}
-
-		public enum Anchor
-		{
-			TopLeft, TopCenter, TopRight,
-			MiddleLeft, Center, MiddleRight,
-			BottomLeft, BottomCenter, BottomRight
-		}
-
-		// KEEP YOUR ORIGINAL PUBLIC Resize() — IT IS PERFECT FOR EDITOR USE
 		public bool Resize(int newWidth, int newHeight, Anchor anchor = Anchor.Center)
 		{
 			if (newWidth <= 0 || newHeight <= 0) return false;
@@ -211,7 +139,6 @@ namespace ClassicTilestorm
 			int oldWidth = width;
 			int oldHeight = height;
 
-			// Calculate proper offset from anchor
 			int offsetX = anchor switch
 			{
 				Anchor.TopLeft or Anchor.MiddleLeft or Anchor.BottomLeft => 0,
@@ -228,11 +155,9 @@ namespace ClassicTilestorm
 				_ => (newHeight - oldHeight) / 2
 			};
 
-			// Use the real engine
 			bool success = RepositionAndResize(newWidth, newHeight, offsetX, offsetZ);
 
-			if (success)
-				Consolidate();
+			if (success) Consolidate();
 
 			if (success)
 				Debug.Log($"Map '{name}' resized to {newWidth}x{newHeight} (anchor: {anchor}).");
@@ -240,7 +165,6 @@ namespace ClassicTilestorm
 			return success;
 		}
 
-		// THE REAL, BULLETPROOF ENGINE — does everything correctly
 		public bool RepositionAndResize(int newWidth, int newHeight, int offsetX, int offsetZ)
 		{
 			if (newWidth <= 0 || newHeight <= 0) return false;
@@ -249,9 +173,8 @@ namespace ClassicTilestorm
 			int oldHeight = height;
 			int newSize = newWidth * newHeight;
 
-			// Ensure tile_empty
-			int emptyIndex = table != null ? Array.IndexOf(table, "tile_empty") : -1;
-			if (emptyIndex == -1 && table != null)
+			int emptyIndex = table.Contains("tile_empty") ? Array.IndexOf(table, "tile_empty") : -1;
+			if (emptyIndex == -1)
 			{
 				var list = table.ToList();
 				list.Add("tile_empty");
@@ -262,7 +185,6 @@ namespace ClassicTilestorm
 			var newTiles = new int[newSize];
 			Array.Fill(newTiles, emptyIndex);
 
-			// Copy tiles with arbitrary offset (positive or negative!)
 			for (int z = 0; z < oldHeight; z++)
 				for (int x = 0; x < oldWidth; x++)
 				{
@@ -273,12 +195,9 @@ namespace ClassicTilestorm
 					int nz = z + offsetZ;
 
 					if (nx >= 0 && nx < newWidth && nz >= 0 && nz < newHeight)
-					{
 						newTiles[nz * newWidth + nx] = tiles[oldIdx];
-					}
 				}
 
-			// solve[] — fully preserved
 			var newSolve = new int[newSize];
 			if (solve != null && solve.Length == oldWidth * oldHeight)
 			{
@@ -310,7 +229,6 @@ namespace ClassicTilestorm
 					}
 			}
 
-			// Waypoints & attachments
 			int Remap(int idx)
 			{
 				if (idx < 0) return idx;
@@ -321,10 +239,12 @@ namespace ClassicTilestorm
 				return (nx >= 0 && nx < newWidth && nz >= 0 && nz < newHeight) ? nz * newWidth + nx : -1;
 			}
 
-			if (waypoints != null) for (var n = 0; n < waypoints.Length; ++n) waypoints[n] = Remap(waypoints[n]);
-			if (attachments != null) foreach (var a in attachments) a.tile = Remap(a.tile);
+			if (waypoints != null)
+				for (int n = 0; n < waypoints.Length; n++) waypoints[n] = Remap(waypoints[n]);
 
-			// Apply
+			if (attachments != null)
+				foreach (var a in attachments) a.tile = Remap(a.tile);
+
 			width = newWidth;
 			height = newHeight;
 			tiles = newTiles;
@@ -343,15 +263,11 @@ namespace ClassicTilestorm
 
 			bool success = RepositionAndResize(w, h, -minX, -minZ);
 
-			if (success)
-				Consolidate();
+			if (success) Consolidate();
 
 			return success;
 		}
 
-		/// <summary>
-		/// Returns the actual used bounds of the map (non-empty tiles only).
-		/// </summary>
 		public (int minX, int minZ, int maxX, int maxZ) GetContentBounds()
 		{
 			if (tiles == null || tiles.Length == 0 || width <= 0 || height <= 0)
@@ -362,30 +278,26 @@ namespace ClassicTilestorm
 			int maxX = -1;
 			int maxZ = -1;
 
-			int emptyIdx = table != null ? Array.IndexOf(table, "tile_empty") : -1;
+			int emptyIdx = table.Contains("tile_empty") ? Array.IndexOf(table, "tile_empty") : -1;
 
 			for (int i = 0; i < tiles.Length; i++)
 			{
 				int t = tiles[i];
-				if (t < 0 || t == emptyIdx || (table != null && t < table.Length && table[t] == "tile_empty"))
+				if (t < 0 || t == emptyIdx || (t < table.Length && table[t] == "tile_empty"))
 					continue;
 
 				int x = i % width;
 				int z = i / width;
 
-				if (x < minX) minX = x;
-				if (x > maxX) maxX = x;
-				if (z < minZ) minZ = z;
-				if (z > maxZ) maxZ = z;
+				minX = Math.Min(minX, x);
+				maxX = Math.Max(maxX, x);
+				minZ = Math.Min(minZ, z);
+				maxZ = Math.Max(maxZ, z);
 			}
 
 			return maxX >= 0 ? (minX, minZ, maxX, maxZ) : (0, 0, -1, -1);
 		}
 
-		/// <summary>
-		/// Returns a cropped copy of this map for serialization/export only.
-		/// Original map is untouched. Used automatically during export.
-		/// </summary>
 		public Map CreateCroppedCopy()
 		{
 			var copy = new Map
@@ -397,19 +309,16 @@ namespace ClassicTilestorm
 				width = width,
 				height = height,
 
-				// These are the ONLY fields CropToContent() and RepositionAndResize() mutate:
 				waypoints = waypoints != null ? (int[])waypoints.Clone() : null,
 				tiles = tiles != null ? (int[])tiles.Clone() : null,
 				solve = solve != null ? (int[])solve.Clone() : null,
-				table = table != null ? (string[])table.Clone() : null,
 
-				// attachments: we need real copies because Remap(ref a.tile) modifies them
-				attachments = null != attachments ? attachments.Select(a => a.ShallowClone()).ToArray() : Array.Empty<MapAttachment>()
+				attachments = attachments != null ? attachments.Select(a => a.ShallowClone()).ToArray() : Array.Empty<MapAttachment>()
 			};
 
-			// Copy the private lists (they are List<T>, so we can clone contents)
-			copy._stableIds = _stableIds != null ? new List<string>(_stableIds) : new List<string>();
-			//copy._displayNames = _displayNames != null ? new List<string>(_displayNames) : new List<string>();
+			copy._tileEntries = _tileEntries != null
+				? new List<TileEntry>(_tileEntries.Select(e => new TileEntry(e.DisplayName, e.StableId)))
+				: new List<TileEntry>();
 
 			bool cropped = copy.CropToContent();
 
@@ -419,71 +328,9 @@ namespace ClassicTilestorm
 			return copy;
 		}
 
-		/// <summary>
-		/// After deserialization, parse any enriched "[hash]name" entries in table.
-		/// Splits them → populates internal _stableIds, strips prefix from public table.
-		/// Call this immediately after JsonConvert.DeserializeObject<Map>().
-		/// Safe to call multiple times (idempotent).
-		/// </summary>
-		public void NormalizeTableAfterLoad()
-		{
-			if (table == null || table.Length == 0)
-				return;
-
-			// Make sure internal list is at least as long as table
-			while (_stableIds.Count < table.Length)
-				_stableIds.Add(null);
-
-			for (int i = 0; i < table.Length; i++)
-			{
-				string entry = table[i];
-				if (string.IsNullOrWhiteSpace(entry))
-				{
-					table[i] = "tile_empty";
-					_stableIds[i] = null;
-					continue;
-				}
-
-				entry = entry.Trim();
-
-				// Check for [hash] prefix
-				if (entry.StartsWith("[") && entry.Contains("]"))
-				{
-					int closeBracket = entry.IndexOf(']');
-					if (closeBracket > 1) // at least [x]
-					{
-						string hashPart = entry.Substring(1, closeBracket - 1).Trim();
-						string namePart = entry.Substring(closeBracket + 1).Trim();
-
-						// Only accept reasonable-looking hashes (e.g. alphanumeric, 4-12 chars)
-						if (!string.IsNullOrEmpty(hashPart) && hashPart.Length >= 4 && hashPart.All(c => char.IsLetterOrDigit(c) || c == '-'))
-						{
-							_stableIds[i] = hashPart;
-							table[i] = string.IsNullOrEmpty(namePart) ? "tile_empty" : namePart;
-							continue;
-						}
-					}
-				}
-
-				// No valid prefix → treat as plain name
-				_stableIds[i] = null;
-				table[i] = entry;
-			}
-
-			// Trim any excess stable IDs (shouldn't happen, but safety)
-			if (_stableIds.Count > table.Length)
-				_stableIds.RemoveRange(table.Length, _stableIds.Count - table.Length);
-
-			Debug.Log($"Normalized map table: {_stableIds.Count(s => !string.IsNullOrEmpty(s))} entries had hash prefixes");
-		}
-
-		// ─────────────────────────────────────────────────────────────────────
-		// CLEAN, SAFE, RUNTIME-FRIENDLY ATTACHMENT MANAGEMENT
-		// ─────────────────────────────────────────────────────────────────────
 		public void AddAttachment(MapAttachment attachment)
 		{
 			if (attachment == null) return;
-
 			var list = attachments?.ToList() ?? new List<MapAttachment>();
 			list.Add(attachment);
 			attachments = list.ToArray();
@@ -519,11 +366,11 @@ namespace ClassicTilestorm
 			return attachments.Where(a => a.tile == tileIndex).ToArray();
 		}
 
-		// in Map.cs
 		public string GetDefinitionIdAt(int tileIndex)
 		{
-			if (tiles == null || table == null || tileIndex < 0 || tileIndex >= tiles.Length)
+			if (tiles == null || tileIndex < 0 || tileIndex >= tiles.Length)
 				return null;
+
 			int idx = tiles[tileIndex];
 			if (idx < 0 || idx >= table.Length) return null;
 			return table[idx];
@@ -531,7 +378,7 @@ namespace ClassicTilestorm
 
 		public bool SetDefinitionIdAt(int tileIndex, string newDefId)
 		{
-			if (tiles == null || table == null || tileIndex < 0 || tileIndex >= tiles.Length)
+			if (tiles == null || tileIndex < 0 || tileIndex >= tiles.Length)
 				return false;
 
 			int idx = Array.IndexOf(table, newDefId);
@@ -547,12 +394,119 @@ namespace ClassicTilestorm
 			return true;
 		}
 
-		// Atomic fields - ignored during normal serialization - this needs to be removed from here and implemented properly as a utility for the serialiser
 		[JsonIgnore] public Definition[] definitions;
 		[JsonIgnore] public TextureSequence[] textures;
 		[JsonIgnore] public string version = "1.0";
 		[JsonIgnore] public string author = "Player";
-		[JsonIgnore] public string exportedFrom = "ClassicTilestorm"; 
-		//[JsonIgnore] public bool IsAtomic => definitions?.Length > 0 || textures?.Length > 0;
+		[JsonIgnore] public string exportedFrom = "ClassicTilestorm";
+
+		[JsonIgnore]
+		public bool ExportEnrichedTable { get; set; } = false;  // false = normal database mode (hash only)
+	}
+
+	public class MapConverter : JsonConverter
+	{
+		public override bool CanConvert(Type objectType)
+		{
+			return typeof(Map).IsAssignableFrom(objectType);
+		}
+
+		public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+		{
+			if (reader.TokenType == JsonToken.Null) return null;
+
+			var jo = JObject.Load(reader);
+			var map = (Map)(existingValue ?? Activator.CreateInstance(objectType));
+
+			serializer.Populate(jo.CreateReader(), map);
+
+			if (jo["table"] is JArray tableArray && tableArray.Count > 0)
+			{
+				map._tileEntries.Clear();
+
+				foreach (JToken token in tableArray)
+				{
+					string entry = token.Value<string>()?.Trim() ?? "tile_empty";
+					string stableId = null;
+					string displayName = entry;
+
+					if (entry.StartsWith("[", StringComparison.Ordinal) && entry.IndexOf(']') > 0)
+					{
+						int close = entry.IndexOf(']');
+						string hashPart = entry.Substring(1, close - 1).Trim();
+						string namePart = entry.Substring(close + 1).Trim();
+
+						if (!string.IsNullOrEmpty(hashPart))
+						{
+							stableId = hashPart;
+							displayName = string.IsNullOrWhiteSpace(namePart) ? "tile_empty" : namePart;
+						}
+					}
+
+					map._tileEntries.Add(new Map.TileEntry(displayName, stableId));
+				}
+			}
+
+			return map;
+		}
+
+		public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+		{
+			if (value == null)
+			{
+				writer.WriteNull();
+				return;
+			}
+
+			var map = (Map)value;
+
+			writer.WriteStartObject();
+
+			var contract = (JsonObjectContract)serializer.ContractResolver.ResolveContract(typeof(Map));
+			foreach (var prop in contract.Properties)
+			{
+				if (prop.Ignored || prop.PropertyName == "table")
+					continue;
+
+				var propValue = prop.ValueProvider?.GetValue(map);
+				if (propValue == null && serializer.NullValueHandling == NullValueHandling.Ignore)
+					continue;
+
+				writer.WritePropertyName(prop.PropertyName ?? prop.UnderlyingName);
+				serializer.Serialize(writer, propValue);
+			}
+
+			writer.WritePropertyName("table");
+			writer.WriteStartArray();
+
+			if (map._tileEntries != null && map._tileEntries.Count > 0)
+			{
+				foreach (var entry in map._tileEntries)
+				{
+					string output;
+
+					if (map.ExportEnrichedTable)
+					{
+						// Atomic export: [hash]name
+						output = string.IsNullOrEmpty(entry.StableId)
+							? entry.DisplayName
+							: $"[{entry.StableId}]{entry.DisplayName}";
+					}
+					else
+					{
+						// Database save: hash only (no brackets, no name)
+						output = !string.IsNullOrEmpty(entry.StableId)
+							? entry.StableId
+							: entry.DisplayName;
+					}
+
+					writer.WriteValue(output);
+				}
+			}
+
+			writer.WriteEndArray();
+
+			writer.WriteEndObject();
+		}
 	}
 }
