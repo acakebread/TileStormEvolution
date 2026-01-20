@@ -14,7 +14,23 @@ namespace MassiveHadronLtd
 
 		public Color GroundColor { get; set; } = Color.white;
 		public float GroundSize { get; set; } = 2.5f;
-		public float GroundY { get; set; } = -0.02f;
+
+		private float _groundY = -0.02f;
+		public float GroundY
+		{
+			get => _groundY;
+			set
+			{
+				if (Mathf.Approximately(_groundY, value)) return;
+				_groundY = value;
+				if (isInitialized)
+				{
+					RecreateGroundPlane();
+					UpdateActiveModels();   // make sure scene sees the new ground
+				}
+			}
+		}
+
 		public float GroundUVScale { get; set; } = 1f;
 		public Texture2D GroundOverrideTexture { get; set; }
 
@@ -49,7 +65,7 @@ namespace MassiveHadronLtd
 			Scene = new CommandRenderScene();
 			Camera.AssignCommandProvider(Scene);
 
-			CreateGroundPlane();
+			RecreateGroundPlane();              // ← changed name for clarity
 			UpdateRenderTextureSizeIfNeeded();
 		}
 
@@ -121,8 +137,29 @@ namespace MassiveHadronLtd
 			Camera.rotation = rotation;
 		}
 
-		private void CreateGroundPlane()
+		private void RecreateGroundPlane()
 		{
+			// Clean up previous ground if it exists
+			if (GroundModelData != null)
+			{
+				foreach (var inst in GroundModelData.meshInstances)
+				{
+					if (inst.mesh != null && inst.mesh.name.Contains("PreviewGroundMesh"))
+						UnityEngine.Object.DestroyImmediate(inst.mesh);
+
+					if (inst.materials != null)
+					{
+						foreach (var m in inst.materials)
+						{
+							if (m != null && m.name == "PreviewGroundMat")
+								UnityEngine.Object.DestroyImmediate(m);
+						}
+					}
+				}
+				GroundModelData = null;
+			}
+
+			// Create new ground
 			var mesh = MeshUtils.GenerateQuadXZ(GroundSize, GroundUVScale, "PreviewGroundMesh");
 
 			var tex = GroundOverrideTexture != null
@@ -179,7 +216,7 @@ namespace MassiveHadronLtd
 			Scene?.Destroy();
 			Scene = null;
 
-			// Ground cleanup
+			// Ground cleanup (already safe to call multiple times)
 			if (GroundModelData != null)
 			{
 				foreach (var inst in GroundModelData.meshInstances)

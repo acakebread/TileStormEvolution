@@ -4271,7 +4271,7 @@ MonoBehaviour:
   autoRotateSpeed: -15
   groundColor: {r: 1, g: 1, b: 1, a: 1}
   groundSize: 2.5
-  groundY: -0.02
+  groundY: -0.01
   groundUVScale: 1
   groundOverrideTexture: {fileID: 2800000, guid: 9a774c7ec64ff9d4dbd097b7b33f3834, type: 3}
 --- !u!1 &4714438361071147397

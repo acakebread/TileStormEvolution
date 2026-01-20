@@ -518,13 +518,23 @@ namespace ClassicTilestorm
 				if (currentModelData != null)
 				{
 					previewCtrl.SetModel(currentModelData);
+
+					// Keep model at authored position (0,0,0)
+					// Move ground instead, using existing groundY as clearance/sink
+					float lowestY = currentModelData.bounds.min.y;
+					previewCtrl.GroundY = lowestY + groundY;   // e.g. if groundY = -0.02f → ground 2 cm below lowest point
+
 					orbitController.ResetView(true, currentModelData.bounds);
 				}
 				else
 					orbitController.ResetView(false);
 			}
 			else
+			{
+				// When no model, fall back to serialized groundY (your original default)
+				previewCtrl.GroundY = groundY;
 				orbitController.ResetView(false);
+			}
 		}
 
 		private void ApplyCameraTransform()
