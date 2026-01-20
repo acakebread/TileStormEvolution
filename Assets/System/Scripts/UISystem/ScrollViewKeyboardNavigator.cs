@@ -2,6 +2,8 @@
 using UnityEngine.UI;
 using System.Collections.Generic;
 using System.Collections;
+using UnityEngine.EventSystems;
+using TMPro;
 
 namespace MassiveHadronLtd
 {
@@ -34,6 +36,9 @@ namespace MassiveHadronLtd
 			pendingReselectIndex = lastSelectedIndex;
 		}
 
+		// At the top of ScrollViewKeyboardNavigator
+		[SerializeField] private bool disableNavigationWhenInputFieldActive = true;
+
 		private void Update()
 		{
 			CleanupDestroyedItems();
@@ -53,6 +58,58 @@ namespace MassiveHadronLtd
 
 			if (selectables.Count == 0) return;
 
+			// ── Generic: only process keyboard navigation if something inside the scroll view is selected ──
+			var es = EventSystem.current;
+			if (es != null)
+			{
+				var selected = es.currentSelectedGameObject;
+
+				// If nothing is selected → we can decide policy (here: allow list nav if it was used before)
+				if (selected == null)
+				{
+					// Optional: if you never want arrows to do anything until list is clicked
+					// if (lastSelectedIndex < 0) return;
+					// For now we allow it (your original behavior)
+				}
+				else
+				{
+					// Is selected object inside our scroll content hierarchy?
+					bool isInsideScrollView = false;
+					Transform current = selected.transform;
+
+					while (current != null)
+					{
+						if (current == scrollRect.content)
+						{
+							isInsideScrollView = true;
+							break;
+						}
+						current = current.parent;
+					}
+
+					// Also consider the toggles/selectables themselves (in case selection is on toggle)
+					if (!isInsideScrollView)
+					{
+						// Quick check against known list items (optional but faster)
+						foreach (var sel in selectables)
+						{
+							if (sel != null && sel.gameObject == selected)
+							{
+								isInsideScrollView = true;
+								break;
+							}
+						}
+					}
+
+					// If selection is OUTSIDE the scroll view → skip custom keyboard handling
+					if (!isInsideScrollView)
+					{
+						return;
+					}
+				}
+			}
+
+			// If we reach here → either nothing selected or list-related UI is selected → process arrows
 			HandleKeyboardInput();
 			HandleRepeatTimer();
 		}
@@ -127,9 +184,9 @@ namespace MassiveHadronLtd
 
 			int direction = 0;
 
-			if (GetKeyDownWithRepeat(KeyCode.UpArrow) || GetKeyDownWithRepeat(KeyCode.LeftArrow))
+			if (GetKeyDownWithRepeat(KeyCode.UpArrow))
 				direction = -1;
-			else if (GetKeyDownWithRepeat(KeyCode.DownArrow) || GetKeyDownWithRepeat(KeyCode.RightArrow))
+			else if (GetKeyDownWithRepeat(KeyCode.DownArrow))
 				direction = +1;
 			else if (GetKeyDownWithRepeat(KeyCode.PageUp))
 				direction = -CalculatePageStep();
@@ -300,7 +357,6 @@ namespace MassiveHadronLtd
 		private bool AnyNavigationKeyPressed()
 		{
 			return Input.GetKey(KeyCode.UpArrow) || Input.GetKey(KeyCode.DownArrow) ||
-				   Input.GetKey(KeyCode.LeftArrow) || Input.GetKey(KeyCode.RightArrow) ||
 				   Input.GetKey(KeyCode.PageUp) || Input.GetKey(KeyCode.PageDown);
 		}
 	}
