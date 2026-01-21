@@ -59,8 +59,6 @@ namespace ClassicTilestorm
 			if (!Directory.Exists(path)) Directory.CreateDirectory(path);
 		}
 
-		private static string lastLoadedJsonHash = null;
-
 		public static void Initialise(TextAsset jsonAsset)
 		{
 #if UNITY_EDITOR
@@ -77,54 +75,9 @@ namespace ClassicTilestorm
 
 			if (jsonAsset == null) return;
 
-			string currentHash = jsonAsset.text.GetHashCode().ToString(); // cheap hash
-
-			if (ResourceManager.database != null && currentHash == lastLoadedJsonHash)
-			{
-				Debug.Log("Database content didn't change → keeping current in-memory version");
-				return;
-			}
-
 			JsonSetup.Init();
-			ResourceManager.database = null;           // important
+			ResourceManager.database = null;// important
 			ResourceManager.database = LoadDatabase(jsonAsset.text);
-
-			// NEW: Recover real display names from hashes in loaded maps
-			if (ResourceManager.database != null)
-			{
-				foreach (var map in ResourceManager.Maps.Where(m => m != null && m._tileEntries != null))
-				{
-					bool fixedAny = false;
-
-					for (int i = 0; i < map._tileEntries.Count; i++)
-					{
-						var entry = map._tileEntries[i];
-						if (!string.IsNullOrEmpty(entry.StableId) && (string.IsNullOrEmpty(entry.DisplayName) || entry.DisplayName == "tile_empty"))
-						{
-							// Lookup definition by hashid
-							var def = ResourceManager.Definitions.FirstOrDefault(d =>
-								string.Equals(d.hashid, entry.StableId, StringComparison.OrdinalIgnoreCase));
-
-							if (def != null)
-							{
-								map._tileEntries[i] = new Map.TileEntry(def.id, entry.StableId);
-								fixedAny = true;
-							}
-						}
-					}
-
-					if (fixedAny)
-					{
-						// Re-sync public table
-						map.table = map._tileEntries.Select(e => e.DisplayName).ToArray();
-						Debug.Log($"Recovered real names for map '{map.name}': {map._tileEntries.Count(e => !string.IsNullOrEmpty(e.StableId))} entries fixed");
-					}
-				}
-			}
-
-			lastLoadedJsonHash = currentHash;
-
-			Debug.Log("Database loaded (or refreshed)");
 		}
 
 		public static DatabaseData LoadDatabase(string json)
