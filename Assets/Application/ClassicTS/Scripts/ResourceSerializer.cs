@@ -35,12 +35,49 @@ namespace ClassicTilestorm
 
 	public class OrderedContractResolver : DefaultContractResolver
 	{
-		protected override IList<JsonProperty> CreateProperties(Type type, MemberSerialization memberSerialization)
+		protected override IList<JsonProperty> CreateProperties(
+			Type type,
+			MemberSerialization memberSerialization)
 		{
-			// Get properties in the order they are declared in source code
-			return base.CreateProperties(type, memberSerialization)
-				.OrderBy(p => p.Order)  // respect [JsonProperty(Order = N)] if used
-				.ToList();              // preserve source order when Order is not set
+			// Get all properties (public fields + properties)
+			var props = base.CreateProperties(type, memberSerialization);
+
+			// We want:
+			// 1. Properties with explicit [JsonProperty(Order = N)] come first, sorted by that number
+			// 2. Properties without explicit order → sorted by source-code declaration order
+
+			var ordered = props
+				.OrderBy(p =>
+				{
+					// Properties with explicit Order value come first (smaller number = earlier)
+					if (p.Order != null && p.Order != int.MaxValue)
+						return p.Order.Value - 1000000; // large negative = very early
+
+					// For properties without Order → use a stable but unique value
+					// We use reflection to get approximate declaration order
+					return GetDeclarationOrder(type, p.UnderlyingName ?? p.PropertyName);
+				})
+				.ThenBy(p => p.PropertyName) // final alphabetical fallback (only if same order value)
+				.ToList();
+
+			return ordered;
+		}
+
+		private static int GetDeclarationOrder(Type type, string memberName)
+		{
+			// Very simple but effective way: scan members in declaration order
+			const int NotFound = 999999;
+
+			int index = 0;
+			foreach (var member in type.GetMembers(BindingFlags.Public | BindingFlags.Instance))
+			{
+				if (member.Name == memberName)
+					return index;
+				index++;
+			}
+
+			// Fallback — should rarely happen
+			return NotFound;
 		}
 	}
 

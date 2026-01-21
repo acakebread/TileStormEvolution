@@ -25,20 +25,19 @@ namespace ClassicTilestorm
 			}
 		}
 
-		public string name;
-		public string character;
-		public string music;
-		public string skybox;
-		public string button;
-		public int width;
-		public int height;
+		[JsonProperty(Order = 1)] public string name;
+		[JsonProperty(Order = 2)] public string character;
+		[JsonProperty(Order = 3)] public string music;
+		[JsonProperty(Order = 4)] public string skybox;
+		[JsonProperty(Order = 5)] public string button;
 
-		public int[] waypoints;
-
+		[JsonProperty(Order = 10)] public int width;
+		[JsonProperty(Order = 11)] public int height;
 
 		[JsonIgnore]
 		internal List<TileEntry> _tileEntries = new List<TileEntry>();
 
+		[JsonProperty(Order = 20)]
 		public string[] table
 		{
 			get => _tileEntries?.Select(e => e.DisplayName).ToArray() ?? Array.Empty<string>();
@@ -54,10 +53,11 @@ namespace ClassicTilestorm
 			}
 		}
 
-		public int[] tiles;
-		public int[] solve;
+		[JsonProperty(Order = 21)] public int[] tiles;
+		[JsonProperty(Order = 22)] public int[] solve;
+		[JsonProperty(Order = 23)] public int[] waypoints;
 
-		public MapAttachment[] attachments = Array.Empty<MapAttachment>();
+		[JsonProperty(Order = 30)] public MapAttachment[] attachments;
 
 		public void SetTileTypeAtIndex(int index, string displayName, string stableId = null)
 		{
@@ -408,8 +408,6 @@ namespace ClassicTilestorm
 			return true;
 		}
 
-		// Inside class Map { ... }
-
 		/// <summary>
 		/// Adds or gets the table index for a given definition ID, preserving any existing StableId.
 		/// Returns the table index to use in tiles[].
@@ -549,25 +547,34 @@ namespace ClassicTilestorm
 			var contract = (JsonObjectContract)serializer.ContractResolver.ResolveContract(typeof(Map));
 			foreach (var prop in contract.Properties)
 			{
-				if (prop.Ignored || prop.PropertyName == "table") continue;
+				if (prop.Ignored) continue;
+
+				// Skip the backing field
+				if (prop.UnderlyingName == nameof(Map._tileEntries)) continue;
 
 				var propValue = prop.ValueProvider?.GetValue(map);
 				if (propValue == null && serializer.NullValueHandling == NullValueHandling.Ignore) continue;
 
 				writer.WritePropertyName(prop.PropertyName ?? prop.UnderlyingName);
-				serializer.Serialize(writer, propValue);
+
+				if (prop.PropertyName == "table")
+				{
+					writer.WriteStartArray();
+
+					foreach (var entry in map._tileEntries)
+					{
+						string output = GetOutput(entry, true); // always enriched for atomic
+						writer.WriteValue(output);
+					}
+
+					writer.WriteEndArray();
+				}
+				else
+				{
+					serializer.Serialize(writer, propValue);
+				}
 			}
 
-			writer.WritePropertyName("table");
-			writer.WriteStartArray();
-
-			foreach (var entry in map._tileEntries)
-			{
-				string output = GetOutput(entry, true); // always enriched for atomic
-				writer.WriteValue(output);
-			}
-
-			writer.WriteEndArray();
 			writer.WriteEndObject();
 		}
 
@@ -610,25 +617,34 @@ namespace ClassicTilestorm
 			var contract = (JsonObjectContract)serializer.ContractResolver.ResolveContract(typeof(Map));
 			foreach (var prop in contract.Properties)
 			{
-				if (prop.Ignored || prop.PropertyName == "table") continue;
+				if (prop.Ignored) continue;
+
+				// Skip the backing field
+				if (prop.UnderlyingName == nameof(Map._tileEntries)) continue;
 
 				var propValue = prop.ValueProvider?.GetValue(map);
 				if (propValue == null && serializer.NullValueHandling == NullValueHandling.Ignore) continue;
 
 				writer.WritePropertyName(prop.PropertyName ?? prop.UnderlyingName);
-				serializer.Serialize(writer, propValue);
+
+				if (prop.PropertyName == "table")
+				{
+					writer.WriteStartArray();
+
+					foreach (var entry in map._tileEntries)
+					{
+						string output = GetOutput(entry, false); // database mode: [hash] only
+						writer.WriteValue(output);
+					}
+
+					writer.WriteEndArray();
+				}
+				else
+				{
+					serializer.Serialize(writer, propValue);
+				}
 			}
 
-			writer.WritePropertyName("table");
-			writer.WriteStartArray();
-
-			foreach (var entry in map._tileEntries)
-			{
-				string output = GetOutput(entry, false); // database mode: [hash] only
-				writer.WriteValue(output);
-			}
-
-			writer.WriteEndArray();
 			writer.WriteEndObject();
 		}
 
