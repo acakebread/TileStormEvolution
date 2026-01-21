@@ -343,7 +343,6 @@ namespace ClassicTilestorm
 				.Where(ts => usedBanks.Contains(ts.id))
 				.ToArray();
 
-			// Temporarily assign metadata
 			map.definitions = usedDefs;
 			map.textures = usedTextures;
 			map.version = "1.0";
@@ -360,28 +359,7 @@ namespace ClassicTilestorm
 					Converters = { new AtomicMapConverter() }
 				};
 
-				// Serialize normally first (this gives correct map property order)
 				string json = JsonConvert.SerializeObject(map, settings);
-
-				// Now parse it back and insert metadata at the end (before closing })
-				var jo = JObject.Parse(json);
-
-				// Remove any accidentally serialized metadata (they should be ignored anyway, but safe)
-				jo.Remove("definitions");
-				jo.Remove("textures");
-				jo.Remove("version");
-				jo.Remove("author");
-				jo.Remove("exportedFrom");
-
-				// Append them at the end in desired order
-				jo["definitions"] = JArray.FromObject(map.definitions ?? Array.Empty<Definition>());
-				jo["textures"] = JArray.FromObject(map.textures ?? Array.Empty<TextureSequence>());
-				jo["version"] = map.version;
-				jo["author"] = map.author;
-				jo["exportedFrom"] = map.exportedFrom;
-
-				// Re-serialize with correct formatting
-				json = jo.ToString(verbose ? Formatting.Indented : Formatting.None);
 
 				var folder = string.IsNullOrEmpty(filepath) ? Application.persistentDataPath : filepath;
 				EnsureFolder(folder);
