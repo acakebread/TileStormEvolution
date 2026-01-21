@@ -199,16 +199,19 @@ namespace ClassicTilestorm
 		//temporary until switch over complete then move to above version
 		public static Definition GetDefault(string newId = null)
 		{
-			string randomId = MassiveHadronLtd.StringUtil.GenerateAssetId(); // legacy style, or use Guid, etc.
-			string hashId = MassiveHadronLtd.IDs.HTB50.HTB50.EncodeFixed(
-				MassiveHadronLtd.RadixHash.HashToRange(randomId), 6, appendFlavor: false);
+			string legacyId = newId ?? MassiveHadronLtd.StringUtil.GenerateAssetId(); // or Guid.NewGuid().ToString("N"), etc.
+
+			// Compute stable hashid using Int64 path
+			long hashValue = RadixHash.HashToRange64(legacyId, HTB50Settings.Modulus);
+			string stableHashId = HTB50.EncodeFixed(hashValue, HTB50Settings.FixedLength, appendFlavor: false);
 
 			return new Definition
 			{
-				id = newId ?? randomId,
+				id = legacyId,
+				hashid = stableHashId,
 				model = "tile_flat",
 				texture = "Default",
-				hashid = hashId
+				// flags, connections, etc. = default/empty
 			};
 		}
 
@@ -224,22 +227,36 @@ namespace ClassicTilestorm
 
 			if (!string.IsNullOrEmpty(id))
 			{
-				// Use RadixHash + HTB50
-				var modulus = BigInteger.Pow(HTB50.Radix, 6);
-				var hash = RadixHash.HashToRange(id, modulus);
-				return HTB50.EncodeFixed(hash, 6, appendFlavor: false);
+				// Preferred path: use the Int64 overload (faster, no BigInteger)
+				long hash64 = RadixHash.HashToRange64(id, HTB50Settings.Modulus);
+				return HTB50.EncodeFixed(hash64, HTB50Settings.FixedLength, appendFlavor: false);
 			}
 
-			// Last resort: random HTB50 ID of length 6
-			Debug.LogWarning($"Definition has no id or hashid — generating random stable ID.");
+			// Fallback: generate random in range using Int64 path
+			Debug.LogWarning("Definition has no id or hashid — generating random stable ID.");
 
-			// Option A: use RadixHash + HTB50 (recommended for consistency)
-			var mod6 = BigInteger.Pow(HTB50.Radix, 6);
-			var randValue = RadixHash.GenerateRandomInRange(mod6);
-			return HTB50.EncodeFixed(randValue, 6, appendFlavor: false, padChar: '0');
+			long random64 = RadixHash.GenerateRandomInRange64(HTB50Settings.Modulus);
+			return HTB50.EncodeFixed(random64, HTB50Settings.FixedLength, appendFlavor: false, padChar: '0');
+		}
 
-			// Option B: if you prefer the old convenience method feel free to add it back to HTB50
-			// return HTB50.GenerateRandomId(6, false, '0');   // ← if you re-add it
+		public static string GenerateUniqueStableId(string input, HashSet<string> existingIds)
+		{
+			long hash64 = RadixHash.HashToRange64(input, HTB50Settings.Modulus);
+			string candidate = HTB50.EncodeFixed(hash64, HTB50Settings.FixedLength, appendFlavor: false);
+
+			if (!existingIds.Contains(candidate))
+				return candidate;
+
+			// Extremely rare fallback — salt and retry once
+			Debug.LogWarning($"Very rare collision on input '{input}' — retrying with salt");
+			return GenerateUniqueStableId(input + "_s", existingIds);
+		}
+
+		public static class HTB50Settings
+		{
+			public const int Radix = 50;
+			public const int FixedLength = 6;
+			public const long Modulus = 15625000000L;  // 50^6 — keep as literal so it's obvious
 		}
 	}
 
