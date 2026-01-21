@@ -42,34 +42,35 @@ namespace ClassicTilestorm
 
 		// ── DEFINITION CREATION WITH OPTIONAL UNIQUENESS CHECK ────────────────
 		public static Definition CreateDefinition(
-			string legacyId = null,
+			string name = null,
 			string model = "tile_flat",
 			string texture = "Default",
 			bool ensureUniqueHash = false)  // ← default false = fast & safe enough
 		{
-			string id = legacyId ?? MassiveHadronLtd.StringUtil.GenerateAssetId();
-
 			var def = new Definition
 			{
-				id = id,
+				id = name ?? StringUtil.GenerateAssetId(),
 				model = model,
 				texture = texture
 			};
+
+			long random64 = RadixHash.GenerateRandomInRange64(Definition.HTB50Settings.Modulus);
+			var hashid = HTB50.EncodeFixed(random64, Definition.HTB50Settings.FixedLength, appendFlavor: false, padChar: '0');
 
 			if (ensureUniqueHash)
 			{
 				var existing = new HashSet<string>(
 					Definitions.Where(d => !string.IsNullOrEmpty(d.hashid))
-							   .Select(d => d.hashid),
+								.Select(d => d.hashid),
 					StringComparer.Ordinal
 				);
 
-				def.hashid = Definition.GenerateUniqueStableId(id, existing);
+				def.hashid = Definition.GenerateUniqueStableId(hashid, existing);
 			}
 			else
 			{
 				// Fast deterministic path (recommended default)
-				long hashValue = RadixHash.HashToRange64(id, Definition.HTB50Settings.Modulus);
+				long hashValue = RadixHash.HashToRange64(hashid, Definition.HTB50Settings.Modulus);
 				def.hashid = HTB50.EncodeFixed(hashValue, Definition.HTB50Settings.FixedLength, appendFlavor: false);
 			}
 

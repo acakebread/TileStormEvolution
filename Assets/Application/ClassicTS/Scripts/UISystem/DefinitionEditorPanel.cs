@@ -653,7 +653,8 @@ namespace ClassicTilestorm
 			if (ResourceManager.database == null) return;
 
 			string newId = ResourceManager.GenerateUniqueNewDefinitionId();
-			var def = Definition.GetDefault(newId);
+			//var def = Definition.GetDefault(newId);
+			var def = ResourceManager.CreateDefinition(newId);
 
 			int insertIndex = lastSelectedDefinitionIndex >= 0 ? lastSelectedDefinitionIndex + 1 : 0;
 			ResourceManager.InsertDefinitionAt(insertIndex, def);
