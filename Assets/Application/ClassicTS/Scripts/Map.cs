@@ -418,21 +418,22 @@ namespace ClassicTilestorm
 				string stableId = null;
 				string displayName = entry;  // default to full entry
 
-				if (entry.StartsWith("[", StringComparison.Ordinal) && entry.EndsWith("]"))
+				if (entry.StartsWith("[", StringComparison.Ordinal))
 				{
-					string inside = entry.Substring(1, entry.Length - 2).Trim();
-
-					// Take everything before first comma as hash (future-proof for options)
-					int commaIndex = inside.IndexOf(',');
-					string hashPart = (commaIndex >= 0 ? inside.Substring(0, commaIndex) : inside).Trim();
-					string rest = (commaIndex >= 0 ? inside.Substring(commaIndex + 1) : "").Trim();
-
-					if (!string.IsNullOrEmpty(hashPart))
+					int close = entry.IndexOf(']', 1);
+					if (close > 1)  // found a closing bracket
 					{
-						stableId = hashPart;
+						string hashAndOptions = entry.Substring(1, close - 1).Trim();
+						string namePart = (close + 1 < entry.Length) ? entry.Substring(close + 1).Trim() : "";
 
-						// If there's name part after ], use it; else leave as placeholder
-						displayName = string.IsNullOrWhiteSpace(rest) ? "PENDING_ID" : rest;
+						// Take hash as first part before any comma (for future overrides)
+						string hashPart = hashAndOptions.Split(',')[0].Trim();
+
+						if (!string.IsNullOrEmpty(hashPart))
+						{
+							stableId = hashPart;
+							displayName = string.IsNullOrWhiteSpace(namePart) ? "PENDING_ID" : namePart;
+						}
 					}
 				}
 
