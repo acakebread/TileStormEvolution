@@ -23,7 +23,6 @@ namespace ClassicTilestorm
 			{
 				Converters = { new MapAttachmentConverter() },
 				NullValueHandling = NullValueHandling.Ignore,
-				// ContractResolver = new OrderedContractResolver()  ← removed, no longer needed
 			};
 
 			JsonConvert.DefaultSettings = () => settings;
@@ -359,16 +358,14 @@ namespace ClassicTilestorm
 					Converters = { new AtomicMapConverter() }
 				};
 
+
 				string json = JsonConvert.SerializeObject(map, settings);
 
 				var folder = string.IsNullOrEmpty(filepath) ? Application.persistentDataPath : filepath;
 				EnsureFolder(folder);
 				string path = Path.Combine(folder, $"{map.name}.json");
 
-				// 🔒 SAFE reorder pass
-				var reordered = ReorderMapJson(JObject.Parse(json));
-
-				File.WriteAllText(path, reordered.ToString(verbose ? Formatting.Indented : Formatting.None));
+				File.WriteAllText(path, json);
 				Debug.Log($"ATOMIC MAP EXPORTED (auto-cropped) → {path} ({map.width}x{map.height})");
 			}
 			finally
@@ -393,56 +390,6 @@ namespace ClassicTilestorm
 				}
 				return property;
 			}
-		}
-
-		static JObject ReorderMapJson(JObject src)
-		{
-			string[] orderedKeys =
-			{
-				"name",
-				"character",
-				"music",
-				"skybox",
-				"button",
-
-				"width",
-				"height",
-
-				"table",
-				"tiles",
-				"solve",
-				"waypoints",
-				"attachments",
-
-				// atomic-only fields LAST
-				"definitions",
-				"textures",
-				"version",
-				"author",
-				"exportedFrom"
-			};
-
-			var dst = new JObject();
-
-			// Add known keys in desired order
-			foreach (var key in orderedKeys)
-			{
-				if (src.TryGetValue(key, out JToken token))
-				{
-					dst.Add(key, token);
-				}
-			}
-
-			// Add any remaining properties (future-proof)
-			foreach (var prop in src.Properties())
-			{
-				if (dst.Property(prop.Name) == null)
-				{
-					dst.Add(prop.Name, prop.Value);
-				}
-			}
-
-			return dst;
 		}
 	}
 }

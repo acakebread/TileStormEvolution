@@ -1,4 +1,6 @@
-using System;
+﻿using System;
+using System.Linq;
+using System.Collections.Generic;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
@@ -7,7 +9,18 @@ namespace ClassicTilestorm
 {
 	public abstract class MapConverterBase : JsonConverter
 	{
-		public override bool CanConvert(Type objectType) => typeof(Map).IsAssignableFrom(objectType);
+		public override bool CanConvert(Type objectType)
+			=> typeof(Map).IsAssignableFrom(objectType);
+
+		protected static IEnumerable<JsonProperty> OrderedProperties(JsonSerializer serializer)
+		{
+			var contract = (JsonObjectContract)
+				serializer.ContractResolver.ResolveContract(typeof(Map));
+
+			return contract.Properties
+				.Where(p => !p.Ignored)
+				.OrderBy(p => p.Order ?? int.MaxValue);
+		}
 
 		protected void ParseTable(Map map, JArray tableArray)
 		{
@@ -17,54 +30,40 @@ namespace ClassicTilestorm
 			{
 				string entry = token.Value<string>()?.Trim() ?? "tile_empty";
 				string stableId = null;
-				string displayName = entry;  // default to full entry
+				string displayName = entry;
 
 				if (entry.StartsWith("[", StringComparison.Ordinal))
 				{
 					int close = entry.IndexOf(']', 1);
-					if (close > 1)  // found a closing bracket
+					if (close > 1)
 					{
-						string hashAndOptions = entry.Substring(1, close - 1).Trim();
-						string namePart = (close + 1 < entry.Length) ? entry.Substring(close + 1).Trim() : "";
+						string hash = entry.Substring(1, close - 1).Trim();
+						string rest = entry.Substring(close + 1).Trim();
 
-						// Take hash as first part before any comma (for future overrides)
-						string hashPart = hashAndOptions.Split(',')[0].Trim();
-
-						if (!string.IsNullOrEmpty(hashPart))
-						{
-							stableId = hashPart;
-							displayName = string.IsNullOrWhiteSpace(namePart) ? "PENDING_ID" : namePart;
-						}
+						stableId = hash;
+						displayName = string.IsNullOrEmpty(rest) ? "PENDING_ID" : rest;
 					}
 				}
 
 				map._tileEntries.Add(new Map.TileEntry(displayName, stableId));
 			}
 		}
-
-		protected virtual string ProcessRest(string rest)
-		{
-			return string.IsNullOrWhiteSpace(rest) ? "tile_empty" : rest;
-		}
-
-		protected abstract string GetOutput(Map.TileEntry entry, bool enriched);
 	}
 
+	// ─────────────────────────────────────────────
+	// ATOMIC MAP CONVERTER
+	// ─────────────────────────────────────────────
 	public class AtomicMapConverter : MapConverterBase
 	{
-		public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+		public override object ReadJson(JsonReader reader, Type type, object existingValue, JsonSerializer serializer)
 		{
-			if (reader.TokenType == JsonToken.Null) return null;
-
 			var jo = JObject.Load(reader);
-			var map = (Map)(existingValue ?? Activator.CreateInstance(objectType));
+			var map = new Map();
 
 			serializer.Populate(jo.CreateReader(), map);
 
-			if (jo["table"] is JArray tableArray && tableArray.Count > 0)
-			{
-				ParseTable(map, tableArray);
-			}
+			if (jo["table"] is JArray table)
+				ParseTable(map, table);
 
 			return map;
 		}
@@ -72,31 +71,29 @@ namespace ClassicTilestorm
 		public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
 		{
 			var map = (Map)value;
+
 			writer.WriteStartObject();
 
-			var contract = (JsonObjectContract)serializer.ContractResolver.ResolveContract(typeof(Map));
-			foreach (var prop in contract.Properties)
+			foreach (var prop in OrderedProperties(serializer))
 			{
-				if (prop.Ignored) continue;
-
-				// Skip the backing field
 				if (prop.UnderlyingName == nameof(Map._tileEntries)) continue;
 
-				var propValue = prop.ValueProvider?.GetValue(map);
-				if (propValue == null && serializer.NullValueHandling == NullValueHandling.Ignore) continue;
+				var propValue = prop.ValueProvider.GetValue(map);
+				if (propValue == null && serializer.NullValueHandling == NullValueHandling.Ignore)
+					continue;
 
-				writer.WritePropertyName(prop.PropertyName ?? prop.UnderlyingName);
+				writer.WritePropertyName(prop.PropertyName);
 
 				if (prop.PropertyName == "table")
 				{
 					writer.WriteStartArray();
-
-					foreach (var entry in map._tileEntries)
+					foreach (var e in map._tileEntries)
 					{
-						string output = GetOutput(entry, true); // always enriched for atomic
-						writer.WriteValue(output);
+						writer.WriteValue(
+							!string.IsNullOrEmpty(e.StableId)
+								? $"[{e.StableId}]{e.DisplayName}"
+								: e.DisplayName);
 					}
-
 					writer.WriteEndArray();
 				}
 				else
@@ -106,35 +103,32 @@ namespace ClassicTilestorm
 			}
 
 			writer.WriteEndObject();
-		}
-
-		protected override string GetOutput(Map.TileEntry entry, bool enriched)
-		{
-			// Atomic mode: ALWAYS include name if StableId exists
-			if (!string.IsNullOrEmpty(entry.StableId))
-			{
-				return $"[{entry.StableId}]{entry.DisplayName}";
-			}
-
-			return entry.DisplayName;
 		}
 	}
 
+	// ─────────────────────────────────────────────
+	// DATABASE MAP CONVERTER
+	// ─────────────────────────────────────────────
 	public class DatabaseMapConverter : MapConverterBase
 	{
-		public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+		static readonly HashSet<string> SuppressedAtomicFields = new()
 		{
-			if (reader.TokenType == JsonToken.Null) return null;
+			"definitions",
+			"textures",
+			"version",
+			"author",
+			"exportedFrom"
+		};
 
+		public override object ReadJson(JsonReader reader, Type type, object existingValue, JsonSerializer serializer)
+		{
 			var jo = JObject.Load(reader);
-			var map = (Map)(existingValue ?? Activator.CreateInstance(objectType));
+			var map = new Map();
 
 			serializer.Populate(jo.CreateReader(), map);
 
-			if (jo["table"] is JArray tableArray && tableArray.Count > 0)
-			{
-				ParseTable(map, tableArray);
-			}
+			if (jo["table"] is JArray table)
+				ParseTable(map, table);
 
 			return map;
 		}
@@ -142,31 +136,30 @@ namespace ClassicTilestorm
 		public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
 		{
 			var map = (Map)value;
+
 			writer.WriteStartObject();
 
-			var contract = (JsonObjectContract)serializer.ContractResolver.ResolveContract(typeof(Map));
-			foreach (var prop in contract.Properties)
+			foreach (var prop in OrderedProperties(serializer))
 			{
-				if (prop.Ignored) continue;
-
-				// Skip the backing field
+				if (SuppressedAtomicFields.Contains(prop.PropertyName)) continue;
 				if (prop.UnderlyingName == nameof(Map._tileEntries)) continue;
 
-				var propValue = prop.ValueProvider?.GetValue(map);
-				if (propValue == null && serializer.NullValueHandling == NullValueHandling.Ignore) continue;
+				var propValue = prop.ValueProvider.GetValue(map);
+				if (propValue == null && serializer.NullValueHandling == NullValueHandling.Ignore)
+					continue;
 
-				writer.WritePropertyName(prop.PropertyName ?? prop.UnderlyingName);
+				writer.WritePropertyName(prop.PropertyName);
 
 				if (prop.PropertyName == "table")
 				{
 					writer.WriteStartArray();
-
-					foreach (var entry in map._tileEntries)
+					foreach (var e in map._tileEntries)
 					{
-						string output = GetOutput(entry, false); // database mode: [hash] only
-						writer.WriteValue(output);
+						writer.WriteValue(
+							!string.IsNullOrEmpty(e.StableId)
+								? $"[{e.StableId}]"
+								: e.DisplayName);
 					}
-
 					writer.WriteEndArray();
 				}
 				else
@@ -176,18 +169,6 @@ namespace ClassicTilestorm
 			}
 
 			writer.WriteEndObject();
-		}
-
-		protected override string GetOutput(Map.TileEntry entry, bool enriched)
-		{
-			return !string.IsNullOrEmpty(entry.StableId)
-				? $"[{entry.StableId}]"
-				: entry.DisplayName;
-		}
-
-		protected override string ProcessRest(string rest)
-		{
-			return "tile_empty"; // no name in database mode
 		}
 	}
 }

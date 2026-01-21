@@ -24,15 +24,24 @@ namespace ClassicTilestorm
 			}
 		}
 
+		// ─────────────────────────────────────────────
+		// Core identity
+		// ─────────────────────────────────────────────
 		[JsonProperty(Order = 1)] public string name;
 		[JsonProperty(Order = 2)] public string character;
 		[JsonProperty(Order = 3)] public string music;
 		[JsonProperty(Order = 4)] public string skybox;
 		[JsonProperty(Order = 5)] public string button;
 
+		// ─────────────────────────────────────────────
+		// Dimensions
+		// ─────────────────────────────────────────────
 		[JsonProperty(Order = 10)] public int width;
 		[JsonProperty(Order = 11)] public int height;
 
+		// ─────────────────────────────────────────────
+		// Tile table backing store
+		// ─────────────────────────────────────────────
 		[JsonIgnore]
 		internal List<TileEntry> _tileEntries = new List<TileEntry>();
 
@@ -40,15 +49,12 @@ namespace ClassicTilestorm
 		public string[] table
 		{
 			get => _tileEntries?.Select(e => e.DisplayName).ToArray() ?? Array.Empty<string>();
-
 			set
 			{
 				_tileEntries.Clear();
-				if (value != null)
-				{
-					foreach (string name in value)
-						_tileEntries.Add(new TileEntry(name));
-				}
+				if (value == null) return;
+				foreach (string name in value)
+					_tileEntries.Add(new TileEntry(name));
 			}
 		}
 
@@ -58,39 +64,18 @@ namespace ClassicTilestorm
 
 		[JsonProperty(Order = 30)] public MapAttachment[] attachments;
 
-		//atomic map properties only
-		[JsonIgnore] public Definition[] definitions;
-		[JsonIgnore] public TextureSequence[] textures;
-		[JsonIgnore] public string version = "1.0";
-		[JsonIgnore] public string author = "Player";
-		[JsonIgnore] public string exportedFrom = "ClassicTilestorm";
+		// ─────────────────────────────────────────────
+		// ATOMIC-ONLY FIELDS (ORDERED, NOT IGNORED)
+		// ─────────────────────────────────────────────
+		[JsonProperty(Order = 100)] public Definition[] definitions;
+		[JsonProperty(Order = 101)] public TextureSequence[] textures;
+		[JsonProperty(Order = 102)] public string version = "1.0";
+		[JsonProperty(Order = 103)] public string author = "Player";
+		[JsonProperty(Order = 104)] public string exportedFrom = "ClassicTilestorm";
 
-		public void SetTileTypeAtIndex(int index, string displayName, string stableId = null)
-		{
-			while (_tileEntries.Count <= index)
-			{
-				_tileEntries.Add(new TileEntry("tile_empty"));
-			}
-
-			var existing = _tileEntries[index];
-
-			// ────────────────────────────────────────────────
-			// Preserve existing StableId unless explicitly given a new one
-			// ────────────────────────────────────────────────
-			string finalStableId = stableId;
-
-			if (string.IsNullOrEmpty(finalStableId) && !string.IsNullOrEmpty(existing.StableId))
-			{
-				// Reuse previously known stable ID for this display name
-				finalStableId = existing.StableId;
-			}
-
-			// Optional: you could also cross-check that displayName matches if you want to be strict
-			// if (!string.IsNullOrEmpty(finalStableId) && existing.DisplayName != displayName) { ... warning ... }
-
-			_tileEntries[index] = new TileEntry(displayName ?? "tile_empty", finalStableId);
-		}
-
+		// ─────────────────────────────────────────────
+		// Conditional serialization
+		// ─────────────────────────────────────────────
 		public bool ShouldSerializeskybox() => !string.IsNullOrEmpty(skybox);
 		public bool ShouldSerializesolve() => solve != null && solve.Length > 0;
 		public bool ShouldSerializewaypoints() => waypoints != null && waypoints.Length > 0;
