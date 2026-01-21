@@ -7,6 +7,9 @@ using Newtonsoft.Json.Serialization;
 using System.Reflection;
 using System;
 using UnityEditor;
+using MassiveHadronLtd;
+using MassiveHadronLtd.IDs.HTB50;
+using System.Collections.Generic;
 
 namespace ClassicTilestorm
 {
@@ -154,6 +157,103 @@ namespace ClassicTilestorm
 						Debug.Log($"Fixed up '{map.name}': {map._tileEntries.Count(e => !string.IsNullOrEmpty(e.StableId))} hashes");
 					}
 				}
+
+
+				// ────────────────────────────────────────────────────────────────
+				// PHASE 2: Migrate legacy DisplayName-only entries to use StableId
+				//          Also ensure every Definition has a deterministic hashid
+				// ────────────────────────────────────────────────────────────────
+
+				bool anyDefinitionChanged = false;
+				var existingStableIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+				// 1. First pass: collect already-known stable IDs + assign missing hashids to definitions
+				foreach (var def in data.definitions.Where(d => d != null))
+				{
+					if (string.IsNullOrEmpty(def.hashid))
+					{
+						def.hashid = def.GetStableId();           // uses .id if available → deterministic
+						anyDefinitionChanged = true;
+					}
+
+					if (!string.IsNullOrEmpty(def.hashid))
+					{
+						existingStableIds.Add(def.hashid);
+					}
+				}
+
+				// Log how many definitions got a new stable ID
+				if (anyDefinitionChanged)
+				{
+					Debug.Log($"Assigned missing hashid to {data.definitions.Count(d => !string.IsNullOrEmpty(d.hashid))} definitions");
+				}
+
+				// 2. Second pass: update maps that still have entries without StableId
+				int totalEntriesUpdated = 0;
+				int mapsTouched = 0;
+
+				foreach (var map in data.maps.Where(m => m != null && m._tileEntries != null))
+				{
+					bool mapChanged = false;
+
+					for (int i = 0; i < map._tileEntries.Count; i++)
+					{
+						var entry = map._tileEntries[i];
+
+						// Already has stable ID → skip
+						if (!string.IsNullOrEmpty(entry.StableId))
+							continue;
+
+						// No DisplayName either → probably empty tile, leave alone
+						if (string.IsNullOrEmpty(entry.DisplayName))
+							continue;
+
+						string legacyId = entry.DisplayName;
+
+						// Try to find matching definition by legacy .id
+						var matchingDef = data.definitions.FirstOrDefault(d =>
+							string.Equals(d.id, legacyId, StringComparison.OrdinalIgnoreCase));
+
+						string stableToUse;
+
+						if (matchingDef != null)
+						{
+							// Use the (now guaranteed) hashid from definition
+							stableToUse = matchingDef.hashid;
+						}
+						else
+						{
+							// No definition exists → generate deterministic stable ID from legacy name
+							// (and log warning — this case should become rare over time)
+							long hash64 = RadixHash.HashToRange64(legacyId, Definition.HTB50Settings.Modulus);
+							stableToUse = HTB50.EncodeFixed(hash64, Definition.HTB50Settings.FixedLength, appendFlavor: false);
+
+							Debug.LogWarning($"No definition found for legacy id '{legacyId}' in map '{map.name}' index {i} — generated stable ID: {stableToUse}");
+						}
+
+						// Only mutate if needed (idempotent)
+						if (string.IsNullOrEmpty(entry.StableId) || entry.StableId != stableToUse)
+						{
+							// Preserve DisplayName, set/update StableId
+							map._tileEntries[i] = new Map.TileEntry(entry.DisplayName, stableToUse);
+							mapChanged = true;
+							totalEntriesUpdated++;
+						}
+					}
+
+					if (mapChanged)
+					{
+						mapsTouched++;
+						// table is a getter → no need to touch it
+						Debug.Log($"Migrated {map._tileEntries.Count(e => !string.IsNullOrEmpty(e.StableId))} entries to StableId in map '{map.name}'");
+					}
+				}
+
+				if (totalEntriesUpdated > 0 || anyDefinitionChanged)
+				{
+					Debug.Log($"Database migration summary: updated {totalEntriesUpdated} tile entries across {mapsTouched} maps + {data.definitions.Count(d => !string.IsNullOrEmpty(d.hashid))} definitions now have hashid");
+				}
+
 
 				return data;
 			}
