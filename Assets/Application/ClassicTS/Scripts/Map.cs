@@ -58,6 +58,13 @@ namespace ClassicTilestorm
 
 		[JsonProperty(Order = 30)] public MapAttachment[] attachments;
 
+		//atomic map properties only
+		[JsonIgnore] public Definition[] definitions;
+		[JsonIgnore] public TextureSequence[] textures;
+		[JsonIgnore] public string version = "1.0";
+		[JsonIgnore] public string author = "Player";
+		[JsonIgnore] public string exportedFrom = "ClassicTilestorm";
+
 		public void SetTileTypeAtIndex(int index, string displayName, string stableId = null)
 		{
 			while (_tileEntries.Count <= index)
@@ -463,14 +470,5 @@ namespace ClassicTilestorm
 			_tileEntries.Add(new TileEntry(displayName, stableId));
 			return _tileEntries.Count - 1;
 		}
-
-		[JsonIgnore] public Definition[] definitions;
-		[JsonIgnore] public TextureSequence[] textures;
-		[JsonIgnore] public string version = "1.0";
-		[JsonIgnore] public string author = "Player";
-		[JsonIgnore] public string exportedFrom = "ClassicTilestorm";
-
-		[JsonIgnore]
-		public bool ExportEnrichedTable { get; set; } = false;  // false = normal database mode (hash only)
 	}
 }

@@ -395,7 +395,6 @@ namespace ClassicTilestorm
 			}
 		}
 
-
 		static JObject ReorderMapJson(JObject src)
 		{
 			string[] orderedKeys =
