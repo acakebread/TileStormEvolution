@@ -62,9 +62,27 @@ namespace ClassicTilestorm
 		public void SetTileTypeAtIndex(int index, string displayName, string stableId = null)
 		{
 			while (_tileEntries.Count <= index)
+			{
 				_tileEntries.Add(new TileEntry("tile_empty"));
+			}
 
-			_tileEntries[index] = new TileEntry(displayName ?? "tile_empty", stableId);
+			var existing = _tileEntries[index];
+
+			// ────────────────────────────────────────────────
+			// Preserve existing StableId unless explicitly given a new one
+			// ────────────────────────────────────────────────
+			string finalStableId = stableId;
+
+			if (string.IsNullOrEmpty(finalStableId) && !string.IsNullOrEmpty(existing.StableId))
+			{
+				// Reuse previously known stable ID for this display name
+				finalStableId = existing.StableId;
+			}
+
+			// Optional: you could also cross-check that displayName matches if you want to be strict
+			// if (!string.IsNullOrEmpty(finalStableId) && existing.DisplayName != displayName) { ... warning ... }
+
+			_tileEntries[index] = new TileEntry(displayName ?? "tile_empty", finalStableId);
 		}
 
 		public bool ShouldSerializeskybox() => !string.IsNullOrEmpty(skybox);
@@ -83,17 +101,18 @@ namespace ClassicTilestorm
 
 		public bool Consolidate()
 		{
-			if (tiles == null || tiles.Length == 0)
-				return false;
+			if (tiles == null || tiles.Length == 0) return false;
 
-			var nameToStable = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-			for (int i = 0; i < _tileEntries.Count; i++)
+			// Keep a map of name → best known stableId
+			var nameToStable = new Dictionary<string, string>(StringComparer.Ordinal);
+
+			foreach (var entry in _tileEntries)
 			{
-				var entry = _tileEntries[i];
-				if (!string.IsNullOrEmpty(entry.DisplayName) && !string.IsNullOrEmpty(entry.StableId))
+				if (!string.IsNullOrEmpty(entry.DisplayName) &&
+					!string.IsNullOrEmpty(entry.StableId) &&
+					!nameToStable.ContainsKey(entry.DisplayName))
 				{
-					if (!nameToStable.ContainsKey(entry.DisplayName))
-						nameToStable[entry.DisplayName] = entry.StableId;
+					nameToStable[entry.DisplayName] = entry.StableId;
 				}
 			}
 
@@ -107,7 +126,7 @@ namespace ClassicTilestorm
 
 			if (changed)
 			{
-				var newEntries = new List<TileEntry>(newFrequencyTable.Length);
+				var newEntries = new List<TileEntry>();
 				foreach (string name in newFrequencyTable)
 				{
 					nameToStable.TryGetValue(name, out string stable);
@@ -116,21 +135,15 @@ namespace ClassicTilestorm
 				_tileEntries = newEntries;
 			}
 
-			if (changed || tiles.Length != mapDefinitions.Length)
+			// Rebuild tiles array with new indices
+			if (changed)
 			{
-				tiles = new int[mapDefinitions.Length];
-				for (int i = 0; i < mapDefinitions.Length; i++)
-				{
-					string name = mapDefinitions[i];
-					int newIndex = Array.IndexOf(table, name);
-					tiles[i] = newIndex != -1 ? newIndex : -1;
-				}
+				tiles = mapDefinitions.Select(name => Array.IndexOf(table, name)).ToArray();
 			}
 
-			if (changed) Debug.Log($"{name} consolidated");
+			if (changed) Debug.Log($"{name} consolidated (stable IDs preserved where known)");
 			return changed;
 		}
-
 		public bool Resize(int newWidth, int newHeight, Anchor anchor = Anchor.Center)
 		{
 			if (newWidth <= 0 || newHeight <= 0) return false;
@@ -392,6 +405,65 @@ namespace ClassicTilestorm
 
 			tiles[tileIndex] = idx;
 			return true;
+		}
+
+		// Inside class Map { ... }
+
+		/// <summary>
+		/// Adds or gets the table index for a given definition ID, preserving any existing StableId.
+		/// Returns the table index to use in tiles[].
+		/// If the type is new and a stableId is provided, it will be stored.
+		/// </summary>
+		/// <param name="displayName">The definition ID / name (e.g. "tile_grass")</param>
+		/// <param name="stableId">Optional: stable hash to assign if this is new or missing</param>
+		/// <returns>Index in table / _tileEntries to use for this tile type</returns>
+		public int GetOrAddTileType(string displayName, string stableId = null)
+		{
+			if (string.IsNullOrEmpty(displayName))
+				displayName = "tile_empty";
+
+			// Already exists?
+			int existingIndex = Array.IndexOf(table, displayName);
+			if (existingIndex >= 0)
+			{
+				// Opportunity to fill in missing StableId
+				var entry = _tileEntries[existingIndex];
+				if (string.IsNullOrEmpty(entry.StableId) && !string.IsNullOrEmpty(stableId))
+				{
+					_tileEntries[existingIndex] = new TileEntry(displayName, stableId);
+					// Note: table[] doesn't change — no need to reassign
+					Debug.Log($"Filled missing StableId [{stableId}] for existing type '{displayName}'");
+				}
+				return existingIndex;
+			}
+
+			// New type → append to _tileEntries (preferred over manipulating table directly)
+			var newEntry = new TileEntry(displayName, stableId);
+			_tileEntries.Add(newEntry);
+
+			// table is auto-derived — no need to set it manually anymore
+			return _tileEntries.Count - 1;
+		}
+
+		/// <summary>
+		/// Variant that forces update of StableId even if type already exists
+		/// (use only when you intentionally want to change/assign it)
+		/// </summary>
+		public int GetOrAddTileTypeForceStableId(string displayName, string stableId)
+		{
+			if (string.IsNullOrEmpty(displayName))
+				displayName = "tile_empty";
+
+			int idx = Array.IndexOf(table, displayName);
+			if (idx >= 0)
+			{
+				// Force update
+				_tileEntries[idx] = new TileEntry(displayName, stableId);
+				return idx;
+			}
+
+			_tileEntries.Add(new TileEntry(displayName, stableId));
+			return _tileEntries.Count - 1;
 		}
 
 		[JsonIgnore] public Definition[] definitions;
