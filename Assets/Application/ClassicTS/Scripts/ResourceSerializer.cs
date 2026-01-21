@@ -122,10 +122,76 @@ namespace ClassicTilestorm
 			ResourceManager.database = null;           // important
 			ResourceManager.database = LoadDatabase(jsonAsset.text);
 
+			// NEW: Recover real display names from hashes in loaded maps
+			if (ResourceManager.database != null)
+			{
+				foreach (var map in ResourceManager.Maps.Where(m => m != null && m._tileEntries != null))
+				{
+					bool fixedAny = false;
+
+					for (int i = 0; i < map._tileEntries.Count; i++)
+					{
+						var entry = map._tileEntries[i];
+						if (!string.IsNullOrEmpty(entry.StableId) && (string.IsNullOrEmpty(entry.DisplayName) || entry.DisplayName == "tile_empty"))
+						{
+							// Lookup definition by hashid
+							var def = ResourceManager.Definitions.FirstOrDefault(d =>
+								string.Equals(d.hashid, entry.StableId, StringComparison.OrdinalIgnoreCase));
+
+							if (def != null)
+							{
+								map._tileEntries[i] = new Map.TileEntry(def.id, entry.StableId);
+								fixedAny = true;
+							}
+						}
+					}
+
+					if (fixedAny)
+					{
+						// Re-sync public table
+						map.table = map._tileEntries.Select(e => e.DisplayName).ToArray();
+						Debug.Log($"Recovered real names for map '{map.name}': {map._tileEntries.Count(e => !string.IsNullOrEmpty(e.StableId))} entries fixed");
+					}
+				}
+			}
+
 			lastLoadedJsonHash = currentHash;
 
 			Debug.Log("Database loaded (or refreshed)");
 		}
+
+		//public static DatabaseData LoadDatabase(string json)
+		//{
+		//	if (string.IsNullOrEmpty(json)) return null;
+
+		//	try
+		//	{
+		//		var root = JObject.Parse(json);
+		//		var serializer = JsonSerializer.CreateDefault();
+
+		//		var data = new DatabaseData
+		//		{
+		//			maps = root["maps"]?.ToObject<Map[]>(serializer) ?? Array.Empty<Map>(),
+		//			definitions = root["definitions"]?.ToObject<Definition[]>(serializer) ?? Array.Empty<Definition>(),
+		//			textures = root["textures"]?.ToObject<TextureSequence[]>(serializer) ?? Array.Empty<TextureSequence>(),
+		//			buttons = root["buttons"]?.ToObject<Legacy.Button[]>(serializer) ?? Array.Empty<Legacy.Button>()
+		//		};
+
+		//		if (data.maps == null || data.definitions == null || data.textures == null ||
+		//			data.maps.Length == 0 || data.definitions.Length == 0 || data.textures.Length == 0)
+		//		{
+		//			Debug.LogError("ResourceSerializer: Database failed validation");
+		//			return null;
+		//		}
+
+		//		return data;
+		//	}
+		//	catch (Exception ex)
+		//	{
+		//		Debug.LogError($"ResourceSerializer: Failed to deserialize database → {ex.Message}");
+		//		return null;
+		//	}
+		//}
 
 		public static DatabaseData LoadDatabase(string json)
 		{
@@ -134,14 +200,32 @@ namespace ClassicTilestorm
 			try
 			{
 				var root = JObject.Parse(json);
-				var serializer = JsonSerializer.CreateDefault();
+
+				var settings = new JsonSerializerSettings
+				{
+					Converters = { new DatabaseMapConverter() },
+					NullValueHandling = NullValueHandling.Ignore
+				};
+
+				var serializer = JsonSerializer.Create(settings);
 
 				var data = new DatabaseData
 				{
-					maps = root["maps"]?.ToObject<Map[]>(serializer) ?? Array.Empty<Map>(),
-					definitions = root["definitions"]?.ToObject<Definition[]>(serializer) ?? Array.Empty<Definition>(),
-					textures = root["textures"]?.ToObject<TextureSequence[]>(serializer) ?? Array.Empty<TextureSequence>(),
-					buttons = root["buttons"]?.ToObject<Legacy.Button[]>(serializer) ?? Array.Empty<Legacy.Button>()
+					maps = root["maps"] != null
+						? serializer.Deserialize<Map[]>(root["maps"].CreateReader())
+						: Array.Empty<Map>(),
+
+					definitions = root["definitions"] != null
+						? serializer.Deserialize<Definition[]>(root["definitions"].CreateReader())
+						: Array.Empty<Definition>(),
+
+					textures = root["textures"] != null
+						? serializer.Deserialize<TextureSequence[]>(root["textures"].CreateReader())
+						: Array.Empty<TextureSequence>(),
+
+					buttons = root["buttons"] != null
+						? serializer.Deserialize<Legacy.Button[]>(root["buttons"].CreateReader())
+						: Array.Empty<Legacy.Button>()
 				};
 
 				if (data.maps == null || data.definitions == null || data.textures == null ||
@@ -149,6 +233,39 @@ namespace ClassicTilestorm
 				{
 					Debug.LogError("ResourceSerializer: Database failed validation");
 					return null;
+				}
+
+				// FIXUP: Recover DisplayName from StableId using definitions
+				foreach (var map in data.maps.Where(m => m != null && m._tileEntries != null))
+				{
+					bool fixedAny = false;
+
+					for (int i = 0; i < map._tileEntries.Count; i++)
+					{
+						var entry = map._tileEntries[i];
+
+						if (!string.IsNullOrEmpty(entry.StableId))
+						{
+							var def = data.definitions.FirstOrDefault(d =>
+								string.Equals(d.hashid, entry.StableId, StringComparison.OrdinalIgnoreCase));
+
+							if (def != null)
+							{
+								entry.DisplayName = def.id;  // mutate in place — DO NOT replace object
+								fixedAny = true;
+							}
+							else
+							{
+								Debug.LogWarning($"No definition for hash '{entry.StableId}' in map '{map.name}' index {i}");
+							}
+						}
+					}
+
+					if (fixedAny)
+					{
+						// NO NEED to set map.table — getter will see updated DisplayName
+						Debug.Log($"Fixed up '{map.name}': {map._tileEntries.Count(e => !string.IsNullOrEmpty(e.StableId))} hashes");
+					}
 				}
 
 				return data;
@@ -175,23 +292,6 @@ namespace ClassicTilestorm
 				Debug.Log($"Saving database with {mapsToSave.Length} cropped maps");
 			}
 
-			// TEMPORARY: Replace table with hash-only for serialization
-			var originalTables = new string[mapsToSave.Length][];
-			for (int i = 0; i < mapsToSave.Length; i++)
-			{
-				var m = mapsToSave[i];
-				if (m == null) continue;
-
-				originalTables[i] = m.table?.ToArray(); // save original (names)
-
-				// Force hash-only
-				var hashOnly = m._tileEntries.Select(e =>
-					!string.IsNullOrEmpty(e.StableId) ? e.StableId : e.DisplayName
-				).ToArray();
-
-				m.table = hashOnly;
-			}
-
 			var saveData = new DatabaseData
 			{
 				maps = mapsToSave,
@@ -204,22 +304,10 @@ namespace ClassicTilestorm
 			{
 				NullValueHandling = NullValueHandling.Ignore,
 				Formatting = verbose ? Formatting.Indented : Formatting.None,
+				Converters = { new DatabaseMapConverter() }  // ← add this
 			};
 
-			string json;
-			try
-			{
-				json = JsonConvert.SerializeObject(saveData, settings);
-			}
-			finally
-			{
-				// Restore original tables
-				for (int i = 0; i < mapsToSave.Length; i++)
-				{
-					if (mapsToSave[i] != null && originalTables[i] != null)
-						mapsToSave[i].table = originalTables[i];
-				}
-			}
+			string json = JsonConvert.SerializeObject(saveData, settings);
 
 			string path = string.IsNullOrEmpty(filepath)
 				? Path.Combine(Application.persistentDataPath, "database.json")
@@ -246,7 +334,7 @@ namespace ClassicTilestorm
 				var settings = new JsonSerializerSettings
 				{
 					NullValueHandling = NullValueHandling.Ignore,
-					Converters = { new MapConverter() }
+					Converters = { new AtomicMapConverter() }
 				};
 
 				var importedMap = JsonConvert.DeserializeObject<Map>(json, settings);
@@ -295,6 +383,67 @@ namespace ClassicTilestorm
 			}
 		}
 
+		//public static void ExportAtomicMap(Map originalMap, string filepath = null, bool verbose = false, bool crop = true)
+		//{
+		//	if (originalMap == null) return;
+
+		//	var map = crop ? originalMap.CreateCroppedCopy() : originalMap;
+
+		//	var usedTypes = map.table?
+		//		.Where(t => !string.IsNullOrEmpty(t))
+		//		.Distinct()
+		//		.ToArray() ?? Array.Empty<string>();
+
+		//	var usedDefs = ResourceManager.Definitions
+		//		.Where(d => usedTypes.Contains(d.id))
+		//		.ToArray();
+
+		//	var usedBanks = usedDefs
+		//		.Where(d => !string.IsNullOrEmpty(d.texture))
+		//		.Select(d => d.texture)
+		//		.Distinct()
+		//		.ToArray();
+
+		//	var usedTextures = ResourceManager.TextureSequences
+		//		.Where(ts => usedBanks.Contains(ts.id))
+		//		.ToArray();
+
+		//	map.definitions = usedDefs;
+		//	map.textures = usedTextures;
+		//	map.version = "1.0";
+		//	map.author = "Player";
+		//	map.exportedFrom = "ClassicTilestorm";
+
+		//	map.ExportEnrichedTable = true;
+
+		//	try
+		//	{
+		//		var settings = new JsonSerializerSettings
+		//		{
+		//			NullValueHandling = NullValueHandling.Ignore,
+		//			Formatting = verbose ? Formatting.Indented : Formatting.None,
+		//			ContractResolver = new AtomicExportResolver(),
+		//			Converters = { new MapConverter() }
+		//		};
+
+		//		string json = JsonConvert.SerializeObject(map, settings);
+
+		//		var folder = string.IsNullOrEmpty(filepath) ? Application.persistentDataPath : filepath;
+		//		EnsureFolder(folder);
+		//		string path = Path.Combine(folder, $"{map.name}.json");
+
+		//		File.WriteAllText(path, json);
+		//		Debug.Log($"ATOMIC MAP EXPORTED (auto-cropped) → {path} ({map.width}x{map.height})");
+		//	}
+		//	finally
+		//	{
+		//		map.definitions = null;
+		//		map.textures = null;
+
+		//		map.ExportEnrichedTable = false;
+		//	}
+		//}
+
 		public static void ExportAtomicMap(Map originalMap, string filepath = null, bool verbose = false, bool crop = true)
 		{
 			if (originalMap == null) return;
@@ -326,8 +475,6 @@ namespace ClassicTilestorm
 			map.author = "Player";
 			map.exportedFrom = "ClassicTilestorm";
 
-			map.ExportEnrichedTable = true;
-
 			try
 			{
 				var settings = new JsonSerializerSettings
@@ -335,7 +482,7 @@ namespace ClassicTilestorm
 					NullValueHandling = NullValueHandling.Ignore,
 					Formatting = verbose ? Formatting.Indented : Formatting.None,
 					ContractResolver = new AtomicExportResolver(),
-					Converters = { new MapConverter() }
+					Converters = { new AtomicMapConverter() }  // ← FIXED: use AtomicMapConverter here
 				};
 
 				string json = JsonConvert.SerializeObject(map, settings);
@@ -351,8 +498,6 @@ namespace ClassicTilestorm
 			{
 				map.definitions = null;
 				map.textures = null;
-
-				map.ExportEnrichedTable = false;
 			}
 		}
 

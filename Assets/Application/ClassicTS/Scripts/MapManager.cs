@@ -223,6 +223,34 @@ namespace ClassicTilestorm
 			for (int i = transform.childCount - 1; i >= 0; i--) Destroy(transform.GetChild(i).gameObject);
 		}
 
+		//private void LoadTileData(int[] tileMap)
+		//{
+		//	if (tileMap == null || tileMap.Length != Count)
+		//	{
+		//		Debug.LogError($"Invalid tiles data! length={(tileMap?.Length ?? -1)}, expected={Count}");
+		//		return;
+		//	}
+
+		//	mapTiles = new MapTile[Count];
+
+		//	for (int n = 0; n < tileMap.Length; ++n)
+		//	{
+		//		int definitionIndex = tileMap[n];
+		//		string id = (definitionIndex >= 0 && definitionIndex < currentMap.table?.Length) ? currentMap.table[definitionIndex] : "tile_empty";
+
+		//		if (string.IsNullOrEmpty(id))
+		//			id = "tile_empty";
+
+		//		var definition = ResourceManager.Definitions.FirstOrDefault(td => td.id == id);
+		//		var tile = new Tile(definition);
+
+		//		if (id != "tile_empty" && definition != null)
+		//			tile.gameObject = InstantiateTile(definition, transform, TileWorldPosition(n));
+
+		//		mapTiles[n] = new MapTile(id, tile);
+		//	}
+		//}
+
 		private void LoadTileData(int[] tileMap)
 		{
 			if (tileMap == null || tileMap.Length != Count)
@@ -236,18 +264,22 @@ namespace ClassicTilestorm
 			for (int n = 0; n < tileMap.Length; ++n)
 			{
 				int definitionIndex = tileMap[n];
-				string id = (definitionIndex >= 0 && definitionIndex < currentMap.table?.Length) ? currentMap.table[definitionIndex] : "tile_empty";
+				string lookupKey = (definitionIndex >= 0 && definitionIndex < currentMap.table?.Length)
+					? currentMap.table[definitionIndex]
+					: "tile_empty";
 
-				if (string.IsNullOrEmpty(id))
-					id = "tile_empty";
+				if (string.IsNullOrEmpty(lookupKey))
+					lookupKey = "tile_empty";
 
-				var definition = ResourceManager.Definitions.FirstOrDefault(td => td.id == id);
+				// Use updated lookup: hash first, then name
+				var definition = ResourceManager.GetDefinition(lookupKey);
+
 				var tile = new Tile(definition);
 
-				if (id != "tile_empty" && definition != null)
+				if (lookupKey != "tile_empty" && definition != null)
 					tile.gameObject = InstantiateTile(definition, transform, TileWorldPosition(n));
 
-				mapTiles[n] = new MapTile(id, tile);
+				mapTiles[n] = new MapTile(lookupKey, tile);  // Keep lookupKey as definitionId for now
 			}
 		}
 

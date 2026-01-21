@@ -8009,3 +8009,73 @@ given that you have not made any effort to iterate the table and update the_stab
 			// ── TEMPORARILY replace table for serialization ───────────────────────────
 			var originalTable = map.table;
 			map.table = map.GetEnrichedTableForExport().ToArray();
+
+
+
+
+
+
+
+still the fucking same
+
+-		[9]	{ClassicTilestorm.Map.TileEntry}	ClassicTilestorm.Map.TileEntry
+		DisplayName	"new_def_id(001)"	string
+		StableId	null	string
+
+
+so the table array looks like this 
+
+      "table": [
+        "ss tile boundary",
+        "tile_empty",
+        "ss toxic pipe ns",
+        "ss tile boundary 1",
+        "ss tile ns",
+        "tile_invisible",
+        "ss tile static ns",
+        "ss toxic pipe floor s",
+        "ss toxic pipe ne",
+        "[t9WVya]",
+        "ss tile console w",
+        "ss tile door end ns",
+        "ss tile door start ns",
+        "ss toxic pipe floor n",
+        "ss toxic pipe floor w",
+        "ss toxic pipe sw",
+        "toxic pipe join leak ns"
+      ]
+
+at this point in the callstack
+
+	public abstract class MapConverterBase : JsonConverter
+	{
+		public override bool CanConvert(Type objectType) => typeof(Map).IsAssignableFrom(objectType);
+
+		protected void ParseTable(Map map, JArray tableArray)
+		{
+			map._tileEntries.Clear();//here!!!!
+
+but it is no surprise because the database table is as follows (which is correct)
+
+      "table": [
+        "ss tile boundary",
+        "tile_empty",
+        "ss toxic pipe ns",
+        "ss tile boundary 1",
+        "ss tile ns",
+        "tile_invisible",
+        "ss tile static ns",
+        "ss toxic pipe floor s",
+        "ss toxic pipe ne",
+        "[t9WVya]",
+        "ss tile console w",
+        "ss tile door end ns",
+        "ss tile door start ns",
+        "ss toxic pipe floor n",
+        "ss toxic pipe floor w",
+        "ss toxic pipe sw",
+        "toxic pipe join leak ns"
+      ]
+
+
+but we know that we are either going to have to fix up the stableIds in every map post load because they are not stored in 

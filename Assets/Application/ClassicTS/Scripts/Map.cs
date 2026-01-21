@@ -13,10 +13,10 @@ namespace ClassicTilestorm
 	public class Map
 	{
 		[Serializable]
-		internal class TileEntry
+		public class TileEntry  // ← change from internal to public
 		{
-			public string StableId;     // hashid (can be null)
-			public string DisplayName;  // what external code sees in table[]
+			public string StableId;
+			public string DisplayName;
 
 			public TileEntry(string displayName, string stableId = null)
 			{
@@ -404,13 +404,52 @@ namespace ClassicTilestorm
 		public bool ExportEnrichedTable { get; set; } = false;  // false = normal database mode (hash only)
 	}
 
-	public class MapConverter : JsonConverter
+	public abstract class MapConverterBase : JsonConverter
 	{
-		public override bool CanConvert(Type objectType)
+		public override bool CanConvert(Type objectType) => typeof(Map).IsAssignableFrom(objectType);
+
+		protected void ParseTable(Map map, JArray tableArray)
 		{
-			return typeof(Map).IsAssignableFrom(objectType);
+			map._tileEntries.Clear();
+
+			foreach (JToken token in tableArray)
+			{
+				string entry = token.Value<string>()?.Trim() ?? "tile_empty";
+				string stableId = null;
+				string displayName = entry;  // default to full entry
+
+				if (entry.StartsWith("[", StringComparison.Ordinal) && entry.EndsWith("]"))
+				{
+					string inside = entry.Substring(1, entry.Length - 2).Trim();
+
+					// Take everything before first comma as hash (future-proof for options)
+					int commaIndex = inside.IndexOf(',');
+					string hashPart = (commaIndex >= 0 ? inside.Substring(0, commaIndex) : inside).Trim();
+					string rest = (commaIndex >= 0 ? inside.Substring(commaIndex + 1) : "").Trim();
+
+					if (!string.IsNullOrEmpty(hashPart))
+					{
+						stableId = hashPart;
+
+						// If there's name part after ], use it; else leave as placeholder
+						displayName = string.IsNullOrWhiteSpace(rest) ? "PENDING_ID" : rest;
+					}
+				}
+
+				map._tileEntries.Add(new Map.TileEntry(displayName, stableId));
+			}
 		}
 
+		protected virtual string ProcessRest(string rest)
+		{
+			return string.IsNullOrWhiteSpace(rest) ? "tile_empty" : rest;
+		}
+
+		protected abstract string GetOutput(Map.TileEntry entry, bool enriched);
+	}
+
+	public class AtomicMapConverter : MapConverterBase
+	{
 		public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
 		{
 			if (reader.TokenType == JsonToken.Null) return null;
@@ -422,29 +461,7 @@ namespace ClassicTilestorm
 
 			if (jo["table"] is JArray tableArray && tableArray.Count > 0)
 			{
-				map._tileEntries.Clear();
-
-				foreach (JToken token in tableArray)
-				{
-					string entry = token.Value<string>()?.Trim() ?? "tile_empty";
-					string stableId = null;
-					string displayName = entry;
-
-					if (entry.StartsWith("[", StringComparison.Ordinal) && entry.IndexOf(']') > 0)
-					{
-						int close = entry.IndexOf(']');
-						string hashPart = entry.Substring(1, close - 1).Trim();
-						string namePart = entry.Substring(close + 1).Trim();
-
-						if (!string.IsNullOrEmpty(hashPart))
-						{
-							stableId = hashPart;
-							displayName = string.IsNullOrWhiteSpace(namePart) ? "tile_empty" : namePart;
-						}
-					}
-
-					map._tileEntries.Add(new Map.TileEntry(displayName, stableId));
-				}
+				ParseTable(map, tableArray);
 			}
 
 			return map;
@@ -452,25 +469,16 @@ namespace ClassicTilestorm
 
 		public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
 		{
-			if (value == null)
-			{
-				writer.WriteNull();
-				return;
-			}
-
 			var map = (Map)value;
-
 			writer.WriteStartObject();
 
 			var contract = (JsonObjectContract)serializer.ContractResolver.ResolveContract(typeof(Map));
 			foreach (var prop in contract.Properties)
 			{
-				if (prop.Ignored || prop.PropertyName == "table")
-					continue;
+				if (prop.Ignored || prop.PropertyName == "table") continue;
 
 				var propValue = prop.ValueProvider?.GetValue(map);
-				if (propValue == null && serializer.NullValueHandling == NullValueHandling.Ignore)
-					continue;
+				if (propValue == null && serializer.NullValueHandling == NullValueHandling.Ignore) continue;
 
 				writer.WritePropertyName(prop.PropertyName ?? prop.UnderlyingName);
 				serializer.Serialize(writer, propValue);
@@ -479,34 +487,202 @@ namespace ClassicTilestorm
 			writer.WritePropertyName("table");
 			writer.WriteStartArray();
 
-			if (map._tileEntries != null && map._tileEntries.Count > 0)
+			foreach (var entry in map._tileEntries)
 			{
-				foreach (var entry in map._tileEntries)
-				{
-					string output;
-
-					if (map.ExportEnrichedTable)
-					{
-						// Atomic export: [hash]name
-						output = string.IsNullOrEmpty(entry.StableId)
-							? entry.DisplayName
-							: $"[{entry.StableId}]{entry.DisplayName}";
-					}
-					else
-					{
-						// Database save: hash only (no brackets, no name)
-						output = !string.IsNullOrEmpty(entry.StableId)
-							? entry.StableId
-							: entry.DisplayName;
-					}
-
-					writer.WriteValue(output);
-				}
+				string output = GetOutput(entry, true); // always enriched for atomic
+				writer.WriteValue(output);
 			}
 
 			writer.WriteEndArray();
-
 			writer.WriteEndObject();
 		}
+
+		protected override string GetOutput(Map.TileEntry entry, bool enriched)
+		{
+			// Atomic mode: ALWAYS include name if StableId exists
+			if (!string.IsNullOrEmpty(entry.StableId))
+			{
+				return $"[{entry.StableId}]{entry.DisplayName}";
+			}
+
+			return entry.DisplayName;
+		}
 	}
+
+	public class DatabaseMapConverter : MapConverterBase
+	{
+		public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+		{
+			if (reader.TokenType == JsonToken.Null) return null;
+
+			var jo = JObject.Load(reader);
+			var map = (Map)(existingValue ?? Activator.CreateInstance(objectType));
+
+			serializer.Populate(jo.CreateReader(), map);
+
+			if (jo["table"] is JArray tableArray && tableArray.Count > 0)
+			{
+				ParseTable(map, tableArray);
+			}
+
+			return map;
+		}
+
+		public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+		{
+			var map = (Map)value;
+			writer.WriteStartObject();
+
+			var contract = (JsonObjectContract)serializer.ContractResolver.ResolveContract(typeof(Map));
+			foreach (var prop in contract.Properties)
+			{
+				if (prop.Ignored || prop.PropertyName == "table") continue;
+
+				var propValue = prop.ValueProvider?.GetValue(map);
+				if (propValue == null && serializer.NullValueHandling == NullValueHandling.Ignore) continue;
+
+				writer.WritePropertyName(prop.PropertyName ?? prop.UnderlyingName);
+				serializer.Serialize(writer, propValue);
+			}
+
+			writer.WritePropertyName("table");
+			writer.WriteStartArray();
+
+			foreach (var entry in map._tileEntries)
+			{
+				string output = GetOutput(entry, false); // database mode: [hash] only
+				writer.WriteValue(output);
+			}
+
+			writer.WriteEndArray();
+			writer.WriteEndObject();
+		}
+
+		protected override string GetOutput(Map.TileEntry entry, bool enriched)
+		{
+			return !string.IsNullOrEmpty(entry.StableId)
+				? $"[{entry.StableId}]"
+				: entry.DisplayName;
+		}
+
+		protected override string ProcessRest(string rest)
+		{
+			return "tile_empty"; // no name in database mode
+		}
+	}
+
+	//public class MapConverter : JsonConverter
+	//{
+	//	public override bool CanConvert(Type objectType)
+	//	{
+	//		return typeof(Map).IsAssignableFrom(objectType);
+	//	}
+
+	//	public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+	//	{
+	//		if (reader.TokenType == JsonToken.Null) return null;
+
+	//		var jo = JObject.Load(reader);
+	//		var map = (Map)(existingValue ?? Activator.CreateInstance(objectType));
+
+	//		serializer.Populate(jo.CreateReader(), map);
+
+	//		if (jo["table"] is JArray tableArray && tableArray.Count > 0)
+	//		{
+	//			map._tileEntries.Clear();
+
+	//			foreach (JToken token in tableArray)
+	//			{
+	//				string entry = token.Value<string>()?.Trim() ?? "tile_empty";
+	//				string stableId = null;
+	//				string displayName = entry;
+
+	//				if (entry.StartsWith("[", StringComparison.Ordinal) && entry.EndsWith("]"))
+	//				{
+	//					// Bracketed hash (database save): [hash]
+	//					string hashPart = entry.Substring(1, entry.Length - 2).Trim();
+	//					if (!string.IsNullOrEmpty(hashPart))
+	//					{
+	//						stableId = hashPart;
+	//						displayName = "tile_empty"; // temporary placeholder — fixed up next
+	//					}
+	//				}
+	//				else if (entry.StartsWith("[", StringComparison.Ordinal) && entry.IndexOf(']') > 0)
+	//				{
+	//					// Full enriched (atomic): [hash]name
+	//					int close = entry.IndexOf(']');
+	//					string hashPart = entry.Substring(1, close - 1).Trim();
+	//					string namePart = entry.Substring(close + 1).Trim();
+
+	//					if (!string.IsNullOrEmpty(hashPart))
+	//					{
+	//						stableId = hashPart;
+	//						displayName = string.IsNullOrWhiteSpace(namePart) ? "tile_empty" : namePart;
+	//					}
+	//				}
+	//				// else: plain name (legacy)
+
+	//				map._tileEntries.Add(new Map.TileEntry(displayName, stableId));
+	//			}
+	//		}
+
+	//		return map;
+	//	}
+
+	//	public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+	//	{
+	//		if (value == null)
+	//		{
+	//			writer.WriteNull();
+	//			return;
+	//		}
+
+	//		var map = (Map)value;
+
+	//		writer.WriteStartObject();
+
+	//		var contract = (JsonObjectContract)serializer.ContractResolver.ResolveContract(typeof(Map));
+	//		foreach (var prop in contract.Properties)
+	//		{
+	//			if (prop.Ignored || prop.PropertyName == "table")
+	//				continue;
+
+	//			var propValue = prop.ValueProvider?.GetValue(map);
+	//			if (propValue == null && serializer.NullValueHandling == NullValueHandling.Ignore)
+	//				continue;
+
+	//			writer.WritePropertyName(prop.PropertyName ?? prop.UnderlyingName);
+	//			serializer.Serialize(writer, propValue);
+	//		}
+
+	//		writer.WritePropertyName("table");
+	//		writer.WriteStartArray();
+
+	//		if (map._tileEntries != null && map._tileEntries.Count > 0)
+	//		{
+	//			foreach (var entry in map._tileEntries)
+	//			{
+	//				string output;
+
+	//				if (map.ExportEnrichedTable)
+	//				{
+	//					output = string.IsNullOrEmpty(entry.StableId)
+	//						? entry.DisplayName
+	//						: $"[{entry.StableId}]{entry.DisplayName}";
+	//				}
+	//				else
+	//				{
+	//					output = !string.IsNullOrEmpty(entry.StableId)
+	//						? $"[{entry.StableId}]"  // bracketed hash for database save
+	//						: entry.DisplayName;
+	//				}
+
+	//				writer.WriteValue(output);
+	//			}
+	//		}
+
+	//		writer.WriteEndArray();
+
+	//		writer.WriteEndObject();
+	//	}
 }

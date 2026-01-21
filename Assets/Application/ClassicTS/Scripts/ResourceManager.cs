@@ -22,8 +22,21 @@ namespace ClassicTilestorm
 		public static System.Collections.Generic.IList<TextureSequence> TextureSequences => _db?.textures ?? Array.Empty<TextureSequence>();
 		public static System.Collections.Generic.IList<Legacy.Button> Buttons => _db?.buttons ?? Array.Empty<Legacy.Button>();
 
-		public static Definition GetDefinition(string id)
-					=> string.IsNullOrEmpty(id) ? null : Definitions.FirstOrDefault(d => d.id == id);
+		//public static Definition GetDefinition(string id)
+		//			=> string.IsNullOrEmpty(id) ? null : Definitions.FirstOrDefault(d => d.id == id);
+
+		public static Definition GetDefinition(string idOrHash)
+		{
+			if (string.IsNullOrEmpty(idOrHash)) return null;
+
+			// Prefer match by hashid first (stable ID)
+			var byHash = Definitions.FirstOrDefault(d => string.Equals(d.hashid, idOrHash, StringComparison.Ordinal));
+			if (byHash != null) return byHash;
+
+			// Fallback to legacy name match (id field)
+			var byName = Definitions.FirstOrDefault(d => string.Equals(d.id, idOrHash, StringComparison.Ordinal));
+			return byName;
+		}
 
 		public static TextureSequence GetTextureSequence(string id)
 			=> string.IsNullOrEmpty(id) ? null : TextureSequences.FirstOrDefault(ts => ts.id == id);
