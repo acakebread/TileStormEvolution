@@ -24,7 +24,7 @@ namespace ClassicTilestorm
 			{
 				Converters = { new MapAttachmentConverter() },
 				NullValueHandling = NullValueHandling.Ignore,
-				ContractResolver = new OrderedContractResolver()  // ← new resolver below
+				ContractResolver = new OrderedContractResolver()
 			};
 
 			JsonConvert.DefaultSettings = () => settings;
@@ -33,7 +33,6 @@ namespace ClassicTilestorm
 		}
 	}
 
-	// Add this new resolver class in the same file or namespace
 	public class OrderedContractResolver : DefaultContractResolver
 	{
 		protected override IList<JsonProperty> CreateProperties(Type type, MemberSerialization memberSerialization)
