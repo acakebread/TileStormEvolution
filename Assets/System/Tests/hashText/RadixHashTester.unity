@@ -397,8 +397,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e2fe0273770123c4991dba2b0032f594, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MassiveHadronLtd.IDs.HTB50.RadixHashTester
-  hashTestsTarget: 200000
-  fixedLengthToTest: 6
+  testMode: 2
+  hashesPerBatch: 1000
+  fixedLength: 6
+  alertThreshold: 2
   labelFontSize: 16
   buttonHeight: 40
   spacing: 8

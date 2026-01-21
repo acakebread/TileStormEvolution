@@ -9299,3 +9299,399 @@ namespace MassiveHadronLtd.IDs.HTB50
 		}
 	}
 }
+
+
+
+
+
+using UnityEngine;
+using System;
+using System.Collections.Generic;
+using System.Numerics;
+using System.Text;
+
+namespace MassiveHadronLtd.IDs.HTB50
+{
+	public class RadixHashTester : MonoBehaviour
+	{
+		public enum HashTestMode { BigInteger, Int32, Int64 }
+
+		[Header("Settings")]
+		public HashTestMode testMode = HashTestMode.BigInteger;
+		public int hashesPerBatch = 1000;
+		public int fixedLength = 6;
+
+		[Header("Logging & Alerts")]
+		[Tooltip("Alert if observed pairs > expected × this factor")]
+		public float alertThreshold = 5.0f;
+
+		[Header("GUI")]
+		public int labelFontSize = 16;
+		public int buttonHeight = 40;
+		public int spacing = 8;
+
+		// State
+		private bool isRunning;
+		private bool paused;
+
+		private int batchCount;
+		private int doneThisBatch;
+
+		private long totalHashes;
+		private long totalPairs;
+		private long batchPairsBefore;
+
+		private bool highCollisionAlert;
+		private string status = "Ready";
+
+		private Dictionary<long, int> bucketCounts32or64 = new();
+		private Dictionary<BigInteger, int> bucketCountsBig = new();
+
+		private System.Diagnostics.Stopwatch watch = new System.Diagnostics.Stopwatch();
+
+		private BigInteger modulusBig;
+		private long modulusLong;
+		private int modulusInt;
+
+		private readonly int radix = HTB50.Radix;
+
+		void Start()
+		{
+			UpdateModulus();
+		}
+
+		void UpdateModulus()
+		{
+			modulusBig = BigInteger.Pow(radix, fixedLength);
+
+			modulusLong = modulusBig <= long.MaxValue ? (long)modulusBig : -1;
+			modulusInt = modulusBig <= int.MaxValue ? (int)modulusBig : -1;
+		}
+
+		double ActiveModulus =>
+			testMode switch
+			{
+				HashTestMode.Int32 => modulusInt,
+				HashTestMode.Int64 => modulusLong,
+				_ => (double)modulusBig
+			};
+
+		void Update()
+		{
+			if (!isRunning || paused) return;
+
+			int remaining = hashesPerBatch - doneThisBatch;
+			if (remaining <= 0)
+			{
+				FinishBatch();
+				return;
+			}
+
+			RunChunk(Mathf.Min(2000, remaining));
+		}
+
+		void RunChunk(int count)
+		{
+			var rng = new System.Random(batchCount * 10007 + doneThisBatch);
+
+			for (int i = 0; i < count; i++)
+			{
+				string input = GenerateInput(rng, doneThisBatch + i);
+
+				switch (testMode)
+				{
+					case HashTestMode.BigInteger:
+						AccumulateBig(RadixHash.HashToRange(input, modulusBig));
+						break;
+
+					case HashTestMode.Int64:
+						if (modulusLong <= 0)
+							throw new InvalidOperationException("radix^length exceeds Int64 range");
+						Accumulate64(RadixHash.HashToRange64(input, modulusLong));
+						break;
+
+					case HashTestMode.Int32:
+						if (modulusInt <= 0)
+						{
+							status = $"Int32 overflow: {radix}^{fixedLength} exceeds int range";
+							paused = true;
+							isRunning = false;
+							return;
+						}
+						Accumulate64(RadixHash.HashToRange32(input, modulusInt));
+						break;
+
+				}
+
+				doneThisBatch++;
+				totalHashes++;
+			}
+
+			EvaluateAlert();
+			status = $"Batch {batchCount} – {doneThisBatch:N0} / {hashesPerBatch:N0} ({testMode})";
+		}
+
+		void AccumulateBig(BigInteger h)
+		{
+			if (!bucketCountsBig.TryGetValue(h, out int c))
+				bucketCountsBig[h] = 1;
+			else
+			{
+				bucketCountsBig[h] = c + 1;
+				totalPairs += c;
+			}
+		}
+
+		void Accumulate64(long h)
+		{
+			if (!bucketCounts32or64.TryGetValue(h, out int c))
+				bucketCounts32or64[h] = 1;
+			else
+			{
+				bucketCounts32or64[h] = c + 1;
+				totalPairs += c;
+			}
+		}
+
+		int MaxLengthForMode(HashTestMode mode)
+		{
+			BigInteger limit = mode switch
+			{
+				HashTestMode.Int32 => int.MaxValue,
+				HashTestMode.Int64 => long.MaxValue,
+				_ => BigInteger.Zero // BigInteger = unlimited
+			};
+
+			if (mode == HashTestMode.BigInteger)
+				return 64; // arbitrary UI cap
+
+			BigInteger v = 1;
+			int len = 0;
+
+			while (true)
+			{
+				v *= radix;
+				if (v > limit)
+					return len;
+				len++;
+			}
+		}
+
+		void EvaluateAlert()
+		{
+			long pairsThisBatch = totalPairs - batchPairsBefore;
+			double expectedPairs =
+				(double)doneThisBatch * (doneThisBatch - 1) /
+				(2.0 * ActiveModulus);
+
+			if (pairsThisBatch > expectedPairs * alertThreshold)
+				highCollisionAlert = true;
+		}
+
+		void FinishBatch()
+		{
+			PrintBatchSummary();
+
+			if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))
+			{
+				isRunning = false;
+				PrintFinalReport();
+				status = "Stopped (Shift held)";
+			}
+			else
+			{
+				NewBatch();
+			}
+		}
+
+		void NewBatch()
+		{
+			batchCount++;
+			doneThisBatch = 0;
+			batchPairsBefore = totalPairs;
+			bucketCounts32or64.Clear();
+			bucketCountsBig.Clear();
+			status = $"Batch {batchCount} – 0 / {hashesPerBatch:N0} ({testMode})";
+		}
+
+		void StartRun()
+		{
+			isRunning = true;
+			paused = false;
+			highCollisionAlert = false;
+
+			batchCount = 0;
+			doneThisBatch = 0;
+			totalHashes = 0;
+			totalPairs = 0;
+
+			bucketCounts32or64.Clear();
+			bucketCountsBig.Clear();
+
+			watch.Reset();
+			watch.Start();
+
+			NewBatch();
+		}
+
+		void PrintBatchSummary()
+		{
+			long pairsThisBatch = totalPairs - batchPairsBefore;
+			double expectedPairs =
+				(double)hashesPerBatch * (hashesPerBatch - 1) /
+				(2.0 * ActiveModulus);
+
+			if (pairsThisBatch > 0)
+			{
+				int buckets = testMode == HashTestMode.BigInteger
+					? bucketCountsBig.Count
+					: bucketCounts32or64.Count;
+
+				Debug.Log(
+					$"Batch #{batchCount} ({testMode}) | Hashes {hashesPerBatch:N0} | " +
+					$"Pairs {pairsThisBatch:N0} (exp ~{expectedPairs:F4}) | Buckets {buckets:N0}");
+			}
+
+			if (pairsThisBatch > expectedPairs * alertThreshold)
+			{
+				Debug.LogWarning(
+					$">>> HIGH COLLISION RATE in batch {batchCount} ({testMode})! " +
+					$"Pairs {pairsThisBatch:N0} vs exp ~{expectedPairs:F4}");
+			}
+		}
+
+		void PrintFinalReport()
+		{
+			double overallExpected =
+				(double)totalHashes * (totalHashes - 1) /
+				(2.0 * ActiveModulus);
+
+			Debug.Log("\n═══════════════════════════════════════════════");
+			Debug.Log("          FINAL COLLISION TEST REPORT          ");
+			Debug.Log("═══════════════════════════════════════════════");
+			Debug.Log($"Mode:                   {testMode}");
+			Debug.Log($"Total batches:          {batchCount}");
+			Debug.Log($"Total hashes tested:    {totalHashes:N0}");
+			Debug.Log($"Total colliding pairs:  {totalPairs:N0}");
+			Debug.Log($"Overall expected pairs: ~{overallExpected:F2}");
+			Debug.Log($"Modulus:                {modulusBig:N0} (length {fixedLength})");
+			Debug.Log($"High collision alert?   {(highCollisionAlert ? "YES" : "No")}");
+			Debug.Log($"Total run time:         {watch.Elapsed.TotalSeconds:F1} seconds");
+			Debug.Log("═══════════════════════════════════════════════\n");
+		}
+
+		void OnGUI()
+		{
+			GUI.skin.label.fontSize = labelFontSize;
+			GUI.skin.button.fontSize = labelFontSize - 2;
+
+			float x = Screen.width * 0.05f;
+			float w = Screen.width * 0.9f;
+			float y = 20;
+
+			GUI.Label(new Rect(x, y, w, 40),
+				"RadixHash Collision Check",
+				new GUIStyle(GUI.skin.label)
+				{
+					fontStyle = FontStyle.Bold,
+					fontSize = 22
+				});
+			y += 50;
+
+			GUI.Label(new Rect(x, y, w, 30),
+				$"Status: {status}",
+				new GUIStyle(GUI.skin.label)
+				{
+					normal = { textColor = Color.cyan }
+				});
+			y += 40;
+
+			GUI.Label(new Rect(x, y, w, 25),
+				$"Batch: {batchCount}   Hashes: {doneThisBatch:N0} / {hashesPerBatch:N0}");
+			y += 30;
+
+			GUI.Label(new Rect(x, y, w, 25),
+				$"Pairs this batch: {totalPairs - batchPairsBefore:N0} (total {totalPairs:N0})");
+			y += 30;
+
+			GUI.Label(new Rect(x, y, w, 25),
+				$"Buckets: {(testMode == HashTestMode.BigInteger ? bucketCountsBig.Count : bucketCounts32or64.Count):N0} / {modulusBig:N0}");
+			y += 40;
+
+			if (!isRunning)
+			{
+				if (GUI.Button(new Rect(x, y, 180, buttonHeight), "Start"))
+					StartRun();
+			}
+			else
+			{
+				if (GUI.Button(new Rect(x, y, 180, buttonHeight), paused ? "Resume" : "Pause"))
+					paused = !paused;
+
+				if (GUI.Button(new Rect(x + 200, y, 180, buttonHeight), "Stop & Report"))
+				{
+					isRunning = false;
+					PrintFinalReport();
+					status = "Stopped";
+				}
+			}
+
+			y += buttonHeight + spacing;
+
+			GUI.Label(new Rect(x, y, 220, 30), "Hashes / batch:");
+			hashesPerBatch = (int)GUI.HorizontalSlider(
+				new Rect(x + 230, y, 200, 30),
+				hashesPerBatch, 1000, 100000);
+			GUI.Label(new Rect(x + 440, y, 120, 30),
+				hashesPerBatch.ToString("N0"));
+			y += 40;
+
+			int maxLen = MaxLengthForMode(testMode);
+
+			GUI.Label(new Rect(x, y, 220, 30), "Fixed length:");
+			int nl = (int)GUI.HorizontalSlider(
+				new Rect(x + 230, y, 200, 30),
+				fixedLength, 2, maxLen);
+
+			GUI.Label(new Rect(x + 440, y, 120, 30), fixedLength.ToString());
+
+			if (nl != fixedLength)
+			{
+				fixedLength = nl;
+				UpdateModulus();
+			}
+
+			if (nl != fixedLength)
+			{
+				fixedLength = nl;
+				UpdateModulus();
+			}
+
+			y += 40;
+
+			GUI.Label(new Rect(x, y, 220, 30), "Test Mode:");
+			testMode = (HashTestMode)GUI.HorizontalSlider(
+				new Rect(x + 230, y, 200, 30),
+				(int)testMode, 0, 2);
+			GUI.Label(new Rect(x + 440, y, 120, 30), testMode.ToString());
+		}
+
+		string GenerateInput(System.Random rng, int index)
+		{
+			var sb = new StringBuilder(64);
+			sb.Append(index.ToString("D7")).Append('-');
+
+			switch (rng.Next(6))
+			{
+				case 0: sb.Append("u/").Append(rng.Next(1000000)); break;
+				case 1: sb.Append("prod-").Append(Guid.NewGuid().ToString("N")[..12]); break;
+				case 2: sb.Append("file/").Append(new string('x', rng.Next(8, 32))); break;
+				case 3: sb.Append("order#").Append(DateTime.UtcNow.Ticks); break;
+				case 4: sb.Append("user.").Append(rng.Next(100000)).Append("@ex.net"); break;
+				default: sb.Append("rand-").Append(rng.NextDouble().ToString("F12")); break;
+			}
+
+			return sb.ToString();
+		}
+	}
+}
