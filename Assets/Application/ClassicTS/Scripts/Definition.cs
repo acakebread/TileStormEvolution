@@ -3,6 +3,9 @@ using System.Linq;
 using System.Collections.Generic;
 using Newtonsoft.Json;
 using UnityEngine;
+using System.Numerics;
+using MassiveHadronLtd;
+using MassiveHadronLtd.IDs.HTB50;
 
 namespace ClassicTilestorm
 {
@@ -198,7 +201,7 @@ namespace ClassicTilestorm
 		{
 			string randomId = MassiveHadronLtd.StringUtil.GenerateAssetId(); // legacy style, or use Guid, etc.
 			string hashId = MassiveHadronLtd.IDs.HTB50.HTB50.EncodeFixed(
-				MassiveHadronLtd.IDs.HTB50.HTB50.HashToRange(randomId), 6, appendFlavor: false);
+				MassiveHadronLtd.RadixHash.HashToRange(randomId), 6, appendFlavor: false);
 
 			return new Definition
 			{
@@ -221,13 +224,22 @@ namespace ClassicTilestorm
 
 			if (!string.IsNullOrEmpty(id))
 			{
-				var hash = MassiveHadronLtd.IDs.HTB50.HTB50.HashToRange(id);
-				return MassiveHadronLtd.IDs.HTB50.HTB50.EncodeFixed(hash, 6, appendFlavor: false);
+				// Use RadixHash + HTB50
+				var modulus = BigInteger.Pow(HTB50.Radix, 6);
+				var hash = RadixHash.HashToRange(id, modulus);
+				return HTB50.EncodeFixed(hash, 6, appendFlavor: false);
 			}
 
-			// Last resort: generate a random valid HTB50 ID
+			// Last resort: random HTB50 ID of length 6
 			Debug.LogWarning($"Definition has no id or hashid — generating random stable ID.");
-			return MassiveHadronLtd.IDs.HTB50.HTB50.GenerateRandomId();
+
+			// Option A: use RadixHash + HTB50 (recommended for consistency)
+			var mod6 = BigInteger.Pow(HTB50.Radix, 6);
+			var randValue = RadixHash.GenerateRandomInRange(mod6);
+			return HTB50.EncodeFixed(randValue, 6, appendFlavor: false, padChar: '0');
+
+			// Option B: if you prefer the old convenience method feel free to add it back to HTB50
+			// return HTB50.GenerateRandomId(6, false, '0');   // ← if you re-add it
 		}
 	}
 

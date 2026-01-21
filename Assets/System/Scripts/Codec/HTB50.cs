@@ -2,8 +2,6 @@
 using System.Collections.Generic;
 using System.Numerics;
 using System.Text;
-using System.Security.Cryptography;
-using System.Linq;
 
 namespace MassiveHadronLtd.IDs.HTB50
 {
@@ -85,7 +83,7 @@ namespace MassiveHadronLtd.IDs.HTB50
 			"ACDEFGHJKMNPQRTUVWXY" +         // 20 uppercase (ambiguous removed)
 			"acdefhijkmnpqrtuvwxy";          // 20 lowercase (ambiguous removed)
 
-		private const int Radix = 50;
+		public static readonly int Radix = 50;
 
 		private static readonly Dictionary<char, int> DecodeMap;
 		private static readonly Dictionary<char, char> NormalizeMap;
@@ -121,7 +119,7 @@ namespace MassiveHadronLtd.IDs.HTB50
 		// ENCODE — BigInteger
 		// ─────────────────────────────────────────────────────────────────────────
 
-		public static string Encode(
+		public static string EncodeBigInteger(
 			BigInteger value,
 			bool appendFlavor = false,
 			int? fixedLength = null,
@@ -182,7 +180,121 @@ namespace MassiveHadronLtd.IDs.HTB50
 			if (length < 1)
 				throw new ArgumentOutOfRangeException(nameof(length));
 
-			return Encode(value, appendFlavor, fixedLength: length, padChar);
+			return EncodeBigInteger(value, appendFlavor, fixedLength: length, padChar);
+		}
+
+		// ─────────────────────────────────────────────────────────────────────────
+		// ENCODE — Int64
+		// ─────────────────────────────────────────────────────────────────────────
+
+		public static string Encode64(
+			long value,
+			bool appendFlavor = false,
+			int? fixedLength = null,
+			char padChar = '0')
+		{
+			if (value < 0)
+				throw new ArgumentOutOfRangeException(nameof(value));
+
+			string result;
+
+			if (value == 0)
+			{
+				result = padChar.ToString();
+			}
+			else
+			{
+				var sb = new StringBuilder();
+				long current = value;
+
+				while (current > 0)
+				{
+					long rem = current % Radix;
+					current /= Radix;
+					int digit = (int)rem;
+
+					if (digit < 0 || digit >= Alphabet.Length)
+						throw new InvalidOperationException(
+							$"Invalid HTB50 digit {digit} (alphabet length {Alphabet.Length})");
+
+					sb.Insert(0, Alphabet[digit]);
+				}
+
+				result = sb.ToString();
+			}
+
+			// Optional fixed-length padding
+			if (fixedLength.HasValue)
+			{
+				int needed = fixedLength.Value - result.Length;
+				if (needed < 0)
+					throw new ArgumentException("Value exceeds fixed length");
+
+				if (needed > 0)
+					result = new string(padChar, needed) + result;
+			}
+
+			if (appendFlavor)
+				result += "_" + Flavor;
+
+			return result;
+		}
+
+		// ─────────────────────────────────────────────────────────────────────────
+		// ENCODE — Int32
+		// ─────────────────────────────────────────────────────────────────────────
+
+		public static string Encode(
+			int value,
+			bool appendFlavor = false,
+			int? fixedLength = null,
+			char padChar = '0')
+		{
+			if (value < 0)
+				throw new ArgumentOutOfRangeException(nameof(value));
+
+			string result;
+
+			if (value == 0)
+			{
+				result = padChar.ToString();
+			}
+			else
+			{
+				var sb = new StringBuilder();
+				int current = value;
+
+				while (current > 0)
+				{
+					int rem = current % Radix;
+					current /= Radix;
+					int digit = rem;
+
+					if (digit < 0 || digit >= Alphabet.Length)
+						throw new InvalidOperationException(
+							$"Invalid HTB50 digit {digit} (alphabet length {Alphabet.Length})");
+
+					sb.Insert(0, Alphabet[digit]);
+				}
+
+				result = sb.ToString();
+			}
+
+			// Optional fixed-length padding
+			if (fixedLength.HasValue)
+			{
+				int needed = fixedLength.Value - result.Length;
+				if (needed < 0)
+					throw new ArgumentException("Value exceeds fixed length");
+
+				if (needed > 0)
+					result = new string(padChar, needed) + result;
+			}
+
+			if (appendFlavor)
+				result += "_" + Flavor;
+
+			return result;
 		}
 
 		// ─────────────────────────────────────────────────────────────────────────
@@ -199,23 +311,16 @@ namespace MassiveHadronLtd.IDs.HTB50
 			Array.Copy(bytes, 0, extended, 1, bytes.Length);
 
 			BigInteger value = new BigInteger(extended);
-			return Encode(value, appendFlavor);
+			return EncodeBigInteger(value, appendFlavor);
 		}
 
 		// ─────────────────────────────────────────────────────────────────────────
 		// DECODE — BigInteger
 		// ─────────────────────────────────────────────────────────────────────────
 
-		public static BigInteger Decode(string input)
+		public static BigInteger DecodeBigInteger(string input)
 		{
-			if (string.IsNullOrWhiteSpace(input))
-				throw new ArgumentException("Input is empty");
-
-			// Strip optional flavor
-			string raw = input;
-			int flavorIndex = input.LastIndexOf("_" + Flavor, StringComparison.Ordinal);
-			if (flavorIndex >= 0)
-				raw = input.Substring(0, flavorIndex);
+			string raw = StripFlavor(input);
 
 			BigInteger result = 0;
 
@@ -233,12 +338,64 @@ namespace MassiveHadronLtd.IDs.HTB50
 		}
 
 		// ─────────────────────────────────────────────────────────────────────────
+		// DECODE — Int64
+		// ─────────────────────────────────────────────────────────────────────────
+
+		public static long Decode64(string input)
+		{
+			string raw = StripFlavor(input);
+
+			long result = 0;
+
+			foreach (char r in raw)
+			{
+				char c = Normalize(r);
+
+				if (!DecodeMap.TryGetValue(c, out int value))
+					throw new FormatException($"Invalid HTB50 character '{r}'");
+
+				if (result > (long.MaxValue - value) / Radix)
+					throw new OverflowException("Value exceeds Int64 range");
+
+				result = result * Radix + value;
+			}
+
+			return result;
+		}
+
+		// ─────────────────────────────────────────────────────────────────────────
+		// DECODE — Int32
+		// ─────────────────────────────────────────────────────────────────────────
+
+		public static int Decode(string input)
+		{
+			string raw = StripFlavor(input);
+
+			int result = 0;
+
+			foreach (char r in raw)
+			{
+				char c = Normalize(r);
+
+				if (!DecodeMap.TryGetValue(c, out int value))
+					throw new FormatException($"Invalid HTB50 character '{r}'");
+
+				if (result > (int.MaxValue - value) / Radix)
+					throw new OverflowException("Value exceeds Int32 range");
+
+				result = result * Radix + value;
+			}
+
+			return result;
+		}
+
+		// ─────────────────────────────────────────────────────────────────────────
 		// DECODE — byte[]
 		// ─────────────────────────────────────────────────────────────────────────
 
 		public static byte[] DecodeToBytes(string input)
 		{
-			BigInteger value = Decode(input);
+			BigInteger value = DecodeBigInteger(input);
 			byte[] bytes = value.ToByteArray();
 
 			// Remove leading zero if present
@@ -250,32 +407,6 @@ namespace MassiveHadronLtd.IDs.HTB50
 			}
 
 			return bytes;
-		}
-
-		// ─────────────────────────────────────────────────────────────────────────
-		// HASH → RANGE (fixed-length ID helper)
-		// ─────────────────────────────────────────────────────────────────────────
-
-		public static readonly BigInteger Modulus = BigInteger.Pow(Radix, 6);
-
-		public static BigInteger HashToRange(string input)
-		{
-			if (string.IsNullOrEmpty(input))
-				return BigInteger.Zero;
-
-			using var sha = SHA256.Create();
-			byte[] hash = sha.ComputeHash(Encoding.UTF8.GetBytes(input));
-
-			byte[] positive = new byte[hash.Length + 1];
-			Array.Copy(hash, 0, positive, 1, hash.Length);
-
-			BigInteger value = new BigInteger(positive);
-			BigInteger result = value % Modulus;
-
-			if (result < 0)
-				result += Modulus;
-
-			return result;
 		}
 
 		// ─────────────────────────────────────────────────────────────────────────
@@ -311,28 +442,13 @@ namespace MassiveHadronLtd.IDs.HTB50
 			return NormalizeMap.TryGetValue(c, out var mapped) ? mapped : c;
 		}
 
-		/// <summary>
-		/// Generates a random HTB50 ID in the range [0, Modulus-1], encoded to 6 characters (padded with leading '0' if needed).
-		/// Uses cryptographically secure random bytes.
-		/// </summary>
-		public static string GenerateRandomId(int length = 6, bool appendFlavor = false, char padChar = '0')
+		private static string StripFlavor(string input)
 		{
-			// Generate random bytes (8 bytes = 64 bits, plenty for 50^6 ≈ 15.4 million)
-			byte[] randomBytes = new byte[8];
-			using (var rng = System.Security.Cryptography.RandomNumberGenerator.Create())
-			{
-				rng.GetBytes(randomBytes);
-			}
+			if (string.IsNullOrWhiteSpace(input))
+				throw new ArgumentException("Input is empty");
 
-			// Convert to BigInteger (ensure positive)
-			BigInteger randValue = new BigInteger(randomBytes.Concat(new byte[] { 0 }).ToArray());
-
-			// Modulo to fit within Modulus range
-			randValue = randValue % Modulus;
-			if (randValue < 0) randValue += Modulus; // ensure non-negative
-
-			// Encode to fixed-length HTB50 string
-			return EncodeFixed(randValue, length, appendFlavor, padChar);
+			int flavorIndex = input.LastIndexOf("_" + Flavor, StringComparison.Ordinal);
+			return flavorIndex >= 0 ? input.Substring(0, flavorIndex) : input;
 		}
 	}
 }
