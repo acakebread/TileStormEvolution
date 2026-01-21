@@ -246,44 +246,39 @@ namespace ClassicTilestorm
 			if (string.IsNullOrEmpty(oldId) || oldId == newId)
 				return 0;
 
-			// Prevent duplicate IDs in the global definitions list
+			// Prevent creating duplicate ID in global definitions
 			if (Definitions.Any(d => string.Equals(d.id, newId, StringComparison.Ordinal)))
 				return -1;
 
 			int changeCount = 0;
 
+			// 1. Rename inside every map's _tileEntries (the source of truth)
 			foreach (var map in Maps)
 			{
-				if (map == null || map.tiles == null || map._tileEntries == null)
+				if (map?._tileEntries == null)
 					continue;
 
-				// Update internal _tileEntries (source of truth)
+				bool changed = false;
 				for (int i = 0; i < map._tileEntries.Count; i++)
 				{
 					var entry = map._tileEntries[i];
 					if (string.Equals(entry.DisplayName, oldId, StringComparison.Ordinal))
 					{
+						// Preserve StableId, only change DisplayName
 						map._tileEntries[i] = new Map.TileEntry(newId, entry.StableId);
+						changed = true;
 						changeCount++;
 					}
 				}
 
-				// Rebuild public table property (names only)
-				map.table = map._tileEntries.Select(e => e.DisplayName).ToArray();
-
-				// Rebuild tiles indices based on new names
-				for (int i = 0; i < map.tiles.Length; i++)
+				if (changed)
 				{
-					int idx = map.tiles[i];
-					if (idx >= 0 && idx < map.table.Length)
-					{
-						// Re-lookup index after name change
-						map.tiles[i] = Array.IndexOf(map.table, map.table[idx]);
-					}
+					// table is a getter — it will automatically reflect the new name
+					// → no need to touch map.table or map.tiles[]
 				}
 			}
 
-			// Rename the definition itself
+			// 2. Rename the global definition itself
 			var def = Definitions.FirstOrDefault(d => string.Equals(d.id, oldId, StringComparison.Ordinal));
 			if (def != null)
 			{

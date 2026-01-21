@@ -288,6 +288,13 @@ namespace ClassicTilestorm
 				return;
 			}
 
+			if (!string.IsNullOrEmpty(def.hashid))
+			{
+				def.id = IDInput.text;
+				RefreshDefinitionList();
+				return;//safe to exit because we have moved over to the new hashid system - fall through only for legacy support
+			}
+
 			// Early duplicate check for nice UI feedback
 			if (ResourceManager.Definitions.Any(d => d != def && string.Equals(d.id, newId, StringComparison.Ordinal)))
 			{
@@ -328,6 +335,7 @@ namespace ClassicTilestorm
 				def.material = null;
 				UpdatePreview(lastSelectedDefinitionIndex);
 				SyncTextureDropdown();
+				SyncMaterialDropdown();
 			}
 		}
 
@@ -387,29 +395,6 @@ namespace ClassicTilestorm
 			SetSelectedIndex(lastSelectedDefinitionIndex);
 			UpdateDeleteButtonState();
 		}
-
-		//private void CreateDefinitionListItem(Definition def, int index)
-		//{
-		//	var go = Instantiate(definitionListItemPrefab, contentParent);
-		//	var toggle = go.GetComponent<Toggle>();
-		//	if (toggle == null)
-		//	{
-		//		Destroy(go);
-		//		return;
-		//	}
-
-		//	toggle.group = toggleGroup;
-		//	spawnedDefinitionToggles.Add(toggle);
-
-		//	toggle.onValueChanged.AddListener(isOn =>
-		//	{
-		//		if (isOn) SetSelectedIndex(index);
-		//	});
-
-		//	var label = go.GetComponentInChildren<TMP_Text>();
-		//	if (label != null)
-		//		label.text = $"{def.id} [{ResourceManager.DefinitionUsageCount(def.id)}]";//$"{def.id} ({def.model ?? "—"})";
-		//}
 
 		private void CreateDefinitionListItem(Definition def, int index)
 		{
