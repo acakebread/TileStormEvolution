@@ -283,9 +283,9 @@ namespace ClassicTilestorm
 
 		public static class HTB50Settings
 		{
-			public const int Radix = 50;
 			public const int FixedLength = 6;
-			public const long Modulus = 15625000000L;  // 50^6
+			//public const int Radix = 50;//no longer used
+			//public const long Modulus = 15625000000L;  // 50^6//no longer used
 		}
 	}
 }
