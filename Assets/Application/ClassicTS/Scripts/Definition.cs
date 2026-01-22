@@ -2,7 +2,6 @@
 using System.Linq;
 using System.Collections.Generic;
 using Newtonsoft.Json;
-using UnityEngine;
 using MassiveHadronLtd;
 using MassiveHadronLtd.IDs.HTB50;
 
@@ -150,8 +149,7 @@ namespace ClassicTilestorm
 
 		public static Definition Default => GetDefaultTile();   // cached if you want, but not necessary
 
-		// Hashid-only check — cleanest long-term
-		public bool IsDefault() => string.Equals( hashid, GetDefaultTile().hashid, StringComparison.Ordinal);
+		public bool IsDefault() => string.Equals(hashid, GetDefaultTile().hashid, StringComparison.Ordinal);
 
 		// ── FACTORY ────────────────────────────────────────────────────────────
 		public static Definition GetDefaultTile()
@@ -159,8 +157,8 @@ namespace ClassicTilestorm
 			// This is the ONLY place where the legacy name is written as a literal
 			const string legacyNameForHash = "tile_empty";
 
-			long hash64 = RadixHash.HashToRange64(legacyNameForHash, HTB50Settings.Modulus);
-			string stable = HTB50.EncodeFixed(hash64, HTB50Settings.FixedLength, appendFlavor: false);
+			long hash64 = RadixHash.HashToRange64(legacyNameForHash, ResourceManager.HTB50Settings.Modulus);
+			string stable = HTB50.EncodeFixed(hash64, ResourceManager.HTB50Settings.FixedLength, appendFlavor: false);
 
 			return new Definition
 			{
@@ -176,42 +174,7 @@ namespace ClassicTilestorm
 			};
 		}
 
-		// ── STABLE ID ACCESS ──────────────────────────────────────────────────
-		public string GetStableId()
-		{
-			if (!string.IsNullOrEmpty(hashid))
-				return hashid;
-
-			if (!string.IsNullOrEmpty(id))
-			{
-				long hash64 = RadixHash.HashToRange64(id, HTB50Settings.Modulus);
-				return HTB50.EncodeFixed(hash64, HTB50Settings.FixedLength, appendFlavor: false);
-			}
-
-			Debug.LogWarning("Definition has no id or hashid — generating random stable ID.");
-			long random64 = RadixHash.GenerateRandomInRange64(HTB50Settings.Modulus);
-			return HTB50.EncodeFixed(random64, HTB50Settings.FixedLength, appendFlavor: false, padChar: '0');
-		}
-
-		// ── SAFE UNIQUE HASH GENERATOR (used by ResourceManager) ──────────────
-		public static string GenerateUniqueStableId(string input, HashSet<string> existingIds)
-		{
-			long hash64 = RadixHash.HashToRange64(input, HTB50Settings.Modulus);
-			string candidate = HTB50.EncodeFixed(hash64, HTB50Settings.FixedLength, appendFlavor: false);
-
-			if (!existingIds.Contains(candidate))
-				return candidate;
-
-			Debug.LogWarning($"Rare collision on input '{input}' — retrying with salt");
-			return GenerateUniqueStableId(input + "_s", existingIds);
-		}
-
-		public static class HTB50Settings
-		{
-			public const int Radix = 50;
-			public const int FixedLength = 6;
-			public const long Modulus = 15625000000L;  // 50^6
-		}
+		public string GetHashId() => hashid ?? throw new InvalidOperationException($"Definition '{id ?? "unknown"}' missing hashid");
 	}
 
 	public static class DefinitionExtensions

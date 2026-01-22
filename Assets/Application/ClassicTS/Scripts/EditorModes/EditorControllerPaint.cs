@@ -9,10 +9,10 @@ namespace ClassicTilestorm
 	{
 		private Vector3 mouseDownPos;
 
-		private string selectedDefinitionId;           // this is now the hashid
-		private string selectedDisplayName;             // this is the legacy id / display name used for cycling
-		public string SelectedDefinitionID => selectedDefinitionId;
-		private List<string> definitionCycleList = new();  // list of display names (legacy ids)
+		private string selectedHashId;              // hashid — placement & ghost
+		public string SelectedHashId => selectedHashId;
+
+		private List<Definition> cycleDefinitions = new();  // list of full definitions for cycling
 		private int cycleIndex = 0;
 
 		private static readonly AutoHidePanel sidePanel = new(collapsed: 120f, expanded: 340f, delay: 1f, animDur: 0.3f);
@@ -20,10 +20,8 @@ namespace ClassicTilestorm
 
 		public EditorControllerPaint(EditorController editorController) : base(editorController)
 		{
-			// Initialize with the canonical default tile
 			var defaultDef = ResourceManager.FindOrCreateDefaultTile();
-			selectedDefinitionId = defaultDef.hashid;
-			selectedDisplayName = defaultDef.id;  // "tile_empty" or whatever legacy name
+			selectedHashId = defaultDef.hashid;
 
 			RefreshCycleList();
 		}
@@ -42,9 +40,11 @@ namespace ClassicTilestorm
 			if (Input.GetMouseButtonUp(1) && Vector3.Distance(Input.mousePosition, mouseDownPos) < 5f)
 				EditMapTile(erase: true);
 
-			var selectedDefinition = ResourceManager.GetDefinition(selectedDefinitionId);
-			if (selectedDefinition != null)
-				EditorMeshUtil.UpdateGhostMesh(camera, iMapManager, selectedDefinition);
+			var selectedDef = ResourceManager.GetDefinition(selectedHashId);
+			if (selectedDef != null)
+				EditorMeshUtil.UpdateGhostMesh(camera, iMapManager, selectedDef);
+			else
+				EditorMeshUtil.HideGhostMesh();
 		}
 
 		public override void OnGUI() => DrawSidePanel();
@@ -56,73 +56,51 @@ namespace ClassicTilestorm
 		private void EditMapTile(bool erase = false)
 		{
 			var worldPos = MapManager.ScreenToWorld(camera, Input.mousePosition);
+			string hashToPlace = erase
+				? ResourceManager.FindOrCreateDefaultTile().hashid
+				: selectedHashId;
 
-			string defIDToPlace;
-
-			if (erase)
+			// Cycle on left-click if on the current tile
+			if (!erase)
 			{
-				var defaultDef = ResourceManager.FindOrCreateDefaultTile();
-				defIDToPlace = defaultDef.hashid;
-			}
-			else
-			{
-				// Left-click: try cycle if clicking same tile
 				var mapIndex = iMapManager.WorldToMapIndex(worldPos);
 				if (mapIndex != -1)
 				{
-					var currentId = iMapManager.GetDefinitionAtIndex(mapIndex); // this returns hashid presumably
-					var currentDef = ResourceManager.GetDefinition(currentId);
-					if (currentDef != null && currentDef.hashid == selectedDefinitionId && definitionCycleList.Count > 1)
+					var currentHash = iMapManager.GetDefinitionAtIndex(mapIndex);
+					if (currentHash == selectedHashId && cycleDefinitions.Count > 1)
 					{
-						cycleIndex = (cycleIndex + 1) % definitionCycleList.Count;
-						selectedDisplayName = definitionCycleList[cycleIndex];
+						cycleIndex = (cycleIndex + 1) % cycleDefinitions.Count;
+						var nextDef = cycleDefinitions[cycleIndex];
 
-						// Resolve back to hashid
-						var nextDef = ResourceManager.GetDefinition(selectedDisplayName);
-						if (nextDef != null)
-						{
-							selectedDefinitionId = nextDef.hashid;
-							EditorMeshUtil.DestroyGhostMesh();
-						}
+						selectedHashId = nextDef.hashid;
+						hashToPlace = selectedHashId;
+
+						EditorMeshUtil.DestroyGhostMesh();
+						EditorMeshUtil.UpdateGhostMesh(camera, iMapManager, nextDef);
 					}
 				}
-
-				defIDToPlace = selectedDefinitionId;
 			}
 
-			var snappedPos = MapManager.SnappedMapPosition(worldPos);
+			var snapped = MapManager.SnappedMapPosition(worldPos);
 			iMapManager.UpdateTileAt(
-				Mathf.FloorToInt(snappedPos.x),
-				Mathf.FloorToInt(snappedPos.z),
-				defIDToPlace,
+				Mathf.FloorToInt(snapped.x),
+				Mathf.FloorToInt(snapped.z),
+				hashToPlace,
 				expand: true
 			);
 		}
 
-		private void SetSelectedDefinitionById(string id)
+		// Called from panel — takes hashid directly
+		private void SetSelectedDefinitionByHash(string hashId)
 		{
-			// id here is expected to be legacy display name (from list click)
-			if (string.IsNullOrEmpty(id))
+			if (string.IsNullOrEmpty(hashId))
 			{
-				var defaultDef = ResourceManager.FindOrCreateDefaultTile();
-				id = defaultDef.id;  // use legacy name for cycling
+				hashId = ResourceManager.FindOrCreateDefaultTile().hashid;
 			}
 
-			selectedDisplayName = id;
+			selectedHashId = hashId;
 
-			// Resolve to hashid for actual use
-			var def = ResourceManager.GetDefinition(id);
-			if (def != null)
-			{
-				selectedDefinitionId = def.hashid;
-			}
-			else
-			{
-				// Fallback if definition missing
-				var defaultDef = ResourceManager.FindOrCreateDefaultTile();
-				selectedDefinitionId = defaultDef.hashid;
-				selectedDisplayName = defaultDef.id;
-			}
+			var def = ResourceManager.GetDefinition(hashId);
 
 			RefreshCycleList();
 
@@ -135,68 +113,75 @@ namespace ClassicTilestorm
 
 		private void RefreshCycleList()
 		{
-			definitionCycleList = DefinitionNavGroup(selectedDisplayName);
-			cycleIndex = definitionCycleList.IndexOf(selectedDisplayName);
+			var currentDef = ResourceManager.GetDefinition(selectedHashId);
+			if (currentDef == null)
+			{
+				cycleDefinitions.Clear();
+				cycleIndex = 0;
+				return;
+			}
+
+			cycleDefinitions = GetVariantGroup(currentDef);
+			cycleIndex = cycleDefinitions.IndexOf(currentDef);
 			if (cycleIndex < 0) cycleIndex = 0;
 		}
 
-		private static List<string> DefinitionNavGroup(string referenceDefName)
+		private static List<Definition> GetVariantGroup(Definition referenceDef)
 		{
-			var singleDirections = new[] { " n", " e", " s", " w" };
-			var doubleLinear = new[] { " we", " ns", " ew", " sn" };
-			var doubleDiagonal = new[] { " nw", " ne", " se", " sw" };
-			var selectedGroup = singleDirections;
+			string referenceName = referenceDef.id;
 
-			var baseId = referenceDefName;
-			foreach (var suffix in singleDirections.Concat(doubleLinear).Concat(doubleDiagonal))
+			var singles = new[] { " n", " e", " s", " w" };
+			var doublesLinear = new[] { " we", " ns", " ew", " sn" };
+			var doublesDiag = new[] { " nw", " ne", " se", " sw" };
+			var group = singles;
+
+			var baseName = referenceName;
+			foreach (var suffix in singles.Concat(doublesLinear).Concat(doublesDiag))
 			{
-				if (referenceDefName.EndsWith(suffix))
+				if (referenceName.EndsWith(suffix))
 				{
-					baseId = referenceDefName.Substring(0, referenceDefName.Length - suffix.Length);
-					if (doubleLinear.Any(s => referenceDefName.EndsWith(s)))
-						selectedGroup = doubleLinear;
-					else if (doubleDiagonal.Any(s => referenceDefName.EndsWith(s)))
-						selectedGroup = doubleDiagonal;
+					baseName = referenceName.Substring(0, referenceName.Length - suffix.Length);
+					if (doublesLinear.Any(s => referenceName.EndsWith(s))) group = doublesLinear;
+					else if (doublesDiag.Any(s => referenceName.EndsWith(s))) group = doublesDiag;
 					break;
 				}
 			}
 
-			var cycleList = new List<string>();
+			var variants = new List<Definition>();
 
-			if (ResourceManager.Definitions.Any(d => d.id == baseId))
-				cycleList.Add(baseId);
+			var baseDef = ResourceManager.Definitions.FirstOrDefault(d => d.id == baseName);
+			if (baseDef != null)
+				variants.Add(baseDef);
 
-			foreach (var suffix in selectedGroup)
+			foreach (var suffix in group)
 			{
-				var candidate = baseId + suffix;
-				if (ResourceManager.Definitions.Any(d => d.id == candidate))
-					cycleList.Add(candidate);
+				var candidate = baseName + suffix;
+				var candidateDef = ResourceManager.Definitions.FirstOrDefault(d => d.id == candidate);
+				if (candidateDef != null)
+					variants.Add(candidateDef);
 			}
 
-			if (cycleList.Count == 0)
-				cycleList.Add(referenceDefName);
+			if (variants.Count == 0)
+				variants.Add(referenceDef);
 
-			return cycleList;
+			return variants;
 		}
 
 		private void DrawSidePanel()
 		{
 			var items = new List<ListViewItem>();
 
-			var defaultDef = ResourceManager.FindOrCreateDefaultTile();
-
 			foreach (var def in ResourceManager.Definitions)
 			{
-				bool isSelected = def.hashid == selectedDefinitionId ||
-								  (string.IsNullOrEmpty(def.hashid) && def.id == selectedDisplayName);
+				bool isSelected = def.hashid == selectedHashId;
 
-				string displayLabel = def.id;
+				string label = def.id;
 				if (def.IsDefault())
-					displayLabel = "[Default] " + displayLabel;
+					label = "[Default] " + label;
 
 				items.Add(new ListViewItem(
-					$"{displayLabel} ({def.texture ?? "none"})",
-					(x) => SetSelectedDefinitionById(def.id),  // pass legacy id for cycling
+					$"{label} ({def.texture ?? "none"})",
+					_ => SetSelectedDefinitionByHash(def.hashid),  // pass hashid
 					isSelected
 				));
 			}

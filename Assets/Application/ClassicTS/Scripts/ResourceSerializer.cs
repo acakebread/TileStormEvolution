@@ -125,11 +125,22 @@ namespace ClassicTilestorm
 					return null;
 				}
 
-				// PHASE 1: Ensure every definition has a deterministic hashid
+				// PHASE 1: One-time fixup — assign missing hashids deterministically from id
 				bool defsChanged = false;
 				foreach (var def in data.definitions.Where(d => d != null && string.IsNullOrEmpty(d.hashid)))
 				{
-					def.hashid = def.GetStableId();
+					if (!string.IsNullOrEmpty(def.id))
+					{
+						long hash64 = RadixHash.HashToRange64(def.id, ResourceManager.HTB50Settings.Modulus);
+						def.hashid = HTB50.EncodeFixed(hash64, ResourceManager.HTB50Settings.FixedLength, appendFlavor: false);
+					}
+					else
+					{
+						// Rare: no id either → random (should never happen in practice)
+						long random64 = RadixHash.GenerateRandomInRange64(ResourceManager.HTB50Settings.Modulus);
+						def.hashid = HTB50.EncodeFixed(random64, ResourceManager.HTB50Settings.FixedLength, appendFlavor: false, padChar: '0');
+						Debug.LogWarning($"Generated random hashid for definition with no id or hashid");
+					}
 					defsChanged = true;
 				}
 				if (defsChanged)
@@ -167,7 +178,7 @@ namespace ClassicTilestorm
 						}
 
 						// Skip if it already looks like a hash (6 chars, alphanumeric)
-						if (current.Length == Definition.HTB50Settings.FixedLength &&
+						if (current.Length == ResourceManager.HTB50Settings.FixedLength &&
 							current.All(c => char.IsLetterOrDigit(c)))
 						{
 							newTable.Add(current);
@@ -188,8 +199,8 @@ namespace ClassicTilestorm
 							else
 							{
 								// Generate deterministic hash
-								long hash64 = RadixHash.HashToRange64(current, Definition.HTB50Settings.Modulus);
-								hashToUse = HTB50.EncodeFixed(hash64, Definition.HTB50Settings.FixedLength, appendFlavor: false);
+								long hash64 = RadixHash.HashToRange64(current, ResourceManager.HTB50Settings.Modulus);
+								hashToUse = HTB50.EncodeFixed(hash64, ResourceManager.HTB50Settings.FixedLength, appendFlavor: false);
 
 								Debug.LogWarning($"Generated hash '{hashToUse}' for unmapped tile '{current}' in map '{map.name}'");
 							}

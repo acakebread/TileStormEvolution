@@ -29,12 +29,8 @@ namespace ClassicTilestorm
 		{
 			if (string.IsNullOrEmpty(idOrHash)) return null;
 
-			// Prefer stable hashid
-			var byHash = Definitions.FirstOrDefault(d => string.Equals(d.hashid, idOrHash, StringComparison.Ordinal));
-			if (byHash != null) return byHash;
-
-			// Fallback to legacy id
-			return Definitions.FirstOrDefault(d => string.Equals(d.id, idOrHash, StringComparison.Ordinal));
+			// Only hashid lookup — no legacy id fallback
+			return Definitions.FirstOrDefault(d => string.Equals(d.hashid, idOrHash, StringComparison.Ordinal));
 		}
 
 		public static TextureSequence GetTextureSequence(string id)
@@ -63,11 +59,24 @@ namespace ClassicTilestorm
 			return prototype;
 		}
 
+		private static string GenerateUniqueHash(string baseInput, HashSet<string> existingHashes)
+		{
+			long hash64 = RadixHash.HashToRange64(baseInput, HTB50Settings.Modulus);
+			string candidate = HTB50.EncodeFixed(hash64, HTB50Settings.FixedLength, appendFlavor: false);
+
+			if (!existingHashes.Contains(candidate))
+				return candidate;
+
+			// Collision (very rare) → salt and retry
+			UnityEngine.Debug.LogWarning($"Hash collision on '{baseInput}' — retrying with salt");
+			return GenerateUniqueHash(baseInput + "_s", existingHashes);
+		}
+
 		public static Definition CreateDefinition(
 			string name = null,
 			string model = "tile_flat",
 			string texture = "Default",
-			bool ensureUniqueHash = false)  // ← default false = fast & safe enough
+			bool ensureUniqueHash = false)  // default false = fast & safe
 		{
 			var def = new Definition
 			{
@@ -76,27 +85,41 @@ namespace ClassicTilestorm
 				texture = texture
 			};
 
-			long random64 = RadixHash.GenerateRandomInRange64(Definition.HTB50Settings.Modulus);
-			var hashid = HTB50.EncodeFixed(random64, Definition.HTB50Settings.FixedLength, appendFlavor: false, padChar: '0');
+			// Fast path: deterministic from id (recommended)
+			long hash64 = RadixHash.HashToRange64(def.id, HTB50Settings.Modulus);
+			string candidate = HTB50.EncodeFixed(hash64, HTB50Settings.FixedLength, appendFlavor: false);
 
 			if (ensureUniqueHash)
 			{
 				var existing = new HashSet<string>(
 					Definitions.Where(d => !string.IsNullOrEmpty(d.hashid))
-								.Select(d => d.hashid),
+							   .Select(d => d.hashid),
 					StringComparer.Ordinal
 				);
 
-				def.hashid = Definition.GenerateUniqueStableId(hashid, existing);
+				def.hashid = GenerateUniqueHash(def.id, existing);
 			}
 			else
 			{
-				// Fast deterministic path (recommended default)
-				long hashValue = RadixHash.HashToRange64(hashid, Definition.HTB50Settings.Modulus);
-				def.hashid = HTB50.EncodeFixed(hashValue, Definition.HTB50Settings.FixedLength, appendFlavor: false);
+				def.hashid = candidate;
 			}
 
 			return def;
+		}
+
+		private static string _defaultTileHash;
+		public static string DefaultTileHash
+		{
+			get
+			{
+				if (_defaultTileHash == null)
+				{
+					const string legacyName = "tile_empty";
+					long hash64 = RadixHash.HashToRange64(legacyName, HTB50Settings.Modulus);
+					_defaultTileHash = HTB50.EncodeFixed(hash64, HTB50Settings.FixedLength, appendFlavor: false);
+				}
+				return _defaultTileHash;
+			}
 		}
 
 		// ── EXISTING INSERT METHODS (updated to use factory if desired) ────────
@@ -186,14 +209,6 @@ namespace ClassicTilestorm
 			return candidate;
 		}
 
-		public static Definition GetDefinitionByStableId(string stableId)
-		{
-			if (string.IsNullOrEmpty(stableId)) return null;
-			var match = database.definitions.FirstOrDefault(d => d.hashid == stableId);
-			if (match != null) return match;
-			return database.definitions.FirstOrDefault(d => d.GetStableId() == stableId);
-		}
-
 		public static int CountDefinitionsNeedingHashMigration()
 		{
 			return database?.definitions?.Count(d => string.IsNullOrEmpty(d.hashid) && !string.IsNullOrEmpty(d.id)) ?? 0;
@@ -246,68 +261,42 @@ namespace ClassicTilestorm
 
 		public static int RenameDefinitionId(string oldId, string newId)
 		{
-			if (string.IsNullOrEmpty(oldId) || oldId == newId)
-				return 0;
+			if (string.IsNullOrEmpty(oldId) || oldId == newId) return 0;
 
 			if (Definitions.Any(d => string.Equals(d.id, newId, StringComparison.Ordinal)))
 				return -1;
 
 			int changeCount = 0;
 
-			foreach (var map in Maps)
-			{
-				if (map?.table == null) continue;
-
-				bool changed = false;
-				for (int i = 0; i < map.table.Length; i++)
-				{
-					if (string.Equals(map.table[i], oldId, StringComparison.Ordinal))
-					{
-						map.table[i] = newId;
-						changed = true;
-						changeCount++;
-					}
-				}
-
-				if (changed)
-				{
-					// table already updated
-				}
-			}
-
 			var def = Definitions.FirstOrDefault(d => string.Equals(d.id, oldId, StringComparison.Ordinal));
 			if (def != null)
 			{
 				def.id = newId;
+				changeCount = 1;
 			}
 
 			return changeCount;
 		}
 
-		// IsDefinitionUsed — fixed (use table instead of StableId)
-		public static bool IsDefinitionUsed(string stableId)
+		public static bool IsDefinitionUsed(string hashId)
 		{
-			if (string.IsNullOrEmpty(stableId))
-				return false;
+			if (string.IsNullOrEmpty(hashId)) return false;
 
-			foreach (var map in Maps)
-			{
-				if (map == null || map.table == null) continue;
-
-				if (map.table.Any(name =>
-				{
-					var def = GetDefinition(name);
-					return def != null && string.Equals(def.hashid, stableId, StringComparison.OrdinalIgnoreCase);
-				}))
-				{
-					return true;
-				}
-			}
-
-			return false;
+			return Maps.Any(m => m?.table?.Contains(hashId) == true);
 		}
 
-		public static int DefinitionUsageCount(string stableId)
-			=> string.IsNullOrEmpty(stableId) ? 0 : Maps.Count(m => m?.table?.Contains(stableId) == true);
+		public static int DefinitionUsageCount(string hashId)
+		{
+			if (string.IsNullOrEmpty(hashId)) return 0;
+
+			return Maps.Sum(m => m?.table?.Count(h => h == hashId) ?? 0);
+		}
+
+		public static class HTB50Settings
+		{
+			public const int Radix = 50;
+			public const int FixedLength = 6;
+			public const long Modulus = 15625000000L;  // 50^6
+		}
 	}
 }
