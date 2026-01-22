@@ -22,29 +22,64 @@ namespace ClassicTilestorm
 				.OrderBy(p => p.Order ?? int.MaxValue);
 		}
 
+		//protected void ParseTableOld(Map map, JArray tableArray)
+		//{
+		//	map._tileEntries.Clear();
+
+		//	foreach (JToken token in tableArray)
+		//	{
+		//		string entry = token.Value<string>()?.Trim() ?? "tile_empty";
+		//		string stableId = null;
+		//		string displayName = entry;
+
+		//		if (entry.StartsWith("[", StringComparison.Ordinal))
+		//		{
+		//			int close = entry.IndexOf(']', 1);
+		//			if (close > 1)
+		//			{
+		//				string hash = entry.Substring(1, close - 1).Trim();
+		//				string rest = entry.Substring(close + 1).Trim();
+
+		//				stableId = hash;
+		//				displayName = string.IsNullOrEmpty(rest) ? "PENDING_ID" : rest;
+		//			}
+		//		}
+
+		//		map._tileEntries.Add(new Map.TileEntry(displayName, stableId));
+		//	}
+		//}
+
 		protected void ParseTable(Map map, JArray tableArray)
 		{
 			map._tileEntries.Clear();
 
 			foreach (JToken token in tableArray)
 			{
-				string entry = token.Value<string>()?.Trim() ?? "tile_empty";
-				string stableId = null;
-				string displayName = entry;
+				string entry = token.Value<string>()?.Trim();
 
-				if (entry.StartsWith("[", StringComparison.Ordinal))
+				string stableId = null;
+				string displayName = entry; // ← can be null or ""
+
+				// Modern format: [HASH]Name or [HASH]
+				if (!string.IsNullOrEmpty(entry) && entry.StartsWith("[", StringComparison.Ordinal))
 				{
 					int close = entry.IndexOf(']', 1);
 					if (close > 1)
 					{
-						string hash = entry.Substring(1, close - 1).Trim();
-						string rest = entry.Substring(close + 1).Trim();
+						string hashPart = entry.Substring(1, close - 1).Trim();
+						string namePart = entry.Substring(close + 1).Trim();
 
-						stableId = hash;
-						displayName = string.IsNullOrEmpty(rest) ? "PENDING_ID" : rest;
+						stableId = hashPart;
+						displayName = string.IsNullOrEmpty(namePart) ? null : namePart;
+					}
+					else
+					{
+						// malformed → keep as-is
+						displayName = entry;
 					}
 				}
 
+				// Legacy entries are kept exactly as they are (including null / "" / "tile_empty")
 				map._tileEntries.Add(new Map.TileEntry(displayName, stableId));
 			}
 		}

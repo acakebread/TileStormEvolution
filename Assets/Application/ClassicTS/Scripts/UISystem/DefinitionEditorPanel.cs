@@ -396,6 +396,45 @@ namespace ClassicTilestorm
 			UpdateDeleteButtonState();
 		}
 
+		//private void CreateDefinitionListItem(Definition def, int index)
+		//{
+		//	var go = Instantiate(definitionListItemPrefab, contentParent);
+		//	var toggle = go.GetComponent<Toggle>();
+		//	if (toggle == null)
+		//	{
+		//		Destroy(go);
+		//		return;
+		//	}
+
+		//	toggle.group = toggleGroup;
+		//	spawnedDefinitionToggles.Add(toggle);
+
+		//	toggle.onValueChanged.AddListener(isOn =>
+		//	{
+		//		if (isOn) SetSelectedIndex(index);
+		//	});
+
+		//	var label = go.GetComponentInChildren<TMP_Text>();
+		//	if (label != null)
+		//	{
+		//		string usage = ResourceManager.DefinitionUsageCount(def.id).ToString();
+		//		string hashPart = "";
+
+		//		if (!string.IsNullOrEmpty(def.hashid))
+		//		{
+		//			hashPart = $" (hash:{def.hashid})";
+		//		}
+		//		// Optional more verbose version during early testing:
+		//		else if (!string.IsNullOrEmpty(def.id))
+		//		{
+		//			string computed = def.GetStableId();
+		//			hashPart = $" (hash:pending → {computed})";
+		//		}
+
+		//		label.text = $"{def.id} [{usage}]{hashPart}";
+		//	}
+		//}
+
 		private void CreateDefinitionListItem(Definition def, int index)
 		{
 			var go = Instantiate(definitionListItemPrefab, contentParent);
@@ -417,21 +456,19 @@ namespace ClassicTilestorm
 			var label = go.GetComponentInChildren<TMP_Text>();
 			if (label != null)
 			{
-				string usage = ResourceManager.DefinitionUsageCount(def.id).ToString();
-				string hashPart = "";
+				int usage = ResourceManager.DefinitionUsageCount(def?.hashid);
 
-				if (!string.IsNullOrEmpty(def.hashid))
-				{
-					hashPart = $" (hash:{def.hashid})";
-				}
-				// Optional more verbose version during early testing:
-				else if (!string.IsNullOrEmpty(def.id))
-				{
-					string computed = def.GetStableId();
-					hashPart = $" (hash:pending → {computed})";
-				}
+				string hashDisplay = string.IsNullOrEmpty(def?.hashid)
+					? "(no hashid yet)"
+					: $"hash: {def.hashid}";
 
-				label.text = $"{def.id} [{usage}]{hashPart}";
+				// During transition you might still want to show the pending hash for debugging:
+				// if (string.IsNullOrEmpty(def.hashid) && !string.IsNullOrEmpty(def.id))
+				// {
+				//     hashDisplay = $"pending hash: {def.GetStableId()}";
+				// }
+
+				label.text = $"{def?.id ?? "???"}  [{usage}]  ({hashDisplay})";
 			}
 		}
 
@@ -476,17 +513,34 @@ namespace ClassicTilestorm
 			}
 		}
 
+		//private void UpdateDeleteButtonState()
+		//{
+		//	if (ButtonDelete == null) return;
+
+		//	bool hasSelection = lastSelectedDefinitionIndex >= 0;
+		//	bool isUsed = hasSelection && ResourceManager.IsDefinitionUsed(CurrentDefinition?.id);
+
+		//	ButtonDelete.interactable = hasSelection && !isUsed;
+
+		//	if (ButtonDelete.GetComponentInChildren<TMP_Text>() is TMP_Text btnText)
+		//		btnText.text = isUsed ? "Delete (used)" : "Delete";
+		//}
+
 		private void UpdateDeleteButtonState()
 		{
 			if (ButtonDelete == null) return;
 
 			bool hasSelection = lastSelectedDefinitionIndex >= 0;
-			bool isUsed = hasSelection && ResourceManager.IsDefinitionUsed(CurrentDefinition?.id);
+
+			// Changed: use hashid instead of id
+			bool isUsed = hasSelection && ResourceManager.IsDefinitionUsed(CurrentDefinition?.hashid);
 
 			ButtonDelete.interactable = hasSelection && !isUsed;
 
 			if (ButtonDelete.GetComponentInChildren<TMP_Text>() is TMP_Text btnText)
+			{
 				btnText.text = isUsed ? "Delete (used)" : "Delete";
+			}
 		}
 
 		// ── Preview Management ──────────────────────────────────────────────────────────────

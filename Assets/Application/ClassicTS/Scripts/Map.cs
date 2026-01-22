@@ -19,7 +19,7 @@ namespace ClassicTilestorm
 
 			public TileEntry(string displayName, string stableId = null)
 			{
-				DisplayName = displayName ?? "tile_empty";
+				DisplayName = displayName ?? "undefined"; //DisplayName = displayName ?? "tile_empty";
 				StableId = stableId;
 			}
 		}

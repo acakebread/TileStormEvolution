@@ -19,6 +19,9 @@ namespace ClassicTilestorm
 		public string flags;         // comma/space separated, e.g. "Drag, Roll, Dock"
 		public string connections;   // e.g. "NSEW" (uppercase, no separators)
 
+		//[JsonIgnore] public string id { get => hashid; }//future replacement for hashid obviously this currently conflicts with the existing use of 'id'
+		[JsonIgnore] public string name { get => id; }//future replacement for id - just the display name in the editor
+
 		// ── CONNECTIONS (settable) ────────────────────────────────────────────
 		[JsonIgnore] public bool bNorth { get => HasConnection('N'); set => SetConnection('N', value); }
 		[JsonIgnore] public bool bSouth { get => HasConnection('S'); set => SetConnection('S', value); }
@@ -145,22 +148,56 @@ namespace ClassicTilestorm
 			};
 		}
 
-		// ── FACTORY ────────────────────────────────────────────────────────────
-		public static Definition GetDefault(string newId = null)
-		{
-			string legacyId = newId ?? StringUtil.GenerateAssetId();
+		public static Definition Default => GetDefaultTile();   // cached if you want, but not necessary
 
-			long hashValue = RadixHash.HashToRange64(legacyId, HTB50Settings.Modulus);
-			string stableHashId = HTB50.EncodeFixed(hashValue, HTB50Settings.FixedLength, appendFlavor: false);
+		//public bool IsTheCanonicalEmptyTile()//Legacy
+		//{
+		//	return
+		//		string.Equals(id, "tile_empty", StringComparison.Ordinal) ||
+		//		string.Equals(hashid, GetEmptyTile().hashid, StringComparison.Ordinal);
+		//}
+
+		// Hashid-only check — cleanest long-term
+		public bool IsDefault() => string.Equals( hashid, GetDefaultTile().hashid, StringComparison.Ordinal);
+
+		// ── FACTORY ────────────────────────────────────────────────────────────
+		public static Definition GetDefaultTile()
+		{
+			// This is the ONLY place where the legacy name is written as a literal
+			const string legacyNameForHash = "tile_empty";
+
+			long hash64 = RadixHash.HashToRange64(legacyNameForHash, HTB50Settings.Modulus);
+			string stable = HTB50.EncodeFixed(hash64, HTB50Settings.FixedLength, appendFlavor: false);
 
 			return new Definition
 			{
-				id = legacyId,
-				hashid = stableHashId,
-				model = "tile_flat",
-				texture = "Default"
+				id = legacyNameForHash,     // kept for compatibility / serialization / inspector
+				hashid = stable,
+
+				model = null,
+				texture = null,
+				material = null,
+				flags = null,
+				connections = null
+				// future empty-state fields go here
 			};
 		}
+
+		//public static Definition GetGeneric(string newId = null)
+		//{
+		//	string legacyId = newId ?? StringUtil.GenerateAssetId();
+
+		//	long hashValue = RadixHash.HashToRange64(legacyId, HTB50Settings.Modulus);
+		//	string stableHashId = HTB50.EncodeFixed(hashValue, HTB50Settings.FixedLength, appendFlavor: false);
+
+		//	return new Definition
+		//	{
+		//		id = legacyId,
+		//		hashid = stableHashId,
+		//		model = "tile_flat",
+		//		texture = "Default"
+		//	};
+		//}
 
 		// ── STABLE ID ACCESS ──────────────────────────────────────────────────
 		public string GetStableId()

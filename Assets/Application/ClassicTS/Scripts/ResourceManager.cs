@@ -41,6 +41,28 @@ namespace ClassicTilestorm
 			=> string.IsNullOrEmpty(id) ? null : TextureSequences.FirstOrDefault(ts => ts.id == id);
 
 		// ── DEFINITION CREATION WITH OPTIONAL UNIQUENESS CHECK ────────────────
+		public static Definition FindOrCreateDefaultTile()
+		{
+			var prototype = Definition.GetDefaultTile();
+			string expectedHash = prototype.hashid;
+
+			// Only hashid matters from now on
+			var match = Definitions.FirstOrDefault(d =>
+				string.Equals(d.hashid, expectedHash, StringComparison.Ordinal));
+
+			if (match != null)
+			{
+				return match;
+			}
+
+			// Canonical default tile is missing → insert it
+			var list = (_db?.definitions ?? Array.Empty<Definition>()).ToList();
+			list.Insert(0, prototype);           // position 0 = conventional for "nothing"
+			_db.definitions = list.ToArray();
+
+			return prototype;
+		}
+
 		public static Definition CreateDefinition(
 			string name = null,
 			string model = "tile_flat",
@@ -148,19 +170,64 @@ namespace ClassicTilestorm
 			_db.definitions = list.ToArray();
 		}
 
-		public static bool IsDefinitionUsed(string defId)
+		/// <summary>
+		/// Checks whether a definition (identified by its stable hashid) is currently placed/used
+		/// in any map in the database.
+		/// </summary>
+		/// <param name="stableId">The hashid / StableId of the definition to check</param>
+		/// <returns>true if the definition appears in any map's tile entries</returns>
+		public static bool IsDefinitionUsed(string stableId)
 		{
-			if (string.IsNullOrEmpty(defId)) return false;
-			foreach (var map in Maps)
+			if (string.IsNullOrEmpty(stableId))
+				return false;
+
+			foreach (var map in ResourceManager.Maps)   // assuming Maps is ResourceManager.Maps or similar
 			{
-				if (map?.table == null) continue;
-				if (Array.IndexOf(map.table, defId) >= 0) return true;
+				if (map == null || map._tileEntries == null)
+					continue;
+
+				// Look directly in _tileEntries — more reliable during transition
+				if (map._tileEntries.Any(e =>
+					string.Equals(e.StableId, stableId, StringComparison.OrdinalIgnoreCase)))
+				{
+					return true;
+				}
+
+				// Optional fallback (during transition period) — can be removed later
+				// if (map.table != null && Array.IndexOf(map.table, defId) >= 0)
+				//     return true;
 			}
+
 			return false;
 		}
 
-		public static int DefinitionUsageCount(string defId)
-			=> string.IsNullOrEmpty(defId) ? 0 : Maps.Count(m => m?.table?.Contains(defId) == true);
+		//public static bool IsDefinitionUsed(string defId)
+		//{
+		//	if (string.IsNullOrEmpty(defId)) return false;
+		//	foreach (var map in Maps)
+		//	{
+		//		if (map?.table == null) continue;
+		//		if (Array.IndexOf(map.table, defId) >= 0) return true;
+		//	}
+		//	return false;
+		//}
+
+		/// <summary>
+		/// Returns how many times this definition (identified by its hashid/StableId) 
+		/// is placed/used across all maps in the database.
+		/// </summary>
+		public static int DefinitionUsageCount(string stableId)
+		{
+			if (string.IsNullOrEmpty(stableId)) return 0;
+
+			return Maps
+				.Where(m => m?._tileEntries != null)
+				.Sum(m => m._tileEntries.Count(e =>
+					string.Equals(e.StableId, stableId, StringComparison.OrdinalIgnoreCase)));
+		}
+
+		//public static int DefinitionUsageCount(string defId)
+		//	=> string.IsNullOrEmpty(defId) ? 0 : Maps.Count(m => m?.table?.Contains(defId) == true);
 
 		public static string GenerateUniqueNewDefinitionId(string prefix = "new_def_id")
 		{
