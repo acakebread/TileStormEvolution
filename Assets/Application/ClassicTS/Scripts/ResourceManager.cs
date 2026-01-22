@@ -170,65 +170,6 @@ namespace ClassicTilestorm
 			_db.definitions = list.ToArray();
 		}
 
-		///// <summary>
-		///// Checks whether a definition (identified by its stable hashid) is currently placed/used
-		///// in any map in the database.
-		///// </summary>
-		///// <param name="stableId">The hashid / StableId of the definition to check</param>
-		///// <returns>true if the definition appears in any map's tile entries</returns>
-		//public static bool IsDefinitionUsed(string stableId)
-		//{
-		//	if (string.IsNullOrEmpty(stableId))
-		//		return false;
-
-		//	foreach (var map in ResourceManager.Maps)   // assuming Maps is ResourceManager.Maps or similar
-		//	{
-		//		if (map == null || map._tileEntries == null)
-		//			continue;
-
-		//		// Look directly in _tileEntries — more reliable during transition
-		//		if (map._tileEntries.Any(e =>
-		//			string.Equals(e.StableId, stableId, StringComparison.OrdinalIgnoreCase)))
-		//		{
-		//			return true;
-		//		}
-
-		//		// Optional fallback (during transition period) — can be removed later
-		//		// if (map.table != null && Array.IndexOf(map.table, defId) >= 0)
-		//		//     return true;
-		//	}
-
-		//	return false;
-		//}
-
-		//public static bool IsDefinitionUsed(string defId)
-		//{
-		//	if (string.IsNullOrEmpty(defId)) return false;
-		//	foreach (var map in Maps)
-		//	{
-		//		if (map?.table == null) continue;
-		//		if (Array.IndexOf(map.table, defId) >= 0) return true;
-		//	}
-		//	return false;
-		//}
-
-		///// <summary>
-		///// Returns how many times this definition (identified by its hashid/StableId) 
-		///// is placed/used across all maps in the database.
-		///// </summary>
-		//public static int DefinitionUsageCount(string stableId)
-		//{
-		//	if (string.IsNullOrEmpty(stableId)) return 0;
-
-		//	return Maps
-		//		.Where(m => m?._tileEntries != null)
-		//		.Sum(m => m._tileEntries.Count(e =>
-		//			string.Equals(e.StableId, stableId, StringComparison.OrdinalIgnoreCase)));
-		//}
-
-		//public static int DefinitionUsageCount(string defId)
-		//	=> string.IsNullOrEmpty(defId) ? 0 : Maps.Count(m => m?.table?.Contains(defId) == true);
-
 		public static string GenerateUniqueNewDefinitionId(string prefix = "new_def_id")
 		{
 			int n = 1;
@@ -303,61 +244,6 @@ namespace ClassicTilestorm
 			return index >= 0 && index < Definitions.Count ? Definitions[index].id : null;
 		}
 
-		///// <summary>
-		///// Renames a definition ID across the entire database.
-		///// Updates both the definition itself and all map placements (including internal _tileEntries).
-		///// Returns number of map cells changed, or -1 if newId already exists.
-		///// </summary>
-		//public static int RenameDefinitionId(string oldId, string newId)
-		//{
-		//	if (string.IsNullOrEmpty(oldId) || oldId == newId)
-		//		return 0;
-
-		//	// Prevent creating duplicate ID in global definitions
-		//	if (Definitions.Any(d => string.Equals(d.id, newId, StringComparison.Ordinal)))
-		//		return -1;
-
-		//	int changeCount = 0;
-
-		//	// 1. Rename inside every map's _tileEntries (the source of truth)
-		//	foreach (var map in Maps)
-		//	{
-		//		if (map?._tileEntries == null)
-		//			continue;
-
-		//		bool changed = false;
-		//		for (int i = 0; i < map._tileEntries.Count; i++)
-		//		{
-		//			var entry = map._tileEntries[i];
-		//			if (string.Equals(entry.DisplayName, oldId, StringComparison.Ordinal))
-		//			{
-		//				// Preserve StableId, only change DisplayName
-		//				map._tileEntries[i] = new Map.TileEntry(newId, entry.StableId);
-		//				changed = true;
-		//				changeCount++;
-		//			}
-		//		}
-
-		//		if (changed)
-		//		{
-		//			// table is a getter — it will automatically reflect the new name
-		//			// → no need to touch map.table or map.tiles[]
-		//		}
-		//	}
-
-		//	// 2. Rename the global definition itself
-		//	var def = Definitions.FirstOrDefault(d => string.Equals(d.id, oldId, StringComparison.Ordinal));
-		//	if (def != null)
-		//	{
-		//		def.id = newId;
-		//	}
-
-		//	return changeCount;
-		//}
-
-		// ... (rest of ResourceManager.cs unchanged)
-
-		// RenameDefinitionId — fixed TileEntry creation
 		public static int RenameDefinitionId(string oldId, string newId)
 		{
 			if (string.IsNullOrEmpty(oldId) || oldId == newId)
@@ -423,46 +309,7 @@ namespace ClassicTilestorm
 			return false;
 		}
 
-		//// DefinitionUsageCount — fixed
-		//public static int DefinitionUsageCount(string stableId)
-		//{
-		//	if (string.IsNullOrEmpty(stableId)) return 0;
-
-		//	return Maps
-		//		.Where(m => m?.table != null)
-		//		.Sum(m => m.table.Count(name =>
-		//		{
-		//			var def = GetDefinition(name);
-		//			return def != null && string.Equals(def.hashid, stableId, StringComparison.OrdinalIgnoreCase);
-		//		}));
-		//}
-
-		//public static int DefinitionUsageCount(string stableId)
-		//{
-		//	if (string.IsNullOrEmpty(stableId)) return 0;
-
-		//	foreach (var map in Maps)
-		//	{
-		//		if (map?.table == null) continue;
-
-		//		foreach (var name in map.table)
-		//		{
-		//			var def = GetDefinition(name);
-		//			if (def != null && string.Equals(def.hashid, stableId, StringComparison.OrdinalIgnoreCase))
-		//			{
-		//				return 1; // found at least once → stop counting, just return positive
-		//			}
-		//		}
-		//	}
-
-		//	return 0;
-		//}
-
 		public static int DefinitionUsageCount(string stableId)
 			=> string.IsNullOrEmpty(stableId) ? 0 : Maps.Count(m => m?.table?.Contains(stableId) == true);
-
-		//old
-		//public static int DefinitionUsageCount(string defId)
-		//	=> string.IsNullOrEmpty(defId) ? 0 : Maps.Count(m => m?.table?.Contains(defId) == true);
 	}
 }
