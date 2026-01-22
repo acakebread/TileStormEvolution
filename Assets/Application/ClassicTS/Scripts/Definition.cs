@@ -10,7 +10,7 @@ namespace ClassicTilestorm
 	[Serializable]
 	public class Definition
 	{
-		public string hashid;   // new: stable hash-based ID (future primary id)
+		public string hashid;   // new: stable hash-based ID (future primary id) -- ToDo convert to 'long'
 		public string id;       // current: human-friendly / legacy name
 		public string model;
 		public string texture;
@@ -20,6 +20,7 @@ namespace ClassicTilestorm
 
 		//[JsonIgnore] public string id { get => hashid; }//future replacement for hashid obviously this currently conflicts with the existing use of 'id'
 		[JsonIgnore] public string name { get => id; }//future replacement for id - just the display name in the editor
+		[JsonIgnore] public long HashInt => string.IsNullOrEmpty(hashid) ? -1L : HTB50.Decode64(hashid);
 
 		// ── CONNECTIONS (settable) ────────────────────────────────────────────
 		[JsonIgnore] public bool bNorth { get => HasConnection('N'); set => SetConnection('N', value); }
