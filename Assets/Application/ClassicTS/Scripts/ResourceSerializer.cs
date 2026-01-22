@@ -7,6 +7,9 @@ using Newtonsoft.Json.Serialization;
 using System.Reflection;
 using System;
 using UnityEditor;
+using MassiveHadronLtd;
+using MassiveHadronLtd.IDs.HTB50;
+using System.Collections.Generic;
 
 namespace ClassicTilestorm
 {
@@ -23,13 +26,11 @@ namespace ClassicTilestorm
 			{
 				Converters = { new MapAttachmentConverter() },
 				NullValueHandling = NullValueHandling.Ignore,
-				// This works on ALL versions of Json.NET
-				ContractResolver = new UnityContractResolver()
 			};
 
 			JsonConvert.DefaultSettings = () => settings;
 			_initialized = true;
-			Debug.Log("Json.NET configured to serialize public fields (Unity-compatible)");
+			Debug.Log("Json.NET configured with ordered properties (declaration order)");
 		}
 	}
 
@@ -56,9 +57,10 @@ namespace ClassicTilestorm
 
 	public static class ResourceSerializer
 	{
-		private static void EnsureFolder(string path) { if (!Directory.Exists(path)) Directory.CreateDirectory(path); }//helper
-
-		private static string lastLoadedJsonHash = null;
+		private static void EnsureFolder(string path)
+		{
+			if (!Directory.Exists(path)) Directory.CreateDirectory(path);
+		}
 
 		public static void Initialise(TextAsset jsonAsset)
 		{
@@ -76,21 +78,9 @@ namespace ClassicTilestorm
 
 			if (jsonAsset == null) return;
 
-			string currentHash = jsonAsset.text.GetHashCode().ToString(); // cheap hash
-
-			if (ResourceManager.database != null && currentHash == lastLoadedJsonHash)
-			{
-				Debug.Log("Database content didn't change → keeping current in-memory version");
-				return;
-			}
-
 			JsonSetup.Init();
-			ResourceManager.database = null;           // important
+			ResourceManager.database = null;// important
 			ResourceManager.database = LoadDatabase(jsonAsset.text);
-
-			lastLoadedJsonHash = currentHash;
-
-			Debug.Log("Database loaded (or refreshed)");
 		}
 
 		public static DatabaseData LoadDatabase(string json)
@@ -100,27 +90,156 @@ namespace ClassicTilestorm
 			try
 			{
 				var root = JObject.Parse(json);
-				var serializer = JsonSerializer.CreateDefault();
+
+				var settings = new JsonSerializerSettings
+				{
+					Converters = { new DatabaseMapConverter() },
+					NullValueHandling = NullValueHandling.Ignore
+				};
+
+				var serializer = JsonSerializer.Create(settings);
 
 				var data = new DatabaseData
 				{
-					maps = root["maps"]?.ToObject<Map[]>(serializer) ?? System.Array.Empty<Map>(),
-					definitions = root["definitions"]?.ToObject<Definition[]>(serializer) ?? System.Array.Empty<Definition>(),
-					textures = root["textures"]?.ToObject<TextureSequence[]>(serializer) ?? System.Array.Empty<TextureSequence>(),
-					buttons = root["buttons"]?.ToObject<Legacy.Button[]>(serializer) ?? System.Array.Empty<Legacy.Button>()
+					maps = root["maps"] != null
+						? serializer.Deserialize<Map[]>(root["maps"].CreateReader())
+						: Array.Empty<Map>(),
+
+					definitions = root["definitions"] != null
+						? serializer.Deserialize<Definition[]>(root["definitions"].CreateReader())
+						: Array.Empty<Definition>(),
+
+					textures = root["textures"] != null
+						? serializer.Deserialize<TextureSequence[]>(root["textures"].CreateReader())
+						: Array.Empty<TextureSequence>(),
+
+					buttons = root["buttons"] != null
+						? serializer.Deserialize<Legacy.Button[]>(root["buttons"].CreateReader())
+						: Array.Empty<Legacy.Button>()
 				};
 
-				if (data.maps == null || data.definitions == null || data.textures == null || data.maps.Length == 0 || data.definitions.Length == 0 || data.textures.Length == 0)
+				if (data.maps == null || data.definitions == null || data.textures == null ||
+					data.maps.Length == 0 || data.definitions.Length == 0 || data.textures.Length == 0)
 				{
 					Debug.LogError("ResourceSerializer: Database failed validation");
 					return null;
 				}
 
+				// PHASE 1: One-time fixup — assign missing hashids deterministically from id
+				bool defsChanged = false;
+				// PHASE 1: assign missing hashids using full-range 32-bit
+				foreach (var def in data.definitions.Where(d => d != null && string.IsNullOrEmpty(d.hashid)))
+				{
+					if (!string.IsNullOrEmpty(def.id))
+					{
+						int hash32 = RadixHash.GetStableHash32(def.id);
+						def.hashid = HTB50.EncodeFixed(hash32, ResourceManager.HTB50Settings.FixedLength, padChar: '0', appendFlavor: false);
+					}
+					else
+					{
+						// Very rare fallback
+						string fallbackInput = Guid.NewGuid().ToString();
+						int hash32 = RadixHash.GetStableHash32(fallbackInput);
+						def.hashid = HTB50.EncodeFixed(hash32, ResourceManager.HTB50Settings.FixedLength, padChar: '0', appendFlavor: false);
+						Debug.LogWarning($"Generated fallback hashid for definition with no id");
+					}
+					defsChanged = true;
+				}
+				if (defsChanged)
+				{
+					Debug.Log($"Assigned deterministic hashids to {data.definitions.Count(d => !string.IsNullOrEmpty(d.hashid))} definitions");
+				}
+
+				// PHASE 2: Convert legacy name-only tables → hashid-based tables (only if needed)
+				int mapsMigrated = 0;
+				int entriesConverted = 0;
+
+				// Pre-build fast name → hash lookup
+				var nameToHash = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+				foreach (var def in data.definitions.Where(d => d != null))
+				{
+					if (!string.IsNullOrEmpty(def.id) && !string.IsNullOrEmpty(def.hashid))
+					{
+						nameToHash[def.id] = def.hashid;
+					}
+				}
+
+				foreach (var map in data.maps.Where(m => m != null && m.table != null))
+				{
+					bool mapChanged = false;
+					var newTable = new List<string>(map.table.Length);
+
+					for (int i = 0; i < map.table.Length; i++)
+					{
+						string current = map.table[i]?.Trim();
+
+						if (string.IsNullOrEmpty(current))
+						{
+							newTable.Add("");
+							continue;
+						}
+
+						// Skip if it already looks like a hash (6 chars, alphanumeric)
+						if (current.Length == ResourceManager.HTB50Settings.FixedLength &&
+							current.All(c => char.IsLetterOrDigit(c)))
+						{
+							newTable.Add(current);
+							continue;
+						}
+
+						// Try to resolve as name
+						var def = ResourceManager.GetDefinition(current);
+						string hashToUse = def?.hashid;
+
+						if (string.IsNullOrEmpty(hashToUse))
+						{
+							// Fallback: known name in lookup
+							if (nameToHash.TryGetValue(current, out string knownHash))
+							{
+								hashToUse = knownHash;
+							}
+							else
+							{
+								// Generate deterministic hash Full-range 32-bit stable hash (no modulus)
+								int hash32 = RadixHash.GetStableHash32(current);
+
+								// Keep fixed length 6 with padding, exactly as before
+								hashToUse = HTB50.EncodeFixed(hash32, ResourceManager.HTB50Settings.FixedLength, padChar: '0', appendFlavor: false);
+
+								Debug.LogWarning($"Generated hash '{hashToUse}' for unmapped tile '{current}' in map '{map.name}'");
+							}
+						}
+
+						if (current != hashToUse)
+						{
+							newTable.Add(hashToUse);
+							mapChanged = true;
+							entriesConverted++;
+						}
+						else
+						{
+							newTable.Add(current);
+						}
+					}
+
+					if (mapChanged)
+					{
+						map.table = newTable.ToArray();
+						mapsMigrated++;
+						Debug.Log($"Migrated table to hashids in map '{map.name}' ({entriesConverted} entries)");
+					}
+				}
+
+				if (mapsMigrated > 0 || entriesConverted > 0)
+				{
+					Debug.Log($"Load-time migration: {mapsMigrated} maps, {entriesConverted} entries converted to hashids");
+				}
+
 				return data;
 			}
-			catch (System.Exception ex)
+			catch (Exception ex)
 			{
-				Debug.LogError($"ResourceSerializer: Failed to deserialize database → {ex.Message}");
+				Debug.LogError($"ResourceSerializer: Failed to deserialize database → {ex.Message}\n{ex.StackTrace}");
 				return null;
 			}
 		}
@@ -152,9 +271,11 @@ namespace ClassicTilestorm
 			{
 				NullValueHandling = NullValueHandling.Ignore,
 				Formatting = verbose ? Formatting.Indented : Formatting.None,
+				Converters = { new DatabaseMapConverter() }  // ← add this
 			};
 
 			string json = JsonConvert.SerializeObject(saveData, settings);
+
 			string path = string.IsNullOrEmpty(filepath)
 				? Path.Combine(Application.persistentDataPath, "database.json")
 				: filepath;
@@ -176,7 +297,14 @@ namespace ClassicTilestorm
 			try
 			{
 				string json = File.ReadAllText(filepath);
-				var importedMap = JsonConvert.DeserializeObject<Map>(json);
+
+				var settings = new JsonSerializerSettings
+				{
+					NullValueHandling = NullValueHandling.Ignore,
+					Converters = { new AtomicMapConverter() }
+				};
+
+				var importedMap = JsonConvert.DeserializeObject<Map>(json, settings);
 
 				if (importedMap == null || string.IsNullOrEmpty(importedMap.name))
 				{
@@ -184,7 +312,7 @@ namespace ClassicTilestorm
 					return;
 				}
 
-				// STRIP atomic-only fields — this is the ONLY thing Import should do
+				// STRIP atomic-only fields
 				importedMap.definitions = null;
 				importedMap.textures = null;
 				importedMap.version = null;
@@ -198,7 +326,7 @@ namespace ClassicTilestorm
 					return;
 				}
 
-				int existingIndex = System.Array.FindIndex(db.maps, m => m.name == importedMap.name);
+				int existingIndex = Array.FindIndex(db.maps, m => m.name == importedMap.name);
 				if (existingIndex >= 0)
 				{
 					db.maps[existingIndex] = importedMap;
@@ -226,17 +354,15 @@ namespace ClassicTilestorm
 		{
 			if (originalMap == null) return;
 
-			// THIS IS THE KEY: Work on a cropped copy — original stays untouched
 			var map = crop ? originalMap.CreateCroppedCopy() : originalMap;
 
-			// Collect used definitions & textures (from original — safer)
 			var usedTypes = map.table?
 				.Where(t => !string.IsNullOrEmpty(t))
 				.Distinct()
-				.ToArray() ?? System.Array.Empty<string>();
+				.ToArray() ?? Array.Empty<string>();
 
 			var usedDefs = ResourceManager.Definitions
-				.Where(d => usedTypes.Contains(d.id))
+				.Where(d => usedTypes.Contains(d.hashid))
 				.ToArray();
 
 			var usedBanks = usedDefs
@@ -249,7 +375,6 @@ namespace ClassicTilestorm
 				.Where(ts => usedBanks.Contains(ts.id))
 				.ToArray();
 
-			// Inject atomic data
 			map.definitions = usedDefs;
 			map.textures = usedTextures;
 			map.version = "1.0";
@@ -262,8 +387,10 @@ namespace ClassicTilestorm
 				{
 					NullValueHandling = NullValueHandling.Ignore,
 					Formatting = verbose ? Formatting.Indented : Formatting.None,
-					ContractResolver = new AtomicExportResolver()
+					ContractResolver = new AtomicExportResolver(),
+					Converters = { new AtomicMapConverter() }
 				};
+
 
 				string json = JsonConvert.SerializeObject(map, settings);
 
@@ -276,7 +403,6 @@ namespace ClassicTilestorm
 			}
 			finally
 			{
-				// Clean up atomic fields — not needed anymore
 				map.definitions = null;
 				map.textures = null;
 			}
@@ -284,7 +410,7 @@ namespace ClassicTilestorm
 
 		private class AtomicExportResolver : UnityContractResolver
 		{
-			protected override JsonProperty CreateProperty(System.Reflection.MemberInfo member, MemberSerialization memberSerialization)
+			protected override JsonProperty CreateProperty(MemberInfo member, MemberSerialization memberSerialization)
 			{
 				var property = base.CreateProperty(member, memberSerialization);
 				if (property.Ignored && member.DeclaringType == typeof(Map))

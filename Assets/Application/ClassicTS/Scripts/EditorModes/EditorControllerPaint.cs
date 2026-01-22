@@ -9,15 +9,22 @@ namespace ClassicTilestorm
 	{
 		private Vector3 mouseDownPos;
 
-		private string selectedDefinitionId = "tile_empty";
-		public string SelectedDefinitionID => selectedDefinitionId;
-		private List<string> definitionCycleList = new();
+		private string selectedHashId;              // hashid — placement & ghost
+		public string SelectedHashId => selectedHashId;
+
+		private List<Definition> cycleDefinitions = new();  // list of full definitions for cycling
 		private int cycleIndex = 0;
 
 		private static readonly AutoHidePanel sidePanel = new(collapsed: 120f, expanded: 340f, delay: 1f, animDur: 0.3f);
 		protected override bool IsMouseOverGUI() => base.IsMouseOverGUI() || sidePanel.IsMouseOver;
 
-		public EditorControllerPaint(EditorController editorController) : base(editorController) { }
+		public EditorControllerPaint(EditorController editorController) : base(editorController)
+		{
+			var defaultDef = ResourceManager.FindOrCreateDefaultTile();
+			selectedHashId = defaultDef.hashid;
+
+			RefreshCycleList();
+		}
 
 		public override void Update()
 		{
@@ -28,14 +35,16 @@ namespace ClassicTilestorm
 				mouseDownPos = Input.mousePosition;
 
 			if (Input.GetMouseButtonUp(0) && Vector3.Distance(Input.mousePosition, mouseDownPos) < 5f)
-				EditMapTile(selectedDefinitionId);
-
-			if (Input.GetMouseButtonUp(1) && Vector3.Distance(Input.mousePosition, mouseDownPos) < 5f)
 				EditMapTile();
 
-			var selectedDefinition = ResourceManager.GetDefinition(selectedDefinitionId);
-			if (selectedDefinition != null)
-				EditorMeshUtil.UpdateGhostMesh(camera, iMapManager, selectedDefinition);
+			if (Input.GetMouseButtonUp(1) && Vector3.Distance(Input.mousePosition, mouseDownPos) < 5f)
+				EditMapTile(erase: true);
+
+			var selectedDef = ResourceManager.GetDefinition(selectedHashId);
+			if (selectedDef != null)
+				EditorMeshUtil.UpdateGhostMesh(camera, iMapManager, selectedDef);
+			else
+				EditorMeshUtil.HideGhostMesh();
 		}
 
 		public override void OnGUI() => DrawSidePanel();
@@ -44,96 +53,140 @@ namespace ClassicTilestorm
 
 		public override void OnDestroy() => EditorMeshUtil.DestroyGhostMesh();
 
-		private void EditMapTile(string defID = null)
+		private void EditMapTile(bool erase = false)
 		{
 			var worldPos = MapManager.ScreenToWorld(camera, Input.mousePosition);
+			string hashToPlace = erase
+				? ResourceManager.FindOrCreateDefaultTile().hashid
+				: selectedHashId;
 
-			if (defID != null)
+			// Cycle on left-click if on the current tile
+			if (!erase)
 			{
 				var mapIndex = iMapManager.WorldToMapIndex(worldPos);
 				if (mapIndex != -1)
 				{
-					var currentId = iMapManager.GetDefinitionAtIndex(mapIndex);
-					if (currentId == selectedDefinitionId && definitionCycleList.Count > 1)
+					var currentHash = iMapManager.GetDefinitionAtIndex(mapIndex);
+					if (currentHash == selectedHashId && cycleDefinitions.Count > 1)
 					{
-						cycleIndex = (cycleIndex + 1) % definitionCycleList.Count;
-						selectedDefinitionId = definitionCycleList[cycleIndex];
+						cycleIndex = (cycleIndex + 1) % cycleDefinitions.Count;
+						var nextDef = cycleDefinitions[cycleIndex];
+
+						selectedHashId = nextDef.hashid;
+						hashToPlace = selectedHashId;
+
 						EditorMeshUtil.DestroyGhostMesh();
-						defID = selectedDefinitionId;
+						EditorMeshUtil.UpdateGhostMesh(camera, iMapManager, nextDef);
 					}
 				}
 			}
-			else
-				defID = "tile_empty";
 
-			var snappedPos = MapManager.SnappedMapPosition(worldPos);
-			iMapManager.UpdateTileAt(Mathf.FloorToInt(snappedPos.x), Mathf.FloorToInt(snappedPos.z), defID, expand: true);
+			var snapped = MapManager.SnappedMapPosition(worldPos);
+			iMapManager.UpdateTileAt(
+				Mathf.FloorToInt(snapped.x),
+				Mathf.FloorToInt(snapped.z),
+				hashToPlace,
+				expand: true
+			);
 		}
 
-		private void SetSelectedDefinitionById(string id)
+		// Called from panel — takes hashid directly
+		private void SetSelectedDefinitionByHash(string hashId)
 		{
-			selectedDefinitionId = id ?? "tile_empty";
+			if (string.IsNullOrEmpty(hashId))
+			{
+				hashId = ResourceManager.FindOrCreateDefaultTile().hashid;
+			}
 
-			definitionCycleList = DefinitionNavGroup(selectedDefinitionId);
-			cycleIndex = definitionCycleList.IndexOf(selectedDefinitionId);
+			selectedHashId = hashId;
+
+			var def = ResourceManager.GetDefinition(hashId);
+
+			RefreshCycleList();
 
 			EditorMeshUtil.DestroyGhostMesh();
-			var def = ResourceManager.GetDefinition(selectedDefinitionId);
 			if (def != null)
 				EditorMeshUtil.UpdateGhostMesh(camera, iMapManager, def);
 			else
 				EditorMeshUtil.HideGhostMesh();
 		}
 
-		private static List<string> DefinitionNavGroup(string referenceDef)
+		private void RefreshCycleList()
 		{
-			var singleDirections = new[] { " n", " e", " s", " w" };
-			var doubleLinear = new[] { " we", " ns", " ew", " sn" };
-			var doubleDiagonal = new[] { " nw", " ne", " se", " sw" };
-			var selectedGroup = singleDirections;
-
-			var baseId = referenceDef;
-			foreach (var suffix in singleDirections.Concat(doubleLinear).Concat(doubleDiagonal))
+			var currentDef = ResourceManager.GetDefinition(selectedHashId);
+			if (currentDef == null)
 			{
-				if (referenceDef.EndsWith(suffix))
+				cycleDefinitions.Clear();
+				cycleIndex = 0;
+				return;
+			}
+
+			cycleDefinitions = GetVariantGroup(currentDef);
+			cycleIndex = cycleDefinitions.IndexOf(currentDef);
+			if (cycleIndex < 0) cycleIndex = 0;
+		}
+
+		private static List<Definition> GetVariantGroup(Definition referenceDef)
+		{
+			string referenceName = referenceDef.id;
+
+			var singles = new[] { " n", " e", " s", " w" };
+			var doublesLinear = new[] { " we", " ns", " ew", " sn" };
+			var doublesDiag = new[] { " nw", " ne", " se", " sw" };
+			var group = singles;
+
+			var baseName = referenceName;
+			foreach (var suffix in singles.Concat(doublesLinear).Concat(doublesDiag))
+			{
+				if (referenceName.EndsWith(suffix))
 				{
-					baseId = referenceDef.Substring(0, referenceDef.Length - suffix.Length);
-					if (doubleLinear.Any(s => referenceDef.EndsWith(s)))
-						selectedGroup = doubleLinear;
-					else if (doubleDiagonal.Any(s => referenceDef.EndsWith(s)))
-						selectedGroup = doubleDiagonal;
+					baseName = referenceName.Substring(0, referenceName.Length - suffix.Length);
+					if (doublesLinear.Any(s => referenceName.EndsWith(s))) group = doublesLinear;
+					else if (doublesDiag.Any(s => referenceName.EndsWith(s))) group = doublesDiag;
 					break;
 				}
 			}
 
-			var cycleList = new List<string>();
+			var variants = new List<Definition>();
 
-			if (ResourceManager.Definitions.Any(d => d.id == baseId))
-				cycleList.Add(baseId);
+			var baseDef = ResourceManager.Definitions.FirstOrDefault(d => d.id == baseName);
+			if (baseDef != null)
+				variants.Add(baseDef);
 
-			foreach (var suffix in selectedGroup)
+			foreach (var suffix in group)
 			{
-				var candidate = baseId + suffix;
-				if (ResourceManager.Definitions.Any(d => d.id == candidate))
-					cycleList.Add(candidate);
+				var candidate = baseName + suffix;
+				var candidateDef = ResourceManager.Definitions.FirstOrDefault(d => d.id == candidate);
+				if (candidateDef != null)
+					variants.Add(candidateDef);
 			}
 
-			if (0 == cycleList.Count)
-				cycleList.Add(referenceDef);
+			if (variants.Count == 0)
+				variants.Add(referenceDef);
 
-			return cycleList;
+			return variants;
 		}
 
 		private void DrawSidePanel()
 		{
-			// Clear old items and populate ListView
 			var items = new List<ListViewItem>();
 
 			foreach (var def in ResourceManager.Definitions)
-				items.Add(new ListViewItem($"{def.id} ({def.texture})", (x) => SetSelectedDefinitionById(def.id), def.id == selectedDefinitionId));
-			sidePanel.List.SetItems(items);
+			{
+				bool isSelected = def.hashid == selectedHashId;
 
-			// Draw the panel (background + list)
+				string label = def.id;
+				if (def.IsDefault())
+					label = "[Default] " + label;
+
+				items.Add(new ListViewItem(
+					$"{label} ({def.texture ?? "none"})",
+					_ => SetSelectedDefinitionByHash(def.hashid),  // pass hashid
+					isSelected
+				));
+			}
+
+			sidePanel.List.SetItems(items);
 			sidePanel.Draw();
 		}
 	}

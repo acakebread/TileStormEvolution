@@ -2,49 +2,34 @@
 using System.Linq;
 using System.Collections.Generic;
 using Newtonsoft.Json;
+using MassiveHadronLtd;
+using MassiveHadronLtd.IDs.HTB50;
+using static ClassicTilestorm.ResourceManager;
 
 namespace ClassicTilestorm
 {
 	[Serializable]
 	public class Definition
 	{
-		public string id;
+		public string hashid;   // new: stable hash-based ID (future primary id) -- ToDo convert to 'long'
+		public string id;       // current: human-friendly / legacy name
 		public string model;
 		public string texture;
 		public string material;
 		public string flags;         // comma/space separated, e.g. "Drag, Roll, Dock"
 		public string connections;   // e.g. "NSEW" (uppercase, no separators)
 
-		// ── CONNECTIONS (now settable – changes affect the 'connections' string) ──
-		[JsonIgnore]
-		public bool bNorth
-		{
-			get => HasConnection('N');
-			set => SetConnection('N', value);
-		}
+		//[JsonIgnore] public string id { get => hashid; }//future replacement for hashid obviously this currently conflicts with the existing use of 'id'
+		[JsonIgnore] public string name { get => id; }//future replacement for id - just the display name in the editor
+		[JsonIgnore] public int HashInt => string.IsNullOrEmpty(hashid) ? -1 : HTB50.Decode(hashid);
 
-		[JsonIgnore]
-		public bool bSouth
-		{
-			get => HasConnection('S');
-			set => SetConnection('S', value);
-		}
+		// ── CONNECTIONS (settable) ────────────────────────────────────────────
+		[JsonIgnore] public bool bNorth { get => HasConnection('N'); set => SetConnection('N', value); }
+		[JsonIgnore] public bool bSouth { get => HasConnection('S'); set => SetConnection('S', value); }
+		[JsonIgnore] public bool bEast { get => HasConnection('E'); set => SetConnection('E', value); }
+		[JsonIgnore] public bool bWest { get => HasConnection('W'); set => SetConnection('W', value); }
 
-		[JsonIgnore]
-		public bool bEast
-		{
-			get => HasConnection('E');
-			set => SetConnection('E', value);
-		}
-
-		[JsonIgnore]
-		public bool bWest
-		{
-			get => HasConnection('W');
-			set => SetConnection('W', value);
-		}
-
-		// ── FLAGS (settable, as before) ───────────────────────────────────────
+		// ── FLAGS (settable) ──────────────────────────────────────────────────
 		[JsonIgnore] public bool bDrag { get => HasFlag("Drag"); set => SetFlag("Drag", value); }
 		[JsonIgnore] public bool bRoll { get => HasFlag("Roll"); set => SetFlag("Roll", value); }
 		[JsonIgnore] public bool bDock { get => HasFlag("Dock"); set => SetFlag("Dock", value); }
@@ -57,8 +42,13 @@ namespace ClassicTilestorm
 		[JsonIgnore] public bool bWash { get => HasFlag("Wash"); set => SetFlag("Wash", value); }
 
 		// ── CONDITIONAL SERIALIZATION ─────────────────────────────────────────
+		public bool ShouldSerializehashid() => !string.IsNullOrEmpty(hashid);
+		public bool ShouldSerializeid() => !string.IsNullOrEmpty(id);
+		public bool ShouldSerializemodel() => !string.IsNullOrEmpty(model);
 		public bool ShouldSerializetexture() => !string.IsNullOrEmpty(texture);
 		public bool ShouldSerializematerial() => !string.IsNullOrEmpty(material);
+		public bool ShouldSerializeflags() => !string.IsNullOrEmpty(flags);
+		public bool ShouldSerializeconnections() => !string.IsNullOrEmpty(connections);
 
 		// ── INTERNAL HELPERS ──────────────────────────────────────────────────
 		private HashSet<string> _flagCache;
@@ -66,24 +56,19 @@ namespace ClassicTilestorm
 
 		public bool HasFlag(string flag)
 		{
-			if (_flagCache == null)
-				RebuildFlagCache();
-
+			if (_flagCache == null) RebuildFlagCache();
 			return _flagCache.Contains(flag, StringComparer.OrdinalIgnoreCase);
 		}
 
 		public bool HasConnection(char dir)
 		{
-			if (_connCache == null)
-				RebuildConnectionCache();
-
+			if (_connCache == null) RebuildConnectionCache();
 			return _connCache.Contains(char.ToUpperInvariant(dir));
 		}
 
 		private void RebuildFlagCache()
 		{
 			_flagCache = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
 			if (!string.IsNullOrEmpty(flags))
 			{
 				foreach (var f in flags.Split(new[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries))
@@ -98,7 +83,6 @@ namespace ClassicTilestorm
 		private void RebuildConnectionCache()
 		{
 			_connCache = new HashSet<char>();
-
 			if (!string.IsNullOrEmpty(connections))
 			{
 				foreach (char c in connections)
@@ -109,14 +93,11 @@ namespace ClassicTilestorm
 			}
 		}
 
-		// ── FLAG MUTATION ─────────────────────────────────────────────────────
 		private void SetFlag(string flag, bool enabled)
 		{
-			if (_flagCache == null)
-				RebuildFlagCache();
+			if (_flagCache == null) RebuildFlagCache();
 
 			bool currentlyHas = _flagCache.Contains(flag, StringComparer.OrdinalIgnoreCase);
-
 			if (enabled == currentlyHas) return;
 
 			var flagList = string.IsNullOrEmpty(flags)
@@ -126,27 +107,20 @@ namespace ClassicTilestorm
 					   .Where(f => !string.Equals(f, flag, StringComparison.OrdinalIgnoreCase))
 					   .ToList();
 
-			if (enabled)
-				flagList.Add(flag);
-
+			if (enabled) flagList.Add(flag);
 			flags = string.Join(", ", flagList);
 			RebuildFlagCache();
 		}
 
-		// ── CONNECTION MUTATION ───────────────────────────────────────────────
 		private void SetConnection(char dirChar, bool enabled)
 		{
 			char dir = char.ToUpperInvariant(dirChar);
-
-			if (_connCache == null)
-				RebuildConnectionCache();
+			if (_connCache == null) RebuildConnectionCache();
 
 			bool currentlyHas = _connCache.Contains(dir);
-
 			if (enabled == currentlyHas) return;
 
 			var connList = new List<char>();
-
 			if (!string.IsNullOrEmpty(connections))
 			{
 				foreach (char c in connections)
@@ -156,10 +130,7 @@ namespace ClassicTilestorm
 				}
 			}
 
-			if (enabled)
-				connList.Add(dir);
-
-			// Sort for consistency (optional, but nice: N, E, S, W)
+			if (enabled) connList.Add(dir);
 			connList.Sort((a, b) => GetDirectionOrder(a).CompareTo(GetDirectionOrder(b)));
 
 			connections = new string(connList.ToArray());
@@ -174,23 +145,44 @@ namespace ClassicTilestorm
 				'E' => 1,
 				'S' => 2,
 				'W' => 3,
-				_ => 999   // unknown directions go last
+				_ => 999
 			};
 		}
 
-		public static Definition GetDefault(string newId = null)=> new Definition
+		public static Definition Default => GetDefaultTile();   // cached if you want, but not necessary
+
+		public bool IsDefault() => string.Equals(hashid, GetDefaultTile().hashid, StringComparison.Ordinal);
+
+		// ── FACTORY ────────────────────────────────────────────────────────────
+		public static Definition GetDefaultTile()
 		{
-			id = newId ??= MassiveHadronLtd.StringUtil.GenerateAssetId(),
-			model = "tile_flat",
-			texture = "Default"
-		};
+			const string legacyNameForHash = "tile_empty";
+
+			// Full-range 32-bit stable hash (no modulus)
+			int hash32 = RadixHash.GetStableHash32(legacyNameForHash);
+
+			// Keep fixed length 6 with padding, exactly as before
+			string stable = HTB50.EncodeFixed(hash32, HTB50Settings.FixedLength, padChar: '0', appendFlavor: false);
+
+			return new Definition
+			{
+				id = legacyNameForHash,
+				hashid = stable,
+
+				model = null,
+				texture = null,
+				material = null,
+				flags = null,
+				connections = null
+			};
+		}
+
+		public string GetHashId() => hashid ?? throw new InvalidOperationException($"Definition '{id ?? "unknown"}' missing hashid");
 	}
 
-	// Optional extension (not needed anymore for core functionality)
 	public static class DefinitionExtensions
 	{
-		// Kept for backward compatibility if used elsewhere
-		public static bool HasConnection(this Definition def, char dir) =>
-			def?.HasConnection(dir) ?? false;
+		public static bool HasConnection(this Definition def, char dir)
+			=> def?.HasConnection(dir) ?? false;
 	}
 }

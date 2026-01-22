@@ -1,88 +1,57 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 using MassiveHadronLtd;
-using System.Linq;
-using System.Collections.Generic;
 
 namespace ClassicTilestorm
 {
 	[Serializable]
 	public class Map
 	{
-		public string name;
-		public string character;
-		public string music;
-		public string skybox;
-		public string button;
-		public int width;
-		public int height;
+		// ─────────────────────────────────────────────
+		// Core identity (unchanged)
+		// ─────────────────────────────────────────────
+		[JsonProperty(Order = 1)] public string name;
+		[JsonProperty(Order = 2)] public string character;
+		[JsonProperty(Order = 3)] public string music;
+		[JsonProperty(Order = 4)] public string skybox;
+		[JsonProperty(Order = 5)] public string button;
 
-		public int[] waypoints;
-		public string[] table;
-		public int[] tiles;
-		public int[] solve;
+		// ─────────────────────────────────────────────
+		// Dimensions (unchanged)
+		// ─────────────────────────────────────────────
+		[JsonProperty(Order = 10)] public int width;
+		[JsonProperty(Order = 11)] public int height;
 
-		public MapAttachment[] attachments = Array.Empty<MapAttachment>();
+		// ─────────────────────────────────────────────
+		// Tile table — now the ONLY source of truth (hashes)
+		// ─────────────────────────────────────────────
+		[JsonProperty(Order = 20)]
+		public string[] table;  // contains hashids only (e.g. "deJ7Yv")
 
+		[JsonProperty(Order = 21)] public int[] tiles;
+		[JsonProperty(Order = 22)] public int[] solve;
+		[JsonProperty(Order = 23)] public int[] waypoints;
+
+		[JsonProperty(Order = 30)] public MapAttachment[] attachments;
+
+		// ATOMIC-ONLY FIELDS (unchanged)
+		[JsonProperty(Order = 100)] public Definition[] definitions;
+		[JsonProperty(Order = 101)] public TextureSequence[] textures;
+		[JsonProperty(Order = 102)] public string version = "1.0";
+		[JsonProperty(Order = 103)] public string author = "Player";
+		[JsonProperty(Order = 104)] public string exportedFrom = "ClassicTilestorm";
+
+		// Conditional serialization (unchanged)
 		public bool ShouldSerializeskybox() => !string.IsNullOrEmpty(skybox);
 		public bool ShouldSerializesolve() => solve != null && solve.Length > 0;
 		public bool ShouldSerializewaypoints() => waypoints != null && waypoints.Length > 0;
 		public bool ShouldSerializeattachments() => attachments != null && attachments.Length > 0;
 
 		public bool IsValidTile(int index) => index >= 0 && index < width * height;
-
-		/// <summary>
-		/// Rebuilds the optimal frequency-sorted table and remaps tiles.
-		/// Returns true if any changes were made (table or tiles changed).
-		/// </summary>
-		public bool Consolidate()
-		{
-			if (tiles == null || tiles.Length == 0)
-				return false;
-
-			var map_definitions = new string[tiles.Length];
-			for (int i = 0; i < tiles.Length; i++)
-			{
-				int idx = tiles[i];
-				if (idx >= 0 && table != null && idx < table.Length)
-					map_definitions[i] = table[idx];
-				else
-					map_definitions[i] = "tile_empty";
-			}
-
-			bool changed = false;
-
-			var newFrequencyTable = map_definitions.ToFrequencySortedTable();
-
-			if (table == null || !table.SequenceEqual(newFrequencyTable))
-			{
-				table = newFrequencyTable;
-				changed = true;
-			}
-
-			if (changed || tiles == null || tiles.Length != map_definitions.Length)
-			{
-				tiles = new int[map_definitions.Length];
-
-				for (int i = 0; i < map_definitions.Length; i++)
-				{
-					string id = map_definitions[i];
-					if (string.IsNullOrEmpty(id))
-					{
-						Debug.LogError($"Invalid ID at index {i}");
-						tiles[i] = -1;
-						continue;
-					}
-
-					int newIndex = Array.IndexOf(table, id);
-					tiles[i] = newIndex != -1 ? newIndex : -1;
-				}
-			}
-
-			if (changed) Debug.Log($"{name} consolidated");
-			return changed;
-		}
 
 		public enum Anchor
 		{
@@ -91,7 +60,45 @@ namespace ClassicTilestorm
 			BottomLeft, BottomCenter, BottomRight
 		}
 
-		// KEEP YOUR ORIGINAL PUBLIC Resize() — IT IS PERFECT FOR EDITOR USE
+		public bool Consolidate()
+		{
+			if (tiles == null || tiles.Length == 0) return false;
+
+			var defaultDef = ResourceManager.FindOrCreateDefaultTile();
+			var defaultHash = defaultDef.hashid;
+
+			var mapDefinitions = tiles.Select(idx =>
+				(idx >= 0 && idx < table.Length) ? table[idx] : null
+			).ToArray();
+
+			// Replace nulls with default hash
+			for (int i = 0; i < mapDefinitions.Length; i++)
+			{
+				if (mapDefinitions[i] == null)
+					mapDefinitions[i] = defaultHash;
+			}
+
+			var newFrequencyTable = mapDefinitions.ToFrequencySortedTable();
+
+			bool changed = !table.SequenceEqual(newFrequencyTable);
+
+			if (changed)
+			{
+				table = newFrequencyTable;
+			}
+
+			// Rebuild tiles indices if changed
+			if (changed)
+			{
+				tiles = mapDefinitions.Select(hash =>
+					Array.IndexOf(table, hash)
+				).ToArray();
+			}
+
+			if (changed) Debug.Log($"{name} consolidated (table updated)");
+			return changed;
+		}
+
 		public bool Resize(int newWidth, int newHeight, Anchor anchor = Anchor.Center)
 		{
 			if (newWidth <= 0 || newHeight <= 0) return false;
@@ -100,7 +107,6 @@ namespace ClassicTilestorm
 			int oldWidth = width;
 			int oldHeight = height;
 
-			// Calculate proper offset from anchor
 			int offsetX = anchor switch
 			{
 				Anchor.TopLeft or Anchor.MiddleLeft or Anchor.BottomLeft => 0,
@@ -117,11 +123,9 @@ namespace ClassicTilestorm
 				_ => (newHeight - oldHeight) / 2
 			};
 
-			// Use the real engine
 			bool success = RepositionAndResize(newWidth, newHeight, offsetX, offsetZ);
 
-			if (success)
-				Consolidate();
+			if (success) Consolidate();
 
 			if (success)
 				Debug.Log($"Map '{name}' resized to {newWidth}x{newHeight} (anchor: {anchor}).");
@@ -129,7 +133,6 @@ namespace ClassicTilestorm
 			return success;
 		}
 
-		// THE REAL, BULLETPROOF ENGINE — does everything correctly
 		public bool RepositionAndResize(int newWidth, int newHeight, int offsetX, int offsetZ)
 		{
 			if (newWidth <= 0 || newHeight <= 0) return false;
@@ -138,20 +141,30 @@ namespace ClassicTilestorm
 			int oldHeight = height;
 			int newSize = newWidth * newHeight;
 
-			// Ensure tile_empty
-			int emptyIndex = table != null ? Array.IndexOf(table, "tile_empty") : -1;
-			if (emptyIndex == -1 && table != null)
+			var defaultDef = ResourceManager.FindOrCreateDefaultTile();
+
+			// In RepositionAndResize, replace defaultIndex search:
+			int defaultIndex = -1;
+			for (int i = 0; i < table.Length; i++)
+			{
+				if (table[i] == defaultDef.hashid)
+				{
+					defaultIndex = i;
+					break;
+				}
+			}
+
+			if (defaultIndex == -1)
 			{
 				var list = table.ToList();
-				list.Add("tile_empty");
+				list.Add(defaultDef.hashid); // use hashid
 				table = list.ToArray();
-				emptyIndex = table.Length - 1;
+				defaultIndex = table.Length - 1;
 			}
 
 			var newTiles = new int[newSize];
-			Array.Fill(newTiles, emptyIndex);
+			Array.Fill(newTiles, defaultIndex);
 
-			// Copy tiles with arbitrary offset (positive or negative!)
 			for (int z = 0; z < oldHeight; z++)
 				for (int x = 0; x < oldWidth; x++)
 				{
@@ -162,12 +175,9 @@ namespace ClassicTilestorm
 					int nz = z + offsetZ;
 
 					if (nx >= 0 && nx < newWidth && nz >= 0 && nz < newHeight)
-					{
 						newTiles[nz * newWidth + nx] = tiles[oldIdx];
-					}
 				}
 
-			// solve[] — fully preserved
 			var newSolve = new int[newSize];
 			if (solve != null && solve.Length == oldWidth * oldHeight)
 			{
@@ -199,7 +209,6 @@ namespace ClassicTilestorm
 					}
 			}
 
-			// Waypoints & attachments
 			int Remap(int idx)
 			{
 				if (idx < 0) return idx;
@@ -210,10 +219,12 @@ namespace ClassicTilestorm
 				return (nx >= 0 && nx < newWidth && nz >= 0 && nz < newHeight) ? nz * newWidth + nx : -1;
 			}
 
-			if (waypoints != null) for (var n = 0; n < waypoints.Length; ++n) waypoints[n] = Remap(waypoints[n]);
-			if (attachments != null) foreach (var a in attachments) a.tile = Remap(a.tile);
+			if (waypoints != null)
+				for (int n = 0; n < waypoints.Length; n++) waypoints[n] = Remap(waypoints[n]);
 
-			// Apply
+			if (attachments != null)
+				foreach (var a in attachments) a.tile = Remap(a.tile);
+
 			width = newWidth;
 			height = newHeight;
 			tiles = newTiles;
@@ -232,15 +243,11 @@ namespace ClassicTilestorm
 
 			bool success = RepositionAndResize(w, h, -minX, -minZ);
 
-			if (success)
-				Consolidate();
+			if (success) Consolidate();
 
 			return success;
 		}
 
-		/// <summary>
-		/// Returns the actual used bounds of the map (non-empty tiles only).
-		/// </summary>
 		public (int minX, int minZ, int maxX, int maxZ) GetContentBounds()
 		{
 			if (tiles == null || tiles.Length == 0 || width <= 0 || height <= 0)
@@ -251,30 +258,34 @@ namespace ClassicTilestorm
 			int maxX = -1;
 			int maxZ = -1;
 
-			int emptyIdx = table != null ? Array.IndexOf(table, "tile_empty") : -1;
+			var defaultDef = ResourceManager.FindOrCreateDefaultTile();
 
 			for (int i = 0; i < tiles.Length; i++)
 			{
 				int t = tiles[i];
-				if (t < 0 || t == emptyIdx || (table != null && t < table.Length && table[t] == "tile_empty"))
+				if (t < 0)
+					continue;
+
+				string tileName = (t < table.Length) ? table[t] : null;
+				if (string.IsNullOrEmpty(tileName))
+					continue;
+
+				var def = ResourceManager.GetDefinition(tileName);
+				if (def == null || def.IsDefault())
 					continue;
 
 				int x = i % width;
 				int z = i / width;
 
-				if (x < minX) minX = x;
-				if (x > maxX) maxX = x;
-				if (z < minZ) minZ = z;
-				if (z > maxZ) maxZ = z;
+				minX = Math.Min(minX, x);
+				maxX = Math.Max(maxX, x);
+				minZ = Math.Min(minZ, z);
+				maxZ = Math.Max(maxZ, z);
 			}
 
 			return maxX >= 0 ? (minX, minZ, maxX, maxZ) : (0, 0, -1, -1);
 		}
 
-		/// <summary>
-		/// Returns a cropped copy of this map for serialization/export only.
-		/// Original map is untouched. Used automatically during export.
-		/// </summary>
 		public Map CreateCroppedCopy()
 		{
 			var copy = new Map
@@ -286,14 +297,12 @@ namespace ClassicTilestorm
 				width = width,
 				height = height,
 
-				// These are the ONLY fields CropToContent() and RepositionAndResize() mutate:
 				waypoints = waypoints != null ? (int[])waypoints.Clone() : null,
 				tiles = tiles != null ? (int[])tiles.Clone() : null,
 				solve = solve != null ? (int[])solve.Clone() : null,
-				table = table != null ? (string[])table.Clone() : null,
 
-				// attachments: we need real copies because Remap(ref a.tile) modifies them
-				attachments = null != attachments ? attachments.Select(a => a.ShallowClone()).ToArray() : Array.Empty<MapAttachment>()
+				attachments = attachments != null ? attachments.Select(a => a.ShallowClone()).ToArray() : Array.Empty<MapAttachment>(),
+				table = table != null ? (string[])table.Clone() : Array.Empty<string>()  // copy table directly
 			};
 
 			bool cropped = copy.CropToContent();
@@ -304,13 +313,9 @@ namespace ClassicTilestorm
 			return copy;
 		}
 
-		// ─────────────────────────────────────────────────────────────────────
-		// CLEAN, SAFE, RUNTIME-FRIENDLY ATTACHMENT MANAGEMENT
-		// ─────────────────────────────────────────────────────────────────────
 		public void AddAttachment(MapAttachment attachment)
 		{
 			if (attachment == null) return;
-
 			var list = attachments?.ToList() ?? new List<MapAttachment>();
 			list.Add(attachment);
 			attachments = list.ToArray();
@@ -345,41 +350,5 @@ namespace ClassicTilestorm
 
 			return attachments.Where(a => a.tile == tileIndex).ToArray();
 		}
-
-		// in Map.cs
-		public string GetDefinitionIdAt(int tileIndex)
-		{
-			if (tiles == null || table == null || tileIndex < 0 || tileIndex >= tiles.Length)
-				return null;
-			int idx = tiles[tileIndex];
-			if (idx < 0 || idx >= table.Length) return null;
-			return table[idx];
-		}
-
-		public bool SetDefinitionIdAt(int tileIndex, string newDefId)
-		{
-			if (tiles == null || table == null || tileIndex < 0 || tileIndex >= tiles.Length)
-				return false;
-
-			int idx = Array.IndexOf(table, newDefId);
-			if (idx == -1)
-			{
-				var list = table.ToList();
-				list.Add(newDefId);
-				table = list.ToArray();
-				idx = table.Length - 1;
-			}
-
-			tiles[tileIndex] = idx;
-			return true;
-		}
-
-		// Atomic fields - ignored during normal serialization - this needs to be removed from here and implemented properly as a utility for the serialiser
-		[JsonIgnore] public Definition[] definitions;
-		[JsonIgnore] public TextureSequence[] textures;
-		[JsonIgnore] public string version = "1.0";
-		[JsonIgnore] public string author = "Player";
-		[JsonIgnore] public string exportedFrom = "ClassicTilestorm"; 
-		//[JsonIgnore] public bool IsAtomic => definitions?.Length > 0 || textures?.Length > 0;
 	}
 }

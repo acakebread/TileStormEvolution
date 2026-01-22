@@ -288,7 +288,7 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			// Early duplicate check for nice UI feedback
+			// No more legacy check — rename always safe (hashid unchanged)
 			if (ResourceManager.Definitions.Any(d => d != def && string.Equals(d.id, newId, StringComparison.Ordinal)))
 			{
 				Debug.LogWarning($"ID '{newId}' already exists!");
@@ -298,16 +298,8 @@ namespace ClassicTilestorm
 
 			int cellsUpdated = ResourceManager.RenameDefinitionId(def.id, newId);
 
-			if (cellsUpdated >= 0)
-			{
-				Debug.Log($"Renamed '{def.id}' → '{newId}'  (updated {cellsUpdated} placement{(cellsUpdated == 1 ? "" : "s")})");
-				RefreshDefinitionList();  // updates list + usage counts
-			}
-			else
-			{
-				// Shouldn't happen due to pre-check, but safety
-				IDInput.text = def.id;
-			}
+			Debug.Log($"Renamed '{def.id}' → '{newId}' (definition updated)");
+			RefreshDefinitionList();
 		}
 
 		private void OnModelDropdownValueChanged(int index)
@@ -328,6 +320,7 @@ namespace ClassicTilestorm
 				def.material = null;
 				UpdatePreview(lastSelectedDefinitionIndex);
 				SyncTextureDropdown();
+				SyncMaterialDropdown();
 			}
 		}
 
@@ -408,7 +401,15 @@ namespace ClassicTilestorm
 
 			var label = go.GetComponentInChildren<TMP_Text>();
 			if (label != null)
-				label.text = $"{def.id} [{ResourceManager.DefinitionUsageCount(def.id)}]";//$"{def.id} ({def.model ?? "—"})";
+			{
+				int usage = ResourceManager.DefinitionUsageCount(def?.hashid);
+
+				string hashDisplay = string.IsNullOrEmpty(def?.hashid)
+					? "(no hashid)"
+					: $"hash: {def.hashid}";
+
+				label.text = $"{def?.id ?? "???"}  [{usage}]  ({hashDisplay})";
+			}
 		}
 
 		private void ClearDefinitionListItems()
@@ -457,12 +458,16 @@ namespace ClassicTilestorm
 			if (ButtonDelete == null) return;
 
 			bool hasSelection = lastSelectedDefinitionIndex >= 0;
-			bool isUsed = hasSelection && ResourceManager.IsDefinitionUsed(CurrentDefinition?.id);
+
+			// Changed: use hashid instead of id
+			bool isUsed = hasSelection && ResourceManager.IsDefinitionUsed(CurrentDefinition?.hashid);
 
 			ButtonDelete.interactable = hasSelection && !isUsed;
 
 			if (ButtonDelete.GetComponentInChildren<TMP_Text>() is TMP_Text btnText)
+			{
 				btnText.text = isUsed ? "Delete (used)" : "Delete";
+			}
 		}
 
 		// ── Preview Management ──────────────────────────────────────────────────────────────
@@ -614,7 +619,8 @@ namespace ClassicTilestorm
 			if (ResourceManager.database == null) return;
 
 			string newId = ResourceManager.GenerateUniqueNewDefinitionId();
-			var def = Definition.GetDefault(newId);
+			//var def = Definition.GetDefault(newId);
+			var def = ResourceManager.CreateDefinition(newId);
 
 			int insertIndex = lastSelectedDefinitionIndex >= 0 ? lastSelectedDefinitionIndex + 1 : 0;
 			ResourceManager.InsertDefinitionAt(insertIndex, def);

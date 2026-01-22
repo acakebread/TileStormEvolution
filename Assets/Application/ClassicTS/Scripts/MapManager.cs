@@ -223,33 +223,112 @@ namespace ClassicTilestorm
 			for (int i = transform.childCount - 1; i >= 0; i--) Destroy(transform.GetChild(i).gameObject);
 		}
 
+		//private void LoadTileData(int[] tileMap)
+		//{
+		//	if (tileMap == null || tileMap.Length != Count)
+		//	{
+		//		Debug.LogError($"Invalid tile map data! length={(tileMap?.Length ?? -1)}, expected={Count}");
+		//		return;
+		//	}
+
+		//	var emptyDef = ResourceManager.FindOrCreateDefaultTile();
+		//	string emptyStableId = emptyDef.hashid;
+
+		//	mapTiles = new MapTile[Count];
+
+		//	for (int n = 0; n < tileMap.Length; n++)
+		//	{
+		//		int idx = tileMap[n];
+		//		Definition def;
+
+		//		if (idx >= 0 && currentMap.table != null && idx < currentMap.table.Length)
+		//		{
+		//			string legacyId = currentMap.table[idx];
+		//			def = ResourceManager.GetDefinition(legacyId);
+
+		//			if (def == null)
+		//			{
+		//				// During transition it's still useful to log this
+		//				Debug.LogWarning($"Missing definition '{legacyId}' at tile {n} → using empty");
+		//				def = emptyDef;
+		//			}
+		//		}
+		//		else
+		//		{
+		//			def = emptyDef;
+
+		//			if (idx != -1)   // assuming -1 is the conventional "no tile" marker
+		//			{
+		//				Debug.LogWarning($"Out-of-range index {idx} at tile {n} → using empty");
+		//			}
+		//		}
+
+		//		var tile = new Tile(def);
+
+		//		if (!def.IsDefault())
+		//		{
+		//			tile.gameObject = InstantiateTile(def, transform, TileWorldPosition(n));
+		//		}
+
+		//		// ── This is now clean and safe ─────────────────────────────────────
+		//		string storedKey = def.hashid ?? emptyStableId;
+
+		//		mapTiles[n] = new MapTile(storedKey, tile);
+		//	}
+		//}
+
 		private void LoadTileData(int[] tileMap)
 		{
 			if (tileMap == null || tileMap.Length != Count)
 			{
-				Debug.LogError($"Invalid tiles data! length={(tileMap?.Length ?? -1)}, expected={Count}");
+				Debug.LogError($"Invalid tile map data! length={(tileMap?.Length ?? -1)}, expected={Count}");
 				return;
 			}
 
+			var emptyDef = ResourceManager.FindOrCreateDefaultTile();
+			string emptyStableId = emptyDef.hashid;
+
 			mapTiles = new MapTile[Count];
 
-			for (int n = 0; n < tileMap.Length; ++n)
+			for (int n = 0; n < tileMap.Length; n++)
 			{
-				int definitionIndex = tileMap[n];
-				string id = (definitionIndex >= 0 && definitionIndex < currentMap.table?.Length) ? currentMap.table[definitionIndex] : "tile_empty";
+				int idx = tileMap[n];
+				Definition def;
 
-				if (string.IsNullOrEmpty(id))
-					id = "tile_empty";
+				if (idx >= 0 && currentMap.table != null && idx < currentMap.table.Length)
+				{
+					string legacyId = currentMap.table[idx];
+					def = ResourceManager.GetDefinition(legacyId);
 
-				var definition = ResourceManager.Definitions.FirstOrDefault(td => td.id == id);
-				var tile = new Tile(definition);
+					if (def == null)
+					{
+						Debug.LogWarning($"Missing definition '{legacyId}' at tile {n} → using empty");
+						def = emptyDef;
+					}
+				}
+				else
+				{
+					def = emptyDef;
 
-				if (id != "tile_empty" && definition != null)
-					tile.gameObject = InstantiateTile(definition, transform, TileWorldPosition(n));
+					if (idx != -1)
+					{
+						Debug.LogWarning($"Out-of-range index {idx} at tile {n} → using empty");
+					}
+				}
 
-				mapTiles[n] = new MapTile(id, tile);
+				var tile = new Tile(def);
+
+				if (!def.IsDefault())
+				{
+					tile.gameObject = InstantiateTile(def, transform, TileWorldPosition(n));
+				}
+
+				string storedKey = def.hashid ?? emptyStableId;
+
+				mapTiles[n] = new MapTile(storedKey, tile);
 			}
 		}
+
 
 		// Editor-only – returns the source definition ID at map index (only valid when not scrambled)
 		public string GetDefinitionAtIndex(int mapIndex)
@@ -338,7 +417,9 @@ namespace ClassicTilestorm
 #if DEBUG
 				position -= tile_origin;
 				var id = string.IsNullOrEmpty(mapTile.definitionId) ? "Empty" : mapTile.definitionId;
-				go.name = $"{id} ({position.x},{position.z})";
+				//go.name = $"{id} ({position.x},{position.z})";
+				var def = ResourceManager.GetDefinition(mapTile.definitionId);
+				go.name = $"{def.id} ({position.x},{position.z})";
 #endif
 			}
 		}
@@ -418,7 +499,10 @@ namespace ClassicTilestorm
 		private bool UpdateTileAtRestricted(int x, int z, string id)
 		{
 			if (string.IsNullOrEmpty(id))
-				id = "tile_empty";
+			{
+				var defaultDef = ResourceManager.FindOrCreateDefaultTile();
+				id = defaultDef.hashid;
+			}
 
 			if (x < 0 || x >= Width || z < 0 || z >= Height)
 			{
@@ -428,47 +512,49 @@ namespace ClassicTilestorm
 
 			int index = z * Width + x;
 
-			// Destroy old visual
 			if (mapTiles[index].tile.gameObject != null)
 				Destroy(mapTiles[index].tile.gameObject);
 
 			var def = ResourceManager.GetDefinition(id);
 			var newTile = new Tile(def);
 
-			if (id != "tile_empty" && def != null)
+			if (!def?.IsDefault() ?? false)
 				newTile.gameObject = InstantiateTile(def, transform, TileWorldPosition(index));
 
-			mapTiles[index] = new MapTile(id, newTile);
+			mapTiles[index] = new MapTile(def?.hashid ?? id, newTile);
 
 			RefreshAttachmentsOnTile(index);
 
-			// Update string table
+			int tableIndex;
 			if (currentMap.table == null || !Array.Exists(currentMap.table, s => s == id))
 			{
-				var list = currentMap.table != null ? new List<string>(currentMap.table) : new List<string>();
-				if (!list.Contains(id)) list.Add(id);
+				// New type → append hash directly to table
+				var list = currentMap.table?.ToList() ?? new List<string>();
+				list.Add(id);  // id is hash here
 				currentMap.table = list.ToArray();
+				tableIndex = currentMap.table.Length - 1;
+			}
+			else
+			{
+				tableIndex = Array.IndexOf(currentMap.table, id);
 			}
 
-			currentMap.tiles[index] = Array.IndexOf(currentMap.table, id);
+			currentMap.tiles[index] = tableIndex;
+
 			currentMap.Consolidate();
 
-			// No resize possible in restricted mode
 			OnMapEdited?.Invoke(this, false, Vector3.zero);
-			return true; // Success!
+			return true;
 		}
 
-		private const int MAP_MAX_SIZE = 64;
-
-		/// <summary>
-		/// Places a tile at any (x,z). Expands/crops intelligently with hard size limits.
-		/// Returns true if tile was successfully placed/removed.
-		/// Calls onEdited only on success, with (resized, originWorldDelta).
-		/// </summary>
 		private bool UpdateTileAtSmart(int x, int z, string id, Action<bool, Vector3> onEdited = null)
 		{
+			// If no id provided → use canonical default tile
 			if (string.IsNullOrEmpty(id))
-				id = "tile_empty";
+			{
+				var defaultDef = ResourceManager.FindOrCreateDefaultTile();
+				id = defaultDef.hashid;  // prefer hashid
+			}
 
 			int oldWidth = Width;
 			int oldHeight = Height;
@@ -489,12 +575,11 @@ namespace ClassicTilestorm
 				int newWidth = maxX - minX + 1;
 				int newHeight = maxZ - minZ + 1;
 
-				// HARD LIMIT: Prevent gargantuan maps
 				if (newWidth > MAP_MAX_SIZE || newHeight > MAP_MAX_SIZE)
 				{
 					Debug.LogWarning($"Map placement rejected: would exceed max size ({MAP_MAX_SIZE}x{MAP_MAX_SIZE})");
 					onEdited?.Invoke(false, Vector3.zero);
-					return false; // Fail silently (or play sound, show toast, etc.)
+					return false;
 				}
 
 				int offsetX = -minX;
@@ -502,7 +587,6 @@ namespace ClassicTilestorm
 
 				currentMap.RepositionAndResize(newWidth, newHeight, offsetX, offsetZ);
 
-				// Only apply delta for axes that were negative
 				if (x < 0) originDelta.x = offsetX;
 				if (z < 0) originDelta.z = offsetZ;
 
@@ -515,17 +599,31 @@ namespace ClassicTilestorm
 			// === 2. Place tile ===
 			int index = z * Width + x;
 
+			// ────────────────────────────────────────────────────────────────
+			// Minimal change: preserve _tileEntries when adding new type
+			// ────────────────────────────────────────────────────────────────
+
+			int tableIndex;
 			if (currentMap.table == null || !Array.Exists(currentMap.table, s => s == id))
 			{
-				var list = currentMap.table != null ? new List<string>(currentMap.table) : new List<string>();
-				if (!list.Contains(id)) list.Add(id);
+				// New type → append hash directly to table
+				var list = currentMap.table?.ToList() ?? new List<string>();
+				list.Add(id);  // id is hash here
 				currentMap.table = list.ToArray();
+				tableIndex = currentMap.table.Length - 1;
+			}
+			else
+			{
+				tableIndex = Array.IndexOf(currentMap.table, id);
 			}
 
-			currentMap.tiles[index] = Array.IndexOf(currentMap.table, id);
+			currentMap.tiles[index] = tableIndex;
 
 			// === 3. Crop — add delta only if left/top content was removed ===
-			if (id == "tile_empty" || sizeChanged)
+			var def = ResourceManager.GetDefinition(id);
+			bool isDefaultTile = def?.IsDefault() ?? false;
+
+			if (isDefaultTile || sizeChanged)
 			{
 				var newBounds = currentMap.GetContentBounds();
 
@@ -552,16 +650,17 @@ namespace ClassicTilestorm
 			else
 			{
 				// Fast single-tile update
-				var def = ResourceManager.GetDefinition(id);
 				var newTile = new Tile(def);
 
 				if (mapTiles[index].tile.gameObject != null)
 					Destroy(mapTiles[index].tile.gameObject);
 
-				if (id != "tile_empty" && def != null)
+				// Only instantiate if NOT the default (invisible) tile
+				if (!isDefaultTile && def != null)
 					newTile.gameObject = InstantiateTile(def, transform, TileWorldPosition(index));
 
-				mapTiles[index] = new MapTile(id, newTile);
+				// Store using hashid (stable)
+				mapTiles[index] = new MapTile(def?.hashid ?? id, newTile);
 
 				RefreshAttachmentsOnTile(index);
 			}
@@ -571,6 +670,8 @@ namespace ClassicTilestorm
 			OnMapEdited?.Invoke(this, boundsChanged, originDelta);
 			return true;
 		}
+
+		private const int MAP_MAX_SIZE = 64;
 
 		// -----------------------------------------------------------------------
 		// Environmental effects
@@ -598,7 +699,7 @@ namespace ClassicTilestorm
 		{
 			if (null == definition || string.IsNullOrEmpty(definition.model))
 			{
-				if (definition?.id == "tile_invisible")
+				if (null != definition && null == definition.model && definition.bDock)//special case to show 'invisible' but 'interactive' tiles - the legacy 'tile_invisible'
 					return ApplicationSettings.ShowHiddenTiles ? GeometryFactory.CreateDebugTile(parent, position) : null;
 
 				Debug.LogWarning("GeometryManager: Invalid Definition or geometry name." + definition.id);
