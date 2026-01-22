@@ -223,34 +223,6 @@ namespace ClassicTilestorm
 			for (int i = transform.childCount - 1; i >= 0; i--) Destroy(transform.GetChild(i).gameObject);
 		}
 
-		//private void LoadTileData(int[] tileMap)
-		//{
-		//	if (tileMap == null || tileMap.Length != Count)
-		//	{
-		//		Debug.LogError($"Invalid tiles data! length={(tileMap?.Length ?? -1)}, expected={Count}");
-		//		return;
-		//	}
-
-		//	mapTiles = new MapTile[Count];
-
-		//	for (int n = 0; n < tileMap.Length; ++n)
-		//	{
-		//		int definitionIndex = tileMap[n];
-		//		string id = (definitionIndex >= 0 && definitionIndex < currentMap.table?.Length) ? currentMap.table[definitionIndex] : "tile_empty";
-
-		//		if (string.IsNullOrEmpty(id))
-		//			id = "tile_empty";
-
-		//		var definition = ResourceManager.Definitions.FirstOrDefault(td => td.id == id);
-		//		var tile = new Tile(definition);
-
-		//		if (id != "tile_empty" && definition != null)
-		//			tile.gameObject = InstantiateTile(definition, transform, TileWorldPosition(n));
-
-		//		mapTiles[n] = new MapTile(id, tile);
-		//	}
-		//}
-
 		private void LoadTileData(int[] tileMap)
 		{
 			if (tileMap == null || tileMap.Length != Count)
@@ -260,7 +232,7 @@ namespace ClassicTilestorm
 			}
 
 			var emptyDef = ResourceManager.FindOrCreateDefaultTile();
-			string emptyStableId = emptyDef.hashid;           // ← cache once, it's constant
+			string emptyStableId = emptyDef.hashid;
 
 			mapTiles = new MapTile[Count];
 
@@ -657,179 +629,6 @@ namespace ClassicTilestorm
 
 		private const int MAP_MAX_SIZE = 64;
 
-		//private bool UpdateTileAtRestricted(int x, int z, string id)
-		//{
-		//	if (string.IsNullOrEmpty(id))
-		//		id = "tile_empty";
-
-		//	if (x < 0 || x >= Width || z < 0 || z >= Height)
-		//	{
-		//		Debug.LogError($"Invalid coordinates: ({x}, {z}) outside map bounds ({Width}x{Height})");
-		//		return false;
-		//	}
-
-		//	int index = z * Width + x;
-
-		//	// Destroy old visual
-		//	if (mapTiles[index].tile.gameObject != null)
-		//		Destroy(mapTiles[index].tile.gameObject);
-
-		//	var def = ResourceManager.GetDefinition(id);
-		//	var newTile = new Tile(def);
-
-		//	if (id != "tile_empty" && def != null)
-		//		newTile.gameObject = InstantiateTile(def, transform, TileWorldPosition(index));
-
-		//	mapTiles[index] = new MapTile(id, newTile);
-
-		//	RefreshAttachmentsOnTile(index);
-
-		//	// ────────────────────────────────────────────────────────────────
-		//	// Minimal change: preserve _tileEntries when adding new type
-		//	// ────────────────────────────────────────────────────────────────
-		//	int tableIndex;
-		//	if (currentMap.table == null || !Array.Exists(currentMap.table, s => s == id))
-		//	{
-		//		// New type → append to _tileEntries (keeps StableId structure)
-		//		string stableIdCandidate = def?.hashid; // may be null
-
-		//		currentMap._tileEntries.Add(new Map.TileEntry(id, stableIdCandidate));
-
-		//		// table is derived → no need to assign it manually anymore
-		//		tableIndex = currentMap._tileEntries.Count - 1;
-		//	}
-		//	else
-		//	{
-		//		tableIndex = Array.IndexOf(currentMap.table, id);
-		//	}
-
-		//	currentMap.tiles[index] = tableIndex;
-
-		//	currentMap.Consolidate();
-
-		//	OnMapEdited?.Invoke(this, false, Vector3.zero);
-		//	return true;
-		//}
-
-		//private bool UpdateTileAtSmart(int x, int z, string id, Action<bool, Vector3> onEdited = null)
-		//{
-		//	if (string.IsNullOrEmpty(id))
-		//		id = "tile_empty";
-
-		//	int oldWidth = Width;
-		//	int oldHeight = Height;
-
-		//	var oldBounds = currentMap.GetContentBounds();
-
-		//	Vector3 originDelta = Vector3.zero;
-		//	bool sizeChanged = false;
-
-		//	// === 1. Expand — only negative axes shift origin ===
-		//	if (x < 0 || x >= Width || z < 0 || z >= Height)
-		//	{
-		//		int minX = Mathf.Min(0, x);
-		//		int minZ = Mathf.Min(0, z);
-		//		int maxX = Mathf.Max(Width - 1, x);
-		//		int maxZ = Mathf.Max(Height - 1, z);
-
-		//		int newWidth = maxX - minX + 1;
-		//		int newHeight = maxZ - minZ + 1;
-
-		//		if (newWidth > MAP_MAX_SIZE || newHeight > MAP_MAX_SIZE)
-		//		{
-		//			Debug.LogWarning($"Map placement rejected: would exceed max size ({MAP_MAX_SIZE}x{MAP_MAX_SIZE})");
-		//			onEdited?.Invoke(false, Vector3.zero);
-		//			return false;
-		//		}
-
-		//		int offsetX = -minX;
-		//		int offsetZ = -minZ;
-
-		//		currentMap.RepositionAndResize(newWidth, newHeight, offsetX, offsetZ);
-
-		//		if (x < 0) originDelta.x = offsetX;
-		//		if (z < 0) originDelta.z = offsetZ;
-
-		//		x += offsetX;
-		//		z += offsetZ;
-
-		//		sizeChanged = true;
-		//	}
-
-		//	// === 2. Place tile ===
-		//	int index = z * Width + x;
-
-		//	// ────────────────────────────────────────────────────────────────
-		//	// Minimal change: preserve _tileEntries when adding new type
-		//	// ────────────────────────────────────────────────────────────────
-		//	int tableIndex;
-		//	if (currentMap.table == null || !Array.Exists(currentMap.table, s => s == id))
-		//	{
-		//		// New type → append TileEntry (preserves StableId structure)
-		//		string stableIdCandidate = ResourceManager.GetDefinition(id)?.hashid;
-
-		//		currentMap._tileEntries.Add(new Map.TileEntry(id, stableIdCandidate));
-
-		//		tableIndex = currentMap._tileEntries.Count - 1;
-		//	}
-		//	else
-		//	{
-		//		tableIndex = Array.IndexOf(currentMap.table, id);
-		//	}
-
-		//	currentMap.tiles[index] = tableIndex;
-
-		//	// === 3. Crop — add delta only if left/top content was removed ===
-		//	if (id == "tile_empty" || sizeChanged)
-		//	{
-		//		var newBounds = currentMap.GetContentBounds();
-
-		//		if (currentMap.CropToContent())
-		//		{
-		//			originDelta += new Vector3(
-		//				oldBounds.minX - newBounds.minX,
-		//				0,
-		//				oldBounds.minZ - newBounds.minZ
-		//			);
-		//			sizeChanged = true;
-		//		}
-		//	}
-
-		//	// === 4. Rebuild visuals ===
-		//	bool boundsChanged = sizeChanged || Width != oldWidth || Height != oldHeight;
-
-		//	if (boundsChanged)
-		//	{
-		//		DestroyAllTiles();
-		//		LoadTileData(currentMap.tiles);
-		//		RefreshAllAttachmentInstances();
-		//	}
-		//	else
-		//	{
-		//		// Fast single-tile update
-		//		var def = ResourceManager.GetDefinition(id);
-		//		var newTile = new Tile(def);
-
-		//		if (mapTiles[index].tile.gameObject != null)
-		//			Destroy(mapTiles[index].tile.gameObject);
-
-		//		if (id != "tile_empty" && def != null)
-		//			newTile.gameObject = InstantiateTile(def, transform, TileWorldPosition(index));
-
-		//		mapTiles[index] = new MapTile(id, newTile);
-
-		//		RefreshAttachmentsOnTile(index);
-		//	}
-
-		//	currentMap.Consolidate();
-
-		//	OnMapEdited?.Invoke(this, boundsChanged, originDelta);
-		//	return true;
-		//}
-
-		//private const int MAP_MAX_SIZE = 64;
-
-
 		// -----------------------------------------------------------------------
 		// Environmental effects
 		// -----------------------------------------------------------------------
@@ -856,7 +655,7 @@ namespace ClassicTilestorm
 		{
 			if (null == definition || string.IsNullOrEmpty(definition.model))
 			{
-				if (null != definition && null == definition.model && definition.bDock)//if (definition?.id == "tile_invisible")
+				if (null != definition && null == definition.model && definition.bDock)//special case to show 'invisible' but 'interactive' tiles - the legacy 'tile_invisible'
 					return ApplicationSettings.ShowHiddenTiles ? GeometryFactory.CreateDebugTile(parent, position) : null;
 
 				Debug.LogWarning("GeometryManager: Invalid Definition or geometry name." + definition.id);

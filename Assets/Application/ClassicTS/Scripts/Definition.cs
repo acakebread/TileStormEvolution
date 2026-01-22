@@ -150,13 +150,6 @@ namespace ClassicTilestorm
 
 		public static Definition Default => GetDefaultTile();   // cached if you want, but not necessary
 
-		//public bool IsTheCanonicalEmptyTile()//Legacy
-		//{
-		//	return
-		//		string.Equals(id, "tile_empty", StringComparison.Ordinal) ||
-		//		string.Equals(hashid, GetEmptyTile().hashid, StringComparison.Ordinal);
-		//}
-
 		// Hashid-only check — cleanest long-term
 		public bool IsDefault() => string.Equals( hashid, GetDefaultTile().hashid, StringComparison.Ordinal);
 

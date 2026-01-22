@@ -22,33 +22,6 @@ namespace ClassicTilestorm
 				.OrderBy(p => p.Order ?? int.MaxValue);
 		}
 
-		//protected void ParseTableOld(Map map, JArray tableArray)
-		//{
-		//	map._tileEntries.Clear();
-
-		//	foreach (JToken token in tableArray)
-		//	{
-		//		string entry = token.Value<string>()?.Trim() ?? "tile_empty";
-		//		string stableId = null;
-		//		string displayName = entry;
-
-		//		if (entry.StartsWith("[", StringComparison.Ordinal))
-		//		{
-		//			int close = entry.IndexOf(']', 1);
-		//			if (close > 1)
-		//			{
-		//				string hash = entry.Substring(1, close - 1).Trim();
-		//				string rest = entry.Substring(close + 1).Trim();
-
-		//				stableId = hash;
-		//				displayName = string.IsNullOrEmpty(rest) ? "PENDING_ID" : rest;
-		//			}
-		//		}
-
-		//		map._tileEntries.Add(new Map.TileEntry(displayName, stableId));
-		//	}
-		//}
-
 		protected void ParseTable(Map map, JArray tableArray)
 		{
 			map._tileEntries.Clear();

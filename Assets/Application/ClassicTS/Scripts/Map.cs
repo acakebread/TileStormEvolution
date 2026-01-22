@@ -19,7 +19,7 @@ namespace ClassicTilestorm
 
 			public TileEntry(string displayName, string stableId = null)
 			{
-				DisplayName = displayName ?? "undefined"; //DisplayName = displayName ?? "tile_empty";
+				DisplayName = displayName ?? "undefined";
 				StableId = stableId;
 			}
 		}
@@ -107,9 +107,19 @@ namespace ClassicTilestorm
 				}
 			}
 
+			var defaultDef = ResourceManager.FindOrCreateDefaultTile();
+			var defaultHash = defaultDef.hashid;
+
 			var mapDefinitions = tiles.Select(idx =>
-				(idx >= 0 && idx < table.Length) ? table[idx] ?? "tile_empty" : "tile_empty"
+				(idx >= 0 && idx < table.Length) ? table[idx] : null
 			).ToArray();
+
+			// Replace nulls with default hash during frequency count
+			for (int i = 0; i < mapDefinitions.Length; i++)
+			{
+				if (mapDefinitions[i] == null)
+					mapDefinitions[i] = defaultHash;
+			}
 
 			var newFrequencyTable = mapDefinitions.ToFrequencySortedTable();
 
@@ -129,7 +139,9 @@ namespace ClassicTilestorm
 			// Rebuild tiles array with new indices
 			if (changed)
 			{
-				tiles = mapDefinitions.Select(name => Array.IndexOf(table, name)).ToArray();
+				tiles = mapDefinitions.Select(name =>
+					Array.IndexOf(table, name)
+				).ToArray();
 			}
 
 			if (changed) Debug.Log($"{name} consolidated (stable IDs preserved where known)");
@@ -178,17 +190,33 @@ namespace ClassicTilestorm
 			int oldHeight = height;
 			int newSize = newWidth * newHeight;
 
-			int emptyIndex = table.Contains("tile_empty") ? Array.IndexOf(table, "tile_empty") : -1;
-			if (emptyIndex == -1)
+			var defaultDef = ResourceManager.FindOrCreateDefaultTile();
+			var defaultHash = defaultDef.hashid;
+
+			// Find or create index for default tile
+			int defaultIndex = -1;
+			for (int i = 0; i < table.Length; i++)
+			{
+				if (table[i] == defaultDef.id || table[i] == defaultHash)
+				{
+					defaultIndex = i;
+					break;
+				}
+			}
+
+			if (defaultIndex == -1)
 			{
 				var list = table.ToList();
-				list.Add("tile_empty");
+				list.Add(defaultDef.id); // legacy-compatible
 				table = list.ToArray();
-				emptyIndex = table.Length - 1;
+
+				_tileEntries.Add(new TileEntry(defaultDef.id, defaultHash));
+
+				defaultIndex = table.Length - 1;
 			}
 
 			var newTiles = new int[newSize];
-			Array.Fill(newTiles, emptyIndex);
+			Array.Fill(newTiles, defaultIndex);
 
 			for (int z = 0; z < oldHeight; z++)
 				for (int x = 0; x < oldWidth; x++)
@@ -283,12 +311,20 @@ namespace ClassicTilestorm
 			int maxX = -1;
 			int maxZ = -1;
 
-			int emptyIdx = table.Contains("tile_empty") ? Array.IndexOf(table, "tile_empty") : -1;
+			var defaultDef = ResourceManager.FindOrCreateDefaultTile();
 
 			for (int i = 0; i < tiles.Length; i++)
 			{
 				int t = tiles[i];
-				if (t < 0 || t == emptyIdx || (t < table.Length && table[t] == "tile_empty"))
+				if (t < 0)
+					continue;
+
+				string tileName = (t < table.Length) ? table[t] : null;
+				if (string.IsNullOrEmpty(tileName))
+					continue;
+
+				var def = ResourceManager.GetDefinition(tileName);
+				if (def == null || def.IsDefault())
 					continue;
 
 				int x = i % width;
