@@ -362,7 +362,7 @@ namespace ClassicTilestorm
 				.ToArray() ?? Array.Empty<string>();
 
 			var usedDefs = ResourceManager.Definitions
-				.Where(d => usedTypes.Contains(d.id))
+				.Where(d => usedTypes.Contains(d.hashid))
 				.ToArray();
 
 			var usedBanks = usedDefs
