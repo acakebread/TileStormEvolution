@@ -125,7 +125,7 @@ namespace ClassicTilestorm
 					return null;
 				}
 
-				// PHASE 1: Ensure every definition has a hashid
+				// PHASE 1: Ensure every definition has a deterministic hashid
 				bool defsChanged = false;
 				foreach (var def in data.definitions.Where(d => d != null && string.IsNullOrEmpty(d.hashid)))
 				{
@@ -134,39 +134,43 @@ namespace ClassicTilestorm
 				}
 				if (defsChanged)
 				{
-					Debug.Log($"Assigned hashids to {data.definitions.Count(d => !string.IsNullOrEmpty(d.hashid))} definitions");
+					Debug.Log($"Assigned deterministic hashids to {data.definitions.Count(d => !string.IsNullOrEmpty(d.hashid))} definitions");
 				}
 
-				// PHASE 2: Convert every map's table to contain hashids only
 				// PHASE 2: Convert legacy name-only tables → hashid-based tables (only if needed)
 				int mapsMigrated = 0;
 				int entriesConverted = 0;
 
-				// Pre-build name → hash lookup for speed
+				// Pre-build fast name → hash lookup
 				var nameToHash = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 				foreach (var def in data.definitions.Where(d => d != null))
 				{
 					if (!string.IsNullOrEmpty(def.id) && !string.IsNullOrEmpty(def.hashid))
+					{
 						nameToHash[def.id] = def.hashid;
+					}
 				}
 
-				foreach (var map in data.maps.Where(m => m != null && m._tileEntries != null))
+				foreach (var map in data.maps.Where(m => m != null && m.table != null))
 				{
 					bool mapChanged = false;
+					var newTable = new List<string>(map.table.Length);
 
-					for (int i = 0; i < map._tileEntries.Count; i++)
+					for (int i = 0; i < map.table.Length; i++)
 					{
-						var entry = map._tileEntries[i];
-						string current = entry.DisplayName?.Trim();
+						string current = map.table[i]?.Trim();
 
 						if (string.IsNullOrEmpty(current))
+						{
+							newTable.Add("");
 							continue;
+						}
 
 						// Skip if it already looks like a hash (6 chars, alphanumeric)
 						if (current.Length == Definition.HTB50Settings.FixedLength &&
 							current.All(c => char.IsLetterOrDigit(c)))
 						{
-							// Already a hash → leave alone
+							newTable.Add(current);
 							continue;
 						}
 
@@ -176,14 +180,14 @@ namespace ClassicTilestorm
 
 						if (string.IsNullOrEmpty(hashToUse))
 						{
-							// Fallback: check if it's a known name
+							// Fallback: known name in lookup
 							if (nameToHash.TryGetValue(current, out string knownHash))
 							{
 								hashToUse = knownHash;
 							}
 							else
 							{
-								// Last resort: generate deterministic hash
+								// Generate deterministic hash
 								long hash64 = RadixHash.HashToRange64(current, Definition.HTB50Settings.Modulus);
 								hashToUse = HTB50.EncodeFixed(hash64, Definition.HTB50Settings.FixedLength, appendFlavor: false);
 
@@ -193,16 +197,19 @@ namespace ClassicTilestorm
 
 						if (current != hashToUse)
 						{
-							map._tileEntries[i] = new Map.TileEntry(hashToUse);
+							newTable.Add(hashToUse);
 							mapChanged = true;
 							entriesConverted++;
+						}
+						else
+						{
+							newTable.Add(current);
 						}
 					}
 
 					if (mapChanged)
 					{
-						// Rebuild table so getter returns hashes
-						map.table = map._tileEntries.Select(e => e.DisplayName).ToArray();
+						map.table = newTable.ToArray();
 						mapsMigrated++;
 						Debug.Log($"Migrated table to hashids in map '{map.name}' ({entriesConverted} entries)");
 					}

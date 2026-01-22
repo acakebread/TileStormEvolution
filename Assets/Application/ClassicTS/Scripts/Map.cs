@@ -11,19 +11,8 @@ namespace ClassicTilestorm
 	[Serializable]
 	public class Map
 	{
-		[Serializable]
-		public class TileEntry
-		{
-			public string DisplayName;
-
-			public TileEntry(string displayName)
-			{
-				DisplayName = displayName ?? "undefined";
-			}
-		}
-
 		// ─────────────────────────────────────────────
-		// Core identity
+		// Core identity (unchanged)
 		// ─────────────────────────────────────────────
 		[JsonProperty(Order = 1)] public string name;
 		[JsonProperty(Order = 2)] public string character;
@@ -32,29 +21,16 @@ namespace ClassicTilestorm
 		[JsonProperty(Order = 5)] public string button;
 
 		// ─────────────────────────────────────────────
-		// Dimensions
+		// Dimensions (unchanged)
 		// ─────────────────────────────────────────────
 		[JsonProperty(Order = 10)] public int width;
 		[JsonProperty(Order = 11)] public int height;
 
 		// ─────────────────────────────────────────────
-		// Tile table backing store
+		// Tile table — now the ONLY source of truth (hashes)
 		// ─────────────────────────────────────────────
-		[JsonIgnore]
-		internal List<TileEntry> _tileEntries = new List<TileEntry>();
-
 		[JsonProperty(Order = 20)]
-		public string[] table
-		{
-			get => _tileEntries?.Select(e => e.DisplayName).ToArray() ?? Array.Empty<string>();
-			set
-			{
-				_tileEntries.Clear();
-				if (value == null) return;
-				foreach (string name in value)
-					_tileEntries.Add(new TileEntry(name));
-			}
-		}
+		public string[] table;  // contains hashids only (e.g. "deJ7Yv")
 
 		[JsonProperty(Order = 21)] public int[] tiles;
 		[JsonProperty(Order = 22)] public int[] solve;
@@ -62,18 +38,14 @@ namespace ClassicTilestorm
 
 		[JsonProperty(Order = 30)] public MapAttachment[] attachments;
 
-		// ─────────────────────────────────────────────
-		// ATOMIC-ONLY FIELDS (ORDERED, NOT IGNORED)
-		// ─────────────────────────────────────────────
+		// ATOMIC-ONLY FIELDS (unchanged)
 		[JsonProperty(Order = 100)] public Definition[] definitions;
 		[JsonProperty(Order = 101)] public TextureSequence[] textures;
 		[JsonProperty(Order = 102)] public string version = "1.0";
 		[JsonProperty(Order = 103)] public string author = "Player";
 		[JsonProperty(Order = 104)] public string exportedFrom = "ClassicTilestorm";
 
-		// ─────────────────────────────────────────────
-		// Conditional serialization
-		// ─────────────────────────────────────────────
+		// Conditional serialization (unchanged)
 		public bool ShouldSerializeskybox() => !string.IsNullOrEmpty(skybox);
 		public bool ShouldSerializesolve() => solve != null && solve.Length > 0;
 		public bool ShouldSerializewaypoints() => waypoints != null && waypoints.Length > 0;
@@ -99,7 +71,7 @@ namespace ClassicTilestorm
 				(idx >= 0 && idx < table.Length) ? table[idx] : null
 			).ToArray();
 
-			// Replace nulls with default hash during frequency count
+			// Replace nulls with default hash
 			for (int i = 0; i < mapDefinitions.Length; i++)
 			{
 				if (mapDefinitions[i] == null)
@@ -112,23 +84,18 @@ namespace ClassicTilestorm
 
 			if (changed)
 			{
-				var newEntries = new List<TileEntry>();
-				foreach (string name in newFrequencyTable)
-				{
-					newEntries.Add(new TileEntry(name));
-				}
-				_tileEntries = newEntries;
+				table = newFrequencyTable;
 			}
 
-			// Rebuild tiles array with new indices
+			// Rebuild tiles indices if changed
 			if (changed)
 			{
-				tiles = mapDefinitions.Select(name =>
-					Array.IndexOf(table, name)
+				tiles = mapDefinitions.Select(hash =>
+					Array.IndexOf(table, hash)
 				).ToArray();
 			}
 
-			if (changed) Debug.Log($"{name} consolidated");
+			if (changed) Debug.Log($"{name} consolidated (table updated)");
 			return changed;
 		}
 
@@ -176,11 +143,11 @@ namespace ClassicTilestorm
 
 			var defaultDef = ResourceManager.FindOrCreateDefaultTile();
 
-			// Find or create index for default tile
+			// In RepositionAndResize, replace defaultIndex search:
 			int defaultIndex = -1;
 			for (int i = 0; i < table.Length; i++)
 			{
-				if (table[i] == defaultDef.id)
+				if (table[i] == defaultDef.hashid)
 				{
 					defaultIndex = i;
 					break;
@@ -190,11 +157,8 @@ namespace ClassicTilestorm
 			if (defaultIndex == -1)
 			{
 				var list = table.ToList();
-				list.Add(defaultDef.id); // legacy-compatible
+				list.Add(defaultDef.hashid); // use hashid
 				table = list.ToArray();
-
-				_tileEntries.Add(new TileEntry(defaultDef.id));
-
 				defaultIndex = table.Length - 1;
 			}
 
@@ -337,12 +301,9 @@ namespace ClassicTilestorm
 				tiles = tiles != null ? (int[])tiles.Clone() : null,
 				solve = solve != null ? (int[])solve.Clone() : null,
 
-				attachments = attachments != null ? attachments.Select(a => a.ShallowClone()).ToArray() : Array.Empty<MapAttachment>()
+				attachments = attachments != null ? attachments.Select(a => a.ShallowClone()).ToArray() : Array.Empty<MapAttachment>(),
+				table = table != null ? (string[])table.Clone() : Array.Empty<string>()  // copy table directly
 			};
-
-			copy._tileEntries = _tileEntries != null
-				? new List<TileEntry>(_tileEntries.Select(e => new TileEntry(e.DisplayName)))
-				: new List<TileEntry>();
 
 			bool cropped = copy.CropToContent();
 

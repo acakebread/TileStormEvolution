@@ -528,10 +528,11 @@ namespace ClassicTilestorm
 			int tableIndex;
 			if (currentMap.table == null || !Array.Exists(currentMap.table, s => s == id))
 			{
-				// New type → append name only (no StableId)
-				currentMap._tileEntries.Add(new Map.TileEntry(id));
-
-				tableIndex = currentMap._tileEntries.Count - 1;
+				// New type → append hash directly to table
+				var list = currentMap.table?.ToList() ?? new List<string>();
+				list.Add(id);  // id is hash here
+				currentMap.table = list.ToArray();
+				tableIndex = currentMap.table.Length - 1;
 			}
 			else
 			{
@@ -605,8 +606,11 @@ namespace ClassicTilestorm
 			int tableIndex;
 			if (currentMap.table == null || !Array.Exists(currentMap.table, s => s == id))
 			{
-				currentMap._tileEntries.Add(new Map.TileEntry(id));
-				tableIndex = currentMap._tileEntries.Count - 1;
+				// New type → append hash directly to table
+				var list = currentMap.table?.ToList() ?? new List<string>();
+				list.Add(id);  // id is hash here
+				currentMap.table = list.ToArray();
+				tableIndex = currentMap.table.Length - 1;
 			}
 			else
 			{

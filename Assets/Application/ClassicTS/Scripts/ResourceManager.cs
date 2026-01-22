@@ -256,16 +256,14 @@ namespace ClassicTilestorm
 
 			foreach (var map in Maps)
 			{
-				if (map?._tileEntries == null)
-					continue;
+				if (map?.table == null) continue;
 
 				bool changed = false;
-				for (int i = 0; i < map._tileEntries.Count; i++)
+				for (int i = 0; i < map.table.Length; i++)
 				{
-					var entry = map._tileEntries[i];
-					if (string.Equals(entry.DisplayName, oldId, StringComparison.Ordinal))
+					if (string.Equals(map.table[i], oldId, StringComparison.Ordinal))
 					{
-						map._tileEntries[i] = new Map.TileEntry(newId);
+						map.table[i] = newId;
 						changed = true;
 						changeCount++;
 					}
@@ -273,7 +271,7 @@ namespace ClassicTilestorm
 
 				if (changed)
 				{
-					// table auto-updates via getter
+					// table already updated
 				}
 			}
 

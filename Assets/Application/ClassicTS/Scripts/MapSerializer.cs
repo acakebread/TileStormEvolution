@@ -22,17 +22,18 @@ namespace ClassicTilestorm
 				.OrderBy(p => p.Order ?? int.MaxValue);
 		}
 
+		// Keep ParseTable to strip brackets on load
 		protected void ParseTable(Map map, JArray tableArray)
 		{
-			map._tileEntries.Clear();
+			map.table = new string[tableArray.Count];
 
-			foreach (JToken token in tableArray)
+			for (int i = 0; i < tableArray.Count; i++)
 			{
-				string entry = token.Value<string>()?.Trim();
+				string entry = tableArray[i].Value<string>()?.Trim();
 
 				if (string.IsNullOrEmpty(entry))
 				{
-					map._tileEntries.Add(new Map.TileEntry(""));
+					map.table[i] = "";
 					continue;
 				}
 
@@ -47,16 +48,15 @@ namespace ClassicTilestorm
 					}
 					else
 					{
-						hashValue = entry; // malformed → treat as hash
+						hashValue = entry; // malformed → keep whole
 					}
 				}
 				else
 				{
-					// Bare hash (from previous save) or legacy name (will be migrated)
-					hashValue = entry;
+					hashValue = entry; // bare hash or legacy name
 				}
 
-				map._tileEntries.Add(new Map.TileEntry(hashValue));
+				map.table[i] = hashValue;
 			}
 		}
 	}
@@ -87,8 +87,6 @@ namespace ClassicTilestorm
 
 			foreach (var prop in OrderedProperties(serializer))
 			{
-				if (prop.UnderlyingName == nameof(Map._tileEntries)) continue;
-
 				var propValue = prop.ValueProvider.GetValue(map);
 				if (propValue == null && serializer.NullValueHandling == NullValueHandling.Ignore)
 					continue;
@@ -99,7 +97,6 @@ namespace ClassicTilestorm
 				{
 					writer.WriteStartArray();
 
-					// Write from table (hashes) + lookup name for readability
 					foreach (string hash in map.table ?? Array.Empty<string>())
 					{
 						if (string.IsNullOrEmpty(hash))
@@ -108,8 +105,8 @@ namespace ClassicTilestorm
 							continue;
 						}
 
-						var def = ResourceManager.GetDefinition(hash); // prefers hash
-						string name = def?.id ?? hash; // fallback to hash if no def
+						var def = ResourceManager.GetDefinition(hash);
+						string name = def?.id ?? hash;
 						string valueToWrite = $"[{hash}]{name}";
 
 						writer.WriteValue(valueToWrite);
@@ -134,11 +131,7 @@ namespace ClassicTilestorm
 	{
 		static readonly HashSet<string> SuppressedAtomicFields = new()
 		{
-			"definitions",
-			"textures",
-			"version",
-			"author",
-			"exportedFrom"
+			"definitions", "textures", "version", "author", "exportedFrom"
 		};
 
 		public override object ReadJson(JsonReader reader, Type type, object existingValue, JsonSerializer serializer)
@@ -163,7 +156,6 @@ namespace ClassicTilestorm
 			foreach (var prop in OrderedProperties(serializer))
 			{
 				if (SuppressedAtomicFields.Contains(prop.PropertyName)) continue;
-				if (prop.UnderlyingName == nameof(Map._tileEntries)) continue;
 
 				var propValue = prop.ValueProvider.GetValue(map);
 				if (propValue == null && serializer.NullValueHandling == NullValueHandling.Ignore)
@@ -175,7 +167,6 @@ namespace ClassicTilestorm
 				{
 					writer.WriteStartArray();
 
-					// Write from table (hashes) → [hash] only
 					foreach (string hash in map.table ?? Array.Empty<string>())
 					{
 						if (string.IsNullOrEmpty(hash))
