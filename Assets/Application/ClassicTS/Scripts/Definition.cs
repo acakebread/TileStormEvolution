@@ -176,22 +176,6 @@ namespace ClassicTilestorm
 			};
 		}
 
-		//public static Definition GetGeneric(string newId = null)
-		//{
-		//	string legacyId = newId ?? StringUtil.GenerateAssetId();
-
-		//	long hashValue = RadixHash.HashToRange64(legacyId, HTB50Settings.Modulus);
-		//	string stableHashId = HTB50.EncodeFixed(hashValue, HTB50Settings.FixedLength, appendFlavor: false);
-
-		//	return new Definition
-		//	{
-		//		id = legacyId,
-		//		hashid = stableHashId,
-		//		model = "tile_flat",
-		//		texture = "Default"
-		//	};
-		//}
-
 		// ── STABLE ID ACCESS ──────────────────────────────────────────────────
 		public string GetStableId()
 		{
