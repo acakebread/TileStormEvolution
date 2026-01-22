@@ -59,24 +59,11 @@ namespace ClassicTilestorm
 			return prototype;
 		}
 
-		private static string GenerateUniqueHash(string baseInput, HashSet<string> existingHashes)
-		{
-			long hash64 = RadixHash.HashToRange64(baseInput, HTB50Settings.Modulus);
-			string candidate = HTB50.EncodeFixed(hash64, HTB50Settings.FixedLength, appendFlavor: false);
-
-			if (!existingHashes.Contains(candidate))
-				return candidate;
-
-			// Collision (very rare) → salt and retry
-			UnityEngine.Debug.LogWarning($"Hash collision on '{baseInput}' — retrying with salt");
-			return GenerateUniqueHash(baseInput + "_s", existingHashes);
-		}
-
 		public static Definition CreateDefinition(
 			string name = null,
 			string model = "tile_flat",
 			string texture = "Default",
-			bool ensureUniqueHash = false)  // default false = fast & safe
+			bool ensureUniqueHash = false)
 		{
 			var def = new Definition
 			{
@@ -85,9 +72,9 @@ namespace ClassicTilestorm
 				texture = texture
 			};
 
-			// Fast path: deterministic from id (recommended)
-			long hash64 = RadixHash.HashToRange64(def.id, HTB50Settings.Modulus);
-			string candidate = HTB50.EncodeFixed(hash64, HTB50Settings.FixedLength, appendFlavor: false);
+			// Full-range 32-bit hash (no modulus), but still encode to fixed length 6
+			int hash32 = RadixHash.GetStableHash32(def.id);
+			def.hashid = HTB50.EncodeFixed(hash32, HTB50Settings.FixedLength, padChar: '0', appendFlavor: false);
 
 			if (ensureUniqueHash)
 			{
@@ -97,11 +84,14 @@ namespace ClassicTilestorm
 					StringComparer.Ordinal
 				);
 
-				def.hashid = GenerateUniqueHash(def.id, existing);
-			}
-			else
-			{
-				def.hashid = candidate;
+				int attempt = 1;
+				while (existing.Contains(def.hashid))
+				{
+					hash32 = RadixHash.GetStableHash32(def.id + attempt);
+					def.hashid = HTB50.EncodeFixed(hash32, HTB50Settings.FixedLength, padChar: '0', appendFlavor: false);
+					attempt++;
+					UnityEngine.Debug.LogWarning($"Hash collision retry {attempt} for '{def.id}'");
+				}
 			}
 
 			return def;
@@ -115,20 +105,19 @@ namespace ClassicTilestorm
 				if (_defaultTileHash == null)
 				{
 					const string legacyName = "tile_empty";
-					long hash64 = RadixHash.HashToRange64(legacyName, HTB50Settings.Modulus);
-					_defaultTileHash = HTB50.EncodeFixed(hash64, HTB50Settings.FixedLength, appendFlavor: false);
+
+					// Full-range 32-bit hash, but keep fixed-length 6 encoding as before
+					int hash32 = RadixHash.GetStableHash32(legacyName);
+					_defaultTileHash = HTB50.EncodeFixed(hash32, HTB50Settings.FixedLength, padChar: '0', appendFlavor: false);
 				}
 				return _defaultTileHash;
 			}
 		}
 
-		// ── EXISTING INSERT METHODS (updated to use factory if desired) ────────
+		// ── EXISTING INSERT METHODS (unchanged) ───────────────────────────────
 		public static void InsertDefinitionAfter(string afterId, Definition newDef)
 		{
 			if (_db?.definitions == null) return;
-
-			// Optional: you can force uniqueness here too
-			// newDef.hashid = Definition.GenerateUniqueStableId(newDef.id, GetCurrentHashIds());
 
 			var list = _db.definitions.ToList();
 			int index = list.Count;
@@ -164,7 +153,7 @@ namespace ClassicTilestorm
 			);
 		}
 
-		// ── OTHER METHODS (unchanged or lightly cleaned) ──────────────────────
+		// ── OTHER METHODS (unchanged) ────────────────────────────────────────
 		public static void DeleteDefinition(string id)
 		{
 			if (_db?.definitions == null) return;

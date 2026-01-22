@@ -6,82 +6,20 @@ using System.Text;
 namespace MassiveHadronLtd.IDs.HTB50
 {
 	/*
-	 * ─────────────────────────────────────────────────────────────────────────────
-	 * HTB50 — Human-Tolerant Base-50 (v1.0)
-	 * ─────────────────────────────────────────────────────────────────────────────
-	 *
-	 * PURPOSE
-	 * -------
-	 * HTB50 is a human-tolerant positional encoding designed for identifiers that
-	 * may be read, transcribed, copied, or visually inspected by humans.
-	 *
-	 * Unlike traditional base encodings (Base32 / Base52 / Base58 / Base64),
-	 * HTB50 aggressively removes all widely accepted visual-ambiguity collisions
-	 * from its *canonical alphabet*, while still accepting them during decoding.
-	 *
-	 *
-	 * COLLISION PHILOSOPHY
-	 * -------------------
-	 * The following character sets are treated as visually equivalent and are
-	 * therefore collapsed to a single canonical value:
-	 *
-	 *   { 0, O, o }
-	 *   { 1, I, l }
-	 *   { 2, Z, z }
-	 *   { 5, S, s }
-	 *   { 8, B }
-	 *   { 9, g }
-	 *
-	 * Canonical output contains ONLY unambiguous characters.
-	 * Decoder normalization accepts all members of each collision set.
-	 *
-	 *
-	 * RESULTING RADIX
-	 * ---------------
-	 * Starting from full alphanumeric (0-9, A-Z, a-z = 62 symbols),
-	 * aggressive collision removal yields exactly:
-	 *
-	 *   50 canonical symbols  →  Base-50
-	 *
-	 * This loss of radix is intentional and traded for maximal human safety.
-	 *
-	 *
-	 * DESIGN GOALS
-	 * ------------
-	 * ✓ Canonical output (single preferred form)
-	 * ✓ Tolerant decoding (accepts common mistakes)
-	 * ✓ Case-sensitive where safe
-	 * ✓ No visually ambiguous glyphs in output
-	 * ✓ Deterministic, reversible encoding
-	 * ✓ Suitable for IDs, filenames, text formats
-	 *
-	 *
-	 * NON-GOALS
-	 * ---------
-	 * ✗ Error detection / checksum (by design)
-	 * ✗ Cryptographic guarantees
-	 *
-	 * VERSIONING
-	 * ----------
-	 * v1.0 — Alphabet, normalization sets, and radix are frozen.
-	 * Any future change MUST introduce a new flavor suffix.
-	 *
-	 * ─────────────────────────────────────────────────────────────────────────────
-	 */
+     * HTB50 — Human-Tolerant Base-50 (v1.0)
+     * Human-readable, ambiguity-resistant base-50 encoding
+     * Canonical output uses only unambiguous characters
+     * Decoder accepts common visual confusions (0/O/o, 1/I/l, etc.)
+     */
 
 	public static class HTB50
 	{
-		/// <summary>Flavor suffix for optional namespacing.</summary>
 		public const string Flavor = "HTB50";
 
-		/// <summary>
-		/// Canonical Base-50 alphabet (index == numeric value).
-		/// Length MUST remain exactly 50.
-		/// </summary>
 		private const string Alphabet =
-			"0123456789" +                  // 10 digits
-			"ACDEFGHJKMNPQRTUVWXY" +         // 20 uppercase (ambiguous removed)
-			"acdefhijkmnpqrtuvwxy";          // 20 lowercase (ambiguous removed)
+			"0123456789" +
+			"ACDEFGHJKMNPQRTUVWXY" +
+			"acdefhijkmnpqrtuvwxy";
 
 		public static readonly int Radix = 50;
 
@@ -96,27 +34,21 @@ namespace MassiveHadronLtd.IDs.HTB50
 
 			NormalizeMap = new Dictionary<char, char>
 			{
-				// Zero
 				['O'] = '0',
 				['o'] = '0',
-				// One
 				['I'] = '1',
 				['l'] = '1',
-				// Two
 				['Z'] = '2',
 				['z'] = '2',
-				// Five
 				['S'] = '5',
 				['s'] = '5',
-				// Eight
 				['B'] = '8',
-				// Nine
 				['g'] = '9'
 			};
 		}
 
 		// ─────────────────────────────────────────────────────────────────────────
-		// ENCODE — BigInteger
+		// ENCODE — BigInteger (unsigned / positive only)
 		// ─────────────────────────────────────────────────────────────────────────
 
 		public static string EncodeBigInteger(
@@ -126,44 +58,11 @@ namespace MassiveHadronLtd.IDs.HTB50
 			char padChar = '0')
 		{
 			if (value < 0)
-				throw new ArgumentOutOfRangeException(nameof(value));
+				throw new ArgumentOutOfRangeException(nameof(value), "BigInteger must be non-negative");
 
-			string result;
+			string result = value == 0 ? padChar.ToString() : BuildBase50(value);
 
-			if (value == 0)
-			{
-				result = padChar.ToString();
-			}
-			else
-			{
-				var sb = new StringBuilder();
-				BigInteger current = value;
-
-				while (current > 0)
-				{
-					current = BigInteger.DivRem(current, Radix, out var rem);
-					int digit = (int)rem;
-
-					if (digit < 0 || digit >= Alphabet.Length)
-						throw new InvalidOperationException(
-							$"Invalid HTB50 digit {digit} (alphabet length {Alphabet.Length})");
-
-					sb.Insert(0, Alphabet[digit]);
-				}
-
-				result = sb.ToString();
-			}
-
-			// Optional fixed-length padding
-			if (fixedLength.HasValue)
-			{
-				int needed = fixedLength.Value - result.Length;
-				if (needed < 0)
-					throw new ArgumentException("Value exceeds fixed length");
-
-				if (needed > 0)
-					result = new string(padChar, needed) + result;
-			}
+			ApplyPadding(ref result, fixedLength, padChar);
 
 			if (appendFlavor)
 				result += "_" + Flavor;
@@ -180,59 +79,30 @@ namespace MassiveHadronLtd.IDs.HTB50
 			if (length < 1)
 				throw new ArgumentOutOfRangeException(nameof(length));
 
-			return EncodeBigInteger(value, appendFlavor, fixedLength: length, padChar);
+			return EncodeBigInteger(value, appendFlavor, length, padChar);
 		}
 
 		// ─────────────────────────────────────────────────────────────────────────
-		// ENCODE — Int64
+		// ENCODE — Int32 with fixed length (full 32-bit range, including negatives)
 		// ─────────────────────────────────────────────────────────────────────────
 
-		public static string Encode64(
-			long value,
+		public static string EncodeFixed(
+			int value,
+			int length,
 			bool appendFlavor = false,
-			int? fixedLength = null,
 			char padChar = '0')
 		{
-			if (value < 0)
-				throw new ArgumentOutOfRangeException(nameof(value));
+			if (length < 1)
+				throw new ArgumentOutOfRangeException(nameof(length));
 
-			string result;
+			uint uvalue = (uint)value;
 
-			if (value == 0)
-			{
-				result = padChar.ToString();
-			}
-			else
-			{
-				var sb = new StringBuilder();
-				long current = value;
+			string result = uvalue == 0
+				? padChar.ToString()
+				: BuildBase50(uvalue);
 
-				while (current > 0)
-				{
-					long rem = current % Radix;
-					current /= Radix;
-					int digit = (int)rem;
-
-					if (digit < 0 || digit >= Alphabet.Length)
-						throw new InvalidOperationException(
-							$"Invalid HTB50 digit {digit} (alphabet length {Alphabet.Length})");
-
-					sb.Insert(0, Alphabet[digit]);
-				}
-
-				result = sb.ToString();
-			}
-
-			// Optional fixed-length padding
-			if (fixedLength.HasValue)
-			{
-				int needed = fixedLength.Value - result.Length;
-				if (needed < 0)
-					throw new ArgumentException("Value exceeds fixed length");
-
-				if (needed > 0)
-					result = new string(padChar, needed) + result;
-			}
+			// Reuse the shared helper (same as Encode(int?, ...) and EncodeBigInteger)
+			ApplyPadding(ref result, fixedLength: length, padChar);
 
 			if (appendFlavor)
 				result += "_" + Flavor;
@@ -241,7 +111,28 @@ namespace MassiveHadronLtd.IDs.HTB50
 		}
 
 		// ─────────────────────────────────────────────────────────────────────────
-		// ENCODE — Int32
+		// ENCODE — Int64 (full 64-bit range, including negatives)
+		// ─────────────────────────────────────────────────────────────────────────
+
+		public static string Encode64(
+			long value,
+			bool appendFlavor = false,
+			int? fixedLength = null,
+			char padChar = '0')
+		{
+			ulong uvalue = (ulong)value;
+			string result = uvalue == 0 ? padChar.ToString() : BuildBase50(uvalue);
+
+			ApplyPadding(ref result, fixedLength, padChar);
+
+			if (appendFlavor)
+				result += "_" + Flavor;
+
+			return result;
+		}
+
+		// ─────────────────────────────────────────────────────────────────────────
+		// ENCODE — Int32 (full 32-bit range, including negatives)
 		// ─────────────────────────────────────────────────────────────────────────
 
 		public static string Encode(
@@ -250,46 +141,10 @@ namespace MassiveHadronLtd.IDs.HTB50
 			int? fixedLength = null,
 			char padChar = '0')
 		{
-			if (value < 0)
-				throw new ArgumentOutOfRangeException(nameof(value));
+			uint uvalue = (uint)value;
+			string result = uvalue == 0 ? padChar.ToString() : BuildBase50(uvalue);
 
-			string result;
-
-			if (value == 0)
-			{
-				result = padChar.ToString();
-			}
-			else
-			{
-				var sb = new StringBuilder();
-				int current = value;
-
-				while (current > 0)
-				{
-					int rem = current % Radix;
-					current /= Radix;
-					int digit = rem;
-
-					if (digit < 0 || digit >= Alphabet.Length)
-						throw new InvalidOperationException(
-							$"Invalid HTB50 digit {digit} (alphabet length {Alphabet.Length})");
-
-					sb.Insert(0, Alphabet[digit]);
-				}
-
-				result = sb.ToString();
-			}
-
-			// Optional fixed-length padding
-			if (fixedLength.HasValue)
-			{
-				int needed = fixedLength.Value - result.Length;
-				if (needed < 0)
-					throw new ArgumentException("Value exceeds fixed length");
-
-				if (needed > 0)
-					result = new string(padChar, needed) + result;
-			}
+			ApplyPadding(ref result, fixedLength, padChar);
 
 			if (appendFlavor)
 				result += "_" + Flavor;
@@ -304,9 +159,8 @@ namespace MassiveHadronLtd.IDs.HTB50
 		public static string Encode(byte[] bytes, bool appendFlavor = false)
 		{
 			if (bytes == null || bytes.Length == 0)
-				throw new ArgumentException("Byte array is empty");
+				throw new ArgumentException("Byte array cannot be null or empty", nameof(bytes));
 
-			// Ensure positive BigInteger
 			byte[] extended = new byte[bytes.Length + 1];
 			Array.Copy(bytes, 0, extended, 1, bytes.Length);
 
@@ -321,17 +175,15 @@ namespace MassiveHadronLtd.IDs.HTB50
 		public static BigInteger DecodeBigInteger(string input)
 		{
 			string raw = StripFlavor(input);
-
 			BigInteger result = 0;
 
 			foreach (char r in raw)
 			{
 				char c = Normalize(r);
-
-				if (!DecodeMap.TryGetValue(c, out int value))
+				if (!DecodeMap.TryGetValue(c, out int digit))
 					throw new FormatException($"Invalid HTB50 character '{r}'");
 
-				result = result * Radix + value;
+				result = result * Radix + digit;
 			}
 
 			return result;
@@ -344,23 +196,22 @@ namespace MassiveHadronLtd.IDs.HTB50
 		public static long Decode64(string input)
 		{
 			string raw = StripFlavor(input);
-
-			long result = 0;
+			ulong result = 0;
 
 			foreach (char r in raw)
 			{
 				char c = Normalize(r);
-
-				if (!DecodeMap.TryGetValue(c, out int value))
+				if (!DecodeMap.TryGetValue(c, out int digit))
 					throw new FormatException($"Invalid HTB50 character '{r}'");
 
-				if (result > (long.MaxValue - value) / Radix)
-					throw new OverflowException("Value exceeds Int64 range");
+				ulong d = (ulong)digit;
+				if (result > (ulong.MaxValue - d) / (ulong)Radix)
+					throw new OverflowException("Decoded value exceeds UInt64 range");
 
-				result = result * Radix + value;
+				result = result * (ulong)Radix + d;
 			}
 
-			return result;
+			return (long)result;
 		}
 
 		// ─────────────────────────────────────────────────────────────────────────
@@ -370,23 +221,22 @@ namespace MassiveHadronLtd.IDs.HTB50
 		public static int Decode(string input)
 		{
 			string raw = StripFlavor(input);
-
-			int result = 0;
+			uint result = 0;
 
 			foreach (char r in raw)
 			{
 				char c = Normalize(r);
-
-				if (!DecodeMap.TryGetValue(c, out int value))
+				if (!DecodeMap.TryGetValue(c, out int digit))
 					throw new FormatException($"Invalid HTB50 character '{r}'");
 
-				if (result > (int.MaxValue - value) / Radix)
-					throw new OverflowException("Value exceeds Int32 range");
+				uint d = (uint)digit;
+				if (result > (uint.MaxValue - d) / (uint)Radix)
+					throw new OverflowException("Decoded value exceeds UInt32 range");
 
-				result = result * Radix + value;
+				result = result * (uint)Radix + d;
 			}
 
-			return result;
+			return (int)result;
 		}
 
 		// ─────────────────────────────────────────────────────────────────────────
@@ -398,7 +248,6 @@ namespace MassiveHadronLtd.IDs.HTB50
 			BigInteger value = DecodeBigInteger(input);
 			byte[] bytes = value.ToByteArray();
 
-			// Remove leading zero if present
 			if (bytes.Length > 1 && bytes[^1] == 0)
 			{
 				var trimmed = new byte[bytes.Length - 1];
@@ -410,7 +259,76 @@ namespace MassiveHadronLtd.IDs.HTB50
 		}
 
 		// ─────────────────────────────────────────────────────────────────────────
-		// PRETTY-PRINTING
+		// Internal helpers
+		// ─────────────────────────────────────────────────────────────────────────
+
+		private static string BuildBase50(uint number)
+		{
+			if (number == 0) return string.Empty;
+
+			var sb = new StringBuilder();
+			while (number > 0)
+			{
+				uint rem = number % (uint)Radix;
+				number /= (uint)Radix;
+				sb.Insert(0, Alphabet[(int)rem]);
+			}
+			return sb.ToString();
+		}
+
+		private static string BuildBase50(ulong number)
+		{
+			if (number == 0) return string.Empty;
+
+			var sb = new StringBuilder();
+			while (number > 0)
+			{
+				ulong rem = number % (ulong)Radix;
+				number /= (ulong)Radix;
+				sb.Insert(0, Alphabet[(int)rem]);
+			}
+			return sb.ToString();
+		}
+
+		private static string BuildBase50(BigInteger number)
+		{
+			if (number == 0) return string.Empty;
+
+			var sb = new StringBuilder();
+			while (number > 0)
+			{
+				number = BigInteger.DivRem(number, Radix, out BigInteger rem);
+				sb.Insert(0, Alphabet[(int)rem]);
+			}
+			return sb.ToString();
+		}
+
+		private static void ApplyPadding(ref string s, int? fixedLength, char padChar)
+		{
+			if (!fixedLength.HasValue) return;
+
+			int needed = fixedLength.Value - s.Length;
+			if (needed < 0)
+				throw new ArgumentException($"Value too large for fixed length {fixedLength.Value}");
+
+			if (needed > 0)
+				s = new string(padChar, needed) + s;
+		}
+
+		private static char Normalize(char c)
+			=> NormalizeMap.TryGetValue(c, out var mapped) ? mapped : c;
+
+		private static string StripFlavor(string input)
+		{
+			if (string.IsNullOrWhiteSpace(input))
+				throw new ArgumentException("Input cannot be empty or whitespace", nameof(input));
+
+			int idx = input.LastIndexOf("_" + Flavor, StringComparison.Ordinal);
+			return idx >= 0 ? input.Substring(0, idx) : input;
+		}
+
+		// ─────────────────────────────────────────────────────────────────────────
+		// Pretty-printing (unchanged)
 		// ─────────────────────────────────────────────────────────────────────────
 
 		public static string Grouped(string htb50, int groupSize = 4, char separator = '-')
@@ -424,31 +342,11 @@ namespace MassiveHadronLtd.IDs.HTB50
 			foreach (char c in htb50)
 			{
 				sb.Append(c);
-				count++;
-
-				if (count % groupSize == 0 && count < htb50.Length && htb50[count] != '_')
+				if (++count % groupSize == 0 && count < htb50.Length && htb50[count] != '_')
 					sb.Append(separator);
 			}
 
 			return sb.ToString();
-		}
-
-		// ─────────────────────────────────────────────────────────────────────────
-		// NORMALIZATION
-		// ─────────────────────────────────────────────────────────────────────────
-
-		private static char Normalize(char c)
-		{
-			return NormalizeMap.TryGetValue(c, out var mapped) ? mapped : c;
-		}
-
-		private static string StripFlavor(string input)
-		{
-			if (string.IsNullOrWhiteSpace(input))
-				throw new ArgumentException("Input is empty");
-
-			int flavorIndex = input.LastIndexOf("_" + Flavor, StringComparison.Ordinal);
-			return flavorIndex >= 0 ? input.Substring(0, flavorIndex) : input;
 		}
 	}
 }

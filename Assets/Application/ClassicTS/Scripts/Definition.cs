@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Newtonsoft.Json;
 using MassiveHadronLtd;
 using MassiveHadronLtd.IDs.HTB50;
+using static ClassicTilestorm.ResourceManager;
 
 namespace ClassicTilestorm
 {
@@ -20,7 +21,7 @@ namespace ClassicTilestorm
 
 		//[JsonIgnore] public string id { get => hashid; }//future replacement for hashid obviously this currently conflicts with the existing use of 'id'
 		[JsonIgnore] public string name { get => id; }//future replacement for id - just the display name in the editor
-		[JsonIgnore] public long HashInt => string.IsNullOrEmpty(hashid) ? -1L : HTB50.Decode64(hashid);
+		[JsonIgnore] public int HashInt => string.IsNullOrEmpty(hashid) ? -1 : HTB50.Decode(hashid);
 
 		// ── CONNECTIONS (settable) ────────────────────────────────────────────
 		[JsonIgnore] public bool bNorth { get => HasConnection('N'); set => SetConnection('N', value); }
@@ -155,15 +156,17 @@ namespace ClassicTilestorm
 		// ── FACTORY ────────────────────────────────────────────────────────────
 		public static Definition GetDefaultTile()
 		{
-			// This is the ONLY place where the legacy name is written as a literal
 			const string legacyNameForHash = "tile_empty";
 
-			long hash64 = RadixHash.HashToRange64(legacyNameForHash, ResourceManager.HTB50Settings.Modulus);
-			string stable = HTB50.EncodeFixed(hash64, ResourceManager.HTB50Settings.FixedLength, appendFlavor: false);
+			// Full-range 32-bit stable hash (no modulus)
+			int hash32 = RadixHash.GetStableHash32(legacyNameForHash);
+
+			// Keep fixed length 6 with padding, exactly as before
+			string stable = HTB50.EncodeFixed(hash32, HTB50Settings.FixedLength, padChar: '0', appendFlavor: false);
 
 			return new Definition
 			{
-				id = legacyNameForHash,     // kept for compatibility / serialization / inspector
+				id = legacyNameForHash,
 				hashid = stable,
 
 				model = null,
@@ -171,7 +174,6 @@ namespace ClassicTilestorm
 				material = null,
 				flags = null,
 				connections = null
-				// future empty-state fields go here
 			};
 		}
 

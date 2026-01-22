@@ -127,19 +127,21 @@ namespace ClassicTilestorm
 
 				// PHASE 1: One-time fixup — assign missing hashids deterministically from id
 				bool defsChanged = false;
+				// PHASE 1: assign missing hashids using full-range 32-bit
 				foreach (var def in data.definitions.Where(d => d != null && string.IsNullOrEmpty(d.hashid)))
 				{
 					if (!string.IsNullOrEmpty(def.id))
 					{
-						long hash64 = RadixHash.HashToRange64(def.id, ResourceManager.HTB50Settings.Modulus);
-						def.hashid = HTB50.EncodeFixed(hash64, ResourceManager.HTB50Settings.FixedLength, appendFlavor: false);
+						int hash32 = RadixHash.GetStableHash32(def.id);
+						def.hashid = HTB50.EncodeFixed(hash32, ResourceManager.HTB50Settings.FixedLength, padChar: '0', appendFlavor: false);
 					}
 					else
 					{
-						// Rare: no id either → random (should never happen in practice)
-						long random64 = RadixHash.GenerateRandomInRange64(ResourceManager.HTB50Settings.Modulus);
-						def.hashid = HTB50.EncodeFixed(random64, ResourceManager.HTB50Settings.FixedLength, appendFlavor: false, padChar: '0');
-						Debug.LogWarning($"Generated random hashid for definition with no id or hashid");
+						// Very rare fallback
+						string fallbackInput = Guid.NewGuid().ToString();
+						int hash32 = RadixHash.GetStableHash32(fallbackInput);
+						def.hashid = HTB50.EncodeFixed(hash32, ResourceManager.HTB50Settings.FixedLength, padChar: '0', appendFlavor: false);
+						Debug.LogWarning($"Generated fallback hashid for definition with no id");
 					}
 					defsChanged = true;
 				}
@@ -198,9 +200,11 @@ namespace ClassicTilestorm
 							}
 							else
 							{
-								// Generate deterministic hash
-								long hash64 = RadixHash.HashToRange64(current, ResourceManager.HTB50Settings.Modulus);
-								hashToUse = HTB50.EncodeFixed(hash64, ResourceManager.HTB50Settings.FixedLength, appendFlavor: false);
+								// Generate deterministic hash Full-range 32-bit stable hash (no modulus)
+								int hash32 = RadixHash.GetStableHash32(current);
+
+								// Keep fixed length 6 with padding, exactly as before
+								hashToUse = HTB50.EncodeFixed(hash32, ResourceManager.HTB50Settings.FixedLength, padChar: '0', appendFlavor: false);
 
 								Debug.LogWarning($"Generated hash '{hashToUse}' for unmapped tile '{current}' in map '{map.name}'");
 							}

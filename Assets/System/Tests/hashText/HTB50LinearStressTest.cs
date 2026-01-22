@@ -1,9 +1,6 @@
 ﻿using UnityEngine;
 using System;
-using System.Collections.Generic;
 using System.Numerics;
-using System.Linq;
-using Random = UnityEngine.Random;
 
 namespace MassiveHadronLtd.IDs.HTB50
 {

@@ -99,6 +99,26 @@ namespace MassiveHadronLtd
 			return (int)biResult;
 		}
 
+		public static int GetStableHash32(string input)
+		{
+			if (string.IsNullOrEmpty(input)) return 0;
+
+			using var sha = SHA256.Create();
+			byte[] hash = sha.ComputeHash(Encoding.UTF8.GetBytes(input));
+
+			// Take first 4 bytes as the 32-bit hash (little-endian)
+			return BitConverter.ToInt32(hash, 0);
+		}
+
+		public static long GetStableHash64(string input)
+		{
+			if (string.IsNullOrEmpty(input)) return 0;
+			var bytes = Encoding.UTF8.GetBytes(input);
+			var h1 = HashCode.Combine(bytes);
+			var h2 = HashCode.Combine(bytes, 1);
+			return ((long)h1 << 32) | (uint)h2;
+		}
+
 		/// <summary>
 		/// Overload: Hashes the input string to an int in the range [0, radix^power - 1].
 		/// Throws if the range exceeds int.MaxValue.
