@@ -4,6 +4,7 @@ using MassiveHadronLtd;
 using UnityEngine.EventSystems;
 using UnityEditor;
 using ClassicTilestorm.Assets;
+using System;
 
 namespace ClassicTilestorm
 {
@@ -11,7 +12,7 @@ namespace ClassicTilestorm
 	{
 		private GameController gameController;
 		private EditorController editorController;
-		private MapManager mapManager;
+		private Transform mapRoot;
 		public static Map CurrentMap { get; set; }
 		private EggbotController eggbotController;
 		private MainCameraController cameraController;
@@ -62,14 +63,33 @@ namespace ClassicTilestorm
 
 		public void LoadMap(string mapName = null)
 		{
-			if (null == (mapName = mapName ?? ApplicationSettings.LoadMapName)) return;
+			if (string.IsNullOrEmpty(mapName ??= ApplicationSettings.LoadMapName))
+				return;
 
-			var currentMap = ResourceManager.Maps.FirstOrDefault(m => m.name == mapName) ?? ResourceManager.Maps.FirstOrDefault();
-			if (null == currentMap)
+			var currentMap = ResourceManager.Maps.FirstOrDefault(m => m.name == mapName)
+						  ?? ResourceManager.Maps.FirstOrDefault();
+
+			if (currentMap == null)
 			{
-				Debug.LogError($"No map found for mapName={mapName}! Available maps: {string.Join(", ", ResourceManager.Maps.Select(m => m.name))}");
+				Debug.LogError($"No map found for '{mapName}'! Available: {string.Join(", ", ResourceManager.Maps.Select(m => m.name))}");
 				return;
 			}
+
+			// ─── Cleanup previous map ─────────────────────────────────────
+			if (CurrentMap != null)
+				CurrentMap.Destroy();
+
+			if (mapRoot != null)
+				DestroyImmediate(mapRoot.gameObject);
+
+			// ─── Create new container GameObject ──────────────────────────
+			var container = new GameObject($"Map: {currentMap.name}");
+			container.transform.SetParent(transform, false);
+			mapRoot = container.transform;
+
+			Map.parentTransform = mapRoot;   // ← still using the static field
+
+			// ─── Load & initialise ────────────────────────────────────────
 
 			//// Sound effect
 			//AudioManager.PlaySound(SoundAssets.Find("jump"));
@@ -80,24 +100,26 @@ namespace ClassicTilestorm
 
 			//SkyboxUtility.SetSkybox(AssetPath.SkycubesPath, $"{(string.IsNullOrEmpty(currentMap.skybox) ? currentMap.music : currentMap.skybox)}Skybox");//fall back to music for now, but will be 'DefaultSkybox'
 
-			//var skyName = string.IsNullOrEmpty(currentMap.skybox) ? currentMap.music : currentMap.skybox;
-			var skyName = string.IsNullOrEmpty(currentMap.skybox) ? $"{currentMap.music}Skybox" : currentMap.skybox;
-			//SkyboxUtility.SetSkybox($"{AssetPath.SkycubesPath}{skyName}");
-			SkyboxUtility.SetSkybox(skyName);
+			CurrentMap = currentMap;
+			currentMap.Initialise();
 
-			if (CurrentMap != null) CurrentMap.Destroy();
-			if (null != mapManager) DestroyImmediate(mapManager.gameObject);
-			mapManager = MapManager.Instantiate(currentMap, transform);
+			// Eggbot
+			if (eggbotController != null)
+				DestroyImmediate(eggbotController.gameObject);
 
-			if (null != eggbotController) DestroyImmediate(eggbotController.gameObject);
 			eggbotController = EggbotController.Instantiate(currentMap.character, transform);
-			if (null != eggbotController) eggbotController.Initialise(CurrentMap);
+			eggbotController?.Initialise(CurrentMap);
 
-			if (null != cameraController) cameraController.Initialise(CurrentMap, eggbotController);
-			if (null != gameController) gameController.Initialise(CurrentMap);
-			if (null != editorController) editorController.Initialise(CurrentMap);
+			// Controllers
+			cameraController?.Initialise(CurrentMap, eggbotController);
+			gameController?.Initialise(CurrentMap);
+			editorController?.Initialise(CurrentMap);
 
-			//static string SkycubesPath(string id) => string.IsNullOrEmpty(id) ? null : $"{AssetPath.SkycubesPath}{id}";
+			// Skybox
+			var skyName = string.IsNullOrEmpty(currentMap.skybox)
+				? $"{currentMap.music}Skybox"
+				: currentMap.skybox;
+			SkyboxUtility.SetSkybox(skyName);
 		}
 
 		//public void ReloadCurrentMap() { if (null != mapManager && null != mapManager.CurrentMap) LoadMap(mapManager.CurrentMap.name); }
@@ -256,6 +278,25 @@ namespace ClassicTilestorm
 #else
 			Debug.Log("Export currently only available in Unity Editor");
 #endif
+		}
+	}
+
+	public class MapManager : MonoBehaviour
+	{
+		public static MapManager Instantiate(Map map, Transform parent = null)
+		{
+			if (map == null || string.IsNullOrEmpty(map.name))
+			{
+				Debug.LogError("Cannot instantiate MapManager: invalid map or name.");
+				return null;
+			}
+
+			var go = new GameObject($"Map: {map.name}");
+			if (parent != null) go.transform.SetParent(parent, false);
+			Map.parentTransform = go.transform;
+
+			var manager = go.AddComponent<MapManager>();
+			return manager;
 		}
 	}
 }

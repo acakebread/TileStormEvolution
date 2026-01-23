@@ -116,12 +116,12 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			var mapManager = FindFirstObjectByType<MapManager>();
-			if (!mapManager)
-			{
-				Hide();
-				return;
-			}
+			//var mapManager = FindFirstObjectByType<MapManager>();
+			//if (!mapManager)
+			//{
+			//	Hide();
+			//	return;
+			//}
 
 			Vector3 worldPos = MainController.CurrentMap.TileWorldPosition(tileIndex) + view.Position;
 			Vector3 forward = (view.LookAt - view.Position).normalized;

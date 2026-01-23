@@ -7,7 +7,6 @@ namespace ClassicTilestorm
 	{
 		private PlaceholderUI placeholderUI;
 		private MainController mainController => GetComponent<MainController>();
-		private MapManager mapManager => null != mainController ? mainController.GetComponentInChildren<MapManager>(true) : null;
 
 		public void Awake()
 		{
@@ -41,7 +40,7 @@ namespace ClassicTilestorm
 				controller.UpdateGestureControllerState();
 
 			// Music
-			if (null != mapManager) AudioManager.PlayMusic(MainController.CurrentMap.Music, loop: true);
+			AudioManager.PlayMusic(MainController.CurrentMap?.Music, loop: true);
 			//AudioManager.PlayMusic(MusicAssets.Find(currentMap.music));
 
 

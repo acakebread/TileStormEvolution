@@ -1132,6 +1132,9 @@ namespace ClassicTilestorm
 
 		public void Destroy()
 		{
+			if (ReferenceEquals(MapAttachmentExtensions.CurrentMap, this))
+				MapAttachmentExtensions.ClearActiveMapManager();
+
 			// 1. Kill delegates (VERY IMPORTANT)
 			OnMapEdited = null;
 
