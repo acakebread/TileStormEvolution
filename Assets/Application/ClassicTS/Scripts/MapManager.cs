@@ -43,9 +43,6 @@ namespace ClassicTilestorm
 
 		void RefreshGeometry();
 
-		MapAttachment[] attachments { get; set; }
-		Waypoint[] waypointAttachments { get; }
-
 		Action<IMapManager, bool, Vector3> OnMapEdited { get; set; }
 	}
 
@@ -138,7 +135,7 @@ namespace ClassicTilestorm
 			}
 
 			// Changed line:
-			mapTiles = currentMap.CreateRuntimeTiles(transform);
+			mapTiles = currentMap.CreateRuntimeTiles();
 
 			if (mapTiles == null)
 			{
@@ -151,7 +148,7 @@ namespace ClassicTilestorm
 
 			InitializeWindController();
 
-			currentMap.RefreshAllAttachmentInstances(transform);
+			currentMap.RefreshAllAttachmentInstances();
 
 			SetupWaypoints();
 		}
@@ -159,7 +156,7 @@ namespace ClassicTilestorm
 		public void RefreshGeometry()
 		{
 			DestroyAllTiles();
-			mapTiles = currentMap.CreateRuntimeTiles(transform);
+			mapTiles = currentMap.CreateRuntimeTiles();
 
 			if (mapTiles == null)
 			{
@@ -167,7 +164,7 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			currentMap.RefreshAllAttachmentInstances(transform);
+			currentMap.RefreshAllAttachmentInstances();
 		}
 
 		private void DestroyAllTiles()
@@ -344,7 +341,7 @@ namespace ClassicTilestorm
 
 			mapTiles[index] = new Tile(def, transform, TileWorldPosition(index));
 
-			currentMap.RefreshAttachmentsOnTile(index, transform);
+			currentMap.RefreshAttachmentsOnTile(index);
 
 			int tableIndex;
 			if (currentMap.table == null || !Array.Exists(currentMap.table, s => s == id))
@@ -448,8 +445,8 @@ namespace ClassicTilestorm
 			if (boundsChanged)
 			{
 				DestroyAllTiles();
-				mapTiles = currentMap.CreateRuntimeTiles(transform);
-				currentMap.RefreshAllAttachmentInstances(transform);
+				mapTiles = currentMap.CreateRuntimeTiles();
+				currentMap.RefreshAllAttachmentInstances();
 			}
 			else
 			{
@@ -460,7 +457,7 @@ namespace ClassicTilestorm
 
 				mapTiles[index] = new Tile(def, transform, TileWorldPosition(index));
 
-				currentMap.RefreshAttachmentsOnTile(index, transform);
+				currentMap.RefreshAttachmentsOnTile(index);
 			}
 
 			currentMap.Consolidate();
@@ -490,7 +487,7 @@ namespace ClassicTilestorm
 
 		public void RefreshAttachmentInstance(MapAttachment attachment)
 		{
-			currentMap.RefreshAttachmentInstance(attachment, transform);
+			currentMap.RefreshAttachmentInstance(attachment);
 		}
 
 		public void DestroyAttachmentInstance(MapAttachment attachment)
@@ -501,7 +498,7 @@ namespace ClassicTilestorm
 		public void AddAttachment(MapAttachment attachment)
 		{
 			currentMap.AddAttachment(attachment);
-			currentMap.RefreshAttachmentInstance(attachment, transform);
+			currentMap.RefreshAttachmentInstance(attachment);
 			OnMapEdited?.Invoke(this, false, Vector3.zero);
 		}
 
@@ -525,17 +522,6 @@ namespace ClassicTilestorm
 		{
 			currentMap.RemoveAllAttachmentsOnTile(tileIndex);
 			OnMapEdited?.Invoke(this, false, Vector3.zero);
-		}
-
-		public Waypoint[] waypointAttachments => currentMap?.GetWaypointAttachments() ?? Array.Empty<Waypoint>();
-
-		public MapAttachment[] attachments
-		{
-			get => currentMap?.GetAllAttachments() ?? Array.Empty<MapAttachment>();
-			set
-			{
-				currentMap?.SetAllAttachments(value);
-			}
 		}
 
 		public Bounds GetTileGeometryBounds(int tileIndex)
@@ -589,6 +575,7 @@ namespace ClassicTilestorm
 
 			var go = new GameObject($"Map: {map.name}");
 			if (parent != null) go.transform.SetParent(parent, false);
+			Map.parentTransform = go.transform;
 
 			var manager = go.AddComponent<MapManager>();
 			manager.Initialise(map);

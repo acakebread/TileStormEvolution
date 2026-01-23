@@ -318,7 +318,7 @@ namespace ClassicTilestorm
 
 		private void RebuildMarkers()
 		{
-			var tiles = iMapManager?.attachments?.Where(a => a.tile >= 0).Select(a => a.tile).Distinct().ToArray() ?? null;
+			var tiles = iMapManager?.CurrentMap.GetAllAttachments()?.Where(a => a.tile >= 0).Select(a => a.tile).Distinct().ToArray() ?? null;
 			if (null == tiles)
 			{
 				EditorMarkerUtil.ClearMapMarkers();
@@ -347,7 +347,7 @@ namespace ClassicTilestorm
 		// ===================================================================
 		private void DrawSidePanelAttachment()
 		{
-			var atts = iMapManager?.attachments ?? Array.Empty<MapAttachment>();
+			var atts = iMapManager?.CurrentMap.GetAllAttachments() ?? Array.Empty<MapAttachment>();
 			var items = new List<ListViewItem>();
 
 			foreach (var att in atts)
@@ -371,7 +371,7 @@ namespace ClassicTilestorm
 			var selectedWaypoint = selection?.Length > 0 ? selection[0] as Waypoint : null;
 
 			var items = new List<ListViewItem>();
-			var waypointAttachments = iMapManager.waypointAttachments;//cached
+			var waypointAttachments = iMapManager.CurrentMap.waypointAttachments;//cached
 
 			for (var i = 0; i < waypointAttachments.Length; i++)
 			{

@@ -5,6 +5,7 @@ using UnityEngine;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using MassiveHadronLtd;
+using Unity.Mathematics;
 
 namespace ClassicTilestorm
 {
@@ -52,6 +53,8 @@ namespace ClassicTilestorm
 
 		public bool IsValidTile(int index) => index >= 0 && index < width * height;
 
+		public static Transform parentTransform;
+
 		public const int MAP_MAX_SIZE = 64;
 
 #if UNITY_EDITOR
@@ -79,7 +82,7 @@ namespace ClassicTilestorm
 		// Moved from MapManager: runtime tile instantiation
 		// ─────────────────────────────────────────────
 
-		public Tile[] CreateRuntimeTiles(Transform parentTransform)
+		public Tile[] CreateRuntimeTiles()
 		{
 			if (tiles == null || tiles.Length != width * height)
 			{
@@ -130,25 +133,25 @@ namespace ClassicTilestorm
 		// ─────────────────────────────────────────────
 		[NonSerialized] private readonly Dictionary<MapAttachment, GameObject> attachmentGameObjects = new();
 
-		public void RefreshAllAttachmentInstances(Transform parentTransform)
+		public void RefreshAllAttachmentInstances()
 		{
 			foreach (var att in attachments ?? Array.Empty<MapAttachment>())
 			{
-				RefreshAttachmentInstance(att, parentTransform);
+				RefreshAttachmentInstance(att);
 			}
 		}
 
-		public void RefreshAttachmentsOnTile(int tileIndex, Transform parentTransform)
+		public void RefreshAttachmentsOnTile(int tileIndex)
 		{
 			if (attachments == null) return;
 			foreach (var att in attachments)
 			{
 				if (att?.tile == tileIndex)
-					RefreshAttachmentInstance(att, parentTransform);
+					RefreshAttachmentInstance(att);
 			}
 		}
 
-		public void RefreshAttachmentInstance(MapAttachment attachment, Transform parentTransform)
+		public void RefreshAttachmentInstance(MapAttachment attachment)
 		{
 			if (attachment == null) return;
 
@@ -307,6 +310,8 @@ namespace ClassicTilestorm
 				RemoveAttachment(att);
 			}
 		}
+
+		[DoNotNormalize] public Waypoint[] waypointAttachments => GetWaypointAttachments() ?? Array.Empty<Waypoint>();
 
 		public Waypoint[] GetWaypointAttachments()
 		{
