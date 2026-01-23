@@ -22,8 +22,7 @@ namespace ClassicTilestorm
 
 		private void OnDestroy()
 		{
-			CurrentMap?.CleanupAttachmentInstances();
-			CurrentMap?.DestroyAllTiles();
+			CurrentMap?.Destroy();
 			if (ReferenceEquals(MapAttachmentExtensions.CurrentMapManager, this))
 				MapAttachmentExtensions.ClearActiveMapManager();
 			instance = null;

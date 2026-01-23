@@ -1131,5 +1131,37 @@ namespace ClassicTilestorm
 
 			UpdateTileObjectNamesAndPositions();
 		}
+
+		public void Destroy()
+		{
+			// 1. Kill delegates (VERY IMPORTANT)
+			OnMapEdited = null;
+
+			// 2. Destroy runtime tiles
+			DestroyAllTiles();
+
+			// 3. Destroy attachment GameObjects
+			CleanupAttachmentInstances();
+
+			// 4. Remove WindController if we created one
+			if (parentTransform != null)
+			{
+				var wind = parentTransform.GetComponent<WindController>();
+				if (wind != null)
+				{
+					if (Application.isPlaying)
+						UnityEngine.Object.Destroy(wind);
+					else
+						UnityEngine.Object.DestroyImmediate(wind);
+				}
+			}
+
+			// 5. Clear runtime-only state
+			indices = null;
+
+			// 6. Defensive: detach shared parent
+			if (parentTransform != null)
+				parentTransform = null;
+		}
 	}
 }
