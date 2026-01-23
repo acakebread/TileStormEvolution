@@ -3,9 +3,9 @@ namespace ClassicTilestorm
 	public static class Navigation
 	{
 		// Public for access from MapManager.FindAdjacentConsole
-		public static readonly int[] Directions = { Tile.North, Tile.South, Tile.East, Tile.West };
+		public static readonly int[] Directions = { TileData.North, TileData.South, TileData.East, TileData.West };
 		public static float DirToAngle(int dir) => new float[] { 0f, 0f, 180f, 0f, 90f, 45f, 135f, 90f, -90f, -45f, -135f, -90f, 0f, 0f, 180f, 0f }[dir & 0xF];
-		public static int GetOppositeDirection(int dir) => ((dir & Tile.North) << 1) | ((dir & Tile.South) >> 1) | ((dir & Tile.East) << 1) | ((dir & Tile.West) >> 1);
+		public static int GetOppositeDirection(int dir) => ((dir & TileData.North) << 1) | ((dir & TileData.South) >> 1) | ((dir & TileData.East) << 1) | ((dir & TileData.West) >> 1);
 
 		//Classic TS legacy function - returns tile index in direction
 		public static int LineOfSight(IMapManager map, int src, int dst, int dir)
@@ -65,8 +65,8 @@ namespace ClassicTilestorm
 		//Classic TS legacy function - returns index of adjacent tile
 		public static int GetAdjacentTile(IMapManager map, int index, int dir)
 		{
-			var dx = ((dir & Tile.East) >> 2) - ((dir & Tile.West) >> 3);
-			var dz = ((dir & Tile.North) >> 0) - ((dir & Tile.South) >> 1);
+			var dx = ((dir & TileData.East) >> 2) - ((dir & TileData.West) >> 3);
+			var dz = ((dir & TileData.North) >> 0) - ((dir & TileData.South) >> 1);
 			return ((index / map.Width) + dz) * map.Width + (index % map.Width) + dx;
 		}
 

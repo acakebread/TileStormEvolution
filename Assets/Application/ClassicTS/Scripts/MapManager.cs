@@ -47,41 +47,21 @@ namespace ClassicTilestorm
 		void RefreshGeometry();
 
 		MapAttachment[] attachments { get; set; }
-		Waypoint[] waypointAttachments { get; }//set; 
+		Waypoint[] waypointAttachments { get; }
 
 		Action<IMapManager, bool, Vector3> OnMapEdited { get; set; }
 	}
 
 	public class MapManager : MonoBehaviour, IMapManager
 	{
-		// ------------------------------------------------------------------
-		// Runtime-only mutable state
-		// ------------------------------------------------------------------
 		private Map currentMap;
-		private int[] indices;// Scrambled/solved visual indices
+		private int[] indices;
 
-		// ONE source of truth per map slot
-		private MapTile[] mapTiles;
+		private Tile[] mapTiles;
 
-		private struct MapTile
-		{
-			public string definitionId;// e.g. "tile_grass", "tile_empty"
-			public Tile tile;// Runtime Tile with flags + GameObject
-
-			public MapTile(string id, Tile t)
-			{
-				definitionId = id;
-				tile = t;
-			}
-		}
-
-		// ------------------------------------------------------------------
-		// IMapData / IMapManager forwarded properties
-		// ------------------------------------------------------------------
 		public Map CurrentMap => currentMap;
 		public Transform CurrentTransform => transform;
 
-		// Replace the field
 		private Action<IMapManager, bool, Vector3> onMapEdited;
 		public Action<IMapManager, bool, Vector3> OnMapEdited
 		{
@@ -97,9 +77,6 @@ namespace ClassicTilestorm
 
 		public int[] Waypoints { get => currentMap?.waypoints; set { if (null != currentMap) currentMap.waypoints = value; } }
 
-		// -----------------------------------------------------------------------
-		// Attachment runtime instances
-		// -----------------------------------------------------------------------
 		private readonly Dictionary<MapAttachment, GameObject> attachmentGameObjects = new();
 
 		public int GetWaypoint(int index) => (index >= 0 && null != currentMap?.waypoints) ? index < currentMap.waypoints.Length ? currentMap.waypoints[index] : -1 : -1;
@@ -113,13 +90,13 @@ namespace ClassicTilestorm
         public static readonly Vector3 tile_origin = Vector3.zero;
         public Vector3 TileWorldPosition(int index) => new(index % Width, 0f, index / Width);
         public int WorldToMapIndex(Vector3 vec) { vec += new Vector3(0.5f, 0f, 0.5f); return vec.x >= 0 && vec.x < Width && vec.z >= 0 && vec.z < Height ? (int)vec.z * Width + (int)vec.x : -1; }
-		public static Vector3 SnappedMapPosition(Vector3 vec) => new Vector3(Mathf.FloorToInt(vec.x + 0.5f), 0f, Mathf.FloorToInt(vec.z + 0.5f));
+        public static Vector3 SnappedMapPosition(Vector3 vec) => new Vector3(Mathf.FloorToInt(vec.x + 0.5f), 0f, Mathf.FloorToInt(vec.z + 0.5f));
 #endif
+		private const int MAP_MAX_SIZE = 64;
 
-		//statci helpers rely on instance - work out how to remove these later
 		private static MapManager instance;
-		public static Quaternion LocalRotation(int tileIndex, Quaternion worldRotation) => worldRotation;//just pass through
-		public static Quaternion WorldRotation(int tileIndex, Quaternion localRotation) => localRotation;//just pass through
+		public static Quaternion LocalRotation(int tileIndex, Quaternion worldRotation) => worldRotation;
+		public static Quaternion WorldRotation(int tileIndex, Quaternion localRotation) => localRotation;
 
 		public static Vector3 LocalPosition(int tileIndex, Vector3 worldPosition) => instance == null || tileIndex < 0 ? worldPosition : worldPosition - instance.TileWorldPosition(tileIndex);
 		public static Vector3 WorldPosition(int tileIndex, Vector3 localPosition) => instance == null || tileIndex < 0 ? localPosition : localPosition + instance.TileWorldPosition(tileIndex);
@@ -143,9 +120,13 @@ namespace ClassicTilestorm
 
 		public Tile GetTile(int index)
 		{
-			if (index < 0 || index >= indices.Length || Width <= 0 || mapTiles == null) return default;
+			if (index < 0 || index >= indices.Length || Width <= 0 || mapTiles == null)
+				return default;
+
 			int dataIndex = indices[index];
-			return dataIndex >= 0 && dataIndex < mapTiles.Length ? mapTiles[dataIndex].tile : default;
+			return dataIndex >= 0 && dataIndex < mapTiles.Length
+				? mapTiles[dataIndex]
+				: default;
 		}
 
 		public static bool RayToWorld(Ray ray, out Vector3 point)
@@ -206,7 +187,7 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			LoadTileData(currentMap.tiles);
+			mapTiles = LoadTileData(currentMap);
 
 			if (ApplicationSettings.Scrambled) Preset();
 			else Solve();
@@ -218,65 +199,74 @@ namespace ClassicTilestorm
 			SetupWaypoints();
 		}
 
+		private Tile[] LoadTileData(Map map)
+		{
+			if (map.tiles == null || map.tiles.Length != Count)
+			{
+				DebugUtil.LogError($"Invalid tile map data! length={(map.tiles?.Length ?? -1)}, expected={Count}", this);
+				return null;
+			}
+
+			var tiles = new Tile[Count];
+
+			string mapName = CurrentMap?.name ?? map.name ?? "Unnamed map";
+
+			for (int n = 0; n < map.tiles.Length; n++)
+			{
+				int idx = map.tiles[n];
+				string hashId = null;
+
+				if (idx >= 0 && map.table != null && idx < map.table.Length)
+				{
+					hashId = map.table[idx];
+				}
+				else if (idx != -1)
+				{
+					DebugUtil.LogWarning($"Out-of-range table index {idx} at tile {n} (map: {mapName})", this);
+				}
+
+				var def = ResourceManager.ResolveDefinition(hashId, out bool hadError);//guaranteed default def if there was an error
+
+				if (hadError)
+				{
+					// Log once per broken tile, with map + tile context
+					Debug.LogWarning($"Failed to resolve tile definition at tile {n} (hash: '{hashId ?? "<null>"}') — using default");
+				}
+
+				tiles[n] = new Tile(def, transform, TileWorldPosition(n));
+			}
+
+			return tiles;
+		}
+
 		private void DestroyAllTiles()
 		{
 			for (int i = transform.childCount - 1; i >= 0; i--) Destroy(transform.GetChild(i).gameObject);
 		}
 
-		private void LoadTileData(int[] tileMap)
+		private Definition ResolveDefinition(string id, int? tileIndexForLogging = null)
 		{
-			if (tileMap == null || tileMap.Length != Count)
+			if (string.IsNullOrEmpty(id))
 			{
-				Debug.LogError($"Invalid tile map data! length={(tileMap?.Length ?? -1)}, expected={Count}");
-				return;
+				Debug.LogError("attempting to load null tile def!!");
+				return ResourceManager.FindOrCreateDefaultTile();
 			}
 
-			var emptyDef = ResourceManager.FindOrCreateDefaultTile();
-			string emptyStableId = emptyDef.hashid;
-
-			mapTiles = new MapTile[Count];
-
-			for (int n = 0; n < tileMap.Length; n++)
+			var def = ResourceManager.GetDefinition(id);
+			if (def != null)
 			{
-				int idx = tileMap[n];
-				Definition def;
-
-				if (idx >= 0 && currentMap.table != null && idx < currentMap.table.Length)
-				{
-					string legacyId = currentMap.table[idx];
-					def = ResourceManager.GetDefinition(legacyId);
-
-					if (def == null)
-					{
-						Debug.LogWarning($"Missing definition '{legacyId}' at tile {n} → using empty");
-						def = emptyDef;
-					}
-				}
-				else
-				{
-					def = emptyDef;
-
-					if (idx != -1)
-					{
-						Debug.LogWarning($"Out-of-range index {idx} at tile {n} → using empty");
-					}
-				}
-
-				var tile = new Tile(def);
-
-				if (!def.IsDefault())
-				{
-					tile.gameObject = InstantiateTile(def, transform, TileWorldPosition(n));
-				}
-
-				string storedKey = def.hashid ?? emptyStableId;
-
-				mapTiles[n] = new MapTile(storedKey, tile);
+				return def;
 			}
+
+			string context = tileIndexForLogging.HasValue
+				? $"at visual tile {tileIndexForLogging.Value}"
+				: "during map load";
+
+			Debug.LogWarning($"Missing or invalid definition for hash '{id}' {context} → falling back to default tile");
+
+			return ResourceManager.FindOrCreateDefaultTile();
 		}
 
-
-		// Editor-only – returns the source definition ID at map index (only valid when not scrambled)
 		public string GetDefinitionAtIndex(int mapIndex)
 		{
 			if (mapIndex < 0 || mapIndex >= Count || mapTiles == null) return null;
@@ -330,7 +320,7 @@ namespace ClassicTilestorm
 
 		public void Scramble()
 		{
-			const int iterations = 1;//increase for more scrambling per iteration
+			const int iterations = 1;
 			for (var n = 0; n < indices.Length * iterations; ++n)
 			{
 				var stride = (UnityEngine.Random.value > 0.5f ? Width : 1) * (UnityEngine.Random.value > 0.5f ? 1 : -1);
@@ -354,7 +344,7 @@ namespace ClassicTilestorm
 			for (int n = 0; n < indices.Length; ++n)
 			{
 				var mapTile = mapTiles[indices[n]];
-				var go = mapTile.tile.gameObject;
+				var go = mapTile.gameObject;
 				if (go == null) continue;
 
 				var position = TileWorldPosition(n);
@@ -363,7 +353,6 @@ namespace ClassicTilestorm
 #if DEBUG
 				position -= tile_origin;
 				var id = string.IsNullOrEmpty(mapTile.definitionId) ? "Empty" : mapTile.definitionId;
-				//go.name = $"{id} ({position.x},{position.z})";
 				var def = ResourceManager.GetDefinition(mapTile.definitionId);
 				go.name = $"{def.id} ({position.x},{position.z})";
 #endif
@@ -419,14 +408,10 @@ namespace ClassicTilestorm
 			Debug.Log($"Generated {currentMap.waypoints.Length} waypoints.");
 		}
 
-		// -----------------------------------------------------------------------
-		// Map editing
-		// -----------------------------------------------------------------------
-
 		public void RefreshGeometry()
 		{
 			DestroyAllTiles();
-			LoadTileData(currentMap.tiles);
+			mapTiles = LoadTileData(currentMap);
 			RefreshAllAttachmentInstances();
 		}
 
@@ -438,18 +423,11 @@ namespace ClassicTilestorm
 			else
 				result = UpdateTileAtRestricted(x, z, id);
 
-			//RebuildEmitterVisuals();//we need to deal with this because emitters vanish if map resized
 			return result;
 		}
 
 		private bool UpdateTileAtRestricted(int x, int z, string id)
 		{
-			if (string.IsNullOrEmpty(id))
-			{
-				var defaultDef = ResourceManager.FindOrCreateDefaultTile();
-				id = defaultDef.hashid;
-			}
-
 			if (x < 0 || x >= Width || z < 0 || z >= Height)
 			{
 				Debug.LogError($"Invalid coordinates: ({x}, {z}) outside map bounds ({Width}x{Height})");
@@ -458,25 +436,20 @@ namespace ClassicTilestorm
 
 			int index = z * Width + x;
 
-			if (mapTiles[index].tile.gameObject != null)
-				Destroy(mapTiles[index].tile.gameObject);
+			if (mapTiles[index].gameObject != null)
+				Destroy(mapTiles[index].gameObject);
 
-			var def = ResourceManager.GetDefinition(id);
-			var newTile = new Tile(def);
+			var def = ResolveDefinition(id, index);
 
-			if (!def?.IsDefault() ?? false)
-				newTile.gameObject = InstantiateTile(def, transform, TileWorldPosition(index));
-
-			mapTiles[index] = new MapTile(def?.hashid ?? id, newTile);
+			mapTiles[index] = new Tile(def, transform, TileWorldPosition(index));
 
 			RefreshAttachmentsOnTile(index);
 
 			int tableIndex;
 			if (currentMap.table == null || !Array.Exists(currentMap.table, s => s == id))
 			{
-				// New type → append hash directly to table
 				var list = currentMap.table?.ToList() ?? new List<string>();
-				list.Add(id);  // id is hash here
+				list.Add(id);
 				currentMap.table = list.ToArray();
 				tableIndex = currentMap.table.Length - 1;
 			}
@@ -495,13 +468,6 @@ namespace ClassicTilestorm
 
 		private bool UpdateTileAtSmart(int x, int z, string id, Action<bool, Vector3> onEdited = null)
 		{
-			// If no id provided → use canonical default tile
-			if (string.IsNullOrEmpty(id))
-			{
-				var defaultDef = ResourceManager.FindOrCreateDefaultTile();
-				id = defaultDef.hashid;  // prefer hashid
-			}
-
 			int oldWidth = Width;
 			int oldHeight = Height;
 
@@ -510,7 +476,6 @@ namespace ClassicTilestorm
 			Vector3 originDelta = Vector3.zero;
 			bool sizeChanged = false;
 
-			// === 1. Expand — only negative axes shift origin ===
 			if (x < 0 || x >= Width || z < 0 || z >= Height)
 			{
 				int minX = Mathf.Min(0, x);
@@ -542,19 +507,13 @@ namespace ClassicTilestorm
 				sizeChanged = true;
 			}
 
-			// === 2. Place tile ===
 			int index = z * Width + x;
-
-			// ────────────────────────────────────────────────────────────────
-			// Minimal change: preserve _tileEntries when adding new type
-			// ────────────────────────────────────────────────────────────────
 
 			int tableIndex;
 			if (currentMap.table == null || !Array.Exists(currentMap.table, s => s == id))
 			{
-				// New type → append hash directly to table
 				var list = currentMap.table?.ToList() ?? new List<string>();
-				list.Add(id);  // id is hash here
+				list.Add(id);
 				currentMap.table = list.ToArray();
 				tableIndex = currentMap.table.Length - 1;
 			}
@@ -565,9 +524,8 @@ namespace ClassicTilestorm
 
 			currentMap.tiles[index] = tableIndex;
 
-			// === 3. Crop — add delta only if left/top content was removed ===
-			var def = ResourceManager.GetDefinition(id);
-			bool isDefaultTile = def?.IsDefault() ?? false;
+			var defForCrop = ResourceManager.GetDefinition(id);
+			bool isDefaultTile = defForCrop?.IsDefault() ?? false;
 
 			if (isDefaultTile || sizeChanged)
 			{
@@ -584,29 +542,22 @@ namespace ClassicTilestorm
 				}
 			}
 
-			// === 4. Rebuild visuals ===
 			bool boundsChanged = sizeChanged || Width != oldWidth || Height != oldHeight;
 
 			if (boundsChanged)
 			{
 				DestroyAllTiles();
-				LoadTileData(currentMap.tiles);
+				mapTiles = LoadTileData(currentMap);
 				RefreshAllAttachmentInstances();
 			}
 			else
 			{
-				// Fast single-tile update
-				var newTile = new Tile(def);
+				if (mapTiles[index].gameObject != null)
+					Destroy(mapTiles[index].gameObject);
 
-				if (mapTiles[index].tile.gameObject != null)
-					Destroy(mapTiles[index].tile.gameObject);
+				var def = ResolveDefinition(id, index);
 
-				// Only instantiate if NOT the default (invisible) tile
-				if (!isDefaultTile && def != null)
-					newTile.gameObject = InstantiateTile(def, transform, TileWorldPosition(index));
-
-				// Store using hashid (stable)
-				mapTiles[index] = new MapTile(def?.hashid ?? id, newTile);
+				mapTiles[index] = new Tile(def, transform, TileWorldPosition(index));
 
 				RefreshAttachmentsOnTile(index);
 			}
@@ -617,17 +568,12 @@ namespace ClassicTilestorm
 			return true;
 		}
 
-		private const int MAP_MAX_SIZE = 64;
-
-		// -----------------------------------------------------------------------
-		// Environmental effects
-		// -----------------------------------------------------------------------
 		private void InitializeWindController()
 		{
 			WindController windController = null;
 			for (int n = 0; n < mapTiles.Length; ++n)
 			{
-				var go = mapTiles[n].tile.gameObject;
+				var go = mapTiles[n].gameObject;
 				if (go == null) continue;
 
 				var sway = go.GetComponent<MorphGeomSway>();
@@ -640,24 +586,6 @@ namespace ClassicTilestorm
 			if (windController != null)
 				Debug.Log($"WindController initialized with {windController.SwayComponents.Count} sway components.");
 		}
-
-		private static GameObject InstantiateTile(Definition definition, Transform parent, Vector3 position)
-		{
-			if (null == definition || string.IsNullOrEmpty(definition.model))
-			{
-				if (null != definition && null == definition.model && definition.bDock)//special case to show 'invisible' but 'interactive' tiles - the legacy 'tile_invisible'
-					return ApplicationSettings.ShowHiddenTiles ? GeometryFactory.CreateDebugTile(parent, position) : null;
-
-				Debug.LogWarning("GeometryManager: Invalid Definition or geometry name." + definition.id);
-				return GeometryFactory.CreateFallbackTile(parent, position);
-			}
-
-			return DefinitionFactory.Instantiate(definition, position, Quaternion.identity, parent);
-		}
-
-		//// -----------------------------------------------------------------------
-		//// Attachment runtime instance management
-		//// -----------------------------------------------------------------------
 
 		private void RefreshAllAttachmentInstances()
 		{
@@ -681,7 +609,6 @@ namespace ClassicTilestorm
 			if (attachment is Waypoint wp)
 				CurrentMap.waypoints[wp.waypointIndex] = wp.tile;
 
-			// Let each type decide its prefab and behavior
 			string prefabName = attachment switch
 			{
 				Waypoint => null,
@@ -691,8 +618,8 @@ namespace ClassicTilestorm
 					"spark" => "spark",
 					_ => null
 				},
-				Pickup => null,// null for now p => "pickup", // example — you can make this dynamic later
-				View => null,// Views have no runtime GO — only editor helpers
+				Pickup => null,
+				View => null,
 				_ => null
 			};
 
@@ -702,14 +629,11 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			//Vector3 worldPos = TileWorldPosition(attachment.tile) + GetAttachmentLocalPosition(attachment);
-			//Quaternion rotation = GetAttachmentRotation(attachment);
-
 			Vector3 localPos = attachment switch
 			{
 				Waypoint w => Vector3.zero,
 				Emitter e => e.Position,
-				Pickup => Vector3.up * 0.5f,// floating above ground
+				Pickup => Vector3.up * 0.5f,
 				View v => v.Position,
 				_ => Vector3.zero
 			};
@@ -732,7 +656,6 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			// Instantiate new
 			go = Assets.PrefabAssets.Instantiate(prefabName, worldPos, rotation, transform);
 			go.name = $"{attachment.TypeName}_{prefabName}_tile{attachment.tile}";
 			attachmentGameObjects[attachment] = go;
@@ -764,7 +687,6 @@ namespace ClassicTilestorm
 		{
 			if (attachment is Waypoint waypoint)
 			{
-				// Rebuild waypoints
 				var waypoints = new int[currentMap.waypoints.Length + 1];
 				foreach (var att in attachments)
 				{
@@ -794,14 +716,12 @@ namespace ClassicTilestorm
 
 			if (attachment is Waypoint waypoint)
 			{
-				// Shift indices down
 				foreach (var att in attachments)
 				{
 					if (att is Waypoint wp && wp.waypointIndex > waypoint.waypointIndex)
 						wp.waypointIndex--;
 				}
 
-				// Instead of trying to remove by reference, rebuild the waypoint array without this index
 				var newWaypoints = new List<int>();
 				foreach (var att in attachments)
 				{
@@ -812,7 +732,7 @@ namespace ClassicTilestorm
 				currentMap.waypoints = newWaypoints.ToArray();
 			}
 			else
-				result = currentMap.RemoveAttachment(attachment); 
+				result = currentMap.RemoveAttachment(attachment);
 
 			DestroyAttachmentInstance(attachment);
 			OnMapEdited?.Invoke(this, false, Vector3.zero);
@@ -824,7 +744,7 @@ namespace ClassicTilestorm
 			var attsOnTile = currentMap.GetAttachmentsOnTile(tileIndex);
 			foreach (var att in attsOnTile)
 			{
-				currentMap.RemoveAttachment(att); 
+				currentMap.RemoveAttachment(att);
 				DestroyAttachmentInstance(att);
 			}
 			OnMapEdited?.Invoke(this, false, Vector3.zero);
@@ -884,11 +804,6 @@ namespace ClassicTilestorm
 			}
 		}
 
-		/// <summary>
-		/// Returns the world-space bounds of the highest rendered geometry that is centered within the given tile.
-		/// Uses a tight horizontal threshold to avoid considering geometry from adjacent tiles or edge decorations (e.g. battlements).
-		/// Returns a default 1x1x1 bounds centered 0.5 units above the tile if no suitable renderer is found.
-		/// </summary>
 		public Bounds GetTileGeometryBounds(int tileIndex)
 		{
 			if (tileIndex < 0 || tileIndex >= Count)
@@ -898,7 +813,7 @@ namespace ClassicTilestorm
 			}
 
 			Vector3 tileCenter = TileWorldPosition(tileIndex);
-			const float horizontalThreshold = 0.7f; // Safe within 1x1 tile, avoids parapets/towers edges
+			const float horizontalThreshold = 0.7f;
 
 			Bounds bestBounds = default;
 			float bestTopY = tileCenter.y;

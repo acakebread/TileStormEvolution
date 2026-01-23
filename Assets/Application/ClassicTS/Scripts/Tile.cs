@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace ClassicTilestorm
 {
-	public struct Tile
+	public struct TileData
 	{
 		public const int North = 1 << 0;   // 0b00000000001
 		public const int South = 1 << 1;   // 0b00000000010
@@ -19,10 +19,9 @@ namespace ClassicTilestorm
 		private readonly int flags;
 		private static readonly int navMask = North | South | East | West;
 
-		public Tile(Definition def)
+		public TileData(Definition def)
 		{
 			flags = def == null ? 0 : CombineFlags(def);
-			gameObject = null;
 
 			static int CombineFlags(Definition d)
 			{
@@ -49,7 +48,51 @@ namespace ClassicTilestorm
 		public readonly bool IsDock => (flags & Dock) != 0;
 		public readonly bool IsRoll => (flags & Roll) != 0;
 		public readonly int Nav => flags & navMask;
+	}
 
-		public GameObject gameObject;
+	public readonly struct Tile
+	{
+		private readonly TileData _data;
+		public readonly string definitionId;
+		public readonly GameObject gameObject;
+
+		public Tile(Definition def, Transform parent, Vector3 worldPosition)
+		{
+			// Compute definitionId safely — never null
+			definitionId = def?.hashid ?? ResourceManager.FindOrCreateDefaultTile().hashid;
+
+			_data = new TileData(def);
+
+			gameObject = null;
+			if (def != null && !def.IsDefault())
+			{
+				gameObject = InstantiateTile(def, parent, worldPosition);
+			}
+		}
+
+		// Forwarded properties
+		public bool IsStart => _data.IsStart;
+		public bool IsEnd => _data.IsEnd;
+		public bool IsConsole => _data.IsConsole;
+		public bool IsDrag => _data.IsDrag;
+		public bool IsDock => _data.IsDock;
+		public bool IsRoll => _data.IsRoll;
+		public int Nav => _data.Nav;
+
+		private static GameObject InstantiateTile(Definition definition, Transform parent, Vector3 position)
+		{
+			if (string.IsNullOrEmpty(definition?.model))
+			{
+				if (definition != null && definition.bDock)
+					return ApplicationSettings.ShowHiddenTiles
+						? GeometryFactory.CreateDebugTile(parent, position)
+						: null;
+
+				Debug.LogWarning($"Invalid Definition or model for {definition?.id ?? "null"}");
+				return GeometryFactory.CreateFallbackTile(parent, position);
+			}
+
+			return DefinitionFactory.Instantiate(definition, position, Quaternion.identity, parent);
+		}
 	}
 }

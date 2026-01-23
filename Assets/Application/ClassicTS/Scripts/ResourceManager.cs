@@ -287,5 +287,35 @@ namespace ClassicTilestorm
 			//public const int Radix = 50;//no longer used
 			//public const long Modulus = 15625000000L;  // 50^6//no longer used
 		}
+
+		// The full version with feedback
+		public static Definition ResolveDefinition(string hashId, out bool hadError)
+		{
+			hadError = false;
+
+			if (string.IsNullOrEmpty(hashId))
+			{
+				hadError = true;
+				DebugUtil.LogError("Attempted to resolve null or empty tile definition hash.");
+				return FindOrCreateDefaultTile();
+			}
+
+			var def = GetDefinition(hashId);
+			if (def != null)
+			{
+				return def;
+			}
+
+			hadError = true;
+			DebugUtil.LogWarning($"Missing or invalid definition hash '{hashId}' — falling back to default tile.");
+			return FindOrCreateDefaultTile();
+		}
+
+		// Convenience overload — no out, callers don't have to care
+		public static Definition ResolveDefinition(string hashId)
+		{
+			// Discard the result — caller gets fallback + log automatically
+			return ResolveDefinition(hashId, out _);
+		}
 	}
 }
