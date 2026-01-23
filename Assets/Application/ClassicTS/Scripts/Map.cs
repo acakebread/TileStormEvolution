@@ -122,13 +122,6 @@ namespace ClassicTilestorm
 
 		public static Vector3 ScreenToWorldSnapped(Camera camera, Vector3 screenPos) => SnappedMapPosition(ScreenToWorld(camera, Input.mousePosition));
 
-		public enum Anchor
-		{
-			TopLeft, TopCenter, TopRight,
-			MiddleLeft, Center, MiddleRight,
-			BottomLeft, BottomCenter, BottomRight
-		}
-
 		// ─────────────────────────────────────────────
 		// Runtime tile instances (not serialized)
 		// ─────────────────────────────────────────────
@@ -194,18 +187,11 @@ namespace ClassicTilestorm
 
 		public void DestroyAllTiles()
 		{
-			if (runtimeTiles == null) return;
+			if (runtimeTiles == null)
+				return;
 
 			foreach (var tile in runtimeTiles)
-			{
-				if (tile.gameObject != null)
-				{
-					if (Application.isPlaying)
-						UnityEngine.Object.Destroy(tile.gameObject);
-					else
-						UnityEngine.Object.DestroyImmediate(tile.gameObject);
-				}
-			}
+				tile.Destroy();
 
 			runtimeTiles = null;
 		}
@@ -572,41 +558,7 @@ namespace ClassicTilestorm
 			return changed;
 		}
 
-		public bool Resize(int newWidth, int newHeight, Anchor anchor = Anchor.Center)
-		{
-			if (newWidth <= 0 || newHeight <= 0) return false;
-			if (width == newWidth && height == newHeight) return true;
-
-			int oldWidth = width;
-			int oldHeight = height;
-
-			int offsetX = anchor switch
-			{
-				Anchor.TopLeft or Anchor.MiddleLeft or Anchor.BottomLeft => 0,
-				Anchor.TopCenter or Anchor.Center or Anchor.BottomCenter => (newWidth - oldWidth) / 2,
-				Anchor.TopRight or Anchor.MiddleRight or Anchor.BottomRight => newWidth - oldWidth,
-				_ => (newWidth - oldWidth) / 2
-			};
-
-			int offsetZ = anchor switch
-			{
-				Anchor.TopLeft or Anchor.TopCenter or Anchor.TopRight => 0,
-				Anchor.MiddleLeft or Anchor.Center or Anchor.MiddleRight => (newHeight - oldHeight) / 2,
-				Anchor.BottomLeft or Anchor.BottomCenter or Anchor.BottomRight => newHeight - oldHeight,
-				_ => (newHeight - oldHeight) / 2
-			};
-
-			bool success = RepositionAndResize(newWidth, newHeight, offsetX, offsetZ);
-
-			if (success) Consolidate();
-
-			if (success)
-				Debug.Log($"Map '{name}' resized to {newWidth}x{newHeight} (anchor: {anchor}).");
-
-			return success;
-		}
-
-		public bool RepositionAndResize(int newWidth, int newHeight, int offsetX, int offsetZ)
+		private bool RepositionAndResize(int newWidth, int newHeight, int offsetX, int offsetZ)
 		{
 			if (newWidth <= 0 || newHeight <= 0) return false;
 
@@ -705,7 +657,7 @@ namespace ClassicTilestorm
 			return true;
 		}
 
-		public bool CropToContent()
+		private bool CropToContent()
 		{
 			var (minX, minZ, maxX, maxZ) = GetContentBounds();
 			if (maxX < 0) return false;
@@ -720,7 +672,7 @@ namespace ClassicTilestorm
 			return success;
 		}
 
-		public (int minX, int minZ, int maxX, int maxZ) GetContentBounds()
+		private (int minX, int minZ, int maxX, int maxZ) GetContentBounds()
 		{
 			if (tiles == null || tiles.Length == 0 || width <= 0 || height <= 0)
 				return (0, 0, -1, -1);
@@ -729,8 +681,6 @@ namespace ClassicTilestorm
 			int minZ = height;
 			int maxX = -1;
 			int maxZ = -1;
-
-			var defaultDef = ResourceManager.FindOrCreateDefaultTile();
 
 			for (int i = 0; i < tiles.Length; i++)
 			{
@@ -851,7 +801,6 @@ namespace ClassicTilestorm
 			return tile.GetGeometryBounds();
 		}
 
-
 		public int GetStartTile()
 		{
 			if (waypoints?.Length > 0) return waypoints[0];
@@ -891,7 +840,7 @@ namespace ClassicTilestorm
 			return -1;
 		}
 
-		public void UpdateTileObjectNamesAndPositions()
+		private void UpdateTileObjectNamesAndPositions()
 		{
 			var perm = indices;
 			if (perm == null || RuntimeTileCount != perm.Length)
@@ -933,10 +882,7 @@ namespace ClassicTilestorm
 			RefreshAllAttachmentInstances();
 		}
 
-		public bool UpdateTileAt(int x, int z, string id, bool expand = true)
-		{
-			return expand ? UpdateTileAtSmart(x, z, id) : UpdateTileAtRestricted(x, z, id);
-		}
+		public bool UpdateTileAt(int x, int z, string id, bool expand = true) => expand ? UpdateTileAtSmart(x, z, id) : UpdateTileAtRestricted(x, z, id);
 
 		private bool UpdateTileAtRestricted(int x, int z, string id)
 		{
@@ -949,8 +895,7 @@ namespace ClassicTilestorm
 			int index = z * width + x;
 
 			var oldTile = GetSeedTile(index);
-			if (oldTile.gameObject != null)
-				UnityEngine.Object.Destroy(oldTile.gameObject);
+			oldTile.Destroy();
 
 			var def = ResolveDefinition(id, index);
 
@@ -986,9 +931,9 @@ namespace ClassicTilestorm
 				int newWidth = maxX - minX + 1;
 				int newHeight = maxZ - minZ + 1;
 
-				if (newWidth > Map.MAP_MAX_SIZE || newHeight > Map.MAP_MAX_SIZE)
+				if (newWidth > MAP_MAX_SIZE || newHeight > MAP_MAX_SIZE)
 				{
-					Debug.LogWarning($"Map placement rejected: would exceed max size ({Map.MAP_MAX_SIZE}x{Map.MAP_MAX_SIZE})");
+					Debug.LogWarning($"Map placement rejected: would exceed max size ({MAP_MAX_SIZE}x{MAP_MAX_SIZE})");
 					onEdited?.Invoke(false, Vector3.zero);
 					return false;
 				}
@@ -1020,11 +965,7 @@ namespace ClassicTilestorm
 
 				if (CropToContent())
 				{
-					originDelta += new Vector3(
-						oldBounds.minX - newBounds.minX,
-						0,
-						oldBounds.minZ - newBounds.minZ
-					);
+					originDelta += new Vector3(oldBounds.minX - newBounds.minX,0,oldBounds.minZ - newBounds.minZ);
 					sizeChanged = true;
 				}
 			}
@@ -1040,8 +981,7 @@ namespace ClassicTilestorm
 			else
 			{
 				var oldTile = GetSeedTile(index);
-				if (oldTile.gameObject != null)
-					UnityEngine.Object.Destroy(oldTile.gameObject);
+				oldTile.Destroy();
 
 				var def = ResolveDefinition(id, index);
 
@@ -1069,7 +1009,7 @@ namespace ClassicTilestorm
 			return Array.IndexOf(table, id);
 		}
 
-		public void SetupWaypoints()
+		private void SetupWaypoints()
 		{
 			if (waypoints != null && waypoints.Length > 0)
 			{
@@ -1118,7 +1058,7 @@ namespace ClassicTilestorm
 			Debug.Log($"Generated {waypoints.Length} waypoints.");
 		}
 
-		public void InitializeWindController()
+		private void InitializeWindController()
 		{
 			WindController windController = null;
 
@@ -1140,6 +1080,8 @@ namespace ClassicTilestorm
 
 		public void Initialise()
 		{
+			OnMapEdited = null;//clear all delegates
+
 			CleanupAttachmentInstances();
 			DestroyAllTiles();
 
@@ -1175,8 +1117,7 @@ namespace ClassicTilestorm
 			const int iterations = 1;
 			for (var n = 0; n < indices.Length * iterations; ++n)
 			{
-				var stride = (UnityEngine.Random.value > 0.5f ? width : 1) *
-							 (UnityEngine.Random.value > 0.5f ? 1 : -1);
+				var stride = (UnityEngine.Random.value > 0.5f ? width : 1) * (UnityEngine.Random.value > 0.5f ? 1 : -1);
 
 				var tileStrip = TileStripHelper.GetTileStrip(this, n % indices.Length, stride, true);
 				TileStripHelper.RollStrip(this, tileStrip);
@@ -1186,9 +1127,7 @@ namespace ClassicTilestorm
 
 		public void Solve()
 		{
-			indices = Enumerable.Range(0, width * height)
-				.Select(n => n + (solve?[n] ?? 0))
-				.ToArray();
+			indices = Enumerable.Range(0, width * height) .Select(n => n + (solve?[n] ?? 0)) .ToArray();
 
 			UpdateTileObjectNamesAndPositions();
 		}

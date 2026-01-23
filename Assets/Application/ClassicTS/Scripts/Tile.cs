@@ -110,6 +110,17 @@ namespace ClassicTilestorm
 			return combined;
 		}
 
+		public void Destroy()
+		{
+			if (gameObject == null)
+				return;
+
+			if (Application.isPlaying)
+				Object.Destroy(gameObject);
+			else
+				Object.DestroyImmediate(gameObject);
+		}
+
 		private static GameObject InstantiateTile(Definition definition, Transform parent, Vector3 position)
 		{
 			if (string.IsNullOrEmpty(definition?.model))
