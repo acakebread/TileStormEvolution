@@ -223,60 +223,6 @@ namespace ClassicTilestorm
 			for (int i = transform.childCount - 1; i >= 0; i--) Destroy(transform.GetChild(i).gameObject);
 		}
 
-		//private void LoadTileData(int[] tileMap)
-		//{
-		//	if (tileMap == null || tileMap.Length != Count)
-		//	{
-		//		Debug.LogError($"Invalid tile map data! length={(tileMap?.Length ?? -1)}, expected={Count}");
-		//		return;
-		//	}
-
-		//	var emptyDef = ResourceManager.FindOrCreateDefaultTile();
-		//	string emptyStableId = emptyDef.hashid;
-
-		//	mapTiles = new MapTile[Count];
-
-		//	for (int n = 0; n < tileMap.Length; n++)
-		//	{
-		//		int idx = tileMap[n];
-		//		Definition def;
-
-		//		if (idx >= 0 && currentMap.table != null && idx < currentMap.table.Length)
-		//		{
-		//			string legacyId = currentMap.table[idx];
-		//			def = ResourceManager.GetDefinition(legacyId);
-
-		//			if (def == null)
-		//			{
-		//				// During transition it's still useful to log this
-		//				Debug.LogWarning($"Missing definition '{legacyId}' at tile {n} → using empty");
-		//				def = emptyDef;
-		//			}
-		//		}
-		//		else
-		//		{
-		//			def = emptyDef;
-
-		//			if (idx != -1)   // assuming -1 is the conventional "no tile" marker
-		//			{
-		//				Debug.LogWarning($"Out-of-range index {idx} at tile {n} → using empty");
-		//			}
-		//		}
-
-		//		var tile = new Tile(def);
-
-		//		if (!def.IsDefault())
-		//		{
-		//			tile.gameObject = InstantiateTile(def, transform, TileWorldPosition(n));
-		//		}
-
-		//		// ── This is now clean and safe ─────────────────────────────────────
-		//		string storedKey = def.hashid ?? emptyStableId;
-
-		//		mapTiles[n] = new MapTile(storedKey, tile);
-		//	}
-		//}
-
 		private void LoadTileData(int[] tileMap)
 		{
 			if (tileMap == null || tileMap.Length != Count)

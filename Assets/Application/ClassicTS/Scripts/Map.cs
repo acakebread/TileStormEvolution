@@ -29,8 +29,7 @@ namespace ClassicTilestorm
 		// ─────────────────────────────────────────────
 		// Tile table — now the ONLY source of truth (hashes)
 		// ─────────────────────────────────────────────
-		[JsonProperty(Order = 20)]
-		public string[] table;  // contains hashids only (e.g. "deJ7Yv")
+		[JsonProperty(Order = 20)] public string[] table;  // contains hashids only (e.g. "deJ7Yv")
 
 		[JsonProperty(Order = 21)] public int[] tiles;
 		[JsonProperty(Order = 22)] public int[] solve;
