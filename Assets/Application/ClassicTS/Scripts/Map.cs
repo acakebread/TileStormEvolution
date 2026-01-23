@@ -816,10 +816,38 @@ namespace ClassicTilestorm
 		{
 			if (waypoints?.Length > 0) return waypoints[0];
 
-			for (int i = 0; i < width* height; ++i)
+			for (int i = 0; i < width * height; ++i)
 				if (GetTile(i).IsStart) return i;
 
 			Debug.LogError("No start tile found!");
+			return -1;
+		}
+
+		public int GetEndTile()
+		{
+			if (waypoints?.Length > 0) return waypoints[0];
+
+			for (int i = 0; i < width * height; ++i)
+				if (GetTile(i).IsEnd) return i;
+
+			Debug.LogError("No end tile found!");
+			return -1;
+		}
+
+		public int FindAdjacentConsole(int nTile)
+		{
+			var tile = GetTile(nTile);
+			if (tile.Nav == 0) return -1;
+
+			foreach (var dirBit in Navigation.Directions)
+			{
+				int consoleIndex = Navigation.GetAdjacentTile(this, nTile, dirBit);
+				if (consoleIndex == -1) continue;
+
+				var consoleTile = GetTile(consoleIndex);
+				if (consoleTile.IsConsole && dirBit == Navigation.GetOppositeDirection(consoleTile.Nav))
+					return consoleIndex;
+			}
 			return -1;
 		}
 	}

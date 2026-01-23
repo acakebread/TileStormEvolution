@@ -131,44 +131,11 @@ namespace ClassicTilestorm
 			return currentMap?.GetRuntimeTile(mapIndex).definitionId;
 		}
 
-		public int GetStartTile()
-		{
-			if (currentMap?.waypoints?.Length > 0) return currentMap.waypoints[0];
+		public int GetStartTile() => currentMap.GetStartTile();
 
-			for (int i = 0; i < Count; ++i)
-				if (GetTile(i).IsStart) return i;
+		public int GetEndTile() => currentMap.GetEndTile();
 
-			Debug.LogError("No start tile found!");
-			return -1;
-		}
-
-		public int GetEndTile()
-		{
-			if (currentMap?.waypoints?.Length > 0) return currentMap.waypoints.Last();
-
-			for (int i = 0; i < Count; ++i)
-				if (GetTile(i).IsEnd) return i;
-
-			Debug.LogError("No end tile found!");
-			return -1;
-		}
-
-		public int FindAdjacentConsole(int nTile)
-		{
-			var tile = GetTile(nTile);
-			if (tile.Nav == 0) return -1;
-
-			foreach (var dirBit in Navigation.Directions)
-			{
-				int consoleIndex = Navigation.GetAdjacentTile(this, nTile, dirBit);
-				if (consoleIndex == -1) continue;
-
-				var consoleTile = GetTile(consoleIndex);
-				if (consoleTile.IsConsole && dirBit == Navigation.GetOppositeDirection(consoleTile.Nav))
-					return consoleIndex;
-			}
-			return -1;
-		}
+		public int FindAdjacentConsole(int nTile) => currentMap.FindAdjacentConsole(nTile);
 
 		public void Preset()
 		{
@@ -250,7 +217,7 @@ namespace ClassicTilestorm
 			generated.Add(start);
 
 			int cur = start;
-			int dir = Navigation.NavToDest(this, cur, end);
+			int dir = Navigation.NavToDest(currentMap, cur, end);
 			if (dir != 0)
 			{
 				while (cur != end)
@@ -258,7 +225,7 @@ namespace ClassicTilestorm
 					if (FindAdjacentConsole(cur) != -1)
 						generated.Add(cur);
 
-					int next = Navigation.GetAdjacentTile(this, cur, dir);
+					int next = Navigation.GetAdjacentTile(currentMap, cur, dir);
 					if (next == -1 || next == start) break;
 
 					var nextTile = GetTile(next);

@@ -31,7 +31,7 @@ namespace ClassicTilestorm
 		public event System.Action<int> OnPuzzleSolved;
 		public event System.Action OnLevelCompleted;
 
-		public int NavDirection(IMapManager map) => Navigation.NavToDest(map, currentTile, map.CurrentMap.GetWaypoint(dstWaypoint));
+		public int NavDirection(IMapManager map) => Navigation.NavToDest(map.CurrentMap, currentTile, map.CurrentMap.GetWaypoint(dstWaypoint));
 
 		private void Awake()
 		{
@@ -50,7 +50,7 @@ namespace ClassicTilestorm
 			if (null == map || -1 == currentTile) { Debug.LogError("Initialize: Invalid setup"); return; }
 
 			transform.position = targetPosition = map.CurrentMap.TileWorldPosition(currentTile);
-			var yaw = map.CurrentMap.waypoints?.Length > 1 ? Navigation.DirToAngle(Navigation.NavToDest(map, map.CurrentMap.waypoints[0], map.CurrentMap.waypoints[1])) : 0f;
+			var yaw = map.CurrentMap.waypoints?.Length > 1 ? Navigation.DirToAngle(Navigation.NavToDest(map.CurrentMap, map.CurrentMap.waypoints[0], map.CurrentMap.waypoints[1])) : 0f;
 			transform.rotation = Quaternion.Euler(0f, yaw, 0f);
 
 			map.CurrentMap.OnMapEdited += HandleMapEdited;// Subscribe to map changes
@@ -121,7 +121,7 @@ namespace ClassicTilestorm
 						return false;
 					}
 
-					var direction = Navigation.NavToDest(map, currentTile, destinationTile);
+					var direction = Navigation.NavToDest(map.CurrentMap, currentTile, destinationTile);
 					if (0 == direction || 0 != (int)Mathf.DeltaAngle(transform.eulerAngles.y, Navigation.DirToAngle(direction))) return false;
 					isBlocked = false;
 
@@ -137,7 +137,7 @@ namespace ClassicTilestorm
 				bool TestTurn(int destinationTile)
 				{
 					if (null == map) return false;
-					var direction = Navigation.NavToDest(map, currentTile, destinationTile);
+					var direction = Navigation.NavToDest(map.CurrentMap, currentTile, destinationTile);
 					var consoleTile = map.FindAdjacentConsole(currentTile);
 					if (0 != direction && Mathf.Abs(Mathf.DeltaAngle(transform.eulerAngles.y, Navigation.DirToAngle(direction))) > 0.01f)
 					{

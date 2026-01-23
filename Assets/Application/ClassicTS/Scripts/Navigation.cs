@@ -13,14 +13,14 @@ namespace ClassicTilestorm
 			while (0 != dir)
 			{
 				if (src == dst) break;
-				src = GetAdjacentTile(map, src, dir);
+				src = GetAdjacentTile(map.CurrentMap, src, dir);
 				dir &= map.GetTile(src).Nav;
 			}
 			return src;
 		}
 
 		//Classic TS legacy function - returns direction
-		public static int NavToDest(IMapManager map, int src, int dst)
+		public static int NavToDest(Map map, int src, int dst)
 		{
 			if (src == dst || -1 == src || -1 == dst)
 				return 0;
@@ -63,11 +63,11 @@ namespace ClassicTilestorm
 		}
 
 		//Classic TS legacy function - returns index of adjacent tile
-		public static int GetAdjacentTile(IMapManager map, int index, int dir)
+		public static int GetAdjacentTile(Map map, int index, int dir)
 		{
 			var dx = ((dir & TileData.East) >> 2) - ((dir & TileData.West) >> 3);
 			var dz = ((dir & TileData.North) >> 0) - ((dir & TileData.South) >> 1);
-			return ((index / map.Width) + dz) * map.Width + (index % map.Width) + dx;
+			return ((index / map.width) + dz) * map.width + (index % map.width) + dx;
 		}
 
 		//public static float LengthDir(IMap map, int src, int dst, int dir)
