@@ -49,7 +49,7 @@ namespace ClassicTilestorm
 			if (currentGrid != null)
 			{
 				currentGrid.transform.SetLayer(LayerMask.NameToLayer("Editor"));
-				currentGrid.transform.localPosition = MapManager.tile_origin + new Vector3(-0.5f, 0f, -0.5f);
+				currentGrid.transform.localPosition = Map.tile_origin + new Vector3(-0.5f, 0f, -0.5f);
 				currentGrid.SetActive(true);
 			}
 

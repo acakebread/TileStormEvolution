@@ -81,27 +81,17 @@ namespace ClassicTilestorm
 
 		public int GetWaypoint(int index) => (index >= 0 && null != currentMap?.waypoints) ? index < currentMap.waypoints.Length ? currentMap.waypoints[index] : -1 : -1;
 
-#if UNITY_EDITOR
-		public static readonly Vector3 tile_origin = new(0.5f, 0f, 0.5f);
-		public Vector3 TileWorldPosition(int index) => new Vector3(index % Width, 0f, index / Width) + tile_origin;
-		public int WorldToMapIndex(Vector3 vec) => vec.x >= 0 && vec.x < Width && vec.z >= 0 && vec.z < Height ? (int)vec.z * Width + (int)vec.x : -1;
-		public static Vector3 SnappedMapPosition(Vector3 vec) => new Vector3(Mathf.FloorToInt(vec.x), 0f, Mathf.FloorToInt(vec.z)) + tile_origin;
-#else
-        public static readonly Vector3 tile_origin = Vector3.zero;
-        public Vector3 TileWorldPosition(int index) => new(index % Width, 0f, index / Width);
-        public int WorldToMapIndex(Vector3 vec) { vec += new Vector3(0.5f, 0f, 0.5f); return vec.x >= 0 && vec.x < Width && vec.z >= 0 && vec.z < Height ? (int)vec.z * Width + (int)vec.x : -1; }
-        public static Vector3 SnappedMapPosition(Vector3 vec) => new Vector3(Mathf.FloorToInt(vec.x + 0.5f), 0f, Mathf.FloorToInt(vec.z + 0.5f));
-#endif
-		private const int MAP_MAX_SIZE = 64;
-
 		private static MapManager instance;
 		public static Quaternion LocalRotation(int tileIndex, Quaternion worldRotation) => worldRotation;
 		public static Quaternion WorldRotation(int tileIndex, Quaternion localRotation) => localRotation;
 
-		public static Vector3 LocalPosition(int tileIndex, Vector3 worldPosition) => instance == null || tileIndex < 0 ? worldPosition : worldPosition - instance.TileWorldPosition(tileIndex);
-		public static Vector3 WorldPosition(int tileIndex, Vector3 localPosition) => instance == null || tileIndex < 0 ? localPosition : localPosition + instance.TileWorldPosition(tileIndex);
+		public static Vector3 LocalPosition(int tileIndex, Vector3 worldPosition) => instance == null || tileIndex < 0 ? worldPosition : worldPosition - instance.currentMap.TileWorldPosition(tileIndex);
+		public static Vector3 WorldPosition(int tileIndex, Vector3 localPosition) => instance == null || tileIndex < 0 ? localPosition : localPosition + instance.currentMap.TileWorldPosition(tileIndex);
 
-		public int CameraHitTile(Camera camera, Vector3 position) => WorldToMapIndex(ScreenToWorld(camera, position));
+		public int CameraHitTile(Camera camera, Vector3 position) => CurrentMap.WorldToMapIndex(ScreenToWorld(camera, position));
+
+		public Vector3 TileWorldPosition(int index) => currentMap.TileWorldPosition(index);
+		public int WorldToMapIndex(Vector3 vec) => currentMap.WorldToMapIndex(vec);
 
 		public View GetView(int tile)
 		{
@@ -157,7 +147,7 @@ namespace ClassicTilestorm
 			return result;
 		}
 
-		public static Vector3 ScreenToWorldSnapped(Camera camera, Vector3 screenPos) => SnappedMapPosition(ScreenToWorld(camera, Input.mousePosition));
+		public static Vector3 ScreenToWorldSnapped(Camera camera, Vector3 screenPos) => Map.SnappedMapPosition(ScreenToWorld(camera, Input.mousePosition));
 
 		private void Awake()
 		{
@@ -244,28 +234,28 @@ namespace ClassicTilestorm
 			for (int i = transform.childCount - 1; i >= 0; i--) Destroy(transform.GetChild(i).gameObject);
 		}
 
-		private Definition ResolveDefinition(string id, int? tileIndexForLogging = null)
-		{
-			if (string.IsNullOrEmpty(id))
-			{
-				Debug.LogError("attempting to load null tile def!!");
-				return ResourceManager.FindOrCreateDefaultTile();
-			}
+		//private Definition ResolveDefinition(string id, int? tileIndexForLogging = null)
+		//{
+		//	if (string.IsNullOrEmpty(id))
+		//	{
+		//		Debug.LogError("attempting to load null tile def!!");
+		//		return ResourceManager.FindOrCreateDefaultTile();
+		//	}
 
-			var def = ResourceManager.GetDefinition(id);
-			if (def != null)
-			{
-				return def;
-			}
+		//	var def = ResourceManager.GetDefinition(id);
+		//	if (def != null)
+		//	{
+		//		return def;
+		//	}
 
-			string context = tileIndexForLogging.HasValue
-				? $"at visual tile {tileIndexForLogging.Value}"
-				: "during map load";
+		//	string context = tileIndexForLogging.HasValue
+		//		? $"at visual tile {tileIndexForLogging.Value}"
+		//		: "during map load";
 
-			Debug.LogWarning($"Missing or invalid definition for hash '{id}' {context} → falling back to default tile");
+		//	Debug.LogWarning($"Missing or invalid definition for hash '{id}' {context} → falling back to default tile");
 
-			return ResourceManager.FindOrCreateDefaultTile();
-		}
+		//	return ResourceManager.FindOrCreateDefaultTile();
+		//}
 
 		public string GetDefinitionAtIndex(int mapIndex)
 		{
@@ -351,7 +341,7 @@ namespace ClassicTilestorm
 				go.transform.position = position;
 
 #if DEBUG
-				position -= tile_origin;
+				position -= Map.tile_origin;
 				var id = string.IsNullOrEmpty(mapTile.definitionId) ? "Empty" : mapTile.definitionId;
 				var def = ResourceManager.GetDefinition(mapTile.definitionId);
 				go.name = $"{def.id} ({position.x},{position.z})";
@@ -439,7 +429,7 @@ namespace ClassicTilestorm
 			if (mapTiles[index].gameObject != null)
 				Destroy(mapTiles[index].gameObject);
 
-			var def = ResolveDefinition(id, index);
+			var def = currentMap.ResolveDefinition(id, index);
 
 			mapTiles[index] = new Tile(def, transform, TileWorldPosition(index));
 
@@ -486,9 +476,9 @@ namespace ClassicTilestorm
 				int newWidth = maxX - minX + 1;
 				int newHeight = maxZ - minZ + 1;
 
-				if (newWidth > MAP_MAX_SIZE || newHeight > MAP_MAX_SIZE)
+				if (newWidth > Map.MAP_MAX_SIZE || newHeight > Map.MAP_MAX_SIZE)
 				{
-					Debug.LogWarning($"Map placement rejected: would exceed max size ({MAP_MAX_SIZE}x{MAP_MAX_SIZE})");
+					Debug.LogWarning($"Map placement rejected: would exceed max size ({Map.MAP_MAX_SIZE}x{Map.MAP_MAX_SIZE})");
 					onEdited?.Invoke(false, Vector3.zero);
 					return false;
 				}
@@ -555,7 +545,7 @@ namespace ClassicTilestorm
 				if (mapTiles[index].gameObject != null)
 					Destroy(mapTiles[index].gameObject);
 
-				var def = ResolveDefinition(id, index);
+				var def = currentMap.ResolveDefinition(id, index);
 
 				mapTiles[index] = new Tile(def, transform, TileWorldPosition(index));
 

@@ -81,7 +81,7 @@ namespace ClassicTilestorm
 				}
 			}
 
-			var snapped = MapManager.SnappedMapPosition(worldPos);
+			var snapped = Map.SnappedMapPosition(worldPos);
 			iMapManager.UpdateTileAt(
 				Mathf.FloorToInt(snapped.x),
 				Mathf.FloorToInt(snapped.z),

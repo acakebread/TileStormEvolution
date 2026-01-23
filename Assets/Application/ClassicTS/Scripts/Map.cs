@@ -52,11 +52,47 @@ namespace ClassicTilestorm
 
 		public bool IsValidTile(int index) => index >= 0 && index < width * height;
 
+#if UNITY_EDITOR
+		public static readonly Vector3 tile_origin = new(0.5f, 0f, 0.5f);
+		public Vector3 TileWorldPosition(int index) => new Vector3(index % width, 0f, index / width) + tile_origin;
+		public int WorldToMapIndex(Vector3 vec) => vec.x >= 0 && vec.x < width && vec.z >= 0 && vec.z < height ? (int)vec.z * width + (int)vec.x : -1;
+		public static Vector3 SnappedMapPosition(Vector3 vec) => new Vector3(Mathf.FloorToInt(vec.x), 0f, Mathf.FloorToInt(vec.z)) + tile_origin;
+#else
+        public static readonly Vector3 tile_origin = Vector3.zero;
+        public Vector3 TileWorldPosition(int index) => new(index % width, 0f, index / width);
+        public int WorldToMapIndex(Vector3 vec) { vec += new Vector3(0.5f, 0f, 0.5f); return vec.x >= 0 && vec.x < width && vec.z >= 0 && vec.z < height ? (int)vec.z * width + (int)vec.x : -1; }
+        public static Vector3 SnappedMapPosition(Vector3 vec) => new Vector3(Mathf.FloorToInt(vec.x + 0.5f), 0f, Mathf.FloorToInt(vec.z + 0.5f));
+#endif
+		public const int MAP_MAX_SIZE = 64;
+
 		public enum Anchor
 		{
 			TopLeft, TopCenter, TopRight,
 			MiddleLeft, Center, MiddleRight,
 			BottomLeft, BottomCenter, BottomRight
+		}
+
+		public Definition ResolveDefinition(string id, int? tileIndexForLogging = null)
+		{
+			if (string.IsNullOrEmpty(id))
+			{
+				Debug.LogError("attempting to load null tile def!!");
+				return ResourceManager.FindOrCreateDefaultTile();
+			}
+
+			var def = ResourceManager.GetDefinition(id);
+			if (def != null)
+			{
+				return def;
+			}
+
+			string context = tileIndexForLogging.HasValue
+				? $"at visual tile {tileIndexForLogging.Value}"
+				: "during map load";
+
+			Debug.LogWarning($"Missing or invalid definition for hash '{id}' {context} → falling back to default tile");
+
+			return ResourceManager.FindOrCreateDefaultTile();
 		}
 
 		public bool Consolidate()

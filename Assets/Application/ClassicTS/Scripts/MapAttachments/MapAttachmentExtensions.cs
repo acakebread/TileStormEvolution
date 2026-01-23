@@ -30,7 +30,7 @@ namespace ClassicTilestorm
 			int z = tileIndex / width;
 
 			// Match MapManager exactly — uses tile_origin (0.5,0,0.5 in editor, zero in build)
-			return new Vector3(x, 0f, z) + MapManager.tile_origin;
+			return new Vector3(x, 0f, z) + Map.tile_origin;
 		}
 
 		// ===================================================================
