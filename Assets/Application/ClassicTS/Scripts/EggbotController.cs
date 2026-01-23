@@ -46,7 +46,7 @@ namespace ClassicTilestorm
 
 		public void Initialise(IMapManager map)
 		{
-			currentTile = map.GetStartTile();
+			currentTile = map.CurrentMap.GetStartTile();
 			if (null == map || -1 == currentTile) { Debug.LogError("Initialize: Invalid setup"); return; }
 
 			transform.position = targetPosition = map.CurrentMap.TileWorldPosition(currentTile);
@@ -101,8 +101,8 @@ namespace ClassicTilestorm
 				bool TestSpin(int destinationTile)
 				{
 					if (null == map) return false;
-					if (currentTile != destinationTile || (destinationTile != map.GetEndTile() && destinationTile != map.GetStartTile())) return false;
-					if (destinationTile == map.GetEndTile()) { OnLevelCompleted?.Invoke(); }
+					if (currentTile != destinationTile || (destinationTile != map.CurrentMap.GetEndTile() && destinationTile != map.CurrentMap.GetStartTile())) return false;
+					if (destinationTile == map.CurrentMap.GetEndTile()) { OnLevelCompleted?.Invoke(); }
 					dstWaypoint = (dstWaypoint + 1) % map.CurrentMap.waypoints.Length;
 					startYaw = transform.eulerAngles.y;
 					targetYaw = transform.eulerAngles.y + SpinAngle;
@@ -138,7 +138,7 @@ namespace ClassicTilestorm
 				{
 					if (null == map) return false;
 					var direction = Navigation.NavToDest(map.CurrentMap, currentTile, destinationTile);
-					var consoleTile = map.FindAdjacentConsole(currentTile);
+					var consoleTile = map.CurrentMap.FindAdjacentConsole(currentTile);
 					if (0 != direction && Mathf.Abs(Mathf.DeltaAngle(transform.eulerAngles.y, Navigation.DirToAngle(direction))) > 0.01f)
 					{
 						startYaw = transform.eulerAngles.y;
@@ -148,10 +148,10 @@ namespace ClassicTilestorm
 						return true;
 					}
 
-					if (-1 != consoleTile && 0 != map.GetTile(consoleTile).Nav)
+					if (-1 != consoleTile && 0 != map.CurrentMap.GetTile(consoleTile).Nav)
 					{
 						isBlocked = direction == 0;
-						var consoleYaw = Navigation.DirToAngle(Navigation.GetOppositeDirection(map.GetTile(consoleTile).Nav));
+						var consoleYaw = Navigation.DirToAngle(Navigation.GetOppositeDirection(map.CurrentMap.GetTile(consoleTile).Nav));
 						if (Mathf.Abs(Mathf.DeltaAngle(transform.eulerAngles.y, consoleYaw)) > 0.01f)
 						{
 							startYaw = transform.eulerAngles.y;

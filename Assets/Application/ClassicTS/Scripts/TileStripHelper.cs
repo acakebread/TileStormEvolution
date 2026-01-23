@@ -35,7 +35,7 @@ namespace ClassicTilestorm
 		public static TileStrip GetTileStrip(IMapManager map, int startIndex, int stride, bool difficult = false)
 		{
 			var strip = new TileStrip { First = -1, Count = 0, Stride = 0 };
-			var tile = map.GetTile(startIndex);
+			var tile = map.CurrentMap.GetTile(startIndex);
 			if (!tile.IsDrag) return strip;
 			strip.First = startIndex;
 			strip.Count = 1;
@@ -46,40 +46,40 @@ namespace ClassicTilestorm
 			var lastIndex = startIndex;
 			while (true)
 			{
-				tile = map.GetTile(lastIndex + stride);
+				tile = map.CurrentMap.GetTile(lastIndex + stride);
 				if (!tile.IsDrag) break;//skip all movable tiles
 				lastIndex += stride;
 			}
 
 			while (difficult)
 			{
-				tile = map.GetTile(lastIndex + stride);
+				tile = map.CurrentMap.GetTile(lastIndex + stride);
 				if (!(tile.IsDrag | tile.IsRoll)) break;
 				lastIndex += stride;
 			}
 
 			while (true)
 			{
-				tile = map.GetTile(lastIndex + stride);
+				tile = map.CurrentMap.GetTile(lastIndex + stride);
 				if (!(tile.IsDock | tile.IsRoll)) break;
 				lastIndex += stride;
 			}
 
-			var lastTile = map.GetTile(lastIndex);
+			var lastTile = map.CurrentMap.GetTile(lastIndex);
 			if (!(lastTile.IsDock | lastTile.IsRoll))
 				return strip;//return invalid strip as 'fail' condition
 
 			while (true)
 			{
-				tile = map.GetTile(strip.First - stride);
+				tile = map.CurrentMap.GetTile(strip.First - stride);
 				if (!(tile.IsDock | tile.IsRoll)) break;
 				strip.First -= stride;
 			}
 
-			var testRoll = difficult && map.GetTile(lastIndex).IsRoll;
+			var testRoll = difficult && map.CurrentMap.GetTile(lastIndex).IsRoll;
 			while (testRoll)
 			{
-				tile = map.GetTile(strip.First - stride);
+				tile = map.CurrentMap.GetTile(strip.First - stride);
 				if (!(tile.IsDrag | tile.IsDock | tile.IsRoll)) break;
 				strip.First -= stride;
 			}
@@ -94,7 +94,7 @@ namespace ClassicTilestorm
 			if (null == strip.Indices) return;
 			foreach (var index in strip.Indices)
 			{
-				var gameObject = map.GetTile(index).gameObject;
+				var gameObject = map.CurrentMap.GetTile(index).gameObject;
 				if (null != gameObject)
 					gameObject.transform.position = map.CurrentMap.TileWorldPosition(index);
 			}
@@ -121,7 +121,7 @@ namespace ClassicTilestorm
 			UpdateSpareTile(map, strip, delta, delta != Vector3.zero);
 			foreach (var index in strip.Indices)
 			{
-				var gameObject = map.GetTile(index).gameObject;
+				var gameObject = map.CurrentMap.GetTile(index).gameObject;
 				if (null != gameObject)
 					gameObject.transform.position += delta;
 			}
@@ -132,7 +132,7 @@ namespace ClassicTilestorm
 				if (strip.Count <= 1) return;
 
 				var leadingTileIndex = strip.Indices.Last();
-				var leadingTile = map.GetTile(leadingTileIndex).gameObject;
+				var leadingTile = map.CurrentMap.GetTile(leadingTileIndex).gameObject;
 				if (null == leadingTile) { if (null != SpareTile) SpareTile.SetActive(false); return; }
 
 				var trailingTileIndex = strip.Indices.First() - strip.Stride;

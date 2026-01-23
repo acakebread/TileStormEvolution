@@ -27,7 +27,7 @@ namespace ClassicTilestorm
 			{
 				AssetRegistry<GameObject>.NameRemapper = value ? ClassicTileStormAssetRemapHelper.RemapName : null;
 				ModelAssets.ClearCache();
-				mapManager?.RefreshGeometry();
+				mapManager?.CurrentMap.RefreshGeometry();
 			};
 
 			if (!FindAnyObjectByType<EventSystem>()) new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
@@ -128,13 +128,13 @@ namespace ClassicTilestorm
 			LoadMap();
 		}
 
-		public void Preset() { if (null != mapManager) mapManager.Preset(); }
+		public void Preset() { if (null != mapManager) mapManager.CurrentMap.Preset(); }
 
-		public void Scramble() { if (null != mapManager) mapManager.Scramble(); }
+		public void Scramble() { if (null != mapManager) mapManager.CurrentMap.Scramble(); }
 
 		public void Solve()
 		{
-			if (null != mapManager) mapManager.Solve();
+			if (null != mapManager) mapManager.CurrentMap.Solve();
 			if (null != cameraController) cameraController.OnMapSolved();
 		}
 

@@ -66,7 +66,7 @@ namespace ClassicTilestorm
 				var mapIndex = iMapManager.CurrentMap.WorldToMapIndex(worldPos);
 				if (mapIndex != -1)
 				{
-					var currentHash = iMapManager.GetDefinitionAtIndex(mapIndex);
+					var currentHash = iMapManager.CurrentMap.GetDefinitionAtIndex(mapIndex);
 					if (currentHash == selectedHashId && cycleDefinitions.Count > 1)
 					{
 						cycleIndex = (cycleIndex + 1) % cycleDefinitions.Count;
@@ -82,7 +82,7 @@ namespace ClassicTilestorm
 			}
 
 			var snapped = Map.SnappedMapPosition(worldPos);
-			iMapManager.UpdateTileAt(
+			iMapManager.CurrentMap.UpdateTileAt(
 				Mathf.FloorToInt(snapped.x),
 				Mathf.FloorToInt(snapped.z),
 				hashToPlace,

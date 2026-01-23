@@ -182,6 +182,14 @@ namespace ClassicTilestorm
 			return index < waypoints.Length ? waypoints[index] : -1;
 		}
 
+		public string GetDefinitionAtIndex(int mapIndex)
+		{
+			if (mapIndex < 0 || mapIndex >= width * height)
+				return null;
+
+			return GetRuntimeTile(mapIndex).definitionId;
+		}
+
 		// ─────────────────────────────────────────────
 		// Attachment runtime state (unchanged)
 		// ─────────────────────────────────────────────
@@ -849,6 +857,316 @@ namespace ClassicTilestorm
 					return consoleIndex;
 			}
 			return -1;
+		}
+
+		public void UpdateTileObjectNamesAndPositions()
+		{
+			var perm = indices;
+			if (perm == null || RuntimeTileCount != perm.Length)
+			{
+				Debug.Assert(false, "mismatched indices and runtime tiles");
+				return;
+			}
+
+			for (int n = 0; n < perm.Length; ++n)
+			{
+				var mapTile = GetRuntimeTile(perm[n]);
+				var go = mapTile.gameObject;
+				if (go == null) continue;
+
+				var position = TileWorldPosition(n);
+				go.transform.position = position;
+
+#if DEBUG
+				position -= tile_origin;
+				var id = string.IsNullOrEmpty(mapTile.definitionId) ? "Empty" : mapTile.definitionId;
+				var def = ResourceManager.GetDefinition(mapTile.definitionId);
+				go.name = $"{def?.id ?? "??"} ({position.x},{position.z})";
+#endif
+			}
+		}
+
+		public void RefreshGeometry()
+		{
+			DestroyAllTiles();
+
+			DestroyRuntimeTiles();
+			CreateOrGetRuntimeTiles(parentTransform);
+
+			if (RuntimeTileCount == 0)
+			{
+				Debug.LogError("RefreshGeometry failed — could not recreate tiles.");
+				return;
+			}
+
+			RefreshAllAttachmentInstances();
+		}
+
+		public void DestroyAllTiles()
+		{
+			for (int i = parentTransform.childCount - 1; i >= 0; i--)
+				GameObject.Destroy(parentTransform.GetChild(i).gameObject);
+		}
+
+		public bool UpdateTileAt(int x, int z, string id, bool expand = true)
+		{
+			return expand ? UpdateTileAtSmart(x, z, id) : UpdateTileAtRestricted(x, z, id);
+		}
+
+		private bool UpdateTileAtRestricted(int x, int z, string id)
+		{
+			if (x < 0 || x >= width || z < 0 || z >= height)
+			{
+				Debug.LogError($"Invalid coordinates: ({x}, {z}) outside map bounds ({width}x{height})");
+				return false;
+			}
+
+			int index = z * width + x;
+
+			var oldTile = GetRuntimeTile(index);
+			if (oldTile.gameObject != null)
+				GameObject.Destroy(oldTile.gameObject);
+
+			var def = ResolveDefinition(id, index);
+
+			// We can't directly set runtimeTiles[index] here anymore — force full refresh
+			tiles[index] = GetOrAddTableIndex(id);
+
+			RefreshAttachmentsOnTile(index);
+			Consolidate();
+
+			RefreshGeometry();  // rebuilds runtime tiles
+
+			OnMapEdited?.Invoke(this, false, Vector3.zero);
+			return true;
+		}
+
+		private bool UpdateTileAtSmart(int x, int z, string id, Action<bool, Vector3> onEdited = null)
+		{
+			int oldWidth = width;
+			int oldHeight = height;
+
+			var oldBounds = GetContentBounds();
+
+			Vector3 originDelta = Vector3.zero;
+			bool sizeChanged = false;
+
+			if (x < 0 || x >= width || z < 0 || z >= height)
+			{
+				int minX = Mathf.Min(0, x);
+				int minZ = Mathf.Min(0, z);
+				int maxX = Mathf.Max(width - 1, x);
+				int maxZ = Mathf.Max(height - 1, z);
+
+				int newWidth = maxX - minX + 1;
+				int newHeight = maxZ - minZ + 1;
+
+				if (newWidth > Map.MAP_MAX_SIZE || newHeight > Map.MAP_MAX_SIZE)
+				{
+					Debug.LogWarning($"Map placement rejected: would exceed max size ({Map.MAP_MAX_SIZE}x{Map.MAP_MAX_SIZE})");
+					onEdited?.Invoke(false, Vector3.zero);
+					return false;
+				}
+
+				int offsetX = -minX;
+				int offsetZ = -minZ;
+
+				RepositionAndResize(newWidth, newHeight, offsetX, offsetZ);
+
+				if (x < 0) originDelta.x = offsetX;
+				if (z < 0) originDelta.z = offsetZ;
+
+				x += offsetX;
+				z += offsetZ;
+
+				sizeChanged = true;
+			}
+
+			int index = z * width + x;
+
+			tiles[index] = GetOrAddTableIndex(id);
+
+			var defForCrop = ResourceManager.GetDefinition(id);
+			bool isDefaultTile = defForCrop?.IsDefault() ?? false;
+
+			if (isDefaultTile || sizeChanged)
+			{
+				var newBounds = GetContentBounds();
+
+				if (CropToContent())
+				{
+					originDelta += new Vector3(
+						oldBounds.minX - newBounds.minX,
+						0,
+						oldBounds.minZ - newBounds.minZ
+					);
+					sizeChanged = true;
+				}
+			}
+
+			bool boundsChanged = sizeChanged || width != oldWidth || height != oldHeight;
+
+			if (boundsChanged)
+			{
+				DestroyAllTiles();
+				DestroyRuntimeTiles();
+				CreateOrGetRuntimeTiles(parentTransform);
+				RefreshAllAttachmentInstances();
+			}
+			else
+			{
+				var oldTile = GetRuntimeTile(index);
+				if (oldTile.gameObject != null)
+					GameObject.Destroy(oldTile.gameObject);
+
+				var def = ResolveDefinition(id, index);
+
+				// Force single tile recreation
+				runtimeTiles[index] = new Tile(def, parentTransform, TileWorldPosition(index));
+
+				RefreshAttachmentsOnTile(index);
+			}
+
+			Consolidate();
+
+			OnMapEdited?.Invoke(this, boundsChanged, originDelta);
+			return true;
+		}
+
+		private int GetOrAddTableIndex(string id)
+		{
+			if (table == null || !Array.Exists(table, s => s == id))
+			{
+				var list = table?.ToList() ?? new List<string>();
+				list.Add(id);
+				table = list.ToArray();
+				return table.Length - 1;
+			}
+			return Array.IndexOf(table, id);
+		}
+
+		public void SetupWaypoints()
+		{
+			if (waypoints != null && waypoints.Length > 0)
+			{
+				Debug.Log($"Using {waypoints.Length} predefined waypoints.");
+				return;
+			}
+
+			var generated = new List<int>();
+			int start = GetStartTile();
+			int end = GetEndTile();
+
+			if (start == -1 || end == -1)
+			{
+				waypoints = generated.ToArray();
+				return;
+			}
+
+			generated.Add(start);
+
+			int cur = start;
+			int dir = Navigation.NavToDest(this, cur, end);
+			if (dir != 0)
+			{
+				while (cur != end)
+				{
+					if (FindAdjacentConsole(cur) != -1)
+						generated.Add(cur);
+
+					int next = Navigation.GetAdjacentTile(this, cur, dir);
+					if (next == -1 || next == start) break;
+
+					var nextTile = GetTile(next);
+					if (nextTile.Nav == 0) break;
+
+					dir = Navigation.CalculateNav(dir, nextTile.Nav);
+					if (dir == 0) break;
+
+					cur = next;
+				}
+			}
+
+			generated.Add(end);
+
+			waypoints = generated.ToArray();
+
+			Debug.Log($"Generated {waypoints.Length} waypoints.");
+		}
+
+		public void InitializeWindController()
+		{
+			WindController windController = null;
+
+			for (int n = 0; n < RuntimeTileCount; ++n)
+			{
+				var go = GetRuntimeTile(n).gameObject;
+				if (go == null) continue;
+
+				var sway = go.GetComponent<MorphGeomSway>();
+				if (sway == null) continue;
+
+				windController = windController ?? parentTransform.gameObject.AddComponent<WindController>();
+				windController.AddSway(sway, this.TileWorldPosition(n));
+			}
+
+			if (windController != null)
+				Debug.Log($"WindController initialized with {windController.SwayComponents.Count} sway components.");
+		}
+
+		public void Initialise()
+		{
+			CleanupAttachmentInstances();
+			DestroyRuntimeTiles();
+
+			CreateOrGetRuntimeTiles(parentTransform);
+
+			if (RuntimeTileCount == 0)
+			{
+				Debug.LogError("Failed to create runtime tiles — map data invalid.");
+				return;
+			}
+
+			if (ApplicationSettings.Scrambled) Preset();
+			else Solve();
+
+			InitializeWindController();
+
+			RefreshAllAttachmentInstances();
+
+			SetupWaypoints();
+		}
+
+		public void Preset()
+		{
+			indices = Enumerable.Range(0, width * height).ToArray();
+			UpdateTileObjectNamesAndPositions();
+		}
+
+		public void Scramble()
+		{
+			if (indices == null)
+				indices = Enumerable.Range(0, width * height).ToArray();
+
+			const int iterations = 1;
+			for (var n = 0; n < indices.Length * iterations; ++n)
+			{
+				var stride = (UnityEngine.Random.value > 0.5f ? width : 1) *
+							 (UnityEngine.Random.value > 0.5f ? 1 : -1);
+
+				var tileStrip = TileStripHelper.GetTileStrip(parentTransform.GetComponent<MapManager>(), n % indices.Length, stride, true);
+				TileStripHelper.RollStrip(parentTransform.GetComponent<MapManager>(), tileStrip);
+			}
+			UpdateTileObjectNamesAndPositions();
+		}
+
+		public void Solve()
+		{
+			indices = Enumerable.Range(0, width * height)
+				.Select(n => n + (solve?[n] ?? 0))
+				.ToArray();
+
+			UpdateTileObjectNamesAndPositions();
 		}
 	}
 }

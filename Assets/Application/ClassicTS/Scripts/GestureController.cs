@@ -49,7 +49,7 @@ namespace ClassicTilestorm
 		{
 			var vert = Map.ScreenToWorld(camera, screenPos);
 			var index = imap.CurrentMap.WorldToMapIndex(vert);
-			var tile = imap.GetTile(index);
+			var tile = imap.CurrentMap.GetTile(index);
 			if (false == tile.IsDrag) return;
 
 			last = vert;

@@ -14,7 +14,7 @@ namespace ClassicTilestorm
 			{
 				if (src == dst) break;
 				src = GetAdjacentTile(map.CurrentMap, src, dir);
-				dir &= map.GetTile(src).Nav;
+				dir &= map.CurrentMap.GetTile(src).Nav;
 			}
 			return src;
 		}
