@@ -56,12 +56,7 @@ namespace ClassicTilestorm
 		public Map CurrentMap => currentMap;
 		public Transform CurrentTransform => transform;
 
-		private Action<IMapManager, bool, Vector3> onMapEdited;
-		public Action<IMapManager, bool, Vector3> OnMapEdited
-		{
-			get => onMapEdited;
-			set => onMapEdited = value;
-		}
+		public Action<IMapManager, bool, Vector3> OnMapEdited { get; set; }
 
 		public int Width => currentMap?.width ?? 0;
 		public int Height => currentMap?.height ?? 0;
