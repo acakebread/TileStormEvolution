@@ -5,13 +5,9 @@ namespace ClassicTilestorm
 {
 	public class MapManager : MonoBehaviour
 	{
-		public Map CurrentMap { get; set; }
-
-		public Transform CurrentTransform => transform;
-
 		private void OnDestroy()
 		{
-			CurrentMap?.Destroy();
+			MainController.CurrentMap?.Destroy();
 			if (ReferenceEquals(MapAttachmentExtensions.CurrentMap, this))
 				MapAttachmentExtensions.ClearActiveMapManager();
 		}
@@ -29,7 +25,7 @@ namespace ClassicTilestorm
 			Map.parentTransform = go.transform;
 
 			var manager = go.AddComponent<MapManager>();
-			manager.CurrentMap = map ?? throw new ArgumentNullException(nameof(map));
+			MainController.CurrentMap = map ?? throw new ArgumentNullException(nameof(map));
 			map.Initialise();
 			return manager;
 		}

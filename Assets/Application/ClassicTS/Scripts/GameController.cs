@@ -41,7 +41,7 @@ namespace ClassicTilestorm
 				controller.UpdateGestureControllerState();
 
 			// Music
-			if (null != mapManager) AudioManager.PlayMusic(mapManager.CurrentMap.Music, loop: true);
+			if (null != mapManager) AudioManager.PlayMusic(MainController.CurrentMap.Music, loop: true);
 			//AudioManager.PlayMusic(MusicAssets.Find(currentMap.music));
 
 

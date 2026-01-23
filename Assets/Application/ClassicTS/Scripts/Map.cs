@@ -1080,6 +1080,7 @@ namespace ClassicTilestorm
 
 		public void Initialise()
 		{
+			instance = this;
 			MapAttachmentExtensions.SetActiveMapManager(this);
 
 			CreateOrGetRuntimeTiles(parentTransform);

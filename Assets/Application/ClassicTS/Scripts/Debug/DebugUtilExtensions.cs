@@ -6,13 +6,13 @@ namespace ClassicTilestorm
 	{
 		public static void LogTile(this MapManager manager, string message, int? tileIndex = null)
 		{
-			string loc = BuildLocation(manager?.CurrentMap?.name, tileIndex);
+			string loc = BuildLocation(MainController.CurrentMap?.name, tileIndex);
 			DebugUtil.LogContext(loc, message, manager);
 		}
 
 		public static void WarnTile(this MapManager manager, string message, int? tileIndex = null)
 		{
-			string loc = BuildLocation(manager?.CurrentMap?.name, tileIndex);
+			string loc = BuildLocation(MainController.CurrentMap?.name, tileIndex);
 			DebugUtil.WarnContext(loc, message, manager);
 		}
 

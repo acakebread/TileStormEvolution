@@ -12,6 +12,7 @@ namespace ClassicTilestorm
 		private GameController gameController;
 		private EditorController editorController;
 		private MapManager mapManager;
+		public static Map CurrentMap { get; set; }
 		private EggbotController eggbotController;
 		private MainCameraController cameraController;
 
@@ -27,7 +28,7 @@ namespace ClassicTilestorm
 			{
 				AssetRegistry<GameObject>.NameRemapper = value ? ClassicTileStormAssetRemapHelper.RemapName : null;
 				ModelAssets.ClearCache();
-				mapManager?.CurrentMap.RefreshGeometry();
+				CurrentMap?.RefreshGeometry();
 			};
 
 			if (!FindAnyObjectByType<EventSystem>()) new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
@@ -41,7 +42,7 @@ namespace ClassicTilestorm
 		}
 
 		private int guard = 0;//temporary workaround for double events from ongui (due to camera stack) - hopefully this will go away when full ui is implemented
-		private void Update() { guard = 0; if (null != eggbotController) eggbotController.UpdateEggbot(mapManager.CurrentMap); }
+		private void Update() { guard = 0; if (null != eggbotController) eggbotController.UpdateEggbot(CurrentMap); }
 
 		//public void SetGeometryMode(bool value)
 		//{
@@ -84,17 +85,17 @@ namespace ClassicTilestorm
 			//SkyboxUtility.SetSkybox($"{AssetPath.SkycubesPath}{skyName}");
 			SkyboxUtility.SetSkybox(skyName);
 
-			if (mapManager?.CurrentMap != null) mapManager.CurrentMap.Destroy();
+			if (CurrentMap != null) CurrentMap.Destroy();
 			if (null != mapManager) DestroyImmediate(mapManager.gameObject);
 			mapManager = MapManager.Instantiate(currentMap, transform);
 
 			if (null != eggbotController) DestroyImmediate(eggbotController.gameObject);
 			eggbotController = EggbotController.Instantiate(currentMap.character, transform);
-			if (null != eggbotController) eggbotController.Initialise(mapManager.CurrentMap);
+			if (null != eggbotController) eggbotController.Initialise(CurrentMap);
 
-			if (null != cameraController) cameraController.Initialise(mapManager.CurrentMap, eggbotController);
-			if (null != gameController) gameController.Initialise(mapManager.CurrentMap);
-			if (null != editorController) editorController.Initialise(mapManager.CurrentMap);
+			if (null != cameraController) cameraController.Initialise(CurrentMap, eggbotController);
+			if (null != gameController) gameController.Initialise(CurrentMap);
+			if (null != editorController) editorController.Initialise(CurrentMap);
 
 			//static string SkycubesPath(string id) => string.IsNullOrEmpty(id) ? null : $"{AssetPath.SkycubesPath}{id}";
 		}
@@ -129,13 +130,13 @@ namespace ClassicTilestorm
 			LoadMap();
 		}
 
-		public void Preset() { if (null != mapManager) mapManager.CurrentMap.Preset(); }
+		public void Preset() => CurrentMap?.Preset();
 
-		public void Scramble() { if (null != mapManager) mapManager.CurrentMap.Scramble(); }
+		public void Scramble() => CurrentMap?.Scramble();
 
 		public void Solve()
 		{
-			if (null != mapManager) mapManager.CurrentMap.Solve();
+			CurrentMap?.Solve();
 			if (null != cameraController) cameraController.OnMapSolved();
 		}
 
@@ -198,7 +199,7 @@ namespace ClassicTilestorm
 				ResourceSerializer.ImportAtomicMap(path);
 				string importedName = System.IO.Path.GetFileNameWithoutExtension(path);
 
-				if (mapManager?.CurrentMap != null && mapManager.CurrentMap.name == importedName)
+				if (CurrentMap != null && CurrentMap.name == importedName)
 					OnChangeMapRequested?.Invoke(0);
 			}
 #else
@@ -209,13 +210,13 @@ namespace ClassicTilestorm
 		public void ExportMapAsAtomic()
 		{
 #if UNITY_EDITOR
-			if (mapManager?.CurrentMap == null)
+			if (CurrentMap == null)
 			{
 				EditorUtility.DisplayDialog("Export Error", "No map is currently loaded.", "OK");
 				return;
 			}
 
-			var map = mapManager.CurrentMap;
+			var map = CurrentMap;
 			string originalName = map.name;
 			string lastFolder = PlayerPrefs.GetString("ClassicTilestorm_LastExportFolder", PreviewSettingsStatic.ExportFolder);
 			System.IO.Directory.CreateDirectory(lastFolder);

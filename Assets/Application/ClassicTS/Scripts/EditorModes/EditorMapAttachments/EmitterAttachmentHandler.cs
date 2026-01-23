@@ -6,7 +6,7 @@ namespace ClassicTilestorm
 	{
 		public static readonly EmitterAttachmentHandler Instance = new();
 
-		public void OnSelectionChanged(IMapData map, Camera camera, MapAttachment[] selection)
+		public void OnSelectionChanged(IMap map, Camera camera, MapAttachment[] selection)
 		{
 			var emitter = (Emitter)selection[0];
 			var worldPos = Map.WorldPosition(emitter.tile, emitter.Position);
@@ -14,7 +14,7 @@ namespace ClassicTilestorm
 			EditorPrimitiveUtil.UpdateCone(worldPos, emitter.Rotation, emitter.Distance, emitter.Apex);
 		}
 
-		public void OnGizmoInput(IMap mapManager, Camera camera, MapAttachment[] selection)
+		public void OnGizmoInput(IMap map, Camera camera, MapAttachment[] selection)
 		{
 			var emitter = (Emitter)selection[0];
 
@@ -22,7 +22,7 @@ namespace ClassicTilestorm
 			{
 				emitter.Position = Map.LocalPosition(emitter.tile, newWorldPos);
 				emitter.Rotation = Map.LocalRotation(emitter.tile, newWorldRot);
-				mapManager.RefreshAttachmentInstance(emitter);
+				map.RefreshAttachmentInstance(emitter);
 				EditorPrimitiveUtil.UpdateCone(newWorldPos, emitter.Rotation, emitter.Distance, emitter.Apex);
 			}
 		}
