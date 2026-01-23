@@ -84,7 +84,7 @@ namespace ClassicTilestorm
 			//SkyboxUtility.SetSkybox($"{AssetPath.SkycubesPath}{skyName}");
 			SkyboxUtility.SetSkybox(skyName);
 
-			if (currentMap != null) currentMap.Destroy();   // full cleanup, no ghosts
+			if (mapManager.CurrentMap != null) mapManager.CurrentMap.Destroy();
 			if (null != mapManager) DestroyImmediate(mapManager.gameObject);
 			mapManager = MapManager.Instantiate(currentMap, transform);
 
