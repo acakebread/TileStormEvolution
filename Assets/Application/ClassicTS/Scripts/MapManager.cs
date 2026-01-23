@@ -9,23 +9,11 @@ namespace ClassicTilestorm
 
 		public Transform CurrentTransform => transform;
 
-		private static MapManager instance;
-
-		public static Quaternion LocalRotation(int tileIndex, Quaternion worldRotation) => worldRotation;
-		public static Quaternion WorldRotation(int tileIndex, Quaternion localRotation) => localRotation;
-
-		public static Vector3 LocalPosition(int tileIndex, Vector3 worldPosition)
-			=> instance == null || tileIndex < 0 ? worldPosition : worldPosition - instance.CurrentMap.TileWorldPosition(tileIndex);
-
-		public static Vector3 WorldPosition(int tileIndex, Vector3 localPosition)
-			=> instance == null || tileIndex < 0 ? localPosition : localPosition + instance.CurrentMap.TileWorldPosition(tileIndex);
-
 		private void OnDestroy()
 		{
 			CurrentMap?.Destroy();
-			if (ReferenceEquals(MapAttachmentExtensions.CurrentMapManager, this))
+			if (ReferenceEquals(MapAttachmentExtensions.CurrentMap, this))
 				MapAttachmentExtensions.ClearActiveMapManager();
-			instance = null;
 		}
 
 		public static MapManager Instantiate(Map map, Transform parent = null)
@@ -43,8 +31,6 @@ namespace ClassicTilestorm
 			var manager = go.AddComponent<MapManager>();
 			manager.CurrentMap = map ?? throw new ArgumentNullException(nameof(map));
 			map.Initialise();
-			MapAttachmentExtensions.SetActiveMapManager(map);
-			instance = manager;
 			return manager;
 		}
 	}

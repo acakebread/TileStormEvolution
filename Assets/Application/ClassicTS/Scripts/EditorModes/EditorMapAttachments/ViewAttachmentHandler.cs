@@ -7,29 +7,29 @@ namespace ClassicTilestorm
 	{
 		public static readonly ViewAttachmentHandler Instance = new();
 
-		public void OnSelectionChanged(IMap mapManager, Camera camera, MapAttachment[] selection)
+		public void OnSelectionChanged(IMap map, Camera camera, MapAttachment[] selection)
 		{
 			var view = (View)selection[0];
-			var worldPos = MapManager.WorldPosition(view.tile, view.Position);
+			var worldPos = Map.WorldPosition(view.tile, view.Position);
 			EditorTransformUtil.ShowAt(worldPos, view.Rotation, camera);
-			OnDragInput(mapManager, selection);
+			OnDragInput(map, selection);
 		}
 
-		public void OnGizmoInput(IMap mapManager, Camera camera, MapAttachment[] selection)
+		public void OnGizmoInput(IMap map, Camera camera, MapAttachment[] selection)
 		{
 			var view = (View)selection[0];
 
 			if (EditorTransformUtil.HandleInput(camera, out Vector3 newWorldPos, out Quaternion newWorldRot))
 			{
-				view.Position = MapManager.LocalPosition(view.tile, newWorldPos);
-				view.Rotation = MapManager.LocalRotation(view.tile, newWorldRot);
+				view.Position = Map.LocalPosition(view.tile, newWorldPos);
+				view.Rotation = Map.LocalRotation(view.tile, newWorldRot);
 				SnapViewDistanceToGround(view);
 
 				var previewTransform = ViewPreviewUtil.PreviewCameraTransform;
 				if (previewTransform != null)
 				{
-					previewTransform.position = MapManager.WorldPosition(view.tile, view.Position);
-					previewTransform.rotation = MapManager.WorldRotation(view.tile, view.Rotation);
+					previewTransform.position = Map.WorldPosition(view.tile, view.Position);
+					previewTransform.rotation = Map.WorldRotation(view.tile, view.Rotation);
 				}
 
 				ViewPreviewUtil.Update();
@@ -37,16 +37,16 @@ namespace ClassicTilestorm
 			}
 		}
 
-		public void OnDragInput(IMap mapManager, MapAttachment[] selection)
+		public void OnDragInput(IMap map, MapAttachment[] selection)
 		{
 			var view = (View)selection[0];
-			ViewPreviewUtil.Show(view, mapManager);
+			ViewPreviewUtil.Show(view, map);
 			UpdateViewFrustumMarker(view);
 		}
 
-		public static View Create(IMap mapManager, int tile)
+		public static View Create(IMap map, int tile)
 		{
-			if (mapManager == null) return null;
+			if (map == null) return null;
 
 			var view = new View
 			{
@@ -56,22 +56,22 @@ namespace ClassicTilestorm
 			};
 
 			SnapViewDistanceToGround(view);
-			mapManager.AddAttachment(view);
+			map.AddAttachment(view);
 			return view;
 		}
 
-		public static void HandlePreviewCameraSync(IMap mapManager, Camera camera, MapAttachment[] selection)
+		public static void HandlePreviewCameraSync(IMap map, Camera camera, MapAttachment[] selection)
 		{
 			if (selection?.FirstOrDefault() is not View view) return;
 			var previewTransform = ViewPreviewUtil.PreviewCameraTransform;
 			if (previewTransform == null) return;
 
-			view.Position = MapManager.LocalPosition(view.tile, previewTransform.position);
-			view.Rotation = MapManager.LocalRotation(view.tile, previewTransform.rotation);
+			view.Position = Map.LocalPosition(view.tile, previewTransform.position);
+			view.Rotation = Map.LocalRotation(view.tile, previewTransform.rotation);
 			SnapViewDistanceToGround(view);
 
-			previewTransform.position = MapManager.WorldPosition(view.tile, view.Position);
-			previewTransform.rotation = MapManager.WorldRotation(view.tile, view.Rotation);
+			previewTransform.position = Map.WorldPosition(view.tile, view.Position);
+			previewTransform.rotation = Map.WorldRotation(view.tile, view.Rotation);
 
 			ViewPreviewUtil.Update();
 			UpdateViewFrustumMarker(view);
@@ -81,7 +81,7 @@ namespace ClassicTilestorm
 		private static void SnapViewDistanceToGround(View view)
 		{
 			if (view == null) return;
-			var origin = MapManager.WorldPosition(view.tile, view.Position);
+			var origin = Map.WorldPosition(view.tile, view.Position);
 			var forward = view.Rotation * Vector3.forward;
 			var ray = new Ray(origin, forward);
 
@@ -106,7 +106,7 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			Vector3 worldPos = MapManager.WorldPosition(view.tile, view.Position);
+			Vector3 worldPos = Map.WorldPosition(view.tile, view.Position);
 			Vector3 forward = (view.LookAt - view.Position).normalized;
 			if (forward.sqrMagnitude < 0.001f) forward = Vector3.forward;
 

@@ -1080,10 +1080,7 @@ namespace ClassicTilestorm
 
 		public void Initialise()
 		{
-			OnMapEdited = null;//clear all delegates
-
-			CleanupAttachmentInstances();
-			DestroyAllTiles();
+			MapAttachmentExtensions.SetActiveMapManager(this);
 
 			CreateOrGetRuntimeTiles(parentTransform);
 
@@ -1163,5 +1160,15 @@ namespace ClassicTilestorm
 			if (parentTransform != null)
 				parentTransform = null;
 		}
+
+		private static Map instance;
+		public static Quaternion LocalRotation(int tileIndex, Quaternion worldRotation) => worldRotation;
+		public static Quaternion WorldRotation(int tileIndex, Quaternion localRotation) => localRotation;
+
+		public static Vector3 LocalPosition(int tileIndex, Vector3 worldPosition)
+			=> instance == null || tileIndex < 0 ? worldPosition : worldPosition - instance.TileWorldPosition(tileIndex);
+
+		public static Vector3 WorldPosition(int tileIndex, Vector3 localPosition)
+			=> instance == null || tileIndex < 0 ? localPosition : localPosition + instance.TileWorldPosition(tileIndex);
 	}
 }

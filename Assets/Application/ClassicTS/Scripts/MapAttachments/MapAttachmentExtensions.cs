@@ -9,23 +9,23 @@ namespace ClassicTilestorm
 	/// </summary>
 	public static class MapAttachmentExtensions
 	{
-		private static IMapData _currentMapManager;
+		private static IMapData _currentMap;
 
-		public static IMapData CurrentMapManager => _currentMapManager;
-
-		// Called automatically by MapManager
-		internal static void SetActiveMapManager(IMapData mapManager) => _currentMapManager = mapManager;
+		public static IMapData CurrentMap => _currentMap;
 
 		// Called automatically by MapManager
-		internal static void ClearActiveMapManager() => _currentMapManager = null;
+		internal static void SetActiveMapManager(IMapData map) => _currentMap = map;
+
+		// Called automatically by MapManager
+		internal static void ClearActiveMapManager() => _currentMap = null;
 
 		// Internal duplicate of MapManager's TileWorldPosition logic
 		private static Vector3 GetTileWorldPosition(int tileIndex)
 		{
-			if (_currentMapManager == null || tileIndex < 0)
+			if (_currentMap == null || tileIndex < 0)
 				return Vector3.zero;
 
-			int width = _currentMapManager.Width;
+			int width = _currentMap.Width;
 			int x = tileIndex % width;
 			int z = tileIndex / width;
 

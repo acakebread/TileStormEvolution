@@ -6,10 +6,10 @@ namespace ClassicTilestorm
 	{
 		public static readonly EmitterAttachmentHandler Instance = new();
 
-		public void OnSelectionChanged(IMapData mapManager, Camera camera, MapAttachment[] selection)
+		public void OnSelectionChanged(IMapData map, Camera camera, MapAttachment[] selection)
 		{
 			var emitter = (Emitter)selection[0];
-			var worldPos = MapManager.WorldPosition(emitter.tile, emitter.Position);
+			var worldPos = Map.WorldPosition(emitter.tile, emitter.Position);
 			EditorTransformUtil.UpdateTransform(worldPos, emitter.Rotation, camera);
 			EditorPrimitiveUtil.UpdateCone(worldPos, emitter.Rotation, emitter.Distance, emitter.Apex);
 		}
@@ -20,25 +20,25 @@ namespace ClassicTilestorm
 
 			if (EditorTransformUtil.HandleInput(camera, out Vector3 newWorldPos, out Quaternion newWorldRot))
 			{
-				emitter.Position = MapManager.LocalPosition(emitter.tile, newWorldPos);
-				emitter.Rotation = MapManager.LocalRotation(emitter.tile, newWorldRot);
+				emitter.Position = Map.LocalPosition(emitter.tile, newWorldPos);
+				emitter.Rotation = Map.LocalRotation(emitter.tile, newWorldRot);
 				mapManager.RefreshAttachmentInstance(emitter);
 				EditorPrimitiveUtil.UpdateCone(newWorldPos, emitter.Rotation, emitter.Distance, emitter.Apex);
 			}
 		}
 
-		public void OnDragInput(IMap mapManager, MapAttachment[] selection)
+		public void OnDragInput(IMap map, MapAttachment[] selection)
 		{
 			var emitter = (Emitter)selection[0];
-			var worldPos = MapManager.WorldPosition(emitter.tile, emitter.Position);
+			var worldPos = Map.WorldPosition(emitter.tile, emitter.Position);
 			EditorPrimitiveUtil.UpdateCone(worldPos, emitter.Rotation, emitter.Distance, emitter.Apex);
 		}
 
-		public static Emitter Create(IMap mapManager, int tile, string variant)
+		public static Emitter Create(IMap map, int tile, string variant)
 		{
-			if (mapManager == null || string.IsNullOrEmpty(variant)) return null;
+			if (map == null || string.IsNullOrEmpty(variant)) return null;
 
-			var localY = ComputeEmitterPlacementHeight(mapManager, tile);
+			var localY = ComputeEmitterPlacementHeight(map, tile);
 			var emitter = new Emitter
 			{
 				tile = tile,
@@ -47,7 +47,7 @@ namespace ClassicTilestorm
 				variant = variant
 			};
 
-			mapManager.AddAttachment(emitter);
+			map.AddAttachment(emitter);
 			return emitter;
 
 			static float ComputeEmitterPlacementHeight(IMap mapManager, int tile)
