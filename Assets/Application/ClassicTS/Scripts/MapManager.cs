@@ -19,15 +19,14 @@ namespace ClassicTilestorm
 
 	public class MapManager : MonoBehaviour, IMapManager
 	{
-		private Map currentMap;
+		public Map CurrentMap { get; set; }
 
-		public Map CurrentMap => currentMap;
 		public Transform CurrentTransform => transform;
 
-		public int Width => currentMap?.width ?? 0;
-		public int Height => currentMap?.height ?? 0;
+		public int Width => CurrentMap?.width ?? 0;
+		public int Height => CurrentMap?.height ?? 0;
 		public int Count => Width * Height;
-		public int[] Indices => currentMap?.indices;
+		public int[] Indices => CurrentMap?.indices;
 
 		private static MapManager instance;
 
@@ -35,16 +34,16 @@ namespace ClassicTilestorm
 		public static Quaternion WorldRotation(int tileIndex, Quaternion localRotation) => localRotation;
 
 		public static Vector3 LocalPosition(int tileIndex, Vector3 worldPosition)
-			=> instance == null || tileIndex < 0 ? worldPosition : worldPosition - instance.currentMap.TileWorldPosition(tileIndex);
+			=> instance == null || tileIndex < 0 ? worldPosition : worldPosition - instance.CurrentMap.TileWorldPosition(tileIndex);
 
 		public static Vector3 WorldPosition(int tileIndex, Vector3 localPosition)
-			=> instance == null || tileIndex < 0 ? localPosition : localPosition + instance.currentMap.TileWorldPosition(tileIndex);
+			=> instance == null || tileIndex < 0 ? localPosition : localPosition + instance.CurrentMap.TileWorldPosition(tileIndex);
 
 
 		private void OnDestroy()
 		{
-			currentMap?.CleanupAttachmentInstances();
-			currentMap?.DestroyRuntimeTiles();
+			CurrentMap?.CleanupAttachmentInstances();
+			CurrentMap?.DestroyRuntimeTiles();
 			if (ReferenceEquals(MapAttachmentExtensions.CurrentMapManager, this))
 				MapAttachmentExtensions.ClearActiveMapManager();
 			instance = null;
@@ -52,7 +51,7 @@ namespace ClassicTilestorm
 
 		private void Initialise(Map map)
 		{
-			currentMap = map ?? throw new ArgumentNullException(nameof(map));
+			CurrentMap = map ?? throw new ArgumentNullException(nameof(map));
 			map.Initialise();
 		}
 
