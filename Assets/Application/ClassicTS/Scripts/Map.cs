@@ -192,7 +192,7 @@ namespace ClassicTilestorm
 			return runtimeTiles;
 		}
 
-		public void DestroyRuntimeTiles()
+		public void DestroyAllTiles()
 		{
 			if (runtimeTiles == null) return;
 
@@ -210,11 +210,11 @@ namespace ClassicTilestorm
 			runtimeTiles = null;
 		}
 
-		public Tile GetRuntimeTile(int index)
+		private Tile GetSeedTile(int seedIndex)
 		{
-			if (runtimeTiles == null || index < 0 || index >= runtimeTiles.Length)
+			if (runtimeTiles == null || seedIndex < 0 || seedIndex >= runtimeTiles.Length)
 				return default;
-			return runtimeTiles[index];
+			return runtimeTiles[seedIndex];
 		}
 
 		public Tile GetTile(int index)
@@ -224,7 +224,7 @@ namespace ClassicTilestorm
 
 			int dataIndex = indices?[index] ?? index;
 
-			return GetRuntimeTile(dataIndex);
+			return GetSeedTile(dataIndex);
 		}
 
 		public int GetWaypoint(int index)
@@ -238,7 +238,7 @@ namespace ClassicTilestorm
 			if (mapIndex < 0 || mapIndex >= width * height)
 				return null;
 
-			return GetRuntimeTile(mapIndex).definitionId;
+			return GetSeedTile(mapIndex).definitionId;
 		}
 
 		// ─────────────────────────────────────────────
@@ -830,45 +830,27 @@ namespace ClassicTilestorm
 
 		public Bounds GetTileGeometryBounds(int tileIndex)
 		{
+			// Invalid index → safe empty bounds at tile position
 			if (tileIndex < 0 || tileIndex >= width * height)
 			{
 				Vector3 center = TileWorldPosition(tileIndex);
-				return new Bounds(center + Vector3.up * 0.5f, new Vector3(1f, 1f, 1f));
+				return new Bounds(center, Vector3.zero);
 			}
 
-			Vector3 tileCenter = TileWorldPosition(tileIndex);
-			const float horizontalThreshold = 0.7f;
+			// Resolve runtime tile (respects scrambling / indices)
+			var tile = GetTile(tileIndex);
 
-			Bounds bestBounds = default;
-			float bestTopY = tileCenter.y;
-			bool foundAny = false;
-
-			var tile = GetRuntimeTile(tileIndex);
-			var tileTransform = tile.gameObject?.transform;
-
-			if (tileTransform != null)
+			// No tile or no geometry
+			if (tile.gameObject == null)
 			{
-				foreach (Renderer renderer in tileTransform.GetComponentsInChildren<Renderer>(true))
-				{
-					if (!renderer.gameObject.activeInHierarchy) continue;
-
-					Bounds bounds = renderer.bounds;
-					Vector3 boundsCenterXZ = new Vector3(bounds.center.x, tileCenter.y, bounds.center.z);
-
-					if (Vector3.Distance(boundsCenterXZ, tileCenter) < horizontalThreshold)
-					{
-						if (bounds.max.y > bestTopY)
-						{
-							bestTopY = bounds.max.y;
-							bestBounds = bounds;
-							foundAny = true;
-						}
-					}
-				}
+				Vector3 center = TileWorldPosition(tileIndex);
+				return new Bounds(center, Vector3.zero);
 			}
 
-			return foundAny ? bestBounds : new Bounds(tileCenter + Vector3.up * 0.25f, new Vector3(1f, 1f, 1f));
+			// Delegate to Tile geometry logic
+			return tile.GetGeometryBounds();
 		}
+
 
 		public int GetStartTile()
 		{
@@ -920,7 +902,7 @@ namespace ClassicTilestorm
 
 			for (int n = 0; n < perm.Length; ++n)
 			{
-				var mapTile = GetRuntimeTile(perm[n]);
+				var mapTile = GetSeedTile(perm[n]);
 				var go = mapTile.gameObject;
 				if (go == null) continue;
 
@@ -940,7 +922,6 @@ namespace ClassicTilestorm
 		{
 			DestroyAllTiles();
 
-			DestroyRuntimeTiles();
 			CreateOrGetRuntimeTiles(parentTransform);
 
 			if (RuntimeTileCount == 0)
@@ -950,12 +931,6 @@ namespace ClassicTilestorm
 			}
 
 			RefreshAllAttachmentInstances();
-		}
-
-		public void DestroyAllTiles()
-		{
-			for (int i = parentTransform.childCount - 1; i >= 0; i--)
-				GameObject.Destroy(parentTransform.GetChild(i).gameObject);
 		}
 
 		public bool UpdateTileAt(int x, int z, string id, bool expand = true)
@@ -973,9 +948,9 @@ namespace ClassicTilestorm
 
 			int index = z * width + x;
 
-			var oldTile = GetRuntimeTile(index);
+			var oldTile = GetSeedTile(index);
 			if (oldTile.gameObject != null)
-				GameObject.Destroy(oldTile.gameObject);
+				UnityEngine.Object.Destroy(oldTile.gameObject);
 
 			var def = ResolveDefinition(id, index);
 
@@ -1059,15 +1034,14 @@ namespace ClassicTilestorm
 			if (boundsChanged)
 			{
 				DestroyAllTiles();
-				DestroyRuntimeTiles();
 				CreateOrGetRuntimeTiles(parentTransform);
 				RefreshAllAttachmentInstances();
 			}
 			else
 			{
-				var oldTile = GetRuntimeTile(index);
+				var oldTile = GetSeedTile(index);
 				if (oldTile.gameObject != null)
-					GameObject.Destroy(oldTile.gameObject);
+					UnityEngine.Object.Destroy(oldTile.gameObject);
 
 				var def = ResolveDefinition(id, index);
 
@@ -1150,7 +1124,7 @@ namespace ClassicTilestorm
 
 			for (int n = 0; n < RuntimeTileCount; ++n)
 			{
-				var go = GetRuntimeTile(n).gameObject;
+				var go = GetSeedTile(n).gameObject;
 				if (go == null) continue;
 
 				var sway = go.GetComponent<MorphGeomSway>();
@@ -1167,7 +1141,7 @@ namespace ClassicTilestorm
 		public void Initialise()
 		{
 			CleanupAttachmentInstances();
-			DestroyRuntimeTiles();
+			DestroyAllTiles();
 
 			CreateOrGetRuntimeTiles(parentTransform);
 

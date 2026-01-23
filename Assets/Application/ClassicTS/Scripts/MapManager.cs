@@ -23,16 +23,10 @@ namespace ClassicTilestorm
 		private void OnDestroy()
 		{
 			CurrentMap?.CleanupAttachmentInstances();
-			CurrentMap?.DestroyRuntimeTiles();
+			CurrentMap?.DestroyAllTiles();
 			if (ReferenceEquals(MapAttachmentExtensions.CurrentMapManager, this))
 				MapAttachmentExtensions.ClearActiveMapManager();
 			instance = null;
-		}
-
-		private void Initialise(Map map)
-		{
-			CurrentMap = map ?? throw new ArgumentNullException(nameof(map));
-			map.Initialise();
 		}
 
 		public static MapManager Instantiate(Map map, Transform parent = null)
@@ -48,8 +42,9 @@ namespace ClassicTilestorm
 			Map.parentTransform = go.transform;
 
 			var manager = go.AddComponent<MapManager>();
+			manager.CurrentMap = map ?? throw new ArgumentNullException(nameof(map));
+			map.Initialise();
 			MapAttachmentExtensions.SetActiveMapManager(map);
-			manager.Initialise(map);
 			instance = manager;
 			return manager;
 		}

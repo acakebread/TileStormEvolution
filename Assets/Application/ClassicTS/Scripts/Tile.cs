@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 namespace ClassicTilestorm
 {
@@ -58,7 +58,7 @@ namespace ClassicTilestorm
 
 		public Tile(Definition def, Transform parent, Vector3 worldPosition)
 		{
-			// Compute definitionId safely � never null
+			// Compute definitionId safely — never null
 			definitionId = def?.hashid ?? ResourceManager.FindOrCreateDefaultTile().hashid;
 
 			_data = new TileData(def);
@@ -78,6 +78,37 @@ namespace ClassicTilestorm
 		public bool IsDock => _data.IsDock;
 		public bool IsRoll => _data.IsRoll;
 		public int Nav => _data.Nav;
+
+		public Bounds GetGeometryBounds()
+		{
+			// No geometry → no bounds
+			if (gameObject == null)
+				return default;
+
+			var renderers = gameObject.GetComponentsInChildren<Renderer>(true);
+
+			bool hasBounds = false;
+			Bounds combined = default;
+
+			foreach (var r in renderers)
+			{
+				// Ignore disabled renderers or inactive objects
+				if (r == null || !r.enabled || !r.gameObject.activeInHierarchy)
+					continue;
+
+				if (!hasBounds)
+				{
+					combined = r.bounds;
+					hasBounds = true;
+				}
+				else
+				{
+					combined.Encapsulate(r.bounds);
+				}
+			}
+
+			return combined;
+		}
 
 		private static GameObject InstantiateTile(Definition definition, Transform parent, Vector3 position)
 		{
