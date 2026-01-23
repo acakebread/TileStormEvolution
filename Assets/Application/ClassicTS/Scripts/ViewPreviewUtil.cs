@@ -129,7 +129,7 @@ namespace ClassicTilestorm
 		{
 			if (previewCam == null || currentView == null || currentManager == null) return;
 
-			Vector3 worldPos = currentManager.TileWorldPosition(currentView.tile) + currentView.Position;
+			Vector3 worldPos = currentManager.CurrentMap.TileWorldPosition(currentView.tile) + currentView.Position;
 			previewCam.transform.position = worldPos;
 			previewCam.transform.rotation = currentView.Rotation;
 			previewCam.fieldOfView = currentView.FOV;

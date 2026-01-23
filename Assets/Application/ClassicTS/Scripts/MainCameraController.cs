@@ -102,7 +102,7 @@ namespace ClassicTilestorm
 				if (null != view)
 				{
 					//has camera settings (View)
-					var tilePos = mapManager.TileWorldPosition(tile);
+					var tilePos = mapManager.CurrentMap.TileWorldPosition(tile);
 					srcPos = view.VSrc + tilePos;
 					dstPos = view.VDst + tilePos;
 				}
@@ -119,7 +119,7 @@ namespace ClassicTilestorm
 
 			Func<IReadOnlyList<Vector3>> focusFunc = () =>
 			{
-				var waypoints = mapManager.Waypoints.Select(w => mapManager.TileWorldPosition(w)).ToList();
+				var waypoints = mapManager.Waypoints.Select(w => mapManager.CurrentMap.TileWorldPosition(w)).ToList();
 				spatialSystem.SetPoints(waypoints);
 
 				focusFunc = () =>
@@ -196,7 +196,7 @@ namespace ClassicTilestorm
 
 			//has camera settings (View)
 			var presetCam = (GameCameraPreset)CameraSystems[CameraModeRegistry.Preset];
-			var tilePos = mapManager.TileWorldPosition(tile);
+			var tilePos = mapManager.CurrentMap.TileWorldPosition(tile);
 			presetCam.originFn = () => view.VSrc + tilePos;
 			presetCam.targetFn = () => view.VDst + tilePos;
 

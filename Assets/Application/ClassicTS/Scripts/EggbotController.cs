@@ -49,7 +49,7 @@ namespace ClassicTilestorm
 			currentTile = map.GetStartTile();
 			if (null == map || -1 == currentTile) { Debug.LogError("Initialize: Invalid setup"); return; }
 
-			transform.position = targetPosition = map.TileWorldPosition(currentTile);
+			transform.position = targetPosition = map.CurrentMap.TileWorldPosition(currentTile);
 			var yaw = map.Waypoints?.Length > 1 ? Navigation.DirToAngle(Navigation.NavToDest(map, map.Waypoints[0], map.Waypoints[1])) : 0f;
 			transform.rotation = Quaternion.Euler(0f, yaw, 0f);
 
@@ -125,11 +125,11 @@ namespace ClassicTilestorm
 					if (0 == direction || 0 != (int)Mathf.DeltaAngle(transform.eulerAngles.y, Navigation.DirToAngle(direction))) return false;
 					isBlocked = false;
 
-					startPosition = map.TileWorldPosition(currentTile);
+					startPosition = map.CurrentMap.TileWorldPosition(currentTile);
 					var prevTargetPosition = targetPosition;
 					var prevCurrentTile = currentTile;
 					currentTile = Navigation.LineOfSight(map, currentTile, destinationTile, direction);
-					targetPosition = map.TileWorldPosition(currentTile);
+					targetPosition = map.CurrentMap.TileWorldPosition(currentTile);
 					actionQueue.Enqueue(() => SetState(State.MOVE, ((targetPosition - prevTargetPosition).magnitude + 1.0f) / walkSpeed));
 					return true;
 				}
@@ -248,7 +248,7 @@ namespace ClassicTilestorm
 			}
 
 			// Snap position to new grid
-			transform.position = mapManager.TileWorldPosition(currentTile);
+			transform.position = mapManager.CurrentMap.TileWorldPosition(currentTile);
 
 			// Optional: preserve sub-tile offset (e.g. during movement)
 			// But for editor, we want clean snap

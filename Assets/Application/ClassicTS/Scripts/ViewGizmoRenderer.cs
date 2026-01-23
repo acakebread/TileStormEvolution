@@ -123,7 +123,7 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			Vector3 worldPos = mapManager.TileWorldPosition(tileIndex) + view.Position;
+			Vector3 worldPos = mapManager.CurrentMap.TileWorldPosition(tileIndex) + view.Position;
 			Vector3 forward = (view.LookAt - view.Position).normalized;
 			if (forward.sqrMagnitude < 0.001f) forward = Vector3.forward;
 

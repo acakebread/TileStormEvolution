@@ -54,7 +54,7 @@ namespace ClassicTilestorm
 			{
 				if (mapManager == null) return 1f;
 				var tileBounds = mapManager.GetTileGeometryBounds(tile);
-				var tileWorldCenter = mapManager.TileWorldPosition(tile);
+				var tileWorldCenter = mapManager.CurrentMap.TileWorldPosition(tile);
 				return (tileBounds.max.y - tileWorldCenter.y) + 0.05f;
 			}
 		}

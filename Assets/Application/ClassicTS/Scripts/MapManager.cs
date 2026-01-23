@@ -16,14 +16,14 @@ namespace ClassicTilestorm
 
 	public interface IMapManager : IMapData
 	{
-		Vector3 TileWorldPosition(int index);
+		Map CurrentMap { get; }
+
 		int WorldToMapIndex(Vector3 vec);
 		Tile GetTile(int index);
 		int GetStartTile();
 		int GetEndTile();
 
 		int FindAdjacentConsole(int nTile);
-		Map CurrentMap { get; }
 		Transform CurrentTransform { get; }
 
 		int[] Waypoints { set; get; }
@@ -74,7 +74,6 @@ namespace ClassicTilestorm
 		public static Vector3 LocalPosition(int tileIndex, Vector3 worldPosition) => instance == null || tileIndex < 0 ? worldPosition : worldPosition - instance.currentMap.TileWorldPosition(tileIndex);
 		public static Vector3 WorldPosition(int tileIndex, Vector3 localPosition) => instance == null || tileIndex < 0 ? localPosition : localPosition + instance.currentMap.TileWorldPosition(tileIndex);
 
-		public Vector3 TileWorldPosition(int index) => currentMap.TileWorldPosition(index);
 		public int WorldToMapIndex(Vector3 vec) => currentMap.WorldToMapIndex(vec);
 
 		public View GetView(int tile)
@@ -247,7 +246,7 @@ namespace ClassicTilestorm
 				var go = mapTile.gameObject;
 				if (go == null) continue;
 
-				var position = TileWorldPosition(n);
+				var position = currentMap.TileWorldPosition(n);
 				go.transform.position = position;
 
 #if DEBUG
@@ -334,7 +333,7 @@ namespace ClassicTilestorm
 
 			var def = currentMap.ResolveDefinition(id, index);
 
-			mapTiles[index] = new Tile(def, transform, TileWorldPosition(index));
+			mapTiles[index] = new Tile(def, transform, currentMap.TileWorldPosition(index));
 
 			currentMap.RefreshAttachmentsOnTile(index);
 
@@ -450,7 +449,7 @@ namespace ClassicTilestorm
 
 				var def = currentMap.ResolveDefinition(id, index);
 
-				mapTiles[index] = new Tile(def, transform, TileWorldPosition(index));
+				mapTiles[index] = new Tile(def, transform, currentMap.TileWorldPosition(index));
 
 				currentMap.RefreshAttachmentsOnTile(index);
 			}
@@ -473,7 +472,7 @@ namespace ClassicTilestorm
 				if (sway == null) continue;
 
 				windController = windController ?? gameObject.AddComponent<WindController>();
-				windController.AddSway(sway, TileWorldPosition(n));
+				windController.AddSway(sway, currentMap.TileWorldPosition(n));
 			}
 
 			if (windController != null)
@@ -523,11 +522,11 @@ namespace ClassicTilestorm
 		{
 			if (tileIndex < 0 || tileIndex >= Count)
 			{
-				Vector3 center = TileWorldPosition(tileIndex);
+				Vector3 center = currentMap.TileWorldPosition(tileIndex);
 				return new Bounds(center + Vector3.up * 0.5f, new Vector3(1f, 1f, 1f));
 			}
 
-			Vector3 tileCenter = TileWorldPosition(tileIndex);
+			Vector3 tileCenter = currentMap.TileWorldPosition(tileIndex);
 			const float horizontalThreshold = 0.7f;
 
 			Bounds bestBounds = default;

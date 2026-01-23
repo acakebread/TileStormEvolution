@@ -96,7 +96,7 @@ namespace ClassicTilestorm
 			{
 				var gameObject = map.GetTile(index).gameObject;
 				if (null != gameObject)
-					gameObject.transform.position = map.TileWorldPosition(index);
+					gameObject.transform.position = map.CurrentMap.TileWorldPosition(index);
 			}
 			if (null != SpareTile)
 				SpareTile.SetActive(false);
@@ -136,7 +136,7 @@ namespace ClassicTilestorm
 				if (null == leadingTile) { if (null != SpareTile) SpareTile.SetActive(false); return; }
 
 				var trailingTileIndex = strip.Indices.First() - strip.Stride;
-				var trailingPosition = map.TileWorldPosition(trailingTileIndex);
+				var trailingPosition = map.CurrentMap.TileWorldPosition(trailingTileIndex);
 
 				if (null == SpareTile) SpareTile = GeometryFactory.CreateSpareTile(leadingTile, leadingTile.transform.parent, trailingPosition + delta);
 				if (null == SpareTile) return;
