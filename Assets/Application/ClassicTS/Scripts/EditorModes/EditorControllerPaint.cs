@@ -55,7 +55,7 @@ namespace ClassicTilestorm
 
 		private void EditMapTile(bool erase = false)
 		{
-			var worldPos = MapManager.ScreenToWorld(camera, Input.mousePosition);
+			var worldPos = Map.ScreenToWorld(camera, Input.mousePosition);
 			string hashToPlace = erase
 				? ResourceManager.FindOrCreateDefaultTile().hashid
 				: selectedHashId;

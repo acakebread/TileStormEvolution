@@ -12,7 +12,7 @@ namespace ClassicTilestorm
 	public class Map
 	{
 		// ─────────────────────────────────────────────
-		// Core identity (unchanged)
+		// Core identity
 		// ─────────────────────────────────────────────
 		[JsonProperty(Order = 1)] public string name;
 		[JsonProperty(Order = 2)] public string character;
@@ -21,7 +21,7 @@ namespace ClassicTilestorm
 		[JsonProperty(Order = 5)] public string button;
 
 		// ─────────────────────────────────────────────
-		// Dimensions (unchanged)
+		// Dimensions
 		// ─────────────────────────────────────────────
 		[JsonProperty(Order = 10)] public int width;
 		[JsonProperty(Order = 11)] public int height;
@@ -37,20 +37,22 @@ namespace ClassicTilestorm
 
 		[JsonProperty(Order = 30)] public MapAttachment[] attachments;
 
-		// ATOMIC-ONLY FIELDS (unchanged)
+		// ATOMIC-ONLY FIELDS
 		[JsonProperty(Order = 100)] public Definition[] definitions;
 		[JsonProperty(Order = 101)] public TextureSequence[] textures;
 		[JsonProperty(Order = 102)] public string version = "1.0";
 		[JsonProperty(Order = 103)] public string author = "Player";
 		[JsonProperty(Order = 104)] public string exportedFrom = "ClassicTilestorm";
 
-		// Conditional serialization (unchanged)
+		// Conditional serialization
 		public bool ShouldSerializeskybox() => !string.IsNullOrEmpty(skybox);
 		public bool ShouldSerializesolve() => solve != null && solve.Length > 0;
 		public bool ShouldSerializewaypoints() => waypoints != null && waypoints.Length > 0;
 		public bool ShouldSerializeattachments() => attachments != null && attachments.Length > 0;
 
 		public bool IsValidTile(int index) => index >= 0 && index < width * height;
+
+		public const int MAP_MAX_SIZE = 64;
 
 #if UNITY_EDITOR
 		public static readonly Vector3 tile_origin = new(0.5f, 0f, 0.5f);
@@ -63,7 +65,8 @@ namespace ClassicTilestorm
         public int WorldToMapIndex(Vector3 vec) { vec += new Vector3(0.5f, 0f, 0.5f); return vec.x >= 0 && vec.x < width && vec.z >= 0 && vec.z < height ? (int)vec.z * width + (int)vec.x : -1; }
         public static Vector3 SnappedMapPosition(Vector3 vec) => new Vector3(Mathf.FloorToInt(vec.x + 0.5f), 0f, Mathf.FloorToInt(vec.z + 0.5f));
 #endif
-		public const int MAP_MAX_SIZE = 64;
+
+		public static Vector3 ScreenToWorldSnapped(Camera camera, Vector3 screenPos) => SnappedMapPosition(ScreenToWorld(camera, Input.mousePosition));
 
 		public enum Anchor
 		{
@@ -71,6 +74,295 @@ namespace ClassicTilestorm
 			MiddleLeft, Center, MiddleRight,
 			BottomLeft, BottomCenter, BottomRight
 		}
+
+		// ─────────────────────────────────────────────
+		// Moved from MapManager: runtime tile instantiation
+		// ─────────────────────────────────────────────
+
+		public Tile[] CreateRuntimeTiles(Transform parentTransform)
+		{
+			if (tiles == null || tiles.Length != width * height)
+			{
+				DebugUtil.LogError($"Invalid tile map data! length={(tiles?.Length ?? -1)}, expected={width * height}");
+				return null;
+			}
+
+			var runtimeTiles = new Tile[width * height];
+
+			string mapName = name ?? "Unnamed map";
+
+			for (int n = 0; n < tiles.Length; n++)
+			{
+				int idx = tiles[n];
+				string hashId = null;
+
+				if (idx >= 0 && table != null && idx < table.Length)
+				{
+					hashId = table[idx];
+				}
+				else if (idx != -1)
+				{
+					DebugUtil.LogWarning($"Out-of-range table index {idx} at tile {n} (map: {mapName})");
+				}
+
+				var def = ResourceManager.ResolveDefinition(hashId, out bool hadError);
+
+				if (hadError)
+				{
+					Debug.LogWarning($"Failed to resolve tile definition at tile {n} (hash: '{hashId ?? "<null>"}') — using default");
+				}
+
+				runtimeTiles[n] = new Tile(def, parentTransform, TileWorldPosition(n));
+			}
+
+			return runtimeTiles;
+		}
+
+		// Helper — convenience method many places were using
+		public int GetWaypoint(int index)
+		{
+			if (index < 0 || waypoints == null) return -1;
+			return index < waypoints.Length ? waypoints[index] : -1;
+		}
+
+		// ─────────────────────────────────────────────
+		// Attachment runtime state (moved here)
+		// ─────────────────────────────────────────────
+		[NonSerialized] private readonly Dictionary<MapAttachment, GameObject> attachmentGameObjects = new();
+
+		public void RefreshAllAttachmentInstances(Transform parentTransform)
+		{
+			foreach (var att in attachments ?? Array.Empty<MapAttachment>())
+			{
+				RefreshAttachmentInstance(att, parentTransform);
+			}
+		}
+
+		public void RefreshAttachmentsOnTile(int tileIndex, Transform parentTransform)
+		{
+			if (attachments == null) return;
+			foreach (var att in attachments)
+			{
+				if (att?.tile == tileIndex)
+					RefreshAttachmentInstance(att, parentTransform);
+			}
+		}
+
+		public void RefreshAttachmentInstance(MapAttachment attachment, Transform parentTransform)
+		{
+			if (attachment == null) return;
+
+			if (attachment is Waypoint wp)
+			{
+				if (waypoints != null && wp.waypointIndex >= 0 && wp.waypointIndex < waypoints.Length)
+					waypoints[wp.waypointIndex] = wp.tile;
+			}
+
+			string prefabName = attachment switch
+			{
+				Waypoint => null,
+				Emitter e => e.variant switch
+				{
+					"flame" => "flame",
+					"spark" => "spark",
+					_ => null
+				},
+				Pickup => null,
+				View => null,
+				_ => null
+			};
+
+			if (string.IsNullOrEmpty(prefabName))
+			{
+				DestroyAttachmentInstance(attachment);
+				return;
+			}
+
+			Vector3 localPos = attachment switch
+			{
+				Waypoint w => Vector3.zero,
+				Emitter e => e.Position,
+				Pickup => Vector3.up * 0.5f,
+				View v => v.Position,
+				_ => Vector3.zero
+			};
+
+			Quaternion rotation = attachment switch
+			{
+				Waypoint w => Quaternion.identity,
+				Emitter e => e.Rotation,
+				Pickup => Quaternion.identity,
+				View v => v.Rotation,
+				_ => Quaternion.identity
+			};
+
+			Vector3 worldPos = TileWorldPosition(attachment.tile) + localPos;
+
+			if (attachmentGameObjects.TryGetValue(attachment, out GameObject go) && go != null)
+			{
+				go.transform.position = worldPos;
+				go.transform.rotation = rotation;
+				return;
+			}
+
+			go = Assets.PrefabAssets.Instantiate(prefabName, worldPos, rotation, parentTransform);
+			go.name = $"{attachment.TypeName}_{prefabName}_tile{attachment.tile}";
+			attachmentGameObjects[attachment] = go;
+		}
+
+		public void DestroyAttachmentInstance(MapAttachment attachment)
+		{
+			if (attachment == null) return;
+
+			if (attachmentGameObjects.TryGetValue(attachment, out GameObject go) && go != null)
+			{
+				if (Application.isPlaying)
+					UnityEngine.Object.Destroy(go);
+				else
+					UnityEngine.Object.DestroyImmediate(go);
+			}
+
+			attachmentGameObjects.Remove(attachment);
+		}
+
+		public void CleanupAttachmentInstances()
+		{
+			foreach (var att in attachmentGameObjects.Keys.ToList())
+				DestroyAttachmentInstance(att);
+			attachmentGameObjects.Clear();
+		}
+
+		public void AddAttachment(MapAttachment attachment)
+		{
+			if (attachment == null) return;
+
+			if (attachment is Waypoint waypoint)
+			{
+				var list = waypoints?.ToList() ?? new List<int>();
+				while (list.Count <= waypoint.waypointIndex)
+					list.Add(-1);
+				list[waypoint.waypointIndex] = waypoint.tile;
+				waypoints = list.ToArray();
+			}
+			else
+			{
+				var list = attachments?.ToList() ?? new List<MapAttachment>();
+				list.Add(attachment);
+				attachments = list.ToArray();
+			}
+		}
+
+		public bool RemoveAttachment(MapAttachment attachment)
+		{
+			if (attachment == null) return false;
+
+			bool removed = false;
+
+			if (attachment is Waypoint waypoint)
+			{
+				if (waypoints == null || waypoint.waypointIndex < 0 || waypoint.waypointIndex >= waypoints.Length)
+					return false;
+
+				// Shift waypoint indices of other attachments
+				if (attachments != null)
+				{
+					foreach (var att in attachments)
+					{
+						if (att is Waypoint wp && wp.waypointIndex > waypoint.waypointIndex)
+							wp.waypointIndex--;
+					}
+				}
+
+				var newWaypoints = new List<int>();
+				for (int i = 0; i < waypoints.Length; i++)
+					if (i != waypoint.waypointIndex)
+						newWaypoints.Add(waypoints[i]);
+
+				waypoints = newWaypoints.Count > 0 ? newWaypoints.ToArray() : null;
+				removed = true;
+			}
+			else if (attachments != null)
+			{
+				int index = Array.IndexOf(attachments, attachment);
+				if (index >= 0)
+				{
+					var list = attachments.ToList();
+					list.RemoveAt(index);
+					attachments = list.Count > 0 ? list.ToArray() : null;
+					removed = true;
+				}
+			}
+
+			DestroyAttachmentInstance(attachment);
+			return removed;
+		}
+
+		public void RemoveAllAttachmentsOnTile(int tileIndex)
+		{
+			if (attachments == null) return;
+
+			var toRemove = attachments.Where(a => a != null && a.tile == tileIndex).ToArray();
+			foreach (var att in toRemove)
+			{
+				RemoveAttachment(att);
+			}
+		}
+
+		public Waypoint[] GetWaypointAttachments()
+		{
+			if (waypoints == null || waypoints.Length == 0) return Array.Empty<Waypoint>();
+			var result = new Waypoint[waypoints.Length];
+			for (int i = 0; i < waypoints.Length; i++)
+				result[i] = new Waypoint(i, waypoints[i]);
+			return result;
+		}
+
+		public MapAttachment[] GetAllAttachments()
+		{
+			var real = attachments ?? Array.Empty<MapAttachment>();
+			return real.Concat(GetWaypointAttachments()).ToArray();
+		}
+
+		public void SetAllAttachments(MapAttachment[] value)
+		{
+			if (value == null)
+			{
+				attachments = null;
+				waypoints = null;
+				return;
+			}
+
+			var realAttachments = new List<MapAttachment>();
+			var waypointsList = new List<(int index, int tile)>();
+
+			foreach (var att in value)
+			{
+				if (att is Waypoint wp)
+					waypointsList.Add((wp.waypointIndex, wp.tile));
+				else if (att != null)
+					realAttachments.Add(att);
+			}
+
+			attachments = realAttachments.Count > 0 ? realAttachments.ToArray() : null;
+
+			if (waypointsList.Count == 0)
+			{
+				waypoints = null;
+			}
+			else
+			{
+				int maxIndex = waypointsList.Max(x => x.index);
+				var arr = new int[maxIndex + 1];
+				foreach (var (idx, tile) in waypointsList)
+					if (idx >= 0 && idx < arr.Length)
+						arr[idx] = tile;
+				waypoints = arr;
+			}
+		}
+
+		// ─────────────────────────────────────────────
+		// Original methods below (unchanged)
+		// ─────────────────────────────────────────────
 
 		public Definition ResolveDefinition(string id, int? tileIndexForLogging = null)
 		{
@@ -106,7 +398,6 @@ namespace ClassicTilestorm
 				(idx >= 0 && idx < table.Length) ? table[idx] : null
 			).ToArray();
 
-			// Replace nulls with default hash
 			for (int i = 0; i < mapDefinitions.Length; i++)
 			{
 				if (mapDefinitions[i] == null)
@@ -122,7 +413,6 @@ namespace ClassicTilestorm
 				table = newFrequencyTable;
 			}
 
-			// Rebuild tiles indices if changed
 			if (changed)
 			{
 				tiles = mapDefinitions.Select(hash =>
@@ -178,7 +468,6 @@ namespace ClassicTilestorm
 
 			var defaultDef = ResourceManager.FindOrCreateDefaultTile();
 
-			// In RepositionAndResize, replace defaultIndex search:
 			int defaultIndex = -1;
 			for (int i = 0; i < table.Length; i++)
 			{
@@ -192,7 +481,7 @@ namespace ClassicTilestorm
 			if (defaultIndex == -1)
 			{
 				var list = table.ToList();
-				list.Add(defaultDef.hashid); // use hashid
+				list.Add(defaultDef.hashid);
 				table = list.ToArray();
 				defaultIndex = table.Length - 1;
 			}
@@ -337,7 +626,7 @@ namespace ClassicTilestorm
 				solve = solve != null ? (int[])solve.Clone() : null,
 
 				attachments = attachments != null ? attachments.Select(a => a.ShallowClone()).ToArray() : Array.Empty<MapAttachment>(),
-				table = table != null ? (string[])table.Clone() : Array.Empty<string>()  // copy table directly
+				table = table != null ? (string[])table.Clone() : Array.Empty<string>()
 			};
 
 			bool cropped = copy.CropToContent();
@@ -348,42 +637,42 @@ namespace ClassicTilestorm
 			return copy;
 		}
 
-		public void AddAttachment(MapAttachment attachment)
-		{
-			if (attachment == null) return;
-			var list = attachments?.ToList() ?? new List<MapAttachment>();
-			list.Add(attachment);
-			attachments = list.ToArray();
-		}
-
-		public bool RemoveAttachment(MapAttachment attachment)
-		{
-			if (attachment == null || attachments == null || attachments.Length == 0)
-				return false;
-
-			int index = Array.IndexOf(attachments, attachment);
-			if (index < 0) return false;
-
-			var list = attachments.ToList();
-			list.RemoveAt(index);
-			attachments = list.ToArray();
-			return true;
-		}
-
-		public void RemoveAllAttachmentsOnTile(int tileIndex)
-		{
-			if (attachments == null || attachments.Length == 0 || tileIndex < 0)
-				return;
-
-			attachments = attachments.Where(a => a.tile != tileIndex).ToArray();
-		}
-
 		public MapAttachment[] GetAttachmentsOnTile(int tileIndex)
 		{
 			if (attachments == null || tileIndex < 0)
 				return Array.Empty<MapAttachment>();
 
 			return attachments.Where(a => a.tile == tileIndex).ToArray();
+		}
+
+		public int CameraHitTile(Camera camera, Vector3 position) => WorldToMapIndex(Map.ScreenToWorld(camera, position));
+
+		public static bool RayToWorld(Ray ray, out Vector3 point)
+		{
+			point = Vector3.zero;
+			var plane = new Plane(Vector3.up, Vector3.zero);
+			if (plane.Raycast(ray, out float d))
+			{
+				point = ray.GetPoint(d);
+				return true;
+			}
+			return false;
+		}
+
+		public static Vector3 ScreenToWorld(Camera camera, Vector3 screenPos)
+		{
+			if (null == camera) return Vector3.negativeInfinity;
+			RayToWorld(camera.ScreenPointToRay(screenPos), out Vector3 result);
+			return result;
+		}
+
+		public static Vector3 CameraToWorld(Camera camera, Vector3 direction = default)
+		{
+			if (null == camera) return Vector3.negativeInfinity;
+			if (default == direction) direction = Camera.main.transform.forward;
+			var ray = new Ray(camera.transform.position, direction);
+			RayToWorld(ray, out Vector3 result);
+			return result;
 		}
 	}
 }

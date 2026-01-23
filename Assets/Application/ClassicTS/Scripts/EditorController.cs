@@ -80,7 +80,7 @@ namespace ClassicTilestorm
 			if (null != cameraEditor)
 			{
 				var volume = getVolume(cameraEditor.controller.gameObject);
-				var distance  = (cameraEditor.controller.transform.position - MapManager.CameraToWorld(cameraEditor.camera)).magnitude;
+				var distance  = (cameraEditor.controller.transform.position - Map.CameraToWorld(cameraEditor.camera)).magnitude;
 				VolumeUtils.SetDepthOfFieldDistance(volume, Mathf.Max(Mathf.Min(distance, cameraEditor.controller.transform.position.y * 3f), 1f));
 			}
 		}

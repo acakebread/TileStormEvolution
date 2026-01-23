@@ -47,7 +47,7 @@ namespace ClassicTilestorm
 
 		private void OnBeginDrag(Vector3 screenPos)
 		{
-			var vert = MapManager.ScreenToWorld(camera, screenPos);
+			var vert = Map.ScreenToWorld(camera, screenPos);
 			var index = imap.WorldToMapIndex(vert);
 			var tile = imap.GetTile(index);
 			if (false == tile.IsDrag) return;
@@ -64,14 +64,14 @@ namespace ClassicTilestorm
 
 			DebugVisualizationHelper.HighlightStrip(imap, tileStrip, false);
 
-			var vert = MapManager.ScreenToWorld(camera, screenPos);
+			var vert = Map.ScreenToWorld(camera, screenPos);
 			TryDrag(vert - last);
 			last = vert;
 
 			DebugVisualizationHelper.HighlightStrip(imap, tileStrip, tileStrip.Count > 1);
 		}
 
-		private void OnEndDrag(Vector3 screenPos) => EndDrag(MapManager.ScreenToWorld(camera, screenPos) - last);
+		private void OnEndDrag(Vector3 screenPos) => EndDrag(Map.ScreenToWorld(camera, screenPos) - last);
 
 		private void EndDrag(Vector3 offset)
 		{

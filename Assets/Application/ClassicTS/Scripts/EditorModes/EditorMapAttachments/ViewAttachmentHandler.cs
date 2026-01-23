@@ -85,7 +85,7 @@ namespace ClassicTilestorm
 			var forward = view.Rotation * Vector3.forward;
 			var ray = new Ray(origin, forward);
 
-			if (MapManager.RayToWorld(ray, out Vector3 result))
+			if (Map.RayToWorld(ray, out Vector3 result))
 			{
 				float distance = (result - origin).magnitude;
 				if (distance > 0.1f)

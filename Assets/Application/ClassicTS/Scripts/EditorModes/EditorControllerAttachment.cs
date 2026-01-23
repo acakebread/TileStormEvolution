@@ -164,7 +164,7 @@ namespace ClassicTilestorm
 		// ===================================================================
 		private void HandleMouseDown()
 		{
-			pendingTile = iMapManager.CameraHitTile(camera, Input.mousePosition);
+			pendingTile = iMapManager.CurrentMap.CameraHitTile(camera, Input.mousePosition);
 
 			if (-1 != pendingTile)
 			{
@@ -199,7 +199,7 @@ namespace ClassicTilestorm
 
 		private void HandleRightMouseUp()
 		{
-			var tile = iMapManager.CameraHitTile(camera, Input.mousePosition);
+			var tile = iMapManager.CurrentMap.CameraHitTile(camera, Input.mousePosition);
 			if (tile >= 0 && GetAttachmentsOnTile(tile)?.Length > 0)
 			{
 				pendingTile = tile;
@@ -211,7 +211,7 @@ namespace ClassicTilestorm
 
 		private void HandleDrag()
 		{
-			var tile = iMapManager.CameraHitTile(camera, Input.mousePosition);
+			var tile = iMapManager.CurrentMap.CameraHitTile(camera, Input.mousePosition);
 			if (tile == pendingTile || -1 == tile || null == selection || 0 == selection.Length)
 				return;
 
@@ -312,8 +312,8 @@ namespace ClassicTilestorm
 
 		private MapAttachment[] GetAttachmentsOnTile(int tileIndex)
 		{
-			if (null == iMapManager || !iMapManager.IsValidTile(tileIndex)) return Array.Empty<MapAttachment>();
-			return iMapManager.attachments?.Where(x => x.tile == tileIndex).ToArray() ?? Array.Empty<MapAttachment>();
+			if (null == currentMap || !currentMap.IsValidTile(tileIndex)) return Array.Empty<MapAttachment>();
+			return currentMap.attachments?.Where(x => x.tile == tileIndex).ToArray() ?? Array.Empty<MapAttachment>();
 		}
 
 		private void RebuildMarkers()
