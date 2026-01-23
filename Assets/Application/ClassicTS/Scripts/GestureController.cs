@@ -7,15 +7,15 @@ namespace ClassicTilestorm
 	public class GestureController : MonoBehaviour
 	{
 		private new Camera camera;
-		private IMapManager imap;
+		private IMap imap;
 		private TileStrip tileStrip;
 		private Vector3 last;
 		private Vector3 delta;
 		private int dragIndex = -1;
 		private const float gridSize = 1.0f;
-		public event System.Action<IMapManager> OnMapUpdated;
+		public event System.Action<IMap> OnMapUpdated;
 
-		public void Initialise(Camera camera, IMapManager imap)
+		public void Initialise(Camera camera, IMap imap)
 		{
 			this.camera = camera;
 			this.imap = imap;
@@ -48,8 +48,8 @@ namespace ClassicTilestorm
 		private void OnBeginDrag(Vector3 screenPos)
 		{
 			var vert = Map.ScreenToWorld(camera, screenPos);
-			var index = imap.CurrentMap.WorldToMapIndex(vert);
-			var tile = imap.CurrentMap.GetTile(index);
+			var index = imap.WorldToMapIndex(vert);
+			var tile = imap.GetTile(index);
 			if (false == tile.IsDrag) return;
 
 			last = vert;

@@ -9,12 +9,12 @@ namespace ClassicTilestorm
 	/// </summary>
 	public static class MapAttachmentExtensions
 	{
-		private static IMapManager _currentMapManager;
+		private static IMapData _currentMapManager;
 
-		public static IMapManager CurrentMapManager => _currentMapManager;
+		public static IMapData CurrentMapManager => _currentMapManager;
 
 		// Called automatically by MapManager
-		internal static void SetActiveMapManager(IMapManager mapManager) => _currentMapManager = mapManager;
+		internal static void SetActiveMapManager(IMapData mapManager) => _currentMapManager = mapManager;
 
 		// Called automatically by MapManager
 		internal static void ClearActiveMapManager() => _currentMapManager = null;

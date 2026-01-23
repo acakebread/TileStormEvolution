@@ -6,7 +6,7 @@ namespace ClassicTilestorm
 	{
 		public static readonly EmitterAttachmentHandler Instance = new();
 
-		public void OnSelectionChanged(IMapManager mapManager, Camera camera, MapAttachment[] selection)
+		public void OnSelectionChanged(IMapData mapManager, Camera camera, MapAttachment[] selection)
 		{
 			var emitter = (Emitter)selection[0];
 			var worldPos = MapManager.WorldPosition(emitter.tile, emitter.Position);
@@ -14,7 +14,7 @@ namespace ClassicTilestorm
 			EditorPrimitiveUtil.UpdateCone(worldPos, emitter.Rotation, emitter.Distance, emitter.Apex);
 		}
 
-		public void OnGizmoInput(IMapManager mapManager, Camera camera, MapAttachment[] selection)
+		public void OnGizmoInput(IMap mapManager, Camera camera, MapAttachment[] selection)
 		{
 			var emitter = (Emitter)selection[0];
 
@@ -22,19 +22,19 @@ namespace ClassicTilestorm
 			{
 				emitter.Position = MapManager.LocalPosition(emitter.tile, newWorldPos);
 				emitter.Rotation = MapManager.LocalRotation(emitter.tile, newWorldRot);
-				mapManager.CurrentMap.RefreshAttachmentInstance(emitter);
+				mapManager.RefreshAttachmentInstance(emitter);
 				EditorPrimitiveUtil.UpdateCone(newWorldPos, emitter.Rotation, emitter.Distance, emitter.Apex);
 			}
 		}
 
-		public void OnDragInput(IMapManager mapManager, MapAttachment[] selection)
+		public void OnDragInput(IMap mapManager, MapAttachment[] selection)
 		{
 			var emitter = (Emitter)selection[0];
 			var worldPos = MapManager.WorldPosition(emitter.tile, emitter.Position);
 			EditorPrimitiveUtil.UpdateCone(worldPos, emitter.Rotation, emitter.Distance, emitter.Apex);
 		}
 
-		public static Emitter Create(IMapManager mapManager, int tile, string variant)
+		public static Emitter Create(IMap mapManager, int tile, string variant)
 		{
 			if (mapManager == null || string.IsNullOrEmpty(variant)) return null;
 
@@ -47,14 +47,14 @@ namespace ClassicTilestorm
 				variant = variant
 			};
 
-			mapManager.CurrentMap.AddAttachment(emitter);
+			mapManager.AddAttachment(emitter);
 			return emitter;
 
-			static float ComputeEmitterPlacementHeight(IMapManager mapManager, int tile)
+			static float ComputeEmitterPlacementHeight(IMap mapManager, int tile)
 			{
 				if (mapManager == null) return 1f;
-				var tileBounds = mapManager.CurrentMap.GetTileGeometryBounds(tile);
-				var tileWorldCenter = mapManager.CurrentMap.TileWorldPosition(tile);
+				var tileBounds = mapManager.GetTileGeometryBounds(tile);
+				var tileWorldCenter = mapManager.TileWorldPosition(tile);
 				return (tileBounds.max.y - tileWorldCenter.y) + 0.05f;
 			}
 		}

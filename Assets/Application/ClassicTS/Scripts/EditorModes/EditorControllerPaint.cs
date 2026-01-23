@@ -63,10 +63,10 @@ namespace ClassicTilestorm
 			// Cycle on left-click if on the current tile
 			if (!erase)
 			{
-				var mapIndex = iMapManager.CurrentMap.WorldToMapIndex(worldPos);
+				var mapIndex = iMapManager.WorldToMapIndex(worldPos);
 				if (mapIndex != -1)
 				{
-					var currentHash = iMapManager.CurrentMap.GetDefinitionAtIndex(mapIndex);
+					var currentHash = iMapManager.GetDefinitionAtIndex(mapIndex);
 					if (currentHash == selectedHashId && cycleDefinitions.Count > 1)
 					{
 						cycleIndex = (cycleIndex + 1) % cycleDefinitions.Count;
@@ -82,7 +82,7 @@ namespace ClassicTilestorm
 			}
 
 			var snapped = Map.SnappedMapPosition(worldPos);
-			iMapManager.CurrentMap.UpdateTileAt(
+			iMapManager.UpdateTileAt(
 				Mathf.FloorToInt(snapped.x),
 				Mathf.FloorToInt(snapped.z),
 				hashToPlace,

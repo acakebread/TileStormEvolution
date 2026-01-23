@@ -32,10 +32,10 @@ namespace ClassicTilestorm
 	{
 		public static GameObject SpareTile; // Public static spare tile
 
-		public static TileStrip GetTileStrip(IMapManager map, int startIndex, int stride, bool difficult = false)
+		public static TileStrip GetTileStrip(IMap map, int startIndex, int stride, bool difficult = false)
 		{
 			var strip = new TileStrip { First = -1, Count = 0, Stride = 0 };
-			var tile = map.CurrentMap.GetTile(startIndex);
+			var tile = map.GetTile(startIndex);
 			if (!tile.IsDrag) return strip;
 			strip.First = startIndex;
 			strip.Count = 1;
@@ -46,40 +46,40 @@ namespace ClassicTilestorm
 			var lastIndex = startIndex;
 			while (true)
 			{
-				tile = map.CurrentMap.GetTile(lastIndex + stride);
+				tile = map.GetTile(lastIndex + stride);
 				if (!tile.IsDrag) break;//skip all movable tiles
 				lastIndex += stride;
 			}
 
 			while (difficult)
 			{
-				tile = map.CurrentMap.GetTile(lastIndex + stride);
+				tile = map.GetTile(lastIndex + stride);
 				if (!(tile.IsDrag | tile.IsRoll)) break;
 				lastIndex += stride;
 			}
 
 			while (true)
 			{
-				tile = map.CurrentMap.GetTile(lastIndex + stride);
+				tile = map.GetTile(lastIndex + stride);
 				if (!(tile.IsDock | tile.IsRoll)) break;
 				lastIndex += stride;
 			}
 
-			var lastTile = map.CurrentMap.GetTile(lastIndex);
+			var lastTile = map.GetTile(lastIndex);
 			if (!(lastTile.IsDock | lastTile.IsRoll))
 				return strip;//return invalid strip as 'fail' condition
 
 			while (true)
 			{
-				tile = map.CurrentMap.GetTile(strip.First - stride);
+				tile = map.GetTile(strip.First - stride);
 				if (!(tile.IsDock | tile.IsRoll)) break;
 				strip.First -= stride;
 			}
 
-			var testRoll = difficult && map.CurrentMap.GetTile(lastIndex).IsRoll;
+			var testRoll = difficult && map.GetTile(lastIndex).IsRoll;
 			while (testRoll)
 			{
-				tile = map.CurrentMap.GetTile(strip.First - stride);
+				tile = map.GetTile(strip.First - stride);
 				if (!(tile.IsDrag | tile.IsDock | tile.IsRoll)) break;
 				strip.First -= stride;
 			}
@@ -89,20 +89,20 @@ namespace ClassicTilestorm
 			return strip;//return draggable strip
 		}
 
-		public static void ResetStrip(IMapManager map, in TileStrip strip)
+		public static void ResetStrip(IMap map, in TileStrip strip)
 		{
 			if (null == strip.Indices) return;
 			foreach (var index in strip.Indices)
 			{
-				var gameObject = map.CurrentMap.GetTile(index).gameObject;
+				var gameObject = map.GetTile(index).gameObject;
 				if (null != gameObject)
-					gameObject.transform.position = map.CurrentMap.TileWorldPosition(index);
+					gameObject.transform.position = map.TileWorldPosition(index);
 			}
 			if (null != SpareTile)
 				SpareTile.SetActive(false);
 		}
 
-		public static bool RollStrip(IMapManager map, TileStrip strip, int adjust = 1)
+		public static bool RollStrip(IMap map, TileStrip strip, int adjust = 1)
 		{
 			if (strip.Count <= 1 || null == strip.Indices || null == map.Indices)
 				return false;
@@ -114,29 +114,29 @@ namespace ClassicTilestorm
 			return true;
 		}
 
-		public static void TranslateStrip(IMapManager map, in TileStrip strip, in Vector3 delta)
+		public static void TranslateStrip(IMap map, in TileStrip strip, in Vector3 delta)
 		{
 			if (null == strip.Indices) return;
 
 			UpdateSpareTile(map, strip, delta, delta != Vector3.zero);
 			foreach (var index in strip.Indices)
 			{
-				var gameObject = map.CurrentMap.GetTile(index).gameObject;
+				var gameObject = map.GetTile(index).gameObject;
 				if (null != gameObject)
 					gameObject.transform.position += delta;
 			}
 
-			static void UpdateSpareTile(IMapManager map, in TileStrip strip, in Vector3 delta, bool active)
+			static void UpdateSpareTile(IMap map, in TileStrip strip, in Vector3 delta, bool active)
 			{
 				if (!active && null != SpareTile) { SpareTile.SetActive(false); return; }
 				if (strip.Count <= 1) return;
 
 				var leadingTileIndex = strip.Indices.Last();
-				var leadingTile = map.CurrentMap.GetTile(leadingTileIndex).gameObject;
+				var leadingTile = map.GetTile(leadingTileIndex).gameObject;
 				if (null == leadingTile) { if (null != SpareTile) SpareTile.SetActive(false); return; }
 
 				var trailingTileIndex = strip.Indices.First() - strip.Stride;
-				var trailingPosition = map.CurrentMap.TileWorldPosition(trailingTileIndex);
+				var trailingPosition = map.TileWorldPosition(trailingTileIndex);
 
 				if (null == SpareTile) SpareTile = GeometryFactory.CreateSpareTile(leadingTile, leadingTile.transform.parent, trailingPosition + delta);
 				if (null == SpareTile) return;

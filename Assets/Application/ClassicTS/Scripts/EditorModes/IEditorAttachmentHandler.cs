@@ -4,17 +4,17 @@ namespace ClassicTilestorm
 {
 	public interface IEditorAttachmentHandler
 	{
-		void OnSelectionChanged(IMapManager mapManager, Camera camera, MapAttachment[] selection)
+		void OnSelectionChanged(IMapData mapManager, Camera camera, MapAttachment[] selection)
 		{
 			// Default: do nothing
 		}
 
-		void OnGizmoInput(IMapManager mapManager, Camera camera, MapAttachment[] selection)
+		void OnGizmoInput(IMapData mapManager, Camera camera, MapAttachment[] selection)
 		{
 			// Default: do nothing
 		}
 
-		void OnDragInput(IMapManager mapManager, MapAttachment[] selection)
+		void OnDragInput(IMapData mapManager, MapAttachment[] selection)
 		{
 			// Default: do nothing
 		}

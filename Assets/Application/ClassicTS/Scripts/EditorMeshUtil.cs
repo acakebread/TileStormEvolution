@@ -30,7 +30,7 @@ namespace ClassicTilestorm
 		}
 
 		// Update or create the ghost mesh at the mouse position
-		public static void UpdateGhostMesh(Camera camera, IMapManager mapManager, Definition definition)
+		public static void UpdateGhostMesh(Camera camera, IMap mapManager, Definition definition)
 		{
 			if (mapManager == null || definition == null) return;
 			InitializeGhostMaterial();
@@ -49,7 +49,7 @@ namespace ClassicTilestorm
 				}
 
 				// Direct, clean, raw instantiation — no runtime junk added
-				ghostMesh = Assets.ModelAssets.Instantiate(prefabPath, parent: mapManager.CurrentTransform.parent);
+				ghostMesh = Assets.ModelAssets.Instantiate(prefabPath, parent: Map.parentTransform.parent);
 
 				if (ghostMesh != null)
 				{
@@ -72,7 +72,7 @@ namespace ClassicTilestorm
 			ghostMesh.transform.position = Map.SnappedMapPosition(worldPos);
 
 			// === ToDo IMPLEMENTED ===
-			var mapIndex = mapManager.CurrentMap.WorldToMapIndex(worldPos);
+			var mapIndex = mapManager.WorldToMapIndex(worldPos);
 
 			bool isValid = mapIndex != -1; // add extra checks here if your game has more rules
 

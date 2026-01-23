@@ -20,7 +20,7 @@ namespace ClassicTilestorm
 		private const float MARGIN = 10f;
 
 		private static View currentView;
-		private static IMapManager currentManager;
+		private static IMap currentManager;
 		private static bool isVisible = false;
 		private static bool isInFocus = false;
 		private static bool isInUse = false;
@@ -32,7 +32,7 @@ namespace ClassicTilestorm
 		public static Camera PreviewCamera => previewCam;
 		public static Transform PreviewCameraTransform => previewCam != null ? previewCam.transform : null;
 
-		public static void Show(View view, IMapManager manager)
+		public static void Show(View view, IMap manager)
 		{
 			if (view == null || manager == null)
 			{
@@ -129,7 +129,7 @@ namespace ClassicTilestorm
 		{
 			if (previewCam == null || currentView == null || currentManager == null) return;
 
-			Vector3 worldPos = currentManager.CurrentMap.TileWorldPosition(currentView.tile) + currentView.Position;
+			Vector3 worldPos = currentManager.TileWorldPosition(currentView.tile) + currentView.Position;
 			previewCam.transform.position = worldPos;
 			previewCam.transform.rotation = currentView.Rotation;
 			previewCam.fieldOfView = currentView.FOV;

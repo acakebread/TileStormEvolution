@@ -8,12 +8,12 @@ namespace ClassicTilestorm
 		private EditorController editorController;
 		protected Camera camera { get { if (editorController.TryGetComponent<MainCameraController>(out var controller)) return controller.activeSystem?.camera; return null; } }
 
-		protected int HitTile(Vector3 position) => iMapManager.CurrentMap.CameraHitTile(camera, position);
+		protected int HitTile(Vector3 position) => iMapManager.CameraHitTile(camera, position);
 
 		protected bool IsGuiControlActive() => GUIUtility.hotControl != 0 || (EventSystem.current && EventSystem.current.IsPointerOverGameObject());
 		protected virtual bool IsMouseOverGUI() => editorController.IsMouseOverGui() | IsGuiControlActive();
-		protected Map currentMap => editorController?.iMapManager?.CurrentMap;
-		protected IMapManager iMapManager => editorController?.iMapManager;
+		protected IMap currentMap => editorController?.iMapManager;
+		protected IMap iMapManager => editorController?.iMapManager;
 		public virtual void OnMapLoaded() { }
 
 		public EditorControllerMovement(EditorController controller = null) => editorController = controller;

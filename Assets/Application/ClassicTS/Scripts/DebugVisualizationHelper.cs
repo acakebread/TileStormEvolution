@@ -6,13 +6,13 @@ namespace ClassicTilestorm
 	{
 		private class OriginalMaterialHolder : MonoBehaviour { public Material originalMaterial; }
 
-		public static void HighlightStrip(IMapManager map, in TileStrip strip, bool highlight)
+		public static void HighlightStrip(IMap map, in TileStrip strip, bool highlight)
 		{
 			if (!ApplicationSettings.ShowTileSelection) return;
 			if (null == strip.Indices) return;
 
 			foreach (var tileIndex in strip.Indices)
-				HighlightTile(map.CurrentMap.GetTile(tileIndex).gameObject, highlight);
+				HighlightTile(map.GetTile(tileIndex).gameObject, highlight);
 
 			if (null != TileStripHelper.SpareTile)
 				HighlightTile(TileStripHelper.SpareTile, highlight);

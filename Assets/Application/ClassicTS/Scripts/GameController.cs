@@ -27,9 +27,9 @@ namespace ClassicTilestorm
 			mainController.SetPreviewMode(mode);
 		}
 
-		public void Initialise(MapManager map)
+		public void Initialise(IMap map)
 		{
-			if (isActiveAndEnabled) AudioManager.PlayMusic(map.CurrentMap.music, loop: true);
+			if (isActiveAndEnabled) AudioManager.PlayMusic(map.Music, loop: true);
 			if (!TryGetComponent<MainCameraController>(out var controller)) return;
 			controller.SetCameraSystem(CameraModeRegistry.Follow, true);
 			controller.SetCameraSystem(CameraModeRegistry.Path, true);
@@ -41,7 +41,7 @@ namespace ClassicTilestorm
 				controller.UpdateGestureControllerState();
 
 			// Music
-			if (null != mapManager) AudioManager.PlayMusic(mapManager.CurrentMap.music, loop: true);
+			if (null != mapManager) AudioManager.PlayMusic(mapManager.CurrentMap.Music, loop: true);
 			//AudioManager.PlayMusic(MusicAssets.Find(currentMap.music));
 
 

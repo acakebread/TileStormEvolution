@@ -8,8 +8,51 @@ using MassiveHadronLtd;
 
 namespace ClassicTilestorm
 {
+	public interface IMapData
+	{
+		int Width { get; }
+		int Height { get; }
+		int Count { get; }
+		int[] Indices { get; }
+	}
+
+	public interface IMap : IMapData
+	{
+		bool IsValidTile(int _);
+		Tile GetTile(int _);
+		int WorldToMapIndex(Vector3 _);
+		Vector3 TileWorldPosition(int _);
+
+		string GetDefinitionAtIndex(int mapIndex);
+
+		int GetStartTile();
+		int GetEndTile();
+		int FindAdjacentConsole(int nTile);
+
+		int GetWaypoint(int _);
+
+		Action<Map, bool, Vector3> OnMapEdited { get; set; }
+		void RefreshAttachmentInstance(MapAttachment _);
+
+		int CameraHitTile(Camera camera, Vector3 position);
+		int[] Waypoints { get; set; }
+		MapAttachment [] Attachments { get; set; }
+		MapAttachment[] GetAllAttachments();
+		Waypoint[] waypointAttachments { get; }
+		void AddAttachment(MapAttachment _);
+		bool RemoveAttachment(MapAttachment _);
+		bool RemoveAttachments(MapAttachment[] _);
+
+		View GetView(int tile);
+
+		Bounds GetTileGeometryBounds(int tileIndex);
+		bool UpdateTileAt(int x, int z, string id, bool expand = true);
+
+		public string Music { get; }
+	}
+
 	[Serializable]
-	public class Map
+	public class Map : IMap
 	{
 		// ─────────────────────────────────────────────
 		// Core identity
@@ -54,6 +97,14 @@ namespace ClassicTilestorm
 
 		public Action<Map, bool, Vector3> OnMapEdited { get; set; }
 		public static Transform parentTransform;
+
+		public int Width => width;
+		public int Height => height;
+		public int Count => Width * Height;
+		public int[] Indices => indices;
+		public int[] Waypoints { get => waypoints; set => waypoints = value; }
+		public MapAttachment[] Attachments { get => attachments; set => attachments = value; }
+		public string Music => music;
 
 		public const int MAP_MAX_SIZE = 64;
 
@@ -320,7 +371,6 @@ namespace ClassicTilestorm
 			RefreshAttachmentInstance(attachment);
 			OnMapEdited?.Invoke(this, false, Vector3.zero);
 		}
-
 
 		public bool RemoveAttachment(MapAttachment attachment)
 		{
@@ -1154,8 +1204,8 @@ namespace ClassicTilestorm
 				var stride = (UnityEngine.Random.value > 0.5f ? width : 1) *
 							 (UnityEngine.Random.value > 0.5f ? 1 : -1);
 
-				var tileStrip = TileStripHelper.GetTileStrip(parentTransform.GetComponent<MapManager>(), n % indices.Length, stride, true);
-				TileStripHelper.RollStrip(parentTransform.GetComponent<MapManager>(), tileStrip);
+				var tileStrip = TileStripHelper.GetTileStrip(this, n % indices.Length, stride, true);
+				TileStripHelper.RollStrip(this, tileStrip);
 			}
 			UpdateTileObjectNamesAndPositions();
 		}

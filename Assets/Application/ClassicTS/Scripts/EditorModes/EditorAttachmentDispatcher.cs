@@ -14,19 +14,19 @@ namespace ClassicTilestorm
 			{ typeof(Waypoint), WaypointAttachmentHandler.Instance }
 		};
 
-		public static void OnSelectionChanged(this MapAttachment attachment, IMapManager mapManager, Camera camera, MapAttachment[] selection)
+		public static void OnSelectionChanged(this MapAttachment attachment, IMapData mapManager, Camera camera, MapAttachment[] selection)
 		{
 			if (Handlers.TryGetValue(attachment.GetType(), out var handler))
 				handler.OnSelectionChanged(mapManager, camera, selection);
 		}
 
-		public static void OnGizmoInput(this MapAttachment attachment, IMapManager mapManager, Camera camera, MapAttachment[] selection)
+		public static void OnGizmoInput(this MapAttachment attachment, IMapData mapManager, Camera camera, MapAttachment[] selection)
 		{
 			if (Handlers.TryGetValue(attachment.GetType(), out var handler))
 				handler.OnGizmoInput(mapManager, camera, selection);
 		}
 
-		public static void OnDragInput(this MapAttachment attachment, IMapManager mapManager, MapAttachment[] selection)
+		public static void OnDragInput(this MapAttachment attachment, IMapData mapManager, MapAttachment[] selection)
 		{
 			if (Handlers.TryGetValue(attachment.GetType(), out var handler))
 				handler.OnDragInput(mapManager, selection);

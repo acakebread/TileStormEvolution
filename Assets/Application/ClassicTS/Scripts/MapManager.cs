@@ -3,30 +3,11 @@ using UnityEngine;
 
 namespace ClassicTilestorm
 {
-	public interface IMapData
-	{
-		int Width { get; }
-		int Height { get; }
-		int Count { get; }
-		int[] Indices { get; }
-	}
-
-	public interface IMapManager : IMapData
-	{
-		Transform CurrentTransform { get; }
-		Map CurrentMap { get; }
-	}
-
-	public class MapManager : MonoBehaviour, IMapManager
+	public class MapManager : MonoBehaviour
 	{
 		public Map CurrentMap { get; set; }
 
 		public Transform CurrentTransform => transform;
-
-		public int Width => CurrentMap?.width ?? 0;
-		public int Height => CurrentMap?.height ?? 0;
-		public int Count => Width * Height;
-		public int[] Indices => CurrentMap?.indices;
 
 		private static MapManager instance;
 
@@ -38,7 +19,6 @@ namespace ClassicTilestorm
 
 		public static Vector3 WorldPosition(int tileIndex, Vector3 localPosition)
 			=> instance == null || tileIndex < 0 ? localPosition : localPosition + instance.CurrentMap.TileWorldPosition(tileIndex);
-
 
 		private void OnDestroy()
 		{
@@ -68,7 +48,7 @@ namespace ClassicTilestorm
 			Map.parentTransform = go.transform;
 
 			var manager = go.AddComponent<MapManager>();
-			MapAttachmentExtensions.SetActiveMapManager(manager);
+			MapAttachmentExtensions.SetActiveMapManager(map);
 			manager.Initialise(map);
 			instance = manager;
 			return manager;

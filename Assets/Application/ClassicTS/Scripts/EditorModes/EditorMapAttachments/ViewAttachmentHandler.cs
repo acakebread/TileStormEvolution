@@ -7,7 +7,7 @@ namespace ClassicTilestorm
 	{
 		public static readonly ViewAttachmentHandler Instance = new();
 
-		public void OnSelectionChanged(IMapManager mapManager, Camera camera, MapAttachment[] selection)
+		public void OnSelectionChanged(IMap mapManager, Camera camera, MapAttachment[] selection)
 		{
 			var view = (View)selection[0];
 			var worldPos = MapManager.WorldPosition(view.tile, view.Position);
@@ -15,7 +15,7 @@ namespace ClassicTilestorm
 			OnDragInput(mapManager, selection);
 		}
 
-		public void OnGizmoInput(IMapManager mapManager, Camera camera, MapAttachment[] selection)
+		public void OnGizmoInput(IMap mapManager, Camera camera, MapAttachment[] selection)
 		{
 			var view = (View)selection[0];
 
@@ -37,14 +37,14 @@ namespace ClassicTilestorm
 			}
 		}
 
-		public void OnDragInput(IMapManager mapManager, MapAttachment[] selection)
+		public void OnDragInput(IMap mapManager, MapAttachment[] selection)
 		{
 			var view = (View)selection[0];
 			ViewPreviewUtil.Show(view, mapManager);
 			UpdateViewFrustumMarker(view);
 		}
 
-		public static View Create(IMapManager mapManager, int tile)
+		public static View Create(IMap mapManager, int tile)
 		{
 			if (mapManager == null) return null;
 
@@ -56,11 +56,11 @@ namespace ClassicTilestorm
 			};
 
 			SnapViewDistanceToGround(view);
-			mapManager.CurrentMap.AddAttachment(view);
+			mapManager.AddAttachment(view);
 			return view;
 		}
 
-		public static void HandlePreviewCameraSync(IMapManager mapManager, Camera camera, MapAttachment[] selection)
+		public static void HandlePreviewCameraSync(IMap mapManager, Camera camera, MapAttachment[] selection)
 		{
 			if (selection?.FirstOrDefault() is not View view) return;
 			var previewTransform = ViewPreviewUtil.PreviewCameraTransform;

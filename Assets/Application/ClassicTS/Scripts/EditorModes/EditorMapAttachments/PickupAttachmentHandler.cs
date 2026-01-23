@@ -4,7 +4,7 @@ namespace ClassicTilestorm
 	{
 		public static readonly PickupAttachmentHandler Instance = new();
 
-		public static Pickup Create(IMapManager mapManager, int tile)
+		public static Pickup Create(IMap mapManager, int tile)
 		{
 			if (mapManager == null) return null;
 
@@ -16,7 +16,7 @@ namespace ClassicTilestorm
 				respawn = false
 			};
 
-			mapManager.CurrentMap.AddAttachment(pickup);
+			mapManager.AddAttachment(pickup);
 			return pickup;
 		}
 	}

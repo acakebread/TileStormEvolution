@@ -9,7 +9,7 @@ namespace ClassicTilestorm
 	[RequireComponent(typeof(GestureController))]
 	public class MainCameraController : CameraController
 	{
-		private MapManager mapManager;
+		private IMap mapManager;
 		private EggbotController eggbotController;
 		private SpatialBucketSystem spatialSystem;
 		private GestureController gestureController;
@@ -52,7 +52,7 @@ namespace ClassicTilestorm
 			}
 		}
 
-		private void CheckDisableDrag(IMapManager imap)
+		private void CheckDisableDrag(IMap imap)
 		{
 			if (eggbotController != null && eggbotController.NavDirection(imap) != 0)
 				GestureControllerEnabled = false;
@@ -66,7 +66,7 @@ namespace ClassicTilestorm
 
 		private void OnWaypointGesturesEnable(bool value) => GestureControllerEnabled = value;
 
-		public void Initialise(MapManager map, EggbotController eggbot)
+		public void Initialise(IMap map, EggbotController eggbot)
 		{
 			mapManager = map ?? throw new ArgumentNullException(nameof(map));
 			gestureController.Initialise(Camera.main, mapManager);
@@ -95,14 +95,14 @@ namespace ClassicTilestorm
 			var dstPos = new Vector3(mapManager.Width * 0.5f, 0f, mapManager.Height * 0.5f);
 			var srcPos = dstPos + new Vector3(0f, 14f, -14f);
 
-			if (mapManager.CurrentMap.waypoints.Length > 0)
+			if (mapManager.Waypoints.Length > 0)
 			{
-				var tile = mapManager.CurrentMap.GetWaypoint(0);
-				var view = mapManager.CurrentMap.GetView(tile);
+				var tile = mapManager.GetWaypoint(0);
+				var view = mapManager.GetView(tile);
 				if (null != view)
 				{
 					//has camera settings (View)
-					var tilePos = mapManager.CurrentMap.TileWorldPosition(tile);
+					var tilePos = mapManager.TileWorldPosition(tile);
 					srcPos = view.VSrc + tilePos;
 					dstPos = view.VDst + tilePos;
 				}
@@ -119,7 +119,7 @@ namespace ClassicTilestorm
 
 			Func<IReadOnlyList<Vector3>> focusFunc = () =>
 			{
-				var waypoints = mapManager.CurrentMap.waypoints.Select(w => mapManager.CurrentMap.TileWorldPosition(w)).ToList();
+				var waypoints = mapManager.Waypoints.Select(w => mapManager.TileWorldPosition(w)).ToList();
 				spatialSystem.SetPoints(waypoints);
 
 				focusFunc = () =>
@@ -180,14 +180,14 @@ namespace ClassicTilestorm
 
 		private void OnWaypointReached(int waypointIndex)
 		{
-			if (eggbotController == null || mapManager == null || waypointIndex < 0 || waypointIndex >= mapManager.CurrentMap.waypoints.Length)
+			if (eggbotController == null || mapManager == null || waypointIndex < 0 || waypointIndex >= mapManager.Waypoints.Length)
 				return;
 
-			if (waypointIndex == 0 || waypointIndex == mapManager.CurrentMap.waypoints.Length - 1)
+			if (waypointIndex == 0 || waypointIndex == mapManager.Waypoints.Length - 1)
 				return;
 
-			var tile = mapManager.CurrentMap.GetWaypoint(waypointIndex);
-			var view = mapManager.CurrentMap.GetView(tile);
+			var tile = mapManager.GetWaypoint(waypointIndex);
+			var view = mapManager.GetView(tile);
 			if (null == view)
 			{
 				SetCameraSystem(CameraModeRegistry.Follow, true);
@@ -196,7 +196,7 @@ namespace ClassicTilestorm
 
 			//has camera settings (View)
 			var presetCam = (GameCameraPreset)CameraSystems[CameraModeRegistry.Preset];
-			var tilePos = mapManager.CurrentMap.TileWorldPosition(tile);
+			var tilePos = mapManager.TileWorldPosition(tile);
 			presetCam.originFn = () => view.VSrc + tilePos;
 			presetCam.targetFn = () => view.VDst + tilePos;
 

@@ -41,7 +41,7 @@ namespace ClassicTilestorm
 		}
 
 		private int guard = 0;//temporary workaround for double events from ongui (due to camera stack) - hopefully this will go away when full ui is implemented
-		private void Update() { guard = 0; if (null != eggbotController) eggbotController.UpdateEggbot(mapManager); }
+		private void Update() { guard = 0; if (null != eggbotController) eggbotController.UpdateEggbot(mapManager.CurrentMap); }
 
 		//public void SetGeometryMode(bool value)
 		//{
@@ -89,11 +89,11 @@ namespace ClassicTilestorm
 
 			if (null != eggbotController) DestroyImmediate(eggbotController.gameObject);
 			eggbotController = EggbotController.Instantiate(currentMap.character, transform);
-			if (null != eggbotController) eggbotController.Initialise(mapManager);
+			if (null != eggbotController) eggbotController.Initialise(mapManager.CurrentMap);
 
-			if (null != cameraController) cameraController.Initialise(mapManager, eggbotController);
-			if (null != gameController) gameController.Initialise(mapManager);
-			if (null != editorController) editorController.Initialise(mapManager);
+			if (null != cameraController) cameraController.Initialise(mapManager.CurrentMap, eggbotController);
+			if (null != gameController) gameController.Initialise(mapManager.CurrentMap);
+			if (null != editorController) editorController.Initialise(mapManager.CurrentMap);
 
 			//static string SkycubesPath(string id) => string.IsNullOrEmpty(id) ? null : $"{AssetPath.SkycubesPath}{id}";
 		}
