@@ -30,7 +30,7 @@ namespace ClassicTilestorm
 		// ─────────────────────────────────────────────
 		// Tile table — now the ONLY source of truth (hashes)
 		// ─────────────────────────────────────────────
-		[JsonProperty(Order = 20)] public string[] table;  // contains hashids only (e.g. "deJ7Yv")
+		[JsonProperty(Order = 20)] public string[] table;
 
 		[JsonProperty(Order = 21)] public int[] tiles;
 		[JsonProperty(Order = 22)] public int[] solve;
@@ -79,12 +79,21 @@ namespace ClassicTilestorm
 		}
 
 		// ─────────────────────────────────────────────
-		// Moved from MapManager: runtime tile instantiation
+		// Runtime tile instances (not serialized)
 		// ─────────────────────────────────────────────
 
-		[NonSerialized] public int[] indices;           // ← added here, NEVER serialized
+		[JsonIgnore, NonSerialized]
+		public Tile[] runtimeTiles;
 
-		// Optional: runtime-only property to make it clearer
+		[JsonIgnore]
+		public IReadOnlyList<Tile> RuntimeTiles => runtimeTiles ?? Array.Empty<Tile>();
+
+		[JsonIgnore]
+		public int RuntimeTileCount => runtimeTiles?.Length ?? 0;
+
+		[NonSerialized]
+		public int[] indices;           // runtime permutation, never serialized
+
 		[JsonIgnore]
 		public bool IsScrambled => indices != null && !IsIdentity(indices);
 
@@ -96,15 +105,18 @@ namespace ClassicTilestorm
 			return true;
 		}
 
-		public Tile[] CreateRuntimeTiles()
+		public Tile[] CreateOrGetRuntimeTiles(Transform parent = null)
 		{
+			if (runtimeTiles != null)
+				return runtimeTiles;
+
 			if (tiles == null || tiles.Length != width * height)
 			{
 				DebugUtil.LogError($"Invalid tile map data! length={(tiles?.Length ?? -1)}, expected={width * height}");
 				return null;
 			}
 
-			var runtimeTiles = new Tile[width * height];
+			runtimeTiles = new Tile[width * height];
 
 			string mapName = name ?? "Unnamed map";
 
@@ -114,28 +126,46 @@ namespace ClassicTilestorm
 				string hashId = null;
 
 				if (idx >= 0 && table != null && idx < table.Length)
-				{
 					hashId = table[idx];
-				}
 				else if (idx != -1)
-				{
 					DebugUtil.LogWarning($"Out-of-range table index {idx} at tile {n} (map: {mapName})");
-				}
 
 				var def = ResourceManager.ResolveDefinition(hashId, out bool hadError);
 
 				if (hadError)
-				{
 					Debug.LogWarning($"Failed to resolve tile definition at tile {n} (hash: '{hashId ?? "<null>"}') — using default");
-				}
 
-				runtimeTiles[n] = new Tile(def, parentTransform, TileWorldPosition(n));
+				runtimeTiles[n] = new Tile(def, parent ?? parentTransform, TileWorldPosition(n));
 			}
 
 			return runtimeTiles;
 		}
 
-		// Helper — convenience method many places were using
+		public void DestroyRuntimeTiles()
+		{
+			if (runtimeTiles == null) return;
+
+			foreach (var tile in runtimeTiles)
+			{
+				if (tile.gameObject != null)
+				{
+					if (Application.isPlaying)
+						UnityEngine.Object.Destroy(tile.gameObject);
+					else
+						UnityEngine.Object.DestroyImmediate(tile.gameObject);
+				}
+			}
+
+			runtimeTiles = null;
+		}
+
+		public Tile GetRuntimeTile(int index)
+		{
+			if (runtimeTiles == null || index < 0 || index >= runtimeTiles.Length)
+				return default;
+			return runtimeTiles[index];
+		}
+
 		public int GetWaypoint(int index)
 		{
 			if (index < 0 || waypoints == null) return -1;
@@ -143,26 +173,23 @@ namespace ClassicTilestorm
 		}
 
 		// ─────────────────────────────────────────────
-		// Attachment runtime state (moved here)
+		// Attachment runtime state (unchanged)
 		// ─────────────────────────────────────────────
+
 		[NonSerialized] private readonly Dictionary<MapAttachment, GameObject> attachmentGameObjects = new();
 
 		public void RefreshAllAttachmentInstances()
 		{
 			foreach (var att in attachments ?? Array.Empty<MapAttachment>())
-			{
 				RefreshAttachmentInstance(att);
-			}
 		}
 
 		public void RefreshAttachmentsOnTile(int tileIndex)
 		{
 			if (attachments == null) return;
 			foreach (var att in attachments)
-			{
 				if (att?.tile == tileIndex)
 					RefreshAttachmentInstance(att);
-			}
 		}
 
 		public void RefreshAttachmentInstance(MapAttachment attachment)
@@ -280,7 +307,6 @@ namespace ClassicTilestorm
 				if (waypoints == null || waypoint.waypointIndex < 0 || waypoint.waypointIndex >= waypoints.Length)
 					return false;
 
-				// Shift waypoint indices of other attachments
 				if (attachments != null)
 				{
 					foreach (var att in attachments)
@@ -320,9 +346,7 @@ namespace ClassicTilestorm
 
 			var toRemove = attachments.Where(a => a != null && a.tile == tileIndex).ToArray();
 			foreach (var att in toRemove)
-			{
 				RemoveAttachment(att);
-			}
 		}
 
 		[DoNotNormalize] public Waypoint[] waypointAttachments => GetWaypointAttachments() ?? Array.Empty<Waypoint>();
@@ -380,7 +404,7 @@ namespace ClassicTilestorm
 		}
 
 		// ─────────────────────────────────────────────
-		// Original methods below (unchanged)
+		// Original methods (unchanged)
 		// ─────────────────────────────────────────────
 
 		public Definition ResolveDefinition(string id, int? tileIndexForLogging = null)
