@@ -450,13 +450,13 @@ namespace ClassicTilestorm
 			{
 				var localAtt = att;
 				string label = att is Waypoint wp ? $"Delete WP{wp.waypointIndex:00} [{pendingTile}]" : $"Delete {att.GetType().Name} [{pendingTile}]";
-				items.Add(new PopupItem(label, () => iMapManager.RemoveAttachment(localAtt), colorOverride: Color.softRed));
+				items.Add(new PopupItem(label, () => iMapManager.CurrentMap.RemoveAttachment(localAtt), colorOverride: Color.softRed));
 			}
 
 			if (attsOnTile.Length > 1)
 			{
 				items.Add(PopupItem.Spacer());
-				items.Add(new PopupItem("Delete All", () => iMapManager.RemoveAttachments(attsOnTile), colorOverride: Color.red));
+				items.Add(new PopupItem("Delete All", () => iMapManager.CurrentMap.RemoveAttachments(attsOnTile), colorOverride: Color.red));
 			}
 
 			items.Add(PopupItem.Spacer());

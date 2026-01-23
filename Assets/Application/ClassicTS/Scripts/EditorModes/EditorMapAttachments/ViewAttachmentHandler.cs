@@ -56,7 +56,7 @@ namespace ClassicTilestorm
 			};
 
 			SnapViewDistanceToGround(view);
-			mapManager.AddAttachment(view);
+			mapManager.CurrentMap.AddAttachment(view);
 			return view;
 		}
 

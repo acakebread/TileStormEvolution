@@ -9,7 +9,7 @@ namespace ClassicTilestorm
 			if (mapManager == null) return null;
 			var index = mapManager.CurrentMap.waypointAttachments?.Length ?? 0;
 			var waypoint = new Waypoint(index, tile);
-			mapManager.AddAttachment(waypoint);
+			mapManager.CurrentMap.AddAttachment(waypoint);
 			return waypoint;
 		}
 	}

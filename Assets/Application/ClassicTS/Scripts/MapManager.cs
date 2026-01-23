@@ -19,22 +19,16 @@ namespace ClassicTilestorm
 		Transform CurrentTransform { get; }
 		Map CurrentMap { get; }
 
+		string GetDefinitionAtIndex(int mapIndex);
 		Tile GetTile(int index);
+
 		int GetStartTile();
 		int GetEndTile();
-
 		int FindAdjacentConsole(int nTile);
-
-		string GetDefinitionAtIndex(int mapIndex);
 
 		bool UpdateTileAt(int x, int z, string id, bool expand = true);
 		void RefreshAttachmentInstance(MapAttachment attachment);
 		void DestroyAttachmentInstance(MapAttachment attachment);
-
-		void AddAttachment(MapAttachment attachment);
-		bool RemoveAttachment(MapAttachment attachment);
-		bool RemoveAttachments(MapAttachment[] attachmentArray);
-		void RemoveAllAttachmentsOnTile(int tileIndex);
 
 		void RefreshGeometry();
 	}
@@ -449,35 +443,6 @@ namespace ClassicTilestorm
 		public void DestroyAttachmentInstance(MapAttachment attachment)
 		{
 			currentMap?.DestroyAttachmentInstance(attachment);
-		}
-
-		public void AddAttachment(MapAttachment attachment)
-		{
-			currentMap?.AddAttachment(attachment);
-			currentMap?.RefreshAttachmentInstance(attachment);
-			currentMap?.OnMapEdited?.Invoke(currentMap, false, Vector3.zero);
-		}
-
-		public bool RemoveAttachment(MapAttachment attachment)
-		{
-			bool removed = currentMap?.RemoveAttachment(attachment) ?? false;
-			if (removed)
-				currentMap?.OnMapEdited?.Invoke(currentMap, false, Vector3.zero);
-			return removed;
-		}
-
-		public bool RemoveAttachments(MapAttachment[] attachmentArray)
-		{
-			bool result = false;
-			foreach (var att in attachmentArray)
-				result |= RemoveAttachment(att);
-			return result;
-		}
-
-		public void RemoveAllAttachmentsOnTile(int tileIndex)
-		{
-			currentMap?.RemoveAllAttachmentsOnTile(tileIndex);
-			currentMap?.OnMapEdited?.Invoke(currentMap, false, Vector3.zero);
 		}
 
 		public static MapManager Instantiate(Map map, Transform parent = null)

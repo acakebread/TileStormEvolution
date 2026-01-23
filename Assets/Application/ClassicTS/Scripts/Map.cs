@@ -286,16 +286,19 @@ namespace ClassicTilestorm
 			attachmentGameObjects.Clear();
 		}
 
+		// Inside class Map
+
 		public void AddAttachment(MapAttachment attachment)
 		{
 			if (attachment == null) return;
 
-			if (attachment is Waypoint waypoint)
+			// ── existing mutation logic ────────────────────────────────
+			if (attachment is Waypoint wp)
 			{
 				var list = waypoints?.ToList() ?? new List<int>();
-				while (list.Count <= waypoint.waypointIndex)
+				while (list.Count <= wp.waypointIndex)
 					list.Add(-1);
-				list[waypoint.waypointIndex] = waypoint.tile;
+				list[wp.waypointIndex] = wp.tile;
 				waypoints = list.ToArray();
 			}
 			else
@@ -304,7 +307,12 @@ namespace ClassicTilestorm
 				list.Add(attachment);
 				attachments = list.ToArray();
 			}
+
+			// ── side effects ───────────────────────────────────────────
+			RefreshAttachmentInstance(attachment);
+			OnMapEdited?.Invoke(this, false, Vector3.zero);
 		}
+
 
 		public bool RemoveAttachment(MapAttachment attachment)
 		{
@@ -312,23 +320,25 @@ namespace ClassicTilestorm
 
 			bool removed = false;
 
-			if (attachment is Waypoint waypoint)
+			// ── existing mutation logic ────────────────────────────────
+			if (attachment is Waypoint wp)
 			{
-				if (waypoints == null || waypoint.waypointIndex < 0 || waypoint.waypointIndex >= waypoints.Length)
+				if (waypoints == null || wp.waypointIndex < 0 || wp.waypointIndex >= waypoints.Length)
 					return false;
 
+				// Renumber higher waypoint indices
 				if (attachments != null)
 				{
 					foreach (var att in attachments)
 					{
-						if (att is Waypoint wp && wp.waypointIndex > waypoint.waypointIndex)
-							wp.waypointIndex--;
+						if (att is Waypoint other && other.waypointIndex > wp.waypointIndex)
+							other.waypointIndex--;
 					}
 				}
 
 				var newWaypoints = new List<int>();
 				for (int i = 0; i < waypoints.Length; i++)
-					if (i != waypoint.waypointIndex)
+					if (i != wp.waypointIndex)
 						newWaypoints.Add(waypoints[i]);
 
 				waypoints = newWaypoints.Count > 0 ? newWaypoints.ToArray() : null;
@@ -336,27 +346,54 @@ namespace ClassicTilestorm
 			}
 			else if (attachments != null)
 			{
-				int index = Array.IndexOf(attachments, attachment);
-				if (index >= 0)
+				int idx = Array.IndexOf(attachments, attachment);
+				if (idx >= 0)
 				{
 					var list = attachments.ToList();
-					list.RemoveAt(index);
+					list.RemoveAt(idx);
 					attachments = list.Count > 0 ? list.ToArray() : null;
 					removed = true;
 				}
 			}
 
-			DestroyAttachmentInstance(attachment);
+			if (removed)
+			{
+				// ── side effects ───────────────────────────────────────
+				DestroyAttachmentInstance(attachment);
+				OnMapEdited?.Invoke(this, false, Vector3.zero);
+			}
+
 			return removed;
 		}
+
+
+		public bool RemoveAttachments(MapAttachment[] attachmentArray)
+		{
+			if (attachmentArray == null || attachmentArray.Length == 0)
+				return false;
+
+			bool anyRemoved = false;
+
+			foreach (var att in attachmentArray)
+			{
+				if (RemoveAttachment(att))      // ← reuses the single-remove logic (including side effects)
+					anyRemoved = true;
+			}
+
+			return anyRemoved;
+		}
+
 
 		public void RemoveAllAttachmentsOnTile(int tileIndex)
 		{
 			if (attachments == null) return;
 
-			var toRemove = attachments.Where(a => a != null && a.tile == tileIndex).ToArray();
+			var toRemove = attachments
+				.Where(a => a?.tile == tileIndex)
+				.ToArray();
+
 			foreach (var att in toRemove)
-				RemoveAttachment(att);
+				RemoveAttachment(att);          // ← again, reuses single-remove (side effects included)
 		}
 
 		[JsonIgnore] public Waypoint[] waypointAttachments => GetWaypointAttachments() ?? Array.Empty<Waypoint>();
@@ -688,14 +725,6 @@ namespace ClassicTilestorm
 				Debug.Log($"[Export] Map '{copy.name}' auto-cropped to {copy.width}x{copy.height}");
 
 			return copy;
-		}
-
-		public MapAttachment[] GetAttachmentsOnTile(int tileIndex)
-		{
-			if (attachments == null || tileIndex < 0)
-				return Array.Empty<MapAttachment>();
-
-			return attachments.Where(a => a.tile == tileIndex).ToArray();
 		}
 
 		public View GetView(int tile)

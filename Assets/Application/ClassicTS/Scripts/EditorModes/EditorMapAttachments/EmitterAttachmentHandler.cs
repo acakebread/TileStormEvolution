@@ -47,7 +47,7 @@ namespace ClassicTilestorm
 				variant = variant
 			};
 
-			mapManager.AddAttachment(emitter);
+			mapManager.CurrentMap.AddAttachment(emitter);
 			return emitter;
 
 			static float ComputeEmitterPlacementHeight(IMapManager mapManager, int tile)

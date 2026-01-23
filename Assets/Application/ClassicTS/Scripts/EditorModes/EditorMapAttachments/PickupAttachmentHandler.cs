@@ -16,7 +16,7 @@ namespace ClassicTilestorm
 				respawn = false
 			};
 
-			mapManager.AddAttachment(pickup);
+			mapManager.CurrentMap.AddAttachment(pickup);
 			return pickup;
 		}
 	}
