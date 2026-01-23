@@ -95,10 +95,10 @@ namespace ClassicTilestorm
 			var dstPos = new Vector3(mapManager.Width * 0.5f, 0f, mapManager.Height * 0.5f);
 			var srcPos = dstPos + new Vector3(0f, 14f, -14f);
 
-			if (mapManager.Waypoints.Length > 0)
+			if (mapManager.CurrentMap.waypoints.Length > 0)
 			{
-				var tile = mapManager.GetWaypoint(0);
-				var view = mapManager.GetView(tile);
+				var tile = mapManager.CurrentMap.GetWaypoint(0);
+				var view = mapManager.CurrentMap.GetView(tile);
 				if (null != view)
 				{
 					//has camera settings (View)
@@ -119,7 +119,7 @@ namespace ClassicTilestorm
 
 			Func<IReadOnlyList<Vector3>> focusFunc = () =>
 			{
-				var waypoints = mapManager.Waypoints.Select(w => mapManager.CurrentMap.TileWorldPosition(w)).ToList();
+				var waypoints = mapManager.CurrentMap.waypoints.Select(w => mapManager.CurrentMap.TileWorldPosition(w)).ToList();
 				spatialSystem.SetPoints(waypoints);
 
 				focusFunc = () =>
@@ -180,14 +180,14 @@ namespace ClassicTilestorm
 
 		private void OnWaypointReached(int waypointIndex)
 		{
-			if (eggbotController == null || mapManager == null || waypointIndex < 0 || waypointIndex >= mapManager.Waypoints.Length)
+			if (eggbotController == null || mapManager == null || waypointIndex < 0 || waypointIndex >= mapManager.CurrentMap.waypoints.Length)
 				return;
 
-			if (waypointIndex == 0 || waypointIndex == mapManager.Waypoints.Length - 1)
+			if (waypointIndex == 0 || waypointIndex == mapManager.CurrentMap.waypoints.Length - 1)
 				return;
 
-			var tile = mapManager.GetWaypoint(waypointIndex);
-			var view = mapManager.GetView(tile);
+			var tile = mapManager.CurrentMap.GetWaypoint(waypointIndex);
+			var view = mapManager.CurrentMap.GetView(tile);
 			if (null == view)
 			{
 				SetCameraSystem(CameraModeRegistry.Follow, true);

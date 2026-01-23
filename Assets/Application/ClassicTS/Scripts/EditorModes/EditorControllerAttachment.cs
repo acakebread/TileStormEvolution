@@ -333,7 +333,7 @@ namespace ClassicTilestorm
 				var tile = tiles[i];
 				positions[i] = tile < 0 || tile >= iMapManager.Count ? Vector3.zero : iMapManager.CurrentMap.TileWorldPosition(tile);
 
-				var hasView = currentMode == Mode.Waypoint && null != iMapManager.GetView(tile);
+				var hasView = currentMode == Mode.Waypoint && null != iMapManager.CurrentMap.GetView(tile);
 				colors[i] = hasView ? new Color(0f, 1f, 1f, 0.5f) : new Color(0f, 0.7f, 1f, 0.7f);
 			}
 

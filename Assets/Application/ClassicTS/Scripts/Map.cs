@@ -82,6 +82,20 @@ namespace ClassicTilestorm
 		// Moved from MapManager: runtime tile instantiation
 		// ─────────────────────────────────────────────
 
+		[NonSerialized] public int[] indices;           // ← added here, NEVER serialized
+
+		// Optional: runtime-only property to make it clearer
+		[JsonIgnore]
+		public bool IsScrambled => indices != null && !IsIdentity(indices);
+
+		private static bool IsIdentity(int[] arr)
+		{
+			if (arr == null) return true;
+			for (int i = 0; i < arr.Length; i++)
+				if (arr[i] != i) return false;
+			return true;
+		}
+
 		public Tile[] CreateRuntimeTiles()
 		{
 			if (tiles == null || tiles.Length != width * height)
@@ -648,6 +662,19 @@ namespace ClassicTilestorm
 				return Array.Empty<MapAttachment>();
 
 			return attachments.Where(a => a.tile == tileIndex).ToArray();
+		}
+
+		public View GetView(int tile)
+		{
+			if (attachments == null || tile < 0 || tile >= tiles.Length)
+				return null;
+
+			foreach (var att in attachments)
+			{
+				if (att is View view && att.tile == tile)
+					return view;
+			}
+			return null;
 		}
 
 		public int CameraHitTile(Camera camera, Vector3 position) => WorldToMapIndex(Map.ScreenToWorld(camera, position));

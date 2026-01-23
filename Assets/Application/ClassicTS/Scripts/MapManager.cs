@@ -26,10 +26,7 @@ namespace ClassicTilestorm
 		int FindAdjacentConsole(int nTile);
 		Transform CurrentTransform { get; }
 
-		int[] Waypoints { set; get; }
 		string GetDefinitionAtIndex(int mapIndex);
-		int GetWaypoint(int index);
-		View GetView(int tile);
 		Bounds GetTileGeometryBounds(int tileIndex);
 
 		bool UpdateTileAt(int x, int z, string id, bool expand = true);
@@ -49,7 +46,6 @@ namespace ClassicTilestorm
 	public class MapManager : MonoBehaviour, IMapManager
 	{
 		private Map currentMap;
-		private int[] indices;
 
 		private Tile[] mapTiles;
 
@@ -62,11 +58,6 @@ namespace ClassicTilestorm
 		public int Height => currentMap?.height ?? 0;
 		public int Count => Width * Height;
 
-		public int[] Indices => indices;
-
-		public int[] Waypoints { get => currentMap?.waypoints; set { if (currentMap != null) currentMap.waypoints = value; } }
-		public int GetWaypoint(int index) => currentMap?.GetWaypoint(index) ?? -1;
-
 		private static MapManager instance;
 		public static Quaternion LocalRotation(int tileIndex, Quaternion worldRotation) => worldRotation;
 		public static Quaternion WorldRotation(int tileIndex, Quaternion localRotation) => localRotation;
@@ -76,33 +67,23 @@ namespace ClassicTilestorm
 
 		public int WorldToMapIndex(Vector3 vec) => currentMap.WorldToMapIndex(vec);
 
-		public View GetView(int tile)
-		{
-			if (currentMap?.attachments == null || tile < 0 || tile >= currentMap.tiles.Length)
-				return null;
-
-			foreach (var att in currentMap.attachments)
-			{
-				if (att is View view && att.tile == tile)
-					return view;
-			}
-			return null;
-		}
-
 		public Tile GetTile(int index)
 		{
-			if (index < 0 || index >= indices.Length || Width <= 0 || mapTiles == null)
+			if (index < 0 || index >= Count || Width <= 0 || mapTiles == null)
 				return default;
 
-			int dataIndex = indices[index];
+			//int dataIndex = indices[index];           ← change to
+			int dataIndex = currentMap?.indices?[index] ?? index;
+
 			return dataIndex >= 0 && dataIndex < mapTiles.Length
 				? mapTiles[dataIndex]
 				: default;
 		}
 
+		public int[] Indices => currentMap.indices;
+
 		private void Awake()
 		{
-			indices = null;
 			mapTiles = null;
 		}
 
@@ -174,7 +155,7 @@ namespace ClassicTilestorm
 
 		public int GetStartTile()
 		{
-			if (Waypoints.Length > 0) return Waypoints[0];
+			if (currentMap.waypoints.Length > 0) return currentMap.waypoints[0];
 
 			for (int i = 0; i < Count; ++i)
 				if (GetTile(i).IsStart) return i;
@@ -185,7 +166,7 @@ namespace ClassicTilestorm
 
 		public int GetEndTile()
 		{
-			if (Waypoints.Length > 0) return Waypoints.Last();
+			if (currentMap.waypoints.Length > 0) return currentMap.waypoints.Last();
 
 			for (int i = 0; i < Count; ++i)
 				if (GetTile(i).IsEnd) return i;
@@ -213,17 +194,23 @@ namespace ClassicTilestorm
 
 		public void Preset()
 		{
-			indices = Enumerable.Range(0, Count).ToArray();
+			currentMap.indices = Enumerable.Range(0, Count).ToArray();
 			UpdateTileObjectNamesAndPositions();
 		}
 
 		public void Scramble()
 		{
+			// assumes currentMap.indices already exists
+			if (currentMap.indices == null)
+				currentMap.indices = Enumerable.Range(0, Count).ToArray();
+
 			const int iterations = 1;
-			for (var n = 0; n < indices.Length * iterations; ++n)
+			for (var n = 0; n < currentMap.indices.Length * iterations; ++n)
 			{
-				var stride = (UnityEngine.Random.value > 0.5f ? Width : 1) * (UnityEngine.Random.value > 0.5f ? 1 : -1);
-				var tileStrip = TileStripHelper.GetTileStrip(this, n % indices.Length, stride, true);
+				var stride = (UnityEngine.Random.value > 0.5f ? Width : 1) *
+							 (UnityEngine.Random.value > 0.5f ? 1 : -1);
+
+				var tileStrip = TileStripHelper.GetTileStrip(this, n % currentMap.indices.Length, stride, true);
 				TileStripHelper.RollStrip(this, tileStrip);
 			}
 			UpdateTileObjectNamesAndPositions();
@@ -231,18 +218,23 @@ namespace ClassicTilestorm
 
 		public void Solve()
 		{
-			indices = Enumerable.Range(0, Count).Select(n => n + (currentMap.solve?[n] ?? 0)).ToArray();
+			//indices = Enumerable.Range(0, Count).Select(n => n + (currentMap.solve?[n] ?? 0)).ToArray();
+			currentMap.indices = Enumerable.Range(0, Count)
+				.Select(n => n + (currentMap.solve?[n] ?? 0))
+				.ToArray();
+
 			UpdateTileObjectNamesAndPositions();
 		}
 
 		private void UpdateTileObjectNamesAndPositions()
 		{
-			Debug.Assert(indices != null && indices.Length == mapTiles?.Length,
+			var perm = currentMap?.indices;
+			Debug.Assert(perm != null && perm.Length == mapTiles?.Length,
 				"mismatched tiles and indices");
 
-			for (int n = 0; n < indices.Length; ++n)
+			for (int n = 0; n < perm.Length; ++n)
 			{
-				var mapTile = mapTiles[indices[n]];
+				var mapTile = mapTiles[perm[n]];
 				var go = mapTile.gameObject;
 				if (go == null) continue;
 
@@ -272,7 +264,7 @@ namespace ClassicTilestorm
 
 			if (start == -1 || end == -1)
 			{
-				Waypoints = generated.ToArray();
+				currentMap.waypoints = generated.ToArray();
 				return;
 			}
 
@@ -302,7 +294,7 @@ namespace ClassicTilestorm
 
 			generated.Add(end);
 
-			Waypoints = generated.ToArray();
+			currentMap.waypoints = generated.ToArray();
 
 			Debug.Log($"Generated {currentMap.waypoints.Length} waypoints.");
 		}
