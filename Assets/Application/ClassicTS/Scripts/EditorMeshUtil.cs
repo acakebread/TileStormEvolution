@@ -72,7 +72,7 @@ namespace ClassicTilestorm
 			ghostMesh.transform.position = Map.SnappedMapPosition(worldPos);
 
 			// === ToDo IMPLEMENTED ===
-			var mapIndex = mapManager.WorldToMapIndex(worldPos);
+			var mapIndex = mapManager.CurrentMap.WorldToMapIndex(worldPos);
 
 			bool isValid = mapIndex != -1; // add extra checks here if your game has more rules
 

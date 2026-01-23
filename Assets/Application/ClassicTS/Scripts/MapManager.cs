@@ -16,18 +16,16 @@ namespace ClassicTilestorm
 
 	public interface IMapManager : IMapData
 	{
+		Transform CurrentTransform { get; }
 		Map CurrentMap { get; }
 
-		int WorldToMapIndex(Vector3 vec);
 		Tile GetTile(int index);
 		int GetStartTile();
 		int GetEndTile();
 
 		int FindAdjacentConsole(int nTile);
-		Transform CurrentTransform { get; }
 
 		string GetDefinitionAtIndex(int mapIndex);
-		Bounds GetTileGeometryBounds(int tileIndex);
 
 		bool UpdateTileAt(int x, int z, string id, bool expand = true);
 		void RefreshAttachmentInstance(MapAttachment attachment);
@@ -39,8 +37,6 @@ namespace ClassicTilestorm
 		void RemoveAllAttachmentsOnTile(int tileIndex);
 
 		void RefreshGeometry();
-
-		Action<IMapManager, bool, Vector3> OnMapEdited { get; set; }
 	}
 
 	public class MapManager : MonoBehaviour, IMapManager
@@ -49,8 +45,6 @@ namespace ClassicTilestorm
 
 		public Map CurrentMap => currentMap;
 		public Transform CurrentTransform => transform;
-
-		public Action<IMapManager, bool, Vector3> OnMapEdited { get; set; }
 
 		public int Width => currentMap?.width ?? 0;
 		public int Height => currentMap?.height ?? 0;
@@ -67,24 +61,9 @@ namespace ClassicTilestorm
 		public static Vector3 WorldPosition(int tileIndex, Vector3 localPosition)
 			=> instance == null || tileIndex < 0 ? localPosition : localPosition + instance.currentMap.TileWorldPosition(tileIndex);
 
-		public int WorldToMapIndex(Vector3 vec) => currentMap?.WorldToMapIndex(vec) ?? -1;
-
-		public Tile GetTile(int index)
-		{
-			if (index < 0 || index >= Count || Width <= 0 || currentMap == null)
-				return default;
-
-			int dataIndex = currentMap?.indices?[index] ?? index;
-
-			return currentMap.GetRuntimeTile(dataIndex);
-		}
+		public Tile GetTile(int index) => null != currentMap ? currentMap.GetTile(index) : default;
 
 		public int[] Indices => currentMap?.indices;
-
-		private void Awake()
-		{
-			// no need for mapTiles = null anymore
-		}
 
 		private void OnDestroy()
 		{
@@ -354,7 +333,7 @@ namespace ClassicTilestorm
 
 			RefreshGeometry();  // rebuilds runtime tiles
 
-			OnMapEdited?.Invoke(this, false, Vector3.zero);
+			currentMap.OnMapEdited?.Invoke(currentMap, false, Vector3.zero);
 			return true;
 		}
 
@@ -446,7 +425,7 @@ namespace ClassicTilestorm
 
 			currentMap.Consolidate();
 
-			OnMapEdited?.Invoke(this, boundsChanged, originDelta);
+			currentMap.OnMapEdited?.Invoke(currentMap, boundsChanged, originDelta);
 			return true;
 		}
 
@@ -476,14 +455,14 @@ namespace ClassicTilestorm
 		{
 			currentMap?.AddAttachment(attachment);
 			currentMap?.RefreshAttachmentInstance(attachment);
-			OnMapEdited?.Invoke(this, false, Vector3.zero);
+			currentMap?.OnMapEdited?.Invoke(currentMap, false, Vector3.zero);
 		}
 
 		public bool RemoveAttachment(MapAttachment attachment)
 		{
 			bool removed = currentMap?.RemoveAttachment(attachment) ?? false;
 			if (removed)
-				OnMapEdited?.Invoke(this, false, Vector3.zero);
+				currentMap?.OnMapEdited?.Invoke(currentMap, false, Vector3.zero);
 			return removed;
 		}
 
@@ -498,49 +477,7 @@ namespace ClassicTilestorm
 		public void RemoveAllAttachmentsOnTile(int tileIndex)
 		{
 			currentMap?.RemoveAllAttachmentsOnTile(tileIndex);
-			OnMapEdited?.Invoke(this, false, Vector3.zero);
-		}
-
-		public Bounds GetTileGeometryBounds(int tileIndex)
-		{
-			if (tileIndex < 0 || tileIndex >= Count)
-			{
-				Vector3 center = currentMap?.TileWorldPosition(tileIndex) ?? Vector3.zero;
-				return new Bounds(center + Vector3.up * 0.5f, new Vector3(1f, 1f, 1f));
-			}
-
-			Vector3 tileCenter = currentMap.TileWorldPosition(tileIndex);
-			const float horizontalThreshold = 0.7f;
-
-			Bounds bestBounds = default;
-			float bestTopY = tileCenter.y;
-			bool foundAny = false;
-
-			var tile = currentMap.GetRuntimeTile(tileIndex);
-			var tileTransform = tile.gameObject?.transform;
-
-			if (tileTransform != null)
-			{
-				foreach (Renderer renderer in tileTransform.GetComponentsInChildren<Renderer>(true))
-				{
-					if (!renderer.gameObject.activeInHierarchy) continue;
-
-					Bounds bounds = renderer.bounds;
-					Vector3 boundsCenterXZ = new Vector3(bounds.center.x, tileCenter.y, bounds.center.z);
-
-					if (Vector3.Distance(boundsCenterXZ, tileCenter) < horizontalThreshold)
-					{
-						if (bounds.max.y > bestTopY)
-						{
-							bestTopY = bounds.max.y;
-							bestBounds = bounds;
-							foundAny = true;
-						}
-					}
-				}
-			}
-
-			return foundAny ? bestBounds : new Bounds(tileCenter + Vector3.up * 0.25f, new Vector3(1f, 1f, 1f));
+			currentMap?.OnMapEdited?.Invoke(currentMap, false, Vector3.zero);
 		}
 
 		public static MapManager Instantiate(Map map, Transform parent = null)

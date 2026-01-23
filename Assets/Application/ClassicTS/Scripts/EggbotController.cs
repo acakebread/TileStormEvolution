@@ -53,13 +53,13 @@ namespace ClassicTilestorm
 			var yaw = map.CurrentMap.waypoints?.Length > 1 ? Navigation.DirToAngle(Navigation.NavToDest(map, map.CurrentMap.waypoints[0], map.CurrentMap.waypoints[1])) : 0f;
 			transform.rotation = Quaternion.Euler(0f, yaw, 0f);
 
-			map.OnMapEdited += HandleMapEdited;// Subscribe to map changes
-			_unsubscribeAction = () => map.OnMapEdited -= HandleMapEdited;// Capture the map instance in a closure
+			map.CurrentMap.OnMapEdited += HandleMapEdited;// Subscribe to map changes
+			_unsubscribeAction = () => map.CurrentMap.OnMapEdited -= HandleMapEdited;// Capture the map instance in a closure
 		}
 
-		private void HandleMapEdited(IMapManager mapManager, bool resized, Vector3 originDelta)
+		private void HandleMapEdited(Map map, bool resized, Vector3 originDelta)
 		{
-			if (resized) OnMapOriginShift(mapManager, originDelta);
+			if (resized) OnMapOriginShift(map, originDelta);
 		}
 
 		private void SetState(State state, float duration = 0f)
@@ -213,7 +213,7 @@ namespace ClassicTilestorm
 		/// Updates currentTile and snaps position to new grid.
 		/// </summary>
 		/// <param name="originDelta">World-space shift of the map origin (in tile units)</param>
-		private void OnMapOriginShift(IMapManager map, Vector3 originDelta)
+		private void OnMapOriginShift(Map map, Vector3 originDelta)
 		{
 			if (originDelta == Vector3.zero) return;
 
@@ -235,20 +235,18 @@ namespace ClassicTilestorm
 			int newX = oldX + deltaX;
 			int newZ = oldZ + deltaZ;
 
-			var mapManager = map;
-
-			if (newX < 0 || newX >= mapManager.Width || newZ < 0 || newZ >= mapManager.Height)
+			if (newX < 0 || newX >= map.width || newZ < 0 || newZ >= map.height)
 			{
 				// Eggbot was cropped out — snap to nearest valid tile or start?
-				currentTile = mapManager.GetStartTile();
+				currentTile = map.GetStartTile();
 			}
 			else
 			{
-				currentTile = newZ * mapManager.Width + newX;
+				currentTile = newZ * map.width + newX;
 			}
 
 			// Snap position to new grid
-			transform.position = mapManager.CurrentMap.TileWorldPosition(currentTile);
+			transform.position = map.TileWorldPosition(currentTile);
 
 			// Optional: preserve sub-tile offset (e.g. during movement)
 			// But for editor, we want clean snap

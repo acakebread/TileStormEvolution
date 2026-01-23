@@ -45,7 +45,7 @@ namespace ClassicTilestorm
 		public void Initialise(MapManager map)
 		{
 			mapManager = map;
-			mapManager.OnMapEdited += HandleMapEdited;// Subscribe to map changes
+			mapManager.CurrentMap.OnMapEdited += HandleMapEdited;// Subscribe to map changes
 			if (!isActiveAndEnabled) return;
 			UpdateGridLines(gridEnabled);
 			activeMode?.OnMapLoaded();
@@ -96,7 +96,7 @@ namespace ClassicTilestorm
 		private void OnDestroy()
 		{
 			GridLinesUtil.Hide();
-			if (null != mapManager) mapManager.OnMapEdited -= HandleMapEdited;
+			if (null != mapManager) mapManager.CurrentMap.OnMapEdited -= HandleMapEdited;
 			viewMode?.OnDestroy();
 			paintMode?.OnDestroy();
 			attachmentMode?.OnDestroy();
@@ -142,12 +142,12 @@ namespace ClassicTilestorm
 		// Map actions
 		// ===================================================================
 
-		private void HandleMapEdited(IMapManager mapManager,bool resized, Vector3 originDelta)
+		private void HandleMapEdited(Map map,bool resized, Vector3 originDelta)
 		{
-			if (mapManager == null) return;
-			ResourceManager.ApplyMapChanges(mapManager.CurrentMap);
+			if (map == null) return;
+			ResourceManager.ApplyMapChanges(map);
 			if (!resized) return;
-			if (gridEnabled) GridLinesUtil.UpdateSize(mapManager.Width, mapManager.Height);
+			if (gridEnabled) GridLinesUtil.UpdateSize(map.width, map.height);
 			if (Vector3.zero == originDelta) return;
 			if (!TryGetComponent<MainCameraController>(out var controller)) return;
 			if (controller.activeSystem is GameCameraEditor editorCam)

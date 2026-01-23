@@ -63,7 +63,7 @@ namespace ClassicTilestorm
 			// Cycle on left-click if on the current tile
 			if (!erase)
 			{
-				var mapIndex = iMapManager.WorldToMapIndex(worldPos);
+				var mapIndex = iMapManager.CurrentMap.WorldToMapIndex(worldPos);
 				if (mapIndex != -1)
 				{
 					var currentHash = iMapManager.GetDefinitionAtIndex(mapIndex);

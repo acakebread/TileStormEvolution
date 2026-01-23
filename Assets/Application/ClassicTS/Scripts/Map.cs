@@ -5,7 +5,6 @@ using UnityEngine;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using MassiveHadronLtd;
-using Unity.Mathematics;
 
 namespace ClassicTilestorm
 {
@@ -53,6 +52,7 @@ namespace ClassicTilestorm
 
 		public bool IsValidTile(int index) => index >= 0 && index < width * height;
 
+		public Action<Map, bool, Vector3> OnMapEdited { get; set; }
 		public static Transform parentTransform;
 
 		public const int MAP_MAX_SIZE = 64;
@@ -164,6 +164,16 @@ namespace ClassicTilestorm
 			if (runtimeTiles == null || index < 0 || index >= runtimeTiles.Length)
 				return default;
 			return runtimeTiles[index];
+		}
+
+		public Tile GetTile(int index)
+		{
+			if (index < 0 || index >= width * height || width <= 0)
+				return default;
+
+			int dataIndex = indices?[index] ?? index;
+
+			return GetRuntimeTile(dataIndex);
 		}
 
 		public int GetWaypoint(int index)
@@ -729,6 +739,59 @@ namespace ClassicTilestorm
 			var ray = new Ray(camera.transform.position, direction);
 			RayToWorld(ray, out Vector3 result);
 			return result;
+		}
+
+		public Bounds GetTileGeometryBounds(int tileIndex)
+		{
+			if (tileIndex < 0 || tileIndex >= width * height)
+			{
+				Vector3 center = TileWorldPosition(tileIndex);
+				return new Bounds(center + Vector3.up * 0.5f, new Vector3(1f, 1f, 1f));
+			}
+
+			Vector3 tileCenter = TileWorldPosition(tileIndex);
+			const float horizontalThreshold = 0.7f;
+
+			Bounds bestBounds = default;
+			float bestTopY = tileCenter.y;
+			bool foundAny = false;
+
+			var tile = GetRuntimeTile(tileIndex);
+			var tileTransform = tile.gameObject?.transform;
+
+			if (tileTransform != null)
+			{
+				foreach (Renderer renderer in tileTransform.GetComponentsInChildren<Renderer>(true))
+				{
+					if (!renderer.gameObject.activeInHierarchy) continue;
+
+					Bounds bounds = renderer.bounds;
+					Vector3 boundsCenterXZ = new Vector3(bounds.center.x, tileCenter.y, bounds.center.z);
+
+					if (Vector3.Distance(boundsCenterXZ, tileCenter) < horizontalThreshold)
+					{
+						if (bounds.max.y > bestTopY)
+						{
+							bestTopY = bounds.max.y;
+							bestBounds = bounds;
+							foundAny = true;
+						}
+					}
+				}
+			}
+
+			return foundAny ? bestBounds : new Bounds(tileCenter + Vector3.up * 0.25f, new Vector3(1f, 1f, 1f));
+		}
+
+		public int GetStartTile()
+		{
+			if (waypoints?.Length > 0) return waypoints[0];
+
+			for (int i = 0; i < width* height; ++i)
+				if (GetTile(i).IsStart) return i;
+
+			Debug.LogError("No start tile found!");
+			return -1;
 		}
 	}
 }
