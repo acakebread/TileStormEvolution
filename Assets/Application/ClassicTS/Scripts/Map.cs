@@ -349,7 +349,7 @@ namespace ClassicTilestorm
 				RemoveAttachment(att);
 		}
 
-		[DoNotNormalize] public Waypoint[] waypointAttachments => GetWaypointAttachments() ?? Array.Empty<Waypoint>();
+		[JsonIgnore] public Waypoint[] waypointAttachments => GetWaypointAttachments() ?? Array.Empty<Waypoint>();
 
 		public Waypoint[] GetWaypointAttachments()
 		{
