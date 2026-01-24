@@ -52,6 +52,9 @@ namespace ClassicTilestorm
 
 		Vector3 LocalPosition(int tileIndex, Vector3 worldPosition);
 		Vector3 WorldPosition(int tileIndex, Vector3 localPosition);
+
+		// In IMap interface
+		MapAttachment[] GetAttachments(int? tileIndex = null, Type[] filterTypes = null);
 	}
 
 	[Serializable]
@@ -101,13 +104,13 @@ namespace ClassicTilestorm
 		public Action<Map, bool, Vector3> OnMapEdited { get; set; }
 		public static Transform parentTransform;
 
-		public int Width => width;
-		public int Height => height;
-		public int Count => Width * Height;
-		public int[] Indices => indices;
-		public int[] Waypoints { get => waypoints; set => waypoints = value; }
-		public MapAttachment[] Attachments { get => attachments; set => attachments = value; }
-		public string Music => music;
+		[JsonIgnore] public int Width => width;
+		[JsonIgnore] public int Height => height;
+		[JsonIgnore] public int Count => Width * Height;
+		[JsonIgnore] public int[] Indices => indices;
+		[JsonIgnore] public int[] Waypoints { get => waypoints; set => waypoints = value; }
+		[JsonIgnore] public MapAttachment[] Attachments { get => attachments; set => attachments = value; }
+		[JsonIgnore] public string Music => music;
 
 		public const int MAP_MAX_SIZE = 64;
 
@@ -230,6 +233,20 @@ namespace ClassicTilestorm
 		// ─────────────────────────────────────────────
 		// Attachment runtime state (unchanged)
 		// ─────────────────────────────────────────────
+
+		// In Map class
+		public MapAttachment[] GetAttachments(int? tileIndex = null, Type[] filterTypes = null)
+		{
+			var source = AllAttachments.AsEnumerable();
+
+			if (tileIndex.HasValue)
+				source = source.Where(a => a?.tile == tileIndex.Value);
+
+			if (filterTypes != null && filterTypes.Length > 0)
+				source = source.Where(a => a != null && filterTypes.Contains(a.GetType()));
+
+			return source.ToArray();
+		}
 
 		[NonSerialized] private readonly Dictionary<MapAttachment, GameObject> attachmentGameObjects = new();
 
@@ -454,6 +471,7 @@ namespace ClassicTilestorm
 			}
 		}
 
+		[JsonIgnore]
 		public MapAttachment[] AllAttachments
 		{
 			get
@@ -525,35 +543,6 @@ namespace ClassicTilestorm
 
 			return ResourceManager.FindOrCreateDefaultTile();
 		}
-
-		//private bool Consolidate()
-		//{
-		//	if (tiles == null || tiles.Length == 0) return false;
-
-		//	var defaultDef = ResourceManager.FindOrCreateDefaultTile();
-		//	var defaultHash = defaultDef.hashid;
-
-		//	var mapDefinitions = tiles.Select(idx => (idx >= 0 && idx < table.Length) ? table[idx] : null).ToArray();
-
-		//	for (int i = 0; i < mapDefinitions.Length; i++)
-		//	{
-		//		if (mapDefinitions[i] == null)
-		//			mapDefinitions[i] = defaultHash;
-		//	}
-
-		//	var newFrequencyTable = mapDefinitions.ToFrequencySortedTable();
-
-		//	bool changed = !table.SequenceEqual(newFrequencyTable);
-
-		//	if (changed)
-		//	{
-		//		table = newFrequencyTable;
-		//		tiles = mapDefinitions.Select(hash => Array.IndexOf(table, hash)).ToArray();
-		//	}
-
-		//	if (changed) Debug.Log($"{name} consolidated (table updated)");
-		//	return changed;
-		//}
 
 		private bool Consolidate()
 		{
