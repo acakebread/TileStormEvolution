@@ -122,7 +122,7 @@ namespace ClassicTilestorm
 					return null;
 				}
 
-				DatabaseDataConverter.LegacyDataConverter(data);//remove when databases are converted
+				//DatabaseDataConverter.LegacyDataConverter(data);//remove when databases are converted
 
 				return data;
 			}
