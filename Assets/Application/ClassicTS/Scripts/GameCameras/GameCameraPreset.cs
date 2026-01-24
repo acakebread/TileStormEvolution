@@ -40,5 +40,12 @@ namespace ClassicTilestorm
 				camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
 			camera.fieldOfView = fieldOfView;
 		}
+
+		public override void OnMapOriginShift(Vector3 delta)
+		{
+			base.OnMapOriginShift(delta);
+			origin += delta;
+			target += delta;
+		}
 	}
 }

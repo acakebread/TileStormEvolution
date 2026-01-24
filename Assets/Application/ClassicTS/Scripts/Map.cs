@@ -132,9 +132,49 @@ namespace ClassicTilestorm
 		// slie (Runtime) tile instances (not serialized)
 		// ─────────────────────────────────────────────
 
-		[JsonIgnore] private Tile[] slide;
-		[JsonIgnore] private int slideCount => slide?.Length ?? 0;
 		[JsonIgnore] private int[] indices;// runtime permutation, never serialized
+
+		[JsonIgnore] private Tile[] _slide; // private backing field (never serialized)
+		[JsonIgnore] public Tile[] slide
+		{
+			get
+			{
+				if (_slide != null)
+					return _slide;
+
+				if (tiles == null || tiles.Length != width * height)
+				{
+					DebugUtil.LogError($"Invalid tile map data! length={(tiles?.Length ?? -1)}, expected={width * height}");
+					return Array.Empty<Tile>();
+				}
+
+				_slide = new Tile[width * height];
+
+				string mapName = name ?? "Unnamed map";
+
+				for (int n = 0; n < tiles.Length; n++)
+				{
+					int idx = tiles[n];
+					string hashId = null;
+
+					if (idx >= 0 && table != null && idx < table.Length)
+						hashId = table[idx];
+					else if (idx != -1)
+						DebugUtil.LogWarning($"Out-of-range table index {idx} at tile {n} (map: {mapName})");
+
+					var def = ResourceManager.ResolveDefinition(hashId, out bool hadError);
+
+					if (hadError)
+						Debug.LogWarning($"Failed to resolve tile definition at tile {n} (hash: '{hashId ?? "<null>"}') — using default");
+
+					_slide[n] = new Tile(def, parent ?? this.parent, TileWorldPosition(n));
+				}
+
+				return _slide;
+			}
+		}
+
+		[JsonIgnore] public int slideCount => slide.Length;  // now safe and simple (always >= 0)
 
 		public Tile GetTile(int index)
 		{
@@ -154,42 +194,6 @@ namespace ClassicTilestorm
 			return GetSeedTile(mapIndex).definitionId;
 		}
 
-		private Tile[] CreateOrGetSeedTiles(Transform parent = null)
-		{
-			if (slide != null)
-				return slide;
-
-			if (tiles == null || tiles.Length != width * height)
-			{
-				DebugUtil.LogError($"Invalid tile map data! length={(tiles?.Length ?? -1)}, expected={width * height}");
-				return null;
-			}
-
-			slide = new Tile[width * height];
-
-			string mapName = name ?? "Unnamed map";
-
-			for (int n = 0; n < tiles.Length; n++)
-			{
-				int idx = tiles[n];
-				string hashId = null;
-
-				if (idx >= 0 && table != null && idx < table.Length)
-					hashId = table[idx];
-				else if (idx != -1)
-					DebugUtil.LogWarning($"Out-of-range table index {idx} at tile {n} (map: {mapName})");
-
-				var def = ResourceManager.ResolveDefinition(hashId, out bool hadError);
-
-				if (hadError)
-					Debug.LogWarning($"Failed to resolve tile definition at tile {n} (hash: '{hashId ?? "<null>"}') — using default");
-
-				slide[n] = new Tile(def, parent ?? this.parent, TileWorldPosition(n));
-			}
-
-			return slide;
-		}
-
 		private void DestroyAllTiles()
 		{
 			if (slide == null)
@@ -198,7 +202,7 @@ namespace ClassicTilestorm
 			foreach (var tile in slide)
 				tile.Destroy();
 
-			slide = null;
+			_slide = null;
 		}
 
 		private Tile GetSeedTile(int seedIndex)
@@ -622,6 +626,7 @@ namespace ClassicTilestorm
 			height = newHeight;
 			tiles = newTiles;
 			solve = newSolve;
+			indices = Enumerable.Range(0, width * height).ToArray();
 
 			return true;
 		}
@@ -839,11 +844,19 @@ namespace ClassicTilestorm
 			}
 		}
 
-		public void RefreshGeometry()
+		public void RecreateTiles()
 		{
+			// Clear old tiles first (safe even if null)
 			DestroyAllTiles();
 
-			CreateOrGetSeedTiles(parent);
+			// Force lazy recreation on next access
+			// (or create immediately if you want to ensure it's ready now)
+			var _ = slide;  // this triggers creation
+		}
+
+		public void RefreshGeometry()
+		{
+			RecreateTiles();
 
 			if (slideCount == 0)
 			{
@@ -955,8 +968,7 @@ namespace ClassicTilestorm
 			if (boundsChanged)
 			{
 				// Full rebuild (map size or content bounds changed)
-				DestroyAllTiles();
-				CreateOrGetSeedTiles(parent);
+				RecreateTiles();
 				RefreshAttachments(GetAttachments());
 			}
 			else
@@ -1049,8 +1061,6 @@ namespace ClassicTilestorm
 		public void Initialise(Transform parent = null)
 		{
 			this.parent = parent;
-
-			CreateOrGetSeedTiles(this.parent);
 
 			if (slideCount == 0)
 			{

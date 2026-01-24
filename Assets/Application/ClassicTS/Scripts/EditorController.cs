@@ -142,7 +142,7 @@ namespace ClassicTilestorm
 		// Map actions
 		// ===================================================================
 
-		private void HandleMapEdited(Map map,bool resized, Vector3 originDelta)
+		private void HandleMapEdited(Map map, bool resized, Vector3 originDelta)
 		{
 			if (map == null) return;
 			ResourceManager.ApplyMapChanges(map);
@@ -150,8 +150,11 @@ namespace ClassicTilestorm
 			if (gridEnabled) GridLinesUtil.UpdateSize(map.width, map.height);
 			if (Vector3.zero == originDelta) return;
 			if (!TryGetComponent<MainCameraController>(out var controller)) return;
-			if (controller.activeSystem is GameCameraEditor editorCam)
-				editorCam.camera.transform.position += originDelta;
+
+		//	controller.AdjustEditorCameraForMapShift(originDelta);
+
+			//if (controller.activeSystem is GameCameraEditor editorCam)
+			//	editorCam.camera.transform.position += originDelta;
 		}
 
 		// ===================================================================

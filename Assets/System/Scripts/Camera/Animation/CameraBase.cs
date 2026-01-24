@@ -43,5 +43,13 @@ namespace MassiveHadronLtd
 			set { if (null != controller) controller.enabled = value; }
 		}
 		public PostProcessingCameraController controller => camera?.GetComponentInChildren<PostProcessingCameraController>(true);
+
+		public virtual void OnMapOriginShift(Vector3 delta)
+		{
+			// Default: do nothing (for cameras that don't need adjustment)
+			// Or shift iorigin/itarget if they exist
+			iorigin += delta;
+			itarget += delta;
+		}
 	}
 }

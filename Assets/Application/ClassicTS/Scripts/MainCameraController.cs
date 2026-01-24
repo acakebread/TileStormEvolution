@@ -42,15 +42,16 @@ namespace ClassicTilestorm
 			gestureController.OnMapUpdated += CheckDisableDrag;
 		}
 
-		//ToDo potentially make generic for all cameras
-		public void AdjustEditorCameraForMapShift(Vector3 delta)
-		{
-			if (activeSystem is GameCameraEditor editorCam)
-			{
-				editorCam.iorigin += delta;
-				editorCam.itarget += delta;
-			}
-		}
+		////ToDo potentially make generic for all cameras
+		//public void AdjustEditorCameraForMapShift(Vector3 delta)
+		//{
+		//	if (activeSystem is GameCameraEditor editorCam)
+		//	{
+		//		editorCam.camera.transform.position += delta;
+		//		//editorCam.iorigin += delta;
+		//		//editorCam.itarget += delta;
+		//	}
+		//}
 
 		private void CheckDisableDrag(IMapPlay imap)
 		{
@@ -66,7 +67,7 @@ namespace ClassicTilestorm
 
 		private void OnWaypointGesturesEnable(bool value) => GestureControllerEnabled = value;
 
-		public void Initialise(IMapPlay map, EggbotController eggbot)
+		public void Initialise(IMapEdit map, EggbotController eggbot)
 		{
 			iMap = map ?? throw new ArgumentNullException(nameof(map));
 			gestureController.Initialise(Camera.main, iMap);
@@ -85,6 +86,14 @@ namespace ClassicTilestorm
 
 			if (postProcessingController != null && eggbotController != null)
 				postProcessingController.dofTarget = eggbotController.transform;
+
+			map.OnMapEdited += (map, resized, delta) =>
+			{
+				if (resized)
+				{
+					AdjustAllCamerasForMapShift(delta);
+				}
+			};
 		}
 
 		protected override (Vector3 srcPos, Vector3 dstPos) GetInitialCameraPositions()
@@ -204,10 +213,10 @@ namespace ClassicTilestorm
 
 			// Has camera settings (View)
 			var presetCam = (GameCameraPreset)CameraSystems[CameraModeRegistry.Preset];
-			var tilePos = iMap.TileWorldPosition(tile);
+			//var tilePos = iMap.TileWorldPosition(tile);
 
-			presetCam.originFn = () => view.VSrc + tilePos;
-			presetCam.targetFn = () => view.VDst + tilePos;
+			presetCam.originFn = () => view.VSrc + iMap.TileWorldPosition(iMap.GetWaypoint(waypointIndex).tile);
+			presetCam.targetFn = () => view.VDst + iMap.TileWorldPosition(iMap.GetWaypoint(waypointIndex).tile);
 
 			SetCameraSystem(CameraModeRegistry.Preset, true);
 			OnWaypointReachedForGestures?.Invoke(true);

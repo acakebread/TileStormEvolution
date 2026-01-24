@@ -149,5 +149,10 @@ namespace ClassicTilestorm
 			iorigin = Vector3.Lerp(iorigin, localOrigin, interpolate);
 			itarget = Vector3.Lerp(itarget, localTarget, interpolate);
 		}
+
+		public override void OnMapOriginShift(Vector3 delta)
+		{
+			base.OnMapOriginShift(delta);
+		}
 	}
 }

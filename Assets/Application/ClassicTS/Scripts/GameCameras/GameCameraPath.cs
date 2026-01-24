@@ -308,5 +308,10 @@ namespace ClassicTilestorm
 			}
 			return position;
 		}
+
+		public override void OnMapOriginShift(Vector3 delta)
+		{
+			base.OnMapOriginShift(delta);
+		}
 	}
 }
