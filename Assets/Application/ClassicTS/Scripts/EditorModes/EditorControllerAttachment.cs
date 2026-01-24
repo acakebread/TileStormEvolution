@@ -220,7 +220,7 @@ namespace ClassicTilestorm
 			foreach (var att in selection)
 			{
 				att.tile = pendingTile;
-				iMap.RefreshAttachmentInstance(att);
+				iMap.RefreshAttachment(att);
 			}
 			HandleDragInput();
 			RebuildMarkers();

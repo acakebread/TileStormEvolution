@@ -22,7 +22,7 @@ namespace ClassicTilestorm
 			{
 				emitter.Position = map.LocalPosition(emitter.tile, newWorldPos);
 				emitter.Rotation = map.LocalRotation(emitter.tile, newWorldRot);
-				map.RefreshAttachmentInstance(emitter);
+				map.RefreshAttachment(emitter);
 				EditorPrimitiveUtil.UpdateCone(newWorldPos, emitter.Rotation, emitter.Distance, emitter.Apex);
 			}
 		}

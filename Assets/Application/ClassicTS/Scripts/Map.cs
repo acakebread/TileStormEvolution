@@ -30,11 +30,12 @@ namespace ClassicTilestorm
 		int GetEndTile();
 		int FindAdjacentConsole(int _);
 
-		MapAttachment[] Attachments { get; set; }//including 'virtual' Waypoints
+		MapAttachment[] GetAttachments(int? tileIndex = null, Type[] filterTypes = null);//filtered heper
+		MapAttachment[] Attachments { get; set; }//complete array including 'virtual' Waypoints
 		void AddAttachment(MapAttachment _);
 		bool RemoveAttachment(MapAttachment _);
 		bool RemoveAttachments(MapAttachment[] _);
-		void RefreshAttachmentInstance(MapAttachment _);
+		void RefreshAttachment(MapAttachment _);
 
 		int CameraHitTile(Camera camera, Vector3 position);
 		Bounds GetTileGeometryBounds(int _);
@@ -45,9 +46,6 @@ namespace ClassicTilestorm
 
 		Vector3 LocalPosition(int tileIndex, Vector3 worldPosition);
 		Vector3 WorldPosition(int tileIndex, Vector3 localPosition);
-
-		// In IMap interface
-		MapAttachment[] GetAttachments(int? tileIndex = null, Type[] filterTypes = null);
 	}
 
 	[Serializable]
@@ -300,7 +298,7 @@ namespace ClassicTilestorm
 
 		[NonSerialized] private readonly Dictionary<MapAttachment, GameObject> attachmentGameObjects = new();
 
-		public void RefreshAttachmentInstance(MapAttachment attachment)
+		public void RefreshAttachment(MapAttachment attachment)
 		{
 			if (attachment == null) return;
 
@@ -383,7 +381,7 @@ namespace ClassicTilestorm
 			}
 
 			// ── side effects ───────────────────────────────────────────
-			RefreshAttachmentInstance(attachment);
+			RefreshAttachment(attachment);
 			OnMapEdited?.Invoke(this, false, Vector3.zero);
 		}
 
@@ -467,7 +465,7 @@ namespace ClassicTilestorm
 		private void RefreshAllAttachmentInstances()
 		{
 			foreach (var att in attachments ?? Array.Empty<MapAttachment>())
-				RefreshAttachmentInstance(att);
+				RefreshAttachment(att);
 		}
 
 		private void RefreshAttachmentsOnTile(int tileIndex)
@@ -475,7 +473,7 @@ namespace ClassicTilestorm
 			if (attachments == null) return;
 			foreach (var att in attachments)
 				if (att?.tile == tileIndex)
-					RefreshAttachmentInstance(att);
+					RefreshAttachment(att);
 		}
 
 		private void DestroyAttachmentInstance(MapAttachment attachment)
