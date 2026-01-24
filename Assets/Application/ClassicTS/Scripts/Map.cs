@@ -526,33 +526,84 @@ namespace ClassicTilestorm
 			return ResourceManager.FindOrCreateDefaultTile();
 		}
 
+		//private bool Consolidate()
+		//{
+		//	if (tiles == null || tiles.Length == 0) return false;
+
+		//	var defaultDef = ResourceManager.FindOrCreateDefaultTile();
+		//	var defaultHash = defaultDef.hashid;
+
+		//	var mapDefinitions = tiles.Select(idx => (idx >= 0 && idx < table.Length) ? table[idx] : null).ToArray();
+
+		//	for (int i = 0; i < mapDefinitions.Length; i++)
+		//	{
+		//		if (mapDefinitions[i] == null)
+		//			mapDefinitions[i] = defaultHash;
+		//	}
+
+		//	var newFrequencyTable = mapDefinitions.ToFrequencySortedTable();
+
+		//	bool changed = !table.SequenceEqual(newFrequencyTable);
+
+		//	if (changed)
+		//	{
+		//		table = newFrequencyTable;
+		//		tiles = mapDefinitions.Select(hash => Array.IndexOf(table, hash)).ToArray();
+		//	}
+
+		//	if (changed) Debug.Log($"{name} consolidated (table updated)");
+		//	return changed;
+		//}
+
 		private bool Consolidate()
 		{
-			if (tiles == null || tiles.Length == 0) return false;
+			if (tiles == null || tiles.Length == 0)
+				return false;
 
-			var defaultDef = ResourceManager.FindOrCreateDefaultTile();
-			var defaultHash = defaultDef.hashid;
+			var defaultHash = ResourceManager.FindOrCreateDefaultTile().hashid;
 
-			var mapDefinitions = tiles.Select(idx => (idx >= 0 && idx < table.Length) ? table[idx] : null).ToArray();
+			// Step 1: build the current hashes with default fallback
+			var currentHashes = tiles.Select(idx =>
+				idx >= 0 && idx < table.Length ? table[idx] : defaultHash
+			).ToArray();
 
-			for (int i = 0; i < mapDefinitions.Length; i++)
+			// Step 2: compute what the sorted table *should* be
+			var newTable = currentHashes.ToFrequencySortedTable();
+
+			// ── Capture original state BEFORE any mutation ─────────────────────────────
+			string[] originalTable = table;                     // reference is fine
+			int originalSize = originalTable?.Length ?? 0;
+			int newSize = newTable.Length;
+
+			bool sizeChanged = newSize != originalSize;
+			bool orderChanged = !sizeChanged && !originalTable.SequenceEqual(newTable);
+
+			bool anythingChanged = sizeChanged || orderChanged;
+
+			if (anythingChanged)
 			{
-				if (mapDefinitions[i] == null)
-					mapDefinitions[i] = defaultHash;
+				// Apply changes
+				table = newTable;
+				tiles = currentHashes.Select(h => Array.IndexOf(table, h)).ToArray();
+
+				// Logging – follow your exact requested rules
+				if (sizeChanged)
+				{
+					string direction = newSize > originalSize ? "increased" : "reduced";
+					Debug.Log($"{name} consolidated: table size {direction} {originalSize} → {newSize}");
+				}
+				else if (orderChanged)
+				{
+					Debug.Log($"{name} consolidated: table order changed (same size: {newSize})");
+				}
 			}
+			// else → silent (or uncomment for debug)
+			// else
+			// {
+			//     Debug.Log($"{name} consolidation: no change needed");
+			// }
 
-			var newFrequencyTable = mapDefinitions.ToFrequencySortedTable();
-
-			bool changed = !table.SequenceEqual(newFrequencyTable);
-
-			if (changed)
-			{
-				table = newFrequencyTable;
-				tiles = mapDefinitions.Select(hash => Array.IndexOf(table, hash)).ToArray();
-			}
-
-			if (changed) Debug.Log($"{name} consolidated (table updated)");
-			return changed;
+			return anythingChanged;
 		}
 
 		private bool RepositionAndResize(int newWidth, int newHeight, int offsetX, int offsetZ)
@@ -654,7 +705,7 @@ namespace ClassicTilestorm
 			return true;
 		}
 
-		private bool CropToContent()
+		private bool CropToContent(bool consolidate = false)
 		{
 			var (minX, minZ, maxX, maxZ) = GetContentBounds();
 			if (maxX < 0) return false;
@@ -676,7 +727,11 @@ namespace ClassicTilestorm
 				resized = RepositionAndResize(newWidth, newHeight, offsetX, offsetZ);
 			}
 
-			bool consolidated = Consolidate();
+			bool consolidated = false;
+			if (consolidate)
+			{
+				consolidated = Consolidate();
+			}
 
 			return resized || consolidated;
 		}
@@ -736,7 +791,7 @@ namespace ClassicTilestorm
 				table = table != null ? (string[])table.Clone() : Array.Empty<string>()
 			};
 
-			bool cropped = copy.CropToContent();
+			bool cropped = copy.CropToContent(true);
 
 			if (cropped)
 				Debug.Log($"[Export] Map '{copy.name}' auto-cropped to {copy.width}x{copy.height}");
@@ -912,7 +967,7 @@ namespace ClassicTilestorm
 			tiles[index] = GetOrAddTableIndex(id);
 
 			RefreshAttachmentsOnTile(index);
-			Consolidate();
+			//Consolidate();//no need to do this - invoked only when seaved
 
 			RefreshGeometry();  // rebuilds runtime tiles
 
@@ -1000,7 +1055,7 @@ namespace ClassicTilestorm
 				RefreshAttachmentsOnTile(index);
 			}
 
-			Consolidate();
+			//Consolidate();//no need to do this - invoked only when seaved
 
 			OnMapEdited?.Invoke(this, boundsChanged, originDelta);
 			return true;
