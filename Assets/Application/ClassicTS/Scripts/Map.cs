@@ -400,60 +400,28 @@ namespace ClassicTilestorm
 			if (attachmentArray == null || attachmentArray.Length == 0)
 				return false;
 
-			// Group by tile to avoid duplicates & make waypoint removal safe
-			var tilesToRemove = new HashSet<int>();
-
-			foreach (var att in attachmentArray)
-			{
-				if (att != null)
-					tilesToRemove.Add(att.tile);
-			}
-
 			bool anyRemoved = false;
 
-			// Remove real attachments first (by reference)
-			if (attachments != null)
-			{
-				var remaining = attachments
-					.Where(a => !tilesToRemove.Contains(a.tile))
-					.ToList();
+			// Separate waypoints and others
+			var waypointsToRemove = attachmentArray.OfType<Waypoint>().ToList();
+			var others = attachmentArray.Where(a => a is not Waypoint).ToArray();
 
-				if (remaining.Count != attachments.Length)
-				{
-					attachments = remaining.Count > 0 ? remaining.ToArray() : null;
+			// Remove normal attachments first (safe)
+			foreach (var att in others)
+			{
+				if (RemoveAttachment(att))
 					anyRemoved = true;
-				}
 			}
 
-			// Remove waypoints by tile (safest way — no index dependency)
-			if (waypoints != null && tilesToRemove.Count > 0)
+			// Sort waypoints **descending by index** so we remove from the end first
+			var sortedWaypoints = waypointsToRemove
+				.OrderByDescending(wp => wp.waypointIndex)
+				.ToList();
+
+			foreach (var wp in sortedWaypoints)
 			{
-				var newWaypoints = new List<int>();
-
-				for (int i = 0; i < waypoints.Length; i++)
-				{
-					int t = waypoints[i];
-					if (t >= 0 && !tilesToRemove.Contains(t))
-						newWaypoints.Add(t);
-				}
-
-				if (newWaypoints.Count != waypoints.Length)
-				{
-					waypoints = newWaypoints.Count > 0 ? newWaypoints.ToArray() : null;
+				if (RemoveAttachment(wp))
 					anyRemoved = true;
-				}
-			}
-
-			if (anyRemoved)
-			{
-				// Clean up instances
-				foreach (var att in attachmentArray)
-				{
-					if (att != null)
-						DestroyAttachmentInstance(att);
-				}
-
-				OnMapEdited?.Invoke(this, false, Vector3.zero);
 			}
 
 			return anyRemoved;
