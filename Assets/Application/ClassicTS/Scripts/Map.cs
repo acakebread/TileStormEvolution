@@ -1127,7 +1127,7 @@ namespace ClassicTilestorm
 
 		public void Initialise()
 		{
-			MapAttachmentExtensions.SetActiveMapManager(this);
+			//MapAttachmentExtensions.SetActiveMapManager(this);
 
 			CreateOrGetRuntimeTiles(parentTransform);
 
@@ -1178,8 +1178,8 @@ namespace ClassicTilestorm
 
 		public void Destroy()
 		{
-			if (ReferenceEquals(MapAttachmentExtensions.CurrentMap, this))
-				MapAttachmentExtensions.ClearActiveMapManager();
+			//if (ReferenceEquals(MapAttachmentExtensions.CurrentMap, this))
+			//	MapAttachmentExtensions.ClearActiveMapManager();
 
 			// 1. Kill delegates (VERY IMPORTANT)
 			OnMapEdited = null;

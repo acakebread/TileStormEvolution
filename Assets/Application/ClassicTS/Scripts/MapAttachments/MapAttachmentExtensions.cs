@@ -1,92 +1,94 @@
-using UnityEngine;
+//not currently needed
 
-namespace ClassicTilestorm
-{
-	/// <summary>
-	/// Runtime-safe extensions for MapAttachment (especially transformable ones like Emitter and View).
-	/// Provides clean world-space Position and Rotation access.
-	/// Automatically tracks the active IMapManager via MapManager lifecycle.
-	/// </summary>
-	public static class MapAttachmentExtensions
-	{
-		private static IMapData _currentMap;
+//using UnityEngine;
 
-		public static IMapData CurrentMap => _currentMap;
+//namespace ClassicTilestorm
+//{
+//	/// <summary>
+//	/// Runtime-safe extensions for MapAttachment (especially transformable ones like Emitter and View).
+//	/// Provides clean world-space Position and Rotation access.
+//	/// Automatically tracks the active IMapManager via MapManager lifecycle.
+//	/// </summary>
+//	public static class MapAttachmentExtensions
+//	{
+//		private static IMapData _currentMap;
 
-		// Called automatically by MapManager
-		internal static void SetActiveMapManager(IMapData map) => _currentMap = map;
+//		public static IMapData CurrentMap => _currentMap;
 
-		// Called automatically by MapManager
-		internal static void ClearActiveMapManager() => _currentMap = null;
+//		// Called automatically by MapManager
+//		internal static void SetActiveMapManager(IMapData map) => _currentMap = map;
 
-		// Internal duplicate of MapManager's TileWorldPosition logic
-		private static Vector3 GetTileWorldPosition(int tileIndex)
-		{
-			if (_currentMap == null || tileIndex < 0)
-				return Vector3.zero;
+//		// Called automatically by MapManager
+//		internal static void ClearActiveMapManager() => _currentMap = null;
 
-			int width = _currentMap.Width;
-			int x = tileIndex % width;
-			int z = tileIndex / width;
+//		// Internal duplicate of MapManager's TileWorldPosition logic
+//		private static Vector3 GetTileWorldPosition(int tileIndex)
+//		{
+//			if (_currentMap == null || tileIndex < 0)
+//				return Vector3.zero;
 
-			// Match MapManager exactly — uses tile_origin (0.5,0,0.5 in editor, zero in build)
-			return new Vector3(x, 0f, z) + Map.tile_origin;
-		}
+//			int width = _currentMap.Width;
+//			int x = tileIndex % width;
+//			int z = tileIndex / width;
 
-		// ===================================================================
-		// World Position
-		// ===================================================================
-		public static Vector3 GetWorldPosition(this MapAttachment attachment)
-		{
-			if (attachment is not ITransformableAttachment t)
-				return Vector3.zero;
-			return GetTileWorldPosition(attachment.tile) + t.Position;
-		}
+//			// Match MapManager exactly — uses tile_origin (0.5,0,0.5 in editor, zero in build)
+//			return new Vector3(x, 0f, z) + Map.tile_origin;
+//		}
 
-		public static void SetWorldPosition(this MapAttachment attachment, Vector3 worldPosition)
-		{
-			if (attachment is not ITransformableAttachment t)
-				return;
+//		// ===================================================================
+//		// World Position
+//		// ===================================================================
+//		public static Vector3 GetWorldPosition(this MapAttachment attachment)
+//		{
+//			if (attachment is not ITransformableAttachment t)
+//				return Vector3.zero;
+//			return GetTileWorldPosition(attachment.tile) + t.Position;
+//		}
 
-			Vector3 localPos = worldPosition - GetTileWorldPosition(attachment.tile);
-			if (t is Emitter e)
-				e.Position = localPos;
-			else if (t is View v)
-				v.Position = localPos;
-			// Add future transformable types here
-		}
+//		public static void SetWorldPosition(this MapAttachment attachment, Vector3 worldPosition)
+//		{
+//			if (attachment is not ITransformableAttachment t)
+//				return;
 
-		// ===================================================================
-		// World Rotation
-		// ===================================================================
-		public static Quaternion GetWorldRotation(this MapAttachment attachment)
-		{
-			return attachment is ITransformableAttachment t ? t.Rotation : Quaternion.identity;
-		}
+//			Vector3 localPos = worldPosition - GetTileWorldPosition(attachment.tile);
+//			if (t is Emitter e)
+//				e.Position = localPos;
+//			else if (t is View v)
+//				v.Position = localPos;
+//			// Add future transformable types here
+//		}
 
-		public static void SetWorldRotation(this MapAttachment attachment, Quaternion worldRotation)
-		{
-			if (attachment is not ITransformableAttachment t)
-				return;
+//		// ===================================================================
+//		// World Rotation
+//		// ===================================================================
+//		public static Quaternion GetWorldRotation(this MapAttachment attachment)
+//		{
+//			return attachment is ITransformableAttachment t ? t.Rotation : Quaternion.identity;
+//		}
 
-			if (t is Emitter e)
-				e.Rotation = worldRotation;
-			else if (t is View v)
-				v.Rotation = worldRotation;
-			// Add future types here
-		}
+//		public static void SetWorldRotation(this MapAttachment attachment, Quaternion worldRotation)
+//		{
+//			if (attachment is not ITransformableAttachment t)
+//				return;
 
-		// Syntax sugar — prevents accidental use on the static class
-		public static Vector3 WorldPosition
-		{
-			get => throw new System.NotSupportedException("Use on instance only");
-			set => throw new System.NotSupportedException("Use on instance only");
-		}
+//			if (t is Emitter e)
+//				e.Rotation = worldRotation;
+//			else if (t is View v)
+//				v.Rotation = worldRotation;
+//			// Add future types here
+//		}
 
-		public static Quaternion WorldRotation
-		{
-			get => throw new System.NotSupportedException("Use on instance only");
-			set => throw new System.NotSupportedException("Use on instance only");
-		}
-	}
-}
+//		// Syntax sugar — prevents accidental use on the static class
+//		public static Vector3 WorldPosition
+//		{
+//			get => throw new System.NotSupportedException("Use on instance only");
+//			set => throw new System.NotSupportedException("Use on instance only");
+//		}
+
+//		public static Quaternion WorldRotation
+//		{
+//			get => throw new System.NotSupportedException("Use on instance only");
+//			set => throw new System.NotSupportedException("Use on instance only");
+//		}
+//	}
+//}
