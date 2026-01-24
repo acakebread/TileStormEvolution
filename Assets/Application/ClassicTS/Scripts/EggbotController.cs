@@ -106,7 +106,6 @@ namespace ClassicTilestorm
 					if (currentTile != destinationTile || (destinationTile != map.GetEndTile() && destinationTile != map.GetStartTile())) return false;
 					if (destinationTile == map.GetEndTile()) { OnLevelCompleted?.Invoke(); }
 
-					//dstWaypoint = (dstWaypoint + 1) % map.Waypoints.Length;
 					var waypoints = map.GetWaypoints();
 					if (null != waypoints) dstWaypoint = (dstWaypoint + 1) % waypoints.Length;
 					startYaw = transform.eulerAngles.y;
@@ -122,7 +121,6 @@ namespace ClassicTilestorm
 					if (currentTile == destinationTile)
 					{
 						OnWaypointReached?.Invoke(dstWaypoint);
-						//dstWaypoint = (dstWaypoint + 1) % map.Waypoints.Length;
 						var waypoints = map.GetWaypoints();
 						if (null != waypoints) dstWaypoint = (dstWaypoint + 1) % waypoints.Length;
 						return false;

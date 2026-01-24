@@ -82,12 +82,7 @@ namespace ClassicTilestorm
 			}
 
 			var snapped = Map.SnappedMapPosition(worldPos);
-			iMap.UpdateTileAt(
-				Mathf.FloorToInt(snapped.x),
-				Mathf.FloorToInt(snapped.z),
-				hashToPlace,
-				expand: true
-			);
+			iMap.UpdateTileAt(Mathf.FloorToInt(snapped.x),Mathf.FloorToInt(snapped.z),hashToPlace,expand: true);
 		}
 
 		// Called from panel — takes hashid directly
