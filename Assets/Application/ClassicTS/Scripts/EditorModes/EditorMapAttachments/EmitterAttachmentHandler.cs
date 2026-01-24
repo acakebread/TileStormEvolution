@@ -9,7 +9,7 @@ namespace ClassicTilestorm
 		public void OnSelectionChanged(IMap map, Camera camera, MapAttachment[] selection)
 		{
 			var emitter = (Emitter)selection[0];
-			var worldPos = Map.WorldPosition(emitter.tile, emitter.Position);
+			var worldPos = map.WorldPosition(emitter.tile, emitter.Position);
 			EditorTransformUtil.UpdateTransform(worldPos, emitter.Rotation, camera);
 			EditorPrimitiveUtil.UpdateCone(worldPos, emitter.Rotation, emitter.Distance, emitter.Apex);
 		}
@@ -20,8 +20,8 @@ namespace ClassicTilestorm
 
 			if (EditorTransformUtil.HandleInput(camera, out Vector3 newWorldPos, out Quaternion newWorldRot))
 			{
-				emitter.Position = Map.LocalPosition(emitter.tile, newWorldPos);
-				emitter.Rotation = Map.LocalRotation(emitter.tile, newWorldRot);
+				emitter.Position = map.LocalPosition(emitter.tile, newWorldPos);
+				emitter.Rotation = map.LocalRotation(emitter.tile, newWorldRot);
 				map.RefreshAttachmentInstance(emitter);
 				EditorPrimitiveUtil.UpdateCone(newWorldPos, emitter.Rotation, emitter.Distance, emitter.Apex);
 			}
@@ -30,7 +30,7 @@ namespace ClassicTilestorm
 		public void OnDragInput(IMap map, MapAttachment[] selection)
 		{
 			var emitter = (Emitter)selection[0];
-			var worldPos = Map.WorldPosition(emitter.tile, emitter.Position);
+			var worldPos = map.WorldPosition(emitter.tile, emitter.Position);
 			EditorPrimitiveUtil.UpdateCone(worldPos, emitter.Rotation, emitter.Distance, emitter.Apex);
 		}
 

@@ -46,6 +46,12 @@ namespace ClassicTilestorm
 		int CameraHitTile(Camera camera, Vector3 position);
 		Bounds GetTileGeometryBounds(int _);
 		bool UpdateTileAt(int x, int z, string id, bool expand = true);
+
+		Quaternion LocalRotation(int tileIndex, Quaternion worldRotation);
+		Quaternion WorldRotation(int tileIndex, Quaternion localRotation);
+
+		Vector3 LocalPosition(int tileIndex, Vector3 worldPosition);
+		Vector3 WorldPosition(int tileIndex, Vector3 localPosition);
 	}
 
 	[Serializable]
@@ -527,9 +533,7 @@ namespace ClassicTilestorm
 			var defaultDef = ResourceManager.FindOrCreateDefaultTile();
 			var defaultHash = defaultDef.hashid;
 
-			var mapDefinitions = tiles.Select(idx =>
-				(idx >= 0 && idx < table.Length) ? table[idx] : null
-			).ToArray();
+			var mapDefinitions = tiles.Select(idx => (idx >= 0 && idx < table.Length) ? table[idx] : null).ToArray();
 
 			for (int i = 0; i < mapDefinitions.Length; i++)
 			{
@@ -544,13 +548,7 @@ namespace ClassicTilestorm
 			if (changed)
 			{
 				table = newFrequencyTable;
-			}
-
-			if (changed)
-			{
-				tiles = mapDefinitions.Select(hash =>
-					Array.IndexOf(table, hash)
-				).ToArray();
+				tiles = mapDefinitions.Select(hash => Array.IndexOf(table, hash)).ToArray();
 			}
 
 			if (changed) Debug.Log($"{name} consolidated (table updated)");
@@ -661,14 +659,26 @@ namespace ClassicTilestorm
 			var (minX, minZ, maxX, maxZ) = GetContentBounds();
 			if (maxX < 0) return false;
 
-			int w = maxX - minX + 1;
-			int h = maxZ - minZ + 1;
+			int newWidth = maxX - minX + 1;
+			int newHeight = maxZ - minZ + 1;
+			int offsetX = -minX;
+			int offsetZ = -minZ;
 
-			bool success = RepositionAndResize(w, h, -minX, -minZ);
+			bool needsCrop =
+				newWidth != width ||
+				newHeight != height ||
+				offsetX != 0 ||
+				offsetZ != 0;
 
-			if (success) Consolidate();
+			bool resized = false;
+			if (needsCrop)
+			{
+				resized = RepositionAndResize(newWidth, newHeight, offsetX, offsetZ);
+			}
 
-			return success;
+			bool consolidated = Consolidate();
+
+			return resized || consolidated;
 		}
 
 		private (int minX, int minZ, int maxX, int maxZ) GetContentBounds()
@@ -1079,7 +1089,6 @@ namespace ClassicTilestorm
 
 		public void Initialise()
 		{
-			instance = this;
 			MapAttachmentExtensions.SetActiveMapManager(this);
 
 			CreateOrGetRuntimeTiles(parentTransform);
@@ -1164,14 +1173,10 @@ namespace ClassicTilestorm
 				parentTransform = null;
 		}
 
-		private static Map instance;
-		public static Quaternion LocalRotation(int tileIndex, Quaternion worldRotation) => worldRotation;
-		public static Quaternion WorldRotation(int tileIndex, Quaternion localRotation) => localRotation;
+		public Quaternion LocalRotation(int tileIndex, Quaternion worldRotation) => worldRotation;
+		public Quaternion WorldRotation(int tileIndex, Quaternion localRotation) => localRotation;
 
-		public static Vector3 LocalPosition(int tileIndex, Vector3 worldPosition)
-			=> instance == null || tileIndex < 0 ? worldPosition : worldPosition - instance.TileWorldPosition(tileIndex);
-
-		public static Vector3 WorldPosition(int tileIndex, Vector3 localPosition)
-			=> instance == null || tileIndex < 0 ? localPosition : localPosition + instance.TileWorldPosition(tileIndex);
+		public Vector3 LocalPosition(int tileIndex, Vector3 worldPosition) => tileIndex < 0 ? worldPosition : worldPosition - TileWorldPosition(tileIndex);
+		public Vector3 WorldPosition(int tileIndex, Vector3 localPosition) => tileIndex < 0 ? localPosition : localPosition + TileWorldPosition(tileIndex);
 	}
 }

@@ -230,8 +230,8 @@ namespace ClassicTilestorm
 				if (null == selection || 1 != selection.Length) return;
 				if (selection[0] is ITransformableAttachment transformable)
 				{
-					var worldPos = Map.WorldPosition(selection[0].tile, transformable.Position);
-					var worldRot = Map.WorldRotation(selection[0].tile, transformable.Rotation);
+					var worldPos = iMap.WorldPosition(selection[0].tile, transformable.Position);
+					var worldRot = iMap.WorldRotation(selection[0].tile, transformable.Rotation);
 					EditorTransformUtil.ShowAt(worldPos, worldRot, camera);
 				}
 				selection[0].OnDragInput(iMap, selection);
