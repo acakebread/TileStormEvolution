@@ -42,7 +42,7 @@ namespace ClassicTilestorm
 
 			var selectedDef = ResourceManager.GetDefinition(selectedHashId);
 			if (selectedDef != null)
-				EditorMeshUtil.UpdateGhostMesh(camera, iMapManager, selectedDef);
+				EditorMeshUtil.UpdateGhostMesh(camera, iMap, selectedDef);
 			else
 				EditorMeshUtil.HideGhostMesh();
 		}
@@ -63,10 +63,10 @@ namespace ClassicTilestorm
 			// Cycle on left-click if on the current tile
 			if (!erase)
 			{
-				var mapIndex = iMapManager.WorldToMapIndex(worldPos);
+				var mapIndex = iMap.WorldToMapIndex(worldPos);
 				if (mapIndex != -1)
 				{
-					var currentHash = iMapManager.GetDefinitionAtIndex(mapIndex);
+					var currentHash = iMap.GetDefinitionAtIndex(mapIndex);
 					if (currentHash == selectedHashId && cycleDefinitions.Count > 1)
 					{
 						cycleIndex = (cycleIndex + 1) % cycleDefinitions.Count;
@@ -76,13 +76,13 @@ namespace ClassicTilestorm
 						hashToPlace = selectedHashId;
 
 						EditorMeshUtil.DestroyGhostMesh();
-						EditorMeshUtil.UpdateGhostMesh(camera, iMapManager, nextDef);
+						EditorMeshUtil.UpdateGhostMesh(camera, iMap, nextDef);
 					}
 				}
 			}
 
 			var snapped = Map.SnappedMapPosition(worldPos);
-			iMapManager.UpdateTileAt(
+			iMap.UpdateTileAt(
 				Mathf.FloorToInt(snapped.x),
 				Mathf.FloorToInt(snapped.z),
 				hashToPlace,
@@ -106,7 +106,7 @@ namespace ClassicTilestorm
 
 			EditorMeshUtil.DestroyGhostMesh();
 			if (def != null)
-				EditorMeshUtil.UpdateGhostMesh(camera, iMapManager, def);
+				EditorMeshUtil.UpdateGhostMesh(camera, iMap, def);
 			else
 				EditorMeshUtil.HideGhostMesh();
 		}

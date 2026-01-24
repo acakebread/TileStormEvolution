@@ -4,12 +4,12 @@ namespace ClassicTilestorm
 	{
 		public static readonly WaypointAttachmentHandler Instance = new();
 
-		public static Waypoint Create(IMap mapManager, int tile)
+		public static Waypoint Create(IMap map, int tile)
 		{
-			if (mapManager == null) return null;
-			var index = mapManager.waypointAttachments?.Length ?? 0;
+			if (map == null) return null;
+			var index = map.WaypointAttachments?.Length ?? 0;
 			var waypoint = new Waypoint(index, tile);
-			mapManager.AddAttachment(waypoint);
+			map.AddAttachment(waypoint);
 			return waypoint;
 		}
 	}

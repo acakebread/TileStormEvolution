@@ -18,37 +18,34 @@ namespace ClassicTilestorm
 
 	public interface IMap : IMapData
 	{
+		Action<Map, bool, Vector3> OnMapEdited { get; set; }
+		public string Music { get; }
+
 		bool IsValidTile(int _);
 		Tile GetTile(int _);
 		int WorldToMapIndex(Vector3 _);
 		Vector3 TileWorldPosition(int _);
-
-		string GetDefinitionAtIndex(int mapIndex);
+		string GetDefinitionAtIndex(int _);
 
 		int GetStartTile();
 		int GetEndTile();
-		int FindAdjacentConsole(int nTile);
+		int FindAdjacentConsole(int _);
 
 		int GetWaypoint(int _);
-
-		Action<Map, bool, Vector3> OnMapEdited { get; set; }
-		void RefreshAttachmentInstance(MapAttachment _);
-
-		int CameraHitTile(Camera camera, Vector3 position);
 		int[] Waypoints { get; set; }
-		MapAttachment [] Attachments { get; set; }
-		MapAttachment[] GetAllAttachments();
-		Waypoint[] waypointAttachments { get; }
+		Waypoint[] WaypointAttachments { get; }
+
+		MapAttachment[] AllAttachments { get; set; }//including Waypoints
 		void AddAttachment(MapAttachment _);
 		bool RemoveAttachment(MapAttachment _);
 		bool RemoveAttachments(MapAttachment[] _);
+		void RefreshAttachmentInstance(MapAttachment _);
 
-		View GetView(int tile);
+		View GetView(int _);
 
-		Bounds GetTileGeometryBounds(int tileIndex);
+		int CameraHitTile(Camera camera, Vector3 position);
+		Bounds GetTileGeometryBounds(int _);
 		bool UpdateTileAt(int x, int z, string id, bool expand = true);
-
-		public string Music { get; }
 	}
 
 	[Serializable]
@@ -130,16 +127,13 @@ namespace ClassicTilestorm
 		public Tile[] runtimeTiles;
 
 		[JsonIgnore]
-		public IReadOnlyList<Tile> RuntimeTiles => runtimeTiles ?? Array.Empty<Tile>();
-
-		[JsonIgnore]
-		public int RuntimeTileCount => runtimeTiles?.Length ?? 0;
+		private int RuntimeTileCount => runtimeTiles?.Length ?? 0;
 
 		[NonSerialized]
-		public int[] indices;           // runtime permutation, never serialized
+		private int[] indices;// runtime permutation, never serialized
 
 		[JsonIgnore]
-		public bool IsScrambled => indices != null && !IsIdentity(indices);
+		private bool IsScrambled => indices != null && !IsIdentity(indices);
 
 		private static bool IsIdentity(int[] arr)
 		{
@@ -309,7 +303,7 @@ namespace ClassicTilestorm
 			attachmentGameObjects[attachment] = go;
 		}
 
-		public void DestroyAttachmentInstance(MapAttachment attachment)
+		private void DestroyAttachmentInstance(MapAttachment attachment)
 		{
 			if (attachment == null) return;
 
@@ -324,14 +318,12 @@ namespace ClassicTilestorm
 			attachmentGameObjects.Remove(attachment);
 		}
 
-		public void CleanupAttachmentInstances()
+		private void CleanupAttachmentInstances()
 		{
 			foreach (var att in attachmentGameObjects.Keys.ToList())
 				DestroyAttachmentInstance(att);
 			attachmentGameObjects.Clear();
 		}
-
-		// Inside class Map
 
 		public void AddAttachment(MapAttachment attachment)
 		{
@@ -364,28 +356,22 @@ namespace ClassicTilestorm
 
 			bool removed = false;
 
-			// ── existing mutation logic ────────────────────────────────
 			if (attachment is Waypoint wp)
 			{
 				if (waypoints == null || wp.waypointIndex < 0 || wp.waypointIndex >= waypoints.Length)
 					return false;
 
-				// Renumber higher waypoint indices
-				if (attachments != null)
-				{
-					foreach (var att in attachments)
-					{
-						if (att is Waypoint other && other.waypointIndex > wp.waypointIndex)
-							other.waypointIndex--;
-					}
-				}
+				// ── Remove from waypoints array and shift remaining elements ────────
+				var newWaypoints = new List<int>(waypoints.Length - 1);
 
-				var newWaypoints = new List<int>();
 				for (int i = 0; i < waypoints.Length; i++)
+				{
 					if (i != wp.waypointIndex)
 						newWaypoints.Add(waypoints[i]);
+				}
 
 				waypoints = newWaypoints.Count > 0 ? newWaypoints.ToArray() : null;
+
 				removed = true;
 			}
 			else if (attachments != null)
@@ -402,7 +388,6 @@ namespace ClassicTilestorm
 
 			if (removed)
 			{
-				// ── side effects ───────────────────────────────────────
 				DestroyAttachmentInstance(attachment);
 				OnMapEdited?.Invoke(this, false, Vector3.zero);
 			}
@@ -410,87 +395,133 @@ namespace ClassicTilestorm
 			return removed;
 		}
 
-
 		public bool RemoveAttachments(MapAttachment[] attachmentArray)
 		{
 			if (attachmentArray == null || attachmentArray.Length == 0)
 				return false;
 
-			bool anyRemoved = false;
+			// Group by tile to avoid duplicates & make waypoint removal safe
+			var tilesToRemove = new HashSet<int>();
 
 			foreach (var att in attachmentArray)
 			{
-				if (RemoveAttachment(att))      // ← reuses the single-remove logic (including side effects)
+				if (att != null)
+					tilesToRemove.Add(att.tile);
+			}
+
+			bool anyRemoved = false;
+
+			// Remove real attachments first (by reference)
+			if (attachments != null)
+			{
+				var remaining = attachments
+					.Where(a => !tilesToRemove.Contains(a.tile))
+					.ToList();
+
+				if (remaining.Count != attachments.Length)
+				{
+					attachments = remaining.Count > 0 ? remaining.ToArray() : null;
 					anyRemoved = true;
+				}
+			}
+
+			// Remove waypoints by tile (safest way — no index dependency)
+			if (waypoints != null && tilesToRemove.Count > 0)
+			{
+				var newWaypoints = new List<int>();
+
+				for (int i = 0; i < waypoints.Length; i++)
+				{
+					int t = waypoints[i];
+					if (t >= 0 && !tilesToRemove.Contains(t))
+						newWaypoints.Add(t);
+				}
+
+				if (newWaypoints.Count != waypoints.Length)
+				{
+					waypoints = newWaypoints.Count > 0 ? newWaypoints.ToArray() : null;
+					anyRemoved = true;
+				}
+			}
+
+			if (anyRemoved)
+			{
+				// Clean up instances
+				foreach (var att in attachmentArray)
+				{
+					if (att != null)
+						DestroyAttachmentInstance(att);
+				}
+
+				OnMapEdited?.Invoke(this, false, Vector3.zero);
 			}
 
 			return anyRemoved;
 		}
 
-
 		public void RemoveAllAttachmentsOnTile(int tileIndex)
 		{
 			if (attachments == null) return;
-
-			var toRemove = attachments
-				.Where(a => a?.tile == tileIndex)
-				.ToArray();
-
+			var toRemove = attachments.Where(a => a?.tile == tileIndex).ToArray();
 			foreach (var att in toRemove)
-				RemoveAttachment(att);          // ← again, reuses single-remove (side effects included)
+				RemoveAttachment(att);
 		}
 
-		[JsonIgnore] public Waypoint[] waypointAttachments => GetWaypointAttachments() ?? Array.Empty<Waypoint>();
-
-		public Waypoint[] GetWaypointAttachments()
+		[JsonIgnore]
+		public Waypoint[] WaypointAttachments
 		{
-			if (waypoints == null || waypoints.Length == 0) return Array.Empty<Waypoint>();
-			var result = new Waypoint[waypoints.Length];
-			for (int i = 0; i < waypoints.Length; i++)
-				result[i] = new Waypoint(i, waypoints[i]);
-			return result;
+			get
+			{
+				if (waypoints == null || waypoints.Length == 0) return Array.Empty<Waypoint>();
+				var result = new Waypoint[waypoints.Length];
+				for (int i = 0; i < waypoints.Length; i++)
+					result[i] = new Waypoint(i, waypoints[i]);
+				return result;
+			}
 		}
 
-		public MapAttachment[] GetAllAttachments()
+		public MapAttachment[] AllAttachments
 		{
-			var real = attachments ?? Array.Empty<MapAttachment>();
-			return real.Concat(GetWaypointAttachments()).ToArray();
-		}
-
-		public void SetAllAttachments(MapAttachment[] value)
-		{
-			if (value == null)
+			get
 			{
-				attachments = null;
-				waypoints = null;
-				return;
+				var real = attachments ?? Array.Empty<MapAttachment>();
+				return real.Concat(WaypointAttachments).ToArray();
 			}
-
-			var realAttachments = new List<MapAttachment>();
-			var waypointsList = new List<(int index, int tile)>();
-
-			foreach (var att in value)
+			set
 			{
-				if (att is Waypoint wp)
-					waypointsList.Add((wp.waypointIndex, wp.tile));
-				else if (att != null)
-					realAttachments.Add(att);
-			}
+				if (value == null)
+				{
+					attachments = null;
+					waypoints = null;
+					return;
+				}
 
-			attachments = realAttachments.Count > 0 ? realAttachments.ToArray() : null;
+				var realAttachments = new List<MapAttachment>();
+				var waypointsList = new List<(int index, int tile)>();
 
-			if (waypointsList.Count == 0)
-			{
-				waypoints = null;
-			}
-			else
-			{
-				int maxIndex = waypointsList.Max(x => x.index);
-				var arr = new int[maxIndex + 1];
-				foreach (var (idx, tile) in waypointsList)
-					if (idx >= 0 && idx < arr.Length)
-						arr[idx] = tile;
-				waypoints = arr;
+				foreach (var att in value)
+				{
+					if (att is Waypoint wp)
+						waypointsList.Add((wp.waypointIndex, wp.tile));
+					else if (att != null)
+						realAttachments.Add(att);
+				}
+
+				attachments = realAttachments.Count > 0 ? realAttachments.ToArray() : null;
+
+				if (waypointsList.Count == 0)
+				{
+					waypoints = null;
+				}
+				else
+				{
+					int maxIndex = waypointsList.Max(x => x.index);
+					var arr = new int[maxIndex + 1];
+					foreach (var (idx, tile) in waypointsList)
+						if (idx >= 0 && idx < arr.Length)
+							arr[idx] = tile;
+					waypoints = arr;
+				}
 			}
 		}
 
