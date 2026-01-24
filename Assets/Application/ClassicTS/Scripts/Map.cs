@@ -148,7 +148,7 @@ namespace ClassicTilestorm
 			return GetSeedTile(mapIndex).definitionId;
 		}
 
-		private Tile[] CreateOrGetRuntimeTiles(Transform parent = null)
+		private Tile[] CreateOrGetSeedTiles(Transform parent = null)
 		{
 			if (slide != null)
 				return slide;
@@ -203,7 +203,7 @@ namespace ClassicTilestorm
 		}
 
 		// ─────────────────────────────────────────────
-		// Attachment runtime state (unchanged)
+		// Attachment slide (runtime) state (unchanged)
 		// ─────────────────────────────────────────────
 
 		public MapAttachment[] GetAttachments(int? tileIndex = null, Type[] filterTypes = null)
@@ -837,7 +837,7 @@ namespace ClassicTilestorm
 		{
 			DestroyAllTiles();
 
-			CreateOrGetRuntimeTiles(parent);
+			CreateOrGetSeedTiles(parent);
 
 			if (slideCount == 0)
 			{
@@ -950,7 +950,7 @@ namespace ClassicTilestorm
 			{
 				// Full rebuild (map size or content bounds changed)
 				DestroyAllTiles();
-				CreateOrGetRuntimeTiles(parent);
+				CreateOrGetSeedTiles(parent);
 				RefreshAttachments(GetAttachments());
 			}
 			else
@@ -1044,7 +1044,7 @@ namespace ClassicTilestorm
 		{
 			this.parent = parent;
 
-			CreateOrGetRuntimeTiles(this.parent);
+			CreateOrGetSeedTiles(this.parent);
 
 			if (slideCount == 0)
 			{
