@@ -4,7 +4,6 @@ using MassiveHadronLtd;
 using UnityEngine.EventSystems;
 using UnityEditor;
 using ClassicTilestorm.Assets;
-using System;
 
 namespace ClassicTilestorm
 {
@@ -278,25 +277,6 @@ namespace ClassicTilestorm
 #else
 			Debug.Log("Export currently only available in Unity Editor");
 #endif
-		}
-	}
-
-	public class MapManager : MonoBehaviour
-	{
-		public static MapManager Instantiate(Map map, Transform parent = null)
-		{
-			if (map == null || string.IsNullOrEmpty(map.name))
-			{
-				Debug.LogError("Cannot instantiate MapManager: invalid map or name.");
-				return null;
-			}
-
-			var go = new GameObject($"Map: {map.name}");
-			if (parent != null) go.transform.SetParent(parent, false);
-			Map.parentTransform = go.transform;
-
-			var manager = go.AddComponent<MapManager>();
-			return manager;
 		}
 	}
 }

@@ -97,6 +97,13 @@ namespace MassiveHadronLtd
 			public Vector3 normal;
 			public float offset;
 			public float swayInfluencePower;
+
+			public static MorphGeomSwayParameters Default => new MorphGeomSwayParameters
+			{
+				normal = Vector3.up,
+				offset = 0.3f,              // or 0.3f if you want legacy parity
+				swayInfluencePower = 0.5f
+			};
 		}
 
 		public static MorphGeomSway AddGeomSway(GameObject target, MorphGeomSwayParameters? parameters = null)
@@ -129,7 +136,7 @@ namespace MassiveHadronLtd
 			filter.mesh = writableMesh;
 
 			// Apply defaults / parameters
-			var p = parameters ?? new MorphGeomSwayParameters();
+			var p = parameters ?? MorphGeomSwayParameters.Default;
 
 			var sway = target.AddComponent<MorphGeomSway>();
 
