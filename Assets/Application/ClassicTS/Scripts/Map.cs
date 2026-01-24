@@ -861,7 +861,7 @@ namespace ClassicTilestorm
 
 		public int GetEndTile()
 		{
-			if (waypoints?.Length > 0) return waypoints[0];
+			if (waypoints?.Length > 0) return waypoints[waypoints.Length - 1];
 
 			for (int i = 0; i < width * height; ++i)
 				if (GetTile(i).IsEnd) return i;
