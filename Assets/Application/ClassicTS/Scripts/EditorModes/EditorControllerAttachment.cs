@@ -169,7 +169,7 @@ namespace ClassicTilestorm
 			if (-1 != pendingTile)
 			{
 				var alreadySelected = selection?.Length > 0 && selection[0].tile == pendingTile;
-				if (!alreadySelected) Select(GetAttachmentsOnTile(pendingTile));
+				if (!alreadySelected) Select(iMap.GetAttachments(tileIndex: pendingTile));
 				return;
 			}
 			Select();
@@ -177,7 +177,7 @@ namespace ClassicTilestorm
 
 		private void HandleLeftMouseUp()
 		{
-			var attachmentsOnTile = GetAttachmentsOnTile(pendingTile);
+			var attachmentsOnTile = iMap.GetAttachments(tileIndex: pendingTile);
 
 			if (null == attachmentsOnTile || 0 == attachmentsOnTile.Length)
 			{
@@ -200,7 +200,7 @@ namespace ClassicTilestorm
 		private void HandleRightMouseUp()
 		{
 			var tile = iMap.CameraHitTile(camera, Input.mousePosition);
-			if (tile >= 0 && GetAttachmentsOnTile(tile)?.Length > 0)
+			if (tile >= 0 && iMap.GetAttachments(tileIndex: tile).Length > 0)
 			{
 				pendingTile = tile;
 				pendingAction = PendingAction.Delete;
@@ -310,66 +310,38 @@ namespace ClassicTilestorm
 			EditorMarkerUtil.ClearMapMarkers();
 		}
 
-		private MapAttachment[] GetAttachmentsOnTile(int tileIndex)
-		{
-			if (null == iMap || tileIndex > iMap.Count || tileIndex < 0) return Array.Empty<MapAttachment>();//if (null == iMap || !iMap.IsValidTile(tileIndex)) return Array.Empty<MapAttachment>();
-			return iMap.Attachments?.Where(x => x.tile == tileIndex).ToArray() ?? Array.Empty<MapAttachment>();
-		}
-
-		//private void RebuildMarkers()
-		//{
-		//	var tiles = iMap?.AllAttachments?.Where(a => a.tile >= 0).Select(a => a.tile).Distinct().ToArray() ?? null;
-		//	if (null == tiles)
-		//	{
-		//		EditorMarkerUtil.ClearMapMarkers();
-		//		return;
-		//	}
-
-		//	var positions = new Vector3[tiles.Length];
-		//	var colors = new Color[tiles.Length];
-
-		//	for (var i = 0; i < tiles.Length; i++)
-		//	{
-		//		var tile = tiles[i];
-		//		positions[i] = tile < 0 || tile >= iMap.Count ? Vector3.zero : iMap.TileWorldPosition(tile);
-
-		//		var hasView = currentMode == Mode.Waypoint && null != iMap.GetView(tile);
-		//		colors[i] = hasView ? new Color(0f, 1f, 1f, 0.5f) : new Color(0f, 0.7f, 1f, 0.7f);
-		//	}
-
-		//	var selectedTile = (null != selection && selection.Length > 0) ? selection[0].tile : -1;
-		//	var selectedIndex = Array.IndexOf(tiles, selectedTile);
-		//	EditorMarkerUtil.ShowMarkers(positions, colors, selectedIndex);
-		//}
-
 		private void RebuildMarkers()
 		{
-			var tilesWithAttachments = iMap?.Attachments ?.Select(a => a.tile) ?.Distinct() ?.ToArray() ?? Array.Empty<int>();
+			// GetAttachments() already returns only valid attachments (tile >= 0)
+			var tiles = iMap?.GetAttachments()
+							?.Select(a => a.tile)
+							?.Distinct()
+							?.ToArray()
+							?? Array.Empty<int>();
 
-			if (tilesWithAttachments == null || tilesWithAttachments.Length == 0)
+			if (tiles.Length == 0)
 			{
 				EditorMarkerUtil.ClearMapMarkers();
 				return;
 			}
 
-			var positions = new Vector3[tilesWithAttachments.Length];
-			var colors = new Color[tilesWithAttachments.Length];
+			var positions = new Vector3[tiles.Length];
+			var colors = new Color[tiles.Length];
 
-			for (var i = 0; i < tilesWithAttachments.Length; i++)
+			bool isWaypointMode = currentMode == Mode.Waypoint;
+
+			for (int i = 0; i < tiles.Length; i++)
 			{
-				var tile = tilesWithAttachments[i];
-				positions[i] = tile < 0 || tile >= iMap.Count ? Vector3.zero : iMap.TileWorldPosition(tile);
+				int tile = tiles[i];
+				positions[i] = iMap.TileWorldPosition(tile);
 
-				// Check if this tile has a View attachment (only in Waypoint mode)
-				bool hasView = currentMode == Mode.Waypoint &&
-							   iMap.GetAttachments(tileIndex: tile, filterTypes: new[] { typeof(View) })
-								   .Length > 0;  // or .Any() if you add it
-
-				colors[i] = hasView ? new Color(0f, 1f, 1f, 0.5f) : new Color(0f, 0.7f, 1f, 0.7f);
+				colors[i] = isWaypointMode && iMap.HasAttachmentOfType<View>(tile)
+					? new Color(0f, 1f, 1f, 0.5f)
+					: new Color(0f, 0.7f, 1f, 0.7f);
 			}
 
 			var selectedTile = (selection != null && selection.Length > 0) ? selection[0].tile : -1;
-			var selectedIndex = Array.IndexOf(tilesWithAttachments, selectedTile);
+			var selectedIndex = Array.IndexOf(tiles, selectedTile);
 
 			EditorMarkerUtil.ShowMarkers(positions, colors, selectedIndex);
 		}
@@ -379,11 +351,19 @@ namespace ClassicTilestorm
 		// ===================================================================
 		private void DrawSidePanelAttachment()
 		{
-			var atts = iMap?.Attachments ?? Array.Empty<MapAttachment>();
+			// Use GetAttachments() — already clean and valid
+			var atts = iMap?.GetAttachments() ?? Array.Empty<MapAttachment>();
+
 			var items = new List<ListViewItem>();
 
 			foreach (var att in atts)
-				items.Add(new(GetAttachmentLabel(att), (_) => Select(att), selected: null != selection && selection.Contains(att)));
+			{
+				items.Add(new(
+					GetAttachmentLabel(att),
+					(_) => Select(att),
+					selected: selection != null && selection.Contains(att)
+				));
+			}
 
 			sidePanel.List.SetItems(items);
 			sidePanel.SetFootnote("Hold RMB on preview to orbit • Scroll to zoom • LMB: place/move • RMB on tile: delete");
@@ -397,52 +377,6 @@ namespace ClassicTilestorm
 				_ => $"{att.TypeName} [{att.tile}]"
 			};
 		}
-
-		//private void DrawSidePanelWaypoint()
-		//{
-		//	var selectedWaypoint = selection?.Length > 0 ? selection[0] as Waypoint : null;
-
-		//	var items = new List<ListViewItem>();
-		//	var waypointAttachments = iMap.WaypointAttachments;//cached
-
-		//	for (var i = 0; i < waypointAttachments.Length; i++)
-		//	{
-		//		var waypoint = waypointAttachments.FirstOrDefault(w => w.waypointIndex == i);
-		//		items.Add(new(label: $"WP{i:00} [tile {waypointAttachments[i].tile}]", onClick: (_) =>
-		//		{
-		//			if (null != waypoint) Select(waypoint);
-		//		}, selected: selectedWaypoint?.waypointIndex == i));
-		//	}
-
-		//	sidePanel.List.SetItems(items);
-
-		//	sidePanel.Buttons.Clear();
-
-		//	var canMoveUp = null != selectedWaypoint && selectedWaypoint.waypointIndex > 0;
-		//	var canMoveDown = null != selectedWaypoint && selectedWaypoint.waypointIndex >= 0 && selectedWaypoint.waypointIndex < waypointAttachments.Length - 1;
-
-		//	sidePanel.Buttons.Add(new("Move Up", () => MoveWaypoint(selectedWaypoint, -1), enabled: canMoveUp));
-		//	sidePanel.Buttons.Add(new("Move Down", () => MoveWaypoint(selectedWaypoint, +1), enabled: canMoveDown));
-
-		//	sidePanel.Draw();
-
-		//	void MoveWaypoint(Waypoint wp, int direction)
-		//	{
-		//		if (null == wp) return;
-
-		//		var oldIndex = wp.waypointIndex;
-		//		var newIndex = oldIndex + direction;
-		//		if (newIndex < 0 || newIndex >= waypointAttachments.Length) return;
-
-		//		var list = iMap.Waypoints.ToList();
-		//		(list[oldIndex], list[newIndex]) = (list[newIndex], list[oldIndex]);
-		//		iMap.Waypoints = list.ToArray();
-
-		//		var movedWaypoint = new Waypoint(newIndex, list[newIndex]);
-		//		Select(movedWaypoint);
-		//		RebuildMarkers();
-		//	}
-		//}
 
 		private void DrawSidePanelWaypoint()
 		{
@@ -478,41 +412,6 @@ namespace ClassicTilestorm
 			sidePanel.Buttons.Add(new("Move Down", () => MoveWaypoint(selectedWaypoint, +1), enabled: canMoveDown));
 
 			sidePanel.Draw();
-
-			//void MoveWaypoint(Waypoint wp, int direction)
-			//{
-			//	if (wp == null) return;
-
-			//	var oldIndex = wp.waypointIndex;
-			//	var newIndex = oldIndex + direction;
-
-			//	// Re-fetch current sorted waypoints
-			//	var currentWaypoints = iMap.GetAttachments(filterTypes: new[] { typeof(Waypoint) })
-			//							   .Cast<Waypoint>()
-			//							   .OrderBy(w => w.waypointIndex)
-			//							   .ToArray();
-
-			//	if (newIndex < 0 || newIndex >= currentWaypoints.Length) return;
-
-			//	var targetWp = currentWaypoints[newIndex];
-
-			//	// Swap in the internal waypoints array (still needed for now)
-			//	var list = iMap.Waypoints.ToList();
-			//	(list[oldIndex], list[newIndex]) = (list[newIndex], list[oldIndex]);
-			//	iMap.Waypoints = list.ToArray();
-
-			//	// Also swap the waypointIndex values on the objects
-			//	wp.waypointIndex = newIndex;
-			//	targetWp.waypointIndex = oldIndex;
-
-			//	var movedWaypoint = new Waypoint(newIndex, list[newIndex]);
-			//	Select(movedWaypoint);
-
-			//	RebuildMarkers();
-
-			//	// Optional: refresh visuals if needed
-			//	// iMap.RefreshAllAttachmentInstances();
-			//}
 		}
 
 		private void MoveWaypoint(Waypoint wp, int direction)
@@ -574,8 +473,8 @@ namespace ClassicTilestorm
 
 		private bool DrawDeletePopup()
 		{
-			var attsOnTile = GetAttachmentsOnTile(pendingTile);
-			if (0 == attsOnTile.Length) return false;
+			var attsOnTile = iMap.GetAttachments(tileIndex: pendingTile);
+			if (attsOnTile.Length == 0) return false;
 
 			var items = new List<PopupItem>();
 
@@ -602,7 +501,7 @@ namespace ClassicTilestorm
 
 		private bool DrawSelectPopup()
 		{
-			var atts = GetAttachmentsOnTile(pendingTile);
+			var atts = iMap.GetAttachments(tileIndex: pendingTile);
 			if (atts.Length == 0) return false;
 
 			var items = new List<PopupItem>();

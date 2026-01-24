@@ -21,17 +21,24 @@ namespace ClassicTilestorm
 		Action<Map, bool, Vector3> OnMapEdited { get; set; }
 		public string Music { get; }
 
-		Tile GetTile(int _);
 		int WorldToMapIndex(Vector3 _);
 		Vector3 TileWorldPosition(int _);
+
+		Quaternion LocalRotation(int tileIndex, Quaternion worldRotation);
+		Quaternion WorldRotation(int tileIndex, Quaternion localRotation);
+
+		Vector3 LocalPosition(int tileIndex, Vector3 worldPosition);
+		Vector3 WorldPosition(int tileIndex, Vector3 localPosition);
+
+		Tile GetTile(int _);
 		string GetDefinitionAtIndex(int _);
+		bool UpdateTileAt(int x, int z, string id, bool expand = true);
 
 		int GetStartTile();
 		int GetEndTile();
 		int FindAdjacentConsole(int _);
 
 		MapAttachment[] GetAttachments(int? tileIndex = null, Type[] filterTypes = null);//filtered heper
-		MapAttachment[] Attachments { get; set; }//complete array including 'virtual' Waypoints
 		void AddAttachment(MapAttachment _);
 		bool RemoveAttachment(MapAttachment _);
 		bool RemoveAttachments(MapAttachment[] _);
@@ -39,13 +46,6 @@ namespace ClassicTilestorm
 
 		int CameraHitTile(Camera camera, Vector3 position);
 		Bounds GetTileGeometryBounds(int _);
-		bool UpdateTileAt(int x, int z, string id, bool expand = true);
-
-		Quaternion LocalRotation(int tileIndex, Quaternion worldRotation);
-		Quaternion WorldRotation(int tileIndex, Quaternion localRotation);
-
-		Vector3 LocalPosition(int tileIndex, Vector3 worldPosition);
-		Vector3 WorldPosition(int tileIndex, Vector3 localPosition);
 	}
 
 	[Serializable]
@@ -98,72 +98,6 @@ namespace ClassicTilestorm
 		[JsonIgnore] public int Count => Width * Height;
 		[JsonIgnore] public int[] Indices => indices;
 		[JsonIgnore] public string Music => music;
-		[JsonIgnore] public MapAttachment[] Attachments
-		{
-			get
-			{
-				var real = attachments ?? Array.Empty<MapAttachment>();
-
-				if (waypoints == null || waypoints.Length == 0)
-				{
-					return real;
-				}
-
-				// Dynamically create Waypoint wrappers on-the-fly
-				var waypointWrappers = new MapAttachment[waypoints.Length];
-				for (int i = 0; i < waypoints.Length; i++)
-				{
-					waypointWrappers[i] = new Waypoint(i, waypoints[i]);
-				}
-
-				return real.Concat(waypointWrappers).ToArray();
-			}
-
-			set
-			{
-				if (value == null)
-				{
-					attachments = null;
-					waypoints = null;
-					return;
-				}
-
-				var realAttachments = new List<MapAttachment>();
-				var waypointsList = new List<(int index, int tile)>();
-
-				foreach (var att in value)
-				{
-					if (att is Waypoint wp)
-					{
-						waypointsList.Add((wp.waypointIndex, wp.tile));
-					}
-					else if (att != null)
-					{
-						realAttachments.Add(att);
-					}
-				}
-
-				attachments = realAttachments.Count > 0 ? realAttachments.ToArray() : null;
-
-				if (waypointsList.Count == 0)
-				{
-					waypoints = null;
-				}
-				else
-				{
-					int maxIndex = waypointsList.Max(x => x.index);
-					var arr = new int[maxIndex + 1];
-					foreach (var (idx, tile) in waypointsList)
-					{
-						if (idx >= 0 && idx < arr.Length)
-						{
-							arr[idx] = tile;
-						}
-					}
-					waypoints = arr;
-				}
-			}
-		}
 
 		public const int MAP_MAX_SIZE = 64;
 
@@ -270,13 +204,26 @@ namespace ClassicTilestorm
 		// Attachment runtime state (unchanged)
 		// ─────────────────────────────────────────────
 
-		// In Map class
 		public MapAttachment[] GetAttachments(int? tileIndex = null, Type[] filterTypes = null)
 		{
-			// Start from the unified source
-			var source = Attachments.AsEnumerable();
+			// Start from real attachments (backing field)
+			var real = attachments ?? Array.Empty<MapAttachment>();
 
-			// Always exclude invalid/unassigned attachments (tile < 0 or null attachment)
+			// Build waypoint wrappers from the serialized int[] waypoints array
+			MapAttachment[] waypointWrappers = Array.Empty<MapAttachment>();
+			if (waypoints != null && waypoints.Length > 0)
+			{
+				waypointWrappers = new MapAttachment[waypoints.Length];
+				for (int i = 0; i < waypoints.Length; i++)
+				{
+					waypointWrappers[i] = new Waypoint(i, waypoints[i]);
+				}
+			}
+
+			// Combine real attachments + waypoint wrappers
+			var source = real.Concat(waypointWrappers).AsEnumerable();
+
+			// Always exclude invalid/unassigned entries
 			source = source.Where(a => a != null && a.tile >= 0);
 
 			// Apply optional tile filter
@@ -292,7 +239,6 @@ namespace ClassicTilestorm
 				source = source.Where(a => typeSet.Contains(a.GetType()));
 			}
 
-			// Return a clean array (never null — empty if no matches)
 			return source.ToArray();
 		}
 
@@ -462,18 +408,15 @@ namespace ClassicTilestorm
 			return anyRemoved;
 		}
 
-		private void RefreshAllAttachmentInstances()
+		public void RefreshAttachments(MapAttachment[] attachmentsToRefresh)
 		{
-			foreach (var att in attachments ?? Array.Empty<MapAttachment>())
-				RefreshAttachment(att);
-		}
+			if (attachmentsToRefresh == null || attachmentsToRefresh.Length == 0)
+				return;
 
-		private void RefreshAttachmentsOnTile(int tileIndex)
-		{
-			if (attachments == null) return;
-			foreach (var att in attachments)
-				if (att?.tile == tileIndex)
-					RefreshAttachment(att);
+			foreach (var att in attachmentsToRefresh)
+			{
+				RefreshAttachment(att);
+			}
 		}
 
 		private void DestroyAttachmentInstance(MapAttachment attachment)
@@ -496,14 +439,6 @@ namespace ClassicTilestorm
 			foreach (var att in attachmentGameObjects.Keys.ToList())
 				DestroyAttachmentInstance(att);
 			attachmentGameObjects.Clear();
-		}
-
-		private void RemoveAllAttachmentsOnTile(int tileIndex)
-		{
-			if (attachments == null) return;
-			var toRemove = attachments.Where(a => a?.tile == tileIndex).ToArray();
-			foreach (var att in toRemove)
-				RemoveAttachment(att);
 		}
 
 		// ─────────────────────────────────────────────
@@ -908,7 +843,7 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			RefreshAllAttachmentInstances();
+			RefreshAttachments(GetAttachments());
 		}
 
 		public bool UpdateTileAt(int x, int z, string id, bool expand = true)
@@ -1014,7 +949,7 @@ namespace ClassicTilestorm
 				// Full rebuild (map size or content bounds changed)
 				DestroyAllTiles();
 				CreateOrGetRuntimeTiles(parentTransform);
-				RefreshAllAttachmentInstances();
+				RefreshAttachments(GetAttachments());
 			}
 			else
 			{
@@ -1025,7 +960,7 @@ namespace ClassicTilestorm
 				var def = ResolveDefinition(id, index);
 				runtimeTiles[index] = new Tile(def, parentTransform, TileWorldPosition(index));
 
-				RefreshAttachmentsOnTile(index);
+				RefreshAttachments(GetAttachments(tileIndex: index));
 			}
 
 			// ── Notify listeners ────────────────────────────────────────────────────
@@ -1118,7 +1053,7 @@ namespace ClassicTilestorm
 
 			InitializeWindController();
 
-			RefreshAllAttachmentInstances();
+			RefreshAttachments(GetAttachments());
 
 			SetupWaypoints();
 		}
@@ -1183,16 +1118,6 @@ namespace ClassicTilestorm
 			if (parentTransform != null)
 				parentTransform = null;
 		}
-
-		//[JsonIgnore] private bool IsScrambled => indices != null && !IsIdentity(indices);
-		//private bool IsValidTile(int index) => index >= 0 && index < width * height;
-		//private static bool IsIdentity(int[] arr)
-		//{
-		//	if (arr == null) return true;
-		//	for (int i = 0; i < arr.Length; i++)
-		//		if (arr[i] != i) return false;
-		//	return true;
-		//}
 	}
 
 	public static class MapExtensions
