@@ -16,6 +16,8 @@ namespace ClassicTilestorm
 		private EggbotController eggbotController;
 		private MainCameraController cameraController;
 
+		public static Transform MapRoot;
+
 		public event System.Action<int> OnChangeMapRequested; // delta or 0 for reload
 
 		private void Awake()
@@ -84,9 +86,7 @@ namespace ClassicTilestorm
 			// ─── Create new container GameObject ──────────────────────────
 			var container = new GameObject($"Map: {currentMap.name}");
 			container.transform.SetParent(transform, false);
-			mapRoot = container.transform;
-
-			Map.parentTransform = mapRoot;   // ← still using the static field
+			MapRoot = mapRoot = container.transform;
 
 			// ─── Load & initialise ────────────────────────────────────────
 
@@ -100,7 +100,7 @@ namespace ClassicTilestorm
 			//SkyboxUtility.SetSkybox(AssetPath.SkycubesPath, $"{(string.IsNullOrEmpty(currentMap.skybox) ? currentMap.music : currentMap.skybox)}Skybox");//fall back to music for now, but will be 'DefaultSkybox'
 
 			CurrentMap = currentMap;
-			currentMap.Initialise();
+			currentMap.Initialise(mapRoot);
 
 			// Eggbot
 			if (eggbotController != null)

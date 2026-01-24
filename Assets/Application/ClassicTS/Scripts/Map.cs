@@ -91,7 +91,7 @@ namespace ClassicTilestorm
 		public bool ShouldSerializeattachments() => attachments != null && attachments.Length > 0;
 
 		public Action<Map, bool, Vector3> OnMapEdited { get; set; }
-		public static Transform parentTransform;
+		[JsonIgnore] private Transform parentTransform;
 
 		[JsonIgnore] public int Width => width;
 		[JsonIgnore] public int Height => height;
@@ -1038,8 +1038,10 @@ namespace ClassicTilestorm
 				Debug.Log($"WindController initialized with {windController.SwayComponents.Count} sway components.");
 		}
 
-		public void Initialise()
+		public void Initialise(Transform parent = null)
 		{
+			parentTransform = parent;
+
 			CreateOrGetRuntimeTiles(parentTransform);
 
 			if (RuntimeTileCount == 0)
