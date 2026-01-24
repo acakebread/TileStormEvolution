@@ -192,7 +192,7 @@ namespace ClassicTilestorm
 		public static void ShowTransformGizmo(View view, IMap map, Camera cam)
 		{
 			if (null == view || null == map || null == cam) return;
-			var worldPos = Map.WorldPosition(view.tile, view.Position);
+			var worldPos = map.WorldPosition(view.tile, view.Position);
 			ShowAt(worldPos, view.Rotation, cam);
 		}
 

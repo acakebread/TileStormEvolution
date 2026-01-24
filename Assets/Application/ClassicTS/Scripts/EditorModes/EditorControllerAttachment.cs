@@ -230,8 +230,8 @@ namespace ClassicTilestorm
 				if (null == selection || 1 != selection.Length) return;
 				if (selection[0] is ITransformableAttachment transformable)
 				{
-					var worldPos = Map.WorldPosition(selection[0].tile, transformable.Position);
-					var worldRot = Map.WorldRotation(selection[0].tile, transformable.Rotation);
+					var worldPos = iMap.WorldPosition(selection[0].tile, transformable.Position);
+					var worldRot = iMap.WorldRotation(selection[0].tile, transformable.Rotation);
 					EditorTransformUtil.ShowAt(worldPos, worldRot, camera);
 				}
 				selection[0].OnDragInput(iMap, selection);
@@ -366,28 +366,81 @@ namespace ClassicTilestorm
 			};
 		}
 
+		//private void DrawSidePanelWaypoint()
+		//{
+		//	var selectedWaypoint = selection?.Length > 0 ? selection[0] as Waypoint : null;
+
+		//	var items = new List<ListViewItem>();
+		//	var waypointAttachments = iMap.WaypointAttachments;//cached
+
+		//	for (var i = 0; i < waypointAttachments.Length; i++)
+		//	{
+		//		var waypoint = waypointAttachments.FirstOrDefault(w => w.waypointIndex == i);
+		//		items.Add(new(label: $"WP{i:00} [tile {waypointAttachments[i].tile}]", onClick: (_) =>
+		//		{
+		//			if (null != waypoint) Select(waypoint);
+		//		}, selected: selectedWaypoint?.waypointIndex == i));
+		//	}
+
+		//	sidePanel.List.SetItems(items);
+
+		//	sidePanel.Buttons.Clear();
+
+		//	var canMoveUp = null != selectedWaypoint && selectedWaypoint.waypointIndex > 0;
+		//	var canMoveDown = null != selectedWaypoint && selectedWaypoint.waypointIndex >= 0 && selectedWaypoint.waypointIndex < waypointAttachments.Length - 1;
+
+		//	sidePanel.Buttons.Add(new("Move Up", () => MoveWaypoint(selectedWaypoint, -1), enabled: canMoveUp));
+		//	sidePanel.Buttons.Add(new("Move Down", () => MoveWaypoint(selectedWaypoint, +1), enabled: canMoveDown));
+
+		//	sidePanel.Draw();
+
+		//	void MoveWaypoint(Waypoint wp, int direction)
+		//	{
+		//		if (null == wp) return;
+
+		//		var oldIndex = wp.waypointIndex;
+		//		var newIndex = oldIndex + direction;
+		//		if (newIndex < 0 || newIndex >= waypointAttachments.Length) return;
+
+		//		var list = iMap.Waypoints.ToList();
+		//		(list[oldIndex], list[newIndex]) = (list[newIndex], list[oldIndex]);
+		//		iMap.Waypoints = list.ToArray();
+
+		//		var movedWaypoint = new Waypoint(newIndex, list[newIndex]);
+		//		Select(movedWaypoint);
+		//		RebuildMarkers();
+		//	}
+		//}
+
 		private void DrawSidePanelWaypoint()
 		{
 			var selectedWaypoint = selection?.Length > 0 ? selection[0] as Waypoint : null;
 
+			// Get only waypoints, sorted by their waypointIndex
+			var waypointAttachments = iMap.GetAttachments(filterTypes: new[] { typeof(Waypoint) })
+										  .Cast<Waypoint>()
+										  .OrderBy(wp => wp.waypointIndex)
+										  .ToArray();
+
 			var items = new List<ListViewItem>();
-			var waypointAttachments = iMap.WaypointAttachments;//cached
 
 			for (var i = 0; i < waypointAttachments.Length; i++)
 			{
-				var waypoint = waypointAttachments.FirstOrDefault(w => w.waypointIndex == i);
-				items.Add(new(label: $"WP{i:00} [tile {waypointAttachments[i].tile}]", onClick: (_) =>
-				{
-					if (null != waypoint) Select(waypoint);
-				}, selected: selectedWaypoint?.waypointIndex == i));
+				var waypoint = waypointAttachments[i];
+
+				items.Add(new ListViewItem(
+					label: $"WP{waypoint.waypointIndex:00} [tile {waypoint.tile}]",
+					onClick: (_) => Select(waypoint),
+					selected: selectedWaypoint?.waypointIndex == waypoint.waypointIndex
+				));
 			}
 
 			sidePanel.List.SetItems(items);
 
 			sidePanel.Buttons.Clear();
 
-			var canMoveUp = null != selectedWaypoint && selectedWaypoint.waypointIndex > 0;
-			var canMoveDown = null != selectedWaypoint && selectedWaypoint.waypointIndex >= 0 && selectedWaypoint.waypointIndex < waypointAttachments.Length - 1;
+			var canMoveUp = selectedWaypoint != null && selectedWaypoint.waypointIndex > 0;
+			var canMoveDown = selectedWaypoint != null && selectedWaypoint.waypointIndex < waypointAttachments.Length - 1;
 
 			sidePanel.Buttons.Add(new("Move Up", () => MoveWaypoint(selectedWaypoint, -1), enabled: canMoveUp));
 			sidePanel.Buttons.Add(new("Move Down", () => MoveWaypoint(selectedWaypoint, +1), enabled: canMoveDown));
@@ -396,19 +449,37 @@ namespace ClassicTilestorm
 
 			void MoveWaypoint(Waypoint wp, int direction)
 			{
-				if (null == wp) return;
+				if (wp == null) return;
 
 				var oldIndex = wp.waypointIndex;
 				var newIndex = oldIndex + direction;
-				if (newIndex < 0 || newIndex >= waypointAttachments.Length) return;
 
+				// Re-fetch current sorted waypoints
+				var currentWaypoints = iMap.GetAttachments(filterTypes: new[] { typeof(Waypoint) })
+										   .Cast<Waypoint>()
+										   .OrderBy(w => w.waypointIndex)
+										   .ToArray();
+
+				if (newIndex < 0 || newIndex >= currentWaypoints.Length) return;
+
+				var targetWp = currentWaypoints[newIndex];
+
+				// Swap in the internal waypoints array (still needed for now)
 				var list = iMap.Waypoints.ToList();
 				(list[oldIndex], list[newIndex]) = (list[newIndex], list[oldIndex]);
 				iMap.Waypoints = list.ToArray();
 
+				// Also swap the waypointIndex values on the objects
+				wp.waypointIndex = newIndex;
+				targetWp.waypointIndex = oldIndex;
+
 				var movedWaypoint = new Waypoint(newIndex, list[newIndex]);
 				Select(movedWaypoint);
+
 				RebuildMarkers();
+
+				// Optional: refresh visuals if needed
+				// iMap.RefreshAllAttachmentInstances();
 			}
 		}
 

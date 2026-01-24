@@ -10,7 +10,7 @@ namespace ClassicTilestorm
 		public void OnSelectionChanged(IMap map, Camera camera, MapAttachment[] selection)
 		{
 			var view = (View)selection[0];
-			var worldPos = Map.WorldPosition(view.tile, view.Position);
+			var worldPos = map.WorldPosition(view.tile, view.Position);
 			EditorTransformUtil.ShowAt(worldPos, view.Rotation, camera);
 			OnDragInput(map, selection);
 		}
@@ -21,19 +21,19 @@ namespace ClassicTilestorm
 
 			if (EditorTransformUtil.HandleInput(camera, out Vector3 newWorldPos, out Quaternion newWorldRot))
 			{
-				view.Position = Map.LocalPosition(view.tile, newWorldPos);
-				view.Rotation = Map.LocalRotation(view.tile, newWorldRot);
-				SnapViewDistanceToGround(view);
+				view.Position = map.LocalPosition(view.tile, newWorldPos);
+				view.Rotation = map.LocalRotation(view.tile, newWorldRot);
+				SnapViewDistanceToGround(map, view);
 
 				var previewTransform = ViewPreviewUtil.PreviewCameraTransform;
 				if (previewTransform != null)
 				{
-					previewTransform.position = Map.WorldPosition(view.tile, view.Position);
-					previewTransform.rotation = Map.WorldRotation(view.tile, view.Rotation);
+					previewTransform.position = map.WorldPosition(view.tile, view.Position);
+					previewTransform.rotation = map.WorldRotation(view.tile, view.Rotation);
 				}
 
 				ViewPreviewUtil.Update();
-				UpdateViewFrustumMarker(view);
+				UpdateViewFrustumMarker(map, view);
 			}
 		}
 
@@ -41,7 +41,7 @@ namespace ClassicTilestorm
 		{
 			var view = (View)selection[0];
 			ViewPreviewUtil.Show(view, map);
-			UpdateViewFrustumMarker(view);
+			UpdateViewFrustumMarker(map, view);
 		}
 
 		public static View Create(IMap map, int tile)
@@ -55,7 +55,7 @@ namespace ClassicTilestorm
 				LookAt = (Vector3.forward + Vector3.down) * 4f
 			};
 
-			SnapViewDistanceToGround(view);
+			SnapViewDistanceToGround(map, view);
 			map.AddAttachment(view);
 			return view;
 		}
@@ -66,22 +66,22 @@ namespace ClassicTilestorm
 			var previewTransform = ViewPreviewUtil.PreviewCameraTransform;
 			if (previewTransform == null) return;
 
-			view.Position = Map.LocalPosition(view.tile, previewTransform.position);
-			view.Rotation = Map.LocalRotation(view.tile, previewTransform.rotation);
-			SnapViewDistanceToGround(view);
+			view.Position = map.LocalPosition(view.tile, previewTransform.position);
+			view.Rotation = map.LocalRotation(view.tile, previewTransform.rotation);
+			SnapViewDistanceToGround(map, view);
 
-			previewTransform.position = Map.WorldPosition(view.tile, view.Position);
-			previewTransform.rotation = Map.WorldRotation(view.tile, view.Rotation);
+			previewTransform.position = map.WorldPosition(view.tile, view.Position);
+			previewTransform.rotation = map.WorldRotation(view.tile, view.Rotation);
 
 			ViewPreviewUtil.Update();
-			UpdateViewFrustumMarker(view);
+			UpdateViewFrustumMarker(map, view);
 			EditorTransformUtil.UpdateTransform(previewTransform.position, view.Rotation, camera);
 		}
 
-		private static void SnapViewDistanceToGround(View view)
+		private static void SnapViewDistanceToGround(IMap map, View view)
 		{
 			if (view == null) return;
-			var origin = Map.WorldPosition(view.tile, view.Position);
+			var origin = map.WorldPosition(view.tile, view.Position);
 			var forward = view.Rotation * Vector3.forward;
 			var ray = new Ray(origin, forward);
 
@@ -98,7 +98,7 @@ namespace ClassicTilestorm
 			view.Distance = View.MAX_DISTANCE;
 		}
 
-		private static void UpdateViewFrustumMarker(View view)
+		private static void UpdateViewFrustumMarker(IMap map, View view)
 		{
 			if (view == null || view.data == null || view.data.Length < 7 || view.Distance < 0.02f)
 			{
@@ -106,7 +106,7 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			Vector3 worldPos = Map.WorldPosition(view.tile, view.Position);
+			Vector3 worldPos = map.WorldPosition(view.tile, view.Position);
 			Vector3 forward = (view.LookAt - view.Position).normalized;
 			if (forward.sqrMagnitude < 0.001f) forward = Vector3.forward;
 

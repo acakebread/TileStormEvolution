@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Collections.Generic;
 
@@ -15,11 +15,12 @@ namespace MassiveHadronLtd
 			if (source == null) throw new ArgumentNullException(nameof(source));
 
 			return source
-				.Where(item => item != null) // skip nulls
+				.Where(item => item != null)
 				.GroupBy(item => item)
-				.OrderByDescending(g => g.Count())
-				.ThenBy(g => g.Key) // requires T : IComparable<T>, or use comparer
-				.Select(g => g.Key)
+				.Select(g => new { Key = g.Key, Count = g.Count() })
+				.OrderByDescending(x => x.Count)
+				.ThenBy(x => x.Key)           // assumes T is comparable
+				.Select(x => x.Key)
 				.ToArray();
 		}
 
@@ -31,9 +32,10 @@ namespace MassiveHadronLtd
 			return source
 				.Where(s => !string.IsNullOrEmpty(s))
 				.GroupBy(s => s)
-				.OrderByDescending(g => g.Count())
-				.ThenBy(g => g.Key, StringComparer.Ordinal) // deterministic + case-sensitive if desired
-				.Select(g => g.Key)
+				.Select(g => new { Key = g.Key, Count = g.Count() })
+				.OrderByDescending(x => x.Count)
+				.ThenBy(x => x.Key, StringComparer.Ordinal)   // now applied after projection → no stability issue
+				.Select(x => x.Key)
 				.ToArray();
 		}
 	}

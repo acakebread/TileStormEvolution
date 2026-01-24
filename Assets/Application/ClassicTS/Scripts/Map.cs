@@ -46,6 +46,15 @@ namespace ClassicTilestorm
 		int CameraHitTile(Camera camera, Vector3 position);
 		Bounds GetTileGeometryBounds(int _);
 		bool UpdateTileAt(int x, int z, string id, bool expand = true);
+
+		Quaternion LocalRotation(int tileIndex, Quaternion worldRotation);
+		Quaternion WorldRotation(int tileIndex, Quaternion localRotation);
+
+		Vector3 LocalPosition(int tileIndex, Vector3 worldPosition);
+		Vector3 WorldPosition(int tileIndex, Vector3 localPosition);
+
+		// In IMap interface
+		MapAttachment[] GetAttachments(int? tileIndex = null, Type[] filterTypes = null);
 	}
 
 	[Serializable]
@@ -95,13 +104,13 @@ namespace ClassicTilestorm
 		public Action<Map, bool, Vector3> OnMapEdited { get; set; }
 		public static Transform parentTransform;
 
-		public int Width => width;
-		public int Height => height;
-		public int Count => Width * Height;
-		public int[] Indices => indices;
-		public int[] Waypoints { get => waypoints; set => waypoints = value; }
-		public MapAttachment[] Attachments { get => attachments; set => attachments = value; }
-		public string Music => music;
+		[JsonIgnore] public int Width => width;
+		[JsonIgnore] public int Height => height;
+		[JsonIgnore] public int Count => Width * Height;
+		[JsonIgnore] public int[] Indices => indices;
+		[JsonIgnore] public int[] Waypoints { get => waypoints; set => waypoints = value; }
+		[JsonIgnore] public MapAttachment[] Attachments { get => attachments; set => attachments = value; }
+		[JsonIgnore] public string Music => music;
 
 		public const int MAP_MAX_SIZE = 64;
 
@@ -224,6 +233,20 @@ namespace ClassicTilestorm
 		// ─────────────────────────────────────────────
 		// Attachment runtime state (unchanged)
 		// ─────────────────────────────────────────────
+
+		// In Map class
+		public MapAttachment[] GetAttachments(int? tileIndex = null, Type[] filterTypes = null)
+		{
+			var source = AllAttachments.AsEnumerable();
+
+			if (tileIndex.HasValue)
+				source = source.Where(a => a?.tile == tileIndex.Value);
+
+			if (filterTypes != null && filterTypes.Length > 0)
+				source = source.Where(a => a != null && filterTypes.Contains(a.GetType()));
+
+			return source.ToArray();
+		}
 
 		[NonSerialized] private readonly Dictionary<MapAttachment, GameObject> attachmentGameObjects = new();
 
@@ -448,6 +471,7 @@ namespace ClassicTilestorm
 			}
 		}
 
+		[JsonIgnore]
 		public MapAttachment[] AllAttachments
 		{
 			get
@@ -520,41 +544,55 @@ namespace ClassicTilestorm
 			return ResourceManager.FindOrCreateDefaultTile();
 		}
 
-		public bool Consolidate()
+		private bool Consolidate()
 		{
-			if (tiles == null || tiles.Length == 0) return false;
+			if (tiles == null || tiles.Length == 0)
+				return false;
 
-			var defaultDef = ResourceManager.FindOrCreateDefaultTile();
-			var defaultHash = defaultDef.hashid;
+			var defaultHash = ResourceManager.FindOrCreateDefaultTile().hashid;
 
-			var mapDefinitions = tiles.Select(idx =>
-				(idx >= 0 && idx < table.Length) ? table[idx] : null
+			// Step 1: build the current hashes with default fallback
+			var currentHashes = tiles.Select(idx =>
+				idx >= 0 && idx < table.Length ? table[idx] : defaultHash
 			).ToArray();
 
-			for (int i = 0; i < mapDefinitions.Length; i++)
+			// Step 2: compute what the sorted table *should* be
+			var newTable = currentHashes.ToFrequencySortedTable();
+
+			// ── Capture original state BEFORE any mutation ─────────────────────────────
+			string[] originalTable = table;                     // reference is fine
+			int originalSize = originalTable?.Length ?? 0;
+			int newSize = newTable.Length;
+
+			bool sizeChanged = newSize != originalSize;
+			bool orderChanged = !sizeChanged && !originalTable.SequenceEqual(newTable);
+
+			bool anythingChanged = sizeChanged || orderChanged;
+
+			if (anythingChanged)
 			{
-				if (mapDefinitions[i] == null)
-					mapDefinitions[i] = defaultHash;
+				// Apply changes
+				table = newTable;
+				tiles = currentHashes.Select(h => Array.IndexOf(table, h)).ToArray();
+
+				// Logging – follow your exact requested rules
+				if (sizeChanged)
+				{
+					string direction = newSize > originalSize ? "increased" : "reduced";
+					Debug.Log($"{name} consolidated: table size {direction} {originalSize} → {newSize}");
+				}
+				else if (orderChanged)
+				{
+					Debug.Log($"{name} consolidated: table order changed (same size: {newSize})");
+				}
 			}
+			// else → silent (or uncomment for debug)
+			// else
+			// {
+			//     Debug.Log($"{name} consolidation: no change needed");
+			// }
 
-			var newFrequencyTable = mapDefinitions.ToFrequencySortedTable();
-
-			bool changed = !table.SequenceEqual(newFrequencyTable);
-
-			if (changed)
-			{
-				table = newFrequencyTable;
-			}
-
-			if (changed)
-			{
-				tiles = mapDefinitions.Select(hash =>
-					Array.IndexOf(table, hash)
-				).ToArray();
-			}
-
-			if (changed) Debug.Log($"{name} consolidated (table updated)");
-			return changed;
+			return anythingChanged;
 		}
 
 		private bool RepositionAndResize(int newWidth, int newHeight, int offsetX, int offsetZ)
@@ -656,19 +694,35 @@ namespace ClassicTilestorm
 			return true;
 		}
 
-		private bool CropToContent()
+		private bool CropToContent(bool consolidate = false)
 		{
 			var (minX, minZ, maxX, maxZ) = GetContentBounds();
 			if (maxX < 0) return false;
 
-			int w = maxX - minX + 1;
-			int h = maxZ - minZ + 1;
+			int newWidth = maxX - minX + 1;
+			int newHeight = maxZ - minZ + 1;
+			int offsetX = -minX;
+			int offsetZ = -minZ;
 
-			bool success = RepositionAndResize(w, h, -minX, -minZ);
+			bool needsCrop =
+				newWidth != width ||
+				newHeight != height ||
+				offsetX != 0 ||
+				offsetZ != 0;
 
-			if (success) Consolidate();
+			bool resized = false;
+			if (needsCrop)
+			{
+				resized = RepositionAndResize(newWidth, newHeight, offsetX, offsetZ);
+			}
 
-			return success;
+			bool consolidated = false;
+			if (consolidate)
+			{
+				consolidated = Consolidate();
+			}
+
+			return resized || consolidated;
 		}
 
 		private (int minX, int minZ, int maxX, int maxZ) GetContentBounds()
@@ -726,7 +780,7 @@ namespace ClassicTilestorm
 				table = table != null ? (string[])table.Clone() : Array.Empty<string>()
 			};
 
-			bool cropped = copy.CropToContent();
+			bool cropped = copy.CropToContent(true);
 
 			if (cropped)
 				Debug.Log($"[Export] Map '{copy.name}' auto-cropped to {copy.width}x{copy.height}");
@@ -902,7 +956,7 @@ namespace ClassicTilestorm
 			tiles[index] = GetOrAddTableIndex(id);
 
 			RefreshAttachmentsOnTile(index);
-			Consolidate();
+			//Consolidate();//no need to do this - invoked only when seaved
 
 			RefreshGeometry();  // rebuilds runtime tiles
 
@@ -990,7 +1044,7 @@ namespace ClassicTilestorm
 				RefreshAttachmentsOnTile(index);
 			}
 
-			Consolidate();
+			//Consolidate();//no need to do this - invoked only when seaved
 
 			OnMapEdited?.Invoke(this, boundsChanged, originDelta);
 			return true;
@@ -1079,7 +1133,6 @@ namespace ClassicTilestorm
 
 		public void Initialise()
 		{
-			instance = this;
 			MapAttachmentExtensions.SetActiveMapManager(this);
 
 			CreateOrGetRuntimeTiles(parentTransform);
@@ -1164,14 +1217,10 @@ namespace ClassicTilestorm
 				parentTransform = null;
 		}
 
-		private static Map instance;
-		public static Quaternion LocalRotation(int tileIndex, Quaternion worldRotation) => worldRotation;
-		public static Quaternion WorldRotation(int tileIndex, Quaternion localRotation) => localRotation;
+		public Quaternion LocalRotation(int tileIndex, Quaternion worldRotation) => worldRotation;
+		public Quaternion WorldRotation(int tileIndex, Quaternion localRotation) => localRotation;
 
-		public static Vector3 LocalPosition(int tileIndex, Vector3 worldPosition)
-			=> instance == null || tileIndex < 0 ? worldPosition : worldPosition - instance.TileWorldPosition(tileIndex);
-
-		public static Vector3 WorldPosition(int tileIndex, Vector3 localPosition)
-			=> instance == null || tileIndex < 0 ? localPosition : localPosition + instance.TileWorldPosition(tileIndex);
+		public Vector3 LocalPosition(int tileIndex, Vector3 worldPosition) => tileIndex < 0 ? worldPosition : worldPosition - TileWorldPosition(tileIndex);
+		public Vector3 WorldPosition(int tileIndex, Vector3 localPosition) => tileIndex < 0 ? localPosition : localPosition + TileWorldPosition(tileIndex);
 	}
 }
