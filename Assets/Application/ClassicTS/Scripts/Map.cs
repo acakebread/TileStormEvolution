@@ -911,47 +911,32 @@ namespace ClassicTilestorm
 			RefreshAllAttachmentInstances();
 		}
 
-		public bool UpdateTileAt(int x, int z, string id, bool expand = true) => expand ? UpdateTileAtSmart(x, z, id) : UpdateTileAtRestricted(x, z, id);
-
-		private bool UpdateTileAtRestricted(int x, int z, string id)
+		public bool UpdateTileAt(int x, int z, string id, bool expand = true)
 		{
-			if (x < 0 || x >= width || z < 0 || z >= height)
+			if (tiles == null || tiles.Length == 0)
 			{
-				Debug.LogError($"Invalid coordinates: ({x}, {z}) outside map bounds ({width}x{height})");
+				Debug.LogError("Cannot update tile: map has no tiles array");
 				return false;
 			}
 
-			int index = z * width + x;
-
-			var oldTile = GetSeedTile(index);
-			oldTile.Destroy();
-
-			var def = ResolveDefinition(id, index);
-
-			// We can't directly set runtimeTiles[index] here anymore — force full refresh
-			tiles[index] = GetOrAddTableIndex(id);
-
-			RefreshAttachmentsOnTile(index);
-			//Consolidate();//no need to do this - invoked only when seaved
-
-			RefreshGeometry();  // rebuilds runtime tiles
-
-			OnMapEdited?.Invoke(this, false, Vector3.zero);
-			return true;
-		}
-
-		private bool UpdateTileAtSmart(int x, int z, string id, Action<bool, Vector3> onEdited = null)
-		{
+			// ── Cache original state ────────────────────────────────────────────────
 			int oldWidth = width;
 			int oldHeight = height;
-
 			var oldBounds = GetContentBounds();
 
 			Vector3 originDelta = Vector3.zero;
 			bool sizeChanged = false;
 
+			// ── Bounds check + optional expansion ───────────────────────────────────
 			if (x < 0 || x >= width || z < 0 || z >= height)
 			{
+				if (!expand)
+				{
+					Debug.LogError($"Invalid coordinates: ({x}, {z}) outside map bounds ({width}x{height})");
+					return false;
+				}
+
+				// Expand map to include the new position
 				int minX = Mathf.Min(0, x);
 				int minZ = Mathf.Min(0, z);
 				int maxX = Mathf.Max(width - 1, x);
@@ -963,7 +948,6 @@ namespace ClassicTilestorm
 				if (newWidth > MAP_MAX_SIZE || newHeight > MAP_MAX_SIZE)
 				{
 					Debug.LogWarning($"Map placement rejected: would exceed max size ({MAP_MAX_SIZE}x{MAP_MAX_SIZE})");
-					onEdited?.Invoke(false, Vector3.zero);
 					return false;
 				}
 
@@ -981,61 +965,73 @@ namespace ClassicTilestorm
 				sizeChanged = true;
 			}
 
+			// ── Update the tile (inline GetOrAddTableIndex) ─────────────────────────
 			int index = z * width + x;
 
-			tiles[index] = GetOrAddTableIndex(id);
-
-			var defForCrop = ResourceManager.GetDefinition(id);
-			bool isDefaultTile = defForCrop?.IsDefault() ?? false;
-
-			if (isDefaultTile || sizeChanged)
+			if (table == null || !Array.Exists(table, s => s == id))
 			{
-				var newBounds = GetContentBounds();
+				var list = table?.ToList() ?? new List<string>();
+				list.Add(id);
+				table = list.ToArray();
+				tiles[index] = table.Length - 1;
+			}
+			else
+			{
+				tiles[index] = Array.IndexOf(table, id);
+			}
 
-				if (CropToContent())
+			// ── Optional crop (only when expanding or placing default tile) ─────────
+			bool cropped = false;
+
+			if (expand)
+			{
+				var def = ResourceManager.GetDefinition(id);
+				bool isDefaultTile = def?.IsDefault() ?? false;
+
+				if (isDefaultTile || sizeChanged)
 				{
-					originDelta += new Vector3(oldBounds.minX - newBounds.minX,0,oldBounds.minZ - newBounds.minZ);
-					sizeChanged = true;
+					var newBounds = GetContentBounds();
+					cropped = CropToContent();  // calls Consolidate internally if needed
+
+					if (cropped)
+					{
+						originDelta += new Vector3(
+							oldBounds.minX - newBounds.minX,
+							0,
+							oldBounds.minZ - newBounds.minZ
+						);
+						sizeChanged = true;
+					}
 				}
 			}
 
-			bool boundsChanged = sizeChanged || width != oldWidth || height != oldHeight;
+			// ── Determine if anything structural changed ────────────────────────────
+			bool boundsChanged = sizeChanged || width != oldWidth || height != oldHeight || cropped;
 
+			// ── Refresh runtime tiles & attachments ─────────────────────────────────
 			if (boundsChanged)
 			{
+				// Full rebuild (map size or content bounds changed)
 				DestroyAllTiles();
 				CreateOrGetRuntimeTiles(parentTransform);
 				RefreshAllAttachmentInstances();
 			}
 			else
 			{
+				// Single-tile update (faster)
 				var oldTile = GetSeedTile(index);
-				oldTile.Destroy();
+				oldTile.Destroy();  // safe null-conditional
 
 				var def = ResolveDefinition(id, index);
-
-				// Force single tile recreation
 				runtimeTiles[index] = new Tile(def, parentTransform, TileWorldPosition(index));
 
 				RefreshAttachmentsOnTile(index);
 			}
 
-			//Consolidate();//no need to do this - invoked only when seaved
-
+			// ── Notify listeners ────────────────────────────────────────────────────
 			OnMapEdited?.Invoke(this, boundsChanged, originDelta);
-			return true;
-		}
 
-		private int GetOrAddTableIndex(string id)
-		{
-			if (table == null || !Array.Exists(table, s => s == id))
-			{
-				var list = table?.ToList() ?? new List<string>();
-				list.Add(id);
-				table = list.ToArray();
-				return table.Length - 1;
-			}
-			return Array.IndexOf(table, id);
+			return true;
 		}
 
 		private void SetupWaypoints()
