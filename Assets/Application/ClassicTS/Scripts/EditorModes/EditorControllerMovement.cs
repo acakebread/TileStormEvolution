@@ -12,7 +12,7 @@ namespace ClassicTilestorm
 
 		protected bool IsGuiControlActive() => GUIUtility.hotControl != 0 || (EventSystem.current && EventSystem.current.IsPointerOverGameObject());
 		protected virtual bool IsMouseOverGUI() => editorController.IsMouseOverGui() | IsGuiControlActive();
-		protected IMap iMap => editorController?.iMapManager;
+		protected IMapEdit iMap => editorController?.iMap;
 		public virtual void OnMapLoaded() { }
 
 		public EditorControllerMovement(EditorController controller = null) => editorController = controller;

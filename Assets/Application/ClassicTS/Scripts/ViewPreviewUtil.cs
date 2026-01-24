@@ -20,7 +20,7 @@ namespace ClassicTilestorm
 		private const float MARGIN = 10f;
 
 		private static View currentView;
-		private static IMap currentManager;
+		private static IMapEdit currentManager;
 		private static bool isVisible = false;
 		private static bool isInFocus = false;
 		private static bool isInUse = false;
@@ -32,7 +32,7 @@ namespace ClassicTilestorm
 		public static Camera PreviewCamera => previewCam;
 		public static Transform PreviewCameraTransform => previewCam != null ? previewCam.transform : null;
 
-		public static void Show(View view, IMap manager)
+		public static void Show(View view, IMapEdit manager)
 		{
 			if (view == null || manager == null)
 			{

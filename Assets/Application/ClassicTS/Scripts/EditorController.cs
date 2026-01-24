@@ -6,8 +6,8 @@ namespace ClassicTilestorm
 {
 	public class EditorController : MonoBehaviour
 	{
-		public IMap iMapManager => mapManager;
-		private IMap mapManager;
+		public IMapEdit iMap => map;
+		private IMapEdit map;
 
 		private EditorControllerMovement activeMode;
 		private EditorControllerView viewMode;
@@ -42,10 +42,10 @@ namespace ClassicTilestorm
 			SetEditorMode(EditorMode.View);//default
 		}
 
-		public void Initialise(IMap map)
+		public void Initialise(IMapEdit map)
 		{
-			mapManager = map;
-			mapManager.OnMapEdited += HandleMapEdited;// Subscribe to map changes
+			this.map = map;
+			this.map.OnMapEdited += HandleMapEdited;// Subscribe to map changes
 			if (!isActiveAndEnabled) return;
 			UpdateGridLines(gridEnabled);
 			activeMode?.OnMapLoaded();
@@ -96,7 +96,7 @@ namespace ClassicTilestorm
 		private void OnDestroy()
 		{
 			GridLinesUtil.Hide();
-			if (null != mapManager) mapManager.OnMapEdited -= HandleMapEdited;
+			if (null != map) map.OnMapEdited -= HandleMapEdited;
 			viewMode?.OnDestroy();
 			paintMode?.OnDestroy();
 			attachmentMode?.OnDestroy();
@@ -108,7 +108,7 @@ namespace ClassicTilestorm
 			if (null != eggbotController) eggbotController.gameObject.SetActive(value);
 		}
 
-		private void UpdateGridLines(bool enabled = true) => GridLinesUtil.Show(transform, null != mapManager ? mapManager.Width : 32, null != mapManager ? mapManager.Height : 32, gridEnabled = enabled);
+		private void UpdateGridLines(bool enabled = true) => GridLinesUtil.Show(transform, null != map ? map.Width : 32, null != map ? map.Height : 32, gridEnabled = enabled);
 		private void UpdateDOF(bool enabled = true)
 		{
 			if (null != gameCameraEditor)

@@ -7,7 +7,7 @@ namespace ClassicTilestorm
 	{
 		public static readonly ViewAttachmentHandler Instance = new();
 
-		public void OnSelectionChanged(IMap map, Camera camera, MapAttachment[] selection)
+		public void OnSelectionChanged(IMapEdit map, Camera camera, MapAttachment[] selection)
 		{
 			var view = (View)selection[0];
 			var worldPos = map.WorldPosition(view.tile, view.Position);
@@ -15,7 +15,7 @@ namespace ClassicTilestorm
 			OnDragInput(map, selection);
 		}
 
-		public void OnGizmoInput(IMap map, Camera camera, MapAttachment[] selection)
+		public void OnGizmoInput(IMapEdit map, Camera camera, MapAttachment[] selection)
 		{
 			var view = (View)selection[0];
 
@@ -37,14 +37,14 @@ namespace ClassicTilestorm
 			}
 		}
 
-		public void OnDragInput(IMap map, MapAttachment[] selection)
+		public void OnDragInput(IMapEdit map, MapAttachment[] selection)
 		{
 			var view = (View)selection[0];
 			ViewPreviewUtil.Show(view, map);
 			UpdateViewFrustumMarker(map, view);
 		}
 
-		public static View Create(IMap map, int tile)
+		public static View Create(IMapEdit map, int tile)
 		{
 			if (map == null) return null;
 
@@ -60,7 +60,7 @@ namespace ClassicTilestorm
 			return view;
 		}
 
-		public static void HandlePreviewCameraSync(IMap map, Camera camera, MapAttachment[] selection)
+		public static void HandlePreviewCameraSync(IMapEdit map, Camera camera, MapAttachment[] selection)
 		{
 			if (selection?.FirstOrDefault() is not View view) return;
 			var previewTransform = ViewPreviewUtil.PreviewCameraTransform;
@@ -78,7 +78,7 @@ namespace ClassicTilestorm
 			EditorTransformUtil.UpdateTransform(previewTransform.position, view.Rotation, camera);
 		}
 
-		private static void SnapViewDistanceToGround(IMap map, View view)
+		private static void SnapViewDistanceToGround(IMapEdit map, View view)
 		{
 			if (view == null) return;
 			var origin = map.WorldPosition(view.tile, view.Position);
@@ -98,7 +98,7 @@ namespace ClassicTilestorm
 			view.Distance = View.MAX_DISTANCE;
 		}
 
-		private static void UpdateViewFrustumMarker(IMap map, View view)
+		private static void UpdateViewFrustumMarker(IMapEdit map, View view)
 		{
 			if (view == null || view.data == null || view.data.Length < 7 || view.Distance < 0.02f)
 			{

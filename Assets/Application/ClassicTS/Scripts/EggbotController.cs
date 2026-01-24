@@ -31,7 +31,7 @@ namespace ClassicTilestorm
 		public event System.Action<int> OnPuzzleSolved;
 		public event System.Action OnLevelCompleted;
 
-		public int NavDirection(IMap map) => Navigation.NavToDest(map, currentTile, map.GetWaypoint(dstWaypoint).tile);
+		public int NavDirection(IMapPlay map) => Navigation.NavToDest(map, currentTile, map.GetWaypoint(dstWaypoint).tile);
 
 		private void Awake()
 		{
@@ -44,7 +44,7 @@ namespace ClassicTilestorm
 
 		private System.Action _unsubscribeAction;
 
-		public void Initialise(IMap map)
+		public void Initialise(IMapEdit map)
 		{
 			currentTile = map.GetStartTile();
 			if (null == map || -1 == currentTile) { Debug.LogError("Initialize: Invalid setup"); return; }
@@ -59,7 +59,7 @@ namespace ClassicTilestorm
 			_unsubscribeAction = () => map.OnMapEdited -= HandleMapEdited;// Capture the map instance in a closure
 		}
 
-		private void HandleMapEdited(Map map, bool resized, Vector3 originDelta)
+		private void HandleMapEdited(IMapPlay map, bool resized, Vector3 originDelta)
 		{
 			if (resized) OnMapOriginShift(map, originDelta);
 		}
@@ -71,7 +71,7 @@ namespace ClassicTilestorm
 			stateDuration = duration;
 		}
 
-		public void UpdateEggbot(IMap map)
+		public void UpdateEggbot(IMapEdit map)
 		{
 			if (!isActiveAndEnabled) return;
 			stateTimer += Time.deltaTime;
@@ -218,7 +218,7 @@ namespace ClassicTilestorm
 		/// Updates currentTile and snaps position to new grid.
 		/// </summary>
 		/// <param name="originDelta">World-space shift of the map origin (in tile units)</param>
-		private void OnMapOriginShift(Map map, Vector3 originDelta)
+		private void OnMapOriginShift(IMapPlay map, Vector3 originDelta)
 		{
 			if (originDelta == Vector3.zero) return;
 
@@ -240,14 +240,14 @@ namespace ClassicTilestorm
 			int newX = oldX + deltaX;
 			int newZ = oldZ + deltaZ;
 
-			if (newX < 0 || newX >= map.width || newZ < 0 || newZ >= map.height)
+			if (newX < 0 || newX >= map.Width || newZ < 0 || newZ >= map.Height)
 			{
 				// Eggbot was cropped out — snap to nearest valid tile or start?
 				currentTile = map.GetStartTile();
 			}
 			else
 			{
-				currentTile = newZ * map.width + newX;
+				currentTile = newZ * map.Width + newX;
 			}
 
 			// Snap position to new grid

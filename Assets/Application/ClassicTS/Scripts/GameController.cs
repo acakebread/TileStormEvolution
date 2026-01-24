@@ -26,9 +26,9 @@ namespace ClassicTilestorm
 			mainController.SetPreviewMode(mode);
 		}
 
-		public void Initialise(IMap map)
+		public void Initialise(IMapEdit iMap)
 		{
-			if (isActiveAndEnabled) AudioManager.PlayMusic(map.Music, loop: true);
+			if (isActiveAndEnabled) AudioManager.PlayMusic(iMap.Music, loop: true);
 			if (!TryGetComponent<MainCameraController>(out var controller)) return;
 			controller.SetCameraSystem(CameraModeRegistry.Follow, true);
 			controller.SetCameraSystem(CameraModeRegistry.Path, true);

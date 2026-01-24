@@ -16,14 +16,26 @@ namespace ClassicTilestorm
 		int[] Indices { get; }
 	}
 
-	public interface IMap : IMapData
+	public interface IMapPlay : IMapData
 	{
-		Action<Map, bool, Vector3> OnMapEdited { get; set; }
 		public string Music { get; set; }
 		public string Skybox { get; set; }
 
 		int WorldToMapIndex(Vector3 _);
 		Vector3 TileWorldPosition(int _);
+
+		Tile GetTile(int _);
+
+		int GetStartTile();
+		int GetEndTile();
+		int FindAdjacentConsole(int _);
+
+		MapAttachment[] GetAttachments(int? tileIndex = null, Type[] filterTypes = null);//filtered heper
+	}
+
+	public interface IMapEdit : IMapPlay
+	{
+		Action<Map, bool, Vector3> OnMapEdited { get; set; }
 
 		Quaternion LocalRotation(int tileIndex, Quaternion worldRotation);
 		Quaternion WorldRotation(int tileIndex, Quaternion localRotation);
@@ -31,15 +43,9 @@ namespace ClassicTilestorm
 		Vector3 LocalPosition(int tileIndex, Vector3 worldPosition);
 		Vector3 WorldPosition(int tileIndex, Vector3 localPosition);
 
-		Tile GetTile(int _);
 		string GetDefinitionAtIndex(int _);
 		bool UpdateTileAt(int x, int z, string id, bool expand = true);
 
-		int GetStartTile();
-		int GetEndTile();
-		int FindAdjacentConsole(int _);
-
-		MapAttachment[] GetAttachments(int? tileIndex = null, Type[] filterTypes = null);//filtered heper
 		void AddAttachment(MapAttachment _);
 		bool RemoveAttachment(MapAttachment _);
 		bool RemoveAttachments(MapAttachment[] _);
@@ -50,7 +56,7 @@ namespace ClassicTilestorm
 	}
 
 	[Serializable]
-	public class Map : IMap
+	public class Map : IMapEdit
 	{
 		// ─────────────────────────────────────────────
 		// Core identity
@@ -714,7 +720,7 @@ namespace ClassicTilestorm
 			return copy;
 		}
 
-		public int CameraHitTile(Camera camera, Vector3 position) => WorldToMapIndex(Map.ScreenToWorld(camera, position));
+		public int CameraHitTile(Camera camera, Vector3 position) => WorldToMapIndex(ScreenToWorld(camera, position));
 
 		public static bool RayToWorld(Ray ray, out Vector3 point)
 		{
@@ -1126,20 +1132,27 @@ namespace ClassicTilestorm
 
 	public static class MapExtensions
 	{
-		public static T GetAttachmentOfType<T>(this IMap map, int tile) where T : MapAttachment
+		public static T GetAttachmentOfType<T>(this IMapPlay map, int tile) where T : MapAttachment
 		{
 			return map.GetAttachments(tileIndex: tile, filterTypes: new[] { typeof(T) })
 					  .OfType<T>()
 					  .FirstOrDefault();
 		}
 
-		public static bool HasAttachmentOfType<T>(this IMap map, int tile) where T : MapAttachment
+		public static bool HasAttachmentOfType<T>(this IMapEdit map, int tile) where T : MapAttachment
 		{
 			return map.GetAttachments(tileIndex: tile, filterTypes: new[] { typeof(T) })
 					  .Length > 0;
 		}
 
-		public static Waypoint[] GetWaypoints(this IMap map)
+		public static Waypoint GetWaypoint(this IMapPlay map, int waypointIndex)
+		{
+			return map.GetAttachments(filterTypes: new[] { typeof(Waypoint) })
+					  .Cast<Waypoint>()
+					  .FirstOrDefault(w => w.waypointIndex == waypointIndex);
+		}
+
+		public static Waypoint[] GetWaypoints(this IMapPlay map)
 		{
 			return map.GetAttachments(filterTypes: new[] { typeof(Waypoint) })
 					  .Cast<Waypoint>()
@@ -1147,17 +1160,10 @@ namespace ClassicTilestorm
 					  .ToArray();
 		}
 
-		public static Waypoint GetWaypoint(this IMap map, int waypointIndex)
-		{
-			return map.GetAttachments(filterTypes: new[] { typeof(Waypoint) })
-					  .Cast<Waypoint>()
-					  .FirstOrDefault(w => w.waypointIndex == waypointIndex);
-		}
-
-		// Optional: sorted list of waypoint tiles (useful for Eggbot navigation)
-		public static int[] GetWaypointTilesSorted(this IMap map)
-		{
-			return map.GetWaypoints().Select(w => w.tile).ToArray();
-		}
+		//// Optional: sorted list of waypoints by tile index - no real use
+		//public static int[] GetWaypointTilesSortedByTile(this IMapPlay iMap)
+		//{
+		//	return iMap.GetWaypoints().Select(w => w.tile).ToArray();
+		//}
 	}
 }

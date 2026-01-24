@@ -189,7 +189,7 @@ namespace ClassicTilestorm
 		// BACKWARD-COMPATIBLE WRAPPERS (so your existing code compiles unchanged)
 		// ===================================================================
 
-		public static void ShowTransformGizmo(View view, IMap map, Camera cam)
+		public static void ShowTransformGizmo(View view, IMapEdit map, Camera cam)
 		{
 			if (null == view || null == map || null == cam) return;
 			var worldPos = map.WorldPosition(view.tile, view.Position);

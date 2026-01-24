@@ -6,7 +6,7 @@ namespace ClassicTilestorm
 	{
 		private class OriginalMaterialHolder : MonoBehaviour { public Material originalMaterial; }
 
-		public static void HighlightStrip(IMap map, in TileStrip strip, bool highlight)
+		public static void HighlightStrip(IMapPlay map, in TileStrip strip, bool highlight)
 		{
 			if (!ApplicationSettings.ShowTileSelection) return;
 			if (null == strip.Indices) return;
