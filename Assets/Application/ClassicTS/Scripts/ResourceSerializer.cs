@@ -299,26 +299,9 @@ namespace ClassicTilestorm
 
 		private static Map CreateCroppedCopy(Map map)
 		{
-			var copy = new Map
-			{
-				name = map.name,
-				character = map.character,
-				music = map.music,
-				button = map.button,
-				width = map.width,
-				height = map.height,
+			var copy = map.Clone();
 
-				waypoints = map.waypoints != null ? (int[])map.waypoints.Clone() : null,
-				tiles = map.tiles != null ? (int[])map.tiles.Clone() : null,
-				solve = map.solve != null ? (int[])map.solve.Clone() : null,
-
-				attachments = map.attachments != null ? map.attachments.Select(a => a.ShallowClone()).ToArray() : Array.Empty<MapAttachment>(),
-				table = map.table != null ? (string[])map.table.Clone() : Array.Empty<string>()
-			};
-
-			bool cropped = copy.CropToContent(true);
-
-			if (cropped)
+			if (copy.CropToContent(true))
 				Debug.Log($"[Export] Map '{copy.name}' auto-cropped to {copy.width}x{copy.height}");
 
 			return copy;

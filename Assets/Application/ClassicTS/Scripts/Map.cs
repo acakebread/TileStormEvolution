@@ -698,32 +698,22 @@ namespace ClassicTilestorm
 			return maxX >= 0 ? (minX, minZ, maxX, maxZ) : (0, 0, -1, -1);
 		}
 
-		//public Map CreateCroppedCopy()
-		//{
-		//	var copy = new Map
-		//	{
-		//		name = name,
-		//		character = character,
-		//		music = music,
-		//		button = button,
-		//		width = width,
-		//		height = height,
+		public Map Clone() => new()
+		{
+			name = name,
+			character = character,
+			music = music,
+			button = button,
+			width = width,
+			height = height,
 
-		//		waypoints = waypoints != null ? (int[])waypoints.Clone() : null,
-		//		tiles = tiles != null ? (int[])tiles.Clone() : null,
-		//		solve = solve != null ? (int[])solve.Clone() : null,
+			waypoints = waypoints != null ? (int[])waypoints.Clone() : null,
+			tiles = tiles != null ? (int[])tiles.Clone() : null,
+			solve = solve != null ? (int[])solve.Clone() : null,
 
-		//		attachments = attachments != null ? attachments.Select(a => a.ShallowClone()).ToArray() : Array.Empty<MapAttachment>(),
-		//		table = table != null ? (string[])table.Clone() : Array.Empty<string>()
-		//	};
-
-		//	bool cropped = copy.CropToContent(true);
-
-		//	if (cropped)
-		//		Debug.Log($"[Export] Map '{copy.name}' auto-cropped to {copy.width}x{copy.height}");
-
-		//	return copy;
-		//}
+			attachments = attachments != null ? attachments.Select(a => a.ShallowClone()).ToArray() : Array.Empty<MapAttachment>(),
+			table = table != null ? (string[])table.Clone() : Array.Empty<string>()
+		};
 
 		public int CameraHitTile(Camera camera, Vector3 position) => WorldToMapIndex(ScreenToWorld(camera, position));
 
