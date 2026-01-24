@@ -312,33 +312,65 @@ namespace ClassicTilestorm
 
 		private MapAttachment[] GetAttachmentsOnTile(int tileIndex)
 		{
-			if (null == iMap || !iMap.IsValidTile(tileIndex)) return Array.Empty<MapAttachment>();
-			return iMap.AllAttachments?.Where(x => x.tile == tileIndex).ToArray() ?? Array.Empty<MapAttachment>();
+			if (null == iMap || tileIndex > iMap.Count || tileIndex < 0) return Array.Empty<MapAttachment>();//if (null == iMap || !iMap.IsValidTile(tileIndex)) return Array.Empty<MapAttachment>();
+			return iMap.Attachments?.Where(x => x.tile == tileIndex).ToArray() ?? Array.Empty<MapAttachment>();
 		}
+
+		//private void RebuildMarkers()
+		//{
+		//	var tiles = iMap?.AllAttachments?.Where(a => a.tile >= 0).Select(a => a.tile).Distinct().ToArray() ?? null;
+		//	if (null == tiles)
+		//	{
+		//		EditorMarkerUtil.ClearMapMarkers();
+		//		return;
+		//	}
+
+		//	var positions = new Vector3[tiles.Length];
+		//	var colors = new Color[tiles.Length];
+
+		//	for (var i = 0; i < tiles.Length; i++)
+		//	{
+		//		var tile = tiles[i];
+		//		positions[i] = tile < 0 || tile >= iMap.Count ? Vector3.zero : iMap.TileWorldPosition(tile);
+
+		//		var hasView = currentMode == Mode.Waypoint && null != iMap.GetView(tile);
+		//		colors[i] = hasView ? new Color(0f, 1f, 1f, 0.5f) : new Color(0f, 0.7f, 1f, 0.7f);
+		//	}
+
+		//	var selectedTile = (null != selection && selection.Length > 0) ? selection[0].tile : -1;
+		//	var selectedIndex = Array.IndexOf(tiles, selectedTile);
+		//	EditorMarkerUtil.ShowMarkers(positions, colors, selectedIndex);
+		//}
 
 		private void RebuildMarkers()
 		{
-			var tiles = iMap?.AllAttachments?.Where(a => a.tile >= 0).Select(a => a.tile).Distinct().ToArray() ?? null;
-			if (null == tiles)
+			var tilesWithAttachments = iMap?.Attachments ?.Select(a => a.tile) ?.Distinct() ?.ToArray() ?? Array.Empty<int>();
+
+			if (tilesWithAttachments == null || tilesWithAttachments.Length == 0)
 			{
 				EditorMarkerUtil.ClearMapMarkers();
 				return;
 			}
 
-			var positions = new Vector3[tiles.Length];
-			var colors = new Color[tiles.Length];
+			var positions = new Vector3[tilesWithAttachments.Length];
+			var colors = new Color[tilesWithAttachments.Length];
 
-			for (var i = 0; i < tiles.Length; i++)
+			for (var i = 0; i < tilesWithAttachments.Length; i++)
 			{
-				var tile = tiles[i];
+				var tile = tilesWithAttachments[i];
 				positions[i] = tile < 0 || tile >= iMap.Count ? Vector3.zero : iMap.TileWorldPosition(tile);
 
-				var hasView = currentMode == Mode.Waypoint && null != iMap.GetView(tile);
+				// Check if this tile has a View attachment (only in Waypoint mode)
+				bool hasView = currentMode == Mode.Waypoint &&
+							   iMap.GetAttachments(tileIndex: tile, filterTypes: new[] { typeof(View) })
+								   .Length > 0;  // or .Any() if you add it
+
 				colors[i] = hasView ? new Color(0f, 1f, 1f, 0.5f) : new Color(0f, 0.7f, 1f, 0.7f);
 			}
 
-			var selectedTile = (null != selection && selection.Length > 0) ? selection[0].tile : -1;
-			var selectedIndex = Array.IndexOf(tiles, selectedTile);
+			var selectedTile = (selection != null && selection.Length > 0) ? selection[0].tile : -1;
+			var selectedIndex = Array.IndexOf(tilesWithAttachments, selectedTile);
+
 			EditorMarkerUtil.ShowMarkers(positions, colors, selectedIndex);
 		}
 
@@ -347,7 +379,7 @@ namespace ClassicTilestorm
 		// ===================================================================
 		private void DrawSidePanelAttachment()
 		{
-			var atts = iMap?.AllAttachments ?? Array.Empty<MapAttachment>();
+			var atts = iMap?.Attachments ?? Array.Empty<MapAttachment>();
 			var items = new List<ListViewItem>();
 
 			foreach (var att in atts)

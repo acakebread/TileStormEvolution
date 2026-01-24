@@ -87,6 +87,30 @@ namespace ClassicTilestorm
 				postProcessingController.dofTarget = eggbotController.transform;
 		}
 
+		//protected override (Vector3 srcPos, Vector3 dstPos) GetInitialCameraPositions()
+		//{
+		//	if (mapManager == null)
+		//		return (new Vector3(0f, 14f, -14f), Vector3.zero);
+
+		//	var dstPos = new Vector3(mapManager.Width * 0.5f, 0f, mapManager.Height * 0.5f);
+		//	var srcPos = dstPos + new Vector3(0f, 14f, -14f);
+
+		//	if (mapManager.Waypoints.Length > 0)
+		//	{
+		//		var tile = mapManager.GetWaypoint(0);
+		//		var view = mapManager.GetView(tile);
+		//		if (null != view)
+		//		{
+		//			//has camera settings (View)
+		//			var tilePos = mapManager.TileWorldPosition(tile);
+		//			srcPos = view.VSrc + tilePos;
+		//			dstPos = view.VDst + tilePos;
+		//		}
+		//	}
+
+		//	return (srcPos, dstPos);
+		//}
+
 		protected override (Vector3 srcPos, Vector3 dstPos) GetInitialCameraPositions()
 		{
 			if (mapManager == null)
@@ -98,10 +122,12 @@ namespace ClassicTilestorm
 			if (mapManager.Waypoints.Length > 0)
 			{
 				var tile = mapManager.GetWaypoint(0);
-				var view = mapManager.GetView(tile);
-				if (null != view)
+
+				// Use extension method — returns the View or null
+				var view = mapManager.GetAttachmentOfType<View>(tile);
+
+				if (view != null)
 				{
-					//has camera settings (View)
 					var tilePos = mapManager.TileWorldPosition(tile);
 					srcPos = view.VSrc + tilePos;
 					dstPos = view.VDst + tilePos;
@@ -178,25 +204,56 @@ namespace ClassicTilestorm
 			GameModes.RegisterAllModes(RegisterMode);
 		}
 
+		//private void OnWaypointReached(int waypointIndex)
+		//{
+		//	if (eggbotController == null || mapManager == null || waypointIndex < 0 || waypointIndex >= mapManager.Waypoints.Length)
+		//		return;
+
+		//	if (waypointIndex == 0 || waypointIndex == mapManager.Waypoints.Length - 1)
+		//		return;
+
+		//	var tile = mapManager.GetWaypoint(waypointIndex);
+		//	var view = mapManager.GetView(tile);
+		//	if (null == view)
+		//	{
+		//		SetCameraSystem(CameraModeRegistry.Follow, true);
+		//		return;
+		//	}
+
+		//	//has camera settings (View)
+		//	var presetCam = (GameCameraPreset)CameraSystems[CameraModeRegistry.Preset];
+		//	var tilePos = mapManager.TileWorldPosition(tile);
+		//	presetCam.originFn = () => view.VSrc + tilePos;
+		//	presetCam.targetFn = () => view.VDst + tilePos;
+
+		//	SetCameraSystem(CameraModeRegistry.Preset, true);
+		//	OnWaypointReachedForGestures?.Invoke(true);
+		//}
+
 		private void OnWaypointReached(int waypointIndex)
 		{
-			if (eggbotController == null || mapManager == null || waypointIndex < 0 || waypointIndex >= mapManager.Waypoints.Length)
+			if (eggbotController == null || mapManager == null ||
+				waypointIndex < 0 || waypointIndex >= mapManager.Waypoints.Length)
 				return;
 
 			if (waypointIndex == 0 || waypointIndex == mapManager.Waypoints.Length - 1)
 				return;
 
 			var tile = mapManager.GetWaypoint(waypointIndex);
-			var view = mapManager.GetView(tile);
-			if (null == view)
+
+			// Use extension method
+			var view = mapManager.GetAttachmentOfType<View>(tile);
+
+			if (view == null)
 			{
 				SetCameraSystem(CameraModeRegistry.Follow, true);
 				return;
 			}
 
-			//has camera settings (View)
+			// Has camera settings (View)
 			var presetCam = (GameCameraPreset)CameraSystems[CameraModeRegistry.Preset];
 			var tilePos = mapManager.TileWorldPosition(tile);
+
 			presetCam.originFn = () => view.VSrc + tilePos;
 			presetCam.targetFn = () => view.VDst + tilePos;
 
