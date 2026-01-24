@@ -19,7 +19,8 @@ namespace ClassicTilestorm
 	public interface IMap : IMapData
 	{
 		Action<Map, bool, Vector3> OnMapEdited { get; set; }
-		public string Music { get; }
+		public string Music { get; set; }
+		public string Skybox { get; set; }
 
 		int WorldToMapIndex(Vector3 _);
 		Vector3 TileWorldPosition(int _);
@@ -71,8 +72,8 @@ namespace ClassicTilestorm
 		// ─────────────────────────────────────────────
 		[JsonProperty(Order = 20)] public string[] table;
 
-		[JsonProperty(Order = 21)] public int[] tiles;
-		[JsonProperty(Order = 22)] public int[] solve;
+		[JsonProperty(Order = 21)] public int[] tiles;//seed
+		[JsonProperty(Order = 22)] public int[] solve;//delta
 		[JsonProperty(Order = 23)] public int[] waypoints;
 
 		[JsonProperty(Order = 30)] public MapAttachment[] attachments;
@@ -91,13 +92,14 @@ namespace ClassicTilestorm
 		public bool ShouldSerializeattachments() => attachments != null && attachments.Length > 0;
 
 		public Action<Map, bool, Vector3> OnMapEdited { get; set; }
-		[JsonIgnore] private Transform parentTransform;
+		[JsonIgnore] private Transform parent;
 
 		[JsonIgnore] public int Width => width;
 		[JsonIgnore] public int Height => height;
 		[JsonIgnore] public int Count => Width * Height;
 		[JsonIgnore] public int[] Indices => indices;
-		[JsonIgnore] public string Music => music;
+		[JsonIgnore] public string Music { get => music; set => music =value; }
+		[JsonIgnore] public string Skybox { get => skybox; set => skybox = value; }
 
 		public const int MAP_MAX_SIZE = 64;
 
@@ -121,11 +123,11 @@ namespace ClassicTilestorm
 		public Vector3 WorldPosition(int tileIndex, Vector3 localPosition) => tileIndex < 0 ? localPosition : localPosition + TileWorldPosition(tileIndex);
 
 		// ─────────────────────────────────────────────
-		// Runtime tile instances (not serialized)
+		// slie (Runtime) tile instances (not serialized)
 		// ─────────────────────────────────────────────
 
-		[JsonIgnore] private Tile[] runtimeTiles;
-		[JsonIgnore] private int RuntimeTileCount => runtimeTiles?.Length ?? 0;
+		[JsonIgnore] private Tile[] slide;
+		[JsonIgnore] private int slideCount => slide?.Length ?? 0;
 		[JsonIgnore] private int[] indices;// runtime permutation, never serialized
 
 		public Tile GetTile(int index)
@@ -148,8 +150,8 @@ namespace ClassicTilestorm
 
 		private Tile[] CreateOrGetRuntimeTiles(Transform parent = null)
 		{
-			if (runtimeTiles != null)
-				return runtimeTiles;
+			if (slide != null)
+				return slide;
 
 			if (tiles == null || tiles.Length != width * height)
 			{
@@ -157,7 +159,7 @@ namespace ClassicTilestorm
 				return null;
 			}
 
-			runtimeTiles = new Tile[width * height];
+			slide = new Tile[width * height];
 
 			string mapName = name ?? "Unnamed map";
 
@@ -176,28 +178,28 @@ namespace ClassicTilestorm
 				if (hadError)
 					Debug.LogWarning($"Failed to resolve tile definition at tile {n} (hash: '{hashId ?? "<null>"}') — using default");
 
-				runtimeTiles[n] = new Tile(def, parent ?? parentTransform, TileWorldPosition(n));
+				slide[n] = new Tile(def, parent ?? this.parent, TileWorldPosition(n));
 			}
 
-			return runtimeTiles;
+			return slide;
 		}
 
 		private void DestroyAllTiles()
 		{
-			if (runtimeTiles == null)
+			if (slide == null)
 				return;
 
-			foreach (var tile in runtimeTiles)
+			foreach (var tile in slide)
 				tile.Destroy();
 
-			runtimeTiles = null;
+			slide = null;
 		}
 
 		private Tile GetSeedTile(int seedIndex)
 		{
-			if (runtimeTiles == null || seedIndex < 0 || seedIndex >= runtimeTiles.Length)
+			if (slide == null || seedIndex < 0 || seedIndex >= slide.Length)
 				return default;
-			return runtimeTiles[seedIndex];
+			return slide[seedIndex];
 		}
 
 		// ─────────────────────────────────────────────
@@ -301,7 +303,7 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			go = Assets.PrefabAssets.Instantiate(prefabName, worldPos, rotation, parentTransform);
+			go = Assets.PrefabAssets.Instantiate(prefabName, worldPos, rotation, parent);
 			go.name = $"{attachment.TypeName}_{prefabName}_tile{attachment.tile}";
 			attachmentGameObjects[attachment] = go;
 		}
@@ -807,7 +809,7 @@ namespace ClassicTilestorm
 		private void UpdateTileObjectNamesAndPositions()
 		{
 			var perm = indices;
-			if (perm == null || RuntimeTileCount != perm.Length)
+			if (perm == null || slideCount != perm.Length)
 			{
 				Debug.Assert(false, "mismatched indices and runtime tiles");
 				return;
@@ -835,9 +837,9 @@ namespace ClassicTilestorm
 		{
 			DestroyAllTiles();
 
-			CreateOrGetRuntimeTiles(parentTransform);
+			CreateOrGetRuntimeTiles(parent);
 
-			if (RuntimeTileCount == 0)
+			if (slideCount == 0)
 			{
 				Debug.LogError("RefreshGeometry failed — could not recreate tiles.");
 				return;
@@ -948,7 +950,7 @@ namespace ClassicTilestorm
 			{
 				// Full rebuild (map size or content bounds changed)
 				DestroyAllTiles();
-				CreateOrGetRuntimeTiles(parentTransform);
+				CreateOrGetRuntimeTiles(parent);
 				RefreshAttachments(GetAttachments());
 			}
 			else
@@ -958,7 +960,7 @@ namespace ClassicTilestorm
 				oldTile.Destroy();  // safe null-conditional
 
 				var def = ResolveDefinition(id, index);
-				runtimeTiles[index] = new Tile(def, parentTransform, TileWorldPosition(index));
+				slide[index] = new Tile(def, parent, TileWorldPosition(index));
 
 				RefreshAttachments(GetAttachments(tileIndex: index));
 			}
@@ -1022,7 +1024,7 @@ namespace ClassicTilestorm
 		{
 			WindController windController = null;
 
-			for (int n = 0; n < RuntimeTileCount; ++n)
+			for (int n = 0; n < slideCount; ++n)
 			{
 				var go = GetSeedTile(n).gameObject;
 				if (go == null) continue;
@@ -1030,7 +1032,7 @@ namespace ClassicTilestorm
 				var sway = go.GetComponent<MorphGeomSway>();
 				if (sway == null) continue;
 
-				windController = windController ?? parentTransform.gameObject.AddComponent<WindController>();
+				windController = windController ?? parent.gameObject.AddComponent<WindController>();
 				windController.AddSway(sway, this.TileWorldPosition(n));
 			}
 
@@ -1040,11 +1042,11 @@ namespace ClassicTilestorm
 
 		public void Initialise(Transform parent = null)
 		{
-			parentTransform = parent;
+			this.parent = parent;
 
-			CreateOrGetRuntimeTiles(parentTransform);
+			CreateOrGetRuntimeTiles(this.parent);
 
-			if (RuntimeTileCount == 0)
+			if (slideCount == 0)
 			{
 				Debug.LogError("Failed to create runtime tiles — map data invalid.");
 				return;
@@ -1101,9 +1103,9 @@ namespace ClassicTilestorm
 			CleanupAttachmentInstances();
 
 			// 4. Remove WindController if we created one
-			if (parentTransform != null)
+			if (parent != null)
 			{
-				var wind = parentTransform.GetComponent<WindController>();
+				var wind = parent.GetComponent<WindController>();
 				if (wind != null)
 				{
 					if (Application.isPlaying)
@@ -1117,8 +1119,8 @@ namespace ClassicTilestorm
 			indices = null;
 
 			// 6. Defensive: detach shared parent
-			if (parentTransform != null)
-				parentTransform = null;
+			if (parent != null)
+				parent = null;
 		}
 	}
 
