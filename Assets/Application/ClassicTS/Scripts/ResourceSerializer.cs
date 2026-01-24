@@ -142,7 +142,7 @@ namespace ClassicTilestorm
 			if (cropAllMaps && data.maps != null)
 			{
 				mapsToSave = data.maps
-					.Select(m => m?.CreateCroppedCopy() ?? m)
+					.Select(m => CreateCroppedCopy(m))
 					.ToArray();
 
 				Debug.Log($"Saving database with {mapsToSave.Length} cropped maps");
@@ -243,7 +243,7 @@ namespace ClassicTilestorm
 		{
 			if (originalMap == null) return;
 
-			var map = crop ? originalMap.CreateCroppedCopy() : originalMap;
+			var map = crop ? CreateCroppedCopy(originalMap) : originalMap;
 
 			var usedTypes = map.table?
 				.Where(t => !string.IsNullOrEmpty(t))
@@ -295,6 +295,33 @@ namespace ClassicTilestorm
 				map.definitions = null;
 				map.textures = null;
 			}
+		}
+
+		private static Map CreateCroppedCopy(Map map)
+		{
+			var copy = new Map
+			{
+				name = map.name,
+				character = map.character,
+				music = map.music,
+				button = map.button,
+				width = map.width,
+				height = map.height,
+
+				waypoints = map.waypoints != null ? (int[])map.waypoints.Clone() : null,
+				tiles = map.tiles != null ? (int[])map.tiles.Clone() : null,
+				solve = map.solve != null ? (int[])map.solve.Clone() : null,
+
+				attachments = map.attachments != null ? map.attachments.Select(a => a.ShallowClone()).ToArray() : Array.Empty<MapAttachment>(),
+				table = map.table != null ? (string[])map.table.Clone() : Array.Empty<string>()
+			};
+
+			bool cropped = copy.CropToContent(true);
+
+			if (cropped)
+				Debug.Log($"[Export] Map '{copy.name}' auto-cropped to {copy.width}x{copy.height}");
+
+			return copy;
 		}
 
 		private class AtomicExportResolver : UnityContractResolver
