@@ -526,7 +526,7 @@ namespace ClassicTilestorm
 			return ResourceManager.FindOrCreateDefaultTile();
 		}
 
-		public bool Consolidate()
+		private bool Consolidate()
 		{
 			if (tiles == null || tiles.Length == 0) return false;
 
