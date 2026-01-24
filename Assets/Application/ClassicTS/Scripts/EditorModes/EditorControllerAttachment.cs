@@ -479,40 +479,69 @@ namespace ClassicTilestorm
 
 			sidePanel.Draw();
 
-			void MoveWaypoint(Waypoint wp, int direction)
-			{
-				if (wp == null) return;
+			//void MoveWaypoint(Waypoint wp, int direction)
+			//{
+			//	if (wp == null) return;
 
-				var oldIndex = wp.waypointIndex;
-				var newIndex = oldIndex + direction;
+			//	var oldIndex = wp.waypointIndex;
+			//	var newIndex = oldIndex + direction;
 
-				// Re-fetch current sorted waypoints
-				var currentWaypoints = iMap.GetAttachments(filterTypes: new[] { typeof(Waypoint) })
-										   .Cast<Waypoint>()
-										   .OrderBy(w => w.waypointIndex)
-										   .ToArray();
+			//	// Re-fetch current sorted waypoints
+			//	var currentWaypoints = iMap.GetAttachments(filterTypes: new[] { typeof(Waypoint) })
+			//							   .Cast<Waypoint>()
+			//							   .OrderBy(w => w.waypointIndex)
+			//							   .ToArray();
 
-				if (newIndex < 0 || newIndex >= currentWaypoints.Length) return;
+			//	if (newIndex < 0 || newIndex >= currentWaypoints.Length) return;
 
-				var targetWp = currentWaypoints[newIndex];
+			//	var targetWp = currentWaypoints[newIndex];
 
-				// Swap in the internal waypoints array (still needed for now)
-				var list = iMap.Waypoints.ToList();
-				(list[oldIndex], list[newIndex]) = (list[newIndex], list[oldIndex]);
-				iMap.Waypoints = list.ToArray();
+			//	// Swap in the internal waypoints array (still needed for now)
+			//	var list = iMap.Waypoints.ToList();
+			//	(list[oldIndex], list[newIndex]) = (list[newIndex], list[oldIndex]);
+			//	iMap.Waypoints = list.ToArray();
 
-				// Also swap the waypointIndex values on the objects
-				wp.waypointIndex = newIndex;
-				targetWp.waypointIndex = oldIndex;
+			//	// Also swap the waypointIndex values on the objects
+			//	wp.waypointIndex = newIndex;
+			//	targetWp.waypointIndex = oldIndex;
 
-				var movedWaypoint = new Waypoint(newIndex, list[newIndex]);
-				Select(movedWaypoint);
+			//	var movedWaypoint = new Waypoint(newIndex, list[newIndex]);
+			//	Select(movedWaypoint);
 
-				RebuildMarkers();
+			//	RebuildMarkers();
 
-				// Optional: refresh visuals if needed
-				// iMap.RefreshAllAttachmentInstances();
-			}
+			//	// Optional: refresh visuals if needed
+			//	// iMap.RefreshAllAttachmentInstances();
+			//}
+		}
+
+		private void MoveWaypoint(Waypoint wp, int direction)
+		{
+			if (wp == null) return;
+
+			var oldIndex = wp.waypointIndex;
+			var newIndex = oldIndex + direction;
+
+			// Get current sorted waypoints
+			var currentWaypoints = iMap.GetWaypoints();  // using extension
+
+			if (newIndex < 0 || newIndex >= currentWaypoints.Length) return;
+
+			var targetWp = currentWaypoints[newIndex];
+
+			// Swap waypointIndex values on the objects
+			wp.waypointIndex = newIndex;
+			targetWp.waypointIndex = oldIndex;
+
+			// No need to touch internal waypoints array anymore!
+			// But if you still have legacy code depending on it, you can rebuild it here:
+			// var tiles = currentWaypoints.Select(w => w.tile).ToArray();
+			// iMap.Waypoints = tiles;  // only if absolutely necessary during transition
+
+			var movedWaypoint = new Waypoint(newIndex, wp.tile);
+			Select(movedWaypoint);
+
+			RebuildMarkers();
 		}
 
 		// ===================================================================
@@ -520,9 +549,10 @@ namespace ClassicTilestorm
 		// ===================================================================
 		private bool DrawAddPopup()
 		{
+			var waypoints = iMap.GetWaypoints();
 			var items = new List<PopupItem>
 			{
-				new($"Waypoint [WP{iMap.Waypoints.Length:00}]", () => Select(WaypointAttachmentHandler.Create(iMap, pendingTile)), colorOverride: Color.lightSteelBlue),
+				new($"Waypoint [WP{waypoints?.Length:00}]", () => Select(WaypointAttachmentHandler.Create(iMap, pendingTile)), colorOverride: Color.lightSteelBlue),
 				new("Emitter [flame]", () => Select(EmitterAttachmentHandler.Create(iMap, pendingTile, "flame")), colorOverride: Color.cyan),
 				new("Emitter [spark]", () => Select(EmitterAttachmentHandler.Create(iMap, pendingTile, "spark")), colorOverride: Color.cyan),
 				new("View", () => Select(ViewAttachmentHandler.Create(iMap, pendingTile)), colorOverride: Color.cyan),
