@@ -100,14 +100,14 @@ namespace ClassicTilestorm
 		[JsonIgnore] public string Music { get => music; set => music = value; }
 		[JsonIgnore] public string Skybox { get => skybox; set => skybox = value; }
 
-		// ─────────────────────────────────────────────
-		// Runtime tile instances (lazy / just-in-time)
-		// ─────────────────────────────────────────────
-
 		[JsonIgnore] private int[] state; // runtime permutation, never serialized
 		[JsonIgnore] private int[] hashes;// runtime int copy of table, never serialized
 		internal interface IHasHashAccess { int[] Hashes { get; set; } }
 		int[] IHasHashAccess.Hashes { get => hashes; set => hashes = value; }
+
+		// ─────────────────────────────────────────────
+		// Runtime tile (graph) instances (lazy / just-in-time)
+		// ─────────────────────────────────────────────
 
 		[JsonIgnore] private Tile[] _graph; // private backing field (never serialized)
 		[JsonIgnore] private Tile[] graph
@@ -149,7 +149,7 @@ namespace ClassicTilestorm
 			}
 		}
 
-		[JsonIgnore] public int graphCount => graph.Length;
+		[JsonIgnore] private int graphCount => graph.Length;
 
 		private const int MAP_MAX_SIZE = 64;
 
