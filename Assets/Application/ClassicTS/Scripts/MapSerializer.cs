@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
+using MassiveHadronLtd.IDs.HTB50;
+using static ClassicTilestorm.ResourceManager;
 
 namespace ClassicTilestorm
 {
@@ -97,19 +99,34 @@ namespace ClassicTilestorm
 				{
 					writer.WriteStartArray();
 
-					foreach (int hash in map.TableHashes ?? Array.Empty<int>())
+					var hashes = map.TableHashes ?? Array.Empty<int>();
+
+					foreach (int hash in hashes)
 					{
-						if (0 == hash)
+						if (hash == 0)
 						{
 							writer.WriteValue("unknown");
 							continue;
 						}
 
+						// Get the definition to fetch the legacy name
 						var def = ResourceManager.GetDefinition(hash);
-						string name = def.id;
-						string valueToWrite = $"[{hash}]{name}";
+						string namePart = (def != null && !string.IsNullOrEmpty(def.id))
+							? def.id
+							: "unknown";
 
-						writer.WriteValue(valueToWrite);
+						// Re-encode the int hash to clean base50 string (positive, fixed length)
+						string hashStr = HTB50.EncodeFixed(
+							hash,
+							length: HTB50Settings.FixedLength,
+							padChar: '0',
+							appendFlavor: false
+						);
+
+						// Final format: "[base50]name"
+						string entry = $"[{hashStr}]{namePart}";
+
+						writer.WriteValue(entry);
 					}
 
 					writer.WriteEndArray();
@@ -167,16 +184,28 @@ namespace ClassicTilestorm
 				{
 					writer.WriteStartArray();
 
-					foreach (string hash in map.table ?? Array.Empty<string>())
+					var hashes = map.TableHashes ?? Array.Empty<int>();
+
+					foreach (int hash in hashes)
 					{
-						if (string.IsNullOrEmpty(hash))
+						if (hash == 0)
 						{
 							writer.WriteValue("unknown");
+							continue;
 						}
-						else
-						{
-							writer.WriteValue($"[{hash}]");
-						}
+
+						// Re-encode the int hash back to clean base50 string
+						string hashStr = HTB50.EncodeFixed(
+							hash,
+							length: HTB50Settings.FixedLength,
+							padChar: '0',
+							appendFlavor: false
+						);
+
+						// Output only the hash wrapped in [] — no name appended
+						string entry = $"[{hashStr}]";
+
+						writer.WriteValue(entry);
 					}
 
 					writer.WriteEndArray();
