@@ -12,13 +12,9 @@ namespace ClassicTilestorm
 	{
 		protected readonly bool IsAtomic;
 
-		protected MapConverterBase(bool isAtomic)
-		{
-			IsAtomic = isAtomic;
-		}
+		protected MapConverterBase(bool isAtomic) { IsAtomic = isAtomic; }
 
-		public override bool CanConvert(Type objectType)
-			=> typeof(Map).IsAssignableFrom(objectType);
+		public override bool CanConvert(Type objectType) => typeof(Map).IsAssignableFrom(objectType);
 
 		protected static IEnumerable<JsonProperty> OrderedProperties(JsonSerializer serializer)
 		{
@@ -79,7 +75,7 @@ namespace ClassicTilestorm
 			var jo = JObject.Load(reader);
 			var map = new Map();
 
-			JArray tableArray = jo["table"] as JArray;
+			var tableArray = jo["table"] as JArray;
 			jo.Remove("table");
 
 			serializer.Populate(jo.CreateReader(), map);
@@ -87,17 +83,14 @@ namespace ClassicTilestorm
 			if (tableArray != null)
 			{
 				// Access via private interface
-				((Map.IHasHashAccess)map).Hashes = ParseTableToHashes(tableArray);
+				((Map.IHashAccess)map).Hashes = ParseTableToHashes(tableArray);
 				map.table = null;
 			}
 
 			return map;
 		}
 
-		public override object ReadJson(JsonReader reader, Type type, object existingValue, JsonSerializer serializer)
-		{
-			return ReadMapJson(reader, serializer);
-		}
+		public override object ReadJson(JsonReader reader, Type type, object existingValue, JsonSerializer serializer) => ReadMapJson(reader, serializer);
 
 		protected virtual void WriteTableArray(JsonWriter writer, Map map, JsonSerializer serializer)
 		{
@@ -105,7 +98,7 @@ namespace ClassicTilestorm
 			writer.WriteStartArray();
 
 			// Access via private interface
-			var hashes = ((Map.IHasHashAccess)map).Hashes ?? Array.Empty<int>();
+			var hashes = ((Map.IHashAccess)map).Hashes ?? Array.Empty<int>();
 
 			foreach (int hash in hashes)
 			{
@@ -167,9 +160,7 @@ namespace ClassicTilestorm
 			}
 
 			if (IsAtomic)
-			{
 				WriteAtomicOnlyFields(writer, map, serializer);
-			}
 
 			writer.WriteEndObject();
 		}
@@ -177,7 +168,7 @@ namespace ClassicTilestorm
 		private void WriteAtomicOnlyFields(JsonWriter writer, Map map, JsonSerializer serializer)
 		{
 			// Access via private interface
-			var usedHashes = (((Map.IHasHashAccess)map).Hashes ?? Array.Empty<int>())
+			var usedHashes = (((Map.IHashAccess)map).Hashes ?? Array.Empty<int>())
 				.Where(h => h != 0)
 				.Distinct()
 				.ToArray();
@@ -225,13 +216,7 @@ namespace ClassicTilestorm
 		}
 	}
 
-	public class AtomicMapConverter : MapConverterBase
-	{
-		public AtomicMapConverter() : base(true) { }
-	}
+	public class AtomicMapConverter : MapConverterBase { public AtomicMapConverter() : base(true) { } }
 
-	public class DatabaseMapConverter : MapConverterBase
-	{
-		public DatabaseMapConverter() : base(false) { }
-	}
+	public class DatabaseMapConverter : MapConverterBase { public DatabaseMapConverter() : base(false) { } }
 }

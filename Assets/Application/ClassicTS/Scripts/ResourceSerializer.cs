@@ -1,12 +1,10 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
+using UnityEditor;
 using System.IO;
 using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using Newtonsoft.Json.Serialization;
-using System.Reflection;
-using System;
-using UnityEditor;
 
 namespace ClassicTilestorm
 {
@@ -28,27 +26,6 @@ namespace ClassicTilestorm
 			JsonConvert.DefaultSettings = () => settings;
 			_initialized = true;
 			Debug.Log("Json.NET configured with ordered properties (declaration order)");
-		}
-	}
-
-	public class UnityContractResolver : DefaultContractResolver
-	{
-		protected override JsonProperty CreateProperty(MemberInfo member, MemberSerialization memberSerialization)
-		{
-			var property = base.CreateProperty(member, memberSerialization);
-
-			// Force serialization of public fields (vSrc, vDst, pickupType, etc.)
-			if (member is FieldInfo field)
-			{
-				if (field.IsPublic && !Attribute.IsDefined(field, typeof(JsonIgnoreAttribute)))
-				{
-					property.Ignored = false;
-					property.Readable = true;
-					property.Writable = true;
-				}
-			}
-
-			return property;
 		}
 	}
 
@@ -275,23 +252,6 @@ namespace ClassicTilestorm
 				Debug.Log($"[Export] Map '{copy.name}' auto-cropped to {copy.width}x{copy.height}");
 
 			return copy;
-		}
-
-		private class AtomicExportResolver : UnityContractResolver
-		{
-			protected override JsonProperty CreateProperty(MemberInfo member, MemberSerialization memberSerialization)
-			{
-				var property = base.CreateProperty(member, memberSerialization);
-				if (property.Ignored && member.DeclaringType == typeof(Map))
-				{
-					if (member.Name is "definitions" or "textures" or "version" or "author" or "exportedFrom")
-					{
-						property.Ignored = false;
-						property.ShouldSerialize = _ => true;
-					}
-				}
-				return property;
-			}
 		}
 	}
 }

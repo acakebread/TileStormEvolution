@@ -114,38 +114,23 @@ namespace ClassicTilestorm
 
 		public static string GenerateUniqueNewDefinitionName(string prefix = "NAME_")
 		{
-			//int n = 1;
 			string candidate;
 			var existingIds = Definitions.Select(d => d.name).ToHashSet(StringComparer.Ordinal);
-			do
-			{
-				//candidate = $"{prefix}({n:000})";
-				//n++;
-				candidate = $"<{prefix}{StringUtil.GenerateAssetId()}>";
-			}
+			do candidate = $"<{prefix}{StringUtil.GenerateAssetId()}>";
 			while (existingIds.Contains(candidate));
-
 			return candidate;
 		}
 
 		public static void ApplyMapChanges(Map modifiedMap)
 		{
-			if (modifiedMap == null) return;
-			if (_db?.maps != null) ReplaceInArray(_db.maps, modifiedMap);
-
-			static void ReplaceInArray(Map[] array, Map updated)
+			if (null == modifiedMap) return;
+			if (null != _db?.maps)
 			{
-				for (int i = 0; i < array.Length; i++)
-					if (array[i].name == updated.name)
-					{ array[i] = updated; return; }
+				for (int i = 0; i < _db.maps.Length; i++)
+					if (_db.maps[i].name == modifiedMap.name)
+					{ _db.maps[i] = modifiedMap; return; }
 			}
 		}
-
-		//// Helper to get current hash set (used above if needed)
-		//private static HashSet<int> GetCurrentHashIds()
-		//{
-		//	return new HashSet<int>(Definitions.Where(d => 0!=d.HashID).Select(d => d.HashID));
-		//}
 
 		// ── EXISTING INSERT METHODS (unchanged) ───────────────────────────────
 		public static void InsertDefinitionAfter(int afterId, Definition newDef)
@@ -231,11 +216,6 @@ namespace ClassicTilestorm
 			_db.definitions = list.ToArray();
 		}
 
-		public static int GetDefinitionIdAt(int index)
-		{
-			return index >= 0 && index < Definitions.Count ? Definitions[index].HashID : 0;
-		}
-
 		public static bool RenameDefinitionName(int hashId, string name)
 		{
 			if (false == HasDefinition(hashId))
@@ -282,13 +262,6 @@ namespace ClassicTilestorm
 			hadError = true;
 			DebugUtil.LogWarning($"Missing or invalid definition hash '{hashId}' — falling back to default tile.");
 			return FindOrCreateDefaultTile();
-		}
-
-		// Convenience overload — no out, callers don't have to care
-		public static Definition ResolveDefinition(int hashId)
-		{
-			// Discard the result — caller gets fallback + log automatically
-			return ResolveDefinition(hashId, out _);
 		}
 	}
 }

@@ -56,7 +56,7 @@ namespace ClassicTilestorm
 	}
 
 	[Serializable]
-	public class Map : IMapEdit, Map.IHasHashAccess
+	public class Map : IMapEdit, Map.IHashAccess
 	{
 		// ─────────────────────────────────────────────
 		// Core identity
@@ -102,8 +102,8 @@ namespace ClassicTilestorm
 
 		[JsonIgnore] private int[] state; // runtime permutation, never serialized
 		[JsonIgnore] private int[] hashes;// runtime int copy of table, never serialized
-		internal interface IHasHashAccess { int[] Hashes { get; set; } }
-		int[] IHasHashAccess.Hashes { get => hashes; set => hashes = value; }
+		internal interface IHashAccess { int[] Hashes { get; set; } }
+		int[] IHashAccess.Hashes { get => hashes; set => hashes = value; }
 
 		// ─────────────────────────────────────────────
 		// Runtime tile (graph) instances (lazy / just-in-time)
@@ -176,10 +176,10 @@ namespace ClassicTilestorm
 		// Runtime integer hash cache (non-serialized, mirrors table)
 		// ─────────────────────────────────────────────
 
+		//public int GetTileID(int index) => tiles == null || state == null || index < 0 || index >= tiles.Length || index >= state.Length ? 0 : hashes[tiles[state[index]]];
+		public int GetTileID(int index) => tiles == null || index < 0 || index >= tiles.Length ? 0 : hashes[tiles[index]];//I think it's this - we can only edit unscrambled maps so need to ensure this
+
 		public Tile GetTile(int index) => null == state || index < 0 || index >= state.Length ? default : GetGraphTile(state[index]);
-
-		public int GetTileID(int mapIndex) => _graph == null || mapIndex < 0 || mapIndex >= _graph.Length ? 0 : GetGraphTile(mapIndex).HashID;
-
 		private Tile GetGraphTile(int graphIndex) => _graph == null || graphIndex < 0 || graphIndex >= _graph.Length ? default : _graph[graphIndex];
 
 		private void DestroyAllTiles()
@@ -621,15 +621,11 @@ namespace ClassicTilestorm
 
 			bool resized = false;
 			if (needsCrop)
-			{
 				resized = RepositionAndResize(newWidth, newHeight, offsetX, offsetZ);
-			}
 
 			bool consolidated = false;
 			if (consolidate)
-			{
 				consolidated = Consolidate();
-			}
 
 			return resized || consolidated;
 		}
@@ -792,8 +788,8 @@ namespace ClassicTilestorm
 
 #if DEBUG
 				position -= tile_origin;
-				var id = mapTile.HashID;
-				var def = ResourceManager.GetDefinition(mapTile.HashID);
+				var id = GetTileID(n);// mapTile.HashID;
+				var def = ResourceManager.GetDefinition(id);//mapTile.HashID
 				go.name = $"{def?.name ?? "??"} ({position.x},{position.z})";
 #endif
 			}

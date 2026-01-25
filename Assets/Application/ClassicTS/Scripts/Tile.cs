@@ -53,21 +53,12 @@ namespace ClassicTilestorm
 	public readonly struct Tile
 	{
 		private readonly TileData _data;
-		public readonly int HashID;
 		public readonly GameObject gameObject;
 
 		public Tile(Definition def, Transform parent, Vector3 worldPosition)
 		{
-			// Compute definitionId safely — never null
-			HashID = def?.HashID ?? ResourceManager.FindOrCreateDefaultTile().HashID;
-
 			_data = new TileData(def);
-
-			gameObject = null;
-			if (def != null && !def.IsDefault())
-			{
-				gameObject = InstantiateTile(def, parent, worldPosition);
-			}
+			gameObject = def != null && !def.IsDefault() ? InstantiateTile(def, parent, worldPosition) : null;
 		}
 
 		// Forwarded properties
