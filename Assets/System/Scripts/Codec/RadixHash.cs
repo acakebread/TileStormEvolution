@@ -217,6 +217,24 @@ namespace MassiveHadronLtd
 
 			return (int)GenerateRandomInRange(modulus);
 		}
+
+		/// <summary>
+		/// Generates a cryptographically secure random 32-bit integer (non-zero).
+		/// Suitable for use as a new HashID before encoding to HTB50 string.
+		/// </summary>
+		public static int GetSecureRandomHash32()
+		{
+			byte[] bytes = new byte[4];
+			using (var rng = RandomNumberGenerator.Create())
+			{
+				rng.GetBytes(bytes);
+			}
+
+			int value = BitConverter.ToInt32(bytes, 0);
+
+			// Avoid zero (very rare, but makes it cleaner for "no hash" sentinel)
+			return value == 0 ? 1 : value;
+		}
 	}
 }
 

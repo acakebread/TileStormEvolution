@@ -53,13 +53,13 @@ namespace ClassicTilestorm
 	public readonly struct Tile
 	{
 		private readonly TileData _data;
-		public readonly string definitionId;
+		public readonly int HashID;
 		public readonly GameObject gameObject;
 
 		public Tile(Definition def, Transform parent, Vector3 worldPosition)
 		{
 			// Compute definitionId safely — never null
-			definitionId = def?.hashid ?? ResourceManager.FindOrCreateDefaultTile().hashid;
+			HashID = def?.HashID ?? ResourceManager.FindOrCreateDefaultTile().HashID;
 
 			_data = new TileData(def);
 

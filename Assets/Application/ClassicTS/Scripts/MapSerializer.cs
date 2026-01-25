@@ -97,16 +97,16 @@ namespace ClassicTilestorm
 				{
 					writer.WriteStartArray();
 
-					foreach (string hash in map.table ?? Array.Empty<string>())
+					foreach (int hash in map.TableHashes ?? Array.Empty<int>())
 					{
-						if (string.IsNullOrEmpty(hash))
+						if (0 == hash)
 						{
 							writer.WriteValue("unknown");
 							continue;
 						}
 
 						var def = ResourceManager.GetDefinition(hash);
-						string name = def?.id ?? hash;
+						string name = def.id;
 						string valueToWrite = $"[{hash}]{name}";
 
 						writer.WriteValue(valueToWrite);

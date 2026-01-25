@@ -245,13 +245,13 @@ namespace ClassicTilestorm
 
 			var map = crop ? CreateCroppedCopy(originalMap) : originalMap;
 
-			var usedTypes = map.table?
-				.Where(t => !string.IsNullOrEmpty(t))
+			var usedTypes = map.TableHashes?
+				.Where(t => 0!=t)
 				.Distinct()
-				.ToArray() ?? Array.Empty<string>();
+				.ToArray() ?? Array.Empty<int>();
 
 			var usedDefs = ResourceManager.Definitions
-				.Where(d => usedTypes.Contains(d.hashid))
+				.Where(d => usedTypes.Contains(d.HashID))
 				.ToArray();
 
 			var usedBanks = usedDefs

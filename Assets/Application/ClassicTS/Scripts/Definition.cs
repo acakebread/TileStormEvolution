@@ -21,7 +21,7 @@ namespace ClassicTilestorm
 
 		//[JsonIgnore] public string id { get => hashid; }//future replacement for hashid obviously this currently conflicts with the existing use of 'id'
 		[JsonIgnore] public string name { get => id; }//future replacement for id - just the display name in the editor
-		[JsonIgnore] public int HashInt => string.IsNullOrEmpty(hashid) ? -1 : HTB50.Decode(hashid);
+		//[JsonIgnore] public int HashID => string.IsNullOrEmpty(hashid) ? 0 : HTB50.Decode(hashid);
 
 		// ── CONNECTIONS (settable) ────────────────────────────────────────────
 		[JsonIgnore] public bool bNorth { get => HasConnection('N'); set => SetConnection('N', value); }
@@ -40,6 +40,54 @@ namespace ClassicTilestorm
 		[JsonIgnore] public bool bPuzzleBlock { get => HasFlag("PuzzleBlock"); set => SetFlag("PuzzleBlock", value); }
 		[JsonIgnore] public bool bSway { get => HasFlag("Sway"); set => SetFlag("Sway", value); }
 		[JsonIgnore] public bool bWash { get => HasFlag("Wash"); set => SetFlag("Wash", value); }
+
+		[JsonIgnore]
+		private int? _cachedHashID;
+
+		[JsonIgnore]
+		public int HashID
+		{
+			get
+			{
+				if (_cachedHashID.HasValue)
+					return _cachedHashID.Value;
+
+				int value;
+
+				if (string.IsNullOrEmpty(hashid))
+				{
+					value = RadixHash.GetSecureRandomHash32();
+					SetHashIDString(value); // ← helper does the encoding
+				}
+				else
+				{
+					value = HTB50.Decode(hashid);
+				}
+
+				_cachedHashID = value;
+				return value;
+			}
+
+			set
+			{
+				if (value == _cachedHashID)
+					return;
+
+				SetHashIDString(value); // ← same helper
+				_cachedHashID = value;
+			}
+		}
+
+		// Private helper — single source of truth for encoding
+		private void SetHashIDString(int hashValue)
+		{
+			hashid = HTB50.EncodeFixed(
+				hashValue,
+				length: HTB50Settings.FixedLength,
+				padChar: '0',
+				appendFlavor: false
+			);
+		}
 
 		// ── CONDITIONAL SERIALIZATION ─────────────────────────────────────────
 		public bool ShouldSerializehashid() => !string.IsNullOrEmpty(hashid);
@@ -177,7 +225,7 @@ namespace ClassicTilestorm
 			};
 		}
 
-		public string GetHashId() => hashid ?? throw new InvalidOperationException($"Definition '{id ?? "unknown"}' missing hashid");
+		//public string GetHashId() => hashid ?? throw new InvalidOperationException($"Definition '{id ?? "unknown"}' missing hashid");
 	}
 
 	public static class DefinitionExtensions

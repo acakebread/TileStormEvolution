@@ -402,11 +402,9 @@ namespace ClassicTilestorm
 			var label = go.GetComponentInChildren<TMP_Text>();
 			if (label != null)
 			{
-				int usage = ResourceManager.DefinitionUsageCount(def?.hashid);
+				int usage = ResourceManager.DefinitionUsageCount(def.HashID);
 
-				string hashDisplay = string.IsNullOrEmpty(def?.hashid)
-					? "(no hashid)"
-					: $"hash: {def.hashid}";
+				string hashDisplay = 0 == def.HashID ? "(no hashid)" : $"hash: {def.HashID}";
 
 				label.text = $"{def?.id ?? "???"}  [{usage}]  ({hashDisplay})";
 			}
@@ -460,7 +458,7 @@ namespace ClassicTilestorm
 			bool hasSelection = lastSelectedDefinitionIndex >= 0;
 
 			// Changed: use hashid instead of id
-			bool isUsed = hasSelection && ResourceManager.IsDefinitionUsed(CurrentDefinition?.hashid);
+			bool isUsed = hasSelection && ResourceManager.IsDefinitionUsed(CurrentDefinition.HashID);
 
 			ButtonDelete.interactable = hasSelection && !isUsed;
 

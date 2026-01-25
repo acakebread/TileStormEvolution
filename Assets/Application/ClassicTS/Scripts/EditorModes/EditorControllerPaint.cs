@@ -9,8 +9,8 @@ namespace ClassicTilestorm
 	{
 		private Vector3 mouseDownPos;
 
-		private string selectedHashId;              // hashid — placement & ghost
-		public string SelectedHashId => selectedHashId;
+		private int selectedHashId;// hashid — placement & ghost
+		public int SelectedHashId => selectedHashId;
 
 		private List<Definition> cycleDefinitions = new();  // list of full definitions for cycling
 		private int cycleIndex = 0;
@@ -21,7 +21,7 @@ namespace ClassicTilestorm
 		public EditorControllerPaint(EditorController editorController) : base(editorController)
 		{
 			var defaultDef = ResourceManager.FindOrCreateDefaultTile();
-			selectedHashId = defaultDef.hashid;
+			selectedHashId = defaultDef.HashID;
 
 			RefreshCycleList();
 		}
@@ -56,9 +56,7 @@ namespace ClassicTilestorm
 		private void EditMapTile(bool erase = false)
 		{
 			var worldPos = Map.ScreenToWorld(camera, Input.mousePosition);
-			string hashToPlace = erase
-				? ResourceManager.FindOrCreateDefaultTile().hashid
-				: selectedHashId;
+			int hashToPlace = erase ? ResourceManager.FindOrCreateDefaultTile().HashID : selectedHashId;
 
 			// Cycle on left-click if on the current tile
 			if (!erase)
@@ -72,7 +70,7 @@ namespace ClassicTilestorm
 						cycleIndex = (cycleIndex + 1) % cycleDefinitions.Count;
 						var nextDef = cycleDefinitions[cycleIndex];
 
-						selectedHashId = nextDef.hashid;
+						selectedHashId = nextDef.HashID;
 						hashToPlace = selectedHashId;
 
 						EditorMeshUtil.DestroyGhostMesh();
@@ -86,11 +84,11 @@ namespace ClassicTilestorm
 		}
 
 		// Called from panel — takes hashid directly
-		private void SetSelectedDefinitionByHash(string hashId)
+		private void SetSelectedDefinitionByHash(int hashId)
 		{
-			if (string.IsNullOrEmpty(hashId))
+			if (0 == hashId)
 			{
-				hashId = ResourceManager.FindOrCreateDefaultTile().hashid;
+				hashId = ResourceManager.FindOrCreateDefaultTile().HashID;
 			}
 
 			selectedHashId = hashId;
@@ -168,7 +166,7 @@ namespace ClassicTilestorm
 
 			foreach (var def in ResourceManager.Definitions)
 			{
-				bool isSelected = def.hashid == selectedHashId;
+				bool isSelected = def.HashID == selectedHashId;
 
 				string label = def.id;
 				if (def.IsDefault())
@@ -176,7 +174,7 @@ namespace ClassicTilestorm
 
 				items.Add(new ListViewItem(
 					$"{label} ({def.texture ?? "none"})",
-					_ => SetSelectedDefinitionByHash(def.hashid),  // pass hashid
+					_ => SetSelectedDefinitionByHash(def.HashID),  // pass hashid
 					isSelected
 				));
 			}
