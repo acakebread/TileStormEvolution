@@ -12,9 +12,17 @@ namespace ClassicTilestorm
 	{
 		protected readonly bool IsAtomic;
 
-		protected MapConverterBase(bool isAtomic) { IsAtomic = isAtomic; }
+		// The virtual Order position where "table" should appear in JSON
+		// (matches the old [JsonProperty(Order = 20)] on the removed table field)
+		private const int TableJsonOrderPosition = 20;
 
-		public override bool CanConvert(Type objectType) => typeof(Map).IsAssignableFrom(objectType);
+		protected MapConverterBase(bool isAtomic)
+		{
+			IsAtomic = isAtomic;
+		}
+
+		public override bool CanConvert(Type objectType)
+			=> typeof(Map).IsAssignableFrom(objectType);
 
 		protected static IEnumerable<JsonProperty> OrderedProperties(JsonSerializer serializer)
 		{
@@ -82,22 +90,20 @@ namespace ClassicTilestorm
 
 			if (tableArray != null)
 			{
-				// Access via private interface
 				((Map.IHashAccess)map).Hashes = ParseTableToHashes(tableArray);
-				map.table = null;
 			}
 
 			return map;
 		}
 
-		public override object ReadJson(JsonReader reader, Type type, object existingValue, JsonSerializer serializer) => ReadMapJson(reader, serializer);
+		public override object ReadJson(JsonReader reader, Type type, object existingValue, JsonSerializer serializer)
+			=> ReadMapJson(reader, serializer);
 
 		protected virtual void WriteTableArray(JsonWriter writer, Map map, JsonSerializer serializer)
 		{
 			writer.WritePropertyName("table");
 			writer.WriteStartArray();
 
-			// Access via private interface
 			var hashes = ((Map.IHashAccess)map).Hashes ?? Array.Empty<int>();
 
 			foreach (int hash in hashes)
@@ -139,15 +145,13 @@ namespace ClassicTilestorm
 
 			writer.WriteStartObject();
 
+			bool tableWritten = false;
+
 			foreach (var prop in OrderedProperties(serializer))
 			{
-				if (prop.PropertyName == "table")
-				{
-					WriteTableArray(writer, map, serializer);
-					continue;
-				}
+				var name = prop.PropertyName;
 
-				if (!IsAtomic && IsSuppressedInDatabaseFormat(prop.PropertyName))
+				if (!IsAtomic && IsSuppressedInDatabaseFormat(name))
 					continue;
 
 				var propValue = prop.ValueProvider?.GetValue(map);
@@ -155,8 +159,28 @@ namespace ClassicTilestorm
 				if (propValue == null && serializer.NullValueHandling == NullValueHandling.Ignore)
 					continue;
 
-				writer.WritePropertyName(prop.PropertyName);
+				writer.WritePropertyName(name);
 				serializer.Serialize(writer, propValue);
+
+				// After any real property with Order < TableJsonOrderPosition,
+				// check if next is >= TableJsonOrderPosition (or end) → insert table
+				if (!tableWritten && prop.Order.GetValueOrDefault(int.MaxValue) < TableJsonOrderPosition)
+				{
+					var remaining = OrderedProperties(serializer).SkipWhile(p => p.PropertyName != name).Skip(1);
+					var nextProp = remaining.FirstOrDefault();
+
+					if (nextProp == null || nextProp.Order.GetValueOrDefault(int.MaxValue) >= TableJsonOrderPosition)
+					{
+						WriteTableArray(writer, map, serializer);
+						tableWritten = true;
+					}
+				}
+			}
+
+			// Fallback if table wasn't inserted (very rare)
+			if (!tableWritten)
+			{
+				WriteTableArray(writer, map, serializer);
 			}
 
 			if (IsAtomic)
@@ -167,7 +191,6 @@ namespace ClassicTilestorm
 
 		private void WriteAtomicOnlyFields(JsonWriter writer, Map map, JsonSerializer serializer)
 		{
-			// Access via private interface
 			var usedHashes = (((Map.IHashAccess)map).Hashes ?? Array.Empty<int>())
 				.Where(h => h != 0)
 				.Distinct()

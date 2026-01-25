@@ -73,11 +73,6 @@ namespace ClassicTilestorm
 		[JsonProperty(Order = 10)] public int width;
 		[JsonProperty(Order = 11)] public int height;
 
-		// ─────────────────────────────────────────────
-		// Tile table — serialised to hashes
-		// ─────────────────────────────────────────────
-		[JsonProperty(Order = 20)] public string[] table;//serialise only - not used internally
-
 		[JsonProperty(Order = 21)] public int[] tiles;      // seed indices
 		[JsonProperty(Order = 22)] public int[] solve;      // delta
 		[JsonProperty(Order = 23)] public int[] waypoints;
@@ -100,7 +95,10 @@ namespace ClassicTilestorm
 		[JsonIgnore] public string Music { get => music; set => music = value; }
 		[JsonIgnore] public string Skybox { get => skybox; set => skybox = value; }
 
-		[JsonIgnore] private int[] state; // runtime permutation, never serialized
+		// ─────────────────────────────────────────────
+		// Tile hashes — for definitions
+		// ─────────────────────────────────────────────
+
 		[JsonIgnore] private int[] hashes;// runtime int copy of table, never serialized
 		internal interface IHashAccess { int[] Hashes { get; set; } }
 		int[] IHashAccess.Hashes { get => hashes; set => hashes = value; }
@@ -109,6 +107,7 @@ namespace ClassicTilestorm
 		// Runtime tile (graph) instances (lazy / just-in-time)
 		// ─────────────────────────────────────────────
 
+		[JsonIgnore] private int[] state; // runtime permutation, never serialized
 		[JsonIgnore] private Tile[] _graph; // private backing field (never serialized)
 		[JsonIgnore] private Tile[] graph
 		{
