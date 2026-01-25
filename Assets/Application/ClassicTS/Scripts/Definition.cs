@@ -38,8 +38,8 @@ namespace ClassicTilestorm
 		[JsonIgnore] public bool bSway { get => HasFlag("Sway"); set => SetFlag("Sway", value); }
 		[JsonIgnore] public bool bWash { get => HasFlag("Wash"); set => SetFlag("Wash", value); }
 
-		[JsonIgnore] private int? _cachedHashID;
-		[JsonIgnore] public int HashID
+		[JsonIgnore] private HashId? _cachedHashID;
+		[JsonIgnore] public HashId HashID
 		{
 			get
 			{

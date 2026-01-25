@@ -99,9 +99,9 @@ namespace ClassicTilestorm
 		// Tile hashes — for definitions
 		// ─────────────────────────────────────────────
 
-		[JsonIgnore] private int[] hashes;// runtime int copy of table, never serialized
-		internal interface IHashAccess { int[] Hashes { get; set; } }
-		int[] IHashAccess.Hashes { get => hashes; set => hashes = value; }
+		[JsonIgnore] private HashId[] hashes;// runtime int copy of table, never serialized
+		internal interface IHashAccess { HashId[] Hashes { get; set; } }
+		HashId[] IHashAccess.Hashes { get => hashes; set => hashes = value; }
 
 		// ─────────────────────────────────────────────
 		// Runtime tile (graph) instances (lazy / just-in-time)
@@ -472,7 +472,7 @@ namespace ClassicTilestorm
 
 			var newTable = currentHashes.ToFrequencySortedDistinct(); // assuming this returns int[]
 
-			int[] originalTable = hashes;//needs a copy here
+			HashId[] originalTable = hashes;//needs a copy here
 			int originalSize = originalTable?.Length ?? 0;
 			int newSize = newTable.Length;
 
@@ -676,7 +676,7 @@ namespace ClassicTilestorm
 			solve = solve != null ? (int[])solve.Clone() : null,
 
 			attachments = attachments != null ? attachments.Select(a => a.ShallowClone()).ToArray() : Array.Empty<MapAttachment>(),
-			hashes = null != hashes ? (int[])hashes.Clone() : Array.Empty<int>()
+			hashes = null != hashes ? (HashId[])hashes.Clone() : Array.Empty<HashId>()
 		};
 
 		public int CameraHitTile(Camera camera, Vector3 position) => WorldToMapIndex(ScreenToWorld(camera, position));

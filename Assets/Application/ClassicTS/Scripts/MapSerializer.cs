@@ -33,11 +33,11 @@ namespace ClassicTilestorm
 				.ThenBy(p => p.PropertyName);
 		}
 
-		protected int[] ParseTableToHashes(JArray tableArray)
+		protected HashId[] ParseTableToHashes(JArray tableArray)
 		{
-			if (tableArray == null) return Array.Empty<int>();
+			if (tableArray == null) return Array.Empty<HashId>();
 
-			var hashes = new int[tableArray.Count];
+			var hashes = new HashId[tableArray.Count];
 
 			for (int i = 0; i < tableArray.Count; i++)
 			{
@@ -104,7 +104,7 @@ namespace ClassicTilestorm
 			writer.WritePropertyName("table");
 			writer.WriteStartArray();
 
-			var hashes = ((Map.IHashAccess)map).Hashes ?? Array.Empty<int>();
+			var hashes = ((Map.IHashAccess)map).Hashes ?? Array.Empty<HashId>();
 
 			foreach (int hash in hashes)
 			{
@@ -191,7 +191,7 @@ namespace ClassicTilestorm
 
 		private void WriteAtomicOnlyFields(JsonWriter writer, Map map, JsonSerializer serializer)
 		{
-			var usedHashes = (((Map.IHashAccess)map).Hashes ?? Array.Empty<int>())
+			var usedHashes = (((Map.IHashAccess)map).Hashes ?? Array.Empty<HashId>())
 				.Where(h => h != 0)
 				.Distinct()
 				.ToArray();

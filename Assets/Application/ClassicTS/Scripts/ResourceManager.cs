@@ -74,12 +74,12 @@ namespace ClassicTilestorm
 			};
 
 			// Full-range 32-bit hash (no modulus), but still encode to fixed length 6
-			int hash32 = RadixHash.GetStableHash32(def.name);
+			HashId hash32 = RadixHash.GetStableHash32(def.name);
 			def.HashID = hash32;
 
 			if (ensureUniqueHash)
 			{
-				var existing = new HashSet<int>(
+				var existing = new HashSet<HashId>(
 					Definitions.Where(d => d.HashID != 0 ).Select(d => d.HashID));
 
 				int attempt = 1;
