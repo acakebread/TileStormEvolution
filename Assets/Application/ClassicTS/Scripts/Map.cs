@@ -6,7 +6,6 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using MassiveHadronLtd;
 using MassiveHadronLtd.IDs.HTB50;
-using static ClassicTilestorm.ResourceManager;
 
 namespace ClassicTilestorm
 {
@@ -537,7 +536,6 @@ namespace ClassicTilestorm
 
 			if (anythingChanged)
 			{
-				table = newTable.Select(h => HTB50.EncodeFixed(h, HTB50Settings.FixedLength, padChar: '0')).ToArray();
 				tiles = currentHashes.Select(h => Array.IndexOf(newTable, h)).ToArray();
 
 				TableHashes = newTable; // keep in sync
@@ -584,11 +582,6 @@ namespace ClassicTilestorm
 				list.Add(defaultHash);
 				TableHashes = list.ToArray();
 				defaultIndex = TableHashes.Length - 1;
-
-				// Also add to serialized table
-				var strList = table?.ToList() ?? new List<string>();
-				strList.Add(HTB50.EncodeFixed(defaultHash, HTB50Settings.FixedLength, padChar: '0'));
-				table = strList.ToArray();
 			}
 
 			var newTiles = new int[newSize];
@@ -943,12 +936,7 @@ namespace ClassicTilestorm
 				var list = hashes.ToArray().ToList();
 				list.Add(id);
 				TableHashes = list.ToArray();
-
-				var strList = table?.ToList() ?? new List<string>();
-				strList.Add(HTB50.EncodeFixed(id, HTB50Settings.FixedLength, padChar: '0'));
-				table = strList.ToArray();
-
-				tiles[index] = table.Length - 1;
+				tiles[index] = TableHashes.Length - 1;
 			}
 			else
 			{
