@@ -84,12 +84,12 @@ namespace ClassicTilestorm
 
 		[JsonProperty(Order = 30)] public MapAttachment[] attachments;
 
-		// ATOMIC-ONLY FIELDS
-		[JsonProperty(Order = 100)] public Definition[] definitions;
-		[JsonProperty(Order = 101)] public TextureSequence[] textures;
-		[JsonProperty(Order = 102)] public string version = "1.0";
-		[JsonProperty(Order = 103)] public string author = "Player";
-		[JsonProperty(Order = 104)] public string exportedFrom = "ClassicTilestorm";
+		//// ATOMIC-ONLY FIELDS
+		//[JsonProperty(Order = 100)] public Definition[] definitions;
+		//[JsonProperty(Order = 101)] public TextureSequence[] textures;
+		//[JsonProperty(Order = 102)] public string version = "1.0";
+		//[JsonProperty(Order = 103)] public string author = "Player";
+		//[JsonProperty(Order = 104)] public string exportedFrom = "ClassicTilestorm";
 
 		// Conditional serialization
 		public bool ShouldSerializeskybox() => !string.IsNullOrEmpty(skybox);

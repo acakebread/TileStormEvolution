@@ -201,12 +201,12 @@ namespace ClassicTilestorm
 					return;
 				}
 
-				// STRIP atomic-only fields
-				importedMap.definitions = null;
-				importedMap.textures = null;
-				importedMap.version = null;
-				importedMap.author = null;
-				importedMap.exportedFrom = null;
+				//// STRIP atomic-only fields
+				//importedMap.definitions = null;
+				//importedMap.textures = null;
+				//importedMap.version = null;
+				//importedMap.author = null;
+				//importedMap.exportedFrom = null;
 
 				var db = ResourceManager.database;
 				if (db?.maps == null)
@@ -243,32 +243,8 @@ namespace ClassicTilestorm
 		{
 			if (originalMap == null) return;
 
+			// Create a copy if we're cropping — we never mutate the original
 			var map = crop ? CreateCroppedCopy(originalMap) : originalMap;
-
-			var usedTypes = map.hashes?
-				.Where(t => 0!=t)
-				.Distinct()
-				.ToArray() ?? Array.Empty<int>();
-
-			var usedDefs = ResourceManager.Definitions
-				.Where(d => usedTypes.Contains(d.HashID))
-				.ToArray();
-
-			var usedBanks = usedDefs
-				.Where(d => !string.IsNullOrEmpty(d.texture))
-				.Select(d => d.texture)
-				.Distinct()
-				.ToArray();
-
-			var usedTextures = ResourceManager.TextureSequences
-				.Where(ts => usedBanks.Contains(ts.id))
-				.ToArray();
-
-			map.definitions = usedDefs;
-			map.textures = usedTextures;
-			map.version = "1.0";
-			map.author = "Player";
-			map.exportedFrom = "ClassicTilestorm";
 
 			try
 			{
@@ -276,26 +252,88 @@ namespace ClassicTilestorm
 				{
 					NullValueHandling = NullValueHandling.Ignore,
 					Formatting = verbose ? Formatting.Indented : Formatting.None,
-					ContractResolver = new AtomicExportResolver(),
-					Converters = { new AtomicMapConverter() }
-				};
+					Converters = { new AtomicMapConverter() },
 
+					// No special ContractResolver needed anymore — 
+					// the converter now handles injecting definitions, textures, version, author, exportedFrom
+				};
 
 				string json = JsonConvert.SerializeObject(map, settings);
 
-				var folder = string.IsNullOrEmpty(filepath) ? Application.persistentDataPath : filepath;
+				var folder = string.IsNullOrEmpty(filepath)
+					? Application.persistentDataPath
+					: filepath;
+
 				EnsureFolder(folder);
 				string path = Path.Combine(folder, $"{map.name}.json");
 
 				File.WriteAllText(path, json);
-				Debug.Log($"ATOMIC MAP EXPORTED (auto-cropped) → {path} ({map.width}x{map.height})");
+
+				Debug.Log($"ATOMIC MAP EXPORTED{(crop ? " (auto-cropped)" : "")} → {path} ({map.width}×{map.height})");
 			}
-			finally
+			catch (Exception ex)
 			{
-				map.definitions = null;
-				map.textures = null;
+				Debug.LogError($"Failed to export atomic map '{map?.name ?? "unknown"}': {ex.Message}");
 			}
 		}
+
+		//public static void ExportAtomicMap(Map originalMap, string filepath = null, bool verbose = false, bool crop = true)
+		//{
+		//	if (originalMap == null) return;
+
+		//	var map = crop ? CreateCroppedCopy(originalMap) : originalMap;
+
+		//	var usedTypes = map.hashes?
+		//		.Where(t => 0!=t)
+		//		.Distinct()
+		//		.ToArray() ?? Array.Empty<int>();
+
+		//	var usedDefs = ResourceManager.Definitions
+		//		.Where(d => usedTypes.Contains(d.HashID))
+		//		.ToArray();
+
+		//	var usedBanks = usedDefs
+		//		.Where(d => !string.IsNullOrEmpty(d.texture))
+		//		.Select(d => d.texture)
+		//		.Distinct()
+		//		.ToArray();
+
+		//	var usedTextures = ResourceManager.TextureSequences
+		//		.Where(ts => usedBanks.Contains(ts.id))
+		//		.ToArray();
+
+		//	map.definitions = usedDefs;
+		//	map.textures = usedTextures;
+		//	map.version = "1.0";
+		//	map.author = "Player";
+		//	map.exportedFrom = "ClassicTilestorm";
+
+		//	try
+		//	{
+		//		var settings = new JsonSerializerSettings
+		//		{
+		//			NullValueHandling = NullValueHandling.Ignore,
+		//			Formatting = verbose ? Formatting.Indented : Formatting.None,
+		//			ContractResolver = new AtomicExportResolver(),
+		//			Converters = { new AtomicMapConverter() }
+		//		};
+
+
+		//		string json = JsonConvert.SerializeObject(map, settings);
+
+		//		var folder = string.IsNullOrEmpty(filepath) ? Application.persistentDataPath : filepath;
+		//		EnsureFolder(folder);
+		//		string path = Path.Combine(folder, $"{map.name}.json");
+
+		//		File.WriteAllText(path, json);
+		//		Debug.Log($"ATOMIC MAP EXPORTED (auto-cropped) → {path} ({map.width}x{map.height})");
+		//	}
+		//	finally
+		//	{
+		//		map.definitions = null;
+		//		map.textures = null;
+		//	}
+		//}
 
 		private static Map CreateCroppedCopy(Map map)
 		{
