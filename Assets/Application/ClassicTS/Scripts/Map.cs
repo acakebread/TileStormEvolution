@@ -190,39 +190,42 @@ namespace ClassicTilestorm
 		// Runtime integer hash cache (non-serialized, mirrors table)
 		// ─────────────────────────────────────────────
 
-		[JsonIgnore]
-		private int[] _tableHashes;
+		//[JsonIgnore] private int[] _tableHashes;
 
-		[JsonIgnore]
-		public int[] TableHashes
-		{
-			get
-			{
-				if (_tableHashes != null && _tableHashes.Length == table?.Length)
-					return _tableHashes;
+		//[JsonIgnore]
+		//public int[] TableHashes
+		//{
+		//	get
+		//	{
+		//		if (_tableHashes != null && _tableHashes.Length == table?.Length)
+		//			return _tableHashes;
 
-				if (table == null || table.Length == 0)
-				{
-					_tableHashes = Array.Empty<int>();
-					return _tableHashes;
-				}
+		//		if (table == null || table.Length == 0)
+		//		{
+		//			_tableHashes = Array.Empty<int>();
+		//			return _tableHashes;
+		//		}
 
-				_tableHashes = new int[table.Length];
+		//		_tableHashes = new int[table.Length];
 
-				for (int i = 0; i < table.Length; i++)
-				{
-					string h = table[i];
-					_tableHashes[i] = string.IsNullOrEmpty(h) ? 0 : HTB50.Decode(h);
-				}
+		//		for (int i = 0; i < table.Length; i++)
+		//		{
+		//			string h = table[i];
+		//			_tableHashes[i] = string.IsNullOrEmpty(h) ? 0 : HTB50.Decode(h);
+		//		}
 
-				return _tableHashes;
-			}
-		}
+		//		return _tableHashes;
+		//	}
+		//	set => TableHashes = value;
+		//}
 
-		public void InvalidateTableHashes()
-		{
-			_tableHashes = null;
-		}
+		[JsonIgnore] private int[] tableHashes;
+		[JsonIgnore] public int[] TableHashes { get => tableHashes; set => tableHashes = value; }
+
+		//public void InvalidateTableHashes()
+		//{
+		//	_tableHashes = null;
+		//}
 
 		public Tile GetTile(int index)
 		{
@@ -523,7 +526,7 @@ namespace ClassicTilestorm
 
 			var newTable = currentHashes.ToFrequencySortedDistinct(); // assuming this returns int[]
 
-			int[] originalTable = _tableHashes;
+			int[] originalTable = TableHashes;
 			int originalSize = originalTable?.Length ?? 0;
 			int newSize = newTable.Length;
 
@@ -537,7 +540,7 @@ namespace ClassicTilestorm
 				table = newTable.Select(h => HTB50.EncodeFixed(h, HTB50Settings.FixedLength, padChar: '0')).ToArray();
 				tiles = currentHashes.Select(h => Array.IndexOf(newTable, h)).ToArray();
 
-				_tableHashes = newTable; // keep in sync
+				TableHashes = newTable; // keep in sync
 
 				if (sizeChanged)
 				{
@@ -579,8 +582,8 @@ namespace ClassicTilestorm
 			{
 				var list = hashes.ToArray().ToList();
 				list.Add(defaultHash);
-				_tableHashes = list.ToArray();
-				defaultIndex = _tableHashes.Length - 1;
+				TableHashes = list.ToArray();
+				defaultIndex = TableHashes.Length - 1;
 
 				// Also add to serialized table
 				var strList = table?.ToList() ?? new List<string>();
@@ -657,8 +660,8 @@ namespace ClassicTilestorm
 			solve = newSolve;
 			indices = Enumerable.Range(0, width * height).ToArray();
 
-			// Table changed size/order → invalidate hash cache
-			InvalidateTableHashes();
+			//// Table changed size/order → invalidate hash cache
+			//InvalidateTableHashes();
 
 			return true;
 		}
@@ -743,7 +746,8 @@ namespace ClassicTilestorm
 			solve = solve != null ? (int[])solve.Clone() : null,
 
 			attachments = attachments != null ? attachments.Select(a => a.ShallowClone()).ToArray() : Array.Empty<MapAttachment>(),
-			table = table != null ? (string[])table.Clone() : Array.Empty<string>()
+			//table = table != null ? (string[])table.Clone() : Array.Empty<string>()//no longer needed
+			tableHashes = null != tableHashes ? (int[])tableHashes.Clone() : Array.Empty<int>()
 		};
 
 		public int CameraHitTile(Camera camera, Vector3 position) => WorldToMapIndex(ScreenToWorld(camera, position));
@@ -938,7 +942,7 @@ namespace ClassicTilestorm
 			{
 				var list = hashes.ToArray().ToList();
 				list.Add(id);
-				_tableHashes = list.ToArray();
+				TableHashes = list.ToArray();
 
 				var strList = table?.ToList() ?? new List<string>();
 				strList.Add(HTB50.EncodeFixed(id, HTB50Settings.FixedLength, padChar: '0'));

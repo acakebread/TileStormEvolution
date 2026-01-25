@@ -16,50 +16,57 @@ namespace ClassicTilestorm
 
 		protected static IEnumerable<JsonProperty> OrderedProperties(JsonSerializer serializer)
 		{
-			var contract = (JsonObjectContract)
-				serializer.ContractResolver.ResolveContract(typeof(Map));
-
+			var contract = (JsonObjectContract)serializer.ContractResolver.ResolveContract(typeof(Map));
 			return contract.Properties
 				.Where(p => !p.Ignored)
 				.OrderBy(p => p.Order ?? int.MaxValue);
 		}
 
-		// Keep ParseTable to strip brackets on load
-		protected void ParseTable(Map map, JArray tableArray)
+		// ─────────────────────────────────────────────
+		// NEW: Parse JSON table → int[] TableHashes
+		// ─────────────────────────────────────────────
+		protected int[] ParseTableToHashes(JArray tableArray)
 		{
-			map.table = new string[tableArray.Count];
+			var hashes = new int[tableArray.Count];
 
 			for (int i = 0; i < tableArray.Count; i++)
 			{
-				string entry = tableArray[i].Value<string>()?.Trim();
+				string entry = tableArray[i]?.Value<string>()?.Trim() ?? "";
 
 				if (string.IsNullOrEmpty(entry))
 				{
-					map.table[i] = "";
+					hashes[i] = 0;
 					continue;
 				}
 
-				string hashValue;
+				string hashStr = entry;
 
+				// Strip [ ] if present
 				if (entry.StartsWith("[", StringComparison.Ordinal))
 				{
 					int close = entry.IndexOf(']', 1);
 					if (close > 1)
-					{
-						hashValue = entry.Substring(1, close - 1).Trim();
-					}
-					else
-					{
-						hashValue = entry; // malformed → keep whole
-					}
-				}
-				else
-				{
-					hashValue = entry; // bare hash or legacy name
+						hashStr = entry.Substring(1, close - 1).Trim();
 				}
 
-				map.table[i] = hashValue;
+				if (string.IsNullOrEmpty(hashStr) || hashStr.Equals("unknown", StringComparison.OrdinalIgnoreCase))
+				{
+					hashes[i] = 0;
+					continue;
+				}
+
+				// Decode base50 → int
+				try
+				{
+					hashes[i] = HTB50.Decode(hashStr);   // assuming Decode exists; use DecodeFixed if needed
+				}
+				catch
+				{
+					hashes[i] = 0; // malformed hash → treat as unknown (0)
+				}
 			}
+
+			return hashes;
 		}
 	}
 
@@ -73,10 +80,17 @@ namespace ClassicTilestorm
 			var jo = JObject.Load(reader);
 			var map = new Map();
 
+			// Extract and remove "table" so Populate doesn't set the string[] version
+			JArray tableArray = jo["table"] as JArray;
+			jo.Remove("table");
+
 			serializer.Populate(jo.CreateReader(), map);
 
-			if (jo["table"] is JArray table)
-				ParseTable(map, table);
+			if (tableArray != null)
+			{
+				map.TableHashes = ParseTableToHashes(tableArray);
+				map.table = null;                    // ← clean state
+			}
 
 			return map;
 		}
@@ -89,14 +103,9 @@ namespace ClassicTilestorm
 
 			foreach (var prop in OrderedProperties(serializer))
 			{
-				var propValue = prop.ValueProvider.GetValue(map);
-				if (propValue == null && serializer.NullValueHandling == NullValueHandling.Ignore)
-					continue;
-
-				writer.WritePropertyName(prop.PropertyName);
-
 				if (prop.PropertyName == "table")
 				{
+					writer.WritePropertyName("table");
 					writer.WriteStartArray();
 
 					var hashes = map.TableHashes ?? Array.Empty<int>();
@@ -109,13 +118,9 @@ namespace ClassicTilestorm
 							continue;
 						}
 
-						// Get the definition to fetch the legacy name
 						var def = ResourceManager.GetDefinition(hash);
-						string namePart = (def != null && !string.IsNullOrEmpty(def.id))
-							? def.id
-							: "unknown";
+						string namePart = (def != null && !string.IsNullOrEmpty(def.id)) ? def.id : "unknown";
 
-						// Re-encode the int hash to clean base50 string (positive, fixed length)
 						string hashStr = HTB50.EncodeFixed(
 							hash,
 							length: HTB50Settings.FixedLength,
@@ -123,16 +128,18 @@ namespace ClassicTilestorm
 							appendFlavor: false
 						);
 
-						// Final format: "[base50]name"
-						string entry = $"[{hashStr}]{namePart}";
-
-						writer.WriteValue(entry);
+						writer.WriteValue($"[{hashStr}]{namePart}");
 					}
 
 					writer.WriteEndArray();
 				}
 				else
 				{
+					var propValue = prop.ValueProvider.GetValue(map);
+					if (propValue == null && serializer.NullValueHandling == NullValueHandling.Ignore)
+						continue;
+
+					writer.WritePropertyName(prop.PropertyName);
 					serializer.Serialize(writer, propValue);
 				}
 			}
@@ -156,10 +163,16 @@ namespace ClassicTilestorm
 			var jo = JObject.Load(reader);
 			var map = new Map();
 
+			JArray tableArray = jo["table"] as JArray;
+			jo.Remove("table");
+
 			serializer.Populate(jo.CreateReader(), map);
 
-			if (jo["table"] is JArray table)
-				ParseTable(map, table);
+			if (tableArray != null)
+			{
+				map.TableHashes = ParseTableToHashes(tableArray);
+				map.table = null;                    // ← clean state
+			}
 
 			return map;
 		}
@@ -174,14 +187,9 @@ namespace ClassicTilestorm
 			{
 				if (SuppressedAtomicFields.Contains(prop.PropertyName)) continue;
 
-				var propValue = prop.ValueProvider.GetValue(map);
-				if (propValue == null && serializer.NullValueHandling == NullValueHandling.Ignore)
-					continue;
-
-				writer.WritePropertyName(prop.PropertyName);
-
 				if (prop.PropertyName == "table")
 				{
+					writer.WritePropertyName("table");
 					writer.WriteStartArray();
 
 					var hashes = map.TableHashes ?? Array.Empty<int>();
@@ -194,7 +202,6 @@ namespace ClassicTilestorm
 							continue;
 						}
 
-						// Re-encode the int hash back to clean base50 string
 						string hashStr = HTB50.EncodeFixed(
 							hash,
 							length: HTB50Settings.FixedLength,
@@ -202,16 +209,18 @@ namespace ClassicTilestorm
 							appendFlavor: false
 						);
 
-						// Output only the hash wrapped in [] — no name appended
-						string entry = $"[{hashStr}]";
-
-						writer.WriteValue(entry);
+						writer.WriteValue($"[{hashStr}]");
 					}
 
 					writer.WriteEndArray();
 				}
 				else
 				{
+					var propValue = prop.ValueProvider.GetValue(map);
+					if (propValue == null && serializer.NullValueHandling == NullValueHandling.Ignore)
+						continue;
+
+					writer.WritePropertyName(prop.PropertyName);
 					serializer.Serialize(writer, propValue);
 				}
 			}
