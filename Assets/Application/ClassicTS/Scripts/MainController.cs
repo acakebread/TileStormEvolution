@@ -78,11 +78,10 @@ namespace ClassicTilestorm
 			// ─── Cleanup previous map ─────────────────────────────────────
 			if (CurrentMap != null)
 			{
-				CurrentMap.Destroy();
-
 				cameraController?.Reset();
 				gameController?.Reset();
 				editorController?.Reset();
+				CurrentMap.Destroy();
 			}
 
 			if (MapRoot != null)
