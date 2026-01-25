@@ -161,7 +161,7 @@ namespace ClassicTilestorm
 			_db.definitions = list.ToArray();
 		}
 
-		public static void DeleteDefinitionId(int id)
+		public static void DeleteDefinitionId(HashId id)
 		{
 			if (_db?.definitions == null) return;
 			var list = _db.definitions.ToList();
@@ -169,7 +169,7 @@ namespace ClassicTilestorm
 			_db.definitions = list.ToArray();
 		}
 
-		public static void MoveDefinitionIdUp(int id)
+		public static void MoveDefinitionIdUp(HashId id)
 		{
 			if (_db?.definitions == null) return;
 			var list = _db.definitions.ToList();
@@ -179,7 +179,7 @@ namespace ClassicTilestorm
 			_db.definitions = list.ToArray();
 		}
 
-		public static void MoveDefinitionIdDown(int id)
+		public static void MoveDefinitionIdDown(HashId id)
 		{
 			if (_db?.definitions == null) return;
 			var list = _db.definitions.ToList();
@@ -216,7 +216,7 @@ namespace ClassicTilestorm
 			_db.definitions = list.ToArray();
 		}
 
-		public static bool RenameDefinitionName(int hashId, string name)
+		public static bool RenameDefinitionName(HashId hashId, string name)
 		{
 			if (false == HasDefinition(hashId))
 				return false;
@@ -226,7 +226,7 @@ namespace ClassicTilestorm
 			return true;
 		}
 
-		public static bool IsDefinitionUsed(int hashId)
+		public static bool IsDefinitionUsed(HashId hashId)
 		{
 			if (hashId == 0) return false;
 
@@ -234,7 +234,7 @@ namespace ClassicTilestorm
 			return Maps.Any(m => m != null && m.IsDefinitionUsed(hashId));
 		}
 
-		public static int DefinitionUsageCount(int hashId)
+		public static int DefinitionUsageCount(HashId hashId)
 		{
 			if (hashId == 0) return 0;
 
@@ -242,7 +242,7 @@ namespace ClassicTilestorm
 			return Maps.Sum(m => m?.DefinitionUsageCount(hashId) ?? 0);
 		}
 
-		public static Definition ResolveDefinition(int hashId, out bool hadError)
+		public static Definition ResolveDefinition(HashId hashId, out bool hadError)
 		{
 			hadError = false;
 
