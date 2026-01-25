@@ -43,7 +43,7 @@ namespace ClassicTilestorm
 		Vector3 LocalPosition(int tileIndex, Vector3 worldPosition);
 		Vector3 WorldPosition(int tileIndex, Vector3 localPosition);
 
-		int GetDefinitionAtIndex(int _);
+		int GetTileID(int _);
 		bool UpdateTileAt(int x, int z, int id, bool expand = true);
 
 		void AddAttachment(MapAttachment _);
@@ -74,7 +74,7 @@ namespace ClassicTilestorm
 		[JsonProperty(Order = 11)] public int height;
 
 		// ─────────────────────────────────────────────
-		// Tile table — now the ONLY source of truth (hashes)
+		// Tile table — serialised to hashes
 		// ─────────────────────────────────────────────
 		[JsonProperty(Order = 20)] public string[] table;
 
@@ -103,7 +103,7 @@ namespace ClassicTilestorm
 		[JsonIgnore] public int Width => width;
 		[JsonIgnore] public int Height => height;
 		[JsonIgnore] public int Count => Width * Height;
-		[JsonIgnore] public int[] Indices => indices;
+		[JsonIgnore] public int[] Indices => state;
 		[JsonIgnore] public string Music { get => music; set => music = value; }
 		[JsonIgnore] public string Skybox { get => skybox; set => skybox = value; }
 
@@ -132,17 +132,16 @@ namespace ClassicTilestorm
 		// Runtime tile instances (lazy / just-in-time)
 		// ─────────────────────────────────────────────
 
-		[JsonIgnore] private int[] indices; // runtime permutation, never serialized
+		[JsonIgnore] public int[] hashes;// runtime int copy of table, never serialized
+		[JsonIgnore] private int[] state; // runtime permutation, never serialized
 
-		[JsonIgnore] private Tile[] _slide; // private backing field (never serialized)
-
-		[JsonIgnore]
-		public Tile[] slide
+		[JsonIgnore] private Tile[] _graph; // private backing field (never serialized)
+		[JsonIgnore] private Tile[] graph
 		{
 			get
 			{
-				if (_slide != null)
-					return _slide;
+				if (_graph != null)
+					return _graph;
 
 				if (tiles == null || tiles.Length != width * height)
 				{
@@ -150,11 +149,9 @@ namespace ClassicTilestorm
 					return Array.Empty<Tile>();
 				}
 
-				_slide = new Tile[width * height];
+				_graph = new Tile[width * height];
 
 				string mapName = name ?? "Unnamed map";
-
-				var hashes = TableHashes; // force generation if needed
 
 				for (int n = 0; n < tiles.Length; n++)
 				{
@@ -171,95 +168,34 @@ namespace ClassicTilestorm
 					if (hadError)
 						Debug.LogWarning($"Failed to resolve tile definition at tile {n} (hash: {hashId}) — using default");
 
-					_slide[n] = new Tile(def, parent ?? this.parent, TileWorldPosition(n));
+					_graph[n] = new Tile(def, parent ?? parent, TileWorldPosition(n));
 				}
 
-				return _slide;
+				return _graph;
 			}
 		}
 
-		[JsonIgnore] public int slideCount => slide.Length;
+		[JsonIgnore] public int graphCount => graph.Length;
 
 		// ─────────────────────────────────────────────
 		// Runtime integer hash cache (non-serialized, mirrors table)
 		// ─────────────────────────────────────────────
 
-		// ─────────────────────────────────────────────
-		// Runtime integer hash cache (non-serialized, mirrors table)
-		// ─────────────────────────────────────────────
+		public Tile GetTile(int index) => null == state || index < 0 || index >= state.Length ? default : GetGraphTile(state[index]);
 
-		//[JsonIgnore] private int[] _tableHashes;
+		public int GetTileID(int mapIndex) => _graph == null || mapIndex < 0 || mapIndex >= _graph.Length ? 0 : GetGraphTile(mapIndex).HashID;
 
-		//[JsonIgnore]
-		//public int[] TableHashes
-		//{
-		//	get
-		//	{
-		//		if (_tableHashes != null && _tableHashes.Length == table?.Length)
-		//			return _tableHashes;
-
-		//		if (table == null || table.Length == 0)
-		//		{
-		//			_tableHashes = Array.Empty<int>();
-		//			return _tableHashes;
-		//		}
-
-		//		_tableHashes = new int[table.Length];
-
-		//		for (int i = 0; i < table.Length; i++)
-		//		{
-		//			string h = table[i];
-		//			_tableHashes[i] = string.IsNullOrEmpty(h) ? 0 : HTB50.Decode(h);
-		//		}
-
-		//		return _tableHashes;
-		//	}
-		//	set => TableHashes = value;
-		//}
-
-		[JsonIgnore] private int[] tableHashes;
-		[JsonIgnore] public int[] TableHashes { get => tableHashes; set => tableHashes = value; }
-
-		//public void InvalidateTableHashes()
-		//{
-		//	_tableHashes = null;
-		//}
-
-		public Tile GetTile(int index)
-		{
-			if (index < 0 || index >= width * height || width <= 0)
-				return default;
-
-			int dataIndex = indices?[index] ?? index;
-
-			return GetSeedTile(dataIndex);
-		}
-
-		public int GetDefinitionAtIndex(int mapIndex)
-		{
-			if (mapIndex < 0 || mapIndex >= width * height)
-				return 0;
-
-			return GetSeedTile(mapIndex).HashID;
-		}
+		private Tile GetGraphTile(int graphIndex) => _graph == null || graphIndex < 0 || graphIndex >= _graph.Length ? default : _graph[graphIndex];
 
 		private void DestroyAllTiles()
 		{
-			if (_slide == null)
+			if (_graph == null)
 				return;
 
-			foreach (var tile in _slide)
+			foreach (var tile in _graph)
 				tile.Destroy();
 
-			_slide = null;
-		}
-
-		private Tile GetSeedTile(int seedIndex)
-		{
-			if (_slide == null || seedIndex < 0 || seedIndex >= _slide.Length)
-				return default;
-
-			return _slide[seedIndex];
+			_graph = null;
 		}
 
 		// ─────────────────────────────────────────────
@@ -519,12 +455,12 @@ namespace ClassicTilestorm
 			var defaultHash = ResourceManager.FindOrCreateDefaultTile().HashID;
 
 			var currentHashes = tiles.Select(idx =>
-				idx >= 0 && idx < TableHashes.Length ? TableHashes[idx] : defaultHash
+				idx >= 0 && idx < hashes.Length ? hashes[idx] : defaultHash
 			).ToArray();
 
 			var newTable = currentHashes.ToFrequencySortedDistinct(); // assuming this returns int[]
 
-			int[] originalTable = TableHashes;
+			int[] originalTable = hashes;//needs a copy here
 			int originalSize = originalTable?.Length ?? 0;
 			int newSize = newTable.Length;
 
@@ -537,7 +473,7 @@ namespace ClassicTilestorm
 			{
 				tiles = currentHashes.Select(h => Array.IndexOf(newTable, h)).ToArray();
 
-				TableHashes = newTable; // keep in sync
+				hashes = newTable; // keep in sync
 
 				if (sizeChanged)
 				{
@@ -565,7 +501,6 @@ namespace ClassicTilestorm
 			int defaultHash = defaultDef.HashID;
 
 			int defaultIndex = -1;
-			var hashes = TableHashes;
 			for (int i = 0; i < hashes.Length; i++)
 			{
 				if (hashes[i] == defaultHash)
@@ -579,8 +514,8 @@ namespace ClassicTilestorm
 			{
 				var list = hashes.ToArray().ToList();
 				list.Add(defaultHash);
-				TableHashes = list.ToArray();
-				defaultIndex = TableHashes.Length - 1;
+				hashes = list.ToArray();
+				defaultIndex = hashes.Length - 1;
 			}
 
 			var newTiles = new int[newSize];
@@ -650,10 +585,7 @@ namespace ClassicTilestorm
 			height = newHeight;
 			tiles = newTiles;
 			solve = newSolve;
-			indices = Enumerable.Range(0, width * height).ToArray();
-
-			//// Table changed size/order → invalidate hash cache
-			//InvalidateTableHashes();
+			state = Enumerable.Range(0, width * height).ToArray();
 
 			return true;
 		}
@@ -699,8 +631,6 @@ namespace ClassicTilestorm
 			int maxX = -1;
 			int maxZ = -1;
 
-			var hashes = TableHashes;
-
 			for (int i = 0; i < tiles.Length; i++)
 			{
 				int t = tiles[i];
@@ -738,8 +668,7 @@ namespace ClassicTilestorm
 			solve = solve != null ? (int[])solve.Clone() : null,
 
 			attachments = attachments != null ? attachments.Select(a => a.ShallowClone()).ToArray() : Array.Empty<MapAttachment>(),
-			//table = table != null ? (string[])table.Clone() : Array.Empty<string>()//no longer needed
-			tableHashes = null != tableHashes ? (int[])tableHashes.Clone() : Array.Empty<int>()
+			hashes = null != hashes ? (int[])hashes.Clone() : Array.Empty<int>()
 		};
 
 		public int CameraHitTile(Camera camera, Vector3 position) => WorldToMapIndex(ScreenToWorld(camera, position));
@@ -832,8 +761,8 @@ namespace ClassicTilestorm
 
 		private void UpdateTileObjectNamesAndPositions()
 		{
-			var perm = indices;
-			if (perm == null || slideCount != perm.Length)
+			var perm = state;
+			if (perm == null || graphCount != perm.Length)
 			{
 				Debug.Assert(false, "mismatched indices and runtime tiles");
 				return;
@@ -841,7 +770,7 @@ namespace ClassicTilestorm
 
 			for (int n = 0; n < perm.Length; ++n)
 			{
-				var mapTile = GetSeedTile(perm[n]);
+				var mapTile = GetGraphTile(perm[n]);
 				var go = mapTile.gameObject;
 				if (go == null) continue;
 
@@ -852,7 +781,7 @@ namespace ClassicTilestorm
 				position -= tile_origin;
 				var id = mapTile.HashID;
 				var def = ResourceManager.GetDefinition(mapTile.HashID);
-				go.name = $"{def?.id ?? "??"} ({position.x},{position.z})";
+				go.name = $"{def?.name ?? "??"} ({position.x},{position.z})";
 #endif
 			}
 		}
@@ -860,14 +789,14 @@ namespace ClassicTilestorm
 		public void RecreateTiles()
 		{
 			DestroyAllTiles();
-			var _ = slide; // force lazy creation
+			var _ = graph; // force lazy creation
 		}
 
 		public void RefreshGeometry()
 		{
 			RecreateTiles();
 
-			if (slideCount == 0)
+			if (graphCount == 0)
 			{
 				Debug.LogError("RefreshGeometry failed — could not recreate tiles.");
 				return;
@@ -929,13 +858,12 @@ namespace ClassicTilestorm
 
 			int index = z * width + x;
 
-			var hashes = TableHashes;
 			if (hashes == null || !hashes.Contains(id))
 			{
 				var list = hashes.ToArray().ToList();
 				list.Add(id);
-				TableHashes = list.ToArray();
-				tiles[index] = TableHashes.Length - 1;
+				hashes = list.ToArray();
+				tiles[index] = hashes.Length - 1;
 			}
 			else
 			{
@@ -975,11 +903,11 @@ namespace ClassicTilestorm
 			}
 			else
 			{
-				var oldTile = GetSeedTile(index);
+				var oldTile = GetGraphTile(index);
 				oldTile.Destroy();
 
 				var def = ResolveDefinition(id, index);
-				slide[index] = new Tile(def, parent, TileWorldPosition(index));
+				graph[index] = new Tile(def, parent, TileWorldPosition(index));
 
 				RefreshAttachments(GetAttachments(tileIndex: index));
 			}
@@ -1042,59 +970,39 @@ namespace ClassicTilestorm
 		{
 			WindController windController = null;
 
-			for (int n = 0; n < slideCount; ++n)
+			for (int n = 0; n < graphCount; ++n)
 			{
-				var go = GetSeedTile(n).gameObject;
+				var go = GetGraphTile(n).gameObject;
 				if (go == null) continue;
 
 				var sway = go.GetComponent<MorphGeomSway>();
 				if (sway == null) continue;
 
 				windController = windController ?? parent.gameObject.AddComponent<WindController>();
-				windController.AddSway(sway, this.TileWorldPosition(n));
+				windController.AddSway(sway, TileWorldPosition(n));
 			}
 
 			if (windController != null)
 				Debug.Log($"WindController initialized with {windController.SwayComponents.Count} sway components.");
 		}
 
-		public void Initialise(Transform parent = null)
-		{
-			this.parent = parent;
-
-			if (slideCount == 0)
-			{
-				Debug.LogError("Failed to create runtime tiles — map data invalid.");
-				return;
-			}
-
-			if (ApplicationSettings.Scrambled) Preset();
-			else Solve();
-
-			InitializeWindController();
-
-			RefreshAttachments(GetAttachments());
-
-			SetupWaypoints();
-		}
-
 		public void Preset()
 		{
-			indices = Enumerable.Range(0, width * height).ToArray();
+			state = Enumerable.Range(0, width * height).ToArray();
 			UpdateTileObjectNamesAndPositions();
 		}
 
 		public void Scramble()
 		{
-			if (indices == null)
-				indices = Enumerable.Range(0, width * height).ToArray();
+			if (state == null)
+				state = Enumerable.Range(0, width * height).ToArray();
 
 			const int iterations = 1;
-			for (var n = 0; n < indices.Length * iterations; ++n)
+			for (var n = 0; n < state.Length * iterations; ++n)
 			{
 				var stride = (UnityEngine.Random.value > 0.5f ? width : 1) * (UnityEngine.Random.value > 0.5f ? 1 : -1);
 
-				var tileStrip = TileStripHelper.GetTileStrip(this, n % indices.Length, stride, true);
+				var tileStrip = TileStripHelper.GetTileStrip(this, n % state.Length, stride, true);
 				TileStripHelper.RollStrip(this, tileStrip);
 			}
 			UpdateTileObjectNamesAndPositions();
@@ -1102,7 +1010,7 @@ namespace ClassicTilestorm
 
 		public void Solve()
 		{
-			indices = Enumerable.Range(0, width * height).Select(n => n + (solve?[n] ?? 0)).ToArray();
+			state = Enumerable.Range(0, width * height).Select(n => n + (solve?[n] ?? 0)).ToArray();
 
 			UpdateTileObjectNamesAndPositions();
 		}
@@ -1127,10 +1035,30 @@ namespace ClassicTilestorm
 				}
 			}
 
-			indices = null;
+			state = null;
 
 			if (parent != null)
 				parent = null;
+		}
+
+		public void Initialise(Transform parent = null)
+		{
+			this.parent = parent;
+
+			if (graphCount == 0)
+			{
+				Debug.LogError("Failed to create runtime tiles — map data invalid.");
+				return;
+			}
+
+			if (ApplicationSettings.Scrambled) Preset();
+			else Solve();
+
+			InitializeWindController();
+
+			RefreshAttachments(GetAttachments());
+
+			SetupWaypoints();
 		}
 	}
 
@@ -1143,7 +1071,7 @@ namespace ClassicTilestorm
 					  .FirstOrDefault();
 		}
 
-		public static bool HasAttachmentOfType<T>(this IMapEdit map, int tile) where T : MapAttachment
+		public static bool HasAttachmentOfType<T>(this IMapPlay map, int tile) where T : MapAttachment
 		{
 			return map.GetAttachments(tileIndex: tile, filterTypes: new[] { typeof(T) })
 					  .Length > 0;

@@ -11,12 +11,11 @@ namespace ClassicTilestorm
 	{
 		private GameController gameController;
 		private EditorController editorController;
-		private Transform mapRoot;
-		public static Map CurrentMap { get; set; }
 		private EggbotController eggbotController;
 		private MainCameraController cameraController;
 
-		public static Transform MapRoot;
+		public static Map CurrentMap { get; set; }
+		public static Transform MapRoot { get; set; }
 
 		public event System.Action<int> OnChangeMapRequested; // delta or 0 for reload
 
@@ -78,29 +77,26 @@ namespace ClassicTilestorm
 
 			// ─── Cleanup previous map ─────────────────────────────────────
 			if (CurrentMap != null)
+			{
 				CurrentMap.Destroy();
 
-			if (mapRoot != null)
-				DestroyImmediate(mapRoot.gameObject);
+				cameraController?.Reset();
+				gameController?.Reset();
+				editorController?.Reset();
+			}
+
+			if (MapRoot != null)
+				DestroyImmediate(MapRoot.gameObject);
 
 			// ─── Create new container GameObject ──────────────────────────
 			var container = new GameObject($"Map: {currentMap.name}");
 			container.transform.SetParent(transform, false);
-			MapRoot = mapRoot = container.transform;
+			MapRoot = container.transform;
 
 			// ─── Load & initialise ────────────────────────────────────────
 
-			//// Sound effect
-			//AudioManager.PlaySound(SoundAssets.Find("jump"));
-
-			// Music
-			//AudioManager.PlayMusic(currentMap.music, loop: true);
-			//AudioManager.PlayMusic(MusicAssets.Find(currentMap.music));
-
-			//SkyboxUtility.SetSkybox(AssetPath.SkycubesPath, $"{(string.IsNullOrEmpty(currentMap.skybox) ? currentMap.music : currentMap.skybox)}Skybox");//fall back to music for now, but will be 'DefaultSkybox'
-
 			CurrentMap = currentMap;
-			currentMap.Initialise(mapRoot);
+			currentMap.Initialise(MapRoot);
 
 			// Eggbot
 			if (eggbotController != null)
@@ -115,10 +111,7 @@ namespace ClassicTilestorm
 			editorController?.Initialise(CurrentMap);
 
 			// Skybox
-			var skyName = string.IsNullOrEmpty(currentMap.skybox)
-				? $"{currentMap.music}Skybox"
-				: currentMap.skybox;
-			SkyboxUtility.SetSkybox(skyName);
+			SkyboxUtility.SetSkybox(string.IsNullOrEmpty(currentMap.skybox) ? $"{currentMap.music}Skybox" : currentMap.skybox);
 		}
 
 		//public void ReloadCurrentMap() { if (null != mapManager && null != mapManager.CurrentMap) LoadMap(mapManager.CurrentMap.name); }

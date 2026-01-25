@@ -4,8 +4,7 @@ using System.Collections.Generic;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
-using MassiveHadronLtd.IDs.HTB50;
-using static ClassicTilestorm.ResourceManager;
+using MassiveHadronLtd;
 
 namespace ClassicTilestorm
 {
@@ -88,8 +87,8 @@ namespace ClassicTilestorm
 
 			if (tableArray != null)
 			{
-				map.TableHashes = ParseTableToHashes(tableArray);
-				map.table = null;                    // ← clean state
+				map.hashes = ParseTableToHashes(tableArray);
+				map.table = null;
 			}
 
 			return map;
@@ -108,7 +107,7 @@ namespace ClassicTilestorm
 					writer.WritePropertyName("table");
 					writer.WriteStartArray();
 
-					var hashes = map.TableHashes ?? Array.Empty<int>();
+					var hashes = map.hashes ?? Array.Empty<int>();
 
 					foreach (int hash in hashes)
 					{
@@ -119,7 +118,7 @@ namespace ClassicTilestorm
 						}
 
 						var def = ResourceManager.GetDefinition(hash);
-						string namePart = (def != null && !string.IsNullOrEmpty(def.id)) ? def.id : "unknown";
+						string namePart = (def != null && !string.IsNullOrEmpty(def.name)) ? def.name : "unknown";
 
 						string hashStr = HTB50.EncodeFixed(
 							hash,
@@ -170,8 +169,8 @@ namespace ClassicTilestorm
 
 			if (tableArray != null)
 			{
-				map.TableHashes = ParseTableToHashes(tableArray);
-				map.table = null;                    // ← clean state
+				map.hashes = ParseTableToHashes(tableArray);
+				map.table = null;
 			}
 
 			return map;
@@ -192,7 +191,7 @@ namespace ClassicTilestorm
 					writer.WritePropertyName("table");
 					writer.WriteStartArray();
 
-					var hashes = map.TableHashes ?? Array.Empty<int>();
+					var hashes = map.hashes ?? Array.Empty<int>();
 
 					foreach (int hash in hashes)
 					{

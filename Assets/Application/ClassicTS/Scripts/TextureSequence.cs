@@ -10,6 +10,7 @@ namespace ClassicTilestorm
 	public class TextureSequence
 	{
 		public string id;
+		public string name { get => id; }//future replacement for id - just the display name in the editor
 		public bool alphaTest = false;
 
 		// Canonical single texture (shorthand)
@@ -109,6 +110,9 @@ namespace ClassicTilestorm
 			writer.WriteStartObject();
 
 			writer.WritePropertyName("id");
+			writer.WriteValue(ts.id);
+
+			writer.WritePropertyName("name");
 			writer.WriteValue(ts.id);
 
 			writer.WritePropertyName("alphaTest");

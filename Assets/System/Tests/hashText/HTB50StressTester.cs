@@ -5,7 +5,7 @@ using System.Linq;
 using Random = UnityEngine.Random;
 using System.Numerics;
 
-namespace MassiveHadronLtd.IDs.HTB50
+namespace MassiveHadronLtd
 {
 	public class HTB50StressTester : MonoBehaviour
 	{

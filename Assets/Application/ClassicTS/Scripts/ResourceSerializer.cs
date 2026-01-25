@@ -245,7 +245,7 @@ namespace ClassicTilestorm
 
 			var map = crop ? CreateCroppedCopy(originalMap) : originalMap;
 
-			var usedTypes = map.TableHashes?
+			var usedTypes = map.hashes?
 				.Where(t => 0!=t)
 				.Distinct()
 				.ToArray() ?? Array.Empty<int>();

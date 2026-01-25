@@ -2,7 +2,7 @@
 using System;
 using System.Numerics;
 
-namespace MassiveHadronLtd.IDs.HTB50
+namespace MassiveHadronLtd
 {
 	public class HTB50CodecStressTester : MonoBehaviour
 	{

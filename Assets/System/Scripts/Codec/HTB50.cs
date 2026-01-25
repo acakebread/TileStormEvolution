@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using System.Text;
 
-namespace MassiveHadronLtd.IDs.HTB50
+namespace MassiveHadronLtd
 {
 	/*
      * HTB50 — Human-Tolerant Base-50 (v1.0)

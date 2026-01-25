@@ -1,5 +1,4 @@
-﻿using MassiveHadronLtd.IDs.HTB50;
-using System;
+﻿using System;
 using UnityEngine;
 
 public class HTB50ExhaustiveRoundTripTest : MonoBehaviour
@@ -40,8 +39,8 @@ public class HTB50ExhaustiveRoundTripTest : MonoBehaviour
 
 			try
 			{
-				string encoded = HTB50.Encode(value, appendFlavor: false);
-				int decoded = HTB50.Decode(encoded);
+				string encoded = MassiveHadronLtd.HTB50.Encode(value, appendFlavor: false);
+				int decoded = MassiveHadronLtd.HTB50.Decode(encoded);
 
 				if (decoded != value)
 				{

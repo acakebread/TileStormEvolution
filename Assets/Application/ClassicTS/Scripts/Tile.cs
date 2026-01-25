@@ -130,7 +130,7 @@ namespace ClassicTilestorm
 						? GeometryFactory.CreateDebugTile(parent, position)
 						: null;
 
-				Debug.LogWarning($"Invalid Definition or model for {definition?.id ?? "null"}");
+				Debug.LogWarning($"Invalid Definition or model for {definition?.name ?? "null"}");
 				return GeometryFactory.CreateFallbackTile(parent, position);
 			}
 

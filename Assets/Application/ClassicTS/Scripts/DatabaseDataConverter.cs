@@ -22,14 +22,14 @@
 //				if (!string.IsNullOrEmpty(def.id))
 //				{
 //					int hash32 = RadixHash.GetStableHash32(def.id);
-//					def.hashid = HTB50.EncodeFixed(hash32, ResourceManager.HTB50Settings.FixedLength, padChar: '0', appendFlavor: false);
+//					def.hashid = HTB50.EncodeFixed(hash32, HTB50Settings.FixedLength, padChar: '0', appendFlavor: false);
 //				}
 //				else
 //				{
 //					// Very rare fallback
 //					string fallbackInput = Guid.NewGuid().ToString();
 //					int hash32 = RadixHash.GetStableHash32(fallbackInput);
-//					def.hashid = HTB50.EncodeFixed(hash32, ResourceManager.HTB50Settings.FixedLength, padChar: '0', appendFlavor: false);
+//					def.hashid = HTB50.EncodeFixed(hash32, HTB50Settings.FixedLength, padChar: '0', appendFlavor: false);
 //					Debug.LogWarning($"Generated fallback hashid for definition with no id");
 //				}
 //				defsChanged = true;
@@ -69,7 +69,7 @@
 //					}
 
 //					// Skip if it already looks like a hash (6 chars, alphanumeric)
-//					if (current.Length == ResourceManager.HTB50Settings.FixedLength &&
+//					if (current.Length == HTB50Settings.FixedLength &&
 //						current.All(c => char.IsLetterOrDigit(c)))
 //					{
 //						newTable.Add(current);
@@ -93,7 +93,7 @@
 //							int hash32 = RadixHash.GetStableHash32(current);
 
 //							// Keep fixed length 6 with padding, exactly as before
-//							hashToUse = HTB50.EncodeFixed(hash32, ResourceManager.HTB50Settings.FixedLength, padChar: '0', appendFlavor: false);
+//							hashToUse = HTB50.EncodeFixed(hash32, HTB50Settings.FixedLength, padChar: '0', appendFlavor: false);
 
 //							Debug.LogWarning($"Generated hash '{hashToUse}' for unmapped tile '{current}' in map '{map.name}'");
 //						}

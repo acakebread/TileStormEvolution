@@ -6,8 +6,7 @@ namespace ClassicTilestorm
 {
 	public class EditorController : MonoBehaviour
 	{
-		public IMapEdit iMap => map;
-		private IMapEdit map;
+		public IMapEdit iMap;
 
 		private EditorControllerMovement activeMode;
 		private EditorControllerView viewMode;
@@ -42,14 +41,30 @@ namespace ClassicTilestorm
 			SetEditorMode(EditorMode.View);//default
 		}
 
-		public void Initialise(IMapEdit map)
+		private System.Action _unsubscribeMapAction;
+
+		public void Initialise(IMapEdit iMap)
 		{
-			this.map = map;
-			this.map.OnMapEdited += HandleMapEdited;// Subscribe to map changes
+			this.iMap = iMap;
+			iMap.OnMapEdited += HandleMapEdited;// Subscribe to map changes
 			if (!isActiveAndEnabled) return;
 			UpdateGridLines(gridEnabled);
 			activeMode?.OnMapLoaded();
 			EnableEggbot(false);
+
+			iMap.OnMapEdited += OnMapEdited;
+			_unsubscribeMapAction = () => iMap.OnMapEdited -= OnMapEdited;
+		}
+
+		public void Reset()
+		{
+			_unsubscribeMapAction?.Invoke();
+			_unsubscribeMapAction = null;
+		}
+
+		private void OnMapEdited(IMapEdit iMap, bool resized, Vector3 delta)
+		{
+			iMap.OnMapEdited -= HandleMapEdited;
 		}
 
 		private void OnEnable()
@@ -96,7 +111,7 @@ namespace ClassicTilestorm
 		private void OnDestroy()
 		{
 			GridLinesUtil.Hide();
-			if (null != map) map.OnMapEdited -= HandleMapEdited;
+			if (null != iMap) iMap.OnMapEdited -= HandleMapEdited;
 			viewMode?.OnDestroy();
 			paintMode?.OnDestroy();
 			attachmentMode?.OnDestroy();
@@ -108,7 +123,7 @@ namespace ClassicTilestorm
 			if (null != eggbotController) eggbotController.gameObject.SetActive(value);
 		}
 
-		private void UpdateGridLines(bool enabled = true) => GridLinesUtil.Show(transform, null != map ? map.Width : 32, null != map ? map.Height : 32, gridEnabled = enabled);
+		private void UpdateGridLines(bool enabled = true) => GridLinesUtil.Show(transform, null != iMap ? iMap.Width : 32, null != iMap ? iMap.Height : 32, gridEnabled = enabled);
 		private void UpdateDOF(bool enabled = true)
 		{
 			if (null != gameCameraEditor)
@@ -149,12 +164,6 @@ namespace ClassicTilestorm
 			if (!resized) return;
 			if (gridEnabled) GridLinesUtil.UpdateSize(map.width, map.height);
 			if (Vector3.zero == originDelta) return;
-			if (!TryGetComponent<MainCameraController>(out var controller)) return;
-
-		//	controller.AdjustEditorCameraForMapShift(originDelta);
-
-			//if (controller.activeSystem is GameCameraEditor editorCam)
-			//	editorCam.camera.transform.position += originDelta;
 		}
 
 		// ===================================================================

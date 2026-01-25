@@ -3,16 +3,15 @@ using System.Linq;
 using System.Collections.Generic;
 using Newtonsoft.Json;
 using MassiveHadronLtd;
-using MassiveHadronLtd.IDs.HTB50;
-using static ClassicTilestorm.ResourceManager;
 
 namespace ClassicTilestorm
 {
 	[Serializable]
 	public class Definition
 	{
-		public string hashid;   // new: stable hash-based ID (future primary id) -- ToDo convert to 'long'
+		public string hashid;   // stable hash-based ID IO only version - internally stored as int
 		public string id;       // current: human-friendly / legacy name
+		public string name { get => id; set => id = value; }//future replacement for id - just the display name in the editor
 		public string model;
 		public string texture;
 		public string material;
@@ -20,8 +19,6 @@ namespace ClassicTilestorm
 		public string connections;   // e.g. "NSEW" (uppercase, no separators)
 
 		//[JsonIgnore] public string id { get => hashid; }//future replacement for hashid obviously this currently conflicts with the existing use of 'id'
-		[JsonIgnore] public string name { get => id; }//future replacement for id - just the display name in the editor
-		//[JsonIgnore] public int HashID => string.IsNullOrEmpty(hashid) ? 0 : HTB50.Decode(hashid);
 
 		// ── CONNECTIONS (settable) ────────────────────────────────────────────
 		[JsonIgnore] public bool bNorth { get => HasConnection('N'); set => SetConnection('N', value); }
@@ -41,11 +38,8 @@ namespace ClassicTilestorm
 		[JsonIgnore] public bool bSway { get => HasFlag("Sway"); set => SetFlag("Sway", value); }
 		[JsonIgnore] public bool bWash { get => HasFlag("Wash"); set => SetFlag("Wash", value); }
 
-		[JsonIgnore]
-		private int? _cachedHashID;
-
-		[JsonIgnore]
-		public int HashID
+		[JsonIgnore] private int? _cachedHashID;
+		[JsonIgnore] public int HashID
 		{
 			get
 			{
@@ -92,6 +86,7 @@ namespace ClassicTilestorm
 		// ── CONDITIONAL SERIALIZATION ─────────────────────────────────────────
 		public bool ShouldSerializehashid() => !string.IsNullOrEmpty(hashid);
 		public bool ShouldSerializeid() => !string.IsNullOrEmpty(id);
+		public bool ShouldSerializename() => !string.IsNullOrEmpty(name);
 		public bool ShouldSerializemodel() => !string.IsNullOrEmpty(model);
 		public bool ShouldSerializetexture() => !string.IsNullOrEmpty(texture);
 		public bool ShouldSerializematerial() => !string.IsNullOrEmpty(material);
@@ -214,7 +209,7 @@ namespace ClassicTilestorm
 
 			return new Definition
 			{
-				id = legacyNameForHash,
+				name = legacyNameForHash,
 				hashid = stable,
 
 				model = null,

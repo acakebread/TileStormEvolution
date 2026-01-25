@@ -108,7 +108,7 @@ namespace ClassicTilestorm.Editor
 			{
 				var def = new Definition
 				{
-					id = old.szType?.Trim(),
+					name = old.szType?.Trim(),
 					model = !string.IsNullOrEmpty(old.szGeom) ? old.szGeom.Replace(".x", "").Trim() : null,
 					texture = !string.IsNullOrEmpty(old.szBank) ? old.szBank.Trim() : "Default"
 				};

@@ -64,7 +64,7 @@ namespace ClassicTilestorm
 				var mapIndex = iMap.WorldToMapIndex(worldPos);
 				if (mapIndex != -1)
 				{
-					var currentHash = iMap.GetDefinitionAtIndex(mapIndex);
+					var currentHash = iMap.GetTileID(mapIndex);
 					if (currentHash == selectedHashId && cycleDefinitions.Count > 1)
 					{
 						cycleIndex = (cycleIndex + 1) % cycleDefinitions.Count;
@@ -121,7 +121,7 @@ namespace ClassicTilestorm
 
 		private static List<Definition> GetVariantGroup(Definition referenceDef)
 		{
-			string referenceName = referenceDef.id;
+			string referenceName = referenceDef.name;
 
 			var singles = new[] { " n", " e", " s", " w" };
 			var doublesLinear = new[] { " we", " ns", " ew", " sn" };
@@ -142,14 +142,14 @@ namespace ClassicTilestorm
 
 			var variants = new List<Definition>();
 
-			var baseDef = ResourceManager.Definitions.FirstOrDefault(d => d.id == baseName);
+			var baseDef = ResourceManager.Definitions.FirstOrDefault(d => d.name == baseName);
 			if (baseDef != null)
 				variants.Add(baseDef);
 
 			foreach (var suffix in group)
 			{
 				var candidate = baseName + suffix;
-				var candidateDef = ResourceManager.Definitions.FirstOrDefault(d => d.id == candidate);
+				var candidateDef = ResourceManager.Definitions.FirstOrDefault(d => d.name == candidate);
 				if (candidateDef != null)
 					variants.Add(candidateDef);
 			}
@@ -168,7 +168,7 @@ namespace ClassicTilestorm
 			{
 				bool isSelected = def.HashID == selectedHashId;
 
-				string label = def.id;
+				string label = def.name;
 				if (def.IsDefault())
 					label = "[Default] " + label;
 
