@@ -73,8 +73,8 @@ namespace ClassicTilestorm
 		[JsonProperty(Order = 10)] public int width;
 		[JsonProperty(Order = 11)] public int height;
 
-		[JsonProperty(Order = 21)] public int[] tiles;      // seed indices
-		[JsonProperty(Order = 22)] public int[] solve;      // delta
+		[JsonProperty(Order = 21)] public int[] tiles;// seed indices
+		[JsonProperty(Order = 22)] public int[] solve;// delta
 		[JsonProperty(Order = 23)] public int[] waypoints;
 
 		[JsonProperty(Order = 30)] public MapAttachment[] attachments;
