@@ -84,13 +84,6 @@ namespace ClassicTilestorm
 
 		[JsonProperty(Order = 30)] public MapAttachment[] attachments;
 
-		//// ATOMIC-ONLY FIELDS
-		//[JsonProperty(Order = 100)] public Definition[] definitions;
-		//[JsonProperty(Order = 101)] public TextureSequence[] textures;
-		//[JsonProperty(Order = 102)] public string version = "1.0";
-		//[JsonProperty(Order = 103)] public string author = "Player";
-		//[JsonProperty(Order = 104)] public string exportedFrom = "ClassicTilestorm";
-
 		// Conditional serialization
 		public bool ShouldSerializeskybox() => !string.IsNullOrEmpty(skybox);
 		public bool ShouldSerializesolve() => solve != null && solve.Length > 0;
@@ -106,27 +99,6 @@ namespace ClassicTilestorm
 		[JsonIgnore] public int[] Indices => state;
 		[JsonIgnore] public string Music { get => music; set => music = value; }
 		[JsonIgnore] public string Skybox { get => skybox; set => skybox = value; }
-
-		public const int MAP_MAX_SIZE = 64;
-
-#if UNITY_EDITOR
-		public static readonly Vector3 tile_origin = new(0.5f, 0f, 0.5f);
-		public Vector3 TileWorldPosition(int index) => new Vector3(index % width, 0f, index / width) + tile_origin;
-		public int WorldToMapIndex(Vector3 vec) => vec.x >= 0 && vec.x < width && vec.z >= 0 && vec.z < height ? (int)vec.z * width + (int)vec.x : -1;
-		public static Vector3 SnappedMapPosition(Vector3 vec) => new Vector3(Mathf.FloorToInt(vec.x), 0f, Mathf.FloorToInt(vec.z)) + tile_origin;
-#else
-        public static readonly Vector3 tile_origin = Vector3.zero;
-        public Vector3 TileWorldPosition(int index) => new(index % width, 0f, index / width);
-        public int WorldToMapIndex(Vector3 vec) { vec += new Vector3(0.5f, 0f, 0.5f); return vec.x >= 0 && vec.x < width && vec.z >= 0 && vec.z < height ? (int)vec.z * width + (int)vec.x : -1; }
-        public static Vector3 SnappedMapPosition(Vector3 vec) => new Vector3(Mathf.FloorToInt(vec.x + 0.5f), 0f, Mathf.FloorToInt(vec.z + 0.5f));
-#endif
-
-		public static Vector3 ScreenToWorldSnapped(Camera camera, Vector3 screenPos) => SnappedMapPosition(ScreenToWorld(camera, Input.mousePosition));
-		public Quaternion LocalRotation(int tileIndex, Quaternion worldRotation) => worldRotation;
-		public Quaternion WorldRotation(int tileIndex, Quaternion localRotation) => localRotation;
-
-		public Vector3 LocalPosition(int tileIndex, Vector3 worldPosition) => tileIndex < 0 ? worldPosition : worldPosition - TileWorldPosition(tileIndex);
-		public Vector3 WorldPosition(int tileIndex, Vector3 localPosition) => tileIndex < 0 ? localPosition : localPosition + TileWorldPosition(tileIndex);
 
 		// ─────────────────────────────────────────────
 		// Runtime tile instances (lazy / just-in-time)
@@ -177,6 +149,27 @@ namespace ClassicTilestorm
 
 		[JsonIgnore] public int graphCount => graph.Length;
 
+		private const int MAP_MAX_SIZE = 64;
+
+#if UNITY_EDITOR
+		public static readonly Vector3 tile_origin = new(0.5f, 0f, 0.5f);
+		public Vector3 TileWorldPosition(int index) => new Vector3(index % width, 0f, index / width) + tile_origin;
+		public int WorldToMapIndex(Vector3 vec) => vec.x >= 0 && vec.x < width && vec.z >= 0 && vec.z < height ? (int)vec.z * width + (int)vec.x : -1;
+		public static Vector3 SnappedMapPosition(Vector3 vec) => new Vector3(Mathf.FloorToInt(vec.x), 0f, Mathf.FloorToInt(vec.z)) + tile_origin;
+#else
+        public static readonly Vector3 tile_origin = Vector3.zero;
+        public Vector3 TileWorldPosition(int index) => new(index % width, 0f, index / width);
+        public int WorldToMapIndex(Vector3 vec) { vec += new Vector3(0.5f, 0f, 0.5f); return vec.x >= 0 && vec.x < width && vec.z >= 0 && vec.z < height ? (int)vec.z * width + (int)vec.x : -1; }
+        public static Vector3 SnappedMapPosition(Vector3 vec) => new Vector3(Mathf.FloorToInt(vec.x + 0.5f), 0f, Mathf.FloorToInt(vec.z + 0.5f));
+#endif
+
+		public static Vector3 ScreenToWorldSnapped(Camera camera, Vector3 screenPos) => SnappedMapPosition(ScreenToWorld(camera, Input.mousePosition));
+		public Quaternion LocalRotation(int tileIndex, Quaternion worldRotation) => worldRotation;
+		public Quaternion WorldRotation(int tileIndex, Quaternion localRotation) => localRotation;
+
+		public Vector3 LocalPosition(int tileIndex, Vector3 worldPosition) => tileIndex < 0 ? worldPosition : worldPosition - TileWorldPosition(tileIndex);
+		public Vector3 WorldPosition(int tileIndex, Vector3 localPosition) => tileIndex < 0 ? localPosition : localPosition + TileWorldPosition(tileIndex);
+
 		// ─────────────────────────────────────────────
 		// Runtime integer hash cache (non-serialized, mirrors table)
 		// ─────────────────────────────────────────────
@@ -196,6 +189,24 @@ namespace ClassicTilestorm
 				tile.Destroy();
 
 			_graph = null;
+		}
+
+		/// <summary>
+		/// Returns true if this map uses the given hash ID at least once.
+		/// </summary>
+		public bool IsDefinitionUsed(int hashId)
+		{
+			if (hashId == 0) return false;
+			return hashes?.Contains(hashId) == true;
+		}
+
+		/// <summary>
+		/// Returns how many times this map uses the given hash ID in its tile table.
+		/// </summary>
+		public int DefinitionUsageCount(int hashId)
+		{
+			if (hashId == 0) return 0;
+			return hashes?.Count(h => h == hashId) ?? 0;
 		}
 
 		// ─────────────────────────────────────────────

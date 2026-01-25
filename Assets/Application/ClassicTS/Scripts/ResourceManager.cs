@@ -248,16 +248,18 @@ namespace ClassicTilestorm
 
 		public static bool IsDefinitionUsed(int hashId)
 		{
-			if (0 == hashId) return false;
+			if (hashId == 0) return false;
 
-			return Maps.Any(m => m?.hashes?.Contains(hashId) == true);
+			// Any map uses it at least once?
+			return Maps.Any(m => m != null && m.IsDefinitionUsed(hashId));
 		}
 
 		public static int DefinitionUsageCount(int hashId)
 		{
-			if (0 == hashId) return 0;
+			if (hashId == 0) return 0;
 
-			return Maps.Sum(m => m?.hashes?.Count(h => h == hashId) ?? 0);
+			// Total usage across ALL maps
+			return Maps.Sum(m => m?.DefinitionUsageCount(hashId) ?? 0);
 		}
 
 		public static Definition ResolveDefinition(int hashId, out bool hadError)
