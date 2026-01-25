@@ -56,7 +56,7 @@ namespace ClassicTilestorm
 	}
 
 	[Serializable]
-	public class Map : IMapEdit
+	public class Map : IMapEdit, Map.IHasHashAccess
 	{
 		// ─────────────────────────────────────────────
 		// Core identity
@@ -104,8 +104,10 @@ namespace ClassicTilestorm
 		// Runtime tile instances (lazy / just-in-time)
 		// ─────────────────────────────────────────────
 
-		[JsonIgnore] public int[] hashes;// runtime int copy of table, never serialized
 		[JsonIgnore] private int[] state; // runtime permutation, never serialized
+		[JsonIgnore] private int[] hashes;// runtime int copy of table, never serialized
+		internal interface IHasHashAccess { int[] Hashes { get; set; } }
+		int[] IHasHashAccess.Hashes { get => hashes; set => hashes = value; }
 
 		[JsonIgnore] private Tile[] _graph; // private backing field (never serialized)
 		[JsonIgnore] private Tile[] graph

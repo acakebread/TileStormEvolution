@@ -23,11 +23,10 @@ namespace ClassicTilestorm
 		protected static IEnumerable<JsonProperty> OrderedProperties(JsonSerializer serializer)
 		{
 			var contract = (JsonObjectContract)serializer.ContractResolver.ResolveContract(typeof(Map));
-
 			return contract.Properties
 				.Where(p => !p.Ignored)
 				.OrderBy(p => p.Order ?? int.MaxValue)
-				.ThenBy(p => p.PropertyName);   // stable sort when Order is equal
+				.ThenBy(p => p.PropertyName);
 		}
 
 		protected int[] ParseTableToHashes(JArray tableArray)
@@ -87,7 +86,8 @@ namespace ClassicTilestorm
 
 			if (tableArray != null)
 			{
-				map.hashes = ParseTableToHashes(tableArray);
+				// Access via private interface
+				((Map.IHasHashAccess)map).Hashes = ParseTableToHashes(tableArray);
 				map.table = null;
 			}
 
@@ -104,7 +104,8 @@ namespace ClassicTilestorm
 			writer.WritePropertyName("table");
 			writer.WriteStartArray();
 
-			var hashes = map.hashes ?? Array.Empty<int>();
+			// Access via private interface
+			var hashes = ((Map.IHasHashAccess)map).Hashes ?? Array.Empty<int>();
 
 			foreach (int hash in hashes)
 			{
@@ -149,7 +150,6 @@ namespace ClassicTilestorm
 			{
 				if (prop.PropertyName == "table")
 				{
-					// Write table exactly when its Order value says so
 					WriteTableArray(writer, map, serializer);
 					continue;
 				}
@@ -166,7 +166,6 @@ namespace ClassicTilestorm
 				serializer.Serialize(writer, propValue);
 			}
 
-			// Only atomic format gets these extra fields at the end
 			if (IsAtomic)
 			{
 				WriteAtomicOnlyFields(writer, map, serializer);
@@ -177,7 +176,8 @@ namespace ClassicTilestorm
 
 		private void WriteAtomicOnlyFields(JsonWriter writer, Map map, JsonSerializer serializer)
 		{
-			var usedHashes = (map.hashes ?? Array.Empty<int>())
+			// Access via private interface
+			var usedHashes = (((Map.IHasHashAccess)map).Hashes ?? Array.Empty<int>())
 				.Where(h => h != 0)
 				.Distinct()
 				.ToArray();
