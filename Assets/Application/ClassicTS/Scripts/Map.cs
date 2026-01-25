@@ -5,7 +5,6 @@ using UnityEngine;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using MassiveHadronLtd;
-using MassiveHadronLtd.IDs.HTB50;
 
 namespace ClassicTilestorm
 {
