@@ -76,7 +76,7 @@ namespace ClassicTilestorm
 		// ─────────────────────────────────────────────
 		// Tile table — serialised to hashes
 		// ─────────────────────────────────────────────
-		[JsonProperty(Order = 20)] public string[] table;
+		[JsonProperty(Order = 20)] public string[] table;//serialise only - not used internally
 
 		[JsonProperty(Order = 21)] public int[] tiles;      // seed indices
 		[JsonProperty(Order = 22)] public int[] solve;      // delta
