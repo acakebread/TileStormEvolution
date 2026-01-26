@@ -15,7 +15,6 @@ namespace ClassicTilestorm
 		public float angle;           // degrees, usually 0/90/180/270
 		public float delta;           // local position offset
 
-		// Optional: constructor helpers
 		public Variant(HashId h) : this(h, 0f, 0f) { }
 		public Variant(HashId h, float rotationDegrees, float offset)
 		{
@@ -24,7 +23,6 @@ namespace ClassicTilestorm
 			delta = offset;
 		}
 
-		// Helper to make migration easier
 		public static implicit operator HashId(Variant v) => v.hash;
 	}
 
@@ -38,8 +36,8 @@ namespace ClassicTilestorm
 
 	public interface IMapPlay : IMapData
 	{
-		public string Music { get; set; }
-		public string Skybox { get; set; }
+		string Music { get; set; }
+		string Skybox { get; set; }
 
 		int WorldToMapIndex(Vector3 _);
 		Vector3 TileWorldPosition(int _);
@@ -93,8 +91,8 @@ namespace ClassicTilestorm
 		[JsonProperty(Order = 10)] public int width;
 		[JsonProperty(Order = 11)] public int height;
 
-		[JsonProperty(Order = 21)] public int[] tiles;// seed indices
-		[JsonProperty(Order = 22)] public int[] solve;// delta
+		[JsonProperty(Order = 21)] public int[] tiles;     // seed indices
+		[JsonProperty(Order = 22)] public int[] solve;     // delta
 		[JsonProperty(Order = 23)] public int[] waypoints;
 
 		[JsonProperty(Order = 30)] public MapAttachment[] attachments;
@@ -116,47 +114,11 @@ namespace ClassicTilestorm
 		[JsonIgnore] public string Skybox { get => skybox; set => skybox = value; }
 
 		// ─────────────────────────────────────────────
-		// Tile hashes — for definitions
+		// Tile data — variants is now the only source of truth
 		// ─────────────────────────────────────────────
 
 		[JsonIgnore]
 		public Variant[] variants = Array.Empty<Variant>();
-
-		// Compatibility layer - exact same name, now a property
-		[JsonIgnore]
-		private HashId[] hashes
-		{
-			get
-			{
-				if (variants == null || variants.Length == 0)
-					return Array.Empty<HashId>();
-
-				var arr = new HashId[variants.Length];
-				for (int i = 0; i < variants.Length; i++)
-					arr[i] = variants[i].hash;
-				return arr;
-			}
-
-			set
-			{
-				if (value == null)
-				{
-					variants = Array.Empty<Variant>();
-				}
-				else
-				{
-					variants = new Variant[value.Length];
-					for (int i = 0; i < value.Length; i++)
-					{
-						variants[i] = new Variant(value[i]);   // angle=0, delta=zero
-					}
-				}
-
-				// Invalidate anything derived from the tile list
-				_graph = null;
-				// If you have other caches depending on hashes/variants → clear them here too
-			}
-		}
 
 		// ─────────────────────────────────────────────
 		// Recommended clean access for future code
@@ -194,7 +156,9 @@ namespace ClassicTilestorm
 
 		[JsonIgnore] private int[] state; // runtime permutation, never serialized
 		[JsonIgnore] private Tile[] _graph; // private backing field (never serialized)
-		[JsonIgnore] private Tile[] graph
+
+		[JsonIgnore]
+		private Tile[] graph
 		{
 			get
 			{
@@ -211,7 +175,7 @@ namespace ClassicTilestorm
 
 				string mapName = name ?? "Unnamed map";
 
-				// Use current state for permutation, fallback to identity if missing
+				// Use current state for permutation, fallback to identity
 				int[] perm = state != null && state.Length == width * height
 					? state
 					: Enumerable.Range(0, width * height).ToArray();
@@ -235,7 +199,7 @@ namespace ClassicTilestorm
 						displayPos -= tile_origin;
 
 						var def = ResourceManager.GetDefinition(variant.hash);
-						go.name = $"{def?.name ?? "??"} ({displayPos.x},{displayPos.z})+{variant.delta:F2}@{variant.angle:F1}°";
+						go.name = $"{def?.name ?? "??"} ({displayPos.x:F1},{displayPos.z:F1})+{variant.delta:F2}@{variant.angle:F1}°";
 					}
 #endif
 				}
@@ -267,14 +231,19 @@ namespace ClassicTilestorm
 		public Vector3 LocalPosition(int tileIndex, Vector3 worldPosition) => tileIndex < 0 ? worldPosition : worldPosition - TileWorldPosition(tileIndex);
 		public Vector3 WorldPosition(int tileIndex, Vector3 localPosition) => tileIndex < 0 ? localPosition : localPosition + TileWorldPosition(tileIndex);
 
-		// ─────────────────────────────────────────────
-		// Runtime integer hash cache (non-serialized, mirrors table)
-		// ─────────────────────────────────────────────
+		public HashId GetTileID(int index)
+		{
+			if (tiles == null || index < 0 || index >= tiles.Length)
+				return 0;
 
-		//public HashId GetTileID(int index) => tiles == null || state == null || index < 0 || index >= tiles.Length || index >= state.Length ? 0 : hashes[tiles[state[index]]];
-		public HashId GetTileID(int index) => tiles == null || index < 0 || index >= tiles.Length ? 0 : hashes[tiles[index]];//I think it's this - we can only edit unscrambled maps so need to ensure this
+			int tableIdx = tiles[index];
+			if (tableIdx >= 0 && tableIdx < variants.Length)
+				return variants[tableIdx].hash;
 
-		public Tile GetTile(int index) => null == state || index < 0 || index >= state.Length ? default : GetGraphTile(state[index]);
+			return 0;
+		}
+
+		public Tile GetTile(int index) => state == null || index < 0 || index >= state.Length ? default : GetGraphTile(state[index]);
 		private Tile GetGraphTile(int graphIndex) => _graph == null || graphIndex < 0 || graphIndex >= _graph.Length ? default : _graph[graphIndex];
 
 		private void DestroyAllTiles()
@@ -288,27 +257,17 @@ namespace ClassicTilestorm
 			_graph = null;
 		}
 
-		/// <summary>
-		/// Returns true if this map uses the given hash ID at least once.
-		/// </summary>
 		public bool IsDefinitionUsed(HashId hashId)
 		{
 			if (hashId == 0) return false;
-			return hashes?.Contains(hashId) == true;
+			return variants?.Any(v => v.hash == hashId) == true;
 		}
 
-		/// <summary>
-		/// Returns how many times this map uses the given hash ID in its tile table.
-		/// </summary>
 		public int DefinitionUsageCount(HashId hashId)
 		{
 			if (hashId == 0) return 0;
-			return hashes?.Count(h => h == hashId) ?? 0;
+			return variants?.Count(v => v.hash == hashId) ?? 0;
 		}
-
-		// ─────────────────────────────────────────────
-		// Attachment runtime state
-		// ─────────────────────────────────────────────
 
 		public MapAttachment[] GetAttachments(int? tileIndex = null, Type[] filterTypes = null)
 		{
@@ -531,7 +490,7 @@ namespace ClassicTilestorm
 		}
 
 		// ─────────────────────────────────────────────
-		// Original methods
+		// Original methods — adapted to variants
 		// ─────────────────────────────────────────────
 
 		private bool Consolidate()
@@ -542,17 +501,17 @@ namespace ClassicTilestorm
 			var defaultHash = ResourceManager.FindOrCreateDefaultTile().HashID;
 
 			var currentHashes = tiles.Select(idx =>
-				idx >= 0 && idx < hashes.Length ? hashes[idx] : defaultHash
+				idx >= 0 && idx < variants.Length ? variants[idx].hash : defaultHash
 			).ToArray();
 
-			var newTable = currentHashes.ToFrequencySortedDistinct(); // assuming this returns int[]
+			var newTable = currentHashes.ToFrequencySortedDistinct(); // assuming returns HashId[]
 
-			HashId[] originalTable = hashes;//needs a copy here
-			int originalSize = originalTable?.Length ?? 0;
+			Variant[] originalVariants = variants;
+			int originalSize = originalVariants?.Length ?? 0;
 			int newSize = newTable.Length;
 
 			bool sizeChanged = newSize != originalSize;
-			bool orderChanged = !sizeChanged && !originalTable.SequenceEqual(newTable);
+			bool orderChanged = !sizeChanged && !originalVariants.Select(v => v.hash).SequenceEqual(newTable);
 
 			bool anythingChanged = sizeChanged || orderChanged;
 
@@ -560,7 +519,17 @@ namespace ClassicTilestorm
 			{
 				tiles = currentHashes.Select(h => Array.IndexOf(newTable, h)).ToArray();
 
-				hashes = newTable; // keep in sync
+				var newVariants = new Variant[newSize];
+				for (int i = 0; i < newSize; i++)
+				{
+					var oldIdx = Array.IndexOf(originalVariants.Select(v => v.hash).ToArray(), newTable[i]);
+					if (oldIdx >= 0)
+						newVariants[i] = originalVariants[oldIdx]; // preserve angle/delta
+					else
+						newVariants[i] = new Variant(newTable[i]);
+				}
+
+				variants = newVariants;
 
 				if (sizeChanged)
 				{
@@ -582,9 +551,8 @@ namespace ClassicTilestorm
 
 			int targetWidth, targetHeight, offsetX, offsetZ;
 
-			if (0 != expandToX || 0 != expandToZ)
+			if (expandToX != 0 || expandToZ != 0)
 			{
-				// Expand mode: include the target point
 				int minX = Mathf.Min(0, expandToX);
 				int minZ = Mathf.Min(0, expandToZ);
 				int maxX = Mathf.Max(width - 1, expandToX);
@@ -597,9 +565,8 @@ namespace ClassicTilestorm
 			}
 			else
 			{
-				// Crop mode: tight bounds around non-default content
 				var (minX, minZ, maxX, maxZ) = GetContentBounds();
-				if (maxX < 0) return false; // no content → no-op
+				if (maxX < 0) return false;
 
 				targetWidth = maxX - minX + 1;
 				targetHeight = maxZ - minZ + 1;
@@ -607,11 +574,9 @@ namespace ClassicTilestorm
 				offsetZ = -minZ;
 			}
 
-			// Early exit: nothing would change
 			if (targetWidth == width && targetHeight == height && offsetX == 0 && offsetZ == 0)
 				return false;
 
-			// Reject oversized maps (only really applies to expand mode)
 			if (targetWidth > MAP_MAX_SIZE || targetHeight > MAP_MAX_SIZE)
 			{
 				Debug.LogWarning($"Resize rejected: would exceed max size ({MAP_MAX_SIZE}x{MAP_MAX_SIZE})");
@@ -620,20 +585,18 @@ namespace ClassicTilestorm
 
 			Debug.Log($"Resize Map '{name}' to {targetWidth}x{targetHeight}");
 
-			// ─────────────────────────────────────────────
-			// Perform the actual resize / reposition
-			// ─────────────────────────────────────────────
-
 			int oldWidth = width;
 			int oldHeight = height;
 			int newSize = targetWidth * targetHeight;
 
 			int defaultIndex = -1;
 
-			// Prefer any existing empty-like tile
-			for (int i = 0; i < hashes.Length; i++)
+			var defaultDef = ResourceManager.FindOrCreateDefaultTile();
+			var defaultHash = defaultDef.HashID;
+
+			for (int i = 0; i < variants.Length; i++)
 			{
-				var def = ResourceManager.GetDefinition(hashes[i]);
+				var def = ResourceManager.GetDefinition(variants[i].hash);
 				if (def != null && def.IsDefaultEquivalent())
 				{
 					defaultIndex = i;
@@ -641,20 +604,16 @@ namespace ClassicTilestorm
 				}
 			}
 
-			// Fallback: append canonical default
 			if (defaultIndex == -1)
 			{
-				var defaultDef = ResourceManager.FindOrCreateDefaultTile();
-				var defaultHash = defaultDef.HashID;
-
-				hashes = hashes.Concat(new[] { defaultHash }).ToArray();
-				defaultIndex = hashes.Length - 1;
+				variants = variants.Concat(new[] { new Variant(defaultHash) }).ToArray();
+				defaultIndex = variants.Length - 1;
 			}
 
 			var newTiles = new int[newSize];
 			Array.Fill(newTiles, defaultIndex);
 
-			var newSolve = new int[newSize]; // zero-filled
+			var newSolve = new int[newSize];
 
 			for (int oldIdx = 0; oldIdx < oldWidth * oldHeight; oldIdx++)
 			{
@@ -683,7 +642,6 @@ namespace ClassicTilestorm
 				}
 			}
 
-			// Helper Remap (updated to take parameters so it can be called locally)
 			int Remap(int idx, int oldW, int newW, int offX, int offZ)
 			{
 				if (idx < 0) return idx;
@@ -715,7 +673,7 @@ namespace ClassicTilestorm
 
 		public bool CropToContent(bool consolidate = false)
 		{
-			bool resized = RepositionAndResize(); // no args = crop mode
+			bool resized = RepositionAndResize();
 
 			bool consolidated = false;
 			if (consolidate)
@@ -739,7 +697,7 @@ namespace ClassicTilestorm
 				int t = tiles[i];
 				if (t < 0) continue;
 
-				int hash = (t < hashes.Length) ? hashes[t] : 0;
+				int hash = (t < variants.Length) ? variants[t].hash : 0;
 				if (hash == 0) continue;
 
 				var def = ResourceManager.GetDefinition(hash);
@@ -771,11 +729,7 @@ namespace ClassicTilestorm
 			solve = solve != null ? (int[])solve.Clone() : null,
 
 			attachments = attachments != null ? attachments.Select(a => a.ShallowClone()).ToArray() : Array.Empty<MapAttachment>(),
-			//hashes = null != hashes ? (HashId[])hashes.Clone() : Array.Empty<HashId>()
-
-			// ── Fix: copy variants directly ─────────────────────────────────────
 			variants = variants != null ? variants.Select(v => new Variant(v.hash, v.angle, v.delta)).ToArray() : Array.Empty<Variant>()
-			// No need to set hashes — the property getter will rebuild it from variants
 		};
 
 		public int CameraHitTile(Camera camera, Vector3 position) => WorldToMapIndex(ScreenToWorld(camera, position));
@@ -869,7 +823,7 @@ namespace ClassicTilestorm
 		private void RecreateTiles()
 		{
 			DestroyAllTiles();
-			var _ = graph; // force lazy creation
+			var _ = graph;
 		}
 
 		public void RefreshGeometry()
@@ -900,7 +854,6 @@ namespace ClassicTilestorm
 			Vector3 originDelta = Vector3.zero;
 			bool sizeChanged = false;
 
-			// If coordinate out of bounds → expand automatically
 			if (x < 0 || x >= width || z < 0 || z >= height)
 			{
 				bool didResize = RepositionAndResize(x, z);
@@ -929,17 +882,12 @@ namespace ClassicTilestorm
 
 			int index = z * width + x;
 
-			// ── Manage variants directly ────────────────────────────────────────
 			int tableIndex = -1;
 
 			if (variants == null || !variants.Any(v => v.hash == hashId))
 			{
 				var newVariant = new Variant(hashId, 0f, 0f);
-
-				variants = variants != null
-					? variants.Concat(new[] { newVariant }).ToArray()
-					: new[] { newVariant };
-
+				variants = variants != null ? variants.Concat(new[] { newVariant }).ToArray() : new[] { newVariant };
 				tableIndex = variants.Length - 1;
 			}
 			else
@@ -949,7 +897,6 @@ namespace ClassicTilestorm
 
 			tiles[index] = tableIndex;
 
-			// ── Rest unchanged ──────────────────────────────────────────────────
 			bool cropped = false;
 
 			var def = ResourceManager.GetDefinition(hashId);
@@ -973,7 +920,6 @@ namespace ClassicTilestorm
 
 			bool boundsChanged = sizeChanged || width != oldWidth || height != oldHeight || cropped;
 
-			// Refresh attachments appropriately
 			if (boundsChanged)
 			{
 				RecreateTiles();
