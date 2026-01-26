@@ -44,7 +44,7 @@ namespace ClassicTilestorm
 		Vector3 WorldPosition(int tileIndex, Vector3 localPosition);
 
 		HashId GetTileID(int _);
-		bool UpdateTileAt(int x, int z, int id, bool expand = true);
+		bool UpdateTileAt(int x, int z, HashId id, bool expand = true);
 
 		void AddAttachment(MapAttachment _);
 		bool RemoveAttachment(MapAttachment _);
@@ -438,7 +438,7 @@ namespace ClassicTilestorm
 		// Original methods
 		// ─────────────────────────────────────────────
 
-		private Definition ResolveDefinition(int id, int? tileIndexForLogging = null)
+		private Definition ResolveDefinition(HashId id, int? tileIndexForLogging = null)
 		{
 			if (id == 0)
 			{
@@ -813,7 +813,7 @@ namespace ClassicTilestorm
 			RefreshAttachments(GetAttachments());
 		}
 
-		public bool UpdateTileAt(int x, int z, int id, bool expand = true)
+		public bool UpdateTileAt(int x, int z, HashId id, bool expand = true)
 		{
 			if (tiles == null || tiles.Length == 0)
 			{
