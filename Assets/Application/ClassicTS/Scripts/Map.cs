@@ -126,22 +126,17 @@ namespace ClassicTilestorm
 
 				string mapName = name ?? "Unnamed map";
 
-				for (int n = 0; n < tiles.Length; n++)
+				for (int index = 0; index < tiles.Length; index++)
 				{
-					int idx = tiles[n];
+					int idx = tiles[index];
 					int hashId = 0;
 
 					if (idx >= 0 && idx < hashes.Length)
 						hashId = hashes[idx];
 					else if (idx != -1)
-						DebugUtil.LogWarning($"Out-of-range table index {idx} at tile {n} (map: {mapName})");
+						Debug.LogWarning($"Out-of-range table index {idx} at tile {index} (map: {mapName})");
 
-					var def = ResourceManager.ResolveDefinition(hashId, out bool hadError);
-
-					if (hadError)
-						Debug.LogWarning($"Failed to resolve tile definition at tile {n} (hash: {hashId}) — using default");
-
-					_graph[n] = new Tile(def, parent ?? parent, TileWorldPosition(n));
+					_graph[index] = new Tile(hashId, parent, TileWorldPosition(index));
 				}
 
 				return _graph;
@@ -437,27 +432,6 @@ namespace ClassicTilestorm
 		// ─────────────────────────────────────────────
 		// Original methods
 		// ─────────────────────────────────────────────
-
-		private Definition ResolveDefinition(HashId id, int? tileIndexForLogging = null)
-		{
-			if (id == 0)
-			{
-				Debug.LogError("attempting to load null tile def!!");
-				return ResourceManager.FindOrCreateDefaultTile();
-			}
-
-			var def = ResourceManager.GetDefinition(id);
-			if (def != null)
-				return def;
-
-			string context = tileIndexForLogging.HasValue
-				? $"at visual tile {tileIndexForLogging.Value}"
-				: "during map load";
-
-			Debug.LogWarning($"Missing or invalid definition for hash '{id}' {context} → falling back to default tile");
-
-			return ResourceManager.FindOrCreateDefaultTile();
-		}
 
 		private bool Consolidate()
 		{
@@ -813,7 +787,7 @@ namespace ClassicTilestorm
 			RefreshAttachments(GetAttachments());
 		}
 
-		public bool UpdateTileAt(int x, int z, HashId id, bool expand = true)
+		public bool UpdateTileAt(int x, int z, HashId hashId, bool expand = true)
 		{
 			if (tiles == null || tiles.Length == 0)
 			{
@@ -866,23 +840,23 @@ namespace ClassicTilestorm
 
 			int index = z * width + x;
 
-			if (hashes == null || !hashes.Contains(id))
+			if (hashes == null || !hashes.Contains(hashId))
 			{
 				var list = hashes.ToArray().ToList();
-				list.Add(id);
+				list.Add(hashId);
 				hashes = list.ToArray();
 				tiles[index] = hashes.Length - 1;
 			}
 			else
 			{
-				tiles[index] = Array.IndexOf(hashes.ToArray(), id);
+				tiles[index] = Array.IndexOf(hashes.ToArray(), hashId);
 			}
 
 			bool cropped = false;
 
 			if (expand)
 			{
-				var def = ResourceManager.GetDefinition(id);
+				var def = ResourceManager.GetDefinition(hashId);
 				bool isDefaultTile = def?.IsDefault() ?? false;
 
 				if (isDefaultTile || sizeChanged)
@@ -914,8 +888,7 @@ namespace ClassicTilestorm
 				var oldTile = GetGraphTile(index);
 				oldTile.Destroy();
 
-				var def = ResolveDefinition(id, index);
-				graph[index] = new Tile(def, parent, TileWorldPosition(index));
+				graph[index] = new Tile(hashId, parent, TileWorldPosition(index));
 
 				RefreshAttachments(GetAttachments(tileIndex: index));
 			}

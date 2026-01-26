@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using MassiveHadronLtd;
+using UnityEngine;
 
 namespace ClassicTilestorm
 {
@@ -55,10 +56,30 @@ namespace ClassicTilestorm
 		private readonly TileData _data;
 		public readonly GameObject gameObject;
 
-		public Tile(Definition def, Transform parent, Vector3 worldPosition)
+		public Tile(HashId hashId, Transform parent, Vector3 worldPosition)
 		{
+			var def = ResourceManager.ResolveDefinition(hashId, out bool hadError);
+			if (hadError)
+				Debug.LogWarning($"Failed to resolve tile definition at tile ({worldPosition.x},{worldPosition.z}) (hash: {hashId}) — using default");
+
 			_data = new TileData(def);
 			gameObject = def != null && !def.IsDefault() ? InstantiateTile(def, parent, worldPosition) : null;
+
+			static GameObject InstantiateTile(Definition definition, Transform parent, Vector3 position)
+			{
+				if (string.IsNullOrEmpty(definition?.model))
+				{
+					if (definition != null && definition.bDock)
+						return ApplicationSettings.ShowHiddenTiles
+							? GeometryFactory.CreateDebugTile(parent, position)
+							: null;
+
+					Debug.LogWarning($"Invalid Definition or model for {definition?.name ?? "null"}");
+					return GeometryFactory.CreateFallbackTile(parent, position);
+				}
+
+				return DefinitionFactory.Instantiate(definition, position, Quaternion.identity, parent);
+			}
 		}
 
 		// Forwarded properties
@@ -110,22 +131,6 @@ namespace ClassicTilestorm
 				Object.Destroy(gameObject);
 			else
 				Object.DestroyImmediate(gameObject);
-		}
-
-		private static GameObject InstantiateTile(Definition definition, Transform parent, Vector3 position)
-		{
-			if (string.IsNullOrEmpty(definition?.model))
-			{
-				if (definition != null && definition.bDock)
-					return ApplicationSettings.ShowHiddenTiles
-						? GeometryFactory.CreateDebugTile(parent, position)
-						: null;
-
-				Debug.LogWarning($"Invalid Definition or model for {definition?.name ?? "null"}");
-				return GeometryFactory.CreateFallbackTile(parent, position);
-			}
-
-			return DefinitionFactory.Instantiate(definition, position, Quaternion.identity, parent);
 		}
 	}
 }
