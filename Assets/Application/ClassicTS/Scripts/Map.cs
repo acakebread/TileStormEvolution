@@ -44,7 +44,7 @@ namespace ClassicTilestorm
 		Vector3 WorldPosition(int tileIndex, Vector3 localPosition);
 
 		HashId GetTileID(int _);
-		bool UpdateTileAt(int x, int z, HashId id);
+		bool UpdateTileAt(int x, int z, HashId hashId);
 
 		void AddAttachment(MapAttachment _);
 		bool RemoveAttachment(MapAttachment _);
@@ -822,14 +822,14 @@ namespace ClassicTilestorm
 			Vector3 originDelta = Vector3.zero;
 			bool sizeChanged = false;
 
-			// If out of bounds → automatically expand (no 'expand' flag needed)
+			// If coordinate out of bounds → expand automatically
 			if (x < 0 || x >= width || z < 0 || z >= height)
 			{
 				bool didResize = RepositionAndResize(x, z);
 
 				if (didResize)
 				{
-					// Recompute shift amount for originDelta and coordinate fixup
+					// Recompute the actual shift that occurred
 					int minX = Mathf.Min(0, x);
 					int minZ = Mathf.Min(0, z);
 					int offsetX = -minX;
@@ -838,6 +838,7 @@ namespace ClassicTilestorm
 					if (x < 0) originDelta.x = offsetX;
 					if (z < 0) originDelta.z = offsetZ;
 
+					// Adjust local x/z to the new valid position after shift
 					x += offsetX;
 					z += offsetZ;
 
@@ -845,15 +846,15 @@ namespace ClassicTilestorm
 				}
 				else
 				{
-					// Expansion failed (too large or other rejection)
-					Debug.LogWarning($"Cannot place tile at ({x},{z}) — map resize failed");
+					Debug.LogWarning($"Cannot place tile at ({x},{z}) — map resize failed (too large?)");
 					return false;
 				}
 			}
 
+			// Now coordinates are guaranteed in bounds
 			int index = z * width + x;
 
-			// Update / add tile definition index
+			// Update tile definition index
 			if (hashes == null || !hashes.Contains(hashId))
 			{
 				hashes = hashes.Concat(new[] { hashId }).ToArray();
@@ -869,7 +870,7 @@ namespace ClassicTilestorm
 			var def = ResourceManager.GetDefinition(hashId);
 			bool isDefaultTile = def?.IsDefault() ?? false;
 
-			// If placed a default tile or map size changed → consider cropping
+			// If default tile placed or size changed → try to crop
 			if (isDefaultTile || sizeChanged)
 			{
 				var newBounds = GetContentBounds();
@@ -895,8 +896,7 @@ namespace ClassicTilestorm
 			}
 			else
 			{
-				var oldTile = GetGraphTile(index);
-				oldTile.Destroy();
+				GetGraphTile(index).Destroy();
 
 				graph[index] = new Tile(hashId, parent, TileWorldPosition(index));
 

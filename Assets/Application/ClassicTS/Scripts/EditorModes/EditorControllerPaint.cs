@@ -58,10 +58,12 @@ namespace ClassicTilestorm
 			var worldPos = Map.ScreenToWorld(camera, Input.mousePosition);
 			int hashToPlace = erase ? ResourceManager.FindOrCreateDefaultTile().HashID : selectedHashId;
 
-			// Cycle on left-click if on the current tile
+			// Cycle check using snapped world pos (we'll reuse the same pos for placement)
 			if (!erase)
 			{
-				var mapIndex = iMap.WorldToMapIndex(worldPos);
+				var snapped = Map.SnappedMapPosition(worldPos);
+				int mapIndex = iMap.WorldToMapIndex(snapped);  // reuse snapped pos for accuracy
+
 				if (mapIndex != -1)
 				{
 					var currentHash = iMap.GetTileID(mapIndex);
@@ -79,8 +81,12 @@ namespace ClassicTilestorm
 				}
 			}
 
-			var snapped = Map.SnappedMapPosition(worldPos);
-			iMap.UpdateTileAt(Mathf.FloorToInt(snapped.x), Mathf.FloorToInt(snapped.z), hashToPlace);
+			// Placement uses the **same snapped world position**
+			var snappedPos = Map.SnappedMapPosition(worldPos);
+			int placeX = Mathf.FloorToInt(snappedPos.x);
+			int placeZ = Mathf.FloorToInt(snappedPos.z);
+
+			iMap.UpdateTileAt(placeX, placeZ, hashToPlace);
 		}
 
 		// Called from panel — takes hashid directly
