@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Collections.Generic;
 using MassiveHadronLtd;
+using UnityEngine;
 
 namespace ClassicTilestorm
 {
@@ -249,7 +250,7 @@ namespace ClassicTilestorm
 			if (0 == hashId)
 			{
 				hadError = true;
-				DebugUtil.LogError("Attempted to resolve null or empty tile definition hash.");
+				Debug.LogError("Attempted to resolve null or empty tile definition hash.");
 				return FindOrCreateDefaultTile();
 			}
 
@@ -260,7 +261,7 @@ namespace ClassicTilestorm
 			}
 
 			hadError = true;
-			DebugUtil.LogWarning($"Missing or invalid definition hash '{hashId}' — falling back to default tile.");
+			Debug.LogWarning($"Missing or invalid definition hash '{hashId}' — falling back to default tile.");
 			return FindOrCreateDefaultTile();
 		}
 	}

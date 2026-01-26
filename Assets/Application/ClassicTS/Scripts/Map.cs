@@ -118,7 +118,7 @@ namespace ClassicTilestorm
 
 				if (tiles == null || tiles.Length != width * height)
 				{
-					DebugUtil.LogError($"Invalid tile map data! length={(tiles?.Length ?? -1)}, expected={width * height}");
+					Debug.LogError($"Invalid tile map data! length={(tiles?.Length ?? -1)}, expected={width * height}");
 					return Array.Empty<Tile>();
 				}
 
@@ -483,24 +483,26 @@ namespace ClassicTilestorm
 			int oldHeight = height;
 			int newSize = newWidth * newHeight;
 
-			var defaultDef = ResourceManager.FindOrCreateDefaultTile();
-			int defaultHash = defaultDef.HashID;
-
 			int defaultIndex = -1;
+
+			// First preference: reuse ANY existing definition that is empty/void-like
 			for (int i = 0; i < hashes.Length; i++)
 			{
-				if (hashes[i] == defaultHash)
+				var def = ResourceManager.GetDefinition(hashes[i]);
+				if (def != null && def.IsDefaultEquivalent())  // ← the new content check
 				{
 					defaultIndex = i;
 					break;
 				}
 			}
 
+			// If no empty-like tile exists in this map's palette yet → append the canonical one
 			if (defaultIndex == -1)
 			{
-				var list = hashes.ToArray().ToList();
-				list.Add(defaultHash);
-				hashes = list.ToArray();
+				var defaultDef = ResourceManager.FindOrCreateDefaultTile();
+				var defaultHash = defaultDef.HashID;
+
+				hashes = hashes.Concat(new[] { defaultHash }).ToArray();
 				defaultIndex = hashes.Length - 1;
 			}
 

@@ -149,6 +149,17 @@ namespace ClassicTilestorm
 
 		public bool IsDefault() => HashID == GetDefaultTile().HashID;
 
+		public bool IsDefaultEquivalent()
+		{
+			// A tile is "default-like" if it has **no rendering or gameplay identity**
+			return
+				string.IsNullOrWhiteSpace(model) &&
+				string.IsNullOrWhiteSpace(texture) &&
+				string.IsNullOrWhiteSpace(material) &&
+				string.IsNullOrWhiteSpace(flags) &&
+				string.IsNullOrWhiteSpace(connections);
+		}
+
 		// ── FACTORY ────────────────────────────────────────────────────────────
 		public static Definition GetDefaultTile()
 		{
