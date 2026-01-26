@@ -19,7 +19,11 @@ namespace ClassicTilestorm
 
 			var settings = new JsonSerializerSettings
 			{
-				Converters = { new MapAttachmentConverter() },
+				Converters = 
+				{
+					new MapAttachmentConverter(),
+					new DefinitionConverter()
+				},
 				NullValueHandling = NullValueHandling.Ignore,
 			};
 

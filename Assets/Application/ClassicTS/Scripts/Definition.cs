@@ -3,21 +3,21 @@ using System.Linq;
 using System.Collections.Generic;
 using Newtonsoft.Json;
 using MassiveHadronLtd;
+using UnityEngine;
+using Newtonsoft.Json.Linq;
 
 namespace ClassicTilestorm
 {
 	[Serializable]
+	[JsonConverter(typeof(DefinitionConverter))]
 	public class Definition
 	{
-		public string id;// stable hash-based ID only version - internally stored as int - ToDo remove from class
 		public string name;
 		public string model;
 		public string texture;
 		public string material;
 		public string flags;         // comma/space separated, e.g. "Drag, Roll, Dock"
 		public string connections;   // e.g. "NSEW" (uppercase, no separators)
-
-		//[JsonIgnore] public string id { get => hashid; }//future replacement for hashid obviously this currently conflicts with the existing use of 'id'
 
 		// ── CONNECTIONS (settable) ────────────────────────────────────────────
 		[JsonIgnore] public bool bNorth { get => HasConnection('N'); set => SetConnection('N', value); }
@@ -36,54 +36,9 @@ namespace ClassicTilestorm
 		[JsonIgnore] public bool bPuzzleBlock { get => HasFlag("PuzzleBlock"); set => SetFlag("PuzzleBlock", value); }
 		[JsonIgnore] public bool bSway { get => HasFlag("Sway"); set => SetFlag("Sway", value); }
 		[JsonIgnore] public bool bWash { get => HasFlag("Wash"); set => SetFlag("Wash", value); }
-
-		[JsonIgnore] private HashId? _cachedHashID;
-		[JsonIgnore] public HashId HashID
-		{
-			get
-			{
-				if (_cachedHashID.HasValue)
-					return _cachedHashID.Value;
-
-				int value;
-
-				if (string.IsNullOrEmpty(id))
-				{
-					value = RadixHash.GetSecureRandomHash32();
-					SetHashIDString(value); // ← helper does the encoding
-				}
-				else
-				{
-					value = HTB50.Decode(id);
-				}
-
-				_cachedHashID = value;
-				return value;
-			}
-
-			set
-			{
-				if (value == _cachedHashID)
-					return;
-
-				SetHashIDString(value); // ← same helper
-				_cachedHashID = value;
-			}
-		}
-
-		// Private helper — single source of truth for encoding
-		private void SetHashIDString(int hashValue)
-		{
-			id = HTB50.EncodeFixed(
-				hashValue,
-				length: HTB50Settings.FixedLength,
-				padChar: '0',
-				appendFlavor: false
-			);
-		}
+		[JsonIgnore] public HashId HashID { get; set; } = default;  // defaults to HashId(0)
 
 		// ── CONDITIONAL SERIALIZATION ─────────────────────────────────────────
-		public bool ShouldSerializeid() => !string.IsNullOrEmpty(id);
 		public bool ShouldSerializename() => !string.IsNullOrEmpty(name);
 		public bool ShouldSerializemodel() => !string.IsNullOrEmpty(model);
 		public bool ShouldSerializetexture() => !string.IsNullOrEmpty(texture);
@@ -202,12 +157,9 @@ namespace ClassicTilestorm
 			// Full-range 32-bit stable hash (no modulus)
 			int hash32 = RadixHash.GetStableHash32(legacyNameForHash);
 
-			// Keep fixed length 6 with padding, exactly as before
-			string stable = HTB50.EncodeFixed(hash32, HTB50Settings.FixedLength, padChar: '0', appendFlavor: false);
-
 			return new Definition
 			{
-				id = stable,
+				HashID = hash32,
 				name = legacyNameForHash,
 				model = null,
 				texture = null,
@@ -224,5 +176,108 @@ namespace ClassicTilestorm
 	{
 		public static bool HasConnection(this Definition def, char dir)
 			=> def?.HasConnection(dir) ?? false;
+	}
+
+	public class DefinitionConverter : JsonConverter
+	{
+		public override bool CanConvert(Type objectType)
+		{
+			return objectType == typeof(Definition);
+		}
+
+		public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+		{
+			if (value == null)
+			{
+				writer.WriteNull();
+				return;
+			}
+
+			var definition = (Definition)value;
+
+			writer.WriteStartObject();
+
+			// Write "id" FIRST — generated from HashID (never stored in object)
+			writer.WritePropertyName("id");
+			writer.WriteValue(HTB50.EncodeFixed(
+				definition.HashID,                           // implicit HashId → int
+				length: HTB50Settings.FixedLength,
+				padChar: '0',
+				appendFlavor: false
+			));
+
+			// Write all real properties normally
+			if (!string.IsNullOrEmpty(definition.name))
+			{
+				writer.WritePropertyName("name");
+				serializer.Serialize(writer, definition.name);
+			}
+
+			if (!string.IsNullOrEmpty(definition.model))
+			{
+				writer.WritePropertyName("model");
+				serializer.Serialize(writer, definition.model);
+			}
+
+			if (!string.IsNullOrEmpty(definition.texture))
+			{
+				writer.WritePropertyName("texture");
+				serializer.Serialize(writer, definition.texture);
+			}
+
+			if (!string.IsNullOrEmpty(definition.material))
+			{
+				writer.WritePropertyName("material");
+				serializer.Serialize(writer, definition.material);
+			}
+
+			if (!string.IsNullOrEmpty(definition.flags))
+			{
+				writer.WritePropertyName("flags");
+				serializer.Serialize(writer, definition.flags);
+			}
+
+			if (!string.IsNullOrEmpty(definition.connections))
+			{
+				writer.WritePropertyName("connections");
+				serializer.Serialize(writer, definition.connections);
+			}
+
+			writer.WriteEndObject();
+		}
+
+		public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+		{
+			if (reader.TokenType == JsonToken.Null)
+				return null;
+
+			var definition = existingValue as Definition ?? new Definition();
+
+			var jo = JObject.Load(reader);
+
+			// Handle legacy "id" string → decode into HashID
+			var idToken = jo["id"];
+			if (idToken != null && idToken.Type == JTokenType.String)
+			{
+				string idStr = idToken.Value<string>();
+				if (!string.IsNullOrEmpty(idStr))
+				{
+					try
+					{
+						int decoded = HTB50.Decode(idStr);
+						definition.HashID = decoded;
+					}
+					catch (Exception ex)
+					{
+						Debug.LogWarning($"Failed to decode legacy 'id' in Definition: {ex.Message}");
+					}
+				}
+			}
+
+			// Populate remaining properties normally
+			serializer.Populate(jo.CreateReader(), definition);
+
+			return definition;
+		}
 	}
 }
