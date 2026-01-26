@@ -43,7 +43,7 @@ namespace ClassicTilestorm
 		Vector3 LocalPosition(int tileIndex, Vector3 worldPosition);
 		Vector3 WorldPosition(int tileIndex, Vector3 localPosition);
 
-		int GetTileID(int _);
+		HashId GetTileID(int _);
 		bool UpdateTileAt(int x, int z, int id, bool expand = true);
 
 		void AddAttachment(MapAttachment _);
@@ -175,8 +175,8 @@ namespace ClassicTilestorm
 		// Runtime integer hash cache (non-serialized, mirrors table)
 		// ─────────────────────────────────────────────
 
-		//public int GetTileID(int index) => tiles == null || state == null || index < 0 || index >= tiles.Length || index >= state.Length ? 0 : hashes[tiles[state[index]]];
-		public int GetTileID(int index) => tiles == null || index < 0 || index >= tiles.Length ? 0 : hashes[tiles[index]];//I think it's this - we can only edit unscrambled maps so need to ensure this
+		//public HashId GetTileID(int index) => tiles == null || state == null || index < 0 || index >= tiles.Length || index >= state.Length ? 0 : hashes[tiles[state[index]]];
+		public HashId GetTileID(int index) => tiles == null || index < 0 || index >= tiles.Length ? 0 : hashes[tiles[index]];//I think it's this - we can only edit unscrambled maps so need to ensure this
 
 		public Tile GetTile(int index) => null == state || index < 0 || index >= state.Length ? default : GetGraphTile(state[index]);
 		private Tile GetGraphTile(int graphIndex) => _graph == null || graphIndex < 0 || graphIndex >= _graph.Length ? default : _graph[graphIndex];
