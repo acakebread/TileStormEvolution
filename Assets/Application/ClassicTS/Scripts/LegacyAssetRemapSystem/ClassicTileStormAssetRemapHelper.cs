@@ -34,7 +34,7 @@ namespace ClassicTilestorm
 
 			if (Instance != null && Instance.TryGetReplacement(clean, out string replacement))
 			{
-				Debug.Log($"[AssetRemap] Remapped '{clean}' → '{replacement}'");
+				//Debug.Log($"[AssetRemap] Remapped '{clean}' → '{replacement}'");
 				return replacement;
 			}
 

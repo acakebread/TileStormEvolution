@@ -29,7 +29,7 @@ namespace ClassicTilestorm
 
 			JsonConvert.DefaultSettings = () => settings;
 			_initialized = true;
-			Debug.Log("Json.NET configured with ordered properties (declaration order)");
+			//Debug.Log("Json.NET configured with ordered properties (declaration order)");
 		}
 	}
 
