@@ -12,6 +12,7 @@ namespace ClassicTilestorm
 	[JsonConverter(typeof(DefinitionConverter))]
 	public class Definition
 	{
+		[JsonIgnore] public HashId HashID { get; set; } = default;  // defaults to HashId(0)
 		public string name;
 		public string model;
 		public string texture;
@@ -36,7 +37,6 @@ namespace ClassicTilestorm
 		[JsonIgnore] public bool bPuzzleBlock { get => HasFlag("PuzzleBlock"); set => SetFlag("PuzzleBlock", value); }
 		[JsonIgnore] public bool bSway { get => HasFlag("Sway"); set => SetFlag("Sway", value); }
 		[JsonIgnore] public bool bWash { get => HasFlag("Wash"); set => SetFlag("Wash", value); }
-		[JsonIgnore] public HashId HashID { get; set; } = default;  // defaults to HashId(0)
 
 		// ── CONDITIONAL SERIALIZATION ─────────────────────────────────────────
 		public bool ShouldSerializename() => !string.IsNullOrEmpty(name);

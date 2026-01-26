@@ -73,7 +73,7 @@ namespace ClassicTilestorm
 				texture = texture
 			};
 
-			// Full-range 32-bit hash (no modulus), but still encode to fixed length 6
+			// Full-range 32-bit hash (no modulus)
 			HashId hash32 = RadixHash.GetStableHash32(def.name);
 			def.HashID = hash32;
 
@@ -104,7 +104,7 @@ namespace ClassicTilestorm
 				{
 					const string legacyName = "tile_empty";
 
-					// Full-range 32-bit hash, but keep fixed-length 6 encoding as before
+					// Full-range 32-bit hash
 					int hash32 = RadixHash.GetStableHash32(legacyName);
 					_defaultTileHash = HTB50.EncodeFixed(hash32, HTB50Settings.FixedLength, padChar: '0', appendFlavor: false);
 				}
