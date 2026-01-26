@@ -62,9 +62,8 @@ namespace ClassicTilestorm
 		Vector3 WorldPosition(int tileIndex, Vector3 localPosition);
 
 		HashId GetTileID(int _);
-		//bool UpdateTileAt(int x, int z, HashId hashId);
 		bool UpdateTileAt(int x, int z, HashId hashId, float delta = 0f, float angle = 0f);
-
+		Variant GetVariantAt(int mapIndex);
 		void AddAttachment(MapAttachment _);
 		bool RemoveAttachment(MapAttachment _);
 		bool RemoveAttachments(MapAttachment[] _);
@@ -149,6 +148,18 @@ namespace ClassicTilestorm
 				return variants[tableIdx];
 
 			return new Variant(0);
+		}
+
+		// In Map class — public implementation
+		public Variant GetVariantAt(int mapIndex)
+		{
+			if (state == null || mapIndex < 0 || mapIndex >= state.Length)
+				return new Variant(0);
+
+			// Apply current permutation (scrambled/solved state)
+			int logicalIndex = state[mapIndex];
+
+			return GetVariantForIndex(logicalIndex);
 		}
 
 		// ─────────────────────────────────────────────

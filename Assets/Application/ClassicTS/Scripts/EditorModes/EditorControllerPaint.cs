@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using static MassiveHadronLtd.GuiUtils;
 using System.Linq;
+using System;
+using MassiveHadronLtd;
 
 namespace ClassicTilestorm
 {
@@ -56,44 +58,111 @@ namespace ClassicTilestorm
 		private void EditMapTile(bool erase = false)
 		{
 			var worldPos = Map.ScreenToWorld(camera, Input.mousePosition);
-			int hashToPlace = erase ? ResourceManager.FindOrCreateDefaultTile().HashID : selectedHashId;
+			var snapped = Map.SnappedMapPosition(worldPos);
+			int placeX = Mathf.FloorToInt(snapped.x);
+			int placeZ = Mathf.FloorToInt(snapped.z);
+			int mapIndex = iMap.WorldToMapIndex(snapped);
 
-			// Cycle check using snapped world pos (we'll reuse the same pos for placement)
-			if (!erase)
+			if (mapIndex == -1)
 			{
-				var snapped = Map.SnappedMapPosition(worldPos);
-				int mapIndex = iMap.WorldToMapIndex(snapped);  // reuse snapped pos for accuracy
-
-				if (mapIndex != -1)
+				// Off-map → just place the currently selected tile (no cycling)
+				if (erase)
 				{
-					var currentHash = iMap.GetTileID(mapIndex);
-					if (currentHash == selectedHashId && cycleDefinitions.Count > 1)
-					{
-						cycleIndex = (cycleIndex + 1) % cycleDefinitions.Count;
-						var nextDef = cycleDefinitions[cycleIndex];
-
-						selectedHashId = nextDef.HashID;
-						hashToPlace = selectedHashId;
-
-						EditorMeshUtil.DestroyGhostMesh();
-						EditorMeshUtil.UpdateGhostMesh(camera, iMap, nextDef);
-					}
+					var defaultHash = ResourceManager.FindOrCreateDefaultTile().HashID;
+					iMap.UpdateTileAt(placeX, placeZ, defaultHash, 0f, 0f);
 				}
+				else
+				{
+					iMap.UpdateTileAt(placeX, placeZ, selectedHashId, 0f, 0f);
+				}
+				return;
 			}
 
-			// Placement uses the **same snapped world position**
-			var snappedPos = Map.SnappedMapPosition(worldPos);
-			int placeX = Mathf.FloorToInt(snappedPos.x);
-			int placeZ = Mathf.FloorToInt(snappedPos.z);
+			// On-map → proceed with erase or cycle logic
+			if (erase)
+			{
+				var defaultHash = ResourceManager.FindOrCreateDefaultTile().HashID;
+				iMap.UpdateTileAt(placeX, placeZ, defaultHash, 0f, 0f);
+				return;
+			}
 
-			//iMap.UpdateTileAt(placeX, placeZ, hashToPlace);
+			// Get current variant only if on-map
+			var currentVariant = iMap.GetVariantAt(mapIndex);
+			HashId currentHash = currentVariant.hash;
 
-			// Example: random delta and angle when placing
-			float randomAngle = new[] { 0f, 90f, 180f, 270f }[UnityEngine.Random.Range(0, 4)];
-			float randomDelta = new[] { 0f, 0.25f, 0.5f, 0.75f, 1f }[UnityEngine.Random.Range(0, 5)];
+			var selectedDef = ResourceManager.GetDefinition(selectedHashId);
 
-			iMap.UpdateTileAt(placeX, placeZ, hashToPlace, randomDelta, randomAngle);
+			// If tile is empty/default or different type → place selected with 0/0
+			if (currentHash == 0 ||
+				(selectedDef?.IsDefault() ?? false) ||
+				currentHash != selectedHashId)
+			{
+				iMap.UpdateTileAt(placeX, placeZ, selectedHashId, 0f, 0f);
+				return;
+			}
+
+			// Same hash → cycle angle and delta
+			float[] angles = { 0f, 90f, 180f, 270f };
+			float[] deltas = { 0f, 0.25f, 0.5f, 0.75f, 1f };
+
+			int angleIdx = Array.IndexOf(angles, currentVariant.angle);
+			if (angleIdx == -1) angleIdx = 0;
+
+			int deltaIdx = Array.IndexOf(deltas, currentVariant.delta);
+			if (deltaIdx == -1) deltaIdx = 0;
+
+			int nextAngleIdx = (angleIdx + 1) % angles.Length;
+			int nextDeltaIdx = (deltaIdx + 1) % deltas.Length;
+
+			float nextAngle = angles[nextAngleIdx];
+			float nextDelta = deltas[nextDeltaIdx];
+
+			iMap.UpdateTileAt(placeX, placeZ, selectedHashId, nextDelta, nextAngle);
+
+			Debug.Log($"Cycled at ({placeX},{placeZ}): angle {currentVariant.angle:F0}→{nextAngle:F0}, delta {currentVariant.delta:F2}→{nextDelta:F2}");
 		}
+
+		//private void EditMapTile(bool erase = false)
+		//{
+		//	var worldPos = Map.ScreenToWorld(camera, Input.mousePosition);
+		//	int hashToPlace = erase ? ResourceManager.FindOrCreateDefaultTile().HashID : selectedHashId;
+
+		//	// Cycle check using snapped world pos (we'll reuse the same pos for placement)
+		//	if (!erase)
+		//	{
+		//		var snapped = Map.SnappedMapPosition(worldPos);
+		//		int mapIndex = iMap.WorldToMapIndex(snapped);  // reuse snapped pos for accuracy
+
+		//		if (mapIndex != -1)
+		//		{
+		//			var currentHash = iMap.GetTileID(mapIndex);
+		//			if (currentHash == selectedHashId && cycleDefinitions.Count > 1)
+		//			{
+		//				cycleIndex = (cycleIndex + 1) % cycleDefinitions.Count;
+		//				var nextDef = cycleDefinitions[cycleIndex];
+
+		//				selectedHashId = nextDef.HashID;
+		//				hashToPlace = selectedHashId;
+
+		//				EditorMeshUtil.DestroyGhostMesh();
+		//				EditorMeshUtil.UpdateGhostMesh(camera, iMap, nextDef);
+		//			}
+		//		}
+		//	}
+
+		//	// Placement uses the **same snapped world position**
+		//	var snappedPos = Map.SnappedMapPosition(worldPos);
+		//	int placeX = Mathf.FloorToInt(snappedPos.x);
+		//	int placeZ = Mathf.FloorToInt(snappedPos.z);
+
+		//	//iMap.UpdateTileAt(placeX, placeZ, hashToPlace);
+
+		//	// Example: random delta and angle when placing
+		//	float randomAngle = new[] { 0f, 90f, 180f, 270f }[UnityEngine.Random.Range(0, 4)];
+		//	float randomDelta = new[] { 0f, 0.25f, 0.5f, 0.75f, 1f }[UnityEngine.Random.Range(0, 5)];
+
+		//	iMap.UpdateTileAt(placeX, placeZ, hashToPlace, randomDelta, randomAngle);
+		//}
 
 		// Called from panel — takes hashid directly
 		private void SetSelectedDefinitionByHash(int hashId)
