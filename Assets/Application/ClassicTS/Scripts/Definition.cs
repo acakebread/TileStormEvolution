@@ -154,8 +154,8 @@ namespace ClassicTilestorm
 			// A tile is "default-like" if it has **no rendering or gameplay identity**
 			return
 				string.IsNullOrWhiteSpace(model) &&
-				string.IsNullOrWhiteSpace(texture) &&
-				string.IsNullOrWhiteSpace(material) &&
+				//string.IsNullOrWhiteSpace(texture) &&
+				//string.IsNullOrWhiteSpace(material) &&
 				string.IsNullOrWhiteSpace(flags) &&
 				string.IsNullOrWhiteSpace(connections);
 		}
