@@ -254,8 +254,8 @@ namespace ClassicTilestorm
 
 			copy.CropToContent(true);
 
-			if (copy.CropToContent(true))
-				Debug.Log($"[Export] Map '{copy.name}' table consolidated table {((Map.IHashAccess)map).Hashes.Length} or auto-cropped to {copy.width}x{copy.height}");
+			//if (copy.CropToContent(true))
+			//	Debug.Log($"[Export] Map '{copy.name}' table consolidated table {((Map.IHashAccess)map).Hashes.Length} or auto-cropped to {copy.width}x{copy.height}");
 
 			return copy;
 		}

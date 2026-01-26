@@ -12,8 +12,6 @@ namespace ClassicTilestorm
 	{
 		protected readonly bool IsAtomic;
 
-		// The virtual Order position where "table" should appear in JSON
-		// (matches the old [JsonProperty(Order = 20)] on the removed table field)
 		private const int TableJsonOrderPosition = 20;
 
 		protected MapConverterBase(bool isAtomic)
@@ -33,49 +31,98 @@ namespace ClassicTilestorm
 				.ThenBy(p => p.PropertyName);
 		}
 
-		protected HashId[] ParseTableToHashes(JArray tableArray)
+		protected Variant[] ParseTableToVariants(JArray tableArray)
 		{
-			if (tableArray == null) return Array.Empty<HashId>();
+			if (tableArray == null) return Array.Empty<Variant>();
 
-			var hashes = new HashId[tableArray.Count];
+			var variants = new Variant[tableArray.Count];
 
 			for (int i = 0; i < tableArray.Count; i++)
 			{
 				string entry = tableArray[i]?.Value<string>()?.Trim() ?? "";
 
-				if (string.IsNullOrEmpty(entry))
+				if (string.IsNullOrEmpty(entry) || entry.Equals("unknown", StringComparison.OrdinalIgnoreCase))
 				{
-					hashes[i] = 0;
+					variants[i] = new Variant(0);
 					continue;
 				}
 
-				string hashStr = entry;
-
-				if (entry.StartsWith("[", StringComparison.Ordinal))
+				// Handle old atomic style with name suffix: "[hash]NameHere"
+				string content = entry;
+				if (entry.StartsWith("[") && entry.Contains("]"))
 				{
 					int close = entry.IndexOf(']', 1);
 					if (close > 1)
-						hashStr = entry.Substring(1, close - 1).Trim();
+					{
+						content = entry.Substring(0, close + 1);
+						// name suffix ignored during parse (as before)
+					}
 				}
 
-				if (string.IsNullOrEmpty(hashStr) ||
-					hashStr.Equals("unknown", StringComparison.OrdinalIgnoreCase))
+				if (!content.StartsWith("[") || !content.EndsWith("]"))
 				{
-					hashes[i] = 0;
+					variants[i] = new Variant(0);
 					continue;
 				}
 
+				string inner = content.Substring(1, content.Length - 2).Trim();
+				var parts = inner.Split('|')
+								 .Select(p => p.Trim())
+								 .Where(p => !string.IsNullOrEmpty(p))
+								 .ToArray();
+
+				if (parts.Length == 0)
+				{
+					variants[i] = new Variant(0);
+					continue;
+				}
+
+				// First part = hash
+				string hashStr = parts[0];
+				HashId hash = 0;
 				try
 				{
-					hashes[i] = HTB50.Decode(hashStr);
+					hash = HTB50.Decode(hashStr);
 				}
 				catch
 				{
-					hashes[i] = 0;
+					hash = 0;
 				}
+
+				var variant = new Variant(hash);
+
+				// Parse only the currently implemented fields: angle and delta
+				for (int p = 1; p < parts.Length; p++)
+				{
+					var kv = parts[p].Split(new[] { ':' }, 2);
+					if (kv.Length != 2) continue;
+
+					string key = kv[0].Trim().ToLowerInvariant();
+					string val = kv[1].Trim();
+
+					if (key == "angle")
+					{
+						if (float.TryParse(val, System.Globalization.NumberStyles.Any,
+										   System.Globalization.CultureInfo.InvariantCulture, out float ang))
+						{
+							variant.angle = ang;
+						}
+					}
+					else if (key == "delta")
+					{
+						if (float.TryParse(val, System.Globalization.NumberStyles.Any,
+										   System.Globalization.CultureInfo.InvariantCulture, out float del))
+						{
+							variant.delta = del;
+						}
+					}
+					// Unknown keys are silently ignored → future-proof
+				}
+
+				variants[i] = variant;
 			}
 
-			return hashes;
+			return variants;
 		}
 
 		protected Map ReadMapJson(JsonReader reader, JsonSerializer serializer)
@@ -90,7 +137,7 @@ namespace ClassicTilestorm
 
 			if (tableArray != null)
 			{
-				((Map.IHashAccess)map).Hashes = ParseTableToHashes(tableArray);
+				((Map.IVariantAccess)map).Variants = ParseTableToVariants(tableArray);
 			}
 
 			return map;
@@ -104,36 +151,51 @@ namespace ClassicTilestorm
 			writer.WritePropertyName("table");
 			writer.WriteStartArray();
 
-			var hashes = ((Map.IHashAccess)map).Hashes ?? Array.Empty<HashId>();
+			var variants = ((Map.IVariantAccess)map).Variants ?? Array.Empty<Variant>();
 
-			foreach (int hash in hashes)
+			foreach (var v in variants)
 			{
-				if (hash == 0)
+				if (v.hash == 0)
 				{
 					writer.WriteValue("unknown");
 					continue;
 				}
 
 				string hashStr = HTB50.EncodeFixed(
-					hash,
+					v.hash,
 					length: HTB50Settings.FixedLength,
 					padChar: '0',
 					appendFlavor: false
 				);
 
+				var parts = new List<string> { hashStr };
+
+				// Only emit non-default values
+				if (Math.Abs(v.angle) > 0.001f)
+				{
+					parts.Add($"angle:{v.angle:F1}");
+				}
+
+				if (Math.Abs(v.delta) > 0.001f)
+				{
+					parts.Add($"delta:{v.delta:F3}");
+				}
+
+				string inner = string.Join("|", parts);
+				string value = $"[{inner}]";
+
+				// Append name suffix in atomic mode (legacy behavior)
 				if (IsAtomic)
 				{
-					var def = ResourceManager.GetDefinition(hash);
+					var def = ResourceManager.GetDefinition(v.hash);
 					string namePart = (def != null && !string.IsNullOrEmpty(def.name))
 						? def.name
 						: "unknown";
 
-					writer.WriteValue($"[{hashStr}]{namePart}");
+					value += namePart;
 				}
-				else
-				{
-					writer.WriteValue($"[{hashStr}]");
-				}
+
+				writer.WriteValue(value);
 			}
 
 			writer.WriteEndArray();
@@ -151,6 +213,9 @@ namespace ClassicTilestorm
 			{
 				var name = prop.PropertyName;
 
+				if (name == "hashes" || name == "variants")
+					continue;
+
 				if (!IsAtomic && IsSuppressedInDatabaseFormat(name))
 					continue;
 
@@ -162,11 +227,12 @@ namespace ClassicTilestorm
 				writer.WritePropertyName(name);
 				serializer.Serialize(writer, propValue);
 
-				// After any real property with Order < TableJsonOrderPosition,
-				// check if next is >= TableJsonOrderPosition (or end) → insert table
 				if (!tableWritten && prop.Order.GetValueOrDefault(int.MaxValue) < TableJsonOrderPosition)
 				{
-					var remaining = OrderedProperties(serializer).SkipWhile(p => p.PropertyName != name).Skip(1);
+					var remaining = OrderedProperties(serializer)
+						.SkipWhile(p => p.PropertyName != name)
+						.Skip(1);
+
 					var nextProp = remaining.FirstOrDefault();
 
 					if (nextProp == null || nextProp.Order.GetValueOrDefault(int.MaxValue) >= TableJsonOrderPosition)
@@ -177,7 +243,6 @@ namespace ClassicTilestorm
 				}
 			}
 
-			// Fallback if table wasn't inserted (very rare)
 			if (!tableWritten)
 			{
 				WriteTableArray(writer, map, serializer);
@@ -191,8 +256,9 @@ namespace ClassicTilestorm
 
 		private void WriteAtomicOnlyFields(JsonWriter writer, Map map, JsonSerializer serializer)
 		{
-			var usedHashes = (((Map.IHashAccess)map).Hashes ?? Array.Empty<HashId>())
-				.Where(h => h != 0)
+			var usedHashes = (((Map.IVariantAccess)map).Variants ?? Array.Empty<Variant>())
+				.Where(v => v.hash != 0)
+				.Select(v => v.hash)
 				.Distinct()
 				.ToArray();
 
@@ -239,7 +305,272 @@ namespace ClassicTilestorm
 		}
 	}
 
-	public class AtomicMapConverter : MapConverterBase { public AtomicMapConverter() : base(true) { } }
+	public class AtomicMapConverter : MapConverterBase
+	{
+		public AtomicMapConverter() : base(true) { }
+	}
 
-	public class DatabaseMapConverter : MapConverterBase { public DatabaseMapConverter() : base(false) { } }
+	public class DatabaseMapConverter : MapConverterBase
+	{
+		public DatabaseMapConverter() : base(false) { }
+	}
 }
+
+//using System;
+//using System.Linq;
+//using System.Collections.Generic;
+//using Newtonsoft.Json;
+//using Newtonsoft.Json.Linq;
+//using Newtonsoft.Json.Serialization;
+//using MassiveHadronLtd;
+
+//namespace ClassicTilestorm
+//{
+//	public abstract class MapConverterBase : JsonConverter
+//	{
+//		protected readonly bool IsAtomic;
+
+//		// The virtual Order position where "table" should appear in JSON
+//		// (matches the old [JsonProperty(Order = 20)] on the removed table field)
+//		private const int TableJsonOrderPosition = 20;
+
+//		protected MapConverterBase(bool isAtomic)
+//		{
+//			IsAtomic = isAtomic;
+//		}
+
+//		public override bool CanConvert(Type objectType)
+//			=> typeof(Map).IsAssignableFrom(objectType);
+
+//		protected static IEnumerable<JsonProperty> OrderedProperties(JsonSerializer serializer)
+//		{
+//			var contract = (JsonObjectContract)serializer.ContractResolver.ResolveContract(typeof(Map));
+//			return contract.Properties
+//				.Where(p => !p.Ignored)
+//				.OrderBy(p => p.Order ?? int.MaxValue)
+//				.ThenBy(p => p.PropertyName);
+//		}
+
+//		protected Variant[] ParseTableToVariants(JArray tableArray)
+//		{
+//			if (tableArray == null) return Array.Empty<Variant>();
+
+//			var variants = new Variant[tableArray.Count];
+
+//			for (int i = 0; i < tableArray.Count; i++)
+//			{
+//				string entry = tableArray[i]?.Value<string>()?.Trim() ?? "";
+
+//				if (string.IsNullOrEmpty(entry))
+//				{
+//					variants[i] = new Variant(0);
+//					continue;
+//				}
+
+//				string hashStr = entry;
+
+//				if (entry.StartsWith("[", StringComparison.Ordinal))
+//				{
+//					int close = entry.IndexOf(']', 1);
+//					if (close > 1)
+//						hashStr = entry.Substring(1, close - 1).Trim();
+//				}
+
+//				if (string.IsNullOrEmpty(hashStr) ||
+//					hashStr.Equals("unknown", StringComparison.OrdinalIgnoreCase))
+//				{
+//					variants[i] = new Variant(0);
+//					continue;
+//				}
+
+//				HashId hashId = 0;
+//				try
+//				{
+//					hashId = HTB50.Decode(hashStr);
+//				}
+//				catch
+//				{
+//					hashId = 0;
+//				}
+
+//				variants[i] = new Variant(hashId);  // angle=0, delta=0
+//			}
+
+//			return variants;
+//		}
+
+//		protected Map ReadMapJson(JsonReader reader, JsonSerializer serializer)
+//		{
+//			var jo = JObject.Load(reader);
+//			var map = new Map();
+
+//			var tableArray = jo["table"] as JArray;
+//			jo.Remove("table");
+
+//			serializer.Populate(jo.CreateReader(), map);
+
+//			if (tableArray != null)
+//			{
+//				((Map.IVariantAccess)map).Variants = ParseTableToVariants(tableArray);
+//			}
+
+//			return map;
+//		}
+
+//		public override object ReadJson(JsonReader reader, Type type, object existingValue, JsonSerializer serializer)
+//			=> ReadMapJson(reader, serializer);
+
+//		protected virtual void WriteTableArray(JsonWriter writer, Map map, JsonSerializer serializer)
+//		{
+//			writer.WritePropertyName("table");
+//			writer.WriteStartArray();
+
+//			var variants = ((Map.IVariantAccess)map).Variants ?? Array.Empty<Variant>();
+
+//			foreach (var v in variants)
+//			{
+//				if (v.hash == 0)
+//				{
+//					writer.WriteValue("unknown");
+//					continue;
+//				}
+
+//				string hashStr = HTB50.EncodeFixed(
+//					v.hash,
+//					length: HTB50Settings.FixedLength,
+//					padChar: '0',
+//					appendFlavor: false
+//				);
+
+//				if (IsAtomic)
+//				{
+//					var def = ResourceManager.GetDefinition(v.hash);
+//					string namePart = (def != null && !string.IsNullOrEmpty(def.name))
+//						? def.name
+//						: "unknown";
+
+//					writer.WriteValue($"[{hashStr}]{namePart}");
+//				}
+//				else
+//				{
+//					writer.WriteValue($"[{hashStr}]");
+//				}
+//			}
+
+//			writer.WriteEndArray();
+//		}
+
+//		public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+//		{
+//			var map = (Map)value ?? throw new ArgumentNullException(nameof(value));
+
+//			writer.WriteStartObject();
+
+//			bool tableWritten = false;
+
+//			foreach (var prop in OrderedProperties(serializer))
+//			{
+//				var name = prop.PropertyName;
+
+//				// Never write internal fields
+//				if (name == "hashes" || name == "variants")
+//					continue;
+
+//				if (!IsAtomic && IsSuppressedInDatabaseFormat(name))
+//					continue;
+
+//				var propValue = prop.ValueProvider?.GetValue(map);
+
+//				if (propValue == null && serializer.NullValueHandling == NullValueHandling.Ignore)
+//					continue;
+
+//				writer.WritePropertyName(name);
+//				serializer.Serialize(writer, propValue);
+
+//				// Insert table after properties with Order < 20, before >=20 or end
+//				if (!tableWritten && prop.Order.GetValueOrDefault(int.MaxValue) < TableJsonOrderPosition)
+//				{
+//					var remaining = OrderedProperties(serializer).SkipWhile(p => p.PropertyName != name).Skip(1);
+//					var nextProp = remaining.FirstOrDefault();
+
+//					if (nextProp == null || nextProp.Order.GetValueOrDefault(int.MaxValue) >= TableJsonOrderPosition)
+//					{
+//						WriteTableArray(writer, map, serializer);
+//						tableWritten = true;
+//					}
+//				}
+//			}
+
+//			// Fallback if table wasn't inserted
+//			if (!tableWritten)
+//			{
+//				WriteTableArray(writer, map, serializer);
+//			}
+
+//			if (IsAtomic)
+//				WriteAtomicOnlyFields(writer, map, serializer);
+
+//			writer.WriteEndObject();
+//		}
+
+//		private void WriteAtomicOnlyFields(JsonWriter writer, Map map, JsonSerializer serializer)
+//		{
+//			var usedHashes = (((Map.IVariantAccess)map).Variants ?? Array.Empty<Variant>())
+//				.Where(v => v.hash != 0)
+//				.Select(v => v.hash)
+//				.Distinct()
+//				.ToArray();
+
+//			var usedDefs = usedHashes
+//				.Select(h => ResourceManager.GetDefinition(h))
+//				.Where(d => d != null)
+//				.ToArray();
+
+//			if (usedDefs.Length > 0)
+//			{
+//				writer.WritePropertyName("definitions");
+//				serializer.Serialize(writer, usedDefs);
+//			}
+
+//			var usedBanks = usedDefs
+//				.Where(d => !string.IsNullOrEmpty(d?.texture))
+//				.Select(d => d.texture)
+//				.Distinct()
+//				.ToArray();
+
+//			var usedTextures = ResourceManager.TextureSequences
+//				.Where(ts => usedBanks.Contains(ts.id))
+//				.ToArray();
+
+//			if (usedTextures.Length > 0)
+//			{
+//				writer.WritePropertyName("textures");
+//				serializer.Serialize(writer, usedTextures);
+//			}
+
+//			writer.WritePropertyName("version");
+//			writer.WriteValue("1.0");
+
+//			writer.WritePropertyName("author");
+//			writer.WriteValue("Player");
+
+//			writer.WritePropertyName("exportedFrom");
+//			writer.WriteValue("ClassicTilestorm");
+//		}
+
+//		private static bool IsSuppressedInDatabaseFormat(string propertyName)
+//		{
+//			return propertyName is "definitions" or "textures" or "version" or "author" or "exportedFrom";
+//		}
+//	}
+
+//	public class AtomicMapConverter : MapConverterBase
+//	{
+//		public AtomicMapConverter() : base(true) { }
+//	}
+
+//	public class DatabaseMapConverter : MapConverterBase
+//	{
+//		public DatabaseMapConverter() : base(false) { }
+//	}
+//}

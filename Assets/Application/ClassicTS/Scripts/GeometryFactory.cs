@@ -5,26 +5,32 @@ namespace ClassicTilestorm
 	public static class GeometryFactory
 	{
 		// Fallback tile for missing prefabs
-		public static GameObject CreateFallbackTile(Transform parent, Vector3 position)
+		public static GameObject CreateFallbackTile(Transform parent, Vector3 position, Quaternion rotation = default)
 		{
+			if (rotation == default) rotation = Quaternion.identity;
+
 			var urpMaterial = new Material(Shader.Find("Universal Render Pipeline/Simple Lit"));
-			urpMaterial.color = new Color(0.25f, 0.25f, 0.35f, 1f); // Set desired color
+			urpMaterial.color = new Color(0.25f, 0.25f, 0.35f, 1f);
 
 			var gameObject = GameObject.CreatePrimitive(PrimitiveType.Cube);
 			gameObject.GetComponent<Renderer>().material = urpMaterial;
 			gameObject.transform.SetParent(parent, false);
 			gameObject.transform.position = position;// + new Vector3(0f, -0.1f, 0f);//we can't do this because it gets overwritten when the level is loaded!! TileWorldPosition resets vertical offset
+			gameObject.transform.rotation = rotation;
 			gameObject.transform.localScale = new Vector3(1f, 0.1f, 1f);
 			gameObject.name = "Fallback_Cube";
 			return gameObject;
 		}
 
 		// Creates a debug tile (e.g., for tile_invisible or spare tiles)
-		public static GameObject CreateDebugTile(Transform parent, Vector3 position, bool isSpareTile = false)
+		public static GameObject CreateDebugTile(Transform parent, Vector3 position, Quaternion rotation = default, bool isSpareTile = false)
 		{
+			if (rotation == default) rotation = Quaternion.identity;
+
 			var gameObject = new GameObject(isSpareTile ? "spare_tile" : "debug_Tile");
 			gameObject.transform.SetParent(parent, false);
 			gameObject.transform.position = position;
+			gameObject.transform.rotation = rotation;
 
 			var meshFilter = gameObject.AddComponent<MeshFilter>();
 			var meshRenderer = gameObject.AddComponent<MeshRenderer>();
@@ -74,7 +80,7 @@ namespace ClassicTilestorm
 			{
 				Debug.LogWarning("GeometryManager: Source tile lacks MeshRenderer or MeshFilter.");
 				Object.Destroy(spareTile);
-				return CreateDebugTile(parent, position, true);
+				return CreateDebugTile(parent, position, isSpareTile: true);
 			}
 
 			return spareTile;

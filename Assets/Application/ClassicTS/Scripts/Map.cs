@@ -8,6 +8,26 @@ using MassiveHadronLtd;
 
 namespace ClassicTilestorm
 {
+	[Serializable]
+	public struct Variant
+	{
+		public HashId hash;           // the core tile definition ID
+		public float angle;           // degrees, usually 0/90/180/270
+		public float delta;           // local position offset
+
+		// Optional: constructor helpers
+		public Variant(HashId h) : this(h, 0f, 0f) { }
+		public Variant(HashId h, float rotationDegrees, float offset)
+		{
+			hash = h;
+			angle = rotationDegrees;
+			delta = offset;
+		}
+
+		// Helper to make migration easier
+		public static implicit operator HashId(Variant v) => v.hash;
+	}
+
 	public interface IMapData
 	{
 		int Width { get; }
@@ -56,7 +76,7 @@ namespace ClassicTilestorm
 	}
 
 	[Serializable]
-	public class Map : IMapEdit, Map.IHashAccess
+	public class Map : IMapEdit, Map.IVariantAccess
 	{
 		// ─────────────────────────────────────────────
 		// Core identity
@@ -99,9 +119,79 @@ namespace ClassicTilestorm
 		// Tile hashes — for definitions
 		// ─────────────────────────────────────────────
 
-		[JsonIgnore] private HashId[] hashes;// runtime int copy of table, never serialized
-		internal interface IHashAccess { HashId[] Hashes { get; set; } }
-		HashId[] IHashAccess.Hashes { get => hashes; set => hashes = value; }
+		//[JsonIgnore] private HashId[] hashes;// runtime int copy of table, never serialized
+		//internal interface IHashAccess { HashId[] Hashes { get; set; } }
+		//HashId[] IHashAccess.Hashes { get => hashes; set => hashes = value; }
+
+		[JsonIgnore]
+		public Variant[] variants = Array.Empty<Variant>();
+
+		// Compatibility layer - exact same name, now a property
+		[JsonIgnore]
+		private HashId[] hashes
+		{
+			get
+			{
+				if (variants == null || variants.Length == 0)
+					return Array.Empty<HashId>();
+
+				var arr = new HashId[variants.Length];
+				for (int i = 0; i < variants.Length; i++)
+					arr[i] = variants[i].hash;
+				return arr;
+			}
+
+			// ← This is the missing piece
+			set
+			{
+				if (value == null)
+				{
+					variants = Array.Empty<Variant>();
+				}
+				else
+				{
+					variants = new Variant[value.Length];
+					for (int i = 0; i < value.Length; i++)
+					{
+						variants[i] = new Variant(value[i]);   // angle=0, delta=zero
+					}
+				}
+
+				// Invalidate anything derived from the tile list
+				_graph = null;
+				// If you have other caches depending on hashes/variants → clear them here too
+			}
+		}
+
+		// ─────────────────────────────────────────────
+		// Recommended clean access for future code
+		// ─────────────────────────────────────────────
+		internal interface IVariantAccess
+		{
+			Variant[] Variants { get; set; }
+		}
+
+		Variant[] IVariantAccess.Variants
+		{
+			get => variants;
+			set
+			{
+				variants = value ?? Array.Empty<Variant>();
+				_graph = null;
+			}
+		}
+
+		private Variant GetVariantForIndex(int mapIndex)
+		{
+			if (tiles == null || variants == null || mapIndex < 0 || mapIndex >= tiles.Length)
+				return new Variant(0);
+
+			int tableIdx = tiles[mapIndex];
+			if (tableIdx >= 0 && tableIdx < variants.Length)
+				return variants[tableIdx];
+
+			return new Variant(0);
+		}
 
 		// ─────────────────────────────────────────────
 		// Runtime tile (graph) instances (lazy / just-in-time)
@@ -109,7 +199,94 @@ namespace ClassicTilestorm
 
 		[JsonIgnore] private int[] state; // runtime permutation, never serialized
 		[JsonIgnore] private Tile[] _graph; // private backing field (never serialized)
-		[JsonIgnore] private Tile[] graph
+											//[JsonIgnore]
+											//private Tile[] graph
+											//{
+											//	get
+											//	{
+											//		if (_graph != null)
+											//			return _graph;
+
+		//		if (tiles == null || tiles.Length != width * height)
+		//		{
+		//			Debug.LogError($"Invalid tile map data! length={(tiles?.Length ?? -1)}, expected={width * height}");
+		//			return Array.Empty<Tile>();
+		//		}
+
+		//		_graph = new Tile[width * height];
+
+		//		string mapName = name ?? "Unnamed map";
+
+		//		for (int index = 0; index < tiles.Length; index++)
+		//		{
+		//			int idx = tiles[index];
+		//			Variant variant = default;
+
+		//			if (idx >= 0 && idx < variants.Length)
+		//			{
+		//				variant = variants[idx];  // ← Get the full Variant, not just hash
+		//			}
+		//			else if (idx != -1)
+		//			{
+		//				Debug.LogWarning($"Out-of-range table index {idx} at tile {index} (map: {mapName})");
+		//				variant = new Variant(0);  // fallback to empty
+		//			}
+
+		//			// ── Pass the full Variant to Tile constructor ──────────────────
+		//			_graph[index] = new Tile(variant, parent, TileWorldPosition(index));
+		//		}
+
+		//		return _graph;
+		//	}
+		//}
+
+		//[JsonIgnore]
+		//private Tile[] graph
+		//{
+		//	get
+		//	{
+		//		if (_graph != null)
+		//			return _graph;
+
+		//		if (tiles == null || tiles.Length != width * height)
+		//		{
+		//			Debug.LogError($"Invalid tile map data! length={(tiles?.Length ?? -1)}, expected={width * height}");
+		//			return Array.Empty<Tile>();
+		//		}
+
+		//		_graph = new Tile[width * height];
+
+		//		string mapName = name ?? "Unnamed map";
+
+		//		for (int visualIndex = 0; visualIndex < tiles.Length; visualIndex++)
+		//		{
+		//			// Apply current permutation (state)
+		//			int logicalIndex = (state != null && visualIndex < state.Length)
+		//				? state[visualIndex]
+		//				: visualIndex;
+
+		//			int tableIdx = tiles[logicalIndex];
+		//			Variant variant = default;
+
+		//			if (tableIdx >= 0 && tableIdx < variants.Length)
+		//			{
+		//				variant = variants[tableIdx];
+		//			}
+		//			else if (tableIdx != -1)
+		//			{
+		//				Debug.LogWarning($"Out-of-range table index {tableIdx} at visual pos {visualIndex} (map: {mapName})");
+		//				variant = new Variant(0);
+		//			}
+
+		//			_graph[visualIndex] = new Tile(variant, parent, TileWorldPosition(visualIndex));
+		//		}
+
+		//		return _graph;
+		//	}
+		//}
+
+		[JsonIgnore]
+		private Tile[] graph
 		{
 			get
 			{
@@ -126,17 +303,33 @@ namespace ClassicTilestorm
 
 				string mapName = name ?? "Unnamed map";
 
-				for (int index = 0; index < tiles.Length; index++)
+				// Use current state for permutation, fallback to identity if missing
+				int[] perm = state != null && state.Length == width * height
+					? state
+					: Enumerable.Range(0, width * height).ToArray();
+
+				for (int visualIndex = 0; visualIndex < _graph.Length; visualIndex++)
 				{
-					int idx = tiles[index];
-					int hashId = 0;
+					int logicalIndex = perm[visualIndex];
 
-					if (idx >= 0 && idx < hashes.Length)
-						hashId = hashes[idx];
-					else if (idx != -1)
-						Debug.LogWarning($"Out-of-range table index {idx} at tile {index} (map: {mapName})");
+					int tableIdx = tiles[logicalIndex];
+					Variant variant = GetVariantForIndex(logicalIndex);
 
-					_graph[index] = new Tile(hashId, parent, TileWorldPosition(index));
+					_graph[visualIndex] = new Tile(variant, parent, TileWorldPosition(visualIndex));
+
+#if DEBUG
+					// Rich debug name — applied right after creation
+					var go = _graph[visualIndex].gameObject;
+					if (go != null)
+					{
+						Vector3 basePos = TileWorldPosition(visualIndex);
+						Vector3 displayPos = basePos + new Vector3(0f, variant.delta, 0f);
+						displayPos -= tile_origin;
+
+						var def = ResourceManager.GetDefinition(variant.hash);
+						go.name = $"{def?.name ?? "??"} ({displayPos.x},{displayPos.z})+{variant.delta:F2}@{variant.angle:F1}°";
+					}
+#endif
 				}
 
 				return _graph;
@@ -670,7 +863,11 @@ namespace ClassicTilestorm
 			solve = solve != null ? (int[])solve.Clone() : null,
 
 			attachments = attachments != null ? attachments.Select(a => a.ShallowClone()).ToArray() : Array.Empty<MapAttachment>(),
-			hashes = null != hashes ? (HashId[])hashes.Clone() : Array.Empty<HashId>()
+			//hashes = null != hashes ? (HashId[])hashes.Clone() : Array.Empty<HashId>()
+
+			// ── Fix: copy variants directly ─────────────────────────────────────
+			variants = variants != null ? variants.Select(v => new Variant(v.hash, v.angle, v.delta)).ToArray() : Array.Empty<Variant>()
+			// No need to set hashes — the property getter will rebuild it from variants
 		};
 
 		public int CameraHitTile(Camera camera, Vector3 position) => WorldToMapIndex(ScreenToWorld(camera, position));
@@ -761,34 +958,49 @@ namespace ClassicTilestorm
 			return -1;
 		}
 
-		private void UpdateTileObjectNamesAndPositions()
-		{
-			var perm = state;
-			if (perm == null || graphCount != perm.Length)
-			{
-				Debug.Assert(false, "mismatched indices and runtime tiles");
-				return;
-			}
+//		private void UpdateTileObjectNamesAndPositions()
+//		{
+//			var perm = state;
+//			if (perm == null || graphCount != perm.Length)
+//			{
+//				Debug.Assert(false, "mismatched indices and runtime tiles");
+//				return;
+//			}
 
-			for (int n = 0; n < perm.Length; ++n)
-			{
-				var mapTile = GetGraphTile(perm[n]);
-				var go = mapTile.gameObject;
-				if (go == null) continue;
+//			for (int n = 0; n < perm.Length; ++n)
+//			{
+//				int tableIndex = perm[n];
+//				if (tableIndex < 0 || tableIndex >= variants.Length)
+//					continue;
 
-				var position = TileWorldPosition(n);
-				go.transform.position = position;
+//				var variant = variants[tableIndex];
+//				var mapTile = GetGraphTile(tableIndex);
+//				var go = mapTile.gameObject;
+//				if (go == null) continue;
 
-#if DEBUG
-				position -= tile_origin;
-				var id = GetTileID(n);// mapTile.HashID;
-				var def = ResourceManager.GetDefinition(id);//mapTile.HashID
-				go.name = $"{def?.name ?? "??"} ({position.x},{position.z})";
-#endif
-			}
-		}
+//				// Base world position (grid center)
+//				Vector3 basePosition = TileWorldPosition(n);
 
-		public void RecreateTiles()
+//				// Apply delta (Y-axis offset)
+//				Vector3 finalPosition = basePosition + new Vector3(0f, variant.delta, 0f);
+
+//				// Apply rotation (Y-axis)
+//				Quaternion finalRotation = Quaternion.Euler(0f, variant.angle, 0f);
+
+//				go.transform.position = finalPosition;
+//				go.transform.rotation = finalRotation;
+
+//#if DEBUG
+//				var displayPos = finalPosition;
+//				displayPos -= tile_origin;
+//				var id = variant.hash;
+//				var def = ResourceManager.GetDefinition(id);
+//				go.name = $"{def?.name ?? "??"} ({displayPos.x:F1},{displayPos.z:F1})+{variant.delta:F2}@{variant.angle:F1}°";
+//#endif
+//			}
+//		}
+
+		private void RecreateTiles()
 		{
 			DestroyAllTiles();
 			var _ = graph; // force lazy creation
@@ -806,6 +1018,111 @@ namespace ClassicTilestorm
 
 			RefreshAttachments(GetAttachments());
 		}
+
+		//public bool UpdateTileAt(int x, int z, HashId hashId)
+		//{
+		//	if (tiles == null || tiles.Length == 0)
+		//	{
+		//		Debug.LogError("Cannot update tile: map has no tiles array");
+		//		return false;
+		//	}
+
+		//	int oldWidth = width;
+		//	int oldHeight = height;
+		//	var oldBounds = GetContentBounds();
+
+		//	Vector3 originDelta = Vector3.zero;
+		//	bool sizeChanged = false;
+
+		//	// If coordinate out of bounds → expand automatically
+		//	if (x < 0 || x >= width || z < 0 || z >= height)
+		//	{
+		//		bool didResize = RepositionAndResize(x, z);
+
+		//		if (didResize)
+		//		{
+		//			// Recompute the actual shift that occurred
+		//			int minX = Mathf.Min(0, x);
+		//			int minZ = Mathf.Min(0, z);
+		//			int offsetX = -minX;
+		//			int offsetZ = -minZ;
+
+		//			if (x < 0) originDelta.x = offsetX;
+		//			if (z < 0) originDelta.z = offsetZ;
+
+		//			// Adjust local x/z to the new valid position after shift
+		//			x += offsetX;
+		//			z += offsetZ;
+
+		//			sizeChanged = true;
+		//		}
+		//		else
+		//		{
+		//			Debug.LogWarning($"Cannot place tile at ({x},{z}) — map resize failed (too large?)");
+		//			return false;
+		//		}
+		//	}
+
+		//	// Now coordinates are guaranteed in bounds
+		//	int index = z * width + x;
+
+		//	// Update tile definition index
+		//	if (hashes == null || !hashes.Contains(hashId))
+		//	{
+		//		hashes = hashes.Concat(new[] { hashId }).ToArray();
+		//		tiles[index] = hashes.Length - 1;
+		//	}
+		//	else
+		//	{
+		//		tiles[index] = Array.IndexOf(hashes, hashId);
+		//	}
+
+		//	bool cropped = false;
+
+		//	var def = ResourceManager.GetDefinition(hashId);
+		//	bool isDefaultTile = def?.IsDefault() ?? false;
+
+		//	// If default tile placed or size changed → try to crop
+		//	if (isDefaultTile || sizeChanged)
+		//	{
+		//		var newBounds = GetContentBounds();
+		//		cropped = CropToContent();
+
+		//		if (cropped)
+		//		{
+		//			originDelta += new Vector3(
+		//				oldBounds.minX - newBounds.minX,
+		//				0,
+		//				oldBounds.minZ - newBounds.minZ
+		//			);
+		//			sizeChanged = true;
+		//		}
+		//	}
+
+		//	bool boundsChanged = sizeChanged || width != oldWidth || height != oldHeight || cropped;
+
+		//	if (boundsChanged)
+		//	{
+		//		RecreateTiles();
+		//		RefreshAttachments(GetAttachments());
+		//	}
+		//	else
+		//	{
+		//		GetGraphTile(index).Destroy();
+
+		//		//graph[index] = new Tile(hashId, parent, TileWorldPosition(index));
+
+		//		var variant = new Variant(hashId, 0f, 0f);
+
+		//		graph[index] = new Tile(variant, parent, TileWorldPosition(index));
+
+		//		RefreshAttachments(GetAttachments(tileIndex: index));
+		//	}
+
+		//	OnMapEdited?.Invoke(this, boundsChanged, originDelta);
+
+		//	return true;
+		//}
 
 		public bool UpdateTileAt(int x, int z, HashId hashId)
 		{
@@ -829,7 +1146,6 @@ namespace ClassicTilestorm
 
 				if (didResize)
 				{
-					// Recompute the actual shift that occurred
 					int minX = Mathf.Min(0, x);
 					int minZ = Mathf.Min(0, z);
 					int offsetX = -minX;
@@ -838,7 +1154,6 @@ namespace ClassicTilestorm
 					if (x < 0) originDelta.x = offsetX;
 					if (z < 0) originDelta.z = offsetZ;
 
-					// Adjust local x/z to the new valid position after shift
 					x += offsetX;
 					z += offsetZ;
 
@@ -851,26 +1166,34 @@ namespace ClassicTilestorm
 				}
 			}
 
-			// Now coordinates are guaranteed in bounds
 			int index = z * width + x;
 
-			// Update tile definition index
-			if (hashes == null || !hashes.Contains(hashId))
+			// ── Manage variants directly ────────────────────────────────────────
+			int tableIndex = -1;
+
+			if (variants == null || !variants.Any(v => v.hash == hashId))
 			{
-				hashes = hashes.Concat(new[] { hashId }).ToArray();
-				tiles[index] = hashes.Length - 1;
+				var newVariant = new Variant(hashId, 0f, 0f);
+
+				variants = variants != null
+					? variants.Concat(new[] { newVariant }).ToArray()
+					: new[] { newVariant };
+
+				tableIndex = variants.Length - 1;
 			}
 			else
 			{
-				tiles[index] = Array.IndexOf(hashes, hashId);
+				tableIndex = Array.FindIndex(variants, v => v.hash == hashId);
 			}
 
+			tiles[index] = tableIndex;
+
+			// ── Rest unchanged ──────────────────────────────────────────────────
 			bool cropped = false;
 
 			var def = ResourceManager.GetDefinition(hashId);
 			bool isDefaultTile = def?.IsDefault() ?? false;
 
-			// If default tile placed or size changed → try to crop
 			if (isDefaultTile || sizeChanged)
 			{
 				var newBounds = GetContentBounds();
@@ -889,6 +1212,7 @@ namespace ClassicTilestorm
 
 			bool boundsChanged = sizeChanged || width != oldWidth || height != oldHeight || cropped;
 
+			// Refresh attachments appropriately
 			if (boundsChanged)
 			{
 				RecreateTiles();
@@ -897,9 +1221,7 @@ namespace ClassicTilestorm
 			else
 			{
 				GetGraphTile(index).Destroy();
-
-				graph[index] = new Tile(hashId, parent, TileWorldPosition(index));
-
+				graph[index] = new Tile(variants[tableIndex], parent, TileWorldPosition(index));
 				RefreshAttachments(GetAttachments(tileIndex: index));
 			}
 
@@ -980,7 +1302,7 @@ namespace ClassicTilestorm
 		public void Preset()
 		{
 			state = Enumerable.Range(0, width * height).ToArray();
-			UpdateTileObjectNamesAndPositions();
+			RecreateTiles(); //UpdateTileObjectNamesAndPositions();
 		}
 
 		public void Scramble()
@@ -996,14 +1318,14 @@ namespace ClassicTilestorm
 				var tileStrip = TileStripHelper.GetTileStrip(this, n % state.Length, stride, true);
 				TileStripHelper.RollStrip(this, tileStrip);
 			}
-			UpdateTileObjectNamesAndPositions();
+			RecreateTiles(); //UpdateTileObjectNamesAndPositions();
 		}
 
 		public void Solve()
 		{
 			state = Enumerable.Range(0, width * height).Select(n => n + (solve?[n] ?? 0)).ToArray();
 
-			UpdateTileObjectNamesAndPositions();
+			RecreateTiles(); //UpdateTileObjectNamesAndPositions();
 		}
 
 		public void Destroy()

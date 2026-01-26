@@ -56,30 +56,46 @@ namespace ClassicTilestorm
 		private readonly TileData _data;
 		public readonly GameObject gameObject;
 
-		public Tile(HashId hashId, Transform parent, Vector3 worldPosition)
+		// ── New constructor: takes Variant instead of just HashId ──────────
+		public Tile(Variant variant, Transform parent, Vector3 worldPosition)
 		{
-			var def = ResourceManager.ResolveDefinition(hashId, out bool hadError);
+			var def = ResourceManager.ResolveDefinition(variant.hash, out bool hadError);
 			if (hadError)
-				Debug.LogWarning($"Failed to resolve tile definition at tile ({worldPosition.x},{worldPosition.z}) (hash: {hashId}) — using default");
+				Debug.LogWarning($"Failed to resolve tile definition at tile ({worldPosition.x},{worldPosition.z}) (hash: {variant.hash}) — using default");
 
 			_data = new TileData(def);
-			gameObject = def != null && !def.IsDefault() ? InstantiateTile(def, parent, worldPosition) : null;
 
-			static GameObject InstantiateTile(Definition definition, Transform parent, Vector3 position)
+			// Position with delta offset
+			Vector3 finalPosition = worldPosition + new Vector3(0f, variant.delta, 0f);
+
+			// Rotation from angle (around Y-axis for top-down map)
+			Quaternion finalRotation = Quaternion.Euler(0f, variant.angle, 0f);
+
+			gameObject = def != null && !def.IsDefault()
+				? InstantiateTile(def, parent, finalPosition, finalRotation)
+				: null;
+
+			static GameObject InstantiateTile(Definition definition, Transform parent, Vector3 position, Quaternion rotation)
 			{
 				if (string.IsNullOrEmpty(definition?.model))
 				{
 					if (definition != null && definition.bDock)
 						return ApplicationSettings.ShowHiddenTiles
-							? GeometryFactory.CreateDebugTile(parent, position)
+							? GeometryFactory.CreateDebugTile(parent, position, rotation)
 							: null;
 
 					Debug.LogWarning($"Invalid Definition or model for {definition?.name ?? "null"}");
-					return GeometryFactory.CreateFallbackTile(parent, position);
+					return GeometryFactory.CreateFallbackTile(parent, position, rotation);
 				}
 
-				return DefinitionFactory.Instantiate(definition, position, Quaternion.identity, parent);
+				return DefinitionFactory.Instantiate(definition, position, rotation, parent);  // ← already takes rotation
 			}
+		}
+
+		// ── Backward compatibility: keep old constructor ───────────────────
+		public Tile(HashId hashId, Transform parent, Vector3 worldPosition)
+			: this(new Variant(hashId), parent, worldPosition)  // ← delegate to new one
+		{
 		}
 
 		// Forwarded properties
