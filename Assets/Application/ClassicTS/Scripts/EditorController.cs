@@ -46,25 +46,18 @@ namespace ClassicTilestorm
 		public void Initialise(IMapEdit iMap)
 		{
 			this.iMap = iMap;
-			iMap.OnMapEdited += HandleMapEdited;// Subscribe to map changes
+			iMap.OnMapEdited += OnMapEdited;// Subscribe to map changes
+			_unsubscribeMapAction = () => iMap.OnMapEdited -= OnMapEdited;
 			if (!isActiveAndEnabled) return;
 			UpdateGridLines(gridEnabled);
 			activeMode?.OnMapLoaded();
 			EnableEggbot(false);
-
-			iMap.OnMapEdited += OnMapEdited;
-			_unsubscribeMapAction = () => iMap.OnMapEdited -= OnMapEdited;
 		}
 
 		public void Reset()
 		{
 			_unsubscribeMapAction?.Invoke();
 			_unsubscribeMapAction = null;
-		}
-
-		private void OnMapEdited(IMapEdit iMap, bool resized, Vector3 delta)
-		{
-			iMap.OnMapEdited -= HandleMapEdited;
 		}
 
 		private void OnEnable()
@@ -111,7 +104,7 @@ namespace ClassicTilestorm
 		private void OnDestroy()
 		{
 			GridLinesUtil.Hide();
-			if (null != iMap) iMap.OnMapEdited -= HandleMapEdited;
+			if (null != iMap) iMap.OnMapEdited -= OnMapEdited;
 			viewMode?.OnDestroy();
 			paintMode?.OnDestroy();
 			attachmentMode?.OnDestroy();
@@ -157,7 +150,7 @@ namespace ClassicTilestorm
 		// Map actions
 		// ===================================================================
 
-		private void HandleMapEdited(Map map, bool resized, Vector3 originDelta)
+		private void OnMapEdited(Map map, bool resized, Vector3 originDelta)
 		{
 			if (map == null) return;
 			ResourceManager.ApplyMapChanges(map);
