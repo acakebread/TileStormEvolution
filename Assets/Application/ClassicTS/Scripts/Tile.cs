@@ -124,12 +124,7 @@ namespace ClassicTilestorm
 
 		public void Destroy()
 		{
-			if (gameObject == null)
-				return;
-
-			if (Application.isPlaying)
-				Object.Destroy(gameObject);
-			else
+			if (gameObject != null)
 				Object.DestroyImmediate(gameObject);
 		}
 	}
