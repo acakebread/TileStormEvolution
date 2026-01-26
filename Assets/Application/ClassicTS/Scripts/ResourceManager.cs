@@ -33,7 +33,7 @@ namespace ClassicTilestorm
 
 		public static bool HasDefinition(int id) => Definitions.Any(def => def.HashID == id);
 
-		public static Definition GetDefinition(int id) => Definitions.FirstOrDefault(d => d.HashID == id);
+		public static Definition GetDefinition(HashId id) => Definitions.FirstOrDefault(d => d.HashID == id);
 
 		public static TextureSequence GetTextureSequence(string id)
 			=> string.IsNullOrEmpty(id) ? null : TextureSequences.FirstOrDefault(ts => ts.id == id);
@@ -133,7 +133,7 @@ namespace ClassicTilestorm
 		}
 
 		// ── EXISTING INSERT METHODS (unchanged) ───────────────────────────────
-		public static void InsertDefinitionAfter(int afterId, Definition newDef)
+		public static void InsertDefinitionAfter(HashId afterId, Definition newDef)
 		{
 			if (_db?.definitions == null) return;
 

@@ -63784,2076 +63784,1804 @@
   ],
   "definitions": [
     {
-      "hashid": "4jWj2v",
-      "id": "Debug Tile",
+      "id": "4jWj2v",
+      "name": "Debug Tile",
       "model": "debug_tile",
-      "texture": "Marker",
-      "name": "Debug Tile"
+      "texture": "Marker"
     },
     {
-      "hashid": "9kreKt",
-      "id": "tile_empty",
+      "id": "9kreKt",
+      "name": "tile_empty",
+      "texture": "Default"
+    },
+    {
+      "id": "7Guyi6",
+      "name": "tile_invisible",
       "texture": "Default",
-      "name": "tile_empty"
+      "flags": "Dock"
     },
     {
-      "hashid": "7Guyi6",
-      "id": "tile_invisible",
-      "texture": "Default",
-      "flags": "Dock",
-      "name": "tile_invisible"
-    },
-    {
-      "hashid": "1EkXD3",
-      "id": "Slide",
+      "id": "1EkXD3",
+      "name": "Slide",
       "model": "tile_slide",
       "texture": "Default",
-      "flags": "Roll",
-      "name": "Slide"
+      "flags": "Roll"
     },
     {
-      "hashid": "2XfyDx",
-      "id": "Caustic",
+      "id": "2XfyDx",
+      "name": "Caustic",
       "model": "tile_flat",
       "texture": "Caustic",
-      "material": "toxic",
-      "name": "Caustic"
+      "material": "toxic"
     },
     {
-      "hashid": "9TKqJw",
-      "id": "toxic pipe join leak ew",
+      "id": "9TKqJw",
+      "name": "toxic pipe join leak ew",
       "model": "ss_tile_pipejoin_leak_ew",
-      "texture": "Toxic Pipes",
-      "name": "toxic pipe join leak ew"
+      "texture": "Toxic Pipes"
     },
     {
-      "hashid": "3tNMCV",
-      "id": "toxic pipe join leak ns",
+      "id": "3tNMCV",
+      "name": "toxic pipe join leak ns",
       "model": "ss_tile_pipejoin_leak_ns",
-      "texture": "Toxic Pipes",
-      "name": "toxic pipe join leak ns"
+      "texture": "Toxic Pipes"
     },
     {
-      "hashid": "2An3fe",
-      "id": "ss tile door start ns",
+      "id": "2An3fe",
+      "name": "ss tile door start ns",
       "model": "ss_tile_door_ns",
       "texture": "Industrial",
       "flags": "Start,Door",
-      "connections": "NS",
-      "name": "ss tile door start ns"
+      "connections": "NS"
     },
     {
-      "hashid": "89UjKN",
-      "id": "ss tile door start ew",
+      "id": "89UjKN",
+      "name": "ss tile door start ew",
       "model": "ss_tile_door_ew",
       "texture": "Industrial",
       "flags": "Start,Door",
-      "connections": "EW",
-      "name": "ss tile door start ew"
+      "connections": "EW"
     },
     {
-      "hashid": "75XVj1",
-      "id": "ss tile door end ns",
+      "id": "75XVj1",
+      "name": "ss tile door end ns",
       "model": "ss_tile_door_ns",
       "texture": "Industrial",
       "flags": "End,Door",
-      "connections": "NS",
-      "name": "ss tile door end ns"
+      "connections": "NS"
     },
     {
-      "hashid": "2qeG1h",
-      "id": "ss tile door end ew",
+      "id": "2qeG1h",
+      "name": "ss tile door end ew",
       "model": "ss_tile_door_ew",
       "texture": "Industrial",
       "flags": "End,Door",
-      "connections": "EW",
-      "name": "ss tile door end ew"
+      "connections": "EW"
     },
     {
-      "hashid": "Cp5F4e",
-      "id": "ss tile console n",
+      "id": "Cp5F4e",
+      "name": "ss tile console n",
       "model": "ss_console_n",
       "texture": "Industrial",
       "flags": "Console",
-      "connections": "N",
-      "name": "ss tile console n"
+      "connections": "N"
     },
     {
-      "hashid": "AFF0NC",
-      "id": "ss tile console e",
+      "id": "AFF0NC",
+      "name": "ss tile console e",
       "model": "ss_console_e",
       "texture": "Industrial",
       "flags": "Console",
-      "connections": "E",
-      "name": "ss tile console e"
+      "connections": "E"
     },
     {
-      "hashid": "A4whAn",
-      "id": "ss tile console s",
+      "id": "A4whAn",
+      "name": "ss tile console s",
       "model": "ss_console_s",
       "texture": "Industrial",
       "flags": "Console",
-      "connections": "S",
-      "name": "ss tile console s"
+      "connections": "S"
     },
     {
-      "hashid": "A2F9p5",
-      "id": "ss tile console w",
+      "id": "A2F9p5",
+      "name": "ss tile console w",
       "model": "ss_console_w",
       "texture": "Industrial",
       "flags": "Console",
-      "connections": "W",
-      "name": "ss tile console w"
+      "connections": "W"
     },
     {
-      "hashid": "8NpvXp",
-      "id": "ss toxic pipe ns",
+      "id": "8NpvXp",
+      "name": "ss toxic pipe ns",
       "model": "ss_tile_pipe_ns",
-      "texture": "Industrial",
-      "name": "ss toxic pipe ns"
+      "texture": "Industrial"
     },
     {
-      "hashid": "9QemdP",
-      "id": "ss toxic pipe ew",
+      "id": "9QemdP",
+      "name": "ss toxic pipe ew",
       "model": "ss_tile_pipe_ew",
-      "texture": "Industrial",
-      "name": "ss toxic pipe ew"
+      "texture": "Industrial"
     },
     {
-      "hashid": "8jtjX2",
-      "id": "ss toxic pipe ne",
+      "id": "8jtjX2",
+      "name": "ss toxic pipe ne",
       "model": "ss_tile_pipe_corner_ne",
-      "texture": "Industrial",
-      "name": "ss toxic pipe ne"
+      "texture": "Industrial"
     },
     {
-      "hashid": "8EMcu4",
-      "id": "ss toxic pipe nw",
+      "id": "8EMcu4",
+      "name": "ss toxic pipe nw",
       "model": "ss_tile_pipe_corner_nw",
-      "texture": "Industrial",
-      "name": "ss toxic pipe nw"
+      "texture": "Industrial"
     },
     {
-      "hashid": "6jvfrm",
-      "id": "ss toxic pipe se",
+      "id": "6jvfrm",
+      "name": "ss toxic pipe se",
       "model": "ss_tile_pipe_corner_se",
-      "texture": "Industrial",
-      "name": "ss toxic pipe se"
+      "texture": "Industrial"
     },
     {
-      "hashid": "51w6Mh",
-      "id": "ss toxic pipe sw",
+      "id": "51w6Mh",
+      "name": "ss toxic pipe sw",
       "model": "ss_tile_pipe_corner_sw",
-      "texture": "Industrial",
-      "name": "ss toxic pipe sw"
+      "texture": "Industrial"
     },
     {
-      "hashid": "ECUVrk",
-      "id": "ss toxic pipe nesw",
+      "id": "ECUVrk",
+      "name": "ss toxic pipe nesw",
       "model": "ss_tile_pipe_mid",
-      "texture": "Industrial",
-      "name": "ss toxic pipe nesw"
+      "texture": "Industrial"
     },
     {
-      "hashid": "0F0wCU",
-      "id": "ss toxic pipe join ns",
+      "id": "0F0wCU",
+      "name": "ss toxic pipe join ns",
       "model": "ss_tile_pipejoin_ns",
-      "texture": "Industrial",
-      "name": "ss toxic pipe join ns"
+      "texture": "Industrial"
     },
     {
-      "hashid": "19akm6",
-      "id": "ss toxic pipe join ew",
+      "id": "19akm6",
+      "name": "ss toxic pipe join ew",
       "model": "ss_tile_pipejoin_ew",
-      "texture": "Industrial",
-      "name": "ss toxic pipe join ew"
+      "texture": "Industrial"
     },
     {
-      "hashid": "ANmNdr",
-      "id": "ss toxic pipe floor n",
+      "id": "ANmNdr",
+      "name": "ss toxic pipe floor n",
       "model": "ss_tile_pipefloor_n",
-      "texture": "Industrial",
-      "name": "ss toxic pipe floor n"
+      "texture": "Industrial"
     },
     {
-      "hashid": "8rUptU",
-      "id": "ss toxic pipe floor e",
+      "id": "8rUptU",
+      "name": "ss toxic pipe floor e",
       "model": "ss_tile_pipefloor_e",
-      "texture": "Industrial",
-      "name": "ss toxic pipe floor e"
+      "texture": "Industrial"
     },
     {
-      "hashid": "DJQEai",
-      "id": "ss toxic pipe floor s",
+      "id": "DJQEai",
+      "name": "ss toxic pipe floor s",
       "model": "ss_tile_pipefloor_s",
-      "texture": "Industrial",
-      "name": "ss toxic pipe floor s"
+      "texture": "Industrial"
     },
     {
-      "hashid": "54Ta1E",
-      "id": "ss toxic pipe floor w",
+      "id": "54Ta1E",
+      "name": "ss toxic pipe floor w",
       "model": "ss_tile_pipefloor_w",
-      "texture": "Industrial",
-      "name": "ss toxic pipe floor w"
+      "texture": "Industrial"
     },
     {
-      "hashid": "4pdw17",
-      "id": "ss tile boundary",
+      "id": "4pdw17",
+      "name": "ss tile boundary",
       "model": "ss_tile_boundary",
-      "texture": "Industrial",
-      "name": "ss tile boundary"
+      "texture": "Industrial"
     },
     {
-      "hashid": "0TGhTv",
-      "id": "ss tile boundary 1",
+      "id": "0TGhTv",
+      "name": "ss tile boundary 1",
       "model": "ss_tile_boundary_pitted",
-      "texture": "Industrial",
-      "name": "ss tile boundary 1"
+      "texture": "Industrial"
     },
     {
-      "hashid": "74Y092",
-      "id": "ss tile boundary 2",
+      "id": "74Y092",
+      "name": "ss tile boundary 2",
       "model": "ss_tile_boundary_02",
-      "texture": "Industrial",
-      "name": "ss tile boundary 2"
+      "texture": "Industrial"
     },
     {
-      "hashid": "1u4HhK",
-      "id": "ss tile boundary 3",
+      "id": "1u4HhK",
+      "name": "ss tile boundary 3",
       "model": "ss_tile_boundary_03",
-      "texture": "Industrial",
-      "name": "ss tile boundary 3"
+      "texture": "Industrial"
     },
     {
-      "hashid": "2FMcwa",
-      "id": "ss tile boundary 4",
+      "id": "2FMcwa",
+      "name": "ss tile boundary 4",
       "model": "ss_tile_boundary_plate",
-      "texture": "Industrial",
-      "name": "ss tile boundary 4"
+      "texture": "Industrial"
     },
     {
-      "hashid": "2w9vTQ",
-      "id": "ss tile slide",
+      "id": "2w9vTQ",
+      "name": "ss tile slide",
       "model": "ss_tile_slide_plain",
       "texture": "Industrial",
-      "flags": "Roll",
-      "name": "ss tile slide"
+      "flags": "Roll"
     },
     {
-      "hashid": "AaNkrC",
-      "id": "ss tile static nesw",
+      "id": "AaNkrC",
+      "name": "ss tile static nesw",
       "model": "ss_tile_nesw_static",
       "texture": "Industrial",
-      "connections": "NSEW",
-      "name": "ss tile static nesw"
+      "connections": "NSEW"
     },
     {
-      "hashid": "0KdnWP",
-      "id": "ss tile static ns",
+      "id": "0KdnWP",
+      "name": "ss tile static ns",
       "model": "ss_tile_ns_static",
       "texture": "Industrial",
-      "connections": "NS",
-      "name": "ss tile static ns"
+      "connections": "NS"
     },
     {
-      "hashid": "CfQuAW",
-      "id": "ss tile static ew",
+      "id": "CfQuAW",
+      "name": "ss tile static ew",
       "model": "ss_tile_ew_static",
       "texture": "Industrial",
-      "connections": "EW",
-      "name": "ss tile static ew"
+      "connections": "EW"
     },
     {
-      "hashid": "E61THk",
-      "id": "ss tile static se",
+      "id": "E61THk",
+      "name": "ss tile static se",
       "model": "ss_tile_se_corner_static",
       "texture": "Industrial",
-      "connections": "SE",
-      "name": "ss tile static se"
+      "connections": "SE"
     },
     {
-      "hashid": "7v0v3x",
-      "id": "ss tile static sw",
+      "id": "7v0v3x",
+      "name": "ss tile static sw",
       "model": "ss_tile_sw_corner_static",
       "texture": "Industrial",
-      "connections": "SW",
-      "name": "ss tile static sw"
+      "connections": "SW"
     },
     {
-      "hashid": "9xfU7Y",
-      "id": "ss tile static ne",
+      "id": "9xfU7Y",
+      "name": "ss tile static ne",
       "model": "ss_tile_ne_corner_static",
       "texture": "Industrial",
-      "connections": "NE",
-      "name": "ss tile static ne"
+      "connections": "NE"
     },
     {
-      "hashid": "CA9PaH",
-      "id": "ss tile static nw",
+      "id": "CA9PaH",
+      "name": "ss tile static nw",
       "model": "ss_tile_nw_corner_static",
       "texture": "Industrial",
-      "connections": "NW",
-      "name": "ss tile static nw"
+      "connections": "NW"
     },
     {
-      "hashid": "D2m8HU",
-      "id": "ss tile nesw",
+      "id": "D2m8HU",
+      "name": "ss tile nesw",
       "model": "ss_tile_nesw",
       "texture": "Industrial",
       "flags": "Drag",
-      "connections": "NSEW",
-      "name": "ss tile nesw"
+      "connections": "NSEW"
     },
     {
-      "hashid": "9hR5pQ",
-      "id": "ss tile ns",
+      "id": "9hR5pQ",
+      "name": "ss tile ns",
       "model": "ss_tile_ns",
       "texture": "Industrial",
       "flags": "Drag",
-      "connections": "NS",
-      "name": "ss tile ns"
+      "connections": "NS"
     },
     {
-      "hashid": "4XQ0Qn",
-      "id": "ss tile ew",
+      "id": "4XQ0Qn",
+      "name": "ss tile ew",
       "model": "ss_tile_ew",
       "texture": "Industrial",
       "flags": "Drag",
-      "connections": "EW",
-      "name": "ss tile ew"
+      "connections": "EW"
     },
     {
-      "hashid": "Cur5RV",
-      "id": "ss tile corner se",
+      "id": "Cur5RV",
+      "name": "ss tile corner se",
       "model": "ss_tile_se_corner",
       "texture": "Industrial",
       "flags": "Drag",
-      "connections": "SE",
-      "name": "ss tile corner se"
+      "connections": "SE"
     },
     {
-      "hashid": "3995Gy",
-      "id": "ss tile corner sw",
+      "id": "3995Gy",
+      "name": "ss tile corner sw",
       "model": "ss_tile_sw_corner",
       "texture": "Industrial",
       "flags": "Drag",
-      "connections": "SW",
-      "name": "ss tile corner sw"
+      "connections": "SW"
     },
     {
-      "hashid": "DJNAYq",
-      "id": "ss tile corner ne",
+      "id": "DJNAYq",
+      "name": "ss tile corner ne",
       "model": "ss_tile_ne_corner",
       "texture": "Industrial",
       "flags": "Drag",
-      "connections": "NE",
-      "name": "ss tile corner ne"
+      "connections": "NE"
     },
     {
-      "hashid": "CQn1Vk",
-      "id": "ss tile corner nw",
+      "id": "CQn1Vk",
+      "name": "ss tile corner nw",
       "model": "ss_tile_nw_corner",
       "texture": "Industrial",
       "flags": "Drag",
-      "connections": "NW",
-      "name": "ss tile corner nw"
+      "connections": "NW"
     },
     {
-      "hashid": "3GVJyw",
-      "id": "ss wall n",
+      "id": "3GVJyw",
+      "name": "ss wall n",
       "model": "ss_wall_n",
-      "texture": "Industrial",
-      "name": "ss wall n"
+      "texture": "Industrial"
     },
     {
-      "hashid": "2VX26p",
-      "id": "ss wall e",
+      "id": "2VX26p",
+      "name": "ss wall e",
       "model": "ss_wall_e",
-      "texture": "Industrial",
-      "name": "ss wall e"
+      "texture": "Industrial"
     },
     {
-      "hashid": "CiEk1T",
-      "id": "ss wall s",
+      "id": "CiEk1T",
+      "name": "ss wall s",
       "model": "ss_wall_s",
-      "texture": "Industrial",
-      "name": "ss wall s"
+      "texture": "Industrial"
     },
     {
-      "hashid": "6HKAWU",
-      "id": "ss wall w",
+      "id": "6HKAWU",
+      "name": "ss wall w",
       "model": "ss_wall_w",
-      "texture": "Industrial",
-      "name": "ss wall w"
+      "texture": "Industrial"
     },
     {
-      "hashid": "4tHT60",
-      "id": "ss wall se",
+      "id": "4tHT60",
+      "name": "ss wall se",
       "model": "ss_wall_corner_se",
-      "texture": "Industrial",
-      "name": "ss wall se"
+      "texture": "Industrial"
     },
     {
-      "hashid": "5TPeHY",
-      "id": "ss wall sw",
+      "id": "5TPeHY",
+      "name": "ss wall sw",
       "model": "ss_wall_corner_sw",
-      "texture": "Industrial",
-      "name": "ss wall sw"
+      "texture": "Industrial"
     },
     {
-      "hashid": "5Un9xE",
-      "id": "ss wall ne",
+      "id": "5Un9xE",
+      "name": "ss wall ne",
       "model": "ss_wall_corner_ne",
-      "texture": "Industrial",
-      "name": "ss wall ne"
+      "texture": "Industrial"
     },
     {
-      "hashid": "3m3714",
-      "id": "ss wall nw",
+      "id": "3m3714",
+      "name": "ss wall nw",
       "model": "ss_wall_corner_nw",
-      "texture": "Industrial",
-      "name": "ss wall nw"
+      "texture": "Industrial"
     },
     {
-      "hashid": "4T8R1f",
-      "id": "ss boundary edge n",
+      "id": "4T8R1f",
+      "name": "ss boundary edge n",
       "model": "ss_tile_n_boundary_edge",
-      "texture": "Industrial",
-      "name": "ss boundary edge n"
+      "texture": "Industrial"
     },
     {
-      "hashid": "8Tp2Fc",
-      "id": "ss boundary edge e",
+      "id": "8Tp2Fc",
+      "name": "ss boundary edge e",
       "model": "ss_tile_e_boundary_edge",
-      "texture": "Industrial",
-      "name": "ss boundary edge e"
+      "texture": "Industrial"
     },
     {
-      "hashid": "0Wp2Dt",
-      "id": "ss boundary edge s",
+      "id": "0Wp2Dt",
+      "name": "ss boundary edge s",
       "model": "ss_tile_s_boundary_edge",
-      "texture": "Industrial",
-      "name": "ss boundary edge s"
+      "texture": "Industrial"
     },
     {
-      "hashid": "CGpfi3",
-      "id": "ss boundary edge w",
+      "id": "CGpfi3",
+      "name": "ss boundary edge w",
       "model": "ss_tile_w_boundary_edge",
-      "texture": "Industrial",
-      "name": "ss boundary edge w"
+      "texture": "Industrial"
     },
     {
-      "hashid": "7x8ynD",
-      "id": "ss boundary corner ne",
+      "id": "7x8ynD",
+      "name": "ss boundary corner ne",
       "model": "ss_tile_ne_boundary_corner",
-      "texture": "Industrial",
-      "name": "ss boundary corner ne"
+      "texture": "Industrial"
     },
     {
-      "hashid": "76uetm",
-      "id": "ss boundary corner nw",
+      "id": "76uetm",
+      "name": "ss boundary corner nw",
       "model": "ss_tile_nw_boundary_corner",
-      "texture": "Industrial",
-      "name": "ss boundary corner nw"
+      "texture": "Industrial"
     },
     {
-      "hashid": "EYY7eQ",
-      "id": "ss boundary corner se",
+      "id": "EYY7eQ",
+      "name": "ss boundary corner se",
       "model": "ss_tile_se_boundary_corner",
-      "texture": "Industrial",
-      "name": "ss boundary corner se"
+      "texture": "Industrial"
     },
     {
-      "hashid": "CwHyeC",
-      "id": "ss boundary corner sw",
+      "id": "CwHyeC",
+      "name": "ss boundary corner sw",
       "model": "ss_tile_sw_boundary_corner",
-      "texture": "Industrial",
-      "name": "ss boundary corner sw"
+      "texture": "Industrial"
     },
     {
-      "hashid": "46Hmr0",
-      "id": "ss boundary corner small ne",
+      "id": "46Hmr0",
+      "name": "ss boundary corner small ne",
       "model": "ss_tile_ne_boundary_sml_corner",
-      "texture": "Industrial",
-      "name": "ss boundary corner small ne"
+      "texture": "Industrial"
     },
     {
-      "hashid": "A5xjXN",
-      "id": "ss boundary corner small nw",
+      "id": "A5xjXN",
+      "name": "ss boundary corner small nw",
       "model": "ss_tile_nw_boundary_sml_corner",
-      "texture": "Industrial",
-      "name": "ss boundary corner small nw"
+      "texture": "Industrial"
     },
     {
-      "hashid": "C9dTdD",
-      "id": "ss boundary corner small se",
+      "id": "C9dTdD",
+      "name": "ss boundary corner small se",
       "model": "ss_tile_se_boundary_sml_corner",
-      "texture": "Industrial",
-      "name": "ss boundary corner small se"
+      "texture": "Industrial"
     },
     {
-      "hashid": "9cH6aX",
-      "id": "ss boundary corner small sw",
+      "id": "9cH6aX",
+      "name": "ss boundary corner small sw",
       "model": "ss_tile_sw_boundary_sml_corner",
-      "texture": "Industrial",
-      "name": "ss boundary corner small sw"
+      "texture": "Industrial"
     },
     {
-      "hashid": "DvCe9T",
-      "id": "egy tile door start ns",
+      "id": "DvCe9T",
+      "name": "egy tile door start ns",
       "model": "egy_tile_ns_door",
       "texture": "Egypt",
       "flags": "Start,Door",
-      "connections": "NS",
-      "name": "egy tile door start ns"
+      "connections": "NS"
     },
     {
-      "hashid": "0FmiCr",
-      "id": "egy tile door start ew",
+      "id": "0FmiCr",
+      "name": "egy tile door start ew",
       "model": "egy_tile_ew_door",
       "texture": "Egypt",
       "flags": "Start,Door",
-      "connections": "EW",
-      "name": "egy tile door start ew"
+      "connections": "EW"
     },
     {
-      "hashid": "5DnCpM",
-      "id": "egy tile door end ns",
+      "id": "5DnCpM",
+      "name": "egy tile door end ns",
       "model": "egy_tile_ns_door",
       "texture": "Egypt",
       "flags": "End,Door",
-      "connections": "NS",
-      "name": "egy tile door end ns"
+      "connections": "NS"
     },
     {
-      "hashid": "CRD3er",
-      "id": "egy tile door end ew",
+      "id": "CRD3er",
+      "name": "egy tile door end ew",
       "model": "egy_tile_ew_door",
       "texture": "Egypt",
       "flags": "End,Door",
-      "connections": "EW",
-      "name": "egy tile door end ew"
+      "connections": "EW"
     },
     {
-      "hashid": "8VWAek",
-      "id": "egy tile console n",
+      "id": "8VWAek",
+      "name": "egy tile console n",
       "model": "egy_console_n",
       "texture": "Egypt",
       "flags": "Console",
-      "connections": "N",
-      "name": "egy tile console n"
+      "connections": "N"
     },
     {
-      "hashid": "4hwcGE",
-      "id": "egy tile console e",
+      "id": "4hwcGE",
+      "name": "egy tile console e",
       "model": "egy_console_e",
       "texture": "Egypt",
       "flags": "Console",
-      "connections": "E",
-      "name": "egy tile console e"
+      "connections": "E"
     },
     {
-      "hashid": "D0eJhQ",
-      "id": "egy tile console s",
+      "id": "D0eJhQ",
+      "name": "egy tile console s",
       "model": "egy_console_s",
       "texture": "Egypt",
       "flags": "Console",
-      "connections": "S",
-      "name": "egy tile console s"
+      "connections": "S"
     },
     {
-      "hashid": "A7A9wy",
-      "id": "egy tile console w",
+      "id": "A7A9wy",
+      "name": "egy tile console w",
       "model": "egy_console_w",
       "texture": "Egypt",
       "flags": "Console",
-      "connections": "W",
-      "name": "egy tile console w"
+      "connections": "W"
     },
     {
-      "hashid": "6d5t6k",
-      "id": "egy tile boundary",
+      "id": "6d5t6k",
+      "name": "egy tile boundary",
       "model": "egy_tile_boundary",
-      "texture": "Egypt",
-      "name": "egy tile boundary"
+      "texture": "Egypt"
     },
     {
-      "hashid": "0ACD6e",
-      "id": "egy boundary obelisk",
+      "id": "0ACD6e",
+      "name": "egy boundary obelisk",
       "model": "egy_tile_boundary_oblisk",
-      "texture": "Egypt",
-      "name": "egy boundary obelisk"
+      "texture": "Egypt"
     },
     {
-      "hashid": "52Gwa3",
-      "id": "egy tile pyramid",
+      "id": "52Gwa3",
+      "name": "egy tile pyramid",
       "model": "egy_tile_boundary_pyramid",
-      "texture": "Egypt",
-      "name": "egy tile pyramid"
+      "texture": "Egypt"
     },
     {
-      "hashid": "5E4P2K",
-      "id": "egy tile slide",
+      "id": "5E4P2K",
+      "name": "egy tile slide",
       "model": "egy_tile_slide",
       "texture": "Egypt",
-      "flags": "Roll",
-      "name": "egy tile slide"
+      "flags": "Roll"
     },
     {
-      "hashid": "7J4P6c",
-      "id": "egy tile static nesw",
+      "id": "7J4P6c",
+      "name": "egy tile static nesw",
       "model": "egy_tile_nsew_static",
       "texture": "Egypt",
-      "connections": "NSEW",
-      "name": "egy tile static nesw"
+      "connections": "NSEW"
     },
     {
-      "hashid": "DAUKG9",
-      "id": "egy tile static ns",
+      "id": "DAUKG9",
+      "name": "egy tile static ns",
       "model": "egy_tile_ns_static",
       "texture": "Egypt",
-      "connections": "NS",
-      "name": "egy tile static ns"
+      "connections": "NS"
     },
     {
-      "hashid": "7jVfqD",
-      "id": "egy tile static ew",
+      "id": "7jVfqD",
+      "name": "egy tile static ew",
       "model": "egy_tile_ew_static",
       "texture": "Egypt",
-      "connections": "EW",
-      "name": "egy tile static ew"
+      "connections": "EW"
     },
     {
-      "hashid": "A5d8aA",
-      "id": "egy tile static se",
+      "id": "A5d8aA",
+      "name": "egy tile static se",
       "model": "egy_tile_se_corner_static",
       "texture": "Egypt",
-      "connections": "SE",
-      "name": "egy tile static se"
+      "connections": "SE"
     },
     {
-      "hashid": "5w6fPP",
-      "id": "egy tile static sw",
+      "id": "5w6fPP",
+      "name": "egy tile static sw",
       "model": "egy_tile_sw_corner_static",
       "texture": "Egypt",
-      "connections": "SW",
-      "name": "egy tile static sw"
+      "connections": "SW"
     },
     {
-      "hashid": "7kQ4Yu",
-      "id": "egy tile static ne",
+      "id": "7kQ4Yu",
+      "name": "egy tile static ne",
       "model": "egy_tile_ne_corner_static",
       "texture": "Egypt",
-      "connections": "NE",
-      "name": "egy tile static ne"
+      "connections": "NE"
     },
     {
-      "hashid": "049mjD",
-      "id": "egy tile static nw",
+      "id": "049mjD",
+      "name": "egy tile static nw",
       "model": "egy_tile_nw_corner_static",
       "texture": "Egypt",
-      "connections": "NW",
-      "name": "egy tile static nw"
+      "connections": "NW"
     },
     {
-      "hashid": "3m9XNT",
-      "id": "egy tile nesw",
+      "id": "3m9XNT",
+      "name": "egy tile nesw",
       "model": "egy_tile_nsew",
       "texture": "Egypt",
       "flags": "Drag",
-      "connections": "NSEW",
-      "name": "egy tile nesw"
+      "connections": "NSEW"
     },
     {
-      "hashid": "APAQMR",
-      "id": "egy tile ns",
+      "id": "APAQMR",
+      "name": "egy tile ns",
       "model": "egy_tile_ns",
       "texture": "Egypt",
       "flags": "Drag",
-      "connections": "NS",
-      "name": "egy tile ns"
+      "connections": "NS"
     },
     {
-      "hashid": "A750hG",
-      "id": "egy tile ew",
+      "id": "A750hG",
+      "name": "egy tile ew",
       "model": "egy_tile_ew",
       "texture": "Egypt",
       "flags": "Drag",
-      "connections": "EW",
-      "name": "egy tile ew"
+      "connections": "EW"
     },
     {
-      "hashid": "717MDN",
-      "id": "egy tile corner se",
+      "id": "717MDN",
+      "name": "egy tile corner se",
       "model": "egy_tile_se_corner",
       "texture": "Egypt",
       "flags": "Drag",
-      "connections": "SE",
-      "name": "egy tile corner se"
+      "connections": "SE"
     },
     {
-      "hashid": "6CtrMT",
-      "id": "egy tile corner sw",
+      "id": "6CtrMT",
+      "name": "egy tile corner sw",
       "model": "egy_tile_sw_corner",
       "texture": "Egypt",
       "flags": "Drag",
-      "connections": "SW",
-      "name": "egy tile corner sw"
+      "connections": "SW"
     },
     {
-      "hashid": "CNKtmM",
-      "id": "egy tile corner ne",
+      "id": "CNKtmM",
+      "name": "egy tile corner ne",
       "model": "egy_tile_ne_corner",
       "texture": "Egypt",
       "flags": "Drag",
-      "connections": "NE",
-      "name": "egy tile corner ne"
+      "connections": "NE"
     },
     {
-      "hashid": "4cHvna",
-      "id": "egy tile corner nw",
+      "id": "4cHvna",
+      "name": "egy tile corner nw",
       "model": "egy_tile_nw_corner",
       "texture": "Egypt",
       "flags": "Drag",
-      "connections": "NW",
-      "name": "egy tile corner nw"
+      "connections": "NW"
     },
     {
-      "hashid": "0HDy8K",
-      "id": "egy tutan bottom ew",
+      "id": "0HDy8K",
+      "name": "egy tutan bottom ew",
       "model": "egy_tile_boundary_tut_bot_ew",
-      "texture": "Egypt",
-      "name": "egy tutan bottom ew"
+      "texture": "Egypt"
     },
     {
-      "hashid": "7KwC8P",
-      "id": "egy tutan top ew",
+      "id": "7KwC8P",
+      "name": "egy tutan top ew",
       "model": "egy_tile_boundary_tut_top_ew",
-      "texture": "Egypt",
-      "name": "egy tutan top ew"
+      "texture": "Egypt"
     },
     {
-      "hashid": "9t7mxe",
-      "id": "egy tutan top we",
+      "id": "9t7mxe",
+      "name": "egy tutan top we",
       "model": "egy_tile_boundary_tut_top_we",
-      "texture": "Egypt",
-      "name": "egy tutan top we"
+      "texture": "Egypt"
     },
     {
-      "hashid": "63nNmX",
-      "id": "egy tutan bottom we",
+      "id": "63nNmX",
+      "name": "egy tutan bottom we",
       "model": "egy_tile_boundary_tut_bot_we",
-      "texture": "Egypt",
-      "name": "egy tutan bottom we"
+      "texture": "Egypt"
     },
     {
-      "hashid": "8vyxaG",
-      "id": "egy tutan top ns",
+      "id": "8vyxaG",
+      "name": "egy tutan top ns",
       "model": "egy_tile_boundary_tut_top_ns",
-      "texture": "Egypt",
-      "name": "egy tutan top ns"
+      "texture": "Egypt"
     },
     {
-      "hashid": "7nx2e5",
-      "id": "egy tutan bottom ns",
+      "id": "7nx2e5",
+      "name": "egy tutan bottom ns",
       "model": "egy_tile_boundary_tut_bot_ns",
-      "texture": "Egypt",
-      "name": "egy tutan bottom ns"
+      "texture": "Egypt"
     },
     {
-      "hashid": "APQJn4",
-      "id": "egy tutan top sn",
+      "id": "APQJn4",
+      "name": "egy tutan top sn",
       "model": "egy_tile_boundary_tut_top_sn",
-      "texture": "Egypt",
-      "name": "egy tutan top sn"
+      "texture": "Egypt"
     },
     {
-      "hashid": "8tUEx6",
-      "id": "egy tutan bottom sn",
+      "id": "8tUEx6",
+      "name": "egy tutan bottom sn",
       "model": "egy_tile_boundary_tut_bot_sn",
-      "texture": "Egypt",
-      "name": "egy tutan bottom sn"
+      "texture": "Egypt"
     },
     {
-      "hashid": "Aa47m9",
-      "id": "egy boundary ne",
+      "id": "Aa47m9",
+      "name": "egy boundary ne",
       "model": "egy_tile_ne_boundary_corner",
-      "texture": "Egypt",
-      "name": "egy boundary ne"
+      "texture": "Egypt"
     },
     {
-      "hashid": "5u7XDi",
-      "id": "egy boundary nw",
+      "id": "5u7XDi",
+      "name": "egy boundary nw",
       "model": "egy_tile_nw_boundary_corner",
-      "texture": "Egypt",
-      "name": "egy boundary nw"
+      "texture": "Egypt"
     },
     {
-      "hashid": "DQU3p2",
-      "id": "egy boundary se",
+      "id": "DQU3p2",
+      "name": "egy boundary se",
       "model": "egy_tile_se_boundary_corner",
-      "texture": "Egypt",
-      "name": "egy boundary se"
+      "texture": "Egypt"
     },
     {
-      "hashid": "6yNqfx",
-      "id": "egy boundary sw",
+      "id": "6yNqfx",
+      "name": "egy boundary sw",
       "model": "egy_tile_sw_boundary_corner",
-      "texture": "Egypt",
-      "name": "egy boundary sw"
+      "texture": "Egypt"
     },
     {
-      "hashid": "81m9R9",
-      "id": "egy boundary small ne",
+      "id": "81m9R9",
+      "name": "egy boundary small ne",
       "model": "egy_tile_ne_boundary_sml_corner",
-      "texture": "Egypt",
-      "name": "egy boundary small ne"
+      "texture": "Egypt"
     },
     {
-      "hashid": "7GthQE",
-      "id": "egy boundary small nw",
+      "id": "7GthQE",
+      "name": "egy boundary small nw",
       "model": "egy_tile_nw_boundary_sml_corner",
-      "texture": "Egypt",
-      "name": "egy boundary small nw"
+      "texture": "Egypt"
     },
     {
-      "hashid": "C2DVW2",
-      "id": "egy boundary small se",
+      "id": "C2DVW2",
+      "name": "egy boundary small se",
       "model": "egy_tile_se_boundary_sml_corner",
-      "texture": "Egypt",
-      "name": "egy boundary small se"
+      "texture": "Egypt"
     },
     {
-      "hashid": "6x5U0Q",
-      "id": "egy boundary small sw",
+      "id": "6x5U0Q",
+      "name": "egy boundary small sw",
       "model": "egy_tile_sw_boundary_sml_corner",
-      "texture": "Egypt",
-      "name": "egy boundary small sw"
+      "texture": "Egypt"
     },
     {
-      "hashid": "23UUn0",
-      "id": "egy boundary n",
+      "id": "23UUn0",
+      "name": "egy boundary n",
       "model": "egy_tile_n_boundary_edge",
-      "texture": "Egypt",
-      "name": "egy boundary n"
+      "texture": "Egypt"
     },
     {
-      "hashid": "9Fq8D1",
-      "id": "egy boundary s",
+      "id": "9Fq8D1",
+      "name": "egy boundary s",
       "model": "egy_tile_s_boundary_edge",
-      "texture": "Egypt",
-      "name": "egy boundary s"
+      "texture": "Egypt"
     },
     {
-      "hashid": "2FAj34",
-      "id": "egy boundary e",
+      "id": "2FAj34",
+      "name": "egy boundary e",
       "model": "egy_tile_e_boundary_edge",
-      "texture": "Egypt",
-      "name": "egy boundary e"
+      "texture": "Egypt"
     },
     {
-      "hashid": "0qkVkd",
-      "id": "egy boundary w",
+      "id": "0qkVkd",
+      "name": "egy boundary w",
       "model": "egy_tile_w_boundary_edge",
-      "texture": "Egypt",
-      "name": "egy boundary w"
+      "texture": "Egypt"
     },
     {
-      "hashid": "7HdMnD",
-      "id": "egy anubis head we",
+      "id": "7HdMnD",
+      "name": "egy anubis head we",
       "model": "egy_anubis_head_we",
-      "texture": "Egypt",
-      "name": "egy anubis head we"
+      "texture": "Egypt"
     },
     {
-      "hashid": "3YdxKm",
-      "id": "egy anubis tail we",
+      "id": "3YdxKm",
+      "name": "egy anubis tail we",
       "model": "egy_anubis_tail_we",
-      "texture": "Egypt",
-      "name": "egy anubis tail we"
+      "texture": "Egypt"
     },
     {
-      "hashid": "680Juh",
-      "id": "egy anumbis tail ew",
+      "id": "680Juh",
+      "name": "egy anumbis tail ew",
       "model": "egy_anubis_tail_ew",
-      "texture": "Egypt",
-      "name": "egy anumbis tail ew"
+      "texture": "Egypt"
     },
     {
-      "hashid": "1mhqhq",
-      "id": "egy anubis head ew",
+      "id": "1mhqhq",
+      "name": "egy anubis head ew",
       "model": "egy_anubis_head_ew",
-      "texture": "Egypt",
-      "name": "egy anubis head ew"
+      "texture": "Egypt"
     },
     {
-      "hashid": "1UeyRN",
-      "id": "egy anubis head ns",
+      "id": "1UeyRN",
+      "name": "egy anubis head ns",
       "model": "egy_anubis_head_ns",
-      "texture": "Egypt",
-      "name": "egy anubis head ns"
+      "texture": "Egypt"
     },
     {
-      "hashid": "40WuF7",
-      "id": "egy anubis tail ns",
+      "id": "40WuF7",
+      "name": "egy anubis tail ns",
       "model": "egy_anubis_tail_ns",
-      "texture": "Egypt",
-      "name": "egy anubis tail ns"
+      "texture": "Egypt"
     },
     {
-      "hashid": "92kcK8",
-      "id": "egy anubis head sn",
+      "id": "92kcK8",
+      "name": "egy anubis head sn",
       "model": "egy_anubis_head_sn",
-      "texture": "Egypt",
-      "name": "egy anubis head sn"
+      "texture": "Egypt"
     },
     {
-      "hashid": "5hYFp3",
-      "id": "egy anubis tail sn",
+      "id": "5hYFp3",
+      "name": "egy anubis tail sn",
       "model": "egy_anubis_tail_sn",
-      "texture": "Egypt",
-      "name": "egy anubis tail sn"
+      "texture": "Egypt"
     },
     {
-      "hashid": "07DRyx",
-      "id": "egy sphynx head we",
+      "id": "07DRyx",
+      "name": "egy sphynx head we",
       "model": "egy_sphinx_head_we",
-      "texture": "Egypt",
-      "name": "egy sphynx head we"
+      "texture": "Egypt"
     },
     {
-      "hashid": "7nhh11",
-      "id": "egy sphynx tail we",
+      "id": "7nhh11",
+      "name": "egy sphynx tail we",
       "model": "egy_sphinx_tail_we",
-      "texture": "Egypt",
-      "name": "egy sphynx tail we"
+      "texture": "Egypt"
     },
     {
-      "hashid": "027QAT",
-      "id": "egy sphynx tail ew",
+      "id": "027QAT",
+      "name": "egy sphynx tail ew",
       "model": "egy_sphinx_tail_ew",
-      "texture": "Egypt",
-      "name": "egy sphynx tail ew"
+      "texture": "Egypt"
     },
     {
-      "hashid": "387khe",
-      "id": "egy sphynx head ew",
+      "id": "387khe",
+      "name": "egy sphynx head ew",
       "model": "egy_sphinx_head_ew",
-      "texture": "Egypt",
-      "name": "egy sphynx head ew"
+      "texture": "Egypt"
     },
     {
-      "hashid": "65mHU1",
-      "id": "egy sphynx head ns",
+      "id": "65mHU1",
+      "name": "egy sphynx head ns",
       "model": "egy_sphinx_head_ns",
-      "texture": "Egypt",
-      "name": "egy sphynx head ns"
+      "texture": "Egypt"
     },
     {
-      "hashid": "D9etjV",
-      "id": "egy sphynx tail ns",
+      "id": "D9etjV",
+      "name": "egy sphynx tail ns",
       "model": "egy_sphinx_tail_ns",
-      "texture": "Egypt",
-      "name": "egy sphynx tail ns"
+      "texture": "Egypt"
     },
     {
-      "hashid": "14uE72",
-      "id": "egy sphynx head sn",
+      "id": "14uE72",
+      "name": "egy sphynx head sn",
       "model": "egy_sphinx_head_sn",
-      "texture": "Egypt",
-      "name": "egy sphynx head sn"
+      "texture": "Egypt"
     },
     {
-      "hashid": "9wt2Qx",
-      "id": "egy sphynx tail sn",
+      "id": "9wt2Qx",
+      "name": "egy sphynx tail sn",
       "model": "egy_sphinx_tail_sn",
-      "texture": "Egypt",
-      "name": "egy sphynx tail sn"
+      "texture": "Egypt"
     },
     {
-      "hashid": "EDQx80",
-      "id": "med tile door start ns",
+      "id": "EDQx80",
+      "name": "med tile door start ns",
       "model": "med_tile_ns_door",
       "texture": "Medieval",
       "flags": "Start,Door",
-      "connections": "NS",
-      "name": "med tile door start ns"
+      "connections": "NS"
     },
     {
-      "hashid": "C7Q1f8",
-      "id": "med tile door start ew",
+      "id": "C7Q1f8",
+      "name": "med tile door start ew",
       "model": "med_tile_ew_door",
       "texture": "Medieval",
       "flags": "Start,Door",
-      "connections": "EW",
-      "name": "med tile door start ew"
+      "connections": "EW"
     },
     {
-      "hashid": "5rM4du",
-      "id": "med tile door end ns",
+      "id": "5rM4du",
+      "name": "med tile door end ns",
       "model": "med_tile_ns_door",
       "texture": "Medieval",
       "flags": "End,Door",
-      "connections": "NS",
-      "name": "med tile door end ns"
+      "connections": "NS"
     },
     {
-      "hashid": "2PVtd5",
-      "id": "med tile door end ew",
+      "id": "2PVtd5",
+      "name": "med tile door end ew",
       "model": "med_tile_ew_door",
       "texture": "Medieval",
       "flags": "End,Door",
-      "connections": "EW",
-      "name": "med tile door end ew"
+      "connections": "EW"
     },
     {
-      "hashid": "2KKauy",
-      "id": "med tile console n",
+      "id": "2KKauy",
+      "name": "med tile console n",
       "model": "med_console_n",
       "texture": "Medieval",
       "flags": "Console",
-      "connections": "N",
-      "name": "med tile console n"
+      "connections": "N"
     },
     {
-      "hashid": "7rF3cr",
-      "id": "med tile console e",
+      "id": "7rF3cr",
+      "name": "med tile console e",
       "model": "med_console_e",
       "texture": "Medieval",
       "flags": "Console",
-      "connections": "E",
-      "name": "med tile console e"
+      "connections": "E"
     },
     {
-      "hashid": "68VvpR",
-      "id": "med tile console s",
+      "id": "68VvpR",
+      "name": "med tile console s",
       "model": "med_console_s",
       "texture": "Medieval",
       "flags": "Console",
-      "connections": "S",
-      "name": "med tile console s"
+      "connections": "S"
     },
     {
-      "hashid": "5tper1",
-      "id": "med tile console w",
+      "id": "5tper1",
+      "name": "med tile console w",
       "model": "med_console_w",
       "texture": "Medieval",
       "flags": "Console",
-      "connections": "W",
-      "name": "med tile console w"
+      "connections": "W"
     },
     {
-      "hashid": "7U6WJe",
-      "id": "med tile boundary",
+      "id": "7U6WJe",
+      "name": "med tile boundary",
       "model": "med_tile_boundary",
-      "texture": "Medieval",
-      "name": "med tile boundary"
+      "texture": "Medieval"
     },
     {
-      "hashid": "81d2rQ",
-      "id": "med tile slide",
+      "id": "81d2rQ",
+      "name": "med tile slide",
       "model": "med_tile_slide",
       "texture": "Medieval",
-      "flags": "Roll",
-      "name": "med tile slide"
+      "flags": "Roll"
     },
     {
-      "hashid": "75dq85",
-      "id": "med tile static nesw",
+      "id": "75dq85",
+      "name": "med tile static nesw",
       "model": "med_tile_nsew_static",
       "texture": "Medieval",
-      "connections": "NSEW",
-      "name": "med tile static nesw"
+      "connections": "NSEW"
     },
     {
-      "hashid": "DWxH1r",
-      "id": "med tile static ns",
+      "id": "DWxH1r",
+      "name": "med tile static ns",
       "model": "med_tile_ns_static",
       "texture": "Medieval",
-      "connections": "NS",
-      "name": "med tile static ns"
+      "connections": "NS"
     },
     {
-      "hashid": "89kuMn",
-      "id": "med tile static ew",
+      "id": "89kuMn",
+      "name": "med tile static ew",
       "model": "med_tile_ew_static",
       "texture": "Medieval",
-      "connections": "EW",
-      "name": "med tile static ew"
+      "connections": "EW"
     },
     {
-      "hashid": "AARCfC",
-      "id": "med tile static se",
+      "id": "AARCfC",
+      "name": "med tile static se",
       "model": "med_tile_se_corner_static",
       "texture": "Medieval",
-      "connections": "SE",
-      "name": "med tile static se"
+      "connections": "SE"
     },
     {
-      "hashid": "7N90Y9",
-      "id": "med tile static sw",
+      "id": "7N90Y9",
+      "name": "med tile static sw",
       "model": "med_tile_sw_corner_static",
       "texture": "Medieval",
-      "connections": "SW",
-      "name": "med tile static sw"
+      "connections": "SW"
     },
     {
-      "hashid": "55GMx1",
-      "id": "med tile static ne",
+      "id": "55GMx1",
+      "name": "med tile static ne",
       "model": "med_tile_ne_corner_static",
       "texture": "Medieval",
-      "connections": "NE",
-      "name": "med tile static ne"
+      "connections": "NE"
     },
     {
-      "hashid": "A0rktC",
-      "id": "med tile static nw",
+      "id": "A0rktC",
+      "name": "med tile static nw",
       "model": "med_tile_nw_corner_static",
       "texture": "Medieval",
-      "connections": "NW",
-      "name": "med tile static nw"
+      "connections": "NW"
     },
     {
-      "hashid": "82jX54",
-      "id": "med tile nesw",
+      "id": "82jX54",
+      "name": "med tile nesw",
       "model": "med_tile_nsew",
       "texture": "Medieval",
       "flags": "Drag",
-      "connections": "NSEW",
-      "name": "med tile nesw"
+      "connections": "NSEW"
     },
     {
-      "hashid": "ACaMdD",
-      "id": "med tile ns",
+      "id": "ACaMdD",
+      "name": "med tile ns",
       "model": "med_tile_ns",
       "texture": "Medieval",
       "flags": "Drag",
-      "connections": "NS",
-      "name": "med tile ns"
+      "connections": "NS"
     },
     {
-      "hashid": "0CK7aj",
-      "id": "med tile ew",
+      "id": "0CK7aj",
+      "name": "med tile ew",
       "model": "med_tile_ew",
       "texture": "Medieval",
       "flags": "Drag",
-      "connections": "EW",
-      "name": "med tile ew"
+      "connections": "EW"
     },
     {
-      "hashid": "EKT0Mx",
-      "id": "med tile corner se",
+      "id": "EKT0Mx",
+      "name": "med tile corner se",
       "model": "med_tile_se_corner",
       "texture": "Medieval",
       "flags": "Drag",
-      "connections": "SE",
-      "name": "med tile corner se"
+      "connections": "SE"
     },
     {
-      "hashid": "9iPRD2",
-      "id": "med tile corner sw",
+      "id": "9iPRD2",
+      "name": "med tile corner sw",
       "model": "med_tile_sw_corner",
       "texture": "Medieval",
       "flags": "Drag",
-      "connections": "SW",
-      "name": "med tile corner sw"
+      "connections": "SW"
     },
     {
-      "hashid": "78F1P9",
-      "id": "med tile corner ne",
+      "id": "78F1P9",
+      "name": "med tile corner ne",
       "model": "med_tile_ne_corner",
       "texture": "Medieval",
       "flags": "Drag",
-      "connections": "NE",
-      "name": "med tile corner ne"
+      "connections": "NE"
     },
     {
-      "hashid": "5Ar0Yk",
-      "id": "med tile corner nw",
+      "id": "5Ar0Yk",
+      "name": "med tile corner nw",
       "model": "med_tile_nw_corner",
       "texture": "Medieval",
       "flags": "Drag",
-      "connections": "NW",
-      "name": "med tile corner nw"
+      "connections": "NW"
     },
     {
-      "hashid": "2qKvhv",
-      "id": "med boundary ne",
+      "id": "2qKvhv",
+      "name": "med boundary ne",
       "model": "med_tile_ne_boundary_corner",
-      "texture": "Medieval",
-      "name": "med boundary ne"
+      "texture": "Medieval"
     },
     {
-      "hashid": "1VmQcT",
-      "id": "med boundary nw",
+      "id": "1VmQcT",
+      "name": "med boundary nw",
       "model": "med_tile_nw_boundary_corner",
-      "texture": "Medieval",
-      "name": "med boundary nw"
+      "texture": "Medieval"
     },
     {
-      "hashid": "C9YW8X",
-      "id": "med boundary se",
+      "id": "C9YW8X",
+      "name": "med boundary se",
       "model": "med_tile_se_boundary_corner",
-      "texture": "Medieval",
-      "name": "med boundary se"
+      "texture": "Medieval"
     },
     {
-      "hashid": "6GRJvW",
-      "id": "med boundary sw",
+      "id": "6GRJvW",
+      "name": "med boundary sw",
       "model": "med_tile_sw_boundary_corner",
-      "texture": "Medieval",
-      "name": "med boundary sw"
+      "texture": "Medieval"
     },
     {
-      "hashid": "93Xvt6",
-      "id": "med boundary small ne",
+      "id": "93Xvt6",
+      "name": "med boundary small ne",
       "model": "med_tile_ne_boundary_sml_corner",
-      "texture": "Medieval",
-      "name": "med boundary small ne"
+      "texture": "Medieval"
     },
     {
-      "hashid": "Amvh9X",
-      "id": "med boundary small nw",
+      "id": "Amvh9X",
+      "name": "med boundary small nw",
       "model": "med_tile_nw_boundary_sml_corner",
-      "texture": "Medieval",
-      "name": "med boundary small nw"
+      "texture": "Medieval"
     },
     {
-      "hashid": "1RDyPf",
-      "id": "med boundary small se",
+      "id": "1RDyPf",
+      "name": "med boundary small se",
       "model": "med_tile_se_boundary_sml_corner",
-      "texture": "Medieval",
-      "name": "med boundary small se"
+      "texture": "Medieval"
     },
     {
-      "hashid": "4tPAV0",
-      "id": "med boundary small sw",
+      "id": "4tPAV0",
+      "name": "med boundary small sw",
       "model": "med_tile_sw_boundary_sml_corner",
-      "texture": "Medieval",
-      "name": "med boundary small sw"
+      "texture": "Medieval"
     },
     {
-      "hashid": "1MC943",
-      "id": "med boundary n",
+      "id": "1MC943",
+      "name": "med boundary n",
       "model": "med_tile_n_boundary_edge",
-      "texture": "Medieval",
-      "name": "med boundary n"
+      "texture": "Medieval"
     },
     {
-      "hashid": "CeqkTn",
-      "id": "med boundary e",
+      "id": "CeqkTn",
+      "name": "med boundary e",
       "model": "med_tile_e_boundary_edge",
-      "texture": "Medieval",
-      "name": "med boundary e"
+      "texture": "Medieval"
     },
     {
-      "hashid": "DH6h8R",
-      "id": "med boundary s",
+      "id": "DH6h8R",
+      "name": "med boundary s",
       "model": "med_tile_s_boundary_edge",
-      "texture": "Medieval",
-      "name": "med boundary s"
+      "texture": "Medieval"
     },
     {
-      "hashid": "9AGf3k",
-      "id": "med boundary w",
+      "id": "9AGf3k",
+      "name": "med boundary w",
       "model": "med_tile_w_boundary_edge",
-      "texture": "Medieval",
-      "name": "med boundary w"
+      "texture": "Medieval"
     },
     {
-      "hashid": "CYjh6D",
-      "id": "med boundary house blue ew",
+      "id": "CYjh6D",
+      "name": "med boundary house blue ew",
       "model": "med_tile_sml_blue_hse_ew",
-      "texture": "Medieval",
-      "name": "med boundary house blue ew"
+      "texture": "Medieval"
     },
     {
-      "hashid": "46VAC4",
-      "id": "med boundary house blue ns",
+      "id": "46VAC4",
+      "name": "med boundary house blue ns",
       "model": "med_tile_sml_blue_hse_ns",
-      "texture": "Medieval",
-      "name": "med boundary house blue ns"
+      "texture": "Medieval"
     },
     {
-      "hashid": "0pm8pC",
-      "id": "med boundary house red ew",
+      "id": "0pm8pC",
+      "name": "med boundary house red ew",
       "model": "med_tile_sml_red_hse_ew",
-      "texture": "Medieval",
-      "name": "med boundary house red ew"
+      "texture": "Medieval"
     },
     {
-      "hashid": "6iTdwH",
-      "id": "med boundary house red ns",
+      "id": "6iTdwH",
+      "name": "med boundary house red ns",
       "model": "med_tile_sml_red_hse_ns",
-      "texture": "Medieval",
-      "name": "med boundary house red ns"
+      "texture": "Medieval"
     },
     {
-      "hashid": "1YGxfJ",
-      "id": "med boundary house big blue ns",
+      "id": "1YGxfJ",
+      "name": "med boundary house big blue ns",
       "model": "med_tile_big_blue_hse_ns",
-      "texture": "Medieval",
-      "name": "med boundary house big blue ns"
+      "texture": "Medieval"
     },
     {
-      "hashid": "4rVDfa",
-      "id": "med boundary house big blue ew",
+      "id": "4rVDfa",
+      "name": "med boundary house big blue ew",
       "model": "med_tile_big_blue_hse_ew",
-      "texture": "Medieval",
-      "name": "med boundary house big blue ew"
+      "texture": "Medieval"
     },
     {
-      "hashid": "9Ep7Dj",
-      "id": "med boundary house big red ns",
+      "id": "9Ep7Dj",
+      "name": "med boundary house big red ns",
       "model": "med_tile_big_red_hse_ns",
-      "texture": "Medieval",
-      "name": "med boundary house big red ns"
+      "texture": "Medieval"
     },
     {
-      "hashid": "DCpRqe",
-      "id": "med boundary house big red ew",
+      "id": "DCpRqe",
+      "name": "med boundary house big red ew",
       "model": "med_tile_big_red_hse_ew",
-      "texture": "Medieval",
-      "name": "med boundary house big red ew"
+      "texture": "Medieval"
     },
     {
-      "hashid": "5y92UG",
-      "id": "med boundary cage n",
+      "id": "5y92UG",
+      "name": "med boundary cage n",
       "model": "med_tile_n_boundary_cage",
-      "texture": "Medieval",
-      "name": "med boundary cage n"
+      "texture": "Medieval"
     },
     {
-      "hashid": "AJvy6i",
-      "id": "med boundary cage e",
+      "id": "AJvy6i",
+      "name": "med boundary cage e",
       "model": "med_tile_e_boundary_cage",
-      "texture": "Medieval",
-      "name": "med boundary cage e"
+      "texture": "Medieval"
     },
     {
-      "hashid": "3CaHrC",
-      "id": "med boundary cage s",
+      "id": "3CaHrC",
+      "name": "med boundary cage s",
       "model": "med_tile_s_boundary_cage",
-      "texture": "Medieval",
-      "name": "med boundary cage s"
+      "texture": "Medieval"
     },
     {
-      "hashid": "2XQPEA",
-      "id": "med boundary cage w",
+      "id": "2XQPEA",
+      "name": "med boundary cage w",
       "model": "med_tile_w_boundary_cage",
-      "texture": "Medieval",
-      "name": "med boundary cage w"
+      "texture": "Medieval"
     },
     {
-      "hashid": "7WEY7G",
-      "id": "med boundary stocks ns",
+      "id": "7WEY7G",
+      "name": "med boundary stocks ns",
       "model": "med_tile_ns_stocks",
-      "texture": "Medieval",
-      "name": "med boundary stocks ns"
+      "texture": "Medieval"
     },
     {
-      "hashid": "0hQjDw",
-      "id": "med boundary stocks ew",
+      "id": "0hQjDw",
+      "name": "med boundary stocks ew",
       "model": "med_tile_ew_stocks",
-      "texture": "Medieval",
-      "name": "med boundary stocks ew"
+      "texture": "Medieval"
     },
     {
-      "hashid": "42vCh8",
-      "id": "med boundary well ew",
+      "id": "42vCh8",
+      "name": "med boundary well ew",
       "model": "med_tile_ew_well",
-      "texture": "Medieval",
-      "name": "med boundary well ew"
+      "texture": "Medieval"
     },
     {
-      "hashid": "052AE3",
-      "id": "med boundary well ns",
+      "id": "052AE3",
+      "name": "med boundary well ns",
       "model": "med_tile_ns_well",
-      "texture": "Medieval",
-      "name": "med boundary well ns"
+      "texture": "Medieval"
     },
     {
-      "hashid": "DPdUHW",
-      "id": "med boundary tent blue",
+      "id": "DPdUHW",
+      "name": "med boundary tent blue",
       "model": "med_tile_tent_blue",
-      "texture": "Medieval",
-      "name": "med boundary tent blue"
+      "texture": "Medieval"
     },
     {
-      "hashid": "AQwcFW",
-      "id": "med boundary tent green",
+      "id": "AQwcFW",
+      "name": "med boundary tent green",
       "model": "med_tile_tent_green",
-      "texture": "Medieval",
-      "name": "med boundary tent green"
+      "texture": "Medieval"
     },
     {
-      "hashid": "E4WjRD",
-      "id": "jun tile door start ns",
+      "id": "E4WjRD",
+      "name": "jun tile door start ns",
       "model": "jun_tile_ns_door",
       "texture": "Jungle",
       "flags": "Start,Door",
-      "connections": "NS",
-      "name": "jun tile door start ns"
+      "connections": "NS"
     },
     {
-      "hashid": "3qa2Jh",
-      "id": "jun tile door start ew",
+      "id": "3qa2Jh",
+      "name": "jun tile door start ew",
       "model": "jun_tile_ew_door",
       "texture": "Jungle",
       "flags": "Start,Door",
-      "connections": "EW",
-      "name": "jun tile door start ew"
+      "connections": "EW"
     },
     {
-      "hashid": "3fdhha",
-      "id": "jun tile door end ns",
+      "id": "3fdhha",
+      "name": "jun tile door end ns",
       "model": "jun_tile_ns_door",
       "texture": "Jungle",
       "flags": "End,Door",
-      "connections": "NS",
-      "name": "jun tile door end ns"
+      "connections": "NS"
     },
     {
-      "hashid": "99X6vK",
-      "id": "jun tile door end ew",
+      "id": "99X6vK",
+      "name": "jun tile door end ew",
       "model": "jun_tile_ew_door",
       "texture": "Jungle",
       "flags": "End,Door",
-      "connections": "EW",
-      "name": "jun tile door end ew"
+      "connections": "EW"
     },
     {
-      "hashid": "6jquRN",
-      "id": "jun tile console n",
+      "id": "6jquRN",
+      "name": "jun tile console n",
       "model": "jun_console_n",
       "texture": "Jungle",
       "flags": "Console",
-      "connections": "N",
-      "name": "jun tile console n"
+      "connections": "N"
     },
     {
-      "hashid": "2d9CTn",
-      "id": "jun tile console e",
+      "id": "2d9CTn",
+      "name": "jun tile console e",
       "model": "jun_console_e",
       "texture": "Jungle",
       "flags": "Console",
-      "connections": "E",
-      "name": "jun tile console e"
+      "connections": "E"
     },
     {
-      "hashid": "6cTc60",
-      "id": "jun tile console s",
+      "id": "6cTc60",
+      "name": "jun tile console s",
       "model": "jun_console_s",
       "texture": "Jungle",
       "flags": "Console",
-      "connections": "S",
-      "name": "jun tile console s"
+      "connections": "S"
     },
     {
-      "hashid": "D1M3eq",
-      "id": "jun tile console w",
+      "id": "D1M3eq",
+      "name": "jun tile console w",
       "model": "jun_console_w",
       "texture": "Jungle",
       "flags": "Console",
-      "connections": "W",
-      "name": "jun tile console w"
+      "connections": "W"
     },
     {
-      "hashid": "6c0yvj",
-      "id": "jun tile boundary",
+      "id": "6c0yvj",
+      "name": "jun tile boundary",
       "model": "jun_tile_boundary",
-      "texture": "Jungle",
-      "name": "jun tile boundary"
+      "texture": "Jungle"
     },
     {
-      "hashid": "603Cit",
-      "id": "jun tile bound pyramid",
+      "id": "603Cit",
+      "name": "jun tile bound pyramid",
       "model": "jun_tile_boundary_pyramid",
-      "texture": "Jungle",
-      "name": "jun tile bound pyramid"
+      "texture": "Jungle"
     },
     {
-      "hashid": "6n29xr",
-      "id": "jun tile slide",
+      "id": "6n29xr",
+      "name": "jun tile slide",
       "model": "jun_tile_slide",
       "texture": "Jungle",
-      "flags": "Roll",
-      "name": "jun tile slide"
+      "flags": "Roll"
     },
     {
-      "hashid": "0e2RF9",
-      "id": "jun tile static nesw",
+      "id": "0e2RF9",
+      "name": "jun tile static nesw",
       "model": "jun_tile_nsew_static",
       "texture": "Jungle",
-      "connections": "NSEW",
-      "name": "jun tile static nesw"
+      "connections": "NSEW"
     },
     {
-      "hashid": "D0JQ7D",
-      "id": "jun tile static ns",
+      "id": "D0JQ7D",
+      "name": "jun tile static ns",
       "model": "jun_tile_ns_static",
       "texture": "Jungle",
-      "connections": "NS",
-      "name": "jun tile static ns"
+      "connections": "NS"
     },
     {
-      "hashid": "AtFx8F",
-      "id": "jun tile static ew",
+      "id": "AtFx8F",
+      "name": "jun tile static ew",
       "model": "jun_tile_ew_static",
       "texture": "Jungle",
-      "connections": "EW",
-      "name": "jun tile static ew"
+      "connections": "EW"
     },
     {
-      "hashid": "Ei1XP8",
-      "id": "jun tile static se",
+      "id": "Ei1XP8",
+      "name": "jun tile static se",
       "model": "jun_tile_se_corner_static",
       "texture": "Jungle",
-      "connections": "SE",
-      "name": "jun tile static se"
+      "connections": "SE"
     },
     {
-      "hashid": "8C1K57",
-      "id": "jun tile static sw",
+      "id": "8C1K57",
+      "name": "jun tile static sw",
       "model": "jun_tile_sw_corner_static",
       "texture": "Jungle",
-      "connections": "SW",
-      "name": "jun tile static sw"
+      "connections": "SW"
     },
     {
-      "hashid": "9uNFv9",
-      "id": "jun tile static ne",
+      "id": "9uNFv9",
+      "name": "jun tile static ne",
       "model": "jun_tile_ne_corner_static",
       "texture": "Jungle",
-      "connections": "NE",
-      "name": "jun tile static ne"
+      "connections": "NE"
     },
     {
-      "hashid": "5Rm56f",
-      "id": "jun tile static nw",
+      "id": "5Rm56f",
+      "name": "jun tile static nw",
       "model": "jun_tile_nw_corner_static",
       "texture": "Jungle",
-      "connections": "NW",
-      "name": "jun tile static nw"
+      "connections": "NW"
     },
     {
-      "hashid": "44Rdar",
-      "id": "jun tile nesw",
+      "id": "44Rdar",
+      "name": "jun tile nesw",
       "model": "jun_tile_nsew",
       "texture": "Jungle",
       "flags": "Drag, Wash",
-      "connections": "NSEW",
-      "name": "jun tile nesw"
+      "connections": "NSEW"
     },
     {
-      "hashid": "AwcehK",
-      "id": "jun tile ns",
+      "id": "AwcehK",
+      "name": "jun tile ns",
       "model": "jun_tile_ns",
       "texture": "Jungle",
       "flags": "Drag, Wash",
-      "connections": "NS",
-      "name": "jun tile ns"
+      "connections": "NS"
     },
     {
-      "hashid": "AWe0fY",
-      "id": "jun tile ew",
+      "id": "AWe0fY",
+      "name": "jun tile ew",
       "model": "jun_tile_ew",
       "texture": "Jungle",
       "flags": "Drag, Wash",
-      "connections": "EW",
-      "name": "jun tile ew"
+      "connections": "EW"
     },
     {
-      "hashid": "2TwQT7",
-      "id": "jun tile corner se",
+      "id": "2TwQT7",
+      "name": "jun tile corner se",
       "model": "jun_tile_se_corner",
       "texture": "Jungle",
       "flags": "Drag, Wash",
-      "connections": "SE",
-      "name": "jun tile corner se"
+      "connections": "SE"
     },
     {
-      "hashid": "EPD1QN",
-      "id": "jun tile corner sw",
+      "id": "EPD1QN",
+      "name": "jun tile corner sw",
       "model": "jun_tile_sw_corner",
       "texture": "Jungle",
       "flags": "Drag, Wash",
-      "connections": "SW",
-      "name": "jun tile corner sw"
+      "connections": "SW"
     },
     {
-      "hashid": "8mNmuv",
-      "id": "jun tile corner ne",
+      "id": "8mNmuv",
+      "name": "jun tile corner ne",
       "model": "jun_tile_ne_corner",
       "texture": "Jungle",
       "flags": "Drag, Wash",
-      "connections": "NE",
-      "name": "jun tile corner ne"
+      "connections": "NE"
     },
     {
-      "hashid": "5N0e4P",
-      "id": "jun tile corner nw",
+      "id": "5N0e4P",
+      "name": "jun tile corner nw",
       "model": "jun_tile_nw_corner",
       "texture": "Jungle",
       "flags": "Drag, Wash",
-      "connections": "NW",
-      "name": "jun tile corner nw"
+      "connections": "NW"
     },
     {
-      "hashid": "1ePHrc",
-      "id": "jun tile stone nesw",
+      "id": "1ePHrc",
+      "name": "jun tile stone nesw",
       "model": "jun_tile_stone_nsew",
       "texture": "Jungle",
       "flags": "Drag",
-      "connections": "NSEW",
-      "name": "jun tile stone nesw"
+      "connections": "NSEW"
     },
     {
-      "hashid": "9xfXA2",
-      "id": "jun tile stone ns",
+      "id": "9xfXA2",
+      "name": "jun tile stone ns",
       "model": "jun_tile_stone_ns",
       "texture": "Jungle",
       "flags": "Drag",
-      "connections": "NS",
-      "name": "jun tile stone ns"
+      "connections": "NS"
     },
     {
-      "hashid": "8ankFH",
-      "id": "jun tile stone ew",
+      "id": "8ankFH",
+      "name": "jun tile stone ew",
       "model": "jun_tile_stone_ew",
       "texture": "Jungle",
       "flags": "Drag",
-      "connections": "EW",
-      "name": "jun tile stone ew"
+      "connections": "EW"
     },
     {
-      "hashid": "61ciV6",
-      "id": "jun tile stone ne",
+      "id": "61ciV6",
+      "name": "jun tile stone ne",
       "model": "jun_tile_stone_ne_corner",
       "texture": "Jungle",
       "flags": "Drag",
-      "connections": "NE",
-      "name": "jun tile stone ne"
+      "connections": "NE"
     },
     {
-      "hashid": "7vqpYT",
-      "id": "juin tile stone nw",
+      "id": "7vqpYT",
+      "name": "juin tile stone nw",
       "model": "jun_tile_stone_nw_corner",
       "texture": "Jungle",
       "flags": "Drag",
-      "connections": "NW",
-      "name": "juin tile stone nw"
+      "connections": "NW"
     },
     {
-      "hashid": "Dm3wdv",
-      "id": "jun tile stone se",
+      "id": "Dm3wdv",
+      "name": "jun tile stone se",
       "model": "jun_tile_stone_se_corner",
       "texture": "Jungle",
       "flags": "Drag",
-      "connections": "SE",
-      "name": "jun tile stone se"
+      "connections": "SE"
     },
     {
-      "hashid": "ACPqD4",
-      "id": "jun tile stone sw",
+      "id": "ACPqD4",
+      "name": "jun tile stone sw",
       "model": "jun_tile_stone_sw_corner",
       "texture": "Jungle",
       "flags": "Drag",
-      "connections": "SW",
-      "name": "jun tile stone sw"
+      "connections": "SW"
     },
     {
-      "hashid": "1mPQ2W",
-      "id": "jun boundary earth",
+      "id": "1mPQ2W",
+      "name": "jun boundary earth",
       "model": "jun_boundary_earth",
-      "texture": "Jungle",
-      "name": "jun boundary earth"
+      "texture": "Jungle"
     },
     {
-      "hashid": "1PDtN8",
-      "id": "jun boundary grass",
+      "id": "1PDtN8",
+      "name": "jun boundary grass",
       "model": "jun_boundary_grass",
-      "texture": "Jungle",
-      "name": "jun boundary grass"
+      "texture": "Jungle"
     },
     {
-      "hashid": "78tUdd",
-      "id": "jun boundary earth grass n",
+      "id": "78tUdd",
+      "name": "jun boundary earth grass n",
       "model": "jun_boundary_grass_earth_n_01",
-      "texture": "Jungle",
-      "name": "jun boundary earth grass n"
+      "texture": "Jungle"
     },
     {
-      "hashid": "A8dvQX",
-      "id": "jun boundary earth grass e",
+      "id": "A8dvQX",
+      "name": "jun boundary earth grass e",
       "model": "jun_boundary_grass_earth_e_01",
-      "texture": "Jungle",
-      "name": "jun boundary earth grass e"
+      "texture": "Jungle"
     },
     {
-      "hashid": "1HmFaF",
-      "id": "jun boundary earth grass s",
+      "id": "1HmFaF",
+      "name": "jun boundary earth grass s",
       "model": "jun_boundary_grass_earth_s_01",
-      "texture": "Jungle",
-      "name": "jun boundary earth grass s"
+      "texture": "Jungle"
     },
     {
-      "hashid": "1xmDmR",
-      "id": "jun boundary earth grass w",
+      "id": "1xmDmR",
+      "name": "jun boundary earth grass w",
       "model": "jun_boundary_grass_earth_w_01",
-      "texture": "Jungle",
-      "name": "jun boundary earth grass w"
+      "texture": "Jungle"
     },
     {
-      "hashid": "2jUH3p",
-      "id": "jun boundary earth grass ne",
+      "id": "2jUH3p",
+      "name": "jun boundary earth grass ne",
       "model": "jun_boundary_earth_grass_corner_ne",
-      "texture": "Jungle",
-      "name": "jun boundary earth grass ne"
+      "texture": "Jungle"
     },
     {
-      "hashid": "A5u11X",
-      "id": "jun boundary earth grass nw",
+      "id": "A5u11X",
+      "name": "jun boundary earth grass nw",
       "model": "jun_boundary_earth_grass_corner_nw",
-      "texture": "Jungle",
-      "name": "jun boundary earth grass nw"
+      "texture": "Jungle"
     },
     {
-      "hashid": "8C9W2Y",
-      "id": "jun boundary earth grass se",
+      "id": "8C9W2Y",
+      "name": "jun boundary earth grass se",
       "model": "jun_boundary_earth_grass_corner_se",
-      "texture": "Jungle",
-      "name": "jun boundary earth grass se"
+      "texture": "Jungle"
     },
     {
-      "hashid": "CcdPPq",
-      "id": "jun boundary earth grass sw",
+      "id": "CcdPPq",
+      "name": "jun boundary earth grass sw",
       "model": "jun_boundary_earth_grass_corner_sw",
-      "texture": "Jungle",
-      "name": "jun boundary earth grass sw"
+      "texture": "Jungle"
     },
     {
-      "hashid": "5F4DRj",
-      "id": "jun boundary grass earth n",
+      "id": "5F4DRj",
+      "name": "jun boundary grass earth n",
       "model": "jun_boundary_grass_earth_n",
-      "texture": "Jungle",
-      "name": "jun boundary grass earth n"
+      "texture": "Jungle"
     },
     {
-      "hashid": "9rArTe",
-      "id": "jun boundary grass earth e",
+      "id": "9rArTe",
+      "name": "jun boundary grass earth e",
       "model": "jun_boundary_grass_earth_e",
-      "texture": "Jungle",
-      "name": "jun boundary grass earth e"
+      "texture": "Jungle"
     },
     {
-      "hashid": "0FKYtx",
-      "id": "jun boundary grass earth s",
+      "id": "0FKYtx",
+      "name": "jun boundary grass earth s",
       "model": "jun_boundary_grass_earth_s",
-      "texture": "Jungle",
-      "name": "jun boundary grass earth s"
+      "texture": "Jungle"
     },
     {
-      "hashid": "8vTyhG",
-      "id": "jun boundary grass earth w",
+      "id": "8vTyhG",
+      "name": "jun boundary grass earth w",
       "model": "jun_boundary_grass_earth_w",
-      "texture": "Jungle",
-      "name": "jun boundary grass earth w"
+      "texture": "Jungle"
     },
     {
-      "hashid": "DcW8yq",
-      "id": "jun boundary grass earth ne",
+      "id": "DcW8yq",
+      "name": "jun boundary grass earth ne",
       "model": "jun_boundary_grass_earth_corner_ne",
-      "texture": "Jungle",
-      "name": "jun boundary grass earth ne"
+      "texture": "Jungle"
     },
     {
-      "hashid": "6kxTUU",
-      "id": "jun boundary grass earth nw",
+      "id": "6kxTUU",
+      "name": "jun boundary grass earth nw",
       "model": "jun_boundary_grass_earth_corner_nw",
-      "texture": "Jungle",
-      "name": "jun boundary grass earth nw"
+      "texture": "Jungle"
     },
     {
-      "hashid": "9yqhM8",
-      "id": "jun boundary grass earth se",
+      "id": "9yqhM8",
+      "name": "jun boundary grass earth se",
       "model": "jun_boundary_grass_earth_corner_se",
-      "texture": "Jungle",
-      "name": "jun boundary grass earth se"
+      "texture": "Jungle"
     },
     {
-      "hashid": "5rjNxQ",
-      "id": "jun boundary grass earth sw",
+      "id": "5rjNxQ",
+      "name": "jun boundary grass earth sw",
       "model": "jun_boundary_grass_earth_corner_sw",
-      "texture": "Jungle",
-      "name": "jun boundary grass earth sw"
+      "texture": "Jungle"
     },
     {
-      "hashid": "1EnmH9",
-      "id": "jun tree single",
+      "id": "1EnmH9",
+      "name": "jun tree single",
       "model": "jun_boundary_tree_single",
       "texture": "Jungle",
-      "flags": "Sway",
-      "name": "jun tree single"
+      "flags": "Sway"
     },
     {
-      "hashid": "E2Gx89",
-      "id": "jun tree plant",
+      "id": "E2Gx89",
+      "name": "jun tree plant",
       "model": "jun_boundary_tree_plant",
       "texture": "Jungle",
-      "flags": "Sway",
-      "name": "jun tree plant"
+      "flags": "Sway"
     },
     {
-      "hashid": "7k7k2n",
-      "id": "jun tree double",
+      "id": "7k7k2n",
+      "name": "jun tree double",
       "model": "jun_boundary_tree_double",
       "texture": "Jungle",
-      "flags": "Sway",
-      "name": "jun tree double"
+      "flags": "Sway"
     },
     {
-      "hashid": "EQj3fm",
-      "id": "jun plant",
+      "id": "EQj3fm",
+      "name": "jun plant",
       "model": "jun_boundary_plant",
-      "texture": "Jungle",
-      "name": "jun plant"
+      "texture": "Jungle"
     },
     {
-      "hashid": "6KHVk9",
-      "id": "jun boundary n",
+      "id": "6KHVk9",
+      "name": "jun boundary n",
       "model": "jun_tile_n_boundary_edge",
-      "texture": "Jungle",
-      "name": "jun boundary n"
+      "texture": "Jungle"
     },
     {
-      "hashid": "0JUcPq",
-      "id": "jun boundary e",
+      "id": "0JUcPq",
+      "name": "jun boundary e",
       "model": "jun_tile_e_boundary_edge",
-      "texture": "Jungle",
-      "name": "jun boundary e"
+      "texture": "Jungle"
     },
     {
-      "hashid": "EGepka",
-      "id": "jun boundary s",
+      "id": "EGepka",
+      "name": "jun boundary s",
       "model": "jun_tile_s_boundary_edge",
-      "texture": "Jungle",
-      "name": "jun boundary s"
+      "texture": "Jungle"
     },
     {
-      "hashid": "838XcK",
-      "id": "jun boundary w",
+      "id": "838XcK",
+      "name": "jun boundary w",
       "model": "jun_tile_w_boundary_edge",
-      "texture": "Jungle",
-      "name": "jun boundary w"
+      "texture": "Jungle"
     },
     {
-      "hashid": "8KGuUc",
-      "id": "jun boundary ne",
+      "id": "8KGuUc",
+      "name": "jun boundary ne",
       "model": "jun_tile_ne_boundary_corner",
-      "texture": "Jungle",
-      "name": "jun boundary ne"
+      "texture": "Jungle"
     },
     {
-      "hashid": "EAdjdw",
-      "id": "jun boundary nw",
+      "id": "EAdjdw",
+      "name": "jun boundary nw",
       "model": "jun_tile_nw_boundary_corner",
-      "texture": "Jungle",
-      "name": "jun boundary nw"
+      "texture": "Jungle"
     },
     {
-      "hashid": "4K3DFh",
-      "id": "jun boundary se",
+      "id": "4K3DFh",
+      "name": "jun boundary se",
       "model": "jun_tile_se_boundary_corner",
-      "texture": "Jungle",
-      "name": "jun boundary se"
+      "texture": "Jungle"
     },
     {
-      "hashid": "8Y4Fd7",
-      "id": "jun boundary sw",
+      "id": "8Y4Fd7",
+      "name": "jun boundary sw",
       "model": "jun_tile_sw_boundary_corner",
-      "texture": "Jungle",
-      "name": "jun boundary sw"
+      "texture": "Jungle"
     },
     {
-      "hashid": "5aXJkc",
-      "id": "jun boundary small ne",
+      "id": "5aXJkc",
+      "name": "jun boundary small ne",
       "model": "jun_tile_ne_boundary_sml_corner",
-      "texture": "Jungle",
-      "name": "jun boundary small ne"
+      "texture": "Jungle"
     },
     {
-      "hashid": "3P1w17",
-      "id": "jun boundary small nw",
+      "id": "3P1w17",
+      "name": "jun boundary small nw",
       "model": "jun_tile_nw_boundary_sml_corner",
-      "texture": "Jungle",
-      "name": "jun boundary small nw"
+      "texture": "Jungle"
     },
     {
-      "hashid": "2mDjuv",
-      "id": "jun boundary small se",
+      "id": "2mDjuv",
+      "name": "jun boundary small se",
       "model": "jun_tile_se_boundary_sml_corner",
-      "texture": "Jungle",
-      "name": "jun boundary small se"
+      "texture": "Jungle"
     },
     {
-      "hashid": "0u6p6h",
-      "id": "jun boundary small sw",
+      "id": "0u6p6h",
+      "name": "jun boundary small sw",
       "model": "jun_tile_sw_boundary_sml_corner",
-      "texture": "Jungle",
-      "name": "jun boundary small sw"
+      "texture": "Jungle"
     },
     {
-      "hashid": "9WypxN",
-      "id": "jun temple nw",
+      "id": "9WypxN",
+      "name": "jun temple nw",
       "model": "jun_boundary_temple_nw",
-      "texture": "Jungle",
-      "name": "jun temple nw"
+      "texture": "Jungle"
     },
     {
-      "hashid": "9mY9NU",
-      "id": "jun temple ne",
+      "id": "9mY9NU",
+      "name": "jun temple ne",
       "model": "jun_boundary_temple_ne",
-      "texture": "Jungle",
-      "name": "jun temple ne"
+      "texture": "Jungle"
     },
     {
-      "hashid": "1tj3Y7",
-      "id": "jun temple sw",
+      "id": "1tj3Y7",
+      "name": "jun temple sw",
       "model": "jun_boundary_temple_sw",
-      "texture": "Jungle",
-      "name": "jun temple sw"
+      "texture": "Jungle"
     },
     {
-      "hashid": "8809jj",
-      "id": "jun temple se",
+      "id": "8809jj",
+      "name": "jun temple se",
       "model": "jun_boundary_temple_se",
-      "texture": "Jungle",
-      "name": "jun temple se"
+      "texture": "Jungle"
     },
     {
-      "hashid": "9Aq8d4",
-      "id": "jun statue n",
+      "id": "9Aq8d4",
+      "name": "jun statue n",
       "model": "jun_boundary_statue_n",
-      "texture": "Jungle",
-      "name": "jun statue n"
+      "texture": "Jungle"
     },
     {
-      "hashid": "2eq9ii",
-      "id": "jun statue e",
+      "id": "2eq9ii",
+      "name": "jun statue e",
       "model": "jun_boundary_statue_e",
-      "texture": "Jungle",
-      "name": "jun statue e"
+      "texture": "Jungle"
     },
     {
-      "hashid": "DPmnTF",
-      "id": "jun statue s",
+      "id": "DPmnTF",
+      "name": "jun statue s",
       "model": "jun_boundary_statue_s",
-      "texture": "Jungle",
-      "name": "jun statue s"
+      "texture": "Jungle"
     },
     {
-      "hashid": "ED2j8M",
-      "id": "jun statue w",
+      "id": "ED2j8M",
+      "name": "jun statue w",
       "model": "jun_boundary_statue_w",
-      "texture": "Jungle",
-      "name": "jun statue w"
+      "texture": "Jungle"
     },
     {
-      "hashid": "0iKw85",
-      "id": "mud pool ne",
+      "id": "0iKw85",
+      "name": "mud pool ne",
       "model": "jun_mudpool_ne",
-      "texture": "Mud Pit",
-      "name": "mud pool ne"
+      "texture": "Mud Pit"
     },
     {
-      "hashid": "3J0Eri",
-      "id": "mud pool nw",
+      "id": "3J0Eri",
+      "name": "mud pool nw",
       "model": "jun_mudpool_nw",
-      "texture": "Mud Pit",
-      "name": "mud pool nw"
+      "texture": "Mud Pit"
     },
     {
-      "hashid": "5wfVrq",
-      "id": "mud pool se",
+      "id": "5wfVrq",
+      "name": "mud pool se",
       "model": "jun_mudpool_se",
-      "texture": "Mud Pit",
-      "name": "mud pool se"
+      "texture": "Mud Pit"
     },
     {
-      "hashid": "0RkVqY",
-      "id": "mud pool sw",
+      "id": "0RkVqY",
+      "name": "mud pool sw",
       "model": "jun_mudpool_sw",
-      "texture": "Mud Pit",
-      "name": "mud pool sw"
+      "texture": "Mud Pit"
     },
     {
-      "hashid": "75M6eC",
-      "id": "med tile boundary grass hd",
-      "model": "med_tile_boundary_grass_hd",
-      "name": "med tile boundary grass hd"
+      "id": "75M6eC",
+      "name": "med tile boundary grass hd",
+      "model": "med_tile_boundary_grass_hd"
     },
     {
-      "hashid": "9aNMhn",
-      "id": "med tile boundary tree 01 hd",
-      "model": "med_tile_boundary_tree_01_hd",
-      "name": "med tile boundary tree 01 hd"
+      "id": "9aNMhn",
+      "name": "med tile boundary tree 01 hd",
+      "model": "med_tile_boundary_tree_01_hd"
     },
     {
-      "hashid": "AMNtxe",
-      "id": "Eggbot Default",
+      "id": "AMNtxe",
+      "name": "Eggbot Default",
       "model": "eggbot_default",
-      "texture": "Eggbot Default",
-      "name": "Eggbot Default"
+      "texture": "Eggbot Default"
     },
     {
-      "hashid": "443D4h",
-      "id": "Eggbot Industrial",
+      "id": "443D4h",
+      "name": "Eggbot Industrial",
       "model": "eggbot_ind",
-      "texture": "Eggbot Industrial",
-      "name": "Eggbot Industrial"
+      "texture": "Eggbot Industrial"
     },
     {
-      "hashid": "528y34",
-      "id": "Eggbot Egypt",
+      "id": "528y34",
+      "name": "Eggbot Egypt",
       "model": "eggbot_egy",
-      "texture": "Eggbot Egypt",
-      "name": "Eggbot Egypt"
+      "texture": "Eggbot Egypt"
     },
     {
-      "hashid": "4tEvrp",
-      "id": "Eggbot Medieval",
+      "id": "4tEvrp",
+      "name": "Eggbot Medieval",
       "model": "eggbot_med",
-      "texture": "Eggbot Medieval",
-      "name": "Eggbot Medieval"
+      "texture": "Eggbot Medieval"
     },
     {
-      "hashid": "A44yj9",
-      "id": "Eggbot Jungle",
+      "id": "A44yj9",
+      "name": "Eggbot Jungle",
       "model": "eggbot_jun",
-      "texture": "Eggbot Jungle",
-      "name": "Eggbot Jungle"
+      "texture": "Eggbot Jungle"
     },
     {
-      "hashid": "836V9t",
-      "id": "Texture Test",
+      "id": "836V9t",
+      "name": "Texture Test",
       "model": "tile_flat",
-      "texture": "Texture Test",
-      "name": "Texture Test"
+      "texture": "Texture Test"
     },
     {
-      "hashid": "42vJcJ",
-      "id": "coin",
+      "id": "42vJcJ",
+      "name": "coin",
       "model": "coin",
-      "texture": "coin",
-      "name": "coin"
+      "texture": "coin"
     },
     {
-      "hashid": "176q90",
-      "id": "Alpha Test",
+      "id": "176q90",
+      "name": "Alpha Test",
       "model": "editor_quad",
-      "texture": "Alpha Test",
-      "name": "Alpha Test"
+      "texture": "Alpha Test"
     }
   ],
   "textures": [

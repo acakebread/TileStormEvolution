@@ -9,9 +9,8 @@ namespace ClassicTilestorm
 	[Serializable]
 	public class Definition
 	{
-		public string hashid;   // stable hash-based ID IO only version - internally stored as int
-		public string id;       // current: human-friendly / legacy name
-		public string name { get => id; set => id = value; }//future replacement for id - just the display name in the editor
+		public string id;// stable hash-based ID only version - internally stored as int - ToDo remove from class
+		public string name;
 		public string model;
 		public string texture;
 		public string material;
@@ -48,14 +47,14 @@ namespace ClassicTilestorm
 
 				int value;
 
-				if (string.IsNullOrEmpty(hashid))
+				if (string.IsNullOrEmpty(id))
 				{
 					value = RadixHash.GetSecureRandomHash32();
 					SetHashIDString(value); // ← helper does the encoding
 				}
 				else
 				{
-					value = HTB50.Decode(hashid);
+					value = HTB50.Decode(id);
 				}
 
 				_cachedHashID = value;
@@ -75,7 +74,7 @@ namespace ClassicTilestorm
 		// Private helper — single source of truth for encoding
 		private void SetHashIDString(int hashValue)
 		{
-			hashid = HTB50.EncodeFixed(
+			id = HTB50.EncodeFixed(
 				hashValue,
 				length: HTB50Settings.FixedLength,
 				padChar: '0',
@@ -84,7 +83,6 @@ namespace ClassicTilestorm
 		}
 
 		// ── CONDITIONAL SERIALIZATION ─────────────────────────────────────────
-		public bool ShouldSerializehashid() => !string.IsNullOrEmpty(hashid);
 		public bool ShouldSerializeid() => !string.IsNullOrEmpty(id);
 		public bool ShouldSerializename() => !string.IsNullOrEmpty(name);
 		public bool ShouldSerializemodel() => !string.IsNullOrEmpty(model);
@@ -194,7 +192,7 @@ namespace ClassicTilestorm
 
 		public static Definition Default => GetDefaultTile();   // cached if you want, but not necessary
 
-		public bool IsDefault() => string.Equals(hashid, GetDefaultTile().hashid, StringComparison.Ordinal);
+		public bool IsDefault() => HashID == GetDefaultTile().HashID;
 
 		// ── FACTORY ────────────────────────────────────────────────────────────
 		public static Definition GetDefaultTile()
@@ -209,9 +207,8 @@ namespace ClassicTilestorm
 
 			return new Definition
 			{
+				id = stable,
 				name = legacyNameForHash,
-				hashid = stable,
-
 				model = null,
 				texture = null,
 				material = null,
