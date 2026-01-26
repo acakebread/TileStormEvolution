@@ -509,48 +509,41 @@ namespace ClassicTilestorm
 			var newTiles = new int[newSize];
 			Array.Fill(newTiles, defaultIndex);
 
-			for (int z = 0; z < oldHeight; z++)
-				for (int x = 0; x < oldWidth; x++)
-				{
-					int oldIdx = z * oldWidth + x;
-					if (oldIdx >= tiles.Length) continue;
+			var newSolve = new int[newSize];  // starts zero-filled → good default for no-delta
 
-					int nx = x + offsetX;
-					int nz = z + offsetZ;
-
-					if (nx >= 0 && nx < newWidth && nz >= 0 && nz < newHeight)
-						newTiles[nz * newWidth + nx] = tiles[oldIdx];
-				}
-
-			var newSolve = new int[newSize];
-			if (solve != null && solve.Length == oldWidth * oldHeight)
+			for (int oldIdx = 0; oldIdx < oldWidth * oldHeight; oldIdx++)
 			{
-				for (int z = 0; z < oldHeight; z++)
-					for (int x = 0; x < oldWidth; x++)
+				// Safety skip (though usually unnecessary)
+				if (oldIdx >= tiles.Length) continue;
+
+				int newPos = Remap(oldIdx);
+				if (newPos < 0) continue;  // out of new bounds → skip
+
+				// Copy tile index
+				newTiles[newPos] = tiles[oldIdx];
+
+				// Handle solve delta (only if solve exists and is valid size)
+				if (solve != null && oldIdx < solve.Length)
+				{
+					int delta = solve[oldIdx];
+					if (delta != 0)
 					{
-						int oldIdx = z * oldWidth + x;
-						int delta = solve[oldIdx];
-						if (delta == 0) continue;
+						int oldSrcIdx = oldIdx + delta;
 
-						int srcIdx = oldIdx + delta;
-						if (srcIdx < 0 || srcIdx >= solve.Length) continue;
-
-						int srcX = srcIdx % oldWidth;
-						int srcZ = srcIdx / oldWidth;
-
-						int nx = x + offsetX;
-						int nz = z + offsetZ;
-						int nsx = srcX + offsetX;
-						int nsz = srcZ + offsetZ;
-
-						if (nx >= 0 && nx < newWidth && nz >= 0 && nz < newHeight &&
-							nsx >= 0 && nsx < newWidth && nsz >= 0 && nsz < newHeight)
+						// Only remap if source index was valid
+						if (oldSrcIdx >= 0 && oldSrcIdx < solve.Length)
 						{
-							int newPos = nz * newWidth + nx;
-							int newSrc = nsz * newWidth + nsx;
-							newSolve[newPos] = newSrc - newPos;
+							int newSrcPos = Remap(oldSrcIdx);
+
+							// Only keep delta if BOTH positions are inside new map
+							if (newSrcPos >= 0)
+							{
+								newSolve[newPos] = newSrcPos - newPos;
+							}
+							// else: source moved out → delta becomes invalid → leave 0
 						}
 					}
+				}
 			}
 
 			int Remap(int idx)
