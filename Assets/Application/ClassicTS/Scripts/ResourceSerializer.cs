@@ -252,8 +252,10 @@ namespace ClassicTilestorm
 		{
 			var copy = map.Clone();
 
+			copy.CropToContent(true);
+
 			if (copy.CropToContent(true))
-				Debug.Log($"[Export] Map '{copy.name}' auto-cropped to {copy.width}x{copy.height}");
+				Debug.Log($"[Export] Map '{copy.name}' table consolidated table {((Map.IHashAccess)map).Hashes.Length} or auto-cropped to {copy.width}x{copy.height}");
 
 			return copy;
 		}
