@@ -86,7 +86,13 @@ namespace ClassicTilestorm
 			int placeX = Mathf.FloorToInt(snappedPos.x);
 			int placeZ = Mathf.FloorToInt(snappedPos.z);
 
-			iMap.UpdateTileAt(placeX, placeZ, hashToPlace);
+			//iMap.UpdateTileAt(placeX, placeZ, hashToPlace);
+
+			// Example: random delta and angle when placing
+			float randomAngle = new[] { 0f, 90f, 180f, 270f }[UnityEngine.Random.Range(0, 4)];
+			float randomDelta = new[] { 0f, 0.25f, 0.5f, 0.75f, 1f }[UnityEngine.Random.Range(0, 5)];
+
+			iMap.UpdateTileAt(placeX, placeZ, hashToPlace, randomDelta, randomAngle);
 		}
 
 		// Called from panel — takes hashid directly

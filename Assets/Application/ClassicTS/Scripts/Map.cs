@@ -62,7 +62,8 @@ namespace ClassicTilestorm
 		Vector3 WorldPosition(int tileIndex, Vector3 localPosition);
 
 		HashId GetTileID(int _);
-		bool UpdateTileAt(int x, int z, HashId hashId);
+		//bool UpdateTileAt(int x, int z, HashId hashId);
+		bool UpdateTileAt(int x, int z, HashId hashId, float delta = 0f, float angle = 0f);
 
 		void AddAttachment(MapAttachment _);
 		bool RemoveAttachment(MapAttachment _);
@@ -1016,7 +1017,128 @@ namespace ClassicTilestorm
 		//	return true;
 		//}
 
-		public bool UpdateTileAt(int x, int z, HashId hashId)
+		//public bool UpdateTileAt(int x, int z, HashId hashId)
+		//{
+		//	if (tiles == null || tiles.Length == 0)
+		//	{
+		//		Debug.LogError("Cannot update tile: map has no tiles array");
+		//		return false;
+		//	}
+
+		//	int oldWidth = width;
+		//	int oldHeight = height;
+		//	var oldBounds = GetContentBounds();
+
+		//	Vector3 originDelta = Vector3.zero;
+		//	bool sizeChanged = false;
+
+		//	// If coordinate out of bounds → expand automatically
+		//	if (x < 0 || x >= width || z < 0 || z >= height)
+		//	{
+		//		bool didResize = RepositionAndResize(x, z);
+
+		//		if (didResize)
+		//		{
+		//			int minX = Mathf.Min(0, x);
+		//			int minZ = Mathf.Min(0, z);
+		//			int offsetX = -minX;
+		//			int offsetZ = -minZ;
+
+		//			if (x < 0) originDelta.x = offsetX;
+		//			if (z < 0) originDelta.z = offsetZ;
+
+		//			x += offsetX;
+		//			z += offsetZ;
+
+		//			sizeChanged = true;
+		//		}
+		//		else
+		//		{
+		//			Debug.LogWarning($"Cannot place tile at ({x},{z}) — map resize failed (too large?)");
+		//			return false;
+		//		}
+		//	}
+
+		//	int index = z * width + x;
+
+		//	// ────────────────────────────────────────────────────────────────
+		//	// Choose a random angle: 0, 90, 180, or 270 degrees
+		//	// ────────────────────────────────────────────────────────────────
+		//	float[] possibleAngles = { 0f, 90f, 180f, 270f };
+		//	float chosenAngle = possibleAngles[UnityEngine.Random.Range(0, possibleAngles.Length)];
+
+		//	// ────────────────────────────────────────────────────────────────
+		//	// Look for existing variant with same hash AND same angle
+		//	// ────────────────────────────────────────────────────────────────
+		//	int tableIndex = -1;
+
+		//	for (int i = 0; i < variants.Length; i++)
+		//	{
+		//		if (variants[i].hash == hashId && Mathf.Approximately(variants[i].angle, chosenAngle))
+		//		{
+		//			tableIndex = i;
+		//			break;
+		//		}
+		//	}
+
+		//	// If no matching variant found → create new one
+		//	if (tableIndex == -1)
+		//	{
+		//		var newVariant = new Variant(hashId, chosenAngle, 0f); // delta = 0 for now
+
+		//		variants = variants != null
+		//			? variants.Concat(new[] { newVariant }).ToArray()
+		//			: new[] { newVariant };
+
+		//		tableIndex = variants.Length - 1;
+		//	}
+
+		//	tiles[index] = tableIndex;
+
+		//	// ────────────────────────────────────────────────────────────────
+		//	// Rest of the method unchanged
+		//	// ────────────────────────────────────────────────────────────────
+		//	bool cropped = false;
+
+		//	var def = ResourceManager.GetDefinition(hashId);
+		//	bool isDefaultTile = def?.IsDefault() ?? false;
+
+		//	if (isDefaultTile || sizeChanged)
+		//	{
+		//		var newBounds = GetContentBounds();
+		//		cropped = CropToContent();
+
+		//		if (cropped)
+		//		{
+		//			originDelta += new Vector3(
+		//				oldBounds.minX - newBounds.minX,
+		//				0,
+		//				oldBounds.minZ - newBounds.minZ
+		//			);
+		//			sizeChanged = true;
+		//		}
+		//	}
+
+		//	bool boundsChanged = sizeChanged || width != oldWidth || height != oldHeight || cropped;
+
+		//	if (boundsChanged)
+		//	{
+		//		RecreateTiles();
+		//		RefreshAttachments(GetAttachments());
+		//	}
+		//	else
+		//	{
+		//		GetGraphTile(index).Destroy();
+		//		graph[index] = new Tile(variants[tableIndex], parent, TileWorldPosition(index));
+		//		RefreshAttachments(GetAttachments(tileIndex: index));
+		//	}
+
+		//	OnMapEdited?.Invoke(this, boundsChanged, originDelta);
+
+		//	return true;
+		//}
+
+		public bool UpdateTileAt(int x, int z, HashId hashId, float delta = 0f, float angle = 0f)
 		{
 			if (tiles == null || tiles.Length == 0)
 			{
@@ -1061,29 +1183,27 @@ namespace ClassicTilestorm
 			int index = z * width + x;
 
 			// ────────────────────────────────────────────────────────────────
-			// Choose a random angle: 0, 90, 180, or 270 degrees
-			// ────────────────────────────────────────────────────────────────
-			float[] possibleAngles = { 0f, 90f, 180f, 270f };
-			float chosenAngle = possibleAngles[UnityEngine.Random.Range(0, possibleAngles.Length)];
-
-			// ────────────────────────────────────────────────────────────────
-			// Look for existing variant with same hash AND same angle
+			// Find or create variant with exact hash + angle + delta
 			// ────────────────────────────────────────────────────────────────
 			int tableIndex = -1;
 
+			// First: look for exact match (hash + angle + delta)
 			for (int i = 0; i < variants.Length; i++)
 			{
-				if (variants[i].hash == hashId && Mathf.Approximately(variants[i].angle, chosenAngle))
+				var v = variants[i];
+				if (v.hash == hashId &&
+					Mathf.Approximately(v.angle, angle) &&
+					Mathf.Approximately(v.delta, delta))
 				{
 					tableIndex = i;
 					break;
 				}
 			}
 
-			// If no matching variant found → create new one
+			// If no exact match → create new variant
 			if (tableIndex == -1)
 			{
-				var newVariant = new Variant(hashId, chosenAngle, 0f); // delta = 0 for now
+				var newVariant = new Variant(hashId, angle, delta);
 
 				variants = variants != null
 					? variants.Concat(new[] { newVariant }).ToArray()
