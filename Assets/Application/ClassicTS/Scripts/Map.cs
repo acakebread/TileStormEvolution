@@ -195,7 +195,7 @@ namespace ClassicTilestorm
 		/// <summary>
 		/// Returns true if this map uses the given hash ID at least once.
 		/// </summary>
-		public bool IsDefinitionUsed(int hashId)
+		public bool IsDefinitionUsed(HashId hashId)
 		{
 			if (hashId == 0) return false;
 			return hashes?.Contains(hashId) == true;
@@ -204,7 +204,7 @@ namespace ClassicTilestorm
 		/// <summary>
 		/// Returns how many times this map uses the given hash ID in its tile table.
 		/// </summary>
-		public int DefinitionUsageCount(int hashId)
+		public int DefinitionUsageCount(HashId hashId)
 		{
 			if (hashId == 0) return 0;
 			return hashes?.Count(h => h == hashId) ?? 0;
