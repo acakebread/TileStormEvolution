@@ -78,7 +78,6 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			// On-map → proceed with erase or cycle logic
 			if (erase)
 			{
 				var defaultHash = ResourceManager.FindOrCreateDefaultTile().HashID;
@@ -101,25 +100,33 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			// Same hash → cycle angle and delta
+			// Same hash → cycle in desired order: delta outer, angle inner
 			float[] angles = { 0f, 90f, 180f, 270f };
 			float[] deltas = { 0f, 0.25f, 0.5f, 0.75f, 1f };
 
+			// Find current position in the cycle
 			int angleIdx = Array.IndexOf(angles, currentVariant.angle);
 			if (angleIdx == -1) angleIdx = 0;
 
 			int deltaIdx = Array.IndexOf(deltas, currentVariant.delta);
 			if (deltaIdx == -1) deltaIdx = 0;
 
+			// Advance inner cycle (angle) first
 			int nextAngleIdx = (angleIdx + 1) % angles.Length;
-			int nextDeltaIdx = (deltaIdx + 1) % deltas.Length;
+			int nextDeltaIdx = deltaIdx;
+
+			// If angle wrapped around → advance delta
+			if (nextAngleIdx == 0)
+			{
+				nextDeltaIdx = (deltaIdx + 1) % deltas.Length;
+			}
 
 			float nextAngle = angles[nextAngleIdx];
 			float nextDelta = deltas[nextDeltaIdx];
 
 			iMap.UpdateTileAt(placeX, placeZ, selectedHashId, nextDelta, nextAngle);
 
-			Debug.Log($"Cycled at ({placeX},{placeZ}): angle {currentVariant.angle:F0}→{nextAngle:F0}, delta {currentVariant.delta:F2}→{nextDelta:F2}");
+			Debug.Log($"Cycled at ({placeX},{placeZ}): delta {currentVariant.delta:F2}→{nextDelta:F2}, angle {currentVariant.angle:F0}→{nextAngle:F0}");
 		}
 
 		//private void EditMapTile(bool erase = false)
