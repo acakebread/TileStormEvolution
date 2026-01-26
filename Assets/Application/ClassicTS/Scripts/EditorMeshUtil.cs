@@ -41,15 +41,16 @@ namespace ClassicTilestorm
 				if (ghostMesh != null)
 					Object.DestroyImmediate(ghostMesh);
 
-				string prefabPath = GetGeometryPath(definition.model);
-				if (string.IsNullOrEmpty(prefabPath))
-				{
-					ghostMesh = null;
-					return;
-				}
+				//string prefabPath = GetGeometryPath(definition.model);
+				//if (string.IsNullOrEmpty(prefabPath))
+				//{
+				//	ghostMesh = null;
+				//	return;
+				//}
 
 				// Direct, clean, raw instantiation — no runtime junk added
-				ghostMesh = Assets.ModelAssets.Instantiate(prefabPath, parent: MainController.MapRoot);
+				//ghostMesh = Assets.ModelAssets.Instantiate(prefabPath, parent: MainController.MapRoot);
+				ghostMesh = Assets.ModelAssets.Instantiate(definition.model, parent: MainController.MapRoot);
 
 				if (ghostMesh != null)
 				{

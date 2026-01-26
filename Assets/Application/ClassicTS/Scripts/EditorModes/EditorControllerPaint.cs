@@ -11,7 +11,7 @@ namespace ClassicTilestorm
 	{
 		private Vector3 mouseDownPos;
 
-		private int selectedHashId;// hashid — placement & ghost
+		private HashId selectedHashId;// hashid — placement & ghost
 		public int SelectedHashId => selectedHashId;
 
 		private List<Definition> cycleDefinitions = new();  // list of full definitions for cycling
@@ -65,16 +65,10 @@ namespace ClassicTilestorm
 
 			if (mapIndex == -1)
 			{
-				// Off-map → just place the currently selected tile (no cycling)
-				if (erase)
-				{
-					var defaultHash = ResourceManager.FindOrCreateDefaultTile().HashID;
-					iMap.UpdateTileAt(placeX, placeZ, defaultHash, 0f, 0f);
-				}
-				else
-				{
-					iMap.UpdateTileAt(placeX, placeZ, selectedHashId, 0f, 0f);
-				}
+				// Off-map → just place default/selected (no cycling or ghost)
+				var hashToPlace = erase ? ResourceManager.FindOrCreateDefaultTile().HashID : selectedHashId;
+				iMap.UpdateTileAt(placeX, placeZ, hashToPlace, 0f, 0f);
+				EditorMeshUtil.DestroyGhostMesh();
 				return;
 			}
 
@@ -82,40 +76,42 @@ namespace ClassicTilestorm
 			{
 				var defaultHash = ResourceManager.FindOrCreateDefaultTile().HashID;
 				iMap.UpdateTileAt(placeX, placeZ, defaultHash, 0f, 0f);
+				EditorMeshUtil.DestroyGhostMesh();
 				return;
 			}
 
-			// Get current variant only if on-map
+			// Get current variant at this map index
 			var currentVariant = iMap.GetVariantAt(mapIndex);
 			HashId currentHash = currentVariant.hash;
 
 			var selectedDef = ResourceManager.GetDefinition(selectedHashId);
 
-			// If tile is empty/default or different type → place selected with 0/0
+			// If different tile or default → place selected with 0/0, update ghost
 			if (currentHash == 0 ||
 				(selectedDef?.IsDefault() ?? false) ||
 				currentHash != selectedHashId)
 			{
 				iMap.UpdateTileAt(placeX, placeZ, selectedHashId, 0f, 0f);
+				EditorMeshUtil.DestroyGhostMesh();  // reset ghost
+				EditorMeshUtil.UpdateGhostMesh(camera, iMap, selectedDef);  // show new selected
 				return;
 			}
 
-			// Same hash → cycle in desired order: delta outer, angle inner
+			// Same hash → cycle delta/angle, update ghost to show NEXT state
 			float[] angles = { 0f, 90f, 180f, 270f };
 			float[] deltas = { 0f, 0.25f, 0.5f, 0.75f, 1f };
 
-			// Find current position in the cycle
 			int angleIdx = Array.IndexOf(angles, currentVariant.angle);
 			if (angleIdx == -1) angleIdx = 0;
 
 			int deltaIdx = Array.IndexOf(deltas, currentVariant.delta);
 			if (deltaIdx == -1) deltaIdx = 0;
 
-			// Advance inner cycle (angle) first
+			// Advance inner (angle) first
 			int nextAngleIdx = (angleIdx + 1) % angles.Length;
 			int nextDeltaIdx = deltaIdx;
 
-			// If angle wrapped around → advance delta
+			// If angle wrapped → advance delta
 			if (nextAngleIdx == 0)
 			{
 				nextDeltaIdx = (deltaIdx + 1) % deltas.Length;
@@ -124,9 +120,23 @@ namespace ClassicTilestorm
 			float nextAngle = angles[nextAngleIdx];
 			float nextDelta = deltas[nextDeltaIdx];
 
+			// Apply the cycle
 			iMap.UpdateTileAt(placeX, placeZ, selectedHashId, nextDelta, nextAngle);
 
-			Debug.Log($"Cycled at ({placeX},{placeZ}): delta {currentVariant.delta:F2}→{nextDelta:F2}, angle {currentVariant.angle:F0}→{nextAngle:F0}");
+			// Update ghost to preview the NEXT cycle state (after this place)
+			int previewAngleIdx = (nextAngleIdx + 1) % angles.Length;
+			int previewDeltaIdx = nextDeltaIdx;
+			if (previewAngleIdx == 0)
+				previewDeltaIdx = (nextDeltaIdx + 1) % deltas.Length;
+
+			float previewAngle = angles[previewAngleIdx];
+			float previewDelta = deltas[previewDeltaIdx];
+
+			//only do this ehen slection changes!!!!!!!
+			EditorMeshUtil.DestroyGhostMesh();
+			EditorMeshUtil.UpdateGhostMesh(camera, iMap, selectedDef);
+
+			//Debug.Log($"Cycled at ({placeX},{placeZ}): delta {currentVariant.delta:F2}→{nextDelta:F2}, angle {currentVariant.angle:F0}→{nextAngle:F0} (preview next: {previewDelta:F2}@{previewAngle:F0}°)");
 		}
 
 		//private void EditMapTile(bool erase = false)
