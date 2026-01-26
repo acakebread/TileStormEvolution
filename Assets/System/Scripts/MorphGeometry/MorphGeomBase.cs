@@ -35,7 +35,7 @@ namespace MassiveHadronLtd
 				meshFilter = meshRenderer.GetComponent<MeshFilter>();
 				if (meshFilter != null)
 				{
-					Debug.Log($"{GetType().Name}: Found MeshFilter via MeshRenderer on {meshRenderer.gameObject.name}");
+					//Debug.Log($"{GetType().Name}: Found MeshFilter via MeshRenderer on {meshRenderer.gameObject.name}");
 				}
 			}
 			else
@@ -44,13 +44,13 @@ namespace MassiveHadronLtd
 				meshFilter = GetComponent<MeshFilter>() ?? GetComponentInChildren<MeshFilter>(true);
 				if (meshFilter != null)
 				{
-					Debug.Log($"{GetType().Name}: Found MeshFilter on {meshFilter.gameObject.name}");
+					//Debug.Log($"{GetType().Name}: Found MeshFilter on {meshFilter.gameObject.name}");
 				}
 			}
 
 			if (meshFilter == null || meshFilter.sharedMesh == null)
 			{
-				Debug.LogWarning($"{GetType().Name}: No MeshFilter or mesh found on {gameObject.name} or its children. Disabling component.");
+				//Debug.LogWarning($"{GetType().Name}: No MeshFilter or mesh found on {gameObject.name} or its children. Disabling component.");
 				enabled = false;
 				return;
 			}
@@ -82,11 +82,11 @@ namespace MassiveHadronLtd
 			// Initialize influence volume
 			UpdateInfluenceVolume();
 
-			// Debug vertex inclusion
-			if (Debug.isDebugBuild)
-			{
-				DebugVertexInclusion();
-			}
+			//// Debug vertex inclusion
+			//if (Debug.isDebugBuild)
+			//{
+			//	DebugVertexInclusion();
+			//}
 		}
 
 		// Public method to configure subdivision and reinitialize
@@ -115,10 +115,10 @@ namespace MassiveHadronLtd
 			// Use MeshStratifier with numStrata = 3
 			Mesh newMesh = MeshStratifier.StratifyMesh(inputMesh, minPlane, numStrata: 3);
 
-			if (Debug.isDebugBuild)
-			{
-				Debug.Log($"{GetType().Name}: Stratified mesh from {originalVertexCount} to {newMesh.vertexCount} vertices, and {originalTrianglesCount / 3} to {newMesh.triangles.Length / 3} triangles");
-			}
+			//if (Debug.isDebugBuild)
+			//{
+			//	Debug.Log($"{GetType().Name}: Stratified mesh from {originalVertexCount} to {newMesh.vertexCount} vertices, and {originalTrianglesCount / 3} to {newMesh.triangles.Length / 3} triangles");
+			//}
 
 			return newMesh;
 		}
@@ -143,7 +143,7 @@ namespace MassiveHadronLtd
 			// Expand bounds to account for epsilon
 			influenceVolume.Expand(boundsEpsilon * 2f);
 
-			Debug.Log($"{GetType().Name}: Influence volume - Center: {influenceVolume.center}, Size: {influenceVolume.size}");
+			//Debug.Log($"{GetType().Name}: Influence volume - Center: {influenceVolume.center}, Size: {influenceVolume.size}");
 		}
 
 		private Bounds CalculateWorldSpaceBounds()
@@ -255,10 +255,10 @@ namespace MassiveHadronLtd
 				{
 					includedVertices++;
 				}
-				//else
-				//{
-				//	Debug.LogWarning($"{GetType().Name}: Vertex at world pos {worldPos} excluded from influence volume {influenceVolume.center}, {influenceVolume.size}");
-				//}
+				else
+				{
+					Debug.LogWarning($"{GetType().Name}: Vertex at world pos {worldPos} excluded from influence volume {influenceVolume.center}, {influenceVolume.size}");
+				}
 			}
 			Debug.Log($"{GetType().Name}: {includedVertices}/{meshFilter.sharedMesh.vertices.Length} vertices included in influence volume");
 		}

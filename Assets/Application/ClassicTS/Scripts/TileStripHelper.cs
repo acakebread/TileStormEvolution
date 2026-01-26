@@ -104,10 +104,10 @@ namespace ClassicTilestorm
 
 		public static bool RollStrip(IMapPlay map, TileStrip strip, int adjust = 1)
 		{
-			if (strip.Count <= 1 || null == strip.Indices || null == map.Indices)
+			if (strip.Count <= 1 || null == strip.Indices || null == map.State)
 				return false;
 
-			ArrayExtensions.RollArray(map.Indices, strip.First, strip.Count, adjust, strip.Stride);
+			ArrayExtensions.RollArray(map.State, strip.First, strip.Count, adjust, strip.Stride);
 
 			ResetStrip(map, strip);
 

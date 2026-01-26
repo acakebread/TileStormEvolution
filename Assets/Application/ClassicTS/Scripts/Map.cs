@@ -31,7 +31,7 @@ namespace ClassicTilestorm
 		int Width { get; }
 		int Height { get; }
 		int Count { get; }
-		int[] Indices { get; }
+		int[] State { get; }
 	}
 
 	public interface IMapPlay : IMapData
@@ -109,7 +109,7 @@ namespace ClassicTilestorm
 		[JsonIgnore] public int Width => width;
 		[JsonIgnore] public int Height => height;
 		[JsonIgnore] public int Count => Width * Height;
-		[JsonIgnore] public int[] Indices => state;
+		[JsonIgnore] public int[] State { get => state = state?.Length == width * height ? state : Enumerable.Range(0, width * height).ToArray(); }//set => state = value; 
 		[JsonIgnore] public string Music { get => music; set => music = value; }
 		[JsonIgnore] public string Skybox { get => skybox; set => skybox = value; }
 
@@ -167,10 +167,10 @@ namespace ClassicTilestorm
 		// ─────────────────────────────────────────────
 
 		[JsonIgnore] private int[] state; // runtime permutation, never serialized
-		[JsonIgnore] private Tile[] _graph; // private backing field (never serialized)
 
-		[JsonIgnore]
-		private Tile[] graph
+		[JsonIgnore] private int graphCount => graph.Length;
+		[JsonIgnore] private Tile[] _graph; // private backing field (never serialized)
+		[JsonIgnore] private Tile[] graph
 		{
 			get
 			{
@@ -183,52 +183,75 @@ namespace ClassicTilestorm
 					return Array.Empty<Tile>();
 				}
 
-				// Safety: ensure state is always valid length
-				if (state == null || state.Length != width * height)
-				{
-					Debug.LogWarning($"State invalid (null or wrong length {state?.Length ?? -1}). Resetting to identity.");
-					state = Enumerable.Range(0, width * height).ToArray();
-				}
-
 				_graph = new Tile[width * height];
 
-				Debug.Log($"Rebuilding graph | state first 8: [{string.Join(", ", tiles.Take(8))}]");
+				//Debug.Log($"Rebuilding graph | state first 8: [{string.Join(", ", tiles.Take(8))}]");
 
 				for (int visualIndex = 0; visualIndex < _graph.Length; visualIndex++)
 				{
-					int logicalIndex = visualIndex;
-
-					if (logicalIndex < 0 || logicalIndex >= tiles.Length)
-					{
-						Debug.LogWarning($"Invalid state[{visualIndex}] = {logicalIndex} — using default");
-						_graph[visualIndex] = new Tile(new Variant(0), parent, TileWorldPosition(visualIndex));
-						continue;
-					}
-
-					int tableIdx = tiles[logicalIndex];
-					Variant variant = GetVariantForIndex(logicalIndex);
-
-					_graph[visualIndex] = new Tile(variant, parent, TileWorldPosition(visualIndex));
-
-#if DEBUG
-					var go = _graph[visualIndex].gameObject;
-					if (go != null)
-					{
-						Vector3 basePos = TileWorldPosition(visualIndex);
-						Vector3 displayPos = basePos + new Vector3(0f, variant.delta, 0f);
-						displayPos -= tile_origin;
-
-						var def = ResourceManager.GetDefinition(variant.hash);
-						go.name = $"{def?.name ?? "??"} ({displayPos.x:F1},{displayPos.z:F1})+{variant.delta:F2}@{variant.angle:F1}°";
-					}
-#endif
+					UpdateGraphTile(visualIndex, allocate: true);
 				}
 
 				return _graph;
 			}
 		}
 
-		[JsonIgnore] private int graphCount => graph.Length;
+		private void UpdateGraph()
+		{
+			if (state == null || graphCount != state.Length)
+			{
+				Debug.Assert(false, "mismatched indices and runtime tiles");
+				return;
+			}
+
+			for (int visualIndex = 0; visualIndex < state.Length; ++visualIndex)
+			{
+				int logicalIndex = state[visualIndex];
+				if (logicalIndex < 0 || logicalIndex >= _graph.Length) continue;
+
+				var mapTile = _graph[logicalIndex];
+				var go = mapTile.gameObject;
+				if (go == null) continue;
+
+				UpdateGraphTile(visualIndex, allocate: false);
+			}
+		}
+
+		private void UpdateGraphTile(int visualIndex, bool allocate = true)
+		{
+			var variant = GetVariantForIndex(visualIndex);  // ← visualIndex is correct for variant lookup? Wait — no!
+															// FIX: variant is based on logical position, not visual
+
+			// Correct: lookup logical first
+			int logicalIndex = allocate ? visualIndex : State[visualIndex];  // during creation: visual == logical
+			variant = GetVariantForIndex(logicalIndex);
+
+			var position = TileWorldPosition(visualIndex);
+
+			GameObject go;
+
+			if (allocate)
+			{
+				_graph[visualIndex] = new Tile(variant, parent, position);
+				go = _graph[visualIndex].gameObject;
+			}
+			else
+			{
+				go = _graph[State[visualIndex]].gameObject;  // ← existing tile at logical position
+			}
+
+			if (go != null)
+			{
+				var finalPos = position + new Vector3(0f, variant.delta, 0f);
+				go.transform.position = finalPos;
+
+#if DEBUG
+				var displayPos = finalPos - tile_origin;
+				var def = ResourceManager.GetDefinition(variant.hash);
+				go.name = $"{def?.name ?? "??"} ({displayPos.x:F1},{displayPos.z:F1})+{variant.delta:F2}@{variant.angle:F1}°";
+#endif
+			}
+		}
 
 		private const int MAP_MAX_SIZE = 64;
 
@@ -256,7 +279,7 @@ namespace ClassicTilestorm
 			if (tiles == null || index < 0 || index >= tiles.Length)
 				return 0;
 
-			int tableIdx = tiles[index];
+			var tableIdx = tiles[index];
 			if (tableIdx >= 0 && tableIdx < variants.Length)
 				return variants[tableIdx].hash;
 
@@ -280,7 +303,7 @@ namespace ClassicTilestorm
 		public void Preset()
 		{
 			state = Enumerable.Range(0, width * height).ToArray();
-			RecreateAndAdjust();
+			UpdateGraph();
 		}
 
 		public void Scramble()
@@ -296,44 +319,14 @@ namespace ClassicTilestorm
 				var tileStrip = TileStripHelper.GetTileStrip(this, n % state.Length, stride, true);
 				TileStripHelper.RollStrip(this, tileStrip);
 			}
-			RecreateAndAdjust();
+			UpdateGraph();
 		}
 
 		public void Solve()
 		{
 			state = Enumerable.Range(0, width * height).Select(n => n + (solve?[n] ?? 0)).ToArray();
-			RecreateAndAdjust();
+			UpdateGraph();
 		}
-
-		private void RecreateAndAdjust()
-		{
-			RecreateTiles();
-
-			var perm = state;
-			if (perm == null || graphCount != perm.Length)
-			{
-				Debug.Assert(false, "mismatched indices and runtime tiles");
-				return;
-			}
-
-			for (int n = 0; n < perm.Length; ++n)
-			{
-				var mapTile = GetGraphTile(perm[n]);
-				var go = mapTile.gameObject;
-				if (go == null) continue;
-
-				var position = TileWorldPosition(n);
-				go.transform.position = position;
-
-#if DEBUG
-				position -= tile_origin;
-				var id = GetTileID(n);
-				var def = ResourceManager.GetDefinition(id);
-				go.name = $"{def?.name ?? "??"} ({position.x},{position.z})";
-#endif
-			}
-		}
-
 
 		private void RecreateTiles()
 		{
@@ -1057,7 +1050,7 @@ namespace ClassicTilestorm
 		{
 			if (waypoints != null && waypoints.Length > 0)
 			{
-				Debug.Log($"Using {waypoints.Length} predefined waypoints.");
+				//Debug.Log($"Using {waypoints.Length} predefined waypoints.");
 				return;
 			}
 
@@ -1118,8 +1111,8 @@ namespace ClassicTilestorm
 				windController.AddSway(sway, TileWorldPosition(n));
 			}
 
-			if (windController != null)
-				Debug.Log($"WindController initialized with {windController.SwayComponents.Count} sway components.");
+			//if (windController != null)
+			//	Debug.Log($"WindController initialized with {windController.SwayComponents.Count} sway components.");
 		}
 
 		public void Destroy()
