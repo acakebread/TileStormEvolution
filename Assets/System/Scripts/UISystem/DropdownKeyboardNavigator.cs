@@ -1,5 +1,4 @@
 ﻿using UnityEngine;
-using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using TMPro;
 using MassiveHadronLtd.UI;
@@ -7,9 +6,7 @@ using MassiveHadronLtd.UI;
 namespace MassiveHadronLtd
 {
 	[RequireComponent(typeof(Selectable))]
-	public class DropdownKeyboardNavigator : MonoBehaviour,
-		IPointerEnterHandler, IPointerExitHandler,
-		ISelectHandler, IDeselectHandler
+	public class DropdownKeyboardNavigator : MonoBehaviour
 	{
 		[Header("Navigation Settings")]
 		[SerializeField] private bool wrapAround = true;
@@ -17,18 +14,14 @@ namespace MassiveHadronLtd
 		[SerializeField] private float repeatRate = 0.08f;
 
 		// State
-		private Selectable selectable;
 		private Dropdown legacyDropdown;
 		private TMP_Dropdown tmpDropdown;
-		private bool isHovered;
-		private bool isKeyboardSelected;
 		private int currentHighlightedIndex = -1;
 		private float repeatTimer;
 		private bool isRepeating;
 
 		private void Awake()
 		{
-			selectable = GetComponent<Selectable>();
 			legacyDropdown = GetComponent<Dropdown>();
 			tmpDropdown = GetComponent<TMP_Dropdown>();
 
@@ -42,20 +35,7 @@ namespace MassiveHadronLtd
 
 		private void Update()
 		{
-			// ── Use the centralized utility ──
-			//if (!gameObject.InFocus())
-			//{
-			//	if (currentHighlightedIndex >= 0)
-			//	{
-			//		// Optional debug
-			//		// Debug.Log($"Dropdown lost focus: {gameObject.name}");
-			//	}
-			//	currentHighlightedIndex = -1;
-			//	isRepeating = false;
-			//	return;
-			//}
-
-			if (!gameObject.InFocus())
+			if (!UIFocusManager.IsInFocus(gameObject))
 			{
 				// reset state
 				currentHighlightedIndex = -1;
@@ -101,12 +81,6 @@ namespace MassiveHadronLtd
 				ConfirmSelection();
 			}
 		}
-
-		// ── Pointer & Selection events (still needed for hover/keyboard focus signals) ──
-		public void OnPointerEnter(PointerEventData eventData) => isHovered = true;
-		public void OnPointerExit(PointerEventData eventData) => isHovered = false;
-		public void OnSelect(BaseEventData eventData) => isKeyboardSelected = true;
-		public void OnDeselect(BaseEventData eventData) => isKeyboardSelected = false;
 
 		// ── Helpers ──
 		private int GetCurrentValue()
