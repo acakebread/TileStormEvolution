@@ -2,8 +2,6 @@
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using TMPro;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace MassiveHadronLtd.UI
 {
@@ -34,6 +32,7 @@ namespace MassiveHadronLtd.UI
 		}
 
 		private static GameObject currentFocus;
+		private static GameObject lastUserSelected;          // ← new: remembers last meaningful selection
 
 		private void LateUpdate()
 		{
@@ -54,26 +53,63 @@ namespace MassiveHadronLtd.UI
 				return;
 			}
 
-			GameObject candidate = es.currentSelectedGameObject;
+			var selected = es.currentSelectedGameObject;
 
-			// If we have a direct selection → that's usually the winner
-			if (candidate != null)
+			// If we have a real selection → remember it (unless it's a blocker/transient)
+			if (selected != null && !IsTransient(selected))
 			{
-				// But if it's a dropdown blocker or something unrelated, prefer expanded dropdown
-				if (IsBlocker(candidate))
+				lastUserSelected = selected;
+			}
+
+			GameObject candidate = null;
+
+			// Priority order
+			if (AnyDropdownIsExpanded())
+			{
+				candidate = FindFirstExpandedDropdown();
+				lastUserSelected = candidate;
+			}
+			else if (AnyInputIsFocused())
+			{
+				candidate = FindFirstFocusedInput();
+			}
+			else if (selected != null)
+			{
+				candidate = selected;
+
+				// If selection is inside a scroll view → promote the scroll view itself
+				var scroll = FindScrollContaining(selected);
+				if (scroll != null)
 				{
-					candidate = FindFirstExpandedDropdown() ?? candidate;
+					candidate = scroll;
+					lastUserSelected = scroll;  // remember scroll view too
 				}
 			}
-			else
+			// When nothing is selected → keep last meaningful thing
+			else if (lastUserSelected != null)
 			{
-				// No selection → look for expanded dropdown / focused input / or fallback to a scroll view
-				candidate = FindFirstExpandedDropdown() ??
-							FindFirstFocusedInput() ??
-							FindAnyActiveScrollView();  // ← NEW: fallback when nothing else is selected
+				candidate = lastUserSelected;
+
+				// If last was a dropdown button → keep it after close
+				var tmpDd = candidate.GetComponent<TMP_Dropdown>();
+				var legacyDd = candidate.GetComponent<Dropdown>();
+
+				var dd = tmpDd != null ? tmpDd : legacyDd as Component; // or just use tmpDd / legacyDd separately
+				if (dd != null)
+				{
+					// Good – keep dropdown button focused after close
+				}
+				// If last was inside scroll → keep scroll
+				else if (FindScrollContaining(candidate) != null)
+				{
+					candidate = FindScrollContaining(candidate);
+				}
 			}
 
 			currentFocus = candidate;
+
+			// Optional debug – comment out later
+			// Debug.Log($"Focus → { (currentFocus ? currentFocus.name : "null") } | Selected: { (selected ? selected.name : "null") } | LastUser: { (lastUserSelected ? lastUserSelected.name : "null") }");
 		}
 
 		public static bool IsInFocus(GameObject go)
@@ -90,9 +126,14 @@ namespace MassiveHadronLtd.UI
 		// Helpers
 		// ──────────────────────────────────────────────────────────────
 
-		private static bool IsBlocker(GameObject go)
+		private static bool IsTransient(GameObject go)
 		{
 			return go != null && go.name.Contains("Blocker");
+		}
+
+		private static bool AnyDropdownIsExpanded()
+		{
+			return FindFirstExpandedDropdown() != null;
 		}
 
 		private static GameObject FindFirstExpandedDropdown()
@@ -106,9 +147,9 @@ namespace MassiveHadronLtd.UI
 			return null;
 		}
 
-		private static bool AnyDropdownIsExpanded()
+		private static bool AnyInputIsFocused()
 		{
-			return FindFirstExpandedDropdown() != null;
+			return FindFirstFocusedInput() != null;
 		}
 
 		private static GameObject FindFirstFocusedInput()
@@ -122,43 +163,25 @@ namespace MassiveHadronLtd.UI
 			return null;
 		}
 
-		private static bool AnyInputIsFocused()
-		{
-			return FindFirstFocusedInput() != null;
-		}
-
 		private static bool HasDropdownListChild(Dropdown dd)
 		{
 			var list = dd?.transform.Find("Dropdown List");
 			return list != null && list.gameObject.activeInHierarchy;
 		}
 
-		// NEW: Find a scroll view that could be considered active when nothing else is
-		private static GameObject FindAnyActiveScrollView()
+		private static GameObject FindScrollContaining(GameObject obj)
 		{
-			var scrolls = FindObjectsByType<ScrollRect>(FindObjectsSortMode.None);
-			foreach (var scroll in scrolls)
-			{
-				if (scroll.gameObject.activeInHierarchy)
-				{
-					// Prefer the one with mouse over it, or the first visible one
-					if (IsPointerOver(scroll.gameObject))
-						return scroll.gameObject;
+			if (obj == null) return null;
 
-					// Or just return the first one if no hover check wanted
+			Transform t = obj.transform;
+			while (t != null)
+			{
+				var scroll = t.GetComponent<ScrollRect>();
+				if (scroll != null && scroll.gameObject.activeInHierarchy)
 					return scroll.gameObject;
-				}
+				t = t.parent;
 			}
 			return null;
-		}
-
-		// Optional pointer check (can remove if you hate hover entirely)
-		private static bool IsPointerOver(GameObject go)
-		{
-			var ped = new PointerEventData(EventSystem.current) { position = Input.mousePosition };
-			var results = new List<RaycastResult>();
-			EventSystem.current.RaycastAll(ped, results);
-			return results.Any(r => r.gameObject == go || r.gameObject.transform.IsChildOf(go.transform));
 		}
 	}
 }

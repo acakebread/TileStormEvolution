@@ -43,6 +43,11 @@ namespace MassiveHadronLtd
 
 		private void Update()
 		{
+			if (!UIFocusManager.IsInFocus(gameObject))
+			{
+				return;
+			}
+
 			CleanupDestroyedItems();
 
 			// Auto-recover if content has items but selectables is empty
@@ -117,11 +122,6 @@ namespace MassiveHadronLtd
 			//	if (dn != null && dn.gameObject.InFocus())
 			//		return;
 			//}
-
-			if (!UIFocusManager.IsInFocus(gameObject))
-			{
-				return;
-			}
 
 			// If we reach here → either nothing selected or list-related UI is selected → process arrows
 			HandleKeyboardInput();
