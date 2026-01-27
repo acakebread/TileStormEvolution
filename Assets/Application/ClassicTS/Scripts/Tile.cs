@@ -16,9 +16,9 @@ namespace ClassicTilestorm
 		public const int End = 1 << 8;     // 0b00100000000
 		public const int Door = 1 << 9;    // 0b01000000000
 		public const int Console = 1 << 10;// 0b10000000000
+		public static readonly int navMask = North | South | East | West;
 
 		private readonly int flags;
-		private static readonly int navMask = North | South | East | West;
 
 		public TileData(Definition def)
 		{
@@ -148,50 +148,4 @@ namespace ClassicTilestorm
 				Object.DestroyImmediate(gameObject);
 		}
 	}
-
-	//// Add inside TileData (or as extension method)
-	//public static class DirectionFlags
-	//{
-	//	// Clockwise 90° rotation of direction bits: N→E, E→S, S→W, W→N
-	//	public static int _Rotate90CW(this int flags)
-	//	{
-	//		//   N E S W        →     original bit positions
-	//		//   0 2 1 3              after 90° CW
-	//		return ((flags & TileData.North) << 2) |  // N → E (bit 0 → bit 2)
-	//			   ((flags & TileData.East) >> 1) |  // E → S (bit 2 → bit 1)
-	//			   ((flags & TileData.South) << 2) |  // S → W (bit 1 → bit 3? wait)
-	//			   ((flags & TileData.West) >> 3);   // W → N (bit 3 → bit 0)
-
-	//		// Better/more readable version using bit permutation:
-	//		// N(1) → E(4), E(4) → S(2), S(2) → W(8), W(8) → N(1)
-	//		int rotated = 0;
-	//		if ((flags & TileData.North) != 0) rotated |= TileData.East;
-	//		if ((flags & TileData.East) != 0) rotated |= TileData.South;
-	//		if ((flags & TileData.South) != 0) rotated |= TileData.West;
-	//		if ((flags & TileData.West) != 0) rotated |= TileData.North;
-	//		return rotated;
-	//	}
-
-	//	public static int Rotate90CW(this int flags)
-	//	{
-	//		int result = 0;
-
-	//		if ((flags & TileData.North) != 0) result |= TileData.East;   // 1 → 4
-	//		if ((flags & TileData.East) != 0) result |= TileData.South;  // 4 → 2
-	//		if ((flags & TileData.South) != 0) result |= TileData.West;   // 2 → 8
-	//		if ((flags & TileData.West) != 0) result |= TileData.North;  // 8 → 1
-
-	//		return result;
-	//	}
-
-	//	public static int Rotate(this int flags, int angleDeg)
-	//	{
-	//		// angleDeg expected to be 0,90,180,270 (or -90, etc.)
-	//		int turns = ((angleDeg % 360 + 360) % 360) / 90; // 0,1,2,3
-	//		int result = flags;
-	//		for (int i = 0; i < turns; i++)
-	//			result = result.Rotate90CW();
-	//		return result;
-	//	}
-	//}
 }

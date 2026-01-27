@@ -1,4 +1,6 @@
-﻿namespace ClassicTilestorm
+﻿using UnityEngine;
+
+namespace ClassicTilestorm
 {
 	public static class Navigation
 	{
@@ -6,32 +8,31 @@
 		public static float DirToAngle(int dir) => new float[] { 0f, 0f, 180f, 0f, 90f, 45f, 135f, 90f, -90f, -45f, -135f, -90f, 0f, 0f, 180f, 0f }[dir & 0xF];
 		public static int GetOppositeDirection(int dir) => ((dir & TileData.North) << 1) | ((dir & TileData.South) >> 1) | ((dir & TileData.East) << 1) | ((dir & TileData.West) >> 1);
 
-		public static int Rotate90CW(int flags)
-		{
-			int result = 0;
-
-			if ((flags & TileData.North) != 0) result |= TileData.East;   // ↑ → →
-			if ((flags & TileData.East) != 0) result |= TileData.South;  // → → ↓
-			if ((flags & TileData.South) != 0) result |= TileData.West;   // ↓ → ←
-			if ((flags & TileData.West) != 0) result |= TileData.North;  // ← → ↑
-
-			return result;
-		}
-
 		public static int Rotate(int flags, int degrees)
 		{
-			// Normalize to 0..3 turns (positive = clockwise)
-			int turns = ((degrees % 360 + 360) % 360) / 90;
-			turns = (turns + 4) % 4;  // make sure it's 0–3 even if negative input
+			int masked = flags & TileData.navMask;
 
-			int result = flags & (TileData.North | TileData.South | TileData.East | TileData.West);
+			// Convert degrees → normalized 0..3 turns (positive = clockwise)
+			int turns = Mathf.RoundToInt(degrees / 90f);
+			turns = (turns % 4 + 4) % 4;           // this is the standard positive mod idiom
 
-			for (int i = 0; i < turns; i++)
+			return turns switch
 			{
-				result = Rotate90CW(result);
-			}
+				0 => masked,
+				1 => (((masked & TileData.North) << 2) |
+					  ((masked & TileData.East) >> 1) |
+					  ((masked & TileData.South) << 2) |
+					  ((masked & TileData.West) >> 3)) & TileData.navMask,
 
-			return result;
+				2 => (~masked) & TileData.navMask,
+
+				3 => (((masked & TileData.North) << 3) |
+					  ((masked & TileData.East) >> 2) |
+					  ((masked & TileData.South) << 1) |
+					  ((masked & TileData.West) >> 2)) & TileData.navMask,
+
+				_ => masked
+			};
 		}
 
 		//Classic TS legacy function - returns tile index in direction
