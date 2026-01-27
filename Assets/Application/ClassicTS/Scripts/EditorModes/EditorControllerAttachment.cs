@@ -115,7 +115,7 @@ namespace ClassicTilestorm
 					mouseMovedBeyondThreshold = true;
 			}
 
-			if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1))
+			if (Input.GetMouseButtonDown(0))
 				HandleMouseDown();
 
 			if (Input.GetMouseButton(0))
