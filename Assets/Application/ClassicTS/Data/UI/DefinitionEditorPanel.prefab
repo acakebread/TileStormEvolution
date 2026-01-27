@@ -297,7 +297,6 @@ MonoBehaviour:
   pageStepMultiplier: 0.9
   initialRepeatDelay: 0.3
   repeatRate: 0.05
-  disableNavigationWhenInputFieldActive: 1
 --- !u!1 &372056331547449886
 GameObject:
   m_ObjectHideFlags: 0
@@ -875,7 +874,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 18
+  m_fontSize: 30.1
   m_fontSizeBase: 24
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -2138,7 +2137,7 @@ RectTransform:
   m_Father: {fileID: 8963738092087317392}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: -0.000061035156}
   m_SizeDelta: {x: 20, y: 20}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -2415,7 +2414,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1044266578244108260
 RectTransform:
   m_ObjectHideFlags: 0
@@ -2758,7 +2757,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -7.5000305, y: -0.5}
+  m_AnchoredPosition: {x: -7.5000153, y: -0.5}
   m_SizeDelta: {x: -35, y: -13}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &7933525196769670453
@@ -2816,7 +2815,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 22.35
+  m_fontSize: 36.35
   m_fontSizeBase: 32
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -3150,7 +3149,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 18
+  m_fontSize: 30.1
   m_fontSizeBase: 24
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -3461,6 +3460,8 @@ GameObject:
   - component: {fileID: 714514115989183261}
   - component: {fileID: 7797061406972080170}
   - component: {fileID: 2629025994289650647}
+  - component: {fileID: 2584762823380669166}
+  - component: {fileID: 8638413874273508567}
   m_Layer: 5
   m_Name: MaterialDropdown
   m_TagString: Untagged
@@ -3511,7 +3512,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 0.1137255, g: 0.1254902, b: 0.121568635, a: 1}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -3549,11 +3550,11 @@ MonoBehaviour:
     m_SelectOnRight: {fileID: 0}
   m_Transition: 1
   m_Colors:
-    m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
-    m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
-    m_PressedColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 1}
-    m_SelectedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
-    m_DisabledColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 0.5019608}
+    m_NormalColor: {r: 0.11372549, g: 0.1254902, b: 0.12156863, a: 1}
+    m_HighlightedColor: {r: 0.7372549, g: 0.6039216, b: 0, a: 1}
+    m_PressedColor: {r: 0, g: 0.5647059, b: 0, a: 1}
+    m_SelectedColor: {r: 0, g: 0.8235294, b: 0, a: 1}
+    m_DisabledColor: {r: 0.34117648, g: 0.34117648, b: 0.34117648, a: 0.5019608}
     m_ColorMultiplier: 1
     m_FadeDuration: 0.1
   m_SpriteState:
@@ -3604,6 +3605,33 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9ed533539c32652428dfbc70300bde44, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DropdownAutoScroller
+--- !u!114 &2584762823380669166
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3504839493337804260}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e8e8371bedbf4a343b056df42cf7c702, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MassiveHadronLtd.DropdownKeyboardNavigator
+  wrapAround: 1
+  repeatDelay: 0.4
+  repeatRate: 0.08
+--- !u!114 &8638413874273508567
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3504839493337804260}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7e184e95b3a816a4ebcb2c42839e6ec0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TMPDropdownSelectedGraphic
 --- !u!1 &3850058089570297901
 GameObject:
   m_ObjectHideFlags: 0
@@ -4417,7 +4445,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -7.5000305, y: -0.5}
+  m_AnchoredPosition: {x: -7.5000153, y: -0.5}
   m_SizeDelta: {x: -35, y: -13}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &7578322203989021294
@@ -4475,7 +4503,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 22.35
+  m_fontSize: 36.35
   m_fontSizeBase: 32
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -5409,7 +5437,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 18
+  m_fontSize: 30.1
   m_fontSizeBase: 24
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -5842,7 +5870,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 0}
-  m_AnchoredPosition: {x: -12.5, y: 0}
+  m_AnchoredPosition: {x: -12.500015, y: 0}
   m_SizeDelta: {x: -25, y: 320}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!222 &6306997288217562923
@@ -6297,7 +6325,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 22.35
+  m_fontSize: 36.35
   m_fontSizeBase: 32
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -6917,7 +6945,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 20.9
+  m_fontSize: 21.45
   m_fontSizeBase: 24
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -7211,7 +7239,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 0}
-  m_AnchoredPosition: {x: -12.5, y: 0}
+  m_AnchoredPosition: {x: -12.500015, y: 0}
   m_SizeDelta: {x: -25, y: 320}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!222 &104346507836698237
@@ -7688,6 +7716,8 @@ GameObject:
   - component: {fileID: 8751470837555733675}
   - component: {fileID: 2297053546116088425}
   - component: {fileID: 4908430346285473072}
+  - component: {fileID: 9023150722587447474}
+  - component: {fileID: 6794077394065359582}
   m_Layer: 5
   m_Name: TextureDropdown
   m_TagString: Untagged
@@ -7738,7 +7768,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 0.1137255, g: 0.1254902, b: 0.121568635, a: 1}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -7776,11 +7806,11 @@ MonoBehaviour:
     m_SelectOnRight: {fileID: 0}
   m_Transition: 1
   m_Colors:
-    m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
-    m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
-    m_PressedColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 1}
-    m_SelectedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
-    m_DisabledColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 0.5019608}
+    m_NormalColor: {r: 0.11372549, g: 0.1254902, b: 0.12156863, a: 1}
+    m_HighlightedColor: {r: 0.7372549, g: 0.6039216, b: 0, a: 1}
+    m_PressedColor: {r: 0, g: 0.5647059, b: 0, a: 1}
+    m_SelectedColor: {r: 0, g: 0.8235294, b: 0, a: 1}
+    m_DisabledColor: {r: 0.34117648, g: 0.34117648, b: 0.34117648, a: 0.5019608}
     m_ColorMultiplier: 1
     m_FadeDuration: 0.1
   m_SpriteState:
@@ -7831,6 +7861,33 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9ed533539c32652428dfbc70300bde44, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DropdownAutoScroller
+--- !u!114 &9023150722587447474
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9093184218585481627}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e8e8371bedbf4a343b056df42cf7c702, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MassiveHadronLtd.DropdownKeyboardNavigator
+  wrapAround: 1
+  repeatDelay: 0.4
+  repeatRate: 0.08
+--- !u!114 &6794077394065359582
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9093184218585481627}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7e184e95b3a816a4ebcb2c42839e6ec0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TMPDropdownSelectedGraphic
 --- !u!1 &9106982593047444292
 GameObject:
   m_ObjectHideFlags: 0
@@ -7844,6 +7901,8 @@ GameObject:
   - component: {fileID: 3578863377100811666}
   - component: {fileID: 454261876308400215}
   - component: {fileID: 2657102818421657666}
+  - component: {fileID: 791172273571284221}
+  - component: {fileID: 5276889819731829804}
   m_Layer: 5
   m_Name: ModelDropdown
   m_TagString: Untagged
@@ -7894,7 +7953,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 0.1137255, g: 0.1254902, b: 0.121568635, a: 1}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -7932,11 +7991,11 @@ MonoBehaviour:
     m_SelectOnRight: {fileID: 0}
   m_Transition: 1
   m_Colors:
-    m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
-    m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
-    m_PressedColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 1}
-    m_SelectedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
-    m_DisabledColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 0.5019608}
+    m_NormalColor: {r: 0.11372549, g: 0.1254902, b: 0.12156863, a: 1}
+    m_HighlightedColor: {r: 0.7372549, g: 0.6039216, b: 0, a: 1}
+    m_PressedColor: {r: 0, g: 0.5660378, b: 0, a: 1}
+    m_SelectedColor: {r: 0, g: 0.8235294, b: 0, a: 1}
+    m_DisabledColor: {r: 0.33962262, g: 0.33962262, b: 0.33962262, a: 0.5019608}
     m_ColorMultiplier: 1
     m_FadeDuration: 0.1
   m_SpriteState:
@@ -7987,3 +8046,30 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9ed533539c32652428dfbc70300bde44, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DropdownAutoScroller
+--- !u!114 &791172273571284221
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9106982593047444292}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e8e8371bedbf4a343b056df42cf7c702, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MassiveHadronLtd.DropdownKeyboardNavigator
+  wrapAround: 1
+  repeatDelay: 0.4
+  repeatRate: 0.08
+--- !u!114 &5276889819731829804
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9106982593047444292}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7e184e95b3a816a4ebcb2c42839e6ec0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MassiveHadronLtd.UI.TMPDropdownSelectedColor

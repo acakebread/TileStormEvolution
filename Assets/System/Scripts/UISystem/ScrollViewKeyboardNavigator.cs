@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using System.Collections.Generic;
 using System.Collections;
 using UnityEngine.EventSystems;
+using MassiveHadronLtd.UI;
 
 namespace MassiveHadronLtd
 {
@@ -25,6 +26,9 @@ namespace MassiveHadronLtd
 		// Pending re-selection after rebuild/content change
 		private int pendingReselectIndex = -2; // -2 = none, -1 or >=0 = target index
 
+		//// Near top
+		//private List<DropdownKeyboardNavigator> dropdownNavigators = new();
+
 		private void Awake()
 		{
 			scrollRect = GetComponent<ScrollRect>();
@@ -33,10 +37,17 @@ namespace MassiveHadronLtd
 		private void OnEnable()
 		{
 			pendingReselectIndex = lastSelectedIndex;
+			//var found = FindObjectsByType<DropdownKeyboardNavigator>(FindObjectsSortMode.None);
+			//dropdownNavigators.AddRange(found);
 		}
 
 		private void Update()
 		{
+			if (!UIFocusManager.IsInFocus(gameObject))
+			{
+				return;
+			}
+
 			CleanupDestroyedItems();
 
 			// Auto-recover if content has items but selectables is empty
@@ -104,6 +115,13 @@ namespace MassiveHadronLtd
 					}
 				}
 			}
+
+			//var found = FindObjectsByType<DropdownKeyboardNavigator>(FindObjectsSortMode.None);
+			//foreach (var dn in found)
+			//{
+			//	if (dn != null && dn.gameObject.InFocus())
+			//		return;
+			//}
 
 			// If we reach here → either nothing selected or list-related UI is selected → process arrows
 			HandleKeyboardInput();

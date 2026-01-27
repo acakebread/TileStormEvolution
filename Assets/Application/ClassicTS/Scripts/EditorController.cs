@@ -6,8 +6,7 @@ namespace ClassicTilestorm
 {
 	public class EditorController : MonoBehaviour
 	{
-		public IMap iMapManager => mapManager;
-		private IMap mapManager;
+		public IMapEdit iMap;
 
 		private EditorControllerMovement activeMode;
 		private EditorControllerView viewMode;
@@ -42,14 +41,23 @@ namespace ClassicTilestorm
 			SetEditorMode(EditorMode.View);//default
 		}
 
-		public void Initialise(IMap map)
+		private System.Action _unsubscribeMapAction;
+
+		public void Initialise(IMapEdit iMap)
 		{
-			mapManager = map;
-			mapManager.OnMapEdited += HandleMapEdited;// Subscribe to map changes
+			this.iMap = iMap;
+			iMap.OnMapEdited += OnMapEdited;// Subscribe to map changes
+			_unsubscribeMapAction = () => iMap.OnMapEdited -= OnMapEdited;
 			if (!isActiveAndEnabled) return;
 			UpdateGridLines(gridEnabled);
 			activeMode?.OnMapLoaded();
 			EnableEggbot(false);
+		}
+
+		public void Reset()
+		{
+			_unsubscribeMapAction?.Invoke();
+			_unsubscribeMapAction = null;
 		}
 
 		private void OnEnable()
@@ -96,7 +104,7 @@ namespace ClassicTilestorm
 		private void OnDestroy()
 		{
 			GridLinesUtil.Hide();
-			if (null != mapManager) mapManager.OnMapEdited -= HandleMapEdited;
+			if (null != iMap) iMap.OnMapEdited -= OnMapEdited;
 			viewMode?.OnDestroy();
 			paintMode?.OnDestroy();
 			attachmentMode?.OnDestroy();
@@ -108,7 +116,7 @@ namespace ClassicTilestorm
 			if (null != eggbotController) eggbotController.gameObject.SetActive(value);
 		}
 
-		private void UpdateGridLines(bool enabled = true) => GridLinesUtil.Show(transform, null != mapManager ? mapManager.Width : 32, null != mapManager ? mapManager.Height : 32, gridEnabled = enabled);
+		private void UpdateGridLines(bool enabled = true) => GridLinesUtil.Show(transform, null != iMap ? iMap.Width : 32, null != iMap ? iMap.Height : 32, gridEnabled = enabled);
 		private void UpdateDOF(bool enabled = true)
 		{
 			if (null != gameCameraEditor)
@@ -142,16 +150,13 @@ namespace ClassicTilestorm
 		// Map actions
 		// ===================================================================
 
-		private void HandleMapEdited(Map map,bool resized, Vector3 originDelta)
+		private void OnMapEdited(Map map, bool resized, Vector3 originDelta)
 		{
 			if (map == null) return;
 			ResourceManager.ApplyMapChanges(map);
 			if (!resized) return;
 			if (gridEnabled) GridLinesUtil.UpdateSize(map.width, map.height);
 			if (Vector3.zero == originDelta) return;
-			if (!TryGetComponent<MainCameraController>(out var controller)) return;
-			if (controller.activeSystem is GameCameraEditor editorCam)
-				editorCam.camera.transform.position += originDelta;
 		}
 
 		// ===================================================================

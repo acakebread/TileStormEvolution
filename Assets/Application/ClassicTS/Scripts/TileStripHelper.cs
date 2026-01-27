@@ -32,7 +32,7 @@ namespace ClassicTilestorm
 	{
 		public static GameObject SpareTile; // Public static spare tile
 
-		public static TileStrip GetTileStrip(IMap map, int startIndex, int stride, bool difficult = false)
+		public static TileStrip GetTileStrip(IMapPlay map, int startIndex, int stride, bool difficult = false)
 		{
 			var strip = new TileStrip { First = -1, Count = 0, Stride = 0 };
 			var tile = map.GetTile(startIndex);
@@ -89,7 +89,7 @@ namespace ClassicTilestorm
 			return strip;//return draggable strip
 		}
 
-		public static void ResetStrip(IMap map, in TileStrip strip)
+		public static void ResetStrip(IMapPlay map, in TileStrip strip)
 		{
 			if (null == strip.Indices) return;
 			foreach (var index in strip.Indices)
@@ -102,19 +102,19 @@ namespace ClassicTilestorm
 				SpareTile.SetActive(false);
 		}
 
-		public static bool RollStrip(IMap map, TileStrip strip, int adjust = 1)
+		public static bool RollStrip(IMapPlay map, TileStrip strip, int adjust = 1)
 		{
-			if (strip.Count <= 1 || null == strip.Indices || null == map.Indices)
+			if (strip.Count <= 1 || null == strip.Indices || null == map.State)
 				return false;
 
-			ArrayExtensions.RollArray(map.Indices, strip.First, strip.Count, adjust, strip.Stride);
+			ArrayExtensions.RollArray(map.State, strip.First, strip.Count, adjust, strip.Stride);
 
 			ResetStrip(map, strip);
 
 			return true;
 		}
 
-		public static void TranslateStrip(IMap map, in TileStrip strip, in Vector3 delta)
+		public static void TranslateStrip(IMapPlay map, in TileStrip strip, in Vector3 delta)
 		{
 			if (null == strip.Indices) return;
 
@@ -126,7 +126,7 @@ namespace ClassicTilestorm
 					gameObject.transform.position += delta;
 			}
 
-			static void UpdateSpareTile(IMap map, in TileStrip strip, in Vector3 delta, bool active)
+			static void UpdateSpareTile(IMapPlay map, in TileStrip strip, in Vector3 delta, bool active)
 			{
 				if (!active && null != SpareTile) { SpareTile.SetActive(false); return; }
 				if (strip.Count <= 1) return;

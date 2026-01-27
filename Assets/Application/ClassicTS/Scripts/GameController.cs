@@ -26,12 +26,28 @@ namespace ClassicTilestorm
 			mainController.SetPreviewMode(mode);
 		}
 
-		public void Initialise(IMap map)
+		private System.Action _unsubscribeMapAction;
+
+		public void Initialise(IMapEdit iMap)
 		{
-			if (isActiveAndEnabled) AudioManager.PlayMusic(map.Music, loop: true);
+			if (isActiveAndEnabled) AudioManager.PlayMusic(iMap.Music, loop: true);
 			if (!TryGetComponent<MainCameraController>(out var controller)) return;
 			controller.SetCameraSystem(CameraModeRegistry.Follow, true);
 			controller.SetCameraSystem(CameraModeRegistry.Path, true);
+
+			iMap.OnMapEdited += OnMapEdited;
+			_unsubscribeMapAction = () => iMap.OnMapEdited -= OnMapEdited;
+		}
+
+		public void Reset()
+		{
+			_unsubscribeMapAction?.Invoke();
+			_unsubscribeMapAction = null;
+		}
+
+		private void OnMapEdited(IMapEdit iMap, bool resized, Vector3 delta)
+		{
+			if (isActiveAndEnabled) AudioManager.StopMusic();
 		}
 
 		void OnEnable()

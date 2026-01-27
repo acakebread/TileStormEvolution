@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using MassiveHadronLtd;
+using UnityEngine;
 
 namespace ClassicTilestorm
 {
@@ -53,21 +54,48 @@ namespace ClassicTilestorm
 	public readonly struct Tile
 	{
 		private readonly TileData _data;
-		public readonly string definitionId;
 		public readonly GameObject gameObject;
 
-		public Tile(Definition def, Transform parent, Vector3 worldPosition)
+		// ── New constructor: takes Variant instead of just HashId ──────────
+		public Tile(Variant variant, Transform parent, Vector3 worldPosition)
 		{
-			// Compute definitionId safely — never null
-			definitionId = def?.hashid ?? ResourceManager.FindOrCreateDefaultTile().hashid;
+			var def = ResourceManager.ResolveDefinition(variant.hash, out bool hadError);
+			if (hadError)
+				Debug.LogWarning($"Failed to resolve tile definition at tile ({worldPosition.x},{worldPosition.z}) (hash: {variant.hash}) — using default");
 
 			_data = new TileData(def);
 
-			gameObject = null;
-			if (def != null && !def.IsDefault())
+			// Position with delta offset
+			Vector3 finalPosition = worldPosition + new Vector3(0f, variant.delta, 0f);
+
+			// Rotation from angle (around Y-axis for top-down map)
+			Quaternion finalRotation = Quaternion.Euler(0f, variant.angle, 0f);
+
+			gameObject = def != null && !def.IsDefault()
+				? InstantiateTile(def, parent, finalPosition, finalRotation)
+				: null;
+
+			static GameObject InstantiateTile(Definition definition, Transform parent, Vector3 position, Quaternion rotation)
 			{
-				gameObject = InstantiateTile(def, parent, worldPosition);
+				if (string.IsNullOrEmpty(definition?.model))
+				{
+					if (definition != null && definition.bDock)
+						return ApplicationSettings.ShowHiddenTiles
+							? GeometryFactory.CreateDebugTile(parent, position, rotation)
+							: null;
+
+					Debug.LogWarning($"Invalid Definition or model for {definition?.name ?? "null"}");
+					return GeometryFactory.CreateFallbackTile(parent, position, rotation);
+				}
+
+				return DefinitionFactory.Instantiate(definition, position, rotation, parent);  // ← already takes rotation
 			}
+		}
+
+		// ── Backward compatibility: keep old constructor ───────────────────
+		public Tile(HashId hashId, Transform parent, Vector3 worldPosition)
+			: this(new Variant(hashId), parent, worldPosition)  // ← delegate to new one
+		{
 		}
 
 		// Forwarded properties
@@ -112,29 +140,8 @@ namespace ClassicTilestorm
 
 		public void Destroy()
 		{
-			if (gameObject == null)
-				return;
-
-			if (Application.isPlaying)
-				Object.Destroy(gameObject);
-			else
+			if (gameObject != null)
 				Object.DestroyImmediate(gameObject);
-		}
-
-		private static GameObject InstantiateTile(Definition definition, Transform parent, Vector3 position)
-		{
-			if (string.IsNullOrEmpty(definition?.model))
-			{
-				if (definition != null && definition.bDock)
-					return ApplicationSettings.ShowHiddenTiles
-						? GeometryFactory.CreateDebugTile(parent, position)
-						: null;
-
-				Debug.LogWarning($"Invalid Definition or model for {definition?.id ?? "null"}");
-				return GeometryFactory.CreateFallbackTile(parent, position);
-			}
-
-			return DefinitionFactory.Instantiate(definition, position, Quaternion.identity, parent);
 		}
 	}
 }

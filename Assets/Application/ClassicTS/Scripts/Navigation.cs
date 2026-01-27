@@ -8,7 +8,7 @@ namespace ClassicTilestorm
 		public static int GetOppositeDirection(int dir) => ((dir & TileData.North) << 1) | ((dir & TileData.South) >> 1) | ((dir & TileData.East) << 1) | ((dir & TileData.West) >> 1);
 
 		//Classic TS legacy function - returns tile index in direction
-		public static int LineOfSight(IMap map, int src, int dst, int dir)
+		public static int LineOfSight(IMapPlay map, int src, int dst, int dir)
 		{
 			while (0 != dir)
 			{
@@ -20,7 +20,7 @@ namespace ClassicTilestorm
 		}
 
 		//Classic TS legacy function - returns direction
-		public static int NavToDest(IMap map, int src, int dst)
+		public static int NavToDest(IMapPlay map, int src, int dst)
 		{
 			if (src == dst || -1 == src || -1 == dst)
 				return 0;
@@ -63,7 +63,7 @@ namespace ClassicTilestorm
 		}
 
 		//Classic TS legacy function - returns index of adjacent tile
-		public static int GetAdjacentTile(IMap map, int index, int dir)
+		public static int GetAdjacentTile(IMapPlay map, int index, int dir)
 		{
 			var dx = ((dir & TileData.East) >> 2) - ((dir & TileData.West) >> 3);
 			var dz = ((dir & TileData.North) >> 0) - ((dir & TileData.South) >> 1);

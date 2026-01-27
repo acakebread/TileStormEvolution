@@ -1,12 +1,10 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
+using UnityEditor;
 using System.IO;
 using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using Newtonsoft.Json.Serialization;
-using System.Reflection;
-using System;
-using UnityEditor;
 
 namespace ClassicTilestorm
 {
@@ -21,34 +19,17 @@ namespace ClassicTilestorm
 
 			var settings = new JsonSerializerSettings
 			{
-				Converters = { new MapAttachmentConverter() },
+				Converters = 
+				{
+					new MapAttachmentConverter(),
+					new DefinitionConverter()
+				},
 				NullValueHandling = NullValueHandling.Ignore,
 			};
 
 			JsonConvert.DefaultSettings = () => settings;
 			_initialized = true;
-			Debug.Log("Json.NET configured with ordered properties (declaration order)");
-		}
-	}
-
-	public class UnityContractResolver : DefaultContractResolver
-	{
-		protected override JsonProperty CreateProperty(MemberInfo member, MemberSerialization memberSerialization)
-		{
-			var property = base.CreateProperty(member, memberSerialization);
-
-			// Force serialization of public fields (vSrc, vDst, pickupType, etc.)
-			if (member is FieldInfo field)
-			{
-				if (field.IsPublic && !Attribute.IsDefined(field, typeof(JsonIgnoreAttribute)))
-				{
-					property.Ignored = false;
-					property.Readable = true;
-					property.Writable = true;
-				}
-			}
-
-			return property;
+			//Debug.Log("Json.NET configured with ordered properties (declaration order)");
 		}
 	}
 
@@ -122,7 +103,7 @@ namespace ClassicTilestorm
 					return null;
 				}
 
-				DatabaseDataConverter.LegacyDataConverter(data);//remove when databases are converted
+				//DatabaseDataConverter.LegacyDataConverter(data);//remove when databases are converted
 
 				return data;
 			}
@@ -142,7 +123,7 @@ namespace ClassicTilestorm
 			if (cropAllMaps && data.maps != null)
 			{
 				mapsToSave = data.maps
-					.Select(m => m?.CreateCroppedCopy() ?? m)
+					.Select(m => CreateCroppedCopy(m))
 					.ToArray();
 
 				Debug.Log($"Saving database with {mapsToSave.Length} cropped maps");
@@ -201,13 +182,6 @@ namespace ClassicTilestorm
 					return;
 				}
 
-				// STRIP atomic-only fields
-				importedMap.definitions = null;
-				importedMap.textures = null;
-				importedMap.version = null;
-				importedMap.author = null;
-				importedMap.exportedFrom = null;
-
 				var db = ResourceManager.database;
 				if (db?.maps == null)
 				{
@@ -243,32 +217,8 @@ namespace ClassicTilestorm
 		{
 			if (originalMap == null) return;
 
-			var map = crop ? originalMap.CreateCroppedCopy() : originalMap;
-
-			var usedTypes = map.table?
-				.Where(t => !string.IsNullOrEmpty(t))
-				.Distinct()
-				.ToArray() ?? Array.Empty<string>();
-
-			var usedDefs = ResourceManager.Definitions
-				.Where(d => usedTypes.Contains(d.hashid))
-				.ToArray();
-
-			var usedBanks = usedDefs
-				.Where(d => !string.IsNullOrEmpty(d.texture))
-				.Select(d => d.texture)
-				.Distinct()
-				.ToArray();
-
-			var usedTextures = ResourceManager.TextureSequences
-				.Where(ts => usedBanks.Contains(ts.id))
-				.ToArray();
-
-			map.definitions = usedDefs;
-			map.textures = usedTextures;
-			map.version = "1.0";
-			map.author = "Player";
-			map.exportedFrom = "ClassicTilestorm";
+			// Create a copy if we're cropping — we never mutate the original
+			var map = crop ? CreateCroppedCopy(originalMap) : originalMap;
 
 			try
 			{
@@ -276,42 +226,38 @@ namespace ClassicTilestorm
 				{
 					NullValueHandling = NullValueHandling.Ignore,
 					Formatting = verbose ? Formatting.Indented : Formatting.None,
-					ContractResolver = new AtomicExportResolver(),
-					Converters = { new AtomicMapConverter() }
+					Converters = { new AtomicMapConverter() },
 				};
-
 
 				string json = JsonConvert.SerializeObject(map, settings);
 
-				var folder = string.IsNullOrEmpty(filepath) ? Application.persistentDataPath : filepath;
+				var folder = string.IsNullOrEmpty(filepath)
+					? Application.persistentDataPath
+					: filepath;
+
 				EnsureFolder(folder);
 				string path = Path.Combine(folder, $"{map.name}.json");
 
 				File.WriteAllText(path, json);
-				Debug.Log($"ATOMIC MAP EXPORTED (auto-cropped) → {path} ({map.width}x{map.height})");
+
+				Debug.Log($"ATOMIC MAP EXPORTED{(crop ? " (auto-cropped)" : "")} → {path} ({map.width}×{map.height})");
 			}
-			finally
+			catch (Exception ex)
 			{
-				map.definitions = null;
-				map.textures = null;
+				Debug.LogError($"Failed to export atomic map '{map?.name ?? "unknown"}': {ex.Message}");
 			}
 		}
 
-		private class AtomicExportResolver : UnityContractResolver
+		private static Map CreateCroppedCopy(Map map)
 		{
-			protected override JsonProperty CreateProperty(MemberInfo member, MemberSerialization memberSerialization)
-			{
-				var property = base.CreateProperty(member, memberSerialization);
-				if (property.Ignored && member.DeclaringType == typeof(Map))
-				{
-					if (member.Name is "definitions" or "textures" or "version" or "author" or "exportedFrom")
-					{
-						property.Ignored = false;
-						property.ShouldSerialize = _ => true;
-					}
-				}
-				return property;
-			}
+			var copy = map.Clone();
+
+			copy.CropToContent(true);
+
+			//if (copy.CropToContent(true))
+			//	Debug.Log($"[Export] Map '{copy.name}' table consolidated table {((Map.IHashAccess)map).Hashes.Length} or auto-cropped to {copy.width}x{copy.height}");
+
+			return copy;
 		}
 	}
 }

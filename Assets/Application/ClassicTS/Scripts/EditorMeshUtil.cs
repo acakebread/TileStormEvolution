@@ -30,9 +30,9 @@ namespace ClassicTilestorm
 		}
 
 		// Update or create the ghost mesh at the mouse position
-		public static void UpdateGhostMesh(Camera camera, IMap mapManager, Definition definition)
+		public static void UpdateGhostMesh(Camera camera, IMapEdit iMap, Definition definition)
 		{
-			if (mapManager == null || definition == null) return;
+			if (iMap == null || definition == null) return;
 			InitializeGhostMaterial();
 
 			// Create ghost mesh if needed (or if definition changed)
@@ -41,15 +41,16 @@ namespace ClassicTilestorm
 				if (ghostMesh != null)
 					Object.DestroyImmediate(ghostMesh);
 
-				string prefabPath = GetGeometryPath(definition.model);
-				if (string.IsNullOrEmpty(prefabPath))
-				{
-					ghostMesh = null;
-					return;
-				}
+				//string prefabPath = GetGeometryPath(definition.model);
+				//if (string.IsNullOrEmpty(prefabPath))
+				//{
+				//	ghostMesh = null;
+				//	return;
+				//}
 
 				// Direct, clean, raw instantiation — no runtime junk added
-				ghostMesh = Assets.ModelAssets.Instantiate(prefabPath, parent: Map.parentTransform.parent);
+				//ghostMesh = Assets.ModelAssets.Instantiate(prefabPath, parent: MainController.MapRoot);
+				ghostMesh = Assets.ModelAssets.Instantiate(definition.model, parent: MainController.MapRoot);
 
 				if (ghostMesh != null)
 				{
@@ -72,7 +73,7 @@ namespace ClassicTilestorm
 			ghostMesh.transform.position = Map.SnappedMapPosition(worldPos);
 
 			// === ToDo IMPLEMENTED ===
-			var mapIndex = mapManager.WorldToMapIndex(worldPos);
+			var mapIndex = iMap.WorldToMapIndex(worldPos);
 
 			bool isValid = mapIndex != -1; // add extra checks here if your game has more rules
 
@@ -86,8 +87,6 @@ namespace ClassicTilestorm
 
 			// Make sure ghost is visible
 			ghostMesh.SetActive(true);
-
-			static string GetGeometryPath(string modelName) => string.IsNullOrEmpty(modelName) ? null : $"{AssetPath.GeometryPath}{modelName}";
 		}
 
 		// Hide the ghost mesh

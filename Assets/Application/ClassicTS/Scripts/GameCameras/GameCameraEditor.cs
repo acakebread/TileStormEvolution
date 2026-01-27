@@ -16,5 +16,11 @@ namespace ClassicTilestorm
 			if (direction.sqrMagnitude > Mathf.Epsilon)
 				camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
 		}
+
+		public override void OnMapOriginShift(Vector3 delta)
+		{
+			base.OnMapOriginShift(delta);
+			camera.transform.position += delta; // move physical camera
+		}
 	}
 }

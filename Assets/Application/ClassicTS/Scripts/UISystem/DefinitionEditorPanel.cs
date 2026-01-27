@@ -280,25 +280,25 @@ namespace ClassicTilestorm
 			var def = CurrentDefinition;
 			if (def == null) return;
 
-			string newId = (input ?? "").Trim();
+			string newName = (input ?? "").Trim();
 
-			if (string.IsNullOrWhiteSpace(newId) || newId == def.id)
+			if (string.IsNullOrWhiteSpace(newName) || newName == def.name)
 			{
-				IDInput.text = def.id;
+				IDInput.text = def.name;
 				return;
 			}
 
 			// No more legacy check — rename always safe (hashid unchanged)
-			if (ResourceManager.Definitions.Any(d => d != def && string.Equals(d.id, newId, StringComparison.Ordinal)))
+			if (ResourceManager.Definitions.Any(d => d != def && string.Equals(d.name, newName, StringComparison.Ordinal)))
 			{
-				Debug.LogWarning($"ID '{newId}' already exists!");
-				IDInput.text = def.id;
+				Debug.LogWarning($"ID '{newName}' already exists!");
+				IDInput.text = def.name;
 				return;
 			}
 
-			int cellsUpdated = ResourceManager.RenameDefinitionId(def.id, newId);
+			bool updated = ResourceManager.RenameDefinitionName(def.HashID, newName);
 
-			Debug.Log($"Renamed '{def.id}' → '{newId}' (definition updated)");
+			Debug.Log($"Renamed '{def.name}' → '{newName}' (definition updated)");
 			RefreshDefinitionList();
 		}
 
@@ -402,13 +402,11 @@ namespace ClassicTilestorm
 			var label = go.GetComponentInChildren<TMP_Text>();
 			if (label != null)
 			{
-				int usage = ResourceManager.DefinitionUsageCount(def?.hashid);
+				int usage = ResourceManager.DefinitionUsageCount(def.HashID);
 
-				string hashDisplay = string.IsNullOrEmpty(def?.hashid)
-					? "(no hashid)"
-					: $"hash: {def.hashid}";
+				string hashDisplay = 0 == def.HashID ? "(no hashid)" : $"hash: {HTB50.EncodeFixed(def.HashID, HTB50Settings.FixedLength, padChar: '0', appendFlavor: false)}";
 
-				label.text = $"{def?.id ?? "???"}  [{usage}]  ({hashDisplay})";
+				label.text = $"{def?.name ?? "???"}  [{usage}]  ({hashDisplay})";
 			}
 		}
 
@@ -427,7 +425,7 @@ namespace ClassicTilestorm
 
 			var def = CurrentDefinition;
 
-			IDInput.text = def?.id ?? "";
+			IDInput.text = def?.name ?? "";
 
 			SyncAllProperties();
 			UpdatePreview(index);
@@ -460,7 +458,7 @@ namespace ClassicTilestorm
 			bool hasSelection = lastSelectedDefinitionIndex >= 0;
 
 			// Changed: use hashid instead of id
-			bool isUsed = hasSelection && ResourceManager.IsDefinitionUsed(CurrentDefinition?.hashid);
+			bool isUsed = hasSelection && ResourceManager.IsDefinitionUsed(CurrentDefinition.HashID);
 
 			ButtonDelete.interactable = hasSelection && !isUsed;
 
@@ -618,12 +616,11 @@ namespace ClassicTilestorm
 		{
 			if (ResourceManager.database == null) return;
 
-			string newId = ResourceManager.GenerateUniqueNewDefinitionId();
-			//var def = Definition.GetDefault(newId);
-			var def = ResourceManager.CreateDefinition(newId);
+			string newName = ResourceManager.GenerateUniqueNewDefinitionName();
+			var def = ResourceManager.CreateDefinition(newName);
 
 			int insertIndex = lastSelectedDefinitionIndex >= 0 ? lastSelectedDefinitionIndex + 1 : 0;
-			ResourceManager.InsertDefinitionAt(insertIndex, def);
+			ResourceManager.InsertDefinitionAtIndex(insertIndex, def);
 
 			lastSelectedDefinitionIndex = insertIndex;
 			RefreshDefinitionList();

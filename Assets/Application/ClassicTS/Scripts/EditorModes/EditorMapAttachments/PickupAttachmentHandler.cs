@@ -4,7 +4,7 @@ namespace ClassicTilestorm
 	{
 		public static readonly PickupAttachmentHandler Instance = new();
 
-		public static Pickup Create(IMap map, int tile)
+		public static Pickup Create(IMapEdit map, int tile)
 		{
 			if (map == null) return null;
 

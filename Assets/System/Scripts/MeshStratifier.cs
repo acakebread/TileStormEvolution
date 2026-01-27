@@ -81,10 +81,10 @@ namespace MassiveHadronLtd
 			result.RecalculateBounds();
 			result.RecalculateTangents();
 
-			// Optional debug log
-			StringBuilder sb = new StringBuilder();
-			sb.AppendLine($"Final mesh: {result.vertexCount} vertices, {result.triangles.Length / 3} triangles");
-			Debug.Log(sb.ToString());
+			//// Optional debug log
+			//StringBuilder sb = new StringBuilder();
+			//sb.AppendLine($"Final mesh: {result.vertexCount} vertices, {result.triangles.Length / 3} triangles");
+			//Debug.Log(sb.ToString());
 
 			return result;
 		}

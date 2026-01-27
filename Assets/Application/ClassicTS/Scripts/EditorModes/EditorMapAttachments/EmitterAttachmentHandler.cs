@@ -6,39 +6,39 @@ namespace ClassicTilestorm
 	{
 		public static readonly EmitterAttachmentHandler Instance = new();
 
-		public void OnSelectionChanged(IMap map, Camera camera, MapAttachment[] selection)
+		public void OnSelectionChanged(IMapEdit iMap, Camera camera, MapAttachment[] selection)
 		{
 			var emitter = (Emitter)selection[0];
-			var worldPos = map.WorldPosition(emitter.tile, emitter.Position);
+			var worldPos = iMap.WorldPosition(emitter.tile, emitter.Position);
 			EditorTransformUtil.UpdateTransform(worldPos, emitter.Rotation, camera);
 			EditorPrimitiveUtil.UpdateCone(worldPos, emitter.Rotation, emitter.Distance, emitter.Apex);
 		}
 
-		public void OnGizmoInput(IMap map, Camera camera, MapAttachment[] selection)
+		public void OnGizmoInput(IMapEdit iMap, Camera camera, MapAttachment[] selection)
 		{
 			var emitter = (Emitter)selection[0];
 
 			if (EditorTransformUtil.HandleInput(camera, out Vector3 newWorldPos, out Quaternion newWorldRot))
 			{
-				emitter.Position = map.LocalPosition(emitter.tile, newWorldPos);
-				emitter.Rotation = map.LocalRotation(emitter.tile, newWorldRot);
-				map.RefreshAttachmentInstance(emitter);
+				emitter.Position = iMap.LocalPosition(emitter.tile, newWorldPos);
+				emitter.Rotation = iMap.LocalRotation(emitter.tile, newWorldRot);
+				iMap.RefreshAttachment(emitter);
 				EditorPrimitiveUtil.UpdateCone(newWorldPos, emitter.Rotation, emitter.Distance, emitter.Apex);
 			}
 		}
 
-		public void OnDragInput(IMap map, MapAttachment[] selection)
+		public void OnDragInput(IMapEdit iMap, MapAttachment[] selection)
 		{
 			var emitter = (Emitter)selection[0];
-			var worldPos = map.WorldPosition(emitter.tile, emitter.Position);
+			var worldPos = iMap.WorldPosition(emitter.tile, emitter.Position);
 			EditorPrimitiveUtil.UpdateCone(worldPos, emitter.Rotation, emitter.Distance, emitter.Apex);
 		}
 
-		public static Emitter Create(IMap map, int tile, string variant)
+		public static Emitter Create(IMapEdit iMap, int tile, string variant)
 		{
-			if (map == null || string.IsNullOrEmpty(variant)) return null;
+			if (iMap == null || string.IsNullOrEmpty(variant)) return null;
 
-			var localY = ComputeEmitterPlacementHeight(map, tile);
+			var localY = ComputeEmitterPlacementHeight(iMap, tile);
 			var emitter = new Emitter
 			{
 				tile = tile,
@@ -47,14 +47,14 @@ namespace ClassicTilestorm
 				variant = variant
 			};
 
-			map.AddAttachment(emitter);
+			iMap.AddAttachment(emitter);
 			return emitter;
 
-			static float ComputeEmitterPlacementHeight(IMap mapManager, int tile)
+			static float ComputeEmitterPlacementHeight(IMapEdit iMap, int tile)
 			{
-				if (mapManager == null) return 1f;
-				var tileBounds = mapManager.GetTileGeometryBounds(tile);
-				var tileWorldCenter = mapManager.TileWorldPosition(tile);
+				if (iMap == null) return 1f;
+				var tileBounds = iMap.GetTileGeometryBounds(tile);
+				var tileWorldCenter = iMap.TileWorldPosition(tile);
 				return (tileBounds.max.y - tileWorldCenter.y) + 0.05f;
 			}
 		}

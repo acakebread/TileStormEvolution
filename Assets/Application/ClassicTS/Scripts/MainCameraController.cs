@@ -9,7 +9,7 @@ namespace ClassicTilestorm
 	[RequireComponent(typeof(GestureController))]
 	public class MainCameraController : CameraController
 	{
-		private IMap mapManager;
+		private IMapPlay iMap;
 		private EggbotController eggbotController;
 		private SpatialBucketSystem spatialSystem;
 		private GestureController gestureController;
@@ -42,17 +42,7 @@ namespace ClassicTilestorm
 			gestureController.OnMapUpdated += CheckDisableDrag;
 		}
 
-		//ToDo potentially make generic for all cameras
-		public void AdjustEditorCameraForMapShift(Vector3 delta)
-		{
-			if (activeSystem is GameCameraEditor editorCam)
-			{
-				editorCam.iorigin += delta;
-				editorCam.itarget += delta;
-			}
-		}
-
-		private void CheckDisableDrag(IMap imap)
+		private void CheckDisableDrag(IMapPlay imap)
 		{
 			if (eggbotController != null && eggbotController.NavDirection(imap) != 0)
 				GestureControllerEnabled = false;
@@ -66,10 +56,12 @@ namespace ClassicTilestorm
 
 		private void OnWaypointGesturesEnable(bool value) => GestureControllerEnabled = value;
 
-		public void Initialise(IMap map, EggbotController eggbot)
+		private Action _unsubscribeMapAction;
+
+		public void Initialise(IMapEdit map, EggbotController eggbot)
 		{
-			mapManager = map ?? throw new ArgumentNullException(nameof(map));
-			gestureController.Initialise(Camera.main, mapManager);
+			iMap = map ?? throw new ArgumentNullException(nameof(map));
+			gestureController.Initialise(Camera.main, iMap);
 			eggbotController = eggbot;
 			spatialSystem = new SpatialBucketSystem(MinDistanceForNewFocusPoint, MaxFocusPoints);
 			if (eggbotController != null)
@@ -85,24 +77,40 @@ namespace ClassicTilestorm
 
 			if (postProcessingController != null && eggbotController != null)
 				postProcessingController.dofTarget = eggbotController.transform;
+
+			map.OnMapEdited += OnMapEdited;
+			_unsubscribeMapAction = () => map.OnMapEdited -= OnMapEdited;
+		}
+
+		public void Reset()
+		{
+			_unsubscribeMapAction?.Invoke();
+			_unsubscribeMapAction = null;
+		}
+
+		private void OnMapEdited(IMapEdit map, bool resized, Vector3 delta)
+		{
+			if (resized) AdjustAllCamerasForMapShift(delta);
 		}
 
 		protected override (Vector3 srcPos, Vector3 dstPos) GetInitialCameraPositions()
 		{
-			if (mapManager == null)
+			if (iMap == null)
 				return (new Vector3(0f, 14f, -14f), Vector3.zero);
 
-			var dstPos = new Vector3(mapManager.Width * 0.5f, 0f, mapManager.Height * 0.5f);
+			var dstPos = new Vector3(iMap.Width * 0.5f, 0f, iMap.Height * 0.5f);
 			var srcPos = dstPos + new Vector3(0f, 14f, -14f);
 
-			if (mapManager.Waypoints.Length > 0)
+			var waypoints = iMap.GetWaypoints();
+			if (waypoints.Length > 0)
 			{
-				var tile = mapManager.GetWaypoint(0);
-				var view = mapManager.GetView(tile);
-				if (null != view)
+				var tile = waypoints[0].tile;
+				// Use extension method — returns the View or null
+				var view = iMap.GetAttachmentOfType<View>(tile);
+
+				if (view != null)
 				{
-					//has camera settings (View)
-					var tilePos = mapManager.TileWorldPosition(tile);
+					var tilePos = iMap.TileWorldPosition(tile);
 					srcPos = view.VSrc + tilePos;
 					dstPos = view.VDst + tilePos;
 				}
@@ -115,11 +123,11 @@ namespace ClassicTilestorm
 
 		protected Func<IReadOnlyList<Vector3>> GetFocusPoints()
 		{
-			if (mapManager == null) return () => Array.Empty<Vector3>();
+			if (iMap == null) return () => Array.Empty<Vector3>();
 
 			Func<IReadOnlyList<Vector3>> focusFunc = () =>
 			{
-				var waypoints = mapManager.Waypoints.Select(w => mapManager.TileWorldPosition(w)).ToList();
+				var waypoints = iMap.GetWaypoints().Select(w => iMap.TileWorldPosition(w.tile)).ToList();
 				spatialSystem.SetPoints(waypoints);
 
 				focusFunc = () =>
@@ -180,25 +188,31 @@ namespace ClassicTilestorm
 
 		private void OnWaypointReached(int waypointIndex)
 		{
-			if (eggbotController == null || mapManager == null || waypointIndex < 0 || waypointIndex >= mapManager.Waypoints.Length)
+			var waypoints = iMap?.GetWaypoints();
+
+			if (eggbotController == null || iMap == null ||
+				waypointIndex < 0 || waypointIndex >= waypoints.Length)
 				return;
 
-			if (waypointIndex == 0 || waypointIndex == mapManager.Waypoints.Length - 1)
+			if (waypointIndex == 0 || waypointIndex == waypoints.Length - 1)
 				return;
 
-			var tile = mapManager.GetWaypoint(waypointIndex);
-			var view = mapManager.GetView(tile);
-			if (null == view)
+			var tile = iMap.GetWaypoint(waypointIndex).tile;
+
+			// Use extension method
+			var view = iMap.GetAttachmentOfType<View>(tile);
+
+			if (view == null)
 			{
 				SetCameraSystem(CameraModeRegistry.Follow, true);
 				return;
 			}
 
-			//has camera settings (View)
+			// Has camera settings (View)
 			var presetCam = (GameCameraPreset)CameraSystems[CameraModeRegistry.Preset];
-			var tilePos = mapManager.TileWorldPosition(tile);
-			presetCam.originFn = () => view.VSrc + tilePos;
-			presetCam.targetFn = () => view.VDst + tilePos;
+
+			presetCam.originFn = () => view.VSrc + iMap.TileWorldPosition(iMap.GetWaypoint(waypointIndex).tile);
+			presetCam.targetFn = () => view.VDst + iMap.TileWorldPosition(iMap.GetWaypoint(waypointIndex).tile);
 
 			SetCameraSystem(CameraModeRegistry.Preset, true);
 			OnWaypointReachedForGestures?.Invoke(true);

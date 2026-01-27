@@ -39,7 +39,7 @@ namespace ClassicTilestorm
 		// ── Runtime ────────────────────────────────────────────────
 		private readonly List<Toggle> spawnedToggles = new();
 		private ToggleGroup toggleGroup;
-		private string selectedDefinitionId;
+		private int selectedDefinitionId;
 
 		private PreviewSceneController previewCtrl;
 		private CommandRenderModelData currentModelData;
@@ -110,7 +110,7 @@ namespace ClassicTilestorm
 			foreach (var def in ResourceManager.Definitions)
 				CreateDefinitionListItem(def);
 
-			string id = selectedDefinitionId ?? ResourceManager.Definitions[0].id;
+			int id = 0 != selectedDefinitionId ? selectedDefinitionId : ResourceManager.Definitions[0].HashID;
 			SetToggleById(id);
 		}
 
@@ -138,21 +138,21 @@ namespace ClassicTilestorm
 
 			var label = go.GetComponentInChildren<TMPro.TMP_Text>();
 			if (label)
-				label.text = $"{def.id} ({def.model ?? "—"})";
+				label.text = $"{def.name} ({def.model ?? "—"})";
 
 			toggle.onValueChanged.AddListener(isOn =>
 			{
 				if (isOn)
-					SelectDefinition(def.id);
+					SelectDefinition(def.HashID);
 			});
 		}
 
-		private void SetToggleById(string defId)
+		private void SetToggleById(int defId)
 		{
 			foreach (var t in spawnedToggles)
 			{
 				var label = t.GetComponentInChildren<TMPro.TMP_Text>();
-				if (label != null && label.text.StartsWith(defId))
+				if (label != null && label.text.StartsWith(ResourceManager.Definitions[defId].name))
 				{
 					t.isOn = true;
 					return;
@@ -160,7 +160,7 @@ namespace ClassicTilestorm
 			}
 		}
 
-		private void SelectDefinition(string defId)
+		private void SelectDefinition(int defId)
 		{
 			selectedDefinitionId = defId;
 			UpdatePreview(defId);
@@ -204,7 +204,7 @@ namespace ClassicTilestorm
 
 		// ───────────── PREVIEW UPDATE & CONTROL ─────────────
 
-		private void UpdatePreview(string defId)
+		private void UpdatePreview(int defId)
 		{
 			currentModelData = null;
 			previewCtrl.ClearModel();  // Always start clean

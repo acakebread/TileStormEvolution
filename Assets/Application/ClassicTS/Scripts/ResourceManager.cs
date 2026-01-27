@@ -2,10 +2,17 @@
 using System.Linq;
 using System.Collections.Generic;
 using MassiveHadronLtd;
-using MassiveHadronLtd.IDs.HTB50;
+using UnityEngine;
 
 namespace ClassicTilestorm
 {
+	public static class HTB50Settings
+	{
+		public const int FixedLength = 6;
+		//public const int Radix = 50;//no longer used
+		//public const long Modulus = 15625000000L;  // 50^6//no longer used
+	}
+
 	[Serializable]
 	public class DatabaseData
 	{
@@ -25,13 +32,9 @@ namespace ClassicTilestorm
 		public static IList<TextureSequence> TextureSequences => _db?.textures ?? Array.Empty<TextureSequence>();
 		public static IList<Legacy.Button> Buttons => _db?.buttons ?? Array.Empty<Legacy.Button>();
 
-		public static Definition GetDefinition(string idOrHash)
-		{
-			if (string.IsNullOrEmpty(idOrHash)) return null;
+		public static bool HasDefinition(int id) => Definitions.Any(def => def.HashID == id);
 
-			// Only hashid lookup — no legacy id fallback
-			return Definitions.FirstOrDefault(d => string.Equals(d.hashid, idOrHash, StringComparison.Ordinal));
-		}
+		public static Definition GetDefinition(HashId id) => Definitions.FirstOrDefault(d => d.HashID == id);
 
 		public static TextureSequence GetTextureSequence(string id)
 			=> string.IsNullOrEmpty(id) ? null : TextureSequences.FirstOrDefault(ts => ts.id == id);
@@ -40,11 +43,10 @@ namespace ClassicTilestorm
 		public static Definition FindOrCreateDefaultTile()
 		{
 			var prototype = Definition.GetDefaultTile();
-			string expectedHash = prototype.hashid;
+			int expectedHash = prototype.HashID;
 
 			// Only hashid matters from now on
-			var match = Definitions.FirstOrDefault(d =>
-				string.Equals(d.hashid, expectedHash, StringComparison.Ordinal));
+			var match = Definitions.FirstOrDefault(d => d.HashID == expectedHash);
 
 			if (match != null)
 			{
@@ -60,37 +62,34 @@ namespace ClassicTilestorm
 		}
 
 		public static Definition CreateDefinition(
-			string name = null,
+			string _name = null,
 			string model = "tile_flat",
 			string texture = "Default",
 			bool ensureUniqueHash = false)
 		{
 			var def = new Definition
 			{
-				id = name ?? StringUtil.GenerateAssetId(),
+				name = _name ?? StringUtil.GenerateAssetId(),
 				model = model,
 				texture = texture
 			};
 
-			// Full-range 32-bit hash (no modulus), but still encode to fixed length 6
-			int hash32 = RadixHash.GetStableHash32(def.id);
-			def.hashid = HTB50.EncodeFixed(hash32, HTB50Settings.FixedLength, padChar: '0', appendFlavor: false);
+			// Full-range 32-bit hash (no modulus)
+			HashId hash32 = RadixHash.GetStableHash32(def.name);
+			def.HashID = hash32;
 
 			if (ensureUniqueHash)
 			{
-				var existing = new HashSet<string>(
-					Definitions.Where(d => !string.IsNullOrEmpty(d.hashid))
-							   .Select(d => d.hashid),
-					StringComparer.Ordinal
-				);
+				var existing = new HashSet<HashId>(
+					Definitions.Where(d => d.HashID != 0 ).Select(d => d.HashID));
 
 				int attempt = 1;
-				while (existing.Contains(def.hashid))
+				while (existing.Contains(def.HashID))
 				{
-					hash32 = RadixHash.GetStableHash32(def.id + attempt);
-					def.hashid = HTB50.EncodeFixed(hash32, HTB50Settings.FixedLength, padChar: '0', appendFlavor: false);
+					hash32 = RadixHash.GetStableHash32(def.name + attempt);
+					def.HashID = hash32;
 					attempt++;
-					UnityEngine.Debug.LogWarning($"Hash collision retry {attempt} for '{def.id}'");
+					UnityEngine.Debug.LogWarning($"Hash collision retry {attempt} for '{def.name}'");
 				}
 			}
 
@@ -106,7 +105,7 @@ namespace ClassicTilestorm
 				{
 					const string legacyName = "tile_empty";
 
-					// Full-range 32-bit hash, but keep fixed-length 6 encoding as before
+					// Full-range 32-bit hash
 					int hash32 = RadixHash.GetStableHash32(legacyName);
 					_defaultTileHash = HTB50.EncodeFixed(hash32, HTB50Settings.FixedLength, padChar: '0', appendFlavor: false);
 				}
@@ -114,17 +113,37 @@ namespace ClassicTilestorm
 			}
 		}
 
+		public static string GenerateUniqueNewDefinitionName(string prefix = "NAME_")
+		{
+			string candidate;
+			var existingIds = Definitions.Select(d => d.name).ToHashSet(StringComparer.Ordinal);
+			do candidate = $"<{prefix}{StringUtil.GenerateAssetId()}>";
+			while (existingIds.Contains(candidate));
+			return candidate;
+		}
+
+		public static void ApplyMapChanges(Map modifiedMap)
+		{
+			if (null == modifiedMap) return;
+			if (null != _db?.maps)
+			{
+				for (int i = 0; i < _db.maps.Length; i++)
+					if (_db.maps[i].name == modifiedMap.name)
+					{ _db.maps[i] = modifiedMap; return; }
+			}
+		}
+
 		// ── EXISTING INSERT METHODS (unchanged) ───────────────────────────────
-		public static void InsertDefinitionAfter(string afterId, Definition newDef)
+		public static void InsertDefinitionAfter(HashId afterId, Definition newDef)
 		{
 			if (_db?.definitions == null) return;
 
 			var list = _db.definitions.ToList();
 			int index = list.Count;
 
-			if (!string.IsNullOrEmpty(afterId))
+			if (0 != afterId)
 			{
-				int found = list.FindIndex(d => d.id == afterId);
+				int found = list.FindIndex(d => d.HashID == afterId);
 				if (found >= 0) index = found + 1;
 			}
 
@@ -132,7 +151,7 @@ namespace ClassicTilestorm
 			_db.definitions = list.ToArray();
 		}
 
-		public static void InsertDefinitionAt(int index, Definition newDef)
+		public static void InsertDefinitionAtIndex(int index, Definition newDef)
 		{
 			if (_db?.definitions == null || index < 0) return;
 
@@ -143,77 +162,32 @@ namespace ClassicTilestorm
 			_db.definitions = list.ToArray();
 		}
 
-		// Helper to get current hash set (used above if needed)
-		private static HashSet<string> GetCurrentHashIds()
-		{
-			return new HashSet<string>(
-				Definitions.Where(d => !string.IsNullOrEmpty(d.hashid))
-						   .Select(d => d.hashid),
-				StringComparer.Ordinal
-			);
-		}
-
-		// ── OTHER METHODS (unchanged) ────────────────────────────────────────
-		public static void DeleteDefinition(string id)
+		public static void DeleteDefinitionId(HashId id)
 		{
 			if (_db?.definitions == null) return;
 			var list = _db.definitions.ToList();
-			list.RemoveAll(d => d.id == id);
+			list.RemoveAll(d => d.HashID == id);
 			_db.definitions = list.ToArray();
 		}
 
-		public static void MoveDefinitionUp(string id)
+		public static void MoveDefinitionIdUp(HashId id)
 		{
 			if (_db?.definitions == null) return;
 			var list = _db.definitions.ToList();
-			int idx = list.FindIndex(d => d.id == id);
+			int idx = list.FindIndex(d => d.HashID == id);
 			if (idx <= 0) return;
 			(list[idx - 1], list[idx]) = (list[idx], list[idx - 1]);
 			_db.definitions = list.ToArray();
 		}
 
-		public static void MoveDefinitionDown(string id)
+		public static void MoveDefinitionIdDown(HashId id)
 		{
 			if (_db?.definitions == null) return;
 			var list = _db.definitions.ToList();
-			int idx = list.FindIndex(d => d.id == id);
+			int idx = list.FindIndex(d => d.HashID == id);
 			if (idx < 0 || idx >= list.Count - 1) return;
 			(list[idx + 1], list[idx]) = (list[idx], list[idx + 1]);
 			_db.definitions = list.ToArray();
-		}
-
-		public static string GenerateUniqueNewDefinitionId(string prefix = "new_def_id")
-		{
-			int n = 1;
-			string candidate;
-			var existingIds = Definitions.Select(d => d.id).ToHashSet(StringComparer.Ordinal);
-
-			do
-			{
-				candidate = $"{prefix}({n:000})";
-				n++;
-			}
-			while (existingIds.Contains(candidate));
-
-			return candidate;
-		}
-
-		public static int CountDefinitionsNeedingHashMigration()
-		{
-			return database?.definitions?.Count(d => string.IsNullOrEmpty(d.hashid) && !string.IsNullOrEmpty(d.id)) ?? 0;
-		}
-
-		public static void ApplyMapChanges(Map modifiedMap)
-		{
-			if (modifiedMap == null) return;
-			if (_db?.maps != null) ReplaceInArray(_db.maps, modifiedMap);
-
-			static void ReplaceInArray(Map[] array, Map updated)
-			{
-				for (int i = 0; i < array.Length; i++)
-					if (array[i].name == updated.name)
-					{ array[i] = updated; return; }
-			}
 		}
 
 		public static void DeleteDefinitionAt(int index)
@@ -243,60 +217,40 @@ namespace ClassicTilestorm
 			_db.definitions = list.ToArray();
 		}
 
-		public static string GetDefinitionIdAt(int index)
+		public static bool RenameDefinitionName(HashId hashId, string name)
 		{
-			return index >= 0 && index < Definitions.Count ? Definitions[index].id : null;
+			if (false == HasDefinition(hashId))
+				return false;
+
+			var def = GetDefinition(hashId);
+			def.name = name;
+			return true;
 		}
 
-		public static int RenameDefinitionId(string oldId, string newId)
+		public static bool IsDefinitionUsed(HashId hashId)
 		{
-			if (string.IsNullOrEmpty(oldId) || oldId == newId) return 0;
+			if (hashId == 0) return false;
 
-			if (Definitions.Any(d => string.Equals(d.id, newId, StringComparison.Ordinal)))
-				return -1;
-
-			int changeCount = 0;
-
-			var def = Definitions.FirstOrDefault(d => string.Equals(d.id, oldId, StringComparison.Ordinal));
-			if (def != null)
-			{
-				def.id = newId;
-				changeCount = 1;
-			}
-
-			return changeCount;
+			// Any map uses it at least once?
+			return Maps.Any(m => m != null && m.IsDefinitionUsed(hashId));
 		}
 
-		public static bool IsDefinitionUsed(string hashId)
+		public static int DefinitionUsageCount(HashId hashId)
 		{
-			if (string.IsNullOrEmpty(hashId)) return false;
+			if (hashId == 0) return 0;
 
-			return Maps.Any(m => m?.table?.Contains(hashId) == true);
+			// Total usage across ALL maps
+			return Maps.Sum(m => m?.DefinitionUsageCount(hashId) ?? 0);
 		}
 
-		public static int DefinitionUsageCount(string hashId)
-		{
-			if (string.IsNullOrEmpty(hashId)) return 0;
-
-			return Maps.Sum(m => m?.table?.Count(h => h == hashId) ?? 0);
-		}
-
-		public static class HTB50Settings
-		{
-			public const int FixedLength = 6;
-			//public const int Radix = 50;//no longer used
-			//public const long Modulus = 15625000000L;  // 50^6//no longer used
-		}
-
-		// The full version with feedback
-		public static Definition ResolveDefinition(string hashId, out bool hadError)
+		public static Definition ResolveDefinition(HashId hashId, out bool hadError)
 		{
 			hadError = false;
 
-			if (string.IsNullOrEmpty(hashId))
+			if (0 == hashId)
 			{
 				hadError = true;
-				DebugUtil.LogError("Attempted to resolve null or empty tile definition hash.");
+				Debug.LogError("Attempted to resolve null or empty tile definition hash.");
 				return FindOrCreateDefaultTile();
 			}
 
@@ -307,15 +261,8 @@ namespace ClassicTilestorm
 			}
 
 			hadError = true;
-			DebugUtil.LogWarning($"Missing or invalid definition hash '{hashId}' — falling back to default tile.");
+			Debug.LogWarning($"Missing or invalid definition hash '{hashId}' — falling back to default tile.");
 			return FindOrCreateDefaultTile();
-		}
-
-		// Convenience overload — no out, callers don't have to care
-		public static Definition ResolveDefinition(string hashId)
-		{
-			// Discard the result — caller gets fallback + log automatically
-			return ResolveDefinition(hashId, out _);
 		}
 	}
 }

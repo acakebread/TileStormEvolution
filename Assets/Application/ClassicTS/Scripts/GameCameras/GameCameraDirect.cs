@@ -7,5 +7,10 @@ namespace ClassicTilestorm
 	public class GameCameraDirect : CameraBase
 	{
 		public GameCameraDirect(Camera camera) : base(camera) { }
+
+		public override void OnMapOriginShift(Vector3 delta)
+		{
+			base.OnMapOriginShift(delta);
+		}
 	}
 }

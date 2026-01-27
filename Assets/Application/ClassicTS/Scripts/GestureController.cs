@@ -7,15 +7,15 @@ namespace ClassicTilestorm
 	public class GestureController : MonoBehaviour
 	{
 		private new Camera camera;
-		private IMap imap;
+		private IMapPlay imap;
 		private TileStrip tileStrip;
 		private Vector3 last;
 		private Vector3 delta;
 		private int dragIndex = -1;
 		private const float gridSize = 1.0f;
-		public event System.Action<IMap> OnMapUpdated;
+		public event System.Action<IMapPlay> OnMapUpdated;
 
-		public void Initialise(Camera camera, IMap imap)
+		public void Initialise(Camera camera, IMapPlay imap)
 		{
 			this.camera = camera;
 			this.imap = imap;

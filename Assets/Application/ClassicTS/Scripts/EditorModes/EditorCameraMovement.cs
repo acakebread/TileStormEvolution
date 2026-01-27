@@ -43,6 +43,7 @@ namespace ClassicTilestorm
 				var eulers = camTransform.eulerAngles;
 				eulers.y += LookSpeedH * pointerX;
 				eulers.x -= LookSpeedV * pointerY;
+				eulers.x = Mathf.Clamp(Mathf.DeltaAngle(0f, eulers.x), -90f, 90f);
 				camTransform.eulerAngles = eulers;
 			}
 
