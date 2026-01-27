@@ -117,8 +117,7 @@ namespace ClassicTilestorm
 		// Tile data — variants is now the only source of truth
 		// ─────────────────────────────────────────────
 
-		[JsonIgnore]
-		public Variant[] variants = Array.Empty<Variant>();
+		[JsonIgnore] public Variant[] variants = Array.Empty<Variant>();
 
 		// ─────────────────────────────────────────────
 		// Recommended clean access for future code
@@ -1113,6 +1112,57 @@ namespace ClassicTilestorm
 
 			//if (windController != null)
 			//	Debug.Log($"WindController initialized with {windController.SwayComponents.Count} sway components.");
+		}
+
+		// Add this - the simplest possible default constructor
+		public Map()
+		{
+			// Optionally initialize minimal safe state here
+			variants = Array.Empty<Variant>();
+			tiles = Array.Empty<int>();
+			// state, attachments, etc. can stay null or empty
+		}
+
+		public Map(int width = 16, int height = 16, string mapName = "New Map")
+		{
+			if (width <= 0 || height <= 0)
+				throw new ArgumentException("Map dimensions must be positive");
+
+			this.name = mapName;
+			this.width = width;
+			this.height = height;
+
+			// Get (or create) the canonical default tile definition
+			var defaultDef = ResourceManager.FindOrCreateDefaultTile();
+			var defaultHash = defaultDef.HashID;
+
+			// Minimal variant table: just the default tile (angle=0, delta=0)
+			variants = new Variant[] { new Variant(defaultHash, 0f, 0f) };
+
+			// Every position in the grid points to variant index 0
+			int tileCount = width * height;
+			tiles = new int[tileCount];
+			Array.Fill(tiles, 0);           // 0 = default variant index
+
+			// Optional: initialize solve array if you want it from the beginning
+			solve = new int[tileCount];     // all zeros = identity permutation
+
+			// Runtime state starts as identity
+			state = Enumerable.Range(0, tileCount).ToArray();
+
+			// Clear / null out optional arrays
+			attachments = null;
+			waypoints = null;
+			music = null;
+			skybox = null;
+			character = null;
+			button = null;
+		}
+
+		// Alternative: static factory method (sometimes cleaner to call)
+		public static Map CreateEmpty(int width = 16, int height = 16, string name = null)
+		{
+			return new Map(width, height, name ?? $"Map {width}×{height}");
 		}
 
 		public void Destroy()
