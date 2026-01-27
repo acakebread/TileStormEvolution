@@ -89,27 +89,9 @@ namespace MassiveHadronLtd.UI
 			else if (lastUserSelected != null)
 			{
 				candidate = lastUserSelected;
-
-				// If last was a dropdown button → keep it after close
-				var tmpDd = candidate.GetComponent<TMP_Dropdown>();
-				var legacyDd = candidate.GetComponent<Dropdown>();
-
-				var dd = tmpDd != null ? tmpDd : legacyDd as Component; // or just use tmpDd / legacyDd separately
-				if (dd != null)
-				{
-					// Good – keep dropdown button focused after close
-				}
-				// If last was inside scroll → keep scroll
-				else if (FindScrollContaining(candidate) != null)
-				{
-					candidate = FindScrollContaining(candidate);
-				}
 			}
 
 			currentFocus = candidate;
-
-			// Optional debug – comment out later
-			// Debug.Log($"Focus → { (currentFocus ? currentFocus.name : "null") } | Selected: { (selected ? selected.name : "null") } | LastUser: { (lastUserSelected ? lastUserSelected.name : "null") }");
 		}
 
 		public static bool IsInFocus(GameObject go)
