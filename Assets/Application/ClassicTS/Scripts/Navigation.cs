@@ -1,11 +1,38 @@
-namespace ClassicTilestorm
+﻿namespace ClassicTilestorm
 {
 	public static class Navigation
 	{
-		// Public for access from MapManager.FindAdjacentConsole
 		public static readonly int[] Directions = { TileData.North, TileData.South, TileData.East, TileData.West };
 		public static float DirToAngle(int dir) => new float[] { 0f, 0f, 180f, 0f, 90f, 45f, 135f, 90f, -90f, -45f, -135f, -90f, 0f, 0f, 180f, 0f }[dir & 0xF];
 		public static int GetOppositeDirection(int dir) => ((dir & TileData.North) << 1) | ((dir & TileData.South) >> 1) | ((dir & TileData.East) << 1) | ((dir & TileData.West) >> 1);
+
+		public static int Rotate90CW(int flags)
+		{
+			int result = 0;
+
+			if ((flags & TileData.North) != 0) result |= TileData.East;   // ↑ → →
+			if ((flags & TileData.East) != 0) result |= TileData.South;  // → → ↓
+			if ((flags & TileData.South) != 0) result |= TileData.West;   // ↓ → ←
+			if ((flags & TileData.West) != 0) result |= TileData.North;  // ← → ↑
+
+			return result;
+		}
+
+		public static int Rotate(int flags, int degrees)
+		{
+			// Normalize to 0..3 turns (positive = clockwise)
+			int turns = ((degrees % 360 + 360) % 360) / 90;
+			turns = (turns + 4) % 4;  // make sure it's 0–3 even if negative input
+
+			int result = flags & (TileData.North | TileData.South | TileData.East | TileData.West);
+
+			for (int i = 0; i < turns; i++)
+			{
+				result = Rotate90CW(result);
+			}
+
+			return result;
+		}
 
 		//Classic TS legacy function - returns tile index in direction
 		public static int LineOfSight(IMapPlay map, int src, int dst, int dir)
