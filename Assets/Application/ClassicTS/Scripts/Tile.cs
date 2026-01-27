@@ -1,23 +1,32 @@
-﻿using MassiveHadronLtd;
-using UnityEngine;
+﻿using UnityEngine;
+using MassiveHadronLtd;
 
 namespace ClassicTilestorm
 {
+	[System.Flags]
+	public enum TileFlags : int
+	{
+		None = 0,
+
+		// ── Directions – must use exactly the same values as DirectionFlags ──
+		North = DirectionFlags.North,//(1 << 0) 0b00000000001
+		South = DirectionFlags.South,//(1 << 1) 0b00000000010
+		East = DirectionFlags.East,  //(1 << 2) 0b00000000100
+		West = DirectionFlags.West,  //(1 << 3) 0b00000001000
+		Directions = DirectionFlags.Directions,
+
+		// ── Gameplay flags – start from bit 4 and never touch 0–3 ─────────────
+		Drag = 1 << 4,               //(1 << 4)  0b00000010000
+		Roll = 1 << 5,				 //(1 << 5)  0b00000100000
+		Dock = 1 << 6,				 //(1 << 6)  0b00001000000
+		Start = 1 << 7,				 //(1 << 7)  0b00010000000
+		End = 1 << 8,                //(1 << 8) 0b00100000000
+		Door = 1 << 9,				 //(1 << 9) 0b01000000000
+		Console = 1 << 10			 //(1 <<10) 0b10000000000
+	}
+
 	public struct TileData
 	{
-		public const int North = 1 << 0;   // 0b00000000001
-		public const int South = 1 << 1;   // 0b00000000010
-		public const int East = 1 << 2;    // 0b00000000100
-		public const int West = 1 << 3;    // 0b00000001000
-		public const int Drag = 1 << 4;    // 0b00000010000
-		public const int Roll = 1 << 5;    // 0b00000100000
-		public const int Dock = 1 << 6;    // 0b00001000000
-		public const int Start = 1 << 7;   // 0b00010000000
-		public const int End = 1 << 8;     // 0b00100000000
-		public const int Door = 1 << 9;    // 0b01000000000
-		public const int Console = 1 << 10;// 0b10000000000
-		public static readonly int navMask = North | South | East | West;
-
 		private readonly int flags;
 
 		public TileData(Definition def)
@@ -27,28 +36,52 @@ namespace ClassicTilestorm
 			static int CombineFlags(Definition d)
 			{
 				int f = 0;
-				if (d.bNorth) f |= North;
-				if (d.bSouth) f |= South;
-				if (d.bEast) f |= East;
-				if (d.bWest) f |= West;
-				if (d.bDrag) f |= Drag;
-				if (d.bRoll) f |= Roll;
-				if (d.bDock) f |= Dock;
-				if (d.bStart) f |= Start;
-				if (d.bEnd) f |= End;
-				if (d.bDoor) f |= Door;
-				if (d.bConsole) f |= Console;
+				if (d.bNorth) f |= (int)TileFlags.North;
+				if (d.bSouth) f |= (int)TileFlags.South;
+				if (d.bEast) f |= (int)TileFlags.East;
+				if (d.bWest) f |= (int)TileFlags.West;
+				if (d.bDrag) f |= (int)TileFlags.Drag;
+				if (d.bRoll) f |= (int)TileFlags.Roll;
+				if (d.bDock) f |= (int)TileFlags.Dock;
+				if (d.bStart) f |= (int)TileFlags.Start;
+				if (d.bEnd) f |= (int)TileFlags.End;
+				if (d.bDoor) f |= (int)TileFlags.Door;
+				if (d.bConsole) f |= (int)TileFlags.Console;
 				return f;
 			}
 		}
 
-		public readonly bool IsStart => (flags & Start) != 0;
-		public readonly bool IsEnd => (flags & End) != 0;
-		public readonly bool IsConsole => (flags & Console) != 0;
-		public readonly bool IsDrag => (flags & Drag) != 0;
-		public readonly bool IsDock => (flags & Dock) != 0;
-		public readonly bool IsRoll => (flags & Roll) != 0;
-		public readonly int Nav => flags & navMask;
+#if DEBUG
+		// One-time check that nobody messed up the bit assignments
+		static TileData()
+		{
+			const int directionBits = (int)TileFlags.Directions;
+
+			// Check EVERY gameplay flag against the direction bits
+			if (((int)TileFlags.Drag & directionBits) != 0 ||
+				((int)TileFlags.Roll & directionBits) != 0 ||
+				((int)TileFlags.Dock & directionBits) != 0 ||
+				((int)TileFlags.Start & directionBits) != 0 ||
+				((int)TileFlags.End & directionBits) != 0 ||
+				((int)TileFlags.Door & directionBits) != 0 ||
+				((int)TileFlags.Console & directionBits) != 0)
+			{
+				throw new System.InvalidProgramException(
+					"CRITICAL: One or more gameplay flags overlap with direction bits 0–3. " +
+					"Directions are permanently reserved — do NOT use bits 0–3 for new flags.");
+			}
+		}
+#endif
+
+		public readonly bool IsStart => (flags & (int)TileFlags.Start) != 0;
+		public readonly bool IsEnd => (flags & (int)TileFlags.End) != 0;
+		public readonly bool IsConsole => (flags & (int)TileFlags.Console) != 0;
+		public readonly bool IsDrag => (flags & (int)TileFlags.Drag) != 0;
+		public readonly bool IsDock => (flags & (int)TileFlags.Dock) != 0;
+		public readonly bool IsRoll => (flags & (int)TileFlags.Roll) != 0;
+		
+		private const int TileNavMask = (int)TileFlags.Directions; 
+		public readonly int Nav => flags & TileNavMask;
 	}
 
 	public readonly struct Tile

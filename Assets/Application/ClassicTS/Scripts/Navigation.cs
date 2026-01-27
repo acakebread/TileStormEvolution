@@ -2,15 +2,36 @@
 
 namespace ClassicTilestorm
 {
+	[System.Flags]
+	public enum DirectionFlags : int
+	{
+		None = 0,
+
+		North = 1 << 0,   // RESERVED – do not reuse this bit anywhere else
+		South = 1 << 1,   // RESERVED
+		East = 1 << 2,   // RESERVED
+		West = 1 << 3,   // RESERVED
+		Directions = North | South | East | West
+
+		// You are **not** allowed to add any other values here
+		// All gameplay flags belong in TileFlags below
+	}
+
 	public static class Navigation
 	{
-		public static readonly int[] Directions = { TileData.North, TileData.South, TileData.East, TileData.West };
+		private const int N = (int)DirectionFlags.North;
+		private const int S = (int)DirectionFlags.South;
+		private const int E = (int)DirectionFlags.East;
+		private const int W = (int)DirectionFlags.West;
+		private const int DirMask = (int)DirectionFlags.Directions;
+
+		public static readonly int[] Directions = { N, S, E, W };
 		public static float DirToAngle(int dir) => new float[] { 0f, 0f, 180f, 0f, 90f, 45f, 135f, 90f, -90f, -45f, -135f, -90f, 0f, 0f, 180f, 0f }[dir & 0xF];
-		public static int GetOppositeDirection(int dir) => ((dir & TileData.North) << 1) | ((dir & TileData.South) >> 1) | ((dir & TileData.East) << 1) | ((dir & TileData.West) >> 1);
+		public static int GetOppositeDirection(int dir) => ((dir & N) << 1) | ((dir & S) >> 1) | ((dir & E) << 1) | ((dir & W) >> 1);
 
 		public static int Rotate(int flags, int degrees)
 		{
-			int masked = flags & TileData.navMask;
+			int masked = flags & DirMask;
 
 			// Convert degrees → normalized 0..3 turns (positive = clockwise)
 			int turns = Mathf.RoundToInt(degrees / 90f);
@@ -19,17 +40,17 @@ namespace ClassicTilestorm
 			return turns switch
 			{
 				0 => masked,
-				1 => (((masked & TileData.North) << 2) |
-					  ((masked & TileData.East) >> 1) |
-					  ((masked & TileData.South) << 2) |
-					  ((masked & TileData.West) >> 3)) & TileData.navMask,
+				1 => (((masked & N) << 2) |
+					  ((masked & E) >> 1) |
+					  ((masked & S) << 2) |
+					  ((masked & W) >> 3)) & (int)DirectionFlags.Directions,
 
-				2 => (~masked) & TileData.navMask,
+				2 => (~masked) & (int)DirectionFlags.Directions,
 
-				3 => (((masked & TileData.North) << 3) |
-					  ((masked & TileData.East) >> 2) |
-					  ((masked & TileData.South) << 1) |
-					  ((masked & TileData.West) >> 2)) & TileData.navMask,
+				3 => (((masked & N) << 3) |
+					  ((masked & E) >> 2) |
+					  ((masked & S) << 1) |
+					  ((masked & W) >> 2)) & (int)DirectionFlags.Directions,
 
 				_ => masked
 			};
@@ -93,8 +114,8 @@ namespace ClassicTilestorm
 		//Classic TS legacy function - returns index of adjacent tile
 		public static int GetAdjacentTile(IMapPlay map, int index, int dir)
 		{
-			var dx = ((dir & TileData.East) >> 2) - ((dir & TileData.West) >> 3);
-			var dz = ((dir & TileData.North) >> 0) - ((dir & TileData.South) >> 1);
+			var dx = ((dir & E) >> 2) - ((dir & W) >> 3);
+			var dz = ((dir & N) >> 0) - ((dir & S) >> 1);
 			return ((index / map.Width) + dz) * map.Width + (index % map.Width) + dx;
 		}
 
