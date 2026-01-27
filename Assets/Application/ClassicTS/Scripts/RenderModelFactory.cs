@@ -35,75 +35,92 @@ namespace ClassicTilestorm
 		{
 			Matrix4x4 rootMatrix = Matrix4x4.TRS(rootPos, rootRot, rootScale);
 
-			var filters = prefabRoot.GetComponentsInChildren<MeshFilter>(true);
-			var renderers = prefabRoot.GetComponentsInChildren<MeshRenderer>(true);
+			// Collect both types
+			var meshRenderers = prefabRoot.GetComponentsInChildren<MeshRenderer>(true);
+			var skinnedRenderers = prefabRoot.GetComponentsInChildren<SkinnedMeshRenderer>(true);
 
-			if (filters.Length == 0) return;
+			if (meshRenderers.Length == 0 && skinnedRenderers.Length == 0)
+			{
+				Debug.LogWarning($"No renderers found on prefab: {prefabRoot.name}");
+				return;
+			}
 
-			// Temporary HD check logic (same as DefinitionFactory)
-			bool isHD = (renderers.Length == 1 && renderers[0].sharedMaterials.Length >= 2) || renderers.Length >= 2;
-
-			// Definition material override
 			Material replacement = null;
 			if (!string.IsNullOrEmpty(def.material))
 				replacement = MaterialAssets.Find(def.material);
 
-			// Texture sequence
 			TextureSequence sequence = null;
-			if (!isHD && !string.IsNullOrEmpty(def.texture))
+			if (!string.IsNullOrEmpty(def.texture))
 				sequence = TextureSequenceManager.GetTextureSequence(def.texture);
 
-			// Loop through matching filter/renderer pairs
-			for (int i = 0; i < Mathf.Min(filters.Length, renderers.Length); i++)
+			int added = 0;
+
+			// Process MeshRenderers
+			foreach (var renderer in meshRenderers)
 			{
-				var filter = filters[i];
-				var renderer = renderers[i];
+				var filter = renderer.GetComponent<MeshFilter>();
+				if (filter == null || filter.sharedMesh == null) continue;
 
-				if (filter.sharedMesh == null) continue;
+				var worldMatrix = rootMatrix * filter.transform.localToWorldMatrix;
+				Material[] mats = renderer.sharedMaterials;
 
-				var localToRoot = filter.transform.localToWorldMatrix;
-				var worldMatrix = rootMatrix * localToRoot;
-
-				// Default: use original shared materials
-				Material[] materialsToUse = renderer.sharedMaterials;
-
-				// Apply texture sequence override (only for non-HD)
+				// Apply sequence override (your code unchanged)
 				if (sequence != null && sequence.ResolvedFrames.Length > 0)
 				{
 					var firstTex = sequence.ResolvedFrames[0].texture;
 					if (firstTex != null)
 					{
-						Material[] overrideMats = new Material[materialsToUse.Length];
-
-						for (int m = 0; m < materialsToUse.Length; m++)
+						var overrideMats = new Material[mats.Length];
+						for (int m = 0; m < mats.Length; m++)
 						{
-							if (materialsToUse[m] == null)
-							{
-								overrideMats[m] = null;
-								continue;
-							}
-
-							// Important: create a copy so we don't modify the asset!
-							Material copy = new Material(materialsToUse[m]);
+							if (mats[m] == null) { overrideMats[m] = null; continue; }
+							var copy = new Material(mats[m]);
 							copy.mainTexture = firstTex;
-
-							// Apply color override from replacement material if it exists and is emissive
 							if (replacement != null && MaterialUtils.IsEmissive(replacement))
-							{
-								var emissionColor = GetEmissionLikeColor(replacement, Color.white * 1.2f); // nice bright fallback
-								copy.color = emissionColor;
-							}
-
+								copy.color = GetEmissionLikeColor(replacement, Color.white * 1.2f);
 							overrideMats[m] = copy;
 						}
-
-						materialsToUse = overrideMats;
+						mats = overrideMats;
 					}
 				}
 
-				// Finally — add the instance **once** with the correct materials
-				target.AddMeshInstance(filter.sharedMesh, materialsToUse, worldMatrix);
+				target.AddMeshInstance(filter.sharedMesh, mats, worldMatrix);
+				added++;
 			}
+
+			// Process SkinnedMeshRenderers
+			foreach (var skinned in skinnedRenderers)
+			{
+				if (skinned.sharedMesh == null) continue;
+
+				var worldMatrix = rootMatrix * skinned.transform.localToWorldMatrix;
+				Material[] mats = skinned.sharedMaterials;
+
+				// Apply same sequence override (duplicate or extract to method)
+				if (sequence != null && sequence.ResolvedFrames.Length > 0)
+				{
+					var firstTex = sequence.ResolvedFrames[0].texture;
+					if (firstTex != null)
+					{
+						var overrideMats = new Material[mats.Length];
+						for (int m = 0; m < mats.Length; m++)
+						{
+							if (mats[m] == null) { overrideMats[m] = null; continue; }
+							var copy = new Material(mats[m]);
+							copy.mainTexture = firstTex;
+							if (replacement != null && MaterialUtils.IsEmissive(replacement))
+								copy.color = GetEmissionLikeColor(replacement, Color.white * 1.2f);
+							overrideMats[m] = copy;
+						}
+						mats = overrideMats;
+					}
+				}
+
+				target.AddMeshInstance(skinned.sharedMesh, mats, worldMatrix);
+				added++;
+			}
+
+			Debug.Log($"Added {added} instances from {prefabRoot.name}");
 		}
 
 		private static Color GetEmissionLikeColor(Material mat, Color fallback = default)
