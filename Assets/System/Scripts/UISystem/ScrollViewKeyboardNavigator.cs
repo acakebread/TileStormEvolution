@@ -25,6 +25,9 @@ namespace MassiveHadronLtd
 		// Pending re-selection after rebuild/content change
 		private int pendingReselectIndex = -2; // -2 = none, -1 or >=0 = target index
 
+		// Near top
+		private List<DropdownKeyboardNavigator> dropdownNavigators = new();
+
 		private void Awake()
 		{
 			scrollRect = GetComponent<ScrollRect>();
@@ -33,6 +36,8 @@ namespace MassiveHadronLtd
 		private void OnEnable()
 		{
 			pendingReselectIndex = lastSelectedIndex;
+			var found = Object.FindObjectsByType<DropdownKeyboardNavigator>(FindObjectsSortMode.None);
+			dropdownNavigators.AddRange(found);
 		}
 
 		private void Update()
@@ -103,6 +108,26 @@ namespace MassiveHadronLtd
 						return;
 					}
 				}
+			}
+
+			if (IsInputOrDropdownFocused())
+			{
+				return;
+			}
+
+			bool anyDropdownActive = false;
+			foreach (var dn in dropdownNavigators)
+			{
+				if (dn != null && dn.IsFocusedOrNavigating)
+				{
+					anyDropdownActive = true;
+					break;
+				}
+			}
+
+			if (anyDropdownActive)
+			{
+				return;  // Dropdown takes arrow key priority
 			}
 
 			// If we reach here → either nothing selected or list-related UI is selected → process arrows
@@ -354,6 +379,31 @@ namespace MassiveHadronLtd
 		{
 			return Input.GetKey(KeyCode.UpArrow) || Input.GetKey(KeyCode.DownArrow) ||
 				   Input.GetKey(KeyCode.PageUp) || Input.GetKey(KeyCode.PageDown);
+		}
+
+		private bool IsInputOrDropdownFocused()
+		{
+			var es = EventSystem.current;
+			if (es == null) return false;
+
+			var selectedGO = es.currentSelectedGameObject;
+			if (selectedGO == null) return false;
+
+			// Check for legacy UI
+			if (selectedGO.GetComponent<InputField>() != null ||
+				selectedGO.GetComponent<Dropdown>() != null)
+			{
+				return true;
+			}
+
+			// Check for TextMeshPro (most common nowadays)
+			if (selectedGO.GetComponent<TMPro.TMP_InputField>() != null ||
+				selectedGO.GetComponent<TMPro.TMP_Dropdown>() != null)
+			{
+				return true;
+			}
+
+			return false;
 		}
 	}
 }
