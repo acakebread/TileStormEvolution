@@ -87,8 +87,6 @@ namespace ClassicTilestorm
 
 			// Make sure ghost is visible
 			ghostMesh.SetActive(true);
-
-			static string GetGeometryPath(string modelName) => string.IsNullOrEmpty(modelName) ? null : $"{AssetPath.GeometryPath}{modelName}";
 		}
 
 		// Hide the ghost mesh
