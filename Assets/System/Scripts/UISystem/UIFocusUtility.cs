@@ -22,9 +22,9 @@ namespace MassiveHadronLtd.UI
 			if (current != null && IsRelated(go, current))
 				return true;
 
-			// Hover / pointer over
-			if (IsPointerOver(go))
-				return true;
+			//// Hover / pointer over
+			//if (IsPointerOver(go))
+			//	return true;
 
 			// Dropdown open state (both legacy and TMP)
 			var tmpDd = go.GetComponentInChildren<TMP_Dropdown>(true);

@@ -1,87 +1,88 @@
 ﻿using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.UI;
 using TMPro;
+using MassiveHadronLtd.UI;
 
 namespace MassiveHadronLtd
 {
-	[RequireComponent(typeof(TMP_Dropdown))]
+	[RequireComponent(typeof(Selectable))]
 	public class DropdownKeyboardNavigator : MonoBehaviour,
 		IPointerEnterHandler, IPointerExitHandler,
 		ISelectHandler, IDeselectHandler
 	{
 		[Header("Navigation Settings")]
-		[SerializeField, Tooltip("Wrap selection when reaching top/bottom")]
-		private bool wrapAround = true;
-
-		[SerializeField, Tooltip("Initial delay before key repeat starts (seconds)")]
-		private float repeatDelay = 0.4f;
-
-		[SerializeField, Tooltip("Delay between repeated key events (seconds)")]
-		private float repeatRate = 0.08f;
+		[SerializeField] private bool wrapAround = true;
+		[SerializeField] private float repeatDelay = 0.4f;
+		[SerializeField] private float repeatRate = 0.08f;
 
 		// State
-		private TMP_Dropdown dropdown;
+		private Selectable selectable;
+		private Dropdown legacyDropdown;
+		private TMP_Dropdown tmpDropdown;
 		private bool isHovered;
 		private bool isKeyboardSelected;
 		private int currentHighlightedIndex = -1;
 		private float repeatTimer;
 		private bool isRepeating;
 
-		/// <summary>
-		/// Public property for ScrollViewKeyboardNavigator to check if this dropdown wants arrow key priority
-		/// </summary>
-		public bool IsFocusedOrNavigating =>
-			enabled &&
-			gameObject.activeInHierarchy &&
-			(isHovered || isKeyboardSelected || (dropdown != null && dropdown.IsExpanded));
-
 		private void Awake()
 		{
-			dropdown = GetComponent<TMP_Dropdown>();
-			if (dropdown == null)
+			selectable = GetComponent<Selectable>();
+			legacyDropdown = GetComponent<Dropdown>();
+			tmpDropdown = GetComponent<TMP_Dropdown>();
+
+			if (legacyDropdown == null && tmpDropdown == null)
 			{
-				Debug.LogError($"[DropdownKeyboardNavigator] Missing TMP_Dropdown on {gameObject.name}", this);
+				Debug.LogWarning($"No Dropdown or TMP_Dropdown found on {gameObject.name}", this);
 				enabled = false;
+				return;
 			}
 		}
 
 		private void Update()
 		{
-			if (!IsFocusedOrNavigating)
+			// ── Use the centralized utility ──
+			//if (!gameObject.InFocus())
+			//{
+			//	if (currentHighlightedIndex >= 0)
+			//	{
+			//		// Optional debug
+			//		// Debug.Log($"Dropdown lost focus: {gameObject.name}");
+			//	}
+			//	currentHighlightedIndex = -1;
+			//	isRepeating = false;
+			//	return;
+			//}
+
+			if (!gameObject.InFocus())
 			{
-				if (currentHighlightedIndex >= 0)
-				{
-					// Optional: uncomment to log when we lose control
-					// Debug.Log($"DropdownKeyboardNavigator lost control: {gameObject.name}");
-				}
+				// reset state
 				currentHighlightedIndex = -1;
-				isRepeating = false;
 				return;
 			}
 
-			// Just activated → start from current value
+			// Just gained focus → start from current value
 			if (currentHighlightedIndex < 0)
 			{
-				currentHighlightedIndex = dropdown.value;
-				// Debug.Log($"DropdownKeyboardNavigator activated: {gameObject.name} (hover={isHovered}, selected={isKeyboardSelected}, expanded={dropdown.IsExpanded})");
+				currentHighlightedIndex = GetCurrentValue();
+				// Debug.Log($"Dropdown gained focus: {gameObject.name}");
 			}
 
 			HandleRepeatTimer();
 
 			int direction = 0;
-
 			if (GetKeyDownWithRepeat(KeyCode.UpArrow)) direction = -1;
 			else if (GetKeyDownWithRepeat(KeyCode.DownArrow)) direction = +1;
 			else if (Input.GetKeyDown(KeyCode.Home)) { SetValue(0); return; }
-			else if (Input.GetKeyDown(KeyCode.End)) { SetValue(dropdown.options.Count - 1); return; }
+			else if (Input.GetKeyDown(KeyCode.End)) { SetValue(GetOptionCount() - 1); return; }
 
 			if (direction != 0)
 			{
-				int count = dropdown.options.Count;
-				if (count == 0) return;
+				int count = GetOptionCount();
+				if (count <= 0) return;
 
 				int next = currentHighlightedIndex + direction;
-
 				if (wrapAround)
 				{
 					if (next < 0) next = count - 1;
@@ -93,76 +94,85 @@ namespace MassiveHadronLtd
 				}
 
 				currentHighlightedIndex = next;
-				PreviewValue(next);
+				SetPreviewValue(next);
 			}
-			else if (Input.GetKeyDown(KeyCode.Return) ||
-					 Input.GetKeyDown(KeyCode.KeypadEnter) ||
-					 Input.GetKeyDown(KeyCode.Space))
+			else if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter) || Input.GetKeyDown(KeyCode.Space))
 			{
 				ConfirmSelection();
 			}
 		}
 
-		// ──────────────────────────────────────────────────────────────
-		// Pointer / Selection events
-		// ──────────────────────────────────────────────────────────────
+		// ── Pointer & Selection events (still needed for hover/keyboard focus signals) ──
+		public void OnPointerEnter(PointerEventData eventData) => isHovered = true;
+		public void OnPointerExit(PointerEventData eventData) => isHovered = false;
+		public void OnSelect(BaseEventData eventData) => isKeyboardSelected = true;
+		public void OnDeselect(BaseEventData eventData) => isKeyboardSelected = false;
 
-		public void OnPointerEnter(PointerEventData eventData)
+		// ── Helpers ──
+		private int GetCurrentValue()
 		{
-			isHovered = true;
+			if (tmpDropdown != null) return tmpDropdown.value;
+			if (legacyDropdown != null) return legacyDropdown.value;
+			return 0;
 		}
 
-		public void OnPointerExit(PointerEventData eventData)
+		private int GetOptionCount()
 		{
-			isHovered = false;
+			if (tmpDropdown != null) return tmpDropdown.options.Count;
+			if (legacyDropdown != null) return legacyDropdown.options.Count;
+			return 0;
 		}
 
-		public void OnSelect(BaseEventData eventData)
+		private void SetPreviewValue(int index)
 		{
-			isKeyboardSelected = true;
-		}
+			if (index < 0 || index >= GetOptionCount()) return;
 
-		public void OnDeselect(BaseEventData eventData)
-		{
-			isKeyboardSelected = false;
-		}
-
-		// ──────────────────────────────────────────────────────────────
-		// Value control
-		// ──────────────────────────────────────────────────────────────
-
-		private void PreviewValue(int index)
-		{
-			if (index < 0 || index >= dropdown.options.Count) return;
-
-			dropdown.value = index;
-			dropdown.RefreshShownValue();
-			// If you do NOT want to preview changes when the dropdown is closed,
-			// add this condition:
-			// if (!dropdown.IsExpanded) return;
+			if (tmpDropdown != null)
+			{
+				tmpDropdown.value = index;
+				tmpDropdown.RefreshShownValue();
+			}
+			else if (legacyDropdown != null)
+			{
+				legacyDropdown.value = index;
+				legacyDropdown.RefreshShownValue();
+			}
 		}
 
 		private void ConfirmSelection()
 		{
-			if (currentHighlightedIndex >= 0 && currentHighlightedIndex < dropdown.options.Count)
+			if (currentHighlightedIndex >= 0 && currentHighlightedIndex < GetOptionCount())
 			{
-				dropdown.value = currentHighlightedIndex;
-				dropdown.RefreshShownValue();
+				if (tmpDropdown != null) tmpDropdown.value = currentHighlightedIndex;
+				else if (legacyDropdown != null) legacyDropdown.value = currentHighlightedIndex;
+
+				RefreshShownValue();
 			}
-			dropdown.Hide();
+			HideDropdown();
 		}
 
 		private void SetValue(int index)
 		{
-			if (index < 0 || index >= dropdown.options.Count) return;
-			dropdown.value = index;
-			dropdown.RefreshShownValue();
-			dropdown.Hide();
+			if (index < 0 || index >= GetOptionCount()) return;
+
+			if (tmpDropdown != null) tmpDropdown.value = index;
+			else if (legacyDropdown != null) legacyDropdown.value = index;
+
+			RefreshShownValue();
+			HideDropdown();
 		}
 
-		// ──────────────────────────────────────────────────────────────
-		// Key repeat logic
-		// ──────────────────────────────────────────────────────────────
+		private void RefreshShownValue()
+		{
+			if (tmpDropdown != null) tmpDropdown.RefreshShownValue();
+			else if (legacyDropdown != null) legacyDropdown.RefreshShownValue();
+		}
+
+		private void HideDropdown()
+		{
+			if (tmpDropdown != null) tmpDropdown.Hide();
+			else if (legacyDropdown != null) legacyDropdown.Hide();
+		}
 
 		private bool GetKeyDownWithRepeat(KeyCode key)
 		{
@@ -172,26 +182,20 @@ namespace MassiveHadronLtd
 				isRepeating = true;
 				return true;
 			}
-
 			if (Input.GetKey(key) && isRepeating && repeatTimer <= 0f)
 			{
 				repeatTimer = repeatRate;
 				return true;
 			}
-
 			return false;
 		}
 
 		private void HandleRepeatTimer()
 		{
 			if (isRepeating && (Input.GetKey(KeyCode.UpArrow) || Input.GetKey(KeyCode.DownArrow)))
-			{
 				repeatTimer -= Time.deltaTime;
-			}
 			else
-			{
 				isRepeating = false;
-			}
 		}
 	}
 }

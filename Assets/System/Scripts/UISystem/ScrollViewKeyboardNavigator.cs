@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using System.Collections.Generic;
 using System.Collections;
 using UnityEngine.EventSystems;
+using MassiveHadronLtd.UI;
 
 namespace MassiveHadronLtd
 {
@@ -110,15 +111,10 @@ namespace MassiveHadronLtd
 				}
 			}
 
-			if (IsInputOrDropdownFocused())
-			{
-				return;
-			}
-
 			bool anyDropdownActive = false;
 			foreach (var dn in dropdownNavigators)
 			{
-				if (dn != null && dn.IsFocusedOrNavigating)
+				if (dn != null && dn.gameObject.InFocus())
 				{
 					anyDropdownActive = true;
 					break;
@@ -127,8 +123,28 @@ namespace MassiveHadronLtd
 
 			if (anyDropdownActive)
 			{
-				return;  // Dropdown takes arrow key priority
+				return;
 			}
+
+			//if (IsInputOrDropdownFocused())
+			//{
+			//	return;
+			//}
+
+			//bool anyDropdownActive = false;
+			//foreach (var dn in dropdownNavigators)
+			//{
+			//	if (dn != null && dn.IsFocusedOrNavigating)
+			//	{
+			//		anyDropdownActive = true;
+			//		break;
+			//	}
+			//}
+
+			//if (anyDropdownActive)
+			//{
+			//	return;  // Dropdown takes arrow key priority
+			//}
 
 			// If we reach here → either nothing selected or list-related UI is selected → process arrows
 			HandleKeyboardInput();
