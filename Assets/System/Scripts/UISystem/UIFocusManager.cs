@@ -165,5 +165,17 @@ namespace MassiveHadronLtd.UI
 			}
 			return null;
 		}
+
+		public static bool AnyUIHasKeyboardFocus()
+		{
+			if (currentFocus == null) return false;
+
+			// Block keys when any dropdown, input field, or other keyboard-capturing UI has focus
+			return currentFocus.GetComponent<TMP_Dropdown>() != null ||
+				   currentFocus.GetComponent<Dropdown>() != null ||
+				   currentFocus.GetComponent<TMP_InputField>()?.isFocused == true ||
+				   currentFocus.GetComponent<InputField>()?.isFocused == true ||
+				   currentFocus.GetComponentInParent<ScrollRect>() != null; // optional: block when scroll view has focus
+		}
 	}
 }
