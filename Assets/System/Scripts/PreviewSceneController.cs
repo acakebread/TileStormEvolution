@@ -8,7 +8,7 @@ namespace MassiveHadronLtd
 	public class PreviewSceneController : IDisposable
 	{
 		// Configuration - defaults are just fallbacks, expect override
-		public Vector2 DefaultResolution { get; set; } = new Vector2(320, 240);
+		public Vector2 DefaultResolution { get; set; } = new Vector2(320, 200);
 		public Color BackgroundColor { get; set; } = new Color(0.129f, 0.698f, 0.882f); // #21B2E1
 		public float FieldOfView { get; set; } = 60f;
 

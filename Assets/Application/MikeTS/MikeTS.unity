@@ -273,7 +273,7 @@ GameObject:
   - component: {fileID: 862124737}
   - component: {fileID: 862124736}
   m_Layer: 0
-  m_Name: PreviewSettings
+  m_Name: ApplicationSettings
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -794,6 +794,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ClassicTilestorm.UIController
   mainCanvas: {fileID: 2944987283630893577}
   panelPrefabs:
+  - {fileID: 4695226594433876902, guid: 4792715285cc0984fa49bff4bb56ce2e, type: 3}
   - {fileID: 4695226594433876902, guid: 81d0ade3e8f8df14fbbd2500e09a8d95, type: 3}
   - {fileID: 4695226594433876902, guid: d164df16686cd7b47b4dd970ba3f74bf, type: 3}
   - {fileID: 4695226594433876902, guid: 13c21ca6cd78bfb459cc9a0428dac147, type: 3}

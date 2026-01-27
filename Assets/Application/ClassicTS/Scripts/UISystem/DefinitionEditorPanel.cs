@@ -153,6 +153,11 @@ namespace ClassicTilestorm
 			base.OnDisable();
 		}
 
+		protected override void LateUdpate()
+		{
+			base.LateUdpate();
+		}
+
 		private void InitializeUIReferences()
 		{
 			if (closeButton) closeButton.onClick.AddListener(() => gameObject.SetActive(false));
@@ -490,6 +495,12 @@ namespace ClassicTilestorm
 				GroundUVScale = groundUVScale,
 				GroundOverrideTexture = groundOverrideTexture
 			};
+
+			if (previewCtrl != null)
+			{
+				Canvas.ForceUpdateCanvases();
+				previewCtrl.UpdateRenderTextureSizeIfNeeded();
+			}
 
 			SetupPreviewInput();
 			orbitController.OnTransformChanged += ApplyCameraTransform;

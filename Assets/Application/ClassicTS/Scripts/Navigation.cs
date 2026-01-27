@@ -14,7 +14,7 @@ namespace ClassicTilestorm
 		Directions = North | South | East | West
 
 		// You are **not** allowed to add any other values here
-		// All gameplay flags belong in TileFlags below
+		// All gameplay flags belong in TileFlags
 	}
 
 	public static class Navigation

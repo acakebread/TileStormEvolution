@@ -2137,7 +2137,7 @@ RectTransform:
   m_Father: {fileID: 8963738092087317392}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 1, y: 1}
+  m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: -0.000061035156}
   m_SizeDelta: {x: 20, y: 20}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -2414,7 +2414,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &1044266578244108260
 RectTransform:
   m_ObjectHideFlags: 0
@@ -4145,10 +4145,10 @@ GameObject:
   - component: {fileID: 4416377904054474362}
   - component: {fileID: 57104370131820811}
   - component: {fileID: 7171374045184151326}
-  - component: {fileID: -2348744077142109005}
   - component: {fileID: 4079367905669483670}
+  - component: {fileID: 2758388438859090808}
   m_Layer: 5
-  m_Name: DefinitionEditorPanel
+  m_Name: DatabaseEditorPanel
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -4226,22 +4226,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Mask
   m_ShowMaskGraphic: 1
---- !u!114 &-2348744077142109005
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4695226594433876902}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 69ffa8d9450493e47afa94bc5214761c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ClassicTilestorm.DatabaseEditorPanel
-  draggable: 1
-  resizable: 1
-  resizeBorder: 16
-  minSize: {x: 256, y: 100}
 --- !u!114 &4079367905669483670
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4268,6 +4252,57 @@ MonoBehaviour:
   m_ChildScaleWidth: 0
   m_ChildScaleHeight: 0
   m_ReverseArrangement: 0
+--- !u!114 &2758388438859090808
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4695226594433876902}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 64adfb330ef289640af13cfbb8df816d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ClassicTilestorm.DefinitionEditorPanel
+  draggable: 1
+  resizable: 1
+  resizeBorder: 16
+  minSize: {x: 256, y: 100}
+  closeButton: {fileID: 0}
+  definitionScrollView: {fileID: 3592446050041274724}
+  contentParent: {fileID: 4343362275747073472}
+  definitionListItemPrefab: {fileID: 6156078273616792229, guid: 20aabc7ae462a854abd635426e95de42, type: 3}
+  ButtonInsert: {fileID: 5269212821420786266}
+  ButtonDelete: {fileID: 2082123257697621870}
+  ButtonMoveUp: {fileID: 9177448086661514197}
+  ButtonMoveDown: {fileID: 6768579624120803534}
+  previewImage: {fileID: 887984126197869973}
+  flagPropertiesRect: {fileID: 8959580728672073993}
+  flagTogglePrefab: {fileID: 510498794976390951, guid: 73dd80b6cd083cf44a69dab9b9a0d7f2, type: 3}
+  IDInput: {fileID: 1389283319039499466}
+  modelDropdown: {fileID: 454261876308400215}
+  noneModelOptionText: "\u2014 None \u2014"
+  textureSequenceDropdown: {fileID: 2297053546116088425}
+  noneTextureOptionText: "\u2014 None \u2014"
+  materialDropdown: {fileID: 7797061406972080170}
+  noneMaterialOptionText: "\u2014 None \u2014"
+  backgroundColor: {r: 0.129, g: 0.698, b: 0.882, a: 1}
+  fieldOfView: 60
+  sizeToDistanceFactor: 1
+  defaultTiltAngle: 30
+  minTiltAngle: 0
+  maxTiltAngle: 90
+  minDistance: 0.8
+  maxDistance: 10
+  dragOrbitSensitivity: 0.2
+  dragTiltSensitivity: 0.2
+  scrollZoomSensitivity: 0.5
+  autoRotateSpeed: -15
+  groundColor: {r: 1, g: 1, b: 1, a: 1}
+  groundSize: 2.5
+  groundY: -0.01
+  groundUVScale: 1
+  groundOverrideTexture: {fileID: 2800000, guid: 9a774c7ec64ff9d4dbd097b7b33f3834, type: 3}
 --- !u!1 &4714438361071147397
 GameObject:
   m_ObjectHideFlags: 0
@@ -7576,7 +7611,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Definitions
+  m_text: Database Editor
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}

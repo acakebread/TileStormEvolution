@@ -195,6 +195,8 @@ namespace ClassicTilestorm
 				controller.NotifyPanelDeactivated(this);
 		}
 
+		protected virtual void LateUdpate() { }
+
 		protected virtual void OnDestroy()
 		{
 			var controller = UIController.Instance;
