@@ -18,10 +18,10 @@ namespace ClassicTilestorm
         East  = 1 << 2,   // (1 <<  2) 0b0000000000000100
         West  = 1 << 3,   // (1 <<  3) 0b0000000000001000
 
-		Directions = 0b1111,  // bits 0–3 only (N=1, S=2, E=4, W=8)
+		DirMask = 0b1111,  // bits 0–3 only (N=1, S=2, E=4, W=8)
 
 		// ── Gameplay flags – start from bit 8 and never touch 0–7 ─────────────
-		Drag = 1 << 8,          // (1 <<  8) 0b0000000100000000
+		Drag        = 1 << 8,          // (1 <<  8) 0b0000000100000000
         Roll        = 1 << 9,   // (1 <<  9) 0b0000001000000000
         Dock        = 1 << 10,  // (1 << 10) 0b0000010000000000
         Start       = 1 << 11,  // (1 << 11) 0b0000100000000000
@@ -89,8 +89,8 @@ namespace ClassicTilestorm
         [JsonIgnore]
         public int Nav
         {
-            get => flags & (int)(DefinitionFlags.Directions);
-            set => flags = (flags & ~(int)(DefinitionFlags.Directions)) | (value & (int)(DefinitionFlags.Directions));
+            get => flags & (int)(DefinitionFlags.DirMask);
+            set => flags = (flags & ~(int)DefinitionFlags.DirMask) | (value & (int)DefinitionFlags.DirMask);
         }
 
         private void SetFlag(DefinitionFlags flag, bool value)

@@ -11,7 +11,7 @@ namespace ClassicTilestorm
 		private const int W = (int)DefinitionFlags.West;
 
 		// Mask for direction bits (bits 0–3)
-		private const int DirMask = N | S | E | W;
+		private const int DirMask = (int)DefinitionFlags.DirMask;
 
 		public static readonly int[] Directions = { N, S, E, W };
 
