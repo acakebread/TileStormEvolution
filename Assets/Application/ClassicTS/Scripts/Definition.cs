@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Linq;
 using System.Collections.Generic;
 using Newtonsoft.Json;
 using MassiveHadronLtd;
@@ -8,95 +7,40 @@ using Newtonsoft.Json.Linq;
 
 namespace ClassicTilestorm
 {
-	[Flags] internal enum DefinitionFlags : int
+	[Flags]
+	internal enum DefinitionFlags : int
 	{
 		None = 0,
 
 		// ── Directions – must use exactly the same values as DirectionFlags ──
-		North = DirectionFlags.North,//(1 << 0) 0b000000000000001
-		South = DirectionFlags.South,//(1 << 1) 0b000000000000010
-		East = DirectionFlags.East,  //(1 << 2) 0b000000000000100
-		West = DirectionFlags.West,  //(1 << 3) 0b000000000001000
+		North = DirectionFlags.North,  // (1 <<  0) 0b0000000000000001
+		South = DirectionFlags.South,  // (1 <<  1) 0b0000000000000010
+		East  = DirectionFlags.East,   // (1 <<  2) 0b0000000000000100
+		West  = DirectionFlags.West,   // (1 <<  3) 0b0000000000001000
 
 		// ── Gameplay flags – start from bit 8 and never touch 0–7 ─────────────
-		Drag = 1 << 8,               //(1 << 8) 0b000000100000000
-		Roll = 1 << 9,               //(1 << 9) 0b000001000000000
-		Dock = 1 << 10,              //(1 <<10) 0b000010000000000
-		Start = 1 << 11,             //(1 <<11) 0b000100000000000
-		End = 1 << 12,               //(1 <<12) 0b001000000000000
-		Door = 1 << 13,              //(1 <<13) 0b010000000000000
-		Console = 1 << 14            //(1 <<14) 0b100000000000000
+		Drag    = 1 <<  8,             // (1 <<  8) 0b0000000100000000
+		Roll    = 1 <<  9,             // (1 <<  9) 0b0000001000000000
+		Dock    = 1 << 10,             // (1 << 10) 0b0000010000000000
+		Start   = 1 << 11,             // (1 << 11) 0b0000100000000000
+		End     = 1 << 12,             // (1 << 12) 0b0001000000000000
+		Door    = 1 << 13,             // (1 << 13) 0b0010000000000000
+		Console = 1 << 14,             // (1 << 14) 0b0100000000000000
+
+		// Newer gameplay flags (continuing sequentially)
+		PuzzleBlock = 1 << 15,         // (1 << 15) 0b1000000000000000
+		Sway        = 1 << 16,         // (1 << 16) 0b1 0000000000000000   (bit 16)
+		Wash        = 1 << 17,         // (1 << 17) 0b10 0000000000000000  (bit 17)
 	}
 
-	internal struct DefinitionData
+	internal interface IFlagAccess
 	{
-		private int flags;
-
-		public DefinitionData(Definition def)
-		{
-			flags = def == null ? 0 : CombineFlags(def);
-
-			static int CombineFlags(Definition d)
-			{
-				int f = 0;
-				if (d.bNorth) f |= (int)DefinitionFlags.North;
-				if (d.bSouth) f |= (int)DefinitionFlags.South;
-				if (d.bEast) f |= (int)DefinitionFlags.East;
-				if (d.bWest) f |= (int)DefinitionFlags.West;
-				if (d.bDrag) f |= (int)DefinitionFlags.Drag;
-				if (d.bRoll) f |= (int)DefinitionFlags.Roll;
-				if (d.bDock) f |= (int)DefinitionFlags.Dock;
-				if (d.bStart) f |= (int)DefinitionFlags.Start;
-				if (d.bEnd) f |= (int)DefinitionFlags.End;
-				if (d.bDoor) f |= (int)DefinitionFlags.Door;
-				if (d.bConsole) f |= (int)DefinitionFlags.Console;
-				return f;
-			}
-		}
-
-#if DEBUG
-		// One-time check that nobody messed up the bit assignments
-		static DefinitionData()
-		{
-			const int directionBits = (int)DirectionFlags.Directions;
-
-			// Check EVERY gameplay flag against the direction bits
-			if (((int)DefinitionFlags.Drag & directionBits) != 0 ||
-				((int)DefinitionFlags.Roll & directionBits) != 0 ||
-				((int)DefinitionFlags.Dock & directionBits) != 0 ||
-				((int)DefinitionFlags.Start & directionBits) != 0 ||
-				((int)DefinitionFlags.End & directionBits) != 0 ||
-				((int)DefinitionFlags.Door & directionBits) != 0 ||
-				((int)DefinitionFlags.Console & directionBits) != 0)
-			{
-				throw new InvalidProgramException(
-					"CRITICAL: One or more gameplay flags overlap with direction bits 0–3. " +
-					"Directions are permanently reserved — do NOT use bits 0–3 for new flags.");
-			}
-		}
-#endif
-
-		public readonly bool IsStart => (flags & (int)DefinitionFlags.Start) != 0;
-		public readonly bool IsEnd => (flags & (int)DefinitionFlags.End) != 0;
-		public readonly bool IsConsole => (flags & (int)DefinitionFlags.Console) != 0;
-		public readonly bool IsDrag => (flags & (int)DefinitionFlags.Drag) != 0;
-		public readonly bool IsDock => (flags & (int)DefinitionFlags.Dock) != 0;
-		public readonly bool IsRoll => (flags & (int)DefinitionFlags.Roll) != 0;
-
-		public int Nav 
-		{ 
-			get => flags & (int)DirectionFlags.Directions;
-			set
-			{
-				flags &= ~(int)DirectionFlags.Directions;
-				flags |= value;
-			}
-		}
+		int Flags { get; set; }
 	}
 
 	[Serializable]
 	[JsonConverter(typeof(DefinitionConverter))]
-	public class Definition
+	public class Definition : IFlagAccess
 	{
 		[JsonIgnore]
 		public HashId HashID { get; set; } = default;
@@ -106,25 +50,50 @@ namespace ClassicTilestorm
 		public string texture;
 		public string material;
 
-		// ── CONNECTIONS ───────────────────────────────────────────────────────
-		[JsonIgnore] public bool bNorth;
-		[JsonIgnore] public bool bSouth;
-		[JsonIgnore] public bool bEast;
-		[JsonIgnore] public bool bWest;
+		// ── The only flags field ───────────────────────────────────────────────
+		[JsonIgnore]
+		private int flags;
 
-		// ── FLAGS ─────────────────────────────────────────────────────────────
-		[JsonIgnore] public bool bDrag;
-		[JsonIgnore] public bool bRoll;
-		[JsonIgnore] public bool bDock;
-		[JsonIgnore] public bool bDoor;
-		[JsonIgnore] public bool bStart;
-		[JsonIgnore] public bool bEnd;
-		[JsonIgnore] public bool bConsole;
-		[JsonIgnore] public bool bPuzzleBlock;
-		[JsonIgnore] public bool bSway;
-		[JsonIgnore] public bool bWash;
+		int IFlagAccess.Flags
+		{
+			get => flags;
+			set => flags = value;
+		}
 
-		// ── DEFAULT & HELPERS ─────────────────────────────────────────────────
+		// ── Public API remains identical (backward compatible) ────────────────
+		[JsonIgnore] public bool bNorth { get => (flags & (int)DefinitionFlags.North) != 0; set => SetFlag(DefinitionFlags.North, value); }
+		[JsonIgnore] public bool bSouth { get => (flags & (int)DefinitionFlags.South) != 0; set => SetFlag(DefinitionFlags.South, value); }
+		[JsonIgnore] public bool bEast { get => (flags & (int)DefinitionFlags.East) != 0; set => SetFlag(DefinitionFlags.East, value); }
+		[JsonIgnore] public bool bWest { get => (flags & (int)DefinitionFlags.West) != 0; set => SetFlag(DefinitionFlags.West, value); }
+
+		[JsonIgnore] public bool bDrag { get => (flags & (int)DefinitionFlags.Drag) != 0; set => SetFlag(DefinitionFlags.Drag, value); }
+		[JsonIgnore] public bool bRoll { get => (flags & (int)DefinitionFlags.Roll) != 0; set => SetFlag(DefinitionFlags.Roll, value); }
+		[JsonIgnore] public bool bDock { get => (flags & (int)DefinitionFlags.Dock) != 0; set => SetFlag(DefinitionFlags.Dock, value); }
+		[JsonIgnore] public bool bDoor { get => (flags & (int)DefinitionFlags.Door) != 0; set => SetFlag(DefinitionFlags.Door, value); }
+		[JsonIgnore] public bool bStart { get => (flags & (int)DefinitionFlags.Start) != 0; set => SetFlag(DefinitionFlags.Start, value); }
+		[JsonIgnore] public bool bEnd { get => (flags & (int)DefinitionFlags.End) != 0; set => SetFlag(DefinitionFlags.End, value); }
+		[JsonIgnore] public bool bConsole { get => (flags & (int)DefinitionFlags.Console) != 0; set => SetFlag(DefinitionFlags.Console, value); }
+		[JsonIgnore] public bool bPuzzleBlock { get => (flags & (int)DefinitionFlags.PuzzleBlock) != 0; set => SetFlag(DefinitionFlags.PuzzleBlock, value); }
+		[JsonIgnore] public bool bSway { get => (flags & (int)DefinitionFlags.Sway) != 0; set => SetFlag(DefinitionFlags.Sway, value); }
+		[JsonIgnore] public bool bWash { get => (flags & (int)DefinitionFlags.Wash) != 0; set => SetFlag(DefinitionFlags.Wash, value); }
+
+		// ── Packed navigation (multi-bit field) ───────────────────────────────
+		[JsonIgnore]
+		public int Nav
+		{
+			get => flags & (int)DirectionFlags.Directions;
+			set => flags = (flags & ~(int)DirectionFlags.Directions) | (value & (int)DirectionFlags.Directions);
+		}
+
+		// ── Helper to keep setters DRY ────────────────────────────────────────
+		private void SetFlag(DefinitionFlags flag, bool value)
+		{
+			if (value)
+				flags |= (int)flag;
+			else
+				flags &= ~(int)flag;
+		}
+
 		public static Definition GetDefaultTile()
 		{
 			const string legacyName = "tile_empty";
@@ -137,6 +106,7 @@ namespace ClassicTilestorm
 				model = null,
 				texture = null,
 				material = null,
+				// flags remain 0 — correct for empty tile
 			};
 		}
 
@@ -155,7 +125,29 @@ namespace ClassicTilestorm
 	}
 
 	// ─────────────────────────────────────────────────────────────────────────
-	// All conversion logic lives here — Definition stays dumb
+	// Centralized flag mapping
+	// ─────────────────────────────────────────────────────────────────────────
+	internal static class DefinitionFlagMapping
+	{
+		public static readonly IReadOnlyDictionary<string, DefinitionFlags> NameToFlag
+			= new Dictionary<string, DefinitionFlags>(StringComparer.OrdinalIgnoreCase)
+			{
+				["Drag"] = DefinitionFlags.Drag,
+				["Roll"] = DefinitionFlags.Roll,
+				["Dock"] = DefinitionFlags.Dock,
+				["Door"] = DefinitionFlags.Door,
+				["Start"] = DefinitionFlags.Start,
+				["End"] = DefinitionFlags.End,
+				["Console"] = DefinitionFlags.Console,
+				["PuzzleBlock"] = DefinitionFlags.PuzzleBlock,
+				["Sway"] = DefinitionFlags.Sway,
+				["Wash"] = DefinitionFlags.Wash,
+				// Add future flags here — single place to maintain
+			};
+	}
+
+	// ─────────────────────────────────────────────────────────────────────────
+	// Converter – non-generic, uses IFlagAccess, compatible with Unity Newtonsoft
 	// ─────────────────────────────────────────────────────────────────────────
 	public class DefinitionConverter : JsonConverter
 	{
@@ -170,6 +162,7 @@ namespace ClassicTilestorm
 			}
 
 			var def = (Definition)value;
+			var flagAccess = (IFlagAccess)def;  // safe cast – we know Definition implements it
 
 			writer.WriteStartObject();
 
@@ -188,18 +181,13 @@ namespace ClassicTilestorm
 			if (!string.IsNullOrEmpty(def.texture)) { writer.WritePropertyName("texture"); serializer.Serialize(writer, def.texture); }
 			if (!string.IsNullOrEmpty(def.material)) { writer.WritePropertyName("material"); serializer.Serialize(writer, def.material); }
 
-			// flags — collect all true flags, sort alphabetically, join with ", "
+			// Flags – collect active ones
 			var activeFlags = new List<string>();
-			if (def.bDrag) activeFlags.Add("Drag");
-			if (def.bRoll) activeFlags.Add("Roll");
-			if (def.bDock) activeFlags.Add("Dock");
-			if (def.bDoor) activeFlags.Add("Door");
-			if (def.bStart) activeFlags.Add("Start");
-			if (def.bEnd) activeFlags.Add("End");
-			if (def.bConsole) activeFlags.Add("Console");
-			if (def.bPuzzleBlock) activeFlags.Add("PuzzleBlock");
-			if (def.bSway) activeFlags.Add("Sway");
-			if (def.bWash) activeFlags.Add("Wash");
+			foreach (var kv in DefinitionFlagMapping.NameToFlag)
+			{
+				if ((flagAccess.Flags & (int)kv.Value) != 0)
+					activeFlags.Add(kv.Key);
+			}
 
 			if (activeFlags.Count > 0)
 			{
@@ -208,7 +196,7 @@ namespace ClassicTilestorm
 				writer.WriteValue(string.Join(", ", activeFlags));
 			}
 
-			// connections — collect active directions in NESW order
+			// Connections – unchanged, uses public bXxx properties
 			var activeDirs = new List<char>();
 			if (def.bNorth) activeDirs.Add('N');
 			if (def.bSouth) activeDirs.Add('S');
@@ -230,6 +218,7 @@ namespace ClassicTilestorm
 				return null;
 
 			var def = existingValue as Definition ?? new Definition();
+			var flagAccess = (IFlagAccess)def;
 
 			var jo = JObject.Load(reader);
 
@@ -250,31 +239,27 @@ namespace ClassicTilestorm
 				}
 			}
 
-			// Populate scalar fields
+			// scalar fields
 			serializer.Populate(jo.CreateReader(), def);
 
 			// ── Parse flags ────────────────────────────────────────────────────
 			if (jo["flags"]?.Type == JTokenType.String)
 			{
 				string raw = jo["flags"].Value<string>() ?? "";
-				var parts = raw.Split(new[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries)
-							   .Select(s => s.Trim())
-							   .Where(s => !string.IsNullOrEmpty(s));
+				var parts = raw.Split(new[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries);
 
-				foreach (var flag in parts)
+				foreach (var part in parts)
 				{
-					switch (flag.ToLowerInvariant())
+					string trimmed = part.Trim();
+					if (string.IsNullOrEmpty(trimmed)) continue;
+
+					if (DefinitionFlagMapping.NameToFlag.TryGetValue(trimmed, out var flag))
 					{
-						case "drag": def.bDrag = true; break;
-						case "roll": def.bRoll = true; break;
-						case "dock": def.bDock = true; break;
-						case "door": def.bDoor = true; break;
-						case "start": def.bStart = true; break;
-						case "end": def.bEnd = true; break;
-						case "console": def.bConsole = true; break;
-						case "puzzleblock": def.bPuzzleBlock = true; break;
-						case "sway": def.bSway = true; break;
-						case "wash": def.bWash = true; break;
+						flagAccess.Flags |= (int)flag;
+					}
+					else
+					{
+						Debug.LogWarning($"Unknown flag in JSON: '{trimmed}'");
 					}
 				}
 			}

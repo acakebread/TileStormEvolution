@@ -5,29 +5,28 @@ namespace ClassicTilestorm
 {
 	public readonly struct Tile
 	{
-		private readonly DefinitionData data;
+		// ── New constructor: takes Variant instead of just HashId ──────────
+		private readonly int flags;
 		public readonly GameObject gameObject;
 
-		// ── New constructor: takes Variant instead of just HashId ──────────
 		public Tile(Variant variant, Transform parent, Vector3 worldPosition)
 		{
 			var def = ResourceManager.ResolveDefinition(variant.hash, out bool hadError);
 			if (hadError)
 				Debug.LogWarning($"Failed to resolve tile definition at tile ({worldPosition.x},{worldPosition.z}) (hash: {variant.hash}) — using default");
 
-			data = new DefinitionData(def);
+			flags = ((IFlagAccess)def).Flags;
 
-			// Position with delta offset
 			Vector3 finalPosition = worldPosition + new Vector3(0f, variant.delta, 0f);
-
-			// Rotation from angle (around Y-axis for top-down map)
 			Quaternion finalRotation = Quaternion.Euler(0f, variant.angle, 0f);
 
 			gameObject = def != null && !def.IsDefault()
 				? InstantiateTile(def, parent, finalPosition, finalRotation)
 				: null;
 
-			data.Nav = Navigation.Rotate(data.Nav, Mathf.RoundToInt(variant.angle));
+			// Apply rotation to navigation bits (done in-place on flags)
+			int rotatedNav = Navigation.Rotate(Nav, Mathf.RoundToInt(variant.angle));
+			flags = (flags & ~(int)DirectionFlags.Directions) | rotatedNav;
 
 			static GameObject InstantiateTile(Definition definition, Transform parent, Vector3 position, Quaternion rotation)
 			{
@@ -52,14 +51,14 @@ namespace ClassicTilestorm
 		{
 		}
 
-		// Forwarded properties
-		public bool IsStart => data.IsStart;
-		public bool IsEnd => data.IsEnd;
-		public bool IsConsole => data.IsConsole;
-		public bool IsDrag => data.IsDrag;
-		public bool IsDock => data.IsDock;
-		public bool IsRoll => data.IsRoll;
-		public readonly int Nav => data.Nav;
+		// Forwarded properties — now directly on our own flags
+		public readonly bool IsStart => (flags & (int)DefinitionFlags.Start) != 0;
+		public readonly bool IsEnd => (flags & (int)DefinitionFlags.End) != 0;
+		public readonly bool IsConsole => (flags & (int)DefinitionFlags.Console) != 0;
+		public readonly bool IsDrag => (flags & (int)DefinitionFlags.Drag) != 0;
+		public readonly bool IsDock => (flags & (int)DefinitionFlags.Dock) != 0;
+		public readonly bool IsRoll => (flags & (int)DefinitionFlags.Roll) != 0;
+		public readonly int Nav => flags & (int)DirectionFlags.Directions;
 
 		public Bounds GetGeometryBounds()
 		{
