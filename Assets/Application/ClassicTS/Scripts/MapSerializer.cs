@@ -13,6 +13,8 @@ namespace ClassicTilestorm
 		protected readonly bool IsAtomic;
 
 		private const int TableJsonOrderPosition = 20;
+		private const int TilesJsonOrderPosition = 21;
+		private const int SolveJsonOrderPosition = 22;
 
 		protected MapConverterBase(bool isAtomic)
 		{
@@ -153,6 +155,19 @@ namespace ClassicTilestorm
 
 			serializer.Populate(jo.CreateReader(), map);
 
+			// Decode tiles & solve using the smart decoder (handles both plain and RLE)
+			if (jo["tiles"]?.Type == JTokenType.Array)
+			{
+				var data = jo["tiles"].ToObject<int[]>(serializer);
+				((Map)map).tiles = data?.SmartRleDecode() ?? Array.Empty<int>();
+			}
+
+			if (jo["solve"]?.Type == JTokenType.Array)
+			{
+				var data = jo["solve"].ToObject<int[]>(serializer);
+				((Map)map).solve = data?.SmartRleDecode() ?? Array.Empty<int>();
+			}
+
 			if (tableArray != null)
 			{
 				((Map.IVariantAccess)map).Variants = ParseTableToVariants(tableArray);
@@ -241,9 +256,27 @@ namespace ClassicTilestorm
 				if (propValue == null && serializer.NullValueHandling == NullValueHandling.Ignore)
 					continue;
 
+				// ── Intercept tiles and solve ──────────────────────────────────────
+				if (name == "tiles" && map.tiles != null && map.tiles.Length > 0)
+				{
+					writer.WritePropertyName("tiles");
+					var encoded = map.tiles.SmartRleEncode();
+					serializer.Serialize(writer, encoded);
+					continue;
+				}
+
+				if (name == "solve" && map.solve != null && map.solve.Length > 0)
+				{
+					writer.WritePropertyName("solve");
+					var encoded = map.solve.SmartRleEncode();
+					serializer.Serialize(writer, encoded);
+					continue;
+				}
+
 				writer.WritePropertyName(name);
 				serializer.Serialize(writer, propValue);
 
+				// Existing table insertion logic
 				if (!tableWritten && prop.Order.GetValueOrDefault(int.MaxValue) < TableJsonOrderPosition)
 				{
 					var remaining = OrderedProperties(serializer)
