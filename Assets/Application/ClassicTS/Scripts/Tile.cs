@@ -5,7 +5,6 @@ namespace ClassicTilestorm
 {
 	public readonly struct Tile
 	{
-		// ── New constructor: takes Variant instead of just HashId ──────────
 		private readonly int flags;
 		public readonly GameObject gameObject;
 
@@ -13,9 +12,18 @@ namespace ClassicTilestorm
 		{
 			var def = ResourceManager.ResolveDefinition(variant.hash, out bool hadError);
 			if (hadError)
-				Debug.LogWarning($"Failed to resolve tile definition at tile ({worldPosition.x},{worldPosition.z}) (hash: {variant.hash}) — using default");
+				Debug.LogWarning($"Failed to resolve tile definition at tile ({worldPosition.x:F1},{worldPosition.z:F1}) (hash: {variant.hash}) — using default");
 
-			flags = ((IFlagAccess)def).Flags;
+			// Directly take flags from definition (no recompute needed)
+			int baseFlags = def?.Flags ?? 0;
+
+			// Rotate navigation bits **before** final assignment (safe in readonly struct)
+			int rotatedNav = Navigation.Rotate(
+				baseFlags & (int)DirectionFlags.Directions,
+				Mathf.RoundToInt(variant.angle)
+			);
+
+			flags = (baseFlags & ~(int)DirectionFlags.Directions) | rotatedNav;
 
 			Vector3 finalPosition = worldPosition + new Vector3(0f, variant.delta, 0f);
 			Quaternion finalRotation = Quaternion.Euler(0f, variant.angle, 0f);
@@ -23,10 +31,6 @@ namespace ClassicTilestorm
 			gameObject = def != null && !def.IsDefault()
 				? InstantiateTile(def, parent, finalPosition, finalRotation)
 				: null;
-
-			// Apply rotation to navigation bits (done in-place on flags)
-			int rotatedNav = Navigation.Rotate(Nav, Mathf.RoundToInt(variant.angle));
-			flags = (flags & ~(int)DirectionFlags.Directions) | rotatedNav;
 
 			static GameObject InstantiateTile(Definition definition, Transform parent, Vector3 position, Quaternion rotation)
 			{
@@ -41,17 +45,17 @@ namespace ClassicTilestorm
 					return GeometryFactory.CreateFallbackTile(parent, position, rotation);
 				}
 
-				return DefinitionFactory.Instantiate(definition, position, rotation, parent);  // ← already takes rotation
+				return DefinitionFactory.Instantiate(definition, position, rotation, parent);
 			}
 		}
 
-		// ── Backward compatibility: keep old constructor ───────────────────
+		// Backward compatibility
 		public Tile(HashId hashId, Transform parent, Vector3 worldPosition)
-			: this(new Variant(hashId), parent, worldPosition)  // ← delegate to new one
+			: this(new Variant(hashId), parent, worldPosition)
 		{
 		}
 
-		// Forwarded properties — now directly on our own flags
+		// Forwarded properties
 		public readonly bool IsStart => (flags & (int)DefinitionFlags.Start) != 0;
 		public readonly bool IsEnd => (flags & (int)DefinitionFlags.End) != 0;
 		public readonly bool IsConsole => (flags & (int)DefinitionFlags.Console) != 0;
@@ -62,9 +66,7 @@ namespace ClassicTilestorm
 
 		public Bounds GetGeometryBounds()
 		{
-			// No geometry → no bounds
-			if (gameObject == null)
-				return default;
+			if (gameObject == null) return default;
 
 			var renderers = gameObject.GetComponentsInChildren<Renderer>(true);
 
@@ -73,7 +75,6 @@ namespace ClassicTilestorm
 
 			foreach (var r in renderers)
 			{
-				// Ignore disabled renderers or inactive objects
 				if (r == null || !r.enabled || !r.gameObject.activeInHierarchy)
 					continue;
 
