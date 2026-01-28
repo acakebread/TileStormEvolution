@@ -35,7 +35,7 @@ namespace ClassicTilestorm
 
 		private void Awake()
 		{
-			dstWaypoint = 1;
+			dstWaypoint = -1;
 			mod1 = mod2 = 0f;
 			sway = 0.1f;
 			actionQueue.Clear();
@@ -46,14 +46,26 @@ namespace ClassicTilestorm
 
 		public void Initialise(IMapEdit map)
 		{
+			if (null == map) { Debug.LogError("Initialize: null map!"); return; }
+
 			currentTile = map.GetStartTile();
-			if (null == map || -1 == currentTile) { Debug.LogError("Initialize: Invalid setup"); return; }
+			if (-1 == currentTile)
+			{
+				Debug.LogWarning("Initialize: Invalid setup or empty map: No start tile");
+			}
 
-			transform.position = targetPosition = map.TileWorldPosition(currentTile);
+			transform.position = targetPosition = map.TileWorldPosition(currentTile >= 0 ? currentTile : map.Count >> 1);
 
-			var waypoints = map.GetWaypoints();
-			var yaw = waypoints?.Length > 1 ? Navigation.DirToAngle(Navigation.NavToDest(map, waypoints[0].tile, waypoints[1].tile)) : 0f;
-			transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+			if (currentTile >= 0)
+			{
+				var waypoints = map.GetWaypoints();
+				var yaw = waypoints?.Length > 1 ? Navigation.DirToAngle(Navigation.NavToDest(map, waypoints[0].tile, waypoints[1].tile)) : 0f;
+				dstWaypoint = 1;
+			}
+			else
+			{
+				transform.rotation = Quaternion.Euler(0f, 0f, 0f);
+			}
 
 			map.OnMapEdited += HandleMapEdited;// Subscribe to map changes
 			_unsubscribeAction = () => map.OnMapEdited -= HandleMapEdited;// Capture the map instance in a closure
@@ -94,6 +106,7 @@ namespace ClassicTilestorm
 			{
 				if (actionQueue.Count > 0) { actionQueue.Dequeue()?.Invoke(); return; }
 
+				if (dstWaypoint < 0) return;
 				var tile = map.GetWaypoint(dstWaypoint).tile;
 				if (TestSpin(tile)) return;
 				if (TestMove(tile)) return;

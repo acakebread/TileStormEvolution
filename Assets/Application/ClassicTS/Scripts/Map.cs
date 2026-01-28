@@ -894,7 +894,7 @@ namespace ClassicTilestorm
 			for (int i = 0; i < width * height; ++i)
 				if (GetTile(i).IsStart) return i;
 
-			Debug.LogError("No start tile found!");
+			Debug.LogWarning("No start tile found!");
 			return -1;
 		}
 
@@ -905,7 +905,7 @@ namespace ClassicTilestorm
 			for (int i = 0; i < width * height; ++i)
 				if (GetTile(i).IsEnd) return i;
 
-			Debug.LogError("No end tile found!");
+			Debug.LogWarning("No end tile found!");
 			return -1;
 		}
 
