@@ -7,7 +7,6 @@ namespace ClassicTilestorm
 		private bool dragging;
 		private bool isDraggingWithLeftMouse;
 		private Vector3 dragStartWorldPoint;
-		private Vector3 cameraStartPosition;
 		private Plane dragPlane;
 
 		public EditorControllerView(EditorController editorController) : base(editorController) { }
@@ -20,12 +19,10 @@ namespace ClassicTilestorm
 			var wasDragging = dragging;
 			var cameraTransform = camera.transform;
 
-
 			if (Input.GetMouseButtonDown(0) && !IsMouseOverGUI())
 			{
 				dragging = true;
 				isDraggingWithLeftMouse = true;
-				cameraStartPosition = cameraTransform.position;
 				var ray = camera.ScreenPointToRay(Input.mousePosition);
 				if (Physics.Raycast(ray, out RaycastHit hit))
 				{
@@ -44,7 +41,6 @@ namespace ClassicTilestorm
 
 			if (dragging && wasDragging && isDraggingWithLeftMouse && Input.GetMouseButton(0) && !IsGuiControlActive())
 			{
-				cameraTransform.position = cameraStartPosition;
 				var currentRay = camera.ScreenPointToRay(Input.mousePosition);
 				if (dragPlane.Raycast(currentRay, out float enter))
 				{

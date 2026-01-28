@@ -8,6 +8,11 @@ namespace ClassicTilestorm
 {
 	public class EditorControllerAttachment : EditorControllerMovement
 	{
+		// ─── drag-to-pan fields (copied & slightly adapted from EditorControllerView) ───
+		private bool isPanning;
+		private Vector3 panStartWorldPoint;
+		private Plane panPlane = new Plane(Vector3.up, Vector3.zero);
+
 		// ===================================================================
 		// Pending state
 		// ===================================================================
@@ -45,6 +50,7 @@ namespace ClassicTilestorm
 		public override void OnMapLoaded()
 		{
 			ResetInputState();
+			isPanning = false;
 			RebuildMarkers();
 		}
 
@@ -59,6 +65,7 @@ namespace ClassicTilestorm
 		public override void OnDisable()
 		{
 			base.OnDisable();
+			isPanning = false;
 			ResetInputState();
 		}
 
@@ -99,14 +106,35 @@ namespace ClassicTilestorm
 			}
 
 			if (WasGuiActiveLastFrame)
-			{
 				return; // Skip input this frame — GUI consumed it last frame
-			}
 
-			if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1))
+			if (Input.GetMouseButtonDown(0))
 			{
 				mouseDownPos = Input.mousePosition;
 				mouseMovedBeyondThreshold = false;
+
+				// Decide right at mouse down whether this is pan or attachment action
+				int hitTile = iMap.CameraHitTile(camera, Input.mousePosition);
+
+				if (hitTile < 0 || iMap.GetAttachments(tileIndex: hitTile).Length == 0)
+				{
+					// No attachment → start panning
+					isPanning = true;
+
+					var ray = camera.ScreenPointToRay(Input.mousePosition);
+					if (Physics.Raycast(ray, out RaycastHit hit))
+					{
+						panPlane = new Plane(Vector3.up, new Vector3(0, hit.point.y, 0));
+						panStartWorldPoint = hit.point;
+					}
+					else
+					{
+						panPlane = new Plane(Vector3.up, Vector3.zero);
+						panPlane.Raycast(ray, out float enter);
+						panStartWorldPoint = ray.GetPoint(enter);
+					}
+				}
+				HandleLeftMouseDown();
 			}
 
 			if (Input.GetMouseButton(0) || Input.GetMouseButton(1))
@@ -115,17 +143,38 @@ namespace ClassicTilestorm
 					mouseMovedBeyondThreshold = true;
 			}
 
-			if (Input.GetMouseButtonDown(0))
-				HandleMouseDown();
-
 			if (Input.GetMouseButton(0))
+			{
 				HandleDrag();
+				if (isPanning)
+					UpdatePan();
+			}
+
+			if (Input.GetMouseButtonUp(0))
+			{
+				isPanning = false;
+				if (!mouseMovedBeyondThreshold)
+					HandleLeftMouseUp();
+			}
 
 			if (Input.GetMouseButtonUp(0) && !mouseMovedBeyondThreshold)
 				HandleLeftMouseUp();
 
 			if (Input.GetMouseButtonUp(1) && !mouseMovedBeyondThreshold)
 				HandleRightMouseUp();
+		}
+
+		private void UpdatePan()
+		{
+			if (!isPanning) return;
+
+			var currentRay = camera.ScreenPointToRay(Input.mousePosition);
+			if (panPlane.Raycast(currentRay, out float enter))
+			{
+				var currentWorldPoint = currentRay.GetPoint(enter);
+				var delta = panStartWorldPoint - currentWorldPoint;
+				camera.transform.position += delta;
+			}
 		}
 
 		// ===================================================================
@@ -162,7 +211,7 @@ namespace ClassicTilestorm
 		// ===================================================================
 		// Input Handlers — now using currentMode
 		// ===================================================================
-		private void HandleMouseDown()
+		private void HandleLeftMouseDown()
 		{
 			pendingTile = iMap.CameraHitTile(camera, Input.mousePosition);
 
