@@ -41,8 +41,8 @@ namespace ClassicTilestorm
 		// ===================================================================
 		public override void OnMapLoaded()
 		{
+			base.OnMapLoaded();
 			ResetInputState();
-			isPanning = false;
 			RebuildMarkers();
 		}
 
@@ -57,7 +57,6 @@ namespace ClassicTilestorm
 		public override void OnDisable()
 		{
 			base.OnDisable();
-			isPanning = false;
 			ResetInputState();
 		}
 
@@ -68,17 +67,17 @@ namespace ClassicTilestorm
 		{
 			base.Update();
 
-			ViewPreviewUtil.SetInFocus(ViewPreviewUtil.IsMouseOverPreview());
+			ViewPreviewUtil.SetHighlighted(ViewPreviewUtil.IsMouseOverPreview());
 
 			if (Input.GetMouseButtonDown(1))
-				rmbDownInPreview = ViewPreviewUtil.IsInFocus;
+				rmbDownInPreview = ViewPreviewUtil.IsHighlighted;
 
 			if (!Input.GetMouseButton(0) && !Input.GetMouseButton(1))
 				rmbDownInPreview = false;
 
 			ViewPreviewUtil.SetInUse(rmbDownInPreview);
 
-			var previewControlsActive = rmbDownInPreview || (!Input.GetMouseButton(1) && ViewPreviewUtil.IsInFocus);
+			var previewControlsActive = rmbDownInPreview || (!Input.GetMouseButton(1) && ViewPreviewUtil.IsHighlighted);
 
 			if (previewControlsActive)
 			{

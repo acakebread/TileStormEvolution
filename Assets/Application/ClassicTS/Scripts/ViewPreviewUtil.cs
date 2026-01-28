@@ -22,11 +22,13 @@ namespace ClassicTilestorm
 		private static View currentView;
 		private static IMapEdit currentManager;
 		private static bool isVisible = false;
+		private static bool isHIighlighted = false;
 		private static bool isInFocus = false;
 		private static bool isInUse = false;
 
 		public static Rect PreviewRect { get; private set; }
 
+		public static bool IsHighlighted => isHIighlighted;
 		public static bool IsInFocus => isInFocus;
 		public static bool IsInUse => isInUse;
 		public static Camera PreviewCamera => previewCam;
@@ -50,11 +52,12 @@ namespace ClassicTilestorm
 
 		public static void Hide()
 		{
-			isVisible = false;
 			currentView = null;
 			currentManager = null;
-			isInUse = false;
+			isVisible = false;
 			isInFocus = false;
+			isHIighlighted = false;
+			isInUse = false;
 		}
 
 		public static void Update()
@@ -86,7 +89,7 @@ namespace ClassicTilestorm
 			GUI.Label(new Rect(PreviewRect.x + 8, PreviewRect.y + 8, PreviewRect.width - 16, 20), "Camera Preview");
 
 			// Visual feedback
-			if (isInUse || isInFocus)
+			if (isInUse || isHIighlighted)
 			{
 				Color border = isInUse
 					? new Color(0.3f, 0.9f, 1f, 1f)
@@ -122,8 +125,9 @@ namespace ClassicTilestorm
 			return hitRect.Contains(mp);
 		}
 
+		public static void SetHighlighted(bool highlighted) => isHIighlighted = highlighted;
+		public static void SetInFocus(bool focus) => isHIighlighted = focus;
 		public static void SetInUse(bool inUse) => isInUse = inUse;
-		public static void SetInFocus(bool focus) => isInFocus = focus;
 
 		private static void UpdateCameraTransform()
 		{
