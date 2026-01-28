@@ -124,121 +124,135 @@ namespace ClassicTilestorm
         }
     }
 
-    internal static class DefinitionFlagMapping
-    {
-        public static readonly IReadOnlyDictionary<string, DefinitionFlags> NameToFlag
-            = new Dictionary<string, DefinitionFlags>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["Drag"]        = DefinitionFlags.Drag,
-                ["Roll"]        = DefinitionFlags.Roll,
-                ["Dock"]        = DefinitionFlags.Dock,
-                ["Door"]        = DefinitionFlags.Door,
-                ["Start"]       = DefinitionFlags.Start,
-                ["End"]         = DefinitionFlags.End,
-                ["Console"]     = DefinitionFlags.Console,
-                ["PuzzleBlock"] = DefinitionFlags.PuzzleBlock,
-                ["Sway"]        = DefinitionFlags.Sway,
-                ["Wash"]        = DefinitionFlags.Wash,
-            };
-    }
+	internal static class DefinitionFlagMapping
+	{
+		public static readonly IReadOnlyDictionary<string, DefinitionFlags> NameToFlag
+			= new Dictionary<string, DefinitionFlags>(StringComparer.OrdinalIgnoreCase)
+			{
+				["Drag"] = DefinitionFlags.Drag,
+				["Roll"] = DefinitionFlags.Roll,
+				["Dock"] = DefinitionFlags.Dock,
+				["Door"] = DefinitionFlags.Door,
+				["Start"] = DefinitionFlags.Start,
+				["End"] = DefinitionFlags.End,
+				["Console"] = DefinitionFlags.Console,
+				["PuzzleBlock"] = DefinitionFlags.PuzzleBlock,
+				["Sway"] = DefinitionFlags.Sway,
+				["Wash"] = DefinitionFlags.Wash,
+			};
+	}
 
-    public class DefinitionConverter : JsonConverter
-    {
-        public override bool CanConvert(Type objectType) => objectType == typeof(Definition);
+	internal static class DefinitionConnectionMapping
+	{
+		public static readonly IReadOnlyDictionary<string, DefinitionFlags> LetterToDirection
+			= new Dictionary<string, DefinitionFlags>(StringComparer.OrdinalIgnoreCase)
+			{
+				["N"] = DefinitionFlags.North,
+				["S"] = DefinitionFlags.South,
+				["E"] = DefinitionFlags.East,
+				["W"] = DefinitionFlags.West,
+			};
+	}
 
-        public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
-        {
-            if (value == null) { writer.WriteNull(); return; }
+	public class DefinitionConverter : JsonConverter
+	{
+		public override bool CanConvert(Type objectType) => objectType == typeof(Definition);
 
-            var def = (Definition)value;
+		public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+		{
+			if (value == null) { writer.WriteNull(); return; }
 
-            writer.WriteStartObject();
+			var def = (Definition)value;
 
-            writer.WritePropertyName("id");
-            writer.WriteValue(HTB50.EncodeFixed(def.HashID, length: HTB50Settings.FixedLength, padChar: '0', appendFlavor: false));
+			writer.WriteStartObject();
 
-            if (!string.IsNullOrEmpty(def.name))    { writer.WritePropertyName("name");    serializer.Serialize(writer, def.name); }
-            if (!string.IsNullOrEmpty(def.model))   { writer.WritePropertyName("model");   serializer.Serialize(writer, def.model); }
-            if (!string.IsNullOrEmpty(def.texture)) { writer.WritePropertyName("texture"); serializer.Serialize(writer, def.texture); }
-            if (!string.IsNullOrEmpty(def.material)){ writer.WritePropertyName("material"); serializer.Serialize(writer, def.material); }
+			writer.WritePropertyName("id");
+			writer.WriteValue(HTB50.EncodeFixed(def.HashID, length: HTB50Settings.FixedLength, padChar: '0', appendFlavor: false));
 
-            // Flags
-            var active = new List<string>();
-            foreach (var kv in DefinitionFlagMapping.NameToFlag)
-            {
-                if ((def.Flags & (int)kv.Value) != 0)
-                    active.Add(kv.Key);
-            }
+			if (!string.IsNullOrEmpty(def.name)) { writer.WritePropertyName("name"); serializer.Serialize(writer, def.name); }
+			if (!string.IsNullOrEmpty(def.model)) { writer.WritePropertyName("model"); serializer.Serialize(writer, def.model); }
+			if (!string.IsNullOrEmpty(def.texture)) { writer.WritePropertyName("texture"); serializer.Serialize(writer, def.texture); }
+			if (!string.IsNullOrEmpty(def.material)) { writer.WritePropertyName("material"); serializer.Serialize(writer, def.material); }
 
-            if (active.Count > 0)
-            {
-                active.Sort(StringComparer.OrdinalIgnoreCase);
-                writer.WritePropertyName("flags");
-                writer.WriteValue(string.Join(", ", active));
-            }
+			// Gameplay flags only
+			var activeFlags = new List<string>();
+			foreach (var kv in DefinitionFlagMapping.NameToFlag)
+			{
+				if ((def.Flags & (int)kv.Value) != 0)
+					activeFlags.Add(kv.Key);
+			}
 
-            // Connections
-            var dirs = new List<char>();
-            if (def.North) dirs.Add('N');
-            if (def.South) dirs.Add('S');
-            if (def.East)  dirs.Add('E');
-            if (def.West)  dirs.Add('W');
+			if (activeFlags.Count > 0)
+			{
+				activeFlags.Sort(StringComparer.OrdinalIgnoreCase);
+				writer.WritePropertyName("flags");
+				writer.WriteValue(string.Join(", ", activeFlags));
+			}
 
-            if (dirs.Count > 0)
-            {
-                writer.WritePropertyName("connections");
-                writer.WriteValue(new string(dirs.ToArray()));
-            }
+			// Connections — fixed N-S-E-W order
+			var activeDirs = new List<char>();
+			if ((def.Flags & (int)DefinitionFlags.North) != 0) activeDirs.Add('N');
+			if ((def.Flags & (int)DefinitionFlags.South) != 0) activeDirs.Add('S');
+			if ((def.Flags & (int)DefinitionFlags.East) != 0) activeDirs.Add('E');
+			if ((def.Flags & (int)DefinitionFlags.West) != 0) activeDirs.Add('W');
 
-            writer.WriteEndObject();
-        }
+			if (activeDirs.Count > 0)
+			{
+				writer.WritePropertyName("connections");
+				writer.WriteValue(new string(activeDirs.ToArray()));
+			}
 
-        public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
-        {
-            if (reader.TokenType == JsonToken.Null) return null;
+			writer.WriteEndObject();
+		}
 
-            var def = existingValue as Definition ?? new Definition();
-            var jo = JObject.Load(reader);
+		public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+		{
+			if (reader.TokenType == JsonToken.Null) return null;
 
-            if (jo["id"]?.Value<string>() is { } idStr && !string.IsNullOrEmpty(idStr))
-            {
-                try { def.HashID = HTB50.Decode(idStr); }
-                catch (Exception ex) { Debug.LogWarning($"Failed to decode id: {ex.Message}"); }
-            }
+			var def = existingValue as Definition ?? new Definition();
+			var jo = JObject.Load(reader);
 
-            serializer.Populate(jo.CreateReader(), def);
+			if (jo["id"]?.Value<string>() is { } idStr && !string.IsNullOrEmpty(idStr))
+			{
+				try { def.HashID = HTB50.Decode(idStr); }
+				catch (Exception ex) { Debug.LogWarning($"Failed to decode id: {ex.Message}"); }
+			}
 
-            if (jo["flags"]?.Value<string>() is { } flagsStr && !string.IsNullOrEmpty(flagsStr))
-            {
-                var parts = flagsStr.Split(new[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries);
-                foreach (var part in parts)
-                {
-                    string trimmed = part.Trim();
-                    if (string.IsNullOrEmpty(trimmed)) continue;
+			serializer.Populate(jo.CreateReader(), def);
 
-                    if (DefinitionFlagMapping.NameToFlag.TryGetValue(trimmed, out var flag))
-                        def.Flags |= (int)flag;
-                    else
-                        Debug.LogWarning($"Unknown flag in JSON: '{trimmed}'");
-                }
-            }
+			// Gameplay flags
+			if (jo["flags"]?.Value<string>() is { } flagsStr && !string.IsNullOrEmpty(flagsStr))
+			{
+				var parts = flagsStr.Split(new[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+				foreach (var part in parts)
+				{
+					string trimmed = part.Trim();
+					if (string.IsNullOrEmpty(trimmed)) continue;
 
-            if (jo["connections"]?.Value<string>() is { } connStr && !string.IsNullOrEmpty(connStr))
-            {
-                foreach (char c in connStr.ToUpperInvariant())
-                {
-                    if (!char.IsLetter(c)) continue;
-                    switch (c)
-                    {
-                        case 'N': def.North = true; break;
-                        case 'S': def.South = true; break;
-                        case 'E': def.East  = true; break;
-                        case 'W': def.West  = true; break;
-                    }
-                }
-            }
+					if (DefinitionFlagMapping.NameToFlag.TryGetValue(trimmed, out var flag))
+						((IFlagAccess)def).Flags |= (int)flag;
+					else
+						Debug.LogWarning($"Unknown flag in JSON: '{trimmed}'");
+				}
+			}
 
-            return def;
-        }
-    }
+			// Connections (directions only)
+			if (jo["connections"]?.Value<string>() is { } connStr && !string.IsNullOrEmpty(connStr))
+			{
+				foreach (char c in connStr.ToUpperInvariant())
+				{
+					if (!char.IsLetter(c)) continue;
+
+					string key = c.ToString();
+
+					if (DefinitionConnectionMapping.LetterToDirection.TryGetValue(key, out var flag))
+						((IFlagAccess)def).Flags |= (int)flag;
+					else
+						Debug.LogWarning($"Unknown direction in connections: '{c}'");
+				}
+			}
+
+			return def;
+		}
+	}
 }
