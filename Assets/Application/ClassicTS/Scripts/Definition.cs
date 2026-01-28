@@ -29,14 +29,11 @@ namespace ClassicTilestorm
 
         // Newer gameplay flags (continuing sequentially)
         PuzzleBlock = 1 << 15,         // (1 << 15) 0b1000000000000000
-        Sway        = 1 << 16,         // (1 << 16) 0b1 0000000000000000   (bit 16)
-        Wash        = 1 << 17,         // (1 << 17) 0b10 0000000000000000  (bit 17)
+        Sway        = 1 << 16,         // (1 << 16) 0b10000000000000000   (bit 16)
+        Wash        = 1 << 17,         // (1 << 17) 0b100000000000000000  (bit 17)
     }
 
-    internal interface IFlagAccess
-    {
-        int Flags { get; set; }
-    }
+    internal interface IFlagAccess { int Flags { get; set; } }
 
     [Serializable]
     [JsonConverter(typeof(DefinitionConverter))]
