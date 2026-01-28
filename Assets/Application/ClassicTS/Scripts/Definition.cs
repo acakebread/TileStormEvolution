@@ -55,13 +55,6 @@ namespace ClassicTilestorm
 
         [JsonIgnore] private int flags;
 
-        // Public access for internal code (Tile, systems, etc.)
-        [JsonIgnore] public int Flags
-        {
-            get => flags;
-            set => flags = value;
-        }
-
         // Explicit interface impl (optional – can be removed later if not used polymorphically)
         int IFlagAccess.Flags
         {
@@ -177,7 +170,7 @@ namespace ClassicTilestorm
             var activeFlags = new List<string>();
             foreach (var kv in FlagLookup)
             {
-                if ((def.Flags & (int)kv.Value) != 0)
+				if ((((IFlagAccess)def).Flags & (int)kv.Value) != 0)
                     activeFlags.Add(kv.Key);
             }
 
@@ -188,14 +181,15 @@ namespace ClassicTilestorm
                 writer.WriteValue(string.Join(", ", activeFlags));
             }
 
-            // Connections — fixed N-S-E-W order
-            var activeDirs = new List<char>();
-            if ((def.Flags & (int)DefinitionFlags.North) != 0) activeDirs.Add('N');
-            if ((def.Flags & (int)DefinitionFlags.South) != 0) activeDirs.Add('S');
-            if ((def.Flags & (int)DefinitionFlags.East)  != 0) activeDirs.Add('E');
-            if ((def.Flags & (int)DefinitionFlags.West)  != 0) activeDirs.Add('W');
+			// Connections — fixed N-S-E-W order
+			var activeDirs = new List<char>(4);
+			var flagsValue = ((IFlagAccess)def).Flags;           // once only
+			if ((flagsValue & (int)DefinitionFlags.North) != 0) activeDirs.Add('N');
+			if ((flagsValue & (int)DefinitionFlags.South) != 0) activeDirs.Add('S');
+			if ((flagsValue & (int)DefinitionFlags.East) != 0) activeDirs.Add('E');
+			if ((flagsValue & (int)DefinitionFlags.West) != 0) activeDirs.Add('W');
 
-            if (activeDirs.Count > 0)
+			if (activeDirs.Count > 0)
             {
                 writer.WritePropertyName("connections");
                 writer.WriteValue(new string(activeDirs.ToArray()));

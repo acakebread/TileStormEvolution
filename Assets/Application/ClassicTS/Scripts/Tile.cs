@@ -15,7 +15,7 @@ namespace ClassicTilestorm
 				Debug.LogWarning($"Failed to resolve tile definition at tile ({worldPosition.x:F1},{worldPosition.z:F1}) (hash: {variant.hash}) — using default");
 
 			// Directly take flags from definition (no recompute needed)
-			int baseFlags = def?.Flags ?? 0;
+			int baseFlags = ((IFlagAccess)def)?.Flags ?? 0;
 
 			// Rotate navigation bits **before** final assignment (safe in readonly struct)
 			int rotatedNav = Navigation.Rotate(
