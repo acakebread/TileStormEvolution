@@ -8,11 +8,6 @@ namespace ClassicTilestorm
 {
 	public class EditorControllerAttachment : EditorControllerMovement
 	{
-		// ─── drag-to-pan fields (copied & slightly adapted from EditorControllerView) ───
-		private bool isPanning;
-		private Vector3 panStartWorldPoint;
-		private Plane panPlane = new Plane(Vector3.up, Vector3.zero);
-
 		// ===================================================================
 		// Pending state
 		// ===================================================================
@@ -25,9 +20,6 @@ namespace ClassicTilestorm
 		// Shared input state
 		// ===================================================================
 		private readonly AutoHidePanel sidePanel = new(collapsed: 120f, expanded: 340f, delay: 1.5f, animDur: 0.25f, defaultPos: new Vector2(0f, 40f));
-		private Vector3 mouseDownPos;
-		private bool mouseMovedBeyondThreshold;
-		private const float CLICK_THRESHOLD = 8f;
 		private bool rmbDownInPreview = false;
 
 		// ===================================================================
@@ -113,27 +105,15 @@ namespace ClassicTilestorm
 				mouseDownPos = Input.mousePosition;
 				mouseMovedBeyondThreshold = false;
 
-				// Decide right at mouse down whether this is pan or attachment action
 				int hitTile = iMap.CameraHitTile(camera, Input.mousePosition);
 
-				if (hitTile < 0 || iMap.GetAttachments(tileIndex: hitTile).Length == 0)
-				{
-					// No attachment → start panning
-					isPanning = true;
+				bool noAttachmentHere = hitTile < 0 || iMap.GetAttachments(tileIndex: hitTile).Length == 0;
 
-					var ray = camera.ScreenPointToRay(Input.mousePosition);
-					if (Physics.Raycast(ray, out RaycastHit hit))
-					{
-						panPlane = new Plane(Vector3.up, new Vector3(0, hit.point.y, 0));
-						panStartWorldPoint = hit.point;
-					}
-					else
-					{
-						panPlane = new Plane(Vector3.up, Vector3.zero);
-						panPlane.Raycast(ray, out float enter);
-						panStartWorldPoint = ray.GetPoint(enter);
-					}
-				}
+				if (noAttachmentHere && ShouldStartPanningOnLeftClick())
+					StartPanning();
+				else
+					isPanning = false;
+
 				HandleLeftMouseDown();
 			}
 
@@ -162,19 +142,6 @@ namespace ClassicTilestorm
 
 			if (Input.GetMouseButtonUp(1) && !mouseMovedBeyondThreshold)
 				HandleRightMouseUp();
-		}
-
-		private void UpdatePan()
-		{
-			if (!isPanning) return;
-
-			var currentRay = camera.ScreenPointToRay(Input.mousePosition);
-			if (panPlane.Raycast(currentRay, out float enter))
-			{
-				var currentWorldPoint = currentRay.GetPoint(enter);
-				var delta = panStartWorldPoint - currentWorldPoint;
-				camera.transform.position += delta;
-			}
 		}
 
 		// ===================================================================
@@ -480,11 +447,6 @@ namespace ClassicTilestorm
 			// Swap waypointIndex values on the objects
 			wp.waypointIndex = newIndex;
 			targetWp.waypointIndex = oldIndex;
-
-			// No need to touch internal waypoints array anymore!
-			// But if you still have legacy code depending on it, you can rebuild it here:
-			// var tiles = currentWaypoints.Select(w => w.tile).ToArray();
-			// iMap.Waypoints = tiles;  // only if absolutely necessary during transition
 
 			var movedWaypoint = new Waypoint(newIndex, wp.tile);
 			Select(movedWaypoint);
