@@ -166,6 +166,12 @@ namespace ClassicTilestorm
 			mouseMovedBeyondThreshold = false;
 			pendingTile = iMap.CameraHitTile(camera, Input.mousePosition);
 
+			bool noAttachmentHere = pendingTile < 0 || iMap.GetAttachments(tileIndex: pendingTile).Length == 0;
+			if (noAttachmentHere && ShouldStartPanningOnLeftClick())
+				StartPanning();
+			else
+				isPanning = false;
+
 			if (-1 != pendingTile)
 			{
 				var alreadySelected = selection?.Length > 0 && selection[0].tile == pendingTile;
@@ -173,12 +179,6 @@ namespace ClassicTilestorm
 				return;
 			}
 			Select();
-
-			bool noAttachmentHere = pendingTile < 0 || iMap.GetAttachments(tileIndex: pendingTile).Length == 0;
-			if (noAttachmentHere && ShouldStartPanningOnLeftClick())
-				StartPanning();
-			else
-				isPanning = false;
 		}
 
 		private void HandleRightMouseDown()
