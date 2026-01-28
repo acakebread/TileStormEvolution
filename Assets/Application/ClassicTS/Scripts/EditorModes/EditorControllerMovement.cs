@@ -20,13 +20,22 @@ namespace ClassicTilestorm
 
 		protected bool IsGuiControlActive() => GUIUtility.hotControl != 0 || (EventSystem.current && EventSystem.current.IsPointerOverGameObject());
 		protected virtual bool IsMouseOverGUI() => editorController.IsMouseOverGui() | IsGuiControlActive();
-		public virtual void OnMapLoaded() { }
+		public virtual void OnMapLoaded() 
+		{
+			ViewPreviewUtil.Hide();
+			isPanning = false; 
+		}
 
 		public EditorControllerMovement(EditorController controller = null) => editorController = controller;
 
 		private bool touchStartOverGui = false;
 		public virtual void Update()
 		{
+			ViewPreviewUtil.Update();
+
+			if (ViewPreviewUtil.IsInFocus)
+				EditorCameraMovement.UpdateCamera(ViewPreviewUtil.PreviewCamera.transform);
+
 			if (Input.GetMouseButtonUp(0) && GUIUtility.hotControl != 0)
 				GUIUtility.hotControl = 0;
 
@@ -43,8 +52,17 @@ namespace ClassicTilestorm
 				EditorCameraMovement.UpdateCamera(camera ? camera.transform : null, isMouseOverGui: !allowScroll);
 		}
 
-		public virtual void OnEnable() { }
-		public virtual void OnDisable() { }
+		public virtual void OnEnable() 
+		{
+			ViewPreviewUtil.Hide();
+		}
+
+		public virtual void OnDisable() 
+		{
+			ViewPreviewUtil.Hide();
+			isPanning = false; 
+		}
+
 		public virtual void OnGUI() { }
 		public virtual void OnDestroy() { }
 

@@ -22,15 +22,15 @@ namespace ClassicTilestorm
 		private static View currentView;
 		private static IMapEdit currentManager;
 		private static bool isVisible = false;
-		private static bool isHIighlighted = false;
+		private static bool isHighlighted = false;
 		private static bool isInFocus = false;
 		private static bool isInUse = false;
 
 		public static Rect PreviewRect { get; private set; }
 
-		public static bool IsHighlighted => isHIighlighted;
+		//public static bool IsHighlighted => isHighlighted;
 		public static bool IsInFocus => isInFocus;
-		public static bool IsInUse => isInUse;
+		//public static bool IsInUse => isInUse;
 		public static Camera PreviewCamera => previewCam;
 		public static Transform PreviewCameraTransform => previewCam != null ? previewCam.transform : null;
 
@@ -47,7 +47,7 @@ namespace ClassicTilestorm
 			isVisible = true;
 
 			EnsureCreated();
-			UpdateCameraTransform();
+			UpdatePreviewCamera();
 		}
 
 		public static void Hide()
@@ -55,18 +55,29 @@ namespace ClassicTilestorm
 			currentView = null;
 			currentManager = null;
 			isVisible = false;
+			isHighlighted = false;
 			isInFocus = false;
-			isHIighlighted = false;
 			isInUse = false;
 		}
 
 		public static void Update()
 		{
-			if (!isVisible || currentView == null || currentManager == null || root == null)
-				return;
+			var isMoseOverPreview = IsMouseOverPreview();
+			isHighlighted = isMoseOverPreview;
 
-			UpdateCameraTransform();
-			previewCam.Render();
+			if (Input.GetMouseButtonDown(1))
+			{
+				isInFocus = isMoseOverPreview;
+				isInUse = isMoseOverPreview;
+			}
+
+			if (!Input.GetMouseButton(0) && !Input.GetMouseButton(1))
+			{
+				isInFocus = isMoseOverPreview;
+				isInUse = false;
+			}
+
+			UpdatePreviewCamera();
 		}
 
 		public static void OnGUI()
@@ -89,7 +100,7 @@ namespace ClassicTilestorm
 			GUI.Label(new Rect(PreviewRect.x + 8, PreviewRect.y + 8, PreviewRect.width - 16, 20), "Camera Preview");
 
 			// Visual feedback
-			if (isInUse || isHIighlighted)
+			if (isInUse || isHighlighted)
 			{
 				Color border = isInUse
 					? new Color(0.3f, 0.9f, 1f, 1f)
@@ -125,11 +136,11 @@ namespace ClassicTilestorm
 			return hitRect.Contains(mp);
 		}
 
-		public static void SetHighlighted(bool highlighted) => isHIighlighted = highlighted;
-		public static void SetInFocus(bool focus) => isHIighlighted = focus;
+		public static void SetHighlighted(bool highlighted) => isHighlighted = highlighted;
+		public static void SetInFocus(bool focus) => isHighlighted = focus;
 		public static void SetInUse(bool inUse) => isInUse = inUse;
 
-		private static void UpdateCameraTransform()
+		private static void UpdatePreviewCamera()
 		{
 			if (previewCam == null || currentView == null || currentManager == null) return;
 
@@ -139,6 +150,7 @@ namespace ClassicTilestorm
 			previewCam.fieldOfView = currentView.FOV;
 			previewCam.nearClipPlane = 0.1f;
 			previewCam.farClipPlane = 999f;
+			previewCam.Render();
 		}
 
 

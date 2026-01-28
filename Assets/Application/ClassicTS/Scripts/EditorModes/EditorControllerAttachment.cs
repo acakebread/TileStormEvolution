@@ -20,7 +20,6 @@ namespace ClassicTilestorm
 		// Shared input state
 		// ===================================================================
 		private readonly AutoHidePanel sidePanel = new(collapsed: 120f, expanded: 340f, delay: 1.5f, animDur: 0.25f, defaultPos: new Vector2(0f, 40f));
-		private bool rmbDownInPreview = false;
 
 		// ===================================================================
 		// Current mode - used for panel and marker styling
@@ -67,26 +66,11 @@ namespace ClassicTilestorm
 		{
 			base.Update();
 
-			ViewPreviewUtil.SetHighlighted(ViewPreviewUtil.IsMouseOverPreview());
-
-			if (Input.GetMouseButtonDown(1))
-				rmbDownInPreview = ViewPreviewUtil.IsHighlighted;
-
-			if (!Input.GetMouseButton(0) && !Input.GetMouseButton(1))
-				rmbDownInPreview = false;
-
-			ViewPreviewUtil.SetInUse(rmbDownInPreview);
-
-			var previewControlsActive = rmbDownInPreview || (!Input.GetMouseButton(1) && ViewPreviewUtil.IsHighlighted);
-
-			if (previewControlsActive)
+			if (ViewPreviewUtil.IsInFocus)
 			{
-				EditorCameraMovement.UpdateCamera(ViewPreviewUtil.PreviewCamera.transform);
 				ViewAttachmentHandler.HandlePreviewCameraSync(iMap, camera, selection);
 				return;
 			}
-
-			ViewPreviewUtil.Update();
 
 			if (IsMouseOverGUI() || IsGuiControlActive()) return;
 
@@ -123,6 +107,7 @@ namespace ClassicTilestorm
 		// ===================================================================
 		public override void OnGUI()
 		{
+			base.OnGUI();
 			ViewPreviewUtil.OnGUI();
 
 			// Draw correct panel based on currentMode
@@ -324,7 +309,6 @@ namespace ClassicTilestorm
 		// ===================================================================
 		private void ResetInputState()
 		{
-			rmbDownInPreview = false;
 			currentMode = Mode.Undefined;
 			selection = null;
 			pendingAction = PendingAction.None;
@@ -337,7 +321,6 @@ namespace ClassicTilestorm
 			EditorTransformUtil.Hide();
 			EditorPrimitiveUtil.Hide();
 			EditorFrustumUtil.Hide();
-			ViewPreviewUtil.Hide();
 			EditorMarkerUtil.ClearMapMarkers();
 		}
 
