@@ -122,14 +122,14 @@ namespace ClassicTilestorm.Editor
 				if (old.bDock) flags.Add("Dock");
 				if (old.bDoor) flags.Add("Door");
 				if (old.bPuzzleBlock) flags.Add("PuzzleBlock");
-				if (flags.Count > 0) def.flags = string.Join(",", flags);
+				//if (flags.Count > 0) def.flags = string.Join(",", flags);
 
 				var dirs = new List<char>();
 				if (old.bNorth) dirs.Add('N');
 				if (old.bSouth) dirs.Add('S');
 				if (old.bEast) dirs.Add('E');
 				if (old.bWest) dirs.Add('W');
-				if (dirs.Count > 0) def.connections = new string(dirs.ToArray());
+				//if (dirs.Count > 0) def.connections = new string(dirs.ToArray());
 
 				//def.pickup = old.nPickup switch
 				//{
