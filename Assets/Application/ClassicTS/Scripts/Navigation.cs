@@ -40,18 +40,9 @@ namespace ClassicTilestorm
 			return turns switch
 			{
 				0 => masked,
-				1 => (((masked & N) << 2) |
-					  ((masked & E) >> 1) |
-					  ((masked & S) << 2) |
-					  ((masked & W) >> 3)) & (int)DirectionFlags.Directions,
-
-				2 => (~masked) & (int)DirectionFlags.Directions,
-
-				3 => (((masked & N) << 3) |
-					  ((masked & E) >> 2) |
-					  ((masked & S) << 1) |
-					  ((masked & W) >> 2)) & (int)DirectionFlags.Directions,
-
+				1 => (((masked & N) << 2) | ((masked & E) >> 1) | ((masked & S) << 2) | ((masked & W) >> 3)) & (int)DirectionFlags.Directions,
+				2 => (((masked & N) << 1) | ((masked & E) << 1) | ((masked & S) >> 1) | ((masked & W) >> 1)) & (int)DirectionFlags.Directions,
+				3 => (((masked & N) << 3) | ((masked & E) >> 2) | ((masked & S) << 1) | ((masked & W) >> 2)) & (int)DirectionFlags.Directions,
 				_ => masked
 			};
 		}
