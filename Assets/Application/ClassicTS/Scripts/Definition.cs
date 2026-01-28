@@ -131,24 +131,6 @@ namespace ClassicTilestorm
         }
     }
 
-    internal static class DefinitionFlagMapping
-    {
-        public static readonly IReadOnlyDictionary<string, DefinitionFlags> NameToFlag
-            = new Dictionary<string, DefinitionFlags>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["Drag"]        = DefinitionFlags.Drag,
-                ["Roll"]        = DefinitionFlags.Roll,
-                ["Dock"]        = DefinitionFlags.Dock,
-                ["Door"]        = DefinitionFlags.Door,
-                ["Start"]       = DefinitionFlags.Start,
-                ["End"]         = DefinitionFlags.End,
-                ["Console"]     = DefinitionFlags.Console,
-                ["PuzzleBlock"] = DefinitionFlags.PuzzleBlock,
-                ["Sway"]        = DefinitionFlags.Sway,
-                ["Wash"]        = DefinitionFlags.Wash,
-            };
-    }
-
     public class DefinitionConverter : JsonConverter
     {
         private static readonly IReadOnlyDictionary<string, DefinitionFlags> FlagLookup = new Dictionary<string, DefinitionFlags>(StringComparer.OrdinalIgnoreCase)
