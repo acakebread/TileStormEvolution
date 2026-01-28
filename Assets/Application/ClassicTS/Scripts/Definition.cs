@@ -124,38 +124,31 @@ namespace ClassicTilestorm
         }
     }
 
-	internal static class DefinitionFlagMapping
-	{
-		public static readonly IReadOnlyDictionary<string, DefinitionFlags> NameToFlag
-			= new Dictionary<string, DefinitionFlags>(StringComparer.OrdinalIgnoreCase)
-			{
-				["Drag"] = DefinitionFlags.Drag,
-				["Roll"] = DefinitionFlags.Roll,
-				["Dock"] = DefinitionFlags.Dock,
-				["Door"] = DefinitionFlags.Door,
-				["Start"] = DefinitionFlags.Start,
-				["End"] = DefinitionFlags.End,
-				["Console"] = DefinitionFlags.Console,
-				["PuzzleBlock"] = DefinitionFlags.PuzzleBlock,
-				["Sway"] = DefinitionFlags.Sway,
-				["Wash"] = DefinitionFlags.Wash,
-			};
-	}
-
-	internal static class DefinitionConnectionMapping
-	{
-		public static readonly IReadOnlyDictionary<string, DefinitionFlags> LetterToDirection
-			= new Dictionary<string, DefinitionFlags>(StringComparer.OrdinalIgnoreCase)
-			{
-				["N"] = DefinitionFlags.North,
-				["S"] = DefinitionFlags.South,
-				["E"] = DefinitionFlags.East,
-				["W"] = DefinitionFlags.West,
-			};
-	}
-
 	public class DefinitionConverter : JsonConverter
 	{
+		// Class-level static dictionaries — initialized once, shared, no runtime cost
+		private static readonly IReadOnlyDictionary<string, DefinitionFlags> FlagLookup = new Dictionary<string, DefinitionFlags>(StringComparer.OrdinalIgnoreCase)
+		{
+			["Drag"] = DefinitionFlags.Drag,
+			["Roll"] = DefinitionFlags.Roll,
+			["Dock"] = DefinitionFlags.Dock,
+			["Door"] = DefinitionFlags.Door,
+			["Start"] = DefinitionFlags.Start,
+			["End"] = DefinitionFlags.End,
+			["Console"] = DefinitionFlags.Console,
+			["PuzzleBlock"] = DefinitionFlags.PuzzleBlock,
+			["Sway"] = DefinitionFlags.Sway,
+			["Wash"] = DefinitionFlags.Wash,
+		};
+
+		private static readonly IReadOnlyDictionary<string, DefinitionFlags> ConnectionLookup = new Dictionary<string, DefinitionFlags>(StringComparer.OrdinalIgnoreCase)
+		{
+			["N"] = DefinitionFlags.North,
+			["S"] = DefinitionFlags.South,
+			["E"] = DefinitionFlags.East,
+			["W"] = DefinitionFlags.West,
+		};
+
 		public override bool CanConvert(Type objectType) => objectType == typeof(Definition);
 
 		public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
@@ -174,9 +167,9 @@ namespace ClassicTilestorm
 			if (!string.IsNullOrEmpty(def.texture)) { writer.WritePropertyName("texture"); serializer.Serialize(writer, def.texture); }
 			if (!string.IsNullOrEmpty(def.material)) { writer.WritePropertyName("material"); serializer.Serialize(writer, def.material); }
 
-			// Gameplay flags only
+			// Gameplay flags
 			var activeFlags = new List<string>();
-			foreach (var kv in DefinitionFlagMapping.NameToFlag)
+			foreach (var kv in FlagLookup)
 			{
 				if ((def.Flags & (int)kv.Value) != 0)
 					activeFlags.Add(kv.Key);
@@ -229,14 +222,14 @@ namespace ClassicTilestorm
 					string trimmed = part.Trim();
 					if (string.IsNullOrEmpty(trimmed)) continue;
 
-					if (DefinitionFlagMapping.NameToFlag.TryGetValue(trimmed, out var flag))
+					if (FlagLookup.TryGetValue(trimmed, out var flag))
 						((IFlagAccess)def).Flags |= (int)flag;
 					else
 						Debug.LogWarning($"Unknown flag in JSON: '{trimmed}'");
 				}
 			}
 
-			// Connections (directions only)
+			// Connections
 			if (jo["connections"]?.Value<string>() is { } connStr && !string.IsNullOrEmpty(connStr))
 			{
 				foreach (char c in connStr.ToUpperInvariant())
@@ -245,7 +238,7 @@ namespace ClassicTilestorm
 
 					string key = c.ToString();
 
-					if (DefinitionConnectionMapping.LetterToDirection.TryGetValue(key, out var flag))
+					if (ConnectionLookup.TryGetValue(key, out var flag))
 						((IFlagAccess)def).Flags |= (int)flag;
 					else
 						Debug.LogWarning($"Unknown direction in connections: '{c}'");
