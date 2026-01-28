@@ -19,11 +19,11 @@ namespace ClassicTilestorm
 
 			// Rotate navigation bits **before** final assignment (safe in readonly struct)
 			int rotatedNav = Navigation.Rotate(
-				baseFlags & (int)DirectionFlags.Directions,
+				baseFlags & (int)DefinitionFlags.Directions,
 				Mathf.RoundToInt(variant.angle)
 			);
 
-			flags = (baseFlags & ~(int)DirectionFlags.Directions) | rotatedNav;
+			flags = (baseFlags & ~(int)DefinitionFlags.Directions) | rotatedNav;
 
 			Vector3 finalPosition = worldPosition + new Vector3(0f, variant.delta, 0f);
 			Quaternion finalRotation = Quaternion.Euler(0f, variant.angle, 0f);
@@ -62,7 +62,7 @@ namespace ClassicTilestorm
 		public readonly bool IsDrag => (flags & (int)DefinitionFlags.Drag) != 0;
 		public readonly bool IsDock => (flags & (int)DefinitionFlags.Dock) != 0;
 		public readonly bool IsRoll => (flags & (int)DefinitionFlags.Roll) != 0;
-		public readonly int Nav => flags & (int)DirectionFlags.Directions;
+		public readonly int Nav => flags & (int)DefinitionFlags.Directions;
 
 		public Bounds GetGeometryBounds()
 		{

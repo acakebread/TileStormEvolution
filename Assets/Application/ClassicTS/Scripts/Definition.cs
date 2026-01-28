@@ -13,24 +13,31 @@ namespace ClassicTilestorm
         None = 0,
 
         // ── Directions – must use exactly the same values as DirectionFlags ──
-        North = DirectionFlags.North,  // (1 <<  0) 0b0000000000000001
-        South = DirectionFlags.South,  // (1 <<  1) 0b0000000000000010
-        East  = DirectionFlags.East,   // (1 <<  2) 0b0000000000000100
-        West  = DirectionFlags.West,   // (1 <<  3) 0b0000000000001000
+        North = 1 << 0,   // (1 <<  0) 0b0000000000000001
+        South = 1 << 1,   // (1 <<  1) 0b0000000000000010
+        East  = 1 << 2,   // (1 <<  2) 0b0000000000000100
+        West  = 1 << 3,   // (1 <<  3) 0b0000000000001000
 
-        // ── Gameplay flags – start from bit 8 and never touch 0–7 ─────────────
-        Drag    = 1 <<  8,             // (1 <<  8) 0b0000000100000000
-        Roll    = 1 <<  9,             // (1 <<  9) 0b0000001000000000
-        Dock    = 1 << 10,             // (1 << 10) 0b0000010000000000
-        Start   = 1 << 11,             // (1 << 11) 0b0000100000000000
-        End     = 1 << 12,             // (1 << 12) 0b0001000000000000
-        Door    = 1 << 13,             // (1 << 13) 0b0010000000000000
-        Console = 1 << 14,             // (1 << 14) 0b0100000000000000
+		Directions = 0b1111,  // bits 0–3 only (N=1, S=2, E=4, W=8)
+
+		// ── Gameplay flags – start from bit 8 and never touch 0–7 ─────────────
+		Drag = 1 << 8,          // (1 <<  8) 0b0000000100000000
+        Roll        = 1 << 9,   // (1 <<  9) 0b0000001000000000
+        Dock        = 1 << 10,  // (1 << 10) 0b0000010000000000
+        Start       = 1 << 11,  // (1 << 11) 0b0000100000000000
+        End         = 1 << 12,  // (1 << 12) 0b0001000000000000
+        Door        = 1 << 13,  // (1 << 13) 0b0010000000000000
+        Console     = 1 << 14,  // (1 << 14) 0b0100000000000000
 
         // Newer gameplay flags (continuing sequentially)
-        PuzzleBlock = 1 << 15,         // (1 << 15) 0b1000000000000000
-        Sway        = 1 << 16,         // (1 << 16) 0b10000000000000000   (bit 16)
-        Wash        = 1 << 17,         // (1 << 17) 0b100000000000000000  (bit 17)
+        PuzzleBlock = 1 << 15,  // (1 << 15) 0b1000000000000000
+        Sway        = 1 << 16,  // (1 << 16) 0b1 0000000000000000   (bit 16)
+        Wash        = 1 << 17,  // (1 << 17) 0b10 0000000000000000  (bit 17)
+
+        // ────────────────────────────────────────────────────────────────
+        // Reserved for future gameplay flags (bits 18+)
+        // Do NOT reuse bits 0–7 — they are permanently reserved for directions
+        // ────────────────────────────────────────────────────────────────
     }
 
     internal interface IFlagAccess { int Flags { get; set; } }
@@ -82,8 +89,8 @@ namespace ClassicTilestorm
         [JsonIgnore]
         public int Nav
         {
-            get => flags & (int)DirectionFlags.Directions;
-            set => flags = (flags & ~(int)DirectionFlags.Directions) | (value & (int)DirectionFlags.Directions);
+            get => flags & (int)(DefinitionFlags.Directions);
+            set => flags = (flags & ~(int)(DefinitionFlags.Directions)) | (value & (int)(DefinitionFlags.Directions));
         }
 
         private void SetFlag(DefinitionFlags flag, bool value)
@@ -124,128 +131,145 @@ namespace ClassicTilestorm
         }
     }
 
-	public class DefinitionConverter : JsonConverter
-	{
-		// Class-level static dictionaries — initialized once, shared, no runtime cost
-		private static readonly IReadOnlyDictionary<string, DefinitionFlags> FlagLookup = new Dictionary<string, DefinitionFlags>(StringComparer.OrdinalIgnoreCase)
-		{
-			["Drag"] = DefinitionFlags.Drag,
-			["Roll"] = DefinitionFlags.Roll,
-			["Dock"] = DefinitionFlags.Dock,
-			["Door"] = DefinitionFlags.Door,
-			["Start"] = DefinitionFlags.Start,
-			["End"] = DefinitionFlags.End,
-			["Console"] = DefinitionFlags.Console,
-			["PuzzleBlock"] = DefinitionFlags.PuzzleBlock,
-			["Sway"] = DefinitionFlags.Sway,
-			["Wash"] = DefinitionFlags.Wash,
-		};
+    internal static class DefinitionFlagMapping
+    {
+        public static readonly IReadOnlyDictionary<string, DefinitionFlags> NameToFlag
+            = new Dictionary<string, DefinitionFlags>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["Drag"]        = DefinitionFlags.Drag,
+                ["Roll"]        = DefinitionFlags.Roll,
+                ["Dock"]        = DefinitionFlags.Dock,
+                ["Door"]        = DefinitionFlags.Door,
+                ["Start"]       = DefinitionFlags.Start,
+                ["End"]         = DefinitionFlags.End,
+                ["Console"]     = DefinitionFlags.Console,
+                ["PuzzleBlock"] = DefinitionFlags.PuzzleBlock,
+                ["Sway"]        = DefinitionFlags.Sway,
+                ["Wash"]        = DefinitionFlags.Wash,
+            };
+    }
 
-		private static readonly IReadOnlyDictionary<string, DefinitionFlags> ConnectionLookup = new Dictionary<string, DefinitionFlags>(StringComparer.OrdinalIgnoreCase)
-		{
-			["N"] = DefinitionFlags.North,
-			["S"] = DefinitionFlags.South,
-			["E"] = DefinitionFlags.East,
-			["W"] = DefinitionFlags.West,
-		};
+    public class DefinitionConverter : JsonConverter
+    {
+        private static readonly IReadOnlyDictionary<string, DefinitionFlags> FlagLookup = new Dictionary<string, DefinitionFlags>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Drag"]        = DefinitionFlags.Drag,
+            ["Roll"]        = DefinitionFlags.Roll,
+            ["Dock"]        = DefinitionFlags.Dock,
+            ["Door"]        = DefinitionFlags.Door,
+            ["Start"]       = DefinitionFlags.Start,
+            ["End"]         = DefinitionFlags.End,
+            ["Console"]     = DefinitionFlags.Console,
+            ["PuzzleBlock"] = DefinitionFlags.PuzzleBlock,
+            ["Sway"]        = DefinitionFlags.Sway,
+            ["Wash"]        = DefinitionFlags.Wash,
+        };
 
-		public override bool CanConvert(Type objectType) => objectType == typeof(Definition);
+        private static readonly IReadOnlyDictionary<string, DefinitionFlags> ConnectionLookup = new Dictionary<string, DefinitionFlags>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["N"] = DefinitionFlags.North,
+            ["S"] = DefinitionFlags.South,
+            ["E"] = DefinitionFlags.East,
+            ["W"] = DefinitionFlags.West,
+        };
 
-		public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
-		{
-			if (value == null) { writer.WriteNull(); return; }
+        public override bool CanConvert(Type objectType) => objectType == typeof(Definition);
 
-			var def = (Definition)value;
+        public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+        {
+            if (value == null) { writer.WriteNull(); return; }
 
-			writer.WriteStartObject();
+            var def = (Definition)value;
 
-			writer.WritePropertyName("id");
-			writer.WriteValue(HTB50.EncodeFixed(def.HashID, length: HTB50Settings.FixedLength, padChar: '0', appendFlavor: false));
+            writer.WriteStartObject();
 
-			if (!string.IsNullOrEmpty(def.name)) { writer.WritePropertyName("name"); serializer.Serialize(writer, def.name); }
-			if (!string.IsNullOrEmpty(def.model)) { writer.WritePropertyName("model"); serializer.Serialize(writer, def.model); }
-			if (!string.IsNullOrEmpty(def.texture)) { writer.WritePropertyName("texture"); serializer.Serialize(writer, def.texture); }
-			if (!string.IsNullOrEmpty(def.material)) { writer.WritePropertyName("material"); serializer.Serialize(writer, def.material); }
+            writer.WritePropertyName("id");
+            writer.WriteValue(HTB50.EncodeFixed(def.HashID, length: HTB50Settings.FixedLength, padChar: '0', appendFlavor: false));
 
-			// Gameplay flags
-			var activeFlags = new List<string>();
-			foreach (var kv in FlagLookup)
-			{
-				if ((def.Flags & (int)kv.Value) != 0)
-					activeFlags.Add(kv.Key);
-			}
+            if (!string.IsNullOrEmpty(def.name))    { writer.WritePropertyName("name");    serializer.Serialize(writer, def.name); }
+            if (!string.IsNullOrEmpty(def.model))   { writer.WritePropertyName("model");   serializer.Serialize(writer, def.model); }
+            if (!string.IsNullOrEmpty(def.texture)) { writer.WritePropertyName("texture"); serializer.Serialize(writer, def.texture); }
+            if (!string.IsNullOrEmpty(def.material)){ writer.WritePropertyName("material"); serializer.Serialize(writer, def.material); }
 
-			if (activeFlags.Count > 0)
-			{
-				activeFlags.Sort(StringComparer.OrdinalIgnoreCase);
-				writer.WritePropertyName("flags");
-				writer.WriteValue(string.Join(", ", activeFlags));
-			}
+            // Gameplay flags
+            var activeFlags = new List<string>();
+            foreach (var kv in FlagLookup)
+            {
+                if ((def.Flags & (int)kv.Value) != 0)
+                    activeFlags.Add(kv.Key);
+            }
 
-			// Connections — fixed N-S-E-W order
-			var activeDirs = new List<char>();
-			if ((def.Flags & (int)DefinitionFlags.North) != 0) activeDirs.Add('N');
-			if ((def.Flags & (int)DefinitionFlags.South) != 0) activeDirs.Add('S');
-			if ((def.Flags & (int)DefinitionFlags.East) != 0) activeDirs.Add('E');
-			if ((def.Flags & (int)DefinitionFlags.West) != 0) activeDirs.Add('W');
+            if (activeFlags.Count > 0)
+            {
+                activeFlags.Sort(StringComparer.OrdinalIgnoreCase);
+                writer.WritePropertyName("flags");
+                writer.WriteValue(string.Join(", ", activeFlags));
+            }
 
-			if (activeDirs.Count > 0)
-			{
-				writer.WritePropertyName("connections");
-				writer.WriteValue(new string(activeDirs.ToArray()));
-			}
+            // Connections — fixed N-S-E-W order
+            var activeDirs = new List<char>();
+            if ((def.Flags & (int)DefinitionFlags.North) != 0) activeDirs.Add('N');
+            if ((def.Flags & (int)DefinitionFlags.South) != 0) activeDirs.Add('S');
+            if ((def.Flags & (int)DefinitionFlags.East)  != 0) activeDirs.Add('E');
+            if ((def.Flags & (int)DefinitionFlags.West)  != 0) activeDirs.Add('W');
 
-			writer.WriteEndObject();
-		}
+            if (activeDirs.Count > 0)
+            {
+                writer.WritePropertyName("connections");
+                writer.WriteValue(new string(activeDirs.ToArray()));
+            }
 
-		public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
-		{
-			if (reader.TokenType == JsonToken.Null) return null;
+            writer.WriteEndObject();
+        }
 
-			var def = existingValue as Definition ?? new Definition();
-			var jo = JObject.Load(reader);
+        public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+        {
+            if (reader.TokenType == JsonToken.Null) return null;
 
-			if (jo["id"]?.Value<string>() is { } idStr && !string.IsNullOrEmpty(idStr))
-			{
-				try { def.HashID = HTB50.Decode(idStr); }
-				catch (Exception ex) { Debug.LogWarning($"Failed to decode id: {ex.Message}"); }
-			}
+            var def = existingValue as Definition ?? new Definition();
+            var jo = JObject.Load(reader);
 
-			serializer.Populate(jo.CreateReader(), def);
+            if (jo["id"]?.Value<string>() is { } idStr && !string.IsNullOrEmpty(idStr))
+            {
+                try { def.HashID = HTB50.Decode(idStr); }
+                catch (Exception ex) { Debug.LogWarning($"Failed to decode id: {ex.Message}"); }
+            }
 
-			// Gameplay flags
-			if (jo["flags"]?.Value<string>() is { } flagsStr && !string.IsNullOrEmpty(flagsStr))
-			{
-				var parts = flagsStr.Split(new[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries);
-				foreach (var part in parts)
-				{
-					string trimmed = part.Trim();
-					if (string.IsNullOrEmpty(trimmed)) continue;
+            serializer.Populate(jo.CreateReader(), def);
 
-					if (FlagLookup.TryGetValue(trimmed, out var flag))
-						((IFlagAccess)def).Flags |= (int)flag;
-					else
-						Debug.LogWarning($"Unknown flag in JSON: '{trimmed}'");
-				}
-			}
+            // Gameplay flags
+            if (jo["flags"]?.Value<string>() is { } flagsStr && !string.IsNullOrEmpty(flagsStr))
+            {
+                var parts = flagsStr.Split(new[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                foreach (var part in parts)
+                {
+                    string trimmed = part.Trim();
+                    if (string.IsNullOrEmpty(trimmed)) continue;
 
-			// Connections
-			if (jo["connections"]?.Value<string>() is { } connStr && !string.IsNullOrEmpty(connStr))
-			{
-				foreach (char c in connStr.ToUpperInvariant())
-				{
-					if (!char.IsLetter(c)) continue;
+                    if (FlagLookup.TryGetValue(trimmed, out var flag))
+                        ((IFlagAccess)def).Flags |= (int)flag;
+                    else
+                        Debug.LogWarning($"Unknown flag in JSON: '{trimmed}'");
+                }
+            }
 
-					string key = c.ToString();
+            // Connections
+            if (jo["connections"]?.Value<string>() is { } connStr && !string.IsNullOrEmpty(connStr))
+            {
+                foreach (char c in connStr.ToUpperInvariant())
+                {
+                    if (!char.IsLetter(c)) continue;
 
-					if (ConnectionLookup.TryGetValue(key, out var flag))
-						((IFlagAccess)def).Flags |= (int)flag;
-					else
-						Debug.LogWarning($"Unknown direction in connections: '{c}'");
-				}
-			}
+                    string key = c.ToString();
 
-			return def;
-		}
-	}
+                    if (ConnectionLookup.TryGetValue(key, out var flag))
+                        ((IFlagAccess)def).Flags |= (int)flag;
+                    else
+                        Debug.LogWarning($"Unknown direction in connections: '{c}'");
+                }
+            }
+
+            return def;
+        }
+    }
 }
