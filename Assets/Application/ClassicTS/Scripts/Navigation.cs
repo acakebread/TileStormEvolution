@@ -7,14 +7,18 @@ namespace ClassicTilestorm
 	{
 		None = 0,
 
-		North = 1 << 0,   // RESERVED – do not reuse this bit anywhere else
-		South = 1 << 1,   // RESERVED
+		North = 1 << 0,  // RESERVED – do not reuse this bit anywhere else
+		South = 1 << 1,  // RESERVED
 		East = 1 << 2,   // RESERVED
 		West = 1 << 3,   // RESERVED
+		//ToDo Add NorthEast = 1 << 4
+		//ToDo Add NorthWest = 1 << 5
+		//ToDo Add SouthEast = 1 << 6
+		//ToDo Add SouthEast = 1 << 7
 		Directions = North | South | East | West
 
 		// You are **not** allowed to add any other values here
-		// All gameplay flags belong in TileFlags
+		// All gameplay flags belong in DefinitionFlags
 	}
 
 	public static class Navigation

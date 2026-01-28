@@ -3,92 +3,10 @@ using MassiveHadronLtd;
 
 namespace ClassicTilestorm
 {
-	[System.Flags]
-	public enum TileFlags : int
-	{
-		None = 0,
-
-		// ── Directions – must use exactly the same values as DirectionFlags ──
-		North = DirectionFlags.North,//(1 << 0) 0b00000000001
-		South = DirectionFlags.South,//(1 << 1) 0b00000000010
-		East = DirectionFlags.East,  //(1 << 2) 0b00000000100
-		West = DirectionFlags.West,  //(1 << 3) 0b00000001000
-		Directions = DirectionFlags.Directions,
-
-		// ── Gameplay flags – start from bit 4 and never touch 0–3 ─────────────
-		Drag = 1 << 4,               //(1 << 4)  0b00000010000
-		Roll = 1 << 5,				 //(1 << 5)  0b00000100000
-		Dock = 1 << 6,				 //(1 << 6)  0b00001000000
-		Start = 1 << 7,				 //(1 << 7)  0b00010000000
-		End = 1 << 8,                //(1 << 8) 0b00100000000
-		Door = 1 << 9,				 //(1 << 9) 0b01000000000
-		Console = 1 << 10			 //(1 <<10) 0b10000000000
-	}
-
-	public struct TileData
-	{
-		private readonly int flags;
-
-		public TileData(Definition def)
-		{
-			flags = def == null ? 0 : CombineFlags(def);
-
-			static int CombineFlags(Definition d)
-			{
-				int f = 0;
-				if (d.bNorth) f |= (int)TileFlags.North;
-				if (d.bSouth) f |= (int)TileFlags.South;
-				if (d.bEast) f |= (int)TileFlags.East;
-				if (d.bWest) f |= (int)TileFlags.West;
-				if (d.bDrag) f |= (int)TileFlags.Drag;
-				if (d.bRoll) f |= (int)TileFlags.Roll;
-				if (d.bDock) f |= (int)TileFlags.Dock;
-				if (d.bStart) f |= (int)TileFlags.Start;
-				if (d.bEnd) f |= (int)TileFlags.End;
-				if (d.bDoor) f |= (int)TileFlags.Door;
-				if (d.bConsole) f |= (int)TileFlags.Console;
-				return f;
-			}
-		}
-
-#if DEBUG
-		// One-time check that nobody messed up the bit assignments
-		static TileData()
-		{
-			const int directionBits = (int)TileFlags.Directions;
-
-			// Check EVERY gameplay flag against the direction bits
-			if (((int)TileFlags.Drag & directionBits) != 0 ||
-				((int)TileFlags.Roll & directionBits) != 0 ||
-				((int)TileFlags.Dock & directionBits) != 0 ||
-				((int)TileFlags.Start & directionBits) != 0 ||
-				((int)TileFlags.End & directionBits) != 0 ||
-				((int)TileFlags.Door & directionBits) != 0 ||
-				((int)TileFlags.Console & directionBits) != 0)
-			{
-				throw new System.InvalidProgramException(
-					"CRITICAL: One or more gameplay flags overlap with direction bits 0–3. " +
-					"Directions are permanently reserved — do NOT use bits 0–3 for new flags.");
-			}
-		}
-#endif
-
-		public readonly bool IsStart => (flags & (int)TileFlags.Start) != 0;
-		public readonly bool IsEnd => (flags & (int)TileFlags.End) != 0;
-		public readonly bool IsConsole => (flags & (int)TileFlags.Console) != 0;
-		public readonly bool IsDrag => (flags & (int)TileFlags.Drag) != 0;
-		public readonly bool IsDock => (flags & (int)TileFlags.Dock) != 0;
-		public readonly bool IsRoll => (flags & (int)TileFlags.Roll) != 0;
-		
-		private const int TileNavMask = (int)TileFlags.Directions; 
-		public readonly int Nav => flags & TileNavMask;
-	}
-
 	public readonly struct Tile
 	{
-		private readonly TileData _data;
+		private readonly DefinitionData data;
 		public readonly GameObject gameObject;
-		private readonly int _rotatedNav;// ← new cached field
 
 		// ── New constructor: takes Variant instead of just HashId ──────────
 		public Tile(Variant variant, Transform parent, Vector3 worldPosition)
@@ -97,7 +15,7 @@ namespace ClassicTilestorm
 			if (hadError)
 				Debug.LogWarning($"Failed to resolve tile definition at tile ({worldPosition.x},{worldPosition.z}) (hash: {variant.hash}) — using default");
 
-			_data = new TileData(def);
+			data = new DefinitionData(def);
 
 			// Position with delta offset
 			Vector3 finalPosition = worldPosition + new Vector3(0f, variant.delta, 0f);
@@ -109,7 +27,7 @@ namespace ClassicTilestorm
 				? InstantiateTile(def, parent, finalPosition, finalRotation)
 				: null;
 
-			_rotatedNav = Navigation.Rotate(_data.Nav, Mathf.RoundToInt(variant.angle));
+			data.Nav = Navigation.Rotate(data.Nav, Mathf.RoundToInt(variant.angle));
 
 			static GameObject InstantiateTile(Definition definition, Transform parent, Vector3 position, Quaternion rotation)
 			{
@@ -135,14 +53,13 @@ namespace ClassicTilestorm
 		}
 
 		// Forwarded properties
-		public bool IsStart => _data.IsStart;
-		public bool IsEnd => _data.IsEnd;
-		public bool IsConsole => _data.IsConsole;
-		public bool IsDrag => _data.IsDrag;
-		public bool IsDock => _data.IsDock;
-		public bool IsRoll => _data.IsRoll;
-		//public int Nav => _data.Nav;
-		public readonly int Nav => _rotatedNav;
+		public bool IsStart => data.IsStart;
+		public bool IsEnd => data.IsEnd;
+		public bool IsConsole => data.IsConsole;
+		public bool IsDrag => data.IsDrag;
+		public bool IsDock => data.IsDock;
+		public bool IsRoll => data.IsRoll;
+		public readonly int Nav => data.Nav;
 
 		public Bounds GetGeometryBounds()
 		{
