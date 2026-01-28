@@ -36,7 +36,7 @@ namespace ClassicTilestorm
 			{
 				if (string.IsNullOrEmpty(definition?.model))
 				{
-					if (definition != null && definition.bDock)
+					if (definition != null && definition.Dock)
 						return ApplicationSettings.ShowHiddenTiles
 							? GeometryFactory.CreateDebugTile(parent, position, rotation)
 							: null;

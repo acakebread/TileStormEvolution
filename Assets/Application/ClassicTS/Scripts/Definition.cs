@@ -66,21 +66,21 @@ namespace ClassicTilestorm
         }
 
         // ── Public API (backward compatible) ─────────────────────────────────
-        [JsonIgnore] public bool bNorth       { get => (flags & (int)DefinitionFlags.North)    != 0; set => SetFlag(DefinitionFlags.North,       value); }
-        [JsonIgnore] public bool bSouth       { get => (flags & (int)DefinitionFlags.South)    != 0; set => SetFlag(DefinitionFlags.South,       value); }
-        [JsonIgnore] public bool bEast        { get => (flags & (int)DefinitionFlags.East)     != 0; set => SetFlag(DefinitionFlags.East,        value); }
-        [JsonIgnore] public bool bWest        { get => (flags & (int)DefinitionFlags.West)     != 0; set => SetFlag(DefinitionFlags.West,        value); }
+        [JsonIgnore] public bool North       { get => (flags & (int)DefinitionFlags.North)       != 0; set => SetFlag(DefinitionFlags.North,       value); }
+        [JsonIgnore] public bool South       { get => (flags & (int)DefinitionFlags.South)       != 0; set => SetFlag(DefinitionFlags.South,       value); }
+        [JsonIgnore] public bool East        { get => (flags & (int)DefinitionFlags.East)        != 0; set => SetFlag(DefinitionFlags.East,        value); }
+        [JsonIgnore] public bool West        { get => (flags & (int)DefinitionFlags.West)        != 0; set => SetFlag(DefinitionFlags.West,        value); }
 
-        [JsonIgnore] public bool bDrag        { get => (flags & (int)DefinitionFlags.Drag)     != 0; set => SetFlag(DefinitionFlags.Drag,        value); }
-        [JsonIgnore] public bool bRoll        { get => (flags & (int)DefinitionFlags.Roll)     != 0; set => SetFlag(DefinitionFlags.Roll,        value); }
-        [JsonIgnore] public bool bDock        { get => (flags & (int)DefinitionFlags.Dock)     != 0; set => SetFlag(DefinitionFlags.Dock,        value); }
-        [JsonIgnore] public bool bDoor        { get => (flags & (int)DefinitionFlags.Door)     != 0; set => SetFlag(DefinitionFlags.Door,        value); }
-        [JsonIgnore] public bool bStart       { get => (flags & (int)DefinitionFlags.Start)    != 0; set => SetFlag(DefinitionFlags.Start,       value); }
-        [JsonIgnore] public bool bEnd         { get => (flags & (int)DefinitionFlags.End)      != 0; set => SetFlag(DefinitionFlags.End,         value); }
-        [JsonIgnore] public bool bConsole     { get => (flags & (int)DefinitionFlags.Console)  != 0; set => SetFlag(DefinitionFlags.Console,     value); }
-        [JsonIgnore] public bool bPuzzleBlock { get => (flags & (int)DefinitionFlags.PuzzleBlock) != 0; set => SetFlag(DefinitionFlags.PuzzleBlock, value); }
-        [JsonIgnore] public bool bSway        { get => (flags & (int)DefinitionFlags.Sway)     != 0; set => SetFlag(DefinitionFlags.Sway,        value); }
-        [JsonIgnore] public bool bWash        { get => (flags & (int)DefinitionFlags.Wash)     != 0; set => SetFlag(DefinitionFlags.Wash,        value); }
+        [JsonIgnore] public bool Drag        { get => (flags & (int)DefinitionFlags.Drag)        != 0; set => SetFlag(DefinitionFlags.Drag,        value); }
+        [JsonIgnore] public bool Roll        { get => (flags & (int)DefinitionFlags.Roll)        != 0; set => SetFlag(DefinitionFlags.Roll,        value); }
+        [JsonIgnore] public bool Dock        { get => (flags & (int)DefinitionFlags.Dock)        != 0; set => SetFlag(DefinitionFlags.Dock,        value); }
+        [JsonIgnore] public bool Door        { get => (flags & (int)DefinitionFlags.Door)        != 0; set => SetFlag(DefinitionFlags.Door,        value); }
+        [JsonIgnore] public bool Start       { get => (flags & (int)DefinitionFlags.Start)       != 0; set => SetFlag(DefinitionFlags.Start,       value); }
+        [JsonIgnore] public bool End         { get => (flags & (int)DefinitionFlags.End)         != 0; set => SetFlag(DefinitionFlags.End,         value); }
+        [JsonIgnore] public bool Console     { get => (flags & (int)DefinitionFlags.Console)     != 0; set => SetFlag(DefinitionFlags.Console,     value); }
+        [JsonIgnore] public bool PuzzleBlock { get => (flags & (int)DefinitionFlags.PuzzleBlock) != 0; set => SetFlag(DefinitionFlags.PuzzleBlock, value); }
+        [JsonIgnore] public bool Sway        { get => (flags & (int)DefinitionFlags.Sway)        != 0; set => SetFlag(DefinitionFlags.Sway,        value); }
+        [JsonIgnore] public bool Wash        { get => (flags & (int)DefinitionFlags.Wash)        != 0; set => SetFlag(DefinitionFlags.Wash,        value); }
 
         [JsonIgnore]
         public int Nav
@@ -120,10 +120,10 @@ namespace ClassicTilestorm
         public bool IsDefaultEquivalent()
         {
             return string.IsNullOrWhiteSpace(model) &&
-                   !bDrag && !bRoll && !bDock && !bDoor &&
-                   !bStart && !bEnd && !bConsole && !bPuzzleBlock &&
-                   !bSway && !bWash &&
-                   !bNorth && !bEast && !bSouth && !bWest;
+                   !Drag && !Roll && !Dock && !Door &&
+                   !Start && !End && !Console && !PuzzleBlock &&
+                   !Sway && !Wash &&
+                   !North && !East && !South && !West;
         }
     }
 
@@ -182,10 +182,10 @@ namespace ClassicTilestorm
 
             // Connections
             var dirs = new List<char>();
-            if (def.bNorth) dirs.Add('N');
-            if (def.bSouth) dirs.Add('S');
-            if (def.bEast)  dirs.Add('E');
-            if (def.bWest)  dirs.Add('W');
+            if (def.North) dirs.Add('N');
+            if (def.South) dirs.Add('S');
+            if (def.East)  dirs.Add('E');
+            if (def.West)  dirs.Add('W');
 
             if (dirs.Count > 0)
             {
@@ -233,10 +233,10 @@ namespace ClassicTilestorm
                     if (!char.IsLetter(c)) continue;
                     switch (c)
                     {
-                        case 'N': def.bNorth = true; break;
-                        case 'S': def.bSouth = true; break;
-                        case 'E': def.bEast  = true; break;
-                        case 'W': def.bWest  = true; break;
+                        case 'N': def.North = true; break;
+                        case 'S': def.South = true; break;
+                        case 'E': def.East  = true; break;
+                        case 'W': def.West  = true; break;
                     }
                 }
             }

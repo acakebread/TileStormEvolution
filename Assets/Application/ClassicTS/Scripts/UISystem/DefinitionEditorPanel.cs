@@ -109,20 +109,20 @@ namespace ClassicTilestorm
 
 		private static readonly IReadOnlyList<FlagInfo> AllFlags = new List<FlagInfo>
 		{
-			new("North",       "Nav North",   d => d.bNorth,       (d, v) => d.bNorth = v),
-			new("East",        "Nav East",    d => d.bEast,        (d, v) => d.bEast = v),
-			new("South",       "Nav South",   d => d.bSouth,       (d, v) => d.bSouth = v),
-			new("West",        "Nav West",    d => d.bWest,        (d, v) => d.bWest = v),
-			new("Drag",        "Can Drag",    d => d.bDrag,        (d, v) => d.bDrag = v),
-			new("Roll",        "Can Roll",    d => d.bRoll,        (d, v) => d.bRoll = v),
-			new("Dock",        "Can Dock",    d => d.bDock,        (d, v) => d.bDock = v),
-			new("Door",        "Is Door",     d => d.bDoor,        (d, v) => d.bDoor = v),
-			new("Start",       "Start Point", d => d.bStart,       (d, v) => d.bStart = v),
-			new("End",         "End Point",   d => d.bEnd,         (d, v) => d.bEnd = v),
-			new("Console",     "Is Console",  d => d.bConsole,     (d, v) => d.bConsole = v),
-			new("PuzzleBlock", "Puzzle Block",d => d.bPuzzleBlock, (d, v) => d.bPuzzleBlock = v),
-			new("Sway",        "Sways",       d => d.bSway,        (d, v) => d.bSway = v),
-			new("Wash",        "Bouyant",     d => d.bWash,        (d, v) => d.bWash = v),
+			new("North",       "Nav North",   d => d.North,       (d, v) => d.North = v),
+			new("East",        "Nav East",    d => d.East,        (d, v) => d.East = v),
+			new("South",       "Nav South",   d => d.South,       (d, v) => d.South = v),
+			new("West",        "Nav West",    d => d.West,        (d, v) => d.West = v),
+			new("Drag",        "Can Drag",    d => d.Drag,        (d, v) => d.Drag = v),
+			new("Roll",        "Can Roll",    d => d.Roll,        (d, v) => d.Roll = v),
+			new("Dock",        "Can Dock",    d => d.Dock,        (d, v) => d.Dock = v),
+			new("Door",        "Is Door",     d => d.Door,        (d, v) => d.Door = v),
+			new("Start",       "Start Point", d => d.Start,       (d, v) => d.Start = v),
+			new("End",         "End Point",   d => d.End,         (d, v) => d.End = v),
+			new("Console",     "Is Console",  d => d.Console,     (d, v) => d.Console = v),
+			new("PuzzleBlock", "Puzzle Block",d => d.PuzzleBlock, (d, v) => d.PuzzleBlock = v),
+			new("Sway",        "Sways",       d => d.Sway,        (d, v) => d.Sway = v),
+			new("Wash",        "Bouyant",     d => d.Wash,        (d, v) => d.Wash = v),
 		};
 
 		protected override void Awake()

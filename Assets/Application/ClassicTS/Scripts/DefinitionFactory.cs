@@ -43,15 +43,15 @@ namespace ClassicTilestorm
 				LightFactory.AddPointLight(gameObject, replacement.GetColor("_EmissionColor"));
 
 			// Add collider for interactive tiles
-			if (definition.bDrag)
+			if (definition.Drag)
 				TileStormGeneric.AddDefaultTileCollider(gameObject);
 
 			// Add sway component for wind controller
-			if (definition.bSway)
+			if (definition.Sway)
 				MorphGeomSway.AddGeomSway(gameObject);
 
 			// Add wash component for water bobbing
-			if (definition.bWash)
+			if (definition.Wash)
 				TilePhysicsWash.AddWash(gameObject);
 
 #if DEBUG
