@@ -101,46 +101,21 @@ namespace ClassicTilestorm
 				return; // Skip input this frame — GUI consumed it last frame
 
 			if (Input.GetMouseButtonDown(0))
-			{
-				mouseDownPos = Input.mousePosition;
-				mouseMovedBeyondThreshold = false;
-
-				int hitTile = iMap.CameraHitTile(camera, Input.mousePosition);
-
-				bool noAttachmentHere = hitTile < 0 || iMap.GetAttachments(tileIndex: hitTile).Length == 0;
-
-				if (noAttachmentHere && ShouldStartPanningOnLeftClick())
-					StartPanning();
-				else
-					isPanning = false;
-
 				HandleLeftMouseDown();
-			}
 
-			if (Input.GetMouseButton(0) || Input.GetMouseButton(1))
-			{
-				if (Vector3.Distance(Input.mousePosition, mouseDownPos) >= CLICK_THRESHOLD)
-					mouseMovedBeyondThreshold = true;
-			}
+			if (Input.GetMouseButtonDown(1))
+				HandleRightMouseDown();
 
 			if (Input.GetMouseButton(0))
-			{
-				HandleDrag();
-				if (isPanning)
-					UpdatePan();
-			}
+				HandleLeftMouseDrag();
+
+			if (Input.GetMouseButton(1))
+				HandleRightMouseDrag();
 
 			if (Input.GetMouseButtonUp(0))
-			{
-				isPanning = false;
-				if (!mouseMovedBeyondThreshold)
-					HandleLeftMouseUp();
-			}
-
-			if (Input.GetMouseButtonUp(0) && !mouseMovedBeyondThreshold)
 				HandleLeftMouseUp();
 
-			if (Input.GetMouseButtonUp(1) && !mouseMovedBeyondThreshold)
+			if (Input.GetMouseButtonUp(1))
 				HandleRightMouseUp();
 		}
 
@@ -178,8 +153,17 @@ namespace ClassicTilestorm
 		// ===================================================================
 		// Input Handlers — now using currentMode
 		// ===================================================================
+
+		private void ThresholdCheck()
+		{
+			if (Vector3.Distance(Input.mousePosition, mouseDownPos) >= CLICK_THRESHOLD)
+				mouseMovedBeyondThreshold = true;
+		}
+
 		private void HandleLeftMouseDown()
 		{
+			mouseDownPos = Input.mousePosition;
+			mouseMovedBeyondThreshold = false;
 			pendingTile = iMap.CameraHitTile(camera, Input.mousePosition);
 
 			if (-1 != pendingTile)
@@ -189,44 +173,28 @@ namespace ClassicTilestorm
 				return;
 			}
 			Select();
-		}
 
-		private void HandleLeftMouseUp()
-		{
-			var attachmentsOnTile = iMap.GetAttachments(tileIndex: pendingTile);
-
-			if (null == attachmentsOnTile || 0 == attachmentsOnTile.Length)
-			{
-				if (-1 != pendingTile)
-					pendingAction = PendingAction.Add;
-			}
-			else if (attachmentsOnTile.Length > 1)
-			{
-				pendingAction = PendingAction.Select;
-			}
+			bool noAttachmentHere = pendingTile < 0 || iMap.GetAttachments(tileIndex: pendingTile).Length == 0;
+			if (noAttachmentHere && ShouldStartPanningOnLeftClick())
+				StartPanning();
 			else
-			{
-				pendingAction = PendingAction.None;
-				Select(attachmentsOnTile);
-			}
-
-			RebuildMarkers();
+				isPanning = false;
 		}
 
-		private void HandleRightMouseUp()
+		private void HandleRightMouseDown()
 		{
-			var tile = iMap.CameraHitTile(camera, Input.mousePosition);
-			if (tile >= 0 && iMap.GetAttachments(tileIndex: tile).Length > 0)
-			{
-				pendingTile = tile;
-				pendingAction = PendingAction.Delete;
-				return;
-			}
-			Select();
+			mouseDownPos = Input.mousePosition;
+			mouseMovedBeyondThreshold = false;
+			pendingTile = iMap.CameraHitTile(camera, Input.mousePosition);
 		}
 
-		private void HandleDrag()
+		private void HandleLeftMouseDrag()
 		{
+			ThresholdCheck();
+
+			if (isPanning)
+				UpdatePan();
+
 			var tile = iMap.CameraHitTile(camera, Input.mousePosition);
 			if (tile == pendingTile || -1 == tile || null == selection || 0 == selection.Length)
 				return;
@@ -252,6 +220,54 @@ namespace ClassicTilestorm
 				}
 				selection[0].OnDragInput(iMap, selection);
 			}
+		}
+
+		private void HandleRightMouseDrag()
+		{
+			ThresholdCheck();
+		}
+
+		private void HandleLeftMouseUp()
+		{
+			isPanning = false;
+
+			if (mouseMovedBeyondThreshold)
+				return;
+
+			var attachmentsOnTile = iMap.GetAttachments(tileIndex: pendingTile);
+
+			if (null == attachmentsOnTile || 0 == attachmentsOnTile.Length)
+			{
+				if (-1 != pendingTile)
+					pendingAction = PendingAction.Add;
+			}
+			else if (attachmentsOnTile.Length > 1)
+			{
+				pendingAction = PendingAction.Select;
+			}
+			else
+			{
+				pendingAction = PendingAction.None;
+				Select(attachmentsOnTile);
+			}
+
+			RebuildMarkers();
+		}
+
+		private void HandleRightMouseUp()
+		{
+			if (mouseMovedBeyondThreshold)
+				return;
+
+			var tile = iMap.CameraHitTile(camera, Input.mousePosition);
+			if (tile >= 0 && iMap.GetAttachments(tileIndex: tile).Length > 0)
+			{
+				pendingTile = tile;
+				pendingAction = PendingAction.Delete;
+				Select(iMap.GetAttachments(tileIndex: pendingTile));
+				return;
+			}
+			Select();
 		}
 
 		// ===================================================================
