@@ -34,6 +34,10 @@ namespace ClassicTilestorm
 		public static Camera PreviewCamera => previewCam;
 		public static Transform PreviewCameraTransform => previewCam != null ? previewCam.transform : null;
 
+		//public static void SetHighlighted(bool highlighted) => isHighlighted = highlighted;
+		//public static void SetInFocus(bool focus) => isHighlighted = focus;
+		//public static void SetInUse(bool inUse) => isInUse = inUse;
+
 		public static void Show(View view, IMapEdit manager)
 		{
 			if (view == null || manager == null)
@@ -135,10 +139,6 @@ namespace ClassicTilestorm
 			mp.y = Screen.height - mp.y;
 			return hitRect.Contains(mp);
 		}
-
-		public static void SetHighlighted(bool highlighted) => isHighlighted = highlighted;
-		public static void SetInFocus(bool focus) => isHighlighted = focus;
-		public static void SetInUse(bool inUse) => isInUse = inUse;
 
 		private static void UpdatePreviewCamera()
 		{

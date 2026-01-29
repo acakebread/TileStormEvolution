@@ -31,11 +31,6 @@ namespace ClassicTilestorm
 		private bool touchStartOverGui = false;
 		public virtual void Update()
 		{
-			ViewPreviewUtil.Update();
-
-			if (ViewPreviewUtil.IsInFocus)
-				EditorCameraMovement.UpdateCamera(ViewPreviewUtil.PreviewCamera.transform);
-
 			if (Input.GetMouseButtonUp(0) && GUIUtility.hotControl != 0)
 				GUIUtility.hotControl = 0;
 
@@ -48,8 +43,23 @@ namespace ClassicTilestorm
 			else
 				touchStartOverGui = false;
 
-			if (!touchStartOverGui)
-				EditorCameraMovement.UpdateCamera(camera ? camera.transform : null, isMouseOverGui: !allowScroll);
+			ViewPreviewUtil.Update();
+			if (ViewPreviewUtil.IsInFocus)
+			{
+				EditorCameraMovement.UpdateCamera(ViewPreviewUtil.PreviewCamera.transform);
+			}
+			else
+			{
+;				if (!touchStartOverGui)
+					EditorCameraMovement.UpdateCamera(camera ? camera.transform : null, isMouseOverGui: !allowScroll);
+			}
+
+			if (ViewPreviewUtil.IsInFocus || IsMouseOverGUI() || IsGuiControlActive()) return;
+
+			if (MassiveHadronLtd.GuiUtils.WasGuiActiveLastFrame)
+				return; // Skip input this frame — GUI consumed it last frame
+
+			OnControl();
 		}
 
 		public virtual void OnEnable() 
@@ -63,12 +73,19 @@ namespace ClassicTilestorm
 			isPanning = false; 
 		}
 
-		public virtual void OnGUI() { }
+		public virtual void OnGUI() 
+		{
+			ViewPreviewUtil.OnGUI();
+		}
+
 		public virtual void OnDestroy() { }
 
 		public virtual void OnApplicationFocus(bool hasFocus) => EditorCameraMovement.OnApplicationFocus(hasFocus);
 
 		// You can keep this one protected virtual if derived classes want to override the plane logic
+
+		public virtual void OnControl() { }//input mouse update
+
 		protected virtual void StartPanning()
 		{
 			isPanning = true;

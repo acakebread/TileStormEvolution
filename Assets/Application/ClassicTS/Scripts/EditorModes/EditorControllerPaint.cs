@@ -9,8 +9,6 @@ namespace ClassicTilestorm
 {
 	public class EditorControllerPaint : EditorControllerMovement
 	{
-		private Vector3 mouseDownPos;
-
 		private HashId selectedHashId;// hashid — placement & ghost
 		public int SelectedHashId => selectedHashId;
 

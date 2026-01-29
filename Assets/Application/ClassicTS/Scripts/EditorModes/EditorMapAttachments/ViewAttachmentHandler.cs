@@ -62,7 +62,10 @@ namespace ClassicTilestorm
 
 		public static void HandlePreviewCameraSync(IMapEdit map, Camera camera, MapAttachment[] selection)
 		{
-			if (selection?.FirstOrDefault() is not View view) return;
+			if (null == selection || 1 != selection.Length) return;
+			if (selection?.FirstOrDefault() is not View view)
+				return;
+
 			var previewTransform = ViewPreviewUtil.PreviewCameraTransform;
 			if (previewTransform == null) return;
 

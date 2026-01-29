@@ -62,17 +62,16 @@ namespace ClassicTilestorm
 		// ===================================================================
 		// Core Update
 		// ===================================================================
+
 		public override void Update()
 		{
 			base.Update();
+			ViewAttachmentHandler.HandlePreviewCameraSync(iMap, camera, selection);
+		}
 
-			if (ViewPreviewUtil.IsInFocus)
-			{
-				ViewAttachmentHandler.HandlePreviewCameraSync(iMap, camera, selection);
-				return;
-			}
-
-			if (IsMouseOverGUI() || IsGuiControlActive()) return;
+		public override void OnControl()
+		{
+			base.OnControl();
 
 			if (EditorTransformUtil.HandleTransformGizmoInput(camera))
 			{
@@ -80,8 +79,8 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			if (WasGuiActiveLastFrame)
-				return; // Skip input this frame — GUI consumed it last frame
+			//if (WasGuiActiveLastFrame)
+			//	return; // Skip input this frame — GUI consumed it last frame
 
 			if (Input.GetMouseButtonDown(0))
 				HandleLeftMouseDown();
@@ -108,7 +107,6 @@ namespace ClassicTilestorm
 		public override void OnGUI()
 		{
 			base.OnGUI();
-			ViewPreviewUtil.OnGUI();
 
 			// Draw correct panel based on currentMode
 			if (currentMode == Mode.Waypoint)
@@ -280,6 +278,7 @@ namespace ClassicTilestorm
 				}
 			}
 
+			ViewPreviewUtil.Hide();
 			HideAllGizmos();
 			RebuildMarkers();
 
