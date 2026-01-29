@@ -100,11 +100,16 @@ namespace ClassicTilestorm
 		{
 			base.OnGUI();
 
-			// Draw correct panel based on currentMode
-			if (currentMode == Mode.Waypoint)
-				DrawSidePanelWaypoint();
+			if (null != selection && selection.Length >= 1) 
+			{
+				// Draw correct panel based on currentMode
+				if (currentMode == Mode.Waypoint)
+					DrawSidePanelWaypoint();
+				else
+					DrawSidePanelAttachment(); // includes Undefined and Attachment
+			}
 			else
-				DrawSidePanelAttachment(); // includes Undefined and Attachment
+				sidePanel.Update();
 
 			if (pendingAction == PendingAction.None) return;
 

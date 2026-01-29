@@ -197,17 +197,21 @@ namespace ClassicTilestorm
 			GUI.contentColor = prevContentColor;
 
 			var mainController = GetComponent<MainController>();
+#if UNITY_EDITOR
 			if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "Import Map", new Color(0.2f, 0.6f, 1f)))
 				mainController.ImportMapAsAtomic();
 
 			if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "Export Map", new Color(0.8f, 0.2f, 0.2f)))
 				mainController.ExportMapAsAtomic();
+#endif
 
 			if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "(Re)Load Database", new Color(0.2f, 0.6f, 1f)))
 				mainController.LoadDatabase();
 
+#if UNITY_EDITOR
 			if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "Save Database", new Color(0.8f, 0.2f, 0.2f)))
 				mainController.SaveDatabase();
+#endif
 		}
 	}
 }

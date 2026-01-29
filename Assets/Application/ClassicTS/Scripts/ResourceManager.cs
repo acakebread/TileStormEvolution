@@ -89,7 +89,7 @@ namespace ClassicTilestorm
 					hash32 = RadixHash.GetStableHash32(def.name + attempt);
 					def.HashID = hash32;
 					attempt++;
-					UnityEngine.Debug.LogWarning($"Hash collision retry {attempt} for '{def.name}'");
+					Debug.LogWarning($"Hash collision retry {attempt} for '{def.name}'");
 				}
 			}
 
@@ -215,6 +215,22 @@ namespace ClassicTilestorm
 			var list = _db.definitions.ToList();
 			(list[index + 1], list[index]) = (list[index], list[index + 1]);
 			_db.definitions = list.ToArray();
+		}
+
+		public static bool RenameMapName(int index, string value)
+		{
+			if (index >= 0 && _db?.maps.Length > index)
+			{
+				_db.maps[index].name = value;
+				return true;
+			}
+			return false;
+		}
+
+		public static bool RenameMapName(Map map, string value)
+		{
+			var index = Array.IndexOf(_db?.maps, map);
+			return RenameMapName(index, value);
 		}
 
 		public static bool RenameDefinitionName(HashId hashId, string name)

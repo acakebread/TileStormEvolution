@@ -122,7 +122,7 @@ namespace MassiveHadronLtd
 					DefaultPosition = defaultPos.Value;
 			}
 
-			private void Update()
+			public void Update()
 			{
 				if (Input.GetMouseButton(0) || Input.GetMouseButton(1)) return;
 

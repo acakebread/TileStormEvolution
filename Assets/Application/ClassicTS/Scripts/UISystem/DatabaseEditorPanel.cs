@@ -23,7 +23,7 @@ namespace ClassicTilestorm
 		[SerializeField] private Button ButtonMoveDown;
 
 		// Add your own later: name input, size label, preview minimap, etc.
-		//[SerializeField] private TMP_InputField mapNameInput;
+		[SerializeField] private TMP_InputField mapNameInput;
 		//[SerializeField] private TextMeshProUGUI mapSizeLabel;
 
 		//[Header("Preview")]
@@ -115,6 +115,9 @@ namespace ClassicTilestorm
 			toggleGroup = contentParent.GetComponent<ToggleGroup>()
 				?? contentParent.gameObject.AddComponent<ToggleGroup>();
 			toggleGroup.allowSwitchOff = false;
+
+			if (mapNameInput != null)
+				mapNameInput.onEndEdit.AddListener(OnMapNameEndEdit);
 		}
 
 		private void InitializeButtons()
@@ -123,6 +126,40 @@ namespace ClassicTilestorm
 			if (ButtonDelete) ButtonDelete.onClick.AddListener(DeleteMap);
 			if (ButtonMoveUp) ButtonMoveUp.onClick.AddListener(MoveMapUp);
 			if (ButtonMoveDown) ButtonMoveDown.onClick.AddListener(MoveMapDown);
+		}
+
+		// ── Event Handlers ──────────────────────────────────────────────────────────────────
+
+		private void OnMapNameEndEdit(string input)
+		{
+			//var def = CurrentDefinition;
+			//if (def == null) return;
+
+			string newName = (input ?? "").Trim();
+
+			//if (string.IsNullOrWhiteSpace(newName) || newName == def.name)
+			//{
+			//	IDInput.text = def.name;
+			//	return;
+			//}
+
+			//// No more legacy check — rename always safe (hashid unchanged)
+			//if (ResourceManager.Definitions.Any(d => d != def && string.Equals(d.name, newName, StringComparison.Ordinal)))
+			//{
+			//	Debug.LogWarning($"ID '{newName}' already exists!");
+			//	IDInput.text = def.name;
+			//	return;
+			//}
+
+			//bool updated = ResourceManager.RenameDefinitionName(def.HashID, newName);
+
+			//Debug.Log($"Map '{def.name}' → '{newName}' (Map updated)");
+
+			//bool result = ResourceManager.RenameMapName(lastSelectedMapIndex, newName);
+
+			bool result = ResourceManager.RenameMapName(CurrentMap, newName);
+
+			RefreshMapList();
 		}
 
 		// ── Map List Population ─────────────────────────────────────────────────────────────
@@ -199,6 +236,8 @@ namespace ClassicTilestorm
 			lastSelectedMapIndex = index;
 
 			var map = CurrentMap;
+
+			mapNameInput.text = map?.name ?? "";
 
 			// Later: fill name field, size label, minimap preview, etc.
 			//if (mapNameInput != null) mapNameInput.text = map?.name ?? "";
