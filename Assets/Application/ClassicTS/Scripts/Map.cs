@@ -1195,36 +1195,51 @@ namespace ClassicTilestorm
 			if (width <= 0 || height <= 0 || tiles == null || variants == null)
 				return null;
 
+			// CRITICAL: Work on a CLONE so we don't corrupt the original map's runtime state
+			var previewMap = this.Clone();
+
 			var previewRoot = new GameObject($"Preview_{name ?? "Map"}");
 			previewRoot.transform.SetParent(previewParent, false);
 			previewRoot.transform.localPosition = Vector3.zero;
 
-			var originalParent = this.parent;
-			this.parent = previewRoot.transform;
+			var originalParent = previewMap.parent;
+			previewMap.parent = previewRoot.transform;
 
 			try
 			{
-				Preset();                   // identity state
-				var _ = graph;              // force creation
+				previewMap.Preset();                // identity state on clone
+				var _ = previewMap.graph;           // force tile creation on clone
 
-				if (_graph == null || _graph.Length == 0)
+				if (previewMap._graph == null || previewMap._graph.Length == 0)
 				{
+					Debug.LogWarning("Preview graph creation failed on clone");
 					UnityEngine.Object.DestroyImmediate(previewRoot);
-					Debug.LogError("_graph == null || _graph.Length == 0");
 					return null;
 				}
 
-				// Apply layer
+				// Apply layer recursively
 				previewRoot.transform.SetLayer(layer, true);
 
-				// Optional: disable unwanted components
-				foreach (var tile in _graph)
+				// Optional: disable unwanted scripts/components
+				foreach (var tile in previewMap._graph)
 				{
 					if (tile.gameObject == null) continue;
+
+					// Disable things that shouldn't run in editor preview
 					foreach (var mb in tile.gameObject.GetComponentsInChildren<MonoBehaviour>(true))
 					{
-						if (mb is MorphGeomSway || mb is WindController /* etc */)
+						if (mb is MorphGeomSway ||
+							mb is WindController)           // optional
+						{
 							mb.enabled = false;
+						}
+					}
+
+					// Optional: turn off shadows for performance
+					foreach (var mr in tile.gameObject.GetComponentsInChildren<Renderer>(true))
+					{
+						mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+						mr.receiveShadows = false;
 					}
 				}
 
@@ -1238,10 +1253,14 @@ namespace ClassicTilestorm
 			}
 			finally
 			{
-				this.parent = originalParent;
-				// IMPORTANT: DO NOT call DestroyAllTiles() here!
-				// We want to keep the preview objects alive
-				// Cleanup happens when selection changes / panel disables
+				// Restore original parent on clone (not needed, but clean)
+				previewMap.parent = originalParent;
+
+				// IMPORTANT: clean up the clone's runtime tiles
+				// (prevents memory leak from dangling GameObjects)
+				//previewMap.DestroyAllTiles();
+
+				// Clone itself can be GC'd — no need to destroy it explicitly
 			}
 		}
 

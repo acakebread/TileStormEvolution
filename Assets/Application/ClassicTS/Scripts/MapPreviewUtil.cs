@@ -1,7 +1,7 @@
-﻿using UnityEngine;
+﻿using MassiveHadronLtd;
+using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
-using MassiveHadronLtd;
 
 namespace ClassicTilestorm
 {
@@ -15,14 +15,57 @@ namespace ClassicTilestorm
 		private static Material groundMat;
 		private static Texture2D groundTex;
 
+		private static GameObject previewRoot;
+		public static Transform previewMapRoot;
+
+		public static int previewLayer = -1;
+		public const string PREVIEW_LAYER_NAME = "Preview";
+
 		public static Camera PreviewCamera => previewCam;
 		public static RenderTexture PreviewRenderTexture => renderTexture;
 		public static Transform PreviewCameraTransform => previewCam ? previewCam.transform : null;
 
-		public static GameObject previewRoot;
-		public static Transform previewMapRoot;
-		public static int previewLayer = -1;//1 << LayerMask.NameToLayer(PREVIEW_LAYER_NAME);// - 1; // cache
-		public const string PREVIEW_LAYER_NAME = "Preview";
+		// Add these static fields near the top (after other fields)
+		private static float orbitAngle = 0f;
+		private static float orbitSpeed = 20f;          // degrees per second — adjust to taste
+		private static Vector3 currentCenter = Vector3.zero;
+		private static float currentDistance = 10f;
+		private static Quaternion baseTilt = Quaternion.Euler(25f, 0f, 0f); // your lower angle
+
+		// Optional: expose speed if you want UI control later
+		public static float OrbitSpeed { get => orbitSpeed; set => orbitSpeed = value; }
+
+		// Modified RenderPreview – now takes center & auto-orbits
+		public static void RenderPreview(Vector3 center, float distance, float fov = 60f)
+		{
+			if (previewCam == null)
+			{
+				Initialize();
+				if (previewCam == null) return;
+			}
+
+			// Update stored values
+			currentCenter = center;
+			currentDistance = distance;
+
+			// Advance orbit angle every frame (smooth rotation)
+			orbitAngle += orbitSpeed * Time.deltaTime;
+			orbitAngle %= 360f;
+
+			// Build orbiting rotation: base tilt + Y-axis orbit
+			Quaternion orbitRot = Quaternion.Euler(0f, orbitAngle, 0f);
+			Quaternion finalRot = orbitRot * baseTilt;
+
+			// Position: orbit around center
+			Vector3 camPos = center + finalRot * Vector3.back * currentDistance;
+
+			previewCam.transform.position = camPos;
+			previewCam.transform.rotation = finalRot; // or LookAt(center) if you prefer strict look-at
+
+			previewCam.fieldOfView = fov;
+
+			previewCam.Render();
+		}
 
 		public static void SetPreviewLayer(int layer)
 		{
@@ -33,22 +76,21 @@ namespace ClassicTilestorm
 		{
 			if (previewRoot != null) return;
 
-			previewRoot = new GameObject("PreviewSceneRoot");// { hideFlags = HideFlags.HideAndDontSave };
-			previewRoot.transform.SetParent(root.transform); // under MAP_PREVIEW_ROOT
+			previewRoot = new GameObject("PreviewSceneRoot");
+			previewRoot.transform.SetParent(root.transform);
 			previewMapRoot = new GameObject("MapCopy").transform;
 			previewMapRoot.SetParent(previewRoot.transform);
 			previewMapRoot.localPosition = Vector3.zero;
 		}
 
-		// Call this when changing map or panel disable
 		public static void ClearPreviewMap()
 		{
 			if (previewMapRoot != null)
 			{
 				foreach (Transform child in previewMapRoot)
+				{
 					if (child != null) Object.DestroyImmediate(child.gameObject);
-
-				// Optional: destroy root if empty, but usually keep it
+				}
 			}
 		}
 
@@ -57,77 +99,84 @@ namespace ClassicTilestorm
 			if (root != null) return;
 
 			root = new GameObject("MAP_PREVIEW_ROOT");
-			//root.hideFlags = HideFlags.HideAndDontSave;
-			// Optional: UnityEngine.Object.DontDestroyOnLoad(root);
 
 			int previewLayerIndex = LayerMask.NameToLayer(PREVIEW_LAYER_NAME);
-
 			if (previewLayerIndex < 0)
 			{
-				Debug.LogError($"Layer '{PREVIEW_LAYER_NAME}' does not exist in Project Settings → Tags and Layers!");
-				previewLayerIndex = 0; // fallback – everything
+				Debug.LogError($"Layer '{PREVIEW_LAYER_NAME}' not found in Tags and Layers!");
+				previewLayerIndex = 0; // fallback
 			}
 
-			// Also store the index for later use
-			previewLayer = 1 << LayerMask.NameToLayer(PREVIEW_LAYER_NAME); //1 << previewLayerIndex;
+			previewLayer = 1 << previewLayerIndex;
 
-			// Camera setup
+			// Root camera setup
 			camGO = new GameObject("PreviewCamera");
 			camGO.transform.SetParent(root.transform);
 
 			previewCam = camGO.AddComponent<Camera>();
 			previewCam.enabled = false;
 			previewCam.clearFlags = CameraClearFlags.SolidColor;
-			previewCam.backgroundColor = new Color(0.1f, 0.1f, 0.14f, 1f);
-			//previewCam.cullingMask = 0;                    // we'll draw ground manually
-			previewCam.cullingMask = 1 << LayerMask.NameToLayer(PREVIEW_LAYER_NAME);
+			previewCam.backgroundColor = new Color(0.12f, 0.12f, 0.16f, 1f);
+			previewCam.cullingMask = 1 << previewLayerIndex;
 			previewCam.nearClipPlane = 0.1f;
 			previewCam.farClipPlane = 2000f;
 
-			// Reasonable default size – can be resized later if needed
-			renderTexture = new RenderTexture(512, 320, 24, RenderTextureFormat.ARGB32);
-			renderTexture.filterMode = FilterMode.Bilinear;
+			// Dedicated preview light (isolated from scene lights)
+			var lightGO = new GameObject("PreviewDirectionalLight");
+			lightGO.transform.SetParent(root.transform);
+			lightGO.transform.localRotation = Quaternion.Euler(50f, -30f, 0f);
+
+			var previewLight = lightGO.AddComponent<Light>();
+			previewLight.type = LightType.Directional;
+			previewLight.intensity = 0.5f;
+			previewLight.color = new Color(1f, 0.97f, 0.92f);
+			previewLight.shadows = LightShadows.Soft;
+			previewLight.shadowStrength = 0.75f;
+			previewLight.renderMode = LightRenderMode.ForcePixel;
+			previewLight.cullingMask = 1 << previewLayerIndex; // only lights Preview objects
+
+			// Render Texture
+			renderTexture = new RenderTexture(512, 320, 24, RenderTextureFormat.ARGB32)
+			{
+				filterMode = FilterMode.Bilinear
+			};
 			renderTexture.Create();
 			previewCam.targetTexture = renderTexture;
 
 			CreateGroundPlane();
-
 			EnsurePreviewRoot();
 		}
 
 		private static void CreateGroundPlane()
 		{
-			// Large flat quad under the camera
 			groundMesh = new Mesh
 			{
 				vertices = new[]
 				{
-				new Vector3(-1000f, -0.02f, -1000f),
-				new Vector3(-1000f, -0.02f,  1000f),
-				new Vector3( 1000f, -0.02f,  1000f),
-				new Vector3( 1000f, -0.02f, -1000f),
-			},
+					new Vector3(-1000f, -0.02f, -1000f),
+					new Vector3(-1000f, -0.02f,  1000f),
+					new Vector3( 1000f, -0.02f,  1000f),
+					new Vector3( 1000f, -0.02f, -1000f),
+				},
 				triangles = new[] { 0, 1, 2, 0, 2, 3 },
 				uv = new[]
 				{
-				new Vector2(0,   0),
-				new Vector2(0,  64),
-				new Vector2(64, 64),
-				new Vector2(64,  0),
-			}
+					new Vector2(0,   0),
+					new Vector2(0,  64),
+					new Vector2(64, 64),
+					new Vector2(64,  0),
+				}
 			};
 			groundMesh.RecalculateNormals();
 			groundMesh.hideFlags = HideFlags.HideAndDontSave;
 
-			// Very simple seamless noise texture
 			groundTex = TextureUtils.GenerateSeamlessValueNoise(256, 0.28f, 0.42f);
 			groundTex.hideFlags = HideFlags.HideAndDontSave;
 
-			// URP Unlit material
 			var shader = Shader.Find("Universal Render Pipeline/Unlit");
 			if (shader == null)
 			{
-				Debug.LogError("MapPreviewUtil: Could not find URP/Unlit shader");
+				Debug.LogError("URP/Unlit shader not found");
 				return;
 			}
 
@@ -135,28 +184,22 @@ namespace ClassicTilestorm
 			{
 				hideFlags = HideFlags.HideAndDontSave
 			};
-			groundMat.SetFloat("_Surface", 0f);           // Opaque
+			groundMat.SetFloat("_Surface", 0f);
 			groundMat.SetTexture("_BaseMap", groundTex);
 			groundMat.SetColor("_BaseColor", Color.white * 0.92f);
 
-			// Add command buffer hook
 			var provider = camGO.AddComponent<CameraCommandProvider>();
 			provider.RegisterCommand(
 				RenderPassEvent.BeforeRenderingOpaques,
 				(cmd, cam) =>
 				{
 					if (groundMesh == null || groundMat == null) return;
-
-					// Draw at world origin – camera position doesn't affect it
-					Matrix4x4 matrix = Matrix4x4.identity;
+					Matrix4x4 matrix = Matrix4x4.Translate(Vector3.down * 0.2f);// Matrix4x4.identity;
 					groundMat.SetPass(0);
 					cmd.DrawMesh(groundMesh, matrix, groundMat, 0, 0);
 				});
 		}
 
-		/// <summary>
-		/// Call this when you want to position & render the preview for a specific location/rotation/fov
-		/// </summary>
 		public static void RenderPreview(Vector3 worldPosition, Quaternion rotation, float fov = 60f)
 		{
 			if (previewCam == null)
@@ -191,11 +234,11 @@ namespace ClassicTilestorm
 			groundMesh = null;
 			groundMat = null;
 			groundTex = null;
+			previewRoot = null;
+			previewMapRoot = null;
 		}
 
-		// ──────────────────────────────────────────────────────────────
-		//  Minimal command buffer helper (kept internal)
-		// ──────────────────────────────────────────────────────────────
+		// Command buffer helper
 		private class CameraCommandProvider : MonoBehaviour, ICommandBufferProvider
 		{
 			private System.Collections.Generic.Dictionary<RenderPassEvent, System.Action<RasterCommandBuffer, Camera>> commands = new();
@@ -211,14 +254,8 @@ namespace ClassicTilestorm
 			{
 				if (commands.TryGetValue(evt, out var action) && action != null)
 				{
-					try
-					{
-						action.Invoke(commandBuffer, camera);
-					}
-					catch (System.Exception e)
-					{
-						Debug.LogError($"MapPreviewUtil command error: {e}");
-					}
+					try { action.Invoke(commandBuffer, camera); }
+					catch (System.Exception e) { Debug.LogError($"Preview command error: {e}"); }
 				}
 			}
 

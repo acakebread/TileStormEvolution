@@ -86,6 +86,24 @@ namespace ClassicTilestorm
 			base.OnDisable();
 		}
 
+		private void Update()
+		{
+			if (gameObject.activeInHierarchy && CurrentMap != null)
+			{
+				// Re-render every frame to animate the orbit
+				// (only if map is selected and preview is active)
+
+				var map = CurrentMap;
+				float diag = Mathf.Sqrt(map.Width * map.Width + map.Height * map.Height);
+				float fov = Mathf.Clamp(15f + diag * 1.6f, 40f, 75f);
+
+				Vector3 center = new Vector3(map.Width * 0.5f, 0f, map.Height * 0.5f);
+				float distance = diag * 0.3f + 4f;
+
+				MapPreviewUtil.RenderPreview(center, distance, fov);
+			}
+		}
+
 		private void InitializeUIReferences()
 		{
 			if (closeButton != null)
@@ -247,9 +265,6 @@ namespace ClassicTilestorm
 
 			previewImage.color = Color.white;
 
-			//LayerUtility.EnsurePreviewLayer();
-
-			// This now calls the new method → instantiates via Tile constructor
 			currentPreviewInstance = map.InstantiatePreviewCopy(
 				MapPreviewUtil.previewMapRoot,
 				MapPreviewUtil.previewLayer
@@ -257,23 +272,26 @@ namespace ClassicTilestorm
 
 			if (currentPreviewInstance == null)
 			{
-				previewImage.color = new Color(1f, 0.3f, 0.3f, 0.7f); // red tint = error
+				previewImage.color = new Color(1f, 0.3f, 0.3f, 0.7f);
 				return;
 			}
 
-			// Camera framing (tweak values to taste)
+			// ── Camera orbiting setup ────────────────────────────────────────
 			float diag = Mathf.Sqrt(map.Width * map.Width + map.Height * map.Height);
-			//float camHeight = Mathf.Max(2f, diag * 1.1f + 2f);
 			float fov = Mathf.Clamp(35f + diag * 1.6f, 40f, 75f);
 
-			Vector3 center = new Vector3(map.Width * 0.5f, 0f, map.Height * 0.5f);
+			// Center of the map
+			Vector3 center = new Vector3(
+				map.Width * 0.5f,
+				0f,
+				map.Height * 0.5f
+			);
 
-			//Quaternion camRot = Quaternion.Euler(52f, 45f, 0f); // nice isometric-ish angle
-			Quaternion camRot = Quaternion.Euler(25f, 45f, 0f); // nice isometric-ish angle
+			// Distance — your current formula, but slightly farther for rotation
+			float distance = diag * 0.6f + 4f; // tweak multiplier/offset to taste
 
-			Vector3 camPos = center + camRot * Vector3.back * diag * 0.5f;// camHeight;
-
-			MapPreviewUtil.RenderPreview(camPos, camRot, fov);
+			// Render with orbiting
+			MapPreviewUtil.RenderPreview(center, distance, fov);
 		}
 
 		// ── CRUD Operations ──────────────────────────────────────────────────────────────
