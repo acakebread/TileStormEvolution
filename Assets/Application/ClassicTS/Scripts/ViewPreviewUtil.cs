@@ -28,15 +28,9 @@ namespace ClassicTilestorm
 
 		public static Rect PreviewRect { get; private set; }
 
-		//public static bool IsHighlighted => isHighlighted;
 		public static bool IsInFocus => isInFocus;
-		//public static bool IsInUse => isInUse;
 		public static Camera PreviewCamera => previewCam;
 		public static Transform PreviewCameraTransform => previewCam != null ? previewCam.transform : null;
-
-		//public static void SetHighlighted(bool highlighted) => isHighlighted = highlighted;
-		//public static void SetInFocus(bool focus) => isHighlighted = focus;
-		//public static void SetInUse(bool inUse) => isInUse = inUse;
 
 		public static void Show(View view, IMapEdit manager)
 		{

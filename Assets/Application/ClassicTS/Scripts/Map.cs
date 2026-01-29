@@ -88,6 +88,7 @@ namespace ClassicTilestorm
 		// ─────────────────────────────────────────────
 		// Dimensions
 		// ─────────────────────────────────────────────
+		private const int MAP_MAX_SIZE = 64;
 		[JsonProperty(Order = 10)] public int width;
 		[JsonProperty(Order = 11)] public int height;
 
@@ -251,8 +252,6 @@ namespace ClassicTilestorm
 #endif
 			}
 		}
-
-		private const int MAP_MAX_SIZE = 64;
 
 #if UNITY_EDITOR
 		public static readonly Vector3 tile_origin = new(0.5f, 0f, 0.5f);

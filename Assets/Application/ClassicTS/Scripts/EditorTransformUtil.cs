@@ -1,5 +1,4 @@
-﻿// EditorTransformUtil.cs
-using UnityEngine;
+﻿using UnityEngine;
 using System.Collections.Generic;
 using Unity.Mathematics;
 
@@ -21,8 +20,6 @@ namespace ClassicTilestorm
 
 		private static bool draggingRotation;
 		private static Vector3 rotationAxis;
-		private static Quaternion startRotation;
-		private static Vector3 startMouseWorld;
 
 		private static bool wasActive = false;
 
@@ -77,6 +74,24 @@ namespace ClassicTilestorm
 
 			// Still update scale to keep it screen-size consistent
 			UpdateVisuals(editorCamera);
+		}
+
+		public static bool MouseOverGizmo(Camera editorCamera)
+		{
+			if (root == null || editorCamera == null) return false;
+			Ray ray = editorCamera.ScreenPointToRay(Input.mousePosition);
+
+			var hits = Physics.RaycastAll(ray, Mathf.Infinity, 1 << LayerMask.NameToLayer("Editor"));
+			System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+
+			foreach (var h in hits)
+			{
+				if (h.transform.IsChildOf(positionHandle.transform))
+					return true;
+				if (h.transform.GetComponent<RingTag>() != null)
+					return true;
+			}
+			return false;
 		}
 
 		public static bool HandleInput(Camera editorCamera, out Vector3 newWorldPosition, out Quaternion newWorldRotation, bool worldSpace = false)
@@ -168,6 +183,10 @@ namespace ClassicTilestorm
 				screenCircle.transform.rotation = Quaternion.LookRotation(screenCircle.transform.position - editorCamera.transform.position);
 				screenCircle.transform.localScale = Vector3.one * 2.2f;
 			}
+
+			Ray ray = editorCamera.ScreenPointToRay(Input.mousePosition);
+
+			DoHover(ray);
 		}
 
 		public static void Hide()
@@ -334,7 +353,6 @@ namespace ClassicTilestorm
 				{
 					// rotationAxis in world space (ring.up is world-up for the ring)
 					rotationAxis = ring.up.normalized;
-					startRotation = rotationOrbiter.transform.rotation;
 
 					// Compute plane of the ring (world space)
 					Plane ringPlane = new Plane(rotationAxis, root.transform.position);
@@ -543,7 +561,7 @@ namespace ClassicTilestorm
 			mr.material = new Material(shader);
 
 			MeshCollider mc = go.AddComponent<MeshCollider>();
-			mc.sharedMesh = GenerateTorusMesh(segments: 32, sides: 16, radius: 1f, tube: 0.05f);
+			mc.sharedMesh = GenerateTorusMesh(segments: 32, sides: 16, radius: 1f, tube: 0.1f);
 
 			return go;
 		}
