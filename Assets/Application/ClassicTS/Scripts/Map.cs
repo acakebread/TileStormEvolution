@@ -1190,6 +1190,61 @@ namespace ClassicTilestorm
 				parent = null;
 		}
 
+		public GameObject BuildPreviewGeometry(Transform previewParent, int layer)
+		{
+			if (width <= 0 || height <= 0 || tiles == null || variants == null)
+				return null;
+
+			var previewRoot = new GameObject($"Preview_{name ?? "Map"}");
+			previewRoot.transform.SetParent(previewParent, false);
+			previewRoot.transform.localPosition = Vector3.zero;
+
+			var originalParent = this.parent;
+			this.parent = previewRoot.transform;
+
+			try
+			{
+				Preset();                   // identity state
+				var _ = graph;              // force creation
+
+				if (_graph == null || _graph.Length == 0)
+				{
+					UnityEngine.Object.DestroyImmediate(previewRoot);
+					Debug.LogError("_graph == null || _graph.Length == 0");
+					return null;
+				}
+
+				// Apply layer
+				previewRoot.transform.SetLayer(layer, true);
+
+				// Optional: disable unwanted components
+				foreach (var tile in _graph)
+				{
+					if (tile.gameObject == null) continue;
+					foreach (var mb in tile.gameObject.GetComponentsInChildren<MonoBehaviour>(true))
+					{
+						if (mb is MorphGeomSway || mb is WindController /* etc */)
+							mb.enabled = false;
+					}
+				}
+
+				return previewRoot;
+			}
+			catch (Exception e)
+			{
+				Debug.LogError($"Preview build failed: {e.Message}");
+				UnityEngine.Object.DestroyImmediate(previewRoot);
+				return null;
+			}
+			finally
+			{
+				this.parent = originalParent;
+				// IMPORTANT: DO NOT call DestroyAllTiles() here!
+				// We want to keep the preview objects alive
+				// Cleanup happens when selection changes / panel disables
+			}
+		}
+
 		public void Initialise(Transform parent = null)
 		{
 			this.parent = parent;

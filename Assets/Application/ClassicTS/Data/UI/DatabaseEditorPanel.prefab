@@ -874,7 +874,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 30.45
+  m_fontSize: 30.1
   m_fontSizeBase: 24
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -2815,7 +2815,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 44.85
+  m_fontSize: 36.35
   m_fontSizeBase: 32
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -3149,7 +3149,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 38.6
+  m_fontSize: 30.1
   m_fontSizeBase: 24
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -4277,6 +4277,7 @@ MonoBehaviour:
   ButtonMoveUp: {fileID: 9177448086661514197}
   ButtonMoveDown: {fileID: 6768579624120803534}
   mapNameInput: {fileID: 1389283319039499466}
+  previewImage: {fileID: 887984126197869973}
 --- !u!1 &4714438361071147397
 GameObject:
   m_ObjectHideFlags: 0
@@ -4477,7 +4478,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 44.85
+  m_fontSize: 36.35
   m_fontSizeBase: 32
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -4626,7 +4627,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1181673987259918947
 RectTransform:
   m_ObjectHideFlags: 0
@@ -5129,7 +5130,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &8959580728672073993
 RectTransform:
   m_ObjectHideFlags: 0
@@ -5144,10 +5145,10 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 468896252696930015}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 344, y: -831.27277}
-  m_SizeDelta: {x: 688, y: 257.45456}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &2736774535777520909
 CanvasRenderer:
@@ -5411,7 +5412,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 38.6
+  m_fontSize: 30.1
   m_fontSizeBase: 24
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -6299,7 +6300,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 44.85
+  m_fontSize: 36.35
   m_fontSizeBase: 32
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -7392,7 +7393,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &7016483734080753733
 RectTransform:
   m_ObjectHideFlags: 0
@@ -7407,10 +7408,10 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 468896252696930015}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 344, y: -214.54546}
-  m_SizeDelta: {x: 688, y: 429.0909}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &3988973880145888393
 CanvasRenderer:

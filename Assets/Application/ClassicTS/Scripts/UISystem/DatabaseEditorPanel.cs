@@ -15,61 +15,17 @@ namespace ClassicTilestorm
 		[SerializeField] private Button closeButton;
 		[SerializeField] private ScrollRect mapScrollView;
 		[SerializeField] private Transform contentParent;
-		[SerializeField] private GameObject mapListItemPrefab;           // ← assign same or similar prefab as definitionListItemPrefab
+		[SerializeField] private GameObject mapListItemPrefab;
 
 		[SerializeField] private Button ButtonInsert;
 		[SerializeField] private Button ButtonDelete;
 		[SerializeField] private Button ButtonMoveUp;
 		[SerializeField] private Button ButtonMoveDown;
 
-		// Add your own later: name input, size label, preview minimap, etc.
 		[SerializeField] private TMP_InputField mapNameInput;
-		//[SerializeField] private TextMeshProUGUI mapSizeLabel;
 
-		//[Header("Preview")]
-		//[SerializeField] private RawImage previewImage;
-
-		//[Header("Dynamic Properties Panel")]
-		//[SerializeField] private RectTransform flagPropertiesRect;
-		//[SerializeField] private GameObject flagTogglePrefab;
-
-		//[Header("ID Input")]
-		//[SerializeField] private TMP_InputField IDInput;
-
-		//[Header("Dropdowns")]
-		//[SerializeField] private TMP_Dropdown modelDropdown;
-		//[SerializeField] private string noneModelOptionText = "— None —";
-
-		//[SerializeField] private TMP_Dropdown textureSequenceDropdown;
-		//[SerializeField] private string noneTextureOptionText = "— None —";
-
-		//[SerializeField] private TMP_Dropdown materialDropdown;
-		//[SerializeField] private string noneMaterialOptionText = "— None —";
-
-		#endregion
-
-		#region Serialized Fields - Preview Settings
-
-		//[Header("Preview Settings")]
-		//[SerializeField] private Color backgroundColor = new Color(0.129f, 0.698f, 0.882f);
-		//[SerializeField] private float fieldOfView = 60f;
-		//[SerializeField] private float sizeToDistanceFactor = 1f;
-		//[SerializeField] private float defaultTiltAngle = 30f;
-		//[SerializeField] private float minTiltAngle = 0f;
-		//[SerializeField] private float maxTiltAngle = 90f;
-		//[SerializeField] private float minDistance = 0.8f;
-		//[SerializeField] private float maxDistance = 10f;
-		//[SerializeField] private float dragOrbitSensitivity = 0.2f;
-		//[SerializeField] private float dragTiltSensitivity = 0.2f;
-		//[SerializeField] private float scrollZoomSensitivity = 0.5f;
-		//[SerializeField] private float autoRotateSpeed = -15f;
-
-		//[Header("Ground Plane Settings")]
-		//[SerializeField] private Color groundColor = Color.white;
-		//[SerializeField] private float groundSize = 2.5f;
-		//[SerializeField] private float groundY = -0.01f;
-		//[SerializeField] private float groundUVScale = 1f;
-		//[SerializeField] private Texture2D groundOverrideTexture;
+		[Header("Preview")]
+		[SerializeField] private RawImage previewImage;
 
 		#endregion
 
@@ -95,12 +51,38 @@ namespace ClassicTilestorm
 		{
 			base.OnEnable();
 			RefreshMapList();
-			// Later: UpdatePreview(), etc.
+
+			MapPreviewUtil.Initialize();
+			MapPreviewUtil.SetPreviewLayer(LayerMask.NameToLayer(MapPreviewUtil.PREVIEW_LAYER_NAME));
+			//LayerUtility.EnsurePreviewLayer(); // if you added the static helper
+
+			if (previewImage != null)
+			{
+				previewImage.texture = MapPreviewUtil.PreviewRenderTexture;
+				previewImage.color = Color.white;           // make sure it's visible
+			}
+
+			// Initial preview update
+			UpdateMapPreview();
 		}
 
 		protected override void OnDisable()
 		{
 			ClearMapListItems();
+
+			MapPreviewUtil.ClearPreviewMap();
+
+			if (currentPreviewInstance != null)
+			{
+				DestroyImmediate(currentPreviewInstance);
+				currentPreviewInstance = null;
+			}
+
+			MapPreviewUtil.Cleanup();
+
+			if (previewImage != null)
+				previewImage.texture = null;
+
 			base.OnDisable();
 		}
 
@@ -116,24 +98,26 @@ namespace ClassicTilestorm
 				?? contentParent.gameObject.AddComponent<ToggleGroup>();
 			toggleGroup.allowSwitchOff = false;
 
-			if (mapNameInput != null) mapNameInput.onEndEdit.AddListener((string input) =>
+			if (mapNameInput != null) mapNameInput.onEndEdit.AddListener(OnMapNameChanged);
+		}
+
+		private void OnMapNameChanged(string input)
+		{
+			if (CurrentMap == null) return;
+
+			string newName = (input ?? "").Trim();
+
+			if (string.IsNullOrWhiteSpace(newName) || newName == CurrentMap.name)
 			{
-				if (null == CurrentMap) return;
+				mapNameInput.text = CurrentMap.name;
+				return;
+			}
 
-				string newName = (input ?? "").Trim();
+			Debug.Log($"Map '{CurrentMap.name}' → '{newName}'");
 
-				if (string.IsNullOrWhiteSpace(newName) || newName == CurrentMap.name)
-				{
-					mapNameInput.text = CurrentMap.name;
-					return;
-				}
+			bool result = ResourceManager.RenameMapName(CurrentMap, newName);
 
-				Debug.Log($"Map '{CurrentMap.name}' → '{newName}' (Map updated)");
-
-				bool result = ResourceManager.RenameMapName(CurrentMap, newName);
-
-				RefreshMapList();
-			});
+			RefreshMapList();
 		}
 
 		private void InitializeButtons()
@@ -143,8 +127,6 @@ namespace ClassicTilestorm
 			if (ButtonMoveUp) ButtonMoveUp.onClick.AddListener(MoveMapUp);
 			if (ButtonMoveDown) ButtonMoveDown.onClick.AddListener(MoveMapDown);
 		}
-
-		// ── Event Handlers ──────────────────────────────────────────────────────────────────
 
 		// ── Map List Population ─────────────────────────────────────────────────────────────
 
@@ -156,7 +138,7 @@ namespace ClassicTilestorm
 			if (maps.Count == 0)
 			{
 				lastSelectedMapIndex = -1;
-				// Clear any right-side fields here later
+				UpdateMapPreview();     // clears preview
 				return;
 			}
 
@@ -191,16 +173,9 @@ namespace ClassicTilestorm
 			var label = go.GetComponentInChildren<TMP_Text>();
 			if (label != null)
 			{
-				// Customize display — feel free to change format
 				string display = map.name ?? "Unnamed";
-
-				// Optional extra info
 				if (map.width > 0 && map.height > 0)
 					display += $"  ({map.width}×{map.height})";
-
-				// Optional: show object count, spawn point presence, etc.
-				// int objCount = map.layers?.Sum(l => l?.Count ?? 0) ?? 0;
-				// display += $"  [{objCount} objs]";
 
 				label.text = display;
 			}
@@ -220,17 +195,14 @@ namespace ClassicTilestorm
 			lastSelectedMapIndex = index;
 
 			var map = CurrentMap;
-
 			mapNameInput.text = map?.name ?? "";
-
-			// Later: fill name field, size label, minimap preview, etc.
-			//if (mapNameInput != null) mapNameInput.text = map?.name ?? "";
-			//if (mapSizeLabel != null)  mapSizeLabel.text  = map != null ? $"{map.width} × {map.height}" : "—";
 
 			UpdateDeleteButtonState();
 
 			if (index >= 0 && index < spawnedMapToggles.Count)
 				spawnedMapToggles[index].SetIsOnWithoutNotify(true);
+
+			UpdateMapPreview();
 		}
 
 		private void UpdateDeleteButtonState()
@@ -238,8 +210,7 @@ namespace ClassicTilestorm
 			if (ButtonDelete == null) return;
 
 			bool hasSelection = lastSelectedMapIndex >= 0;
-			// Later: check if map is used / protected / current play map / etc.
-			bool cannotDelete = false; // placeholder
+			bool cannotDelete = false; // ← add real logic later if needed
 
 			ButtonDelete.interactable = hasSelection && !cannotDelete;
 
@@ -249,15 +220,68 @@ namespace ClassicTilestorm
 			}
 		}
 
+		// ── Preview Logic ────────────────────────────────────────────────────────────────
+
+		private GameObject currentPreviewInstance;
+
+		private void UpdateMapPreview()
+		{
+			if (MapPreviewUtil.PreviewCamera == null || previewImage == null)
+				return;
+
+			var map = CurrentMap;
+
+			// Clear previous
+			MapPreviewUtil.ClearPreviewMap();
+			if (currentPreviewInstance != null)
+			{
+				DestroyImmediate(currentPreviewInstance);
+				currentPreviewInstance = null;
+			}
+
+			if (map == null || map.Width <= 0 || map.Height <= 0)
+			{
+				previewImage.color = new Color(0.3f, 0.3f, 0.3f, 0.6f);
+				return;
+			}
+
+			previewImage.color = Color.white;
+
+			//LayerUtility.EnsurePreviewLayer();
+
+			// This now calls the new method → instantiates via Tile constructor
+			currentPreviewInstance = map.InstantiatePreviewCopy(
+				MapPreviewUtil.previewMapRoot,
+				MapPreviewUtil.previewLayer
+			);
+
+			if (currentPreviewInstance == null)
+			{
+				previewImage.color = new Color(1f, 0.3f, 0.3f, 0.7f); // red tint = error
+				return;
+			}
+
+			// Camera framing (tweak values to taste)
+			float diag = Mathf.Sqrt(map.Width * map.Width + map.Height * map.Height);
+			//float camHeight = Mathf.Max(2f, diag * 1.1f + 2f);
+			float fov = Mathf.Clamp(35f + diag * 1.6f, 40f, 75f);
+
+			Vector3 center = new Vector3(map.Width * 0.5f, 0f, map.Height * 0.5f);
+
+			//Quaternion camRot = Quaternion.Euler(52f, 45f, 0f); // nice isometric-ish angle
+			Quaternion camRot = Quaternion.Euler(25f, 45f, 0f); // nice isometric-ish angle
+
+			Vector3 camPos = center + camRot * Vector3.back * diag * 0.5f;// camHeight;
+
+			MapPreviewUtil.RenderPreview(camPos, camRot, fov);
+		}
+
 		// ── CRUD Operations ──────────────────────────────────────────────────────────────
 
 		private void InsertMap()
 		{
 			string newName = GenerateUniqueMapName("Map");
-
-			// Use the new constructor/factory
 			var newMap = new Map(16, 16, newName);
-			// or: var newMap = Map.CreateEmpty(16, 16, newName);
 
 			int insertIndex = (lastSelectedMapIndex >= 0)
 				? lastSelectedMapIndex + 1
@@ -265,8 +289,6 @@ namespace ClassicTilestorm
 
 			var list = ResourceManager.Maps.ToList();
 			list.Insert(insertIndex, newMap);
-
-			// Write back to database
 			ResourceManager.database.maps = list.ToArray();
 
 			lastSelectedMapIndex = insertIndex;
@@ -278,10 +300,8 @@ namespace ClassicTilestorm
 			if (lastSelectedMapIndex < 0) return;
 
 			int idx = lastSelectedMapIndex;
-
 			var list = ResourceManager.Maps.ToList();
 			list.RemoveAt(idx);
-
 			ResourceManager.database.maps = list.ToArray();
 
 			lastSelectedMapIndex = Mathf.Clamp(idx - 1, 0, list.Count - 1);
@@ -297,7 +317,6 @@ namespace ClassicTilestorm
 			var list = ResourceManager.Maps.ToList();
 			int i = lastSelectedMapIndex;
 			(list[i - 1], list[i]) = (list[i], list[i - 1]);
-
 			ResourceManager.database.maps = list.ToArray();
 
 			lastSelectedMapIndex--;
@@ -312,7 +331,6 @@ namespace ClassicTilestorm
 			var list = maps.ToList();
 			int i = lastSelectedMapIndex;
 			(list[i + 1], list[i]) = (list[i], list[i + 1]);
-
 			ResourceManager.database.maps = list.ToArray();
 
 			lastSelectedMapIndex++;
