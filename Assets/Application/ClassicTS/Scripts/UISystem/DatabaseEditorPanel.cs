@@ -95,7 +95,7 @@ namespace ClassicTilestorm
 		{
 			base.OnEnable();
 			RefreshMapList();
-			// Later: PopulateNameField(), UpdatePreview(), etc.
+			// Later: UpdatePreview(), etc.
 		}
 
 		protected override void OnDisable()
@@ -116,8 +116,24 @@ namespace ClassicTilestorm
 				?? contentParent.gameObject.AddComponent<ToggleGroup>();
 			toggleGroup.allowSwitchOff = false;
 
-			if (mapNameInput != null)
-				mapNameInput.onEndEdit.AddListener(OnMapNameEndEdit);
+			if (mapNameInput != null) mapNameInput.onEndEdit.AddListener((string input) =>
+			{
+				if (null == CurrentMap) return;
+
+				string newName = (input ?? "").Trim();
+
+				if (string.IsNullOrWhiteSpace(newName) || newName == CurrentMap.name)
+				{
+					mapNameInput.text = CurrentMap.name;
+					return;
+				}
+
+				Debug.Log($"Map '{CurrentMap.name}' → '{newName}' (Map updated)");
+
+				bool result = ResourceManager.RenameMapName(CurrentMap, newName);
+
+				RefreshMapList();
+			});
 		}
 
 		private void InitializeButtons()
@@ -129,38 +145,6 @@ namespace ClassicTilestorm
 		}
 
 		// ── Event Handlers ──────────────────────────────────────────────────────────────────
-
-		private void OnMapNameEndEdit(string input)
-		{
-			//var def = CurrentDefinition;
-			//if (def == null) return;
-
-			string newName = (input ?? "").Trim();
-
-			//if (string.IsNullOrWhiteSpace(newName) || newName == def.name)
-			//{
-			//	IDInput.text = def.name;
-			//	return;
-			//}
-
-			//// No more legacy check — rename always safe (hashid unchanged)
-			//if (ResourceManager.Definitions.Any(d => d != def && string.Equals(d.name, newName, StringComparison.Ordinal)))
-			//{
-			//	Debug.LogWarning($"ID '{newName}' already exists!");
-			//	IDInput.text = def.name;
-			//	return;
-			//}
-
-			//bool updated = ResourceManager.RenameDefinitionName(def.HashID, newName);
-
-			//Debug.Log($"Map '{def.name}' → '{newName}' (Map updated)");
-
-			//bool result = ResourceManager.RenameMapName(lastSelectedMapIndex, newName);
-
-			bool result = ResourceManager.RenameMapName(CurrentMap, newName);
-
-			RefreshMapList();
-		}
 
 		// ── Map List Population ─────────────────────────────────────────────────────────────
 
