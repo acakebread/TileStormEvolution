@@ -79,9 +79,6 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			//if (WasGuiActiveLastFrame)
-			//	return; // Skip input this frame — GUI consumed it last frame
-
 			if (Input.GetMouseButtonDown(0))
 				HandleLeftMouseDown();
 
