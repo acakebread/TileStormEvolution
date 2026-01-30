@@ -111,6 +111,20 @@ namespace ClassicTilestorm
 
 			// Skybox
 			SkyboxUtility.SetSkybox(string.IsNullOrEmpty(currentMap.skybox) ? $"{currentMap.music}Skybox" : currentMap.skybox);
+
+			//var mainReflection = Camera.main?.GetComponent<ReflectionEffectCamera>();
+			//if (mainReflection != null)
+			//{
+			//	string skyName = string.IsNullOrEmpty(currentMap.skybox)
+			//		? $"{currentMap.music}Skybox"
+			//		: currentMap.skybox;
+
+			//	Material mainSkyMat = SkyboxUtility.GetSkyboxMaterialForName(skyName);
+			//	if (mainSkyMat != null)
+			//	{
+			//		mainReflection.SetSkyboxOverride(mainSkyMat);
+			//	}
+			//}
 		}
 
 		//public void ReloadCurrentMap() { if (null != mapManager && null != mapManager.CurrentMap) LoadMap(mapManager.CurrentMap.name); }

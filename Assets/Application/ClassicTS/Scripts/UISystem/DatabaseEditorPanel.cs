@@ -52,7 +52,7 @@ namespace ClassicTilestorm
 			base.OnEnable();
 			RefreshMapList();
 
-			MapPreviewUtil.Initialize();
+			MapPreviewUtil.Initialize(CurrentMap);
 			MapPreviewUtil.SetPreviewLayer(LayerMask.NameToLayer(MapPreviewUtil.PREVIEW_LAYER_NAME));
 			//LayerUtility.EnsurePreviewLayer(); // if you added the static helper
 

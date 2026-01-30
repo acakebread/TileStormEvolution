@@ -28,9 +28,8 @@ namespace ClassicTilestorm
 		// Add these static fields near the top (after other fields)
 		private static float orbitAngle = 0f;
 		private static float orbitSpeed = 20f;          // degrees per second — adjust to taste
-		private static Vector3 currentCenter = Vector3.zero;
 		private static float currentDistance = 10f;
-		private static Quaternion baseTilt = Quaternion.Euler(25f, 0f, 0f); // your lower angle
+		private static Quaternion baseTilt = Quaternion.Euler(15f, 0f, 0f); // your lower angle
 
 		// Optional: expose speed if you want UI control later
 		public static float OrbitSpeed { get => orbitSpeed; set => orbitSpeed = value; }
@@ -45,7 +44,6 @@ namespace ClassicTilestorm
 			}
 
 			// Update stored values
-			currentCenter = center;
 			currentDistance = distance;
 
 			// Advance orbit angle every frame (smooth rotation)
@@ -94,8 +92,12 @@ namespace ClassicTilestorm
 			}
 		}
 
-		public static void Initialize()
+		private static Map currentMap;
+		public static void Initialize(Map _map = null)
 		{
+			if (null == _map) _map = currentMap;
+			currentMap = _map;
+
 			if (root != null) return;
 
 			root = new GameObject("MAP_PREVIEW_ROOT");
@@ -114,12 +116,35 @@ namespace ClassicTilestorm
 			camGO.transform.SetParent(root.transform);
 
 			previewCam = camGO.AddComponent<Camera>();
-			previewCam.enabled = false;
-			previewCam.clearFlags = CameraClearFlags.SolidColor;
-			previewCam.backgroundColor = new Color(0.12f, 0.12f, 0.16f, 1f);
+			//previewCam.enabled = false;
+			//previewCam.clearFlags = CameraClearFlags.SolidColor;
+			//previewCam.backgroundColor = new Color(0.12f, 0.12f, 0.16f, 1f);
+
+			previewCam.clearFlags = CameraClearFlags.Skybox;//CameraClearFlags.Nothing;
 			previewCam.cullingMask = 1 << previewLayerIndex;
 			previewCam.nearClipPlane = 0.1f;
 			previewCam.farClipPlane = 2000f;
+
+			var reflectionEffect = camGO.AddComponent<ReflectionEffectCamera>();
+			reflectionEffect.SetEffectMode(ReflectionEffectCamera.EffectMode.Water);
+			reflectionEffect.SetOffset(-0.2f);
+
+			//// NEW: Get the skybox material using the same map logic
+			//string skyName = string.IsNullOrEmpty(_map.skybox)
+			//	? $"{_map.music}Skybox"
+			//	: _map.skybox;
+
+			//Material previewSkyMat = SkyboxUtility.GetSkyboxMaterialForName(skyName);
+
+			//if (previewSkyMat != null)
+			//{
+			//	reflectionEffect.SetSkyboxOverride(previewSkyMat);
+			//}
+			//else
+			//{
+			//	Debug.LogWarning($"Preview skybox not found for '{skyName}' — falling back to global.");
+			//	// Optional: reflectionEffect.SetSkyboxOverride(RenderSettings.skybox);
+			//}
 
 			// Dedicated preview light (isolated from scene lights)
 			var lightGO = new GameObject("PreviewDirectionalLight");
@@ -188,16 +213,16 @@ namespace ClassicTilestorm
 			groundMat.SetTexture("_BaseMap", groundTex);
 			groundMat.SetColor("_BaseColor", Color.white * 0.92f);
 
-			var provider = camGO.AddComponent<CameraCommandProvider>();
-			provider.RegisterCommand(
-				RenderPassEvent.BeforeRenderingOpaques,
-				(cmd, cam) =>
-				{
-					if (groundMesh == null || groundMat == null) return;
-					Matrix4x4 matrix = Matrix4x4.Translate(Vector3.down * 0.2f);// Matrix4x4.identity;
-					groundMat.SetPass(0);
-					cmd.DrawMesh(groundMesh, matrix, groundMat, 0, 0);
-				});
+			//var provider = camGO.AddComponent<CameraCommandProvider>();
+			//provider.RegisterCommand(
+			//	RenderPassEvent.BeforeRenderingOpaques,
+			//	(cmd, cam) =>
+			//	{
+			//		if (groundMesh == null || groundMat == null) return;
+			//		Matrix4x4 matrix = Matrix4x4.Translate(Vector3.down * 0.01f);// Matrix4x4.identity;
+			//		groundMat.SetPass(0);
+			//		cmd.DrawMesh(groundMesh, matrix, groundMat, 0, 0);
+			//	});
 		}
 
 		public static void RenderPreview(Vector3 worldPosition, Quaternion rotation, float fov = 60f)
@@ -238,29 +263,29 @@ namespace ClassicTilestorm
 			previewMapRoot = null;
 		}
 
-		// Command buffer helper
-		private class CameraCommandProvider : MonoBehaviour, ICommandBufferProvider
-		{
-			private System.Collections.Generic.Dictionary<RenderPassEvent, System.Action<RasterCommandBuffer, Camera>> commands = new();
+		//// Command buffer helper
+		//private class CameraCommandProvider : MonoBehaviour, ICommandBufferProvider
+		//{
+		//	private System.Collections.Generic.Dictionary<RenderPassEvent, System.Action<RasterCommandBuffer, Camera>> commands = new();
 
-			public void RegisterCommand(RenderPassEvent evt, System.Action<RasterCommandBuffer, Camera> action)
-			{
-				commands[evt] = action;
-			}
+		//	public void RegisterCommand(RenderPassEvent evt, System.Action<RasterCommandBuffer, Camera> action)
+		//	{
+		//		commands[evt] = action;
+		//	}
 
-			public bool HasCommands(RenderPassEvent evt) => commands.ContainsKey(evt) && commands[evt] != null;
+		//	public bool HasCommands(RenderPassEvent evt) => commands.ContainsKey(evt) && commands[evt] != null;
 
-			public void ExecuteCommands(RenderPassEvent evt, RasterCommandBuffer commandBuffer, Camera camera)
-			{
-				if (commands.TryGetValue(evt, out var action) && action != null)
-				{
-					try { action.Invoke(commandBuffer, camera); }
-					catch (System.Exception e) { Debug.LogError($"Preview command error: {e}"); }
-				}
-			}
+		//	public void ExecuteCommands(RenderPassEvent evt, RasterCommandBuffer commandBuffer, Camera camera)
+		//	{
+		//		if (commands.TryGetValue(evt, out var action) && action != null)
+		//		{
+		//			try { action.Invoke(commandBuffer, camera); }
+		//			catch (System.Exception e) { Debug.LogError($"Preview command error: {e}"); }
+		//		}
+		//	}
 
-			private void OnDestroy() => commands.Clear();
-		}
+		//	private void OnDestroy() => commands.Clear();
+		//}
 	}
 
 	public static class MapPreviewExtensions
