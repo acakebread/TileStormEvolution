@@ -4278,6 +4278,8 @@ MonoBehaviour:
   ButtonMoveDown: {fileID: 6768579624120803534}
   mapNameInput: {fileID: 1389283319039499466}
   previewImage: {fileID: 887984126197869973}
+  skyboxDropdown: {fileID: 454261876308400215}
+  noneSkyboxOptionText: "\u2014 Default \u2014"
 --- !u!1 &4714438361071147397
 GameObject:
   m_ObjectHideFlags: 0
@@ -4627,7 +4629,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &1181673987259918947
 RectTransform:
   m_ObjectHideFlags: 0
@@ -5332,12 +5334,12 @@ GameObject:
   - component: {fileID: 9076536480617585151}
   - component: {fileID: 1511268386531558934}
   m_Layer: 5
-  m_Name: LabelModel
+  m_Name: LabelSkybox
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &6113029987769564539
 RectTransform:
   m_ObjectHideFlags: 0
@@ -5385,7 +5387,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: '3D Model:'
+  m_text: 'Skybox:'
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -6273,7 +6275,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: <null>
+  m_text: <default>
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -6485,7 +6487,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: <model>
+  m_text: <skybox>
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -7879,12 +7881,12 @@ GameObject:
   - component: {fileID: 791172273571284221}
   - component: {fileID: 5276889819731829804}
   m_Layer: 5
-  m_Name: ModelDropdown
+  m_Name: SkyboxDropdown
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &4559936994020989425
 RectTransform:
   m_ObjectHideFlags: 0
@@ -7996,13 +7998,13 @@ MonoBehaviour:
   m_MultiSelect: 0
   m_Options:
     m_Options:
-    - m_Text: <null>
+    - m_Text: <default>
       m_Image: {fileID: 0}
       m_Color: {r: 1, g: 1, b: 1, a: 1}
-    - m_Text: <model001>
+    - m_Text: <skybox001>
       m_Image: {fileID: 0}
       m_Color: {r: 1, g: 1, b: 1, a: 1}
-    - m_Text: <model001>
+    - m_Text: <skybox002>
       m_Image: {fileID: 0}
       m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_OnValueChanged:

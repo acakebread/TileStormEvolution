@@ -4,6 +4,7 @@ using TMPro;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using MassiveHadronLtd;
 
 namespace ClassicTilestorm
 {
@@ -27,6 +28,10 @@ namespace ClassicTilestorm
 		[Header("Preview")]
 		[SerializeField] private RawImage previewImage;
 
+		[Header("Dropdowns")]
+		[SerializeField] private TMP_Dropdown skyboxDropdown;
+		[SerializeField] private string noneSkyboxOptionText = "— Default —";
+
 		#endregion
 
 		// Runtime state
@@ -44,7 +49,6 @@ namespace ClassicTilestorm
 		{
 			base.Awake();
 			InitializeUIReferences();
-			InitializeButtons();
 		}
 
 		protected override void OnEnable()
@@ -54,7 +58,6 @@ namespace ClassicTilestorm
 
 			MapPreviewUtil.Initialize(CurrentMap);
 			MapPreviewUtil.SetPreviewLayer(LayerMask.NameToLayer(MapPreviewUtil.PREVIEW_LAYER_NAME));
-			//LayerUtility.EnsurePreviewLayer(); // if you added the static helper
 
 			if (previewImage != null)
 			{
@@ -64,6 +67,9 @@ namespace ClassicTilestorm
 
 			// Initial preview update
 			UpdateMapPreview();
+
+			PopulateSkyboxDropdown();
+			SyncSkyboxDropdown();
 		}
 
 		protected override void OnDisable()
@@ -106,6 +112,11 @@ namespace ClassicTilestorm
 
 		private void InitializeUIReferences()
 		{
+			if (ButtonInsert) ButtonInsert.onClick.AddListener(InsertMap);
+			if (ButtonDelete) ButtonDelete.onClick.AddListener(DeleteMap);
+			if (ButtonMoveUp) ButtonMoveUp.onClick.AddListener(MoveMapUp);
+			if (ButtonMoveDown) ButtonMoveDown.onClick.AddListener(MoveMapDown);
+
 			if (closeButton != null)
 				closeButton.onClick.AddListener(() => gameObject.SetActive(false));
 
@@ -117,6 +128,9 @@ namespace ClassicTilestorm
 			toggleGroup.allowSwitchOff = false;
 
 			if (mapNameInput != null) mapNameInput.onEndEdit.AddListener(OnMapNameChanged);
+
+			if (skyboxDropdown != null)
+				skyboxDropdown.onValueChanged.AddListener(OnSkyboxDropdownValueChanged);
 		}
 
 		private void OnMapNameChanged(string input)
@@ -138,12 +152,22 @@ namespace ClassicTilestorm
 			RefreshMapList();
 		}
 
-		private void InitializeButtons()
+		private void OnSkyboxDropdownValueChanged(int index)
 		{
-			if (ButtonInsert) ButtonInsert.onClick.AddListener(InsertMap);
-			if (ButtonDelete) ButtonDelete.onClick.AddListener(DeleteMap);
-			if (ButtonMoveUp) ButtonMoveUp.onClick.AddListener(MoveMapUp);
-			if (ButtonMoveDown) ButtonMoveDown.onClick.AddListener(MoveMapDown);
+			if (CurrentMap == null) return;
+
+			string selected = index >= 0 && index < skyboxDropdown.options.Count
+				? skyboxDropdown.options[index].text
+				: null;
+
+			string newSkybox = (selected == noneSkyboxOptionText) ? null : selected;
+
+			if (newSkybox != CurrentMap.Skybox)
+			{
+				CurrentMap.Skybox = newSkybox;
+
+				SkyboxUtility.SetSkybox(newSkybox);//temporary workaround to deal with the issue that the preview cannot have different skybox to global skybox
+			}
 		}
 
 		// ── Map List Population ─────────────────────────────────────────────────────────────
@@ -220,6 +244,9 @@ namespace ClassicTilestorm
 			if (index >= 0 && index < spawnedMapToggles.Count)
 				spawnedMapToggles[index].SetIsOnWithoutNotify(true);
 
+			if (null != map.skybox) SkyboxUtility.SetSkybox(map.skybox);//temporary workaround to deal with the issue that the preview cannot have different skybox to global skybox
+
+			SyncSkyboxDropdown();
 			UpdateMapPreview();
 		}
 
@@ -237,6 +264,43 @@ namespace ClassicTilestorm
 				txt.text = cannotDelete ? "Delete (locked)" : "Delete";
 			}
 		}
+
+		// ── Dropdown Helpers ────────────────────────────────────────────────────────────────
+
+		private void PopulateDropdown(TMP_Dropdown dropdown, IEnumerable<string> items, string noneOption)
+		{
+			if (dropdown == null) return;
+
+			dropdown.ClearOptions();
+
+			var options = new List<string> { noneOption };
+			options.AddRange(items);
+
+			dropdown.AddOptions(options);
+			dropdown.interactable = true;
+		}
+
+		private void SyncDropdown(TMP_Dropdown dropdown, string currentValue, string noneOption)
+		{
+			if (dropdown == null) return;
+
+			if (string.IsNullOrEmpty(currentValue))
+			{
+				dropdown.SetValueWithoutNotify(0);
+				return;
+			}
+
+			int index = dropdown.options.FindIndex(opt =>
+				opt.text.Equals(currentValue, StringComparison.OrdinalIgnoreCase));
+
+			dropdown.SetValueWithoutNotify(index >= 0 ? index : 0);
+		}
+
+		private void PopulateSkyboxDropdown() =>
+			PopulateDropdown(skyboxDropdown, Assets.ProjectAssets.GetSkycubeNames(), noneSkyboxOptionText);
+
+		private void SyncSkyboxDropdown() =>
+			SyncDropdown(skyboxDropdown, CurrentMap?.skybox, noneSkyboxOptionText);
 
 		// ── Preview Logic ────────────────────────────────────────────────────────────────
 

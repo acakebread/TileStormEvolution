@@ -825,6 +825,7 @@ namespace ClassicTilestorm
 			name = name,
 			character = character,
 			music = music,
+			skybox = skybox,
 			button = button,
 			width = width,
 			height = height,
