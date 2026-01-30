@@ -92,7 +92,7 @@ namespace ClassicTilestorm
 			base.OnDisable();
 		}
 
-		private void Update()
+		private void LateUpdate()
 		{
 			if (gameObject.activeInHierarchy && CurrentMap != null)
 			{
@@ -101,7 +101,7 @@ namespace ClassicTilestorm
 
 				var map = CurrentMap;
 				float diag = Mathf.Sqrt(map.Width * map.Width + map.Height * map.Height);
-				float fov = Mathf.Clamp(15f + diag * 1.6f, 40f, 75f);
+				float fov = 60f;// Mathf.Clamp(15f + diag * 1.6f, 40f, 75f);
 
 				Vector3 center = new Vector3(map.Width * 0.5f, 0f, map.Height * 0.5f);
 				float distance = diag * 0.3f + 4f;
@@ -165,8 +165,7 @@ namespace ClassicTilestorm
 			if (newSkybox != CurrentMap.Skybox)
 			{
 				CurrentMap.Skybox = newSkybox;
-
-				SkyboxUtility.SetSkybox(newSkybox);//temporary workaround to deal with the issue that the preview cannot have different skybox to global skybox
+				SetSkybox(newSkybox);
 			}
 		}
 
@@ -244,7 +243,7 @@ namespace ClassicTilestorm
 			if (index >= 0 && index < spawnedMapToggles.Count)
 				spawnedMapToggles[index].SetIsOnWithoutNotify(true);
 
-			if (null != map.skybox) SkyboxUtility.SetSkybox(map.skybox);//temporary workaround to deal with the issue that the preview cannot have different skybox to global skybox
+			if (null != map.skybox) SetSkybox(map.skybox);
 
 			SyncSkyboxDropdown();
 			UpdateMapPreview();
@@ -436,6 +435,23 @@ namespace ClassicTilestorm
 			} while (existing.Contains(candidate));
 
 			return candidate;
+		}
+
+		private void SetSkybox(string value = null)
+		{
+			//SkyboxUtility.SetSkybox(value);//temporary workaround to deal with the issue that the preview cannot have different skybox to global skybox
+
+			var skyMaterial = SkyboxUtility.GetSkyboxMaterialForName(value);
+			 if (null != skyMaterial)
+				MapPreviewUtil.SetSkyboxOverride(skyMaterial);
+
+			//var mainReflection = Camera.main?.GetComponent<ReflectionEffectCamera>();
+			//if (mainReflection != null)
+			//{
+			//	var mainSkyMat = SkyboxUtility.GetSkyboxMaterialForName(value);
+			//	if (mainSkyMat != null)
+			//		mainReflection.SetSkyboxOverride(mainSkyMat);
+			//}
 		}
 	}
 }

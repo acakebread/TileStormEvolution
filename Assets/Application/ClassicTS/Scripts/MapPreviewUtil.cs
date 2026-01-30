@@ -29,7 +29,7 @@ namespace ClassicTilestorm
 		private static float orbitAngle = 0f;
 		private static float orbitSpeed = 20f;          // degrees per second — adjust to taste
 		private static float currentDistance = 10f;
-		private static Quaternion baseTilt = Quaternion.Euler(15f, 0f, 0f); // your lower angle
+		private static Quaternion baseTilt = Quaternion.Euler(35f, 0f, 0f); // your lower angle
 
 		// Optional: expose speed if you want UI control later
 		public static float OrbitSpeed { get => orbitSpeed; set => orbitSpeed = value; }
@@ -117,10 +117,11 @@ namespace ClassicTilestorm
 
 			previewCam = camGO.AddComponent<Camera>();
 			//previewCam.enabled = false;
-			//previewCam.clearFlags = CameraClearFlags.SolidColor;
+			previewCam.clearFlags = CameraClearFlags.SolidColor;
 			//previewCam.backgroundColor = new Color(0.12f, 0.12f, 0.16f, 1f);
+			previewCam.backgroundColor = new Color(0.2f, 0.2f, 0.2f, 1f);
 
-			previewCam.clearFlags = CameraClearFlags.Skybox;//CameraClearFlags.Nothing;
+			//previewCam.clearFlags = CameraClearFlags.Skybox;//CameraClearFlags.Nothing;
 			previewCam.cullingMask = 1 << previewLayerIndex;
 			previewCam.nearClipPlane = 0.1f;
 			previewCam.farClipPlane = 2000f;
@@ -129,22 +130,15 @@ namespace ClassicTilestorm
 			reflectionEffect.SetEffectMode(ReflectionEffectCamera.EffectMode.Water);
 			reflectionEffect.SetOffset(-0.2f);
 
-			//// NEW: Get the skybox material using the same map logic
-			//string skyName = string.IsNullOrEmpty(_map.skybox)
-			//	? $"{_map.music}Skybox"
-			//	: _map.skybox;
+			var previewSkyMat = SkyboxUtility.GetSkyboxMaterialForName(_map.skybox);
 
-			//Material previewSkyMat = SkyboxUtility.GetSkyboxMaterialForName(skyName);
-
-			//if (previewSkyMat != null)
-			//{
-			//	reflectionEffect.SetSkyboxOverride(previewSkyMat);
-			//}
-			//else
-			//{
-			//	Debug.LogWarning($"Preview skybox not found for '{skyName}' — falling back to global.");
-			//	// Optional: reflectionEffect.SetSkyboxOverride(RenderSettings.skybox);
-			//}
+			if (previewSkyMat != null)
+				reflectionEffect.SetSkyboxOverride(previewSkyMat);
+			else
+			{
+				Debug.LogWarning($"Preview skybox not found for '{_map.skybox}' — falling back to global.");
+				// Optional: reflectionEffect.SetSkyboxOverride(RenderSettings.skybox);
+			}
 
 			// Dedicated preview light (isolated from scene lights)
 			var lightGO = new GameObject("PreviewDirectionalLight");
@@ -154,7 +148,7 @@ namespace ClassicTilestorm
 			var previewLight = lightGO.AddComponent<Light>();
 			previewLight.type = LightType.Directional;
 			previewLight.intensity = 0.5f;
-			previewLight.color = new Color(1f, 0.97f, 0.92f);
+			previewLight.color = new Color(0.75f, 0.75f, 0.75f);
 			previewLight.shadows = LightShadows.Soft;
 			previewLight.shadowStrength = 0.75f;
 			previewLight.renderMode = LightRenderMode.ForcePixel;
@@ -170,6 +164,13 @@ namespace ClassicTilestorm
 
 			CreateGroundPlane();
 			EnsurePreviewRoot();
+		}
+
+		public static void SetSkyboxOverride(Material value)
+		{
+			var reflectionEffect = camGO?.GetComponent<ReflectionEffectCamera>();
+			if (null!=reflectionEffect)
+				reflectionEffect.SetSkyboxOverride(value);
 		}
 
 		private static void CreateGroundPlane()

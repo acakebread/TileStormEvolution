@@ -149,6 +149,18 @@ namespace MassiveHadronLtd
 			//mainCamera.cullingMask |= 1 << LayerMask.NameToLayer("Editor");//no need for this any more
 		}
 
+		private Material overrideSkyboxMaterial;
+		public void SetSkyboxOverride(Material value)
+		{
+			overrideSkyboxMaterial = value;
+			if (null == effectMaterial)
+			{
+				Debug.Log("ToDo: sort out construction order in DatabaseEditorPanel");
+				return;
+			}
+			SkyboxUtility.SetSkyboxCubemap(effectMaterial, overrideSkyboxMaterial);
+		}
+
 		private void InitializeEffect()
 		{
 			CleanupDynamicResources();
@@ -243,7 +255,7 @@ namespace MassiveHadronLtd
 			if (null != postProcessingCamera) mainCameraData.cameraStack.Add(postProcessingCamera);
 
 			UpdateMaterialProperties();
-			SkyboxUtility.SetSkyboxCubemap(effectMaterial, RenderSettings.skybox);
+			SkyboxUtility.SetSkyboxCubemap(effectMaterial, overrideSkyboxMaterial ?? RenderSettings.skybox);
 
 			if (outputStage != null)
 			{

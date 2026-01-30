@@ -32,7 +32,7 @@ namespace MassiveHadronLtd
 
 		//not currently used
 		//public static Material LoadSkyboxMaterial(string pathOrName = null) => string.IsNullOrEmpty(pathOrName) ? defaultSkyboxMaterial : GetSkyboxMaterial(pathOrName);
-		//public static Material GetSkyboxMaterialForName(string pathOrName) => string.IsNullOrEmpty(pathOrName) ? defaultSkyboxMaterial : GetSkyboxMaterial(pathOrName);
+		public static Material GetSkyboxMaterialForName(string pathOrName) => string.IsNullOrEmpty(pathOrName) ? defaultSkyboxMaterial : GetSkyboxMaterial(pathOrName);
 
 		private static Material GetSkyboxMaterial(string pathOrName = null)
 		{
@@ -57,7 +57,7 @@ namespace MassiveHadronLtd
 			}
 
 			// Otherwise — name only, use registry
-			return AssetRegistry<Material>.FindMaterial(normalized);
+			return AssetRegistry<Material>.FindMaterial(normalized) ?? defaultSkyboxMaterial;
 		}
 
 		// === YOUR FULL CUBEMAP LOGIC — UNCHANGED ===
