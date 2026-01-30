@@ -104,7 +104,7 @@ namespace ClassicTilestorm
 				float fov = 60f;// Mathf.Clamp(15f + diag * 1.6f, 40f, 75f);
 
 				Vector3 center = new Vector3(map.Width * 0.5f, 0f, map.Height * 0.5f);
-				float distance = diag * 0.3f + 4f;
+				float distance = diag * 0.5f + 2f;
 
 				MapPreviewUtil.RenderPreview(center, distance, fov);
 			}
@@ -341,7 +341,7 @@ namespace ClassicTilestorm
 
 			// ── Camera orbiting setup ────────────────────────────────────────
 			float diag = Mathf.Sqrt(map.Width * map.Width + map.Height * map.Height);
-			float fov = Mathf.Clamp(35f + diag * 1.6f, 40f, 75f);
+			float fov = 60f;// Mathf.Clamp(35f + diag * 1.6f, 40f, 75f);
 
 			// Center of the map
 			Vector3 center = new Vector3(
@@ -351,7 +351,7 @@ namespace ClassicTilestorm
 			);
 
 			// Distance — your current formula, but slightly farther for rotation
-			float distance = diag * 0.6f + 4f; // tweak multiplier/offset to taste
+			float distance = diag * 0.5f + 2f; // tweak multiplier/offset to taste
 
 			// Render with orbiting
 			MapPreviewUtil.RenderPreview(center, distance, fov);

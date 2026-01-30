@@ -27,9 +27,9 @@ namespace ClassicTilestorm
 
 		// Add these static fields near the top (after other fields)
 		private static float orbitAngle = 0f;
-		private static float orbitSpeed = 20f;          // degrees per second — adjust to taste
+		private static float orbitSpeed = 10f;          // degrees per second — adjust to taste
 		private static float currentDistance = 10f;
-		private static Quaternion baseTilt = Quaternion.Euler(35f, 0f, 0f); // your lower angle
+		private static Quaternion baseTilt = Quaternion.Euler(25f, 0f, 0f); // your lower angle
 
 		// Optional: expose speed if you want UI control later
 		public static float OrbitSpeed { get => orbitSpeed; set => orbitSpeed = value; }
@@ -51,14 +51,16 @@ namespace ClassicTilestorm
 			orbitAngle %= 360f;
 
 			// Build orbiting rotation: base tilt + Y-axis orbit
-			Quaternion orbitRot = Quaternion.Euler(0f, orbitAngle, 0f);
+			Quaternion orbitRot = Quaternion.Euler(0f, -orbitAngle, 0f);
 			Quaternion finalRot = orbitRot * baseTilt;
+
+			Quaternion extraTilt = Quaternion.Euler(10f, 0f, 0f); // your lower angl
 
 			// Position: orbit around center
 			Vector3 camPos = center + finalRot * Vector3.back * currentDistance;
 
 			previewCam.transform.position = camPos;
-			previewCam.transform.rotation = finalRot; // or LookAt(center) if you prefer strict look-at
+			previewCam.transform.rotation = finalRot * extraTilt; // or LookAt(center) if you prefer strict look-at
 
 			previewCam.fieldOfView = fov;
 
