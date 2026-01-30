@@ -169,7 +169,7 @@ namespace ClassicTilestorm
 		public static void SetSkyboxOverride(Material value)
 		{
 			var reflectionEffect = camGO?.GetComponent<ReflectionEffectCamera>();
-			if (null!=reflectionEffect)
+			if (null != reflectionEffect)
 				reflectionEffect.SetSkyboxOverride(value);
 		}
 

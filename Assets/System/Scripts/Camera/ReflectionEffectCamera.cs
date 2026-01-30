@@ -387,7 +387,7 @@ namespace MassiveHadronLtd
 						effectMaterial.SetFloat("_RippleOffset", rippleOffset);
 						effectMaterial.SetFloat("_ReflectionStrength", reflectionStrength);
 						if (RenderSettings.skybox != lastSkyboxMaterial)
-							SkyboxUtility.SetSkyboxCubemap(effectMaterial, RenderSettings.skybox);
+							SkyboxUtility.SetSkyboxCubemap(effectMaterial, overrideSkyboxMaterial ?? RenderSettings.skybox);
 						break;
 
 					case EffectMode.OceanEffect:
@@ -403,7 +403,7 @@ namespace MassiveHadronLtd
 						effectMaterial.SetFloat("_FrostFadeRange", frostFadeRange);
 						effectMaterial.SetTexture("_NoiseTex", noiseTexture);
 						if (RenderSettings.skybox != lastSkyboxMaterial)
-							SkyboxUtility.SetSkyboxCubemap(effectMaterial, RenderSettings.skybox);
+							SkyboxUtility.SetSkyboxCubemap(effectMaterial, overrideSkyboxMaterial ?? RenderSettings.skybox);
 						break;
 				}
 
@@ -483,8 +483,8 @@ namespace MassiveHadronLtd
 		{
 			if (effectMode == EffectMode.Water || effectMode == EffectMode.OceanEffect)
 			{
-				SkyboxUtility.SetSkyboxCubemap(effectMaterial, RenderSettings.skybox);
-				lastSkyboxMaterial = RenderSettings.skybox;
+				SkyboxUtility.SetSkyboxCubemap(effectMaterial, overrideSkyboxMaterial ?? RenderSettings.skybox);
+				lastSkyboxMaterial = overrideSkyboxMaterial ?? RenderSettings.skybox;
 			}
 		}
 
