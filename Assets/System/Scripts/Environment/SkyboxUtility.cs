@@ -24,27 +24,20 @@ namespace MassiveHadronLtd
 		/// - Otherwise → treated as name only, uses AssetRegistry<Material>.FindMaterial (configured roots)
 		/// No automatic "Skybox" append — you control it in MainController
 		/// </summary>
-		public static void SetSkybox(string pathOrName)
+		public static void SetSkybox(string pathOrName = null)
 		{
-			Material material = GetSkyboxMaterial(pathOrName);
+			var material = string.IsNullOrEmpty(pathOrName) ? defaultSkyboxMaterial : GetSkyboxMaterial(pathOrName);
 			RenderSettings.skybox = material ? material : defaultSkyboxMaterial;
 		}
 
-		public static Material LoadSkyboxMaterial(string pathOrName)
-		{
-			var material = GetSkyboxMaterial(pathOrName);
-			return material ? material : defaultSkyboxMaterial;
-		}
+		//not currently used
+		//public static Material LoadSkyboxMaterial(string pathOrName = null) => string.IsNullOrEmpty(pathOrName) ? defaultSkyboxMaterial : GetSkyboxMaterial(pathOrName);
+		//public static Material GetSkyboxMaterialForName(string pathOrName) => string.IsNullOrEmpty(pathOrName) ? defaultSkyboxMaterial : GetSkyboxMaterial(pathOrName);
 
-		public static Material GetSkyboxMaterialForName(string pathOrName)
-		{
-			return GetSkyboxMaterial(pathOrName);  // Reuse your existing private loader
-		}
-
-		private static Material GetSkyboxMaterial(string pathOrName)
+		private static Material GetSkyboxMaterial(string pathOrName = null)
 		{
 			if (string.IsNullOrEmpty(pathOrName))
-				return null;
+				return defaultSkyboxMaterial;
 
 			string normalized = pathOrName.Replace("\\", "/").Trim('/');
 
