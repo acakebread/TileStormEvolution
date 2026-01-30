@@ -861,7 +861,7 @@ namespace ClassicTilestorm
 		public static Vector3 CameraToWorld(Camera camera, Vector3 direction = default)
 		{
 			if (null == camera) return Vector3.negativeInfinity;
-			if (default == direction) direction = Camera.main.transform.forward;
+			if (default == direction) direction = camera.transform.forward;
 			var ray = new Ray(camera.transform.position, direction);
 			RayToWorld(ray, out Vector3 result);
 			return result;
@@ -1225,15 +1225,15 @@ namespace ClassicTilestorm
 				{
 					if (tile.gameObject == null) continue;
 
-					// Disable things that shouldn't run in editor preview
-					foreach (var mb in tile.gameObject.GetComponentsInChildren<MonoBehaviour>(true))
-					{
-						if (mb is MorphGeomSway ||
-							mb is WindController)           // optional
-						{
-							mb.enabled = false;
-						}
-					}
+					//// Disable things that shouldn't run in editor preview
+					//foreach (var mb in tile.gameObject.GetComponentsInChildren<MonoBehaviour>(true))
+					//{
+					//	if (mb is MorphGeomSway ||
+					//		mb is WindController)           // optional
+					//	{
+					//		mb.enabled = false;
+					//	}
+					//}
 
 					// Optional: turn off shadows for performance
 					foreach (var mr in tile.gameObject.GetComponentsInChildren<Renderer>(true))
