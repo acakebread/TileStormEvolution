@@ -52,31 +52,25 @@ namespace MassiveHadronLtd
 				ApplyWaterDefault();
 		}
 
-		// === MIRROR & FILM TINT (NEW) ===
 		[SerializeField, Tooltip("Tint for PerfectMirror and SurfaceFilm (multiplies reflection)")]
 		private Color mirrorTint = new Color(1f, 1f, 1f, 1f);
 
-		// === FROST / WATER / OCEAN BASE COLOR (OLD) ===
 		[SerializeField, Tooltip("Base color for Frost, Water, Ocean")]
 		private Color baseColor = new Color(0.25f, 0.25f, 0.25f, 0.5f);
 
-		// Used for surface film effect
 		[SerializeField, Range(0, 0.5f)] private float filmIntensity = 0.2f;
 		[SerializeField, Range(0.01f, 5f)] private float noiseScale = 1f;
 		[SerializeField] private Texture2D noiseTexture;
 
-		// Used for frost effect
 		[SerializeField, Range(0f, 1f)] private float frostDepth = 0.5f;
 		[SerializeField, Range(0f, 1f)] private float noiseStrength = 0.5f;
 
-		// Used for water effect
 		[SerializeField, Range(0f, 1f)] private float rippleSpeed = 0.5f;
 		[SerializeField, Range(0f, 1f)] private float rippleAmplitude = 0.5f;
 		[SerializeField, Range(0f, 1f)] private float rippleFrequency = 0.5f;
 		[SerializeField, Range(0f, 1f)] private float rippleOffset = 0.5f;
 		[SerializeField, Range(0f, 1f)] private float reflectionStrength = 0.5f;
 
-		// Used for ocean effect
 		[SerializeField, Range(0f, 1f)] private float frostThreshold = 0.8f;
 		[SerializeField, Range(0f, 0.2f)] private float frostFadeRange = 0.1f;
 
@@ -91,7 +85,6 @@ namespace MassiveHadronLtd
 		private bool isTextureDynamic;
 		private float timeSeed;
 
-		// Track previous values
 		private Color lastMirrorTint;
 		private Color lastBaseColor;
 		private float lastFrostDepth;
@@ -108,7 +101,7 @@ namespace MassiveHadronLtd
 		private float lastFrostFadeRange;
 		private Material lastSkyboxMaterial;
 
-		void Start()
+		void Awake()
 		{
 			mainCamera = GetComponent<Camera>();
 			if (mainCamera == null)
@@ -118,47 +111,41 @@ namespace MassiveHadronLtd
 				return;
 			}
 			if (Camera.main == mainCamera)
-				PreviewRenderLayers.RemovePreviewLayers(mainCamera); //mainCamera.cullingMask &= ~(1 << LayerMask.NameToLayer("Preview"));//make sure to remove Preview from cullling if main camera
+				PreviewRenderLayers.RemovePreviewLayers(mainCamera);
 
-			var obj = new GameObject("ReflectionCamera");
-			obj.transform.SetParent(transform, false);
-			reflectionCamera = obj.AddComponent<Camera>();
-			reflectionCamera.clearFlags = CameraClearFlags.Nothing;
-			reflectionCamera.cullingMask = mainCamera.cullingMask;
-			reflectionCamera.cullingMask &= ~(1 << LayerMask.NameToLayer("Editor"));
-			//reflectionCamera.cullingMask &= ~(1 << LayerMask.NameToLayer("TransparentFX"));//not sure
+			CleanupOrphanedChildren();
 
-			var provider = obj.AddComponent<CameraCommandProvider>();
-			if (provider == null)
+			if (reflectionCamera == null)
 			{
-				Debug.LogError("ReflectionEffectCamera: Failed to add CameraCommandProvider to ReflectionCamera", this);
-				enabled = false;
-				return;
+				var obj = new GameObject("ReflectionCamera");
+				obj.transform.SetParent(transform, false);
+				reflectionCamera = obj.AddComponent<Camera>();
+				reflectionCamera.clearFlags = CameraClearFlags.Nothing;
+				reflectionCamera.cullingMask = mainCamera.cullingMask;
+				reflectionCamera.cullingMask &= ~(1 << LayerMask.NameToLayer("Editor"));
+
+				var provider = obj.AddComponent<CameraCommandProvider>();
+				provider.RegisterCommand(RenderPassEvent.BeforeRendering, (cmd, cam) => cmd.SetInvertCulling(true));
+				provider.RegisterCommand(RenderPassEvent.AfterRenderingOpaques, (cmd, cam) => cmd.SetInvertCulling(false));
+
+				var data = obj.AddComponent<UniversalAdditionalCameraData>();
+				data.renderType = CameraRenderType.Overlay;
+				URPCameraHelper.SetClearDepth(data, false);
 			}
+		}
 
-			provider.RegisterCommand(RenderPassEvent.BeforeRendering, (cmd, cam) => { cmd.SetInvertCulling(true); });
-			provider.RegisterCommand(RenderPassEvent.AfterRenderingOpaques, (cmd, cam) => { cmd.SetInvertCulling(false); });
-
-			var data = obj.AddComponent<UniversalAdditionalCameraData>();
-			data.renderType = CameraRenderType.Overlay;
-			URPCameraHelper.SetClearDepth(data, false);
-
+		void Start()
+		{
 			InitializeEffect();
 			previousEffectMode = effectMode;
 			StoreMaterialPropertyValues();
-
-			//mainCamera.cullingMask |= 1 << LayerMask.NameToLayer("Editor");//no need for this any more
 		}
 
 		private Material overrideSkyboxMaterial;
 		public void SetSkyboxOverride(Material value)
 		{
 			overrideSkyboxMaterial = value;
-			if (null == effectMaterial)
-			{
-				Debug.Log("ToDo: sort out construction order in DatabaseEditorPanel");
-				return;
-			}
+			if (effectMaterial == null) return;
 			SkyboxUtility.SetSkyboxCubemap(effectMaterial, overrideSkyboxMaterial);
 		}
 
@@ -170,8 +157,6 @@ namespace MassiveHadronLtd
 			{
 				if (noiseTexture == null)
 				{
-					//noiseTexture = TextureUtils.GeneratePerlinNoiseTexture();
-					//noiseTexture = TextureUtils.GenerateWangTileAtlas();
 					noiseTexture = WangTileGenerator.GenerateWangTileAtlas();
 					isTextureDynamic = true;
 				}
@@ -206,7 +191,6 @@ namespace MassiveHadronLtd
 				case EffectMode.SurfaceFilm:
 					SetupRenderTexture("MirrorWithFilmRT");
 					effectMesh = new Mesh();
-					//effectMaterial = MaterialUtils.CreateMirrorWithFilmOpaque(renderTexture, mirrorTint, noiseTexture, filmIntensity, noiseScale);
 					effectMaterial = MaterialUtils.CreatePerlinWangOpaque(renderTexture, mirrorTint, noiseTexture, filmIntensity, noiseScale);
 					isMaterialDynamic = true;
 					SetupTextureCamera();
@@ -253,7 +237,7 @@ namespace MassiveHadronLtd
 			}
 
 			var mainCameraData = mainCamera.gameObject.GetComponent<UniversalAdditionalCameraData>();
-			if (null != postProcessingCamera) mainCameraData.cameraStack.Add(postProcessingCamera);
+			if (postProcessingCamera != null) mainCameraData.cameraStack.Add(postProcessingCamera);
 
 			UpdateMaterialProperties();
 			SkyboxUtility.SetSkyboxCubemap(effectMaterial, overrideSkyboxMaterial ?? RenderSettings.skybox);
@@ -268,7 +252,6 @@ namespace MassiveHadronLtd
 				(cmd, cam) =>
 				{
 					if (effectMesh == null) return;
-					//FrustumPlaneIntersection.GenerateFrustumPlaneIntersectionMesh(mainCamera, planeNormal, offset, effectMesh);
 					FrustumPlaneIntersection.GenerateFrustumPlaneIntersectionMesh(mainCamera, planeNormal, offset, effectMesh, true);
 					if (effectMesh != null && effectMesh.vertexCount >= 3 && effectMesh.triangles.Length >= 3 && effectMaterial != null)
 					{
@@ -428,16 +411,6 @@ namespace MassiveHadronLtd
 			reflectionStrength = 0.5f;
 		}
 
-		public void Update()
-		{
-			if (effectMode == EffectMode.Water || effectMode == EffectMode.OceanEffect)
-			{
-				timeSeed += Time.deltaTime;
-			}
-
-			UpdateMaterialProperties();
-		}
-
 		private void LateUpdate()
 		{
 			if (reflectionCamera != null)
@@ -471,10 +444,9 @@ namespace MassiveHadronLtd
 
 			if (effectMode != previousEffectMode)
 			{
-				InitializeEffect();
 				previousEffectMode = effectMode;
 			}
-			else
+			else if (effectMaterial != null)
 			{
 				UpdateMaterialProperties();
 			}
@@ -491,6 +463,10 @@ namespace MassiveHadronLtd
 
 		private void CleanupDynamicResources()
 		{
+			RenderTexture.active = null;
+			if (reflectionCamera != null) reflectionCamera.targetTexture = null;
+			if (textureCamera != null) textureCamera.targetTexture = null;
+
 			if (effectMaterial != null && isMaterialDynamic)
 			{
 				DestroyImmediate(effectMaterial);
@@ -506,7 +482,7 @@ namespace MassiveHadronLtd
 				DestroyImmediate(noiseTexture);
 				noiseTexture = null;
 			}
-			if (renderTexture != null && effectMode != EffectMode.FrostEffect && effectMode != EffectMode.Water && effectMode != EffectMode.OceanEffect)
+			if (renderTexture != null)
 			{
 				DestroyImmediate(renderTexture);
 				renderTexture = null;
@@ -518,21 +494,37 @@ namespace MassiveHadronLtd
 			}
 		}
 
+		private void CleanupOrphanedChildren()
+		{
+			for (int i = transform.childCount - 1; i >= 0; i--)
+			{
+				var child = transform.GetChild(i);
+				if (child.name == "ReflectionCamera" || child.name == "TextureCamera")
+				{
+					if (child.GetComponent<Camera>() != null)
+					{
+						DestroyImmediate(child.gameObject);
+					}
+				}
+			}
+		}
+
 		void OnDestroy()
 		{
+			RenderTexture.active = null;
 			if (mainCamera != null) mainCamera.targetTexture = null;
 			if (reflectionCamera != null) reflectionCamera.targetTexture = null;
 			if (textureCamera != null) textureCamera.targetTexture = null;
+
 			if (effectMaterial != null && isMaterialDynamic) DestroyImmediate(effectMaterial);
 			if (effectMesh != null) DestroyImmediate(effectMesh);
 			if (renderTexture != null) DestroyImmediate(renderTexture);
 			if (isTextureDynamic && noiseTexture != null) DestroyImmediate(noiseTexture);
+
+			CleanupOrphanedChildren();
 		}
 	}
 }
-
-
-
 
 //using System;
 //using UnityEngine;
@@ -565,9 +557,6 @@ namespace MassiveHadronLtd
 //			void OnDestroy() => commands.Clear();
 //		}
 
-//		[SerializeField, Tooltip("Optional override skybox material for this reflection setup (used in water/ocean reflection)")]
-//		private Material overrideSkyboxMaterial;
-
 //		[SerializeField] private Vector3 planeNormal = Vector3.up;
 //		[SerializeField] private float offset = 0f;
 //		public void SetOffset(float value) => offset = value;
@@ -584,7 +573,12 @@ namespace MassiveHadronLtd
 
 //		[SerializeField] private EffectMode effectMode = EffectMode.PerfectMirror;
 //		[SerializeField, HideInInspector] private EffectMode previousEffectMode;
-//		public void SetEffectMode(EffectMode value) => effectMode = value;
+//		public void SetEffectMode(EffectMode value)
+//		{
+//			effectMode = value;
+//			if (value == EffectMode.Water)
+//				ApplyWaterDefault();
+//		}
 
 //		// === MIRROR & FILM TINT (NEW) ===
 //		[SerializeField, Tooltip("Tint for PerfectMirror and SurfaceFilm (multiplies reflection)")]
@@ -642,89 +636,7 @@ namespace MassiveHadronLtd
 //		private float lastFrostFadeRange;
 //		private Material lastSkyboxMaterial;
 
-//		//void Start()
-//		//{
-//		//	mainCamera = GetComponent<Camera>();
-//		//	if (mainCamera == null)
-//		//	{
-//		//		Debug.LogError("Camera component missing.", this);
-//		//		enabled = false;
-//		//		return;
-//		//	}
-
-//		//	if (Camera.main == mainCamera)
-//		//		mainCamera.cullingMask &= ~(1 << LayerMask.NameToLayer("Preview"));
-
-//		//	// ─── Reflection child setup ────────────────────────────────────────
-//		//	var obj = new GameObject("ReflectionCamera");
-//		//	obj.transform.SetParent(transform, false);
-//		//	reflectionCamera = obj.AddComponent<Camera>();
-//		//	reflectionCamera.clearFlags = CameraClearFlags.Nothing;
-//		//	reflectionCamera.cullingMask = mainCamera.cullingMask;
-//		//	reflectionCamera.cullingMask &= ~(1 << LayerMask.NameToLayer("Editor"));
-
-//		//	var provider = obj.AddComponent<CameraCommandProvider>();
-//		//	if (provider == null)
-//		//	{
-//		//		Debug.LogError("Failed to add CameraCommandProvider to ReflectionCamera", this);
-//		//		enabled = false;
-//		//		return;
-//		//	}
-
-//		//	// Existing invert culling for reflection
-//		//	provider.RegisterCommand(RenderPassEvent.BeforeRendering, (cmd, cam) => { cmd.SetInvertCulling(true); });
-//		//	provider.RegisterCommand(RenderPassEvent.AfterRenderingOpaques, (cmd, cam) => { cmd.SetInvertCulling(false); });
-
-//		//	// Skybox for reflection camera
-//		//	provider.RegisterCommand(RenderPassEvent.BeforeRenderingSkybox, (cmd, cam) =>
-//		//	{
-//		//		// Clear to black first — prevents yellow garbage
-//		//		cmd.ClearRenderTarget(true, true, new Color(0f, 0f, 0f, 1f));  // black color + full alpha
-
-//		//		Material skyMat = overrideSkyboxMaterial ?? RenderSettings.skybox;
-//		//		if (skyMat == null) return;
-
-//		//		cmd.SetInvertCulling(true);
-//		//		cmd.SetViewProjectionMatrices(cam.worldToCameraMatrix, cam.projectionMatrix);
-//		//		cmd.DrawProcedural(Matrix4x4.identity, skyMat, 0, MeshTopology.Triangles, 3);
-//		//		cmd.SetInvertCulling(false);
-//		//	});
-
-//		//	var data = obj.AddComponent<UniversalAdditionalCameraData>();
-//		//	data.renderType = CameraRenderType.Overlay;
-//		//	URPCameraHelper.SetClearDepth(data, false);
-
-//		//	// ─── NEW: Add skybox command buffer to the MAIN/BASE camera ────────
-//		//	var mainProvider = mainCamera.gameObject.GetComponent<CameraCommandProvider>();
-//		//	if (mainProvider == null)
-//		//	{
-//		//		mainProvider = mainCamera.gameObject.AddComponent<CameraCommandProvider>();
-//		//	}
-
-//		//	// For the main/base camera provider
-//		//	mainProvider.RegisterCommand(RenderPassEvent.BeforeRenderingSkybox, (cmd, cam) =>
-//		//	{
-//		//		// Same clear here — this is what fixes the yellow on main view
-//		//		cmd.ClearRenderTarget(true, true, new Color(0f, 0f, 0f, 1f));
-
-//		//		Material skyMat = overrideSkyboxMaterial ?? RenderSettings.skybox;
-//		//		if (skyMat == null) return;
-
-//		//		cmd.SetInvertCulling(true);
-//		//		cmd.SetViewProjectionMatrices(cam.worldToCameraMatrix, cam.projectionMatrix);
-//		//		cmd.DrawProcedural(Matrix4x4.identity, skyMat, 0, MeshTopology.Triangles, 3);
-//		//		cmd.SetInvertCulling(false);
-//		//	});
-
-//		//	// Stop default skybox drawing on main camera
-//		//	mainCamera.clearFlags = CameraClearFlags.Nothing;
-
-//		//	InitializeEffect();
-//		//	previousEffectMode = effectMode;
-//		//	StoreMaterialPropertyValues();
-//		//}
-
-//		void Start()
+//		void Awake()
 //		{
 //			mainCamera = GetComponent<Camera>();
 //			if (mainCamera == null)
@@ -733,8 +645,8 @@ namespace MassiveHadronLtd
 //				enabled = false;
 //				return;
 //			}
-
-//			if (Camera.main == mainCamera) mainCamera.cullingMask &= ~(1 << LayerMask.NameToLayer("Preview"));//make sure to remove Preview from cullling if main camera
+//			if (Camera.main == mainCamera)
+//				PreviewRenderLayers.RemovePreviewLayers(mainCamera);
 
 //			var obj = new GameObject("ReflectionCamera");
 //			obj.transform.SetParent(transform, false);
@@ -755,27 +667,28 @@ namespace MassiveHadronLtd
 //			provider.RegisterCommand(RenderPassEvent.BeforeRendering, (cmd, cam) => { cmd.SetInvertCulling(true); });
 //			provider.RegisterCommand(RenderPassEvent.AfterRenderingOpaques, (cmd, cam) => { cmd.SetInvertCulling(false); });
 
-//			//// Add this after the existing invert-culling registrations
-//			//provider.RegisterCommand(RenderPassEvent.BeforeRenderingSkybox, (cmd, cam) =>
-//			//{
-//			//	Material skyMat = overrideSkyboxMaterial ?? RenderSettings.skybox;
-//			//	if (skyMat == null) return;
-
-//			//	cmd.SetInvertCulling(true);                // most sky shaders need this
-//			//	cmd.SetViewProjectionMatrices(cam.worldToCameraMatrix, cam.projectionMatrix);
-//			//	cmd.DrawProcedural(Matrix4x4.identity, skyMat, 0, MeshTopology.Triangles, 3);
-//			//	cmd.SetInvertCulling(false);
-//			//});
-
 //			var data = obj.AddComponent<UniversalAdditionalCameraData>();
 //			data.renderType = CameraRenderType.Overlay;
 //			URPCameraHelper.SetClearDepth(data, false);
+//		}
 
+//		void Start()
+//		{ 
 //			InitializeEffect();
 //			previousEffectMode = effectMode;
 //			StoreMaterialPropertyValues();
+//		}
 
-//			//mainCamera.cullingMask |= 1 << LayerMask.NameToLayer("Editor");//no need for this any more
+//		private Material overrideSkyboxMaterial;
+//		public void SetSkyboxOverride(Material value)
+//		{
+//			overrideSkyboxMaterial = value;
+//			if (null == effectMaterial)
+//			{
+//				Debug.Log("ToDo: sort out construction order in DatabaseEditorPanel");
+//				return;
+//			}
+//			SkyboxUtility.SetSkyboxCubemap(effectMaterial, overrideSkyboxMaterial);
 //		}
 
 //		private void InitializeEffect()
@@ -810,7 +723,7 @@ namespace MassiveHadronLtd
 //			switch (effectMode)
 //			{
 //				case EffectMode.PerfectMirror:
-//					SetupRenderTexture("MirrorRenderTexture");
+//					SetupRenderTexture("RenderTexture");
 //					effectMesh = new Mesh();
 //					effectMaterial = MaterialUtils.CreatePerfectMirrorOpaqueMaterial(renderTexture, mirrorTint);
 //					isMaterialDynamic = true;
@@ -872,7 +785,7 @@ namespace MassiveHadronLtd
 //			if (null != postProcessingCamera) mainCameraData.cameraStack.Add(postProcessingCamera);
 
 //			UpdateMaterialProperties();
-//			SkyboxUtility.SetSkyboxCubemap(effectMaterial, RenderSettings.skybox);
+//			SkyboxUtility.SetSkyboxCubemap(effectMaterial, overrideSkyboxMaterial ?? RenderSettings.skybox);
 
 //			if (outputStage != null)
 //			{
@@ -974,9 +887,6 @@ namespace MassiveHadronLtd
 //		{
 //			if (effectMaterial == null) return;
 
-//			var skyMatToUse = overrideSkyboxMaterial ?? RenderSettings.skybox;  // fallback to global if no override
-//			SkyboxUtility.SetSkyboxCubemap(effectMaterial, skyMatToUse);
-
 //			if (HasMaterialPropertiesChanged())
 //			{
 //				switch (effectMode)
@@ -1007,7 +917,7 @@ namespace MassiveHadronLtd
 //						effectMaterial.SetFloat("_RippleOffset", rippleOffset);
 //						effectMaterial.SetFloat("_ReflectionStrength", reflectionStrength);
 //						if (RenderSettings.skybox != lastSkyboxMaterial)
-//							SkyboxUtility.SetSkyboxCubemap(effectMaterial, RenderSettings.skybox);
+//							SkyboxUtility.SetSkyboxCubemap(effectMaterial, overrideSkyboxMaterial ?? RenderSettings.skybox);
 //						break;
 
 //					case EffectMode.OceanEffect:
@@ -1023,7 +933,7 @@ namespace MassiveHadronLtd
 //						effectMaterial.SetFloat("_FrostFadeRange", frostFadeRange);
 //						effectMaterial.SetTexture("_NoiseTex", noiseTexture);
 //						if (RenderSettings.skybox != lastSkyboxMaterial)
-//							SkyboxUtility.SetSkyboxCubemap(effectMaterial, RenderSettings.skybox);
+//							SkyboxUtility.SetSkyboxCubemap(effectMaterial, overrideSkyboxMaterial ?? RenderSettings.skybox);
 //						break;
 //				}
 
@@ -1036,6 +946,15 @@ namespace MassiveHadronLtd
 //				if (effectMode == EffectMode.OceanEffect)
 //					effectMaterial.SetFloat("_RippleSeed", timeSeed);
 //			}
+//		}
+
+//		public void ApplyWaterDefault()
+//		{
+//			baseColor = new Color(0, 0, 0, 0.5f);
+//			rippleSpeed = 0.25f;
+//			rippleAmplitude = 0.25f;
+//			rippleFrequency = 0.35f;
+//			reflectionStrength = 0.5f;
 //		}
 
 //		public void Update()
@@ -1090,31 +1009,13 @@ namespace MassiveHadronLtd
 //			}
 //		}
 
-//		//public void ForceSkyboxUpdate()
-//		//{
-//		//	if (effectMode == EffectMode.Water || effectMode == EffectMode.OceanEffect)
-//		//	{
-//		//		SkyboxUtility.SetSkyboxCubemap(effectMaterial, RenderSettings.skybox);
-//		//		lastSkyboxMaterial = RenderSettings.skybox;
-//		//	}
-//		//}
-
-//		// Public setter (call from preview init or main camera sync)
-//		//public void SetSkyboxOverride(Material skyboxMat)
-//		//{
-//		//	overrideSkyboxMaterial = skyboxMat;
-
-//		//	// Immediate update if already initialized
-//		//	if (effectMaterial != null && (effectMode == EffectMode.Water || effectMode == EffectMode.OceanEffect))
-//		//	{
-//		//		SkyboxUtility.SetSkyboxCubemap(effectMaterial, skyboxMat);
-//		//	}
-//		//}
-
-//		//// In SetSkyboxOverride
-//		public void SetSkyboxOverride(Material skyboxMat)
+//		public void ForceSkyboxUpdate()
 //		{
-//			overrideSkyboxMaterial = skyboxMat;
+//			if (effectMode == EffectMode.Water || effectMode == EffectMode.OceanEffect)
+//			{
+//				SkyboxUtility.SetSkyboxCubemap(effectMaterial, overrideSkyboxMaterial ?? RenderSettings.skybox);
+//				lastSkyboxMaterial = overrideSkyboxMaterial ?? RenderSettings.skybox;
+//			}
 //		}
 
 //		private void CleanupDynamicResources()

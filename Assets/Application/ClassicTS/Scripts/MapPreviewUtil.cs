@@ -13,9 +13,6 @@ namespace ClassicTilestorm
 
 		public static Transform previewMapRoot;
 
-		public static int previewLayer = PreviewRenderLayers.previewMask;// - 1;
-		//public const string PREVIEW_LAYER_NAME = "Preview";
-
 		// ── Added for dynamic RT resize ─────────────────────────────────────
 		private static RawImage targetRawImage;
 		private static RectTransform previewRect;
@@ -24,22 +21,6 @@ namespace ClassicTilestorm
 		public static Camera PreviewCamera => previewCam;
 		public static RenderTexture PreviewRenderTexture => renderTexture;
 		public static Transform PreviewMapRoot => previewMapRoot;
-
-		//public static void SetPreviewLayer(int layer)
-		//{
-		//	previewLayer = layer;
-		//}
-
-		private static void EnsurePreviewRoot()
-		{
-			if (previewMapRoot != null) return;
-
-			GameObject previewRoot = new GameObject("PreviewSceneRoot");
-			previewRoot.transform.SetParent(root.transform);
-			previewMapRoot = previewRoot.transform;// new GameObject("MapCopy").transform;
-			//previewMapRoot.SetParent(previewRoot.transform);
-			//previewMapRoot.localPosition = Vector3.zero;
-		}
 
 		public static void ClearPreviewMap()
 		{
@@ -58,15 +39,16 @@ namespace ClassicTilestorm
 
 			root = new GameObject("MAP_PREVIEW_ROOT");
 
-			int previewLayerIndex = PreviewRenderLayers.previewLayer;//  LayerMask.NameToLayer(PREVIEW_LAYER_NAME);
+			int previewLayerIndex = PreviewRenderLayers.previewLayer;
 			if (previewLayerIndex < 0)
 			{
-				//Debug.LogError($"Layer '{PREVIEW_LAYER_NAME}' not found in Tags and Layers!");
 				Debug.LogError($"Layer '{PreviewRenderLayers.LAYER_PREVIEW}' not found in Tags and Layers!");
 				previewLayerIndex = 0; // fallback
 			}
 
-			//previewLayer = PreviewRenderLayers.previewMask;//  1 << previewLayerIndex;
+			// Render Texture (initial fixed size — will be resized dynamically)
+			renderTexture = new RenderTexture(512, 320, 24, RenderTextureFormat.ARGB32) { filterMode = FilterMode.Bilinear };
+			renderTexture.Create();
 
 			// Root camera setup
 			camGO = new GameObject("PreviewCamera");
@@ -75,14 +57,16 @@ namespace ClassicTilestorm
 			previewCam = camGO.AddComponent<Camera>();
 			previewCam.clearFlags = CameraClearFlags.SolidColor;
 			previewCam.backgroundColor = new Color(0.2f, 0.2f, 0.2f, 1f);
-			previewCam.cullingMask = PreviewRenderLayers.previewFullMask;//  1 << previewLayerIndex;
+			previewCam.cullingMask = PreviewRenderLayers.previewMask;//important only set sub mask before adding reflection camera component
 			previewCam.nearClipPlane = 0.1f;
 			previewCam.farClipPlane = 2000f;
-			previewCam.depthTextureMode = DepthTextureMode.Depth;
+			previewCam.targetTexture = renderTexture;
 
 			var reflectionEffect = camGO.AddComponent<ReflectionEffectCamera>();
 			reflectionEffect.SetEffectMode(ReflectionEffectCamera.EffectMode.Water);
 			reflectionEffect.SetOffset(-0.2f);
+
+			previewCam.cullingMask = PreviewRenderLayers.previewFullMask;//set full preview mask after adding reflection camera component
 
 			var previewSkyMat = SkyboxUtility.GetSkyboxMaterialForName(_map?.skybox);
 			if (previewSkyMat != null)
@@ -90,30 +74,12 @@ namespace ClassicTilestorm
 			else
 				Debug.LogWarning($"Preview skybox not found for '{_map?.skybox}' — falling back to global.");
 
-			//// Dedicated preview light
-			//var lightGO = new GameObject("PreviewDirectionalLight");
-			//lightGO.transform.SetParent(root.transform);
-			//lightGO.transform.localRotation = Quaternion.Euler(50f, -30f, 0f);
+			//Ensure Preview Root
+			if (previewMapRoot != null) return;
 
-			//var previewLight = lightGO.AddComponent<Light>();
-			//previewLight.type = LightType.Directional;
-			//previewLight.intensity = 0.5f;
-			//previewLight.color = new Color(0.75f, 0.75f, 0.75f);
-			//previewLight.shadows = LightShadows.Soft;
-			//previewLight.shadowStrength = 0.75f;
-			//previewLight.renderMode = LightRenderMode.ForcePixel;
-			//previewLight.cullingMask = PreviewRenderLayers.previewMask;//  1 << previewLayerIndex;
-
-			// Render Texture (initial fixed size — will be resized dynamically)
-			renderTexture = new RenderTexture(512, 320, 24, RenderTextureFormat.ARGB32)
-			{
-				filterMode = FilterMode.Bilinear
-			};
-			renderTexture.Create();
-			previewCam.targetTexture = renderTexture;
-
-			//CreateGroundPlane();
-			EnsurePreviewRoot();
+			GameObject previewRoot = new GameObject("PreviewSceneRoot");
+			previewRoot.transform.SetParent(root.transform);
+			previewMapRoot = previewRoot.transform;
 		}
 
 		public static void SetSkyboxOverride(Material value)
@@ -122,14 +88,6 @@ namespace ClassicTilestorm
 			if (reflectionEffect != null)
 				reflectionEffect.SetSkyboxOverride(value);
 		}
-
-		//public static void Render()
-		//{
-		//	previewCam.cullingMask = PreviewRenderLayers.previewFullMask;
-
-		//	if (previewCam != null && previewCam.isActiveAndEnabled)
-		//		previewCam.Render();
-		//}
 
 		// ── Added: dynamic resize based on RawImage rect size ────────────────
 		public static void UpdateRenderTextureSizeIfNeeded()
@@ -196,19 +154,6 @@ namespace ClassicTilestorm
 			if (rawImage != null && renderTexture != null)
 				rawImage.texture = renderTexture;
 		}
-
-		//public static void RenderPreviewCamera()
-		//{
-		//	if (PreviewCamera == null) return;
-
-		//	// Ensure RT active
-		//	if (PreviewCamera.targetTexture == null) return;
-
-
-		//	previewCam.cullingMask = PreviewRenderLayers.previewFullMask;
-
-		//	PreviewCamera.Render();
-		//}
 	}
 
 	public static class MapPreviewExtensions
