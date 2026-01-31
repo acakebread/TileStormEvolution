@@ -342,7 +342,7 @@ namespace ClassicTilestorm
 			if (index >= 0 && index < spawnedMapToggles.Count)
 				spawnedMapToggles[index].SetIsOnWithoutNotify(true);
 
-			if (map?.skybox != null) SetSkybox(map.skybox);
+			SetSkybox(map.skybox);//if (map?.skybox != null) SetSkybox(map.skybox);
 
 			SyncSkyboxDropdown();
 			UpdateMapPreview();
