@@ -289,6 +289,7 @@ namespace MassiveHadronLtd
 				textureCamera.clearFlags = mainCamera.clearFlags;
 				textureCamera.cullingMask = mainCamera.cullingMask;
 				textureCamera.cullingMask &= ~(1 << LayerMask.NameToLayer("TransparentFX"));
+				textureCamera.cullingMask &= ~(1 << PreviewRenderLayers.previewTransparentLayer);
 				textureCamera.cullingMask &= ~(1 << LayerMask.NameToLayer("Editor"));
 				textureCamera.targetTexture = renderTexture;
 				textureCamera.depth = mainCamera.depth - 1;

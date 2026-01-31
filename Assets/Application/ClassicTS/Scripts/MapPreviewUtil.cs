@@ -50,9 +50,10 @@ namespace ClassicTilestorm
 
 			camGO = new GameObject("PreviewCamera");
 			camGO.transform.SetParent(root.transform);
+			camGO.layer = PreviewRenderLayers.previewLayer;
 
 			previewCam = camGO.AddComponent<Camera>();
-			previewCam.cullingMask = PreviewRenderLayers.previewMask;
+			previewCam.cullingMask = PreviewRenderLayers.previewFullMask;
 			previewCam.clearFlags = CameraClearFlags.SolidColor;
 			previewCam.backgroundColor = new Color(0.2f, 0.2f, 0.2f, 1f);
 			previewCam.nearClipPlane = 0.1f;
@@ -62,8 +63,6 @@ namespace ClassicTilestorm
 			var reflectionEffect = camGO.AddComponent<ReflectionEffectCamera>();
 			reflectionEffect.SetEffectMode(ReflectionEffectCamera.EffectMode.Water);
 			reflectionEffect.SetOffset(-0.2f);
-
-			previewCam.cullingMask = PreviewRenderLayers.previewFullMask;
 
 			var previewSkyMat = SkyboxUtility.GetSkyboxMaterialForName(_map?.skybox);
 			if (previewSkyMat != null)
