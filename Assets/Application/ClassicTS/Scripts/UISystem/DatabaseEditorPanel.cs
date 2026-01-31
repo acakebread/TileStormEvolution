@@ -88,7 +88,23 @@ namespace ClassicTilestorm
 
 			MapPreviewUtil.UpdateRenderTextureSizeIfNeeded();
 			UpdateMapPreview();
+
+			//StartCoroutine(ForceFirstPreviewRender());
 		}
+
+		//private System.Collections.IEnumerator ForceFirstPreviewRender()
+		//{
+		//	yield return null; // wait one frame for layout/resize
+
+		//	var cam = MapPreviewUtil.PreviewCamera;
+		//	if (cam != null)
+		//	{
+		//		MapPreviewUtil.UpdateRenderTextureSizeIfNeeded(); // ensure final size
+		//		cam.Render(); // now safe — RT matches expected size
+		//					  // Optional second render if command buffers lag
+		//					  // cam.Render();
+		//	}
+		//}
 
 		protected override void OnDisable()
 		{
@@ -128,7 +144,8 @@ namespace ClassicTilestorm
 			UpdatePreviewCamera();
 		}
 
-		// New: extract parameter refresh (center + distance)
+		// ── Preview Logic ────────────────────────────────────────────────────────────────
+
 		private void RefreshMapCameraParameters()
 		{
 			var map = CurrentMap;
@@ -143,7 +160,6 @@ namespace ClassicTilestorm
 			currentFOV = defaultFOV; // can become dynamic later if needed
 		}
 
-		// New: the actual camera transform setter
 		private void UpdatePreviewCamera()
 		{
 			var cam = MapPreviewUtil.PreviewCamera;
@@ -186,7 +202,7 @@ namespace ClassicTilestorm
 
 			currentPreviewInstance = map.InstantiatePreviewCopy(
 				MapPreviewUtil.PreviewMapRoot,
-				PreviewRenderLayers.previewMask//MapPreviewUtil.previewLayer   // ← still using the old field name (ok)
+				PreviewRenderLayers.previewMask
 			);
 
 			if (currentPreviewInstance == null)
@@ -337,7 +353,7 @@ namespace ClassicTilestorm
 			if (index >= 0 && index < spawnedMapToggles.Count)
 				spawnedMapToggles[index].SetIsOnWithoutNotify(true);
 
-			SetSkybox(map.skybox);//if (map?.skybox != null) SetSkybox(map.skybox);
+			SetSkybox(map.skybox);
 
 			SyncSkyboxDropdown();
 			UpdateMapPreview();
@@ -394,10 +410,6 @@ namespace ClassicTilestorm
 
 		private void SyncSkyboxDropdown() =>
 			SyncDropdown(skyboxDropdown, CurrentMap?.skybox, noneSkyboxOptionText);
-
-		// ── Preview Logic ────────────────────────────────────────────────────────────────
-
-
 
 		// ── CRUD Operations ──────────────────────────────────────────────────────────────
 
