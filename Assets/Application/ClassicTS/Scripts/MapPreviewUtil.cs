@@ -33,7 +33,7 @@ namespace ClassicTilestorm
 			}
 		}
 
-		public static void Initialize(Map _map = null)
+		public static void Initialize(GameObject previewCamerPrefab, Map _map = null)
 		{
 			if (root != null) return;
 
@@ -48,20 +48,26 @@ namespace ClassicTilestorm
 				targetRawImage.color = Color.white;
 			}
 
-			camGO = new GameObject("PreviewCamera");
+			//camGO = new GameObject("PreviewCamera");
+			//camGO.transform.SetParent(root.transform);
+			//camGO.layer = PreviewRenderLayers.previewLayer;
+
+			//previewCam = camGO.AddComponent<Camera>();
+			//previewCam.cullingMask = PreviewRenderLayers.previewFullMask;
+			//previewCam.clearFlags = CameraClearFlags.SolidColor;
+			//previewCam.backgroundColor = new Color(0.2f, 0.2f, 0.2f, 1f);
+			//previewCam.nearClipPlane = 0.1f;
+			//previewCam.farClipPlane = 2000f;
+
+			camGO = GameObject.Instantiate(previewCamerPrefab);
 			camGO.transform.SetParent(root.transform);
 			camGO.layer = PreviewRenderLayers.previewLayer;
 
-			previewCam = camGO.AddComponent<Camera>();
-			previewCam.cullingMask = PreviewRenderLayers.previewFullMask;
-			previewCam.clearFlags = CameraClearFlags.SolidColor;
-			previewCam.backgroundColor = new Color(0.2f, 0.2f, 0.2f, 1f);
-			previewCam.nearClipPlane = 0.1f;
-			previewCam.farClipPlane = 2000f;
+			previewCam = camGO.GetComponent<Camera>();
 			previewCam.targetTexture = renderTexture;
 
-			var reflectionEffect = camGO.AddComponent<ReflectionEffectCamera>();
-			reflectionEffect.SetEffectMode(ReflectionEffectCamera.EffectMode.Water);
+			var reflectionEffect = camGO.GetComponent<ReflectionEffectCamera>();
+			//reflectionEffect.SetEffectMode(ReflectionEffectCamera.EffectMode.Water);
 			reflectionEffect.SetOffset(-0.2f);
 
 			var previewSkyMat = SkyboxUtility.GetSkyboxMaterialForName(_map?.skybox);

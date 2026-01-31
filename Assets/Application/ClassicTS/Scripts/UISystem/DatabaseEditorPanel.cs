@@ -13,6 +13,8 @@ namespace ClassicTilestorm
 		#region Serialized Fields - UI References
 
 		[Header("UI References")]
+		[SerializeField] private GameObject previewCamerPrefab;
+
 		[SerializeField] private Button closeButton;
 		[SerializeField] private ScrollRect mapScrollView;
 		[SerializeField] private Transform contentParent;
@@ -79,7 +81,7 @@ namespace ClassicTilestorm
 			if (previewImage != null)
 				MapPreviewUtil.SetPreviewUI(previewImage, previewImage.rectTransform);
 
-			MapPreviewUtil.Initialize(CurrentMap);
+			MapPreviewUtil.Initialize(previewCamerPrefab, CurrentMap);
 
 			PopulateSkyboxDropdown();
 			SyncSkyboxDropdown();

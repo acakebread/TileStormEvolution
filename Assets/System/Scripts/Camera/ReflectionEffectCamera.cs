@@ -412,6 +412,16 @@ namespace MassiveHadronLtd
 			reflectionStrength = 0.5f;
 		}
 
+		public void Update()
+		{
+			if (effectMode == EffectMode.Water || effectMode == EffectMode.OceanEffect)
+			{
+				timeSeed += Time.deltaTime;
+			}
+
+			UpdateMaterialProperties();
+		}
+
 		private void LateUpdate()
 		{
 			if (reflectionCamera != null)
