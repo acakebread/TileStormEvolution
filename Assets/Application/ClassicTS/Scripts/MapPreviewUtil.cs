@@ -90,20 +90,6 @@ namespace ClassicTilestorm
 				Debug.LogWarning($"Preview skybox not found for '{_map?.skybox}' — falling back to global.");
 
 			UpdateRenderTextureSizeIfNeeded();
-
-
-//#if !USING_PREFAB
-//			// Force culling refresh at runtime
-//			if (previewCam != null)
-//			{
-//				float originalFOV = previewCam.fieldOfView;
-//				previewCam.fieldOfView = originalFOV + 0.001f;
-//				previewCam.fieldOfView = originalFOV;
-
-//				previewCam.Render();
-//				previewCam.Render();  // double-call for safety
-//			}
-//#endif
 		}
 
 		public static void SetSkyboxOverride(Material value)
@@ -186,3 +172,4 @@ namespace ClassicTilestorm
 		}
 	}
 }
+
