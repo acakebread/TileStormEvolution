@@ -153,11 +153,6 @@ namespace ClassicTilestorm
 			base.OnDisable();
 		}
 
-		protected override void LateUdpate()
-		{
-			base.LateUdpate();
-		}
-
 		private void InitializeUIReferences()
 		{
 			if (closeButton) closeButton.onClick.AddListener(() => gameObject.SetActive(false));

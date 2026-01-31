@@ -27,6 +27,7 @@ namespace ClassicTilestorm
 
 		[Header("Preview")]
 		[SerializeField] private RawImage previewImage;
+		private bool previewInitialized; // to avoid calling SetPreviewUI multiple times
 
 		[Header("Dropdowns")]
 		[SerializeField] private TMP_Dropdown skyboxDropdown;
@@ -54,6 +55,8 @@ namespace ClassicTilestorm
 		{
 			if (!isActiveAndEnabled || CurrentMap == null)
 				return;
+
+			MapPreviewUtil.UpdateRenderTextureSizeIfNeeded();
 
 			// Increment orbit (smooth rotation over time)
 			currentOrbitAngle += orbitSpeed * Time.deltaTime;
@@ -103,7 +106,6 @@ namespace ClassicTilestorm
 			// MapPreviewUtil.Render();
 		}
 
-		// In UpdateMapPreview – call the update immediately after creating the preview
 		private void UpdateMapPreview()
 		{
 			if (MapPreviewUtil.PreviewCamera == null || previewImage == null)
@@ -128,7 +130,7 @@ namespace ClassicTilestorm
 
 			currentPreviewInstance = map.InstantiatePreviewCopy(
 				MapPreviewUtil.PreviewMapRoot,
-				MapPreviewUtil.previewLayer
+				MapPreviewUtil.previewLayer   // ← still using the old field name (ok)
 			);
 
 			if (currentPreviewInstance == null)
@@ -137,15 +139,17 @@ namespace ClassicTilestorm
 				return;
 			}
 
+			MapPreviewUtil.UpdateRenderTextureSizeIfNeeded();
+
 			// Reset orbit view on map change
 			currentFOV = defaultFOV;
 
-			// Immediately refresh parameters and apply camera pose
 			RefreshMapCameraParameters();
 			UpdatePreviewCamera();
 
-			// Optional: one extra render to make sure the first frame is correct
-			MapPreviewUtil.Render();
+			// No need to call Render() here anymore — Update() will handle it every frame
+			// But if you really want a forced first-frame render:
+			// MapPreviewUtil.UpdateAndRender();
 		}
 
 		#endregion
@@ -174,6 +178,12 @@ namespace ClassicTilestorm
 			base.OnEnable();
 			RefreshMapList();
 
+			if (previewImage != null)
+			{
+				MapPreviewUtil.SetPreviewUI(previewImage, previewImage.rectTransform);
+				previewInitialized = true;
+			}
+
 			MapPreviewUtil.Initialize(CurrentMap);
 			MapPreviewUtil.SetPreviewLayer(LayerMask.NameToLayer(MapPreviewUtil.PREVIEW_LAYER_NAME));
 
@@ -186,6 +196,7 @@ namespace ClassicTilestorm
 			PopulateSkyboxDropdown();
 			SyncSkyboxDropdown();
 
+			MapPreviewUtil.UpdateRenderTextureSizeIfNeeded();
 			UpdateMapPreview();
 		}
 
