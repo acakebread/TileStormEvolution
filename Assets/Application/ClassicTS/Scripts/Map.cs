@@ -1199,6 +1199,7 @@ namespace ClassicTilestorm
 			// CRITICAL: Work on a CLONE so we don't corrupt the original map's runtime state
 			var previewMap = this.Clone();
 
+
 			var previewRoot = new GameObject($"Preview_{name ?? "Map"}");
 			previewRoot.transform.SetParent(previewParent, false);
 			previewRoot.transform.localPosition = Vector3.zero;
@@ -1218,31 +1219,45 @@ namespace ClassicTilestorm
 					return null;
 				}
 
+				previewMap.RefreshAttachments(previewMap.GetAttachments());
+
 				// Apply layer recursively
-				previewRoot.transform.SetLayer(layer, true);
+				//previewRoot.transform.SetLayer(layer, true);
 
-				// Optional: disable unwanted scripts/components
-				foreach (var tile in previewMap._graph)
-				{
-					if (tile.gameObject == null) continue;
+				PreviewRenderLayers.SetLayerRecursively(previewRoot, PreviewRenderLayers.LAYER_PREVIEW);
+				PreviewRenderLayers.SetPreviewLayersToChildren(previewRoot.transform);
 
-					//// Disable things that shouldn't run in editor preview
-					//foreach (var mb in tile.gameObject.GetComponentsInChildren<MonoBehaviour>(true))
-					//{
-					//	if (mb is MorphGeomSway ||
-					//		mb is WindController)           // optional
-					//	{
-					//		mb.enabled = false;
-					//	}
-					//}
+				var particleControllers = previewRoot.GetComponentsInChildren<ParticleController>(true);
+				foreach (var particleController in particleControllers)
+					particleController.gameObject.layer = PreviewRenderLayers.previewTransparentLayer;
 
-					// Optional: turn off shadows for performance
-					foreach (var mr in tile.gameObject.GetComponentsInChildren<Renderer>(true))
-					{
-						mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-						mr.receiveShadows = false;
-					}
-				}
+				var lights = previewRoot.GetComponentsInChildren<Light>(true);
+				foreach (var light in lights)
+					PreviewRenderLayers.SetPreviewLayers(light, false); // Preview only //light.cullingMask = 1 << LayerMask.NameToLayer("Preview");
+
+				//// Optional: disable unwanted scripts/components
+				//foreach (var tile in previewMap._graph)
+				//{
+				//	if (tile.gameObject == null) continue;
+
+				//	//// Disable things that shouldn't run in editor preview
+				//	//foreach (var mb in tile.gameObject.GetComponentsInChildren<MonoBehaviour>(true))
+				//	//{
+				//	//	if (mb is MorphGeomSway ||
+				//	//		mb is WindController)           // optional
+				//	//	{
+				//	//		mb.enabled = false;
+				//	//	}
+				//	//}
+
+				//	//// Optional: turn off shadows for performance
+				//	//foreach (var mr in tile.gameObject.GetComponentsInChildren<Renderer>(true))
+				//	//{
+				//	//	mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+				//	//	mr.receiveShadows = false;
+				//	//}
+				//}
+
 
 				return previewRoot;
 			}
@@ -1281,6 +1296,12 @@ namespace ClassicTilestorm
 			InitializeWindController();
 
 			RefreshAttachments(GetAttachments());
+
+			var lights = parent.GetComponentsInChildren<Light>(true);
+			foreach (var light in lights)
+				PreviewRenderLayers.RemovePreviewLayers(light); //light.cullingMask &= ~(1 << LayerMask.NameToLayer("Preview"));
+
+			PreviewRenderLayers.RemovePreviewLayersFromChildren(parent);
 
 			SetupWaypoints();
 		}

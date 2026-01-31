@@ -19,6 +19,7 @@ namespace ClassicTilestorm
 			pointLight.intensity = intensity;
 			pointLight.range = range;
 			pointLight.shadows = LightShadows.None;
+			pointLight.cullingMask &= ~(1 << LayerMask.NameToLayer("Preview"));
 			return pointLight;
 		}
 	}

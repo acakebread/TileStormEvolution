@@ -33,9 +33,9 @@ TagManager:
   - 
   - 
   - 
-  - 
-  - 
   - Preview
+  - PreviewTransparent
+  - PreviewEmissive
   - Editor
   m_SortingLayers:
   - name: Default

@@ -10,7 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6554384982051433533}
   - component: {fileID: 6450972374832348925}
-  m_Layer: 0
+  m_Layer: 1
   m_Name: flame
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -96,3 +96,5 @@ MonoBehaviour:
   pulses:
   - start: -0.01
     end: 1
+  randomiseTimelineOffset: 1
+  timelineSeed: 0

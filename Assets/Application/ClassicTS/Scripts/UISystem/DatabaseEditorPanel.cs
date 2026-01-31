@@ -27,7 +27,7 @@ namespace ClassicTilestorm
 
 		[Header("Preview")]
 		[SerializeField] private RawImage previewImage;
-		private bool previewInitialized; // to avoid calling SetPreviewUI multiple times
+		//private bool previewInitialized; // to avoid calling SetPreviewUI multiple times
 
 		[Header("Dropdowns")]
 		[SerializeField] private TMP_Dropdown skyboxDropdown;
@@ -39,11 +39,11 @@ namespace ClassicTilestorm
 		[SerializeField] private float orbitSpeed = 18f;
 		[SerializeField] private float baseTiltAngle = 25f;
 		[SerializeField] private float extraTiltAngle = 10f;
-		[SerializeField] private float distanceMultiplier = 0.58f;
-		[SerializeField] private float distanceOffset = 3.5f;
+		[SerializeField] private float distanceMultiplier = 0.35f;
+		[SerializeField] private float distanceOffset = 0f;//3.5f;
 		[SerializeField] private float minDistance = 5f;
 		[SerializeField] private float maxDistance = 80f;
-		[SerializeField] private float defaultFOV = 62f;
+		[SerializeField] private float defaultFOV = 60f;
 
 		private float currentOrbitAngle = 45f;
 		private Vector3 currentMapCenter = Vector3.zero;
@@ -67,6 +67,8 @@ namespace ClassicTilestorm
 
 			// Apply position/rotation/FOV
 			UpdatePreviewCamera();
+
+			//MapPreviewUtil.RenderPreviewCamera();
 		}
 
 		// New: extract parameter refresh (center + distance)
@@ -130,7 +132,7 @@ namespace ClassicTilestorm
 
 			currentPreviewInstance = map.InstantiatePreviewCopy(
 				MapPreviewUtil.PreviewMapRoot,
-				MapPreviewUtil.previewLayer   // ← still using the old field name (ok)
+				PreviewRenderLayers.previewMask//MapPreviewUtil.previewLayer   // ← still using the old field name (ok)
 			);
 
 			if (currentPreviewInstance == null)
@@ -181,11 +183,12 @@ namespace ClassicTilestorm
 			if (previewImage != null)
 			{
 				MapPreviewUtil.SetPreviewUI(previewImage, previewImage.rectTransform);
-				previewInitialized = true;
+				//previewInitialized = true;
 			}
 
 			MapPreviewUtil.Initialize(CurrentMap);
-			MapPreviewUtil.SetPreviewLayer(LayerMask.NameToLayer(MapPreviewUtil.PREVIEW_LAYER_NAME));
+			//MapPreviewUtil.SetPreviewLayer(LayerMask.NameToLayer(MapPreviewUtil.PREVIEW_LAYER_NAME));
+			//MapPreviewUtil.SetPreviewLayer(LayerMask.NameToLayer(PreviewRenderLayers.LAYER_PREVIEW));
 
 			if (previewImage != null)
 			{

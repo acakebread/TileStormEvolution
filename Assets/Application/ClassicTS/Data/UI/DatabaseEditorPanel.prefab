@@ -4280,6 +4280,14 @@ MonoBehaviour:
   previewImage: {fileID: 887984126197869973}
   skyboxDropdown: {fileID: 454261876308400215}
   noneSkyboxOptionText: "\u2014 Default \u2014"
+  orbitSpeed: 18
+  baseTiltAngle: 25
+  extraTiltAngle: 10
+  distanceMultiplier: 0.35
+  distanceOffset: 0
+  minDistance: 5
+  maxDistance: 80
+  defaultFOV: 60
 --- !u!1 &4714438361071147397
 GameObject:
   m_ObjectHideFlags: 0

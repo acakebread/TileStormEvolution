@@ -117,7 +117,8 @@ namespace MassiveHadronLtd
 				enabled = false;
 				return;
 			}
-			if (Camera.main == mainCamera) mainCamera.cullingMask &= ~(1 << LayerMask.NameToLayer("Preview"));//make sure to remove Preview from cullling if main camera
+			if (Camera.main == mainCamera)
+				PreviewRenderLayers.RemovePreviewLayers(mainCamera); //mainCamera.cullingMask &= ~(1 << LayerMask.NameToLayer("Preview"));//make sure to remove Preview from cullling if main camera
 
 			var obj = new GameObject("ReflectionCamera");
 			obj.transform.SetParent(transform, false);
