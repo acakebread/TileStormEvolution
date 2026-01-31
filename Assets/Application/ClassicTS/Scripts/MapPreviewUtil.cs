@@ -39,25 +39,22 @@ namespace ClassicTilestorm
 
 			root = new GameObject("MAP_PREVIEW_ROOT");
 
-			int previewLayerIndex = PreviewRenderLayers.previewLayer;
-			if (previewLayerIndex < 0)
-			{
-				Debug.LogError($"Layer '{PreviewRenderLayers.LAYER_PREVIEW}' not found in Tags and Layers!");
-				previewLayerIndex = 0; // fallback
-			}
-
-			// Render Texture (initial fixed size — will be resized dynamically)
 			renderTexture = new RenderTexture(512, 320, 24, RenderTextureFormat.ARGB32) { filterMode = FilterMode.Bilinear };
 			renderTexture.Create();
 
-			// Root camera setup
+			if (targetRawImage != null)
+			{
+				targetRawImage.texture = PreviewRenderTexture;
+				targetRawImage.color = Color.white;
+			}
+
 			camGO = new GameObject("PreviewCamera");
 			camGO.transform.SetParent(root.transform);
 
 			previewCam = camGO.AddComponent<Camera>();
+			previewCam.cullingMask = PreviewRenderLayers.previewMask;
 			previewCam.clearFlags = CameraClearFlags.SolidColor;
 			previewCam.backgroundColor = new Color(0.2f, 0.2f, 0.2f, 1f);
-			previewCam.cullingMask = PreviewRenderLayers.previewMask;//important only set sub mask before adding reflection camera component
 			previewCam.nearClipPlane = 0.1f;
 			previewCam.farClipPlane = 2000f;
 			previewCam.targetTexture = renderTexture;
@@ -66,7 +63,7 @@ namespace ClassicTilestorm
 			reflectionEffect.SetEffectMode(ReflectionEffectCamera.EffectMode.Water);
 			reflectionEffect.SetOffset(-0.2f);
 
-			previewCam.cullingMask = PreviewRenderLayers.previewFullMask;//set full preview mask after adding reflection camera component
+			previewCam.cullingMask = PreviewRenderLayers.previewFullMask;
 
 			var previewSkyMat = SkyboxUtility.GetSkyboxMaterialForName(_map?.skybox);
 			if (previewSkyMat != null)
@@ -74,7 +71,6 @@ namespace ClassicTilestorm
 			else
 				Debug.LogWarning($"Preview skybox not found for '{_map?.skybox}' — falling back to global.");
 
-			//Ensure Preview Root
 			if (previewMapRoot != null) return;
 
 			GameObject previewRoot = new GameObject("PreviewSceneRoot");
@@ -89,7 +85,6 @@ namespace ClassicTilestorm
 				reflectionEffect.SetSkyboxOverride(value);
 		}
 
-		// ── Added: dynamic resize based on RawImage rect size ────────────────
 		public static void UpdateRenderTextureSizeIfNeeded()
 		{
 			if (previewRect == null || previewCam == null || renderTexture == null) return;
@@ -142,7 +137,6 @@ namespace ClassicTilestorm
 			// Added cleanup for resize fields
 			targetRawImage = null;
 			previewRect = null;
-			lastKnownSize = Vector2.zero;
 		}
 
 		// ── Added helpers to set UI references from DatabaseEditorPanel ─────

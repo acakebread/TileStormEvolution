@@ -50,7 +50,64 @@ namespace ClassicTilestorm
 		private float currentDistance = 12f;
 		private float currentFOV;
 
-		// Remove LateUpdate, replace with Update
+		#endregion
+
+		// Runtime state
+		private readonly List<Toggle> spawnedMapToggles = new List<Toggle>();
+		private ToggleGroup toggleGroup;
+
+		private static int lastSelectedMapIndex = 0;
+
+		private Map CurrentMap =>
+			lastSelectedMapIndex >= 0 && lastSelectedMapIndex < ResourceManager.Maps.Count
+				? ResourceManager.Maps[lastSelectedMapIndex]
+				: null;
+
+		private GameObject currentPreviewInstance;
+
+		protected override void Awake()
+		{
+			base.Awake();
+			InitializeUIReferences();
+		}
+
+		protected override void OnEnable()
+		{
+			base.OnEnable();
+			RefreshMapList();
+
+			if (previewImage != null)
+				MapPreviewUtil.SetPreviewUI(previewImage, previewImage.rectTransform);
+
+			MapPreviewUtil.Initialize(CurrentMap);
+
+			PopulateSkyboxDropdown();
+			SyncSkyboxDropdown();
+
+			MapPreviewUtil.UpdateRenderTextureSizeIfNeeded();
+			UpdateMapPreview();
+		}
+
+		protected override void OnDisable()
+		{
+			ClearMapListItems();
+
+			MapPreviewUtil.ClearPreviewMap();
+
+			if (currentPreviewInstance != null)
+			{
+				DestroyImmediate(currentPreviewInstance);
+				currentPreviewInstance = null;
+			}
+
+			MapPreviewUtil.Cleanup();
+
+			if (previewImage != null)
+				previewImage.texture = null;
+
+			base.OnDisable();
+		}
+
 		private void Update()
 		{
 			if (!isActiveAndEnabled || CurrentMap == null)
@@ -67,8 +124,6 @@ namespace ClassicTilestorm
 
 			// Apply position/rotation/FOV
 			UpdatePreviewCamera();
-
-			//MapPreviewUtil.RenderPreviewCamera();
 		}
 
 		// New: extract parameter refresh (center + distance)
@@ -103,9 +158,6 @@ namespace ClassicTilestorm
 
 			cam.transform.SetPositionAndRotation(camPosition, finalRotation);
 			cam.fieldOfView = currentFOV;
-
-			// Optional: force render here if you want to be extra sure
-			// MapPreviewUtil.Render();
 		}
 
 		private void UpdateMapPreview()
@@ -148,79 +200,6 @@ namespace ClassicTilestorm
 
 			RefreshMapCameraParameters();
 			UpdatePreviewCamera();
-
-			// No need to call Render() here anymore — Update() will handle it every frame
-			// But if you really want a forced first-frame render:
-			// MapPreviewUtil.UpdateAndRender();
-		}
-
-		#endregion
-
-		// Runtime state
-		private readonly List<Toggle> spawnedMapToggles = new List<Toggle>();
-		private ToggleGroup toggleGroup;
-
-		private static int lastSelectedMapIndex = 0;
-
-		private Map CurrentMap =>
-			lastSelectedMapIndex >= 0 && lastSelectedMapIndex < ResourceManager.Maps.Count
-				? ResourceManager.Maps[lastSelectedMapIndex]
-				: null;
-
-		private GameObject currentPreviewInstance;
-
-		protected override void Awake()
-		{
-			base.Awake();
-			InitializeUIReferences();
-		}
-
-		protected override void OnEnable()
-		{
-			base.OnEnable();
-			RefreshMapList();
-
-			if (previewImage != null)
-			{
-				MapPreviewUtil.SetPreviewUI(previewImage, previewImage.rectTransform);
-				//previewInitialized = true;
-			}
-
-			MapPreviewUtil.Initialize(CurrentMap);
-			//MapPreviewUtil.SetPreviewLayer(LayerMask.NameToLayer(MapPreviewUtil.PREVIEW_LAYER_NAME));
-			//MapPreviewUtil.SetPreviewLayer(LayerMask.NameToLayer(PreviewRenderLayers.LAYER_PREVIEW));
-
-			if (previewImage != null)
-			{
-				previewImage.texture = MapPreviewUtil.PreviewRenderTexture;
-				previewImage.color = Color.white;
-			}
-
-			PopulateSkyboxDropdown();
-			SyncSkyboxDropdown();
-
-			MapPreviewUtil.UpdateRenderTextureSizeIfNeeded();
-			UpdateMapPreview();
-		}
-
-		protected override void OnDisable()
-		{
-			ClearMapListItems();
-
-			MapPreviewUtil.ClearPreviewMap();
-
-			if (currentPreviewInstance != null)
-			{
-				DestroyImmediate(currentPreviewInstance);
-				currentPreviewInstance = null;
-			}
-
-			MapPreviewUtil.Cleanup();
-
-			if (previewImage != null)
-				previewImage.texture = null;
-
-			base.OnDisable();
 		}
 
 		private void InitializeUIReferences()
