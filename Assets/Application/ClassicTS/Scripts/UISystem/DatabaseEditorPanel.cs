@@ -9,7 +9,7 @@ using MassiveHadronLtd;
 
 namespace ClassicTilestorm
 {
-	public class DatabaseEditorPanel : UIPanel//, IPointerDownHandler, IDragHandler, IPointerUpHandler
+	public class DatabaseEditorPanel : UIPanel
 	{
 		#region Serialized Fields - UI References
 
@@ -55,7 +55,6 @@ namespace ClassicTilestorm
 		private UIDragHandler valueDrag;
 
 		private enum ActivePicker { None, ColorSquare, ValueSlider }
-		private ActivePicker currentActivePicker = ActivePicker.None;
 
 		[Header("Preview Orbit & Camera")]
 		[SerializeField] private float orbitSpeed = 18f;
@@ -109,6 +108,7 @@ namespace ClassicTilestorm
 			}
 
 			RefreshMapList();
+			SyncColorPickerToCurrentMap();
 
 			if (previewImage != null)
 				MapPreviewUtil.SetPreviewUI(previewImage, previewImage.rectTransform);
@@ -186,40 +186,6 @@ namespace ClassicTilestorm
 
 		// ── Color Picker Input ──────────────────────────────────────────────────────
 
-		//public void OnPointerDown(PointerEventData eventData)
-		//{
-		//	if (RectTransformUtility.RectangleContainsScreenPoint(
-		//		colourPickerImage.rectTransform, eventData.position, eventData.pressEventCamera))
-		//	{
-		//		currentActivePicker = ActivePicker.ColorSquare;
-		//	}
-		//	else if (RectTransformUtility.RectangleContainsScreenPoint(
-		//		brightnessPickerImage.rectTransform, eventData.position, eventData.pressEventCamera))
-		//	{
-		//		currentActivePicker = ActivePicker.ValueSlider;
-		//	}
-		//	else
-		//	{
-		//		currentActivePicker = ActivePicker.None;
-		//		return;
-		//	}
-
-		//	UpdateColorFromPointer(eventData);
-		//}
-
-		//public void OnDrag(PointerEventData eventData)
-		//{
-		//	if (currentActivePicker != ActivePicker.None)
-		//	{
-		//		UpdateColorFromPointer(eventData);
-		//	}
-		//}
-
-		//public void OnPointerUp(PointerEventData eventData)
-		//{
-		//	currentActivePicker = ActivePicker.None;
-		//}
-
 		private void OnColorPointer(UIDragHandler sender, PointerEventData eventData)
 		{
 			UpdateColorFromPointer(eventData, colourPickerImage.rectTransform, colorTexture, true);
@@ -256,55 +222,10 @@ namespace ClassicTilestorm
 
 			if (swatchImage != null)
 				swatchImage.color = final;
+
+			CurrentMap.Light = final;
+			SetLightColour(final);
 		}
-
-		//private void UpdateColorFromPointer(PointerEventData eventData)
-		//{
-		//	Vector2 localPos;
-		//	Texture2D tex = null;
-		//	RectTransform rt = null;
-
-		//	if (currentActivePicker == ActivePicker.ColorSquare)
-		//	{
-		//		rt = colourPickerImage.rectTransform;
-		//		tex = colorTexture;
-		//	}
-		//	else if (currentActivePicker == ActivePicker.ValueSlider)
-		//	{
-		//		rt = brightnessPickerImage.rectTransform;
-		//		tex = valueTexture;
-		//	}
-		//	else return;
-
-		//	if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(
-		//		rt, eventData.position, eventData.pressEventCamera, out localPos))
-		//		return;
-
-		//	Color picked = ColorPickerSquareUtility.GetColorFromLocalPoint(tex, localPos, rt);
-
-		//	if (currentActivePicker == ActivePicker.ColorSquare)
-		//	{
-		//		Color.RGBToHSV(picked, out currentHue, out currentSaturation, out float _);
-		//		UpdateValueSlider();
-		//	}
-		//	else if (currentActivePicker == ActivePicker.ValueSlider)
-		//	{
-		//		Color.RGBToHSV(picked, out float _, out float __, out currentValue);
-		//	}
-
-		//	Color final = Color.HSVToRGB(currentHue, currentSaturation, currentValue);
-
-		//	if (swatchImage != null)
-		//	{
-		//		swatchImage.color = final;
-		//	}
-
-		//	Debug.Log($"Picked: {final}   (HSV: {currentHue:F3}, {currentSaturation:F3}, {currentValue:F3})");
-
-		//	// → Put your real usage here, example:
-		//	// previewImage.color = final;
-		//	// someMaterial.color = final;
-		//}
 
 		private void UpdateValueSlider()
 		{
@@ -315,6 +236,44 @@ namespace ClassicTilestorm
 				saturation: currentSaturation
 			);
 			brightnessPickerImage.texture = valueTexture;
+		}
+
+		private void SyncColorPickerToCurrentMap()
+		{
+			if (CurrentMap == null)
+			{
+				// Optional: reset to some default (white / neutral)
+				currentHue = 0f;
+				currentSaturation = 0.8f;
+				currentValue = 1f;
+				UpdateValueSlider();
+				if (swatchImage != null) swatchImage.color = Color.white;
+				SetLightColour(Color.white);
+				return;
+			}
+
+			Color lightColor = CurrentMap.Light;
+
+			// Convert stored color → HSV
+			Color.RGBToHSV(lightColor, out currentHue, out currentSaturation, out currentValue);
+
+			// Refresh the brightness slider (depends on hue & saturation)
+			UpdateValueSlider();
+
+			// Update preview swatch
+			if (swatchImage != null)
+			{
+				swatchImage.color = lightColor;
+			}
+
+			// Apply to scene lighting (if you want immediate preview)
+			SetLightColour(lightColor);
+
+			// ── Optional: if you have visible picker handles/cursors ─────────────────
+			// Position them according to the new values
+			// Example (if you have draggable thumbs):
+			// if (colorDrag != null) colorDrag.SetNormalizedPosition(currentHue, currentSaturation);
+			// if (valueDrag != null) valueDrag.SetNormalizedPosition(0.5f, currentValue); // x ignored
 		}
 
 		// ── The rest of your code (UI, maps, preview, etc.) unchanged ──────────────
@@ -470,6 +429,7 @@ namespace ClassicTilestorm
 				spawnedMapToggles[index].SetIsOnWithoutNotify(true);
 
 			SetSkybox(map.skybox);
+			SyncColorPickerToCurrentMap();
 
 			SyncSkyboxDropdown();
 			SyncCharacterDropdown();
@@ -627,6 +587,11 @@ namespace ClassicTilestorm
 			var skyMaterial = SkyboxUtility.GetSkyboxMaterialForName(value);
 			if (skyMaterial != null)
 				MapPreviewUtil.SetSkyboxOverride(skyMaterial);
+		}
+
+		private void SetLightColour(Color value)
+		{
+			RenderSettings.ambientLight = value;
 		}
 
 		private void UpdatePreviewCamera()

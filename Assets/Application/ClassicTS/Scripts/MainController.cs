@@ -117,6 +117,7 @@ namespace ClassicTilestorm
 				currentMap.skybox = null;
 
 			SkyboxUtility.SetSkybox(currentMap.skybox);
+			RenderSettings.ambientLight = currentMap.Light;
 
 			//var mainReflection = Camera.main?.GetComponent<ReflectionEffectCamera>();
 			//if (mainReflection != null)

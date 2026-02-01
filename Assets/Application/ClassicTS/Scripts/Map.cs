@@ -82,8 +82,9 @@ namespace ClassicTilestorm
 		[JsonProperty(Order = 1)] public string name;
 		[JsonProperty(Order = 2)] public string character;
 		[JsonProperty(Order = 3)] public string music;
-		[JsonProperty(Order = 4)] public string skybox;
-		[JsonProperty(Order = 5)] public string button;
+		[JsonProperty(Order = 4)] public string light;
+		[JsonProperty(Order = 5)] public string skybox;
+		[JsonProperty(Order = 6)] public string button;
 
 		// ─────────────────────────────────────────────
 		// Dimensions
@@ -99,6 +100,7 @@ namespace ClassicTilestorm
 		[JsonProperty(Order = 30)] public MapAttachment[] attachments;
 
 		// Conditional serialization
+		public bool ShouldSerializelight() => !string.IsNullOrEmpty(light);
 		public bool ShouldSerializeskybox() => !string.IsNullOrEmpty(skybox);
 		public bool ShouldSerializesolve() => solve != null && solve.Length > 0;
 		public bool ShouldSerializewaypoints() => waypoints != null && waypoints.Length > 0;
@@ -112,7 +114,14 @@ namespace ClassicTilestorm
 		[JsonIgnore] public int Count => Width * Height;
 		[JsonIgnore] public int[] State { get => state = state?.Length == width * height ? state : Enumerable.Range(0, width * height).ToArray(); }//set => state = value; 
 		[JsonIgnore] public string Music { get => music; set => music = value; }
+		//[JsonIgnore] public string Light { get => light; set => light = value; }
 		[JsonIgnore] public string Skybox { get => skybox; set => skybox = value; }
+
+		[JsonIgnore] public Color Light
+		{
+			get => StringUtil.FromHexString(light, defaultColor: Color.white);
+			set => light = value.ToHexString(includeAlpha: true);
+		}
 
 		// ─────────────────────────────────────────────
 		// Tile data — variants is now the only source of truth
@@ -825,6 +834,7 @@ namespace ClassicTilestorm
 			name = name,
 			character = character,
 			music = music,
+			light = light,
 			skybox = skybox,
 			button = button,
 			width = width,

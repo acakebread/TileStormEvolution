@@ -5,6 +5,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 using MassiveHadronLtd;
+using UnityEngine;
 
 namespace ClassicTilestorm
 {
@@ -168,6 +169,19 @@ namespace ClassicTilestorm
 				((Map)map).solve = data?.SmartRleDecode() ?? Array.Empty<int>();
 			}
 
+			// Decode tiles & solve using the smart decoder (handles both plain and RLE)
+			if (jo["tiles"]?.Type == JTokenType.Array)
+			{
+				var data = jo["tiles"].ToObject<int[]>(serializer);
+				((Map)map).tiles = data?.SmartRleDecode() ?? Array.Empty<int>();
+			}
+
+			if (jo["solve"]?.Type == JTokenType.Array)
+			{
+				var data = jo["solve"].ToObject<int[]>(serializer);
+				((Map)map).solve = data?.SmartRleDecode() ?? Array.Empty<int>();
+			}
+
 			if (tableArray != null)
 			{
 				((Map.IVariantAccess)map).Variants = ParseTableToVariants(tableArray);
@@ -270,6 +284,20 @@ namespace ClassicTilestorm
 					writer.WritePropertyName("solve");
 					var encoded = map.solve.SmartRleEncode();
 					serializer.Serialize(writer, encoded);
+					continue;
+				}
+
+				if (name == "light")
+				{
+					writer.WritePropertyName("light");
+
+					// Use the Color property instead of the string field
+					Color color = map.Light;   // ← assuming Light is a public property on Map
+
+					// Decide if you want alpha always or only when < 1
+					string hex = color.ToHexString(includeAlpha: true);   // or false
+
+					writer.WriteValue(hex);
 					continue;
 				}
 
