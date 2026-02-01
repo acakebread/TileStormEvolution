@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using UnityEngine.EventSystems;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,7 +9,7 @@ using MassiveHadronLtd;
 
 namespace ClassicTilestorm
 {
-	public class DatabaseEditorPanel : UIPanel
+	public class DatabaseEditorPanel : UIPanel//, IPointerDownHandler, IDragHandler, IPointerUpHandler
 	{
 		#region Serialized Fields - UI References
 
@@ -37,14 +38,31 @@ namespace ClassicTilestorm
 		[SerializeField] private TMP_Dropdown characterDropdown;
 		[SerializeField] private string noneCharacterOptionText = "— Default —";
 
-		[Header("Preview Orbit & Camera")]
-		// ── Camera orbit control fields (unchanged, but no lerp anymore) ────────────────────────
+		[Header("Colour Pickers")]
+		[SerializeField] private RawImage colourPickerImage;     // rainbow hue + saturation square
+		[SerializeField] private RawImage brightnessPickerImage; // value/brightness slider
+		[SerializeField] private RawImage swatchImage;           // ← the preview swatch that shows the final color
+
+		#endregion
+
+		// Color picker state
+		private Texture2D colorTexture;   // rainbow square
+		private Texture2D valueTexture;   // brightness slider
+		private float currentHue = 0f;    // 0 = red start
+		private float currentSaturation = 0.8f;
+		private float currentValue = 1f;
+		private UIDragHandler colorDrag;
+		private UIDragHandler valueDrag;
+
+		private enum ActivePicker { None, ColorSquare, ValueSlider }
+		private ActivePicker currentActivePicker = ActivePicker.None;
+
 		[Header("Preview Orbit & Camera")]
 		[SerializeField] private float orbitSpeed = 18f;
 		[SerializeField] private float baseTiltAngle = 25f;
 		[SerializeField] private float extraTiltAngle = 10f;
 		[SerializeField] private float distanceMultiplier = 0.35f;
-		[SerializeField] private float distanceOffset = 0f;//3.5f;
+		[SerializeField] private float distanceOffset = 0f;
 		[SerializeField] private float minDistance = 5f;
 		[SerializeField] private float maxDistance = 80f;
 		[SerializeField] private float defaultFOV = 60f;
@@ -54,12 +72,8 @@ namespace ClassicTilestorm
 		private float currentDistance = 12f;
 		private float currentFOV;
 
-		#endregion
-
-		// Runtime state
 		private readonly List<Toggle> spawnedMapToggles = new List<Toggle>();
 		private ToggleGroup toggleGroup;
-
 		private static int lastSelectedMapIndex = 0;
 
 		private Map CurrentMap =>
@@ -78,6 +92,22 @@ namespace ClassicTilestorm
 		protected override void OnEnable()
 		{
 			base.OnEnable();
+
+			colorDrag = colourPickerImage.GetComponent<UIDragHandler>();
+			valueDrag = brightnessPickerImage.GetComponent<UIDragHandler>();
+
+			if (colorDrag != null)
+			{
+				colorDrag.OnPointerDownEvent += OnColorPointer;
+				colorDrag.OnDragEvent += OnColorPointer;
+			}
+
+			if (valueDrag != null)
+			{
+				valueDrag.OnPointerDownEvent += OnValuePointer;
+				valueDrag.OnDragEvent += OnValuePointer;
+			}
+
 			RefreshMapList();
 
 			if (previewImage != null)
@@ -93,10 +123,34 @@ namespace ClassicTilestorm
 
 			MapPreviewUtil.UpdateRenderTextureSizeIfNeeded();
 			UpdateMapPreview();
+
+			// Initialize rainbow + brightness picker
+			if (colourPickerImage != null && brightnessPickerImage != null)
+			{
+				colorTexture = ColorPickerSquareUtility.CreateColorPickerTexture(
+					size: 256,
+					style: ColorPickerSquareUtility.PickerStyle.HueSaturation_FullValue
+				);
+				colourPickerImage.texture = colorTexture;
+
+				UpdateValueSlider();
+			}
 		}
 
 		protected override void OnDisable()
 		{
+			if (colorDrag != null)
+			{
+				colorDrag.OnPointerDownEvent -= OnColorPointer;
+				colorDrag.OnDragEvent -= OnColorPointer;
+			}
+
+			if (valueDrag != null)
+			{
+				valueDrag.OnPointerDownEvent -= OnValuePointer;
+				valueDrag.OnDragEvent -= OnValuePointer;
+			}
+
 			ClearMapListItems();
 
 			MapPreviewUtil.ClearPreviewMap();
@@ -112,96 +166,158 @@ namespace ClassicTilestorm
 			if (previewImage != null)
 				previewImage.texture = null;
 
+			if (colorTexture != null) Destroy(colorTexture);
+			if (valueTexture != null) Destroy(valueTexture);
+
 			base.OnDisable();
 		}
 
 		private void Update()
 		{
-			if (!isActiveAndEnabled || CurrentMap == null)
-				return;
+			if (!isActiveAndEnabled || CurrentMap == null) return;
 
 			MapPreviewUtil.UpdateRenderTextureSizeIfNeeded();
 
-			// Increment orbit (smooth rotation over time)
 			currentOrbitAngle += orbitSpeed * Time.deltaTime;
 			currentOrbitAngle %= 360f;
 
 			UpdatePreviewCamera();
 		}
 
-		// ── Preview Logic ────────────────────────────────────────────────────────────────
+		// ── Color Picker Input ──────────────────────────────────────────────────────
 
-		private void UpdatePreviewCamera()
+		//public void OnPointerDown(PointerEventData eventData)
+		//{
+		//	if (RectTransformUtility.RectangleContainsScreenPoint(
+		//		colourPickerImage.rectTransform, eventData.position, eventData.pressEventCamera))
+		//	{
+		//		currentActivePicker = ActivePicker.ColorSquare;
+		//	}
+		//	else if (RectTransformUtility.RectangleContainsScreenPoint(
+		//		brightnessPickerImage.rectTransform, eventData.position, eventData.pressEventCamera))
+		//	{
+		//		currentActivePicker = ActivePicker.ValueSlider;
+		//	}
+		//	else
+		//	{
+		//		currentActivePicker = ActivePicker.None;
+		//		return;
+		//	}
+
+		//	UpdateColorFromPointer(eventData);
+		//}
+
+		//public void OnDrag(PointerEventData eventData)
+		//{
+		//	if (currentActivePicker != ActivePicker.None)
+		//	{
+		//		UpdateColorFromPointer(eventData);
+		//	}
+		//}
+
+		//public void OnPointerUp(PointerEventData eventData)
+		//{
+		//	currentActivePicker = ActivePicker.None;
+		//}
+
+		private void OnColorPointer(UIDragHandler sender, PointerEventData eventData)
 		{
-			var cam = MapPreviewUtil.PreviewCamera;
-			if (cam == null) return;
-
-			var map = CurrentMap;
-			if (map == null) return;
-
-			// Recompute center + distance every frame (cheap, and ensures correctness after map change)
-			currentMapCenter = new Vector3(map.Width * 0.5f, 0f, map.Height * 0.5f);
-
-			float diag = Mathf.Sqrt(map.Width * map.Width + map.Height * map.Height);
-			float targetDistance = diag * distanceMultiplier + distanceOffset;
-			currentDistance = Mathf.Clamp(targetDistance, minDistance, maxDistance);
-
-			// Apply position/rotation/FOV
-			currentFOV = defaultFOV; // can become dynamic later if needed
-
-			Quaternion orbitRot = Quaternion.Euler(0f, currentOrbitAngle, 0f);
-			Quaternion baseTilt = Quaternion.Euler(baseTiltAngle, 0f, 0f);
-			Quaternion extraTilt = Quaternion.Euler(extraTiltAngle, 0f, 0f);
-
-			Quaternion finalRotation = orbitRot * baseTilt * extraTilt;
-
-			Vector3 direction = finalRotation * Vector3.back;
-			Vector3 camPosition = currentMapCenter + direction * currentDistance;
-
-			cam.transform.SetPositionAndRotation(camPosition, finalRotation);
-			cam.fieldOfView = currentFOV;
+			UpdateColorFromPointer(eventData, colourPickerImage.rectTransform, colorTexture, true);
 		}
 
-		private void UpdateMapPreview()
+		private void OnValuePointer(UIDragHandler sender, PointerEventData eventData)
 		{
-			if (MapPreviewUtil.PreviewCamera == null || previewImage == null)
+			UpdateColorFromPointer(eventData, brightnessPickerImage.rectTransform, valueTexture, false);
+		}
+
+		private void UpdateColorFromPointer(
+			PointerEventData eventData,
+			RectTransform rt,
+			Texture2D tex,
+			bool isColorSquare)
+		{
+			if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(
+				rt, eventData.position, eventData.pressEventCamera, out Vector2 localPos))
 				return;
 
-			var map = CurrentMap;
+			Color picked = ColorPickerSquareUtility.GetColorFromLocalPoint(tex, localPos, rt);
 
-			MapPreviewUtil.ClearPreviewMap();
-			if (currentPreviewInstance != null)
+			if (isColorSquare)
 			{
-				DestroyImmediate(currentPreviewInstance);
-				currentPreviewInstance = null;
+				Color.RGBToHSV(picked, out currentHue, out currentSaturation, out _);
+				UpdateValueSlider();
+			}
+			else
+			{
+				Color.RGBToHSV(picked, out _, out _, out currentValue);
 			}
 
-			if (map == null || map.Width <= 0 || map.Height <= 0)
-			{
-				previewImage.color = new Color(0.3f, 0.3f, 0.3f, 0.6f);
-				return;
-			}
+			Color final = Color.HSVToRGB(currentHue, currentSaturation, currentValue);
 
-			previewImage.color = Color.white;
+			if (swatchImage != null)
+				swatchImage.color = final;
+		}
 
-			currentPreviewInstance = map.InstantiatePreviewCopy(
-				MapPreviewUtil.PreviewMapRoot,
-				PreviewRenderLayers.previewMask
+		//private void UpdateColorFromPointer(PointerEventData eventData)
+		//{
+		//	Vector2 localPos;
+		//	Texture2D tex = null;
+		//	RectTransform rt = null;
+
+		//	if (currentActivePicker == ActivePicker.ColorSquare)
+		//	{
+		//		rt = colourPickerImage.rectTransform;
+		//		tex = colorTexture;
+		//	}
+		//	else if (currentActivePicker == ActivePicker.ValueSlider)
+		//	{
+		//		rt = brightnessPickerImage.rectTransform;
+		//		tex = valueTexture;
+		//	}
+		//	else return;
+
+		//	if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(
+		//		rt, eventData.position, eventData.pressEventCamera, out localPos))
+		//		return;
+
+		//	Color picked = ColorPickerSquareUtility.GetColorFromLocalPoint(tex, localPos, rt);
+
+		//	if (currentActivePicker == ActivePicker.ColorSquare)
+		//	{
+		//		Color.RGBToHSV(picked, out currentHue, out currentSaturation, out float _);
+		//		UpdateValueSlider();
+		//	}
+		//	else if (currentActivePicker == ActivePicker.ValueSlider)
+		//	{
+		//		Color.RGBToHSV(picked, out float _, out float __, out currentValue);
+		//	}
+
+		//	Color final = Color.HSVToRGB(currentHue, currentSaturation, currentValue);
+
+		//	if (swatchImage != null)
+		//	{
+		//		swatchImage.color = final;
+		//	}
+
+		//	Debug.Log($"Picked: {final}   (HSV: {currentHue:F3}, {currentSaturation:F3}, {currentValue:F3})");
+
+		//	// → Put your real usage here, example:
+		//	// previewImage.color = final;
+		//	// someMaterial.color = final;
+		//}
+
+		private void UpdateValueSlider()
+		{
+			if (valueTexture != null) Destroy(valueTexture);
+			valueTexture = ColorPickerSquareUtility.CreateValueSliderTexture(
+				height: 256,
+				hue: currentHue,
+				saturation: currentSaturation
 			);
-
-			if (currentPreviewInstance == null)
-			{
-				previewImage.color = new Color(1f, 0.3f, 0.3f, 0.7f);
-				return;
-			}
-
-			MapPreviewUtil.UpdateRenderTextureSizeIfNeeded();
-
-			// Reset orbit view on map change
-			currentFOV = defaultFOV;
-
-			UpdatePreviewCamera();
+			brightnessPickerImage.texture = valueTexture;
 		}
+
+		// ── The rest of your code (UI, maps, preview, etc.) unchanged ──────────────
 
 		private void InitializeUIReferences()
 		{
@@ -275,16 +391,11 @@ namespace ClassicTilestorm
 
 			string newCharacter = (selected == noneCharacterOptionText) ? null : selected;
 
-			// Only update + react if actually changed
 			if (newCharacter != CurrentMap.character)
 			{
 				CurrentMap.character = newCharacter;
-				// TODO: later — apply character preview / reload model / etc.
-				// For now it just saves the selection
 			}
 		}
-
-		// ── Map List Population ─────────────────────────────────────────────────────────────
 
 		private void RefreshMapList()
 		{
@@ -380,8 +491,6 @@ namespace ClassicTilestorm
 			}
 		}
 
-		// ── Dropdown Helpers ────────────────────────────────────────────────────────────────
-
 		private void PopulateDropdown(TMP_Dropdown dropdown, IEnumerable<string> items, string noneOption)
 		{
 			if (dropdown == null) return;
@@ -426,7 +535,6 @@ namespace ClassicTilestorm
 				"Eggbot Egypt",
 				"Eggbot Medieval",
 				"Eggbot Jungle",
-				// ↑ Add more here later when real resources are ready
 			};
 
 			PopulateDropdown(characterDropdown, characterNames, noneCharacterOptionText);
@@ -435,12 +543,8 @@ namespace ClassicTilestorm
 		private void SyncCharacterDropdown()
 		{
 			if (CurrentMap == null) return;
-
-			// Assuming Map class will eventually get a field like: public string Character { get; set; }
 			SyncDropdown(characterDropdown, CurrentMap.character, noneCharacterOptionText);
 		}
-
-		// ── CRUD Operations ──────────────────────────────────────────────────────────────
 
 		private void InsertMap()
 		{
@@ -501,8 +605,6 @@ namespace ClassicTilestorm
 			RefreshMapList();
 		}
 
-		// ── Helpers ─────────────────────────────────────────────────────────────────────
-
 		private string GenerateUniqueMapName(string prefix = "Map")
 		{
 			var existing = ResourceManager.Maps
@@ -526,12 +628,75 @@ namespace ClassicTilestorm
 			if (skyMaterial != null)
 				MapPreviewUtil.SetSkyboxOverride(skyMaterial);
 		}
+
+		private void UpdatePreviewCamera()
+		{
+			var cam = MapPreviewUtil.PreviewCamera;
+			if (cam == null) return;
+
+			var map = CurrentMap;
+			if (map == null) return;
+
+			currentMapCenter = new Vector3(map.Width * 0.5f, 0f, map.Height * 0.5f);
+
+			float diag = Mathf.Sqrt(map.Width * map.Width + map.Height * map.Height);
+			float targetDistance = diag * distanceMultiplier + distanceOffset;
+			currentDistance = Mathf.Clamp(targetDistance, minDistance, maxDistance);
+
+			currentFOV = defaultFOV;
+
+			Quaternion orbitRot = Quaternion.Euler(0f, currentOrbitAngle, 0f);
+			Quaternion baseTilt = Quaternion.Euler(baseTiltAngle, 0f, 0f);
+			Quaternion extraTilt = Quaternion.Euler(extraTiltAngle, 0f, 0f);
+
+			Quaternion finalRotation = orbitRot * baseTilt * extraTilt;
+
+			Vector3 direction = finalRotation * Vector3.back;
+			Vector3 camPosition = currentMapCenter + direction * currentDistance;
+
+			cam.transform.SetPositionAndRotation(camPosition, finalRotation);
+			cam.fieldOfView = currentFOV;
+		}
+
+		private void UpdateMapPreview()
+		{
+			if (MapPreviewUtil.PreviewCamera == null || previewImage == null)
+				return;
+
+			var map = CurrentMap;
+
+			MapPreviewUtil.ClearPreviewMap();
+			if (currentPreviewInstance != null)
+			{
+				DestroyImmediate(currentPreviewInstance);
+				currentPreviewInstance = null;
+			}
+
+			if (map == null || map.Width <= 0 || map.Height <= 0)
+			{
+				previewImage.color = new Color(0.3f, 0.3f, 0.3f, 0.6f);
+				return;
+			}
+
+			previewImage.color = Color.white;
+
+			currentPreviewInstance = map.InstantiatePreviewCopy(
+				MapPreviewUtil.PreviewMapRoot,
+				PreviewRenderLayers.previewMask
+			);
+
+			if (currentPreviewInstance == null)
+			{
+				previewImage.color = new Color(1f, 0.3f, 0.3f, 0.7f);
+				return;
+			}
+
+			MapPreviewUtil.UpdateRenderTextureSizeIfNeeded();
+
+			currentFOV = defaultFOV;
+
+			UpdatePreviewCamera();
+		}
 	}
 }
 
-
-      //"Eggbot Default",
-      //"Eggbot Industrial",
-      //"Eggbot Egypt",
-      //"Eggbot Medieval",
-      //"Eggbot Jungle",
