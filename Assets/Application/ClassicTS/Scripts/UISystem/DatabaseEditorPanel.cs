@@ -29,7 +29,6 @@ namespace ClassicTilestorm
 
 		[Header("Preview")]
 		[SerializeField] private RawImage previewImage;
-		//private bool previewInitialized; // to avoid calling SetPreviewUI multiple times
 
 		[Header("Dropdowns")]
 		[SerializeField] private TMP_Dropdown skyboxDropdown;
@@ -88,23 +87,7 @@ namespace ClassicTilestorm
 
 			MapPreviewUtil.UpdateRenderTextureSizeIfNeeded();
 			UpdateMapPreview();
-
-			//StartCoroutine(ForceFirstPreviewRender());
 		}
-
-		//private System.Collections.IEnumerator ForceFirstPreviewRender()
-		//{
-		//	yield return null; // wait one frame for layout/resize
-
-		//	var cam = MapPreviewUtil.PreviewCamera;
-		//	if (cam != null)
-		//	{
-		//		MapPreviewUtil.UpdateRenderTextureSizeIfNeeded(); // ensure final size
-		//		cam.Render(); // now safe — RT matches expected size
-		//					  // Optional second render if command buffers lag
-		//					  // cam.Render();
-		//	}
-		//}
 
 		protected override void OnDisable()
 		{
@@ -137,33 +120,28 @@ namespace ClassicTilestorm
 			currentOrbitAngle += orbitSpeed * Time.deltaTime;
 			currentOrbitAngle %= 360f;
 
-			// Recompute center + distance every frame (cheap, and ensures correctness after map change)
-			RefreshMapCameraParameters();
-
-			// Apply position/rotation/FOV
 			UpdatePreviewCamera();
 		}
 
 		// ── Preview Logic ────────────────────────────────────────────────────────────────
 
-		private void RefreshMapCameraParameters()
+		private void UpdatePreviewCamera()
 		{
+			var cam = MapPreviewUtil.PreviewCamera;
+			if (cam == null) return;
+
 			var map = CurrentMap;
 			if (map == null) return;
 
+			// Recompute center + distance every frame (cheap, and ensures correctness after map change)
 			currentMapCenter = new Vector3(map.Width * 0.5f, 0f, map.Height * 0.5f);
 
 			float diag = Mathf.Sqrt(map.Width * map.Width + map.Height * map.Height);
 			float targetDistance = diag * distanceMultiplier + distanceOffset;
 			currentDistance = Mathf.Clamp(targetDistance, minDistance, maxDistance);
 
+			// Apply position/rotation/FOV
 			currentFOV = defaultFOV; // can become dynamic later if needed
-		}
-
-		private void UpdatePreviewCamera()
-		{
-			var cam = MapPreviewUtil.PreviewCamera;
-			if (cam == null) return;
 
 			Quaternion orbitRot = Quaternion.Euler(0f, currentOrbitAngle, 0f);
 			Quaternion baseTilt = Quaternion.Euler(baseTiltAngle, 0f, 0f);
@@ -216,7 +194,6 @@ namespace ClassicTilestorm
 			// Reset orbit view on map change
 			currentFOV = defaultFOV;
 
-			RefreshMapCameraParameters();
 			UpdatePreviewCamera();
 		}
 
