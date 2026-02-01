@@ -34,6 +34,9 @@ namespace ClassicTilestorm
 		[SerializeField] private TMP_Dropdown skyboxDropdown;
 		[SerializeField] private string noneSkyboxOptionText = "— Default —";
 
+		[SerializeField] private TMP_Dropdown characterDropdown;
+		[SerializeField] private string noneCharacterOptionText = "— Default —";
+
 		[Header("Preview Orbit & Camera")]
 		// ── Camera orbit control fields (unchanged, but no lerp anymore) ────────────────────────
 		[Header("Preview Orbit & Camera")]
@@ -83,7 +86,10 @@ namespace ClassicTilestorm
 			MapPreviewUtil.Initialize(previewCamerPrefab, CurrentMap);
 
 			PopulateSkyboxDropdown();
+			PopulateCharacterDropdown();
+
 			SyncSkyboxDropdown();
+			SyncCharacterDropdown();
 
 			MapPreviewUtil.UpdateRenderTextureSizeIfNeeded();
 			UpdateMapPreview();
@@ -218,6 +224,9 @@ namespace ClassicTilestorm
 
 			if (skyboxDropdown != null)
 				skyboxDropdown.onValueChanged.AddListener(OnSkyboxDropdownValueChanged);
+
+			if (characterDropdown != null)
+				characterDropdown.onValueChanged.AddListener(OnCharacterDropdownValueChanged);
 		}
 
 		private void OnMapNameChanged(string input)
@@ -253,6 +262,25 @@ namespace ClassicTilestorm
 			{
 				CurrentMap.Skybox = newSkybox;
 				SetSkybox(newSkybox);
+			}
+		}
+
+		private void OnCharacterDropdownValueChanged(int index)
+		{
+			if (CurrentMap == null) return;
+
+			string selected = index >= 0 && index < characterDropdown.options.Count
+				? characterDropdown.options[index].text
+				: null;
+
+			string newCharacter = (selected == noneCharacterOptionText) ? null : selected;
+
+			// Only update + react if actually changed
+			if (newCharacter != CurrentMap.character)
+			{
+				CurrentMap.character = newCharacter;
+				// TODO: later — apply character preview / reload model / etc.
+				// For now it just saves the selection
 			}
 		}
 
@@ -333,6 +361,7 @@ namespace ClassicTilestorm
 			SetSkybox(map.skybox);
 
 			SyncSkyboxDropdown();
+			SyncCharacterDropdown();
 			UpdateMapPreview();
 		}
 
@@ -387,6 +416,29 @@ namespace ClassicTilestorm
 
 		private void SyncSkyboxDropdown() =>
 			SyncDropdown(skyboxDropdown, CurrentMap?.skybox, noneSkyboxOptionText);
+
+		private void PopulateCharacterDropdown()
+		{
+			var characterNames = new List<string>
+			{
+				"Eggbot Default",
+				"Eggbot Industrial",
+				"Eggbot Egypt",
+				"Eggbot Medieval",
+				"Eggbot Jungle",
+				// ↑ Add more here later when real resources are ready
+			};
+
+			PopulateDropdown(characterDropdown, characterNames, noneCharacterOptionText);
+		}
+
+		private void SyncCharacterDropdown()
+		{
+			if (CurrentMap == null) return;
+
+			// Assuming Map class will eventually get a field like: public string Character { get; set; }
+			SyncDropdown(characterDropdown, CurrentMap.character, noneCharacterOptionText);
+		}
 
 		// ── CRUD Operations ──────────────────────────────────────────────────────────────
 
@@ -476,3 +528,10 @@ namespace ClassicTilestorm
 		}
 	}
 }
+
+
+      //"Eggbot Default",
+      //"Eggbot Industrial",
+      //"Eggbot Egypt",
+      //"Eggbot Medieval",
+      //"Eggbot Jungle",

@@ -92,7 +92,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &7262968465598831605
 RectTransform:
   m_ObjectHideFlags: 0
@@ -794,12 +794,12 @@ GameObject:
   - component: {fileID: 1922120838967763869}
   - component: {fileID: 6083578490432948730}
   m_Layer: 5
-  m_Name: LabelTexture
+  m_Name: LabelCharacter
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &5963624654493202399
 RectTransform:
   m_ObjectHideFlags: 0
@@ -847,7 +847,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 'Texture Anim:'
+  m_text: 'Egbbot:'
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -874,11 +874,11 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 30.1
+  m_fontSize: 22.1
   m_fontSizeBase: 24
   m_fontWeight: 400
   m_enableAutoSizing: 1
-  m_fontSizeMin: 18
+  m_fontSizeMin: 8
   m_fontSizeMax: 72
   m_fontStyle: 0
   m_HorizontalAlignment: 1
@@ -4281,6 +4281,8 @@ MonoBehaviour:
   previewImage: {fileID: 887984126197869973}
   skyboxDropdown: {fileID: 454261876308400215}
   noneSkyboxOptionText: "\u2014 Default \u2014"
+  characterDropdown: {fileID: 2297053546116088425}
+  noneCharacterOptionText: "\u2014 Default \u2014"
   orbitSpeed: 18
   baseTiltAngle: 25
   extraTiltAngle: 10
@@ -4462,7 +4464,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: <null>
+  m_text: <default>
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -4489,11 +4491,11 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 36.35
+  m_fontSize: 28.35
   m_fontSizeBase: 32
   m_fontWeight: 400
   m_enableAutoSizing: 1
-  m_fontSizeMin: 18
+  m_fontSizeMin: 8
   m_fontSizeMax: 72
   m_fontStyle: 0
   m_HorizontalAlignment: 1
@@ -7705,12 +7707,12 @@ GameObject:
   - component: {fileID: 9023150722587447474}
   - component: {fileID: 6794077394065359582}
   m_Layer: 5
-  m_Name: TextureDropdown
+  m_Name: CharacterDropdown
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &4521923356095562805
 RectTransform:
   m_ObjectHideFlags: 0
@@ -7822,13 +7824,13 @@ MonoBehaviour:
   m_MultiSelect: 0
   m_Options:
     m_Options:
-    - m_Text: <null>
+    - m_Text: <default>
       m_Image: {fileID: 0}
       m_Color: {r: 1, g: 1, b: 1, a: 1}
-    - m_Text: <textrue001>
+    - m_Text: <Egbbot001>
       m_Image: {fileID: 0}
       m_Color: {r: 1, g: 1, b: 1, a: 1}
-    - m_Text: <textrue001>
+    - m_Text: <Egbbot002>
       m_Image: {fileID: 0}
       m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_OnValueChanged:
