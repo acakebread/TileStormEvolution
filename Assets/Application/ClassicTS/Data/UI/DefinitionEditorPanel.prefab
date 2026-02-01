@@ -4267,7 +4267,7 @@ MonoBehaviour:
   draggable: 1
   resizable: 1
   resizeBorder: 16
-  minSize: {x: 256, y: 100}
+  minSize: {x: 600, y: 400}
   closeButton: {fileID: 0}
   definitionScrollView: {fileID: 3592446050041274724}
   contentParent: {fileID: 4343362275747073472}

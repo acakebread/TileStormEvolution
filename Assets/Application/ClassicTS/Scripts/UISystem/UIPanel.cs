@@ -12,7 +12,7 @@ namespace ClassicTilestorm
 		[SerializeField] private bool resizable = true;
 		[SerializeField, Tooltip("Resize grab zone thickness in pixels")]
 		private float resizeBorder = 16f; // increased from 8f
-		[SerializeField] private Vector2 minSize = new Vector2(256, 100);
+		[SerializeField] private Vector2 minSize = new Vector2(600, 400);
 
 		private RectTransform rect;
 		private Canvas canvas;
