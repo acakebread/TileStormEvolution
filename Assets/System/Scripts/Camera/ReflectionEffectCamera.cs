@@ -45,12 +45,6 @@ namespace MassiveHadronLtd
 
 		[SerializeField] private EffectMode effectMode = EffectMode.Water;
 		[SerializeField, HideInInspector] private EffectMode previousEffectMode;
-		public void SetEffectMode(EffectMode value)
-		{
-			effectMode = value;
-			if (value == EffectMode.Water)
-				ApplyWaterDefault();
-		}
 
 		[SerializeField, Tooltip("Tint for PerfectMirror and SurfaceFilm (multiplies reflection)")]
 		private Color mirrorTint = new Color(1f, 1f, 1f, 1f);
@@ -128,175 +122,152 @@ namespace MassiveHadronLtd
 				reflectionCamera.cullingMask = mainCamera.cullingMask;
 				reflectionCamera.cullingMask &= ~(1 << LayerMask.NameToLayer("Editor"));
 
-				var provider = obj.AddComponent<CameraCommandProvider>();
-				provider.RegisterCommand(RenderPassEvent.BeforeRendering, (cmd, cam) => cmd.SetInvertCulling(true));
-				provider.RegisterCommand(RenderPassEvent.AfterRenderingOpaques, (cmd, cam) => cmd.SetInvertCulling(false));
+				var _provider = obj.AddComponent<CameraCommandProvider>();
+				_provider.RegisterCommand(RenderPassEvent.BeforeRendering, (cmd, cam) => cmd.SetInvertCulling(true));
+				_provider.RegisterCommand(RenderPassEvent.AfterRenderingOpaques, (cmd, cam) => cmd.SetInvertCulling(false));
 
 				var data = obj.AddComponent<UniversalAdditionalCameraData>();
 				data.renderType = CameraRenderType.Overlay;
 				URPCameraHelper.SetClearDepth(data, false);
 			}
-			InitializeEffect();
-			previousEffectMode = effectMode;
-			StoreMaterialPropertyValues();
 
-			void InitializeEffect()
+			CleanupDynamicResources();
+
+			renderTexture = new RenderTexture(Screen.width, Screen.height, 24, RenderTextureFormat.ARGB32)
 			{
-				CleanupDynamicResources();
+				name = "RenderTexture",
+				useMipMap = false,
+				autoGenerateMips = false,
+				filterMode = FilterMode.Bilinear,
+				useDynamicScale = true
+			};
+			renderTexture.Create();
 
-				if (effectMode == EffectMode.SurfaceFilm || effectMode == EffectMode.FrostEffect || effectMode == EffectMode.OceanEffect)
+			if (effectMode == EffectMode.SurfaceFilm || effectMode == EffectMode.FrostEffect || effectMode == EffectMode.OceanEffect)
+			{
+				if (noiseTexture == null)
 				{
-					if (noiseTexture == null)
-					{
-						noiseTexture = WangTileGenerator.GenerateWangTileAtlas();
-						isTextureDynamic = true;
-					}
-					else
-					{
-						isTextureDynamic = false;
-					}
+					noiseTexture = WangTileGenerator.GenerateWangTileAtlas();
+					isTextureDynamic = true;
 				}
 				else
+					isTextureDynamic = false;
+			}
+			else
+			{
+				if (isTextureDynamic && noiseTexture != null)
 				{
-					if (isTextureDynamic && noiseTexture != null)
-					{
-						DestroyImmediate(noiseTexture);
-						noiseTexture = null;
-						isTextureDynamic = false;
-					}
-				}
-
-				Camera outputStage = null;
-				switch (effectMode)
-				{
-					case EffectMode.PerfectMirror:
-						SetupRenderTexture("RenderTexture");
-						effectMesh = new Mesh();
-						// Pass null for reflection texture — set later
-						effectMaterial = MaterialUtils.CreatePerfectMirrorOpaqueMaterial(null, mirrorTint);
-						isMaterialDynamic = true;
-						SetupTextureCamera();
-						reflectionCamera.targetTexture = renderTexture;
-						outputStage = mainCamera;
-						break;
-
-					case EffectMode.SurfaceFilm:
-						SetupRenderTexture("MirrorWithFilmRT");
-						effectMesh = new Mesh();
-						// Pass null for reflection texture — set later
-						effectMaterial = MaterialUtils.CreatePerlinWangOpaque(null, mirrorTint, noiseTexture, filmIntensity, noiseScale);
-						isMaterialDynamic = true;
-						SetupTextureCamera();
-						reflectionCamera.targetTexture = renderTexture;
-						outputStage = mainCamera;
-						break;
-
-					case EffectMode.FrostEffect:
-						SetupRenderTexture("RenderTexture");
-						effectMesh = new Mesh();
-						// Pass null for reflection texture — set later
-						effectMaterial = MaterialUtils.CreateFrostOpaqueMaterial(baseColor, frostDepth, null, noiseTexture, noiseStrength);
-						isMaterialDynamic = true;
-						SetupTextureCamera();
-						reflectionCamera.targetTexture = renderTexture;
-						outputStage = mainCamera;
-						break;
-
-					case EffectMode.Water:
-						SetupRenderTexture("WaterRenderTexture");
-						effectMesh = new Mesh();
-						// Pass null for reflection texture — set later
-						effectMaterial = MaterialUtils.CreateWaterMaterialOpaque(baseColor, null, rippleSpeed, rippleAmplitude, rippleFrequency, rippleOffset);
-						SkyboxUtility.SetSkyboxCubemap(effectMaterial, activeSkybox);
-						isMaterialDynamic = true;
-						SetupTextureCamera();
-						reflectionCamera.targetTexture = renderTexture;
-						outputStage = mainCamera;
-						break;
-
-					case EffectMode.OceanEffect:
-						SetupRenderTexture("OceanRenderTexture");
-						effectMesh = new Mesh();
-						// Pass null for reflection texture — set later
-						effectMaterial = MaterialUtils.CreateOceanOpaqueMaterial(baseColor, rippleSpeed, rippleAmplitude, rippleFrequency, rippleOffset, frostDepth, noiseStrength, frostThreshold, frostFadeRange, null, noiseTexture);
-						SkyboxUtility.SetSkyboxCubemap(effectMaterial, activeSkybox);
-						isMaterialDynamic = true;
-						SetupTextureCamera();
-						reflectionCamera.targetTexture = renderTexture;
-						outputStage = mainCamera;
-						break;
-
-					default:
-						var defaultData = mainCamera.gameObject.GetComponent<UniversalAdditionalCameraData>();
-						defaultData.cameraStack.Clear();
-						defaultData.cameraStack.Add(reflectionCamera);
-						outputStage = mainCamera;
-						break;
-				}
-
-				var mainCameraData = mainCamera.gameObject.GetComponent<UniversalAdditionalCameraData>();
-				if (postProcessingCamera != null) mainCameraData.cameraStack.Add(postProcessingCamera);
-
-				UpdateMaterialProperties();
-				SkyboxUtility.SetSkyboxCubemap(effectMaterial, activeSkybox);
-
-				if (outputStage != null)
-				{
-					var provider = outputStage.gameObject.GetComponent<CameraCommandProvider>();
-					if (provider == null)
-						provider = outputStage.gameObject.AddComponent<CameraCommandProvider>();
-
-					provider.RegisterCommand(RenderPassEvent.BeforeRenderingTransparents,
-					(cmd, cam) =>
-					{
-						if (effectMesh == null) return;
-						FrustumPlaneIntersection.GenerateFrustumPlaneIntersectionMesh(mainCamera, planeNormal, offset, effectMesh, true);
-						if (effectMesh != null && effectMesh.vertexCount >= 3 && effectMesh.triangles.Length >= 3 && effectMaterial != null)
-						{
-							effectMaterial.SetPass(0);
-							cmd.DrawMesh(effectMesh, Matrix4x4.identity, effectMaterial, 0, 0);
-						}
-					});
-				}
-
-				void SetupRenderTexture(string textureName)
-				{
-					if (renderTexture == null)
-					{
-						renderTexture = new RenderTexture(Screen.width, Screen.height, 24, RenderTextureFormat.ARGB32)
-						{
-							name = textureName,
-							useMipMap = false,
-							autoGenerateMips = false,
-							filterMode = FilterMode.Bilinear,
-							useDynamicScale = true
-						};
-						renderTexture.Create();
-					}
-				}
-
-				void SetupTextureCamera()
-				{
-					if (textureCamera == null)
-					{
-						var obj = new GameObject("TextureCamera");
-						obj.transform.SetParent(transform, false);
-						textureCamera = obj.AddComponent<Camera>();
-						textureCamera.CopyFrom(mainCamera);
-						textureCamera.clearFlags = mainCamera.clearFlags;
-						textureCamera.cullingMask = mainCamera.cullingMask;
-						textureCamera.cullingMask &= ~(1 << LayerMask.NameToLayer("TransparentFX"));
-						textureCamera.cullingMask &= ~(1 << PreviewRenderLayers.previewTransparentLayer);
-						textureCamera.cullingMask &= ~(1 << LayerMask.NameToLayer("Editor"));
-						textureCamera.targetTexture = renderTexture;
-						textureCamera.depth = mainCamera.depth - 1;
-						var data = obj.AddComponent<UniversalAdditionalCameraData>();
-						data.cameraStack.Clear();
-						data.cameraStack.Add(reflectionCamera);
-						obj.AddComponent<CameraCommandProvider>();
-					}
+					DestroyImmediate(noiseTexture);
+					noiseTexture = null;
+					isTextureDynamic = false;
 				}
 			}
+
+			switch (effectMode)
+			{
+				case EffectMode.PerfectMirror:
+					renderTexture.name = "RenderTexture";
+					effectMesh = new Mesh();
+					effectMaterial = MaterialUtils.CreatePerfectMirrorOpaqueMaterial(renderTexture, mirrorTint);
+					isMaterialDynamic = true;
+					SetupTextureCamera();
+					reflectionCamera.targetTexture = renderTexture;
+					break;
+
+				case EffectMode.SurfaceFilm:
+					renderTexture.name = "MirrorWithFilmRT";
+					effectMesh = new Mesh();
+					effectMaterial = MaterialUtils.CreatePerlinWangOpaque(renderTexture, mirrorTint, noiseTexture, filmIntensity, noiseScale);
+					isMaterialDynamic = true;
+					SetupTextureCamera();
+					reflectionCamera.targetTexture = renderTexture;
+					break;
+
+				case EffectMode.FrostEffect:
+					renderTexture.name = "RenderTexture";
+					effectMesh = new Mesh();
+					effectMaterial = MaterialUtils.CreateFrostOpaqueMaterial(baseColor, frostDepth, renderTexture, noiseTexture, noiseStrength);
+					isMaterialDynamic = true;
+					SetupTextureCamera();
+					reflectionCamera.targetTexture = renderTexture;
+					break;
+
+				case EffectMode.Water:
+					renderTexture.name = "WaterRenderTexture";
+					effectMesh = new Mesh();
+					effectMaterial = MaterialUtils.CreateWaterMaterialOpaque(baseColor, renderTexture, rippleSpeed, rippleAmplitude, rippleFrequency, rippleOffset);
+					isMaterialDynamic = true;
+					SetupTextureCamera();
+					reflectionCamera.targetTexture = renderTexture;
+					break;
+
+				case EffectMode.OceanEffect:
+					renderTexture.name = "OceanRenderTexture";
+					effectMesh = new Mesh();
+					effectMaterial = MaterialUtils.CreateOceanOpaqueMaterial(baseColor, rippleSpeed, rippleAmplitude, rippleFrequency, rippleOffset, frostDepth, noiseStrength, frostThreshold, frostFadeRange, null, noiseTexture);
+					isMaterialDynamic = true;
+					SetupTextureCamera();
+					reflectionCamera.targetTexture = renderTexture;
+					break;
+
+				default:
+					var defaultData = mainCamera.gameObject.GetComponent<UniversalAdditionalCameraData>();
+					defaultData.cameraStack.Clear();
+					defaultData.cameraStack.Add(reflectionCamera);
+					break;
+			}
+
+			var mainCameraData = mainCamera.gameObject.GetComponent<UniversalAdditionalCameraData>();
+			if (postProcessingCamera != null) mainCameraData.cameraStack.Add(postProcessingCamera);
+
+			var provider = mainCamera.gameObject.GetComponent<CameraCommandProvider>();
+			if (provider == null)
+				provider = mainCamera.gameObject.AddComponent<CameraCommandProvider>();
+
+			provider.RegisterCommand(RenderPassEvent.BeforeRenderingTransparents,
+			(cmd, cam) =>
+			{
+				if (effectMesh == null) return;
+				FrustumPlaneIntersection.GenerateFrustumPlaneIntersectionMesh(mainCamera, planeNormal, offset, effectMesh, true);
+				if (effectMesh != null && effectMesh.vertexCount >= 3 && effectMesh.triangles.Length >= 3 && effectMaterial != null)
+				{
+					effectMaterial.SetPass(0);
+					cmd.DrawMesh(effectMesh, Matrix4x4.identity, effectMaterial, 0, 0);
+				}
+			});
+
+			UpdateMaterialProperties();
+			StoreMaterialPropertyValues();
+			previousEffectMode = effectMode;
+
+			void SetupTextureCamera()
+			{
+				if (textureCamera == null)
+				{
+					var obj = new GameObject("TextureCamera");
+					obj.transform.SetParent(transform, false);
+					textureCamera = obj.AddComponent<Camera>();
+					textureCamera.CopyFrom(mainCamera);
+					textureCamera.clearFlags = mainCamera.clearFlags;
+					textureCamera.cullingMask = mainCamera.cullingMask;
+					textureCamera.cullingMask &= ~(1 << LayerMask.NameToLayer("TransparentFX"));
+					textureCamera.cullingMask &= ~(1 << PreviewRenderLayers.previewTransparentLayer);
+					textureCamera.cullingMask &= ~(1 << LayerMask.NameToLayer("Editor"));
+					textureCamera.targetTexture = renderTexture;
+					textureCamera.depth = mainCamera.depth - 1;
+					var data = obj.AddComponent<UniversalAdditionalCameraData>();
+					data.cameraStack.Clear();
+					data.cameraStack.Add(reflectionCamera);
+					obj.AddComponent<CameraCommandProvider>();
+				}
+			}
+		}
+
+		public void SetEffectMode(EffectMode value)
+		{
+			effectMode = value;
+			if (value == EffectMode.Water)
+				ApplyWaterDefault();
 		}
 
 		private bool HasMaterialPropertiesChanged()
