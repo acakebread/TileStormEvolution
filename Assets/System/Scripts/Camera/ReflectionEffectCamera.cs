@@ -106,10 +106,7 @@ namespace MassiveHadronLtd
 		[SerializeField, HideInInspector] private bool isPreviewCamera = false;
 		public void SetPreviewMode(bool value) => isPreviewCamera = value;
 
-		private Material GetActiveSkybox()
-		{
-			return overrideSkyboxMaterial != null ? overrideSkyboxMaterial : RenderSettings.skybox;
-		}
+		private Material activeSkybox => overrideSkyboxMaterial != null ? overrideSkyboxMaterial : RenderSettings.skybox;
 
 		void Awake()
 		{
@@ -154,11 +151,11 @@ namespace MassiveHadronLtd
 		private Material overrideSkyboxMaterial;
 		public void SetSkyboxOverride(Material value)
 		{
+			//lastSkyboxMaterial = activeSkybox;
 			overrideSkyboxMaterial = value;
-			lastSkyboxMaterial = GetActiveSkybox();
 
-			if (effectMaterial == null) return;
-			SkyboxUtility.SetSkyboxCubemap(effectMaterial, overrideSkyboxMaterial);//lastSkyboxMaterial
+			//if (effectMaterial == null) return;
+			//SkyboxUtility.SetSkyboxCubemap(effectMaterial, overrideSkyboxMaterial);//lastSkyboxMaterial
 		}
 
 		private void InitializeEffect()
@@ -224,6 +221,7 @@ namespace MassiveHadronLtd
 					SetupRenderTexture("WaterRenderTexture");
 					effectMesh = new Mesh();
 					effectMaterial = MaterialUtils.CreateWaterMaterialOpaque(baseColor, renderTexture, rippleSpeed, rippleAmplitude, rippleFrequency, rippleOffset);
+					SkyboxUtility.SetSkyboxCubemap(effectMaterial, activeSkybox);
 					isMaterialDynamic = true;
 					SetupTextureCamera();
 					reflectionCamera.targetTexture = renderTexture;
@@ -234,6 +232,7 @@ namespace MassiveHadronLtd
 					SetupRenderTexture("OceanRenderTexture");
 					effectMesh = new Mesh();
 					effectMaterial = MaterialUtils.CreateOceanOpaqueMaterial(baseColor, rippleSpeed, rippleAmplitude, rippleFrequency, rippleOffset, frostDepth, noiseStrength, frostThreshold, frostFadeRange, renderTexture, noiseTexture);
+					SkyboxUtility.SetSkyboxCubemap(effectMaterial, activeSkybox);
 					isMaterialDynamic = true;
 					SetupTextureCamera();
 					reflectionCamera.targetTexture = renderTexture;
@@ -252,7 +251,7 @@ namespace MassiveHadronLtd
 			if (postProcessingCamera != null) mainCameraData.cameraStack.Add(postProcessingCamera);
 
 			UpdateMaterialProperties();
-			SkyboxUtility.SetSkyboxCubemap(effectMaterial, overrideSkyboxMaterial ?? RenderSettings.skybox);
+			SkyboxUtility.SetSkyboxCubemap(effectMaterial, activeSkybox);
 
 			if (outputStage != null)
 			{
@@ -334,7 +333,7 @@ namespace MassiveHadronLtd
 				   reflectionStrength != lastReflectionStrength ||
 				   frostThreshold != lastFrostThreshold ||
 				   frostFadeRange != lastFrostFadeRange ||
-				   GetActiveSkybox() != lastSkyboxMaterial;
+				   activeSkybox != lastSkyboxMaterial;
 		}
 
 		private void StoreMaterialPropertyValues()
@@ -353,7 +352,7 @@ namespace MassiveHadronLtd
 			lastReflectionStrength = reflectionStrength;
 			lastFrostThreshold = frostThreshold;
 			lastFrostFadeRange = frostFadeRange;
-			lastSkyboxMaterial = GetActiveSkybox();
+			lastSkyboxMaterial = activeSkybox;
 		}
 
 		private void UpdateMaterialProperties()
@@ -389,9 +388,7 @@ namespace MassiveHadronLtd
 						effectMaterial.SetFloat("_RippleFrequency", rippleFrequency);
 						effectMaterial.SetFloat("_RippleOffset", rippleOffset);
 						effectMaterial.SetFloat("_ReflectionStrength", reflectionStrength);
-						var activeSky = GetActiveSkybox();
-						if (activeSky != lastSkyboxMaterial)
-							SkyboxUtility.SetSkyboxCubemap(effectMaterial, activeSky);
+						SkyboxUtility.SetSkyboxCubemap(effectMaterial, activeSkybox);
 						break;
 
 					case EffectMode.OceanEffect:
@@ -406,9 +403,7 @@ namespace MassiveHadronLtd
 						effectMaterial.SetFloat("_FrostThreshold", frostThreshold);
 						effectMaterial.SetFloat("_FrostFadeRange", frostFadeRange);
 						effectMaterial.SetTexture("_NoiseTex", noiseTexture);
-						var _activeSky = GetActiveSkybox();
-						if (_activeSky != lastSkyboxMaterial)
-							SkyboxUtility.SetSkyboxCubemap(effectMaterial, _activeSky);
+						SkyboxUtility.SetSkyboxCubemap(effectMaterial, activeSkybox);
 						break;
 				}
 
@@ -487,7 +482,7 @@ namespace MassiveHadronLtd
 		{
 			if (effectMode == EffectMode.Water || effectMode == EffectMode.OceanEffect)
 			{
-				lastSkyboxMaterial = overrideSkyboxMaterial ?? RenderSettings.skybox;
+				lastSkyboxMaterial = activeSkybox;
 				SkyboxUtility.SetSkyboxCubemap(effectMaterial, lastSkyboxMaterial);
 			}
 		}
