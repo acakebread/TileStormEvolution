@@ -4361,14 +4361,18 @@ MonoBehaviour:
   colourPickerImage: {fileID: 4382211045647294586}
   brightnessPickerImage: {fileID: 2548264389916112201}
   swatchImage: {fileID: 4711762663077492972}
-  orbitSpeed: 18
-  baseTiltAngle: 25
-  extraTiltAngle: 10
-  distanceMultiplier: 0.35
-  distanceOffset: 0
-  minDistance: 5
-  maxDistance: 80
-  defaultFOV: 60
+  backgroundColor: {r: 0.129, g: 0.698, b: 0.882, a: 1}
+  fieldOfView: 50
+  sizeToDistanceFactor: 0.8
+  defaultTiltAngle: 35
+  minTiltAngle: 30
+  maxTiltAngle: 90
+  minDistance: 2
+  maxDistance: 120
+  dragOrbitSensitivity: 0.25
+  dragTiltSensitivity: 0.2
+  scrollZoomSensitivity: 0.6
+  autoRotateSpeed: -12
 --- !u!1 &4714438361071147397
 GameObject:
   m_ObjectHideFlags: 0

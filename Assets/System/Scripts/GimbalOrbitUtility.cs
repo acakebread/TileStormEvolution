@@ -32,6 +32,36 @@ namespace MassiveHadronLtd
 		private const int VelocityHistoryLength = 5;  // last 5 frames
 		private Vector2 frameVel;
 
+		[Header("Pivot")]
+		public Vector3 PivotOffset = Vector3.zero;           // ← new field, default (0,0,0)
+
+		// Optional: expose a setter if you want to change it at runtime
+		public void SetPivot(Vector3 worldPivot)
+		{
+			PivotOffset = worldPivot;
+		}
+
+		// ── New method: update framing without resetting angles ───────────────────────────────
+		public void Reframe(Bounds newBounds, float distanceMultiplier = 1f, float? overridePivotY = null)
+		{
+			currentModelBounds = newBounds;
+
+			// Distance calculation (with optional closer zoom)
+			float diag = newBounds.size.magnitude;
+			float target = diag * SizeToDistanceFactor * distanceMultiplier;
+			CurrentDistance = Mathf.Clamp(target, MinDistance, MaxDistance);
+			CurrentTiltAngle = Mathf.Clamp(CurrentTiltAngle, MinTiltAngle, MaxTiltAngle);
+
+			// Pivot Y override (for maps: set to 0 or center.y)
+			if (overridePivotY.HasValue)
+			{
+				PivotOffset = new Vector3(0, overridePivotY.Value, 0);
+			}
+
+			lastInputTime = Time.unscaledTime;
+			OnTransformChanged?.Invoke();
+		}
+
 		// State
 		public float CurrentOrbitAngle { get; private set; }
 		public float CurrentTiltAngle { get; private set; }
@@ -90,6 +120,8 @@ namespace MassiveHadronLtd
 			velocityHistory.Clear();
 
 			lastInputTime = Time.unscaledTime - AutoRotateTimeout + 1f;
+
+			CurrentTiltAngle = Mathf.Clamp(CurrentTiltAngle, MinTiltAngle, MaxTiltAngle);
 
 			OnTransformChanged?.Invoke();
 		}
@@ -181,10 +213,10 @@ namespace MassiveHadronLtd
 			}
 		}
 
+		// ── Updated GetCameraTransform to use PivotYOffset ────────────────────────────────
 		public (Vector3 position, Quaternion rotation) GetCameraTransform()
 		{
-			float gimbalY = currentModelBounds.max.y * 0.5f;
-			Vector3 gimbalPosition = Vector3.up * gimbalY;
+			Vector3 gimbalPosition = currentModelBounds.center + PivotOffset;
 
 			Quaternion rotation = Quaternion.Euler(CurrentTiltAngle, CurrentOrbitAngle, 0f);
 			Vector3 forward = rotation * Vector3.forward;

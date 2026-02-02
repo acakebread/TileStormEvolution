@@ -45,31 +45,32 @@ namespace ClassicTilestorm
 
 		#endregion
 
+		#region Preview Settings (replacing old orbit & camera section)
+
+		[Header("Preview Settings – Map View")]
+		[SerializeField] private Color backgroundColor = new Color(0.129f, 0.698f, 0.882f);
+		[SerializeField] private float fieldOfView = 50f;
+		[SerializeField] private float sizeToDistanceFactor = 0.8f;      // tuned for map scale
+		[SerializeField] private float defaultTiltAngle = 35f;
+		[SerializeField] private float minTiltAngle = 30f;
+		[SerializeField] private float maxTiltAngle = 90f;
+		[SerializeField] private float minDistance = 2f;
+		[SerializeField] private float maxDistance = 120f;
+		[SerializeField] private float dragOrbitSensitivity = 0.25f;
+		[SerializeField] private float dragTiltSensitivity = 0.20f;
+		[SerializeField] private float scrollZoomSensitivity = 0.6f;
+		[SerializeField] private float autoRotateSpeed = -12f;
+
+		#endregion
+
 		// Color picker state
-		private Texture2D colorTexture;   // rainbow square
-		private Texture2D valueTexture;   // brightness slider
-		private float currentHue = 0f;    // 0 = red start
+		private Texture2D colorTexture;
+		private Texture2D valueTexture;
+		private float currentHue = 0f;
 		private float currentSaturation = 0.8f;
 		private float currentValue = 1f;
 		private UIDragHandler colorDrag;
 		private UIDragHandler valueDrag;
-
-		private enum ActivePicker { None, ColorSquare, ValueSlider }
-
-		[Header("Preview Orbit & Camera")]
-		[SerializeField] private float orbitSpeed = 18f;
-		[SerializeField] private float baseTiltAngle = 25f;
-		[SerializeField] private float extraTiltAngle = 10f;
-		[SerializeField] private float distanceMultiplier = 0.35f;
-		[SerializeField] private float distanceOffset = 0f;
-		[SerializeField] private float minDistance = 5f;
-		[SerializeField] private float maxDistance = 80f;
-		[SerializeField] private float defaultFOV = 60f;
-
-		private float currentOrbitAngle = 45f;
-		private Vector3 currentMapCenter = Vector3.zero;
-		private float currentDistance = 12f;
-		private float currentFOV;
 
 		private readonly List<Toggle> spawnedMapToggles = new List<Toggle>();
 		private ToggleGroup toggleGroup;
@@ -82,6 +83,9 @@ namespace ClassicTilestorm
 
 		private GameObject currentPreviewInstance;
 
+		// Gimbal orbit controller (replaces old auto-orbit)
+		private GimbalOrbitController orbitController;
+
 		protected override void Awake()
 		{
 			base.Awake();
@@ -92,8 +96,9 @@ namespace ClassicTilestorm
 		{
 			base.OnEnable();
 
-			colorDrag = colourPickerImage.GetComponent<UIDragHandler>();
-			valueDrag = brightnessPickerImage.GetComponent<UIDragHandler>();
+			// ── Color picker drag wiring ───────────────────────────────────────
+			colorDrag = colourPickerImage?.GetComponent<UIDragHandler>();
+			valueDrag = brightnessPickerImage?.GetComponent<UIDragHandler>();
 
 			if (colorDrag != null)
 			{
@@ -107,24 +112,7 @@ namespace ClassicTilestorm
 				valueDrag.OnDragEvent += OnValuePointer;
 			}
 
-			RefreshMapList();
-			SyncColorPickerToCurrentMap();
-
-			if (previewImage != null)
-				MapPreviewUtil.SetPreviewUI(previewImage, previewImage.rectTransform);
-
-			MapPreviewUtil.Initialize(previewCamerPrefab, CurrentMap);
-
-			PopulateSkyboxDropdown();
-			PopulateCharacterDropdown();
-
-			SyncSkyboxDropdown();
-			SyncCharacterDropdown();
-
-			MapPreviewUtil.UpdateRenderTextureSizeIfNeeded();
-			UpdateMapPreview();
-
-			// Initialize rainbow + brightness picker
+			// ── Critical: recreate & assign color picker textures (this was missing) ──
 			if (colourPickerImage != null && brightnessPickerImage != null)
 			{
 				colorTexture = ColorPickerSquareUtility.CreateColorPickerTexture(
@@ -133,8 +121,28 @@ namespace ClassicTilestorm
 				);
 				colourPickerImage.texture = colorTexture;
 
-				UpdateValueSlider();
+				UpdateValueSlider();  // creates brightness slider based on initial hue/sat
 			}
+
+			// ── Rest of your OnEnable ──────────────────────────────────────────
+			InitializeOrbitController();
+			SetupPreviewInput();
+
+			RefreshMapList();
+			PopulateSkyboxDropdown();
+			PopulateCharacterDropdown();
+
+			SyncColorPickerToCurrentMap();   // now safe — textures exist
+			SyncSkyboxDropdown();
+			SyncCharacterDropdown();
+
+			if (previewImage != null)
+				MapPreviewUtil.SetPreviewUI(previewImage, previewImage.rectTransform);
+
+			MapPreviewUtil.Initialize(previewCamerPrefab, CurrentMap);
+			MapPreviewUtil.UpdateRenderTextureSizeIfNeeded();
+
+			UpdateMapPreview();
 		}
 
 		protected override void OnDisable()
@@ -151,8 +159,13 @@ namespace ClassicTilestorm
 				valueDrag.OnDragEvent -= OnValuePointer;
 			}
 
-			ClearMapListItems();
+			if (orbitController != null)
+			{
+				orbitController.OnTransformChanged -= ApplyOrbitToPreviewCamera;
+				orbitController = null;
+			}
 
+			ClearMapListItems();
 			MapPreviewUtil.ClearPreviewMap();
 
 			if (currentPreviewInstance != null)
@@ -174,17 +187,92 @@ namespace ClassicTilestorm
 
 		private void Update()
 		{
-			if (!isActiveAndEnabled || CurrentMap == null) return;
+			if (!isActiveAndEnabled) return;
 
 			MapPreviewUtil.UpdateRenderTextureSizeIfNeeded();
 
-			currentOrbitAngle += orbitSpeed * Time.deltaTime;
-			currentOrbitAngle %= 360f;
-
-			UpdatePreviewCamera();
+			orbitController?.Update();
+			// No need for manual camera update – handled by OnTransformChanged callback
 		}
 
-		// ── Color Picker Input ──────────────────────────────────────────────────────
+		// ────────────────────────────────────────────────────────────────────────────────
+		//   Orbit Controller Setup
+		// ────────────────────────────────────────────────────────────────────────────────
+
+		//private void InitializeOrbitController()
+		//{
+		//	orbitController = new GimbalOrbitController(
+		//		dragOrbitSens: dragOrbitSensitivity,
+		//		dragTiltSens: dragTiltSensitivity,
+		//		scrollZoomSens: scrollZoomSensitivity,
+		//		minTilt: minTiltAngle,
+		//		maxTilt: maxTiltAngle,
+		//		minDist: minDistance,
+		//		maxDist: maxDistance,
+		//		sizeToDistFactor: sizeToDistanceFactor
+		//	)
+		//	{
+		//		AutoRotateSpeed = autoRotateSpeed,
+		//		AutoRotateTimeout = 3.5f,
+		//		EnableInertia = true,
+		//		PivotOffset = new Vector3(0, -0.5f, 0)   // or 0, 0, 0 — tune as needed
+		//	};
+
+		//	orbitController.OnTransformChanged += ApplyOrbitToPreviewCamera;
+		//}
+
+		private void InitializeOrbitController()
+		{
+			orbitController = new GimbalOrbitController(
+				dragOrbitSens: dragOrbitSensitivity,
+				dragTiltSens: dragTiltSensitivity,
+				scrollZoomSens: scrollZoomSensitivity,
+				minTilt: minTiltAngle,
+				maxTilt: maxTiltAngle,
+				minDist: minDistance,
+				maxDist: maxDistance,
+				sizeToDistFactor: sizeToDistanceFactor
+			)
+			{
+				AutoRotateSpeed = autoRotateSpeed,
+				AutoRotateTimeout = 0.001f,
+				EnableInertia = true
+			};
+
+			// Map-specific: pivot at center Y = 0 (or slightly below)
+			orbitController.PivotOffset = new Vector3(0, -0.5f, 0);   // or 0, 0, 0 — tune as needed
+
+			orbitController.OnTransformChanged += ApplyOrbitToPreviewCamera;
+		}
+
+
+		private void SetupPreviewInput()
+		{
+			if (previewImage == null) return;
+
+			if (!previewImage.TryGetComponent<PointerDragScrollHandler>(out var handler))
+				handler = previewImage.gameObject.AddComponent<PointerDragScrollHandler>();
+
+			handler.Setup(
+				onDrag: orbitController.ProcessDrag,
+				onScroll: orbitController.ProcessScroll,
+				onUp: orbitController.EndDrag
+			);
+		}
+
+		private void ApplyOrbitToPreviewCamera()
+		{
+			var cam = MapPreviewUtil.PreviewCamera;
+			if (cam == null || orbitController == null) return;
+
+			var (pos, rot) = orbitController.GetCameraTransform();
+			cam.transform.SetPositionAndRotation(pos, rot);
+			cam.fieldOfView = fieldOfView;
+		}
+
+		// ────────────────────────────────────────────────────────────────────────────────
+		//   Color Picker (unchanged)
+		// ────────────────────────────────────────────────────────────────────────────────
 
 		private void OnColorPointer(UIDragHandler sender, PointerEventData eventData)
 		{
@@ -196,14 +284,9 @@ namespace ClassicTilestorm
 			UpdateColorFromPointer(eventData, brightnessPickerImage.rectTransform, valueTexture, false);
 		}
 
-		private void UpdateColorFromPointer(
-			PointerEventData eventData,
-			RectTransform rt,
-			Texture2D tex,
-			bool isColorSquare)
+		private void UpdateColorFromPointer(PointerEventData eventData, RectTransform rt, Texture2D tex, bool isColorSquare)
 		{
-			if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(
-				rt, eventData.position, eventData.pressEventCamera, out Vector2 localPos))
+			if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(rt, eventData.position, eventData.pressEventCamera, out Vector2 localPos))
 				return;
 
 			Color picked = ColorPickerSquareUtility.GetColorFromLocalPoint(tex, localPos, rt);
@@ -242,7 +325,6 @@ namespace ClassicTilestorm
 		{
 			if (CurrentMap == null)
 			{
-				// Optional: reset to some default (white / neutral)
 				currentHue = 0f;
 				currentSaturation = 0.8f;
 				currentValue = 1f;
@@ -253,30 +335,18 @@ namespace ClassicTilestorm
 			}
 
 			Color lightColor = CurrentMap.Light;
-
-			// Convert stored color → HSV
 			Color.RGBToHSV(lightColor, out currentHue, out currentSaturation, out currentValue);
-
-			// Refresh the brightness slider (depends on hue & saturation)
 			UpdateValueSlider();
 
-			// Update preview swatch
 			if (swatchImage != null)
-			{
 				swatchImage.color = lightColor;
-			}
 
-			// Apply to scene lighting (if you want immediate preview)
 			SetLightColour(lightColor);
-
-			// ── Optional: if you have visible picker handles/cursors ─────────────────
-			// Position them according to the new values
-			// Example (if you have draggable thumbs):
-			// if (colorDrag != null) colorDrag.SetNormalizedPosition(currentHue, currentSaturation);
-			// if (valueDrag != null) valueDrag.SetNormalizedPosition(0.5f, currentValue); // x ignored
 		}
 
-		// ── The rest of your code (UI, maps, preview, etc.) unchanged ──────────────
+		// ────────────────────────────────────────────────────────────────────────────────
+		//   Map List & Selection (mostly unchanged)
+		// ────────────────────────────────────────────────────────────────────────────────
 
 		private void InitializeUIReferences()
 		{
@@ -316,10 +386,7 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			Debug.Log($"Map '{CurrentMap.name}' → '{newName}'");
-
 			bool result = ResourceManager.RenameMapName(CurrentMap, newName);
-
 			RefreshMapList();
 		}
 
@@ -369,9 +436,7 @@ namespace ClassicTilestorm
 			}
 
 			for (int i = 0; i < maps.Count; i++)
-			{
 				CreateMapListItem(maps[i], i);
-			}
 
 			SetSelectedMapIndex(lastSelectedMapIndex);
 		}
@@ -428,38 +493,32 @@ namespace ClassicTilestorm
 			if (index >= 0 && index < spawnedMapToggles.Count)
 				spawnedMapToggles[index].SetIsOnWithoutNotify(true);
 
-			SetSkybox(map.skybox);
+			SetSkybox(map?.Skybox);
 			SyncColorPickerToCurrentMap();
-
 			SyncSkyboxDropdown();
 			SyncCharacterDropdown();
+
 			UpdateMapPreview();
 		}
 
 		private void UpdateDeleteButtonState()
 		{
 			if (ButtonDelete == null) return;
-
 			bool hasSelection = lastSelectedMapIndex >= 0;
-			bool cannotDelete = false;
-
-			ButtonDelete.interactable = hasSelection && !cannotDelete;
+			ButtonDelete.interactable = hasSelection;
 
 			if (ButtonDelete.GetComponentInChildren<TMP_Text>() is TMP_Text txt)
 			{
-				txt.text = cannotDelete ? "Delete (locked)" : "Delete";
+				txt.text = "Delete";
 			}
 		}
 
 		private void PopulateDropdown(TMP_Dropdown dropdown, IEnumerable<string> items, string noneOption)
 		{
 			if (dropdown == null) return;
-
 			dropdown.ClearOptions();
-
 			var options = new List<string> { noneOption };
 			options.AddRange(items);
-
 			dropdown.AddOptions(options);
 			dropdown.interactable = true;
 		}
@@ -467,16 +526,12 @@ namespace ClassicTilestorm
 		private void SyncDropdown(TMP_Dropdown dropdown, string currentValue, string noneOption)
 		{
 			if (dropdown == null) return;
-
 			if (string.IsNullOrEmpty(currentValue))
 			{
 				dropdown.SetValueWithoutNotify(0);
 				return;
 			}
-
-			int index = dropdown.options.FindIndex(opt =>
-				opt.text.Equals(currentValue, StringComparison.OrdinalIgnoreCase));
-
+			int index = dropdown.options.FindIndex(opt => opt.text.Equals(currentValue, StringComparison.OrdinalIgnoreCase));
 			dropdown.SetValueWithoutNotify(index >= 0 ? index : 0);
 		}
 
@@ -484,27 +539,24 @@ namespace ClassicTilestorm
 			PopulateDropdown(skyboxDropdown, Assets.ProjectAssets.GetSkycubeNames(), noneSkyboxOptionText);
 
 		private void SyncSkyboxDropdown() =>
-			SyncDropdown(skyboxDropdown, CurrentMap?.skybox, noneSkyboxOptionText);
+			SyncDropdown(skyboxDropdown, CurrentMap?.Skybox, noneSkyboxOptionText);
 
 		private void PopulateCharacterDropdown()
 		{
 			var characterNames = new List<string>
 			{
-				"Eggbot Default",
-				"Eggbot Industrial",
-				"Eggbot Egypt",
-				"Eggbot Medieval",
-				"Eggbot Jungle",
+				"Eggbot Default", "Eggbot Industrial", "Eggbot Egypt",
+				"Eggbot Medieval", "Eggbot Jungle",
 			};
-
 			PopulateDropdown(characterDropdown, characterNames, noneCharacterOptionText);
 		}
 
-		private void SyncCharacterDropdown()
-		{
-			if (CurrentMap == null) return;
-			SyncDropdown(characterDropdown, CurrentMap.character, noneCharacterOptionText);
-		}
+		private void SyncCharacterDropdown() =>
+			SyncDropdown(characterDropdown, CurrentMap?.character, noneCharacterOptionText);
+
+		// ────────────────────────────────────────────────────────────────────────────────
+		//   Map CRUD
+		// ────────────────────────────────────────────────────────────────────────────────
 
 		private void InsertMap()
 		{
@@ -533,8 +585,6 @@ namespace ClassicTilestorm
 			ResourceManager.database.maps = list.ToArray();
 
 			lastSelectedMapIndex = Mathf.Clamp(idx - 1, 0, list.Count - 1);
-			if (list.Count == 0) lastSelectedMapIndex = -1;
-
 			RefreshMapList();
 		}
 
@@ -582,6 +632,10 @@ namespace ClassicTilestorm
 			return candidate;
 		}
 
+		// ────────────────────────────────────────────────────────────────────────────────
+		//   Preview Utilities
+		// ────────────────────────────────────────────────────────────────────────────────
+
 		private void SetSkybox(string value = null)
 		{
 			var skyMaterial = SkyboxUtility.GetSkyboxMaterialForName(value);
@@ -592,35 +646,6 @@ namespace ClassicTilestorm
 		private void SetLightColour(Color value)
 		{
 			RenderSettings.ambientLight = value;
-		}
-
-		private void UpdatePreviewCamera()
-		{
-			var cam = MapPreviewUtil.PreviewCamera;
-			if (cam == null) return;
-
-			var map = CurrentMap;
-			if (map == null) return;
-
-			currentMapCenter = new Vector3(map.Width * 0.5f, 0f, map.Height * 0.5f);
-
-			float diag = Mathf.Sqrt(map.Width * map.Width + map.Height * map.Height);
-			float targetDistance = diag * distanceMultiplier + distanceOffset;
-			currentDistance = Mathf.Clamp(targetDistance, minDistance, maxDistance);
-
-			currentFOV = defaultFOV;
-
-			Quaternion orbitRot = Quaternion.Euler(0f, currentOrbitAngle, 0f);
-			Quaternion baseTilt = Quaternion.Euler(baseTiltAngle, 0f, 0f);
-			Quaternion extraTilt = Quaternion.Euler(extraTiltAngle, 0f, 0f);
-
-			Quaternion finalRotation = orbitRot * baseTilt * extraTilt;
-
-			Vector3 direction = finalRotation * Vector3.back;
-			Vector3 camPosition = currentMapCenter + direction * currentDistance;
-
-			cam.transform.SetPositionAndRotation(camPosition, finalRotation);
-			cam.fieldOfView = currentFOV;
 		}
 
 		private void UpdateMapPreview()
@@ -640,6 +665,7 @@ namespace ClassicTilestorm
 			if (map == null || map.Width <= 0 || map.Height <= 0)
 			{
 				previewImage.color = new Color(0.3f, 0.3f, 0.3f, 0.6f);
+				orbitController?.ResetView(false);
 				return;
 			}
 
@@ -653,15 +679,45 @@ namespace ClassicTilestorm
 			if (currentPreviewInstance == null)
 			{
 				previewImage.color = new Color(1f, 0.3f, 0.3f, 0.7f);
+				orbitController?.ResetView(false);
 				return;
+			}
+
+			// Compute bounds for better framing
+			var bounds = new Bounds();
+			bool first = true;
+
+			foreach (var r in currentPreviewInstance.GetComponentsInChildren<Renderer>())
+			{
+				if (first)
+				{
+					bounds = r.bounds;
+					first = false;
+				}
+				else
+				{
+					bounds.Encapsulate(r.bounds);
+				}
+			}
+
+			if (first) // fallback
+			{
+				bounds = new Bounds(
+					new Vector3(map.Width * 0.5f, 0, map.Height * 0.5f),
+					new Vector3(map.Width, 5f, map.Height)
+				);
 			}
 
 			MapPreviewUtil.UpdateRenderTextureSizeIfNeeded();
 
-			currentFOV = defaultFOV;
+			//// Reset gimbal view to frame the new map
+			//orbitController?.ResetView(true, bounds);
 
-			UpdatePreviewCamera();
+			// Reframe only — preserve angles, halve distance
+			orbitController?.Reframe(bounds, distanceMultiplier: 1f);
+
+			// Optional: fine-tune pivot if needed
+			//orbitController.PivotOffset = new Vector3(0, -0.5f, 0);   // example: slightly below center
 		}
 	}
 }
-
