@@ -95,7 +95,7 @@ namespace MassiveHadronLtd
 			MinDistance = minDist;
 			MaxDistance = maxDist;
 			SizeToDistanceFactor = sizeToDistFactor;
-			DefaultTiltAngle = defaultTilt;
+			CurrentTiltAngle = DefaultTiltAngle = defaultTilt;
 			EnableInertia = enableInertia;
 		}
 
