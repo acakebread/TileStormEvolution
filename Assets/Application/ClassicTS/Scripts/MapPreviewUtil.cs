@@ -2,8 +2,9 @@
 
 using MassiveHadronLtd;
 using UnityEngine;
-using UnityEngine.Rendering.Universal;
 using UnityEngine.UI;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 
 namespace ClassicTilestorm
 {
@@ -76,13 +77,12 @@ namespace ClassicTilestorm
 			previewCam = camGO.AddComponent<Camera>();
 			camGO.AddComponent<UniversalAdditionalCameraData>();
 			previewCam.cullingMask = PreviewRenderLayers.previewFullMask;
-			previewCam.clearFlags = CameraClearFlags.Skybox;// CameraClearFlags.SolidColor;
+			previewCam.clearFlags = CameraClearFlags.Skybox;
 			previewCam.backgroundColor = new Color(0.2f, 0.2f, 0.2f, 1f);
 			previewCam.nearClipPlane = 0.1f;
 			previewCam.farClipPlane = 2000f;
 
 			var reflectionEffect = camGO.AddComponent<ReflectionEffectCamera>();
-			reflectionEffect.SetPreviewMode(true);  // only this instance is a preview
 			reflectionEffect.SetEffectMode(ReflectionEffectCamera.EffectMode.Water);
 			reflectionEffect.SetOffset(-0.2f);
 
@@ -90,14 +90,14 @@ namespace ClassicTilestorm
 #endif
 
 			// Add the override component
-			var ambientOverride = camGO.AddComponent<PreviewAmbientOverride>();
+			var ambientOverride = camGO.AddComponent<PreviewRenderSettingsOverride>();
 			ambientOverride.SetMap(_map);  // pass your map reference
 
 			foreach (var childCam in camGO.GetComponentsInChildren<Camera>(true))  // true = include inactive
 			{
-				var overrideComp = childCam.gameObject.GetComponent<PreviewAmbientOverride>();
+				var overrideComp = childCam.gameObject.GetComponent<PreviewRenderSettingsOverride>();
 				if (overrideComp == null)
-					overrideComp = childCam.gameObject.AddComponent<PreviewAmbientOverride>();
+					overrideComp = childCam.gameObject.AddComponent<PreviewRenderSettingsOverride>();
 				overrideComp.SetMap(_map);  // safe even if duplicate calls
 			}
 
@@ -115,7 +115,7 @@ namespace ClassicTilestorm
 			if (camGO == null) return;
 
 			// Update ambient override on ALL preview cameras
-			foreach (var overrideComp in camGO.GetComponentsInChildren<PreviewAmbientOverride>(true))
+			foreach (var overrideComp in camGO.GetComponentsInChildren<PreviewRenderSettingsOverride>(true))
 				overrideComp.SetMap(map);
 
 			// Update skybox override too
@@ -199,6 +199,68 @@ namespace ClassicTilestorm
 	public static class MapPreviewExtensions
 	{
 		public static GameObject InstantiatePreviewCopy(this Map map, Transform parent, int layer) => map?.BuildPreviewGeometry(parent, layer);
+	}
+
+	[RequireComponent(typeof(Camera))]
+	internal class PreviewRenderSettingsOverride : MonoBehaviour
+	{
+		[SerializeField] private Map mapToUse;
+
+		private SphericalHarmonicsL2 originalProbe;
+		private Color originalAmbientLight;
+		private AmbientMode originalMode;
+		private float originalIntensity;
+		private Material originalSkybox;
+
+		//private RenderSettings overrideRenderSettings;//ToDo convert to using overrideRenderSettings instead of Map to make it general purpose
+
+		private void OnEnable()
+		{
+			RenderPipelineManager.beginCameraRendering += OnBeginRender;
+			RenderPipelineManager.endCameraRendering += OnEndRender;
+		}
+
+		private void OnDisable()
+		{
+			RenderPipelineManager.beginCameraRendering -= OnBeginRender;
+			RenderPipelineManager.endCameraRendering -= OnEndRender;
+		}
+
+		private void OnBeginRender(ScriptableRenderContext context, Camera cam)
+		{
+			if (cam != GetComponent<Camera>()) return;
+
+			// Save original settings
+			originalAmbientLight = RenderSettings.ambientLight;
+			originalMode = RenderSettings.ambientMode;
+			originalIntensity = RenderSettings.ambientIntensity;
+			originalSkybox = RenderSettings.skybox;
+
+			// Apply map lighting
+			Color previewColor = mapToUse?.Light ?? Color.white;
+			RenderSettings.ambientMode = AmbientMode.Flat;
+			RenderSettings.ambientLight = previewColor;
+			RenderSettings.ambientIntensity = 1f;
+
+			// Apply map skybox
+			var skyMat = mapToUse?.SkyboxMaterial;
+			if (skyMat != null)
+				RenderSettings.skybox = skyMat;
+		}
+
+		private void OnEndRender(ScriptableRenderContext context, Camera cam)
+		{
+			if (cam != GetComponent<Camera>()) return;
+
+			//	// Restore
+			RenderSettings.ambientProbe = originalProbe;
+			RenderSettings.ambientLight = originalAmbientLight;
+			RenderSettings.ambientMode = originalMode;
+			RenderSettings.ambientIntensity = originalIntensity;
+			RenderSettings.skybox = originalSkybox;
+		}
+
+		public void SetMap(Map map) => mapToUse = map;
 	}
 }
 
