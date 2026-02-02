@@ -141,6 +141,7 @@ namespace ClassicTilestorm
 
 			MapPreviewUtil.Initialize(previewCamerPrefab, CurrentMap);
 			MapPreviewUtil.UpdateRenderTextureSizeIfNeeded();
+			SetSkybox(CurrentMap?.Skybox);
 
 			UpdateMapPreview();
 		}
@@ -198,28 +199,6 @@ namespace ClassicTilestorm
 		// ────────────────────────────────────────────────────────────────────────────────
 		//   Orbit Controller Setup
 		// ────────────────────────────────────────────────────────────────────────────────
-
-		//private void InitializeOrbitController()
-		//{
-		//	orbitController = new GimbalOrbitController(
-		//		dragOrbitSens: dragOrbitSensitivity,
-		//		dragTiltSens: dragTiltSensitivity,
-		//		scrollZoomSens: scrollZoomSensitivity,
-		//		minTilt: minTiltAngle,
-		//		maxTilt: maxTiltAngle,
-		//		minDist: minDistance,
-		//		maxDist: maxDistance,
-		//		sizeToDistFactor: sizeToDistanceFactor
-		//	)
-		//	{
-		//		AutoRotateSpeed = autoRotateSpeed,
-		//		AutoRotateTimeout = 3.5f,
-		//		EnableInertia = true,
-		//		PivotOffset = new Vector3(0, -0.5f, 0)   // or 0, 0, 0 — tune as needed
-		//	};
-
-		//	orbitController.OnTransformChanged += ApplyOrbitToPreviewCamera;
-		//}
 
 		private void InitializeOrbitController()
 		{
@@ -340,8 +319,6 @@ namespace ClassicTilestorm
 
 			if (swatchImage != null)
 				swatchImage.color = lightColor;
-
-			//SetLightColour(lightColor);
 		}
 
 		// ────────────────────────────────────────────────────────────────────────────────
@@ -418,9 +395,7 @@ namespace ClassicTilestorm
 			string newCharacter = (selected == noneCharacterOptionText) ? null : selected;
 
 			if (newCharacter != CurrentMap.character)
-			{
 				CurrentMap.character = newCharacter;
-			}
 		}
 
 		private void RefreshMapList()
@@ -493,13 +468,13 @@ namespace ClassicTilestorm
 			if (index >= 0 && index < spawnedMapToggles.Count)
 				spawnedMapToggles[index].SetIsOnWithoutNotify(true);
 
-			SetSkybox(map?.Skybox);
 			SyncColorPickerToCurrentMap();
 			SyncSkyboxDropdown();
 			SyncCharacterDropdown();
 
 			MapPreviewUtil.SetActiveMap(map);
 			UpdateMapPreview();
+			SetSkybox(map?.Skybox);
 		}
 
 		private void UpdateDeleteButtonState()
@@ -644,11 +619,6 @@ namespace ClassicTilestorm
 				MapPreviewUtil.SetSkyboxOverride(skyMaterial);
 		}
 
-		//private void SetLightColour(Color value)
-		//{
-		//	//RenderSettings.ambientLight = value;
-		//}
-
 		private void UpdateMapPreview()
 		{
 			if (MapPreviewUtil.PreviewCamera == null || previewImage == null)
@@ -710,9 +680,6 @@ namespace ClassicTilestorm
 			}
 
 			MapPreviewUtil.UpdateRenderTextureSizeIfNeeded();
-
-			//// Reset gimbal view to frame the new map
-			//orbitController?.ResetView(true, bounds);
 
 			// Reframe only — preserve angles, halve distance
 			orbitController?.Reframe(bounds, distanceMultiplier: 1f);
