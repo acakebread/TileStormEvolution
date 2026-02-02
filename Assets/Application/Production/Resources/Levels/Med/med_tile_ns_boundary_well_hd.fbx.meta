@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: a8af70f55ff54ea4a99aa33c483449d9
+guid: 22b0d1c7412e0214894a1491245f6828
 ModelImporter:
   serializedVersion: 24200
   internalIDToNameTable: []
@@ -18,6 +18,11 @@ ModelImporter:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
       name: med_well
+    second: {fileID: 2100000, guid: e80abacc7c2479b42b180fae3fff87ee, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: well
     second: {fileID: 2100000, guid: e80abacc7c2479b42b180fae3fff87ee, type: 2}
   materials:
     materialImportMode: 2

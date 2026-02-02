@@ -19,6 +19,11 @@ ModelImporter:
       assembly: UnityEngine.CoreModule
       name: med_well
     second: {fileID: 2100000, guid: e80abacc7c2479b42b180fae3fff87ee, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: well
+    second: {fileID: 2100000, guid: e80abacc7c2479b42b180fae3fff87ee, type: 2}
   materials:
     materialImportMode: 2
     materialName: 0
