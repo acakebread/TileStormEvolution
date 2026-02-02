@@ -43,8 +43,7 @@ namespace MassiveHadronLtd
 			OceanEffect
 		}
 
-		[SerializeField] private EffectMode effectMode = EffectMode.Water;
-		[SerializeField, HideInInspector] private EffectMode previousEffectMode;
+		[SerializeField] private EffectMode effectMode = EffectMode.PerfectMirror;
 
 		[SerializeField, Tooltip("Tint for PerfectMirror and SurfaceFilm (multiplies reflection)")]
 		private Color mirrorTint = new Color(1f, 1f, 1f, 1f);
@@ -111,112 +110,6 @@ namespace MassiveHadronLtd
 			if (Camera.main == mainCamera)
 				PreviewRenderLayers.RemovePreviewLayers(mainCamera);
 
-			CleanupOrphanedChildren();
-
-			if (reflectionCamera == null)
-			{
-				var obj = new GameObject("ReflectionCamera");
-				obj.transform.SetParent(transform, false);
-				reflectionCamera = obj.AddComponent<Camera>();
-				reflectionCamera.clearFlags = CameraClearFlags.Nothing;
-				reflectionCamera.cullingMask = mainCamera.cullingMask;
-				reflectionCamera.cullingMask &= ~(1 << LayerMask.NameToLayer("Editor"));
-
-				var _provider = obj.AddComponent<CameraCommandProvider>();
-				_provider.RegisterCommand(RenderPassEvent.BeforeRendering, (cmd, cam) => cmd.SetInvertCulling(true));
-				_provider.RegisterCommand(RenderPassEvent.AfterRenderingOpaques, (cmd, cam) => cmd.SetInvertCulling(false));
-
-				var data = obj.AddComponent<UniversalAdditionalCameraData>();
-				data.renderType = CameraRenderType.Overlay;
-				URPCameraHelper.SetClearDepth(data, false);
-			}
-
-			CleanupDynamicResources();
-
-			renderTexture = new RenderTexture(Screen.width, Screen.height, 24, RenderTextureFormat.ARGB32)
-			{
-				name = "RenderTexture",
-				useMipMap = false,
-				autoGenerateMips = false,
-				filterMode = FilterMode.Bilinear,
-				useDynamicScale = true
-			};
-			renderTexture.Create();
-
-			if (effectMode == EffectMode.SurfaceFilm || effectMode == EffectMode.FrostEffect || effectMode == EffectMode.OceanEffect)
-			{
-				if (noiseTexture == null)
-				{
-					noiseTexture = WangTileGenerator.GenerateWangTileAtlas();
-					isTextureDynamic = true;
-				}
-				else
-					isTextureDynamic = false;
-			}
-			else
-			{
-				if (isTextureDynamic && noiseTexture != null)
-				{
-					DestroyImmediate(noiseTexture);
-					noiseTexture = null;
-					isTextureDynamic = false;
-				}
-			}
-
-			switch (effectMode)
-			{
-				case EffectMode.PerfectMirror:
-					renderTexture.name = "RenderTexture";
-					effectMesh = new Mesh();
-					effectMaterial = MaterialUtils.CreatePerfectMirrorOpaqueMaterial(renderTexture, mirrorTint);
-					isMaterialDynamic = true;
-					SetupTextureCamera();
-					reflectionCamera.targetTexture = renderTexture;
-					break;
-
-				case EffectMode.SurfaceFilm:
-					renderTexture.name = "MirrorWithFilmRT";
-					effectMesh = new Mesh();
-					effectMaterial = MaterialUtils.CreatePerlinWangOpaque(renderTexture, mirrorTint, noiseTexture, filmIntensity, noiseScale);
-					isMaterialDynamic = true;
-					SetupTextureCamera();
-					reflectionCamera.targetTexture = renderTexture;
-					break;
-
-				case EffectMode.FrostEffect:
-					renderTexture.name = "RenderTexture";
-					effectMesh = new Mesh();
-					effectMaterial = MaterialUtils.CreateFrostOpaqueMaterial(baseColor, frostDepth, renderTexture, noiseTexture, noiseStrength);
-					isMaterialDynamic = true;
-					SetupTextureCamera();
-					reflectionCamera.targetTexture = renderTexture;
-					break;
-
-				case EffectMode.Water:
-					renderTexture.name = "WaterRenderTexture";
-					effectMesh = new Mesh();
-					effectMaterial = MaterialUtils.CreateWaterMaterialOpaque(baseColor, renderTexture, rippleSpeed, rippleAmplitude, rippleFrequency, rippleOffset);
-					isMaterialDynamic = true;
-					SetupTextureCamera();
-					reflectionCamera.targetTexture = renderTexture;
-					break;
-
-				case EffectMode.OceanEffect:
-					renderTexture.name = "OceanRenderTexture";
-					effectMesh = new Mesh();
-					effectMaterial = MaterialUtils.CreateOceanOpaqueMaterial(baseColor, rippleSpeed, rippleAmplitude, rippleFrequency, rippleOffset, frostDepth, noiseStrength, frostThreshold, frostFadeRange, null, noiseTexture);
-					isMaterialDynamic = true;
-					SetupTextureCamera();
-					reflectionCamera.targetTexture = renderTexture;
-					break;
-
-				default:
-					var defaultData = mainCamera.gameObject.GetComponent<UniversalAdditionalCameraData>();
-					defaultData.cameraStack.Clear();
-					defaultData.cameraStack.Add(reflectionCamera);
-					break;
-			}
-
 			var mainCameraData = mainCamera.gameObject.GetComponent<UniversalAdditionalCameraData>();
 			if (postProcessingCamera != null) mainCameraData.cameraStack.Add(postProcessingCamera);
 
@@ -236,9 +129,111 @@ namespace MassiveHadronLtd
 				}
 			});
 
+			ApplyEffect(effectMode);
+		}
+
+		public void SetEffectMode(EffectMode value)
+		{
+			if (value == EffectMode.Water)
+				ApplyWaterDefault();
+
+			CleanupDynamicResources();
+
+			ApplyEffect(value);
+		}
+
+		private void ApplyEffect(EffectMode value)
+		{
+			effectMode = value;
+
+			renderTexture = new RenderTexture(Screen.width, Screen.height, 24, RenderTextureFormat.ARGB32)
+			{
+				name = "RenderTexture",
+				useMipMap = false,
+				autoGenerateMips = false,
+				filterMode = FilterMode.Bilinear,
+				useDynamicScale = true
+			};
+			renderTexture.Create();
+
+			var obj = new GameObject("ReflectionCamera");
+			obj.transform.SetParent(transform, false);
+			reflectionCamera = obj.AddComponent<Camera>();
+			reflectionCamera.clearFlags = CameraClearFlags.Nothing;
+			reflectionCamera.cullingMask = mainCamera.cullingMask;
+			reflectionCamera.cullingMask &= ~(1 << LayerMask.NameToLayer("Editor"));
+			reflectionCamera.targetTexture = renderTexture;
+
+			var _provider = obj.AddComponent<CameraCommandProvider>();
+			_provider.RegisterCommand(RenderPassEvent.BeforeRendering, (cmd, cam) => cmd.SetInvertCulling(true));
+			_provider.RegisterCommand(RenderPassEvent.AfterRenderingOpaques, (cmd, cam) => cmd.SetInvertCulling(false));
+
+			var data = obj.AddComponent<UniversalAdditionalCameraData>();
+			data.renderType = CameraRenderType.Overlay;
+			URPCameraHelper.SetClearDepth(data, false);
+
+			switch (effectMode)
+			{
+				case EffectMode.PerfectMirror:
+					renderTexture.name = "RenderTexture";
+					effectMesh = new Mesh();
+					effectMaterial = MaterialUtils.CreatePerfectMirrorOpaqueMaterial(renderTexture, mirrorTint);
+					isMaterialDynamic = true;
+					SetupTextureCamera();
+					reflectionCamera.targetTexture = renderTexture;
+					break;
+
+				case EffectMode.SurfaceFilm:
+					renderTexture.name = "MirrorWithFilmRT";
+					effectMesh = new Mesh();
+					noiseTexture = WangTileGenerator.GenerateWangTileAtlas();
+					isTextureDynamic = true;
+					effectMaterial = MaterialUtils.CreatePerlinWangOpaque(renderTexture, mirrorTint, noiseTexture, filmIntensity, noiseScale);
+					isMaterialDynamic = true;
+					SetupTextureCamera();
+					reflectionCamera.targetTexture = renderTexture;
+					break;
+
+				case EffectMode.FrostEffect:
+					renderTexture.name = "RenderTexture";
+					effectMesh = new Mesh();
+					noiseTexture = WangTileGenerator.GenerateWangTileAtlas();
+					isTextureDynamic = true;
+					effectMaterial = MaterialUtils.CreateFrostOpaqueMaterial(baseColor, frostDepth, renderTexture, noiseTexture, noiseStrength);
+					isMaterialDynamic = true;
+					SetupTextureCamera();
+					reflectionCamera.targetTexture = renderTexture;
+					break;
+
+				case EffectMode.Water:
+					renderTexture.name = "WaterRenderTexture";
+					effectMesh = new Mesh();
+					effectMaterial = MaterialUtils.CreateWaterMaterialOpaque(baseColor, renderTexture, rippleSpeed, rippleAmplitude, rippleFrequency, rippleOffset);
+					isMaterialDynamic = true;
+					SetupTextureCamera();
+					reflectionCamera.targetTexture = renderTexture;
+					break;
+
+				case EffectMode.OceanEffect:
+					renderTexture.name = "OceanRenderTexture";
+					effectMesh = new Mesh();
+					noiseTexture = WangTileGenerator.GenerateWangTileAtlas();
+					isTextureDynamic = true;
+					effectMaterial = MaterialUtils.CreateOceanOpaqueMaterial(baseColor, rippleSpeed, rippleAmplitude, rippleFrequency, rippleOffset, frostDepth, noiseStrength, frostThreshold, frostFadeRange, null, noiseTexture);
+					isMaterialDynamic = true;
+					SetupTextureCamera();
+					reflectionCamera.targetTexture = renderTexture;
+					break;
+
+				default:
+					var defaultData = mainCamera.gameObject.GetComponent<UniversalAdditionalCameraData>();
+					defaultData.cameraStack.Clear();
+					defaultData.cameraStack.Add(reflectionCamera);
+					break;
+			}
+
 			UpdateMaterialProperties();
 			StoreMaterialPropertyValues();
-			previousEffectMode = effectMode;
 
 			void SetupTextureCamera()
 			{
@@ -261,13 +256,6 @@ namespace MassiveHadronLtd
 					obj.AddComponent<CameraCommandProvider>();
 				}
 			}
-		}
-
-		public void SetEffectMode(EffectMode value)
-		{
-			effectMode = value;
-			if (value == EffectMode.Water)
-				ApplyWaterDefault();
 		}
 
 		private bool HasMaterialPropertiesChanged()
@@ -386,9 +374,7 @@ namespace MassiveHadronLtd
 
 		public void Update()
 		{
-			if (effectMode == EffectMode.Water || effectMode == EffectMode.OceanEffect)
-				timeSeed += Time.deltaTime;
-
+			timeSeed += Time.deltaTime;
 			UpdateMaterialProperties();
 		}
 
@@ -423,19 +409,53 @@ namespace MassiveHadronLtd
 			if (!isActiveAndEnabled || mainCamera == null)
 				return;
 
-			if (effectMode != previousEffectMode)
-				previousEffectMode = effectMode;
-			else if (effectMaterial != null)
+			if (effectMaterial != null)
 				UpdateMaterialProperties();
 		}
 
-		public void ForceSkyboxUpdate()
+		public void ResizeRenderTexture(int width, int height)
 		{
-			if (effectMode == EffectMode.Water || effectMode == EffectMode.OceanEffect)
+			if (renderTexture == null)
+				return;
+
+			// Avoid pointless recreation if size is the same
+			if (renderTexture.width == width && renderTexture.height == height)
+				return;
+
+			// Safety guard — minimum sane size
+			width = Mathf.Max(16, width);
+			height = Mathf.Max(16, height);
+
+			Debug.Log($"Resizing reflection RT to {width}×{height}");
+
+			// Release old RT safely
+			RenderTexture.active = null;
+			if (reflectionCamera != null) reflectionCamera.targetTexture = null;
+			if (textureCamera != null) textureCamera.targetTexture = null;
+
+			DestroyImmediate(renderTexture);
+
+			// Create new one with desired size
+			renderTexture = new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32)
 			{
-				lastSkyboxMaterial = activeSkybox;
-				SkyboxUtility.SetSkyboxCubemap(effectMaterial, lastSkyboxMaterial);
-			}
+				name = "ReflectionRT_" + effectMode.ToString(),
+				useMipMap = false,
+				autoGenerateMips = false,
+				filterMode = FilterMode.Bilinear,
+				useDynamicScale = true
+			};
+			renderTexture.Create();
+
+			// Re-assign to cameras
+			if (reflectionCamera != null)
+				reflectionCamera.targetTexture = renderTexture;
+
+			if (textureCamera != null)
+				textureCamera.targetTexture = renderTexture;
+
+			// Force material to pick up new _MainTex if it has the property
+			if (effectMaterial != null && effectMaterial.HasProperty("_MainTex"))
+				effectMaterial.SetTexture("_MainTex", renderTexture);
 		}
 
 		private void CleanupDynamicResources()
@@ -458,29 +478,22 @@ namespace MassiveHadronLtd
 			{
 				DestroyImmediate(noiseTexture);
 				noiseTexture = null;
+				isTextureDynamic = false;
 			}
 			if (renderTexture != null)
 			{
 				DestroyImmediate(renderTexture);
 				renderTexture = null;
 			}
-			if (textureCamera != null && effectMode != EffectMode.FrostEffect && effectMode != EffectMode.Water && effectMode != EffectMode.OceanEffect)
+			if (null != reflectionCamera)
+			{
+				DestroyImmediate(reflectionCamera.gameObject);
+				reflectionCamera = null;
+			}
+			if (null != textureCamera)
 			{
 				DestroyImmediate(textureCamera.gameObject);
 				textureCamera = null;
-			}
-		}
-
-		private void CleanupOrphanedChildren()
-		{
-			for (int i = transform.childCount - 1; i >= 0; i--)
-			{
-				var child = transform.GetChild(i);
-				if (child.name == "ReflectionCamera" || child.name == "TextureCamera")
-				{
-					if (child.GetComponent<Camera>() != null)
-						DestroyImmediate(child.gameObject);
-				}
 			}
 		}
 
@@ -495,8 +508,8 @@ namespace MassiveHadronLtd
 			if (effectMesh != null) DestroyImmediate(effectMesh);
 			if (renderTexture != null) DestroyImmediate(renderTexture);
 			if (isTextureDynamic && noiseTexture != null) DestroyImmediate(noiseTexture);
-
-			CleanupOrphanedChildren();
+			if (null != reflectionCamera) DestroyImmediate(reflectionCamera.gameObject);
+			if (null != textureCamera) DestroyImmediate(textureCamera.gameObject);
 		}
 	}
 }

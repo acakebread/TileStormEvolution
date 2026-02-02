@@ -163,6 +163,13 @@ namespace ClassicTilestorm
 
 			if (targetRawImage != null)
 				targetRawImage.texture = renderTexture;
+
+			// NEW: Also resize the ReflectionEffectCamera's internal RT
+			var reflectionEffect = previewCam?.GetComponent<ReflectionEffectCamera>();
+			if (reflectionEffect != null)
+			{
+				reflectionEffect.ResizeRenderTexture(w, h);
+			}
 		}
 
 		public static void Cleanup()
