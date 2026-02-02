@@ -210,6 +210,7 @@ namespace ClassicTilestorm
 				maxTilt: maxTiltAngle,
 				minDist: minDistance,
 				maxDist: maxDistance,
+				defaultTilt: defaultTiltAngle,
 				sizeToDistFactor: sizeToDistanceFactor
 			)
 			{

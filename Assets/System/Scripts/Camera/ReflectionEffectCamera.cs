@@ -419,9 +419,9 @@ namespace MassiveHadronLtd
 
 		public void ApplyWaterDefault()
 		{
-			baseColor = new Color(0, 0, 0, 0.5f);
+			baseColor = new Color(0, 0, 0, 0.6f);
 			rippleSpeed = 0.25f;
-			rippleAmplitude = 0.25f;
+			rippleAmplitude = 0.15f;
 			rippleFrequency = 0.35f;
 			reflectionStrength = 0.5f;
 		}
