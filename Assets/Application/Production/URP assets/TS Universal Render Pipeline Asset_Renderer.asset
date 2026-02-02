@@ -133,13 +133,13 @@ MonoBehaviour:
   m_AssetVersion: 3
   m_PrepassLayerMask:
     serializedVersion: 2
-    m_Bits: 2147483701
+    m_Bits: 2415919157
   m_OpaqueLayerMask:
     serializedVersion: 2
     m_Bits: 4294967295
   m_TransparentLayerMask:
     serializedVersion: 2
-    m_Bits: 3758096419
+    m_Bits: 3758096483
   m_DefaultStencilState:
     overrideStencilState: 0
     stencilReference: 0
