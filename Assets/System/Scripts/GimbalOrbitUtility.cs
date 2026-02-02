@@ -58,7 +58,7 @@ namespace MassiveHadronLtd
 				PivotOffset = new Vector3(0, overridePivotY.Value, 0);
 			}
 
-			lastInputTime = Time.unscaledTime;
+			lastInputTime = Time.unscaledTime - 999f;
 			OnTransformChanged?.Invoke();
 		}
 

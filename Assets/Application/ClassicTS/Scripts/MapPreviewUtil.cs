@@ -2,6 +2,8 @@
 
 using MassiveHadronLtd;
 using UnityEngine;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 using UnityEngine.UI;
 
 namespace ClassicTilestorm
@@ -83,6 +85,24 @@ namespace ClassicTilestorm
 			reflectionEffect.SetOffset(-0.2f);
 #endif
 
+			// Add the override component
+			var ambientOverride = camGO.AddComponent<PreviewAmbientOverride>();
+			ambientOverride.SetMap(_map);  // pass your map reference
+			Debug.Log($"PreviewAmbientOverride attached with map Light = {_map?.Light}");
+
+			foreach (var childCam in camGO.GetComponentsInChildren<Camera>(true))  // true = include inactive
+			{
+				var overrideComp = childCam.gameObject.GetComponent<PreviewAmbientOverride>();
+				if (overrideComp == null)
+				{
+					overrideComp = childCam.gameObject.AddComponent<PreviewAmbientOverride>();
+				}
+				overrideComp.SetMap(_map);  // safe even if duplicate calls
+
+				Debug.Log($"Attached PreviewAmbientOverride to camera: {childCam.name} with Light = {_map?.Light}");
+			}
+
+
 			var previewSkyMat = SkyboxUtility.GetSkyboxMaterialForName(_map?.skybox);
 			if (previewSkyMat != null)
 				reflectionEffect.SetSkyboxOverride(previewSkyMat);
@@ -90,6 +110,47 @@ namespace ClassicTilestorm
 				Debug.LogWarning($"Preview skybox not found for '{_map?.skybox}' — falling back to global.");
 
 			UpdateRenderTextureSizeIfNeeded();
+
+			//var provider = camGO.AddComponent<CameraCommandProvider>();
+			//provider.RegisterCommand(
+			//	RenderPassEvent.BeforeRenderingOpaques,  // or BeforeRenderingSkybox if sky/reflections matter
+			//	(cmd, cam) =>
+			//	{
+			//		Color previewLight = _map?.Light ?? Color.white;
+
+			//		// Most reliable for flat color override
+			//		cmd.SetGlobalColor("unity_AmbientSky", previewLight);
+			//		cmd.SetGlobalColor("unity_AmbientEquator", previewLight * 0.7f);  // or same as sky, or Color.black
+			//		cmd.SetGlobalColor("unity_AmbientGround", previewLight * 0.4f);  // darker floor bounce simulation
+
+			//		// Optional legacy fallback (some old shaders still read this)
+			//		cmd.SetGlobalColor("UNITY_LIGHTMODEL_AMBIENT", previewLight);
+
+			//		// If using SH-based ambient (common with light probes), you can approximate flat color like this:
+			//		// But usually not needed if you're forcing the above
+			//		// cmd.SetGlobalVector("unity_SHAr", new Vector4(previewLight.r, previewLight.g, previewLight.b, 1f) * someFactor);
+			//	});
+		}
+
+		public static void SetActiveMap(Map map)
+		{
+			if (camGO == null) return;
+
+			// Update ambient override on ALL preview cameras
+			foreach (var overrideComp in camGO.GetComponentsInChildren<PreviewAmbientOverride>(true))
+			{
+				overrideComp.SetMap(map);
+			}
+
+			// Update skybox override too
+			var reflectionEffect = camGO.GetComponent<ReflectionEffectCamera>();
+			if (reflectionEffect != null)
+			{
+				var skyMat = SkyboxUtility.GetSkyboxMaterialForName(map?.Skybox);
+				reflectionEffect.SetSkyboxOverride(skyMat);
+			}
+
+			Debug.Log($"Preview map updated → Light: {map?.Light}, Skybox: {map?.Skybox}");
 		}
 
 		public static void SetSkyboxOverride(Material value)
@@ -162,6 +223,29 @@ namespace ClassicTilestorm
 			if (rawImage != null && renderTexture != null)
 				rawImage.texture = renderTexture;
 		}
+
+  //      private class CameraCommandProvider : MonoBehaviour, ICommandBufferProvider
+  //      {
+  //          private System.Collections.Generic.Dictionary<RenderPassEvent, System.Action<RasterCommandBuffer, Camera>> commands = new();
+
+  //          public void RegisterCommand(RenderPassEvent evt, System.Action<RasterCommandBuffer, Camera> action)
+  //          {
+  //              commands[evt] = action;
+  //          }
+
+  //          public bool HasCommands(RenderPassEvent evt) => commands.ContainsKey(evt) && commands[evt] != null;
+
+  //          public void ExecuteCommands(RenderPassEvent evt, RasterCommandBuffer commandBuffer, Camera camera)
+  //          {
+  //              if (commands.TryGetValue(evt, out var action) && action != null)
+  //              {
+  //                  try { action.Invoke(commandBuffer, camera); }
+  //                  catch (System.Exception e) { Debug.LogError($"Preview command error: {e}"); }
+  //              }
+  //          }
+
+  //          private void OnDestroy() => commands.Clear();
+		//}
 	}
 
 	public static class MapPreviewExtensions

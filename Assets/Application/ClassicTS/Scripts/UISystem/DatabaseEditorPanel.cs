@@ -132,7 +132,7 @@ namespace ClassicTilestorm
 			PopulateSkyboxDropdown();
 			PopulateCharacterDropdown();
 
-			SyncColorPickerToCurrentMap();   // now safe — textures exist
+			SyncColorPickerToCurrentMap();
 			SyncSkyboxDropdown();
 			SyncCharacterDropdown();
 
@@ -235,7 +235,7 @@ namespace ClassicTilestorm
 			)
 			{
 				AutoRotateSpeed = autoRotateSpeed,
-				AutoRotateTimeout = 0.001f,
+				AutoRotateTimeout = 3f,
 				EnableInertia = true
 			};
 
@@ -307,7 +307,7 @@ namespace ClassicTilestorm
 				swatchImage.color = final;
 
 			CurrentMap.Light = final;
-			SetLightColour(final);
+			//SetLightColour(final);
 		}
 
 		private void UpdateValueSlider()
@@ -330,7 +330,7 @@ namespace ClassicTilestorm
 				currentValue = 1f;
 				UpdateValueSlider();
 				if (swatchImage != null) swatchImage.color = Color.white;
-				SetLightColour(Color.white);
+				//SetLightColour(Color.white);
 				return;
 			}
 
@@ -341,7 +341,7 @@ namespace ClassicTilestorm
 			if (swatchImage != null)
 				swatchImage.color = lightColor;
 
-			SetLightColour(lightColor);
+			//SetLightColour(lightColor);
 		}
 
 		// ────────────────────────────────────────────────────────────────────────────────
@@ -498,6 +498,7 @@ namespace ClassicTilestorm
 			SyncSkyboxDropdown();
 			SyncCharacterDropdown();
 
+			MapPreviewUtil.SetActiveMap(map);
 			UpdateMapPreview();
 		}
 
@@ -643,10 +644,10 @@ namespace ClassicTilestorm
 				MapPreviewUtil.SetSkyboxOverride(skyMaterial);
 		}
 
-		private void SetLightColour(Color value)
-		{
-			RenderSettings.ambientLight = value;
-		}
+		//private void SetLightColour(Color value)
+		//{
+		//	//RenderSettings.ambientLight = value;
+		//}
 
 		private void UpdateMapPreview()
 		{
