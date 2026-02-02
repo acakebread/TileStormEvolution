@@ -44,7 +44,7 @@ namespace MassiveHadronLtd
 			OceanEffect
 		}
 
-		[SerializeField] private EffectMode effectMode = EffectMode.PerfectMirror;
+		[SerializeField] private EffectMode effectMode = EffectMode.Water;
 		[SerializeField, HideInInspector] private EffectMode previousEffectMode;
 		public void SetEffectMode(EffectMode value)
 		{
@@ -106,9 +106,9 @@ namespace MassiveHadronLtd
 		[SerializeField, HideInInspector] private bool isPreviewCamera = false;
 		public void SetPreviewMode(bool value) => isPreviewCamera = value;
 
-		private Material activeSkybox => overrideSkyboxMaterial != null ? overrideSkyboxMaterial : RenderSettings.skybox;
-
 		private Material overrideSkyboxMaterial;
+		public void SetSkyboxOverride(Material value) => overrideSkyboxMaterial = value;
+		private Material activeSkybox => overrideSkyboxMaterial != null ? overrideSkyboxMaterial : RenderSettings.skybox;
 
 		void Awake()
 		{
@@ -145,8 +145,6 @@ namespace MassiveHadronLtd
 			previousEffectMode = effectMode;
 			StoreMaterialPropertyValues();
 		}
-
-		public void SetSkyboxOverride(Material value) => overrideSkyboxMaterial = value;
 
 		private void InitializeEffect()
 		{

@@ -1,7 +1,8 @@
-﻿#define USING_PREFAB
+﻿//#define USING_PREFAB
 
 using MassiveHadronLtd;
 using UnityEngine;
+using UnityEngine.Rendering.Universal;
 using UnityEngine.UI;
 
 namespace ClassicTilestorm
@@ -65,6 +66,7 @@ namespace ClassicTilestorm
 			previewCam.targetTexture = renderTexture;
 
 			var reflectionEffect = camGO.GetComponent<ReflectionEffectCamera>();
+			reflectionEffect.SetPreviewMode(true);  // only this instance is a preview
 			reflectionEffect.SetOffset(-0.2f);
 #else
 			camGO = new GameObject("PreviewCamera");
@@ -72,17 +74,20 @@ namespace ClassicTilestorm
 			camGO.layer = PreviewRenderLayers.previewLayer;
 
 			previewCam = camGO.AddComponent<Camera>();
+			camGO.AddComponent<UniversalAdditionalCameraData>();
 			previewCam.cullingMask = PreviewRenderLayers.previewFullMask;
-			previewCam.clearFlags = CameraClearFlags.SolidColor;
+			previewCam.clearFlags = CameraClearFlags.Skybox;// CameraClearFlags.SolidColor;
 			previewCam.backgroundColor = new Color(0.2f, 0.2f, 0.2f, 1f);
 			previewCam.nearClipPlane = 0.1f;
 			previewCam.farClipPlane = 2000f;
 
 			var reflectionEffect = camGO.AddComponent<ReflectionEffectCamera>();
+			reflectionEffect.SetPreviewMode(true);  // only this instance is a preview
 			reflectionEffect.SetEffectMode(ReflectionEffectCamera.EffectMode.Water);
 			reflectionEffect.SetOffset(-0.2f);
+
+			previewCam.targetTexture = renderTexture;
 #endif
-			reflectionEffect.SetPreviewMode(true);  // only this instance is a preview
 
 			// Add the override component
 			var ambientOverride = camGO.AddComponent<PreviewAmbientOverride>();
@@ -92,9 +97,7 @@ namespace ClassicTilestorm
 			{
 				var overrideComp = childCam.gameObject.GetComponent<PreviewAmbientOverride>();
 				if (overrideComp == null)
-				{
 					overrideComp = childCam.gameObject.AddComponent<PreviewAmbientOverride>();
-				}
 				overrideComp.SetMap(_map);  // safe even if duplicate calls
 			}
 
