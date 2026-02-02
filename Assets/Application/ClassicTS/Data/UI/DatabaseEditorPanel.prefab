@@ -4365,7 +4365,7 @@ MonoBehaviour:
   fieldOfView: 50
   sizeToDistanceFactor: 0.8
   defaultTiltAngle: 35
-  minTiltAngle: 30
+  minTiltAngle: 0
   maxTiltAngle: 90
   minDistance: 2
   maxDistance: 120

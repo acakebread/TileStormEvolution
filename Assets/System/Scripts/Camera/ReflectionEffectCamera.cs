@@ -101,6 +101,16 @@ namespace MassiveHadronLtd
 		private float lastFrostFadeRange;
 		private Material lastSkyboxMaterial;
 
+		//temporary workaround
+		[Header("Preview Mode (internal)")]
+		[SerializeField, HideInInspector] private bool isPreviewCamera = false;
+		public void SetPreviewMode(bool value) => isPreviewCamera = value;
+
+		private Material GetActiveSkybox()
+		{
+			return overrideSkyboxMaterial != null ? overrideSkyboxMaterial : RenderSettings.skybox;
+		}
+
 		void Awake()
 		{
 			mainCamera = GetComponent<Camera>();
@@ -145,8 +155,10 @@ namespace MassiveHadronLtd
 		public void SetSkyboxOverride(Material value)
 		{
 			overrideSkyboxMaterial = value;
+			lastSkyboxMaterial = GetActiveSkybox();
+
 			if (effectMaterial == null) return;
-			SkyboxUtility.SetSkyboxCubemap(effectMaterial, overrideSkyboxMaterial);
+			SkyboxUtility.SetSkyboxCubemap(effectMaterial, overrideSkyboxMaterial);//lastSkyboxMaterial
 		}
 
 		private void InitializeEffect()
@@ -297,6 +309,12 @@ namespace MassiveHadronLtd
 				data.cameraStack.Clear();
 				data.cameraStack.Add(reflectionCamera);
 				obj.AddComponent<CameraCommandProvider>();
+
+				if (isPreviewCamera)
+				{
+					var ambientOverride = textureCamera.gameObject.AddComponent<ClassicTilestorm.PreviewAmbientOverride>();
+					Debug.Log($"PreviewAmbientOverride attached to TextureCamera (preview only) - ToDo: get rid of this hack!!!");
+				}
 			}
 		}
 
@@ -316,7 +334,7 @@ namespace MassiveHadronLtd
 				   reflectionStrength != lastReflectionStrength ||
 				   frostThreshold != lastFrostThreshold ||
 				   frostFadeRange != lastFrostFadeRange ||
-				   RenderSettings.skybox != lastSkyboxMaterial;
+				   GetActiveSkybox() != lastSkyboxMaterial;
 		}
 
 		private void StoreMaterialPropertyValues()
@@ -335,7 +353,7 @@ namespace MassiveHadronLtd
 			lastReflectionStrength = reflectionStrength;
 			lastFrostThreshold = frostThreshold;
 			lastFrostFadeRange = frostFadeRange;
-			lastSkyboxMaterial = RenderSettings.skybox;
+			lastSkyboxMaterial = GetActiveSkybox();
 		}
 
 		private void UpdateMaterialProperties()
@@ -371,8 +389,9 @@ namespace MassiveHadronLtd
 						effectMaterial.SetFloat("_RippleFrequency", rippleFrequency);
 						effectMaterial.SetFloat("_RippleOffset", rippleOffset);
 						effectMaterial.SetFloat("_ReflectionStrength", reflectionStrength);
-						if (RenderSettings.skybox != lastSkyboxMaterial)
-							SkyboxUtility.SetSkyboxCubemap(effectMaterial, overrideSkyboxMaterial ?? RenderSettings.skybox);
+						var activeSky = GetActiveSkybox();
+						if (activeSky != lastSkyboxMaterial)
+							SkyboxUtility.SetSkyboxCubemap(effectMaterial, activeSky);
 						break;
 
 					case EffectMode.OceanEffect:
@@ -387,8 +406,9 @@ namespace MassiveHadronLtd
 						effectMaterial.SetFloat("_FrostThreshold", frostThreshold);
 						effectMaterial.SetFloat("_FrostFadeRange", frostFadeRange);
 						effectMaterial.SetTexture("_NoiseTex", noiseTexture);
-						if (RenderSettings.skybox != lastSkyboxMaterial)
-							SkyboxUtility.SetSkyboxCubemap(effectMaterial, overrideSkyboxMaterial ?? RenderSettings.skybox);
+						var _activeSky = GetActiveSkybox();
+						if (_activeSky != lastSkyboxMaterial)
+							SkyboxUtility.SetSkyboxCubemap(effectMaterial, _activeSky);
 						break;
 				}
 
@@ -467,8 +487,8 @@ namespace MassiveHadronLtd
 		{
 			if (effectMode == EffectMode.Water || effectMode == EffectMode.OceanEffect)
 			{
-				SkyboxUtility.SetSkyboxCubemap(effectMaterial, overrideSkyboxMaterial ?? RenderSettings.skybox);
 				lastSkyboxMaterial = overrideSkyboxMaterial ?? RenderSettings.skybox;
+				SkyboxUtility.SetSkyboxCubemap(effectMaterial, lastSkyboxMaterial);
 			}
 		}
 

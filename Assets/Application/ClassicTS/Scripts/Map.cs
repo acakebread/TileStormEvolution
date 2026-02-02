@@ -114,7 +114,6 @@ namespace ClassicTilestorm
 		[JsonIgnore] public int Count => Width * Height;
 		[JsonIgnore] public int[] State { get => state = state?.Length == width * height ? state : Enumerable.Range(0, width * height).ToArray(); }//set => state = value; 
 		[JsonIgnore] public string Music { get => music; set => music = value; }
-		//[JsonIgnore] public string Light { get => light; set => light = value; }
 		[JsonIgnore] public string Skybox { get => skybox; set => skybox = value; }
 
 		[JsonIgnore] public Color Light
@@ -122,6 +121,8 @@ namespace ClassicTilestorm
 			get => StringUtil.FromHexString(light, defaultColor: Color.white);
 			set => light = value.ToHexString(includeAlpha: true);
 		}
+
+		[JsonIgnore] public Material SkyboxMaterial => SkyboxUtility.GetSkyboxMaterialForName(Skybox);
 
 		// ─────────────────────────────────────────────
 		// Tile data — variants is now the only source of truth
