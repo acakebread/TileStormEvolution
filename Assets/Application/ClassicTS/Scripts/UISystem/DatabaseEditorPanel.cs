@@ -286,7 +286,6 @@ namespace ClassicTilestorm
 				swatchImage.color = final;
 
 			CurrentMap.Light = final;
-			//SetLightColour(final);
 		}
 
 		private void UpdateValueSlider()
