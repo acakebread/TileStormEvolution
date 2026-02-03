@@ -134,9 +134,8 @@ namespace MassiveHadronLtd
 		[SerializeField] private EffectMode effectMode = EffectMode.Null;
 
 		[SerializeField, Tooltip("Tint for PerfectMirror and SurfaceFilm (multiplies reflection) and Base color for Frost, Water, Ocean")]
-		private Color mirrorTint = new Color(0.1f, 0.1f, 0.1f, 0.5f);
+		private Color mirrorTint = new (0.1f, 0.1f, 0.1f, 0.5f);
 
-		//[SerializeField, Range(0, 0.5f)] private float filmIntensity = 0.2f;
 		[SerializeField, Range(0.01f, 5f)] private float noiseScale = 1f;
 		[SerializeField] private Texture2D noiseTexture;
 
@@ -162,20 +161,6 @@ namespace MassiveHadronLtd
 		private bool isMaterialDynamic;
 		private bool isTextureDynamic;
 		private float timeSeed;
-
-		private Color lastMirrorTint;
-		private float lastFrostDepth;
-		private float lastNoiseStrength;
-		private float lastNoiseScale;
-		private Texture2D lastNoiseTexture;
-		private float lastRippleSpeed;
-		private float lastRippleAmplitude;
-		private float lastRippleFrequency;
-		private float lastRippleOffset;
-		private float lastReflectionStrength;
-		private float lastFrostThreshold;
-		private float lastFrostFadeRange;
-		private Texture lastSkyboxTexture;
 
 		private CameraRenderSettingsOverride renderSettingsOverride => gameObject.GetComponent<CameraRenderSettingsOverride>();
 		private Texture skyboxTexture => SkyboxUtility.GetSkyboxTexture(renderSettingsOverride ? renderSettingsOverride.OverrideSettings.skybox : RenderSettings.skybox);
@@ -368,10 +353,7 @@ namespace MassiveHadronLtd
 				case EffectMode.Water:
 					renderTexture.name = "WaterRenderTexture";
 					effectMesh = new Mesh();
-					effectMaterial = MaterialUtils.CreateWaterMaterialOpaque(mirrorTint, renderTexture, rippleSpeed, rippleAmplitude, rippleFrequency, rippleOffset, reflectionStrength);
-
-					effectMaterial.SetTexture("_Skybox", skyboxTexture);
-
+					effectMaterial = MaterialUtils.CreateWaterMaterialOpaque(mirrorTint, renderTexture, rippleSpeed, rippleAmplitude, rippleFrequency, rippleOffset, reflectionStrength, skyboxTexture);
 					isMaterialDynamic = true;
 					SetupTextureCamera();
 					reflectionCamera.targetTexture = renderTexture;
@@ -396,7 +378,6 @@ namespace MassiveHadronLtd
 			}
 
 			UpdateMaterialProperties();
-			StoreMaterialPropertyValues();
 
 			void SetupTextureCamera()
 			{
@@ -421,47 +402,10 @@ namespace MassiveHadronLtd
 			}
 		}
 
-		private bool HasMaterialPropertiesChanged()
-		{
-			return mirrorTint != lastMirrorTint ||
-				   frostDepth != lastFrostDepth ||
-				   noiseStrength != lastNoiseStrength ||
-				   noiseScale != lastNoiseScale ||
-				   noiseTexture != lastNoiseTexture ||
-				   rippleSpeed != lastRippleSpeed ||
-				   rippleAmplitude != lastRippleAmplitude ||
-				   rippleFrequency != lastRippleFrequency ||
-				   rippleOffset != lastRippleOffset ||
-				   reflectionStrength != lastReflectionStrength ||
-				   frostThreshold != lastFrostThreshold ||
-				   frostFadeRange != lastFrostFadeRange ||
-				   skyboxTexture != lastSkyboxTexture;
-		}
-
-		private void StoreMaterialPropertyValues()
-		{
-			lastMirrorTint = mirrorTint;
-			lastFrostDepth = frostDepth;
-			lastNoiseStrength = noiseStrength;
-			lastNoiseScale = noiseScale;
-			lastNoiseTexture = noiseTexture;
-			lastRippleSpeed = rippleSpeed;
-			lastRippleAmplitude = rippleAmplitude;
-			lastRippleFrequency = rippleFrequency;
-			lastRippleOffset = rippleOffset;
-			lastReflectionStrength = reflectionStrength;
-			lastFrostThreshold = frostThreshold;
-			lastFrostFadeRange = frostFadeRange;
-			lastSkyboxTexture = skyboxTexture;
-		}
-
 		public void UpdateMaterialProperties()
 		{
 			if (effectMaterial == null) return;
 
-			//if (true == renderSettingsChanged || HasMaterialPropertiesChanged())
-			{
-				renderSettingsChanged = false;
 				// Lazy one-time assignment of reflection RT to material (after RT is created & camera is rendering)
 				if (renderTexture != null && effectMaterial.HasProperty("_MainTex") && effectMaterial.GetTexture("_MainTex") == null)
 					effectMaterial.SetTexture("_MainTex", renderTexture);
@@ -510,15 +454,11 @@ namespace MassiveHadronLtd
 						effectMaterial.SetTexture("_Skybox", skyboxTexture);
 						break;
 				}
-
-				StoreMaterialPropertyValues();
-			}
 		}
 
 		public void Update()
 		{
 			timeSeed += Time.deltaTime;
-			//UpdateMaterialProperties();
 
 			if (effectMode == EffectMode.Water || effectMode == EffectMode.OceanEffect)
 				effectMaterial.SetFloat("_TimeSeed", timeSeed);
@@ -552,26 +492,24 @@ namespace MassiveHadronLtd
 
 		public void OnValidate()
 		{
-			if (!isActiveAndEnabled || mainCamera == null)
+			if (!isActiveAndEnabled)
 				return;
 
 			// Safe: live update material properties (colors, floats, textures)
-			if (lastAppliedMode == effectMode) UpdateMaterialProperties();
+			if (Application.isPlaying && lastAppliedMode == effectMode) UpdateMaterialProperties();
 			else ApplyDefaults(effectMode);
+
+			if (mainCamera == null)
+				return;//only update properties in editor mode
 
 			// If mode changed (or first time), schedule rebuild
 			if (effectMode != lastAppliedMode || lastAppliedMode == EffectMode.Null)
 				Invoke(nameof(DeferredRebuild), 0f);  // next frame / safe timing
-
 			lastAppliedMode = effectMode;  // track for next change detection
 		}
 
-		private void DeferredRebuild()
-		{
-			ApplyEffect(effectMode, true);
-		}
+		private void DeferredRebuild() => ApplyEffect(effectMode, true);
 
-		private bool renderSettingsChanged = false;
 		public void UpdateRenderSettings(UnityRenderSettings renderSettings)
 		{
 			foreach (var childCam in GetComponentsInChildren<Camera>(true))
@@ -581,7 +519,6 @@ namespace MassiveHadronLtd
 					overrideComp = childCam.gameObject.AddComponent<CameraRenderSettingsOverride>();
 				overrideComp.OverrideSettings = renderSettings;
 			}
-			//renderSettingsChanged = true;
 			UpdateMaterialProperties();
 		}
 
@@ -622,9 +559,7 @@ namespace MassiveHadronLtd
 
 			// 1. Detach from GPU / pipeline
 			if (rt.IsCreated())
-			{
 				rt.Release();
-			}
 
 			// 2. Null out any known camera references (defensive)
 			if (mainCamera != null && mainCamera.targetTexture == rt)

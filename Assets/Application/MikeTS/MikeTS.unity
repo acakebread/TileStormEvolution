@@ -26,7 +26,7 @@ RenderSettings:
   m_AmbientIntensity: 1
   m_AmbientMode: 3
   m_SubtractiveShadowColor: {r: 0.42, g: 0.478, b: 0.627, a: 1}
-  m_SkyboxMaterial: {fileID: 2100000, guid: 85ff05840d836914f8b987d982302ccf, type: 2}
+  m_SkyboxMaterial: {fileID: 2100000, guid: eb9142391aca01f4cb618ecfa8f972dc, type: 2}
   m_HaloStrength: 0.5
   m_FlareStrength: 1
   m_FlareFadeSpeed: 3
@@ -646,9 +646,9 @@ GameObject:
   m_Component:
   - component: {fileID: 1146321626}
   - component: {fileID: 1146321625}
-  - component: {fileID: 1146321624}
-  - component: {fileID: 1146321629}
   - component: {fileID: 1146321630}
+  - component: {fileID: 1146321629}
+  - component: {fileID: 1146321624}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -790,17 +790,16 @@ MonoBehaviour:
   planeNormal: {x: 0, y: 1, z: 0}
   offset: -0.2
   effectMode: 5
-  mirrorTint: {r: 0.0627451, g: 0.0627451, b: 0.0627451, a: 0.5019608}
-  filmIntensity: 0.5
+  mirrorTint: {r: 0.05, g: 0.05, b: 0.05, a: 0.6}
   noiseScale: 1
   noiseTexture: {fileID: 0}
-  frostDepth: 0.57
-  noiseStrength: 0.097
-  rippleSpeed: 0.231
-  rippleAmplitude: 0.15
-  rippleFrequency: 0.372
-  rippleOffset: 0.651
-  reflectionStrength: 0.5
+  frostDepth: 0.05
+  noiseStrength: 0.2
+  rippleSpeed: 0.2
+  rippleAmplitude: 0.075
+  rippleFrequency: 0.35
+  rippleOffset: 0
+  reflectionStrength: 0.8
   frostThreshold: 0.8
   frostFadeRange: 0.1
   postProcessingCamera: {fileID: 756155709}
