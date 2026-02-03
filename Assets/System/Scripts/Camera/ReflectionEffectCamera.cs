@@ -95,14 +95,8 @@ namespace MassiveHadronLtd
 		private float lastFrostFadeRange;
 		private Material lastSkyboxMaterial;
 
-		private Material activeSkybox
-		{
-			get
-			{
-				gameObject.TryGetComponent<CameraRenderSettingsOverride>(out var renderSettingsOverride);
-				return null != renderSettingsOverride ? renderSettingsOverride.GetOverrideSettings().skybox : RenderSettings.skybox;
-			}
-		}
+		private CameraRenderSettingsOverride renderSettingsOverride => gameObject.GetComponent<CameraRenderSettingsOverride>();
+		private Material activeSkybox => renderSettingsOverride ? renderSettingsOverride.OverrideSettings.skybox : RenderSettings.skybox;
 
 		// Already there
 		private bool isRenderToTextureMode = false;
@@ -466,7 +460,7 @@ namespace MassiveHadronLtd
 				var overrideComp = childCam.gameObject.GetComponent<CameraRenderSettingsOverride>();
 				if (null == overrideComp)
 					overrideComp = childCam.gameObject.AddComponent<CameraRenderSettingsOverride>();
-				overrideComp.SetOverrideSettings(renderSettings);
+				overrideComp.OverrideSettings = renderSettings;
 			}
 			lastSkyboxMaterial = null;//temporary hack
 		}

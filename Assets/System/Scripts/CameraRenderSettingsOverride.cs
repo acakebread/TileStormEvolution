@@ -45,14 +45,6 @@ namespace MassiveHadronLtd
 			UnityRenderSettings.Restore(originalSettings);
 		}
 
-		public void SetOverrideSettings(UnityRenderSettings value)
-		{
-			overrideSettings = value;
-		}
-
-		public UnityRenderSettings GetOverrideSettings()
-		{
-			return overrideSettings;
-		}
+		public UnityRenderSettings OverrideSettings { get => overrideSettings; set => overrideSettings = value; }
 	}
 }
