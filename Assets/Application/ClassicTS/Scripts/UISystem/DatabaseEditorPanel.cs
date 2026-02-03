@@ -43,6 +43,9 @@ namespace ClassicTilestorm
 		[SerializeField] private RawImage brightnessPickerImage; // value/brightness slider
 		[SerializeField] private RawImage swatchImage;           // ← the preview swatch that shows the final color
 
+		[SerializeField] private TMP_Dropdown effectDropdown;
+		[SerializeField] private string noneEffectOptionText = "— Default —";
+
 		#endregion
 
 		#region Preview Settings (replacing old orbit & camera section)
@@ -131,16 +134,19 @@ namespace ClassicTilestorm
 			RefreshMapList();
 			PopulateSkyboxDropdown();
 			PopulateCharacterDropdown();
+			PopulateEffectDropdown();
 
 			SyncColorPickerToCurrentMap();
 			SyncSkyboxDropdown();
 			SyncCharacterDropdown();
+			SyncEffectDropdown();
 
 			ScenePreviewUtil.Initialize(CurrentMap.RenderSettings, previewCameraPrefab);
 
 			if (previewImage != null)
 				ScenePreviewUtil.SetPreviewUI(previewImage);
 
+			ScenePreviewUtil.UpdateEffect(ReflectionEffectCamera.ParseEffectMode(CurrentMap?.Effect));
 			ScenePreviewUtil.UpdateRenderSettings(CurrentMap.RenderSettings);
 			UpdateMapPreview();
 		}
@@ -298,6 +304,7 @@ namespace ClassicTilestorm
 				swatchImage.color = final;
 
 			CurrentMap.Light = final;
+			ScenePreviewUtil.UpdateEffect(ReflectionEffectCamera.ParseEffectMode(CurrentMap?.Effect));
 			ScenePreviewUtil.UpdateRenderSettings(CurrentMap.RenderSettings);
 		}
 
@@ -361,6 +368,9 @@ namespace ClassicTilestorm
 
 			if (characterDropdown != null)
 				characterDropdown.onValueChanged.AddListener(OnCharacterDropdownValueChanged);
+
+			if (effectDropdown != null)
+				effectDropdown.onValueChanged.AddListener(OnEffectDropdownValueChanged);
 		}
 
 		private void OnMapNameChanged(string input)
@@ -392,6 +402,7 @@ namespace ClassicTilestorm
 			if (newSkybox != CurrentMap.Skybox)
 			{
 				CurrentMap.Skybox = newSkybox;
+				ScenePreviewUtil.UpdateEffect(ReflectionEffectCamera.ParseEffectMode(CurrentMap?.Effect));
 				ScenePreviewUtil.UpdateRenderSettings(CurrentMap.RenderSettings);
 			}
 		}
@@ -408,6 +419,32 @@ namespace ClassicTilestorm
 
 			if (newCharacter != CurrentMap.character)
 				CurrentMap.character = newCharacter;
+		}
+
+		private void OnEffectDropdownValueChanged(int index)
+		{
+			if (CurrentMap == null) return;
+
+			string selected = index >= 0 && index < effectDropdown.options.Count
+				? effectDropdown.options[index].text
+				: null;
+
+			string newEffect = (selected == noneEffectOptionText) ? null : selected;
+
+			// Decide how you want to store it.
+			// Option A: if you already have a string field (most similar to Skybox & character)
+			if (newEffect != CurrentMap.Effect)           // ← adjust field name
+				CurrentMap.Effect = newEffect;            // ← adjust field name
+
+			// Option B: if you're going to store the enum name as string (recommended)
+			// CurrentMap.effectModeName = newEffect;
+
+			// Option C: if you want to store the enum value directly (int)
+			// CurrentMap.effectMode = (ReflectionEffectCamera.EffectMode)index;   // but only if 0 = None/Default
+
+			// Optional: immediate preview update
+			ScenePreviewUtil.UpdateEffect(ReflectionEffectCamera.ParseEffectMode(CurrentMap?.Effect));
+			ScenePreviewUtil.UpdateRenderSettings(CurrentMap.RenderSettings);
 		}
 
 		private void RefreshMapList()
@@ -483,7 +520,9 @@ namespace ClassicTilestorm
 			SyncColorPickerToCurrentMap();
 			SyncSkyboxDropdown();
 			SyncCharacterDropdown();
+			SyncEffectDropdown();
 
+			ScenePreviewUtil.UpdateEffect(ReflectionEffectCamera.ParseEffectMode(CurrentMap?.Effect));
 			ScenePreviewUtil.UpdateRenderSettings(CurrentMap.RenderSettings);
 			UpdateMapPreview();
 		}
@@ -538,8 +577,45 @@ namespace ClassicTilestorm
 			PopulateDropdown(characterDropdown, characterNames, noneCharacterOptionText);
 		}
 
+		private void PopulateEffectDropdown()
+		{
+			if (effectDropdown == null) return;
+
+			var effectNames = Enum.GetNames(typeof(ReflectionEffectCamera.EffectMode))
+				.Where(name => name != "Null")              // usually skip "Null"
+				.ToList();
+
+			PopulateDropdown(effectDropdown, effectNames, noneEffectOptionText);
+		}
+
 		private void SyncCharacterDropdown() =>
 			SyncDropdown(characterDropdown, CurrentMap?.character, noneCharacterOptionText);
+
+		private void SyncEffectDropdown()
+		{
+			if (CurrentMap == null)
+			{
+				effectDropdown?.SetValueWithoutNotify(0);
+				return;
+			}
+
+			//// If you're storing the effect as string (like Skybox / character)
+			SyncDropdown(effectDropdown, CurrentMap.Effect, noneEffectOptionText);   // ← adjust field name
+
+			// ── Alternative if storing enum name directly ──
+			// string value = CurrentMap.effectModeName;
+			// SyncDropdown(effectDropdown, value, noneEffectOptionText);
+
+			// ── Alternative if storing int enum value ──
+			/*
+			int idx = (int)(CurrentMap.effectMode ?? ReflectionEffectCamera.EffectMode.Null);
+			if (idx == (int)ReflectionEffectCamera.EffectMode.Null)
+				idx = 0;
+			else if (idx >= effectDropdown.options.Count)
+				idx = 0;
+			effectDropdown.SetValueWithoutNotify(idx);
+			*/
+		}
 
 		// ────────────────────────────────────────────────────────────────────────────────
 		//   Map CRUD

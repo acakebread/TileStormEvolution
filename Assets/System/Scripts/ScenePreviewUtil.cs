@@ -65,6 +65,18 @@ namespace MassiveHadronLtd
 			reflectionEffect?.UpdateRenderSettings(renderSettings);
 		}
 
+		public static void UpdateEffect(ReflectionEffectCamera.EffectMode effectMode = ReflectionEffectCamera.EffectMode.Null)
+		{
+			if (previewCam == null) return;
+
+			var reflectionEffect = previewCam.GetComponent<ReflectionEffectCamera>();
+			if (reflectionEffect == null) return;
+			reflectionEffect.SetEffectMode(effectMode, useDefaults: true);
+			// Keep the default offset behavior (you can later make this more flexible)
+			reflectionEffect.SetOffset(-0.2f);
+			SetPreviewUI(targetRawImage);
+		}
+
 		public static void Update()
 		{
 			if (targetRawImage == null || previewCam == null) return;

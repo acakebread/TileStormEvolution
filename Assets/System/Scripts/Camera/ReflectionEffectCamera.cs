@@ -25,7 +25,7 @@ namespace MassiveHadronLtd
 
 		public static SurfaceFilmDefaults Get() => new()
 		{
-			tint = new Color(0.2f, 0.2f, 0.2f, 0.5f),
+			tint = new Color(0.5f, 0.5f, 0.5f, 0.5f),
 			noiseScale = 1f,
 		};
 	}
@@ -243,6 +243,8 @@ namespace MassiveHadronLtd
 			ApplyEffect(value);
 		}
 
+		public EffectMode CurrentEffectMode => effectMode;
+
 		public void ApplyDefaults(EffectMode value)
 		{
 			switch (value)
@@ -406,54 +408,54 @@ namespace MassiveHadronLtd
 		{
 			if (effectMaterial == null) return;
 
-				// Lazy one-time assignment of reflection RT to material (after RT is created & camera is rendering)
-				if (renderTexture != null && effectMaterial.HasProperty("_MainTex") && effectMaterial.GetTexture("_MainTex") == null)
-					effectMaterial.SetTexture("_MainTex", renderTexture);
+			// Lazy one-time assignment of reflection RT to material (after RT is created & camera is rendering)
+			if (renderTexture != null && effectMaterial.HasProperty("_MainTex") && effectMaterial.GetTexture("_MainTex") == null)
+				effectMaterial.SetTexture("_MainTex", renderTexture);
 
-				switch (effectMode)
-				{
-					case EffectMode.PerfectMirror:
-						effectMaterial.SetColor("_DimColor", mirrorTint);
-						break;
-					case EffectMode.SurfaceFilm:
-						effectMaterial.SetColor("_DimColor", mirrorTint);
-						effectMaterial.SetFloat("_FilmIntensity", mirrorTint.a);
-						effectMaterial.SetFloat("_NoiseScale", noiseScale);
-						effectMaterial.SetTexture("_NoiseTex", noiseTexture);
-						break;
+			switch (effectMode)
+			{
+				case EffectMode.PerfectMirror:
+					effectMaterial.SetColor("_DimColor", mirrorTint);
+					break;
+				case EffectMode.SurfaceFilm:
+					effectMaterial.SetColor("_DimColor", mirrorTint);
+					effectMaterial.SetFloat("_FilmIntensity", mirrorTint.a);
+					effectMaterial.SetFloat("_NoiseScale", noiseScale);
+					effectMaterial.SetTexture("_NoiseTex", noiseTexture);
+					break;
 
-					case EffectMode.FrostEffect:
-						effectMaterial.SetColor("_BaseColor", mirrorTint);
-						effectMaterial.SetFloat("_Depth", frostDepth);
-						effectMaterial.SetFloat("_NoiseStrength", noiseStrength);
-						effectMaterial.SetTexture("_NoiseTex", noiseTexture);
-						break;
+				case EffectMode.FrostEffect:
+					effectMaterial.SetColor("_BaseColor", mirrorTint);
+					effectMaterial.SetFloat("_Depth", frostDepth);
+					effectMaterial.SetFloat("_NoiseStrength", noiseStrength);
+					effectMaterial.SetTexture("_NoiseTex", noiseTexture);
+					break;
 
-					case EffectMode.Water:
-						effectMaterial.SetColor("_BaseColor", mirrorTint);
-						effectMaterial.SetFloat("_RippleSpeed", rippleSpeed);
-						effectMaterial.SetFloat("_RippleAmplitude", rippleAmplitude);
-						effectMaterial.SetFloat("_RippleFrequency", rippleFrequency);
-						effectMaterial.SetFloat("_RippleOffset", rippleOffset);
-						effectMaterial.SetFloat("_ReflectionStrength", reflectionStrength);
-						effectMaterial.SetTexture("_Skybox", skyboxTexture);
-						break;
+				case EffectMode.Water:
+					effectMaterial.SetColor("_BaseColor", mirrorTint);
+					effectMaterial.SetFloat("_RippleSpeed", rippleSpeed);
+					effectMaterial.SetFloat("_RippleAmplitude", rippleAmplitude);
+					effectMaterial.SetFloat("_RippleFrequency", rippleFrequency);
+					effectMaterial.SetFloat("_RippleOffset", rippleOffset);
+					effectMaterial.SetFloat("_ReflectionStrength", reflectionStrength);
+					effectMaterial.SetTexture("_Skybox", skyboxTexture);
+					break;
 
-					case EffectMode.OceanEffect:
-						effectMaterial.SetColor("_BaseColor", mirrorTint);
-						effectMaterial.SetFloat("_RippleSpeed", rippleSpeed);
-						effectMaterial.SetFloat("_RippleAmplitude", rippleAmplitude);
-						effectMaterial.SetFloat("_RippleFrequency", rippleFrequency);
-						effectMaterial.SetFloat("_RippleOffset", rippleOffset);
-						effectMaterial.SetFloat("_DepthThreshold", 128.0f);
-						effectMaterial.SetFloat("_FrostDepth", frostDepth);
-						effectMaterial.SetFloat("_FrostNoiseStrength", noiseStrength);
-						effectMaterial.SetFloat("_FrostThreshold", frostThreshold);
-						effectMaterial.SetFloat("_FrostFadeRange", frostFadeRange);
-						effectMaterial.SetTexture("_NoiseTex", noiseTexture);
-						effectMaterial.SetTexture("_Skybox", skyboxTexture);
-						break;
-				}
+				case EffectMode.OceanEffect:
+					effectMaterial.SetColor("_BaseColor", mirrorTint);
+					effectMaterial.SetFloat("_RippleSpeed", rippleSpeed);
+					effectMaterial.SetFloat("_RippleAmplitude", rippleAmplitude);
+					effectMaterial.SetFloat("_RippleFrequency", rippleFrequency);
+					effectMaterial.SetFloat("_RippleOffset", rippleOffset);
+					effectMaterial.SetFloat("_DepthThreshold", 128.0f);
+					effectMaterial.SetFloat("_FrostDepth", frostDepth);
+					effectMaterial.SetFloat("_FrostNoiseStrength", noiseStrength);
+					effectMaterial.SetFloat("_FrostThreshold", frostThreshold);
+					effectMaterial.SetFloat("_FrostFadeRange", frostFadeRange);
+					effectMaterial.SetTexture("_NoiseTex", noiseTexture);
+					effectMaterial.SetTexture("_Skybox", skyboxTexture);
+					break;
+			}
 		}
 
 		public void Update()
@@ -699,6 +701,52 @@ namespace MassiveHadronLtd
 			if (isTextureDynamic && noiseTexture != null) DestroyImmediate(noiseTexture);
 			if (null != reflectionCamera) DestroyImmediate(reflectionCamera.gameObject);
 			if (null != textureCamera) DestroyImmediate(textureCamera.gameObject);
+		}
+
+		// Returns the enum value that best matches the stored string
+		// Returns EffectMode.Null if no match or input is null/empty
+		public static EffectMode ParseEffectMode(string effectString)
+		{
+			if (string.IsNullOrWhiteSpace(effectString))
+				return EffectMode.Null;
+
+			// Try exact match first (case-insensitive)
+			if (Enum.TryParse<EffectMode>(effectString, ignoreCase: true, out var mode))
+			{
+				// We usually don't want to restore "Null" from string
+				return mode == EffectMode.Null ? EffectMode.Debug : mode;
+			}
+
+			// Optional: fallback / alias mapping (very useful in real projects)
+			return effectString.ToLowerInvariant() switch
+			{
+				"mirror" => EffectMode.PerfectMirror,
+				"perfectmirror" => EffectMode.PerfectMirror,
+				"film" => EffectMode.SurfaceFilm,
+				"surfacefilm" => EffectMode.SurfaceFilm,
+				"frost" => EffectMode.FrostEffect,
+				"watereffect" => EffectMode.Water,
+				"ocean" => EffectMode.OceanEffect,
+				"oceaneffect" => EffectMode.OceanEffect,
+				"debug" => EffectMode.Debug,
+				_ => EffectMode.Null   // or EffectMode.Debug as fallback
+			};
+		}
+
+		// Converts enum back to the string you want to store / show in UI
+		public static string EffectModeToString(EffectMode mode)
+		{
+			return mode switch
+			{
+				EffectMode.Null => null,                    // or "" if you prefer
+				EffectMode.Debug => "Debug",
+				EffectMode.PerfectMirror => "PerfectMirror",
+				EffectMode.SurfaceFilm => "SurfaceFilm",
+				EffectMode.FrostEffect => "FrostEffect",
+				EffectMode.Water => "Water",
+				EffectMode.OceanEffect => "OceanEffect",
+				_ => null
+			};
 		}
 	}
 }
