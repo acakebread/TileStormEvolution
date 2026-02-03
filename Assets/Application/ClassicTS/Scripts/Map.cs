@@ -103,7 +103,7 @@ namespace ClassicTilestorm
 		// Conditional serialization
 		public bool ShouldSerializelight() => !string.IsNullOrEmpty(light);
 		public bool ShouldSerializeskybox() => !string.IsNullOrEmpty(skybox);
-		public bool ShouldSerializeeffect() => !string.IsNullOrEmpty(effect);
+		public bool ShouldSerializeeffect() => false;//!string.IsNullOrEmpty(effect);
 		public bool ShouldSerializesolve() => solve != null && solve.Length > 0;
 		public bool ShouldSerializewaypoints() => waypoints != null && waypoints.Length > 0;
 		public bool ShouldSerializeattachments() => attachments != null && attachments.Length > 0;
@@ -840,6 +840,7 @@ namespace ClassicTilestorm
 			music = music,
 			light = light,
 			skybox = skybox,
+			effect = effect,
 			button = button,
 			width = width,
 			height = height,
