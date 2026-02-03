@@ -1,6 +1,4 @@
-﻿//#define USING_PREFAB
-
-using MassiveHadronLtd;
+﻿using MassiveHadronLtd;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Rendering;
@@ -13,7 +11,6 @@ namespace ClassicTilestorm
 		private static GameObject root;
 		private static GameObject camGO;
 		private static Camera previewCam;
-		private static RenderTexture renderTexture;
 
 		public static Transform previewMapRoot;
 
@@ -23,7 +20,6 @@ namespace ClassicTilestorm
 		private static Vector2 lastKnownSize = Vector2.zero;
 
 		public static Camera PreviewCamera => previewCam;
-		public static RenderTexture PreviewRenderTexture => renderTexture;
 		public static Transform PreviewMapRoot => previewMapRoot;
 
 		public static void ClearPreviewMap()
@@ -37,68 +33,56 @@ namespace ClassicTilestorm
 			}
 		}
 
-		public static void Initialize(GameObject previewCamerPrefab, Map _map = null)
+		public static void Initialize(Map _map = null, GameObject previewCamerPrefab = null)
 		{
 			if (root != null) return;
 
 			root = new GameObject("MAP_PREVIEW_ROOT");
 
-			if (previewMapRoot != null) return;
-
 			GameObject previewRoot = new GameObject("PreviewSceneRoot");
 			previewRoot.transform.SetParent(root.transform);
 			previewMapRoot = previewRoot.transform;
 
-			renderTexture = new RenderTexture(512, 320, 24, RenderTextureFormat.ARGB32) { filterMode = FilterMode.Bilinear };
-			renderTexture.Create();
-
-			if (targetRawImage != null)
+			if (null != previewCamerPrefab)
 			{
-				targetRawImage.texture = PreviewRenderTexture;
-				targetRawImage.color = Color.white;
+				camGO = GameObject.Instantiate(previewCamerPrefab);
+				camGO.transform.SetParent(root.transform);
+				camGO.layer = PreviewRenderLayers.previewLayer;
+
+				previewCam = camGO.GetComponent<Camera>();
+			}
+			else
+			{
+				camGO = new GameObject("PreviewCamera");
+				camGO.transform.SetParent(root.transform);
+				camGO.layer = PreviewRenderLayers.previewLayer;
+
+				previewCam = camGO.AddComponent<Camera>();
+				camGO.AddComponent<UniversalAdditionalCameraData>();
+				previewCam.cullingMask = PreviewRenderLayers.previewFullMask;
+				previewCam.clearFlags = CameraClearFlags.Skybox;
+				previewCam.backgroundColor = new Color(0.2f, 0.2f, 0.2f, 1f);
+				previewCam.nearClipPlane = 0.1f;
+				previewCam.farClipPlane = 2000f;
+				camGO.AddComponent<ReflectionEffectCamera>();
 			}
 
-#if USING_PREFAB
-			camGO = GameObject.Instantiate(previewCamerPrefab);
-			camGO.transform.SetParent(root.transform);
-			camGO.layer = PreviewRenderLayers.previewLayer;
-
-			previewCam = camGO.GetComponent<Camera>();
-			previewCam.targetTexture = renderTexture;
-
 			var reflectionEffect = camGO.GetComponent<ReflectionEffectCamera>();
-			reflectionEffect.SetPreviewMode(true);  // only this instance is a preview
+			// ── Key change: enable internal RT management ─────────────────────────────
+			reflectionEffect.SetRenderToTextureMode(true);
+			reflectionEffect.SetEffectMode(ReflectionEffectCamera.EffectMode.Water);  // or whatever default you want
 			reflectionEffect.SetOffset(-0.2f);
-#else
-			camGO = new GameObject("PreviewCamera");
-			camGO.transform.SetParent(root.transform);
-			camGO.layer = PreviewRenderLayers.previewLayer;
-
-			previewCam = camGO.AddComponent<Camera>();
-			camGO.AddComponent<UniversalAdditionalCameraData>();
-			previewCam.cullingMask = PreviewRenderLayers.previewFullMask;
-			previewCam.clearFlags = CameraClearFlags.Skybox;
-			previewCam.backgroundColor = new Color(0.2f, 0.2f, 0.2f, 1f);
-			previewCam.nearClipPlane = 0.1f;
-			previewCam.farClipPlane = 2000f;
-
-			var reflectionEffect = camGO.AddComponent<ReflectionEffectCamera>();
-			reflectionEffect.SetEffectMode(ReflectionEffectCamera.EffectMode.Water);
-			reflectionEffect.SetOffset(-0.2f);
-
-			previewCam.targetTexture = renderTexture;
-#endif
 
 			// Add the override component
 			var ambientOverride = camGO.AddComponent<PreviewRenderSettingsOverride>();
-			ambientOverride.SetMap(_map);  // pass your map reference
+			ambientOverride.SetMap(_map);
 
-			foreach (var childCam in camGO.GetComponentsInChildren<Camera>(true))  // true = include inactive
+			foreach (var childCam in camGO.GetComponentsInChildren<Camera>(true))
 			{
 				var overrideComp = childCam.gameObject.GetComponent<PreviewRenderSettingsOverride>();
 				if (overrideComp == null)
 					overrideComp = childCam.gameObject.AddComponent<PreviewRenderSettingsOverride>();
-				overrideComp.SetMap(_map);  // safe even if duplicate calls
+				overrideComp.SetMap(_map);
 			}
 
 			var previewSkyMat = SkyboxUtility.GetSkyboxMaterialForName(_map?.skybox);
@@ -107,6 +91,7 @@ namespace ClassicTilestorm
 			else
 				Debug.LogWarning($"Preview skybox not found for '{_map?.skybox}' — falling back to global.");
 
+			// Initial size — will be updated properly in UpdateRenderTextureSizeIfNeeded
 			UpdateRenderTextureSizeIfNeeded();
 		}
 
@@ -133,12 +118,10 @@ namespace ClassicTilestorm
 
 		public static void UpdateRenderTextureSizeIfNeeded()
 		{
-			if (previewRect == null || previewCam == null || renderTexture == null) return;
+			if (previewRect == null || previewCam == null) return;
 
 			Vector2 currentSize = previewRect.rect.size;
-			if (currentSize.x <= 0 || currentSize.y <= 0)
-				return; // don't resize to invalid size
-
+			if (currentSize.x <= 0 || currentSize.y <= 0) return;
 			if (currentSize == lastKnownSize) return;
 			if (currentSize.x < 16 || currentSize.y < 16) return;
 
@@ -147,39 +130,23 @@ namespace ClassicTilestorm
 			int w = Mathf.RoundToInt(currentSize.x);
 			int h = Mathf.RoundToInt(currentSize.y);
 
-			if (renderTexture.width == w && renderTexture.height == h)
-				return;
-
-			// Release and recreate
-			renderTexture.Release();
-			renderTexture = new RenderTexture(w, h, 24, RenderTextureFormat.ARGB32)
-			{
-				filterMode = FilterMode.Bilinear
-			};
-			renderTexture.Create();
-
-			previewCam.targetTexture = renderTexture;
 			previewCam.aspect = (float)w / h;
 
-			if (targetRawImage != null)
-				targetRawImage.texture = renderTexture;
-
-			// NEW: Also resize the ReflectionEffectCamera's internal RT
 			var reflectionEffect = previewCam?.GetComponent<ReflectionEffectCamera>();
 			if (reflectionEffect != null)
 			{
-				reflectionEffect.ResizeRenderTexture(w, h);
+				reflectionEffect.CreateOrResizeReflectionTexture(w, h);
+
+				if (targetRawImage != null)
+				{
+					targetRawImage.texture = reflectionEffect.GetOutputTexture();
+					targetRawImage.color = Color.white;
+				}
 			}
 		}
 
 		public static void Cleanup()
 		{
-			if (renderTexture != null && renderTexture.IsCreated())
-			{
-				renderTexture.Release();
-				renderTexture = null;
-			}
-
 			if (root) Object.DestroyImmediate(root);
 
 			root = null;
@@ -187,19 +154,27 @@ namespace ClassicTilestorm
 			previewCam = null;
 			previewMapRoot = null;
 
-			// Added cleanup for resize fields
 			targetRawImage = null;
 			previewRect = null;
 		}
 
-		// ── Added helpers to set UI references from DatabaseEditorPanel ─────
 		public static void SetPreviewUI(RawImage rawImage, RectTransform rectTransform)
 		{
 			targetRawImage = rawImage;
 			previewRect = rectTransform;
 
-			if (rawImage != null && renderTexture != null)
-				rawImage.texture = renderTexture;
+			if (rawImage != null && previewCam != null)
+			{
+				var reflectionEffect = previewCam.GetComponent<ReflectionEffectCamera>();
+				if (reflectionEffect != null)
+				{
+					rawImage.texture = reflectionEffect.GetOutputTexture();
+					rawImage.color = Color.white;
+				}
+			}
+
+			// Trigger resize to apply new rect size immediately
+			UpdateRenderTextureSizeIfNeeded();
 		}
 	}
 

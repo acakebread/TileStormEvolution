@@ -14,7 +14,7 @@ namespace ClassicTilestorm
 		#region Serialized Fields - UI References
 
 		[Header("UI References")]
-		[SerializeField] private GameObject previewCamerPrefab;
+		[SerializeField] private GameObject previewCameraPrefab;
 
 		[SerializeField] private Button closeButton;
 		[SerializeField] private ScrollRect mapScrollView;
@@ -48,7 +48,7 @@ namespace ClassicTilestorm
 		#region Preview Settings (replacing old orbit & camera section)
 
 		[Header("Preview Settings – Map View")]
-		[SerializeField] private Color backgroundColor = new Color(0.129f, 0.698f, 0.882f);
+		//[SerializeField] private Color backgroundColor = new Color(0.129f, 0.698f, 0.882f);
 		[SerializeField] private float fieldOfView = 50f;
 		[SerializeField] private float sizeToDistanceFactor = 0.8f;      // tuned for map scale
 		[SerializeField] private float defaultTiltAngle = 35f;
@@ -136,11 +136,12 @@ namespace ClassicTilestorm
 			SyncSkyboxDropdown();
 			SyncCharacterDropdown();
 
+			MapPreviewUtil.Initialize(CurrentMap, previewCameraPrefab);
+			MapPreviewUtil.UpdateRenderTextureSizeIfNeeded();
+
 			if (previewImage != null)
 				MapPreviewUtil.SetPreviewUI(previewImage, previewImage.rectTransform);
 
-			MapPreviewUtil.Initialize(previewCamerPrefab, CurrentMap);
-			MapPreviewUtil.UpdateRenderTextureSizeIfNeeded();
 			SetSkybox(CurrentMap?.Skybox);
 
 			UpdateMapPreview();

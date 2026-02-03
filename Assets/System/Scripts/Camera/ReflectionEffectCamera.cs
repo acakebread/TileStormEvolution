@@ -98,6 +98,10 @@ namespace MassiveHadronLtd
 		public void SetSkyboxOverride(Material value) => overrideSkyboxMaterial = value;
 		private Material activeSkybox => overrideSkyboxMaterial != null ? overrideSkyboxMaterial : RenderSettings.skybox;
 
+		// Already there
+		private bool isRenderToTextureMode = false;
+		private RenderTexture outputRenderTexture;
+
 		void Awake()
 		{
 			mainCamera = GetComponent<Camera>();
@@ -146,15 +150,7 @@ namespace MassiveHadronLtd
 		{
 			effectMode = value;
 
-			renderTexture = new RenderTexture(Screen.width, Screen.height, 24, RenderTextureFormat.ARGB32)
-			{
-				name = "RenderTexture",
-				useMipMap = false,
-				autoGenerateMips = false,
-				filterMode = FilterMode.Bilinear,
-				useDynamicScale = true
-			};
-			renderTexture.Create();
+			CreateOrResizeReflectionTexture(Screen.width, Screen.height);
 
 			var obj = new GameObject("ReflectionCamera");
 			obj.transform.SetParent(transform, false);
@@ -413,49 +409,133 @@ namespace MassiveHadronLtd
 				UpdateMaterialProperties();
 		}
 
-		public void ResizeRenderTexture(int width, int height)
+		public void SetExternalOutputTexture(RenderTexture externalRT)
 		{
-			if (renderTexture == null)
-				return;
-
-			// Avoid pointless recreation if size is the same
-			if (renderTexture.width == width && renderTexture.height == height)
-				return;
-
-			// Safety guard — minimum sane size
-			width = Mathf.Max(16, width);
-			height = Mathf.Max(16, height);
-
-			Debug.Log($"Resizing reflection RT to {width}×{height}");
-
-			// Release old RT safely
-			RenderTexture.active = null;
-			if (reflectionCamera != null) reflectionCamera.targetTexture = null;
-			if (textureCamera != null) textureCamera.targetTexture = null;
-
-			DestroyImmediate(renderTexture);
-
-			// Create new one with desired size
-			renderTexture = new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32)
+			if (isRenderToTextureMode)
 			{
-				name = "ReflectionRT_" + effectMode.ToString(),
-				useMipMap = false,
-				autoGenerateMips = false,
-				filterMode = FilterMode.Bilinear,
-				useDynamicScale = true
-			};
-			renderTexture.Create();
+				Debug.LogWarning("SetExternalOutputTexture has no effect when isRenderToTextureMode is true.");
+				return;
+			}
 
-			// Re-assign to cameras
-			if (reflectionCamera != null)
-				reflectionCamera.targetTexture = renderTexture;
+			if (mainCamera == null) return;
 
-			if (textureCamera != null)
-				textureCamera.targetTexture = renderTexture;
+			// Clean up previous internal one if any (shouldn't exist, but safety)
+			SafeReleaseAndNull(ref outputRenderTexture);
 
-			// Force material to pick up new _MainTex if it has the property
-			if (effectMaterial != null && effectMaterial.HasProperty("_MainTex"))
-				effectMaterial.SetTexture("_MainTex", renderTexture);
+			mainCamera.targetTexture = externalRT;
+		}
+
+		// Public setter (call before SetEffectMode ideally)
+		public void SetRenderToTextureMode(bool enable)
+		{
+			if (isRenderToTextureMode == enable) return;
+			isRenderToTextureMode = enable;
+
+			CleanupDynamicResources();           // cleans both textures + cameras etc.
+
+			// Rebuild everything with new mode context
+			ApplyEffect(effectMode);
+		}
+
+		// Public accessor for UI / preview system
+		public RenderTexture GetOutputTexture()
+		{
+			return isRenderToTextureMode ? outputRenderTexture : null;
+		}
+
+		private void SafeReleaseAndNull(ref RenderTexture rt)
+		{
+			if (rt == null) return;
+
+			// 1. Detach from GPU / pipeline
+			if (rt.IsCreated())
+			{
+				rt.Release();
+			}
+
+			// 2. Null out any known camera references (defensive)
+			if (mainCamera != null && mainCamera.targetTexture == rt)
+				mainCamera.targetTexture = null;
+			if (reflectionCamera != null && reflectionCamera.targetTexture == rt)
+				reflectionCamera.targetTexture = null;
+			if (textureCamera != null && textureCamera.targetTexture == rt)
+				textureCamera.targetTexture = null;
+
+			// 3. Destroy (safe now that it's released and detached)
+			DestroyImmediate(rt);
+
+			rt = null;
+		}
+
+		// The single resize function — now handles both textures when in mode
+		public void CreateOrResizeReflectionTexture(int targetWidth, int targetHeight)
+		{
+			targetWidth = Mathf.Max(16, targetWidth);
+			targetHeight = Mathf.Max(16, targetHeight);
+
+			// ── Reflection texture (always exists) ─────────────────────────────────
+			bool reflectionNeedsResize = renderTexture == null ||
+										 renderTexture.width != targetWidth ||
+										 renderTexture.height != targetHeight;
+
+			if (reflectionNeedsResize)
+			{
+				RenderTexture.active = null;
+				if (reflectionCamera) reflectionCamera.targetTexture = null;
+				if (textureCamera) textureCamera.targetTexture = null;
+
+				if (renderTexture != null)
+				{
+					DestroyImmediate(renderTexture);
+					renderTexture = null;
+				}
+
+				renderTexture = new RenderTexture(targetWidth, targetHeight, 24, RenderTextureFormat.ARGB32)
+				{
+					name = $"Reflection_{effectMode}",
+					useMipMap = false,
+					autoGenerateMips = false,
+					filterMode = FilterMode.Bilinear,
+					useDynamicScale = true
+				};
+				renderTexture.Create();
+
+				if (reflectionCamera) reflectionCamera.targetTexture = renderTexture;
+				if (textureCamera) textureCamera.targetTexture = renderTexture;
+
+				// Update material if already exists
+				if (effectMaterial != null && effectMaterial.HasProperty("_MainTex"))
+					effectMaterial.SetTexture("_MainTex", renderTexture);
+			}
+
+			// ── Output texture (only in render-to-texture mode) ─────────────────────
+			if (isRenderToTextureMode)
+			{
+				bool outputNeedsResize = outputRenderTexture == null ||
+										 outputRenderTexture.width != targetWidth ||
+										 outputRenderTexture.height != targetHeight;
+
+				if (outputNeedsResize)
+				{
+					if (mainCamera) mainCamera.targetTexture = null;
+
+					if (outputRenderTexture != null)
+					{
+						DestroyImmediate(outputRenderTexture);
+						outputRenderTexture = null;
+					}
+
+					outputRenderTexture = new RenderTexture(targetWidth, targetHeight, 24, RenderTextureFormat.ARGB32)
+					{
+						name = $"Output_{effectMode}",
+						filterMode = FilterMode.Bilinear,
+						useDynamicScale = true
+					};
+					outputRenderTexture.Create();
+
+					if (mainCamera) mainCamera.targetTexture = outputRenderTexture;
+				}
+			}
 		}
 
 		private void CleanupDynamicResources()
@@ -495,6 +575,7 @@ namespace MassiveHadronLtd
 				DestroyImmediate(textureCamera.gameObject);
 				textureCamera = null;
 			}
+			SafeReleaseAndNull(ref outputRenderTexture);
 		}
 
 		void OnDestroy()

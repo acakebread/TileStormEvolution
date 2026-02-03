@@ -4343,7 +4343,7 @@ MonoBehaviour:
   resizable: 1
   resizeBorder: 16
   minSize: {x: 600, y: 400}
-  previewCamerPrefab: {fileID: 1729209467339557997, guid: e6fa8f524cd94ef43bcf00f37230ba08, type: 3}
+  previewCameraPrefab: {fileID: 1729209467339557997, guid: e6fa8f524cd94ef43bcf00f37230ba08, type: 3}
   closeButton: {fileID: 1113145341421358585}
   mapScrollView: {fileID: 3592446050041274724}
   contentParent: {fileID: 4343362275747073472}
