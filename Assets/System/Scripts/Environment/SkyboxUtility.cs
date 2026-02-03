@@ -138,6 +138,49 @@ namespace MassiveHadronLtd
 			lastCubemap = cubemap;
 		}
 
+		public static Texture GetSkyboxTexture(Material skyboxMaterial)
+		{
+			Cubemap cubemap = null;
+
+			if (skyboxMaterial.HasProperty("_Tex"))
+				return skyboxMaterial.GetTexture("_Tex") as Cubemap;
+			else if (skyboxMaterial.HasProperty("_MainTex"))
+				return skyboxMaterial.GetTexture("_MainTex") as Cubemap;
+
+			if (skyboxMaterial.HasProperty("_FrontTex"))
+			{
+				Texture2D front = skyboxMaterial.GetTexture("_FrontTex") as Texture2D;
+				Texture2D back = skyboxMaterial.GetTexture("_BackTex") as Texture2D;
+				Texture2D left = skyboxMaterial.GetTexture("_LeftTex") as Texture2D;
+				Texture2D right = skyboxMaterial.GetTexture("_RightTex") as Texture2D;
+				Texture2D up = skyboxMaterial.GetTexture("_UpTex") as Texture2D;
+				Texture2D down = skyboxMaterial.GetTexture("_DownTex") as Texture2D;
+
+				if (front && back && left && right && up && down)
+				{
+					int size = front.width;
+
+					if (reusableSixSidedCubemap == null || lastCubemapSize != size)
+					{
+						reusableSixSidedCubemap = new Cubemap(size, TextureFormat.RGBA32, false);
+						lastCubemapSize = size;
+					}
+
+					CopyFace(reusableSixSidedCubemap, CubemapFace.PositiveZ, front);
+					CopyFace(reusableSixSidedCubemap, CubemapFace.NegativeZ, back);
+					CopyFace(reusableSixSidedCubemap, CubemapFace.PositiveX, left);
+					CopyFace(reusableSixSidedCubemap, CubemapFace.NegativeX, right);
+					CopyFace(reusableSixSidedCubemap, CubemapFace.PositiveY, up);
+					CopyFace(reusableSixSidedCubemap, CubemapFace.NegativeY, down);
+
+					reusableSixSidedCubemap.Apply();
+
+					cubemap = reusableSixSidedCubemap;
+				}
+			}
+			return cubemap;
+		}
+
 		private static void CopyFace(Cubemap target, CubemapFace face, Texture2D source)
 		{
 			if (source == null || target == null) return;

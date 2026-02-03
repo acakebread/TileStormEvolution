@@ -93,10 +93,11 @@ namespace MassiveHadronLtd
 		private float lastReflectionStrength;
 		private float lastFrostThreshold;
 		private float lastFrostFadeRange;
-		private Material lastSkyboxMaterial;
+		private Texture lastSkyboxTexture;
 
 		private CameraRenderSettingsOverride renderSettingsOverride => gameObject.GetComponent<CameraRenderSettingsOverride>();
-		private Material activeSkybox => renderSettingsOverride ? renderSettingsOverride.OverrideSettings.skybox : RenderSettings.skybox;
+		//private Material activeSkybox => renderSettingsOverride ? renderSettingsOverride.OverrideSettings.skybox : RenderSettings.skybox;
+		private Texture skyboxTexture => SkyboxUtility.GetSkyboxTexture(renderSettingsOverride ? renderSettingsOverride.OverrideSettings.skybox : RenderSettings.skybox);
 
 		// Already there
 		private bool isRenderToTextureMode = false;
@@ -299,7 +300,7 @@ namespace MassiveHadronLtd
 				   reflectionStrength != lastReflectionStrength ||
 				   frostThreshold != lastFrostThreshold ||
 				   frostFadeRange != lastFrostFadeRange ||
-				   activeSkybox != lastSkyboxMaterial;
+				   skyboxTexture != lastSkyboxTexture;
 		}
 
 		private void StoreMaterialPropertyValues()
@@ -318,7 +319,7 @@ namespace MassiveHadronLtd
 			lastReflectionStrength = reflectionStrength;
 			lastFrostThreshold = frostThreshold;
 			lastFrostFadeRange = frostFadeRange;
-			lastSkyboxMaterial = activeSkybox;
+			lastSkyboxTexture = skyboxTexture;
 		}
 
 		private void UpdateMaterialProperties()
@@ -358,8 +359,7 @@ namespace MassiveHadronLtd
 						effectMaterial.SetFloat("_RippleFrequency", rippleFrequency);
 						effectMaterial.SetFloat("_RippleOffset", rippleOffset);
 						effectMaterial.SetFloat("_ReflectionStrength", reflectionStrength);
-						//effectMaterial.SetTexture("_Skybox", activeSkybox.mainTexture);//this doesn't work
-						SkyboxUtility.SetSkyboxCubemap(effectMaterial, activeSkybox);//this does
+						effectMaterial.SetTexture("_Skybox", skyboxTexture);
 						break;
 
 					case EffectMode.OceanEffect:
@@ -374,8 +374,7 @@ namespace MassiveHadronLtd
 						effectMaterial.SetFloat("_FrostThreshold", frostThreshold);
 						effectMaterial.SetFloat("_FrostFadeRange", frostFadeRange);
 						effectMaterial.SetTexture("_NoiseTex", noiseTexture);
-						//effectMaterial.SetTexture("_Skybox", activeSkybox.mainTexture);//this doesn't work
-						SkyboxUtility.SetSkyboxCubemap(effectMaterial, activeSkybox);//this does
+						effectMaterial.SetTexture("_Skybox", skyboxTexture);
 						break;
 				}
 
@@ -462,7 +461,7 @@ namespace MassiveHadronLtd
 					overrideComp = childCam.gameObject.AddComponent<CameraRenderSettingsOverride>();
 				overrideComp.OverrideSettings = renderSettings;
 			}
-			lastSkyboxMaterial = null;//temporary hack
+			lastSkyboxTexture = null;//temporary hack
 		}
 
 		private EffectMode lastAppliedMode = EffectMode.Null;  // track last successfully applied
