@@ -143,8 +143,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MassiveHadronLtd.ReflectionEffectCamera
   planeNormal: {x: 0, y: 1, z: 0}
   offset: 0
-  effectMode: 4
-  previousEffectMode: 0
+  effectMode: 2
   mirrorTint: {r: 1, g: 1, b: 1, a: 1}
   baseColor: {r: 0, g: 0, b: 0, a: 0.5882353}
   filmIntensity: 0.2

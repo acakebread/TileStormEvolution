@@ -35,6 +35,7 @@ namespace MassiveHadronLtd
 
 		public enum EffectMode
 		{
+			Null,// "not yet initialized"
 			Debug,
 			PerfectMirror,
 			SurfaceFilm,
@@ -43,7 +44,7 @@ namespace MassiveHadronLtd
 			OceanEffect
 		}
 
-		[SerializeField] private EffectMode effectMode = EffectMode.PerfectMirror;
+		[SerializeField] private EffectMode effectMode = EffectMode.Null;
 
 		[SerializeField, Tooltip("Tint for PerfectMirror and SurfaceFilm (multiplies reflection)")]
 		private Color mirrorTint = new Color(1f, 1f, 1f, 1f);
@@ -111,9 +112,11 @@ namespace MassiveHadronLtd
 				enabled = false;
 				return;
 			}
+
 			if (Camera.main == mainCamera)
 				PreviewRenderLayers.RemovePreviewLayers(mainCamera);
 
+			// Setup camera data and command provider (always needed)
 			var mainCameraData = mainCamera.gameObject.GetComponent<UniversalAdditionalCameraData>();
 			if (postProcessingCamera != null) mainCameraData.cameraStack.Add(postProcessingCamera);
 
@@ -122,18 +125,45 @@ namespace MassiveHadronLtd
 				provider = mainCamera.gameObject.AddComponent<CameraCommandProvider>();
 
 			provider.RegisterCommand(RenderPassEvent.BeforeRenderingTransparents,
-			(cmd, cam) =>
-			{
-				if (effectMesh == null) return;
-				FrustumPlaneIntersection.GenerateFrustumPlaneIntersectionMesh(mainCamera, planeNormal, offset, effectMesh, true);
-				if (effectMesh != null && effectMesh.vertexCount >= 3 && effectMesh.triangles.Length >= 3 && effectMaterial != null)
+				(cmd, cam) =>
 				{
-					effectMaterial.SetPass(0);
-					cmd.DrawMesh(effectMesh, Matrix4x4.identity, effectMaterial, 0, 0);
-				}
-			});
+					if (effectMesh == null) return;
+					FrustumPlaneIntersection.GenerateFrustumPlaneIntersectionMesh(mainCamera, planeNormal, offset, effectMesh, true);
+					if (effectMesh != null && effectMesh.vertexCount >= 3 && effectMesh.triangles.Length >= 3 && effectMaterial != null)
+					{
+						effectMaterial.SetPass(0);
+						cmd.DrawMesh(effectMesh, Matrix4x4.identity, effectMaterial, 0, 0);
+					}
+				});
 
-			ApplyEffect(effectMode);
+			// Intelligent initialization logic
+			if (effectMode == EffectMode.Null)
+			{
+				// Wait one frame to see if something sets it (e.g. script, editor)
+				Invoke(nameof(CheckAndApplyDefaultEffectAfterDelay), 0f); // 0f = next frame
+			}
+			else
+			{
+				// Already set in inspector/script → apply immediately
+				ApplyEffect(effectMode);
+			}
+		}
+
+		private void CheckAndApplyDefaultEffectAfterDelay()
+		{
+			if (effectMode == EffectMode.Null)
+			{
+				// Still null after one frame → apply default
+				effectMode = EffectMode.Debug; // or PerfectMirror, Water, whatever you prefer as fallback
+				ApplyEffect(effectMode);
+				Debug.Log($"Auto-applied default effect {effectMode} after one-frame delay (was Null)", this);
+			}
+			else
+			{
+				// Something set it during that frame → apply now
+				ApplyEffect(effectMode);
+				Debug.Log($"Effect was set to {effectMode} during delay frame — applying immediately", this);
+			}
 		}
 
 		public void SetEffectMode(EffectMode value)
@@ -405,9 +435,24 @@ namespace MassiveHadronLtd
 			if (!isActiveAndEnabled || mainCamera == null)
 				return;
 
+			// Safe: live update material properties (colors, floats, textures)
 			if (effectMaterial != null)
 				UpdateMaterialProperties();
+
+			// If mode changed (or first time), schedule rebuild
+			if (effectMode != lastAppliedMode || lastAppliedMode == EffectMode.Null)
+				Invoke(nameof(DeferredRebuild), 0f);  // next frame / safe timing
+
+			lastAppliedMode = effectMode;  // track for next change detection
 		}
+
+		private void DeferredRebuild()
+		{
+			CleanupDynamicResources();
+			ApplyEffect(effectMode);
+		}
+
+		private EffectMode lastAppliedMode = EffectMode.Null;  // track last successfully applied
 
 		public void SetExternalOutputTexture(RenderTexture externalRT)
 		{
