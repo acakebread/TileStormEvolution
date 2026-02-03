@@ -248,7 +248,7 @@ namespace MassiveHadronLtd
 			return material;
 		}
 
-		public static Material CreateWaterMaterialOpaque(Color baseColor, RenderTexture reflectionTexture, float rippleSpeed = 0.5f, float rippleAmplitude = 0.5f, float rippleFrequency = 0.5f, float rippleOffset = 0.5f, float depthThreshold = 5.0f, float depthTolerance = 0.01f, float debugDepthScalar = 0.0f)
+		public static Material CreateWaterMaterialOpaque(Color baseColor, RenderTexture reflectionTexture, float rippleSpeed = 0.5f, float rippleAmplitude = 0.5f, float rippleFrequency = 0.5f, float rippleOffset = 0.5f, float reflectionStrength = 0.8f, Texture skyboxTexture = null, float depthThreshold = 5.0f, float depthTolerance = 0.01f, float debugDepthScalar = 0.0f)
 		{
 			var waterShader = Shader.Find("Unlit/URPWaterOpaque");
 			if (!waterShader)
@@ -263,6 +263,9 @@ namespace MassiveHadronLtd
 			material.SetFloat("_RippleAmplitude", rippleAmplitude);
 			material.SetFloat("_RippleFrequency", rippleFrequency);
 			material.SetFloat("_RippleOffset", rippleOffset);
+			material.SetFloat("_ReflectionStrength", reflectionStrength);
+			if (skyboxTexture != null)
+				material.SetTexture("_Skybox", skyboxTexture);
 			material.SetFloat("_TimeSeed", 0f);
 			material.SetFloat("_DepthThreshold", depthThreshold);
 			material.SetFloat("_DepthTolerance", depthTolerance);

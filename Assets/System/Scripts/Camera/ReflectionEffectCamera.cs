@@ -6,6 +6,93 @@ using UnityEngine.Rendering.Universal;
 
 namespace MassiveHadronLtd
 {
+	[System.Serializable]
+	public struct PerfectMirrorDefaults
+	{
+		public Color tint;
+
+		public static PerfectMirrorDefaults Get() => new()
+		{
+			tint = new Color(0.5f, 0.5f, 0.5f, 1f),
+		};
+	}
+
+	[System.Serializable]
+	public struct SurfaceFilmDefaults
+	{
+		public Color tint;
+		public float noiseScale;
+
+		public static SurfaceFilmDefaults Get() => new()
+		{
+			tint = new Color(0.2f, 0.2f, 0.2f, 0.5f),
+			noiseScale = 1f,
+		};
+	}
+
+	[System.Serializable]
+	public struct FrostDefaults
+	{
+		public Color tint;
+		public float depth;
+		public float noiseStrength;
+
+		public static FrostDefaults Get() => new()
+		{
+			tint = new Color(0.1f, 0.1f, 0.1f, 0.5f),
+			depth = 0.05f,
+			noiseStrength = 0.2f,
+		};
+	}
+
+	[System.Serializable]
+	public struct WaterDefaults
+	{
+		public Color tint;
+		public float rippleSpeed;
+		public float rippleAmplitude;
+		public float rippleFrequency;
+		public float rippleOffset;
+		public float reflectionStrength;
+
+		public static WaterDefaults Get() => new()
+		{
+			tint = new Color(0.05f, 0.05f, 0.05f, 0.6f),
+			rippleSpeed = 0.2f,
+			rippleAmplitude = 0.075f,
+			rippleFrequency = 0.35f,
+			rippleOffset = 0f,
+			reflectionStrength = 0.8f,
+		};
+	}
+
+	[System.Serializable]
+	public struct OceanDefaults
+	{
+		public Color tint;
+		public float rippleSpeed;
+		public float rippleAmplitude;
+		public float rippleFrequency;
+		public float rippleOffset;
+		public float frostDepth;
+		public float noiseStrength;
+		public float frostThreshold;
+		public float frostFadeRange;
+
+		public static OceanDefaults Get() => new()
+		{
+			tint = new Color(0.075f, 0.075f, 0.075f, 0.6f),
+			rippleSpeed = 0.25f,
+			rippleAmplitude = 0.15f,
+			rippleFrequency = 0.35f,
+			rippleOffset = 0f,
+			frostDepth = 0.5f,
+			noiseStrength = 0.5f,
+			frostThreshold = 0.8f,
+			frostFadeRange = 0.1f,
+		};
+	}
+
 	[RequireComponent(typeof(Camera))]
 	public class ReflectionEffectCamera : MonoBehaviour
 	{
@@ -49,7 +136,7 @@ namespace MassiveHadronLtd
 		[SerializeField, Tooltip("Tint for PerfectMirror and SurfaceFilm (multiplies reflection) and Base color for Frost, Water, Ocean")]
 		private Color mirrorTint = new Color(0.1f, 0.1f, 0.1f, 0.5f);
 
-		[SerializeField, Range(0, 0.5f)] private float filmIntensity = 0.2f;
+		//[SerializeField, Range(0, 0.5f)] private float filmIntensity = 0.2f;
 		[SerializeField, Range(0.01f, 5f)] private float noiseScale = 1f;
 		[SerializeField] private Texture2D noiseTexture;
 
@@ -79,7 +166,6 @@ namespace MassiveHadronLtd
 		private Color lastMirrorTint;
 		private float lastFrostDepth;
 		private float lastNoiseStrength;
-		private float lastFilmIntensity;
 		private float lastNoiseScale;
 		private Texture2D lastNoiseTexture;
 		private float lastRippleSpeed;
@@ -161,12 +247,62 @@ namespace MassiveHadronLtd
 			}
 		}
 
-		public void SetEffectMode(EffectMode value)
+		public void SetEffectMode(EffectMode value, bool useDefaults = true)
 		{
-			if (value == EffectMode.Water)
-				ApplyWaterDefault();
+			if (effectMode == value) return;
 
+			effectMode = value;
+			if (useDefaults) ApplyDefaults(value);
 			ApplyEffect(value);
+		}
+
+		public void ApplyDefaults(EffectMode value)
+		{
+			switch (value)
+			{
+				case EffectMode.PerfectMirror:
+					var pm = PerfectMirrorDefaults.Get();
+					mirrorTint = pm.tint;
+					break;
+
+				case EffectMode.SurfaceFilm:
+					var sf = SurfaceFilmDefaults.Get();
+					mirrorTint = sf.tint;
+					noiseScale = sf.noiseScale;
+					break;
+
+				case EffectMode.FrostEffect:
+					var fr = FrostDefaults.Get();
+					mirrorTint = fr.tint;
+					frostDepth = fr.depth;
+					noiseStrength = fr.noiseStrength;
+					break;
+
+				case EffectMode.Water:
+					var w = WaterDefaults.Get();
+					mirrorTint = w.tint;
+					rippleSpeed = w.rippleSpeed;
+					rippleAmplitude = w.rippleAmplitude;
+					rippleFrequency = w.rippleFrequency;
+					rippleOffset = w.rippleOffset;
+					reflectionStrength = w.reflectionStrength;
+					break;
+
+				case EffectMode.OceanEffect:
+					var o = OceanDefaults.Get();
+					mirrorTint = o.tint;
+					rippleSpeed = o.rippleSpeed;
+					rippleAmplitude = o.rippleAmplitude;
+					rippleFrequency = o.rippleFrequency;
+					rippleOffset = o.rippleOffset;
+					frostDepth = o.frostDepth;
+					noiseStrength = o.noiseStrength;
+					frostThreshold = o.frostThreshold;
+					frostFadeRange = o.frostFadeRange;
+					break;
+
+				// Debug, Null → no defaults applied
+			}
 		}
 
 		private void ApplyEffect(EffectMode value, bool withReset = true)
@@ -210,7 +346,7 @@ namespace MassiveHadronLtd
 					effectMesh = new Mesh();
 					noiseTexture = WangTileGenerator.GenerateWangTileAtlas();
 					isTextureDynamic = true;
-					effectMaterial = MaterialUtils.CreatePerlinWangOpaque(renderTexture, mirrorTint, noiseTexture, filmIntensity, noiseScale);
+					effectMaterial = MaterialUtils.CreatePerlinWangOpaque(renderTexture, mirrorTint, noiseTexture, mirrorTint.a, noiseScale);
 					isMaterialDynamic = true;
 					SetupTextureCamera();
 					reflectionCamera.targetTexture = renderTexture;
@@ -230,7 +366,10 @@ namespace MassiveHadronLtd
 				case EffectMode.Water:
 					renderTexture.name = "WaterRenderTexture";
 					effectMesh = new Mesh();
-					effectMaterial = MaterialUtils.CreateWaterMaterialOpaque(mirrorTint, renderTexture, rippleSpeed, rippleAmplitude, rippleFrequency, rippleOffset);
+					effectMaterial = MaterialUtils.CreateWaterMaterialOpaque(mirrorTint, renderTexture, rippleSpeed, rippleAmplitude, rippleFrequency, rippleOffset, reflectionStrength);
+
+					effectMaterial.SetTexture("_Skybox", skyboxTexture);
+
 					isMaterialDynamic = true;
 					SetupTextureCamera();
 					reflectionCamera.targetTexture = renderTexture;
@@ -285,7 +424,6 @@ namespace MassiveHadronLtd
 			return mirrorTint != lastMirrorTint ||
 				   frostDepth != lastFrostDepth ||
 				   noiseStrength != lastNoiseStrength ||
-				   filmIntensity != lastFilmIntensity ||
 				   noiseScale != lastNoiseScale ||
 				   noiseTexture != lastNoiseTexture ||
 				   rippleSpeed != lastRippleSpeed ||
@@ -303,7 +441,6 @@ namespace MassiveHadronLtd
 			lastMirrorTint = mirrorTint;
 			lastFrostDepth = frostDepth;
 			lastNoiseStrength = noiseStrength;
-			lastFilmIntensity = filmIntensity;
 			lastNoiseScale = noiseScale;
 			lastNoiseTexture = noiseTexture;
 			lastRippleSpeed = rippleSpeed;
@@ -334,7 +471,7 @@ namespace MassiveHadronLtd
 						break;
 					case EffectMode.SurfaceFilm:
 						effectMaterial.SetColor("_DimColor", mirrorTint);
-						effectMaterial.SetFloat("_FilmIntensity", filmIntensity);
+						effectMaterial.SetFloat("_FilmIntensity", mirrorTint.a);
 						effectMaterial.SetFloat("_NoiseScale", noiseScale);
 						effectMaterial.SetTexture("_NoiseTex", noiseTexture);
 						break;
@@ -383,15 +520,6 @@ namespace MassiveHadronLtd
 			}
 		}
 
-		public void ApplyWaterDefault()
-		{
-			mirrorTint = new Color(0.075f, 0.075f, 0.075f, 0.6f);
-			rippleSpeed = 0.25f;
-			rippleAmplitude = 0.15f;
-			rippleFrequency = 0.35f;
-			reflectionStrength = 0.5f;
-		}
-
 		public void Update()
 		{
 			timeSeed += Time.deltaTime;
@@ -430,8 +558,8 @@ namespace MassiveHadronLtd
 				return;
 
 			// Safe: live update material properties (colors, floats, textures)
-			if (effectMaterial != null)
-				UpdateMaterialProperties();
+			if (lastAppliedMode == effectMode) UpdateMaterialProperties();
+			else ApplyDefaults(effectMode);
 
 			// If mode changed (or first time), schedule rebuild
 			if (effectMode != lastAppliedMode || lastAppliedMode == EffectMode.Null)
@@ -442,7 +570,7 @@ namespace MassiveHadronLtd
 
 		private void DeferredRebuild()
 		{
-			ApplyEffect(effectMode);
+			ApplyEffect(effectMode, true);
 		}
 
 		private bool renderSettingsChanged = false;

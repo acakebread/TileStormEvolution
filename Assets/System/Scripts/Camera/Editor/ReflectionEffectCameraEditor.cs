@@ -27,7 +27,6 @@ public class ReflectionEffectCameraEditor : Editor
 			case ReflectionEffectCamera.EffectMode.SurfaceFilm:
 				EditorGUILayout.PropertyField(serializedObject.FindProperty("mirrorTint"), new GUIContent("Mirror Tint"));
 				EditorGUILayout.PropertyField(serializedObject.FindProperty("noiseTexture"));
-				EditorGUILayout.PropertyField(serializedObject.FindProperty("filmIntensity"));
 				EditorGUILayout.PropertyField(serializedObject.FindProperty("noiseScale"));
 				break;
 
