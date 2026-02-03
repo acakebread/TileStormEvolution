@@ -9,7 +9,7 @@ Shader "Unlit/URPOceanOpaque"
         _RippleAmplitude ("Ripple Amplitude", Range(0, 1)) = 0.5
         _RippleFrequency ("Ripple Frequency", Range(0, 1)) = 0.5
         _RippleOffset ("Ripple Offset", Range(0, 1)) = 0.5
-        _RippleSeed ("Ripple Seed", Float) = 0.0
+        _TimeSeed ("Time Seed", Float) = 0.0
         _DepthThreshold ("Frost Depth Max", Range(1, 512)) = 128
         _FrostDepth ("Frost Depth", Range(0, 1)) = 0.5
         _FrostNoiseStrength ("Frost Noise Strength", Range(0, 0.1)) = 0.02
@@ -58,7 +58,7 @@ Shader "Unlit/URPOceanOpaque"
                 float _RippleAmplitude;
                 float _RippleFrequency;
                 float _RippleOffset;
-                float _RippleSeed;
+                float _TimeSeed;
                 float _DepthThreshold;
                 float _FrostDepth;
                 float _FrostNoiseStrength;
@@ -106,7 +106,7 @@ Shader "Unlit/URPOceanOpaque"
                 float speed = _RippleSpeed * RIPPLE_SPEED_SCALE;
                 float amplitude = _RippleAmplitude * RIPPLE_AMPLITUDE_SCALE;
                 float frequency = _RippleFrequency * RIPPLE_FREQUENCY_SCALE + RIPPLE_FREQUENCY_OFFSET;
-                float time = _RippleSeed * speed;
+                float time = _TimeSeed * speed;
 
                 float2 wave1Dir = normalize(float2(1, 1));
                 float2 wave2Dir = normalize(float2(-1, 1));

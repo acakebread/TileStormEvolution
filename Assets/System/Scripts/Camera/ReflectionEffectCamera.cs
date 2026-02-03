@@ -39,7 +39,7 @@ namespace MassiveHadronLtd
 
 		public static FrostDefaults Get() => new()
 		{
-			tint = new Color(0.1f, 0.1f, 0.1f, 0.5f),
+			tint = new Color(1f, 1f, 1f, 0.1f),
 			depth = 0.05f,
 			noiseStrength = 0.2f,
 		};
@@ -216,6 +216,8 @@ namespace MassiveHadronLtd
 						cmd.DrawMesh(effectMesh, Matrix4x4.identity, effectMaterial, 0, 0);
 					}
 				});
+
+			lastAppliedMode = effectMode;//for invalidate to work at run time
 
 			// Intelligent initialization logic
 			if (effectMode == EffectMode.Null)
@@ -453,11 +455,11 @@ namespace MassiveHadronLtd
 			lastSkyboxTexture = skyboxTexture;
 		}
 
-		private void UpdateMaterialProperties()
+		public void UpdateMaterialProperties()
 		{
 			if (effectMaterial == null) return;
 
-			if (true == renderSettingsChanged || HasMaterialPropertiesChanged())
+			//if (true == renderSettingsChanged || HasMaterialPropertiesChanged())
 			{
 				renderSettingsChanged = false;
 				// Lazy one-time assignment of reflection RT to material (after RT is created & camera is rendering)
@@ -511,19 +513,15 @@ namespace MassiveHadronLtd
 
 				StoreMaterialPropertyValues();
 			}
-
-			if (effectMode == EffectMode.Water || effectMode == EffectMode.OceanEffect)
-			{
-				effectMaterial.SetFloat("_TimeSeed", timeSeed);
-				if (effectMode == EffectMode.OceanEffect)
-					effectMaterial.SetFloat("_RippleSeed", timeSeed);
-			}
 		}
 
 		public void Update()
 		{
 			timeSeed += Time.deltaTime;
-			UpdateMaterialProperties();
+			//UpdateMaterialProperties();
+
+			if (effectMode == EffectMode.Water || effectMode == EffectMode.OceanEffect)
+				effectMaterial.SetFloat("_TimeSeed", timeSeed);
 		}
 
 		private void LateUpdate()
@@ -583,7 +581,8 @@ namespace MassiveHadronLtd
 					overrideComp = childCam.gameObject.AddComponent<CameraRenderSettingsOverride>();
 				overrideComp.OverrideSettings = renderSettings;
 			}
-			renderSettingsChanged = true;
+			//renderSettingsChanged = true;
+			UpdateMaterialProperties();
 		}
 
 		private EffectMode lastAppliedMode = EffectMode.Null;  // track last successfully applied

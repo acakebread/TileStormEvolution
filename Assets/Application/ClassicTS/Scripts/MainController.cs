@@ -119,6 +119,10 @@ namespace ClassicTilestorm
 			SkyboxUtility.SetSkybox(currentMap.skybox);
 			RenderSettings.ambientLight = currentMap.Light;
 
+			var mainReflection = Camera.main?.GetComponent<ReflectionEffectCamera>();
+			if (mainReflection != null)
+				mainReflection.UpdateMaterialProperties();//invoke due to skybox loaded
+
 			//var mainReflection = Camera.main?.GetComponent<ReflectionEffectCamera>();
 			//if (mainReflection != null)
 			//{
