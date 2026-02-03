@@ -64,17 +64,6 @@ namespace ClassicTilestorm
 
 			UpdateOverrideSettings(CreateRenderSettingsFromMap(map));
 
-			//var renderSettings = CreateRenderSettingsFromMap(map);
-
-			//// Ambient / render overrides on main camera + children
-			//foreach (var childCam in previewCam.GetComponentsInChildren<Camera>(true))
-			//{
-			//	var overrideComp = childCam.gameObject.GetComponent<CameraRenderSettingsOverride>();
-			//	if (overrideComp == null)
-			//		overrideComp = childCam.gameObject.AddComponent<CameraRenderSettingsOverride>();
-			//	overrideComp.SetOverrideSettings(renderSettings);
-			//}
-
 			// Skybox
 			var previewSkyMat = SkyboxUtility.GetSkyboxMaterialForName(map?.skybox);
 			if (previewSkyMat != null)
