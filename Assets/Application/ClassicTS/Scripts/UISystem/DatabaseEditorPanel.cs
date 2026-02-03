@@ -643,10 +643,7 @@ namespace ClassicTilestorm
 
 			previewImage.color = Color.white;
 
-			currentPreviewInstance = map.InstantiatePreviewCopy(
-				MapPreviewUtil.PreviewMapRoot,
-				PreviewRenderLayers.previewMask
-			);
+			currentPreviewInstance = map.BuildPreviewGeometry(MapPreviewUtil.PreviewMapRoot, PreviewRenderLayers.previewMask);
 
 			if (currentPreviewInstance == null)
 			{
