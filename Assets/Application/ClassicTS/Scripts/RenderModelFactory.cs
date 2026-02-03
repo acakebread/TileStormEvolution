@@ -120,7 +120,7 @@ namespace ClassicTilestorm
 				added++;
 			}
 
-			Debug.Log($"Added {added} instances from {prefabRoot.name}");
+			//Debug.Log($"Added {added} instances from {prefabRoot.name}");
 		}
 
 		private static Color GetEmissionLikeColor(Material mat, Color fallback = default)

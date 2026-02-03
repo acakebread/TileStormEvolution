@@ -168,10 +168,22 @@ namespace ClassicTilestorm
 			}
 
 			ClearMapListItems();
-			MapPreviewUtil.ClearPreviewMap();
 
 			if (currentPreviewInstance != null)
 			{
+				DestroyImmediate(currentPreviewInstance);
+				currentPreviewInstance = null;
+			}
+
+			if (currentPreviewRoot != null)
+			{
+				DestroyImmediate(currentPreviewRoot);
+				currentPreviewRoot = null;
+			}
+
+			if (currentPreviewInstance != null)
+			{
+				// usually already destroyed via currentPreviewRoot, but safe
 				DestroyImmediate(currentPreviewInstance);
 				currentPreviewInstance = null;
 			}
@@ -288,6 +300,8 @@ namespace ClassicTilestorm
 				swatchImage.color = final;
 
 			CurrentMap.Light = final;
+
+			MapPreviewUtil.UpdateOverrideSettings(MapPreviewUtil.CreateRenderSettingsFromMap(CurrentMap));
 		}
 
 		private void UpdateValueSlider()
@@ -620,18 +634,19 @@ namespace ClassicTilestorm
 				MapPreviewUtil.SetSkyboxOverride(skyMaterial);
 		}
 
+		private GameObject currentPreviewRoot;   // ← this is the one GameObject we spawn
+
 		private void UpdateMapPreview()
 		{
-			if (MapPreviewUtil.PreviewCamera == null || previewImage == null)
-				return;
+			if (MapPreviewUtil.PreviewCamera == null || previewImage == null) return;
 
 			var map = CurrentMap;
 
-			MapPreviewUtil.ClearPreviewMap();
-			if (currentPreviewInstance != null)
+			// Destroy previous preview (clean, fast, zero scanning)
+			if (currentPreviewRoot != null)
 			{
-				DestroyImmediate(currentPreviewInstance);
-				currentPreviewInstance = null;
+				DestroyImmediate(currentPreviewRoot);
+				currentPreviewRoot = null;
 			}
 
 			if (map == null || map.Width <= 0 || map.Height <= 0)
@@ -643,47 +658,45 @@ namespace ClassicTilestorm
 
 			previewImage.color = Color.white;
 
-			currentPreviewInstance = map.BuildPreviewGeometry(MapPreviewUtil.PreviewMapRoot, PreviewRenderLayers.previewMask);
+			// Create dedicated root object – named, easy to spot in hierarchy
+			currentPreviewRoot = new GameObject($"Preview – {map.name ?? "Untitled"}");
+			currentPreviewRoot.transform.SetParent(MapPreviewUtil.PreviewMapRoot ?? transform); // fallback if no util root
 
-			if (currentPreviewInstance == null)
+			// Optional: reset transform
+			currentPreviewRoot.transform.localPosition = Vector3.zero;
+			currentPreviewRoot.transform.localRotation = Quaternion.identity;
+
+			// Build under our owned root
+			var geometry = map.BuildPreviewGeometry(currentPreviewRoot.transform, PreviewRenderLayers.previewMask);
+
+			if (geometry == null)
 			{
 				previewImage.color = new Color(1f, 0.3f, 0.3f, 0.7f);
 				orbitController?.ResetView(false);
 				return;
 			}
 
-			// Compute bounds for better framing
-			var bounds = new Bounds();
-			bool first = true;
+			// currentPreviewInstance can stay if you still need direct ref to the returned object
+			currentPreviewInstance = geometry;
 
-			foreach (var r in currentPreviewInstance.GetComponentsInChildren<Renderer>())
+			// bounds calculation + reframing (unchanged)
+			var bounds = new Bounds();
+			bool hasRenderers = false;
+
+			foreach (var rend in currentPreviewInstance.GetComponentsInChildren<Renderer>())
 			{
-				if (first)
-				{
-					bounds = r.bounds;
-					first = false;
-				}
-				else
-				{
-					bounds.Encapsulate(r.bounds);
-				}
+				if (!hasRenderers) { bounds = rend.bounds; hasRenderers = true; }
+				else bounds.Encapsulate(rend.bounds);
 			}
 
-			if (first) // fallback
+			if (!hasRenderers)
 			{
-				bounds = new Bounds(
-					new Vector3(map.Width * 0.5f, 0, map.Height * 0.5f),
-					new Vector3(map.Width, 5f, map.Height)
-				);
+				bounds = new Bounds(new Vector3(map.Width * 0.5f, 0, map.Height * 0.5f),
+									new Vector3(map.Width, 5f, map.Height));
 			}
 
 			MapPreviewUtil.UpdateRenderTextureSizeIfNeeded();
-
-			// Reframe only — preserve angles, halve distance
 			orbitController?.Reframe(bounds, distanceMultiplier: 1f);
-
-			// Optional: fine-tune pivot if needed
-			//orbitController.PivotOffset = new Vector3(0, -0.5f, 0);   // example: slightly below center
 		}
 	}
 }

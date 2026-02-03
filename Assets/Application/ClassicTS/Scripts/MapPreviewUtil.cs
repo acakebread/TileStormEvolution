@@ -9,111 +9,109 @@ namespace ClassicTilestorm
 	public static class MapPreviewUtil
 	{
 		private static GameObject root;
-		private static GameObject camGO;
 		private static Camera previewCam;
 
-		public static Transform previewMapRoot;
+		// Simple accessor — this is the transform where the panel should parent preview content
+		public static Transform PreviewMapRoot => root != null ? root.transform : null;
 
-		// ── Added for dynamic RT resize ─────────────────────────────────────
+		public static Camera PreviewCamera => previewCam;
+
+		// ── Dynamic RT resize fields ────────────────────────────────────────
 		private static RawImage targetRawImage;
 		private static RectTransform previewRect;
 		private static Vector2 lastKnownSize = Vector2.zero;
 
-		public static Camera PreviewCamera => previewCam;
-		public static Transform PreviewMapRoot => previewMapRoot;
-
-		public static void ClearPreviewMap()
-		{
-			if (previewMapRoot != null)
-			{
-				foreach (Transform child in previewMapRoot)
-				{
-					if (child != null) Object.DestroyImmediate(child.gameObject);
-				}
-			}
-		}
-
-		public static void Initialize(Map _map = null, GameObject previewCamerPrefab = null)
+		public static void Initialize(Map map = null, GameObject previewCameraPrefab = null)
 		{
 			if (root != null) return;
 
 			root = new GameObject("MAP_PREVIEW_ROOT");
 
-			GameObject previewRoot = new GameObject("PreviewSceneRoot");
-			previewRoot.transform.SetParent(root.transform);
-			previewMapRoot = previewRoot.transform;
-
-			if (null != previewCamerPrefab)
+			// Camera setup
+			if (previewCameraPrefab != null)
 			{
-				camGO = GameObject.Instantiate(previewCamerPrefab);
-				camGO.transform.SetParent(root.transform);
-				camGO.layer = PreviewRenderLayers.previewLayer;
-
-				previewCam = camGO.GetComponent<Camera>();
+				var camInstance = GameObject.Instantiate(previewCameraPrefab);
+				camInstance.transform.SetParent(root.transform);
+				camInstance.layer = PreviewRenderLayers.previewLayer;
+				previewCam = camInstance.GetComponent<Camera>();
 			}
 			else
 			{
-				camGO = new GameObject("PreviewCamera");
+				var camGO = new GameObject("PreviewCamera");
 				camGO.transform.SetParent(root.transform);
 				camGO.layer = PreviewRenderLayers.previewLayer;
 
 				previewCam = camGO.AddComponent<Camera>();
 				camGO.AddComponent<UniversalAdditionalCameraData>();
+
 				previewCam.cullingMask = PreviewRenderLayers.previewFullMask;
 				previewCam.clearFlags = CameraClearFlags.Skybox;
 				previewCam.backgroundColor = new Color(0.2f, 0.2f, 0.2f, 1f);
 				previewCam.nearClipPlane = 0.1f;
 				previewCam.farClipPlane = 2000f;
+
 				camGO.AddComponent<ReflectionEffectCamera>();
 			}
 
-			var reflectionEffect = camGO.GetComponent<ReflectionEffectCamera>();
-			// ── Key change: enable internal RT management ─────────────────────────────
-			reflectionEffect.SetRenderToTextureMode(true);
-			reflectionEffect.SetEffectMode(ReflectionEffectCamera.EffectMode.Water);  // or whatever default you want
-			reflectionEffect.SetOffset(-0.2f);
+			// Reflection & render settings
+			var reflectionEffect = previewCam.GetComponent<ReflectionEffectCamera>();
+			if (reflectionEffect != null)
+			{
+				reflectionEffect.SetRenderToTextureMode(true);
+				reflectionEffect.SetEffectMode(ReflectionEffectCamera.EffectMode.Water);
+				reflectionEffect.SetOffset(-0.2f);
+			}
 
-			// Add the override component
-			var ambientOverride = camGO.AddComponent<CameraRenderSettingsOverride>();
-			ambientOverride.SetOverrideSettings(CreateRenderSettingsFromMap(_map));
+			UpdateOverrideSettings(CreateRenderSettingsFromMap(map));
 
-			foreach (var childCam in camGO.GetComponentsInChildren<Camera>(true))
+			//var renderSettings = CreateRenderSettingsFromMap(map);
+
+			//// Ambient / render overrides on main camera + children
+			//foreach (var childCam in previewCam.GetComponentsInChildren<Camera>(true))
+			//{
+			//	var overrideComp = childCam.gameObject.GetComponent<CameraRenderSettingsOverride>();
+			//	if (overrideComp == null)
+			//		overrideComp = childCam.gameObject.AddComponent<CameraRenderSettingsOverride>();
+			//	overrideComp.SetOverrideSettings(renderSettings);
+			//}
+
+			// Skybox
+			var previewSkyMat = SkyboxUtility.GetSkyboxMaterialForName(map?.skybox);
+			if (previewSkyMat != null)
+				reflectionEffect?.SetSkyboxOverride(previewSkyMat);
+			else if (!string.IsNullOrEmpty(map?.skybox))
+				Debug.LogWarning($"Preview skybox not found for '{map.skybox}' — falling back to global.");
+		}
+
+		public static void UpdateOverrideSettings(UnityRenderSettings renderSettings)
+		{
+			// Ambient / render overrides on main camera + children
+			foreach (var childCam in previewCam.GetComponentsInChildren<Camera>(true))
 			{
 				var overrideComp = childCam.gameObject.GetComponent<CameraRenderSettingsOverride>();
 				if (overrideComp == null)
 					overrideComp = childCam.gameObject.AddComponent<CameraRenderSettingsOverride>();
-				overrideComp.SetOverrideSettings(CreateRenderSettingsFromMap(_map));
+				overrideComp.SetOverrideSettings(renderSettings);
 			}
-
-			var previewSkyMat = SkyboxUtility.GetSkyboxMaterialForName(_map?.skybox);
-			if (previewSkyMat != null)
-				reflectionEffect.SetSkyboxOverride(previewSkyMat);
-			else
-				Debug.LogWarning($"Preview skybox not found for '{_map?.skybox}' — falling back to global.");
-
-			// Initial size — will be updated properly in UpdateRenderTextureSizeIfNeeded
-			UpdateRenderTextureSizeIfNeeded();
 		}
 
 		public static void SetActiveMap(Map map)
 		{
-			if (camGO == null) return;
+			if (previewCam == null) return;
 
-			// Update ambient override on ALL preview cameras
-			foreach (var overrideComp in camGO.GetComponentsInChildren<CameraRenderSettingsOverride>(true))
+			// Update ambient overrides
+			foreach (var overrideComp in previewCam.GetComponentsInChildren<CameraRenderSettingsOverride>(true))
 				overrideComp.SetOverrideSettings(CreateRenderSettingsFromMap(map));
 
-			// Update skybox override too
-			var reflectionEffect = camGO.GetComponent<ReflectionEffectCamera>();
-			if (reflectionEffect != null)
-				reflectionEffect.SetSkyboxOverride(map?.SkyboxMaterial);
+			// Skybox override
+			var reflectionEffect = previewCam.GetComponent<ReflectionEffectCamera>();
+			reflectionEffect?.SetSkyboxOverride(map?.SkyboxMaterial);
 		}
 
 		public static void SetSkyboxOverride(Material value)
 		{
-			var reflectionEffect = camGO?.GetComponent<ReflectionEffectCamera>();
-			if (reflectionEffect != null)
-				reflectionEffect.SetSkyboxOverride(value);
+			var reflectionEffect = previewCam?.GetComponent<ReflectionEffectCamera>();
+			reflectionEffect?.SetSkyboxOverride(value);
 		}
 
 		public static void UpdateRenderTextureSizeIfNeeded()
@@ -132,7 +130,7 @@ namespace ClassicTilestorm
 
 			previewCam.aspect = (float)w / h;
 
-			var reflectionEffect = previewCam?.GetComponent<ReflectionEffectCamera>();
+			var reflectionEffect = previewCam.GetComponent<ReflectionEffectCamera>();
 			if (reflectionEffect != null)
 			{
 				reflectionEffect.CreateOrResizeReflectionTexture(w, h);
@@ -143,19 +141,6 @@ namespace ClassicTilestorm
 					targetRawImage.color = Color.white;
 				}
 			}
-		}
-
-		public static void Cleanup()
-		{
-			if (root) Object.DestroyImmediate(root);
-
-			root = null;
-			camGO = null;
-			previewCam = null;
-			previewMapRoot = null;
-
-			targetRawImage = null;
-			previewRect = null;
 		}
 
 		public static void SetPreviewUI(RawImage rawImage, RectTransform rectTransform)
@@ -173,26 +158,33 @@ namespace ClassicTilestorm
 				}
 			}
 
-			// Trigger resize to apply new rect size immediately
 			UpdateRenderTextureSizeIfNeeded();
 		}
 
-		private static UnityRenderSettings CreateRenderSettingsFromMap(Map map)
+		public static void Cleanup()
+		{
+			if (root != null)
+			{
+				Object.DestroyImmediate(root);
+			}
+
+			root = null;
+			previewCam = null;
+			targetRawImage = null;
+			previewRect = null;
+			lastKnownSize = Vector2.zero;
+		}
+
+		public static UnityRenderSettings CreateRenderSettingsFromMap(Map map)
 		{
 			return new UnityRenderSettings(
 				ambientMode: AmbientMode.Flat,
 				ambientLight: map?.Light ?? Color.white,
 				ambientIntensity: 1f,
 				skybox: map?.SkyboxMaterial,
-				ambientProbe: default,                               // or whatever fallback you prefer
-				subtractiveShadowColor: RenderSettings.subtractiveShadowColor  // keep whatever is current
+				ambientProbe: default,
+				subtractiveShadowColor: RenderSettings.subtractiveShadowColor
 			);
 		}
 	}
-
-	//public static class MapPreviewExtensions
-	//{
-	//	public static GameObject InstantiatePreviewCopy(this Map map, Transform parent, int layer) => map?.BuildPreviewGeometry(parent, layer);
-	//}
 }
-
