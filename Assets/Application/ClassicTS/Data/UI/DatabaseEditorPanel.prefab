@@ -4361,10 +4361,9 @@ MonoBehaviour:
   colourPickerImage: {fileID: 4382211045647294586}
   brightnessPickerImage: {fileID: 2548264389916112201}
   swatchImage: {fileID: 4711762663077492972}
-  backgroundColor: {r: 0.129, g: 0.698, b: 0.882, a: 1}
   fieldOfView: 50
   sizeToDistanceFactor: 0.8
-  defaultTiltAngle: 35
+  defaultTiltAngle: 20
   minTiltAngle: 0
   maxTiltAngle: 90
   minDistance: 2

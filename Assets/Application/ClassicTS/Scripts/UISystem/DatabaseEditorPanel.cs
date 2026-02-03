@@ -51,7 +51,7 @@ namespace ClassicTilestorm
 		//[SerializeField] private Color backgroundColor = new Color(0.129f, 0.698f, 0.882f);
 		[SerializeField] private float fieldOfView = 50f;
 		[SerializeField] private float sizeToDistanceFactor = 0.8f;      // tuned for map scale
-		[SerializeField] private float defaultTiltAngle = 35f;
+		[SerializeField] private float defaultTiltAngle = 20f;
 		[SerializeField] private float minTiltAngle = 0f;
 		[SerializeField] private float maxTiltAngle = 90f;
 		[SerializeField] private float minDistance = 2f;

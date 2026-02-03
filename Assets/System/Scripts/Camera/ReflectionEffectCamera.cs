@@ -96,7 +96,6 @@ namespace MassiveHadronLtd
 		private Texture lastSkyboxTexture;
 
 		private CameraRenderSettingsOverride renderSettingsOverride => gameObject.GetComponent<CameraRenderSettingsOverride>();
-		//private Material activeSkybox => renderSettingsOverride ? renderSettingsOverride.OverrideSettings.skybox : RenderSettings.skybox;
 		private Texture skyboxTexture => SkyboxUtility.GetSkyboxTexture(renderSettingsOverride ? renderSettingsOverride.OverrideSettings.skybox : RenderSettings.skybox);
 
 		// Already there
@@ -326,8 +325,9 @@ namespace MassiveHadronLtd
 		{
 			if (effectMaterial == null) return;
 
-			if (HasMaterialPropertiesChanged())
+			if (true == renderSettingsChanged || HasMaterialPropertiesChanged())
 			{
+				renderSettingsChanged = false;
 				// Lazy one-time assignment of reflection RT to material (after RT is created & camera is rendering)
 				if (renderTexture != null && effectMaterial.HasProperty("_MainTex") && effectMaterial.GetTexture("_MainTex") == null)
 					effectMaterial.SetTexture("_MainTex", renderTexture);
@@ -452,6 +452,7 @@ namespace MassiveHadronLtd
 			ApplyEffect(effectMode);
 		}
 
+		private bool renderSettingsChanged = false;
 		public void UpdateRenderSettings(UnityRenderSettings renderSettings)
 		{
 			foreach (var childCam in GetComponentsInChildren<Camera>(true))
@@ -461,7 +462,7 @@ namespace MassiveHadronLtd
 					overrideComp = childCam.gameObject.AddComponent<CameraRenderSettingsOverride>();
 				overrideComp.OverrideSettings = renderSettings;
 			}
-			lastSkyboxTexture = null;//temporary hack
+			renderSettingsChanged = true;
 		}
 
 		private EffectMode lastAppliedMode = EffectMode.Null;  // track last successfully applied
@@ -495,10 +496,7 @@ namespace MassiveHadronLtd
 		}
 
 		// Public accessor for UI / preview system
-		public RenderTexture GetOutputTexture()
-		{
-			return isRenderToTextureMode ? outputRenderTexture : null;
-		}
+		public RenderTexture GetOutputTexture() => isRenderToTextureMode ? outputRenderTexture : null;
 
 		private void SafeReleaseAndNull(ref RenderTexture rt)
 		{
