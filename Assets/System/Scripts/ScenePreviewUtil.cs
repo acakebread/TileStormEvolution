@@ -1,10 +1,9 @@
-﻿using MassiveHadronLtd;
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 
-namespace ClassicTilestorm
+namespace MassiveHadronLtd
 {
-	public static class MapPreviewUtil
+	public static class ScenePreviewUtil
 	{
 		private static GameObject root;
 		private static Camera previewCam;
@@ -18,7 +17,7 @@ namespace ClassicTilestorm
 		private static RawImage targetRawImage;
 		private static Vector2 lastKnownSize = Vector2.zero;
 
-		public static void Initialize(Map map = null, GameObject previewCameraPrefab = null)
+		public static void Initialize(UnityRenderSettings renderSettings, GameObject previewCameraPrefab = null)
 		{
 			if (root != null) return;
 
@@ -52,39 +51,21 @@ namespace ClassicTilestorm
 
 			// Reflection & render settings
 			var reflectionEffect = previewCam.GetComponent<ReflectionEffectCamera>();
-			if (reflectionEffect != null)
-			{
-				reflectionEffect.SetEffectMode(ReflectionEffectCamera.EffectMode.Water);
-				reflectionEffect.SetOffset(-0.2f);
-			}
+			if (null == reflectionEffect) return;
 
-			UpdateRenderSettings(map.RenderSettings);
-
-			// Skybox
-			var previewSkyMat = SkyboxUtility.GetSkyboxMaterialForName(map?.skybox);
-			if (previewSkyMat != null)
-				reflectionEffect?.SetSkyboxOverride(previewSkyMat);
-			else if (!string.IsNullOrEmpty(map?.skybox))
-				Debug.LogWarning($"Preview skybox not found for '{map.skybox}' — falling back to global.");
+			reflectionEffect.SetEffectMode(ReflectionEffectCamera.EffectMode.Water);
+			reflectionEffect.SetOffset(-0.2f);
+			UpdateRenderSettings(renderSettings);
 		}
 
 		public static void UpdateRenderSettings(UnityRenderSettings renderSettings)
 		{
 			if (null == previewCam) return;
-
-			foreach (var childCam in previewCam.GetComponentsInChildren<Camera>(true))
-			{
-				var overrideComp = childCam.gameObject.GetComponent<CameraRenderSettingsOverride>();
-				if (null == overrideComp)
-					overrideComp = childCam.gameObject.AddComponent<CameraRenderSettingsOverride>();
-				overrideComp.SetOverrideSettings(renderSettings);
-			}
-
 			var reflectionEffect = previewCam.GetComponent<ReflectionEffectCamera>();
-			reflectionEffect?.SetSkyboxOverride(renderSettings.skybox);
+			reflectionEffect?.UpdateRenderSettings(renderSettings);
 		}
 
-		public static void UpdateRenderTextureSizeIfNeeded()
+		public static void Update()
 		{
 			if (targetRawImage == null || previewCam == null) return;
 
@@ -127,7 +108,7 @@ namespace ClassicTilestorm
 				rawImage.color = Color.white;
 			}
 
-			UpdateRenderTextureSizeIfNeeded();
+			Update();
 		}
 
 		public static void Cleanup()

@@ -95,9 +95,14 @@ namespace MassiveHadronLtd
 		private float lastFrostFadeRange;
 		private Material lastSkyboxMaterial;
 
-		private Material overrideSkyboxMaterial;
-		public void SetSkyboxOverride(Material value) => overrideSkyboxMaterial = value;
-		private Material activeSkybox => overrideSkyboxMaterial != null ? overrideSkyboxMaterial : RenderSettings.skybox;
+		private Material activeSkybox
+		{
+			get
+			{
+				gameObject.TryGetComponent<CameraRenderSettingsOverride>(out var renderSettingsOverride);
+				return null != renderSettingsOverride ? renderSettingsOverride.GetOverrideSettings().skybox : RenderSettings.skybox;
+			}
+		}
 
 		// Already there
 		private bool isRenderToTextureMode = false;
@@ -359,7 +364,8 @@ namespace MassiveHadronLtd
 						effectMaterial.SetFloat("_RippleFrequency", rippleFrequency);
 						effectMaterial.SetFloat("_RippleOffset", rippleOffset);
 						effectMaterial.SetFloat("_ReflectionStrength", reflectionStrength);
-						SkyboxUtility.SetSkyboxCubemap(effectMaterial, activeSkybox);
+						//effectMaterial.SetTexture("_Skybox", activeSkybox.mainTexture);//this doesn't work
+						SkyboxUtility.SetSkyboxCubemap(effectMaterial, activeSkybox);//this does
 						break;
 
 					case EffectMode.OceanEffect:
@@ -374,7 +380,8 @@ namespace MassiveHadronLtd
 						effectMaterial.SetFloat("_FrostThreshold", frostThreshold);
 						effectMaterial.SetFloat("_FrostFadeRange", frostFadeRange);
 						effectMaterial.SetTexture("_NoiseTex", noiseTexture);
-						SkyboxUtility.SetSkyboxCubemap(effectMaterial, activeSkybox);
+						//effectMaterial.SetTexture("_Skybox", activeSkybox.mainTexture);//this doesn't work
+						SkyboxUtility.SetSkyboxCubemap(effectMaterial, activeSkybox);//this does
 						break;
 				}
 
@@ -450,6 +457,18 @@ namespace MassiveHadronLtd
 		{
 			CleanupDynamicResources();
 			ApplyEffect(effectMode);
+		}
+
+		public void UpdateRenderSettings(UnityRenderSettings renderSettings)
+		{
+			foreach (var childCam in GetComponentsInChildren<Camera>(true))
+			{
+				var overrideComp = childCam.gameObject.GetComponent<CameraRenderSettingsOverride>();
+				if (null == overrideComp)
+					overrideComp = childCam.gameObject.AddComponent<CameraRenderSettingsOverride>();
+				overrideComp.SetOverrideSettings(renderSettings);
+			}
+			lastSkyboxMaterial = null;//temporary hack
 		}
 
 		private EffectMode lastAppliedMode = EffectMode.Null;  // track last successfully applied

@@ -49,5 +49,10 @@ namespace MassiveHadronLtd
 		{
 			overrideSettings = value;
 		}
+
+		public UnityRenderSettings GetOverrideSettings()
+		{
+			return overrideSettings;
+		}
 	}
 }

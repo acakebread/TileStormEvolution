@@ -136,13 +136,12 @@ namespace ClassicTilestorm
 			SyncSkyboxDropdown();
 			SyncCharacterDropdown();
 
-			MapPreviewUtil.Initialize(CurrentMap, previewCameraPrefab);
-			MapPreviewUtil.UpdateRenderTextureSizeIfNeeded();
+			ScenePreviewUtil.Initialize(CurrentMap.RenderSettings, previewCameraPrefab);
 
 			if (previewImage != null)
-				MapPreviewUtil.SetPreviewUI(previewImage);
+				ScenePreviewUtil.SetPreviewUI(previewImage);
 
-			MapPreviewUtil.UpdateRenderSettings(CurrentMap.RenderSettings);
+			ScenePreviewUtil.UpdateRenderSettings(CurrentMap.RenderSettings);
 			UpdateMapPreview();
 		}
 
@@ -187,7 +186,7 @@ namespace ClassicTilestorm
 				currentPreviewInstance = null;
 			}
 
-			MapPreviewUtil.Cleanup();
+			ScenePreviewUtil.Cleanup();
 
 			if (previewImage != null)
 				previewImage.texture = null;
@@ -202,7 +201,7 @@ namespace ClassicTilestorm
 		{
 			if (!isActiveAndEnabled) return;
 
-			MapPreviewUtil.UpdateRenderTextureSizeIfNeeded();
+			ScenePreviewUtil.Update();
 
 			orbitController?.Update();
 			// No need for manual camera update – handled by OnTransformChanged callback
@@ -254,7 +253,7 @@ namespace ClassicTilestorm
 
 		private void ApplyOrbitToPreviewCamera()
 		{
-			var cam = MapPreviewUtil.PreviewCamera;
+			var cam = ScenePreviewUtil.PreviewCamera;
 			if (cam == null || orbitController == null) return;
 
 			var (pos, rot) = orbitController.GetCameraTransform();
@@ -299,7 +298,7 @@ namespace ClassicTilestorm
 				swatchImage.color = final;
 
 			CurrentMap.Light = final;
-			MapPreviewUtil.UpdateRenderSettings(CurrentMap.RenderSettings);
+			ScenePreviewUtil.UpdateRenderSettings(CurrentMap.RenderSettings);
 		}
 
 		private void UpdateValueSlider()
@@ -393,7 +392,7 @@ namespace ClassicTilestorm
 			if (newSkybox != CurrentMap.Skybox)
 			{
 				CurrentMap.Skybox = newSkybox;
-				MapPreviewUtil.UpdateRenderSettings(CurrentMap.RenderSettings);
+				ScenePreviewUtil.UpdateRenderSettings(CurrentMap.RenderSettings);
 			}
 		}
 
@@ -485,7 +484,7 @@ namespace ClassicTilestorm
 			SyncSkyboxDropdown();
 			SyncCharacterDropdown();
 
-			MapPreviewUtil.UpdateRenderSettings(CurrentMap.RenderSettings);
+			ScenePreviewUtil.UpdateRenderSettings(CurrentMap.RenderSettings);
 			UpdateMapPreview();
 		}
 
@@ -624,11 +623,11 @@ namespace ClassicTilestorm
 		//   Preview Utilities
 		// ────────────────────────────────────────────────────────────────────────────────
 
-		private GameObject currentPreviewRoot;   // ← this is the one GameObject we spawn
+		private GameObject currentPreviewRoot;
 
 		private void UpdateMapPreview()
 		{
-			if (MapPreviewUtil.PreviewCamera == null || previewImage == null) return;
+			if (ScenePreviewUtil.PreviewCamera == null || previewImage == null) return;
 
 			var map = CurrentMap;
 
@@ -650,7 +649,7 @@ namespace ClassicTilestorm
 
 			// Create dedicated root object – named, easy to spot in hierarchy
 			currentPreviewRoot = new GameObject($"Preview – {map.name ?? "Untitled"}");
-			currentPreviewRoot.transform.SetParent(MapPreviewUtil.PreviewMapRoot ?? transform); // fallback if no util root
+			currentPreviewRoot.transform.SetParent(ScenePreviewUtil.PreviewMapRoot ?? transform); // fallback if no util root
 
 			// Optional: reset transform
 			currentPreviewRoot.transform.localPosition = Vector3.zero;
@@ -685,7 +684,7 @@ namespace ClassicTilestorm
 									new Vector3(map.Width, 5f, map.Height));
 			}
 
-			MapPreviewUtil.UpdateRenderTextureSizeIfNeeded();
+			ScenePreviewUtil.Update();
 			orbitController?.Reframe(bounds, distanceMultiplier: 1f);
 		}
 	}
