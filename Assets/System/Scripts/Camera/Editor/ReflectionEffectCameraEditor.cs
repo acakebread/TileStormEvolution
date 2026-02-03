@@ -32,14 +32,14 @@ public class ReflectionEffectCameraEditor : Editor
 				break;
 
 			case ReflectionEffectCamera.EffectMode.FrostEffect:
+				EditorGUILayout.PropertyField(serializedObject.FindProperty("mirrorTint"));
 				EditorGUILayout.PropertyField(serializedObject.FindProperty("noiseTexture"));
 				EditorGUILayout.PropertyField(serializedObject.FindProperty("noiseStrength"));
 				EditorGUILayout.PropertyField(serializedObject.FindProperty("frostDepth"));
-				EditorGUILayout.PropertyField(serializedObject.FindProperty("baseColor"));
 				break;
 
 			case ReflectionEffectCamera.EffectMode.Water:
-				EditorGUILayout.PropertyField(serializedObject.FindProperty("baseColor"));
+				EditorGUILayout.PropertyField(serializedObject.FindProperty("mirrorTint"));
 				EditorGUILayout.PropertyField(serializedObject.FindProperty("rippleSpeed"));
 				EditorGUILayout.PropertyField(serializedObject.FindProperty("rippleAmplitude"));
 				EditorGUILayout.PropertyField(serializedObject.FindProperty("rippleFrequency"));
@@ -48,7 +48,7 @@ public class ReflectionEffectCameraEditor : Editor
 				break;
 
 			case ReflectionEffectCamera.EffectMode.OceanEffect:
-				EditorGUILayout.PropertyField(serializedObject.FindProperty("baseColor"));
+				EditorGUILayout.PropertyField(serializedObject.FindProperty("mirrorTint"));
 				EditorGUILayout.PropertyField(serializedObject.FindProperty("rippleSpeed"));
 				EditorGUILayout.PropertyField(serializedObject.FindProperty("rippleAmplitude"));
 				EditorGUILayout.PropertyField(serializedObject.FindProperty("rippleFrequency"));
