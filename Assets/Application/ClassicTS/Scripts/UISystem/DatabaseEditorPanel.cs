@@ -140,10 +140,9 @@ namespace ClassicTilestorm
 			MapPreviewUtil.UpdateRenderTextureSizeIfNeeded();
 
 			if (previewImage != null)
-				MapPreviewUtil.SetPreviewUI(previewImage, previewImage.rectTransform);
+				MapPreviewUtil.SetPreviewUI(previewImage);
 
-			SetSkybox(CurrentMap?.Skybox);
-
+			MapPreviewUtil.UpdateRenderSettings(CurrentMap.RenderSettings);
 			UpdateMapPreview();
 		}
 
@@ -300,8 +299,7 @@ namespace ClassicTilestorm
 				swatchImage.color = final;
 
 			CurrentMap.Light = final;
-
-			MapPreviewUtil.UpdateOverrideSettings(MapPreviewUtil.CreateRenderSettingsFromMap(CurrentMap));
+			MapPreviewUtil.UpdateRenderSettings(CurrentMap.RenderSettings);
 		}
 
 		private void UpdateValueSlider()
@@ -395,7 +393,7 @@ namespace ClassicTilestorm
 			if (newSkybox != CurrentMap.Skybox)
 			{
 				CurrentMap.Skybox = newSkybox;
-				SetSkybox(newSkybox);
+				MapPreviewUtil.UpdateRenderSettings(CurrentMap.RenderSettings);
 			}
 		}
 
@@ -487,9 +485,8 @@ namespace ClassicTilestorm
 			SyncSkyboxDropdown();
 			SyncCharacterDropdown();
 
-			MapPreviewUtil.SetActiveMap(map);
+			MapPreviewUtil.UpdateRenderSettings(CurrentMap.RenderSettings);
 			UpdateMapPreview();
-			SetSkybox(map?.Skybox);
 		}
 
 		private void UpdateDeleteButtonState()
@@ -626,13 +623,6 @@ namespace ClassicTilestorm
 		// ────────────────────────────────────────────────────────────────────────────────
 		//   Preview Utilities
 		// ────────────────────────────────────────────────────────────────────────────────
-
-		private void SetSkybox(string value = null)
-		{
-			var skyMaterial = SkyboxUtility.GetSkyboxMaterialForName(value);
-			if (skyMaterial != null)
-				MapPreviewUtil.SetSkyboxOverride(skyMaterial);
-		}
 
 		private GameObject currentPreviewRoot;   // ← this is the one GameObject we spawn
 

@@ -1,8 +1,6 @@
 ﻿using MassiveHadronLtd;
 using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.Rendering;
-using UnityEngine.Rendering.Universal;
 
 namespace ClassicTilestorm
 {
@@ -11,14 +9,13 @@ namespace ClassicTilestorm
 		private static GameObject root;
 		private static Camera previewCam;
 
-		// Simple accessor — this is the transform where the panel should parent preview content
+		// Where content should be parented
 		public static Transform PreviewMapRoot => root != null ? root.transform : null;
 
 		public static Camera PreviewCamera => previewCam;
 
 		// ── Dynamic RT resize fields ────────────────────────────────────────
 		private static RawImage targetRawImage;
-		private static RectTransform previewRect;
 		private static Vector2 lastKnownSize = Vector2.zero;
 
 		public static void Initialize(Map map = null, GameObject previewCameraPrefab = null)
@@ -42,7 +39,7 @@ namespace ClassicTilestorm
 				camGO.layer = PreviewRenderLayers.previewLayer;
 
 				previewCam = camGO.AddComponent<Camera>();
-				camGO.AddComponent<UniversalAdditionalCameraData>();
+				camGO.AddComponent<UnityEngine.Rendering.Universal.UniversalAdditionalCameraData>();
 
 				previewCam.cullingMask = PreviewRenderLayers.previewFullMask;
 				previewCam.clearFlags = CameraClearFlags.Skybox;
@@ -57,12 +54,11 @@ namespace ClassicTilestorm
 			var reflectionEffect = previewCam.GetComponent<ReflectionEffectCamera>();
 			if (reflectionEffect != null)
 			{
-				reflectionEffect.SetRenderToTextureMode(true);
 				reflectionEffect.SetEffectMode(ReflectionEffectCamera.EffectMode.Water);
 				reflectionEffect.SetOffset(-0.2f);
 			}
 
-			UpdateOverrideSettings(CreateRenderSettingsFromMap(map));
+			UpdateRenderSettings(map.RenderSettings);
 
 			// Skybox
 			var previewSkyMat = SkyboxUtility.GetSkyboxMaterialForName(map?.skybox);
@@ -72,42 +68,29 @@ namespace ClassicTilestorm
 				Debug.LogWarning($"Preview skybox not found for '{map.skybox}' — falling back to global.");
 		}
 
-		public static void UpdateOverrideSettings(UnityRenderSettings renderSettings)
+		public static void UpdateRenderSettings(UnityRenderSettings renderSettings)
 		{
-			// Ambient / render overrides on main camera + children
+			if (null == previewCam) return;
+
 			foreach (var childCam in previewCam.GetComponentsInChildren<Camera>(true))
 			{
 				var overrideComp = childCam.gameObject.GetComponent<CameraRenderSettingsOverride>();
-				if (overrideComp == null)
+				if (null == overrideComp)
 					overrideComp = childCam.gameObject.AddComponent<CameraRenderSettingsOverride>();
 				overrideComp.SetOverrideSettings(renderSettings);
 			}
-		}
 
-		public static void SetActiveMap(Map map)
-		{
-			if (previewCam == null) return;
-
-			// Update ambient overrides
-			foreach (var overrideComp in previewCam.GetComponentsInChildren<CameraRenderSettingsOverride>(true))
-				overrideComp.SetOverrideSettings(CreateRenderSettingsFromMap(map));
-
-			// Skybox override
 			var reflectionEffect = previewCam.GetComponent<ReflectionEffectCamera>();
-			reflectionEffect?.SetSkyboxOverride(map?.SkyboxMaterial);
-		}
-
-		public static void SetSkyboxOverride(Material value)
-		{
-			var reflectionEffect = previewCam?.GetComponent<ReflectionEffectCamera>();
-			reflectionEffect?.SetSkyboxOverride(value);
+			reflectionEffect?.SetSkyboxOverride(renderSettings.skybox);
 		}
 
 		public static void UpdateRenderTextureSizeIfNeeded()
 		{
-			if (previewRect == null || previewCam == null) return;
+			if (targetRawImage == null || previewCam == null) return;
 
-			Vector2 currentSize = previewRect.rect.size;
+			var rectTransform = targetRawImage.rectTransform;
+			Vector2 currentSize = rectTransform.rect.size;
+
 			if (currentSize.x <= 0 || currentSize.y <= 0) return;
 			if (currentSize == lastKnownSize) return;
 			if (currentSize.x < 16 || currentSize.y < 16) return;
@@ -124,27 +107,24 @@ namespace ClassicTilestorm
 			{
 				reflectionEffect.CreateOrResizeReflectionTexture(w, h);
 
-				if (targetRawImage != null)
-				{
-					targetRawImage.texture = reflectionEffect.GetOutputTexture();
-					targetRawImage.color = Color.white;
-				}
+				targetRawImage.texture = reflectionEffect.GetOutputTexture();
+				targetRawImage.color = Color.white;
 			}
 		}
 
-		public static void SetPreviewUI(RawImage rawImage, RectTransform rectTransform)
+		public static void SetPreviewUI(RawImage rawImage = null)
 		{
+			var reflectionEffect = previewCam.GetComponent<ReflectionEffectCamera>();
+			if (null == reflectionEffect) return;
+			reflectionEffect.SetRenderToTextureMode(null != rawImage);
+			if (null == rawImage) return;
+
 			targetRawImage = rawImage;
-			previewRect = rectTransform;
 
 			if (rawImage != null && previewCam != null)
 			{
-				var reflectionEffect = previewCam.GetComponent<ReflectionEffectCamera>();
-				if (reflectionEffect != null)
-				{
-					rawImage.texture = reflectionEffect.GetOutputTexture();
-					rawImage.color = Color.white;
-				}
+				rawImage.texture = reflectionEffect.GetOutputTexture();
+				rawImage.color = Color.white;
 			}
 
 			UpdateRenderTextureSizeIfNeeded();
@@ -153,27 +133,12 @@ namespace ClassicTilestorm
 		public static void Cleanup()
 		{
 			if (root != null)
-			{
 				Object.DestroyImmediate(root);
-			}
 
 			root = null;
 			previewCam = null;
 			targetRawImage = null;
-			previewRect = null;
 			lastKnownSize = Vector2.zero;
-		}
-
-		public static UnityRenderSettings CreateRenderSettingsFromMap(Map map)
-		{
-			return new UnityRenderSettings(
-				ambientMode: AmbientMode.Flat,
-				ambientLight: map?.Light ?? Color.white,
-				ambientIntensity: 1f,
-				skybox: map?.SkyboxMaterial,
-				ambientProbe: default,
-				subtractiveShadowColor: RenderSettings.subtractiveShadowColor
-			);
 		}
 	}
 }

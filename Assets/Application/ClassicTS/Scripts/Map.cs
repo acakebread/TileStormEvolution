@@ -1125,7 +1125,6 @@ namespace ClassicTilestorm
 			//	Debug.Log($"WindController initialized with {windController.SwayComponents.Count} sway components.");
 		}
 
-		// Add this - the simplest possible default constructor
 		public Map()
 		{
 			// Optionally initialize minimal safe state here
@@ -1290,6 +1289,14 @@ namespace ClassicTilestorm
 				// Clone itself can be GC'd — no need to destroy it explicitly
 			}
 		}
+
+		public UnityRenderSettings RenderSettings => new (
+			ambientMode: UnityEngine.Rendering.AmbientMode.Flat,
+			ambientLight: Light,
+			ambientIntensity: 1f,
+			skybox: SkyboxMaterial,
+			ambientProbe: default,
+			subtractiveShadowColor: UnityEngine.RenderSettings.subtractiveShadowColor);
 
 		public void Initialise(Transform parent = null)
 		{
