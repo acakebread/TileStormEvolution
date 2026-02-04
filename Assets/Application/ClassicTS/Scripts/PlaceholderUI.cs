@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 using System;
 using MassiveHadronLtd;
-using MassiveHadronLtd.UI; // ← make sure this is included for UIFocusManager
+using MassiveHadronLtd.UI;
 
 namespace ClassicTilestorm
 {
@@ -110,6 +110,9 @@ namespace ClassicTilestorm
 
 			// Draw background EVERY Repaint — no conditional, no flag
 			GUI.Box(new Rect(0, panelY, Screen.width, panelHeight), "", new GUIStyle(GUI.skin.box) { normal = { background = panelTexture } });
+
+			//invisble button to open options panel
+			GuiUtils.ColoredButton(new Rect(currentX, y, buttonWidth + mapNameWidth, buttonHeight), "", new Color(0f, 0f, 0f, 0f), () => UIController.OpenPanel<OptionsPanel>());
 
 			// ALWAYS draw all buttons and labels — critical for input + visuals
 			GUI.Label(new Rect(currentX, y, labelWidth, buttonHeight), "Map:");

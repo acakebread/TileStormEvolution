@@ -18,6 +18,10 @@ namespace ClassicTilestorm
 
 		private bool gridEnabled = true;
 		private bool dofEnabled = false;
+
+		public bool GridEnabled { get => gridEnabled; set => OnGridLinesToggled(value); }
+		public bool DofEnabled { get => dofEnabled; set => OnDofToggled(value); }
+
 		private Volume getVolume(GameObject root) => root.GetComponentInChildren<Volume>(true);
 
 		// UI state
@@ -171,11 +175,11 @@ namespace ClassicTilestorm
 
 			var ct = 0;
 			var y = panelYoffset + spacing;
-			if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), ApplicationSettings.RemapGeometry ? "Remap" : "Classic", new Color(0.45f, 0.25f, 0.25f))) ApplicationSettings.RemapGeometry = !ApplicationSettings.RemapGeometry;
+			//if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), ApplicationSettings.RemapGeometry ? "Remap" : "Classic", new Color(0.45f, 0.25f, 0.25f))) ApplicationSettings.RemapGeometry = !ApplicationSettings.RemapGeometry;
 
-			if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), gridVisible ? "Hide Grid" : "Show Grid", new Color(0.25f, 0.75f, 0.25f))) OnGridLinesToggled(!gridVisible);
+			//if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), gridVisible ? "Hide Grid" : "Show Grid", new Color(0.25f, 0.75f, 0.25f))) OnGridLinesToggled(!gridVisible);
 
-			if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), dofEnabled ? "Disable DOF" : "Enable DOF", new Color(0.25f, 0.75f, 0.25f))) OnDofToggled(!dofEnabled);
+			//if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), dofEnabled ? "Disable DOF" : "Enable DOF", new Color(0.25f, 0.75f, 0.25f))) OnDofToggled(!dofEnabled);
 
 			if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "Database Editor", new Color(0.6f, 0.3f, 0.8f))) UIController.OpenPanel<DatabaseEditorPanel>();
 
@@ -196,22 +200,22 @@ namespace ClassicTilestorm
 
 			GUI.contentColor = prevContentColor;
 
-			var mainController = GetComponent<MainController>();
-#if UNITY_EDITOR
-			if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "Import Map", new Color(0.2f, 0.6f, 1f)))
-				mainController.ImportMapAsAtomic();
+//			var mainController = GetComponent<MainController>();
+//#if UNITY_EDITOR
+//			if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "Import Map", new Color(0.2f, 0.6f, 1f)))
+//				mainController.ImportMapAsAtomic();
 
-			if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "Export Map", new Color(0.8f, 0.2f, 0.2f)))
-				mainController.ExportMapAsAtomic();
-#endif
+//			if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "Export Map", new Color(0.8f, 0.2f, 0.2f)))
+//				mainController.ExportMapAsAtomic();
+//#endif
 
-			if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "(Re)Load Database", new Color(0.2f, 0.6f, 1f)))
-				mainController.LoadDatabase();
+//			if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "(Re)Load Database", new Color(0.2f, 0.6f, 1f)))
+//				mainController.LoadDatabase();
 
-#if UNITY_EDITOR
-			if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "Save Database", new Color(0.8f, 0.2f, 0.2f)))
-				mainController.SaveDatabase();
-#endif
+//#if UNITY_EDITOR
+//			if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "Save Database", new Color(0.8f, 0.2f, 0.2f)))
+//				mainController.SaveDatabase();
+//#endif
 		}
 	}
 }
