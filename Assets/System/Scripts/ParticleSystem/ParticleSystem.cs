@@ -180,7 +180,11 @@ namespace MassiveHadronLtd
 			}
 			ReportViewRendered(view);
 			pm = particleMeshes[slot];
-			if (null == pm) return;
+			if (null == pm)
+			{
+				Debug.LogError("null particle mesh in particle system!!");
+				return;
+			}
 			//Graphics.DrawMesh(pm.mesh, Matrix4x4.identity, material, 0, renderingCamera);
 			//int transparentFXLayer = LayerMask.NameToLayer("TransparentFX");
 			//Graphics.DrawMesh(pm.mesh, Matrix4x4.identity, material, transparentFXLayer, renderingCamera);
