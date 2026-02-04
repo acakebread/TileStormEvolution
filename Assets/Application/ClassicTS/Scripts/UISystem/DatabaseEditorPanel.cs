@@ -583,8 +583,10 @@ namespace ClassicTilestorm
 		{
 			if (effectDropdown == null) return;
 
-			var effectNames = Enum.GetNames(typeof(ReflectionEffectCamera.EffectMode))
-				.Where(name => name != "Null")              // usually skip "Null"
+			var effectNames = Enum.GetValues(typeof(ReflectionEffectCamera.EffectMode))
+				.Cast<ReflectionEffectCamera.EffectMode>()
+				.Where(effect => effect != ReflectionEffectCamera.EffectMode.Null)  // skip "Null"
+				.Select(effect => ReflectionEffectCamera.EffectModeToString(effect))
 				.ToList();
 
 			PopulateDropdown(effectDropdown, effectNames, noneEffectOptionText);

@@ -52,8 +52,9 @@ public class ReflectionEffectCameraEditor : Editor
 				EditorGUILayout.PropertyField(serializedObject.FindProperty("rippleAmplitude"));
 				EditorGUILayout.PropertyField(serializedObject.FindProperty("rippleFrequency"));
 				EditorGUILayout.PropertyField(serializedObject.FindProperty("rippleOffset"));
-				EditorGUILayout.PropertyField(serializedObject.FindProperty("frostDepth"));
+				EditorGUILayout.PropertyField(serializedObject.FindProperty("noiseStrength"));
 				EditorGUILayout.PropertyField(serializedObject.FindProperty("noiseTexture"));
+				EditorGUILayout.PropertyField(serializedObject.FindProperty("frostDepth"));
 				EditorGUILayout.PropertyField(serializedObject.FindProperty("frostThreshold"));
 				EditorGUILayout.PropertyField(serializedObject.FindProperty("frostFadeRange"));
 				break;

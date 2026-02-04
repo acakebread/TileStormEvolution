@@ -81,15 +81,15 @@ namespace MassiveHadronLtd
 
 		public static OceanDefaults Get() => new()
 		{
-			tint = new Color(0.075f, 0.075f, 0.075f, 0.6f),
-			rippleSpeed = 0.25f,
-			rippleAmplitude = 0.15f,
-			rippleFrequency = 0.35f,
+			tint = new Color(0.5f, 0.5f, 0.5f, 0.5f),
+			rippleSpeed = 0.05f,
+			rippleAmplitude = 0.05f,
+			rippleFrequency = 0.015f,
 			rippleOffset = 0f,
-			frostDepth = 0.5f,
-			noiseStrength = 0.5f,
-			frostThreshold = 0.8f,
-			frostFadeRange = 0.1f,
+			frostDepth = 0.15f,
+			noiseStrength = 0.15f,
+			frostThreshold = 0.65f,
+			frostFadeRange = 0.065f,
 		};
 	}
 
