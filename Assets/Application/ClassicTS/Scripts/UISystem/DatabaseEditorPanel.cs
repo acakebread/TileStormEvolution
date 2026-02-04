@@ -53,7 +53,7 @@ namespace ClassicTilestorm
 		[Header("Preview Settings – Map View")]
 		//[SerializeField] private Color backgroundColor = new Color(0.129f, 0.698f, 0.882f);
 		[SerializeField] private float fieldOfView = 50f;
-		[SerializeField] private float sizeToDistanceFactor = 0.8f;      // tuned for map scale
+		[SerializeField] private float sizeToDistanceFactor = 0.8f;// tune for map scale
 		[SerializeField] private float defaultTiltAngle = 20f;
 		[SerializeField] private float minTiltAngle = 0f;
 		[SerializeField] private float maxTiltAngle = 90f;
@@ -115,7 +115,7 @@ namespace ClassicTilestorm
 				valueDrag.OnDragEvent += OnValuePointer;
 			}
 
-			// ── Critical: recreate & assign color picker textures (this was missing) ──
+			// recreate & assign color picker textures
 			if (colourPickerImage != null && brightnessPickerImage != null)
 			{
 				colorTexture = ColorPickerSquareUtility.CreateColorPickerTexture(
@@ -208,9 +208,7 @@ namespace ClassicTilestorm
 			if (!isActiveAndEnabled) return;
 
 			ScenePreviewUtil.Update();
-
 			orbitController?.Update();
-			// No need for manual camera update – handled by OnTransformChanged callback
 		}
 
 		// ────────────────────────────────────────────────────────────────────────────────
@@ -236,9 +234,7 @@ namespace ClassicTilestorm
 				EnableInertia = true
 			};
 
-			// Map-specific: pivot at center Y = 0 (or slightly below)
-			orbitController.PivotOffset = new Vector3(0, -0.5f, 0);   // or 0, 0, 0 — tune as needed
-
+			orbitController.PivotOffset = new Vector3(0, -0.5f, 0);
 			orbitController.OnTransformChanged += ApplyOrbitToPreviewCamera;
 		}
 
@@ -328,7 +324,6 @@ namespace ClassicTilestorm
 				currentValue = 1f;
 				UpdateValueSlider();
 				if (swatchImage != null) swatchImage.color = Color.white;
-				//SetLightColour(Color.white);
 				return;
 			}
 
@@ -433,18 +428,9 @@ namespace ClassicTilestorm
 
 			var newEffectMode = ReflectionEffectCamera.ParseEffectMode(newEffect);
 
-			// Decide how you want to store it.
-			// Option A: if you already have a string field (most similar to Skybox & character)
-			if (newEffectMode != CurrentMap.Effect)           // ← adjust field name
-				CurrentMap.Effect = newEffectMode;            // ← adjust field name
+			if (newEffectMode != CurrentMap.Effect)
+				CurrentMap.Effect = newEffectMode;
 
-			// Option B: if you're going to store the enum name as string (recommended)
-			// CurrentMap.effectModeName = newEffect;
-
-			// Option C: if you want to store the enum value directly (int)
-			// CurrentMap.effectMode = (ReflectionEffectCamera.EffectMode)index;   // but only if 0 = None/Default
-
-			// Optional: immediate preview update
 			ScenePreviewUtil.UpdateEffect(CurrentMap.Effect);
 			ScenePreviewUtil.UpdateRenderSettings(CurrentMap.RenderSettings);
 		}
@@ -603,22 +589,7 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			//// If you're storing the effect as string (like Skybox / character)
-			SyncDropdown(effectDropdown, ReflectionEffectCamera.EffectModeToString(CurrentMap.Effect), noneEffectOptionText);   // ← adjust field name
-
-			// ── Alternative if storing enum name directly ──
-			// string value = CurrentMap.effectModeName;
-			// SyncDropdown(effectDropdown, value, noneEffectOptionText);
-
-			// ── Alternative if storing int enum value ──
-			/*
-			int idx = (int)(CurrentMap.effectMode ?? ReflectionEffectCamera.EffectMode.Null);
-			if (idx == (int)ReflectionEffectCamera.EffectMode.Null)
-				idx = 0;
-			else if (idx >= effectDropdown.options.Count)
-				idx = 0;
-			effectDropdown.SetValueWithoutNotify(idx);
-			*/
+			SyncDropdown(effectDropdown, ReflectionEffectCamera.EffectModeToString(CurrentMap.Effect), noneEffectOptionText);
 		}
 
 		// ────────────────────────────────────────────────────────────────────────────────
