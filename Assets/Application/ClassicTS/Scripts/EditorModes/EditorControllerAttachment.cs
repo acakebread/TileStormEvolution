@@ -33,7 +33,7 @@ namespace ClassicTilestorm
 		// ===================================================================
 		public EditorControllerAttachment(EditorController controller) : base(controller) { }
 
-		protected override bool IsMouseOverGUI() => base.IsMouseOverGUI() || sidePanel.IsMouseOver;
+		protected override bool IsMouseOverGUI() => base.IsMouseOverGUI() || (sidePanel.IsMouseOver && null != selection);
 
 		// ===================================================================
 		// Lifecycle

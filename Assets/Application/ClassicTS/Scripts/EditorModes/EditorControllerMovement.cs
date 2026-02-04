@@ -54,7 +54,8 @@ namespace ClassicTilestorm
 					EditorCameraMovement.UpdateCamera(camera ? camera.transform : null, isMouseOverGui: !allowScroll);
 			}
 
-			if (ViewPreviewUtil.IsInFocus || IsMouseOverGUI() || IsGuiControlActive()) return;
+			if (ViewPreviewUtil.IsInFocus || IsMouseOverGUI() || IsGuiControlActive())
+				return;
 
 			if (MassiveHadronLtd.GuiUtils.WasGuiActiveLastFrame)
 				return; // Skip input this frame — GUI consumed it last frame
