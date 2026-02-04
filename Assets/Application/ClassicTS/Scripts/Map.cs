@@ -103,7 +103,7 @@ namespace ClassicTilestorm
 		// Conditional serialization
 		public bool ShouldSerializelight() => !string.IsNullOrEmpty(light);
 		public bool ShouldSerializeskybox() => !string.IsNullOrEmpty(skybox);
-		public bool ShouldSerializeeffect() => false;//!string.IsNullOrEmpty(effect);
+		public bool ShouldSerializeeffect() => !string.IsNullOrEmpty(effect);
 		public bool ShouldSerializesolve() => solve != null && solve.Length > 0;
 		public bool ShouldSerializewaypoints() => waypoints != null && waypoints.Length > 0;
 		public bool ShouldSerializeattachments() => attachments != null && attachments.Length > 0;
@@ -117,7 +117,12 @@ namespace ClassicTilestorm
 		[JsonIgnore] public int[] State { get => state = state?.Length == width * height ? state : Enumerable.Range(0, width * height).ToArray(); }//set => state = value; 
 		[JsonIgnore] public string Music { get => music; set => music = value; }
 		[JsonIgnore] public string Skybox { get => skybox; set => skybox = value; }
-		[JsonIgnore] public string Effect { get => string.IsNullOrEmpty(effect) ? "Water" : effect; set => effect = value; }
+		//[JsonIgnore] public string Effect { get => string.IsNullOrEmpty(effect) ? "Water" : effect; set => effect = value; }
+		[JsonIgnore] public ReflectionEffectCamera.EffectMode Effect 
+		{ 
+			get => ReflectionEffectCamera.ParseEffectMode(string.IsNullOrEmpty(effect) ? "Water" : effect);
+			set => effect = ReflectionEffectCamera.EffectModeToString(value);
+		}
 
 		[JsonIgnore] public Color Light
 		{
@@ -1294,7 +1299,7 @@ namespace ClassicTilestorm
 			}
 		}
 
-		public UnityRenderSettings RenderSettings => new (
+		[JsonIgnore] public UnityRenderSettings RenderSettings => new (
 			ambientMode: UnityEngine.Rendering.AmbientMode.Flat,
 			ambientLight: Light,
 			ambientIntensity: 1f,

@@ -234,6 +234,8 @@ namespace MassiveHadronLtd
 			}
 		}
 
+		public void SetEffectMode(string value, bool useDefaults = true) => SetEffectMode(ParseEffectMode(value), useDefaults);
+
 		public void SetEffectMode(EffectMode value, bool useDefaults = true)
 		{
 			if (effectMode == value) return;
@@ -720,15 +722,16 @@ namespace MassiveHadronLtd
 			// Optional: fallback / alias mapping (very useful in real projects)
 			return effectString.ToLowerInvariant() switch
 			{
-				"mirror" => EffectMode.PerfectMirror,
-				"perfectmirror" => EffectMode.PerfectMirror,
-				"film" => EffectMode.SurfaceFilm,
-				"surfacefilm" => EffectMode.SurfaceFilm,
-				"frost" => EffectMode.FrostEffect,
-				"watereffect" => EffectMode.Water,
-				"ocean" => EffectMode.OceanEffect,
-				"oceaneffect" => EffectMode.OceanEffect,
 				"debug" => EffectMode.Debug,
+				"mirror" => EffectMode.PerfectMirror,
+				"film" => EffectMode.SurfaceFilm,
+				"frost" => EffectMode.FrostEffect,
+				"water" => EffectMode.Water,
+				"ocean" => EffectMode.OceanEffect,
+				"perfectmirror" => EffectMode.PerfectMirror,
+				"surfacefilm" => EffectMode.SurfaceFilm,
+				"watereffect" => EffectMode.Water,
+				"oceaneffect" => EffectMode.OceanEffect,
 				_ => EffectMode.Null   // or EffectMode.Debug as fallback
 			};
 		}
@@ -738,13 +741,13 @@ namespace MassiveHadronLtd
 		{
 			return mode switch
 			{
-				EffectMode.Null => null,                    // or "" if you prefer
+				EffectMode.Null => null,
 				EffectMode.Debug => "Debug",
-				EffectMode.PerfectMirror => "PerfectMirror",
-				EffectMode.SurfaceFilm => "SurfaceFilm",
-				EffectMode.FrostEffect => "FrostEffect",
+				EffectMode.PerfectMirror => "Mirror",
+				EffectMode.SurfaceFilm => "Film",
+				EffectMode.FrostEffect => "Frost",
 				EffectMode.Water => "Water",
-				EffectMode.OceanEffect => "OceanEffect",
+				EffectMode.OceanEffect => "Ocean",
 				_ => null
 			};
 		}

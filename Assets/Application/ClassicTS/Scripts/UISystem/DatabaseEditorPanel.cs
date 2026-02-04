@@ -146,7 +146,7 @@ namespace ClassicTilestorm
 			if (previewImage != null)
 				ScenePreviewUtil.SetPreviewUI(previewImage);
 
-			ScenePreviewUtil.UpdateEffect(ReflectionEffectCamera.ParseEffectMode(CurrentMap?.Effect));
+			ScenePreviewUtil.UpdateEffect(CurrentMap.Effect);
 			ScenePreviewUtil.UpdateRenderSettings(CurrentMap.RenderSettings);
 			UpdateMapPreview();
 		}
@@ -304,7 +304,7 @@ namespace ClassicTilestorm
 				swatchImage.color = final;
 
 			CurrentMap.Light = final;
-			ScenePreviewUtil.UpdateEffect(ReflectionEffectCamera.ParseEffectMode(CurrentMap?.Effect));
+			ScenePreviewUtil.UpdateEffect(CurrentMap.Effect);
 			ScenePreviewUtil.UpdateRenderSettings(CurrentMap.RenderSettings);
 		}
 
@@ -402,7 +402,7 @@ namespace ClassicTilestorm
 			if (newSkybox != CurrentMap.Skybox)
 			{
 				CurrentMap.Skybox = newSkybox;
-				ScenePreviewUtil.UpdateEffect(ReflectionEffectCamera.ParseEffectMode(CurrentMap?.Effect));
+				ScenePreviewUtil.UpdateEffect(CurrentMap.Effect);
 				ScenePreviewUtil.UpdateRenderSettings(CurrentMap.RenderSettings);
 			}
 		}
@@ -431,10 +431,12 @@ namespace ClassicTilestorm
 
 			string newEffect = (selected == noneEffectOptionText) ? null : selected;
 
+			var newEffectMode = ReflectionEffectCamera.ParseEffectMode(newEffect);
+
 			// Decide how you want to store it.
 			// Option A: if you already have a string field (most similar to Skybox & character)
-			if (newEffect != CurrentMap.Effect)           // ← adjust field name
-				CurrentMap.Effect = newEffect;            // ← adjust field name
+			if (newEffectMode != CurrentMap.Effect)           // ← adjust field name
+				CurrentMap.Effect = newEffectMode;            // ← adjust field name
 
 			// Option B: if you're going to store the enum name as string (recommended)
 			// CurrentMap.effectModeName = newEffect;
@@ -443,7 +445,7 @@ namespace ClassicTilestorm
 			// CurrentMap.effectMode = (ReflectionEffectCamera.EffectMode)index;   // but only if 0 = None/Default
 
 			// Optional: immediate preview update
-			ScenePreviewUtil.UpdateEffect(ReflectionEffectCamera.ParseEffectMode(CurrentMap?.Effect));
+			ScenePreviewUtil.UpdateEffect(CurrentMap.Effect);
 			ScenePreviewUtil.UpdateRenderSettings(CurrentMap.RenderSettings);
 		}
 
@@ -522,7 +524,7 @@ namespace ClassicTilestorm
 			SyncCharacterDropdown();
 			SyncEffectDropdown();
 
-			ScenePreviewUtil.UpdateEffect(ReflectionEffectCamera.ParseEffectMode(CurrentMap?.Effect));
+			ScenePreviewUtil.UpdateEffect(CurrentMap.Effect);
 			ScenePreviewUtil.UpdateRenderSettings(CurrentMap.RenderSettings);
 			UpdateMapPreview();
 		}
@@ -600,7 +602,7 @@ namespace ClassicTilestorm
 			}
 
 			//// If you're storing the effect as string (like Skybox / character)
-			SyncDropdown(effectDropdown, CurrentMap.Effect, noneEffectOptionText);   // ← adjust field name
+			SyncDropdown(effectDropdown, ReflectionEffectCamera.EffectModeToString(CurrentMap.Effect), noneEffectOptionText);   // ← adjust field name
 
 			// ── Alternative if storing enum name directly ──
 			// string value = CurrentMap.effectModeName;

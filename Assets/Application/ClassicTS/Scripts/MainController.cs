@@ -121,7 +121,13 @@ namespace ClassicTilestorm
 
 			var mainReflection = Camera.main?.GetComponent<ReflectionEffectCamera>();
 			if (mainReflection != null)
+			{
+				mainReflection.SetEffectMode(currentMap.Effect);
+				mainReflection.SetOffset(-0.2f);
+				mainReflection.UpdateRenderSettings(currentMap.RenderSettings);
 				mainReflection.UpdateMaterialProperties();//invoke due to skybox loaded
+			}
+
 
 			//var mainReflection = Camera.main?.GetComponent<ReflectionEffectCamera>();
 			//if (mainReflection != null)
