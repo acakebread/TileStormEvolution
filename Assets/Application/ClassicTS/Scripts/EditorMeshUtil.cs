@@ -30,60 +30,67 @@ namespace ClassicTilestorm
 		}
 
 		// Update or create the ghost mesh at the mouse position
-		public static void UpdateGhostMesh(Camera camera, IMapEdit iMap, Definition definition)
+		public static void UpdateGhostMesh(Definition definition, Vector3 position, float angle, bool outOfBounds)
 		{
-			if (iMap == null || definition == null) return;
+			if (null == definition) return;
 			InitializeGhostMaterial();
 
-			// Create ghost mesh if needed (or if definition changed)
-			if (ghostMesh == null || currentDefinition?.model != definition.model)
+			bool needsReinstantiation = false;
+
+			// Check if we need to recreate the ghost
+			if (ghostMesh == null)
 			{
-				if (ghostMesh != null)
+				needsReinstantiation = true;
+			}
+			else if (currentDefinition == null || currentDefinition.model != definition.model)
+			{
+				needsReinstantiation = true;
+			}
+			else if (Vector3.Distance(ghostMesh.transform.position, position) > 0.001f)
+			{
+				needsReinstantiation = true;
+			}
+			else if (Mathf.Abs(Mathf.DeltaAngle(ghostMesh.transform.eulerAngles.y, angle)) > 0.1f)
+			{
+				needsReinstantiation = true;
+			}
+
+			if (needsReinstantiation)
+			{
+				if (null != ghostMesh)
 					Object.DestroyImmediate(ghostMesh);
 
-				//string prefabPath = GetGeometryPath(definition.model);
-				//if (string.IsNullOrEmpty(prefabPath))
-				//{
-				//	ghostMesh = null;
-				//	return;
-				//}
+				// raw instantiation
+				ghostMesh = Assets.ModelAssets.Instantiate(definition.model, position, Quaternion.Euler(0f, angle, 0f), parent: MainController.MapRoot);
 
-				// Direct, clean, raw instantiation — no runtime junk added
-				//ghostMesh = Assets.ModelAssets.Instantiate(prefabPath, parent: MainController.MapRoot);
-				ghostMesh = Assets.ModelAssets.Instantiate(definition.model, parent: MainController.MapRoot);
-
-				if (ghostMesh != null)
+				if (null != ghostMesh)
 				{
 					ghostMesh.name = "GhostMesh";
 
-					// Optional: strip any colliders that might be baked into prefab
+					// strip any colliders that might be baked into prefab
 					foreach (var collider in ghostMesh.GetComponentsInChildren<Collider>())
 						Object.DestroyImmediate(collider);
-
-					// No need to remove TextureSetAnimator, MorphGeomSway, etc. — they were never added!
 				}
 
 				currentDefinition = definition; // track for change detection
 			}
+			else
+			{
+				// Just update transform (cheaper than destroying + instantiating)
+				if (ghostMesh != null)
+				{
+					ghostMesh.transform.position = position;
+					ghostMesh.transform.rotation = Quaternion.Euler(0f, angle, 0f);
+				}
+			}
 
-			if (camera == null || ghostMesh == null) return;
-
-			// Update position
-			var worldPos = Map.ScreenToWorld(camera, Input.mousePosition);
-			ghostMesh.transform.position = Map.SnappedMapPosition(worldPos);
-
-			// === ToDo IMPLEMENTED ===
-			var mapIndex = iMap.WorldToMapIndex(worldPos);
-
-			bool isValid = mapIndex != -1; // add extra checks here if your game has more rules
+			if (null == ghostMesh) return;
 
 			// Switch material based on validity
-			Material targetMaterial = isValid ? ghostMaterial : ghostMaterialInvalid;
+			Material targetMaterial = outOfBounds ? ghostMaterialInvalid : ghostMaterial;
 
 			foreach (var renderer in ghostMesh.GetComponentsInChildren<MeshRenderer>())
-			{
 				renderer.material = targetMaterial;
-			}
 
 			// Make sure ghost is visible
 			ghostMesh.SetActive(true);
