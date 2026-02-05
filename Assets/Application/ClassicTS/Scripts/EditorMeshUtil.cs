@@ -45,10 +45,6 @@ namespace ClassicTilestorm
 			{
 				needsReinstantiation = true;
 			}
-			else if (currentDefinition == null || currentDefinition.HashID != definition.HashID)
-			{
-				needsReinstantiation = true;
-			}
 			else if (lastPosition != position)                 // exact Vector3 comparison is fine here
 			{
 				needsReinstantiation = true;
@@ -61,6 +57,10 @@ namespace ClassicTilestorm
 			{
 				needsReinstantiation = true;
 			}
+			else if (currentDefinition == null || currentDefinition.HashID != definition.HashID)
+			{
+				needsReinstantiation = true;
+			}
 
 			if (!needsReinstantiation)
 				return;
@@ -70,7 +70,7 @@ namespace ClassicTilestorm
 			lastAngle = angle;
 			lastOutOfBounds = outOfBounds;
 
-			if ((null != currentDefinition) && (currentDefinition.HashID != definition.HashID))
+			if (currentDefinition == null || currentDefinition.HashID != definition.HashID)
 			{
 				if (null != ghostMesh)
 					Object.DestroyImmediate(ghostMesh);
