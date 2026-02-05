@@ -97,6 +97,11 @@ namespace ClassicTilestorm
 			}
 		}
 
+		//private void OnPostRender()
+		//{
+		//	activeMode?.OnPostRender();
+		//}
+
 		private void OnGUI()
 		{
 			DrawMainUI((currentMode ?? EditorMode.View).ToString(), gridEnabled);

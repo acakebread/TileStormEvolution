@@ -23,6 +23,8 @@ namespace ClassicTilestorm
 		public override void Update()
 		{
 			base.Update();
+
+
 			if (!camera || IsMouseOverGUI() || IsGuiControlActive()) return;
 
 			if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1))
@@ -97,7 +99,23 @@ namespace ClassicTilestorm
 			EditorMeshUtil.UpdateGhostMesh(previewVariant, snapped, outOfBounds);
 		}
 
-		public override void OnGUI() => DrawSidePanel();
+		//public override void OnGUI() => DrawSidePanel();
+
+		// Debug: draw the quad texture full-screen in GUI
+		public override void OnGUI()
+		{
+			//var rect = new Rect(0, Screen.height - 400, Screen.width, 400);
+
+			//GUI.DrawTexture(
+			//	rect,
+			//	ScreenSpaceUtil.GetRenderTexture(Mathf.RoundToInt(rect.width), Mathf.RoundToInt(rect.height)),
+			//	ScaleMode.StretchToFill,
+			//	true
+			//);
+
+			DrawSidePanel();
+		}
+
 
 		public override void OnDisable() => EditorMeshUtil.HideGhostMesh();
 

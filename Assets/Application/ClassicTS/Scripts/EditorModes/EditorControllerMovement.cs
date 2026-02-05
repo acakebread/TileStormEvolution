@@ -26,9 +26,11 @@ namespace ClassicTilestorm
 			isPanning = false; 
 		}
 
+		private bool touchStartOverGui = false;
 		public EditorControllerMovement(EditorController controller = null) => editorController = controller;
 
-		private bool touchStartOverGui = false;
+		//public virtual void Awake() { }
+
 		public virtual void Update()
 		{
 			if (Input.GetMouseButtonUp(0) && GUIUtility.hotControl != 0)
@@ -73,6 +75,8 @@ namespace ClassicTilestorm
 			ViewPreviewUtil.Hide();
 			isPanning = false; 
 		}
+
+		//public virtual void OnPostRender() { }//not avaiable in URP
 
 		public virtual void OnGUI() 
 		{
