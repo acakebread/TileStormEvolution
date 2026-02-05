@@ -1,7 +1,6 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 using System.Collections.Generic;
-using static MassiveHadronLtd.GuiUtils;
-using System;
 using MassiveHadronLtd;
 
 namespace ClassicTilestorm
@@ -9,9 +8,10 @@ namespace ClassicTilestorm
 	public class EditorControllerPaint : EditorControllerMovement
 	{
 		private HashId selectedHashId;// hashid — placement & ghost
-		public int SelectedHashId => selectedHashId;
+		private float previewAngle = 0f;
+		private float previewDelta = 0f;
 
-		private static readonly AutoHidePanel sidePanel = new(collapsed: 120f, expanded: 340f, delay: 1f, animDur: 0.3f);
+		private static readonly GuiUtils.AutoHidePanel sidePanel = new(collapsed: 120f, expanded: 340f, delay: 1f, animDur: 0.3f);
 		protected override bool IsMouseOverGUI() => base.IsMouseOverGUI() || sidePanel.IsMouseOver;
 
 		public EditorControllerPaint(EditorController editorController) : base(editorController)
@@ -38,15 +38,8 @@ namespace ClassicTilestorm
 			UpdateGhostMesh(camera, iMap, selectedDef);
 		}
 
-		private float previewAngle = 0f;
-		private float previewDelta = 0f;
-
 		private void UpdateGhostMesh(Camera camera, IMapEdit iMap, Definition definition)
 		{
-			var worldPos = Map.ScreenToWorld(camera, Input.mousePosition);
-			var snapped = Map.SnappedMapPosition(worldPos);
-			var mapIndex = iMap.WorldToMapIndex(snapped);
-
 			// ───────────────────────────────────────────────────────────────
 			// Early hide + bail if no definition or we're just showing nothing
 			// ───────────────────────────────────────────────────────────────
@@ -55,6 +48,10 @@ namespace ClassicTilestorm
 				EditorMeshUtil.HideGhostMesh();
 				return;
 			}
+
+			var worldPos = Map.ScreenToWorld(camera, Input.mousePosition);
+			var snapped = Map.SnappedMapPosition(worldPos);
+			var mapIndex = iMap.WorldToMapIndex(snapped);
 
 			// ───────────────────────────────────────────────────────────────
 			// Determine which angle/delta to PREVIEW (ghost)
@@ -82,15 +79,13 @@ namespace ClassicTilestorm
 					if (deltaIdx == -1) deltaIdx = 0;
 
 					// Cycle angle first (inner loop)
-					var nextAngleIdx = (angleIdx + 1) % angles.Length;
+					angleIdx = (angleIdx + 1) % angles.Length;
 
 					// If angle wrapped around → advance delta (outer loop)
-					var nextDeltaIdx = deltaIdx;
-					if (nextAngleIdx == 0)
-						nextDeltaIdx = (deltaIdx + 1) % deltas.Length;
+					deltaIdx = angleIdx != 0 ? deltaIdx : (deltaIdx + 1) % deltas.Length;
 
-					previewAngle = angles[nextAngleIdx];
-					previewDelta = deltas[nextDeltaIdx];
+					previewAngle = angles[angleIdx];
+					previewDelta = deltas[deltaIdx];
 				}
 			}
 
@@ -129,17 +124,14 @@ namespace ClassicTilestorm
 
 		private void DrawSidePanel()
 		{
-			var items = new List<ListViewItem>();
+			var items = new List<GuiUtils.ListViewItem>();
 
 			foreach (var def in ResourceManager.Definitions)
 			{
-				bool isSelected = def.HashID == selectedHashId;
+				var label = def.IsDefault() ? "[Default] " + def.name : def.name;
+				var isSelected = def.HashID == selectedHashId;
 
-				string label = def.name;
-				if (def.IsDefault())
-					label = "[Default] " + label;
-
-				items.Add(new ListViewItem(
+				items.Add(new GuiUtils.ListViewItem(
 					$"{label} ({def.texture ?? "none"})",
 					_ =>
 					{
