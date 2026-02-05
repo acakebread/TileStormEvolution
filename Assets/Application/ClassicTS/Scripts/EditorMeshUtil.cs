@@ -9,6 +9,7 @@ namespace ClassicTilestorm
 		private static GameObject ghostMesh;
 		private static Material ghostMaterial;        // default valid color (white 0.5 alpha)
 		private static Material ghostMaterialInvalid; // invalid color (red 0.5 alpha)
+		private static Variant currentVariant;         // ← added for the new overload
 		private static Definition currentDefinition;
 		private static Vector3 lastPosition;
 		private static float lastAngle;
@@ -111,6 +112,94 @@ namespace ClassicTilestorm
 					renderer.material = targetMaterial;
 			}
 		}
+
+		// New overload: takes Variant directly (uses hash, angle, delta from variant)
+		public static void UpdateGhostMesh(Variant variant, Vector3 position, bool outOfBounds)
+		{
+			if (variant.hash == 0) return;  // invalid variant
+			InitializeGhostMaterial();
+
+			// Early out if nothing changed (compare full variant + position + validity)
+			if (currentVariant.hash == variant.hash &&
+				Mathf.Approximately(currentVariant.angle, variant.angle) &&
+				Mathf.Approximately(currentVariant.delta, variant.delta) &&
+				lastPosition == position &&
+				lastOutOfBounds == outOfBounds)
+			{
+				return;
+			}
+
+			// Update tracked values
+			currentVariant = variant;
+			lastPosition = position;
+			lastAngle = variant.angle;
+			lastOutOfBounds = outOfBounds;
+
+			// Get definition from hash (needed for model instantiation)
+			var definition = ResourceManager.GetDefinition(variant.hash);
+			if (null == definition) return;
+
+			// Reuse same helpers, but pass variant.angle and add delta to y
+			if (null == currentDefinition || currentDefinition.HashID != variant.hash)
+			{
+				CreateMesh();
+				return;
+			}
+
+			UpdateMesh();
+
+
+			// ── Local helpers (same as above, but using variant properties) ───────
+
+			void CreateMesh()
+			{
+				if (null != ghostMesh)
+				{
+					Object.DestroyImmediate(ghostMesh);
+					ghostMesh = null;
+				}
+
+				ghostMesh = Assets.ModelAssets.Instantiate(
+					definition.model,
+					position + new Vector3(0f, variant.delta, 0f),
+					Quaternion.Euler(0f, variant.angle, 0f),
+					parent: MainController.MapRoot);
+
+				if (null == ghostMesh) return;
+
+				ghostMesh.name = "GhostMesh";
+
+				foreach (var collider in ghostMesh.GetComponentsInChildren<Collider>())
+					Object.DestroyImmediate(collider);
+
+				currentDefinition = definition;
+
+				UpdateMaterial();
+				ghostMesh.SetActive(true);
+			}
+
+			void UpdateMesh()
+			{
+				if (null == ghostMesh) return;
+
+				UpdateMaterial();
+
+				ghostMesh.transform.position = position + new Vector3(0f, variant.delta, 0f);
+				ghostMesh.transform.rotation = Quaternion.Euler(0f, variant.angle, 0f);
+				ghostMesh.SetActive(true);
+			}
+
+			void UpdateMaterial()
+			{
+				if (null == ghostMesh) return;
+
+				var targetMaterial = outOfBounds ? ghostMaterialInvalid : ghostMaterial;
+
+				foreach (var renderer in ghostMesh.GetComponentsInChildren<MeshRenderer>())
+					renderer.material = targetMaterial;
+			}
+		}
+
 
 		// Hide the ghost mesh
 		public static void HideGhostMesh()

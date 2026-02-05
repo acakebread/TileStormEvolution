@@ -59,8 +59,8 @@ namespace ClassicTilestorm
 			// ───────────────────────────────────────────────────────────────
 			// Determine which angle/delta to PREVIEW (ghost)
 			// ───────────────────────────────────────────────────────────────
-			float previewAngle = 0f;
-			float previewDelta = 0f;
+			previewAngle = 0f;
+			previewDelta = 0f;
 
 			if (mapIndex != -1)   // only cycle when hovering valid map cell
 			{
@@ -113,14 +113,9 @@ namespace ClassicTilestorm
 			// ───────────────────────────────────────────────────────────────
 			// Finally update ghost
 			// ───────────────────────────────────────────────────────────────
-			var ghostPosition = snapped + new Vector3(0f, previewDelta, 0f);
 			bool outOfBounds = mapIndex == -1;
-
-			EditorMeshUtil.UpdateGhostMesh(definition, ghostPosition, previewAngle, outOfBounds);
-
-			// Keep these for placement on click
-			this.previewAngle = previewAngle;
-			this.previewDelta = previewDelta;
+			var previewVariant = new Variant(selectedHashId, previewAngle, previewDelta);
+			EditorMeshUtil.UpdateGhostMesh(previewVariant, snapped, outOfBounds);
 		}
 
 		public override void OnGUI() => DrawSidePanel();
