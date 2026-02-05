@@ -107,15 +107,15 @@ namespace ClassicTilestorm
 			//var rect = new Rect(0, Screen.height - 400, Screen.width, 400);
 
 			//GUI.DrawTexture(
-			//	rect,
-			//	ScreenSpaceUtil.GetRenderTexture(Mathf.RoundToInt(rect.width), Mathf.RoundToInt(rect.height)),
+			//	new Rect(0, Screen.height - 400, Screen.width, 400),//rect,
+			//	//ScreenSpaceUtil.GetRenderTexture(Mathf.RoundToInt(rect.width), Mathf.RoundToInt(rect.height)),
+			//	ScreenSpaceUtil.GetRenderTexture(16, 8),
 			//	ScaleMode.StretchToFill,
 			//	true
 			//);
 
 			DrawSidePanel();
 		}
-
 
 		public override void OnDisable() => EditorMeshUtil.HideGhostMesh();
 
