@@ -66,54 +66,38 @@ namespace ClassicTilestorm
 			{
 				var currentVariant = iMap.GetVariantAt(mapIndex);
 				var currentHash = currentVariant.hash;
-
 				var selectedDef = ResourceManager.GetDefinition(selectedHashId);
-				bool isDefaultSelected = selectedDef?.IsDefault() ?? false;
+				var isDefaultSelected = selectedDef?.IsDefault() ?? false;
 
-				bool shouldResetToZero =
-					currentHash == 0 ||                 // empty cell
-					isDefaultSelected ||                // user picked the default tile
-					currentHash != selectedHashId;      // different tile type
-
-				if (shouldResetToZero)
-				{
-					// Start fresh: angle=0, delta=0
-					previewAngle = 0f;
-					previewDelta = 0f;
-				}
-				else
+				if (currentHash != 0 && !isDefaultSelected && currentHash == selectedHashId)
 				{
 					// Same tile type → show the NEXT rotation/height variant
-
 					float[] angles = { 0f, 90f, 180f, 270f };
 					float[] deltas = { 0f, 0.25f, 0.5f, 0.75f, 1f };
 
-					int angleIdx = Array.IndexOf(angles, currentVariant.angle);
+					var angleIdx = Array.IndexOf(angles, currentVariant.angle);
 					if (angleIdx == -1) angleIdx = 0;
 
-					int deltaIdx = Array.IndexOf(deltas, currentVariant.delta);
+					var deltaIdx = Array.IndexOf(deltas, currentVariant.delta);
 					if (deltaIdx == -1) deltaIdx = 0;
 
 					// Cycle angle first (inner loop)
-					int nextAngleIdx = (angleIdx + 1) % angles.Length;
+					var nextAngleIdx = (angleIdx + 1) % angles.Length;
 
 					// If angle wrapped around → advance delta (outer loop)
-					int nextDeltaIdx = deltaIdx;
+					var nextDeltaIdx = deltaIdx;
 					if (nextAngleIdx == 0)
-					{
 						nextDeltaIdx = (deltaIdx + 1) % deltas.Length;
-					}
 
 					previewAngle = angles[nextAngleIdx];
 					previewDelta = deltas[nextDeltaIdx];
 				}
 			}
-			// else: off-map → just use 0/0 (already set above)
 
 			// ───────────────────────────────────────────────────────────────
 			// Finally update ghost
 			// ───────────────────────────────────────────────────────────────
-			bool outOfBounds = mapIndex == -1;
+			var outOfBounds = mapIndex == -1;
 			var previewVariant = new Variant(selectedHashId, previewAngle, previewDelta);
 			EditorMeshUtil.UpdateGhostMesh(previewVariant, snapped, outOfBounds);
 		}
@@ -132,29 +116,15 @@ namespace ClassicTilestorm
 			int placeZ = Mathf.FloorToInt(snapped.z);
 			int mapIndex = iMap.WorldToMapIndex(snapped);
 
-			if (mapIndex == -1)
+			if (mapIndex == -1 || erase)
 			{
-				// Off-map → just place default/selected (no cycling or ghost)
+				// Off-map or erase just place or erase  with default/selected
 				var hashToPlace = erase ? ResourceManager.FindOrCreateDefaultTile().HashID : selectedHashId;
 				iMap.UpdateTileAt(placeX, placeZ, hashToPlace, 0f, 0f);
 				return;
 			}
 
-			if (erase)
-			{
-				var defaultHash = ResourceManager.FindOrCreateDefaultTile().HashID;
-				iMap.UpdateTileAt(placeX, placeZ, defaultHash, 0f, 0f);
-				return;
-			}
-
 			iMap.UpdateTileAt(placeX, placeZ, selectedHashId, previewDelta, previewAngle);
-		}
-
-		// Called from panel — takes hashid directly
-		private void SetSelectedDefinitionByHash(int hashId)
-		{
-			selectedHashId = 0 == hashId ? ResourceManager.FindOrCreateDefaultTile().HashID : hashId;
-			UpdateGhostMesh(camera, iMap, ResourceManager.GetDefinition(selectedHashId));
 		}
 
 		private void DrawSidePanel()
@@ -171,7 +141,11 @@ namespace ClassicTilestorm
 
 				items.Add(new ListViewItem(
 					$"{label} ({def.texture ?? "none"})",
-					_ => SetSelectedDefinitionByHash(def.HashID),  // pass hashid
+					_ =>
+					{
+						selectedHashId = 0 == def.HashID ? ResourceManager.FindOrCreateDefaultTile().HashID : def.HashID;
+						UpdateGhostMesh(camera, iMap, ResourceManager.GetDefinition(selectedHashId));
+					},
 					isSelected
 				));
 			}
