@@ -38,59 +38,73 @@ namespace ClassicTilestorm
 			if (null == definition) return;
 			InitializeGhostMaterial();
 
-			if (currentDefinition == null || currentDefinition.HashID != definition.HashID)
+			if (null == currentDefinition || currentDefinition.HashID != definition.HashID)
 			{
-				createMesh();
-				applyMaterial();
+				CreateMesh();
 				return;
 			}
 
-			// Check if we need to recreate the ghost
-			//if (ghostMesh != null && lastPosition == position && lastOutOfBounds == outOfBounds && Mathf.Approximately(lastAngle, angle))
-			if (lastPosition == position && lastOutOfBounds == outOfBounds && Mathf.Approximately(lastAngle, angle))
-				return;
-
-			updateMesh();
-			applyMaterial();
-			
-			if (null != ghostMesh) ghostMesh.SetActive(true);// Make sure ghost is visible
-
-			void createMesh()
+			// Nothing changed → early out
+			if (lastPosition == position &&
+				lastOutOfBounds == outOfBounds &&
+				Mathf.Approximately(lastAngle, angle))
 			{
-				currentDefinition = definition; // track for change detection
-				lastPosition = position;
-				lastAngle = angle;
+				return;
+			}
 
+			// Update tracked values
+			lastPosition = position;
+			lastAngle = angle;
+			lastOutOfBounds = outOfBounds;
+
+			UpdateMesh();
+
+
+			// ── Local helpers ────────────────────────────────────────────────────────
+
+			void CreateMesh()
+			{
 				if (null != ghostMesh)
+				{
 					Object.DestroyImmediate(ghostMesh);
+					ghostMesh = null;
+				}
 
-				// raw instantiation
-				ghostMesh = Assets.ModelAssets.Instantiate(definition.model, position, Quaternion.Euler(0f, angle, 0f), parent: MainController.MapRoot);
+				ghostMesh = Assets.ModelAssets.Instantiate(
+					definition.model,
+					position,
+					Quaternion.Euler(0f, angle, 0f),
+					parent: MainController.MapRoot);
 
 				if (null == ghostMesh) return;
+
 				ghostMesh.name = "GhostMesh";
 
-				// strip any colliders that might be baked into prefab
+				// Remove any colliders baked into the prefab
 				foreach (var collider in ghostMesh.GetComponentsInChildren<Collider>())
 					Object.DestroyImmediate(collider);
+
+				currentDefinition = definition;
+
+				UpdateMaterial();
+				ghostMesh.SetActive(true);
 			}
 
-			void updateMesh()
+			void UpdateMesh()
 			{
-				lastPosition = position;
-				lastAngle = angle;
 				if (null == ghostMesh) return;
-				// Just update transform (cheaper than destroying + instantiating)
+
+				UpdateMaterial();
+
 				ghostMesh.transform.position = position;
 				ghostMesh.transform.rotation = Quaternion.Euler(0f, angle, 0f);
+				ghostMesh.SetActive(true);
 			}
 
-			void applyMaterial()
+			void UpdateMaterial()
 			{
-				lastOutOfBounds = outOfBounds;
 				if (null == ghostMesh) return;
 
-				// Switch material based on validity
 				var targetMaterial = outOfBounds ? ghostMaterialInvalid : ghostMaterial;
 
 				foreach (var renderer in ghostMesh.GetComponentsInChildren<MeshRenderer>())
