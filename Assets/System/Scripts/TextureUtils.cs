@@ -296,5 +296,64 @@ namespace MassiveHadronLtd
 			tex.Apply(false, true);
 			return tex;
 		}
+
+		public static Texture2D GenerateCheckerTexture(int numSquares = 256)
+		{
+			// How many tiles across/down
+			int tilesPerSide = Mathf.Max(1, Mathf.RoundToInt(Mathf.Sqrt(numSquares)));
+
+			// We’ll make texture resolution match tile count (1 pixel per tile)
+			int size = tilesPerSide;
+
+			Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false)
+			{
+				wrapMode = TextureWrapMode.Repeat,
+				filterMode = FilterMode.Point,
+				hideFlags = HideFlags.HideAndDontSave
+			};
+
+			Color32 c0 = new Color32(0, 0, 0, 255);
+			Color32 c1 = new Color32(255, 255, 255, 255);
+
+			for (int y = 0; y < tilesPerSide; y++)
+			{
+				for (int x = 0; x < tilesPerSide; x++)
+				{
+					bool isWhite = ((x + y) & 1) == 0;   // fast checker test
+					tex.SetPixel(x, y, isWhite ? c1 : c0);
+				}
+			}
+
+			tex.Apply(false, true);
+			return tex;
+		}
+
+		public static Texture2D GenerateCheckerTexture(int squaresX, int squaresY)
+		{
+			squaresX = Mathf.Max(1, squaresX);
+			squaresY = Mathf.Max(1, squaresY);
+
+			Texture2D tex = new Texture2D(squaresX, squaresY, TextureFormat.RGBA32, false)
+			{
+				wrapMode = TextureWrapMode.Repeat,
+				filterMode = FilterMode.Point,
+				hideFlags = HideFlags.HideAndDontSave
+			};
+
+			Color32 c0 = new Color32(0, 0, 0, 255);
+			Color32 c1 = new Color32(255, 255, 255, 255);
+
+			for (int y = 0; y < squaresY; y++)
+			{
+				for (int x = 0; x < squaresX; x++)
+				{
+					bool isWhite = ((x + y) & 1) == 0;
+					tex.SetPixel(x, y, isWhite ? c1 : c0);
+				}
+			}
+
+			tex.Apply(false, true);
+			return tex;
+		}
 	}
 }

@@ -104,13 +104,14 @@ namespace ClassicTilestorm
 		// Debug: draw the quad texture full-screen in GUI
 		public override void OnGUI()
 		{
-			//var rect = new Rect(0, Screen.height - 400, Screen.width, 400);
+			////var rect = new Rect(0, Screen.height * 0.5f, Screen.width, Screen.height * 0.5f);
+			//var rect = new Rect(0, 0, Screen.width, Screen.height);
 
 			//GUI.DrawTexture(
-			//	new Rect(0, Screen.height - 400, Screen.width, 400),//rect,
-			//	//ScreenSpaceUtil.GetRenderTexture(Mathf.RoundToInt(rect.width), Mathf.RoundToInt(rect.height)),
-			//	ScreenSpaceUtil.GetRenderTexture(16, 8),
+			//	rect,
+			//	ScreenSpaceUtil.GetRenderTexture(Screen.width / 32, Screen.height / 32, new Vector2((Input.mousePosition.x - rect.x) / rect.width, (Input.mousePosition.y - rect.y) / rect.height)),
 			//	ScaleMode.StretchToFill,
+			//	//ScaleMode.ScaleToFit,
 			//	true
 			//);
 
