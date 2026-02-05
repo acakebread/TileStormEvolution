@@ -10,6 +10,9 @@ namespace ClassicTilestorm
 		private static Material ghostMaterial;        // default valid color (white 0.5 alpha)
 		private static Material ghostMaterialInvalid; // invalid color (red 0.5 alpha)
 		private static Definition currentDefinition;
+		private static Vector3 lastPosition;
+		private static float lastAngle;
+		private static bool lastOutOfBounds;
 
 		// Initialize the ghost materials
 		public static void InitializeGhostMaterial()
@@ -42,20 +45,32 @@ namespace ClassicTilestorm
 			{
 				needsReinstantiation = true;
 			}
-			else if (currentDefinition == null || currentDefinition.model != definition.model)
+			else if (currentDefinition == null || currentDefinition.HashID != definition.HashID)
 			{
 				needsReinstantiation = true;
 			}
-			else if (Vector3.Distance(ghostMesh.transform.position, position) > 0.001f)
+			else if (lastPosition != position)                 // exact Vector3 comparison is fine here
 			{
 				needsReinstantiation = true;
 			}
-			else if (Mathf.Abs(Mathf.DeltaAngle(ghostMesh.transform.eulerAngles.y, angle)) > 0.1f)
+			else if (lastOutOfBounds != outOfBounds)
+			{
+				needsReinstantiation = true;
+			}
+			else if (!Mathf.Approximately(lastAngle, angle))    // safe floating-point comparison
 			{
 				needsReinstantiation = true;
 			}
 
-			if (needsReinstantiation)
+			if (!needsReinstantiation)
+				return;
+
+			// ── Remember what we actually applied ──
+			lastPosition = position;
+			lastAngle = angle;
+			lastOutOfBounds = outOfBounds;
+
+			if ((null != currentDefinition) && (currentDefinition.HashID != definition.HashID))
 			{
 				if (null != ghostMesh)
 					Object.DestroyImmediate(ghostMesh);
@@ -87,7 +102,7 @@ namespace ClassicTilestorm
 			if (null == ghostMesh) return;
 
 			// Switch material based on validity
-			Material targetMaterial = outOfBounds ? ghostMaterialInvalid : ghostMaterial;
+			Material targetMaterial = outOfBounds ? ghostMaterial : ghostMaterialInvalid;
 
 			foreach (var renderer in ghostMesh.GetComponentsInChildren<MeshRenderer>())
 				renderer.material = targetMaterial;
