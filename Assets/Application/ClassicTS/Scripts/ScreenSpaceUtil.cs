@@ -46,7 +46,7 @@ namespace MassiveHadronLtd
             if (numColumns < 1) numColumns = 1;
             if (numRows < 1) numRows = 1;
 
-            bool needsRebuild = _gridMesh == null ||
+			var needsRebuild = _gridMesh == null ||
                                 _lastColumns != numColumns ||
                                 _lastRows != numRows ||
                                 Vector2.Distance(_lastCoord, center) > 0.0005f;
@@ -57,32 +57,34 @@ namespace MassiveHadronLtd
 
             _gridMesh = new Mesh { name = $"DeformGrid_{numColumns}x{numRows}" };
 
-            int totalCells = numColumns * numRows;
-            int totalVerts = totalCells * 4;
-            int totalIndices = totalCells * 6;
+			var totalCells = numColumns * numRows;
+            var totalVerts = totalCells * 4;
+            var totalIndices = totalCells * 6;
 
-            Vector3[] vertices = new Vector3[totalVerts];
-            Vector2[] uvs = new Vector2[totalVerts];
-            Color[] colors = new Color[totalVerts];
-            int[] indices = new int[totalIndices];
+			var vertices = new Vector3[totalVerts];
+			var uvs = new Vector2[totalVerts];
+			var colors = new Color[totalVerts];
+			var indices = new int[totalIndices];
 
-            float cellWidth = 1f;
-            float cellHeight = 1f;
-            float uvScaleX = 1f / numColumns;
-            float uvScaleY = 1f / numRows;
+			var cellWidth = 1f;
+            var cellHeight = 1f;
+            var uvScaleX = 1f / numColumns;
+            var uvScaleY = 1f / numRows;
 
             var centerLogical = new Vector2(center.x / uvScaleX, center.y / uvScaleY);
-			float falloffRadius = 0.35f / uvScaleY;
-			float maxDisplacement = 1.3f;
+			//var falloffRadius = 0.35f / uvScaleY;
+			//var maxDisplacement = 1.3f;
+			var falloffRadius = 0.2f / uvScaleY;
+			var maxDisplacement = 1.5f;
 
-			for (int qy = 0; qy < numRows; qy++)
+			for (var qy = 0; qy < numRows; qy++)
             {
-                for (int qx = 0; qx < numColumns; qx++)
+                for (var qx = 0; qx < numColumns; qx++)
                 {
-                    float x0 = qx * cellWidth;
-                    float y0 = qy * cellHeight;
-                    float x1 = x0 + cellWidth;
-                    float y1 = y0 + cellHeight;
+					var x0 = qx * cellWidth;
+                    var y0 = qy * cellHeight;
+                    var x1 = x0 + cellWidth;
+                    var y1 = y0 + cellHeight;
 
                     Vector2[] corners = { new(x0, y0), new(x0, y1), new(x1, y1), new(x1, y0) };
 
@@ -91,10 +93,10 @@ namespace MassiveHadronLtd
 					var d2 = (new Vector2(x1, y1) - centerLogical).sqrMagnitude;
 					var d3 = (new Vector2(x1, y0) - centerLogical).sqrMagnitude;
 
-					Vector2 quadCenter = new ( (x0 + x1) * 0.5f, (y0 + y1) * 0.5f );
-					Vector2 centreDelta = quadCenter - centerLogical;
-					float centreDist = centreDelta.magnitude;
-					Vector2 centreDir = centreDist > 1e-6f ? centreDelta.normalized : Vector2.zero;
+					var quadCenter = new Vector2( (x0 + x1) * 0.5f, (y0 + y1) * 0.5f );
+					var centreDelta = quadCenter - centerLogical;
+					var centreDist = centreDelta.magnitude;
+					var centreDir = centreDist > 1e-6f ? centreDelta.normalized : Vector2.zero;
 
 					var dt = (d0 + d1 + d2 + d3) * 0.25f;
                     var sqrRadius = falloffRadius * falloffRadius;
@@ -120,25 +122,25 @@ namespace MassiveHadronLtd
             }
 
             // ────────── Phase 2: Snap quads to squares ──────────
-            for (int qy = 0; qy < numRows; qy++)
+            for (var qy = 0; qy < numRows; qy++)
             {
-                for (int qx = 0; qx < numColumns; qx++)
+                for (var qx = 0; qx < numColumns; qx++)
                 {
-					int vertIdx = (qy * numColumns + qx) * 4;
+					var vertIdx = (qy * numColumns + qx) * 4;
 
-					Vector3 bl = vertices[vertIdx + 0];
-                    Vector3 tl = vertices[vertIdx + 1];
-                    Vector3 tr = vertices[vertIdx + 2];
-                    Vector3 br = vertices[vertIdx + 3];
+					var bl = vertices[vertIdx + 0];
+                    var tl = vertices[vertIdx + 1];
+                    var tr = vertices[vertIdx + 2];
+                    var br = vertices[vertIdx + 3];
 
-                    float left = Mathf.Min(bl.x, tl.x);
-                    float right = Mathf.Max(tr.x, br.x);
-                    float bottom = Mathf.Min(bl.y, br.y);
-                    float top = Mathf.Max(tl.y, tr.y);
+					var left = Mathf.Min(bl.x, tl.x);
+                    var right = Mathf.Max(tr.x, br.x);
+                    var bottom = Mathf.Min(bl.y, br.y);
+                    var top = Mathf.Max(tl.y, tr.y);
 
-                    float side = Mathf.Max(right - left, top - bottom);
-                    float cx = (left + right) * 0.5f;
-                    float cy = (bottom + top) * 0.5f;
+					var side = Mathf.Max(right - left, top - bottom);
+                    var cx = (left + right) * 0.5f;
+                    var cy = (bottom + top) * 0.5f;
 
                     left = cx - side * 0.5f;
                     right = cx + side * 0.5f;
@@ -154,27 +156,27 @@ namespace MassiveHadronLtd
 
             // ────────── Phase 3: Sort quads by size ascending ──────────
             var quads = new System.Collections.Generic.List<(float area, int baseVert)>(totalCells);
-            for (int q = 0; q < totalCells; q++)
+            for (var q = 0; q < totalCells; q++)
             {
-                int baseVert = q * 4;
-                Vector3 bl = vertices[baseVert + 0];
-                Vector3 tr = vertices[baseVert + 2];
-                float area = (tr.x - bl.x) * (tr.y - bl.y);
+				var baseVert = q * 4;
+				var bl = vertices[baseVert + 0];
+				var tr = vertices[baseVert + 2];
+				var area = (tr.x - bl.x) * (tr.y - bl.y);
                 quads.Add((area, baseVert));
             }
             quads.Sort((a, b) => a.area.CompareTo(b.area));
 
-            Vector3[] sortedVerts = new Vector3[vertices.Length];
-            Vector2[] sortedUVs = new Vector2[uvs.Length];
-            Color[] sortedColors = new Color[colors.Length];
-            int[] sortedIndices = new int[indices.Length];
+			var sortedVerts = new Vector3[vertices.Length];
+			var sortedUVs = new Vector2[uvs.Length];
+			var sortedColors = new Color[colors.Length];
+			var sortedIndices = new int[indices.Length];
 
-            for (int q = 0; q < quads.Count; q++)
+            for (var q = 0; q < quads.Count; q++)
             {
-                int oldBase = quads[q].baseVert;
-                int newBase = q * 4;
+				var oldBase = quads[q].baseVert;
+				var newBase = q * 4;
 
-                for (int i = 0; i < 4; i++)
+                for (var i = 0; i < 4; i++)
                 {
                     sortedVerts[newBase + i] = vertices[oldBase + i];
                     sortedUVs[newBase + i] = uvs[oldBase + i];
@@ -191,7 +193,7 @@ namespace MassiveHadronLtd
             }
 
             // ────────── Phase 4: Project vertices to final UV space ──────────
-            for (int n = 0; n < sortedVerts.Length; n++)
+            for (var n = 0; n < sortedVerts.Length; n++)
             {
                 sortedVerts[n] = new Vector3(sortedVerts[n].x * uvScaleX, sortedVerts[n].y * uvScaleY, sortedVerts[n].z);
             }

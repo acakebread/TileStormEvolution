@@ -45,12 +45,15 @@ namespace ClassicTilestorm
 				return;
 			}
 
+			//temporary provision to suppress texture replacement on loaded HD models
+			var isHD = (meshRenderers.Length == 1 && meshRenderers[0].sharedMaterials.Length >= 2) || meshRenderers.Length >= 2;//gameObject.CompareTag("Respawn");//HD flag!
+
 			Material replacement = null;
 			if (!string.IsNullOrEmpty(def.material))
 				replacement = MaterialAssets.Find(def.material);
 
 			TextureSequence sequence = null;
-			if (!string.IsNullOrEmpty(def.texture))
+			if (!isHD && !string.IsNullOrEmpty(def.texture))
 				sequence = TextureSequenceManager.GetTextureSequence(def.texture);
 
 			int added = 0;
