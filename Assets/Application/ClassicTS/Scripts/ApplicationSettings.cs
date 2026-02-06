@@ -129,6 +129,8 @@ namespace ClassicTilestorm
 
 		public Texture2D testTexture;
 
+		public static Texture2D TestTexture { get => instance?.testTexture; set => instance.testTexture = value; }
+
 		private void Awake()
 		{
 			instance = this;

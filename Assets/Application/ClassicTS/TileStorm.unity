@@ -633,6 +633,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ClassicTilestorm.UIController
   mainCanvas: {fileID: 1027007947}
   panelPrefabs:
+  - {fileID: 4695226594433876902, guid: ed34c90972540be42a54339edf746755, type: 3}
   - {fileID: 4695226594433876902, guid: 4792715285cc0984fa49bff4bb56ce2e, type: 3}
   - {fileID: 4695226594433876902, guid: 81d0ade3e8f8df14fbbd2500e09a8d95, type: 3}
   - {fileID: 4695226594433876902, guid: d164df16686cd7b47b4dd970ba3f74bf, type: 3}

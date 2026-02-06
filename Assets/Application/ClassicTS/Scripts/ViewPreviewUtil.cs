@@ -175,10 +175,10 @@ namespace ClassicTilestorm
 			groundMesh = new Mesh();
 			groundMesh.vertices = new Vector3[]
 			{
-			new Vector3(-512, -0.2f, -512),
-			new Vector3(-512, -0.2f,  512),
-			new Vector3( 512, -0.2f,  512),
-			new Vector3( 512, -0.2f, -512)
+				new (-512, -0.2f, -512),
+				new (-512, -0.2f,  512),
+				new ( 512, -0.2f,  512),
+				new ( 512, -0.2f, -512)
 			};
 			groundMesh.triangles = new int[] { 0, 1, 2, 0, 2, 3 };
 			groundMesh.uv = new Vector2[] { new(0, 0), new(0, 16), new(16, 16), new(16, 0) };

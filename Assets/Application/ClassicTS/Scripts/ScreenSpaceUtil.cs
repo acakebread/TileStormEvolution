@@ -72,8 +72,8 @@ namespace MassiveHadronLtd
             float uvScaleY = 1f / numRows;
 
             var centerLogical = new Vector2(center.x / uvScaleX, center.y / uvScaleY);
-			float falloffRadius = 0.25f / uvScaleY;
-			float maxDisplacement = 0.66f;
+			float falloffRadius = 0.35f / uvScaleY;
+			float maxDisplacement = 1.3f;
 
 			for (int qy = 0; qy < numRows; qy++)
             {

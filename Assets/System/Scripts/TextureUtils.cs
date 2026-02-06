@@ -355,5 +355,37 @@ namespace MassiveHadronLtd
 			tex.Apply(false, true);
 			return tex;
 		}
+
+		/// <summary>
+		/// Converts a RenderTexture to a new Texture2D by reading pixels from GPU → CPU.
+		/// Caller is responsible for Destroy()ing the returned Texture2D when no longer needed.
+		/// </summary>
+		public static Texture2D RenderTextureToTexture2D(RenderTexture rt, TextureFormat format = TextureFormat.RGBA32, bool mipChain = false)
+		{
+			if (rt == null || !rt.IsCreated())
+			{
+				Debug.LogError("RenderTexture is null or not created.");
+				return null;
+			}
+
+			// Create matching Texture2D
+			Texture2D tex = new Texture2D(rt.width, rt.height, format, mipChain)
+			{
+				filterMode = rt.filterMode,
+				wrapMode = TextureWrapMode.Clamp, // or match rt.wrapMode if needed
+				name = rt.name + "_AsTex2D"
+			};
+
+			// Remember previous active RT to restore it
+			RenderTexture previous = RenderTexture.active;
+
+			RenderTexture.active = rt;
+			tex.ReadPixels(new Rect(0, 0, rt.width, rt.height), 0, 0);
+			tex.Apply();  // Uploads changes to GPU — skip only if you never use tex as a GPU texture
+
+			RenderTexture.active = previous;
+
+			return tex;
+		}
 	}
 }

@@ -24,7 +24,6 @@ namespace ClassicTilestorm
 		{
 			base.Update();
 
-
 			if (!camera || IsMouseOverGUI() || IsGuiControlActive()) return;
 
 			if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1))
@@ -101,23 +100,102 @@ namespace ClassicTilestorm
 
 		//public override void OnGUI() => DrawSidePanel();
 
+		public static Texture2D testIcon;
+
+		private int COLUMNS = 32;
+		private int ROWS = 0;
+
+
 		// Debug: draw the quad texture full-screen in GUI
 		public override void OnGUI()
 		{
-			////var rect = new Rect(0, Screen.height * 0.5f, Screen.width, Screen.height * 0.5f);
+			var rect = new Rect(0, Screen.height * 0.5f, Screen.width, Screen.height * 0.5f);
 			//var rect = new Rect(0, 0, Screen.width, Screen.height);
 
-			//GUI.DrawTexture(
-			//	rect,
-			//	//ScreenSpaceUtil.GetRenderTexture(Screen.width / 64, Screen.height / 64, new Vector2((Input.mousePosition.x - rect.x) / rect.width, (Input.mousePosition.y - rect.y) / rect.height)),
-			//	ScreenSpaceUtil.GetRenderTexture(21, 12, new Vector2((Input.mousePosition.x - rect.x) / rect.width, (Input.mousePosition.y - rect.y) / rect.height)),
-			//	//ScreenSpaceUtil.GetRenderTexture(9, 5, new Vector2((Input.mousePosition.x - rect.x) / rect.width, (Input.mousePosition.y - rect.y) / rect.height)),
-			//	ScaleMode.StretchToFill,
-			//	//ScaleMode.ScaleToFit,
-			//	true
-			//);
+			GUI.DrawTexture(
+				rect,
+				//ScreenSpaceUtil.GetRenderTexture(Screen.width / 64, Screen.height / 64, new Vector2((Input.mousePosition.x - rect.x) / rect.width, (Input.mousePosition.y - rect.y) / rect.height)),
+				ScreenSpaceUtil.GetRenderTexture(COLUMNS, ROWS, new Vector2((Input.mousePosition.x - rect.x) / rect.width, (Input.mousePosition.y) / rect.height)),
+				//ScreenSpaceUtil.GetRenderTexture(9, 5, new Vector2((Input.mousePosition.x - rect.x) / rect.width, (Input.mousePosition.y - rect.y) / rect.height)),
+				ScaleMode.StretchToFill,
+				//ScaleMode.ScaleToFit,
+				true
+			);
 
-			DrawSidePanel();
+			//DrawSidePanel();
+		}
+
+		public override void OnEnable()
+		{
+			base.OnEnable();
+
+			const int ICON_SIZE = 64;
+
+			var defs = ResourceManager.Definitions;
+			if (defs == null || defs.Count == 0)
+			{
+				Debug.LogWarning("No definitions to render icons for.");
+				return;
+			}
+
+			// Calculate grid dimensions
+			ROWS = Mathf.CeilToInt((float)defs.Count / COLUMNS);
+			int width = COLUMNS * ICON_SIZE;
+			int height = ROWS * ICON_SIZE;
+
+			// Create output atlas texture
+			var atlas = new Texture2D(width, height, TextureFormat.RGBA32, false)
+			{
+				filterMode = FilterMode.Point,   // sharp pixel edges for icons
+				wrapMode = TextureWrapMode.Clamp,
+				name = "DefinitionIconAtlas"
+			};
+
+			// Fill with transparent black by default (or change to desired bg)
+			Color[] blank = new Color[width * height];
+			for (int i = 0; i < blank.Length; i++) blank[i] = new Color(0, 0, 0, 0);
+			atlas.SetPixels(blank);
+			atlas.Apply(false);
+
+			// Generate and blit each icon
+			for (int i = 0; i < defs.Count; i++)
+			{
+				var def = defs[i];
+
+				// Skip invalid entries
+				if (def == null || string.IsNullOrEmpty(def.model))
+					continue;
+
+				// Generate small icon (64×64 is fine for atlas)
+				Texture2D icon = DefinitionIconRenderUtil.GenerateIcon(def, ICON_SIZE);
+
+				if (icon == null)
+				{
+					Debug.LogWarning($"Failed to generate icon for definition {def.name ?? "unnamed"}");
+					continue;
+				}
+
+				// Calculate position in atlas
+				int col = i % COLUMNS;
+				int row = i / COLUMNS;
+				int x = col * ICON_SIZE;
+				int y = (ROWS - 1 - row) * ICON_SIZE;  // flip Y so row 0 is at top
+
+				// Copy icon pixels into atlas
+				Color[] pixels = icon.GetPixels();
+				atlas.SetPixels(x, y, ICON_SIZE, ICON_SIZE, pixels);
+
+				// Clean up single icon immediately
+				UnityEngine.Object.DestroyImmediate(icon);
+			}
+
+			// Final upload
+			atlas.Apply(true, false);  // true = generate mipmaps if you want, false = readable
+
+			// Pass to ScreenSpaceUtil
+			ScreenSpaceUtil.SetTexture(atlas);
+
+			Debug.Log($"Generated definition icon atlas: {width}×{height}, {defs.Count} icons");
 		}
 
 		public override void OnDisable() => EditorMeshUtil.HideGhostMesh();
