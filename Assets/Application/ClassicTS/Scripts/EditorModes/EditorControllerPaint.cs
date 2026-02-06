@@ -109,7 +109,9 @@ namespace ClassicTilestorm
 
 			//GUI.DrawTexture(
 			//	rect,
-			//	ScreenSpaceUtil.GetRenderTexture(Screen.width / 64, Screen.height / 64, new Vector2((Input.mousePosition.x - rect.x) / rect.width, (Input.mousePosition.y - rect.y) / rect.height)),
+			//	//ScreenSpaceUtil.GetRenderTexture(Screen.width / 64, Screen.height / 64, new Vector2((Input.mousePosition.x - rect.x) / rect.width, (Input.mousePosition.y - rect.y) / rect.height)),
+			//	ScreenSpaceUtil.GetRenderTexture(21, 12, new Vector2((Input.mousePosition.x - rect.x) / rect.width, (Input.mousePosition.y - rect.y) / rect.height)),
+			//	//ScreenSpaceUtil.GetRenderTexture(9, 5, new Vector2((Input.mousePosition.x - rect.x) / rect.width, (Input.mousePosition.y - rect.y) / rect.height)),
 			//	ScaleMode.StretchToFill,
 			//	//ScaleMode.ScaleToFit,
 			//	true

@@ -127,10 +127,13 @@ namespace ClassicTilestorm
 
 		private static ApplicationSettings instance;
 
+		public Texture2D testTexture;
+
 		private void Awake()
 		{
 			instance = this;
 			remapGeometry = RemapGeometry;
+			if (null != testTexture) ScreenSpaceUtil.SetTexture(testTexture);
 		}
 
 		private void OnValidate()
@@ -159,6 +162,7 @@ namespace ClassicTilestorm
 
 		public static string DatabaseFolder => PreviewSettingsStatic.DatabaseFolder;
 		public static string ExportFolder => PreviewSettingsStatic.ExportFolder;
+
 	}
 
 	public static class PreviewSettingsStatic
