@@ -131,13 +131,12 @@ namespace MassiveHadronLtd
 			var colors = new Color[totalVerts];
 			var indices = new int[totalTris];
 
+			Vector2 centerLogical = new Vector2(point.x * numColumns, point.y * numRows);
+
 			float cellW = 1f;
 			float cellH = 1f;
 			float uvScaleX = 1f / numColumns;
 			float uvScaleY = 1f / numRows;
-
-			Vector2 centerLogical = new Vector2(point.x / uvScaleX, point.y / uvScaleY);
-
 			float falloffRadius = 0.425f / uvScaleY;
 			float sqrRadius = falloffRadius * falloffRadius;
 			float maxDisplacement = 2f;
