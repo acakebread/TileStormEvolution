@@ -134,8 +134,7 @@ namespace MassiveHadronLtd
 					var x1 = x0 + cellWidth;
 					var y1 = y0 + cellHeight;
 
-					Vector2[] corners = { new(x0, y0), new(x0, y1), new(x1, y1), new(x1, y0) };
-
+					var corners = new Vector2[]{ new(x0, y0), new(x0, y1), new(x1, y1), new(x1, y0) };
 					var d0 = (new Vector2(x0, y0) - centerLogical).sqrMagnitude;
 					var d1 = (new Vector2(x0, y1) - centerLogical).sqrMagnitude;
 					var d2 = (new Vector2(x1, y1) - centerLogical).sqrMagnitude;
@@ -151,10 +150,10 @@ namespace MassiveHadronLtd
 					var dt = (d0 + d1 + d2 + d3) * 0.25f;
 					var sqrRadius = falloffRadius * falloffRadius;
 					var scaleStrength = dt < sqrRadius ? 1f - dt / sqrRadius : 0f;
-					scaleStrength *= scaleStrength;
+					scaleStrength *= scaleStrength * maxDisplacement;
 
-					var deltaScale = 1f + scaleStrength * maxDisplacement;
-					var transScale = 1f + scaleStrength * maxDisplacement * 0.375f;
+					var deltaScale = scaleStrength + 1f;
+					var transScale = scaleStrength * 0.375f;
 
 					int baseVert = qIdx * 4;
 
@@ -162,9 +161,7 @@ namespace MassiveHadronLtd
 					{
 						var pos = corners[i];
 						var delta = (pos - quadCenter) * deltaScale;
-
-						var trans = pos - centerLogical;
-						trans = trans * transScale - trans;
+						var trans = (pos - centerLogical) * transScale;
 
 						vertices[baseVert + i] = quadCenter + delta + trans;
 						uvs[baseVert + i] = new Vector2(pos.x * uvScaleX, pos.y * uvScaleY);
@@ -278,68 +275,68 @@ namespace MassiveHadronLtd
 
 			var centerLogical = new Vector2(coord.x * numColumns, coord.y * numRows);
 
-			int qx = Mathf.FloorToInt(centerLogical.x);
-			int qy = Mathf.FloorToInt(centerLogical.y);
+			var qx = Mathf.FloorToInt(centerLogical.x);
+			var qy = Mathf.FloorToInt(centerLogical.y);
 
 			if (qx < 0 || qx >= numColumns || qy < 0 || qy >= numRows) return;
 
-			int originalIdx = qy * numColumns + qx;
+			var originalIdx = qy * numColumns + qx;
 
-			float uvScaleX = 1f / numColumns;
-			float uvScaleY = 1f / numRows;
+			var uvScaleX = 1f / numColumns;
+			var uvScaleY = 1f / numRows;
 
 			// Original UVs for this quad (what we want to show)
-			Vector2 uvBL = new Vector2(qx * uvScaleX, qy * uvScaleY);
-			Vector2 uvTL = new Vector2(qx * uvScaleX, (qy + 1) * uvScaleY);
-			Vector2 uvTR = new Vector2((qx + 1) * uvScaleX, (qy + 1) * uvScaleY);
-			Vector2 uvBR = new Vector2((qx + 1) * uvScaleX, qy * uvScaleY);
+			var uvBL = new Vector2(qx * uvScaleX, qy * uvScaleY);
+			var uvTL = new Vector2(qx * uvScaleX, (qy + 1) * uvScaleY);
+			var uvTR = new Vector2((qx + 1) * uvScaleX, (qy + 1) * uvScaleY);
+			var uvBR = new Vector2((qx + 1) * uvScaleX, qy * uvScaleY);
 
 			// Find the corresponding final deformed vertices
-			Vector3[] verts = _gridMesh.vertices;
+			var verts = _gridMesh.vertices;
 			if (verts == null || verts.Length == 0) return;
 
 			// Use deformed center matching (as in your working version)
-			float cellWidth = 1f;
-			float cellHeight = 1f;
-			float falloffRadius = 0.3f / uvScaleY;
-			float maxDisplacement = 1.25f;
+			var cellWidth = 1f;
+			var cellHeight = 1f;
+			var falloffRadius = 0.3f / uvScaleY;
+			var maxDisplacement = 1.25f;
 
 			float x0 = qx * cellWidth;
 			float y0 = qy * cellHeight;
 			float x1 = x0 + cellWidth;
 			float y1 = y0 + cellHeight;
 
-			float d0 = (new Vector2(x0, y0) - centerLogical).sqrMagnitude;
-			float d1 = (new Vector2(x0, y1) - centerLogical).sqrMagnitude;
-			float d2 = (new Vector2(x1, y1) - centerLogical).sqrMagnitude;
-			float d3 = (new Vector2(x1, y0) - centerLogical).sqrMagnitude;
+			var d0 = (new Vector2(x0, y0) - centerLogical).sqrMagnitude;
+			var d1 = (new Vector2(x0, y1) - centerLogical).sqrMagnitude;
+			var d2 = (new Vector2(x1, y1) - centerLogical).sqrMagnitude;
+			var d3 = (new Vector2(x1, y0) - centerLogical).sqrMagnitude;
 
-			float dt = (d0 + d1 + d2 + d3) * 0.25f;
-			float sqrRadius = falloffRadius * falloffRadius;
-			float scaleStrength = dt < sqrRadius ? 1f - dt / sqrRadius : 0f;
+			var dt = (d0 + d1 + d2 + d3) * 0.25f;
+			var sqrRadius = falloffRadius * falloffRadius;
+			var scaleStrength = dt < sqrRadius ? 1f - dt / sqrRadius : 0f;
 			scaleStrength *= scaleStrength;
 
-			float scale = 1f + scaleStrength * maxDisplacement;
+			var scale = 1f + scaleStrength * maxDisplacement;
 
-			Vector2 quadCenter = _logicalQuadCenters[originalIdx];
-			Vector2 deformedCenterLogical = centerLogical + (quadCenter - centerLogical) * scale;
-			Vector3 targetCenter = new Vector3(
+			var quadCenter = _logicalQuadCenters[originalIdx];
+			var deformedCenterLogical = centerLogical + (quadCenter - centerLogical) * scale;
+			var targetCenter = new Vector3(
 				deformedCenterLogical.x * uvScaleX,
 				deformedCenterLogical.y * uvScaleY,
 				0f
 			);
 
-			int closestFinalIdx = -1;
-			float minDistSqr = float.MaxValue;
+			var closestFinalIdx = -1;
+			var minDistSqr = float.MaxValue;
 
-			for (int q = 0; q < numColumns * numRows; q++)
+			for (var q = 0; q < numColumns * numRows; q++)
 			{
-				int baseV = q * 4;
-				Vector3 bl = verts[baseV + 0];
-				Vector3 tr = verts[baseV + 2];
-				Vector3 center = (bl + tr) * 0.5f;
+				var baseV = q * 4;
+				var bl = verts[baseV + 0];
+				var tr = verts[baseV + 2];
+				var center = (bl + tr) * 0.5f;
 
-				float distSqr = (center - targetCenter).sqrMagnitude;
+				var distSqr = (center - targetCenter).sqrMagnitude;
 				if (distSqr < minDistSqr)
 				{
 					minDistSqr = distSqr;
@@ -349,11 +346,11 @@ namespace MassiveHadronLtd
 
 			if (closestFinalIdx < 0) return;
 
-			int baseVert = closestFinalIdx * 4;
-			Vector3 v0 = verts[baseVert + 0];
-			Vector3 v1 = verts[baseVert + 1];
-			Vector3 v2 = verts[baseVert + 2];
-			Vector3 v3 = verts[baseVert + 3];
+			var baseVert = closestFinalIdx * 4;
+			var v0 = verts[baseVert + 0];
+			var v1 = verts[baseVert + 1];
+			var v2 = verts[baseVert + 2];
+			var v3 = verts[baseVert + 3];
 
 			// 1. Selected quad mesh with ORIGINAL UVs
 			_selectedQuadMesh = new Mesh
@@ -364,11 +361,11 @@ namespace MassiveHadronLtd
 			};
 
 			// 2. Outline mesh (same as your working version)
-			float outset = 0.115f;//balance for highlight texture
-			Vector3 dir0 = (v0 - (v0 + v1 + v2 + v3) * 0.25f).normalized * outset;
-			Vector3 dir1 = (v1 - (v0 + v1 + v2 + v3) * 0.25f).normalized * outset;
-			Vector3 dir2 = (v2 - (v0 + v1 + v2 + v3) * 0.25f).normalized * outset;
-			Vector3 dir3 = (v3 - (v0 + v1 + v2 + v3) * 0.25f).normalized * outset;
+			var outset = 0.115f;//balance for highlight texture
+			var dir0 = (v0 - (v0 + v1 + v2 + v3) * 0.25f).normalized * outset;
+			var dir1 = (v1 - (v0 + v1 + v2 + v3) * 0.25f).normalized * outset;
+			var dir2 = (v2 - (v0 + v1 + v2 + v3) * 0.25f).normalized * outset;
+			var dir3 = (v3 - (v0 + v1 + v2 + v3) * 0.25f).normalized * outset;
 
 			Vector3[] outlineVerts = { v0 + dir0, v1 + dir1, v2 + dir2, v3 + dir3 };
 			Vector2[] outlineUVs = { new(0, 0), new(0, 1), new(1, 1), new(1, 0) };
@@ -388,8 +385,8 @@ namespace MassiveHadronLtd
 		{
 			LazyInitResources();
 
-			int pw = numColumns * 64;
-			int ph = numRows * 64;
+			var pw = numColumns * 64;
+			var ph = numRows * 64;
 
 			if (_rt == null || _rt.width != pw || _rt.height != ph || !_rt.IsCreated())
 			{
