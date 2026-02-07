@@ -129,6 +129,7 @@ namespace MassiveHadronLtd
 			var vertices = new Vector3[totalVerts];
 			var uvs = new Vector2[totalVerts];
 			var colors = new Color[totalVerts];
+			var indices = new int[totalTris];
 
 			float cellW = 1f;
 			float cellH = 1f;
@@ -141,22 +142,19 @@ namespace MassiveHadronLtd
 			float sqrRadius = falloffRadius * falloffRadius;
 			float maxDisplacement = 2f;
 
-			// ───────────────────────────────────────────────────────────────
-			// Build deformed + snapped quads (logical space → snapped space)
-			// ───────────────────────────────────────────────────────────────
+			// Phase 1: collect scale strengths
+			var quadData = new List<(float scaleStrength, int qIdx)>(totalCells);
+
 			for (int qy = 0; qy < numRows; qy++)
 			{
 				for (int qx = 0; qx < numColumns; qx++)
 				{
 					int qIdx = qy * numColumns + qx;
-					int baseVert = qIdx * 4;
 
 					float x0 = qx * cellW;
 					float y0 = qy * cellH;
 					float x1 = x0 + cellW;
 					float y1 = y0 + cellH;
-
-					Vector2 quadCenter = new Vector2((x0 + x1) * 0.5f, (y0 + y1) * 0.5f);
 
 					float dt = 0.25f * (
 						(new Vector2(x0, y0) - centerLogical).sqrMagnitude +
@@ -168,141 +166,115 @@ namespace MassiveHadronLtd
 						? (1f - dt / sqrRadius) * (1f - dt / sqrRadius) * maxDisplacement
 						: 0f;
 
-					float deltaScale = 1f + scaleStrength;
-					float transScale = scaleStrength * 0.375f;
-
-					Vector3 bl = quadCenter + (new Vector2(x0, y0) - quadCenter) * deltaScale + (new Vector2(x0, y0) - centerLogical) * transScale;
-					Vector3 tl = quadCenter + (new Vector2(x0, y1) - quadCenter) * deltaScale + (new Vector2(x0, y1) - centerLogical) * transScale;
-					Vector3 tr = quadCenter + (new Vector2(x1, y1) - quadCenter) * deltaScale + (new Vector2(x1, y1) - centerLogical) * transScale;
-					Vector3 br = quadCenter + (new Vector2(x1, y0) - quadCenter) * deltaScale + (new Vector2(x1, y0) - centerLogical) * transScale;
-
-					// Snap to largest axis-aligned square
-					float minX = Mathf.Min(bl.x, tl.x);
-					float maxX = Mathf.Max(tr.x, br.x);
-					float minY = Mathf.Min(bl.y, br.y);
-					float maxY = Mathf.Max(tl.y, tr.y);
-
-					float side = Mathf.Max(maxX - minX, maxY - minY);
-					float cx = (minX + maxX) * 0.5f;
-					float cy = (minY + maxY) * 0.5f;
-
-					vertices[baseVert + 0] = new Vector3(cx - side * 0.5f, cy - side * 0.5f, 0f);
-					vertices[baseVert + 1] = new Vector3(cx - side * 0.5f, cy + side * 0.5f, 0f);
-					vertices[baseVert + 2] = new Vector3(cx + side * 0.5f, cy + side * 0.5f, 0f);
-					vertices[baseVert + 3] = new Vector3(cx + side * 0.5f, cy - side * 0.5f, 0f);
-
-					uvs[baseVert + 0] = new Vector2(x0 * uvScaleX, y0 * uvScaleY);
-					uvs[baseVert + 1] = new Vector2(x0 * uvScaleX, y1 * uvScaleY);
-					uvs[baseVert + 2] = new Vector2(x1 * uvScaleX, y1 * uvScaleY);
-					uvs[baseVert + 3] = new Vector2(x1 * uvScaleX, y0 * uvScaleY);
-
-					colors[baseVert + 0] = colors[baseVert + 1] =
-					colors[baseVert + 2] = colors[baseVert + 3] = Color.white;
+					quadData.Add((scaleStrength, qIdx));
 				}
 			}
 
-			// ───────────────────────────────────────────────────────────────
-			// Sort quads by area (ascending) — painter's algorithm prep
-			// Largest (most deformed) ends up last
-			// ───────────────────────────────────────────────────────────────
-			var quads = new List<(float area, int srcBase, int origIdx)>(totalCells);
+			// Sort ascending by strength → small → large (painter's: large on top)
+			quadData.Sort((a, b) => a.scaleStrength.CompareTo(b.scaleStrength));
 
-			for (int q = 0; q < totalCells; q++)
+			// Phase 2: build final buffers directly
+			for (int drawIdx = 0; drawIdx < quadData.Count; drawIdx++)
 			{
-				int b = q * 4;
-				float w = vertices[b + 2].x - vertices[b + 0].x;
-				float h = vertices[b + 2].y - vertices[b + 0].y;
-				quads.Add((w * h, b, q));
+				var (scaleStrength, qIdx) = quadData[drawIdx];
+
+				int qx = qIdx % numColumns;
+				int qy = qIdx / numColumns;
+
+				float x0 = qx * cellW;
+				float y0 = qy * cellH;
+				float x1 = x0 + cellW;
+				float y1 = y0 + cellH;
+
+				Vector2 quadCenter = new Vector2((x0 + x1) * 0.5f, (y0 + y1) * 0.5f);
+
+				float deltaScale = 1f + scaleStrength;
+				float transScale = scaleStrength * 0.375f;
+
+				Vector3 bl = quadCenter + (new Vector2(x0, y0) - quadCenter) * deltaScale + (new Vector2(x0, y0) - centerLogical) * transScale;
+				Vector3 tl = quadCenter + (new Vector2(x0, y1) - quadCenter) * deltaScale + (new Vector2(x0, y1) - centerLogical) * transScale;
+				Vector3 tr = quadCenter + (new Vector2(x1, y1) - quadCenter) * deltaScale + (new Vector2(x1, y1) - centerLogical) * transScale;
+				Vector3 br = quadCenter + (new Vector2(x1, y0) - quadCenter) * deltaScale + (new Vector2(x1, y0) - centerLogical) * transScale;
+
+				float minX = Mathf.Min(bl.x, tl.x);
+				float maxX = Mathf.Max(tr.x, br.x);
+				float minY = Mathf.Min(bl.y, br.y);
+				float maxY = Mathf.Max(tl.y, tr.y);
+
+				float side = Mathf.Max(maxX - minX, maxY - minY);
+				float cx = (minX + maxX) * 0.5f;
+				float cy = (minY + maxY) * 0.5f;
+
+				int baseVert = drawIdx * 4;
+
+				vertices[baseVert + 0] = new Vector3(cx - side * 0.5f, cy - side * 0.5f, 0f);
+				vertices[baseVert + 1] = new Vector3(cx - side * 0.5f, cy + side * 0.5f, 0f);
+				vertices[baseVert + 2] = new Vector3(cx + side * 0.5f, cy + side * 0.5f, 0f);
+				vertices[baseVert + 3] = new Vector3(cx + side * 0.5f, cy - side * 0.5f, 0f);
+
+				uvs[baseVert + 0] = new Vector2(x0 * uvScaleX, y0 * uvScaleY);
+				uvs[baseVert + 1] = new Vector2(x0 * uvScaleX, y1 * uvScaleY);
+				uvs[baseVert + 2] = new Vector2(x1 * uvScaleX, y1 * uvScaleY);
+				uvs[baseVert + 3] = new Vector2(x1 * uvScaleX, y0 * uvScaleY);
+
+				colors[baseVert + 0] = colors[baseVert + 1] =
+				colors[baseVert + 2] = colors[baseVert + 3] = Color.white;
+
+				int tri = drawIdx * 6;
+				indices[tri + 0] = baseVert + 0;
+				indices[tri + 1] = baseVert + 1;
+				indices[tri + 2] = baseVert + 2;
+				indices[tri + 3] = baseVert + 0;
+				indices[tri + 4] = baseVert + 2;
+				indices[tri + 5] = baseVert + 3;
 			}
 
-			quads.Sort((a, b) => a.area.CompareTo(b.area));
-
-			var sortedVerts = new Vector3[totalVerts];
-			var sortedUVs = new Vector2[totalVerts];
-			var sortedColors = new Color[totalVerts];
-			var sortedIndices = new int[totalTris];
-
-			for (int i = 0; i < quads.Count; i++)
-			{
-				var (_, oldBase, _) = quads[i];
-				int newBase = i * 4;
-
-				for (int c = 0; c < 4; c++)
-				{
-					sortedVerts[newBase + c] = vertices[oldBase + c];
-					sortedUVs[newBase + c] = uvs[oldBase + c];
-					sortedColors[newBase + c] = colors[oldBase + c];
-				}
-
-				int tri = i * 6;
-				sortedIndices[tri + 0] = newBase;
-				sortedIndices[tri + 1] = newBase + 1;
-				sortedIndices[tri + 2] = newBase + 2;
-				sortedIndices[tri + 3] = newBase;
-				sortedIndices[tri + 4] = newBase + 2;
-				sortedIndices[tri + 5] = newBase + 3;
-			}
-
-			// Final scale to normalized [0..1] space
+			// Final scale
 			for (int i = 0; i < totalVerts; i++)
 			{
-				var v = sortedVerts[i];
-				sortedVerts[i] = new Vector3(v.x * uvScaleX, v.y * uvScaleY, v.z);
+				var v = vertices[i];
+				vertices[i] = new Vector3(v.x * uvScaleX, v.y * uvScaleY, v.z);
 			}
 
-			_gridMesh.vertices = sortedVerts;
-			_gridMesh.uv = sortedUVs;
-			_gridMesh.colors = sortedColors;
-			_gridMesh.triangles = sortedIndices;
+			_gridMesh.vertices = vertices;
+			_gridMesh.uv = uvs;
+			_gridMesh.colors = colors;
+			_gridMesh.triangles = indices;
 
 			_lastColumns = numColumns;
 			_lastRows = numRows;
 			_lastCoord = point;
 
 			// ───────────────────────────────────────────────────────────────
-			// Highlight & outline = largest quad (last in sorted list)
+			// Highlight & outline = the largest quad (last in sorted list)
 			// ───────────────────────────────────────────────────────────────
-			bool highlightNeedsRebuild = _selectedQuadMesh == null || _outlineMesh == null ||
-										 Vector2.Distance(_lastOutlineCoord, point) > 0.0005f ||
-										 _lastColumns != numColumns ||
-										 _lastRows != numRows;
-
-			if (!highlightNeedsRebuild) return;
-
 			if (_selectedQuadMesh != null) Object.DestroyImmediate(_selectedQuadMesh);
 			if (_outlineMesh != null) Object.DestroyImmediate(_outlineMesh);
 
 			_selectedQuadMesh = null;
 			_outlineMesh = null;
 
-			// Skip if center is outside grid bounds
-			Vector2 coordLogical = new Vector2(point.x * numColumns, point.y * numRows);
-			int highlightQx = Mathf.FloorToInt(coordLogical.x);
-			int highlightQy = Mathf.FloorToInt(coordLogical.y);
+			// Largest quad = last position
+			int lastBase = (quadData.Count - 1) * 4;
 
-			if (highlightQx < 0 || highlightQx >= numColumns ||
-				highlightQy < 0 || highlightQy >= numRows)
-				return;
+			Vector3 v0 = vertices[lastBase + 0];
+			Vector3 v1 = vertices[lastBase + 1];
+			Vector3 v2 = vertices[lastBase + 2];
+			Vector3 v3 = vertices[lastBase + 3];
 
-			// The largest quad is always the last one after area sort
-			int lastQuadIndex = quads.Count - 1;
-			int baseVertLast = lastQuadIndex * 4;
-
-			Vector3 v0 = sortedVerts[baseVertLast + 0];
-			Vector3 v1 = sortedVerts[baseVertLast + 1];
-			Vector3 v2 = sortedVerts[baseVertLast + 2];
-			Vector3 v3 = sortedVerts[baseVertLast + 3];
+			// UVs: since it's the largest, we don't need exact logical qx/qy for UVs if the texture is uniform
+			// But if you need correct region sampling, use the original UVs from the logical quad (but you said it's the largest, so assume uniform or skip UV remap)
+			// For now, use full texture UVs for highlight as per your original outline intent
 
 			_selectedQuadMesh = new Mesh
 			{
 				vertices = new[] { v0, v1, v2, v3 },
-				uv = new[] { sortedUVs[baseVertLast + 0], sortedUVs[baseVertLast + 1], sortedUVs[baseVertLast + 2], sortedUVs[baseVertLast + 3] },
+				uv = new[] { uvs[lastBase + 0], uvs[lastBase + 1], uvs[lastBase + 2], uvs[lastBase + 3] },
 				triangles = new[] { 0, 1, 2, 0, 2, 3 }
 			};
 
-			// Outline — outset from the same deformed quad
-			const float outlineScale = 1.54f;//magic number based on highlight texture / material
-
+			// Outline — simple uniform scale
+			const float outlineScale = 1.56f;
 			Vector3 center = (v0 + v1 + v2 + v3) * 0.25f;
 
 			Vector3 ov0 = center + (v0 - center) * outlineScale;
