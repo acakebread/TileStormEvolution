@@ -21,8 +21,6 @@ namespace MassiveHadronLtd
 		private static Vector2 _lastCoord = new Vector2(-999f, -999f);
 		private static Vector2 _lastOutlineCoord = new Vector2(-999f, -999f);
 
-		private static Vector2[] _logicalQuadCenters;
-
 		public static void SetTexture(Texture2D value) => _quadTexture = value;
 		public static Texture2D GetTexture() => _quadTexture;
 
@@ -42,49 +40,78 @@ namespace MassiveHadronLtd
 
 		private static void LazyInitResources()
 		{
+			// ────────────────────────────────────────────────
+			// Materials – create only if missing
+			// ────────────────────────────────────────────────
 			if (_quadMaterial == null)
 			{
-				var shader = Shader.Find("Sprites/Default")
-							 ?? Shader.Find("Hidden/Internal-Colored")
-							 ?? Shader.Find("Particles/Standard Unlit")
-							 ?? Shader.Find("Universal Render Pipeline/Unlit");
-
-				if (shader == null)
+				var shader = TryFindGoodShader();
+				if (shader != null)
 				{
-					Debug.LogError("[ScreenSpaceUtil] No usable shader found!");
-					return;
+					_quadMaterial = new Material(shader)
+					{
+						name = "ScreenSpaceUtil-QuadMat (auto)",
+						hideFlags = HideFlags.HideAndDontSave
+					};
 				}
-
-				_quadMaterial = new Material(shader);
-			}
-
-			if (_quadTexture == null)
-			{
-				_quadTexture = TextureUtils.GeneratePerlinNoiseTexture();
-				if (_quadTexture != null) _quadTexture.filterMode = FilterMode.Point;
+				else
+				{
+					Debug.LogError("[ScreenSpaceUtil] No usable shader found for quad material!");
+				}
 			}
 
 			if (_outlineMaterial == null)
 			{
-				var shader = Shader.Find("Sprites/Default")
-							 ?? Shader.Find("Hidden/Internal-Colored")
-							 ?? Shader.Find("Particles/Standard Unlit")
-							 ?? Shader.Find("Universal Render Pipeline/Unlit");
-
-				if (shader == null)
+				var shader = TryFindGoodShader();
+				if (shader != null)
 				{
-					Debug.LogError("[ScreenSpaceUtil] No usable shader found!");
-					return;
-				}
+					_outlineMaterial = new Material(shader)
+					{
+						name = "ScreenSpaceUtil-OutlineMat (auto)",
+						hideFlags = HideFlags.HideAndDontSave
+					};
 
-				_outlineMaterial = new Material(shader);
+					// If user previously set a texture via SetOutlineTexture → apply it
+					if (_outlineTexture != null)
+						_outlineMaterial.mainTexture = _outlineTexture;
+				}
+				else
+				{
+					Debug.LogError("[ScreenSpaceUtil] No usable shader found for outline material!");
+				}
+			}
+
+			// ────────────────────────────────────────────────
+			// Textures – create fallback only if missing
+			// ────────────────────────────────────────────────
+			if (_quadTexture == null)
+			{
+				_quadTexture = TextureUtils.GeneratePerlinNoiseTexture();
+				if (_quadTexture != null)
+				{
+					_quadTexture.filterMode = FilterMode.Point;
+					_quadTexture.hideFlags = HideFlags.HideAndDontSave;
+				}
 			}
 
 			if (_outlineTexture == null)
 			{
 				_outlineTexture = TextureUtils.GenerateXorTexture256();
-				if (_outlineTexture != null) _outlineTexture.filterMode = FilterMode.Point;
+				if (_outlineTexture != null)
+				{
+					_outlineTexture.filterMode = FilterMode.Point;
+					_outlineTexture.hideFlags = HideFlags.HideAndDontSave;
+				}
 			}
+		}
+
+		// Helper
+		private static Shader TryFindGoodShader()
+		{
+			return Shader.Find("Sprites/Default")
+				?? Shader.Find("Hidden/Internal-Colored")
+				?? Shader.Find("Particles/Standard Unlit")
+				?? Shader.Find("Universal Render Pipeline/Unlit");
 		}
 
 		private static void RebuildGridMeshIfNeeded(int numColumns, int numRows, Vector2 center)
@@ -121,7 +148,7 @@ namespace MassiveHadronLtd
 			var falloffRadius = 0.425f / uvScaleY;
 			var maxDisplacement = 2f;
 
-			_logicalQuadCenters = new Vector2[totalCells];
+			var _logicalQuadCenters = new Vector2[totalCells];
 
 			// Phase 1: Build deformed quads + store logical center
 			for (var qy = 0; qy < numRows; qy++)
@@ -255,130 +282,132 @@ namespace MassiveHadronLtd
 			_lastColumns = numColumns;
 			_lastRows = numRows;
 			_lastCoord = center;
-		}
 
-		private static void RebuildSelectedAndOutlineMeshes(int numColumns, int numRows, Vector2 coord)
-		{
-			bool needsRebuild = _selectedQuadMesh == null || _outlineMesh == null ||
-								Vector2.Distance(_lastOutlineCoord, coord) > 0.0005f ||
-								_lastColumns != numColumns ||
-								_lastRows != numRows;
+			RebuildSelectedAndOutlineMeshes(numColumns, numRows, center);
 
-			if (!needsRebuild) return;
-
-			if (_selectedQuadMesh != null) Object.DestroyImmediate(_selectedQuadMesh);
-			if (_outlineMesh != null) Object.DestroyImmediate(_outlineMesh);
-			_selectedQuadMesh = null;
-			_outlineMesh = null;
-
-			if (_logicalQuadCenters == null || _logicalQuadCenters.Length == 0) return;
-
-			var centerLogical = new Vector2(coord.x * numColumns, coord.y * numRows);
-
-			var qx = Mathf.FloorToInt(centerLogical.x);
-			var qy = Mathf.FloorToInt(centerLogical.y);
-
-			if (qx < 0 || qx >= numColumns || qy < 0 || qy >= numRows) return;
-
-			var originalIdx = qy * numColumns + qx;
-
-			var uvScaleX = 1f / numColumns;
-			var uvScaleY = 1f / numRows;
-
-			// Original UVs for this quad (what we want to show)
-			var uvBL = new Vector2(qx * uvScaleX, qy * uvScaleY);
-			var uvTL = new Vector2(qx * uvScaleX, (qy + 1) * uvScaleY);
-			var uvTR = new Vector2((qx + 1) * uvScaleX, (qy + 1) * uvScaleY);
-			var uvBR = new Vector2((qx + 1) * uvScaleX, qy * uvScaleY);
-
-			// Find the corresponding final deformed vertices
-			var verts = _gridMesh.vertices;
-			if (verts == null || verts.Length == 0) return;
-
-			// Use deformed center matching (as in your working version)
-			var cellWidth = 1f;
-			var cellHeight = 1f;
-			var falloffRadius = 0.3f / uvScaleY;
-			var maxDisplacement = 1.25f;
-
-			float x0 = qx * cellWidth;
-			float y0 = qy * cellHeight;
-			float x1 = x0 + cellWidth;
-			float y1 = y0 + cellHeight;
-
-			var d0 = (new Vector2(x0, y0) - centerLogical).sqrMagnitude;
-			var d1 = (new Vector2(x0, y1) - centerLogical).sqrMagnitude;
-			var d2 = (new Vector2(x1, y1) - centerLogical).sqrMagnitude;
-			var d3 = (new Vector2(x1, y0) - centerLogical).sqrMagnitude;
-
-			var dt = (d0 + d1 + d2 + d3) * 0.25f;
-			var sqrRadius = falloffRadius * falloffRadius;
-			var scaleStrength = dt < sqrRadius ? 1f - dt / sqrRadius : 0f;
-			scaleStrength *= scaleStrength;
-
-			var scale = 1f + scaleStrength * maxDisplacement;
-
-			var quadCenter = _logicalQuadCenters[originalIdx];
-			var deformedCenterLogical = centerLogical + (quadCenter - centerLogical) * scale;
-			var targetCenter = new Vector3(
-				deformedCenterLogical.x * uvScaleX,
-				deformedCenterLogical.y * uvScaleY,
-				0f
-			);
-
-			var closestFinalIdx = -1;
-			var minDistSqr = float.MaxValue;
-
-			for (var q = 0; q < numColumns * numRows; q++)
+			void RebuildSelectedAndOutlineMeshes(int numColumns, int numRows, Vector2 coord)
 			{
-				var baseV = q * 4;
-				var bl = verts[baseV + 0];
-				var tr = verts[baseV + 2];
-				var center = (bl + tr) * 0.5f;
+				bool needsRebuild = _selectedQuadMesh == null || _outlineMesh == null ||
+									Vector2.Distance(_lastOutlineCoord, coord) > 0.0005f ||
+									_lastColumns != numColumns ||
+									_lastRows != numRows;
 
-				var distSqr = (center - targetCenter).sqrMagnitude;
-				if (distSqr < minDistSqr)
+				if (!needsRebuild) return;
+
+				if (_selectedQuadMesh != null) Object.DestroyImmediate(_selectedQuadMesh);
+				if (_outlineMesh != null) Object.DestroyImmediate(_outlineMesh);
+				_selectedQuadMesh = null;
+				_outlineMesh = null;
+
+				if (_logicalQuadCenters == null || _logicalQuadCenters.Length == 0) return;
+
+				var centerLogical = new Vector2(coord.x * numColumns, coord.y * numRows);
+
+				var qx = Mathf.FloorToInt(centerLogical.x);
+				var qy = Mathf.FloorToInt(centerLogical.y);
+
+				if (qx < 0 || qx >= numColumns || qy < 0 || qy >= numRows) return;
+
+				var originalIdx = qy * numColumns + qx;
+
+				var uvScaleX = 1f / numColumns;
+				var uvScaleY = 1f / numRows;
+
+				// Original UVs for this quad (what we want to show)
+				var uvBL = new Vector2(qx * uvScaleX, qy * uvScaleY);
+				var uvTL = new Vector2(qx * uvScaleX, (qy + 1) * uvScaleY);
+				var uvTR = new Vector2((qx + 1) * uvScaleX, (qy + 1) * uvScaleY);
+				var uvBR = new Vector2((qx + 1) * uvScaleX, qy * uvScaleY);
+
+				// Find the corresponding final deformed vertices
+				var verts = _gridMesh.vertices;
+				if (verts == null || verts.Length == 0) return;
+
+				// Use deformed center matching (as in your working version)
+				var cellWidth = 1f;
+				var cellHeight = 1f;
+				var falloffRadius = 0.3f / uvScaleY;
+				var maxDisplacement = 1.25f;
+
+				float x0 = qx * cellWidth;
+				float y0 = qy * cellHeight;
+				float x1 = x0 + cellWidth;
+				float y1 = y0 + cellHeight;
+
+				var d0 = (new Vector2(x0, y0) - centerLogical).sqrMagnitude;
+				var d1 = (new Vector2(x0, y1) - centerLogical).sqrMagnitude;
+				var d2 = (new Vector2(x1, y1) - centerLogical).sqrMagnitude;
+				var d3 = (new Vector2(x1, y0) - centerLogical).sqrMagnitude;
+
+				var dt = (d0 + d1 + d2 + d3) * 0.25f;
+				var sqrRadius = falloffRadius * falloffRadius;
+				var scaleStrength = dt < sqrRadius ? 1f - dt / sqrRadius : 0f;
+				scaleStrength *= scaleStrength;
+
+				var scale = 1f + scaleStrength * maxDisplacement;
+
+				var quadCenter = _logicalQuadCenters[originalIdx];
+				var deformedCenterLogical = centerLogical + (quadCenter - centerLogical) * scale;
+				var targetCenter = new Vector3(
+					deformedCenterLogical.x * uvScaleX,
+					deformedCenterLogical.y * uvScaleY,
+					0f
+				);
+
+				var closestFinalIdx = -1;
+				var minDistSqr = float.MaxValue;
+
+				for (var q = 0; q < numColumns * numRows; q++)
 				{
-					minDistSqr = distSqr;
-					closestFinalIdx = q;
+					var baseV = q * 4;
+					var bl = verts[baseV + 0];
+					var tr = verts[baseV + 2];
+					var center = (bl + tr) * 0.5f;
+
+					var distSqr = (center - targetCenter).sqrMagnitude;
+					if (distSqr < minDistSqr)
+					{
+						minDistSqr = distSqr;
+						closestFinalIdx = q;
+					}
 				}
+
+				if (closestFinalIdx < 0) return;
+
+				var baseVert = closestFinalIdx * 4;
+				var v0 = verts[baseVert + 0];
+				var v1 = verts[baseVert + 1];
+				var v2 = verts[baseVert + 2];
+				var v3 = verts[baseVert + 3];
+
+				// 1. Selected quad mesh with ORIGINAL UVs
+				_selectedQuadMesh = new Mesh
+				{
+					vertices = new[] { v0, v1, v2, v3 },
+					uv = new[] { uvBL, uvTL, uvTR, uvBR },
+					triangles = new[] { 0, 1, 2, 0, 2, 3 }
+				};
+
+				// 2. Outline mesh (same as your working version)
+				var outset = 0.115f;//balance for highlight texture
+				var dir0 = (v0 - (v0 + v1 + v2 + v3) * 0.25f).normalized * outset;
+				var dir1 = (v1 - (v0 + v1 + v2 + v3) * 0.25f).normalized * outset;
+				var dir2 = (v2 - (v0 + v1 + v2 + v3) * 0.25f).normalized * outset;
+				var dir3 = (v3 - (v0 + v1 + v2 + v3) * 0.25f).normalized * outset;
+
+				Vector3[] outlineVerts = { v0 + dir0, v1 + dir1, v2 + dir2, v3 + dir3 };
+				Vector2[] outlineUVs = { new(0, 0), new(0, 1), new(1, 1), new(1, 0) };
+				int[] outlineTris = { 0, 1, 2, 0, 2, 3 };
+
+				_outlineMesh = new Mesh
+				{
+					vertices = outlineVerts,
+					uv = outlineUVs,
+					triangles = outlineTris
+				};
+
+				_lastOutlineCoord = coord;
 			}
-
-			if (closestFinalIdx < 0) return;
-
-			var baseVert = closestFinalIdx * 4;
-			var v0 = verts[baseVert + 0];
-			var v1 = verts[baseVert + 1];
-			var v2 = verts[baseVert + 2];
-			var v3 = verts[baseVert + 3];
-
-			// 1. Selected quad mesh with ORIGINAL UVs
-			_selectedQuadMesh = new Mesh
-			{
-				vertices = new[] { v0, v1, v2, v3 },
-				uv = new[] { uvBL, uvTL, uvTR, uvBR },
-				triangles = new[] { 0, 1, 2, 0, 2, 3 }
-			};
-
-			// 2. Outline mesh (same as your working version)
-			var outset = 0.115f;//balance for highlight texture
-			var dir0 = (v0 - (v0 + v1 + v2 + v3) * 0.25f).normalized * outset;
-			var dir1 = (v1 - (v0 + v1 + v2 + v3) * 0.25f).normalized * outset;
-			var dir2 = (v2 - (v0 + v1 + v2 + v3) * 0.25f).normalized * outset;
-			var dir3 = (v3 - (v0 + v1 + v2 + v3) * 0.25f).normalized * outset;
-
-			Vector3[] outlineVerts = { v0 + dir0, v1 + dir1, v2 + dir2, v3 + dir3 };
-			Vector2[] outlineUVs = { new(0, 0), new(0, 1), new(1, 1), new(1, 0) };
-			int[] outlineTris = { 0, 1, 2, 0, 2, 3 };
-
-			_outlineMesh = new Mesh
-			{
-				vertices = outlineVerts,
-				uv = outlineUVs,
-				triangles = outlineTris
-			};
-
-			_lastOutlineCoord = coord;
 		}
 
 		private static void DrawGridToRT(int numColumns, int numRows, Vector2 coord)
@@ -400,7 +429,6 @@ namespace MassiveHadronLtd
 			}
 
 			RebuildGridMeshIfNeeded(numColumns, numRows, coord);
-			RebuildSelectedAndOutlineMeshes(numColumns, numRows, coord);
 
 			var oldRT = RenderTexture.active;
 			RenderTexture.active = _rt;
@@ -457,15 +485,28 @@ namespace MassiveHadronLtd
 
 		public static void Cleanup()
 		{
-			if (_rt != null) { _rt.Release(); _rt = null; }
+			// ── Only destroy what WE created ────────────────────────────────
+
+			if (_rt != null)
+			{
+				_rt.Release();
+				_rt = null;
+			}
+
 			if (_gridMesh != null) { Object.DestroyImmediate(_gridMesh); _gridMesh = null; }
 			if (_selectedQuadMesh != null) { Object.DestroyImmediate(_selectedQuadMesh); _selectedQuadMesh = null; }
 			if (_outlineMesh != null) { Object.DestroyImmediate(_outlineMesh); _outlineMesh = null; }
-			if (_quadMaterial != null) { Object.DestroyImmediate(_quadMaterial); _quadMaterial = null; }
-			if (_outlineMaterial != null) { Object.DestroyImmediate(_outlineMaterial); _outlineMaterial = null; }
+
+			// IMPORTANT: do NOT destroy materials & textures unless we are sure
+			// they were auto-created by us (very hard to know reliably).
+			// → Instead just null them out and let GC / AssetDatabase handle it.
+
+			_quadMaterial = null;
+			_outlineMaterial = null;
 			_quadTexture = null;
 			_outlineTexture = null;
-			_logicalQuadCenters = null;
+
+			// Reset caching state
 			_lastColumns = _lastRows = -1;
 			_lastCoord = new Vector2(-999f, -999f);
 			_lastOutlineCoord = new Vector2(-999f, -999f);
