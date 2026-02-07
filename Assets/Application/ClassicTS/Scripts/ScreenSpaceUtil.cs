@@ -19,7 +19,6 @@ namespace MassiveHadronLtd
 		private static int _lastColumns = -1;
 		private static int _lastRows = -1;
 		private static Vector2 _lastCoord = new Vector2(-999f, -999f);
-		private static Vector2 _lastOutlineCoord = new Vector2(-999f, -999f);
 
 		public static void SetTexture(Texture2D value) => _quadTexture = value;
 		public static Texture2D GetTexture() => _quadTexture;
@@ -287,8 +286,6 @@ namespace MassiveHadronLtd
 				uv = new[] { new Vector2(0, 0), new Vector2(0, 1), new Vector2(1, 1), new Vector2(1, 0) },
 				triangles = new[] { 0, 1, 2, 0, 2, 3 }
 			};
-
-			_lastOutlineCoord = point;
 		}
 
 		private static void DrawGridToRT(int numColumns, int numRows, Vector2 coord)
@@ -379,7 +376,6 @@ namespace MassiveHadronLtd
 
 			_lastColumns = _lastRows = -1;
 			_lastCoord = new Vector2(-999f, -999f);
-			_lastOutlineCoord = new Vector2(-999f, -999f);
 		}
 	}
 }
