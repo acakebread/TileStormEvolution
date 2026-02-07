@@ -106,7 +106,7 @@ namespace MassiveHadronLtd
 				?? Shader.Find("Universal Render Pipeline/Unlit");
 		}
 
-		private static void RebuildGridMeshIfNeeded(int numColumns, int numRows, Vector2 center)
+		private static void RebuildGridMeshIfNeeded(int numColumns, int numRows, Vector2 point)
 		{
 			if (numColumns < 1) numColumns = 1;
 			if (numRows < 1) numRows = 1;
@@ -114,7 +114,7 @@ namespace MassiveHadronLtd
 			bool needsRebuild = _gridMesh == null ||
 								_lastColumns != numColumns ||
 								_lastRows != numRows ||
-								Vector2.Distance(_lastCoord, center) > 0.0005f;
+								Vector2.Distance(_lastCoord, point) > 0.0005f;
 
 			if (!needsRebuild) return;
 
@@ -129,22 +129,20 @@ namespace MassiveHadronLtd
 			var vertices = new Vector3[totalVerts];
 			var uvs = new Vector2[totalVerts];
 			var colors = new Color[totalVerts];
-			var indices = new int[totalTris];
 
 			float cellW = 1f;
 			float cellH = 1f;
 			float uvScaleX = 1f / numColumns;
 			float uvScaleY = 1f / numRows;
 
-			// logical = normalized → grid cell coordinates
-			Vector2 centerLogical = new Vector2(center.x / uvScaleX, center.y / uvScaleY);
+			Vector2 centerLogical = new Vector2(point.x / uvScaleX, point.y / uvScaleY);
 
 			float falloffRadius = 0.425f / uvScaleY;
 			float sqrRadius = falloffRadius * falloffRadius;
 			float maxDisplacement = 2f;
 
 			// ───────────────────────────────────────────────────────────────
-			// Generate deformed + snapped quads
+			// Build deformed + snapped quads (logical space → snapped space)
 			// ───────────────────────────────────────────────────────────────
 			for (int qy = 0; qy < numRows; qy++)
 			{
@@ -160,18 +158,15 @@ namespace MassiveHadronLtd
 
 					Vector2 quadCenter = new Vector2((x0 + x1) * 0.5f, (y0 + y1) * 0.5f);
 
-					float d0 = (new Vector2(x0, y0) - centerLogical).sqrMagnitude;
-					float d1 = (new Vector2(x0, y1) - centerLogical).sqrMagnitude;
-					float d2 = (new Vector2(x1, y1) - centerLogical).sqrMagnitude;
-					float d3 = (new Vector2(x1, y0) - centerLogical).sqrMagnitude;
-					float dt = (d0 + d1 + d2 + d3) * 0.25f;
+					float dt = 0.25f * (
+						(new Vector2(x0, y0) - centerLogical).sqrMagnitude +
+						(new Vector2(x0, y1) - centerLogical).sqrMagnitude +
+						(new Vector2(x1, y1) - centerLogical).sqrMagnitude +
+						(new Vector2(x1, y0) - centerLogical).sqrMagnitude);
 
-					float scaleStrength = 0f;
-					if (dt < sqrRadius)
-					{
-						scaleStrength = 1f - dt / sqrRadius;
-						scaleStrength *= scaleStrength * maxDisplacement;
-					}
+					float scaleStrength = dt < sqrRadius
+						? (1f - dt / sqrRadius) * (1f - dt / sqrRadius) * maxDisplacement
+						: 0f;
 
 					float deltaScale = 1f + scaleStrength;
 					float transScale = scaleStrength * 0.375f;
@@ -181,7 +176,7 @@ namespace MassiveHadronLtd
 					Vector3 tr = quadCenter + (new Vector2(x1, y1) - quadCenter) * deltaScale + (new Vector2(x1, y1) - centerLogical) * transScale;
 					Vector3 br = quadCenter + (new Vector2(x1, y0) - quadCenter) * deltaScale + (new Vector2(x1, y0) - centerLogical) * transScale;
 
-					// Snap to square
+					// Snap to largest axis-aligned square
 					float minX = Mathf.Min(bl.x, tl.x);
 					float maxX = Mathf.Max(tr.x, br.x);
 					float minY = Mathf.Min(bl.y, br.y);
@@ -207,7 +202,8 @@ namespace MassiveHadronLtd
 			}
 
 			// ───────────────────────────────────────────────────────────────
-			// Sort by area ascending → largest is last
+			// Sort quads by area (ascending) — painter's algorithm prep
+			// Largest (most deformed) ends up last
 			// ───────────────────────────────────────────────────────────────
 			var quads = new List<(float area, int srcBase, int origIdx)>(totalCells);
 
@@ -247,7 +243,7 @@ namespace MassiveHadronLtd
 				sortedIndices[tri + 5] = newBase + 3;
 			}
 
-			// Scale to final [0..1] space
+			// Final scale to normalized [0..1] space
 			for (int i = 0; i < totalVerts; i++)
 			{
 				var v = sortedVerts[i];
@@ -261,13 +257,13 @@ namespace MassiveHadronLtd
 
 			_lastColumns = numColumns;
 			_lastRows = numRows;
-			_lastCoord = center;
+			_lastCoord = point;
 
 			// ───────────────────────────────────────────────────────────────
-			// Highlighted / outline = the largest (last) quad
+			// Highlight & outline = largest quad (last in sorted list)
 			// ───────────────────────────────────────────────────────────────
 			bool highlightNeedsRebuild = _selectedQuadMesh == null || _outlineMesh == null ||
-										 Vector2.Distance(_lastOutlineCoord, center) > 0.0005f ||
+										 Vector2.Distance(_lastOutlineCoord, point) > 0.0005f ||
 										 _lastColumns != numColumns ||
 										 _lastRows != numRows;
 
@@ -279,53 +275,49 @@ namespace MassiveHadronLtd
 			_selectedQuadMesh = null;
 			_outlineMesh = null;
 
-			// Only proceed if center is inside grid
-			Vector2 coordLogical = new Vector2(center.x * numColumns, center.y * numRows);
+			// Skip if center is outside grid bounds
+			Vector2 coordLogical = new Vector2(point.x * numColumns, point.y * numRows);
 			int highlightQx = Mathf.FloorToInt(coordLogical.x);
 			int highlightQy = Mathf.FloorToInt(coordLogical.y);
 
 			if (highlightQx < 0 || highlightQx >= numColumns ||
-				highlightQy < 0 || highlightQy >= numRows) return;
+				highlightQy < 0 || highlightQy >= numRows)
+				return;
 
-			// Largest quad = last in sorted list
-			int lastQuadIdx = quads.Count - 1;
-			int baseVertLast = lastQuadIdx * 4;
+			// The largest quad is always the last one after area sort
+			int lastQuadIndex = quads.Count - 1;
+			int baseVertLast = lastQuadIndex * 4;
 
 			Vector3 v0 = sortedVerts[baseVertLast + 0];
 			Vector3 v1 = sortedVerts[baseVertLast + 1];
 			Vector3 v2 = sortedVerts[baseVertLast + 2];
 			Vector3 v3 = sortedVerts[baseVertLast + 3];
 
-			// Original UVs for the highlighted cell
-			var uvBL = new Vector2(highlightQx * uvScaleX, highlightQy * uvScaleY);
-			var uvTL = new Vector2(highlightQx * uvScaleX, (highlightQy + 1) * uvScaleY);
-			var uvTR = new Vector2((highlightQx + 1) * uvScaleX, (highlightQy + 1) * uvScaleY);
-			var uvBR = new Vector2((highlightQx + 1) * uvScaleX, highlightQy * uvScaleY);
-
 			_selectedQuadMesh = new Mesh
 			{
 				vertices = new[] { v0, v1, v2, v3 },
-				uv = new[] { uvBL, uvTL, uvTR, uvBR },
+				uv = new[] { sortedUVs[baseVertLast + 0], sortedUVs[baseVertLast + 1], sortedUVs[baseVertLast + 2], sortedUVs[baseVertLast + 3] },
 				triangles = new[] { 0, 1, 2, 0, 2, 3 }
 			};
 
-			// Outline
-			const float outset = 0.115f;
-			Vector3 _quadCenter = (v0 + v1 + v2 + v3) * 0.25f;
+			// Outline — outset from the same deformed quad
+			const float outlineScale = 1.54f;//magic number based on highlight texture / material
 
-			Vector3 dir0 = (v0 - _quadCenter).normalized * outset;
-			Vector3 dir1 = (v1 - _quadCenter).normalized * outset;
-			Vector3 dir2 = (v2 - _quadCenter).normalized * outset;
-			Vector3 dir3 = (v3 - _quadCenter).normalized * outset;
+			Vector3 center = (v0 + v1 + v2 + v3) * 0.25f;
+
+			Vector3 ov0 = center + (v0 - center) * outlineScale;
+			Vector3 ov1 = center + (v1 - center) * outlineScale;
+			Vector3 ov2 = center + (v2 - center) * outlineScale;
+			Vector3 ov3 = center + (v3 - center) * outlineScale;
 
 			_outlineMesh = new Mesh
 			{
-				vertices = new[] { v0 + dir0, v1 + dir1, v2 + dir2, v3 + dir3 },
+				vertices = new[] { ov0, ov1, ov2, ov3 },
 				uv = new[] { new Vector2(0, 0), new Vector2(0, 1), new Vector2(1, 1), new Vector2(1, 0) },
 				triangles = new[] { 0, 1, 2, 0, 2, 3 }
 			};
 
-			_lastOutlineCoord = center;
+			_lastOutlineCoord = point;
 		}
 
 		private static void DrawGridToRT(int numColumns, int numRows, Vector2 coord)
@@ -356,7 +348,6 @@ namespace MassiveHadronLtd
 			GL.PushMatrix();
 			GL.LoadOrtho();
 
-			// Grid (all quads except highlight overlay)
 			if (_gridMesh != null)
 			{
 				_quadMaterial.mainTexture = _quadTexture;
@@ -365,7 +356,6 @@ namespace MassiveHadronLtd
 				Graphics.DrawMeshNow(_gridMesh, Matrix4x4.identity);
 			}
 
-			// Dark background under highlight
 			if (_selectedQuadMesh != null)
 			{
 				_quadMaterial.mainTexture = null;
@@ -374,7 +364,6 @@ namespace MassiveHadronLtd
 				Graphics.DrawMeshNow(_selectedQuadMesh, Matrix4x4.identity);
 			}
 
-			// Highlighted cell texture
 			if (_selectedQuadMesh != null)
 			{
 				_quadMaterial.mainTexture = _quadTexture;
@@ -383,7 +372,6 @@ namespace MassiveHadronLtd
 				Graphics.DrawMeshNow(_selectedQuadMesh, Matrix4x4.identity);
 			}
 
-			// Outline
 			if (_outlineMesh != null && _outlineMaterial != null)
 			{
 				_outlineMaterial.SetPass(0);
@@ -413,7 +401,6 @@ namespace MassiveHadronLtd
 			if (_selectedQuadMesh != null) { Object.DestroyImmediate(_selectedQuadMesh); _selectedQuadMesh = null; }
 			if (_outlineMesh != null) { Object.DestroyImmediate(_outlineMesh); _outlineMesh = null; }
 
-			// Do NOT destroy externally assignable assets
 			_quadMaterial = null;
 			_outlineMaterial = null;
 			_quadTexture = null;
