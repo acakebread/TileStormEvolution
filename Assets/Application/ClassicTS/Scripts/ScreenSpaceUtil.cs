@@ -24,6 +24,7 @@ namespace MassiveHadronLtd
 		private static Vector2[] _logicalQuadCenters;
 
 		public static void SetTexture(Texture2D value) => _quadTexture = value;
+		public static Texture2D GetTexture() => _quadTexture;
 
 		public static void SetOutlineTexture(Texture2D outlineTex)
 		{
@@ -117,8 +118,8 @@ namespace MassiveHadronLtd
 			var uvScaleY = 1f / numRows;
 
 			var centerLogical = new Vector2(center.x / uvScaleX, center.y / uvScaleY);
-			var falloffRadius = 0.3f / uvScaleY;
-			var maxDisplacement = 1.25f;
+			var falloffRadius = 0.425f / uvScaleY;
+			var maxDisplacement = 2f;
 
 			_logicalQuadCenters = new Vector2[totalCells];
 
@@ -152,16 +153,20 @@ namespace MassiveHadronLtd
 					var scaleStrength = dt < sqrRadius ? 1f - dt / sqrRadius : 0f;
 					scaleStrength *= scaleStrength;
 
-					var scaleX = 1f + scaleStrength * maxDisplacement;
-					var scaleY = 1f + scaleStrength * maxDisplacement;
+					var deltaScale = 1f + scaleStrength * maxDisplacement;
+					var transScale = 1f + scaleStrength * maxDisplacement * 0.375f;
 
 					int baseVert = qIdx * 4;
 
 					for (int i = 0; i < 4; i++)
 					{
 						var pos = corners[i];
-						var delta = pos - centerLogical;
-						vertices[baseVert + i] = centerLogical + new Vector2(delta.x * scaleX, delta.y * scaleY);
+						var delta = (pos - quadCenter) * deltaScale;
+
+						var trans = pos - centerLogical;
+						trans = trans * transScale - trans;
+
+						vertices[baseVert + i] = quadCenter + delta + trans;
 						uvs[baseVert + i] = new Vector2(pos.x * uvScaleX, pos.y * uvScaleY);
 						colors[baseVert + i] = Color.white;
 					}
@@ -359,7 +364,7 @@ namespace MassiveHadronLtd
 			};
 
 			// 2. Outline mesh (same as your working version)
-			float outset = 0.06f;
+			float outset = 0.115f;//balance for highlight texture
 			Vector3 dir0 = (v0 - (v0 + v1 + v2 + v3) * 0.25f).normalized * outset;
 			Vector3 dir1 = (v1 - (v0 + v1 + v2 + v3) * 0.25f).normalized * outset;
 			Vector3 dir2 = (v2 - (v0 + v1 + v2 + v3) * 0.25f).normalized * outset;
