@@ -209,8 +209,8 @@ namespace ClassicTilestorm
 			var bgRect = new Rect(0, panelY, Screen.width, panelHeight);
 			GUI.Box(bgRect, GUIContent.none, new GUIStyle { normal = { background = TextureUtils.MakeTex(1, 1, semiTransparentBg) } });
 
-			const float margin = 12f;
-			const float cellSize = 64f;
+			const float margin = 24f;
+			const float cellSize = 128f;
 
 			float totalWidth = COLUMNS * cellSize;
 			float totalHeight = ROWS * cellSize;
