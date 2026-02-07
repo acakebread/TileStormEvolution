@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using System.Collections.Generic;
 
 namespace MassiveHadronLtd
 {
@@ -10,6 +11,7 @@ namespace MassiveHadronLtd
 		private static Material _quadMaterial;
 		private static Texture2D _quadTexture;
 
+		private static Mesh _selectedQuadMesh;     // only the highlighted quad
 		private static Mesh _outlineMesh;
 		private static Material _outlineMaterial;
 		private static Texture2D _outlineTexture;
@@ -19,8 +21,7 @@ namespace MassiveHadronLtd
 		private static Vector2 _lastCoord = new Vector2(-999f, -999f);
 		private static Vector2 _lastOutlineCoord = new Vector2(-999f, -999f);
 
-		// Temporary storage during rebuild — logical centers before final projection
-		private static Vector2[] _logicalQuadCenters;  // one per quad
+		private static Vector2[] _logicalQuadCenters;
 
 		public static void SetTexture(Texture2D value) => _quadTexture = value;
 
@@ -34,7 +35,8 @@ namespace MassiveHadronLtd
 		public static void SetOutlineMaterial(Material value)
 		{
 			_outlineMaterial = value;
-			_outlineTexture = (Texture2D)value.mainTexture;
+			if (value != null && value.mainTexture is Texture2D tex)
+				_outlineTexture = tex;
 		}
 
 		private static void LazyInitResources()
@@ -118,7 +120,7 @@ namespace MassiveHadronLtd
 			var falloffRadius = 0.3f / uvScaleY;
 			var maxDisplacement = 1.25f;
 
-			_logicalQuadCenters = new Vector2[totalCells];  // reset
+			_logicalQuadCenters = new Vector2[totalCells];
 
 			// Phase 1: Build deformed quads + store logical center
 			for (var qy = 0; qy < numRows; qy++)
@@ -139,7 +141,7 @@ namespace MassiveHadronLtd
 					var d3 = (new Vector2(x1, y0) - centerLogical).sqrMagnitude;
 
 					var quadCenter = new Vector2((x0 + x1) * 0.5f, (y0 + y1) * 0.5f);
-					_logicalQuadCenters[qIdx] = quadCenter;  // save pre-deformation center
+					_logicalQuadCenters[qIdx] = quadCenter;
 
 					var centreDelta = quadCenter - centerLogical;
 					var centreDist = centreDelta.magnitude;
@@ -159,15 +161,14 @@ namespace MassiveHadronLtd
 					{
 						var pos = corners[i];
 						var delta = pos - centerLogical;
-						vertices[baseVert] = centerLogical + new Vector2(delta.x * scaleX, delta.y * scaleY);
-						uvs[baseVert] = new Vector2(pos.x * uvScaleX, pos.y * uvScaleY);
-						colors[baseVert] = Color.white;
-						baseVert++;
+						vertices[baseVert + i] = centerLogical + new Vector2(delta.x * scaleX, delta.y * scaleY);
+						uvs[baseVert + i] = new Vector2(pos.x * uvScaleX, pos.y * uvScaleY);
+						colors[baseVert + i] = Color.white;
 					}
 				}
 			}
 
-			// Phase 2: Snap quads to squares (vertices updated in-place)
+			// Phase 2: Snap quads to squares
 			for (var qy = 0; qy < numRows; qy++)
 			{
 				for (var qx = 0; qx < numColumns; qx++)
@@ -201,20 +202,20 @@ namespace MassiveHadronLtd
 			}
 
 			// Phase 3: Sort quads by size ascending
-			var quads = new System.Collections.Generic.List<(float area, int baseVert, int originalIdx)>(totalCells);
+			var quads = new List<(float area, int baseVert, int originalIdx)>(totalCells);
 			for (var q = 0; q < totalCells; q++)
 			{
 				var baseVert = q * 4;
 				var bl = vertices[baseVert + 0];
 				var tr = vertices[baseVert + 2];
 				var area = (tr.x - bl.x) * (tr.y - bl.y);
-				quads.Add((area, baseVert, q));  // keep original index
+				quads.Add((area, baseVert, q));
 			}
 			quads.Sort((a, b) => a.area.CompareTo(b.area));
 
-			var sortedVerts = new Vector3[vertices.Length];
-			var sortedUVs = new Vector2[uvs.Length];
-			var sortedColors = new Color[colors.Length];
+			var sortedVerts = new Vector3[totalVerts];
+			var sortedUVs = new Vector2[totalVerts];
+			var sortedColors = new Color[totalVerts];
 			var sortedIndices = new int[totalIndices];
 
 			for (var q = 0; q < quads.Count; q++)
@@ -254,20 +255,19 @@ namespace MassiveHadronLtd
 			_lastCoord = center;
 		}
 
-		private static void RebuildOutlineMeshIfNeeded(int numColumns, int numRows, Vector2 coord)
+		private static void RebuildSelectedAndOutlineMeshes(int numColumns, int numRows, Vector2 coord)
 		{
-			bool needsRebuild = _outlineMesh == null ||
+			bool needsRebuild = _selectedQuadMesh == null || _outlineMesh == null ||
 								Vector2.Distance(_lastOutlineCoord, coord) > 0.0005f ||
 								_lastColumns != numColumns ||
 								_lastRows != numRows;
 
 			if (!needsRebuild) return;
 
-			if (_outlineMesh != null)
-			{
-				Object.DestroyImmediate(_outlineMesh);
-				_outlineMesh = null;
-			}
+			if (_selectedQuadMesh != null) Object.DestroyImmediate(_selectedQuadMesh);
+			if (_outlineMesh != null) Object.DestroyImmediate(_outlineMesh);
+			_selectedQuadMesh = null;
+			_outlineMesh = null;
 
 			if (_logicalQuadCenters == null || _logicalQuadCenters.Length == 0) return;
 
@@ -278,13 +278,24 @@ namespace MassiveHadronLtd
 
 			if (qx < 0 || qx >= numColumns || qy < 0 || qy >= numRows) return;
 
-			int closestOriginalIdx = qy * numColumns + qx;
+			int originalIdx = qy * numColumns + qx;
 
-			// Compute deformed center for matching
-			float cellWidth = 1f;
-			float cellHeight = 1f;
 			float uvScaleX = 1f / numColumns;
 			float uvScaleY = 1f / numRows;
+
+			// Original UVs for this quad (what we want to show)
+			Vector2 uvBL = new Vector2(qx * uvScaleX, qy * uvScaleY);
+			Vector2 uvTL = new Vector2(qx * uvScaleX, (qy + 1) * uvScaleY);
+			Vector2 uvTR = new Vector2((qx + 1) * uvScaleX, (qy + 1) * uvScaleY);
+			Vector2 uvBR = new Vector2((qx + 1) * uvScaleX, qy * uvScaleY);
+
+			// Find the corresponding final deformed vertices
+			Vector3[] verts = _gridMesh.vertices;
+			if (verts == null || verts.Length == 0) return;
+
+			// Use deformed center matching (as in your working version)
+			float cellWidth = 1f;
+			float cellHeight = 1f;
 			float falloffRadius = 0.3f / uvScaleY;
 			float maxDisplacement = 1.25f;
 
@@ -305,17 +316,13 @@ namespace MassiveHadronLtd
 
 			float scale = 1f + scaleStrength * maxDisplacement;
 
-			Vector2 quadCenter = _logicalQuadCenters[closestOriginalIdx];
-			Vector2 deformedQuadCenterLogical = centerLogical + (quadCenter - centerLogical) * scale;
-			Vector3 deformedQuadCenterFinal = new Vector3(
-				deformedQuadCenterLogical.x * uvScaleX,
-				deformedQuadCenterLogical.y * uvScaleY,
+			Vector2 quadCenter = _logicalQuadCenters[originalIdx];
+			Vector2 deformedCenterLogical = centerLogical + (quadCenter - centerLogical) * scale;
+			Vector3 targetCenter = new Vector3(
+				deformedCenterLogical.x * uvScaleX,
+				deformedCenterLogical.y * uvScaleY,
 				0f
 			);
-
-			// Now find the final quad index by matching deformed centers
-			Vector3[] verts = _gridMesh.vertices;
-			if (verts == null || verts.Length == 0) return;
 
 			int closestFinalIdx = -1;
 			float minDistSqr = float.MaxValue;
@@ -327,7 +334,7 @@ namespace MassiveHadronLtd
 				Vector3 tr = verts[baseV + 2];
 				Vector3 center = (bl + tr) * 0.5f;
 
-				float distSqr = (center - deformedQuadCenterFinal).sqrMagnitude;
+				float distSqr = (center - targetCenter).sqrMagnitude;
 				if (distSqr < minDistSqr)
 				{
 					minDistSqr = distSqr;
@@ -338,33 +345,28 @@ namespace MassiveHadronLtd
 			if (closestFinalIdx < 0) return;
 
 			int baseVert = closestFinalIdx * 4;
-
 			Vector3 v0 = verts[baseVert + 0];
 			Vector3 v1 = verts[baseVert + 1];
 			Vector3 v2 = verts[baseVert + 2];
 			Vector3 v3 = verts[baseVert + 3];
 
-			// Optional: slight outset for better visibility (adjust factor as needed)
+			// 1. Selected quad mesh with ORIGINAL UVs
+			_selectedQuadMesh = new Mesh
+			{
+				vertices = new[] { v0, v1, v2, v3 },
+				uv = new[] { uvBL, uvTL, uvTR, uvBR },
+				triangles = new[] { 0, 1, 2, 0, 2, 3 }
+			};
+
+			// 2. Outline mesh (same as your working version)
 			float outset = 0.06f;
 			Vector3 dir0 = (v0 - (v0 + v1 + v2 + v3) * 0.25f).normalized * outset;
 			Vector3 dir1 = (v1 - (v0 + v1 + v2 + v3) * 0.25f).normalized * outset;
 			Vector3 dir2 = (v2 - (v0 + v1 + v2 + v3) * 0.25f).normalized * outset;
 			Vector3 dir3 = (v3 - (v0 + v1 + v2 + v3) * 0.25f).normalized * outset;
 
-			Vector3[] outlineVerts = {
-				v0 + dir0,
-				v1 + dir1,
-				v2 + dir2,
-				v3 + dir3
-			};
-
-			Vector2[] outlineUVs = {
-				new Vector2(0f, 0f),
-				new Vector2(0f, 1f),
-				new Vector2(1f, 1f),
-				new Vector2(1f, 0f)
-			};
-
+			Vector3[] outlineVerts = { v0 + dir0, v1 + dir1, v2 + dir2, v3 + dir3 };
+			Vector2[] outlineUVs = { new(0, 0), new(0, 1), new(1, 1), new(1, 0) };
 			int[] outlineTris = { 0, 1, 2, 0, 2, 3 };
 
 			_outlineMesh = new Mesh
@@ -373,7 +375,6 @@ namespace MassiveHadronLtd
 				uv = outlineUVs,
 				triangles = outlineTris
 			};
-			_outlineMesh.name = "OutlineQuad_MatchDeformed";
 
 			_lastOutlineCoord = coord;
 		}
@@ -397,7 +398,7 @@ namespace MassiveHadronLtd
 			}
 
 			RebuildGridMeshIfNeeded(numColumns, numRows, coord);
-			RebuildOutlineMeshIfNeeded(numColumns, numRows, coord);
+			RebuildSelectedAndOutlineMeshes(numColumns, numRows, coord);
 
 			var oldRT = RenderTexture.active;
 			RenderTexture.active = _rt;
@@ -407,6 +408,7 @@ namespace MassiveHadronLtd
 			GL.PushMatrix();
 			GL.LoadOrtho();
 
+			// 1. Draw full grid (all other icons)
 			if (_gridMesh != null)
 			{
 				_quadMaterial.mainTexture = _quadTexture;
@@ -415,20 +417,30 @@ namespace MassiveHadronLtd
 				Graphics.DrawMeshNow(_gridMesh, Matrix4x4.identity);
 			}
 
-			//if (_outlineMesh != null && _outlineTexture != null)
-			//{
-			//	_outlineMaterial.mainTexture = _outlineTexture;
-			//	_outlineMaterial.color = Color.white;
-			//	_outlineMaterial.SetPass(0);
-			//	Graphics.DrawMeshNow(_outlineMesh, Matrix4x4.identity);
-			//}
+			// 2. Draw solid/semi-opaque background only under the selected quad
+			if (_selectedQuadMesh != null)
+			{
+				_quadMaterial.mainTexture = null;
+				_quadMaterial.color = new Color(0.05f, 0.05f, 0.05f, 0.9f); // almost opaque dark
+				_quadMaterial.SetPass(0);
+				Graphics.DrawMeshNow(_selectedQuadMesh, Matrix4x4.identity);
+			}
 
+			// 3. Draw only the selected quad's correct texture region
+			if (_selectedQuadMesh != null)
+			{
+				_quadMaterial.mainTexture = _quadTexture;
+				_quadMaterial.color = Color.white;
+				_quadMaterial.SetPass(0);
+				Graphics.DrawMeshNow(_selectedQuadMesh, Matrix4x4.identity);
+			}
+
+			// 4. Draw outline using YOUR material (no changes to texture/color)
 			if (_outlineMesh != null && _outlineMaterial != null)
 			{
 				_outlineMaterial.SetPass(0);
 				Graphics.DrawMeshNow(_outlineMesh, Matrix4x4.identity);
 			}
-
 
 			GL.PopMatrix();
 			RenderTexture.active = oldRT;
@@ -445,6 +457,7 @@ namespace MassiveHadronLtd
 		{
 			if (_rt != null) { _rt.Release(); _rt = null; }
 			if (_gridMesh != null) { Object.DestroyImmediate(_gridMesh); _gridMesh = null; }
+			if (_selectedQuadMesh != null) { Object.DestroyImmediate(_selectedQuadMesh); _selectedQuadMesh = null; }
 			if (_outlineMesh != null) { Object.DestroyImmediate(_outlineMesh); _outlineMesh = null; }
 			if (_quadMaterial != null) { Object.DestroyImmediate(_quadMaterial); _quadMaterial = null; }
 			if (_outlineMaterial != null) { Object.DestroyImmediate(_outlineMaterial); _outlineMaterial = null; }
