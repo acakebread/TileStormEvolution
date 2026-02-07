@@ -117,8 +117,8 @@ namespace ClassicTilestorm
 				//ScreenSpaceUtil.GetRenderTexture(Screen.width / 64, Screen.height / 64, new Vector2((Input.mousePosition.x - rect.x) / rect.width, (Input.mousePosition.y - rect.y) / rect.height)),
 				ScreenSpaceUtil.GetRenderTexture(COLUMNS, ROWS, new Vector2((Input.mousePosition.x - rect.x) / rect.width, (Input.mousePosition.y) / rect.height)),
 				//ScreenSpaceUtil.GetRenderTexture(9, 5, new Vector2((Input.mousePosition.x - rect.x) / rect.width, (Input.mousePosition.y - rect.y) / rect.height)),
-				ScaleMode.StretchToFill,
-				//ScaleMode.ScaleToFit,
+				//ScaleMode.StretchToFill,
+				ScaleMode.ScaleToFit,
 				true
 			);
 
@@ -129,7 +129,7 @@ namespace ClassicTilestorm
 		{
 			base.OnEnable();
 
-			const int ICON_SIZE = 64;
+			const int ICON_SIZE = 128;
 
 			var defs = ResourceManager.Definitions;
 			if (defs == null || defs.Count == 0)

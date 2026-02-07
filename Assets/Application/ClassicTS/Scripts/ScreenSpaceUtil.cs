@@ -74,8 +74,8 @@ namespace MassiveHadronLtd
             var centerLogical = new Vector2(center.x / uvScaleX, center.y / uvScaleY);
 			//var falloffRadius = 0.35f / uvScaleY;
 			//var maxDisplacement = 1.3f;
-			var falloffRadius = 0.2f / uvScaleY;
-			var maxDisplacement = 1.5f;
+			var falloffRadius = 0.3f / uvScaleY;
+			var maxDisplacement = 1.25f;
 
 			for (var qy = 0; qy < numRows; qy++)
             {
@@ -98,13 +98,15 @@ namespace MassiveHadronLtd
 					var centreDist = centreDelta.magnitude;
 					var centreDir = centreDist > 1e-6f ? centreDelta.normalized : Vector2.zero;
 
-					var dt = (d0 + d1 + d2 + d3) * 0.25f;
+                    var dt = (d0 + d1 + d2 + d3) * 0.25f;
                     var sqrRadius = falloffRadius * falloffRadius;
-					var strength = dt < sqrRadius ? 1f - dt / sqrRadius : 0f;
+                    var scaleStrength = dt < sqrRadius ? 1f - dt / sqrRadius : 0f;
 
-                    var trans = centreDir * strength * maxDisplacement * 0f;
-                    var scaleX = 1f + strength * maxDisplacement;
-                    var scaleY = 1f + strength * maxDisplacement;
+                    scaleStrength *= scaleStrength;
+
+					//var trans = centreDir * scaleStrength * maxDisplacement;
+					var scaleX = 1f + scaleStrength * maxDisplacement;
+                    var scaleY = 1f + scaleStrength * maxDisplacement;
 
 					int baseVert = (qy * numColumns + qx) * 4;
 
@@ -112,7 +114,7 @@ namespace MassiveHadronLtd
                     {
 						var pos = corners[i];
 						var delta = pos - centerLogical;
-                        vertices[baseVert] = centerLogical + trans + new Vector2(delta.x * scaleX, delta.y * scaleY);
+                        vertices[baseVert] = centerLogical + new Vector2(delta.x * scaleX, delta.y * scaleY);//+ trans 
 
 						uvs[baseVert] = new Vector2(pos.x * uvScaleX, pos.y * uvScaleY);
                         colors[baseVert] = Color.white;
