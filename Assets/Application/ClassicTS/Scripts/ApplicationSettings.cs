@@ -128,14 +128,18 @@ namespace ClassicTilestorm
 		private static ApplicationSettings instance;
 
 		public Texture2D testTexture;
-
 		public static Texture2D TestTexture { get => instance?.testTexture; set => instance.testTexture = value; }
+
+		public Material outline128x128;
+		public static Material Outline128x128 { get => instance?.outline128x128; set => instance.outline128x128 = value; }
 
 		private void Awake()
 		{
 			instance = this;
 			remapGeometry = RemapGeometry;
-			if (null != testTexture) ScreenSpaceUtil.SetTexture(testTexture);
+			//if (null != testTexture) ScreenSpaceUtil.SetTexture(testTexture);
+			//if (null != testTexture) ScreenSpaceUtil.SetOutlineTexture(testTexture);
+			if (null != outline128x128) ScreenSpaceUtil.SetOutlineMaterial(outline128x128);
 		}
 
 		private void OnValidate()

@@ -374,7 +374,8 @@ MonoBehaviour:
   soundPath: ClassicTS/Sounds/
   musicPath: ClassicTS/Music/
   previewMode: 0
-  testTexture: {fileID: 2800000, guid: a25b2b84357824a458221a0a89496c7f, type: 3}
+  testTexture: {fileID: 2800000, guid: c3da9692305f89048bfb57020b786734, type: 3}
+  outline128x128: {fileID: 2100000, guid: e69d69b6fbf9b7c4999a2e288cc29675, type: 2}
 --- !u!4 &862124737
 Transform:
   m_ObjectHideFlags: 0
