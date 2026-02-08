@@ -133,6 +133,9 @@ namespace ClassicTilestorm
 		public Material outline128x128;
 		public static Material Outline128x128 { get => instance?.outline128x128; set => instance.outline128x128 = value; }
 
+		public Material background128x128;
+		public static Material Background128x128 { get => instance?.background128x128; set => instance.background128x128 = value; }
+
 		private void Awake()
 		{
 			instance = this;
@@ -140,6 +143,7 @@ namespace ClassicTilestorm
 			//if (null != testTexture) ScreenSpaceUtil.SetTexture(testTexture);
 			//if (null != testTexture) ScreenSpaceUtil.SetOutlineTexture(testTexture);
 			if (null != outline128x128) ScreenSpaceUtil.SetOutlineMaterial(outline128x128);
+			if (null != background128x128) ScreenSpaceUtil.SetBackgroundMaterial(background128x128);
 		}
 
 		private void OnValidate()

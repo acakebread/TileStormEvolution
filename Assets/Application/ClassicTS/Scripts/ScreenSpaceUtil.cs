@@ -16,6 +16,10 @@ namespace MassiveHadronLtd
 		private static Material _outlineMaterial;
 		private static Texture2D _outlineTexture;
 
+		private static Mesh _backgroundMesh;
+		private static Material _backgroundMaterial;
+		private static Texture2D _backgroundTexture;
+
 		private static int _lastColumns = -1;
 		private static int _lastRows = -1;
 		private static Vector2 _lastCoord = new Vector2(-999f, -999f);
@@ -35,6 +39,13 @@ namespace MassiveHadronLtd
 			_outlineMaterial = value;
 			if (value != null && value.mainTexture is Texture2D tex)
 				_outlineTexture = tex;
+		}
+
+		public static void SetBackgroundMaterial(Material value)
+		{
+			_backgroundMaterial = value;
+			if (value != null && value.mainTexture is Texture2D tex)
+				_backgroundTexture = tex;
 		}
 
 		private static void LazyInitResources()
@@ -76,6 +87,26 @@ namespace MassiveHadronLtd
 				}
 			}
 
+			if (_backgroundMaterial == null)
+			{
+				var shader = TryFindGoodShader();
+				if (shader != null)
+				{
+					_backgroundMaterial = new Material(shader)
+					{
+						name = "ScreenSpaceUtil-OutlineMat (auto)",
+						hideFlags = HideFlags.HideAndDontSave
+					};
+
+					if (_backgroundMaterial != null)
+						_backgroundMaterial.mainTexture = _backgroundTexture;
+				}
+				else
+				{
+					Debug.LogError("[ScreenSpaceUtil] No usable shader found for outline material!");
+				}
+			}
+
 			if (_quadTexture == null)
 			{
 				_quadTexture = TextureUtils.GeneratePerlinNoiseTexture();
@@ -93,6 +124,16 @@ namespace MassiveHadronLtd
 				{
 					_outlineTexture.filterMode = FilterMode.Point;
 					_outlineTexture.hideFlags = HideFlags.HideAndDontSave;
+				}
+			}
+
+			if (_backgroundTexture == null)
+			{
+				_backgroundTexture = TextureUtils.GenerateXorTexture256();
+				if (_backgroundTexture != null)
+				{
+					_backgroundTexture.filterMode = FilterMode.Point;
+					_backgroundTexture.hideFlags = HideFlags.HideAndDontSave;
 				}
 			}
 		}
@@ -139,7 +180,7 @@ namespace MassiveHadronLtd
 			//float falloffRadius = 0.425f / uvScaleY;
 			float falloffRadius = 0.625f / uvScaleY;
 			float sqrRadius = falloffRadius * falloffRadius;
-			float maxDisplacement = 1.25f;
+			float maxDisplacement = 1f;
 
 			// Phase 1: collect scale strengths
 			var quadData = new List<(float scaleStrength, int qIdx)>(totalCells);
@@ -192,8 +233,8 @@ namespace MassiveHadronLtd
 
 				if (drawIdx == quadData.Count - 1)
 				{
-					deltaScale = 3f;// maxDisplacement + 1f;
-					transScale *= 0.25f;
+					deltaScale = 4f;// maxDisplacement + 1f;
+					//transScale *= 0.25f;
 				}
 
 				Vector3 bl = quadCenter + (new Vector2(x0, y0) - quadCenter) * deltaScale + (new Vector2(x0, y0) - centerLogical) * transScale;
@@ -255,9 +296,11 @@ namespace MassiveHadronLtd
 			// ───────────────────────────────────────────────────────────────
 			if (_selectedQuadMesh != null) Object.DestroyImmediate(_selectedQuadMesh);
 			if (_outlineMesh != null) Object.DestroyImmediate(_outlineMesh);
+			if (_backgroundMesh != null) Object.DestroyImmediate(_backgroundMesh);
 
 			_selectedQuadMesh = null;
 			_outlineMesh = null;
+			_backgroundMesh = null;
 
 			// Largest quad = last position
 			int lastBase = (quadData.Count - 1) * 4;
@@ -279,7 +322,7 @@ namespace MassiveHadronLtd
 			};
 
 			// Outline — simple uniform scale
-			const float outlineScale = 1.56f;
+			const float outlineScale = 4;// 1.56f;
 			Vector3 center = (v0 + v1 + v2 + v3) * 0.25f;
 
 			Vector3 ov0 = center + (v0 - center) * outlineScale;
@@ -290,6 +333,22 @@ namespace MassiveHadronLtd
 			_outlineMesh = new Mesh
 			{
 				vertices = new[] { ov0, ov1, ov2, ov3 },
+				uv = new[] { new Vector2(0, 0), new Vector2(0, 1), new Vector2(1, 1), new Vector2(1, 0) },
+				triangles = new[] { 0, 1, 2, 0, 2, 3 }
+			};
+
+
+			var backgroundScaleX = 7f * uvScaleX;
+			var backgroundScaleY = 7f * uvScaleY;
+
+			var bv0 = new Vector3(point.x -backgroundScaleX, point.y - backgroundScaleY, 0);
+			var bv1 = new Vector3(point.x -backgroundScaleX, point.y + backgroundScaleY, 0);
+			var bv2 = new Vector3(point.x +backgroundScaleX, point.y + backgroundScaleY, 0);
+			var bv3 = new Vector3(point.x +backgroundScaleX, point.y - backgroundScaleY, 0);
+
+			_backgroundMesh = new Mesh
+			{
+				vertices = new[] { bv0, bv1, bv2, bv3 },
 				uv = new[] { new Vector2(0, 0), new Vector2(0, 1), new Vector2(1, 1), new Vector2(1, 0) },
 				triangles = new[] { 0, 1, 2, 0, 2, 3 }
 			};
@@ -331,12 +390,18 @@ namespace MassiveHadronLtd
 				Graphics.DrawMeshNow(_gridMesh, Matrix4x4.identity);
 			}
 
-			if (_selectedQuadMesh != null)
+			//if (_selectedQuadMesh != null)
+			//{
+			//	_quadMaterial.mainTexture = null;
+			//	_quadMaterial.color = new Color(0.05f, 0.05f, 0.05f, 0.9f);
+			//	_quadMaterial.SetPass(0);
+			//	Graphics.DrawMeshNow(_selectedQuadMesh, Matrix4x4.identity);
+			//}
+
+			if (_backgroundMesh != null && _backgroundMaterial != null)
 			{
-				_quadMaterial.mainTexture = null;
-				_quadMaterial.color = new Color(0.05f, 0.05f, 0.05f, 0.9f);
-				_quadMaterial.SetPass(0);
-				Graphics.DrawMeshNow(_selectedQuadMesh, Matrix4x4.identity);
+				_backgroundMaterial.SetPass(0);
+				Graphics.DrawMeshNow(_backgroundMesh, Matrix4x4.identity);
 			}
 
 			if (_selectedQuadMesh != null)
@@ -347,11 +412,11 @@ namespace MassiveHadronLtd
 				Graphics.DrawMeshNow(_selectedQuadMesh, Matrix4x4.identity);
 			}
 
-			if (_outlineMesh != null && _outlineMaterial != null)
-			{
-				_outlineMaterial.SetPass(0);
-				Graphics.DrawMeshNow(_outlineMesh, Matrix4x4.identity);
-			}
+			//if (_outlineMesh != null && _outlineMaterial != null)
+			//{
+			//	_outlineMaterial.SetPass(0);
+			//	Graphics.DrawMeshNow(_outlineMesh, Matrix4x4.identity);
+			//}
 
 			GL.PopMatrix();
 			RenderTexture.active = oldRT;
@@ -378,8 +443,10 @@ namespace MassiveHadronLtd
 
 			_quadMaterial = null;
 			_outlineMaterial = null;
+			_backgroundMaterial = null;
 			_quadTexture = null;
 			_outlineTexture = null;
+			_backgroundTexture = null;
 
 			_lastColumns = _lastRows = -1;
 			_lastCoord = new Vector2(-999f, -999f);
