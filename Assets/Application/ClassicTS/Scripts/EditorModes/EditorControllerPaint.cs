@@ -245,9 +245,6 @@ namespace ClassicTilestorm
 				Rect guiGridRect = ToGUIRect(gridScreenRect);
 				Vector2 mouseUV = gridScreenRect.NormalisedPoint(Input.mousePosition);
 				ScreenSpaceUtil.OnGUI(gridScreenRect, COLUMNS, ROWS, mouseUV);
-
-				//var rt = ScreenSpaceUtil.GetRenderTexture(COLUMNS, ROWS, mouseUV);
-				//GUI.DrawTexture(guiGridRect, rt, ScaleMode.StretchToFill, true);
 			}
 		}
 
