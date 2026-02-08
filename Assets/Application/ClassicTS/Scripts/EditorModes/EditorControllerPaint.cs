@@ -93,7 +93,6 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			float screenH = Screen.height;
 			panelY = -panelHeight;           // start hidden below screen
 			panelTargetY = -panelHeight;
 
@@ -145,8 +144,6 @@ namespace ClassicTilestorm
 		{
 			base.Update();
 			if (!camera) return;
-
-			float screenH = Screen.height;
 
 			// Panel visibility
 			bool nearBottom = Input.mousePosition.y <= triggerZoneHeight;
@@ -246,11 +243,11 @@ namespace ClassicTilestorm
 			if (panelY > -panelHeight + 1f)
 			{
 				Rect guiGridRect = ToGUIRect(gridScreenRect);
-
 				Vector2 mouseUV = gridScreenRect.NormalisedPoint(Input.mousePosition);
+				ScreenSpaceUtil.OnGUI(gridScreenRect, COLUMNS, ROWS, mouseUV);
 
-				var rt = ScreenSpaceUtil.GetRenderTexture(COLUMNS, ROWS, mouseUV);
-				GUI.DrawTexture(guiGridRect, rt, ScaleMode.StretchToFill, true);
+				//var rt = ScreenSpaceUtil.GetRenderTexture(COLUMNS, ROWS, mouseUV);
+				//GUI.DrawTexture(guiGridRect, rt, ScaleMode.StretchToFill, true);
 			}
 		}
 

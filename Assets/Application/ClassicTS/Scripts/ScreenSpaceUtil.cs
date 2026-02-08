@@ -412,6 +412,13 @@ namespace MassiveHadronLtd
 			RenderTexture.active = oldRT;
 		}
 
+		public static void OnGUI(Rect rect, int numColumns = 8, int numRows = 8, Vector2 coord = default)
+		{
+			var guiGridRect = rect.ToGUIRect();
+			var rt = GetRenderTexture(numColumns, numRows, coord);
+			GUI.DrawTexture(guiGridRect, rt, ScaleMode.StretchToFill, true);
+		}
+
 		public static RenderTexture GetRenderTexture(int numColumns = 8, int numRows = 8, Vector2 coord = default)
 		{
 			if (coord == default) coord = new Vector2(0.5f, 0.5f);
