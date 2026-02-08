@@ -247,7 +247,7 @@ namespace ClassicTilestorm
 			{
 				Vector2 mouseUV = new Vector2(
 					(Input.mousePosition.x - gridScreenRect.xMin) / gridScreenRect.width,
-					(Input.mousePosition.y - BORDER - (screenH - (panelY + panelHeight))) / gridScreenRect.height
+					(Input.mousePosition.y - (screenH - gridScreenRect.yMax)) / gridScreenRect.height
 				);
 
 				var rt = ScreenSpaceUtil.GetRenderTexture(COLUMNS, ROWS, mouseUV);

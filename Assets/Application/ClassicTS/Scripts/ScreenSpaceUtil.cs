@@ -171,6 +171,8 @@ namespace MassiveHadronLtd
 			var colors = new Color[totalVerts];
 			var indices = new int[totalTris];
 
+			var invalid = point.x < 0 || point.x > 1 || point.y < 0 || point.y > 1;
+
 			Vector2 centerLogical = new Vector2(point.x * numColumns, point.y * numRows);
 
 			float cellW = 1f;
@@ -231,32 +233,18 @@ namespace MassiveHadronLtd
 				float deltaScale = 1f + scaleStrength;
 				float transScale = scaleStrength * 0.375f;
 
-				if (drawIdx == quadData.Count - 1)
+				if (!invalid && drawIdx == quadData.Count - 1)
 				{
-					deltaScale = 4f;// maxDisplacement + 1f;
+					deltaScale = 5f;// maxDisplacement + 1f;
 					//transScale *= 0.25f;
 				}
 
-				Vector3 bl = quadCenter + (new Vector2(x0, y0) - quadCenter) * deltaScale + (new Vector2(x0, y0) - centerLogical) * transScale;
-				Vector3 tl = quadCenter + (new Vector2(x0, y1) - quadCenter) * deltaScale + (new Vector2(x0, y1) - centerLogical) * transScale;
-				Vector3 tr = quadCenter + (new Vector2(x1, y1) - quadCenter) * deltaScale + (new Vector2(x1, y1) - centerLogical) * transScale;
-				Vector3 br = quadCenter + (new Vector2(x1, y0) - quadCenter) * deltaScale + (new Vector2(x1, y0) - centerLogical) * transScale;
-
-				float minX = Mathf.Min(bl.x, tl.x);
-				float maxX = Mathf.Max(tr.x, br.x);
-				float minY = Mathf.Min(bl.y, br.y);
-				float maxY = Mathf.Max(tl.y, tr.y);
-
-				float side = Mathf.Max(maxX - minX, maxY - minY);
-				float cx = (minX + maxX) * 0.5f;
-				float cy = (minY + maxY) * 0.5f;
-
 				int baseVert = drawIdx * 4;
 
-				vertices[baseVert + 0] = new Vector3(cx - side * 0.5f, cy - side * 0.5f, 0f);
-				vertices[baseVert + 1] = new Vector3(cx - side * 0.5f, cy + side * 0.5f, 0f);
-				vertices[baseVert + 2] = new Vector3(cx + side * 0.5f, cy + side * 0.5f, 0f);
-				vertices[baseVert + 3] = new Vector3(cx + side * 0.5f, cy - side * 0.5f, 0f);
+				vertices[baseVert + 0] = quadCenter + (new Vector2(x0, y0) - quadCenter) * deltaScale + (new Vector2(x0, y0) - centerLogical) * transScale;
+				vertices[baseVert + 1] = quadCenter + (new Vector2(x0, y1) - quadCenter) * deltaScale + (new Vector2(x0, y1) - centerLogical) * transScale;
+				vertices[baseVert + 2] = quadCenter + (new Vector2(x1, y1) - quadCenter) * deltaScale + (new Vector2(x1, y1) - centerLogical) * transScale;
+				vertices[baseVert + 3] = quadCenter + (new Vector2(x1, y0) - quadCenter) * deltaScale + (new Vector2(x1, y0) - centerLogical) * transScale;
 
 				uvs[baseVert + 0] = new Vector2(x0 * uvScaleX, y0 * uvScaleY);
 				uvs[baseVert + 1] = new Vector2(x0 * uvScaleX, y1 * uvScaleY);
@@ -302,6 +290,24 @@ namespace MassiveHadronLtd
 			_outlineMesh = null;
 			_backgroundMesh = null;
 
+			var backgroundScaleX = 7f * uvScaleX;
+			var backgroundScaleY = 7f * uvScaleY;
+
+			var bv0 = new Vector3(point.x - backgroundScaleX, point.y - backgroundScaleY, 0);
+			var bv1 = new Vector3(point.x - backgroundScaleX, point.y + backgroundScaleY, 0);
+			var bv2 = new Vector3(point.x + backgroundScaleX, point.y + backgroundScaleY, 0);
+			var bv3 = new Vector3(point.x + backgroundScaleX, point.y - backgroundScaleY, 0);
+
+			_backgroundMesh = new Mesh
+			{
+				vertices = new[] { bv0, bv1, bv2, bv3 },
+				uv = new[] { new Vector2(0, 0), new Vector2(0, 1), new Vector2(1, 1), new Vector2(1, 0) },
+				triangles = new[] { 0, 1, 2, 0, 2, 3 }
+			};
+
+			if (invalid)
+				return;
+
 			// Largest quad = last position
 			int lastBase = (quadData.Count - 1) * 4;
 
@@ -333,22 +339,6 @@ namespace MassiveHadronLtd
 			_outlineMesh = new Mesh
 			{
 				vertices = new[] { ov0, ov1, ov2, ov3 },
-				uv = new[] { new Vector2(0, 0), new Vector2(0, 1), new Vector2(1, 1), new Vector2(1, 0) },
-				triangles = new[] { 0, 1, 2, 0, 2, 3 }
-			};
-
-
-			var backgroundScaleX = 7f * uvScaleX;
-			var backgroundScaleY = 7f * uvScaleY;
-
-			var bv0 = new Vector3(point.x -backgroundScaleX, point.y - backgroundScaleY, 0);
-			var bv1 = new Vector3(point.x -backgroundScaleX, point.y + backgroundScaleY, 0);
-			var bv2 = new Vector3(point.x +backgroundScaleX, point.y + backgroundScaleY, 0);
-			var bv3 = new Vector3(point.x +backgroundScaleX, point.y - backgroundScaleY, 0);
-
-			_backgroundMesh = new Mesh
-			{
-				vertices = new[] { bv0, bv1, bv2, bv3 },
 				uv = new[] { new Vector2(0, 0), new Vector2(0, 1), new Vector2(1, 1), new Vector2(1, 0) },
 				triangles = new[] { 0, 1, 2, 0, 2, 3 }
 			};
