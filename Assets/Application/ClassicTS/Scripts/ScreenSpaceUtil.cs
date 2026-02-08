@@ -136,9 +136,10 @@ namespace MassiveHadronLtd
 			float cellH = 1f;
 			float uvScaleX = 1f / numColumns;
 			float uvScaleY = 1f / numRows;
-			float falloffRadius = 0.425f / uvScaleY;
+			//float falloffRadius = 0.425f / uvScaleY;
+			float falloffRadius = 0.625f / uvScaleY;
 			float sqrRadius = falloffRadius * falloffRadius;
-			float maxDisplacement = 2f;
+			float maxDisplacement = 1.25f;
 
 			// Phase 1: collect scale strengths
 			var quadData = new List<(float scaleStrength, int qIdx)>(totalCells);
@@ -188,6 +189,12 @@ namespace MassiveHadronLtd
 
 				float deltaScale = 1f + scaleStrength;
 				float transScale = scaleStrength * 0.375f;
+
+				if (drawIdx == quadData.Count - 1)
+				{
+					deltaScale = 3f;// maxDisplacement + 1f;
+					transScale *= 0.25f;
+				}
 
 				Vector3 bl = quadCenter + (new Vector2(x0, y0) - quadCenter) * deltaScale + (new Vector2(x0, y0) - centerLogical) * transScale;
 				Vector3 tl = quadCenter + (new Vector2(x0, y1) - quadCenter) * deltaScale + (new Vector2(x0, y1) - centerLogical) * transScale;

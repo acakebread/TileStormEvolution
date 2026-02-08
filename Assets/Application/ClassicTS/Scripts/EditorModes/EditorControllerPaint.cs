@@ -20,8 +20,7 @@ namespace ClassicTilestorm
 		private readonly float hideDelay = 0.25f;
 		private readonly float animSpeed = 3000f;
 		private readonly float triggerZoneHeight = 40f;   // distance from bottom to trigger show
-		private readonly float panelHeight = 500f;
-
+		private float panelHeight = 100f;
 		private const int COLUMNS = 32;
 		private int ROWS = 0;
 		private HashId[] gridHashIds;
@@ -36,26 +35,60 @@ namespace ClassicTilestorm
 			selectedHashId = defaultDef.HashID;
 		}
 
-		public override void OnEnable()
+		private const int ICON_SIZE = 128;
+		private const int BORDER = 30;
+
+		private void CalculatePanelLayout()
 		{
-			base.OnEnable();
-
-			float screenH = Screen.height;
-			panelY = screenH + panelHeight + 40f;
-			panelTargetY = screenH + panelHeight + 40f;
-
-			const int ICON_SIZE = 128;
-
 			var defs = ResourceManager.Definitions;
 			if (defs == null || defs.Count == 0)
 			{
-				Debug.LogWarning("No definitions → no grid icons");
 				ROWS = 0;
 				gridHashIds = Array.Empty<HashId>();
+				panelHeight = 0f;
+				gridScreenRect = Rect.zero;
 				return;
 			}
 
 			ROWS = Mathf.CeilToInt((float)defs.Count / COLUMNS);
+
+			const float cellSize = ICON_SIZE;
+			float totalWidth = COLUMNS * cellSize;
+			float totalHeight = ROWS * cellSize;
+
+			float margin = BORDER;
+			float availWidth = Screen.width - 2f * margin;
+			float scale = Mathf.Min(1f, availWidth / totalWidth);
+
+			float drawWidth = totalWidth * scale;
+			float drawHeight = totalHeight * scale + 2f * margin;  // include top/bottom border
+
+			panelHeight = drawHeight;
+
+			float x = (Screen.width - drawWidth) * 0.5f;
+			float y = panelY + margin;  // top of grid content inside panel
+
+			gridScreenRect = new Rect(x, y, drawWidth, drawHeight - 2f * margin);
+		}
+
+		public override void OnEnable()
+		{
+			base.OnEnable();
+
+			CalculatePanelLayout();  // sets ROWS, panelHeight, gridScreenRect, etc.
+
+			if (ROWS <= 0)
+			{
+				Debug.LogWarning("No definitions → no grid icons");
+				return;
+			}
+
+			float screenH = Screen.height;
+			panelY = screenH + panelHeight;
+			panelTargetY = screenH + panelHeight;
+
+			// Atlas generation (unchanged, but now ROWS is correct)
+			var defs = ResourceManager.Definitions;
 			int width = COLUMNS * ICON_SIZE;
 			int height = ROWS * ICON_SIZE;
 
@@ -69,7 +102,6 @@ namespace ClassicTilestorm
 			Color[] blank = new Color[width * height];
 			Array.Fill(blank, new Color(0, 0, 0, 0));
 			atlas.SetPixels(blank);
-			atlas.Apply(false);
 
 			gridHashIds = new HashId[defs.Count];
 
@@ -86,10 +118,9 @@ namespace ClassicTilestorm
 				int col = i % COLUMNS;
 				int row = i / COLUMNS;
 				int x = col * ICON_SIZE;
-				int y = (ROWS - 1 - row) * ICON_SIZE;
+				int y = (ROWS - 1 - row) * ICON_SIZE;  // flip Y for texture
 
-				Color[] pixels = icon.GetPixels();
-				atlas.SetPixels(x, y, ICON_SIZE, ICON_SIZE, pixels);
+				atlas.SetPixels(x, y, ICON_SIZE, ICON_SIZE, icon.GetPixels());
 
 				UnityEngine.Object.DestroyImmediate(icon);
 			}
@@ -97,7 +128,7 @@ namespace ClassicTilestorm
 			atlas.Apply(true, false);
 			ScreenSpaceUtil.SetTexture(atlas);
 
-			Debug.Log($"Icon atlas: {width}×{height}, {defs.Count} icons");
+			Debug.Log($"Icon atlas: {width}×{height}, {defs.Count} icons, panelHeight={panelHeight}");
 		}
 
 		public override void Update()
@@ -127,7 +158,7 @@ namespace ClassicTilestorm
 				hideTimer += Time.deltaTime;
 				if (hideTimer >= hideDelay)
 				{
-					panelTargetY = screenH + 40f;
+					panelTargetY = screenH;
 				}
 			}
 
@@ -146,7 +177,7 @@ namespace ClassicTilestorm
 					TrySelectTileFromGridClick(Input.mousePosition);
 
 					// INSTANT CLOSE: force hide immediately, no delay at all
-					panelTargetY = screenH + 40f;
+					panelTargetY = screenH;
 					hideTimer = hideDelay;  // make sure hide condition is true right away
 					allowHideDespiteMouseOverPanel = true;
 				}
@@ -206,32 +237,17 @@ namespace ClassicTilestorm
 			float screenH = Screen.height;
 			if (panelY >= screenH) return;
 
+			// Re-calculate layout every frame (handles window resize, etc.)
+			CalculatePanelLayout();
+
 			var bgRect = new Rect(0, panelY, Screen.width, panelHeight);
 			GUI.Box(bgRect, GUIContent.none, new GUIStyle { normal = { background = TextureUtils.MakeTex(1, 1, semiTransparentBg) } });
-
-			const float margin = 24f;
-			const float cellSize = 128f;
-
-			float totalWidth = COLUMNS * cellSize;
-			float totalHeight = ROWS * cellSize;
-
-			float availW = Screen.width - 2 * margin;
-			float scale = Mathf.Min(1f, availW / totalWidth);
-			float drawW = totalWidth * scale;
-			float drawH = totalHeight * scale;
-
-			float x = (Screen.width - drawW) * 0.5f;
-			float y = panelY + margin;
-
-			var panelBottom = Screen.height - (y + drawH);
-
-			gridScreenRect = new Rect(x, y, drawW, drawH);
 
 			if (panelY < screenH - 20f)
 			{
 				Vector2 mouseUV = new Vector2(
-					(Input.mousePosition.x - x) / drawW,
-					(Input.mousePosition.y - panelBottom) / drawH
+					(Input.mousePosition.x - gridScreenRect.xMin) / gridScreenRect.width,
+					(Input.mousePosition.y - (screenH - (panelY + panelHeight))) / gridScreenRect.height
 				);
 
 				var rt = ScreenSpaceUtil.GetRenderTexture(COLUMNS, ROWS, mouseUV);
