@@ -21,7 +21,7 @@ namespace ClassicTilestorm
 		private readonly float animSpeed = 3000f;
 		private readonly float triggerZoneHeight = 40f;   // distance from bottom to trigger show
 		private float panelHeight = 100f;
-		private const int COLUMNS = 32;
+		private const int COLUMNS = 28;
 		private int ROWS = 0;
 		private HashId[] gridHashIds;
 		private Rect gridScreenRect;
@@ -214,13 +214,14 @@ namespace ClassicTilestorm
 		{
 			if (ROWS <= 0 || gridHashIds == null || gridHashIds.Length == 0) return;
 
-			float uvx = (mousePos.x - gridScreenRect.xMin) / gridScreenRect.width;
-			float uvy = ((Screen.height - mousePos.y) - gridScreenRect.yMin) / gridScreenRect.height;
+			// Use the same normalised helper as in OnGUI — consistent screen-space logic
+			Vector2 mouseUV = gridScreenRect.ToScreenRect().NormalisedPoint(mousePos);
 
-			int col = Mathf.Clamp(Mathf.FloorToInt(uvx * COLUMNS), 0, COLUMNS - 1);
-			int row = Mathf.Clamp(Mathf.FloorToInt(uvy * ROWS), 0, ROWS - 1);
-
+			// Convert UV [0..1] to column/row indices
+			int col = Mathf.Clamp(Mathf.FloorToInt(mouseUV.x * COLUMNS), 0, COLUMNS - 1);
+			int row = Mathf.Clamp(Mathf.FloorToInt((1f - mouseUV.y) * ROWS), 0, ROWS - 1);
 			int index = row * COLUMNS + col;
+
 			if (index < 0 || index >= gridHashIds.Length) return;
 
 			var newHash = gridHashIds[index];
@@ -243,12 +244,9 @@ namespace ClassicTilestorm
 			var bgRect = new Rect(0, panelY, Screen.width, panelHeight);
 			GUI.Box(bgRect, GUIContent.none, new GUIStyle { normal = { background = TextureUtils.MakeTex(1, 1, semiTransparentBg) } });
 
-			if (panelY < screenH - 20f)
+			if (panelY < screenH)
 			{
-				Vector2 mouseUV = new Vector2(
-					(Input.mousePosition.x - gridScreenRect.xMin) / gridScreenRect.width,
-					(Input.mousePosition.y - (screenH - gridScreenRect.yMax)) / gridScreenRect.height
-				);
+				Vector2 mouseUV = gridScreenRect.ToScreenRect().NormalisedPoint(Input.mousePosition);
 
 				var rt = ScreenSpaceUtil.GetRenderTexture(COLUMNS, ROWS, mouseUV);
 				GUI.DrawTexture(gridScreenRect, rt, ScaleMode.StretchToFill, true);

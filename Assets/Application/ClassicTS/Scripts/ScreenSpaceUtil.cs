@@ -328,7 +328,7 @@ namespace MassiveHadronLtd
 			};
 
 			// Outline — simple uniform scale
-			const float outlineScale = 4;// 1.56f;
+			const float outlineScale = 1.56f;
 			Vector3 center = (v0 + v1 + v2 + v3) * 0.25f;
 
 			Vector3 ov0 = center + (v0 - center) * outlineScale;

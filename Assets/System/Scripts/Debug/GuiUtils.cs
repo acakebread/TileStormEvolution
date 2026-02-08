@@ -64,6 +64,76 @@ namespace MassiveHadronLtd
 			}
 		}
 
+		/// <summary>
+		/// Core helper: flips the Y origin of a Rect between bottom-up (screen) and top-down (GUI).
+		/// </summary>
+		/// <param name="rect">The input rectangle</param>
+		/// <param name="screenHeight">Current screen height (usually Screen.height)</param>
+		/// <param name="toGUI">True = convert screen → GUI (flip down), False = GUI → screen (flip up)</param>
+		private static Rect FlipRectY(Rect rect, float screenHeight, bool toGUI)
+		{
+			// For screen → GUI: new y = screenHeight - (old y + height)
+			// For GUI → screen: new y = screenHeight - (old y + height)  — same math, symmetric
+			float newY = screenHeight - rect.yMax;
+
+			return new Rect(
+				rect.x,
+				newY,
+				rect.width,
+				rect.height
+			);
+		}
+
+		/// <summary>
+		/// Converts screen-space Rect (bottom-left origin) to GUI-space Rect (top-left origin).
+		/// </summary>
+		public static Rect ToGUIRect(this Rect screenRect) => FlipRectY(screenRect, Screen.height, toGUI: true);
+
+		/// <summary>
+		/// Converts GUI-space Rect (top-left origin) to screen-space Rect (bottom-left origin).
+		/// </summary>
+		public static Rect ToScreenRect(this Rect guiRect) => FlipRectY(guiRect, Screen.height, toGUI: false);
+
+		// Overloads with explicit height (safer / more flexible)
+		public static Rect ToGUIRect(this Rect screenRect, float screenHeight) => FlipRectY(screenRect, screenHeight, toGUI: true);
+
+		public static Rect ToScreenRect(this Rect guiRect, float screenHeight) => FlipRectY(guiRect, screenHeight, toGUI: false);
+
+		/// <summary>
+		/// Returns the normalized UV coordinate (0..1) of a screen point relative to the Rect.
+		/// Matches Unity's bottom-left screen origin and texture UV convention (Y=0 bottom, Y=1 top).
+		/// </summary>
+		public static Vector2 NormalisedPoint(this Rect rect, Vector2 screenPoint)
+		{
+			if (rect.width <= 0f || rect.height <= 0f)
+				return new Vector2(0.5f, 0.5f);
+
+			float uvX = (screenPoint.x - rect.xMin) / rect.width;
+			float uvY = (screenPoint.y - rect.yMin) / rect.height;
+
+			return new Vector2(uvX, uvY);
+		}
+
+		/// <summary>
+		/// Clamped version — forces result into [0..1] range.
+		/// Useful when you want to ignore mouse positions outside the rect.
+		/// </summary>
+		public static Vector2 NormalisedPointClamped(this Rect rect, Vector2 screenPoint)
+		{
+			if (rect.width <= 0f || rect.height <= 0f)
+				return new Vector2(0.5f, 0.5f);
+
+			float uvX = (screenPoint.x - rect.xMin) / rect.width;
+			float uvY = (screenPoint.y - rect.yMin) / rect.height;
+
+			return new Vector2(
+				Mathf.Clamp01(uvX),
+				Mathf.Clamp01(uvY)
+			);
+		}
+
+		public static Vector2 NormalisedPoint(this Rect rect, Vector3 mousePoint) => rect.NormalisedPoint(new Vector2(mousePoint.x, mousePoint.y));
+
 		// Static constructor: creates the manager automatically on first access
 		static GuiUtils()
 		{
