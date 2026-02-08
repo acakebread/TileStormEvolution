@@ -10,11 +10,10 @@ namespace ClassicTilestorm
 		private float previewAngle = 0f;
 		private float previewDelta = 0f;
 
-		private float panelY;                      // top edge in GUI coords (0 = top of screen)
+		private float panelY;                      // distance from BOTTOM of screen now
 		private float panelTargetY;
 		private float hideTimer = 0f;
 
-		// NEW: flag to force-allow hiding even when mouse is still over panel
 		private bool allowHideDespiteMouseOverPanel = false;
 
 		private readonly float hideDelay = 0.25f;
@@ -24,7 +23,7 @@ namespace ClassicTilestorm
 		private const int COLUMNS = 28;
 		private int ROWS = 0;
 		private HashId[] gridHashIds;
-		private Rect gridScreenRect;
+		private Rect gridScreenRect;               // ← now in normal screen coords (bottom-left origin)
 		private bool mouseWasOverGridLastFrame = false;
 
 		private static readonly Color semiTransparentBg = new Color(0.08f, 0.09f, 0.11f, 0.92f);
@@ -61,21 +60,32 @@ namespace ClassicTilestorm
 			float scale = Mathf.Min(1f, availWidth / totalWidth);
 
 			float drawWidth = totalWidth * scale;
-			float drawHeight = totalHeight * scale + 2f * margin;  // include top/bottom border
+			float drawHeight = totalHeight * scale;
 
-			panelHeight = drawHeight;
+			panelHeight = drawHeight + 2f * margin;
 
 			float x = (Screen.width - drawWidth) * 0.5f;
-			float y = panelY + margin;  // top of grid content inside panel
+			float gridBottomFromScreenBottom = panelY + margin;
+			float gridY = gridBottomFromScreenBottom;  // bottom of grid content
 
-			gridScreenRect = new Rect(x, y, drawWidth, drawHeight - 2f * margin);
+			gridScreenRect = new Rect(x, gridY, drawWidth, drawHeight);
+		}
+
+		private Rect ToGUIRect(Rect screenRect)
+		{
+			return new Rect(
+				screenRect.x,
+				Screen.height - screenRect.yMax,  // flip: top edge in GUI space
+				screenRect.width,
+				screenRect.height
+			);
 		}
 
 		public override void OnEnable()
 		{
 			base.OnEnable();
 
-			CalculatePanelLayout();  // sets ROWS, panelHeight, gridScreenRect, etc.
+			CalculatePanelLayout();
 
 			if (ROWS <= 0)
 			{
@@ -84,10 +94,10 @@ namespace ClassicTilestorm
 			}
 
 			float screenH = Screen.height;
-			panelY = screenH + panelHeight;
-			panelTargetY = screenH + panelHeight;
+			panelY = -panelHeight;           // start hidden below screen
+			panelTargetY = -panelHeight;
 
-			// Atlas generation (unchanged, but now ROWS is correct)
+			// Atlas generation (y-flip preserved for texture)
 			var defs = ResourceManager.Definitions;
 			int width = COLUMNS * ICON_SIZE;
 			int height = ROWS * ICON_SIZE;
@@ -138,19 +148,15 @@ namespace ClassicTilestorm
 
 			float screenH = Screen.height;
 
-			// ───────────────────────────────────────
 			// Panel visibility
-			// ───────────────────────────────────────
 			bool nearBottom = Input.mousePosition.y <= triggerZoneHeight;
-
-			// ← Only check overPanel if we are NOT forcing the hide after click
-			bool overPanel = !allowHideDespiteMouseOverPanel && Input.mousePosition.y <= screenH - panelY;
+			bool overPanel = !allowHideDespiteMouseOverPanel && Input.mousePosition.y <= (panelY + panelHeight);
 
 			bool wantsVisible = nearBottom || overPanel;
 
 			if (wantsVisible)
 			{
-				panelTargetY = screenH - panelHeight;
+				panelTargetY = 0f;
 				hideTimer = 0f;
 			}
 			else
@@ -158,17 +164,14 @@ namespace ClassicTilestorm
 				hideTimer += Time.deltaTime;
 				if (hideTimer >= hideDelay)
 				{
-					panelTargetY = screenH;
+					panelTargetY = -panelHeight;
 				}
 			}
 
 			panelY = Mathf.MoveTowards(panelY, panelTargetY, animSpeed * Time.deltaTime);
 
-			// ───────────────────────────────────────
-			var invertedMosue = Input.mousePosition;
-			invertedMosue.y = Screen.height - invertedMosue.y;
-
-			bool mouseOverGridThisFrame = gridScreenRect.Contains(invertedMosue);
+			// Mouse testing — now direct in screen space
+			bool mouseOverGridThisFrame = gridScreenRect.Contains(Input.mousePosition);
 
 			if (Input.GetMouseButtonDown(0))
 			{
@@ -176,9 +179,9 @@ namespace ClassicTilestorm
 				{
 					TrySelectTileFromGridClick(Input.mousePosition);
 
-					// INSTANT CLOSE: force hide immediately, no delay at all
-					panelTargetY = screenH;
-					hideTimer = hideDelay;  // make sure hide condition is true right away
+					// INSTANT CLOSE
+					panelTargetY = -panelHeight;
+					hideTimer = hideDelay;
 					allowHideDespiteMouseOverPanel = true;
 				}
 				else if (mouseWasOverGridLastFrame)
@@ -189,8 +192,8 @@ namespace ClassicTilestorm
 
 			mouseWasOverGridLastFrame = mouseOverGridThisFrame;
 
-			// Reset flag once panel is fully hidden (so normal mouse-over behavior returns)
-			if (allowHideDespiteMouseOverPanel && panelY >= screenH)
+			// Reset force-hide flag once panel is fully off-screen
+			if (allowHideDespiteMouseOverPanel && panelY <= -panelHeight + 1f)
 			{
 				allowHideDespiteMouseOverPanel = false;
 			}
@@ -214,12 +217,10 @@ namespace ClassicTilestorm
 		{
 			if (ROWS <= 0 || gridHashIds == null || gridHashIds.Length == 0) return;
 
-			// Use the same normalised helper as in OnGUI — consistent screen-space logic
-			Vector2 mouseUV = gridScreenRect.ToScreenRect().NormalisedPoint(mousePos);
+			Vector2 uv = gridScreenRect.NormalisedPoint(mousePos);  // assumes you have this extension
 
-			// Convert UV [0..1] to column/row indices
-			int col = Mathf.Clamp(Mathf.FloorToInt(mouseUV.x * COLUMNS), 0, COLUMNS - 1);
-			int row = Mathf.Clamp(Mathf.FloorToInt((1f - mouseUV.y) * ROWS), 0, ROWS - 1);
+			int col = Mathf.Clamp(Mathf.FloorToInt(uv.x * COLUMNS), 0, COLUMNS - 1);
+			int row = Mathf.Clamp(Mathf.FloorToInt((1f - uv.y) * ROWS), 0, ROWS - 1);
 			int index = row * COLUMNS + col;
 
 			if (index < 0 || index >= gridHashIds.Length) return;
@@ -234,32 +235,29 @@ namespace ClassicTilestorm
 		public override void OnGUI()
 		{
 			if (ROWS <= 0) return;
+			if (panelY <= -panelHeight) return;
 
-			float screenH = Screen.height;
-			if (panelY >= screenH) return;
-
-			// Re-calculate layout every frame (handles window resize, etc.)
 			CalculatePanelLayout();
 
-			var bgRect = new Rect(0, panelY, Screen.width, panelHeight);
-			GUI.Box(bgRect, GUIContent.none, new GUIStyle { normal = { background = TextureUtils.MakeTex(1, 1, semiTransparentBg) } });
+			// Background — full width, from bottom up
+			Rect guiPanelRect = new Rect(0, Screen.height - (panelY + panelHeight), Screen.width, panelHeight);
+			GUI.Box(guiPanelRect, GUIContent.none, new GUIStyle { normal = { background = TextureUtils.MakeTex(1, 1, semiTransparentBg) } });
 
-			if (panelY < screenH)
+			if (panelY > -panelHeight + 1f)
 			{
-				Vector2 mouseUV = gridScreenRect.ToScreenRect().NormalisedPoint(Input.mousePosition);
+				Rect guiGridRect = ToGUIRect(gridScreenRect);
+
+				Vector2 mouseUV = gridScreenRect.NormalisedPoint(Input.mousePosition);
 
 				var rt = ScreenSpaceUtil.GetRenderTexture(COLUMNS, ROWS, mouseUV);
-				GUI.DrawTexture(gridScreenRect, rt, ScaleMode.StretchToFill, true);
+				GUI.DrawTexture(guiGridRect, rt, ScaleMode.StretchToFill, true);
 			}
 		}
 
 		protected override bool IsMouseOverGUI()
 		{
 			var mp = Input.mousePosition;
-			float screenH = Screen.height;
-			float guiMouseY = screenH - mp.y;
-
-			return base.IsMouseOverGUI() || guiMouseY >= panelY;
+			return base.IsMouseOverGUI() || mp.y <= (panelY + panelHeight);
 		}
 
 		private void UpdateGhostMesh(Camera cam, IMapEdit map, Definition def)
