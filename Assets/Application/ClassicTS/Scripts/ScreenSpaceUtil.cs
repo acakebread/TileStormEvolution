@@ -59,6 +59,19 @@ namespace MassiveHadronLtd
 			if (_gridMesh != null) Object.DestroyImmediate(_gridMesh);
 			_gridMesh = new Mesh { name = $"DeformGrid_{numColumns}x{numRows}" };
 
+			bool invalid = point.x < 0 || point.x > 1 || point.y < 0 || point.y > 1;
+
+			if (invalid)
+			{
+				_selectedQuadMeshverts = null;
+
+				if (_selectedQuadMesh != null)
+				{
+					Object.DestroyImmediate(_selectedQuadMesh);
+					_selectedQuadMesh = null;
+				}
+			}
+
 			int corePixelWidth = numColumns * CELL_SIZE;
 			int corePixelHeight = numRows * CELL_SIZE;
 			int paddedPixelWidth = corePixelWidth + 2 * BORDER;
@@ -75,7 +88,6 @@ namespace MassiveHadronLtd
 			var colors = new Color[totalCells * 4];
 			var indices = new int[totalCells * 6];
 
-			bool invalid = point.x < 0 || point.x > 1 || point.y < 0 || point.y > 1;
 			Vector2 centerLogical = new(point.x * numColumns, point.y * numRows);
 
 			float uvScaleX = 1f / numColumns;
@@ -115,10 +127,7 @@ namespace MassiveHadronLtd
 
 				int baseVert = drawIdx * 4;
 
-				Vector2[] src =
-				{
-					new(x0,y0), new(x0,y1), new(x1,y1), new(x1,y0)
-				};
+				Vector2[] src = { new(x0,y0), new(x0,y1), new(x1,y1), new(x1,y0) };
 
 				for (int i = 0; i < 4; i++)
 				{
@@ -132,7 +141,8 @@ namespace MassiveHadronLtd
 
 					vertices[baseVert + i] = new Vector3(finalX, finalY, 0);
 					uvs[baseVert + i] = new Vector2(src[i].x * uvScaleX, src[i].y * uvScaleY);
-					var luminense = 1f - scaleStrength * 0.75f;
+
+					float luminense = 1f - scaleStrength * 0.75f;
 					colors[baseVert + i] = new Color(luminense, luminense, luminense, 1);
 				}
 
@@ -154,10 +164,11 @@ namespace MassiveHadronLtd
 			_lastRows = numRows;
 			_lastCoord = point;
 
-			// Selected quad extraction
+			// Selected quad extraction (only when valid)
 			if (!invalid)
 			{
 				int lastBase = (quadData.Count - 1) * 4;
+
 				_selectedQuadMeshverts = new[]
 				{
 					vertices[lastBase + 0],
@@ -169,14 +180,8 @@ namespace MassiveHadronLtd
 				if (_selectedQuadMesh == null)
 					_selectedQuadMesh = new Mesh();
 
-				_selectedQuadMesh.vertices = new[]
-				{
-					Vector3.zero, Vector3.up, Vector3.one, Vector3.right
-				};
-				_selectedQuadMesh.uv = new[]
-				{
-					uvs[lastBase+0], uvs[lastBase+1], uvs[lastBase+2], uvs[lastBase+3]
-				};
+				_selectedQuadMesh.vertices = new[] { Vector3.zero, Vector3.up, Vector3.one, Vector3.right };
+				_selectedQuadMesh.uv = new[] { uvs[lastBase+0], uvs[lastBase+1], uvs[lastBase+2], uvs[lastBase+3] };
 				_selectedQuadMesh.triangles = new[] { 0, 1, 2, 0, 2, 3 };
 			}
 		}
