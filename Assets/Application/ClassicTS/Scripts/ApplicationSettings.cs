@@ -140,7 +140,7 @@ namespace ClassicTilestorm
 		{
 			instance = this;
 			remapGeometry = RemapGeometry;
-			if (null != outline128x128) ScreenSpaceUtil.SetOutlineMaterial(outline128x128);
+			//if (null != outline128x128) ScreenSpaceUtil.SetOutlineMaterial(outline128x128);
 		}
 
 		private void OnValidate()
