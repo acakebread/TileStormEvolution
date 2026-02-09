@@ -311,21 +311,17 @@ namespace MassiveHadronLtd
 			if (null == _mainRT) return;
 
 			// Main grid (with deformed cells) — offset to compensate for padding
-			var renderW = _mainRT.width - BORDER * 2;
-			var borderX = (float)BORDER * _mainRT.width / renderW;
-			var renderH = _mainRT.height - BORDER * 2;
-			var borderY = (float)BORDER * _mainRT.height / renderH;
-			borderX *= rect.width / _mainRT.width;
-			borderY *= rect.height / _mainRT.height;
+			var scaleW = rect.width / (_mainRT.width - BORDER * 2);
+			var scaleH = rect.height / (_mainRT.height - BORDER * 2);
+
+			var borderX = BORDER * scaleW;
+			var borderY = BORDER * scaleH;
 
 			var displayRect = new Rect(rect.x - borderX, rect.y - borderY, rect.width + borderX * 2, rect.height + borderY * 2);
 			GUI.DrawTexture(displayRect.ToGUIRect(), _mainRT, ScaleMode.ScaleToFit, true);
 
 			// Enlarged selected cell on top — centered on the cell position
 			if (null == _selectedRT || null == _selectedQuadMesh) return;
-
-			var scaleW = rect.width / (_mainRT.width - BORDER * 2);
-			var scaleH = rect.height / (_mainRT.height - BORDER * 2);
 
 			float quadWidth = (_selectedQuadMeshverts[2].x - _selectedQuadMeshverts[0].x) * _mainRT.width * scaleW;
 			float quadHeight = (_selectedQuadMeshverts[1].y - _selectedQuadMeshverts[0].y) * _mainRT.height * scaleH;
