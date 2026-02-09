@@ -1,6 +1,6 @@
 # Combined OBJ created by OBJJoin
 # Source files: egy_tile_boundary_tut_bot_s.obj, egy_tile_boundary_tut_top_n.obj
-#
+mtllib tutankhamun.mtl
 v -0.500000 0.145000 -1.000004
 v 0.500000 0.145000 -1.000004
 v -0.500000 -0.200000 -1.000004

@@ -1,6 +1,6 @@
 # Combined OBJ created by OBJJoin
 # Source files: egy_anubis_head_ns.obj, egy_anubis_tail_ns.obj
-#
+mtllib egy_anubis.mtl
 v 0.500000 -0.200000 1.000000
 v 0.500000 -0.200000 0.000000
 v 0.500008 0.145000 1.000000

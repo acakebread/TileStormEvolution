@@ -1,6 +1,6 @@
 # Combined OBJ created by OBJJoin
 # Source files: egy_sphinx_head_ns.obj, egy_sphinx_tail_ns.obj
-#
+mtllib egy_sphinx.mtl
 v 0.500000 -0.200000 1.000000
 v 0.500000 -0.200000 0.000000
 v 0.500008 0.145000 1.000000

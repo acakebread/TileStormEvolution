@@ -1,6 +1,6 @@
 # Combined OBJ created by OBJJoin
 # Source files: jun_boundary_temple_ne.obj, jun_boundary_temple_nw.obj, jun_boundary_temple_se.obj, jun_boundary_temple_sw.obj
-#
+mtllib jun_boundary_temple.mtl
 v -1.000013 -0.200000 1.000004
 v -0.000013 -0.200000 1.000004
 v -1.000013 0.195000 1.000012
