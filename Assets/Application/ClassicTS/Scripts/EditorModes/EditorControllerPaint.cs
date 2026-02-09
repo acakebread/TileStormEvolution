@@ -236,21 +236,14 @@ namespace ClassicTilestorm
 
 			CalculatePanelLayout();
 
-			// Background — full width, from bottom up
-			//Rect guiPanelRect = new Rect(0, Screen.height - (panelY + panelHeight), Screen.width, panelHeight);
-			//GUI.Box(guiPanelRect, GUIContent.none, new GUIStyle { normal = { background = TextureUtils.MakeTex(1, 1, semiTransparentBg) } });
-
 			Rect guiPanelRect = new Rect(0, panelY, Screen.width, panelHeight);
 			GUI.Box(guiPanelRect.ToGUIRect(), GUIContent.none, new GUIStyle { normal = { background = TextureUtils.MakeTex(1, 1, semiTransparentBg) } });
-
-			//GUI.Box(gridScreenRect.ToGUIRect(), GUIContent.none, new GUIStyle { normal = { background = TextureUtils.MakeTex(1, 1, semiTransparentBg) } });
-			
 
 			if (panelY > -panelHeight + 1f)
 			{
 				Rect guiGridRect = ToGUIRect(gridScreenRect);
 				Vector2 mouseUV = gridScreenRect.NormalisedPoint(Input.mousePosition);
-				ScreenSpaceUtil.OnGUI(gridScreenRect, guiPanelRect, COLUMNS, ROWS, mouseUV);
+				ScreenSpaceUtil.OnGUI(gridScreenRect, COLUMNS, ROWS, mouseUV);
 			}
 		}
 

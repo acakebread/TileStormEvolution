@@ -20,18 +20,6 @@ namespace MassiveHadronLtd
 		private static Material _outlineMaterial;
 		private static Texture2D _outlineTexture;
 
-		private static Mesh _unitQuadMesh;
-		private static RenderTexture _bgRT;
-
-		private static Mesh _backgroundMesh;
-		private static Material _backgroundMaterial;
-		private static Texture2D _backgroundTexture;
-
-		// Add near the other static fields
-		private static Vector2 _lastBackgroundPoint; // in normalized 0..1
-		private static int _lastBackgroundColumns;
-		private static int _lastBackgroundRows;
-
 		private static int _lastColumns = -1;
 		private static int _lastRows = -1;
 		private static Vector2 _lastCoord = new Vector2(-999f, -999f);
@@ -57,13 +45,6 @@ namespace MassiveHadronLtd
 			_outlineMaterial = value;
 			if (value != null && value.mainTexture is Texture2D tex)
 				_outlineTexture = tex;
-		}
-
-		public static void SetBackgroundMaterial(Material value)
-		{
-			_backgroundMaterial = value;
-			if (value != null && value.mainTexture is Texture2D tex)
-				_backgroundTexture = tex;
 		}
 
 		private static void RebuildGridMeshIfNeeded(int numColumns, int numRows, Vector2 point)
@@ -173,8 +154,11 @@ namespace MassiveHadronLtd
 				uvs[baseVert + 2] = new Vector2(x1 * uvScaleX, y1 * uvScaleY);
 				uvs[baseVert + 3] = new Vector2(x1 * uvScaleX, y0 * uvScaleY);
 
+				var luminense = 1f - scaleStrength * 0.75f;
+				var colour = new Color(luminense, luminense, luminense, 1);
+
 				colors[baseVert + 0] = colors[baseVert + 1] =
-				colors[baseVert + 2] = colors[baseVert + 3] = Color.white;
+				colors[baseVert + 2] = colors[baseVert + 3] = colour;// Color.white;
 
 				int tri = drawIdx * 6;
 				indices[tri + 0] = baseVert + 0;
@@ -259,64 +243,6 @@ namespace MassiveHadronLtd
 			};
 		}
 
-		private static void DrawBackgroundToRT(Rect rect, int numColumns, int numRows, Vector2 coord)
-		{
-			if (_backgroundMaterial == null || _unitQuadMesh == null) return;
-
-			int rtWidth = Mathf.FloorToInt(rect.width);
-			int rtHeight = Mathf.FloorToInt(rect.height);
-
-			if (rtWidth <= 0 || rtHeight <= 0) return;
-
-			// Create / resize RT to exactly match the OnGUI rect size
-			if (_bgRT == null || _bgRT.width != rtWidth || _bgRT.height != rtHeight)
-			{
-				if (_bgRT != null) _bgRT.Release();
-				_bgRT = new RenderTexture(rtWidth, rtHeight, 0, RenderTextureFormat.ARGB32)
-				{
-					filterMode = FilterMode.Bilinear,
-					antiAliasing = 1
-				};
-				_bgRT.Create();
-			}
-
-			var oldActive = RenderTexture.active;
-			RenderTexture.active = _bgRT;
-
-			GL.Clear(true, true, Color.clear);
-
-			GL.PushMatrix();
-			GL.LoadOrtho();   // ortho projection, z=0 plane
-
-			// Center in pixels = coord * rect size
-			float centerX = coord.x * rect.width;
-			float centerY = coord.y * rect.height;
-
-			// Size: 15 × cell size in pixels
-			float cellPixelW = rect.width / numColumns;
-			float cellPixelH = rect.height / numRows;
-
-			var cellPixel = Mathf.Max(cellPixelW, cellPixelH);
-			float bgPixelW = 15f * cellPixel;
-			float bgPixelH = 15f * cellPixel;
-
-			// Build matrix: translate to center, scale to bg size
-			Matrix4x4 matrix = Matrix4x4.TRS(
-				new Vector3(centerX / rect.width, centerY / rect.height, 0),  // normalized center [0..1]
-				Quaternion.identity,
-				new Vector3(bgPixelW / rect.width, bgPixelH / rect.height, 1) // normalized scale
-			);
-
-			_backgroundMaterial.mainTexture = _backgroundTexture;
-			//_backgroundMaterial.color = Color.white;
-			_backgroundMaterial.SetPass(0);
-
-			Graphics.DrawMeshNow(_unitQuadMesh, matrix);
-
-			GL.PopMatrix();
-			RenderTexture.active = oldActive;
-		}
-
 		private static void DrawGridToRT(int numColumns, int numRows, Vector2 coord)
 		{
 			LazyInitResources();
@@ -354,12 +280,6 @@ namespace MassiveHadronLtd
 				_quadMaterial.color = Color.white;
 				_quadMaterial.SetPass(0);
 				Graphics.DrawMeshNow(_gridMesh, Matrix4x4.identity);
-			}
-
-			if (_backgroundMesh != null && _backgroundMaterial != null)
-			{
-				_backgroundMaterial.SetPass(0);
-				Graphics.DrawMeshNow(_backgroundMesh, Matrix4x4.identity);
 			}
 
 			GL.PopMatrix();
@@ -403,7 +323,7 @@ namespace MassiveHadronLtd
 			RenderTexture.active = old;
 		}
 
-		public static void OnGUI(Rect rect, Rect mask, int numColumns = 8, int numRows = 8, Vector2 coord = default)
+		public static void OnGUI(Rect rect, int numColumns = 8, int numRows = 8, Vector2 coord = default)
 		{
 			if (coord == default) coord = new Vector2(0.5f, 0.5f);
 
@@ -429,13 +349,6 @@ namespace MassiveHadronLtd
 				);
 
 				GUI.DrawTexture(displayRect.ToGUIRect(), _mainRT, ScaleMode.ScaleAndCrop, true);
-
-
-				// Draw background RT full size over the grid rect
-				DrawBackgroundToRT(mask, numColumns, numRows, coord);
-
-				if (_bgRT != null)
-					GUI.DrawTexture(mask.ToGUIRect(), _bgRT, ScaleMode.StretchToFill, true);
 			}
 
 			// Enlarged selected cell on top — centered on the cell position
@@ -521,26 +434,6 @@ namespace MassiveHadronLtd
 				}
 			}
 
-			if (_backgroundMaterial == null)
-			{
-				var shader = TryFindGoodShader();
-				if (shader != null)
-				{
-					_backgroundMaterial = new Material(shader)
-					{
-						name = "ScreenSpaceUtil-BackgroundMat (auto)",
-						hideFlags = HideFlags.HideAndDontSave
-					};
-
-					if (_backgroundTexture != null)
-						_backgroundMaterial.mainTexture = _backgroundTexture;
-				}
-				else
-				{
-					Debug.LogError("[ScreenSpaceUtil] No usable shader found for background material!");
-				}
-			}
-
 			if (_quadTexture == null)
 			{
 				_quadTexture = TextureUtils.GeneratePerlinNoiseTexture();
@@ -559,39 +452,6 @@ namespace MassiveHadronLtd
 					_outlineTexture.filterMode = FilterMode.Point;
 					_outlineTexture.hideFlags = HideFlags.HideAndDontSave;
 				}
-			}
-
-			if (_backgroundTexture == null)
-			{
-				_backgroundTexture = TextureUtils.GenerateXorTexture256();
-				if (_backgroundTexture != null)
-				{
-					_backgroundTexture.filterMode = FilterMode.Point;
-					_backgroundTexture.hideFlags = HideFlags.HideAndDontSave;
-				}
-			}
-
-			if (_unitQuadMesh == null)
-			{
-				_unitQuadMesh = new Mesh
-				{
-					vertices = new Vector3[]
-					{
-						new Vector3(-0.5f, -0.5f, 0),   // BL
-						new Vector3(-0.5f,  0.5f, 0),   // TL
-						new Vector3( 0.5f,  0.5f, 0),   // TR
-						new Vector3( 0.5f, -0.5f, 0)    // BR
-					},
-					uv = new Vector2[]
-					{
-						new Vector2(0,0),
-						new Vector2(0,1),
-						new Vector2(1,1),
-						new Vector2(1,0)
-					},
-					triangles = new int[] { 0, 1, 2, 0, 2, 3 }
-				};
-				_unitQuadMesh.hideFlags = HideFlags.HideAndDontSave;
 			}
 
 			static Shader TryFindGoodShader()
@@ -615,30 +475,16 @@ namespace MassiveHadronLtd
 				_selectedRT.Release();
 				_selectedRT = null;
 			}
-			if (_bgRT != null)
-			{
-				_bgRT.Release();
-				_bgRT = null;
-			}
 
 			if (_gridMesh != null) { Object.DestroyImmediate(_gridMesh); _gridMesh = null; }
 			if (_selectedQuadMesh != null) { Object.DestroyImmediate(_selectedQuadMesh); _selectedQuadMesh = null; }
 			if (_outlineMesh != null) { Object.DestroyImmediate(_outlineMesh); _outlineMesh = null; }
-			if (_backgroundMesh != null) { Object.DestroyImmediate(_backgroundMesh); _backgroundMesh = null; }
-
-			if (_unitQuadMesh != null)
-			{
-				Object.DestroyImmediate(_unitQuadMesh);
-				_unitQuadMesh = null;
-			}
 
 			_quadMaterial = null;
 			_outlineMaterial = null;
-			_backgroundMaterial = null;
 
 			_quadTexture = null;
 			_outlineTexture = null;
-			_backgroundTexture = null;
 
 			_lastColumns = _lastRows = -1;
 			_lastCoord = new Vector2(-999f, -999f);
