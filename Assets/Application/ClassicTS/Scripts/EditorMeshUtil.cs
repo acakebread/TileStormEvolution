@@ -122,7 +122,8 @@ namespace ClassicTilestorm
 			// Early out if nothing changed (compare full variant + position + validity)
 			if (currentVariant.hash == variant.hash &&
 				Mathf.Approximately(currentVariant.angle, variant.angle) &&
-				Mathf.Approximately(currentVariant.delta, variant.delta) &&
+				//Mathf.Approximately(currentVariant.delta, variant.delta) &&
+				(currentVariant.delta - variant.delta).sqrMagnitude <= 0.001f &&
 				lastPosition == position &&
 				lastOutOfBounds == outOfBounds)
 			{
@@ -161,7 +162,7 @@ namespace ClassicTilestorm
 
 				ghostMesh = Assets.ModelAssets.Instantiate(
 					definition.model,
-					position + new Vector3(0f, variant.delta, 0f),
+					position + variant.delta,//new Vector3(0f, variant.delta, 0f),
 					Quaternion.Euler(0f, variant.angle, 0f),
 					parent: MainController.MapRoot);
 
@@ -184,7 +185,7 @@ namespace ClassicTilestorm
 
 				UpdateMaterial();
 
-				ghostMesh.transform.position = position + new Vector3(0f, variant.delta, 0f);
+				ghostMesh.transform.position = position + variant.delta;//new Vector3(0f, variant.delta, 0f);
 				ghostMesh.transform.rotation = Quaternion.Euler(0f, variant.angle, 0f);
 				ghostMesh.SetActive(true);
 			}

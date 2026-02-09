@@ -280,7 +280,7 @@ namespace ClassicTilestorm
 					float[] deltas = { 0f, 0.25f, 0.5f, 0.75f, 1f };
 
 					int aIdx = Array.IndexOf(angles, current.angle); if (aIdx < 0) aIdx = 0;
-					int dIdx = Array.IndexOf(deltas, current.delta); if (dIdx < 0) dIdx = 0;
+					int dIdx = Array.IndexOf(deltas, current.delta.y); if (dIdx < 0) dIdx = 0;
 
 					aIdx = (aIdx + 1) % angles.Length;
 					if (aIdx == 0) dIdx = (dIdx + 1) % deltas.Length;
@@ -291,7 +291,7 @@ namespace ClassicTilestorm
 			}
 
 			bool oob = mapIndex == -1;
-			var variant = new Variant(selectedHashId, previewAngle, previewDelta);
+			var variant = new Variant(selectedHashId, previewAngle, new Vector3(0f, previewDelta, 0f));
 			EditorMeshUtil.UpdateGhostMesh(variant, snapped, oob);
 		}
 
@@ -306,11 +306,11 @@ namespace ClassicTilestorm
 			if (idx == -1 || erase)
 			{
 				var hash = erase ? ResourceManager.FindOrCreateDefaultTile().HashID : selectedHashId;
-				iMap.UpdateTileAt(px, pz, hash, 0f, 0f);
+				iMap.UpdateTileAt(px, pz, hash, Vector3.zero, 0f);
 				return;
 			}
 
-			iMap.UpdateTileAt(px, pz, selectedHashId, previewDelta, previewAngle);
+			iMap.UpdateTileAt(px, pz, selectedHashId, new Vector3(0f, previewDelta, 0f), previewAngle);
 		}
 
 		public override void OnDisable() => EditorMeshUtil.HideGhostMesh();

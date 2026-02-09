@@ -131,11 +131,71 @@ namespace ClassicTilestorm
 					}
 					else if (key == "delta")
 					{
-						if (float.TryParse(val, System.Globalization.NumberStyles.Any,
-										   System.Globalization.CultureInfo.InvariantCulture, out float del))
+						string deltaVal = val.Trim().ToLowerInvariant();
+
+						// ── Case 1: full comma-separated (arbitrary XYZ) ────────────────
+						if (deltaVal.Contains(','))
 						{
-							variant.delta = del;
+							var nums = deltaVal.Split(',')
+											   .Select(s => s.Trim())
+											   .Where(s => !string.IsNullOrEmpty(s))
+											   .ToArray();
+
+							if (nums.Length == 3 &&
+								float.TryParse(nums[0], System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out float dx) &&
+								float.TryParse(nums[1], System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out float dy) &&
+								float.TryParse(nums[2], System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out float dz))
+							{
+								variant.delta = new Vector3(dx, dy, dz);
+							}
+							// invalid → ignore
 						}
+						// ── Case 2: +suffix style (with or without leading number) ──────
+						else if (deltaVal.StartsWith("+") || deltaVal.Contains("+"))
+						{
+							string numPart = "0"; // default to y=0 when no number given
+							string suffix = "";
+
+							int plusIndex = deltaVal.IndexOf('+');
+							if (plusIndex > 0)
+							{
+								// has number before +
+								numPart = deltaVal.Substring(0, plusIndex).Trim();
+								suffix = deltaVal.Substring(plusIndex + 1).Trim().ToLowerInvariant();
+							}
+							else if (plusIndex == 0)
+							{
+								// starts with + → y=0 implied
+								numPart = "0";
+								suffix = deltaVal.Substring(1).Trim().ToLowerInvariant();
+							}
+
+							if (float.TryParse(numPart, System.Globalization.NumberStyles.Any,
+											   System.Globalization.CultureInfo.InvariantCulture, out float yVal))
+							{
+								bool hasX = suffix.Contains("x");
+								bool hasZ = suffix.Contains("z");
+
+								// normalize synonyms
+								if (suffix == "zx" || suffix == "xz" || suffix.Contains("xz") || suffix.Contains("zx"))
+								{
+									hasX = true;
+									hasZ = true;
+								}
+
+								float xVal = hasX ? 0.5f : 0f;
+								float zVal = hasZ ? 0.5f : 0f;
+
+								variant.delta = new Vector3(xVal, yVal, zVal);
+							}
+						}
+						// ── Case 3: plain number → only Y ───────────────────────────────
+						else if (float.TryParse(deltaVal, System.Globalization.NumberStyles.Any,
+												System.Globalization.CultureInfo.InvariantCulture, out float yOnly))
+						{
+							variant.delta = new Vector3(0f, yOnly, 0f);
+						}
+						// else invalid → ignore silently
 					}
 					// Unknown keys are silently ignored → future-proof
 				}
@@ -220,8 +280,56 @@ namespace ClassicTilestorm
 				if (Math.Abs(v.angle) > 0.001f)
 					parts.Add($"angle:{v.angle:F1}");
 
-				if (Math.Abs(v.delta) > 0.001f)
-					parts.Add($"delta:{v.delta:F3}");
+				if (v.delta.sqrMagnitude > 0.000001f) // non-zero delta
+				{
+					const float HALF = 0.5f;
+					const float EPS = 0.001f;
+
+					bool isHalfX = Mathf.Abs(v.delta.x - HALF) < EPS;
+					bool isHalfZ = Mathf.Abs(v.delta.z - HALF) < EPS;
+					bool isZeroX = Mathf.Abs(v.delta.x) < EPS;
+					bool isZeroZ = Mathf.Abs(v.delta.z) < EPS;
+					bool isZeroY = Mathf.Abs(v.delta.y) < EPS;
+
+					string deltaStr;
+
+					// ── Special compact forms when y ≈ 0 ────────────────────────────
+					if (isZeroY)
+					{
+						if (isHalfX && isHalfZ)
+							deltaStr = "+xz";
+						else if (isHalfX)
+							deltaStr = "+x";
+						else if (isHalfZ)
+							deltaStr = "+z";
+						else
+							deltaStr = $"{v.delta.x:F3},0.000,{v.delta.z:F3}"; // rare fallback
+					}
+					// ── Classic + suffix forms when y != 0 ───────────────────────────
+					else if (isZeroX && isZeroZ)
+					{
+						deltaStr = $"{v.delta.y:F3}";
+					}
+					else if (isHalfX && isHalfZ)
+					{
+						deltaStr = $"{v.delta.y:F3}+xz";
+					}
+					else if (isHalfX)
+					{
+						deltaStr = $"{v.delta.y:F3}+x";
+					}
+					else if (isHalfZ)
+					{
+						deltaStr = $"{v.delta.y:F3}+z";
+					}
+					// ── Full arbitrary XYZ ──────────────────────────────────────────
+					else
+					{
+						deltaStr = $"{v.delta.x:F3},{v.delta.y:F3},{v.delta.z:F3}";
+					}
+
+					parts.Add($"delta:{deltaStr}");
+				}
 
 				string content = string.Join("|", parts);   // renamed from inner for clarity
 

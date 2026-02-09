@@ -25,7 +25,7 @@ namespace ClassicTilestorm
 
 			flags = (baseFlags & ~(int)DefinitionFlags.DirMask) | rotatedNav;
 
-			Vector3 finalPosition = worldPosition + new Vector3(0f, variant.delta, 0f);
+			Vector3 finalPosition = worldPosition + variant.delta;// new Vector3(0f, variant.delta, 0f) + variant.deltaxz;
 			Quaternion finalRotation = Quaternion.Euler(0f, variant.angle, 0f);
 
 			gameObject = def != null && !def.IsDefault()

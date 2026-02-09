@@ -13,10 +13,10 @@ namespace ClassicTilestorm
 	{
 		public HashId hash;           // the core tile definition ID
 		public float angle;           // degrees, usually 0/90/180/270
-		public float delta;           // local position offset
+		public Vector3 delta;           // local position offset
 
-		public Variant(HashId h) : this(h, 0f, 0f) { }
-		public Variant(HashId h, float rotationDegrees, float offset)
+		public Variant(HashId h) : this(h, 0f, Vector3.zero) { }
+		public Variant(HashId h, float rotationDegrees, Vector3 offset)
 		{
 			hash = h;
 			angle = rotationDegrees;
@@ -62,7 +62,7 @@ namespace ClassicTilestorm
 		Vector3 WorldPosition(int tileIndex, Vector3 localPosition);
 
 		HashId GetTileID(int _);
-		bool UpdateTileAt(int x, int z, HashId hashId, float delta = 0f, float angle = 0f);
+		bool UpdateTileAt(int x, int z, HashId hashId, Vector3 delta = new Vector3(), float angle = 0f);
 		Variant GetVariantAt(int mapIndex);
 		void AddAttachment(MapAttachment _);
 		bool RemoveAttachment(MapAttachment _);
@@ -255,12 +255,12 @@ namespace ClassicTilestorm
 			}
 			else
 			{
-				go = _graph[State[visualIndex]].gameObject;  // ← existing tile at logical position
+				go = _graph[State[visualIndex]].gameObject;  // existing tile at logical position
 			}
 
 			if (go != null)
 			{
-				var finalPos = position + new Vector3(0f, variant.delta, 0f);
+				var finalPos = position + variant.delta;
 				go.transform.position = finalPos;
 
 #if DEBUG
@@ -612,25 +612,27 @@ namespace ClassicTilestorm
 				{
 					Variant = g.Key,
 					Count = g.Count(),
-					OriginalVariants = g.ToList()   // keep one representative (angle/delta already in key)
+					// OriginalVariants = g.ToList()   // removed because it was never used
 				})
 				.OrderByDescending(g => g.Count)
-				.ThenBy(g => g.Variant.hash)          // stable secondary sort: hash
+				.ThenBy(g => g.Variant.hash)// stable secondary sort
 				.ThenBy(g => g.Variant.angle)
-				.ThenBy(g => g.Variant.delta)
+				.ThenBy(g => g.Variant.delta, Vector3LexComparer.Instance)
 				.ToList();
 
-			var newVariants = grouped.Select(g => new Variant(g.Variant.hash, g.Variant.angle, g.Variant.delta)).ToArray();
-			var newTable = newVariants.Select((v, i) => i).ToArray(); // new indices
+			var newVariants = grouped
+				.Select(g => new Variant(g.Variant.hash, g.Variant.angle, g.Variant.delta))
+				.ToArray();
 
-			// Build new tiles array
-			var oldToNew = new Dictionary<(HashId, float, float), int>();
+			// Build lookup: old key → new index
+			var oldToNew = new Dictionary<(HashId, float, Vector3), int>(grouped.Count);
 			for (int i = 0; i < newVariants.Length; i++)
 			{
-				var key = (newVariants[i].hash, newVariants[i].angle, newVariants[i].delta);
-				oldToNew[key] = i;
+				var v = newVariants[i];
+				oldToNew[(v.hash, v.angle, v.delta)] = i;
 			}
 
+			// Remap tiles to new indices
 			var newTiles = new int[tiles.Length];
 			for (int i = 0; i < tiles.Length; i++)
 			{
@@ -640,9 +642,12 @@ namespace ClassicTilestorm
 				newTiles[i] = oldToNew[key];
 			}
 
-			// Compare before/after
+			// Detect what actually changed
 			bool sizeChanged = newVariants.Length != variants.Length;
-			bool orderChanged = !sizeChanged && !variants.Select(v => (v.hash, v.angle, v.delta)).SequenceEqual(newVariants.Select(v => (v.hash, v.angle, v.delta)));
+
+			bool orderChanged = !sizeChanged &&
+				!variants.Select(v => (v.hash, v.angle, v.delta))
+						 .SequenceEqual(newVariants.Select(v => (v.hash, v.angle, v.delta)));
 
 			bool anythingChanged = sizeChanged || orderChanged;
 
@@ -654,11 +659,11 @@ namespace ClassicTilestorm
 				if (sizeChanged)
 				{
 					string direction = newVariants.Length > variants.Length ? "increased" : "reduced";
-					Debug.Log($"{name} consolidated: table size {direction} {variants.Length} → {newVariants.Length}");
+					Debug.Log($"{name} consolidated: table size {direction} from {variants.Length} → {newVariants.Length}");
 				}
 				else if (orderChanged)
 				{
-					Debug.Log($"{name} consolidated: table order changed (same size: {newVariants.Length})");
+					Debug.Log($"{name} consolidated: table order changed (size remains {newVariants.Length})");
 				}
 
 				// Invalidate caches
@@ -946,7 +951,7 @@ namespace ClassicTilestorm
 			return -1;
 		}
 
-		public bool UpdateTileAt(int x, int z, HashId hashId, float delta = 0f, float angle = 0f)
+		public bool UpdateTileAt(int x, int z, HashId hashId, Vector3 delta = new Vector3(), float angle = 0f)
 		{
 			if (tiles == null || tiles.Length == 0)
 			{
@@ -1001,7 +1006,7 @@ namespace ClassicTilestorm
 				var v = variants[i];
 				if (v.hash == hashId &&
 					Mathf.Approximately(v.angle, angle) &&
-					Mathf.Approximately(v.delta, delta))
+					Vector3LexComparer.ApproximatelyEqual(v.delta, delta))
 				{
 					tableIndex = i;
 					break;
@@ -1156,7 +1161,7 @@ namespace ClassicTilestorm
 			var defaultHash = defaultDef.HashID;
 
 			// Minimal variant table: just the default tile (angle=0, delta=0)
-			variants = new Variant[] { new Variant(defaultHash, 0f, 0f) };
+			variants = new Variant[] { new Variant(defaultHash, 0f, Vector3.zero) };
 
 			// Every position in the grid points to variant index 0
 			int tileCount = width * height;
@@ -1217,7 +1222,6 @@ namespace ClassicTilestorm
 
 			// CRITICAL: Work on a CLONE so we don't corrupt the original map's runtime state
 			var previewMap = this.Clone();
-
 
 			var previewRoot = new GameObject($"Preview_{name ?? "Map"}");
 			previewRoot.transform.SetParent(previewParent, false);
