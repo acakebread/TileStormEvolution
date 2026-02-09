@@ -155,6 +155,12 @@ namespace MassiveHadronLtd
 				indices[tri + 5] = baseVert + 3;
 			}
 
+			if (!invalid)
+			{
+				int lastBase = (quadData.Count - 1) * 4;
+				colors[lastBase + 0] = colors[lastBase + 1] = colors[lastBase + 2] = colors[lastBase + 3] = Color.clear;
+			}
+
 			_gridMesh.vertices = vertices;
 			_gridMesh.uv = uvs;
 			_gridMesh.colors = colors;
