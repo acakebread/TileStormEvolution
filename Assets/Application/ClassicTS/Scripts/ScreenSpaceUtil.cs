@@ -142,8 +142,8 @@ namespace MassiveHadronLtd
 					vertices[baseVert + i] = new Vector3(finalX, finalY, 0);
 					uvs[baseVert + i] = new Vector2(src[i].x * uvScaleX, src[i].y * uvScaleY);
 
-					float luminense = 1f - scaleStrength * 0.75f;
-					colors[baseVert + i] = new Color(luminense, luminense, luminense, 1);
+					float luminance = 1f - scaleStrength * 0.75f;
+					colors[baseVert + i] = new Color(luminance, luminance, luminance, 1);
 				}
 
 				int tri = drawIdx * 6;
