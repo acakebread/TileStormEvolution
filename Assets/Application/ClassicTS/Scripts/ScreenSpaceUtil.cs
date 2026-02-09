@@ -62,12 +62,10 @@ namespace MassiveHadronLtd
 			if (_gridMesh != null) Object.DestroyImmediate(_gridMesh);
 			if (_selectedQuadMesh != null) Object.DestroyImmediate(_selectedQuadMesh);
 			if (_outlineMesh != null) Object.DestroyImmediate(_outlineMesh);
-			//if (_backgroundMesh != null) Object.DestroyImmediate(_backgroundMesh);
 
 			_gridMesh = new Mesh { name = $"DeformGrid_{numColumns}x{numRows}" };
 			_selectedQuadMesh = null;
 			_outlineMesh = null;
-			//_backgroundMesh = null;
 
 			int corePixelWidth = numColumns * CELL_SIZE;
 			int corePixelHeight = numRows * CELL_SIZE;
@@ -197,26 +195,8 @@ namespace MassiveHadronLtd
 			// Create separate mesh + RT only for the enlarged quad
 			// ───────────────────────────────────────────────────────────────
 			if (_selectedQuadMesh != null) Object.DestroyImmediate(_selectedQuadMesh);
-			//if (_backgroundMesh != null) Object.DestroyImmediate(_backgroundMesh);
 
 			_selectedQuadMesh = null;
-			//_backgroundMesh = null;
-
-			//// Background behind selection
-			//var backgroundScaleX = 7f * uvScaleX;
-			//var backgroundScaleY = 7f * uvScaleY;
-
-			//var bv0 = new Vector3(point.x - backgroundScaleX, point.y - backgroundScaleY, 0);
-			//var bv1 = new Vector3(point.x - backgroundScaleX, point.y + backgroundScaleY, 0);
-			//var bv2 = new Vector3(point.x + backgroundScaleX, point.y + backgroundScaleY, 0);
-			//var bv3 = new Vector3(point.x + backgroundScaleX, point.y - backgroundScaleY, 0);
-
-			//_backgroundMesh = new Mesh
-			//{
-			//	vertices = new[] { bv0, bv1, bv2, bv3 },
-			//	uv = new[] { new Vector2(0, 0), new Vector2(0, 1), new Vector2(1, 1), new Vector2(1, 0) },
-			//	triangles = new[] { 0, 1, 2, 0, 2, 3 }
-			//};
 
 			if (invalid) return;
 
@@ -268,7 +248,6 @@ namespace MassiveHadronLtd
 			var oldRT = RenderTexture.active;
 			RenderTexture.active = _mainRT;
 
-			//GL.Clear(true, true, new Color(0.12f, 0.14f, 0.16f));//debug
 			GL.Clear(true, true, Color.clear);
 
 			GL.PushMatrix();
@@ -329,63 +308,36 @@ namespace MassiveHadronLtd
 
 			DrawGridToRT(numColumns, numRows, coord);
 			DrawSelectedOnlyToRT(numColumns, numRows, coord);
+			if (null == _mainRT) return;
 
 			// Main grid (with deformed cells) — offset to compensate for padding
-			if (_mainRT != null)
-			{
-				var renderW = _mainRT.width - BORDER * 2;
-				var borderX = (float)BORDER * _mainRT.width / renderW;
-				var renderH = _mainRT.height - BORDER * 2;
-				var borderY = (float)BORDER * _mainRT.height / renderH;
+			var renderW = _mainRT.width - BORDER * 2;
+			var borderX = (float)BORDER * _mainRT.width / renderW;
+			var renderH = _mainRT.height - BORDER * 2;
+			var borderY = (float)BORDER * _mainRT.height / renderH;
+			borderX *= rect.width / _mainRT.width;
+			borderY *= rect.height / _mainRT.height;
 
-				borderX *= rect.width / _mainRT.width;
-				borderY *= rect.height / _mainRT.height;
-
-				var displayRect = new Rect(
-					rect.x - borderX,
-					rect.y - borderY,
-					rect.width + borderX * 2,
-					rect.height + borderY * 2
-				);
-
-				GUI.DrawTexture(displayRect.ToGUIRect(), _mainRT, ScaleMode.ScaleAndCrop, true);
-			}
+			var displayRect = new Rect(rect.x - borderX, rect.y - borderY, rect.width + borderX * 2, rect.height + borderY * 2);
+			GUI.DrawTexture(displayRect.ToGUIRect(), _mainRT, ScaleMode.ScaleToFit, true);
 
 			// Enlarged selected cell on top — centered on the cell position
-			if (_selectedRT != null && _selectedQuadMesh != null)
-			{
-				float quadWidth = (_selectedQuadMeshverts[2].x - _selectedQuadMeshverts[0].x) * _mainRT.width;
-				float quadHeight = (_selectedQuadMeshverts[1].y - _selectedQuadMeshverts[0].y) * _mainRT.height;
+			if (null == _selectedRT || null == _selectedQuadMesh) return;
 
-				quadWidth *= rect.width / (_mainRT.width - BORDER * 2);
-				quadHeight *= rect.height / (_mainRT.height - BORDER * 2);
+			var scaleW = rect.width / (_mainRT.width - BORDER * 2);
+			var scaleH = rect.height / (_mainRT.height - BORDER * 2);
 
-				var renderW = _mainRT.width - BORDER * 2;
-				var borderX = (float)BORDER * _mainRT.width / renderW;
-				var renderH = _mainRT.height - BORDER * 2;
-				var borderY = (float)BORDER * _mainRT.height / renderH;
+			float quadWidth = (_selectedQuadMeshverts[2].x - _selectedQuadMeshverts[0].x) * _mainRT.width * scaleW;
+			float quadHeight = (_selectedQuadMeshverts[1].y - _selectedQuadMeshverts[0].y) * _mainRT.height * scaleH;
 
-				borderX *= rect.width / _mainRT.width;
-				borderY *= rect.height / _mainRT.height;
+			float selectedPosX = (_selectedQuadMeshverts[2].x + _selectedQuadMeshverts[0].x) * 0.5f * _mainRT.width * scaleW;
+			float selectedPosY = (_selectedQuadMeshverts[1].y + _selectedQuadMeshverts[0].y) * 0.5f * _mainRT.height * scaleH;
 
-				float selectedPosX = (_selectedQuadMeshverts[2].x + _selectedQuadMeshverts[0].x) * 0.5f * _mainRT.width;
-				float selectedPosY = (_selectedQuadMeshverts[1].y + _selectedQuadMeshverts[0].y) * 0.5f * _mainRT.height;
+			float centerX = selectedPosX - borderX + rect.x;
+			float centerY = selectedPosY - borderY + rect.y;
 
-				selectedPosX *= rect.width / (_mainRT.width - BORDER * 2);
-				selectedPosY *= rect.height / (_mainRT.height - BORDER * 2);
-
-				float centerX = selectedPosX - borderX + rect.x;
-				float centerY = selectedPosY - borderY + rect.y;
-
-				var selRect = new Rect(
-					centerX - quadWidth * 0.5f,
-					centerY - quadHeight * 0.5f,
-					quadWidth,
-					quadHeight
-				);
-
-				GUI.DrawTexture(selRect.ToGUIRect(), _selectedRT, ScaleMode.StretchToFill, true);
-			}
+			var selRect = new Rect(centerX - quadWidth * 0.5f, centerY - quadHeight * 0.5f, quadWidth, quadHeight);
+			GUI.DrawTexture(selRect.ToGUIRect(), _selectedRT, ScaleMode.ScaleToFit, true);
 		}
 
 		public static RenderTexture GetRenderTexture(int numColumns = 8, int numRows = 8, Vector2 coord = default)
@@ -465,27 +417,16 @@ namespace MassiveHadronLtd
 
 		public static void Cleanup()
 		{
-			if (_mainRT != null)
-			{
-				_mainRT.Release();
-				_mainRT = null;
-			}
-			if (_selectedRT != null)
-			{
-				_selectedRT.Release();
-				_selectedRT = null;
-			}
-
+			if (_mainRT != null) { _mainRT.Release(); _mainRT = null; }
+			if (_selectedRT != null) { _selectedRT.Release(); _selectedRT = null; }
 			if (_gridMesh != null) { Object.DestroyImmediate(_gridMesh); _gridMesh = null; }
 			if (_selectedQuadMesh != null) { Object.DestroyImmediate(_selectedQuadMesh); _selectedQuadMesh = null; }
 			if (_outlineMesh != null) { Object.DestroyImmediate(_outlineMesh); _outlineMesh = null; }
 
+			_quadTexture = null;
 			_quadMaterial = null;
 			_outlineMaterial = null;
-
-			_quadTexture = null;
 			_outlineTexture = null;
-
 			_lastColumns = _lastRows = -1;
 			_lastCoord = new Vector2(-999f, -999f);
 		}
