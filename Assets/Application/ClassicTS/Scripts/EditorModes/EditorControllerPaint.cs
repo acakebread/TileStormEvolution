@@ -26,7 +26,7 @@ namespace ClassicTilestorm
 		private Rect gridScreenRect;               // ← now in normal screen coords (bottom-left origin)
 		private bool mouseWasOverGridLastFrame = false;
 
-		private static readonly Color semiTransparentBg = new Color(0.08f, 0.09f, 0.11f, 0.92f);
+		private static readonly Color semiTransparentBg = new Color(0.08f, 0.09f, 0.11f, 0.95f);
 
 		public EditorControllerPaint(EditorController editorController) : base(editorController)
 		{
@@ -35,7 +35,7 @@ namespace ClassicTilestorm
 		}
 
 		private const int ICON_SIZE = 128;
-		private const int BORDER = 30;
+		private const int BORDER = 32;
 
 		private void CalculatePanelLayout()
 		{
@@ -237,14 +237,20 @@ namespace ClassicTilestorm
 			CalculatePanelLayout();
 
 			// Background — full width, from bottom up
-			Rect guiPanelRect = new Rect(0, Screen.height - (panelY + panelHeight), Screen.width, panelHeight);
-			GUI.Box(guiPanelRect, GUIContent.none, new GUIStyle { normal = { background = TextureUtils.MakeTex(1, 1, semiTransparentBg) } });
+			//Rect guiPanelRect = new Rect(0, Screen.height - (panelY + panelHeight), Screen.width, panelHeight);
+			//GUI.Box(guiPanelRect, GUIContent.none, new GUIStyle { normal = { background = TextureUtils.MakeTex(1, 1, semiTransparentBg) } });
+
+			Rect guiPanelRect = new Rect(0, panelY, Screen.width, panelHeight);
+			GUI.Box(guiPanelRect.ToGUIRect(), GUIContent.none, new GUIStyle { normal = { background = TextureUtils.MakeTex(1, 1, semiTransparentBg) } });
+
+			//GUI.Box(gridScreenRect.ToGUIRect(), GUIContent.none, new GUIStyle { normal = { background = TextureUtils.MakeTex(1, 1, semiTransparentBg) } });
+			
 
 			if (panelY > -panelHeight + 1f)
 			{
 				Rect guiGridRect = ToGUIRect(gridScreenRect);
 				Vector2 mouseUV = gridScreenRect.NormalisedPoint(Input.mousePosition);
-				ScreenSpaceUtil.OnGUI(gridScreenRect, COLUMNS, ROWS, mouseUV);
+				ScreenSpaceUtil.OnGUI(gridScreenRect, guiPanelRect, COLUMNS, ROWS, mouseUV);
 			}
 		}
 

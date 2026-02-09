@@ -5,7 +5,7 @@ namespace MassiveHadronLtd
 {
 	public static class ScreenSpaceUtil
 	{
-		private static RenderTexture _mainRT;                   // full grid including enlarged quad
+		private static RenderTexture _mainRT;                   // full grid including enlarged quad — now with extra border
 		private static RenderTexture _selectedRT;               // only the enlarged quad, size CELL_SIZE * SELECTED_SIZE
 
 		private static Mesh _gridMesh;
@@ -20,9 +20,17 @@ namespace MassiveHadronLtd
 		private static Material _outlineMaterial;
 		private static Texture2D _outlineTexture;
 
+		private static Mesh _unitQuadMesh;
+		private static RenderTexture _bgRT;
+
 		private static Mesh _backgroundMesh;
 		private static Material _backgroundMaterial;
 		private static Texture2D _backgroundTexture;
+
+		// Add near the other static fields
+		private static Vector2 _lastBackgroundPoint; // in normalized 0..1
+		private static int _lastBackgroundColumns;
+		private static int _lastBackgroundRows;
 
 		private static int _lastColumns = -1;
 		private static int _lastRows = -1;
@@ -35,7 +43,7 @@ namespace MassiveHadronLtd
 		private const float SELECTED_SIZE = 4f;
 		private const float DELTA_TRANS_RATIO = 0.375f;
 
-		private const int BORDER = 128;//please implement this
+		private const int BORDER = 256;//128;  // extra pixels around the grid for overdraw (glow/outline/shadow/...)
 
 		public static void SetOutlineTexture(Texture2D outlineTex)
 		{
@@ -73,12 +81,25 @@ namespace MassiveHadronLtd
 			if (_gridMesh != null) Object.DestroyImmediate(_gridMesh);
 			if (_selectedQuadMesh != null) Object.DestroyImmediate(_selectedQuadMesh);
 			if (_outlineMesh != null) Object.DestroyImmediate(_outlineMesh);
-			if (_backgroundMesh != null) Object.DestroyImmediate(_backgroundMesh);
+			//if (_backgroundMesh != null) Object.DestroyImmediate(_backgroundMesh);
 
 			_gridMesh = new Mesh { name = $"DeformGrid_{numColumns}x{numRows}" };
 			_selectedQuadMesh = null;
 			_outlineMesh = null;
-			_backgroundMesh = null;
+			//_backgroundMesh = null;
+
+			int corePixelWidth = numColumns * CELL_SIZE;
+			int corePixelHeight = numRows * CELL_SIZE;
+			int paddedPixelWidth = corePixelWidth + 2 * BORDER;
+			int paddedPixelHeight = corePixelHeight + 2 * BORDER;
+
+			// How much of the padded RT is actual content (normalized)
+			float contentScaleX = (float)corePixelWidth / paddedPixelWidth;
+			float contentScaleY = (float)corePixelHeight / paddedPixelHeight;
+
+			// Offset to center the content inside the padded texture
+			float contentOffsetX = (float)BORDER / paddedPixelWidth;
+			float contentOffsetY = (float)BORDER / paddedPixelHeight;
 
 			int totalCells = numColumns * numRows;
 			int totalVerts = totalCells * 4;
@@ -130,7 +151,7 @@ namespace MassiveHadronLtd
 				float x1 = x0 + cellW;
 				float y1 = y0 + cellH;
 
-				Vector2 quadCenter = new ((x0 + x1) * 0.5f, (y0 + y1) * 0.5f);
+				Vector2 quadCenter = new((x0 + x1) * 0.5f, (y0 + y1) * 0.5f);
 
 				float deltaScale = 1f + scaleStrength;
 				float transScale = scaleStrength * DELTA_TRANS_RATIO;
@@ -144,6 +165,8 @@ namespace MassiveHadronLtd
 				vertices[baseVert + 1] = quadCenter + (new Vector2(x0, y1) - quadCenter) * deltaScale + (new Vector2(x0, y1) - centerLogical) * transScale;
 				vertices[baseVert + 2] = quadCenter + (new Vector2(x1, y1) - quadCenter) * deltaScale + (new Vector2(x1, y1) - centerLogical) * transScale;
 				vertices[baseVert + 3] = quadCenter + (new Vector2(x1, y0) - quadCenter) * deltaScale + (new Vector2(x1, y0) - centerLogical) * transScale;
+
+				//apply texture_translate and texture_scale here
 
 				uvs[baseVert + 0] = new Vector2(x0 * uvScaleX, y0 * uvScaleY);
 				uvs[baseVert + 1] = new Vector2(x0 * uvScaleX, y1 * uvScaleY);
@@ -165,7 +188,16 @@ namespace MassiveHadronLtd
 			for (int i = 0; i < totalVerts; i++)
 			{
 				var v = vertices[i];
-				vertices[i] = new Vector3(v.x * uvScaleX, v.y * uvScaleY, v.z);
+
+				// First apply original logical-to-UV scaling (as it was before)
+				float scaledX = v.x * uvScaleX;
+				float scaledY = v.y * uvScaleY;
+
+				// Then apply padding: shrink towards center + add border offset
+				float finalX = contentOffsetX + scaledX * contentScaleX;
+				float finalY = contentOffsetY + scaledY * contentScaleY;
+
+				vertices[i] = new Vector3(finalX, finalY, v.z);
 			}
 
 			_gridMesh.vertices = vertices;
@@ -181,41 +213,39 @@ namespace MassiveHadronLtd
 			// Create separate mesh + RT only for the enlarged quad
 			// ───────────────────────────────────────────────────────────────
 			if (_selectedQuadMesh != null) Object.DestroyImmediate(_selectedQuadMesh);
-			if (_backgroundMesh != null) Object.DestroyImmediate(_backgroundMesh);
+			//if (_backgroundMesh != null) Object.DestroyImmediate(_backgroundMesh);
 
 			_selectedQuadMesh = null;
-			_backgroundMesh = null;
+			//_backgroundMesh = null;
 
-			// Background behind selection
-			var backgroundScaleX = 7f * uvScaleX;
-			var backgroundScaleY = 7f * uvScaleY;
+			//// Background behind selection
+			//var backgroundScaleX = 7f * uvScaleX;
+			//var backgroundScaleY = 7f * uvScaleY;
 
-			var bv0 = new Vector3(point.x - backgroundScaleX, point.y - backgroundScaleY, 0);
-			var bv1 = new Vector3(point.x - backgroundScaleX, point.y + backgroundScaleY, 0);
-			var bv2 = new Vector3(point.x + backgroundScaleX, point.y + backgroundScaleY, 0);
-			var bv3 = new Vector3(point.x + backgroundScaleX, point.y - backgroundScaleY, 0);
+			//var bv0 = new Vector3(point.x - backgroundScaleX, point.y - backgroundScaleY, 0);
+			//var bv1 = new Vector3(point.x - backgroundScaleX, point.y + backgroundScaleY, 0);
+			//var bv2 = new Vector3(point.x + backgroundScaleX, point.y + backgroundScaleY, 0);
+			//var bv3 = new Vector3(point.x + backgroundScaleX, point.y - backgroundScaleY, 0);
 
-			_backgroundMesh = new Mesh
-			{
-				vertices = new[] { bv0, bv1, bv2, bv3 },
-				uv = new[] { new Vector2(0, 0), new Vector2(0, 1), new Vector2(1, 1), new Vector2(1, 0) },
-				triangles = new[] { 0, 1, 2, 0, 2, 3 }
-			};
+			//_backgroundMesh = new Mesh
+			//{
+			//	vertices = new[] { bv0, bv1, bv2, bv3 },
+			//	uv = new[] { new Vector2(0, 0), new Vector2(0, 1), new Vector2(1, 1), new Vector2(1, 0) },
+			//	triangles = new[] { 0, 1, 2, 0, 2, 3 }
+			//};
 
 			if (invalid) return;
 
-			// We only need the UV rectangle of the selected cell
 			var lastBase = (quadData.Count - 1) * 4;
 
 			_selectedQuadMeshPos = (vertices[lastBase + 0] + vertices[lastBase + 1] + vertices[lastBase + 2] + vertices[lastBase + 3]) * 0.25f;
-			_selectedQuadMeshverts = new[] { vertices[lastBase + 0], vertices[lastBase + 1], vertices[lastBase + 2], vertices[lastBase + 3] }; 
+			_selectedQuadMeshverts = new[] { vertices[lastBase + 0], vertices[lastBase + 1], vertices[lastBase + 2], vertices[lastBase + 3] };
 
 			var uv0 = uvs[lastBase + 0];
 			var uv1 = uvs[lastBase + 1];
 			var uv2 = uvs[lastBase + 2];
 			var uv3 = uvs[lastBase + 3];
 
-			// For the separate small RT: create a simple full-size quad that fills [0,1]×[0,1]
 			var v0 = new Vector3(0, 0, 0);
 			var v1 = new Vector3(0, 1, 0);
 			var v2 = new Vector3(1, 1, 0);
@@ -229,17 +259,77 @@ namespace MassiveHadronLtd
 			};
 		}
 
+		private static void DrawBackgroundToRT(Rect rect, int numColumns, int numRows, Vector2 coord)
+		{
+			if (_backgroundMaterial == null || _unitQuadMesh == null) return;
+
+			int rtWidth = Mathf.FloorToInt(rect.width);
+			int rtHeight = Mathf.FloorToInt(rect.height);
+
+			if (rtWidth <= 0 || rtHeight <= 0) return;
+
+			// Create / resize RT to exactly match the OnGUI rect size
+			if (_bgRT == null || _bgRT.width != rtWidth || _bgRT.height != rtHeight)
+			{
+				if (_bgRT != null) _bgRT.Release();
+				_bgRT = new RenderTexture(rtWidth, rtHeight, 0, RenderTextureFormat.ARGB32)
+				{
+					filterMode = FilterMode.Bilinear,
+					antiAliasing = 1
+				};
+				_bgRT.Create();
+			}
+
+			var oldActive = RenderTexture.active;
+			RenderTexture.active = _bgRT;
+
+			GL.Clear(true, true, Color.clear);
+
+			GL.PushMatrix();
+			GL.LoadOrtho();   // ortho projection, z=0 plane
+
+			// Center in pixels = coord * rect size
+			float centerX = coord.x * rect.width;
+			float centerY = coord.y * rect.height;
+
+			// Size: 15 × cell size in pixels
+			float cellPixelW = rect.width / numColumns;
+			float cellPixelH = rect.height / numRows;
+
+			var cellPixel = Mathf.Max(cellPixelW, cellPixelH);
+			float bgPixelW = 15f * cellPixel;
+			float bgPixelH = 15f * cellPixel;
+
+			// Build matrix: translate to center, scale to bg size
+			Matrix4x4 matrix = Matrix4x4.TRS(
+				new Vector3(centerX / rect.width, centerY / rect.height, 0),  // normalized center [0..1]
+				Quaternion.identity,
+				new Vector3(bgPixelW / rect.width, bgPixelH / rect.height, 1) // normalized scale
+			);
+
+			_backgroundMaterial.mainTexture = _backgroundTexture;
+			//_backgroundMaterial.color = Color.white;
+			_backgroundMaterial.SetPass(0);
+
+			Graphics.DrawMeshNow(_unitQuadMesh, matrix);
+
+			GL.PopMatrix();
+			RenderTexture.active = oldActive;
+		}
+
 		private static void DrawGridToRT(int numColumns, int numRows, Vector2 coord)
 		{
 			LazyInitResources();
 
-			int pw = numColumns * CELL_SIZE;
-			int ph = numRows * CELL_SIZE;
+			int coreWidth = numColumns * CELL_SIZE;
+			int coreHeight = numRows * CELL_SIZE;
+			int paddedWidth = coreWidth + 2 * BORDER;
+			int paddedHeight = coreHeight + 2 * BORDER;
 
-			if (_mainRT == null || _mainRT.width != pw || _mainRT.height != ph || !_mainRT.IsCreated())
+			if (_mainRT == null || _mainRT.width != paddedWidth || _mainRT.height != paddedHeight || !_mainRT.IsCreated())
 			{
 				if (_mainRT != null) _mainRT.Release();
-				_mainRT = new RenderTexture(pw, ph, 0, RenderTextureFormat.ARGB32)
+				_mainRT = new RenderTexture(paddedWidth, paddedHeight, 0, RenderTextureFormat.ARGB32)
 				{
 					filterMode = FilterMode.Bilinear,
 					antiAliasing = 1
@@ -252,7 +342,8 @@ namespace MassiveHadronLtd
 			var oldRT = RenderTexture.active;
 			RenderTexture.active = _mainRT;
 
-			GL.Clear(true, true, new Color(0.12f, 0.14f, 0.16f));
+			//GL.Clear(true, true, new Color(0.12f, 0.14f, 0.16f));//debug
+			GL.Clear(true, true, Color.clear);
 
 			GL.PushMatrix();
 			GL.LoadOrtho();
@@ -284,7 +375,7 @@ namespace MassiveHadronLtd
 			if (_selectedRT == null || _selectedRT.width != selSize || _selectedRT.height != selSize || !_selectedRT.IsCreated())
 			{
 				if (_selectedRT != null) _selectedRT.Release();
-				_selectedRT = new RenderTexture(selSize, selSize, 0, RenderTextureFormat.ARGB32)//please add BORDER*2 to width and height and make all necessary adjustments to DrawMeshNow by offsetting render in by x=BORDER,y=BORDER
+				_selectedRT = new RenderTexture(selSize, selSize, 0, RenderTextureFormat.ARGB32)
 				{
 					filterMode = FilterMode.Bilinear,
 					antiAliasing = 1
@@ -312,27 +403,66 @@ namespace MassiveHadronLtd
 			RenderTexture.active = old;
 		}
 
-		public static void OnGUI(Rect rect, int numColumns = 8, int numRows = 8, Vector2 coord = default)
+		public static void OnGUI(Rect rect, Rect mask, int numColumns = 8, int numRows = 8, Vector2 coord = default)
 		{
 			if (coord == default) coord = new Vector2(0.5f, 0.5f);
 
 			DrawGridToRT(numColumns, numRows, coord);
 			DrawSelectedOnlyToRT(numColumns, numRows, coord);
 
-			// Main grid (with deformed cells)
+			// Main grid (with deformed cells) — offset to compensate for padding
 			if (_mainRT != null)
-				GUI.DrawTexture(rect.ToGUIRect(), _mainRT, ScaleMode.ScaleToFit, true);//offset byt x=-BORDER,y=-BORDER
+			{
+				var renderW = _mainRT.width - BORDER * 2;
+				var borderX = (float)BORDER * _mainRT.width / renderW;
+				var renderH = _mainRT.height - BORDER * 2;
+				var borderY = (float)BORDER * _mainRT.height / renderH;
+
+				borderX *= rect.width / _mainRT.width;
+				borderY *= rect.height / _mainRT.height;
+
+				var displayRect = new Rect(
+					rect.x - borderX,
+					rect.y - borderY,
+					rect.width + borderX * 2,
+					rect.height + borderY * 2
+				);
+
+				GUI.DrawTexture(displayRect.ToGUIRect(), _mainRT, ScaleMode.ScaleAndCrop, true);
+
+
+				// Draw background RT full size over the grid rect
+				DrawBackgroundToRT(mask, numColumns, numRows, coord);
+
+				if (_bgRT != null)
+					GUI.DrawTexture(mask.ToGUIRect(), _bgRT, ScaleMode.StretchToFill, true);
+			}
 
 			// Enlarged selected cell on top — centered on the cell position
 			if (_selectedRT != null && _selectedQuadMesh != null)
 			{
-				// Width/height from the deformed quad (preserves aspect & exact scale)
-				float quadWidth = (_selectedQuadMeshverts[2].x - _selectedQuadMeshverts[0].x) * rect.width;
-				float quadHeight = (_selectedQuadMeshverts[1].y - _selectedQuadMeshverts[0].y) * rect.height;
+				float quadWidth = (_selectedQuadMeshverts[2].x - _selectedQuadMeshverts[0].x) * _mainRT.width;
+				float quadHeight = (_selectedQuadMeshverts[1].y - _selectedQuadMeshverts[0].y) * _mainRT.height;
 
-				// Center in GUI pixels
-				float centerX = rect.x + _selectedQuadMeshPos.x * rect.width;
-				float centerY = rect.y + _selectedQuadMeshPos.y * rect.height;
+				quadWidth *= rect.width / (_mainRT.width - BORDER * 2);
+				quadHeight *= rect.height / (_mainRT.height - BORDER * 2);
+
+				var renderW = _mainRT.width - BORDER * 2;
+				var borderX = (float)BORDER * _mainRT.width / renderW;
+				var renderH = _mainRT.height - BORDER * 2;
+				var borderY = (float)BORDER * _mainRT.height / renderH;
+
+				borderX *= rect.width / _mainRT.width;
+				borderY *= rect.height / _mainRT.height;
+
+				float selectedPosX = (_selectedQuadMeshverts[2].x + _selectedQuadMeshverts[0].x) * 0.5f * _mainRT.width;
+				float selectedPosY = (_selectedQuadMeshverts[1].y + _selectedQuadMeshverts[0].y) * 0.5f * _mainRT.height;
+
+				selectedPosX *= rect.width / (_mainRT.width - BORDER * 2);
+				selectedPosY *= rect.height / (_mainRT.height - BORDER * 2);
+
+				float centerX = selectedPosX - borderX + rect.x;
+				float centerY = selectedPosY - borderY + rect.y;
 
 				var selRect = new Rect(
 					centerX - quadWidth * 0.5f,
@@ -341,7 +471,7 @@ namespace MassiveHadronLtd
 					quadHeight
 				);
 
-				GUI.DrawTexture(selRect.ToGUIRect(), _selectedRT, ScaleMode.ScaleToFit, true);
+				GUI.DrawTexture(selRect.ToGUIRect(), _selectedRT, ScaleMode.StretchToFill, true);
 			}
 		}
 
@@ -441,6 +571,29 @@ namespace MassiveHadronLtd
 				}
 			}
 
+			if (_unitQuadMesh == null)
+			{
+				_unitQuadMesh = new Mesh
+				{
+					vertices = new Vector3[]
+					{
+						new Vector3(-0.5f, -0.5f, 0),   // BL
+						new Vector3(-0.5f,  0.5f, 0),   // TL
+						new Vector3( 0.5f,  0.5f, 0),   // TR
+						new Vector3( 0.5f, -0.5f, 0)    // BR
+					},
+					uv = new Vector2[]
+					{
+						new Vector2(0,0),
+						new Vector2(0,1),
+						new Vector2(1,1),
+						new Vector2(1,0)
+					},
+					triangles = new int[] { 0, 1, 2, 0, 2, 3 }
+				};
+				_unitQuadMesh.hideFlags = HideFlags.HideAndDontSave;
+			}
+
 			static Shader TryFindGoodShader()
 			{
 				return Shader.Find("Sprites/Default")
@@ -462,11 +615,22 @@ namespace MassiveHadronLtd
 				_selectedRT.Release();
 				_selectedRT = null;
 			}
+			if (_bgRT != null)
+			{
+				_bgRT.Release();
+				_bgRT = null;
+			}
 
 			if (_gridMesh != null) { Object.DestroyImmediate(_gridMesh); _gridMesh = null; }
 			if (_selectedQuadMesh != null) { Object.DestroyImmediate(_selectedQuadMesh); _selectedQuadMesh = null; }
 			if (_outlineMesh != null) { Object.DestroyImmediate(_outlineMesh); _outlineMesh = null; }
 			if (_backgroundMesh != null) { Object.DestroyImmediate(_backgroundMesh); _backgroundMesh = null; }
+
+			if (_unitQuadMesh != null)
+			{
+				Object.DestroyImmediate(_unitQuadMesh);
+				_unitQuadMesh = null;
+			}
 
 			_quadMaterial = null;
 			_outlineMaterial = null;
