@@ -20,22 +20,13 @@ namespace MassiveHadronLtd
 		private static bool _gridDirty = true;
 		private static bool _selectedDirty = true;
 
-		private const float SELECTED_SIZE = 4f;
-		private const float DELTA_TRANS_RATIO = 0.375f;
+		private static IGridIconAtlas _currentAtlas;
 
 		// Padding added around the icon grid when rendering to the RT
 		// (not part of the atlas itself)
 		public const int BORDER = 256;
-
-		private static IGridIconAtlas _currentAtlas;
-
-		//public static void SetAtlas(IGridIconAtlas atlas)
-		//{
-		//	_currentAtlas = atlas;
-		//	_gridDirty = _selectedDirty = true;
-		//}
-
-		//public static IGridIconAtlas GetAtlas() => _currentAtlas;
+		private const float SELECTED_SIZE = 4f;
+		private const float DELTA_TRANS_RATIO = 0.375f;
 
 		// ─────────────────────────────────────────────────────────────
 
