@@ -20,7 +20,8 @@ namespace ClassicTilestorm
 		private readonly float animSpeed = 3000f;
 		private readonly float triggerZoneHeight = 40f;
 
-		private const int COLUMNS = (4096 - ScreenSpaceUtil.BORDER * 2) / ScreenSpaceUtil.ICON_SIZE;
+		private const int ICON_SIZE = 128;
+		private const int COLUMNS = (4096 - ScreenSpaceUtil.BORDER * 2) / ICON_SIZE;
 		private int ROWS
 		{
 			get
@@ -73,7 +74,7 @@ namespace ClassicTilestorm
 		{
 			const int PANEL_BORDER = 32;
 
-			var RT = ScreenSpaceUtil.GetTexture();
+			var RT = ScreenSpaceUtil.GetAtlas()?.Texture;
 			if (null == RT) return;
 
 			float totalWidth = RT.width;
@@ -103,8 +104,8 @@ namespace ClassicTilestorm
 
 			// One-time atlas creation (you can also do it lazily later)
 			var atlas = DefinitionIconRenderUtil.CreateIconAtlas(
-				iconSize: ScreenSpaceUtil.ICON_SIZE,
-				columns: (4096 - ScreenSpaceUtil.BORDER * 2) / ScreenSpaceUtil.ICON_SIZE,
+				iconSize: ICON_SIZE,
+				columns: (4096 - ScreenSpaceUtil.BORDER * 2) / ICON_SIZE,
 				includeGround: false,           // ← tune as needed
 				background: null,
 				yaw: 35f,
@@ -277,7 +278,7 @@ namespace ClassicTilestorm
 			if (panelY > -panelHeight + 1f)
 			{
 				Vector2 mouseUV = gridScreenRect.NormalisedPoint(Input.mousePosition);
-				ScreenSpaceUtil.OnGUI(gridScreenRect, COLUMNS, ROWS, mouseUV);
+				ScreenSpaceUtil.OnGUI(gridScreenRect, mouseUV);
 			}
 		}
 
