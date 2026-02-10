@@ -28,14 +28,14 @@ namespace ClassicTilestorm
 
 		private static readonly Color semiTransparentBg = new Color(0.08f, 0.09f, 0.11f, 0.95f);
 
+		private const int ICON_SIZE = 128;
+		private const int PANEL_BORDER = 32;
+
 		public EditorControllerPaint(EditorController editorController) : base(editorController)
 		{
 			var defaultDef = ResourceManager.FindOrCreateDefaultTile();
 			selectedHashId = defaultDef.HashID;
 		}
-
-		private const int ICON_SIZE = 128;
-		private const int BORDER = 32;
 
 		private void CalculatePanelLayout()
 		{
@@ -55,7 +55,7 @@ namespace ClassicTilestorm
 			float totalWidth = COLUMNS * cellSize;
 			float totalHeight = ROWS * cellSize;
 
-			float margin = BORDER;
+			float margin = PANEL_BORDER;
 			float availWidth = Screen.width - 2f * margin;
 			float scale = Mathf.Min(1f, availWidth / totalWidth);
 
@@ -203,7 +203,13 @@ namespace ClassicTilestorm
 				EditMapTile();
 
 			if (Input.GetMouseButtonUp(1) && Vector3.Distance(Input.mousePosition, mouseDownPos) < 5f)
-				EditMapTile(erase: true);
+			{
+				var defaultDef = ResourceManager.FindOrCreateDefaultTile();
+				if (selectedHashId == defaultDef.HashID)
+					EditMapTile(erase: true);
+				else
+					selectedHashId = defaultDef.HashID;
+			}
 
 			var def = ResourceManager.GetDefinition(selectedHashId);
 			UpdateGhostMesh(camera, iMap, def);
