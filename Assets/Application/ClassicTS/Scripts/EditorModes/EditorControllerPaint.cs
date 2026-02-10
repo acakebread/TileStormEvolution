@@ -10,7 +10,7 @@ namespace ClassicTilestorm
 		private float previewAngle = 0f;
 		private float previewDelta = 0f;
 
-		private float panelY;                      // distance from BOTTOM of screen now
+		private float panelY;                      // distance from BOTTOM of screen
 		private float panelTargetY;
 		private float hideTimer = 0f;
 
@@ -23,18 +23,23 @@ namespace ClassicTilestorm
 		private const int COLUMNS = 28;
 		private int ROWS = 0;
 		private HashId[] gridHashIds;
-		private Rect gridScreenRect;               // ← now in normal screen coords (bottom-left origin)
+		private Rect gridScreenRect;               // in normal screen coords (bottom-left origin)
 		private bool mouseWasOverGridLastFrame = false;
+
+		// ─── New hover logic fields ─────────────────────────────────────
+		private bool mouseInTriggerZoneLastFrame = false;
+		private bool panelWasShownByValidHover = false;
 
 		private static readonly Color semiTransparentBg = new Color(0.08f, 0.09f, 0.11f, 0.95f);
 
 		private const int ICON_SIZE = 128;
 		private const int PANEL_BORDER = 32;
 
+		private HashId defaultHash => ResourceManager.FindOrCreateDefaultTile().HashID;
+
 		public EditorControllerPaint(EditorController editorController) : base(editorController)
 		{
-			var defaultDef = ResourceManager.FindOrCreateDefaultTile();
-			selectedHashId = defaultDef.HashID;
+			selectedHashId = defaultHash;
 		}
 
 		private void CalculatePanelLayout()
@@ -62,8 +67,7 @@ namespace ClassicTilestorm
 
 		private void CalculatePanelPosition()
 		{
-			if (ROWS == 0)
-				return;
+			if (ROWS == 0) return;
 
 			const float cellSize = ICON_SIZE;
 			float totalWidth = COLUMNS * cellSize;
@@ -80,7 +84,7 @@ namespace ClassicTilestorm
 
 			float x = (Screen.width - drawWidth) * 0.5f;
 			float gridBottomFromScreenBottom = panelY + margin;
-			float gridY = gridBottomFromScreenBottom;  // bottom of grid content
+			float gridY = gridBottomFromScreenBottom;
 
 			gridScreenRect = new Rect(x, gridY, drawWidth, drawHeight);
 		}
@@ -89,7 +93,7 @@ namespace ClassicTilestorm
 		{
 			return new Rect(
 				screenRect.x,
-				Screen.height - screenRect.yMax,  // flip: top edge in GUI space
+				Screen.height - screenRect.yMax,  // flip Y for GUI space
 				screenRect.width,
 				screenRect.height
 			);
@@ -101,7 +105,7 @@ namespace ClassicTilestorm
 
 			CalculatePanelGrid();
 
-			// Atlas generation (y-flip preserved for texture)
+			// Atlas generation
 			var defs = ResourceManager.Definitions;
 			int width = COLUMNS * ICON_SIZE;
 			int height = ROWS * ICON_SIZE;
@@ -153,16 +157,32 @@ namespace ClassicTilestorm
 			base.Update();
 			if (!camera) return;
 
-			// Panel visibility
-			bool nearBottom =Input.mousePosition.y <= triggerZoneHeight && !Input.GetMouseButton(0) && !Input.GetMouseButton(1);
-			bool overPanel = !allowHideDespiteMouseOverPanel && Input.mousePosition.y <= (panelY + panelHeight);
+			// ─── Improved panel visibility logic ────────────────────────────────
+			bool mouseInTriggerZoneThisFrame =
+				InputX.mouseInsideWindow &&
+				Input.mousePosition.y <= triggerZoneHeight;
 
-			bool wantsVisible = InputX.mouseInsideWindow && (nearBottom || overPanel);
+			bool justEnteredTriggerZoneCleanly =
+				!mouseInTriggerZoneLastFrame &&
+				mouseInTriggerZoneThisFrame &&
+				selectedHashId == defaultHash &&
+				!Input.GetMouseButton(0) &&
+				!Input.GetMouseButton(1) &&
+				!Input.GetMouseButton(2);
+
+			bool mouseOverPanel =
+				!allowHideDespiteMouseOverPanel &&
+				Input.mousePosition.y <= (panelY + panelHeight);
+
+			bool wantsVisible =
+				justEnteredTriggerZoneCleanly ||
+				(panelWasShownByValidHover && mouseOverPanel);
 
 			if (wantsVisible)
 			{
 				panelTargetY = 0f;
 				hideTimer = 0f;
+				panelWasShownByValidHover = true;
 			}
 			else
 			{
@@ -170,12 +190,22 @@ namespace ClassicTilestorm
 				if (hideTimer >= hideDelay)
 				{
 					panelTargetY = -panelHeight;
+
+					// Only reset the "shown by hover" flag once panel is basically gone
+					if (panelY <= -panelHeight + 1f)
+					{
+						panelWasShownByValidHover = false;
+					}
 				}
 			}
 
+			// Animate
 			panelY = Mathf.MoveTowards(panelY, panelTargetY, animSpeed * Time.deltaTime);
 
-			// Mouse testing — now direct in screen space
+			// Remember for next frame
+			mouseInTriggerZoneLastFrame = mouseInTriggerZoneThisFrame;
+
+			// ─── Existing grid / click handling ────────────────────────────────
 			bool mouseOverGridThisFrame = gridScreenRect.Contains(Input.mousePosition);
 
 			if (Input.GetMouseButtonDown(0))
@@ -184,7 +214,7 @@ namespace ClassicTilestorm
 				{
 					TrySelectTileFromGridClick(Input.mousePosition);
 
-					// INSTANT CLOSE
+					// INSTANT CLOSE after selection
 					panelTargetY = -panelHeight;
 					hideTimer = hideDelay;
 					allowHideDespiteMouseOverPanel = true;
@@ -210,8 +240,7 @@ namespace ClassicTilestorm
 
 			if (Input.GetMouseButtonUp(0) && Vector3.Distance(Input.mousePosition, mouseDownPos) < 5f)
 			{
-				var defaultDef = ResourceManager.FindOrCreateDefaultTile();
-				if (selectedHashId == defaultDef.HashID)
+				if (selectedHashId == defaultHash)
 				{
 					var worldPos = Map.ScreenToWorld(camera, Input.mousePosition);
 					var snapped = Map.SnappedMapPosition(worldPos);
@@ -220,9 +249,6 @@ namespace ClassicTilestorm
 					if (mapIndex != -1)
 					{
 						var current = iMap.GetVariantAt(mapIndex);
-						//var selDef = ResourceManager.GetDefinition(selectedHashId);
-						//bool isDefault = selDef?.IsDefault() ?? false;
-
 						selectedHashId = current.hash;
 						previewAngle = current.angle;
 						previewDelta = current.delta.y;
@@ -236,11 +262,10 @@ namespace ClassicTilestorm
 
 			if (Input.GetMouseButtonUp(1) && Vector3.Distance(Input.mousePosition, mouseDownPos) < 5f)
 			{
-				var defaultDef = ResourceManager.FindOrCreateDefaultTile();
-				if (selectedHashId == defaultDef.HashID)
+				if (selectedHashId == defaultHash)
 					EditMapTile(erase: true);
 				else
-					selectedHashId = defaultDef.HashID;
+					selectedHashId = defaultHash;
 			}
 
 			var def = ResourceManager.GetDefinition(selectedHashId);
@@ -251,7 +276,7 @@ namespace ClassicTilestorm
 		{
 			if (ROWS <= 0 || gridHashIds == null || gridHashIds.Length == 0) return;
 
-			Vector2 uv = gridScreenRect.NormalisedPoint(mousePos);  // assumes you have this extension
+			Vector2 uv = gridScreenRect.NormalisedPoint(mousePos);  // assumes extension method
 
 			int col = Mathf.Clamp(Mathf.FloorToInt(uv.x * COLUMNS), 0, COLUMNS - 1);
 			int row = Mathf.Clamp(Mathf.FloorToInt((1f - uv.y) * ROWS), 0, ROWS - 1);
@@ -274,7 +299,8 @@ namespace ClassicTilestorm
 			CalculatePanelLayout();
 
 			Rect guiPanelRect = new Rect(0, panelY, Screen.width, panelHeight);
-			GUI.Box(guiPanelRect.ToGUIRect(), GUIContent.none, new GUIStyle { normal = { background = TextureUtils.MakeTex(1, 1, semiTransparentBg) } });
+			GUI.Box(guiPanelRect.ToGUIRect(), GUIContent.none,
+				new GUIStyle { normal = { background = TextureUtils.MakeTex(1, 1, semiTransparentBg) } });
 
 			if (panelY > -panelHeight + 1f)
 			{
