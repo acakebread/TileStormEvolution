@@ -20,6 +20,8 @@ namespace ClassicTilestorm
 		private readonly float animSpeed = 3000f;
 		private readonly float triggerZoneHeight = 40f;
 
+		private IconAtlas _atlas;
+
 		private const int ICON_SIZE = 128;
 		private const int COLUMNS = (4096 - ScreenSpaceUtil.BORDER * 2) / ICON_SIZE;
 		private int ROWS
@@ -74,7 +76,7 @@ namespace ClassicTilestorm
 		{
 			const int PANEL_BORDER = 32;
 
-			var RT = ScreenSpaceUtil.GetAtlas()?.Texture;
+			var RT = _atlas?.Texture;
 			if (null == RT) return;
 
 			float totalWidth = RT.width;
@@ -100,10 +102,8 @@ namespace ClassicTilestorm
 		{
 			base.OnEnable();
 
-			CalculatePanelGrid();
-
-			// One-time atlas creation (you can also do it lazily later)
-			var atlas = DefinitionIconRenderUtil.CreateIconAtlas(
+			// One-time atlas creation
+			_atlas = DefinitionIconRenderUtil.CreateIconAtlas(
 				iconSize: ICON_SIZE,
 				columns: (4096 - ScreenSpaceUtil.BORDER * 2) / ICON_SIZE,
 				includeGround: false,           // ← tune as needed
@@ -112,15 +112,15 @@ namespace ClassicTilestorm
 				pitch: 30f
 			);
 
-			if (atlas != null)
-			{
-				//ScreenSpaceUtil.SetTexture(atlas.Texture);
-				ScreenSpaceUtil.SetAtlas(atlas);
-			}
-			else
-			{
+			if (null == _atlas)
 				Debug.LogWarning("Failed to generate icon atlas — grid will be empty.");
-			}
+
+			CalculatePanelGrid();
+
+			//if (_atlas != null)
+			//	ScreenSpaceUtil.SetAtlas(_atlas);
+			//else
+			//	Debug.LogWarning("Failed to generate icon atlas — grid will be empty.");
 
 			CalculatePanelPosition();
 			panelY = panelTargetY = -panelHeight;
@@ -249,19 +249,22 @@ namespace ClassicTilestorm
 
 		private void TrySelectTileFromGridClick(Vector2 mousePos)
 		{
-			if (ROWS <= 0 || ResourceManager.Definitions == null || ResourceManager.Definitions.Count == 0) return;
+			if (_atlas == null || ResourceManager.Definitions == null || ResourceManager.Definitions.Count == 0)
+				return;
 
-			Vector2 uv = gridScreenRect.NormalisedPoint(mousePos);  // assumes extension method
+			Vector2 uv = gridScreenRect.NormalisedPoint(mousePos);
 
-			int col = Mathf.Clamp(Mathf.FloorToInt(uv.x * COLUMNS), 0, COLUMNS - 1);
-			int row = Mathf.Clamp(Mathf.FloorToInt((1f - uv.y) * ROWS), 0, ROWS - 1);
-			int index = row * COLUMNS + col;
-
-			if (index < 0 || index >= ResourceManager.Definitions.Count) return;
-
-			var newHash = ResourceManager.Definitions[index].HashID;
-			if (newHash != default)
-				selectedHashId = newHash;
+			if (_atlas.TryGetIndex(uv, out int index))
+			{
+				if (index >= 0 && index < ResourceManager.Definitions.Count)
+				{
+					var newHash = ResourceManager.Definitions[index].HashID;
+					if (newHash != default)
+					{
+						selectedHashId = newHash;
+					}
+				}
+			}
 		}
 
 		public override void OnGUI()
@@ -278,7 +281,7 @@ namespace ClassicTilestorm
 			if (panelY > -panelHeight + 1f)
 			{
 				Vector2 mouseUV = gridScreenRect.NormalisedPoint(Input.mousePosition);
-				ScreenSpaceUtil.OnGUI(gridScreenRect, mouseUV);
+				ScreenSpaceUtil.OnGUI(_atlas, gridScreenRect, mouseUV);
 			}
 		}
 
