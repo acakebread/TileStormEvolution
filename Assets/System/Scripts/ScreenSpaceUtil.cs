@@ -38,6 +38,17 @@ namespace MassiveHadronLtd
 
 		public static Texture2D GetTexture() => _quadTexture;
 
+		private static IGridIconAtlas _currentAtlas;
+
+		public static void SetAtlas(IGridIconAtlas atlas)
+		{
+			_currentAtlas = atlas;
+			SetTexture(atlas?.Texture);  // reuse your existing SetTexture
+										 // You can later use atlas.CellSize, atlas.Columns, atlas.Rows if needed
+		}
+
+		public static IGridIconAtlas GetAtlas() => _currentAtlas;
+
 		// ─────────────────────────────────────────────────────────────
 
 		private static void RebuildGridMeshIfNeeded(int numColumns, int numRows, Vector2 point)

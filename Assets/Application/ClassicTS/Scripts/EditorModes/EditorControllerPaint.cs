@@ -43,6 +43,8 @@ namespace ClassicTilestorm
 
 		private HashId defaultHash => ResourceManager.FindOrCreateDefaultTile().HashID;
 
+		protected override bool IsMouseOverGUI() => base.IsMouseOverGUI() || Input.mousePosition.y <= (panelY + panelHeight);
+
 		public EditorControllerPaint(EditorController editorController) : base(editorController)
 		{
 			selectedHashId = defaultHash;
@@ -100,7 +102,7 @@ namespace ClassicTilestorm
 			CalculatePanelGrid();
 
 			// One-time atlas creation (you can also do it lazily later)
-			var atlas = DefinitionIconRenderUtil.GenerateIconAtlas(
+			var atlas = DefinitionIconRenderUtil.CreateIconAtlas(
 				iconSize: ScreenSpaceUtil.ICON_SIZE,
 				columns: (4096 - ScreenSpaceUtil.BORDER * 2) / ScreenSpaceUtil.ICON_SIZE,
 				includeGround: false,           // ← tune as needed
@@ -111,7 +113,8 @@ namespace ClassicTilestorm
 
 			if (atlas != null)
 			{
-				ScreenSpaceUtil.SetTexture(atlas);
+				//ScreenSpaceUtil.SetTexture(atlas.Texture);
+				ScreenSpaceUtil.SetAtlas(atlas);
 			}
 			else
 			{
@@ -277,8 +280,6 @@ namespace ClassicTilestorm
 				ScreenSpaceUtil.OnGUI(gridScreenRect, COLUMNS, ROWS, mouseUV);
 			}
 		}
-
-		protected override bool IsMouseOverGUI() => base.IsMouseOverGUI() || Input.mousePosition.y <= (panelY + panelHeight);
 
 		private void UpdateGhostMesh(Camera cam, IMapEdit map, Definition def)
 		{
