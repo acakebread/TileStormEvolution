@@ -349,7 +349,7 @@ namespace ClassicTilestorm
 					if (aIdx == 0) dIdx = (dIdx + 1) % deltas.Length;
 
 					previewAngle = angles[aIdx];
-					previewDelta = new Vector3(0f,deltas[dIdx],0f);
+					previewDelta = new Vector3(current.delta.x, deltas[dIdx], current.delta.z);
 				}
 			}
 
