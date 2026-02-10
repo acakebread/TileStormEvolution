@@ -8,22 +8,31 @@ namespace ClassicTilestorm
 	{
 		private HashId selectedHashId;
 		private float previewAngle = 0f;
-		private Vector3 previewDelta = new Vector3();
+		private Vector3 previewDelta = new ();
 
-		private float panelY;                      // distance from BOTTOM of screen
+		private float panelHeight = 0f;
+		private float panelY;
 		private float panelTargetY;
+
 		private float hideTimer = 0f;
-
 		private bool allowHideDespiteMouseOverPanel = false;
-
 		private readonly float hideDelay = 0.25f;
 		private readonly float animSpeed = 3000f;
-		private readonly float triggerZoneHeight = 40f;   // distance from bottom to trigger show
-		private float panelHeight = 100f;
-		private const int COLUMNS = 28;
-		private int ROWS = 0;
-		private HashId[] gridHashIds;
-		private Rect gridScreenRect;               // in normal screen coords (bottom-left origin)
+		private readonly float triggerZoneHeight = 40f;
+
+		private const int COLUMNS = (4096 - ScreenSpaceUtil.BORDER * 2) / ScreenSpaceUtil.ICON_SIZE;
+		private int ROWS
+		{
+			get
+			{
+				var defs = ResourceManager.Definitions;
+				if (null == defs || 0 == defs.Count)
+					return 0;
+				return Mathf.CeilToInt((float)defs.Count / COLUMNS);
+			}
+		}
+
+		private Rect gridScreenRect;
 		private bool mouseWasOverGridLastFrame = false;
 
 		// ─── New hover logic fields ─────────────────────────────────────
@@ -31,9 +40,6 @@ namespace ClassicTilestorm
 		private bool panelWasShownByValidHover = false;
 
 		private static readonly Color semiTransparentBg = new Color(0.08f, 0.09f, 0.11f, 0.95f);
-
-		private const int ICON_SIZE = 128;
-		private const int PANEL_BORDER = 32;
 
 		private HashId defaultHash => ResourceManager.FindOrCreateDefaultTile().HashID;
 
@@ -53,25 +59,23 @@ namespace ClassicTilestorm
 			var defs = ResourceManager.Definitions;
 			if (defs == null || defs.Count == 0)
 			{
-				ROWS = 0;
-				gridHashIds = Array.Empty<HashId>();
 				panelHeight = 0f;
 				gridScreenRect = Rect.zero;
 				return;
 			}
-
-			ROWS = Mathf.CeilToInt((float)defs.Count / COLUMNS);
 
 			CalculatePanelPosition();
 		}
 
 		private void CalculatePanelPosition()
 		{
-			if (ROWS == 0) return;
+			const int PANEL_BORDER = 32;
 
-			const float cellSize = ICON_SIZE;
-			float totalWidth = COLUMNS * cellSize;
-			float totalHeight = ROWS * cellSize;
+			var RT = ScreenSpaceUtil.GetTexture();
+			if (null == RT) return;
+
+			float totalWidth = RT.width;
+			float totalHeight = RT.height;
 
 			float margin = PANEL_BORDER;
 			float availWidth = Screen.width - 2f * margin;
@@ -89,16 +93,6 @@ namespace ClassicTilestorm
 			gridScreenRect = new Rect(x, gridY, drawWidth, drawHeight);
 		}
 
-		private Rect ToGUIRect(Rect screenRect)
-		{
-			return new Rect(
-				screenRect.x,
-				Screen.height - screenRect.yMax,  // flip Y for GUI space
-				screenRect.width,
-				screenRect.height
-			);
-		}
-
 		public override void OnEnable()
 		{
 			base.OnEnable();
@@ -107,8 +101,8 @@ namespace ClassicTilestorm
 
 			// Atlas generation
 			var defs = ResourceManager.Definitions;
-			int width = COLUMNS * ICON_SIZE;
-			int height = ROWS * ICON_SIZE;
+			int width = COLUMNS * ScreenSpaceUtil.ICON_SIZE;
+			int height = ROWS * ScreenSpaceUtil.ICON_SIZE;
 
 			var atlas = new Texture2D(width, height, TextureFormat.RGBA32, false)
 			{
@@ -121,23 +115,20 @@ namespace ClassicTilestorm
 			Array.Fill(blank, new Color(0, 0, 0, 0));
 			atlas.SetPixels(blank);
 
-			gridHashIds = new HashId[defs.Count];
-
 			for (int i = 0; i < defs.Count; i++)
 			{
 				var def = defs[i];
-				gridHashIds[i] = def.HashID;
 				if (def == null || string.IsNullOrEmpty(def.model)) continue;
 
-				Texture2D icon = DefinitionIconRenderUtil.GenerateIcon(def, ICON_SIZE);
+				Texture2D icon = DefinitionIconRenderUtil.GenerateIcon(def, ScreenSpaceUtil.ICON_SIZE);
 				if (icon == null) continue;
 
 				int col = i % COLUMNS;
 				int row = i / COLUMNS;
-				int x = col * ICON_SIZE;
-				int y = (ROWS - 1 - row) * ICON_SIZE;  // flip Y for texture
+				int x = col * ScreenSpaceUtil.ICON_SIZE;
+				int y = (ROWS - 1 - row) * ScreenSpaceUtil.ICON_SIZE;  // flip Y for texture
 
-				atlas.SetPixels(x, y, ICON_SIZE, ICON_SIZE, icon.GetPixels());
+				atlas.SetPixels(x, y, ScreenSpaceUtil.ICON_SIZE, ScreenSpaceUtil.ICON_SIZE, icon.GetPixels());
 
 				UnityEngine.Object.DestroyImmediate(icon);
 			}
@@ -274,7 +265,7 @@ namespace ClassicTilestorm
 
 		private void TrySelectTileFromGridClick(Vector2 mousePos)
 		{
-			if (ROWS <= 0 || gridHashIds == null || gridHashIds.Length == 0) return;
+			if (ROWS <= 0 || ResourceManager.Definitions == null || ResourceManager.Definitions.Count == 0) return;
 
 			Vector2 uv = gridScreenRect.NormalisedPoint(mousePos);  // assumes extension method
 
@@ -282,13 +273,11 @@ namespace ClassicTilestorm
 			int row = Mathf.Clamp(Mathf.FloorToInt((1f - uv.y) * ROWS), 0, ROWS - 1);
 			int index = row * COLUMNS + col;
 
-			if (index < 0 || index >= gridHashIds.Length) return;
+			if (index < 0 || index >= ResourceManager.Definitions.Count) return;
 
-			var newHash = gridHashIds[index];
+			var newHash = ResourceManager.Definitions[index].HashID;
 			if (newHash != default)
-			{
 				selectedHashId = newHash;
-			}
 		}
 
 		public override void OnGUI()
@@ -304,17 +293,12 @@ namespace ClassicTilestorm
 
 			if (panelY > -panelHeight + 1f)
 			{
-				Rect guiGridRect = ToGUIRect(gridScreenRect);
 				Vector2 mouseUV = gridScreenRect.NormalisedPoint(Input.mousePosition);
 				ScreenSpaceUtil.OnGUI(gridScreenRect, COLUMNS, ROWS, mouseUV);
 			}
 		}
 
-		protected override bool IsMouseOverGUI()
-		{
-			var mp = Input.mousePosition;
-			return base.IsMouseOverGUI() || mp.y <= (panelY + panelHeight);
-		}
+		protected override bool IsMouseOverGUI() => base.IsMouseOverGUI() || Input.mousePosition.y <= (panelY + panelHeight);
 
 		private void UpdateGhostMesh(Camera cam, IMapEdit map, Definition def)
 		{

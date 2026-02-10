@@ -23,10 +23,10 @@ namespace MassiveHadronLtd
 		private static bool _gridDirty = true;
 		private static bool _selectedDirty = true;
 
-		private const int CELL_SIZE = 128;
+		public const int BORDER = 256;
+		public const int ICON_SIZE = 128;
 		private const float SELECTED_SIZE = 4f;
 		private const float DELTA_TRANS_RATIO = 0.375f;
-		private const int BORDER = 256;
 
 		public static void SetTexture(Texture2D value)
 		{
@@ -72,8 +72,8 @@ namespace MassiveHadronLtd
 				}
 			}
 
-			int corePixelWidth = numColumns * CELL_SIZE;
-			int corePixelHeight = numRows * CELL_SIZE;
+			int corePixelWidth = numColumns * ICON_SIZE;
+			int corePixelHeight = numRows * ICON_SIZE;
 			int paddedPixelWidth = corePixelWidth + 2 * BORDER;
 			int paddedPixelHeight = corePixelHeight + 2 * BORDER;
 
@@ -199,8 +199,8 @@ namespace MassiveHadronLtd
 			LazyInitResources();
 			RebuildGridMeshIfNeeded(numColumns, numRows, coord);
 
-			int w = numColumns * CELL_SIZE + 2 * BORDER;
-			int h = numRows * CELL_SIZE + 2 * BORDER;
+			int w = numColumns * ICON_SIZE + 2 * BORDER;
+			int h = numRows * ICON_SIZE + 2 * BORDER;
 
 			if (_mainRT == null || _mainRT.width != w || _mainRT.height != h)
 			{
@@ -230,7 +230,7 @@ namespace MassiveHadronLtd
 		{
 			if (_selectedQuadMesh == null) return;
 
-			int selSize = Mathf.CeilToInt(CELL_SIZE * SELECTED_SIZE);
+			int selSize = Mathf.CeilToInt(ICON_SIZE * SELECTED_SIZE);
 
 			if (_selectedRT == null || _selectedRT.width != selSize)
 			{
