@@ -15,8 +15,8 @@ namespace ClassicTilestorm
 		public float angle;           // degrees, usually 0/90/180/270
 		public Vector3 delta;           // local position offset
 
-		public Variant(HashId h) : this(h, 0f, Vector3.zero) { }
-		public Variant(HashId h, float rotationDegrees, Vector3 offset)
+		public Variant(HashId h) : this(h, Vector3.zero, 0f) { }
+		public Variant(HashId h, Vector3 offset, float rotationDegrees)
 		{
 			hash = h;
 			angle = rotationDegrees;
@@ -621,7 +621,7 @@ namespace ClassicTilestorm
 				.ToList();
 
 			var newVariants = grouped
-				.Select(g => new Variant(g.Variant.hash, g.Variant.angle, g.Variant.delta))
+				.Select(g => new Variant(g.Variant.hash, g.Variant.delta, g.Variant.angle))
 				.ToArray();
 
 			// Build lookup: old key → new index
@@ -860,7 +860,7 @@ namespace ClassicTilestorm
 			solve = solve != null ? (int[])solve.Clone() : null,
 
 			attachments = attachments != null ? attachments.Select(a => a.ShallowClone()).ToArray() : Array.Empty<MapAttachment>(),
-			variants = variants != null ? variants.Select(v => new Variant(v.hash, v.angle, v.delta)).ToArray() : Array.Empty<Variant>()
+			variants = variants != null ? variants.Select(v => new Variant(v.hash, v.delta, v.angle)).ToArray() : Array.Empty<Variant>()
 		};
 
 		public int CameraHitTile(Camera camera, Vector3 position) => WorldToMapIndex(ScreenToWorld(camera, position));
@@ -1016,7 +1016,7 @@ namespace ClassicTilestorm
 			// If no exact match → create new variant
 			if (tableIndex == -1)
 			{
-				var newVariant = new Variant(hashId, angle, delta);
+				var newVariant = new Variant(hashId, delta, angle);
 
 				variants = variants != null
 					? variants.Concat(new[] { newVariant }).ToArray()
@@ -1161,7 +1161,7 @@ namespace ClassicTilestorm
 			var defaultHash = defaultDef.HashID;
 
 			// Minimal variant table: just the default tile (angle=0, delta=0)
-			variants = new Variant[] { new Variant(defaultHash, 0f, Vector3.zero) };
+			variants = new Variant[] { new Variant(defaultHash, Vector3.zero, 0f) };
 
 			// Every position in the grid points to variant index 0
 			int tileCount = width * height;

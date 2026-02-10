@@ -8,7 +8,7 @@ namespace ClassicTilestorm
 	{
 		private HashId selectedHashId;
 		private float previewAngle = 0f;
-		private float previewDelta = 0f;
+		private Vector3 previewDelta = new Vector3();
 
 		private float panelY;                      // distance from BOTTOM of screen
 		private float panelTargetY;
@@ -251,7 +251,7 @@ namespace ClassicTilestorm
 						var current = iMap.GetVariantAt(mapIndex);
 						selectedHashId = current.hash;
 						previewAngle = current.angle;
-						previewDelta = current.delta.y;
+						previewDelta = current.delta;
 					}
 				}
 				else
@@ -329,7 +329,7 @@ namespace ClassicTilestorm
 			var mapIndex = map.WorldToMapIndex(snapped);
 
 			previewAngle = 0f;
-			previewDelta = 0f;
+			previewDelta = Vector3.zero;
 
 			if (mapIndex != -1)
 			{
@@ -349,12 +349,12 @@ namespace ClassicTilestorm
 					if (aIdx == 0) dIdx = (dIdx + 1) % deltas.Length;
 
 					previewAngle = angles[aIdx];
-					previewDelta = deltas[dIdx];
+					previewDelta = new Vector3(0f,deltas[dIdx],0f);
 				}
 			}
 
 			bool oob = mapIndex == -1;
-			var variant = new Variant(selectedHashId, previewAngle, new Vector3(0f, previewDelta, 0f));
+			var variant = new Variant(selectedHashId, previewDelta, previewAngle);
 			EditorMeshUtil.UpdateGhostMesh(variant, snapped, oob);
 		}
 
@@ -373,7 +373,7 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			iMap.UpdateTileAt(px, pz, selectedHashId, new Vector3(0f, previewDelta, 0f), previewAngle);
+			iMap.UpdateTileAt(px, pz, selectedHashId, previewDelta, previewAngle);
 		}
 
 		public override void OnDisable() => EditorMeshUtil.HideGhostMesh();
