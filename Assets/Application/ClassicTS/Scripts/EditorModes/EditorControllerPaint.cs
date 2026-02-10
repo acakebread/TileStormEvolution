@@ -200,7 +200,30 @@ namespace ClassicTilestorm
 				mouseDownPos = Input.mousePosition;
 
 			if (Input.GetMouseButtonUp(0) && Vector3.Distance(Input.mousePosition, mouseDownPos) < 5f)
-				EditMapTile();
+			{
+				var defaultDef = ResourceManager.FindOrCreateDefaultTile();
+				if (selectedHashId == defaultDef.HashID)
+				{
+					var worldPos = Map.ScreenToWorld(camera, Input.mousePosition);
+					var snapped = Map.SnappedMapPosition(worldPos);
+					var mapIndex = iMap.WorldToMapIndex(snapped);
+
+					if (mapIndex != -1)
+					{
+						var current = iMap.GetVariantAt(mapIndex);
+						//var selDef = ResourceManager.GetDefinition(selectedHashId);
+						//bool isDefault = selDef?.IsDefault() ?? false;
+
+						selectedHashId = current.hash;
+						previewAngle = current.angle;
+						previewDelta = current.delta.y;
+					}
+				}
+				else
+				{
+					EditMapTile();
+				}
+			}
 
 			if (Input.GetMouseButtonUp(1) && Vector3.Distance(Input.mousePosition, mouseDownPos) < 5f)
 			{

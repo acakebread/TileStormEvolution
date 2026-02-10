@@ -141,7 +141,7 @@ namespace ClassicTilestorm
 			if (null == definition) return;
 
 			// Reuse same helpers, but pass variant.angle and add delta to y
-			if (null == currentDefinition || currentDefinition.HashID != variant.hash)
+			if (null == ghostMesh || null == currentDefinition || currentDefinition.HashID != variant.hash)
 			{
 				CreateMesh();
 				return;
