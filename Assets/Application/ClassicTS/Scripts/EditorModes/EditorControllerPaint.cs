@@ -99,46 +99,6 @@ namespace ClassicTilestorm
 
 			CalculatePanelGrid();
 
-			//// Atlas generation
-			//var defs = ResourceManager.Definitions;
-			//int width = COLUMNS * ScreenSpaceUtil.ICON_SIZE;
-			//int height = ROWS * ScreenSpaceUtil.ICON_SIZE;
-
-			//var atlas = new Texture2D(width, height, TextureFormat.RGBA32, false)
-			//{
-			//	filterMode = FilterMode.Point,
-			//	wrapMode = TextureWrapMode.Clamp,
-			//	name = "DefinitionIconAtlas"
-			//};
-
-			//Color[] blank = new Color[width * height];
-			//Array.Fill(blank, new Color(0, 0, 0, 0));
-			//atlas.SetPixels(blank);
-
-			//for (int i = 0; i < defs.Count; i++)
-			//{
-			//	var def = defs[i];
-			//	if (def == null || string.IsNullOrEmpty(def.model)) continue;
-
-			//	Texture2D icon = DefinitionIconRenderUtil.GenerateIcon(def, ScreenSpaceUtil.ICON_SIZE);
-			//	if (icon == null) continue;
-
-			//	int col = i % COLUMNS;
-			//	int row = i / COLUMNS;
-			//	int x = col * ScreenSpaceUtil.ICON_SIZE;
-			//	int y = (ROWS - 1 - row) * ScreenSpaceUtil.ICON_SIZE;  // flip Y for texture
-
-			//	atlas.SetPixels(x, y, ScreenSpaceUtil.ICON_SIZE, ScreenSpaceUtil.ICON_SIZE, icon.GetPixels());
-
-			//	UnityEngine.Object.DestroyImmediate(icon);
-			//}
-
-			//atlas.Apply(true, false);
-
-			//ScreenSpaceUtil.SetTexture(atlas);
-			//Debug.Log($"Icon atlas: {width}×{height}, {defs.Count} icons, panelHeight={panelHeight}");
-
-
 			// One-time atlas creation (you can also do it lazily later)
 			var atlas = DefinitionIconRenderUtil.GenerateIconAtlas(
 				iconSize: ScreenSpaceUtil.ICON_SIZE,
