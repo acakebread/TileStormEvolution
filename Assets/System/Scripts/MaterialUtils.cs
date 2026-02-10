@@ -350,6 +350,7 @@ namespace MassiveHadronLtd
 			material.SetFloat("_SrcBlend", (float)BlendMode.SrcAlpha);
 			material.SetFloat("_DstBlend", (float)BlendMode.OneMinusSrcAlpha);
 			material.SetFloat("_ZWrite", 0f);
+
 			material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
 			material.SetOverrideTag("RenderType", "Transparent");
 			// Clear all effect-specific properties
@@ -366,6 +367,52 @@ namespace MassiveHadronLtd
 			if (material.HasProperty("_NoiseScale"))
 				material.SetFloat("_NoiseScale", 0);
 			return material;
+		}
+
+		public static Material CreateAlwaysOnTopUnlitMaterial(
+			Color baseColor = default,
+			bool ignoreDepthTest = true,     // ← controls ZTest Never / Always
+			bool disableDepthWrite = true)     // ← usually want this true
+		{
+			//var shader = Shader.Find("Universal Render Pipeline/Unlit");
+			//if (shader == null)
+			//{
+			//	Debug.LogError("URP Unlit shader not found. Is URP installed and set as active render pipeline?");
+			//	return null;
+			//}
+
+			var shader = Shader.Find("Custom/AlwaysOnTopUnlit");
+			if (shader == null)
+			{
+				Debug.LogError("Custom/AlwaysOnTopUnlit shader not found.");
+				return null;
+			}
+
+			var mat = new Material(shader)
+			{
+				// Important: place it after all normal transparent objects
+				renderQueue = (int)RenderQueue.Overlay   // 4000 — very late
+			};
+
+			// Core transparent blending
+			mat.SetFloat("_Surface", 1f);                    // Transparent
+			mat.SetFloat("_SrcBlend", (float)BlendMode.SrcAlpha);
+			mat.SetFloat("_DstBlend", (float)BlendMode.OneMinusSrcAlpha);
+			mat.SetFloat("_ZWrite", disableDepthWrite ? 0f : 1f);
+			mat.SetInt("_ZTest", ignoreDepthTest ? (int)CompareFunction.Always : (int)CompareFunction.LessEqual);
+
+			mat.SetColor("_BaseColor", baseColor == default ? Color.white : baseColor);
+
+			// Make sure URP knows it's transparent
+			mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+			mat.SetOverrideTag("RenderType", "Transparent");
+
+			// Optional: prevent any texture/noise/effect interference
+			mat.SetTexture("_MainTex", null);
+			if (mat.HasProperty("_BumpMap")) mat.SetTexture("_BumpMap", null);
+			if (mat.HasProperty("_EmissionMap")) mat.SetTexture("_EmissionMap", null);
+
+			return mat;
 		}
 
 		public static Material CreateOpaqueUnlitMaterial(Color baseColor)

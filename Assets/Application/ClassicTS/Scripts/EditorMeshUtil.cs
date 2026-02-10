@@ -20,14 +20,14 @@ namespace ClassicTilestorm
 		{
 			if (ghostMaterial == null)
 			{
-				ghostMaterial = MaterialUtils.CreateTransparentUnlitMaterial(new Color(1f, 1f, 1f, 0.5f));
+				ghostMaterial = MaterialUtils.CreateAlwaysOnTopUnlitMaterial(new Color(1f, 1f, 1f, 0.5f));
 				if (ghostMaterial == null)
 					Debug.LogError("GeometryUtil: Failed to create transparent unlit material.");
 			}
 
 			if (ghostMaterialInvalid == null)
 			{
-				ghostMaterialInvalid = MaterialUtils.CreateTransparentUnlitMaterial(new Color(1f, 0f, 0f, 0.5f));
+				ghostMaterialInvalid = MaterialUtils.CreateAlwaysOnTopUnlitMaterial(new Color(1f, 0f, 0f, 0.5f));
 				if (ghostMaterialInvalid == null)
 					Debug.LogError("GeometryUtil: Failed to create invalid ghost material.");
 			}
@@ -170,8 +170,8 @@ namespace ClassicTilestorm
 
 				ghostMesh.name = "GhostMesh";
 
-				foreach (var collider in ghostMesh.GetComponentsInChildren<Collider>())
-					Object.DestroyImmediate(collider);
+				//foreach (var collider in ghostMesh.GetComponentsInChildren<Collider>())
+				//	Object.DestroyImmediate(collider);
 
 				currentDefinition = definition;
 
@@ -194,10 +194,12 @@ namespace ClassicTilestorm
 			{
 				if (null == ghostMesh) return;
 
-				var targetMaterial = outOfBounds ? ghostMaterialInvalid : ghostMaterial;
+				ghostMesh.SetAllMaterials(outOfBounds ? ghostMaterialInvalid : ghostMaterial);
 
-				foreach (var renderer in ghostMesh.GetComponentsInChildren<MeshRenderer>())
-					renderer.material = targetMaterial;
+				//var targetMaterial = outOfBounds ? ghostMaterialInvalid : ghostMaterial;
+
+				//foreach (var renderer in ghostMesh.GetComponentsInChildren<MeshRenderer>())
+				//	renderer.material = targetMaterial;
 			}
 		}
 

@@ -39,6 +39,12 @@ namespace ClassicTilestorm
 
 		private void CalculatePanelLayout()
 		{
+			CalculatePanelGrid();
+			CalculatePanelPosition();
+		}
+
+		private void CalculatePanelGrid()
+		{
 			var defs = ResourceManager.Definitions;
 			if (defs == null || defs.Count == 0)
 			{
@@ -50,6 +56,14 @@ namespace ClassicTilestorm
 			}
 
 			ROWS = Mathf.CeilToInt((float)defs.Count / COLUMNS);
+
+			CalculatePanelPosition();
+		}
+
+		private void CalculatePanelPosition()
+		{
+			if (ROWS == 0)
+				return;
 
 			const float cellSize = ICON_SIZE;
 			float totalWidth = COLUMNS * cellSize;
@@ -85,16 +99,7 @@ namespace ClassicTilestorm
 		{
 			base.OnEnable();
 
-			CalculatePanelLayout();
-
-			if (ROWS <= 0)
-			{
-				Debug.LogWarning("No definitions → no grid icons");
-				return;
-			}
-
-			panelY = -panelHeight;           // start hidden below screen
-			panelTargetY = -panelHeight;
+			CalculatePanelGrid();
 
 			// Atlas generation (y-flip preserved for texture)
 			var defs = ResourceManager.Definitions;
@@ -134,9 +139,13 @@ namespace ClassicTilestorm
 			}
 
 			atlas.Apply(true, false);
-			ScreenSpaceUtil.SetTexture(atlas);
 
+			ScreenSpaceUtil.SetTexture(atlas);
 			Debug.Log($"Icon atlas: {width}×{height}, {defs.Count} icons, panelHeight={panelHeight}");
+
+			CalculatePanelPosition();
+			panelY = panelTargetY = -panelHeight;
+			CalculatePanelPosition();
 		}
 
 		public override void Update()
@@ -145,10 +154,10 @@ namespace ClassicTilestorm
 			if (!camera) return;
 
 			// Panel visibility
-			bool nearBottom = Input.mousePosition.y <= triggerZoneHeight && !Input.GetMouseButton(0) && !Input.GetMouseButton(1);
+			bool nearBottom =Input.mousePosition.y <= triggerZoneHeight && !Input.GetMouseButton(0) && !Input.GetMouseButton(1);
 			bool overPanel = !allowHideDespiteMouseOverPanel && Input.mousePosition.y <= (panelY + panelHeight);
 
-			bool wantsVisible = nearBottom || overPanel;
+			bool wantsVisible = InputX.mouseInsideWindow && (nearBottom || overPanel);
 
 			if (wantsVisible)
 			{

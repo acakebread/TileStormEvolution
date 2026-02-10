@@ -214,5 +214,90 @@ namespace MassiveHadronLtd
 			// Project onto plane perpendicular to normal
 			return Vector3.ProjectOnPlane(best, normal).normalized;
 		}
+
+		public static Renderer[] CollectAllRenderers(this GameObject root, bool includeInactive = true)
+		{
+			if (root == null) return System.Array.Empty<Renderer>();
+			return root.GetComponentsInChildren<Renderer>(includeInactive);
+		}
+
+		public static void SetAllMaterials(
+			this GameObject root,
+			Material overrideMaterial,
+			bool includeInactive = true,
+			System.Action<Material> modifyCopy = null)   // optional: let caller tint / set properties
+		{
+			if (root == null || overrideMaterial == null) return;
+
+			var renderers = root.GetComponentsInChildren<Renderer>(includeInactive);
+
+			int count = 0;
+
+			foreach (var rend in renderers)
+			{
+				if (rend == null) continue;
+
+				var original = rend.sharedMaterials;
+				if (original == null || original.Length == 0)
+				{
+					rend.material = overrideMaterial;
+					count++;
+					continue;
+				}
+
+				var replacementArray = new Material[original.Length];
+
+				for (int i = 0; i < original.Length; i++)
+				{
+					if (original[i] == null)
+					{
+						replacementArray[i] = null;
+						continue;
+					}
+
+					var copy = new Material(overrideMaterial);
+
+					modifyCopy?.Invoke(copy);
+
+					replacementArray[i] = copy;
+				}
+
+				rend.materials = replacementArray;
+				count++;
+			}
+		}
 	}
 }
+
+//public static void SetAllMaterials(this GameObject root, Material overrideMat, bool includeInactive = true)
+//{
+//	if (root == null || overrideMat == null) return;
+
+//	var renderers = root.GetComponentsInChildren<Renderer>(includeInactive);
+
+//	int count = 0;
+
+//	foreach (var rend in renderers)
+//	{
+//		if (rend == null) continue;
+
+//		var originalMats = rend.sharedMaterials;
+
+//		if (originalMats == null || originalMats.Length == 0)
+//		{
+//			rend.material = overrideMat;
+//			count++;
+//			continue;
+//		}
+
+//		var newMats = new Material[originalMats.Length];
+//		for (int i = 0; i < newMats.Length; i++)
+//		{
+//			newMats[i] = overrideMat;
+//		}
+
+//		rend.materials = newMats;
+
+//		count++;
+//	}
+//}
