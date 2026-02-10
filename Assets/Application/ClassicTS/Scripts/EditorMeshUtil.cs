@@ -33,33 +33,40 @@ namespace ClassicTilestorm
 			}
 		}
 
-		// Update or create the ghost mesh at the mouse position
-		public static void UpdateGhostMesh(Definition definition, Vector3 position, float angle, bool outOfBounds)
+		// New overload: takes Variant directly (uses hash, angle, delta from variant)
+		public static void UpdateGhostMesh(Variant variant, Vector3 position, bool outOfBounds)
 		{
-			if (null == definition) return;
+			if (variant.hash == 0) return;  // invalid variant
 			InitializeGhostMaterial();
 
-			if (null == currentDefinition || currentDefinition.HashID != definition.HashID)
-			{
-				CreateMesh();
-				return;
-			}
-
-			// Nothing changed → early out
-			if (lastPosition == position &&
-				lastOutOfBounds == outOfBounds &&
-				Mathf.Approximately(lastAngle, angle))
+			// Early out if nothing changed (compare full variant + position + validity)
+			if (currentVariant.hash == variant.hash &&
+				Mathf.Approximately(currentVariant.angle, variant.angle) &&
+				Vector3LexComparer.ApproximatelyEqual(currentVariant.delta, variant.delta) &&
+				lastPosition == position &&
+				lastOutOfBounds == outOfBounds)
 			{
 				return;
 			}
 
 			// Update tracked values
+			currentDefinition = ResourceManager.GetDefinition(variant.hash);
+			// Get definition from hash (needed for model instantiation)
+			if (null == currentDefinition) return;
+
+			currentVariant = variant;
 			lastPosition = position;
-			lastAngle = angle;
+			lastAngle = variant.angle;
 			lastOutOfBounds = outOfBounds;
 
-			UpdateMesh();
+			// Reuse same helpers, but pass variant.angle and add delta to y
+			if (null == ghostMesh || null == currentDefinition || currentDefinition.HashID != variant.hash)
+			{
+				CreateMesh();
+				return;
+			}
 
+			UpdateMesh();
 
 			// ── Local helpers ────────────────────────────────────────────────────────
 
@@ -72,7 +79,88 @@ namespace ClassicTilestorm
 				}
 
 				ghostMesh = Assets.ModelAssets.Instantiate(
-					definition.model,
+					currentDefinition.model,
+					position + variant.delta,
+					Quaternion.Euler(0f, variant.angle, 0f),
+					parent: MainController.MapRoot);
+
+				if (null == ghostMesh) return;
+
+				ghostMesh.name = "GhostMesh";
+
+				foreach (var collider in ghostMesh.GetComponentsInChildren<Collider>())
+					Object.DestroyImmediate(collider);
+
+				UpdateMaterial();
+				ghostMesh.SetActive(true);
+			}
+
+			void UpdateMesh()
+			{
+				if (null == ghostMesh) return;
+
+				UpdateMaterial();
+
+				ghostMesh.transform.position = position + variant.delta;
+				ghostMesh.transform.rotation = Quaternion.Euler(0f, variant.angle, 0f);
+				ghostMesh.SetActive(true);
+			}
+
+			void UpdateMaterial()
+			{
+				if (null != ghostMesh)
+					ghostMesh.SetAllMaterials(outOfBounds ? ghostMaterialInvalid : ghostMaterial);
+			}
+		}
+
+		public static void UpdateGhostMesh(Definition definition, Vector3 position, float angle, bool outOfBounds)
+		{
+			if (null == definition) return;
+			InitializeGhostMaterial();
+
+			if (null == currentDefinition || currentDefinition.HashID != definition.HashID)
+			{
+				CreateMesh();
+				return;
+			}
+
+			// Early out if nothing changed (compare full variant + position + validity)
+			if (currentDefinition.HashID == definition.HashID &&
+				lastOutOfBounds == outOfBounds &&
+				lastPosition == position &&
+				lastOutOfBounds == outOfBounds)
+			{
+				return;
+			}
+
+			// Nothing changed → early out
+			if (lastPosition == position &&
+				lastOutOfBounds == outOfBounds &&
+				Mathf.Approximately(lastAngle, angle))
+			{
+				return;
+			}
+
+			// Update tracked values
+			currentDefinition = definition;
+			lastPosition = position;
+			lastAngle = angle;
+			lastOutOfBounds = outOfBounds;
+
+			UpdateMesh();
+
+			// ── Local helpers ────────────────────────────────────────────────────────
+
+			void CreateMesh()
+			{
+				if (null != ghostMesh)
+				{
+					Object.DestroyImmediate(ghostMesh);
+					ghostMesh = null;
+				}
+
+				ghostMesh = Assets.ModelAssets.Instantiate(
+					currentDefinition.model,
 					position,
 					Quaternion.Euler(0f, angle, 0f),
 					parent: MainController.MapRoot);
@@ -84,8 +172,6 @@ namespace ClassicTilestorm
 				// Remove any colliders baked into the prefab
 				foreach (var collider in ghostMesh.GetComponentsInChildren<Collider>())
 					Object.DestroyImmediate(collider);
-
-				currentDefinition = definition;
 
 				UpdateMaterial();
 				ghostMesh.SetActive(true);
@@ -104,105 +190,10 @@ namespace ClassicTilestorm
 
 			void UpdateMaterial()
 			{
-				if (null == ghostMesh) return;
-
-				var targetMaterial = outOfBounds ? ghostMaterialInvalid : ghostMaterial;
-
-				foreach (var renderer in ghostMesh.GetComponentsInChildren<MeshRenderer>())
-					renderer.material = targetMaterial;
-			}
-		}
-
-		// New overload: takes Variant directly (uses hash, angle, delta from variant)
-		public static void UpdateGhostMesh(Variant variant, Vector3 position, bool outOfBounds)
-		{
-			if (variant.hash == 0) return;  // invalid variant
-			InitializeGhostMaterial();
-
-			// Early out if nothing changed (compare full variant + position + validity)
-			if (currentVariant.hash == variant.hash &&
-				Mathf.Approximately(currentVariant.angle, variant.angle) &&
-				//Mathf.Approximately(currentVariant.delta, variant.delta) &&
-				(currentVariant.delta - variant.delta).sqrMagnitude <= 0.001f &&
-				lastPosition == position &&
-				lastOutOfBounds == outOfBounds)
-			{
-				return;
-			}
-
-			// Update tracked values
-			currentVariant = variant;
-			lastPosition = position;
-			lastAngle = variant.angle;
-			lastOutOfBounds = outOfBounds;
-
-			// Get definition from hash (needed for model instantiation)
-			var definition = ResourceManager.GetDefinition(variant.hash);
-			if (null == definition) return;
-
-			// Reuse same helpers, but pass variant.angle and add delta to y
-			if (null == ghostMesh || null == currentDefinition || currentDefinition.HashID != variant.hash)
-			{
-				CreateMesh();
-				return;
-			}
-
-			UpdateMesh();
-
-
-			// ── Local helpers (same as above, but using variant properties) ───────
-
-			void CreateMesh()
-			{
 				if (null != ghostMesh)
-				{
-					Object.DestroyImmediate(ghostMesh);
-					ghostMesh = null;
-				}
-
-				ghostMesh = Assets.ModelAssets.Instantiate(
-					definition.model,
-					position + variant.delta,//new Vector3(0f, variant.delta, 0f),
-					Quaternion.Euler(0f, variant.angle, 0f),
-					parent: MainController.MapRoot);
-
-				if (null == ghostMesh) return;
-
-				ghostMesh.name = "GhostMesh";
-
-				//foreach (var collider in ghostMesh.GetComponentsInChildren<Collider>())
-				//	Object.DestroyImmediate(collider);
-
-				currentDefinition = definition;
-
-				UpdateMaterial();
-				ghostMesh.SetActive(true);
-			}
-
-			void UpdateMesh()
-			{
-				if (null == ghostMesh) return;
-
-				UpdateMaterial();
-
-				ghostMesh.transform.position = position + variant.delta;//new Vector3(0f, variant.delta, 0f);
-				ghostMesh.transform.rotation = Quaternion.Euler(0f, variant.angle, 0f);
-				ghostMesh.SetActive(true);
-			}
-
-			void UpdateMaterial()
-			{
-				if (null == ghostMesh) return;
-
-				ghostMesh.SetAllMaterials(outOfBounds ? ghostMaterialInvalid : ghostMaterial);
-
-				//var targetMaterial = outOfBounds ? ghostMaterialInvalid : ghostMaterial;
-
-				//foreach (var renderer in ghostMesh.GetComponentsInChildren<MeshRenderer>())
-				//	renderer.material = targetMaterial;
+					ghostMesh.SetAllMaterials(outOfBounds ? ghostMaterialInvalid : ghostMaterial);
 			}
 		}
-
 
 		// Hide the ghost mesh
 		public static void HideGhostMesh()
