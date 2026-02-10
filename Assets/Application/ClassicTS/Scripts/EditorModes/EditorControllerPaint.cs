@@ -117,11 +117,6 @@ namespace ClassicTilestorm
 
 			CalculatePanelGrid();
 
-			//if (_atlas != null)
-			//	ScreenSpaceUtil.SetAtlas(_atlas);
-			//else
-			//	Debug.LogWarning("Failed to generate icon atlas — grid will be empty.");
-
 			CalculatePanelPosition();
 			panelY = panelTargetY = -panelHeight;
 			CalculatePanelPosition();
