@@ -117,9 +117,8 @@ namespace ClassicTilestorm
 			for (int i = 0; i < defs.Count; i++)
 			{
 				var def = defs[i];
-				if (def == null || string.IsNullOrEmpty(def.model)) continue;
-
 				gridHashIds[i] = def.HashID;
+				if (def == null || string.IsNullOrEmpty(def.model)) continue;
 
 				Texture2D icon = DefinitionIconRenderUtil.GenerateIcon(def, ICON_SIZE);
 				if (icon == null) continue;
@@ -146,7 +145,7 @@ namespace ClassicTilestorm
 			if (!camera) return;
 
 			// Panel visibility
-			bool nearBottom = Input.mousePosition.y <= triggerZoneHeight;
+			bool nearBottom = Input.mousePosition.y <= triggerZoneHeight && !Input.GetMouseButton(0) && !Input.GetMouseButton(1);
 			bool overPanel = !allowHideDespiteMouseOverPanel && Input.mousePosition.y <= (panelY + panelHeight);
 
 			bool wantsVisible = nearBottom || overPanel;
