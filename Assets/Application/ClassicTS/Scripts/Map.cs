@@ -287,13 +287,13 @@ namespace ClassicTilestorm
 		public Vector3 TileNormalisedWorldPosition(int index) => new(index % width, 0f, index / width);
 		public static Vector3 TileNormalisedSnappedMapPosition(Vector3 vec) => new (Mathf.FloorToInt(vec.x), 0f, Mathf.FloorToInt(vec.z));
 
-#if UNITY_EDITOR
-		public static readonly Vector3 tile_origin = new(0.5f, 0f, 0.5f);
+#if __UNITY_EDITOR
+		private static readonly Vector3 tile_origin = new(0.5f, 0f, 0.5f);
 		public Vector3 TileWorldPosition(int index) => TileNormalisedWorldPosition(index) + tile_origin;
 		public int WorldToMapIndex(Vector3 vec) => vec.x >= 0 && vec.x < width && vec.z >= 0 && vec.z < height ? (int)vec.z * width + (int)vec.x : -1;
 		public static Vector3 SnappedMapPosition(Vector3 vec) => new Vector3(Mathf.FloorToInt(vec.x), 0f, Mathf.FloorToInt(vec.z)) + tile_origin;
 #else
-        public static readonly Vector3 tile_origin = Vector3.zero;
+        private static readonly Vector3 tile_origin = Vector3.zero;
         public Vector3 TileWorldPosition(int index) => TileNormalisedWorldPosition(index);
         public int WorldToMapIndex(Vector3 vec) { vec += new Vector3(0.5f, 0f, 0.5f); return vec.x >= 0 && vec.x < width && vec.z >= 0 && vec.z < height ? (int)vec.z * width + (int)vec.x : -1; }
         public static Vector3 SnappedMapPosition(Vector3 vec) => new Vector3(Mathf.FloorToInt(vec.x + 0.5f), 0f, Mathf.FloorToInt(vec.z + 0.5f));

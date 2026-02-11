@@ -125,7 +125,7 @@ namespace ClassicTilestorm
 			if (null != eggbotController) eggbotController.gameObject.SetActive(value);
 		}
 
-		private void UpdateGridLines(bool enabled = true) => GridLinesUtil.Show(transform, null != iMap ? iMap.Width : 32, null != iMap ? iMap.Height : 32, gridEnabled = enabled, offset: Map.tile_origin + new Vector3(-0.5f, 0f, -0.5f));
+		private void UpdateGridLines(bool enabled = true) => GridLinesUtil.Show(transform, null != iMap ? iMap.Width : 32, null != iMap ? iMap.Height : 32, gridEnabled = enabled, offset: Map.SnappedMapPosition(Vector3.zero) + new Vector3(-0.5f, 0f, -0.5f));
 		private void UpdateDOF(bool enabled = true)
 		{
 			if (null != gameCameraEditor)
