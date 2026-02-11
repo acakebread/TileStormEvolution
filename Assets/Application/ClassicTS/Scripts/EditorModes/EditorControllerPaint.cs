@@ -231,14 +231,13 @@ namespace ClassicTilestorm
 		protected override void OnControl(bool staticClick) 
 		{
 			base.OnControl(staticClick);
-			if (!staticClick)
-				return;
-
-			if (Input.GetMouseButtonUp(0) && defSelection)
+			if (defSelection && Input.GetMouseButtonUp(0))
 			{
 				defSelection = false;
 				return;
 			}
+			if (!staticClick)
+				return;
 
 			if (Input.GetMouseButtonUp(0) && Vector3.Distance(Input.mousePosition, mouseDownPos) < 5f)
 			{

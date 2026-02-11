@@ -103,13 +103,10 @@ namespace MassiveHadronLtd
 				for (int drawIdx = 0; drawIdx < quadCount; drawIdx++)
 				{
 					var (strength, qIdx) = quadData[drawIdx];
-					var qx = qIdx % columns;
-					var qy = qIdx / columns;
-
-					float x0 = qx, y0 = qy;
-					float x1 = x0 + 1f, y1 = y0 + 1f;
-					Vector2 quadCenter = new Vector2((x0 + x1) * 0.5f, (y0 + y1) * 0.5f);
-					Vector2[] src = { new(x0, y0), new(x0, y1), new(x1, y1), new(x1, y0) };
+					var x = (float)(qIdx % columns);
+					var y = (float)(qIdx / columns);
+					Vector2[] src = { new(x, y), new(x, y + 1f), new(x + 1f, y + 1f), new(x + 1f, y) };
+					Vector2 quadCenter = new (x + 0.5f, y + 0.5f);
 
 					var deltaScale = 1f + strength;
 					var transScale = strength * DELTA_TRANS_RATIO;
@@ -147,13 +144,10 @@ namespace MassiveHadronLtd
 				if (!invalid)
 				{
 					var (strength, qIdx) = quadData[^1]; // last = selected
-					var qx = qIdx % columns;
-					var qy = qIdx / columns;
-
-					float x0 = qx, y0 = qy;
-					float x1 = x0 + 1f, y1 = y0 + 1f;
-					Vector2 quadCenter = new Vector2((x0 + x1) * 0.5f, (y0 + y1) * 0.5f);
-					Vector2[] src = { new(x0, y0), new(x0, y1), new(x1, y1), new(x1, y0) };
+					var x = (float)(qIdx % columns);
+					var y = (float)(qIdx / columns);
+					Vector2[] src = { new(x, y), new(x, y + 1f), new(x + 1f, y + 1f), new(x + 1f, y) };
+					Vector2 quadCenter = new (x + 0.5f, y + 0.5f);
 
 					var deltaScale = SELECTED_SIZE;
 					var transScale = strength * DELTA_TRANS_RATIO;
