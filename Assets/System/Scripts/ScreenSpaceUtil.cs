@@ -19,7 +19,7 @@ namespace MassiveHadronLtd
 		private static bool _gridDirty = true;
 		private static bool _selectedDirty = true;
 
-		private static IGridIconAtlas _currentAtlas;
+		private static IGridAtlas _currentAtlas;
 
 		// Padding added around the icon grid when rendering to the RT
 		// (not part of the atlas itself)
@@ -266,7 +266,7 @@ namespace MassiveHadronLtd
 
 		// ─────────────────────────────────────────────────────────────
 
-		public static void OnGUI(IGridIconAtlas atlas, Rect rect, Vector2 coord = default)
+		public static void OnGUI(IGridAtlas atlas, Rect rect, Vector2 coord = default)
 		{
 			_currentAtlas = atlas;
 
