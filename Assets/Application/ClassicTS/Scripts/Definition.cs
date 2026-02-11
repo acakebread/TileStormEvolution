@@ -117,10 +117,10 @@ namespace ClassicTilestorm
         public bool IsDefaultEquivalent()
         {
             return string.IsNullOrWhiteSpace(model) &&
-                   !Drag && !Roll && !Dock && !Door &&
-                   !Start && !End && !Console && !PuzzleBlock &&
-                   !Sway && !Wash &&
-                   !North && !East && !South && !West;
+                   !North && !East && !South && !West &&
+                   !Drag && !Roll && !Dock &&
+				   !Start && !End && !Door && !Console &&
+				   !PuzzleBlock && !Sway && !Wash;
         }
     }
 
