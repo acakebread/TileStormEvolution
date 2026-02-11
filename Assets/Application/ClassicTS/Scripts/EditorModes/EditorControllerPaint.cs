@@ -193,6 +193,11 @@ namespace ClassicTilestorm
 				{
 					hideTimer = hideDelay - 0.4f;
 				}
+
+				if (!mouseOverGridThisFrame)
+				{
+					//	StartPanning();
+				}
 			}
 
 			mouseWasOverGridLastFrame = mouseOverGridThisFrame;
@@ -205,17 +210,18 @@ namespace ClassicTilestorm
 
 			if (IsMouseOverGUI() || IsGuiControlActive()) return;
 
-			if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1))
-				mouseDownPos = Input.mousePosition;
+			//if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1))
+			//	mouseDownPos = Input.mousePosition;
 
 			if (Input.GetMouseButtonUp(0) && Vector3.Distance(Input.mousePosition, mouseDownPos) < 5f)
 			{
 				if (selectedHashId == defaultHash)
 				{
-					var worldPos = Map.ScreenToWorld(camera, Input.mousePosition);
-					var snapped = Map.SnappedMapPosition(worldPos);
-					var mapIndex = iMap.WorldToMapIndex(snapped);
+					//var worldPos = Map.ScreenToWorld(camera, Input.mousePosition);
+					//var snapped = Map.SnappedMapPosition(worldPos);
+					//var mapIndex = iMap.WorldToMapIndex(snapped);
 
+					var mapIndex = iMap.CameraHitTile(camera, Input.mousePosition);
 					if (mapIndex != -1)
 					{
 						var current = iMap.GetVariantAt(mapIndex);

@@ -15,6 +15,7 @@ namespace ClassicTilestorm
 		private enum PendingAction { None, Add, Delete, Select }
 		private PendingAction pendingAction = PendingAction.None;
 		private int pendingTile = -1;
+		private Vector3 popupPos;
 
 		// ===================================================================
 		// Shared input state
@@ -70,9 +71,9 @@ namespace ClassicTilestorm
 			ViewAttachmentHandler.HandlePreviewCameraSync(iMap, camera, selection);
 		}
 
-		protected override void OnControl()
+		protected override void OnControl(bool staticClick)
 		{
-			base.OnControl();
+			base.OnControl(staticClick);
 
 			if (Input.GetMouseButtonDown(0))
 				HandleLeftMouseDown();
@@ -85,6 +86,9 @@ namespace ClassicTilestorm
 
 			if (Input.GetMouseButton(1))
 				HandleRightMouseDrag();
+
+			if (!staticClick)
+				return;
 
 			if (Input.GetMouseButtonUp(0))
 				HandleLeftMouseUp();
@@ -135,15 +139,11 @@ namespace ClassicTilestorm
 
 		private void HandleLeftMouseDown()
 		{
-			mouseDownPos = Input.mousePosition;
-			mouseMovedBeyondThreshold = false;
 			pendingTile = iMap.CameraHitTile(camera, Input.mousePosition);
 
 			bool noAttachmentHere = pendingTile < 0 || iMap.GetAttachments(tileIndex: pendingTile).Length == 0;
 			if (noAttachmentHere && ShouldStartPanningOnLeftClick())
 				StartPanning();
-			else
-				isPanning = false;
 
 			if (-1 != pendingTile)
 			{
@@ -154,20 +154,10 @@ namespace ClassicTilestorm
 			Select();
 		}
 
-		private void HandleRightMouseDown()
-		{
-			mouseDownPos = Input.mousePosition;
-			mouseMovedBeyondThreshold = false;
-			pendingTile = iMap.CameraHitTile(camera, Input.mousePosition);
-		}
+		private void HandleRightMouseDown() => pendingTile = iMap.CameraHitTile(camera, Input.mousePosition);
 
 		private void HandleLeftMouseDrag()
 		{
-			//ThresholdCheck();
-
-			if (isPanning)
-				UpdatePan();
-
 			var tile = iMap.CameraHitTile(camera, Input.mousePosition);
 			if (tile == pendingTile || -1 == tile || null == selection || 0 == selection.Length)
 				return;
@@ -203,15 +193,10 @@ namespace ClassicTilestorm
 			selection[0].OnGizmoInput(iMap, camera, selection);
 		}
 
-		private void HandleRightMouseDrag() { } //private void HandleRightMouseDrag() => ThresholdCheck();
+		private void HandleRightMouseDrag() { }
 
 		private void HandleLeftMouseUp()
 		{
-			isPanning = false;
-
-			if (mouseMovedBeyondThreshold)
-				return;
-
 			var attachmentsOnTile = iMap.GetAttachments(tileIndex: pendingTile);
 
 			if (null == attachmentsOnTile || 0 == attachmentsOnTile.Length)
@@ -234,9 +219,6 @@ namespace ClassicTilestorm
 
 		private void HandleRightMouseUp()
 		{
-			if (mouseMovedBeyondThreshold)
-				return;
-
 			var tile = iMap.CameraHitTile(camera, Input.mousePosition);
 			if (tile >= 0 && iMap.GetAttachments(tileIndex: tile).Length > 0)
 			{
@@ -256,6 +238,8 @@ namespace ClassicTilestorm
 
 		private void Select(MapAttachment[] attachments = null)
 		{
+			popupPos = Input.mousePosition;
+
 			selection = attachments?.Length > 0 ? attachments : null;
 
 			if (null != selection && selection.Length > 0)
@@ -455,7 +439,7 @@ namespace ClassicTilestorm
 				new("Cancel", () => {}, colorOverride: Color.yellow)
 			};
 
-			var result = PopupMenu.Show(mouseDownPos, $"Add Attachment at tile {pendingTile}", items);
+			var result = PopupMenu.Show(popupPos, $"Add Attachment at tile {pendingTile}", items);
 
 			if (result == PopupResult.ClosedByAction)
 				return false; // action already invoked inside popup
@@ -489,7 +473,7 @@ namespace ClassicTilestorm
 			items.Add(PopupItem.Spacer());
 			items.Add(new PopupItem("Cancel", () => { }, colorOverride: Color.yellow));
 
-			var result = PopupMenu.Show(mouseDownPos, "Delete Attachment" + (attsOnTile.Length > 1 ? "(s)" : ""), items);
+			var result = PopupMenu.Show(popupPos, "Delete Attachment" + (attsOnTile.Length > 1 ? "(s)" : ""), items);
 			if (result != PopupResult.StillOpen) Select();
 			return result == PopupResult.StillOpen;
 		}
@@ -520,7 +504,7 @@ namespace ClassicTilestorm
 			items.Add(PopupItem.Spacer());
 			items.Add(new PopupItem("Cancel", () => { }, colorOverride: Color.yellow));
 
-			var result = PopupMenu.Show(mouseDownPos, $"Select ({atts.Length})", items);
+			var result = PopupMenu.Show(popupPos, $"Select ({atts.Length})", items);
 
 			if (result == PopupResult.ClosedByAction)
 				return false; // action already invoked inside popup

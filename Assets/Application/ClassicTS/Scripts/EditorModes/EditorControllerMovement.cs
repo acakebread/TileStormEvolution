@@ -6,12 +6,12 @@ namespace ClassicTilestorm
 	public abstract class EditorControllerMovement
 	{
 		// ─── drag-to-pan
-		protected bool isPanning;
-		protected Vector3 panStartWorldPoint;
+		private bool isPanning;
+		private Vector3 panStartWorldPoint;
 
 		protected Vector3 mouseDownPos;
-		protected bool mouseMovedBeyondThreshold;
-		protected const float CLICK_THRESHOLD = 8f;
+		private bool mouseMovedBeyondThreshold;
+		private const float CLICK_THRESHOLD = 8f;
 
 		private EditorController editorController;
 		protected IMapEdit iMap => editorController?.iMap;
@@ -32,15 +32,21 @@ namespace ClassicTilestorm
 
 		public virtual void Update()
 		{
-			// update threshold flag
-			if (Input.GetMouseButton(0) || Input.GetMouseButton(1) && Vector3.Distance(Input.mousePosition, mouseDownPos) >= CLICK_THRESHOLD)
-				mouseMovedBeyondThreshold = true;
-
-			if (Input.GetMouseButtonUp(0) && GUIUtility.hotControl != 0)
-				GUIUtility.hotControl = 0;
-
 			if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1))
+			{
+				mouseDownPos = Input.mousePosition;
+				mouseMovedBeyondThreshold = false;// update threshold flag
 				touchStartOverGui = IsMouseOverGUI() || ViewPreviewUtil.IsMouseOverPreview();
+			}
+			
+			if ((Input.GetMouseButton(0) || Input.GetMouseButton(1)) && Vector3.Distance(Input.mousePosition, mouseDownPos) >= CLICK_THRESHOLD)
+				mouseMovedBeyondThreshold = true;// update threshold flag
+
+			if (Input.GetMouseButtonUp(0))
+			{
+				isPanning = false;
+				GUIUtility.hotControl = 0;
+			}
 
 			var allowScroll = !(IsMouseOverGUI() || ViewPreviewUtil.IsMouseOverPreview());
 			if (Input.GetMouseButton(0) || Input.GetMouseButton(1))
@@ -63,7 +69,10 @@ namespace ClassicTilestorm
 				return;
 
 			if (MassiveHadronLtd.GuiUtils.WasGuiActiveLastFrame)
+			{
+				mouseMovedBeyondThreshold = true;//workaround to suppress clean click after popup closed
 				return; // Skip input this frame — GUI consumed it last frame
+			}
 
 			if (EditorTransformUtil.HandleTransformGizmoInput(camera))
 			{
@@ -74,7 +83,10 @@ namespace ClassicTilestorm
 			if (EditorTransformUtil.MouseOverGizmo(camera))
 				return;
 
-			OnControl();
+			OnControl(!mouseMovedBeyondThreshold);
+
+			if (isPanning)
+				UpdatePan();
 		}
 
 		public virtual void OnEnable() => ViewPreviewUtil.Hide();
@@ -95,7 +107,7 @@ namespace ClassicTilestorm
 
 		protected virtual void HandleGizmoInput() { }
 
-		protected virtual void OnControl() { }
+		protected virtual void OnControl(bool staticClick) { }
 
 		protected virtual void StartPanning()
 		{
