@@ -206,6 +206,7 @@ namespace ClassicTilestorm
 
 				if (!mouseOverGridThisFrame)
 				{
+					defSelection = false;
 					var variant = iMap.CameraHitVariant(camera, Input.mousePosition);
 					var selDef = ResourceManager.GetDefinition(variant.hash);
 					var isDefault = selDef?.IsDefaultEquivalent() ?? true;
@@ -231,13 +232,14 @@ namespace ClassicTilestorm
 		protected override void OnControl(bool staticClick) 
 		{
 			base.OnControl(staticClick);
-			if (defSelection && Input.GetMouseButtonUp(0))
+			if (!staticClick)
+				return;
+
+			if (defSelection && (Input.GetMouseButtonUp(0) || Input.GetMouseButtonUp(1)))
 			{
 				defSelection = false;
 				return;
 			}
-			if (!staticClick)
-				return;
 
 			if (Input.GetMouseButtonUp(0) && Vector3.Distance(Input.mousePosition, mouseDownPos) < 5f)
 			{
