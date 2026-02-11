@@ -70,6 +70,7 @@ namespace ClassicTilestorm
 		void RefreshAttachment(MapAttachment _);
 
 		int CameraHitTile(Camera camera, Vector3 position);
+		Variant CameraHitVariant(Camera camera, Vector3 position);
 		Bounds GetTileGeometryBounds(int _);
 	}
 
@@ -864,6 +865,8 @@ namespace ClassicTilestorm
 		};
 
 		public int CameraHitTile(Camera camera, Vector3 position) => WorldToMapIndex(ScreenToWorld(camera, position));
+
+		public Variant CameraHitVariant(Camera camera, Vector3 position) => GetVariantAt(CameraHitTile(camera, Input.mousePosition));
 
 		public static bool RayToWorld(Ray ray, out Vector3 point)
 		{
