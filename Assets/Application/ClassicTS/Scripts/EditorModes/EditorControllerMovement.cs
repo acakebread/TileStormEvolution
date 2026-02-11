@@ -8,7 +8,6 @@ namespace ClassicTilestorm
 		// ─── drag-to-pan
 		protected bool isPanning;
 		protected Vector3 panStartWorldPoint;
-		protected Plane panPlane = new Plane(Vector3.up, Vector3.zero);
 
 		protected Vector3 mouseDownPos;
 		protected bool mouseMovedBeyondThreshold;
@@ -29,10 +28,14 @@ namespace ClassicTilestorm
 		private bool touchStartOverGui = false;
 		public EditorControllerMovement(EditorController controller = null) => editorController = controller;
 
-		//public virtual void Awake() { }
+		//public virtual void Awake() { }//not implemented yet
 
 		public virtual void Update()
 		{
+			// update threshold flag
+			if (Input.GetMouseButton(0) || Input.GetMouseButton(1) && Vector3.Distance(Input.mousePosition, mouseDownPos) >= CLICK_THRESHOLD)
+				mouseMovedBeyondThreshold = true;
+
 			if (Input.GetMouseButtonUp(0) && GUIUtility.hotControl != 0)
 				GUIUtility.hotControl = 0;
 
@@ -57,22 +60,24 @@ namespace ClassicTilestorm
 			}
 
 			if (ViewPreviewUtil.IsInFocus || IsMouseOverGUI() || IsGuiControlActive())
-			{
-				if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1))
-					mouseMovedBeyondThreshold = true;//workaround to suppress rogue mouse up event handling after mouse down in video preview
 				return;
-			}
 
 			if (MassiveHadronLtd.GuiUtils.WasGuiActiveLastFrame)
 				return; // Skip input this frame — GUI consumed it last frame
 
+			if (EditorTransformUtil.HandleTransformGizmoInput(camera))
+			{
+				HandleGizmoInput();
+				return;
+			}
+
+			if (EditorTransformUtil.MouseOverGizmo(camera))
+				return;
+
 			OnControl();
 		}
 
-		public virtual void OnEnable() 
-		{
-			ViewPreviewUtil.Hide();
-		}
+		public virtual void OnEnable() => ViewPreviewUtil.Hide();
 
 		public virtual void OnDisable() 
 		{
@@ -80,58 +85,37 @@ namespace ClassicTilestorm
 			isPanning = false; 
 		}
 
-		//public virtual void OnPostRender() { }//not avaiable in URP
+		//public virtual void OnPostRender() { }//not available in URP
 
-		public virtual void OnGUI() 
-		{
-			ViewPreviewUtil.OnGUI();
-		}
+		public virtual void OnGUI()  => ViewPreviewUtil.OnGUI();
 
 		public virtual void OnDestroy() { }
 
 		public virtual void OnApplicationFocus(bool hasFocus) => EditorCameraMovement.OnApplicationFocus(hasFocus);
 
-		// You can keep this one protected virtual if derived classes want to override the plane logic
+		protected virtual void HandleGizmoInput() { }
 
-		public virtual void OnControl() { }//input mouse update
+		protected virtual void OnControl() { }
 
 		protected virtual void StartPanning()
 		{
-			isPanning = true;
-
-			var ray = camera.ScreenPointToRay(Input.mousePosition);
-			if (Physics.Raycast(ray, out RaycastHit hit))
-			{
-				// Try to pan on the actual ground height
-				panPlane = new Plane(Vector3.up, new Vector3(0, hit.point.y, 0));
-				panStartWorldPoint = hit.point;
-			}
-			else
-			{
-				// Fallback — usually at y=0
-				panPlane = new Plane(Vector3.up, Vector3.zero);
-				panPlane.Raycast(ray, out float enter);
-				panStartWorldPoint = ray.GetPoint(enter);
-			}
+			panStartWorldPoint = Map.ScreenToWorld(camera, Input.mousePosition);
+			isPanning = panStartWorldPoint != Vector3.negativeInfinity;
 		}
 
 		protected void UpdatePan()
 		{
 			if (!isPanning) return;
 
-			var currentRay = camera.ScreenPointToRay(Input.mousePosition);
-			if (panPlane.Raycast(currentRay, out float enter))
+			var currentWorldPoint = Map.ScreenToWorld(camera, Input.mousePosition);
+			if (currentWorldPoint != Vector3.negativeInfinity)
 			{
-				var currentWorldPoint = currentRay.GetPoint(enter);
 				var delta = panStartWorldPoint - currentWorldPoint;
 				camera.transform.position += delta;
 			}
 		}
 
 		// Helper — can be overridden if a mode wants different pan conditions
-		protected virtual bool ShouldStartPanningOnLeftClick()
-		{
-			return true;
-		}
+		protected virtual bool ShouldStartPanningOnLeftClick() => true;
 	}
 }

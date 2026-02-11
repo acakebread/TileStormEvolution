@@ -70,7 +70,7 @@ namespace ClassicTilestorm
 			ViewAttachmentHandler.HandlePreviewCameraSync(iMap, camera, selection);
 		}
 
-		public override void OnControl()
+		protected override void OnControl()
 		{
 			base.OnControl();
 
@@ -133,17 +133,8 @@ namespace ClassicTilestorm
 		// Input Handlers — now using currentMode
 		// ===================================================================
 
-		private void ThresholdCheck()
-		{
-			if (Vector3.Distance(Input.mousePosition, mouseDownPos) >= CLICK_THRESHOLD)
-				mouseMovedBeyondThreshold = true;
-		}
-
 		private void HandleLeftMouseDown()
 		{
-			if (EditorTransformUtil.MouseOverGizmo(camera)) 
-				return;
-
 			mouseDownPos = Input.mousePosition;
 			mouseMovedBeyondThreshold = false;
 			pendingTile = iMap.CameraHitTile(camera, Input.mousePosition);
@@ -172,13 +163,7 @@ namespace ClassicTilestorm
 
 		private void HandleLeftMouseDrag()
 		{
-			if (EditorTransformUtil.HandleTransformGizmoInput(camera))
-			{
-				HandleGizmoInput();
-				return;
-			}
-
-			ThresholdCheck();
+			//ThresholdCheck();
 
 			if (isPanning)
 				UpdatePan();
@@ -197,14 +182,6 @@ namespace ClassicTilestorm
 			HandleDragInput();
 			RebuildMarkers();
 
-			void HandleGizmoInput()
-			{
-				if (null == selection || 0 == selection.Length) return;
-				var firstType = selection[0].GetType();
-				if (!selection.All(a => a.GetType() == firstType)) return;
-				selection[0].OnGizmoInput(iMap, camera, selection);
-			}
-
 			void HandleDragInput()
 			{
 				if (null == selection || 1 != selection.Length) return;
@@ -218,7 +195,15 @@ namespace ClassicTilestorm
 			}
 		}
 
-		private void HandleRightMouseDrag() => ThresholdCheck();
+		protected override void HandleGizmoInput()
+		{
+			if (null == selection || 0 == selection.Length) return;
+			var firstType = selection[0].GetType();
+			if (!selection.All(a => a.GetType() == firstType)) return;
+			selection[0].OnGizmoInput(iMap, camera, selection);
+		}
+
+		private void HandleRightMouseDrag() { } //private void HandleRightMouseDrag() => ThresholdCheck();
 
 		private void HandleLeftMouseUp()
 		{
