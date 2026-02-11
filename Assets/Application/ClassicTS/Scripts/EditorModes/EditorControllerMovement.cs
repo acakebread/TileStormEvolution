@@ -57,7 +57,11 @@ namespace ClassicTilestorm
 			}
 
 			if (ViewPreviewUtil.IsInFocus || IsMouseOverGUI() || IsGuiControlActive())
+			{
+				if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1))
+					mouseMovedBeyondThreshold = true;//workaround to suppress rogue mouse up event handling after mouse down in video preview
 				return;
+			}
 
 			if (MassiveHadronLtd.GuiUtils.WasGuiActiveLastFrame)
 				return; // Skip input this frame — GUI consumed it last frame
