@@ -287,7 +287,7 @@ namespace ClassicTilestorm
 		public Vector3 TileNormalisedWorldPosition(int index) => new(index % width, 0f, index / width);
 		public static Vector3 TileNormalisedSnappedMapPosition(Vector3 vec) => new (Mathf.FloorToInt(vec.x), 0f, Mathf.FloorToInt(vec.z));
 
-#if __UNITY_EDITOR
+#if UNITY_EDITOR
 		private static readonly Vector3 tile_origin = new(0.5f, 0f, 0.5f);
 		public Vector3 TileWorldPosition(int index) => TileNormalisedWorldPosition(index) + tile_origin;
 		public int WorldToMapIndex(Vector3 vec) => vec.x >= 0 && vec.x < width && vec.z >= 0 && vec.z < height ? (int)vec.z * width + (int)vec.x : -1;
