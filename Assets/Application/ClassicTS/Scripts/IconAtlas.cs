@@ -6,29 +6,11 @@ using System.Linq;
 namespace ClassicTilestorm
 {
 	[Serializable]
-	public class IconAtlas : MassiveHadronLtd.IGridIconAtlas, IDisposable
+	public class IconAtlas : MassiveHadronLtd.GridIconAtlas, IDisposable
 	{
-		public Texture2D Texture { get; private set; }
-
-		public int CellSize { get; private set; }           // iconSize e.g. 64 or 128
-		public int Columns { get; private set; }
-		public int Rows { get; private set; }
-		public int IconCount => _entries.Count;
-
-		// Optional: if you later want non-square cells
-		// public Vector2Int CellSize { get; private set; }
+		private List<Definition> filteredDefs;
 
 		// Core mapping: index (from ResourceManager.Definitions) → UV rect
-		// Or use HashId if you prefer
-		private readonly List<AtlasEntry> _entries = new List<AtlasEntry>();
-
-		private struct AtlasEntry
-		{
-			public int Index;           // original list index in ResourceManager.Definitions
-			public Rect RectNormalized; // UV rect [0,1]×[0,1] in atlas
-										// public HashId Hash;      // if you want to key by hash instead
-		}
-
 		public IconAtlas(
 			int cellSize,
 			int columns,
@@ -41,15 +23,16 @@ namespace ClassicTilestorm
 			CellSize = cellSize;
 			Columns = columns;
 
-			var validDefs = definitionsToRender.ToList(); // .Where(d => d != null && !string.IsNullOrEmpty(d.model)) .ToList();
+			//filteredDefs = definitionsToRender.ToList(); // .Where(d => d != null && !string.IsNullOrEmpty(d.model)) .ToList();
+			filteredDefs = definitionsToRender.Where(d => !d.IsDefaultEquivalent()).ToList();
 
-			if (validDefs.Count == 0)
+			if (filteredDefs.Count == 0)
 			{
 				Debug.LogWarning("No valid definitions to render into atlas.");
 				return;
 			}
 
-			Rows = Mathf.CeilToInt((float)validDefs.Count / columns);
+			Rows = Mathf.CeilToInt((float)filteredDefs.Count / columns);
 
 			int width = columns * cellSize;
 			int height = Rows * cellSize;
@@ -74,9 +57,9 @@ namespace ClassicTilestorm
 				initialYaw: yaw,
 				initialPitch: pitch))
 			{
-				for (int i = 0; i < validDefs.Count; i++)
+				for (int i = 0; i < filteredDefs.Count; i++)
 				{
-					var def = validDefs[i];
+					var def = filteredDefs[i];
 
 					Texture2D icon = null;
 					try
@@ -144,71 +127,14 @@ namespace ClassicTilestorm
 
 					_entries.Add(new AtlasEntry
 					{
-						Index = ResourceManager.Definitions.IndexOf(def),
+						//Index = ResourceManager.Definitions.IndexOf(def),
 						RectNormalized = uvRect
 					});
 				}
 			}
 
 			Texture.Apply(true, false);
-			Debug.Log($"IconAtlas created: {width}×{height}, {validDefs.Count} icons placed");
-		}
-
-		public bool TryGetUVRect(int definitionIndex, out Rect uvRect)
-		{
-			uvRect = default;
-			var match = _entries.FirstOrDefault(e => e.Index == definitionIndex);
-			if (match.Index == definitionIndex) // default struct has Index=0, so check properly
-			{
-				uvRect = match.RectNormalized;
-				return true;
-			}
-			return false;
-		}
-
-		public bool TryGetIndex(Vector2 normalizedUV, out int index)
-		{
-			index = -1;
-
-			float atlasY = 1f - normalizedUV.y;
-
-			if (normalizedUV.x < 0f || normalizedUV.x > 1f || atlasY < 0f || atlasY > 1f)
-				return false;
-
-			float colF = normalizedUV.x * Columns;
-			float rowF = atlasY * Rows;
-
-			int col = Mathf.Clamp(Mathf.FloorToInt(colF), 0, Columns - 1);
-			int row = Mathf.Clamp(Mathf.FloorToInt(rowF), 0, Rows - 1);
-
-			// Search for entry at this grid position
-			foreach (var entry in _entries)
-			{
-				int entryCol = entry.Index % Columns;
-				int entryRow = entry.Index / Columns;
-
-				if (entryCol == col && entryRow == row)
-				{
-					index = entry.Index;
-					return true;
-				}
-			}
-
-			return false;
-		}
-
-		public void Dispose()
-		{
-			if (Texture != null)
-			{
-				if (Application.isPlaying)
-					UnityEngine.Object.Destroy(Texture);
-				else
-					UnityEngine.Object.DestroyImmediate(Texture);
-
-				Texture = null;
-			}
-			_entries.Clear();
+			Debug.Log($"IconAtlas created: {width}×{height}, {filteredDefs.Count} icons placed");
 		}
 	}
 }

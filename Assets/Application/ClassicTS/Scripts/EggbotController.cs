@@ -244,8 +244,8 @@ namespace ClassicTilestorm
 			Vector3 oldWorldPos = transform.position;
 
 			// Calculate old grid position (reverse-engineer from world pos)
-			// This works because TileWorldPosition(index) = (x, 0, z) + tile_origin
-			Vector3 localPos = oldWorldPos - Map.tile_origin; // remove origin offset
+			Vector3 localPos = Map.TileNormalisedSnappedMapPosition(oldWorldPos);
+
 			int oldX = Mathf.RoundToInt(localPos.x);
 			int oldZ = Mathf.RoundToInt(localPos.z);
 

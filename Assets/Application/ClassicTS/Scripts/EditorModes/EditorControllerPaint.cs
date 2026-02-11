@@ -1,6 +1,7 @@
 ﻿using System;
 using UnityEngine;
 using MassiveHadronLtd;
+using System.Linq;
 
 namespace ClassicTilestorm
 {
@@ -21,6 +22,7 @@ namespace ClassicTilestorm
 		private readonly float triggerZoneHeight = 40f;
 
 		private IconAtlas _atlas;
+		private System.Collections.Generic.List<Definition> filteredDefs;
 
 		private const int ICON_SIZE = 128;
 		private const int COLUMNS = (4096 - ScreenSpaceUtil.MARGIN * 2) / ICON_SIZE;
@@ -47,6 +49,8 @@ namespace ClassicTilestorm
 		private HashId defaultHash => ResourceManager.FindOrCreateDefaultTile().HashID;
 
 		protected override bool IsMouseOverGUI() => base.IsMouseOverGUI() || Input.mousePosition.y <= (panelY + panelHeight);
+
+		private bool defSelection = false;
 
 		public EditorControllerPaint(EditorController editorController) : base(editorController)
 		{
@@ -103,9 +107,13 @@ namespace ClassicTilestorm
 			base.OnEnable();
 
 			// One-time atlas creation
+
+			filteredDefs = ResourceManager.Definitions.Where(d => !d.IsDefaultEquivalent()).ToList();
+
 			_atlas = DefinitionIconRenderUtil.CreateIconAtlas(
 				iconSize: ICON_SIZE,
 				columns: (4096 - ScreenSpaceUtil.MARGIN * 2) / ICON_SIZE,
+				filteredDefs,
 				includeGround: false,           // ← tune as needed
 				background: null,
 				yaw: 35f,
@@ -177,6 +185,8 @@ namespace ClassicTilestorm
 
 			// ─── Existing grid / click handling ────────────────────────────────
 			bool mouseOverGridThisFrame = gridScreenRect.Contains(Input.mousePosition);
+			if (mouseOverGridThisFrame)
+				defSelection = true;
 
 			if (Input.GetMouseButtonDown(0))
 			{
@@ -214,24 +224,62 @@ namespace ClassicTilestorm
 
 			if (IsMouseOverGUI() || IsGuiControlActive()) return;
 
-			//if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1))
-			//	mouseDownPos = Input.mousePosition;
+			//if (Input.GetMouseButtonUp(0) && Vector3.Distance(Input.mousePosition, mouseDownPos) < 5f)
+			//{
+			//	if (selectedHashId == defaultHash)
+			//	{
+			//		var variant = iMap.CameraHitVariant(camera, Input.mousePosition);
+			//		var selDef = ResourceManager.GetDefinition(variant.hash);
+			//		var isDefault = selDef?.IsDefaultEquivalent() ?? true;
+			//		if (!isDefault)
+			//		{
+			//			selectedHashId = variant.hash;
+			//			previewAngle = variant.angle;
+			//			previewDelta = variant.delta;
+			//		}
+			//	}
+			//	else
+			//	{
+			//		EditMapTile();
+			//	}
+			//}
+
+			//if (Input.GetMouseButtonUp(1) && Vector3.Distance(Input.mousePosition, mouseDownPos) < 5f)
+			//{
+			//	if (selectedHashId == defaultHash)
+			//		EditMapTile(erase: true);
+			//	else
+			//		selectedHashId = defaultHash;
+			//}
+
+			var def = ResourceManager.GetDefinition(selectedHashId);
+			UpdateGhostMesh(camera, iMap, def);
+		}
+
+		protected override void OnControl(bool staticClick) 
+		{
+			base.OnControl(staticClick);
+			if (!staticClick)
+				return;
+
+			if (defSelection)
+			{
+				defSelection = false;
+				return;
+			}
 
 			if (Input.GetMouseButtonUp(0) && Vector3.Distance(Input.mousePosition, mouseDownPos) < 5f)
 			{
 				if (selectedHashId == defaultHash)
 				{
-					//var worldPos = Map.ScreenToWorld(camera, Input.mousePosition);
-					//var snapped = Map.SnappedMapPosition(worldPos);
-					//var mapIndex = iMap.WorldToMapIndex(snapped);
-
-					var mapIndex = iMap.CameraHitTile(camera, Input.mousePosition);
-					if (mapIndex != -1)
+					var variant = iMap.CameraHitVariant(camera, Input.mousePosition);
+					var selDef = ResourceManager.GetDefinition(variant.hash);
+					var isDefault = selDef?.IsDefaultEquivalent() ?? true;
+					if (!isDefault)
 					{
-						var current = iMap.GetVariantAt(mapIndex);
-						selectedHashId = current.hash;
-						previewAngle = current.angle;
-						previewDelta = current.delta;
+						selectedHashId = variant.hash;
+						previewAngle = variant.angle;
+						previewDelta = variant.delta;
 					}
 				}
 				else
@@ -247,23 +295,20 @@ namespace ClassicTilestorm
 				else
 					selectedHashId = defaultHash;
 			}
-
-			var def = ResourceManager.GetDefinition(selectedHashId);
-			UpdateGhostMesh(camera, iMap, def);
 		}
 
 		private void TrySelectTileFromGridClick(Vector2 mousePos)
 		{
-			if (_atlas == null || ResourceManager.Definitions == null || ResourceManager.Definitions.Count == 0)
+			if (_atlas == null || filteredDefs == null || filteredDefs.Count == 0)
 				return;
 
 			Vector2 uv = gridScreenRect.NormalisedPoint(mousePos);
 
 			if (_atlas.TryGetIndex(uv, out int index))
 			{
-				if (index >= 0 && index < ResourceManager.Definitions.Count)
+				if (index >= 0 && index < filteredDefs.Count)
 				{
-					var newHash = ResourceManager.Definitions[index].HashID;
+					var newHash = filteredDefs[index].HashID;
 					if (newHash != default)
 					{
 						selectedHashId = newHash;

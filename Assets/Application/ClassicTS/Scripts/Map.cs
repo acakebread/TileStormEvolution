@@ -71,6 +71,7 @@ namespace ClassicTilestorm
 
 		int CameraHitTile(Camera camera, Vector3 position);
 		Variant CameraHitVariant(Camera camera, Vector3 position);
+		Definition CameraHitDefinition(Camera camera, Vector3 position);
 		Bounds GetTileGeometryBounds(int _);
 	}
 
@@ -181,6 +182,17 @@ namespace ClassicTilestorm
 			return GetVariantForIndex(logicalIndex);
 		}
 
+		public Definition GetDefinitionAt(int mapIndex)
+		{
+			if (state == null || mapIndex < 0 || mapIndex >= state.Length)
+				return null;
+
+			// Apply current permutation (scrambled/solved state)
+			int logicalIndex = state[mapIndex];
+
+			return ResourceManager.GetDefinition(GetVariantForIndex(logicalIndex).hash);
+		}
+
 		// ─────────────────────────────────────────────
 		// Runtime tile (graph) instances (lazy / just-in-time)
 		// ─────────────────────────────────────────────
@@ -272,14 +284,17 @@ namespace ClassicTilestorm
 			}
 		}
 
+		public Vector3 TileNormalisedWorldPosition(int index) => new(index % width, 0f, index / width);
+		public static Vector3 TileNormalisedSnappedMapPosition(Vector3 vec) => new (Mathf.FloorToInt(vec.x), 0f, Mathf.FloorToInt(vec.z));
+
 #if UNITY_EDITOR
 		public static readonly Vector3 tile_origin = new(0.5f, 0f, 0.5f);
-		public Vector3 TileWorldPosition(int index) => new Vector3(index % width, 0f, index / width) + tile_origin;
+		public Vector3 TileWorldPosition(int index) => TileNormalisedWorldPosition(index) + tile_origin;
 		public int WorldToMapIndex(Vector3 vec) => vec.x >= 0 && vec.x < width && vec.z >= 0 && vec.z < height ? (int)vec.z * width + (int)vec.x : -1;
 		public static Vector3 SnappedMapPosition(Vector3 vec) => new Vector3(Mathf.FloorToInt(vec.x), 0f, Mathf.FloorToInt(vec.z)) + tile_origin;
 #else
         public static readonly Vector3 tile_origin = Vector3.zero;
-        public Vector3 TileWorldPosition(int index) => new(index % width, 0f, index / width);
+        public Vector3 TileWorldPosition(int index) => TileNormalisedWorldPosition(index);
         public int WorldToMapIndex(Vector3 vec) { vec += new Vector3(0.5f, 0f, 0.5f); return vec.x >= 0 && vec.x < width && vec.z >= 0 && vec.z < height ? (int)vec.z * width + (int)vec.x : -1; }
         public static Vector3 SnappedMapPosition(Vector3 vec) => new Vector3(Mathf.FloorToInt(vec.x + 0.5f), 0f, Mathf.FloorToInt(vec.z + 0.5f));
 #endif
@@ -867,6 +882,8 @@ namespace ClassicTilestorm
 		public int CameraHitTile(Camera camera, Vector3 position) => WorldToMapIndex(ScreenToWorld(camera, position));
 
 		public Variant CameraHitVariant(Camera camera, Vector3 position) => GetVariantAt(CameraHitTile(camera, Input.mousePosition));
+
+		public Definition CameraHitDefinition(Camera camera, Vector3 position) => GetDefinitionAt(CameraHitTile(camera, Input.mousePosition));
 
 		public static bool RayToWorld(Ray ray, out Vector3 point)
 		{

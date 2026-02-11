@@ -130,6 +130,7 @@ namespace ClassicTilestorm
 		public static IconAtlas CreateIconAtlas(
 			int iconSize = 64,
 			int columns = 16,
+			System.Collections.Generic.List<Definition> filteredDefs = null,
 			bool includeGround = false,
 			Color? background = null,
 			float yaw = 35f,
@@ -138,7 +139,7 @@ namespace ClassicTilestorm
 			return new IconAtlas(
 				iconSize,
 				columns,
-				ResourceManager.Definitions,
+				filteredDefs,
 				includeGround,
 				background,
 				yaw,

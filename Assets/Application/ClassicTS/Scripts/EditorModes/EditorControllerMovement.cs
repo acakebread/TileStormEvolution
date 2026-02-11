@@ -42,6 +42,10 @@ namespace ClassicTilestorm
 			if ((Input.GetMouseButton(0) || Input.GetMouseButton(1)) && Vector3.Distance(Input.mousePosition, mouseDownPos) >= CLICK_THRESHOLD)
 				mouseMovedBeyondThreshold = true;// update threshold flag
 
+			var staticClick = !mouseMovedBeyondThreshold;
+			//if (Input.GetMouseButtonUp(0) || Input.GetMouseButtonUp(1))
+			//	mouseMovedBeyondThreshold = false;// update threshold flag
+
 			if (Input.GetMouseButtonUp(0))
 			{
 				isPanning = false;
@@ -83,7 +87,7 @@ namespace ClassicTilestorm
 			if (EditorTransformUtil.MouseOverGizmo(camera))
 				return;
 
-			OnControl(!mouseMovedBeyondThreshold);
+			OnControl(staticClick);
 
 			if (isPanning)
 				UpdatePan();

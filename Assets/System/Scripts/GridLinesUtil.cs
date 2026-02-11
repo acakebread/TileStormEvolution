@@ -1,7 +1,6 @@
 using UnityEngine;
-using MassiveHadronLtd;
 
-namespace ClassicTilestorm
+namespace MassiveHadronLtd
 {
 	public static class GridLinesUtil
 	{
@@ -14,7 +13,7 @@ namespace ClassicTilestorm
 		/// <summary>
 		/// Shows, updates, or hides the grid. If visible = false, hides without recreating.
 		/// </summary>
-		public static void Show(Transform parent, int width, int height, bool visible = true)
+		public static void Show(Transform parent, int width, int height, bool visible = true, Vector3 offset = default)
 		{
 			// If turning off: just hide existing
 			if (currentGrid != null && !visible)
@@ -49,7 +48,7 @@ namespace ClassicTilestorm
 			if (currentGrid != null)
 			{
 				currentGrid.transform.SetLayer(LayerMask.NameToLayer("Editor"));
-				currentGrid.transform.localPosition = Map.tile_origin + new Vector3(-0.5f, 0f, -0.5f);
+				currentGrid.transform.localPosition = offset;// Map.tile_origin + new Vector3(-0.5f, 0f, -0.5f);
 				currentGrid.SetActive(true);
 			}
 
@@ -64,7 +63,7 @@ namespace ClassicTilestorm
 
 			var parent = currentGrid.transform.parent;
 			var wasVisible = currentGrid.activeSelf;
-			Show(parent, width, height, wasVisible);
+			Show(parent, width, height, wasVisible, currentGrid.transform.localPosition);
 		}
 
 		public static void SetVisible(bool visible)
