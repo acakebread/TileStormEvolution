@@ -16,7 +16,6 @@ namespace MassiveHadronLtd
 		private static int _lastRows = -1;
 		private static int _lastCellSize = -1;
 
-		public const int MARGIN = 256;
 		private const float SELECTED_SIZE = 4f;
 		private const float DELTA_TRANS_RATIO = 0.375f;
 		private const float FALL_OFF_RATIO = 0.625f;
@@ -32,11 +31,16 @@ namespace MassiveHadronLtd
 			var columns = Mathf.Max(1, atlas.Columns);
 			var rows = Mathf.Max(1, atlas.Rows);
 			var cellSize = atlas.CellSize;
+			var coreW = atlas.Texture.width;
+			var coreH = atlas.Texture.height;
 
-			var coreW = columns * cellSize;
-			var coreH = rows * cellSize;
+			int MARGIN = cellSize * 2;// (4096 - coreW) / 2;
+
 			var padW = coreW + 2 * MARGIN;
 			var padH = coreH + 2 * MARGIN;
+
+			if (padW > 8192 || padH > 8192)
+				Debug.LogError($"Maximum safe Render Texture size exceeded: {padW}:{padH}");
 
 			var contentScaleX = (float)coreW / padW;
 			var contentScaleY = (float)coreH / padH;

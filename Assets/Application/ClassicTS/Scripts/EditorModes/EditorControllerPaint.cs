@@ -24,8 +24,10 @@ namespace ClassicTilestorm
 		private IconAtlas _atlas;
 		private System.Collections.Generic.List<Definition> filteredDefs;
 
-		private const int ICON_SIZE = 128;
-		private const int COLUMNS = (4096 - ScreenSpaceUtil.MARGIN * 2) / ICON_SIZE;
+		private const int MAXIMUM_RENDER_TEXTURE_SIZE = 8192;
+		private const int ICON_SIZE = 192;
+		private const int COLUMNS = (MAXIMUM_RENDER_TEXTURE_SIZE - ICON_SIZE * 4) / ICON_SIZE;
+
 		private int ROWS
 		{
 			get
@@ -112,7 +114,7 @@ namespace ClassicTilestorm
 
 			_atlas = DefinitionIconRenderUtil.CreateIconAtlas(
 				iconSize: ICON_SIZE,
-				columns: (4096 - ScreenSpaceUtil.MARGIN * 2) / ICON_SIZE,
+				columns: COLUMNS,
 				filteredDefs,
 				includeGround: false,           // ← tune as needed
 				background: null,
