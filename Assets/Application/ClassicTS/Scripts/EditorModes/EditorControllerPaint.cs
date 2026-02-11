@@ -196,7 +196,17 @@ namespace ClassicTilestorm
 
 				if (!mouseOverGridThisFrame)
 				{
-					//	StartPanning();
+					var mapIndex = iMap.CameraHitTile(camera, Input.mousePosition);
+					if (mapIndex != -1)
+					{
+						var current = iMap.GetVariantAt(mapIndex);
+						var selDef = ResourceManager.GetDefinition(current.hash);
+						var isDefault = selDef?.IsDefault() ?? false;
+						if (isDefault)
+							StartPanning();
+					}
+					else
+						StartPanning();
 				}
 			}
 
