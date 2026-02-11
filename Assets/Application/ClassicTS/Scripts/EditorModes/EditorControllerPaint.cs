@@ -224,34 +224,6 @@ namespace ClassicTilestorm
 
 			if (IsMouseOverGUI() || IsGuiControlActive()) return;
 
-			//if (Input.GetMouseButtonUp(0) && Vector3.Distance(Input.mousePosition, mouseDownPos) < 5f)
-			//{
-			//	if (selectedHashId == defaultHash)
-			//	{
-			//		var variant = iMap.CameraHitVariant(camera, Input.mousePosition);
-			//		var selDef = ResourceManager.GetDefinition(variant.hash);
-			//		var isDefault = selDef?.IsDefaultEquivalent() ?? true;
-			//		if (!isDefault)
-			//		{
-			//			selectedHashId = variant.hash;
-			//			previewAngle = variant.angle;
-			//			previewDelta = variant.delta;
-			//		}
-			//	}
-			//	else
-			//	{
-			//		EditMapTile();
-			//	}
-			//}
-
-			//if (Input.GetMouseButtonUp(1) && Vector3.Distance(Input.mousePosition, mouseDownPos) < 5f)
-			//{
-			//	if (selectedHashId == defaultHash)
-			//		EditMapTile(erase: true);
-			//	else
-			//		selectedHashId = defaultHash;
-			//}
-
 			var def = ResourceManager.GetDefinition(selectedHashId);
 			UpdateGhostMesh(camera, iMap, def);
 		}
@@ -259,10 +231,7 @@ namespace ClassicTilestorm
 		protected override void OnControl(bool staticClick) 
 		{
 			base.OnControl(staticClick);
-			if (!staticClick)
-				return;
-
-			if (defSelection)
+			if (!staticClick || defSelection)
 			{
 				defSelection = false;
 				return;

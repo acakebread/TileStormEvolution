@@ -8,13 +8,11 @@ namespace ClassicTilestorm
 	[Serializable]
 	public class IconAtlas : MassiveHadronLtd.GridIconAtlas, IDisposable
 	{
-		private List<Definition> filteredDefs;
-
 		// Core mapping: index (from ResourceManager.Definitions) → UV rect
 		public IconAtlas(
 			int cellSize,
 			int columns,
-			IEnumerable<Definition> definitionsToRender,
+			IEnumerable<Definition> filteredDefs,
 			bool includeGround = false,
 			Color? background = null,
 			float yaw = 35f,
@@ -23,16 +21,15 @@ namespace ClassicTilestorm
 			CellSize = cellSize;
 			Columns = columns;
 
-			//filteredDefs = definitionsToRender.ToList(); // .Where(d => d != null && !string.IsNullOrEmpty(d.model)) .ToList();
-			filteredDefs = definitionsToRender.Where(d => !d.IsDefaultEquivalent()).ToList();
+			var defintionList = filteredDefs.ToList();
 
-			if (filteredDefs.Count == 0)
+			if (defintionList.Count == 0)
 			{
 				Debug.LogWarning("No valid definitions to render into atlas.");
 				return;
 			}
 
-			Rows = Mathf.CeilToInt((float)filteredDefs.Count / columns);
+			Rows = Mathf.CeilToInt((float)defintionList.Count / columns);
 
 			int width = columns * cellSize;
 			int height = Rows * cellSize;
@@ -57,9 +54,9 @@ namespace ClassicTilestorm
 				initialYaw: yaw,
 				initialPitch: pitch))
 			{
-				for (int i = 0; i < filteredDefs.Count; i++)
+				for (int i = 0; i < defintionList.Count; i++)
 				{
-					var def = filteredDefs[i];
+					var def = defintionList[i];
 
 					Texture2D icon = null;
 					try
@@ -127,14 +124,14 @@ namespace ClassicTilestorm
 
 					_entries.Add(new AtlasEntry
 					{
-						//Index = ResourceManager.Definitions.IndexOf(def),
 						RectNormalized = uvRect
+						//Index = ResourceManager.Definitions.IndexOf(def),
 					});
 				}
 			}
 
 			Texture.Apply(true, false);
-			Debug.Log($"IconAtlas created: {width}×{height}, {filteredDefs.Count} icons placed");
+			Debug.Log($"IconAtlas created: {width}×{height}, {defintionList.Count} icons placed");
 		}
 	}
 }
