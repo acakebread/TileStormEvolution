@@ -6,12 +6,11 @@ namespace MassiveHadronLtd
 	public static class ScreenSpaceUtil
 	{
 		private static RenderTexture _mainRT;
-		private static RenderTexture _selectedRT;
-
 		private static Mesh _gridMesh;
-		private static Mesh _selectedQuadMesh;
 
-		private static Material _quadMaterial;
+		private static RenderTexture _selectedRT;
+		private static Mesh _selectedMesh;
+		private static Material _selectedMaterial;
 
 		private static Vector3[] _selectedQuadMeshverts;
 
@@ -24,7 +23,7 @@ namespace MassiveHadronLtd
 
 		// Padding added around the icon grid when rendering to the RT
 		// (not part of the atlas itself)
-		public const int BORDER = 256;
+		public const int MARGIN = 256;//for overdraw
 		private const float SELECTED_SIZE = 4f;
 		private const float DELTA_TRANS_RATIO = 0.375f;
 
@@ -64,22 +63,22 @@ namespace MassiveHadronLtd
 			{
 				_selectedQuadMeshverts = null;
 
-				if (_selectedQuadMesh != null)
+				if (_selectedMesh != null)
 				{
-					Object.DestroyImmediate(_selectedQuadMesh);
-					_selectedQuadMesh = null;
+					Object.DestroyImmediate(_selectedMesh);
+					_selectedMesh = null;
 				}
 			}
 
 			int corePixelWidth = columns * iconSize;
 			int corePixelHeight = rows * iconSize;
-			int paddedPixelWidth = corePixelWidth + 2 * BORDER;
-			int paddedPixelHeight = corePixelHeight + 2 * BORDER;
+			int paddedPixelWidth = corePixelWidth + 2 * MARGIN;
+			int paddedPixelHeight = corePixelHeight + 2 * MARGIN;
 
 			float contentScaleX = (float)corePixelWidth / paddedPixelWidth;
 			float contentScaleY = (float)corePixelHeight / paddedPixelHeight;
-			float contentOffsetX = (float)BORDER / paddedPixelWidth;
-			float contentOffsetY = (float)BORDER / paddedPixelHeight;
+			float contentOffsetX = (float)MARGIN / paddedPixelWidth;
+			float contentOffsetY = (float)MARGIN / paddedPixelHeight;
 
 			int totalCells = columns * rows;
 			var vertices = new Vector3[totalCells * 4];
@@ -179,12 +178,12 @@ namespace MassiveHadronLtd
 					vertices[lastBase + 3]
 				};
 
-				if (_selectedQuadMesh == null)
-					_selectedQuadMesh = new Mesh();
+				if (_selectedMesh == null)
+					_selectedMesh = new Mesh();
 
-				_selectedQuadMesh.vertices = new[] { Vector3.zero, Vector3.up, Vector3.one, Vector3.right };
-				_selectedQuadMesh.uv = new[] { uvs[lastBase + 0], uvs[lastBase + 1], uvs[lastBase + 2], uvs[lastBase + 3] };
-				_selectedQuadMesh.triangles = new[] { 0, 1, 2, 0, 2, 3 };
+				_selectedMesh.vertices = new[] { Vector3.zero, Vector3.up, Vector3.one, Vector3.right };
+				_selectedMesh.uv = new[] { uvs[lastBase + 0], uvs[lastBase + 1], uvs[lastBase + 2], uvs[lastBase + 3] };
+				_selectedMesh.triangles = new[] { 0, 1, 2, 0, 2, 3 };
 			}
 		}
 
@@ -201,8 +200,8 @@ namespace MassiveHadronLtd
 			int rows = _currentAtlas.Rows;
 			int iconSize = _currentAtlas.CellSize;
 
-			int w = columns * iconSize + 2 * BORDER;
-			int h = rows * iconSize + 2 * BORDER;
+			int w = columns * iconSize + 2 * MARGIN;
+			int h = rows * iconSize + 2 * MARGIN;
 
 			if (_mainRT == null || _mainRT.width != w || _mainRT.height != h)
 			{
@@ -224,7 +223,7 @@ namespace MassiveHadronLtd
 
 			GL.PushMatrix();
 			GL.LoadOrtho();
-			_quadMaterial.SetPass(0);
+			_selectedMaterial.SetPass(0);
 			Graphics.DrawMeshNow(_gridMesh, Matrix4x4.identity);
 			GL.PopMatrix();
 
@@ -233,7 +232,7 @@ namespace MassiveHadronLtd
 
 		private static void DrawSelectedOnlyToRT()
 		{
-			if (_selectedQuadMesh == null) return;
+			if (_selectedMesh == null) return;
 
 			int iconSize = _currentAtlas?.CellSize ?? 128;
 			int selSize = Mathf.CeilToInt(iconSize * SELECTED_SIZE);
@@ -258,8 +257,8 @@ namespace MassiveHadronLtd
 
 			GL.PushMatrix();
 			GL.LoadOrtho();
-			_quadMaterial.SetPass(0);
-			Graphics.DrawMeshNow(_selectedQuadMesh, Matrix4x4.identity);
+			_selectedMaterial.SetPass(0);
+			Graphics.DrawMeshNow(_selectedMesh, Matrix4x4.identity);
 			GL.PopMatrix();
 
 			RenderTexture.active = old;
@@ -280,14 +279,14 @@ namespace MassiveHadronLtd
 
 			if (_mainRT == null) return;
 
-			float renderW = _mainRT.width - BORDER * 2;
-			float renderH = _mainRT.height - BORDER * 2;
+			float renderW = _mainRT.width - MARGIN * 2;
+			float renderH = _mainRT.height - MARGIN * 2;
 
 			float scaleW = rect.width / renderW;
 			float scaleH = rect.height / renderH;
 
-			float borderX = BORDER * scaleW;
-			float borderY = BORDER * scaleH;
+			float borderX = MARGIN * scaleW;
+			float borderY = MARGIN * scaleH;
 
 			var displayRect = new Rect(rect.x - borderX, rect.y - borderY, rect.width + borderX * 2, rect.height + borderY * 2);
 			GUI.DrawTexture(displayRect.ToGUIRect(), _mainRT, ScaleMode.ScaleToFit, true);
@@ -311,12 +310,14 @@ namespace MassiveHadronLtd
 
 		private static void LazyInitResources()
 		{
-			if (_quadMaterial != null) return;
+			if (_selectedMaterial != null) return;
 
 			var shader = Shader.Find("Sprites/Default");
-			_quadMaterial = new Material(shader) { hideFlags = HideFlags.HideAndDontSave };
-
-			_quadMaterial.mainTexture = _currentAtlas?.Texture ?? Texture2D.whiteTexture;
+			_selectedMaterial = new Material(shader) 
+			{
+				hideFlags = HideFlags.HideAndDontSave,
+				mainTexture = _currentAtlas?.Texture ?? Texture2D.whiteTexture
+			};
 		}
 	}
 }

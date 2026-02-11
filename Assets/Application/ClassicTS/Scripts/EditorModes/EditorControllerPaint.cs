@@ -23,7 +23,7 @@ namespace ClassicTilestorm
 		private IconAtlas _atlas;
 
 		private const int ICON_SIZE = 128;
-		private const int COLUMNS = (4096 - ScreenSpaceUtil.BORDER * 2) / ICON_SIZE;
+		private const int COLUMNS = (4096 - ScreenSpaceUtil.MARGIN * 2) / ICON_SIZE;
 		private int ROWS
 		{
 			get
@@ -105,7 +105,7 @@ namespace ClassicTilestorm
 			// One-time atlas creation
 			_atlas = DefinitionIconRenderUtil.CreateIconAtlas(
 				iconSize: ICON_SIZE,
-				columns: (4096 - ScreenSpaceUtil.BORDER * 2) / ICON_SIZE,
+				columns: (4096 - ScreenSpaceUtil.MARGIN * 2) / ICON_SIZE,
 				includeGround: false,           // ← tune as needed
 				background: null,
 				yaw: 35f,

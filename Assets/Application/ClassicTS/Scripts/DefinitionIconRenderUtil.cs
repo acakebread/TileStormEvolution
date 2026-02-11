@@ -1,6 +1,5 @@
-﻿using UnityEngine;
-using System;
-using System.Linq;
+﻿using System;
+using UnityEngine;
 using MassiveHadronLtd;
 
 namespace ClassicTilestorm
@@ -145,75 +144,5 @@ namespace ClassicTilestorm
 				yaw,
 				pitch);
 		}
-
-		//// ────────────────────────────────────────────────────────────────
-		////           NEW - Atlas generation moved here
-		//// ────────────────────────────────────────────────────────────────
-
-		//public static Texture2D GenerateIconAtlas(
-		//	int iconSize = 64,
-		//	int columns = 16,
-		//	bool includeGround = false,
-		//	Color? background = null,
-		//	float yaw = 35f,
-		//	float pitch = 30f)
-		//{
-		//	var defs = ResourceManager.Definitions;
-		//	if (defs == null || defs.Count == 0)
-		//	{
-		//		Debug.LogWarning("No definitions available for atlas generation.");
-		//		return null;
-		//	}
-
-		//	// Remove null / invalid entries early
-		//	var validDefs = defs.Where(d => d != null && !string.IsNullOrEmpty(d.model)).ToList();
-		//	if (validDefs.Count == 0) return null;
-
-		//	int rows = Mathf.CeilToInt((float)validDefs.Count / columns);
-
-		//	int atlasWidth = columns * iconSize;
-		//	int atlasHeight = rows * iconSize;
-
-		//	var atlas = new Texture2D(atlasWidth, atlasHeight, TextureFormat.RGBA32, false)
-		//	{
-		//		filterMode = FilterMode.Point,     // crisp pixel icons
-		//		wrapMode = TextureWrapMode.Clamp,
-		//		name = "DefinitionIconAtlas"
-		//	};
-
-		//	// Clear to transparent
-		//	Color[] pixels = new Color[atlasWidth * atlasHeight];
-		//	Array.Fill(pixels, new Color(0, 0, 0, 0));
-		//	atlas.SetPixels(pixels);
-
-		//	for (int i = 0; i < validDefs.Count; i++)
-		//	{
-		//		var def = validDefs[i];
-
-		//		var icon = GenerateIcon(
-		//			def,
-		//			size: iconSize,
-		//			background: background,
-		//			yaw: yaw,
-		//			pitch: pitch,
-		//			includeGround: includeGround);
-
-		//		if (icon == null) continue;
-
-		//		int col = i % columns;
-		//		int row = i / columns;
-
-		//		// Bottom-left origin → flip Y
-		//		int x = col * iconSize;
-		//		int y = (rows - 1 - row) * iconSize;
-
-		//		atlas.SetPixels(x, y, iconSize, iconSize, icon.GetPixels());
-		//	}
-
-		//	atlas.Apply(true, false);
-		//	Debug.Log($"Generated icon atlas: {atlasWidth}×{atlasHeight}, {validDefs.Count} icons");
-
-		//	return atlas;
-		//}
 	}
 }

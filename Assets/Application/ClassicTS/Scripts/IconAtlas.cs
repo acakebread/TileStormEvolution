@@ -41,7 +41,7 @@ namespace ClassicTilestorm
 			CellSize = cellSize;
 			Columns = columns;
 
-			var validDefs = definitionsToRender.ToList();//.Where(d => d != null && !string.IsNullOrEmpty(d.model)) .ToList();
+			var validDefs = definitionsToRender.ToList(); // .Where(d => d != null && !string.IsNullOrEmpty(d.model)) .ToList();
 
 			if (validDefs.Count == 0)
 			{
@@ -61,99 +61,93 @@ namespace ClassicTilestorm
 				name = "DefinitionIconAtlas"
 			};
 
-			// Initialize transparent
-			var blank = new Color[width * height];
-			Array.Fill(blank, new Color(0, 0, 0, 0));
-			Texture.SetPixels(blank);
+			// Initialize entire atlas with transparent black
+			var blank = new Color32[width * height];
+			Array.Fill(blank, new Color32(0, 0, 0, 0));
+			Texture.SetPixels32(blank);
 
-			for (int i = 0; i < validDefs.Count; i++)
+			// ─── Use the reusable renderer for the whole atlas ────────────────────────────────
+			using (var renderer = new ReusableIconRenderer(
+				size: cellSize,
+				background: background ?? new Color(0, 0, 0, 0),
+				includeGround: includeGround,
+				initialYaw: yaw,
+				initialPitch: pitch))
 			{
-				var def = validDefs[i];
-
-				Texture2D icon = null;
-				try
+				for (int i = 0; i < validDefs.Count; i++)
 				{
-					icon = DefinitionIconRenderUtil.GenerateIcon(
-						def,
-						size: cellSize,
-						background: background,
-						yaw: yaw,
-						pitch: pitch,
-						includeGround: includeGround);
-				}
-				catch (Exception ex)
-				{
-					Debug.LogWarning($"Failed to generate icon for {def?.name ?? "unknown"}: {ex.Message}");
-				}
+					var def = validDefs[i];
 
-				int col = i % Columns;
-				int row = i / Columns;
-
-				int x = col * cellSize;
-				int y = (Rows - 1 - row) * cellSize;  // bottom-up packing
-
-				if (icon != null)
-				{
-					Texture.SetPixels(x, y, cellSize, cellSize, icon.GetPixels());
-					UnityEngine.Object.DestroyImmediate(icon);
-				}
-				// else → leave the pixels as they are (transparent from initial fill)
-
-				else
-				{
-					Color[] pixels = new Color[cellSize * cellSize];
-
-					// All transparent by default
-
-					int outerMargin = cellSize / 4;          // 25% inset from edge → frame starts here
-					int frameThickness = cellSize / 16;       // ~12.5% thick frame (adjust as needed)
-
-					int innerStart = outerMargin + frameThickness;
-					int innerEnd = cellSize - outerMargin - frameThickness;
-
-					Color frameColor = new Color(0.2f, 0.5f, 1.0f, 1.0f);  // visible blue
-
-					for (int py = 0; py < cellSize; py++)
+					Texture2D icon = null;
+					try
 					{
-						for (int px = 0; px < cellSize; px++)
-						{
-							// Check if pixel is inside the frame area (between outerMargin and cellSize-outerMargin)
-							bool inFrameHoriz = px >= outerMargin && px < cellSize - outerMargin;
-							bool inFrameVert = py >= outerMargin && py < cellSize - outerMargin;
-
-							if (inFrameHoriz && inFrameVert)
-							{
-								// Now check if it's on the frame border (not in the hollow center)
-								bool onTop = py >= outerMargin && py < outerMargin + frameThickness;
-								bool onBottom = py >= cellSize - outerMargin - frameThickness && py < cellSize - outerMargin;
-								bool onLeft = px >= outerMargin && px < outerMargin + frameThickness;
-								bool onRight = px >= cellSize - outerMargin - frameThickness && px < cellSize - outerMargin;
-
-								if (onTop || onBottom || onLeft || onRight)
-								{
-									pixels[py * cellSize + px] = frameColor;
-								}
-								// else: inside hollow center → remains transparent
-							}
-							// else: outside the inset area → remains transparent
-						}
+						icon = renderer.RenderIcon(def);
+						// If you ever need per-icon rotation overrides, you can do:
+						// icon = renderer.RenderIcon(def, yaw: 45f, pitch: 20f);
+					}
+					catch (Exception ex)
+					{
+						Debug.LogWarning($"Failed to render icon for {def?.name ?? "unknown"}: {ex.Message}");
 					}
 
-					Texture.SetPixels(x, y, cellSize, cellSize, pixels);
+					int col = i % Columns;
+					int row = i / Columns;
+
+					int x = col * cellSize;
+					int y = (Rows - 1 - row) * cellSize;  // bottom-up packing (Unity texture coords)
+
+					if (icon != null)
+					{
+						Texture.SetPixels32(x, y, cellSize, cellSize, icon.GetPixels32());
+						UnityEngine.Object.DestroyImmediate(icon);
+					}
+					else
+					{
+						// Fallback placeholder frame when render fails
+						Color32[] pixels = new Color32[cellSize * cellSize];
+
+						int outerMargin = cellSize / 4;
+						int frameThickness = cellSize / 16;
+						Color32 frameColor = new Color(0.2f, 0.5f, 1.0f, 1.0f); // visible blue
+
+						for (int py = 0; py < cellSize; py++)
+						{
+							for (int px = 0; px < cellSize; px++)
+							{
+								bool inFrameHoriz = px >= outerMargin && px < cellSize - outerMargin;
+								bool inFrameVert = py >= outerMargin && py < cellSize - outerMargin;
+
+								if (inFrameHoriz && inFrameVert)
+								{
+									bool onTop = py >= outerMargin && py < outerMargin + frameThickness;
+									bool onBottom = py >= cellSize - outerMargin - frameThickness && py < cellSize - outerMargin;
+									bool onLeft = px >= outerMargin && px < outerMargin + frameThickness;
+									bool onRight = px >= cellSize - outerMargin - frameThickness && px < cellSize - outerMargin;
+
+									if (onTop || onBottom || onLeft || onRight)
+									{
+										pixels[py * cellSize + px] = frameColor;
+									}
+								}
+							}
+						}
+
+						Texture.SetPixels32(x, y, cellSize, cellSize, pixels);
+					}
+
+					// Always store the atlas entry — even for failed renders
+					var uvRect = new Rect(
+						(float)x / Texture.width,
+						(float)y / Texture.height,
+						(float)cellSize / Texture.width,
+						(float)cellSize / Texture.height);
+
+					_entries.Add(new AtlasEntry
+					{
+						Index = ResourceManager.Definitions.IndexOf(def),
+						RectNormalized = uvRect
+					});
 				}
-
-				// Always store the entry — even for failed renders
-				var uvRect = new Rect(
-					(float)x / Texture.width,
-					(float)y / Texture.height,
-					(float)cellSize / Texture.width,
-					(float)cellSize / Texture.height);
-
-				_entries.Add(new AtlasEntry
-				{
-					Index = ResourceManager.Definitions.IndexOf(def),
-					RectNormalized = uvRect
-				});
 			}
 
 			Texture.Apply(true, false);
@@ -202,59 +196,6 @@ namespace ClassicTilestorm
 
 			return false;
 		}
-
-		///// <summary>
-		///// Attempts to find the original definition index from a normalized UV coordinate [0..1, 0..1].
-		///// Returns false if the point is outside any cell or no matching entry exists.
-		///// </summary>
-		///// <param name="normalizedUV">UV in atlas space (bottom-left = 0,0; top-right = 1,1)</param>
-		///// <param name="index">The original index in ResourceManager.Definitions (or -1 if not found)</param>
-		///// <returns>true if a valid cell was hit</returns>
-		//public bool TryGetIndex(Vector2 normalizedUV, out int index)
-		//{
-		//	index = -1;
-
-		//	if (normalizedUV.x < 0f || normalizedUV.x > 1f ||
-		//		normalizedUV.y < 0f || normalizedUV.y > 1f)
-		//	{
-		//		return false;
-		//	}
-
-		//	// Convert normalized UV → column / row
-		//	// Note: atlas UVs are usually bottom-left origin (y=0 at bottom)
-		//	float colF = normalizedUV.x * Columns;
-		//	float rowF = normalizedUV.y * Rows;          // y increases upwards
-
-		//	int col = Mathf.FloorToInt(colF);
-		//	int row = Mathf.FloorToInt(rowF);
-
-		//	// Clamp (in case of floating-point edge cases)
-		//	if (col < 0 || col >= Columns || row < 0 || row >= Rows)
-		//	{
-		//		return false;
-		//	}
-
-		//	int candidateIndex = row * Columns + col;
-
-		//	// Now check if this slot actually has an entry (some slots might be empty if defs.Count % Columns != 0)
-		//	var entry = _entries.FirstOrDefault(e => GetRowColFromFlatIndex(e.Index) == (row, col));
-
-		//	if (entry.Index >= 0) // found a real entry
-		//	{
-		//		index = entry.Index;
-		//		return true;
-		//	}
-
-		//	return false;
-		//}
-
-		//private (int row, int col) GetRowColFromFlatIndex(int flatIndex)
-		//{
-		//	return (flatIndex / Columns, flatIndex % Columns);
-		//}
-
-		// Variant: by HashId
-		// public bool TryGetUVRect(HashId hash, out Rect uvRect) { ... }
 
 		public void Dispose()
 		{
