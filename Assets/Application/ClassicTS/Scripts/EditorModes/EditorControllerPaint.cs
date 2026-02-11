@@ -231,7 +231,10 @@ namespace ClassicTilestorm
 		protected override void OnControl(bool staticClick) 
 		{
 			base.OnControl(staticClick);
-			if (!staticClick || defSelection)
+			if (!staticClick)
+				return;
+
+			if (Input.GetMouseButtonUp(0) && defSelection)
 			{
 				defSelection = false;
 				return;
