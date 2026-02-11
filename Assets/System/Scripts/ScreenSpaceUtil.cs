@@ -12,6 +12,9 @@ namespace MassiveHadronLtd
 		private static Material _renderMaterial;
 
 		private static Vector2 _lastCoord = new Vector2(-999f, -999f);
+		private static int _lastColumns = -1;
+		private static int _lastRows = -1;
+		private static int _lastCellSize = -1;
 
 		public const int MARGIN = 256;
 		private const float SELECTED_SIZE = 4f;
@@ -26,7 +29,6 @@ namespace MassiveHadronLtd
 
 			LazyInitResources(atlas.Texture);
 
-			// ── Atlas & size values ────────────────────────────────────────────────────────
 			var columns = Mathf.Max(1, atlas.Columns);
 			var rows = Mathf.Max(1, atlas.Rows);
 			var cellSize = atlas.CellSize;
@@ -36,22 +38,18 @@ namespace MassiveHadronLtd
 			var padW = coreW + 2 * MARGIN;
 			var padH = coreH + 2 * MARGIN;
 
-			// ── RT padding & content scaling (for mesh vertices) ───────────────────────────
 			var contentScaleX = (float)coreW / padW;
 			var contentScaleY = (float)coreH / padH;
 			var contentOffsetX = (float)MARGIN / padW;
 			var contentOffsetY = (float)MARGIN / padH;
 
-			// ── GUI scaling & margin (for display rect & overlay) ──────────────────────────
 			var scaleW = (float)rect.width / coreW;
 			var scaleH = (float)rect.height / coreH;
 			var marginX = MARGIN * scaleW;
 			var marginY = MARGIN * scaleH;
 
-			// ── Last quad base index (only used for overlay when valid) ────────────────────
 			var lastBase = (columns * rows - 1) * 4;
 
-			// ── RT creation / resize ───────────────────────────────────────────────────────
 			if (_mainRT == null || _mainRT.width != padW || _mainRT.height != padH)
 			{
 				_mainRT?.Release();
@@ -62,12 +60,21 @@ namespace MassiveHadronLtd
 				_mainRT.Create();
 			}
 
-			// ── Early decisions ────────────────────────────────────────────────────────────
 			var invalid = coord.x < 0 || coord.x > 1 || coord.y < 0 || coord.y > 1;
 			var coordChanged = (_lastCoord - coord).sqrMagnitude > 0.00000025f;
 
-			if (_gridMesh == null || coordChanged)
+			var layoutChanged =
+				_gridMesh == null ||
+				coordChanged ||
+				_lastColumns != columns ||
+				_lastRows != rows ||
+				_lastCellSize != cellSize;
+
+			if (layoutChanged)
 			{
+				_lastColumns = columns;
+				_lastRows = rows;
+				_lastCellSize = cellSize;
 				_lastCoord = coord;
 
 				if (_gridMesh != null) Object.DestroyImmediate(_gridMesh);
@@ -109,7 +116,6 @@ namespace MassiveHadronLtd
 
 				int quadCount = invalid ? quadData.Count : quadData.Count - 1;
 
-				// Normal quads
 				for (int drawIdx = 0; drawIdx < quadCount; drawIdx++)
 				{
 					var (strength, qIdx) = quadData[drawIdx];
@@ -133,10 +139,9 @@ namespace MassiveHadronLtd
 					var colour = new Color(lum, lum, lum, 1);
 
 					BuildQuad(vertices, uvs, colors, indices, baseVert, quadCenter, src, deltaScale, transScale, centerLogical,
-							  scaleX, scaleY, transX, transY, colour, uvScaleX, uvScaleY);
+						scaleX, scaleY, transX, transY, colour, uvScaleX, uvScaleY);
 				}
 
-				// Selected quad (only if valid)
 				if (!invalid)
 				{
 					var (strength, qIdx) = quadData[^1];
@@ -156,10 +161,8 @@ namespace MassiveHadronLtd
 					var transX = rect.x;
 					var transY = rect.y;
 
-					var colour = Color.clear;
-
 					BuildQuad(vertices, uvs, colors, indices, baseVert, quadCenter, src, deltaScale, transScale, centerLogical,
-							  scaleX, scaleY, transX, transY, colour, uvScaleX, uvScaleY);
+						scaleX, scaleY, transX, transY, Color.clear, uvScaleX, uvScaleY);
 				}
 
 				_gridMesh.vertices = vertices;
@@ -167,7 +170,6 @@ namespace MassiveHadronLtd
 				_gridMesh.colors = colors;
 				_gridMesh.triangles = indices;
 
-				// ─── Render main grid ──────────────────────────────────────────────────────────
 				var old = RenderTexture.active;
 				RenderTexture.active = _mainRT;
 				GL.Clear(true, true, Color.clear);
@@ -178,7 +180,6 @@ namespace MassiveHadronLtd
 				Graphics.DrawMeshNow(_gridMesh, Matrix4x4.identity);
 				GL.PopMatrix();
 
-				// ─── Render selected icon RT ───────────────────────────────────────────────────
 				if (!invalid)
 				{
 					int selSize = Mathf.CeilToInt(cellSize * SELECTED_SIZE);
@@ -205,7 +206,7 @@ namespace MassiveHadronLtd
 					var lastBaseForUV = (columns * rows - 1) * 4;
 					_selectedMesh.vertices = new[] { Vector3.zero, Vector3.up, Vector3.one, Vector3.right };
 					_selectedMesh.uv = new[] { uvs[lastBaseForUV + 0], uvs[lastBaseForUV + 1], uvs[lastBaseForUV + 2], uvs[lastBaseForUV + 3] };
-					_selectedMesh.colors = new Color[] { Color.white, Color.white, Color.white, Color.white };
+					_selectedMesh.colors = new[] { Color.white, Color.white, Color.white, Color.white };
 					_selectedMesh.triangles = new[] { 0, 1, 2, 0, 2, 3 };
 
 					Graphics.DrawMeshNow(_selectedMesh, Matrix4x4.identity);
@@ -220,11 +221,9 @@ namespace MassiveHadronLtd
 			var displayRect = new Rect(rect.x - marginX, rect.y - marginY, rect.width + marginX * 2, rect.height + marginY * 2);
 			GUI.DrawTexture(displayRect.ToGUIRect(), _mainRT, ScaleMode.ScaleToFit, true);
 
-			// Selected overlay ── exactly as you have it ────────────────────────────────────
 			if (_selectedRT == null || _gridMesh == null || invalid) return;
 
 			var verts = _gridMesh.vertices;
-
 			var bl = verts[lastBase + 0];
 			var tr = verts[lastBase + 2];
 
