@@ -191,7 +191,6 @@ namespace MassiveHadronLtd
 
 		private static void DrawGridToRT(Vector2 coord)
 		{
-			LazyInitResources();
 			RebuildGridMeshIfNeeded(coord);
 
 			if (_currentAtlas == null) return;
@@ -268,12 +267,12 @@ namespace MassiveHadronLtd
 
 		public static void OnGUI(IGridAtlas atlas, Rect rect, Vector2 coord = default)
 		{
+			if (atlas == null || atlas.Texture == null) return;
 			_currentAtlas = atlas;
 
 			if (coord == default) coord = new Vector2(0.5f, 0.5f);
 
-			if (_currentAtlas == null || _currentAtlas.Texture == null) return;
-
+			LazyInitResources();
 			DrawGridToRT(coord);
 			DrawSelectedOnlyToRT();
 
