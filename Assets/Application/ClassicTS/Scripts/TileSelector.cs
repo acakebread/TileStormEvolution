@@ -46,13 +46,12 @@ namespace ClassicTilestorm
 
 		public Func<bool> CanOpenPalette;
 
-		private int pressedIndex = -1;
+		// ─── Wobble (scale-based on focus overlay) ───────────────────────────
+		private int pressedIndex = -1;          // tile pressed down on
 		private float wobbleStartTime = -1f;
 		[SerializeField] private float wobbleMaxAmplitude = 0.1f;
 		[SerializeField] private float wobbleDecayTime = 0.3f;
 		[SerializeField] private float wobbleFrequency = 12f;
-
-		private float autoHideAfterSelectionTimer = -1f;
 
 		private void Awake()
 		{
@@ -70,6 +69,7 @@ namespace ClassicTilestorm
 
 			if (_focusOverlay != null)
 			{
+				// Set pivot to center once (so scale happens from middle)
 				_focusOverlay.rectTransform.pivot = new Vector2(0.5f, 0.5f);
 			}
 		}
@@ -106,6 +106,7 @@ namespace ClassicTilestorm
 
 			RecalculateLayout();
 
+			// ─── Panel visibility ────────────────────────────────────────────────
 			bool mouseInTrigger = InputX.mouseInsideWindow && Input.mousePosition.y <= triggerZoneHeight;
 
 			bool justEnteredCleanly =
@@ -147,8 +148,9 @@ namespace ClassicTilestorm
 
 			UpdatePanelVisuals();
 
+			// ─── Wobble trigger on mouse DOWN ────────────────────────────────────
 			bool mouseOverGrid = gridScreenRect.Contains(Input.mousePosition);
-			if (Input.GetMouseButtonDown(0) && mouseOverGrid && wobbleStartTime < 0f)
+			if (Input.GetMouseButtonDown(0) && mouseOverGrid && wobbleStartTime < 0f) // ← only start if no wobble active
 			{
 				Vector2 uv = gridScreenRect.NormalisedPoint(Input.mousePosition);
 				if (_atlas.TryGetIndex(uv, out int idx) && idx >= 0 && idx < filteredDefs.Count)
@@ -158,27 +160,21 @@ namespace ClassicTilestorm
 				}
 			}
 
+			// ─── Apply wobble to focus overlay (scale-based) ─────────────────────
 			ApplyFocusWobble();
 
+			// ─── Selection only on mouse UP over SAME tile ───────────────────────
 			if (Input.GetMouseButtonUp(0) && pressedIndex >= 0)
 			{
+				var resetWobble = false;
 				Vector2 uv = gridScreenRect.NormalisedPoint(Input.mousePosition);
 				if (_atlas.TryGetIndex(uv, out int releaseIdx) && releaseIdx == pressedIndex)
+					resetWobble = !TrySelectTile(releaseIdx);
+				if (resetWobble)
 				{
-					TrySelectTile(releaseIdx);
-				}
-				pressedIndex = -1;
-			}
-
-			if (autoHideAfterSelectionTimer > 0f)
-			{
-				autoHideAfterSelectionTimer -= Time.deltaTime;
-				if (autoHideAfterSelectionTimer <= 0f)
-				{
-					panelTargetY = -panelHeight;
-					hideTimer = hideDelay;
-					allowHideDespiteMouseOverPanel = true;
-					autoHideAfterSelectionTimer = -1f;
+					pressedIndex = -1;
+					wobbleStartTime = -1f;
+					if (_focusOverlay) _focusOverlay.transform.localScale = Vector3.one;
 				}
 			}
 		}
@@ -189,34 +185,51 @@ namespace ClassicTilestorm
 
 			float elapsed = Time.time - wobbleStartTime;
 
+			// Stop exactly after wobbleDecayTime
 			if (elapsed >= wobbleDecayTime)
 			{
 				wobbleStartTime = -1f;
 				_focusOverlay.transform.localScale = Vector3.one;
-
-				if (autoHideAfterSelectionTimer < 0f)
-				{
-					autoHideAfterSelectionTimer = 0.1f;
-				}
 				return;
 			}
 
+			// Normalized progress (0 → 1 over wobbleDecayTime)
 			float t = elapsed / wobbleDecayTime;
-			float amplitude = wobbleMaxAmplitude * (1f - t);
+
+			// Simple linear decay of amplitude (optional)
+			float amplitude = wobbleMaxAmplitude * (1f - t); // optional, or just wobbleMaxAmplitude
+
+			// Sine wobble
 			float wobble = Mathf.Sin(elapsed * wobbleFrequency * Mathf.PI * 2f) * amplitude;
+
 			float scale = 1f + wobble;
 			_focusOverlay.transform.localScale = new Vector3(scale, scale, 1f);
 		}
 
-		private void TrySelectTile(int index)
+		private bool TrySelectTile(int index)
 		{
-			if (index < 0 || index >= filteredDefs.Count) return;
+			if (index < 0 || index >= filteredDefs.Count) return false;
 
 			var newHash = filteredDefs[index].HashID;
-			if (newHash == default) return;
+			if (newHash != default)
+			{
+				OnTileSelected?.Invoke(SelectedHashId);
 
+				// Start delayed hide
+				StopCoroutine(nameof(AutoHideAfterDelay)); // prevent stacking
+				StartCoroutine(AutoHideAfterDelay(newHash));
+				return true;
+			}
+			return false;
+		}
+
+		private IEnumerator AutoHideAfterDelay(HashId newHash)
+		{
+			yield return new WaitForSeconds(wobbleDecayTime + 0.2f);
 			SelectedHashId = newHash;
-			OnTileSelected?.Invoke(SelectedHashId);
+
+			panelTargetY = -panelHeight;
+			hideTimer = hideDelay;
 			allowHideDespiteMouseOverPanel = true;
 		}
 
@@ -303,15 +316,17 @@ namespace ClassicTilestorm
 			var rt = target.rectTransform;
 			rt.anchorMin = rt.anchorMax = new Vector2(0, 0);
 
+			// Grid stays bottom-left
 			if (target == _gridOverlay)
 				rt.pivot = new Vector2(0, 0);
 			else
-				rt.pivot = new Vector2(0.5f, 0.5f);
+				rt.pivot = new Vector2(0.5f, 0.5f); // focus overlay scales from center
 
 			if (info.IsValid)
 			{
 				if (target == _focusOverlay)
 				{
+					// Center position for focus
 					float cx = info.ScreenRect.x + info.ScreenRect.width * 0.5f;
 					float cy = info.ScreenRect.y + info.ScreenRect.height * 0.5f;
 
@@ -335,6 +350,7 @@ namespace ClassicTilestorm
 
 		private string GetStatusMessage()
 		{
+			// Quick exit if panel is fully hidden
 			bool panelVisible = !Mathf.Approximately(panelY, panelTargetY) || panelTargetY >= 0f;
 			if (!panelVisible)
 				return "Hover near bottom of screen to open tile palette";
@@ -342,6 +358,7 @@ namespace ClassicTilestorm
 			bool mouseOverGrid = gridScreenRect.Contains(Input.mousePosition);
 			Vector2 uv = gridScreenRect.NormalisedPoint(Input.mousePosition);
 
+			// Case 1: Mouse over a valid tile in grid → show its info
 			if (mouseOverGrid && _atlas != null && _atlas.TryGetIndex(uv, out int idx) && idx >= 0 && idx < filteredDefs.Count)
 			{
 				var def = filteredDefs[idx];
@@ -385,6 +402,7 @@ namespace ClassicTilestorm
 				return message;
 			}
 
+			// Case 2: Mouse inside palette rect but NOT over any tile → show current selection
 			if (gridScreenRect.Contains(Input.mousePosition) && SelectedHashId != ResourceManager.DefaultHash)
 			{
 				var def = ResourceManager.GetDefinition(SelectedHashId);
@@ -414,6 +432,7 @@ namespace ClassicTilestorm
 				return $"<color=#88FF88>Selected:</color> <b><color=#FFD700>{selName}</color></b>{directions}{flagsStr}";
 			}
 
+			// Case 3: Mouse outside grid (or no selection) → default prompt
 			return "Hover over a tile";
 		}
 	}
