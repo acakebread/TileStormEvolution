@@ -14,7 +14,7 @@ namespace ClassicTilestorm
 		private readonly CommandCameraHook _hook;
 		private readonly Light _iconLight;
 
-		private readonly CommandRenderModelData _groundModel;
+		private CommandRenderModelData _groundModel;
 
 		public ReusableIconRenderer(
 			int size = 128,
