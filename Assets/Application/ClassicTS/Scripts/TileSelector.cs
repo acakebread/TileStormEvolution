@@ -213,6 +213,7 @@ namespace ClassicTilestorm
 			var newHash = filteredDefs[index].HashID;
 			if (newHash != default)
 			{
+				allowHideDespiteMouseOverPanel = true;
 				// Start delayed hide
 				StopCoroutine(nameof(AutoHideAfterDelay)); // prevent stacking
 				StartCoroutine(AutoHideAfterDelay(newHash));
@@ -229,7 +230,6 @@ namespace ClassicTilestorm
 
 			panelTargetY = -panelHeight;
 			hideTimer = hideDelay;
-			allowHideDespiteMouseOverPanel = true;
 		}
 
 		private int Rows => filteredDefs?.Count > 0 ? Mathf.CeilToInt((float)filteredDefs.Count / COLUMNS) : 0;
@@ -263,7 +263,7 @@ namespace ClassicTilestorm
 
 		private void UpdatePanelVisuals()
 		{
-			if (Rows <= 0 || _panelImage == null) return;
+			if (allowHideDespiteMouseOverPanel || Rows <= 0 || _panelImage == null) return;
 
 			float uiScale = 1f;
 			if (_scaler && _scaler.uiScaleMode == CanvasScaler.ScaleMode.ScaleWithScreenSize)
