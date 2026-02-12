@@ -12,12 +12,9 @@ namespace ClassicTilestorm
 		private float previewAngle = 0f;
 		private Vector3 previewDelta = new();
 
-		private bool mouseWasOverGridLastFrame = false;
 		private bool defSelection = false;
 
-		public EditorControllerPaint(EditorController editorController) : base(editorController)
-		{
-		}
+		public EditorControllerPaint(EditorController editorController) : base(editorController) { }
 
 		public override void OnEnable()
 		{
@@ -32,6 +29,31 @@ namespace ClassicTilestorm
 
 			_tileSelector.Initialize();
 			selectedHashId = _tileSelector.DefaultHash;
+
+			// Subscribe to selection event
+			_tileSelector.OnTileSelected += OnPaletteTileSelected;
+		}
+
+		public override void OnDisable()
+		{
+			if (_tileSelector != null)
+				_tileSelector.OnTileSelected -= OnPaletteTileSelected;
+
+			base.OnDisable();
+		}
+
+		public override void OnDestroy() => EditorMeshUtil.DestroyGhostMesh();
+
+		protected override bool IsMouseOverGUI() => base.IsMouseOverGUI() || _tileSelector.IsMouseOverPalette();
+
+		private void OnPaletteTileSelected(HashId newHash)
+		{
+			selectedHashId = newHash;
+			previewAngle = 0f;
+			previewDelta = Vector3.zero;
+
+			// Optional: any other reaction (e.g. log, update UI, etc.)
+			Debug.Log($"Palette selected tile: {ResourceManager.GetDefinition(newHash)?.name ?? "Unknown"}");
 		}
 
 		public override void Update()
@@ -39,9 +61,6 @@ namespace ClassicTilestorm
 			base.Update();
 			if (!camera) return;
 
-			_tileSelector.Tick();
-
-			// Get hover states
 			bool mouseOverPaletteY = _tileSelector.IsMouseOverPalette();
 			bool mouseOverGridRect = false;
 
@@ -50,22 +69,17 @@ namespace ClassicTilestorm
 				mouseOverGridRect = _tileSelector.gridScreenRect.Contains(Input.mousePosition);
 			}
 
-			// Hover sets defSelection (original behavior)
 			if (mouseOverGridRect)
 				defSelection = true;
 
-			// Mouse down
-			if (Input.GetMouseButtonDown(0))
+			// ─── Selection now happens on mouse UP ───────────────────────────────
+			if (Input.GetMouseButtonUp(0))
 			{
 				if (mouseOverGridRect)
 				{
-					bool didSelect = _tileSelector.TrySelectTileFromClick(Input.mousePosition);
-					if (didSelect)
-					{
-						selectedHashId = _tileSelector.SelectedHashId;
-						previewAngle = 0f;
-						previewDelta = Vector3.zero;
-					}
+					// Try select on release
+					_tileSelector.TrySelectTileOnUp(Input.mousePosition);
+					// No need to do anything else here — event handler will update us
 				}
 				else
 				{
@@ -77,8 +91,6 @@ namespace ClassicTilestorm
 						StartPanning();
 				}
 			}
-
-			mouseWasOverGridLastFrame = mouseOverGridRect;
 
 			if (IsMouseOverGUI() || IsGuiControlActive()) return;
 
@@ -189,10 +201,5 @@ namespace ClassicTilestorm
 
 			iMap.UpdateTileAt(px, pz, selectedHashId, previewDelta, previewAngle);
 		}
-
-		public override void OnDisable() => EditorMeshUtil.HideGhostMesh();
-		public override void OnDestroy() => EditorMeshUtil.DestroyGhostMesh();
-
-		protected override bool IsMouseOverGUI() => base.IsMouseOverGUI() || _tileSelector.IsMouseOverPalette();
 	}
 }

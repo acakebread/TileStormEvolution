@@ -14,10 +14,13 @@ namespace ClassicTilestorm
 
 		public HashId DefaultHash => ResourceManager.FindOrCreateDefaultTile().HashID;
 
+		// Event fired when user selects a tile (on mouse up)
+		public event Action<HashId> OnTileSelected;
+
 		private IconAtlas _atlas;
 		private List<Definition> filteredDefs;
 
-		public Rect gridScreenRect;  // made public so Paint can access it
+		public Rect gridScreenRect; // still public for paint to check hover if needed
 
 		private float panelHeight;
 		private float panelY;
@@ -43,6 +46,8 @@ namespace ClassicTilestorm
 		private RawImage _gridOverlay;
 		private RawImage _focusOverlay;
 		private TMP_Text _statusText;
+
+		private bool _wasMouseOverGridLastFrame; // for potential highlight later
 
 		private void Awake()
 		{
@@ -84,7 +89,8 @@ namespace ClassicTilestorm
 			panelY = panelTargetY = -panelHeight;
 		}
 
-		public void Tick()
+		// Remove public void Tick() and replace with:
+		private void Update()
 		{
 			if (_atlas == null) return;
 
@@ -127,11 +133,23 @@ namespace ClassicTilestorm
 				allowHideDespiteMouseOverPanel = false;
 
 			UpdatePanelVisuals();
+
+			// Hover tracking for future highlight
+			bool mouseOverGridThisFrame = gridScreenRect.Contains(Input.mousePosition);
+			if (mouseOverGridThisFrame != _wasMouseOverGridLastFrame)
+			{
+				// Future: highlight hovered tile icon here
+				_wasMouseOverGridLastFrame = mouseOverGridThisFrame;
+			}
 		}
 
 		public bool IsMouseOverPalette() => Input.mousePosition.y <= (panelY + panelHeight);
 
-		public bool TrySelectTileFromClick(Vector2 mousePos)
+		/// <summary>
+		/// Call this on MouseButtonUp(0) when over palette.
+		/// Returns true if a tile was selected.
+		/// </summary>
+		public bool TrySelectTileOnUp(Vector2 mousePos)
 		{
 			if (_atlas == null || filteredDefs == null || filteredDefs.Count == 0 || !gridScreenRect.Contains(mousePos))
 				return false;
@@ -141,12 +159,18 @@ namespace ClassicTilestorm
 			if (_atlas.TryGetIndex(uv, out int index) && index >= 0 && index < filteredDefs.Count)
 			{
 				var newHash = filteredDefs[index].HashID;
-				if (newHash != default)
+				if (newHash != default && newHash != SelectedHashId)
 				{
 					SelectedHashId = newHash;
+
+					// Close panel
 					panelTargetY = -panelHeight;
 					hideTimer = hideDelay;
 					allowHideDespiteMouseOverPanel = true;
+
+					// Fire event
+					OnTileSelected?.Invoke(SelectedHashId);
+
 					return true;
 				}
 			}
