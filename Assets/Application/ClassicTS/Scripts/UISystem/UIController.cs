@@ -14,6 +14,8 @@ namespace ClassicTilestorm
 		[Header("Panel Prefabs – drag prefabs here (must have UIPanel component)")]
 		[SerializeField] private List<GameObject> panelPrefabs = new List<GameObject>();
 
+		[SerializeField] private GameObject editorScreenPrefab;
+
 		private readonly Dictionary<Type, GameObject> prefabByType = new();
 
 		private GameObject currentPanel;
@@ -55,6 +57,8 @@ namespace ClassicTilestorm
 
 			if (prefabByType.Count == 0)
 				Debug.LogWarning("UIController: No valid panel prefabs assigned!");
+
+			Instantiate(editorScreenPrefab, mainCanvas.transform);
 		}
 
 		// ── Public API ────────────────────────────────────────────────────────

@@ -2,6 +2,7 @@
 using UnityEngine;
 using MassiveHadronLtd;
 using System.Linq;
+using UnityEngine.UI;
 
 namespace ClassicTilestorm
 {
@@ -225,6 +226,8 @@ namespace ClassicTilestorm
 				allowHideDespiteMouseOverPanel = false;
 			}
 
+			UpdatePanel();
+
 			if (IsMouseOverGUI() || IsGuiControlActive()) return;
 
 			var def = ResourceManager.GetDefinition(selectedHashId);
@@ -292,21 +295,146 @@ namespace ClassicTilestorm
 			}
 		}
 
-		public override void OnGUI()
+		//public override void OnGUI()
+		//{
+		//	if (ROWS <= 0) return;
+		//	if (panelY <= -panelHeight) return;
+
+		//	CalculatePanelLayout();
+
+		//	Rect guiPanelRect = new Rect(0, panelY, Screen.width, panelHeight);
+		//	GUI.Box(guiPanelRect.ToGUIRect(), GUIContent.none,
+		//		new GUIStyle { normal = { background = TextureUtils.MakeTex(1, 1, semiTransparentBg) } });
+
+		//	if (panelY > -panelHeight + 1f)
+		//	{
+		//		Vector2 mouseUV = gridScreenRect.NormalisedPoint(Input.mousePosition);
+		//		ScreenSpaceUtil.OnGUI(_atlas, gridScreenRect, mouseUV);
+		//	}
+
+		//	//ApplicationSettings.TilePanelRect;[RectTransform]
+		//	//ApplicationSettings.GridTarget[UnityEngine.UI.RawImage]
+		//	//ApplicationSettings.FocusTarget[UnityEngine.UI.RawImage]
+		//}
+
+		public void UpdatePanel()
 		{
-			if (ROWS <= 0) return;
-			if (panelY <= -panelHeight) return;
+			if (ROWS <= 0)
+				return;
 
 			CalculatePanelLayout();
 
-			Rect guiPanelRect = new Rect(0, panelY, Screen.width, panelHeight);
-			GUI.Box(guiPanelRect.ToGUIRect(), GUIContent.none,
-				new GUIStyle { normal = { background = TextureUtils.MakeTex(1, 1, semiTransparentBg) } });
+			var panelImage = EditorScreen.PanelTarget;
+			if (!panelImage)
+				return;
 
-			if (panelY > -panelHeight + 1f)
+			var canvas = panelImage.GetComponentInParent<Canvas>();
+			if (!canvas)
+				return;
+
+			var scaler = canvas.GetComponent<CanvasScaler>();
+			float scale = 1f;
+
+			if (scaler && scaler.uiScaleMode == CanvasScaler.ScaleMode.ScaleWithScreenSize)
 			{
-				Vector2 mouseUV = gridScreenRect.NormalisedPoint(Input.mousePosition);
-				ScreenSpaceUtil.OnGUI(_atlas, gridScreenRect, mouseUV);
+				float sx = Screen.width / scaler.referenceResolution.x;
+				float sy = Screen.height / scaler.referenceResolution.y;
+				scale = Mathf.Lerp(sx, sy, scaler.matchWidthOrHeight);
+			}
+
+			float inv = 1f / scale;
+
+			// ========================= PANEL =========================
+			var panelRT = panelImage.rectTransform;
+
+			panelRT.anchorMin = new Vector2(0, 0);
+			panelRT.anchorMax = new Vector2(1, 0);
+			panelRT.pivot = new Vector2(0.5f, 0);
+
+			panelRT.anchoredPosition = new Vector2(0, panelY * inv);
+			panelRT.sizeDelta = new Vector2(0, panelHeight * inv);
+
+			// Determine visibility AFTER applying position
+			bool panelFullyHidden = Mathf.Approximately(panelY, panelTargetY) && panelTargetY < 0f;
+
+			panelImage.enabled = !panelFullyHidden;
+
+			if (panelFullyHidden || _atlas == null)
+			{
+				if (EditorScreen.GridTarget)
+					EditorScreen.GridTarget.enabled = false;
+
+				if (EditorScreen.FocusTarget)
+					EditorScreen.FocusTarget.enabled = false;
+
+				return;
+			}
+
+			// ========================= GRID / FOCUS =========================
+
+			Vector2 mouseUV = gridScreenRect.NormalisedPoint(Input.mousePosition);
+
+			var gridInfo = ScreenSpaceUtil.GetGridRenderInfo(_atlas, gridScreenRect, mouseUV);
+			var focusInfo = ScreenSpaceUtil.GetFocusRenderInfo(_atlas, gridScreenRect, mouseUV);
+
+			// ---------------- GRID ----------------
+			if (EditorScreen.GridTarget)
+			{
+				var rt = EditorScreen.GridTarget.rectTransform;
+
+				rt.anchorMin = new Vector2(0, 0);
+				rt.anchorMax = new Vector2(0, 0);
+				rt.pivot = new Vector2(0, 0);
+
+				if (gridInfo.IsValid)
+				{
+					rt.anchoredPosition = new Vector2(
+						gridInfo.ScreenRect.x * inv,
+						gridInfo.ScreenRect.y * inv
+					);
+
+					rt.sizeDelta = new Vector2(
+						gridInfo.ScreenRect.width * inv,
+						gridInfo.ScreenRect.height * inv
+					);
+
+					EditorScreen.GridTarget.texture = gridInfo.Texture;
+					EditorScreen.GridTarget.enabled = true;
+				}
+				else
+				{
+					EditorScreen.GridTarget.enabled = false;
+				}
+			}
+
+			// ---------------- FOCUS ----------------
+			if (EditorScreen.FocusTarget)
+			{
+				var rt = EditorScreen.FocusTarget.rectTransform;
+
+				rt.anchorMin = new Vector2(0, 0);
+				rt.anchorMax = new Vector2(0, 0);
+				rt.pivot = new Vector2(0, 0);
+
+				if (focusInfo.IsValid)
+				{
+					rt.anchoredPosition = new Vector2(
+						focusInfo.ScreenRect.x * inv,
+						focusInfo.ScreenRect.y * inv
+					);
+
+					rt.sizeDelta = new Vector2(
+						focusInfo.ScreenRect.width * inv,
+						focusInfo.ScreenRect.height * inv
+					);
+
+					EditorScreen.FocusTarget.texture = focusInfo.Texture;
+					EditorScreen.FocusTarget.enabled = true;
+				}
+				else
+				{
+					EditorScreen.FocusTarget.enabled = false;
+				}
 			}
 		}
 

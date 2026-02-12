@@ -127,14 +127,25 @@ namespace ClassicTilestorm
 
 		private static ApplicationSettings instance;
 
-		public Texture2D testTexture;
-		public static Texture2D TestTexture { get => instance?.testTexture; set => instance.testTexture = value; }
 
-		public Material outline128x128;
-		public static Material Outline128x128 { get => instance?.outline128x128; set => instance.outline128x128 = value; }
+		//[Header("debug [to be removed]")]
+		//public Texture2D testTexture;
+		//public static Texture2D TestTexture { get => instance?.testTexture; set => instance.testTexture = value; }
 
-		public Material background128x128;
-		public static Material Background128x128 { get => instance?.background128x128; set => instance.background128x128 = value; }
+		//public Material outline128x128;
+		//public static Material Outline128x128 { get => instance?.outline128x128; set => instance.outline128x128 = value; }
+
+		//public Material background128x128;
+		//public static Material Background128x128 { get => instance?.background128x128; set => instance.background128x128 = value; }
+
+		//public UnityEngine.UI.Image panelTarget;
+		//public static UnityEngine.UI.Image PanelTarget { get => instance?.panelTarget; set => instance.panelTarget = value; }
+
+		//public UnityEngine.UI.RawImage gridTarget;
+		//public static UnityEngine.UI.RawImage GridTarget { get => instance?.gridTarget; set => instance.gridTarget = value; }
+
+		//public UnityEngine.UI.RawImage focusTarget;
+		//public static UnityEngine.UI.RawImage FocusTarget { get => instance?.focusTarget; set => instance.focusTarget = value; }
 
 		private void Awake()
 		{
