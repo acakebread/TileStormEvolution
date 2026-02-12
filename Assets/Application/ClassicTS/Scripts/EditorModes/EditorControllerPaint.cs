@@ -25,7 +25,7 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			_tileSelector.Initialize();
+			//_tileSelector.Initialize();
 
 			// Subscribe to tile selection event
 			_tileSelector.OnTileSelected += OnTileSelectedFromPalette;

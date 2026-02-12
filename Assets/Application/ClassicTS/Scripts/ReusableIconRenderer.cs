@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using UnityEngine;
 using MassiveHadronLtd;
+using UnityEngine.Rendering;
 
 namespace ClassicTilestorm
 {
@@ -11,6 +13,7 @@ namespace ClassicTilestorm
 		private readonly RenderTexture _rt;
 		private readonly CommandRenderScene _scene;
 		private readonly CommandCameraHook _hook;
+		private readonly Light _iconLight;
 
 		private CommandRenderModelData _currentModel;
 		private CommandRenderModelData _groundModel;
@@ -25,6 +28,16 @@ namespace ClassicTilestorm
 			if (size <= 0) throw new ArgumentException("Size must be > 0");
 
 			_root = new GameObject("ReusableIconRenderer") { hideFlags = HideFlags.HideAndDontSave };
+
+			// Create dedicated directional light for icons
+			var lightObj = new GameObject("IconLight") { hideFlags = HideFlags.HideAndDontSave };
+			lightObj.transform.SetParent(_root.transform, false);
+			_iconLight = lightObj.AddComponent<Light>();
+			_iconLight.type = LightType.Directional;
+			_iconLight.intensity = 1.2f;
+			_iconLight.color = new Color(1f, 0.98f, 0.95f); // slightly warm white
+			_iconLight.shadows = LightShadows.None;
+			_iconLight.enabled = false; // off by default
 
 			_rt = new RenderTexture(size, size, 24, RenderTextureFormat.ARGB32)
 			{
@@ -53,7 +66,6 @@ namespace ClassicTilestorm
 			_hook = camObj.AddComponent<CommandCameraHook>();
 			_hook.Provider = _scene;
 
-			// Optional shared ground (reused for all icons if enabled)
 			if (includeGround)
 			{
 				var quadMesh = MeshUtils.GenerateQuadXZ(3f, 1f, "SharedIconGround");
@@ -64,10 +76,9 @@ namespace ClassicTilestorm
 				};
 				groundMat.SetTexture("_BaseMap", Texture2D.whiteTexture);
 
-				_groundModel = new CommandRenderModelData(quadMesh, new[] { groundMat }, Matrix4x4.identity);
+				_groundModel = new CommandRenderModelData(quadMesh, new[] { groundMat }, Matrix4x4.identity, 0);
 			}
 
-			// Set initial rotation (can be overridden per icon if desired)
 			SetCameraRotation(initialYaw, initialPitch);
 		}
 
@@ -75,7 +86,6 @@ namespace ClassicTilestorm
 		{
 			var rot = Quaternion.Euler(pitch, yaw, 0f);
 			_camera.transform.rotation = rot;
-			// position will be updated in RenderIcon() based on model bounds
 		}
 
 		public Texture2D RenderIcon(Definition def, float yaw = -1f, float pitch = -1f)
@@ -83,17 +93,11 @@ namespace ClassicTilestorm
 			if (def == null || string.IsNullOrEmpty(def.model))
 				return null;
 
-			// Optional: allow per-icon rotation override
 			if (yaw >= 0 || pitch >= 0)
 			{
 				SetCameraRotation(yaw >= 0 ? yaw : 35f, pitch >= 0 ? pitch : 30f);
 			}
 
-			// Clean previous model
-			if (_currentModel != null)
-			{
-				_currentModel = null;
-			}
 			var modelData = RenderModelFactory.Create(def, Vector3.zero, Quaternion.identity, Vector3.one);
 			if (modelData == null || modelData.meshInstances.Count == 0)
 			{
@@ -103,7 +107,6 @@ namespace ClassicTilestorm
 
 			_currentModel = modelData;
 
-			// Adjust ground position if used
 			CommandRenderModelData[] modelsToRender;
 			if (_groundModel != null)
 			{
@@ -111,7 +114,8 @@ namespace ClassicTilestorm
 				var adjustedGround = new CommandRenderModelData(
 					_groundModel.meshInstances[0].mesh,
 					_groundModel.meshInstances[0].materials,
-					Matrix4x4.Translate(Vector3.up * (lowestY - 0.02f)));
+					Matrix4x4.Translate(Vector3.up * (lowestY - 0.02f)),
+					0);
 
 				modelsToRender = new[] { adjustedGround, modelData };
 			}
@@ -122,16 +126,43 @@ namespace ClassicTilestorm
 
 			_scene.SetModels(modelsToRender);
 
-			// Position camera
 			var center = modelData.bounds.center;
 			var radius = modelData.bounds.extents.magnitude * 1.2f;
 			var dist = radius / Mathf.Tan(_camera.fieldOfView * 0.5f * Mathf.Deg2Rad);
 
 			_camera.transform.position = center - _camera.transform.rotation * Vector3.forward * dist;
 
-			// Render!
-			_camera.Render();//this call is surprisingly slow
+			// ────────────────────────────────────────────────
+			// Setup consistent lighting for this render
+			// ────────────────────────────────────────────────
 
+			// Save original global ambient
+			var prevAmbientMode = RenderSettings.ambientMode;
+			var prevAmbientColor = RenderSettings.ambientLight;
+			var prevAmbientIntensity = RenderSettings.ambientIntensity;
+
+			// Kill global ambient / sky contribution
+			RenderSettings.ambientMode = AmbientMode.Flat;
+			RenderSettings.ambientLight = Color.black;
+			RenderSettings.ambientIntensity = 0f;
+
+			// Position light relative to camera (front-top-right feel)
+			_iconLight.transform.rotation = _camera.transform.rotation * Quaternion.Euler(-30f, 45f, 0f);
+			_iconLight.intensity = 1.3f;
+			_iconLight.enabled = true;
+
+			// Render
+			_camera.Render();
+
+			// ────────────────────────────────────────────────
+			// Restore immediately
+			// ────────────────────────────────────────────────
+			RenderSettings.ambientMode = prevAmbientMode;
+			RenderSettings.ambientLight = prevAmbientColor;
+			RenderSettings.ambientIntensity = prevAmbientIntensity;
+			_iconLight.enabled = false;
+
+			// Extract texture
 			var tex = new Texture2D(_rt.width, _rt.height, TextureFormat.RGBA32, false)
 			{
 				filterMode = FilterMode.Bilinear,
@@ -139,27 +170,17 @@ namespace ClassicTilestorm
 				name = $"Icon_{def.name ?? "unnamed"}"
 			};
 
-			var prev = RenderTexture.active;
+			var prevActive = RenderTexture.active;
 			RenderTexture.active = _rt;
 			tex.ReadPixels(new Rect(0, 0, _rt.width, _rt.height), 0, 0);
 			tex.Apply();
-			RenderTexture.active = prev;
+			RenderTexture.active = prevActive;
 
 			return tex;
 		}
 
 		public void Dispose()
 		{
-			if (_currentModel != null)
-			{
-				_currentModel = null;
-			}
-
-			if (_groundModel != null)
-			{
-				_groundModel = null;
-			}
-
 			if (_rt != null)
 			{
 				_rt.Release();

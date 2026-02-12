@@ -76,7 +76,7 @@ namespace ClassicTilestorm
 			}
 		}
 
-		public void Initialize()
+		public void Start()
 		{
 			filteredDefs = ResourceManager.Definitions
 				.Where(d => !d.IsDefaultEquivalent())
