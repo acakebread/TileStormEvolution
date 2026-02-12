@@ -25,7 +25,7 @@ namespace ClassicTilestorm
 		private static readonly Color SELECT_TINT = new Color(1.4f, 1.25f, 0.85f, 1f);
 
 		// Tightened — prevents adjacent tile false positives (grid is 1 unit)
-		private const float DRAG_START_RADIUS = 0.75f;   // < 1.0 = safe for 1-unit grid
+		private const float DRAG_START_RADIUS = 0.75f;
 
 		public EditorControllerPaint(EditorController editorController) : base(editorController) { }
 
@@ -113,7 +113,6 @@ namespace ClassicTilestorm
 					if (tile.gameObject != null)
 					{
 						var tilePos = tile.gameObject.transform.position;
-						// TIGHTER radius — stops adjacent tiles from triggering drag
 						if (Vector3.Distance(mouseWorld, tilePos) < DRAG_START_RADIUS)
 						{
 							StartDrag();
@@ -143,7 +142,6 @@ namespace ClassicTilestorm
 					return;
 				}
 
-				// Normal clean click
 				if (selectedHashId == ResourceManager.DefaultHash)
 				{
 					if (hitIndex == -1)
@@ -181,7 +179,6 @@ namespace ClassicTilestorm
 					}
 					else
 					{
-						// RIGHT-CLICK ERASE — reinstated from your old working version
 						EditMapTile(erase: true);
 					}
 				}
@@ -223,46 +220,47 @@ namespace ClassicTilestorm
 			if (!isDragging || !selectedMapIndex.HasValue) return;
 
 			var oldIndex = selectedMapIndex.Value;
-			var tile = iMap.GetTile(oldIndex);
-			if (tile.gameObject == null)
-			{
-				isDragging = false;
-				return;
-			}
-
-			if (!commit)
-			{
-				tile.gameObject.transform.position = tileOriginalWorldPos;
-				isDragging = false;
-				Debug.Log("Drag cancelled");
-				return;
-			}
 
 			var mouseWorld = Map.ScreenToWorld(camera, Input.mousePosition);
 			var newSnapped = Map.SnappedMapPosition(mouseWorld);
 
 			bool shouldMove = newSnapped != tileOriginalWorldPos;
 
-			if (!shouldMove)
+			if (!commit || !shouldMove)
 			{
-				tile.gameObject.transform.position = tileOriginalWorldPos;
+				var tile = iMap.GetTile(oldIndex);
+				if (tile.gameObject != null)
+					tile.gameObject.transform.position = tileOriginalWorldPos;
 			}
 			else
 			{
-				// Erase old first
+				// Step 1: clear stale selection state BEFORE map changes destroy the object
+				DeselectTile();
+
+				// Step 2: erase old position (destroys old GameObject)
 				iMap.UpdateTileAt(tileOriginalWorldPos, ResourceManager.DefaultHash, Vector3.zero, 0f);
 
-				// Place new
+				// Step 3: place at new position (creates new GameObject)
 				iMap.UpdateTileAt(newSnapped, tileOriginalVariant.hash,
 								  tileOriginalVariant.delta, tileOriginalVariant.angle);
 
-				// Keep selection on new tile
+				// Step 4: update index & re-select (builds fresh highlight on new object)
 				selectedMapIndex = iMap.WorldToMapIndex(newSnapped);
+				if (selectedMapIndex.HasValue)
+				{
+					SelectTile(selectedMapIndex.Value);
+				}
 
 				Debug.Log($"Tile moved to {newSnapped}");
 			}
 
 			isDragging = false;
+
+			if (selectedMapIndex.HasValue)
+			{
+				selectedMapIndex = -1;
+				SelectTile(selectedMapIndex.Value);
+			}
 		}
 
 		private void SelectTile(int mapIndex)
@@ -312,7 +310,13 @@ namespace ClassicTilestorm
 			if (!selectedMapIndex.HasValue) return;
 
 			var tile = iMap.GetTile(selectedMapIndex.Value);
-			if (tile.gameObject == null || originalRenderersState == null)
+			if (tile.gameObject == null)
+			{
+				selectedMapIndex = null;
+				return;
+			}
+
+			if (originalRenderersState == null)
 			{
 				selectedMapIndex = null;
 				return;
@@ -325,11 +329,12 @@ namespace ClassicTilestorm
 				var backup = originalRenderersState[i];
 				if (!backup.HasValue) continue;
 				var (expected, mats) = backup.Value;
-				if (allRenderers[i] == expected && mats != null)
-					allRenderers[i].materials = mats;
+				if (allRenderers[i] != expected || mats == null) continue;
+				allRenderers[i].materials = mats;
 			}
 
 			tile.gameObject.transform.localScale = originalTileScale;
+
 			originalRenderersState = null;
 			selectedMapIndex = null;
 		}
