@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using MassiveHadronLtd;
+using System.Collections;
 
 namespace ClassicTilestorm
 {
@@ -73,8 +74,9 @@ namespace ClassicTilestorm
 			}
 		}
 
-		public void Start()
+		public IEnumerator Start()
 		{
+			yield return null;
 			filteredDefs = ResourceManager.Definitions
 				.Where(d => !d.IsDefaultEquivalent())
 				.ToList();

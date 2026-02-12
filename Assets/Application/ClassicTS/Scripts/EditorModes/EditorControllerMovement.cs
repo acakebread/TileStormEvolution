@@ -13,7 +13,7 @@ namespace ClassicTilestorm
 		private bool mouseMovedBeyondThreshold;
 		private const float CLICK_THRESHOLD = 8f;
 
-		private EditorController editorController;
+		private readonly EditorController editorController;
 		protected IMapEdit iMap => editorController?.iMap;
 		protected Camera camera { get { if (editorController.TryGetComponent<MainCameraController>(out var controller)) return controller.activeSystem?.camera; return null; } }
 

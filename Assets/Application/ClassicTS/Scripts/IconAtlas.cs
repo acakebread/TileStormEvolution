@@ -13,9 +13,6 @@ namespace ClassicTilestorm
 		private readonly float _pitch;
 		private readonly Color _backgroundColor;
 
-		// Optional: you can expose this if you ever want per-atlas light customization
-		private readonly Vector3 _fixedLightDirection = new Vector3(0.5f, 1.0f, -0.8f).normalized;
-
 		public IconAtlas(
 			int cellSize,
 			int columns,
