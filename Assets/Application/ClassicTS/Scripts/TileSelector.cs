@@ -12,15 +12,12 @@ namespace ClassicTilestorm
 	{
 		public HashId SelectedHashId { get; private set; }
 
-		public HashId DefaultHash => ResourceManager.FindOrCreateDefaultTile().HashID;
-
 		public event Action<HashId> OnTileSelected;
 
 		private IconAtlas _atlas;
 		private List<Definition> filteredDefs;
 
-		[HideInInspector] public Rect gridScreenRect;
-
+		private Rect gridScreenRect;
 		private float panelHeight;
 		private float panelY;
 		private float panelTargetY;
@@ -95,7 +92,7 @@ namespace ClassicTilestorm
 			if (_atlas == null)
 				Debug.LogWarning("Failed to generate icon atlas — palette empty.");
 
-			SelectedHashId = DefaultHash;
+			SelectedHashId = ResourceManager.DefaultHash;
 
 			RecalculateLayout();
 			panelY = panelTargetY = -panelHeight;
@@ -224,7 +221,7 @@ namespace ClassicTilestorm
 			}
 		}
 
-		public bool IsMouseOverPalette() => Input.mousePosition.y <= (panelY + panelHeight);
+		//public bool IsMouseOverPalette() => Input.mousePosition.y <= (panelY + panelHeight);
 
 		private int Rows => filteredDefs?.Count > 0 ? Mathf.CeilToInt((float)filteredDefs.Count / COLUMNS) : 0;
 
@@ -341,13 +338,18 @@ namespace ClassicTilestorm
 			}
 		}
 
-
 		private string GetStatusMessage()
 		{
-			bool mouseOver = gridScreenRect.Contains(Input.mousePosition);
+			// Quick exit if panel is fully hidden
+			bool panelVisible = !Mathf.Approximately(panelY, panelTargetY) || panelTargetY >= 0f;
+			if (!panelVisible)
+				return "Hover near bottom of screen to open tile palette";
+
+			bool mouseOverGrid = gridScreenRect.Contains(Input.mousePosition);
 			Vector2 uv = gridScreenRect.NormalisedPoint(Input.mousePosition);
 
-			if (mouseOver && _atlas != null && _atlas.TryGetIndex(uv, out int idx) && idx >= 0 && idx < filteredDefs.Count)
+			// Case 1: Mouse over a valid tile in grid → show its info
+			if (mouseOverGrid && _atlas != null && _atlas.TryGetIndex(uv, out int idx) && idx >= 0 && idx < filteredDefs.Count)
 			{
 				var def = filteredDefs[idx];
 				string name = def.name ?? "Unnamed Tile";
@@ -390,7 +392,8 @@ namespace ClassicTilestorm
 				return message;
 			}
 
-			if (SelectedHashId != DefaultHash)
+			// Case 2: Mouse inside palette rect but NOT over any tile → show current selection
+			if (gridScreenRect.Contains(Input.mousePosition) && SelectedHashId != ResourceManager.DefaultHash)
 			{
 				var def = ResourceManager.GetDefinition(SelectedHashId);
 				string selName = def?.name ?? "Unknown";
@@ -416,10 +419,11 @@ namespace ClassicTilestorm
 
 				string flagsStr = flagsList.Count > 0 ? $"<color=#88FFAA> • {string.Join(", ", flagsList)}</color>" : "";
 
-				return $"<color=#88FF88>Selected:</color> <b><color=#FFD700>{selName}</color></b>{directions}{flagsStr}   (hover palette to change)";
+				return $"<color=#88FF88>Selected:</color> <b><color=#FFD700>{selName}</color></b>{directions}{flagsStr}";
 			}
 
-			return "Hover near bottom of screen to open tile palette";
+			// Case 3: Mouse outside grid (or no selection) → default prompt
+			return "Hover over a tile";
 		}
 	}
 }

@@ -6,8 +6,6 @@ namespace ClassicTilestorm
 {
 	public class EditorControllerPaint : EditorControllerMovement
 	{
-		private TileSelector _tileSelector;
-
 		private HashId selectedHashId;
 		private float previewAngle = 0f;
 		private Vector3 previewDelta = new();
@@ -18,24 +16,23 @@ namespace ClassicTilestorm
 		{
 			base.OnEnable();
 
-			_tileSelector = UnityEngine.Object.FindAnyObjectByType<TileSelector>(FindObjectsInactive.Include);
+			var _tileSelector = UnityEngine.Object.FindAnyObjectByType<TileSelector>(FindObjectsInactive.Include);
 			if (_tileSelector == null)
 			{
 				Debug.LogError("TileSelector not found in scene!");
 				return;
 			}
 
-			//_tileSelector.Initialize();
-
 			// Subscribe to tile selection event
 			_tileSelector.OnTileSelected += OnTileSelectedFromPalette;
-			_tileSelector.CanOpenPalette = () => selectedHashId == _tileSelector.DefaultHash;
+			_tileSelector.CanOpenPalette = () => selectedHashId == ResourceManager.DefaultHash;
 
-			selectedHashId = _tileSelector.DefaultHash;
+			selectedHashId = ResourceManager.DefaultHash;
 		}
 
 		public override void OnDisable()
 		{
+			var _tileSelector = UnityEngine.Object.FindAnyObjectByType<TileSelector>(FindObjectsInactive.Include);
 			if (_tileSelector != null)
 				_tileSelector.OnTileSelected -= OnTileSelectedFromPalette;
 
@@ -52,19 +49,6 @@ namespace ClassicTilestorm
 		public override void Update()
 		{
 			base.Update();
-			if (!camera) return;
-
-			bool mouseOverPaletteY = _tileSelector.IsMouseOverPalette();
-			if (!mouseOverPaletteY && Input.GetMouseButtonDown(0))
-			{
-				var variant = iMap.CameraHitVariant(camera, Input.mousePosition);
-				var selDef = ResourceManager.GetDefinition(variant.hash);
-				var isDefault = selDef?.IsDefaultEquivalent() ?? true;
-				if (isDefault)
-					StartPanning();
-			}
-
-			if (IsMouseOverGUI() || IsGuiControlActive()) return;
 
 			var def = ResourceManager.GetDefinition(selectedHashId);
 			UpdateGhostMesh(camera, iMap, def);
@@ -73,11 +57,23 @@ namespace ClassicTilestorm
 		protected override void OnControl(bool staticClick)
 		{
 			base.OnControl(staticClick);
+
+			if (!camera) return;
+
+			if (Input.GetMouseButtonDown(0))
+			{
+				var variant = iMap.CameraHitVariant(camera, Input.mousePosition);
+				var selDef = ResourceManager.GetDefinition(variant.hash);
+				var isDefault = selDef?.IsDefaultEquivalent() ?? true;
+				if (isDefault)
+					StartPanning();
+			}
+
 			if (!staticClick) return;
 
 			if (Input.GetMouseButtonUp(0) && Vector3.Distance(Input.mousePosition, mouseDownPos) < 5f)
 			{
-				if (selectedHashId == _tileSelector.DefaultHash)
+				if (selectedHashId == ResourceManager.DefaultHash)
 				{
 					var variant = iMap.CameraHitVariant(camera, Input.mousePosition);
 					var selDef = ResourceManager.GetDefinition(variant.hash);
@@ -95,13 +91,13 @@ namespace ClassicTilestorm
 				}
 			}
 
-			if (Input.GetMouseButtonUp(1) && Vector3.Distance(Input.mousePosition, mouseDownPos) < 5f)
+			if (Input.GetMouseButtonUp(1))
 			{
-				if (selectedHashId == _tileSelector.DefaultHash)
+				if (selectedHashId == ResourceManager.DefaultHash)
 					EditMapTile(erase: true);
 				else
 				{
-					selectedHashId = _tileSelector.DefaultHash;
+					selectedHashId = ResourceManager.DefaultHash;
 					previewAngle = 0f;
 					previewDelta = Vector3.zero;
 				}
@@ -160,7 +156,7 @@ namespace ClassicTilestorm
 
 			if (idx == -1 || erase)
 			{
-				var hash = erase ? _tileSelector.DefaultHash : selectedHashId;
+				var hash = erase ? ResourceManager.DefaultHash : selectedHashId;
 				iMap.UpdateTileAt(px, pz, hash, Vector3.zero, 0f);
 				return;
 			}
@@ -169,7 +165,5 @@ namespace ClassicTilestorm
 		}
 
 		public override void OnDestroy() => EditorMeshUtil.DestroyGhostMesh();
-
-		protected override bool IsMouseOverGUI() => base.IsMouseOverGUI() || _tileSelector.IsMouseOverPalette();
 	}
 }

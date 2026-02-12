@@ -40,6 +40,9 @@ namespace ClassicTilestorm
 			=> string.IsNullOrEmpty(id) ? null : TextureSequences.FirstOrDefault(ts => ts.id == id);
 
 		// ── DEFINITION CREATION WITH OPTIONAL UNIQUENESS CHECK ────────────────
+
+		public static HashId DefaultHash => FindOrCreateDefaultTile().HashID;
+
 		public static Definition FindOrCreateDefaultTile()
 		{
 			var prototype = Definition.GetDefaultTile();
