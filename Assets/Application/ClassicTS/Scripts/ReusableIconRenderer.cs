@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using UnityEngine;
 using MassiveHadronLtd;
 using UnityEngine.Rendering;
@@ -133,41 +132,30 @@ namespace ClassicTilestorm
 			// Setup consistent lighting for this render
 			// ────────────────────────────────────────────────
 
+			// Save original global ambient
 			var prevAmbientMode = RenderSettings.ambientMode;
 			var prevAmbientColor = RenderSettings.ambientLight;
 			var prevAmbientIntensity = RenderSettings.ambientIntensity;
 
+			// Kill global ambient / sky contribution
 			RenderSettings.ambientMode = AmbientMode.Flat;
 			RenderSettings.ambientLight = Color.black;
 			RenderSettings.ambientIntensity = 0f;
 
-			// Disable other directional lights
-			var sceneLights = UnityEngine.Object.FindObjectsByType<Light>(FindObjectsSortMode.None);
-			var disabledLights = new List<Light>();
-			foreach (var l in sceneLights)
-			{
-				if (l != _iconLight && l.type == LightType.Directional && l.enabled)
-				{
-					l.enabled = false;
-					disabledLights.Add(l);
-				}
-			}
-
-			// Enable icon light
+			// Position light relative to camera (front-top-right feel)
 			_iconLight.transform.rotation = _camera.transform.rotation * Quaternion.Euler(-30f, 45f, 0f);
 			_iconLight.intensity = 1.3f;
 			_iconLight.enabled = true;
 
+			// Render
 			_camera.Render();
 
-			// Restore
-			_iconLight.enabled = false;
-			foreach (var l in disabledLights) l.enabled = true;
-
+			// ────────────────────────────────────────────────
+			// Restore immediately
+			// ────────────────────────────────────────────────
 			RenderSettings.ambientMode = prevAmbientMode;
 			RenderSettings.ambientLight = prevAmbientColor;
 			RenderSettings.ambientIntensity = prevAmbientIntensity;
-
 			_iconLight.enabled = false;
 
 			// Extract texture
