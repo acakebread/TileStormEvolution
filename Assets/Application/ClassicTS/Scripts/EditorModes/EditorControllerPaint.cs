@@ -49,8 +49,6 @@ namespace ClassicTilestorm
 		private bool mouseInTriggerZoneLastFrame = false;
 		private bool panelWasShownByValidHover = false;
 
-		private static readonly Color semiTransparentBg = new Color(0.08f, 0.09f, 0.11f, 0.95f);
-
 		private HashId defaultHash => ResourceManager.FindOrCreateDefaultTile().HashID;
 
 		protected override bool IsMouseOverGUI() => base.IsMouseOverGUI() || Input.mousePosition.y <= (panelY + panelHeight);
@@ -295,26 +293,125 @@ namespace ClassicTilestorm
 			}
 		}
 
-		//public override void OnGUI()
+		//public void UpdatePanel()
 		//{
-		//	if (ROWS <= 0) return;
-		//	if (panelY <= -panelHeight) return;
+		//	if (ROWS <= 0)
+		//		return;
 
 		//	CalculatePanelLayout();
 
-		//	Rect guiPanelRect = new Rect(0, panelY, Screen.width, panelHeight);
-		//	GUI.Box(guiPanelRect.ToGUIRect(), GUIContent.none,
-		//		new GUIStyle { normal = { background = TextureUtils.MakeTex(1, 1, semiTransparentBg) } });
+		//	var panelImage = EditorScreen.PanelTarget;
+		//	if (!panelImage)
+		//		return;
 
-		//	if (panelY > -panelHeight + 1f)
+		//	var canvas = panelImage.GetComponentInParent<Canvas>();
+		//	if (!canvas)
+		//		return;
+
+		//	var scaler = canvas.GetComponent<CanvasScaler>();
+		//	float scale = 1f;
+
+		//	if (scaler && scaler.uiScaleMode == CanvasScaler.ScaleMode.ScaleWithScreenSize)
 		//	{
-		//		Vector2 mouseUV = gridScreenRect.NormalisedPoint(Input.mousePosition);
-		//		ScreenSpaceUtil.OnGUI(_atlas, gridScreenRect, mouseUV);
+		//		float sx = Screen.width / scaler.referenceResolution.x;
+		//		float sy = Screen.height / scaler.referenceResolution.y;
+		//		scale = Mathf.Lerp(sx, sy, scaler.matchWidthOrHeight);
 		//	}
 
-		//	//ApplicationSettings.TilePanelRect;[RectTransform]
-		//	//ApplicationSettings.GridTarget[UnityEngine.UI.RawImage]
-		//	//ApplicationSettings.FocusTarget[UnityEngine.UI.RawImage]
+		//	float inv = 1f / scale;
+
+		//	// ========================= PANEL =========================
+		//	var panelRT = panelImage.rectTransform;
+
+		//	panelRT.anchorMin = new Vector2(0, 0);
+		//	panelRT.anchorMax = new Vector2(1, 0);
+		//	panelRT.pivot = new Vector2(0.5f, 0);
+
+		//	panelRT.anchoredPosition = new Vector2(0, panelY * inv);
+		//	panelRT.sizeDelta = new Vector2(0, panelHeight * inv);
+
+		//	// Determine visibility AFTER applying position
+		//	bool panelFullyHidden = Mathf.Approximately(panelY, panelTargetY) && panelTargetY < 0f;
+
+		//	panelImage.enabled = !panelFullyHidden;
+
+		//	if (panelFullyHidden || _atlas == null)
+		//	{
+		//		if (EditorScreen.GridTarget)
+		//			EditorScreen.GridTarget.enabled = false;
+
+		//		if (EditorScreen.FocusTarget)
+		//			EditorScreen.FocusTarget.enabled = false;
+
+		//		return;
+		//	}
+
+		//	// ========================= GRID / FOCUS =========================
+
+		//	Vector2 mouseUV = gridScreenRect.NormalisedPoint(Input.mousePosition);
+
+		//	var gridInfo = ScreenSpaceUtil.GetGridRenderInfo(_atlas, gridScreenRect, mouseUV);
+		//	var focusInfo = ScreenSpaceUtil.GetFocusRenderInfo(_atlas, gridScreenRect, mouseUV);
+
+		//	// ---------------- GRID ----------------
+		//	if (EditorScreen.GridTarget)
+		//	{
+		//		var rt = EditorScreen.GridTarget.rectTransform;
+
+		//		rt.anchorMin = new Vector2(0, 0);
+		//		rt.anchorMax = new Vector2(0, 0);
+		//		rt.pivot = new Vector2(0, 0);
+
+		//		if (gridInfo.IsValid)
+		//		{
+		//			rt.anchoredPosition = new Vector2(
+		//				gridInfo.ScreenRect.x * inv,
+		//				gridInfo.ScreenRect.y * inv
+		//			);
+
+		//			rt.sizeDelta = new Vector2(
+		//				gridInfo.ScreenRect.width * inv,
+		//				gridInfo.ScreenRect.height * inv
+		//			);
+
+		//			EditorScreen.GridTarget.texture = gridInfo.Texture;
+		//			EditorScreen.GridTarget.enabled = true;
+		//		}
+		//		else
+		//		{
+		//			EditorScreen.GridTarget.enabled = false;
+		//		}
+		//	}
+
+		//	// ---------------- FOCUS ----------------
+		//	if (EditorScreen.FocusTarget)
+		//	{
+		//		var rt = EditorScreen.FocusTarget.rectTransform;
+
+		//		rt.anchorMin = new Vector2(0, 0);
+		//		rt.anchorMax = new Vector2(0, 0);
+		//		rt.pivot = new Vector2(0, 0);
+
+		//		if (focusInfo.IsValid)
+		//		{
+		//			rt.anchoredPosition = new Vector2(
+		//				focusInfo.ScreenRect.x * inv,
+		//				focusInfo.ScreenRect.y * inv
+		//			);
+
+		//			rt.sizeDelta = new Vector2(
+		//				focusInfo.ScreenRect.width * inv,
+		//				focusInfo.ScreenRect.height * inv
+		//			);
+
+		//			EditorScreen.FocusTarget.texture = focusInfo.Texture;
+		//			EditorScreen.FocusTarget.enabled = true;
+		//		}
+		//		else
+		//		{
+		//			EditorScreen.FocusTarget.enabled = false;
+		//		}
+		//	}
 		//}
 
 		public void UpdatePanel()
@@ -331,6 +428,8 @@ namespace ClassicTilestorm
 			var canvas = panelImage.GetComponentInParent<Canvas>();
 			if (!canvas)
 				return;
+
+			Vector2 mouseUV = gridScreenRect.NormalisedPoint(Input.mousePosition);
 
 			var scaler = canvas.GetComponent<CanvasScaler>();
 			float scale = 1f;
@@ -359,7 +458,69 @@ namespace ClassicTilestorm
 
 			panelImage.enabled = !panelFullyHidden;
 
-			if (panelFullyHidden || _atlas == null)
+			// Status text (child of panel → follows visibility automatically, but we still control text & enabled)
+			bool showUIElements = !panelFullyHidden && _atlas != null;
+
+			if (EditorScreen.StatusText)
+			{
+				EditorScreen.StatusText.enabled = showUIElements;
+
+				if (showUIElements)
+				{
+					string statusMessage = "Hover over a tile";
+
+					bool mouseOverGrid = gridScreenRect.Contains(Input.mousePosition);
+
+					if (mouseOverGrid && _atlas != null && filteredDefs != null && filteredDefs.Count > 0)
+					{
+						if (_atlas.TryGetIndex(mouseUV, out int focusedIndex))
+						{
+							if (focusedIndex >= 0 && focusedIndex < filteredDefs.Count)
+							{
+								var focusedDef = filteredDefs[focusedIndex];
+								string tileName = focusedDef.name ?? "Unnamed Tile";
+
+								// If Definition has a better name field → use it instead:
+								// string tileName = focusedDef.DisplayName ?? focusedDef.name ?? "Unnamed Tile";
+
+								string extra = "";
+
+								// Optional: show rotation/variant only if this is also the selected tile
+								if (focusedDef.HashID == selectedHashId && selectedHashId != defaultHash)
+								{
+									if (previewAngle != 0f)
+									{
+										extra += $"  •  {previewAngle:F0}°";
+									}
+
+									if (Mathf.Abs(previewDelta.y) > 0.001f)
+									{
+										extra += $"  •  variant {previewDelta.y:F2}";
+									}
+								}
+
+								statusMessage = $"{tileName}</b>{extra}";
+							}
+						}
+					}
+					else if (selectedHashId != defaultHash)
+					{
+						// Mouse not over any tile, but something is selected
+						var selDef = ResourceManager.GetDefinition(selectedHashId);
+						string selName = selDef?.name ?? "Unknown";
+						statusMessage = $"Selected: <b>{selName}</b>   (hover palette to change)";
+					}
+					else
+					{
+						// Nothing selected, mouse not over grid
+						statusMessage = "Hover near bottom of screen to open tile palette";
+					}
+
+					EditorScreen.StatusText.text = statusMessage;
+				}
+			}
+
+			if (!showUIElements)
 			{
 				if (EditorScreen.GridTarget)
 					EditorScreen.GridTarget.enabled = false;
@@ -372,7 +533,6 @@ namespace ClassicTilestorm
 
 			// ========================= GRID / FOCUS =========================
 
-			Vector2 mouseUV = gridScreenRect.NormalisedPoint(Input.mousePosition);
 
 			var gridInfo = ScreenSpaceUtil.GetGridRenderInfo(_atlas, gridScreenRect, mouseUV);
 			var focusInfo = ScreenSpaceUtil.GetFocusRenderInfo(_atlas, gridScreenRect, mouseUV);
