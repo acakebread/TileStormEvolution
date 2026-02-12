@@ -95,9 +95,7 @@ namespace ClassicTilestorm
 				var radius = modelData.bounds.extents.magnitude * 1.2f;
 				var dist = radius / Mathf.Tan(cam.fieldOfView * 0.5f * Mathf.Deg2Rad);
 
-				cam.transform.position = center - rot * Vector3.forward * dist;
-				cam.transform.rotation = rot;
-
+				cam.transform.SetPositionAndRotation(center - rot * Vector3.forward * dist, rot);
 				cam.Render();
 
 				var tex = new Texture2D(size, size, TextureFormat.RGBA32, false)
