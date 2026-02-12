@@ -63,6 +63,7 @@ namespace ClassicTilestorm
 
 		HashId GetTileID(int _);
 		bool UpdateTileAt(int x, int z, HashId hashId, Vector3 delta = new Vector3(), float angle = 0f);
+		bool UpdateTileAt(Vector3 pos, HashId hashId, Vector3 delta = new Vector3(), float angle = 0f);
 		Variant GetVariantAt(int mapIndex);
 		void AddAttachment(MapAttachment _);
 		bool RemoveAttachment(MapAttachment _);
@@ -291,7 +292,7 @@ namespace ClassicTilestorm
 		private static readonly Vector3 tile_origin = new(0.5f, 0f, 0.5f);
 		public Vector3 TileWorldPosition(int index) => TileNormalisedWorldPosition(index) + tile_origin;
 		public int WorldToMapIndex(Vector3 vec) => vec.x >= 0 && vec.x < width && vec.z >= 0 && vec.z < height ? (int)vec.z * width + (int)vec.x : -1;
-		public static Vector3 SnappedMapPosition(Vector3 vec) => new Vector3(Mathf.FloorToInt(vec.x), 0f, Mathf.FloorToInt(vec.z)) + tile_origin;
+		public static Vector3 SnappedMapPosition(Vector3 vec) => TileNormalisedSnappedMapPosition(vec) + tile_origin;
 #else
         private static readonly Vector3 tile_origin = Vector3.zero;
         public Vector3 TileWorldPosition(int index) => TileNormalisedWorldPosition(index);
@@ -970,6 +971,8 @@ namespace ClassicTilestorm
 			}
 			return -1;
 		}
+
+		public bool UpdateTileAt(Vector3 pos, HashId hashId, Vector3 delta = new Vector3(), float angle = 0f) => UpdateTileAt(Mathf.FloorToInt(pos.x), Mathf.FloorToInt(pos.z), hashId, delta, angle);
 
 		public bool UpdateTileAt(int x, int z, HashId hashId, Vector3 delta = new Vector3(), float angle = 0f)
 		{
