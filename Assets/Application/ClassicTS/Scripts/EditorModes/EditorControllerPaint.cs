@@ -54,16 +54,7 @@ namespace ClassicTilestorm
 			base.Update();
 			if (!camera) return;
 
-			// No _tileSelector.Tick() needed — it uses its own Update()
-
 			bool mouseOverPaletteY = _tileSelector.IsMouseOverPalette();
-			bool mouseOverGridRect = false;
-
-			if (mouseOverPaletteY)
-			{
-				mouseOverGridRect = _tileSelector.gridScreenRect.Contains(Input.mousePosition);
-			}
-
 			if (!mouseOverPaletteY && Input.GetMouseButtonDown(0))
 			{
 				var variant = iMap.CameraHitVariant(camera, Input.mousePosition);
