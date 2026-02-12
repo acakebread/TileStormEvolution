@@ -5,18 +5,19 @@ namespace MassiveHadronLtd
 {
 	public static class ScreenSpaceUtil
 	{
-		private static RenderTexture _mainRT;
+		private static Material _atlasMaterial;
+
+		private static RenderTexture _gridRT;
+		private static RenderTexture _focusRT;
 		private static Mesh _gridMesh;
-		private static RenderTexture _selectedRT;
-		private static Mesh _selectedMesh;
-		private static Material _renderMaterial;
+		private static Mesh _focusMesh;
 
 		private static Vector2 _lastCoord = new Vector2(-999f, -999f);
 		private static int _lastColumns = -1;
 		private static int _lastRows = -1;
 		private static int _lastCellSize = -1;
 
-		private const float SELECTED_SIZE = 4f;
+		private const float FOCUS_FACTOR = 5f;
 		private const float DELTA_TRANS_RATIO = 0.375f;
 		private const float FALL_OFF_RATIO = 0.625f;
 
@@ -26,7 +27,15 @@ namespace MassiveHadronLtd
 
 			if (coord == default) coord = new Vector2(0.5f, 0.5f);
 
-			LazyInitResources(atlas.Texture);
+			if (null == _atlasMaterial)
+			{
+				var shader = Shader.Find("Sprites/Default");
+				_atlasMaterial = new Material(shader)
+				{
+					hideFlags = HideFlags.HideAndDontSave,
+					mainTexture = atlas.Texture
+				};
+			}
 
 			var columns = Mathf.Max(1, atlas.Columns);
 			var rows = Mathf.Max(1, atlas.Rows);
@@ -34,34 +43,49 @@ namespace MassiveHadronLtd
 			var coreW = atlas.Texture.width;
 			var coreH = atlas.Texture.height;
 
-			int MARGIN = cellSize * 2;// (4096 - coreW) / 2;
+			var marginW = cellSize * 2;
+			var marginH = cellSize * 2;
 
-			var padW = coreW + 2 * MARGIN;
-			var padH = coreH + 2 * MARGIN;
+			var padW_temp = coreW + 2 * marginW;
+			var padH_temp = coreH + 2 * marginH;
 
-			if (padW > 8192 || padH > 8192)
-				Debug.LogError($"Maximum safe Render Texture size exceeded: {padW}:{padH}");
+			// Round up each dimension independently
+			int targetW = NextPowerOf2(padW_temp);
+			int targetH = NextPowerOf2(padH_temp);
+
+			// Re-calculate the actual margins needed to reach exactly the pow2 size
+			marginW = (targetW - coreW) / 2;
+			marginH = (targetH - coreH) / 2;
+
+			// Now update padW / padH to the final (power-of-2) values the rest of the code expects
+			var padW = targetW;
+			var padH = targetH;
 
 			var contentScaleX = (float)coreW / padW;
 			var contentScaleY = (float)coreH / padH;
-			var contentOffsetX = (float)MARGIN / padW;
-			var contentOffsetY = (float)MARGIN / padH;
+			var contentOffsetX = (float)marginW / padW;
+			var contentOffsetY = (float)marginH / padH;
 
 			var scaleW = (float)rect.width / coreW;
 			var scaleH = (float)rect.height / coreH;
-			var marginX = MARGIN * scaleW;
-			var marginY = MARGIN * scaleH;
+			marginW = (int)(marginW * scaleW);
+			marginH = (int)(marginH * scaleH);
 
 			var lastBase = (columns * rows - 1) * 4;
 
-			if (_mainRT == null || _mainRT.width != padW || _mainRT.height != padH)
+			if (_gridRT == null || _gridRT.width != padW || _gridRT.height != padH)
 			{
-				_mainRT?.Release();
-				_mainRT = new RenderTexture(padW, padH, 0, RenderTextureFormat.ARGB32)
+				if (padW > 8192 || padH > 8192)
+					Debug.LogError($"Maximum safe Render Texture size exceeded: {padW}:{padH}");
+				else
+					Debug.Log($"Render Texture size : {padW}:{padH}");
+
+				_gridRT?.Release();
+				_gridRT = new RenderTexture(padW, padH, 0, RenderTextureFormat.ARGB32)
 				{
 					filterMode = FilterMode.Bilinear
 				};
-				_mainRT.Create();
+				_gridRT.Create();
 			}
 
 			var invalid = coord.x < 0 || coord.x > 1 || coord.y < 0 || coord.y > 1;
@@ -84,10 +108,10 @@ namespace MassiveHadronLtd
 				if (_gridMesh != null) Object.DestroyImmediate(_gridMesh);
 				_gridMesh = new Mesh { name = $"DeformGrid_{columns}x{rows}" };
 
-				if (invalid && _selectedMesh != null)
+				if (invalid && _focusMesh != null)
 				{
-					Object.DestroyImmediate(_selectedMesh);
-					_selectedMesh = null;
+					Object.DestroyImmediate(_focusMesh);
+					_focusMesh = null;
 				}
 
 				var totalCells = columns * rows;
@@ -155,7 +179,7 @@ namespace MassiveHadronLtd
 					Vector2[] src = { new(x, y), new(x, y + 1f), new(x + 1f, y + 1f), new(x + 1f, y) };
 					Vector2 quadCenter = new Vector2(x + 0.5f, y + 0.5f);
 
-					float deltaScale = SELECTED_SIZE;
+					float deltaScale = FOCUS_FACTOR;
 					float transScale = strength * DELTA_TRANS_RATIO;
 
 					int baseVert = quadCount * 4;
@@ -175,57 +199,57 @@ namespace MassiveHadronLtd
 				_gridMesh.triangles = indices;
 
 				var old = RenderTexture.active;
-				RenderTexture.active = _mainRT;
+				RenderTexture.active = _gridRT;
 				GL.Clear(true, true, Color.clear);
 
 				GL.PushMatrix();
 				GL.LoadOrtho();
-				_renderMaterial.SetPass(0);
+				_atlasMaterial.SetPass(0);
 				Graphics.DrawMeshNow(_gridMesh, Matrix4x4.identity);
 				GL.PopMatrix();
 
 				if (!invalid)
 				{
-					int selSize = Mathf.CeilToInt(cellSize * SELECTED_SIZE);
+					int selSize = Mathf.CeilToInt(cellSize * FOCUS_FACTOR);
 
-					if (_selectedRT == null || _selectedRT.width != selSize || _selectedRT.height != selSize)
+					if (_focusRT == null || _focusRT.width != selSize || _focusRT.height != selSize)
 					{
-						_selectedRT?.Release();
-						_selectedRT = new RenderTexture(selSize, selSize, 0, RenderTextureFormat.ARGB32)
+						_focusRT?.Release();
+						_focusRT = new RenderTexture(selSize, selSize, 0, RenderTextureFormat.ARGB32)
 						{
 							filterMode = FilterMode.Bilinear
 						};
-						_selectedRT.Create();
+						_focusRT.Create();
 					}
 
-					RenderTexture.active = _selectedRT;
+					RenderTexture.active = _focusRT;
 					GL.Clear(true, true, Color.clear);
 
 					GL.PushMatrix();
 					GL.LoadOrtho();
-					_renderMaterial.SetPass(0);
+					_atlasMaterial.SetPass(0);
 
-					if (_selectedMesh == null) _selectedMesh = new Mesh();
+					if (_focusMesh == null) _focusMesh = new Mesh();
 
 					var lastBaseForUV = (columns * rows - 1) * 4;
-					_selectedMesh.vertices = new[] { Vector3.zero, Vector3.up, Vector3.one, Vector3.right };
-					_selectedMesh.uv = new[] { uvs[lastBaseForUV + 0], uvs[lastBaseForUV + 1], uvs[lastBaseForUV + 2], uvs[lastBaseForUV + 3] };
-					_selectedMesh.colors = new[] { Color.white, Color.white, Color.white, Color.white };
-					_selectedMesh.triangles = new[] { 0, 1, 2, 0, 2, 3 };
+					_focusMesh.vertices = new[] { Vector3.zero, Vector3.up, Vector3.one, Vector3.right };
+					_focusMesh.uv = new[] { uvs[lastBaseForUV + 0], uvs[lastBaseForUV + 1], uvs[lastBaseForUV + 2], uvs[lastBaseForUV + 3] };
+					_focusMesh.colors = new[] { Color.white, Color.white, Color.white, Color.white };
+					_focusMesh.triangles = new[] { 0, 1, 2, 0, 2, 3 };
 
-					Graphics.DrawMeshNow(_selectedMesh, Matrix4x4.identity);
+					Graphics.DrawMeshNow(_focusMesh, Matrix4x4.identity);
 					GL.PopMatrix();
 				}
 
 				RenderTexture.active = old;
 			}
 
-			if (_mainRT == null) return;
+			if (_gridRT == null) return;
 
-			var displayRect = new Rect(rect.x - marginX, rect.y - marginY, rect.width + marginX * 2, rect.height + marginY * 2);
-			GUI.DrawTexture(displayRect.ToGUIRect(), _mainRT, ScaleMode.ScaleToFit, true);
+			var displayRect = new Rect(rect.x - marginW, rect.y - marginH, rect.width + marginW * 2, rect.height + marginH * 2);
+			GUI.DrawTexture(displayRect.ToGUIRect(), _gridRT, ScaleMode.ScaleToFit, true);
 
-			if (_selectedRT == null || _gridMesh == null || invalid) return;
+			if (_focusRT == null || _gridMesh == null || invalid) return;
 
 			var verts = _gridMesh.vertices;
 			var bl = verts[lastBase + 0];
@@ -238,7 +262,7 @@ namespace MassiveHadronLtd
 			var centerY = (bl.y + tr.y) * 0.5f;
 
 			var selRect = new Rect(centerX - quadWidth * 0.5f, centerY - quadHeight * 0.5f, quadWidth, quadHeight);
-			GUI.DrawTexture(selRect.ToGUIRect(), _selectedRT, ScaleMode.ScaleToFit, true);
+			GUI.DrawTexture(selRect.ToGUIRect(), _focusRT, ScaleMode.ScaleToFit, true);
 		}
 
 		private static void BuildQuad(
@@ -269,16 +293,10 @@ namespace MassiveHadronLtd
 			indices[tri + 5] = baseVert + 3;
 		}
 
-		private static void LazyInitResources(Texture atlasTexture)
+		private static int NextPowerOf2(int x)
 		{
-			if (_renderMaterial != null) return;
-
-			var shader = Shader.Find("Sprites/Default");
-			_renderMaterial = new Material(shader)
-			{
-				hideFlags = HideFlags.HideAndDontSave,
-				mainTexture = atlasTexture ?? Texture2D.whiteTexture
-			};
+			if (x <= 0) return 1;
+			return Mathf.NextPowerOfTwo(x);
 		}
 	}
 }

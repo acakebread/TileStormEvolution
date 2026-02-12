@@ -28,6 +28,8 @@ namespace ClassicTilestorm
 		private const int ICON_SIZE = 192;
 		private const int COLUMNS = (MAXIMUM_RENDER_TEXTURE_SIZE - ICON_SIZE * 4) / ICON_SIZE;
 
+		private const int PANEL_BORDER = 16;
+
 		private int ROWS
 		{
 			get
@@ -80,8 +82,6 @@ namespace ClassicTilestorm
 
 		private void CalculatePanelPosition()
 		{
-			const int PANEL_BORDER = 32;
-
 			var RT = _atlas?.Texture;
 			if (null == RT) return;
 
