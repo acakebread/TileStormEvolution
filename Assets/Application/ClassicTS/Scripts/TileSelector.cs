@@ -213,8 +213,6 @@ namespace ClassicTilestorm
 			var newHash = filteredDefs[index].HashID;
 			if (newHash != default)
 			{
-				OnTileSelected?.Invoke(SelectedHashId);
-
 				// Start delayed hide
 				StopCoroutine(nameof(AutoHideAfterDelay)); // prevent stacking
 				StartCoroutine(AutoHideAfterDelay(newHash));
@@ -227,6 +225,7 @@ namespace ClassicTilestorm
 		{
 			yield return new WaitForSeconds(wobbleDecayTime + 0.2f);
 			SelectedHashId = newHash;
+			OnTileSelected?.Invoke(newHash);
 
 			panelTargetY = -panelHeight;
 			hideTimer = hideDelay;
