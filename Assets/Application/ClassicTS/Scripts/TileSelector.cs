@@ -223,8 +223,6 @@ namespace ClassicTilestorm
 			}
 		}
 
-		//public bool IsMouseOverPalette() => Input.mousePosition.y <= (panelY + panelHeight);
-
 		private int Rows => filteredDefs?.Count > 0 ? Mathf.CeilToInt((float)filteredDefs.Count / COLUMNS) : 0;
 
 		private void RecalculateLayout()
