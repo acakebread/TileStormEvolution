@@ -1,134 +1,37 @@
 ﻿using System;
 using UnityEngine;
 using MassiveHadronLtd;
-using System.Linq;
-using UnityEngine.UI;
 
 namespace ClassicTilestorm
 {
 	public class EditorControllerPaint : EditorControllerMovement
 	{
+		private TileSelector _tileSelector;
+
 		private HashId selectedHashId;
 		private float previewAngle = 0f;
-		private Vector3 previewDelta = new ();
+		private Vector3 previewDelta = new();
 
-		private float panelHeight = 0f;
-		private float panelY;
-		private float panelTargetY;
-
-		private float hideTimer = 0f;
-		private bool allowHideDespiteMouseOverPanel = false;
-		private readonly float hideDelay = 0.25f;
-		private readonly float animSpeed = 3000f;
-		private readonly float triggerZoneHeight = 40f;
-
-		private IconAtlas _atlas;
-		private System.Collections.Generic.List<Definition> filteredDefs;
-
-		private const int MAXIMUM_RENDER_TEXTURE_SIZE = 8192;
-		private const int ICON_SIZE = 192;
-		private const int COLUMNS = (MAXIMUM_RENDER_TEXTURE_SIZE - ICON_SIZE * 4) / ICON_SIZE;
-
-		private const int PANEL_BORDER = 16;
-
-		private int ROWS
-		{
-			get
-			{
-				var defs = ResourceManager.Definitions;
-				if (null == defs || 0 == defs.Count)
-					return 0;
-				return Mathf.CeilToInt((float)defs.Count / COLUMNS);
-			}
-		}
-
-		private Rect gridScreenRect;
 		private bool mouseWasOverGridLastFrame = false;
-
-		// ─── New hover logic fields ─────────────────────────────────────
-		private bool mouseInTriggerZoneLastFrame = false;
-		private bool panelWasShownByValidHover = false;
-
-		private HashId defaultHash => ResourceManager.FindOrCreateDefaultTile().HashID;
-
-		protected override bool IsMouseOverGUI() => base.IsMouseOverGUI() || Input.mousePosition.y <= (panelY + panelHeight);
-
 		private bool defSelection = false;
 
 		public EditorControllerPaint(EditorController editorController) : base(editorController)
 		{
-			selectedHashId = defaultHash;
-		}
-
-		private void CalculatePanelLayout()
-		{
-			CalculatePanelGrid();
-			CalculatePanelPosition();
-		}
-
-		private void CalculatePanelGrid()
-		{
-			var defs = ResourceManager.Definitions;
-			if (defs == null || defs.Count == 0)
-			{
-				panelHeight = 0f;
-				gridScreenRect = Rect.zero;
-				return;
-			}
-
-			CalculatePanelPosition();
-		}
-
-		private void CalculatePanelPosition()
-		{
-			var RT = _atlas?.Texture;
-			if (null == RT) return;
-
-			float totalWidth = RT.width;
-			float totalHeight = RT.height;
-
-			float margin = PANEL_BORDER;
-			float availWidth = Screen.width - 2f * margin;
-			float scale = Mathf.Min(1f, availWidth / totalWidth);
-
-			float drawWidth = totalWidth * scale;
-			float drawHeight = totalHeight * scale;
-
-			panelHeight = drawHeight + 2f * margin;
-
-			float x = (Screen.width - drawWidth) * 0.5f;
-			float gridBottomFromScreenBottom = panelY + margin;
-			float gridY = gridBottomFromScreenBottom;
-
-			gridScreenRect = new Rect(x, gridY, drawWidth, drawHeight);
 		}
 
 		public override void OnEnable()
 		{
 			base.OnEnable();
 
-			// One-time atlas creation
+			_tileSelector = UnityEngine.Object.FindAnyObjectByType<TileSelector>(FindObjectsInactive.Include);
+			if (_tileSelector == null)
+			{
+				Debug.LogError("TileSelector not found in scene!");
+				return;
+			}
 
-			filteredDefs = ResourceManager.Definitions.Where(d => !d.IsDefaultEquivalent()).ToList();
-
-			_atlas = DefinitionIconRenderUtil.CreateIconAtlas(
-				iconSize: ICON_SIZE,
-				columns: COLUMNS,
-				filteredDefs,
-				includeGround: false,           // ← tune as needed
-				background: null,
-				yaw: 35f,
-				pitch: 30f
-			);
-
-			if (null == _atlas)
-				Debug.LogWarning("Failed to generate icon atlas — grid will be empty.");
-
-			CalculatePanelGrid();
-
-			CalculatePanelPosition();
-			panelY = panelTargetY = -panelHeight;
-			CalculatePanelPosition();
+			_tileSelector.Initialize();
+			selectedHashId = _tileSelector.DefaultHash;
 		}
 
 		public override void Update()
@@ -136,76 +39,35 @@ namespace ClassicTilestorm
 			base.Update();
 			if (!camera) return;
 
-			// ─── Improved panel visibility logic ────────────────────────────────
-			bool mouseInTriggerZoneThisFrame =
-				InputX.mouseInsideWindow &&
-				Input.mousePosition.y <= triggerZoneHeight;
+			_tileSelector.Tick();
 
-			bool justEnteredTriggerZoneCleanly =
-				!mouseInTriggerZoneLastFrame &&
-				mouseInTriggerZoneThisFrame &&
-				selectedHashId == defaultHash &&
-				!Input.GetMouseButton(0) &&
-				!Input.GetMouseButton(1) &&
-				!Input.GetMouseButton(2);
+			// Get hover states
+			bool mouseOverPaletteY = _tileSelector.IsMouseOverPalette();
+			bool mouseOverGridRect = false;
 
-			bool mouseOverPanel =
-				!allowHideDespiteMouseOverPanel &&
-				Input.mousePosition.y <= (panelY + panelHeight);
-
-			bool wantsVisible =
-				justEnteredTriggerZoneCleanly ||
-				(panelWasShownByValidHover && mouseOverPanel);
-
-			if (wantsVisible)
+			if (mouseOverPaletteY)
 			{
-				panelTargetY = 0f;
-				hideTimer = 0f;
-				panelWasShownByValidHover = true;
-			}
-			else
-			{
-				hideTimer += Time.deltaTime;
-				if (hideTimer >= hideDelay)
-				{
-					panelTargetY = -panelHeight;
-
-					// Only reset the "shown by hover" flag once panel is basically gone
-					if (panelY <= -panelHeight + 1f)
-					{
-						panelWasShownByValidHover = false;
-					}
-				}
+				mouseOverGridRect = _tileSelector.gridScreenRect.Contains(Input.mousePosition);
 			}
 
-			// Animate
-			panelY = Mathf.MoveTowards(panelY, panelTargetY, animSpeed * Time.deltaTime);
-
-			// Remember for next frame
-			mouseInTriggerZoneLastFrame = mouseInTriggerZoneThisFrame;
-
-			// ─── Existing grid / click handling ────────────────────────────────
-			bool mouseOverGridThisFrame = gridScreenRect.Contains(Input.mousePosition);
-			if (mouseOverGridThisFrame)
+			// Hover sets defSelection (original behavior)
+			if (mouseOverGridRect)
 				defSelection = true;
 
+			// Mouse down
 			if (Input.GetMouseButtonDown(0))
 			{
-				if (mouseOverGridThisFrame)
+				if (mouseOverGridRect)
 				{
-					TrySelectTileFromGridClick(Input.mousePosition);
-
-					// INSTANT CLOSE after selection
-					panelTargetY = -panelHeight;
-					hideTimer = hideDelay;
-					allowHideDespiteMouseOverPanel = true;
+					bool didSelect = _tileSelector.TrySelectTileFromClick(Input.mousePosition);
+					if (didSelect)
+					{
+						selectedHashId = _tileSelector.SelectedHashId;
+						previewAngle = 0f;
+						previewDelta = Vector3.zero;
+					}
 				}
-				else if (mouseWasOverGridLastFrame)
-				{
-					hideTimer = hideDelay - 0.4f;
-				}
-
-				if (!mouseOverGridThisFrame)
+				else
 				{
 					defSelection = false;
 					var variant = iMap.CameraHitVariant(camera, Input.mousePosition);
@@ -216,15 +78,7 @@ namespace ClassicTilestorm
 				}
 			}
 
-			mouseWasOverGridLastFrame = mouseOverGridThisFrame;
-
-			// Reset force-hide flag once panel is fully off-screen
-			if (allowHideDespiteMouseOverPanel && panelY <= -panelHeight + 1f)
-			{
-				allowHideDespiteMouseOverPanel = false;
-			}
-
-			UpdatePanel();
+			mouseWasOverGridLastFrame = mouseOverGridRect;
 
 			if (IsMouseOverGUI() || IsGuiControlActive()) return;
 
@@ -232,11 +86,10 @@ namespace ClassicTilestorm
 			UpdateGhostMesh(camera, iMap, def);
 		}
 
-		protected override void OnControl(bool staticClick) 
+		protected override void OnControl(bool staticClick)
 		{
 			base.OnControl(staticClick);
-			if (!staticClick)
-				return;
+			if (!staticClick) return;
 
 			if (defSelection && (Input.GetMouseButtonUp(0) || Input.GetMouseButtonUp(1)))
 			{
@@ -246,7 +99,7 @@ namespace ClassicTilestorm
 
 			if (Input.GetMouseButtonUp(0) && Vector3.Distance(Input.mousePosition, mouseDownPos) < 5f)
 			{
-				if (selectedHashId == defaultHash)
+				if (selectedHashId == _tileSelector.DefaultHash)
 				{
 					var variant = iMap.CameraHitVariant(camera, Input.mousePosition);
 					var selDef = ResourceManager.GetDefinition(variant.hash);
@@ -266,334 +119,13 @@ namespace ClassicTilestorm
 
 			if (Input.GetMouseButtonUp(1) && Vector3.Distance(Input.mousePosition, mouseDownPos) < 5f)
 			{
-				if (selectedHashId == defaultHash)
+				if (selectedHashId == _tileSelector.DefaultHash)
 					EditMapTile(erase: true);
 				else
-					selectedHashId = defaultHash;
-			}
-		}
-
-		private void TrySelectTileFromGridClick(Vector2 mousePos)
-		{
-			if (_atlas == null || filteredDefs == null || filteredDefs.Count == 0)
-				return;
-
-			Vector2 uv = gridScreenRect.NormalisedPoint(mousePos);
-
-			if (_atlas.TryGetIndex(uv, out int index))
-			{
-				if (index >= 0 && index < filteredDefs.Count)
 				{
-					var newHash = filteredDefs[index].HashID;
-					if (newHash != default)
-					{
-						selectedHashId = newHash;
-					}
-				}
-			}
-		}
-
-		//public void UpdatePanel()
-		//{
-		//	if (ROWS <= 0)
-		//		return;
-
-		//	CalculatePanelLayout();
-
-		//	var panelImage = EditorScreen.PanelTarget;
-		//	if (!panelImage)
-		//		return;
-
-		//	var canvas = panelImage.GetComponentInParent<Canvas>();
-		//	if (!canvas)
-		//		return;
-
-		//	var scaler = canvas.GetComponent<CanvasScaler>();
-		//	float scale = 1f;
-
-		//	if (scaler && scaler.uiScaleMode == CanvasScaler.ScaleMode.ScaleWithScreenSize)
-		//	{
-		//		float sx = Screen.width / scaler.referenceResolution.x;
-		//		float sy = Screen.height / scaler.referenceResolution.y;
-		//		scale = Mathf.Lerp(sx, sy, scaler.matchWidthOrHeight);
-		//	}
-
-		//	float inv = 1f / scale;
-
-		//	// ========================= PANEL =========================
-		//	var panelRT = panelImage.rectTransform;
-
-		//	panelRT.anchorMin = new Vector2(0, 0);
-		//	panelRT.anchorMax = new Vector2(1, 0);
-		//	panelRT.pivot = new Vector2(0.5f, 0);
-
-		//	panelRT.anchoredPosition = new Vector2(0, panelY * inv);
-		//	panelRT.sizeDelta = new Vector2(0, panelHeight * inv);
-
-		//	// Determine visibility AFTER applying position
-		//	bool panelFullyHidden = Mathf.Approximately(panelY, panelTargetY) && panelTargetY < 0f;
-
-		//	panelImage.enabled = !panelFullyHidden;
-
-		//	if (panelFullyHidden || _atlas == null)
-		//	{
-		//		if (EditorScreen.GridTarget)
-		//			EditorScreen.GridTarget.enabled = false;
-
-		//		if (EditorScreen.FocusTarget)
-		//			EditorScreen.FocusTarget.enabled = false;
-
-		//		return;
-		//	}
-
-		//	// ========================= GRID / FOCUS =========================
-
-		//	Vector2 mouseUV = gridScreenRect.NormalisedPoint(Input.mousePosition);
-
-		//	var gridInfo = ScreenSpaceUtil.GetGridRenderInfo(_atlas, gridScreenRect, mouseUV);
-		//	var focusInfo = ScreenSpaceUtil.GetFocusRenderInfo(_atlas, gridScreenRect, mouseUV);
-
-		//	// ---------------- GRID ----------------
-		//	if (EditorScreen.GridTarget)
-		//	{
-		//		var rt = EditorScreen.GridTarget.rectTransform;
-
-		//		rt.anchorMin = new Vector2(0, 0);
-		//		rt.anchorMax = new Vector2(0, 0);
-		//		rt.pivot = new Vector2(0, 0);
-
-		//		if (gridInfo.IsValid)
-		//		{
-		//			rt.anchoredPosition = new Vector2(
-		//				gridInfo.ScreenRect.x * inv,
-		//				gridInfo.ScreenRect.y * inv
-		//			);
-
-		//			rt.sizeDelta = new Vector2(
-		//				gridInfo.ScreenRect.width * inv,
-		//				gridInfo.ScreenRect.height * inv
-		//			);
-
-		//			EditorScreen.GridTarget.texture = gridInfo.Texture;
-		//			EditorScreen.GridTarget.enabled = true;
-		//		}
-		//		else
-		//		{
-		//			EditorScreen.GridTarget.enabled = false;
-		//		}
-		//	}
-
-		//	// ---------------- FOCUS ----------------
-		//	if (EditorScreen.FocusTarget)
-		//	{
-		//		var rt = EditorScreen.FocusTarget.rectTransform;
-
-		//		rt.anchorMin = new Vector2(0, 0);
-		//		rt.anchorMax = new Vector2(0, 0);
-		//		rt.pivot = new Vector2(0, 0);
-
-		//		if (focusInfo.IsValid)
-		//		{
-		//			rt.anchoredPosition = new Vector2(
-		//				focusInfo.ScreenRect.x * inv,
-		//				focusInfo.ScreenRect.y * inv
-		//			);
-
-		//			rt.sizeDelta = new Vector2(
-		//				focusInfo.ScreenRect.width * inv,
-		//				focusInfo.ScreenRect.height * inv
-		//			);
-
-		//			EditorScreen.FocusTarget.texture = focusInfo.Texture;
-		//			EditorScreen.FocusTarget.enabled = true;
-		//		}
-		//		else
-		//		{
-		//			EditorScreen.FocusTarget.enabled = false;
-		//		}
-		//	}
-		//}
-
-		public void UpdatePanel()
-		{
-			if (ROWS <= 0)
-				return;
-
-			CalculatePanelLayout();
-
-			var panelImage = EditorScreen.PanelTarget;
-			if (!panelImage)
-				return;
-
-			var canvas = panelImage.GetComponentInParent<Canvas>();
-			if (!canvas)
-				return;
-
-			Vector2 mouseUV = gridScreenRect.NormalisedPoint(Input.mousePosition);
-
-			var scaler = canvas.GetComponent<CanvasScaler>();
-			float scale = 1f;
-
-			if (scaler && scaler.uiScaleMode == CanvasScaler.ScaleMode.ScaleWithScreenSize)
-			{
-				float sx = Screen.width / scaler.referenceResolution.x;
-				float sy = Screen.height / scaler.referenceResolution.y;
-				scale = Mathf.Lerp(sx, sy, scaler.matchWidthOrHeight);
-			}
-
-			float inv = 1f / scale;
-
-			// ========================= PANEL =========================
-			var panelRT = panelImage.rectTransform;
-
-			panelRT.anchorMin = new Vector2(0, 0);
-			panelRT.anchorMax = new Vector2(1, 0);
-			panelRT.pivot = new Vector2(0.5f, 0);
-
-			panelRT.anchoredPosition = new Vector2(0, panelY * inv);
-			panelRT.sizeDelta = new Vector2(0, panelHeight * inv);
-
-			// Determine visibility AFTER applying position
-			bool panelFullyHidden = Mathf.Approximately(panelY, panelTargetY) && panelTargetY < 0f;
-
-			panelImage.enabled = !panelFullyHidden;
-
-			// Status text (child of panel → follows visibility automatically, but we still control text & enabled)
-			bool showUIElements = !panelFullyHidden && _atlas != null;
-
-			if (EditorScreen.StatusText)
-			{
-				EditorScreen.StatusText.enabled = showUIElements;
-
-				if (showUIElements)
-				{
-					string statusMessage = "Hover over a tile";
-
-					bool mouseOverGrid = gridScreenRect.Contains(Input.mousePosition);
-
-					if (mouseOverGrid && _atlas != null && filteredDefs != null && filteredDefs.Count > 0)
-					{
-						if (_atlas.TryGetIndex(mouseUV, out int focusedIndex))
-						{
-							if (focusedIndex >= 0 && focusedIndex < filteredDefs.Count)
-							{
-								var focusedDef = filteredDefs[focusedIndex];
-								string tileName = focusedDef.name ?? "Unnamed Tile";
-
-								// If Definition has a better name field → use it instead:
-								// string tileName = focusedDef.DisplayName ?? focusedDef.name ?? "Unnamed Tile";
-
-								string extra = "";
-
-								// Optional: show rotation/variant only if this is also the selected tile
-								if (focusedDef.HashID == selectedHashId && selectedHashId != defaultHash)
-								{
-									if (previewAngle != 0f)
-									{
-										extra += $"  •  {previewAngle:F0}°";
-									}
-
-									if (Mathf.Abs(previewDelta.y) > 0.001f)
-									{
-										extra += $"  •  variant {previewDelta.y:F2}";
-									}
-								}
-
-								statusMessage = $"{tileName}</b>{extra}";
-							}
-						}
-					}
-					else if (selectedHashId != defaultHash)
-					{
-						// Mouse not over any tile, but something is selected
-						var selDef = ResourceManager.GetDefinition(selectedHashId);
-						string selName = selDef?.name ?? "Unknown";
-						statusMessage = $"Selected: <b>{selName}</b>   (hover palette to change)";
-					}
-					else
-					{
-						// Nothing selected, mouse not over grid
-						statusMessage = "Hover near bottom of screen to open tile palette";
-					}
-
-					EditorScreen.StatusText.text = statusMessage;
-				}
-			}
-
-			if (!showUIElements)
-			{
-				if (EditorScreen.GridTarget)
-					EditorScreen.GridTarget.enabled = false;
-
-				if (EditorScreen.FocusTarget)
-					EditorScreen.FocusTarget.enabled = false;
-
-				return;
-			}
-
-			// ========================= GRID / FOCUS =========================
-
-
-			var gridInfo = ScreenSpaceUtil.GetGridRenderInfo(_atlas, gridScreenRect, mouseUV);
-			var focusInfo = ScreenSpaceUtil.GetFocusRenderInfo(_atlas, gridScreenRect, mouseUV);
-
-			// ---------------- GRID ----------------
-			if (EditorScreen.GridTarget)
-			{
-				var rt = EditorScreen.GridTarget.rectTransform;
-
-				rt.anchorMin = new Vector2(0, 0);
-				rt.anchorMax = new Vector2(0, 0);
-				rt.pivot = new Vector2(0, 0);
-
-				if (gridInfo.IsValid)
-				{
-					rt.anchoredPosition = new Vector2(
-						gridInfo.ScreenRect.x * inv,
-						gridInfo.ScreenRect.y * inv
-					);
-
-					rt.sizeDelta = new Vector2(
-						gridInfo.ScreenRect.width * inv,
-						gridInfo.ScreenRect.height * inv
-					);
-
-					EditorScreen.GridTarget.texture = gridInfo.Texture;
-					EditorScreen.GridTarget.enabled = true;
-				}
-				else
-				{
-					EditorScreen.GridTarget.enabled = false;
-				}
-			}
-
-			// ---------------- FOCUS ----------------
-			if (EditorScreen.FocusTarget)
-			{
-				var rt = EditorScreen.FocusTarget.rectTransform;
-
-				rt.anchorMin = new Vector2(0, 0);
-				rt.anchorMax = new Vector2(0, 0);
-				rt.pivot = new Vector2(0, 0);
-
-				if (focusInfo.IsValid)
-				{
-					rt.anchoredPosition = new Vector2(
-						focusInfo.ScreenRect.x * inv,
-						focusInfo.ScreenRect.y * inv
-					);
-
-					rt.sizeDelta = new Vector2(
-						focusInfo.ScreenRect.width * inv,
-						focusInfo.ScreenRect.height * inv
-					);
-
-					EditorScreen.FocusTarget.texture = focusInfo.Texture;
-					EditorScreen.FocusTarget.enabled = true;
-				}
-				else
-				{
-					EditorScreen.FocusTarget.enabled = false;
+					selectedHashId = _tileSelector.DefaultHash;
+					previewAngle = 0f;
+					previewDelta = Vector3.zero;
 				}
 			}
 		}
@@ -650,7 +182,7 @@ namespace ClassicTilestorm
 
 			if (idx == -1 || erase)
 			{
-				var hash = erase ? ResourceManager.FindOrCreateDefaultTile().HashID : selectedHashId;
+				var hash = erase ? _tileSelector.DefaultHash : selectedHashId;
 				iMap.UpdateTileAt(px, pz, hash, Vector3.zero, 0f);
 				return;
 			}
@@ -660,5 +192,7 @@ namespace ClassicTilestorm
 
 		public override void OnDisable() => EditorMeshUtil.HideGhostMesh();
 		public override void OnDestroy() => EditorMeshUtil.DestroyGhostMesh();
+
+		protected override bool IsMouseOverGUI() => base.IsMouseOverGUI() || _tileSelector.IsMouseOverPalette();
 	}
 }

@@ -10,6 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 8747300043302012533}
   - component: {fileID: 370732235652685781}
+  - component: {fileID: 9074993955242934558}
   m_Layer: 0
   m_Name: TileSelector
   m_TagString: Untagged
@@ -45,6 +46,18 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1403093167659257173}
   m_CullTransparentMesh: 1
+--- !u!114 &9074993955242934558
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1403093167659257173}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5a3d2f788243213408b375c676ad1ee8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ClassicTilestorm.TileSelector
 --- !u!1 &3005949861221122192
 GameObject:
   m_ObjectHideFlags: 0
