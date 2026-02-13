@@ -24,9 +24,6 @@ namespace ClassicTilestorm
 		private const float SELECT_TINT_BRIGHTNESS = 1.35f;
 		private static readonly Color SELECT_TINT = new Color(1.4f, 1.25f, 0.85f, 1f);
 
-		// Tightened — prevents adjacent tile false positives (grid is 1 unit)
-		private const float DRAG_START_RADIUS = 0.75f;
-
 		public EditorControllerPaint(EditorController editorController) : base(editorController) { }
 
 		public override void OnEnable()
@@ -41,7 +38,7 @@ namespace ClassicTilestorm
 			}
 
 			tileSelector.OnTileSelected += OnTileSelectedFromPalette;
-			tileSelector.CanOpenPalette = () => selectedHashId == ResourceManager.DefaultHash;
+			tileSelector.CanOpenPalette = () => selectedHashId == ResourceManager.DefaultHash && null == selectedMapIndex;
 
 			selectedHashId = ResourceManager.DefaultHash;
 			DeselectTile();
@@ -100,6 +97,9 @@ namespace ClassicTilestorm
 
 			if (!camera) return;
 
+			// ── Only handle stationary clicks here ─────────────────────────────
+			if (!staticClick) return;
+
 			var mouseWorld = Map.ScreenToWorld(camera, Input.mousePosition);
 			var snapped = Map.SnappedMapPosition(mouseWorld);
 			int hitIndex = iMap.WorldToMapIndex(snapped);
@@ -113,11 +113,8 @@ namespace ClassicTilestorm
 					if (tile.gameObject != null)
 					{
 						var tilePos = tile.gameObject.transform.position;
-						if (Vector3.Distance(mouseWorld, tilePos) < DRAG_START_RADIUS)
-						{
-							StartDrag();
-							return;
-						}
+						StartDrag();
+						return;
 					}
 				}
 
@@ -129,9 +126,6 @@ namespace ClassicTilestorm
 					StartPanning();
 				}
 			}
-
-			// ── Only handle stationary clicks here ─────────────────────────────
-			if (!staticClick) return;
 
 			// ── Mouse UP ───────────────────────────────────────────────────────
 			if (Input.GetMouseButtonUp(0))
@@ -171,6 +165,7 @@ namespace ClassicTilestorm
 
 			if (Input.GetMouseButtonUp(1))
 			{
+				DeselectTile();
 				if (selectedHashId == ResourceManager.DefaultHash)
 				{
 					if (isDragging)
@@ -187,7 +182,6 @@ namespace ClassicTilestorm
 					selectedHashId = ResourceManager.DefaultHash;
 					previewAngle = 0f;
 					previewDelta = Vector3.zero;
-					DeselectTile();
 				}
 			}
 		}
@@ -244,23 +238,26 @@ namespace ClassicTilestorm
 				iMap.UpdateTileAt(newSnapped, tileOriginalVariant.hash,
 								  tileOriginalVariant.delta, tileOriginalVariant.angle);
 
-				// Step 4: update index & re-select (builds fresh highlight on new object)
-				selectedMapIndex = iMap.WorldToMapIndex(newSnapped);
-				if (selectedMapIndex.HasValue)
-				{
-					SelectTile(selectedMapIndex.Value);
-				}
+				//// Step 4: update index & re-select (builds fresh highlight on new object)
+				//selectedMapIndex = iMap.WorldToMapIndex(newSnapped);
+				//if (selectedMapIndex.HasValue)
+				//{
+				//	SelectTile(selectedMapIndex.Value);
+				//}
 
-				Debug.Log($"Tile moved to {newSnapped}");
+				//Debug.Log($"Tile moved to {newSnapped}");
 			}
 
 			isDragging = false;
 
-			if (selectedMapIndex.HasValue)
-			{
-				selectedMapIndex = -1;
-				SelectTile(selectedMapIndex.Value);
-			}
+			selectedHashId = ResourceManager.DefaultHash;
+			selectedMapIndex = null;
+
+			//if (selectedMapIndex.HasValue)
+			//{
+			//	selectedMapIndex = -1;
+			//	//SelectTile(selectedMapIndex.Value);
+			//}
 		}
 
 		private void SelectTile(int mapIndex)

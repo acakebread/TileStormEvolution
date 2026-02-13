@@ -177,6 +177,12 @@ namespace ClassicTilestorm
 					if (_focusOverlay) _focusOverlay.transform.localScale = Vector3.one;
 				}
 			}
+
+			if (Input.GetMouseButtonUp(1))
+			{
+				allowHideDespiteMouseOverPanel = true;
+				panelTargetY = -panelHeight;
+			}
 		}
 
 		private void ApplyFocusWobble()
@@ -263,7 +269,8 @@ namespace ClassicTilestorm
 
 		private void UpdatePanelVisuals()
 		{
-			if (allowHideDespiteMouseOverPanel || Rows <= 0 || _panelImage == null) return;
+			//if (allowHideDespiteMouseOverPanel || Rows <= 0 || _panelImage == null) return;
+			if (Rows <= 0 || _panelImage == null) return;
 
 			float uiScale = 1f;
 			if (_scaler && _scaler.uiScaleMode == CanvasScaler.ScaleMode.ScaleWithScreenSize)
