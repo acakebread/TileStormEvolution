@@ -107,14 +107,25 @@ namespace ClassicTilestorm
 			// ── Mouse DOWN ─────────────────────────────────────────────────────
 			if (Input.GetMouseButtonDown(0))
 			{
-				if (selectedHashId == ResourceManager.DefaultHash && selectedMapIndex.HasValue)
+				if (selectedHashId == ResourceManager.DefaultHash)
 				{
-					var tile = iMap.GetTile(selectedMapIndex.Value);
-					if (tile.gameObject != null)
+					if (selectedMapIndex.HasValue)
 					{
-						var tilePos = tile.gameObject.transform.position;
-						StartDrag();
-						return;
+						if (hitIndex == selectedMapIndex.Value)
+						{
+							var tile = iMap.GetTile(selectedMapIndex.Value);
+							if (tile.gameObject != null)
+							{
+								var tilePos = tile.gameObject.transform.position;
+								StartDrag();
+								return;
+							}
+						}
+						else
+						{
+							DeselectTile();
+							return;
+						}
 					}
 				}
 
@@ -228,8 +239,8 @@ namespace ClassicTilestorm
 			}
 			else
 			{
-				// Step 1: clear stale selection state BEFORE map changes destroy the object
-				DeselectTile();
+				//// Step 1: clear stale selection state BEFORE map changes destroy the object
+				//DeselectTile();
 
 				// Step 2: erase old position (destroys old GameObject)
 				iMap.UpdateTileAt(tileOriginalWorldPos, ResourceManager.DefaultHash, Vector3.zero, 0f);
@@ -238,26 +249,16 @@ namespace ClassicTilestorm
 				iMap.UpdateTileAt(newSnapped, tileOriginalVariant.hash,
 								  tileOriginalVariant.delta, tileOriginalVariant.angle);
 
-				//// Step 4: update index & re-select (builds fresh highlight on new object)
-				//selectedMapIndex = iMap.WorldToMapIndex(newSnapped);
-				//if (selectedMapIndex.HasValue)
-				//{
-				//	SelectTile(selectedMapIndex.Value);
-				//}
-
-				//Debug.Log($"Tile moved to {newSnapped}");
+				SelectTile(iMap.WorldToMapIndex(newSnapped));//reselect
 			}
 
 			isDragging = false;
 
-			selectedHashId = ResourceManager.DefaultHash;
-			selectedMapIndex = null;
-
-			//if (selectedMapIndex.HasValue)
-			//{
-			//	selectedMapIndex = -1;
-			//	//SelectTile(selectedMapIndex.Value);
-			//}
+			//selectedHashId = ResourceManager.DefaultHash;
+			//selectedMapIndex = null;
+			//var reselect = selectedMapIndex ?? -1;
+			//selectedMapIndex = null;
+			//SelectTile(reselect);
 		}
 
 		private void SelectTile(int mapIndex)
