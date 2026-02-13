@@ -18,9 +18,6 @@ namespace ClassicTilestorm
 		private int? selectedMapIndex = null;
 		private (Renderer renderer, Material[] originalMaterials)?[] originalRenderersState;
 
-		private const float SELECT_TINT_BRIGHTNESS = 1.35f;
-		private static readonly Color SELECT_TINT = new Color(1.4f, 1.25f, 0.85f, 1f);
-
 		public EditorControllerPlacement(EditorController editorController) : base(editorController) { }
 
 		public override void OnEnable()
@@ -251,11 +248,10 @@ namespace ClassicTilestorm
 
 			selectedMapIndex = mapIndex;
 
-			originalRenderersState = tile.gameObject.ApplySelectionHighlight(
-				SELECT_TINT,
-				SELECT_TINT_BRIGHTNESS,
-				includeInactive: true);
+			const float SELECT_TINT_BRIGHTNESS = 1.35f;
+			Color SELECT_TINT = new Color(1.4f, 1.25f, 0.85f, 1f);
 
+			originalRenderersState = tile.gameObject.ApplySelectionHighlight( SELECT_TINT, SELECT_TINT_BRIGHTNESS, includeInactive: true);
 			isInPlacementMode = false;
 		}
 
