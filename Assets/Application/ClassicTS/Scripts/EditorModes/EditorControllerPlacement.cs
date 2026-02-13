@@ -69,13 +69,9 @@ namespace ClassicTilestorm
 				if (isDragging)
 				{
 					if (Input.GetMouseButton(0))
-					{
 						UpdateDragPosition();
-					}
 					else
-					{
 						EndDrag(true);
-					}
 				}
 			}
 			else
@@ -145,14 +141,10 @@ namespace ClassicTilestorm
 						return;
 					}
 					else
-					{
 						DeselectTile();
-					}
 				}
 				else
-				{
 					EditMapTile();
-				}
 			}
 
 			if (Input.GetMouseButtonUp(1))
@@ -161,13 +153,9 @@ namespace ClassicTilestorm
 				if (placementVariant.hash == ResourceManager.DefaultHash)
 				{
 					if (isDragging)
-					{
 						EndDrag(false);
-					}
 					else
-					{
 						EditMapTile(erase: true);
-					}
 				}
 				else
 				{
