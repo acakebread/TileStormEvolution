@@ -6,9 +6,7 @@ namespace ClassicTilestorm
 {
 	public class EditorControllerPlacement : EditorControllerMovement
 	{
-		private HashId selectedHashId;
-		private float previewAngle = 0f;
-		private Vector3 previewDelta = new ();
+		private Variant placementVariant = default;
 
 		// Selection
 		private int? selectedMapIndex = null;
@@ -20,7 +18,7 @@ namespace ClassicTilestorm
 		private Variant tileOriginalVariant;
 
 		private const float SELECT_TINT_BRIGHTNESS = 1.35f;
-		private static readonly Color SELECT_TINT = new (1.4f, 1.25f, 0.85f, 1f);
+		private static readonly Color SELECT_TINT = new(1.4f, 1.25f, 0.85f, 1f);
 
 		public EditorControllerPlacement(EditorController editorController) : base(editorController) { }
 
@@ -36,9 +34,9 @@ namespace ClassicTilestorm
 			}
 
 			tileSelector.OnTileSelected += OnTileSelectedFromPalette;
-			tileSelector.CanOpenPalette = () => selectedHashId == ResourceManager.DefaultHash && null == selectedMapIndex;
+			tileSelector.CanOpenPalette = () => placementVariant.hash == ResourceManager.DefaultHash && null == selectedMapIndex;
 
-			selectedHashId = ResourceManager.DefaultHash;
+			placementVariant = new Variant(ResourceManager.DefaultHash);
 			DeselectTile();
 		}
 
@@ -56,9 +54,7 @@ namespace ClassicTilestorm
 
 		private void OnTileSelectedFromPalette(HashId newHash)
 		{
-			selectedHashId = newHash;
-			previewAngle = 0f;
-			previewDelta = Vector3.zero;
+			placementVariant = new Variant(newHash);
 			DeselectTile();
 		}
 
@@ -66,7 +62,7 @@ namespace ClassicTilestorm
 		{
 			base.OnControl(staticClick);
 
-			if (selectedHashId == ResourceManager.DefaultHash && selectedMapIndex.HasValue)
+			if (placementVariant.hash == ResourceManager.DefaultHash && selectedMapIndex.HasValue)
 			{
 				EditorMeshUtil.HideGhostMesh();
 
@@ -84,7 +80,7 @@ namespace ClassicTilestorm
 			}
 			else
 			{
-				var def = ResourceManager.GetDefinition(selectedHashId);
+				var def = ResourceManager.GetDefinition(placementVariant.hash);
 				UpdateGhostMesh(camera, iMap, def);
 			}
 
@@ -100,7 +96,7 @@ namespace ClassicTilestorm
 			// ── Mouse DOWN ─────────────────────────────────────────────────────
 			if (Input.GetMouseButtonDown(0))
 			{
-				if (selectedHashId == ResourceManager.DefaultHash)
+				if (placementVariant.hash == ResourceManager.DefaultHash)
 				{
 					if (selectedMapIndex.HasValue)
 					{
@@ -134,7 +130,7 @@ namespace ClassicTilestorm
 			// ── Mouse UP ───────────────────────────────────────────────────────
 			if (Input.GetMouseButtonUp(0))
 			{
-				if (selectedHashId == ResourceManager.DefaultHash)
+				if (placementVariant.hash == ResourceManager.DefaultHash)
 				{
 					if (hitIndex == -1)
 					{
@@ -164,7 +160,7 @@ namespace ClassicTilestorm
 			if (Input.GetMouseButtonUp(1))
 			{
 				DeselectTile();
-				if (selectedHashId == ResourceManager.DefaultHash)
+				if (placementVariant.hash == ResourceManager.DefaultHash)
 				{
 					if (isDragging)
 					{
@@ -177,9 +173,7 @@ namespace ClassicTilestorm
 				}
 				else
 				{
-					selectedHashId = ResourceManager.DefaultHash;
-					previewAngle = 0f;
-					previewDelta = Vector3.zero;
+					placementVariant = new Variant(ResourceManager.DefaultHash);
 				}
 			}
 		}
@@ -229,7 +223,7 @@ namespace ClassicTilestorm
 				iMap.UpdateTileAt(newSnapped, tileOriginalVariant.hash,
 								  tileOriginalVariant.delta, tileOriginalVariant.angle);
 
-				SelectTile(iMap.WorldToMapIndex(newSnapped));//reselect
+				SelectTile(iMap.WorldToMapIndex(newSnapped)); // reselect
 			}
 
 			isDragging = false;
@@ -314,16 +308,16 @@ namespace ClassicTilestorm
 			var snapped = Map.SnappedMapPosition(worldPos);
 			var mapIndex = map.WorldToMapIndex(snapped);
 
-			previewAngle = 0f;
-			previewDelta = Vector3.zero;
+			var previewDelta = Vector3.zero;
+			var previewAngle = 0f;
 
 			if (mapIndex != -1)
 			{
 				var current = map.GetVariantAt(mapIndex);
-				var selDef = ResourceManager.GetDefinition(selectedHashId);
-				bool isDefault = selDef?.IsDefault() ?? false;
+				var selDef = ResourceManager.GetDefinition(placementVariant.hash);
+				var isDefault = selDef?.IsDefault() ?? false;
 
-				if (current.hash != 0 && !isDefault && current.hash == selectedHashId)
+				if (current.hash != 0 && !isDefault && current.hash == placementVariant.hash)
 				{
 					float[] angles = { 0f, 90f, 180f, 270f };
 					float[] deltas = { 0f, 0.25f, 0.5f, 0.75f, 1f };
@@ -339,9 +333,9 @@ namespace ClassicTilestorm
 				}
 			}
 
-			bool oob = mapIndex == -1;
-			var variant = new Variant(selectedHashId, previewDelta, previewAngle);
-			EditorMeshUtil.UpdateGhostMesh(variant, snapped, oob);
+			placementVariant.delta = previewDelta;
+			placementVariant.angle = previewAngle;
+			EditorMeshUtil.UpdateGhostMesh(placementVariant, snapped, mapIndex == -1);
 		}
 
 		private void EditMapTile(bool erase = false)
@@ -352,12 +346,12 @@ namespace ClassicTilestorm
 
 			if (idx == -1 || erase)
 			{
-				var hash = erase ? ResourceManager.DefaultHash : selectedHashId;
+				var hash = erase ? ResourceManager.DefaultHash : placementVariant.hash;
 				iMap.UpdateTileAt(snapped, hash, Vector3.zero, 0f);
 				return;
 			}
 
-			iMap.UpdateTileAt(snapped, selectedHashId, previewDelta, previewAngle);
+			iMap.UpdateTileAt(snapped, placementVariant.hash, placementVariant.delta, placementVariant.angle);
 		}
 
 		public override void OnDestroy()
