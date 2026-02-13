@@ -36,6 +36,13 @@ namespace ClassicTilestorm
 		private readonly float hideDelay = 0.25f;
 		private readonly float animSpeed = 3000f;
 		private readonly float triggerZoneHeight = 40f;
+		// ─── Trigger dwell logic ─────────────────────────────────────
+		private float triggerEnterTime;
+		private Vector2 triggerEnterPos;
+		private bool triggerAttemptActive;
+
+		[SerializeField] private float triggerDwellTime = 0.5f;
+		[SerializeField] private float triggerMoveTolerance = 16f;
 
 		private Canvas _canvas;
 		private CanvasScaler _scaler;
@@ -109,10 +116,45 @@ namespace ClassicTilestorm
 			// ─── Panel visibility ────────────────────────────────────────────────
 			bool mouseInTrigger = InputX.mouseInsideWindow && Input.mousePosition.y <= triggerZoneHeight;
 
-			bool justEnteredCleanly =
-				!mouseInTriggerZoneLastFrame &&
-				 mouseInTrigger &&
-				!Input.GetMouseButton(0) && !Input.GetMouseButton(1) && !Input.GetMouseButton(2);
+			bool justEnteredCleanly = false;
+			Vector2 mousePos = Input.mousePosition;
+
+			// Start attempt on entry OR if no attempt active
+			if (!triggerAttemptActive && mouseInTrigger)
+			{
+				triggerAttemptActive = true;
+				triggerEnterTime = Time.time;
+				triggerEnterPos = mousePos;
+			}
+
+			// Cancel if left zone
+			if (!mouseInTrigger)
+			{
+				triggerAttemptActive = false;
+			}
+
+			// If attempting
+			if (triggerAttemptActive)
+			{
+				float moveDist = Vector2.Distance(mousePos, triggerEnterPos);
+
+				// Cancel if moved too much
+				if (moveDist > triggerMoveTolerance)
+				{
+					triggerAttemptActive = false;
+				}
+				// Fire if time reached
+				else if (Time.time - triggerEnterTime >= triggerDwellTime &&
+						 !Input.GetMouseButton(0) &&
+						 !Input.GetMouseButton(1) &&
+						 !Input.GetMouseButton(2))
+				{
+					justEnteredCleanly = true;
+
+					// Reset attempt so a new dwell can begin
+					triggerAttemptActive = false;
+				}
+			}
 
 			bool mouseOverPanel = !allowHideDespiteMouseOverPanel &&
 								  Input.mousePosition.y <= (panelY + panelHeight);
