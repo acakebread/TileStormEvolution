@@ -1,4 +1,6 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
+using System.Collections.Generic;
 
 namespace MassiveHadronLtd
 {
@@ -39,7 +41,7 @@ namespace MassiveHadronLtd
 			}
 			finally
 			{
-				Object.DestroyImmediate(temp);
+				UnityEngine.Object.DestroyImmediate(temp);
 			}
 		}
 
@@ -79,7 +81,7 @@ namespace MassiveHadronLtd
 			}
 			finally
 			{
-				Object.DestroyImmediate(tempGO);
+				UnityEngine.Object.DestroyImmediate(tempGO);
 			}
 		}
 
@@ -266,38 +268,82 @@ namespace MassiveHadronLtd
 				count++;
 			}
 		}
+
+
+		/// <summary>
+		/// Applies a tinted highlight to all renderers under this GameObject by creating copies
+		/// of their current materials and multiplying the .color property (exactly like the original working code).
+		/// Returns backups for later restoration.
+		/// </summary>
+		public static (Renderer renderer, Material[] originalMaterials)?[] ApplySelectionHighlight(
+			this GameObject root,
+			Color tintMultiplier,
+			float brightnessMultiplier = 1.35f,
+			bool includeInactive = true)
+		{
+			if (root == null) return null;
+
+			var allRenderers = root.GetComponentsInChildren<Renderer>(includeInactive);
+			if (allRenderers.Length == 0) return null;
+
+			var backups = new (Renderer renderer, Material[] originalMaterials)?[allRenderers.Length];
+
+			for (int i = 0; i < allRenderers.Length; i++)
+			{
+				var rend = allRenderers[i];
+				if (rend == null) continue;
+
+				var originals = rend.sharedMaterials;
+				if (originals == null || originals.Length == 0) continue;
+
+				backups[i] = (rend, (Material[])originals.Clone());
+
+				var tinted = new Material[originals.Length];
+				for (int m = 0; m < originals.Length; m++)
+				{
+					if (originals[m] == null)
+					{
+						tinted[m] = null;
+						continue;
+					}
+
+					var copy = new Material(originals[m]);
+					copy.color = originals[m].color * tintMultiplier * brightnessMultiplier;
+					tinted[m] = copy;
+				}
+
+				rend.materials = tinted;
+			}
+
+			return backups;
+		}
+
+		/// <summary>
+		/// Restores materials from the backup array created by ApplySelectionHighlight.
+		/// Matches renderers by reference and index order — safe and exact to original logic.
+		/// </summary>
+		public static void RestoreSelectionHighlight(
+			this GameObject root,
+			(Renderer renderer, Material[] originalMaterials)?[] backups,
+			bool includeInactive = true)
+		{
+			if (root == null || backups == null) return;
+
+			var allRenderers = root.GetComponentsInChildren<Renderer>(includeInactive);
+
+			for (int i = 0; i < backups.Length && i < allRenderers.Length; i++)
+			{
+				var backup = backups[i];
+				if (!backup.HasValue) continue;
+
+				var (expectedRenderer, originalMats) = backup.Value;
+				if (expectedRenderer == null || originalMats == null) continue;
+
+				if (allRenderers[i] == expectedRenderer)
+				{
+					allRenderers[i].materials = originalMats;
+				}
+			}
+		}
 	}
 }
-
-//public static void SetAllMaterials(this GameObject root, Material overrideMat, bool includeInactive = true)
-//{
-//	if (root == null || overrideMat == null) return;
-
-//	var renderers = root.GetComponentsInChildren<Renderer>(includeInactive);
-
-//	int count = 0;
-
-//	foreach (var rend in renderers)
-//	{
-//		if (rend == null) continue;
-
-//		var originalMats = rend.sharedMaterials;
-
-//		if (originalMats == null || originalMats.Length == 0)
-//		{
-//			rend.material = overrideMat;
-//			count++;
-//			continue;
-//		}
-
-//		var newMats = new Material[originalMats.Length];
-//		for (int i = 0; i < newMats.Length; i++)
-//		{
-//			newMats[i] = overrideMat;
-//		}
-
-//		rend.materials = newMats;
-
-//		count++;
-//	}
-//}

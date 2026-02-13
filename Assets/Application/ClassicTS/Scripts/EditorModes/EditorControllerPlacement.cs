@@ -15,7 +15,7 @@ namespace ClassicTilestorm
 
 		// Selection
 		private int? selectedMapIndex = null;
-		private (Renderer renderer, Material[] originalMaterials)?[] originalRenderersState;//we want to do this another way
+		private (Renderer renderer, Material[] originalMaterials)?[] originalRenderersState;
 
 		private const float SELECT_TINT_BRIGHTNESS = 1.35f;
 		private static readonly Color SELECT_TINT = new(1.4f, 1.25f, 0.85f, 1f);
@@ -223,6 +223,7 @@ namespace ClassicTilestorm
 			isDragging = false;
 		}
 
+		// In SelectTile:
 		private void SelectTile(int mapIndex)
 		{
 			if (mapIndex == selectedMapIndex) return;
@@ -233,33 +234,13 @@ namespace ClassicTilestorm
 
 			selectedMapIndex = mapIndex;
 
-			var allRenderers = tile.gameObject.CollectAllRenderers(true);
-			if (allRenderers.Length == 0) return;
-
-			originalRenderersState = new (Renderer, Material[])?[allRenderers.Length];
-
-			for (int i = 0; i < allRenderers.Length; i++)
-			{
-				var rend = allRenderers[i];
-				if (rend == null) continue;
-
-				var originals = rend.sharedMaterials;
-				if (originals == null || originals.Length == 0) continue;
-
-				originalRenderersState[i] = (rend, (Material[])originals.Clone());
-
-				var tinted = new Material[originals.Length];
-				for (int m = 0; m < originals.Length; m++)
-				{
-					if (originals[m] == null) { tinted[m] = null; continue; }
-					var copy = new Material(originals[m]);
-					copy.color = originals[m].color * SELECT_TINT * SELECT_TINT_BRIGHTNESS;
-					tinted[m] = copy;
-				}
-				rend.materials = tinted;
-			}
+			originalRenderersState = tile.gameObject.ApplySelectionHighlight(
+				SELECT_TINT,
+				SELECT_TINT_BRIGHTNESS,
+				includeInactive: true);
 		}
 
+		// In DeselectTile:
 		private void DeselectTile()
 		{
 			if (isDragging) EndDrag(false);
@@ -273,22 +254,7 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			if (originalRenderersState == null)
-			{
-				selectedMapIndex = null;
-				return;
-			}
-
-			var allRenderers = tile.gameObject.CollectAllRenderers(true);
-
-			for (int i = 0; i < originalRenderersState.Length && i < allRenderers.Length; i++)
-			{
-				var backup = originalRenderersState[i];
-				if (!backup.HasValue) continue;
-				var (expected, mats) = backup.Value;
-				if (allRenderers[i] != expected || mats == null) continue;
-				allRenderers[i].materials = mats;
-			}
+			tile.gameObject.RestoreSelectionHighlight(originalRenderersState);
 
 			originalRenderersState = null;
 			selectedMapIndex = null;
