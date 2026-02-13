@@ -64,9 +64,11 @@ namespace ClassicTilestorm
 			DeselectTile();
 		}
 
-		public override void Update()
+		//public override void Update() => base.Update();
+
+		protected override void OnControl(bool staticClick)
 		{
-			base.Update();
+			base.OnControl(staticClick);
 
 			if (selectedHashId == ResourceManager.DefaultHash && selectedMapIndex.HasValue)
 			{
@@ -89,11 +91,6 @@ namespace ClassicTilestorm
 				var def = ResourceManager.GetDefinition(selectedHashId);
 				UpdateGhostMesh(camera, iMap, def);
 			}
-		}
-
-		protected override void OnControl(bool staticClick)
-		{
-			base.OnControl(staticClick);
 
 			if (!camera) return;
 
@@ -141,12 +138,6 @@ namespace ClassicTilestorm
 			// ── Mouse UP ───────────────────────────────────────────────────────
 			if (Input.GetMouseButtonUp(0))
 			{
-				if (isDragging)
-				{
-					EndDrag(true);
-					return;
-				}
-
 				if (selectedHashId == ResourceManager.DefaultHash)
 				{
 					if (hitIndex == -1)
@@ -237,9 +228,6 @@ namespace ClassicTilestorm
 			}
 			else
 			{
-				//// Step 1: clear stale selection state BEFORE map changes destroy the object
-				//DeselectTile();
-
 				// Step 2: erase old position (destroys old GameObject)
 				iMap.UpdateTileAt(tileOriginalWorldPos, ResourceManager.DefaultHash, Vector3.zero, 0f);
 
@@ -251,12 +239,6 @@ namespace ClassicTilestorm
 			}
 
 			isDragging = false;
-
-			//selectedHashId = ResourceManager.DefaultHash;
-			//selectedMapIndex = null;
-			//var reselect = selectedMapIndex ?? -1;
-			//selectedMapIndex = null;
-			//SelectTile(reselect);
 		}
 
 		private void SelectTile(int mapIndex)
