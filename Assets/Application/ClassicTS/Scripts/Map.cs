@@ -1,4 +1,5 @@
-﻿using System;
+﻿//#define VERBOSE//for debug logging
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -724,12 +725,14 @@ namespace ClassicTilestorm
 
 			if (targetWidth > MAP_MAX_SIZE || targetHeight > MAP_MAX_SIZE)
 			{
+#if VERBOSE
 				Debug.LogWarning($"Resize rejected: would exceed max size ({MAP_MAX_SIZE}x{MAP_MAX_SIZE})");
+#endif
 				return false;
 			}
-
+#if VERBOSE
 			Debug.Log($"Resize Map '{name}' to {targetWidth}x{targetHeight}");
-
+#endif
 			int oldWidth = width;
 			int oldHeight = height;
 			int newSize = targetWidth * targetHeight;

@@ -205,8 +205,6 @@ namespace ClassicTilestorm
 			isDragging = true;
 			tileOriginalWorldPos = tile.gameObject.transform.position;
 			tileOriginalVariant = iMap.GetVariantAt(selectedMapIndex.Value);
-
-			Debug.Log("Drag started");
 		}
 
 		private void UpdateDragPosition()
