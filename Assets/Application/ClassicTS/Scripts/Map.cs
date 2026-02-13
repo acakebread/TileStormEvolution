@@ -65,6 +65,8 @@ namespace ClassicTilestorm
 		HashId GetTileID(int _);
 		bool UpdateTileAt(int x, int z, HashId hashId, Vector3 delta = new Vector3(), float angle = 0f);
 		bool UpdateTileAt(Vector3 pos, HashId hashId, Vector3 delta = new Vector3(), float angle = 0f);
+		bool RemoveTileAt(int x, int z);//does not affect bounds
+		bool RemoveTileAt(Vector3 pos);//does not affect bounds
 		Variant GetVariantAt(int mapIndex);
 		void AddAttachment(MapAttachment _);
 		bool RemoveAttachment(MapAttachment _);
@@ -987,7 +989,8 @@ namespace ClassicTilestorm
 
 			int oldWidth = width;
 			int oldHeight = height;
-			var oldBounds = GetContentBounds();
+			//var oldBounds = new   GetContentBounds();
+			(int minX, int minZ, int maxX, int maxZ) oldBounds = new(0, 0, width, height);
 
 			Vector3 originDelta = Vector3.zero;
 			bool sizeChanged = false;
@@ -1058,10 +1061,10 @@ namespace ClassicTilestorm
 			// ────────────────────────────────────────────────────────────────
 			bool cropped = false;
 
-			var def = ResourceManager.GetDefinition(hashId);
-			bool isDefaultTile = def?.IsDefault() ?? false;
+			//var def = ResourceManager.GetDefinition(hashId);
+			//bool isDefaultTile = def?.IsDefault() ?? false;
 
-			if (isDefaultTile || sizeChanged)
+			//if (isDefaultTile || sizeChanged)
 			{
 				var newBounds = GetContentBounds();
 				cropped = CropToContent();
@@ -1095,6 +1098,58 @@ namespace ClassicTilestorm
 
 			return true;
 		}
+
+		private int TableIndex(HashId hashId, Vector3 delta = new Vector3(), float angle = 0f)
+		{
+			// ────────────────────────────────────────────────────────────────
+			// Find or create variant with exact hash + angle + delta
+			// ────────────────────────────────────────────────────────────────
+			int tableIndex = -1;
+
+			// First: look for exact match (hash + angle + delta)
+			for (int i = 0; i < variants.Length; i++)
+			{
+				var v = variants[i];
+				if (v.hash == hashId &&
+					Mathf.Approximately(v.angle, angle) &&
+					Vector3LexComparer.ApproximatelyEqual(v.delta, delta))
+				{
+					tableIndex = i;
+					break;
+				}
+			}
+
+			// If no exact match → create new variant
+			if (tableIndex == -1)
+			{
+				var newVariant = new Variant(hashId, delta, angle);
+
+				variants = variants != null
+					? variants.Concat(new[] { newVariant }).ToArray()
+					: new[] { newVariant };
+
+				tableIndex = variants.Length - 1;
+			}
+
+			return tableIndex;
+		}
+
+		public bool RemoveTileAt(int x, int z)
+		{
+			if (tiles == null || tiles.Length == 0)
+			{
+				Debug.LogError("Cannot update tile: map has no tiles array");
+				return false;
+			}
+
+			int index = z * width + x;
+
+			tiles[index] = TableIndex(ResourceManager.DefaultHash);//find table index of empty tile
+
+			return true;
+		}
+
+		public bool RemoveTileAt(Vector3 pos) => RemoveTileAt(Mathf.FloorToInt(pos.x), Mathf.FloorToInt(pos.z));
 
 		private void SetupWaypoints()
 		{
