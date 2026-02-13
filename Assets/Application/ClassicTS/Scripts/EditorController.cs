@@ -10,10 +10,10 @@ namespace ClassicTilestorm
 
 		private EditorControllerMovement activeMode;
 		private EditorControllerView viewMode;
-		private EditorControllerPaint paintMode;
+		private EditorControllerPlacement placementMode;
 		private EditorControllerAttachment attachmentMode;
 
-		private enum EditorMode { View, Paint, Attachment }
+		private enum EditorMode { Placement, Attachment }//private enum EditorMode { View, Placement, Attachment }
 		private EditorMode? currentMode = null;
 
 		private bool gridEnabled = true;
@@ -27,9 +27,9 @@ namespace ClassicTilestorm
 		// UI state
 		private float panelYoffset = 10f;
 		private const float margin = 10f;
-		private const float spacing = 10f;
-		private const float buttonWidth = 135f;
-		private const float buttonHeight = 30f;
+		private const float spacing = 6f;
+		private const float buttonWidth = 130f;
+		private const float buttonHeight = 28f;
 
 		private MainCameraController mainCameraController { get { TryGetComponent<MainCameraController>(out var controller); return controller; } }
 		private GameCameraEditor gameCameraEditor { get { if (null != mainCameraController && mainCameraController.activeSystem is GameCameraEditor editorCam) return editorCam; return null; } }
@@ -40,9 +40,9 @@ namespace ClassicTilestorm
 
 			// Modes
 			viewMode = new EditorControllerView(this);
-			paintMode = new EditorControllerPaint(this);
+			placementMode = new EditorControllerPlacement(this);
 			attachmentMode = new EditorControllerAttachment(this); 
-			SetEditorMode(EditorMode.View);//default
+			SetEditorMode(EditorMode.Placement);//default
 		}
 
 		private System.Action _unsubscribeMapAction;
@@ -104,7 +104,7 @@ namespace ClassicTilestorm
 
 		private void OnGUI()
 		{
-			DrawMainUI((currentMode ?? EditorMode.View).ToString(), gridEnabled);
+			DrawMainUI((currentMode ?? EditorMode.Placement).ToString(), gridEnabled);
 			activeMode?.OnGUI();
 		}
 
@@ -115,7 +115,7 @@ namespace ClassicTilestorm
 			GridLinesUtil.Hide();
 			if (null != iMap) iMap.OnMapEdited -= OnMapEdited;
 			viewMode?.OnDestroy();
-			paintMode?.OnDestroy();
+			placementMode?.OnDestroy();
 			attachmentMode?.OnDestroy();
 		}
 
@@ -147,8 +147,8 @@ namespace ClassicTilestorm
 			currentMode = newMode;
 			activeMode = newMode switch
 			{
-				EditorMode.View => viewMode,
-				EditorMode.Paint => paintMode,
+				//EditorMode.View => viewMode,
+				EditorMode.Placement => placementMode,
 				EditorMode.Attachment => attachmentMode,
 				_ => viewMode
 			};
@@ -195,13 +195,13 @@ namespace ClassicTilestorm
 
 			//if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "Model Editor", new Color(0.6f, 0.3f, 0.8f))) UIController.OpenPanel<ModelEditorPanel>();//placeholder
 
-			GUI.contentColor = mode == "View" ? Color.cyan : Color.white;
-			if (GUI.Button(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "View")) SetEditorMode(EditorMode.View);
+			//GUI.contentColor = mode == "View" ? Color.cyan : Color.white;
+			//if (GUI.Button(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "View")) SetEditorMode(EditorMode.View);
 
-			GUI.contentColor = mode == "Paint" ? Color.cyan : Color.white;
-			if (GUI.Button(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "Paint")) SetEditorMode(EditorMode.Paint);
+			GUI.contentColor = mode == "Placement" ? Color.cyan : Color.white;
+			if (GUI.Button(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "Placement")) SetEditorMode(EditorMode.Placement);
 
-			GUI.contentColor = (currentMode ?? EditorMode.View) == EditorMode.Attachment ? Color.cyan : Color.white;
+			GUI.contentColor = (currentMode ?? EditorMode.Placement) == EditorMode.Attachment ? Color.cyan : Color.white;
 			if (GUI.Button(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "Attachments")) SetEditorMode(EditorMode.Attachment);
 
 			GUI.contentColor = prevContentColor;

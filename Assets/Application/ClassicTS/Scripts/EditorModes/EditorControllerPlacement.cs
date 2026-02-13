@@ -4,15 +4,14 @@ using MassiveHadronLtd;
 
 namespace ClassicTilestorm
 {
-	public class EditorControllerPaint : EditorControllerMovement
+	public class EditorControllerPlacement : EditorControllerMovement
 	{
 		private HashId selectedHashId;
 		private float previewAngle = 0f;
-		private Vector3 previewDelta = new Vector3();
+		private Vector3 previewDelta = new ();
 
 		// Selection
 		private int? selectedMapIndex = null;
-		private Vector3 originalTileScale;
 		private (Renderer renderer, Material[] originalMaterials)?[] originalRenderersState;
 
 		// Dragging
@@ -20,11 +19,10 @@ namespace ClassicTilestorm
 		private Vector3 tileOriginalWorldPos;
 		private Variant tileOriginalVariant;
 
-		private const float SELECTED_SCALE_FACTOR = 1.12f;
 		private const float SELECT_TINT_BRIGHTNESS = 1.35f;
-		private static readonly Color SELECT_TINT = new Color(1.4f, 1.25f, 0.85f, 1f);
+		private static readonly Color SELECT_TINT = new (1.4f, 1.25f, 0.85f, 1f);
 
-		public EditorControllerPaint(EditorController editorController) : base(editorController) { }
+		public EditorControllerPlacement(EditorController editorController) : base(editorController) { }
 
 		public override void OnEnable()
 		{
@@ -63,8 +61,6 @@ namespace ClassicTilestorm
 			previewDelta = Vector3.zero;
 			DeselectTile();
 		}
-
-		//public override void Update() => base.Update();
 
 		protected override void OnControl(bool staticClick)
 		{
@@ -228,10 +224,8 @@ namespace ClassicTilestorm
 			}
 			else
 			{
-				// Step 2: erase old position (destroys old GameObject)
 				iMap.UpdateTileAt(tileOriginalWorldPos, ResourceManager.DefaultHash, Vector3.zero, 0f);
 
-				// Step 3: place at new position (creates new GameObject)
 				iMap.UpdateTileAt(newSnapped, tileOriginalVariant.hash,
 								  tileOriginalVariant.delta, tileOriginalVariant.angle);
 
@@ -276,9 +270,6 @@ namespace ClassicTilestorm
 				}
 				rend.materials = tinted;
 			}
-
-			originalTileScale = tile.gameObject.transform.localScale;
-			tile.gameObject.transform.localScale = originalTileScale * SELECTED_SCALE_FACTOR;
 		}
 
 		private void DeselectTile()
@@ -310,8 +301,6 @@ namespace ClassicTilestorm
 				if (allRenderers[i] != expected || mats == null) continue;
 				allRenderers[i].materials = mats;
 			}
-
-			tile.gameObject.transform.localScale = originalTileScale;
 
 			originalRenderersState = null;
 			selectedMapIndex = null;
