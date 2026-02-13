@@ -301,8 +301,8 @@ namespace ClassicTilestorm
 			var snapped = Map.ScreenToWorldSnapped(camera, Input.mousePosition);
 			var mapIndex = map.WorldToMapIndex(snapped);
 
-			var previewDelta = Vector3.zero;
-			var previewAngle = 0f;
+			placementVariant.delta = Vector3.zero;
+			placementVariant.angle  = 0f;
 
 			if (mapIndex != -1)
 			{
@@ -321,13 +321,11 @@ namespace ClassicTilestorm
 					aIdx = (aIdx + 1) % angles.Length;
 					if (aIdx == 0) dIdx = (dIdx + 1) % deltas.Length;
 
-					previewAngle = angles[aIdx];
-					previewDelta = new Vector3(current.delta.x, deltas[dIdx], current.delta.z);
+					placementVariant.delta = new Vector3(current.delta.x, deltas[dIdx], current.delta.z); 
+					placementVariant.angle = angles[aIdx];
 				}
 			}
 
-			placementVariant.delta = previewDelta;
-			placementVariant.angle = previewAngle;
 			EditorMeshUtil.UpdateGhostMesh(placementVariant, snapped, mapIndex == -1);
 		}
 
