@@ -8,14 +8,14 @@ namespace ClassicTilestorm
 	{
 		private Variant placementVariant = default;
 
+		// Dragging
+		private Variant tileOriginalVariant;
+		private Vector3 tileOriginalWorldPos;
+		private bool isDragging;
+
 		// Selection
 		private int? selectedMapIndex = null;
-		private (Renderer renderer, Material[] originalMaterials)?[] originalRenderersState;
-
-		// Dragging
-		private bool isDragging;
-		private Vector3 tileOriginalWorldPos;
-		private Variant tileOriginalVariant;
+		private (Renderer renderer, Material[] originalMaterials)?[] originalRenderersState;//we want to do this another way
 
 		private const float SELECT_TINT_BRIGHTNESS = 1.35f;
 		private static readonly Color SELECT_TINT = new(1.4f, 1.25f, 0.85f, 1f);
@@ -88,9 +88,7 @@ namespace ClassicTilestorm
 
 			// ── Only handle stationary clicks here ─────────────────────────────
 			if (!staticClick) return;
-
-			var mouseWorld = Map.ScreenToWorld(camera, Input.mousePosition);
-			var snapped = Map.SnappedMapPosition(mouseWorld);
+			var snapped = Map.ScreenToWorldSnapped(camera, Input.mousePosition);
 			int hitIndex = iMap.WorldToMapIndex(snapped);
 
 			// ── Mouse DOWN ─────────────────────────────────────────────────────
@@ -193,9 +191,7 @@ namespace ClassicTilestorm
 			var tile = iMap.GetTile(selectedMapIndex.Value);
 			if (tile.gameObject == null) return;
 
-			var mouseWorld = Map.ScreenToWorld(camera, Input.mousePosition);
-			var snapped = Map.SnappedMapPosition(mouseWorld);
-
+			var snapped = Map.ScreenToWorldSnapped(camera, Input.mousePosition);
 			tile.gameObject.transform.position = snapped + tileOriginalVariant.delta;
 		}
 
@@ -205,9 +201,7 @@ namespace ClassicTilestorm
 
 			var oldIndex = selectedMapIndex.Value;
 
-			var mouseWorld = Map.ScreenToWorld(camera, Input.mousePosition);
-			var newSnapped = Map.SnappedMapPosition(mouseWorld);
-
+			var newSnapped = Map.ScreenToWorldSnapped(camera, Input.mousePosition);
 			bool shouldMove = newSnapped != tileOriginalWorldPos;
 
 			if (!commit || !shouldMove)
@@ -304,8 +298,7 @@ namespace ClassicTilestorm
 		{
 			if (def == null) { EditorMeshUtil.HideGhostMesh(); return; }
 
-			var worldPos = Map.ScreenToWorld(cam, Input.mousePosition);
-			var snapped = Map.SnappedMapPosition(worldPos);
+			var snapped = Map.ScreenToWorldSnapped(camera, Input.mousePosition);
 			var mapIndex = map.WorldToMapIndex(snapped);
 
 			var previewDelta = Vector3.zero;
@@ -340,18 +333,8 @@ namespace ClassicTilestorm
 
 		private void EditMapTile(bool erase = false)
 		{
-			var worldPos = Map.ScreenToWorld(camera, Input.mousePosition);
-			var snapped = Map.SnappedMapPosition(worldPos);
-			int idx = iMap.WorldToMapIndex(snapped);
-
-			if (idx == -1 || erase)
-			{
-				var hash = erase ? ResourceManager.DefaultHash : placementVariant.hash;
-				iMap.UpdateTileAt(snapped, hash, Vector3.zero, 0f);
-				return;
-			}
-
-			iMap.UpdateTileAt(snapped, placementVariant.hash, placementVariant.delta, placementVariant.angle);
+			var snapped = Map.ScreenToWorldSnapped(camera, Input.mousePosition);
+			iMap.UpdateTileAt(snapped, erase ? ResourceManager.DefaultHash : placementVariant.hash, placementVariant.delta, placementVariant.angle);
 		}
 
 		public override void OnDestroy()
