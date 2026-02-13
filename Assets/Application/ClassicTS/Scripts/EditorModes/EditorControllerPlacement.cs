@@ -6,10 +6,11 @@ namespace ClassicTilestorm
 {
 	public class EditorControllerPlacement : EditorControllerMovement
 	{
-		private Variant placementVariant = default;
+		private Variant placementVariant = new Variant(ResourceManager.DefaultHash);
+
+		private bool isInPlacementMode = true;   // true = placing tiles from palette, false = in selection/drag/erase mode
 
 		// Dragging
-		private Variant tileOriginalVariant;
 		private Vector3 tileOriginalWorldPos;
 		private bool isDragging;
 
@@ -18,7 +19,7 @@ namespace ClassicTilestorm
 		private (Renderer renderer, Material[] originalMaterials)?[] originalRenderersState;
 
 		private const float SELECT_TINT_BRIGHTNESS = 1.35f;
-		private static readonly Color SELECT_TINT = new(1.4f, 1.25f, 0.85f, 1f);
+		private static readonly Color SELECT_TINT = new Color(1.4f, 1.25f, 0.85f, 1f);
 
 		public EditorControllerPlacement(EditorController editorController) : base(editorController) { }
 
@@ -34,9 +35,11 @@ namespace ClassicTilestorm
 			}
 
 			tileSelector.OnTileSelected += OnTileSelectedFromPalette;
-			tileSelector.CanOpenPalette = () => placementVariant.hash == ResourceManager.DefaultHash && null == selectedMapIndex;
+
+			tileSelector.CanOpenPalette = () => !isInPlacementMode && selectedMapIndex == null;
 
 			placementVariant = new Variant(ResourceManager.DefaultHash);
+			isInPlacementMode = false;   // start in neutral state
 			DeselectTile();
 		}
 
@@ -55,14 +58,35 @@ namespace ClassicTilestorm
 		private void OnTileSelectedFromPalette(HashId newHash)
 		{
 			placementVariant = new Variant(newHash);
+			isInPlacementMode = (newHash != ResourceManager.DefaultHash);
 			DeselectTile();
 		}
-
 		protected override void OnControl(bool staticClick)
 		{
 			base.OnControl(staticClick);
 
-			if (placementVariant.hash == ResourceManager.DefaultHash && selectedMapIndex.HasValue)
+			// ── Ghost & drag handling ───────────────────────────────────────
+			if (isInPlacementMode)
+			{
+				if (placementVariant.hash == ResourceManager.DefaultHash)
+				{
+					EditorMeshUtil.HideGhostMesh();
+
+					if (isDragging)
+					{
+						if (Input.GetMouseButton(0))
+							UpdateDragPosition();
+						else
+							EndDrag(true);
+					}
+				}
+				else
+				{
+					var def = ResourceManager.GetDefinition(placementVariant.hash);
+					UpdateGhostMesh(camera, iMap, def);
+				}
+			}
+			else
 			{
 				EditorMeshUtil.HideGhostMesh();
 
@@ -74,23 +98,17 @@ namespace ClassicTilestorm
 						EndDrag(true);
 				}
 			}
-			else
-			{
-				var def = ResourceManager.GetDefinition(placementVariant.hash);
-				UpdateGhostMesh(camera, iMap, def);
-			}
 
 			if (!camera) return;
-
-			// ── Only handle stationary clicks here ─────────────────────────────
 			if (!staticClick) return;
+
 			var snapped = Map.ScreenToWorldSnapped(camera, Input.mousePosition);
 			int hitIndex = iMap.WorldToMapIndex(snapped);
 
 			// ── Mouse DOWN ─────────────────────────────────────────────────────
 			if (Input.GetMouseButtonDown(0))
 			{
-				if (placementVariant.hash == ResourceManager.DefaultHash)
+				if (!isInPlacementMode || placementVariant.hash == ResourceManager.DefaultHash)
 				{
 					if (selectedMapIndex.HasValue)
 					{
@@ -99,7 +117,6 @@ namespace ClassicTilestorm
 							var tile = iMap.GetTile(selectedMapIndex.Value);
 							if (tile.gameObject != null)
 							{
-								var tilePos = tile.gameObject.transform.position;
 								StartDrag();
 								return;
 							}
@@ -124,7 +141,7 @@ namespace ClassicTilestorm
 			// ── Mouse UP ───────────────────────────────────────────────────────
 			if (Input.GetMouseButtonUp(0))
 			{
-				if (placementVariant.hash == ResourceManager.DefaultHash)
+				if (!isInPlacementMode || placementVariant.hash == ResourceManager.DefaultHash)
 				{
 					if (hitIndex == -1)
 					{
@@ -150,16 +167,20 @@ namespace ClassicTilestorm
 			if (Input.GetMouseButtonUp(1))
 			{
 				DeselectTile();
-				if (placementVariant.hash == ResourceManager.DefaultHash)
+
+				if (isInPlacementMode && placementVariant.hash != ResourceManager.DefaultHash)
 				{
+					// Cancel placement → switch to selection mode
+					placementVariant = new Variant(ResourceManager.DefaultHash);
+					isInPlacementMode = false;
+				}
+				else
+				{
+					// Already in selection mode → erase
 					if (isDragging)
 						EndDrag(false);
 					else
 						EditMapTile(erase: true);
-				}
-				else
-				{
-					placementVariant = new Variant(ResourceManager.DefaultHash);
 				}
 			}
 		}
@@ -171,7 +192,12 @@ namespace ClassicTilestorm
 
 			isDragging = true;
 			tileOriginalWorldPos = tile.gameObject.transform.position;
-			tileOriginalVariant = iMap.GetVariantAt(selectedMapIndex.Value);
+
+			// ── Here we store the dragged tile's data into the unified field ──
+			placementVariant = iMap.GetVariantAt(selectedMapIndex.Value);
+
+			// Optional: switch flag explicitly (helps readability)
+			isInPlacementMode = false;
 		}
 
 		private void UpdateDragPosition()
@@ -180,7 +206,7 @@ namespace ClassicTilestorm
 			if (tile.gameObject == null) return;
 
 			var snapped = Map.ScreenToWorldSnapped(camera, Input.mousePosition);
-			tile.gameObject.transform.position = snapped + tileOriginalVariant.delta;
+			tile.gameObject.transform.position = snapped + placementVariant.delta;
 		}
 
 		private void EndDrag(bool commit)
@@ -202,16 +228,19 @@ namespace ClassicTilestorm
 			{
 				iMap.UpdateTileAt(tileOriginalWorldPos, ResourceManager.DefaultHash, Vector3.zero, 0f);
 
-				iMap.UpdateTileAt(newSnapped, tileOriginalVariant.hash,
-								  tileOriginalVariant.delta, tileOriginalVariant.angle);
+				iMap.UpdateTileAt(newSnapped,
+								  placementVariant.hash,
+								  placementVariant.delta,
+								  placementVariant.angle);
 
-				SelectTile(iMap.WorldToMapIndex(newSnapped)); // reselect
+				SelectTile(iMap.WorldToMapIndex(newSnapped));
 			}
 
 			isDragging = false;
+			isInPlacementMode = false;
+			placementVariant = new Variant(ResourceManager.DefaultHash);
 		}
 
-		// In SelectTile:
 		private void SelectTile(int mapIndex)
 		{
 			if (mapIndex == selectedMapIndex) return;
@@ -226,9 +255,10 @@ namespace ClassicTilestorm
 				SELECT_TINT,
 				SELECT_TINT_BRIGHTNESS,
 				includeInactive: true);
+
+			isInPlacementMode = false;
 		}
 
-		// In DeselectTile:
 		private void DeselectTile()
 		{
 			if (isDragging) EndDrag(false);
@@ -246,17 +276,18 @@ namespace ClassicTilestorm
 
 			originalRenderersState = null;
 			selectedMapIndex = null;
+			isInPlacementMode = false;
 		}
 
 		private void UpdateGhostMesh(Camera cam, IMapEdit map, Definition def)
 		{
 			if (def == null) { EditorMeshUtil.HideGhostMesh(); return; }
 
-			var snapped = Map.ScreenToWorldSnapped(camera, Input.mousePosition);
+			var snapped = Map.ScreenToWorldSnapped(cam, Input.mousePosition);
 			var mapIndex = map.WorldToMapIndex(snapped);
 
 			placementVariant.delta = Vector3.zero;
-			placementVariant.angle  = 0f;
+			placementVariant.angle = 0f;
 
 			if (mapIndex != -1)
 			{
@@ -275,7 +306,7 @@ namespace ClassicTilestorm
 					aIdx = (aIdx + 1) % angles.Length;
 					if (aIdx == 0) dIdx = (dIdx + 1) % deltas.Length;
 
-					placementVariant.delta = new Vector3(current.delta.x, deltas[dIdx], current.delta.z); 
+					placementVariant.delta = new Vector3(current.delta.x, deltas[dIdx], current.delta.z);
 					placementVariant.angle = angles[aIdx];
 				}
 			}
@@ -286,7 +317,10 @@ namespace ClassicTilestorm
 		private void EditMapTile(bool erase = false)
 		{
 			var snapped = Map.ScreenToWorldSnapped(camera, Input.mousePosition);
-			iMap.UpdateTileAt(snapped, erase ? ResourceManager.DefaultHash : placementVariant.hash, placementVariant.delta, placementVariant.angle);
+			iMap.UpdateTileAt(snapped,
+							  erase ? ResourceManager.DefaultHash : placementVariant.hash,
+							  placementVariant.delta,
+							  placementVariant.angle);
 		}
 
 		public override void OnDestroy()
