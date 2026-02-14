@@ -216,17 +216,15 @@ namespace ClassicTilestorm
 
 		private void EndDrag(bool commit)
 		{
-			if (mode != EditorMode.Dragging) return;
-
-			int oldIndex = iMap.WorldToMapIndex(selectedMapPos);
 			var newSnapped = Map.ScreenToWorldSnapped(camera, Input.mousePosition);
-			bool shouldMove = (newSnapped - selectedMapPos).sqrMagnitude > 0.001f;
+			var shouldMove = newSnapped !=- selectedMapPos;
 
 			if (!commit || !shouldMove)
 			{
+				var oldIndex = iMap.WorldToMapIndex(selectedMapPos);
 				var tile = iMap.GetTile(oldIndex);
 				if (tile.gameObject != null)
-					tile.gameObject.transform.position = selectedMapPos;// tileOriginalWorldPos;
+					tile.gameObject.transform.position = selectedMapPos;
 			}
 			else
 			{
