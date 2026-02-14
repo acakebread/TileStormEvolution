@@ -1,6 +1,4 @@
-﻿using System;
-using UnityEngine;
-using System.Collections.Generic;
+﻿using UnityEngine;
 
 namespace MassiveHadronLtd
 {
@@ -9,6 +7,63 @@ namespace MassiveHadronLtd
 	// =========================================================================
 	public static class MeshUtils
 	{
+		public static Mesh CreateWritableMeshCopyOrFallback(
+			Mesh source,
+			string nameSuffix = "_Writable",
+			bool fallbackToQuadIfFailed = true)
+		{
+			if (source == null)
+			{
+				Debug.LogError("Source mesh is null");
+				return fallbackToQuadIfFailed ? GenerateQuadXZ(1f) : null;
+			}
+
+			if (source.isReadable)
+			{
+				// Preferred: Bake via Skinned if skinned, else simple instantiate
+				var tempGO = new GameObject("TempBaker") { hideFlags = HideFlags.HideAndDontSave };
+				try
+				{
+					var tempSMR = tempGO.AddComponent<SkinnedMeshRenderer>();
+					tempSMR.sharedMesh = source;
+
+					var writable = new Mesh { name = source.name + nameSuffix };
+					tempSMR.BakeMesh(writable, true);  // true = use scale
+
+					if (writable.vertexCount > 0)
+					{
+						writable.MarkDynamic();
+						writable.RecalculateBounds();
+						Debug.Log($"Writable copy succeeded via BakeMesh ({writable.vertexCount} verts)");
+						return writable;
+					}
+				}
+				finally
+				{
+					UnityEngine.Object.DestroyImmediate(tempGO);
+				}
+
+				// Fallback for non-skinned readable meshes
+				var simpleCopy = UnityEngine.Object.Instantiate(source);
+				simpleCopy.name += nameSuffix;
+				simpleCopy.MarkDynamic();
+				return simpleCopy;
+			}
+
+			// Non-readable: cannot clone → fallback or error
+			Debug.LogError($"Cannot create writable runtime copy of '{source.name}' — Read/Write is disabled. " +
+						   "This fails in WebGL builds (and sometimes other platforms). " +
+						   "Unity strips CPU data. Use procedural fallback or enable Read/Write on asset.");
+
+			if (fallbackToQuadIfFailed)
+			{
+				var fallback = GenerateQuadXZ(1f); // or your oriented quad, plane, etc.
+				fallback.name = source.name + nameSuffix + "_Fallback";
+				return fallback;
+			}
+
+			return null;
+		}
 		/// <summary>
 		/// Creates a fully readable/writable copy of a mesh using SkinnedMeshRenderer + BakeMesh.
 		/// Most reliable method when original mesh has Read/Write disabled in import settings.

@@ -1,4 +1,6 @@
-﻿using UnityEngine;
+﻿//#define VERBOSE
+
+using UnityEngine;
 
 namespace MassiveHadronLtd
 {
@@ -117,25 +119,66 @@ namespace MassiveHadronLtd
 				return null;
 			}
 
-			// Create readable/writable copy (using the method that worked)
-			Mesh writableMesh = MeshUtils.CreateReadableCopyViaBake(filter.sharedMesh);
+			Mesh targetMesh = filter.sharedMesh;
 
-			if (writableMesh == null)
+			// ────────────────────────────────────────────────────────────────
+			// Check if already readable → use original + warn for future fix
+			// ────────────────────────────────────────────────────────────────
+			if (targetMesh.isReadable)
 			{
-				Debug.LogWarning($"Bake method failed for {target.name} - trying fallback combine method...");
-				writableMesh = MeshUtils.CreateReadableCopyViaCombine(filter.sharedMesh);
+#if VERBOSE
+				Debug.LogWarning(
+					$"Mesh '{targetMesh.name}' on '{target.name}' is already readable. " +
+					"Skipping runtime copy (good for performance). " +
+					"Consider enabling Read/Write only if you need runtime modifications on this model. " +
+					"For WebGL optimization, keep non-modified meshes non-readable."
+				);
+#endif
+
+				// No need to assign a copy — original is already writable
+				// (but we still assign filter.mesh = targetMesh just to be explicit/safe)
+				filter.mesh = targetMesh;
+			}
+			else
+			{
+				// Non-readable → attempt to create writable copy (will likely fail in WebGL)
+				Debug.Log($"Creating writable copy for non-readable mesh '{targetMesh.name}' on '{target.name}'... " +
+						  "(this may fail in WebGL builds — consider enabling Read/Write in import settings)");
+
+				Mesh writableMesh = MeshUtils.CreateReadableCopyViaBake(targetMesh);
+
+				if (writableMesh == null || writableMesh.vertexCount == 0)
+				{
+					Debug.LogWarning($"Bake method failed for '{target.name}' — trying fallback combine method...");
+					writableMesh = MeshUtils.CreateReadableCopyViaCombine(targetMesh);
+				}
+
+				if (writableMesh == null || writableMesh.vertexCount == 0)
+				{
+					Debug.LogError(
+						$"Failed to create readable mesh copy for '{target.name}' " +
+						$"(original verts: {targetMesh.vertexCount}, isReadable: {targetMesh.isReadable}). " +
+						"Mesh modifications will not work in builds (especially WebGL). " +
+						"Enable Read/Write Enabled in the model's import settings."
+					);
+
+					// Optional: early exit or fallback to a dummy mesh
+					// return null;  // ← uncomment if you want to abort adding the component
+					// or: writableMesh = MeshUtils.GenerateQuadXZ(); // procedural fallback
+				}
+				else
+				{
+					Debug.Log($"Writable copy created successfully ({writableMesh.vertexCount} verts)");
+				}
+
+				// Assign whatever we got (even if empty — so you see broken visuals and know to fix)
+				filter.mesh = writableMesh;
+				targetMesh = writableMesh; // for the rest of the method if needed
 			}
 
-			if (writableMesh == null)
-			{
-				Debug.LogError($"Failed to create readable mesh copy for {target.name}");
-				return null;
-			}
-
-			// Assign our own writable mesh
-			filter.mesh = writableMesh;
-
-			// Apply defaults / parameters
+			// ────────────────────────────────────────────────────────────────
+			// Proceed with adding the component (parameters, etc.)
+			// ────────────────────────────────────────────────────────────────
 			var p = parameters ?? MorphGeomSwayParameters.Default;
 
 			var sway = target.AddComponent<MorphGeomSway>();
