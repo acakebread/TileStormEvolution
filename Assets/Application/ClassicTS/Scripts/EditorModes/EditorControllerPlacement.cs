@@ -16,12 +16,12 @@ namespace ClassicTilestorm
 	{
 		private ControllerMode mode = ControllerMode.Idle;
 
-		// ── Fields for delayed select vs immediate pan ───────────────────────────────
-		private float pressStartTime = -1f;
-		private const float DELAY_BEFORE_SELECT_AND_DRAG = 0.25f;
-		private bool isDecisionPending;
+		// Delayed select vs pan decision
+		private bool decisionPending;
+		private float pressTime;
+		private const float DELAY_BEFORE_DRAG = 0.25f;
 
-		// Selection
+		// Selection state
 		private Variant selectedVariant = new(ResourceManager.DefaultHash);
 		private Vector3 selectedMapPos;
 		private (Renderer renderer, Material[] originalMaterials)?[] originalRenderersState;
@@ -69,13 +69,6 @@ namespace ClassicTilestorm
 		{
 			base.Update();
 			UpdateGhostMesh(camera, iMap, selectedVariant);
-
-			// Safety: if button released during decision window, cancel it
-			if (isDecisionPending && !Input.GetMouseButton(0))
-			{
-				isDecisionPending = false;
-				pressStartTime = -1f;
-			}
 		}
 
 		protected override void OnControl(bool staticClick)
@@ -83,7 +76,7 @@ namespace ClassicTilestorm
 			base.OnControl(staticClick);
 			if (!camera) return;
 
-			// Handle active drag first (highest priority)
+			// Active drag takes priority
 			if (mode == ControllerMode.Dragging)
 			{
 				if (Input.GetMouseButton(0))
@@ -97,60 +90,101 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			// ── Decision window logic ────────────────────────────────────────────────
-			if (isDecisionPending)
-			{
-				// Movement detected → pan immediately
-				if (!staticClick)
-				{
-					isDecisionPending = false;
-					pressStartTime = -1f;
-					StartPanning();
-					return;
-				}
-
-				// Still static after delay → try to select + drag
-				if (Time.time - pressStartTime >= DELAY_BEFORE_SELECT_AND_DRAG)
-				{
-					isDecisionPending = false;
-					pressStartTime = -1f;
-
-					if (!TrySelectAndStartDrag())
-					{
-						// No tile under cursor (or default) → pan
-						StartPanning();
-					}
-					// If successful → mode is now Dragging, next frames will handle it
-				}
-
-				// Still waiting and static → do nothing this frame
-				return;
-			}
-
-			// ── Normal discrete input ────────────────────────────────────────────────
 			switch (mode)
 			{
 				case ControllerMode.Idle:
 				case ControllerMode.Selected:
-					if (staticClick)
-					{
-						if (Input.GetMouseButtonDown(0))
-						{
-							pressStartTime = Time.time;
-							isDecisionPending = true;
-							// Optional: visual feedback (cursor change, subtle glow, …)
-						}
 
-						if (Input.GetMouseButtonUp(1))
+					if (Input.GetMouseButtonDown(0))
+					{
+						pressTime = Time.time;
+						decisionPending = true;
+					}
+
+					// ── Quick static release → just select ───────────────────────
+					else if (Input.GetMouseButtonUp(0))
+					{
+						if (decisionPending)
 						{
-							isDecisionPending = false;
-							pressStartTime = -1f;
-							EditMapTile(erase: true);
+							decisionPending = false;
+
+							// Quick click: select now, no drag
+							var pos = Map.ScreenToWorldSnapped(camera, Input.mousePosition);
+							int idx = iMap.WorldToMapIndex(pos);
+
+							if (idx != -1)
+							{
+								var v = iMap.GetVariantAt(idx);
+								if (!v.IsDefaultEquivalent())
+								{
+									// Different tile or no selection yet → select it
+									if (mode != ControllerMode.Selected || selectedMapPos != pos)
+									{
+										SelectTile(pos);
+									}
+									// same tile already selected → nothing (or you could toggle/deselect)
+								}
+								else
+								{
+									DeselectTile();
+								}
+							}
+							else
+							{
+								DeselectTile();
+							}
 						}
 					}
+
+					// ── Long static hold → select + drag ─────────────────────────
+					else if (decisionPending && staticClick && Time.time - pressTime >= DELAY_BEFORE_DRAG)
+					{
+						decisionPending = false;
+
+						var pos = Map.ScreenToWorldSnapped(camera, Input.mousePosition);
+						int idx = iMap.WorldToMapIndex(pos);
+
+						if (idx != -1)
+						{
+							var v = iMap.GetVariantAt(idx);
+							if (!v.IsDefaultEquivalent())
+							{
+								if (mode != ControllerMode.Selected || selectedMapPos != pos)
+								{
+									SelectTile(pos);
+								}
+								StartDrag();   // ← this is the only place we enter Dragging
+							}
+							else
+							{
+								DeselectTile();
+								StartPanning();
+							}
+						}
+						else
+						{
+							StartPanning();
+						}
+					}
+
+					// ── Moved during hold → pan immediately ───────────────────────
+					else if (decisionPending && !staticClick)
+					{
+						decisionPending = false;
+						StartPanning();
+					}
+
+					// Right click
+					if (Input.GetMouseButtonUp(1))
+					{
+						decisionPending = false;
+						EditMapTile(erase: true);
+					}
+
 					break;
 
 				case ControllerMode.Placing:
+					// your existing placing code, unchanged
 					if (staticClick)
 					{
 						if (Input.GetMouseButtonUp(0))
@@ -172,20 +206,28 @@ namespace ClassicTilestorm
 					break;
 			}
 		}
-
-		private bool TrySelectAndStartDrag()
+		private void TrySelect(bool startDrag)
 		{
-			var snapped = Map.ScreenToWorldSnapped(camera, Input.mousePosition);
-			int hitIndex = iMap.WorldToMapIndex(snapped);
+			var pos = Map.ScreenToWorldSnapped(camera, Input.mousePosition);
+			int idx = iMap.WorldToMapIndex(pos);
 
-			if (hitIndex == -1) return false;
+			if (idx == -1 || iMap.GetVariantAt(idx).IsDefaultEquivalent())
+			{
+				DeselectTile();
+				return;
+			}
 
-			var variant = iMap.GetVariantAt(hitIndex);
-			if (variant.IsDefaultEquivalent()) return false;
+			// Already selected this exact position → no-op
+			if (mode == ControllerMode.Selected && selectedMapPos == pos)
+			{
+				if (startDrag) StartDrag();
+				return;
+			}
 
-			SelectTile(snapped);
-			StartDrag();           // → sets mode = Dragging
-			return true;
+			SelectTile(pos);
+
+			if (startDrag)
+				StartDrag();
 		}
 
 		private void StartDrag()
