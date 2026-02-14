@@ -987,6 +987,8 @@ namespace ClassicTilestorm
 				return false;
 			}
 
+			GetGraphTile(z * width + x).Destroy();//remove old tile
+
 			int oldWidth = width;
 			int oldHeight = height;
 			//var oldBounds = new   GetContentBounds();
@@ -1082,22 +1084,25 @@ namespace ClassicTilestorm
 
 			bool boundsChanged = sizeChanged || width != oldWidth || height != oldHeight || cropped;
 
-			if (boundsChanged)
+			//if (boundsChanged)
 			{
 				RecreateTiles();
 				RefreshAttachments(GetAttachments());
 			}
-			else
-			{
-				GetGraphTile(index).Destroy();
-				graph[index] = new Tile(variants[tableIndex], parent, TileWorldPosition(index));
-				RefreshAttachments(GetAttachments(tileIndex: index));
-			}
+			//else
+			//{
+			//	GetGraphTile(index).Destroy();
+			//	graph[index] = new Tile(variants[tableIndex], parent, TileWorldPosition(index));
+			//	RefreshAttachments(GetAttachments(tileIndex: index));
+			//}
 
+			OriginDelta = originDelta;
 			OnMapEdited?.Invoke(this, boundsChanged, originDelta);
 
 			return true;
 		}
+
+		public static Vector3 OriginDelta;
 
 		private int TableIndex(HashId hashId, Vector3 delta = new Vector3(), float angle = 0f)
 		{

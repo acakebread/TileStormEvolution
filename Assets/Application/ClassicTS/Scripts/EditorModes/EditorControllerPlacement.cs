@@ -211,10 +211,7 @@ namespace ClassicTilestorm
 			if (!isDragging || !selectedMapPos.HasValue) return;
 
 			int oldIndex = iMap.WorldToMapIndex(selectedMapPos.Value);
-
 			var newSnapped = Map.ScreenToWorldSnapped(camera, Input.mousePosition);
-			var delta = newSnapped - tileOriginalWorldPos;
-
 			bool shouldMove = (newSnapped - tileOriginalWorldPos).sqrMagnitude > 0.001f;
 
 			if (!commit || !shouldMove)
@@ -225,10 +222,12 @@ namespace ClassicTilestorm
 			}
 			else
 			{
+				RestoreSelectedTile();//remove highlight
 				iMap.RemoveTileAt(tileOriginalWorldPos);
 				iMap.UpdateTileAt(newSnapped, placementVariant.hash, placementVariant.delta, placementVariant.angle);
-
-				//SelectTile(newSnapped);   // pass the new snapped position
+				newSnapped += Map.OriginDelta;
+				selectedMapPos = null;
+				SelectTile(newSnapped);   // pass the new snapped position
 			}
 
 			isDragging = false;
@@ -284,6 +283,19 @@ namespace ClassicTilestorm
 			originalRenderersState = null;
 			selectedMapPos = null;
 			isInPlacementMode = false;
+		}
+
+		private void RestoreSelectedTile()
+		{
+			if (!selectedMapPos.HasValue) return;
+
+			int index = iMap.WorldToMapIndex(selectedMapPos.Value);
+			var tile = iMap.GetTile(index);
+
+			if (tile.gameObject == null)
+				return;
+
+			tile.gameObject.RestoreSelectionHighlight(originalRenderersState);
 		}
 
 		private void UpdateGhostMesh(Camera cam, IMapEdit map, Definition def)
