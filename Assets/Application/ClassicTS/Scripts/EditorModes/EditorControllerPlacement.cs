@@ -69,10 +69,7 @@ namespace ClassicTilestorm
 			if (newMode != ControllerMode.Placing)
 				EditorMeshUtil.HideGhostMesh();
 			else
-			{
-				var def = ResourceManager.GetDefinition(placementVariant.hash);
-				UpdateGhostMesh(camera, iMap, def);
-			}
+				UpdateGhostMesh(camera, iMap, placementVariant);  // ← now passes Variant
 		}
 
 		protected override void OnControl(bool staticClick)
@@ -135,8 +132,8 @@ namespace ClassicTilestorm
 						}
 					}
 
-					var placementVariantDef = ResourceManager.GetDefinition(placementVariant.hash);
-					UpdateGhostMesh(camera, iMap, placementVariantDef);
+					// Continuous ghost update in placing mode
+					UpdateGhostMesh(camera, iMap, placementVariant);  // ← now uses Variant
 					break;
 
 				case ControllerMode.Selected:
@@ -211,7 +208,7 @@ namespace ClassicTilestorm
 			}
 
 			SelectTile(newSnapped + Map.OriginDelta); // this is here until click and drag starts working properly and then the mode will be set to idle
-			// SetMode(ControllerMode.Idle);
+													  // SetMode(ControllerMode.Idle);
 		}
 
 		private void SelectTile(Vector3 worldPos)
@@ -246,23 +243,32 @@ namespace ClassicTilestorm
 			SetMode(ControllerMode.Idle);
 		}
 
-		private void UpdateGhostMesh(Camera cam, IMapEdit map, Definition def)
+		// ────────────────────────────────────────────────────────────────
+		// CHANGED: now takes Variant instead of Definition
+		// ────────────────────────────────────────────────────────────────
+		private void UpdateGhostMesh(Camera cam, IMapEdit map, Variant variant)
 		{
-			if (def == null || def.IsDefault()) { EditorMeshUtil.HideGhostMesh(); return; }
+			var def = ResourceManager.GetDefinition(variant.hash);
+			if (def == null || def.IsDefault())
+			{
+				EditorMeshUtil.HideGhostMesh();
+				return;
+			}
 
 			var snapped = Map.ScreenToWorldSnapped(cam, Input.mousePosition);
 			var mapIndex = map.WorldToMapIndex(snapped);
 
+			// These lines are questionable – they mutate placementVariant inside a render/update function
+			// Consider moving this logic elsewhere if possible (e.g. to a separate method or when mode changes)
 			placementVariant.delta = Vector3.zero;
 			placementVariant.angle = 0f;
 
 			if (mapIndex != -1)
 			{
 				var current = map.GetVariantAt(mapIndex);
-				var selDef = ResourceManager.GetDefinition(placementVariant.hash);
-				var isDefault = selDef?.IsDefault() ?? false;
+				var isDefault = def.IsDefault(); // already checked above, but kept for clarity
 
-				if (current.hash != 0 && !isDefault && current.hash == placementVariant.hash)
+				if (current.hash != 0 && !isDefault && current.hash == variant.hash)
 				{
 					float[] angles = { 0f, 90f, 180f, 270f };
 					float[] deltas = { 0f, 0.25f, 0.5f, 0.75f, 1f };
@@ -278,7 +284,7 @@ namespace ClassicTilestorm
 				}
 			}
 
-			EditorMeshUtil.UpdateGhostMesh(placementVariant, snapped, mapIndex == -1);
+			EditorMeshUtil.UpdateGhostMesh(variant, snapped, mapIndex == -1);
 		}
 
 		private void EditMapTile(bool erase = false)
