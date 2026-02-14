@@ -82,9 +82,7 @@ namespace ClassicTilestorm
 					{
 						var variant = iMap.CameraHitVariant(camera, Input.mousePosition);
 						if (variant.IsDefaultEquivalent())
-						{
 							StartPanning(); // immediate panning on default/empty
-						}
 						else
 						{
 							pressTime = Time.time;
@@ -96,11 +94,10 @@ namespace ClassicTilestorm
 					{
 						if (Input.GetMouseButtonUp(0))
 						{
-							// Quick click before timer → just select (no drag)
 							if (decisionPending)
 							{
 								decisionPending = false;
-								SelectTile();   // or your original selection logic
+								SelectTile();
 							}
 						}
 
@@ -108,11 +105,8 @@ namespace ClassicTilestorm
 						if (decisionPending && Time.time - pressTime >= 0.25f)
 						{
 							decisionPending = false;
-							// Try to select tile and drag
 							if (!AttemptDrag())
-							{
 								StartPanning();
-							}
 						}
 
 						if (Input.GetMouseButtonUp(1))
@@ -154,16 +148,18 @@ namespace ClassicTilestorm
 					{
 						if (Input.GetMouseButtonDown(0))
 						{
+							if (!AttemptDrag())
+								StartPanning();
+						}
+
+						if (Input.GetMouseButtonUp(0))
+						{
 							if (Map.ScreenToWorldSnapped(camera, Input.mousePosition) != selectedMapPos)
 								DeselectTile();
-							AttemptDrag();
 						}
 
 						if (Input.GetMouseButtonUp(1))
-						{
 							DeselectTile();
-							//EditMapTile(erase: true);
-						}
 					}
 					break;
 
