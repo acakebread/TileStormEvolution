@@ -228,8 +228,7 @@ namespace ClassicTilestorm
 			}
 			else
 			{
-				RestoreSelectedTile(); // remove highlight
-				iMap.RemoveTileAt(selectedMapPos);
+				iMap.RemoveTileAt(selectedMapPos);//this will destroy the gameobject on the tile so defacto remove the highlight
 				iMap.UpdateTileAt(newSnapped, placementVariant.hash, placementVariant.delta, placementVariant.angle);
 			}
 
@@ -260,18 +259,13 @@ namespace ClassicTilestorm
 
 		private void DeselectTile()
 		{
-			RestoreSelectedTile();
-			mode = ControllerMode.Idle;
-		}
-
-		private void RestoreSelectedTile()
-		{
 			int index = iMap.WorldToMapIndex(selectedMapPos);
 			var tile = iMap.GetTile(index);
 			if (null != tile.gameObject)
 				tile.gameObject.RestoreSelectionHighlight(originalRenderersState);
 
 			originalRenderersState = null;
+			mode = ControllerMode.Idle;
 		}
 
 		private void UpdateGhostMesh(Camera cam, IMapEdit map, Definition def)
