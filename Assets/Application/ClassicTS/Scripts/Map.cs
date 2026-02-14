@@ -1066,7 +1066,7 @@ namespace ClassicTilestorm
 			var def = ResourceManager.GetDefinition(hashId);
 			bool isDefaultTile = def?.IsDefault() ?? false;
 
-			if (isDefaultTile || sizeChanged)
+			//if (isDefaultTile || sizeChanged)//for now always try to crop the map because it may not currently be cropped due to RemoveTileAt 
 			{
 				var (minX, minZ, maxX, maxZ) = GetContentBounds();
 				cropped = CropToContent();

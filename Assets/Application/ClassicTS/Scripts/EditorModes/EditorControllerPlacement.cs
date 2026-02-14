@@ -8,7 +8,8 @@ namespace ClassicTilestorm
 	{
 		Idle,       // nothing selected, no placement active → can select, pan, start placing
 		Placing,    // active tile placement from palette (ghost visible)
-		Selected    // tile is highlighted/selected → can drag it or deselect
+		Selected,   // tile is highlighted/selected → can start drag or deselect
+		Dragging    // actively dragging a selected tile (mouse button held)
 	}
 
 	public class EditorControllerPlacement : EditorControllerMovement
@@ -16,9 +17,8 @@ namespace ClassicTilestorm
 		private Variant placementVariant = new Variant(ResourceManager.DefaultHash);
 		private EditorMode mode = EditorMode.Idle;
 
-		// Dragging (active drag gesture)
+		// Dragging data (only meaningful in Dragging mode)
 		private Vector3 tileOriginalWorldPos;
-		private bool isDragging;
 
 		// Selection
 		private Vector3 selectedMapPos;
@@ -51,7 +51,7 @@ namespace ClassicTilestorm
 			if (tileSelector != null)
 				tileSelector.OnTileSelected -= OnTileSelectedFromPalette;
 
-			if (isDragging) EndDrag(false);
+			if (mode == EditorMode.Dragging) EndDrag(false);
 			DeselectTile();
 
 			base.OnDisable();
@@ -74,14 +74,6 @@ namespace ClassicTilestorm
 				if (placementVariant.hash == ResourceManager.DefaultHash)
 				{
 					EditorMeshUtil.HideGhostMesh();
-
-					if (isDragging)
-					{
-						if (Input.GetMouseButton(0))
-							UpdateDragPosition();
-						else
-							EndDrag(true);
-					}
 				}
 				else
 				{
@@ -92,13 +84,18 @@ namespace ClassicTilestorm
 			else
 			{
 				EditorMeshUtil.HideGhostMesh();
+			}
 
-				if (isDragging)
+			// Handle active drag movement
+			if (mode == EditorMode.Dragging)
+			{
+				if (Input.GetMouseButton(0))
 				{
-					if (Input.GetMouseButton(0))
-						UpdateDragPosition();
-					else
-						EndDrag(true);
+					UpdateDragPosition();
+				}
+				else
+				{
+					EndDrag(true);
 				}
 			}
 
@@ -111,6 +108,12 @@ namespace ClassicTilestorm
 			// ── Mouse DOWN ─────────────────────────────────────────────────────
 			if (Input.GetMouseButtonDown(0))
 			{
+				if (mode == EditorMode.Dragging)
+				{
+					// should not happen - already handled above
+					return;
+				}
+
 				if (mode != EditorMode.Placing || placementVariant.hash == ResourceManager.DefaultHash)
 				{
 					if (mode == EditorMode.Selected)
@@ -145,6 +148,12 @@ namespace ClassicTilestorm
 			// ── Mouse UP ───────────────────────────────────────────────────────
 			if (Input.GetMouseButtonUp(0))
 			{
+				if (mode == EditorMode.Dragging)
+				{
+					EndDrag(true);
+					return;
+				}
+
 				if (mode != EditorMode.Placing || placementVariant.hash == ResourceManager.DefaultHash)
 				{
 					if (hitIndex == -1)
@@ -158,7 +167,7 @@ namespace ClassicTilestorm
 
 					if (currentDef != null && !currentDef.IsDefaultEquivalent())
 					{
-						SelectTile(snapped);   // pass position, not index
+						SelectTile(snapped);
 						return;
 					}
 					else
@@ -181,12 +190,13 @@ namespace ClassicTilestorm
 					placementVariant = new Variant(ResourceManager.DefaultHash);
 					mode = EditorMode.Idle;
 				}
+				else if (mode == EditorMode.Dragging)
+				{
+					EndDrag(false);
+				}
 				else
 				{
-					if (isDragging)
-						EndDrag(false);
-					else
-						EditMapTile(erase: true);
+					EditMapTile(erase: true);
 				}
 			}
 		}
@@ -197,10 +207,10 @@ namespace ClassicTilestorm
 			var tile = iMap.GetTile(index);
 			if (tile.gameObject == null) return;
 
-			isDragging = true;
 			tileOriginalWorldPos = tile.gameObject.transform.position;
 			placementVariant = iMap.GetVariantAt(index);
-			// mode remains Selected during drag
+
+			mode = EditorMode.Dragging;
 		}
 
 		private void UpdateDragPosition()
@@ -215,7 +225,7 @@ namespace ClassicTilestorm
 
 		private void EndDrag(bool commit)
 		{
-			if (!isDragging) return;
+			if (mode != EditorMode.Dragging) return;
 
 			int oldIndex = iMap.WorldToMapIndex(selectedMapPos);
 			var newSnapped = Map.ScreenToWorldSnapped(camera, Input.mousePosition);
@@ -233,19 +243,20 @@ namespace ClassicTilestorm
 				iMap.RemoveTileAt(tileOriginalWorldPos);
 				iMap.UpdateTileAt(newSnapped, placementVariant.hash, placementVariant.delta, placementVariant.angle);
 				newSnapped += Map.OriginDelta;
-				selectedMapPos = Vector3.negativeInfinity;// this is effectively treated as a flag by select tile so it needs to be reset - we can deal with this later
-				SelectTile(newSnapped);   // re-apply highlight → stays in Selected
+
+				selectedMapPos = Vector3.negativeInfinity;
+				SelectTile(newSnapped);   // → goes back to Selected
 			}
 
-			isDragging = false;
-			// Note: we no longer reset placementVariant or force mode change here
+			mode = EditorMode.Selected;   // after drag → back to selected (highlighted)
+										  // Note: if you prefer to deselect after move, change to Idle here
 		}
 
 		private void SelectTile(Vector3 worldPos)
 		{
 			int mapIndex = iMap.WorldToMapIndex(worldPos);
 
-			if (mode == EditorMode.Selected)
+			if (mode == EditorMode.Selected || mode == EditorMode.Dragging)
 			{
 				int oldIndex = iMap.WorldToMapIndex(selectedMapPos);
 				if (mapIndex == oldIndex) return;
@@ -266,27 +277,25 @@ namespace ClassicTilestorm
 				SELECT_TINT,
 				SELECT_TINT_BRIGHTNESS,
 				includeInactive: true);
-
-			// We no longer force isInPlacementMode = false here
-			// The caller (mouse up) decides whether to stay in Placing or not
 		}
 
 		private void DeselectTile()
 		{
-			if (isDragging) EndDrag(false);
+			if (mode == EditorMode.Dragging)
+			{
+				EndDrag(false);
+			}
 
-			if (mode != EditorMode.Selected) return;
+			if (mode != EditorMode.Selected && mode != EditorMode.Dragging)
+				return;
 
 			int index = iMap.WorldToMapIndex(selectedMapPos);
 			var tile = iMap.GetTile(index);
 
-			if (tile.gameObject == null)
+			if (tile.gameObject != null)
 			{
-				mode = EditorMode.Idle;
-				return;
+				tile.gameObject.RestoreSelectionHighlight(originalRenderersState);
 			}
-
-			tile.gameObject.RestoreSelectionHighlight(originalRenderersState);
 
 			originalRenderersState = null;
 			mode = EditorMode.Idle;
@@ -294,7 +303,7 @@ namespace ClassicTilestorm
 
 		private void RestoreSelectedTile()
 		{
-			if (mode != EditorMode.Selected) return;
+			if (mode != EditorMode.Selected && mode != EditorMode.Dragging) return;
 
 			int index = iMap.WorldToMapIndex(selectedMapPos);
 			var tile = iMap.GetTile(index);
@@ -351,7 +360,7 @@ namespace ClassicTilestorm
 
 		public override void OnDestroy()
 		{
-			if (isDragging) EndDrag(false);
+			if (mode == EditorMode.Dragging) EndDrag(false);
 			DeselectTile();
 			EditorMeshUtil.DestroyGhostMesh();
 		}
