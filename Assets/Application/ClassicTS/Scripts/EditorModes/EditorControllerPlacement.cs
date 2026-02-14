@@ -66,6 +66,9 @@ namespace ClassicTilestorm
 			UpdateGhostMesh(camera, iMap, selectedVariant);// Continuous ghost update in placing mode
 		}
 
+		private bool decisionPending;
+		private float pressTime;
+
 		protected override void OnControl(bool staticClick)
 		{
 			base.OnControl(staticClick);
@@ -75,22 +78,53 @@ namespace ClassicTilestorm
 			switch (mode)
 			{
 				case ControllerMode.Idle:
+					if (Input.GetMouseButtonDown(0))
+					{
+						var variant = iMap.CameraHitVariant(camera, Input.mousePosition);
+						if (variant.IsDefaultEquivalent())
+						{
+							StartPanning(); // immediate panning on default/empty
+						}
+						else
+						{
+							pressTime = Time.time;
+							decisionPending = true; // start the select timer
+						}
+					}
+
 					if (staticClick)
 					{
-						if (Input.GetMouseButtonDown(0))
+						if (Input.GetMouseButtonUp(0))
 						{
+							// Quick click before timer → just select (no drag)
+							if (decisionPending)
+							{
+								decisionPending = false;
+								SelectTile();   // or your original selection logic
+							}
+						}
+
+						// check the select timer
+						if (decisionPending && Time.time - pressTime >= 0.25f)
+						{
+							decisionPending = false;
 							// Try to select tile and drag
 							if (!AttemptDrag())
 							{
-								// Nothing → pan if appropriate
-								var hitVariant = iMap.CameraHitVariant(camera, Input.mousePosition);
-								if (hitVariant.IsDefaultEquivalent())
-									StartPanning();
+								StartPanning();
 							}
 						}
 
 						if (Input.GetMouseButtonUp(1))
 							EditMapTile(erase: true);
+					}
+					else
+					{
+						if (Input.GetMouseButton(0) && decisionPending)
+						{
+							decisionPending = false;
+							StartPanning(); // immediate panning when moved during hold
+						}
 					}
 					break;
 
@@ -128,7 +162,7 @@ namespace ClassicTilestorm
 						if (Input.GetMouseButtonUp(1))
 						{
 							DeselectTile();
-							EditMapTile(erase: true);
+							//EditMapTile(erase: true);
 						}
 					}
 					break;
@@ -144,17 +178,24 @@ namespace ClassicTilestorm
 
 		private bool AttemptDrag()
 		{
-			var snapped = Map.ScreenToWorldSnapped(camera, Input.mousePosition);
-			int hitIndex = iMap.WorldToMapIndex(snapped);
+			if (SelectTile())
+			{
+				StartDrag();
+				return true;
+			}
+			return false;
+		}
 
+		private bool SelectTile()
+		{
 			// Try to select tile
-			if (hitIndex != -1)
+			var hitIndex = iMap.CameraHitTile(camera, Input.mousePosition);
+			if (-1 != hitIndex)
 			{
 				var variant = iMap.GetVariantAt(hitIndex);
 				if (!variant.IsDefaultEquivalent())
 				{
-					SelectTile(snapped);
-					StartDrag();
+					SelectTile(iMap.TileWorldPosition(hitIndex));
 					return true;
 				}
 			}
@@ -199,14 +240,14 @@ namespace ClassicTilestorm
 			SelectTile(newSnapped + Map.OriginDelta);//SetMode(ControllerMode.Idle);
 		}
 
-		private void SelectTile(Vector3 worldPos)
+		private bool SelectTile(Vector3 worldPos)
 		{
 			int mapIndex = iMap.WorldToMapIndex(worldPos);
 
 			DeselectTile();
 
 			var tile = iMap.GetTile(mapIndex);
-			if (tile.gameObject == null) return;
+			if (tile.gameObject == null) return false;
 
 			const float SELECT_TINT_BRIGHTNESS = 1.35f;
 			Color SELECT_TINT = new Color(1.4f, 1.25f, 0.85f, 1f);
@@ -218,6 +259,8 @@ namespace ClassicTilestorm
 
 			selectedMapPos = worldPos;
 			SetMode(ControllerMode.Selected);
+
+			return true;
 		}
 
 		private void DeselectTile()

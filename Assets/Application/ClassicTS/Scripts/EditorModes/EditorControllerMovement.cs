@@ -115,6 +115,7 @@ namespace ClassicTilestorm
 
 		protected virtual void StartPanning()
 		{
+			if (isPanning) return;
 			panStartWorldPoint = Map.ScreenToWorld(camera, Input.mousePosition);
 			isPanning = panStartWorldPoint != Vector3.negativeInfinity;
 		}
