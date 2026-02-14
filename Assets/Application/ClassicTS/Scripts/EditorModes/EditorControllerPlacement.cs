@@ -227,13 +227,14 @@ namespace ClassicTilestorm
 				iMap.RemoveTileAt(tileOriginalWorldPos);
 				iMap.UpdateTileAt(newSnapped, placementVariant.hash, placementVariant.delta, placementVariant.angle);
 				newSnapped += Map.OriginDelta;
-				selectedMapPos = Vector3.negativeInfinity;          // ← CHANGED: directly assign
+				selectedMapPos = Vector3.negativeInfinity;          // this is effectively treated as a flag by select tile so it needs to be reset - we can deal with this later
 				SelectTile(newSnapped);               // re-highlight at new position
 			}
 
 			isDragging = false;
-			isInPlacementMode = false;
-			placementVariant = new Variant(ResourceManager.DefaultHash);
+			//these lines are not needed
+			//isInPlacementMode = false;
+			//placementVariant = new Variant(ResourceManager.DefaultHash);
 		}
 
 		private void SelectTile(Vector3 worldPos)
