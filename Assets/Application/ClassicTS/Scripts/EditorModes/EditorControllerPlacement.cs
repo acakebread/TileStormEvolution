@@ -84,7 +84,7 @@ namespace ClassicTilestorm
 							{
 								// Nothing → pan if appropriate
 								var hitVariant = iMap.CameraHitVariant(camera, Input.mousePosition);
-								if (!hitVariant.IsDefaultEquivalent())
+								if (hitVariant.IsDefaultEquivalent())
 									StartPanning();
 							}
 						}
