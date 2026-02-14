@@ -148,7 +148,7 @@ namespace ClassicTilestorm
 					}
 
 					// Long static hold → select + drag (only when delay was active)
-					else if (decisionPending && staticClick && Time.time - pressTime >= 0.25f)
+					else if (decisionPending && staticClick && Time.time - pressTime >= DELAY_BEFORE_DRAG)
 					{
 						decisionPending = false;
 
