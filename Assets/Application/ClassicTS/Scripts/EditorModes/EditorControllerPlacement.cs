@@ -76,7 +76,7 @@ namespace ClassicTilestorm
 			base.OnControl(staticClick);
 			if (!camera) return;
 
-			// Active drag takes priority
+			// Active drag has priority
 			if (mode == ControllerMode.Dragging)
 			{
 				if (Input.GetMouseButton(0))
@@ -97,47 +97,29 @@ namespace ClassicTilestorm
 
 					if (Input.GetMouseButtonDown(0))
 					{
-						pressTime = Time.time;
-						decisionPending = true;
-					}
+						var pos = Map.ScreenToWorldSnapped(camera, Input.mousePosition);
+						int idx = iMap.WorldToMapIndex(pos);
 
-					// ── Quick static release → just select ───────────────────────
-					else if (Input.GetMouseButtonUp(0))
-					{
-						if (decisionPending)
+						bool clickedOnSelected =
+							mode == ControllerMode.Selected &&
+							idx != -1 &&
+							selectedMapPos == pos;
+
+						if (clickedOnSelected)
 						{
-							decisionPending = false;
-
-							// Quick click: select now, no drag
-							var pos = Map.ScreenToWorldSnapped(camera, Input.mousePosition);
-							int idx = iMap.WorldToMapIndex(pos);
-
-							if (idx != -1)
-							{
-								var v = iMap.GetVariantAt(idx);
-								if (!v.IsDefaultEquivalent())
-								{
-									// Different tile or no selection yet → select it
-									if (mode != ControllerMode.Selected || selectedMapPos != pos)
-									{
-										SelectTile(pos);
-									}
-									// same tile already selected → nothing (or you could toggle/deselect)
-								}
-								else
-								{
-									DeselectTile();
-								}
-							}
-							else
-							{
-								DeselectTile();
-							}
+							// Already selected → instant drag start (no delay)
+							StartDrag();
+						}
+						else
+						{
+							// New location or empty → normal delay logic
+							pressTime = Time.time;
+							decisionPending = true;
 						}
 					}
 
-					// ── Long static hold → select + drag ─────────────────────────
-					else if (decisionPending && staticClick && Time.time - pressTime >= DELAY_BEFORE_DRAG)
+					// Quick static release → just select (only when delay was active)
+					else if (Input.GetMouseButtonUp(0) && decisionPending)
 					{
 						decisionPending = false;
 
@@ -153,7 +135,36 @@ namespace ClassicTilestorm
 								{
 									SelectTile(pos);
 								}
-								StartDrag();   // ← this is the only place we enter Dragging
+							}
+							else
+							{
+								DeselectTile();
+							}
+						}
+						else
+						{
+							DeselectTile();
+						}
+					}
+
+					// Long static hold → select + drag (only when delay was active)
+					else if (decisionPending && staticClick && Time.time - pressTime >= 0.25f)
+					{
+						decisionPending = false;
+
+						var pos = Map.ScreenToWorldSnapped(camera, Input.mousePosition);
+						int idx = iMap.WorldToMapIndex(pos);
+
+						if (idx != -1)
+						{
+							var v = iMap.GetVariantAt(idx);
+							if (!v.IsDefaultEquivalent())
+							{
+								if (mode != ControllerMode.Selected || selectedMapPos != pos)
+								{
+									SelectTile(pos);
+								}
+								StartDrag();
 							}
 							else
 							{
@@ -167,7 +178,7 @@ namespace ClassicTilestorm
 						}
 					}
 
-					// ── Moved during hold → pan immediately ───────────────────────
+					// Moved during hold → pan (when delay was active)
 					else if (decisionPending && !staticClick)
 					{
 						decisionPending = false;
@@ -184,7 +195,7 @@ namespace ClassicTilestorm
 					break;
 
 				case ControllerMode.Placing:
-					// your existing placing code, unchanged
+					// unchanged
 					if (staticClick)
 					{
 						if (Input.GetMouseButtonUp(0))
@@ -205,29 +216,6 @@ namespace ClassicTilestorm
 					}
 					break;
 			}
-		}
-		private void TrySelect(bool startDrag)
-		{
-			var pos = Map.ScreenToWorldSnapped(camera, Input.mousePosition);
-			int idx = iMap.WorldToMapIndex(pos);
-
-			if (idx == -1 || iMap.GetVariantAt(idx).IsDefaultEquivalent())
-			{
-				DeselectTile();
-				return;
-			}
-
-			// Already selected this exact position → no-op
-			if (mode == ControllerMode.Selected && selectedMapPos == pos)
-			{
-				if (startDrag) StartDrag();
-				return;
-			}
-
-			SelectTile(pos);
-
-			if (startDrag)
-				StartDrag();
 		}
 
 		private void StartDrag()
