@@ -220,6 +220,8 @@ namespace ClassicTilestorm
 			var newSnapped = Map.ScreenToWorldSnapped(camera, Input.mousePosition);
 			var shouldMove = newSnapped != selectedMapPos;
 
+			Map.OriginDelta = new();//reset before any operation - need to sort this horrible hack out
+
 			if (shouldMove)
 			{
 				iMap.RemoveTileAt(selectedMapPos); // this will destroy the gameobject on the tile so defacto remove the highlight
