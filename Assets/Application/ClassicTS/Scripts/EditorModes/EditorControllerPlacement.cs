@@ -244,7 +244,7 @@ namespace ClassicTilestorm
 				iMap.UpdateTileAt(newSnapped, placementVariant.hash, placementVariant.delta, placementVariant.angle);
 				newSnapped += Map.OriginDelta;
 
-				selectedMapPos = Vector3.negativeInfinity;
+				//selectedMapPos = Vector3.negativeInfinity;
 				SelectTile(newSnapped);   // → goes back to Selected
 			}
 
@@ -256,11 +256,11 @@ namespace ClassicTilestorm
 		{
 			int mapIndex = iMap.WorldToMapIndex(worldPos);
 
-			if (mode == EditorMode.Selected || mode == EditorMode.Dragging)
-			{
-				int oldIndex = iMap.WorldToMapIndex(selectedMapPos);
-				if (mapIndex == oldIndex) return;
-			}
+			//if (mode == EditorMode.Selected || mode == EditorMode.Dragging)
+			//{
+			//	int oldIndex = iMap.WorldToMapIndex(selectedMapPos);
+			//	if (mapIndex == oldIndex) return;
+			//}
 
 			DeselectTile();
 
