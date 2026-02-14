@@ -63,6 +63,7 @@ namespace ClassicTilestorm
 		protected override void OnControl(bool staticClick)
 		{
 			base.OnControl(staticClick);
+			if (!camera) return;
 
 			// ── Ghost & drag handling ───────────────────────────────────────
 			if (mode == ControllerMode.Placing)
@@ -95,7 +96,6 @@ namespace ClassicTilestorm
 				}
 			}
 
-			if (!camera) return;
 			if (!staticClick) return;
 
 			var snapped = Map.ScreenToWorldSnapped(camera, Input.mousePosition);
