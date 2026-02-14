@@ -14,10 +14,10 @@ namespace ClassicTilestorm
 
 	public class EditorControllerPlacement : EditorControllerMovement
 	{
-		private Variant placementVariant = new Variant(ResourceManager.DefaultHash);
 		private ControllerMode mode = ControllerMode.Idle;
 
 		// Selection
+		private Variant selectedVariant = new Variant(ResourceManager.DefaultHash);
 		private Vector3 selectedMapPos;
 		private (Renderer renderer, Material[] originalMaterials)?[] originalRenderersState;
 
@@ -37,7 +37,7 @@ namespace ClassicTilestorm
 			tileSelector.OnTileSelected += OnTileSelectedFromPalette;
 			tileSelector.CanOpenPalette = () => mode == ControllerMode.Idle;
 
-			placementVariant = new Variant(ResourceManager.DefaultHash);
+			selectedVariant = new Variant(ResourceManager.DefaultHash);
 			SetMode(ControllerMode.Idle);
 		}
 
@@ -54,15 +54,16 @@ namespace ClassicTilestorm
 		private void OnTileSelectedFromPalette(HashId newHash)
 		{
 			DeselectTile();
-			placementVariant = new Variant(newHash);
+			selectedVariant = new Variant(newHash);
 			SetMode((newHash != ResourceManager.DefaultHash) ? ControllerMode.Placing : ControllerMode.Idle);
 		}
 
-		private void SetMode(ControllerMode newMode)
+		private void SetMode(ControllerMode newMode) => mode = newMode;
+
+		public override void Update()
 		{
-			if (mode == newMode) return;
-			mode = newMode;
-			UpdateGhostMesh(camera, iMap, placementVariant);
+			base.Update();
+			UpdateGhostMesh(camera, iMap, selectedVariant);// Continuous ghost update in placing mode
 		}
 
 		protected override void OnControl(bool staticClick)
@@ -77,65 +78,67 @@ namespace ClassicTilestorm
 			switch (mode)
 			{
 				case ControllerMode.Idle:
-					if (Input.GetMouseButtonDown(0) && staticClick)
+					if (staticClick)
 					{
-						// Try to select tile and drag
-						if (AttamptDrag()) return;
+						if (Input.GetMouseButtonDown(0))
+						{
+							// Try to select tile and drag
+							if (!AttemptDrag())
+							{
+								// Nothing → pan if appropriate
+								var hitVariant = iMap.CameraHitVariant(camera, Input.mousePosition);
+								var hitDef = ResourceManager.GetDefinition(hitVariant.hash);
+								if (hitDef?.IsDefaultEquivalent() ?? true)
+									StartPanning();
+							}
+						}
 
-						// Nothing → pan if appropriate
-						var hitVariant = iMap.CameraHitVariant(camera, Input.mousePosition);
-						var hitDef = ResourceManager.GetDefinition(hitVariant.hash);
-						if (hitDef?.IsDefaultEquivalent() ?? true)
-							StartPanning();
+						if (Input.GetMouseButtonUp(1))
+							EditMapTile(erase: true);
 					}
-
-					if (Input.GetMouseButtonUp(1) && staticClick)
-						EditMapTile(erase: true);
 					break;
 
 				case ControllerMode.Placing:
-					if (Input.GetMouseButtonUp(0) && staticClick)
+					if (staticClick)
 					{
-						EditMapTile();
-					}
+						if (Input.GetMouseButtonUp(0))
+							EditMapTile();
 
-					if (Input.GetMouseButtonUp(1) && staticClick)
-					{
-						DeselectTile();
-
-						if (placementVariant.hash == ResourceManager.DefaultHash)
-							EditMapTile(erase: true);
-						else
+						if (Input.GetMouseButtonUp(1))
 						{
-							placementVariant = new Variant(ResourceManager.DefaultHash);
-							SetMode(ControllerMode.Idle);
+							DeselectTile();
+
+							if (selectedVariant.hash == ResourceManager.DefaultHash)
+								EditMapTile(erase: true);
+							else
+							{
+								selectedVariant = new Variant(ResourceManager.DefaultHash);
+								SetMode(ControllerMode.Idle);
+							}
 						}
 					}
-
-					// Continuous ghost update in placing mode
-					UpdateGhostMesh(camera, iMap, placementVariant);
 					break;
 
 				case ControllerMode.Selected:
-					if (Input.GetMouseButtonDown(0) && staticClick)
+					if (staticClick)
 					{
-						var selectedIndex = iMap.WorldToMapIndex(selectedMapPos);
-						if (hitIndex != selectedIndex)
-							DeselectTile();
-						if (AttamptDrag()) return;
-					}
+						if (Input.GetMouseButtonDown(0))
+						{
+							var selectedIndex = iMap.WorldToMapIndex(selectedMapPos);
+							if (hitIndex != selectedIndex)
+								DeselectTile();
+							AttemptDrag();
+						}
 
-					if (Input.GetMouseButtonUp(1) && staticClick)
-					{
-						DeselectTile();
-						EditMapTile(erase: true);
+						if (Input.GetMouseButtonUp(1))
+						{
+							DeselectTile();
+							EditMapTile(erase: true);
+						}
 					}
 					break;
 
 				case ControllerMode.Dragging:
-					if (Input.GetMouseButtonUp(1) && staticClick)
-						EndDrag();
-
 					if (Input.GetMouseButton(0))
 						UpdateDragPosition();
 					else
@@ -144,7 +147,7 @@ namespace ClassicTilestorm
 			}
 		}
 
-		private bool AttamptDrag()
+		private bool AttemptDrag()
 		{
 			var snapped = Map.ScreenToWorldSnapped(camera, Input.mousePosition);
 			int hitIndex = iMap.WorldToMapIndex(snapped);
@@ -167,7 +170,7 @@ namespace ClassicTilestorm
 		private void StartDrag()
 		{
 			int index = iMap.WorldToMapIndex(selectedMapPos);
-			placementVariant = iMap.GetVariantAt(index);
+			selectedVariant = iMap.GetVariantAt(index);
 			SetMode(ControllerMode.Dragging);
 		}
 
@@ -178,7 +181,7 @@ namespace ClassicTilestorm
 			if (tile.gameObject == null) return;
 
 			var snapped = Map.ScreenToWorldSnapped(camera, Input.mousePosition);
-			tile.gameObject.transform.position = snapped + placementVariant.delta;
+			tile.gameObject.transform.position = snapped + selectedVariant.delta;
 		}
 
 		private void EndDrag()
@@ -189,7 +192,7 @@ namespace ClassicTilestorm
 			if (shouldMove)
 			{
 				iMap.RemoveTileAt(selectedMapPos); // this will destroy the gameobject on the tile so defacto remove the highlight
-				iMap.UpdateTileAt(newSnapped, placementVariant.hash, placementVariant.delta, placementVariant.angle);
+				iMap.UpdateTileAt(newSnapped, selectedVariant.hash, selectedVariant.delta, selectedVariant.angle);
 			}
 			else
 			{
@@ -199,7 +202,6 @@ namespace ClassicTilestorm
 					tile.gameObject.transform.position = selectedMapPos;
 			}
 
-			//SelectTile(newSnapped + Map.OriginDelta); // this is here until click and drag starts working properly and then the mode will be set to idle
 			SetMode(ControllerMode.Idle);
 		}
 
@@ -212,9 +214,6 @@ namespace ClassicTilestorm
 			var tile = iMap.GetTile(mapIndex);
 			if (tile.gameObject == null) return;
 
-			selectedMapPos = worldPos;
-			SetMode(ControllerMode.Selected);
-
 			const float SELECT_TINT_BRIGHTNESS = 1.35f;
 			Color SELECT_TINT = new Color(1.4f, 1.25f, 0.85f, 1f);
 
@@ -222,6 +221,9 @@ namespace ClassicTilestorm
 				SELECT_TINT,
 				SELECT_TINT_BRIGHTNESS,
 				includeInactive: true);
+
+			selectedMapPos = worldPos;
+			SetMode(ControllerMode.Selected);
 		}
 
 		private void DeselectTile()
@@ -247,8 +249,8 @@ namespace ClassicTilestorm
 			var snapped = Map.ScreenToWorldSnapped(cam, Input.mousePosition);
 			var mapIndex = map.WorldToMapIndex(snapped);
 
-			placementVariant.delta = Vector3.zero;
-			placementVariant.angle = 0f;
+			selectedVariant.delta = Vector3.zero;
+			selectedVariant.angle = 0f;
 
 			if (mapIndex != -1)
 			{
@@ -266,8 +268,8 @@ namespace ClassicTilestorm
 					aIdx = (aIdx + 1) % angles.Length;
 					if (aIdx == 0) dIdx = (dIdx + 1) % deltas.Length;
 
-					placementVariant.delta = new Vector3(current.delta.x, deltas[dIdx], current.delta.z);
-					placementVariant.angle = angles[aIdx];
+					selectedVariant.delta = new Vector3(current.delta.x, deltas[dIdx], current.delta.z);
+					selectedVariant.angle = angles[aIdx];
 				}
 			}
 
@@ -278,9 +280,9 @@ namespace ClassicTilestorm
 		{
 			var snapped = Map.ScreenToWorldSnapped(camera, Input.mousePosition);
 			iMap.UpdateTileAt(snapped,
-							  erase ? ResourceManager.DefaultHash : placementVariant.hash,
-							  placementVariant.delta,
-							  placementVariant.angle);
+							  erase ? ResourceManager.DefaultHash : selectedVariant.hash,
+							  selectedVariant.delta,
+							  selectedVariant.angle);
 		}
 
 		public override void OnDestroy()
