@@ -253,7 +253,7 @@ namespace ClassicTilestorm
 					tile.gameObject.transform.position = selectedMapPos;
 			}
 
-			SetMode(ControllerMode.Idle);
+			SelectTile(newSnapped + Map.OriginDelta);//SetMode(ControllerMode.Idle);
 		}
 
 		private void SelectTile(Vector3 worldPos)
