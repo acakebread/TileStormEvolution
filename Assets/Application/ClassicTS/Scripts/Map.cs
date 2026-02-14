@@ -1063,20 +1063,20 @@ namespace ClassicTilestorm
 			// ────────────────────────────────────────────────────────────────
 			bool cropped = false;
 
-			//var def = ResourceManager.GetDefinition(hashId);
-			//bool isDefaultTile = def?.IsDefault() ?? false;
+			var def = ResourceManager.GetDefinition(hashId);
+			bool isDefaultTile = def?.IsDefault() ?? false;
 
-			//if (isDefaultTile || sizeChanged)
+			if (isDefaultTile || sizeChanged)
 			{
-				var newBounds = GetContentBounds();
+				var (minX, minZ, maxX, maxZ) = GetContentBounds();
 				cropped = CropToContent();
 
 				if (cropped)
 				{
 					originDelta += new Vector3(
-						oldBounds.minX - newBounds.minX,
+						oldBounds.minX - minX,
 						0,
-						oldBounds.minZ - newBounds.minZ
+						oldBounds.minZ - minZ
 					);
 					sizeChanged = true;
 				}
@@ -1084,17 +1084,17 @@ namespace ClassicTilestorm
 
 			bool boundsChanged = sizeChanged || width != oldWidth || height != oldHeight || cropped;
 
-			//if (boundsChanged)
+			if (boundsChanged)
 			{
 				RecreateTiles();
 				RefreshAttachments(GetAttachments());
 			}
-			//else
-			//{
-			//	GetGraphTile(index).Destroy();
-			//	graph[index] = new Tile(variants[tableIndex], parent, TileWorldPosition(index));
-			//	RefreshAttachments(GetAttachments(tileIndex: index));
-			//}
+			else
+			{
+				GetGraphTile(index).Destroy();
+				graph[index] = new Tile(variants[tableIndex], parent, TileWorldPosition(index));
+				RefreshAttachments(GetAttachments(tileIndex: index));
+			}
 
 			OriginDelta = originDelta;
 			OnMapEdited?.Invoke(this, boundsChanged, originDelta);
@@ -1147,9 +1147,12 @@ namespace ClassicTilestorm
 				return false;
 			}
 
-			int index = z * width + x;
-
-			tiles[index] = TableIndex(ResourceManager.DefaultHash);//find table index of empty tile
+			var index = z * width + x;
+			var tableIndex = TableIndex(ResourceManager.DefaultHash);//find table index of empty tile
+			tiles[index] = tableIndex;
+			GetGraphTile(index).Destroy();
+			graph[index] = new Tile(variants[tableIndex], parent, TileWorldPosition(index));
+			RefreshAttachments(GetAttachments(tileIndex: index));
 
 			return true;
 		}

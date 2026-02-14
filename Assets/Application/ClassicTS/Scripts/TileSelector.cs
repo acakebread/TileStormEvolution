@@ -26,7 +26,6 @@ namespace ClassicTilestorm
 		private float hideTimer;
 		private bool allowHideDespiteMouseOverPanel;
 		private bool panelWasShownByValidHover;
-		private bool mouseInTriggerZoneLastFrame;
 
 		private const int ICON_SIZE = 192;
 		private const int MAXIMUM_RENDER_TEXTURE_SIZE = 8192;
@@ -41,7 +40,7 @@ namespace ClassicTilestorm
 		private Vector2 triggerEnterPos;
 		private bool triggerAttemptActive;
 
-		[SerializeField] private float triggerDwellTime = 0.5f;
+		[SerializeField] private float triggerDwellTime = 0.25f;
 		[SerializeField] private float triggerMoveTolerance = 16f;
 
 		private Canvas _canvas;
@@ -183,7 +182,6 @@ namespace ClassicTilestorm
 			}
 
 			panelY = Mathf.MoveTowards(panelY, panelTargetY, animSpeed * Time.deltaTime);
-			mouseInTriggerZoneLastFrame = mouseInTrigger;
 
 			if (allowHideDespiteMouseOverPanel && panelY <= -panelHeight + 1f)
 				allowHideDespiteMouseOverPanel = false;
