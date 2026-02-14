@@ -17,7 +17,7 @@ namespace ClassicTilestorm
 		private ControllerMode mode = ControllerMode.Idle;
 
 		// Selection
-		private Variant selectedVariant = new Variant(ResourceManager.DefaultHash);
+		private Variant selectedVariant = new (ResourceManager.DefaultHash);
 		private Vector3 selectedMapPos;
 		private (Renderer renderer, Material[] originalMaterials)?[] originalRenderersState;
 
@@ -72,9 +72,6 @@ namespace ClassicTilestorm
 			if (!camera) return;
 
 			// ── Discrete input ────────────────────────────────────────────────────────────────
-			var snapped = Map.ScreenToWorldSnapped(camera, Input.mousePosition);
-			int hitIndex = iMap.WorldToMapIndex(snapped);
-
 			switch (mode)
 			{
 				case ControllerMode.Idle:
@@ -87,8 +84,7 @@ namespace ClassicTilestorm
 							{
 								// Nothing → pan if appropriate
 								var hitVariant = iMap.CameraHitVariant(camera, Input.mousePosition);
-								var hitDef = ResourceManager.GetDefinition(hitVariant.hash);
-								if (hitDef?.IsDefaultEquivalent() ?? true)
+								if (!hitVariant.IsDefaultEquivalent())
 									StartPanning();
 							}
 						}
@@ -124,8 +120,7 @@ namespace ClassicTilestorm
 					{
 						if (Input.GetMouseButtonDown(0))
 						{
-							var selectedIndex = iMap.WorldToMapIndex(selectedMapPos);
-							if (hitIndex != selectedIndex)
+							if (Map.ScreenToWorldSnapped(camera, Input.mousePosition) != selectedMapPos)
 								DeselectTile();
 							AttemptDrag();
 						}
@@ -156,8 +151,7 @@ namespace ClassicTilestorm
 			if (hitIndex != -1)
 			{
 				var variant = iMap.GetVariantAt(hitIndex);
-				var def = ResourceManager.GetDefinition(variant.hash);
-				if (def != null && !def.IsDefaultEquivalent())
+				if (!variant.IsDefaultEquivalent())
 				{
 					SelectTile(snapped);
 					StartDrag();

@@ -25,6 +25,12 @@ namespace ClassicTilestorm
 		}
 
 		public static implicit operator HashId(Variant v) => v.hash;
+
+		public bool IsDefaultEquivalent()
+		{
+			var def = ResourceManager.GetDefinition(hash);
+			return def != null && def.IsDefaultEquivalent();
+		}
 	}
 
 	public interface IMapData
@@ -123,7 +129,6 @@ namespace ClassicTilestorm
 		[JsonIgnore] public int[] State { get => state = state?.Length == width * height ? state : Enumerable.Range(0, width * height).ToArray(); }//set => state = value; 
 		[JsonIgnore] public string Music { get => music; set => music = value; }
 		[JsonIgnore] public string Skybox { get => skybox; set => skybox = value; }
-		//[JsonIgnore] public string Effect { get => string.IsNullOrEmpty(effect) ? "Water" : effect; set => effect = value; }
 		[JsonIgnore] public ReflectionEffectCamera.EffectMode Effect 
 		{ 
 			get => ReflectionEffectCamera.ParseEffectMode(string.IsNullOrEmpty(effect) ? "Water" : effect);
