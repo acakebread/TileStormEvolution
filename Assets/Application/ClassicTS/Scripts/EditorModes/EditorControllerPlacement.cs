@@ -47,9 +47,7 @@ namespace ClassicTilestorm
 			if (tileSelector != null)
 				tileSelector.OnTileSelected -= OnTileSelectedFromPalette;
 
-			if (mode == ControllerMode.Dragging) EndDrag(false);
 			DeselectTile();
-
 			base.OnDisable();
 		}
 
@@ -64,12 +62,7 @@ namespace ClassicTilestorm
 		{
 			if (mode == newMode) return;
 			mode = newMode;
-
-			// Handle ghost mesh visibility based on the new mode
-			if (newMode != ControllerMode.Placing)
-				EditorMeshUtil.HideGhostMesh();
-			else
-				UpdateGhostMesh(camera, iMap, placementVariant);  // ← now passes Variant
+			UpdateGhostMesh(camera, iMap, placementVariant);
 		}
 
 		protected override void OnControl(bool staticClick)
@@ -86,17 +79,8 @@ namespace ClassicTilestorm
 				case ControllerMode.Idle:
 					if (Input.GetMouseButtonDown(0) && staticClick)
 					{
-						// Try to select tile
-						if (hitIndex != -1)
-						{
-							var variant = iMap.GetVariantAt(hitIndex);
-							var def = ResourceManager.GetDefinition(variant.hash);
-							if (def != null && !def.IsDefaultEquivalent())
-							{
-								SelectTile(snapped);
-								return;
-							}
-						}
+						// Try to select tile and drag
+						if (AttamptDrag()) return;
 
 						// Nothing → pan if appropriate
 						var hitVariant = iMap.CameraHitVariant(camera, Input.mousePosition);
@@ -106,9 +90,7 @@ namespace ClassicTilestorm
 					}
 
 					if (Input.GetMouseButtonUp(1) && staticClick)
-					{
 						EditMapTile(erase: true);
-					}
 					break;
 
 				case ControllerMode.Placing:
@@ -121,19 +103,17 @@ namespace ClassicTilestorm
 					{
 						DeselectTile();
 
-						if (placementVariant.hash != ResourceManager.DefaultHash)
+						if (placementVariant.hash == ResourceManager.DefaultHash)
+							EditMapTile(erase: true);
+						else
 						{
 							placementVariant = new Variant(ResourceManager.DefaultHash);
 							SetMode(ControllerMode.Idle);
 						}
-						else
-						{
-							EditMapTile(erase: true);
-						}
 					}
 
 					// Continuous ghost update in placing mode
-					UpdateGhostMesh(camera, iMap, placementVariant);  // ← now uses Variant
+					UpdateGhostMesh(camera, iMap, placementVariant);
 					break;
 
 				case ControllerMode.Selected:
@@ -142,15 +122,7 @@ namespace ClassicTilestorm
 						var selectedIndex = iMap.WorldToMapIndex(selectedMapPos);
 						if (hitIndex != selectedIndex)
 							DeselectTile();
-						else
-						{
-							var tile = iMap.GetTile(selectedIndex);
-							if (tile.gameObject != null)
-							{
-								StartDrag();
-								return;
-							}
-						}
+						if (AttamptDrag()) return;
 					}
 
 					if (Input.GetMouseButtonUp(1) && staticClick)
@@ -162,14 +134,34 @@ namespace ClassicTilestorm
 
 				case ControllerMode.Dragging:
 					if (Input.GetMouseButtonUp(1) && staticClick)
-						EndDrag(false);
+						EndDrag();
 
 					if (Input.GetMouseButton(0))
 						UpdateDragPosition();
 					else
-						EndDrag(true);
+						EndDrag();
 					break;
 			}
+		}
+
+		private bool AttamptDrag()
+		{
+			var snapped = Map.ScreenToWorldSnapped(camera, Input.mousePosition);
+			int hitIndex = iMap.WorldToMapIndex(snapped);
+
+			// Try to select tile
+			if (hitIndex != -1)
+			{
+				var variant = iMap.GetVariantAt(hitIndex);
+				var def = ResourceManager.GetDefinition(variant.hash);
+				if (def != null && !def.IsDefaultEquivalent())
+				{
+					SelectTile(snapped);
+					StartDrag();
+					return true;
+				}
+			}
+			return false;
 		}
 
 		private void StartDrag()
@@ -189,26 +181,26 @@ namespace ClassicTilestorm
 			tile.gameObject.transform.position = snapped + placementVariant.delta;
 		}
 
-		private void EndDrag(bool commit)
+		private void EndDrag()
 		{
 			var newSnapped = Map.ScreenToWorldSnapped(camera, Input.mousePosition);
 			var shouldMove = newSnapped != selectedMapPos;
 
-			if (!commit || !shouldMove)
+			if (shouldMove)
+			{
+				iMap.RemoveTileAt(selectedMapPos); // this will destroy the gameobject on the tile so defacto remove the highlight
+				iMap.UpdateTileAt(newSnapped, placementVariant.hash, placementVariant.delta, placementVariant.angle);
+			}
+			else
 			{
 				var oldIndex = iMap.WorldToMapIndex(selectedMapPos);
 				var tile = iMap.GetTile(oldIndex);
 				if (tile.gameObject != null)
 					tile.gameObject.transform.position = selectedMapPos;
 			}
-			else
-			{
-				iMap.RemoveTileAt(selectedMapPos); // this will destroy the gameobject on the tile so defacto remove the highlight
-				iMap.UpdateTileAt(newSnapped, placementVariant.hash, placementVariant.delta, placementVariant.angle);
-			}
 
-			SelectTile(newSnapped + Map.OriginDelta); // this is here until click and drag starts working properly and then the mode will be set to idle
-													  // SetMode(ControllerMode.Idle);
+			//SelectTile(newSnapped + Map.OriginDelta); // this is here until click and drag starts working properly and then the mode will be set to idle
+			SetMode(ControllerMode.Idle);
 		}
 
 		private void SelectTile(Vector3 worldPos)
@@ -243,13 +235,10 @@ namespace ClassicTilestorm
 			SetMode(ControllerMode.Idle);
 		}
 
-		// ────────────────────────────────────────────────────────────────
-		// CHANGED: now takes Variant instead of Definition
-		// ────────────────────────────────────────────────────────────────
 		private void UpdateGhostMesh(Camera cam, IMapEdit map, Variant variant)
 		{
 			var def = ResourceManager.GetDefinition(variant.hash);
-			if (def == null || def.IsDefault())
+			if (mode != ControllerMode.Placing || def == null || def.IsDefaultEquivalent())
 			{
 				EditorMeshUtil.HideGhostMesh();
 				return;
@@ -258,15 +247,13 @@ namespace ClassicTilestorm
 			var snapped = Map.ScreenToWorldSnapped(cam, Input.mousePosition);
 			var mapIndex = map.WorldToMapIndex(snapped);
 
-			// These lines are questionable – they mutate placementVariant inside a render/update function
-			// Consider moving this logic elsewhere if possible (e.g. to a separate method or when mode changes)
 			placementVariant.delta = Vector3.zero;
 			placementVariant.angle = 0f;
 
 			if (mapIndex != -1)
 			{
 				var current = map.GetVariantAt(mapIndex);
-				var isDefault = def.IsDefault(); // already checked above, but kept for clarity
+				var isDefault = def.IsDefaultEquivalent(); // already checked above, but kept for clarity
 
 				if (current.hash != 0 && !isDefault && current.hash == variant.hash)
 				{
@@ -298,7 +285,6 @@ namespace ClassicTilestorm
 
 		public override void OnDestroy()
 		{
-			if (mode == ControllerMode.Dragging) EndDrag(false);
 			DeselectTile();
 			EditorMeshUtil.DestroyGhostMesh();
 		}
