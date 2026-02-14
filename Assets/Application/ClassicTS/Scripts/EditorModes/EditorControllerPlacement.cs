@@ -17,9 +17,6 @@ namespace ClassicTilestorm
 		private Variant placementVariant = new Variant(ResourceManager.DefaultHash);
 		private EditorMode mode = EditorMode.Idle;
 
-		// Dragging data (only meaningful in Dragging mode)
-		private Vector3 tileOriginalWorldPos;
-
 		// Selection
 		private Vector3 selectedMapPos;
 		private (Renderer renderer, Material[] originalMaterials)?[] originalRenderersState;
@@ -203,12 +200,7 @@ namespace ClassicTilestorm
 		private void StartDrag()
 		{
 			int index = iMap.WorldToMapIndex(selectedMapPos);
-			var tile = iMap.GetTile(index);
-			if (tile.gameObject == null) return;
-
-			tileOriginalWorldPos = tile.gameObject.transform.position;
 			placementVariant = iMap.GetVariantAt(index);
-
 			mode = EditorMode.Dragging;
 		}
 
@@ -234,7 +226,7 @@ namespace ClassicTilestorm
 			{
 				var tile = iMap.GetTile(oldIndex);
 				if (tile.gameObject != null)
-					tile.gameObject.transform.position = tileOriginalWorldPos;
+					tile.gameObject.transform.position = selectedMapPos;// tileOriginalWorldPos;
 			}
 			else
 			{
