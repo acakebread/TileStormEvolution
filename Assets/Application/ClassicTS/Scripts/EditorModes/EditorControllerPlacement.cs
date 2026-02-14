@@ -232,7 +232,7 @@ namespace ClassicTilestorm
 				var oldIndex = iMap.WorldToMapIndex(selectedMapPos);
 				var tile = iMap.GetTile(oldIndex);
 				if (tile.gameObject != null)
-					tile.gameObject.transform.position = selectedMapPos;
+					tile.gameObject.transform.position = selectedMapPos + selectedVariant.delta;
 			}
 
 			SelectTile(newSnapped + Map.OriginDelta);//SetMode(ControllerMode.Idle);
