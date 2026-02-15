@@ -78,6 +78,7 @@ namespace ClassicTilestorm
 		Vector3 LocalPosition(int tileIndex, Vector3 worldPosition);
 		Vector3 WorldPosition(int tileIndex, Vector3 localPosition);
 
+		Vector3 TileNormalisedWorldPosition(int index);
 		HashId GetTileID(int _);
 		int UpdateTileAt(int x, int z, HashId hashId, Vector3 delta = new Vector3(), float angle = 0f);
 		int UpdateTileAt(Vector3 pos, HashId hashId, Vector3 delta = new Vector3(), float angle = 0f);
@@ -306,16 +307,18 @@ namespace ClassicTilestorm
 		}
 
 		private static readonly Vector3 HALF_TILE = new(0.5f, 0f, 0.5f);
+		public static Vector3 FloorVec(Vector3 vec) => new(Mathf.FloorToInt(vec.x), vec.y, Mathf.FloorToInt(vec.z));
+		public static Vector3 HalfFloorVec(Vector3 vec) => new(Mathf.FloorToInt(vec.x * 2f) * 0.5f, vec.y, Mathf.FloorToInt(vec.z * 2f) * 0.5f);
 		private int NormaliseWorldToMapIndex(Vector3 vec) => vec.x < 0 || vec.x >= width || vec.z < 0 || vec.z >= height ? -1 : Mathf.FloorToInt(vec.z) * width + Mathf.FloorToInt(vec.x);
-		private Vector3 TileNormalisedWorldPosition(int index) => new(index % width, 0f, index / width);
-		public static Vector3 TileNormalisedSnappedMapPosition(Vector3 vec) => new (Mathf.FloorToInt(vec.x), 0f, Mathf.FloorToInt(vec.z));
+		public Vector3 TileNormalisedWorldPosition(int index) => new(index % width, 0f, index / width);
+		public static Vector3 OffsetMapPosition(Vector3 vec) => vec - FloorVec(vec);
 
 #if UNITY_EDITOR
 		private static readonly Vector3 tile_origin = HALF_TILE;
 		public Vector3 TileWorldPosition(int index) => TileNormalisedWorldPosition(index) + HALF_TILE;
 		public int WorldToMapIndex(Vector3 vec) => NormaliseWorldToMapIndex(vec);
-		public static Vector3 SnappedMapPosition(Vector3 vec) => TileNormalisedSnappedMapPosition(vec) + HALF_TILE;
-		public static Vector3 HalfSnappedMapPosition(Vector3 vec) => TileNormalisedSnappedMapPosition(vec * 2f) * 0.5f + HALF_TILE;
+		public static Vector3 SnappedMapPosition(Vector3 vec) => FloorVec(vec) + HALF_TILE;
+		public static Vector3 HalfSnappedMapPosition(Vector3 vec) => FloorVec(vec * 2f) * 0.5f + HALF_TILE;
 #else
 		private static readonly Vector3 tile_origin = Vector3.zero;
         public Vector3 TileWorldPosition(int index) => TileNormalisedWorldPosition(index);
