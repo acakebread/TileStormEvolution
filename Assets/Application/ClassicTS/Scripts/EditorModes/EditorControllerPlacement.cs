@@ -152,12 +152,6 @@ namespace ClassicTilestorm
 								StartPanning();
 						}
 
-						if (Input.GetMouseButtonUp(0))
-						{
-							if (Map.ScreenToWorldSnapped(camera, Input.mousePosition) != selectedMapPos)
-								DeselectTile();
-						}
-
 						if (Input.GetMouseButtonUp(1))
 							DeselectTile();
 					}
@@ -225,20 +219,13 @@ namespace ClassicTilestorm
 
 		private bool SelectTile(Vector3 worldPos)
 		{
-			// Try to select tile
-			var hitIndex = iMap.CameraHitTile(camera, Input.mousePosition);
-			if (-1 != hitIndex)
-			{
-				var variant = iMap.GetVariantAt(hitIndex);
-				if (variant.IsDefaultEquivalent())
-					return false;
-			}
-
-			var mapIndex = iMap.WorldToMapIndex(worldPos);
+			var variant = iMap.GetVariantAt(worldPos);
+			if (variant.IsDefaultEquivalent())
+				return false;
 
 			DeselectTile();
 
-			var tile = iMap.GetTile(mapIndex);
+			var tile = iMap.GetTile(worldPos);
 			if (tile.gameObject == null) return false;
 
 			const float SELECT_TINT_BRIGHTNESS = 1.35f;

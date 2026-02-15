@@ -59,6 +59,7 @@ namespace ClassicTilestorm
 		Vector3 TileWorldPosition(int _);
 
 		Tile GetTile(int _);
+		Tile GetTile(Vector3 _);
 
 		int GetStartTile();
 		int GetEndTile();
@@ -83,6 +84,7 @@ namespace ClassicTilestorm
 		bool RemoveTileAt(int x, int z);//does not affect bounds
 		bool RemoveTileAt(Vector3 pos);//does not affect bounds
 		Variant GetVariantAt(int mapIndex);
+		Variant GetVariantAt(Vector3 pos);
 		void AddAttachment(MapAttachment _);
 		bool RemoveAttachment(MapAttachment _);
 		bool RemoveAttachments(MapAttachment[] _);
@@ -188,7 +190,6 @@ namespace ClassicTilestorm
 			return new Variant(0);
 		}
 
-		// In Map class — public implementation
 		public Variant GetVariantAt(int mapIndex)
 		{
 			if (state == null || mapIndex < 0 || mapIndex >= state.Length)
@@ -199,6 +200,8 @@ namespace ClassicTilestorm
 
 			return GetVariantForIndex(logicalIndex);
 		}
+
+		public Variant GetVariantAt(Vector3 pos) => GetVariantAt(WorldToMapIndex(pos));
 
 		public Definition GetDefinitionAt(int mapIndex)
 		{
@@ -342,6 +345,8 @@ namespace ClassicTilestorm
 		}
 
 		public Tile GetTile(int index) => state == null || index < 0 || index >= state.Length ? default : GetGraphTile(state[index]);
+		public Tile GetTile(Vector3 pos) => GetTile(WorldToMapIndex(pos));
+
 		private Tile GetGraphTile(int graphIndex) => _graph == null || graphIndex < 0 || graphIndex >= _graph.Length ? default : _graph[graphIndex];
 
 		private void DestroyAllTiles()
