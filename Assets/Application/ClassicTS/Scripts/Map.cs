@@ -69,8 +69,8 @@ namespace ClassicTilestorm
 		Vector3 WorldPosition(int tileIndex, Vector3 localPosition);
 
 		HashId GetTileID(int _);
-		bool UpdateTileAt(int x, int z, HashId hashId, Vector3 delta = new Vector3(), float angle = 0f);
-		bool UpdateTileAt(Vector3 pos, HashId hashId, Vector3 delta = new Vector3(), float angle = 0f);
+		int UpdateTileAt(int x, int z, HashId hashId, Vector3 delta = new Vector3(), float angle = 0f);
+		int UpdateTileAt(Vector3 pos, HashId hashId, Vector3 delta = new Vector3(), float angle = 0f);
 		bool RemoveTileAt(int x, int z);//does not affect bounds
 		bool RemoveTileAt(Vector3 pos);//does not affect bounds
 		Variant GetVariantAt(int mapIndex);
@@ -982,21 +982,18 @@ namespace ClassicTilestorm
 			return -1;
 		}
 
-		public bool UpdateTileAt(Vector3 pos, HashId hashId, Vector3 delta = new Vector3(), float angle = 0f) => UpdateTileAt(Mathf.FloorToInt(pos.x), Mathf.FloorToInt(pos.z), hashId, delta, angle);
+		public int UpdateTileAt(Vector3 pos, HashId hashId, Vector3 delta = new Vector3(), float angle = 0f) => UpdateTileAt(Mathf.FloorToInt(pos.x), Mathf.FloorToInt(pos.z), hashId, delta, angle);
 
-		public bool UpdateTileAt(int x, int z, HashId hashId, Vector3 delta = new Vector3(), float angle = 0f)
+		public int UpdateTileAt(int x, int z, HashId hashId, Vector3 delta = new Vector3(), float angle = 0f)
 		{
 			if (tiles == null || tiles.Length == 0)
 			{
 				Debug.LogError("Cannot update tile: map has no tiles array");
-				return false;
+				return -1;
 			}
-
-			GetGraphTile(z * width + x).Destroy();//remove old tile
 
 			int oldWidth = width;
 			int oldHeight = height;
-			//var oldBounds = new   GetContentBounds();
 			(int minX, int minZ, int maxX, int maxZ) oldBounds = new(0, 0, width, height);
 
 			Vector3 originDelta = Vector3.zero;
@@ -1025,7 +1022,7 @@ namespace ClassicTilestorm
 				else
 				{
 					Debug.LogWarning($"Cannot place tile at ({x},{z}) — map resize failed (too large?)");
-					return false;
+					return -1;
 				}
 			}
 
@@ -1078,11 +1075,11 @@ namespace ClassicTilestorm
 
 				if (cropped)
 				{
-					originDelta += new Vector3(
-						oldBounds.minX - minX,
-						0,
-						oldBounds.minZ - minZ
-					);
+					var dx = oldBounds.minX - minX;
+					var dz = oldBounds.minZ - minZ;
+					originDelta += new Vector3(dx, 0, dz);
+					x += dx;
+					z += dz;
 					sizeChanged = true;
 				}
 			}
@@ -1101,13 +1098,9 @@ namespace ClassicTilestorm
 				RefreshAttachments(GetAttachments(tileIndex: index));
 			}
 
-			OriginDelta = originDelta;
 			OnMapEdited?.Invoke(this, boundsChanged, originDelta);
-
-			return true;
+			return z * width + x;//recaclculate index
 		}
-
-		public static Vector3 OriginDelta;
 
 		private int TableIndex(HashId hashId, Vector3 delta = new Vector3(), float angle = 0f)
 		{

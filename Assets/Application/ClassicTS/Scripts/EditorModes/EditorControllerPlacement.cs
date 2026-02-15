@@ -217,15 +217,13 @@ namespace ClassicTilestorm
 
 		private void EndDrag()
 		{
-			var newSnapped = Map.ScreenToWorldSnapped(camera, Input.mousePosition);
-			var shouldMove = newSnapped != selectedMapPos;
-
-			Map.OriginDelta = new();//reset before any operation - need to sort this horrible hack out
-
-			if (shouldMove)
+			var snapped = Map.ScreenToWorldSnapped(camera, Input.mousePosition);
+			if (snapped != selectedMapPos)
 			{
 				iMap.RemoveTileAt(selectedMapPos); // this will destroy the gameobject on the tile so defacto remove the highlight
-				iMap.UpdateTileAt(newSnapped, selectedVariant.hash, selectedVariant.delta, selectedVariant.angle);
+				var index = iMap.UpdateTileAt(snapped, selectedVariant.hash, selectedVariant.delta, selectedVariant.angle);
+				if (-1 == index) return;//operation failed
+				snapped = iMap.TileWorldPosition(index);
 			}
 			else
 			{
@@ -235,12 +233,12 @@ namespace ClassicTilestorm
 					tile.gameObject.transform.position = selectedMapPos + selectedVariant.delta;
 			}
 
-			SelectTile(newSnapped + Map.OriginDelta);//SetMode(ControllerMode.Idle);
+			SelectTile(snapped);//SetMode(ControllerMode.Idle);
 		}
 
 		private bool SelectTile(Vector3 worldPos)
 		{
-			int mapIndex = iMap.WorldToMapIndex(worldPos);
+			var mapIndex = iMap.WorldToMapIndex(worldPos);
 
 			DeselectTile();
 
