@@ -31,6 +31,15 @@ namespace ClassicTilestorm
 			var def = ResourceManager.GetDefinition(hash);
 			return def != null && def.IsDefaultEquivalent();
 		}
+
+		public bool HasNav
+		{
+			get
+			{
+				var def = ResourceManager.GetDefinition(hash);
+				return def != null && def.Nav != 0;
+			}
+		}
 	}
 
 	public interface IMapData
@@ -293,22 +302,27 @@ namespace ClassicTilestorm
 			}
 		}
 
-		public Vector3 TileNormalisedWorldPosition(int index) => new(index % width, 0f, index / width);
+		private static readonly Vector3 HALF_TILE = new(0.5f, 0f, 0.5f);
+		private int NormaliseWorldToMapIndex(Vector3 vec) => vec.x < 0 || vec.x >= width || vec.z < 0 || vec.z >= height ? -1 : Mathf.FloorToInt(vec.z) * width + Mathf.FloorToInt(vec.x);
+		private Vector3 TileNormalisedWorldPosition(int index) => new(index % width, 0f, index / width);
 		public static Vector3 TileNormalisedSnappedMapPosition(Vector3 vec) => new (Mathf.FloorToInt(vec.x), 0f, Mathf.FloorToInt(vec.z));
 
 #if UNITY_EDITOR
-		private static readonly Vector3 tile_origin = new(0.5f, 0f, 0.5f);
-		public Vector3 TileWorldPosition(int index) => TileNormalisedWorldPosition(index) + tile_origin;
-		public int WorldToMapIndex(Vector3 vec) => vec.x >= 0 && vec.x < width && vec.z >= 0 && vec.z < height ? (int)vec.z * width + (int)vec.x : -1;
-		public static Vector3 SnappedMapPosition(Vector3 vec) => TileNormalisedSnappedMapPosition(vec) + tile_origin;
+		private static readonly Vector3 tile_origin = HALF_TILE;
+		public Vector3 TileWorldPosition(int index) => TileNormalisedWorldPosition(index) + HALF_TILE;
+		public int WorldToMapIndex(Vector3 vec) => NormaliseWorldToMapIndex(vec);
+		public static Vector3 SnappedMapPosition(Vector3 vec) => TileNormalisedSnappedMapPosition(vec) + HALF_TILE;
+		public static Vector3 HalfSnappedMapPosition(Vector3 vec) => TileNormalisedSnappedMapPosition(vec * 2f) * 0.5f + HALF_TILE;
 #else
-        private static readonly Vector3 tile_origin = Vector3.zero;
+		private static readonly Vector3 tile_origin = Vector3.zero;
         public Vector3 TileWorldPosition(int index) => TileNormalisedWorldPosition(index);
-        public int WorldToMapIndex(Vector3 vec) { vec += new Vector3(0.5f, 0f, 0.5f); return vec.x >= 0 && vec.x < width && vec.z >= 0 && vec.z < height ? (int)vec.z * width + (int)vec.x : -1; }
-        public static Vector3 SnappedMapPosition(Vector3 vec) => new Vector3(Mathf.FloorToInt(vec.x + 0.5f), 0f, Mathf.FloorToInt(vec.z + 0.5f));
+        public int WorldToMapIndex(Vector3 vec) => NormaliseWorldToMapIndex(vec + HALF_TILE);
+        public static Vector3 SnappedMapPosition(Vector3 vec) => TileNormalisedSnappedMapPosition(vec + HALF_TILE);
 #endif
 
 		public static Vector3 ScreenToWorldSnapped(Camera camera, Vector3 screenPos) => SnappedMapPosition(ScreenToWorld(camera, Input.mousePosition));
+		public static Vector3 ScreenToWorldHalfSnapped(Camera camera, Vector3 screenPos) => HalfSnappedMapPosition(ScreenToWorld(camera, Input.mousePosition));
+
 		public Quaternion LocalRotation(int tileIndex, Quaternion worldRotation) => worldRotation;
 		public Quaternion WorldRotation(int tileIndex, Quaternion localRotation) => localRotation;
 

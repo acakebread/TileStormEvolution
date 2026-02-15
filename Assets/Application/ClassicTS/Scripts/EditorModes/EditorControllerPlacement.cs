@@ -4,21 +4,24 @@ using MassiveHadronLtd;
 
 namespace ClassicTilestorm
 {
-	public enum ControllerMode
-	{
-		Idle,       // nothing selected, no placement active → can select, pan, start placing
-		Placing,    // active tile placement from palette (ghost visible)
-		Selected,   // tile is highlighted/selected → can start drag or deselect
-		Dragging    // actively dragging a selected tile (mouse button held)
-	}
-
 	public class EditorControllerPlacement : EditorControllerMovement
 	{
+		private enum ControllerMode
+		{
+			Idle,       // nothing selected, no placement active → can select, pan, start placing
+			Placing,    // active tile placement from palette (ghost visible)
+			Selected,   // tile is highlighted/selected → can start drag or deselect
+			Dragging    // actively dragging a selected tile (mouse button held)
+		}
+
 		private ControllerMode mode = ControllerMode.Idle;
+		private bool decisionPending;
+		private float pressTime;
 
 		// Selection
+		private Vector3 selectedMapPos;//private Vector3 mouseWorldPosStart;
+
 		private Variant selectedVariant = new(ResourceManager.DefaultHash);
-		private Vector3 selectedMapPos;
 		private (Renderer renderer, Material[] originalMaterials)?[] originalRenderersState;
 
 		public EditorControllerPlacement(EditorController editorController) : base(editorController) { }
@@ -66,9 +69,6 @@ namespace ClassicTilestorm
 			UpdateGhostMesh(camera, iMap, selectedVariant);// Continuous ghost update in placing mode
 		}
 
-		private bool decisionPending;
-		private float pressTime;
-
 		protected override void OnControl(bool staticClick)
 		{
 			base.OnControl(staticClick);
@@ -97,7 +97,7 @@ namespace ClassicTilestorm
 							if (decisionPending)
 							{
 								decisionPending = false;
-								SelectTile();
+								SelectTile(Map.ScreenToWorld(camera, Input.mousePosition));
 							}
 						}
 
@@ -174,7 +174,7 @@ namespace ClassicTilestorm
 
 		private bool AttemptDrag()
 		{
-			if (SelectTile())
+			if (SelectTile(Map.ScreenToWorld(camera, Input.mousePosition)))
 			{
 				StartDrag();
 				return true;
@@ -182,44 +182,29 @@ namespace ClassicTilestorm
 			return false;
 		}
 
-		private bool SelectTile()
-		{
-			// Try to select tile
-			var hitIndex = iMap.CameraHitTile(camera, Input.mousePosition);
-			if (-1 != hitIndex)
-			{
-				var variant = iMap.GetVariantAt(hitIndex);
-				if (!variant.IsDefaultEquivalent())
-				{
-					SelectTile(iMap.TileWorldPosition(hitIndex));
-					return true;
-				}
-			}
-			return false;
-		}
-
 		private void StartDrag()
 		{
-			int index = iMap.WorldToMapIndex(selectedMapPos);
+			var index = iMap.WorldToMapIndex(selectedMapPos);
 			selectedVariant = iMap.GetVariantAt(index);
+			selectedVariant.delta = Vector3.zero;
 			SetMode(ControllerMode.Dragging);
 		}
 
 		private void UpdateDragPosition()
 		{
-			int index = iMap.WorldToMapIndex(selectedMapPos);
+			var index = iMap.WorldToMapIndex(selectedMapPos);
 			var tile = iMap.GetTile(index);
 			if (tile.gameObject == null) return;
-
-			var snapped = Map.ScreenToWorldSnapped(camera, Input.mousePosition);
-			tile.gameObject.transform.position = snapped + selectedVariant.delta;
+			tile.gameObject.transform.position = HalfSnapped + selectedVariant.delta;
 		}
 
 		private void EndDrag()
 		{
 			var snapped = Map.ScreenToWorldSnapped(camera, Input.mousePosition);
-			if (snapped != selectedMapPos)
+			var delta = HalfSnapped - snapped;
+			if (snapped != selectedMapPos || delta != selectedVariant.delta)
 			{
+				selectedVariant.delta = delta;
 				iMap.RemoveTileAt(selectedMapPos); // this will destroy the gameobject on the tile so defacto remove the highlight
 				var index = iMap.UpdateTileAt(snapped, selectedVariant.hash, selectedVariant.delta, selectedVariant.angle);
 				if (-1 == index) return;//operation failed
@@ -233,11 +218,22 @@ namespace ClassicTilestorm
 					tile.gameObject.transform.position = selectedMapPos + selectedVariant.delta;
 			}
 
-			SelectTile(snapped);//SetMode(ControllerMode.Idle);
+			SelectTile(snapped);
 		}
+
+		private Vector3 HalfSnapped => selectedVariant.HasNav ? Map.ScreenToWorldSnapped(camera, Input.mousePosition) : Map.ScreenToWorldHalfSnapped(camera, Input.mousePosition);
 
 		private bool SelectTile(Vector3 worldPos)
 		{
+			// Try to select tile
+			var hitIndex = iMap.CameraHitTile(camera, Input.mousePosition);
+			if (-1 != hitIndex)
+			{
+				var variant = iMap.GetVariantAt(hitIndex);
+				if (variant.IsDefaultEquivalent())
+					return false;
+			}
+
 			var mapIndex = iMap.WorldToMapIndex(worldPos);
 
 			DeselectTile();
@@ -246,7 +242,7 @@ namespace ClassicTilestorm
 			if (tile.gameObject == null) return false;
 
 			const float SELECT_TINT_BRIGHTNESS = 1.35f;
-			Color SELECT_TINT = new Color(1.4f, 1.25f, 0.85f, 1f);
+			Color SELECT_TINT = new (1.4f, 1.25f, 0.85f, 1f);
 
 			originalRenderersState = tile.gameObject.ApplySelectionHighlight(
 				SELECT_TINT,
@@ -261,7 +257,7 @@ namespace ClassicTilestorm
 
 		private void DeselectTile()
 		{
-			int index = iMap.WorldToMapIndex(selectedMapPos);
+			var index = iMap.WorldToMapIndex(selectedMapPos);
 			var tile = iMap.GetTile(index);
 			if (null != tile.gameObject)
 				tile.gameObject.RestoreSelectionHighlight(originalRenderersState);
