@@ -165,7 +165,12 @@ namespace ClassicTilestorm
 					break;
 
 				case ControllerMode.Dragging:
-					if (Input.GetMouseButton(0))
+					if (Input.GetMouseButtonDown(0))
+					{
+						if (!AttemptDrag())
+							SetMode(ControllerMode.Idle);
+					}
+					else if (Input.GetMouseButton(0))
 						UpdateDragPosition();
 					else if (Input.GetMouseButtonUp(0))
 						EndDrag();
@@ -221,11 +226,11 @@ namespace ClassicTilestorm
 
 		private bool SelectTile(Vector3 worldPos)
 		{
+			DeselectTile();
+
 			var variant = iMap.GetVariantAt(worldPos);
 			if (variant.IsDefaultEquivalent())
 				return false;
-
-			DeselectTile();
 
 			var tile = iMap.GetTile(worldPos);
 			if (tile.gameObject == null) return false;
