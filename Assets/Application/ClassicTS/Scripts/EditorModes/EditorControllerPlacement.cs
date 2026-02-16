@@ -154,7 +154,7 @@ namespace ClassicTilestorm
 
 						if (Input.GetMouseButtonUp(0))
 						{
-							if (Map.ScreenToWorldSnapped(camera, Input.mousePosition) != selectedMapPos)
+							if (Map.ScreenToWorld(camera, Input.mousePosition) != selectedMapPos)
 								DeselectTile();
 						}
 
@@ -276,7 +276,7 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			var snapped = Map.ScreenToWorldSnapped(cam, Input.mousePosition);
+			var snapped = Map.FullFloorVec(Map.ScreenToWorld(cam, Input.mousePosition));
 			var mapIndex = map.VectorToIndex(snapped);
 
 			selectedVariant.delta = Vector3.zero;
@@ -305,7 +305,7 @@ namespace ClassicTilestorm
 			EditorMeshUtil.UpdateGhostMesh(variant, snapped, mapIndex == -1);
 		}
 
-		private void EditMapTile(bool erase = false) => iMap.UpdateTileAt(Map.ScreenToWorldSnapped(camera, Input.mousePosition), erase ? ResourceManager.DefaultHash : selectedVariant.hash, selectedVariant.delta, selectedVariant.angle);
+		private void EditMapTile(bool erase = false) => iMap.UpdateTileAt(Map.ScreenToWorld(camera, Input.mousePosition), erase ? ResourceManager.DefaultHash : selectedVariant.hash, selectedVariant.delta, selectedVariant.angle);
 
 		public override void OnDestroy()
 		{

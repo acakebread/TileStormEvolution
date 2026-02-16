@@ -345,7 +345,7 @@ namespace ClassicTilestorm
 			return result;
 		}
 
-		public static Vector3 ScreenToWorldSnapped(Camera camera, Vector3 screenPos) => FullFloorVec(ScreenToWorld(camera, Input.mousePosition));
+		//public static Vector3 ScreenToWorldSnapped(Camera camera, Vector3 screenPos) => FullFloorVec(ScreenToWorld(camera, Input.mousePosition));
 		//public static Vector3 ScreenToWorldHalfSnapped(Camera camera, Vector3 screenPos) => HalfSnappedMapPosition(ScreenToWorld(camera, Input.mousePosition));
 
 		public int VectorToIndex(Vector3 vec) => vec.x < 0 || vec.x >= width || vec.z < 0 || vec.z >= height ? -1 : Mathf.FloorToInt(vec.z) * width + Mathf.FloorToInt(vec.x);
