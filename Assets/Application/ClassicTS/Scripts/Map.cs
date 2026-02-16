@@ -26,23 +26,11 @@ namespace ClassicTilestorm
 
 		public static implicit operator HashId(Variant v) => v.hash;
 
-		public bool IsDefaultEquivalent
-		{
-			get
-			{
-				var def = ResourceManager.GetDefinition(hash);
-				return def != null && def.IsDefaultEquivalent();
-			}
-		}
+		public Definition definition => ResourceManager.GetDefinition(hash);
 
-		public bool HasNav
-		{
-			get
-			{
-				var def = ResourceManager.GetDefinition(hash);
-				return def != null && def.Nav != 0;
-			}
-		}
+		public bool IsDefaultEquivalent => (bool)(definition?.IsDefaultEquivalent());
+
+		public bool HasNav => definition?.Nav != 0;
 	}
 
 	public interface IMapData
