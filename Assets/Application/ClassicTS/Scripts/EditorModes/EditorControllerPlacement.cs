@@ -19,7 +19,7 @@ namespace ClassicTilestorm
 		private float pressTime;
 
 		// Selection
-		private Vector3 selectedMapPos;//private Vector3 mouseWorldPosStart;
+		private Vector3 selectedMapPos;
 
 		private Variant selectedVariant = new(ResourceManager.DefaultHash);
 		private (Renderer renderer, Material[] originalMaterials)?[] originalRenderersState;
@@ -210,8 +210,8 @@ namespace ClassicTilestorm
 			var world_position = snapped + drag + selectedVariant.delta;
 			var fullSnapped = Map.FullFloorVec(world_position);
 			var halfSnapped = selectedVariant.HasNav ? fullSnapped : Map.HalfFloorVec(world_position);
-
 			var delta = halfSnapped - fullSnapped;
+
 			if (fullSnapped != selectedMapPos || delta != selectedVariant.delta)
 			{
 				selectedVariant.delta = delta;
