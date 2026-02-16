@@ -276,7 +276,7 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			var snapped = Map.FullFloorVec(Map.ScreenToWorld(cam, Input.mousePosition));
+			var snapped = Map.WorldToRender(Map.FullFloorVec(Map.ScreenToWorld(cam, Input.mousePosition)));
 			var mapIndex = map.VectorToIndex(snapped);
 
 			selectedVariant.delta = Vector3.zero;
