@@ -143,13 +143,15 @@ namespace ClassicTilestorm
 		[JsonIgnore] public int[] State { get => state = state?.Length == width * height ? state : Enumerable.Range(0, width * height).ToArray(); }//set => state = value; 
 		[JsonIgnore] public string Music { get => music; set => music = value; }
 		[JsonIgnore] public string Skybox { get => skybox; set => skybox = value; }
-		[JsonIgnore] public ReflectionEffectCamera.EffectMode Effect 
-		{ 
+		[JsonIgnore]
+		public ReflectionEffectCamera.EffectMode Effect
+		{
 			get => ReflectionEffectCamera.ParseEffectMode(string.IsNullOrEmpty(effect) ? "Water" : effect);
 			set => effect = ReflectionEffectCamera.EffectModeToString(value);
 		}
 
-		[JsonIgnore] public Color Light
+		[JsonIgnore]
+		public Color Light
 		{
 			get => StringUtil.FromHexString(light, defaultColor: Color.white);
 			set => light = value.ToHexString(includeAlpha: true);
@@ -225,7 +227,8 @@ namespace ClassicTilestorm
 
 		[JsonIgnore] private int graphCount => graph.Length;
 		[JsonIgnore] private Tile[] _graph; // private backing field (never serialized)
-		[JsonIgnore] private Tile[] graph
+		[JsonIgnore]
+		private Tile[] graph
 		{
 			get
 			{
@@ -244,7 +247,11 @@ namespace ClassicTilestorm
 
 				for (int visualIndex = 0; visualIndex < _graph.Length; visualIndex++)
 				{
-					UpdateGraphTile(visualIndex, allocate: true);
+					//UpdateGraphTile(visualIndex, allocate: true);
+					var variant = GetVariantForIndex(visualIndex);
+					var position = TileRenderPosition(visualIndex);
+					_graph[visualIndex] = CreateTile(variant, parent, position);
+					UpdateGraphTileInfo(visualIndex);
 				}
 
 				return _graph;
@@ -268,44 +275,38 @@ namespace ClassicTilestorm
 				var go = mapTile.gameObject;
 				if (go == null) continue;
 
-				UpdateGraphTile(visualIndex, allocate: false);
+				//UpdateGraphTile(visualIndex, allocate: false);
+
+				var variant = GetVariantForIndex(visualIndex);
+				var position = TileRenderPosition(visualIndex);
+				go.transform.position = position + variant.delta;//reset position
+				UpdateGraphTileInfo(State[visualIndex]);
 			}
 		}
 
-		private void UpdateGraphTile(int visualIndex, bool allocate = true)
+		//		private void UpdateGraphTile(int visualIndex, bool allocate = true)
+		//		{
+		//			if (allocate)
+		//			{
+		//				var variant = GetVariantForIndex(visualIndex);
+		//				var position = TileRenderPosition(visualIndex);
+		//				_graph[visualIndex] = CreateTile(variant, parent, position);
+		//			}
+		//#if DEBUG
+		//			UpdateGraphTileInfo(allocate ? visualIndex : State[visualIndex]);
+		//#endif
+		//		}
+
+		private void UpdateGraphTileInfo(int index)
 		{
-			var variant = GetVariantForIndex(visualIndex);
-
-			// Correct: lookup logical first
-			int logicalIndex = allocate ? visualIndex : State[visualIndex];
-			variant = GetVariantForIndex(logicalIndex);
-
-			var position = TileRenderPosition(visualIndex);
-
-			GameObject go;
-
-			if (allocate)
-			{
-				_graph[visualIndex] = new Tile(variant, parent, position);
-				go = _graph[visualIndex].gameObject;
-			}
-			else
-			{
-				go = _graph[State[visualIndex]].gameObject;
-			}
-
-			if (go != null)
-			{
-				var finalPos = position + variant.delta;
-				go.transform.position = finalPos;
-
-#if DEBUG
-				var displayPos = FullFloorVec(finalPos);
-				var def = ResourceManager.GetDefinition(variant.hash);
-				go.name = $"{def?.name ?? "??"} ({displayPos.x:F1},{displayPos.z:F1})+{variant.delta:F2}@{variant.angle:F1}°";
-#endif
-			}
+			var go = _graph[index].gameObject;
+			if (null == go) return;
+			var variant = GetVariantForIndex(index);
+			var def = ResourceManager.GetDefinition(variant.hash);
+			go.name = $"{def?.name ?? "??"} ({go.transform.position.x:F1},{go.transform.position.z:F1})+{variant.delta:F2}@{variant.angle:F1}°";
 		}
+
+		private Tile CreateTile(Variant variant, Transform parent, Vector3 worldPosition) => new Tile(variant, parent, worldPosition);
 
 		public static Vector3 FullFloorVec(Vector3 vec) => new(Mathf.FloorToInt(vec.x), vec.y, Mathf.FloorToInt(vec.z));
 		public static Vector3 HalfFloorVec(Vector3 vec) => new(Mathf.FloorToInt(vec.x * 2f) * 0.5f, vec.y, Mathf.FloorToInt(vec.z * 2f) * 0.5f);
@@ -1113,7 +1114,7 @@ namespace ClassicTilestorm
 			else
 			{
 				GetGraphTile(index).Destroy();
-				graph[index] = new Tile(variants[tableIndex], parent, TileRenderPosition(index));
+				graph[index] = CreateTile(variants[tableIndex], parent, TileRenderPosition(index));
 				RefreshAttachments(GetAttachments(tileIndex: index));
 			}
 
@@ -1168,7 +1169,7 @@ namespace ClassicTilestorm
 			var tableIndex = TableIndex(ResourceManager.DefaultHash);//find table index of empty tile
 			tiles[index] = tableIndex;
 			GetGraphTile(index).Destroy();
-			graph[index] = new Tile(variants[tableIndex], parent, TileRenderPosition(index));
+			graph[index] = CreateTile(variants[tableIndex], parent, TileRenderPosition(index));
 			RefreshAttachments(GetAttachments(tileIndex: index));
 
 			return true;
@@ -1409,7 +1410,8 @@ namespace ClassicTilestorm
 			}
 		}
 
-		[JsonIgnore] public UnityRenderSettings RenderSettings => new (
+		[JsonIgnore]
+		public UnityRenderSettings RenderSettings => new(
 			ambientMode: UnityEngine.Rendering.AmbientMode.Flat,
 			ambientLight: Light,
 			ambientIntensity: 1f,

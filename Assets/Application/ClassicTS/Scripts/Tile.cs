@@ -49,11 +49,8 @@ namespace ClassicTilestorm
 			}
 		}
 
-		// Backward compatibility
-		public Tile(HashId hashId, Transform parent, Vector3 worldPosition)
-			: this(new Variant(hashId), parent, worldPosition)
-		{
-		}
+		//// Backward compatibility
+		//public Tile(HashId hashId, Transform parent, Vector3 worldPosition) : this(new Variant(hashId), parent, worldPosition) { }
 
 		// Forwarded properties
 		public readonly bool IsStart => (flags & (int)DefinitionFlags.Start) != 0;
