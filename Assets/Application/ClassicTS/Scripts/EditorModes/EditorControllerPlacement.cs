@@ -195,7 +195,7 @@ namespace ClassicTilestorm
 			if (null != tile.gameObject)
 			{
 				var snapped = Map.FullFloorVec(selectedMapPos);
-				var drag = Map.HalfFloorVec(position) - (selectedVariant.HasNav ? Map.FullFloorVec(selectedMapPos) : Map.HalfFloorVec(selectedMapPos));
+				var drag = Map.HalfFloorVec(position) - (selectedVariant.HasNav ? snapped : Map.HalfFloorVec(selectedMapPos));
 				var world_position = snapped + drag + selectedVariant.delta;
 				var fullSnapped = Map.FullFloorVec(world_position);
 				var delta = selectedVariant.HasNav ? Vector3.zero : Map.HalfFloorVec(world_position) - fullSnapped;//the future selectedVariant.delta
@@ -206,11 +206,10 @@ namespace ClassicTilestorm
 		private void EndDrag(Vector3 position)
 		{
 			var snapped = Map.FullFloorVec(selectedMapPos);
-			var drag = Map.HalfFloorVec(position) - (selectedVariant.HasNav ? Map.FullFloorVec(selectedMapPos) : Map.HalfFloorVec(selectedMapPos));
+			var drag = Map.HalfFloorVec(position) - (selectedVariant.HasNav ? snapped : Map.HalfFloorVec(selectedMapPos));
 			var world_position = snapped + drag + selectedVariant.delta;
 			var fullSnapped = Map.FullFloorVec(world_position);
-			var halfSnapped = selectedVariant.HasNav ? fullSnapped : Map.HalfFloorVec(world_position);
-			var delta = halfSnapped - fullSnapped;
+			var delta = selectedVariant.HasNav ? Vector3.zero : Map.HalfFloorVec(world_position) - fullSnapped;//the future selectedVariant.delta
 
 			if (fullSnapped != selectedMapPos || delta != selectedVariant.delta)
 			{
