@@ -212,7 +212,7 @@ namespace ClassicTilestorm
 			var fullSnapped = Map.FullFloorVec(world_position);
 			var delta = selectedVariant.HasNav ? Vector3.zero : Map.HalfFloorVec(world_position) - fullSnapped;//the future selectedVariant.delta
 
-			if (fullSnapped == selectedMapPos && delta == selectedVariant.delta) return;
+			if (fullSnapped == snapped && delta == selectedVariant.delta) return;//no change so ok to just exit
 
 			selectedVariant.delta = delta;
 			iMap.RemoveTileAt(selectedMapPos); // this will destroy the gameobject on the tile so defacto remove the highlight
