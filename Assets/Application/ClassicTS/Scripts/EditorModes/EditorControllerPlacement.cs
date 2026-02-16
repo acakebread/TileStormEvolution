@@ -167,7 +167,7 @@ namespace ClassicTilestorm
 				case ControllerMode.Dragging:
 					if (Input.GetMouseButton(0))
 						UpdateDragPosition();
-					else
+					else if (Input.GetMouseButtonUp(0))
 						EndDrag();
 					break;
 			}
@@ -216,6 +216,7 @@ namespace ClassicTilestorm
 			var index = iMap.UpdateTileAt(snapped, selectedVariant);
 			if (-1 == index) return;//operation failed
 			SelectTile(iMap.IndexToVector(index));
+			//SetMode(ControllerMode.Idle);
 		}
 
 		private bool SelectTile(Vector3 worldPos)
