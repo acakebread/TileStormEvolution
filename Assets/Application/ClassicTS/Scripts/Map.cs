@@ -1114,7 +1114,7 @@ namespace ClassicTilestorm
 			}
 
 			OnMapEdited?.Invoke(this, boundsChanged, originDelta);
-			return z * width + x;//recaclculate index
+			return z * width + x;//recalculate index
 		}
 
 		private int TableIndex(HashId hashId, Vector3 delta = new Vector3(), float angle = 0f)

@@ -218,8 +218,7 @@ namespace ClassicTilestorm
 			iMap.RemoveTileAt(selectedMapPos); // this will destroy the gameobject on the tile so defacto remove the highlight
 			var index = iMap.UpdateTileAt(fullSnapped, selectedVariant.hash, selectedVariant.delta, selectedVariant.angle);
 			if (-1 == index) return;//operation failed
-			fullSnapped = iMap.IndexToVector(index);
-			SelectTile(fullSnapped);
+			SelectTile(iMap.IndexToVector(index));
 		}
 
 		private bool SelectTile(Vector3 worldPos)
