@@ -82,6 +82,8 @@ namespace ClassicTilestorm
 		HashId GetTileID(int _);
 		int UpdateTileAt(int x, int z, HashId hashId, Vector3 delta = new Vector3(), float angle = 0f);
 		int UpdateTileAt(Vector3 pos, HashId hashId, Vector3 delta = new Vector3(), float angle = 0f);
+		int UpdateTileAt(Vector3 pos, Variant variant);
+
 		bool RemoveTileAt(int x, int z);//does not affect bounds
 		bool RemoveTileAt(Vector3 pos);//does not affect bounds
 		Variant GetVariantAt(int mapIndex);
@@ -996,6 +998,8 @@ namespace ClassicTilestorm
 			}
 			return -1;
 		}
+
+		public int UpdateTileAt(Vector3 pos, Variant variant) => UpdateTileAt(pos, variant.hash, variant.delta, variant.angle);
 
 		public int UpdateTileAt(Vector3 pos, HashId hashId, Vector3 delta = new Vector3(), float angle = 0f) => UpdateTileAt(Mathf.FloorToInt(pos.x), Mathf.FloorToInt(pos.z), hashId, delta, angle);
 
