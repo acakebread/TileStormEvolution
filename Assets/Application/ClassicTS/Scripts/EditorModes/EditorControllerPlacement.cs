@@ -192,15 +192,16 @@ namespace ClassicTilestorm
 		private void UpdateDragPosition(Vector3 position)
 		{
 			var tile = iMap.GetTile(selectedMapPos);
-			if (null != tile.gameObject)
-			{
-				var snapped = Map.FullFloorVec(selectedMapPos);
-				var drag = Map.HalfFloorVec(position) - (selectedVariant.HasNav ? snapped : Map.HalfFloorVec(selectedMapPos));
-				var world_position = snapped + drag + selectedVariant.delta;
-				var fullSnapped = Map.FullFloorVec(world_position);
-				var delta = selectedVariant.HasNav ? Vector3.zero : Map.HalfFloorVec(world_position) - fullSnapped;//the future selectedVariant.delta
-				tile.gameObject.transform.position = Map.WorldToRender(fullSnapped) + delta;
-			}
+
+			if (null == tile.gameObject) return;
+
+			var snapped = Map.FullFloorVec(selectedMapPos);
+			var drag = Map.HalfFloorVec(position) - (selectedVariant.HasNav ? snapped : Map.HalfFloorVec(selectedMapPos));
+			var world_position = snapped + drag + selectedVariant.delta;
+			var fullSnapped = Map.FullFloorVec(world_position);
+			var delta = selectedVariant.HasNav ? Vector3.zero : Map.HalfFloorVec(world_position) - fullSnapped;//the future selectedVariant.delta
+
+			tile.gameObject.transform.position = Map.WorldToRender(fullSnapped) + delta;//update selection visual
 		}
 
 		private void EndDrag(Vector3 position)
@@ -211,22 +212,13 @@ namespace ClassicTilestorm
 			var fullSnapped = Map.FullFloorVec(world_position);
 			var delta = selectedVariant.HasNav ? Vector3.zero : Map.HalfFloorVec(world_position) - fullSnapped;//the future selectedVariant.delta
 
-			if (fullSnapped != selectedMapPos || delta != selectedVariant.delta)
-			{
-				selectedVariant.delta = delta;
-				iMap.RemoveTileAt(selectedMapPos); // this will destroy the gameobject on the tile so defacto remove the highlight
-				var index = iMap.UpdateTileAt(fullSnapped, selectedVariant.hash, selectedVariant.delta, selectedVariant.angle);
-				if (-1 == index) return;//operation failed
-				fullSnapped = iMap.IndexToVector(index);
-			}
-			else
-			{
-				var oldIndex = iMap.VectorToIndex(selectedMapPos);
-				var tile = iMap.GetTile(oldIndex);
-				if (tile.gameObject != null)
-					tile.gameObject.transform.position = selectedMapPos + selectedVariant.delta;
-			}
+			if (fullSnapped == selectedMapPos && delta == selectedVariant.delta) return;
 
+			selectedVariant.delta = delta;
+			iMap.RemoveTileAt(selectedMapPos); // this will destroy the gameobject on the tile so defacto remove the highlight
+			var index = iMap.UpdateTileAt(fullSnapped, selectedVariant.hash, selectedVariant.delta, selectedVariant.angle);
+			if (-1 == index) return;//operation failed
+			fullSnapped = iMap.IndexToVector(index);
 			SelectTile(fullSnapped);
 		}
 
