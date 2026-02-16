@@ -307,17 +307,14 @@ namespace ClassicTilestorm
 
 		public static Vector3 FullFloorVec(Vector3 vec) => new(Mathf.FloorToInt(vec.x), vec.y, Mathf.FloorToInt(vec.z));
 		public static Vector3 HalfFloorVec(Vector3 vec) => new(Mathf.FloorToInt(vec.x * 2f) * 0.5f, vec.y, Mathf.FloorToInt(vec.z * 2f) * 0.5f);
-		public int VectorToIndex(Vector3 vec) => vec.x < 0 || vec.x >= width || vec.z < 0 || vec.z >= height ? -1 : Mathf.FloorToInt(vec.z) * width + Mathf.FloorToInt(vec.x);
-		public Vector3 IndexToVector(int index) => new(index % width, 0f, index / width);
-		public Vector3 TileRenderPosition(int index) => WorldToRender(IndexToVector(index));
 
 		private static readonly Vector3 HALF_TILE = new(0.5f, 0f, 0.5f);
-#if NITY_EDITOR
-		public static Vector3 WorldToRender(Vector3 world) => world + HALF_TILE;
-		public static Vector3 RenderToWorld(Vector3 render) => render - HALF_TILE;
+#if UNITY_EDITOR
+		public static Vector3 WorldToRender(Vector3 value) => value + HALF_TILE;
+		public static Vector3 RenderToWorld(Vector3 value) => value - HALF_TILE;
 #else
-		public static Vector3 WorldToRender(Vector3 world) => world;
-		public static Vector3 RenderToWorld(Vector3 render) => render;
+		public static Vector3 WorldToRender(Vector3 value) => value;
+		public static Vector3 RenderToWorld(Vector3 value) => value;
 #endif
 
 		public static bool RayToWorld(Ray ray, out Vector3 point)
@@ -350,6 +347,10 @@ namespace ClassicTilestorm
 
 		public static Vector3 ScreenToWorldSnapped(Camera camera, Vector3 screenPos) => FullFloorVec(ScreenToWorld(camera, Input.mousePosition));
 		//public static Vector3 ScreenToWorldHalfSnapped(Camera camera, Vector3 screenPos) => HalfSnappedMapPosition(ScreenToWorld(camera, Input.mousePosition));
+
+		public int VectorToIndex(Vector3 vec) => vec.x < 0 || vec.x >= width || vec.z < 0 || vec.z >= height ? -1 : Mathf.FloorToInt(vec.z) * width + Mathf.FloorToInt(vec.x);
+		public Vector3 IndexToVector(int index) => new(index % width, 0f, index / width);
+		public Vector3 TileRenderPosition(int index) => WorldToRender(IndexToVector(index));
 
 		public int CameraHitTile(Camera camera, Vector3 position) => VectorToIndex(ScreenToWorld(camera, position));
 		public Variant CameraHitVariant(Camera camera, Vector3 position) => GetVariantAt(CameraHitTile(camera, Input.mousePosition));
