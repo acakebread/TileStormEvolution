@@ -7,6 +7,8 @@ namespace ClassicTilestorm
 	{
 		[Header("UI References")]
 		[SerializeField] private Button closeButton;
+		[SerializeField] private Button DatabaseEditorButton;
+		[SerializeField] private Button DefinitionEditorButton;
 		[SerializeField] private Button LoadDatabaseButton;
 		[SerializeField] private Button SaveDatabaseButton;
 		[SerializeField] private Button ImportMapButton;
@@ -26,6 +28,11 @@ namespace ClassicTilestorm
 		{
 			if (null != closeButton)
 				closeButton.onClick.AddListener(() => gameObject.SetActive(false));
+
+			if (null != DatabaseEditorButton)
+				DatabaseEditorButton.onClick.AddListener(() => UIController.OpenPanel<DatabaseEditorPanel>());
+			if (null != DefinitionEditorButton)
+				DefinitionEditorButton.onClick.AddListener(() => UIController.OpenPanel<DefinitionEditorPanel>());
 
 			var mainController = FindAnyObjectByType<MainController>(FindObjectsInactive.Include);
 			if (null != mainController)

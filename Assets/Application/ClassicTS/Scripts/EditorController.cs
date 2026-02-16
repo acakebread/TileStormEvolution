@@ -187,9 +187,9 @@ namespace ClassicTilestorm
 
 			//if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), dofEnabled ? "Disable DOF" : "Enable DOF", new Color(0.25f, 0.75f, 0.25f))) OnDofToggled(!dofEnabled);
 
-			if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "Database Editor", new Color(0.6f, 0.3f, 0.8f))) UIController.OpenPanel<DatabaseEditorPanel>();
+			//if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "Database Editor", new Color(0.6f, 0.3f, 0.8f))) UIController.OpenPanel<DatabaseEditorPanel>();
 
-			if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "Definition Editor", new Color(0.6f, 0.3f, 0.8f))) UIController.OpenPanel<DefinitionEditorPanel>();
+			//if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "Definition Editor", new Color(0.6f, 0.3f, 0.8f))) UIController.OpenPanel<DefinitionEditorPanel>();
 
 			//if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "Effect Editor", new Color(0.6f, 0.3f, 0.8f))) UIController.OpenPanel<EffectEditorPanel>();
 
