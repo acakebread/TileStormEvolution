@@ -184,7 +184,7 @@ namespace ClassicTilestorm
 
 		private void StartDrag()
 		{
-			var index = iMap.WorldToMapIndex(selectedMapPos);
+			var index = iMap.VectorToIndex(selectedMapPos);
 			selectedVariant = iMap.GetVariantAt(index);
 			SetMode(ControllerMode.Dragging);
 		}
@@ -194,22 +194,23 @@ namespace ClassicTilestorm
 			var tile = iMap.GetTile(selectedMapPos);
 			if (null != tile.gameObject)
 			{
-				var snapped = Map.FloorVec(selectedMapPos);
-				var drag = Map.HalfFloorVec(position) - (selectedVariant.HasNav ? Map.FloorVec(selectedMapPos) : Map.HalfFloorVec(selectedMapPos));
+				var snapped = Map.FullFloorVec(selectedMapPos);
+				var drag = Map.HalfFloorVec(position) - (selectedVariant.HasNav ? Map.FullFloorVec(selectedMapPos) : Map.HalfFloorVec(selectedMapPos));
 				var world_position = snapped + drag + selectedVariant.delta;
-				var fullSnapped = Map.FloorVec(world_position);
+				var fullSnapped = Map.FullFloorVec(world_position);
 				var halfSnapped = selectedVariant.HasNav ? fullSnapped : Map.HalfFloorVec(world_position);
 
-				tile.gameObject.transform.position = Map.HalfSnappedMapPosition(halfSnapped);
+				var delta = halfSnapped - fullSnapped;//the future selectedVariant.delta
+				tile.gameObject.transform.position = Map.WorldToRender(fullSnapped) + delta;
 			}
 		}
 
 		private void EndDrag(Vector3 position)
 		{
-			var snapped = Map.FloorVec(selectedMapPos);
-			var drag = Map.HalfFloorVec(position) - (selectedVariant.HasNav ? Map.FloorVec(selectedMapPos) : Map.HalfFloorVec(selectedMapPos));
+			var snapped = Map.FullFloorVec(selectedMapPos);
+			var drag = Map.HalfFloorVec(position) - (selectedVariant.HasNav ? Map.FullFloorVec(selectedMapPos) : Map.HalfFloorVec(selectedMapPos));
 			var world_position = snapped + drag + selectedVariant.delta;
-			var fullSnapped = Map.FloorVec(world_position);
+			var fullSnapped = Map.FullFloorVec(world_position);
 			var halfSnapped = selectedVariant.HasNav ? fullSnapped : Map.HalfFloorVec(world_position);
 
 			var delta = halfSnapped - fullSnapped;
@@ -219,11 +220,11 @@ namespace ClassicTilestorm
 				iMap.RemoveTileAt(selectedMapPos); // this will destroy the gameobject on the tile so defacto remove the highlight
 				var index = iMap.UpdateTileAt(fullSnapped, selectedVariant.hash, selectedVariant.delta, selectedVariant.angle);
 				if (-1 == index) return;//operation failed
-				fullSnapped = iMap.TileNormalisedWorldPosition(index);
+				fullSnapped = iMap.IndexToVector(index);
 			}
 			else
 			{
-				var oldIndex = iMap.WorldToMapIndex(selectedMapPos);
+				var oldIndex = iMap.VectorToIndex(selectedMapPos);
 				var tile = iMap.GetTile(oldIndex);
 				if (tile.gameObject != null)
 					tile.gameObject.transform.position = selectedMapPos + selectedVariant.delta;
@@ -233,7 +234,6 @@ namespace ClassicTilestorm
 		}
 
 		private Vector3 FullSnapped => Map.ScreenToWorldSnapped(camera, Input.mousePosition);
-		private Vector3 HalfSnapped => selectedVariant.HasNav ? FullSnapped : Map.ScreenToWorldHalfSnapped(camera, Input.mousePosition);
 
 		private bool SelectTile(Vector3 worldPos)
 		{
@@ -262,7 +262,7 @@ namespace ClassicTilestorm
 
 		private void DeselectTile()
 		{
-			var index = iMap.WorldToMapIndex(selectedMapPos);
+			var index = iMap.VectorToIndex(selectedMapPos);
 			var tile = iMap.GetTile(index);
 			if (null != tile.gameObject)
 				tile.gameObject.RestoreSelectionHighlight(originalRenderersState);
@@ -281,7 +281,7 @@ namespace ClassicTilestorm
 			}
 
 			var snapped = Map.ScreenToWorldSnapped(cam, Input.mousePosition);
-			var mapIndex = map.WorldToMapIndex(snapped);
+			var mapIndex = map.VectorToIndex(snapped);
 
 			selectedVariant.delta = Vector3.zero;
 			selectedVariant.angle = 0f;

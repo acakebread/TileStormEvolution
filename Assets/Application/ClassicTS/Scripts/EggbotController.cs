@@ -54,7 +54,7 @@ namespace ClassicTilestorm
 				Debug.LogWarning("Initialize: Invalid setup or empty map: No start tile");
 			}
 
-			transform.position = targetPosition = map.TileWorldPosition(currentTile >= 0 ? currentTile : map.Count >> 1);
+			transform.position = targetPosition = map.TileRenderPosition(currentTile >= 0 ? currentTile : map.Count >> 1);
 
 			if (currentTile >= 0)
 			{
@@ -143,11 +143,11 @@ namespace ClassicTilestorm
 					if (0 == direction || 0 != (int)Mathf.DeltaAngle(transform.eulerAngles.y, Navigation.DirToAngle(direction))) return false;
 					isBlocked = false;
 
-					startPosition = map.TileWorldPosition(currentTile);
+					startPosition = map.TileRenderPosition(currentTile);
 					var prevTargetPosition = targetPosition;
 					var prevCurrentTile = currentTile;
 					currentTile = Navigation.LineOfSight(map, currentTile, destinationTile, direction);
-					targetPosition = map.TileWorldPosition(currentTile);
+					targetPosition = map.TileRenderPosition(currentTile);
 					actionQueue.Enqueue(() => SetState(State.MOVE, ((targetPosition - prevTargetPosition).magnitude + 1.0f) / walkSpeed));
 					return true;
 				}
@@ -244,7 +244,7 @@ namespace ClassicTilestorm
 			Vector3 oldWorldPos = transform.position;
 
 			// Calculate old grid position (reverse-engineer from world pos)
-			Vector3 localPos = Map.FloorVec(oldWorldPos);
+			Vector3 localPos = Map.FullFloorVec(oldWorldPos);
 
 			int oldX = Mathf.RoundToInt(localPos.x);
 			int oldZ = Mathf.RoundToInt(localPos.z);
@@ -264,7 +264,7 @@ namespace ClassicTilestorm
 			}
 
 			// Snap position to new grid
-			transform.position = map.TileWorldPosition(currentTile);
+			transform.position = map.TileRenderPosition(currentTile);
 
 			// Optional: preserve sub-tile offset (e.g. during movement)
 			// But for editor, we want clean snap

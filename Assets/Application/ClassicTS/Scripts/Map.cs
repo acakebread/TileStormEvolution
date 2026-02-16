@@ -55,8 +55,8 @@ namespace ClassicTilestorm
 		string Music { get; set; }
 		string Skybox { get; set; }
 
-		int WorldToMapIndex(Vector3 _);
-		Vector3 TileWorldPosition(int _);
+		int VectorToIndex(Vector3 _);
+		Vector3 TileRenderPosition(int _);
 
 		Tile GetTile(int _);
 		Tile GetTile(Vector3 _);
@@ -78,7 +78,7 @@ namespace ClassicTilestorm
 		Vector3 LocalPosition(int tileIndex, Vector3 worldPosition);
 		Vector3 WorldPosition(int tileIndex, Vector3 localPosition);
 
-		Vector3 TileNormalisedWorldPosition(int index);
+		Vector3 IndexToVector(int index);
 		HashId GetTileID(int _);
 		int UpdateTileAt(int x, int z, HashId hashId, Vector3 delta = new Vector3(), float angle = 0f);
 		int UpdateTileAt(Vector3 pos, HashId hashId, Vector3 delta = new Vector3(), float angle = 0f);
@@ -202,7 +202,7 @@ namespace ClassicTilestorm
 			return GetVariantForIndex(logicalIndex);
 		}
 
-		public Variant GetVariantAt(Vector3 pos) => GetVariantAt(WorldToMapIndex(pos));
+		public Variant GetVariantAt(Vector3 pos) => GetVariantAt(VectorToIndex(pos));
 
 		public Definition GetDefinitionAt(int mapIndex)
 		{
@@ -279,7 +279,7 @@ namespace ClassicTilestorm
 			int logicalIndex = allocate ? visualIndex : State[visualIndex];  // during creation: visual == logical
 			variant = GetVariantForIndex(logicalIndex);
 
-			var position = TileWorldPosition(visualIndex);
+			var position = TileRenderPosition(visualIndex);
 
 			GameObject go;
 
@@ -299,41 +299,71 @@ namespace ClassicTilestorm
 				go.transform.position = finalPos;
 
 #if DEBUG
-				var displayPos = finalPos - tile_origin;
+				var displayPos = FullFloorVec(finalPos);// - tile_render_offset;
 				var def = ResourceManager.GetDefinition(variant.hash);
 				go.name = $"{def?.name ?? "??"} ({displayPos.x:F1},{displayPos.z:F1})+{variant.delta:F2}@{variant.angle:F1}°";
 #endif
 			}
 		}
 
-		private static readonly Vector3 HALF_TILE = new(0.5f, 0f, 0.5f);
-		public static Vector3 FloorVec(Vector3 vec) => new(Mathf.FloorToInt(vec.x), vec.y, Mathf.FloorToInt(vec.z));
-		public static Vector3 HalfFloorVec(Vector3 vec) => new(Mathf.FloorToInt(vec.x * 2f) * 0.5f, vec.y, Mathf.FloorToInt(vec.z * 2f) * 0.5f);
-		private int NormaliseWorldToMapIndex(Vector3 vec) => vec.x < 0 || vec.x >= width || vec.z < 0 || vec.z >= height ? -1 : Mathf.FloorToInt(vec.z) * width + Mathf.FloorToInt(vec.x);
-		public Vector3 TileNormalisedWorldPosition(int index) => new(index % width, 0f, index / width);
-		public static Vector3 OffsetMapPosition(Vector3 vec) => vec - FloorVec(vec);
 
-#if UNITY_EDITOR
-		private static readonly Vector3 tile_origin = HALF_TILE;
-		public Vector3 TileWorldPosition(int index) => TileNormalisedWorldPosition(index) + HALF_TILE;
-		public int WorldToMapIndex(Vector3 vec) => NormaliseWorldToMapIndex(vec);
-		public static Vector3 SnappedMapPosition(Vector3 vec) => FloorVec(vec) + HALF_TILE;
-		public static Vector3 HalfSnappedMapPosition(Vector3 vec) => FloorVec(vec * 2f) * 0.5f + HALF_TILE;
+		public static Vector3 FullFloorVec(Vector3 vec) => new(Mathf.FloorToInt(vec.x), vec.y, Mathf.FloorToInt(vec.z));
+		public static Vector3 HalfFloorVec(Vector3 vec) => new(Mathf.FloorToInt(vec.x * 2f) * 0.5f, vec.y, Mathf.FloorToInt(vec.z * 2f) * 0.5f);
+		public int VectorToIndex(Vector3 vec) => vec.x < 0 || vec.x >= width || vec.z < 0 || vec.z >= height ? -1 : Mathf.FloorToInt(vec.z) * width + Mathf.FloorToInt(vec.x);
+		public Vector3 IndexToVector(int index) => new(index % width, 0f, index / width);
+		public Vector3 TileRenderPosition(int index) => WorldToRender(IndexToVector(index));
+
+		private static readonly Vector3 HALF_TILE = new(0.5f, 0f, 0.5f);
+#if NITY_EDITOR
+		public static Vector3 WorldToRender(Vector3 world) => world + HALF_TILE;
+		public static Vector3 RenderToWorld(Vector3 render) => render - HALF_TILE;
 #else
-		private static readonly Vector3 tile_origin = Vector3.zero;
-        public Vector3 TileWorldPosition(int index) => TileNormalisedWorldPosition(index);
-        public int WorldToMapIndex(Vector3 vec) => NormaliseWorldToMapIndex(vec + HALF_TILE);
-        public static Vector3 SnappedMapPosition(Vector3 vec) => TileNormalisedSnappedMapPosition(vec + HALF_TILE);
+		public static Vector3 WorldToRender(Vector3 world) => world;
+		public static Vector3 RenderToWorld(Vector3 render) => render;
 #endif
 
-		public static Vector3 ScreenToWorldSnapped(Camera camera, Vector3 screenPos) => SnappedMapPosition(ScreenToWorld(camera, Input.mousePosition));
-		public static Vector3 ScreenToWorldHalfSnapped(Camera camera, Vector3 screenPos) => HalfSnappedMapPosition(ScreenToWorld(camera, Input.mousePosition));
+		public static bool RayToWorld(Ray ray, out Vector3 point)
+		{
+			point = Vector3.zero;
+			var plane = new Plane(Vector3.up, Vector3.zero);
+			if (plane.Raycast(ray, out float d))
+			{
+				point = RenderToWorld(ray.GetPoint(d) + HALF_TILE);
+				return true;
+			}
+			return false;
+		}
+
+		public static Vector3 ScreenToWorld(Camera camera, Vector3 screenPos)
+		{
+			if (null == camera) return Vector3.negativeInfinity;
+			RayToWorld(camera.ScreenPointToRay(screenPos), out Vector3 result);
+			return result;
+		}
+
+		public static Vector3 CameraToWorld(Camera camera, Vector3 direction = default)
+		{
+			if (null == camera) return Vector3.negativeInfinity;
+			if (default == direction) direction = camera.transform.forward;
+			var ray = new Ray(camera.transform.position, direction);
+			RayToWorld(ray, out Vector3 result);
+			return result;
+		}
+
+		public static Vector3 ScreenToWorldSnapped(Camera camera, Vector3 screenPos) => FullFloorVec(ScreenToWorld(camera, Input.mousePosition));
+		//public static Vector3 ScreenToWorldHalfSnapped(Camera camera, Vector3 screenPos) => HalfSnappedMapPosition(ScreenToWorld(camera, Input.mousePosition));
+
+		public int CameraHitTile(Camera camera, Vector3 position) => VectorToIndex(ScreenToWorld(camera, position));
+
+		public Variant CameraHitVariant(Camera camera, Vector3 position) => GetVariantAt(CameraHitTile(camera, Input.mousePosition));
+
+		public Definition CameraHitDefinition(Camera camera, Vector3 position) => GetDefinitionAt(CameraHitTile(camera, Input.mousePosition));
 
 		public Quaternion LocalRotation(int tileIndex, Quaternion worldRotation) => worldRotation;
 		public Quaternion WorldRotation(int tileIndex, Quaternion localRotation) => localRotation;
 
-		public Vector3 LocalPosition(int tileIndex, Vector3 worldPosition) => tileIndex < 0 ? worldPosition : worldPosition - TileWorldPosition(tileIndex);
-		public Vector3 WorldPosition(int tileIndex, Vector3 localPosition) => tileIndex < 0 ? localPosition : localPosition + TileWorldPosition(tileIndex);
+		public Vector3 LocalPosition(int tileIndex, Vector3 worldPosition) => tileIndex < 0 ? worldPosition : worldPosition - TileRenderPosition(tileIndex);
+		public Vector3 WorldPosition(int tileIndex, Vector3 localPosition) => tileIndex < 0 ? localPosition : localPosition + TileRenderPosition(tileIndex);
 
 		public HashId GetTileID(int index)
 		{
@@ -348,7 +378,7 @@ namespace ClassicTilestorm
 		}
 
 		public Tile GetTile(int index) => state == null || index < 0 || index >= state.Length ? default : GetGraphTile(state[index]);
-		public Tile GetTile(Vector3 pos) => GetTile(WorldToMapIndex(pos));
+		public Tile GetTile(Vector3 pos) => GetTile(VectorToIndex(pos));
 
 		private Tile GetGraphTile(int graphIndex) => _graph == null || graphIndex < 0 || graphIndex >= _graph.Length ? default : _graph[graphIndex];
 
@@ -502,7 +532,7 @@ namespace ClassicTilestorm
 				_ => Quaternion.identity
 			};
 
-			Vector3 worldPos = TileWorldPosition(attachment.tile) + localPos;
+			Vector3 worldPos = TileRenderPosition(attachment.tile) + localPos;
 
 			if (attachmentGameObjects.TryGetValue(attachment, out GameObject go) && go != null)
 			{
@@ -912,45 +942,11 @@ namespace ClassicTilestorm
 			variants = variants != null ? variants.Select(v => new Variant(v.hash, v.delta, v.angle)).ToArray() : Array.Empty<Variant>()
 		};
 
-		public int CameraHitTile(Camera camera, Vector3 position) => WorldToMapIndex(ScreenToWorld(camera, position));
-
-		public Variant CameraHitVariant(Camera camera, Vector3 position) => GetVariantAt(CameraHitTile(camera, Input.mousePosition));
-
-		public Definition CameraHitDefinition(Camera camera, Vector3 position) => GetDefinitionAt(CameraHitTile(camera, Input.mousePosition));
-
-		public static bool RayToWorld(Ray ray, out Vector3 point)
-		{
-			point = Vector3.zero;
-			var plane = new Plane(Vector3.up, Vector3.zero);
-			if (plane.Raycast(ray, out float d))
-			{
-				point = ray.GetPoint(d);
-				return true;
-			}
-			return false;
-		}
-
-		public static Vector3 ScreenToWorld(Camera camera, Vector3 screenPos)
-		{
-			if (null == camera) return Vector3.negativeInfinity;
-			RayToWorld(camera.ScreenPointToRay(screenPos), out Vector3 result);
-			return result;
-		}
-
-		public static Vector3 CameraToWorld(Camera camera, Vector3 direction = default)
-		{
-			if (null == camera) return Vector3.negativeInfinity;
-			if (default == direction) direction = camera.transform.forward;
-			var ray = new Ray(camera.transform.position, direction);
-			RayToWorld(ray, out Vector3 result);
-			return result;
-		}
-
 		public Bounds GetTileGeometryBounds(int tileIndex)
 		{
 			if (tileIndex < 0 || tileIndex >= width * height)
 			{
-				Vector3 center = TileWorldPosition(tileIndex);
+				Vector3 center = TileRenderPosition(tileIndex);
 				return new Bounds(center, Vector3.zero);
 			}
 
@@ -958,7 +954,7 @@ namespace ClassicTilestorm
 
 			if (tile.gameObject == null)
 			{
-				Vector3 center = TileWorldPosition(tileIndex);
+				Vector3 center = TileRenderPosition(tileIndex);
 				return new Bounds(center, Vector3.zero);
 			}
 
@@ -1116,7 +1112,7 @@ namespace ClassicTilestorm
 			else
 			{
 				GetGraphTile(index).Destroy();
-				graph[index] = new Tile(variants[tableIndex], parent, TileWorldPosition(index));
+				graph[index] = new Tile(variants[tableIndex], parent, TileRenderPosition(index));
 				RefreshAttachments(GetAttachments(tileIndex: index));
 			}
 
@@ -1171,7 +1167,7 @@ namespace ClassicTilestorm
 			var tableIndex = TableIndex(ResourceManager.DefaultHash);//find table index of empty tile
 			tiles[index] = tableIndex;
 			GetGraphTile(index).Destroy();
-			graph[index] = new Tile(variants[tableIndex], parent, TileWorldPosition(index));
+			graph[index] = new Tile(variants[tableIndex], parent, TileRenderPosition(index));
 			RefreshAttachments(GetAttachments(tileIndex: index));
 
 			return true;
@@ -1241,7 +1237,7 @@ namespace ClassicTilestorm
 				if (sway == null) continue;
 
 				windController = windController ?? parent.gameObject.AddComponent<WindController>();
-				windController.AddSway(sway, TileWorldPosition(n));
+				windController.AddSway(sway, TileRenderPosition(n));
 			}
 
 			//if (windController != null)

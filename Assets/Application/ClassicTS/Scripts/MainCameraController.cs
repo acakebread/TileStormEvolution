@@ -110,7 +110,7 @@ namespace ClassicTilestorm
 
 				if (view != null)
 				{
-					var tilePos = iMap.TileWorldPosition(tile);
+					var tilePos = iMap.TileRenderPosition(tile);
 					srcPos = view.VSrc + tilePos;
 					dstPos = view.VDst + tilePos;
 				}
@@ -127,7 +127,7 @@ namespace ClassicTilestorm
 
 			Func<IReadOnlyList<Vector3>> focusFunc = () =>
 			{
-				var waypoints = iMap.GetWaypoints().Select(w => iMap.TileWorldPosition(w.tile)).ToList();
+				var waypoints = iMap.GetWaypoints().Select(w => iMap.TileRenderPosition(w.tile)).ToList();
 				spatialSystem.SetPoints(waypoints);
 
 				focusFunc = () =>
@@ -211,8 +211,8 @@ namespace ClassicTilestorm
 			// Has camera settings (View)
 			var presetCam = (GameCameraPreset)CameraSystems[CameraModeRegistry.Preset];
 
-			presetCam.originFn = () => view.VSrc + iMap.TileWorldPosition(iMap.GetWaypoint(waypointIndex).tile);
-			presetCam.targetFn = () => view.VDst + iMap.TileWorldPosition(iMap.GetWaypoint(waypointIndex).tile);
+			presetCam.originFn = () => view.VSrc + iMap.TileRenderPosition(iMap.GetWaypoint(waypointIndex).tile);
+			presetCam.targetFn = () => view.VDst + iMap.TileRenderPosition(iMap.GetWaypoint(waypointIndex).tile);
 
 			SetCameraSystem(CameraModeRegistry.Preset, true);
 			OnWaypointReachedForGestures?.Invoke(true);

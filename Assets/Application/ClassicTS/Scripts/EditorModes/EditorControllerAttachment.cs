@@ -317,7 +317,7 @@ namespace ClassicTilestorm
 			for (int i = 0; i < tiles.Length; i++)
 			{
 				int tile = tiles[i];
-				positions[i] = iMap.TileWorldPosition(tile);
+				positions[i] = iMap.TileRenderPosition(tile);
 
 				colors[i] = isWaypointMode && iMap.HasAttachmentOfType<View>(tile)
 					? new Color(0f, 1f, 1f, 0.5f)

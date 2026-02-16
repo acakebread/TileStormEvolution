@@ -48,7 +48,7 @@ namespace ClassicTilestorm
 		private void OnBeginDrag(Vector3 screenPos)
 		{
 			var vert = Map.ScreenToWorld(camera, screenPos);
-			var index = imap.WorldToMapIndex(vert);
+			var index = imap.VectorToIndex(vert);
 			var tile = imap.GetTile(index);
 			if (false == tile.IsDrag) return;
 
