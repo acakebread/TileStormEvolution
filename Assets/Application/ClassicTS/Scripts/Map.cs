@@ -26,10 +26,13 @@ namespace ClassicTilestorm
 
 		public static implicit operator HashId(Variant v) => v.hash;
 
-		public bool IsDefaultEquivalent()
+		public bool IsDefaultEquivalent
 		{
-			var def = ResourceManager.GetDefinition(hash);
-			return def != null && def.IsDefaultEquivalent();
+			get
+			{
+				var def = ResourceManager.GetDefinition(hash);
+				return def != null && def.IsDefaultEquivalent();
+			}
 		}
 
 		public bool HasNav
@@ -247,11 +250,12 @@ namespace ClassicTilestorm
 
 				for (int visualIndex = 0; visualIndex < _graph.Length; visualIndex++)
 				{
-					//UpdateGraphTile(visualIndex, allocate: true);
 					var variant = GetVariantForIndex(visualIndex);
 					var position = TileRenderPosition(visualIndex);
 					_graph[visualIndex] = CreateTile(variant, parent, position);
+#if DEBUG
 					UpdateGraphTileInfo(visualIndex);
+#endif
 				}
 
 				return _graph;
@@ -275,27 +279,15 @@ namespace ClassicTilestorm
 				var go = mapTile.gameObject;
 				if (go == null) continue;
 
-				//UpdateGraphTile(visualIndex, allocate: false);
-
 				var variant = GetVariantForIndex(visualIndex);
 				var position = TileRenderPosition(visualIndex);
 				go.transform.position = position + variant.delta;//reset position
+#if DEBUG
 				UpdateGraphTileInfo(State[visualIndex]);
+#endif
 			}
 		}
 
-		//		private void UpdateGraphTile(int visualIndex, bool allocate = true)
-		//		{
-		//			if (allocate)
-		//			{
-		//				var variant = GetVariantForIndex(visualIndex);
-		//				var position = TileRenderPosition(visualIndex);
-		//				_graph[visualIndex] = CreateTile(variant, parent, position);
-		//			}
-		//#if DEBUG
-		//			UpdateGraphTileInfo(allocate ? visualIndex : State[visualIndex]);
-		//#endif
-		//		}
 
 		private void UpdateGraphTileInfo(int index)
 		{

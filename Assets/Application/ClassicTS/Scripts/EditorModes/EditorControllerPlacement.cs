@@ -82,7 +82,7 @@ namespace ClassicTilestorm
 					if (Input.GetMouseButtonDown(0))
 					{
 						var variant = iMap.CameraHitVariant(camera, Input.mousePosition);
-						if (variant.IsDefaultEquivalent())
+						if (variant.IsDefaultEquivalent)
 							StartPanning(); // immediate panning on default/empty
 						else
 						{
@@ -229,7 +229,7 @@ namespace ClassicTilestorm
 			DeselectTile();
 
 			var variant = iMap.GetVariantAt(worldPos);
-			if (variant.IsDefaultEquivalent())
+			if (variant.IsDefaultEquivalent)
 				return false;
 
 			var tile = iMap.GetTile(worldPos);
