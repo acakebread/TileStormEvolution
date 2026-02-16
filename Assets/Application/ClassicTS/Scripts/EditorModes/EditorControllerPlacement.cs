@@ -165,7 +165,7 @@ namespace ClassicTilestorm
 
 				case ControllerMode.Dragging:
 					if (Input.GetMouseButton(0))
-						UpdateDragPosition(Map.ScreenToWorld(camera, Input.mousePosition));// HalfSnapped);
+						UpdateDragPosition(Map.ScreenToWorld(camera, Input.mousePosition));
 					else
 						EndDrag(Map.ScreenToWorld(camera, Input.mousePosition));
 					break;
@@ -198,9 +198,7 @@ namespace ClassicTilestorm
 				var drag = Map.HalfFloorVec(position) - (selectedVariant.HasNav ? Map.FullFloorVec(selectedMapPos) : Map.HalfFloorVec(selectedMapPos));
 				var world_position = snapped + drag + selectedVariant.delta;
 				var fullSnapped = Map.FullFloorVec(world_position);
-				var halfSnapped = selectedVariant.HasNav ? fullSnapped : Map.HalfFloorVec(world_position);
-
-				var delta = halfSnapped - fullSnapped;//the future selectedVariant.delta
+				var delta = selectedVariant.HasNav ? Vector3.zero : Map.HalfFloorVec(world_position) - fullSnapped;//the future selectedVariant.delta
 				tile.gameObject.transform.position = Map.WorldToRender(fullSnapped) + delta;
 			}
 		}
@@ -232,8 +230,6 @@ namespace ClassicTilestorm
 
 			SelectTile(fullSnapped);
 		}
-
-		private Vector3 FullSnapped => Map.ScreenToWorldSnapped(camera, Input.mousePosition);
 
 		private bool SelectTile(Vector3 worldPos)
 		{
@@ -289,9 +285,8 @@ namespace ClassicTilestorm
 			if (mapIndex != -1)
 			{
 				var current = map.GetVariantAt(mapIndex);
-				var isDefault = def.IsDefaultEquivalent(); // already checked above, but kept for clarity
 
-				if (current.hash != 0 && !isDefault && current.hash == variant.hash)
+				if (current.hash != 0 && current.hash == variant.hash)
 				{
 					float[] angles = { 0f, 90f, 180f, 270f };
 					float[] deltas = { 0f, 0.25f, 0.5f, 0.75f, 1f };
@@ -310,7 +305,7 @@ namespace ClassicTilestorm
 			EditorMeshUtil.UpdateGhostMesh(variant, snapped, mapIndex == -1);
 		}
 
-		private void EditMapTile(bool erase = false) => iMap.UpdateTileAt(FullSnapped, erase ? ResourceManager.DefaultHash : selectedVariant.hash, selectedVariant.delta, selectedVariant.angle);
+		private void EditMapTile(bool erase = false) => iMap.UpdateTileAt(Map.ScreenToWorldSnapped(camera, Input.mousePosition), erase ? ResourceManager.DefaultHash : selectedVariant.hash, selectedVariant.delta, selectedVariant.angle);
 
 		public override void OnDestroy()
 		{

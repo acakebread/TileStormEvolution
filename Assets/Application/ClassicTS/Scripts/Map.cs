@@ -272,11 +272,10 @@ namespace ClassicTilestorm
 
 		private void UpdateGraphTile(int visualIndex, bool allocate = true)
 		{
-			var variant = GetVariantForIndex(visualIndex);  // ← visualIndex is correct for variant lookup? Wait — no!
-															// FIX: variant is based on logical position, not visual
+			var variant = GetVariantForIndex(visualIndex);
 
 			// Correct: lookup logical first
-			int logicalIndex = allocate ? visualIndex : State[visualIndex];  // during creation: visual == logical
+			int logicalIndex = allocate ? visualIndex : State[visualIndex];
 			variant = GetVariantForIndex(logicalIndex);
 
 			var position = TileRenderPosition(visualIndex);
@@ -290,7 +289,7 @@ namespace ClassicTilestorm
 			}
 			else
 			{
-				go = _graph[State[visualIndex]].gameObject;  // existing tile at logical position
+				go = _graph[State[visualIndex]].gameObject;
 			}
 
 			if (go != null)
@@ -299,13 +298,12 @@ namespace ClassicTilestorm
 				go.transform.position = finalPos;
 
 #if DEBUG
-				var displayPos = FullFloorVec(finalPos);// - tile_render_offset;
+				var displayPos = FullFloorVec(finalPos);
 				var def = ResourceManager.GetDefinition(variant.hash);
 				go.name = $"{def?.name ?? "??"} ({displayPos.x:F1},{displayPos.z:F1})+{variant.delta:F2}@{variant.angle:F1}°";
 #endif
 			}
 		}
-
 
 		public static Vector3 FullFloorVec(Vector3 vec) => new(Mathf.FloorToInt(vec.x), vec.y, Mathf.FloorToInt(vec.z));
 		public static Vector3 HalfFloorVec(Vector3 vec) => new(Mathf.FloorToInt(vec.x * 2f) * 0.5f, vec.y, Mathf.FloorToInt(vec.z * 2f) * 0.5f);
@@ -354,9 +352,7 @@ namespace ClassicTilestorm
 		//public static Vector3 ScreenToWorldHalfSnapped(Camera camera, Vector3 screenPos) => HalfSnappedMapPosition(ScreenToWorld(camera, Input.mousePosition));
 
 		public int CameraHitTile(Camera camera, Vector3 position) => VectorToIndex(ScreenToWorld(camera, position));
-
 		public Variant CameraHitVariant(Camera camera, Vector3 position) => GetVariantAt(CameraHitTile(camera, Input.mousePosition));
-
 		public Definition CameraHitDefinition(Camera camera, Vector3 position) => GetDefinitionAt(CameraHitTile(camera, Input.mousePosition));
 
 		public Quaternion LocalRotation(int tileIndex, Quaternion worldRotation) => worldRotation;
