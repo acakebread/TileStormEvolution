@@ -6,6 +6,7 @@ using UnityEngine;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using MassiveHadronLtd;
+using NUnit.Framework;
 
 namespace ClassicTilestorm
 {
@@ -26,25 +27,10 @@ namespace ClassicTilestorm
 
 		public static implicit operator HashId(Variant v) => v.hash;
 
-		public Definition definition => ResourceManager.GetDefinition(hash);
+		public readonly Definition definition => ResourceManager.GetDefinition(hash);
 
-		public bool IsDefaultEquivalent
-		{
-			get
-			{
-				var def = ResourceManager.GetDefinition(hash);
-				return def != null && def.IsDefaultEquivalent();
-			}
-		}
-
-		public bool HasNav
-		{
-			get
-			{
-				var def = ResourceManager.GetDefinition(hash);
-				return def != null && def.Nav != 0;
-			}
-		}
+		public readonly bool IsDefaultEquivalent => definition != null && definition.IsDefaultEquivalent();
+		public readonly bool HasNav => definition != null && definition.Nav != 0;
 	}
 
 	public interface IMapData
@@ -232,8 +218,7 @@ namespace ClassicTilestorm
 
 		[JsonIgnore] private int graphCount => graph.Length;
 		[JsonIgnore] private Tile[] _graph; // private backing field (never serialized)
-		[JsonIgnore]
-		private Tile[] graph
+		[JsonIgnore] private Tile[] graph
 		{
 			get
 			{
@@ -252,9 +237,8 @@ namespace ClassicTilestorm
 
 				for (int visualIndex = 0; visualIndex < _graph.Length; visualIndex++)
 				{
-					var variant = GetVariantForIndex(visualIndex);
-					var position = TileRenderPosition(visualIndex);
-					_graph[visualIndex] = CreateTile(variant, parent, position);
+					Debug.Assert(tiles[visualIndex] >= 0 && tiles[visualIndex] < variants.Length, "variant index out of bounds");
+					_graph[visualIndex] = CreateTile(variants[tiles[visualIndex]], parent, TileRenderPosition(visualIndex));
 #if DEBUG
 					UpdateGraphTileInfo(visualIndex);
 #endif
@@ -281,15 +265,13 @@ namespace ClassicTilestorm
 				var go = mapTile.gameObject;
 				if (go == null) continue;
 
-				var variant = GetVariantForIndex(visualIndex);
-				var position = TileRenderPosition(visualIndex);
-				go.transform.position = position + variant.delta;//reset position
+				Debug.Assert(tiles[visualIndex] >= 0 && tiles[visualIndex] < variants.Length, "variant index out of bounds");
+				go.transform.position = TileRenderPosition(visualIndex) + variants[tiles[visualIndex]].delta;//reset position
 #if DEBUG
 				UpdateGraphTileInfo(State[visualIndex]);
 #endif
 			}
 		}
-
 
 		private void UpdateGraphTileInfo(int index)
 		{
