@@ -33,7 +33,12 @@ namespace MassiveHadronLtd
 
 	public abstract class ParticleSystem
 	{
+#if UNITY_WEBGL && !UNITY_EDITOR
+		protected const int MaxParticles = 1024;
+#else
 		protected const int MaxParticles = 4096;
+#endif
+
 		public const int MaxViewCache = 8;
 
 		protected readonly Material material;

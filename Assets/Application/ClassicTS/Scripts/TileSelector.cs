@@ -27,8 +27,13 @@ namespace ClassicTilestorm
 		private bool allowHideDespiteMouseOverPanel;
 		private bool panelWasShownByValidHover;
 
+#if UNITY_WEBGL && !UNITY_EDITOR
+		private const int ICON_SIZE = 48;
+		private const int MAXIMUM_RENDER_TEXTURE_SIZE = 2048;
+#else
 		private const int ICON_SIZE = 192;
 		private const int MAXIMUM_RENDER_TEXTURE_SIZE = 8192;
+#endif
 		private const int COLUMNS = (MAXIMUM_RENDER_TEXTURE_SIZE - ICON_SIZE * 4) / ICON_SIZE;
 		private const int PANEL_BORDER = 16;
 
@@ -83,6 +88,8 @@ namespace ClassicTilestorm
 		public IEnumerator Start()
 		{
 			yield return null;
+			//yield break;
+
 			filteredDefs = ResourceManager.Definitions
 				.Where(d => !d.IsDefaultEquivalent())
 				.ToList();
