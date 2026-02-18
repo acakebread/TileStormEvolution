@@ -43,25 +43,41 @@ namespace ClassicTilestorm
 			if (IsValidTileIndices(candidate))
 				return candidate;
 
+			// Debug/info point: smart decode produced invalid indices → trying forced
+			// Debug.Log($"Tiles: smart decode gave length {candidate.Length} with invalid indices → attempting forced RLE");
+
 			var forced = raw.ForcedRleDecode();
 
 			if (IsValidTileIndices(forced))
 				return forced;
 
-			// Neither valid → error handling
-			return Array.Empty<int>(); // or throw
+			// Both failed — this is likely a corrupt file
+			// Debug.LogWarning($"Tiles decode failed: smart len={candidate.Length}, forced len={forced.Length}, raw len={raw.Length}");
+			return Array.Empty<int>();  // or throw FormatException if you prefer hard failure
 		}
 
 		private static bool IsValidTileIndices(int[] arr)
 		{
-			if (arr == null || arr.Length == 0) return false; // or true for empty map?
+			if (arr == null) return false;
 
 			int len = arr.Length;
+
+			// Allow empty map (0×0)
+			if (len == 0) return true;
+
+			// For length 1: only check >= 0 (your rule says it will be 0 anyway)
+			if (len == 1)
+			{
+				return arr[0] >= 0;
+			}
+
+			// Normal case
 			for (int i = 0; i < len; i++)
 			{
 				int v = arr[i];
 				if (v < 0 || v >= len) return false;
 			}
+
 			return true;
 		}
 
