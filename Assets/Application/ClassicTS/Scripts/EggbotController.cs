@@ -107,10 +107,11 @@ namespace ClassicTilestorm
 				if (actionQueue.Count > 0) { actionQueue.Dequeue()?.Invoke(); return; }
 
 				if (dstWaypoint < 0) return;
-				var tile = map.GetWaypoint(dstWaypoint).tile;
-				if (TestSpin(tile)) return;
-				if (TestMove(tile)) return;
-				if (TestTurn(tile)) return;
+				var wp = map.GetWaypoint(dstWaypoint);
+				if (null == wp || -1 == wp.tile) return;
+				if (TestSpin(wp.tile)) return;
+				if (TestMove(wp.tile)) return;
+				if (TestTurn(wp.tile)) return;
 				SetState(State.IDLE, 1f);
 
 				bool TestSpin(int destinationTile)
