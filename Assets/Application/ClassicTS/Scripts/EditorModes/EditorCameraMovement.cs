@@ -69,7 +69,11 @@ namespace ClassicTilestorm
 			// Mouse wheel zoom (only if not over GUI)
 			if (!isMouseOverGui && GuiUtils.IsMouseInsideWindow())
 			{
+#if UNITY_IOS || UNITY_ANDROID
 				const float scrollSensitivity = 0.05f; // ≈ 3–4× typical mouse notch
+#else
+				const float scrollSensitivity = 60f;
+#endif
 
 				float scroll = InputX.GetAxis("Mouse ScrollWheel");
 				if (scroll != 0f)
