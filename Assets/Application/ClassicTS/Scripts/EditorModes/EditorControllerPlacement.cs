@@ -49,7 +49,10 @@ namespace ClassicTilestorm
 		{
 			var tileSelector = UnityEngine.Object.FindAnyObjectByType<TileSelector>(FindObjectsInactive.Include);
 			if (tileSelector != null)
+			{
 				tileSelector.OnTileSelected -= OnTileSelectedFromPalette;
+				tileSelector.CanOpenPalette = () => false;
+			}
 
 			DeselectTile();
 			base.OnDisable();
