@@ -91,7 +91,7 @@ namespace MassiveHadronLtd
 				}
 				else if (Mathf.Abs(scroll) > 0.001f)
 				{
-					float scaledScroll = scroll * 4f * Mathf.Sqrt(Screen.width * Screen.width + Screen.height * Screen.height) * 0.5f;
+					float scaledScroll = scroll * 100f * Mathf.Sqrt(Screen.width * Screen.width + Screen.height * Screen.height);
 
 					Vector2 center = mousePos;
 
