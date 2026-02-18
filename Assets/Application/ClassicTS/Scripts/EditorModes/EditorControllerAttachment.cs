@@ -3,6 +3,7 @@ using UnityEngine;
 using System.Linq;
 using System.Collections.Generic;
 using static MassiveHadronLtd.GuiUtils;
+using MassiveHadronLtd;
 
 namespace ClassicTilestorm
 {
@@ -75,25 +76,25 @@ namespace ClassicTilestorm
 		{
 			base.OnControl(staticClick);
 
-			if (Input.GetMouseButtonDown(0))
+			if (InputX.GetMouseButtonDown(0))
 				HandleLeftMouseDown();
 
-			if (Input.GetMouseButtonDown(1))
+			if (InputX.GetMouseButtonDown(1))
 				HandleRightMouseDown();
 
-			if (Input.GetMouseButton(0))
+			if (InputX.GetMouseButton(0))
 				HandleLeftMouseDrag();
 
-			if (Input.GetMouseButton(1))
+			if (InputX.GetMouseButton(1))
 				HandleRightMouseDrag();
 
 			if (!staticClick)
 				return;
 
-			if (Input.GetMouseButtonUp(0))
+			if (InputX.GetMouseButtonUp(0))
 				HandleLeftMouseUp();
 
-			if (Input.GetMouseButtonUp(1))
+			if (InputX.GetMouseButtonUp(1))
 				HandleRightMouseUp();
 		}
 
@@ -139,7 +140,7 @@ namespace ClassicTilestorm
 
 		private void HandleLeftMouseDown()
 		{
-			pendingTile = iMap.CameraHitTile(camera, Input.mousePosition);
+			pendingTile = iMap.CameraHitTile(camera, InputX.mousePosition);
 
 			bool noAttachmentHere = pendingTile < 0 || iMap.GetAttachments(tileIndex: pendingTile).Length == 0;
 			if (noAttachmentHere && ShouldStartPanningOnLeftClick())
@@ -154,11 +155,11 @@ namespace ClassicTilestorm
 			Select();
 		}
 
-		private void HandleRightMouseDown() => pendingTile = iMap.CameraHitTile(camera, Input.mousePosition);
+		private void HandleRightMouseDown() => pendingTile = iMap.CameraHitTile(camera, InputX.mousePosition);
 
 		private void HandleLeftMouseDrag()
 		{
-			var tile = iMap.CameraHitTile(camera, Input.mousePosition);
+			var tile = iMap.CameraHitTile(camera, InputX.mousePosition);
 			if (tile == pendingTile || -1 == tile || null == selection || 0 == selection.Length)
 				return;
 
@@ -219,7 +220,7 @@ namespace ClassicTilestorm
 
 		private void HandleRightMouseUp()
 		{
-			var tile = iMap.CameraHitTile(camera, Input.mousePosition);
+			var tile = iMap.CameraHitTile(camera, InputX.mousePosition);
 			if (tile >= 0 && iMap.GetAttachments(tileIndex: tile).Length > 0)
 			{
 				pendingTile = tile;
@@ -238,7 +239,7 @@ namespace ClassicTilestorm
 
 		private void Select(MapAttachment[] attachments = null)
 		{
-			popupPos = Input.mousePosition;
+			popupPos = InputX.mousePosition;
 
 			selection = attachments?.Length > 0 ? attachments : null;
 

@@ -20,7 +20,7 @@ namespace ClassicTilestorm
 
 		// Selection
 		private Vector3 startWorld;
-		private Vector3 currentWorld => Map.ScreenToWorld(camera, Input.mousePosition);
+		private Vector3 currentWorld => Map.ScreenToWorld(camera, InputX.mousePosition);
 
 		private Variant selectedVariant = new(ResourceManager.DefaultHash);
 		private (Renderer renderer, Material[] originalMaterials)?[] originalRenderersState;
@@ -82,9 +82,9 @@ namespace ClassicTilestorm
 			switch (mode)
 			{
 				case ControllerMode.Idle:
-					if (Input.GetMouseButtonDown(0))
+					if (InputX.GetMouseButtonDown(0))
 					{
-						var variant = iMap.CameraHitVariant(camera, Input.mousePosition);
+						var variant = iMap.CameraHitVariant(camera, InputX.mousePosition);
 						if (variant.IsDefaultEquivalent)
 							StartPanning(); // immediate panning on default/empty
 						else
@@ -96,7 +96,7 @@ namespace ClassicTilestorm
 
 					if (staticClick)
 					{
-						if (Input.GetMouseButtonUp(0))
+						if (InputX.GetMouseButtonUp(0))
 						{
 							if (holdSelect)
 							{
@@ -113,12 +113,12 @@ namespace ClassicTilestorm
 								StartPanning();
 						}
 
-						if (Input.GetMouseButtonUp(1))
+						if (InputX.GetMouseButtonUp(1))
 							EditMapTile(erase: true);
 					}
 					else
 					{
-						if (Input.GetMouseButton(0) && holdSelect)
+						if (InputX.GetMouseButton(0) && holdSelect)
 						{
 							holdSelect = false;
 							StartPanning(); // immediate panning when moved during hold
@@ -129,10 +129,10 @@ namespace ClassicTilestorm
 				case ControllerMode.Placing:
 					if (staticClick)
 					{
-						if (Input.GetMouseButtonUp(0))
+						if (InputX.GetMouseButtonUp(0))
 							EditMapTile();
 
-						if (Input.GetMouseButtonUp(1))
+						if (InputX.GetMouseButtonUp(1))
 						{
 							DeselectTile();
 
@@ -150,32 +150,32 @@ namespace ClassicTilestorm
 				case ControllerMode.Selected:
 					if (staticClick)
 					{
-						if (Input.GetMouseButtonDown(0))
+						if (InputX.GetMouseButtonDown(0))
 						{
 							if (!AttemptDrag())
 								StartPanning();
 						}
 
-						if (Input.GetMouseButtonUp(0))
+						if (InputX.GetMouseButtonUp(0))
 						{
 							if (currentWorld != startWorld)
 								DeselectTile();
 						}
 
-						if (Input.GetMouseButtonUp(1))
+						if (InputX.GetMouseButtonUp(1))
 							DeselectTile();
 					}
 					break;
 
 				case ControllerMode.Dragging:
-					if (Input.GetMouseButtonDown(0))
+					if (InputX.GetMouseButtonDown(0))
 					{
 						if (!AttemptDrag())
 							SetMode(ControllerMode.Idle);
 					}
-					else if (Input.GetMouseButton(0))
+					else if (InputX.GetMouseButton(0))
 						UpdateDragPosition();
-					else if (Input.GetMouseButtonUp(0))
+					else if (InputX.GetMouseButtonUp(0))
 						EndDrag();
 					break;
 			}
@@ -272,7 +272,7 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			var snapped = Map.WorldToRender(Map.FullFloorVec(Map.ScreenToWorld(cam, Input.mousePosition)));
+			var snapped = Map.WorldToRender(Map.FullFloorVec(Map.ScreenToWorld(cam, InputX.mousePosition)));
 			var mapIndex = map.VectorToIndex(snapped);
 
 			selectedVariant.delta = Vector3.zero;
@@ -301,7 +301,7 @@ namespace ClassicTilestorm
 			EditorMeshUtil.UpdateGhostMesh(variant, snapped, mapIndex == -1);
 		}
 
-		private void EditMapTile(bool erase = false) => iMap.UpdateTileAt(Map.ScreenToWorld(camera, Input.mousePosition), erase ? ResourceManager.DefaultHash : selectedVariant.hash, selectedVariant.delta, selectedVariant.angle);
+		private void EditMapTile(bool erase = false) => iMap.UpdateTileAt(Map.ScreenToWorld(camera, InputX.mousePosition), erase ? ResourceManager.DefaultHash : selectedVariant.hash, selectedVariant.delta, selectedVariant.angle);
 
 		public override void OnDestroy()
 		{

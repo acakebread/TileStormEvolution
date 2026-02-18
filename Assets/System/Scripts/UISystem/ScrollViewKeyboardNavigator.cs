@@ -206,12 +206,12 @@ namespace MassiveHadronLtd
 				direction = -CalculatePageStep();
 			else if (GetKeyDownWithRepeat(KeyCode.PageDown))
 				direction = +CalculatePageStep();
-			else if (Input.GetKeyDown(KeyCode.Home))
+			else if (InputX.GetKeyDown(KeyCode.Home))
 			{
 				ScheduleSelect(0);
 				return;
 			}
-			else if (Input.GetKeyDown(KeyCode.End))
+			else if (InputX.GetKeyDown(KeyCode.End))
 			{
 				ScheduleSelect(selectables.Count - 1);
 				return;

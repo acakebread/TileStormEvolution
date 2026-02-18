@@ -19,7 +19,7 @@ namespace ClassicTilestorm
 			var camera = camTransform.GetComponent<Camera>();
 			if (camera == null) return;
 
-			if ((Input.GetMouseButtonDown(1) || Input.touchCount > 0))
+			if ((InputX.GetMouseButtonDown(1) || InputX.touchCount > 0))
 				focus = !isMouseOverGui;
 
 			if (didGainFocus)
@@ -29,15 +29,15 @@ namespace ClassicTilestorm
 			}
 
 			// Right mouse button or touch = orbit
-			if (focus && (Input.GetMouseButton(1) || Input.touchCount > 0))
+			if (focus && (InputX.GetMouseButton(1) || InputX.touchCount > 1))
 			{
-				float pointerX = Input.GetAxis("Mouse X");
-				float pointerY = Input.GetAxis("Mouse Y");
+				float pointerX = InputX.GetAxis("Mouse X");
+				float pointerY = InputX.GetAxis("Mouse Y");
 
-				if (Input.touchCount > 0)
+				if (InputX.touchCount > 1)
 				{
-					pointerX = Input.touches[0].deltaPosition.x * 0.05f;
-					pointerY = Input.touches[0].deltaPosition.y * 0.05f;
+					pointerX = InputX.touches[1].deltaPosition.x * 0.05f;
+					pointerY = InputX.touches[1].deltaPosition.y * 0.05f;
 				}
 
 				var eulers = camTransform.eulerAngles;
@@ -47,10 +47,10 @@ namespace ClassicTilestorm
 				camTransform.eulerAngles = eulers;
 			}
 
-			if (Input.GetMouseButtonUp(1))// || Input.touchCount == 0)//this doesn't work for obvious reasons if (Input.GetMouseButtonUp(1) || Input.touchCount == 0)
+			if (InputX.GetMouseButtonUp(1))// || InputX.touchCount == 0)//this doesn't work for obvious reasons if (InputX.GetMouseButtonUp(1) || InputX.touchCount == 0)
 				focus = false;
 
-			if (Input.GetKeyDown(KeyCode.Tab))
+			if (InputX.GetKeyDown(KeyCode.Tab))
 				MoveSpeedModifier = 0.1f / MoveSpeedModifier;
 
 			// WASDQE movement
@@ -59,7 +59,7 @@ namespace ClassicTilestorm
 			// Mouse wheel zoom (only if not over GUI)
 			if (!isMouseOverGui && GuiUtils.IsMouseInsideWindow())
 			{
-				float scroll = Input.GetAxis("Mouse ScrollWheel");
+				float scroll = InputX.GetAxis("Mouse ScrollWheel");
 				if (scroll != 0f)
 					translation += Vector3.forward * scroll * ZoomSpeed * MoveSpeedMultiplier * MoveSpeedModifier; //camTransform.Translate(0, 0, scroll * ZoomSpeed * MoveSpeedMultiplier * MoveSpeedModifier, Space.Self);
 			}
@@ -71,13 +71,13 @@ namespace ClassicTilestorm
 		private static Vector3 GetInputTranslationDirection()
 		{
 			Vector3 dir = Vector3.zero;
-			if (Input.GetKey(KeyCode.W)) dir += Vector3.forward;
-			if (Input.GetKey(KeyCode.S)) dir += Vector3.back;
-			if (Input.GetKey(KeyCode.A)) dir += Vector3.left;
-			if (Input.GetKey(KeyCode.D)) dir += Vector3.right;
-			if (Input.GetKey(KeyCode.Q)) dir += Vector3.down;
-			if (Input.GetKey(KeyCode.E)) dir += Vector3.up;
-			if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) dir *= 2f;
+			if (InputX.GetKey(KeyCode.W)) dir += Vector3.forward;
+			if (InputX.GetKey(KeyCode.S)) dir += Vector3.back;
+			if (InputX.GetKey(KeyCode.A)) dir += Vector3.left;
+			if (InputX.GetKey(KeyCode.D)) dir += Vector3.right;
+			if (InputX.GetKey(KeyCode.Q)) dir += Vector3.down;
+			if (InputX.GetKey(KeyCode.E)) dir += Vector3.up;
+			if (InputX.GetKey(KeyCode.LeftShift) || InputX.GetKey(KeyCode.RightShift)) dir *= 2f;
 			return dir;
 		}
 

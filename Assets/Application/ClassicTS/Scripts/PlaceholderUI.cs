@@ -63,7 +63,7 @@ namespace ClassicTilestorm
 			}
 			else
 			{
-				var mousePos = Input.mousePosition;
+				var mousePos = InputX.mousePosition;
 				bool nearTop = mousePos.y >= Screen.height - 50;
 				isMouseOverGui = guiRect.Contains(new Vector2(mousePos.x, Screen.height - mousePos.y));
 

@@ -120,10 +120,10 @@ namespace ClassicTilestorm
 			RecalculateLayout();
 
 			// ─── Panel visibility ────────────────────────────────────────────────
-			bool mouseInTrigger = InputX.mouseInsideWindow && Input.mousePosition.y <= triggerZoneHeight;
+			bool mouseInTrigger = InputX.mouseInsideWindow && InputX.mousePosition.y <= triggerZoneHeight;
 
 			bool justEnteredCleanly = false;
-			Vector2 mousePos = Input.mousePosition;
+			Vector2 mousePos = InputX.mousePosition;
 
 			// Start attempt on entry OR if no attempt active
 			if (!triggerAttemptActive && mouseInTrigger)
@@ -151,9 +151,9 @@ namespace ClassicTilestorm
 				}
 				// Fire if time reached
 				else if (Time.time - triggerEnterTime >= triggerDwellTime &&
-						 !Input.GetMouseButton(0) &&
-						 !Input.GetMouseButton(1) &&
-						 !Input.GetMouseButton(2))
+						 !InputX.GetMouseButton(0) &&
+						 !InputX.GetMouseButton(1) &&
+						 !InputX.GetMouseButton(2))
 				{
 					justEnteredCleanly = true;
 
@@ -163,7 +163,7 @@ namespace ClassicTilestorm
 			}
 
 			bool mouseOverPanel = !allowHideDespiteMouseOverPanel &&
-								  Input.mousePosition.y <= (panelY + panelHeight);
+								  InputX.mousePosition.y <= (panelY + panelHeight);
 
 			bool allowedToOpen = CanOpenPalette == null || CanOpenPalette();
 
@@ -196,10 +196,10 @@ namespace ClassicTilestorm
 			UpdatePanelVisuals();
 
 			// ─── Wobble trigger on mouse DOWN ────────────────────────────────────
-			bool mouseOverGrid = gridScreenRect.Contains(Input.mousePosition);
-			if (Input.GetMouseButtonDown(0) && mouseOverGrid && wobbleStartTime < 0f) // ← only start if no wobble active
+			bool mouseOverGrid = gridScreenRect.Contains(InputX.mousePosition);
+			if (InputX.GetMouseButtonDown(0) && mouseOverGrid && wobbleStartTime < 0f) // ← only start if no wobble active
 			{
-				Vector2 uv = gridScreenRect.NormalisedPoint(Input.mousePosition);
+				Vector2 uv = gridScreenRect.NormalisedPoint(InputX.mousePosition);
 				if (_atlas.TryGetIndex(uv, out int idx) && idx >= 0 && idx < filteredDefs.Count)
 				{
 					pressedIndex = idx;
@@ -211,10 +211,10 @@ namespace ClassicTilestorm
 			ApplyFocusWobble();
 
 			// ─── Selection only on mouse UP over SAME tile ───────────────────────
-			if (Input.GetMouseButtonUp(0) && pressedIndex >= 0)
+			if (InputX.GetMouseButtonUp(0) && pressedIndex >= 0)
 			{
 				var resetWobble = false;
-				Vector2 uv = gridScreenRect.NormalisedPoint(Input.mousePosition);
+				Vector2 uv = gridScreenRect.NormalisedPoint(InputX.mousePosition);
 				if (_atlas.TryGetIndex(uv, out int releaseIdx) && releaseIdx == pressedIndex)
 					resetWobble = !TrySelectTile(releaseIdx);
 				if (resetWobble)
@@ -225,7 +225,7 @@ namespace ClassicTilestorm
 				}
 			}
 
-			if (Input.GetMouseButtonUp(1))
+			if (InputX.GetMouseButtonUp(1))
 			{
 				allowHideDespiteMouseOverPanel = true;
 				panelTargetY = -panelHeight;
@@ -354,7 +354,7 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			Vector2 mouseUV = gridScreenRect.NormalisedPoint(Input.mousePosition);
+			Vector2 mouseUV = gridScreenRect.NormalisedPoint(InputX.mousePosition);
 			var gridInfo = ScreenSpaceUtil.GetGridRenderInfo(_atlas, gridScreenRect, mouseUV);
 			var focusInfo = ScreenSpaceUtil.GetFocusRenderInfo(_atlas, gridScreenRect, mouseUV);
 
@@ -408,8 +408,8 @@ namespace ClassicTilestorm
 			if (!panelVisible)
 				return "Hover near bottom of screen to open tile palette";
 
-			bool mouseOverGrid = gridScreenRect.Contains(Input.mousePosition);
-			Vector2 uv = gridScreenRect.NormalisedPoint(Input.mousePosition);
+			bool mouseOverGrid = gridScreenRect.Contains(InputX.mousePosition);
+			Vector2 uv = gridScreenRect.NormalisedPoint(InputX.mousePosition);
 
 			// Case 1: Mouse over a valid tile in grid → show its info
 			if (mouseOverGrid && _atlas != null && _atlas.TryGetIndex(uv, out int idx) && idx >= 0 && idx < filteredDefs.Count)
@@ -456,7 +456,7 @@ namespace ClassicTilestorm
 			}
 
 			// Case 2: Mouse inside palette rect but NOT over any tile → show current selection
-			if (gridScreenRect.Contains(Input.mousePosition) && SelectedHashId != ResourceManager.DefaultHash)
+			if (gridScreenRect.Contains(InputX.mousePosition) && SelectedHashId != ResourceManager.DefaultHash)
 			{
 				var def = ResourceManager.GetDefinition(SelectedHashId);
 				string selName = def?.name ?? "Unknown";

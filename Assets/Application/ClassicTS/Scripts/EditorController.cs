@@ -9,7 +9,7 @@ namespace ClassicTilestorm
 		public IMapEdit iMap;
 
 		private EditorControllerMovement activeMode;
-		private EditorControllerView viewMode;
+		//private EditorControllerView viewMode;
 		private EditorControllerPlacement placementMode;
 		private EditorControllerAttachment attachmentMode;
 
@@ -39,7 +39,7 @@ namespace ClassicTilestorm
 			panelYoffset = PlaceholderUI.PanelBottomY;
 
 			// Modes
-			viewMode = new EditorControllerView(this);
+			//viewMode = new EditorControllerView(this);
 			placementMode = new EditorControllerPlacement(this);
 			attachmentMode = new EditorControllerAttachment(this); 
 			SetEditorMode(EditorMode.Placement);//default
@@ -97,11 +97,6 @@ namespace ClassicTilestorm
 			}
 		}
 
-		//private void OnPostRender()
-		//{
-		//	activeMode?.OnPostRender();
-		//}
-
 		private void OnGUI()
 		{
 			DrawMainUI((currentMode ?? EditorMode.Placement).ToString(), gridEnabled);
@@ -114,7 +109,7 @@ namespace ClassicTilestorm
 		{
 			GridLinesUtil.Hide();
 			if (null != iMap) iMap.OnMapEdited -= OnMapEdited;
-			viewMode?.OnDestroy();
+			//viewMode?.OnDestroy();
 			placementMode?.OnDestroy();
 			attachmentMode?.OnDestroy();
 		}
@@ -150,7 +145,7 @@ namespace ClassicTilestorm
 				//EditorMode.View => viewMode,
 				EditorMode.Placement => placementMode,
 				EditorMode.Attachment => attachmentMode,
-				_ => viewMode
+				_ => placementMode//viewMode
 			};
 			activeMode?.OnEnable();
 		}
@@ -173,7 +168,7 @@ namespace ClassicTilestorm
 		// ===================================================================
 
 		private int numItems = 0;
-		public bool IsMouseOverGui() => new Rect(margin, panelYoffset + spacing, buttonWidth + 20f, (buttonHeight + spacing) * numItems).Contains(new Vector3(Input.mousePosition.x, Screen.height - Input.mousePosition.y, Input.mousePosition.z));
+		public bool IsMouseOverGui() => new Rect(margin, panelYoffset + spacing, buttonWidth + 20f, (buttonHeight + spacing) * numItems).Contains(new Vector3(InputX.mousePosition.x, Screen.height - InputX.mousePosition.y, InputX.mousePosition.z));
 
 		private void DrawMainUI(string mode, bool gridVisible)
 		{
@@ -225,5 +220,7 @@ namespace ClassicTilestorm
 			//				mainController.SaveDatabase();
 			//#endif
 		}
+
+		//private void OnPostRender() => activeMode?.OnPostRender();
 	}
 }

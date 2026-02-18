@@ -11,12 +11,12 @@ namespace MassiveHadronLtd
 
 		private void Update()
 		{
-			if (Input.GetMouseButtonDown(0))
-				OnBeginDrag?.Invoke(Input.mousePosition);
-			else if (Input.GetMouseButton(0))
-				OnDrag?.Invoke(Input.mousePosition);
-			else if (Input.GetMouseButtonUp(0))
-				OnEndDrag?.Invoke(Input.mousePosition);
+			if (InputX.GetMouseButtonDown(0))
+				OnBeginDrag?.Invoke(InputX.mousePosition);
+			else if (InputX.GetMouseButton(0))
+				OnDrag?.Invoke(InputX.mousePosition);
+			else if (InputX.GetMouseButtonUp(0))
+				OnEndDrag?.Invoke(InputX.mousePosition);
 		}
 	}
 }

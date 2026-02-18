@@ -11,7 +11,7 @@ namespace MassiveHadronLtd
 
 		private void Update()
 		{
-			if (Input.GetMouseButtonUp(0) && lastPointerData != null)
+			if (InputX.GetMouseButtonUp(0) && lastPointerData != null)
 			{
 				// On any mouse up, force reset hovered/pressed states
 				var current = EventSystem.current;
@@ -23,7 +23,7 @@ namespace MassiveHadronLtd
 				// Optional: force exit on all current hovered
 				var results = new List<RaycastResult>();
 				PointerEventData ped = new PointerEventData(current);
-				ped.position = Input.mousePosition;
+				ped.position = InputX.mousePosition;
 				EventSystem.current.RaycastAll(ped, results);
 
 				foreach (var result in results)
@@ -38,11 +38,11 @@ namespace MassiveHadronLtd
 				lastPointerData = null;
 			}
 
-			if (Input.GetMouseButtonDown(0))
+			if (InputX.GetMouseButtonDown(0))
 			{
 				lastPointerData = new PointerEventData(EventSystem.current)
 				{
-					position = Input.mousePosition
+					position = InputX.mousePosition
 				};
 			}
 		}

@@ -324,16 +324,16 @@ namespace ClassicTilestorm
 			return result;
 		}
 
-		//public static Vector3 ScreenToWorldSnapped(Camera camera, Vector3 screenPos) => FullFloorVec(ScreenToWorld(camera, Input.mousePosition));
-		//public static Vector3 ScreenToWorldHalfSnapped(Camera camera, Vector3 screenPos) => HalfSnappedMapPosition(ScreenToWorld(camera, Input.mousePosition));
+		//public static Vector3 ScreenToWorldSnapped(Camera camera, Vector3 screenPos) => FullFloorVec(ScreenToWorld(camera, InputX.mousePosition));
+		//public static Vector3 ScreenToWorldHalfSnapped(Camera camera, Vector3 screenPos) => HalfSnappedMapPosition(ScreenToWorld(camera, InputX.mousePosition));
 
 		public int VectorToIndex(Vector3 vec) => vec.x < 0 || vec.x >= width || vec.z < 0 || vec.z >= height ? -1 : Mathf.FloorToInt(vec.z) * width + Mathf.FloorToInt(vec.x);
 		public Vector3 IndexToVector(int index) => new(index % width, 0f, index / width);
 		public Vector3 TileRenderPosition(int index) => WorldToRender(IndexToVector(index));
 
 		public int CameraHitTile(Camera camera, Vector3 position) => VectorToIndex(ScreenToWorld(camera, position));
-		public Variant CameraHitVariant(Camera camera, Vector3 position) => GetVariantAt(CameraHitTile(camera, Input.mousePosition));
-		public Definition CameraHitDefinition(Camera camera, Vector3 position) => GetDefinitionAt(CameraHitTile(camera, Input.mousePosition));
+		public Variant CameraHitVariant(Camera camera, Vector3 position) => GetVariantAt(CameraHitTile(camera, InputX.mousePosition));
+		public Definition CameraHitDefinition(Camera camera, Vector3 position) => GetDefinitionAt(CameraHitTile(camera, InputX.mousePosition));
 
 		public Quaternion LocalRotation(int tileIndex, Quaternion worldRotation) => worldRotation;
 		public Quaternion WorldRotation(int tileIndex, Quaternion localRotation) => localRotation;

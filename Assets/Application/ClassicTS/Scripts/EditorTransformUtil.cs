@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
 using Unity.Mathematics;
+using MassiveHadronLtd;
 
 namespace ClassicTilestorm
 {
@@ -79,7 +80,7 @@ namespace ClassicTilestorm
 		public static bool MouseOverGizmo(Camera editorCamera)
 		{
 			if (root == null || editorCamera == null) return false;
-			Ray ray = editorCamera.ScreenPointToRay(Input.mousePosition);
+			Ray ray = editorCamera.ScreenPointToRay(InputX.mousePosition);
 
 			var hits = Physics.RaycastAll(ray, Mathf.Infinity, 1 << LayerMask.NameToLayer("Editor"));
 			System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
@@ -103,13 +104,13 @@ namespace ClassicTilestorm
 
 			UpdateVisuals(editorCamera);
 
-			Ray ray = editorCamera.ScreenPointToRay(Input.mousePosition);
+			Ray ray = editorCamera.ScreenPointToRay(InputX.mousePosition);
 			bool handled = false;
 			bool _wasActive = wasActive;
 
 			DoHover(ray);
 
-			if (Input.GetMouseButtonDown(0))
+			if (InputX.GetMouseButtonDown(0))
 			{
 				var hits = Physics.RaycastAll(ray, Mathf.Infinity, 1 << LayerMask.NameToLayer("Editor"));
 				System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
@@ -144,7 +145,7 @@ namespace ClassicTilestorm
 				wasActive = handled;
 			}
 
-			if (Input.GetMouseButton(0))
+			if (InputX.GetMouseButton(0))
 			{
 				if (draggingPosition) ContinuePositionDrag(editorCamera);
 				if (draggingRotation) ContinueRotationDrag(editorCamera);
@@ -152,7 +153,7 @@ namespace ClassicTilestorm
 				wasActive |= handled;
 			}
 
-			if (Input.GetMouseButtonUp(0))
+			if (InputX.GetMouseButtonUp(0))
 			{
 				draggingPosition = draggingRotation = false;
 				lockedAxis = Vector3.zero;
@@ -184,7 +185,7 @@ namespace ClassicTilestorm
 				screenCircle.transform.localScale = Vector3.one * 2.2f;
 			}
 
-			Ray ray = editorCamera.ScreenPointToRay(Input.mousePosition);
+			Ray ray = editorCamera.ScreenPointToRay(InputX.mousePosition);
 
 			DoHover(ray);
 		}
@@ -292,7 +293,7 @@ namespace ClassicTilestorm
 
 		private static void ContinuePositionDrag(Camera cam)
 		{
-			Ray ray = cam.ScreenPointToRay(Input.mousePosition);
+			Ray ray = cam.ScreenPointToRay(InputX.mousePosition);
 			if (!dragPlane.Raycast(ray, out float enter)) return;
 
 			Vector3 cur = ray.GetPoint(enter);
@@ -400,7 +401,7 @@ namespace ClassicTilestorm
 					}
 
 					// record start mouse screen pos
-					startMouseScreen = Input.mousePosition;
+					startMouseScreen = InputX.mousePosition;
 
 					draggingRotation = true;
 					return true;
@@ -414,7 +415,7 @@ namespace ClassicTilestorm
 			if (!draggingRotation) return;
 
 			// Mouse delta in screen pixels
-			Vector2 curMouse = Input.mousePosition;
+			Vector2 curMouse = InputX.mousePosition;
 			Vector2 mouseDelta = curMouse - startMouseScreen;
 
 			if (mouseDelta.sqrMagnitude < 0.0001f) return;

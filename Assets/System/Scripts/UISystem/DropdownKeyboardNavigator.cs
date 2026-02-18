@@ -54,8 +54,8 @@ namespace MassiveHadronLtd
 			int direction = 0;
 			if (GetKeyDownWithRepeat(KeyCode.UpArrow)) direction = -1;
 			else if (GetKeyDownWithRepeat(KeyCode.DownArrow)) direction = +1;
-			else if (Input.GetKeyDown(KeyCode.Home)) { SetValue(0); return; }
-			else if (Input.GetKeyDown(KeyCode.End)) { SetValue(GetOptionCount() - 1); return; }
+			else if (InputX.GetKeyDown(KeyCode.Home)) { SetValue(0); return; }
+			else if (InputX.GetKeyDown(KeyCode.End)) { SetValue(GetOptionCount() - 1); return; }
 
 			if (direction != 0)
 			{
@@ -76,7 +76,7 @@ namespace MassiveHadronLtd
 				currentHighlightedIndex = next;
 				SetPreviewValue(next);
 			}
-			else if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter) || Input.GetKeyDown(KeyCode.Space))
+			else if (InputX.GetKeyDown(KeyCode.Return) || InputX.GetKeyDown(KeyCode.KeypadEnter) || InputX.GetKeyDown(KeyCode.Space))
 			{
 				ConfirmSelection();
 			}
@@ -150,13 +150,13 @@ namespace MassiveHadronLtd
 
 		private bool GetKeyDownWithRepeat(KeyCode key)
 		{
-			if (Input.GetKeyDown(key))
+			if (InputX.GetKeyDown(key))
 			{
 				repeatTimer = repeatDelay;
 				isRepeating = true;
 				return true;
 			}
-			if (Input.GetKey(key) && isRepeating && repeatTimer <= 0f)
+			if (InputX.GetKey(key) && isRepeating && repeatTimer <= 0f)
 			{
 				repeatTimer = repeatRate;
 				return true;
@@ -166,7 +166,7 @@ namespace MassiveHadronLtd
 
 		private void HandleRepeatTimer()
 		{
-			if (isRepeating && (Input.GetKey(KeyCode.UpArrow) || Input.GetKey(KeyCode.DownArrow)))
+			if (isRepeating && (InputX.GetKey(KeyCode.UpArrow) || InputX.GetKey(KeyCode.DownArrow)))
 				repeatTimer -= Time.deltaTime;
 			else
 				isRepeating = false;

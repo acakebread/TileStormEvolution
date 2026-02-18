@@ -63,13 +63,13 @@ namespace ClassicTilestorm
 			var isMoseOverPreview = IsMouseOverPreview();
 			isHighlighted = isMoseOverPreview;
 
-			if (Input.GetMouseButtonDown(1))
+			if (InputX.GetMouseButtonDown(1))
 			{
 				isInFocus = isMoseOverPreview;
 				isInUse = isMoseOverPreview;
 			}
 
-			if (!Input.GetMouseButton(0) && !Input.GetMouseButton(1))
+			if (!InputX.GetMouseButton(0) && !InputX.GetMouseButton(1))
 			{
 				isInFocus = isMoseOverPreview;
 				isInUse = false;
@@ -129,7 +129,7 @@ namespace ClassicTilestorm
 		{
 			if (!isVisible || PreviewRect.width <= 0) return false;
 			Rect hitRect = new Rect(PreviewRect.x - 8, PreviewRect.y - 8, PreviewRect.width + 16, PreviewRect.height + 16);
-			Vector2 mp = Input.mousePosition;
+			Vector2 mp = InputX.mousePosition;
 			mp.y = Screen.height - mp.y;
 			return hitRect.Contains(mp);
 		}

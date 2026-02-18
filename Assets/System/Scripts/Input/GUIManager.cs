@@ -14,7 +14,7 @@ namespace MassiveHadronLtd
 		public static bool IsMouseOverGui()
 		{
 			if (GUIUtility.hotControl != 0) return true;
-			Vector2 mousePos = Input.mousePosition;
+			Vector2 mousePos = InputX.mousePosition;
 			mousePos.y = Screen.height - mousePos.y; // Convert to GUI coordinates
 			foreach (var rect in guiRects)
 			{

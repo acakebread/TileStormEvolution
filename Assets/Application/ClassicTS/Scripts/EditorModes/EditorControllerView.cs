@@ -1,3 +1,4 @@
+using MassiveHadronLtd;
 using UnityEngine;
 
 namespace ClassicTilestorm
@@ -19,11 +20,11 @@ namespace ClassicTilestorm
 			var wasDragging = dragging;
 			var cameraTransform = camera.transform;
 
-			if (Input.GetMouseButtonDown(0) && !IsMouseOverGUI())
+			if (InputX.GetMouseButtonDown(0) && !IsMouseOverGUI())
 			{
 				dragging = true;
 				isDraggingWithLeftMouse = true;
-				var ray = camera.ScreenPointToRay(Input.mousePosition);
+				var ray = camera.ScreenPointToRay(InputX.mousePosition);
 				if (Physics.Raycast(ray, out RaycastHit hit))
 				{
 					dragPlane = new Plane(Vector3.up, new Vector3(0f, hit.point.y, 0f));
@@ -39,9 +40,9 @@ namespace ClassicTilestorm
 				}
 			}
 
-			if (dragging && wasDragging && isDraggingWithLeftMouse && Input.GetMouseButton(0) && !IsGuiControlActive())
+			if (dragging && wasDragging && isDraggingWithLeftMouse && InputX.GetMouseButton(0) && !IsGuiControlActive())
 			{
-				var currentRay = camera.ScreenPointToRay(Input.mousePosition);
+				var currentRay = camera.ScreenPointToRay(InputX.mousePosition);
 				if (dragPlane.Raycast(currentRay, out float enter))
 				{
 					var currentWorldPoint = currentRay.GetPoint(enter);
@@ -50,7 +51,7 @@ namespace ClassicTilestorm
 				}
 			}
 
-			if (!Input.GetMouseButton(0))
+			if (!InputX.GetMouseButton(0))
 			{
 				dragging = false;
 				isDraggingWithLeftMouse = false;

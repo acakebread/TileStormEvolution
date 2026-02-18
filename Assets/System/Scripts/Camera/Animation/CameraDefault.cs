@@ -48,7 +48,7 @@ namespace MassiveHadronLtd
 			var wasDragging = dragging;
 
 			// Handle mouse button down to start dragging
-			if ((Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1)) &&
+			if ((InputX.GetMouseButtonDown(0) || InputX.GetMouseButtonDown(1)) &&
 				!EventSystem.current.IsPointerOverGameObject())
 			{
 				dragging = true;
@@ -57,16 +57,16 @@ namespace MassiveHadronLtd
 			}
 
 			// Get mouse or touch input
-			float pointerX = Input.GetAxis("Mouse X");
-			float pointerY = Input.GetAxis("Mouse Y");
-			if (Input.touchCount > 0)
+			float pointerX = InputX.GetAxis("Mouse X");
+			float pointerY = InputX.GetAxis("Mouse Y");
+			if (InputX.touchCount > 0)
 			{
-				pointerX = Input.touches[0].deltaPosition.x * 0.05f;
-				pointerY = Input.touches[0].deltaPosition.y * 0.05f;
+				pointerX = InputX.touches[0].deltaPosition.x * 0.05f;
+				pointerY = InputX.touches[0].deltaPosition.y * 0.05f;
 			}
 
 			// Handle camera rotation (for left or right mouse)
-			if (dragging && wasDragging && (Input.GetMouseButton(0) || Input.GetMouseButton(1)))
+			if (dragging && wasDragging && (InputX.GetMouseButton(0) || InputX.GetMouseButton(1)))
 			{
 				yaw += lookSpeedH * pointerX;
 				pitch -= lookSpeedV * pointerY;
@@ -74,7 +74,7 @@ namespace MassiveHadronLtd
 			}
 
 			// Stop dragging when mouse buttons or touch are released
-			if (!(Input.touchCount > 0 || Input.GetMouseButton(0) || Input.GetMouseButton(1)))
+			if (!(InputX.touchCount > 0 || InputX.GetMouseButton(0) || InputX.GetMouseButton(1)))
 			{
 				dragging = false;
 			}
@@ -82,7 +82,7 @@ namespace MassiveHadronLtd
 			// Zoom with mouse wheel
 			if (InsideWindow())
 			{
-				float scroll = skipNextScroll ? 0f : Input.GetAxis("Mouse ScrollWheel");
+				float scroll = skipNextScroll ? 0f : InputX.GetAxis("Mouse ScrollWheel");
 				camera.transform.Translate(0, 0, scroll * zoomSpeed, Space.Self);
 				skipNextScroll = false;
 			}
@@ -99,7 +99,7 @@ namespace MassiveHadronLtd
 
 		private bool InsideWindow()
 		{
-			Vector3 mousePosition = Input.mousePosition;
+			Vector3 mousePosition = InputX.mousePosition;
 			return mousePosition.x >= 0 && mousePosition.x <= Screen.width &&
 				   mousePosition.y >= 0 && mousePosition.y <= Screen.height;
 		}
@@ -107,14 +107,14 @@ namespace MassiveHadronLtd
 		private Vector3 GetInputTranslationDirection()
 		{
 			Vector3 direction = Vector3.zero;
-			if (Input.GetKey(KeyCode.W)) direction += Vector3.forward;
-			if (Input.GetKey(KeyCode.S)) direction += Vector3.back;
-			if (Input.GetKey(KeyCode.A)) direction += Vector3.left;
-			if (Input.GetKey(KeyCode.D)) direction += Vector3.right;
-			if (Input.GetKey(KeyCode.Q)) direction += Vector3.down;
-			if (Input.GetKey(KeyCode.E)) direction += Vector3.up;
+			if (InputX.GetKey(KeyCode.W)) direction += Vector3.forward;
+			if (InputX.GetKey(KeyCode.S)) direction += Vector3.back;
+			if (InputX.GetKey(KeyCode.A)) direction += Vector3.left;
+			if (InputX.GetKey(KeyCode.D)) direction += Vector3.right;
+			if (InputX.GetKey(KeyCode.Q)) direction += Vector3.down;
+			if (InputX.GetKey(KeyCode.E)) direction += Vector3.up;
 
-			if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) direction *= 5f;
+			if (InputX.GetKey(KeyCode.LeftShift) || InputX.GetKey(KeyCode.RightShift)) direction *= 5f;
 
 			return direction;
 		}

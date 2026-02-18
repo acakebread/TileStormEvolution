@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using MassiveHadronLtd;
+using UnityEngine;
 using UnityEngine.EventSystems;
 
 namespace ClassicTilestorm
@@ -32,28 +33,28 @@ namespace ClassicTilestorm
 
 		public virtual void Update()
 		{
-			if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1))
+			if (InputX.GetMouseButtonDown(0) || InputX.GetMouseButtonDown(1))
 			{
-				mouseDownPos = Input.mousePosition;
+				mouseDownPos = InputX.mousePosition;
 				mouseMovedBeyondThreshold = false;// update threshold flag
 				touchStartOverGui = IsMouseOverGUI() || ViewPreviewUtil.IsMouseOverPreview();
 			}
 			
-			if ((Input.GetMouseButton(0) || Input.GetMouseButton(1)) && Vector3.Distance(Input.mousePosition, mouseDownPos) >= CLICK_THRESHOLD)
+			if ((InputX.GetMouseButton(0) || InputX.GetMouseButton(1)) && Vector3.Distance(InputX.mousePosition, mouseDownPos) >= CLICK_THRESHOLD)
 				mouseMovedBeyondThreshold = true;// update threshold flag
 
 			var staticClick = !mouseMovedBeyondThreshold;
-			//if (Input.GetMouseButtonUp(0) || Input.GetMouseButtonUp(1))
+			//if (InputX.GetMouseButtonUp(0) || InputX.GetMouseButtonUp(1))
 			//	mouseMovedBeyondThreshold = false;// update threshold flag
 
-			if (Input.GetMouseButtonUp(0))
+			if (InputX.GetMouseButtonUp(0))
 			{
 				isPanning = false;
 				GUIUtility.hotControl = 0;
 			}
 
 			var allowScroll = !(IsMouseOverGUI() || ViewPreviewUtil.IsMouseOverPreview());
-			if (Input.GetMouseButton(0) || Input.GetMouseButton(1))
+			if (InputX.GetMouseButton(0) || InputX.GetMouseButton(1))
 				allowScroll = !touchStartOverGui;
 			else
 				touchStartOverGui = false;
@@ -72,7 +73,7 @@ namespace ClassicTilestorm
 			if (ViewPreviewUtil.IsInFocus || IsMouseOverGUI() || IsGuiControlActive())
 				return;
 
-			if (MassiveHadronLtd.GuiUtils.WasGuiActiveLastFrame)
+			if (GuiUtils.WasGuiActiveLastFrame)
 			{
 				mouseMovedBeyondThreshold = true;//workaround to suppress clean click after popup closed
 				return; // Skip input this frame — GUI consumed it last frame
@@ -116,7 +117,7 @@ namespace ClassicTilestorm
 		protected virtual void StartPanning()
 		{
 			if (isPanning) return;
-			panStartWorldPoint = Map.ScreenToWorld(camera, Input.mousePosition);
+			panStartWorldPoint = Map.ScreenToWorld(camera, InputX.mousePosition);
 			isPanning = panStartWorldPoint != Vector3.negativeInfinity;
 		}
 
@@ -124,7 +125,7 @@ namespace ClassicTilestorm
 		{
 			if (!isPanning) return;
 
-			var currentWorldPoint = Map.ScreenToWorld(camera, Input.mousePosition);
+			var currentWorldPoint = Map.ScreenToWorld(camera, InputX.mousePosition);
 			if (currentWorldPoint != Vector3.negativeInfinity)
 			{
 				var delta = panStartWorldPoint - currentWorldPoint;

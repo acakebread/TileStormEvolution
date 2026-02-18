@@ -22,9 +22,9 @@ namespace MassiveHadronLtd
 		/// </summary>
 		public static bool GetKeyRepeat(KeyCode key)
 		{
-			if (!Input.GetKey(key))
+			if (!InputX.GetKey(key))
 			{
-				if (Input.GetKeyUp(key))
+				if (InputX.GetKeyUp(key))
 				{
 					// Reset state on key release
 					if (keyStates.ContainsKey(key))
