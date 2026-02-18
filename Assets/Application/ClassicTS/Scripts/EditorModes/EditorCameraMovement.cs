@@ -42,6 +42,14 @@ namespace ClassicTilestorm
 					pointerY = (InputX.touches[0].deltaPosition.y + InputX.touches[1].deltaPosition.y) * 0.5f;
 				}
 
+				float scaledLook = 1024f / Mathf.Sqrt(Screen.width * Screen.width + Screen.height * Screen.height);
+#if !UNITY_EDITOR
+				if (Application.isMobilePlatform) scaledLook *= 0.1f;
+#endif
+
+				pointerX *= scaledLook;
+				pointerY *= scaledLook;
+
 				var eulers = camTransform.eulerAngles;
 				eulers.y += LookSpeedH * pointerX;
 				eulers.x -= LookSpeedV * pointerY;
@@ -61,7 +69,7 @@ namespace ClassicTilestorm
 			// Mouse wheel zoom (only if not over GUI)
 			if (!isMouseOverGui && GuiUtils.IsMouseInsideWindow())
 			{
-				const float scrollSensitivity = 0.001f; // ≈ 3–4× typical mouse notch
+				const float scrollSensitivity = 0.05f; // ≈ 3–4× typical mouse notch
 
 				float scroll = InputX.GetAxis("Mouse ScrollWheel");
 				if (scroll != 0f)
