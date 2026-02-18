@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using MassiveHadronLtd;
 
 namespace ClassicTilestorm
@@ -36,8 +36,10 @@ namespace ClassicTilestorm
 
 				if (InputX.touchCount > 1)
 				{
-					pointerX = InputX.touches[1].deltaPosition.x * 0.05f;
-					pointerY = InputX.touches[1].deltaPosition.y * 0.05f;
+					//pointerX = InputX.touches[1].deltaPosition.x * 0.05f;
+					//pointerY = InputX.touches[1].deltaPosition.y * 0.05f;
+					pointerX = (InputX.touches[0].deltaPosition.x + InputX.touches[1].deltaPosition.x) * 0.5f;
+					pointerY = (InputX.touches[0].deltaPosition.y + InputX.touches[1].deltaPosition.y) * 0.5f;
 				}
 
 				var eulers = camTransform.eulerAngles;
@@ -59,9 +61,11 @@ namespace ClassicTilestorm
 			// Mouse wheel zoom (only if not over GUI)
 			if (!isMouseOverGui && GuiUtils.IsMouseInsideWindow())
 			{
+				const float scrollSensitivity = 0.02f; // ≈ 3–4× typical mouse notch
+
 				float scroll = InputX.GetAxis("Mouse ScrollWheel");
 				if (scroll != 0f)
-					translation += Vector3.forward * scroll * ZoomSpeed * MoveSpeedMultiplier * MoveSpeedModifier; //camTransform.Translate(0, 0, scroll * ZoomSpeed * MoveSpeedMultiplier * MoveSpeedModifier, Space.Self);
+					translation += Vector3.forward * scroll * scrollSensitivity * ZoomSpeed * MoveSpeedMultiplier * MoveSpeedModifier * Time.deltaTime; //camTransform.Translate(0, 0, scroll * ZoomSpeed * MoveSpeedMultiplier * MoveSpeedModifier, Space.Self);
 			}
 
 			if (!isMouseOverGui)

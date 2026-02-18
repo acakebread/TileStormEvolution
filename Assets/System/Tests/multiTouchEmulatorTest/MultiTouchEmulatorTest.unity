@@ -497,7 +497,7 @@ MonoBehaviour:
   lookSensitivityY: 8
   pitchMin: -85
   pitchMax: 85
-  zoomSpeed: 0.1
+  zoomSpeed: 1
 --- !u!1 &780684582
 GameObject:
   m_ObjectHideFlags: 0

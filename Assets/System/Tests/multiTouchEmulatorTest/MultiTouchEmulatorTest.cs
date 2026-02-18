@@ -11,7 +11,7 @@ namespace MassiveHadronLtd
 		[Range(-90f, 0f)] public float pitchMin = -85f;
 		[Range(0f, 90f)] public float pitchMax = 85f;
 
-		public float zoomSpeed = 0.1f;
+		public float zoomSpeed = 1f;
 
 		private Camera cam;
 		private float pitch = 20f;
@@ -132,7 +132,7 @@ namespace MassiveHadronLtd
 				if (Mathf.Abs(deltaDistance) > 0.8f) // small deadzone to avoid jitter
 				{
 					// forward = zoom in (pinch out), backward = zoom out (pinch in)
-					Vector3 zoomDelta = transform.forward * (deltaDistance * zoomSpeed);
+					Vector3 zoomDelta = transform.forward * (deltaDistance * Time.deltaTime * zoomSpeed);
 
 					transform.position += zoomDelta;
 				}
