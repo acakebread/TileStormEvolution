@@ -34,6 +34,37 @@ namespace ClassicTilestorm
 				.ThenBy(p => p.PropertyName);
 		}
 
+		private static int[] DecodeTilesSafely(int[] raw)
+		{
+			if (raw == null || raw.Length == 0) return Array.Empty<int>();
+
+			var candidate = raw.SmartRleDecode();
+
+			if (IsValidTileIndices(candidate))
+				return candidate;
+
+			var forced = raw.ForcedRleDecode();
+
+			if (IsValidTileIndices(forced))
+				return forced;
+
+			// Neither valid → error handling
+			return Array.Empty<int>(); // or throw
+		}
+
+		private static bool IsValidTileIndices(int[] arr)
+		{
+			if (arr == null || arr.Length == 0) return false; // or true for empty map?
+
+			int len = arr.Length;
+			for (int i = 0; i < len; i++)
+			{
+				int v = arr[i];
+				if (v < 0 || v >= len) return false;
+			}
+			return true;
+		}
+
 		protected Variant[] ParseTableToVariants(JArray tableArray)
 		{
 			if (tableArray == null) return Array.Empty<Variant>();
@@ -219,21 +250,9 @@ namespace ClassicTilestorm
 			// Decode tiles & solve using the smart decoder (handles both plain and RLE)
 			if (jo["tiles"]?.Type == JTokenType.Array)
 			{
-				var data = jo["tiles"].ToObject<int[]>(serializer);
-				((Map)map).tiles = data?.SmartRleDecode() ?? Array.Empty<int>();
-			}
-
-			if (jo["solve"]?.Type == JTokenType.Array)
-			{
-				var data = jo["solve"].ToObject<int[]>(serializer);
-				((Map)map).solve = data?.SmartRleDecode() ?? Array.Empty<int>();
-			}
-
-			// Decode tiles & solve using the smart decoder (handles both plain and RLE)
-			if (jo["tiles"]?.Type == JTokenType.Array)
-			{
-				var data = jo["tiles"].ToObject<int[]>(serializer);
-				((Map)map).tiles = data?.SmartRleDecode() ?? Array.Empty<int>();
+				//var data = jo["tiles"].ToObject<int[]>(serializer);
+				//((Map)map).tiles = data?.SmartRleDecode() ?? Array.Empty<int>();
+				map.tiles = DecodeTilesSafely(jo["tiles"]?.ToObject<int[]>(serializer));
 			}
 
 			if (jo["solve"]?.Type == JTokenType.Array)

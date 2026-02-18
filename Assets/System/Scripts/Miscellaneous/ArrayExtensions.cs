@@ -144,6 +144,38 @@ namespace MassiveHadronLtd
 			return (int[])encoded.Clone();
 		}
 
+		// ────────────────────────────────────────────────────────────────
+		// Public: Forced RLE Decode — assumes input is always value-count pairs,
+		//         does NOT fall back to plain array
+		// ────────────────────────────────────────────────────────────────
+		public static int[] ForcedRleDecode(this int[] encoded)
+		{
+			if (encoded == null || encoded.Length == 0 || encoded.Length % 2 != 0)
+			{
+				// You can throw, return empty, or log — decide based on your error policy
+				return Array.Empty<int>();
+			}
+
+			var result = new List<int>(encoded.Length * 4); // rough initial capacity
+
+			for (int i = 0; i < encoded.Length; i += 2)
+			{
+				int value = encoded[i];
+				int count = encoded[i + 1];
+
+				// You can decide how strict to be about count <= 0
+				if (count <= 0) continue;           // skip (lenient)
+													// or: throw new FormatException("Invalid run length <= 0");
+
+				for (int j = 0; j < count; j++)
+				{
+					result.Add(value);
+				}
+			}
+
+			return result.ToArray();
+		}
+
 		private static bool IsValidRlePairs(int[] encoded)
 		{
 			for (int i = 1; i < encoded.Length; i += 2)
@@ -164,3 +196,41 @@ namespace MassiveHadronLtd
 		}
 	}
 }
+
+
+//public static int[] SmartRleDecode(this int[] encoded, int? expectedLength = null)
+//{
+//	if (encoded == null || encoded.Length == 0)
+//		return Array.Empty<int>();
+
+//	bool looksLikeRle = encoded.Length % 2 == 0 && IsValidRlePairs(encoded);
+
+//	if (looksLikeRle)
+//	{
+//		var decoded = RleDecodeInternal(encoded);  // or ForcedRleDecode(encoded)
+
+//		// If we have ground truth → this is the decisive check
+//		if (expectedLength.HasValue)
+//		{
+//			if (decoded.Length == expectedLength.Value)
+//				return decoded;
+//		}
+//		else
+//		{
+//			// old heuristic — keep only if no expected length given
+//			if (decoded.Length > 0 && Math.Abs(decoded.Length - encoded.Length * 10) < encoded.Length * 20)
+//				return decoded;
+//		}
+//	}
+
+//	// Either not RLE, or RLE gave wrong size → assume plain
+//	var plain = (int[])encoded.Clone();
+
+//	// Optional: if we have expected length, we can at least warn / log when plain also wrong
+//	if (expectedLength.HasValue && plain.Length != expectedLength.Value)
+//	{
+//		// log warning: "Neither RLE nor plain interpretation matches expected size {expectedLength}"
+//	}
+
+//	return plain;
+//}
