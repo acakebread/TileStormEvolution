@@ -8,8 +8,9 @@ namespace ClassicTilestorm
 		private const float LookSpeedH = 2f;
 		private const float LookSpeedV = 2f;
 		private const float ZoomSpeed = 12f;
-		private const float MoveSpeedMultiplier = 1f;
+		private const float TouchCompensation = 10f;
 		private static float MoveSpeedModifier = 1f;
+		private static float ModifiedZoomSpeed => ZoomSpeed * MoveSpeedModifier;
 
 		private static bool focus = false;
 		public static void UpdateCamera(Transform camTransform, bool isMouseOverGui = false, bool allowInput = true)
@@ -29,22 +30,33 @@ namespace ClassicTilestorm
 			}
 
 			// Right mouse button or touch = orbit
-			if (focus && (InputX.GetMouseButton(1) || InputX.touchCount > 1))
+			//if (focus && (InputX.GetMouseButton(1) || InputX.touchCount > 1))
+			if (focus && InputX.touchCount == 2)
 			{
-				float pointerX = InputX.GetAxis("Mouse X");
-				float pointerY = InputX.GetAxis("Mouse Y");
+				float pointerX = 0f;// InputX.GetAxis("Mouse X");
+				float pointerY = 0f;//InputX.GetAxis("Mouse Y");
 
 				if (InputX.touchCount > 1)
 				{
 					//pointerX = InputX.touches[1].deltaPosition.x * 0.05f;
 					//pointerY = InputX.touches[1].deltaPosition.y * 0.05f;
-					pointerX = (InputX.touches[0].deltaPosition.x + InputX.touches[1].deltaPosition.x) * 0.5f;
-					pointerY = (InputX.touches[0].deltaPosition.y + InputX.touches[1].deltaPosition.y) * 0.5f;
+
+					if ((InputX.touches[0].phase == TouchPhase.Stationary || InputX.touches[0].phase == TouchPhase.Moved) &&
+						(InputX.touches[1].phase == TouchPhase.Stationary || InputX.touches[1].phase == TouchPhase.Moved))
+					{
+						pointerX = (InputX.touches[0].deltaPosition.x + InputX.touches[1].deltaPosition.x) * 0.5f;
+						pointerY = (InputX.touches[0].deltaPosition.y + InputX.touches[1].deltaPosition.y) * 0.5f;
+					}
+					//else
+					//{
+					//	pointerX = InputX.touches[1].deltaPosition.x;
+					//	pointerY = InputX.touches[1].deltaPosition.y;
+					//}
 				}
 
-				float scaledLook = 1024f / Mathf.Sqrt(Screen.width * Screen.width + Screen.height * Screen.height);
-#if !UNITY_EDITOR
-				if (Application.isMobilePlatform) scaledLook *= 0.1f;
+				float scaledLook = 2048f / Mathf.Sqrt(Screen.width * Screen.width + Screen.height * Screen.height);
+#if !UNITY_EDITOR && (UNITY_IOS || UNITY_ANDROID)
+				if (Application.isMobilePlatform) scaledLook /= TouchCompensation;
 #endif
 
 				pointerX *= scaledLook;
@@ -64,20 +76,14 @@ namespace ClassicTilestorm
 				MoveSpeedModifier = 0.1f / MoveSpeedModifier;
 
 			// WASDQE movement
-			Vector3 translation = GetInputTranslationDirection() * ZoomSpeed * MoveSpeedMultiplier * MoveSpeedModifier * Time.deltaTime;
+			Vector3 translation = GetInputTranslationDirection() * ModifiedZoomSpeed * Time.deltaTime;
 
 			// Mouse wheel zoom (only if not over GUI)
 			if (!isMouseOverGui && GuiUtils.IsMouseInsideWindow())
 			{
-#if UNITY_IOS || UNITY_ANDROID
-				const float scrollSensitivity = 0.05f; // ≈ 3–4× typical mouse notch
-#else
-				const float scrollSensitivity = 60f;
-#endif
-
-				float scroll = InputX.GetAxis("Mouse ScrollWheel");
+				var scroll = InputX.GetAxis("Mouse ScrollWheel") * TouchCompensation;
 				if (scroll != 0f)
-					translation += Vector3.forward * scroll * scrollSensitivity * ZoomSpeed * MoveSpeedMultiplier * MoveSpeedModifier * Time.deltaTime; //camTransform.Translate(0, 0, scroll * ZoomSpeed * MoveSpeedMultiplier * MoveSpeedModifier, Space.Self);
+					translation += Vector3.forward * scroll * ModifiedZoomSpeed;
 			}
 
 			if (!isMouseOverGui)

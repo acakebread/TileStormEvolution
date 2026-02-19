@@ -101,6 +101,7 @@ namespace ClassicTilestorm
 		{
 			DrawMainUI((currentMode ?? EditorMode.Placement).ToString(), gridEnabled);
 			activeMode?.OnGUI();
+			//MultiTouchEmulator.OnGUI();//for debugging touch emulator
 		}
 
 		public void OnApplicationFocus(bool hasFocus) => activeMode?.OnApplicationFocus(hasFocus);

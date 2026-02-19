@@ -1,4 +1,5 @@
-﻿#if UNITY_IOS || UNITY_ANDROID
+﻿#if true
+//#if !UNITY_EDITOR && (UNITY_IOS || UNITY_ANDROID)
 
 using UnityEngine;
 using System.Linq;
@@ -149,14 +150,15 @@ namespace MassiveHadronLtd
 		{
 			if (axisName != "Mouse ScrollWheel")
 			{
-				return Input.GetAxis(axisName);
+				return Input.GetAxis(axisName);// * TOUCH_PINCH_MOUSE_WHEEL_NOMALISE_RATIO / Mathf.Sqrt(Screen.width * Screen.width + Screen.height * Screen.height);//normalise
 			}
 
 			var ts = GetTouches();
 			if (ts.Length != 2)
 			{
+				return 0;//
 				// No pinch emulation active → use real scroll
-				return Input.GetAxis("Mouse ScrollWheel");
+				//return Input.GetAxis("Mouse ScrollWheel");
 			}
 
 			// Try to estimate scroll direction & magnitude from pinch distance change
@@ -180,7 +182,8 @@ namespace MassiveHadronLtd
 			// Tune multiplier to match how much legacy code expects per notch
 			const float scrollSensitivity = 1f;// 0.1f; // ≈ 3–4× typical mouse notch
 
-			return deltaDist * scrollSensitivity;
+			return deltaDist * scrollSensitivity / Mathf.Sqrt(Screen.width * Screen.width + Screen.height * Screen.height);
+			//return deltaDist * scrollSensitivity;
 		}
 
 		// Helpers
