@@ -18,6 +18,7 @@ namespace MassiveHadronLtd
 		{
 			base.Awake();
 
+			PostProcessingEnabled = false;
 			camera.transform.position = iorigin;
 			var direction = itarget - iorigin;
 			if (direction.sqrMagnitude > Mathf.Epsilon)
@@ -29,8 +30,7 @@ namespace MassiveHadronLtd
 			base.OnEnable();
 			fieldOfView = 60f;
 			camera.fieldOfView = fieldOfView;
-			postProcessingEnabled = false;
-
+			EnablePostProcessing = PostProcessingEnabled;
 			// Initialize rotation and state
 			yaw = camera.transform.eulerAngles.y;
 			pitch = camera.transform.eulerAngles.x;

@@ -1,3 +1,4 @@
+﻿using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -15,7 +16,11 @@ namespace ClassicTilestorm
 		[SerializeField] private Button ExportMapButton;
 
 		[SerializeField] private Toggle gridLinesToggle;
-		[SerializeField] private Toggle depthOfFieldToggle;
+		[SerializeField] private Toggle postProcessingToggle;
+
+		[SerializeField] private Slider detailLevelSlider;          // ← new
+		[SerializeField] private TMP_Text detailLevelLabel;           // optional – shows current text
+
 		[SerializeField] private Toggle remapAssetsToggle;
 
 		protected override void Awake()
@@ -64,16 +69,88 @@ namespace ClassicTilestorm
 					gridLinesToggle.isOn = editorController.GridEnabled;
 					gridLinesToggle.onValueChanged.AddListener(isOn => editorController.GridEnabled = isOn);
 				}
-				if (null != depthOfFieldToggle)
+				//if (null != postProcessingToggle)
+				//{
+				//	postProcessingToggle.isOn = editorController.PostProcessingEnabled;
+				//	postProcessingToggle.onValueChanged.AddListener(isOn => editorController.PostProcessingEnabled = isOn);
+				//}
+
+				// ─────────────── New detail level slider logic ───────────────
+				if (null != detailLevelSlider)
 				{
-					depthOfFieldToggle.isOn = editorController.DofEnabled;
-					depthOfFieldToggle.onValueChanged.AddListener(isOn => editorController.DofEnabled = isOn);
+					// Default to Game Only
+					detailLevelSlider.minValue = 0;
+					detailLevelSlider.maxValue = 2;
+					detailLevelSlider.wholeNumbers = true;
+
+					// Load initial value
+					//bool ppGame = editorController.PostProcessingEnabled;
+					//bool ppEditor = editorController.PostProcessingEnabled;/* decide how to load editor-specific setting – see note below */;
+
+					//int initialValue = 0;
+					//if (ppGame)
+					//{
+					//	initialValue = ppEditor ? 2 : 1;
+					//}
+
+					//bool ppGame = editorController.PostProcessingEnabled;
+					bool ppEditor = editorController.PostProcessingEnabled;/* decide how to load editor-specific setting – see note below */;
+
+					int initialValue = ppEditor ? 2 : 1;
+
+					detailLevelSlider.value = initialValue;
+
+					// Optional: show current mode as text
+					if (detailLevelLabel != null)
+						UpdateDetailLabel(initialValue);
+
+					detailLevelSlider.onValueChanged.AddListener(OnDetailLevelChanged);
+
+					// Apply initial state
+					OnDetailLevelChanged(initialValue);
 				}
+
 				if (null != remapAssetsToggle)
 				{
 					remapAssetsToggle.isOn = ApplicationSettings.RemapGeometry;
 					remapAssetsToggle.onValueChanged.AddListener(isOn => ApplicationSettings.RemapGeometry = isOn);
 				}
+			}
+		}
+
+		private void OnDetailLevelChanged(float value)
+		{
+			int mode = Mathf.RoundToInt(value);
+
+			var mainController = FindAnyObjectByType<MainController>(FindObjectsInactive.Include);
+			if (null != mainController)
+				mainController.PostProcessingLevel = mode;
+
+			//var editor = FindAnyObjectByType<EditorController>(FindObjectsInactive.Include);
+			//if (null != editor)
+			//	editor.PostProcessingEnabled = (mode >= 1);           // GameOnly or Game+Editor
+
+			// Core logic: decide who gets post-processing
+
+			// If your EditorController has a separate flag for editor-only post-processing:
+			// editor.PostProcessingInEditorOnly = (mode == 2);
+
+			// Or if it uses the same bool but only applies in editor context:
+			// (most common approach → one bool, controlled by context)
+
+			UpdateDetailLabel(mode);
+		}
+
+		private void UpdateDetailLabel(int mode)
+		{
+			if (detailLevelLabel == null) return;
+
+			switch (mode)
+			{
+				case 0: detailLevelLabel.text = "Off"; break;
+				case 1: detailLevelLabel.text = "Game Only"; break;
+				case 2: detailLevelLabel.text = "Game + Editor"; break;
+				default: detailLevelLabel.text = "—"; break;
 			}
 		}
 		//private MainCameraController mainCameraController { get { TryGetComponent<MainCameraController>(out var controller); return controller; } }

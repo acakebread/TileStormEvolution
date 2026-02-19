@@ -22,7 +22,8 @@ namespace ClassicTilestorm
 			fieldOfView = 20f;
 			origin = originFn?.Invoke() ?? Vector3.zero;
 			target = targetFn?.Invoke() ?? Vector3.forward;
-			postProcessingEnabled = true;
+			EnablePostProcessing = PostProcessingEnabled;
+			//postProcessingEnabled = true;
 		}
 
 		public override void Update()

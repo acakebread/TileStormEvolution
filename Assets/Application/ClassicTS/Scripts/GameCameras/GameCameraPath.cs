@@ -74,7 +74,7 @@ namespace ClassicTilestorm
 			base.OnEnable();
 			smoothing = DefaultSmoothingRate;
 			fieldOfView = 45f;
-			postProcessingEnabled = true;
+			//postProcessingEnabled = true;
 
 			if (camera == null)
 			{

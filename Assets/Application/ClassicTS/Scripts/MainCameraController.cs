@@ -15,6 +15,8 @@ namespace ClassicTilestorm
 		private GestureController gestureController;
 		private PostProcessingCameraController postProcessingController;
 
+		public int PostProcessingLevel { get; set; }
+
 		private const int MaxFocusPoints = 50;
 		private const float MinDistanceForNewFocusPoint = 3f;
 		private const float CinemaTimeoutDuration = 5f;
@@ -40,6 +42,7 @@ namespace ClassicTilestorm
 			gestureController = GetComponent<GestureController>();
 			OnWaypointReachedForGestures += OnWaypointGesturesEnable;
 			gestureController.OnMapUpdated += CheckDisableDrag;
+			PostProcessingLevel = 1;
 		}
 
 		private void CheckDisableDrag(IMapPlay imap)
@@ -155,6 +158,7 @@ namespace ClassicTilestorm
 			}
 
 			postProcessingController = InitialisePostProcessingController(camera);
+
 			var postProcessingCamera = postProcessingController.GetComponent<Camera>();
 			if (null != postProcessingCamera)//ensure clip planes are synchronised - important for depth of field
 			{
@@ -177,11 +181,11 @@ namespace ClassicTilestorm
 
 			var (srcPos, dstPos) = GetInitialCameraPositions();
 
-			RegisterCamera(new GameCameraEditor(camera) { iorigin = srcPos, itarget = dstPos }, CameraModeRegistry.Editor);
-			RegisterCamera(new GameCameraFollow(camera) { iorigin = srcPos, itarget = GetTargetPosition().Invoke(), targetFn = GetTargetPosition() }, CameraModeRegistry.Follow);
-			RegisterCamera(new GameCameraPreset(camera) { iorigin = srcPos, itarget = dstPos, originFn = () => srcPos, targetFn = GetTargetPosition() }, CameraModeRegistry.Preset);
-			RegisterCamera(new GameCameraOrbit(camera) { iorigin = srcPos, itarget = dstPos, targetFn = GetTargetPosition() }, CameraModeRegistry.Orbit);
-			RegisterCamera(new GameCameraPath(camera) { iorigin = srcPos, itarget = dstPos, pointsFn = GetFocusPoints(), targetFn = GetTargetPosition() }, CameraModeRegistry.Path);
+			RegisterCamera(new GameCameraEditor(camera) { iorigin = srcPos, itarget = dstPos, PostProcessingEnabled = PostProcessingLevel >= 2 }, CameraModeRegistry.Editor);
+			RegisterCamera(new GameCameraFollow(camera) { iorigin = srcPos, itarget = GetTargetPosition().Invoke(), targetFn = GetTargetPosition(), PostProcessingEnabled = PostProcessingLevel >= 1 }, CameraModeRegistry.Follow);
+			RegisterCamera(new GameCameraPreset(camera) { iorigin = srcPos, itarget = dstPos, originFn = () => srcPos, targetFn = GetTargetPosition(), PostProcessingEnabled = PostProcessingLevel >= 1 }, CameraModeRegistry.Preset);
+			RegisterCamera(new GameCameraOrbit(camera) { iorigin = srcPos, itarget = dstPos, targetFn = GetTargetPosition(), PostProcessingEnabled = PostProcessingLevel >= 1 }, CameraModeRegistry.Orbit);
+			RegisterCamera(new GameCameraPath(camera) { iorigin = srcPos, itarget = dstPos, pointsFn = GetFocusPoints(), targetFn = GetTargetPosition(), PostProcessingEnabled = PostProcessingLevel >= 1 }, CameraModeRegistry.Path);
 
 			GameModes.RegisterAllModes(RegisterMode);
 		}

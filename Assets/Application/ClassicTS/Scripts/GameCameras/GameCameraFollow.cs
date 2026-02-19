@@ -20,7 +20,8 @@ namespace ClassicTilestorm
 			base.OnEnable();
 			smoothing = 64f;
 			fieldOfView = 20f;
-			postProcessingEnabled = true;
+			//postProcessingEnabled = true;
+			EnablePostProcessing = PostProcessingEnabled;
 			UpdateCamera();
 		}
 

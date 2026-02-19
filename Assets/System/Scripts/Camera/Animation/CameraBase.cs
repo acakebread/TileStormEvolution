@@ -37,11 +37,17 @@ namespace MassiveHadronLtd
 		protected float smoothing = 64f;// Default Smoothing Rate
 		protected const float TargetFPS = 60f;
 
-		protected bool postProcessingEnabled
+		public bool postProcessingEnabled;
+		public bool PostProcessingEnabled
 		{
-			get => null != controller ? controller.enabled : false;
-			set { if (null != controller) controller.enabled = value; }
+			get => postProcessingEnabled;
+			set => postProcessingEnabled = value;
+			//get => null != controller ? controller.enabled : false;
+			//set { if (null != controller) controller.enabled = value; }
 		}
+
+		protected bool EnablePostProcessing { set { if (null != controller) controller.enabled = value; } }
+
 		public PostProcessingCameraController controller => camera?.GetComponentInChildren<PostProcessingCameraController>(true);
 
 		public virtual void OnMapOriginShift(Vector3 delta)

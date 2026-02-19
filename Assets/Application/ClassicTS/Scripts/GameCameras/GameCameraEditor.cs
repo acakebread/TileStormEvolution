@@ -10,7 +10,8 @@ namespace ClassicTilestorm
 		public override void OnEnable()
 		{
 			camera.fieldOfView = 60f;
-			postProcessingEnabled = false;
+			//postProcessingEnabled = false;
+			EnablePostProcessing = PostProcessingEnabled;
 			camera.transform.position = iorigin;
 			var direction = itarget - iorigin;
 			if (direction.sqrMagnitude > Mathf.Epsilon)

@@ -17,10 +17,10 @@ namespace ClassicTilestorm
 		private EditorMode? currentMode = null;
 
 		private bool gridEnabled = true;
-		private bool dofEnabled = false;
+		private bool postProcessingEnabled = false;
 
 		public bool GridEnabled { get => gridEnabled; set => OnGridLinesToggled(value); }
-		public bool DofEnabled { get => dofEnabled; set => OnDofToggled(value); }
+		public bool PostProcessingEnabled { get => postProcessingEnabled; set => OnPostProcessingToggled(value); }
 
 		private Volume getVolume(GameObject root) => root.GetComponentInChildren<Volume>(true);
 
@@ -72,7 +72,7 @@ namespace ClassicTilestorm
 				controller.UpdateGestureControllerState();
 			}
 			UpdateGridLines(gridEnabled);
-			UpdateDOF(dofEnabled);
+			UpdatePostProcessing(postProcessingEnabled);
 			activeMode?.OnEnable();
 			EnableEggbot(false);
 		}
@@ -122,7 +122,7 @@ namespace ClassicTilestorm
 		}
 
 		private void UpdateGridLines(bool enabled = true) => GridLinesUtil.Show(transform, null != iMap ? iMap.Width : 32, null != iMap ? iMap.Height : 32, gridEnabled = enabled, offset: null!=iMap ? iMap.TileRenderPosition(0) + new Vector3(-0.5f, 0f, -0.5f) : Vector3.zero);
-		private void UpdateDOF(bool enabled = true)
+		private void UpdatePostProcessing(bool enabled = true)
 		{
 			if (null != gameCameraEditor)
 			{
@@ -134,7 +134,7 @@ namespace ClassicTilestorm
 		}
 
 		private void OnGridLinesToggled(bool value) => UpdateGridLines(gridEnabled = value);
-		private void OnDofToggled(bool value) => UpdateDOF(dofEnabled = value);
+		private void OnPostProcessingToggled(bool value) => UpdatePostProcessing(postProcessingEnabled = value);
 
 		private void SetEditorMode(EditorMode newMode)
 		{
