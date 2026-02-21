@@ -1,5 +1,5 @@
-﻿#if true
-//#if !UNITY_EDITOR && (UNITY_IOS || UNITY_ANDROID)
+﻿//#if true
+#if !UNITY_EDITOR && (UNITY_IOS || UNITY_ANDROID)
 
 using UnityEngine;
 using System.Linq;
