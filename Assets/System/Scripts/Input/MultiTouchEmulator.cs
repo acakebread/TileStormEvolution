@@ -60,40 +60,35 @@ namespace MassiveHadronLtd
 					Vector2 pos = Input.mousePosition;
 					Vector2 delta = new Vector2(Input.GetAxis("Mouse X"), Input.GetAxis("Mouse Y"));
 
-					TouchPhase sharedPhase = GetPhase(0, old);
-					if (old.ContainsKey(1) && old[1].phase == TouchPhase.Began)
-						sharedPhase = TouchPhase.Began;
-
-					var baseTouch = new Touch
-					{
-						position = pos,
-						deltaPosition = delta,
-						phase = sharedPhase,
-						tapCount = 0,
-						type = TouchType.Indirect
-					};
-
+					// finger 0 = primary pointer, always gets real movement & phase
 					map[0] = new Touch
 					{
 						fingerId = 0,
-						position = baseTouch.position,
-						deltaPosition = baseTouch.deltaPosition,
-						phase = baseTouch.phase,
-						tapCount = baseTouch.tapCount,
-						type = baseTouch.type
+						position = pos,
+						deltaPosition = delta,
+						phase = GetPhase(0, old),
+						type = TouchType.Indirect
 					};
+
+					// finger 1 = RMB marker: starts as Began, stays Began (or Stationary if you prefer)
+					// Never give it delta/movement → easy to detect as "not real finger"
+					TouchPhase phase1 = TouchPhase.Began;
+					if (old.ContainsKey(1) && old[1].phase != TouchPhase.Ended)
+					{
+						phase1 = TouchPhase.Stationary;  // or keep Began — Stationary might feel more natural in some UI
+					}
 
 					map[1] = new Touch
 					{
 						fingerId = 1,
-						position = baseTouch.position,
-						deltaPosition = baseTouch.deltaPosition,
-						phase = baseTouch.phase,
-						tapCount = baseTouch.tapCount,
-						type = baseTouch.type
+						position = pos,               // same pos → average = mouse
+						deltaPosition = delta,      // no movement → easy to filter as marker
+						phase = phase1,
+						tapCount = 0,
+						type = TouchType.Indirect
 					};
 				}
-				
+
 				if (Mathf.Abs(scroll) > 0.001f)
 				{
 					float scaledScroll = scroll * TOUCH_PINCH_MOUSE_WHEEL_NOMALISE_RATIO;

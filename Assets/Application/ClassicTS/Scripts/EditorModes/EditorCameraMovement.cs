@@ -7,10 +7,10 @@ namespace ClassicTilestorm
 	{
 		private const float LookSpeedH = 4f;
 		private const float LookSpeedV = 4f;
-		private const float ZoomSpeed = 8f;
+		private const float MoveSpeed = 8f;
 		private const float TouchCompensation = 4f;
 		private static float MoveSpeedModifier = 1f;
-		private static float ModifiedZoomSpeed => ZoomSpeed * MoveSpeedModifier;
+		private static float ModifiedZoomSpeed => MoveSpeed * MoveSpeedModifier;
 
 		private static bool focus = false;
 		public static void UpdateCamera(Transform camTransform, bool isMouseOverGui = false, bool allowInput = true)
@@ -33,27 +33,16 @@ namespace ClassicTilestorm
 			// Right mouse button or touch = orbit
 			//if (focus && (InputX.GetMouseButton(1) || InputX.touchCount > 1))
 
-#if !UNITY_EDITOR && (UNITY_IOS || UNITY_ANDROID)
+#if true//!UNITY_EDITOR && (UNITY_IOS || UNITY_ANDROID)
 			if (focus && InputX.touchCount == 2)
 			{
 				float pointerX = 0f;
 				float pointerY = 0f;
-				if (InputX.touchCount > 1)
+				if ((InputX.touches[0].phase == TouchPhase.Stationary || InputX.touches[0].phase == TouchPhase.Moved) &&
+					(InputX.touches[1].phase == TouchPhase.Stationary || InputX.touches[1].phase == TouchPhase.Moved))
 				{
-					//pointerX = InputX.touches[1].deltaPosition.x * 0.05f;
-					//pointerY = InputX.touches[1].deltaPosition.y * 0.05f;
-
-					if ((InputX.touches[0].phase == TouchPhase.Stationary || InputX.touches[0].phase == TouchPhase.Moved) &&
-						(InputX.touches[1].phase == TouchPhase.Stationary || InputX.touches[1].phase == TouchPhase.Moved))
-					{
-						pointerX = (InputX.touches[0].deltaPosition.x + InputX.touches[1].deltaPosition.x) * 0.5f;
-						pointerY = (InputX.touches[0].deltaPosition.y + InputX.touches[1].deltaPosition.y) * 0.5f;
-					}
-					//else
-					//{
-					//	pointerX = InputX.touches[1].deltaPosition.x;
-					//	pointerY = InputX.touches[1].deltaPosition.y;
-					//}
+					pointerX = (InputX.touches[0].deltaPosition.x + InputX.touches[1].deltaPosition.x) * 0.5f;
+					pointerY = (InputX.touches[0].deltaPosition.y + InputX.touches[1].deltaPosition.y) * 0.5f;
 				}
 #else
 			if (focus && InputX.GetMouseButton(1))
@@ -63,9 +52,9 @@ namespace ClassicTilestorm
 
 #endif
 				float scaledLook = 1024f / Mathf.Sqrt(Screen.width * Screen.width + Screen.height * Screen.height);
-#if !UNITY_EDITOR && (UNITY_IOS || UNITY_ANDROID)
-				if (Application.isMobilePlatform) scaledLook /= TouchCompensation;
-#endif
+//#if !UNITY_EDITOR && (UNITY_IOS || UNITY_ANDROID)
+//				if (Application.isMobilePlatform) scaledLook /= TouchCompensation;
+//#endif
 
 				pointerX *= scaledLook;
 				pointerY *= scaledLook;

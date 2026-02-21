@@ -1,5 +1,6 @@
-﻿//#if true
-#if !UNITY_EDITOR && (UNITY_IOS || UNITY_ANDROID)
+﻿#define EMULATE
+#if EMULATE
+//#if !UNITY_EDITOR && (UNITY_IOS || UNITY_ANDROID)
 
 using UnityEngine;
 using System.Linq;
@@ -56,18 +57,20 @@ namespace MassiveHadronLtd
 		public static bool GetMouseButtonDown(int button)
 		{
 			var ts = GetTouches();
+			if (0 == ts.Length) return false;
+			if (LooksLikeActiveScroll(ts)) return false;  // ignore pure scroll frames for button events
 
-			if (button == 0) // left ~ primary touch began
+			if (button == 0)
 			{
-				//return ts.Any(t => t.fingerId == 0 && t.phase == TouchPhase.Began);
-				return ts.Length == 1 && ts[0].fingerId == 0 && ts[0].phase == TouchPhase.Began;
+				// LMB: only finger 0 began, no finger 1
+				return ts.Any(t => t.fingerId == 0 && t.phase == TouchPhase.Began)
+					   && !ts.Any(t => t.fingerId == 1);
 			}
 
-			if (button == 1) // right ~ secondary touch began (or two touches appeared)
+			if (button == 1)
 			{
-				// Typical right-mouse emulation gives two touches at Began together
-				var beganTouches = ts.Where(t => t.phase == TouchPhase.Began).ToArray();
-				return beganTouches.Length >= 1 && beganTouches.All(t => t.phase == TouchPhase.Began);
+				// RMB down: finger 1 appeared (Began or first Stationary)
+				return ts.Any(t => t.fingerId == 1 && (t.phase == TouchPhase.Began /* || t.phase == TouchPhase.Stationary */ ));
 			}
 
 			return false;
@@ -75,14 +78,113 @@ namespace MassiveHadronLtd
 
 		public static bool GetMouseButton(int button)
 		{
-			//do not attempt to emulate RMB right now
-			if (button == 1)
-				return Input.GetMouseButton(button);
 			var ts = GetTouches();
-			if (ts.Length == 1)
-				return ts[0].phase == TouchPhase.Moved || ts[0].phase == TouchPhase.Stationary;
+			if (0 == ts.Length) return false;
+			if (LooksLikeActiveScroll(ts)) return false;  // ignore pure scroll frames for button events
+
+			if (button == 0)
+			{
+				// LMB held: finger 0 active, no finger 1 present
+				return ts.Any(t => t.fingerId == 0 && (t.phase == TouchPhase.Moved || t.phase == TouchPhase.Stationary))
+					   && !ts.Any(t => t.fingerId == 1);
+			}
+
+			if (button == 1)
+			{
+				// RMB held: finger 1 exists (marker) + finger 0 active
+				var finger1 = ts.FirstOrDefault(t => t.fingerId == 1);
+				bool hasMarker = finger1.fingerId == 1 && (finger1.phase == TouchPhase.Began || finger1.phase == TouchPhase.Stationary);
+				bool finger0Active = ts.Any(t => t.fingerId == 0 && (t.phase == TouchPhase.Moved || t.phase == TouchPhase.Stationary));
+
+				return hasMarker && finger0Active;
+			}
+
 			return false;
 		}
+
+		public static bool GetMouseButtonUp(int button)
+		{
+			var ts = GetTouches();
+			if (0 == ts.Length) return false;
+			if (LooksLikeActiveScroll(ts)) 
+				return false;  // ignore pure scroll frames for button events
+
+			if (button == 0)
+			{
+				//return ts.Any(t => t.fingerId == 0 && t.phase == TouchPhase.Ended) && !ts.Any(t => t.fingerId == 1);
+				if (ts.Any(t => t.fingerId == 0 && t.phase == TouchPhase.Ended) && !ts.Any(t => t.fingerId == 1))
+					return true;
+			}
+
+			if (button == 1)
+			{
+				// RMB up: finger 1 Ended this frame (marker disappeared)
+				//return ts.Any(t => t.fingerId == 1 && t.phase == TouchPhase.Ended);
+				if (ts.Any(t => t.fingerId == 1 && t.phase == TouchPhase.Ended))
+					return true;
+			}
+
+			return false;
+		}
+
+		private static bool LooksLikeActiveScroll(Touch[] ts)
+		{
+			if (ts.Length != 2) return false;
+
+			var t0 = ts.FirstOrDefault(t => t.fingerId == 0);
+			var t1 = ts.FirstOrDefault(t => t.fingerId == 1);
+
+			if (t0.Equals(default(Touch)) || t1.Equals(default(Touch))) return false;
+
+			//// Require actual movement — both fingers must be in Moved phase
+			//if (t0.phase != TouchPhase.Moved || t1.phase != TouchPhase.Moved)
+			//	return false;
+
+			// Deltas should be opposite and non-trivial
+			Vector2 sumDelta = t0.deltaPosition + t1.deltaPosition;
+			if (sumDelta.sqrMagnitude > 0.05f) return false;          // allow tiny residual noise
+
+			// Each delta should have meaningful length (not just noise)
+			if (t0.deltaPosition.sqrMagnitude < 0.01f) return false;
+			if (t1.deltaPosition.sqrMagnitude < 0.01f) return false;
+
+			// Optional: positions reasonably close (pinch/scroll is usually centered)
+			float dist = Vector2.Distance(t0.position, t1.position);
+			if (dist > 120f) return false;  // tune higher if needed
+
+			return true;
+		}
+
+		//public static bool GetMouseButtonDown(int button)
+		//{
+		//	var ts = GetTouches();
+
+		//	if (button == 0) // left ~ primary touch began
+		//	{
+		//		//return ts.Any(t => t.fingerId == 0 && t.phase == TouchPhase.Began);
+		//		return ts.Length == 1 && ts[0].fingerId == 0 && ts[0].phase == TouchPhase.Began;
+		//	}
+
+		//	if (button == 1) // right ~ secondary touch began (or two touches appeared)
+		//	{
+		//		// Typical right-mouse emulation gives two touches at Began together
+		//		var beganTouches = ts.Where(t => t.phase == TouchPhase.Began).ToArray();
+		//		return beganTouches.Length >= 1 && beganTouches.All(t => t.phase == TouchPhase.Began);
+		//	}
+
+		//	return false;
+		//}
+
+		//public static bool GetMouseButton(int button)
+		//{
+		//	//do not attempt to emulate RMB right now
+		//	if (button == 1)
+		//		return Input.GetMouseButton(button);
+		//	var ts = GetTouches();
+		//	if (ts.Length == 1)
+		//		return ts[0].phase == TouchPhase.Moved || ts[0].phase == TouchPhase.Stationary;
+		//	return false;
+		//}
 
 		//public static bool GetMouseButton(int button)
 		//{
@@ -116,31 +218,31 @@ namespace MassiveHadronLtd
 		//	return false;
 		//}
 
-		public static bool GetMouseButtonUp(int button)
-		{
-			var ts = GetTouches();
+		//public static bool GetMouseButtonUp(int button)
+		//{
+		//	var ts = GetTouches();
 
-			if (button == 0)
-			{
-				return ts.Length == 1 && ts[0].fingerId == 0 && ts[0].phase == TouchPhase.Ended;
-				//return ts.Any(t => t.fingerId == 0 && t.phase == TouchPhase.Ended);
-			}
+		//	if (button == 0)
+		//	{
+		//		return ts.Length == 1 && ts[0].fingerId == 0 && ts[0].phase == TouchPhase.Ended;
+		//		//return ts.Any(t => t.fingerId == 0 && t.phase == TouchPhase.Ended);
+		//	}
 
-			if (button == 1)
-			{
-				return ts.Length == 2 && ts[0].fingerId == 0 && ts[0].phase != TouchPhase.Ended && ts[1].fingerId == 1 && ts[1].phase == TouchPhase.Ended;
+		//	if (button == 1)
+		//	{
+		//		return ts.Length == 2 && ts[0].fingerId == 0 && ts[0].phase != TouchPhase.Ended && ts[1].fingerId == 1 && ts[1].phase == TouchPhase.Ended;
 
 
-				//if (ts.Any(t => t.fingerId == 1 && t.phase == TouchPhase.Ended) ||
-				//	   (ts.Length == 0 && Input.GetMouseButtonUp(1)))
-				//	return true;
+		//		//if (ts.Any(t => t.fingerId == 1 && t.phase == TouchPhase.Ended) ||
+		//		//	   (ts.Length == 0 && Input.GetMouseButtonUp(1)))
+		//		//	return true;
 
-				//return ts.Any(t => t.fingerId == 1 && t.phase == TouchPhase.Ended) ||
-				//	   (ts.Length == 0 && Input.GetMouseButtonUp(1)); // fallback for clean release
-			}
+		//		//return ts.Any(t => t.fingerId == 1 && t.phase == TouchPhase.Ended) ||
+		//		//	   (ts.Length == 0 && Input.GetMouseButtonUp(1)); // fallback for clean release
+		//	}
 
-			return false;
-		}
+		//	return false;
+		//}
 
 		// ────────────────────────────────────────────────
 		// Scroll wheel emulation is the tricky part
