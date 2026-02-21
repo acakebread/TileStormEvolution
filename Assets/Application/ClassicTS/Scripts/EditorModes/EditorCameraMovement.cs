@@ -29,13 +29,15 @@ namespace ClassicTilestorm
 				return;
 			}
 
+
 			// Right mouse button or touch = orbit
 			//if (focus && (InputX.GetMouseButton(1) || InputX.touchCount > 1))
+
+#if !UNITY_EDITOR && (UNITY_IOS || UNITY_ANDROID)
 			if (focus && InputX.touchCount == 2)
 			{
-				float pointerX = 0f;// InputX.GetAxis("Mouse X");
-				float pointerY = 0f;//InputX.GetAxis("Mouse Y");
-
+				float pointerX = 0f;
+				float pointerY = 0f;
 				if (InputX.touchCount > 1)
 				{
 					//pointerX = InputX.touches[1].deltaPosition.x * 0.05f;
@@ -53,7 +55,13 @@ namespace ClassicTilestorm
 					//	pointerY = InputX.touches[1].deltaPosition.y;
 					//}
 				}
+#else
+			if (focus && InputX.GetMouseButton(1))
+			{
+				float pointerX = InputX.GetAxis("Mouse X");
+				float pointerY = InputX.GetAxis("Mouse Y");
 
+#endif
 				float scaledLook = 2048f / Mathf.Sqrt(Screen.width * Screen.width + Screen.height * Screen.height);
 #if !UNITY_EDITOR && (UNITY_IOS || UNITY_ANDROID)
 				if (Application.isMobilePlatform) scaledLook /= TouchCompensation;
