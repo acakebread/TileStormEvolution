@@ -5,10 +5,10 @@ namespace ClassicTilestorm
 {
 	public static class EditorCameraMovement
 	{
-		private const float LookSpeedH = 2f;
-		private const float LookSpeedV = 2f;
-		private const float ZoomSpeed = 12f;
-		private const float TouchCompensation = 10f;
+		private const float LookSpeedH = 4f;
+		private const float LookSpeedV = 4f;
+		private const float ZoomSpeed = 8f;
+		private const float TouchCompensation = 4f;
 		private static float MoveSpeedModifier = 1f;
 		private static float ModifiedZoomSpeed => ZoomSpeed * MoveSpeedModifier;
 
@@ -62,7 +62,7 @@ namespace ClassicTilestorm
 				float pointerY = InputX.GetAxis("Mouse Y");
 
 #endif
-				float scaledLook = 2048f / Mathf.Sqrt(Screen.width * Screen.width + Screen.height * Screen.height);
+				float scaledLook = 1024f / Mathf.Sqrt(Screen.width * Screen.width + Screen.height * Screen.height);
 #if !UNITY_EDITOR && (UNITY_IOS || UNITY_ANDROID)
 				if (Application.isMobilePlatform) scaledLook /= TouchCompensation;
 #endif
