@@ -136,10 +136,6 @@ namespace MassiveHadronLtd
 
 			if (t0.Equals(default(Touch)) || t1.Equals(default(Touch))) return false;
 
-			//// Require actual movement — both fingers must be in Moved phase
-			//if (t0.phase != TouchPhase.Moved || t1.phase != TouchPhase.Moved)
-			//	return false;
-
 			// Deltas should be opposite and non-trivial
 			Vector2 sumDelta = t0.deltaPosition + t1.deltaPosition;
 			if (sumDelta.sqrMagnitude > 0.05f) return false;          // allow tiny residual noise
@@ -155,95 +151,6 @@ namespace MassiveHadronLtd
 			return true;
 		}
 
-		//public static bool GetMouseButtonDown(int button)
-		//{
-		//	var ts = GetTouches();
-
-		//	if (button == 0) // left ~ primary touch began
-		//	{
-		//		//return ts.Any(t => t.fingerId == 0 && t.phase == TouchPhase.Began);
-		//		return ts.Length == 1 && ts[0].fingerId == 0 && ts[0].phase == TouchPhase.Began;
-		//	}
-
-		//	if (button == 1) // right ~ secondary touch began (or two touches appeared)
-		//	{
-		//		// Typical right-mouse emulation gives two touches at Began together
-		//		var beganTouches = ts.Where(t => t.phase == TouchPhase.Began).ToArray();
-		//		return beganTouches.Length >= 1 && beganTouches.All(t => t.phase == TouchPhase.Began);
-		//	}
-
-		//	return false;
-		//}
-
-		//public static bool GetMouseButton(int button)
-		//{
-		//	//do not attempt to emulate RMB right now
-		//	if (button == 1)
-		//		return Input.GetMouseButton(button);
-		//	var ts = GetTouches();
-		//	if (ts.Length == 1)
-		//		return ts[0].phase == TouchPhase.Moved || ts[0].phase == TouchPhase.Stationary;
-		//	return false;
-		//}
-
-		//public static bool GetMouseButton(int button)
-		//{
-		//	var ts = GetTouches();
-
-		//	if (button == 0) // left ~ primary touch active
-		//	{
-		//		return ts.Any(t => t.fingerId == 0 &&
-		//						  (t.phase == TouchPhase.Moved || t.phase == TouchPhase.Stationary));
-		//	}
-
-		//	if (button == 1) // right ~ secondary touch active (or two similar touches)
-		//	{
-		//		var active = ts.Where(t => t.phase == TouchPhase.Moved || t.phase == TouchPhase.Stationary).ToArray();
-		//		if (active.Length == 0) return false;
-
-		//		if (active.Length == 1)
-		//		{
-		//			return active[0].fingerId == 1;
-		//		}
-
-		//		// Two touches → check they are roughly at same place (right mouse style)
-		//		if (active.Length >= 2)
-		//		{
-		//			var pos0 = active[0].position;
-		//			bool allClose = active.All(t => Vector2.Distance(t.position, pos0) < 40f);
-		//			return allClose;
-		//		}
-		//	}
-
-		//	return false;
-		//}
-
-		//public static bool GetMouseButtonUp(int button)
-		//{
-		//	var ts = GetTouches();
-
-		//	if (button == 0)
-		//	{
-		//		return ts.Length == 1 && ts[0].fingerId == 0 && ts[0].phase == TouchPhase.Ended;
-		//		//return ts.Any(t => t.fingerId == 0 && t.phase == TouchPhase.Ended);
-		//	}
-
-		//	if (button == 1)
-		//	{
-		//		return ts.Length == 2 && ts[0].fingerId == 0 && ts[0].phase != TouchPhase.Ended && ts[1].fingerId == 1 && ts[1].phase == TouchPhase.Ended;
-
-
-		//		//if (ts.Any(t => t.fingerId == 1 && t.phase == TouchPhase.Ended) ||
-		//		//	   (ts.Length == 0 && Input.GetMouseButtonUp(1)))
-		//		//	return true;
-
-		//		//return ts.Any(t => t.fingerId == 1 && t.phase == TouchPhase.Ended) ||
-		//		//	   (ts.Length == 0 && Input.GetMouseButtonUp(1)); // fallback for clean release
-		//	}
-
-		//	return false;
-		//}
-
 		// ────────────────────────────────────────────────
 		// Scroll wheel emulation is the tricky part
 		// We try to reconstruct something close to original scroll from pinch movement
@@ -258,9 +165,7 @@ namespace MassiveHadronLtd
 			var ts = GetTouches();
 			if (ts.Length != 2)
 			{
-				return 0;//
-				// No pinch emulation active → use real scroll
-				//return Input.GetAxis("Mouse ScrollWheel");
+				return 0;
 			}
 
 			// Try to estimate scroll direction & magnitude from pinch distance change
@@ -282,10 +187,9 @@ namespace MassiveHadronLtd
 			// Map pinch-out → positive scroll (zoom in)
 			// pinch-in  → negative scroll (zoom out)
 			// Tune multiplier to match how much legacy code expects per notch
-			const float scrollSensitivity = 1f;// 0.1f; // ≈ 3–4× typical mouse notch
+			const float scrollSensitivity = 0.1f; // ≈ 3–4× typical mouse notch
 
 			return deltaDist * scrollSensitivity / Mathf.Sqrt(Screen.width * Screen.width + Screen.height * Screen.height);
-			//return deltaDist * scrollSensitivity;
 		}
 
 		// Helpers

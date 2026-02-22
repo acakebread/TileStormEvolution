@@ -9,9 +9,9 @@ namespace MassiveHadronLtd
 {
 	public static class MultiTouchEmulator
 	{
-		private const float TouchCompensation = 10f;
+		private const float TouchCompensation = 1f;
 
-		private static float TOUCH_PINCH_MOUSE_WHEEL_NOMALISE_RATIO => Mathf.Sqrt(Screen.width * Screen.width + Screen.height * Screen.height) / TouchCompensation;
+		private static float TOUCH_PINCH_MOUSE_WHEEL_LINEAR_RATIO => Mathf.Sqrt(Screen.width * Screen.width + Screen.height * Screen.height) / TouchCompensation;
 
 		private static Dictionary<int, Touch> map = new Dictionary<int, Touch>();
 
@@ -91,7 +91,7 @@ namespace MassiveHadronLtd
 
 				if (Mathf.Abs(scroll) > 0.001f)
 				{
-					float scaledScroll = scroll * TOUCH_PINCH_MOUSE_WHEEL_NOMALISE_RATIO;
+					float scaledScroll = scroll * TOUCH_PINCH_MOUSE_WHEEL_LINEAR_RATIO;
 
 					Vector2 center = mousePos;
 
