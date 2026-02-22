@@ -36,13 +36,15 @@ namespace ClassicTilestorm
 #if true//!UNITY_EDITOR && (UNITY_IOS || UNITY_ANDROID)
 			if (focus && InputX.touchCount == 2)
 			{
+				const float LINEAR_TOUCH_COMPENSATION = 4f;
+
 				float pointerX = 0f;
 				float pointerY = 0f;
 				if ((InputX.touches[0].phase == TouchPhase.Stationary || InputX.touches[0].phase == TouchPhase.Moved) &&
 					(InputX.touches[1].phase == TouchPhase.Stationary || InputX.touches[1].phase == TouchPhase.Moved))
 				{
-					pointerX = (InputX.touches[0].deltaPosition.x + InputX.touches[1].deltaPosition.x) * 0.5f;
-					pointerY = (InputX.touches[0].deltaPosition.y + InputX.touches[1].deltaPosition.y) * 0.5f;
+					pointerX = (InputX.touches[0].deltaPosition.x + InputX.touches[1].deltaPosition.x) / LINEAR_TOUCH_COMPENSATION;
+					pointerY = (InputX.touches[0].deltaPosition.y + InputX.touches[1].deltaPosition.y) / LINEAR_TOUCH_COMPENSATION;
 				}
 #else
 			if (focus && InputX.GetMouseButton(1))
