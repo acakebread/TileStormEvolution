@@ -15,9 +15,7 @@ namespace MassiveHadronLtd
 		private static Touch[] GetTouches()
 		{
 			if (Application.isMobilePlatform || Application.isConsolePlatform)
-			{
 				return Input.touches;
-			}
 
 			// Editor / standalone / anything else → use emulator
 			return MultiTouchEmulator.touches;
@@ -37,19 +35,13 @@ namespace MassiveHadronLtd
 			{
 				var ts = GetTouches();
 				if (ts.Length == 0)
-				{
 					return Input.mousePosition;
-				}
 				if (ts.Length == 1)
-				{
 					return ts[0].position;
-				}
 				// 2+ touches → average position (good for orbit + pinch)
 				Vector2 sum = Vector2.zero;
 				foreach (var t in ts)
-				{
 					sum += t.position;
-				}
 				return sum / ts.Length;
 			}
 		}
@@ -158,15 +150,11 @@ namespace MassiveHadronLtd
 		public static float GetAxis(string axisName)
 		{
 			if (axisName != "Mouse ScrollWheel")
-			{
 				return Input.GetAxis(axisName);// * TOUCH_PINCH_MOUSE_WHEEL_NOMALISE_RATIO / Mathf.Sqrt(Screen.width * Screen.width + Screen.height * Screen.height);//normalise
-			}
 
 			var ts = GetTouches();
 			if (ts.Length != 2)
-			{
 				return 0;
-			}
 
 			// Try to estimate scroll direction & magnitude from pinch distance change
 			var t0 = ts.FirstOrDefault(t => t.fingerId == 0);
@@ -195,8 +183,7 @@ namespace MassiveHadronLtd
 		// Helpers
 		private static bool IsValid(this Touch t) => t.phase != TouchPhase.Canceled && t.phase != TouchPhase.Ended;
 
-		public static bool mouseInsideWindow =>
-			new Rect(0, 0, Screen.width, Screen.height).Contains(mousePosition);
+		public static bool mouseInsideWindow => new Rect(0, 0, Screen.width, Screen.height).Contains(mousePosition);
 
 		public static bool GetKeyDown(KeyCode key) => Input.GetKeyDown(key);
 		public static bool GetKey(KeyCode key) => Input.GetKey(key);

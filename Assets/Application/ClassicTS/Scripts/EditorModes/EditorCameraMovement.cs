@@ -1,4 +1,6 @@
-﻿using UnityEngine;
+﻿#define EMULATE
+
+using UnityEngine;
 using MassiveHadronLtd;
 
 namespace ClassicTilestorm
@@ -8,7 +10,7 @@ namespace ClassicTilestorm
 		private const float LookSpeedH = 4f;
 		private const float LookSpeedV = 4f;
 		private const float MoveSpeed = 8f;
-		private const float TouchCompensation = 128f;
+		private const float TouchCompensation = 1f;//128f;
 		private static float MoveSpeedModifier = 1f;
 		private static float ModifiedZoomSpeed => MoveSpeed * MoveSpeedModifier;
 
@@ -29,26 +31,31 @@ namespace ClassicTilestorm
 				return;
 			}
 
-#if true//!UNITY_EDITOR && (UNITY_IOS || UNITY_ANDROID)
-			if (focus && InputX.touchCount == 2)
+			if (focus)
 			{
-				const float LINEAR_TOUCH_COMPENSATION = 32;
-
 				float pointerX = 0f;
 				float pointerY = 0f;
-				if ((InputX.touches[0].phase == TouchPhase.Stationary || InputX.touches[0].phase == TouchPhase.Moved) &&
-					(InputX.touches[1].phase == TouchPhase.Stationary || InputX.touches[1].phase == TouchPhase.Moved))
+
+#if EMULATE//!UNITY_EDITOR && (UNITY_IOS || UNITY_ANDROID)
+				if (InputX.touchCount == 2)
 				{
-					pointerX = (InputX.touches[0].deltaPosition.x + InputX.touches[1].deltaPosition.x) / LINEAR_TOUCH_COMPENSATION;
-					pointerY = (InputX.touches[0].deltaPosition.y + InputX.touches[1].deltaPosition.y) / LINEAR_TOUCH_COMPENSATION;
+					const float LINEAR_TOUCH_COMPENSATION = 1;// 32;
+
+					if ((InputX.touches[0].phase == TouchPhase.Stationary || InputX.touches[0].phase == TouchPhase.Moved) &&
+						(InputX.touches[1].phase == TouchPhase.Stationary || InputX.touches[1].phase == TouchPhase.Moved))
+					{
+						pointerX = (InputX.touches[0].deltaPosition.x + InputX.touches[1].deltaPosition.x) / LINEAR_TOUCH_COMPENSATION;
+						pointerY = (InputX.touches[0].deltaPosition.y + InputX.touches[1].deltaPosition.y) / LINEAR_TOUCH_COMPENSATION;
+					}
 				}
 #else
-			if (focus && InputX.GetMouseButton(1))
-			{
-				float pointerX = InputX.GetAxis("Mouse X");
-				float pointerY = InputX.GetAxis("Mouse Y");
-
+				if (InputX.GetMouseButton(1))
+				{
+					pointerX = InputX.GetAxis("Mouse X");
+					pointerY = InputX.GetAxis("Mouse Y");
+				}
 #endif
+
 				float scaledLook = 1024f / Mathf.Sqrt(Screen.width * Screen.width + Screen.height * Screen.height);
 
 				pointerX *= scaledLook;

@@ -29,14 +29,12 @@ namespace MassiveHadronLtd
 
 				// If we have a recent cache and time hasn't advanced much → reuse
 				if (cachedTouches != null && now - lastComputeTime < CACHE_DURATION_SECONDS)
-				{
 					return cachedTouches;
-				}
 
 				// ────────────────────────────────────────────────
 				// Full computation (old code)
 				// ────────────────────────────────────────────────
-				Vector2 mouseDelta = new Vector2(Input.GetAxis("Mouse X"), Input.GetAxis("Mouse Y")) * LINEAR_TOUCH_DELTA_COMPENSATION;
+				Vector2 mouseDelta = new Vector2(Input.GetAxis("Mouse X"), Input.GetAxis("Mouse Y"));// * LINEAR_TOUCH_DELTA_COMPENSATION;
 				Vector2 mousePos = Input.mousePosition;
 
 				Dictionary<int, Touch> old = map;
@@ -87,7 +85,7 @@ namespace MassiveHadronLtd
 
 				if (Mathf.Abs(scroll) > 0.001f)
 				{
-					float scaledScroll = scroll * LINEAR_TOUCH_PINCH_MOUSE_WHEEL_RATIO;
+					float scaledScroll = scroll * LINEAR_TOUCH_PINCH_MOUSE_WHEEL_RATIO * 128f;
 
 					Vector2 center = mousePos;
 
