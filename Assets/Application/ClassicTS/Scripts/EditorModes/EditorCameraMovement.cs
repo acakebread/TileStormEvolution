@@ -10,7 +10,6 @@ namespace ClassicTilestorm
 		private const float LookSpeedH = 4f;
 		private const float LookSpeedV = 4f;
 		private const float MoveSpeed = 8f;
-		private const float TouchCompensation = 1f;//128f;
 		private static float MoveSpeedModifier = 1f;
 		private static float ModifiedZoomSpeed => MoveSpeed * MoveSpeedModifier;
 
@@ -39,13 +38,13 @@ namespace ClassicTilestorm
 #if EMULATE//!UNITY_EDITOR && (UNITY_IOS || UNITY_ANDROID)
 				if (InputX.touchCount == 2)
 				{
-					const float LINEAR_TOUCH_COMPENSATION = 1;// 32;
+					//const float LINEAR_TOUCH_COMPENSATION = 1;// 32;
 
 					if ((InputX.touches[0].phase == TouchPhase.Stationary || InputX.touches[0].phase == TouchPhase.Moved) &&
 						(InputX.touches[1].phase == TouchPhase.Stationary || InputX.touches[1].phase == TouchPhase.Moved))
 					{
-						pointerX = (InputX.touches[0].deltaPosition.x + InputX.touches[1].deltaPosition.x) / LINEAR_TOUCH_COMPENSATION;
-						pointerY = (InputX.touches[0].deltaPosition.y + InputX.touches[1].deltaPosition.y) / LINEAR_TOUCH_COMPENSATION;
+						pointerX = (InputX.touches[0].deltaPosition.x + InputX.touches[1].deltaPosition.x);// / LINEAR_TOUCH_COMPENSATION;
+						pointerY = (InputX.touches[0].deltaPosition.y + InputX.touches[1].deltaPosition.y);// / LINEAR_TOUCH_COMPENSATION;
 					}
 				}
 #else
@@ -80,6 +79,9 @@ namespace ClassicTilestorm
 			// Mouse wheel zoom (only if not over GUI)
 			if (!isMouseOverGui && GuiUtils.IsMouseInsideWindow())
 			{
+				const float TouchCompensation = 1f;//128f;
+
+
 				var scroll = InputX.GetAxis("Mouse ScrollWheel") * TouchCompensation;
 				if (scroll != 0f)
 					translation += Vector3.forward * scroll * ModifiedZoomSpeed;

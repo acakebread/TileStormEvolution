@@ -175,7 +175,7 @@ namespace MassiveHadronLtd
 			// Map pinch-out → positive scroll (zoom in)
 			// pinch-in  → negative scroll (zoom out)
 			// Tune multiplier to match how much legacy code expects per notch
-			const float scrollSensitivity = 0.1f; // ≈ 3–4× typical mouse notch
+			const float scrollSensitivity = 128f; // ≈ 3–4× typical mouse notch
 
 			return deltaDist * scrollSensitivity / Mathf.Sqrt(Screen.width * Screen.width + Screen.height * Screen.height);
 		}
