@@ -8,7 +8,7 @@ namespace ClassicTilestorm
 		private const float LookSpeedH = 4f;
 		private const float LookSpeedV = 4f;
 		private const float MoveSpeed = 8f;
-		private const float TouchCompensation = 4f;
+		private const float TouchCompensation = 128f;
 		private static float MoveSpeedModifier = 1f;
 		private static float ModifiedZoomSpeed => MoveSpeed * MoveSpeedModifier;
 
@@ -28,10 +28,6 @@ namespace ClassicTilestorm
 				didGainFocus = false;
 				return;
 			}
-
-
-			// Right mouse button or touch = orbit
-			//if (focus && (InputX.GetMouseButton(1) || InputX.touchCount > 1))
 
 #if true//!UNITY_EDITOR && (UNITY_IOS || UNITY_ANDROID)
 			if (focus && InputX.touchCount == 2)
@@ -54,9 +50,6 @@ namespace ClassicTilestorm
 
 #endif
 				float scaledLook = 1024f / Mathf.Sqrt(Screen.width * Screen.width + Screen.height * Screen.height);
-//#if !UNITY_EDITOR && (UNITY_IOS || UNITY_ANDROID)
-//				if (Application.isMobilePlatform) scaledLook /= TouchCompensation;
-//#endif
 
 				pointerX *= scaledLook;
 				pointerY *= scaledLook;
