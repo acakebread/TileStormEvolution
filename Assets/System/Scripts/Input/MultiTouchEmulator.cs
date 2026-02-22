@@ -56,15 +56,12 @@ namespace MassiveHadronLtd
 				}
 				else if (Input.GetMouseButton(1))
 				{
-					Vector2 pos = Input.mousePosition;
-					Vector2 delta = new Vector2(Input.GetAxis("Mouse X"), Input.GetAxis("Mouse Y"));
-
 					// finger 0 = primary pointer, always gets real movement & phase
 					map[0] = new Touch
 					{
 						fingerId = 0,
-						position = pos,
-						deltaPosition = delta,
+						position = mousePos,
+						deltaPosition = mouseDelta,
 						phase = GetPhase(0, old),
 						type = TouchType.Indirect
 					};
@@ -80,8 +77,8 @@ namespace MassiveHadronLtd
 					map[1] = new Touch
 					{
 						fingerId = 1,
-						position = pos,               // same pos → average = mouse
-						deltaPosition = delta,      // no movement → easy to filter as marker
+						position = mousePos,
+						deltaPosition = mouseDelta,
 						phase = phase1,
 						tapCount = 0,
 						type = TouchType.Indirect

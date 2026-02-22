@@ -36,7 +36,7 @@ namespace ClassicTilestorm
 #if true//!UNITY_EDITOR && (UNITY_IOS || UNITY_ANDROID)
 			if (focus && InputX.touchCount == 2)
 			{
-				const float LINEAR_TOUCH_COMPENSATION = 4f;
+				const float LINEAR_TOUCH_COMPENSATION = 32;
 
 				float pointerX = 0f;
 				float pointerY = 0f;
