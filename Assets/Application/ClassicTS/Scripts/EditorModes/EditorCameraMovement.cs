@@ -56,7 +56,7 @@ namespace ClassicTilestorm
 				}
 #endif
 
-				float scaledLook = 1024f / Mathf.Sqrt(Screen.width * Screen.width + Screen.height * Screen.height);
+				float scaledLook = 64f / Mathf.Sqrt(Screen.width * Screen.width + Screen.height * Screen.height);
 
 				pointerX *= scaledLook;
 				pointerY *= scaledLook;
