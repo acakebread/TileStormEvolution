@@ -34,7 +34,7 @@ namespace MassiveHadronLtd
 				// ────────────────────────────────────────────────
 				// Full computation (old code)
 				// ────────────────────────────────────────────────
-				Vector2 mouseDelta = new Vector2(Input.GetAxis("Mouse X"), Input.GetAxis("Mouse Y"));// * LINEAR_TOUCH_DELTA_COMPENSATION;
+				Vector2 mouseDelta = new Vector2(Input.GetAxis("Mouse X"), Input.GetAxis("Mouse Y")) * 16f;// * LINEAR_TOUCH_DELTA_COMPENSATION;
 				Vector2 mousePos = Input.mousePosition;
 
 				Dictionary<int, Touch> old = map;
@@ -85,9 +85,9 @@ namespace MassiveHadronLtd
 
 				if (Mathf.Abs(scroll) > 0.001f)
 				{
-					float LINEAR_TOUCH_PINCH_MOUSE_WHEEL_RATIO = Mathf.Sqrt(Screen.width * Screen.width + Screen.height * Screen.height);
+					float LINEAR_TOUCH_PINCH_MOUSE_WHEEL_RATIO = Mathf.Sqrt(Screen.width * Screen.width + Screen.height * Screen.height) / 4f;
 
-					float scaledScroll = scroll * LINEAR_TOUCH_PINCH_MOUSE_WHEEL_RATIO * 128f;
+					float scaledScroll = scroll * LINEAR_TOUCH_PINCH_MOUSE_WHEEL_RATIO;
 
 					Vector2 center = mousePos;
 

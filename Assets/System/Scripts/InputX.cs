@@ -1,5 +1,5 @@
-﻿#define EMULATE
-#if EMULATE
+﻿#define MOBILE
+#if MOBILE
 //#if !UNITY_EDITOR && (UNITY_IOS || UNITY_ANDROID)
 
 using UnityEngine;
@@ -16,7 +16,6 @@ namespace MassiveHadronLtd
 		{
 			if (Application.isMobilePlatform || Application.isConsolePlatform)
 				return Input.touches;
-
 			// Editor / standalone / anything else → use emulator
 			return MultiTouchEmulator.touches;
 		}
@@ -149,8 +148,8 @@ namespace MassiveHadronLtd
 		// ────────────────────────────────────────────────
 		public static float GetAxis(string axisName)
 		{
-			if (axisName != "Mouse ScrollWheel")
-				return Input.GetAxis(axisName);// * TOUCH_PINCH_MOUSE_WHEEL_NOMALISE_RATIO / Mathf.Sqrt(Screen.width * Screen.width + Screen.height * Screen.height);//normalise
+			//if (axisName != "Mouse ScrollWheel")
+			//	return Input.GetAxis(axisName);// * TOUCH_PINCH_MOUSE_WHEEL_NOMALISE_RATIO / Mathf.Sqrt(Screen.width * Screen.width + Screen.height * Screen.height);//normalise
 
 			var ts = GetTouches();
 			if (ts.Length != 2)
@@ -174,10 +173,8 @@ namespace MassiveHadronLtd
 
 			// Map pinch-out → positive scroll (zoom in)
 			// pinch-in  → negative scroll (zoom out)
-			// Tune multiplier to match how much legacy code expects per notch
-			const float scrollSensitivity = 128f; // ≈ 3–4× typical mouse notch
-
-			return deltaDist * scrollSensitivity / Mathf.Sqrt(Screen.width * Screen.width + Screen.height * Screen.height);
+			float scrollSensitivity = 1f / Mathf.Sqrt(Screen.width * Screen.width + Screen.height * Screen.height);
+			return deltaDist * scrollSensitivity;
 		}
 
 		// Helpers

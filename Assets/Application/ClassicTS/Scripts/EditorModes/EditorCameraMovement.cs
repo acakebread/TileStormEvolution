@@ -1,4 +1,4 @@
-﻿#define EMULATE
+﻿#define MOBILE
 
 using UnityEngine;
 using MassiveHadronLtd;
@@ -35,23 +35,21 @@ namespace ClassicTilestorm
 				float pointerX = 0f;
 				float pointerY = 0f;
 
-#if EMULATE//!UNITY_EDITOR && (UNITY_IOS || UNITY_ANDROID)
+#if MOBILE//!UNITY_EDITOR && (UNITY_IOS || UNITY_ANDROID)
 				if (InputX.touchCount == 2)
 				{
-					//const float LINEAR_TOUCH_COMPENSATION = 1;// 32;
-
 					if ((InputX.touches[0].phase == TouchPhase.Stationary || InputX.touches[0].phase == TouchPhase.Moved) &&
 						(InputX.touches[1].phase == TouchPhase.Stationary || InputX.touches[1].phase == TouchPhase.Moved))
 					{
-						pointerX = (InputX.touches[0].deltaPosition.x + InputX.touches[1].deltaPosition.x);// / LINEAR_TOUCH_COMPENSATION;
-						pointerY = (InputX.touches[0].deltaPosition.y + InputX.touches[1].deltaPosition.y);// / LINEAR_TOUCH_COMPENSATION;
+						pointerX = (InputX.touches[0].deltaPosition.x + InputX.touches[1].deltaPosition.x) * 0.5f;
+						pointerY = (InputX.touches[0].deltaPosition.y + InputX.touches[1].deltaPosition.y) * 0.5f;
 					}
 				}
 #else
 				if (InputX.GetMouseButton(1))
 				{
-					pointerX = InputX.GetAxis("Mouse X");
-					pointerY = InputX.GetAxis("Mouse Y");
+					pointerX = InputX.GetAxis("Mouse X") * 16f;
+					pointerY = InputX.GetAxis("Mouse Y") * 16f;
 				}
 #endif
 
@@ -79,8 +77,7 @@ namespace ClassicTilestorm
 			// Mouse wheel zoom (only if not over GUI)
 			if (!isMouseOverGui && GuiUtils.IsMouseInsideWindow())
 			{
-				const float TouchCompensation = 1f;//128f;
-
+				const float TouchCompensation = 8f;//128f;
 
 				var scroll = InputX.GetAxis("Mouse ScrollWheel") * TouchCompensation;
 				if (scroll != 0f)
