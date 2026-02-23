@@ -76,18 +76,18 @@ namespace MassiveHadronLtd
 			if (button == 0)
 			{
 				// LMB held: finger 0 active, no finger 1 present
-				return ts.Any(t => t.fingerId == 0 && (t.phase == TouchPhase.Moved || t.phase == TouchPhase.Stationary))
+				return ts.Any(t => t.fingerId == 0 && (t.phase == TouchPhase.Began || t.phase == TouchPhase.Moved || t.phase == TouchPhase.Stationary))
 					   && !ts.Any(t => t.fingerId == 1);
 			}
 
 			if (button == 1)
 			{
 				// RMB held: finger 1 exists (marker) + finger 0 active
-				var finger1 = ts.FirstOrDefault(t => t.fingerId == 1);
-				bool hasMarker = finger1.fingerId == 1 && (finger1.phase == TouchPhase.Began || finger1.phase == TouchPhase.Stationary);
-				bool finger0Active = ts.Any(t => t.fingerId == 0 && (t.phase == TouchPhase.Moved || t.phase == TouchPhase.Stationary));
-
-				return hasMarker && finger0Active;
+				//var finger1 = ts.FirstOrDefault(t => t.fingerId == 1);
+				//bool hasMarker = finger1.fingerId == 1 && (finger1.phase == TouchPhase.Began || finger1.phase == TouchPhase.Stationary);
+				//bool finger0Active = ts.Any(t => t.fingerId == 0 && (t.phase == TouchPhase.Moved || t.phase == TouchPhase.Stationary));
+				//return hasMarker && finger0Active;
+				return ts.Any(t => t.fingerId == 1 && (t.phase == TouchPhase.Began || t.phase == TouchPhase.Moved || t.phase == TouchPhase.Stationary));
 			}
 
 			return false;
@@ -97,7 +97,7 @@ namespace MassiveHadronLtd
 		{
 			var ts = GetTouches();
 			if (0 == ts.Length) return false;
-			if (LooksLikeActiveScroll(ts)) 
+			if (LooksLikeActiveScroll(ts))
 				return false;  // ignore pure scroll frames for button events
 
 			if (button == 0)
@@ -105,6 +105,8 @@ namespace MassiveHadronLtd
 				//return ts.Any(t => t.fingerId == 0 && t.phase == TouchPhase.Ended) && !ts.Any(t => t.fingerId == 1);
 				if (ts.Any(t => t.fingerId == 0 && t.phase == TouchPhase.Ended) && !ts.Any(t => t.fingerId == 1))
 					return true;
+				//if (ts.Any(t => t.fingerId == 0 && t.phase == TouchPhase.Ended))
+				//	return true;
 			}
 
 			if (button == 1)
@@ -122,24 +124,77 @@ namespace MassiveHadronLtd
 		{
 			if (ts.Length != 2) return false;
 
+			// Find the two touches — must be exactly finger 0 and 1
 			var t0 = ts.FirstOrDefault(t => t.fingerId == 0);
 			var t1 = ts.FirstOrDefault(t => t.fingerId == 1);
 
+			// Missing one of them → cannot be emulator pinch
 			if (t0.Equals(default(Touch)) || t1.Equals(default(Touch))) return false;
 
-			// Deltas should be opposite and non-trivial
-			Vector2 sumDelta = t0.deltaPosition + t1.deltaPosition;
-			if (sumDelta.sqrMagnitude > 0.05f) return false;          // allow tiny residual noise
+			// ── Case 1: Active scroll frame ─────────────────────────────────────
+			bool bothActive = (t0.phase == TouchPhase.Began || t0.phase == TouchPhase.Moved) &&
+							  (t1.phase == TouchPhase.Began || t1.phase == TouchPhase.Moved);
 
-			// Each delta should have meaningful length (not just noise)
-			if (t0.deltaPosition.sqrMagnitude < 0.01f) return false;
-			if (t1.deltaPosition.sqrMagnitude < 0.01f) return false;
+			if (bothActive)
+			{
+				Vector2 sumDelta = t0.deltaPosition + t1.deltaPosition;
 
-			// Optional: positions reasonably close (pinch/scroll is usually centered)
-			float dist = Vector2.Distance(t0.position, t1.position);
-			if (dist > 120f) return false;  // tune higher if needed
+				// Deltas must almost perfectly cancel (emulator does exact opposite horizontal)
+				if (sumDelta.sqrMagnitude > 1e-5f) return false;
 
-			return true;
+				// Non-trivial movement (not stationary noise)
+				if (t0.deltaPosition.sqrMagnitude < 1e-5f) return false;
+
+				// Emulator only moves horizontally → y components near zero
+				if (Mathf.Abs(t0.deltaPosition.y) > 1e-4f || Mathf.Abs(t1.deltaPosition.y) > 1e-4f)
+					return false;
+
+				// Optional but very strong: reconstructed center should match
+				Vector2 center0 = t0.position + t0.deltaPosition;
+				Vector2 center1 = t1.position + t1.deltaPosition;
+				if (Vector2.Distance(center0, center1) > 0.01f) return false;
+
+				return true;
+			}
+
+			//// ── Case 2: Pinch just ended this frame (snap happened) ──────────────
+			//bool bothSnappedEnd =
+			//	t0.deltaPosition == Vector2.zero &&
+			//	t1.deltaPosition == Vector2.zero &&
+			//	(t0.phase == TouchPhase.Stationary || t0.phase == TouchPhase.Moved) &&  // Moved possible if threshold borderline
+			//	(t1.phase == TouchPhase.Stationary || t1.phase == TouchPhase.Moved) &&
+			//	Vector2.Distance(t0.position, t1.position) < 0.01f;  // identical after snap
+
+			//if (bothSnappedEnd) return true;
+
+			// ── Case 3: The final Ended frame (both ended same frame, same pos) ──
+			bool bothEndedSamePos =
+				t0.phase == TouchPhase.Ended &&
+				t1.phase == TouchPhase.Ended &&
+				Vector2.Distance(t0.position, t1.position) < 0.01f &&
+				Mathf.Approximately(Vector2.SqrMagnitude(t1.deltaPosition - t0.deltaPosition), 1f);
+
+			if (bothEndedSamePos) return true;
+
+			// Anything else cannot come from the emulator → not fake scroll
+			return false;
+		}
+
+		private static Vector3 mouseDelta
+		{
+			get
+			{
+				var ts = GetTouches();
+				if (ts.Length == 0)
+					return Vector3.zero;
+				if (ts.Length == 1)
+					return ts[0].deltaPosition;
+				// 2+ touches → average position (good for orbit + pinch)
+				Vector2 sum = Vector2.zero;
+				foreach (var t in ts)
+					sum += t.deltaPosition;
+				return sum / ts.Length;
+			}
 		}
 
 		// ────────────────────────────────────────────────
@@ -150,6 +205,14 @@ namespace MassiveHadronLtd
 		{
 			//if (axisName != "Mouse ScrollWheel")
 			//	return Input.GetAxis(axisName);// * TOUCH_PINCH_MOUSE_WHEEL_NOMALISE_RATIO / Mathf.Sqrt(Screen.width * Screen.width + Screen.height * Screen.height);//normalise
+
+			if (axisName != "Mouse ScrollWheel")
+			{
+				if (axisName == "Mouse X")
+					return mouseDelta.x;
+				if (axisName == "Mouse Y")
+					return mouseDelta.y;
+			}
 
 			var ts = GetTouches();
 			if (ts.Length != 2)

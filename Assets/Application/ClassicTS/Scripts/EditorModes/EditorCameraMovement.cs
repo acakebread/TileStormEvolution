@@ -48,8 +48,8 @@ namespace ClassicTilestorm
 #else
 				if (InputX.GetMouseButton(1))
 				{
-					pointerX = InputX.GetAxis("Mouse X") * 16f;
-					pointerY = InputX.GetAxis("Mouse Y") * 16f;
+					pointerX = InputX.GetAxis("Mouse X");// * 16f;
+					pointerY = InputX.GetAxis("Mouse Y");// * 16f;
 				}
 #endif
 
@@ -77,7 +77,7 @@ namespace ClassicTilestorm
 			// Mouse wheel zoom (only if not over GUI)
 			if (!isMouseOverGui && GuiUtils.IsMouseInsideWindow())
 			{
-				const float TouchCompensation = 8f;//128f;
+				const float TouchCompensation = 8f;
 
 				var scroll = InputX.GetAxis("Mouse ScrollWheel") * TouchCompensation;
 				if (scroll != 0f)

@@ -12,7 +12,7 @@ namespace ClassicTilestorm
 
 		protected Vector3 mouseDownPos;
 		private bool mouseMovedBeyondThreshold;
-		private const float CLICK_THRESHOLD = 8f;
+		private const float CLICK_THRESHOLD = 3f;
 
 		private readonly EditorController editorController;
 		protected IMapEdit iMap => editorController?.iMap;
@@ -40,7 +40,7 @@ namespace ClassicTilestorm
 				touchStartOverGui = IsMouseOverGUI() || ViewPreviewUtil.IsMouseOverPreview();
 			}
 			
-			if ((InputX.GetMouseButton(0) || InputX.GetMouseButton(1)) && Vector3.Distance(InputX.mousePosition, mouseDownPos) >= CLICK_THRESHOLD)
+			if ((InputX.GetMouseButton(0) || InputX.GetMouseButton(1)) && Vector3.Distance(InputX.mousePosition, mouseDownPos) >= CLICK_THRESHOLD || InputX.GetAxis("Mouse ScrollWheel") > 0.01f)
 				mouseMovedBeyondThreshold = true;// update threshold flag
 
 			var staticClick = !mouseMovedBeyondThreshold;
@@ -57,7 +57,11 @@ namespace ClassicTilestorm
 			if (InputX.GetMouseButton(0) || InputX.GetMouseButton(1))
 				allowScroll = !touchStartOverGui;
 			else
+			{
+				if (Input.GetMouseButton(0) || Input.GetMouseButton(1))
+					Debug.Log("rogue state");
 				touchStartOverGui = false;
+			}
 
 			ViewPreviewUtil.Update();
 			if (ViewPreviewUtil.IsInFocus)

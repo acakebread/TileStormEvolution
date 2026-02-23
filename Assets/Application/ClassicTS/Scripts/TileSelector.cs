@@ -195,6 +195,9 @@ namespace ClassicTilestorm
 
 			UpdatePanelVisuals();
 
+			if (false == mouseOverPanel) 
+				return;
+
 			// ─── Wobble trigger on mouse DOWN ────────────────────────────────────
 			bool mouseOverGrid = gridScreenRect.Contains(InputX.mousePosition);
 			if (InputX.GetMouseButtonDown(0) && mouseOverGrid && wobbleStartTime < 0f) // ← only start if no wobble active
