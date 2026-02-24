@@ -88,21 +88,19 @@ namespace ClassicTilestorm
 		public IEnumerator Start()
 		{
 			yield return null;
-			//yield break;
 
 			filteredDefs = ResourceManager.Definitions
 				.Where(d => !d.IsDefaultEquivalent())
 				.ToList();
 
-			_atlas = DefinitionIconRenderUtil.CreateIconAtlas(
-				iconSize: ICON_SIZE,
-				columns: COLUMNS,
-				filteredDefs: filteredDefs,
+			_atlas = new IconAtlas(
+				ICON_SIZE,
+				COLUMNS,
+				filteredDefs,
 				includeGround: false,
 				background: null,
 				yaw: 35f,
-				pitch: 30f
-			);
+				pitch: 30f);
 
 			if (_atlas == null)
 				Debug.LogWarning("Failed to generate icon atlas — palette empty.");
@@ -111,6 +109,8 @@ namespace ClassicTilestorm
 
 			RecalculateLayout();
 			panelY = panelTargetY = -panelHeight;
+
+			yield break;
 		}
 
 		private void Update()

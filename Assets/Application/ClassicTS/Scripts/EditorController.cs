@@ -9,7 +9,6 @@ namespace ClassicTilestorm
 		public IMapEdit iMap;
 
 		private EditorControllerMovement activeMode;
-		//private EditorControllerView viewMode;
 		private EditorControllerPlacement placementMode;
 		private EditorControllerAttachment attachmentMode;
 
@@ -37,9 +36,6 @@ namespace ClassicTilestorm
 		private void Awake()
 		{
 			panelYoffset = PlaceholderUI.PanelBottomY;
-
-			// Modes
-			//viewMode = new EditorControllerView(this);
 			placementMode = new EditorControllerPlacement(this);
 			attachmentMode = new EditorControllerAttachment(this); 
 			SetEditorMode(EditorMode.Placement);//default
@@ -110,7 +106,6 @@ namespace ClassicTilestorm
 		{
 			GridLinesUtil.Hide();
 			if (null != iMap) iMap.OnMapEdited -= OnMapEdited;
-			//viewMode?.OnDestroy();
 			placementMode?.OnDestroy();
 			attachmentMode?.OnDestroy();
 		}

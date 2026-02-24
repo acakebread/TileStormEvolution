@@ -142,7 +142,6 @@ namespace ClassicTilestorm
 
 			EnsurePreviewInitialized();
 			RefreshDefinitionList();
-
 			PopulateAndSyncDropdowns();
 		}
 

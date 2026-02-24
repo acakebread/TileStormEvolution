@@ -39,6 +39,15 @@ namespace ClassicTilestorm
 
 		private void Awake()
 		{
+			//workaround for shader problem in command buffer
+			var quad = GameObject.CreatePrimitive(PrimitiveType.Quad);
+			var shader = Shader.Find("Hidden/Internal-Colored");
+			var mat = new Material(shader);
+			mat.color = Color.clear;
+			quad.GetComponent<Renderer>().material = mat;
+			quad.transform.SetParent(Camera.main.transform, false);
+			quad.transform.position = Vector3.forward * 1000f;
+
 			// === ADD AUDIO MANAGER AUTOMATICALLY ===
 			gameObject.AddComponent<AudioManager>(); //audioManager = gameObject.AddComponent<AudioManager>();
 			AssetConfiguration.Initialize(); // Sets initial remapper + roots
@@ -63,6 +72,46 @@ namespace ClassicTilestorm
 
 		private int guard = 0;//temporary workaround for double events from ongui (due to camera stack) - hopefully this will go away when full ui is implemented
 		private void Update() { guard = 0; if (null != eggbotController) eggbotController.UpdateEggbot(CurrentMap); }
+
+
+	//	private bool _unlitWarmupDone = false;
+
+	//	private void LateUpdate()
+	//	{
+	//		if (_unlitWarmupDone) return;
+
+	//		_unlitWarmupDone = true;
+
+	//		// Create tiny quad mesh (1x1 is fine, scale it down)
+	//		var quadMesh = new Mesh();
+	//		quadMesh.vertices = new Vector3[] {
+	//	new Vector3(-0.5f, -0.5f, 0),
+	//	new Vector3( 0.5f, -0.5f, 0),
+	//	new Vector3( 0.5f,  0.5f, 0),
+	//	new Vector3(-0.5f,  0.5f, 0)
+	//};
+	//		quadMesh.uv = new Vector2[] {
+	//	new Vector2(0, 0),
+	//	new Vector2(1, 0),
+	//	new Vector2(1, 1),
+	//	new Vector2(0, 1)
+	//};
+	//		quadMesh.triangles = new int[] { 0, 1, 2, 0, 2, 3 };
+
+	//		// Use Sprites/Default material
+	//		var warmupMat = new Material(Shader.Find("Sprites/Default"));
+	//		warmupMat.hideFlags = HideFlags.HideAndDontSave;
+
+	//		// Draw it far away (no culling needed with DrawMeshNow)
+	//		warmupMat.SetPass(0);
+	//		Graphics.DrawMeshNow(quadMesh, Matrix4x4.Translate(new Vector3(0, -10000, 0)));
+
+	//		// Cleanup
+	//		DestroyImmediate(quadMesh);
+	//		DestroyImmediate(warmupMat);
+
+	//		Debug.Log("[MainController] Forced Unlit/Sprite variant warmup via DrawMeshNow");
+	//	}
 
 		//public void SetGeometryMode(bool value)
 		//{
