@@ -21,7 +21,7 @@ namespace ClassicTilestorm
 			var camera = camTransform.GetComponent<Camera>();
 			if (camera == null) return;
 
-			if ((InputX.GetMouseButtonDown(1) || InputX.touchCount > 0))
+			if (InputX.GetMouseButtonDown(1) || InputX.touchCount > 0)
 				focus = !isMouseOverGui;
 
 			if (didGainFocus)
