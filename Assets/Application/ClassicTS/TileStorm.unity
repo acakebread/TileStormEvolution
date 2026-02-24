@@ -362,7 +362,7 @@ MonoBehaviour:
   loadMapName: Industrial 01
   remapGeometry: 1
   scrambled: 1
-  difficulty: 0
+  difficulty: 1
   showHiddenTiles: 0
   showTileSelection: 0
   databaseJsonFile: {fileID: 4900000, guid: 96c40ca8617a15a4590b9728c168e29a, type: 3}
@@ -373,7 +373,7 @@ MonoBehaviour:
   prefabPath: ClassicTS/Prefabs/
   soundPath: ClassicTS/Sounds/
   musicPath: ClassicTS/Music/
-  previewMode: 0
+  previewMode: 1
 --- !u!4 &862124737
 Transform:
   m_ObjectHideFlags: 0
