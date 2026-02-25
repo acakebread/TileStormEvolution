@@ -64,53 +64,6 @@ namespace ClassicTilestorm
 		private int guard = 0;//temporary workaround for double events from ongui (due to camera stack) - hopefully this will go away when full ui is implemented
 		private void Update() { guard = 0; if (null != eggbotController) eggbotController.UpdateEggbot(CurrentMap); }
 
-
-	//	private bool _unlitWarmupDone = false;
-
-	//	private void LateUpdate()
-	//	{
-	//		if (_unlitWarmupDone) return;
-
-	//		_unlitWarmupDone = true;
-
-	//		// Create tiny quad mesh (1x1 is fine, scale it down)
-	//		var quadMesh = new Mesh();
-	//		quadMesh.vertices = new Vector3[] {
-	//	new Vector3(-0.5f, -0.5f, 0),
-	//	new Vector3( 0.5f, -0.5f, 0),
-	//	new Vector3( 0.5f,  0.5f, 0),
-	//	new Vector3(-0.5f,  0.5f, 0)
-	//};
-	//		quadMesh.uv = new Vector2[] {
-	//	new Vector2(0, 0),
-	//	new Vector2(1, 0),
-	//	new Vector2(1, 1),
-	//	new Vector2(0, 1)
-	//};
-	//		quadMesh.triangles = new int[] { 0, 1, 2, 0, 2, 3 };
-
-	//		// Use Sprites/Default material
-	//		var warmupMat = new Material(Shader.Find("Sprites/Default"));
-	//		warmupMat.hideFlags = HideFlags.HideAndDontSave;
-
-	//		// Draw it far away (no culling needed with DrawMeshNow)
-	//		warmupMat.SetPass(0);
-	//		Graphics.DrawMeshNow(quadMesh, Matrix4x4.Translate(new Vector3(0, -10000, 0)));
-
-	//		// Cleanup
-	//		DestroyImmediate(quadMesh);
-	//		DestroyImmediate(warmupMat);
-
-	//		Debug.Log("[MainController] Forced Unlit/Sprite variant warmup via DrawMeshNow");
-	//	}
-
-		//public void SetGeometryMode(bool value)
-		//{
-		//	AssetRegistry<GameObject>.NameRemapper = value ? ClassicTileStormAssetRemapHelper.RemapName : null;
-		//	ModelAssets.ClearCache();
-		//	mapManager?.RefreshGeometry();
-		//}
-
 		public void SetPreviewMode(ApplicationMode mode)
 		{
 			if (null == cameraController) return;
@@ -186,7 +139,6 @@ namespace ClassicTilestorm
 				mainReflection.UpdateRenderSettings(currentMap.RenderSettings);
 				mainReflection.UpdateMaterialProperties();//invoke due to skybox loaded
 			}
-
 
 			//var mainReflection = Camera.main?.GetComponent<ReflectionEffectCamera>();
 			//if (mainReflection != null)
