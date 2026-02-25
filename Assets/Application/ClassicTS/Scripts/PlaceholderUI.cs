@@ -112,7 +112,7 @@ namespace ClassicTilestorm
 			GUI.Box(new Rect(0, panelY, Screen.width, panelHeight), "", new GUIStyle(GUI.skin.box) { normal = { background = panelTexture } });
 
 			//invisble button to open options panel
-			GuiUtils.ColoredButton(new Rect(currentX, y, buttonWidth + mapNameWidth, buttonHeight), "", new Color(0f, 0f, 0f, 0f), () => UIController.OpenPanel<OptionsPanel>());
+			GuiUtils.ColoredButton(new Rect(currentX, y, labelWidth + mapNameWidth, buttonHeight), "", new Color(0f, 0f, 0f, 0f), () => UIController.OpenPanel<OptionsPanel>());
 
 			// ALWAYS draw all buttons and labels — critical for input + visuals
 			GUI.Label(new Rect(currentX, y, labelWidth, buttonHeight), "Map:");
