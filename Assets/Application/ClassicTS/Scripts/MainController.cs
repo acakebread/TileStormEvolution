@@ -39,15 +39,6 @@ namespace ClassicTilestorm
 
 		private void Awake()
 		{
-			//workaround for shader problem in command buffer
-			var quad = GameObject.CreatePrimitive(PrimitiveType.Quad);
-			var shader = Shader.Find("Hidden/Internal-Colored");
-			var mat = new Material(shader);
-			mat.color = Color.clear;
-			quad.GetComponent<Renderer>().material = mat;
-			quad.transform.SetParent(Camera.main.transform, false);
-			quad.transform.position = Vector3.forward * 1000f;
-
 			// === ADD AUDIO MANAGER AUTOMATICALLY ===
 			gameObject.AddComponent<AudioManager>(); //audioManager = gameObject.AddComponent<AudioManager>();
 			AssetConfiguration.Initialize(); // Sets initial remapper + roots

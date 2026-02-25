@@ -136,6 +136,7 @@ namespace ClassicTilestorm
 			CreateFlagToggles();
 		}
 
+		private GameObject quad;
 		protected override void OnEnable()
 		{
 			base.OnEnable();
@@ -143,10 +144,20 @@ namespace ClassicTilestorm
 			EnsurePreviewInitialized();
 			RefreshDefinitionList();
 			PopulateAndSyncDropdowns();
+
+			//workaround for shader problem in command buffer
+			quad = GameObject.CreatePrimitive(PrimitiveType.Quad);
+			var shader = Shader.Find("Hidden/Internal-Colored");
+			var mat = new Material(shader);
+			mat.color = Color.clear;
+			quad.GetComponent<Renderer>().material = mat;
+			quad.transform.position = Vector3.forward * 1000f;
+			quad.transform.SetParent(Camera.main.transform, false);
 		}
 
 		protected override void OnDisable()
 		{
+			Destroy(quad);
 			CleanupPreview();
 			ClearDefinitionListItems();
 			base.OnDisable();
