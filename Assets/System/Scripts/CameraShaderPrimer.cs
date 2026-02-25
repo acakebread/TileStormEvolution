@@ -32,7 +32,7 @@ public class CameraShaderPrimer : MonoBehaviour
 		var renderer = s_dummyQuad.GetComponent<MeshRenderer>();
 
 		//renderer.material = new Material(Shader.Find("Custom/CommandRender"));
-		renderer.material = new Material(Shader.Find("Hidden/Internal-Colored"));
+		renderer.material = new Material(Shader.Find("Hidden/Internal-Colored")){color = Color.clear};
 
 		// Make invisible / zero-cost
 		renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
@@ -43,7 +43,7 @@ public class CameraShaderPrimer : MonoBehaviour
 
 		// Position + scale to be frustum-culled (or just disable if that suffices in your version)
 		s_dummyQuad.transform.SetParent(Camera.main.transform, false);
-		s_dummyQuad.transform.localPosition = new Vector3(0f, 0f, Camera.main.nearClipPlane + 0.001f);
+		s_dummyQuad.transform.localPosition = new Vector3(0f, 0f, Camera.main.farClipPlane - 1f);
 		s_dummyQuad.transform.localScale = Vector3.one * 0.0001f;
 
 		// Usually safe to leave disabled – Unity often still processes it for variant collection
