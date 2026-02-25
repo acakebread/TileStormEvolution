@@ -39,6 +39,11 @@ namespace ClassicTilestorm
 
 		private void Awake()
 		{
+			//workaround for shader problem in command buffer
+			var cam = Camera.main;
+			if (cam != null && cam.GetComponent<CameraShaderPrimer>() == null)
+				cam.gameObject.AddComponent<CameraShaderPrimer>();
+
 			// === ADD AUDIO MANAGER AUTOMATICALLY ===
 			gameObject.AddComponent<AudioManager>(); //audioManager = gameObject.AddComponent<AudioManager>();
 			AssetConfiguration.Initialize(); // Sets initial remapper + roots

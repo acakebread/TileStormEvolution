@@ -87,17 +87,7 @@ namespace ClassicTilestorm
 
 		public IEnumerator Start()
 		{
-			//workaround for shader problem in command buffer
-			var quad = GameObject.CreatePrimitive(PrimitiveType.Quad);
-			var shader = Shader.Find("Hidden/Internal-Colored");
-			var mat = new Material(shader);
-			mat.color = Color.clear;
-			quad.GetComponent<Renderer>().material = mat;
-			quad.transform.position = Vector3.forward * 1000f;
-			quad.transform.SetParent(Camera.main.transform, false);
-
-			yield return null;
-
+			yield return null;//workaround for shader problem in command buffer
 			filteredDefs = ResourceManager.Definitions
 				.Where(d => !d.IsDefaultEquivalent())
 				.ToList();
@@ -118,10 +108,6 @@ namespace ClassicTilestorm
 
 			RecalculateLayout();
 			panelY = panelTargetY = -panelHeight;
-
-			Destroy(quad);
-
-			yield break;
 		}
 
 		private void Update()
