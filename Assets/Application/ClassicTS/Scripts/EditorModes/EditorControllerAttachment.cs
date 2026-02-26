@@ -1,9 +1,6 @@
-﻿#define NEWER
-
-using System;
+﻿using System;
 using UnityEngine;
 using System.Linq;
-using System.Collections.Generic;
 using static MassiveHadronLtd.GuiUtils;
 using MassiveHadronLtd;
 
@@ -29,8 +26,8 @@ namespace ClassicTilestorm
 		// Current mode - used for panel and marker styling
 		// ===================================================================
 
-		public enum Mode { Undefined, Mixed, Waypoint, Attachment }//there will be several new modes based on context
-		private Mode currentMode = Mode.Undefined;
+		public enum Mode { Undefined, Waypoint, Attachment }//there will be several new modes based on context
+		private Mode currentMode => null == selection ? Mode.Undefined : selection.Length > 1 ? Mode.Attachment : selection[0] is Waypoint ? Mode.Waypoint : Mode.Attachment;
 
 		// ===================================================================
 		// Constructor
@@ -52,7 +49,7 @@ namespace ClassicTilestorm
 		public override void OnEnable()
 		{
 			base.OnEnable();
-			currentMode = Mode.Attachment; // default to attachment mode
+			//currentMode = Mode.Attachment; // default to attachment mode
 			ResetInputState();
 			RebuildMarkers();
 		}
@@ -209,9 +206,6 @@ namespace ClassicTilestorm
 
 			selection = attachments?.Length > 0 ? attachments : null;
 
-			if (null != selection)
-				currentMode = selection.Length > 1 ? Mode.Attachment : selection[0] is Waypoint ? Mode.Waypoint : Mode.Attachment;
-
 			ViewPreviewUtil.Hide();
 			HideAllGizmos();
 			RebuildMarkers();
@@ -233,7 +227,6 @@ namespace ClassicTilestorm
 		// ===================================================================
 		private void ResetInputState()
 		{
-			currentMode = Mode.Undefined;
 			selection = null;
 			pendingAction = PendingAction.None;
 			pendingTile = -1;
@@ -308,8 +301,6 @@ namespace ClassicTilestorm
 			RebuildMarkers();
 		}
 
-#if NEWER
-
 		public override void OnGUI()
 		{
 			base.OnGUI();
@@ -370,205 +361,5 @@ namespace ClassicTilestorm
 
 			pendingAction = PendingAction.None;
 		}
-
-#else
-
-		// ===================================================================
-		// GUI — currently only draws attachment panel (waypoint panel ready below)
-		// ===================================================================
-		public override void OnGUI()
-		{
-			base.OnGUI();
-
-			if (null != selection && selection.Length >= 1)
-			{
-				// Draw correct panel based on currentMode
-				if (currentMode == Mode.Waypoint)
-					DrawSidePanelWaypoint();
-				else
-					DrawSidePanelAttachment(); // includes Undefined and Attachment
-			}
-			else
-				sidePanel.Update();
-
-			if (pendingAction == PendingAction.None) return;
-
-			switch (pendingAction)
-			{
-				case PendingAction.Add:
-					if (DrawAddPopup()) return;
-					break;
-				case PendingAction.Delete:
-					if (DrawDeletePopup()) return;
-					break;
-				case PendingAction.Select:
-					if (DrawSelectPopup()) return;
-					break;
-			}
-
-			pendingAction = PendingAction.None;
-		}
-
-		// ===================================================================
-		// Side Panels
-		// ===================================================================
-		private void DrawSidePanelAttachment()
-		{
-			// Use GetAttachments() — already clean and valid
-			var atts = iMap?.GetAttachments() ?? Array.Empty<MapAttachment>();
-
-			var items = new List<ListViewItem>();
-
-			foreach (var att in atts)
-			{
-				items.Add(new(
-					GetAttachmentLabel(att),
-					(_) => Select(att),
-					selected: selection != null && selection.Contains(att)
-				));
-			}
-
-			sidePanel.List.SetItems(items);
-			sidePanel.SetFootnote("Hold RMB on preview to orbit • Scroll to zoom • LMB: place/move • RMB on tile: delete");
-			sidePanel.Draw();
-
-			string GetAttachmentLabel(MapAttachment att) => att switch
-			{
-				Emitter e => $"Emitter [{att.tile}]" + (e.LookAt.sqrMagnitude > 0.01f && e.LookAt != Vector3.up ? $" → {e.LookAt.magnitude:F1}" : ""),
-				View => $"View [{att.tile}]",
-				Pickup p => $"Pickup [{att.tile}] ({p.amount})",
-				_ => $"{att.TypeName} [{att.tile}]"
-			};
-		}
-
-		private void DrawSidePanelWaypoint()
-		{
-			var selectedWaypoint = selection?.Length > 0 ? selection[0] as Waypoint : null;
-
-			// Get only waypoints, sorted by their waypointIndex
-			var waypointAttachments = iMap.GetAttachments(filterTypes: new[] { typeof(Waypoint) })
-										  .Cast<Waypoint>()
-										  .OrderBy(wp => wp.waypointIndex)
-										  .ToArray();
-
-			var items = new List<ListViewItem>();
-
-			for (var i = 0; i < waypointAttachments.Length; i++)
-			{
-				var waypoint = waypointAttachments[i];
-
-				items.Add(new ListViewItem(
-					label: $"WP{waypoint.waypointIndex:00} [tile {waypoint.tile}]",
-					onClick: (_) => Select(waypoint),
-					selected: selectedWaypoint?.waypointIndex == waypoint.waypointIndex
-				));
-			}
-
-			sidePanel.List.SetItems(items);
-
-			sidePanel.Buttons.Clear();
-
-			var canMoveUp = selectedWaypoint != null && selectedWaypoint.waypointIndex > 0;
-			var canMoveDown = selectedWaypoint != null && selectedWaypoint.waypointIndex < waypointAttachments.Length - 1;
-
-			sidePanel.Buttons.Add(new("Move Up", () => MoveWaypoint(selectedWaypoint, -1), enabled: canMoveUp));
-			sidePanel.Buttons.Add(new("Move Down", () => MoveWaypoint(selectedWaypoint, +1), enabled: canMoveDown));
-
-			sidePanel.Draw();
-		}
-
-		// ===================================================================
-		// Popups
-		// ===================================================================
-		private bool DrawAddPopup()
-		{
-			var waypoints = iMap.GetWaypoints();
-			var items = new List<PopupItem>
-			{
-				new($"Waypoint [WP{waypoints?.Length:00}]", () => Select(WaypointAttachmentHandler.Create(iMap, pendingTile)), colorOverride: Color.lightSteelBlue),
-				new("Emitter [flame]", () => Select(EmitterAttachmentHandler.Create(iMap, pendingTile, "flame")), colorOverride: Color.cyan),
-				new("Emitter [spark]", () => Select(EmitterAttachmentHandler.Create(iMap, pendingTile, "spark")), colorOverride: Color.cyan),
-				new("View", () => Select(ViewAttachmentHandler.Create(iMap, pendingTile)), colorOverride: Color.cyan),
-				new("Pickup", () => Select(PickupAttachmentHandler.Create(iMap, pendingTile)), colorOverride: Color.cyan),
-				PopupItem.Spacer(),
-				new("Cancel", () => {}, colorOverride: Color.yellow)
-			};
-
-			var result = PopupMenu.Show(popupPos, $"Add Attachment at tile {pendingTile}", items);
-
-			if (result == PopupResult.ClosedByAction)
-				return false; // action already invoked inside popup
-
-			if (result == PopupResult.ClosedByClickOutside || result == PopupResult.ClosedByCancel)
-				Select(); // explicit deselect
-
-			return result == PopupResult.StillOpen;
-		}
-
-		private bool DrawDeletePopup()
-		{
-			var attsOnTile = iMap.GetAttachments(tileIndex: pendingTile);
-			if (attsOnTile.Length == 0) return false;
-
-			var items = new List<PopupItem>();
-
-			foreach (var att in attsOnTile)
-			{
-				var localAtt = att;
-				string label = att is Waypoint wp ? $"Delete WP{wp.waypointIndex:00} [{pendingTile}]" : $"Delete {att.GetType().Name} [{pendingTile}]";
-				items.Add(new PopupItem(label, () => iMap.RemoveAttachment(localAtt), colorOverride: Color.softRed));
-			}
-
-			if (attsOnTile.Length > 1)
-			{
-				items.Add(PopupItem.Spacer());
-				items.Add(new PopupItem("Delete All", () => iMap.RemoveAttachments(attsOnTile), colorOverride: Color.red));
-			}
-
-			items.Add(PopupItem.Spacer());
-			items.Add(new PopupItem("Cancel", () => { }, colorOverride: Color.yellow));
-
-			var result = PopupMenu.Show(popupPos, "Delete Attachment" + (attsOnTile.Length > 1 ? "(s)" : ""), items);
-			if (result != PopupResult.StillOpen) Select();
-			return result == PopupResult.StillOpen;
-		}
-
-		private bool DrawSelectPopup()
-		{
-			var atts = iMap.GetAttachments(tileIndex: pendingTile);
-			if (atts.Length == 0) return false;
-
-			var items = new List<PopupItem>();
-
-			foreach (var att in atts)
-			{
-				string label = att.GetType().Name;
-				if (att is Emitter e && e.LookAt != null && e.LookAt != Vector3.up)
-					label += $" to {e.LookAt.magnitude:F1}";
-				label += $" [tile {att.tile}]";
-
-				items.Add(new(label, () => Select(att)));
-			}
-
-			if (atts.Length > 1)
-			{
-				items.Add(PopupItem.Spacer());
-				items.Add(new("Select All", () => Select(atts), colorOverride: Color.green));
-			}
-
-			items.Add(PopupItem.Spacer());
-			items.Add(new PopupItem("Cancel", () => { }, colorOverride: Color.yellow));
-
-			var result = PopupMenu.Show(popupPos, $"Select ({atts.Length})", items);
-
-			if (result == PopupResult.ClosedByAction)
-				return false; // action already invoked inside popup
-
-			if (result == PopupResult.ClosedByClickOutside || result == PopupResult.ClosedByCancel)
-				Select(); // explicit deselect
-
-			return result == PopupResult.StillOpen;
-		}
-#endif
 	}
 }
