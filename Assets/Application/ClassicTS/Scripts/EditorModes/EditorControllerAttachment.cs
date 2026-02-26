@@ -1,8 +1,8 @@
 ﻿using System;
 using UnityEngine;
 using System.Linq;
-using static MassiveHadronLtd.GuiUtils;
 using MassiveHadronLtd;
+using static MassiveHadronLtd.GuiUtils;
 
 namespace ClassicTilestorm
 {
@@ -21,13 +21,6 @@ namespace ClassicTilestorm
 		// Shared input state
 		// ===================================================================
 		private readonly AutoHidePanel sidePanel = new(collapsed: 120f, expanded: 340f, delay: 1.5f, animDur: 0.25f, defaultPos: new Vector2(0f, 40f));
-
-		// ===================================================================
-		// Current mode - used for panel and marker styling
-		// ===================================================================
-
-		public enum Mode { Undefined, Waypoint, Attachment }//there will be several new modes based on context
-		private Mode currentMode => null == selection ? Mode.Undefined : selection.Length > 1 ? Mode.Attachment : selection[0] is Waypoint ? Mode.Waypoint : Mode.Attachment;
 
 		// ===================================================================
 		// Constructor
@@ -49,7 +42,6 @@ namespace ClassicTilestorm
 		public override void OnEnable()
 		{
 			base.OnEnable();
-			//currentMode = Mode.Attachment; // default to attachment mode
 			ResetInputState();
 			RebuildMarkers();
 		}
@@ -259,7 +251,7 @@ namespace ClassicTilestorm
 			var positions = new Vector3[tiles.Length];
 			var colors = new Color[tiles.Length];
 
-			var isWaypointMode = currentMode == Mode.Waypoint;
+			var isWaypointMode = null != selection && selection.Length == 1 && selection[0] is Waypoint;
 
 			for (int i = 0; i < tiles.Length; i++)
 			{
@@ -307,7 +299,7 @@ namespace ClassicTilestorm
 
 			if (selection != null && selection.Length >= 1)
 			{
-				if (currentMode == Mode.Waypoint)
+				if (selection.Length == 1 && selection[0] is Waypoint)
 				{
 					EditorAttachmentUI.DrawSidePanelWaypoint(
 						sidePanel,
