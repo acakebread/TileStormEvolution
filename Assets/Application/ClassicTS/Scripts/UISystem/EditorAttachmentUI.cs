@@ -1,7 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
+using System.Linq;
+using System.Collections.Generic;
 using static MassiveHadronLtd.GuiUtils;
 
 namespace ClassicTilestorm
@@ -10,8 +10,9 @@ namespace ClassicTilestorm
 	{
 		// Side panels
 
+		public static readonly AutoHidePanel sidePanel = new(collapsed: 120f, expanded: 340f, delay: 1.5f, animDur: 0.25f, defaultPos: new Vector2(0f, 40f));
+
 		public static void DrawSidePanelAttachment(
-			AutoHidePanel sidePanel,
 			IMapEdit iMap,
 			MapAttachment[] selection,
 			Action<MapAttachment> onSelect)
@@ -43,10 +44,9 @@ namespace ClassicTilestorm
 		}
 
 		public static void DrawSidePanelWaypoint(
-			AutoHidePanel sidePanel,
 			IMapEdit iMap,
 			MapAttachment[] selection,
-			Action<Waypoint, int> onMoveWaypoint)
+			Action<Waypoint> onSelectWaypoint)
 		{
 			var selectedWaypoint = selection?.Length > 0 ? selection[0] as Waypoint : null;
 
@@ -61,7 +61,7 @@ namespace ClassicTilestorm
 			{
 				items.Add(new ListViewItem(
 					label: $"WP{waypoint.waypointIndex:00} [tile {waypoint.tile}]",
-					// No onClick — matches original behavior (selection via map, not list)
+					onClick: (_) => onSelectWaypoint?.Invoke(waypoint),
 					selected: selectedWaypoint?.waypointIndex == waypoint.waypointIndex
 				));
 			}
@@ -72,11 +72,31 @@ namespace ClassicTilestorm
 			var canMoveUp = selectedWaypoint != null && selectedWaypoint.waypointIndex > 0;
 			var canMoveDown = selectedWaypoint != null && selectedWaypoint.waypointIndex < waypointAttachments.Length - 1;
 
-			// ── Use exactly the same syntax as your original code ──
-			sidePanel.Buttons.Add(new("Move Up", () => onMoveWaypoint?.Invoke(selectedWaypoint, -1), enabled: canMoveUp));
-			sidePanel.Buttons.Add(new("Move Down", () => onMoveWaypoint?.Invoke(selectedWaypoint, +1), enabled: canMoveDown));
+			sidePanel.Buttons.Add(new("Move Up", () => onSelectWaypoint?.Invoke(MoveWaypoint(selectedWaypoint, -1)), enabled: canMoveUp));
+			sidePanel.Buttons.Add(new("Move Down", () => onSelectWaypoint?.Invoke(MoveWaypoint(selectedWaypoint, +1)), enabled: canMoveDown));
 
 			sidePanel.Draw();
+
+			Waypoint MoveWaypoint(Waypoint wp, int direction)
+			{
+				if (wp == null) return null;
+
+				var oldIndex = wp.waypointIndex;
+				var newIndex = oldIndex + direction;
+
+				// Get current sorted waypoints
+				var currentWaypoints = iMap.GetWaypoints();
+
+				if (newIndex < 0 || newIndex >= currentWaypoints.Length) return null;
+
+				var targetWp = currentWaypoints[newIndex];
+
+				// Swap waypointIndex values on the objects
+				wp.waypointIndex = newIndex;
+				targetWp.waypointIndex = oldIndex;
+
+				return new Waypoint(newIndex, wp.tile);
+			}
 		}
 
 		// Popups
@@ -105,7 +125,6 @@ namespace ClassicTilestorm
 			if (result == PopupResult.ClosedByAction)
 				return false;
 
-			// We no longer call Select() here — caller will handle deselect if needed
 			return result == PopupResult.StillOpen;
 		}
 

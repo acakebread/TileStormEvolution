@@ -2,7 +2,6 @@
 using UnityEngine;
 using System.Linq;
 using MassiveHadronLtd;
-using static MassiveHadronLtd.GuiUtils;
 
 namespace ClassicTilestorm
 {
@@ -18,16 +17,11 @@ namespace ClassicTilestorm
 		private Vector3 popupPos;
 
 		// ===================================================================
-		// Shared input state
-		// ===================================================================
-		private readonly AutoHidePanel sidePanel = new(collapsed: 120f, expanded: 340f, delay: 1.5f, animDur: 0.25f, defaultPos: new Vector2(0f, 40f));
-
-		// ===================================================================
 		// Constructor
 		// ===================================================================
 		public EditorControllerAttachment(EditorController controller) : base(controller) { }
 
-		protected override bool IsMouseOverGUI() => base.IsMouseOverGUI() || (sidePanel.IsMouseOver && null != selection);
+		protected override bool IsMouseOverGUI() => base.IsMouseOverGUI() || EditorAttachmentUI.sidePanel.IsMouseOver;
 
 		// ===================================================================
 		// Lifecycle
@@ -235,12 +229,7 @@ namespace ClassicTilestorm
 
 		private void RebuildMarkers()
 		{
-			// GetAttachments() already returns only valid attachments (tile >= 0)
-			var tiles = iMap?.GetAttachments()
-							?.Select(a => a.tile)
-							?.Distinct()
-							?.ToArray()
-							?? Array.Empty<int>();
+			var tiles = iMap?.GetAttachments()?.Select(a => a.tile)?.Distinct()?.ToArray() ?? Array.Empty<int>();
 
 			if (tiles.Length == 0)
 			{
@@ -269,84 +258,36 @@ namespace ClassicTilestorm
 			EditorMarkerUtil.ShowMarkers(positions, colors, selectedIndex);
 		}
 
-		private void MoveWaypoint(Waypoint wp, int direction)
-		{
-			if (wp == null) return;
-
-			var oldIndex = wp.waypointIndex;
-			var newIndex = oldIndex + direction;
-
-			// Get current sorted waypoints
-			var currentWaypoints = iMap.GetWaypoints();  // using extension
-
-			if (newIndex < 0 || newIndex >= currentWaypoints.Length) return;
-
-			var targetWp = currentWaypoints[newIndex];
-
-			// Swap waypointIndex values on the objects
-			wp.waypointIndex = newIndex;
-			targetWp.waypointIndex = oldIndex;
-
-			var movedWaypoint = new Waypoint(newIndex, wp.tile);
-			Select(movedWaypoint);
-
-			RebuildMarkers();
-		}
-
 		public override void OnGUI()
 		{
 			base.OnGUI();
 
-			if (selection != null && selection.Length >= 1)
+			if (null != selection)
 			{
 				if (selection.Length == 1 && selection[0] is Waypoint)
-				{
-					EditorAttachmentUI.DrawSidePanelWaypoint(
-						sidePanel,
-						iMap,
-						selection,
-						(wp, dir) => MoveWaypoint(wp, dir)
-					);
-				}
+					EditorAttachmentUI.DrawSidePanelWaypoint(iMap, selection, wp => Select(wp));
 				else
-				{
-					EditorAttachmentUI.DrawSidePanelAttachment(
-						sidePanel,
-						iMap,
-						selection,
-						att => Select(att)
-					);
-				}
+					EditorAttachmentUI.DrawSidePanelAttachment(iMap, selection, att => Select(att));
 			}
 			else
-			{
-				sidePanel.Update();
-			}
+				EditorAttachmentUI.sidePanel.Update();
 
 			if (pendingAction == PendingAction.None) return;
 
 			switch (pendingAction)
 			{
 				case PendingAction.Add:
-					if (EditorAttachmentUI.DrawAddPopup(
-							popupPos, iMap, pendingTile,
-							created => Select(created)))
+					if (EditorAttachmentUI.DrawAddPopup(popupPos, iMap, pendingTile, created => Select(created)))
 						return;
 					break;
 
 				case PendingAction.Delete:
-					if (EditorAttachmentUI.DrawDeletePopup(
-							popupPos, iMap, pendingTile,
-							() => Select()))
+					if (EditorAttachmentUI.DrawDeletePopup(popupPos, iMap, pendingTile, () => Select()))
 						return;
 					break;
 
 				case PendingAction.Select:
-					if (EditorAttachmentUI.DrawSelectPopup(
-							popupPos, iMap, pendingTile,
-							att => Select(att),
-							atts => Select(atts),
-							() => Select()))
+					if (EditorAttachmentUI.DrawSelectPopup(popupPos, iMap, pendingTile, att => Select(att), atts => Select(atts), () => Select()))
 						return;
 					break;
 			}
