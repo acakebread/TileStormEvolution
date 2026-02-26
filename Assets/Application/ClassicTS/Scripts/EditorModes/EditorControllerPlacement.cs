@@ -251,8 +251,7 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			var snapped = Map.WorldToRender(Map.FullFloorVec(Map.ScreenToWorld(cam, InputX.mousePosition)));
-			var mapIndex = map.VectorToIndex(snapped);
+			var mapIndex = map.VectorToIndex(currentWorld);
 
 			selectedVariant.delta = Vector3.zero;
 			selectedVariant.angle = 0f;
@@ -277,6 +276,7 @@ namespace ClassicTilestorm
 				}
 			}
 
+			var snapped = Map.WorldToRender(Map.FullFloorVec(currentWorld));
 			EditorMeshUtil.UpdateGhostMesh(variant, snapped, mapIndex == -1);
 		}
 
