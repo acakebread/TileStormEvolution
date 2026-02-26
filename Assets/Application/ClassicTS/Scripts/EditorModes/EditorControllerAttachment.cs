@@ -1,4 +1,6 @@
-﻿using System;
+﻿#define NEWER
+
+using System;
 using UnityEngine;
 using System.Linq;
 using System.Collections.Generic;
@@ -96,42 +98,6 @@ namespace ClassicTilestorm
 
 			if (InputX.GetMouseButtonUp(1))
 				HandleRightMouseUp();
-		}
-
-		// ===================================================================
-		// GUI — currently only draws attachment panel (waypoint panel ready below)
-		// ===================================================================
-		public override void OnGUI()
-		{
-			base.OnGUI();
-
-			if (null != selection && selection.Length >= 1) 
-			{
-				// Draw correct panel based on currentMode
-				if (currentMode == Mode.Waypoint)
-					DrawSidePanelWaypoint();
-				else
-					DrawSidePanelAttachment(); // includes Undefined and Attachment
-			}
-			else
-				sidePanel.Update();
-
-			if (pendingAction == PendingAction.None) return;
-
-			switch (pendingAction)
-			{
-				case PendingAction.Add:
-					if (DrawAddPopup()) return;
-					break;
-				case PendingAction.Delete:
-					if (DrawDeletePopup()) return;
-					break;
-				case PendingAction.Select:
-					if (DrawSelectPopup()) return;
-					break;
-			}
-
-			pendingAction = PendingAction.None;
 		}
 
 		// ===================================================================
@@ -243,21 +209,8 @@ namespace ClassicTilestorm
 
 			selection = attachments?.Length > 0 ? attachments : null;
 
-			if (null != selection && selection.Length > 0)
-			{
-				if (selection == null || selection.Length == 0)
-				{
-					// Do nothing — keep currentMode as is (panel stays)
-				}
-				else if (selection.Length == 1)
-				{
-					currentMode = selection[0] is Waypoint ? Mode.Waypoint : Mode.Attachment;
-				}
-				else // Length > 1
-				{
-					currentMode = Mode.Attachment;
-				}
-			}
+			if (null != selection)
+				currentMode = selection.Length > 1 ? Mode.Attachment : selection[0] is Waypoint ? Mode.Waypoint : Mode.Attachment;
 
 			ViewPreviewUtil.Hide();
 			HideAllGizmos();
@@ -313,7 +266,7 @@ namespace ClassicTilestorm
 			var positions = new Vector3[tiles.Length];
 			var colors = new Color[tiles.Length];
 
-			bool isWaypointMode = currentMode == Mode.Waypoint;
+			var isWaypointMode = currentMode == Mode.Waypoint;
 
 			for (int i = 0; i < tiles.Length; i++)
 			{
@@ -329,6 +282,131 @@ namespace ClassicTilestorm
 			var selectedIndex = Array.IndexOf(tiles, selectedTile);
 
 			EditorMarkerUtil.ShowMarkers(positions, colors, selectedIndex);
+		}
+
+		private void MoveWaypoint(Waypoint wp, int direction)
+		{
+			if (wp == null) return;
+
+			var oldIndex = wp.waypointIndex;
+			var newIndex = oldIndex + direction;
+
+			// Get current sorted waypoints
+			var currentWaypoints = iMap.GetWaypoints();  // using extension
+
+			if (newIndex < 0 || newIndex >= currentWaypoints.Length) return;
+
+			var targetWp = currentWaypoints[newIndex];
+
+			// Swap waypointIndex values on the objects
+			wp.waypointIndex = newIndex;
+			targetWp.waypointIndex = oldIndex;
+
+			var movedWaypoint = new Waypoint(newIndex, wp.tile);
+			Select(movedWaypoint);
+
+			RebuildMarkers();
+		}
+
+#if NEWER
+
+		public override void OnGUI()
+		{
+			base.OnGUI();
+
+			if (selection != null && selection.Length >= 1)
+			{
+				if (currentMode == Mode.Waypoint)
+				{
+					EditorAttachmentUI.DrawSidePanelWaypoint(
+						sidePanel,
+						iMap,
+						selection,
+						(wp, dir) => MoveWaypoint(wp, dir)
+					);
+				}
+				else
+				{
+					EditorAttachmentUI.DrawSidePanelAttachment(
+						sidePanel,
+						iMap,
+						selection,
+						att => Select(att)
+					);
+				}
+			}
+			else
+			{
+				sidePanel.Update();
+			}
+
+			if (pendingAction == PendingAction.None) return;
+
+			switch (pendingAction)
+			{
+				case PendingAction.Add:
+					if (EditorAttachmentUI.DrawAddPopup(
+							popupPos, iMap, pendingTile,
+							created => Select(created)))
+						return;
+					break;
+
+				case PendingAction.Delete:
+					if (EditorAttachmentUI.DrawDeletePopup(
+							popupPos, iMap, pendingTile,
+							() => Select()))
+						return;
+					break;
+
+				case PendingAction.Select:
+					if (EditorAttachmentUI.DrawSelectPopup(
+							popupPos, iMap, pendingTile,
+							att => Select(att),
+							atts => Select(atts),
+							() => Select()))
+						return;
+					break;
+			}
+
+			pendingAction = PendingAction.None;
+		}
+
+#else
+
+		// ===================================================================
+		// GUI — currently only draws attachment panel (waypoint panel ready below)
+		// ===================================================================
+		public override void OnGUI()
+		{
+			base.OnGUI();
+
+			if (null != selection && selection.Length >= 1)
+			{
+				// Draw correct panel based on currentMode
+				if (currentMode == Mode.Waypoint)
+					DrawSidePanelWaypoint();
+				else
+					DrawSidePanelAttachment(); // includes Undefined and Attachment
+			}
+			else
+				sidePanel.Update();
+
+			if (pendingAction == PendingAction.None) return;
+
+			switch (pendingAction)
+			{
+				case PendingAction.Add:
+					if (DrawAddPopup()) return;
+					break;
+				case PendingAction.Delete:
+					if (DrawDeletePopup()) return;
+					break;
+				case PendingAction.Select:
+					if (DrawSelectPopup()) return;
+					break;
+			}
+
+			pendingAction = PendingAction.None;
 		}
 
 		// ===================================================================
@@ -397,30 +475,6 @@ namespace ClassicTilestorm
 			sidePanel.Buttons.Add(new("Move Down", () => MoveWaypoint(selectedWaypoint, +1), enabled: canMoveDown));
 
 			sidePanel.Draw();
-		}
-
-		private void MoveWaypoint(Waypoint wp, int direction)
-		{
-			if (wp == null) return;
-
-			var oldIndex = wp.waypointIndex;
-			var newIndex = oldIndex + direction;
-
-			// Get current sorted waypoints
-			var currentWaypoints = iMap.GetWaypoints();  // using extension
-
-			if (newIndex < 0 || newIndex >= currentWaypoints.Length) return;
-
-			var targetWp = currentWaypoints[newIndex];
-
-			// Swap waypointIndex values on the objects
-			wp.waypointIndex = newIndex;
-			targetWp.waypointIndex = oldIndex;
-
-			var movedWaypoint = new Waypoint(newIndex, wp.tile);
-			Select(movedWaypoint);
-
-			RebuildMarkers();
 		}
 
 		// ===================================================================
@@ -493,13 +547,13 @@ namespace ClassicTilestorm
 					label += $" to {e.LookAt.magnitude:F1}";
 				label += $" [tile {att.tile}]";
 
-				items.Add(new (label, () => Select(att)));
+				items.Add(new(label, () => Select(att)));
 			}
 
 			if (atts.Length > 1)
 			{
 				items.Add(PopupItem.Spacer());
-				items.Add(new ("Select All", () => Select(atts), colorOverride: Color.green));
+				items.Add(new("Select All", () => Select(atts), colorOverride: Color.green));
 			}
 
 			items.Add(PopupItem.Spacer());
@@ -515,5 +569,6 @@ namespace ClassicTilestorm
 
 			return result == PopupResult.StillOpen;
 		}
+#endif
 	}
 }
