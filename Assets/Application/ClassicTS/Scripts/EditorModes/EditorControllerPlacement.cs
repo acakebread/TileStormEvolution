@@ -164,7 +164,7 @@ namespace ClassicTilestorm
 					break;
 			}
 
-			void EditMapTile(bool erase = false) => iMap.UpdateTileAt(Map.ScreenToWorld(camera, InputX.mousePosition), erase ? ResourceManager.DefaultHash : selectedVariant.hash, selectedVariant.delta, selectedVariant.angle);
+			void EditMapTile(bool erase = false) => iMap.UpdateTileAt(currentWorld, erase ? ResourceManager.DefaultHash : selectedVariant.hash, selectedVariant.delta, selectedVariant.angle);
 		}
 
 		private bool StartDrag()
