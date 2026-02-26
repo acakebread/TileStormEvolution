@@ -152,12 +152,6 @@ namespace ClassicTilestorm
 								StartPanning();
 						}
 
-						if (InputX.GetMouseButtonUp(0))
-						{
-							if (currentWorld != startWorld)
-								DeselectTile();
-						}
-
 						if (InputX.GetMouseButtonUp(1))
 							DeselectTile();
 					}
@@ -175,6 +169,8 @@ namespace ClassicTilestorm
 						EndDrag();
 					break;
 			}
+
+			void EditMapTile(bool erase = false) => iMap.UpdateTileAt(Map.ScreenToWorld(camera, InputX.mousePosition), erase ? ResourceManager.DefaultHash : selectedVariant.hash, selectedVariant.delta, selectedVariant.angle);
 		}
 
 		private bool StartDrag()
@@ -229,8 +225,8 @@ namespace ClassicTilestorm
 			var tile = iMap.GetTile(worldPos);
 			if (tile.gameObject == null) return false;
 
-			const float SELECT_TINT_BRIGHTNESS = 1.35f;
 			Color SELECT_TINT = new (1.4f, 1.25f, 0.85f, 1f);
+			const float SELECT_TINT_BRIGHTNESS = 1.35f;
 
 			originalRenderersState = tile.gameObject.ApplySelectionHighlight(
 				SELECT_TINT,
@@ -291,8 +287,6 @@ namespace ClassicTilestorm
 
 			EditorMeshUtil.UpdateGhostMesh(variant, snapped, mapIndex == -1);
 		}
-
-		private void EditMapTile(bool erase = false) => iMap.UpdateTileAt(Map.ScreenToWorld(camera, InputX.mousePosition), erase ? ResourceManager.DefaultHash : selectedVariant.hash, selectedVariant.delta, selectedVariant.angle);
 
 		public override void OnDestroy()
 		{
