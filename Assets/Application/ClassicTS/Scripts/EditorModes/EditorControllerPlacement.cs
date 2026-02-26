@@ -67,18 +67,11 @@ namespace ClassicTilestorm
 
 		private void SetMode(ControllerMode newMode) => mode = newMode;
 
-		public override void Update()
-		{
-			base.Update();
-			UpdateGhostMesh(camera, iMap, selectedVariant);// Continuous ghost update in placing mode
-		}
-
 		protected override void OnControl(bool staticClick)
 		{
 			base.OnControl(staticClick);
 			if (!camera) return;
 
-			// ── Discrete input ────────────────────────────────────────────────────────────────
 			switch (mode)
 			{
 				case ControllerMode.Idle:
@@ -127,6 +120,8 @@ namespace ClassicTilestorm
 					break;
 
 				case ControllerMode.Placing:
+					UpdateGhostMesh(camera, iMap, selectedVariant);// Continuous ghost update in placing mode
+
 					if (staticClick)
 					{
 						if (InputX.GetMouseButtonUp(0))
@@ -140,6 +135,7 @@ namespace ClassicTilestorm
 								EditMapTile(erase: true);
 							else
 							{
+								EditorMeshUtil.HideGhostMesh();
 								selectedVariant = new Variant(ResourceManager.DefaultHash);
 								SetMode(ControllerMode.Idle);
 							}
@@ -266,7 +262,7 @@ namespace ClassicTilestorm
 		private void UpdateGhostMesh(Camera cam, IMapEdit map, Variant variant)
 		{
 			var def = ResourceManager.GetDefinition(variant.hash);
-			if (mode != ControllerMode.Placing || def == null || def.IsDefaultEquivalent())
+			if (def == null || def.IsDefaultEquivalent())
 			{
 				EditorMeshUtil.HideGhostMesh();
 				return;
