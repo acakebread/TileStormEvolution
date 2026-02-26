@@ -171,8 +171,6 @@ namespace ClassicTilestorm
 		{
 			if (!SelectTile(currentWorld))
 				return false;
-			var index = iMap.VectorToIndex(startWorld);
-			selectedVariant = iMap.GetVariantAt(index);
 			SetMode(ControllerMode.Dragging);
 			return true;
 		}
@@ -226,6 +224,7 @@ namespace ClassicTilestorm
 				includeInactive: true);
 
 			startWorld = variant.HasNav ? Map.FullFloorVec(worldPos) : Map.HalfFloorVec(worldPos);
+			selectedVariant = variant;
 			SetMode(ControllerMode.Selected);
 
 			return true;
