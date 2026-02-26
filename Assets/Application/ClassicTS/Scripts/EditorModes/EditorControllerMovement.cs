@@ -136,8 +136,5 @@ namespace ClassicTilestorm
 				camera.transform.position += delta;
 			}
 		}
-
-		// Helper — can be overridden if a mode wants different pan conditions
-		protected virtual bool ShouldStartPanningOnLeftClick() => true;
 	}
 }

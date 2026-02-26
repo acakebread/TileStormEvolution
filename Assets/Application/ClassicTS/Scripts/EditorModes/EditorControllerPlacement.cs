@@ -65,7 +65,7 @@ namespace ClassicTilestorm
 			SetMode((newHash != ResourceManager.DefaultHash) ? ControllerMode.Placing : ControllerMode.Idle);
 		}
 
-		private void SetMode(ControllerMode newMode) => mode = newMode;
+		private void SetMode(ControllerMode value) => mode = value;
 
 		protected override void OnControl(bool staticClick)
 		{

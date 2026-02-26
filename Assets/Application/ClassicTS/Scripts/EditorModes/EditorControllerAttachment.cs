@@ -87,14 +87,13 @@ namespace ClassicTilestorm
 		{
 			pendingTile = iMap.CameraHitTile(camera, InputX.mousePosition);
 
-			bool noAttachmentHere = pendingTile < 0 || iMap.GetAttachments(tileIndex: pendingTile).Length == 0;
-			if (noAttachmentHere && ShouldStartPanningOnLeftClick())
+			if (pendingTile < 0 || iMap.GetAttachments(tileIndex: pendingTile).Length == 0)//no attachment here
 				StartPanning();
 
 			if (-1 != pendingTile)
 			{
-				var alreadySelected = selection?.Length > 0 && selection[0].tile == pendingTile;
-				if (!alreadySelected) Select(iMap.GetAttachments(tileIndex: pendingTile));
+				if (null == selection || selection.Length == 0 || selection[0].tile != pendingTile)
+					Select(iMap.GetAttachments(tileIndex: pendingTile));
 				return;
 			}
 			Select();
