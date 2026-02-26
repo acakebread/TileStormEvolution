@@ -102,7 +102,7 @@ namespace ClassicTilestorm
 						if (holdSelect && Time.time - holdTime >= 0.25f)
 						{
 							holdSelect = false;
-							if (!AttemptDrag())
+							if (!StartDrag())
 								StartPanning();
 						}
 
@@ -148,7 +148,7 @@ namespace ClassicTilestorm
 					{
 						if (InputX.GetMouseButtonDown(0))
 						{
-							if (!AttemptDrag())
+							if (!StartDrag())
 								StartPanning();
 						}
 
@@ -166,35 +166,30 @@ namespace ClassicTilestorm
 				case ControllerMode.Dragging:
 					if (InputX.GetMouseButtonDown(0))
 					{
-						if (!AttemptDrag())
+						if (!StartDrag())
 							SetMode(ControllerMode.Idle);
 					}
 					else if (InputX.GetMouseButton(0))
-						UpdateDragPosition();
+						UpdateDrag();
 					else if (InputX.GetMouseButtonUp(0))
 						EndDrag();
 					break;
 			}
 		}
 
-		private bool AttemptDrag()
+		private bool StartDrag()
 		{
 			if (!SelectTile(currentWorld))
 				return false;
-			StartDrag();
-			return true;
-		}
-
-		private void StartDrag()
-		{
 			var index = iMap.VectorToIndex(startWorld);
 			selectedVariant = iMap.GetVariantAt(index);
 			SetMode(ControllerMode.Dragging);
+			return true;
 		}
 
 		private Vector3 DeltaWorld(Vector3 src, Vector3 dst, bool half = false) => Map.FullFloorVec(src) + (dst - (half ? Map.FullFloorVec(src) : Map.HalfFloorVec(src)));
 
-		private void UpdateDragPosition()
+		private void UpdateDrag()
 		{
 			var tile = iMap.GetTile(startWorld);
 

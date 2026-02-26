@@ -56,6 +56,7 @@ namespace ClassicTilestorm
 		protected override void OnControl(bool staticClick)
 		{
 			base.OnControl(staticClick);
+			if (!camera) return;
 
 			if (InputX.GetMouseButtonDown(0))
 				HandleLeftMouseDown();
