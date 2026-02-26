@@ -3,13 +3,48 @@ using UnityEngine;
 using System.Linq;
 using System.Collections.Generic;
 using static MassiveHadronLtd.GuiUtils;
+using MassiveHadronLtd;
 
 namespace ClassicTilestorm
 {
 	public static class EditorAttachmentUI
 	{
-		// Side panels
+		// ─────────────────────────────────────────────────────────────────────
+		// Moved/shared pending state
+		// ─────────────────────────────────────────────────────────────────────
+		private enum PendingAction { None, Add, Delete, Select }
+		private static PendingAction pendingAction = PendingAction.None;
+		private static Vector3 popupPos;
 
+		// Public API to enter pending mode + capture mouse position
+		public static void RequestAdd()
+		{
+			pendingAction = PendingAction.Add;
+			popupPos = InputX.mousePosition;
+		}
+
+		public static void RequestDelete()
+		{
+			pendingAction = PendingAction.Delete;
+			popupPos = InputX.mousePosition;
+		}
+
+		public static void RequestSelect()
+		{
+			pendingAction = PendingAction.Select;
+			popupPos = InputX.mousePosition;
+		}
+
+		public static void ClearPending()
+		{
+			pendingAction = PendingAction.None;
+		}
+
+		public static bool IsPending => pendingAction != PendingAction.None;
+
+		// ─────────────────────────────────────────────────────────────────────
+		// Side panels (unchanged)
+		// ─────────────────────────────────────────────────────────────────────
 		public static readonly AutoHidePanel sidePanel = new(collapsed: 120f, expanded: 340f, delay: 1.5f, animDur: 0.25f, defaultPos: new Vector2(0f, 40f));
 
 		public static void DrawSidePanelAttachment(
@@ -84,14 +119,12 @@ namespace ClassicTilestorm
 				var oldIndex = wp.waypointIndex;
 				var newIndex = oldIndex + direction;
 
-				// Get current sorted waypoints
 				var currentWaypoints = iMap.GetWaypoints();
 
 				if (newIndex < 0 || newIndex >= currentWaypoints.Length) return null;
 
 				var targetWp = currentWaypoints[newIndex];
 
-				// Swap waypointIndex values on the objects
 				wp.waypointIndex = newIndex;
 				targetWp.waypointIndex = oldIndex;
 
@@ -99,28 +132,30 @@ namespace ClassicTilestorm
 			}
 		}
 
-		// Popups
-
+		// ─────────────────────────────────────────────────────────────────────
+		// Popups — now take tile as parameter, use static popupPos + mode check
+		// ─────────────────────────────────────────────────────────────────────
 		public static bool DrawAddPopup(
-			Vector3 popupPos,
 			IMapEdit iMap,
-			int pendingTile,
+			int tile,
 			Action<MapAttachment> onCreateAndSelect)
 		{
+			if (pendingAction != PendingAction.Add) return false;
+
 			var waypoints = iMap.GetWaypoints();
 
 			var items = new List<PopupItem>
 			{
-				new($"Waypoint [WP{waypoints?.Length:00}]", () => onCreateAndSelect(WaypointAttachmentHandler.Create(iMap, pendingTile)), colorOverride: Color.lightSteelBlue),
-				new("Emitter [flame]", () => onCreateAndSelect(EmitterAttachmentHandler.Create(iMap, pendingTile, "flame")), colorOverride: Color.cyan),
-				new("Emitter [spark]", () => onCreateAndSelect(EmitterAttachmentHandler.Create(iMap, pendingTile, "spark")), colorOverride: Color.cyan),
-				new("View",            () => onCreateAndSelect(ViewAttachmentHandler.Create(iMap, pendingTile)),            colorOverride: Color.cyan),
-				new("Pickup",          () => onCreateAndSelect(PickupAttachmentHandler.Create(iMap, pendingTile)),          colorOverride: Color.cyan),
+				new($"Waypoint [WP{waypoints?.Length:00}]", () => onCreateAndSelect(WaypointAttachmentHandler.Create(iMap, tile)), colorOverride: Color.lightSteelBlue),
+				new("Emitter [flame]", () => onCreateAndSelect(EmitterAttachmentHandler.Create(iMap, tile, "flame")), colorOverride: Color.cyan),
+				new("Emitter [spark]", () => onCreateAndSelect(EmitterAttachmentHandler.Create(iMap, tile, "spark")), colorOverride: Color.cyan),
+				new("View",            () => onCreateAndSelect(ViewAttachmentHandler.Create(iMap, tile)),            colorOverride: Color.cyan),
+				new("Pickup",          () => onCreateAndSelect(PickupAttachmentHandler.Create(iMap, tile)),          colorOverride: Color.cyan),
 				PopupItem.Spacer(),
 				new("Cancel", () => { }, colorOverride: Color.yellow)
 			};
 
-			var result = PopupMenu.Show(popupPos, $"Add Attachment at tile {pendingTile}", items);
+			var result = PopupMenu.Show(popupPos, $"Add Attachment at tile {tile}", items);
 
 			if (result == PopupResult.ClosedByAction)
 				return false;
@@ -129,12 +164,13 @@ namespace ClassicTilestorm
 		}
 
 		public static bool DrawDeletePopup(
-			Vector3 popupPos,
 			IMapEdit iMap,
-			int pendingTile,
-			Action onDeselect)
+			int tile,
+			Action<MapAttachment[]> onSelect)
 		{
-			var attsOnTile = iMap.GetAttachments(tileIndex: pendingTile);
+			if (pendingAction != PendingAction.Delete) return false;
+
+			var attsOnTile = iMap.GetAttachments(tileIndex: tile);
 			if (attsOnTile.Length == 0) return false;
 
 			var items = new List<PopupItem>();
@@ -142,7 +178,7 @@ namespace ClassicTilestorm
 			foreach (var att in attsOnTile)
 			{
 				var localAtt = att;
-				string label = att is Waypoint wp ? $"Delete WP{wp.waypointIndex:00} [{pendingTile}]" : $"Delete {att.GetType().Name} [{pendingTile}]";
+				string label = att is Waypoint wp ? $"Delete WP{wp.waypointIndex:00} [{tile}]" : $"Delete {att.GetType().Name} [{tile}]";
 				items.Add(new PopupItem(label, () => iMap.RemoveAttachment(localAtt), colorOverride: Color.softRed));
 			}
 
@@ -158,20 +194,19 @@ namespace ClassicTilestorm
 			var result = PopupMenu.Show(popupPos, "Delete Attachment" + (attsOnTile.Length > 1 ? "(s)" : ""), items);
 
 			if (result != PopupResult.StillOpen)
-				onDeselect?.Invoke();
+				onSelect(null);
 
 			return result == PopupResult.StillOpen;
 		}
 
 		public static bool DrawSelectPopup(
-			Vector3 popupPos,
 			IMapEdit iMap,
-			int pendingTile,
-			Action<MapAttachment> onSelect,
-			Action<MapAttachment[]> onSelectMultiple,
-			Action onDeselect)
+			int tile,
+			Action<MapAttachment[]> onSelect)
 		{
-			var atts = iMap.GetAttachments(tileIndex: pendingTile);
+			if (pendingAction != PendingAction.Select) return false;
+
+			var atts = iMap.GetAttachments(tileIndex: tile);
 			if (atts.Length == 0) return false;
 
 			var items = new List<PopupItem>();
@@ -183,13 +218,13 @@ namespace ClassicTilestorm
 					label += $" to {e.LookAt.magnitude:F1}";
 				label += $" [tile {att.tile}]";
 
-				items.Add(new PopupItem(label, () => onSelect(att)));
+				items.Add(new PopupItem(label, () => onSelect(new[] { att })));
 			}
 
 			if (atts.Length > 1)
 			{
 				items.Add(PopupItem.Spacer());
-				items.Add(new PopupItem("Select All", () => onSelectMultiple(atts), colorOverride: Color.green));
+				items.Add(new PopupItem("Select All", () => onSelect(atts), colorOverride: Color.green));
 			}
 
 			items.Add(PopupItem.Spacer());
@@ -201,9 +236,46 @@ namespace ClassicTilestorm
 				return false;
 
 			if (result == PopupResult.ClosedByClickOutside || result == PopupResult.ClosedByCancel)
-				onDeselect?.Invoke();
+				onSelect(null);
 
 			return result == PopupResult.StillOpen;
+		}
+
+		// In EditorAttachmentUI
+		public static void UpdateGUI(
+			IMapEdit iMap,
+			MapAttachment[] currentSelection,
+			Action<MapAttachment[]> onSelect,   // ← this replaces all Select(...) calls
+			int pendingTile
+		)
+		{
+			// Side panel handling
+			if (currentSelection != null)
+			{
+				if (currentSelection.Length == 1 && currentSelection[0] is Waypoint wp)
+				{
+					DrawSidePanelWaypoint(iMap, currentSelection, waypoint => onSelect(new[] { waypoint }));
+				}
+				else
+				{
+					DrawSidePanelAttachment(iMap, currentSelection, att => onSelect(new[] { att }));
+				}
+			}
+			else
+			{
+				sidePanel.Update();
+			}
+
+			// Popups
+			bool stillOpen =
+				DrawAddPopup(iMap, pendingTile, created => onSelect(new[] { created })) ||
+				DrawDeletePopup(iMap, pendingTile, atts => onSelect(atts)) ||
+				DrawSelectPopup(iMap, pendingTile, atts => onSelect(atts));
+
+			if (!stillOpen && IsPending)
+			{
+				ClearPending();
+			}
 		}
 	}
 }

@@ -8,13 +8,10 @@ namespace ClassicTilestorm
 	public class EditorControllerAttachment : EditorControllerMovement
 	{
 		// ===================================================================
-		// Pending state
+		// Pending state — only tile stays here
 		// ===================================================================
-		private MapAttachment[] selection = null;
-		private enum PendingAction { None, Add, Delete, Select }
-		private PendingAction pendingAction = PendingAction.None;
 		private int pendingTile = -1;
-		private Vector3 popupPos;
+		private MapAttachment[] selection = null;
 
 		// ===================================================================
 		// Constructor
@@ -49,7 +46,6 @@ namespace ClassicTilestorm
 		// ===================================================================
 		// Core Update
 		// ===================================================================
-
 		public override void Update()
 		{
 			base.Update();
@@ -84,9 +80,8 @@ namespace ClassicTilestorm
 		}
 
 		// ===================================================================
-		// Input Handlers — now using currentMode
+		// Input Handlers
 		// ===================================================================
-
 		private void HandleLeftMouseDown()
 		{
 			pendingTile = iMap.CameraHitTile(camera, InputX.mousePosition);
@@ -152,15 +147,15 @@ namespace ClassicTilestorm
 			if (null == attachmentsOnTile || 0 == attachmentsOnTile.Length)
 			{
 				if (-1 != pendingTile)
-					pendingAction = PendingAction.Add;
+					EditorAttachmentUI.RequestAdd();
 			}
 			else if (attachmentsOnTile.Length > 1)
 			{
-				pendingAction = PendingAction.Select;
+				EditorAttachmentUI.RequestSelect();
 			}
 			else
 			{
-				pendingAction = PendingAction.None;
+				EditorAttachmentUI.ClearPending();
 				Select(attachmentsOnTile);
 			}
 
@@ -173,7 +168,7 @@ namespace ClassicTilestorm
 			if (tile >= 0 && iMap.GetAttachments(tileIndex: tile).Length > 0)
 			{
 				pendingTile = tile;
-				pendingAction = PendingAction.Delete;
+				EditorAttachmentUI.RequestDelete();
 				Select(iMap.GetAttachments(tileIndex: pendingTile));
 				return;
 			}
@@ -184,12 +179,8 @@ namespace ClassicTilestorm
 		// Selection & Gizmos
 		// ===================================================================
 
-		private void Select(MapAttachment attachment) => Select(attachment == null ? null : new[] { attachment });
-
 		private void Select(MapAttachment[] attachments = null)
 		{
-			popupPos = InputX.mousePosition;
-
 			selection = attachments?.Length > 0 ? attachments : null;
 
 			ViewPreviewUtil.Hide();
@@ -214,8 +205,8 @@ namespace ClassicTilestorm
 		private void ResetInputState()
 		{
 			selection = null;
-			pendingAction = PendingAction.None;
 			pendingTile = -1;
+			EditorAttachmentUI.ClearPending();
 			HideAllGizmos();
 		}
 
@@ -242,9 +233,9 @@ namespace ClassicTilestorm
 
 			var isWaypointMode = null != selection && selection.Length == 1 && selection[0] is Waypoint;
 
-			for (int i = 0; i < tiles.Length; i++)
+			for (var i = 0; i < tiles.Length; i++)
 			{
-				int tile = tiles[i];
+				var tile = tiles[i];
 				positions[i] = iMap.TileRenderPosition(tile);
 
 				colors[i] = isWaypointMode && iMap.HasAttachmentOfType<View>(tile)
@@ -261,38 +252,7 @@ namespace ClassicTilestorm
 		public override void OnGUI()
 		{
 			base.OnGUI();
-
-			if (null != selection)
-			{
-				if (selection.Length == 1 && selection[0] is Waypoint)
-					EditorAttachmentUI.DrawSidePanelWaypoint(iMap, selection, wp => Select(wp));
-				else
-					EditorAttachmentUI.DrawSidePanelAttachment(iMap, selection, att => Select(att));
-			}
-			else
-				EditorAttachmentUI.sidePanel.Update();
-
-			if (pendingAction == PendingAction.None) return;
-
-			switch (pendingAction)
-			{
-				case PendingAction.Add:
-					if (EditorAttachmentUI.DrawAddPopup(popupPos, iMap, pendingTile, created => Select(created)))
-						return;
-					break;
-
-				case PendingAction.Delete:
-					if (EditorAttachmentUI.DrawDeletePopup(popupPos, iMap, pendingTile, () => Select()))
-						return;
-					break;
-
-				case PendingAction.Select:
-					if (EditorAttachmentUI.DrawSelectPopup(popupPos, iMap, pendingTile, att => Select(att), atts => Select(atts), () => Select()))
-						return;
-					break;
-			}
-
-			pendingAction = PendingAction.None;
+			EditorAttachmentUI.UpdateGUI(iMap, selection, atts => Select(atts), pendingTile );
 		}
 	}
 }
