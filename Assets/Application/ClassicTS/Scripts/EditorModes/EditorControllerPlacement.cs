@@ -181,24 +181,26 @@ namespace ClassicTilestorm
 
 			if (null == tile.gameObject) return;
 
-			var worldPos = Map.FullFloorVec(startWorld) + currentWorld - startWorld + selectedVariant.delta;
+			var startVariant = iMap.GetVariantAt(startWorld);
+			var worldPos = Map.FullFloorVec(startWorld) + currentWorld - startWorld + startVariant.delta;
 			var snapped = Map.FullFloorVec(worldPos);
-			var delta = selectedVariant.HasNav ? Vector3.zero : Map.HalfFloorVec(worldPos) - snapped;//the future selectedVariant.delta
+			var delta = startVariant.HasNav ? Vector3.zero : Map.HalfFloorVec(worldPos) - snapped;//the future selectedVariant.delta
 
 			tile.gameObject.transform.position = Map.WorldToRender(snapped) + delta;//update selection visual
 		}
 
 		private void EndDrag()
 		{
-			var worldPos = Map.FullFloorVec(startWorld) + currentWorld - startWorld + selectedVariant.delta;
+			var startVariant = iMap.GetVariantAt(startWorld);
+			var worldPos = Map.FullFloorVec(startWorld) + currentWorld - startWorld + startVariant.delta;
 			var snapped = Map.FullFloorVec(worldPos);
-			var delta = selectedVariant.HasNav ? Vector3.zero : Map.HalfFloorVec(worldPos) - snapped;//the future selectedVariant.delta
+			var delta = startVariant.HasNav ? Vector3.zero : Map.HalfFloorVec(worldPos) - snapped;//the future selectedVariant.delta
 
-			if (snapped == Map.FullFloorVec(startWorld) && delta == selectedVariant.delta) return;//no change so ok to just exit
+			if (snapped == Map.FullFloorVec(startWorld) && delta == startVariant.delta) return;//no change so ok to just exit
 
-			selectedVariant.delta = delta;
+			startVariant.delta = delta;
 			iMap.RemoveTileAt(startWorld); // this will destroy the gameobject on the tile so defacto remove the highlight
-			var index = iMap.UpdateTileAt(snapped, selectedVariant);
+			var index = iMap.UpdateTileAt(snapped, startVariant);
 			if (-1 == index) return;//operation failed
 			SelectTile(iMap.IndexToVector(index));
 			//SetMode(ControllerMode.Idle);
