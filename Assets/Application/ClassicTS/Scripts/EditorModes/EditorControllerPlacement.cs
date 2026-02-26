@@ -130,15 +130,9 @@ namespace ClassicTilestorm
 						if (InputX.GetMouseButtonUp(1))
 						{
 							DeselectTile();
-
-							if (selectedVariant.hash == ResourceManager.DefaultHash)
-								EditMapTile(erase: true);
-							else
-							{
-								EditorMeshUtil.HideGhostMesh();
-								selectedVariant = new Variant(ResourceManager.DefaultHash);
-								SetMode(ControllerMode.Idle);
-							}
+							EditorMeshUtil.HideGhostMesh();
+							selectedVariant = new Variant(ResourceManager.DefaultHash);
+							SetMode(ControllerMode.Idle);
 						}
 					}
 					break;
