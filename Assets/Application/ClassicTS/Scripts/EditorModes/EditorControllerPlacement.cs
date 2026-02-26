@@ -160,7 +160,10 @@ namespace ClassicTilestorm
 					else if (InputX.GetMouseButton(0))
 						UpdateDrag();
 					else if (InputX.GetMouseButtonUp(0))
+					{
+						SetMode(ControllerMode.Selected);
 						EndDrag();
+					}
 					break;
 			}
 
@@ -196,7 +199,8 @@ namespace ClassicTilestorm
 			var snapped = Map.FullFloorVec(worldPos);
 			var delta = startVariant.HasNav ? Vector3.zero : Map.HalfFloorVec(worldPos) - snapped;//the future selectedVariant.delta
 
-			if (snapped == Map.FullFloorVec(startWorld) && delta == startVariant.delta) return;//no change so ok to just exit
+			if (snapped == Map.FullFloorVec(startWorld) && delta == startVariant.delta)
+				return;//no change so ok to just exit
 
 			startVariant.delta = delta;
 			iMap.RemoveTileAt(startWorld); // this will destroy the gameobject on the tile so defacto remove the highlight
@@ -226,7 +230,6 @@ namespace ClassicTilestorm
 				includeInactive: true);
 
 			startWorld = variant.HasNav ? Map.FullFloorVec(worldPos) : Map.HalfFloorVec(worldPos);
-			selectedVariant = variant;
 			SetMode(ControllerMode.Selected);
 
 			return true;
