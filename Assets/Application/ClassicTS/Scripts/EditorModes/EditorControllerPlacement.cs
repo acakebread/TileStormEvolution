@@ -177,15 +177,13 @@ namespace ClassicTilestorm
 			return true;
 		}
 
-		private Vector3 DeltaWorld(Vector3 src, Vector3 dst, bool half = false) => Map.FullFloorVec(src) + (dst - (half ? Map.FullFloorVec(src) : Map.HalfFloorVec(src)));
-
 		private void UpdateDrag()
 		{
 			var tile = iMap.GetTile(startWorld);
 
 			if (null == tile.gameObject) return;
 
-			var worldPos = DeltaWorld(startWorld, currentWorld, selectedVariant.HasNav) + selectedVariant.delta;
+			var worldPos = Map.FullFloorVec(startWorld) + currentWorld - startWorld + selectedVariant.delta;
 			var snapped = Map.FullFloorVec(worldPos);
 			var delta = selectedVariant.HasNav ? Vector3.zero : Map.HalfFloorVec(worldPos) - snapped;//the future selectedVariant.delta
 
@@ -194,7 +192,7 @@ namespace ClassicTilestorm
 
 		private void EndDrag()
 		{
-			var worldPos = DeltaWorld(startWorld, currentWorld, selectedVariant.HasNav) + selectedVariant.delta;
+			var worldPos = Map.FullFloorVec(startWorld) + currentWorld - startWorld + selectedVariant.delta;
 			var snapped = Map.FullFloorVec(worldPos);
 			var delta = selectedVariant.HasNav ? Vector3.zero : Map.HalfFloorVec(worldPos) - snapped;//the future selectedVariant.delta
 
@@ -227,7 +225,7 @@ namespace ClassicTilestorm
 				SELECT_TINT_BRIGHTNESS,
 				includeInactive: true);
 
-			startWorld = worldPos;
+			startWorld = variant.HasNav ? Map.FullFloorVec(worldPos) : Map.HalfFloorVec(worldPos);
 			SetMode(ControllerMode.Selected);
 
 			return true;
