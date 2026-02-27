@@ -41,7 +41,7 @@ namespace ClassicTilestorm
 			tileSelector.OnTileSelected += OnTileSelectedFromPalette;
 			tileSelector.CanOpenPalette = () => mode == ControllerMode.Idle;
 
-			selectedVariant = new Variant(ResourceManager.DefaultHash);
+			//selectedVariant = new Variant(ResourceManager.DefaultHash);
 			SetMode(ControllerMode.Idle);
 		}
 
@@ -120,7 +120,8 @@ namespace ClassicTilestorm
 					break;
 
 				case ControllerMode.Placing:
-					UpdateGhostMesh(camera, iMap, selectedVariant);// Continuous ghost update in placing mode
+					selectedVariant = NextVariantOnMap(iMap, currentWorld, selectedVariant);
+					UpdateGhostMesh();// Continuous ghost update in placing mode
 
 					if (staticClick)
 					{
@@ -131,7 +132,6 @@ namespace ClassicTilestorm
 						{
 							DeselectTile();
 							EditorMeshUtil.HideGhostMesh();
-							selectedVariant = new Variant(ResourceManager.DefaultHash);
 							SetMode(ControllerMode.Idle);
 						}
 					}
@@ -202,6 +202,7 @@ namespace ClassicTilestorm
 			if (snapped == Map.FullFloorVec(startWorld) && delta == startVariant.delta)
 				return;//no change so ok to just exit
 
+			delta.y = startVariant.delta.y;//retore old delta height
 			startVariant.delta = delta;
 			iMap.RemoveTileAt(startWorld); // this will destroy the gameobject on the tile so defacto remove the highlight
 			var index = iMap.UpdateTileAt(snapped, startVariant);
@@ -246,48 +247,38 @@ namespace ClassicTilestorm
 			SetMode(ControllerMode.Idle);
 		}
 
-		private void UpdateGhostMesh(Camera cam, IMapEdit map, Variant variant)
+		private void UpdateGhostMesh()
 		{
-			var def = ResourceManager.GetDefinition(variant.hash);
-			if (def == null || def.IsDefaultEquivalent())
-			{
-				EditorMeshUtil.HideGhostMesh();
-				return;
-			}
-
-			var mapIndex = map.VectorToIndex(currentWorld);
-
-			selectedVariant.delta = Vector3.zero;
-			selectedVariant.angle = 0f;
-
-			if (mapIndex != -1)
-			{
-				var current = map.GetVariantAt(mapIndex);
-
-				if (current.hash != 0 && current.hash == variant.hash)
-				{
-					float[] angles = { 0f, 90f, 180f, 270f };
-					float[] deltas = { 0f, 0.25f, 0.5f, 0.75f, 1f };
-
-					int aIdx = Array.IndexOf(angles, current.angle); if (aIdx < 0) aIdx = 0;
-					int dIdx = Array.IndexOf(deltas, current.delta.y); if (dIdx < 0) dIdx = 0;
-
-					aIdx = (aIdx + 1) % angles.Length;
-					if (aIdx == 0) dIdx = (dIdx + 1) % deltas.Length;
-
-					selectedVariant.delta = new Vector3(current.delta.x, deltas[dIdx], current.delta.z);
-					selectedVariant.angle = angles[aIdx];
-				}
-			}
-
+			var mapIndex = iMap.VectorToIndex(currentWorld);
 			var snapped = Map.WorldToRender(Map.FullFloorVec(currentWorld));
-			EditorMeshUtil.UpdateGhostMesh(variant, snapped, mapIndex == -1);
+			EditorMeshUtil.UpdateGhostMesh(selectedVariant, snapped, mapIndex == -1);
 		}
 
 		public override void OnDestroy()
 		{
 			DeselectTile();
 			EditorMeshUtil.DestroyGhostMesh();
+		}
+
+		private Variant NextVariantOnMap(IMapEdit map, Vector3 worldPos, Variant variant)
+		{
+			var current = map.GetVariantAt(worldPos);
+			if (current.hash == variant.hash)
+			{
+				float[] angles = { 0f, 90f, 180f, 270f };
+				float[] deltas = { 0f, 0.25f, 0.5f, 0.75f, 1f };
+
+				int dIdx = Array.IndexOf(deltas, current.delta.y); if (dIdx < 0) dIdx = 0;
+				int aIdx = Array.IndexOf(angles, current.angle); if (aIdx < 0) aIdx = 0;
+
+				aIdx = (aIdx + 1) % angles.Length;
+				if (aIdx == 0) dIdx = (dIdx + 1) % deltas.Length;
+
+				variant.delta = new Vector3(current.delta.x, deltas[dIdx], current.delta.z);
+				variant.angle = angles[aIdx];
+			}
+
+			return variant;
 		}
 	}
 }

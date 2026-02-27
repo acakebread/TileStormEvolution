@@ -6,7 +6,6 @@ using UnityEngine;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using MassiveHadronLtd;
-using NUnit.Framework;
 
 namespace ClassicTilestorm
 {
@@ -14,15 +13,15 @@ namespace ClassicTilestorm
 	public struct Variant
 	{
 		public HashId hash;           // the core tile definition ID
-		public float angle;           // degrees, usually 0/90/180/270
 		public Vector3 delta;           // local position offset
+		public float angle;           // degrees, usually 0/90/180/270
 
 		public Variant(HashId h) : this(h, Vector3.zero, 0f) { }
 		public Variant(HashId h, Vector3 offset, float rotationDegrees)
 		{
 			hash = h;
-			angle = rotationDegrees;
 			delta = offset;
+			angle = rotationDegrees;
 		}
 
 		public static implicit operator HashId(Variant v) => v.hash;
