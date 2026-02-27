@@ -124,7 +124,7 @@ namespace ClassicTilestorm
 					if (staticClick)
 					{
 						if (InputX.GetMouseButtonUp(0))
-							iMap.UpdateTileAt(currentWorld, cursorVariant.hash, cursorVariant.delta, cursorVariant.angle);
+							iMap.UpdateTileAt(currentWorld, cursorVariant);
 
 						if (InputX.GetMouseButtonUp(1))
 						{
@@ -149,12 +149,6 @@ namespace ClassicTilestorm
 					break;
 
 				case ControllerMode.Dragging:
-					if (InputX.GetMouseButtonDown(0))
-					{
-						if (!StartDrag())
-							SetMode(ControllerMode.Idle);
-					}
-
 					if (InputX.GetMouseButton(0))
 						UpdateDrag();
 
