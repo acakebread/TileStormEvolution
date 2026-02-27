@@ -11,8 +11,9 @@ namespace ClassicTilestorm
 		private EditorControllerMovement activeMode;
 		private EditorControllerPlacement placementMode;
 		private EditorControllerAttachment attachmentMode;
+		private EditorControllerCombined combinedMode;
 
-		private enum EditorMode { Placement, Attachment }//private enum EditorMode { View, Placement, Attachment }
+		private enum EditorMode { Placement, Attachment, Combined }
 		private EditorMode? currentMode = null;
 
 		private bool gridEnabled = true;
@@ -37,8 +38,10 @@ namespace ClassicTilestorm
 		{
 			panelYoffset = PlaceholderUI.PanelBottomY;
 			placementMode = new EditorControllerPlacement(this);
-			attachmentMode = new EditorControllerAttachment(this); 
+			attachmentMode = new EditorControllerAttachment(this);
+			combinedMode = new EditorControllerCombined(this);
 			SetEditorMode(EditorMode.Placement);//default
+			//SetEditorMode(EditorMode.Combined);//default
 		}
 
 		private System.Action _unsubscribeMapAction;
@@ -108,6 +111,7 @@ namespace ClassicTilestorm
 			if (null != iMap) iMap.OnMapEdited -= OnMapEdited;
 			placementMode?.OnDestroy();
 			attachmentMode?.OnDestroy();
+			combinedMode?.OnDestroy();
 		}
 
 		private void EnableEggbot(bool value)
@@ -141,6 +145,7 @@ namespace ClassicTilestorm
 				//EditorMode.View => viewMode,
 				EditorMode.Placement => placementMode,
 				EditorMode.Attachment => attachmentMode,
+				EditorMode.Combined => combinedMode,
 				_ => placementMode//viewMode
 			};
 			activeMode?.OnEnable();
