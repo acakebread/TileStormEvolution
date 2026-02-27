@@ -1,5 +1,4 @@
-﻿using System;
-using UnityEngine;
+﻿using UnityEngine;
 using MassiveHadronLtd;
 
 namespace ClassicTilestorm
@@ -22,8 +21,7 @@ namespace ClassicTilestorm
 		private Vector3 startWorld;
 		private Vector3 currentWorld => Map.ScreenToWorld(camera, InputX.mousePosition);
 
-		private Variant selectedVariant = new(ResourceManager.DefaultHash);
-		private (Renderer renderer, Material[] originalMaterials)?[] originalRenderersState;
+		private Variant cursorVariant = new(ResourceManager.DefaultHash);
 
 		public EditorControllerPlacement(EditorController editorController) : base(editorController) { }
 
@@ -31,7 +29,7 @@ namespace ClassicTilestorm
 		{
 			base.OnEnable();
 
-			var tileSelector = UnityEngine.Object.FindAnyObjectByType<TileSelector>(FindObjectsInactive.Include);
+			var tileSelector = Object.FindAnyObjectByType<TileSelector>(FindObjectsInactive.Include);
 			if (tileSelector == null)
 			{
 				Debug.LogError("TileSelector not found!");
@@ -46,7 +44,7 @@ namespace ClassicTilestorm
 
 		public override void OnDisable()
 		{
-			var tileSelector = UnityEngine.Object.FindAnyObjectByType<TileSelector>(FindObjectsInactive.Include);
+			var tileSelector = Object.FindAnyObjectByType<TileSelector>(FindObjectsInactive.Include);
 			if (tileSelector != null)
 			{
 				tileSelector.OnTileSelected -= OnTileSelectedFromPalette;
@@ -60,7 +58,7 @@ namespace ClassicTilestorm
 		private void OnTileSelectedFromPalette(HashId newHash)
 		{
 			DeselectTile();
-			selectedVariant = new Variant(newHash);
+			cursorVariant = new Variant(newHash);
 			SetMode((newHash != ResourceManager.DefaultHash) ? ControllerMode.Placing : ControllerMode.Idle);
 		}
 
@@ -106,7 +104,7 @@ namespace ClassicTilestorm
 						}
 
 						if (InputX.GetMouseButtonUp(1))
-							EditMapTile(erase: true);
+							iMap.UpdateTileAt(currentWorld, ResourceManager.DefaultHash);
 					}
 					else
 					{
@@ -120,18 +118,18 @@ namespace ClassicTilestorm
 
 				case ControllerMode.Placing:
 					// Continuous ghost update in placing mode
-					selectedVariant = NextVariantOnMap(iMap, currentWorld, selectedVariant);
-					UpdateGhostMesh();
+					cursorVariant = EditorSelectionUtil.NextVariantOnMap(iMap, currentWorld, cursorVariant);
+					EditorSelectionUtil.UpdateGhostMesh(iMap, currentWorld, cursorVariant);
 
 					if (staticClick)
 					{
 						if (InputX.GetMouseButtonUp(0))
-							EditMapTile();
+							iMap.UpdateTileAt(currentWorld, cursorVariant.hash, cursorVariant.delta, cursorVariant.angle);
 
 						if (InputX.GetMouseButtonUp(1))
 						{
 							DeselectTile();
-							EditorMeshUtil.HideGhostMesh();
+							EditorSelectionUtil.HideGhostMesh();
 							SetMode(ControllerMode.Idle);
 						}
 					}
@@ -166,8 +164,6 @@ namespace ClassicTilestorm
 					}
 					break;
 			}
-
-			void EditMapTile(bool erase = false) => iMap.UpdateTileAt(currentWorld, erase ? ResourceManager.DefaultHash : selectedVariant.hash, selectedVariant.delta, selectedVariant.angle);
 		}
 
 		private bool StartDrag()
@@ -211,21 +207,10 @@ namespace ClassicTilestorm
 		{
 			DeselectTile();
 
-			var variant = iMap.GetVariantAt(worldPos);
-			if (variant.IsDefaultEquivalent)
+			if (!EditorSelectionUtil.HighlightTile(iMap, worldPos))
 				return false;
 
-			var tile = iMap.GetTile(worldPos);
-			if (tile.gameObject == null) return false;
-
-			Color SELECT_TINT = new (1.4f, 1.25f, 0.85f, 1f);
-			const float SELECT_TINT_BRIGHTNESS = 1.35f;
-
-			originalRenderersState = tile.gameObject.ApplySelectionHighlight(
-				SELECT_TINT,
-				SELECT_TINT_BRIGHTNESS,
-				includeInactive: true);
-
+			var variant = iMap.GetVariantAt(worldPos);
 			startWorld = variant.HasNav ? Map.FullFloorVec(worldPos) : Map.HalfFloorVec(worldPos);
 			SetMode(ControllerMode.Selected);
 
@@ -234,47 +219,14 @@ namespace ClassicTilestorm
 
 		private void DeselectTile()
 		{
-			var index = iMap.VectorToIndex(startWorld);
-			var tile = iMap.GetTile(index);
-			if (null != tile.gameObject)
-				tile.gameObject.RestoreSelectionHighlight(originalRenderersState);
-
-			originalRenderersState = null;
+			EditorSelectionUtil.UnhighlightTile(iMap, startWorld);
 			SetMode(ControllerMode.Idle);
 		}
 
 		public override void OnDestroy()
 		{
 			DeselectTile();
-			EditorMeshUtil.DestroyGhostMesh();
-		}
-
-		private void UpdateGhostMesh()
-		{
-			var mapIndex = iMap.VectorToIndex(currentWorld);
-			var snapped = Map.WorldToRender(Map.FullFloorVec(currentWorld));
-			EditorMeshUtil.UpdateGhostMesh(selectedVariant, snapped, mapIndex == -1);
-		}
-
-		private Variant NextVariantOnMap(IMapEdit map, Vector3 worldPos, Variant variant)
-		{
-			var current = map.GetVariantAt(worldPos);
-			if (current.hash == variant.hash)
-			{
-				float[] angles = { 0f, 90f, 180f, 270f };
-				float[] deltas = { 0f, 0.25f, 0.5f, 0.75f, 1f };
-
-				int dIdx = Array.IndexOf(deltas, current.delta.y); if (dIdx < 0) dIdx = 0;
-				int aIdx = Array.IndexOf(angles, current.angle); if (aIdx < 0) aIdx = 0;
-
-				aIdx = (aIdx + 1) % angles.Length;
-				if (aIdx == 0) dIdx = (dIdx + 1) % deltas.Length;
-
-				variant.delta = new Vector3(current.delta.x, deltas[dIdx], current.delta.z);
-				variant.angle = angles[aIdx];
-			}
-
-			return variant;
+			EditorSelectionUtil.DestroyGhostMesh();
 		}
 	}
 }

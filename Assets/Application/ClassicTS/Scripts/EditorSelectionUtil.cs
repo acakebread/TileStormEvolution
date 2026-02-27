@@ -3,7 +3,7 @@ using MassiveHadronLtd;
 
 namespace ClassicTilestorm
 {
-	public static class EditorMeshUtil
+	public static class EditorSelectionUtil
 	{
 		//ghost mesh system
 		private static GameObject ghostMesh;
@@ -205,6 +205,66 @@ namespace ClassicTilestorm
 				Object.Destroy(ghostMesh);
 				ghostMesh = null;
 			}
+		}
+
+		public static void UpdateGhostMesh(IMapEdit map, Vector3 worldPos, Variant variant)
+		{
+			var mapIndex = map.VectorToIndex(worldPos);
+			var snapped = Map.WorldToRender(Map.FullFloorVec(worldPos));
+			UpdateGhostMesh(variant, snapped, mapIndex == -1);
+		}
+
+		public static Variant NextVariantOnMap(IMapEdit map, Vector3 worldPos, Variant variant)
+		{
+			var current = map.GetVariantAt(worldPos);
+			if (current.hash == variant.hash)
+			{
+				float[] angles = { 0f, 90f, 180f, 270f };
+				float[] deltas = { 0f, 0.25f, 0.5f, 0.75f, 1f };
+
+				int dIdx = System.Array.IndexOf(deltas, current.delta.y); if (dIdx < 0) dIdx = 0;
+				int aIdx = System.Array.IndexOf(angles, current.angle); if (aIdx < 0) aIdx = 0;
+
+				aIdx = (aIdx + 1) % angles.Length;
+				if (aIdx == 0) dIdx = (dIdx + 1) % deltas.Length;
+
+				variant.delta = new Vector3(current.delta.x, deltas[dIdx], current.delta.z);
+				variant.angle = angles[aIdx];
+			}
+
+			return variant;
+		}
+
+		private static (Renderer renderer, Material[] originalMaterials)?[] originalRenderersState;
+
+		public static bool HighlightTile(IMapEdit map, Vector3 worldPos)
+		{
+			var variant = map.GetVariantAt(worldPos);
+			if (variant.IsDefaultEquivalent)
+				return false;
+
+			var tile = map.GetTile(worldPos);
+			if (tile.gameObject == null) return false;
+
+			Color SELECT_TINT = new(1.4f, 1.25f, 0.85f, 1f);
+			const float SELECT_TINT_BRIGHTNESS = 1.35f;
+
+			originalRenderersState = tile.gameObject.ApplySelectionHighlight(
+				SELECT_TINT,
+				SELECT_TINT_BRIGHTNESS,
+				includeInactive: true);
+
+			return true;
+		}
+
+		public static void UnhighlightTile(IMapEdit map, Vector3 worldPos)
+		{
+			var index = map.VectorToIndex(worldPos);
+			var tile = map.GetTile(index);
+			if (null != tile.gameObject)
+				tile.gameObject.RestoreSelectionHighlight(originalRenderersState);
+
+			originalRenderersState = null;
 		}
 	}
 }
