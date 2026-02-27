@@ -206,10 +206,7 @@ namespace ClassicTilestorm
 					if (staticClick)
 					{
 						if (InputX.GetMouseButtonUp(0))
-						{
-							//pendingTile = iMap.CameraHitTile(camera, InputX.mousePosition);
 							SelectAttachemnt();
-						}
 
 						if (InputX.GetMouseButtonUp(1))
 							EndAttachmentMode();
