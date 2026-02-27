@@ -200,9 +200,6 @@ namespace ClassicTilestorm
 					if (InputX.GetMouseButtonDown(0))
 						pendingTile = iMap.CameraHitTile(camera, InputX.mousePosition);
 
-					if (InputX.GetMouseButton(0))
-						UpdateAttachmentDrag();
-
 					if (staticClick)
 					{
 						if (InputX.GetMouseButtonUp(0))
@@ -217,6 +214,7 @@ namespace ClassicTilestorm
 						{
 							if (!StartAttachmentDrag())
 								StartPanning();
+							UpdateAttachmentDrag();
 						}
 					}
 					break;
@@ -225,8 +223,6 @@ namespace ClassicTilestorm
 
 		private bool StartAttachmentDrag()
 		{
-			pendingTile = iMap.CameraHitTile(camera, InputX.mousePosition);
-
 			if (pendingTile < 0 || iMap.GetAttachments(tileIndex: pendingTile).Length == 0)//no attachment here
 			{
 				EndAttachmentMode();
