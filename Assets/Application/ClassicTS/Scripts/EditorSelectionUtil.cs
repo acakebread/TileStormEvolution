@@ -115,12 +115,15 @@ namespace ClassicTilestorm
 			InitializeGhostMaterial();
 
 			// Early out if nothing changed (compare full variant + position + validity)
-			if (currentVariant.hash == variant.hash &&
+			if (null != ghostMesh &&
+				currentVariant.hash == variant.hash &&
 				Mathf.Approximately(currentVariant.angle, variant.angle) &&
 				Vector3LexComparer.ApproximatelyEqual(currentVariant.delta, variant.delta) &&
 				lastPosition == position &&
 				lastOutOfBounds == outOfBounds)
-			{
+			{ 
+				if (!ghostMesh.activeInHierarchy)
+					ghostMesh.SetActive(true);
 				return;
 			}
 
@@ -210,8 +213,8 @@ namespace ClassicTilestorm
 		public static void UpdateGhostMesh(IMapEdit map, Vector3 worldPos, Variant variant)
 		{
 			var mapIndex = map.VectorToIndex(worldPos);
-			var snapped = Map.WorldToRender(Map.FullFloorVec(worldPos));
-			UpdateGhostMesh(variant, snapped, mapIndex == -1);
+			var renderPos = Map.WorldToRender(worldPos);
+			UpdateGhostMesh(variant, renderPos, mapIndex == -1);
 		}
 
 		public static Variant NextVariantOnMap(IMapEdit map, Vector3 worldPos, Variant variant)

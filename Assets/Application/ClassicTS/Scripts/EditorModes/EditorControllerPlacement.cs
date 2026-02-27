@@ -119,7 +119,7 @@ namespace ClassicTilestorm
 				case ControllerMode.Placing:
 					// Continuous ghost update in placing mode
 					cursorVariant = EditorSelectionUtil.NextVariantOnMap(iMap, currentWorld, cursorVariant);
-					EditorSelectionUtil.UpdateGhostMesh(iMap, currentWorld, cursorVariant);
+					EditorSelectionUtil.UpdateGhostMesh(iMap, Map.FullFloorVec(currentWorld), cursorVariant);
 
 					if (staticClick)
 					{
