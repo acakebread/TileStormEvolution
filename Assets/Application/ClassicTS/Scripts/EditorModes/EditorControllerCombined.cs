@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
-using System.Linq;
 using MassiveHadronLtd;
+using System.Linq;
+using System;
 
 namespace ClassicTilestorm
 {
@@ -8,36 +9,46 @@ namespace ClassicTilestorm
 	{
 		private enum ControllerMode
 		{
-			Idle,
-			PlacingTile,
-			SelectedTile,
-			DraggingTile,
-
-			SelectedAttachment,
-			DraggingAttachment
+			Idle,               // nothing selected, no placement active → can select, pan, start placing
+			PlacingTile,        // active tile placement from palette (ghost visible)
+			SelectedTile,       // tile is selected → can start drag or deselect
+			DraggingTile,       // actively dragging a selected tile (mouse button held)
+			UpdateAttachment
 		}
 
 		private ControllerMode mode = ControllerMode.Idle;
 		private bool holdSelect;
 		private float holdTime;
 
-		// Tile state
+		// Selection
 		private Vector3 startWorld;
+		private Vector3 currentWorld => Map.ScreenToWorld(camera, InputX.mousePosition);
+
 		private Variant cursorVariant = new(ResourceManager.DefaultHash);
 
 		// Attachment state
 		private int pendingTile = -1;
 		private MapAttachment[] selection = null;
 
-		private Vector3 currentWorld => Map.ScreenToWorld(camera, InputX.mousePosition);
-
 		public EditorControllerCombined(EditorController editorController) : base(editorController) { }
+
+		protected override bool IsMouseOverGUI() => base.IsMouseOverGUI() || EditorAttachmentUI.sidePanel.IsMouseOver;
+
+		// ===================================================================
+		// Lifecycle
+		// ===================================================================
+		public override void OnMapLoaded()
+		{
+			base.OnMapLoaded();
+			ResetInputState();
+		}
 
 		public override void OnEnable()
 		{
 			base.OnEnable();
+			ResetInputState();
 
-			var tileSelector = Object.FindAnyObjectByType<TileSelector>(FindObjectsInactive.Include);
+			var tileSelector = UnityEngine.Object.FindAnyObjectByType<TileSelector>(FindObjectsInactive.Include);
 			if (tileSelector == null)
 			{
 				Debug.LogError("TileSelector not found!");
@@ -47,33 +58,21 @@ namespace ClassicTilestorm
 			tileSelector.OnTileSelected += OnTileSelectedFromPalette;
 			tileSelector.CanOpenPalette = () => mode == ControllerMode.Idle;
 
-			ResetState();
 			SetMode(ControllerMode.Idle);
 		}
 
 		public override void OnDisable()
 		{
-			var tileSelector = Object.FindAnyObjectByType<TileSelector>(FindObjectsInactive.Include);
+			base.OnDisable();
+			var tileSelector = UnityEngine.Object.FindAnyObjectByType<TileSelector>(FindObjectsInactive.Include);
 			if (tileSelector != null)
 			{
 				tileSelector.OnTileSelected -= OnTileSelectedFromPalette;
 				tileSelector.CanOpenPalette = () => false;
 			}
 
-			ResetState();
-			base.OnDisable();
-		}
-
-		private void ResetState()
-		{
-			EditorSelectionUtil.HideGhostMesh();
-			EditorTransformUtil.Hide();
-			EditorMarkerUtil.ClearMapMarkers();
-			EditorAttachmentUI.ClearPending();
-
-			selection = null;
-			pendingTile = -1;
-			// NO DeselectTile() here — avoids crash on startup when startWorld is invalid
+			DeselectTile();
+			ResetInputState();
 		}
 
 		private void OnTileSelectedFromPalette(HashId newHash)
@@ -90,16 +89,71 @@ namespace ClassicTilestorm
 			base.OnControl(staticClick);
 			if (!camera) return;
 
-			if (mode is ControllerMode.SelectedAttachment or ControllerMode.DraggingAttachment)
-				HandleGizmoInput();
-
 			switch (mode)
 			{
 				case ControllerMode.Idle:
-					HandleIdle(staticClick);
+					if (InputX.GetMouseButtonDown(0))
+					{
+						var hitTileIndex = iMap.CameraHitTile(camera, InputX.mousePosition);
+						var variant = iMap.CameraHitVariant(camera, InputX.mousePosition);
+
+						if (variant.IsDefaultEquivalent)
+						{
+							StartPanning(); // immediate panning on default/empty
+						}
+						else
+						{
+							var attachmentsHere = iMap.GetAttachments(hitTileIndex);
+
+							if (attachmentsHere.Length == 0)
+							{
+								// No attachments → original behaviour
+								holdTime = Time.time;
+								holdSelect = true; // start the hold timer
+							}
+							else
+							{
+								pendingTile = hitTileIndex;
+								SelectAttachemnt();
+							}
+						}
+					}
+
+					if (staticClick)
+					{
+						if (InputX.GetMouseButtonUp(0))
+						{
+							if (holdSelect)
+							{
+								holdSelect = false;
+								//ToDo implement option to select tile or attachemnts if there are any present - if there are only attachemnts and not tile jump stright to attachment editing
+								SelectTile(currentWorld);
+							}
+						}
+
+						// check the hold timer
+						if (holdSelect && Time.time - holdTime >= 0.25f)
+						{
+							holdSelect = false;
+							if (!StartDrag())
+								StartPanning();
+						}
+
+						if (InputX.GetMouseButtonUp(1))
+							iMap.UpdateTileAt(currentWorld, ResourceManager.DefaultHash);
+					}
+					else
+					{
+						if (InputX.GetMouseButton(0) && holdSelect)
+						{
+							holdSelect = false;
+							StartPanning(); // immediate panning when moved during hold
+						}
+					}
 					break;
 
 				case ControllerMode.PlacingTile:
+					// Continuous ghost update in placing mode
 					cursorVariant = EditorSelectionUtil.NextVariantOnMap(iMap, currentWorld, cursorVariant);
 					EditorSelectionUtil.UpdateGhostMesh(iMap, Map.FullFloorVec(currentWorld), cursorVariant, false);
 
@@ -141,73 +195,87 @@ namespace ClassicTilestorm
 					}
 					break;
 
-				case ControllerMode.SelectedAttachment:
-				case ControllerMode.DraggingAttachment:
-					HandleAttachmentInput(staticClick);
+				case ControllerMode.UpdateAttachment:
+
+					// NEW: LMB new down → original HandleLeftMouseDown behaviour
+					if (InputX.GetMouseButtonDown(0))
+					{
+						if (!StartAttachmentDrag())
+							StartPanning();
+					}
+
+					// NEW: LMB held → move attachments (drag behaviour)
+					if (InputX.GetMouseButton(0))
+						UpdateAttachmentDrag();
+
+					if (staticClick)
+					{
+						if (InputX.GetMouseButtonUp(0))
+							SelectAttachemnt();
+
+						if (InputX.GetMouseButtonUp(1))
+							EndAttachmentMode();
+					}
 					break;
 			}
 		}
 
-		private void HandleIdle(bool staticClick)
+		private bool StartAttachmentDrag()
 		{
-			if (InputX.GetMouseButtonDown(0))
+			pendingTile = iMap.CameraHitTile(camera, InputX.mousePosition);
+
+			if (pendingTile < 0 || iMap.GetAttachments(tileIndex: pendingTile).Length == 0)//no attachment here
 			{
-				var hitTileIndex = iMap.CameraHitTile(camera, InputX.mousePosition);
-				var variant = iMap.CameraHitVariant(camera, InputX.mousePosition);
-
-				if (variant.IsDefaultEquivalent)
-				{
-					StartPanning();
-					return;
-				}
-
-				var attachmentsHere = iMap.GetAttachments(hitTileIndex);
-
-				if (attachmentsHere.Length == 0)
-				{
-					// Tile only
-					SelectTile(currentWorld);
-				}
-				else
-				{
-					var tile = iMap.GetTile(hitTileIndex);
-					if (tile.gameObject == null)
-					{
-						// Attachments only
-						SelectAttachments(attachmentsHere);
-					}
-					else
-					{
-						// Both → popup
-						pendingTile = hitTileIndex;
-						EditorAttachmentUI.RequestSelect();
-					}
-				}
+				EndAttachmentMode();
+				return false;
 			}
 
-			if (staticClick)
+			if (-1 != pendingTile)
 			{
-				if (holdSelect)
-				{
-					holdSelect = false;
-					SelectTile(currentWorld);
-				}
-
-				if (holdSelect && Time.time - holdTime >= 0.25f)
-				{
-					holdSelect = false;
-					if (!StartDrag())
-						StartPanning();
-				}
-
-				if (InputX.GetMouseButtonUp(1))
-					iMap.UpdateTileAt(currentWorld, ResourceManager.DefaultHash);
+				if (null == selection || selection.Length == 0 || selection[0].tile != pendingTile)
+					Select(iMap.GetAttachments(tileIndex: pendingTile));
+				return true;
 			}
-			else if (InputX.GetMouseButton(0) && holdSelect)
+			Select();
+			return true;
+		}
+
+		private void UpdateAttachmentDrag()
+		{
+			var tile = iMap.CameraHitTile(camera, InputX.mousePosition);
+			if (tile == pendingTile || -1 == tile || null == selection || 0 == selection.Length)
+				return;
+
+			pendingTile = tile;
+			if (null == selection) return;
+			foreach (var att in selection)
 			{
-				holdSelect = false;
-				StartPanning();
+				att.tile = pendingTile;
+				iMap.RefreshAttachment(att);
 			}
+			HandleDragInput();
+			RebuildMarkers();
+
+			void HandleDragInput()
+			{
+				if (null == selection || 1 != selection.Length) return;
+				if (selection[0] is ITransformableAttachment transformable)
+				{
+					var worldPos = iMap.WorldPosition(selection[0].tile, transformable.Position);
+					var worldRot = iMap.WorldRotation(selection[0].tile, transformable.Rotation);
+					EditorTransformUtil.ShowAt(worldPos, worldRot, camera);
+				}
+				selection[0].OnDragInput(iMap, selection);
+			}
+		}
+
+		private void EndAttachmentMode()
+		{
+			pendingTile = -1;
+			Select();
+			EditorAttachmentUI.ClearPending();
+			HideAllGizmos();
+			SetMode(ControllerMode.Idle);
 		}
 
 		private bool StartDrag()
@@ -233,14 +301,22 @@ namespace ClassicTilestorm
 			var delta = cursorVariant.HasNav ? Vector3.zero : Map.HalfFloorVec(worldPos) - snapped;
 
 			if (snapped == Map.FullFloorVec(startWorld) && delta == cursorVariant.delta)
-				return;
+				return;//no change so ok to just exit
 
-			delta.y = cursorVariant.delta.y;
+			delta.y = cursorVariant.delta.y;//retore old delta height
 			cursorVariant.delta = delta;
 			iMap.RemoveTileAt(startWorld);
 			var index = iMap.UpdateTileAt(snapped, cursorVariant);
-			if (index == -1) index = iMap.UpdateTileAt(Map.FullFloorVec(startWorld), cursorVariant);
+			if (-1 == index) index = iMap.UpdateTileAt(Map.FullFloorVec(startWorld), cursorVariant);//operation failed restore old tile
 			SelectTile(iMap.IndexToVector(index));
+		}
+
+		private void DeselectTile()
+		{
+			EditorSelectionUtil.HideGhostMesh();
+			var tile = iMap.GetTile(startWorld);
+			if (null != tile.gameObject) tile.gameObject.SetActive(true);
+			SetMode(ControllerMode.Idle);
 		}
 
 		private bool SelectTile(Vector3 worldPos)
@@ -248,7 +324,7 @@ namespace ClassicTilestorm
 			DeselectTile();
 
 			var tile = iMap.GetTile(worldPos);
-			if (tile.gameObject == null)
+			if (null == tile.gameObject)
 				return false;
 
 			tile.gameObject.SetActive(false);
@@ -260,157 +336,126 @@ namespace ClassicTilestorm
 			return true;
 		}
 
-		private void DeselectTile()
+		public override void OnDestroy()
 		{
-			EditorSelectionUtil.HideGhostMesh();
-			var tile = iMap.GetTile(startWorld);
-			if (tile.gameObject != null)
-				tile.gameObject.SetActive(true);
-			SetMode(ControllerMode.Idle);
+			DeselectTile();
+			EditorSelectionUtil.DestroyGhostMesh();
 		}
 
-		// Attachment handlers
-		private void HandleAttachmentInput(bool staticClick)
-		{
-			if (InputX.GetMouseButtonDown(0)) HandleAttachmentLeftDown();
-			if (InputX.GetMouseButtonDown(1)) HandleAttachmentRightDown();
-			if (InputX.GetMouseButton(0)) HandleAttachmentLeftDrag();
+		// ===================================================================
+		// Helpers
+		// ===================================================================
 
-			if (staticClick)
+		private void Select(MapAttachment[] attachments = null)
+		{
+			selection = attachments?.Length > 0 ? attachments : null;
+
+			ViewPreviewUtil.Hide();
+			HideAllGizmos();
+			RebuildMarkers();
+
+			if (null == selection || 1 != selection.Length) return;
+			HandleSelectionChanged();
+
+			void HandleSelectionChanged()
 			{
-				if (InputX.GetMouseButtonUp(0)) HandleAttachmentLeftUp();
-				if (InputX.GetMouseButtonUp(1)) HandleAttachmentRightUp();
+				if (null == selection || 0 == selection.Length) return;
+				var firstType = selection[0].GetType();
+				if (!selection.All(a => a.GetType() == firstType)) return;
+				selection[0].OnSelectionChanged(iMap, camera, selection);
 			}
 		}
 
-		private void HandleAttachmentLeftDown()
+		private void SelectAttachemnt()
 		{
-			pendingTile = iMap.CameraHitTile(camera, InputX.mousePosition);
-			var atts = iMap.GetAttachments(pendingTile);
+			var attachmentsOnTile = iMap.GetAttachments(tileIndex: pendingTile);
 
-			if (atts.Length == 0)
+			if (null == attachmentsOnTile || 0 == attachmentsOnTile.Length)
 			{
-				StartPanning();
-				return;
+				if (-1 != pendingTile)
+					EditorAttachmentUI.RequestAdd();
 			}
-
-			SelectAttachments(atts);
-		}
-
-		private void HandleAttachmentRightDown()
-		{
-			pendingTile = iMap.CameraHitTile(camera, InputX.mousePosition);
-		}
-
-		private void HandleAttachmentLeftDrag()
-		{
-			var tile = iMap.CameraHitTile(camera, InputX.mousePosition);
-			if (tile == pendingTile || tile < 0 || selection == null || selection.Length == 0)
-				return;
-
-			pendingTile = tile;
-			foreach (var att in selection)
-			{
-				att.tile = pendingTile;
-				iMap.RefreshAttachment(att);
-			}
-			RebuildAttachmentMarkers();
-		}
-
-		private void HandleAttachmentLeftUp()
-		{
-			var attsHere = iMap.GetAttachments(pendingTile);
-			if (attsHere.Length == 0 && pendingTile >= 0)
-			{
-				EditorAttachmentUI.RequestAdd();
-			}
-			else if (attsHere.Length > 1)
+			else if (attachmentsOnTile.Length > 1)
 			{
 				EditorAttachmentUI.RequestSelect();
 			}
 			else
 			{
 				EditorAttachmentUI.ClearPending();
-				SelectAttachments(attsHere);
+				Select(attachmentsOnTile);
 			}
-			RebuildAttachmentMarkers();
+
+			RebuildMarkers();
+
+			SetMode(ControllerMode.UpdateAttachment);
 		}
 
-		private void HandleAttachmentRightUp()
+		private void ResetInputState()
 		{
-			var tile = iMap.CameraHitTile(camera, InputX.mousePosition);
-			if (tile >= 0 && iMap.GetAttachments(tile).Length > 0)
-			{
-				pendingTile = tile;
-				EditorAttachmentUI.RequestDelete();
-				SelectAttachments(iMap.GetAttachments(pendingTile));
-				return;
-			}
-			SelectAttachments(null);
+			selection = null;
+			pendingTile = -1;
+			EditorAttachmentUI.ClearPending();
+			HideAllGizmos();
 		}
 
-		private void SelectAttachments(MapAttachment[] atts)
+		private void HideAllGizmos()
 		{
-			selection = atts?.Length > 0 ? atts : null;
 			EditorTransformUtil.Hide();
+			EditorPrimitiveUtil.Hide();
+			EditorFrustumUtil.Hide();
 			EditorMarkerUtil.ClearMapMarkers();
-
-			if (selection?.Length == 1)
-			{
-				var att = selection[0];
-				if (att is ITransformableAttachment t)
-				{
-					var wPos = iMap.WorldPosition(att.tile, t.Position);
-					var wRot = iMap.WorldRotation(att.tile, t.Rotation);
-					EditorTransformUtil.ShowAt(wPos, wRot, camera);
-				}
-				att.OnSelectionChanged(iMap, camera, selection);
-			}
-
-			RebuildAttachmentMarkers();
-
-			SetMode(selection != null ? ControllerMode.SelectedAttachment : ControllerMode.Idle);
 		}
 
-		private void RebuildAttachmentMarkers()
+		private void RebuildMarkers()
 		{
-			if (selection == null || selection.Length == 0)
+			var tiles = iMap?.GetAttachments()?.Select(a => a.tile)?.Distinct()?.ToArray() ?? Array.Empty<int>();
+
+			if (tiles.Length == 0)
 			{
 				EditorMarkerUtil.ClearMapMarkers();
 				return;
 			}
 
-			var tiles = selection.Select(a => a.tile).Distinct().ToArray();
-			var positions = tiles.Select(t => iMap.TileRenderPosition(t)).ToArray();
-			var colors = Enumerable.Repeat(new Color(0f, 0.7f, 1f, 0.7f), tiles.Length).ToArray();
+			var positions = new Vector3[tiles.Length];
+			var colors = new Color[tiles.Length];
 
-			var selectedTile = selection[0].tile;
-			var selectedIndex = System.Array.IndexOf(tiles, selectedTile);
+			var isWaypointMode = null != selection && selection.Length == 1 && selection[0] is Waypoint;
+
+			for (var i = 0; i < tiles.Length; i++)
+			{
+				var tile = tiles[i];
+				positions[i] = iMap.TileRenderPosition(tile);
+
+				colors[i] = isWaypointMode && iMap.HasAttachmentOfType<View>(tile)
+					? new Color(0f, 1f, 1f, 0.5f)
+					: new Color(0f, 0.7f, 1f, 0.7f);
+			}
+
+			var selectedTile = (selection != null && selection.Length > 0) ? selection[0].tile : -1;
+			var selectedIndex = Array.IndexOf(tiles, selectedTile);
 
 			EditorMarkerUtil.ShowMarkers(positions, colors, selectedIndex);
 		}
 
 		protected override void HandleGizmoInput()
 		{
-			if (selection == null || selection.Length == 0) return;
-			var first = selection[0];
-			if (!selection.All(a => a.GetType() == first.GetType())) return;
-			first.OnGizmoInput(iMap, camera, selection);
+			if (null == selection || 0 == selection.Length) return;
+			var firstType = selection[0].GetType();
+			if (!selection.All(a => a.GetType() == firstType)) return;
+			selection[0].OnGizmoInput(iMap, camera, selection);
 		}
 
 		public override void OnGUI()
 		{
 			base.OnGUI();
-			EditorAttachmentUI.UpdateGUI(iMap, selection, atts => SelectAttachments(atts), pendingTile);
+			EditorAttachmentUI.UpdateGUI(iMap, selection, atts => Select(atts), pendingTile);
 		}
 
-		public override void OnDestroy()
+		public override void Update()
 		{
-			DeselectTile();
-			selection = null;
-			EditorSelectionUtil.DestroyGhostMesh();
-			EditorTransformUtil.Hide();
-			EditorMarkerUtil.ClearMapMarkers();
+			base.Update();
+			EditorTransformUtil.UpdateTransformGizmoVisuals(camera);
+			ViewAttachmentHandler.HandlePreviewCameraSync(iMap, camera, selection);
 		}
 	}
 }
