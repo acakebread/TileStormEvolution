@@ -180,15 +180,12 @@ namespace ClassicTilestorm
 
 		private void UpdateDrag()
 		{
-			var tile = iMap.GetTile(startWorld);
-
-			if (null == tile.gameObject) return;
-
 			var startVariant = iMap.GetVariantAt(startWorld);
 			var worldPos = Map.FullFloorVec(startWorld) + currentWorld - startWorld + startVariant.delta;
 			var snapped = Map.FullFloorVec(worldPos);
 			var delta = startVariant.HasNav ? Vector3.zero : Map.HalfFloorVec(worldPos) - snapped;//the future selectedVariant.delta
 
+			var tile = iMap.GetTile(startWorld);
 			tile.gameObject.transform.position = Map.WorldToRender(snapped) + delta;//update selection visual
 		}
 
