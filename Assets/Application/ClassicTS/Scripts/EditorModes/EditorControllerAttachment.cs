@@ -252,7 +252,7 @@ namespace ClassicTilestorm
 		public override void OnGUI()
 		{
 			base.OnGUI();
-			EditorAttachmentUI.UpdateGUI(iMap, selection, atts => Select(atts), pendingTile );
+			EditorAttachmentUI.UpdateGUI(iMap, selection, atts => Select(atts), pendingTile);
 		}
 	}
 }

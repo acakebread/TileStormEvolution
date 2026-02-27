@@ -41,7 +41,6 @@ namespace ClassicTilestorm
 			tileSelector.OnTileSelected += OnTileSelectedFromPalette;
 			tileSelector.CanOpenPalette = () => mode == ControllerMode.Idle;
 
-			//selectedVariant = new Variant(ResourceManager.DefaultHash);
 			SetMode(ControllerMode.Idle);
 		}
 
@@ -120,8 +119,9 @@ namespace ClassicTilestorm
 					break;
 
 				case ControllerMode.Placing:
+					// Continuous ghost update in placing mode
 					selectedVariant = NextVariantOnMap(iMap, currentWorld, selectedVariant);
-					UpdateGhostMesh();// Continuous ghost update in placing mode
+					UpdateGhostMesh();
 
 					if (staticClick)
 					{
@@ -205,7 +205,6 @@ namespace ClassicTilestorm
 			var index = iMap.UpdateTileAt(snapped, startVariant);
 			if (-1 == index) return;//operation failed
 			SelectTile(iMap.IndexToVector(index));
-			//SetMode(ControllerMode.Idle);
 		}
 
 		private bool SelectTile(Vector3 worldPos)
@@ -244,17 +243,17 @@ namespace ClassicTilestorm
 			SetMode(ControllerMode.Idle);
 		}
 
+		public override void OnDestroy()
+		{
+			DeselectTile();
+			EditorMeshUtil.DestroyGhostMesh();
+		}
+
 		private void UpdateGhostMesh()
 		{
 			var mapIndex = iMap.VectorToIndex(currentWorld);
 			var snapped = Map.WorldToRender(Map.FullFloorVec(currentWorld));
 			EditorMeshUtil.UpdateGhostMesh(selectedVariant, snapped, mapIndex == -1);
-		}
-
-		public override void OnDestroy()
-		{
-			DeselectTile();
-			EditorMeshUtil.DestroyGhostMesh();
 		}
 
 		private Variant NextVariantOnMap(IMapEdit map, Vector3 worldPos, Variant variant)
