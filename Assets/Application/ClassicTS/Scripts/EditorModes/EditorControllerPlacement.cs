@@ -185,19 +185,18 @@ namespace ClassicTilestorm
 
 		private void EndDrag()
 		{
-			var startVariant = iMap.GetVariantAt(startWorld);
-			var worldPos = Map.FullFloorVec(startWorld) + currentWorld - startWorld + startVariant.delta;
+			var worldPos = Map.FullFloorVec(startWorld) + currentWorld - startWorld + cursorVariant.delta;
 			var snapped = Map.FullFloorVec(worldPos);
-			var delta = startVariant.HasNav ? Vector3.zero : Map.HalfFloorVec(worldPos) - snapped;
+			var delta = cursorVariant.HasNav ? Vector3.zero : Map.HalfFloorVec(worldPos) - snapped;
 
-			if (snapped == Map.FullFloorVec(startWorld) && delta == startVariant.delta)
+			if (snapped == Map.FullFloorVec(startWorld) && delta == cursorVariant.delta)
 				return;//no change so ok to just exit
 
-			delta.y = startVariant.delta.y;//retore old delta height
-			startVariant.delta = delta;
+			delta.y = cursorVariant.delta.y;//retore old delta height
+			cursorVariant.delta = delta;
 			iMap.RemoveTileAt(startWorld);
-			var index = iMap.UpdateTileAt(snapped, startVariant);
-			if (-1 == index) index = iMap.UpdateTileAt(Map.FullFloorVec(startWorld), startVariant);//operation failed restore old tile
+			var index = iMap.UpdateTileAt(snapped, cursorVariant);
+			if (-1 == index) index = iMap.UpdateTileAt(Map.FullFloorVec(startWorld), cursorVariant);//operation failed restore old tile
 			SelectTile(iMap.IndexToVector(index));
 		}
 
