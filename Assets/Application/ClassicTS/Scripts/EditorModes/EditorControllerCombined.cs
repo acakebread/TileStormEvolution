@@ -197,24 +197,30 @@ namespace ClassicTilestorm
 
 				case ControllerMode.UpdateAttachment:
 
-					// NEW: LMB new down → original HandleLeftMouseDown behaviour
 					if (InputX.GetMouseButtonDown(0))
-					{
-						if (!StartAttachmentDrag())
-							StartPanning();
-					}
+						pendingTile = iMap.CameraHitTile(camera, InputX.mousePosition);
 
-					// NEW: LMB held → move attachments (drag behaviour)
 					if (InputX.GetMouseButton(0))
 						UpdateAttachmentDrag();
 
 					if (staticClick)
 					{
 						if (InputX.GetMouseButtonUp(0))
+						{
+							//pendingTile = iMap.CameraHitTile(camera, InputX.mousePosition);
 							SelectAttachemnt();
+						}
 
 						if (InputX.GetMouseButtonUp(1))
 							EndAttachmentMode();
+					}
+					else
+					{
+						if (InputX.GetMouseButton(0))
+						{
+							if (!StartAttachmentDrag())
+								StartPanning();
+						}
 					}
 					break;
 			}
