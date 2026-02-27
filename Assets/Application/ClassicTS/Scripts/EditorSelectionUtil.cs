@@ -7,9 +7,11 @@ namespace ClassicTilestorm
 	{
 		//ghost mesh system
 		private static GameObject ghostMesh;
-		private static Material ghostMaterial;        // default valid color (white 0.5 alpha)
-		private static Material ghostMaterialInvalid; // invalid color (red 0.5 alpha)
-		private static Variant currentVariant;         // ← added for the new overload
+		private static Material ghostMaterial;          // normal/valid (white 0.5 alpha)
+		private static Material ghostMaterialInvalid;   // invalid (red 0.5 alpha)
+		private static Material ghostMaterialSelected;  // ← NEW: yellow tint for selected/dragging
+
+		private static Variant currentVariant;
 		private static Definition currentDefinition;
 		private static Vector3 lastPosition;
 		private static float lastAngle;
@@ -30,6 +32,14 @@ namespace ClassicTilestorm
 				ghostMaterialInvalid = MaterialUtils.CreateAlwaysOnTopUnlitMaterial(new Color(1f, 0f, 0f, 0.5f));
 				if (ghostMaterialInvalid == null)
 					Debug.LogError("GeometryUtil: Failed to create invalid ghost material.");
+			}
+
+			if (ghostMaterialSelected == null)
+			{
+				// Using the same color as the old highlight system (but with ghost-appropriate alpha)
+				ghostMaterialSelected = MaterialUtils.CreateAlwaysOnTopUnlitMaterial(new Color(1.4f, 1.25f, 0.85f, 0.6f));
+				if (ghostMaterialSelected == null)
+					Debug.LogError("GeometryUtil: Failed to create selected ghost material.");
 			}
 		}
 
@@ -60,8 +70,6 @@ namespace ClassicTilestorm
 
 			UpdateMesh();
 
-			// ── Local helpers ────────────────────────────────────────────────────────
-
 			void CreateMesh()
 			{
 				if (null != ghostMesh)
@@ -80,7 +88,6 @@ namespace ClassicTilestorm
 
 				ghostMesh.name = "GhostMesh";
 
-				// Remove any colliders baked into the prefab
 				foreach (var collider in ghostMesh.GetComponentsInChildren<Collider>())
 					Object.DestroyImmediate(collider);
 
@@ -108,20 +115,20 @@ namespace ClassicTilestorm
 			}
 		}
 
-		// New overload: takes Variant directly (uses hash, angle, delta from variant)
-		public static void UpdateGhostMesh(Variant variant, Vector3 position, bool outOfBounds)
+		// New overload: takes Variant directly + selected/dragging flag
+		private static void UpdateGhostMesh(Variant variant, Vector3 position, bool outOfBounds, bool isSelectedOrDragging = false)
 		{
-			if (variant.hash == 0) return;  // invalid variant
+			if (variant.hash == 0) return;
 			InitializeGhostMaterial();
 
-			// Early out if nothing changed (compare full variant + position + validity)
+			// Early out if nothing changed
 			if (null != ghostMesh &&
 				currentVariant.hash == variant.hash &&
 				Mathf.Approximately(currentVariant.angle, variant.angle) &&
 				Vector3LexComparer.ApproximatelyEqual(currentVariant.delta, variant.delta) &&
 				lastPosition == position &&
 				lastOutOfBounds == outOfBounds)
-			{ 
+			{
 				if (!ghostMesh.activeInHierarchy)
 					ghostMesh.SetActive(true);
 				return;
@@ -133,11 +140,9 @@ namespace ClassicTilestorm
 			lastAngle = variant.angle;
 			lastOutOfBounds = outOfBounds;
 
-			// Get definition from hash (needed for model instantiation)
 			var definition = ResourceManager.GetDefinition(variant.hash);
 			if (null == definition) return;
 
-			// Reuse same helpers, but pass variant.angle and add delta to y
 			if (null == ghostMesh || null == currentDefinition || currentDefinition.HashID != variant.hash)
 			{
 				CreateMesh();
@@ -145,8 +150,6 @@ namespace ClassicTilestorm
 			}
 
 			UpdateMesh();
-
-			// ── Local helpers (same as above, but using variant properties) ───────
 
 			void CreateMesh()
 			{
@@ -189,7 +192,16 @@ namespace ClassicTilestorm
 			void UpdateMaterial()
 			{
 				if (null != ghostMesh)
-					ghostMesh.SetAllMaterials(outOfBounds ? ghostMaterialInvalid : ghostMaterial);
+				{
+					Material matToUse;
+
+					if (isSelectedOrDragging)
+						matToUse = outOfBounds ? ghostMaterialInvalid : ghostMaterialSelected;
+					else
+						matToUse = outOfBounds ? ghostMaterialInvalid : ghostMaterial;
+
+					ghostMesh.SetAllMaterials(matToUse);
+				}
 			}
 		}
 
@@ -210,11 +222,20 @@ namespace ClassicTilestorm
 			}
 		}
 
+		// Public wrapper - normal placing mode (no selected flag)
 		public static void UpdateGhostMesh(IMapEdit map, Vector3 worldPos, Variant variant)
 		{
 			var mapIndex = map.VectorToIndex(worldPos);
 			var renderPos = Map.WorldToRender(worldPos);
-			UpdateGhostMesh(variant, renderPos, mapIndex == -1);
+			UpdateGhostMesh(variant, renderPos, mapIndex == -1, false);
+		}
+
+		// NEW public overload - for selected / dragging (pass true)
+		public static void UpdateGhostMesh(IMapEdit map, Vector3 worldPos, Variant variant, bool isSelectedOrDragging)
+		{
+			var mapIndex = map.VectorToIndex(worldPos);
+			var renderPos = Map.WorldToRender(worldPos);
+			UpdateGhostMesh(variant, renderPos, mapIndex == -1, isSelectedOrDragging);
 		}
 
 		public static Variant NextVariantOnMap(IMapEdit map, Vector3 worldPos, Variant variant)

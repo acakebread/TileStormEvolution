@@ -119,7 +119,7 @@ namespace ClassicTilestorm
 				case ControllerMode.Placing:
 					// Continuous ghost update in placing mode
 					cursorVariant = EditorSelectionUtil.NextVariantOnMap(iMap, currentWorld, cursorVariant);
-					EditorSelectionUtil.UpdateGhostMesh(iMap, Map.FullFloorVec(currentWorld), cursorVariant);
+					EditorSelectionUtil.UpdateGhostMesh(iMap, Map.FullFloorVec(currentWorld), cursorVariant, false);
 
 					if (staticClick)
 					{
@@ -154,9 +154,11 @@ namespace ClassicTilestorm
 						if (!StartDrag())
 							SetMode(ControllerMode.Idle);
 					}
-					else if (InputX.GetMouseButton(0))
+
+					if (InputX.GetMouseButton(0))
 						UpdateDrag();
-					else if (InputX.GetMouseButtonUp(0))
+
+					if (InputX.GetMouseButtonUp(0))
 					{
 						SetMode(ControllerMode.Selected);
 						EndDrag();
@@ -175,13 +177,10 @@ namespace ClassicTilestorm
 
 		private void UpdateDrag()
 		{
-			var startVariant = iMap.GetVariantAt(startWorld);
-			var worldPos = Map.FullFloorVec(startWorld) + currentWorld - startWorld + startVariant.delta;
+			var worldPos = Map.FullFloorVec(startWorld) + currentWorld - startWorld;
 			var snapped = Map.FullFloorVec(worldPos);
-			var delta = startVariant.HasNav ? Vector3.zero : Map.HalfFloorVec(worldPos) - snapped;//the future selectedVariant.delta
-
-			var tile = iMap.GetTile(startWorld);
-			tile.gameObject.transform.position = Map.WorldToRender(snapped) + delta;//update selection visual
+			var delta = cursorVariant.HasNav ? Vector3.zero : Map.HalfFloorVec(worldPos) - snapped;
+			EditorSelectionUtil.UpdateGhostMesh(iMap, snapped + delta, cursorVariant, true);
 		}
 
 		private void EndDrag()
@@ -189,37 +188,42 @@ namespace ClassicTilestorm
 			var startVariant = iMap.GetVariantAt(startWorld);
 			var worldPos = Map.FullFloorVec(startWorld) + currentWorld - startWorld + startVariant.delta;
 			var snapped = Map.FullFloorVec(worldPos);
-			var delta = startVariant.HasNav ? Vector3.zero : Map.HalfFloorVec(worldPos) - snapped;//the future selectedVariant.delta
+			var delta = startVariant.HasNav ? Vector3.zero : Map.HalfFloorVec(worldPos) - snapped;
 
 			if (snapped == Map.FullFloorVec(startWorld) && delta == startVariant.delta)
 				return;//no change so ok to just exit
 
 			delta.y = startVariant.delta.y;//retore old delta height
 			startVariant.delta = delta;
-			iMap.RemoveTileAt(startWorld); // this will destroy the gameobject on the tile so defacto remove the highlight
+			iMap.RemoveTileAt(startWorld);
 			var index = iMap.UpdateTileAt(snapped, startVariant);
-			if (-1 == index) return;//operation failed
+			if (-1 == index) index = iMap.UpdateTileAt(Map.FullFloorVec(startWorld), startVariant);//operation failed restore old tile
 			SelectTile(iMap.IndexToVector(index));
+		}
+
+		private void DeselectTile()
+		{
+			EditorSelectionUtil.HideGhostMesh();
+			var tile = iMap.GetTile(startWorld);
+			if (null != tile.gameObject) tile.gameObject.SetActive(true);
+			SetMode(ControllerMode.Idle);
 		}
 
 		private bool SelectTile(Vector3 worldPos)
 		{
 			DeselectTile();
 
-			if (!EditorSelectionUtil.HighlightTile(iMap, worldPos))
+			var tile = iMap.GetTile(worldPos);
+			if (null == tile.gameObject)
 				return false;
 
-			var variant = iMap.GetVariantAt(worldPos);
-			startWorld = variant.HasNav ? Map.FullFloorVec(worldPos) : Map.HalfFloorVec(worldPos);
+			tile.gameObject.SetActive(false);
+			cursorVariant = iMap.GetVariantAt(worldPos);
+			EditorSelectionUtil.UpdateGhostMesh(iMap, Map.FullFloorVec(worldPos), cursorVariant, true);
+			startWorld = cursorVariant.HasNav ? Map.FullFloorVec(worldPos) : Map.HalfFloorVec(worldPos);
 			SetMode(ControllerMode.Selected);
 
 			return true;
-		}
-
-		private void DeselectTile()
-		{
-			EditorSelectionUtil.UnhighlightTile(iMap, startWorld);
-			SetMode(ControllerMode.Idle);
 		}
 
 		public override void OnDestroy()
