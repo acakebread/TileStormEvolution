@@ -128,7 +128,6 @@ namespace ClassicTilestorm
 
 						if (InputX.GetMouseButtonUp(1))
 						{
-							DeselectTile();
 							EditorSelectionUtil.HideGhostMesh();
 							SetMode(ControllerMode.Idle);
 						}
