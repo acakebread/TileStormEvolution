@@ -80,10 +80,7 @@ namespace ClassicTilestorm
 			}
 
 			if (EditorTransformUtil.HandleTransformGizmoInput(camera))
-			{
-				HandleGizmoInput();
 				return;
-			}
 
 			if (EditorTransformUtil.MouseOverGizmo(camera))
 				return;
@@ -102,7 +99,7 @@ namespace ClassicTilestorm
 			isPanning = false; 
 		}
 
-		public virtual void OnGUI()  => ViewPreviewUtil.OnGUI();
+		public virtual void OnGUI() => ViewPreviewUtil.OnGUI();
 
 		public virtual void OnDestroy() { }
 
@@ -112,14 +109,14 @@ namespace ClassicTilestorm
 
 		protected virtual void OnControl(bool staticClick) { }
 
-		protected virtual void StartPanning()
+		protected void StartPanning()
 		{
 			if (isPanning) return;
 			panStartWorldPoint = Map.ScreenToWorld(camera, InputX.mousePosition);
 			isPanning = panStartWorldPoint != Vector3.negativeInfinity;
 		}
 
-		protected void UpdatePan()
+		private void UpdatePan()
 		{
 			if (!isPanning) return;
 
