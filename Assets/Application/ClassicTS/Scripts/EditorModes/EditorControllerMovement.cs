@@ -29,8 +29,6 @@ namespace ClassicTilestorm
 		private bool touchStartOverGui = false;
 		public EditorControllerMovement(EditorController controller = null) => editorController = controller;
 
-		//public virtual void Awake() { }//not implemented yet
-
 		public virtual void Update()
 		{
 			if (InputX.GetMouseButtonDown(0) || InputX.GetMouseButtonDown(1))
@@ -44,8 +42,6 @@ namespace ClassicTilestorm
 				mouseMovedBeyondThreshold = true;// update threshold flag
 
 			var staticClick = !mouseMovedBeyondThreshold;
-			//if (InputX.GetMouseButtonUp(0) || InputX.GetMouseButtonUp(1))
-			//	mouseMovedBeyondThreshold = false;// update threshold flag
 
 			if (InputX.GetMouseButtonUp(0))
 			{
@@ -105,8 +101,6 @@ namespace ClassicTilestorm
 			ViewPreviewUtil.Hide();
 			isPanning = false; 
 		}
-
-		//public virtual void OnPostRender() { }//not available in URP
 
 		public virtual void OnGUI()  => ViewPreviewUtil.OnGUI();
 

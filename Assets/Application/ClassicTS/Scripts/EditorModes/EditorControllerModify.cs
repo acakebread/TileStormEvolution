@@ -5,7 +5,7 @@ using MassiveHadronLtd;
 
 namespace ClassicTilestorm
 {
-	public class EditorControllerCombined : EditorControllerMovement
+	public class EditorControllerModify : EditorControllerMovement
 	{
 		private enum ControllerMode
 		{
@@ -30,7 +30,7 @@ namespace ClassicTilestorm
 		private int pendingTile = -1;
 		private MapAttachment[] selection = null;
 
-		public EditorControllerCombined(EditorController editorController) : base(editorController) { }
+		public EditorControllerModify(EditorController editorController) : base(editorController) { }
 
 		protected override bool IsMouseOverGUI() => base.IsMouseOverGUI() || EditorAttachmentUI.sidePanel.IsMouseOver;
 
