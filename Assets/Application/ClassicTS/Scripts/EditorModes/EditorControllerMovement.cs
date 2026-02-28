@@ -19,7 +19,7 @@ namespace ClassicTilestorm
 		protected Camera camera { get { if (editorController.TryGetComponent<MainCameraController>(out var controller)) return controller.activeSystem?.camera; return null; } }
 
 		protected bool IsGuiControlActive() => GUIUtility.hotControl != 0 || (EventSystem.current && EventSystem.current.IsPointerOverGameObject());
-		protected virtual bool IsMouseOverGUI() => editorController.IsMouseOverGui() | IsGuiControlActive();
+		protected virtual bool IsMouseOverGUI() => PlaceholderUI.IsMouseOverGui() | IsGuiControlActive();
 		public virtual void OnMapLoaded() 
 		{
 			ViewPreviewUtil.Hide();

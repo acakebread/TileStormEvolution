@@ -19,11 +19,9 @@ namespace ClassicTilestorm
 		private Volume getVolume(GameObject root) => root.GetComponentInChildren<Volume>(true);
 
 		private MainCameraController mainCameraController { get { TryGetComponent<MainCameraController>(out var controller); return controller; } }
-		private GameCameraEditor gameCameraEditor { get { if (null != mainCameraController && mainCameraController.activeSystem is GameCameraEditor editorCam) return editorCam; return null; } }
+		private GameCameraEditor gameCameraEditor => null != mainCameraController && mainCameraController.activeSystem is GameCameraEditor editorCam ? editorCam : null;
 
 		private System.Action _unsubscribeMapAction;
-
-		public bool IsMouseOverGui() => PlaceholderUI.IsMouseOverGui();
 
 		private void Awake() => modifier = new EditorControllerModify(this);
 
