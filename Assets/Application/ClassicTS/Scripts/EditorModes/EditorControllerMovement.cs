@@ -80,7 +80,10 @@ namespace ClassicTilestorm
 			}
 
 			if (EditorTransformUtil.HandleTransformGizmoInput(camera))
+			{
+				HandleGizmoInput();
 				return;
+			}
 
 			if (EditorTransformUtil.MouseOverGizmo(camera))
 				return;
