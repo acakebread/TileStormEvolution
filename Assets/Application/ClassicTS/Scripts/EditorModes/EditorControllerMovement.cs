@@ -84,10 +84,7 @@ namespace ClassicTilestorm
 			{
 				//Update Pan
 				if (currentWorld != Vector3.negativeInfinity)
-				{
-					var delta = beginWorld - currentWorld;
-					camera.transform.position += delta;
-				}
+					camera.transform.position += beginWorld - currentWorld;
 			}
 
 			if (GuiUtils.WasGuiActiveLastFrame)
