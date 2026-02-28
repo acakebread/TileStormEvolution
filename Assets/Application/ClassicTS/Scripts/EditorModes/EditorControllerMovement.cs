@@ -32,8 +32,9 @@ namespace ClassicTilestorm
 		{
 			if (InputX.GetMouseButtonDown(0) || InputX.GetMouseButtonDown(1))
 			{
+				if (InputX.GetMouseButtonDown(0))
+					beginWorld = Map.ScreenToWorld(camera, InputX.mousePosition);
 				mouseDownPos = InputX.mousePosition;
-				beginWorld = Map.ScreenToWorld(camera, InputX.mousePosition);
 				mouseMovedBeyondThreshold = false;// update threshold flag
 				touchStartOverGui = IsMouseOverGUI() || ViewPreviewUtil.IsMouseOverPreview();
 			}
