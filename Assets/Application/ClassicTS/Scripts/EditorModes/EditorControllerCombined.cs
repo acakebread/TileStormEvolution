@@ -1,7 +1,7 @@
-﻿using UnityEngine;
-using MassiveHadronLtd;
+﻿using System;
+using UnityEngine;
 using System.Linq;
-using System;
+using MassiveHadronLtd;
 
 namespace ClassicTilestorm
 {
@@ -13,7 +13,7 @@ namespace ClassicTilestorm
 			PlacingTile,        // active tile placement from palette (ghost visible)
 			SelectedTile,       // tile is selected → can start drag or deselect
 			DraggingTile,       // actively dragging a selected tile (mouse button held)
-			UpdateAttachment
+			UpdateAttachment    // editing attachments
 		}
 
 		private ControllerMode mode = ControllerMode.Idle;
@@ -94,28 +94,14 @@ namespace ClassicTilestorm
 				case ControllerMode.Idle:
 					if (InputX.GetMouseButtonDown(0))
 					{
-						var hitTileIndex = iMap.CameraHitTile(camera, InputX.mousePosition);
-						var variant = iMap.CameraHitVariant(camera, InputX.mousePosition);
+						var variant = iMap.GetVariantAt(currentWorld);
 
 						if (variant.IsDefaultEquivalent)
-						{
 							StartPanning(); // immediate panning on default/empty
-						}
 						else
 						{
-							var attachmentsHere = iMap.GetAttachments(hitTileIndex);
-
-							if (attachmentsHere.Length == 0)
-							{
-								// No attachments → original behaviour
-								holdTime = Time.time;
-								holdSelect = true; // start the hold timer
-							}
-							else
-							{
-								pendingTile = hitTileIndex;
-								SelectAttachemnt();
-							}
+							holdTime = Time.time;
+							holdSelect = true; // start the hold timer
 						}
 					}
 
@@ -123,12 +109,9 @@ namespace ClassicTilestorm
 					{
 						if (InputX.GetMouseButtonUp(0))
 						{
-							if (holdSelect)
-							{
-								holdSelect = false;
-								//ToDo implement option to select tile or attachemnts if there are any present - if there are only attachemnts and not tile jump stright to attachment editing
-								SelectTile(currentWorld);
-							}
+							holdSelect = false;
+							pendingTile = iMap.VectorToIndex(currentWorld);
+							SelectAttachemnt();
 						}
 
 						// check the hold timer
@@ -458,3 +441,23 @@ namespace ClassicTilestorm
 		}
 	}
 }
+
+////ToDo implement option to select tile or select / add attachemnts
+////rule as follows
+////if there is an atttachment go straight to SelectAttachemnt()
+////if there is no tile geometry go straight to SelectAttachemnt() - this should invoke the 'Add' option
+////if there is a tile but no attachements add a new popup option to either select the tile or add attachments
+//private void SelectLocation(Vector3 worldPos)
+//{
+//	var hitTileIndex = iMap.VectorToIndex(worldPos);
+//	//var attachmentsHere = iMap.GetAttachments(hitTileIndex);
+//	//if (attachmentsHere.Length == 0)
+//	//{
+//	//	SelectTile(worldPos);
+//	//}
+//	//else
+//	{
+//		pendingTile = hitTileIndex;
+//		SelectAttachemnt();
+//	}
+//}
