@@ -24,7 +24,7 @@ namespace ClassicTilestorm
 		private Vector3 currentWorld => Map.ScreenToWorld(camera, InputX.mousePosition);
 		private int cursorTile = -1;
 		private Variant cursorVariant = new(ResourceManager.DefaultHash);
-		private MapAttachment[] selection = null;
+		private ISelectable[] selection = null;
 		private Action unsubscribeTileSelectorAction;
 
 		public EditorControllerModify(EditorController editorController) : base(editorController) { }
@@ -83,13 +83,23 @@ namespace ClassicTilestorm
 		public override void Update()
 		{
 			base.Update();
-			ViewAttachmentHandler.HandlePreviewCameraSync(iMap, camera, selection);
+			var attSelection = selection?.OfType<MapAttachment>().ToArray() ?? Array.Empty<MapAttachment>();
+			ViewAttachmentHandler.HandlePreviewCameraSync(iMap, camera, attSelection);
 		}
 
 		public override void OnGUI()
 		{
 			base.OnGUI();
-			EditorAttachmentUI.UpdateGUI(iMap, cursorTile, atts => SelectAttachment(atts));
+
+			EditorAttachmentUI.UpdateGUI(
+				iMap,
+				cursorTile,
+				selectable =>
+				{
+					var attachments = selectable?.OfType<MapAttachment>().ToArray() ?? Array.Empty<MapAttachment>();
+					SelectAttachment(attachments);
+				}
+			);
 		}
 
 		public override void OnDestroy()
@@ -101,9 +111,14 @@ namespace ClassicTilestorm
 		protected override void HandleGizmoInput()
 		{
 			if (null == selection || 0 == selection.Length) return;
-			var firstType = selection[0].GetType();
-			if (!selection.All(a => a.GetType() == firstType)) return;
-			selection[0].OnGizmoInput(iMap, camera, selection);
+
+			var attSelection = selection.OfType<MapAttachment>().ToArray();
+			if (attSelection.Length == 0) return;
+
+			var firstType = attSelection[0].GetType();
+			if (!attSelection.All(a => a.GetType() == firstType)) return;
+
+			attSelection[0].OnGizmoInput(iMap, camera, attSelection);
 		}
 
 		protected override void OnControl(bool staticClick)
@@ -236,6 +251,7 @@ namespace ClassicTilestorm
 
 		private bool StartTileDrag()
 		{
+			beginWorld = currentWorld;
 			if (!SelectTile(currentWorld))
 				return false;
 			SetMode(ControllerMode.DraggingTile);
@@ -244,7 +260,7 @@ namespace ClassicTilestorm
 
 		private void UpdateTileDrag()
 		{
-			var startWorld = cursorVariant.HasNav? Map.FullFloorVec(beginWorld) : Map.HalfFloorVec(beginWorld);
+			var startWorld = cursorVariant.HasNav ? Map.FullFloorVec(beginWorld) : Map.HalfFloorVec(beginWorld);
 			var worldPos = Map.FullFloorVec(beginWorld) + currentWorld - startWorld;
 			var snapped = Map.FullFloorVec(worldPos);
 			var delta = cursorVariant.HasNav ? Vector3.zero : Map.HalfFloorVec(worldPos) - snapped;
@@ -280,7 +296,7 @@ namespace ClassicTilestorm
 			tile.gameObject.SetActive(false);
 			cursorVariant = iMap.GetVariantAt(worldPos);
 			EditorSelectionUtil.UpdateGhostMesh(iMap, Map.FullFloorVec(worldPos), cursorVariant, true);
-			beginWorld = worldPos;
+			selection = new ISelectable[] { tile };
 			SetMode(ControllerMode.SelectedTile);
 
 			return true;
@@ -289,8 +305,8 @@ namespace ClassicTilestorm
 		private void DeselectTile()
 		{
 			EditorSelectionUtil.HideGhostMesh();
-			var tile = iMap.GetTile(beginWorld);
-			if (null != tile.gameObject) tile.gameObject.SetActive(true);
+			foreach (var tile in selection?.OfType<Tile>().Where(t => t.gameObject != null) ?? Enumerable.Empty<Tile>())
+				tile.gameObject.SetActive(true);
 			SetMode(ControllerMode.Idle);
 		}
 
@@ -304,7 +320,7 @@ namespace ClassicTilestorm
 
 			if (-1 != cursorTile)
 			{
-				if (null == selection || selection.Length == 0 || selection[0].tile != cursorTile)
+				if (null == selection || selection.Length == 0 || (selection[0] is MapAttachment ma && ma.tile != cursorTile))
 					SelectAttachment(iMap.GetAttachments(tileIndex: cursorTile));
 				return true;
 			}
@@ -319,12 +335,14 @@ namespace ClassicTilestorm
 				return;
 
 			cursorTile = tile;
-			if (null == selection) return;
-			foreach (var att in selection)
+
+			var attSelection = selection.OfType<MapAttachment>().ToArray();
+			foreach (var att in attSelection)
 			{
 				att.tile = cursorTile;
 				iMap.RefreshAttachment(att);
 			}
+
 			HandleDragInput();
 			RebuildMarkers();
 
@@ -333,11 +351,14 @@ namespace ClassicTilestorm
 				if (null == selection || 1 != selection.Length) return;
 				if (selection[0] is ITransformableAttachment transformable)
 				{
-					var worldPos = iMap.WorldPosition(selection[0].tile, transformable.Position);
-					var worldRot = iMap.WorldRotation(selection[0].tile, transformable.Rotation);
+					var worldPos = iMap.WorldPosition((selection[0] as MapAttachment).tile, transformable.Position);
+					var worldRot = iMap.WorldRotation((selection[0] as MapAttachment).tile, transformable.Rotation);
 					EditorTransformUtil.ShowAt(worldPos, worldRot, camera);
 				}
-				selection[0].OnDragInput(iMap, selection);
+
+				// only call if it's still MapAttachment
+				if (selection[0] is MapAttachment ma)
+					ma.OnDragInput(iMap, attSelection);
 			}
 		}
 
@@ -357,7 +378,7 @@ namespace ClassicTilestorm
 
 		private void SelectAttachment(MapAttachment[] attachments = null)
 		{
-			selection = attachments?.Length > 0 ? attachments : null;
+			selection = attachments?.Length > 0 ? attachments.Cast<ISelectable>().ToArray() : null;
 
 			ViewPreviewUtil.Hide();
 			HideAllGizmos();
@@ -373,9 +394,14 @@ namespace ClassicTilestorm
 			void HandleSelectionChanged()
 			{
 				if (null == selection || 0 == selection.Length) return;
-				var firstType = selection[0].GetType();
-				if (!selection.All(a => a.GetType() == firstType)) return;
-				selection[0].OnSelectionChanged(iMap, camera, selection);
+
+				if (selection[0] is not MapAttachment first) return;
+
+				var firstType = first.GetType();
+				var atts = selection.OfType<MapAttachment>().ToArray();
+				if (!atts.All(a => a.GetType() == firstType)) return;
+
+				first.OnSelectionChanged(iMap, camera, atts);
 			}
 		}
 
@@ -444,7 +470,7 @@ namespace ClassicTilestorm
 					: new Color(0f, 0.7f, 1f, 0.7f);
 			}
 
-			var selectedTile = (selection != null && selection.Length > 0) ? selection[0].tile : -1;
+			var selectedTile = (selection != null && selection.Length > 0 && selection[0] is MapAttachment ma) ? ma.tile : -1;
 			var selectedIndex = Array.IndexOf(tiles, selectedTile);
 
 			EditorMarkerUtil.ShowMarkers(positions, colors, selectedIndex);

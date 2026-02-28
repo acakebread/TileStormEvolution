@@ -1,9 +1,8 @@
 ﻿using UnityEngine;
-using MassiveHadronLtd;
 
 namespace ClassicTilestorm
 {
-	public readonly struct Tile
+	public readonly struct Tile : ISelectable
 	{
 		private readonly int flags;
 		public readonly GameObject gameObject;

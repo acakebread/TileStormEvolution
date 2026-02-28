@@ -16,7 +16,7 @@ namespace ClassicTilestorm
 
 	[Serializable]
 	[JsonConverter(typeof(MapAttachmentConverter))]
-	public abstract class MapAttachment
+	public abstract class MapAttachment : ISelectable
 	{
 		[JsonProperty(Order = 1)] public string type;
 		[JsonProperty(Order = 2)] public string name;

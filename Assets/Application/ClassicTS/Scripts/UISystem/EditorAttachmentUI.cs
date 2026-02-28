@@ -226,7 +226,7 @@ namespace ClassicTilestorm
 			return result == PopupResult.StillOpen;
 		}
 
-		public static void UpdateGUI(IMapEdit iMap, int tileIndex, Action<MapAttachment[]> onSelect)
+		public static void UpdateGUI(IMapEdit iMap, int tileIndex, Action<ISelectable[]> onSelect)
 		{
 			var currentSelection = iMap.GetAttachments(tileIndex: tileIndex);
 
@@ -235,11 +235,13 @@ namespace ClassicTilestorm
 			{
 				if (currentSelection.Length == 1 && currentSelection[0] is Waypoint wp)
 				{
-					DrawSidePanelWaypoint(iMap, currentSelection, waypoint => onSelect(new[] { waypoint }));
+					DrawSidePanelWaypoint(iMap, currentSelection,
+						waypoint => onSelect(new ISelectable[] { waypoint }));
 				}
 				else
 				{
-					DrawSidePanelAttachment(iMap, currentSelection, att => onSelect(new[] { att }));
+					DrawSidePanelAttachment(iMap, currentSelection,
+						att => onSelect(new ISelectable[] { att }));
 				}
 			}
 			else
@@ -247,11 +249,11 @@ namespace ClassicTilestorm
 				sidePanel.Update();
 			}
 
-			// Popups
+			// Popups ── wrap/unwrap the array
 			bool stillOpen =
-				DrawAddPopup(iMap, tileIndex, created => onSelect(new[] { created })) ||
-				DrawDeletePopup(iMap, tileIndex, atts => onSelect(atts)) ||
-				DrawSelectPopup(iMap, tileIndex, atts => onSelect(atts));
+				DrawAddPopup(iMap, tileIndex, created => onSelect(new ISelectable[] { created })) ||
+				DrawDeletePopup(iMap, tileIndex, atts => onSelect(atts?.Cast<ISelectable>().ToArray())) ||
+				DrawSelectPopup(iMap, tileIndex, atts => onSelect(atts?.Cast<ISelectable>().ToArray()));
 
 			if (!stillOpen && pendingAction != PendingAction.None)
 			{
