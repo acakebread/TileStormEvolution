@@ -18,7 +18,7 @@ namespace ClassicTilestorm
 		protected IMapEdit iMap => editorController?.iMap;
 		protected Camera camera { get { if (editorController.TryGetComponent<MainCameraController>(out var controller)) return controller.activeSystem?.camera; return null; } }
 
-		protected virtual bool IsMouseOverGUI() => PlaceholderUI.IsMouseOverGui() || GUIUtility.hotControl != 0 || (EventSystem.current && EventSystem.current.IsPointerOverGameObject());
+		private bool IsMouseOverGUI() => PlaceholderUI.IsMouseOverGui() || GUIUtility.hotControl != 0 || (EventSystem.current && EventSystem.current.IsPointerOverGameObject()) || EditorAttachmentUI.sidePanel.IsMouseOver;
 		public virtual void OnMapLoaded() 
 		{
 			ViewPreviewUtil.Hide();
@@ -39,8 +39,6 @@ namespace ClassicTilestorm
 			
 			if ((InputX.GetMouseButton(0) || InputX.GetMouseButton(1)) && Vector3.Distance(InputX.mousePosition, mouseDownPos) >= CLICK_THRESHOLD || InputX.GetAxis("Mouse ScrollWheel") > 0.01f)
 				mouseMovedBeyondThreshold = true;// update threshold flag
-
-			var staticClick = !mouseMovedBeyondThreshold;
 
 			if (InputX.GetMouseButtonUp(0))
 			{
@@ -89,7 +87,7 @@ namespace ClassicTilestorm
 			if (EditorTransformUtil.MouseOverGizmo(camera))
 				return;
 
-			OnControl(staticClick);
+			OnControl(!mouseMovedBeyondThreshold);//static click
 
 			if (isPanning)
 				UpdatePan();

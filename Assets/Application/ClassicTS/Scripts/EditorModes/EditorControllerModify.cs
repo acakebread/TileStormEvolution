@@ -33,8 +33,6 @@ namespace ClassicTilestorm
 
 		public EditorControllerModify(EditorController editorController) : base(editorController) { }
 
-		protected override bool IsMouseOverGUI() => base.IsMouseOverGUI() || EditorAttachmentUI.sidePanel.IsMouseOver;
-
 		// ===================================================================
 		// Lifecycle
 		// ===================================================================
@@ -323,7 +321,6 @@ namespace ClassicTilestorm
 			cursorVariant = iMap.GetVariantAt(worldPos);
 			EditorSelectionUtil.UpdateGhostMesh(iMap, Map.FullFloorVec(worldPos), cursorVariant, true);
 			beginWorld = worldPos;
-			//startWorld = cursorVariant.HasNav ? Map.FullFloorVec(worldPos) : Map.HalfFloorVec(worldPos);
 			SetMode(ControllerMode.SelectedTile);
 
 			return true;
