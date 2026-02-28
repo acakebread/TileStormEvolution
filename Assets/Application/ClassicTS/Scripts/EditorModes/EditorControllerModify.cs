@@ -20,17 +20,17 @@ namespace ClassicTilestorm
 		private bool holdSelect;
 		private float holdTime;
 
-		// Selection
 		private Vector3 startWorld => cursorVariant.HasNav? Map.FullFloorVec(beginWorld) : Map.HalfFloorVec(beginWorld);
 		private Vector3 currentWorld => Map.ScreenToWorld(camera, InputX.mousePosition);
 
+		// Tile selection and Attachment state
+		private int cursorTile = -1;
 		private Variant cursorVariant = new(ResourceManager.DefaultHash);
-
-		// Attachment state
-		private int pendingTile = -1;
 		private MapAttachment[] selection = null;
 
 		public EditorControllerModify(EditorController editorController) : base(editorController) { }
+
+		private void SetMode(ControllerMode value) => mode = value;
 
 		// ===================================================================
 		// Lifecycle
@@ -80,8 +80,6 @@ namespace ClassicTilestorm
 			SetMode((newHash != ResourceManager.DefaultHash) ? ControllerMode.PlacingTile : ControllerMode.Idle);
 		}
 
-		private void SetMode(ControllerMode value) => mode = value;
-
 		protected override void OnControl(bool staticClick)
 		{
 			base.OnControl(staticClick);
@@ -108,15 +106,15 @@ namespace ClassicTilestorm
 						if (InputX.GetMouseButtonUp(0))
 						{
 							holdSelect = false;
-							pendingTile = iMap.VectorToIndex(currentWorld);
-							SelectAttachemnt();
+							cursorTile = iMap.VectorToIndex(currentWorld);
+							EvaluateAttachment();
 						}
 
 						// check the hold timer
 						if (holdSelect && Time.time - holdTime >= 0.25f)
 						{
 							holdSelect = false;
-							if (!StartDrag())
+							if (!StartTileDrag())
 								StartPanning();
 						}
 
@@ -156,7 +154,7 @@ namespace ClassicTilestorm
 					{
 						if (InputX.GetMouseButtonDown(0))
 						{
-							if (!StartDrag())
+							if (!StartTileDrag())
 								StartPanning();
 						}
 
@@ -167,29 +165,29 @@ namespace ClassicTilestorm
 
 				case ControllerMode.DraggingTile:
 					if (InputX.GetMouseButton(0))
-						UpdateDrag();
+						UpdateTileDrag();
 
 					if (InputX.GetMouseButtonUp(0))
 					{
 						SetMode(ControllerMode.SelectedTile);
-						EndDrag();
+						EndTileDrag();
 					}
 					break;
 
 				case ControllerMode.UpdateAttachment:
 
 					if (InputX.GetMouseButtonDown(0))
-						pendingTile = iMap.CameraHitTile(camera, InputX.mousePosition);
+						cursorTile = iMap.CameraHitTile(camera, InputX.mousePosition);
 
 					if (staticClick)
 					{
 						if (InputX.GetMouseButtonUp(0))
-							SelectAttachemnt();
+							EvaluateAttachment();
 
 						if (InputX.GetMouseButtonUp(1))
 						{
-							pendingTile = iMap.CameraHitTile(camera, InputX.mousePosition);
-							SelectAttachemnt();
+							cursorTile = iMap.CameraHitTile(camera, InputX.mousePosition);
+							EvaluateAttachment();
 							EndAttachmentMode();
 						}
 					}
@@ -208,33 +206,33 @@ namespace ClassicTilestorm
 
 		private bool StartAttachmentDrag()
 		{
-			if (pendingTile < 0 || iMap.GetAttachments(tileIndex: pendingTile).Length == 0)//no attachment here
+			if (cursorTile < 0 || iMap.GetAttachments(tileIndex: cursorTile).Length == 0)//no attachment here
 			{
 				EndAttachmentMode();
 				return false;
 			}
 
-			if (-1 != pendingTile)
+			if (-1 != cursorTile)
 			{
-				if (null == selection || selection.Length == 0 || selection[0].tile != pendingTile)
-					Select(iMap.GetAttachments(tileIndex: pendingTile));
+				if (null == selection || selection.Length == 0 || selection[0].tile != cursorTile)
+					SelectAttachment(iMap.GetAttachments(tileIndex: cursorTile));
 				return true;
 			}
-			Select();
+			SelectAttachment();
 			return true;
 		}
 
 		private void UpdateAttachmentDrag()
 		{
 			var tile = iMap.CameraHitTile(camera, InputX.mousePosition);
-			if (tile == pendingTile || -1 == tile || null == selection || 0 == selection.Length)
+			if (tile == cursorTile || -1 == tile || null == selection || 0 == selection.Length)
 				return;
 
-			pendingTile = tile;
+			cursorTile = tile;
 			if (null == selection) return;
 			foreach (var att in selection)
 			{
-				att.tile = pendingTile;
+				att.tile = cursorTile;
 				iMap.RefreshAttachment(att);
 			}
 			HandleDragInput();
@@ -255,10 +253,10 @@ namespace ClassicTilestorm
 
 		private void EndAttachmentMode()
 		{
-			if (pendingTile < 0 || iMap.GetAttachments(tileIndex: pendingTile).Length == 0)//no attachment here
+			if (cursorTile < 0 || iMap.GetAttachments(tileIndex: cursorTile).Length == 0)//no attachment here
 			{
-				pendingTile = -1;
-				Select();
+				cursorTile = -1;
+				SelectAttachment();
 				EditorAttachmentUI.ClearPending();
 				HideAllGizmos();
 				SetMode(ControllerMode.Idle);
@@ -267,7 +265,7 @@ namespace ClassicTilestorm
 			EditorAttachmentUI.RequestDelete();
 		}
 
-		private bool StartDrag()
+		private bool StartTileDrag()
 		{
 			if (!SelectTile(currentWorld))
 				return false;
@@ -275,7 +273,7 @@ namespace ClassicTilestorm
 			return true;
 		}
 
-		private void UpdateDrag()
+		private void UpdateTileDrag()
 		{
 			var worldPos = Map.FullFloorVec(startWorld) + currentWorld - startWorld;
 			var snapped = Map.FullFloorVec(worldPos);
@@ -283,7 +281,7 @@ namespace ClassicTilestorm
 			EditorSelectionUtil.UpdateGhostMesh(iMap, snapped + delta, cursorVariant, true);
 		}
 
-		private void EndDrag()
+		private void EndTileDrag()
 		{
 			var worldPos = Map.FullFloorVec(startWorld) + currentWorld - startWorld + cursorVariant.delta;
 			var snapped = Map.FullFloorVec(worldPos);
@@ -335,7 +333,7 @@ namespace ClassicTilestorm
 		// Helpers
 		// ===================================================================
 
-		private void Select(MapAttachment[] attachments = null)
+		private void SelectAttachment(MapAttachment[] attachments = null)
 		{
 			selection = attachments?.Length > 0 ? attachments : null;
 
@@ -345,7 +343,7 @@ namespace ClassicTilestorm
 
 			if (null == selection || 1 != selection.Length)
 			{
-				pendingTile = -1;
+				cursorTile = -1;
 				return;
 			}
 			HandleSelectionChanged();
@@ -359,13 +357,13 @@ namespace ClassicTilestorm
 			}
 		}
 
-		private void SelectAttachemnt()
+		private void EvaluateAttachment()
 		{
-			var attachmentsOnTile = iMap.GetAttachments(tileIndex: pendingTile);
+			var attachmentsOnTile = iMap.GetAttachments(tileIndex: cursorTile);
 
 			if (null == attachmentsOnTile || 0 == attachmentsOnTile.Length)
 			{
-				if (-1 != pendingTile)
+				if (-1 != cursorTile)
 					EditorAttachmentUI.RequestAdd();
 			}
 			else if (attachmentsOnTile.Length > 1)
@@ -375,7 +373,7 @@ namespace ClassicTilestorm
 			else
 			{
 				EditorAttachmentUI.ClearPending();
-				Select(attachmentsOnTile);
+				SelectAttachment(attachmentsOnTile);
 			}
 
 			RebuildMarkers();
@@ -386,7 +384,7 @@ namespace ClassicTilestorm
 		private void ResetInputState()
 		{
 			selection = null;
-			pendingTile = -1;
+			cursorTile = -1;
 			EditorAttachmentUI.ClearPending();
 			HideAllGizmos();
 		}
@@ -441,7 +439,7 @@ namespace ClassicTilestorm
 		public override void OnGUI()
 		{
 			base.OnGUI();
-			EditorAttachmentUI.UpdateGUI(iMap, selection, atts => Select(atts), pendingTile);
+			EditorAttachmentUI.UpdateGUI(iMap, selection, atts => SelectAttachment(atts), cursorTile);
 		}
 
 		public override void Update()
