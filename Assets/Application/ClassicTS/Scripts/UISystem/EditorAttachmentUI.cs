@@ -129,7 +129,7 @@ namespace ClassicTilestorm
 		// ─────────────────────────────────────────────────────────────────────
 		// Popups — now take tile as parameter, use static popupPos + mode check
 		// ─────────────────────────────────────────────────────────────────────
-		public static bool DrawAddPopup(IMapEdit iMap, int tile, Action<MapAttachment> onCreateAndSelect)
+		private static bool DrawAddPopup(IMapEdit iMap, int tile, Action<MapAttachment> onCreateAndSelect)
 		{
 			if (pendingAction != PendingAction.Add) return false;
 
@@ -154,7 +154,7 @@ namespace ClassicTilestorm
 			return result == PopupResult.StillOpen;
 		}
 
-		public static bool DrawDeletePopup(IMapEdit iMap, int tile, Action<MapAttachment[]> onSelect)
+		private static bool DrawDeletePopup(IMapEdit iMap, int tile, Action<MapAttachment[]> onSelect)
 		{
 			if (pendingAction != PendingAction.Delete) return false;
 
@@ -187,10 +187,7 @@ namespace ClassicTilestorm
 			return result == PopupResult.StillOpen;
 		}
 
-		public static bool DrawSelectPopup(
-			IMapEdit iMap,
-			int tile,
-			Action<MapAttachment[]> onSelect)
+		private static bool DrawSelectPopup(IMapEdit iMap, int tile, Action<MapAttachment[]> onSelect)
 		{
 			if (pendingAction != PendingAction.Select) return false;
 
