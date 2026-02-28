@@ -441,23 +441,3 @@ namespace ClassicTilestorm
 		}
 	}
 }
-
-////ToDo implement option to select tile or select / add attachemnts
-////rule as follows
-////if there is an atttachment go straight to SelectAttachemnt()
-////if there is no tile geometry go straight to SelectAttachemnt() - this should invoke the 'Add' option
-////if there is a tile but no attachements add a new popup option to either select the tile or add attachments
-//private void SelectLocation(Vector3 worldPos)
-//{
-//	var hitTileIndex = iMap.VectorToIndex(worldPos);
-//	//var attachmentsHere = iMap.GetAttachments(hitTileIndex);
-//	//if (attachmentsHere.Length == 0)
-//	//{
-//	//	SelectTile(worldPos);
-//	//}
-//	//else
-//	{
-//		pendingTile = hitTileIndex;
-//		SelectAttachemnt();
-//	}
-//}

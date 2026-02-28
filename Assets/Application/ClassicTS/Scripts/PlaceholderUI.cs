@@ -91,6 +91,8 @@ namespace ClassicTilestorm
 
 		public float GetPanelBottomY() => guiRect.height + (guiRect.y >= 0 ? guiRect.y : 0);
 
+		public static bool IsMouseOverGui() => new Rect(0, 0, Screen.width, 40).Contains(new Vector3(InputX.mousePosition.x, Screen.height - InputX.mousePosition.y, InputX.mousePosition.z));
+
 		private void OnGUI()
 		{
 			// Visibility check first (safe and cheap)

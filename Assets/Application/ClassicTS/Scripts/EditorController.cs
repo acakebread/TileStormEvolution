@@ -9,11 +9,11 @@ namespace ClassicTilestorm
 		public IMapEdit iMap;
 
 		private EditorControllerMovement activeMode;
-		private EditorControllerPlacement placementMode;
-		private EditorControllerAttachment attachmentMode;
+		//private EditorControllerPlacement placementMode;
+		//private EditorControllerAttachment attachmentMode;
 		private EditorControllerCombined combinedMode;
 
-		private enum EditorMode { Placement, Attachment, Combined }
+		private enum EditorMode { Combined }//private enum EditorMode { Placement, Attachment, Combined }
 		private EditorMode? currentMode = null;
 
 		private bool gridEnabled = true;
@@ -24,24 +24,24 @@ namespace ClassicTilestorm
 
 		private Volume getVolume(GameObject root) => root.GetComponentInChildren<Volume>(true);
 
-		// UI state
-		private float panelYoffset = 10f;
-		private const float margin = 10f;
-		private const float spacing = 6f;
-		private const float buttonWidth = 130f;
-		private const float buttonHeight = 28f;
+		//// UI state
+		//private float panelYoffset = 10f;
+		//private const float margin = 10f;
+		//private const float spacing = 6f;
+		//private const float buttonWidth = 130f;
+		//private const float buttonHeight = 28f;
 
 		private MainCameraController mainCameraController { get { TryGetComponent<MainCameraController>(out var controller); return controller; } }
 		private GameCameraEditor gameCameraEditor { get { if (null != mainCameraController && mainCameraController.activeSystem is GameCameraEditor editorCam) return editorCam; return null; } }
 
 		private void Awake()
 		{
-			panelYoffset = PlaceholderUI.PanelBottomY;
-			placementMode = new EditorControllerPlacement(this);
-			attachmentMode = new EditorControllerAttachment(this);
+			//panelYoffset = PlaceholderUI.PanelBottomY;
+			//placementMode = new EditorControllerPlacement(this);
+			//attachmentMode = new EditorControllerAttachment(this);
 			combinedMode = new EditorControllerCombined(this);
-			SetEditorMode(EditorMode.Placement);//default
-			//SetEditorMode(EditorMode.Combined);//default
+			//SetEditorMode(EditorMode.Placement);//default
+			SetEditorMode(EditorMode.Combined);//default
 		}
 
 		private System.Action _unsubscribeMapAction;
@@ -98,7 +98,7 @@ namespace ClassicTilestorm
 
 		private void OnGUI()
 		{
-			DrawMainUI((currentMode ?? EditorMode.Placement).ToString(), gridEnabled);
+			//DrawMainUI((currentMode ?? EditorMode.Combined).ToString(), gridEnabled);//DrawMainUI((currentMode ?? EditorMode.Placement).ToString(), gridEnabled);
 			activeMode?.OnGUI();
 			//MultiTouchEmulator.OnGUI();//for debugging touch emulator
 		}
@@ -109,8 +109,8 @@ namespace ClassicTilestorm
 		{
 			GridLinesUtil.Hide();
 			if (null != iMap) iMap.OnMapEdited -= OnMapEdited;
-			placementMode?.OnDestroy();
-			attachmentMode?.OnDestroy();
+			//placementMode?.OnDestroy();
+			//attachmentMode?.OnDestroy();
 			combinedMode?.OnDestroy();
 		}
 
@@ -143,10 +143,10 @@ namespace ClassicTilestorm
 			activeMode = newMode switch
 			{
 				//EditorMode.View => viewMode,
-				EditorMode.Placement => placementMode,
-				EditorMode.Attachment => attachmentMode,
+				//EditorMode.Placement => placementMode,
+				//EditorMode.Attachment => attachmentMode,
 				EditorMode.Combined => combinedMode,
-				_ => placementMode//viewMode
+				_ => combinedMode//placementMode//viewMode
 			};
 			activeMode?.OnEnable();
 		}
@@ -168,60 +168,62 @@ namespace ClassicTilestorm
 		// UI & Input Detection
 		// ===================================================================
 
-		private int numItems = 0;
-		public bool IsMouseOverGui() => new Rect(margin, panelYoffset + spacing, buttonWidth + 20f, (buttonHeight + spacing) * numItems).Contains(new Vector3(InputX.mousePosition.x, Screen.height - InputX.mousePosition.y, InputX.mousePosition.z));
+		public bool IsMouseOverGui() => PlaceholderUI.IsMouseOverGui();
 
-		private void DrawMainUI(string mode, bool gridVisible)
-		{
-			Color prevContentColor = GUI.contentColor;
+		//private int numItems = 0;
+		//public bool IsMouseOverGui() => new Rect(margin, panelYoffset + spacing, buttonWidth + 20f, (buttonHeight + spacing) * numItems).Contains(new Vector3(InputX.mousePosition.x, Screen.height - InputX.mousePosition.y, InputX.mousePosition.z));
 
-			var ct = 0;
-			var y = panelYoffset + spacing;
-			//if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), ApplicationSettings.RemapGeometry ? "Remap" : "Classic", new Color(0.45f, 0.25f, 0.25f))) ApplicationSettings.RemapGeometry = !ApplicationSettings.RemapGeometry;
+		//		private void DrawMainUI(string mode, bool gridVisible)
+		//		{
+		//			Color prevContentColor = GUI.contentColor;
 
-			//if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), gridVisible ? "Hide Grid" : "Show Grid", new Color(0.25f, 0.75f, 0.25f))) OnGridLinesToggled(!gridVisible);
+		//			var ct = 0;
+		//			var y = panelYoffset + spacing;
+		//			//if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), ApplicationSettings.RemapGeometry ? "Remap" : "Classic", new Color(0.45f, 0.25f, 0.25f))) ApplicationSettings.RemapGeometry = !ApplicationSettings.RemapGeometry;
 
-			//if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), dofEnabled ? "Disable DOF" : "Enable DOF", new Color(0.25f, 0.75f, 0.25f))) OnDofToggled(!dofEnabled);
+		//			//if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), gridVisible ? "Hide Grid" : "Show Grid", new Color(0.25f, 0.75f, 0.25f))) OnGridLinesToggled(!gridVisible);
 
-			//if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "Database Editor", new Color(0.6f, 0.3f, 0.8f))) UIController.OpenPanel<DatabaseEditorPanel>();
+		//			//if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), dofEnabled ? "Disable DOF" : "Enable DOF", new Color(0.25f, 0.75f, 0.25f))) OnDofToggled(!dofEnabled);
 
-			//if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "Definition Editor", new Color(0.6f, 0.3f, 0.8f))) UIController.OpenPanel<DefinitionEditorPanel>();
+		//			//if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "Database Editor", new Color(0.6f, 0.3f, 0.8f))) UIController.OpenPanel<DatabaseEditorPanel>();
 
-			//if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "Effect Editor", new Color(0.6f, 0.3f, 0.8f))) UIController.OpenPanel<EffectEditorPanel>();
+		//			//if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "Definition Editor", new Color(0.6f, 0.3f, 0.8f))) UIController.OpenPanel<DefinitionEditorPanel>();
 
-			//if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "Model Editor", new Color(0.6f, 0.3f, 0.8f))) UIController.OpenPanel<ModelEditorPanel>();//placeholder
+		//			//if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "Effect Editor", new Color(0.6f, 0.3f, 0.8f))) UIController.OpenPanel<EffectEditorPanel>();
 
-			//GUI.contentColor = mode == "View" ? Color.cyan : Color.white;
-			//if (GUI.Button(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "View")) SetEditorMode(EditorMode.View);
+		//			//if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "Model Editor", new Color(0.6f, 0.3f, 0.8f))) UIController.OpenPanel<ModelEditorPanel>();//placeholder
 
-			GUI.contentColor = mode == "Placement" ? Color.cyan : Color.white;
-			if (GUI.Button(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "Placement")) SetEditorMode(EditorMode.Placement);
+		//			//GUI.contentColor = mode == "View" ? Color.cyan : Color.white;
+		//			//if (GUI.Button(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "View")) SetEditorMode(EditorMode.View);
 
-			GUI.contentColor = (currentMode ?? EditorMode.Placement) == EditorMode.Attachment ? Color.cyan : Color.white;
-			if (GUI.Button(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "Attachments")) SetEditorMode(EditorMode.Attachment);
+		//			//GUI.contentColor = mode == "Placement" ? Color.cyan : Color.white;
+		//			//if (GUI.Button(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "Placement")) SetEditorMode(EditorMode.Placement);
 
-			GUI.contentColor = prevContentColor;
+		//			//GUI.contentColor = (currentMode ?? EditorMode.Placement) == EditorMode.Attachment ? Color.cyan : Color.white;
+		//			//if (GUI.Button(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "Attachments")) SetEditorMode(EditorMode.Attachment);
 
-			numItems = ct;
+		//			GUI.contentColor = prevContentColor;
 
-//			var mainController = GetComponent<MainController>();
-//#if UNITY_EDITOR
-//			if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "Import Map", new Color(0.2f, 0.6f, 1f)))
-//				mainController.ImportMapAsAtomic();
+		//			numItems = ct;
 
-			//			if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "Export Map", new Color(0.8f, 0.2f, 0.2f)))
-			//				mainController.ExportMapAsAtomic();
-			//#endif
+		////			var mainController = GetComponent<MainController>();
+		////#if UNITY_EDITOR
+		////			if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "Import Map", new Color(0.2f, 0.6f, 1f)))
+		////				mainController.ImportMapAsAtomic();
 
-			//			if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "(Re)Load Database", new Color(0.2f, 0.6f, 1f)))
-			//				mainController.LoadDatabase();
+		//			//			if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "Export Map", new Color(0.8f, 0.2f, 0.2f)))
+		//			//				mainController.ExportMapAsAtomic();
+		//			//#endif
 
-			//#if UNITY_EDITOR
-			//			if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "Save Database", new Color(0.8f, 0.2f, 0.2f)))
-			//				mainController.SaveDatabase();
-			//#endif
-		}
+		//			//			if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "(Re)Load Database", new Color(0.2f, 0.6f, 1f)))
+		//			//				mainController.LoadDatabase();
 
-		//private void OnPostRender() => activeMode?.OnPostRender();
+		//			//#if UNITY_EDITOR
+		//			//			if (GuiUtils.ColoredButton(new Rect(margin, y + ct++ * (buttonHeight + spacing), buttonWidth, buttonHeight), "Save Database", new Color(0.8f, 0.2f, 0.2f)))
+		//			//				mainController.SaveDatabase();
+		//			//#endif
+		//		}
+
+		//		//private void OnPostRender() => activeMode?.OnPostRender();
 	}
 }
