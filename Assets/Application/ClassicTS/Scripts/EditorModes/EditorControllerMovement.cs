@@ -18,15 +18,16 @@ namespace ClassicTilestorm
 		protected IMapEdit iMap => editorController?.iMap;
 		protected Camera camera { get { if (editorController.TryGetComponent<MainCameraController>(out var controller)) return controller.activeSystem?.camera; return null; } }
 
+		private bool touchStartOverGui = false;
 		private bool IsMouseOverGUI() => PlaceholderUI.IsMouseOverGui() || GUIUtility.hotControl != 0 || (EventSystem.current && EventSystem.current.IsPointerOverGameObject()) || EditorAttachmentUI.sidePanel.IsMouseOver;
+		
+		public EditorControllerMovement(EditorController controller = null) => editorController = controller;
+
 		public virtual void OnMapLoaded() 
 		{
 			ViewPreviewUtil.Hide();
 			isPanning = false; 
 		}
-
-		private bool touchStartOverGui = false;
-		public EditorControllerMovement(EditorController controller = null) => editorController = controller;
 
 		public virtual void Update()
 		{
@@ -79,7 +80,15 @@ namespace ClassicTilestorm
 			}
 
 			if (isPanning)
-				UpdatePan();
+			{
+				//Update Pan
+				var currentWorldPoint = Map.ScreenToWorld(camera, InputX.mousePosition);
+				if (currentWorldPoint != Vector3.negativeInfinity)
+				{
+					var delta = beginWorld - currentWorldPoint;
+					camera.transform.position += delta;
+				}
+			}
 
 			if (GuiUtils.WasGuiActiveLastFrame)
 			{
@@ -112,16 +121,6 @@ namespace ClassicTilestorm
 		{
 			if (isPanning) return;
 			isPanning = beginWorld != Vector3.negativeInfinity;
-		}
-
-		private void UpdatePan()
-		{
-			var currentWorldPoint = Map.ScreenToWorld(camera, InputX.mousePosition);
-			if (currentWorldPoint != Vector3.negativeInfinity)
-			{
-				var delta = beginWorld - currentWorldPoint;
-				camera.transform.position += delta;
-			}
 		}
 	}
 }
