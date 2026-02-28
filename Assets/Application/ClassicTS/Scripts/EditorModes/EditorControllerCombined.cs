@@ -180,13 +180,16 @@ namespace ClassicTilestorm
 
 				case ControllerMode.UpdateAttachment:
 
-					if (InputX.GetMouseButtonDown(0))
-						pendingTile = iMap.CameraHitTile(camera, InputX.mousePosition);
+					//if (InputX.GetMouseButtonDown(0))
+					//	pendingTile = iMap.CameraHitTile(camera, InputX.mousePosition);
 
 					if (staticClick)
 					{
 						if (InputX.GetMouseButtonUp(0))
+						{
+							pendingTile = iMap.CameraHitTile(camera, InputX.mousePosition);
 							SelectAttachemnt();
+						}
 
 						if (InputX.GetMouseButtonUp(1))
 						{
@@ -345,7 +348,11 @@ namespace ClassicTilestorm
 			HideAllGizmos();
 			RebuildMarkers();
 
-			if (null == selection || 1 != selection.Length) return;
+			if (null == selection || 1 != selection.Length)
+			{
+				pendingTile = -1;
+				return;
+			}
 			HandleSelectionChanged();
 
 			void HandleSelectionChanged()
