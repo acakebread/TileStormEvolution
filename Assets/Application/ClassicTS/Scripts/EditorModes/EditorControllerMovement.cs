@@ -55,7 +55,7 @@ namespace ClassicTilestorm
 			else
 			{
 				if (Input.GetMouseButton(0) || Input.GetMouseButton(1))
-					Debug.Log("rogue state");
+					Debug.Log("rogue state - problem with InputX caching");
 				touchStartOverGui = false;
 			}
 
@@ -79,7 +79,9 @@ namespace ClassicTilestorm
 				return; // Skip input this frame — GUI consumed it last frame
 			}
 
-			if (EditorTransformUtil.HandleTransformGizmoInput(camera))
+			var handled = EditorTransformUtil.HandleTransformGizmoInput(camera);
+			EditorTransformUtil.UpdateTransformGizmoVisuals(camera);
+			if (handled)
 			{
 				HandleGizmoInput();
 				return;

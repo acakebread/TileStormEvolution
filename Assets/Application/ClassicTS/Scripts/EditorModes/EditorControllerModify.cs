@@ -449,7 +449,6 @@ namespace ClassicTilestorm
 		public override void Update()
 		{
 			base.Update();
-			EditorTransformUtil.UpdateTransformGizmoVisuals(camera);
 			ViewAttachmentHandler.HandlePreviewCameraSync(iMap, camera, selection);
 		}
 	}
