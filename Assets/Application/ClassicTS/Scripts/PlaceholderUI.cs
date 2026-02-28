@@ -91,16 +91,16 @@ namespace ClassicTilestorm
 
 		public float GetPanelBottomY() => guiRect.height + (guiRect.y >= 0 ? guiRect.y : 0);
 
-		public static bool IsMouseOverGui() => new Rect(0, 0, Screen.width, 40).Contains(new Vector3(InputX.mousePosition.x, Screen.height - InputX.mousePosition.y, InputX.mousePosition.z));
+		public static bool IsMouseOverGui() => new Rect(0, 0, Screen.width, 40).Contains(new Vector3(InputX.mousePosition.x, Screen.height - InputX.mousePosition.y, InputX.mousePosition.z));//GUIManager.IsMouseOverGui();//  
 
 		private void OnGUI()
 		{
+			//// ALWAYS run this setup — needed for input handling
+			//GUIManager.RegisterGuiRect(new Rect(0, guiRect.y - panelGap, Screen.width, guiRect.height + 2 * panelGap));
+
 			// Visibility check first (safe and cheap)
 			if (guiRect.y < -90 && !isGuiVisible)
 				return;
-
-			// ALWAYS run this setup — needed for input handling
-			GUIManager.RegisterGuiRect(new Rect(0, guiRect.y - panelGap, Screen.width, guiRect.height + 2 * panelGap));
 
 			GUI.skin.button.fontSize = 16;
 			GUI.skin.label.fontSize = 16;
