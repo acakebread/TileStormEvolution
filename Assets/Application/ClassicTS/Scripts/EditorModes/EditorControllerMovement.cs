@@ -64,9 +64,9 @@ namespace ClassicTilestorm
 			{
 				if (!touchStartOverGui)
 				{
-					var overGUI = IsMouseOverGUI() | ViewPreviewUtil.IsMouseOverPreview();
-					if (InputX.GetMouseButton(0) || InputX.GetMouseButton(1))
-						overGUI = touchStartOverGui;
+					var overGUI = (InputX.GetMouseButton(0) || InputX.GetMouseButton(1))
+						? touchStartOverGui
+						: IsMouseOverGUI() || ViewPreviewUtil.IsMouseOverPreview();
 					EditorCameraMovement.UpdateCamera(camera ? camera.transform : null, isMouseOverGui: overGUI);
 				}
 			}
