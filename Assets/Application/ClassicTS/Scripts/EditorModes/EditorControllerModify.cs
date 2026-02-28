@@ -20,10 +20,8 @@ namespace ClassicTilestorm
 		private bool holdSelect;
 		private float holdTime;
 
-		private Vector3 startWorld => cursorVariant.HasNav? Map.FullFloorVec(beginWorld) : Map.HalfFloorVec(beginWorld);
-		private Vector3 currentWorld => Map.ScreenToWorld(camera, InputX.mousePosition);
-
 		// Tile selection and Attachment state
+		private Vector3 currentWorld => Map.ScreenToWorld(camera, InputX.mousePosition);
 		private int cursorTile = -1;
 		private Variant cursorVariant = new(ResourceManager.DefaultHash);
 		private MapAttachment[] selection = null;
@@ -247,7 +245,8 @@ namespace ClassicTilestorm
 
 		private void UpdateTileDrag()
 		{
-			var worldPos = Map.FullFloorVec(startWorld) + currentWorld - startWorld;
+			var startWorld = cursorVariant.HasNav? Map.FullFloorVec(beginWorld) : Map.HalfFloorVec(beginWorld);
+			var worldPos = Map.FullFloorVec(beginWorld) + currentWorld - startWorld;
 			var snapped = Map.FullFloorVec(worldPos);
 			var delta = cursorVariant.HasNav ? Vector3.zero : Map.HalfFloorVec(worldPos) - snapped;
 			EditorSelectionUtil.UpdateGhostMesh(iMap, snapped + delta, cursorVariant, true);
@@ -255,25 +254,26 @@ namespace ClassicTilestorm
 
 		private void EndTileDrag()
 		{
-			var worldPos = Map.FullFloorVec(startWorld) + currentWorld - startWorld + cursorVariant.delta;
+			var startWorld = cursorVariant.HasNav ? Map.FullFloorVec(beginWorld) : Map.HalfFloorVec(beginWorld);
+			var worldPos = Map.FullFloorVec(beginWorld) + currentWorld - startWorld + cursorVariant.delta;
 			var snapped = Map.FullFloorVec(worldPos);
 			var delta = cursorVariant.HasNav ? Vector3.zero : Map.HalfFloorVec(worldPos) - snapped;
 
-			if (snapped == Map.FullFloorVec(startWorld) && delta == cursorVariant.delta)
+			if (snapped == Map.FullFloorVec(beginWorld) && delta == cursorVariant.delta)
 				return;//no change so ok to just exit
 
 			delta.y = cursorVariant.delta.y;//retore old delta height
 			cursorVariant.delta = delta;
-			iMap.RemoveTileAt(startWorld);
+			iMap.RemoveTileAt(beginWorld);
 			var index = iMap.UpdateTileAt(snapped, cursorVariant);
-			if (-1 == index) index = iMap.UpdateTileAt(Map.FullFloorVec(startWorld), cursorVariant);//operation failed restore old tile
+			if (-1 == index) index = iMap.UpdateTileAt(Map.FullFloorVec(beginWorld), cursorVariant);//operation failed restore old tile
 			SelectTile(iMap.IndexToVector(index));
 		}
 
 		private void DeselectTile()
 		{
 			EditorSelectionUtil.HideGhostMesh();
-			var tile = iMap.GetTile(startWorld);
+			var tile = iMap.GetTile(beginWorld);
 			if (null != tile.gameObject) tile.gameObject.SetActive(true);
 			SetMode(ControllerMode.Idle);
 		}
