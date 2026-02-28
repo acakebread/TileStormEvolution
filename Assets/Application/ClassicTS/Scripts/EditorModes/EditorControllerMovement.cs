@@ -33,6 +33,7 @@ namespace ClassicTilestorm
 			if (InputX.GetMouseButtonDown(0) || InputX.GetMouseButtonDown(1))
 			{
 				mouseDownPos = InputX.mousePosition;
+				beginWorld = Map.ScreenToWorld(camera, InputX.mousePosition);
 				mouseMovedBeyondThreshold = false;// update threshold flag
 				touchStartOverGui = IsMouseOverGUI() || ViewPreviewUtil.IsMouseOverPreview();
 			}
@@ -70,27 +71,22 @@ namespace ClassicTilestorm
 			if (ViewPreviewUtil.IsInFocus || IsMouseOverGUI())
 				return;
 
+			if (HandleGizmoInput())
+			{
+				EditorTransformUtil.UpdateTransformGizmoVisuals(camera);
+				return;
+			}
+
+			if (isPanning)
+				UpdatePan();
+
 			if (GuiUtils.WasGuiActiveLastFrame)
 			{
 				mouseMovedBeyondThreshold = true;//workaround to suppress clean click after popup closed
 				return; // Skip input this frame — GUI consumed it last frame
 			}
 
-			var handled = EditorTransformUtil.HandleTransformGizmoInput(camera);
-			EditorTransformUtil.UpdateTransformGizmoVisuals(camera);
-			if (handled)
-			{
-				HandleGizmoInput();
-				return;
-			}
-
-			if (EditorTransformUtil.MouseOverGizmo(camera))
-				return;
-
 			OnControl(!mouseMovedBeyondThreshold);//static click
-
-			if (isPanning)
-				UpdatePan();
 		}
 
 		public virtual void OnEnable() => ViewPreviewUtil.Hide();
@@ -107,14 +103,13 @@ namespace ClassicTilestorm
 
 		public virtual void OnApplicationFocus(bool hasFocus) => EditorCameraMovement.OnApplicationFocus(hasFocus);
 
-		protected virtual void HandleGizmoInput() { }
+		protected virtual bool HandleGizmoInput() => false;
 
 		protected virtual void OnControl(bool staticClick) { }
 
 		protected void StartPanning()
 		{
 			if (isPanning) return;
-			beginWorld = Map.ScreenToWorld(camera, InputX.mousePosition);
 			isPanning = beginWorld != Vector3.negativeInfinity;
 		}
 

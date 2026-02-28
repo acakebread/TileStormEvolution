@@ -14,7 +14,7 @@ namespace ClassicTilestorm
 			EditorPrimitiveUtil.UpdateCone(worldPos, emitter.Rotation, emitter.Distance, emitter.Apex);
 		}
 
-		public void OnGizmoInput(IMapEdit iMap, Camera camera, MapAttachment[] selection)
+		public bool OnGizmoInput(IMapEdit iMap, Camera camera, MapAttachment[] selection)
 		{
 			var emitter = (Emitter)selection[0];
 
@@ -24,14 +24,16 @@ namespace ClassicTilestorm
 				emitter.Rotation = iMap.LocalRotation(emitter.tile, newWorldRot);
 				iMap.RefreshAttachment(emitter);
 				EditorPrimitiveUtil.UpdateCone(newWorldPos, emitter.Rotation, emitter.Distance, emitter.Apex);
+				return true;
 			}
+			return false;
 		}
 
-		public void OnDragInput(IMapEdit iMap, MapAttachment[] selection)
+		public bool OnDragInput(IMapEdit iMap, MapAttachment[] selection)
 		{
 			var emitter = (Emitter)selection[0];
 			var worldPos = iMap.WorldPosition(emitter.tile, emitter.Position);
-			EditorPrimitiveUtil.UpdateCone(worldPos, emitter.Rotation, emitter.Distance, emitter.Apex);
+			return EditorPrimitiveUtil.UpdateCone(worldPos, emitter.Rotation, emitter.Distance, emitter.Apex);
 		}
 
 		public static Emitter Create(IMapEdit iMap, int tile, string variant)

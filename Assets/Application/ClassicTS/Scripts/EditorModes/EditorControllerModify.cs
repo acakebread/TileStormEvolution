@@ -108,17 +108,17 @@ namespace ClassicTilestorm
 			EditorSelectionUtil.DestroyGhostMesh();
 		}
 
-		protected override void HandleGizmoInput()
+		protected override bool HandleGizmoInput()
 		{
-			if (null == selection || 0 == selection.Length) return;
+			if (null == selection || 0 == selection.Length) return false;
 
 			var attSelection = selection.OfType<MapAttachment>().ToArray();
-			if (attSelection.Length == 0) return;
+			if (attSelection.Length == 0) return false;
 
 			var firstType = attSelection[0].GetType();
-			if (!attSelection.All(a => a.GetType() == firstType)) return;
+			if (!attSelection.All(a => a.GetType() == firstType)) return false;
 
-			attSelection[0].OnGizmoInput(iMap, camera, attSelection);
+			return attSelection[0].OnGizmoInput(iMap, camera, attSelection);
 		}
 
 		protected override void OnControl(bool staticClick)
@@ -251,7 +251,6 @@ namespace ClassicTilestorm
 
 		private bool StartTileDrag()
 		{
-			beginWorld = currentWorld;
 			if (!SelectTile(currentWorld))
 				return false;
 			SetMode(ControllerMode.DraggingTile);

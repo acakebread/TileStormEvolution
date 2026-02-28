@@ -15,7 +15,7 @@ namespace ClassicTilestorm
 			OnDragInput(map, selection);
 		}
 
-		public void OnGizmoInput(IMapEdit map, Camera camera, MapAttachment[] selection)
+		public bool OnGizmoInput(IMapEdit map, Camera camera, MapAttachment[] selection)
 		{
 			var view = (View)selection[0];
 
@@ -34,14 +34,16 @@ namespace ClassicTilestorm
 
 				ViewPreviewUtil.Update();
 				UpdateViewFrustumMarker(map, view);
+				return true;
 			}
+			return false;
 		}
 
-		public void OnDragInput(IMapEdit map, MapAttachment[] selection)
+		public bool OnDragInput(IMapEdit map, MapAttachment[] selection)
 		{
 			var view = (View)selection[0];
 			ViewPreviewUtil.Show(view, map);
-			UpdateViewFrustumMarker(map, view);
+			return UpdateViewFrustumMarker(map, view);
 		}
 
 		public static View Create(IMapEdit map, int tile)
@@ -101,12 +103,12 @@ namespace ClassicTilestorm
 			view.Distance = View.MAX_DISTANCE;
 		}
 
-		private static void UpdateViewFrustumMarker(IMapEdit map, View view)
+		private static bool UpdateViewFrustumMarker(IMapEdit map, View view)
 		{
 			if (view == null || view.data == null || view.data.Length < 7 || view.Distance < 0.02f)
 			{
 				EditorFrustumUtil.Hide();
-				return;
+				return false;
 			}
 
 			Vector3 worldPos = map.WorldPosition(view.tile, view.Position);
@@ -119,6 +121,7 @@ namespace ClassicTilestorm
 
 			Quaternion targetRotation = Quaternion.LookRotation(forward, up);
 			EditorFrustumUtil.UpdateFrustum(worldPos, targetRotation, view.Distance, view.FOV);
+			return true;
 		}
 	}
 }

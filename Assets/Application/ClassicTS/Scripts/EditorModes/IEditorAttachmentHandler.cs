@@ -9,14 +9,16 @@ namespace ClassicTilestorm
 			// Default: do nothing
 		}
 
-		void OnGizmoInput(IMapEdit map, Camera camera, MapAttachment[] selection)
+		bool OnGizmoInput(IMapEdit map, Camera camera, MapAttachment[] selection)
 		{
 			// Default: do nothing
+			return false;
 		}
 
-		void OnDragInput(IMapEdit map, MapAttachment[] selection)
+		bool OnDragInput(IMapEdit map, MapAttachment[] selection)
 		{
 			// Default: do nothing
+			return false;
 		}
 	}
 }

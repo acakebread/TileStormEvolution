@@ -22,12 +22,12 @@ namespace ClassicTilestorm
 		// ===================================================================
 		// MAIN UPDATE — uses apex angle (in degrees)
 		// ===================================================================
-		public static void UpdateCone(Vector3 worldPosition, Quaternion worldRotation, float length, float apexAngle)
+		public static bool UpdateCone(Vector3 worldPosition, Quaternion worldRotation, float length, float apexAngle)
 		{
 			if (length < 0.02f || apexAngle <= 0f || apexAngle >= 180f)
 			{
 				Hide();
-				return;
+				return false;
 			}
 
 			float halfAngleRad = apexAngle * 0.5f * Mathf.Deg2Rad;
@@ -84,6 +84,7 @@ namespace ClassicTilestorm
 			coneMarker.transform.position = worldPosition;
 			coneMarker.transform.rotation = worldRotation;
 			coneMarker.SetActive(true);
+			return true;
 		}
 
 		public static void Hide()

@@ -20,16 +20,18 @@ namespace ClassicTilestorm
 				handler.OnSelectionChanged(iMap, camera, selection);
 		}
 
-		public static void OnGizmoInput(this MapAttachment attachment, IMapEdit iMap, Camera camera, MapAttachment[] selection)
+		public static bool OnGizmoInput(this MapAttachment attachment, IMapEdit iMap, Camera camera, MapAttachment[] selection)
 		{
 			if (Handlers.TryGetValue(attachment.GetType(), out var handler))
-				handler.OnGizmoInput(iMap, camera, selection);
+				return handler.OnGizmoInput(iMap, camera, selection);
+			return false;
 		}
 
-		public static void OnDragInput(this MapAttachment attachment, IMapEdit iMap, MapAttachment[] selection)
+		public static bool OnDragInput(this MapAttachment attachment, IMapEdit iMap, MapAttachment[] selection)
 		{
 			if (Handlers.TryGetValue(attachment.GetType(), out var handler))
-				handler.OnDragInput(iMap, selection);
+				return handler.OnDragInput(iMap, selection);
+			return false;
 		}
 	}
 }
