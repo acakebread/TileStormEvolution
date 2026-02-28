@@ -25,6 +25,7 @@ namespace ClassicTilestorm
 		private int cursorTile = -1;
 		private Variant cursorVariant = new(ResourceManager.DefaultHash);
 		private MapAttachment[] selection = null;
+		private Action unsubscribeTileSelectorAction;
 
 		public EditorControllerModify(EditorController editorController) : base(editorController) { }
 
@@ -38,8 +39,6 @@ namespace ClassicTilestorm
 			base.OnMapLoaded();
 			ResetInputState();
 		}
-
-		private Action _unsubscribeTileSectorAction;
 
 		public override void OnEnable()
 		{
@@ -55,7 +54,7 @@ namespace ClassicTilestorm
 
 			tileSelector.OnTileSelected += OnTileSelectedFromPalette;
 			tileSelector.CanOpenPalette = () => mode == ControllerMode.Idle;
-			_unsubscribeTileSectorAction = () =>
+			unsubscribeTileSelectorAction = () =>
 			{
 				tileSelector.OnTileSelected -= OnTileSelectedFromPalette;
 				tileSelector.CanOpenPalette = () => false;
@@ -74,8 +73,8 @@ namespace ClassicTilestorm
 		public override void OnDisable()
 		{
 			base.OnDisable();
-			_unsubscribeTileSectorAction?.Invoke();
-			_unsubscribeTileSectorAction = null;
+			unsubscribeTileSelectorAction?.Invoke();
+			unsubscribeTileSelectorAction = null;
 
 			DeselectTile();
 			ResetInputState();
@@ -270,14 +269,6 @@ namespace ClassicTilestorm
 			SelectTile(iMap.IndexToVector(index));
 		}
 
-		private void DeselectTile()
-		{
-			EditorSelectionUtil.HideGhostMesh();
-			var tile = iMap.GetTile(beginWorld);
-			if (null != tile.gameObject) tile.gameObject.SetActive(true);
-			SetMode(ControllerMode.Idle);
-		}
-
 		private bool SelectTile(Vector3 worldPos)
 		{
 			DeselectTile();
@@ -293,6 +284,14 @@ namespace ClassicTilestorm
 			SetMode(ControllerMode.SelectedTile);
 
 			return true;
+		}
+
+		private void DeselectTile()
+		{
+			EditorSelectionUtil.HideGhostMesh();
+			var tile = iMap.GetTile(beginWorld);
+			if (null != tile.gameObject) tile.gameObject.SetActive(true);
+			SetMode(ControllerMode.Idle);
 		}
 
 		private bool StartAttachmentDrag()
