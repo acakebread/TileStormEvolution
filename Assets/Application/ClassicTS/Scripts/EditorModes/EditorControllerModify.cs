@@ -83,6 +83,32 @@ namespace ClassicTilestorm
 			ResetInputState();
 		}
 
+		public override void Update()
+		{
+			base.Update();
+			ViewAttachmentHandler.HandlePreviewCameraSync(iMap, camera, selection);
+		}
+
+		public override void OnGUI()
+		{
+			base.OnGUI();
+			EditorAttachmentUI.UpdateGUI(iMap, cursorTile, atts => SelectAttachment(atts));
+		}
+
+		public override void OnDestroy()
+		{
+			DeselectTile();
+			EditorSelectionUtil.DestroyGhostMesh();
+		}
+
+		protected override void HandleGizmoInput()
+		{
+			if (null == selection || 0 == selection.Length) return;
+			var firstType = selection[0].GetType();
+			if (!selection.All(a => a.GetType() == firstType)) return;
+			selection[0].OnGizmoInput(iMap, camera, selection);
+		}
+
 		protected override void OnControl(bool staticClick)
 		{
 			base.OnControl(staticClick);
@@ -207,6 +233,68 @@ namespace ClassicTilestorm
 			}
 		}
 
+		// ===================================================================
+		// Helpers
+		// ===================================================================
+
+		private bool StartTileDrag()
+		{
+			if (!SelectTile(currentWorld))
+				return false;
+			SetMode(ControllerMode.DraggingTile);
+			return true;
+		}
+
+		private void UpdateTileDrag()
+		{
+			var worldPos = Map.FullFloorVec(startWorld) + currentWorld - startWorld;
+			var snapped = Map.FullFloorVec(worldPos);
+			var delta = cursorVariant.HasNav ? Vector3.zero : Map.HalfFloorVec(worldPos) - snapped;
+			EditorSelectionUtil.UpdateGhostMesh(iMap, snapped + delta, cursorVariant, true);
+		}
+
+		private void EndTileDrag()
+		{
+			var worldPos = Map.FullFloorVec(startWorld) + currentWorld - startWorld + cursorVariant.delta;
+			var snapped = Map.FullFloorVec(worldPos);
+			var delta = cursorVariant.HasNav ? Vector3.zero : Map.HalfFloorVec(worldPos) - snapped;
+
+			if (snapped == Map.FullFloorVec(startWorld) && delta == cursorVariant.delta)
+				return;//no change so ok to just exit
+
+			delta.y = cursorVariant.delta.y;//retore old delta height
+			cursorVariant.delta = delta;
+			iMap.RemoveTileAt(startWorld);
+			var index = iMap.UpdateTileAt(snapped, cursorVariant);
+			if (-1 == index) index = iMap.UpdateTileAt(Map.FullFloorVec(startWorld), cursorVariant);//operation failed restore old tile
+			SelectTile(iMap.IndexToVector(index));
+		}
+
+		private void DeselectTile()
+		{
+			EditorSelectionUtil.HideGhostMesh();
+			var tile = iMap.GetTile(startWorld);
+			if (null != tile.gameObject) tile.gameObject.SetActive(true);
+			SetMode(ControllerMode.Idle);
+		}
+
+		private bool SelectTile(Vector3 worldPos)
+		{
+			DeselectTile();
+
+			var tile = iMap.GetTile(worldPos);
+			if (null == tile.gameObject)
+				return false;
+
+			tile.gameObject.SetActive(false);
+			cursorVariant = iMap.GetVariantAt(worldPos);
+			EditorSelectionUtil.UpdateGhostMesh(iMap, Map.FullFloorVec(worldPos), cursorVariant, true);
+			beginWorld = worldPos;
+			SetMode(ControllerMode.SelectedTile);
+
+			return true;
+		}
+
 		private bool StartAttachmentDrag()
 		{
 			if (cursorTile < 0 || iMap.GetAttachments(tileIndex: cursorTile).Length == 0)//no attachment here
@@ -267,74 +355,6 @@ namespace ClassicTilestorm
 			}
 			EditorAttachmentUI.RequestDelete();
 		}
-
-		private bool StartTileDrag()
-		{
-			if (!SelectTile(currentWorld))
-				return false;
-			SetMode(ControllerMode.DraggingTile);
-			return true;
-		}
-
-		private void UpdateTileDrag()
-		{
-			var worldPos = Map.FullFloorVec(startWorld) + currentWorld - startWorld;
-			var snapped = Map.FullFloorVec(worldPos);
-			var delta = cursorVariant.HasNav ? Vector3.zero : Map.HalfFloorVec(worldPos) - snapped;
-			EditorSelectionUtil.UpdateGhostMesh(iMap, snapped + delta, cursorVariant, true);
-		}
-
-		private void EndTileDrag()
-		{
-			var worldPos = Map.FullFloorVec(startWorld) + currentWorld - startWorld + cursorVariant.delta;
-			var snapped = Map.FullFloorVec(worldPos);
-			var delta = cursorVariant.HasNav ? Vector3.zero : Map.HalfFloorVec(worldPos) - snapped;
-
-			if (snapped == Map.FullFloorVec(startWorld) && delta == cursorVariant.delta)
-				return;//no change so ok to just exit
-
-			delta.y = cursorVariant.delta.y;//retore old delta height
-			cursorVariant.delta = delta;
-			iMap.RemoveTileAt(startWorld);
-			var index = iMap.UpdateTileAt(snapped, cursorVariant);
-			if (-1 == index) index = iMap.UpdateTileAt(Map.FullFloorVec(startWorld), cursorVariant);//operation failed restore old tile
-			SelectTile(iMap.IndexToVector(index));
-		}
-
-		private void DeselectTile()
-		{
-			EditorSelectionUtil.HideGhostMesh();
-			var tile = iMap.GetTile(startWorld);
-			if (null != tile.gameObject) tile.gameObject.SetActive(true);
-			SetMode(ControllerMode.Idle);
-		}
-
-		private bool SelectTile(Vector3 worldPos)
-		{
-			DeselectTile();
-
-			var tile = iMap.GetTile(worldPos);
-			if (null == tile.gameObject)
-				return false;
-
-			tile.gameObject.SetActive(false);
-			cursorVariant = iMap.GetVariantAt(worldPos);
-			EditorSelectionUtil.UpdateGhostMesh(iMap, Map.FullFloorVec(worldPos), cursorVariant, true);
-			beginWorld = worldPos;
-			SetMode(ControllerMode.SelectedTile);
-
-			return true;
-		}
-
-		public override void OnDestroy()
-		{
-			DeselectTile();
-			EditorSelectionUtil.DestroyGhostMesh();
-		}
-
-		// ===================================================================
-		// Helpers
-		// ===================================================================
 
 		private void SelectAttachment(MapAttachment[] attachments = null)
 		{
@@ -429,26 +449,6 @@ namespace ClassicTilestorm
 			var selectedIndex = Array.IndexOf(tiles, selectedTile);
 
 			EditorMarkerUtil.ShowMarkers(positions, colors, selectedIndex);
-		}
-
-		protected override void HandleGizmoInput()
-		{
-			if (null == selection || 0 == selection.Length) return;
-			var firstType = selection[0].GetType();
-			if (!selection.All(a => a.GetType() == firstType)) return;
-			selection[0].OnGizmoInput(iMap, camera, selection);
-		}
-
-		public override void OnGUI()
-		{
-			base.OnGUI();
-			EditorAttachmentUI.UpdateGUI(iMap, selection, atts => SelectAttachment(atts), cursorTile);
-		}
-
-		public override void Update()
-		{
-			base.Update();
-			ViewAttachmentHandler.HandlePreviewCameraSync(iMap, camera, selection);
 		}
 	}
 }

@@ -47,10 +47,7 @@ namespace ClassicTilestorm
 		// ─────────────────────────────────────────────────────────────────────
 		public static readonly AutoHidePanel sidePanel = new(collapsed: 120f, expanded: 340f, delay: 1.5f, animDur: 0.25f, defaultPos: new Vector2(0f, 40f));
 
-		public static void DrawSidePanelAttachment(
-			IMapEdit iMap,
-			MapAttachment[] selection,
-			Action<MapAttachment> onSelect)
+		private static void DrawSidePanelAttachment(IMapEdit iMap, MapAttachment[] selection, Action<MapAttachment> onSelect)
 		{
 			var atts = iMap?.GetAttachments() ?? Array.Empty<MapAttachment>();
 
@@ -78,10 +75,7 @@ namespace ClassicTilestorm
 			};
 		}
 
-		public static void DrawSidePanelWaypoint(
-			IMapEdit iMap,
-			MapAttachment[] selection,
-			Action<Waypoint> onSelectWaypoint)
+		private static void DrawSidePanelWaypoint(IMapEdit iMap, MapAttachment[] selection, Action<Waypoint> onSelectWaypoint)
 		{
 			var selectedWaypoint = selection?.Length > 0 ? selection[0] as Waypoint : null;
 
@@ -135,10 +129,7 @@ namespace ClassicTilestorm
 		// ─────────────────────────────────────────────────────────────────────
 		// Popups — now take tile as parameter, use static popupPos + mode check
 		// ─────────────────────────────────────────────────────────────────────
-		public static bool DrawAddPopup(
-			IMapEdit iMap,
-			int tile,
-			Action<MapAttachment> onCreateAndSelect)
+		public static bool DrawAddPopup(IMapEdit iMap, int tile, Action<MapAttachment> onCreateAndSelect)
 		{
 			if (pendingAction != PendingAction.Add) return false;
 
@@ -163,10 +154,7 @@ namespace ClassicTilestorm
 			return result == PopupResult.StillOpen;
 		}
 
-		public static bool DrawDeletePopup(
-			IMapEdit iMap,
-			int tile,
-			Action<MapAttachment[]> onSelect)
+		public static bool DrawDeletePopup(IMapEdit iMap, int tile, Action<MapAttachment[]> onSelect)
 		{
 			if (pendingAction != PendingAction.Delete) return false;
 
@@ -241,16 +229,12 @@ namespace ClassicTilestorm
 			return result == PopupResult.StillOpen;
 		}
 
-		// In EditorAttachmentUI
-		public static void UpdateGUI(
-			IMapEdit iMap,
-			MapAttachment[] currentSelection,
-			Action<MapAttachment[]> onSelect,   // ← this replaces all Select(...) calls
-			int pendingTile
-		)
+		public static void UpdateGUI(IMapEdit iMap, int tileIndex, Action<MapAttachment[]> onSelect)
 		{
+			var currentSelection = iMap.GetAttachments(tileIndex: tileIndex);
+
 			// Side panel handling
-			if (currentSelection != null)
+			if (currentSelection != null && currentSelection.Length > 0)
 			{
 				if (currentSelection.Length == 1 && currentSelection[0] is Waypoint wp)
 				{
@@ -268,11 +252,11 @@ namespace ClassicTilestorm
 
 			// Popups
 			bool stillOpen =
-				DrawAddPopup(iMap, pendingTile, created => onSelect(new[] { created })) ||
-				DrawDeletePopup(iMap, pendingTile, atts => onSelect(atts)) ||
-				DrawSelectPopup(iMap, pendingTile, atts => onSelect(atts));
+				DrawAddPopup(iMap, tileIndex, created => onSelect(new[] { created })) ||
+				DrawDeletePopup(iMap, tileIndex, atts => onSelect(atts)) ||
+				DrawSelectPopup(iMap, tileIndex, atts => onSelect(atts));
 
-			if (!stillOpen && IsPending)
+			if (!stillOpen && pendingAction != PendingAction.None)
 			{
 				ClearPending();
 			}
