@@ -41,6 +41,8 @@ namespace ClassicTilestorm
 			ResetInputState();
 		}
 
+		private Action _unsubscribeTileSectorAction;
+
 		public override void OnEnable()
 		{
 			base.OnEnable();
@@ -55,29 +57,30 @@ namespace ClassicTilestorm
 
 			tileSelector.OnTileSelected += OnTileSelectedFromPalette;
 			tileSelector.CanOpenPalette = () => mode == ControllerMode.Idle;
+			_unsubscribeTileSectorAction = () =>
+			{
+				tileSelector.OnTileSelected -= OnTileSelectedFromPalette;
+				tileSelector.CanOpenPalette = () => false;
+			};
 
 			SetMode(ControllerMode.Idle);
+
+			void OnTileSelectedFromPalette(HashId newHash)
+			{
+				DeselectTile();
+				cursorVariant = new Variant(newHash);
+				SetMode((newHash != ResourceManager.DefaultHash) ? ControllerMode.PlacingTile : ControllerMode.Idle);
+			}
 		}
 
 		public override void OnDisable()
 		{
 			base.OnDisable();
-			var tileSelector = UnityEngine.Object.FindAnyObjectByType<TileSelector>(FindObjectsInactive.Include);
-			if (tileSelector != null)
-			{
-				tileSelector.OnTileSelected -= OnTileSelectedFromPalette;
-				tileSelector.CanOpenPalette = () => false;
-			}
+			_unsubscribeTileSectorAction?.Invoke();
+			_unsubscribeTileSectorAction = null;
 
 			DeselectTile();
 			ResetInputState();
-		}
-
-		private void OnTileSelectedFromPalette(HashId newHash)
-		{
-			DeselectTile();
-			cursorVariant = new Variant(newHash);
-			SetMode((newHash != ResourceManager.DefaultHash) ? ControllerMode.PlacingTile : ControllerMode.Idle);
 		}
 
 		protected override void OnControl(bool staticClick)
