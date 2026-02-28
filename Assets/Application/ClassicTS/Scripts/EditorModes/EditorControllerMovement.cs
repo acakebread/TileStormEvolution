@@ -9,6 +9,7 @@ namespace ClassicTilestorm
 		// ─── drag-to-pan
 		private bool isPanning;
 		protected Vector3 beginWorld;
+		protected Vector3 currentWorld => Map.ScreenToWorld(camera, InputX.mousePosition);
 
 		protected Vector3 mouseDownPos;
 		private bool mouseMovedBeyondThreshold;
@@ -82,10 +83,9 @@ namespace ClassicTilestorm
 			if (isPanning)
 			{
 				//Update Pan
-				var currentWorldPoint = Map.ScreenToWorld(camera, InputX.mousePosition);
-				if (currentWorldPoint != Vector3.negativeInfinity)
+				if (currentWorld != Vector3.negativeInfinity)
 				{
-					var delta = beginWorld - currentWorldPoint;
+					var delta = beginWorld - currentWorld;
 					camera.transform.position += delta;
 				}
 			}

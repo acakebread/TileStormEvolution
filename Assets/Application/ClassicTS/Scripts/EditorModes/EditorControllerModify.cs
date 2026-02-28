@@ -21,7 +21,6 @@ namespace ClassicTilestorm
 		private float holdTime;
 
 		// Tile selection and Attachment state
-		private Vector3 currentWorld => Map.ScreenToWorld(camera, InputX.mousePosition);
 		private int cursorTile = -1;
 		private Variant cursorVariant = new(ResourceManager.DefaultHash);
 		private ISelectable[] selection = null;
