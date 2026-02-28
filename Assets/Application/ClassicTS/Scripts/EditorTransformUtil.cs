@@ -178,7 +178,7 @@ namespace ClassicTilestorm
 			scale = TARGET_SCREEN_SIZE * scale / Screen.height;
 			root.transform.localScale = Vector3.one * Mathf.Max(scale, 0.01f);
 
-			if (screenCircle != null)
+			if (screenCircle != null && screenCircle.transform.position != editorCamera.transform.position)
 			{
 				// Face the camera
 				screenCircle.transform.rotation = Quaternion.LookRotation(screenCircle.transform.position - editorCamera.transform.position);
