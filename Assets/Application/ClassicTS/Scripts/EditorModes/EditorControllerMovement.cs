@@ -62,12 +62,13 @@ namespace ClassicTilestorm
 			}
 			else
 			{
-				var allowScroll = !(IsMouseOverGUI() || ViewPreviewUtil.IsMouseOverPreview());
-				if (InputX.GetMouseButton(0) || InputX.GetMouseButton(1))
-					allowScroll = !touchStartOverGui;
-
 				if (!touchStartOverGui)
-					EditorCameraMovement.UpdateCamera(camera ? camera.transform : null, isMouseOverGui: !allowScroll);
+				{
+					var overGUI = IsMouseOverGUI() | ViewPreviewUtil.IsMouseOverPreview();
+					if (InputX.GetMouseButton(0) || InputX.GetMouseButton(1))
+						overGUI = touchStartOverGui;
+					EditorCameraMovement.UpdateCamera(camera ? camera.transform : null, isMouseOverGui: overGUI);
+				}
 			}
 
 			if (IsMouseOverGUI())
