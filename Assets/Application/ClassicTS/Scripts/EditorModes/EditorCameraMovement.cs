@@ -1,4 +1,4 @@
-﻿#define MOBILE
+﻿//#define MOBILE
 
 using UnityEngine;
 using MassiveHadronLtd;
@@ -48,8 +48,8 @@ namespace ClassicTilestorm
 #else
 				if (InputX.GetMouseButton(1))
 				{
-					pointerX = InputX.GetAxis("Mouse X");// * 16f;
-					pointerY = InputX.GetAxis("Mouse Y");// * 16f;
+					pointerX = InputX.GetAxis("Mouse X") * InputX.TOUCH_COMPENSATION_SCALAR;
+					pointerY = InputX.GetAxis("Mouse Y") * InputX.TOUCH_COMPENSATION_SCALAR;
 				}
 #endif
 

@@ -1,4 +1,4 @@
-﻿#define MOBILE
+﻿//#define MOBILE
 #if MOBILE
 //#if !UNITY_EDITOR && (UNITY_IOS || UNITY_ANDROID)
 
@@ -248,6 +248,8 @@ namespace MassiveHadronLtd
 		public static bool GetKeyDown(KeyCode key) => Input.GetKeyDown(key);
 		public static bool GetKey(KeyCode key) => Input.GetKey(key);
 		public static bool GetKeyUp(KeyCode key) => Input.GetKeyUp(key);
+
+		public const float TOUCH_COMPENSATION_SCALAR = 1f;//temporary workaround
 	}
 }
 
@@ -273,6 +275,8 @@ namespace MassiveHadronLtd
 		public static bool GetKeyDown(KeyCode key) => Input.GetKeyDown(key);
 		public static bool GetKey(KeyCode key) => Input.GetKey(key);
 		public static bool GetKeyUp(KeyCode key) => Input.GetKeyUp(key);
+
+		public const float TOUCH_COMPENSATION_SCALAR = 16f;//temporary workaround
 	}
 }
 

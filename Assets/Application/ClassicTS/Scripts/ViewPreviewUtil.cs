@@ -60,18 +60,18 @@ namespace ClassicTilestorm
 
 		public static void Update()
 		{
-			var isMoseOverPreview = IsMouseOverPreview();
-			isHighlighted = isMoseOverPreview;
+			var isMouseOverPreview = IsMouseOverPreview();
+			isHighlighted = isMouseOverPreview;
 
 			if (InputX.GetMouseButtonDown(1))
 			{
-				isInFocus = isMoseOverPreview;
-				isInUse = isMoseOverPreview;
+				isInFocus = isMouseOverPreview;
+				isInUse = isMouseOverPreview;
 			}
 
 			if (!InputX.GetMouseButton(0) && !InputX.GetMouseButton(1))
 			{
-				isInFocus = isMoseOverPreview;
+				isInFocus = isMouseOverPreview;
 				isInUse = false;
 			}
 

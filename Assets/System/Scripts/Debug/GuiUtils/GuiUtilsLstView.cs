@@ -93,7 +93,7 @@ namespace MassiveHadronLtd
 		public class AutoHidePanel
 		{
 			public float CurrentWidth { get; private set; }
-			public bool IsMouseOver { get; private set; }
+			public bool IsMouseOver { get; set; }
 
 			private float collapsedWidth;
 			private float expandedWidth;

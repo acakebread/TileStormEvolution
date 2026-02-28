@@ -45,15 +45,9 @@ namespace ClassicTilestorm
 				mouseMovedBeyondThreshold = true;// update threshold flag
 
 			if (InputX.GetMouseButtonUp(0))
-			{
 				isPanning = false;
-				GUIUtility.hotControl = 0;
-			}
 
-			var allowScroll = !(IsMouseOverGUI() || ViewPreviewUtil.IsMouseOverPreview());
-			if (InputX.GetMouseButton(0) || InputX.GetMouseButton(1))
-				allowScroll = !touchStartOverGui;
-			else
+			if (!InputX.GetMouseButton(0) && !InputX.GetMouseButton(1))
 			{
 				if (Input.GetMouseButton(0) || Input.GetMouseButton(1))
 					Debug.Log("rogue state - problem with InputX caching");
@@ -64,14 +58,19 @@ namespace ClassicTilestorm
 			if (ViewPreviewUtil.IsInFocus)
 			{
 				EditorCameraMovement.UpdateCamera(ViewPreviewUtil.PreviewCamera.transform);
+				return;
 			}
 			else
 			{
-;				if (!touchStartOverGui)
+				var allowScroll = !(IsMouseOverGUI() || ViewPreviewUtil.IsMouseOverPreview());
+				if (InputX.GetMouseButton(0) || InputX.GetMouseButton(1))
+					allowScroll = !touchStartOverGui;
+
+				if (!touchStartOverGui)
 					EditorCameraMovement.UpdateCamera(camera ? camera.transform : null, isMouseOverGui: !allowScroll);
 			}
 
-			if (ViewPreviewUtil.IsInFocus || IsMouseOverGUI())
+			if (IsMouseOverGUI())
 				return;
 
 			if (HandleGizmoInput())
@@ -82,9 +81,8 @@ namespace ClassicTilestorm
 
 			if (isPanning)
 			{
-				//Update Pan
 				if (currentWorld != Vector3.negativeInfinity)
-					camera.transform.position += beginWorld - currentWorld;
+					camera.transform.position += beginWorld - currentWorld;// Update Pan
 			}
 
 			if (GuiUtils.WasGuiActiveLastFrame)

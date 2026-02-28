@@ -247,6 +247,7 @@ namespace ClassicTilestorm
 			else
 			{
 				sidePanel.Update();
+				sidePanel.IsMouseOver = false;
 			}
 
 			// Popups ── wrap/unwrap the array
