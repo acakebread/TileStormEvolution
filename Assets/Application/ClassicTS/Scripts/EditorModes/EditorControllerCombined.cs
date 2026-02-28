@@ -189,7 +189,11 @@ namespace ClassicTilestorm
 							SelectAttachemnt();
 
 						if (InputX.GetMouseButtonUp(1))
+						{
+							pendingTile = iMap.CameraHitTile(camera, InputX.mousePosition);
+							SelectAttachemnt();
 							EndAttachmentMode();
+						}
 					}
 					else
 					{
@@ -253,11 +257,16 @@ namespace ClassicTilestorm
 
 		private void EndAttachmentMode()
 		{
-			pendingTile = -1;
-			Select();
-			EditorAttachmentUI.ClearPending();
-			HideAllGizmos();
-			SetMode(ControllerMode.Idle);
+			if (pendingTile < 0 || iMap.GetAttachments(tileIndex: pendingTile).Length == 0)//no attachment here
+			{
+				pendingTile = -1;
+				Select();
+				EditorAttachmentUI.ClearPending();
+				HideAllGizmos();
+				SetMode(ControllerMode.Idle);
+				return;
+			}
+			EditorAttachmentUI.RequestDelete();
 		}
 
 		private bool StartDrag()
