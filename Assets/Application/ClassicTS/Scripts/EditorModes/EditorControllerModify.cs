@@ -21,7 +21,6 @@ namespace ClassicTilestorm
 		private float holdTime;
 
 		// Selection
-		//private Vector3 startWorld;
 		private Vector3 startWorld => cursorVariant.HasNav? Map.FullFloorVec(beginWorld) : Map.HalfFloorVec(beginWorld);
 		private Vector3 currentWorld => Map.ScreenToWorld(camera, InputX.mousePosition);
 
