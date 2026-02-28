@@ -21,7 +21,8 @@ namespace ClassicTilestorm
 		private float holdTime;
 
 		// Selection
-		private Vector3 startWorld;
+		//private Vector3 startWorld;
+		private Vector3 startWorld => cursorVariant.HasNav? Map.FullFloorVec(beginWorld) : Map.HalfFloorVec(beginWorld);
 		private Vector3 currentWorld => Map.ScreenToWorld(camera, InputX.mousePosition);
 
 		private Variant cursorVariant = new(ResourceManager.DefaultHash);
@@ -321,7 +322,8 @@ namespace ClassicTilestorm
 			tile.gameObject.SetActive(false);
 			cursorVariant = iMap.GetVariantAt(worldPos);
 			EditorSelectionUtil.UpdateGhostMesh(iMap, Map.FullFloorVec(worldPos), cursorVariant, true);
-			startWorld = cursorVariant.HasNav ? Map.FullFloorVec(worldPos) : Map.HalfFloorVec(worldPos);
+			beginWorld = worldPos;
+			//startWorld = cursorVariant.HasNav ? Map.FullFloorVec(worldPos) : Map.HalfFloorVec(worldPos);
 			SetMode(ControllerMode.SelectedTile);
 
 			return true;

@@ -8,7 +8,7 @@ namespace ClassicTilestorm
 	{
 		// ─── drag-to-pan
 		private bool isPanning;
-		private Vector3 panStartWorldPoint;
+		protected Vector3 beginWorld;
 
 		protected Vector3 mouseDownPos;
 		private bool mouseMovedBeyondThreshold;
@@ -18,8 +18,7 @@ namespace ClassicTilestorm
 		protected IMapEdit iMap => editorController?.iMap;
 		protected Camera camera { get { if (editorController.TryGetComponent<MainCameraController>(out var controller)) return controller.activeSystem?.camera; return null; } }
 
-		protected bool IsGuiControlActive() => GUIUtility.hotControl != 0 || (EventSystem.current && EventSystem.current.IsPointerOverGameObject());
-		protected virtual bool IsMouseOverGUI() => PlaceholderUI.IsMouseOverGui() | IsGuiControlActive();
+		protected virtual bool IsMouseOverGUI() => PlaceholderUI.IsMouseOverGui() || GUIUtility.hotControl != 0 || (EventSystem.current && EventSystem.current.IsPointerOverGameObject());
 		public virtual void OnMapLoaded() 
 		{
 			ViewPreviewUtil.Hide();
@@ -70,7 +69,7 @@ namespace ClassicTilestorm
 					EditorCameraMovement.UpdateCamera(camera ? camera.transform : null, isMouseOverGui: !allowScroll);
 			}
 
-			if (ViewPreviewUtil.IsInFocus || IsMouseOverGUI() || IsGuiControlActive())
+			if (ViewPreviewUtil.IsInFocus || IsMouseOverGUI())
 				return;
 
 			if (GuiUtils.WasGuiActiveLastFrame)
@@ -117,18 +116,16 @@ namespace ClassicTilestorm
 		protected void StartPanning()
 		{
 			if (isPanning) return;
-			panStartWorldPoint = Map.ScreenToWorld(camera, InputX.mousePosition);
-			isPanning = panStartWorldPoint != Vector3.negativeInfinity;
+			beginWorld = Map.ScreenToWorld(camera, InputX.mousePosition);
+			isPanning = beginWorld != Vector3.negativeInfinity;
 		}
 
 		private void UpdatePan()
 		{
-			if (!isPanning) return;
-
 			var currentWorldPoint = Map.ScreenToWorld(camera, InputX.mousePosition);
 			if (currentWorldPoint != Vector3.negativeInfinity)
 			{
-				var delta = panStartWorldPoint - currentWorldPoint;
+				var delta = beginWorld - currentWorldPoint;
 				camera.transform.position += delta;
 			}
 		}
