@@ -334,7 +334,7 @@ namespace ClassicTilestorm
 		private void OnGUI()
 		{
 			ViewPreviewUtil.OnGUI();
-			EditorAttachmentUI.UpdateGUI(iMap, cursorTile, selectable => SelectAttachment(selectable?.OfType<MapAttachment>().ToArray() ?? Array.Empty<MapAttachment>()));
+			EditorAttachmentUI.UpdateGUI(iMap, cursorTile, selectable => SelectAttachment(selectable));
 		}
 
 		private void OnDestroy() => Reset();
@@ -453,14 +453,9 @@ namespace ClassicTilestorm
 				return false;
 			}
 
-			if (cursorTile != -1)
-			{
-				if (selection == null || selection.Length == 0 || (selection[0] is MapAttachment ma && ma.tile != cursorTile))
-					SelectAttachment(iMap.GetAttachments(tileIndex: cursorTile));
-				return true;
-			}
+			if (selection == null || selection.Length == 0 || (selection[0] is MapAttachment ma && ma.tile != cursorTile))
+				SelectAttachment(iMap.GetAttachments(tileIndex: cursorTile));
 
-			SelectAttachment();
 			return true;
 		}
 
@@ -485,16 +480,16 @@ namespace ClassicTilestorm
 			void HandleDragInput()
 			{
 				if (selection == null || selection.Length != 1) return;
+				var ma = (MapAttachment)selection[0];
 				if (selection[0] is ITransformableAttachment transformable)
 				{
-					var ma = (MapAttachment)selection[0];
 					var worldPos = iMap.WorldPosition(ma.tile, transformable.Position);
 					var worldRot = iMap.WorldRotation(ma.tile, transformable.Rotation);
 					EditorTransformUtil.ShowAt(worldPos, worldRot, _camera);
 				}
 
-				if (selection[0] is MapAttachment ma2)
-					ma2.OnDragInput(iMap);   // ← changed to single
+				if (null != ma)
+					ma.OnDragInput(iMap);
 			}
 		}
 
@@ -512,22 +507,20 @@ namespace ClassicTilestorm
 			EditorAttachmentUI.RequestDelete();
 		}
 
-		private void SelectAttachment(MapAttachment[] attachments = null)
+		private void SelectAttachment(ISelectable[] value = null)
 		{
-			selection = attachments?.Length > 0 ? attachments.Cast<ISelectable>().ToArray() : null;
-
 			ViewPreviewUtil.Hide();
 			HideAllGizmos();
 			RebuildMarkers();
 
+			selection = value;
 			if (selection == null || selection.Length != 1)
 			{
 				cursorTile = -1;
 				return;
 			}
 
-			if (selection[0] is not MapAttachment first) return;
-			first.OnSelectionChanged(iMap, _camera);
+			selection[0].OnSelectionChanged(iMap, _camera);
 		}
 
 		private void EvaluateAttachment()
