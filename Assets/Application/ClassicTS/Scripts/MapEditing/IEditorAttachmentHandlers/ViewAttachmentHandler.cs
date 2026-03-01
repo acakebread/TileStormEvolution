@@ -7,7 +7,7 @@ namespace ClassicTilestorm
 	{
 		public static readonly ViewAttachmentHandler Instance = new();
 
-		public void OnSelectionChanged(IMapEdit map, Camera camera, MapAttachment[] selection)
+		public void OnSelectionChanged(IMapEdit map, Camera camera, ISelectable[] selection)
 		{
 			var view = (View)selection[0];
 			var worldPos = map.WorldPosition(view.tile, view.Position);
@@ -15,7 +15,7 @@ namespace ClassicTilestorm
 			OnDragInput(map, selection);
 		}
 
-		public bool OnGizmoInput(IMapEdit map, Camera camera, MapAttachment[] selection)
+		public bool OnGizmoInput(IMapEdit map, Camera camera, ISelectable[] selection)
 		{
 			if (!EditorTransformUtil.HandleInput(camera, out Vector3 newWorldPos, out Quaternion newWorldRot))
 				return false;
@@ -37,7 +37,7 @@ namespace ClassicTilestorm
 			return true;
 		}
 
-		public bool OnDragInput(IMapEdit map, MapAttachment[] selection)
+		public bool OnDragInput(IMapEdit map, ISelectable[] selection)
 		{
 			var view = (View)selection[0];
 			ViewPreviewUtil.Show(map, view);
@@ -60,7 +60,7 @@ namespace ClassicTilestorm
 			return view;
 		}
 
-		public static void HandlePreviewCameraSync(IMapEdit map, Camera camera, MapAttachment[] selection)
+		public static void HandlePreviewCameraSync(IMapEdit map, Camera camera, ISelectable[] selection)
 		{
 			if (null == selection || 1 != selection.Length) return;
 			if (selection?.FirstOrDefault() is not View view)

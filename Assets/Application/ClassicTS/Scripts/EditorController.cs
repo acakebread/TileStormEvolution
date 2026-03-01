@@ -18,7 +18,6 @@ namespace ClassicTilestorm
 		public bool PostProcessingEnabled { get => postProcessingEnabled; set => OnPostProcessingToggled(value); }
 
 		// ─── drag-to-pan & input state ───────────────────────────────────────
-		private bool isPanning;
 		private Vector3 beginWorld;
 		private Vector3 currentWorld => Map.ScreenToWorld(camera, InputX.mousePosition);
 
@@ -57,31 +56,29 @@ namespace ClassicTilestorm
 
 		private void SetMode(ControllerMode value) => mode = value;
 
-		// ─── Other fields ────────────────────────────────────────────────────
-		private Action unsubscribeMapAction;
-
 		// ─── Unity / lifecycle ───────────────────────────────────────────────
 		private void Awake() { }
 
 		public void Initialise(IMapEdit iMap)
 		{
 			this.iMap = iMap;
-			iMap.OnMapEdited += OnMapEdited;
-			unsubscribeMapAction = () => iMap.OnMapEdited -= OnMapEdited;
 
+			iMap.OnMapEdited += OnMapEdited;
 			if (!isActiveAndEnabled) return;
 
 			UpdateGridLines(gridEnabled);
 			ViewPreviewUtil.Hide();
-			isPanning = false;
+			EditorCameraMovement.isPanning = false;
 			ResetInputState();
 			EnableEggbot(false);
 		}
 
-		public void Reset()
+		public void Reset() 
 		{
-			unsubscribeMapAction?.Invoke();
-			unsubscribeMapAction = null;
+			if (iMap != null) iMap.OnMapEdited -= OnMapEdited;
+			GridLinesUtil.Hide();
+			DeselectTile();
+			EditorSelectionUtil.DestroyGhostMesh();
 		}
 
 		private void OnEnable()
@@ -125,7 +122,7 @@ namespace ClassicTilestorm
 		private void OnDisable()
 		{
 			ViewPreviewUtil.Hide();
-			isPanning = false;
+			EditorCameraMovement.isPanning = false;
 
 			unsubscribeTileSelectorAction?.Invoke();
 			unsubscribeTileSelectorAction = null;
@@ -162,9 +159,6 @@ namespace ClassicTilestorm
 				mouseMovedBeyondThreshold = true;
 			}
 
-			if (InputX.GetMouseButtonUp(0))
-				isPanning = false;
-
 			if (!InputX.GetMouseButton(0) && !InputX.GetMouseButton(1))
 			{
 				if (Input.GetMouseButton(0) || Input.GetMouseButton(1))
@@ -176,7 +170,7 @@ namespace ClassicTilestorm
 
 			if (ViewPreviewUtil.IsInFocus)
 			{
-				EditorCameraMovement.UpdateCamera(ViewPreviewUtil.PreviewCamera.transform);
+				EditorCameraMovement.UpdateCamera(ViewPreviewUtil.PreviewCamera.transform, currentWorld);
 			}
 			else
 			{
@@ -185,12 +179,11 @@ namespace ClassicTilestorm
 					var overGUI = (InputX.GetMouseButton(0) || InputX.GetMouseButton(1))
 						? touchStartOverGui
 						: IsMouseOverGUI() || ViewPreviewUtil.IsMouseOverPreview();
-					EditorCameraMovement.UpdateCamera(camera ? camera.transform : null, isMouseOverGui: overGUI);
+					EditorCameraMovement.UpdateCamera(camera ? camera.transform : null, currentWorld, isMouseOverGui: overGUI);
 				}
 			}
 
-			var attSelection = selection?.OfType<MapAttachment>().ToArray() ?? Array.Empty<MapAttachment>();
-			ViewAttachmentHandler.HandlePreviewCameraSync(iMap, camera, attSelection);
+			ViewAttachmentHandler.HandlePreviewCameraSync(iMap, camera, selection);
 
 			if (ViewPreviewUtil.IsInFocus) return;
 
@@ -200,12 +193,6 @@ namespace ClassicTilestorm
 			{
 				EditorTransformUtil.UpdateTransformGizmoVisuals(camera);
 				return;
-			}
-
-			if (isPanning)
-			{
-				if (currentWorld != Vector3.negativeInfinity)
-					camera.transform.position += beginWorld - currentWorld;
 			}
 
 			if (GuiUtils.WasGuiActiveLastFrame)
@@ -227,7 +214,7 @@ namespace ClassicTilestorm
 							var variant = iMap.GetVariantAt(currentWorld);
 
 							if (variant.IsDefaultEquivalent)
-								StartPanning();
+								EditorCameraMovement.StartPanning(beginWorld);
 							else
 							{
 								holdTime = Time.time;
@@ -248,7 +235,7 @@ namespace ClassicTilestorm
 							{
 								holdSelect = false;
 								if (!StartTileDrag())
-									StartPanning();
+									EditorCameraMovement.StartPanning(beginWorld);
 							}
 
 							if (InputX.GetMouseButtonUp(1))
@@ -259,7 +246,7 @@ namespace ClassicTilestorm
 							if (InputX.GetMouseButton(0) && holdSelect)
 							{
 								holdSelect = false;
-								StartPanning();
+								EditorCameraMovement.StartPanning(beginWorld);
 							}
 						}
 						break;
@@ -287,7 +274,7 @@ namespace ClassicTilestorm
 							if (InputX.GetMouseButtonDown(0))
 							{
 								if (!StartTileDrag())
-									StartPanning();
+									EditorCameraMovement.StartPanning(beginWorld);
 							}
 
 							if (InputX.GetMouseButtonUp(1))
@@ -327,7 +314,7 @@ namespace ClassicTilestorm
 							if (InputX.GetMouseButton(0))
 							{
 								if (!StartAttachmentDrag())
-									StartPanning();
+									EditorCameraMovement.StartPanning(beginWorld);
 								UpdateAttachmentDrag();
 							}
 						}
@@ -339,30 +326,10 @@ namespace ClassicTilestorm
 		private void OnGUI()
 		{
 			ViewPreviewUtil.OnGUI();
-
-			EditorAttachmentUI.UpdateGUI(
-				iMap,
-				cursorTile,
-				selectable =>
-				{
-					var attachments = selectable?.OfType<MapAttachment>().ToArray() ?? Array.Empty<MapAttachment>();
-					SelectAttachment(attachments);
-				}
-			);
+			EditorAttachmentUI.UpdateGUI(iMap, cursorTile, selectable => SelectAttachment(selectable?.OfType<MapAttachment>().ToArray() ?? Array.Empty<MapAttachment>()));
 		}
 
-		public void OnApplicationFocus(bool hasFocus)
-		{
-			EditorCameraMovement.OnApplicationFocus(hasFocus);
-		}
-
-		private void OnDestroy()
-		{
-			GridLinesUtil.Hide();
-			if (iMap != null) iMap.OnMapEdited -= OnMapEdited;
-			DeselectTile();
-			EditorSelectionUtil.DestroyGhostMesh();
-		}
+		private void OnDestroy() => Reset();
 
 		// ─── Helpers (grid, post, eggbot) ────────────────────────────────────
 		private void EnableEggbot(bool value)
@@ -457,7 +424,7 @@ namespace ClassicTilestorm
 			cursorVariant.delta = delta;
 			iMap.RemoveTileAt(beginWorld);
 			var index = iMap.UpdateTileAt(snapped, cursorVariant);
-			if (index == -1) index = iMap.UpdateTileAt(Map.FullFloorVec(beginWorld), cursorVariant);
+			if (-1 == index) index = iMap.UpdateTileAt(Map.FullFloorVec(beginWorld), cursorVariant);
 			SelectTile(iMap.IndexToVector(index));
 		}
 
@@ -630,7 +597,7 @@ namespace ClassicTilestorm
 
 			var isWaypointMode = selection != null && selection.Length == 1 && selection[0] is Waypoint;
 
-			for (int i = 0; i < tiles.Length; i++)
+			for (var i = 0; i < tiles.Length; i++)
 			{
 				var tile = tiles[i];
 				positions[i] = iMap.TileRenderPosition(tile);
@@ -646,10 +613,6 @@ namespace ClassicTilestorm
 			EditorMarkerUtil.ShowMarkers(positions, colors, selectedIndex);
 		}
 
-		private void StartPanning()
-		{
-			if (isPanning) return;
-			isPanning = beginWorld != Vector3.negativeInfinity;
-		}
+		//public void OnApplicationFocus(bool hasFocus) => EditorCameraMovement.OnApplicationFocus(hasFocus);//disabled for now as it wasn't working properly anyway
 	}
 }

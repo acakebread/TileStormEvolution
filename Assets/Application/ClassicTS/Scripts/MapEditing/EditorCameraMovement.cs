@@ -13,10 +13,27 @@ namespace ClassicTilestorm
 		private static float MoveSpeedModifier = 1f;
 		private static float ModifiedZoomSpeed => MoveSpeed * MoveSpeedModifier;
 
+		public static bool isPanning = false;
+		private static Vector3 worldStart;
+
 		private static bool focus = false;
-		public static void UpdateCamera(Transform camTransform, bool isMouseOverGui = false, bool allowInput = true)
+
+		public static void StartPanning(Vector3 value)
+		{
+			if (isPanning) return;
+			isPanning = value != Vector3.negativeInfinity;
+			worldStart = value;
+		}
+
+		public static void UpdateCamera(Transform camTransform, Vector3 worldCurrent, bool isMouseOverGui = false, bool allowInput = true)
 		{
 			if (camTransform == null || !allowInput) return;
+
+			if (isPanning)
+			{
+				if (worldCurrent != Vector3.negativeInfinity)
+					camTransform.position += worldStart - worldCurrent;
+			}
 
 			var camera = camTransform.GetComponent<Camera>();
 			if (camera == null) return;
@@ -65,6 +82,9 @@ namespace ClassicTilestorm
 				camTransform.eulerAngles = eulers;
 			}
 
+			if (InputX.GetMouseButtonUp(0))
+				isPanning = false;
+
 			if (InputX.GetMouseButtonUp(1))// || InputX.touchCount == 0)//this doesn't work for obvious reasons if (InputX.GetMouseButtonUp(1) || InputX.touchCount == 0)
 				focus = false;
 
@@ -102,6 +122,6 @@ namespace ClassicTilestorm
 		}
 
 		private static bool didGainFocus = true;
-		public static void OnApplicationFocus(bool hasFocus) => didGainFocus |= hasFocus;
+		public static void OnApplicationFocus(bool hasFocus) => didGainFocus |= hasFocus;// this doesn't seem to work anyway so disabled in EditorController for now
 	}
 }
