@@ -9,7 +9,7 @@ namespace ClassicTilestorm
 {
 	public class EditorController : MonoBehaviour
 	{
-		public IMapEdit iMap;
+		private IMapEdit iMap;
 
 		private bool gridEnabled = true;
 		private bool postProcessingEnabled = false;
@@ -17,23 +17,14 @@ namespace ClassicTilestorm
 		public bool GridEnabled { get => gridEnabled; set => OnGridLinesToggled(value); }
 		public bool PostProcessingEnabled { get => postProcessingEnabled; set => OnPostProcessingToggled(value); }
 
-		// ─── drag-to-pan & input state ───────────────────────────────────────
+		// ─── input state ───────────────────────────────────────
 		private Vector3 beginWorld;
 		private Vector3 currentWorld => Map.ScreenToWorld(_camera, InputX.mousePosition);
 
 		private Vector3 mouseDownPos;
 		private bool mouseMovedBeyondThreshold;
 		private const float CLICK_THRESHOLD = 3f;
-
 		private bool touchStartOverGui = false;
-
-		private bool IsMouseOverGUI()
-			=> PlaceholderUI.IsMouseOverGui()
-			|| GUIUtility.hotControl != 0
-			|| (EventSystem.current && EventSystem.current.IsPointerOverGameObject())
-			|| EditorAttachmentUI.sidePanel.IsMouseOver;
-
-		private Camera _camera => mainCameraController?.activeSystem?.camera;
 
 		// ─── Tile / Attachment state ─────────────────────────────────────────
 		private enum ControllerMode
@@ -54,10 +45,26 @@ namespace ClassicTilestorm
 		private ISelectable[] selection = null;
 		private Action unsubscribeTileSelectorAction;
 
+		private bool IsMouseOverGUI()
+			=> PlaceholderUI.IsMouseOverGui()
+			|| GUIUtility.hotControl != 0
+			|| (EventSystem.current && EventSystem.current.IsPointerOverGameObject())
+			|| EditorAttachmentUI.sidePanel.IsMouseOver;
+
+		private Camera _camera => mainCameraController?.activeSystem?.camera;
+
+		private void OnGridLinesToggled(bool value) => UpdateGridLines(gridEnabled = value);
+		private void OnPostProcessingToggled(bool value) => UpdatePostProcessing(postProcessingEnabled = value);
+
+		private Volume getVolume(GameObject root) => root.GetComponentInChildren<Volume>(true);
+
+		private MainCameraController mainCameraController => TryGetComponent<MainCameraController>(out var c) ? c : null;
+
+		private GameCameraEditor gameCameraEditor
+			=> mainCameraController != null && mainCameraController.activeSystem is GameCameraEditor editor ? editor : null;
 		private void SetMode(ControllerMode value) => mode = value;
 
 		// ─── Unity / lifecycle ───────────────────────────────────────────────
-		private void Awake() { }
 
 		public void Initialise(IMapEdit iMap)
 		{
@@ -358,16 +365,6 @@ namespace ClassicTilestorm
 				VolumeUtils.SetDepthOfFieldDistance(volume, 8f);
 			}
 		}
-
-		private void OnGridLinesToggled(bool value) => UpdateGridLines(gridEnabled = value);
-		private void OnPostProcessingToggled(bool value) => UpdatePostProcessing(postProcessingEnabled = value);
-
-		private Volume getVolume(GameObject root) => root.GetComponentInChildren<Volume>(true);
-
-		private MainCameraController mainCameraController => TryGetComponent<MainCameraController>(out var c) ? c : null;
-
-		private GameCameraEditor gameCameraEditor
-			=> mainCameraController != null && mainCameraController.activeSystem is GameCameraEditor editor ? editor : null;
 
 		// ─── Map events ──────────────────────────────────────────────────────
 		private void OnMapEdited(Map map, bool resized, Vector3 originDelta)
