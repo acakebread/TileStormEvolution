@@ -356,13 +356,13 @@ namespace ClassicTilestorm
 					break;
 
 				case ControllerMode.PlacingTile:
-					cursorVariant = EditorSelectionUtil.NextVariantOnMap(iMap, currentWorld, cursorVariant);
-					EditorSelectionUtil.UpdateGhostMesh(iMap, Map.FullFloorVec(currentWorld), cursorVariant, false);
+					var nextVariant = EditorSelectionUtil.NextVariantOnMap(iMap, currentWorld, cursorVariant);
+					EditorSelectionUtil.UpdateGhostMesh(iMap, Map.FullFloorVec(currentWorld), nextVariant, false);
 
 					if (staticClick)
 					{
 						if (InputX.GetMouseButtonUp(0))
-							iMap.UpdateTileAt(currentWorld, cursorVariant);
+							iMap.UpdateTileAt(currentWorld, nextVariant);
 
 						if (InputX.GetMouseButtonUp(1))
 						{
