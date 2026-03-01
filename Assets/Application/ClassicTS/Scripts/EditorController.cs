@@ -19,7 +19,7 @@ namespace ClassicTilestorm
 
 		// ─── drag-to-pan & input state ───────────────────────────────────────
 		private Vector3 beginWorld;
-		private Vector3 currentWorld => Map.ScreenToWorld(camera, InputX.mousePosition);
+		private Vector3 currentWorld => Map.ScreenToWorld(_camera, InputX.mousePosition);
 
 		private Vector3 mouseDownPos;
 		private bool mouseMovedBeyondThreshold;
@@ -33,7 +33,7 @@ namespace ClassicTilestorm
 			|| (EventSystem.current && EventSystem.current.IsPointerOverGameObject())
 			|| EditorAttachmentUI.sidePanel.IsMouseOver;
 
-		private Camera camera => mainCameraController?.activeSystem?.camera;
+		private Camera _camera => mainCameraController?.activeSystem?.camera;
 
 		// ─── Tile / Attachment state ─────────────────────────────────────────
 		private enum ControllerMode
@@ -73,7 +73,7 @@ namespace ClassicTilestorm
 			EnableEggbot(false);
 		}
 
-		public void Reset() 
+		public void Reset()
 		{
 			if (iMap != null) iMap.OnMapEdited -= OnMapEdited;
 			GridLinesUtil.Hide();
@@ -146,7 +146,7 @@ namespace ClassicTilestorm
 			if (InputX.GetMouseButtonDown(0) || InputX.GetMouseButtonDown(1))
 			{
 				if (InputX.GetMouseButtonDown(0))
-					beginWorld = Map.ScreenToWorld(camera, InputX.mousePosition);
+					beginWorld = Map.ScreenToWorld(_camera, InputX.mousePosition);
 				mouseDownPos = InputX.mousePosition;
 				mouseMovedBeyondThreshold = false;
 				touchStartOverGui = IsMouseOverGUI() || ViewPreviewUtil.IsMouseOverPreview();
@@ -179,11 +179,12 @@ namespace ClassicTilestorm
 					var overGUI = (InputX.GetMouseButton(0) || InputX.GetMouseButton(1))
 						? touchStartOverGui
 						: IsMouseOverGUI() || ViewPreviewUtil.IsMouseOverPreview();
-					EditorCameraMovement.UpdateCamera(camera ? camera.transform : null, currentWorld, isMouseOverGui: overGUI);
+					EditorCameraMovement.UpdateCamera(_camera ? _camera.transform : null, currentWorld, isMouseOverGui: overGUI);
 				}
 			}
 
-			ViewAttachmentHandler.HandlePreviewCameraSync(iMap, camera, selection);
+			if (null != selection && 1 == selection.Length)
+				ViewAttachmentHandler.HandlePreviewCameraSync(iMap, _camera, selection[0]);
 
 			if (ViewPreviewUtil.IsInFocus) return;
 
@@ -191,7 +192,7 @@ namespace ClassicTilestorm
 
 			if (HandleGizmoInput())
 			{
-				EditorTransformUtil.UpdateTransformGizmoVisuals(camera);
+				EditorTransformUtil.UpdateTransformGizmoVisuals(_camera);
 				return;
 			}
 
@@ -201,7 +202,7 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			if (camera)
+			if (_camera)
 				OnControl(!mouseMovedBeyondThreshold);
 
 			void OnControl(bool staticClick)
@@ -295,7 +296,7 @@ namespace ClassicTilestorm
 
 					case ControllerMode.UpdateAttachment:
 						if (InputX.GetMouseButtonDown(0))
-							cursorTile = iMap.CameraHitTile(camera, InputX.mousePosition);
+							cursorTile = iMap.CameraHitTile(_camera, InputX.mousePosition);
 
 						if (staticClick)
 						{
@@ -304,7 +305,7 @@ namespace ClassicTilestorm
 
 							if (InputX.GetMouseButtonUp(1))
 							{
-								cursorTile = iMap.CameraHitTile(camera, InputX.mousePosition);
+								cursorTile = iMap.CameraHitTile(_camera, InputX.mousePosition);
 								EvaluateAttachment();
 								EndAttachmentMode();
 							}
@@ -382,14 +383,8 @@ namespace ClassicTilestorm
 		private bool HandleGizmoInput()
 		{
 			if (selection == null || selection.Length == 0) return false;
-
-			var attSelection = selection.OfType<MapAttachment>().ToArray();
-			if (attSelection.Length == 0) return false;
-
-			var firstType = attSelection[0].GetType();
-			if (!attSelection.All(a => a.GetType() == firstType)) return false;
-
-			return attSelection[0].OnGizmoInput(iMap, camera, attSelection);
+			if (selection[0] is not MapAttachment attachment) return false;
+			return attachment.OnGizmoInput(iMap, _camera);
 		}
 
 		// ─── All helper methods ──────────────────────────────────────────────
@@ -474,7 +469,7 @@ namespace ClassicTilestorm
 
 		private void UpdateAttachmentDrag()
 		{
-			var tile = iMap.CameraHitTile(camera, InputX.mousePosition);
+			var tile = iMap.CameraHitTile(_camera, InputX.mousePosition);
 			if (tile == cursorTile || tile == -1 || selection == null || selection.Length == 0)
 				return;
 
@@ -495,14 +490,14 @@ namespace ClassicTilestorm
 				if (selection == null || selection.Length != 1) return;
 				if (selection[0] is ITransformableAttachment transformable)
 				{
-					var ma = selection[0] as MapAttachment;
+					var ma = (MapAttachment)selection[0];
 					var worldPos = iMap.WorldPosition(ma.tile, transformable.Position);
 					var worldRot = iMap.WorldRotation(ma.tile, transformable.Rotation);
-					EditorTransformUtil.ShowAt(worldPos, worldRot, camera);
+					EditorTransformUtil.ShowAt(worldPos, worldRot, _camera);
 				}
 
 				if (selection[0] is MapAttachment ma2)
-					ma2.OnDragInput(iMap, attSelection);
+					ma2.OnDragInput(iMap);   // ← changed to single
 			}
 		}
 
@@ -535,12 +530,7 @@ namespace ClassicTilestorm
 			}
 
 			if (selection[0] is not MapAttachment first) return;
-
-			var firstType = first.GetType();
-			var atts = selection.OfType<MapAttachment>().ToArray();
-			if (!atts.All(a => a.GetType() == firstType)) return;
-
-			first.OnSelectionChanged(iMap, camera, atts);
+			first.OnSelectionChanged(iMap, _camera);
 		}
 
 		private void EvaluateAttachment()

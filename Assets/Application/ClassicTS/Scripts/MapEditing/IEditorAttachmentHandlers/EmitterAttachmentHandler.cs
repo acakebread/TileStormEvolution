@@ -6,20 +6,20 @@ namespace ClassicTilestorm
 	{
 		public static readonly EmitterAttachmentHandler Instance = new();
 
-		public void OnSelectionChanged(IMapEdit iMap, Camera camera, ISelectable[] selection)
+		public void OnSelectionChanged(IMapEdit iMap, Camera camera, ISelectable selection)
 		{
-			var emitter = (Emitter)selection[0];
+			var emitter = (Emitter)selection;
 			var worldPos = iMap.WorldPosition(emitter.tile, emitter.Position);
 			EditorTransformUtil.UpdateTransform(worldPos, emitter.Rotation, camera);
 			EditorPrimitiveUtil.UpdateCone(worldPos, emitter.Rotation, emitter.Distance, emitter.Apex);
 		}
 
-		public bool OnGizmoInput(IMapEdit iMap, Camera camera, ISelectable[] selection)
+		public bool OnGizmoInput(IMapEdit iMap, Camera camera, ISelectable selection)
 		{
 			if (!EditorTransformUtil.HandleInput(camera, out Vector3 newWorldPos, out Quaternion newWorldRot))
 				return false;
 
-			var emitter = (Emitter)selection[0];
+			var emitter = (Emitter)selection;
 			emitter.Position = iMap.LocalPosition(emitter.tile, newWorldPos);
 			emitter.Rotation = iMap.LocalRotation(emitter.tile, newWorldRot);
 			iMap.RefreshAttachment(emitter);
@@ -27,9 +27,9 @@ namespace ClassicTilestorm
 			return true;
 		}
 
-		public bool OnDragInput(IMapEdit iMap, ISelectable[] selection)
+		public bool OnDragInput(IMapEdit iMap, ISelectable selection)
 		{
-			var emitter = (Emitter)selection[0];
+			var emitter = (Emitter)selection;
 			var worldPos = iMap.WorldPosition(emitter.tile, emitter.Position);
 			return EditorPrimitiveUtil.UpdateCone(worldPos, emitter.Rotation, emitter.Distance, emitter.Apex);
 		}

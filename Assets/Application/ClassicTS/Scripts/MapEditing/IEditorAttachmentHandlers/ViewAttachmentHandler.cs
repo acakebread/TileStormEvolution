@@ -7,20 +7,20 @@ namespace ClassicTilestorm
 	{
 		public static readonly ViewAttachmentHandler Instance = new();
 
-		public void OnSelectionChanged(IMapEdit map, Camera camera, ISelectable[] selection)
+		public void OnSelectionChanged(IMapEdit map, Camera camera, ISelectable selection)
 		{
-			var view = (View)selection[0];
+			var view = (View)selection;
 			var worldPos = map.WorldPosition(view.tile, view.Position);
 			EditorTransformUtil.ShowAt(worldPos, view.Rotation, camera);
 			OnDragInput(map, selection);
 		}
 
-		public bool OnGizmoInput(IMapEdit map, Camera camera, ISelectable[] selection)
+		public bool OnGizmoInput(IMapEdit map, Camera camera, ISelectable selection)
 		{
 			if (!EditorTransformUtil.HandleInput(camera, out Vector3 newWorldPos, out Quaternion newWorldRot))
 				return false;
-	
-			var view = (View)selection[0];
+
+			var view = (View)selection;
 			view.Position = map.LocalPosition(view.tile, newWorldPos);
 			view.Rotation = map.LocalRotation(view.tile, newWorldRot);
 			SnapViewDistanceToGround(map, view);
@@ -37,9 +37,9 @@ namespace ClassicTilestorm
 			return true;
 		}
 
-		public bool OnDragInput(IMapEdit map, ISelectable[] selection)
+		public bool OnDragInput(IMapEdit map, ISelectable selection)
 		{
-			var view = (View)selection[0];
+			var view = (View)selection;
 			ViewPreviewUtil.Show(map, view);
 			return UpdateViewFrustumMarker(map, view);
 		}
@@ -60,10 +60,10 @@ namespace ClassicTilestorm
 			return view;
 		}
 
-		public static void HandlePreviewCameraSync(IMapEdit map, Camera camera, ISelectable[] selection)
+		public static void HandlePreviewCameraSync(IMapEdit map, Camera camera, ISelectable selection)
 		{
-			if (null == selection || 1 != selection.Length) return;
-			if (selection?.FirstOrDefault() is not View view)
+			if (selection == null) return;
+			if (selection is not View view)
 				return;
 
 			var previewTransform = ViewPreviewUtil.PreviewCameraTransform;
