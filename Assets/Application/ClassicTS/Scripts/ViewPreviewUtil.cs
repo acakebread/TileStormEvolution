@@ -32,7 +32,7 @@ namespace ClassicTilestorm
 		public static Camera PreviewCamera => previewCam;
 		public static Transform PreviewCameraTransform => previewCam != null ? previewCam.transform : null;
 
-		public static void Show(View view, IMapEdit manager)
+		public static void Show(IMapEdit manager, View view)
 		{
 			if (view == null || manager == null)
 			{

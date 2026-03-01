@@ -16,17 +16,15 @@ namespace ClassicTilestorm
 
 		public bool OnGizmoInput(IMapEdit iMap, Camera camera, MapAttachment[] selection)
 		{
-			var emitter = (Emitter)selection[0];
+			if (!EditorTransformUtil.HandleInput(camera, out Vector3 newWorldPos, out Quaternion newWorldRot))
+				return false;
 
-			if (EditorTransformUtil.HandleInput(camera, out Vector3 newWorldPos, out Quaternion newWorldRot))
-			{
-				emitter.Position = iMap.LocalPosition(emitter.tile, newWorldPos);
-				emitter.Rotation = iMap.LocalRotation(emitter.tile, newWorldRot);
-				iMap.RefreshAttachment(emitter);
-				EditorPrimitiveUtil.UpdateCone(newWorldPos, emitter.Rotation, emitter.Distance, emitter.Apex);
-				return true;
-			}
-			return false;
+			var emitter = (Emitter)selection[0];
+			emitter.Position = iMap.LocalPosition(emitter.tile, newWorldPos);
+			emitter.Rotation = iMap.LocalRotation(emitter.tile, newWorldRot);
+			iMap.RefreshAttachment(emitter);
+			EditorPrimitiveUtil.UpdateCone(newWorldPos, emitter.Rotation, emitter.Distance, emitter.Apex);
+			return true;
 		}
 
 		public bool OnDragInput(IMapEdit iMap, MapAttachment[] selection)

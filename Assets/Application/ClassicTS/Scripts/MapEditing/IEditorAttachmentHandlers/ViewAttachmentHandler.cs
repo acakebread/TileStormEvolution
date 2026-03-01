@@ -17,32 +17,30 @@ namespace ClassicTilestorm
 
 		public bool OnGizmoInput(IMapEdit map, Camera camera, MapAttachment[] selection)
 		{
+			if (!EditorTransformUtil.HandleInput(camera, out Vector3 newWorldPos, out Quaternion newWorldRot))
+				return false;
+	
 			var view = (View)selection[0];
+			view.Position = map.LocalPosition(view.tile, newWorldPos);
+			view.Rotation = map.LocalRotation(view.tile, newWorldRot);
+			SnapViewDistanceToGround(map, view);
 
-			if (EditorTransformUtil.HandleInput(camera, out Vector3 newWorldPos, out Quaternion newWorldRot))
+			var previewTransform = ViewPreviewUtil.PreviewCameraTransform;
+			if (previewTransform != null)
 			{
-				view.Position = map.LocalPosition(view.tile, newWorldPos);
-				view.Rotation = map.LocalRotation(view.tile, newWorldRot);
-				SnapViewDistanceToGround(map, view);
-
-				var previewTransform = ViewPreviewUtil.PreviewCameraTransform;
-				if (previewTransform != null)
-				{
-					previewTransform.position = map.WorldPosition(view.tile, view.Position);
-					previewTransform.rotation = map.WorldRotation(view.tile, view.Rotation);
-				}
-
-				ViewPreviewUtil.Update();
-				UpdateViewFrustumMarker(map, view);
-				return true;
+				previewTransform.position = map.WorldPosition(view.tile, view.Position);
+				previewTransform.rotation = map.WorldRotation(view.tile, view.Rotation);
 			}
-			return false;
+
+			ViewPreviewUtil.Update();
+			UpdateViewFrustumMarker(map, view);
+			return true;
 		}
 
 		public bool OnDragInput(IMapEdit map, MapAttachment[] selection)
 		{
 			var view = (View)selection[0];
-			ViewPreviewUtil.Show(view, map);
+			ViewPreviewUtil.Show(map, view);
 			return UpdateViewFrustumMarker(map, view);
 		}
 

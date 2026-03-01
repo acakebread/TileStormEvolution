@@ -1,7 +1,6 @@
-// File: ClassicTileStormAssetRemap.cs
+using System;
 using UnityEngine;
 using System.Collections.Generic;
-using System;
 
 namespace ClassicTilestorm
 {

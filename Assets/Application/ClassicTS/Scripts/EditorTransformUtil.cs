@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
-using System.Collections.Generic;
 using Unity.Mathematics;
+using System.Collections.Generic;
 using MassiveHadronLtd;
 
 namespace ClassicTilestorm

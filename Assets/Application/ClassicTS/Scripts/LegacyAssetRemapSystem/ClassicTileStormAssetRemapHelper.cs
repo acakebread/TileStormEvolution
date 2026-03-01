@@ -1,5 +1,4 @@
-﻿// File: ClassicTileStormAssetRemapHelper.cs
-using UnityEngine;
+﻿using UnityEngine;
 
 namespace ClassicTilestorm
 {

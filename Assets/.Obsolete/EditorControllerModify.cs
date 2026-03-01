@@ -2,46 +2,79 @@
 using UnityEngine;
 using System.Linq;
 using MassiveHadronLtd;
+using UnityEngine.EventSystems;
 
 namespace ClassicTilestorm
 {
-	public class EditorControllerModify : EditorControllerMovement
+	public class EditorControllerModify
 	{
+		// ─── drag-to-pan
+		private bool isPanning;
+		private Vector3 beginWorld;
+		private Vector3 currentWorld => Map.ScreenToWorld(camera, InputX.mousePosition);
+
+		private Vector3 mouseDownPos;
+		private bool mouseMovedBeyondThreshold;
+		private const float CLICK_THRESHOLD = 3f;
+
+		private readonly EditorController editorController;
+		private IMapEdit iMap => editorController?.iMap;
+		private Camera camera
+		{
+			get
+			{
+				if (editorController.TryGetComponent<MainCameraController>(out var controller))
+					return controller.activeSystem?.camera;
+				return null;
+			}
+		}
+
+		private bool touchStartOverGui = false;
+		private bool IsMouseOverGUI()
+			=> PlaceholderUI.IsMouseOverGui()
+			|| GUIUtility.hotControl != 0
+			|| (EventSystem.current && EventSystem.current.IsPointerOverGameObject())
+			|| EditorAttachmentUI.sidePanel.IsMouseOver;
+
+		public EditorControllerModify(EditorController editorController)
+		{
+			this.editorController = editorController;
+		}
+
+		// Tile selection and Attachment state
 		private enum ControllerMode
 		{
-			Idle,               // nothing selected, no placement active → can select, pan, start placing
-			PlacingTile,        // active tile placement from palette (ghost visible)
-			SelectedTile,       // tile is selected → can start drag or deselect
-			DraggingTile,       // actively dragging a selected tile (mouse button held)
-			UpdateAttachment    // editing attachments
+			Idle,
+			PlacingTile,
+			SelectedTile,
+			DraggingTile,
+			UpdateAttachment
 		}
 
 		private ControllerMode mode = ControllerMode.Idle;
 		private bool holdSelect;
 		private float holdTime;
 
-		// Tile selection and Attachment state
 		private int cursorTile = -1;
 		private Variant cursorVariant = new(ResourceManager.DefaultHash);
 		private ISelectable[] selection = null;
 		private Action unsubscribeTileSelectorAction;
-
-		public EditorControllerModify(EditorController editorController) : base(editorController) { }
 
 		private void SetMode(ControllerMode value) => mode = value;
 
 		// ===================================================================
 		// Lifecycle
 		// ===================================================================
-		public override void OnMapLoaded()
+		public void OnMapLoaded()
 		{
-			base.OnMapLoaded();
+			ViewPreviewUtil.Hide();
+			isPanning = false;
 			ResetInputState();
 		}
 
-		public override void OnEnable()
+		public void OnEnable()
 		{
-			base.OnEnable();
+			ViewPreviewUtil.Hide();
 			ResetInputState();
 
 			var tileSelector = UnityEngine.Object.FindAnyObjectByType<TileSelector>(FindObjectsInactive.Include);
@@ -69,9 +102,11 @@ namespace ClassicTilestorm
 			}
 		}
 
-		public override void OnDisable()
+		public void OnDisable()
 		{
-			base.OnDisable();
+			ViewPreviewUtil.Hide();
+			isPanning = false;
+
 			unsubscribeTileSelectorAction?.Invoke();
 			unsubscribeTileSelectorAction = null;
 
@@ -79,16 +114,91 @@ namespace ClassicTilestorm
 			ResetInputState();
 		}
 
-		public override void Update()
+		public void Update()
 		{
-			base.Update();
+			// ─── former base input handling ───────────────────────────────
+			if (InputX.GetMouseButtonDown(0) || InputX.GetMouseButtonDown(1))
+			{
+				if (InputX.GetMouseButtonDown(0))
+					beginWorld = Map.ScreenToWorld(camera, InputX.mousePosition);
+				mouseDownPos = InputX.mousePosition;
+				mouseMovedBeyondThreshold = false;
+				touchStartOverGui = IsMouseOverGUI() || ViewPreviewUtil.IsMouseOverPreview();
+			}
+
+			if ((InputX.GetMouseButton(0) || InputX.GetMouseButton(1))
+				&& Vector3.Distance(InputX.mousePosition, mouseDownPos) >= CLICK_THRESHOLD
+				|| InputX.GetAxis("Mouse ScrollWheel") > 0.01f)
+			{
+				mouseMovedBeyondThreshold = true;
+			}
+
+			if (InputX.GetMouseButtonUp(0))
+				isPanning = false;
+
+			if (!InputX.GetMouseButton(0) && !InputX.GetMouseButton(1))
+			{
+				if (Input.GetMouseButton(0) || Input.GetMouseButton(1))
+					Debug.Log("rogue state - problem with InputX caching");
+				touchStartOverGui = false;
+			}
+
+			ViewPreviewUtil.Update();
+
+			// ─── preview focus check (early return preserved) ─────────────
+			if (ViewPreviewUtil.IsInFocus)
+			{
+				EditorCameraMovement.UpdateCamera(ViewPreviewUtil.PreviewCamera.transform);
+				// DO NOT return here yet — let subclass code run first if needed
+			}
+			else
+			{
+				if (!touchStartOverGui)
+				{
+					var overGUI = (InputX.GetMouseButton(0) || InputX.GetMouseButton(1))
+						? touchStartOverGui
+						: IsMouseOverGUI() || ViewPreviewUtil.IsMouseOverPreview();
+					EditorCameraMovement.UpdateCamera(camera ? camera.transform : null, isMouseOverGui: overGUI);
+				}
+			}
+
+			// Run subclass-specific preview/attachment sync EVERY frame (matches original override)
 			var attSelection = selection?.OfType<MapAttachment>().ToArray() ?? Array.Empty<MapAttachment>();
 			ViewAttachmentHandler.HandlePreviewCameraSync(iMap, camera, attSelection);
+
+			// ─── rest of former-base logic (may early-return) ──────────────
+			if (ViewPreviewUtil.IsInFocus)
+			{
+				return;  // now return AFTER sync — if preview focused, skip world input
+			}
+
+			if (IsMouseOverGUI())
+				return;
+
+			if (HandleGizmoInput())
+			{
+				EditorTransformUtil.UpdateTransformGizmoVisuals(camera);
+				return;
+			}
+
+			if (isPanning)
+			{
+				if (currentWorld != Vector3.negativeInfinity)
+					camera.transform.position += beginWorld - currentWorld;
+			}
+
+			if (GuiUtils.WasGuiActiveLastFrame)
+			{
+				mouseMovedBeyondThreshold = true;
+				return;
+			}
+
+			OnControl(!mouseMovedBeyondThreshold);
 		}
 
-		public override void OnGUI()
+		public void OnGUI()
 		{
-			base.OnGUI();
+			ViewPreviewUtil.OnGUI();
 
 			EditorAttachmentUI.UpdateGUI(
 				iMap,
@@ -101,13 +211,22 @@ namespace ClassicTilestorm
 			);
 		}
 
-		public override void OnDestroy()
+		public void OnDestroy()
 		{
 			DeselectTile();
 			EditorSelectionUtil.DestroyGhostMesh();
 		}
 
-		protected override bool HandleGizmoInput()
+		public void OnApplicationFocus(bool hasFocus)
+		{
+			EditorCameraMovement.OnApplicationFocus(hasFocus);
+		}
+
+		// ===================================================================
+		// Input handling
+		// ===================================================================
+
+		private bool HandleGizmoInput()
 		{
 			if (null == selection || 0 == selection.Length) return false;
 
@@ -120,9 +239,8 @@ namespace ClassicTilestorm
 			return attSelection[0].OnGizmoInput(iMap, camera, attSelection);
 		}
 
-		protected override void OnControl(bool staticClick)
+		private void OnControl(bool staticClick)
 		{
-			base.OnControl(staticClick);
 			if (!camera) return;
 
 			switch (mode)
@@ -133,11 +251,11 @@ namespace ClassicTilestorm
 						var variant = iMap.GetVariantAt(currentWorld);
 
 						if (variant.IsDefaultEquivalent)
-							StartPanning(); // immediate panning on default/empty
+							StartPanning();
 						else
 						{
 							holdTime = Time.time;
-							holdSelect = true; // start the hold timer
+							holdSelect = true;
 						}
 					}
 
@@ -150,7 +268,6 @@ namespace ClassicTilestorm
 							EvaluateAttachment();
 						}
 
-						// check the hold timer
 						if (holdSelect && Time.time - holdTime >= 0.25f)
 						{
 							holdSelect = false;
@@ -166,13 +283,12 @@ namespace ClassicTilestorm
 						if (InputX.GetMouseButton(0) && holdSelect)
 						{
 							holdSelect = false;
-							StartPanning(); // immediate panning when moved during hold
+							StartPanning();
 						}
 					}
 					break;
 
 				case ControllerMode.PlacingTile:
-					// Continuous ghost update in placing mode
 					cursorVariant = EditorSelectionUtil.NextVariantOnMap(iMap, currentWorld, cursorVariant);
 					EditorSelectionUtil.UpdateGhostMesh(iMap, Map.FullFloorVec(currentWorld), cursorVariant, false);
 
@@ -215,7 +331,6 @@ namespace ClassicTilestorm
 					break;
 
 				case ControllerMode.UpdateAttachment:
-
 					if (InputX.GetMouseButtonDown(0))
 						cursorTile = iMap.CameraHitTile(camera, InputX.mousePosition);
 
@@ -244,9 +359,7 @@ namespace ClassicTilestorm
 			}
 		}
 
-		// ===================================================================
-		// Helpers
-		// ===================================================================
+		// Helpers (all private)
 
 		private bool StartTileDrag()
 		{
@@ -273,13 +386,13 @@ namespace ClassicTilestorm
 			var delta = cursorVariant.HasNav ? Vector3.zero : Map.HalfFloorVec(worldPos) - snapped;
 
 			if (snapped == Map.FullFloorVec(beginWorld) && delta == cursorVariant.delta)
-				return;//no change so ok to just exit
+				return;
 
-			delta.y = cursorVariant.delta.y;//retore old delta height
+			delta.y = cursorVariant.delta.y;
 			cursorVariant.delta = delta;
 			iMap.RemoveTileAt(beginWorld);
 			var index = iMap.UpdateTileAt(snapped, cursorVariant);
-			if (-1 == index) index = iMap.UpdateTileAt(Map.FullFloorVec(beginWorld), cursorVariant);//operation failed restore old tile
+			if (-1 == index) index = iMap.UpdateTileAt(Map.FullFloorVec(beginWorld), cursorVariant);
 			SelectTile(iMap.IndexToVector(index));
 		}
 
@@ -310,7 +423,7 @@ namespace ClassicTilestorm
 
 		private bool StartAttachmentDrag()
 		{
-			if (cursorTile < 0 || iMap.GetAttachments(tileIndex: cursorTile).Length == 0)//no attachment here
+			if (cursorTile < 0 || iMap.GetAttachments(tileIndex: cursorTile).Length == 0)
 			{
 				EndAttachmentMode();
 				return false;
@@ -354,7 +467,6 @@ namespace ClassicTilestorm
 					EditorTransformUtil.ShowAt(worldPos, worldRot, camera);
 				}
 
-				// only call if it's still MapAttachment
 				if (selection[0] is MapAttachment ma)
 					ma.OnDragInput(iMap, attSelection);
 			}
@@ -362,7 +474,7 @@ namespace ClassicTilestorm
 
 		private void EndAttachmentMode()
 		{
-			if (cursorTile < 0 || iMap.GetAttachments(tileIndex: cursorTile).Length == 0)//no attachment here
+			if (cursorTile < 0 || iMap.GetAttachments(tileIndex: cursorTile).Length == 0)
 			{
 				cursorTile = -1;
 				SelectAttachment();
@@ -472,6 +584,12 @@ namespace ClassicTilestorm
 			var selectedIndex = Array.IndexOf(tiles, selectedTile);
 
 			EditorMarkerUtil.ShowMarkers(positions, colors, selectedIndex);
+		}
+
+		private void StartPanning()
+		{
+			if (isPanning) return;
+			isPanning = beginWorld != Vector3.negativeInfinity;
 		}
 	}
 }

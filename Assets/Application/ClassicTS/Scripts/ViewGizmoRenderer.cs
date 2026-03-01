@@ -1,4 +1,3 @@
-// File: Assets/Scripts/ClassicTilestorm/ViewGizmoRenderer.cs
 using UnityEngine;
 using System.Collections.Generic;
 
