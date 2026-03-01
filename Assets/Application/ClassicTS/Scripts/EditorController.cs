@@ -2,7 +2,6 @@
 using System.Linq;
 using UnityEngine;
 using UnityEngine.EventSystems;
-using UnityEngine.Rendering;
 using MassiveHadronLtd;
 
 namespace ClassicTilestorm
@@ -54,14 +53,10 @@ namespace ClassicTilestorm
 		private Camera _camera => mainCameraController?.activeSystem?.camera;
 
 		private void OnGridLinesToggled(bool value) => UpdateGridLines(gridEnabled = value);
-		private void OnPostProcessingToggled(bool value) => UpdatePostProcessing(postProcessingEnabled = value);
-
-		private Volume getVolume(GameObject root) => root.GetComponentInChildren<Volume>(true);
+		private void OnPostProcessingToggled(bool value) => mainCameraController?.EnableEditorPostProcessing(postProcessingEnabled = value);
 
 		private MainCameraController mainCameraController => TryGetComponent<MainCameraController>(out var c) ? c : null;
 
-		private GameCameraEditor gameCameraEditor
-			=> mainCameraController != null && mainCameraController.activeSystem is GameCameraEditor editor ? editor : null;
 		private void SetMode(ControllerMode value) => mode = value;
 
 		// ─── Unity / lifecycle ───────────────────────────────────────────────
@@ -90,14 +85,14 @@ namespace ClassicTilestorm
 
 		private void OnEnable()
 		{
-			if (TryGetComponent<MainCameraController>(out var controller))
+			if (null != mainCameraController)
 			{
-				controller.SetCameraSystem(CameraModeRegistry.Editor, false);
-				controller.UpdateGestureControllerState();
+				mainCameraController.SetCameraSystem(CameraModeRegistry.Editor, false);
+				mainCameraController.UpdateGestureControllerState();
+				mainCameraController.EnableEditorPostProcessing(postProcessingEnabled);
 			}
 
 			UpdateGridLines(gridEnabled);
-			UpdatePostProcessing(postProcessingEnabled);
 			ViewPreviewUtil.Hide();
 			ResetInputState();
 			SetMode(ControllerMode.Idle);
@@ -142,13 +137,8 @@ namespace ClassicTilestorm
 
 		private void Update()
 		{
-			var cameraEditor = gameCameraEditor;
-			if (cameraEditor != null)
-			{
-				var volume = getVolume(cameraEditor.controller.gameObject);
-				var distance = (cameraEditor.controller.transform.position - Map.CameraToWorld(cameraEditor.camera)).magnitude;
-				VolumeUtils.SetDepthOfFieldDistance(volume, Mathf.Max(Mathf.Min(distance, cameraEditor.controller.transform.position.y * 3f), 1f));
-			}
+			if (null != mainCameraController)
+				mainCameraController.UpdateEditorPostProcessing();
 
 			if (InputX.GetMouseButtonDown(0) || InputX.GetMouseButtonDown(1))
 			{
@@ -354,17 +344,6 @@ namespace ClassicTilestorm
 				gridEnabled = enabled,
 				offset: iMap != null ? iMap.TileRenderPosition(0) + new Vector3(-0.5f, 0f, -0.5f) : Vector3.zero
 			);
-
-		private void UpdatePostProcessing(bool enabled = true)
-		{
-			if (gameCameraEditor != null)
-			{
-				var volume = getVolume(gameCameraEditor.controller.gameObject);
-				volume.enabled = enabled;
-				VolumeUtils.EnableDepthOfField(volume, enabled);
-				VolumeUtils.SetDepthOfFieldDistance(volume, 8f);
-			}
-		}
 
 		// ─── Map events ──────────────────────────────────────────────────────
 		private void OnMapEdited(Map map, bool resized, Vector3 originDelta)

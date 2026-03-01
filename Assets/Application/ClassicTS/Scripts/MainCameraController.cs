@@ -256,5 +256,31 @@ namespace ClassicTilestorm
 			eggbotController.OnPuzzleSolved -= HandlePuzzleSolved;
 			eggbotController.OnLevelCompleted -= OnLevelCompleted;
 		}
+
+		//utils
+		public void EnableEditorPostProcessing(bool enabled = true)
+		{
+			var gameCameraEditor = activeSystem is GameCameraEditor editor ? editor : null;
+			if (gameCameraEditor != null)
+			{
+				var volume = getVolume(gameCameraEditor.controller.gameObject);
+				volume.enabled = enabled;
+				VolumeUtils.EnableDepthOfField(volume, enabled);
+				VolumeUtils.SetDepthOfFieldDistance(volume, 8f);
+			}
+			static UnityEngine.Rendering.Volume getVolume(GameObject root) => root.GetComponentInChildren<UnityEngine.Rendering.Volume>(true);
+		}
+
+		public void UpdateEditorPostProcessing()
+		{
+			var gameCameraEditor = activeSystem is GameCameraEditor editor ? editor : null;
+			if (gameCameraEditor != null)
+			{
+				var volume = getVolume(gameCameraEditor.controller.gameObject);
+				var distance = (gameCameraEditor.controller.transform.position - Map.CameraToWorld(gameCameraEditor.camera)).magnitude;
+				VolumeUtils.SetDepthOfFieldDistance(volume, Mathf.Max(Mathf.Min(distance, gameCameraEditor.controller.transform.position.y * 3f), 1f));
+			}
+			static  UnityEngine.Rendering.Volume getVolume(GameObject root) => root.GetComponentInChildren<UnityEngine.Rendering.Volume>(true);
+		}
 	}
 }
