@@ -42,7 +42,7 @@ namespace ClassicTilestorm
 			EditorCameraMovement.isPanning = false;
 			ResetInputState();
 
-			GridLinesUtil.Update(transform, iMap?.Width ?? 32, iMap?.Height ?? 32, null != iMap ? iMap.TileRenderPosition(0) + new Vector3(-0.5f, 0f, -0.5f) : Vector3.zero );
+			GridLinesUtil.Update(transform, iMap?.Width ?? 32, iMap?.Height ?? 32, null != iMap ? iMap.TileRenderPosition(0) - new Vector3(0.5f, 0f, 0.5f) : Vector3.zero );
 			if (!isActiveAndEnabled) return;
 			GridLinesUtil.Show();
 			EnableEggbot(false);
