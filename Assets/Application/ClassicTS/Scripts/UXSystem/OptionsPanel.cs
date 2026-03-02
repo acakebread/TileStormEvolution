@@ -18,8 +18,8 @@ namespace ClassicTilestorm
 		[SerializeField] private Toggle gridLinesToggle;
 		[SerializeField] private Toggle postProcessingToggle;
 
-		[SerializeField] private Slider detailLevelSlider;          // ← new
-		[SerializeField] private TMP_Text detailLevelLabel;           // optional – shows current text
+		[SerializeField] private Slider detailLevelSlider;
+		[SerializeField] private TMP_Text detailLevelLabel;
 
 		[SerializeField] private Toggle remapAssetsToggle;
 
@@ -67,36 +67,18 @@ namespace ClassicTilestorm
 				if (null != gridLinesToggle)
 				{
 					gridLinesToggle.isOn = MassiveHadronLtd.GridLinesUtil.Enabled;
-					gridLinesToggle.onValueChanged.AddListener(isOn => MassiveHadronLtd.GridLinesUtil.Enabled = isOn);
+					gridLinesToggle.onValueChanged.AddListener(isOn => { MassiveHadronLtd.GridLinesUtil.Enabled = isOn; if (editorController.isActiveAndEnabled) { if (isOn) MassiveHadronLtd.GridLinesUtil.Show(); else MassiveHadronLtd.GridLinesUtil.Hide(); } });
 				}
-				//if (null != postProcessingToggle)
-				//{
-				//	postProcessingToggle.isOn = editorController.PostProcessingEnabled;
-				//	postProcessingToggle.onValueChanged.AddListener(isOn => editorController.PostProcessingEnabled = isOn);
-				//}
 
 				// ─────────────── New detail level slider logic ───────────────
 				if (null != detailLevelSlider)
 				{
-					// Default to Game Only
 					detailLevelSlider.minValue = 0;
 					detailLevelSlider.maxValue = 2;
 					detailLevelSlider.wholeNumbers = true;
 
 					// Load initial value
-					//bool ppGame = editorController.PostProcessingEnabled;
-					//bool ppEditor = editorController.PostProcessingEnabled;/* decide how to load editor-specific setting – see note below */;
-
-					//int initialValue = 0;
-					//if (ppGame)
-					//{
-					//	initialValue = ppEditor ? 2 : 1;
-					//}
-
-					//bool ppGame = editorController.PostProcessingEnabled;
-					//bool ppEditor = editorController.PostProcessingEnabled;/* decide how to load editor-specific setting – see note below */;
-
-					int initialValue = 1;//default
+					int initialValue = 1;// Default to Game Only
 					var cameraController = FindAnyObjectByType<MainCameraController>(FindObjectsInactive.Include);
 					if (null != cameraController)
 						initialValue = cameraController.PostProcessingLevel;
@@ -129,22 +111,6 @@ namespace ClassicTilestorm
 			if (null != cameraController)
 				cameraController.PostProcessingLevel = mode;
 
-			//var mainController = FindAnyObjectByType<MainController>(FindObjectsInactive.Include);
-			//if (null != mainController)
-			//	mainController.PostProcessingLevel = mode;
-
-			//var editor = FindAnyObjectByType<EditorController>(FindObjectsInactive.Include);
-			//if (null != editor)
-			//	editor.PostProcessingEnabled = (mode >= 1);           // GameOnly or Game+Editor
-
-			// Core logic: decide who gets post-processing
-
-			// If your EditorController has a separate flag for editor-only post-processing:
-			// editor.PostProcessingInEditorOnly = (mode == 2);
-
-			// Or if it uses the same bool but only applies in editor context:
-			// (most common approach → one bool, controlled by context)
-
 			UpdateDetailLabel(mode);
 		}
 
@@ -160,7 +126,5 @@ namespace ClassicTilestorm
 				default: detailLevelLabel.text = "—"; break;
 			}
 		}
-		//private MainCameraController mainCameraController { get { TryGetComponent<MainCameraController>(out var controller); return controller; } }
-		//private GameCameraEditor gameCameraEditor { get { if (null != mainCameraController && mainCameraController.activeSystem is GameCameraEditor editorCam) return editorCam; return null; } }
 	}
 }

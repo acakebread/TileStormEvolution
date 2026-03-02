@@ -34,25 +34,29 @@ namespace ClassicTilestorm
 		private void SetMode(ControllerMode value) => mode = value;
 
 		// ─── Unity / lifecycle ───────────────────────────────────────────────
-
 		public void Initialise(IMapEdit iMap)
 		{
 			this.iMap = iMap;
-
 			iMap.OnMapEdited += OnMapEdited;
-			if (!isActiveAndEnabled) return;
-
-			UpdateGridLines();
 			ViewPreviewUtil.Hide();
 			EditorCameraMovement.isPanning = false;
 			ResetInputState();
+
+			GridLinesUtil.Update(
+				transform,
+				null != iMap ? iMap.Width : 32,
+				null != iMap ? iMap.Height : 32,
+				null != iMap ? iMap.TileRenderPosition(0) + new Vector3(-0.5f, 0f, -0.5f) : Vector3.zero
+			);
+			if (!isActiveAndEnabled) return;
+			GridLinesUtil.Show();
 			EnableEggbot(false);
 		}
 
 		public void Reset()
 		{
 			if (iMap != null) iMap.OnMapEdited -= OnMapEdited;
-			GridLinesUtil.Hide();
+			GridLinesUtil.Destroy();
 			DeselectTile();
 			EditorSelectionUtil.DestroyGhostMesh();
 		}
@@ -67,7 +71,7 @@ namespace ClassicTilestorm
 				mainCameraController.EnableEditorPostProcessing();
 			}
 
-			UpdateGridLines();
+			GridLinesUtil.Show();
 			ViewPreviewUtil.Hide();
 			ResetInputState();
 			SetMode(ControllerMode.Idle);
@@ -272,14 +276,6 @@ namespace ClassicTilestorm
 			var eggbotController = GetComponentInChildren<EggbotController>(true);
 			eggbotController?.gameObject.SetActive(value);
 		}
-
-		private void UpdateGridLines()
-			=> GridLinesUtil.Show(
-				transform,
-				null != iMap ? iMap.Width : 32,
-				null != iMap ? iMap.Height : 32,
-				null != iMap ? iMap.TileRenderPosition(0) + new Vector3(-0.5f, 0f, -0.5f) : Vector3.zero
-			);
 
 		// ─── Map events ──────────────────────────────────────────────────────
 		private void OnMapEdited(Map map, bool resized, Vector3 originDelta)

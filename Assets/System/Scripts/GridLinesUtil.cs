@@ -7,56 +7,24 @@ namespace MassiveHadronLtd
 		private static GameObject currentGrid;
 		private static int currentWidth = -1;
 		private static int currentHeight = -1;
-
+		private static Transform currentParent = null;
+		private static Vector3 currentOffset = Vector3.zero;
 		private const int Extension = 16;
 
 		private static bool enabled = true;
-		public static bool Enabled { get => enabled; set { enabled = value; currentGrid?.SetActive(value); } }
+		public static bool Enabled { get => enabled; set => enabled = value; }
 
-		/// <summary>
-		/// Shows, updates, or hides the grid. If visible = false, hides without recreating.
-		/// </summary>
-		public static void Show(Transform parent, int width, int height, Vector3 offset = default)
+		public static void Update(Transform parent, int width, int height, Vector3 offset = default)
 		{
-			// If turning off: just hide existing
-			if (currentGrid != null && !enabled)
-			{
-				currentGrid.SetActive(false);
-				return;
-			}
-
-			// If turning on but already correct size and visible: early exit
-			if (enabled &&
-				currentGrid != null &&
-				currentWidth == width &&
-				currentHeight == height &&
-				currentGrid.activeSelf)
-			{
-				return;
-			}
-
-			// Otherwise: full recreate
-			Hide();
-
-			if (parent == null || width <= 0 || height <= 0 || !enabled)
+			if (currentGrid != null && currentWidth == width && currentHeight == height && currentParent == parent && currentOffset == offset)
 				return;
 
-			currentGrid = GridLinesHelper.CreateGridLines(
-				parent,
-				width,
-				height,
-				extension: Extension
-			);
-
-			if (currentGrid != null)
-			{
-				currentGrid.transform.SetLayer(LayerMask.NameToLayer("Editor"));
-				currentGrid.transform.localPosition = offset;// Map.tile_origin + new Vector3(-0.5f, 0f, -0.5f);
-				currentGrid.SetActive(true);
-			}
-
+			Destroy();
+			//cache settings ready for reinstantiation
 			currentWidth = width;
 			currentHeight = height;
+			currentParent = parent;
+			currentOffset = offset;
 		}
 
 		public static void UpdateSize(int width, int height)
@@ -65,7 +33,7 @@ namespace MassiveHadronLtd
 				return;
 
 			var parent = currentGrid.transform.parent;
-			Show(parent, width, height, currentGrid.transform.localPosition);
+			Update(parent, width, height, currentGrid.transform.localPosition);
 		}
 
 		public static void SetVisible(bool visible)
@@ -76,7 +44,7 @@ namespace MassiveHadronLtd
 
 		public static bool IsVisible => currentGrid != null && currentGrid.activeSelf;
 
-		public static void Hide()
+		public static void Destroy()
 		{
 			if (currentGrid != null)
 			{
@@ -90,6 +58,24 @@ namespace MassiveHadronLtd
 
 			currentWidth = -1;
 			currentHeight = -1;
+			currentParent = null;
 		}
+
+		public static void Show()
+		{
+			if (false == enabled || currentParent == null || currentWidth <= 0 || currentHeight <= 0)
+				return;
+
+			if (null == currentGrid)
+			{
+				currentGrid = GridLinesHelper.CreateGridLines(currentParent, currentWidth, currentHeight, extension: Extension);
+				currentGrid.transform.SetLayer(LayerMask.NameToLayer("Editor"));
+				currentGrid.transform.localPosition = currentOffset;
+			}
+
+			if (null != currentGrid)
+				currentGrid.SetActive(true);
+		}
+		public static void Hide() => currentGrid?.SetActive(false);
 	}
 }
