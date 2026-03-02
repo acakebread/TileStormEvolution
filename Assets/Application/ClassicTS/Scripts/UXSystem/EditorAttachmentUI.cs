@@ -228,19 +228,19 @@ namespace ClassicTilestorm
 
 		public static void UpdateGUI(IMapEdit iMap, ISelectable[] selection, int tileIndex, Action<ISelectable[]> onSelect)
 		{
-			var currentSelection = iMap.GetAttachments(tileIndex: tileIndex);
+			var currentSelection = selection?.OfType<MapAttachment>().ToArray();
 
 			// Side panel handling
-			if (selection != null && selection.Length > 0)
+			if (currentSelection != null && selection.Length > 0)
 			{
-				if (selection.Length == 1 && selection[0] is Waypoint wp)
+				if (currentSelection.Length == 1 && currentSelection[0] is Waypoint wp)
 				{
-					DrawSidePanelWaypoint(iMap, selection.OfType<MapAttachment>().ToArray(),
+					DrawSidePanelWaypoint(iMap, currentSelection,
 						waypoint => onSelect(new ISelectable[] { waypoint }));
 				}
 				else
 				{
-					DrawSidePanelAttachment(iMap, selection.OfType<MapAttachment>().ToArray(),
+					DrawSidePanelAttachment(iMap, currentSelection,
 						att => onSelect(new ISelectable[] { att }));
 				}
 			}
@@ -257,9 +257,7 @@ namespace ClassicTilestorm
 				DrawSelectPopup(iMap, tileIndex, atts => onSelect(atts?.Cast<ISelectable>().ToArray()));
 
 			if (!stillOpen && pendingAction != PendingAction.None)
-			{
 				ClearPending();
-			}
 		}
 	}
 }
