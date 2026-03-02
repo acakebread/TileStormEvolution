@@ -20,8 +20,6 @@ namespace ClassicTilestorm
 		private Vector3 beginWorld;
 		private Vector3 currentWorld => Map.ScreenToWorld(_camera, InputX.mousePosition);
 
-		private bool touchStartOverGui = false;
-
 		// ─── Tile / Attachment state ─────────────────────────────────────────
 		private enum ControllerMode
 		{
@@ -133,15 +131,8 @@ namespace ClassicTilestorm
 
 		private void Update()
 		{
-			if (InputX.GetMouseButtonDown(0) || InputX.GetMouseButtonDown(1))
-			{
-				if (InputX.GetMouseButtonDown(0))
-					beginWorld = currentWorld;
-				touchStartOverGui = IsMouseOverGUI() || ViewPreviewUtil.IsMouseOverPreview();
-			}
-
-			if (!InputX.GetMouseButton(0) && !InputX.GetMouseButton(1))
-				touchStartOverGui = false;
+			if (InputX.GetMouseButtonDown(0))
+				beginWorld = currentWorld;
 
 			ViewPreviewUtil.Update();
 			if (ViewPreviewUtil.IsInFocus)
