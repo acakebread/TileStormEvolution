@@ -260,11 +260,12 @@ namespace ClassicTilestorm
 		}
 
 		//utils
-		public void EnableEditorPostProcessing(bool enabled = true)
+		public void EnableEditorPostProcessing()
 		{
 			var gameCameraEditor = activeSystem is GameCameraEditor editor ? editor : null;
 			if (gameCameraEditor != null)
 			{
+				var enabled = postProcessingLevel > 1;
 				var volume = getVolume(gameCameraEditor.controller.gameObject);
 				volume.enabled = enabled;
 				VolumeUtils.EnableDepthOfField(volume, enabled);

@@ -66,8 +66,8 @@ namespace ClassicTilestorm
 			{
 				if (null != gridLinesToggle)
 				{
-					gridLinesToggle.isOn = editorController.GridEnabled;
-					gridLinesToggle.onValueChanged.AddListener(isOn => editorController.GridEnabled = isOn);
+					gridLinesToggle.isOn = MassiveHadronLtd.GridLinesUtil.Enabled;
+					gridLinesToggle.onValueChanged.AddListener(isOn => MassiveHadronLtd.GridLinesUtil.Enabled = isOn);
 				}
 				//if (null != postProcessingToggle)
 				//{
@@ -94,9 +94,12 @@ namespace ClassicTilestorm
 					//}
 
 					//bool ppGame = editorController.PostProcessingEnabled;
-					bool ppEditor = editorController.PostProcessingEnabled;/* decide how to load editor-specific setting – see note below */;
+					//bool ppEditor = editorController.PostProcessingEnabled;/* decide how to load editor-specific setting – see note below */;
 
-					int initialValue = ppEditor ? 2 : 1;
+					int initialValue = 1;//default
+					var cameraController = FindAnyObjectByType<MainCameraController>(FindObjectsInactive.Include);
+					if (null != cameraController)
+						initialValue = cameraController.PostProcessingLevel;
 
 					detailLevelSlider.value = initialValue;
 

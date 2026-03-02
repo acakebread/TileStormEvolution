@@ -49,6 +49,8 @@ namespace ClassicTilestorm
 
 		private void Update() => eggbotController?.UpdateEggbot(CurrentMap);
 
+		public void OnApplicationFocus(bool hasFocus) => EditorCameraMovement.OnApplicationFocus(hasFocus);//disabled for now as it wasn't working properly anyway
+
 		public void SetPreviewMode(ApplicationMode mode)
 		{
 			if (null == cameraController) return;

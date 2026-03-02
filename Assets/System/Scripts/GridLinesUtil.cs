@@ -10,20 +10,23 @@ namespace MassiveHadronLtd
 
 		private const int Extension = 16;
 
+		private static bool enabled = true;
+		public static bool Enabled { get => enabled; set { enabled = value; currentGrid?.SetActive(value); } }
+
 		/// <summary>
 		/// Shows, updates, or hides the grid. If visible = false, hides without recreating.
 		/// </summary>
-		public static void Show(Transform parent, int width, int height, bool visible = true, Vector3 offset = default)
+		public static void Show(Transform parent, int width, int height, Vector3 offset = default)
 		{
 			// If turning off: just hide existing
-			if (currentGrid != null && !visible)
+			if (currentGrid != null && !enabled)
 			{
 				currentGrid.SetActive(false);
 				return;
 			}
 
 			// If turning on but already correct size and visible: early exit
-			if (visible &&
+			if (enabled &&
 				currentGrid != null &&
 				currentWidth == width &&
 				currentHeight == height &&
@@ -35,7 +38,7 @@ namespace MassiveHadronLtd
 			// Otherwise: full recreate
 			Hide();
 
-			if (parent == null || width <= 0 || height <= 0 || !visible)
+			if (parent == null || width <= 0 || height <= 0 || !enabled)
 				return;
 
 			currentGrid = GridLinesHelper.CreateGridLines(
@@ -58,12 +61,11 @@ namespace MassiveHadronLtd
 
 		public static void UpdateSize(int width, int height)
 		{
-			if (null == currentGrid || (width == currentWidth && height == currentHeight))
+			if (false == enabled || null == currentGrid || (width == currentWidth && height == currentHeight))
 				return;
 
 			var parent = currentGrid.transform.parent;
-			var wasVisible = currentGrid.activeSelf;
-			Show(parent, width, height, wasVisible, currentGrid.transform.localPosition);
+			Show(parent, width, height, currentGrid.transform.localPosition);
 		}
 
 		public static void SetVisible(bool visible)

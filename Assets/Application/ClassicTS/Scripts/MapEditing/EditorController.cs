@@ -10,12 +10,6 @@ namespace ClassicTilestorm
 	{
 		private IMapEdit iMap;
 
-		private bool gridEnabled = true;
-		private bool postProcessingEnabled = false;
-
-		public bool GridEnabled { get => gridEnabled; set => UpdateGridLines(gridEnabled = value); }
-		public bool PostProcessingEnabled { get => postProcessingEnabled; set => GetComponent<MainCameraController>()?.EnableEditorPostProcessing(postProcessingEnabled = value); }
-
 		// ─── input state ───────────────────────────────────────
 		private Vector3 beginWorld;
 		private Vector3 currentWorld => Map.ScreenToWorld(_camera, InputX.mousePosition);
@@ -30,7 +24,6 @@ namespace ClassicTilestorm
 		private enum ControllerMode
 		{
 			Idle,
-			UpdateView,
 			PlacingTile,
 			SelectedTile,
 			DraggingTile,
@@ -39,12 +32,6 @@ namespace ClassicTilestorm
 
 		private ControllerMode mode = ControllerMode.Idle;
 		private void SetMode(ControllerMode value) => mode = value;
-
-		private bool IsMouseOverGUI()
-			=> (EventSystem.current && EventSystem.current.IsPointerOverGameObject())
-			|| GUIUtility.hotControl != 0
-			|| PlaceholderUI.IsMouseOverGui()
-			|| EditorAttachmentUI.sidePanel.IsMouseOver;
 
 		// ─── Unity / lifecycle ───────────────────────────────────────────────
 
@@ -55,7 +42,7 @@ namespace ClassicTilestorm
 			iMap.OnMapEdited += OnMapEdited;
 			if (!isActiveAndEnabled) return;
 
-			UpdateGridLines(gridEnabled);
+			UpdateGridLines();
 			ViewPreviewUtil.Hide();
 			EditorCameraMovement.isPanning = false;
 			ResetInputState();
@@ -77,10 +64,10 @@ namespace ClassicTilestorm
 			{
 				mainCameraController.SetCameraSystem(CameraModeRegistry.Editor, false);
 				mainCameraController.UpdateGestureControllerState();
-				mainCameraController.EnableEditorPostProcessing(postProcessingEnabled);
+				mainCameraController.EnableEditorPostProcessing();
 			}
 
-			UpdateGridLines(gridEnabled);
+			UpdateGridLines();
 			ViewPreviewUtil.Hide();
 			ResetInputState();
 			SetMode(ControllerMode.Idle);
@@ -125,6 +112,8 @@ namespace ClassicTilestorm
 
 		private void Update()
 		{
+			if (!_camera) return;
+
 			if (InputX.GetMouseButtonDown(0))
 				beginWorld = currentWorld;
 
@@ -145,8 +134,6 @@ namespace ClassicTilestorm
 				EditorTransformUtil.UpdateTransformGizmoVisuals(_camera);
 				return;
 			}
-
-			if (!_camera) return;
 
 			switch (mode)
 			{
@@ -186,9 +173,6 @@ namespace ClassicTilestorm
 							EditorCameraMovement.StartPanning(beginWorld);
 						}
 					}
-					break;
-
-				case ControllerMode.UpdateView:
 					break;
 
 				case ControllerMode.PlacingTile:
@@ -260,6 +244,18 @@ namespace ClassicTilestorm
 					}
 					break;
 			}
+
+			static bool IsMouseOverGUI()
+				=> (EventSystem.current && EventSystem.current.IsPointerOverGameObject())
+				|| GUIUtility.hotControl != 0
+				|| PlaceholderUI.IsMouseOverGui()
+				|| EditorAttachmentUI.sidePanel.IsMouseOver;
+
+			bool HandleGizmoInput()
+			{
+				if (selection == null || selection.Length == 0 || selection[0] is not MapAttachment attachment) return false;
+				return attachment.OnGizmoInput(iMap, _camera);
+			}
 		}
 
 		private void OnGUI()
@@ -274,34 +270,24 @@ namespace ClassicTilestorm
 		private void EnableEggbot(bool value)
 		{
 			var eggbotController = GetComponentInChildren<EggbotController>(true);
-			if (eggbotController != null) eggbotController.gameObject.SetActive(value);
+			eggbotController?.gameObject.SetActive(value);
 		}
 
-		private void UpdateGridLines(bool enabled = true)
+		private void UpdateGridLines()
 			=> GridLinesUtil.Show(
 				transform,
-				iMap != null ? iMap.Width : 32,
-				iMap != null ? iMap.Height : 32,
-				gridEnabled = enabled,
-				offset: iMap != null ? iMap.TileRenderPosition(0) + new Vector3(-0.5f, 0f, -0.5f) : Vector3.zero
+				null != iMap ? iMap.Width : 32,
+				null != iMap ? iMap.Height : 32,
+				null != iMap ? iMap.TileRenderPosition(0) + new Vector3(-0.5f, 0f, -0.5f) : Vector3.zero
 			);
 
 		// ─── Map events ──────────────────────────────────────────────────────
 		private void OnMapEdited(Map map, bool resized, Vector3 originDelta)
 		{
-			if (map == null) return;
+			if (null == map) return;
 			ResourceManager.ApplyMapChanges(map);
-			if (!resized) return;
-			if (gridEnabled) GridLinesUtil.UpdateSize(map.width, map.height);
-			// originDelta handling was empty in original → left as-is
-		}
-
-		// ─── Input / control logic ───────────────────────────────────────────
-		private bool HandleGizmoInput()
-		{
-			if (selection == null || selection.Length == 0) return false;
-			if (selection[0] is not MapAttachment attachment) return false;
-			return attachment.OnGizmoInput(iMap, _camera);
+			if (resized)
+				GridLinesUtil.UpdateSize(map.width, map.height);
 		}
 
 		// ─── All helper methods ──────────────────────────────────────────────
@@ -511,7 +497,5 @@ namespace ClassicTilestorm
 
 			EditorMarkerUtil.ShowMarkers(positions, colors, selectedIndex);
 		}
-
-		//public void OnApplicationFocus(bool hasFocus) => EditorCameraMovement.OnApplicationFocus(hasFocus);//disabled for now as it wasn't working properly anyway
 	}
 }
