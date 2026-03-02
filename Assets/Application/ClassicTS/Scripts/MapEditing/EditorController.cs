@@ -151,11 +151,7 @@ namespace ClassicTilestorm
 					mouseMovedBeyondThreshold = true;
 			}
 			else
-			{
-				if (Input.GetMouseButton(0) || Input.GetMouseButton(1))
-					Debug.Log("rogue state - problem with InputX caching");//debugging
 				touchStartOverGui = false;
-			}
 
 			ViewPreviewUtil.Update();
 			if (ViewPreviewUtil.IsInFocus)

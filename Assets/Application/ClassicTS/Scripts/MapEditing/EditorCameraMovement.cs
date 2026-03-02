@@ -12,6 +12,7 @@ namespace ClassicTilestorm
 		private const float MoveSpeed = 8f;
 		private static float MoveSpeedModifier = 1f;
 		private static float ModifiedZoomSpeed => MoveSpeed * MoveSpeedModifier;
+		private static float ScrollSpeed = 1f;
 
 		public static bool isPanning = false;
 		private static Vector3 worldStart;
@@ -100,7 +101,7 @@ namespace ClassicTilestorm
 			// Mouse wheel zoom (only if not over GUI)
 			if (!isMouseOverGui && GuiUtils.IsMouseInsideWindow())
 			{
-				var scroll = InputX.GetAxis("Mouse ScrollWheel") * InputX.TOUCH_SCROLL_COMPENSATION_SCALAR;
+				var scroll = InputX.GetAxis("Mouse ScrollWheel") * ScrollSpeed * InputX.TOUCH_SCROLL_COMPENSATION_SCALAR;
 				if (scroll != 0f)
 					translation += Vector3.forward * scroll * ModifiedZoomSpeed;
 			}

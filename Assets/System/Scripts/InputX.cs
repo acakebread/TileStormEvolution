@@ -1,6 +1,4 @@
 ﻿#define MOBILE
-#if MOBILE
-//#if !UNITY_EDITOR && (UNITY_IOS || UNITY_ANDROID)
 
 using UnityEngine;
 using System.Linq;
@@ -9,30 +7,26 @@ namespace MassiveHadronLtd
 {
 	public static class InputX
 	{
+		public static bool GetKeyDown(KeyCode key) => Input.GetKeyDown(key);
+		public static bool GetKey(KeyCode key) => Input.GetKey(key);
+		public static bool GetKeyUp(KeyCode key) => Input.GetKeyUp(key);
+
 		// ────────────────────────────────────────────────
 		// Central touch source — this is the only place that decides real vs emulated
 		// ────────────────────────────────────────────────
-		private static Touch[] GetTouches()
-		{
-			if (Application.isMobilePlatform || Application.isConsolePlatform)
-				return Input.touches;
-			// Editor / standalone / anything else → use emulator
-			return MultiTouchEmulator.touches;
-		}
+		public static Touch[] touches => Application.isMobilePlatform || Application.isConsolePlatform ? Input.touches : MultiTouchEmulator.touches;// Editor / standalone / anything else → use emulator
+		public static int touchCount => Application.isMobilePlatform || Application.isConsolePlatform ? Input.touchCount : touches.Length;// Editor / standalone / anything else → use emulator
 
-		// ────────────────────────────────────────────────
-		// Public API — everything else reads from GetTouches()
-		// ────────────────────────────────────────────────
-		public static int touchCount => GetTouches().Length;
+		public static bool mouseInsideWindow => new Rect(0, 0, Screen.width, Screen.height).Contains(mousePosition);
 
-		public static Touch[] touches => GetTouches();
+#if MOBILE //#if !UNITY_EDITOR && (UNITY_IOS || UNITY_ANDROID)
 
 		// Mouse position: average of active touches, fallback to real mouse
 		public static Vector3 mousePosition
 		{
 			get
 			{
-				var ts = GetTouches();
+				var ts = touches;
 				if (ts.Length == 0)
 					return Input.mousePosition;
 				if (ts.Length == 1)
@@ -47,7 +41,7 @@ namespace MassiveHadronLtd
 
 		public static bool GetMouseButtonDown(int button)
 		{
-			var ts = GetTouches();
+			var ts = touches;
 			if (0 == ts.Length) return false;
 			if (LooksLikeActiveScroll(ts)) return false;  // ignore pure scroll frames for button events
 
@@ -69,7 +63,7 @@ namespace MassiveHadronLtd
 
 		public static bool GetMouseButton(int button)
 		{
-			var ts = GetTouches();
+			var ts = touches;
 			if (0 == ts.Length) return false;
 			//if (LooksLikeActiveScroll(ts)) return false;  // ignore pure scroll frames for button events - update: skip this or we get rogue no mouse button held events
 
@@ -95,7 +89,7 @@ namespace MassiveHadronLtd
 
 		public static bool GetMouseButtonUp(int button)
 		{
-			var ts = GetTouches();
+			var ts = touches;
 			if (0 == ts.Length) return false;
 			if (LooksLikeActiveScroll(ts))
 				return false;  // ignore pure scroll frames for button events
@@ -180,23 +174,6 @@ namespace MassiveHadronLtd
 			return false;
 		}
 
-		private static Vector3 mouseDelta
-		{
-			get
-			{
-				var ts = GetTouches();
-				if (ts.Length == 0)
-					return Vector3.zero;
-				if (ts.Length == 1)
-					return ts[0].deltaPosition;
-				// 2+ touches → average position (good for orbit + pinch)
-				Vector2 sum = Vector2.zero;
-				foreach (var t in ts)
-					sum += t.deltaPosition;
-				return sum / ts.Length;
-			}
-		}
-
 		// ────────────────────────────────────────────────
 		// Scroll wheel emulation is the tricky part
 		// We try to reconstruct something close to original scroll from pinch movement
@@ -208,13 +185,14 @@ namespace MassiveHadronLtd
 
 			if (axisName != "Mouse ScrollWheel")
 			{
+				var mouseDelta = GetMouseDelta();
 				if (axisName == "Mouse X")
 					return mouseDelta.x;
 				if (axisName == "Mouse Y")
 					return mouseDelta.y;
 			}
 
-			var ts = GetTouches();
+			var ts = touches;
 			if (ts.Length != 2)
 				return 0;
 
@@ -238,48 +216,38 @@ namespace MassiveHadronLtd
 			// pinch-in  → negative scroll (zoom out)
 			float scrollSensitivity = 1f / Mathf.Sqrt(Screen.width * Screen.width + Screen.height * Screen.height);
 			return deltaDist * scrollSensitivity;
+
+			static Vector3 GetMouseDelta()
+			{
+				var ts = touches;
+				if (ts.Length == 0)
+					return Vector3.zero;
+				if (ts.Length == 1)
+					return ts[0].deltaPosition;
+				// 2+ touches → average position (good for orbit + pinch)
+				Vector2 sum = Vector2.zero;
+				foreach (var t in ts)
+					sum += t.deltaPosition;
+				return sum / ts.Length;
+			}
 		}
 
 		// Helpers
 		private static bool IsValid(this Touch t) => t.phase != TouchPhase.Canceled && t.phase != TouchPhase.Ended;
 
-		public static bool mouseInsideWindow => new Rect(0, 0, Screen.width, Screen.height).Contains(mousePosition);
-
-		public static bool GetKeyDown(KeyCode key) => Input.GetKeyDown(key);
-		public static bool GetKey(KeyCode key) => Input.GetKey(key);
-		public static bool GetKeyUp(KeyCode key) => Input.GetKeyUp(key);
-
 		public const float TOUCH_LOOK_COMPENSATION_SCALAR = 1f;//temporary workaround
 		public const float TOUCH_SCROLL_COMPENSATION_SCALAR = 2f;//temporary workaround
-	}
-}
 
 #else
-
-using UnityEngine;
-
-namespace MassiveHadronLtd
-{
-	public static class InputX
-	{
 		public static Vector3 mousePosition => Input.mousePosition;
 		public static bool GetMouseButtonDown(int button) => Input.GetMouseButtonDown(button);
 		public static bool GetMouseButton(int button) => Input.GetMouseButton(button);
 		public static bool GetMouseButtonUp(int button) => Input.GetMouseButtonUp(button);
 
-		public static bool mouseInsideWindow => new Rect(0, 0, Screen.width, Screen.height).Contains(mousePosition);
-
-		public static int touchCount => Input.touchCount;
-		public static Touch[] touches => Input.touches;
 		public static float GetAxis(string axisName) => Input.GetAxis(axisName);
 
-		public static bool GetKeyDown(KeyCode key) => Input.GetKeyDown(key);
-		public static bool GetKey(KeyCode key) => Input.GetKey(key);
-		public static bool GetKeyUp(KeyCode key) => Input.GetKeyUp(key);
-
-		public const float TOUCH_LOOK_COMPENSATION_SCALAR = 16f;//temporary workaround
+		public const float TOUCH_LOOK_COMPENSATION_SCALAR = 1f;//temporary workaround
 		public const float TOUCH_SCROLL_COMPENSATION_SCALAR = 1f;//temporary workaround
+#endif
 	}
 }
-
-#endif
