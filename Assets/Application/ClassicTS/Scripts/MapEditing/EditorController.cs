@@ -17,13 +17,13 @@ namespace ClassicTilestorm
 		private int cursorTile = -1;
 		private Variant cursorVariant = new(ResourceManager.DefaultHash);
 		private ISelectable[] selection = null;
-		private bool evaluating = false;
 		private Action unsubscribeTileSelectorAction;
 
 		// ─── Tile / Attachment state ─────────────────────────────────────────
 		private enum ControllerMode
 		{
 			Idle,
+			Evaluate,
 			PlacingTile,
 			SelectedTile,
 			DraggingTile,
@@ -139,13 +139,19 @@ namespace ClassicTilestorm
 				case ControllerMode.Idle:
 					if (InputX.GetMouseButtonDown(0))
 					{
-						evaluating = false;
 						if (iMap.GetVariantAt(currentWorld).IsDefaultEquivalent)
 							EditorCameraMovement.StartPanning(beginWorld);
 						else
-							evaluating = true;
+							SetMode(ControllerMode.Evaluate);
 					}
+					if (InputX.staticClick)
+					{
+						if (InputX.GetMouseButtonUp(1))
+							iMap.UpdateTileAt(currentWorld, ResourceManager.DefaultHash);
+					}
+					break;
 
+				case ControllerMode.Evaluate:
 					if (InputX.staticClick)
 					{
 						if (InputX.GetMouseButtonUp(0))
@@ -156,21 +162,14 @@ namespace ClassicTilestorm
 
 						if (InputX.GetMouseButtonHeld(0))
 						{
-							evaluating = false;
 							if (!StartTileDrag())
 								EditorCameraMovement.StartPanning(beginWorld);
 						}
-
-						if (InputX.GetMouseButtonUp(1))
-							iMap.UpdateTileAt(currentWorld, ResourceManager.DefaultHash);
 					}
 					else
 					{
-						if (InputX.GetMouseButton(0) && evaluating)
-						{
-							evaluating = false;
+						if (InputX.GetMouseButton(0))
 							EditorCameraMovement.StartPanning(beginWorld);
-						}
 					}
 					break;
 
@@ -265,7 +264,7 @@ namespace ClassicTilestorm
 
 		private void OnDestroy() => Reset();
 
-		// ─── Helpers (grid, post, eggbot) ────────────────────────────────────
+		// ─── Helper ────────────────────────────────────
 		private void EnableEggbot(bool value)
 		{
 			var eggbotController = GetComponentInChildren<EggbotController>(true);
@@ -275,7 +274,6 @@ namespace ClassicTilestorm
 		// ─── Map events ──────────────────────────────────────────────────────
 		private void OnMapEdited(Map map, bool resized, Vector3 originDelta)
 		{
-			if (null == map) return;
 			ResourceManager.ApplyMapChanges(map);
 			if (resized)
 				GridLinesUtil.UpdateSize(map.width, map.height);
