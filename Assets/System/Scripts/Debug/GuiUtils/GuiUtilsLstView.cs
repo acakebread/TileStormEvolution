@@ -124,7 +124,8 @@ namespace MassiveHadronLtd
 
 			public void Update()
 			{
-				if (InputX.GetMouseButton(0) || InputX.GetMouseButton(1)) return;
+				if (InputX.GetMouseButton(0) || InputX.GetMouseButton(1))
+					return;
 
 				float detectX = Screen.width - CurrentWidth - 10f;
 				Rect detectRect = new Rect(detectX, 20f, CurrentWidth + 20f, Screen.height - 40f);

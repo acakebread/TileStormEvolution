@@ -15,14 +15,49 @@ namespace MassiveHadronLtd
 		// Central touch source — this is the only place that decides real vs emulated
 		// ────────────────────────────────────────────────
 		public static Touch[] touches => Application.isMobilePlatform || Application.isConsolePlatform ? Input.touches : MultiTouchEmulator.touches;// Editor / standalone / anything else → use emulator
-		public static int touchCount => Application.isMobilePlatform || Application.isConsolePlatform ? Input.touchCount : touches.Length;// Editor / standalone / anything else → use emulator
+		public static int touchCount => Application.isMobilePlatform || Application.isConsolePlatform ? Input.touchCount : MultiTouchEmulator.touches.Length;// Editor / standalone / anything else → use emulator
+
+		public static Vector3 mousePosition => getMousePosition;
+		public static bool GetMouseButtonDown(int button)
+		{
+			var result = getMouseButtonDown(button);
+			if (result)
+			{
+				mouseDownPos = mousePosition;
+				mouseMovedBeyondThreshold = false;
+			}
+			return result;
+		}
+		public static bool GetMouseButton(int button)
+		{
+			var result = getMouseButton(button);
+			if (result && Vector3.Distance(mousePosition, mouseDownPos) >= CLICK_THRESHOLD)
+				mouseMovedBeyondThreshold = true;
+			return result;
+		}
+		public static bool GetMouseButtonUp(int button)
+		{
+			var result = getMouseButtonUp(button);
+			return result;
+		}
+		public static float GetAxis(string axisName)
+		{
+			var result = getAxis(axisName);
+			if (Mathf.Abs(result) > 0.01f && axisName == "Mouse ScrollWheel")
+				mouseMovedBeyondThreshold = true;
+			return result;
+		}
 
 		public static bool mouseInsideWindow => new Rect(0, 0, Screen.width, Screen.height).Contains(mousePosition);
+		public static bool mouseMovedBeyondThreshold = false;
+
+		private static Vector3 mouseDownPos;
+		private const float CLICK_THRESHOLD = 3f;
 
 #if MOBILE //#if !UNITY_EDITOR && (UNITY_IOS || UNITY_ANDROID)
 
 		// Mouse position: average of active touches, fallback to real mouse
-		public static Vector3 mousePosition
+		private static Vector3 getMousePosition
 		{
 			get
 			{
@@ -39,7 +74,7 @@ namespace MassiveHadronLtd
 			}
 		}
 
-		public static bool GetMouseButtonDown(int button)
+		private static bool getMouseButtonDown(int button)
 		{
 			var ts = touches;
 			if (0 == ts.Length) return false;
@@ -61,11 +96,14 @@ namespace MassiveHadronLtd
 			return false;
 		}
 
-		public static bool GetMouseButton(int button)
+		private static bool getMouseButton(int button)
 		{
 			var ts = touches;
 			if (0 == ts.Length) return false;
 			//if (LooksLikeActiveScroll(ts)) return false;  // ignore pure scroll frames for button events - update: skip this or we get rogue no mouse button held events
+
+			if (LooksLikeActiveScroll(ts))
+				return true;
 
 			if (button == 0)
 			{
@@ -87,7 +125,7 @@ namespace MassiveHadronLtd
 			return false;
 		}
 
-		public static bool GetMouseButtonUp(int button)
+		private static bool getMouseButtonUp(int button)
 		{
 			var ts = touches;
 			if (0 == ts.Length) return false;
@@ -143,10 +181,10 @@ namespace MassiveHadronLtd
 				if (Mathf.Abs(t0.deltaPosition.y) > 1e-4f || Mathf.Abs(t1.deltaPosition.y) > 1e-4f)
 					return false;
 
-				// Optional but very strong: reconstructed center should match
-				Vector2 center0 = t0.position + t0.deltaPosition;
-				Vector2 center1 = t1.position + t1.deltaPosition;
-				if (Vector2.Distance(center0, center1) > 0.01f) return false;
+				//// Optional but very strong: reconstructed center should match
+				//Vector2 center0 = t0.position + t0.deltaPosition;
+				//Vector2 center1 = t1.position + t1.deltaPosition;
+				//if (Vector2.Distance(center0, center1) > 0.01f) return false;
 
 				return true;
 			}
@@ -178,11 +216,8 @@ namespace MassiveHadronLtd
 		// Scroll wheel emulation is the tricky part
 		// We try to reconstruct something close to original scroll from pinch movement
 		// ────────────────────────────────────────────────
-		public static float GetAxis(string axisName)
+		private static float getAxis(string axisName)
 		{
-			//if (axisName != "Mouse ScrollWheel")
-			//	return Input.GetAxis(axisName);// * TOUCH_PINCH_MOUSE_WHEEL_NOMALISE_RATIO / Mathf.Sqrt(Screen.width * Screen.width + Screen.height * Screen.height);//normalise
-
 			if (axisName != "Mouse ScrollWheel")
 			{
 				var mouseDelta = GetMouseDelta();
@@ -239,12 +274,11 @@ namespace MassiveHadronLtd
 		public const float TOUCH_SCROLL_COMPENSATION_SCALAR = 2f;//temporary workaround
 
 #else
-		public static Vector3 mousePosition => Input.mousePosition;
-		public static bool GetMouseButtonDown(int button) => Input.GetMouseButtonDown(button);
-		public static bool GetMouseButton(int button) => Input.GetMouseButton(button);
-		public static bool GetMouseButtonUp(int button) => Input.GetMouseButtonUp(button);
-
-		public static float GetAxis(string axisName) => Input.GetAxis(axisName);
+		private static Vector3 getMousePosition => Input.mousePosition;
+		private static bool getMouseButtonDown(int button) => Input.GetMouseButtonDown(button);
+		private static bool getMouseButton(int button) => Input.GetMouseButton(button);
+		private static bool getMouseButtonUp(int button) => Input.GetMouseButtonUp(button);
+		private static float getAxis(string axisName) => Input.GetAxis(axisName);
 
 		public const float TOUCH_LOOK_COMPENSATION_SCALAR = 1f;//temporary workaround
 		public const float TOUCH_SCROLL_COMPENSATION_SCALAR = 1f;//temporary workaround

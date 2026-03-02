@@ -20,9 +20,6 @@ namespace ClassicTilestorm
 		private Vector3 beginWorld;
 		private Vector3 currentWorld => Map.ScreenToWorld(_camera, InputX.mousePosition);
 
-		private Vector3 mouseDownPos;
-		private bool mouseMovedBeyondThreshold;
-		private const float CLICK_THRESHOLD = 3f;
 		private bool touchStartOverGui = false;
 
 		// ─── Tile / Attachment state ─────────────────────────────────────────
@@ -140,17 +137,10 @@ namespace ClassicTilestorm
 			{
 				if (InputX.GetMouseButtonDown(0))
 					beginWorld = currentWorld;
-				mouseDownPos = InputX.mousePosition;
-				mouseMovedBeyondThreshold = false;
 				touchStartOverGui = IsMouseOverGUI() || ViewPreviewUtil.IsMouseOverPreview();
 			}
 
-			if (InputX.GetMouseButton(0) || InputX.GetMouseButton(1))
-			{
-				if (Vector3.Distance(InputX.mousePosition, mouseDownPos) >= CLICK_THRESHOLD || InputX.GetAxis("Mouse ScrollWheel") > 0.01f)
-					mouseMovedBeyondThreshold = true;
-			}
-			else
+			if (!InputX.GetMouseButton(0) && !InputX.GetMouseButton(1))
 				touchStartOverGui = false;
 
 			ViewPreviewUtil.Update();
@@ -161,15 +151,7 @@ namespace ClassicTilestorm
 				return;
 			}
 			else
-			{
-				if (!touchStartOverGui)
-				{
-					var overGUI = (InputX.GetMouseButton(0) || InputX.GetMouseButton(1))
-						? touchStartOverGui
-						: IsMouseOverGUI() || ViewPreviewUtil.IsMouseOverPreview();
-					EditorCameraMovement.UpdateCamera(_camera ? _camera.transform : null, currentWorld, isMouseOverGui: overGUI);
-				}
-			}
+				EditorCameraMovement.UpdateCamera(_camera ? _camera.transform : null, currentWorld, inFocus: !IsMouseOverGUI());
 
 			if (IsMouseOverGUI()) return;
 
@@ -181,12 +163,12 @@ namespace ClassicTilestorm
 
 			if (GuiUtils.WasGuiActiveLastFrame)
 			{
-				mouseMovedBeyondThreshold = true;
+				InputX.mouseMovedBeyondThreshold = true;
 				return;
 			}
 
 			if (_camera)
-				OnControl(!mouseMovedBeyondThreshold);
+				OnControl(!InputX.mouseMovedBeyondThreshold);
 
 			void OnControl(bool staticClick)
 			{

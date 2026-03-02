@@ -26,21 +26,23 @@ namespace ClassicTilestorm
 			worldStart = value;
 		}
 
-		public static void UpdateCamera(Transform camTransform, Vector3 worldCurrent, bool isMouseOverGui = false, bool allowInput = true)
+		public static void UpdateCamera(Transform camTransform, Vector3 worldCurrent, bool inFocus = true)
 		{
-			if (camTransform == null || !allowInput) return;
-
-			if (isPanning)
-			{
-				if (worldCurrent != Vector3.negativeInfinity)
-					camTransform.position += worldStart - worldCurrent;
-			}
+			if (camTransform == null) return;
 
 			var camera = camTransform.GetComponent<Camera>();
 			if (camera == null) return;
 
-			if (InputX.GetMouseButtonDown(1) || InputX.touchCount > 0)
-				focus = !isMouseOverGui;
+			if (InputX.GetMouseButtonDown(1))
+				focus = inFocus;
+
+			if (InputX.GetMouseButtonUp(0))
+				isPanning = false;
+
+			if (!InputX.GetMouseButton(0) && !InputX.GetMouseButton(1))
+				focus = inFocus;
+
+			if (!focus) return;
 
 			if (didGainFocus)
 			{
@@ -48,49 +50,46 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			if (focus)
+			if (isPanning)
 			{
-				float pointerX = 0f;
-				float pointerY = 0f;
-
-#if MOBILE//!UNITY_EDITOR && (UNITY_IOS || UNITY_ANDROID)
-				if (InputX.touchCount == 2)
-				{
-					if ((InputX.touches[0].phase == TouchPhase.Stationary || InputX.touches[0].phase == TouchPhase.Moved) &&
-						(InputX.touches[1].phase == TouchPhase.Stationary || InputX.touches[1].phase == TouchPhase.Moved))
-					{
-						pointerX = (InputX.touches[0].deltaPosition.x + InputX.touches[1].deltaPosition.x) * 0.5f;
-						pointerY = (InputX.touches[0].deltaPosition.y + InputX.touches[1].deltaPosition.y) * 0.5f;
-					}
-				}
-#else
-				if (InputX.GetMouseButton(1))
-				{
-					pointerX = InputX.GetAxis("Mouse X");
-					pointerY = InputX.GetAxis("Mouse Y");
-				}
-#endif
-
-				pointerX *= InputX.TOUCH_LOOK_COMPENSATION_SCALAR;
-				pointerY *= InputX.TOUCH_LOOK_COMPENSATION_SCALAR;
-
-				float scaledLook = 64f / Mathf.Sqrt(Screen.width * Screen.width + Screen.height * Screen.height);
-
-				pointerX *= scaledLook;
-				pointerY *= scaledLook;
-
-				var eulers = camTransform.eulerAngles;
-				eulers.y += LookSpeedH * pointerX;
-				eulers.x -= LookSpeedV * pointerY;
-				eulers.x = Mathf.Clamp(Mathf.DeltaAngle(0f, eulers.x), -90f, 90f);
-				camTransform.eulerAngles = eulers;
+				if (worldCurrent != Vector3.negativeInfinity)
+					camTransform.position += worldStart - worldCurrent;
 			}
 
-			if (InputX.GetMouseButtonUp(0))
-				isPanning = false;
+			var pointerX = 0f;
+			var pointerY = 0f;
 
-			if (InputX.GetMouseButtonUp(1))// || InputX.touchCount == 0)//this doesn't work for obvious reasons if (InputX.GetMouseButtonUp(1) || InputX.touchCount == 0)
-				focus = false;
+#if MOBILE//!UNITY_EDITOR && (UNITY_IOS || UNITY_ANDROID)
+			if (InputX.touchCount == 2)
+			{
+				if ((InputX.touches[0].phase == TouchPhase.Stationary || InputX.touches[0].phase == TouchPhase.Moved) &&
+					(InputX.touches[1].phase == TouchPhase.Stationary || InputX.touches[1].phase == TouchPhase.Moved))
+				{
+					pointerX = (InputX.touches[0].deltaPosition.x + InputX.touches[1].deltaPosition.x) * 0.5f;
+					pointerY = (InputX.touches[0].deltaPosition.y + InputX.touches[1].deltaPosition.y) * 0.5f;
+				}
+			}
+#else
+			if (InputX.GetMouseButton(1))
+			{
+				pointerX = InputX.GetAxis("Mouse X");
+				pointerY = InputX.GetAxis("Mouse Y");
+			}
+#endif
+
+			pointerX *= InputX.TOUCH_LOOK_COMPENSATION_SCALAR;
+			pointerY *= InputX.TOUCH_LOOK_COMPENSATION_SCALAR;
+
+			float scaledLook = 64f / Mathf.Sqrt(Screen.width * Screen.width + Screen.height * Screen.height);
+
+			pointerX *= scaledLook;
+			pointerY *= scaledLook;
+
+			var eulers = camTransform.eulerAngles;
+			eulers.y += LookSpeedH * pointerX;
+			eulers.x -= LookSpeedV * pointerY;
+			eulers.x = Mathf.Clamp(Mathf.DeltaAngle(0f, eulers.x), -90f, 90f);
+			camTransform.eulerAngles = eulers;
 
 			if (InputX.GetKeyDown(KeyCode.Tab))
 				MoveSpeedModifier = 0.1f / MoveSpeedModifier;
@@ -99,15 +98,14 @@ namespace ClassicTilestorm
 			Vector3 translation = GetInputTranslationDirection() * ModifiedZoomSpeed * Time.deltaTime;
 
 			// Mouse wheel zoom (only if not over GUI)
-			if (!isMouseOverGui && GuiUtils.IsMouseInsideWindow())
+			if (GuiUtils.IsMouseInsideWindow())
 			{
 				var scroll = InputX.GetAxis("Mouse ScrollWheel") * ScrollSpeed * InputX.TOUCH_SCROLL_COMPENSATION_SCALAR;
 				if (scroll != 0f)
 					translation += Vector3.forward * scroll * ModifiedZoomSpeed;
 			}
 
-			if (!isMouseOverGui)
-				camTransform.Translate(translation, Space.Self);
+			camTransform.Translate(translation, Space.Self);
 		}
 
 		private static Vector3 GetInputTranslationDirection()
