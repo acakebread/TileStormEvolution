@@ -14,16 +14,18 @@ namespace ClassicTilestorm
 		private bool postProcessingEnabled = false;
 
 		public bool GridEnabled { get => gridEnabled; set => OnGridLinesToggled(value); }
-		public bool PostProcessingEnabled { get => postProcessingEnabled; set => OnPostProcessingToggled(value); }
+		public bool PostProcessingEnabled { get => postProcessingEnabled; set => GetComponent<MainCameraController>()?.EnableEditorPostProcessing(postProcessingEnabled = value); }
 
 		// ─── input state ───────────────────────────────────────
 		private Vector3 beginWorld;
 		private Vector3 currentWorld => Map.ScreenToWorld(_camera, InputX.mousePosition);
+		private Camera _camera => GetComponent<MainCameraController>()?.activeSystem?.camera;
 
 		// ─── Tile / Attachment state ─────────────────────────────────────────
 		private enum ControllerMode
 		{
 			Idle,
+			UpdateView,
 			PlacingTile,
 			SelectedTile,
 			DraggingTile,
@@ -31,7 +33,7 @@ namespace ClassicTilestorm
 		}
 
 		private ControllerMode mode = ControllerMode.Idle;
-		private bool handlingLMB = false;
+		private bool evaluating = false;
 
 		private int cursorTile = -1;
 		private Variant cursorVariant = new(ResourceManager.DefaultHash);
@@ -44,11 +46,8 @@ namespace ClassicTilestorm
 			|| PlaceholderUI.IsMouseOverGui()
 			|| EditorAttachmentUI.sidePanel.IsMouseOver;
 
-		private MainCameraController mainCameraController => TryGetComponent<MainCameraController>(out var c) ? c : null;
-		private Camera _camera => mainCameraController?.activeSystem?.camera;
 
 		private void OnGridLinesToggled(bool value) => UpdateGridLines(gridEnabled = value);
-		private void OnPostProcessingToggled(bool value) => mainCameraController?.EnableEditorPostProcessing(postProcessingEnabled = value);
 
 		private void SetMode(ControllerMode value) => mode = value;
 
@@ -78,6 +77,7 @@ namespace ClassicTilestorm
 
 		private void OnEnable()
 		{
+			var mainCameraController = GetComponent<MainCameraController>();
 			if (null != mainCameraController)
 			{
 				mainCameraController.SetCameraSystem(CameraModeRegistry.Editor, false);
@@ -151,128 +151,119 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			if (GuiUtils.WasGuiActiveLastFrame)
+			if (!_camera) return;
+
+			switch (mode)
 			{
-				InputX.mouseMovedBeyondThreshold = true;
-				return;
-			}
-
-			if (_camera)
-				OnControl(!InputX.mouseMovedBeyondThreshold);
-
-			void OnControl(bool staticClick)
-			{
-				switch (mode)
-				{
-					case ControllerMode.Idle:
-						if (InputX.GetMouseButtonDown(0))
-						{
-							var variant = iMap.GetVariantAt(currentWorld);
-
-							if (variant.IsDefaultEquivalent)
-								EditorCameraMovement.StartPanning(beginWorld);
-							else
-								handlingLMB = true;
-						}
-
-						if (staticClick)
-						{
-							if (InputX.GetMouseButtonUp(0))
-							{
-								handlingLMB = false;
-								cursorTile = iMap.VectorToIndex(currentWorld);
-								EvaluateAttachment();
-							}
-
-							if (InputX.GetMouseButtonHeld(0))
-							{
-								handlingLMB = false;
-								if (!StartTileDrag())
-									EditorCameraMovement.StartPanning(beginWorld);
-							}
-
-							if (InputX.GetMouseButtonUp(1))
-								iMap.UpdateTileAt(currentWorld, ResourceManager.DefaultHash);
-						}
+				case ControllerMode.Idle:
+					if (InputX.GetMouseButtonDown(0))
+					{
+						evaluating = false;
+						if (iMap.GetVariantAt(currentWorld).IsDefaultEquivalent)
+							EditorCameraMovement.StartPanning(beginWorld);
 						else
-						{
-							if (InputX.GetMouseButton(0) && handlingLMB)
-							{
-								handlingLMB = false;
-								EditorCameraMovement.StartPanning(beginWorld);
-							}
-						}
-						break;
+							evaluating = true;
+					}
 
-					case ControllerMode.PlacingTile:
-						var nextVariant = EditorSelectionUtil.NextVariantOnMap(iMap, currentWorld, cursorVariant);
-						EditorSelectionUtil.UpdateGhostMesh(iMap, Map.FullFloorVec(currentWorld), nextVariant, false);
-
-						if (staticClick)
-						{
-							if (InputX.GetMouseButtonUp(0))
-								iMap.UpdateTileAt(currentWorld, nextVariant);
-
-							if (InputX.GetMouseButtonUp(1))
-							{
-								EditorSelectionUtil.HideGhostMesh();
-								SetMode(ControllerMode.Idle);
-							}
-						}
-						break;
-
-					case ControllerMode.SelectedTile:
-						if (staticClick)
-						{
-							if (InputX.GetMouseButtonDown(0))
-							{
-								if (!StartTileDrag())
-									EditorCameraMovement.StartPanning(beginWorld);
-							}
-
-							if (InputX.GetMouseButtonUp(1))
-								DeselectTile();
-						}
-						break;
-
-					case ControllerMode.DraggingTile:
-						if (InputX.GetMouseButton(0))
-							UpdateTileDrag();
-
+					if (InputX.staticClick)
+					{
 						if (InputX.GetMouseButtonUp(0))
 						{
-							SetMode(ControllerMode.SelectedTile);
-							EndTileDrag();
+							cursorTile = iMap.VectorToIndex(currentWorld);
+							EvaluateAttachment();
 						}
-						break;
 
-					case ControllerMode.UpdateAttachment:
+						if (InputX.GetMouseButtonHeld(0))
+						{
+							evaluating = false;
+							if (!StartTileDrag())
+								EditorCameraMovement.StartPanning(beginWorld);
+						}
+
+						if (InputX.GetMouseButtonUp(1))
+							iMap.UpdateTileAt(currentWorld, ResourceManager.DefaultHash);
+					}
+					else
+					{
+						if (InputX.GetMouseButton(0) && evaluating)
+						{
+							evaluating = false;
+							EditorCameraMovement.StartPanning(beginWorld);
+						}
+					}
+					break;
+
+				case ControllerMode.UpdateView:
+					break;
+
+				case ControllerMode.PlacingTile:
+					var variant = EditorSelectionUtil.NextVariantOnMap(iMap, currentWorld, cursorVariant);
+					EditorSelectionUtil.UpdateGhostMesh(iMap, Map.FullFloorVec(currentWorld), variant, false);
+
+					if (InputX.staticClick)
+					{
+						if (InputX.GetMouseButtonUp(0))
+							iMap.UpdateTileAt(currentWorld, variant);
+
+						if (InputX.GetMouseButtonUp(1))
+						{
+							EditorSelectionUtil.HideGhostMesh();
+							SetMode(ControllerMode.Idle);
+						}
+					}
+					break;
+
+				case ControllerMode.SelectedTile:
+					if (InputX.staticClick)
+					{
 						if (InputX.GetMouseButtonDown(0))
+						{
+							if (!StartTileDrag())
+								EditorCameraMovement.StartPanning(beginWorld);
+						}
+
+						if (InputX.GetMouseButtonUp(1))
+							DeselectTile();
+					}
+					break;
+
+				case ControllerMode.DraggingTile:
+					if (InputX.GetMouseButton(0))
+						UpdateTileDrag();
+
+					if (InputX.GetMouseButtonUp(0))
+					{
+						SetMode(ControllerMode.SelectedTile);
+						EndTileDrag();
+					}
+					break;
+
+				case ControllerMode.UpdateAttachment:
+					if (InputX.GetMouseButtonDown(0))
+						cursorTile = iMap.CameraHitTile(_camera, InputX.mousePosition);
+
+					if (InputX.staticClick)
+					{
+						if (InputX.GetMouseButtonUp(0))
+							EvaluateAttachment();
+
+						if (InputX.GetMouseButtonUp(1))
+						{
 							cursorTile = iMap.CameraHitTile(_camera, InputX.mousePosition);
-
-						if (staticClick)
-						{
-							if (InputX.GetMouseButtonUp(0))
-								EvaluateAttachment();
-
-							if (InputX.GetMouseButtonUp(1))
-							{
-								cursorTile = iMap.CameraHitTile(_camera, InputX.mousePosition);
-								EvaluateAttachment();
-								EndAttachmentMode();
-							}
+							EvaluateAttachment();
+							EndAttachmentMode();
 						}
-						else
+					}
+					else
+					{
+						if (InputX.GetMouseButton(0))
 						{
-							if (InputX.GetMouseButton(0))
-							{
-								if (!StartAttachmentDrag())
-									EditorCameraMovement.StartPanning(beginWorld);
-								UpdateAttachmentDrag();
-							}
+							if (!StartAttachmentDrag())
+								EditorCameraMovement.StartPanning(beginWorld);
+							UpdateAttachmentDrag();
 						}
-						break;
-				}
+					}
+					break;
 			}
 		}
 
@@ -412,7 +403,7 @@ namespace ClassicTilestorm
 
 			void HandleDragInput()
 			{
-				if (selection == null || selection.Length != 1) return;
+				if (selection == null || selection.Length == 0) return;
 				var ma = (MapAttachment)selection[0];
 				if (selection[0] is ITransformableAttachment transformable)
 				{

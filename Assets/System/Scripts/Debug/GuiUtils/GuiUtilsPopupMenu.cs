@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -58,11 +58,24 @@ namespace MassiveHadronLtd
 
 		public static class PopupMenu
 		{
+			// ────────────────────────────────────────────────
+			// Internal state for one-frame delay (transparent to callers)
+			private static bool wasClosedLastFrame = false;
+			private static PopupResult lastCloseType = PopupResult.StillOpen;
+
 			public static PopupResult Show(Vector2 screenPos, string title, List<PopupItem> items)
 			{
 				MarkGuiActive();
 
-				screenPos.y = Screen.height - screenPos.y;//invert screen coords for GUI
+				// ────────────────────────────────────────────────
+				// If we closed on the previous frame → echo the close reason once, then clear
+				if (wasClosedLastFrame)
+				{
+					wasClosedLastFrame = false;
+					return lastCloseType;   // returns ClosedByAction / ClosedByCancel / ClosedByClickOutside
+				}
+
+				screenPos.y = Screen.height - screenPos.y; // invert screen coords for GUI
 
 				const float WIDTH = 260f;
 				const float ITEM_HEIGHT = 26f;
@@ -77,21 +90,21 @@ namespace MassiveHadronLtd
 				height += PADDING_BOTTOM;
 
 				// === AUTO POSITIONING: Center horizontally, place above cursor ===
-				float x = screenPos.x - WIDTH * 0.5f;  // center horizontally
-				float y = screenPos.y - height - 10f; // place above cursor with small gap
+				float x = screenPos.x - WIDTH * 0.5f;
+				float y = screenPos.y - height - 10f;
 
-				// Clamp to screen bounds to avoid going off-screen
+				// Clamp to screen bounds
 				if (x < 10f) x = 10f;
 				if (x + WIDTH > Screen.width - 10f) x = Screen.width - WIDTH - 10f;
-				if (y < 10f) y = screenPos.y + 20f; // if no room above, place below instead
+				if (y < 10f) y = screenPos.y + 20f;
 				if (y + height > Screen.height - 10f) y = Screen.height - height - 10f;
 
 				var rect = new Rect(x, y, WIDTH, height);
 
-				// 1. Draw the window background
+				// 1. Draw background
 				GUI.Box(rect, GUIContent.none, GUI.skin.window);
 
-				// 2. Draw the title
+				// 2. Draw title
 				var titleStyle = new GUIStyle(GUI.skin.label)
 				{
 					alignment = TextAnchor.MiddleCenter,
@@ -121,24 +134,26 @@ namespace MassiveHadronLtd
 
 					if (item.action != null)
 					{
-						// Interactive button - use standard button style
 						if (GUI.Button(itemRect, item.label, PopupStyles.button))
 						{
 							GUI.color = oldColor;
 							item.action?.Invoke();
-							return PopupResult.ClosedByAction;
+
+							// Remember we just closed — return the real close type NEXT frame
+							wasClosedLastFrame = true;
+							lastCloseType = PopupResult.ClosedByAction;
+							return PopupResult.StillOpen;   // this frame still says open
 						}
 					}
 					else
 					{
-						// Non-interactive label - centered, bold for headers/Cancel
 						var labelStyle = new GUIStyle(GUI.skin.label)
 						{
 							alignment = TextAnchor.MiddleCenter,
 							fontStyle = FontStyle.Bold,
 							fontSize = 12
 						};
-						labelStyle.normal.textColor = GUI.color; // respect color override
+						labelStyle.normal.textColor = GUI.color;
 
 						GUI.Label(itemRect, item.label, labelStyle);
 					}
@@ -147,9 +162,13 @@ namespace MassiveHadronLtd
 					yOffset += ITEM_HEIGHT;
 				}
 
-				// Click outside closes
-				if (Event.current.type == EventType.MouseDown && !rect.Contains(Event.current.mousePosition))
-					return PopupResult.ClosedByClickOutside;
+				// Click outside → same delayed-close logic
+				if (Event.current.type == EventType.MouseUp && !rect.Contains(Event.current.mousePosition))
+				{
+					wasClosedLastFrame = true;
+					lastCloseType = PopupResult.ClosedByClickOutside;
+					return PopupResult.StillOpen;   // this frame still reports open
+				}
 
 				return PopupResult.StillOpen;
 			}

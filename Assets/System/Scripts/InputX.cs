@@ -26,7 +26,7 @@ namespace MassiveHadronLtd
 			if (result)
 			{
 				mouseDownPos = mousePosition;
-				mouseMovedBeyondThreshold = false;
+				staticClick = true;
 			}
 			return result;
 		}
@@ -35,7 +35,7 @@ namespace MassiveHadronLtd
 		{
 			var result = getMouseButton(button);
 			if (result && Vector3.Distance(mousePosition, mouseDownPos) >= CLICK_THRESHOLD)
-				mouseMovedBeyondThreshold = true;
+				staticClick = false;
 			return result;
 		}
 
@@ -49,12 +49,12 @@ namespace MassiveHadronLtd
 		{
 			var result = getAxis(axisName);
 			if (Mathf.Abs(result) > 0.01f && axisName == "Mouse ScrollWheel")
-				mouseMovedBeyondThreshold = true;
+				staticClick = false;
 			return result;
 		}
 
 		public static bool mouseInsideWindow => new Rect(0, 0, Screen.width, Screen.height).Contains(mousePosition);
-		public static bool mouseMovedBeyondThreshold = false;
+		public static bool staticClick = false;
 
 		private static Vector3 mouseDownPos;
 		private const float CLICK_THRESHOLD = 3f;

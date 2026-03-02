@@ -231,7 +231,7 @@ namespace ClassicTilestorm
 			var currentSelection = selection?.OfType<MapAttachment>().ToArray();
 
 			// Side panel handling
-			if (currentSelection != null && selection.Length > 0)
+			if (currentSelection != null && currentSelection.Length > 0)
 			{
 				if (currentSelection.Length == 1 && currentSelection[0] is Waypoint wp)
 				{
