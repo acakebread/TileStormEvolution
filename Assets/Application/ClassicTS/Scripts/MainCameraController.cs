@@ -15,7 +15,8 @@ namespace ClassicTilestorm
 		private GestureController gestureController;
 		private PostProcessingCameraController postProcessingController;
 
-		public int PostProcessingLevel { get; set; }
+		private int postProcessingLevel = 1; 
+		public int PostProcessingLevel { get => postProcessingLevel; set => postProcessingLevel= value; }
 
 		private const int MaxFocusPoints = 50;
 		private const float MinDistanceForNewFocusPoint = 3f;

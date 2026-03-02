@@ -122,9 +122,13 @@ namespace ClassicTilestorm
 		{
 			int mode = Mathf.RoundToInt(value);
 
-			var mainController = FindAnyObjectByType<MainController>(FindObjectsInactive.Include);
-			if (null != mainController)
-				mainController.PostProcessingLevel = mode;
+			var cameraController = FindAnyObjectByType<MainCameraController>(FindObjectsInactive.Include);
+			if (null != cameraController)
+				cameraController.PostProcessingLevel = mode;
+
+			//var mainController = FindAnyObjectByType<MainController>(FindObjectsInactive.Include);
+			//if (null != mainController)
+			//	mainController.PostProcessingLevel = mode;
 
 			//var editor = FindAnyObjectByType<EditorController>(FindObjectsInactive.Include);
 			//if (null != editor)

@@ -44,14 +44,22 @@ namespace ClassicTilestorm
 
 		public static int PanelBottomY => 40; // guiRect.height;
 
+		private int guard = 0;//temporary workaround for double events from ongui (due to camera stack) - hopefully this will go away when full ui is implemented
+		private void onChangeMapRequested(int value)
+		{
+			if (++guard > 1) return;
+			OnChangeMapRequested?.Invoke(value);
+		}
+
 		private void Update()
 		{
+			guard = 0;
 			// Handle arrow key navigation
 			// ← only process - / = if no UI has keyboard focus
 			if (!UIFocusManager.AnyUIHasKeyboardFocus())
 			{
-				if (InputUtility.GetKeyRepeat(KeyCode.LeftArrow)) OnChangeMapRequested?.Invoke(-1);
-				if (InputUtility.GetKeyRepeat(KeyCode.RightArrow)) OnChangeMapRequested?.Invoke(1);
+				if (InputUtility.GetKeyRepeat(KeyCode.LeftArrow)) onChangeMapRequested(-1);
+				if (InputUtility.GetKeyRepeat(KeyCode.RightArrow)) onChangeMapRequested(1);
 			}
 
 			// Always visible in Editor mode
@@ -132,13 +140,13 @@ namespace ClassicTilestorm
 
 			currentX += 20;
 
-			GuiUtils.ColoredRepeatButton(new Rect(currentX, y, buttonWidth, buttonHeight), "<< Level", new Color(0.3f, 0.6f, 1f), () => OnChangeMapRequested?.Invoke(-1), initialDelay: 0.35f);
+			GuiUtils.ColoredRepeatButton(new Rect(currentX, y, buttonWidth, buttonHeight), "<< Level", new Color(0.3f, 0.6f, 1f), () => onChangeMapRequested(-1), initialDelay: 0.35f);
 			currentX += buttonWidth + spacing;
 
-			GuiUtils.ColoredRepeatButton(new Rect(currentX, y, buttonWidth, buttonHeight), "Level >>", new Color(0.3f, 0.6f, 1f), () => OnChangeMapRequested?.Invoke(1), initialDelay: 0.35f);
+			GuiUtils.ColoredRepeatButton(new Rect(currentX, y, buttonWidth, buttonHeight), "Level >>", new Color(0.3f, 0.6f, 1f), () => onChangeMapRequested(1), initialDelay: 0.35f);
 			currentX += buttonWidth + spacing;
 
-			GuiUtils.ColoredButton(new Rect(currentX, y, buttonWidth, buttonHeight), "Reload", new Color(0.6f, 0.6f, 0.2f), () => OnChangeMapRequested?.Invoke(0));
+			GuiUtils.ColoredButton(new Rect(currentX, y, buttonWidth, buttonHeight), "Reload", new Color(0.6f, 0.6f, 0.2f), () => onChangeMapRequested(0));
 			currentX += buttonWidth + spacing;
 
 			GuiUtils.ColoredButton(new Rect(currentX, y, buttonWidth, buttonHeight), "Preset", new Color(0.2f, 0.8f, 0.2f), () => OnPresetRequested?.Invoke());

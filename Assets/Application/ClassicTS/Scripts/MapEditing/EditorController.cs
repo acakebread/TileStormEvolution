@@ -13,13 +13,18 @@ namespace ClassicTilestorm
 		private bool gridEnabled = true;
 		private bool postProcessingEnabled = false;
 
-		public bool GridEnabled { get => gridEnabled; set => OnGridLinesToggled(value); }
+		public bool GridEnabled { get => gridEnabled; set => UpdateGridLines(gridEnabled = value); }
 		public bool PostProcessingEnabled { get => postProcessingEnabled; set => GetComponent<MainCameraController>()?.EnableEditorPostProcessing(postProcessingEnabled = value); }
 
 		// ─── input state ───────────────────────────────────────
 		private Vector3 beginWorld;
 		private Vector3 currentWorld => Map.ScreenToWorld(_camera, InputX.mousePosition);
 		private Camera _camera => GetComponent<MainCameraController>()?.activeSystem?.camera;
+		private int cursorTile = -1;
+		private Variant cursorVariant = new(ResourceManager.DefaultHash);
+		private ISelectable[] selection = null;
+		private bool evaluating = false;
+		private Action unsubscribeTileSelectorAction;
 
 		// ─── Tile / Attachment state ─────────────────────────────────────────
 		private enum ControllerMode
@@ -33,23 +38,13 @@ namespace ClassicTilestorm
 		}
 
 		private ControllerMode mode = ControllerMode.Idle;
-		private bool evaluating = false;
-
-		private int cursorTile = -1;
-		private Variant cursorVariant = new(ResourceManager.DefaultHash);
-		private ISelectable[] selection = null;
-		private Action unsubscribeTileSelectorAction;
+		private void SetMode(ControllerMode value) => mode = value;
 
 		private bool IsMouseOverGUI()
 			=> (EventSystem.current && EventSystem.current.IsPointerOverGameObject())
 			|| GUIUtility.hotControl != 0
 			|| PlaceholderUI.IsMouseOverGui()
 			|| EditorAttachmentUI.sidePanel.IsMouseOver;
-
-
-		private void OnGridLinesToggled(bool value) => UpdateGridLines(gridEnabled = value);
-
-		private void SetMode(ControllerMode value) => mode = value;
 
 		// ─── Unity / lifecycle ───────────────────────────────────────────────
 
