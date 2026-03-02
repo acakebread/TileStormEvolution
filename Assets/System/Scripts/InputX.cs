@@ -1,4 +1,4 @@
-﻿//#define MOBILE
+﻿#define MOBILE
 #if MOBILE
 //#if !UNITY_EDITOR && (UNITY_IOS || UNITY_ANDROID)
 
@@ -71,7 +71,7 @@ namespace MassiveHadronLtd
 		{
 			var ts = GetTouches();
 			if (0 == ts.Length) return false;
-			if (LooksLikeActiveScroll(ts)) return false;  // ignore pure scroll frames for button events
+			//if (LooksLikeActiveScroll(ts)) return false;  // ignore pure scroll frames for button events - update: skip this or we get rogue no mouse button held events
 
 			if (button == 0)
 			{
@@ -249,7 +249,8 @@ namespace MassiveHadronLtd
 		public static bool GetKey(KeyCode key) => Input.GetKey(key);
 		public static bool GetKeyUp(KeyCode key) => Input.GetKeyUp(key);
 
-		public const float TOUCH_COMPENSATION_SCALAR = 1f;//temporary workaround
+		public const float TOUCH_LOOK_COMPENSATION_SCALAR = 1f;//temporary workaround
+		public const float TOUCH_SCROLL_COMPENSATION_SCALAR = 2f;//temporary workaround
 	}
 }
 
@@ -276,7 +277,8 @@ namespace MassiveHadronLtd
 		public static bool GetKey(KeyCode key) => Input.GetKey(key);
 		public static bool GetKeyUp(KeyCode key) => Input.GetKeyUp(key);
 
-		public const float TOUCH_COMPENSATION_SCALAR = 16f;//temporary workaround
+		public const float TOUCH_LOOK_COMPENSATION_SCALAR = 16f;//temporary workaround
+		public const float TOUCH_SCROLL_COMPENSATION_SCALAR = 1f;//temporary workaround
 	}
 }
 

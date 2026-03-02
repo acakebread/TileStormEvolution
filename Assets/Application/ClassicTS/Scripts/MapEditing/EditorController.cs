@@ -45,17 +45,16 @@ namespace ClassicTilestorm
 		private Action unsubscribeTileSelectorAction;
 
 		private bool IsMouseOverGUI()
-			=> PlaceholderUI.IsMouseOverGui()
+			=> (EventSystem.current && EventSystem.current.IsPointerOverGameObject())
 			|| GUIUtility.hotControl != 0
-			|| (EventSystem.current && EventSystem.current.IsPointerOverGameObject())
+			|| PlaceholderUI.IsMouseOverGui()
 			|| EditorAttachmentUI.sidePanel.IsMouseOver;
 
+		private MainCameraController mainCameraController => TryGetComponent<MainCameraController>(out var c) ? c : null;
 		private Camera _camera => mainCameraController?.activeSystem?.camera;
 
 		private void OnGridLinesToggled(bool value) => UpdateGridLines(gridEnabled = value);
 		private void OnPostProcessingToggled(bool value) => mainCameraController?.EnableEditorPostProcessing(postProcessingEnabled = value);
-
-		private MainCameraController mainCameraController => TryGetComponent<MainCameraController>(out var c) ? c : null;
 
 		private void SetMode(ControllerMode value) => mode = value;
 

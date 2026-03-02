@@ -1,4 +1,4 @@
-﻿//#define MOBILE
+﻿#define MOBILE
 
 using UnityEngine;
 using MassiveHadronLtd;
@@ -65,10 +65,13 @@ namespace ClassicTilestorm
 #else
 				if (InputX.GetMouseButton(1))
 				{
-					pointerX = InputX.GetAxis("Mouse X") * InputX.TOUCH_COMPENSATION_SCALAR;
-					pointerY = InputX.GetAxis("Mouse Y") * InputX.TOUCH_COMPENSATION_SCALAR;
+					pointerX = InputX.GetAxis("Mouse X");
+					pointerY = InputX.GetAxis("Mouse Y");
 				}
 #endif
+
+				pointerX *= InputX.TOUCH_LOOK_COMPENSATION_SCALAR;
+				pointerY *= InputX.TOUCH_LOOK_COMPENSATION_SCALAR;
 
 				float scaledLook = 64f / Mathf.Sqrt(Screen.width * Screen.width + Screen.height * Screen.height);
 
@@ -97,9 +100,7 @@ namespace ClassicTilestorm
 			// Mouse wheel zoom (only if not over GUI)
 			if (!isMouseOverGui && GuiUtils.IsMouseInsideWindow())
 			{
-				const float TouchCompensation = 8f;
-
-				var scroll = InputX.GetAxis("Mouse ScrollWheel") * TouchCompensation;
+				var scroll = InputX.GetAxis("Mouse ScrollWheel") * InputX.TOUCH_SCROLL_COMPENSATION_SCALAR;
 				if (scroll != 0f)
 					translation += Vector3.forward * scroll * ModifiedZoomSpeed;
 			}
