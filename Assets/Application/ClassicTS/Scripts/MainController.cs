@@ -19,24 +19,6 @@ namespace ClassicTilestorm
 
 		public event System.Action<int> OnChangeMapRequested; // delta or 0 for reload
 
-		//private bool postProcessingEnabled = false;
-		//public bool PostProcessingEnabled { get => postProcessingEnabled; set { postProcessingEnabled = value; } }
-
-		//private int postProcessingLevel = 1;
-		//public int PostProcessingLevel 
-		//{ 
-		//	get => postProcessingLevel; 
-		//	set 
-		//	{
-		//		postProcessingLevel = value;
-		//		cameraController.PostProcessingLevel = postProcessingLevel;
-
-		//		//var editor = FindAnyObjectByType<EditorController>(FindObjectsInactive.Include);
-		//		//if (null != editor)
-		//		//	editor.PostProcessingEnabled = postProcessingLevel >= 2;           // GameOnly or Game+Editor
-		//	}
-		//}
-
 		private void Awake()
 		{
 			//workaround for shader problem in command buffer
@@ -60,7 +42,6 @@ namespace ClassicTilestorm
 			gameController = gameObject.AddComponent<GameController>();
 			editorController = gameObject.AddComponent<EditorController>();
 			cameraController = gameObject.AddComponent<MainCameraController>();
-			//cameraController.PostProcessingLevel = postProcessingLevel;
 			OnChangeMapRequested += HandleChangeMap;
 			LoadMap(ApplicationSettings.LoadMapName);
 			SetPreviewMode(ApplicationSettings.CurrentMode);//invoke to enable and disable game and editor controllers - ToDo improve this
