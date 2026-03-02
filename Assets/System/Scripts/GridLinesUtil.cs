@@ -32,8 +32,8 @@ namespace MassiveHadronLtd
 			if (false == enabled || null == currentGrid || (width == currentWidth && height == currentHeight))
 				return;
 
-			var parent = currentGrid.transform.parent;
-			Update(parent, width, height, currentGrid.transform.localPosition);
+			Update(currentGrid.transform.parent, width, height, currentGrid.transform.localPosition);
+			Show();
 		}
 
 		public static void SetVisible(bool visible)
