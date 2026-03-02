@@ -244,6 +244,7 @@ namespace ClassicTilestorm
 		{
 			base.Update();
 			UpdateCinemaMode();
+			UpdateEditorPostProcessing();
 		}
 
 		protected override void OnDestroy()

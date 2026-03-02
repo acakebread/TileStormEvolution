@@ -9,7 +9,7 @@ namespace ClassicTilestorm
 			if (map == null) return null;
 
 			// Count existing waypoints to get the next sequential index
-			int nextIndex = map.GetAttachments(filterTypes: new[] { typeof(Waypoint) }).Length;
+			var nextIndex = map.GetAttachments(filterTypes: new[] { typeof(Waypoint) }).Length;
 			var waypoint = new Waypoint(nextIndex, tile);
 			map.AddAttachment(waypoint);
 			return waypoint;

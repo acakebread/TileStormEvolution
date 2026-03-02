@@ -137,9 +137,6 @@ namespace ClassicTilestorm
 
 		private void Update()
 		{
-			if (null != mainCameraController)
-				mainCameraController.UpdateEditorPostProcessing();
-
 			if (InputX.GetMouseButtonDown(0) || InputX.GetMouseButtonDown(1))
 			{
 				if (InputX.GetMouseButtonDown(0))
@@ -149,25 +146,24 @@ namespace ClassicTilestorm
 				touchStartOverGui = IsMouseOverGUI() || ViewPreviewUtil.IsMouseOverPreview();
 			}
 
-			if ((InputX.GetMouseButton(0) || InputX.GetMouseButton(1))
-				&& Vector3.Distance(InputX.mousePosition, mouseDownPos) >= CLICK_THRESHOLD
-				|| InputX.GetAxis("Mouse ScrollWheel") > 0.01f)
+			if (InputX.GetMouseButton(0) || InputX.GetMouseButton(1))
 			{
-				mouseMovedBeyondThreshold = true;
+				if (Vector3.Distance(InputX.mousePosition, mouseDownPos) >= CLICK_THRESHOLD || InputX.GetAxis("Mouse ScrollWheel") > 0.01f)
+					mouseMovedBeyondThreshold = true;
 			}
-
-			if (!InputX.GetMouseButton(0) && !InputX.GetMouseButton(1))
+			else
 			{
 				if (Input.GetMouseButton(0) || Input.GetMouseButton(1))
-					Debug.Log("rogue state - problem with InputX caching");
+					Debug.Log("rogue state - problem with InputX caching");//debugging
 				touchStartOverGui = false;
 			}
 
 			ViewPreviewUtil.Update();
-
 			if (ViewPreviewUtil.IsInFocus)
 			{
 				EditorCameraMovement.UpdateCamera(ViewPreviewUtil.PreviewCamera.transform, currentWorld);
+				ViewAttachmentHandler.HandlePreviewCameraSync(iMap, _camera, selection[0]);
+				return;
 			}
 			else
 			{
@@ -179,11 +175,6 @@ namespace ClassicTilestorm
 					EditorCameraMovement.UpdateCamera(_camera ? _camera.transform : null, currentWorld, isMouseOverGui: overGUI);
 				}
 			}
-
-			if (null != selection && 1 == selection.Length)
-				ViewAttachmentHandler.HandlePreviewCameraSync(iMap, _camera, selection[0]);
-
-			if (ViewPreviewUtil.IsInFocus) return;
 
 			if (IsMouseOverGUI()) return;
 
@@ -412,7 +403,6 @@ namespace ClassicTilestorm
 			EditorSelectionUtil.UpdateGhostMesh(iMap, Map.FullFloorVec(worldPos), cursorVariant, true);
 			selection = new ISelectable[] { tile };
 			SetMode(ControllerMode.SelectedTile);
-
 			return true;
 		}
 
