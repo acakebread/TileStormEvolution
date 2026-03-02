@@ -31,8 +31,11 @@ namespace ClassicTilestorm
 		}
 
 		private ControllerMode mode = ControllerMode.Idle;
-		private bool holdSelect;
-		private float holdTime;
+		//private bool holdSelect;
+		//private float holdTime;
+
+		private bool handlingLMB = false;
+
 
 		private int cursorTile = -1;
 		private Variant cursorVariant = new(ResourceManager.DefaultHash);
@@ -174,8 +177,9 @@ namespace ClassicTilestorm
 								EditorCameraMovement.StartPanning(beginWorld);
 							else
 							{
-								holdTime = Time.time;
-								holdSelect = true;
+								//holdTime = Time.time;
+								//holdSelect = true;
+								handlingLMB = true;
 							}
 						}
 
@@ -183,14 +187,22 @@ namespace ClassicTilestorm
 						{
 							if (InputX.GetMouseButtonUp(0))
 							{
-								holdSelect = false;
+								//holdSelect = false;
+								handlingLMB = false;
 								cursorTile = iMap.VectorToIndex(currentWorld);
 								EvaluateAttachment();
 							}
 
-							if (holdSelect && Time.time - holdTime >= 0.25f)
+							//if (holdSelect && Time.time - holdTime >= 0.25f)
+							//{
+							//	holdSelect = false;
+							//	if (!StartTileDrag())
+							//		EditorCameraMovement.StartPanning(beginWorld);
+							//}
+
+							if (InputX.GetMouseButtonHeld(0))
 							{
-								holdSelect = false;
+								handlingLMB = false;
 								if (!StartTileDrag())
 									EditorCameraMovement.StartPanning(beginWorld);
 							}
@@ -200,9 +212,15 @@ namespace ClassicTilestorm
 						}
 						else
 						{
-							if (InputX.GetMouseButton(0) && holdSelect)
+							//if (InputX.GetMouseButton(0) && holdSelect)
+							//{
+							//	holdSelect = false;
+							//	EditorCameraMovement.StartPanning(beginWorld);
+							//}
+
+							if (InputX.GetMouseButton(0) && handlingLMB)
 							{
-								holdSelect = false;
+								handlingLMB = false;
 								EditorCameraMovement.StartPanning(beginWorld);
 							}
 						}
@@ -283,7 +301,7 @@ namespace ClassicTilestorm
 		private void OnGUI()
 		{
 			ViewPreviewUtil.OnGUI();
-			EditorAttachmentUI.UpdateGUI(iMap, cursorTile, selectable => SelectAttachment(selectable));
+			EditorAttachmentUI.UpdateGUI(iMap, selection, cursorTile, selectable => SelectAttachment(selectable));
 		}
 
 		private void OnDestroy() => Reset();

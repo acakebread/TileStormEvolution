@@ -226,21 +226,21 @@ namespace ClassicTilestorm
 			return result == PopupResult.StillOpen;
 		}
 
-		public static void UpdateGUI(IMapEdit iMap, int tileIndex, Action<ISelectable[]> onSelect)
+		public static void UpdateGUI(IMapEdit iMap, ISelectable[] selection, int tileIndex, Action<ISelectable[]> onSelect)
 		{
 			var currentSelection = iMap.GetAttachments(tileIndex: tileIndex);
 
 			// Side panel handling
-			if (currentSelection != null && currentSelection.Length > 0)
+			if (selection != null && selection.Length > 0)
 			{
-				if (currentSelection.Length == 1 && currentSelection[0] is Waypoint wp)
+				if (selection.Length == 1 && selection[0] is Waypoint wp)
 				{
-					DrawSidePanelWaypoint(iMap, currentSelection,
+					DrawSidePanelWaypoint(iMap, selection.OfType<MapAttachment>().ToArray(),
 						waypoint => onSelect(new ISelectable[] { waypoint }));
 				}
 				else
 				{
-					DrawSidePanelAttachment(iMap, currentSelection,
+					DrawSidePanelAttachment(iMap, selection.OfType<MapAttachment>().ToArray(),
 						att => onSelect(new ISelectable[] { att }));
 				}
 			}
