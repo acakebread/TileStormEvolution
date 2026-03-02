@@ -143,7 +143,7 @@ namespace ClassicTilestorm
 			if (InputX.GetMouseButtonDown(0) || InputX.GetMouseButtonDown(1))
 			{
 				if (InputX.GetMouseButtonDown(0))
-					beginWorld = Map.ScreenToWorld(_camera, InputX.mousePosition);
+					beginWorld = currentWorld;
 				mouseDownPos = InputX.mousePosition;
 				mouseMovedBeyondThreshold = false;
 				touchStartOverGui = IsMouseOverGUI() || ViewPreviewUtil.IsMouseOverPreview();
