@@ -42,10 +42,8 @@ namespace ClassicTilestorm
 			EditorCameraMovement.isPanning = false;
 			ResetInputState();
 
-			GridLinesUtil.Update(transform, iMap?.Width ?? 32, iMap?.Height ?? 32, null != iMap ? iMap.TileRenderPosition(0) - new Vector3(0.5f, 0f, 0.5f) : Vector3.zero );
-			if (!isActiveAndEnabled) return;
-			GridLinesUtil.Show();
-			EnableEggbot(false);
+			GridLinesUtil.Update(transform, iMap?.Width ?? 32, iMap?.Height ?? 32, null != iMap ? iMap.TileRenderPosition(0) - new Vector3(0.5f, 0f, 0.5f) : Vector3.zero);
+			if (isActiveAndEnabled) GridLinesUtil.Show();
 		}
 
 		public void Reset()
@@ -70,7 +68,6 @@ namespace ClassicTilestorm
 			ViewPreviewUtil.Hide();
 			ResetInputState();
 			SetMode(ControllerMode.Idle);
-			EnableEggbot(false);
 
 			var tileSelector = FindAnyObjectByType<TileSelector>(FindObjectsInactive.Include);
 			if (tileSelector == null)
@@ -106,7 +103,6 @@ namespace ClassicTilestorm
 			DeselectTile();
 			ResetInputState();
 			GridLinesUtil.Hide();
-			EnableEggbot(true);
 		}
 
 		private void Update()
@@ -263,13 +259,6 @@ namespace ClassicTilestorm
 		}
 
 		private void OnDestroy() => Reset();
-
-		// ─── Helper ────────────────────────────────────
-		private void EnableEggbot(bool value)
-		{
-			var eggbotController = GetComponentInChildren<EggbotController>(true);
-			eggbotController?.gameObject.SetActive(value);
-		}
 
 		// ─── Map events ──────────────────────────────────────────────────────
 		private void OnMapEdited(Map map, bool resized, Vector3 originDelta)

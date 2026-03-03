@@ -58,6 +58,7 @@ namespace ClassicTilestorm
 			cameraController.SetCameraMode(GameModes.GetModeString(mode));
 			editorController.enabled = mode == ApplicationMode.Editor;
 			gameController.enabled = mode != ApplicationMode.Editor;
+			eggbotController.gameObject.SetActive(mode != ApplicationMode.Editor);
 		}
 
 		public void LoadMap(string mapName = null)
