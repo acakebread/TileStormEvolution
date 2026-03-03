@@ -289,26 +289,14 @@ namespace ClassicTilestorm
 				return;
 
 			cursorTile = tile;
-
 			var attSelection = selection.OfType<MapAttachment>().ToArray();
 			foreach (var att in attSelection)
 				att.tile = cursorTile;
 			iMap.RefreshAttachments(attSelection);
 
-			HandleDragInput();
+			if (null != selection && selection.Length == 1 && selection[0] is MapAttachment ma)
+				ma.OnDragInput(iMap, _camera);
 			RebuildMarkers();
-
-			void HandleDragInput()
-			{
-				if (selection == null || selection.Length == 0 || selection.Length > 1 || selection[0] is not MapAttachment ma) return;
-				if (selection[0] is ITransformableAttachment transformable)
-				{
-					var worldPos = iMap.WorldPosition(ma.tile, transformable.Position);
-					var worldRot = iMap.WorldRotation(ma.tile, transformable.Rotation);
-					EditorTransformUtil.ShowAt(worldPos, worldRot, _camera);
-				}
-				ma.OnDragInput(iMap);
-			}
 		}
 
 		private void EndAttachmentMode()

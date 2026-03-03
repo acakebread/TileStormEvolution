@@ -12,7 +12,7 @@ namespace ClassicTilestorm
 			var view = (View)selection;
 			var worldPos = map.WorldPosition(view.tile, view.Position);
 			EditorTransformUtil.ShowAt(worldPos, view.Rotation, camera);
-			OnDragInput(map, selection);
+			OnDragInput(map, camera, selection);
 		}
 
 		public void OnDeselect(ISelectable selection)
@@ -46,7 +46,7 @@ namespace ClassicTilestorm
 			return true;
 		}
 
-		public bool OnDragInput(IMapEdit map, ISelectable selection)
+		public bool OnDragInput(IMapEdit map, Camera camera, ISelectable selection)
 		{
 			var view = (View)selection;
 			ViewPreviewUtil.Show(map, view);

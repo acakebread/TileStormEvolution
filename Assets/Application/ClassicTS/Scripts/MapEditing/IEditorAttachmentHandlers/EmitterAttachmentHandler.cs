@@ -35,10 +35,12 @@ namespace ClassicTilestorm
 			return true;
 		}
 
-		public bool OnDragInput(IMapEdit iMap, ISelectable selection)
+		public bool OnDragInput(IMapEdit iMap, Camera camera, ISelectable selection)
 		{
 			var emitter = (Emitter)selection;
 			var worldPos = iMap.WorldPosition(emitter.tile, emitter.Position);
+			var worldRot = iMap.WorldRotation(emitter.tile, emitter.Rotation);
+			EditorTransformUtil.ShowAt(worldPos, worldRot, camera);
 			return EditorPrimitiveUtil.UpdateCone(worldPos, emitter.Rotation, emitter.Distance, emitter.Apex);
 		}
 

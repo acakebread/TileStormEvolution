@@ -30,7 +30,7 @@ namespace ClassicTilestorm
 		public static bool OnGizmoInput(this ISelectable a, IMapEdit m, Camera c)
 			=> Handlers.TryGetValue(a.GetType(), out var h) && h.OnGizmoInput(m, c, a);
 
-		public static bool OnDragInput(this ISelectable a, IMapEdit m)
-			=> Handlers.TryGetValue(a.GetType(), out var h) && h.OnDragInput(m, a);
+		public static bool OnDragInput(this ISelectable a, IMapEdit m, Camera c)
+			=> Handlers.TryGetValue(a.GetType(), out var h) && h.OnDragInput(m, c, a);
 	}
 }
