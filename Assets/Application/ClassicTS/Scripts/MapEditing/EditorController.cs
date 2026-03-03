@@ -189,7 +189,6 @@ namespace ClassicTilestorm
 				case ControllerMode.UpdateAttachment:
 					if (InputX.GetMouseButtonDown(0))
 						cursorTile = iMap.CameraHitTile(_camera, InputX.mousePosition);
-
 					if (InputX.staticClick)
 					{
 						if (InputX.GetMouseButtonUp(0))
