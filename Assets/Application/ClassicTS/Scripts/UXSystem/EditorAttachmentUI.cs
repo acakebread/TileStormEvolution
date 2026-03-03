@@ -226,6 +226,26 @@ namespace ClassicTilestorm
 			return result == PopupResult.StillOpen;
 		}
 
+		public static bool EvaluateSelection(ISelectable[] selection, int tile)
+		{
+			var atts = selection?.OfType<MapAttachment>().ToArray();
+			if (atts == null || atts.Length == 0)
+			{
+				if (tile != -1)
+					RequestAdd();
+			}
+			else if (atts.Length > 1)
+			{
+				RequestSelect();
+			}
+			else
+			{
+				ClearPending();
+				return true;
+			}
+			return false;
+		}
+
 		public static void UpdateGUI(IMapEdit iMap, ISelectable[] selection, int tileIndex, Action<ISelectable[]> onSelect)
 		{
 			var currentSelection = selection?.OfType<MapAttachment>().ToArray();

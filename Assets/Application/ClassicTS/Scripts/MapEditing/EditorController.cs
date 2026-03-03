@@ -129,7 +129,7 @@ namespace ClassicTilestorm
 						if (InputX.GetMouseButtonUp(0))
 						{
 							cursorTile = iMap.VectorToIndex(beginWorld);
-							EvaluateAttachment();
+							EvaluateAttachments();
 						}
 						if (InputX.GetMouseButtonHeld(0))
 						{
@@ -197,11 +197,11 @@ namespace ClassicTilestorm
 					if (InputX.staticClick)
 					{
 						if (InputX.GetMouseButtonUp(0))
-							EvaluateAttachment();
+							EvaluateAttachments();
 						if (InputX.GetMouseButtonUp(1))
 						{
 							cursorTile = iMap.CameraHitTile(_camera, InputX.mousePosition);
-							EvaluateAttachment();
+							EvaluateAttachments();
 							EndAttachmentMode();
 						}
 					}
@@ -224,7 +224,7 @@ namespace ClassicTilestorm
 		private void OnGUI()
 		{
 			ViewPreviewUtil.OnGUI();
-			EditorAttachmentUI.UpdateGUI(iMap, selection, cursorTile, selectable => SelectAttachment(selectable));
+			EditorAttachmentUI.UpdateGUI(iMap, selection, cursorTile, selectable => SelectAttachments(selectable));
 		}
 
 		private void OnDestroy()
@@ -297,7 +297,7 @@ namespace ClassicTilestorm
 		private bool StartAttachmentDrag()
 		{
 			if (selection == null || selection.Length == 0 || (selection[0] is MapAttachment ma && ma.tile != cursorTile))
-				SelectAttachment(iMap.GetAttachments(tileIndex: cursorTile));
+				SelectAttachments(iMap.GetAttachments(tileIndex: cursorTile));
 			return selection != null && selection.Length > 0;
 		}
 
@@ -341,30 +341,17 @@ namespace ClassicTilestorm
 			EditorAttachmentUI.RequestDelete();
 		}
 
-		private void SelectAttachment(ISelectable[] value = null)
+		private void SelectAttachments(ISelectable[] value = null)
 		{
 			selection = value;
 			RebuildMarkers();
 		}
 
-		private void EvaluateAttachment()
+		private void EvaluateAttachments()
 		{
 			var attachmentsOnTile = iMap.GetAttachments(tileIndex: cursorTile);
-
-			if (attachmentsOnTile == null || attachmentsOnTile.Length == 0)
-			{
-				if (cursorTile != -1)
-					EditorAttachmentUI.RequestAdd();
-			}
-			else if (attachmentsOnTile.Length > 1)
-			{
-				EditorAttachmentUI.RequestSelect();
-			}
-			else
-			{
-				EditorAttachmentUI.ClearPending();
-				SelectAttachment(attachmentsOnTile);
-			}
+			if (EditorAttachmentUI.EvaluateSelection(attachmentsOnTile, cursorTile))
+				SelectAttachments(attachmentsOnTile);
 
 			RebuildMarkers();
 			SetMode(ControllerMode.UpdateAttachment);
