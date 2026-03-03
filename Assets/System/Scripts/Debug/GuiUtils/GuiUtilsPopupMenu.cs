@@ -72,6 +72,7 @@ namespace MassiveHadronLtd
 				if (wasClosedLastFrame)
 				{
 					wasClosedLastFrame = false;
+					GUIUtility.hotControl = 0;
 					return lastCloseType;   // returns ClosedByAction / ClosedByCancel / ClosedByClickOutside
 				}
 
