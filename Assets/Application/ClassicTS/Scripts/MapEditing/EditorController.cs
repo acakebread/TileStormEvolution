@@ -38,32 +38,20 @@ namespace ClassicTilestorm
 		{
 			this.iMap = iMap;
 			iMap.OnMapEdited += OnMapEdited;
-			ResetInputState();
+			Reset();
 
 			GridLinesUtil.Update(transform, iMap?.Width ?? 32, iMap?.Height ?? 32, null != iMap ? iMap.TileRenderPosition(0) - new Vector3(0.5f, 0f, 0.5f) : Vector3.zero);
 			if (isActiveAndEnabled) GridLinesUtil.Show();
 		}
 
-		public void Reset()
+		private void Reset()
 		{
-			if (null != iMap) iMap.OnMapEdited -= OnMapEdited;
-			GridLinesUtil.Destroy();
-			EditorSelectionUtil.DestroyGhostMesh();
-			//DeselectTile();
-		}
-
-		private void ResetInputState()
-		{
+			DeselectTile();
 			selection = null;
 			cursorTile = -1;
-			EditorCameraMovement.isPanning = false;
+			//EditorCameraMovement.isPanning = false;
 			EditorAttachmentUI.ClearPending();
 			ViewPreviewUtil.Hide();
-			HideAllGizmos();
-		}
-
-		private void HideAllGizmos()
-		{
 			EditorTransformUtil.Hide();
 			EditorPrimitiveUtil.Hide();
 			EditorFrustumUtil.Hide();
@@ -72,7 +60,7 @@ namespace ClassicTilestorm
 
 		private void OnEnable()
 		{
-			ResetInputState();
+			Reset();
 
 			var mainCameraController = GetComponent<MainCameraController>();
 			if (null != mainCameraController)
@@ -113,9 +101,8 @@ namespace ClassicTilestorm
 			unsubscribeTileSelectorAction?.Invoke();
 			unsubscribeTileSelectorAction = null;
 
-			DeselectTile();
-			ResetInputState();
 			GridLinesUtil.Hide();
+			Reset();
 		}
 
 		private void Update()
@@ -273,7 +260,11 @@ namespace ClassicTilestorm
 			EditorAttachmentUI.UpdateGUI(iMap, selection, cursorTile, selectable => SelectAttachment(selectable));
 		}
 
-		private void OnDestroy() => Reset();
+		private void OnDestroy()
+		{
+			Reset();
+			EditorSelectionUtil.DestroyGhostMesh();
+		}
 
 		// ─── Map events ──────────────────────────────────────────────────────
 		private void OnMapEdited(Map map, bool resized, Vector3 originDelta)
@@ -395,7 +386,7 @@ namespace ClassicTilestorm
 		{
 			if (cursorTile < 0 || iMap.GetAttachments(tileIndex: cursorTile).Length == 0)
 			{
-				ResetInputState();
+				Reset();
 				SetMode(ControllerMode.Idle);
 				return;
 			}
@@ -404,7 +395,7 @@ namespace ClassicTilestorm
 
 		private void SelectAttachment(ISelectable[] value = null)
 		{
-			ResetInputState();
+			Reset();
 			selection = value;
 			if (selection != null && selection.Length == 1)
 				selection[0].OnSelectionChanged(iMap, _camera);

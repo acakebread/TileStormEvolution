@@ -80,7 +80,6 @@ namespace ClassicTilestorm
 			{
 				cameraController?.Reset();
 				gameController?.Reset();
-				editorController?.Reset();
 				CurrentMap.Destroy();
 			}
 

@@ -14,7 +14,7 @@ namespace ClassicTilestorm
 		private static float ModifiedZoomSpeed => MoveSpeed * MoveSpeedModifier;
 		private static float ScrollSpeed = 1f;
 
-		public static bool isPanning = false;
+		private static bool isPanning = false;
 		private static Vector3 worldStart;
 
 		private static bool focus = false;
