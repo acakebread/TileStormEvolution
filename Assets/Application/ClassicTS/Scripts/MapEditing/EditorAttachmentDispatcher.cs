@@ -8,6 +8,7 @@ namespace ClassicTilestorm
 	{
 		private static readonly Dictionary<Type, IEditorAttachmentHandler> Handlers = new()
 		{
+			{ typeof(Tile), TileSelectableHandler.Instance },
 			{ typeof(Emitter), EmitterAttachmentHandler.Instance },
 			{ typeof(View), ViewAttachmentHandler.Instance },
 			{ typeof(Pickup), PickupAttachmentHandler.Instance },
@@ -23,7 +24,7 @@ namespace ClassicTilestorm
 		public static void OnDeselect(this ISelectable a)
 		{
 			if (Handlers.TryGetValue(a.GetType(), out var h))
-				h.OnDeselect();
+				h.OnDeselect(a);
 		}
 
 		public static bool OnGizmoInput(this ISelectable a, IMapEdit m, Camera c)

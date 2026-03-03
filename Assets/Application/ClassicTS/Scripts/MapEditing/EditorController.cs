@@ -112,10 +112,7 @@ namespace ClassicTilestorm
 			{
 				case ControllerMode.Idle:
 					if (InputX.GetMouseButtonDown(0))
-					{
-						beginWorld = currentWorld;
 						SetMode(ControllerMode.Evaluate);
-					}
 					if (InputX.staticClick)
 					{
 						if (InputX.GetMouseButtonUp(1))
@@ -128,14 +125,14 @@ namespace ClassicTilestorm
 					{
 						if (InputX.GetMouseButtonUp(0))
 						{
-							cursorTile = iMap.VectorToIndex(beginWorld);
+							cursorTile = iMap.VectorToIndex(currentWorld);
 							EvaluateAttachments();
 						}
 						if (InputX.GetMouseButtonHeld(0))
 						{
 							if (!StartTileDrag())
 							{
-								EditorCameraMovement.StartPanning(beginWorld);
+								EditorCameraMovement.StartPanning(currentWorld);
 								SetMode(ControllerMode.Idle);
 							}
 						}
@@ -144,7 +141,7 @@ namespace ClassicTilestorm
 					{
 						if (InputX.GetMouseButton(0))
 						{
-							EditorCameraMovement.StartPanning(beginWorld);
+							EditorCameraMovement.StartPanning(currentWorld);
 							SetMode(ControllerMode.Idle);
 						}
 					}
@@ -169,9 +166,8 @@ namespace ClassicTilestorm
 				case ControllerMode.SelectedTile:
 					if (InputX.GetMouseButtonDown(0))
 					{
-						beginWorld = currentWorld;
 						if (!StartTileDrag())
-							EditorCameraMovement.StartPanning(beginWorld);
+							EditorCameraMovement.StartPanning(currentWorld);
 					}
 					if (InputX.staticClick)
 					{
@@ -210,10 +206,7 @@ namespace ClassicTilestorm
 						if (InputX.GetMouseButton(0))
 						{
 							if (!StartAttachmentDrag())
-							{
-								beginWorld = currentWorld;
-								EditorCameraMovement.StartPanning(beginWorld);
-							}
+								EditorCameraMovement.StartPanning(currentWorld);
 							UpdateAttachmentDrag();
 						}
 					}
@@ -236,8 +229,8 @@ namespace ClassicTilestorm
 		// ─── All helper methods ──────────────────────────────────────────────
 		private bool StartTileDrag()
 		{
-			if (!SelectTile(currentWorld))
-				return false;
+			beginWorld = currentWorld;//we could snap beginWorld to half resolution but it's hardly worth it: Map.HalfFloorVec(currentWorld);
+			if (!SelectTile(currentWorld)) return false;
 			SetMode(ControllerMode.DraggingTile);
 			return true;
 		}
@@ -257,9 +250,7 @@ namespace ClassicTilestorm
 			var worldPos = Map.FullFloorVec(beginWorld) + currentWorld - startWorld + cursorVariant.delta;
 			var snapped = Map.FullFloorVec(worldPos);
 			var delta = cursorVariant.HasNav ? Vector3.zero : Map.HalfFloorVec(worldPos) - snapped;
-
-			if (snapped == Map.FullFloorVec(beginWorld) && delta == cursorVariant.delta)
-				return;
+			if (snapped == Map.FullFloorVec(beginWorld) && delta == cursorVariant.delta) return;
 
 			delta.y = cursorVariant.delta.y;
 			cursorVariant.delta = delta;
@@ -273,11 +264,9 @@ namespace ClassicTilestorm
 		private bool SelectTile(Vector3 worldPos)
 		{
 			var tile = iMap.GetTile(worldPos);
-			if (tile.gameObject == null)
-				return false;
+			if (tile.gameObject == null) return false;
 
 			Reset();
-			tile.gameObject.SetActive(false);
 			cursorVariant = iMap.GetVariantAt(worldPos);
 			EditorSelectionUtil.UpdateGhostMesh(iMap, Map.FullFloorVec(worldPos), cursorVariant, true);
 			selection = new ISelectable[] { tile };
@@ -288,8 +277,6 @@ namespace ClassicTilestorm
 		private void DeselectTile()
 		{
 			EditorSelectionUtil.HideGhostMesh();
-			foreach (var tile in selection?.OfType<Tile>().Where(t => t.gameObject != null) ?? Enumerable.Empty<Tile>())
-				tile.gameObject.SetActive(true);
 			selection = null;
 			SetMode(ControllerMode.Idle);
 		}

@@ -9,7 +9,7 @@ namespace ClassicTilestorm
 			// Default: do nothing
 		}
 
-		void OnDeselect()
+		void OnDeselect(ISelectable selection)
 		{
 			// Default: do nothing
 		}

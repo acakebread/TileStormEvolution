@@ -15,7 +15,7 @@ namespace ClassicTilestorm
 			OnDragInput(map, selection);
 		}
 
-		public void OnDeselect()
+		public void OnDeselect(ISelectable selection)
 		{
 			EditorTransformUtil.Hide();
 			EditorFrustumUtil.Hide();
