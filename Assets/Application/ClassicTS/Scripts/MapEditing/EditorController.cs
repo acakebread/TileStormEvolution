@@ -328,6 +328,7 @@ namespace ClassicTilestorm
 			EditorSelectionUtil.HideGhostMesh();
 			foreach (var tile in selection?.OfType<Tile>().Where(t => t.gameObject != null) ?? Enumerable.Empty<Tile>())
 				tile.gameObject.SetActive(true);
+			selection = null;
 			SetMode(ControllerMode.Idle);
 		}
 
