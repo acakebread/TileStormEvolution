@@ -53,9 +53,13 @@ namespace ClassicTilestorm
 		public void Initialise(IMapEdit iMap)
 		{
 			this.iMap = iMap;
-			iMap.OnMapEdited += OnMapEdited;
-			Reset();
+			iMap.OnMapEdited += (Map map, bool resized, Vector3 originDelta) =>
+			{
+				ResourceManager.ApplyMapChanges(map);
+				if (resized) GridLinesUtil.UpdateSize(map.width, map.height);
+			};
 
+			Reset();
 			GridLinesUtil.Update(transform, iMap?.Width ?? 32, iMap?.Height ?? 32, null != iMap ? iMap.TileRenderPosition(0) - new Vector3(0.5f, 0f, 0.5f) : Vector3.zero);
 			if (isActiveAndEnabled) GridLinesUtil.Show();
 		}
@@ -251,14 +255,6 @@ namespace ClassicTilestorm
 		{
 			Reset();
 			EditorSelectionUtil.DestroyGhostMesh();
-		}
-
-		// ─── Map events ──────────────────────────────────────────────────────
-		private void OnMapEdited(Map map, bool resized, Vector3 originDelta)
-		{
-			ResourceManager.ApplyMapChanges(map);
-			if (resized)
-				GridLinesUtil.UpdateSize(map.width, map.height);
 		}
 
 		// ─── All helper methods ──────────────────────────────────────────────
