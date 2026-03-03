@@ -15,7 +15,6 @@ namespace ClassicTilestorm
 		// ─── input state ───────────────────────────────────────
 		private Vector3 beginWorld;
 		private Vector3 currentWorld => Map.ScreenToWorld(_camera, InputX.mousePosition);
-		private Variant cursorVariant = new(ResourceManager.DefaultHash);
 		private ISelectable[] _selection = null;
 		private ISelectable[] selection
 		{
@@ -29,9 +28,9 @@ namespace ClassicTilestorm
 			Idle,
 			Evaluate,
 			PlacingTile,
-			SelectedTile,
+			SelectingTile,
 			DraggingTile,
-			UpdateAttachment
+			DraggingAttachment
 		}
 
 		private ControllerMode mode = ControllerMode.Idle;
@@ -42,7 +41,7 @@ namespace ClassicTilestorm
 		{
 			Debug.Assert(null != tileAtlas, "TileAtlas not found!");
 			if (null == tileAtlas) return;
-			tileAtlas.OnTileSelected += (HashId newHash) => { cursorVariant = new Variant(newHash);
+			tileAtlas.OnTileSelected += (HashId newHash) => {EditorSelectionUtil.CurrentVariant = new Variant(newHash);
 				SetMode(newHash != ResourceManager.DefaultHash ? ControllerMode.PlacingTile : ControllerMode.Idle); };
 			tileAtlas.CanOpenPalette = () => mode == ControllerMode.Idle;
 		}
@@ -61,7 +60,6 @@ namespace ClassicTilestorm
 		private void Reset()
 		{
 			DeselectTile();
-			selection = null;
 			EditorAttachmentUI.ClearPending();
 			EditorMarkerUtil.ClearMapMarkers();
 		}
@@ -138,7 +136,7 @@ namespace ClassicTilestorm
 					break;
 
 				case ControllerMode.PlacingTile:
-					var variant = EditorSelectionUtil.NextVariantOnMap(iMap, currentWorld, cursorVariant);
+					var variant = EditorSelectionUtil.NextVariantOnMap(iMap, currentWorld, EditorSelectionUtil.CurrentVariant);
 					EditorSelectionUtil.UpdateGhostMesh(iMap, Map.FullFloorVec(currentWorld), variant, false);
 
 					if (InputX.staticClick)
@@ -153,7 +151,7 @@ namespace ClassicTilestorm
 					}
 					break;
 
-				case ControllerMode.SelectedTile:
+				case ControllerMode.SelectingTile:
 					if (InputX.GetMouseButtonDown(0))
 					{
 						if (!StartTileDrag())
@@ -171,15 +169,14 @@ namespace ClassicTilestorm
 						UpdateTileDrag();
 					if (InputX.GetMouseButtonUp(0))
 					{
-						SetMode(ControllerMode.SelectedTile);
+						SetMode(ControllerMode.SelectingTile);
 						EndTileDrag();
 					}
 					break;
 
-				case ControllerMode.UpdateAttachment:
+				case ControllerMode.DraggingAttachment:
 					if (InputX.GetMouseButtonDown(0))
 						beginWorld = currentWorld;
-
 					if (InputX.staticClick)
 					{
 						if (InputX.GetMouseButtonUp(0))
@@ -223,27 +220,29 @@ namespace ClassicTilestorm
 
 		private void UpdateTileDrag()
 		{
-			var startWorld = cursorVariant.HasNav ? Map.FullFloorVec(beginWorld) : Map.HalfFloorVec(beginWorld);
+			var variant = iMap.GetVariantAt(beginWorld);
+			var startWorld = variant.HasNav ? Map.FullFloorVec(beginWorld) : Map.HalfFloorVec(beginWorld);
 			var worldPos = Map.FullFloorVec(beginWorld) + currentWorld - startWorld;
 			var snapped = Map.FullFloorVec(worldPos);
-			var delta = cursorVariant.HasNav ? Vector3.zero : Map.HalfFloorVec(worldPos) - snapped;
-			EditorSelectionUtil.UpdateGhostMesh(iMap, snapped + delta, cursorVariant, true);
+			var delta = variant.HasNav ? Vector3.zero : Map.HalfFloorVec(worldPos) - snapped;
+			EditorSelectionUtil.UpdateGhostMesh(iMap, snapped + delta, variant, true);
 		}
 
 		private void EndTileDrag()
 		{
-			var startWorld = cursorVariant.HasNav ? Map.FullFloorVec(beginWorld) : Map.HalfFloorVec(beginWorld);
-			var worldPos = Map.FullFloorVec(beginWorld) + currentWorld - startWorld + cursorVariant.delta;
+			var variant = iMap.GetVariantAt(beginWorld);
+			var startWorld = variant.HasNav ? Map.FullFloorVec(beginWorld) : Map.HalfFloorVec(beginWorld);
+			var worldPos = Map.FullFloorVec(beginWorld) + currentWorld - startWorld + variant.delta;
 			var snapped = Map.FullFloorVec(worldPos);
-			var delta = cursorVariant.HasNav ? Vector3.zero : Map.HalfFloorVec(worldPos) - snapped;
-			if (snapped == Map.FullFloorVec(beginWorld) && delta == cursorVariant.delta) return;
+			var delta = variant.HasNav ? Vector3.zero : Map.HalfFloorVec(worldPos) - snapped;
+			if (snapped == Map.FullFloorVec(beginWorld) && delta == variant.delta) return;
 
 			DeselectTile();
-			delta.y = cursorVariant.delta.y;
-			cursorVariant.delta = delta;
+			delta.y = variant.delta.y;
+			variant.delta = delta;
 			iMap.RemoveTileAt(beginWorld);
-			var index = iMap.UpdateTileAt(snapped, cursorVariant);
-			if (-1 == index) index = iMap.UpdateTileAt(Map.FullFloorVec(beginWorld), cursorVariant);
+			var index = iMap.UpdateTileAt(snapped, variant);
+			if (-1 == index) index = iMap.UpdateTileAt(Map.FullFloorVec(beginWorld), variant);
 			SelectTile(iMap.IndexToVector(index));
 		}
 
@@ -253,10 +252,9 @@ namespace ClassicTilestorm
 			if (tile.gameObject == null) return false;
 
 			Reset();
-			cursorVariant = iMap.GetVariantAt(worldPos);
-			EditorSelectionUtil.UpdateGhostMesh(iMap, Map.FullFloorVec(worldPos), cursorVariant, true);
+			EditorSelectionUtil.UpdateGhostMesh(iMap, Map.FullFloorVec(worldPos), iMap.GetVariantAt(worldPos), true);
 			selection = new ISelectable[] { tile };
-			SetMode(ControllerMode.SelectedTile);
+			SetMode(ControllerMode.SelectingTile);
 			return true;
 		}
 
@@ -321,21 +319,14 @@ namespace ClassicTilestorm
 				SelectAttachments(attachmentsOnTile);
 
 			RebuildMarkers();
-			SetMode(ControllerMode.UpdateAttachment);
+			SetMode(ControllerMode.DraggingAttachment);
 		}
 
 		private void RebuildMarkers()
 		{
 			var tiles = iMap?.GetAttachments()?.Select(a => a.tile)?.Distinct()?.ToArray() ?? Array.Empty<int>();
-			if (tiles.Length == 0)
-			{
-				EditorMarkerUtil.ClearMapMarkers();
-				return;
-			}
-
 			var positions = new Vector3[tiles.Length];
 			var colors = new Color[tiles.Length];
-
 			var isWaypointMode = selection != null && selection.Length == 1 && selection[0] is Waypoint;
 
 			for (var i = 0; i < tiles.Length; i++)
@@ -347,7 +338,6 @@ namespace ClassicTilestorm
 
 			var selectedTile = (selection != null && selection.Length > 0 && selection[0] is MapAttachment ma) ? ma.tile : -1;
 			var selectedIndex = Array.IndexOf(tiles, selectedTile);
-
 			EditorMarkerUtil.ShowMarkers(positions, colors, selectedIndex);
 		}
 	}

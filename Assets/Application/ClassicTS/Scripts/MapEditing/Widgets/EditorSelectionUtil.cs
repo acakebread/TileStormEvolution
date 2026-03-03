@@ -17,6 +17,8 @@ namespace ClassicTilestorm
 		private static float lastAngle;
 		private static bool lastOutOfBounds;
 
+		public static Variant CurrentVariant { get => currentVariant; set => currentVariant = value; }
+
 		// Initialize the ghost materials
 		public static void InitializeGhostMaterial()
 		{

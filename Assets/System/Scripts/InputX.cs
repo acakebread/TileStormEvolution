@@ -140,6 +140,12 @@ namespace MassiveHadronLtd
 				if (!active.Contains(kv.Key))
 					holdStates.Remove(kv.Key);
 			}
+
+			if (!getMouseButton(0) && !getMouseButton(1))
+			{
+				mouseDownPos = mousePosition;
+				staticClick = true;
+			}
 		}
 
 		public static bool GetMouseButtonHeld(int button)
