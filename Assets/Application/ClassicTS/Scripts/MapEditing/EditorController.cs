@@ -38,8 +38,6 @@ namespace ClassicTilestorm
 		{
 			this.iMap = iMap;
 			iMap.OnMapEdited += OnMapEdited;
-			ViewPreviewUtil.Hide();
-			EditorCameraMovement.isPanning = false;
 			ResetInputState();
 
 			GridLinesUtil.Update(transform, iMap?.Width ?? 32, iMap?.Height ?? 32, null != iMap ? iMap.TileRenderPosition(0) - new Vector3(0.5f, 0f, 0.5f) : Vector3.zero);
@@ -56,6 +54,8 @@ namespace ClassicTilestorm
 
 		private void OnEnable()
 		{
+			ResetInputState();
+
 			var mainCameraController = GetComponent<MainCameraController>();
 			if (null != mainCameraController)
 			{
@@ -65,8 +65,6 @@ namespace ClassicTilestorm
 			}
 
 			GridLinesUtil.Show();
-			ViewPreviewUtil.Hide();
-			ResetInputState();
 			SetMode(ControllerMode.Idle);
 
 			var tileSelector = FindAnyObjectByType<TileSelector>(FindObjectsInactive.Include);
@@ -94,9 +92,6 @@ namespace ClassicTilestorm
 
 		private void OnDisable()
 		{
-			ViewPreviewUtil.Hide();
-			EditorCameraMovement.isPanning = false;
-
 			unsubscribeTileSelectorAction?.Invoke();
 			unsubscribeTileSelectorAction = null;
 
@@ -115,12 +110,12 @@ namespace ClassicTilestorm
 			ViewPreviewUtil.Update();
 			if (ViewPreviewUtil.IsInFocus)
 			{
-				EditorCameraMovement.UpdateCamera(ViewPreviewUtil.PreviewCamera.transform, currentWorld);
+				EditorCameraMovement.UpdateCamera(ViewPreviewUtil.PreviewCamera, currentWorld);
 				ViewAttachmentHandler.HandlePreviewCameraSync(iMap, _camera, selection[0]);
 				return;
 			}
 			else
-				EditorCameraMovement.UpdateCamera(_camera ? _camera.transform : null, currentWorld, inFocus: !IsMouseOverGUI());
+				EditorCameraMovement.UpdateCamera(_camera, currentWorld, inFocus: !IsMouseOverGUI());
 
 			if (IsMouseOverGUI()) return;
 
@@ -135,9 +130,9 @@ namespace ClassicTilestorm
 				case ControllerMode.Idle:
 					if (InputX.GetMouseButtonDown(0))
 					{
-						if (iMap.GetVariantAt(currentWorld).IsDefaultEquivalent)
-							EditorCameraMovement.StartPanning(beginWorld);
-						else
+						//if (iMap.GetVariantAt(currentWorld).IsDefaultEquivalent)
+						//	EditorCameraMovement.StartPanning(beginWorld);
+						//else
 							SetMode(ControllerMode.Evaluate);
 					}
 					if (InputX.staticClick)
@@ -380,10 +375,7 @@ namespace ClassicTilestorm
 		{
 			if (cursorTile < 0 || iMap.GetAttachments(tileIndex: cursorTile).Length == 0)
 			{
-				cursorTile = -1;
-				SelectAttachment();
-				EditorAttachmentUI.ClearPending();
-				HideAllGizmos();
+				ResetInputState();
 				SetMode(ControllerMode.Idle);
 				return;
 			}
@@ -392,18 +384,10 @@ namespace ClassicTilestorm
 
 		private void SelectAttachment(ISelectable[] value = null)
 		{
-			ViewPreviewUtil.Hide();
-			HideAllGizmos();
-			RebuildMarkers();
-
+			ResetInputState();
 			selection = value;
-			if (selection == null || selection.Length != 1)
-			{
-				cursorTile = -1;
-				return;
-			}
-
-			selection[0].OnSelectionChanged(iMap, _camera);
+			if (selection != null && selection.Length == 1)
+				selection[0].OnSelectionChanged(iMap, _camera);
 		}
 
 		private void EvaluateAttachment()
@@ -433,7 +417,9 @@ namespace ClassicTilestorm
 		{
 			selection = null;
 			cursorTile = -1;
+			EditorCameraMovement.isPanning = false;
 			EditorAttachmentUI.ClearPending();
+			ViewPreviewUtil.Hide();
 			HideAllGizmos();
 		}
 

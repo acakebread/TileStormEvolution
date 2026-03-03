@@ -26,13 +26,11 @@ namespace ClassicTilestorm
 			worldStart = value;
 		}
 
-		public static void UpdateCamera(Transform camTransform, Vector3 worldCurrent, bool inFocus = true)
+		public static void UpdateCamera(Camera camera, Vector3 worldCurrent, bool inFocus = true)
 		{
-			if (camTransform == null) return;
-
-			var camera = camTransform.GetComponent<Camera>();
-			if (camera == null) return;
-
+			if (null == camera) return;
+			var camTransform = camera.transform;
+			
 			if (InputX.GetMouseButtonDown(1))
 				focus = inFocus;
 

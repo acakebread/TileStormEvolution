@@ -103,6 +103,7 @@ namespace ClassicTilestorm
 
 			eggbotController = EggbotController.Instantiate(currentMap.character, transform);
 			eggbotController?.Initialise(CurrentMap);
+			eggbotController.gameObject.SetActive(ApplicationSettings.CurrentMode != ApplicationMode.Editor);
 
 			// Controllers
 			cameraController?.Initialise(CurrentMap, eggbotController);

@@ -162,14 +162,60 @@ namespace MassiveHadronLtd
 					yOffset += ITEM_HEIGHT;
 				}
 
-				// Click outside → same delayed-close logic
-				if (Event.current.type == EventType.MouseUp && !rect.Contains(Event.current.mousePosition))
+				//// Click outside → same delayed-close logic
+				//if (Event.current.type == EventType.MouseUp && !rect.Contains(Event.current.mousePosition))
+				//{
+				//	wasClosedLastFrame = true;
+				//	lastCloseType = PopupResult.ClosedByClickOutside;
+				//	return PopupResult.StillOpen;   // this frame still reports open
+				//}
+
+				//return PopupResult.StillOpen;
+
+				// ... all your drawing code here (GUI.Box background, title, loop over items with GUI.Button / GUI.Label) ...
+
+				// ────────────────────────────────────────────────
+				// Final input handling — at the BOTTOM, after everything is drawn
+				// ────────────────────────────────────────────────
+				// ────────────────────────────────────────────────
+				// Background click consume + outside close detection
+				// Must be AFTER all content is drawn so buttons can claim hotControl first
+				// ────────────────────────────────────────────────
+
+				var e = Event.current;
+				bool mouseInside = rect.Contains(e.mousePosition);
+
+				// Only act on relevant mouse events
+				if (e.isMouse && (e.type == EventType.MouseDown || e.type == EventType.MouseUp || e.type == EventType.MouseDrag))
 				{
-					wasClosedLastFrame = true;
-					lastCloseType = PopupResult.ClosedByClickOutside;
-					return PopupResult.StillOpen;   // this frame still reports open
+					if (mouseInside)
+					{
+						// If no control is hot (buttons would have set it on Down), this is background
+						if (GUIUtility.hotControl == 0)
+						{
+							// Claim it ourselves to block pass-through
+							int dummyControlID = GUIUtility.GetControlID(FocusType.Passive); // unique but passive
+							GUIUtility.hotControl = dummyControlID;
+							e.Use();  // mark as handled → external code shouldn't see it
+
+							// Optional: if you want to release on MouseUp (cleaner), but usually not needed
+							// Unity will auto-clear hotControl on global MouseUp if no one holds it
+						}
+						// else: some button is hot → do nothing, let it handle (action already fired)
+					}
+					else // outside
+					{
+						// Your original outside logic – prefer MouseUp for UX
+						if (e.type == EventType.MouseUp)
+						{
+							wasClosedLastFrame = true;
+							lastCloseType = PopupResult.ClosedByClickOutside;
+							return PopupResult.StillOpen;
+						}
+					}
 				}
 
+				// No close this frame
 				return PopupResult.StillOpen;
 			}
 		}
