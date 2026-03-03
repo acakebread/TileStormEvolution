@@ -21,11 +21,7 @@ namespace ClassicTilestorm
 		private ISelectable[] selection
 		{
 			get => _selection;
-			set
-			{
-				Array.ForEach(_selection ?? Array.Empty<ISelectable>(), item => item.OnDeselect());
-				_selection = value;
-			}
+			set { Array.ForEach(_selection ?? Array.Empty<ISelectable>(), item => item.OnDeselect()); _selection = value; }
 		}
 
 		private TileSelector tileSelector => FindAnyObjectByType<TileSelector>(FindObjectsInactive.Include);
@@ -50,7 +46,6 @@ namespace ClassicTilestorm
 			if (null != tileSelector)
 			{
 				tileSelector.OnTileSelected += (HashId newHash) => {
-					DeselectTile();
 					cursorVariant = new Variant(newHash);
 					SetMode(newHash != ResourceManager.DefaultHash ? ControllerMode.PlacingTile : ControllerMode.Idle);
 				};
