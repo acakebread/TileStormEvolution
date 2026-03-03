@@ -17,7 +17,7 @@ namespace ClassicTilestorm
 		private int cursorTile = -1;
 		private Variant cursorVariant = new(ResourceManager.DefaultHash);
 		private ISelectable[] selection = null;
-		private Action unsubscribeTileSelectorAction;
+		private TileSelector tileSelector => FindAnyObjectByType<TileSelector>(FindObjectsInactive.Include);
 
 		// ─── Tile / Attachment state ─────────────────────────────────────────
 		private enum ControllerMode
@@ -34,6 +34,21 @@ namespace ClassicTilestorm
 		private void SetMode(ControllerMode value) => mode = value;
 
 		// ─── Unity / lifecycle ───────────────────────────────────────────────
+		public void Awake()
+		{
+			if (null != tileSelector)
+			{
+				tileSelector.OnTileSelected += (HashId newHash) => {
+					DeselectTile();
+					cursorVariant = new Variant(newHash);
+					SetMode(newHash != ResourceManager.DefaultHash ? ControllerMode.PlacingTile : ControllerMode.Idle);
+				};
+				tileSelector.CanOpenPalette = () => mode == ControllerMode.Idle;
+				return;
+			}
+			Debug.LogError("TileSelector not found!");
+		}
+
 		public void Initialise(IMapEdit iMap)
 		{
 			this.iMap = iMap;
@@ -68,37 +83,14 @@ namespace ClassicTilestorm
 				mainCameraController.UpdateGestureControllerState();
 			}
 
+			tileSelector?.gameObject.SetActive(true);
 			GridLinesUtil.Show();
 			SetMode(ControllerMode.Idle);
-
-			var tileSelector = FindAnyObjectByType<TileSelector>(FindObjectsInactive.Include);
-			if (tileSelector == null)
-			{
-				Debug.LogError("TileSelector not found!");
-				return;
-			}
-
-			tileSelector.OnTileSelected += OnTileSelectedFromPalette;
-			tileSelector.CanOpenPalette = () => mode == ControllerMode.Idle;
-			unsubscribeTileSelectorAction = () =>
-			{
-				tileSelector.OnTileSelected -= OnTileSelectedFromPalette;
-				tileSelector.CanOpenPalette = () => false;
-			};
-
-			void OnTileSelectedFromPalette(HashId newHash)
-			{
-				DeselectTile();
-				cursorVariant = new Variant(newHash);
-				SetMode(newHash != ResourceManager.DefaultHash ? ControllerMode.PlacingTile : ControllerMode.Idle);
-			}
 		}
 
 		private void OnDisable()
 		{
-			unsubscribeTileSelectorAction?.Invoke();
-			unsubscribeTileSelectorAction = null;
-
+			tileSelector?.gameObject.SetActive(false);
 			GridLinesUtil.Hide();
 			Reset();
 		}
