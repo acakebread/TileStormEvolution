@@ -26,6 +26,7 @@ namespace ClassicTilestorm
 		{
 			if (!EditorTransformUtil.HandleInput(camera, out Vector3 newWorldPos, out Quaternion newWorldRot))
 				return false;
+			EditorTransformUtil.UpdateTransformGizmoVisuals(camera);
 
 			var view = (View)selection;
 			view.Position = map.LocalPosition(view.tile, newWorldPos);

@@ -25,6 +25,7 @@ namespace ClassicTilestorm
 		{
 			if (!EditorTransformUtil.HandleInput(camera, out Vector3 newWorldPos, out Quaternion newWorldRot))
 				return false;
+			EditorTransformUtil.UpdateTransformGizmoVisuals(camera);
 
 			var emitter = (Emitter)selection;
 			emitter.Position = iMap.LocalPosition(emitter.tile, newWorldPos);

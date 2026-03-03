@@ -100,9 +100,6 @@ namespace ClassicTilestorm
 		{
 			if (!_camera) return;
 
-			if (InputX.GetMouseButtonDown(0))
-				beginWorld = currentWorld;
-
 			ViewPreviewUtil.Update();
 			if (ViewPreviewUtil.IsInFocus)
 			{
@@ -114,18 +111,16 @@ namespace ClassicTilestorm
 				EditorCameraMovement.UpdateCamera(_camera, currentWorld, inFocus: !IsMouseOverGUI());
 
 			if (IsMouseOverGUI()) return;
-
-			if (HandleGizmoInput())
-			{
-				EditorTransformUtil.UpdateTransformGizmoVisuals(_camera);
-				return;
-			}
+			if (selection?.Length == 1 && selection[0] is MapAttachment a && a.OnGizmoInput(iMap, _camera)) return;
 
 			switch (mode)
 			{
 				case ControllerMode.Idle:
 					if (InputX.GetMouseButtonDown(0))
+					{
+						beginWorld = currentWorld;
 						SetMode(ControllerMode.Evaluate);
+					}
 
 					if (InputX.staticClick)
 					{
@@ -184,6 +179,7 @@ namespace ClassicTilestorm
 					{
 						if (InputX.GetMouseButtonDown(0))
 						{
+							beginWorld = currentWorld;
 							if (!StartTileDrag())
 								EditorCameraMovement.StartPanning(beginWorld);
 						}
@@ -237,12 +233,6 @@ namespace ClassicTilestorm
 				|| GUIUtility.hotControl != 0
 				|| PlaceholderUI.IsMouseOverGui()
 				|| EditorAttachmentUI.sidePanel.IsMouseOver;
-
-			bool HandleGizmoInput()
-			{
-				if (selection == null || selection.Length == 0 || selection[0] is not MapAttachment attachment) return false;
-				return attachment.OnGizmoInput(iMap, _camera);
-			}
 		}
 
 		private void OnGUI()
