@@ -15,7 +15,6 @@ namespace ClassicTilestorm
 		// ─── input state ───────────────────────────────────────
 		private Vector3 beginWorld;
 		private Vector3 currentWorld => Map.ScreenToWorld(_camera, InputX.mousePosition);
-		private int cursorTile = -1;
 		private Variant cursorVariant = new(ResourceManager.DefaultHash);
 		private ISelectable[] _selection = null;
 		private ISelectable[] selection
@@ -63,7 +62,6 @@ namespace ClassicTilestorm
 		{
 			DeselectTile();
 			selection = null;
-			cursorTile = -1;
 			EditorAttachmentUI.ClearPending();
 			EditorMarkerUtil.ClearMapMarkers();
 		}
@@ -119,10 +117,7 @@ namespace ClassicTilestorm
 					if (InputX.staticClick)
 					{
 						if (InputX.GetMouseButtonUp(0))
-						{
-							cursorTile = iMap.VectorToIndex(currentWorld);
 							EvaluateAttachments();
-						}
 						if (InputX.GetMouseButtonHeld(0))
 						{
 							if (!StartTileDrag())
@@ -183,17 +178,14 @@ namespace ClassicTilestorm
 
 				case ControllerMode.UpdateAttachment:
 					if (InputX.GetMouseButtonDown(0))
-						cursorTile = iMap.CameraHitTile(_camera, InputX.mousePosition);
+						beginWorld = currentWorld;
+
 					if (InputX.staticClick)
 					{
 						if (InputX.GetMouseButtonUp(0))
 							EvaluateAttachments();
 						if (InputX.GetMouseButtonUp(1))
-						{
-							cursorTile = iMap.CameraHitTile(_camera, InputX.mousePosition);
-							EvaluateAttachments();
-							EndAttachmentMode();
-						}
+							CancelAttachmentMode();
 					}
 					else
 					{
@@ -211,7 +203,7 @@ namespace ClassicTilestorm
 		private void OnGUI()
 		{
 			ViewPreviewUtil.OnGUI();
-			EditorAttachmentUI.UpdateGUI(iMap, selection, cursorTile, selectable => SelectAttachments(selectable));
+			EditorAttachmentUI.UpdateGUI(iMap, selection, iMap.VectorToIndex(beginWorld), selectable => SelectAttachments(selectable));
 		}
 
 		private void OnDestroy()
@@ -277,6 +269,7 @@ namespace ClassicTilestorm
 
 		private bool StartAttachmentDrag()
 		{
+			var cursorTile = iMap.VectorToIndex(beginWorld);
 			if (selection == null || selection.Length == 0 || (selection[0] is MapAttachment ma && ma.tile != cursorTile))
 				SelectAttachments(iMap.GetAttachments(tileIndex: cursorTile));
 			return selection != null && selection.Length > 0;
@@ -284,11 +277,11 @@ namespace ClassicTilestorm
 
 		private void UpdateAttachmentDrag()
 		{
-			var tile = iMap.CameraHitTile(_camera, InputX.mousePosition);
+			var cursorTile = iMap.VectorToIndex(beginWorld);
+			var tile = iMap.VectorToIndex(currentWorld);
 			if (tile == cursorTile || tile == -1 || selection == null || selection.Length == 0)
 				return;
-
-			cursorTile = tile;
+			cursorTile = iMap.VectorToIndex(beginWorld = currentWorld);
 			var attSelection = selection.OfType<MapAttachment>().ToArray();
 			foreach (var att in attSelection)
 				att.tile = cursorTile;
@@ -299,8 +292,11 @@ namespace ClassicTilestorm
 			RebuildMarkers();
 		}
 
-		private void EndAttachmentMode()
+		private void CancelAttachmentMode()
 		{
+			beginWorld = currentWorld;
+			EvaluateAttachments();
+			var cursorTile = iMap.VectorToIndex(beginWorld);
 			if (cursorTile < 0 || iMap.GetAttachments(tileIndex: cursorTile).Length == 0)
 			{
 				Reset();
@@ -318,6 +314,8 @@ namespace ClassicTilestorm
 
 		private void EvaluateAttachments()
 		{
+			var cursorTile = iMap.VectorToIndex(beginWorld);
+			beginWorld = currentWorld;
 			var attachmentsOnTile = iMap.GetAttachments(tileIndex: cursorTile);
 			if (EditorAttachmentUI.EvaluateSelection(attachmentsOnTile, cursorTile))
 				SelectAttachments(attachmentsOnTile);
@@ -329,7 +327,6 @@ namespace ClassicTilestorm
 		private void RebuildMarkers()
 		{
 			var tiles = iMap?.GetAttachments()?.Select(a => a.tile)?.Distinct()?.ToArray() ?? Array.Empty<int>();
-
 			if (tiles.Length == 0)
 			{
 				EditorMarkerUtil.ClearMapMarkers();
