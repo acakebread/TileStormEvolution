@@ -252,12 +252,12 @@ namespace ClassicTilestorm
 			var delta = cursorVariant.HasNav ? Vector3.zero : Map.HalfFloorVec(worldPos) - snapped;
 			if (snapped == Map.FullFloorVec(beginWorld) && delta == cursorVariant.delta) return;
 
+			DeselectTile();
 			delta.y = cursorVariant.delta.y;
 			cursorVariant.delta = delta;
 			iMap.RemoveTileAt(beginWorld);
 			var index = iMap.UpdateTileAt(snapped, cursorVariant);
 			if (-1 == index) index = iMap.UpdateTileAt(Map.FullFloorVec(beginWorld), cursorVariant);
-			DeselectTile();
 			SelectTile(iMap.IndexToVector(index));
 		}
 
