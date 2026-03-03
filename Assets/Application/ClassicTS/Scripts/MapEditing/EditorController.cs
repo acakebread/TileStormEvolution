@@ -372,8 +372,6 @@ namespace ClassicTilestorm
 		private void SelectAttachment(ISelectable[] value = null)
 		{
 			selection = value;
-			if (selection?.Length == 1)
-				selection[0].OnSelect(iMap, _camera);
 			RebuildMarkers();
 		}
 
