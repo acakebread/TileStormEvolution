@@ -42,8 +42,6 @@ namespace MassiveHadronLtd
 		{
 			get => postProcessingEnabled;
 			set => postProcessingEnabled = value;
-			//get => null != controller ? controller.enabled : false;
-			//set { if (null != controller) controller.enabled = value; }
 		}
 
 		protected bool EnablePostProcessing { set { if (null != controller) controller.enabled = value; } }

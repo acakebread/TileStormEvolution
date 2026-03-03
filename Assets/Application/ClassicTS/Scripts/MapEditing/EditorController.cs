@@ -49,7 +49,6 @@ namespace ClassicTilestorm
 			DeselectTile();
 			selection = null;
 			cursorTile = -1;
-			//EditorCameraMovement.isPanning = false;
 			EditorAttachmentUI.ClearPending();
 			ViewPreviewUtil.Hide();
 			EditorTransformUtil.Hide();
@@ -67,7 +66,6 @@ namespace ClassicTilestorm
 			{
 				mainCameraController.SetCameraSystem(CameraModeRegistry.Editor, false);
 				mainCameraController.UpdateGestureControllerState();
-				mainCameraController.EnableEditorPostProcessing();
 			}
 
 			GridLinesUtil.Show();
