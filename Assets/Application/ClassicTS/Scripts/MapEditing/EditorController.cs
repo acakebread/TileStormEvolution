@@ -358,17 +358,14 @@ namespace ClassicTilestorm
 
 			void HandleDragInput()
 			{
-				if (selection == null || selection.Length == 0 || selection.Length > 1) return;
-				var ma = (MapAttachment)selection[0];
+				if (selection == null || selection.Length == 0 || selection.Length > 1 || selection[0] is not MapAttachment ma) return;
 				if (selection[0] is ITransformableAttachment transformable)
 				{
 					var worldPos = iMap.WorldPosition(ma.tile, transformable.Position);
 					var worldRot = iMap.WorldRotation(ma.tile, transformable.Rotation);
 					EditorTransformUtil.ShowAt(worldPos, worldRot, _camera);
 				}
-
-				if (null != ma)
-					ma.OnDragInput(iMap);
+				ma.OnDragInput(iMap);
 			}
 		}
 
@@ -434,10 +431,7 @@ namespace ClassicTilestorm
 			{
 				var tile = tiles[i];
 				positions[i] = iMap.TileRenderPosition(tile);
-
-				colors[i] = isWaypointMode && iMap.HasAttachmentOfType<View>(tile)
-					? new Color(0f, 1f, 1f, 0.5f)
-					: new Color(0f, 0.7f, 1f, 0.7f);
+				colors[i] = isWaypointMode && iMap.HasAttachmentOfType<View>(tile) ? new (0f, 1f, 1f, 0.5f) : new (0f, 0.7f, 1f, 0.7f);
 			}
 
 			var selectedTile = (selection != null && selection.Length > 0 && selection[0] is MapAttachment ma) ? ma.tile : -1;
