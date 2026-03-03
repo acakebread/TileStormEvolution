@@ -348,10 +348,8 @@ namespace ClassicTilestorm
 
 			var attSelection = selection.OfType<MapAttachment>().ToArray();
 			foreach (var att in attSelection)
-			{
 				att.tile = cursorTile;
-				iMap.RefreshAttachment(att);
-			}
+			iMap.RefreshAttachments(attSelection);
 
 			HandleDragInput();
 			RebuildMarkers();

@@ -82,6 +82,7 @@ namespace ClassicTilestorm
 		bool RemoveAttachment(MapAttachment _);
 		bool RemoveAttachments(MapAttachment[] _);
 		void RefreshAttachment(MapAttachment _);
+		void RefreshAttachments(MapAttachment[] _);
 
 		int CameraHitTile(Camera camera, Vector3 position);
 		Variant CameraHitVariant(Camera camera, Vector3 position);
