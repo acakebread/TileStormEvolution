@@ -9,22 +9,20 @@ namespace ClassicTilestorm
 	public class EditorController : MonoBehaviour
 	{
 		private IMapEdit iMap;
+		private TileSelector tileSelector => FindAnyObjectByType<TileSelector>(FindObjectsInactive.Include);
+		private Camera _camera => GetComponent<MainCameraController>()?.activeSystem?.camera;
 
 		// ─── input state ───────────────────────────────────────
 		private Vector3 beginWorld;
 		private Vector3 currentWorld => Map.ScreenToWorld(_camera, InputX.mousePosition);
-		private Camera _camera => GetComponent<MainCameraController>()?.activeSystem?.camera;
 		private int cursorTile = -1;
 		private Variant cursorVariant = new(ResourceManager.DefaultHash);
-
 		private ISelectable[] _selection = null;
 		private ISelectable[] selection
 		{
 			get => _selection;
 			set { Array.ForEach(_selection ?? Array.Empty<ISelectable>(), item => item.OnDeselect()); _selection = value; }
 		}
-
-		private TileSelector tileSelector => FindAnyObjectByType<TileSelector>(FindObjectsInactive.Include);
 
 		// ─── Tile / Attachment state ─────────────────────────────────────────
 		private enum ControllerMode
@@ -43,16 +41,13 @@ namespace ClassicTilestorm
 		// ─── Unity / lifecycle ───────────────────────────────────────────────
 		public void Awake()
 		{
-			if (null != tileSelector)
-			{
-				tileSelector.OnTileSelected += (HashId newHash) => {
-					cursorVariant = new Variant(newHash);
-					SetMode(newHash != ResourceManager.DefaultHash ? ControllerMode.PlacingTile : ControllerMode.Idle);
-				};
-				tileSelector.CanOpenPalette = () => mode == ControllerMode.Idle;
-				return;
-			}
-			Debug.LogError("TileSelector not found!");
+			Debug.Assert(null != tileSelector, "TileSelector not found!");
+			if (null == tileSelector) return;
+			tileSelector.OnTileSelected += (HashId newHash) => {
+				cursorVariant = new Variant(newHash);
+				SetMode(newHash != ResourceManager.DefaultHash ? ControllerMode.PlacingTile : ControllerMode.Idle);
+			};
+			tileSelector.CanOpenPalette = () => mode == ControllerMode.Idle;
 		}
 
 		public void Initialise(IMapEdit iMap)
