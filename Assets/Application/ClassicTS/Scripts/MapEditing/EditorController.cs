@@ -9,7 +9,7 @@ namespace ClassicTilestorm
 	public class EditorController : MonoBehaviour
 	{
 		private IMapEdit iMap;
-		private TileSelector tileSelector => FindAnyObjectByType<TileSelector>(FindObjectsInactive.Include);
+		private TileSelector tileAtlas => FindAnyObjectByType<TileSelector>(FindObjectsInactive.Include);
 		private Camera _camera => GetComponent<MainCameraController>()?.activeSystem?.camera;
 
 		// ─── input state ───────────────────────────────────────
@@ -41,13 +41,13 @@ namespace ClassicTilestorm
 		// ─── Unity / lifecycle ───────────────────────────────────────────────
 		public void Awake()
 		{
-			Debug.Assert(null != tileSelector, "TileSelector not found!");
-			if (null == tileSelector) return;
-			tileSelector.OnTileSelected += (HashId newHash) => {
+			Debug.Assert(null != tileAtlas, "TileAtlas not found!");
+			if (null == tileAtlas) return;
+			tileAtlas.OnTileSelected += (HashId newHash) => {
 				cursorVariant = new Variant(newHash);
 				SetMode(newHash != ResourceManager.DefaultHash ? ControllerMode.PlacingTile : ControllerMode.Idle);
 			};
-			tileSelector.CanOpenPalette = () => mode == ControllerMode.Idle;
+			tileAtlas.CanOpenPalette = () => mode == ControllerMode.Idle;
 		}
 
 		public void Initialise(IMapEdit iMap)
@@ -84,14 +84,14 @@ namespace ClassicTilestorm
 				mainCameraController.UpdateGestureControllerState();
 			}
 
-			tileSelector?.gameObject.SetActive(true);
+			tileAtlas?.gameObject.SetActive(true);
 			GridLinesUtil.Show();
 			SetMode(ControllerMode.Idle);
 		}
 
 		private void OnDisable()
 		{
-			tileSelector?.gameObject.SetActive(false);
+			tileAtlas?.gameObject.SetActive(false);
 			GridLinesUtil.Hide();
 			Reset();
 		}
@@ -100,9 +100,12 @@ namespace ClassicTilestorm
 		{
 			if (!_camera) return;
 
+			var mouseOverGUI = (EventSystem.current && EventSystem.current.IsPointerOverGameObject())
+				|| GUIUtility.hotControl != 0 || PlaceholderUI.IsMouseOverGui() || EditorAttachmentUI.sidePanel.IsMouseOver;
+
 			ViewPreviewUtil.Update();
-			EditorCameraMovement.UpdateCamera(ViewPreviewUtil.IsInFocus ? ViewPreviewUtil.PreviewCamera: _camera, currentWorld, inFocus: !IsMouseOverGUI());
-			if (!ViewPreviewUtil.IsInFocus && IsMouseOverGUI()) return;
+			EditorCameraMovement.UpdateCamera(ViewPreviewUtil.IsInFocus ? ViewPreviewUtil.PreviewCamera : _camera, currentWorld, inFocus: !mouseOverGUI);
+			if (!ViewPreviewUtil.IsInFocus && mouseOverGUI) return;
 			if (selection?.Length == 1 && selection[0] is MapAttachment a && a.OnGizmoInput(iMap, _camera)) return;
 
 			switch (mode)
@@ -113,7 +116,6 @@ namespace ClassicTilestorm
 						beginWorld = currentWorld;
 						SetMode(ControllerMode.Evaluate);
 					}
-
 					if (InputX.staticClick)
 					{
 						if (InputX.GetMouseButtonUp(1))
@@ -167,15 +169,14 @@ namespace ClassicTilestorm
 					break;
 
 				case ControllerMode.SelectedTile:
+					if (InputX.GetMouseButtonDown(0))
+					{
+						beginWorld = currentWorld;
+						if (!StartTileDrag())
+							EditorCameraMovement.StartPanning(beginWorld);
+					}
 					if (InputX.staticClick)
 					{
-						if (InputX.GetMouseButtonDown(0))
-						{
-							beginWorld = currentWorld;
-							if (!StartTileDrag())
-								EditorCameraMovement.StartPanning(beginWorld);
-						}
-
 						if (InputX.GetMouseButtonUp(1))
 							DeselectTile();
 					}
@@ -184,7 +185,6 @@ namespace ClassicTilestorm
 				case ControllerMode.DraggingTile:
 					if (InputX.GetMouseButton(0))
 						UpdateTileDrag();
-
 					if (InputX.GetMouseButtonUp(0))
 					{
 						SetMode(ControllerMode.SelectedTile);
@@ -213,18 +213,15 @@ namespace ClassicTilestorm
 						if (InputX.GetMouseButton(0))
 						{
 							if (!StartAttachmentDrag())
+							{
+								beginWorld = currentWorld;
 								EditorCameraMovement.StartPanning(beginWorld);
+							}
 							UpdateAttachmentDrag();
 						}
 					}
 					break;
 			}
-
-			static bool IsMouseOverGUI()
-				=> (EventSystem.current && EventSystem.current.IsPointerOverGameObject())
-				|| GUIUtility.hotControl != 0
-				|| PlaceholderUI.IsMouseOverGui()
-				|| EditorAttachmentUI.sidePanel.IsMouseOver;
 		}
 
 		private void OnGUI()
