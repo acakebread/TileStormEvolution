@@ -16,7 +16,18 @@ namespace ClassicTilestorm
 		private Camera _camera => GetComponent<MainCameraController>()?.activeSystem?.camera;
 		private int cursorTile = -1;
 		private Variant cursorVariant = new(ResourceManager.DefaultHash);
-		private ISelectable[] selection = null;
+
+		private ISelectable[] _selection = null;
+		private ISelectable[] selection
+		{
+			get => _selection;
+			set
+			{
+				Array.ForEach(_selection ?? Array.Empty<ISelectable>(), item => item.OnDeselect());
+				_selection = value;
+			}
+		}
+
 		private TileSelector tileSelector => FindAnyObjectByType<TileSelector>(FindObjectsInactive.Include);
 
 		// ─── Tile / Attachment state ─────────────────────────────────────────
@@ -65,10 +76,6 @@ namespace ClassicTilestorm
 			selection = null;
 			cursorTile = -1;
 			EditorAttachmentUI.ClearPending();
-			ViewPreviewUtil.Hide();
-			EditorTransformUtil.Hide();
-			EditorPrimitiveUtil.Hide();
-			EditorFrustumUtil.Hide();
 			EditorMarkerUtil.ClearMapMarkers();
 		}
 
@@ -138,7 +145,7 @@ namespace ClassicTilestorm
 					{
 						if (InputX.GetMouseButtonUp(0))
 						{
-							cursorTile = iMap.VectorToIndex(currentWorld);
+							cursorTile = iMap.VectorToIndex(beginWorld);
 							EvaluateAttachment();
 						}
 
@@ -297,17 +304,17 @@ namespace ClassicTilestorm
 			iMap.RemoveTileAt(beginWorld);
 			var index = iMap.UpdateTileAt(snapped, cursorVariant);
 			if (-1 == index) index = iMap.UpdateTileAt(Map.FullFloorVec(beginWorld), cursorVariant);
+			DeselectTile();
 			SelectTile(iMap.IndexToVector(index));
 		}
 
 		private bool SelectTile(Vector3 worldPos)
 		{
-			DeselectTile();
-
 			var tile = iMap.GetTile(worldPos);
 			if (tile.gameObject == null)
 				return false;
 
+			Reset();
 			tile.gameObject.SetActive(false);
 			cursorVariant = iMap.GetVariantAt(worldPos);
 			EditorSelectionUtil.UpdateGhostMesh(iMap, Map.FullFloorVec(worldPos), cursorVariant, true);
@@ -326,14 +333,11 @@ namespace ClassicTilestorm
 
 		private bool StartAttachmentDrag()
 		{
-			if (cursorTile < 0 || iMap.GetAttachments(tileIndex: cursorTile).Length == 0)
-			{
-				EndAttachmentMode();
-				return false;
-			}
-
 			if (selection == null || selection.Length == 0 || (selection[0] is MapAttachment ma && ma.tile != cursorTile))
 				SelectAttachment(iMap.GetAttachments(tileIndex: cursorTile));
+
+			if (selection == null || selection.Length == 0)
+				return false;
 
 			return true;
 		}
@@ -358,7 +362,7 @@ namespace ClassicTilestorm
 
 			void HandleDragInput()
 			{
-				if (selection == null || selection.Length == 0) return;
+				if (selection == null || selection.Length == 0 || selection.Length > 1) return;
 				var ma = (MapAttachment)selection[0];
 				if (selection[0] is ITransformableAttachment transformable)
 				{
@@ -385,10 +389,11 @@ namespace ClassicTilestorm
 
 		private void SelectAttachment(ISelectable[] value = null)
 		{
-			Reset();
 			selection = value;
 			if (selection != null && selection.Length == 1)
-				selection[0].OnSelectionChanged(iMap, _camera);
+				selection[0].OnSelect(iMap, _camera);
+
+			RebuildMarkers();
 		}
 
 		private void EvaluateAttachment()

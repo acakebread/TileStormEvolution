@@ -6,12 +6,18 @@ namespace ClassicTilestorm
 	{
 		public static readonly EmitterAttachmentHandler Instance = new();
 
-		public void OnSelectionChanged(IMapEdit iMap, Camera camera, ISelectable selection)
+		public void OnSelect(IMapEdit iMap, Camera camera, ISelectable selection)
 		{
 			var emitter = (Emitter)selection;
 			var worldPos = iMap.WorldPosition(emitter.tile, emitter.Position);
 			EditorTransformUtil.UpdateTransform(worldPos, emitter.Rotation, camera);
 			EditorPrimitiveUtil.UpdateCone(worldPos, emitter.Rotation, emitter.Distance, emitter.Apex);
+		}
+
+		public void OnDeselect()
+		{
+			EditorTransformUtil.Hide();
+			EditorPrimitiveUtil.Hide();
 		}
 
 		public bool OnGizmoInput(IMapEdit iMap, Camera camera, ISelectable selection)

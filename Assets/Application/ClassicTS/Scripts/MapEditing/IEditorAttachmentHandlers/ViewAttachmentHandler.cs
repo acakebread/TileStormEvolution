@@ -6,12 +6,19 @@ namespace ClassicTilestorm
 	{
 		public static readonly ViewAttachmentHandler Instance = new();
 
-		public void OnSelectionChanged(IMapEdit map, Camera camera, ISelectable selection)
+		public void OnSelect(IMapEdit map, Camera camera, ISelectable selection)
 		{
 			var view = (View)selection;
 			var worldPos = map.WorldPosition(view.tile, view.Position);
 			EditorTransformUtil.ShowAt(worldPos, view.Rotation, camera);
 			OnDragInput(map, selection);
+		}
+
+		public void OnDeselect()
+		{
+			EditorTransformUtil.Hide();
+			EditorFrustumUtil.Hide();
+			ViewPreviewUtil.Hide();
 		}
 
 		public bool OnGizmoInput(IMapEdit map, Camera camera, ISelectable selection)
