@@ -43,21 +43,16 @@ namespace ClassicTilestorm
 		{
 			Debug.Assert(null != tileAtlas, "TileAtlas not found!");
 			if (null == tileAtlas) return;
-			tileAtlas.OnTileSelected += (HashId newHash) => {
-				cursorVariant = new Variant(newHash);
-				SetMode(newHash != ResourceManager.DefaultHash ? ControllerMode.PlacingTile : ControllerMode.Idle);
-			};
+			tileAtlas.OnTileSelected += (HashId newHash) => { cursorVariant = new Variant(newHash);
+				SetMode(newHash != ResourceManager.DefaultHash ? ControllerMode.PlacingTile : ControllerMode.Idle); };
 			tileAtlas.CanOpenPalette = () => mode == ControllerMode.Idle;
 		}
 
 		public void Initialise(IMapEdit iMap)
 		{
 			this.iMap = iMap;
-			iMap.OnMapEdited += (Map map, bool resized, Vector3 originDelta) =>
-			{
-				ResourceManager.ApplyMapChanges(map);
-				if (resized) GridLinesUtil.UpdateSize(map.width, map.height);
-			};
+			iMap.OnMapEdited += (Map map, bool resized, Vector3 originDelta) => { ResourceManager.ApplyMapChanges(map);
+				if (resized) GridLinesUtil.UpdateSize(map.width, map.height); };
 
 			Reset();
 			GridLinesUtil.Update(transform, iMap?.Width ?? 32, iMap?.Height ?? 32, null != iMap ? iMap.TileRenderPosition(0) - new Vector3(0.5f, 0f, 0.5f) : Vector3.zero);
