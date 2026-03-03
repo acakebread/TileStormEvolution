@@ -46,10 +46,28 @@ namespace ClassicTilestorm
 
 		public void Reset()
 		{
-			if (iMap != null) iMap.OnMapEdited -= OnMapEdited;
+			if (null != iMap) iMap.OnMapEdited -= OnMapEdited;
 			GridLinesUtil.Destroy();
-			DeselectTile();
 			EditorSelectionUtil.DestroyGhostMesh();
+			//DeselectTile();
+		}
+
+		private void ResetInputState()
+		{
+			selection = null;
+			cursorTile = -1;
+			EditorCameraMovement.isPanning = false;
+			EditorAttachmentUI.ClearPending();
+			ViewPreviewUtil.Hide();
+			HideAllGizmos();
+		}
+
+		private void HideAllGizmos()
+		{
+			EditorTransformUtil.Hide();
+			EditorPrimitiveUtil.Hide();
+			EditorFrustumUtil.Hide();
+			EditorMarkerUtil.ClearMapMarkers();
 		}
 
 		private void OnEnable()
@@ -129,12 +147,8 @@ namespace ClassicTilestorm
 			{
 				case ControllerMode.Idle:
 					if (InputX.GetMouseButtonDown(0))
-					{
-						//if (iMap.GetVariantAt(currentWorld).IsDefaultEquivalent)
-						//	EditorCameraMovement.StartPanning(beginWorld);
-						//else
-							SetMode(ControllerMode.Evaluate);
-					}
+						SetMode(ControllerMode.Evaluate);
+
 					if (InputX.staticClick)
 					{
 						if (InputX.GetMouseButtonUp(1))
@@ -154,13 +168,19 @@ namespace ClassicTilestorm
 						if (InputX.GetMouseButtonHeld(0))
 						{
 							if (!StartTileDrag())
+							{
 								EditorCameraMovement.StartPanning(beginWorld);
+								SetMode(ControllerMode.Idle);
+							}
 						}
 					}
 					else
 					{
 						if (InputX.GetMouseButton(0))
+						{
 							EditorCameraMovement.StartPanning(beginWorld);
+							SetMode(ControllerMode.Idle);
+						}
 					}
 					break;
 
@@ -411,24 +431,6 @@ namespace ClassicTilestorm
 
 			RebuildMarkers();
 			SetMode(ControllerMode.UpdateAttachment);
-		}
-
-		private void ResetInputState()
-		{
-			selection = null;
-			cursorTile = -1;
-			EditorCameraMovement.isPanning = false;
-			EditorAttachmentUI.ClearPending();
-			ViewPreviewUtil.Hide();
-			HideAllGizmos();
-		}
-
-		private void HideAllGizmos()
-		{
-			EditorTransformUtil.Hide();
-			EditorPrimitiveUtil.Hide();
-			EditorFrustumUtil.Hide();
-			EditorMarkerUtil.ClearMapMarkers();
 		}
 
 		private void RebuildMarkers()
