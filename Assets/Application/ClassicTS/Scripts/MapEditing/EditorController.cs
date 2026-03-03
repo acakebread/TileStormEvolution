@@ -101,16 +101,8 @@ namespace ClassicTilestorm
 			if (!_camera) return;
 
 			ViewPreviewUtil.Update();
-			if (ViewPreviewUtil.IsInFocus)
-			{
-				EditorCameraMovement.UpdateCamera(ViewPreviewUtil.PreviewCamera, currentWorld);
-				ViewAttachmentHandler.HandlePreviewCameraSync(iMap, _camera, selection[0]);
-				return;
-			}
-			else
-				EditorCameraMovement.UpdateCamera(_camera, currentWorld, inFocus: !IsMouseOverGUI());
-
-			if (IsMouseOverGUI()) return;
+			EditorCameraMovement.UpdateCamera(ViewPreviewUtil.IsInFocus ? ViewPreviewUtil.PreviewCamera: _camera, currentWorld, inFocus: !IsMouseOverGUI());
+			if (!ViewPreviewUtil.IsInFocus && IsMouseOverGUI()) return;
 			if (selection?.Length == 1 && selection[0] is MapAttachment a && a.OnGizmoInput(iMap, _camera)) return;
 
 			switch (mode)

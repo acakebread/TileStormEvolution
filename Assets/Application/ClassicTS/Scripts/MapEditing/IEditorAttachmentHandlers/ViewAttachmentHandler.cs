@@ -24,6 +24,7 @@ namespace ClassicTilestorm
 
 		public bool OnGizmoInput(IMapEdit map, Camera camera, ISelectable selection)
 		{
+			HandlePreviewCameraSync(map, camera, selection);
 			if (!EditorTransformUtil.HandleInput(camera, out Vector3 newWorldPos, out Quaternion newWorldRot))
 				return false;
 			EditorTransformUtil.UpdateTransformGizmoVisuals(camera);
