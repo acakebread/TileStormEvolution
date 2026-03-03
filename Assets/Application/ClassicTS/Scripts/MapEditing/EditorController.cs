@@ -326,11 +326,7 @@ namespace ClassicTilestorm
 		{
 			if (selection == null || selection.Length == 0 || (selection[0] is MapAttachment ma && ma.tile != cursorTile))
 				SelectAttachment(iMap.GetAttachments(tileIndex: cursorTile));
-
-			if (selection == null || selection.Length == 0)
-				return false;
-
-			return true;
+			return selection != null && selection.Length > 0;
 		}
 
 		private void UpdateAttachmentDrag()
