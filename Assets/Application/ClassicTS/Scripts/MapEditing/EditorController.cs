@@ -131,7 +131,6 @@ namespace ClassicTilestorm
 							cursorTile = iMap.VectorToIndex(beginWorld);
 							EvaluateAttachment();
 						}
-
 						if (InputX.GetMouseButtonHeld(0))
 						{
 							if (!StartTileDrag())
@@ -159,7 +158,6 @@ namespace ClassicTilestorm
 					{
 						if (InputX.GetMouseButtonUp(0))
 							iMap.UpdateTileAt(currentWorld, variant);
-
 						if (InputX.GetMouseButtonUp(1))
 						{
 							EditorSelectionUtil.HideGhostMesh();
@@ -200,7 +198,6 @@ namespace ClassicTilestorm
 					{
 						if (InputX.GetMouseButtonUp(0))
 							EvaluateAttachment();
-
 						if (InputX.GetMouseButtonUp(1))
 						{
 							cursorTile = iMap.CameraHitTile(_camera, InputX.mousePosition);
