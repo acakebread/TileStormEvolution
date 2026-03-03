@@ -1,7 +1,7 @@
 using UnityEngine;
 using System.Collections.Generic;
 
-namespace ClassicTilestorm
+namespace MassiveHadronLtd
 {
 	public static class EditorFrustumUtil
 	{

@@ -1,8 +1,7 @@
 using UnityEngine;
 using System.Collections.Generic;
-using MassiveHadronLtd;
 
-namespace ClassicTilestorm
+namespace MassiveHadronLtd
 {
 	public static class EditorMarkerUtil
 	{

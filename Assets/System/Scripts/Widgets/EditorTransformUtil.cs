@@ -1,9 +1,8 @@
 ﻿using UnityEngine;
 using Unity.Mathematics;
 using System.Collections.Generic;
-using MassiveHadronLtd;
 
-namespace ClassicTilestorm
+namespace MassiveHadronLtd
 {
 	public static class EditorTransformUtil
 	{
@@ -209,12 +208,12 @@ namespace ClassicTilestorm
 		// BACKWARD-COMPATIBLE WRAPPERS (so your existing code compiles unchanged)
 		// ===================================================================
 
-		public static void ShowTransformGizmo(View view, IMapEdit map, Camera cam)
-		{
-			if (null == view || null == map || null == cam) return;
-			var worldPos = map.WorldPosition(view.tile, view.Position);
-			ShowAt(worldPos, view.Rotation, cam);
-		}
+		//public static void ShowTransformGizmo(View view, IMapEdit map, Camera cam)
+		//{
+		//	if (null == view || null == map || null == cam) return;
+		//	var worldPos = map.WorldPosition(view.tile, view.Position);
+		//	ShowAt(worldPos, view.Rotation, cam);
+		//}
 
 		public static void UpdateTransformGizmoVisuals(Camera cam) => UpdateVisuals(cam);
 
