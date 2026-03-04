@@ -185,10 +185,11 @@ namespace ClassicTilestorm
 				case ControllerMode.SelectAttachment:
 					if (InputX.GetMouseButtonDown(0))
 					{
-						if (!StartAttachmentDrag())
-							EditorCameraMovement.StartPanning(currentWorld);
-						else
+						EditorAttachmentUI.ClearPending();
+						if (StartAttachmentDrag())
 							SetMode(ControllerMode.DragAttachment);
+						else
+							EditorCameraMovement.StartPanning(currentWorld);
 					}
 					if (InputX.staticClick)
 					{
@@ -285,7 +286,6 @@ namespace ClassicTilestorm
 
 		private bool StartAttachmentDrag()
 		{
-			EditorAttachmentUI.ClearPending();
 			var cursorTile = iMap.VectorToIndex(beginWorld = currentWorld);
 			if (selection == null || selection.Length == 0 || (selection[0] is MapAttachment ma && ma.tile != cursorTile))
 				SelectAttachments(iMap.GetAttachments(tileIndex: cursorTile));
