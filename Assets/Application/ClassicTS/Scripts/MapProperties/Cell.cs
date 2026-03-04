@@ -1,8 +1,12 @@
 namespace ClassicTilestorm
 {
 	// Editor-only fake attachment that represents one map cell
-	public class Cell : MapAttachment
+	public class Cell : ISelectable
 	{
+		public string type;
+		public string name;
+		public int tile = -1;
+
 		public Cell(int tileIndex)
 		{
 			type = "Cell"; // or leave as base, doesn't matter
@@ -10,6 +14,6 @@ namespace ClassicTilestorm
 		}
 
 		// Optional: give it a nice name in the side panel
-		public override string TypeName => "Cell";
+		//public string TypeName => "Cell";
 	}
 }
