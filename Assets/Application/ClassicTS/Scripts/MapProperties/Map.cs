@@ -12,10 +12,11 @@ namespace ClassicTilestorm
 	[Serializable]
 	public struct Variant
 	{
-		public HashId hash;           // the core tile definition ID
-		public Vector3 delta;           // local position offset
-		public float angle;           // degrees, usually 0/90/180/270
+		public HashId hash;
+		public Vector3 delta;           // local position offset (usually small x/z values)
+		public float angle;             // degrees, usually 0/90/180/270
 
+		// ─── constructors (unchanged) ────────────────────────────────────────
 		public Variant(HashId h) : this(h, Vector3.zero, 0f) { }
 		public Variant(HashId h, Vector3 offset, float rotationDegrees)
 		{
@@ -30,6 +31,68 @@ namespace ClassicTilestorm
 
 		public readonly bool IsDefaultEquivalent => definition != null && definition.IsDefaultEquivalent();
 		public readonly bool HasNav => definition != null && definition.Nav != 0;
+
+		// ─── New positioning / snapping helpers ──────────────────────────────
+
+		/// <summary>
+		/// The "anchor point" we consider when starting to drag this variant.
+		/// Usually center for nav tiles, half-offset for decorative/small tiles.
+		/// </summary>
+		public readonly Vector3 GetDragAnchor(Vector3 worldPos)
+		{
+			return HasNav
+				? Map.FullFloorVec(worldPos)
+				: Map.HalfFloorVec(worldPos);
+		}
+
+		/// <summary>
+		/// Given a desired world position (e.g. during drag), returns the final
+		/// position we should place this variant at — preserving its relative offset.
+		/// </summary>
+		public readonly Vector3 GetSnappedWorldPosition(Vector3 desiredWorldPos)
+		{
+			if (HasNav)
+			{
+				return Map.FullFloorVec(desiredWorldPos);
+			}
+
+			var fullCenter = Map.FullFloorVec(desiredWorldPos);
+			var currentPos = Map.HalfFloorVec(desiredWorldPos);  // current drag sample
+			var relativeOffset = currentPos - fullCenter;
+
+			// We keep the relative offset from the nearest full-tile center
+			return fullCenter + relativeOffset;
+			// = Map.HalfFloorVec(desiredWorldPos)   ← but more explicit
+		}
+
+		/// <summary>
+		/// Variant of GetSnappedWorldPosition that also applies the existing delta.
+		/// Useful when computing final placement after drag ends.
+		/// </summary>
+		public readonly Vector3 GetFinalWorldPosition(Vector3 baseWorldPos)
+		{
+			var snapped = GetSnappedWorldPosition(baseWorldPos);
+			return snapped + delta;
+		}
+
+		/// <summary>
+		/// Extracts just the sub-tile offset (x/z) from a world position,
+		/// ignoring Y (height) which is usually preserved separately.
+		/// </summary>
+		public static Vector3 ExtractOffsetFromWorldPos(Vector3 worldPos)
+		{
+			var full = Map.FullFloorVec(worldPos);
+			var offset = worldPos - full;
+
+			// Optional: if you ever want to clamp offsets inside the tile
+			// offset.x = Mathf.Clamp(offset.x, -0.5f, 0.5f);
+			// offset.z = Mathf.Clamp(offset.z, -0.5f, 0.5f);
+
+			return new Vector3(offset.x, 0f, offset.z);   // y usually ignored for delta
+		}
+
+		// Optional: if you later want to support clamping / grid-size changes
+		// public readonly Vector3 GetClampedSnappedPosition(Vector3 desired) { ... }
 	}
 
 	public interface IMapData

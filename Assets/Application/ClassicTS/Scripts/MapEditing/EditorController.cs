@@ -28,9 +28,10 @@ namespace ClassicTilestorm
 			Idle,
 			Evaluate,
 			PlacingTile,
-			SelectingTile,
-			DraggingTile,
-			DraggingAttachment
+			SelectTile,
+			DragTile,
+			SelectAttachment,
+			DragAttachment
 		}
 
 		private ControllerMode mode = ControllerMode.Idle;
@@ -52,22 +53,17 @@ namespace ClassicTilestorm
 			iMap.OnMapEdited += (Map map, bool resized, Vector3 originDelta) => { ResourceManager.ApplyMapChanges(map);
 				if (resized) GridLinesUtil.UpdateSize(map.width, map.height); };
 
-			Reset();
 			GridLinesUtil.Update(transform, iMap?.Width ?? 32, iMap?.Height ?? 32, null != iMap ? iMap.TileRenderPosition(0) - new Vector3(0.5f, 0f, 0.5f) : Vector3.zero);
-			if (isActiveAndEnabled) GridLinesUtil.Show();
-		}
-
-		private void Reset()
-		{
+			if (!isActiveAndEnabled) return;
+			GridLinesUtil.Show();
 			DeselectTile();
 			EditorAttachmentUI.ClearPending();
 			EditorMarkerUtil.ClearMapMarkers();
+			SetMode(ControllerMode.Idle);
 		}
 
 		private void OnEnable()
 		{
-			Reset();
-
 			var mainCameraController = GetComponent<MainCameraController>();
 			if (null != mainCameraController)
 			{
@@ -83,8 +79,10 @@ namespace ClassicTilestorm
 		private void OnDisable()
 		{
 			tileAtlas?.gameObject.SetActive(false);
+			DeselectTile();
 			GridLinesUtil.Hide();
-			Reset();
+			EditorAttachmentUI.ClearPending();
+			EditorMarkerUtil.ClearMapMarkers();
 		}
 
 		private void Update()
@@ -115,10 +113,15 @@ namespace ClassicTilestorm
 					if (InputX.staticClick)
 					{
 						if (InputX.GetMouseButtonUp(0))
+						{
 							EvaluateAttachments();
+							SetMode(ControllerMode.SelectAttachment);
+						}
 						if (InputX.GetMouseButtonHeld(0))
 						{
-							if (!StartTileDrag())
+							if (StartTileDrag())
+								SetMode(ControllerMode.DragTile);
+							else
 							{
 								EditorCameraMovement.StartPanning(currentWorld);
 								SetMode(ControllerMode.Idle);
@@ -151,47 +154,67 @@ namespace ClassicTilestorm
 					}
 					break;
 
-				case ControllerMode.SelectingTile:
+				case ControllerMode.SelectTile:
 					if (InputX.GetMouseButtonDown(0))
 					{
-						if (!StartTileDrag())
+						if (StartTileDrag())
+							SetMode(ControllerMode.DragTile);
+						else
 							EditorCameraMovement.StartPanning(currentWorld);
 					}
 					if (InputX.staticClick)
 					{
 						if (InputX.GetMouseButtonUp(1))
+						{
 							DeselectTile();
+							SetMode(ControllerMode.Idle);
+						}
 					}
 					break;
 
-				case ControllerMode.DraggingTile:
+				case ControllerMode.DragTile:
 					if (InputX.GetMouseButton(0))
 						UpdateTileDrag();
 					if (InputX.GetMouseButtonUp(0))
 					{
-						SetMode(ControllerMode.SelectingTile);
 						EndTileDrag();
+						SetMode(ControllerMode.SelectTile);
 					}
 					break;
 
-				case ControllerMode.DraggingAttachment:
+				case ControllerMode.SelectAttachment:
 					if (InputX.GetMouseButtonDown(0))
-						beginWorld = currentWorld;
+					{
+						if (!StartAttachmentDrag())
+							EditorCameraMovement.StartPanning(currentWorld);
+						else
+							SetMode(ControllerMode.DragAttachment);
+					}
+					if (InputX.staticClick)
+					{
+						if (InputX.GetMouseButtonUp(1))
+						{
+							if (CancelAttachmentMode())
+								SetMode(ControllerMode.Idle);
+						}
+					}
+					break;
+
+				case ControllerMode.DragAttachment:
+					if (InputX.GetMouseButton(0))
+						UpdateAttachmentDrag();
 					if (InputX.staticClick)
 					{
 						if (InputX.GetMouseButtonUp(0))
+						{
 							EvaluateAttachments();
-						if (InputX.GetMouseButtonUp(1))
-							CancelAttachmentMode();
+							SetMode(ControllerMode.SelectAttachment);
+						}
 					}
 					else
 					{
-						if (InputX.GetMouseButton(0))
-						{
-							if (!StartAttachmentDrag())
-								EditorCameraMovement.StartPanning(currentWorld);
-							UpdateAttachmentDrag();
-						}
+						if (InputX.GetMouseButtonUp(0))
+							SetMode(ControllerMode.SelectAttachment);
 					}
 					break;
 			}
@@ -203,20 +226,8 @@ namespace ClassicTilestorm
 			EditorAttachmentUI.UpdateGUI(iMap, selection, iMap.VectorToIndex(beginWorld), selectable => SelectAttachments(selectable));
 		}
 
-		private void OnDestroy()
-		{
-			Reset();
-			EditorSelectionUtil.DestroyGhostMesh();
-		}
-
 		// ─── All helper methods ──────────────────────────────────────────────
-		private bool StartTileDrag()
-		{
-			beginWorld = currentWorld;//we could snap beginWorld to half resolution but it's hardly worth it: Map.HalfFloorVec(currentWorld);
-			if (!SelectTile(currentWorld)) return false;
-			SetMode(ControllerMode.DraggingTile);
-			return true;
-		}
+		private bool StartTileDrag() => SelectTile(beginWorld = currentWorld);
 
 		private void UpdateTileDrag()
 		{
@@ -238,8 +249,7 @@ namespace ClassicTilestorm
 			if (snapped == Map.FullFloorVec(beginWorld) && delta == variant.delta) return;
 
 			DeselectTile();
-			delta.y = variant.delta.y;
-			variant.delta = delta;
+			variant.delta = new Vector3(delta.x, variant.delta.y, delta.z);
 			iMap.RemoveTileAt(beginWorld);
 			var index = iMap.UpdateTileAt(snapped, variant);
 			if (-1 == index) index = iMap.UpdateTileAt(Map.FullFloorVec(beginWorld), variant);
@@ -249,12 +259,9 @@ namespace ClassicTilestorm
 		private bool SelectTile(Vector3 worldPos)
 		{
 			var tile = iMap.GetTile(worldPos);
-			if (tile.gameObject == null) return false;
-
-			Reset();
+			if (null == tile.gameObject) return false;
 			EditorSelectionUtil.UpdateGhostMesh(iMap, Map.FullFloorVec(worldPos), iMap.GetVariantAt(worldPos), true);
 			selection = new ISelectable[] { tile };
-			SetMode(ControllerMode.SelectingTile);
 			return true;
 		}
 
@@ -262,26 +269,32 @@ namespace ClassicTilestorm
 		{
 			EditorSelectionUtil.HideGhostMesh();
 			selection = null;
-			SetMode(ControllerMode.Idle);
+		}
+
+		private void EvaluateAttachments()
+		{
+			var cursorTile = iMap.VectorToIndex(beginWorld = currentWorld);
+			var attachmentsOnTile = iMap.GetAttachments(tileIndex: cursorTile);
+			if (EditorAttachmentUI.EvaluateSelection(attachmentsOnTile, cursorTile))
+				SelectAttachments(attachmentsOnTile);
+			RebuildMarkers();
 		}
 
 		private bool StartAttachmentDrag()
 		{
-			var cursorTile = iMap.VectorToIndex(beginWorld);
+			EditorAttachmentUI.ClearPending();
+			var cursorTile = iMap.VectorToIndex(beginWorld = currentWorld);
 			if (selection == null || selection.Length == 0 || (selection[0] is MapAttachment ma && ma.tile != cursorTile))
 				SelectAttachments(iMap.GetAttachments(tileIndex: cursorTile));
-			return selection != null && selection.Length > 0;
+			return selection?.Length > 0;
 		}
 
 		private void UpdateAttachmentDrag()
 		{
 			var cursorTile = iMap.VectorToIndex(beginWorld);
-			var tile = iMap.VectorToIndex(currentWorld);
-			if (tile == cursorTile || tile == -1 || selection == null || selection.Length == 0)
-				return;
 			cursorTile = iMap.VectorToIndex(beginWorld = currentWorld);
 			var attSelection = selection.OfType<MapAttachment>().ToArray();
-			foreach (var att in attSelection)
+			foreach (var att in attSelection) 
 				att.tile = cursorTile;
 			iMap.RefreshAttachments(attSelection);
 
@@ -290,36 +303,28 @@ namespace ClassicTilestorm
 			RebuildMarkers();
 		}
 
-		private void CancelAttachmentMode()
+		private bool CancelAttachmentMode()
 		{
-			beginWorld = currentWorld;
-			EvaluateAttachments();
-			var cursorTile = iMap.VectorToIndex(beginWorld);
-			if (cursorTile < 0 || iMap.GetAttachments(tileIndex: cursorTile).Length == 0)
+			if (selection?.Length > 0)
 			{
-				Reset();
-				SetMode(ControllerMode.Idle);
-				return;
+				selection = null;
+				RebuildMarkers();
+				return false;
 			}
-			EditorAttachmentUI.RequestDelete();
+			SelectAttachments(iMap.GetAttachments(tileIndex: iMap.VectorToIndex(beginWorld = currentWorld)));
+			if (selection?.Length > 0)
+			{
+				EditorAttachmentUI.RequestDelete();
+				return false;
+			}
+			EditorMarkerUtil.ClearMapMarkers();
+			return true;
 		}
 
 		private void SelectAttachments(ISelectable[] value = null)
 		{
 			selection = value;
 			RebuildMarkers();
-		}
-
-		private void EvaluateAttachments()
-		{
-			var cursorTile = iMap.VectorToIndex(beginWorld);
-			beginWorld = currentWorld;
-			var attachmentsOnTile = iMap.GetAttachments(tileIndex: cursorTile);
-			if (EditorAttachmentUI.EvaluateSelection(attachmentsOnTile, cursorTile))
-				SelectAttachments(attachmentsOnTile);
-
-			RebuildMarkers();
-			SetMode(ControllerMode.DraggingAttachment);
 		}
 
 		private void RebuildMarkers()
@@ -342,3 +347,35 @@ namespace ClassicTilestorm
 		}
 	}
 }
+
+//suggested upgrades using new helpers
+
+//private void UpdateTileDrag()
+//{
+//	var variant = iMap.GetVariantAt(beginWorld);
+//	var dragStartAnchor = variant.GetDragAnchor(beginWorld);
+//	var relativeDrag = currentWorld - dragStartAnchor;
+//	var baseTarget = Map.FullFloorVec(beginWorld) + relativeDrag;
+//	var previewPos = variant.GetSnappedWorldPosition(baseTarget);
+//	EditorSelectionUtil.UpdateGhostMesh(iMap, previewPos, variant, isSelectedOrDragging: true);
+//}
+
+//private void EndTileDrag()
+//{
+//	var variant = iMap.GetVariantAt(beginWorld);
+//	var dragStartAnchor = variant.GetDragAnchor(beginWorld);
+//	var relativeDrag = currentWorld - dragStartAnchor;
+//	var baseTarget = Map.FullFloorVec(beginWorld) + relativeDrag;
+//	var finalPos = variant.GetFinalWorldPosition(baseTarget);   // includes old delta
+//	var newSnapped = Map.FullFloorVec(finalPos);
+//	var newOffset = Variant.ExtractOffsetFromWorldPos(finalPos);
+//	var oldSnapped = Map.FullFloorVec(beginWorld);
+//	if (newSnapped == oldSnapped && newOffset == variant.delta) return; // no meaningful change
+
+//	DeselectTile();
+//	variant.delta = new Vector3(newOffset.x, variant.delta.y, newOffset.z);
+//	iMap.RemoveTileAt(beginWorld);
+//	var newIndex = iMap.UpdateTileAt(newSnapped, variant);
+//	if (-1 == newIndex) newIndex = iMap.UpdateTileAt(oldSnapped, variant);
+//	SelectTile(iMap.IndexToVector(newIndex));
+//}
