@@ -347,35 +347,3 @@ namespace ClassicTilestorm
 		}
 	}
 }
-
-//suggested upgrades using new helpers
-
-//private void UpdateTileDrag()
-//{
-//	var variant = iMap.GetVariantAt(beginWorld);
-//	var dragStartAnchor = variant.GetDragAnchor(beginWorld);
-//	var relativeDrag = currentWorld - dragStartAnchor;
-//	var baseTarget = Map.FullFloorVec(beginWorld) + relativeDrag;
-//	var previewPos = variant.GetSnappedWorldPosition(baseTarget);
-//	EditorSelectionUtil.UpdateGhostMesh(iMap, previewPos, variant, isSelectedOrDragging: true);
-//}
-
-//private void EndTileDrag()
-//{
-//	var variant = iMap.GetVariantAt(beginWorld);
-//	var dragStartAnchor = variant.GetDragAnchor(beginWorld);
-//	var relativeDrag = currentWorld - dragStartAnchor;
-//	var baseTarget = Map.FullFloorVec(beginWorld) + relativeDrag;
-//	var finalPos = variant.GetFinalWorldPosition(baseTarget);   // includes old delta
-//	var newSnapped = Map.FullFloorVec(finalPos);
-//	var newOffset = Variant.ExtractOffsetFromWorldPos(finalPos);
-//	var oldSnapped = Map.FullFloorVec(beginWorld);
-//	if (newSnapped == oldSnapped && newOffset == variant.delta) return; // no meaningful change
-
-//	DeselectTile();
-//	variant.delta = new Vector3(newOffset.x, variant.delta.y, newOffset.z);
-//	iMap.RemoveTileAt(beginWorld);
-//	var newIndex = iMap.UpdateTileAt(newSnapped, variant);
-//	if (-1 == newIndex) newIndex = iMap.UpdateTileAt(oldSnapped, variant);
-//	SelectTile(iMap.IndexToVector(newIndex));
-//}
