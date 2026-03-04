@@ -95,7 +95,8 @@ namespace ClassicTilestorm
 			ViewPreviewUtil.Update();
 			EditorCameraMovement.UpdateCamera(ViewPreviewUtil.IsInFocus ? ViewPreviewUtil.PreviewCamera : _camera, currentWorld, inFocus: !mouseOverGUI);
 			if (!ViewPreviewUtil.IsInFocus && mouseOverGUI) return;
-			if (selection?.Length == 1 && selection[0] is MapAttachment a && a.OnGizmoInput(iMap, _camera)) return;
+			//if (selection?.Length == 1 && selection[0] is MapAttachment a && a.OnGizmoInput(iMap, _camera)) return;
+			if (selection?.Length == 1 && selection[0].OnGizmoInput(iMap, _camera)) return;
 
 			switch (mode)
 			{
@@ -238,6 +239,8 @@ namespace ClassicTilestorm
 			var snapped = Map.FullFloorVec(worldPos);
 			var delta = variant.HasNav ? Vector3.zero : Map.HalfFloorVec(worldPos) - snapped;
 			EditorSelectionUtil.UpdateGhostMesh(iMap, snapped + delta, variant, true);
+			if (selection?.Length == 1)
+				selection[0].OnUpdate(iMap, _camera);
 		}
 
 		private void EndTileDrag()

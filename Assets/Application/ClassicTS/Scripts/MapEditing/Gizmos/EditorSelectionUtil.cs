@@ -18,6 +18,8 @@ namespace ClassicTilestorm
 		private static bool lastOutOfBounds;
 
 		public static Variant CurrentVariant { get => currentVariant; set => currentVariant = value; }
+		public static Vector3 CurrentPosition { get => lastPosition; }//set => lastPosition = value; }
+		public static float CurrentRotation { get => lastAngle; }//set => lastPosition = value; }
 
 		// Initialize the ghost materials
 		public static void InitializeGhostMaterial()
@@ -238,6 +240,12 @@ namespace ClassicTilestorm
 			var mapIndex = map.VectorToIndex(worldPos);
 			var renderPos = Map.WorldToRender(worldPos);
 			UpdateGhostMesh(variant, renderPos, mapIndex == -1, isSelectedOrDragging);
+		}
+
+		// Public wrapper - normal placing mode (no selected flag)
+		public static void UpdateGhostMesh(Variant variant)
+		{
+			UpdateGhostMesh(variant, lastPosition, false, true);
 		}
 
 		public static Variant NextVariantOnMap(IMapEdit map, Vector3 worldPos, Variant variant)
