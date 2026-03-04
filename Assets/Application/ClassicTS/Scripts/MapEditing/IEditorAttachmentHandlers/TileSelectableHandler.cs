@@ -17,5 +17,10 @@ namespace ClassicTilestorm
 			var tile = (Tile)selection;
 			if (null != tile.gameObject) tile.gameObject.SetActive(true);
 		}
+
+		public bool OnGizmoInput(IMapEdit iMap, Camera camera, ISelectable selection)
+		{
+			return false;
+		}
 	}
 }

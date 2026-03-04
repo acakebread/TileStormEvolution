@@ -204,17 +204,6 @@ namespace MassiveHadronLtd
 			wasActive = false;
 		}
 
-		// ===================================================================
-		// BACKWARD-COMPATIBLE WRAPPERS (so your existing code compiles unchanged)
-		// ===================================================================
-
-		//public static void ShowTransformGizmo(View view, IMapEdit map, Camera cam)
-		//{
-		//	if (null == view || null == map || null == cam) return;
-		//	var worldPos = map.WorldPosition(view.tile, view.Position);
-		//	ShowAt(worldPos, view.Rotation, cam);
-		//}
-
 		public static void UpdateTransformGizmoVisuals(Camera cam) => UpdateVisuals(cam);
 
 		public static bool HandleTransformGizmoInput(Camera cam) => HandleInput(cam, out _, out _);
