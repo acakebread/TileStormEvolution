@@ -15,7 +15,7 @@ namespace ClassicTilestorm
 			OnUpdate(map, camera, selection);
 		}
 
-		public void OnDeselect(ISelectable selection)
+		public void OnDeselect(IMapEdit iMap, Camera camera, ISelectable selection)
 		{
 			EditorTransformUtil.Hide();
 			EditorFrustumUtil.Hide();

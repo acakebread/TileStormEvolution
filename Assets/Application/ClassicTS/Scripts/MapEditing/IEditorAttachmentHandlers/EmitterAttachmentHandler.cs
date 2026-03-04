@@ -15,7 +15,7 @@ namespace ClassicTilestorm
 			EditorPrimitiveUtil.UpdateCone(worldPos, emitter.Rotation, emitter.Distance, emitter.Apex);
 		}
 
-		public void OnDeselect(ISelectable selection)
+		public void OnDeselect(IMapEdit iMap, Camera camera, ISelectable selection)
 		{
 			EditorTransformUtil.Hide();
 			EditorPrimitiveUtil.Hide();

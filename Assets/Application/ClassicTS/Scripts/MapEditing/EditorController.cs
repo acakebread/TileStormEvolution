@@ -19,7 +19,7 @@ namespace ClassicTilestorm
 		private ISelectable[] selection
 		{
 			get => _selection;
-			set { Array.ForEach(_selection ?? Array.Empty<ISelectable>(), item => item.OnDeselect()); if (value?.Length is 1) value[0].OnSelect(iMap, _camera); _selection = value;}
+			set { Array.ForEach(_selection ?? Array.Empty<ISelectable>(), item => item.OnDeselect(iMap, _camera)); if (value?.Length is 1) value[0].OnSelect(iMap, _camera); _selection = value;}
 		}
 
 		// ─── Tile / Attachment state ─────────────────────────────────────────
@@ -265,7 +265,8 @@ namespace ClassicTilestorm
 			var tile = iMap.GetTile(worldPos);
 			if (null == tile.gameObject) return false;
 			EditorSelectionUtil.UpdateGhostMesh(iMap, Map.FullFloorVec(worldPos), iMap.GetVariantAt(worldPos), true);
-			selection = new ISelectable[] { tile };
+			//selection = new ISelectable[] { tile };
+			selection = new ISelectable[] { new Cell(iMap.VectorToIndex(worldPos)) };
 			return true;
 		}
 

@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using UnityEditor;
+using System.Collections.Generic;
 
 namespace MassiveHadronLtd
 {
@@ -11,17 +12,21 @@ namespace MassiveHadronLtd
 		private static float currentYawDegrees = 0f;
 
 		// Total size of the combined control area (centered at gizmo origin)
-		private const float TOTAL_WIDTH = 2f;     // x: -1 to +1
-		private const float TOTAL_DEPTH = 2f;     // z: -1 to +1
+		private const float TOTAL_WIDTH = 2f;
+		private const float TOTAL_DEPTH = 2f;
 
 		// Derived
-		private const float HALF_WIDTH = TOTAL_WIDTH * 0.5f;   // = 1f
-		private const float FULL_DEPTH = TOTAL_DEPTH;          // = 2f
+		private const float HALF_WIDTH = TOTAL_WIDTH * 0.5f;
 
-		// Lazy-loaded internal textures
-		private static Texture2D ccwTexInternal;
-		private static Texture2D cwTexInternal;
-		private static bool texturesInitialized = false;
+		// Highlight feedback
+		private const float HIGHLIGHT_DURATION = 0.45f;
+		private static readonly Color HIGHLIGHT_COLOR = new Color(1f, 0.3f, 0.3f, 1f);
+
+		// Fix for rapid clicks: single shared update + cached originals
+		private static readonly Dictionary<GameObject, (Dictionary<Renderer, Color> originals, float startTime)> activeHighlights =
+			new Dictionary<GameObject, (Dictionary<Renderer, Color>, float)>();
+
+		public static float CurrentRotation => currentYawDegrees;
 
 		public static void ShowAt(
 			Vector3 worldPosition,
@@ -30,8 +35,6 @@ namespace MassiveHadronLtd
 		{
 			if (!Application.isPlaying) return;
 			Hide();
-
-			LazyLoadTextures();
 
 			root = new GameObject("YAW_DIRECTION_GIZMO");
 			root.layer = LayerMask.NameToLayer("Editor");
@@ -75,10 +78,13 @@ namespace MassiveHadronLtd
 			if (Input.GetMouseButtonDown(0))
 			{
 				Ray ray = editorCamera.ScreenPointToRay(Input.mousePosition);
-				if (TryStartYawDrag(ray))
+				if (TryStartYawDrag(ray, out GameObject clickedArrow))
 				{
 					inputConsumed = true;
 					newWorldRotation = Quaternion.Euler(0f, currentYawDegrees, 0f);
+
+					if (clickedArrow != null)
+						HighlightArrow(clickedArrow);
 				}
 			}
 
@@ -87,6 +93,9 @@ namespace MassiveHadronLtd
 
 		public static void Hide()
 		{
+			activeHighlights.Clear();
+			EditorApplication.update -= UpdateAllHighlights;
+
 			if (root != null)
 				Object.DestroyImmediate(root);
 
@@ -94,28 +103,22 @@ namespace MassiveHadronLtd
 			currentYawDegrees = 0f;
 		}
 
-		private static void LazyLoadTextures()
+		private static bool TryStartYawDrag(Ray ray, out GameObject clickedArrow)
 		{
-			if (texturesInitialized) return;
+			clickedArrow = null;
 
-			ccwTexInternal = Resources.Load<Texture2D>("Textures/CCW_Arrow");
-			cwTexInternal = Resources.Load<Texture2D>("Textures/CW_Arrow");
-
-			if (ccwTexInternal == null) Debug.LogWarning("Could not load Resources/Textures/CCW_Arrow — using fallback color.");
-			if (cwTexInternal == null) Debug.LogWarning("Could not load Resources/Textures/CW_Arrow — using fallback color.");
-
-			texturesInitialized = true;
-		}
-
-		private static bool TryStartYawDrag(Ray ray)
-		{
 			if (!Physics.Raycast(ray, out var hit, float.PositiveInfinity, 1 << LayerMask.NameToLayer("Editor")))
 				return false;
 
 			if (!hit.transform.IsChildOf(yawControls.transform))
 				return false;
 
-			float localX = hit.transform.localPosition.x;
+			// Find the arrow root (works even if you hit a child mesh)
+			clickedArrow = hit.transform.root.gameObject;
+			if (clickedArrow == null || !clickedArrow.name.Contains("_Arrow"))
+				clickedArrow = hit.transform.gameObject;
+
+			float localX = clickedArrow.transform.localPosition.x;
 			bool isCW = localX > 0;
 
 			float delta = isCW ? -90f : +90f;
@@ -128,85 +131,147 @@ namespace MassiveHadronLtd
 			return true;
 		}
 
+		private static void HighlightArrow(GameObject arrowGo)
+		{
+			if (arrowGo == null) return;
+
+			// Rapid click? Just restart the timer (keeps true original colours)
+			if (activeHighlights.ContainsKey(arrowGo))
+			{
+				var entry = activeHighlights[arrowGo];
+				activeHighlights[arrowGo] = (entry.originals, (float)EditorApplication.timeSinceStartup);
+				return;
+			}
+
+			// First time → capture true original colours
+			var originals = new Dictionary<Renderer, Color>();
+			Renderer[] renderers = arrowGo.GetComponentsInChildren<Renderer>(true);
+			foreach (var rend in renderers)
+			{
+				if (rend.material != null)
+					originals[rend] = rend.material.color;
+			}
+
+			activeHighlights[arrowGo] = (originals, (float)EditorApplication.timeSinceStartup);
+
+			// Apply red immediately
+			foreach (var rend in renderers)
+			{
+				if (rend.material != null)
+					rend.material.color = HIGHLIGHT_COLOR;
+			}
+
+			// Start the single shared update loop (only once)
+			if (activeHighlights.Count == 1)
+				EditorApplication.update += UpdateAllHighlights;
+		}
+
+		private static void UpdateAllHighlights()
+		{
+			float now = (float)EditorApplication.timeSinceStartup;
+			var toRemove = new List<GameObject>();
+
+			foreach (var kvp in activeHighlights)
+			{
+				GameObject arrow = kvp.Key;
+				var (originals, startTime) = kvp.Value;
+
+				float elapsed = now - startTime;
+				float t = Mathf.Clamp01(elapsed / HIGHLIGHT_DURATION);
+
+				Renderer[] renderers = arrow.GetComponentsInChildren<Renderer>(true);
+
+				foreach (var pair in originals)
+				{
+					Renderer rend = pair.Key;
+					if (rend != null && rend.material != null)
+						rend.material.color = Color.Lerp(HIGHLIGHT_COLOR, pair.Value, t);
+				}
+
+				if (t >= 1f)
+					toRemove.Add(arrow);
+			}
+
+			foreach (var arrow in toRemove)
+				activeHighlights.Remove(arrow);
+
+			if (activeHighlights.Count == 0)
+				EditorApplication.update -= UpdateAllHighlights;
+		}
+
 		private static GameObject CreateYawControls(Transform parent)
 		{
 			var container = new GameObject("YawControls");
 			container.layer = LayerMask.NameToLayer("Editor");
 			container.transform.SetParent(parent, false);
 
-			var fallbackMat = new Material(
-				Shader.Find("Universal Render Pipeline/Unlit") ??
-				Shader.Find("Unlit/Color") ??
-				Shader.Find("Legacy Shaders/Transparent/Diffuse")
-			);
-			fallbackMat.color = new Color(0.92f, 0.92f, 0.96f, 0.55f);
+			var cwPrefab = Resources.Load<GameObject>("Geometry/ArrowCW");
+			var ccwPrefab = Resources.Load<GameObject>("Geometry/ArrowCCW");
 
-			// Left half: CW
-			CreateHalfControl(container.transform, "CW", cwTexInternal, fallbackMat, xCenter: -0.5f);
+			if (cwPrefab == null) Debug.LogError("Failed to load Resources/Geometry/ArrowCW");
+			if (ccwPrefab == null) Debug.LogError("Failed to load Resources/Geometry/ArrowCCW");
 
-			// Right half: CCW, explicitly placed and sized
-			CreateHalfControl(container.transform, "CCW", ccwTexInternal, fallbackMat, xCenter: +0.5f);
+			if (cwPrefab != null)
+			{
+				var cwGo = Object.Instantiate(cwPrefab, container.transform);
+				cwGo.name = "CW_Arrow";
+				SetLayerRecursively(cwGo, LayerMask.NameToLayer("Editor"));
+
+				cwGo.transform.localPosition = new Vector3(-HALF_WIDTH, 0f, 0f);
+
+				AddMeshCollider(cwGo);
+				ForceColliderUpdate(cwGo);
+			}
+
+			if (ccwPrefab != null)
+			{
+				var ccwGo = Object.Instantiate(ccwPrefab, container.transform);
+				ccwGo.name = "CCW_Arrow";
+				SetLayerRecursively(ccwGo, LayerMask.NameToLayer("Editor"));
+
+				ccwGo.transform.localPosition = new Vector3(+HALF_WIDTH, 0f, 0f);
+
+				AddMeshCollider(ccwGo);
+				ForceColliderUpdate(ccwGo);
+			}
 
 			return container;
 		}
 
-		private static void CreateHalfControl(Transform parent, string namePrefix, Texture2D customTex, Material fallbackMat, float xCenter)
+		private static void AddMeshCollider(GameObject go)
 		{
-			var go = new GameObject($"{namePrefix}_Control");
-			go.layer = LayerMask.NameToLayer("Editor");
-			go.transform.SetParent(parent, false);
-
-			// Center the control GameObject at the middle of its half
-			go.transform.localPosition = new Vector3(xCenter, 0f, 0f);
-
-			// Create quad as child
-			var quad = GameObject.CreatePrimitive(PrimitiveType.Quad);
-			quad.name = "Quad";
-			quad.layer = LayerMask.NameToLayer("Editor");
-			quad.transform.SetParent(go.transform, false);
-
-			// Reset local transform for clarity
-			quad.transform.localPosition = Vector3.zero;
-			quad.transform.localRotation = Quaternion.Euler(90f, 0f, 0f); // lay flat on XZ
-
-			// Scale: width = 1 (x), depth = 2 (z)
-			quad.transform.localScale = new Vector3(1f, 2f, 1f);
-
-			var mr = quad.GetComponent<MeshRenderer>();
-
-			Material mat;
-			if (customTex != null)
+			var meshFilter = go.GetComponentInChildren<MeshFilter>(true);
+			if (meshFilter == null || meshFilter.sharedMesh == null)
 			{
-				// Prefer transparent-capable Unlit
-				Shader transparentShader = Shader.Find("Universal Render Pipeline/Unlit Transparent") ??  // if you have a custom one
-										   Shader.Find("Universal Render Pipeline/Unlit") ??
-										   Shader.Find("Unlit/Transparent") ??
-										   Shader.Find("Legacy Shaders/Transparent/Diffuse");
-
-				mat = new Material(transparentShader);
-
-				mat.mainTexture = customTex;
-				mat.color = Color.white;
-
-				// IMPORTANT: Force transparent rendering
-				mat.SetFloat("_Surface", 1f);          // 0 = Opaque, 1 = Transparent
-				mat.SetFloat("_Blend", 0f);            // 0 = Alpha Blend (most common for textures)
-				mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-				mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-				mat.SetInt("_ZWrite", 0);              // usually off for transparent
-				mat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
-			}
-			else
-			{
-				mat = new Material(fallbackMat);
+				Debug.LogWarning($"No readable MeshFilter on {go.name}. Adding fallback box collider.");
+				var fallbackCol = go.AddComponent<BoxCollider>();
+				fallbackCol.size = new Vector3(1.5f, 1f, 3f);
+				return;
 			}
 
-			mr.material = mat;
+			var meshCol = go.AddComponent<MeshCollider>();
+			meshCol.sharedMesh = meshFilter.sharedMesh;
+			meshCol.convex = true;
+		}
 
-			// Collider matches visual size + margin
-			var col = go.AddComponent<BoxCollider>();
-			col.size = new Vector3(1.08f, 0.12f, 2.08f);
-			col.center = Vector3.zero;
+		private static void ForceColliderUpdate(GameObject go)
+		{
+			Collider[] colliders = go.GetComponentsInChildren<Collider>(true);
+			foreach (var col in colliders)
+			{
+				if (col != null)
+				{
+					col.enabled = false;
+					col.enabled = true;
+				}
+			}
+		}
+
+		private static void SetLayerRecursively(GameObject go, int layer)
+		{
+			go.layer = layer;
+			foreach (Transform child in go.transform)
+				SetLayerRecursively(child.gameObject, layer);
 		}
 
 		public static void DestroyGizmo() => Hide();

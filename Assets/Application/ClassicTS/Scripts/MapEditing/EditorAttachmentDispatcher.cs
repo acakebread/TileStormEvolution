@@ -8,7 +8,8 @@ namespace ClassicTilestorm
 	{
 		private static readonly Dictionary<Type, IEditorAttachmentHandler> Handlers = new()
 		{
-			{ typeof(Tile), TileSelectableHandler.Instance },
+			//{ typeof(Tile), TileSelectableHandler.Instance },
+			{ typeof(Cell), CellSelectableHandler.Instance },
 			{ typeof(Emitter), EmitterAttachmentHandler.Instance },
 			{ typeof(View), ViewAttachmentHandler.Instance },
 			{ typeof(Pickup), PickupAttachmentHandler.Instance },
@@ -21,10 +22,10 @@ namespace ClassicTilestorm
 				h.OnSelect(m, c, a);
 		}
 
-		public static void OnDeselect(this ISelectable a)
+		public static void OnDeselect(this ISelectable a, IMapEdit m, Camera c)
 		{
 			if (Handlers.TryGetValue(a.GetType(), out var h))
-				h.OnDeselect(a);
+				h.OnDeselect(m, c, a);
 		}
 
 		public static void OnUpdate(this ISelectable a, IMapEdit m, Camera c)
