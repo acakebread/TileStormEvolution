@@ -218,6 +218,9 @@ namespace ClassicTilestorm
 					}
 					break;
 			}
+
+			foreach(var att in selection ?? Array.Empty<ISelectable>())
+				att.OnUpdate(iMap, _camera);
 		}
 
 		private void OnGUI()
@@ -297,9 +300,6 @@ namespace ClassicTilestorm
 			foreach (var att in attSelection) 
 				att.tile = cursorTile;
 			iMap.RefreshAttachments(attSelection);
-
-			if (null != selection && selection.Length == 1 && selection[0] is MapAttachment ma)
-				ma.OnDragInput(iMap, _camera);
 			RebuildMarkers();
 		}
 

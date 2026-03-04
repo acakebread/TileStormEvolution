@@ -23,6 +23,7 @@ namespace ClassicTilestorm
 
 		public bool OnGizmoInput(IMapEdit iMap, Camera camera, ISelectable selection)
 		{
+			//OnUpdate(iMap, camera, selection);
 			if (!EditorTransformUtil.HandleInput(camera, out Vector3 newWorldPos, out Quaternion newWorldRot))
 				return false;
 			EditorTransformUtil.UpdateTransformGizmoVisuals(camera);
@@ -35,13 +36,13 @@ namespace ClassicTilestorm
 			return true;
 		}
 
-		public bool OnDragInput(IMapEdit iMap, Camera camera, ISelectable selection)
+		public void OnUpdate(IMapEdit iMap, Camera camera, ISelectable selection)
 		{
 			var emitter = (Emitter)selection;
 			var worldPos = iMap.WorldPosition(emitter.tile, emitter.Position);
 			var worldRot = iMap.WorldRotation(emitter.tile, emitter.Rotation);
 			EditorTransformUtil.ShowAt(worldPos, worldRot, camera);
-			return EditorPrimitiveUtil.UpdateCone(worldPos, emitter.Rotation, emitter.Distance, emitter.Apex);
+			EditorPrimitiveUtil.UpdateCone(worldPos, emitter.Rotation, emitter.Distance, emitter.Apex);
 		}
 
 		public static Emitter Create(IMapEdit iMap, int tile, string variant)

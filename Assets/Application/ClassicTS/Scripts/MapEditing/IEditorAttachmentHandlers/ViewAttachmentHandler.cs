@@ -12,7 +12,7 @@ namespace ClassicTilestorm
 			var view = (View)selection;
 			var worldPos = map.WorldPosition(view.tile, view.Position);
 			EditorTransformUtil.ShowAt(worldPos, view.Rotation, camera);
-			OnDragInput(map, camera, selection);
+			OnUpdate(map, camera, selection);
 		}
 
 		public void OnDeselect(ISelectable selection)
@@ -24,6 +24,7 @@ namespace ClassicTilestorm
 
 		public bool OnGizmoInput(IMapEdit map, Camera camera, ISelectable selection)
 		{
+			//OnUpdate(map, camera, selection);
 			HandlePreviewCameraSync(map, camera, selection);
 			if (!EditorTransformUtil.HandleInput(camera, out Vector3 newWorldPos, out Quaternion newWorldRot))
 				return false;
@@ -46,11 +47,11 @@ namespace ClassicTilestorm
 			return true;
 		}
 
-		public bool OnDragInput(IMapEdit map, Camera camera, ISelectable selection)
+		public void OnUpdate(IMapEdit map, Camera camera, ISelectable selection)
 		{
 			var view = (View)selection;
 			ViewPreviewUtil.Show(map, view);
-			return UpdateViewFrustumMarker(map, view);
+			UpdateViewFrustumMarker(map, view);
 		}
 
 		public static View Create(IMapEdit map, int tile)
