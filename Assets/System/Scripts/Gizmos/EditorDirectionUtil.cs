@@ -1,5 +1,4 @@
 ﻿using UnityEngine;
-using UnityEditor;
 using System.Collections.Generic;
 
 namespace MassiveHadronLtd
@@ -11,76 +10,66 @@ namespace MassiveHadronLtd
 
 		private static float currentYawDegrees = 0f;
 
-		// Total size of the combined control area (centered at gizmo origin)
-		private const float TOTAL_WIDTH = 2f;
-		private const float TOTAL_DEPTH = 2f;
-
-		// Derived
+		private const float TOTAL_WIDTH = 2f;   // X axis span
+		private const float TOTAL_DEPTH = 2f;   // Z axis span (for the new perpendicular arrows)
 		private const float HALF_WIDTH = TOTAL_WIDTH * 0.5f;
+		private const float HALF_DEPTH = TOTAL_DEPTH * 0.5f;
 
-		// Highlight feedback
 		private const float HIGHLIGHT_DURATION = 0.45f;
 		private static readonly Color HIGHLIGHT_COLOR = new Color(1f, 0.3f, 0.3f, 1f);
 
-		// Fix for rapid clicks: single shared update + cached originals
-		private static readonly Dictionary<GameObject, (Dictionary<Renderer, Color> originals, float startTime)> activeHighlights =
-			new Dictionary<GameObject, (Dictionary<Renderer, Color>, float)>();
+		private static readonly Dictionary<GameObject, (Dictionary<Renderer, Color> originals, float startTime)>
+			activeHighlights = new();
 
 		public static float CurrentRotation => currentYawDegrees;
 
-		public static void ShowAt(
-			Vector3 worldPosition,
-			Quaternion initialWorldRotation,
-			Camera editorCamera)
+		public static void ShowAt(Vector3 worldPosition, Quaternion initialWorldRotation, Camera inputCamera)
 		{
-			if (!Application.isPlaying) return;
 			Hide();
 
 			root = new GameObject("YAW_DIRECTION_GIZMO");
-			root.layer = LayerMask.NameToLayer("Editor");
 
-			yawControls = CreateYawControls(root.transform);
+			int editorLayer = LayerMask.NameToLayer("Editor");
+			if (editorLayer == -1) editorLayer = 0;
+
+			root.layer = editorLayer;
+
+			yawControls = CreateYawControls(root.transform, editorLayer);
 
 			root.transform.position = worldPosition;
 			root.transform.rotation = Quaternion.identity;
 
+			// Snap initial yaw
 			Vector3 euler = initialWorldRotation.eulerAngles;
 			currentYawDegrees = Mathf.Round(euler.y / 90f) * 90f;
 			currentYawDegrees = Mathf.Repeat(currentYawDegrees, 360f);
 		}
 
-		public static void UpdateTransform(
-			Vector3 worldPosition,
-			Quaternion worldRotation,
-			Camera editorCamera)
+		public static void UpdateTransform(Vector3 worldPosition, Quaternion worldRotation)
 		{
-			if (!Application.isPlaying) return;
-
-			if (root == null)
-			{
-				ShowAt(worldPosition, worldRotation, editorCamera);
-				return;
-			}
+			if (root == null) return;
 
 			root.transform.position = worldPosition;
 			root.transform.rotation = Quaternion.identity;
 		}
 
-		public static bool HandleInput(Camera editorCamera, out Quaternion newWorldRotation)
+		public static bool HandleInput(Camera inputCamera, out Quaternion newWorldRotation)
 		{
 			newWorldRotation = Quaternion.Euler(0f, currentYawDegrees, 0f);
 
-			if (root == null || editorCamera == null || !Application.isPlaying)
-				return false;
+			if (root == null || inputCamera == null) return false;
 
-			bool inputConsumed = false;
+			bool consumed = false;
+
+			UpdateAllHighlights();
 
 			if (Input.GetMouseButtonDown(0))
 			{
-				Ray ray = editorCamera.ScreenPointToRay(Input.mousePosition);
+				Ray ray = inputCamera.ScreenPointToRay(Input.mousePosition);
+
 				if (TryStartYawDrag(ray, out GameObject clickedArrow))
 				{
-					inputConsumed = true;
+					consumed = true;
 					newWorldRotation = Quaternion.Euler(0f, currentYawDegrees, 0f);
 
 					if (clickedArrow != null)
@@ -88,45 +77,51 @@ namespace MassiveHadronLtd
 				}
 			}
 
-			return inputConsumed;
+			return consumed;
 		}
 
 		public static void Hide()
 		{
 			activeHighlights.Clear();
-			//EditorApplication.update -= UpdateAllHighlights;
 
 			if (root != null)
-				Object.DestroyImmediate(root);
+				Object.Destroy(root);
 
-			root = yawControls = null;
+			root = null;
+			yawControls = null;
 			currentYawDegrees = 0f;
 		}
+
+		public static void DestroyGizmo() => Hide();
 
 		private static bool TryStartYawDrag(Ray ray, out GameObject clickedArrow)
 		{
 			clickedArrow = null;
 
-			if (!Physics.Raycast(ray, out var hit, float.PositiveInfinity, 1 << LayerMask.NameToLayer("Editor")))
+			int layerMask = 1 << (LayerMask.NameToLayer("Editor") != -1 ? LayerMask.NameToLayer("Editor") : 0);
+
+			if (!Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, layerMask))
 				return false;
 
-			if (!hit.transform.IsChildOf(yawControls.transform))
+			if (yawControls == null || !hit.transform.IsChildOf(yawControls.transform))
 				return false;
 
-			// Find the arrow root (works even if you hit a child mesh)
-			clickedArrow = hit.transform.root.gameObject;
-			if (clickedArrow == null || !clickedArrow.name.Contains("_Arrow"))
-				clickedArrow = hit.transform.gameObject;
+			Transform t = hit.transform;
+			while (t != null && t.parent != yawControls.transform)
+				t = t.parent;
 
-			float localX = clickedArrow.transform.localPosition.x;
-			bool isCW = localX > 0;
+			if (t == null) return false;
 
-			float delta = isCW ? -90f : +90f;
+			clickedArrow = t.gameObject;
 
-			//Undo.RecordObject(root, "Snap Direction 90°");
+			// ────────────────────────────────────────────────
+			// Direction logic – after 180° rotation + prefab swap intent
+			// ────────────────────────────────────────────────
+			Vector3 localPos = clickedArrow.transform.localPosition;
 
-			currentYawDegrees += delta;
-			currentYawDegrees = Mathf.Repeat(currentYawDegrees, 360f);
+			float delta = Mathf.Abs(localPos.x) > 0.1f ? +90f : -90f;
+
+			currentYawDegrees = Mathf.Repeat(currentYawDegrees + delta, 360f);
 
 			return true;
 		}
@@ -135,136 +130,128 @@ namespace MassiveHadronLtd
 		{
 			if (arrowGo == null) return;
 
-			// Rapid click? Just restart the timer (keeps true original colours)
-			if (activeHighlights.ContainsKey(arrowGo))
+			if (activeHighlights.TryGetValue(arrowGo, out var existing))
 			{
-				var entry = activeHighlights[arrowGo];
-				//activeHighlights[arrowGo] = (entry.originals, (float)EditorApplication.timeSinceStartup);
+				activeHighlights[arrowGo] = (existing.originals, Time.realtimeSinceStartup);
 				return;
 			}
 
-			// First time → capture true original colours
 			var originals = new Dictionary<Renderer, Color>();
-			Renderer[] renderers = arrowGo.GetComponentsInChildren<Renderer>(true);
-			foreach (var rend in renderers)
-			{
-				if (rend.material != null)
-					originals[rend] = rend.material.color;
-			}
+			Renderer[] rends = arrowGo.GetComponentsInChildren<Renderer>(true);
 
-			//activeHighlights[arrowGo] = (originals, (float)EditorApplication.timeSinceStartup);
+			foreach (var r in rends)
+				if (r.material != null)
+					originals[r] = r.material.color;
 
-			// Apply red immediately
-			foreach (var rend in renderers)
-			{
-				if (rend.material != null)
-					rend.material.color = HIGHLIGHT_COLOR;
-			}
+			activeHighlights[arrowGo] = (originals, Time.realtimeSinceStartup);
 
-			//// Start the single shared update loop (only once)
-			//if (activeHighlights.Count == 1)
-			//	EditorApplication.update += UpdateAllHighlights;
+			foreach (var r in rends)
+				if (r.material != null)
+					r.material.color = HIGHLIGHT_COLOR;
 		}
 
 		private static void UpdateAllHighlights()
 		{
-			float now = (float)Time.realtimeSinceStartup;
+			float now = Time.realtimeSinceStartup;
 			var toRemove = new List<GameObject>();
 
 			foreach (var kvp in activeHighlights)
 			{
-				GameObject arrow = kvp.Key;
-				var (originals, startTime) = kvp.Value;
+				var arrow = kvp.Key;
+				var (originals, start) = kvp.Value;
 
-				float elapsed = now - startTime;
-				float t = Mathf.Clamp01(elapsed / HIGHLIGHT_DURATION);
-
-				Renderer[] renderers = arrow.GetComponentsInChildren<Renderer>(true);
+				float t = Mathf.Clamp01((now - start) / HIGHLIGHT_DURATION);
 
 				foreach (var pair in originals)
 				{
-					Renderer rend = pair.Key;
-					if (rend != null && rend.material != null)
-						rend.material.color = Color.Lerp(HIGHLIGHT_COLOR, pair.Value, t);
+					if (pair.Key != null && pair.Key.material != null)
+						pair.Key.material.color = Color.Lerp(HIGHLIGHT_COLOR, pair.Value, t);
 				}
 
 				if (t >= 1f)
 					toRemove.Add(arrow);
 			}
 
-			foreach (var arrow in toRemove)
-				activeHighlights.Remove(arrow);
-
-			//if (activeHighlights.Count == 0)
-			//	EditorApplication.update -= UpdateAllHighlights;
+			foreach (var go in toRemove)
+				activeHighlights.Remove(go);
 		}
 
-		private static GameObject CreateYawControls(Transform parent)
+		private static GameObject CreateYawControls(Transform parent, int layer)
 		{
 			var container = new GameObject("YawControls");
-			container.layer = LayerMask.NameToLayer("Editor");
+			container.layer = layer;
 			container.transform.SetParent(parent, false);
 
+			// Apply 180° rotation to the whole controls container
+			container.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
+
+			// ────────────────────────────────────────────────
+			// Original X-axis arrows (now flipped by 180°)
+			// ────────────────────────────────────────────────
 			var cwPrefab = Resources.Load<GameObject>("Geometry/ArrowCW");
 			var ccwPrefab = Resources.Load<GameObject>("Geometry/ArrowCCW");
 
-			if (cwPrefab == null) Debug.LogError("Failed to load Resources/Geometry/ArrowCW");
-			if (ccwPrefab == null) Debug.LogError("Failed to load Resources/Geometry/ArrowCCW");
+			if (cwPrefab == null) Debug.LogError("Missing: Resources/Geometry/ArrowCW");
+			if (ccwPrefab == null) Debug.LogError("Missing: Resources/Geometry/ArrowCCW");
 
+			// After 180° container rotation + your "swap CCW to CW" intent:
+			// Put CW prefab where CCW used to be (and vice versa)
 			if (cwPrefab != null)
 			{
-				var cwGo = Object.Instantiate(cwPrefab, container.transform);
-				cwGo.name = "CW_Arrow";
-				SetLayerRecursively(cwGo, LayerMask.NameToLayer("Editor"));
+				var inst = Object.Instantiate(cwPrefab, container.transform);
+				inst.name = "NegativeX_CW_Arrow";           // now at +X after 180°
+				inst.transform.localPosition = new Vector3(-HALF_WIDTH, 0f, 0f);
+				inst.transform.localRotation = Quaternion.identity;
+				SetLayerRecursively(inst, layer);
+				AddCollider(inst);
 
-				cwGo.transform.localPosition = new Vector3(-HALF_WIDTH, 0f, 0f);
-
-				AddMeshCollider(cwGo);
-				ForceColliderUpdate(cwGo);
+				var inst180 = Object.Instantiate(cwPrefab, container.transform);
+				inst180.name = "PositiveX_CW_Arrow";          // now at -X after 180°
+				inst180.transform.localPosition = new Vector3(+HALF_WIDTH, 0f, 0f);
+				inst180.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
+				SetLayerRecursively(inst180, layer);
+				AddCollider(inst180);
 			}
 
-			if (ccwPrefab != null)
+			// ────────────────────────────────────────────────
+			// New perpendicular arrows — both CCW, rotated 90° / 270°
+			// ────────────────────────────────────────────────
+			if (ccwPrefab != null) // reusing CCW prefab for both
 			{
-				var ccwGo = Object.Instantiate(ccwPrefab, container.transform);
-				ccwGo.name = "CCW_Arrow";
-				SetLayerRecursively(ccwGo, LayerMask.NameToLayer("Editor"));
+				// 90° → pointing along +Z
+				var inst90 = Object.Instantiate(ccwPrefab, container.transform);
+				inst90.name = "PositiveZ_CCW_Arrow";
+				inst90.transform.localPosition = new Vector3(0f, 0f, +HALF_DEPTH);
+				inst90.transform.localRotation = Quaternion.Euler(0f, 270f, 0f);
+				SetLayerRecursively(inst90, layer);
+				AddCollider(inst90);
 
-				ccwGo.transform.localPosition = new Vector3(+HALF_WIDTH, 0f, 0f);
-
-				AddMeshCollider(ccwGo);
-				ForceColliderUpdate(ccwGo);
+				// 270° → pointing along -Z
+				var inst270 = Object.Instantiate(ccwPrefab, container.transform);
+				inst270.name = "NegativeZ_CCW_Arrow";
+				inst270.transform.localPosition = new Vector3(0f, 0f, -HALF_DEPTH);
+				inst270.transform.localRotation = Quaternion.Euler(0f, 90f, 0f);
+				SetLayerRecursively(inst270, layer);
+				AddCollider(inst270);
 			}
 
 			return container;
 		}
 
-		private static void AddMeshCollider(GameObject go)
+		private static void AddCollider(GameObject go)
 		{
-			var meshFilter = go.GetComponentInChildren<MeshFilter>(true);
-			if (meshFilter == null || meshFilter.sharedMesh == null)
+			var mf = go.GetComponentInChildren<MeshFilter>(true);
+			if (mf == null || mf.sharedMesh == null)
 			{
-				Debug.LogWarning($"No readable MeshFilter on {go.name}. Adding fallback box collider.");
-				var fallbackCol = go.AddComponent<BoxCollider>();
-				fallbackCol.size = new Vector3(1.5f, 1f, 3f);
+				Debug.LogWarning($"No mesh on {go.name} → fallback BoxCollider");
+				var bc = go.AddComponent<BoxCollider>();
+				bc.size = new Vector3(1.5f, 1.2f, 3f);
 				return;
 			}
 
-			var meshCol = go.AddComponent<MeshCollider>();
-			meshCol.sharedMesh = meshFilter.sharedMesh;
-			meshCol.convex = true;
-		}
-
-		private static void ForceColliderUpdate(GameObject go)
-		{
-			Collider[] colliders = go.GetComponentsInChildren<Collider>(true);
-			foreach (var col in colliders)
-			{
-				if (col != null)
-				{
-					col.enabled = false;
-					col.enabled = true;
-				}
-			}
+			var mc = go.AddComponent<MeshCollider>();
+			mc.sharedMesh = mf.sharedMesh;
+			mc.convex = true;
 		}
 
 		private static void SetLayerRecursively(GameObject go, int layer)
@@ -273,7 +260,5 @@ namespace MassiveHadronLtd
 			foreach (Transform child in go.transform)
 				SetLayerRecursively(child.gameObject, layer);
 		}
-
-		public static void DestroyGizmo() => Hide();
 	}
 }

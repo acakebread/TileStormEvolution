@@ -75,14 +75,14 @@ namespace ClassicTilestorm
 				mainCameraController.UpdateGestureControllerState();
 			}
 
-			UIController.Instance.tileSelector?.SetActive(true);
+			UIController.Instance?.tileSelector?.SetActive(true);
 			GridLinesUtil.Show();
 			SetMode(ControllerMode.Idle);
 		}
 
 		private void OnDisable()
 		{
-			UIController.Instance.tileSelector?.SetActive(false);
+			UIController.Instance?.tileSelector?.SetActive(false);
 			DeselectTile();
 			GridLinesUtil.Hide();
 			EditorAttachmentUI.ClearPending();

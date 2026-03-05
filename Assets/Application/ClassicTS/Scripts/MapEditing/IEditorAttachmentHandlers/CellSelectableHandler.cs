@@ -14,7 +14,8 @@ namespace ClassicTilestorm
 			if (null != tile.gameObject)
 			{
 				tile.gameObject.SetActive(false);
-				EditorDirectionUtil.ShowAt(tile.gameObject.transform.position + Vector3.up * 0f, tile.gameObject.transform.rotation, camera);
+				var variant = iMap.GetVariantAt(cell.tile);
+				EditorDirectionUtil.ShowAt(Map.WorldToRender(iMap.IndexToVector(cell.tile)) + variant.delta, tile.gameObject.transform.rotation, camera);
 			}
 		}
 
@@ -43,10 +44,12 @@ namespace ClassicTilestorm
 			return false;// true;
 		}
 
-		public void OnUpdate(IMapEdit map, Camera camera, ISelectable selection)
+		public void OnUpdate(IMapEdit iMap, Camera camera, ISelectable selection)
 		{
+			var cell = (Cell)selection;
+			var variant = iMap.GetVariantAt(cell.tile);
 			var rotation = Quaternion.AngleAxis(EditorSelectionUtil.CurrentRotation, Vector3.up);
-			EditorDirectionUtil.ShowAt(EditorSelectionUtil.CurrentPosition + Vector3.up * 0f, rotation, camera);
+			EditorDirectionUtil.ShowAt(EditorSelectionUtil.CurrentPosition + variant.delta, rotation, camera);
 		}
 	}
 }
