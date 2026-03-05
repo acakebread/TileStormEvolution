@@ -94,7 +94,7 @@ namespace MassiveHadronLtd
 		public static void Hide()
 		{
 			activeHighlights.Clear();
-			EditorApplication.update -= UpdateAllHighlights;
+			//EditorApplication.update -= UpdateAllHighlights;
 
 			if (root != null)
 				Object.DestroyImmediate(root);
@@ -123,7 +123,7 @@ namespace MassiveHadronLtd
 
 			float delta = isCW ? -90f : +90f;
 
-			Undo.RecordObject(root, "Snap Direction 90°");
+			//Undo.RecordObject(root, "Snap Direction 90°");
 
 			currentYawDegrees += delta;
 			currentYawDegrees = Mathf.Repeat(currentYawDegrees, 360f);
@@ -139,7 +139,7 @@ namespace MassiveHadronLtd
 			if (activeHighlights.ContainsKey(arrowGo))
 			{
 				var entry = activeHighlights[arrowGo];
-				activeHighlights[arrowGo] = (entry.originals, (float)EditorApplication.timeSinceStartup);
+				//activeHighlights[arrowGo] = (entry.originals, (float)EditorApplication.timeSinceStartup);
 				return;
 			}
 
@@ -152,7 +152,7 @@ namespace MassiveHadronLtd
 					originals[rend] = rend.material.color;
 			}
 
-			activeHighlights[arrowGo] = (originals, (float)EditorApplication.timeSinceStartup);
+			//activeHighlights[arrowGo] = (originals, (float)EditorApplication.timeSinceStartup);
 
 			// Apply red immediately
 			foreach (var rend in renderers)
@@ -161,9 +161,9 @@ namespace MassiveHadronLtd
 					rend.material.color = HIGHLIGHT_COLOR;
 			}
 
-			// Start the single shared update loop (only once)
-			if (activeHighlights.Count == 1)
-				EditorApplication.update += UpdateAllHighlights;
+			//// Start the single shared update loop (only once)
+			//if (activeHighlights.Count == 1)
+			//	EditorApplication.update += UpdateAllHighlights;
 		}
 
 		private static void UpdateAllHighlights()
@@ -195,8 +195,8 @@ namespace MassiveHadronLtd
 			foreach (var arrow in toRemove)
 				activeHighlights.Remove(arrow);
 
-			if (activeHighlights.Count == 0)
-				EditorApplication.update -= UpdateAllHighlights;
+			//if (activeHighlights.Count == 0)
+			//	EditorApplication.update -= UpdateAllHighlights;
 		}
 
 		private static GameObject CreateYawControls(Transform parent)
