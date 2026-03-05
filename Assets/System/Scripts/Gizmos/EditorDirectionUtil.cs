@@ -168,7 +168,7 @@ namespace MassiveHadronLtd
 
 		private static void UpdateAllHighlights()
 		{
-			float now = (float)EditorApplication.timeSinceStartup;
+			float now = (float)Time.realtimeSinceStartup;
 			var toRemove = new List<GameObject>();
 
 			foreach (var kvp in activeHighlights)
