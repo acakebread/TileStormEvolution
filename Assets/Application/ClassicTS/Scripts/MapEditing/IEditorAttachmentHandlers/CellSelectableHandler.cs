@@ -41,7 +41,7 @@ namespace ClassicTilestorm
 			var variant = EditorSelectionUtil.CurrentVariant;
 			variant.angle = newWorldRot.eulerAngles.y;
 			EditorSelectionUtil.UpdateGhostMesh(variant);
-			return false;// true;
+			return true;
 		}
 
 		public void OnUpdate(IMapEdit iMap, Camera camera, ISelectable selection)
