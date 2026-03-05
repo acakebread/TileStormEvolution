@@ -9,11 +9,24 @@ using System.Collections;
 
 namespace ClassicTilestorm
 {
+	// 1. Define a clean, minimal interface
+	public interface ITileSelectorHandler
+	{
+		// TileSelector will call this when user picks a tile
+		void OnTileSelected(HashId selectedHash);
+
+		// TileSelector asks: "may I open the palette right now?"
+		bool CanOpenPalette();
+	}
+
 	public class TileSelector : MonoBehaviour
 	{
-		public HashId SelectedHashId { get; private set; }
+		[SerializeField] private Image panelTarget;
+		[SerializeField] private RawImage gridTarget;
+		[SerializeField] private RawImage focusTarget;
+		[SerializeField] private TMP_Text statusText;
 
-		public event Action<HashId> OnTileSelected;
+		public HashId SelectedHashId { get; private set; }
 
 		private IconAtlas _atlas;
 		private List<Definition> filteredDefs;
@@ -55,8 +68,6 @@ namespace ClassicTilestorm
 		private RawImage _focusOverlay;
 		private TMP_Text _statusText;
 
-		public Func<bool> CanOpenPalette;
-
 		// ─── Wobble (scale-based on focus overlay) ───────────────────────────
 		private int pressedIndex = -1;          // tile pressed down on
 		private float wobbleStartTime = -1f;
@@ -64,12 +75,47 @@ namespace ClassicTilestorm
 		[SerializeField] private float wobbleDecayTime = 0.3f;
 		[SerializeField] private float wobbleFrequency = 12f;
 
+		// Only one active handler at a time (editor use-case → simplest)
+		private ITileSelectorHandler _handler;
+
+		public void Register(ITileSelectorHandler handler)
+		{
+			if (_handler != null && _handler != handler)
+			{
+				Debug.LogWarning($"TileSelector: replacing previous handler {handler}");
+			}
+			_handler = handler;
+		}
+
+		public void Unregister(ITileSelectorHandler handler)
+		{
+			if (_handler == handler)
+				_handler = null;
+		}
+
+		// In Update / selection logic, instead of:
+		// OnTileSelected?.Invoke(newHash);
+		// Use:
+		private void NotifyTileSelected(HashId newHash)
+		{
+			_handler?.OnTileSelected(newHash);
+			SelectedHashId = newHash;   // keep your internal state
+		}
+
+		// Optional: expose for debugging / fallback
+		public ITileSelectorHandler CurrentHandler => _handler;
+
 		private void Awake()
 		{
-			_panelImage = EditorScreen.PanelTarget?.GetComponent<Image>();
-			_gridOverlay = EditorScreen.GridTarget;
-			_focusOverlay = EditorScreen.FocusTarget;
-			_statusText = EditorScreen.StatusText;
+			_panelImage = panelTarget?.GetComponent<Image>();
+			_gridOverlay = gridTarget;
+			_focusOverlay = focusTarget;
+			_statusText = statusText;
+
+			panelTarget.enabled = false;
+			gridTarget.enabled = false;
+			focusTarget.enabled = false;
+			statusText.enabled = false;
 
 			var canvasObj = _panelImage?.GetComponentInParent<Canvas>();
 			if (canvasObj)
@@ -162,7 +208,7 @@ namespace ClassicTilestorm
 			bool mouseOverPanel = !allowHideDespiteMouseOverPanel &&
 								  InputX.mousePosition.y <= (panelY + panelHeight);
 
-			bool allowedToOpen = CanOpenPalette == null || CanOpenPalette();
+			bool allowedToOpen = _handler == null || _handler.CanOpenPalette();
 
 			bool wantsVisible =
 				allowedToOpen &&
@@ -278,8 +324,9 @@ namespace ClassicTilestorm
 		private IEnumerator AutoHideAfterDelay(HashId newHash)
 		{
 			yield return new WaitForSeconds(wobbleDecayTime + 0.2f);
+
 			SelectedHashId = newHash;
-			OnTileSelected?.Invoke(newHash);
+			NotifyTileSelected(newHash);     // ← this calls _handler.OnTileSelected()
 
 			panelTargetY = -panelHeight;
 			hideTimer = hideDelay;

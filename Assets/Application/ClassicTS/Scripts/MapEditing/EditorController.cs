@@ -6,10 +6,9 @@ using MassiveHadronLtd;
 
 namespace ClassicTilestorm
 {
-	public class EditorController : MonoBehaviour
+	public class EditorController : MonoBehaviour, ITileSelectorHandler
 	{
 		private IMapEdit iMap;
-		private TileSelector tileAtlas => FindAnyObjectByType<TileSelector>(FindObjectsInactive.Include);
 		private Camera _camera => GetComponent<MainCameraController>()?.activeSystem?.camera;
 
 		// ─── input state ───────────────────────────────────────
@@ -37,14 +36,19 @@ namespace ClassicTilestorm
 		private ControllerMode mode = ControllerMode.Idle;
 		private void SetMode(ControllerMode value) => mode = value;
 
+		public bool CanOpenPalette() => mode == ControllerMode.Idle;
+		public void OnTileSelected(HashId newHash)
+		{
+			EditorSelectionUtil.CurrentVariant = new Variant(newHash);
+			SetMode(newHash != ResourceManager.DefaultHash ? ControllerMode.PlacingTile : ControllerMode.Idle);
+		}
+
 		// ─── Unity / lifecycle ───────────────────────────────────────────────
 		public void Awake()
 		{
-			Debug.Assert(null != tileAtlas, "TileAtlas not found!");
-			if (null == tileAtlas) return;
-			tileAtlas.OnTileSelected += (HashId newHash) => {EditorSelectionUtil.CurrentVariant = new Variant(newHash);
-				SetMode(newHash != ResourceManager.DefaultHash ? ControllerMode.PlacingTile : ControllerMode.Idle); };
-			tileAtlas.CanOpenPalette = () => mode == ControllerMode.Idle;
+			TryRegisterToTileSelector(UIController.Instance?.tileSelector?.GetComponent<TileSelector>());
+			UIController.OnTileSelectorReady += TryRegisterToTileSelector;
+			void TryRegisterToTileSelector(TileSelector tileSelector) => tileSelector?.Register(this);
 		}
 
 		public void Initialise(IMapEdit iMap)
@@ -71,14 +75,14 @@ namespace ClassicTilestorm
 				mainCameraController.UpdateGestureControllerState();
 			}
 
-			tileAtlas?.gameObject.SetActive(true);
+			UIController.Instance.tileSelector?.SetActive(true);
 			GridLinesUtil.Show();
 			SetMode(ControllerMode.Idle);
 		}
 
 		private void OnDisable()
 		{
-			tileAtlas?.gameObject.SetActive(false);
+			UIController.Instance.tileSelector?.SetActive(false);
 			DeselectTile();
 			GridLinesUtil.Hide();
 			EditorAttachmentUI.ClearPending();

@@ -637,7 +637,8 @@ MonoBehaviour:
   - {fileID: 4695226594433876902, guid: 81d0ade3e8f8df14fbbd2500e09a8d95, type: 3}
   - {fileID: 4695226594433876902, guid: d164df16686cd7b47b4dd970ba3f74bf, type: 3}
   - {fileID: 4695226594433876902, guid: 13c21ca6cd78bfb459cc9a0428dac147, type: 3}
-  editorScreenPrefab: {fileID: 8119239224014383716, guid: 0cc412b9ee4395940b83e7bc3c20701e, type: 3}
+  tileSelectorPrefab: {fileID: 5375037393176994070, guid: 10fac602bc9675542afce42c56c6587f, type: 3}
+  tileSelector: {fileID: 2603057638736964957, guid: 10fac602bc9675542afce42c56c6587f, type: 3}
 --- !u!1 &1146321623
 GameObject:
   m_ObjectHideFlags: 0
