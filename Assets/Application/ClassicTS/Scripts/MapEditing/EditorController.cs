@@ -300,6 +300,7 @@ namespace ClassicTilestorm
 			var cursorTile = iMap.VectorToIndex(beginWorld = currentWorld);
 			if (-1 == cursorTile) return;
 			var attSelection = selection.OfType<MapAttachment>().ToArray();
+			if (attSelection?.Length >= 1 && attSelection[0].tile == cursorTile) return;
 			foreach (var att in attSelection) 
 				att.tile = cursorTile;
 			if (selection?.Length == 1)
