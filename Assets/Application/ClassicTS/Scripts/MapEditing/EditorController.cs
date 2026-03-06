@@ -297,8 +297,8 @@ namespace ClassicTilestorm
 
 		private void UpdateAttachmentDrag()
 		{
-			var cursorTile = iMap.VectorToIndex(beginWorld);
-			cursorTile = iMap.VectorToIndex(beginWorld = currentWorld);
+			var cursorTile = iMap.VectorToIndex(beginWorld = currentWorld);
+			if (-1 == cursorTile) return;
 			var attSelection = selection.OfType<MapAttachment>().ToArray();
 			foreach (var att in attSelection) 
 				att.tile = cursorTile;
