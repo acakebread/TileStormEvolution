@@ -133,7 +133,6 @@ namespace ClassicTilestorm
 
 		public IEnumerator Start()
 		{
-			yield return null;//workaround for shader problem in command buffer
 			var unityRenderSettings = UnityRenderSettings.CaptureCurrent();
 			var mainReflection = Camera.main?.GetComponent<ReflectionEffectCamera>();
 			if (mainReflection != null)
@@ -143,10 +142,11 @@ namespace ClassicTilestorm
 					new(ambientMode: UnityEngine.Rendering.AmbientMode.Flat,
 					ambientLight: Color.white * 1.2f,
 					ambientIntensity: 0.15f,//has no effect
-					skybox: null,//RenderSettings.skybox,
+					skybox: RenderSettings.skybox,//null,//RenderSettings.skybox,
 					ambientProbe: default,
 					subtractiveShadowColor: RenderSettings.subtractiveShadowColor));
-
+			var cam = Camera.main;
+			cam.enabled = false;
 			yield return null;//workaround for shader problem in command buffer
 			filteredDefs = ResourceManager.Definitions
 				.Where(d => !d.IsDefaultEquivalent())
@@ -164,6 +164,7 @@ namespace ClassicTilestorm
 			if (_atlas == null)
 				Debug.LogWarning("Failed to generate icon atlas — palette empty.");
 
+			cam.enabled = true;
 			if (mainReflection != null) mainReflection.UpdateRenderSettings(unityRenderSettings);//mainReflection.UpdateRenderSettings(MainController.CurrentMap.RenderSettings); 
 
 			SelectedHashId = ResourceManager.DefaultHash;
