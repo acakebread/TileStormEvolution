@@ -140,6 +140,7 @@ namespace MassiveHadronLtd
 
 		public static Texture GetSkyboxTexture(Material skyboxMaterial)
 		{
+			if (skyboxMaterial == null) return null;
 			Cubemap cubemap = null;
 
 			if (skyboxMaterial.HasProperty("_Tex"))

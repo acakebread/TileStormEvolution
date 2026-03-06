@@ -95,7 +95,7 @@ namespace ClassicTilestorm
 			lightObj.transform.SetParent(_root.transform, false);
 			_iconLight = lightObj.AddComponent<Light>();
 			_iconLight.type = LightType.Directional;
-			_iconLight.intensity = 1.2f;
+			_iconLight.intensity = 1.2f;//overwritten later so ignore this value
 			_iconLight.color = new Color(1f, 0.98f, 0.95f);
 			_iconLight.shadows = LightShadows.None;
 			_iconLight.enabled = false;
@@ -116,6 +116,15 @@ namespace ClassicTilestorm
 				fov: 50f,
 				desiredParent: _root.transform
 			);
+
+			//doesn't work yet!!!
+			//_cameraWrapper.overrideSettings = new(
+			//ambientMode: UnityEngine.Rendering.AmbientMode.Flat,
+			//ambientLight: Color.purple,
+			//ambientIntensity: 1f,
+			//skybox: RenderSettings.skybox,
+			//ambientProbe: default,
+			//subtractiveShadowColor: RenderSettings.subtractiveShadowColor);
 
 			_scene = new CommandRenderScene();
 			_cameraWrapper.AssignCommandProvider(_scene);
@@ -185,7 +194,7 @@ namespace ClassicTilestorm
 			_cameraWrapper.position = center - _cameraWrapper.rotation * Vector3.forward * dist;
 
 			_iconLight.transform.rotation = _cameraWrapper.rotation * Quaternion.Euler(-35f, 45f, 0f);
-			_iconLight.intensity = 1.2f;
+			_iconLight.intensity = 10f;// doesn't seem to have any effect
 			_iconLight.enabled = true;
 
 			_cameraWrapper.Render();

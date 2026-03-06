@@ -163,7 +163,7 @@ namespace MassiveHadronLtd
 		private float timeSeed;
 
 		private CameraRenderSettingsOverride renderSettingsOverride => gameObject.GetComponent<CameraRenderSettingsOverride>();
-		private Texture skyboxTexture => SkyboxUtility.GetSkyboxTexture(renderSettingsOverride ? renderSettingsOverride.OverrideSettings.skybox : RenderSettings.skybox);
+		private Texture skyboxTexture => SkyboxUtility.GetSkyboxTexture(null == RenderSettings.skybox || renderSettingsOverride ? renderSettingsOverride?.OverrideSettings.skybox : RenderSettings.skybox);
 
 		// Already there
 		private bool isRenderToTextureMode = false;
@@ -514,6 +514,9 @@ namespace MassiveHadronLtd
 
 		private void DeferredRebuild() => ApplyEffect(effectMode, true);
 
+		private UnityRenderSettings currentRenderSettings;
+		public UnityRenderSettings CurrentRenderSettings => currentRenderSettings;
+
 		public void UpdateRenderSettings(UnityRenderSettings renderSettings)
 		{
 			foreach (var childCam in GetComponentsInChildren<Camera>(true))
@@ -523,6 +526,7 @@ namespace MassiveHadronLtd
 					overrideComp = childCam.gameObject.AddComponent<CameraRenderSettingsOverride>();
 				overrideComp.OverrideSettings = renderSettings;
 			}
+			currentRenderSettings = renderSettings;
 			UpdateMaterialProperties();
 		}
 

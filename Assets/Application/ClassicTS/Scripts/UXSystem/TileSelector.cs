@@ -134,6 +134,20 @@ namespace ClassicTilestorm
 		public IEnumerator Start()
 		{
 			yield return null;//workaround for shader problem in command buffer
+			var unityRenderSettings = UnityRenderSettings.CaptureCurrent();
+			var mainReflection = Camera.main?.GetComponent<ReflectionEffectCamera>();
+			if (mainReflection != null)
+				unityRenderSettings = mainReflection.CurrentRenderSettings;//.GetComponent<CameraRenderSettingsOverride>().
+
+				mainReflection.UpdateRenderSettings(
+					new(ambientMode: UnityEngine.Rendering.AmbientMode.Flat,
+					ambientLight: Color.white * 1.2f,
+					ambientIntensity: 0.15f,//has no effect
+					skybox: null,//RenderSettings.skybox,
+					ambientProbe: default,
+					subtractiveShadowColor: RenderSettings.subtractiveShadowColor));
+
+			yield return null;//workaround for shader problem in command buffer
 			filteredDefs = ResourceManager.Definitions
 				.Where(d => !d.IsDefaultEquivalent())
 				.ToList();
@@ -150,10 +164,14 @@ namespace ClassicTilestorm
 			if (_atlas == null)
 				Debug.LogWarning("Failed to generate icon atlas — palette empty.");
 
+			if (mainReflection != null) mainReflection.UpdateRenderSettings(unityRenderSettings);//mainReflection.UpdateRenderSettings(MainController.CurrentMap.RenderSettings); 
+
 			SelectedHashId = ResourceManager.DefaultHash;
 
 			RecalculateLayout();
 			panelY = panelTargetY = -panelHeight;
+
+			yield break;
 		}
 
 		private void Update()
@@ -535,5 +553,48 @@ namespace ClassicTilestorm
 			// Case 3: Mouse outside grid (or no selection) → default prompt
 			return "Hover over a tile";
 		}
+
+		//private void OnEnable()
+		//{
+		//	UnityEngine.Rendering.RenderPipelineManager.beginCameraRendering += OnBeginRender;
+		//	//UnityEngine.Rendering.RenderPipelineManager.endCameraRendering += OnEndRender;
+		//}
+
+		//private void OnDisable()
+		//{
+		//	UnityEngine.Rendering.RenderPipelineManager.beginCameraRendering -= OnBeginRender;
+		//	//UnityEngine.Rendering.RenderPipelineManager.endCameraRendering -= OnEndRender;
+		//}
+
+		//private UnityRenderSettings originalSettings;
+
+		//private void OnBeginRender(UnityEngine.Rendering.ScriptableRenderContext context, Camera cam)
+		//{
+		//	//if (cam != GetComponent<Camera>()) return;
+
+		//	// Save current global render settings
+		//	originalSettings = UnityRenderSettings.Clone();
+
+		//	//// Apply the override values
+		//	//RenderSettings.ambientMode = overrideSettings.ambientMode;
+		//	////RenderSettings.ambientLight = overrideSettings.ambientLight;
+		//	//RenderSettings.ambientIntensity = overrideSettings.ambientIntensity;
+		//	//RenderSettings.skybox = overrideSettings.skybox;
+		//	//RenderSettings.ambientProbe = overrideSettings.ambientProbe;
+		//	//RenderSettings.subtractiveShadowColor = overrideSettings.subtractiveShadowColor;
+
+		//	RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
+		//	RenderSettings.ambientLight = Color.white;
+		//	RenderSettings.ambientIntensity = 10;
+		//	RenderSettings.skybox = null;
+		//}
+
+		//private void OnEndRender(UnityEngine.Rendering.ScriptableRenderContext context, Camera cam)
+		//{
+		//	if (cam != GetComponent<Camera>()) return;
+
+		//	// Restore original settings
+		//	UnityRenderSettings.Restore(originalSettings);
+		//}
 	}
 }

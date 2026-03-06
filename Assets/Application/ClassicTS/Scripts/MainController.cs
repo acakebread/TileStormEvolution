@@ -45,6 +45,7 @@ namespace ClassicTilestorm
 			OnChangeMapRequested += HandleChangeMap;
 			LoadMap(ApplicationSettings.LoadMapName);
 			SetPreviewMode(ApplicationSettings.CurrentMode);//invoke to enable and disable game and editor controllers - ToDo improve this
+			RenderSettings.ambientLight = Color.blue;
 		}
 
 		private void Update() => eggbotController?.UpdateEggbot(CurrentMap);

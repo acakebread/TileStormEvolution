@@ -8,17 +8,19 @@ namespace ClassicTilestorm
 	{
 		public static UIController Instance { get; private set; }
 
-		// ─── Event that fires once tileSelector is created and ready ────────
-		public static event Action<TileSelector> OnTileSelectorReady;
-
 		[Header("UI Setup")]
 		[SerializeField] private Canvas mainCanvas; // Drag your Screen Space - Overlay canvas here
 
 		[Header("Panel Prefabs – drag prefabs here (must have UIPanel component)")]
 		[SerializeField] private List<GameObject> panelPrefabs = new List<GameObject>();
 
-		[SerializeField] private GameObject tileSelectorPrefab;
-		[HideInInspector] public GameObject tileSelector;
+		[SerializeField] private GameObject editorScreenUIPrefab;
+		[HideInInspector] public GameObject editorScreenUI;
+		public static event Action<EditorScreenUI> OnEditorScreenUIReady;
+
+		//[SerializeField] private GameObject tileSelectorPrefab;
+		//[HideInInspector] public GameObject tileSelector;
+		//public static event Action<TileSelector> OnTileSelectorReady;
 
 		private readonly Dictionary<Type, GameObject> prefabByType = new();
 
@@ -62,11 +64,13 @@ namespace ClassicTilestorm
 			if (prefabByType.Count == 0)
 				Debug.LogWarning("UIController: No valid panel prefabs assigned!");
 
-			tileSelector = Instantiate(tileSelectorPrefab, mainCanvas.transform);
-			tileSelector.SetActive(false);
+			editorScreenUI = Instantiate(editorScreenUIPrefab, mainCanvas.transform);
+			editorScreenUI.SetActive(false);
+			OnEditorScreenUIReady?.Invoke(editorScreenUI.GetComponent<EditorScreenUI>());
 
-			// ─── OnTileSelectorReady after creation ────────────────────────
-			OnTileSelectorReady?.Invoke(tileSelector.GetComponent<TileSelector>());
+			//tileSelector = Instantiate(tileSelectorPrefab, mainCanvas.transform);
+			//tileSelector.SetActive(false);
+			//OnTileSelectorReady?.Invoke(tileSelector.GetComponent<TileSelector>());
 		}
 
 		// ── Public API ────────────────────────────────────────────────────────

@@ -6,7 +6,7 @@ using MassiveHadronLtd;
 
 namespace ClassicTilestorm
 {
-	public class EditorController : MonoBehaviour, ITileSelectorHandler
+	public class EditorController : MonoBehaviour, IEditorScreenUI
 	{
 		private IMapEdit iMap;
 		private Camera _camera => GetComponent<MainCameraController>()?.activeSystem?.camera;
@@ -46,9 +46,9 @@ namespace ClassicTilestorm
 		// ─── Unity / lifecycle ───────────────────────────────────────────────
 		public void Awake()
 		{
-			TryRegisterToTileSelector(UIController.Instance?.tileSelector?.GetComponent<TileSelector>());
-			UIController.OnTileSelectorReady += TryRegisterToTileSelector;
-			void TryRegisterToTileSelector(TileSelector tileSelector) => tileSelector?.Register(this);
+			TryRegisterEditorScreenUI(UIController.Instance?.editorScreenUI?.GetComponent<EditorScreenUI>());
+			UIController.OnEditorScreenUIReady += TryRegisterEditorScreenUI;
+			void TryRegisterEditorScreenUI(EditorScreenUI editorScreenUI) => editorScreenUI?.Register(this);
 		}
 
 		public void Initialise(IMapEdit iMap)
@@ -75,14 +75,14 @@ namespace ClassicTilestorm
 				mainCameraController.UpdateGestureControllerState();
 			}
 
-			UIController.Instance?.tileSelector?.SetActive(true);
+			if (null != UIController.Instance?.editorScreenUI) UIController.Instance.editorScreenUI.SetActive(true);
 			GridLinesUtil.Show();
 			SetMode(ControllerMode.Idle);
 		}
 
 		private void OnDisable()
 		{
-			UIController.Instance?.tileSelector?.SetActive(false);
+			if (null != UIController.Instance?.editorScreenUI) UIController.Instance.editorScreenUI.SetActive(false);
 			DeselectTile();
 			GridLinesUtil.Hide();
 			EditorAttachmentUI.ClearPending();
@@ -99,7 +99,6 @@ namespace ClassicTilestorm
 			ViewPreviewUtil.Update();
 			EditorCameraMovement.UpdateCamera(ViewPreviewUtil.IsInFocus ? ViewPreviewUtil.PreviewCamera : _camera, currentWorld, inFocus: !mouseOverGUI);
 			if (!ViewPreviewUtil.IsInFocus && mouseOverGUI) return;
-			//if (selection?.Length == 1 && selection[0] is MapAttachment a && a.OnGizmoInput(iMap, _camera)) return;
 			if (selection?.Length == 1 && selection[0].OnGizmoInput(iMap, _camera)) return;
 
 			switch (mode)
@@ -269,7 +268,6 @@ namespace ClassicTilestorm
 			var tile = iMap.GetTile(worldPos);
 			if (null == tile.gameObject) return false;
 			EditorSelectionUtil.UpdateGhostMesh(iMap, Map.FullFloorVec(worldPos), iMap.GetVariantAt(worldPos), true);
-			//selection = new ISelectable[] { tile };
 			selection = new ISelectable[] { new Cell(iMap.VectorToIndex(worldPos)) };
 			return true;
 		}
