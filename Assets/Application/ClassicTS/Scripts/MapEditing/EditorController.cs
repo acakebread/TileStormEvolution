@@ -154,10 +154,8 @@ namespace ClassicTilestorm
 				case ControllerMode.PlacingTile:
 					var current = EditorSelectionUtil.CurrentVariant;
 					var variant = EditorSelectionUtil.NextVariantOnMap(iMap, currentWorld, EditorSelectionUtil.CurrentVariant);
+					EditorSelectionUtil.CurrentVariant = current;
 					variant.delta = Vector3.up * editAltitude;
-					var seaLevel = Map.FullFloorVec(currentWorld);
-					seaLevel.y = 0f;
-					EditorSelectionUtil.UpdateGhostMesh(iMap, seaLevel, variant, false);
 					if (InputX.staticClick)
 					{
 						if (InputX.GetMouseButtonUp(0))
@@ -166,9 +164,12 @@ namespace ClassicTilestorm
 						{
 							EditorSelectionUtil.HideGhostMesh();
 							SetMode(ControllerMode.Idle);
+							return;
 						}
 					}
-					EditorSelectionUtil.CurrentVariant = current;
+					var seaLevel = Map.FullFloorVec(currentWorld);
+					seaLevel.y = 0f;
+					EditorSelectionUtil.UpdateGhostMesh(iMap, seaLevel, variant, false);
 					break;
 
 				case ControllerMode.SelectTile:
@@ -245,38 +246,56 @@ namespace ClassicTilestorm
 		}
 
 		// ─── All helper methods ──────────────────────────────────────────────
+		private Vector3 snappedWorld => (selection?.Length == 1 && selection[0] is Cell cell) ? cell.variant(iMap).HasNav ? Map.FullFloorVec(currentWorld) : (iMap.IndexToVector(cell.tile) + Map.HalfFloorVec(currentWorld) - Map.HalfFloorVec(beginWorld)) + Vector3.up * cell.variant(iMap).delta.y : Vector3.negativeInfinity;
+
 		private bool StartTileDrag() => SelectTile(beginWorld = currentWorld);
 
 		private void UpdateTileDrag()
 		{
 			if (selection?.Length != 1 || selection[0] is not Cell cell) return;
-			var variant = cell.variant(iMap);
-			var startWorld = variant.HasNav ? Map.FullFloorVec(beginWorld) : Map.HalfFloorVec(beginWorld);
-			var worldPos = Map.FullFloorVec(beginWorld) + currentWorld - startWorld;
-			var snapped = Map.FullFloorVec(worldPos);
-			var delta = variant.HasNav ? Vector3.zero : Map.HalfFloorVec(worldPos) - snapped;
-			snapped.y = 0f;
-			cell.position = snapped + delta;
+			var pos = snappedWorld;
+			pos.y = 0f;
+			cell.position = pos;
 			selection[0].OnUpdate(iMap, _camera);
 		}
 
 		private void EndTileDrag()
 		{
 			if (selection?.Length != 1 || selection[0] is not Cell cell) return;
+
 			var variant = cell.variant(iMap);
-			var startWorld = variant.HasNav ? Map.FullFloorVec(beginWorld) : Map.HalfFloorVec(beginWorld);
-			var worldPos = Map.FullFloorVec(beginWorld) + currentWorld - startWorld + variant.delta;
-			var snapped = Map.FullFloorVec(worldPos);
-			var delta = variant.HasNav ? Vector3.zero : Map.HalfFloorVec(worldPos) - snapped;
-			if (snapped == Map.FullFloorVec(beginWorld) && delta == variant.delta) return;
+			var worldPos = snappedWorld + variant.delta;
+	
+			var delta = worldPos - Map.FullFloorVec(worldPos);
+			delta.y = variant.delta.y;
+			if (iMap.VectorToIndex(snappedWorld) == cell.tile && delta == variant.delta) return;
+			variant.delta = delta;
 
 			DeselectTile();
-			variant.delta = new Vector3(delta.x, variant.delta.y, delta.z);
 			iMap.RemoveTileAt(beginWorld);
-			var index = iMap.UpdateTileAt(snapped, variant);
+			var index = iMap.UpdateTileAt(worldPos, variant);
 			if (-1 == index) index = iMap.UpdateTileAt(Map.FullFloorVec(beginWorld), variant);
 			SelectTile(iMap.IndexToVector(index));
 		}
+
+
+		//private void EndTileDrag()
+		//{
+		//	if (selection?.Length != 1 || selection[0] is not Cell cell) return;
+		//	var variant = cell.variant(iMap);
+		//	var startWorld = variant.HasNav ? Map.FullFloorVec(beginWorld) : Map.HalfFloorVec(beginWorld);
+		//	var worldPos = Map.FullFloorVec(beginWorld) + currentWorld - startWorld + variant.delta;
+		//	var snapped = Map.FullFloorVec(worldPos);
+		//	var delta = variant.HasNav ? Vector3.zero : Map.HalfFloorVec(worldPos) - snapped;
+		//	if (snapped == Map.FullFloorVec(beginWorld) && delta == variant.delta) return;
+
+		//	DeselectTile();
+		//	variant.delta = new Vector3(delta.x, variant.delta.y, delta.z);
+		//	iMap.RemoveTileAt(beginWorld);
+		//	var index = iMap.UpdateTileAt(snapped, variant);
+		//	if (-1 == index) index = iMap.UpdateTileAt(Map.FullFloorVec(beginWorld), variant);
+		//	SelectTile(iMap.IndexToVector(index));
+		//}
 
 		private bool SelectTile(Vector3 worldPos)
 		{

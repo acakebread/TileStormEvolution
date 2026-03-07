@@ -17,6 +17,7 @@ namespace ClassicTilestorm
 		private static float lastAngle;
 		private static bool lastOutOfBounds;
 
+		//we should do away with these - they are a bit of a hack
 		public static Variant CurrentVariant { get => currentVariant; set => currentVariant = value; }
 		public static Vector3 CurrentPosition { get => lastPosition; }//set => lastPosition = value; }
 		public static float CurrentRotation { get => lastAngle; }//set => lastPosition = value; }

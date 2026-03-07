@@ -237,6 +237,7 @@ namespace ClassicTilestorm
 
 			bool wantsVisible =
 				allowedToOpen &&
+				!allowHideDespiteMouseOverPanel &&
 				(justEnteredCleanly || (panelWasShownByValidHover && mouseOverPanel));
 
 			if (wantsVisible)

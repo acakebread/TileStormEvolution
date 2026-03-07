@@ -53,7 +53,7 @@ namespace ClassicTilestorm
 			var variant = cell.variant(iMap);
 			var rotation = Quaternion.AngleAxis(EditorSelectionUtil.CurrentRotation, Vector3.up);
 			EditorSelectionUtil.UpdateGhostMesh(iMap, cell.position, variant, true);
-			EditorDirectionUtil.ShowAt(EditorSelectionUtil.CurrentPosition + variant.delta, rotation, camera);
+			EditorDirectionUtil.ShowAt(Map.WorldToRender(cell.position) + variant.delta, rotation, camera);
 		}
 	}
 }
