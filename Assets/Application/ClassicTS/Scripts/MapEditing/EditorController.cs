@@ -94,12 +94,13 @@ namespace ClassicTilestorm
 			if (!_camera) return;
 
 			var mouseOverGUI = (EventSystem.current && EventSystem.current.IsPointerOverGameObject())
-				|| GUIUtility.hotControl != 0 || PlaceholderUI.IsMouseOverGui() || EditorAttachmentUI.sidePanel.IsMouseOver;
+				|| GUIUtility.hotControl != 0 || PlaceholderUI.IsMouseOverGui() || EditorAttachmentUI.sidePanel.IsMouseOver;// || ViewPreviewUtil.IsMouseOverPreview();
 
 			ViewPreviewUtil.Update();
 			EditorCameraMovement.UpdateCamera(ViewPreviewUtil.IsInFocus ? ViewPreviewUtil.PreviewCamera : _camera, currentWorld, inFocus: !mouseOverGUI);
 			if (!ViewPreviewUtil.IsInFocus && mouseOverGUI) return;
 			if (selection?.Length == 1 && selection[0].OnGizmoInput(iMap, _camera)) return;
+			if (ViewPreviewUtil.IsInFocus) return;
 
 			switch (mode)
 			{

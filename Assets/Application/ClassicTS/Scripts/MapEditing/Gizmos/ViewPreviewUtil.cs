@@ -161,6 +161,9 @@ namespace ClassicTilestorm
 			previewCam = camGO.AddComponent<Camera>();
 			previewCam.enabled = false;
 			previewCam.cullingMask &= ~(1 << LayerMask.NameToLayer("Editor"));
+			previewCam.cullingMask &= ~(1 << LayerMask.NameToLayer("Preview"));
+			previewCam.cullingMask &= ~(1 << LayerMask.NameToLayer("PreviewTransparent"));
+			previewCam.cullingMask &= ~(1 << LayerMask.NameToLayer("PreviewEmissive"));
 
 			renderTexture = new RenderTexture(320, 200, 24, RenderTextureFormat.ARGB32);
 			renderTexture.Create();
