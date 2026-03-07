@@ -248,7 +248,7 @@ namespace ClassicTilestorm
 			UpdateGhostMesh(variant, lastPosition, false, true);
 		}
 
-		public static Variant NextVariantOnMap(IMapEdit map, Vector3 worldPos, Variant variant)
+		public static Variant NextVariantOnMap(IMapEdit map, Vector3 worldPos, Variant variant, bool cycleHeight = false)
 		{
 			var current = map.GetVariantAt(worldPos);
 			if (current.hash == variant.hash)
@@ -262,7 +262,7 @@ namespace ClassicTilestorm
 				aIdx = (aIdx + 1) % angles.Length;
 				if (aIdx == 0) dIdx = (dIdx + 1) % deltas.Length;
 
-				variant.delta = new Vector3(current.delta.x, deltas[dIdx], current.delta.z);
+				variant.delta = cycleHeight ? new Vector3(current.delta.x, deltas[dIdx], current.delta.z) : current.delta;
 				variant.angle = angles[aIdx];
 			}
 

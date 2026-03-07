@@ -86,7 +86,7 @@ GameObject:
   - component: {fileID: 153639091375270705}
   - component: {fileID: 5054156065522176130}
   m_Layer: 0
-  m_Name: GridSlider
+  m_Name: AltitudeSlider
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -447,6 +447,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EditorScreenUI
   tileSelector: {fileID: 7089492679886840515}
+  altitudeSlider: {fileID: 5054156065522176130}
 --- !u!1001 &5079245807596310430
 PrefabInstance:
   m_ObjectHideFlags: 0

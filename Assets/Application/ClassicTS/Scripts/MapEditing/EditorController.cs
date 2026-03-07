@@ -20,6 +20,7 @@ namespace ClassicTilestorm
 			get => _selection;
 			set { Array.ForEach(_selection ?? Array.Empty<ISelectable>(), item => item.OnDeselect(iMap, _camera)); if (value?.Length is 1) value[0].OnSelect(iMap, _camera); _selection = value;}
 		}
+		private float editAltitude = 0f;
 
 		// ─── Tile / Attachment state ─────────────────────────────────────────
 		private enum ControllerMode
@@ -43,6 +44,13 @@ namespace ClassicTilestorm
 			SetMode(newHash != ResourceManager.DefaultHash ? ControllerMode.PlacingTile : ControllerMode.Idle);
 		}
 
+		public void OnAltitudeChanged(float value)
+		{
+			editAltitude = value;
+			GridLinesUtil.Update(transform, iMap?.Width ?? 32, iMap?.Height ?? 32, null != iMap ? iMap.TileRenderPosition(0) + new Vector3(-0.5f, editAltitude, -0.5f) : Vector3.zero);
+			GridLinesUtil.Show();
+		}
+
 		// ─── Unity / lifecycle ───────────────────────────────────────────────
 		public void Awake()
 		{
@@ -57,7 +65,7 @@ namespace ClassicTilestorm
 			iMap.OnMapEdited += (Map map, bool resized, Vector3 originDelta) => { ResourceManager.ApplyMapChanges(map);
 				if (resized) GridLinesUtil.UpdateSize(map.width, map.height); };
 
-			GridLinesUtil.Update(transform, iMap?.Width ?? 32, iMap?.Height ?? 32, null != iMap ? iMap.TileRenderPosition(0) - new Vector3(0.5f, 0f, 0.5f) : Vector3.zero);
+			GridLinesUtil.Update(transform, iMap?.Width ?? 32, iMap?.Height ?? 32, null != iMap ? iMap.TileRenderPosition(0) + new Vector3(-0.5f, editAltitude, -0.5f) : Vector3.zero);
 			if (!isActiveAndEnabled) return;
 			GridLinesUtil.Show();
 			DeselectTile();
@@ -146,6 +154,7 @@ namespace ClassicTilestorm
 				case ControllerMode.PlacingTile:
 					var current = EditorSelectionUtil.CurrentVariant;
 					var variant = EditorSelectionUtil.NextVariantOnMap(iMap, currentWorld, EditorSelectionUtil.CurrentVariant);
+					variant.delta = Vector3.up * editAltitude;
 					EditorSelectionUtil.UpdateGhostMesh(iMap, Map.FullFloorVec(currentWorld), variant, false);
 					if (InputX.staticClick)
 					{
