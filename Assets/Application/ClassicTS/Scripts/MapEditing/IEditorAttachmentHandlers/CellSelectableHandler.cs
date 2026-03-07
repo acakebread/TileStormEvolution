@@ -15,6 +15,7 @@ namespace ClassicTilestorm
 			{
 				tile.gameObject.SetActive(false);
 				var variant = iMap.GetVariantAt(cell.tile);
+				EditorSelectionUtil.UpdateGhostMesh(iMap, iMap.IndexToVector(cell.tile), variant, true);
 				EditorDirectionUtil.ShowAt(Map.WorldToRender(iMap.IndexToVector(cell.tile)) + variant.delta, tile.gameObject.transform.rotation, camera);
 			}
 		}
@@ -30,6 +31,7 @@ namespace ClassicTilestorm
 				variant.angle = EditorDirectionUtil.CurrentRotation;
 				iMap.UpdateTileAt(iMap.IndexToVector(cell.tile), variant);
 			}
+			EditorSelectionUtil.HideGhostMesh();
 			EditorDirectionUtil.Hide();
 		}
 
@@ -49,6 +51,8 @@ namespace ClassicTilestorm
 			var cell = (Cell)selection;
 			var variant = iMap.GetVariantAt(cell.tile);
 			var rotation = Quaternion.AngleAxis(EditorSelectionUtil.CurrentRotation, Vector3.up);
+			//EditorSelectionUtil.UpdateGhostMesh(iMap, iMap.IndexToVector(cell.tile) + cell.position, variant, true);
+			EditorSelectionUtil.UpdateGhostMesh(iMap, cell.position, variant, true);
 			EditorDirectionUtil.ShowAt(EditorSelectionUtil.CurrentPosition + variant.delta, rotation, camera);
 		}
 	}

@@ -13,7 +13,7 @@ namespace ClassicTilestorm
 
 		// ─── input state ───────────────────────────────────────
 		private Vector3 beginWorld;
-		private Vector3 currentWorld => Map.ScreenToWorld(_camera, InputX.mousePosition);
+		private Vector3 currentWorld => Map.ScreenToWorld(_camera, InputX.mousePosition, editAltitude);
 		private ISelectable[] _selection = null;
 		private ISelectable[] selection
 		{
@@ -155,7 +155,9 @@ namespace ClassicTilestorm
 					var current = EditorSelectionUtil.CurrentVariant;
 					var variant = EditorSelectionUtil.NextVariantOnMap(iMap, currentWorld, EditorSelectionUtil.CurrentVariant);
 					variant.delta = Vector3.up * editAltitude;
-					EditorSelectionUtil.UpdateGhostMesh(iMap, Map.FullFloorVec(currentWorld), variant, false);
+					var seaLevel = Map.FullFloorVec(currentWorld);
+					seaLevel.y = 0f;
+					EditorSelectionUtil.UpdateGhostMesh(iMap, seaLevel, variant, false);
 					if (InputX.staticClick)
 					{
 						if (InputX.GetMouseButtonUp(0))
@@ -247,14 +249,17 @@ namespace ClassicTilestorm
 
 		private void UpdateTileDrag()
 		{
-			var variant = iMap.GetVariantAt(beginWorld);
-			var startWorld = variant.HasNav ? Map.FullFloorVec(beginWorld) : Map.HalfFloorVec(beginWorld);
-			var worldPos = Map.FullFloorVec(beginWorld) + currentWorld - startWorld;
-			var snapped = Map.FullFloorVec(worldPos);
-			var delta = variant.HasNav ? Vector3.zero : Map.HalfFloorVec(worldPos) - snapped;
-			EditorSelectionUtil.UpdateGhostMesh(iMap, snapped + delta, variant, true);
-			if (selection?.Length == 1)
+			if (selection?.Length == 1 && selection[0] is Cell cell)
+			{ 
+				var variant = iMap.GetVariantAt(beginWorld);
+				var startWorld = variant.HasNav ? Map.FullFloorVec(beginWorld) : Map.HalfFloorVec(beginWorld);
+				var worldPos = Map.FullFloorVec(beginWorld) + currentWorld - startWorld;
+				var snapped = Map.FullFloorVec(worldPos);
+				var delta = variant.HasNav ? Vector3.zero : Map.HalfFloorVec(worldPos) - snapped;
+				snapped.y = 0f;
+				cell.position = snapped + delta;
 				selection[0].OnUpdate(iMap, _camera);
+			}
 		}
 
 		private void EndTileDrag()
@@ -278,16 +283,11 @@ namespace ClassicTilestorm
 		{
 			var tile = iMap.GetTile(worldPos);
 			if (null == tile.gameObject) return false;
-			EditorSelectionUtil.UpdateGhostMesh(iMap, Map.FullFloorVec(worldPos), iMap.GetVariantAt(worldPos), true);
 			selection = new ISelectable[] { new Cell(iMap.VectorToIndex(worldPos)) };
 			return true;
 		}
 
-		private void DeselectTile()
-		{
-			EditorSelectionUtil.HideGhostMesh();
-			selection = null;
-		}
+		private void DeselectTile() => selection = null;
 
 		private void EvaluateAttachments()
 		{

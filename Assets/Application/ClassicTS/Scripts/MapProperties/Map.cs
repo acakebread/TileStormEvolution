@@ -371,10 +371,22 @@ namespace ClassicTilestorm
 			return false;
 		}
 
-		public static Vector3 ScreenToWorld(Camera camera, Vector3 screenPos)
+		public static bool RayToPlane(Ray ray, Plane plane, out Vector3 point)
+		{
+			point = Vector3.zero;
+			if (plane.Raycast(ray, out float d))
+			{
+				point = RenderToWorld(ray.GetPoint(d) + HALF_TILE);
+				return true;
+			}
+			return false;
+		}
+
+		public static Vector3 ScreenToWorld(Camera camera, Vector3 screenPos, float offset = 0f)
 		{
 			if (null == camera) return Vector3.negativeInfinity;
-			RayToWorld(camera.ScreenPointToRay(screenPos), out Vector3 result);
+			var plane = new Plane(Vector3.up, Vector3.up * offset);
+			RayToPlane(camera.ScreenPointToRay(screenPos), plane, out Vector3 result);
 			return result;
 		}
 
