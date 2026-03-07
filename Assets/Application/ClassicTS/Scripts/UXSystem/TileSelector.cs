@@ -140,7 +140,7 @@ namespace ClassicTilestorm
 			// all this to force the render state into the graphics hardware - unity requires a display render for command buffer to work
 			var stateCamera = new GameObject("RenderStateCamera");
 			var renderCam = stateCamera.AddComponent<Camera>();
-			renderCam.rect = new(0, 0, 1f / Screen.width, 1f / Screen.height);
+			renderCam.pixelRect = new Rect(0, 0, 4, 4);  // 4×4 pixels — small but reliably non-zero
 
 			var cameraRenderSettingsOverride = stateCamera.AddComponent<CameraRenderSettingsOverride>();
 			cameraRenderSettingsOverride.OverrideSettings = new(ambientMode: UnityEngine.Rendering.AmbientMode.Flat,
