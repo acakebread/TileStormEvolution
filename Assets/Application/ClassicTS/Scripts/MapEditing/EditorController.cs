@@ -143,9 +143,9 @@ namespace ClassicTilestorm
 					break;
 
 				case ControllerMode.PlacingTile:
+					var current = EditorSelectionUtil.CurrentVariant;
 					var variant = EditorSelectionUtil.NextVariantOnMap(iMap, currentWorld, EditorSelectionUtil.CurrentVariant);
 					EditorSelectionUtil.UpdateGhostMesh(iMap, Map.FullFloorVec(currentWorld), variant, false);
-
 					if (InputX.staticClick)
 					{
 						if (InputX.GetMouseButtonUp(0))
@@ -156,6 +156,7 @@ namespace ClassicTilestorm
 							SetMode(ControllerMode.Idle);
 						}
 					}
+					EditorSelectionUtil.CurrentVariant = current;
 					break;
 
 				case ControllerMode.SelectTile:
