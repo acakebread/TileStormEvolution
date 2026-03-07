@@ -133,21 +133,26 @@ namespace ClassicTilestorm
 
 		public IEnumerator Start()
 		{
-			var unityRenderSettings = UnityRenderSettings.CaptureCurrent();
-			var mainReflection = Camera.main?.GetComponent<ReflectionEffectCamera>();
-			if (mainReflection != null)
-				unityRenderSettings = mainReflection.CurrentRenderSettings;//.GetComponent<CameraRenderSettingsOverride>().
+			//var unityRenderSettings = UnityRenderSettings.CaptureCurrent();
+			//var cam = Camera.main;
+			//cam.enabled = false;
 
-				mainReflection.UpdateRenderSettings(
-					new(ambientMode: UnityEngine.Rendering.AmbientMode.Flat,
+			// all this to force the render state into the graphics hardware - unity requires a display render for command buffer to work
+			var stateCamera = new GameObject("RenderStateCamera");
+			var renderCam = stateCamera.AddComponent<Camera>();
+			renderCam.rect = new(0, 0, 1f / Screen.width, 1f / Screen.height);
+
+			var cameraRenderSettingsOverride = stateCamera.AddComponent<CameraRenderSettingsOverride>();
+			cameraRenderSettingsOverride.OverrideSettings = new(ambientMode: UnityEngine.Rendering.AmbientMode.Flat,
 					ambientLight: Color.white * 1.2f,
-					ambientIntensity: 0.15f,//has no effect
-					skybox: RenderSettings.skybox,//null,//RenderSettings.skybox,
+					ambientIntensity: 0f,//has no effect but ambient light colour can be premultiplies with intensity for same effect
+					skybox: null,
 					ambientProbe: default,
-					subtractiveShadowColor: RenderSettings.subtractiveShadowColor));
-			var cam = Camera.main;
-			cam.enabled = false;
+					subtractiveShadowColor: RenderSettings.subtractiveShadowColor);
+
 			yield return null;//workaround for shader problem in command buffer
+			//renderCam.enabled = false;
+
 			filteredDefs = ResourceManager.Definitions
 				.Where(d => !d.IsDefaultEquivalent())
 				.ToList();
@@ -164,8 +169,9 @@ namespace ClassicTilestorm
 			if (_atlas == null)
 				Debug.LogWarning("Failed to generate icon atlas — palette empty.");
 
-			cam.enabled = true;
-			if (mainReflection != null) mainReflection.UpdateRenderSettings(unityRenderSettings);//mainReflection.UpdateRenderSettings(MainController.CurrentMap.RenderSettings); 
+			Destroy(stateCamera);
+			//cam.enabled = true;
+			//UnityRenderSettings.Apply(unityRenderSettings);
 
 			SelectedHashId = ResourceManager.DefaultHash;
 
