@@ -9,6 +9,7 @@ namespace ClassicTilestorm
 		public string name;
 		public int tile = -1;
 		public Vector3 position;
+		public Variant variant(IMapEdit iMap) => iMap.GetVariantAt(tile);
 
 		public Cell(int tileIndex)
 		{

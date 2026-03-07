@@ -249,22 +249,21 @@ namespace ClassicTilestorm
 
 		private void UpdateTileDrag()
 		{
-			if (selection?.Length == 1 && selection[0] is Cell cell)
-			{ 
-				var variant = iMap.GetVariantAt(beginWorld);
-				var startWorld = variant.HasNav ? Map.FullFloorVec(beginWorld) : Map.HalfFloorVec(beginWorld);
-				var worldPos = Map.FullFloorVec(beginWorld) + currentWorld - startWorld;
-				var snapped = Map.FullFloorVec(worldPos);
-				var delta = variant.HasNav ? Vector3.zero : Map.HalfFloorVec(worldPos) - snapped;
-				snapped.y = 0f;
-				cell.position = snapped + delta;
-				selection[0].OnUpdate(iMap, _camera);
-			}
+			if (selection?.Length != 1 || selection[0] is not Cell cell) return;
+			var variant = cell.variant(iMap);
+			var startWorld = variant.HasNav ? Map.FullFloorVec(beginWorld) : Map.HalfFloorVec(beginWorld);
+			var worldPos = Map.FullFloorVec(beginWorld) + currentWorld - startWorld;
+			var snapped = Map.FullFloorVec(worldPos);
+			var delta = variant.HasNav ? Vector3.zero : Map.HalfFloorVec(worldPos) - snapped;
+			snapped.y = 0f;
+			cell.position = snapped + delta;
+			selection[0].OnUpdate(iMap, _camera);
 		}
 
 		private void EndTileDrag()
 		{
-			var variant = iMap.GetVariantAt(beginWorld);
+			if (selection?.Length != 1 || selection[0] is not Cell cell) return;
+			var variant = cell.variant(iMap);
 			var startWorld = variant.HasNav ? Map.FullFloorVec(beginWorld) : Map.HalfFloorVec(beginWorld);
 			var worldPos = Map.FullFloorVec(beginWorld) + currentWorld - startWorld + variant.delta;
 			var snapped = Map.FullFloorVec(worldPos);
