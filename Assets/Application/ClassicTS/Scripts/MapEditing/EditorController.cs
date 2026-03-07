@@ -154,7 +154,6 @@ namespace ClassicTilestorm
 				case ControllerMode.PlacingTile:
 					var current = EditorSelectionUtil.CurrentVariant;
 					var variant = EditorSelectionUtil.NextVariantOnMap(iMap, currentWorld, EditorSelectionUtil.CurrentVariant);
-					EditorSelectionUtil.CurrentVariant = current;
 					variant.delta = Vector3.up * editAltitude;
 					if (InputX.staticClick)
 					{
@@ -170,6 +169,7 @@ namespace ClassicTilestorm
 					var seaLevel = Map.FullFloorVec(currentWorld);
 					seaLevel.y = 0f;
 					EditorSelectionUtil.UpdateGhostMesh(iMap, seaLevel, variant, false);
+					EditorSelectionUtil.CurrentVariant = current;
 					break;
 
 				case ControllerMode.SelectTile:
@@ -246,7 +246,8 @@ namespace ClassicTilestorm
 		}
 
 		// ─── All helper methods ──────────────────────────────────────────────
-		private Vector3 snappedWorld => (selection?.Length == 1 && selection[0] is Cell cell) ? cell.variant(iMap).HasNav ? Map.FullFloorVec(currentWorld) : (iMap.IndexToVector(cell.tile) + Map.HalfFloorVec(currentWorld) - Map.HalfFloorVec(beginWorld)) + Vector3.up * cell.variant(iMap).delta.y : Vector3.negativeInfinity;
+		//private Vector3 snappedWorld => (selection?.Length == 1 && selection[0] is Cell cell) ? cell.variant(iMap).HasNav ? Map.FullFloorVec(currentWorld) : (iMap.IndexToVector(cell.tile) + Map.HalfFloorVec(currentWorld) - Map.HalfFloorVec(beginWorld)) + Vector3.up * cell.variant(iMap).delta.y : Vector3.negativeInfinity;
+		private Vector3 snappedWorld => (selection?.Length == 1 && selection[0] is Cell cell) ? cell.variant(iMap).HasNav ? Map.FullFloorVec(currentWorld) : (Map.FullFloorVec(beginWorld) + Map.HalfFloorVec(currentWorld) - Map.HalfFloorVec(beginWorld)) : Vector3.negativeInfinity;
 
 		private bool StartTileDrag() => SelectTile(beginWorld = currentWorld);
 
