@@ -1063,7 +1063,7 @@ namespace ClassicTilestorm
 				return -1;
 			}
 
-			delta = new Vector3(delta.x % 1f, delta.y, delta.z % 1f);//make sure valid delta for variant
+			delta = new Vector3((delta.x % 1f) + 1f % 1f, delta.y, (delta.z % 1f) + 1f % 1f);//make sure valid delta for variant
 
 			int oldWidth = width;
 			int oldHeight = height;

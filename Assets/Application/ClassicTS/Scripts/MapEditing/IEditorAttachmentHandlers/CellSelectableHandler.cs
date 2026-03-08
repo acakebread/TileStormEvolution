@@ -16,7 +16,7 @@ namespace ClassicTilestorm
 				tile.gameObject.SetActive(false);
 				var variant = cell.variant(iMap);
 				EditorSelectionUtil.UpdateGhostMesh(iMap, iMap.IndexToVector(cell.tile), variant, true);
-				EditorDirectionUtil.ShowAt(Map.WorldToRender(iMap.IndexToVector(cell.tile)) + variant.delta, tile.gameObject.transform.rotation, camera);
+				EditorDirectionUtil.ShowAt(iMap.TileRenderPosition(cell.tile) + variant.delta, tile.gameObject.transform.rotation, camera);
 			}
 		}
 
