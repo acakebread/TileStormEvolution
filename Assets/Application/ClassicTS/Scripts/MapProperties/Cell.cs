@@ -17,8 +17,12 @@ namespace ClassicTilestorm
 			type = "Cell"; // or leave as base, doesn't matter
 			tile = iMap.VectorToIndex(pos);
 			variant = iMap.GetVariantAt(tile);
+
+			var snapped = Map.FullFloorVec(pos);
+			startPosition = new Vector3(snapped.x, 0f, snapped.z) + variant.delta;
+
 			variant.delta.y = 0f;//clear the cached delta altitude
-			startPosition = position = Map.FullFloorVec(pos) + variant.delta;
+			startPosition = position = snapped + variant.delta;
 		}
 
 		//public string TypeName => "Cell";// Optional: give it a nice name in the side panel

@@ -25,6 +25,12 @@ namespace ClassicTilestorm
 			var cell = (Cell)selection;
 			var tile = iMap.GetTile(cell.tile);
 			if (null != tile.gameObject) tile.gameObject.SetActive(true);
+
+			//ToDo detect no change and skip
+			//cell.position = snappedWorld + new Vector3(cell.variant.delta.x, 0f, cell.variant.delta.z);
+			//if (cell.position == cell.startPosition) return;//unchanged - do not alter map
+
+			iMap.UpdateTileAt(cell.startPosition, cell.variant);//apply the changes
 			EditorSelectionUtil.HideGhostMesh();
 			EditorDirectionUtil.Hide();
 		}

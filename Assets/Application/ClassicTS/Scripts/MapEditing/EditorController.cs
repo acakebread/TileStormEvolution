@@ -18,7 +18,8 @@ namespace ClassicTilestorm
 		private ISelectable[] selection
 		{
 			get => _selection;
-			set { Array.ForEach(_selection ?? Array.Empty<ISelectable>(), item => item.OnDeselect(iMap, _camera)); if (value?.Length is 1) value[0].OnSelect(iMap, _camera); _selection = value;}
+			//set { Array.ForEach(_selection ?? Array.Empty<ISelectable>(), item => item.OnDeselect(iMap, _camera)); if (value?.Length is 1) value[0].OnSelect(iMap, _camera); _selection = value; }
+			set { Array.ForEach(_selection ?? Array.Empty<ISelectable>(), item => item.OnDeselect(iMap, _camera)); Array.ForEach(value ?? Array.Empty<ISelectable>(), item => item.OnSelect(iMap, _camera)); _selection = value; }
 		}
 		private float editAltitude = 0f;
 
@@ -69,7 +70,7 @@ namespace ClassicTilestorm
 			GridLinesUtil.Update(transform, iMap?.Width ?? 32, iMap?.Height ?? 32, null != iMap ? iMap.TileRenderPosition(0) + new Vector3(-0.5f, editAltitude, -0.5f) : Vector3.zero);
 			if (!isActiveAndEnabled) return;
 			GridLinesUtil.Show();
-			DeselectTile();
+			ClearSelection();
 			EditorAttachmentUI.ClearPending();
 			EditorMarkerUtil.ClearMapMarkers();
 			SetMode(ControllerMode.Idle);
@@ -92,7 +93,7 @@ namespace ClassicTilestorm
 		private void OnDisable()
 		{
 			if (null != UIController.Instance?.editorScreenUI) UIController.Instance.editorScreenUI.SetActive(false);
-			DeselectTile();
+			ClearSelection();
 			GridLinesUtil.Hide();
 			EditorAttachmentUI.ClearPending();
 			EditorMarkerUtil.ClearMapMarkers();
@@ -170,6 +171,8 @@ namespace ClassicTilestorm
 				case ControllerMode.SelectTile:
 					if (InputX.GetMouseButtonDown(0))
 					{
+						//if (!Input.GetKey(KeyCode.LeftControl) && !Input.GetKey(KeyCode.RightControl))
+							ClearSelection();
 						if (StartTileDrag())
 							SetMode(ControllerMode.DragTile);
 						else
@@ -179,7 +182,7 @@ namespace ClassicTilestorm
 					{
 						if (InputX.GetMouseButtonUp(1))
 						{
-							DeselectTile();
+							ClearSelection();
 							SetMode(ControllerMode.Idle);
 						}
 					}
@@ -272,22 +275,50 @@ namespace ClassicTilestorm
 			cell.position = snappedWorld + new Vector3(cell.variant.delta.x, 0f, cell.variant.delta.z);
 			if (cell.position == cell.startPosition) return;//unchanged - do not alter map
 
-			DeselectTile();
+			DeselectTile(cell.tile);
 			iMap.RemoveTileAt(beginWorld);
 			var index = iMap.UpdateTileAt(cell.position, cell.variant);
 			if (-1 == index) index = iMap.UpdateTileAt(beginWorld, cell.variant);
 			SelectTile(iMap.IndexToVector(index) + Vector3.up * editAltitude);
 		}
 
+		//private bool SelectTile(Vector3 worldPos)
+		//{
+		//	var tile = iMap.GetTile(worldPos);
+		//	if (null == tile.gameObject) return false;
+		//	selection = new ISelectable[] { new Cell(iMap, worldPos) };
+		//	return true;
+		//}
+
 		private bool SelectTile(Vector3 worldPos)
 		{
 			var tile = iMap.GetTile(worldPos);
-			if (null == tile.gameObject) return false;
-			selection = new ISelectable[] { new Cell(iMap, worldPos) };
+			if (tile.gameObject == null) return false;
+
+			var newCell = new Cell(iMap, worldPos);
+
+			if (selection?.Any(s => s is Cell c && c.tile == newCell.tile) == true)
+				return true;
+
+			selection = selection == null
+				? new[] { newCell }
+				: selection.Append(newCell).ToArray();   // ← allocates every time
+
 			return true;
 		}
 
-		private void DeselectTile() => selection = null;
+		private void DeselectTile(int tileIndex)
+		{
+			if (selection == null || selection.Length == 0) return;
+			// Filter out the cell that matches the given tile index
+			var newSelection = selection.Where(item => item is not Cell cell || cell.tile != tileIndex).ToArray();
+			// If nothing changed → early return
+			if (newSelection.Length == selection.Length) return;
+			// Update selection
+			selection = newSelection.Length > 0 ? newSelection : null;
+		}
+
+		private void ClearSelection() => selection = null;
 
 		private void EvaluateAttachments()
 		{
