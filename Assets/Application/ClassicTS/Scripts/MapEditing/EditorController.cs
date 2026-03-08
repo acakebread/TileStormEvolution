@@ -47,6 +47,7 @@ namespace ClassicTilestorm
 		public void OnAltitudeChanged(float value)
 		{
 			editAltitude = value;
+			UpdateSelectionAltitude(value);
 			GridLinesUtil.Update(transform, iMap?.Width ?? 32, iMap?.Height ?? 32, null != iMap ? iMap.TileRenderPosition(0) + new Vector3(-0.5f, editAltitude, -0.5f) : Vector3.zero);
 			GridLinesUtil.Show();
 		}
@@ -242,6 +243,18 @@ namespace ClassicTilestorm
 		// ─── All helper methods ──────────────────────────────────────────────
 		private Vector3 snappedWorld => iMap.GetVariantAt(beginWorld).HasNav ? 
 			Map.FullFloorVec(currentWorld) : (Map.FullFloorVec(beginWorld) + Map.HalfFloorVec(currentWorld) - Map.HalfFloorVec(beginWorld));
+
+		private void UpdateSelectionAltitude(float value)
+		{
+			if (null == selection || selection.Length <= 0) return;
+			foreach (var item in selection)
+			{
+				if (item is not Cell cell) continue;
+				cell.startPosition.y = cell.position.y = value;
+				iMap.UpdateTileAt(cell.startPosition, cell.variant);//apply the new altitude value
+				cell.OnUpdate(iMap, _camera);
+			}
+		}
 
 		private bool StartTileDrag() => SelectTile(beginWorld = currentWorld);
 
