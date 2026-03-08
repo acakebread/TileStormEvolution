@@ -2,24 +2,25 @@ using UnityEngine;
 
 namespace ClassicTilestorm
 {
-	// Editor-only fake attachment that represents one map cell
+	// Editor-only fake tile that represents one map cell
 	public class Cell : ISelectable
 	{
 		public string type;
 		public string name;
 		public int tile = -1;
 		public Vector3 position;
-		public Variant variant(IMapEdit iMap) => iMap.GetVariantAt(tile);
-		public Vector3 startPosition(IMapEdit iMap) => iMap.IndexToVector(tile) + variant(iMap).delta;
+		public Variant variant;
+		public Vector3 startPosition;
 
-		public Cell(int tileIndex)
+		public Cell(IMapEdit iMap, Vector3 pos)
 		{
 			type = "Cell"; // or leave as base, doesn't matter
-			tile = tileIndex;
-			position = Vector3.zero;
+			tile = iMap.VectorToIndex(pos);
+			var _variant = iMap.GetVariantAt(pos);
+			startPosition = position = Map.FullFloorVec(pos) + new Vector3(_variant.delta.x, 0f, _variant.delta.z);
+			variant = iMap.GetVariantAt(tile);
 		}
 
-		// Optional: give it a nice name in the side panel
-		//public string TypeName => "Cell";
+		//public string TypeName => "Cell";// Optional: give it a nice name in the side panel
 	}
 }

@@ -14,9 +14,9 @@ namespace ClassicTilestorm
 			if (null != tile.gameObject)
 			{
 				tile.gameObject.SetActive(false);
-				var variant = cell.variant(iMap);
-				EditorSelectionUtil.UpdateGhostMesh(iMap, iMap.IndexToVector(cell.tile), variant, true);
-				EditorDirectionUtil.ShowAt(iMap.TileRenderPosition(cell.tile) + variant.delta, tile.gameObject.transform.rotation, camera);
+				var rotation = Quaternion.AngleAxis(cell.variant.angle, Vector3.up);
+				EditorSelectionUtil.UpdateGhostMesh(iMap, cell.position, cell.variant, true);
+				EditorDirectionUtil.ShowAt(Map.WorldToRender(cell.position), rotation, camera);
 			}
 		}
 
@@ -24,15 +24,7 @@ namespace ClassicTilestorm
 		{
 			var cell = (Cell)selection;
 			var tile = iMap.GetTile(cell.tile);
-			if (null != tile.gameObject)
-			{
-				tile.gameObject.SetActive(true);
-				var variant = cell.variant(iMap);
-				variant.angle = EditorDirectionUtil.CurrentRotation;
-				//iMap.UpdateTileAt(iMap.IndexToVector(cell.tile), variant);
-				iMap.UpdateTileAt(iMap.IndexToVector(cell.tile) + variant.delta, variant);
-				//iMap.UpdateTileAt(cell.position, variant);
-			}
+			if (null != tile.gameObject) tile.gameObject.SetActive(true);
 			EditorSelectionUtil.HideGhostMesh();
 			EditorDirectionUtil.Hide();
 		}
@@ -43,19 +35,20 @@ namespace ClassicTilestorm
 				return false;
 
 			var cell = (Cell)selection;
-			var variant = cell.variant(iMap);
-			variant.angle = newWorldRot.eulerAngles.y;
-			EditorSelectionUtil.UpdateGhostMesh(variant);
+			cell.variant.angle = newWorldRot.eulerAngles.y;
+			iMap.UpdateTileAt(cell.startPosition, cell.variant);//apply the rotation to original tile variant
+			EditorSelectionUtil.UpdateGhostMesh(cell.variant);
 			return true;
 		}
 
 		public void OnUpdate(IMapEdit iMap, Camera camera, ISelectable selection)
 		{
 			var cell = (Cell)selection;
-			var variant = cell.variant(iMap);
-			var rotation = Quaternion.AngleAxis(EditorSelectionUtil.CurrentRotation, Vector3.up);
-			EditorSelectionUtil.UpdateGhostMesh(iMap, cell.position, variant, true);
-			EditorDirectionUtil.ShowAt(Map.WorldToRender(cell.position + variant.delta), rotation, camera);
+			var position = new Vector3(cell.position.x, 0f, cell.position.z);	
+			var rotation = Quaternion.AngleAxis(cell.variant.angle, Vector3.up);
+			EditorSelectionUtil.UpdateGhostMesh(iMap, cell.position, cell.variant, true);
+			EditorDirectionUtil.ShowAt(Map.WorldToRender(cell.position), rotation, camera);
+
 		}
 	}
 }

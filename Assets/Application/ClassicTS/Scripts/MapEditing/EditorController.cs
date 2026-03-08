@@ -153,14 +153,12 @@ namespace ClassicTilestorm
 
 				case ControllerMode.PlacingTile:
 					var current = EditorSelectionUtil.CurrentVariant;
-					var variant = EditorSelectionUtil.NextVariantOnMap(iMap, currentWorld, EditorSelectionUtil.CurrentVariant);
-					variant.delta = Vector3.up * editAltitude;
+					var variant = EditorSelectionUtil.NextVariantOnMap(iMap, currentWorld, current);
 					if (InputX.staticClick && InputX.GetMouseButtonUp(0))
 						iMap.UpdateTileAt(Map.FullFloorVec(currentWorld), variant);
-					var seaLevel = Map.FullFloorVec(currentWorld);
-					seaLevel.y = 0f;
-					EditorSelectionUtil.UpdateGhostMesh(iMap, seaLevel, variant, false);
-					EditorSelectionUtil.CurrentVariant = current;
+					EditorSelectionUtil.UpdateGhostMesh(iMap, Map.FullFloorVec(currentWorld), variant, false);
+					EditorSelectionUtil.CurrentVariant = current;//restore placement - ToDo remove storage of CurrentVariant from EditorSelectionUtil
+
 					if (InputX.staticClick && InputX.GetMouseButtonUp(1))
 					{
 						EditorSelectionUtil.HideGhostMesh();
@@ -250,8 +248,7 @@ namespace ClassicTilestorm
 		private void UpdateTileDrag()
 		{
 			if (selection?.Length != 1 || selection[0] is not Cell cell) return;
-			var pos = snappedWorld;
-			cell.position = new Vector3(pos.x, 0f, pos.z);
+			cell.position = snappedWorld + new Vector3(cell.variant.delta.x, 0f, cell.variant.delta.z);
 			selection[0].OnUpdate(iMap, _camera);
 		}
 
@@ -259,24 +256,21 @@ namespace ClassicTilestorm
 		{
 			if (selection?.Length != 1 || selection[0] is not Cell cell) return;
 
-			var variant = cell.variant(iMap);
-			var finalWorld = snappedWorld + new Vector3(variant.delta.x, 0f, variant.delta.z);
-			if (finalWorld == cell.startPosition(iMap)) return;//unchanged - do not alter map
+			cell.position = snappedWorld + new Vector3(cell.variant.delta.x, 0f, cell.variant.delta.z);
+			if (cell.position == cell.startPosition) return;//unchanged - do not alter map
 
 			DeselectTile();
 			iMap.RemoveTileAt(beginWorld);
-			var index = iMap.UpdateTileAt(finalWorld, variant);
-			if (-1 == index) index = iMap.UpdateTileAt(beginWorld, variant);
-			SelectTile(iMap.IndexToVector(index));
+			var index = iMap.UpdateTileAt(cell.position, cell.variant);
+			if (-1 == index) index = iMap.UpdateTileAt(beginWorld, cell.variant);
+			SelectTile(iMap.IndexToVector(index) + Vector3.up * editAltitude);
 		}
 
 		private bool SelectTile(Vector3 worldPos)
 		{
 			var tile = iMap.GetTile(worldPos);
 			if (null == tile.gameObject) return false;
-			selection = new ISelectable[] { new Cell(iMap.VectorToIndex(worldPos)) };
-			//var variant = (selection[0] as Cell).variant(iMap);//ToDo dynamically alter editing height based on selected tile - this does not work properly at the moment - selecting casing incorrect ray / begin / current value
-			//OnAltitudeChanged(variant.delta.y);
+			selection = new ISelectable[] { new Cell(iMap, worldPos) };
 			return true;
 		}
 

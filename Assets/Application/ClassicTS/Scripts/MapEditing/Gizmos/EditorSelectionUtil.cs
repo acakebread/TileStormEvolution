@@ -19,8 +19,8 @@ namespace ClassicTilestorm
 
 		//we should do away with these - they are a bit of a hack
 		public static Variant CurrentVariant { get => currentVariant; set => currentVariant = value; }
-		public static Vector3 CurrentPosition { get => lastPosition; }//set => lastPosition = value; }
-		public static float CurrentRotation { get => lastAngle; }//set => lastPosition = value; }
+		//public static Vector3 CurrentPosition { get => lastPosition; }//set => lastPosition = value; }
+		//public static float CurrentRotation { get => lastAngle; }//set => lastPosition = value; }
 
 		// Initialize the ghost materials
 		public static void InitializeGhostMaterial()
@@ -166,7 +166,7 @@ namespace ClassicTilestorm
 
 				ghostMesh = Assets.ModelAssets.Instantiate(
 					definition.model,
-					position + variant.delta,
+					position,
 					Quaternion.Euler(0f, variant.angle, 0f),
 					parent: MainController.MapRoot);
 
@@ -189,7 +189,7 @@ namespace ClassicTilestorm
 
 				UpdateMaterial();
 
-				ghostMesh.transform.position = position + variant.delta;
+				ghostMesh.transform.position = position;
 				ghostMesh.transform.rotation = Quaternion.Euler(0f, variant.angle, 0f);
 				ghostMesh.SetActive(true);
 			}
