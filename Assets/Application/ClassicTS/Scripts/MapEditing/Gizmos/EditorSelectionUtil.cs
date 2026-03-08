@@ -278,13 +278,40 @@ namespace ClassicTilestorm
 			if (variant.IsDefaultEquivalent)
 				return false;
 
-			var tile = map.GetTile(worldPos);
-			if (tile.gameObject == null) return false;
+			return HighlightGameObject(map.GetTile(worldPos).gameObject);
+
+			//var tile = map.GetTile(worldPos);
+			//if (tile.gameObject == null) return false;
+
+			//Color SELECT_TINT = new(1.4f, 1.25f, 0.85f, 1f);
+			//const float SELECT_TINT_BRIGHTNESS = 1.35f;
+
+			//originalRenderersState = tile.gameObject.ApplySelectionHighlight(
+			//	SELECT_TINT,
+			//	SELECT_TINT_BRIGHTNESS,
+			//	includeInactive: true);
+
+			//return true;
+		}
+
+		public static void UnhighlightTile(IMapEdit map, Vector3 worldPos)
+		{
+			//var tile = map.GetTile(worldPos);
+			//if (null != tile.gameObject)
+			//	tile.gameObject.RestoreSelectionHighlight(originalRenderersState);
+			UnhighlightGameObject(map.GetTile(worldPos).gameObject);
+
+			originalRenderersState = null;
+		}
+
+		public static bool HighlightGameObject(GameObject gameObject)
+		{
+			if (gameObject == null) return false;
 
 			Color SELECT_TINT = new(1.4f, 1.25f, 0.85f, 1f);
 			const float SELECT_TINT_BRIGHTNESS = 1.35f;
 
-			originalRenderersState = tile.gameObject.ApplySelectionHighlight(
+			originalRenderersState = gameObject.ApplySelectionHighlight(
 				SELECT_TINT,
 				SELECT_TINT_BRIGHTNESS,
 				includeInactive: true);
@@ -292,12 +319,10 @@ namespace ClassicTilestorm
 			return true;
 		}
 
-		public static void UnhighlightTile(IMapEdit map, Vector3 worldPos)
+		public static void UnhighlightGameObject(GameObject gameObject)
 		{
-			var index = map.VectorToIndex(worldPos);
-			var tile = map.GetTile(index);
-			if (null != tile.gameObject)
-				tile.gameObject.RestoreSelectionHighlight(originalRenderersState);
+			if (null != gameObject)
+				gameObject.RestoreSelectionHighlight(originalRenderersState);
 
 			originalRenderersState = null;
 		}
