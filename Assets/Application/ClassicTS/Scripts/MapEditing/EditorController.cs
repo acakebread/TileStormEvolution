@@ -156,7 +156,7 @@ namespace ClassicTilestorm
 					var variant = EditorSelectionUtil.NextVariantOnMap(iMap, currentWorld, EditorSelectionUtil.CurrentVariant);
 					variant.delta = Vector3.up * editAltitude;
 					if (InputX.staticClick && InputX.GetMouseButtonUp(0))
-						iMap.UpdateTileAt(currentWorld, variant);
+						iMap.UpdateTileAt(Map.FullFloorVec(currentWorld), variant);
 					var seaLevel = Map.FullFloorVec(currentWorld);
 					seaLevel.y = 0f;
 					EditorSelectionUtil.UpdateGhostMesh(iMap, seaLevel, variant, false);
@@ -262,7 +262,6 @@ namespace ClassicTilestorm
 			var variant = cell.variant(iMap);
 			var finalWorld = snappedWorld + new Vector3(variant.delta.x, 0f, variant.delta.z);
 			if (finalWorld == cell.startPosition(iMap)) return;//unchanged - do not alter map
-			variant.delta = finalWorld;
 
 			DeselectTile();
 			iMap.RemoveTileAt(beginWorld);
@@ -276,6 +275,8 @@ namespace ClassicTilestorm
 			var tile = iMap.GetTile(worldPos);
 			if (null == tile.gameObject) return false;
 			selection = new ISelectable[] { new Cell(iMap.VectorToIndex(worldPos)) };
+			//var variant = (selection[0] as Cell).variant(iMap);//ToDo dynamically alter editing height based on selected tile - this does not work properly at the moment - selecting casing incorrect ray / begin / current value
+			//OnAltitudeChanged(variant.delta.y);
 			return true;
 		}
 

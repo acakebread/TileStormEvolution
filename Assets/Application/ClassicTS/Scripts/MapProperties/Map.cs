@@ -1051,7 +1051,13 @@ namespace ClassicTilestorm
 			return -1;
 		}
 
-		public int UpdateTileAt(Vector3 pos, Variant variant) => UpdateTileAt(pos, variant.hash, variant.delta, variant.angle);
+		//public int UpdateTileAt(Vector3 pos, Variant variant) => UpdateTileAt(pos, variant.hash, variant.delta, variant.angle);
+		public int UpdateTileAt(Vector3 pos, Variant variant)
+		{
+			var snapped = variant.HasNav ? FullFloorVec(pos) : HalfFloorVec(pos);
+			var delta = new Vector3(((snapped.x % 1f) + 1f) % 1f, snapped.y, ((snapped.z % 1f) + 1f) % 1f);//make sure valid delta for variant
+			return UpdateTileAt(pos, variant.hash, delta, variant.angle);
+		}
 
 		public int UpdateTileAt(Vector3 pos, HashId hashId, Vector3 delta = new Vector3(), float angle = 0f) => UpdateTileAt(Mathf.FloorToInt(pos.x), Mathf.FloorToInt(pos.z), hashId, delta, angle);
 
