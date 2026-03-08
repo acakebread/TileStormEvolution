@@ -22,6 +22,7 @@ namespace ClassicTilestorm
 			set { Array.ForEach(_selection ?? Array.Empty<ISelectable>(), item => item.OnDeselect(iMap, _camera)); Array.ForEach(value ?? Array.Empty<ISelectable>(), item => item.OnSelect(iMap, _camera)); _selection = value; }
 		}
 		private float editAltitude = 0f;
+		private Variant atlasVariant = default;
 
 		// ─── Tile / Attachment state ─────────────────────────────────────────
 		private enum ControllerMode
@@ -41,7 +42,7 @@ namespace ClassicTilestorm
 		public bool CanOpenPalette() => mode == ControllerMode.Idle;
 		public void OnTileSelected(HashId newHash)
 		{
-			EditorSelectionUtil.CurrentVariant = new Variant(newHash);
+			atlasVariant = new Variant(newHash);
 			SetMode(newHash != ResourceManager.DefaultHash ? ControllerMode.PlacingTile : ControllerMode.Idle);
 		}
 
@@ -154,16 +155,14 @@ namespace ClassicTilestorm
 					break;
 
 				case ControllerMode.PlacingTile:
-					var current = EditorSelectionUtil.CurrentVariant;
-					var variant = EditorSelectionUtil.NextVariantOnMap(iMap, currentWorld, current);
+					var variant = MepUtils.NextVariantOnMap(iMap, currentWorld, atlasVariant);
 					if (InputX.staticClick && InputX.GetMouseButtonUp(0))
 						iMap.UpdateTileAt(Map.FullFloorVec(currentWorld), variant);
-					EditorSelectionUtil.UpdateGhostMesh(iMap, Map.FullFloorVec(currentWorld), variant, false);
-					EditorSelectionUtil.CurrentVariant = current;//restore placement - ToDo remove storage of CurrentVariant from EditorSelectionUtil
+					GhostMeshUtil.UpdateGhostMesh(iMap, Map.FullFloorVec(currentWorld), variant, false);
 
 					if (InputX.staticClick && InputX.GetMouseButtonUp(1))
 					{
-						EditorSelectionUtil.HideGhostMesh();
+						GhostMeshUtil.HideGhostMesh();
 						SetMode(ControllerMode.Idle);
 					}
 					break;
