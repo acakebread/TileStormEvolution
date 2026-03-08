@@ -255,37 +255,19 @@ namespace ClassicTilestorm
 			selection[0].OnUpdate(iMap, _camera);
 		}
 
-		//private void EndTileDrag()
-		//{
-		//	if (selection?.Length != 1 || selection[0] is not Cell cell) return;
-
-		//	var variant = cell.variant(iMap);
-		//	var finalWorld = snappedWorld + new Vector3(variant.delta.x, 0f, variant.delta.z);
-		//	if (finalWorld == cell.startPosition(iMap)) return;//unchanged - do not alter map
-		//	variant.delta = new Vector3(finalWorld.x % 1f, finalWorld.y, finalWorld.z % 1f);//no need to do this any more - mod handled in Map.cs
-
-		//	DeselectTile();
-		//	iMap.RemoveTileAt(beginWorld);
-		//	var index = iMap.UpdateTileAt(finalWorld, variant);
-		//	if (-1 == index) index = iMap.UpdateTileAt(beginWorld, variant);
-		//	SelectTile(iMap.IndexToVector(index));
-		//}
-
 		private void EndTileDrag()
 		{
 			if (selection?.Length != 1 || selection[0] is not Cell cell) return;
+
 			var variant = cell.variant(iMap);
-			var startWorld = variant.HasNav ? Map.FullFloorVec(beginWorld) : Map.HalfFloorVec(beginWorld);
-			var worldPos = Map.FullFloorVec(beginWorld) + currentWorld - startWorld + variant.delta;
-			var snapped = Map.FullFloorVec(worldPos);
-			var delta = variant.HasNav ? Vector3.zero : Map.HalfFloorVec(worldPos) - snapped;
-			if (snapped == Map.FullFloorVec(beginWorld) && delta == variant.delta) return;
+			var finalWorld = snappedWorld + new Vector3(variant.delta.x, 0f, variant.delta.z);
+			if (finalWorld == cell.startPosition(iMap)) return;//unchanged - do not alter map
+			variant.delta = finalWorld;
 
 			DeselectTile();
-			variant.delta = new Vector3(delta.x, variant.delta.y, delta.z);
 			iMap.RemoveTileAt(beginWorld);
-			var index = iMap.UpdateTileAt(snapped, variant);
-			if (-1 == index) index = iMap.UpdateTileAt(Map.FullFloorVec(beginWorld), variant);
+			var index = iMap.UpdateTileAt(finalWorld, variant);
+			if (-1 == index) index = iMap.UpdateTileAt(beginWorld, variant);
 			SelectTile(iMap.IndexToVector(index));
 		}
 
