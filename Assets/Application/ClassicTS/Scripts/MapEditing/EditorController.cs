@@ -155,7 +155,7 @@ namespace ClassicTilestorm
 					break;
 
 				case ControllerMode.PlacingTile:
-					var variant = MepUtils.NextVariantOnMap(iMap, currentWorld, atlasVariant);
+					var variant = MapUtils.NextVariantOnMap(iMap, currentWorld, atlasVariant);
 					if (InputX.staticClick && InputX.GetMouseButtonUp(0))
 						iMap.UpdateTileAt(Map.FullFloorVec(currentWorld), variant);
 					GhostMeshUtil.UpdateGhostMesh(iMap, Map.FullFloorVec(currentWorld), variant, false);
@@ -170,7 +170,7 @@ namespace ClassicTilestorm
 				case ControllerMode.SelectTile:
 					if (InputX.GetMouseButtonDown(0))
 					{
-						//if (!Input.GetKey(KeyCode.LeftControl) && !Input.GetKey(KeyCode.RightControl))
+						if (!Input.GetKey(KeyCode.LeftControl) && !Input.GetKey(KeyCode.RightControl))
 							ClearSelection();
 						if (StartTileDrag())
 							SetMode(ControllerMode.DragTile);

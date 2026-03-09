@@ -222,13 +222,13 @@ namespace ClassicTilestorm
 			}
 		}
 
-		// Public wrapper - normal placing mode (no selected flag)
-		public static void UpdateGhostMesh(IMapEdit map, Vector3 worldPos, Variant variant)
-		{
-			var mapIndex = map.VectorToIndex(worldPos);
-			var renderPos = Map.WorldToRender(worldPos);
-			UpdateGhostMesh(variant, renderPos, mapIndex == -1, false);
-		}
+		//// Public wrapper - normal placing mode (no selected flag)
+		//public static void UpdateGhostMesh(IMapEdit map, Vector3 worldPos, Variant variant)
+		//{
+		//	var mapIndex = map.VectorToIndex(worldPos);
+		//	var renderPos = Map.WorldToRender(worldPos);
+		//	UpdateGhostMesh(variant, renderPos, mapIndex == -1, false);
+		//}
 
 		// NEW public overload - for selected / dragging (pass true)
 		public static void UpdateGhostMesh(IMapEdit map, Vector3 worldPos, Variant variant, bool isSelectedOrDragging)

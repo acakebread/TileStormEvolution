@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace ClassicTilestorm
 {
-	public static class MepUtils
+	public static class MapUtils
 	{
 		public static Variant NextVariantOnMap(IMapEdit map, Vector3 worldPos, Variant variant, bool cycleHeight = false)
 		{
