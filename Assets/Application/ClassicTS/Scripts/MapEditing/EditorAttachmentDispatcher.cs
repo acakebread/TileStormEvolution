@@ -8,7 +8,6 @@ namespace ClassicTilestorm
 	{
 		private static readonly Dictionary<Type, IEditorAttachmentHandler> Handlers = new()
 		{
-			//{ typeof(Tile), TileSelectableHandler.Instance },
 			{ typeof(Cell), CellSelectableHandler.Instance },
 			{ typeof(Emitter), EmitterAttachmentHandler.Instance },
 			{ typeof(View), ViewAttachmentHandler.Instance },

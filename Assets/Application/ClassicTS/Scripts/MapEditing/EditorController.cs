@@ -18,7 +18,6 @@ namespace ClassicTilestorm
 		private ISelectable[] selection
 		{
 			get => _selection;
-			//set { Array.ForEach(_selection ?? Array.Empty<ISelectable>(), item => item.OnDeselect(iMap, _camera)); if (value?.Length is 1) value[0].OnSelect(iMap, _camera); _selection = value; }
 			set { Array.ForEach(_selection ?? Array.Empty<ISelectable>(), item => item.OnDeselect(iMap, _camera)); Array.ForEach(value ?? Array.Empty<ISelectable>(), item => item.OnSelect(iMap, _camera)); _selection = value; }
 		}
 		private float editAltitude = 0f;
@@ -281,28 +280,13 @@ namespace ClassicTilestorm
 			SelectTile(iMap.IndexToVector(index) + Vector3.up * editAltitude);
 		}
 
-		//private bool SelectTile(Vector3 worldPos)
-		//{
-		//	var tile = iMap.GetTile(worldPos);
-		//	if (null == tile.gameObject) return false;
-		//	selection = new ISelectable[] { new Cell(iMap, worldPos) };
-		//	return true;
-		//}
-
 		private bool SelectTile(Vector3 worldPos)
 		{
 			var tile = iMap.GetTile(worldPos);
 			if (tile.gameObject == null) return false;
-
 			var newCell = new Cell(iMap, worldPos);
-
-			if (selection?.Any(s => s is Cell c && c.tile == newCell.tile) == true)
-				return true;
-
-			selection = selection == null
-				? new[] { newCell }
-				: selection.Append(newCell).ToArray();   // ← allocates every time
-
+			if (selection?.Any(s => s is Cell c && c.tile == newCell.tile) == true) return true;
+			selection = selection == null ? new[] { newCell } : selection.Append(newCell).ToArray();
 			return true;
 		}
 
