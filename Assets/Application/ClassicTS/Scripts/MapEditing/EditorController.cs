@@ -247,8 +247,7 @@ namespace ClassicTilestorm
 
 		private void UpdateSelectionAltitude(float value)
 		{
-			if (null == selection || selection.Length <= 0) return;
-			foreach (var item in selection)
+			foreach (var item in selection ?? Array.Empty<ISelectable>())
 			{
 				if (item is not Cell cell) continue;
 				cell.startPosition.y = cell.position.y = value;
