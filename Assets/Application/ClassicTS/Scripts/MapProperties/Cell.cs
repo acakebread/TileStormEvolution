@@ -20,7 +20,7 @@ namespace ClassicTilestorm
 			var snapped = Map.FullFloorVec(pos);
 			variant.delta.y = 0f;//clear the cached delta altitude
 			origin = position = snapped + variant.delta;
-			variant.delta = Vector3.zero;//clear the cached delta
+			//variant.delta = Vector3.zero;//clear the cached delta
 
 			//variant.delta.y = 0f;//clear the cached delta altitude
 			//origin = position = (variant.HasNav ? Map.FullFloorVec(pos) : Map.HalfFloorVec(pos)) - variant.delta;
