@@ -302,16 +302,6 @@ namespace ClassicTilestorm
 			var cells = selection?.OfType<Cell>() ?? Enumerable.Empty<Cell>();
 			if (!cells.Any()) return;
 
-			//var extents = new Rect(0, 0, iMap.Width - 1, iMap.Height - 1);
-			//foreach (var cell in cells)
-			//{
-			//	var p = Map.FullFloorVec(cell.position);
-			//	extents.xMin = Mathf.Min(extents.xMin, p.x);
-			//	extents.xMax = Mathf.Max(extents.xMax, p.x);
-			//	extents.yMin = Mathf.Min(extents.yMin, p.z);
-			//	extents.yMax = Mathf.Max(extents.yMax, p.z);
-			//}
-
 			var extents = GeomUtils.PointArrayBoundsInt((new[] { new Vector2Int(0, 0), new Vector2Int(iMap.Width - 1, iMap.Height - 1) }).Concat(
 				cells.Select(c => new Vector2Int(Mathf.FloorToInt(c.position.x), Mathf.FloorToInt(c.position.z)))));
 
@@ -340,13 +330,13 @@ namespace ClassicTilestorm
 
 			foreach (var cell in copy)
 			{
-				if (cell.position != cell.origin)
-					iMap.UpdateTileAt(cell.position, cell.variant, false);
+				if (cell.position == cell.origin) continue;
+				iMap.UpdateTileAt(cell.position, cell.variant, false);
+				cell.origin = cell.position;
 			}
 
 			//restore selection
-			foreach (var cell in copy)
-				SelectTile(cell.position, true);
+			selection = copy.OfType<ISelectable>().ToArray();
 
 			iMap.UpdateTileAt(copy.First().position, copy.First().variant);//workaround to crop map after drag changes extents
 			//iMap.CropToContent(true);//need to make sure  onmapchanged is invoked or we can't use this instead of above
