@@ -7,11 +7,11 @@ namespace ClassicTilestorm
 		private readonly int flags;
 		public readonly GameObject gameObject;
 
-		public Tile(Variant variant, Transform parent, Vector3 worldPosition)
+		public Tile(Variant variant, Transform parent, Vector3 renderPosition)
 		{
 			var def = ResourceManager.ResolveDefinition(variant.hash, out bool hadError);
 			if (hadError)
-				Debug.LogWarning($"Failed to resolve tile definition at tile ({worldPosition.x:F1},{worldPosition.z:F1}) (hash: {variant.hash}) — using default");
+				Debug.LogWarning($"Failed to resolve tile definition at tile ({renderPosition.x:F1},{renderPosition.z:F1}) (hash: {variant.hash}) — using default");
 
 			// Directly take flags from definition (no recompute needed)
 			int baseFlags = ((IFlagAccess)def)?.Flags ?? 0;
@@ -24,7 +24,7 @@ namespace ClassicTilestorm
 
 			flags = (baseFlags & ~(int)DefinitionFlags.DirMask) | rotatedNav;
 
-			Vector3 finalPosition = worldPosition + variant.delta;// new Vector3(0f, variant.delta, 0f) + variant.deltaxz;
+			Vector3 finalPosition = renderPosition + variant.delta;
 			Quaternion finalRotation = Quaternion.Euler(0f, variant.angle, 0f);
 
 			gameObject = def != null && !def.IsDefault()

@@ -64,8 +64,29 @@ namespace ClassicTilestorm
 		public void Initialise(IMapEdit iMap)
 		{
 			this.iMap = iMap;
-			iMap.OnMapEdited += (Map map, bool resized, Vector3 originDelta) => { ResourceManager.ApplyMapChanges(map);
-				if (resized) GridLinesUtil.UpdateSize(map.width, map.height); };
+			iMap.OnMapEdited += (Map map, bool resized, Vector3 originDelta) => 
+			{
+				ResourceManager.ApplyMapChanges(map);
+				if (resized)
+				{
+					GridLinesUtil.UpdateSize(map.width, map.height);
+
+					if (originDelta != Vector3.zero)
+					{
+						Debug.Log($"Map resized, origin shifted by {originDelta}");
+
+						foreach (var item in selection ?? Array.Empty<ISelectable>())
+						{
+							if (item is not Cell cell) continue;
+
+							// Shift both original and current position by the same world delta
+							cell.startPosition += originDelta;
+							cell.position += originDelta;
+							item.OnUpdate(iMap, _camera);
+						}
+					}
+				}
+			};
 
 			GridLinesUtil.Update(transform, iMap?.Width ?? 32, iMap?.Height ?? 32, null != iMap ? iMap.TileRenderPosition(0) + new Vector3(-0.5f, editAltitude, -0.5f) : Vector3.zero);
 			if (!isActiveAndEnabled) return;
@@ -169,10 +190,11 @@ namespace ClassicTilestorm
 				case ControllerMode.SelectTile:
 					if (InputX.GetMouseButtonDown(0))
 					{
-						if (!Input.GetKey(KeyCode.LeftControl) && !Input.GetKey(KeyCode.RightControl))
-							ClearSelection();
-						if (StartTileDrag())
+						if (StartTileDrag(Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)))
+						{
 							SetMode(ControllerMode.DragTile);
+							if (selection?.Length > 1) EditorDirectionUtil.Hide();
+						}
 						else
 							EditorCameraMovement.StartPanning(currentWorld);
 					}
@@ -233,6 +255,19 @@ namespace ClassicTilestorm
 					}
 					break;
 			}
+
+			if (Input.GetKeyDown(KeyCode.T))
+			{
+				Vector3 originDelta = iMap.ResizeMap(Rect.MinMaxRect(xmin: -1, ymin: -1, xmax: iMap.Width + 1, ymax: iMap.Height + 1));
+				if (originDelta != Vector3.zero)
+					Debug.Log($"Map resized, origin shifted by {originDelta}");
+			}
+			if (Input.GetKeyDown(KeyCode.Y))
+			{
+				Vector3 originDelta = iMap.ResizeMap(Rect.MinMaxRect(xmin: 1, ymin: 1, xmax: iMap.Width - 1, ymax: iMap.Height - 1));
+				if (originDelta != Vector3.zero)
+					Debug.Log($"Map resized, origin shifted by {originDelta}");
+			}
 		}
 
 		private void OnGUI()
@@ -242,8 +277,10 @@ namespace ClassicTilestorm
 		}
 
 		// ─── All helper methods ──────────────────────────────────────────────
-		private Vector3 snappedWorld => iMap.GetVariantAt(beginWorld).HasNav ? 
-			Map.FullFloorVec(currentWorld) : (Map.FullFloorVec(beginWorld) + Map.HalfFloorVec(currentWorld) - Map.HalfFloorVec(beginWorld));
+		private Vector3 snappedDelta => iMap.GetVariantAt(beginWorld).HasNav ?
+			Map.FullFloorVec(currentWorld) - Map.FullFloorVec(beginWorld) : Map.HalfFloorVec(currentWorld) - Map.HalfFloorVec(beginWorld);
+
+		private void UpdateRotateGizmo() { if (selection?.Length > 1) EditorDirectionUtil.Hide(); }//temporary workaround for rotate gizmo - for now do not allow in multiselect mode
 
 		private void UpdateSelectionAltitude(float value)
 		{
@@ -254,37 +291,125 @@ namespace ClassicTilestorm
 				iMap.UpdateTileAt(cell.startPosition, cell.variant);//apply the new altitude value
 				cell.OnUpdate(iMap, _camera);
 			}
+			UpdateRotateGizmo();//temporary workaround for rotate gizmo - for now do not allow in multiselect mode
 		}
 
-		private bool StartTileDrag() => SelectTile(beginWorld = currentWorld);
+		private bool StartTileDrag(bool combine = false) => SelectTile(beginWorld = currentWorld, combine);
 
 		private void UpdateTileDrag()
 		{
-			if (selection?.Length != 1 || selection[0] is not Cell cell) return;
-			cell.position = snappedWorld + new Vector3(cell.variant.delta.x, 0f, cell.variant.delta.z);
-			selection[0].OnUpdate(iMap, _camera);
+			//if (selection?.Length != 1 || selection[0] is not Cell cell) return;
+			foreach (var item in selection ?? Array.Empty<ISelectable>())
+			{
+				if (item is not Cell cell) continue;
+				cell.position = cell.startPosition + snappedDelta;
+				item.OnUpdate(iMap, _camera);
+			}
+			UpdateRotateGizmo();//temporary workaround for rotate gizmo - for now do not allow in multiselect mode
 		}
+
+		//private void EndTileDrag()
+		//{
+		//	if (selection?.Length != 1 || selection[0] is not Cell cell) return;
+		//	foreach (var item in selection ?? Array.Empty<ISelectable>())
+		//	{
+		//		if (item is not Cell cell) continue;
+		//		cell.position = cell.startPosition + snappedDelta;
+		//		if (cell.position == cell.startPosition) return;//unchanged - do not alter map
+
+		//		DeselectTile(cell.tile);
+		//		iMap.RemoveTileAt(cell.startPosition);
+		//		var index = iMap.UpdateTileAt(cell.position, cell.variant);
+		//		if (-1 == index) index = iMap.UpdateTileAt(cell.startPosition, cell.variant);
+		//		SelectTile(iMap.IndexToVector(index) + Vector3.up * editAltitude, true);
+		//	}
+		//	UpdateRotateGizmo();//temporary workaround for rotate gizmo - for now do not allow in multiselect mode
+		//}
 
 		private void EndTileDrag()
 		{
-			if (selection?.Length != 1 || selection[0] is not Cell cell) return;
+			if (selection == null || selection.Length == 0) return;
 
-			cell.position = snappedWorld + new Vector3(cell.variant.delta.x, 0f, cell.variant.delta.z);
-			if (cell.position == cell.startPosition) return;//unchanged - do not alter map
+			var mapCoorinates = new System.Collections.Generic.List<Vector3>();
 
-			DeselectTile(cell.tile);
-			iMap.RemoveTileAt(beginWorld);
-			var index = iMap.UpdateTileAt(cell.position, cell.variant);
-			if (-1 == index) index = iMap.UpdateTileAt(beginWorld, cell.variant);
-			SelectTile(iMap.IndexToVector(index) + Vector3.up * editAltitude);
+			foreach (var item in selection)
+			{
+				if (item is not Cell cell) continue;
+				mapCoorinates.Add(Map.FullFloorVec(cell.position));
+			}
+
+			if (mapCoorinates.Count == 0) return;
+
+			float selectionMinX = mapCoorinates.Count > 0 ? mapCoorinates.Min(p => p.x) : 0f;
+			float selectionMaxX = mapCoorinates.Count > 0 ? mapCoorinates.Max(p => p.x) : 0f;
+			float selectionMinZ = mapCoorinates.Count > 0 ? mapCoorinates.Min(p => p.z) : 0f;
+			float selectionMaxZ = mapCoorinates.Count > 0 ? mapCoorinates.Max(p => p.z) : 0f;
+
+			// Take the union (outer bounds)
+			float mapMinX = 0f;
+			float mapMinZ = 0f;
+			float mapMaxX = iMap.Width - 1f;
+			float mapMaxZ = iMap.Height - 1f;
+
+			float overallMinX = Mathf.Min(mapMinX, selectionMinX);
+			float overallMinZ = Mathf.Min(mapMinZ, selectionMinZ);
+			float overallMaxX = Mathf.Max(mapMaxX, selectionMaxX);
+			float overallMaxZ = Mathf.Max(mapMaxZ, selectionMaxZ);
+
+			var originDelta = iMap.ResizeMap(Rect.MinMaxRect(overallMinX, overallMinZ, overallMaxX, overallMaxZ));
+			//if (originDelta != Vector3.zero) Debug.Log($"Map resized, origin shifted by {originDelta}");
+
+			var anyChange = false;
+
+			foreach (var item in selection)
+			{
+				if (item is not Cell cell) continue;
+				if (cell.position == cell.startPosition) continue;
+				anyChange = true;
+
+				// Remove from old location
+				DeselectTile(iMap.VectorToIndex(cell.startPosition));
+				iMap.RemoveTileAt(cell.startPosition);
+
+				// Place at new location
+				var newIndex = iMap.UpdateTileAt(cell.position, cell.variant, false);
+				if (newIndex == -1) newIndex = iMap.UpdateTileAt(cell.startPosition, cell.variant, false);
+
+				// Update cell tracking
+				cell.variant = iMap.GetVariantAt(newIndex);
+				cell.startPosition = cell.position = iMap.IndexToVector(newIndex) + cell.variant.delta;
+
+				// Re-select at new world position
+				SelectTile(new Vector3(cell.startPosition.x, 0f, cell.startPosition.z) + Vector3.up * editAltitude, true);
+			}
+
+			if (selection[0] is Cell _cell)
+				iMap.UpdateTileAt(_cell.startPosition, _cell.variant);//workaround to crop map after drag changes bounds
+
+			if (anyChange) UpdateRotateGizmo();
 		}
 
-		private bool SelectTile(Vector3 worldPos)
+		private bool SelectTile(Vector3 worldPos, bool combine = false)
 		{
 			var tile = iMap.GetTile(worldPos);
 			if (tile.gameObject == null) return false;
+			var index = iMap.VectorToIndex(worldPos);
+			if (selection?.Any(s => s is Cell c && iMap.VectorToIndex(c.startPosition) == index) == true)
+			{
+				//foreach (var item in selection)
+				//{
+				//	var cell = item as Cell;
+				//	if (iMap.VectorToIndex(cell.startPosition) == index)
+				//	{
+				//		Debug.Log("reselecting");
+				//		cell.OnSelect(iMap, _camera);
+				//		break;
+				//	}
+				//}
+				return true;
+			}
+			if (false == combine) ClearSelection();
 			var newCell = new Cell(iMap, worldPos);
-			if (selection?.Any(s => s is Cell c && c.tile == newCell.tile) == true) return true;
 			selection = selection == null ? new[] { newCell } : selection.Append(newCell).ToArray();
 			return true;
 		}
@@ -292,12 +417,9 @@ namespace ClassicTilestorm
 		private void DeselectTile(int tileIndex)
 		{
 			if (selection == null || selection.Length == 0) return;
-			// Filter out the cell that matches the given tile index
-			var newSelection = selection.Where(item => item is not Cell cell || cell.tile != tileIndex).ToArray();
-			// If nothing changed → early return
-			if (newSelection.Length == selection.Length) return;
-			// Update selection
-			selection = newSelection.Length > 0 ? newSelection : null;
+			var newSelection = selection.Where(item => item is not Cell cell || Map.FullFloorVec(cell.startPosition) != iMap.IndexToVector(tileIndex)).ToArray();// Filter out the cell that matches the given tile index
+			if (newSelection.Length == selection.Length) return;// If nothing changed → early return
+			selection = newSelection.Length > 0 ? newSelection : null;// Update selection
 		}
 
 		private void ClearSelection() => selection = null;

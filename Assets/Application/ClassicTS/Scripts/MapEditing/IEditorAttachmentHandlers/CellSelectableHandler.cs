@@ -11,7 +11,7 @@ namespace ClassicTilestorm
 		{
 			if (selection is not Cell cell) return;
 
-			var tile = iMap.GetTile(cell.tile);
+			var tile = iMap.GetTile(cell.startPosition);
 			if (tile.gameObject != null)
 				tile.gameObject.SetActive(false);
 
@@ -28,11 +28,11 @@ namespace ClassicTilestorm
 		{
 			if (selection is not Cell cell) return;
 
-			var tile = iMap.GetTile(cell.tile);
+			var tile = iMap.GetTile(cell.startPosition);
 			if (tile.gameObject != null)
 				tile.gameObject.SetActive(true);
 
-			iMap.UpdateTileAt(cell.startPosition, cell.variant);
+			iMap.UpdateTileAt(cell.startPosition, cell.variant, false);
 
 			cell.DestroyHighlight();
 
@@ -45,7 +45,10 @@ namespace ClassicTilestorm
 			if (!EditorDirectionUtil.HandleInput(camera, out Quaternion newWorldRot)) return false;
 
 			cell.variant.angle = newWorldRot.eulerAngles.y;
-			iMap.UpdateTileAt(cell.startPosition, cell.variant);
+			iMap.UpdateTileAt(cell.startPosition, cell.variant, false);
+			var tile = iMap.GetTile(cell.startPosition);
+			if (tile.gameObject != null)
+				tile.gameObject.SetActive(false);
 
 			if (cell.highlightMesh != null) EditorSelectionUtil.Update(cell.highlightMesh, iMap, cell.position, cell.variant, true);
 
@@ -57,6 +60,9 @@ namespace ClassicTilestorm
 			if (selection is not Cell cell) return;
 
 			if (cell.highlightMesh != null) EditorSelectionUtil.Update(cell.highlightMesh, iMap, cell.position, cell.variant, true);
+			var tile = iMap.GetTile(cell.startPosition);
+			if (tile.gameObject != null)
+				tile.gameObject.SetActive(false);
 			var renderPos = Map.WorldToRender(cell.position);
 			var rotation = Quaternion.AngleAxis(cell.variant.angle, Vector3.up);
 			EditorDirectionUtil.ShowAt(renderPos, rotation, camera);

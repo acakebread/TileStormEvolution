@@ -133,9 +133,10 @@ namespace ClassicTilestorm
 
 		Vector3 IndexToVector(int index);
 		HashId GetTileID(int _);
-		int UpdateTileAt(int x, int z, HashId hashId, Vector3 delta = new Vector3(), float angle = 0f);
-		int UpdateTileAt(Vector3 pos, HashId hashId, Vector3 delta = new Vector3(), float angle = 0f);
-		int UpdateTileAt(Vector3 pos, Variant variant);
+		int UpdateTileAt(int x, int z, HashId hashId, Vector3 delta = new Vector3(), float angle = 0f, bool allowResize = true);
+		int UpdateTileAt(Vector3 pos, HashId hashId, Vector3 delta = new Vector3(), float angle = 0f, bool allowResize = true);
+		int UpdateTileAt(Vector3 pos, Variant variant, bool allowResize = true);
+		Vector3 ResizeMap(Rect bounds);
 
 		bool RemoveTileAt(int x, int z);//does not affect bounds
 		bool RemoveTileAt(Vector3 pos);//does not affect bounds
@@ -345,7 +346,7 @@ namespace ClassicTilestorm
 			go.name = $"{def?.name ?? "??"} ({go.transform.position.x:F1},{go.transform.position.z:F1})+{variant.delta:F2}@{variant.angle:F1}°";
 		}
 
-		private Tile CreateTile(Variant variant, Transform parent, Vector3 worldPosition) => new Tile(variant, parent, worldPosition);
+		private Tile CreateTile(Variant variant, Transform parent, Vector3 renderPosition) => new Tile(variant, parent, renderPosition);
 
 		public static Vector3 FullFloorVec(Vector3 vec) => new(Mathf.FloorToInt(vec.x), vec.y, Mathf.FloorToInt(vec.z));
 		public static Vector3 HalfFloorVec(Vector3 vec) => new(Mathf.FloorToInt(vec.x * 2f) * 0.5f, vec.y, Mathf.FloorToInt(vec.z * 2f) * 0.5f);
@@ -1052,16 +1053,16 @@ namespace ClassicTilestorm
 		}
 
 		//public int UpdateTileAt(Vector3 pos, Variant variant) => UpdateTileAt(pos, variant.hash, variant.delta, variant.angle);
-		public int UpdateTileAt(Vector3 pos, Variant variant)
+		public int UpdateTileAt(Vector3 pos, Variant variant, bool allowResize = true)
 		{
 			var snapped = variant.HasNav ? FullFloorVec(pos) : HalfFloorVec(pos);
 			var delta = new Vector3(((snapped.x % 1f) + 1f) % 1f, snapped.y, ((snapped.z % 1f) + 1f) % 1f);//make sure valid delta for variant
-			return UpdateTileAt(pos, variant.hash, delta, variant.angle);
+			return UpdateTileAt(pos, variant.hash, delta, variant.angle, allowResize);
 		}
 
-		public int UpdateTileAt(Vector3 pos, HashId hashId, Vector3 delta = new Vector3(), float angle = 0f) => UpdateTileAt(Mathf.FloorToInt(pos.x), Mathf.FloorToInt(pos.z), hashId, delta, angle);
+		public int UpdateTileAt(Vector3 pos, HashId hashId, Vector3 delta = new Vector3(), float angle = 0f, bool allowResize = true) => UpdateTileAt(Mathf.FloorToInt(pos.x), Mathf.FloorToInt(pos.z), hashId, delta, angle, allowResize);
 
-		public int UpdateTileAt(int x, int z, HashId hashId, Vector3 delta = new Vector3(), float angle = 0f)
+		public int UpdateTileAt(int x, int z, HashId hashId, Vector3 delta = new Vector3(), float angle = 0f, bool allowResize = true)
 		{
 			if (tiles == null || tiles.Length == 0)
 			{
@@ -1078,30 +1079,33 @@ namespace ClassicTilestorm
 			Vector3 originDelta = Vector3.zero;
 			bool sizeChanged = false;
 
-			// If coordinate out of bounds → expand automatically
-			if (x < 0 || x >= width || z < 0 || z >= height)
+			if (allowResize)
 			{
-				bool didResize = RepositionAndResize(x, z);
-
-				if (didResize)
+				// If coordinate out of bounds → expand automatically
+				if (x < 0 || x >= width || z < 0 || z >= height)
 				{
-					int minX = Mathf.Min(0, x);
-					int minZ = Mathf.Min(0, z);
-					int offsetX = -minX;
-					int offsetZ = -minZ;
+					bool didResize = RepositionAndResize(x, z);
 
-					if (x < 0) originDelta.x = offsetX;
-					if (z < 0) originDelta.z = offsetZ;
+					if (didResize)
+					{
+						int minX = Mathf.Min(0, x);
+						int minZ = Mathf.Min(0, z);
+						int offsetX = -minX;
+						int offsetZ = -minZ;
 
-					x += offsetX;
-					z += offsetZ;
+						if (x < 0) originDelta.x = offsetX;
+						if (z < 0) originDelta.z = offsetZ;
 
-					sizeChanged = true;
-				}
-				else
-				{
-					Debug.LogWarning($"Cannot place tile at ({x},{z}) — map resize failed (too large?)");
-					return -1;
+						x += offsetX;
+						z += offsetZ;
+
+						sizeChanged = true;
+					}
+					else
+					{
+						Debug.LogWarning($"Cannot place tile at ({x},{z}) — map resize failed (too large?)");
+						return -1;
+					}
 				}
 			}
 
@@ -1147,19 +1151,22 @@ namespace ClassicTilestorm
 			var def = ResourceManager.GetDefinition(hashId);
 			bool isDefaultTile = def?.IsDefault() ?? false;
 
-			//if (isDefaultTile || sizeChanged)//for now always try to crop the map because it may not currently be cropped due to RemoveTileAt 
+			if (allowResize)
 			{
-				var (minX, minZ, maxX, maxZ) = GetContentBounds();
-				cropped = CropToContent();
-
-				if (cropped)
+				//if (isDefaultTile || sizeChanged)//for now always try to crop the map because it may not currently be cropped due to RemoveTileAt 
 				{
-					var dx = oldBounds.minX - minX;
-					var dz = oldBounds.minZ - minZ;
-					originDelta += new Vector3(dx, 0, dz);
-					x += dx;
-					z += dz;
-					sizeChanged = true;
+					var (minX, minZ, maxX, maxZ) = GetContentBounds();
+					cropped = CropToContent();
+
+					if (cropped)
+					{
+						var dx = oldBounds.minX - minX;
+						var dz = oldBounds.minZ - minZ;
+						originDelta += new Vector3(dx, 0, dz);
+						x += dx;
+						z += dz;
+						sizeChanged = true;
+					}
 				}
 			}
 
@@ -1235,6 +1242,189 @@ namespace ClassicTilestorm
 		}
 
 		public bool RemoveTileAt(Vector3 pos) => RemoveTileAt(Mathf.FloorToInt(pos.x), Mathf.FloorToInt(pos.z));
+
+		//public Vector3 ResizeMap(Rect bounds) => Vector3.zero;//ToDo implement map resize and return origin offset (delta)
+
+
+		/// <summary>
+		/// Resizes the map to exactly match the given bounds (in grid coordinates).
+		/// Shifts all content accordingly and returns the world-space delta
+		/// by which the old origin (0,0) has been moved.
+		/// </summary>
+		/// <param name="bounds">New desired map rectangle in world/grid coordinates (xMin → xMax, zMin → zMax)</param>
+		/// <returns>World-space offset that was applied to the old (0,0) corner</returns>
+		public Vector3 ResizeMap(Rect bounds)
+		{
+			if (tiles == null || variants == null || width <= 0 || height <= 0)
+			{
+				Debug.LogWarning("Cannot resize map: invalid or empty map data");
+				return Vector3.zero;
+			}
+
+			int newMinX = Mathf.FloorToInt(bounds.xMin);
+			int newMinZ = Mathf.FloorToInt(bounds.yMin);
+			int newMaxX = Mathf.FloorToInt(bounds.xMax);
+			int newMaxZ = Mathf.FloorToInt(bounds.yMax);
+
+			int targetWidth = newMaxX - newMinX + 1;
+			int targetHeight = newMaxZ - newMinZ + 1;
+
+			if (targetWidth <= 0 || targetHeight <= 0)
+			{
+				Debug.LogWarning($"Invalid resize bounds: {bounds} → size {targetWidth}×{targetHeight}");
+				return Vector3.zero;
+			}
+
+			if (targetWidth > MAP_MAX_SIZE || targetHeight > MAP_MAX_SIZE)
+			{
+				Debug.LogWarning($"Requested map size {targetWidth}×{targetHeight} exceeds maximum {MAP_MAX_SIZE}");
+				return Vector3.zero;
+			}
+
+			// ────────────────────────────────────────────────────────────────
+			// 2. Calculate how much we shift the existing content
+			//    (how many grid steps left/down the old origin moves)
+			// ────────────────────────────────────────────────────────────────
+			int offsetX = -newMinX;     // how many tiles right we move old content
+			int offsetZ = -newMinZ;     // how many tiles up we move old content
+
+			Vector3 originOffsetWorld = new Vector3(offsetX, 0f, offsetZ);
+
+			// ────────────────────────────────────────────────────────────────
+			// 3. Early out if nothing changes
+			// ────────────────────────────────────────────────────────────────
+			if (targetWidth == width && targetHeight == height &&
+				offsetX == 0 && offsetZ == 0)
+			{
+				return Vector3.zero; // no change
+			}
+
+			// ────────────────────────────────────────────────────────────────
+			// 4. Prepare new arrays
+			// ────────────────────────────────────────────────────────────────
+			int oldWidth = width;
+			int oldHeight = height;
+			int newSize = targetWidth * targetHeight;
+
+			var newTiles = new int[newSize];
+			var newSolve = new int[newSize]; // if solve exists
+
+			// Fill with default tile
+			int defaultVariantIndex = TableIndex(ResourceManager.DefaultHash);//GetOrCreateDefaultVariantIndex();
+			Array.Fill(newTiles, defaultVariantIndex);
+			Array.Fill(newSolve, 0);
+
+			// ────────────────────────────────────────────────────────────────
+			// 5. Copy old content into new grid with offset
+			// ────────────────────────────────────────────────────────────────
+			for (int oldZ = 0; oldZ < oldHeight; oldZ++)
+			{
+				for (int oldX = 0; oldX < oldWidth; oldX++)
+				{
+					int oldIndex = oldZ * oldWidth + oldX;
+					if (oldIndex >= tiles.Length) continue;
+
+					int newX = oldX + offsetX;
+					int newZ = oldZ + offsetZ;
+
+					if (newX >= 0 && newX < targetWidth &&
+						newZ >= 0 && newZ < targetHeight)
+					{
+						int newIndex = newZ * targetWidth + newX;
+						newTiles[newIndex] = tiles[oldIndex];
+
+						// Preserve solve deltas (adjusted)
+						if (solve != null && oldIndex < solve.Length)
+						{
+							int oldDelta = solve[oldIndex];
+							if (oldDelta != 0)
+							{
+								int oldSourceIndex = oldIndex + oldDelta;
+								if (oldSourceIndex >= 0 && oldSourceIndex < oldWidth * oldHeight)
+								{
+									int oldSourceX = oldSourceIndex % oldWidth;
+									int oldSourceZ = oldSourceIndex / oldWidth;
+
+									int newSourceX = oldSourceX + offsetX;
+									int newSourceZ = oldSourceZ + offsetZ;
+
+									if (newSourceX >= 0 && newSourceX < targetWidth &&
+										newSourceZ >= 0 && newSourceZ < targetHeight)
+									{
+										int newSourceIndex = newSourceZ * targetWidth + newSourceX;
+										newSolve[newIndex] = newSourceIndex - newIndex;
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+
+			// ────────────────────────────────────────────────────────────────
+			// 6. Remap waypoints & attachments
+			// ────────────────────────────────────────────────────────────────
+			if (waypoints != null)
+			{
+				for (int i = 0; i < waypoints.Length; i++)
+				{
+					int oldTile = waypoints[i];
+					if (oldTile < 0) continue;
+
+					int ox = oldTile % oldWidth;
+					int oz = oldTile / oldWidth;
+
+					int nx = ox + offsetX;
+					int nz = oz + offsetZ;
+
+					waypoints[i] = (nx >= 0 && nx < targetWidth && nz >= 0 && nz < targetHeight)
+						? nz * targetWidth + nx
+						: -1;
+				}
+			}
+
+			if (attachments != null)
+			{
+				foreach (var att in attachments)
+				{
+					if (att.tile < 0) continue;
+
+					int ox = att.tile % oldWidth;
+					int oz = att.tile / oldWidth;
+
+					int nx = ox + offsetX;
+					int nz = oz + offsetZ;
+
+					att.tile = (nx >= 0 && nx < targetWidth && nz >= 0 && nz < targetHeight)
+						? nz * targetWidth + nx
+						: -1;
+				}
+			}
+
+			// ────────────────────────────────────────────────────────────────
+			// 7. Apply changes
+			// ────────────────────────────────────────────────────────────────
+			width = targetWidth;
+			height = targetHeight;
+			tiles = newTiles;
+			solve = newSolve.Length > 0 ? newSolve : null;
+
+			// Reset runtime permutation
+			state = Enumerable.Range(0, newSize).ToArray();
+
+			// Force rebuild of visual tiles & attachments
+			RecreateTiles();
+			RefreshAttachments(GetAttachments());
+
+			// Notify listeners
+			OnMapEdited?.Invoke(this, true, originOffsetWorld);
+
+#if VERBOSE
+    Debug.Log($"Map resized to {width}×{height}, origin offset = {originOffsetWorld}");
+#endif
+
+			return originOffsetWorld;
+		}
 
 		private void SetupWaypoints()
 		{
