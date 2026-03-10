@@ -74,7 +74,7 @@ namespace ClassicTilestorm
 					if (originDelta != Vector3.zero)
 					{
 						//Debug.Log($"Map resized, origin shifted by {originDelta}");
-						foreach (Cell cell in selection?.OfType<Cell>() ?? Array.Empty<Cell>())
+						foreach (var cell in selection?.OfType<Cell>() ?? Array.Empty<Cell>())
 						{
 							// Shift both original and current position by the same world delta
 							cell.origin += originDelta;
@@ -265,7 +265,7 @@ namespace ClassicTilestorm
 
 		private void UpdateSelectionAltitude(float value)
 		{
-			foreach (Cell cell in selection?.OfType<Cell>() ?? Array.Empty<Cell>())
+			foreach (var cell in selection?.OfType<Cell>() ?? Array.Empty<Cell>())
 			{
 				cell.origin.y = cell.position.y = value;
 				iMap.UpdateTileAt(cell.origin, cell.variant);//apply the new altitude value
@@ -281,7 +281,7 @@ namespace ClassicTilestorm
 			var snappedDelta = iMap.GetVariantAt(beginWorld).HasNav ?
 				Map.FullFloorVec(currentWorld) - Map.FullFloorVec(beginWorld) : Map.HalfFloorVec(currentWorld) - Map.HalfFloorVec(beginWorld);
 
-			foreach (Cell cell in selection?.OfType<Cell>() ?? Array.Empty<Cell>())
+			foreach (var cell in selection?.OfType<Cell>() ?? Array.Empty<Cell>())
 			{
 				cell.position = cell.origin + snappedDelta;
 				cell.OnUpdate(iMap, _camera);
@@ -295,7 +295,7 @@ namespace ClassicTilestorm
 			if (!cells.Any()) return;
 
 			var extents = new Rect(0, 0, iMap.Width - 1, iMap.Height - 1);
-			foreach (Cell cell in cells)
+			foreach (var cell in cells)
 			{
 				var p = Map.FullFloorVec(cell.position);
 				extents.xMin = Mathf.Min(extents.xMin, p.x);
@@ -307,7 +307,7 @@ namespace ClassicTilestorm
 			if (!Map.ValidExtents(extents))
 			{
 				//reset selection to current map positions
-				foreach (Cell cell in cells)
+				foreach (var cell in cells)
 				{
 					cell.position = cell.origin;
 					cell.OnUpdate(iMap, _camera);
@@ -334,13 +334,15 @@ namespace ClassicTilestorm
 			}
 
 			//restore selection
-			foreach (Cell cell in copy)
+			foreach (var cell in copy)
 				SelectTile(new Vector3(cell.position.x, 0f, cell.position.z) + Vector3.up * editAltitude, true);
 
 			if (selection[0] is Cell _cell)
 				iMap.UpdateTileAt(_cell.origin, _cell.variant);//workaround to crop map after drag changes extents
+			//iMap.CropToContent(true);//need to make sure  onmapchanged is invoked or we can't use this instead of above
 
-			//iMap.CropToContent(true);//need to make sure  onmapchanged is invoked or we can't use this
+			foreach (var item in selection)
+				item.OnUpdate(iMap, _camera);
 
 			UpdateRotateGizmo();//temporary workaround for rotate gizmo - for now do not allow in multiselect mode
 		}
