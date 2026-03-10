@@ -316,21 +316,27 @@ namespace ClassicTilestorm
 			var cells = selection?.OfType<Cell>() ?? Enumerable.Empty<Cell>();
 			if (!cells.Any()) return;
 
-			var extents = new Rect(0, 0, iMap.Width, iMap.Height);
+			var extents = new Rect(0, 0, iMap.Width - 1, iMap.Height - 1);
 			foreach (Cell cell in cells)
 			{
 				var p = Map.FullFloorVec(cell.position);
 				extents.xMin = Mathf.Min(extents.xMin, p.x);
-				extents.xMax = Mathf.Max(extents.xMax, p.x);
+				extents.xMax = Mathf.Max(extents.xMax, p.x - 1);
 				extents.yMin = Mathf.Min(extents.yMin, p.z);
-				extents.yMax = Mathf.Max(extents.yMax, p.z);
+				extents.yMax = Mathf.Max(extents.yMax, p.z - 1);
 			}
 
-			//if (!Map.ValidExtents(extents))
-			//{
-			//	Debug.Log($"invalid map extents - exceeds limits, {extents}");
-			//	return;
-			//}
+			if (!Map.ValidExtents(extents))
+			{
+				Debug.Log($"invalid map extents - exceeds limits, {extents}");
+				foreach (Cell cell in cells)
+				{
+					cell.position = cell.startPosition;
+					cell.OnUpdate(iMap, _camera);
+				}
+				UpdateRotateGizmo();
+				return;
+			}
 
 			var originDelta = iMap.ResizeMap(extents); //if (originDelta != Vector3.zero) Debug.Log($"Map resized, origin shifted by {originDelta}");
 
@@ -358,8 +364,8 @@ namespace ClassicTilestorm
 				SelectTile(new Vector3(cell.startPosition.x, 0f, cell.startPosition.z) + Vector3.up * editAltitude, true);
 			}
 
-			if (selection[0] is Cell _cell)
-				iMap.UpdateTileAt(_cell.startPosition, _cell.variant);//workaround to crop map after drag changes bounds
+			//if (selection[0] is Cell _cell)
+			//	iMap.UpdateTileAt(_cell.startPosition, _cell.variant);//workaround to crop map after drag changes bounds
 
 			if (anyChange) UpdateRotateGizmo();
 		}
