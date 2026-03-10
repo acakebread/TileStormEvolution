@@ -137,6 +137,7 @@ namespace ClassicTilestorm
 		int UpdateTileAt(Vector3 pos, HashId hashId, Vector3 delta = new Vector3(), float angle = 0f, bool allowResize = true);
 		int UpdateTileAt(Vector3 pos, Variant variant, bool allowResize = true);
 		Vector3 ResizeMap(Rect bounds);
+		bool CropToContent(bool consolidate = false);
 
 		bool RemoveTileAt(int x, int z);//does not affect bounds
 		bool RemoveTileAt(Vector3 pos);//does not affect bounds

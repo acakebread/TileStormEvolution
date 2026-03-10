@@ -77,7 +77,7 @@ namespace ClassicTilestorm
 						foreach (Cell cell in selection?.OfType<Cell>() ?? Array.Empty<Cell>())
 						{
 							// Shift both original and current position by the same world delta
-							cell.startPosition += originDelta;
+							cell.origin += originDelta;
 							cell.position += originDelta;
 							cell.OnUpdate(iMap, _camera);
 						}
@@ -261,17 +261,14 @@ namespace ClassicTilestorm
 		}
 
 		// ─── All helper methods ──────────────────────────────────────────────
-		private Vector3 snappedDelta => iMap.GetVariantAt(beginWorld).HasNav ?
-			Map.FullFloorVec(currentWorld) - Map.FullFloorVec(beginWorld) : Map.HalfFloorVec(currentWorld) - Map.HalfFloorVec(beginWorld);
-
 		private void UpdateRotateGizmo() { if (selection?.Length > 1) EditorDirectionUtil.Hide(); }//temporary workaround for rotate gizmo - for now do not allow in multiselect mode
 
 		private void UpdateSelectionAltitude(float value)
 		{
 			foreach (Cell cell in selection?.OfType<Cell>() ?? Array.Empty<Cell>())
 			{
-				cell.startPosition.y = cell.position.y = value;
-				iMap.UpdateTileAt(cell.startPosition, cell.variant);//apply the new altitude value
+				cell.origin.y = cell.position.y = value;
+				iMap.UpdateTileAt(cell.origin, cell.variant);//apply the new altitude value
 				cell.OnUpdate(iMap, _camera);
 			}
 			UpdateRotateGizmo();//temporary workaround for rotate gizmo - for now do not allow in multiselect mode
@@ -281,9 +278,12 @@ namespace ClassicTilestorm
 
 		private void UpdateTileDrag()
 		{
+			var snappedDelta = iMap.GetVariantAt(beginWorld).HasNav ?
+				Map.FullFloorVec(currentWorld) - Map.FullFloorVec(beginWorld) : Map.HalfFloorVec(currentWorld) - Map.HalfFloorVec(beginWorld);
+
 			foreach (Cell cell in selection?.OfType<Cell>() ?? Array.Empty<Cell>())
 			{
-				cell.position = cell.startPosition + snappedDelta;
+				cell.position = cell.origin + snappedDelta;
 				cell.OnUpdate(iMap, _camera);
 			}
 			UpdateRotateGizmo();//temporary workaround for rotate gizmo - for now do not allow in multiselect mode
@@ -309,7 +309,7 @@ namespace ClassicTilestorm
 				//reset selection to current map positions
 				foreach (Cell cell in cells)
 				{
-					cell.position = cell.startPosition;
+					cell.position = cell.origin;
 					cell.OnUpdate(iMap, _camera);
 				}
 				UpdateRotateGizmo();
@@ -323,13 +323,13 @@ namespace ClassicTilestorm
 
 			foreach (var cell in copy)
 			{
-				if (cell.position != cell.startPosition)
-					iMap.RemoveTileAt(cell.startPosition);
+				if (cell.position != cell.origin)
+					iMap.RemoveTileAt(cell.origin);
 			}
 
 			foreach (var cell in copy)
 			{
-				if (cell.position != cell.startPosition)
+				if (cell.position != cell.origin)
 					iMap.UpdateTileAt(cell.position, cell.variant, false);
 			}
 
@@ -338,7 +338,9 @@ namespace ClassicTilestorm
 				SelectTile(new Vector3(cell.position.x, 0f, cell.position.z) + Vector3.up * editAltitude, true);
 
 			if (selection[0] is Cell _cell)
-				iMap.UpdateTileAt(_cell.startPosition, _cell.variant);//workaround to crop map after drag changes extents
+				iMap.UpdateTileAt(_cell.origin, _cell.variant);//workaround to crop map after drag changes extents
+
+			//iMap.CropToContent(true);//need to make sure  onmapchanged is invoked or we can't use this
 
 			UpdateRotateGizmo();//temporary workaround for rotate gizmo - for now do not allow in multiselect mode
 		}
@@ -348,7 +350,7 @@ namespace ClassicTilestorm
 			var tile = iMap.GetTile(worldPos);
 			if (tile.gameObject == null) return false;
 			var index = iMap.VectorToIndex(worldPos);
-			if (selection?.Any(s => s is Cell c && iMap.VectorToIndex(c.startPosition) == index) == true)
+			if (selection?.Any(s => s is Cell c && iMap.VectorToIndex(c.origin) == index) == true)
 				return true;
 			if (false == combine) ClearSelection();
 			var newCell = new Cell(iMap, worldPos);

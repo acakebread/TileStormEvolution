@@ -6,7 +6,7 @@ namespace ClassicTilestorm
 	public class Cell : ISelectable
 	{
 		public string type;
-		public Vector3 startPosition;
+		public Vector3 origin;
 		public Vector3 position;
 		public Variant variant;
 
@@ -19,7 +19,12 @@ namespace ClassicTilestorm
 
 			var snapped = Map.FullFloorVec(pos);
 			variant.delta.y = 0f;//clear the cached delta altitude
-			startPosition = position = snapped + variant.delta;
+			origin = position = snapped + variant.delta;
+			variant.delta = Vector3.zero;//clear the cached delta
+
+			//variant.delta.y = 0f;//clear the cached delta altitude
+			//origin = position = (variant.HasNav ? Map.FullFloorVec(pos) : Map.HalfFloorVec(pos)) - variant.delta;
+			//variant.delta = Vector3.zero;//clear the cached delta
 		}
 
 		public void DestroyHighlight()
