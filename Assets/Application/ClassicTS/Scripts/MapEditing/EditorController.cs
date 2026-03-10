@@ -64,13 +64,13 @@ namespace ClassicTilestorm
 		public void Initialise(IMapEdit iMap)
 		{
 			this.iMap = iMap;
-			iMap.OnMapEdited += (Map map, bool resized, Vector3 originDelta) => 
+			iMap.OnMapEdited += (Map map, bool resized, Vector3 originDelta) =>
 			{
 				ResourceManager.ApplyMapChanges(map);
 				if (resized)
 				{
 					GridLinesUtil.UpdateSize(map.width, map.height);
-					
+
 					if (originDelta != Vector3.zero)
 					{
 						//Debug.Log($"Map resized, origin shifted by {originDelta}");
@@ -333,21 +333,19 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			var originDelta = iMap.ResizeMap(extents); //if (originDelta != Vector3.zero) Debug.Log($"Map resized, origin shifted by {originDelta}");
+			var originDelta = iMap.ResizeMap(extents);//if (originDelta != Vector3.zero) Debug.Log($"Map resized, origin shifted by {originDelta}");
 
-			var copy = selection.ToArray();
+			var copy = selection?.OfType<Cell>() ?? Enumerable.Empty<Cell>();
 			selection = null;//clear selection
 
-			foreach (var item in copy)
+			foreach (Cell cell in copy)
 			{
-				if (item is not Cell cell) continue;
 				if (cell.position == cell.startPosition) continue;
 				iMap.RemoveTileAt(cell.startPosition);
 			}
 
-			foreach (var item in copy)
+			foreach (Cell cell in copy)
 			{
-				if (item is not Cell cell) continue;
 				if (cell.position == cell.startPosition) continue;
 
 				var shouldBe = iMap.VectorToIndex(cell.position);
@@ -357,12 +355,10 @@ namespace ClassicTilestorm
 			}
 
 			//restore selection
-			foreach (Cell cell in copy?.OfType<Cell>() ?? Enumerable.Empty<Cell>())
+			foreach (Cell cell in copy)
 				SelectTile(new Vector3(cell.position.x, 0f, cell.position.z) + Vector3.up * editAltitude, true);
 
-			if (selection[0] is Cell _cell)
-				iMap.UpdateTileAt(_cell.startPosition, _cell.variant);//workaround to crop map after drag changes extents
-
+			iMap.UpdateTileAt(copy.First().startPosition, copy.First().variant);//workaround to crop map after drag changes extents
 			UpdateRotateGizmo();
 		}
 
@@ -425,7 +421,7 @@ namespace ClassicTilestorm
 			if (-1 == cursorTile) return;
 			var attSelection = selection.OfType<MapAttachment>().ToArray();
 			if (attSelection?.Length >= 1 && attSelection[0].tile == cursorTile) return;
-			foreach (var att in attSelection) 
+			foreach (var att in attSelection)
 				att.tile = cursorTile;
 			if (selection?.Length == 1)
 				selection[0].OnUpdate(iMap, _camera);
@@ -468,7 +464,7 @@ namespace ClassicTilestorm
 			{
 				var tile = tiles[i];
 				positions[i] = iMap.TileRenderPosition(tile);
-				colors[i] = isWaypointMode && iMap.HasAttachmentOfType<View>(tile) ? new (0f, 1f, 1f, 0.5f) : new (0f, 0.7f, 1f, 0.7f);
+				colors[i] = isWaypointMode && iMap.HasAttachmentOfType<View>(tile) ? new(0f, 1f, 1f, 0.5f) : new(0f, 0.7f, 1f, 0.7f);
 			}
 
 			var selectedTile = (selection != null && selection.Length > 0 && selection[0] is MapAttachment ma) ? ma.tile : -1;
