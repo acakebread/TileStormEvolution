@@ -253,6 +253,19 @@ namespace ClassicTilestorm
 					}
 					break;
 			}
+
+			if (Input.GetKeyDown(KeyCode.T))
+			{
+				Vector3 originDelta = iMap.ResizeMap(Rect.MinMaxRect(xmin: -1, ymin: -1, xmax: iMap.Width, ymax: iMap.Height));
+				if (originDelta != Vector3.zero)
+					Debug.Log($"Map resized, origin shifted by {originDelta}");
+			}
+			if (Input.GetKeyDown(KeyCode.Y))
+			{
+				Vector3 originDelta = iMap.ResizeMap(Rect.MinMaxRect(xmin: 1, ymin: 1, xmax: iMap.Width - 2, ymax: iMap.Height - 2));
+				if (originDelta != Vector3.zero)
+					Debug.Log($"Map resized, origin shifted by {originDelta}");
+			}
 		}
 
 		private void OnGUI()
@@ -322,35 +335,33 @@ namespace ClassicTilestorm
 
 			var originDelta = iMap.ResizeMap(extents); //if (originDelta != Vector3.zero) Debug.Log($"Map resized, origin shifted by {originDelta}");
 
-			var anyChange = false;
+			var copy = selection.ToArray();
+			selection = null;//clear selection
 
-			foreach (var item in selection)
+			foreach (var item in copy)
 			{
 				if (item is not Cell cell) continue;
 				if (cell.position == cell.startPosition) continue;
-				anyChange = true;
-
-				// Remove from old location
-				DeselectTile(iMap.VectorToIndex(cell.startPosition));
 				iMap.RemoveTileAt(cell.startPosition);
-
-				// Place at new location
-				var newIndex = iMap.UpdateTileAt(cell.position, cell.variant, false);
-				if (newIndex == -1) newIndex = iMap.UpdateTileAt(cell.startPosition, cell.variant, false);// cannot happen any more
-
-				// Update cell tracking
-				cell.variant = iMap.GetVariantAt(newIndex);
-				cell.startPosition = cell.position = iMap.IndexToVector(newIndex) + cell.variant.delta;
-
-				// Re-select at new world position
-				SelectTile(new Vector3(cell.startPosition.x, 0f, cell.startPosition.z) + Vector3.up * editAltitude, true);
 			}
 
-			//if (selection[0] is Cell _cell)
-			//	iMap.UpdateTileAt(_cell.startPosition, _cell.variant);//workaround to crop map after drag changes extents
+			foreach (var item in copy)
+			{
+				if (item is not Cell cell) continue;
+				if (cell.position == cell.startPosition) continue;
 
-			//foreach (Cell cell in selection?.OfType<Cell>() ?? Enumerable.Empty<Cell>())
-			//	cell.OnUpdate(iMap, _camera);
+				var shouldBe = iMap.VectorToIndex(cell.position);
+				var newIndex = iMap.UpdateTileAt(cell.position, cell.variant, false);
+				if (shouldBe != newIndex)
+					Debug.LogError("index mismatch");
+			}
+
+			//restore selection
+			foreach (Cell cell in copy?.OfType<Cell>() ?? Enumerable.Empty<Cell>())
+				SelectTile(new Vector3(cell.position.x, 0f, cell.position.z) + Vector3.up * editAltitude, true);
+
+			if (selection[0] is Cell _cell)
+				iMap.UpdateTileAt(_cell.startPosition, _cell.variant);//workaround to crop map after drag changes extents
 
 			UpdateRotateGizmo();
 		}
