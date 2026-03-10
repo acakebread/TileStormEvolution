@@ -253,19 +253,6 @@ namespace ClassicTilestorm
 					}
 					break;
 			}
-
-			if (Input.GetKeyDown(KeyCode.T))
-			{
-				Vector3 originDelta = iMap.ResizeMap(Rect.MinMaxRect(xmin: -1, ymin: -1, xmax: iMap.Width, ymax: iMap.Height));
-				if (originDelta != Vector3.zero)
-					Debug.Log($"Map resized, origin shifted by {originDelta}");
-			}
-			if (Input.GetKeyDown(KeyCode.Y))
-			{
-				Vector3 originDelta = iMap.ResizeMap(Rect.MinMaxRect(xmin: 1, ymin: 1, xmax: iMap.Width - 2, ymax: iMap.Height - 2));
-				if (originDelta != Vector3.zero)
-					Debug.Log($"Map resized, origin shifted by {originDelta}");
-			}
 		}
 
 		private void OnGUI()
@@ -335,21 +322,18 @@ namespace ClassicTilestorm
 
 			var originDelta = iMap.ResizeMap(extents); //if (originDelta != Vector3.zero) Debug.Log($"Map resized, origin shifted by {originDelta}");
 
-			var copy = selection.ToArray();
+			var copy = selection?.OfType<Cell>();
 			selection = null;//clear selection
 
-			foreach (var item in copy)
+			foreach (var cell in copy)
 			{
-				if (item is not Cell cell) continue;
 				if (cell.position == cell.startPosition) continue;
 				iMap.RemoveTileAt(cell.startPosition);
 			}
 
-			foreach (var item in copy)
+			foreach (var cell in copy)
 			{
-				if (item is not Cell cell) continue;
 				if (cell.position == cell.startPosition) continue;
-
 				var shouldBe = iMap.VectorToIndex(cell.position);
 				var newIndex = iMap.UpdateTileAt(cell.position, cell.variant, false);
 				if (shouldBe != newIndex)
@@ -357,7 +341,7 @@ namespace ClassicTilestorm
 			}
 
 			//restore selection
-			foreach (Cell cell in copy?.OfType<Cell>() ?? Enumerable.Empty<Cell>())
+			foreach (Cell cell in copy)
 				SelectTile(new Vector3(cell.position.x, 0f, cell.position.z) + Vector3.up * editAltitude, true);
 
 			if (selection[0] is Cell _cell)
@@ -372,32 +356,12 @@ namespace ClassicTilestorm
 			if (tile.gameObject == null) return false;
 			var index = iMap.VectorToIndex(worldPos);
 			if (selection?.Any(s => s is Cell c && iMap.VectorToIndex(c.startPosition) == index) == true)
-			{
-				//foreach (var item in selection)
-				//{
-				//	var cell = item as Cell;
-				//	if (iMap.VectorToIndex(cell.startPosition) == index)
-				//	{
-				//		Debug.Log("reselecting");
-				//		cell.OnSelect(iMap, _camera);
-				//		break;
-				//	}
-				//}
 				return true;
-			}
 			if (false == combine) ClearSelection();
 			var newCell = new Cell(iMap, worldPos);
 			selection = selection == null ? new[] { newCell } : selection.Append(newCell).ToArray();
 			UpdateRotateGizmo();
 			return true;
-		}
-
-		private void DeselectTile(int tileIndex)
-		{
-			if (selection == null || selection.Length == 0) return;
-			var newSelection = selection.Where(item => item is not Cell cell || Map.FullFloorVec(cell.startPosition) != iMap.IndexToVector(tileIndex)).ToArray();// Filter out the cell that matches the given tile index
-			if (newSelection.Length == selection.Length) return;// If nothing changed → early return
-			selection = newSelection.Length > 0 ? newSelection : null;// Update selection
 		}
 
 		private void ClearSelection() => selection = null;
