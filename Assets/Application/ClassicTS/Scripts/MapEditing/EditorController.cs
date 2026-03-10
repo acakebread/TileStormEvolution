@@ -294,7 +294,6 @@ namespace ClassicTilestorm
 
 		private void EndTileDrag()
 		{
-			if (selection == null || selection.Length == 0) return;
 			var cells = selection?.OfType<Cell>() ?? Enumerable.Empty<Cell>();
 			if (!cells.Any()) return;
 
@@ -322,8 +321,8 @@ namespace ClassicTilestorm
 
 			var originDelta = iMap.ResizeMap(extents); //if (originDelta != Vector3.zero) Debug.Log($"Map resized, origin shifted by {originDelta}");
 
-			var copy = selection?.OfType<Cell>();
-			selection = null;//clear selection
+			var copy = selection.OfType<Cell>();
+			ClearSelection();
 
 			foreach (var cell in copy)
 			{
