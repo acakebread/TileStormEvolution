@@ -319,24 +319,21 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			var originDelta = iMap.ResizeMap(extents); //if (originDelta != Vector3.zero) Debug.Log($"Map resized, origin shifted by {originDelta}");
+			iMap.ResizeMap(extents);//resize the map for the selection to apply
 
 			var copy = selection.OfType<Cell>();
 			ClearSelection();
 
 			foreach (var cell in copy)
 			{
-				if (cell.position == cell.startPosition) continue;
-				iMap.RemoveTileAt(cell.startPosition);
+				if (cell.position != cell.startPosition)
+					iMap.RemoveTileAt(cell.startPosition);
 			}
 
 			foreach (var cell in copy)
 			{
-				if (cell.position == cell.startPosition) continue;
-				var shouldBe = iMap.VectorToIndex(cell.position);
-				var newIndex = iMap.UpdateTileAt(cell.position, cell.variant, false);
-				if (shouldBe != newIndex)
-					Debug.LogError("index mismatch");
+				if (cell.position != cell.startPosition)
+					iMap.UpdateTileAt(cell.position, cell.variant, false);
 			}
 
 			//restore selection
@@ -346,7 +343,7 @@ namespace ClassicTilestorm
 			if (selection[0] is Cell _cell)
 				iMap.UpdateTileAt(_cell.startPosition, _cell.variant);//workaround to crop map after drag changes extents
 
-			UpdateRotateGizmo();
+			UpdateRotateGizmo();//temporary workaround for rotate gizmo - for now do not allow in multiselect mode
 		}
 
 		private bool SelectTile(Vector3 worldPos, bool combine = false)
