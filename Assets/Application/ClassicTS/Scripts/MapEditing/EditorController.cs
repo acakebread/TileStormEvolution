@@ -292,24 +292,6 @@ namespace ClassicTilestorm
 			UpdateRotateGizmo();//temporary workaround for rotate gizmo - for now do not allow in multiselect mode
 		}
 
-		//private void EndTileDrag()
-		//{
-		//	if (selection?.Length != 1 || selection[0] is not Cell cell) return;
-		//	foreach (var item in selection ?? Array.Empty<ISelectable>())
-		//	{
-		//		if (item is not Cell cell) continue;
-		//		cell.position = cell.startPosition + snappedDelta;
-		//		if (cell.position == cell.startPosition) return;//unchanged - do not alter map
-
-		//		DeselectTile(cell.tile);
-		//		iMap.RemoveTileAt(cell.startPosition);
-		//		var index = iMap.UpdateTileAt(cell.position, cell.variant);
-		//		if (-1 == index) index = iMap.UpdateTileAt(cell.startPosition, cell.variant);
-		//		SelectTile(iMap.IndexToVector(index) + Vector3.up * editAltitude, true);
-		//	}
-		//	UpdateRotateGizmo();//temporary workaround for rotate gizmo - for now do not allow in multiselect mode
-		//}
-
 		private void EndTileDrag()
 		{
 			if (selection == null || selection.Length == 0) return;
@@ -370,7 +352,7 @@ namespace ClassicTilestorm
 			//foreach (Cell cell in selection?.OfType<Cell>() ?? Enumerable.Empty<Cell>())
 			//	cell.OnUpdate(iMap, _camera);
 
-			if (anyChange) UpdateRotateGizmo();
+			UpdateRotateGizmo();
 		}
 
 		private bool SelectTile(Vector3 worldPos, bool combine = false)
@@ -395,6 +377,7 @@ namespace ClassicTilestorm
 			if (false == combine) ClearSelection();
 			var newCell = new Cell(iMap, worldPos);
 			selection = selection == null ? new[] { newCell } : selection.Append(newCell).ToArray();
+			UpdateRotateGizmo();
 			return true;
 		}
 
