@@ -136,7 +136,8 @@ namespace ClassicTilestorm
 		int UpdateTileAt(int x, int z, HashId hashId, Vector3 delta = new Vector3(), float angle = 0f, bool allowResize = true);
 		int UpdateTileAt(Vector3 pos, HashId hashId, Vector3 delta = new Vector3(), float angle = 0f, bool allowResize = true);
 		int UpdateTileAt(Vector3 pos, Variant variant, bool allowResize = true);
-		Vector3 ResizeMap(Rect bounds);
+		Vector3 ResizeMap(Rect extents);
+		Vector3 ResizeMap(RectInt extents);
 		bool CropToContent(bool consolidate = false);
 
 		bool RemoveTileAt(int x, int z);//does not affect bounds
@@ -1245,6 +1246,9 @@ namespace ClassicTilestorm
 		public bool RemoveTileAt(Vector3 pos) => RemoveTileAt(Mathf.FloorToInt(pos.x), Mathf.FloorToInt(pos.z));
 
 		public static bool ValidExtents(Rect extents) => (Mathf.FloorToInt(extents.xMax) - Mathf.FloorToInt(extents.xMin)) < MAP_MAX_SIZE && (Mathf.FloorToInt(extents.yMax) - Mathf.FloorToInt(extents.yMin)) < MAP_MAX_SIZE;
+		public static bool ValidExtents(RectInt extents) => extents.width < MAP_MAX_SIZE -1 && extents.height < MAP_MAX_SIZE -1;
+
+		public Vector3 ResizeMap(Rect extents) => ResizeMap(new RectInt(Mathf.FloorToInt(extents.xMin), Mathf.FloorToInt(extents.yMin), Mathf.FloorToInt(extents.width), Mathf.FloorToInt(extents.height)));
 
 		/// <summary>
 		/// Resizes the map to exactly match the given bounds (in grid coordinates).
@@ -1253,7 +1257,7 @@ namespace ClassicTilestorm
 		/// </summary>
 		/// <param name="extents">New desired map rectangle in world/grid coordinates (xMin → xMax, zMin → zMax)</param>
 		/// <returns>World-space offset that was applied to the old (0,0) corner</returns>
-		public Vector3 ResizeMap(Rect extents)
+		public Vector3 ResizeMap(RectInt extents)
 		{
 			if (tiles == null || variants == null || width <= 0 || height <= 0)
 			{
@@ -1261,13 +1265,28 @@ namespace ClassicTilestorm
 				return Vector3.zero;
 			}
 
-			int newMinX = Mathf.FloorToInt(extents.xMin);
-			int newMinZ = Mathf.FloorToInt(extents.yMin);
-			int newMaxX = Mathf.FloorToInt(extents.xMax);
-			int newMaxZ = Mathf.FloorToInt(extents.yMax);
+			int newMinX = extents.xMin;
+			int newMinZ = extents.yMin;
+			int newMaxX = extents.xMax;
+			int newMaxZ = extents.yMax;
 
 			int targetWidth = newMaxX - newMinX + 1;
 			int targetHeight = newMaxZ - newMinZ + 1;
+			//public Vector3 ResizeMap(Rect extents)
+			//{
+			//	if (tiles == null || variants == null || width <= 0 || height <= 0)
+			//	{
+			//		Debug.LogWarning("Cannot resize map: invalid or empty map data");
+			//		return Vector3.zero;
+			//	}
+
+			//	int newMinX = Mathf.FloorToInt(extents.xMin);
+			//	int newMinZ = Mathf.FloorToInt(extents.yMin);
+			//	int newMaxX = Mathf.FloorToInt(extents.xMax);
+			//	int newMaxZ = Mathf.FloorToInt(extents.yMax);
+
+			//	int targetWidth = newMaxX - newMinX + 1;
+			//	int targetHeight = newMaxZ - newMinZ + 1;
 
 			if (targetWidth <= 0 || targetHeight <= 0)
 			{

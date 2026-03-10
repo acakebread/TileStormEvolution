@@ -187,7 +187,15 @@ namespace ClassicTilestorm
 				case ControllerMode.SelectTile:
 					if (InputX.GetMouseButtonDown(0))
 					{
-						if (StartTileDrag(Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)))
+						if (!Input.GetKey(KeyCode.LeftControl) && !Input.GetKey(KeyCode.RightControl))
+						{
+							var index = iMap.VectorToIndex(currentWorld);
+							if (selection?.Any(s => s is Cell c && iMap.VectorToIndex(c.origin) == index) == false)
+								ClearSelection();
+						}
+
+						//if (StartTileDrag(Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)))
+						if (StartTileDrag(true))
 						{
 							SetMode(ControllerMode.DragTile);
 							if (selection?.Length > 1) EditorDirectionUtil.Hide();
@@ -304,6 +312,9 @@ namespace ClassicTilestorm
 				extents.yMax = Mathf.Max(extents.yMax, p.z);
 			}
 
+			//var extents = GeomUtils.PointArrayBoundsInt((new[] { new Vector2Int(0, 0), new Vector2Int(iMap.Width - 1, iMap.Height - 1) }).Concat(
+			//	cells.Select(c => new Vector2Int(Mathf.FloorToInt(c.position.x), Mathf.FloorToInt(c.position.z)))));
+
 			if (!Map.ValidExtents(extents))
 			{
 				//reset selection to current map positions
@@ -335,10 +346,9 @@ namespace ClassicTilestorm
 
 			//restore selection
 			foreach (var cell in copy)
-				SelectTile(new Vector3(cell.position.x, 0f, cell.position.z) + Vector3.up * editAltitude, true);
+				SelectTile(cell.position, true);
 
-			if (selection[0] is Cell _cell)
-				iMap.UpdateTileAt(_cell.origin, _cell.variant);//workaround to crop map after drag changes extents
+			iMap.UpdateTileAt(copy.First().position, copy.First().variant);//workaround to crop map after drag changes extents
 			//iMap.CropToContent(true);//need to make sure  onmapchanged is invoked or we can't use this instead of above
 
 			foreach (var item in selection)
@@ -350,8 +360,9 @@ namespace ClassicTilestorm
 		private bool SelectTile(Vector3 worldPos, bool combine = false)
 		{
 			var tile = iMap.GetTile(worldPos);
-			if (tile.gameObject == null) return false;
+			if (null == tile.gameObject) return false;//need this for now
 			var index = iMap.VectorToIndex(worldPos);
+			if (-1 == index) return false;
 			if (selection?.Any(s => s is Cell c && iMap.VectorToIndex(c.origin) == index) == true)
 				return true;
 			if (false == combine) ClearSelection();
