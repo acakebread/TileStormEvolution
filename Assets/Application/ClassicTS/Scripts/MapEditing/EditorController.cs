@@ -321,9 +321,9 @@ namespace ClassicTilestorm
 			{
 				var p = Map.FullFloorVec(cell.position);
 				extents.xMin = Mathf.Min(extents.xMin, p.x);
-				extents.xMax = Mathf.Max(extents.xMax, p.x - 1);
+				extents.xMax = Mathf.Max(extents.xMax, p.x);
 				extents.yMin = Mathf.Min(extents.yMin, p.z);
-				extents.yMax = Mathf.Max(extents.yMax, p.z - 1);
+				extents.yMax = Mathf.Max(extents.yMax, p.z);
 			}
 
 			if (!Map.ValidExtents(extents))
@@ -365,7 +365,10 @@ namespace ClassicTilestorm
 			}
 
 			//if (selection[0] is Cell _cell)
-			//	iMap.UpdateTileAt(_cell.startPosition, _cell.variant);//workaround to crop map after drag changes bounds
+			//	iMap.UpdateTileAt(_cell.startPosition, _cell.variant);//workaround to crop map after drag changes extents
+
+			//foreach (Cell cell in selection?.OfType<Cell>() ?? Enumerable.Empty<Cell>())
+			//	cell.OnUpdate(iMap, _camera);
 
 			if (anyChange) UpdateRotateGizmo();
 		}

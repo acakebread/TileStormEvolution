@@ -1243,7 +1243,7 @@ namespace ClassicTilestorm
 
 		public bool RemoveTileAt(Vector3 pos) => RemoveTileAt(Mathf.FloorToInt(pos.x), Mathf.FloorToInt(pos.z));
 
-		public static bool ValidExtents(Rect extents) => (Mathf.FloorToInt(extents.xMax) - Mathf.FloorToInt(extents.xMin)) <= MAP_MAX_SIZE && (Mathf.FloorToInt(extents.yMax) - Mathf.FloorToInt(extents.yMin)) <= MAP_MAX_SIZE;
+		public static bool ValidExtents(Rect extents) => (Mathf.FloorToInt(extents.xMax) - Mathf.FloorToInt(extents.xMin)) < MAP_MAX_SIZE && (Mathf.FloorToInt(extents.yMax) - Mathf.FloorToInt(extents.yMin)) < MAP_MAX_SIZE;
 
 		/// <summary>
 		/// Resizes the map to exactly match the given bounds (in grid coordinates).
