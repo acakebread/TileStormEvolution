@@ -74,13 +74,12 @@ namespace ClassicTilestorm
 					if (originDelta != Vector3.zero)
 					{
 						//Debug.Log($"Map resized, origin shifted by {originDelta}");
-						foreach (var item in selection ?? Array.Empty<ISelectable>())
+						foreach (Cell cell in selection?.OfType<Cell>() ?? Array.Empty<Cell>())
 						{
-							if (item is not Cell cell) continue;
 							// Shift both original and current position by the same world delta
 							cell.startPosition += originDelta;
 							cell.position += originDelta;
-							item.OnUpdate(iMap, _camera);
+							cell.OnUpdate(iMap, _camera);
 						}
 					}
 				}
@@ -269,9 +268,8 @@ namespace ClassicTilestorm
 
 		private void UpdateSelectionAltitude(float value)
 		{
-			foreach (var item in selection ?? Array.Empty<ISelectable>())
+			foreach (Cell cell in selection?.OfType<Cell>() ?? Array.Empty<Cell>())
 			{
-				if (item is not Cell cell) continue;
 				cell.startPosition.y = cell.position.y = value;
 				iMap.UpdateTileAt(cell.startPosition, cell.variant);//apply the new altitude value
 				cell.OnUpdate(iMap, _camera);
@@ -283,7 +281,6 @@ namespace ClassicTilestorm
 
 		private void UpdateTileDrag()
 		{
-			//if (selection?.Length != 1 || selection[0] is not Cell cell) return;
 			foreach (Cell cell in selection?.OfType<Cell>() ?? Array.Empty<Cell>())
 			{
 				cell.position = cell.startPosition + snappedDelta;
@@ -309,7 +306,7 @@ namespace ClassicTilestorm
 
 			if (!Map.ValidExtents(extents))
 			{
-				Debug.Log($"invalid map extents - exceeds limits, {extents}");
+				//reset selection to current map positions
 				foreach (Cell cell in cells)
 				{
 					cell.position = cell.startPosition;
