@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace MassiveHadronLtd
@@ -53,6 +54,16 @@ namespace MassiveHadronLtd
 			if (typeof(T) == typeof(Vector2))
 				return (T)(object)Vector2.Lerp((Vector2)(object)a, (Vector2)(object)b, t);
 			throw new System.NotImplementedException("Unsupported type for Lerp");
+		}
+
+		public static RectInt PointArrayBoundsInt(IEnumerable<Vector2Int> points)
+		{
+			if (!points.Any()) return new RectInt(0, 0, 0, 0);
+			var minX = points.Min(p => p.x);
+			var minY = points.Min(p => p.y);
+			var maxX = points.Max(p => p.x);
+			var maxY = points.Max(p => p.y);
+			return new RectInt(minX, minY, maxX - minX + 1, maxY - minY + 1);
 		}
 	}
 }
