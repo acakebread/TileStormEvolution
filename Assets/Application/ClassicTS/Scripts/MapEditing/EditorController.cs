@@ -187,15 +187,15 @@ namespace ClassicTilestorm
 				case ControllerMode.SelectTile:
 					if (InputX.GetMouseButtonDown(0))
 					{
-						if (!Input.GetKey(KeyCode.LeftControl) && !Input.GetKey(KeyCode.RightControl))
-						{
-							var index = iMap.VectorToIndex(currentWorld);
-							if (selection?.Any(s => s is Cell c && iMap.VectorToIndex(c.origin) == index) == false)
-								ClearSelection();
-						}
+						//if (!Input.GetKey(KeyCode.LeftControl) && !Input.GetKey(KeyCode.RightControl))
+						//{
+						//	var index = iMap.VectorToIndex(currentWorld);
+						//	if (selection?.Any(s => s is Cell c && iMap.VectorToIndex(c.origin) == index) == false)
+						//		ClearSelection();
+						//}
 
-						//if (StartTileDrag(Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)))
-						if (StartTileDrag(true))
+						if (StartTileDrag(Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)))
+						//if (StartTileDrag(true))
 						{
 							SetMode(ControllerMode.DragTile);
 							if (selection?.Length > 1) EditorDirectionUtil.Hide();
@@ -302,18 +302,18 @@ namespace ClassicTilestorm
 			var cells = selection?.OfType<Cell>() ?? Enumerable.Empty<Cell>();
 			if (!cells.Any()) return;
 
-			var extents = new Rect(0, 0, iMap.Width - 1, iMap.Height - 1);
-			foreach (var cell in cells)
-			{
-				var p = Map.FullFloorVec(cell.position);
-				extents.xMin = Mathf.Min(extents.xMin, p.x);
-				extents.xMax = Mathf.Max(extents.xMax, p.x);
-				extents.yMin = Mathf.Min(extents.yMin, p.z);
-				extents.yMax = Mathf.Max(extents.yMax, p.z);
-			}
+			//var extents = new Rect(0, 0, iMap.Width - 1, iMap.Height - 1);
+			//foreach (var cell in cells)
+			//{
+			//	var p = Map.FullFloorVec(cell.position);
+			//	extents.xMin = Mathf.Min(extents.xMin, p.x);
+			//	extents.xMax = Mathf.Max(extents.xMax, p.x);
+			//	extents.yMin = Mathf.Min(extents.yMin, p.z);
+			//	extents.yMax = Mathf.Max(extents.yMax, p.z);
+			//}
 
-			//var extents = GeomUtils.PointArrayBoundsInt((new[] { new Vector2Int(0, 0), new Vector2Int(iMap.Width - 1, iMap.Height - 1) }).Concat(
-			//	cells.Select(c => new Vector2Int(Mathf.FloorToInt(c.position.x), Mathf.FloorToInt(c.position.z)))));
+			var extents = GeomUtils.PointArrayBoundsInt((new[] { new Vector2Int(0, 0), new Vector2Int(iMap.Width - 1, iMap.Height - 1) }).Concat(
+				cells.Select(c => new Vector2Int(Mathf.FloorToInt(c.position.x), Mathf.FloorToInt(c.position.z)))));
 
 			if (!Map.ValidExtents(extents))
 			{
