@@ -349,8 +349,7 @@ namespace ClassicTilestorm
 
 		private bool SelectTile(Vector3 worldPos, bool combine = false)
 		{
-			var tile = iMap.GetTile(worldPos);
-			if (null == tile.gameObject) return false;//need this for now
+			if (iMap.GetVariantAt(worldPos).IsDefaultEquivalent) return false;
 			var index = iMap.VectorToIndex(worldPos);
 			if (-1 == index) return false;
 			if (selection?.Any(s => s is Cell c && iMap.VectorToIndex(c.origin) == index) == true)
