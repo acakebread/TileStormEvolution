@@ -12,17 +12,12 @@ namespace ClassicTilestorm
 
 		public GameObject highlightMesh;
 
-		//public int tile = -1;
-
 		public Cell(IMapEdit iMap, Vector3 pos)
 		{
 			type = "Cell"; // or leave as base, doesn't matter
-			//tile = iMap.VectorToIndex(pos);
 			variant = iMap.GetVariantAt(iMap.VectorToIndex(pos));
 
 			var snapped = Map.FullFloorVec(pos);
-			startPosition = new Vector3(snapped.x, 0f, snapped.z) + variant.delta;
-
 			variant.delta.y = 0f;//clear the cached delta altitude
 			startPosition = position = snapped + variant.delta;
 		}

@@ -1243,17 +1243,16 @@ namespace ClassicTilestorm
 
 		public bool RemoveTileAt(Vector3 pos) => RemoveTileAt(Mathf.FloorToInt(pos.x), Mathf.FloorToInt(pos.z));
 
-		//public Vector3 ResizeMap(Rect bounds) => Vector3.zero;//ToDo implement map resize and return origin offset (delta)
-
+		public static bool ValidExtents(Rect extents) => (Mathf.FloorToInt(extents.xMax) - Mathf.FloorToInt(extents.xMin)) <= MAP_MAX_SIZE && (Mathf.FloorToInt(extents.yMax) - Mathf.FloorToInt(extents.yMin)) <= MAP_MAX_SIZE;
 
 		/// <summary>
 		/// Resizes the map to exactly match the given bounds (in grid coordinates).
 		/// Shifts all content accordingly and returns the world-space delta
 		/// by which the old origin (0,0) has been moved.
 		/// </summary>
-		/// <param name="bounds">New desired map rectangle in world/grid coordinates (xMin → xMax, zMin → zMax)</param>
+		/// <param name="extents">New desired map rectangle in world/grid coordinates (xMin → xMax, zMin → zMax)</param>
 		/// <returns>World-space offset that was applied to the old (0,0) corner</returns>
-		public Vector3 ResizeMap(Rect bounds)
+		public Vector3 ResizeMap(Rect extents)
 		{
 			if (tiles == null || variants == null || width <= 0 || height <= 0)
 			{
@@ -1261,17 +1260,17 @@ namespace ClassicTilestorm
 				return Vector3.zero;
 			}
 
-			int newMinX = Mathf.FloorToInt(bounds.xMin);
-			int newMinZ = Mathf.FloorToInt(bounds.yMin);
-			int newMaxX = Mathf.FloorToInt(bounds.xMax);
-			int newMaxZ = Mathf.FloorToInt(bounds.yMax);
+			int newMinX = Mathf.FloorToInt(extents.xMin);
+			int newMinZ = Mathf.FloorToInt(extents.yMin);
+			int newMaxX = Mathf.FloorToInt(extents.xMax);
+			int newMaxZ = Mathf.FloorToInt(extents.yMax);
 
 			int targetWidth = newMaxX - newMinX + 1;
 			int targetHeight = newMaxZ - newMinZ + 1;
 
 			if (targetWidth <= 0 || targetHeight <= 0)
 			{
-				Debug.LogWarning($"Invalid resize bounds: {bounds} → size {targetWidth}×{targetHeight}");
+				Debug.LogWarning($"Invalid resize bounds: {extents} → size {targetWidth}×{targetHeight}");
 				return Vector3.zero;
 			}
 

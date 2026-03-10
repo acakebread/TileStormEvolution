@@ -70,15 +70,13 @@ namespace ClassicTilestorm
 				if (resized)
 				{
 					GridLinesUtil.UpdateSize(map.width, map.height);
-
+					
 					if (originDelta != Vector3.zero)
 					{
-						Debug.Log($"Map resized, origin shifted by {originDelta}");
-
+						//Debug.Log($"Map resized, origin shifted by {originDelta}");
 						foreach (var item in selection ?? Array.Empty<ISelectable>())
 						{
 							if (item is not Cell cell) continue;
-
 							// Shift both original and current position by the same world delta
 							cell.startPosition += originDelta;
 							cell.position += originDelta;
@@ -255,19 +253,6 @@ namespace ClassicTilestorm
 					}
 					break;
 			}
-
-			if (Input.GetKeyDown(KeyCode.T))
-			{
-				Vector3 originDelta = iMap.ResizeMap(Rect.MinMaxRect(xmin: -1, ymin: -1, xmax: iMap.Width + 1, ymax: iMap.Height + 1));
-				if (originDelta != Vector3.zero)
-					Debug.Log($"Map resized, origin shifted by {originDelta}");
-			}
-			if (Input.GetKeyDown(KeyCode.Y))
-			{
-				Vector3 originDelta = iMap.ResizeMap(Rect.MinMaxRect(xmin: 1, ymin: 1, xmax: iMap.Width - 1, ymax: iMap.Height - 1));
-				if (originDelta != Vector3.zero)
-					Debug.Log($"Map resized, origin shifted by {originDelta}");
-			}
 		}
 
 		private void OnGUI()
@@ -299,11 +284,10 @@ namespace ClassicTilestorm
 		private void UpdateTileDrag()
 		{
 			//if (selection?.Length != 1 || selection[0] is not Cell cell) return;
-			foreach (var item in selection ?? Array.Empty<ISelectable>())
+			foreach (Cell cell in selection?.OfType<Cell>() ?? Array.Empty<Cell>())
 			{
-				if (item is not Cell cell) continue;
 				cell.position = cell.startPosition + snappedDelta;
-				item.OnUpdate(iMap, _camera);
+				cell.OnUpdate(iMap, _camera);
 			}
 			UpdateRotateGizmo();//temporary workaround for rotate gizmo - for now do not allow in multiselect mode
 		}
@@ -329,35 +313,26 @@ namespace ClassicTilestorm
 		private void EndTileDrag()
 		{
 			if (selection == null || selection.Length == 0) return;
+			var cells = selection?.OfType<Cell>() ?? Enumerable.Empty<Cell>();
+			if (!cells.Any()) return;
 
-			var mapCoorinates = new System.Collections.Generic.List<Vector3>();
-
-			foreach (var item in selection)
+			var extents = new Rect(0, 0, iMap.Width, iMap.Height);
+			foreach (Cell cell in cells)
 			{
-				if (item is not Cell cell) continue;
-				mapCoorinates.Add(Map.FullFloorVec(cell.position));
+				var p = Map.FullFloorVec(cell.position);
+				extents.xMin = Mathf.Min(extents.xMin, p.x);
+				extents.xMax = Mathf.Max(extents.xMax, p.x);
+				extents.yMin = Mathf.Min(extents.yMin, p.z);
+				extents.yMax = Mathf.Max(extents.yMax, p.z);
 			}
 
-			if (mapCoorinates.Count == 0) return;
+			//if (!Map.ValidExtents(extents))
+			//{
+			//	Debug.Log($"invalid map extents - exceeds limits, {extents}");
+			//	return;
+			//}
 
-			float selectionMinX = mapCoorinates.Count > 0 ? mapCoorinates.Min(p => p.x) : 0f;
-			float selectionMaxX = mapCoorinates.Count > 0 ? mapCoorinates.Max(p => p.x) : 0f;
-			float selectionMinZ = mapCoorinates.Count > 0 ? mapCoorinates.Min(p => p.z) : 0f;
-			float selectionMaxZ = mapCoorinates.Count > 0 ? mapCoorinates.Max(p => p.z) : 0f;
-
-			// Take the union (outer bounds)
-			float mapMinX = 0f;
-			float mapMinZ = 0f;
-			float mapMaxX = iMap.Width - 1f;
-			float mapMaxZ = iMap.Height - 1f;
-
-			float overallMinX = Mathf.Min(mapMinX, selectionMinX);
-			float overallMinZ = Mathf.Min(mapMinZ, selectionMinZ);
-			float overallMaxX = Mathf.Max(mapMaxX, selectionMaxX);
-			float overallMaxZ = Mathf.Max(mapMaxZ, selectionMaxZ);
-
-			var originDelta = iMap.ResizeMap(Rect.MinMaxRect(overallMinX, overallMinZ, overallMaxX, overallMaxZ));
-			//if (originDelta != Vector3.zero) Debug.Log($"Map resized, origin shifted by {originDelta}");
+			var originDelta = iMap.ResizeMap(extents); //if (originDelta != Vector3.zero) Debug.Log($"Map resized, origin shifted by {originDelta}");
 
 			var anyChange = false;
 
@@ -373,7 +348,7 @@ namespace ClassicTilestorm
 
 				// Place at new location
 				var newIndex = iMap.UpdateTileAt(cell.position, cell.variant, false);
-				if (newIndex == -1) newIndex = iMap.UpdateTileAt(cell.startPosition, cell.variant, false);
+				if (newIndex == -1) newIndex = iMap.UpdateTileAt(cell.startPosition, cell.variant, false);// cannot happen any more
 
 				// Update cell tracking
 				cell.variant = iMap.GetVariantAt(newIndex);
