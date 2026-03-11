@@ -198,7 +198,7 @@ namespace ClassicTilestorm
 						//if (StartTileDrag(true))
 						{
 							SetMode(ControllerMode.DragTile);
-							if (selection?.Length > 1) EditorDirectionUtil.Hide();
+							UpdateRotateGizmo();//temporary workaround for rotate gizmo - for now do not allow in multiselect mode
 						}
 						else
 							EditorCameraMovement.StartPanning(currentWorld);
