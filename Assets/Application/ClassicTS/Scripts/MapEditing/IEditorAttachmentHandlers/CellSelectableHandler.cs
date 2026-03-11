@@ -11,14 +11,13 @@ namespace ClassicTilestorm
 		{
 			if (selection is not Cell cell) return;
 
-			var tile = iMap.GetTile(cell.origin);
-			if (tile.gameObject != null)
-				tile.gameObject.SetActive(false);
+			cell.originalMesh = iMap.GetTile(cell.origin).gameObject;
+			if (null != cell.originalMesh) cell.originalMesh.SetActive(false);
 
 			var renderPos = Map.WorldToRender(cell.position);
 
 			cell.highlightMesh = EditorSelectionUtil.Create(cell.variant, renderPos);
-			if (cell.highlightMesh != null)EditorSelectionUtil.Update( cell.highlightMesh, iMap, cell.position, cell.variant, isSelectedOrDragging: true);
+			EditorSelectionUtil.Update( cell.highlightMesh, iMap, cell.position, cell.variant, isSelectedOrDragging: true);
 
 			var rotation = Quaternion.AngleAxis(cell.variant.angle, Vector3.up);
 			EditorDirectionUtil.ShowAt(renderPos, rotation, camera);
@@ -28,9 +27,7 @@ namespace ClassicTilestorm
 		{
 			if (selection is not Cell cell) return;
 
-			var tile = iMap.GetTile(cell.origin);
-			if (tile.gameObject != null)
-				tile.gameObject.SetActive(true);
+			if (null != cell.originalMesh) cell.originalMesh.SetActive(true);
 
 			iMap.UpdateTileAt(cell.origin, cell.variant, false);
 
@@ -45,12 +42,7 @@ namespace ClassicTilestorm
 			if (!EditorDirectionUtil.HandleInput(camera, out Quaternion newWorldRot)) return false;
 
 			cell.variant.angle = newWorldRot.eulerAngles.y;
-			iMap.UpdateTileAt(cell.origin, cell.variant, false);
-			var tile = iMap.GetTile(cell.origin);
-			if (tile.gameObject != null)
-				tile.gameObject.SetActive(false);
-
-			if (cell.highlightMesh != null) EditorSelectionUtil.Update(cell.highlightMesh, iMap, cell.position, cell.variant, true);
+			EditorSelectionUtil.Update(cell.highlightMesh, iMap, cell.position, cell.variant, true);
 
 			return true;
 		}
@@ -59,10 +51,7 @@ namespace ClassicTilestorm
 		{
 			if (selection is not Cell cell) return;
 
-			if (cell.highlightMesh != null) EditorSelectionUtil.Update(cell.highlightMesh, iMap, cell.position, cell.variant, true);
-			var tile = iMap.GetTile(cell.origin);
-			if (tile.gameObject != null)
-				tile.gameObject.SetActive(false);
+			EditorSelectionUtil.Update(cell.highlightMesh, iMap, cell.position, cell.variant, true);
 			var renderPos = Map.WorldToRender(cell.position);
 			var rotation = Quaternion.AngleAxis(cell.variant.angle, Vector3.up);
 			EditorDirectionUtil.ShowAt(renderPos, rotation, camera);

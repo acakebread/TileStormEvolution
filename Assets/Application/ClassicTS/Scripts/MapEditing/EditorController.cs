@@ -81,8 +81,7 @@ namespace ClassicTilestorm
 					}
 				}
 
-				//foreach (var cell in selection?.OfType<Cell>() ?? Array.Empty<Cell>())
-				//	cell.OnUpdate(iMap, _camera);//restore selection state after map change
+				//selection = selection?.ToArray();//restore selection state after map change
 			};
 
 			GridLinesUtil.Update(transform, iMap?.Width ?? 32, iMap?.Height ?? 32, null != iMap ? iMap.TileRenderPosition(0) + new Vector3(-0.5f, editAltitude, -0.5f) : Vector3.zero);
@@ -275,11 +274,10 @@ namespace ClassicTilestorm
 		private void UpdateSelectionAltitude(float value)
 		{
 			foreach (var cell in selection?.OfType<Cell>() ?? Array.Empty<Cell>())
-			{
 				cell.origin.y = cell.position.y = value;
-				iMap.UpdateTileAt(cell.origin, cell.variant);//apply the new altitude value
-				cell.OnUpdate(iMap, _camera);
-			}
+
+			selection = selection?.ToArray();//restore selection state
+
 			UpdateRotateGizmo();//temporary workaround for rotate gizmo - for now do not allow in multiselect mode
 		}
 
@@ -310,7 +308,7 @@ namespace ClassicTilestorm
 			{
 				//reset selection to current map positions
 				foreach (var cell in cells) cell.position = cell.origin;
-				selection = cells.OfType<ISelectable>().ToArray();
+				selection = selection?.ToArray();//restore selection state//selection = cells.OfType<ISelectable>().ToArray();
 				UpdateRotateGizmo();
 				return;
 			}
@@ -337,8 +335,9 @@ namespace ClassicTilestorm
 			selection = copy.OfType<ISelectable>().ToArray();
 
 			iMap.UpdateTileAt(copy.First().position, copy.First().variant);//workaround to crop map after drag changes extents
-																		   //iMap.CropToContent(true);//need to make sure  onmapchanged is invoked or we can't use this instead of above
-			foreach (var item in selection) item.OnUpdate(iMap, _camera);
+			//iMap.CropToContent(true);//need to make sure  onmapchanged is invoked or we can't use this instead of above
+
+			selection = selection?.ToArray();//restore selection state
 
 			UpdateRotateGizmo();//temporary workaround for rotate gizmo - for now do not allow in multiselect mode
 		}
