@@ -303,12 +303,22 @@ namespace ClassicTilestorm
 			var cells = selection?.OfType<Cell>() ?? Enumerable.Empty<Cell>();
 			if (!cells.Any()) return;
 
+			//var copy = selection.OfType<Cell>();
+			//ClearSelection();
+
+			//var _extents = GeomUtils.PointArrayBoundsInt(new[] { new Vector2Int(0, 0), new Vector2Int(iMap.Width - 1, iMap.Height - 1) });
+
+			//var __extents = GeomUtils.PointArrayBoundsInt(new[] { new Vector2Int(-1, -1), new Vector2Int(1, 1) });
+
 			var extents = GeomUtils.PointArrayBoundsInt((new[] { new Vector2Int(0, 0), new Vector2Int(iMap.Width - 1, iMap.Height - 1) }).Concat(
 				cells.Select(c => new Vector2Int(Mathf.FloorToInt(c.position.x), Mathf.FloorToInt(c.position.z)))));
 
 			if (!Map.ValidExtents(extents))
 			{
 				//reset selection to current map positions
+				//foreach (var cell in cells) cell.position = cell.origin;
+				//selection = cells.OfType<ISelectable>().ToArray();
+
 				foreach (var cell in cells)
 				{
 					cell.position = cell.origin;
