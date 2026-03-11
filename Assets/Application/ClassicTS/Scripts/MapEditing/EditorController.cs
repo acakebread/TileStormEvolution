@@ -73,16 +73,16 @@ namespace ClassicTilestorm
 					
 					if (originDelta != Vector3.zero)
 					{
-						//Debug.Log($"Map resized, origin shifted by {originDelta}");
 						foreach (var cell in selection?.OfType<Cell>() ?? Array.Empty<Cell>())
 						{
-							// Shift both original and current position by the same world delta
 							cell.origin += originDelta;
 							cell.position += originDelta;
-							cell.OnUpdate(iMap, _camera);
 						}
 					}
 				}
+
+				//foreach (var cell in selection?.OfType<Cell>() ?? Array.Empty<Cell>())
+				//	cell.OnUpdate(iMap, _camera);//restore selection state after map change
 			};
 
 			GridLinesUtil.Update(transform, iMap?.Width ?? 32, iMap?.Height ?? 32, null != iMap ? iMap.TileRenderPosition(0) + new Vector3(-0.5f, editAltitude, -0.5f) : Vector3.zero);
@@ -270,6 +270,7 @@ namespace ClassicTilestorm
 
 		// ─── All helper methods ──────────────────────────────────────────────
 		private void UpdateRotateGizmo() { if (selection?.Length > 1) EditorDirectionUtil.Hide(); }//temporary workaround for rotate gizmo - for now do not allow in multiselect mode
+		private void UpdateViewGizmo() { if (selection?.Length > 1) { ViewPreviewUtil.Hide(); EditorTransformUtil.Hide(); EditorFrustumUtil.Hide(); } }//temporary workaround for preview system - for now do not allow in multiselect mode
 
 		private void UpdateSelectionAltitude(float value)
 		{
@@ -339,10 +340,8 @@ namespace ClassicTilestorm
 			selection = copy.OfType<ISelectable>().ToArray();
 
 			iMap.UpdateTileAt(copy.First().position, copy.First().variant);//workaround to crop map after drag changes extents
-			//iMap.CropToContent(true);//need to make sure  onmapchanged is invoked or we can't use this instead of above
-
-			foreach (var item in selection)
-				item.OnUpdate(iMap, _camera);
+																		   //iMap.CropToContent(true);//need to make sure  onmapchanged is invoked or we can't use this instead of above
+			foreach (var item in selection) item.OnUpdate(iMap, _camera);
 
 			UpdateRotateGizmo();//temporary workaround for rotate gizmo - for now do not allow in multiselect mode
 		}
@@ -357,7 +356,7 @@ namespace ClassicTilestorm
 			if (false == combine) ClearSelection();
 			var newCell = new Cell(iMap, worldPos);
 			selection = selection == null ? new[] { newCell } : selection.Append(newCell).ToArray();
-			UpdateRotateGizmo();
+			UpdateRotateGizmo();//temporary workaround for rotate gizmo - for now do not allow in multiselect mode
 			return true;
 		}
 
@@ -369,7 +368,8 @@ namespace ClassicTilestorm
 			var attachmentsOnTile = iMap.GetAttachments(tileIndex: cursorTile);
 			if (EditorAttachmentUI.EvaluateSelection(attachmentsOnTile, cursorTile))
 				SelectAttachments(attachmentsOnTile);
-			RebuildMarkers();
+			MapUtils.RebuildMarkers(iMap, selection);
+			UpdateViewGizmo();//temporary workaround for rotate gizmo - for now do not allow in multiselect mode
 		}
 
 		private bool StartAttachmentDrag()
@@ -391,7 +391,8 @@ namespace ClassicTilestorm
 			if (selection?.Length == 1)
 				selection[0].OnUpdate(iMap, _camera);
 			iMap.RefreshAttachments(attSelection);
-			RebuildMarkers();
+			MapUtils.RebuildMarkers(iMap, selection);
+			UpdateViewGizmo();//temporary workaround for rotate gizmo - for now do not allow in multiselect mode
 		}
 
 		private bool CancelAttachmentMode()
@@ -399,7 +400,7 @@ namespace ClassicTilestorm
 			if (selection?.Length > 0)
 			{
 				selection = null;
-				RebuildMarkers();
+				MapUtils.RebuildMarkers(iMap, selection);
 				return false;
 			}
 			SelectAttachments(iMap.GetAttachments(tileIndex: iMap.VectorToIndex(beginWorld = currentWorld)));
@@ -415,26 +416,8 @@ namespace ClassicTilestorm
 		private void SelectAttachments(ISelectable[] value = null)
 		{
 			selection = value;
-			RebuildMarkers();
-		}
-
-		private void RebuildMarkers()
-		{
-			var tiles = iMap?.GetAttachments()?.Select(a => a.tile)?.Distinct()?.ToArray() ?? Array.Empty<int>();
-			var positions = new Vector3[tiles.Length];
-			var colors = new Color[tiles.Length];
-			var isWaypointMode = selection != null && selection.Length == 1 && selection[0] is Waypoint;
-
-			for (var i = 0; i < tiles.Length; i++)
-			{
-				var tile = tiles[i];
-				positions[i] = iMap.TileRenderPosition(tile);
-				colors[i] = isWaypointMode && iMap.HasAttachmentOfType<View>(tile) ? new (0f, 1f, 1f, 0.5f) : new (0f, 0.7f, 1f, 0.7f);
-			}
-
-			var selectedTile = (selection != null && selection.Length > 0 && selection[0] is MapAttachment ma) ? ma.tile : -1;
-			var selectedIndex = Array.IndexOf(tiles, selectedTile);
-			EditorMarkerUtil.ShowMarkers(positions, colors, selectedIndex);
+			MapUtils.RebuildMarkers(iMap, selection);
+			UpdateViewGizmo();//temporary workaround for rotate gizmo - for now do not allow in multiselect mode
 		}
 	}
 }

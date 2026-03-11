@@ -1,3 +1,6 @@
+using MassiveHadronLtd;
+using System;
+using System.Linq;
 using UnityEngine;
 
 namespace ClassicTilestorm
@@ -23,6 +26,25 @@ namespace ClassicTilestorm
 			}
 
 			return variant;
+		}
+
+		public static void RebuildMarkers(IMapEdit iMap, ISelectable[] selection)
+		{
+			var tiles = iMap?.GetAttachments()?.Select(a => a.tile)?.Distinct()?.ToArray() ?? Array.Empty<int>();
+			var positions = new Vector3[tiles.Length];
+			var colors = new Color[tiles.Length];
+			var isWaypointMode = selection != null && selection.Length == 1 && selection[0] is Waypoint;
+
+			for (var i = 0; i < tiles.Length; i++)
+			{
+				var tile = tiles[i];
+				positions[i] = iMap.TileRenderPosition(tile);
+				colors[i] = isWaypointMode && iMap.HasAttachmentOfType<View>(tile) ? new(0f, 1f, 1f, 0.5f) : new(0f, 0.7f, 1f, 0.7f);
+			}
+
+			var selectedTile = (selection != null && selection.Length > 0 && selection[0] is MapAttachment ma) ? ma.tile : -1;
+			var selectedIndex = Array.IndexOf(tiles, selectedTile);
+			EditorMarkerUtil.ShowMarkers(positions, colors, selectedIndex);
 		}
 	}
 }
