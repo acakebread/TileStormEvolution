@@ -311,12 +311,6 @@ namespace ClassicTilestorm
 				//reset selection to current map positions
 				foreach (var cell in cells) cell.position = cell.origin;
 				selection = cells.OfType<ISelectable>().ToArray();
-
-				//foreach (var cell in cells)
-				//{
-				//	cell.position = cell.origin;
-				//	cell.OnUpdate(iMap, _camera);
-				//}
 				UpdateRotateGizmo();
 				return;
 			}
