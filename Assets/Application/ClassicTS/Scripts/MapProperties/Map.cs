@@ -190,6 +190,7 @@ namespace ClassicTilestorm
 			return new Variant(0);
 		}
 
+		public Variant GetVariantAt(Vector3 pos) => GetVariantAt(VectorToIndex(pos));
 		public Variant GetVariantAt(int mapIndex)
 		{
 			if (state == null || mapIndex < 0 || mapIndex >= state.Length)
@@ -200,8 +201,6 @@ namespace ClassicTilestorm
 
 			return GetVariantForIndex(logicalIndex);
 		}
-
-		public Variant GetVariantAt(Vector3 pos) => GetVariantAt(VectorToIndex(pos));
 
 		public Definition GetDefinitionAt(int mapIndex)
 		{
@@ -279,10 +278,15 @@ namespace ClassicTilestorm
 			}
 		}
 
-		public bool InitialiseGraph()
+		internal bool InitialiseGraph()
 		{
 			var _ = graph;// force tile creation on clone
 			return _graph != null && 0 != _graph.Length;
+		}
+
+		internal void InvalidateGraphCache()
+		{
+			_graph = null;
 		}
 
 		private void UpdateGraphTileInfo(int index)
@@ -347,6 +351,9 @@ namespace ClassicTilestorm
 			RayToWorld(ray, out Vector3 result);
 			return result;
 		}
+
+		public static bool ValidExtents(Rect extents) => (Mathf.FloorToInt(extents.xMax) - Mathf.FloorToInt(extents.xMin)) < MAP_MAX_SIZE && (Mathf.FloorToInt(extents.yMax) - Mathf.FloorToInt(extents.yMin)) < MAP_MAX_SIZE;
+		public static bool ValidExtents(RectInt extents) => extents.width <= MAP_MAX_SIZE && extents.height <= MAP_MAX_SIZE;
 
 		public int VectorToIndex(Vector3 vec) => vec.x < 0 || vec.x >= width || vec.z < 0 || vec.z >= height ? -1 : Mathf.FloorToInt(vec.z) * width + Mathf.FloorToInt(vec.x);
 		public Vector3 IndexToVector(int index) => new(index % width, 0f, index / width);
@@ -671,79 +678,6 @@ namespace ClassicTilestorm
 		// Original methods — adapted to variants
 		// ─────────────────────────────────────────────
 
-		private bool Consolidate()
-		{
-			if (tiles == null || tiles.Length == 0 || variants == null || variants.Length == 0)
-				return false;
-
-			// Group by full Variant identity (hash + angle + delta)
-			var grouped = tiles
-				.Select(idx => idx >= 0 && idx < variants.Length ? variants[idx] : new Variant(0))
-				.GroupBy(v => (v.hash, v.angle, v.delta))   // tuple key = full identity
-				.Select(g => new
-				{
-					Variant = g.Key,
-					Count = g.Count(),
-				})
-				.OrderByDescending(g => g.Count)
-				.ThenBy(g => g.Variant.hash)// stable secondary sort
-				.ThenBy(g => g.Variant.angle)
-				.ThenBy(g => g.Variant.delta, Vector3LexComparer.Instance)
-				.ToList();
-
-			var newVariants = grouped
-				.Select(g => new Variant(g.Variant.hash, g.Variant.delta, g.Variant.angle))
-				.ToArray();
-
-			// Build lookup: old key → new index
-			var oldToNew = new Dictionary<(HashId, float, Vector3), int>(grouped.Count);
-			for (int i = 0; i < newVariants.Length; i++)
-			{
-				var v = newVariants[i];
-				oldToNew[(v.hash, v.angle, v.delta)] = i;
-			}
-
-			// Remap tiles to new indices
-			var newTiles = new int[tiles.Length];
-			for (int i = 0; i < tiles.Length; i++)
-			{
-				int oldIdx = tiles[i];
-				var oldVariant = oldIdx >= 0 && oldIdx < variants.Length ? variants[oldIdx] : new Variant(0);
-				var key = (oldVariant.hash, oldVariant.angle, oldVariant.delta);
-				newTiles[i] = oldToNew[key];
-			}
-
-			// Detect what actually changed
-			bool sizeChanged = newVariants.Length != variants.Length;
-
-			bool orderChanged = !sizeChanged &&
-				!variants.Select(v => (v.hash, v.angle, v.delta))
-						 .SequenceEqual(newVariants.Select(v => (v.hash, v.angle, v.delta)));
-
-			bool anythingChanged = sizeChanged || orderChanged;
-
-			if (anythingChanged)
-			{
-				variants = newVariants;
-				tiles = newTiles;
-
-				if (sizeChanged)
-				{
-					string direction = newVariants.Length > variants.Length ? "increased" : "reduced";
-					Debug.Log($"{name} consolidated: table size {direction} from {variants.Length} → {newVariants.Length}");
-				}
-				else if (orderChanged)
-				{
-					Debug.Log($"{name} consolidated: table order changed (size remains {newVariants.Length})");
-				}
-
-				// Invalidate caches
-				_graph = null;
-			}
-
-			return anythingChanged;
-		}
-
 		private bool RepositionAndResize(int expandToX = 0, int expandToZ = 0)
 		{
 			if (tiles == null || tiles.Length == 0) return false;
@@ -878,30 +812,10 @@ namespace ClassicTilestorm
 
 			bool consolidated = false;
 			if (consolidate)
-				consolidated = Consolidate();
+				consolidated = this.Optimise();
 
 			return resized || consolidated;
 		}
-
-		public Map Clone() => new()
-		{
-			name = name,
-			character = character,
-			music = music,
-			light = light,
-			skybox = skybox,
-			effect = effect,
-			button = button,
-			width = width,
-			height = height,
-
-			waypoints = waypoints != null ? (int[])waypoints.Clone() : null,
-			tiles = tiles != null ? (int[])tiles.Clone() : null,
-			solve = solve != null ? (int[])solve.Clone() : null,
-
-			attachments = attachments != null ? attachments.Select(a => a.ShallowClone()).ToArray() : Array.Empty<MapAttachment>(),
-			variants = variants != null ? variants.Select(v => new Variant(v.hash, v.delta, v.angle)).ToArray() : Array.Empty<Variant>()
-		};
 
 		public Bounds GetTileGeometryBounds(int tileIndex)
 		{
@@ -1131,6 +1045,7 @@ namespace ClassicTilestorm
 			return tableIndex;
 		}
 
+		public bool RemoveTileAt(Vector3 pos) => RemoveTileAt(Mathf.FloorToInt(pos.x), Mathf.FloorToInt(pos.z));
 		public bool RemoveTileAt(int x, int z)
 		{
 			if (tiles == null || tiles.Length == 0)
@@ -1148,11 +1063,6 @@ namespace ClassicTilestorm
 
 			return true;
 		}
-
-		public bool RemoveTileAt(Vector3 pos) => RemoveTileAt(Mathf.FloorToInt(pos.x), Mathf.FloorToInt(pos.z));
-
-		public static bool ValidExtents(Rect extents) => (Mathf.FloorToInt(extents.xMax) - Mathf.FloorToInt(extents.xMin)) < MAP_MAX_SIZE && (Mathf.FloorToInt(extents.yMax) - Mathf.FloorToInt(extents.yMin)) < MAP_MAX_SIZE;
-		public static bool ValidExtents(RectInt extents) => extents.width <= MAP_MAX_SIZE && extents.height <= MAP_MAX_SIZE;
 
 		public Vector3 ResizeMap(Rect extents) => ResizeMap(new RectInt(Mathf.FloorToInt(extents.xMin), Mathf.FloorToInt(extents.yMin), Mathf.FloorToInt(extents.xMax) - Mathf.FloorToInt(extents.xMin), Mathf.FloorToInt(extents.yMax) - Mathf.FloorToInt(extents.yMin)));
 
@@ -1435,6 +1345,26 @@ namespace ClassicTilestorm
 			return new Map(width, height, name ?? $"Map {width}×{height}");
 		}
 
+		public Map Clone() => new()
+		{
+			name = name,
+			character = character,
+			music = music,
+			light = light,
+			skybox = skybox,
+			effect = effect,
+			button = button,
+			width = width,
+			height = height,
+
+			waypoints = waypoints != null ? (int[])waypoints.Clone() : null,
+			tiles = tiles != null ? (int[])tiles.Clone() : null,
+			solve = solve != null ? (int[])solve.Clone() : null,
+
+			attachments = attachments != null ? attachments.Select(a => a.ShallowClone()).ToArray() : Array.Empty<MapAttachment>(),
+			variants = variants != null ? variants.Select(v => new Variant(v.hash, v.delta, v.angle)).ToArray() : Array.Empty<Variant>()
+		};
+
 		public void Destroy()
 		{
 			OnMapEdited = null;
@@ -1460,61 +1390,6 @@ namespace ClassicTilestorm
 			if (parent != null)
 				parent = null;
 		}
-
-		//public GameObject BuildPreviewGeometry(Transform previewParent, int layer)
-		//{
-		//	if (width <= 0 || height <= 0 || tiles == null || variants == null)
-		//		return null;
-
-		//	// CRITICAL: Work on a CLONE so we don't corrupt the original map's runtime state
-		//	var previewMap = this.Clone();
-
-		//	var previewRoot = new GameObject($"Preview_{name ?? "Map"}");
-		//	previewRoot.transform.SetParent(previewParent, false);
-		//	previewRoot.transform.localPosition = Vector3.zero;
-
-		//	var originalParent = previewMap.parent;
-		//	previewMap.parent = previewRoot.transform;
-
-		//	try
-		//	{
-		//		previewMap.Preset();
-		//		var _ = previewMap.graph;// force tile creation on clone
-
-		//		if (previewMap._graph == null || previewMap._graph.Length == 0)
-		//		{
-		//			Debug.LogWarning("Preview graph creation failed on clone");
-		//			UnityEngine.Object.DestroyImmediate(previewRoot);
-		//			return null;
-		//		}
-
-		//		previewMap.RefreshAttachments(previewMap.GetAttachments());
-
-		//		PreviewRenderLayers.SetLayerRecursively(previewRoot, PreviewRenderLayers.LAYER_PREVIEW);
-		//		PreviewRenderLayers.SetPreviewLayersToChildren(previewRoot.transform);
-
-		//		var particleControllers = previewRoot.GetComponentsInChildren<ParticleController>(true);
-		//		foreach (var particleController in particleControllers)
-		//			particleController.gameObject.layer = PreviewRenderLayers.previewTransparentLayer;
-
-		//		var lights = previewRoot.GetComponentsInChildren<Light>(true);
-		//		foreach (var light in lights)
-		//			PreviewRenderLayers.SetPreviewLayers(light, false);
-
-		//		return previewRoot;
-		//	}
-		//	catch (Exception e)
-		//	{
-		//		Debug.LogError($"Preview build failed: {e.Message}");
-		//		UnityEngine.Object.DestroyImmediate(previewRoot);
-		//		return null;
-		//	}
-		//	finally
-		//	{
-		//		// Restore original parent on clone (not needed, but clean)
-		//		previewMap.parent = originalParent;
-		//	}
-		//}
 
 		[JsonIgnore]
 		public UnityRenderSettings RenderSettings => new(

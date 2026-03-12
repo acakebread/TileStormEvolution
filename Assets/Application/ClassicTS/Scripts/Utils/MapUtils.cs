@@ -1,10 +1,11 @@
-using MassiveHadronLtd;
+﻿using MassiveHadronLtd;
 using System;
 using System.Linq;
 using UnityEngine;
 
 namespace ClassicTilestorm
 {
+	
 	public static class MapUtils
 	{
 		public static Variant NextVariantOnMap(IMapEdit map, Vector3 worldPos, Variant variant, bool cycleHeight = false)
@@ -80,7 +81,7 @@ namespace ClassicTilestorm
 			return maxX >= 0 ? (minX, minZ, maxX, maxZ) : (0, 0, -1, -1);
 		}
 
-		public static GameObject BuildPreviewGeometry(Map map, Transform previewParent, int layer)
+		public static GameObject BuildPreviewGeometry(Map map, Transform previewParent)
 		{
 			if (map.width <= 0 || map.height <= 0 || map.tiles == null || map.variants == null)
 				return null;
@@ -131,6 +132,79 @@ namespace ClassicTilestorm
 				// Restore original parent on clone (not needed, but clean)
 				previewMap.parent = originalParent;
 			}
+		}
+
+		public static bool Optimise(this Map map)
+		{
+			if (map.tiles == null || map.tiles.Length == 0 || map.variants == null || map.variants.Length == 0)
+				return false;
+
+			// Group by full Variant identity (hash + angle + delta)
+			var grouped = map.tiles
+				.Select(idx => idx >= 0 && idx < map.variants.Length ? map.variants[idx] : new Variant(0))
+				.GroupBy(v => (v.hash, v.angle, v.delta))   // tuple key = full identity
+				.Select(g => new
+				{
+					Variant = g.Key,
+					Count = g.Count(),
+				})
+				.OrderByDescending(g => g.Count)
+				.ThenBy(g => g.Variant.hash)// stable secondary sort
+				.ThenBy(g => g.Variant.angle)
+				.ThenBy(g => g.Variant.delta, Vector3LexComparer.Instance)
+				.ToList();
+
+			var newVariants = grouped
+				.Select(g => new Variant(g.Variant.hash, g.Variant.delta, g.Variant.angle))
+				.ToArray();
+
+			// Build lookup: old key → new index
+			var oldToNew = new System.Collections.Generic.Dictionary<(HashId, float, Vector3), int>(grouped.Count);
+			for (int i = 0; i < newVariants.Length; i++)
+			{
+				var v = newVariants[i];
+				oldToNew[(v.hash, v.angle, v.delta)] = i;
+			}
+
+			// Remap tiles to new indices
+			var newTiles = new int[map.tiles.Length];
+			for (int i = 0; i < map.tiles.Length; i++)
+			{
+				int oldIdx = map.tiles[i];
+				var oldVariant = oldIdx >= 0 && oldIdx < map.variants.Length ? map.variants[oldIdx] : new Variant(0);
+				var key = (oldVariant.hash, oldVariant.angle, oldVariant.delta);
+				newTiles[i] = oldToNew[key];
+			}
+
+			// Detect what actually changed
+			bool sizeChanged = newVariants.Length != map.variants.Length;
+
+			bool orderChanged = !sizeChanged &&
+				!map.variants.Select(v => (v.hash, v.angle, v.delta))
+						 .SequenceEqual(newVariants.Select(v => (v.hash, v.angle, v.delta)));
+
+			bool anythingChanged = sizeChanged || orderChanged;
+
+			if (anythingChanged)
+			{
+				map.variants = newVariants;
+				map.tiles = newTiles;
+
+				if (sizeChanged)
+				{
+					string direction = newVariants.Length > map.variants.Length ? "increased" : "reduced";
+					Debug.Log($"{map.name} consolidated: table size {direction} from {map.variants.Length} → {newVariants.Length}");
+				}
+				else if (orderChanged)
+				{
+					Debug.Log($"{map.name} consolidated: table order changed (size remains {newVariants.Length})");
+				}
+
+				// Invalidate caches
+				map.InvalidateGraphCache();
+			}
+
+			return anythingChanged;
 		}
 	}
 }
