@@ -31,68 +31,6 @@ namespace ClassicTilestorm
 
 		public readonly bool IsDefaultEquivalent => definition != null && definition.IsDefaultEquivalent();
 		public readonly bool HasNav => definition != null && definition.Nav != 0;
-
-		// ─── New positioning / snapping helpers ──────────────────────────────
-
-		/// <summary>
-		/// The "anchor point" we consider when starting to drag this variant.
-		/// Usually center for nav tiles, half-offset for decorative/small tiles.
-		/// </summary>
-		public readonly Vector3 GetDragAnchor(Vector3 worldPos)
-		{
-			return HasNav
-				? Map.FullFloorVec(worldPos)
-				: Map.HalfFloorVec(worldPos);
-		}
-
-		/// <summary>
-		/// Given a desired world position (e.g. during drag), returns the final
-		/// position we should place this variant at — preserving its relative offset.
-		/// </summary>
-		public readonly Vector3 GetSnappedWorldPosition(Vector3 desiredWorldPos)
-		{
-			if (HasNav)
-			{
-				return Map.FullFloorVec(desiredWorldPos);
-			}
-
-			var fullCenter = Map.FullFloorVec(desiredWorldPos);
-			var currentPos = Map.HalfFloorVec(desiredWorldPos);  // current drag sample
-			var relativeOffset = currentPos - fullCenter;
-
-			// We keep the relative offset from the nearest full-tile center
-			return fullCenter + relativeOffset;
-			// = Map.HalfFloorVec(desiredWorldPos)   ← but more explicit
-		}
-
-		/// <summary>
-		/// Variant of GetSnappedWorldPosition that also applies the existing delta.
-		/// Useful when computing final placement after drag ends.
-		/// </summary>
-		public readonly Vector3 GetFinalWorldPosition(Vector3 baseWorldPos)
-		{
-			var snapped = GetSnappedWorldPosition(baseWorldPos);
-			return snapped + delta;
-		}
-
-		/// <summary>
-		/// Extracts just the sub-tile offset (x/z) from a world position,
-		/// ignoring Y (height) which is usually preserved separately.
-		/// </summary>
-		public static Vector3 ExtractOffsetFromWorldPos(Vector3 worldPos)
-		{
-			var full = Map.FullFloorVec(worldPos);
-			var offset = worldPos - full;
-
-			// Optional: if you ever want to clamp offsets inside the tile
-			// offset.x = Mathf.Clamp(offset.x, -0.5f, 0.5f);
-			// offset.z = Mathf.Clamp(offset.z, -0.5f, 0.5f);
-
-			return new Vector3(offset.x, 0f, offset.z);   // y usually ignored for delta
-		}
-
-		// Optional: if you later want to support clamping / grid-size changes
-		// public readonly Vector3 GetClampedSnappedPosition(Vector3 desired) { ... }
 	}
 
 	public interface IMapData
@@ -299,7 +237,9 @@ namespace ClassicTilestorm
 
 				_graph = new Tile[width * height];
 
-				//Debug.Log($"Rebuilding graph | state first 8: [{string.Join(", ", tiles.Take(8))}]");
+#if VERBOSE
+				Debug.Log($"Rebuilding graph | state first 8: [{string.Join(", ", tiles.Take(8))}]");                                                                                                    
+#endif
 
 				for (int visualIndex = 0; visualIndex < _graph.Length; visualIndex++)
 				{
@@ -401,9 +341,6 @@ namespace ClassicTilestorm
 			RayToWorld(ray, out Vector3 result);
 			return result;
 		}
-
-		//public static Vector3 ScreenToWorldSnapped(Camera camera, Vector3 screenPos) => FullFloorVec(ScreenToWorld(camera, InputX.mousePosition));
-		//public static Vector3 ScreenToWorldHalfSnapped(Camera camera, Vector3 screenPos) => HalfSnappedMapPosition(ScreenToWorld(camera, InputX.mousePosition));
 
 		public int VectorToIndex(Vector3 vec) => vec.x < 0 || vec.x >= width || vec.z < 0 || vec.z >= height ? -1 : Mathf.FloorToInt(vec.z) * width + Mathf.FloorToInt(vec.x);
 		public Vector3 IndexToVector(int index) => new(index % width, 0f, index / width);
@@ -515,9 +452,7 @@ namespace ClassicTilestorm
 			{
 				waypointWrappers = new MapAttachment[waypoints.Length];
 				for (int i = 0; i < waypoints.Length; i++)
-				{
 					waypointWrappers[i] = new Waypoint(i, waypoints[i]);
-				}
 			}
 
 			var source = real.Concat(waypointWrappers).AsEnumerable();
@@ -743,7 +678,6 @@ namespace ClassicTilestorm
 				{
 					Variant = g.Key,
 					Count = g.Count(),
-					// OriginalVariants = g.ToList()   // removed because it was never used
 				})
 				.OrderByDescending(g => g.Count)
 				.ThenBy(g => g.Variant.hash)// stable secondary sort
@@ -1571,8 +1505,8 @@ namespace ClassicTilestorm
 
 			try
 			{
-				previewMap.Preset();                // identity state on clone
-				var _ = previewMap.graph;           // force tile creation on clone
+				previewMap.Preset();
+				var _ = previewMap.graph;// force tile creation on clone
 
 				if (previewMap._graph == null || previewMap._graph.Length == 0)
 				{
@@ -1637,7 +1571,7 @@ namespace ClassicTilestorm
 
 			var lights = parent.GetComponentsInChildren<Light>(true);
 			foreach (var light in lights)
-				PreviewRenderLayers.RemovePreviewLayers(light); //light.cullingMask &= ~(1 << LayerMask.NameToLayer("Preview"));
+				PreviewRenderLayers.RemovePreviewLayers(light);
 
 			PreviewRenderLayers.RemovePreviewLayersFromChildren(parent);
 
