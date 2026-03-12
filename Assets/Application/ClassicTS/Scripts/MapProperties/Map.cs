@@ -932,7 +932,7 @@ namespace ClassicTilestorm
 			return true;
 		}
 
-		public bool _CropToContent(bool consolidate = false, Action<Vector2Int> onOriginDelta = null)
+		public bool CropToContent(bool consolidate = false, Action<Vector2Int> onOriginDelta = null)
 		{
 			bool resized = RepositionAndResize();
 
@@ -940,51 +940,7 @@ namespace ClassicTilestorm
 			if (consolidate)
 				consolidated = Consolidate();
 
-			//Vector2Int originDelta = Vector2Int.zero;//ToDo work out the delta
-			//if (originDelta != Vector2Int.zero) onOriginDelta?.Invoke(originDelta);
-
 			return resized || consolidated;
-		}
-
-		public bool CropToContent(bool consolidate = false, Action<Vector2Int> onOriginDelta = null)
-		{
-			var (minX, minZ, maxX, maxZ) = GetContentBounds();
-
-			if (maxX < minX) // empty
-				return false;
-
-			int targetW = maxX - minX + 1;
-			int targetH = maxZ - minZ + 1;
-
-			if (targetW == width && targetH == height && minX == 0 && minZ == 0)
-			{
-				if (!consolidate) return false;
-				bool did = Consolidate();
-				if (did)
-				{
-					RecreateTiles();
-					RefreshAttachments(GetAttachments());
-					onOriginDelta?.Invoke(Vector2Int.zero);
-				}
-				return did;
-			}
-
-			// Force crop using the same logic as auto-resize
-			bool didResize = RepositionAndResize();   // ← this already does crop-to-content !
-
-			Vector2Int gridDelta = new Vector2Int(-minX, -minZ);   // because content was shifted left/up by minX/minZ
-
-			bool consolidated = consolidate && Consolidate();
-
-			bool changed = didResize || consolidated;
-
-			RecreateTiles();
-			RefreshAttachments(GetAttachments());
-
-			if (changed && didResize)
-				onOriginDelta?.Invoke(gridDelta);
-
-			return changed;
 		}
 
 		private (int minX, int minZ, int maxX, int maxZ) GetContentBounds()
@@ -1098,7 +1054,6 @@ namespace ClassicTilestorm
 			return -1;
 		}
 
-		//public int UpdateTileAt(Vector3 pos, Variant variant) => UpdateTileAt(pos, variant.hash, variant.delta, variant.angle);
 		public int UpdateTileAt(Vector3 pos, Variant variant, bool allowResize = true)
 		{
 			var snapped = variant.HasNav ? FullFloorVec(pos) : HalfFloorVec(pos);
@@ -1202,7 +1157,7 @@ namespace ClassicTilestorm
 				//if (isDefaultTile || sizeChanged)//for now always try to crop the map because it may not currently be cropped due to RemoveTileAt 
 				{
 					var (minX, minZ, maxX, maxZ) = GetContentBounds();
-					cropped = _CropToContent();
+					cropped = CropToContent();
 
 					if (cropped)
 					{
@@ -1463,10 +1418,7 @@ namespace ClassicTilestorm
 		private void SetupWaypoints()
 		{
 			if (waypoints != null && waypoints.Length > 0)
-			{
-				//Debug.Log($"Using {waypoints.Length} predefined waypoints.");
 				return;
-			}
 
 			var generated = new List<int>();
 			int start = GetStartTile();
@@ -1524,9 +1476,6 @@ namespace ClassicTilestorm
 				windController = windController ?? parent.gameObject.AddComponent<WindController>();
 				windController.AddSway(sway, TileRenderPosition(n));
 			}
-
-			//if (windController != null)
-			//	Debug.Log($"WindController initialized with {windController.SwayComponents.Count} sway components.");
 		}
 
 		public Map()
@@ -1634,9 +1583,6 @@ namespace ClassicTilestorm
 
 				previewMap.RefreshAttachments(previewMap.GetAttachments());
 
-				// Apply layer recursively
-				//previewRoot.transform.SetLayer(layer, true);
-
 				PreviewRenderLayers.SetLayerRecursively(previewRoot, PreviewRenderLayers.LAYER_PREVIEW);
 				PreviewRenderLayers.SetPreviewLayersToChildren(previewRoot.transform);
 
@@ -1646,31 +1592,7 @@ namespace ClassicTilestorm
 
 				var lights = previewRoot.GetComponentsInChildren<Light>(true);
 				foreach (var light in lights)
-					PreviewRenderLayers.SetPreviewLayers(light, false); // Preview only //light.cullingMask = 1 << LayerMask.NameToLayer("Preview");
-
-				//// Optional: disable unwanted scripts/components
-				//foreach (var tile in previewMap._graph)
-				//{
-				//	if (tile.gameObject == null) continue;
-
-				//	//// Disable things that shouldn't run in editor preview
-				//	//foreach (var mb in tile.gameObject.GetComponentsInChildren<MonoBehaviour>(true))
-				//	//{
-				//	//	if (mb is MorphGeomSway ||
-				//	//		mb is WindController)           // optional
-				//	//	{
-				//	//		mb.enabled = false;
-				//	//	}
-				//	//}
-
-				//	//// Optional: turn off shadows for performance
-				//	//foreach (var mr in tile.gameObject.GetComponentsInChildren<Renderer>(true))
-				//	//{
-				//	//	mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-				//	//	mr.receiveShadows = false;
-				//	//}
-				//}
-
+					PreviewRenderLayers.SetPreviewLayers(light, false);
 
 				return previewRoot;
 			}
@@ -1684,12 +1606,6 @@ namespace ClassicTilestorm
 			{
 				// Restore original parent on clone (not needed, but clean)
 				previewMap.parent = originalParent;
-
-				// IMPORTANT: clean up the clone's runtime tiles
-				// (prevents memory leak from dangling GameObjects)
-				//previewMap.DestroyAllTiles();
-
-				// Clone itself can be GC'd — no need to destroy it explicitly
 			}
 		}
 
