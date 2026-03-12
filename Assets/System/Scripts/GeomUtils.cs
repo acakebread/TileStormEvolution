@@ -63,7 +63,7 @@ namespace MassiveHadronLtd
 			var minY = points.Min(p => p.y);
 			var maxX = points.Max(p => p.x);
 			var maxY = points.Max(p => p.y);
-			return new RectInt(minX, minY, maxX - minX + 1, maxY - minY + 1);
+			return new RectInt(minX, minY, maxX - minX, maxY - minY);
 		}
 	}
 }

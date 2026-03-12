@@ -11,8 +11,8 @@ namespace ClassicTilestorm
 		{
 			if (selection is not Cell cell) return;
 
-			cell.originalMesh = iMap.GetTile(cell.origin).gameObject;
-			if (null != cell.originalMesh) cell.originalMesh.SetActive(false);
+			var originalMesh = iMap.GetTile(cell.origin).gameObject;
+			if (null != originalMesh) originalMesh.SetActive(false);
 
 			var renderPos = Map.WorldToRender(cell.position);
 
@@ -27,9 +27,10 @@ namespace ClassicTilestorm
 		{
 			if (selection is not Cell cell) return;
 
-			if (null != cell.originalMesh) cell.originalMesh.SetActive(true);
+			var originalMesh = iMap.GetTile(cell.origin).gameObject;
+			if (null != originalMesh) originalMesh.SetActive(true);
 
-			iMap.UpdateTileAt(cell.origin, cell.variant, false);
+			iMap.UpdateTileAt(cell.position, cell.variant, false);
 
 			cell.DestroyHighlight();
 

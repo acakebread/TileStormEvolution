@@ -70,15 +70,16 @@ namespace ClassicTilestorm
 				if (resized)
 				{
 					GridLinesUtil.UpdateSize(map.width, map.height);
-					
-					if (originDelta != Vector3.zero)
-					{
-						foreach (var cell in selection?.OfType<Cell>() ?? Array.Empty<Cell>())
-						{
-							cell.origin += originDelta;
-							cell.position += originDelta;
-						}
-					}
+					UpdateSelection(originDelta);
+
+					//if (originDelta != Vector3.zero)
+					//{
+					//	foreach (var cell in selection?.OfType<Cell>() ?? Array.Empty<Cell>())
+					//	{
+					//		cell.origin += originDelta;
+					//		cell.position += originDelta;
+					//	}
+					//}
 				}
 
 				//selection = selection?.ToArray();//restore selection state after map change
@@ -259,6 +260,21 @@ namespace ClassicTilestorm
 					}
 					break;
 			}
+
+			//if (Input.GetKeyDown(KeyCode.T))
+			//{
+			//	Debug.Log(Rect.MinMaxRect(xmin: -1, ymin: -1, xmax: iMap.Width + 1, ymax: iMap.Height + 1));
+
+			//	Vector3 originDelta = iMap.ResizeMap(Rect.MinMaxRect(xmin: -1, ymin: -1, xmax: iMap.Width, ymax: iMap.Height));
+			//	if (originDelta != Vector3.zero)
+			//		Debug.Log($"Map resized, origin shifted by {originDelta}");
+			//}
+			//if (Input.GetKeyDown(KeyCode.Y))
+			//{
+			//	Vector3 originDelta = iMap.ResizeMap(Rect.MinMaxRect(xmin: 1, ymin: 1, xmax: iMap.Width - 2, ymax: iMap.Height - 2));
+			//	if (originDelta != Vector3.zero)
+			//		Debug.Log($"Map resized, origin shifted by {originDelta}");
+			//}
 		}
 
 		private void OnGUI()
@@ -268,13 +284,23 @@ namespace ClassicTilestorm
 		}
 
 		// ─── All helper methods ──────────────────────────────────────────────
+		private void UpdateSelection(Vector3 originDelta)
+		{
+			if (Vector3.zero == originDelta) return;
+			foreach (var cell in selection?.OfType<Cell>() ?? Array.Empty<Cell>())
+			{
+				cell.origin += originDelta;
+				cell.position += originDelta;
+			}
+		}
+
 		private void UpdateRotateGizmo() { if (selection?.Length > 1) EditorDirectionUtil.Hide(); }//temporary workaround for rotate gizmo - for now do not allow in multiselect mode
 		private void UpdateViewGizmo() { if (selection?.Length > 1) { ViewPreviewUtil.Hide(); EditorTransformUtil.Hide(); EditorFrustumUtil.Hide(); } }//temporary workaround for preview system - for now do not allow in multiselect mode
 
 		private void UpdateSelectionAltitude(float value)
 		{
 			foreach (var cell in selection?.OfType<Cell>() ?? Array.Empty<Cell>())
-				cell.origin.y = cell.position.y = value;
+				cell.position.y = value;
 
 			selection = selection?.ToArray();//restore selection state
 
@@ -308,7 +334,7 @@ namespace ClassicTilestorm
 			{
 				//reset selection to current map positions
 				foreach (var cell in cells) cell.position = cell.origin;
-				selection = selection?.ToArray();//restore selection state//selection = cells.OfType<ISelectable>().ToArray();
+				selection = selection?.ToArray();//restore selection state
 				UpdateRotateGizmo();
 				return;
 			}
@@ -332,10 +358,12 @@ namespace ClassicTilestorm
 			}
 
 			//restore selection
-			selection = copy.OfType<ISelectable>().ToArray();
 
+			selection = copy.OfType<ISelectable>().ToArray();
 			iMap.UpdateTileAt(copy.First().position, copy.First().variant);//workaround to crop map after drag changes extents
-			//iMap.CropToContent(true);//need to make sure  onmapchanged is invoked or we can't use this instead of above
+			//iMap.CropToContent(true);//iMap.CropToContent(true, value => UpdateSelection(new Vector3(value.x, 0, value.y)));//need to make sure  onmapchanged is invoked or we can't use this instead of above
+
+			//iMap.CropToContent(true, value => UpdateSelection(new Vector3(value.x, 0, value.y)));
 
 			selection = selection?.ToArray();//restore selection state
 
