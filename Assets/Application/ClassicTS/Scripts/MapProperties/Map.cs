@@ -1140,9 +1140,7 @@ namespace ClassicTilestorm
 				int pz = idx / oldW;
 				int nx = px + offX;
 				int nz = pz + offZ;
-				return (nx >= 0 && nx < targetWidth && nz >= 0 && nz < targetHeight)
-					? nz * newW + nx
-					: -1;
+				return (nx >= 0 && nx < targetWidth && nz >= 0 && nz < targetHeight) ? nz * newW + nx : -1;
 			}
 
 			if (waypoints != null)
@@ -1212,9 +1210,7 @@ namespace ClassicTilestorm
 
 			// No-op check — exact same size and position
 			if (targetWidth == width && targetHeight == height && offsetX == 0 && offsetZ == 0)
-			{
 				return Vector3.zero;
-			}
 
 			// The amount the old (0,0) moves in world space
 			// (this is what UpdateTileAt accumulates in originDelta)
@@ -1296,9 +1292,7 @@ namespace ClassicTilestorm
 					int nx = ox + offsetX;
 					int nz = oz + offsetZ;
 
-					waypoints[i] = (nx >= 0 && nx < targetWidth && nz >= 0 && nz < targetHeight)
-						? nz * targetWidth + nx
-						: -1;
+					waypoints[i] = (nx >= 0 && nx < targetWidth && nz >= 0 && nz < targetHeight) ? nz * targetWidth + nx : -1;
 				}
 			}
 
@@ -1314,9 +1308,7 @@ namespace ClassicTilestorm
 					int nx = ox + offsetX;
 					int nz = oz + offsetZ;
 
-					att.tile = (nx >= 0 && nx < targetWidth && nz >= 0 && nz < targetHeight)
-						? nz * targetWidth + nx
-						: -1;
+					att.tile = (nx >= 0 && nx < targetWidth && nz >= 0 && nz < targetHeight) ? nz * targetWidth + nx : -1;
 				}
 			}
 
