@@ -46,5 +46,91 @@ namespace ClassicTilestorm
 			var selectedIndex = Array.IndexOf(tiles, selectedTile);
 			EditorMarkerUtil.ShowMarkers(positions, colors, selectedIndex);
 		}
+
+		public static (int minX, int minZ, int maxX, int maxZ) GetContentBounds(Map map)
+		{
+			if (map.tiles == null || map.tiles.Length == 0 || map.width <= 0 || map.height <= 0)
+				return (0, 0, -1, -1);
+
+			int minX = map.width;
+			int minZ = map.height;
+			int maxX = -1;
+			int maxZ = -1;
+
+			for (int i = 0; i < map.tiles.Length; i++)
+			{
+				int t = map.tiles[i];
+				if (t < 0) continue;
+
+				int hash = (t < map.variants.Length) ? map.variants[t].hash : 0;
+				if (hash == 0) continue;
+
+				var def = ResourceManager.GetDefinition(hash);
+				if (def == null || def.IsDefault()) continue;
+
+				int x = i % map.width;
+				int z = i / map.width;
+
+				minX = Math.Min(minX, x);
+				maxX = Math.Max(maxX, x);
+				minZ = Math.Min(minZ, z);
+				maxZ = Math.Max(maxZ, z);
+			}
+
+			return maxX >= 0 ? (minX, minZ, maxX, maxZ) : (0, 0, -1, -1);
+		}
+
+		public static GameObject BuildPreviewGeometry(Map map, Transform previewParent, int layer)
+		{
+			if (map.width <= 0 || map.height <= 0 || map.tiles == null || map.variants == null)
+				return null;
+
+			// CRITICAL: Work on a CLONE so we don't corrupt the original map's runtime state
+			var previewMap = map.Clone();
+
+			var previewRoot = new GameObject($"Preview_{map.name ?? "Map"}");
+			previewRoot.transform.SetParent(previewParent, false);
+			previewRoot.transform.localPosition = Vector3.zero;
+
+			var originalParent = previewMap.parent;
+			previewMap.parent = previewRoot.transform;
+
+			try
+			{
+				previewMap.Preset();
+				if (false == previewMap.InitialiseGraph())
+				{
+					Debug.LogWarning("Preview graph creation failed on clone");
+					UnityEngine.Object.DestroyImmediate(previewRoot);
+					return null;
+				}
+
+				previewMap.RefreshAttachments(previewMap.GetAttachments());
+
+				PreviewRenderLayers.SetLayerRecursively(previewRoot, PreviewRenderLayers.LAYER_PREVIEW);
+				PreviewRenderLayers.SetPreviewLayersToChildren(previewRoot.transform);
+
+				var particleControllers = previewRoot.GetComponentsInChildren<ParticleController>(true);
+				foreach (var particleController in particleControllers)
+					particleController.gameObject.layer = PreviewRenderLayers.previewTransparentLayer;
+
+				var lights = previewRoot.GetComponentsInChildren<Light>(true);
+				foreach (var light in lights)
+					PreviewRenderLayers.SetPreviewLayers(light, false);
+
+				return previewRoot;
+			}
+			catch (Exception e)
+			{
+				Debug.LogError($"Preview build failed: {e.Message}");
+				UnityEngine.Object.DestroyImmediate(previewRoot);
+				return null;
+			}
+			finally
+			{
+				// Restore original parent on clone (not needed, but clean)
+				previewMap.parent = originalParent;
+			}
+		}
 	}
 }

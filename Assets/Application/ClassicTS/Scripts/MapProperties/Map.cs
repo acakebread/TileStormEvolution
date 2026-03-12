@@ -130,7 +130,7 @@ namespace ClassicTilestorm
 		public bool ShouldSerializeattachments() => attachments != null && attachments.Length > 0;
 
 		public Action<Map, bool, Vector3> OnMapEdited { get; set; }
-		[JsonIgnore] private Transform parent;
+		[JsonIgnore] public Transform parent { get; set; }//had to make public for now for preview creation in maputil
 
 		[JsonIgnore] public int Width => width;
 		[JsonIgnore] public int Height => height;
@@ -277,6 +277,12 @@ namespace ClassicTilestorm
 				UpdateGraphTileInfo(State[visualIndex]);
 #endif
 			}
+		}
+
+		public bool InitialiseGraph()
+		{
+			var _ = graph;// force tile creation on clone
+			return _graph != null && 0 != _graph.Length;
 		}
 
 		private void UpdateGraphTileInfo(int index)
@@ -758,7 +764,7 @@ namespace ClassicTilestorm
 			}
 			else
 			{
-				var (minX, minZ, maxX, maxZ) = GetContentBounds();
+				var (minX, minZ, maxX, maxZ) = MapUtils.GetContentBounds(this);
 				if (maxX < 0) return false;
 
 				targetWidth = maxX - minX + 1;
@@ -875,39 +881,6 @@ namespace ClassicTilestorm
 				consolidated = Consolidate();
 
 			return resized || consolidated;
-		}
-
-		private (int minX, int minZ, int maxX, int maxZ) GetContentBounds()
-		{
-			if (tiles == null || tiles.Length == 0 || width <= 0 || height <= 0)
-				return (0, 0, -1, -1);
-
-			int minX = width;
-			int minZ = height;
-			int maxX = -1;
-			int maxZ = -1;
-
-			for (int i = 0; i < tiles.Length; i++)
-			{
-				int t = tiles[i];
-				if (t < 0) continue;
-
-				int hash = (t < variants.Length) ? variants[t].hash : 0;
-				if (hash == 0) continue;
-
-				var def = ResourceManager.GetDefinition(hash);
-				if (def == null || def.IsDefault()) continue;
-
-				int x = i % width;
-				int z = i / width;
-
-				minX = Math.Min(minX, x);
-				maxX = Math.Max(maxX, x);
-				minZ = Math.Min(minZ, z);
-				maxZ = Math.Max(maxZ, z);
-			}
-
-			return maxX >= 0 ? (minX, minZ, maxX, maxZ) : (0, 0, -1, -1);
 		}
 
 		public Map Clone() => new()
@@ -1090,7 +1063,7 @@ namespace ClassicTilestorm
 			{
 				//if (isDefaultTile || sizeChanged)//for now always try to crop the map because it may not currently be cropped due to RemoveTileAt 
 				{
-					var (minX, minZ, maxX, maxZ) = GetContentBounds();
+					var (minX, minZ, maxX, maxZ) = MapUtils.GetContentBounds(this);
 					cropped = CropToContent();
 
 					if (cropped)
@@ -1488,60 +1461,60 @@ namespace ClassicTilestorm
 				parent = null;
 		}
 
-		public GameObject BuildPreviewGeometry(Transform previewParent, int layer)
-		{
-			if (width <= 0 || height <= 0 || tiles == null || variants == null)
-				return null;
+		//public GameObject BuildPreviewGeometry(Transform previewParent, int layer)
+		//{
+		//	if (width <= 0 || height <= 0 || tiles == null || variants == null)
+		//		return null;
 
-			// CRITICAL: Work on a CLONE so we don't corrupt the original map's runtime state
-			var previewMap = this.Clone();
+		//	// CRITICAL: Work on a CLONE so we don't corrupt the original map's runtime state
+		//	var previewMap = this.Clone();
 
-			var previewRoot = new GameObject($"Preview_{name ?? "Map"}");
-			previewRoot.transform.SetParent(previewParent, false);
-			previewRoot.transform.localPosition = Vector3.zero;
+		//	var previewRoot = new GameObject($"Preview_{name ?? "Map"}");
+		//	previewRoot.transform.SetParent(previewParent, false);
+		//	previewRoot.transform.localPosition = Vector3.zero;
 
-			var originalParent = previewMap.parent;
-			previewMap.parent = previewRoot.transform;
+		//	var originalParent = previewMap.parent;
+		//	previewMap.parent = previewRoot.transform;
 
-			try
-			{
-				previewMap.Preset();
-				var _ = previewMap.graph;// force tile creation on clone
+		//	try
+		//	{
+		//		previewMap.Preset();
+		//		var _ = previewMap.graph;// force tile creation on clone
 
-				if (previewMap._graph == null || previewMap._graph.Length == 0)
-				{
-					Debug.LogWarning("Preview graph creation failed on clone");
-					UnityEngine.Object.DestroyImmediate(previewRoot);
-					return null;
-				}
+		//		if (previewMap._graph == null || previewMap._graph.Length == 0)
+		//		{
+		//			Debug.LogWarning("Preview graph creation failed on clone");
+		//			UnityEngine.Object.DestroyImmediate(previewRoot);
+		//			return null;
+		//		}
 
-				previewMap.RefreshAttachments(previewMap.GetAttachments());
+		//		previewMap.RefreshAttachments(previewMap.GetAttachments());
 
-				PreviewRenderLayers.SetLayerRecursively(previewRoot, PreviewRenderLayers.LAYER_PREVIEW);
-				PreviewRenderLayers.SetPreviewLayersToChildren(previewRoot.transform);
+		//		PreviewRenderLayers.SetLayerRecursively(previewRoot, PreviewRenderLayers.LAYER_PREVIEW);
+		//		PreviewRenderLayers.SetPreviewLayersToChildren(previewRoot.transform);
 
-				var particleControllers = previewRoot.GetComponentsInChildren<ParticleController>(true);
-				foreach (var particleController in particleControllers)
-					particleController.gameObject.layer = PreviewRenderLayers.previewTransparentLayer;
+		//		var particleControllers = previewRoot.GetComponentsInChildren<ParticleController>(true);
+		//		foreach (var particleController in particleControllers)
+		//			particleController.gameObject.layer = PreviewRenderLayers.previewTransparentLayer;
 
-				var lights = previewRoot.GetComponentsInChildren<Light>(true);
-				foreach (var light in lights)
-					PreviewRenderLayers.SetPreviewLayers(light, false);
+		//		var lights = previewRoot.GetComponentsInChildren<Light>(true);
+		//		foreach (var light in lights)
+		//			PreviewRenderLayers.SetPreviewLayers(light, false);
 
-				return previewRoot;
-			}
-			catch (Exception e)
-			{
-				Debug.LogError($"Preview build failed: {e.Message}");
-				UnityEngine.Object.DestroyImmediate(previewRoot);
-				return null;
-			}
-			finally
-			{
-				// Restore original parent on clone (not needed, but clean)
-				previewMap.parent = originalParent;
-			}
-		}
+		//		return previewRoot;
+		//	}
+		//	catch (Exception e)
+		//	{
+		//		Debug.LogError($"Preview build failed: {e.Message}");
+		//		UnityEngine.Object.DestroyImmediate(previewRoot);
+		//		return null;
+		//	}
+		//	finally
+		//	{
+		//		// Restore original parent on clone (not needed, but clean)
+		//		previewMap.parent = originalParent;
+		//	}
+		//}
 
 		[JsonIgnore]
 		public UnityRenderSettings RenderSettings => new(
