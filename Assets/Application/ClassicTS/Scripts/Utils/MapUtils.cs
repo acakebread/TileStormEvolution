@@ -206,5 +206,78 @@ namespace ClassicTilestorm
 
 			return anythingChanged;
 		}
+
+		/// <summary>
+		/// Finds or creates an exact matching variant (hash + normalized delta + angle).
+		/// Mutates map.variants only when necessary.
+		/// Returns the index in map.variants.
+		/// Does NOT invalidate the graph — caller must do it if needed.
+		/// </summary>
+		public static int GetOrCreateVariantIndex(this Map map, HashId hash, Vector3 delta = new Vector3(), float angle = 0f)
+		{
+			//// Normalize delta (same rule as UpdateTileAt)
+			//delta = new Vector3(
+			//	((delta.x % 1f) + 1f) % 1f,
+			//	delta.y,
+			//	((delta.z % 1f) + 1f) % 1f
+			//);
+
+			if (map.variants == null)
+			{
+				map.variants = Array.Empty<Variant>();
+			}
+
+			// Search (identical to original)
+			for (int i = 0; i < map.variants.Length; i++)
+			{
+				var v = map.variants[i];
+				if (v.hash == hash &&
+					Mathf.Approximately(v.angle, angle) &&
+					Vector3LexComparer.ApproximatelyEqual(v.delta, delta))
+				{
+					return i;
+				}
+			}
+
+			// Append new variant (using Array.Resize for simplicity & clarity)
+			var newVariant = new Variant(hash, delta, angle);
+
+			int newIndex = map.variants.Length;
+			Array.Resize(ref map.variants, newIndex + 1);
+			map.variants[newIndex] = newVariant;
+
+			return newIndex;
+		}
+	}
+
+	public static class MapExtensions
+	{
+		public static T GetAttachmentOfType<T>(this IMapPlay map, int tile) where T : MapAttachment
+		{
+			return map.GetAttachments(tileIndex: tile, filterTypes: new[] { typeof(T) })
+					  .OfType<T>()
+					  .FirstOrDefault();
+		}
+
+		public static bool HasAttachmentOfType<T>(this IMapPlay map, int tile) where T : MapAttachment
+		{
+			return map.GetAttachments(tileIndex: tile, filterTypes: new[] { typeof(T) })
+					  .Length > 0;
+		}
+
+		public static Waypoint GetWaypoint(this IMapPlay map, int waypointIndex)
+		{
+			return map.GetAttachments(filterTypes: new[] { typeof(Waypoint) })
+					  .Cast<Waypoint>()
+					  .FirstOrDefault(w => w.waypointIndex == waypointIndex);
+		}
+
+		public static Waypoint[] GetWaypoints(this IMapPlay map)
+		{
+			return map.GetAttachments(filterTypes: new[] { typeof(Waypoint) })
+					  .Cast<Waypoint>()
+					  .OrderBy(w => w.waypointIndex)
+					  .ToArray();
+		}
 	}
 }
