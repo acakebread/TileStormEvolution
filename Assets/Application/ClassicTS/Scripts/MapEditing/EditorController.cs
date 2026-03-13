@@ -349,8 +349,8 @@ namespace ClassicTilestorm
 
 			//restore selection
 			selection = copy.OfType<ISelectable>().ToArray();//restore selection before bounding map
-			//iMap.ResizeMap(extents, true);//resize the map for the selection to apply - enable cropping
-			iMap.InsertTileAt(copy.First().position, copy.First().variant);//workaround to crop map after drag changes extents
+			iMap.ResizeMap(extents, true);//resize the map for the selection to apply - enable cropping
+			//iMap.InsertTileAt(copy.First().position, copy.First().variant);//workaround to crop map after drag changes extents
 			selection = selection?.ToArray();//restore selection state
 
 			UpdateRotateGizmo();//temporary workaround for rotate gizmo - for now do not allow in multiselect mode
