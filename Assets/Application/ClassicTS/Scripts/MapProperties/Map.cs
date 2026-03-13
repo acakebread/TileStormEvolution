@@ -932,38 +932,23 @@ namespace ClassicTilestorm
 		{
 			if (tiles == null || tiles.Length == 0) return false;
 
-			int targetWidth, targetHeight, offsetX, offsetZ;
+			var minX = expandToX;
+			var minZ = expandToZ;
+			if (expandToXnax == 0) minX = Mathf.Min(0, expandToX);
+			if (expandToZnax == 0) minZ = Mathf.Min(0, expandToZ);
 
-			if (expandToX != 0 || expandToZ != 0 || expandToXnax != 0 || expandToZnax != 0)
-			{
-				var minX = expandToX;
-				var minZ = expandToZ;
-				if (expandToXnax == 0) minX = Mathf.Min(0, expandToX);
-				if (expandToZnax == 0) minZ = Mathf.Min(0, expandToZ);
+			if (expandToXnax == 0) expandToXnax = Mathf.Max(width - 1, expandToXnax);
+			if (expandToZnax == 0) expandToZnax = Mathf.Max(height - 1, expandToZnax);
+			expandToXnax = Mathf.Max(expandToX, expandToXnax);
+			expandToZnax = Mathf.Max(expandToZ, expandToZnax);
 
-				if (expandToXnax == 0) expandToXnax = Mathf.Max(width - 1, expandToXnax);
-				if (expandToZnax == 0) expandToZnax = Mathf.Max(height - 1, expandToZnax);
-				expandToXnax = Mathf.Max(expandToX, expandToXnax);
-				expandToZnax = Mathf.Max(expandToZ, expandToZnax);
+			var maxX = expandToXnax;
+			var maxZ = expandToZnax;
 
-				var maxX = expandToXnax;
-				var maxZ = expandToZnax;
-
-				targetWidth = maxX - minX + 1;
-				targetHeight = maxZ - minZ + 1;
-				offsetX = -minX;
-				offsetZ = -minZ;
-			}
-			else
-			{
-				var (minX, minZ, maxX, maxZ) = MapUtils.GetContentBounds(this);
-				if (maxX < 0) return false;
-
-				targetWidth = maxX - minX + 1;
-				targetHeight = maxZ - minZ + 1;
-				offsetX = -minX;
-				offsetZ = -minZ;
-			}
+			var targetWidth = maxX - minX + 1;
+			var targetHeight = maxZ - minZ + 1;
+			var offsetX = -minX;
+			var offsetZ = -minZ;
 
 			if (targetWidth == width && targetHeight == height && offsetX == 0 && offsetZ == 0)
 				return false;
@@ -1043,7 +1028,9 @@ namespace ClassicTilestorm
 
 		public bool CropToContent(bool consolidate = false, Action<Vector2Int> onOriginDelta = null)
 		{
-			var resized = RepositionAndResize();
+			//var resized = RepositionAndResize();
+			var (minX, minZ, maxX, maxZ) = MapUtils.GetContentBounds(this);
+			var resized = RepositionAndResize(minX, minZ, maxX, maxZ);
 			var optimised = false;
 			if (consolidate) optimised = this.Optimise();
 			return resized || optimised;
