@@ -901,6 +901,25 @@ namespace ClassicTilestorm
 			return -1;
 		}
 
+		public bool RemoveTileAt(Vector3 pos) => RemoveTileAt(Mathf.FloorToInt(pos.x), Mathf.FloorToInt(pos.z));
+		public bool RemoveTileAt(int x, int z)
+		{
+			if (tiles == null || tiles.Length == 0)
+			{
+				Debug.LogError("Cannot update tile: map has no tiles array");
+				return false;
+			}
+
+			var index = z * width + x;
+			int tableIndex = this.GetOrCreateVariantIndex(ResourceManager.DefaultHash);//find table index of empty tile
+			tiles[index] = tableIndex;
+			GetGraphTile(index).Destroy();
+			graph[index] = CreateTile(variants[tableIndex], parent, TileRenderPosition(index));
+			RefreshAttachments(GetAttachments(tileIndex: index));
+
+			return true;
+		}
+
 		public int UpdateTileAt(Vector3 pos, Variant variant, bool allowResize = true)
 		{
 			if (tiles == null || tiles.Length == 0)
@@ -920,15 +939,15 @@ namespace ClassicTilestorm
 			var oldHeight = height;
 			(int minX, int minZ, int maxX, int maxZ) oldBounds = new(0, 0, width, height);
 
-			Vector3 originDelta = Vector3.zero;
-			bool sizeChanged = false;
+			var originDelta = Vector3.zero;
+			var sizeChanged = false;
 
 			if (allowResize)
 			{
 				// If coordinate out of bounds → expand automatically
 				if (x < 0 || x >= width || z < 0 || z >= height)
 				{
-					bool didResize = RepositionAndResize(x, z);
+					var didResize = RepositionAndResize(x, z);
 
 					if (didResize)
 					{
@@ -964,10 +983,10 @@ namespace ClassicTilestorm
 			// ────────────────────────────────────────────────────────────────
 			// Rest of the method unchanged
 			// ────────────────────────────────────────────────────────────────
-			bool cropped = false;
+			var cropped = false;
 
 			var def = ResourceManager.GetDefinition(hashId);
-			bool isDefaultTile = def?.IsDefault() ?? false;
+			var isDefaultTile = def?.IsDefault() ?? false;
 
 			if (allowResize)
 			{
@@ -988,7 +1007,7 @@ namespace ClassicTilestorm
 				}
 			}
 
-			bool boundsChanged = sizeChanged || width != oldWidth || height != oldHeight || cropped;
+			var boundsChanged = sizeChanged || width != oldWidth || height != oldHeight || cropped;
 
 			if (boundsChanged)
 			{
@@ -1005,29 +1024,6 @@ namespace ClassicTilestorm
 			OnMapEdited?.Invoke(this, boundsChanged, originDelta);
 			return z * width + x;//recalculate index
 		}
-
-		public bool RemoveTileAt(Vector3 pos) => RemoveTileAt(Mathf.FloorToInt(pos.x), Mathf.FloorToInt(pos.z));
-		public bool RemoveTileAt(int x, int z)
-		{
-			if (tiles == null || tiles.Length == 0)
-			{
-				Debug.LogError("Cannot update tile: map has no tiles array");
-				return false;
-			}
-
-			var index = z * width + x;
-			int tableIndex = this.GetOrCreateVariantIndex(ResourceManager.DefaultHash);//find table index of empty tile
-			tiles[index] = tableIndex;
-			GetGraphTile(index).Destroy();
-			graph[index] = CreateTile(variants[tableIndex], parent, TileRenderPosition(index));
-			RefreshAttachments(GetAttachments(tileIndex: index));
-
-			return true;
-		}
-
-		// ─────────────────────────────────────────────
-		// Original methods — adapted to variants
-		// ─────────────────────────────────────────────
 
 		private bool RepositionAndResize(int expandToX = 0, int expandToZ = 0)
 		{
