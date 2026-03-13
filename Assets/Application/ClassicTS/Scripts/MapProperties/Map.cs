@@ -999,36 +999,19 @@ namespace ClassicTilestorm
 			return index;
 		}
 
-		private bool RepositionAndResize(RectInt extents, bool boundsCheck = true)
+		private bool RepositionAndResize(RectInt extents, bool cropToContent = true)
 		{
 			if (tiles == null || tiles.Length == 0) return false;
 
-			var desiredMinX = extents.xMin;
-			var desiredMinZ = extents.yMin;
-			var desiredMaxX = extents.xMax;
-			var desiredMaxZ = extents.yMax;
+			var targetWidth = extents.width + 1;
+			var targetHeight = extents.height + 1;
+			var offsetX = -extents.xMin;
+			var offsetZ = -extents.yMin;
 
-			var targetWidth = desiredMaxX - desiredMinX + 1;
-			var targetHeight = desiredMaxZ - desiredMinZ + 1;
-
-			int offsetX, offsetZ;
-
-			if (boundsCheck)
+			if (cropToContent)
 			{
 				var (minX, minZ, maxX, maxZ) = MapUtils.GetContentBounds(this);
-				if (maxX < 0) return false;
-
-				targetWidth = maxX - minX + 1;
-				targetHeight = maxZ - minZ + 1;
-				offsetX = -minX;
-				offsetZ = -minZ;
-			}
-			else
-			{
-				var minX = Mathf.Min(0, desiredMinX);
-				var minZ = Mathf.Min(0, desiredMinZ);
-				var maxX = Mathf.Max(width - 1, desiredMaxX);
-				var maxZ = Mathf.Max(height - 1, desiredMaxZ);
+				if (maxX < 0 || maxZ < 0) return false;
 
 				targetWidth = maxX - minX + 1;
 				targetHeight = maxZ - minZ + 1;
