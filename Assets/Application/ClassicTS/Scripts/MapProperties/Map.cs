@@ -51,7 +51,6 @@ namespace ClassicTilestorm
 		int UpdateTileAt(Vector3 pos, Variant variant);
 		int InsertTileAt(Vector3 pos, Variant variant);
 
-		Vector3 ResizeMap(Rect extents);
 		Vector3 ResizeMap(RectInt extents);
 		bool CropToContent(bool consolidate = false, Action<Vector2Int> onOriginDelta = null);
 
@@ -156,7 +155,7 @@ namespace ClassicTilestorm
 			if (tiles == null || variants == null || mapIndex < 0 || mapIndex >= tiles.Length)
 				return new Variant(0);
 
-			int tableIdx = tiles[mapIndex];
+			var tableIdx = tiles[mapIndex];
 			if (tableIdx >= 0 && tableIdx < variants.Length)
 				return variants[tableIdx];
 
@@ -170,7 +169,7 @@ namespace ClassicTilestorm
 				return new Variant(0);
 
 			// Apply current permutation (scrambled/solved state)
-			int logicalIndex = state[mapIndex];
+			var logicalIndex = state[mapIndex];
 
 			return GetVariantForIndex(logicalIndex);
 		}
@@ -234,9 +233,9 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			for (int visualIndex = 0; visualIndex < state.Length; ++visualIndex)
+			for (var visualIndex = 0; visualIndex < state.Length; ++visualIndex)
 			{
-				int logicalIndex = state[visualIndex];
+				var logicalIndex = state[visualIndex];
 				if (logicalIndex < 0 || logicalIndex >= _graph.Length) continue;
 
 				var mapTile = _graph[logicalIndex];
@@ -277,8 +276,8 @@ namespace ClassicTilestorm
 				return;
 
 			var generated = new List<int>();
-			int start = GetStartTile();
-			int end = GetEndTile();
+			var start = GetStartTile();
+			var end = GetEndTile();
 
 			if (start == -1 || end == -1)
 			{
@@ -288,8 +287,8 @@ namespace ClassicTilestorm
 
 			generated.Add(start);
 
-			int cur = start;
-			int dir = Navigation.NavToDest(this, cur, end);
+			var cur = start;
+			var dir = Navigation.NavToDest(this, cur, end);
 			if (dir != 0)
 			{
 				while (cur != end)
@@ -297,7 +296,7 @@ namespace ClassicTilestorm
 					if (FindAdjacentConsole(cur) != -1)
 						generated.Add(cur);
 
-					int next = Navigation.GetAdjacentTile(this, cur, dir);
+					var next = Navigation.GetAdjacentTile(this, cur, dir);
 					if (next == -1 || next == start) break;
 
 					var nextTile = GetTile(next);
@@ -321,7 +320,7 @@ namespace ClassicTilestorm
 		{
 			WindController windController = null;
 
-			for (int n = 0; n < graphCount; ++n)
+			for (var n = 0; n < graphCount; ++n)
 			{
 				var go = GetGraphTile(n).gameObject;
 				if (go == null) continue;
@@ -359,7 +358,7 @@ namespace ClassicTilestorm
 			variants = new Variant[] { new Variant(defaultHash, Vector3.zero, 0f) };
 
 			// Every position in the grid points to variant index 0
-			int tileCount = width * height;
+			var tileCount = width * height;
 			tiles = new int[tileCount];
 			Array.Fill(tiles, 0);           // 0 = default variant index
 
@@ -627,7 +626,7 @@ namespace ClassicTilestorm
 			if (waypoints != null && waypoints.Length > 0)
 			{
 				waypointWrappers = new MapAttachment[waypoints.Length];
-				for (int i = 0; i < waypoints.Length; i++)
+				for (var i = 0; i < waypoints.Length; i++)
 					waypointWrappers[i] = new Waypoint(i, waypoints[i]);
 			}
 
@@ -747,7 +746,7 @@ namespace ClassicTilestorm
 
 				var newWaypoints = new List<int>(waypoints.Length - 1);
 
-				for (int i = 0; i < waypoints.Length; i++)
+				for (var i = 0; i < waypoints.Length; i++)
 				{
 					if (i != wp.waypointIndex)
 						newWaypoints.Add(waypoints[i]);
@@ -759,7 +758,7 @@ namespace ClassicTilestorm
 			}
 			else if (attachments != null)
 			{
-				int idx = Array.IndexOf(attachments, attachment);
+				var idx = Array.IndexOf(attachments, attachment);
 				if (idx >= 0)
 				{
 					var list = attachments.ToList();
@@ -783,7 +782,7 @@ namespace ClassicTilestorm
 			if (attachmentArray == null || attachmentArray.Length == 0)
 				return false;
 
-			bool anyRemoved = false;
+			var anyRemoved = false;
 
 			var waypointsToRemove = attachmentArray.OfType<Waypoint>().ToList();
 			var others = attachmentArray.Where(a => a is not Waypoint).ToArray();
@@ -841,7 +840,7 @@ namespace ClassicTilestorm
 		{
 			if (waypoints?.Length > 0) return waypoints[0];
 
-			for (int i = 0; i < width * height; ++i)
+			for (var i = 0; i < width * height; ++i)
 				if (GetTile(i).IsStart) return i;
 
 			Debug.LogWarning("No start tile found!");
@@ -852,7 +851,7 @@ namespace ClassicTilestorm
 		{
 			if (waypoints?.Length > 0) return waypoints[waypoints.Length - 1];
 
-			for (int i = 0; i < width * height; ++i)
+			for (var i = 0; i < width * height; ++i)
 				if (GetTile(i).IsEnd) return i;
 
 			Debug.LogWarning("No end tile found!");
@@ -866,7 +865,7 @@ namespace ClassicTilestorm
 
 			foreach (var dirBit in Navigation.Directions)
 			{
-				int consoleIndex = Navigation.GetAdjacentTile(this, nTile, dirBit);
+				var consoleIndex = Navigation.GetAdjacentTile(this, nTile, dirBit);
 				if (consoleIndex == -1) continue;
 
 				var consoleTile = GetTile(consoleIndex);
@@ -901,7 +900,6 @@ namespace ClassicTilestorm
 
 			// Normalize delta to [0,1) range
 			variant.delta = new Vector3(Mathf.Repeat(pos.x, 1f), pos.y, Mathf.Repeat(pos.z, 1f));// delta is +ve modulo
-
 			
 			// ────────────────────────────────────────────────────────────────
 			// Update rendering / graph (single tile update path)
@@ -952,9 +950,7 @@ namespace ClassicTilestorm
 			// ────────────────────────────────────────────────────────────────
 			if (x < 0 || x >= width || z < 0 || z >= height)
 			{
-				var didResize = RepositionAndResize(x, z);
-
-				if (!didResize)
+				if (!RepositionAndResize(x, z))//didResize
 				{
 					Debug.LogWarning($"Cannot place tile at ({x},{z}) — map resize failed (too large?)");
 					return -1;
@@ -962,14 +958,12 @@ namespace ClassicTilestorm
 
 				var minX = Mathf.Min(0, x);
 				var minZ = Mathf.Min(0, z);
-				var offsetX = -minX;
-				var offsetZ = -minZ;
 
-				if (x < 0) originDelta.x = offsetX;
-				if (z < 0) originDelta.z = offsetZ;
+				if (x < 0) originDelta.x = -minX;
+				if (z < 0) originDelta.z = -minZ;
 
-				x += offsetX;
-				z += offsetZ;
+				x -= minX;
+				z -= minZ;
 				sizeChanged = true;
 			}
 
@@ -1013,10 +1007,10 @@ namespace ClassicTilestorm
 
 			if (expandToX != 0 || expandToZ != 0)
 			{
-				int minX = Mathf.Min(0, expandToX);
-				int minZ = Mathf.Min(0, expandToZ);
-				int maxX = Mathf.Max(width - 1, expandToX);
-				int maxZ = Mathf.Max(height - 1, expandToZ);
+				var minX = Mathf.Min(0, expandToX);
+				var minZ = Mathf.Min(0, expandToZ);
+				var maxX = Mathf.Max(width - 1, expandToX);
+				var maxZ = Mathf.Max(height - 1, expandToZ);
 
 				targetWidth = maxX - minX + 1;
 				targetHeight = maxZ - minZ + 1;
@@ -1047,18 +1041,18 @@ namespace ClassicTilestorm
 #if VERBOSE
 			Debug.Log($"Resize Map '{name}' to {targetWidth}x{targetHeight}");
 #endif
-			int oldWidth = width;
-			int oldHeight = height;
-			int newSize = targetWidth * targetHeight;
+			var oldWidth = width;
+			var oldHeight = height;
+			var newSize = targetWidth * targetHeight;
 
-			int defaultIndex = this.GetOrCreateVariantIndex(ResourceManager.DefaultHash);
+			var defaultIndex = this.GetOrCreateVariantIndex(ResourceManager.DefaultHash);
 
 			var newTiles = new int[newSize];
 			Array.Fill(newTiles, defaultIndex);
 
 			var newSolve = new int[newSize];
 
-			for (int oldIdx = 0; oldIdx < oldWidth * oldHeight; oldIdx++)
+			for (var oldIdx = 0; oldIdx < oldWidth * oldHeight; oldIdx++)
 			{
 				if (oldIdx >= tiles.Length) continue;
 
@@ -1086,10 +1080,10 @@ namespace ClassicTilestorm
 			int Remap(int idx, int oldW, int newW, int offX, int offZ)
 			{
 				if (idx < 0) return idx;
-				int px = idx % oldW;
-				int pz = idx / oldW;
-				int nx = px + offX;
-				int nz = pz + offZ;
+				var px = idx % oldW;
+				var pz = idx / oldW;
+				var nx = px + offX;
+				var nz = pz + offZ;
 				return (nx >= 0 && nx < targetWidth && nz >= 0 && nz < targetHeight) ? nz * newW + nx : -1;
 			}
 
@@ -1118,8 +1112,6 @@ namespace ClassicTilestorm
 			return resized || optimised;
 		}
 
-		public Vector3 ResizeMap(Rect extents) => ResizeMap(new RectInt(Mathf.FloorToInt(extents.xMin), Mathf.FloorToInt(extents.yMin), Mathf.FloorToInt(extents.xMax) - Mathf.FloorToInt(extents.xMin), Mathf.FloorToInt(extents.yMax) - Mathf.FloorToInt(extents.yMin)));
-
 		public Vector3 ResizeMap(RectInt extents)
 		{
 			if (tiles == null || variants == null || width <= 0 || height <= 0)
@@ -1128,13 +1120,13 @@ namespace ClassicTilestorm
 				return Vector3.zero;
 			}
 
-			int desiredMinX = extents.xMin;
-			int desiredMinZ = extents.yMin;
-			int desiredMaxX = extents.xMax;
-			int desiredMaxZ = extents.yMax;
+			var desiredMinX = extents.xMin;
+			var desiredMinZ = extents.yMin;
+			var desiredMaxX = extents.xMax;
+			var desiredMaxZ = extents.yMax;
 
-			int targetWidth = desiredMaxX - desiredMinX + 1;
-			int targetHeight = desiredMaxZ - desiredMinZ + 1;
+			var targetWidth = desiredMaxX - desiredMinX + 1;
+			var targetHeight = desiredMaxZ - desiredMinZ + 1;
 
 			if (targetWidth <= 0 || targetHeight <= 0)
 			{
@@ -1152,8 +1144,8 @@ namespace ClassicTilestorm
 			// The offset is how much we need to shift existing content so that
 			// the point that was at (desiredMinX, desiredMinZ) becomes new (0,0)
 			// ────────────────────────────────────────────────────────────────
-			int offsetX = -desiredMinX;
-			int offsetZ = -desiredMinZ;
+			var offsetX = -desiredMinX;
+			var offsetZ = -desiredMinZ;
 
 			// No-op check — exact same size and position
 			if (targetWidth == width && targetHeight == height && offsetX == 0 && offsetZ == 0)
@@ -1166,54 +1158,54 @@ namespace ClassicTilestorm
 			// ────────────────────────────────────────────────────────────────
 			// Prepare new grid
 			// ────────────────────────────────────────────────────────────────
-			int oldWidth = width;
-			int oldHeight = height;
-			int newSize = targetWidth * targetHeight;
+			var oldWidth = width;
+			var oldHeight = height;
+			var newSize = targetWidth * targetHeight;
 
 			var newTiles = new int[newSize];
 			var newSolve = new int[newSize];
 
-			int defaultIndex = this.GetOrCreateVariantIndex(ResourceManager.DefaultHash);//find table index of empty tile
+			var defaultIndex = this.GetOrCreateVariantIndex(ResourceManager.DefaultHash);//find table index of empty tile
 			Array.Fill(newTiles, defaultIndex);
 			Array.Fill(newSolve, 0);
 
 			// ────────────────────────────────────────────────────────────────
 			// Copy old content with offset (same logic as RepositionAndResize)
 			// ────────────────────────────────────────────────────────────────
-			for (int oldZ = 0; oldZ < oldHeight; oldZ++)
+			for (var oldZ = 0; oldZ < oldHeight; oldZ++)
 			{
-				for (int oldX = 0; oldX < oldWidth; oldX++)
+				for (var oldX = 0; oldX < oldWidth; oldX++)
 				{
-					int oldIndex = oldZ * oldWidth + oldX;
+					var oldIndex = oldZ * oldWidth + oldX;
 					if (oldIndex >= tiles.Length) continue;
 
-					int newX = oldX + offsetX;
-					int newZ = oldZ + offsetZ;
+					var newX = oldX + offsetX;
+					var newZ = oldZ + offsetZ;
 
 					if (newX >= 0 && newX < targetWidth && newZ >= 0 && newZ < targetHeight)
 					{
-						int newIndex = newZ * targetWidth + newX;
+						var newIndex = newZ * targetWidth + newX;
 						newTiles[newIndex] = tiles[oldIndex];
 
 						// Remap solve delta — exact same as RepositionAndResize
 						if (solve != null && oldIndex < solve.Length)
 						{
-							int delta = solve[oldIndex];
+							var delta = solve[oldIndex];
 							if (delta != 0)
 							{
-								int oldSrcIdx = oldIndex + delta;
+								var oldSrcIdx = oldIndex + delta;
 								if (oldSrcIdx >= 0 && oldSrcIdx < oldWidth * oldHeight)
 								{
-									int oldSrcX = oldSrcIdx % oldWidth;
-									int oldSrcZ = oldSrcIdx / oldWidth;
+									var oldSrcX = oldSrcIdx % oldWidth;
+									var oldSrcZ = oldSrcIdx / oldWidth;
 
-									int newSrcX = oldSrcX + offsetX;
-									int newSrcZ = oldSrcZ + offsetZ;
+									var newSrcX = oldSrcX + offsetX;
+									var newSrcZ = oldSrcZ + offsetZ;
 
 									if (newSrcX >= 0 && newSrcX < targetWidth &&
 										newSrcZ >= 0 && newSrcZ < targetHeight)
 									{
-										int newSrcIdx = newSrcZ * targetWidth + newSrcX;
+										var newSrcIdx = newSrcZ * targetWidth + newSrcX;
 										newSolve[newIndex] = newSrcIdx - newIndex;
 									}
 								}
@@ -1228,16 +1220,16 @@ namespace ClassicTilestorm
 			// ────────────────────────────────────────────────────────────────
 			if (waypoints != null)
 			{
-				for (int i = 0; i < waypoints.Length; i++)
+				for (var i = 0; i < waypoints.Length; i++)
 				{
-					int oldTile = waypoints[i];
+					var oldTile = waypoints[i];
 					if (oldTile < 0) continue;
 
-					int ox = oldTile % oldWidth;
-					int oz = oldTile / oldWidth;
+					var ox = oldTile % oldWidth;
+					var oz = oldTile / oldWidth;
 
-					int nx = ox + offsetX;
-					int nz = oz + offsetZ;
+					var nx = ox + offsetX;
+					var nz = oz + offsetZ;
 
 					waypoints[i] = (nx >= 0 && nx < targetWidth && nz >= 0 && nz < targetHeight) ? nz * targetWidth + nx : -1;
 				}
@@ -1249,11 +1241,11 @@ namespace ClassicTilestorm
 				{
 					if (att.tile < 0) continue;
 
-					int ox = att.tile % oldWidth;
-					int oz = att.tile / oldWidth;
+					var ox = att.tile % oldWidth;
+					var oz = att.tile / oldWidth;
 
-					int nx = ox + offsetX;
-					int nz = oz + offsetZ;
+					var nx = ox + offsetX;
+					var nz = oz + offsetZ;
 
 					att.tile = (nx >= 0 && nx < targetWidth && nz >= 0 && nz < targetHeight) ? nz * targetWidth + nx : -1;
 				}
