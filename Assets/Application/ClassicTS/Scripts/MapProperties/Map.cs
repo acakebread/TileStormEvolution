@@ -91,7 +91,6 @@ namespace ClassicTilestorm
 		int CameraHitTile(Camera camera, Vector3 position);
 		Variant CameraHitVariant(Camera camera, Vector3 position);
 		Definition CameraHitDefinition(Camera camera, Vector3 position);
-		Bounds GetTileGeometryBounds(int _);
 	}
 
 	[Serializable]
@@ -863,25 +862,6 @@ namespace ClassicTilestorm
 				DestroyAttachmentInstance(att);
 
 			attachmentGameObjects.Clear();
-		}
-
-		public Bounds GetTileGeometryBounds(int tileIndex)
-		{
-			if (tileIndex < 0 || tileIndex >= width * height)
-			{
-				Vector3 center = TileRenderPosition(tileIndex);
-				return new Bounds(center, Vector3.zero);
-			}
-
-			var tile = GetTile(tileIndex);
-
-			if (tile.gameObject == null)
-			{
-				Vector3 center = TileRenderPosition(tileIndex);
-				return new Bounds(center, Vector3.zero);
-			}
-
-			return tile.GetGeometryBounds();
 		}
 
 		public int GetStartTile()
