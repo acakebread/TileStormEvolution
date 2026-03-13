@@ -138,7 +138,7 @@ namespace ClassicTilestorm
 					if (InputX.staticClick)
 					{
 						if (InputX.GetMouseButtonUp(1))
-							iMap.UpdateTileAt(currentWorld, ResourceManager.DefaultHash);
+							iMap.UpdateTileAt(currentWorld, new Variant(ResourceManager.DefaultHash));
 					}
 					break;
 

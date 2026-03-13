@@ -71,8 +71,6 @@ namespace ClassicTilestorm
 
 		Vector3 IndexToVector(int index);
 		HashId GetTileID(int _);
-		int UpdateTileAt(int x, int z, HashId hashId, Vector3 delta = new Vector3(), float angle = 0f, bool allowResize = true);
-		int UpdateTileAt(Vector3 pos, HashId hashId, Vector3 delta = new Vector3(), float angle = 0f, bool allowResize = true);
 		int UpdateTileAt(Vector3 pos, Variant variant, bool allowResize = true);
 		Vector3 ResizeMap(Rect extents);
 		Vector3 ResizeMap(RectInt extents);
@@ -905,25 +903,21 @@ namespace ClassicTilestorm
 
 		public int UpdateTileAt(Vector3 pos, Variant variant, bool allowResize = true)
 		{
-			var snapped = variant.HasNav ? FullFloorVec(pos) : HalfFloorVec(pos);
-			var delta = new Vector3(((snapped.x % 1f) + 1f) % 1f, snapped.y, ((snapped.z % 1f) + 1f) % 1f);//make sure valid delta for variant
-			return UpdateTileAt(pos, variant.hash, delta, variant.angle, allowResize);
-		}
-
-		public int UpdateTileAt(Vector3 pos, HashId hashId, Vector3 delta = new Vector3(), float angle = 0f, bool allowResize = true) => UpdateTileAt(Mathf.FloorToInt(pos.x), Mathf.FloorToInt(pos.z), hashId, delta, angle, allowResize);
-
-		public int UpdateTileAt(int x, int z, HashId hashId, Vector3 delta = new Vector3(), float angle = 0f, bool allowResize = true)
-		{
 			if (tiles == null || tiles.Length == 0)
 			{
 				Debug.LogError("Cannot update tile: map has no tiles array");
 				return -1;
 			}
 
-			delta = new Vector3(((delta.x % 1f) + 1f) % 1f, delta.y, ((delta.z % 1f) + 1f) % 1f);//make sure valid delta for variant
+			var hashId = variant.hash;
+			var angle = variant.angle;
+			var x = Mathf.FloorToInt(pos.x);
+			var z = Mathf.FloorToInt(pos.z);
 
-			int oldWidth = width;
-			int oldHeight = height;
+			var delta = new Vector3(((pos.x % 1f) + 1f) % 1f, pos.y, ((pos.z % 1f) + 1f) % 1f);//make sure valid delta for variant
+
+			var oldWidth = width;
+			var oldHeight = height;
 			(int minX, int minZ, int maxX, int maxZ) oldBounds = new(0, 0, width, height);
 
 			Vector3 originDelta = Vector3.zero;
@@ -938,10 +932,10 @@ namespace ClassicTilestorm
 
 					if (didResize)
 					{
-						int minX = Mathf.Min(0, x);
-						int minZ = Mathf.Min(0, z);
-						int offsetX = -minX;
-						int offsetZ = -minZ;
+						var minX = Mathf.Min(0, x);
+						var minZ = Mathf.Min(0, z);
+						var offsetX = -minX;
+						var offsetZ = -minZ;
 
 						if (x < 0) originDelta.x = offsetX;
 						if (z < 0) originDelta.z = offsetZ;
@@ -959,12 +953,12 @@ namespace ClassicTilestorm
 				}
 			}
 
-			int index = z * width + x;
+			var index = z * width + x;
 
 			// ────────────────────────────────────────────────────────────────
 			// Find or create variant with exact hash + angle + delta
 			// ────────────────────────────────────────────────────────────────
-			int tableIndex = this.GetOrCreateVariantIndex(hashId, delta, angle);
+			var tableIndex = this.GetOrCreateVariantIndex(hashId, delta, angle);
 			tiles[index] = tableIndex;
 
 			// ────────────────────────────────────────────────────────────────
