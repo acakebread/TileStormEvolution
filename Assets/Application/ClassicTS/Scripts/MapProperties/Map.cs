@@ -55,7 +55,6 @@ namespace ClassicTilestorm
 		Vector3 ResizeMap(RectInt extents);
 		bool CropToContent(bool consolidate = false, Action<Vector2Int> onOriginDelta = null);
 
-		bool RemoveTileAt(int x, int z);//does not affect bounds
 		bool RemoveTileAt(Vector3 pos);//does not affect bounds
 		Variant GetVariantAt(int mapIndex);
 		Variant GetVariantAt(Vector3 pos);
@@ -380,10 +379,7 @@ namespace ClassicTilestorm
 		}
 
 		// Alternative: static factory method (sometimes cleaner to call)
-		public static Map CreateEmpty(int width = 16, int height = 16, string name = null)
-		{
-			return new Map(width, height, name ?? $"Map {width}×{height}");
-		}
+		public static Map CreateEmpty(int width = 16, int height = 16, string name = null) => new Map(width, height, name ?? $"Map {width}×{height}");
 
 		public Map Clone() => new()
 		{
@@ -880,24 +876,7 @@ namespace ClassicTilestorm
 			return -1;
 		}
 
-		public bool RemoveTileAt(Vector3 pos) => RemoveTileAt(Mathf.FloorToInt(pos.x), Mathf.FloorToInt(pos.z));
-		public bool RemoveTileAt(int x, int z)
-		{
-			if (tiles == null || tiles.Length == 0)
-			{
-				Debug.LogError("Cannot update tile: map has no tiles array");
-				return false;
-			}
-
-			var index = z * width + x;
-			int tableIndex = this.GetOrCreateVariantIndex(ResourceManager.DefaultHash);//find table index of empty tile
-			tiles[index] = tableIndex;
-			GetGraphTile(index).Destroy();
-			graph[index] = CreateTile(variants[tableIndex], parent, TileRenderPosition(index));
-			RefreshAttachments(GetAttachments(tileIndex: index));
-
-			return true;
-		}
+		public bool RemoveTileAt(Vector3 pos) => UpdateTileAt(pos, new Variant(ResourceManager.DefaultHash)) != -1;
 
 		/// <summary>
 		/// Updates a tile at the given grid position. Position must be within current map bounds.
@@ -912,24 +891,18 @@ namespace ClassicTilestorm
 				return -1;
 			}
 
-			var x = Mathf.FloorToInt(pos.x);
-			var z = Mathf.FloorToInt(pos.z);
-
 			// Strict bounds check — no resize allowed in this version
-			if (x < 0 || x >= width || z < 0 || z >= height)
+			var index = VectorToIndex(pos);
+			if (-1 == index)
 			{
-				Debug.LogWarning($"Cannot update tile at ({x},{z}) — position out of bounds and resizing is not allowed in UpdateTileAt");
+				Debug.LogWarning($"Cannot update tile at ({pos}) — position out of bounds and resizing is not allowed in UpdateTileAt");
 				return -1;
 			}
 
 			// Normalize delta to [0,1) range
-			variant.delta = new Vector3(pos.x - x, pos.y, pos.z - z);// delta is +ve modulo
+			variant.delta = new Vector3(Mathf.Repeat(pos.x, 1f), pos.y, Mathf.Repeat(pos.z, 1f));// delta is +ve modulo
 
-			// Find or create variant entry
-			var tableIndex = this.GetOrCreateVariantIndex(variant.hash, variant.delta, variant.angle);
-			var index = z * width + x;
-			tiles[index] = tableIndex;
-
+			
 			// ────────────────────────────────────────────────────────────────
 			// Update rendering / graph (single tile update path)
 			// ────────────────────────────────────────────────────────────────
@@ -937,6 +910,8 @@ namespace ClassicTilestorm
 			var isDefaultTile = def?.IsDefault() ?? false;
 
 			// No resize/crop in this version — just update the single tile
+			var tableIndex = this.GetOrCreateVariantIndex(variant.hash, variant.delta, variant.angle);// Find or create variant entry
+			tiles[index] = tableIndex;
 			GetGraphTile(index).Destroy();
 			graph[index] = CreateTile(variants[tableIndex], parent, TileRenderPosition(index));
 			RefreshAttachments(GetAttachments(tileIndex: index));
@@ -1022,11 +997,7 @@ namespace ClassicTilestorm
 			var boundsChanged = sizeChanged || cropped;
 
 			// If we resized or cropped → full refresh needed
-			if (boundsChanged)
-			{
-				RecreateTiles();
-				RefreshAttachments(GetAttachments());
-			}
+			if (boundsChanged) RefreshGeometry();
 			// Note: if only single-tile update happened, UpdateTileAt already refreshed attachments
 
 			OnMapEdited?.Invoke(this, boundsChanged, originDelta);
