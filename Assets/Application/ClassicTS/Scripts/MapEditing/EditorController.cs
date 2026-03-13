@@ -318,7 +318,7 @@ namespace ClassicTilestorm
 			if (!cells.Any()) return;
 
 			var extents = GeomUtils.PointArrayBoundsInt((new[] { new Vector2Int(0, 0), new Vector2Int(iMap.Width - 1, iMap.Height - 1) }).Concat(
-				cells.Select(c => new Vector2Int(Mathf.FloorToInt(c.position.x), Mathf.FloorToInt(c.position.z)))));
+				cells.Select(c => new Vector2Int(Mathf.FloorToInt(c.position.x), Mathf.FloorToInt(c.position.z)))));//cells.Select(c => new Vector2Int(Mathf.FloorToInt(c.position.x + c.variant.delta.x), Mathf.FloorToInt(c.position.z + c.variant.delta.z)))));
 
 			if (!Map.ValidExtents(extents))
 			{
@@ -329,7 +329,7 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			iMap.ResizeMap(extents);//resize the map for the selection to apply
+			iMap.ResizeMap(extents, false);//resize the map for the selection to apply - suppress cropping
 
 			var copy = selection.OfType<Cell>();
 			ClearSelection();
@@ -348,13 +348,9 @@ namespace ClassicTilestorm
 			}
 
 			//restore selection
-
-			selection = copy.OfType<ISelectable>().ToArray();
+			selection = copy.OfType<ISelectable>().ToArray();//restore selection before bounding map
+			//iMap.ResizeMap(extents, true);//resize the map for the selection to apply - enable cropping
 			iMap.InsertTileAt(copy.First().position, copy.First().variant);//workaround to crop map after drag changes extents
-			//iMap.CropToContent(true);//iMap.CropToContent(true, value => UpdateSelection(new Vector3(value.x, 0, value.y)));//need to make sure  onmapchanged is invoked or we can't use this instead of above
-
-			//iMap.CropToContent(true, value => UpdateSelection(new Vector3(value.x, 0, value.y)));
-
 			selection = selection?.ToArray();//restore selection state
 
 			UpdateRotateGizmo();//temporary workaround for rotate gizmo - for now do not allow in multiselect mode

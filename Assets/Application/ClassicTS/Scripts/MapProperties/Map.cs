@@ -51,7 +51,7 @@ namespace ClassicTilestorm
 		int UpdateTileAt(Vector3 pos, Variant variant);
 		int InsertTileAt(Vector3 pos, Variant variant);
 
-		Vector3 ResizeMap(RectInt extents);
+		Vector3 ResizeMap(RectInt extents, bool cropToContent = true);
 		bool CropToContent(bool consolidate = false, Action<Vector2Int> onOriginDelta = null);
 
 		bool RemoveTileAt(Vector3 pos);//does not affect bounds
@@ -919,17 +919,95 @@ namespace ClassicTilestorm
 			return index;
 		}
 
-		/// <summary>
-		/// Inserts/updates a tile — allows automatic map expansion if position is out of bounds,
-		/// followed by content-based cropping (original full behavior).
-		/// Slightly less efficient due to separate crop step.
-		/// </summary>
-		/// <returns>Final tile index (after possible resize/crop), or -1 on failure</returns>
+		///// <summary>
+		///// Inserts/updates a tile — allows automatic map expansion if position is out of bounds,
+		///// followed by content-based cropping (original full behavior).
+		///// Slightly less efficient due to separate crop step.
+		///// </summary>
+		///// <returns>Final tile index (after possible resize/crop), or -1 on failure</returns>
+		//public int InsertTileAt(Vector3 pos, Variant variant)
+		//{
+		//	if (tiles == null || tiles.Length == 0)
+		//	{
+		//		Debug.LogError("Cannot insert tile: map has no tiles array");
+		//		return -1;
+		//	}
+
+		//	var x = Mathf.FloorToInt(pos.x);
+		//	var z = Mathf.FloorToInt(pos.z);
+
+		//	var oldWidth = width;
+		//	var oldHeight = height;
+		//	var oldBounds = new { minX = 0, minZ = 0, maxX = width, maxZ = height };
+
+		//	var originDelta = Vector3.zero;
+		//	var sizeChanged = false;
+		//	var cropped = false;
+
+		//	// ────────────────────────────────────────────────────────────────
+		//	// Step 1: Resize if needed
+		//	// ────────────────────────────────────────────────────────────────
+		//	if (x < 0 || x >= width || z < 0 || z >= height)
+		//	{
+		//		var extents = GeomUtils.PointArrayBoundsInt(new[] { new Vector2Int(0, 0), new Vector2Int(width - 1, height - 1), new Vector2Int(x, z) });
+		//		if (!RepositionAndResize(extents, false))//didResize
+		//		{
+		//			Debug.LogWarning($"Cannot place tile at ({x},{z}) — map resize failed (too large?)");
+		//			return -1;
+		//		}
+
+		//		var minX = Mathf.Min(0, x);
+		//		var minZ = Mathf.Min(0, z);
+
+		//		if (x < 0) originDelta.x = -minX;
+		//		if (z < 0) originDelta.z = -minZ;
+
+		//		x -= minX;
+		//		z -= minZ;
+		//		sizeChanged = true;
+		//		DestroyAllTiles();
+		//	}
+
+		//	// Now position should be in bounds — delegate to the strict updater
+		//	var index = UpdateTileAt(new Vector3(x, pos.y, z), variant);
+		//	if (index < 0) return -1; // should not happen at this point, but safety check
+
+		//	// ────────────────────────────────────────────────────────────────
+		//	// Step 2: Try to crop
+		//	// ────────────────────────────────────────────────────────────────
+		//	var (minXAfter, minZAfter, maxXAfter, maxZAfter) = MapUtils.GetContentBounds(this);
+		//	cropped = CropToContent();
+
+		//	if (cropped)
+		//	{
+		//		var dx = oldBounds.minX - minXAfter;
+		//		var dz = oldBounds.minZ - minZAfter;
+		//		originDelta += new Vector3(dx, 0, dz);
+
+		//		// Recalculate final logical position after crop
+		//		index = (z + dz) * width + (x + dx);
+		//		sizeChanged = true;
+		//	}
+
+		//	var boundsChanged = sizeChanged || cropped;
+
+		//	// If we resized or cropped → full refresh needed
+		//	if (boundsChanged) RefreshGeometry();
+		//	// Note: if only single-tile update happened, UpdateTileAt already refreshed attachments
+
+		//	OnMapEdited?.Invoke(this, boundsChanged, originDelta);
+
+		//	return index;
+		//}
+
+
 		public int InsertTileAt(Vector3 pos, Variant variant)
 		{
+			bool allowResize = true;
+
 			if (tiles == null || tiles.Length == 0)
 			{
-				Debug.LogError("Cannot insert tile: map has no tiles array");
+				Debug.LogError("Cannot update tile: map has no tiles array");
 				return -1;
 			}
 
@@ -938,65 +1016,199 @@ namespace ClassicTilestorm
 
 			var oldWidth = width;
 			var oldHeight = height;
-			var oldBounds = new { minX = 0, minZ = 0, maxX = width, maxZ = height };
+			(int minX, int minZ, int maxX, int maxZ) oldBounds = new(0, 0, width, height);
 
 			var originDelta = Vector3.zero;
 			var sizeChanged = false;
+
+			if (allowResize)
+			{
+				// If coordinate out of bounds → expand automatically
+				if (x < 0 || x >= width || z < 0 || z >= height)
+				{
+					var didResize = _RepositionAndResize(x, z);
+
+					if (didResize)
+					{
+						var minX = Mathf.Min(0, x);
+						var minZ = Mathf.Min(0, z);
+						var offsetX = -minX;
+						var offsetZ = -minZ;
+
+						if (x < 0) originDelta.x = offsetX;
+						if (z < 0) originDelta.z = offsetZ;
+
+						x += offsetX;
+						z += offsetZ;
+
+						sizeChanged = true;
+					}
+					else
+					{
+						Debug.LogWarning($"Cannot place tile at ({x},{z}) — map resize failed (too large?)");
+						return -1;
+					}
+				}
+			}
+
+			var index = z * width + x;
+
+			// ────────────────────────────────────────────────────────────────
+			// Find or create variant with exact hash + angle + delta
+			// ────────────────────────────────────────────────────────────────
+			variant.delta = new Vector3(((pos.x % 1f) + 1f) % 1f, pos.y, ((pos.z % 1f) + 1f) % 1f);//make sure valid delta for variant
+			var tableIndex = this.GetOrCreateVariantIndex(variant.hash, variant.delta, variant.angle);
+			tiles[index] = tableIndex;
+
+			// ────────────────────────────────────────────────────────────────
+			// Rest of the method unchanged
+			// ────────────────────────────────────────────────────────────────
 			var cropped = false;
 
-			// ────────────────────────────────────────────────────────────────
-			// Step 1: Resize if needed
-			// ────────────────────────────────────────────────────────────────
-			if (x < 0 || x >= width || z < 0 || z >= height)
+			var def = ResourceManager.GetDefinition(variant.hash);
+			var isDefaultTile = def?.IsDefault() ?? false;
+
+			if (allowResize)
 			{
-				var extents = GeomUtils.PointArrayBoundsInt(new[] { new Vector2Int(0, 0), new Vector2Int(width - 1, height - 1), new Vector2Int(x, z) });
-				if (!RepositionAndResize(extents, false))//didResize
+				//if (isDefaultTile || sizeChanged)//for now always try to crop the map because it may not currently be cropped due to RemoveTileAt 
 				{
-					Debug.LogWarning($"Cannot place tile at ({x},{z}) — map resize failed (too large?)");
-					return -1;
+					var (minX, minZ, maxX, maxZ) = MapUtils.GetContentBounds(this);
+					cropped = CropToContent();
+
+					if (cropped)
+					{
+						var dx = oldBounds.minX - minX;
+						var dz = oldBounds.minZ - minZ;
+						originDelta += new Vector3(dx, 0, dz);
+						x += dx;
+						z += dz;
+						sizeChanged = true;
+					}
 				}
-
-				var minX = Mathf.Min(0, x);
-				var minZ = Mathf.Min(0, z);
-
-				if (x < 0) originDelta.x = -minX;
-				if (z < 0) originDelta.z = -minZ;
-
-				x -= minX;
-				z -= minZ;
-				sizeChanged = true;
 			}
 
-			// Now position should be in bounds — delegate to the strict updater
-			var index = UpdateTileAt(new Vector3(x, pos.y, z), variant);
-			if (index < 0) return -1; // should not happen at this point, but safety check
+			var boundsChanged = sizeChanged || width != oldWidth || height != oldHeight || cropped;
 
-			// ────────────────────────────────────────────────────────────────
-			// Step 2: Try to crop
-			// ────────────────────────────────────────────────────────────────
-			var (minXAfter, minZAfter, maxXAfter, maxZAfter) = MapUtils.GetContentBounds(this);
-			cropped = CropToContent();
-
-			if (cropped)
+			if (boundsChanged)
 			{
-				var dx = oldBounds.minX - minXAfter;
-				var dz = oldBounds.minZ - minZAfter;
-				originDelta += new Vector3(dx, 0, dz);
-
-				// Recalculate final logical position after crop
-				index = (z + dz) * width + (x + dx);
-				sizeChanged = true;
+				RecreateTiles();
+				RefreshAttachments(GetAttachments());
 			}
-
-			var boundsChanged = sizeChanged || cropped;
-
-			// If we resized or cropped → full refresh needed
-			if (boundsChanged) RefreshGeometry();
-			// Note: if only single-tile update happened, UpdateTileAt already refreshed attachments
+			else
+			{
+				GetGraphTile(index).Destroy();
+				graph[index] = CreateTile(variants[tableIndex], parent, TileRenderPosition(index));
+				RefreshAttachments(GetAttachments(tileIndex: index));
+			}
 
 			OnMapEdited?.Invoke(this, boundsChanged, originDelta);
+			return z * width + x;//recalculate index
 
-			return index;
+
+		bool _RepositionAndResize(int expandToX = 0, int expandToZ = 0)
+		{
+			if (tiles == null || tiles.Length == 0) return false;
+
+			int targetWidth, targetHeight, offsetX, offsetZ;
+
+			if (expandToX != 0 || expandToZ != 0)
+			{
+				int minX = Mathf.Min(0, expandToX);
+				int minZ = Mathf.Min(0, expandToZ);
+				int maxX = Mathf.Max(width - 1, expandToX);
+				int maxZ = Mathf.Max(height - 1, expandToZ);
+
+				targetWidth = maxX - minX + 1;
+				targetHeight = maxZ - minZ + 1;
+				offsetX = -minX;
+				offsetZ = -minZ;
+			}
+			else
+			{
+				var (minX, minZ, maxX, maxZ) = MapUtils.GetContentBounds(this);
+				if (maxX < 0) return false;
+
+				targetWidth = maxX - minX + 1;
+				targetHeight = maxZ - minZ + 1;
+				offsetX = -minX;
+				offsetZ = -minZ;
+			}
+
+			if (targetWidth == width && targetHeight == height && offsetX == 0 && offsetZ == 0)
+				return false;
+
+			if (targetWidth > MAP_MAX_SIZE || targetHeight > MAP_MAX_SIZE)
+			{
+#if VERBOSE
+				Debug.LogWarning($"Resize rejected: would exceed max size ({MAP_MAX_SIZE}x{MAP_MAX_SIZE})");
+#endif
+				return false;
+			}
+#if VERBOSE
+			Debug.Log($"Resize Map '{name}' to {targetWidth}x{targetHeight}");
+#endif
+			int oldWidth = width;
+			int oldHeight = height;
+			int newSize = targetWidth * targetHeight;
+
+			int defaultIndex = this.GetOrCreateVariantIndex(ResourceManager.DefaultHash);
+
+			var newTiles = new int[newSize];
+			Array.Fill(newTiles, defaultIndex);
+
+			var newSolve = new int[newSize];
+
+			for (int oldIdx = 0; oldIdx < oldWidth * oldHeight; oldIdx++)
+			{
+				if (oldIdx >= tiles.Length) continue;
+
+				int newPos = Remap(oldIdx, oldWidth, targetWidth, offsetX, offsetZ);
+				if (newPos < 0) continue;
+
+				newTiles[newPos] = tiles[oldIdx];
+
+				if (solve != null && oldIdx < solve.Length)
+				{
+					int delta = solve[oldIdx];
+					if (delta != 0)
+					{
+						int oldSrcIdx = oldIdx + delta;
+						if (oldSrcIdx >= 0 && oldSrcIdx < solve.Length)
+						{
+							int newSrcPos = Remap(oldSrcIdx, oldWidth, targetWidth, offsetX, offsetZ);
+							if (newSrcPos >= 0)
+								newSolve[newPos] = newSrcPos - newPos;
+						}
+					}
+				}
+			}
+
+			int Remap(int idx, int oldW, int newW, int offX, int offZ)
+			{
+				if (idx < 0) return idx;
+				int px = idx % oldW;
+				int pz = idx / oldW;
+				int nx = px + offX;
+				int nz = pz + offZ;
+				return (nx >= 0 && nx < targetWidth && nz >= 0 && nz < targetHeight) ? nz * newW + nx : -1;
+			}
+
+			if (waypoints != null)
+				for (int n = 0; n < waypoints.Length; n++)
+					waypoints[n] = Remap(waypoints[n], oldWidth, targetWidth, offsetX, offsetZ);
+
+			if (attachments != null)
+				foreach (var a in attachments)
+					a.tile = Remap(a.tile, oldWidth, targetWidth, offsetX, offsetZ);
+
+			width = targetWidth;
+			height = targetHeight;
+			tiles = newTiles;
+			solve = newSolve;
+			state = Enumerable.Range(0, width * height).ToArray();
+
+			return true;
+		}
 		}
 
 		private bool RepositionAndResize(RectInt extents, bool cropToContent = true)
@@ -1103,17 +1315,18 @@ namespace ClassicTilestorm
 			return resized || optimised;
 		}
 
-		public Vector3 ResizeMap(RectInt extents)
+		public Vector3 ResizeMap(RectInt extents, bool cropToContent = true)
 		{
-			if (RepositionAndResize(extents, false))
+			var (minXAfter, minZAfter, maxXAfter, maxZAfter) = MapUtils.GetContentBounds(this);
+			if (RepositionAndResize(extents, cropToContent))
 			{
 				var originDelta = Vector3.zero;
 				if (extents.xMin < 0) originDelta.x = -extents.xMin;
 				if (extents.yMin < 0) originDelta.z = -extents.yMin;
+				originDelta -= new Vector3(minXAfter, 0, minZAfter);
 
 				RecreateTiles();
 				RefreshAttachments(GetAttachments());
-
 				OnMapEdited?.Invoke(this, true, originDelta);
 #if VERBOSE
 				Debug.Log($"ResizeMap({extents}) → {width}×{height}  | origin delta {originDeltaWorld}");
@@ -1122,5 +1335,22 @@ namespace ClassicTilestorm
 			}
 			return Vector3.zero;
 		}
+
+		//		public Vector3 ResizeMap(RectInt extents, bool cropToContent = true)
+		//		{
+		//			var (minXAfter, minZAfter, _, _) = MapUtils.GetContentBounds(this);
+		//			if (RepositionAndResize(extents, cropToContent))
+		//			{
+		//				RecreateTiles();
+		//				RefreshAttachments(GetAttachments());
+		//				var originDelta = new Vector3(-Mathf.Min(0, extents.xMin), 0f, -Mathf.Min(0, extents.yMin)) - new Vector3(minXAfter, 0, minZAfter);
+		//				OnMapEdited?.Invoke(this, true, originDelta);
+		//#if VERBOSE
+		//				Debug.Log($"ResizeMap({extents}) → {width}×{height}  | origin delta {originDeltaWorld}");
+		//#endif
+		//				return originDelta;
+		//			}
+		//			return Vector3.zero;
+		//		}
 	}
 }
