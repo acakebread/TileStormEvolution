@@ -9,30 +9,6 @@ using MassiveHadronLtd;
 
 namespace ClassicTilestorm
 {
-	[Serializable]
-	public struct Variant
-	{
-		public HashId hash;
-		public Vector3 delta;           // local position offset (usually small x/z values)
-		public float angle;             // degrees, usually 0/90/180/270
-
-		// ─── constructors (unchanged) ────────────────────────────────────────
-		public Variant(HashId h) : this(h, Vector3.zero, 0f) { }
-		public Variant(HashId h, Vector3 offset, float rotationDegrees)
-		{
-			hash = h;
-			delta = offset;
-			angle = rotationDegrees;
-		}
-
-		public static implicit operator HashId(Variant v) => v.hash;
-
-		public readonly Definition definition => ResourceManager.GetDefinition(hash);
-
-		public readonly bool IsDefaultEquivalent => definition != null && definition.IsDefaultEquivalent();
-		public readonly bool HasNav => definition != null && definition.Nav != 0;
-	}
-
 	public interface IMapData
 	{
 		int Width { get; }
@@ -1125,27 +1101,6 @@ namespace ClassicTilestorm
 			state = Enumerable.Range(0, width * height).ToArray();
 
 			return true;
-		}
-
-		public bool IncludePosition(Vector3 pos)
-		{
-			var x = Mathf.FloorToInt(pos.x);
-			var z = Mathf.FloorToInt(pos.z);
-
-			if (RepositionAndResize(x, z))
-			{
-				var minX = Mathf.Min(0, x);
-				var minZ = Mathf.Min(0, z);
-				var offsetX = -minX;
-				var offsetZ = -minZ;
-
-				var originDelta = Vector3.zero;
-				if (x < 0) originDelta.x = offsetX;
-				if (z < 0) originDelta.z = offsetZ;
-				return true;
-			}
-			Debug.LogWarning($"map resize failed ({x},{z}) — (invalid size)");
-			return false;
 		}
 
 		public bool CropToContent(bool consolidate = false, Action<Vector2Int> onOriginDelta = null)
