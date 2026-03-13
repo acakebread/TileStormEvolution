@@ -928,12 +928,8 @@ namespace ClassicTilestorm
 				return -1;
 			}
 
-			var hashId = variant.hash;
-			var angle = variant.angle;
 			var x = Mathf.FloorToInt(pos.x);
 			var z = Mathf.FloorToInt(pos.z);
-
-			var delta = new Vector3(((pos.x % 1f) + 1f) % 1f, pos.y, ((pos.z % 1f) + 1f) % 1f);//make sure valid delta for variant
 
 			var oldWidth = width;
 			var oldHeight = height;
@@ -977,7 +973,8 @@ namespace ClassicTilestorm
 			// ────────────────────────────────────────────────────────────────
 			// Find or create variant with exact hash + angle + delta
 			// ────────────────────────────────────────────────────────────────
-			var tableIndex = this.GetOrCreateVariantIndex(hashId, delta, angle);
+			variant.delta = new Vector3(((pos.x % 1f) + 1f) % 1f, pos.y, ((pos.z % 1f) + 1f) % 1f);//make sure valid delta for variant
+			var tableIndex = this.GetOrCreateVariantIndex(variant.hash, variant.delta, variant.angle);
 			tiles[index] = tableIndex;
 
 			// ────────────────────────────────────────────────────────────────
@@ -985,7 +982,7 @@ namespace ClassicTilestorm
 			// ────────────────────────────────────────────────────────────────
 			var cropped = false;
 
-			var def = ResourceManager.GetDefinition(hashId);
+			var def = ResourceManager.GetDefinition(variant.hash);
 			var isDefaultTile = def?.IsDefault() ?? false;
 
 			if (allowResize)
@@ -1130,15 +1127,33 @@ namespace ClassicTilestorm
 			return true;
 		}
 
+		public bool IncludePosition(Vector3 pos)
+		{
+			var x = Mathf.FloorToInt(pos.x);
+			var z = Mathf.FloorToInt(pos.z);
+
+			if (RepositionAndResize(x, z))
+			{
+				var minX = Mathf.Min(0, x);
+				var minZ = Mathf.Min(0, z);
+				var offsetX = -minX;
+				var offsetZ = -minZ;
+
+				var originDelta = Vector3.zero;
+				if (x < 0) originDelta.x = offsetX;
+				if (z < 0) originDelta.z = offsetZ;
+				return true;
+			}
+			Debug.LogWarning($"map resize failed ({x},{z}) — (invalid size)");
+			return false;
+		}
+
 		public bool CropToContent(bool consolidate = false, Action<Vector2Int> onOriginDelta = null)
 		{
-			bool resized = RepositionAndResize();
-
-			bool consolidated = false;
-			if (consolidate)
-				consolidated = this.Optimise();
-
-			return resized || consolidated;
+			var resized = RepositionAndResize();
+			var optimised = false;
+			if (consolidate) optimised = this.Optimise();
+			return resized || optimised;
 		}
 
 		public Vector3 ResizeMap(Rect extents) => ResizeMap(new RectInt(Mathf.FloorToInt(extents.xMin), Mathf.FloorToInt(extents.yMin), Mathf.FloorToInt(extents.xMax) - Mathf.FloorToInt(extents.xMin), Mathf.FloorToInt(extents.yMax) - Mathf.FloorToInt(extents.yMin)));
