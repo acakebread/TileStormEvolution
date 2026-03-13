@@ -47,7 +47,10 @@ namespace ClassicTilestorm
 
 		Vector3 IndexToVector(int index);
 		HashId GetTileID(int _);
-		int UpdateTileAt(Vector3 pos, Variant variant, bool allowResize = true);
+
+		int UpdateTileAt(Vector3 pos, Variant variant);
+		int InsertTileAt(Vector3 pos, Variant variant);
+
 		Vector3 ResizeMap(Rect extents);
 		Vector3 ResizeMap(RectInt extents);
 		bool CropToContent(bool consolidate = false, Action<Vector2Int> onOriginDelta = null);
@@ -896,7 +899,12 @@ namespace ClassicTilestorm
 			return true;
 		}
 
-		public int UpdateTileAt(Vector3 pos, Variant variant, bool allowResize = true)
+		/// <summary>
+		/// Updates a tile at the given grid position. Position must be within current map bounds.
+		/// Does NOT perform automatic resizing or cropping.
+		/// </summary>
+		/// <returns>Final tile index if successful, -1 if out of bounds or other failure</returns>
+		public int UpdateTileAt(Vector3 pos, Variant variant)
 		{
 			if (tiles == null || tiles.Length == 0)
 			{
@@ -907,95 +915,123 @@ namespace ClassicTilestorm
 			var x = Mathf.FloorToInt(pos.x);
 			var z = Mathf.FloorToInt(pos.z);
 
-			var oldWidth = width;
-			var oldHeight = height;
-			(int minX, int minZ, int maxX, int maxZ) oldBounds = new(0, 0, width, height);
-
-			var originDelta = Vector3.zero;
-			var sizeChanged = false;
-
-			if (allowResize)
+			// Strict bounds check — no resize allowed in this version
+			if (x < 0 || x >= width || z < 0 || z >= height)
 			{
-				// If coordinate out of bounds → expand automatically
-				if (x < 0 || x >= width || z < 0 || z >= height)
-				{
-					var didResize = RepositionAndResize(x, z);
-
-					if (didResize)
-					{
-						var minX = Mathf.Min(0, x);
-						var minZ = Mathf.Min(0, z);
-						var offsetX = -minX;
-						var offsetZ = -minZ;
-
-						if (x < 0) originDelta.x = offsetX;
-						if (z < 0) originDelta.z = offsetZ;
-
-						x += offsetX;
-						z += offsetZ;
-
-						sizeChanged = true;
-					}
-					else
-					{
-						Debug.LogWarning($"Cannot place tile at ({x},{z}) — map resize failed (too large?)");
-						return -1;
-					}
-				}
+				Debug.LogWarning($"Cannot update tile at ({x},{z}) — position out of bounds and resizing is not allowed in UpdateTileAt");
+				return -1;
 			}
 
-			var index = z * width + x;
+			// Normalize delta to [0,1) range
+			variant.delta = new Vector3(pos.x - x, pos.y, pos.z - z);// delta is +ve modulo
 
-			// ────────────────────────────────────────────────────────────────
-			// Find or create variant with exact hash + angle + delta
-			// ────────────────────────────────────────────────────────────────
-			variant.delta = new Vector3(((pos.x % 1f) + 1f) % 1f, pos.y, ((pos.z % 1f) + 1f) % 1f);//make sure valid delta for variant
+			// Find or create variant entry
 			var tableIndex = this.GetOrCreateVariantIndex(variant.hash, variant.delta, variant.angle);
+			var index = z * width + x;
 			tiles[index] = tableIndex;
 
 			// ────────────────────────────────────────────────────────────────
-			// Rest of the method unchanged
+			// Update rendering / graph (single tile update path)
 			// ────────────────────────────────────────────────────────────────
-			var cropped = false;
-
 			var def = ResourceManager.GetDefinition(variant.hash);
 			var isDefaultTile = def?.IsDefault() ?? false;
 
-			if (allowResize)
-			{
-				//if (isDefaultTile || sizeChanged)//for now always try to crop the map because it may not currently be cropped due to RemoveTileAt 
-				{
-					var (minX, minZ, maxX, maxZ) = MapUtils.GetContentBounds(this);
-					cropped = CropToContent();
+			// No resize/crop in this version — just update the single tile
+			GetGraphTile(index).Destroy();
+			graph[index] = CreateTile(variants[tableIndex], parent, TileRenderPosition(index));
+			RefreshAttachments(GetAttachments(tileIndex: index));
 
-					if (cropped)
-					{
-						var dx = oldBounds.minX - minX;
-						var dz = oldBounds.minZ - minZ;
-						originDelta += new Vector3(dx, 0, dz);
-						x += dx;
-						z += dz;
-						sizeChanged = true;
-					}
-				}
+			// No bounds change possible in this version
+			OnMapEdited?.Invoke(this, false, Vector3.zero);
+
+			return index;
+		}
+
+		/// <summary>
+		/// Inserts/updates a tile — allows automatic map expansion if position is out of bounds,
+		/// followed by content-based cropping (original full behavior).
+		/// Slightly less efficient due to separate crop step.
+		/// </summary>
+		/// <returns>Final tile index (after possible resize/crop), or -1 on failure</returns>
+		public int InsertTileAt(Vector3 pos, Variant variant)
+		{
+			if (tiles == null || tiles.Length == 0)
+			{
+				Debug.LogError("Cannot insert tile: map has no tiles array");
+				return -1;
 			}
 
-			var boundsChanged = sizeChanged || width != oldWidth || height != oldHeight || cropped;
+			var x = Mathf.FloorToInt(pos.x);
+			var z = Mathf.FloorToInt(pos.z);
 
+			var oldWidth = width;
+			var oldHeight = height;
+			var oldBounds = new { minX = 0, minZ = 0, maxX = width, maxZ = height };
+
+			var originDelta = Vector3.zero;
+			var sizeChanged = false;
+			var cropped = false;
+
+			// ────────────────────────────────────────────────────────────────
+			// Step 1: Resize if needed
+			// ────────────────────────────────────────────────────────────────
+			if (x < 0 || x >= width || z < 0 || z >= height)
+			{
+				var didResize = RepositionAndResize(x, z);
+
+				if (!didResize)
+				{
+					Debug.LogWarning($"Cannot place tile at ({x},{z}) — map resize failed (too large?)");
+					return -1;
+				}
+
+				var minX = Mathf.Min(0, x);
+				var minZ = Mathf.Min(0, z);
+				var offsetX = -minX;
+				var offsetZ = -minZ;
+
+				if (x < 0) originDelta.x = offsetX;
+				if (z < 0) originDelta.z = offsetZ;
+
+				x += offsetX;
+				z += offsetZ;
+				sizeChanged = true;
+			}
+
+			// Now position should be in bounds — delegate to the strict updater
+			var index = UpdateTileAt(new Vector3(x, pos.y, z), variant);
+			if (index < 0) return -1; // should not happen at this point, but safety check
+
+			// ────────────────────────────────────────────────────────────────
+			// Step 2: Try to crop
+			// ────────────────────────────────────────────────────────────────
+			var (minXAfter, minZAfter, maxXAfter, maxZAfter) = MapUtils.GetContentBounds(this);
+			cropped = CropToContent();
+
+			if (cropped)
+			{
+				var dx = oldBounds.minX - minXAfter;
+				var dz = oldBounds.minZ - minZAfter;
+				originDelta += new Vector3(dx, 0, dz);
+
+				// Recalculate final logical position after crop
+				index = (z + dz) * width + (x + dx);
+				sizeChanged = true;
+			}
+
+			var boundsChanged = sizeChanged || cropped;
+
+			// If we resized or cropped → full refresh needed
 			if (boundsChanged)
 			{
 				RecreateTiles();
 				RefreshAttachments(GetAttachments());
 			}
-			else
-			{
-				GetGraphTile(index).Destroy();
-				graph[index] = CreateTile(variants[tableIndex], parent, TileRenderPosition(index));
-				RefreshAttachments(GetAttachments(tileIndex: index));
-			}
+			// Note: if only single-tile update happened, UpdateTileAt already refreshed attachments
 
 			OnMapEdited?.Invoke(this, boundsChanged, originDelta);
-			return z * width + x;//recalculate index
+
+			return index;
 		}
 
 		private bool RepositionAndResize(int expandToX = 0, int expandToZ = 0)

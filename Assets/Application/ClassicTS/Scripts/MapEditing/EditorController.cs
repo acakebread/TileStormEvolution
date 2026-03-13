@@ -71,17 +71,7 @@ namespace ClassicTilestorm
 				{
 					GridLinesUtil.UpdateSize(map.width, map.height);
 					UpdateSelection(originDelta);
-
-					//if (originDelta != Vector3.zero)
-					//{
-					//	foreach (var cell in selection?.OfType<Cell>() ?? Array.Empty<Cell>())
-					//	{
-					//		cell.origin += originDelta;
-					//		cell.position += originDelta;
-					//	}
-					//}
 				}
-
 				//selection = selection?.ToArray();//restore selection state after map change
 			};
 
@@ -138,7 +128,7 @@ namespace ClassicTilestorm
 					if (InputX.staticClick)
 					{
 						if (InputX.GetMouseButtonUp(1))
-							iMap.UpdateTileAt(currentWorld, new Variant(ResourceManager.DefaultHash));
+							iMap.InsertTileAt(currentWorld, new Variant(ResourceManager.DefaultHash));
 					}
 					break;
 
@@ -174,7 +164,7 @@ namespace ClassicTilestorm
 				case ControllerMode.PlacingTile:
 					var variant = MapUtils.NextVariantOnMap(iMap, currentWorld, atlasVariant);
 					if (InputX.staticClick && InputX.GetMouseButtonUp(0))
-						iMap.UpdateTileAt(Map.FullFloorVec(currentWorld), variant);
+						iMap.InsertTileAt(Map.FullFloorVec(currentWorld), variant);
 					GhostMeshUtil.UpdateGhostMesh(iMap, Map.FullFloorVec(currentWorld), variant, false);
 
 					if (InputX.staticClick && InputX.GetMouseButtonUp(1))
@@ -353,14 +343,14 @@ namespace ClassicTilestorm
 			foreach (var cell in copy)
 			{
 				if (cell.position == cell.origin) continue;
-				iMap.UpdateTileAt(cell.position, cell.variant, false);
+				iMap.UpdateTileAt(cell.position, cell.variant);
 				cell.origin = cell.position;
 			}
 
 			//restore selection
 
 			selection = copy.OfType<ISelectable>().ToArray();
-			iMap.UpdateTileAt(copy.First().position, copy.First().variant);//workaround to crop map after drag changes extents
+			iMap.InsertTileAt(copy.First().position, copy.First().variant);//workaround to crop map after drag changes extents
 			//iMap.CropToContent(true);//iMap.CropToContent(true, value => UpdateSelection(new Vector3(value.x, 0, value.y)));//need to make sure  onmapchanged is invoked or we can't use this instead of above
 
 			//iMap.CropToContent(true, value => UpdateSelection(new Vector3(value.x, 0, value.y)));
