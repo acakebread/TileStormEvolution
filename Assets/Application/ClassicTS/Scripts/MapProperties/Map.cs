@@ -921,7 +921,7 @@ namespace ClassicTilestorm
 
 		public int InsertTileAt(Vector3 pos, Variant variant)
 		{
-			var extents = GeomUtils.PointArrayBoundsInt(new[] { new Vector2Int(0, 0), new Vector2Int(width - 1, height - 1), new Vector2Int(Mathf.FloorToInt(pos.x), Mathf.FloorToInt(pos.z)) });
+			var extents = GeomUtils.GetBoundingRect(new Vector2Int(Mathf.FloorToInt(pos.x), Mathf.FloorToInt(pos.z)), new RectInt(0, 0, width, height));
 			if (!ValidExtents(extents)) return -1;
 			pos += ResizeMap(extents);
 			if (-1 == UpdateTileAt(pos, variant)) return -1;
@@ -1019,6 +1019,8 @@ namespace ClassicTilestorm
 		}
 
 		public RectInt ContentBounds() => this.GetContentBounds();
+
+		public RectInt MapExtents() => new(0, 0, width - 1, height - 1);
 
 		public Vector3 ResizeMap(RectInt extents)
 		{

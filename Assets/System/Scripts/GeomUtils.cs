@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -64,6 +65,77 @@ namespace MassiveHadronLtd
 			var maxX = points.Max(p => p.x);
 			var maxY = points.Max(p => p.y);
 			return new RectInt(minX, minY, maxX - minX + 1, maxY - minY + 1);
+		}
+
+		//public static RectInt PointArrayBoundsInt(IEnumerable<Vector2Int> points)
+		//{
+		//	if (!points.Any()) return new RectInt(0, 0, 0, 0);
+		//	var minX = points.Min(p => p.x);
+		//	var minY = points.Min(p => p.y);
+		//	var maxX = points.Max(p => p.x) + 1;
+		//	var maxY = points.Max(p => p.y) + 1;
+		//	return new RectInt(minX, minY, maxX - minX, maxY - minY);
+		//}
+
+		public static RectInt GetBoundingRect(IEnumerable<Vector2Int> points, RectInt? seed = null)
+		{
+			var r = seed ?? RectInt.zero;
+			bool hasAny = false;
+
+			foreach (var p in points)
+			{
+				hasAny = true;
+				r.xMin = Math.Min(r.xMin, p.x);
+				r.yMin = Math.Min(r.yMin, p.y);
+				r.xMax = Math.Max(r.xMax, p.x + 1);
+				r.yMax = Math.Max(r.yMax, p.y + 1);
+			}
+
+			if (!hasAny && seed == null)
+				return new RectInt(0, 0, 0, 0);
+
+			return r;
+		}
+
+		public static RectInt GetBoundingRect(Vector2Int point, RectInt? seed = null) => GetBoundingRect(new[] { point }, seed);
+
+		//public static RectInt IncludingPoint(this RectInt rect, Vector2Int point)
+		//{
+		//	rect.xMin = Math.Min(rect.xMin, point.x);
+		//	rect.yMin = Math.Min(rect.yMin, point.y);
+		//	rect.xMax = Math.Max(rect.xMax, point.x + 1);
+		//	rect.yMax = Math.Max(rect.yMax, point.y + 1);
+		//	return rect;
+		//}
+
+		//public static RectInt GetBoundingRect(RectInt initial, Vector2Int point)
+		//{
+		//	initial.xMin = Math.Min(initial.xMin, point.x);
+		//	initial.yMin = Math.Min(initial.yMin, point.y);
+		//	initial.xMax = Math.Max(initial.xMax, point.x + 1);
+		//	initial.yMax = Math.Max(initial.yMax, point.y + 1);
+		//	return initial;
+		//}
+	}
+
+	public static class RectIntExtensions
+	{
+		public static void Encapsulate(this ref RectInt rect, Vector2Int point)
+		{
+			rect.xMin = Math.Min(rect.xMin, point.x);
+			rect.yMin = Math.Min(rect.yMin, point.y);
+			rect.xMax = Math.Max(rect.xMax, point.x + 1);   // because xMax/yMax are exclusive
+			rect.yMax = Math.Max(rect.yMax, point.y + 1);
+		}
+
+		// Optional overloads
+		public static void Encapsulate(this ref RectInt rect, int x, int y)
+			=> Encapsulate(ref rect, new Vector2Int(x, y));
+
+		public static RectInt Encapsulate(RectInt rect, Vector2Int point)
+		{
+			rect.Encapsulate(point);
+			return rect;
 		}
 	}
 }
