@@ -947,8 +947,6 @@ namespace ClassicTilestorm
 #if VERBOSE
 			Debug.Log($"Resize Map '{name}' to {extents.width}x{extents.height}");
 #endif
-			var oldWidth = width;
-			var oldHeight = height;
 			var newSize = extents.width * extents.height;
 
 			var defaultIndex = this.GetOrCreateVariantIndex(ResourceManager.DefaultHash);
@@ -958,11 +956,11 @@ namespace ClassicTilestorm
 
 			var newSolve = new int[newSize];
 
-			for (var oldIdx = 0; oldIdx < oldWidth * oldHeight; oldIdx++)
+			for (var oldIdx = 0; oldIdx < width * height; oldIdx++)
 			{
 				if (oldIdx >= tiles.Length) continue;
 
-				var newPos = Remap(oldIdx, oldWidth, extents.width, extents.x, extents.y);
+				var newPos = Remap(oldIdx, width, extents.width, extents.x, extents.y);
 				if (newPos < 0) continue;
 
 				newTiles[newPos] = tiles[oldIdx];
@@ -975,7 +973,7 @@ namespace ClassicTilestorm
 						var oldSrcIdx = oldIdx + delta;
 						if (oldSrcIdx >= 0 && oldSrcIdx < solve.Length)
 						{
-							var newSrcPos = Remap(oldSrcIdx, oldWidth, extents.width, extents.x, extents.y);
+							var newSrcPos = Remap(oldSrcIdx, width, extents.width, extents.x, extents.y);
 							if (newSrcPos >= 0)
 								newSolve[newPos] = newSrcPos - newPos;
 						}
@@ -985,11 +983,11 @@ namespace ClassicTilestorm
 
 			if (waypoints != null)
 				for (var n = 0; n < waypoints.Length; n++)
-					waypoints[n] = Remap(waypoints[n], oldWidth, extents.width, extents.x, extents.y);
+					waypoints[n] = Remap(waypoints[n], width, extents.width, extents.x, extents.y);
 
 			if (attachments != null)
 				foreach (var a in attachments)
-					a.tile = Remap(a.tile, oldWidth, extents.width, extents.x, extents.y);
+					a.tile = Remap(a.tile, width, extents.width, extents.x, extents.y);
 
 			width = extents.width;
 			height = extents.height;

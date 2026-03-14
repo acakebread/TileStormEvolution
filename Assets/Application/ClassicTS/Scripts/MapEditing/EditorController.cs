@@ -72,7 +72,6 @@ namespace ClassicTilestorm
 					GridLinesUtil.UpdateSize(map.width, map.height);
 					UpdateSelection(originDelta);
 				}
-				//selection = selection?.ToArray();//restore selection state after map change
 			};
 
 			GridLinesUtil.Update(transform, iMap?.Width ?? 32, iMap?.Height ?? 32, null != iMap ? iMap.TileRenderPosition(0) + new Vector3(-0.5f, editAltitude, -0.5f) : Vector3.zero);
@@ -177,15 +176,7 @@ namespace ClassicTilestorm
 				case ControllerMode.SelectTile:
 					if (InputX.GetMouseButtonDown(0))
 					{
-						//if (!Input.GetKey(KeyCode.LeftControl) && !Input.GetKey(KeyCode.RightControl))
-						//{
-						//	var index = iMap.VectorToIndex(currentWorld);
-						//	if (selection?.Any(s => s is Cell c && iMap.VectorToIndex(c.origin) == index) == false)
-						//		ClearSelection();
-						//}
-
 						if (StartTileDrag(Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)))
-						//if (StartTileDrag(true))
 						{
 							SetMode(ControllerMode.DragTile);
 							UpdateRotateGizmo();//temporary workaround for rotate gizmo - for now do not allow in multiselect mode
@@ -358,18 +349,9 @@ namespace ClassicTilestorm
 				{
 					// Remove it (deselect)
 					selection = selection.Where(s => !(s is Cell c && iMap.VectorToIndex(c.origin) == index)).ToArray();
-
-					// Optional: if selection became empty, you might want to clean up
-					if (selection.Length == 0)
-						selection = null; // or keep empty array — your choice
-
+					if (selection.Length == 0) selection = null;
 					UpdateRotateGizmo();
 				}
-				//else
-				//{
-				//	// combine = false + already selected → do nothing / or reselect just this one
-				//	// (your original code returned true here without changing anything)
-				//}
 				return true;
 			}
 
@@ -390,7 +372,6 @@ namespace ClassicTilestorm
 			}
 
 			UpdateRotateGizmo(); // temporary workaround comment still applies
-
 			return true;
 		}
 
