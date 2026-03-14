@@ -707,7 +707,7 @@ namespace ClassicTilestorm
 			currentPreviewRoot.transform.localRotation = Quaternion.identity;
 
 			// Build under our owned root
-			var geometry = map.BuildPreviewGeometry(currentPreviewRoot.transform, PreviewRenderLayers.previewMask);
+			var geometry = MapUtils.BuildPreviewGeometry(map, currentPreviewRoot.transform);//, PreviewRenderLayers.previewMask
 
 			if (geometry == null)
 			{

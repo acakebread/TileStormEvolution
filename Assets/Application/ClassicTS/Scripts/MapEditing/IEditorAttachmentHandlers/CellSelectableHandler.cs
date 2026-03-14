@@ -30,11 +30,12 @@ namespace ClassicTilestorm
 			var originalMesh = iMap.GetTile(cell.origin).gameObject;
 			if (null != originalMesh) originalMesh.SetActive(true);
 
-			iMap.UpdateTileAt(cell.position, cell.variant, false);
+			iMap.UpdateTileAt(cell.position, cell.variant);
 
 			cell.DestroyHighlight();
 
 			EditorDirectionUtil.Hide();
+			//cell.origin = cell.position;
 		}
 
 		public bool OnGizmoInput(IMapEdit iMap, Camera camera, ISelectable selection)

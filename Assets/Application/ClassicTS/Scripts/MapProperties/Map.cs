@@ -9,30 +9,6 @@ using MassiveHadronLtd;
 
 namespace ClassicTilestorm
 {
-	[Serializable]
-	public struct Variant
-	{
-		public HashId hash;
-		public Vector3 delta;           // local position offset (usually small x/z values)
-		public float angle;             // degrees, usually 0/90/180/270
-
-		// ─── constructors (unchanged) ────────────────────────────────────────
-		public Variant(HashId h) : this(h, Vector3.zero, 0f) { }
-		public Variant(HashId h, Vector3 offset, float rotationDegrees)
-		{
-			hash = h;
-			delta = offset;
-			angle = rotationDegrees;
-		}
-
-		public static implicit operator HashId(Variant v) => v.hash;
-
-		public readonly Definition definition => ResourceManager.GetDefinition(hash);
-
-		public readonly bool IsDefaultEquivalent => definition != null && definition.IsDefaultEquivalent();
-		public readonly bool HasNav => definition != null && definition.Nav != 0;
-	}
-
 	public interface IMapData
 	{
 		int Width { get; }
@@ -71,14 +47,13 @@ namespace ClassicTilestorm
 
 		Vector3 IndexToVector(int index);
 		HashId GetTileID(int _);
-		int UpdateTileAt(int x, int z, HashId hashId, Vector3 delta = new Vector3(), float angle = 0f, bool allowResize = true);
-		int UpdateTileAt(Vector3 pos, HashId hashId, Vector3 delta = new Vector3(), float angle = 0f, bool allowResize = true);
-		int UpdateTileAt(Vector3 pos, Variant variant, bool allowResize = true);
-		Vector3 ResizeMap(Rect extents);
-		Vector3 ResizeMap(RectInt extents);
+
+		int UpdateTileAt(Vector3 pos, Variant variant);
+		int InsertTileAt(Vector3 pos, Variant variant);
+
+		Vector3 ResizeMap(RectInt extents, bool cropToContent = true);
 		bool CropToContent(bool consolidate = false, Action<Vector2Int> onOriginDelta = null);
 
-		bool RemoveTileAt(int x, int z);//does not affect bounds
 		bool RemoveTileAt(Vector3 pos);//does not affect bounds
 		Variant GetVariantAt(int mapIndex);
 		Variant GetVariantAt(Vector3 pos);
@@ -91,7 +66,6 @@ namespace ClassicTilestorm
 		int CameraHitTile(Camera camera, Vector3 position);
 		Variant CameraHitVariant(Camera camera, Vector3 position);
 		Definition CameraHitDefinition(Camera camera, Vector3 position);
-		Bounds GetTileGeometryBounds(int _);
 	}
 
 	[Serializable]
@@ -130,7 +104,7 @@ namespace ClassicTilestorm
 		public bool ShouldSerializeattachments() => attachments != null && attachments.Length > 0;
 
 		public Action<Map, bool, Vector3> OnMapEdited { get; set; }
-		[JsonIgnore] private Transform parent;
+		[JsonIgnore] public Transform parent { get; set; }//had to make public for now for preview creation in maputil
 
 		[JsonIgnore] public int Width => width;
 		[JsonIgnore] public int Height => height;
@@ -138,15 +112,13 @@ namespace ClassicTilestorm
 		[JsonIgnore] public int[] State { get => state = state?.Length == width * height ? state : Enumerable.Range(0, width * height).ToArray(); }//set => state = value; 
 		[JsonIgnore] public string Music { get => music; set => music = value; }
 		[JsonIgnore] public string Skybox { get => skybox; set => skybox = value; }
-		[JsonIgnore]
-		public ReflectionEffectCamera.EffectMode Effect
+		[JsonIgnore] public ReflectionEffectCamera.EffectMode Effect
 		{
 			get => ReflectionEffectCamera.ParseEffectMode(string.IsNullOrEmpty(effect) ? "Water" : effect);
 			set => effect = ReflectionEffectCamera.EffectModeToString(value);
 		}
 
-		[JsonIgnore]
-		public Color Light
+		[JsonIgnore] public Color Light
 		{
 			get => StringUtil.FromHexString(light, defaultColor: Color.white);
 			set => light = value.ToHexString(includeAlpha: true);
@@ -183,25 +155,24 @@ namespace ClassicTilestorm
 			if (tiles == null || variants == null || mapIndex < 0 || mapIndex >= tiles.Length)
 				return new Variant(0);
 
-			int tableIdx = tiles[mapIndex];
+			var tableIdx = tiles[mapIndex];
 			if (tableIdx >= 0 && tableIdx < variants.Length)
 				return variants[tableIdx];
 
 			return new Variant(0);
 		}
 
+		public Variant GetVariantAt(Vector3 pos) => GetVariantAt(VectorToIndex(pos));
 		public Variant GetVariantAt(int mapIndex)
 		{
 			if (state == null || mapIndex < 0 || mapIndex >= state.Length)
 				return new Variant(0);
 
 			// Apply current permutation (scrambled/solved state)
-			int logicalIndex = state[mapIndex];
+			var logicalIndex = state[mapIndex];
 
 			return GetVariantForIndex(logicalIndex);
 		}
-
-		public Variant GetVariantAt(Vector3 pos) => GetVariantAt(VectorToIndex(pos));
 
 		public Definition GetDefinitionAt(int mapIndex)
 		{
@@ -262,9 +233,9 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			for (int visualIndex = 0; visualIndex < state.Length; ++visualIndex)
+			for (var visualIndex = 0; visualIndex < state.Length; ++visualIndex)
 			{
-				int logicalIndex = state[visualIndex];
+				var logicalIndex = state[visualIndex];
 				if (logicalIndex < 0 || logicalIndex >= _graph.Length) continue;
 
 				var mapTile = _graph[logicalIndex];
@@ -279,6 +250,17 @@ namespace ClassicTilestorm
 			}
 		}
 
+		internal bool InitialiseGraph()
+		{
+			var _ = graph;// force tile creation on clone
+			return _graph != null && 0 != _graph.Length;
+		}
+
+		internal void InvalidateGraphCache()
+		{
+			_graph = null;
+		}
+
 		private void UpdateGraphTileInfo(int index)
 		{
 			var go = _graph[index].gameObject;
@@ -286,6 +268,196 @@ namespace ClassicTilestorm
 			var variant = GetVariantForIndex(index);
 			var def = ResourceManager.GetDefinition(variant.hash);
 			go.name = $"{def?.name ?? "??"} ({go.transform.position.x:F1},{go.transform.position.z:F1})+{variant.delta:F2}@{variant.angle:F1}°";
+		}
+
+		private void SetupWaypoints()
+		{
+			if (waypoints != null && waypoints.Length > 0)
+				return;
+
+			var generated = new List<int>();
+			var start = GetStartTile();
+			var end = GetEndTile();
+
+			if (start == -1 || end == -1)
+			{
+				waypoints = generated.ToArray();
+				return;
+			}
+
+			generated.Add(start);
+
+			var cur = start;
+			var dir = Navigation.NavToDest(this, cur, end);
+			if (dir != 0)
+			{
+				while (cur != end)
+				{
+					if (FindAdjacentConsole(cur) != -1)
+						generated.Add(cur);
+
+					var next = Navigation.GetAdjacentTile(this, cur, dir);
+					if (next == -1 || next == start) break;
+
+					var nextTile = GetTile(next);
+					if (nextTile.Nav == 0) break;
+
+					dir = Navigation.CalculateNav(dir, nextTile.Nav);
+					if (dir == 0) break;
+
+					cur = next;
+				}
+			}
+
+			generated.Add(end);
+
+			waypoints = generated.ToArray();
+
+			Debug.Log($"Generated {waypoints.Length} waypoints.");
+		}
+
+		private void InitializeWindController()
+		{
+			WindController windController = null;
+
+			for (var n = 0; n < graphCount; ++n)
+			{
+				var go = GetGraphTile(n).gameObject;
+				if (go == null) continue;
+
+				var sway = go.GetComponent<MorphGeomSway>();
+				if (sway == null) continue;
+
+				windController = windController ?? parent.gameObject.AddComponent<WindController>();
+				windController.AddSway(sway, TileRenderPosition(n));
+			}
+		}
+
+		public Map()
+		{
+			// Optionally initialize minimal safe state here
+			variants = Array.Empty<Variant>();
+			tiles = Array.Empty<int>();
+			// state, attachments, etc. can stay null or empty
+		}
+
+		public Map(int width = 16, int height = 16, string mapName = "New Map")
+		{
+			if (width <= 0 || height <= 0)
+				throw new ArgumentException("Map dimensions must be positive");
+
+			this.name = mapName;
+			this.width = width;
+			this.height = height;
+
+			// Get (or create) the canonical default tile definition
+			var defaultDef = ResourceManager.FindOrCreateDefaultTile();
+			var defaultHash = defaultDef.HashID;
+
+			// Minimal variant table: just the default tile (angle=0, delta=0)
+			variants = new Variant[] { new Variant(defaultHash, Vector3.zero, 0f) };
+
+			// Every position in the grid points to variant index 0
+			var tileCount = width * height;
+			tiles = new int[tileCount];
+			Array.Fill(tiles, 0);           // 0 = default variant index
+
+			// Optional: initialize solve array if you want it from the beginning
+			solve = new int[tileCount];     // all zeros = identity permutation
+
+			// Runtime state starts as identity
+			state = Enumerable.Range(0, tileCount).ToArray();
+
+			// Clear / null out optional arrays
+			attachments = null;
+			waypoints = null;
+			music = null;
+			skybox = null;
+			character = null;
+			button = null;
+		}
+
+		// Alternative: static factory method (sometimes cleaner to call)
+		public static Map CreateEmpty(int width = 16, int height = 16, string name = null) => new Map(width, height, name ?? $"Map {width}×{height}");
+
+		public Map Clone() => new()
+		{
+			name = name,
+			character = character,
+			music = music,
+			light = light,
+			skybox = skybox,
+			effect = effect,
+			button = button,
+			width = width,
+			height = height,
+
+			waypoints = waypoints != null ? (int[])waypoints.Clone() : null,
+			tiles = tiles != null ? (int[])tiles.Clone() : null,
+			solve = solve != null ? (int[])solve.Clone() : null,
+
+			attachments = attachments != null ? attachments.Select(a => a.ShallowClone()).ToArray() : Array.Empty<MapAttachment>(),
+			variants = variants != null ? variants.Select(v => new Variant(v.hash, v.delta, v.angle)).ToArray() : Array.Empty<Variant>()
+		};
+
+		public void Destroy()
+		{
+			OnMapEdited = null;
+
+			DestroyAllTiles();
+
+			CleanupAttachmentInstances();
+
+			if (parent != null)
+			{
+				var wind = parent.GetComponent<WindController>();
+				if (wind != null)
+				{
+					if (Application.isPlaying)
+						UnityEngine.Object.Destroy(wind);
+					else
+						UnityEngine.Object.DestroyImmediate(wind);
+				}
+			}
+
+			state = null;
+
+			if (parent != null)
+				parent = null;
+		}
+
+		[JsonIgnore] public UnityRenderSettings RenderSettings => new(
+			ambientMode: UnityEngine.Rendering.AmbientMode.Flat,
+			ambientLight: Light,
+			ambientIntensity: 1f,
+			skybox: SkyboxMaterial,
+			ambientProbe: default,
+			subtractiveShadowColor: UnityEngine.RenderSettings.subtractiveShadowColor);
+
+		public void Initialise(Transform parent = null)
+		{
+			this.parent = parent;
+
+			if (graphCount == 0)
+			{
+				Debug.LogError("Failed to create runtime tiles — map data invalid.");
+				return;
+			}
+
+			if (ApplicationSettings.Scrambled) Preset();
+			else Solve();
+
+			InitializeWindController();
+
+			RefreshAttachments(GetAttachments());
+
+			var lights = parent.GetComponentsInChildren<Light>(true);
+			foreach (var light in lights)
+				PreviewRenderLayers.RemovePreviewLayers(light);
+
+			PreviewRenderLayers.RemovePreviewLayersFromChildren(parent);
+
+			SetupWaypoints();
 		}
 
 		private Tile CreateTile(Variant variant, Transform parent, Vector3 renderPosition) => new Tile(variant, parent, renderPosition);
@@ -341,6 +513,8 @@ namespace ClassicTilestorm
 			RayToWorld(ray, out Vector3 result);
 			return result;
 		}
+
+		public static bool ValidExtents(RectInt extents) => extents.width < MAP_MAX_SIZE && extents.height < MAP_MAX_SIZE;
 
 		public int VectorToIndex(Vector3 vec) => vec.x < 0 || vec.x >= width || vec.z < 0 || vec.z >= height ? -1 : Mathf.FloorToInt(vec.z) * width + Mathf.FloorToInt(vec.x);
 		public Vector3 IndexToVector(int index) => new(index % width, 0f, index / width);
@@ -451,7 +625,7 @@ namespace ClassicTilestorm
 			if (waypoints != null && waypoints.Length > 0)
 			{
 				waypointWrappers = new MapAttachment[waypoints.Length];
-				for (int i = 0; i < waypoints.Length; i++)
+				for (var i = 0; i < waypoints.Length; i++)
 					waypointWrappers[i] = new Waypoint(i, waypoints[i]);
 			}
 
@@ -571,7 +745,7 @@ namespace ClassicTilestorm
 
 				var newWaypoints = new List<int>(waypoints.Length - 1);
 
-				for (int i = 0; i < waypoints.Length; i++)
+				for (var i = 0; i < waypoints.Length; i++)
 				{
 					if (i != wp.waypointIndex)
 						newWaypoints.Add(waypoints[i]);
@@ -583,7 +757,7 @@ namespace ClassicTilestorm
 			}
 			else if (attachments != null)
 			{
-				int idx = Array.IndexOf(attachments, attachment);
+				var idx = Array.IndexOf(attachments, attachment);
 				if (idx >= 0)
 				{
 					var list = attachments.ToList();
@@ -607,7 +781,7 @@ namespace ClassicTilestorm
 			if (attachmentArray == null || attachmentArray.Length == 0)
 				return false;
 
-			bool anyRemoved = false;
+			var anyRemoved = false;
 
 			var waypointsToRemove = attachmentArray.OfType<Waypoint>().ToList();
 			var others = attachmentArray.Where(a => a is not Waypoint).ToArray();
@@ -661,111 +835,120 @@ namespace ClassicTilestorm
 			attachmentGameObjects.Clear();
 		}
 
-		// ─────────────────────────────────────────────
-		// Original methods — adapted to variants
-		// ─────────────────────────────────────────────
-
-		private bool Consolidate()
+		public int GetStartTile()
 		{
-			if (tiles == null || tiles.Length == 0 || variants == null || variants.Length == 0)
-				return false;
+			if (waypoints?.Length > 0) return waypoints[0];
 
-			// Group by full Variant identity (hash + angle + delta)
-			var grouped = tiles
-				.Select(idx => idx >= 0 && idx < variants.Length ? variants[idx] : new Variant(0))
-				.GroupBy(v => (v.hash, v.angle, v.delta))   // tuple key = full identity
-				.Select(g => new
-				{
-					Variant = g.Key,
-					Count = g.Count(),
-				})
-				.OrderByDescending(g => g.Count)
-				.ThenBy(g => g.Variant.hash)// stable secondary sort
-				.ThenBy(g => g.Variant.angle)
-				.ThenBy(g => g.Variant.delta, Vector3LexComparer.Instance)
-				.ToList();
+			for (var i = 0; i < width * height; ++i)
+				if (GetTile(i).IsStart) return i;
 
-			var newVariants = grouped
-				.Select(g => new Variant(g.Variant.hash, g.Variant.delta, g.Variant.angle))
-				.ToArray();
-
-			// Build lookup: old key → new index
-			var oldToNew = new Dictionary<(HashId, float, Vector3), int>(grouped.Count);
-			for (int i = 0; i < newVariants.Length; i++)
-			{
-				var v = newVariants[i];
-				oldToNew[(v.hash, v.angle, v.delta)] = i;
-			}
-
-			// Remap tiles to new indices
-			var newTiles = new int[tiles.Length];
-			for (int i = 0; i < tiles.Length; i++)
-			{
-				int oldIdx = tiles[i];
-				var oldVariant = oldIdx >= 0 && oldIdx < variants.Length ? variants[oldIdx] : new Variant(0);
-				var key = (oldVariant.hash, oldVariant.angle, oldVariant.delta);
-				newTiles[i] = oldToNew[key];
-			}
-
-			// Detect what actually changed
-			bool sizeChanged = newVariants.Length != variants.Length;
-
-			bool orderChanged = !sizeChanged &&
-				!variants.Select(v => (v.hash, v.angle, v.delta))
-						 .SequenceEqual(newVariants.Select(v => (v.hash, v.angle, v.delta)));
-
-			bool anythingChanged = sizeChanged || orderChanged;
-
-			if (anythingChanged)
-			{
-				variants = newVariants;
-				tiles = newTiles;
-
-				if (sizeChanged)
-				{
-					string direction = newVariants.Length > variants.Length ? "increased" : "reduced";
-					Debug.Log($"{name} consolidated: table size {direction} from {variants.Length} → {newVariants.Length}");
-				}
-				else if (orderChanged)
-				{
-					Debug.Log($"{name} consolidated: table order changed (size remains {newVariants.Length})");
-				}
-
-				// Invalidate caches
-				_graph = null;
-			}
-
-			return anythingChanged;
+			Debug.LogWarning("No start tile found!");
+			return -1;
 		}
 
-		private bool RepositionAndResize(int expandToX = 0, int expandToZ = 0)
+		public int GetEndTile()
+		{
+			if (waypoints?.Length > 0) return waypoints[waypoints.Length - 1];
+
+			for (var i = 0; i < width * height; ++i)
+				if (GetTile(i).IsEnd) return i;
+
+			Debug.LogWarning("No end tile found!");
+			return -1;
+		}
+
+		public int FindAdjacentConsole(int nTile)
+		{
+			var tile = GetTile(nTile);
+			if (tile.Nav == 0) return -1;
+
+			foreach (var dirBit in Navigation.Directions)
+			{
+				var consoleIndex = Navigation.GetAdjacentTile(this, nTile, dirBit);
+				if (consoleIndex == -1) continue;
+
+				var consoleTile = GetTile(consoleIndex);
+				if (consoleTile.IsConsole && dirBit == Navigation.GetOppositeDirection(consoleTile.Nav))
+					return consoleIndex;
+			}
+			return -1;
+		}
+
+		public bool RemoveTileAt(Vector3 pos) => UpdateTileAt(pos, new Variant(ResourceManager.DefaultHash)) != -1;
+
+		/// <summary>
+		/// Updates a tile at the given grid position. Position must be within current map bounds.
+		/// Does NOT perform automatic resizing or cropping.
+		/// </summary>
+		/// <returns>Final tile index if successful, -1 if out of bounds or other failure</returns>
+		public int UpdateTileAt(Vector3 pos, Variant variant)
+		{
+			if (tiles == null || tiles.Length == 0)
+			{
+				Debug.LogError("Cannot update tile: map has no tiles array");
+				return -1;
+			}
+
+			// Strict bounds check — no resize allowed in this version
+			var index = VectorToIndex(pos);
+			if (-1 == index)
+			{
+				Debug.LogWarning($"Cannot update tile at ({pos}) — position out of bounds and resizing is not allowed in UpdateTileAt");
+				return -1;
+			}
+
+			// Normalize delta to [0,1) range
+			variant.delta = new Vector3(Mathf.Repeat(pos.x, 1f), pos.y, Mathf.Repeat(pos.z, 1f));// delta is +ve modulo
+			
+			// ────────────────────────────────────────────────────────────────
+			// Update rendering / graph (single tile update path)
+			// ────────────────────────────────────────────────────────────────
+
+			// No resize/crop in this version — just update the single tile
+			var def = ResourceManager.GetDefinition(variant.hash);
+			var tableIndex = this.GetOrCreateVariantIndex(variant.hash, variant.delta, variant.angle);// Find or create variant entry
+			tiles[index] = tableIndex;
+			GetGraphTile(index).Destroy();
+			graph[index] = CreateTile(variants[tableIndex], parent, TileRenderPosition(index));
+			RefreshAttachments(GetAttachments(tileIndex: index));
+
+			// No bounds change possible in this version
+			OnMapEdited?.Invoke(this, false, Vector3.zero);
+
+			return index;
+		}
+
+		public int InsertTileAt(Vector3 pos, Variant variant)
+		{
+			var extents = GeomUtils.PointArrayBoundsInt(new[] { new Vector2Int(0, 0), new Vector2Int(width - 1, height - 1), new Vector2Int(Mathf.FloorToInt(pos.x), Mathf.FloorToInt(pos.z)) });
+			if (!ValidExtents(extents)) return -1;
+			pos += ResizeMap(extents, false);
+			if (-1 == UpdateTileAt(pos, variant)) return -1;
+			pos += ResizeMap(extents, true);
+			return VectorToIndex(pos);
+		}
+
+		private bool RepositionAndResize(int expandToX = 0, int expandToZ = 0, int expandToXmax = 0, int expandToZmax = 0)
 		{
 			if (tiles == null || tiles.Length == 0) return false;
 
-			int targetWidth, targetHeight, offsetX, offsetZ;
+			var minX = expandToX;
+			var minZ = expandToZ;
+			if (expandToXmax == 0) minX = Mathf.Min(0, expandToX);
+			if (expandToZmax == 0) minZ = Mathf.Min(0, expandToZ);
 
-			if (expandToX != 0 || expandToZ != 0)
-			{
-				int minX = Mathf.Min(0, expandToX);
-				int minZ = Mathf.Min(0, expandToZ);
-				int maxX = Mathf.Max(width - 1, expandToX);
-				int maxZ = Mathf.Max(height - 1, expandToZ);
+			if (expandToXmax == 0) expandToXmax = Mathf.Max(width - 1, expandToXmax);
+			if (expandToZmax == 0) expandToZmax = Mathf.Max(height - 1, expandToZmax);
+			expandToXmax = Mathf.Max(expandToX, expandToXmax);
+			expandToZmax = Mathf.Max(expandToZ, expandToZmax);
 
-				targetWidth = maxX - minX + 1;
-				targetHeight = maxZ - minZ + 1;
-				offsetX = -minX;
-				offsetZ = -minZ;
-			}
-			else
-			{
-				var (minX, minZ, maxX, maxZ) = GetContentBounds();
-				if (maxX < 0) return false;
+			var maxX = expandToXmax;
+			var maxZ = expandToZmax;
 
-				targetWidth = maxX - minX + 1;
-				targetHeight = maxZ - minZ + 1;
-				offsetX = -minX;
-				offsetZ = -minZ;
-			}
+			var targetWidth = maxX - minX + 1;
+			var targetHeight = maxZ - minZ + 1;
+			var offsetX = -minX;
+			var offsetZ = -minZ;
 
 			if (targetWidth == width && targetHeight == height && offsetX == 0 && offsetZ == 0)
 				return false;
@@ -780,58 +963,37 @@ namespace ClassicTilestorm
 #if VERBOSE
 			Debug.Log($"Resize Map '{name}' to {targetWidth}x{targetHeight}");
 #endif
-			int oldWidth = width;
-			int oldHeight = height;
-			int newSize = targetWidth * targetHeight;
+			var oldWidth = width;
+			var oldHeight = height;
+			var newSize = targetWidth * targetHeight;
 
-			int defaultIndex = -1;
-
-			var defaultDef = ResourceManager.FindOrCreateDefaultTile();
-			var defaultHash = defaultDef.HashID;
-
-			for (int i = 0; i < variants.Length; i++)
-			{
-				var def = ResourceManager.GetDefinition(variants[i].hash);
-				if (def != null && def.IsDefaultEquivalent())
-				{
-					defaultIndex = i;
-					break;
-				}
-			}
-
-			if (defaultIndex == -1)
-			{
-				variants = variants.Concat(new[] { new Variant(defaultHash) }).ToArray();
-				defaultIndex = variants.Length - 1;
-			}
+			var defaultIndex = this.GetOrCreateVariantIndex(ResourceManager.DefaultHash);
 
 			var newTiles = new int[newSize];
 			Array.Fill(newTiles, defaultIndex);
 
 			var newSolve = new int[newSize];
 
-			for (int oldIdx = 0; oldIdx < oldWidth * oldHeight; oldIdx++)
+			for (var oldIdx = 0; oldIdx < oldWidth * oldHeight; oldIdx++)
 			{
 				if (oldIdx >= tiles.Length) continue;
 
-				int newPos = Remap(oldIdx, oldWidth, targetWidth, offsetX, offsetZ);
+				var newPos = Remap(oldIdx, oldWidth, targetWidth, offsetX, offsetZ);
 				if (newPos < 0) continue;
 
 				newTiles[newPos] = tiles[oldIdx];
 
 				if (solve != null && oldIdx < solve.Length)
 				{
-					int delta = solve[oldIdx];
+					var delta = solve[oldIdx];
 					if (delta != 0)
 					{
-						int oldSrcIdx = oldIdx + delta;
+						var oldSrcIdx = oldIdx + delta;
 						if (oldSrcIdx >= 0 && oldSrcIdx < solve.Length)
 						{
-							int newSrcPos = Remap(oldSrcIdx, oldWidth, targetWidth, offsetX, offsetZ);
+							var newSrcPos = Remap(oldSrcIdx, oldWidth, targetWidth, offsetX, offsetZ);
 							if (newSrcPos >= 0)
-							{
 								newSolve[newPos] = newSrcPos - newPos;
-							}
 						}
 					}
 				}
@@ -840,17 +1002,15 @@ namespace ClassicTilestorm
 			int Remap(int idx, int oldW, int newW, int offX, int offZ)
 			{
 				if (idx < 0) return idx;
-				int px = idx % oldW;
-				int pz = idx / oldW;
-				int nx = px + offX;
-				int nz = pz + offZ;
-				return (nx >= 0 && nx < targetWidth && nz >= 0 && nz < targetHeight)
-					? nz * newW + nx
-					: -1;
+				var px = idx % oldW;
+				var pz = idx / oldW;
+				var nx = px + offX;
+				var nz = pz + offZ;
+				return (nx >= 0 && nx < targetWidth && nz >= 0 && nz < targetHeight) ? nz * newW + nx : -1;
 			}
 
 			if (waypoints != null)
-				for (int n = 0; n < waypoints.Length; n++)
+				for (var n = 0; n < waypoints.Length; n++)
 					waypoints[n] = Remap(waypoints[n], oldWidth, targetWidth, offsetX, offsetZ);
 
 			if (attachments != null)
@@ -868,745 +1028,32 @@ namespace ClassicTilestorm
 
 		public bool CropToContent(bool consolidate = false, Action<Vector2Int> onOriginDelta = null)
 		{
-			bool resized = RepositionAndResize();
+			var rect = MapUtils.GetContentBounds(this);
+			var resized = RepositionAndResize(rect.xMin, rect.yMin, rect.xMax, rect.yMax);
 
-			bool consolidated = false;
-			if (consolidate)
-				consolidated = Consolidate();
-
-			return resized || consolidated;
+			var optimised = false;
+			if (consolidate) optimised = this.Optimise();
+			return resized || optimised;
 		}
 
-		private (int minX, int minZ, int maxX, int maxZ) GetContentBounds()
+		public Vector3 ResizeMap(RectInt extents, bool cropToContent = true)
 		{
-			if (tiles == null || tiles.Length == 0 || width <= 0 || height <= 0)
-				return (0, 0, -1, -1);
+			var rect = MapUtils.GetContentBounds(this);
+			if (cropToContent)
+				extents = rect;
 
-			int minX = width;
-			int minZ = height;
-			int maxX = -1;
-			int maxZ = -1;
-
-			for (int i = 0; i < tiles.Length; i++)
-			{
-				int t = tiles[i];
-				if (t < 0) continue;
-
-				int hash = (t < variants.Length) ? variants[t].hash : 0;
-				if (hash == 0) continue;
-
-				var def = ResourceManager.GetDefinition(hash);
-				if (def == null || def.IsDefault()) continue;
-
-				int x = i % width;
-				int z = i / width;
-
-				minX = Math.Min(minX, x);
-				maxX = Math.Max(maxX, x);
-				minZ = Math.Min(minZ, z);
-				maxZ = Math.Max(maxZ, z);
-			}
-
-			return maxX >= 0 ? (minX, minZ, maxX, maxZ) : (0, 0, -1, -1);
-		}
-
-		public Map Clone() => new()
-		{
-			name = name,
-			character = character,
-			music = music,
-			light = light,
-			skybox = skybox,
-			effect = effect,
-			button = button,
-			width = width,
-			height = height,
-
-			waypoints = waypoints != null ? (int[])waypoints.Clone() : null,
-			tiles = tiles != null ? (int[])tiles.Clone() : null,
-			solve = solve != null ? (int[])solve.Clone() : null,
-
-			attachments = attachments != null ? attachments.Select(a => a.ShallowClone()).ToArray() : Array.Empty<MapAttachment>(),
-			variants = variants != null ? variants.Select(v => new Variant(v.hash, v.delta, v.angle)).ToArray() : Array.Empty<Variant>()
-		};
-
-		public Bounds GetTileGeometryBounds(int tileIndex)
-		{
-			if (tileIndex < 0 || tileIndex >= width * height)
-			{
-				Vector3 center = TileRenderPosition(tileIndex);
-				return new Bounds(center, Vector3.zero);
-			}
-
-			var tile = GetTile(tileIndex);
-
-			if (tile.gameObject == null)
-			{
-				Vector3 center = TileRenderPosition(tileIndex);
-				return new Bounds(center, Vector3.zero);
-			}
-
-			return tile.GetGeometryBounds();
-		}
-
-		public int GetStartTile()
-		{
-			if (waypoints?.Length > 0) return waypoints[0];
-
-			for (int i = 0; i < width * height; ++i)
-				if (GetTile(i).IsStart) return i;
-
-			Debug.LogWarning("No start tile found!");
-			return -1;
-		}
-
-		public int GetEndTile()
-		{
-			if (waypoints?.Length > 0) return waypoints[waypoints.Length - 1];
-
-			for (int i = 0; i < width * height; ++i)
-				if (GetTile(i).IsEnd) return i;
-
-			Debug.LogWarning("No end tile found!");
-			return -1;
-		}
-
-		public int FindAdjacentConsole(int nTile)
-		{
-			var tile = GetTile(nTile);
-			if (tile.Nav == 0) return -1;
-
-			foreach (var dirBit in Navigation.Directions)
-			{
-				int consoleIndex = Navigation.GetAdjacentTile(this, nTile, dirBit);
-				if (consoleIndex == -1) continue;
-
-				var consoleTile = GetTile(consoleIndex);
-				if (consoleTile.IsConsole && dirBit == Navigation.GetOppositeDirection(consoleTile.Nav))
-					return consoleIndex;
-			}
-			return -1;
-		}
-
-		public int UpdateTileAt(Vector3 pos, Variant variant, bool allowResize = true)
-		{
-			var snapped = variant.HasNav ? FullFloorVec(pos) : HalfFloorVec(pos);
-			var delta = new Vector3(((snapped.x % 1f) + 1f) % 1f, snapped.y, ((snapped.z % 1f) + 1f) % 1f);//make sure valid delta for variant
-			return UpdateTileAt(pos, variant.hash, delta, variant.angle, allowResize);
-		}
-
-		public int UpdateTileAt(Vector3 pos, HashId hashId, Vector3 delta = new Vector3(), float angle = 0f, bool allowResize = true) => UpdateTileAt(Mathf.FloorToInt(pos.x), Mathf.FloorToInt(pos.z), hashId, delta, angle, allowResize);
-
-		public int UpdateTileAt(int x, int z, HashId hashId, Vector3 delta = new Vector3(), float angle = 0f, bool allowResize = true)
-		{
-			if (tiles == null || tiles.Length == 0)
-			{
-				Debug.LogError("Cannot update tile: map has no tiles array");
-				return -1;
-			}
-
-			delta = new Vector3(((delta.x % 1f) + 1f) % 1f, delta.y, ((delta.z % 1f) + 1f) % 1f);//make sure valid delta for variant
-
-			int oldWidth = width;
-			int oldHeight = height;
-			(int minX, int minZ, int maxX, int maxZ) oldBounds = new(0, 0, width, height);
-
-			Vector3 originDelta = Vector3.zero;
-			bool sizeChanged = false;
-
-			if (allowResize)
-			{
-				// If coordinate out of bounds → expand automatically
-				if (x < 0 || x >= width || z < 0 || z >= height)
-				{
-					bool didResize = RepositionAndResize(x, z);
-
-					if (didResize)
-					{
-						int minX = Mathf.Min(0, x);
-						int minZ = Mathf.Min(0, z);
-						int offsetX = -minX;
-						int offsetZ = -minZ;
-
-						if (x < 0) originDelta.x = offsetX;
-						if (z < 0) originDelta.z = offsetZ;
-
-						x += offsetX;
-						z += offsetZ;
-
-						sizeChanged = true;
-					}
-					else
-					{
-						Debug.LogWarning($"Cannot place tile at ({x},{z}) — map resize failed (too large?)");
-						return -1;
-					}
-				}
-			}
-
-			int index = z * width + x;
-
-			// ────────────────────────────────────────────────────────────────
-			// Find or create variant with exact hash + angle + delta
-			// ────────────────────────────────────────────────────────────────
-			int tableIndex = -1;
-
-			// First: look for exact match (hash + angle + delta)
-			for (int i = 0; i < variants.Length; i++)
-			{
-				var v = variants[i];
-				if (v.hash == hashId &&
-					Mathf.Approximately(v.angle, angle) &&
-					Vector3LexComparer.ApproximatelyEqual(v.delta, delta))
-				{
-					tableIndex = i;
-					break;
-				}
-			}
-
-			// If no exact match → create new variant
-			if (tableIndex == -1)
-			{
-				var newVariant = new Variant(hashId, delta, angle);
-
-				variants = variants != null
-					? variants.Concat(new[] { newVariant }).ToArray()
-					: new[] { newVariant };
-
-				tableIndex = variants.Length - 1;
-			}
-
-			tiles[index] = tableIndex;
-
-			// ────────────────────────────────────────────────────────────────
-			// Rest of the method unchanged
-			// ────────────────────────────────────────────────────────────────
-			bool cropped = false;
-
-			var def = ResourceManager.GetDefinition(hashId);
-			bool isDefaultTile = def?.IsDefault() ?? false;
-
-			if (allowResize)
-			{
-				//if (isDefaultTile || sizeChanged)//for now always try to crop the map because it may not currently be cropped due to RemoveTileAt 
-				{
-					var (minX, minZ, maxX, maxZ) = GetContentBounds();
-					cropped = CropToContent();
-
-					if (cropped)
-					{
-						var dx = oldBounds.minX - minX;
-						var dz = oldBounds.minZ - minZ;
-						originDelta += new Vector3(dx, 0, dz);
-						x += dx;
-						z += dz;
-						sizeChanged = true;
-					}
-				}
-			}
-
-			bool boundsChanged = sizeChanged || width != oldWidth || height != oldHeight || cropped;
-
-			if (boundsChanged)
+			if (RepositionAndResize(extents.xMin, extents.yMin, extents.xMax, extents.yMax))
 			{
 				RecreateTiles();
 				RefreshAttachments(GetAttachments());
-			}
-			else
-			{
-				GetGraphTile(index).Destroy();
-				graph[index] = CreateTile(variants[tableIndex], parent, TileRenderPosition(index));
-				RefreshAttachments(GetAttachments(tileIndex: index));
-			}
-
-			OnMapEdited?.Invoke(this, boundsChanged, originDelta);
-			return z * width + x;//recalculate index
-		}
-
-		private int TableIndex(HashId hashId, Vector3 delta = new Vector3(), float angle = 0f)
-		{
-			// ────────────────────────────────────────────────────────────────
-			// Find or create variant with exact hash + angle + delta
-			// ────────────────────────────────────────────────────────────────
-			int tableIndex = -1;
-
-			// First: look for exact match (hash + angle + delta)
-			for (int i = 0; i < variants.Length; i++)
-			{
-				var v = variants[i];
-				if (v.hash == hashId &&
-					Mathf.Approximately(v.angle, angle) &&
-					Vector3LexComparer.ApproximatelyEqual(v.delta, delta))
-				{
-					tableIndex = i;
-					break;
-				}
-			}
-
-			// If no exact match → create new variant
-			if (tableIndex == -1)
-			{
-				var newVariant = new Variant(hashId, delta, angle);
-
-				variants = variants != null
-					? variants.Concat(new[] { newVariant }).ToArray()
-					: new[] { newVariant };
-
-				tableIndex = variants.Length - 1;
-			}
-
-			return tableIndex;
-		}
-
-		public bool RemoveTileAt(int x, int z)
-		{
-			if (tiles == null || tiles.Length == 0)
-			{
-				Debug.LogError("Cannot update tile: map has no tiles array");
-				return false;
-			}
-
-			var index = z * width + x;
-			var tableIndex = TableIndex(ResourceManager.DefaultHash);//find table index of empty tile
-			tiles[index] = tableIndex;
-			GetGraphTile(index).Destroy();
-			graph[index] = CreateTile(variants[tableIndex], parent, TileRenderPosition(index));
-			RefreshAttachments(GetAttachments(tileIndex: index));
-
-			return true;
-		}
-
-		public bool RemoveTileAt(Vector3 pos) => RemoveTileAt(Mathf.FloorToInt(pos.x), Mathf.FloorToInt(pos.z));
-
-		public static bool ValidExtents(Rect extents) => (Mathf.FloorToInt(extents.xMax) - Mathf.FloorToInt(extents.xMin)) < MAP_MAX_SIZE && (Mathf.FloorToInt(extents.yMax) - Mathf.FloorToInt(extents.yMin)) < MAP_MAX_SIZE;
-		public static bool ValidExtents(RectInt extents) => extents.width <= MAP_MAX_SIZE && extents.height <= MAP_MAX_SIZE;
-
-		public Vector3 ResizeMap(Rect extents) => ResizeMap(new RectInt(Mathf.FloorToInt(extents.xMin), Mathf.FloorToInt(extents.yMin), Mathf.FloorToInt(extents.xMax) - Mathf.FloorToInt(extents.xMin), Mathf.FloorToInt(extents.yMax) - Mathf.FloorToInt(extents.yMin)));
-
-		public Vector3 ResizeMap(RectInt extents)
-		{
-			if (tiles == null || variants == null || width <= 0 || height <= 0)
-			{
-				Debug.LogWarning("Cannot resize map: invalid or empty map data");
-				return Vector3.zero;
-			}
-
-			int desiredMinX = extents.xMin;
-			int desiredMinZ = extents.yMin;
-			int desiredMaxX = extents.xMax;
-			int desiredMaxZ = extents.yMax;
-
-			int targetWidth = desiredMaxX - desiredMinX + 1;
-			int targetHeight = desiredMaxZ - desiredMinZ + 1;
-
-			if (targetWidth <= 0 || targetHeight <= 0)
-			{
-				Debug.LogWarning($"Invalid resize bounds: {extents} → size {targetWidth}×{targetHeight}");
-				return Vector3.zero;
-			}
-
-			if (targetWidth > MAP_MAX_SIZE || targetHeight > MAP_MAX_SIZE)
-			{
-				Debug.LogWarning($"Requested map size {targetWidth}×{targetHeight} exceeds maximum {MAP_MAX_SIZE}");
-				return Vector3.zero;
-			}
-
-			// ────────────────────────────────────────────────────────────────
-			// The offset is how much we need to shift existing content so that
-			// the point that was at (desiredMinX, desiredMinZ) becomes new (0,0)
-			// ────────────────────────────────────────────────────────────────
-			int offsetX = -desiredMinX;
-			int offsetZ = -desiredMinZ;
-
-			// No-op check — exact same size and position
-			if (targetWidth == width && targetHeight == height && offsetX == 0 && offsetZ == 0)
-			{
-				return Vector3.zero;
-			}
-
-			// The amount the old (0,0) moves in world space
-			// (this is what UpdateTileAt accumulates in originDelta)
-			Vector3 originDeltaWorld = new Vector3(offsetX, 0f, offsetZ);
-
-			// ────────────────────────────────────────────────────────────────
-			// Prepare new grid
-			// ────────────────────────────────────────────────────────────────
-			int oldWidth = width;
-			int oldHeight = height;
-			int newSize = targetWidth * targetHeight;
-
-			var newTiles = new int[newSize];
-			var newSolve = new int[newSize];
-
-			int defaultIndex = TableIndex(ResourceManager.DefaultHash);
-			Array.Fill(newTiles, defaultIndex);
-			Array.Fill(newSolve, 0);
-
-			// ────────────────────────────────────────────────────────────────
-			// Copy old content with offset (same logic as RepositionAndResize)
-			// ────────────────────────────────────────────────────────────────
-			for (int oldZ = 0; oldZ < oldHeight; oldZ++)
-			{
-				for (int oldX = 0; oldX < oldWidth; oldX++)
-				{
-					int oldIndex = oldZ * oldWidth + oldX;
-					if (oldIndex >= tiles.Length) continue;
-
-					int newX = oldX + offsetX;
-					int newZ = oldZ + offsetZ;
-
-					if (newX >= 0 && newX < targetWidth && newZ >= 0 && newZ < targetHeight)
-					{
-						int newIndex = newZ * targetWidth + newX;
-						newTiles[newIndex] = tiles[oldIndex];
-
-						// Remap solve delta — exact same as RepositionAndResize
-						if (solve != null && oldIndex < solve.Length)
-						{
-							int delta = solve[oldIndex];
-							if (delta != 0)
-							{
-								int oldSrcIdx = oldIndex + delta;
-								if (oldSrcIdx >= 0 && oldSrcIdx < oldWidth * oldHeight)
-								{
-									int oldSrcX = oldSrcIdx % oldWidth;
-									int oldSrcZ = oldSrcIdx / oldWidth;
-
-									int newSrcX = oldSrcX + offsetX;
-									int newSrcZ = oldSrcZ + offsetZ;
-
-									if (newSrcX >= 0 && newSrcX < targetWidth &&
-										newSrcZ >= 0 && newSrcZ < targetHeight)
-									{
-										int newSrcIdx = newSrcZ * targetWidth + newSrcX;
-										newSolve[newIndex] = newSrcIdx - newIndex;
-									}
-								}
-							}
-						}
-					}
-				}
-			}
-
-			// ────────────────────────────────────────────────────────────────
-			// Remap waypoints and attachments — identical to RepositionAndResize
-			// ────────────────────────────────────────────────────────────────
-			if (waypoints != null)
-			{
-				for (int i = 0; i < waypoints.Length; i++)
-				{
-					int oldTile = waypoints[i];
-					if (oldTile < 0) continue;
-
-					int ox = oldTile % oldWidth;
-					int oz = oldTile / oldWidth;
-
-					int nx = ox + offsetX;
-					int nz = oz + offsetZ;
-
-					waypoints[i] = (nx >= 0 && nx < targetWidth && nz >= 0 && nz < targetHeight)
-						? nz * targetWidth + nx
-						: -1;
-				}
-			}
-
-			if (attachments != null)
-			{
-				foreach (var att in attachments)
-				{
-					if (att.tile < 0) continue;
-
-					int ox = att.tile % oldWidth;
-					int oz = att.tile / oldWidth;
-
-					int nx = ox + offsetX;
-					int nz = oz + offsetZ;
-
-					att.tile = (nx >= 0 && nx < targetWidth && nz >= 0 && nz < targetHeight)
-						? nz * targetWidth + nx
-						: -1;
-				}
-			}
-
-			// ────────────────────────────────────────────────────────────────
-			// Apply
-			// ────────────────────────────────────────────────────────────────
-			width = targetWidth;
-			height = targetHeight;
-			tiles = newTiles;
-			solve = newSolve;   // we keep it even if all zero — simpler downstream
-			state = Enumerable.Range(0, newSize).ToArray();
-
-			RecreateTiles();
-			RefreshAttachments(GetAttachments());
-
-			OnMapEdited?.Invoke(this, true, originDeltaWorld);
-
+				var originDelta = new Vector3(Mathf.Max(0, -extents.xMin) - rect.xMin, 0f, Mathf.Max(0, -extents.yMin) - rect.yMin);
+				OnMapEdited?.Invoke(this, true, originDelta);
 #if VERBOSE
-    Debug.Log($"ResizeMap({extents}) → {width}×{height}  | origin delta {originDeltaWorld}");
+				Debug.Log($"ResizeMap({extents}) → {width}×{height}  | origin delta {originDeltaWorld}");
 #endif
-
-			return originDeltaWorld;
-		}
-
-		private void SetupWaypoints()
-		{
-			if (waypoints != null && waypoints.Length > 0)
-				return;
-
-			var generated = new List<int>();
-			int start = GetStartTile();
-			int end = GetEndTile();
-
-			if (start == -1 || end == -1)
-			{
-				waypoints = generated.ToArray();
-				return;
+				return originDelta;
 			}
-
-			generated.Add(start);
-
-			int cur = start;
-			int dir = Navigation.NavToDest(this, cur, end);
-			if (dir != 0)
-			{
-				while (cur != end)
-				{
-					if (FindAdjacentConsole(cur) != -1)
-						generated.Add(cur);
-
-					int next = Navigation.GetAdjacentTile(this, cur, dir);
-					if (next == -1 || next == start) break;
-
-					var nextTile = GetTile(next);
-					if (nextTile.Nav == 0) break;
-
-					dir = Navigation.CalculateNav(dir, nextTile.Nav);
-					if (dir == 0) break;
-
-					cur = next;
-				}
-			}
-
-			generated.Add(end);
-
-			waypoints = generated.ToArray();
-
-			Debug.Log($"Generated {waypoints.Length} waypoints.");
-		}
-
-		private void InitializeWindController()
-		{
-			WindController windController = null;
-
-			for (int n = 0; n < graphCount; ++n)
-			{
-				var go = GetGraphTile(n).gameObject;
-				if (go == null) continue;
-
-				var sway = go.GetComponent<MorphGeomSway>();
-				if (sway == null) continue;
-
-				windController = windController ?? parent.gameObject.AddComponent<WindController>();
-				windController.AddSway(sway, TileRenderPosition(n));
-			}
-		}
-
-		public Map()
-		{
-			// Optionally initialize minimal safe state here
-			variants = Array.Empty<Variant>();
-			tiles = Array.Empty<int>();
-			// state, attachments, etc. can stay null or empty
-		}
-
-		public Map(int width = 16, int height = 16, string mapName = "New Map")
-		{
-			if (width <= 0 || height <= 0)
-				throw new ArgumentException("Map dimensions must be positive");
-
-			this.name = mapName;
-			this.width = width;
-			this.height = height;
-
-			// Get (or create) the canonical default tile definition
-			var defaultDef = ResourceManager.FindOrCreateDefaultTile();
-			var defaultHash = defaultDef.HashID;
-
-			// Minimal variant table: just the default tile (angle=0, delta=0)
-			variants = new Variant[] { new Variant(defaultHash, Vector3.zero, 0f) };
-
-			// Every position in the grid points to variant index 0
-			int tileCount = width * height;
-			tiles = new int[tileCount];
-			Array.Fill(tiles, 0);           // 0 = default variant index
-
-			// Optional: initialize solve array if you want it from the beginning
-			solve = new int[tileCount];     // all zeros = identity permutation
-
-			// Runtime state starts as identity
-			state = Enumerable.Range(0, tileCount).ToArray();
-
-			// Clear / null out optional arrays
-			attachments = null;
-			waypoints = null;
-			music = null;
-			skybox = null;
-			character = null;
-			button = null;
-		}
-
-		// Alternative: static factory method (sometimes cleaner to call)
-		public static Map CreateEmpty(int width = 16, int height = 16, string name = null)
-		{
-			return new Map(width, height, name ?? $"Map {width}×{height}");
-		}
-
-		public void Destroy()
-		{
-			OnMapEdited = null;
-
-			DestroyAllTiles();
-
-			CleanupAttachmentInstances();
-
-			if (parent != null)
-			{
-				var wind = parent.GetComponent<WindController>();
-				if (wind != null)
-				{
-					if (Application.isPlaying)
-						UnityEngine.Object.Destroy(wind);
-					else
-						UnityEngine.Object.DestroyImmediate(wind);
-				}
-			}
-
-			state = null;
-
-			if (parent != null)
-				parent = null;
-		}
-
-		public GameObject BuildPreviewGeometry(Transform previewParent, int layer)
-		{
-			if (width <= 0 || height <= 0 || tiles == null || variants == null)
-				return null;
-
-			// CRITICAL: Work on a CLONE so we don't corrupt the original map's runtime state
-			var previewMap = this.Clone();
-
-			var previewRoot = new GameObject($"Preview_{name ?? "Map"}");
-			previewRoot.transform.SetParent(previewParent, false);
-			previewRoot.transform.localPosition = Vector3.zero;
-
-			var originalParent = previewMap.parent;
-			previewMap.parent = previewRoot.transform;
-
-			try
-			{
-				previewMap.Preset();
-				var _ = previewMap.graph;// force tile creation on clone
-
-				if (previewMap._graph == null || previewMap._graph.Length == 0)
-				{
-					Debug.LogWarning("Preview graph creation failed on clone");
-					UnityEngine.Object.DestroyImmediate(previewRoot);
-					return null;
-				}
-
-				previewMap.RefreshAttachments(previewMap.GetAttachments());
-
-				PreviewRenderLayers.SetLayerRecursively(previewRoot, PreviewRenderLayers.LAYER_PREVIEW);
-				PreviewRenderLayers.SetPreviewLayersToChildren(previewRoot.transform);
-
-				var particleControllers = previewRoot.GetComponentsInChildren<ParticleController>(true);
-				foreach (var particleController in particleControllers)
-					particleController.gameObject.layer = PreviewRenderLayers.previewTransparentLayer;
-
-				var lights = previewRoot.GetComponentsInChildren<Light>(true);
-				foreach (var light in lights)
-					PreviewRenderLayers.SetPreviewLayers(light, false);
-
-				return previewRoot;
-			}
-			catch (Exception e)
-			{
-				Debug.LogError($"Preview build failed: {e.Message}");
-				UnityEngine.Object.DestroyImmediate(previewRoot);
-				return null;
-			}
-			finally
-			{
-				// Restore original parent on clone (not needed, but clean)
-				previewMap.parent = originalParent;
-			}
-		}
-
-		[JsonIgnore]
-		public UnityRenderSettings RenderSettings => new(
-			ambientMode: UnityEngine.Rendering.AmbientMode.Flat,
-			ambientLight: Light,
-			ambientIntensity: 1f,
-			skybox: SkyboxMaterial,
-			ambientProbe: default,
-			subtractiveShadowColor: UnityEngine.RenderSettings.subtractiveShadowColor);
-
-		public void Initialise(Transform parent = null)
-		{
-			this.parent = parent;
-
-			if (graphCount == 0)
-			{
-				Debug.LogError("Failed to create runtime tiles — map data invalid.");
-				return;
-			}
-
-			if (ApplicationSettings.Scrambled) Preset();
-			else Solve();
-
-			InitializeWindController();
-
-			RefreshAttachments(GetAttachments());
-
-			var lights = parent.GetComponentsInChildren<Light>(true);
-			foreach (var light in lights)
-				PreviewRenderLayers.RemovePreviewLayers(light);
-
-			PreviewRenderLayers.RemovePreviewLayersFromChildren(parent);
-
-			SetupWaypoints();
-		}
-	}
-
-	public static class MapExtensions
-	{
-		public static T GetAttachmentOfType<T>(this IMapPlay map, int tile) where T : MapAttachment
-		{
-			return map.GetAttachments(tileIndex: tile, filterTypes: new[] { typeof(T) })
-					  .OfType<T>()
-					  .FirstOrDefault();
-		}
-
-		public static bool HasAttachmentOfType<T>(this IMapPlay map, int tile) where T : MapAttachment
-		{
-			return map.GetAttachments(tileIndex: tile, filterTypes: new[] { typeof(T) })
-					  .Length > 0;
-		}
-
-		public static Waypoint GetWaypoint(this IMapPlay map, int waypointIndex)
-		{
-			return map.GetAttachments(filterTypes: new[] { typeof(Waypoint) })
-					  .Cast<Waypoint>()
-					  .FirstOrDefault(w => w.waypointIndex == waypointIndex);
-		}
-
-		public static Waypoint[] GetWaypoints(this IMapPlay map)
-		{
-			return map.GetAttachments(filterTypes: new[] { typeof(Waypoint) })
-					  .Cast<Waypoint>()
-					  .OrderBy(w => w.waypointIndex)
-					  .ToArray();
+			return Vector3.zero;
 		}
 	}
 }

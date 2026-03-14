@@ -71,17 +71,7 @@ namespace ClassicTilestorm
 				{
 					GridLinesUtil.UpdateSize(map.width, map.height);
 					UpdateSelection(originDelta);
-
-					//if (originDelta != Vector3.zero)
-					//{
-					//	foreach (var cell in selection?.OfType<Cell>() ?? Array.Empty<Cell>())
-					//	{
-					//		cell.origin += originDelta;
-					//		cell.position += originDelta;
-					//	}
-					//}
 				}
-
 				//selection = selection?.ToArray();//restore selection state after map change
 			};
 
@@ -138,7 +128,7 @@ namespace ClassicTilestorm
 					if (InputX.staticClick)
 					{
 						if (InputX.GetMouseButtonUp(1))
-							iMap.UpdateTileAt(currentWorld, ResourceManager.DefaultHash);
+							iMap.InsertTileAt(currentWorld, new Variant(ResourceManager.DefaultHash));
 					}
 					break;
 
@@ -174,7 +164,7 @@ namespace ClassicTilestorm
 				case ControllerMode.PlacingTile:
 					var variant = MapUtils.NextVariantOnMap(iMap, currentWorld, atlasVariant);
 					if (InputX.staticClick && InputX.GetMouseButtonUp(0))
-						iMap.UpdateTileAt(Map.FullFloorVec(currentWorld), variant);
+						iMap.InsertTileAt(Map.FullFloorVec(currentWorld), variant);
 					GhostMeshUtil.UpdateGhostMesh(iMap, Map.FullFloorVec(currentWorld), variant, false);
 
 					if (InputX.staticClick && InputX.GetMouseButtonUp(1))
@@ -316,7 +306,9 @@ namespace ClassicTilestorm
 
 			foreach (var cell in selection?.OfType<Cell>() ?? Array.Empty<Cell>())
 			{
+				var alt = cell.position.y;
 				cell.position = cell.origin + snappedDelta;
+				cell.position.y = alt;
 				cell.OnUpdate(iMap, _camera);
 			}
 			UpdateRotateGizmo();//temporary workaround for rotate gizmo - for now do not allow in multiselect mode
@@ -328,7 +320,7 @@ namespace ClassicTilestorm
 			if (!cells.Any()) return;
 
 			var extents = GeomUtils.PointArrayBoundsInt((new[] { new Vector2Int(0, 0), new Vector2Int(iMap.Width - 1, iMap.Height - 1) }).Concat(
-				cells.Select(c => new Vector2Int(Mathf.FloorToInt(c.position.x), Mathf.FloorToInt(c.position.z)))));
+				cells.Select(c => new Vector2Int(Mathf.FloorToInt(c.position.x), Mathf.FloorToInt(c.position.z)))));//cells.Select(c => new Vector2Int(Mathf.FloorToInt(c.position.x + c.variant.delta.x), Mathf.FloorToInt(c.position.z + c.variant.delta.z)))));
 
 			if (!Map.ValidExtents(extents))
 			{
@@ -339,7 +331,7 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			iMap.ResizeMap(extents);//resize the map for the selection to apply
+			iMap.ResizeMap(extents, false);//resize the map for the selection to apply - suppress cropping
 
 			var copy = selection.OfType<Cell>();
 			ClearSelection();
@@ -353,34 +345,92 @@ namespace ClassicTilestorm
 			foreach (var cell in copy)
 			{
 				if (cell.position == cell.origin) continue;
-				iMap.UpdateTileAt(cell.position, cell.variant, false);
+				iMap.UpdateTileAt(cell.position, cell.variant);
 				cell.origin = cell.position;
 			}
 
 			//restore selection
-
-			selection = copy.OfType<ISelectable>().ToArray();
-			iMap.UpdateTileAt(copy.First().position, copy.First().variant);//workaround to crop map after drag changes extents
-			//iMap.CropToContent(true);//iMap.CropToContent(true, value => UpdateSelection(new Vector3(value.x, 0, value.y)));//need to make sure  onmapchanged is invoked or we can't use this instead of above
-
-			//iMap.CropToContent(true, value => UpdateSelection(new Vector3(value.x, 0, value.y)));
-
+			selection = copy.OfType<ISelectable>().ToArray();//restore selection before bounding map
+			iMap.ResizeMap(extents, true);//resize the map for the selection to apply - enable cropping
+			//iMap.InsertTileAt(copy.First().position, copy.First().variant);//workaround to crop map after drag changes extents
 			selection = selection?.ToArray();//restore selection state
 
 			UpdateRotateGizmo();//temporary workaround for rotate gizmo - for now do not allow in multiselect mode
 		}
 
+		//private bool SelectTile(Vector3 worldPos, bool combine = false)
+		//{
+		//	if (iMap.GetVariantAt(worldPos).IsDefaultEquivalent) return false;
+		//	var index = iMap.VectorToIndex(worldPos);
+		//	if (-1 == index) return false;
+		//	if (selection?.Any(s => s is Cell c && iMap.VectorToIndex(c.origin) == index) == true)
+		//		return true;
+		//	if (false == combine) ClearSelection();
+		//	var newCell = new Cell(iMap, worldPos);
+		//	selection = selection == null ? new[] { newCell } : selection.Append(newCell).ToArray();
+		//	UpdateRotateGizmo();//temporary workaround for rotate gizmo - for now do not allow in multiselect mode
+		//	return true;
+		//}
+
 		private bool SelectTile(Vector3 worldPos, bool combine = false)
 		{
-			if (iMap.GetVariantAt(worldPos).IsDefaultEquivalent) return false;
+			if (iMap.GetVariantAt(worldPos).IsDefaultEquivalent)
+				return false;
+
 			var index = iMap.VectorToIndex(worldPos);
-			if (-1 == index) return false;
-			if (selection?.Any(s => s is Cell c && iMap.VectorToIndex(c.origin) == index) == true)
-				return true;
-			if (false == combine) ClearSelection();
-			var newCell = new Cell(iMap, worldPos);
-			selection = selection == null ? new[] { newCell } : selection.Append(newCell).ToArray();
-			UpdateRotateGizmo();//temporary workaround for rotate gizmo - for now do not allow in multiselect mode
+			if (index == -1)
+				return false;
+
+			// Check if this position is already in the current selection
+			bool isAlreadySelected = selection?.Any(s => s is Cell c && iMap.VectorToIndex(c.origin) == index) == true;
+
+			if (isAlreadySelected)
+			{
+				// Already selected → toggle behavior only when combine is true
+				if (combine)
+				{
+					// Remove it (deselect)
+					selection = selection
+						.Where(s => !(s is Cell c && iMap.VectorToIndex(c.origin) == index))
+						.ToArray();
+
+					// Optional: if selection became empty, you might want to clean up
+					if (selection.Length == 0)
+					{
+						selection = null; // or keep empty array — your choice
+					}
+
+					UpdateRotateGizmo();
+					return true; // still count as "successful interaction"
+				}
+				else
+				{
+					// combine = false + already selected → do nothing / or reselect just this one
+					// (your original code returned true here without changing anything)
+					return true;
+				}
+			}
+
+			// ───────────────────────────────────────────────
+			// Not previously selected → normal selection logic
+			// ───────────────────────────────────────────────
+
+			if (!combine)
+			{
+				ClearSelection();
+				selection = new[] { new Cell(iMap, worldPos) };
+			}
+			else
+			{
+				// combine = true → append
+				var newCell = new Cell(iMap, worldPos);
+				selection = selection == null
+					? new[] { newCell }
+					: selection.Append(newCell).ToArray();
+			}
+
+			UpdateRotateGizmo(); // temporary workaround comment still applies
+
 			return true;
 		}
 

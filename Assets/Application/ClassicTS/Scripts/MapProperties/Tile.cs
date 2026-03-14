@@ -62,7 +62,7 @@ namespace ClassicTilestorm
 
 		public Bounds GetGeometryBounds()
 		{
-			if (gameObject == null) return default;
+			if (gameObject == null) return default;//return new Bounds(gameObject.transform.position, Vector3.zero);//// return default;
 
 			var renderers = gameObject.GetComponentsInChildren<Renderer>(true);
 
