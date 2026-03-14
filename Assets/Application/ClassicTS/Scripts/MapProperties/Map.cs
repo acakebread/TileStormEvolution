@@ -554,7 +554,7 @@ namespace ClassicTilestorm
 				return;
 
 			foreach (var tile in _graph)
-				tile.Destroy();
+				tile.Dispose();
 
 			_graph = null;
 		}
@@ -909,8 +909,9 @@ namespace ClassicTilestorm
 			var def = ResourceManager.GetDefinition(variant.hash);
 			var tableIndex = this.GetOrCreateVariantIndex(variant.hash, variant.delta, variant.angle);// Find or create variant entry
 			tiles[index] = tableIndex;
-			GetGraphTile(index).Destroy();
-			graph[index] = CreateTile(variants[tableIndex], parent, TileRenderPosition(index));
+			var _graph = graph;
+			_graph[index].Dispose();
+			_graph[index] = CreateTile(variants[tableIndex], parent, TileRenderPosition(index)); 
 			RefreshAttachments(GetAttachments(tileIndex: index));
 
 			// No bounds change possible in this version
