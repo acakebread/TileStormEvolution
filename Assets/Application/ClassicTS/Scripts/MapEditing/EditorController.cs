@@ -250,21 +250,6 @@ namespace ClassicTilestorm
 					}
 					break;
 			}
-
-			//if (Input.GetKeyDown(KeyCode.T))
-			//{
-			//	Debug.Log(Rect.MinMaxRect(xmin: -1, ymin: -1, xmax: iMap.Width + 1, ymax: iMap.Height + 1));
-
-			//	Vector3 originDelta = iMap.ResizeMap(Rect.MinMaxRect(xmin: -1, ymin: -1, xmax: iMap.Width, ymax: iMap.Height));
-			//	if (originDelta != Vector3.zero)
-			//		Debug.Log($"Map resized, origin shifted by {originDelta}");
-			//}
-			//if (Input.GetKeyDown(KeyCode.Y))
-			//{
-			//	Vector3 originDelta = iMap.ResizeMap(Rect.MinMaxRect(xmin: 1, ymin: 1, xmax: iMap.Width - 2, ymax: iMap.Height - 2));
-			//	if (originDelta != Vector3.zero)
-			//		Debug.Log($"Map resized, origin shifted by {originDelta}");
-			//}
 		}
 
 		private void OnGUI()
@@ -319,8 +304,26 @@ namespace ClassicTilestorm
 			var cells = selection?.OfType<Cell>() ?? Enumerable.Empty<Cell>();
 			if (!cells.Any()) return;
 
-			var extents = GeomUtils.PointArrayBoundsInt((new[] { new Vector2Int(0, 0), new Vector2Int(iMap.Width - 1, iMap.Height - 1) }).Concat(
-				cells.Select(c => new Vector2Int(Mathf.FloorToInt(c.position.x), Mathf.FloorToInt(c.position.z)))));//cells.Select(c => new Vector2Int(Mathf.FloorToInt(c.position.x + c.variant.delta.x), Mathf.FloorToInt(c.position.z + c.variant.delta.z)))));
+			//var extents = GeomUtils.PointArrayBoundsInt((new[] { new Vector2Int(0, 0), new Vector2Int(iMap.Width - 1, iMap.Height - 1) }).Concat(
+			//	cells.Select(c => new Vector2Int(Mathf.FloorToInt(c.position.x), Mathf.FloorToInt(c.position.z)))));
+
+			//var extents = cells.Aggregate(
+			//	new RectInt(0, 0, iMap.Width, iMap.Height),
+			//	(r, c) =>
+			//	{
+			//		var x = Mathf.FloorToInt(c.position.x);
+			//		var z = Mathf.FloorToInt(c.position.z);
+
+			//		r.xMin = Math.Min(r.xMin, x);
+			//		r.yMin = Math.Min(r.yMin, z);
+			//		r.xMax = Math.Max(r.xMax, x + 1);
+			//		r.yMax = Math.Max(r.yMax, z + 1);
+
+			//		return r;
+			//	});
+
+			var gridPoints = cells.Select(c => new Vector2Int(Mathf.FloorToInt(c.position.x),Mathf.FloorToInt(c.position.z)));
+			var extents = GeomUtils.GetBoundingRect(gridPoints, new RectInt(0, 0, iMap.Width, iMap.Height));
 
 			if (!Map.ValidExtents(extents))
 			{
