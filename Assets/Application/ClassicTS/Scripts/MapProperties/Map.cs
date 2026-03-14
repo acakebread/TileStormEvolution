@@ -514,7 +514,7 @@ namespace ClassicTilestorm
 			return result;
 		}
 
-		public static bool ValidExtents(RectInt extents) => extents.width < MAP_MAX_SIZE && extents.height < MAP_MAX_SIZE;
+		public static bool ValidExtents(RectInt extents) => extents.width <= MAP_MAX_SIZE && extents.height <= MAP_MAX_SIZE;
 
 		public int VectorToIndex(Vector3 vec) => vec.x < 0 || vec.x >= width || vec.z < 0 || vec.z >= height ? -1 : Mathf.FloorToInt(vec.z) * width + Mathf.FloorToInt(vec.x);
 		public Vector3 IndexToVector(int index) => new(index % width, 0f, index / width);
@@ -928,16 +928,15 @@ namespace ClassicTilestorm
 			return VectorToIndex(pos);
 		}
 
-		//private bool RepositionAndResize(int expandToX = 0, int expandToZ = 0, int expandToXmax = 0, int expandToZmax = 0)
 		private bool RepositionAndResize(RectInt extents)
 		{
 			if (tiles == null || tiles.Length == 0) return false;
 
-			int expandToX = extents.xMin;
-			int expandToZ = extents.yMin;
+			int expandToX = extents.x;
+			int expandToZ = extents.y;
 
-			int expandToXmax = extents.xMax - extents.xMin;
-			int expandToZmax = extents.yMax - extents.yMin;
+			int expandToXmax = extents.x + extents.width - 1;
+			int expandToZmax = extents.y + extents.height - 1;
 
 			var minX = expandToX;
 			var minZ = expandToZ;
@@ -1036,7 +1035,7 @@ namespace ClassicTilestorm
 		public bool CropToContent(bool consolidate = false, Action<Vector2Int> onOriginDelta = null)
 		{
 			var rect = MapUtils.GetContentBounds(this);
-			var resized = RepositionAndResize(rect);// (rect.xMin, rect.yMin, rect.xMax, rect.yMax);
+			var resized = RepositionAndResize(rect);
 
 			var optimised = false;
 			if (consolidate) optimised = this.Optimise();
@@ -1049,7 +1048,7 @@ namespace ClassicTilestorm
 			if (cropToContent)
 				extents = rect;
 
-			if (RepositionAndResize(extents))//if (RepositionAndResize(extents.xMin, extents.yMin, extents.xMax, extents.yMax))
+			if (RepositionAndResize(extents))
 			{
 				RecreateTiles();
 				RefreshAttachments(GetAttachments());
