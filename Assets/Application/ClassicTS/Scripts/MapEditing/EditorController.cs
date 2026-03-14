@@ -306,7 +306,9 @@ namespace ClassicTilestorm
 
 			foreach (var cell in selection?.OfType<Cell>() ?? Array.Empty<Cell>())
 			{
+				var alt = cell.position.y;
 				cell.position = cell.origin + snappedDelta;
+				cell.position.y = alt;
 				cell.OnUpdate(iMap, _camera);
 			}
 			UpdateRotateGizmo();//temporary workaround for rotate gizmo - for now do not allow in multiselect mode

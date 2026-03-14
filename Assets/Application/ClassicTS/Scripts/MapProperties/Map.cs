@@ -1028,9 +1028,9 @@ namespace ClassicTilestorm
 
 		public bool CropToContent(bool consolidate = false, Action<Vector2Int> onOriginDelta = null)
 		{
-			//var resized = RepositionAndResize();
-			var (minX, minZ, maxX, maxZ) = MapUtils.GetContentBounds(this);
-			var resized = RepositionAndResize(minX, minZ, maxX, maxZ);
+			var rect = MapUtils.GetContentBounds(this);
+			var resized = RepositionAndResize(rect.xMin, rect.yMin, rect.xMax, rect.yMax);
+
 			var optimised = false;
 			if (consolidate) optimised = this.Optimise();
 			return resized || optimised;
@@ -1038,15 +1038,15 @@ namespace ClassicTilestorm
 
 		public Vector3 ResizeMap(RectInt extents, bool cropToContent = true)
 		{
-			var (minX, minZ, maxX, maxZ) = MapUtils.GetContentBounds(this);
+			var rect = MapUtils.GetContentBounds(this);
 			if (cropToContent)
-				extents = new RectInt(minX, minZ, maxX - minX, maxZ - minZ);
+				extents = rect;
 
 			if (RepositionAndResize(extents.xMin, extents.yMin, extents.xMax, extents.yMax))
 			{
 				RecreateTiles();
 				RefreshAttachments(GetAttachments());
-				var originDelta = new Vector3(Mathf.Max(0, -extents.xMin) - minX, 0f, Mathf.Max(0, -extents.yMin) - minZ);
+				var originDelta = new Vector3(Mathf.Max(0, -extents.xMin) - rect.xMin, 0f, Mathf.Max(0, -extents.yMin) - rect.yMin);
 				OnMapEdited?.Invoke(this, true, originDelta);
 #if VERBOSE
 				Debug.Log($"ResizeMap({extents}) → {width}×{height}  | origin delta {originDeltaWorld}");

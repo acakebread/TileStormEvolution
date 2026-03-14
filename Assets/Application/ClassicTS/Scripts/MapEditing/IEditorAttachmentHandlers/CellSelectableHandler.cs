@@ -35,6 +35,7 @@ namespace ClassicTilestorm
 			cell.DestroyHighlight();
 
 			EditorDirectionUtil.Hide();
+			//cell.origin = cell.position;
 		}
 
 		public bool OnGizmoInput(IMapEdit iMap, Camera camera, ISelectable selection)
