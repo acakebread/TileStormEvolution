@@ -1027,7 +1027,7 @@ namespace ClassicTilestorm
 			{
 				RecreateTiles();
 				RefreshAttachments(GetAttachments());
-				var originDelta = new Vector3(Mathf.Max(0, -extents.x) - rect.x, 0f, Mathf.Max(0, -extents.y) - rect.y);
+				var originDelta = new Vector3(-extents.x, 0f, -extents.y);
 				OnMapEdited?.Invoke(this, true, originDelta);
 #if VERBOSE
 				Debug.Log($"ResizeMap({extents}) → {width}×{height}  | origin delta {originDeltaWorld}");
