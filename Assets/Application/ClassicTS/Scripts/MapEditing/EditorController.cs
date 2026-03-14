@@ -304,24 +304,6 @@ namespace ClassicTilestorm
 			var cells = selection?.OfType<Cell>() ?? Enumerable.Empty<Cell>();
 			if (!cells.Any()) return;
 
-			//var extents = GeomUtils.PointArrayBoundsInt((new[] { new Vector2Int(0, 0), new Vector2Int(iMap.Width - 1, iMap.Height - 1) }).Concat(
-			//	cells.Select(c => new Vector2Int(Mathf.FloorToInt(c.position.x), Mathf.FloorToInt(c.position.z)))));
-
-			//var extents = cells.Aggregate(
-			//	new RectInt(0, 0, iMap.Width, iMap.Height),
-			//	(r, c) =>
-			//	{
-			//		var x = Mathf.FloorToInt(c.position.x);
-			//		var z = Mathf.FloorToInt(c.position.z);
-
-			//		r.xMin = Math.Min(r.xMin, x);
-			//		r.yMin = Math.Min(r.yMin, z);
-			//		r.xMax = Math.Max(r.xMax, x + 1);
-			//		r.yMax = Math.Max(r.yMax, z + 1);
-
-			//		return r;
-			//	});
-
 			var gridPoints = cells.Select(c => new Vector2Int(Mathf.FloorToInt(c.position.x),Mathf.FloorToInt(c.position.z)));
 			var extents = GeomUtils.GetBoundingRect(gridPoints, new RectInt(0, 0, iMap.Width, iMap.Height));
 
