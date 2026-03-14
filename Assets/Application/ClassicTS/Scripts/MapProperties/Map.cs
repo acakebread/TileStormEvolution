@@ -947,6 +947,7 @@ namespace ClassicTilestorm
 #if VERBOSE
 			Debug.Log($"Resize Map '{name}' to {extents.width}x{extents.height}");
 #endif
+
 			var newSize = extents.width * extents.height;
 
 			var defaultIndex = this.GetOrCreateVariantIndex(ResourceManager.DefaultHash);
@@ -956,11 +957,9 @@ namespace ClassicTilestorm
 
 			var newSolve = new int[newSize];
 
-			for (var oldIdx = 0; oldIdx < width * height; oldIdx++)
+			for (var oldIdx = 0; oldIdx < width * height && oldIdx < tiles.Length; oldIdx++)
 			{
-				if (oldIdx >= tiles.Length) continue;
-
-				var newPos = Remap(oldIdx, width, extents.width, extents.x, extents.y);
+				var newPos = Remap(oldIdx);
 				if (newPos < 0) continue;
 
 				newTiles[newPos] = tiles[oldIdx];
@@ -971,9 +970,9 @@ namespace ClassicTilestorm
 					if (delta != 0)
 					{
 						var oldSrcIdx = oldIdx + delta;
-						if (oldSrcIdx >= 0 && oldSrcIdx < solve.Length)
+						if ((uint)oldSrcIdx < solve.Length)
 						{
-							var newSrcPos = Remap(oldSrcIdx, width, extents.width, extents.x, extents.y);
+							var newSrcPos = Remap(oldSrcIdx);
 							if (newSrcPos >= 0)
 								newSolve[newPos] = newSrcPos - newPos;
 						}
@@ -983,11 +982,11 @@ namespace ClassicTilestorm
 
 			if (waypoints != null)
 				for (var n = 0; n < waypoints.Length; n++)
-					waypoints[n] = Remap(waypoints[n], width, extents.width, extents.x, extents.y);
+					waypoints[n] = Remap(waypoints[n]);
 
 			if (attachments != null)
 				foreach (var a in attachments)
-					a.tile = Remap(a.tile, width, extents.width, extents.x, extents.y);
+					a.tile = Remap(a.tile);
 
 			width = extents.width;
 			height = extents.height;
@@ -997,14 +996,14 @@ namespace ClassicTilestorm
 
 			return true;
 
-			int Remap(int idx, int oldW, int newW, int offX, int offZ)
+			int Remap(int idx)
 			{
 				if (idx < 0) return idx;
-				var px = idx % oldW;
-				var pz = idx / oldW;
-				var nx = px - offX;
-				var nz = pz - offZ;
-				return (nx >= 0 && nx < extents.width && nz >= 0 && nz < extents.height) ? nz * newW + nx : -1;
+
+				var x = idx % width - extents.x;
+				var y = idx / width - extents.y;
+
+				return ((uint)x >= extents.width || (uint)y >= extents.height) ? -1 : y * extents.width + x;
 			}
 		}
 
