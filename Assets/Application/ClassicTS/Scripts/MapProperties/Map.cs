@@ -51,7 +51,8 @@ namespace ClassicTilestorm
 		int UpdateTileAt(Vector3 pos, Variant variant);
 		int InsertTileAt(Vector3 pos, Variant variant);
 
-		Vector3 ResizeMap(RectInt extents, bool cropToContent = true);
+		RectInt ContentBounds();
+		Vector3 ResizeMap(RectInt extents);
 		bool CropToContent(bool consolidate = false, Action<Vector2Int> onOriginDelta = null);
 
 		bool RemoveTileAt(Vector3 pos);//does not affect bounds
@@ -514,7 +515,7 @@ namespace ClassicTilestorm
 			return result;
 		}
 
-		public static bool ValidExtents(RectInt extents) => extents.width < MAP_MAX_SIZE && extents.height < MAP_MAX_SIZE;
+		public static bool ValidExtents(RectInt extents) => extents.width <= MAP_MAX_SIZE && extents.height <= MAP_MAX_SIZE;
 
 		public int VectorToIndex(Vector3 vec) => vec.x < 0 || vec.x >= width || vec.z < 0 || vec.z >= height ? -1 : Mathf.FloorToInt(vec.z) * width + Mathf.FloorToInt(vec.x);
 		public Vector3 IndexToVector(int index) => new(index % width, 0f, index / width);
@@ -922,50 +923,33 @@ namespace ClassicTilestorm
 		{
 			var extents = GeomUtils.PointArrayBoundsInt(new[] { new Vector2Int(0, 0), new Vector2Int(width - 1, height - 1), new Vector2Int(Mathf.FloorToInt(pos.x), Mathf.FloorToInt(pos.z)) });
 			if (!ValidExtents(extents)) return -1;
-			pos += ResizeMap(extents, false);
+			pos += ResizeMap(extents);
 			if (-1 == UpdateTileAt(pos, variant)) return -1;
-			pos += ResizeMap(extents, true);
+			pos += ResizeMap(this.GetContentBounds());
 			return VectorToIndex(pos);
 		}
 
-		private bool RepositionAndResize(int expandToX = 0, int expandToZ = 0, int expandToXmax = 0, int expandToZmax = 0)
+		private bool RepositionAndResize(RectInt extents)
 		{
 			if (tiles == null || tiles.Length == 0) return false;
 
-			var minX = expandToX;
-			var minZ = expandToZ;
-			if (expandToXmax == 0) minX = Mathf.Min(0, expandToX);
-			if (expandToZmax == 0) minZ = Mathf.Min(0, expandToZ);
-
-			if (expandToXmax == 0) expandToXmax = Mathf.Max(width - 1, expandToXmax);
-			if (expandToZmax == 0) expandToZmax = Mathf.Max(height - 1, expandToZmax);
-			expandToXmax = Mathf.Max(expandToX, expandToXmax);
-			expandToZmax = Mathf.Max(expandToZ, expandToZmax);
-
-			var maxX = expandToXmax;
-			var maxZ = expandToZmax;
-
-			var targetWidth = maxX - minX + 1;
-			var targetHeight = maxZ - minZ + 1;
-			var offsetX = -minX;
-			var offsetZ = -minZ;
-
-			if (targetWidth == width && targetHeight == height && offsetX == 0 && offsetZ == 0)
+			if (extents.width == width && extents.height == height && extents.x == 0 && extents.y == 0)
 				return false;
 
-			if (targetWidth > MAP_MAX_SIZE || targetHeight > MAP_MAX_SIZE)
+			if (extents.width > MAP_MAX_SIZE || extents.height > MAP_MAX_SIZE)
 			{
 #if VERBOSE
 				Debug.LogWarning($"Resize rejected: would exceed max size ({MAP_MAX_SIZE}x{MAP_MAX_SIZE})");
 #endif
 				return false;
 			}
+
 #if VERBOSE
-			Debug.Log($"Resize Map '{name}' to {targetWidth}x{targetHeight}");
+			Debug.Log($"Resize Map '{name}' to {extents.width}x{extents.height}");
 #endif
 			var oldWidth = width;
 			var oldHeight = height;
-			var newSize = targetWidth * targetHeight;
+			var newSize = extents.width * extents.height;
 
 			var defaultIndex = this.GetOrCreateVariantIndex(ResourceManager.DefaultHash);
 
@@ -978,7 +962,7 @@ namespace ClassicTilestorm
 			{
 				if (oldIdx >= tiles.Length) continue;
 
-				var newPos = Remap(oldIdx, oldWidth, targetWidth, offsetX, offsetZ);
+				var newPos = Remap(oldIdx, oldWidth, extents.width, extents.x, extents.y);
 				if (newPos < 0) continue;
 
 				newTiles[newPos] = tiles[oldIdx];
@@ -991,7 +975,7 @@ namespace ClassicTilestorm
 						var oldSrcIdx = oldIdx + delta;
 						if (oldSrcIdx >= 0 && oldSrcIdx < solve.Length)
 						{
-							var newSrcPos = Remap(oldSrcIdx, oldWidth, targetWidth, offsetX, offsetZ);
+							var newSrcPos = Remap(oldSrcIdx, oldWidth, extents.width, extents.x, extents.y);
 							if (newSrcPos >= 0)
 								newSolve[newPos] = newSrcPos - newPos;
 						}
@@ -999,54 +983,51 @@ namespace ClassicTilestorm
 				}
 			}
 
-			int Remap(int idx, int oldW, int newW, int offX, int offZ)
-			{
-				if (idx < 0) return idx;
-				var px = idx % oldW;
-				var pz = idx / oldW;
-				var nx = px + offX;
-				var nz = pz + offZ;
-				return (nx >= 0 && nx < targetWidth && nz >= 0 && nz < targetHeight) ? nz * newW + nx : -1;
-			}
-
 			if (waypoints != null)
 				for (var n = 0; n < waypoints.Length; n++)
-					waypoints[n] = Remap(waypoints[n], oldWidth, targetWidth, offsetX, offsetZ);
+					waypoints[n] = Remap(waypoints[n], oldWidth, extents.width, extents.x, extents.y);
 
 			if (attachments != null)
 				foreach (var a in attachments)
-					a.tile = Remap(a.tile, oldWidth, targetWidth, offsetX, offsetZ);
+					a.tile = Remap(a.tile, oldWidth, extents.width, extents.x, extents.y);
 
-			width = targetWidth;
-			height = targetHeight;
+			width = extents.width;
+			height = extents.height;
 			tiles = newTiles;
 			solve = newSolve;
 			state = Enumerable.Range(0, width * height).ToArray();
 
 			return true;
+
+			int Remap(int idx, int oldW, int newW, int offX, int offZ)
+			{
+				if (idx < 0) return idx;
+				var px = idx % oldW;
+				var pz = idx / oldW;
+				var nx = px - offX;
+				var nz = pz - offZ;
+				return (nx >= 0 && nx < extents.width && nz >= 0 && nz < extents.height) ? nz * newW + nx : -1;
+			}
 		}
 
 		public bool CropToContent(bool consolidate = false, Action<Vector2Int> onOriginDelta = null)
 		{
-			var rect = MapUtils.GetContentBounds(this);
-			var resized = RepositionAndResize(rect.xMin, rect.yMin, rect.xMax, rect.yMax);
-
+			var resized = RepositionAndResize(this.GetContentBounds());
 			var optimised = false;
 			if (consolidate) optimised = this.Optimise();
 			return resized || optimised;
 		}
 
-		public Vector3 ResizeMap(RectInt extents, bool cropToContent = true)
-		{
-			var rect = MapUtils.GetContentBounds(this);
-			if (cropToContent)
-				extents = rect;
+		public RectInt ContentBounds() => this.GetContentBounds();
 
-			if (RepositionAndResize(extents.xMin, extents.yMin, extents.xMax, extents.yMax))
+		public Vector3 ResizeMap(RectInt extents)
+		{
+			var rect = this.GetContentBounds();
+			if (RepositionAndResize(extents))
 			{
 				RecreateTiles();
 				RefreshAttachments(GetAttachments());
-				var originDelta = new Vector3(Mathf.Max(0, -extents.xMin) - rect.xMin, 0f, Mathf.Max(0, -extents.yMin) - rect.yMin);
+				var originDelta = new Vector3(-extents.x, 0f, -extents.y);
 				OnMapEdited?.Invoke(this, true, originDelta);
 #if VERBOSE
 				Debug.Log($"ResizeMap({extents}) → {width}×{height}  | origin delta {originDeltaWorld}");

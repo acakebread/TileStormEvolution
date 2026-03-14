@@ -48,11 +48,10 @@ namespace ClassicTilestorm
 			EditorMarkerUtil.ShowMarkers(positions, colors, selectedIndex);
 		}
 
-		//public static (int minX, int minZ, int maxX, int maxZ) GetContentBounds(Map map)
-		public static RectInt GetContentBounds(Map map)
+		public static RectInt GetContentBounds(this Map map)
 		{
 			if (map.tiles == null || map.tiles.Length == 0 || map.width <= 0 || map.height <= 0)
-				return new RectInt(0, 0, -1, -1);
+				return new RectInt(0, 0, 0, 0);
 
 			int minX = map.width;
 			int minZ = map.height;
@@ -79,7 +78,7 @@ namespace ClassicTilestorm
 				maxZ = Math.Max(maxZ, z);
 			}
 
-			return maxX >= 0 ? new RectInt(minX, minZ, maxX, maxZ) : new RectInt(0, 0, -1, -1);
+			return maxX >= 0 ? new RectInt(minX, minZ, maxX - minX + 1, maxZ - minZ + 1) : new RectInt(0, 0, 0, 0);
 		}
 
 		public static GameObject BuildPreviewGeometry(Map map, Transform previewParent)
