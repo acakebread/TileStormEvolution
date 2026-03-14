@@ -48,7 +48,7 @@ namespace ClassicTilestorm
 			EditorMarkerUtil.ShowMarkers(positions, colors, selectedIndex);
 		}
 
-		public static RectInt GetContentBounds(Map map)
+		public static RectInt GetContentBounds(this Map map)
 		{
 			if (map.tiles == null || map.tiles.Length == 0 || map.width <= 0 || map.height <= 0)
 				return new RectInt(0, 0, 0, 0);
