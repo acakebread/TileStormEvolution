@@ -358,17 +358,79 @@ namespace ClassicTilestorm
 			UpdateRotateGizmo();//temporary workaround for rotate gizmo - for now do not allow in multiselect mode
 		}
 
+		//private bool SelectTile(Vector3 worldPos, bool combine = false)
+		//{
+		//	if (iMap.GetVariantAt(worldPos).IsDefaultEquivalent) return false;
+		//	var index = iMap.VectorToIndex(worldPos);
+		//	if (-1 == index) return false;
+		//	if (selection?.Any(s => s is Cell c && iMap.VectorToIndex(c.origin) == index) == true)
+		//		return true;
+		//	if (false == combine) ClearSelection();
+		//	var newCell = new Cell(iMap, worldPos);
+		//	selection = selection == null ? new[] { newCell } : selection.Append(newCell).ToArray();
+		//	UpdateRotateGizmo();//temporary workaround for rotate gizmo - for now do not allow in multiselect mode
+		//	return true;
+		//}
+
 		private bool SelectTile(Vector3 worldPos, bool combine = false)
 		{
-			if (iMap.GetVariantAt(worldPos).IsDefaultEquivalent) return false;
+			if (iMap.GetVariantAt(worldPos).IsDefaultEquivalent)
+				return false;
+
 			var index = iMap.VectorToIndex(worldPos);
-			if (-1 == index) return false;
-			if (selection?.Any(s => s is Cell c && iMap.VectorToIndex(c.origin) == index) == true)
-				return true;
-			if (false == combine) ClearSelection();
-			var newCell = new Cell(iMap, worldPos);
-			selection = selection == null ? new[] { newCell } : selection.Append(newCell).ToArray();
-			UpdateRotateGizmo();//temporary workaround for rotate gizmo - for now do not allow in multiselect mode
+			if (index == -1)
+				return false;
+
+			// Check if this position is already in the current selection
+			bool isAlreadySelected = selection?.Any(s => s is Cell c && iMap.VectorToIndex(c.origin) == index) == true;
+
+			if (isAlreadySelected)
+			{
+				// Already selected → toggle behavior only when combine is true
+				if (combine)
+				{
+					// Remove it (deselect)
+					selection = selection
+						.Where(s => !(s is Cell c && iMap.VectorToIndex(c.origin) == index))
+						.ToArray();
+
+					// Optional: if selection became empty, you might want to clean up
+					if (selection.Length == 0)
+					{
+						selection = null; // or keep empty array — your choice
+					}
+
+					UpdateRotateGizmo();
+					return true; // still count as "successful interaction"
+				}
+				else
+				{
+					// combine = false + already selected → do nothing / or reselect just this one
+					// (your original code returned true here without changing anything)
+					return true;
+				}
+			}
+
+			// ───────────────────────────────────────────────
+			// Not previously selected → normal selection logic
+			// ───────────────────────────────────────────────
+
+			if (!combine)
+			{
+				ClearSelection();
+				selection = new[] { new Cell(iMap, worldPos) };
+			}
+			else
+			{
+				// combine = true → append
+				var newCell = new Cell(iMap, worldPos);
+				selection = selection == null
+					? new[] { newCell }
+					: selection.Append(newCell).ToArray();
+			}
+
+			UpdateRotateGizmo(); // temporary workaround comment still applies
+
 			return true;
 		}
 

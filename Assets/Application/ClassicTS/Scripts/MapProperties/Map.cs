@@ -928,22 +928,22 @@ namespace ClassicTilestorm
 			return VectorToIndex(pos);
 		}
 
-		private bool RepositionAndResize(int expandToX = 0, int expandToZ = 0, int expandToXnax = 0, int expandToZnax = 0)
+		private bool RepositionAndResize(int expandToX = 0, int expandToZ = 0, int expandToXmax = 0, int expandToZmax = 0)
 		{
 			if (tiles == null || tiles.Length == 0) return false;
 
 			var minX = expandToX;
 			var minZ = expandToZ;
-			if (expandToXnax == 0) minX = Mathf.Min(0, expandToX);
-			if (expandToZnax == 0) minZ = Mathf.Min(0, expandToZ);
+			if (expandToXmax == 0) minX = Mathf.Min(0, expandToX);
+			if (expandToZmax == 0) minZ = Mathf.Min(0, expandToZ);
 
-			if (expandToXnax == 0) expandToXnax = Mathf.Max(width - 1, expandToXnax);
-			if (expandToZnax == 0) expandToZnax = Mathf.Max(height - 1, expandToZnax);
-			expandToXnax = Mathf.Max(expandToX, expandToXnax);
-			expandToZnax = Mathf.Max(expandToZ, expandToZnax);
+			if (expandToXmax == 0) expandToXmax = Mathf.Max(width - 1, expandToXmax);
+			if (expandToZmax == 0) expandToZmax = Mathf.Max(height - 1, expandToZmax);
+			expandToXmax = Mathf.Max(expandToX, expandToXmax);
+			expandToZmax = Mathf.Max(expandToZ, expandToZmax);
 
-			var maxX = expandToXnax;
-			var maxZ = expandToZnax;
+			var maxX = expandToXmax;
+			var maxZ = expandToZmax;
 
 			var targetWidth = maxX - minX + 1;
 			var targetHeight = maxZ - minZ + 1;
