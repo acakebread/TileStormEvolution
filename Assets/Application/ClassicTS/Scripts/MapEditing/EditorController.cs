@@ -18,7 +18,11 @@ namespace ClassicTilestorm
 		private ISelectable[] selection
 		{
 			get => _selection;
-			set { Array.ForEach(_selection ?? Array.Empty<ISelectable>(), item => item.OnDeselect(this)); _selection = value; Array.ForEach(_selection ?? Array.Empty<ISelectable>(), item => item.OnSelect(this)); }
+			set
+			{
+				Array.ForEach(_selection ?? Array.Empty<ISelectable>(), item => item.OnDeselect(this));
+				Array.ForEach((_selection = value is { Length: 0 } ? null : value) ?? Array.Empty<ISelectable>(),item => item.OnSelect(this));
+			}
 		}
 
 		public bool IsMultiSelect => selection?.Length > 1;
@@ -346,11 +350,7 @@ namespace ClassicTilestorm
 			{
 				// Already selected → toggle behavior only when combine is true
 				if (combine)
-				{
-					// Remove it (deselect)
-					selection = selection.Where(s => !(s is Cell c && iMap.VectorToIndex(c.origin) == index)).ToArray();
-					if (selection.Length == 0) selection = null;
-				}
+					selection = selection.Where(s => s is not Cell c || iMap.VectorToIndex(c.origin) != index).ToArray();
 				return true;
 			}
 
