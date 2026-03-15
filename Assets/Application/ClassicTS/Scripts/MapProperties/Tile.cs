@@ -1,8 +1,9 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 
 namespace ClassicTilestorm
 {
-	public readonly struct Tile : ISelectable
+	public readonly struct Tile : IDisposable
 	{
 		private readonly int flags;
 		public readonly GameObject gameObject;
@@ -88,10 +89,14 @@ namespace ClassicTilestorm
 			return combined;
 		}
 
-		public void Destroy()
+		public void Dispose()
 		{
-			if (gameObject != null)
-				Object.DestroyImmediate(gameObject);
+			if (gameObject == null) return;
+
+			if (Application.isPlaying)
+				UnityEngine.Object.Destroy(gameObject);
+			else
+				UnityEngine.Object.DestroyImmediate(gameObject);
 		}
 	}
 }

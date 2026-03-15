@@ -8,8 +8,8 @@ namespace ClassicTilestorm
 {
 	public class EditorController : MonoBehaviour, IEditorScreenUI
 	{
-		private IMapEdit iMap;
-		private Camera _camera => GetComponent<MainCameraController>()?.activeSystem?.camera;
+		public IMapEdit iMap;
+		public Camera _camera => GetComponent<MainCameraController>()?.activeSystem?.camera;
 
 		// ─── input state ───────────────────────────────────────
 		private Vector3 beginWorld;
@@ -18,8 +18,16 @@ namespace ClassicTilestorm
 		private ISelectable[] selection
 		{
 			get => _selection;
-			set { Array.ForEach(_selection ?? Array.Empty<ISelectable>(), item => item.OnDeselect(iMap, _camera)); Array.ForEach(value ?? Array.Empty<ISelectable>(), item => item.OnSelect(iMap, _camera)); _selection = value; }
+			set
+			{
+				Array.ForEach(_selection ?? Array.Empty<ISelectable>(), item => item.OnDeselect(this));
+				Array.ForEach((_selection = value is { Length: 0 } ? null : value) ?? Array.Empty<ISelectable>(),item => item.OnSelect(this));
+			}
 		}
+
+		public bool IsMultiSelect => selection?.Length > 1;
+		public bool HasSelection => selection?.Length > 0;
+
 		private float editAltitude = 0f;
 		private Variant atlasVariant = default;
 
@@ -34,6 +42,9 @@ namespace ClassicTilestorm
 			SelectAttachment,
 			DragAttachment
 		}
+
+		private ISelectable[] GetAttachmentsAsSelectables(int? tileIndex = null, Type[] filterTypes = null)
+			=> iMap.GetAttachments(tileIndex, filterTypes).Cast<ISelectable>().ToArray();
 
 		private ControllerMode mode = ControllerMode.Idle;
 		private void SetMode(ControllerMode value) => mode = value;
@@ -72,7 +83,6 @@ namespace ClassicTilestorm
 					GridLinesUtil.UpdateSize(map.width, map.height);
 					UpdateSelection(originDelta);
 				}
-				//selection = selection?.ToArray();//restore selection state after map change
 			};
 
 			GridLinesUtil.Update(transform, iMap?.Width ?? 32, iMap?.Height ?? 32, null != iMap ? iMap.TileRenderPosition(0) + new Vector3(-0.5f, editAltitude, -0.5f) : Vector3.zero);
@@ -117,7 +127,7 @@ namespace ClassicTilestorm
 			ViewPreviewUtil.Update();
 			EditorCameraMovement.UpdateCamera(ViewPreviewUtil.IsInFocus ? ViewPreviewUtil.PreviewCamera : _camera, currentWorld, inFocus: !mouseOverGUI);
 			if (!ViewPreviewUtil.IsInFocus && mouseOverGUI) return;
-			if (selection?.Length == 1 && selection[0].OnGizmoInput(iMap, _camera)) return;
+			if (selection?.Length == 1 && selection[0].OnGizmoInput(this)) return;
 			if (ViewPreviewUtil.IsInFocus) return;
 
 			switch (mode)
@@ -177,19 +187,8 @@ namespace ClassicTilestorm
 				case ControllerMode.SelectTile:
 					if (InputX.GetMouseButtonDown(0))
 					{
-						//if (!Input.GetKey(KeyCode.LeftControl) && !Input.GetKey(KeyCode.RightControl))
-						//{
-						//	var index = iMap.VectorToIndex(currentWorld);
-						//	if (selection?.Any(s => s is Cell c && iMap.VectorToIndex(c.origin) == index) == false)
-						//		ClearSelection();
-						//}
-
 						if (StartTileDrag(Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)))
-						//if (StartTileDrag(true))
-						{
 							SetMode(ControllerMode.DragTile);
-							UpdateRotateGizmo();//temporary workaround for rotate gizmo - for now do not allow in multiselect mode
-						}
 						else
 							EditorCameraMovement.StartPanning(currentWorld);
 					}
@@ -266,20 +265,18 @@ namespace ClassicTilestorm
 			{
 				cell.origin += originDelta;
 				cell.position += originDelta;
+				cell.OnUpdate(this);
 			}
 		}
 
-		private void UpdateRotateGizmo() { if (selection?.Length > 1) EditorDirectionUtil.Hide(); }//temporary workaround for rotate gizmo - for now do not allow in multiselect mode
-		private void UpdateViewGizmo() { if (selection?.Length > 1) { ViewPreviewUtil.Hide(); EditorTransformUtil.Hide(); EditorFrustumUtil.Hide(); } }//temporary workaround for preview system - for now do not allow in multiselect mode
-
 		private void UpdateSelectionAltitude(float value)
 		{
+			if (0f == value) return;
 			foreach (var cell in selection?.OfType<Cell>() ?? Array.Empty<Cell>())
+			{
 				cell.position.y = value;
-
-			selection = selection?.ToArray();//restore selection state
-
-			UpdateRotateGizmo();//temporary workaround for rotate gizmo - for now do not allow in multiselect mode
+				cell.OnUpdate(this);
+			}
 		}
 
 		private bool StartTileDrag(bool combine = false) => SelectTile(beginWorld = currentWorld, combine);
@@ -294,9 +291,8 @@ namespace ClassicTilestorm
 				var alt = cell.position.y;
 				cell.position = cell.origin + snappedDelta;
 				cell.position.y = alt;
-				cell.OnUpdate(iMap, _camera);
+				cell.OnUpdate(this);
 			}
-			UpdateRotateGizmo();//temporary workaround for rotate gizmo - for now do not allow in multiselect mode
 		}
 
 		private void EndTileDrag()
@@ -304,33 +300,17 @@ namespace ClassicTilestorm
 			var cells = selection?.OfType<Cell>() ?? Enumerable.Empty<Cell>();
 			if (!cells.Any()) return;
 
-			//var extents = GeomUtils.PointArrayBoundsInt((new[] { new Vector2Int(0, 0), new Vector2Int(iMap.Width - 1, iMap.Height - 1) }).Concat(
-			//	cells.Select(c => new Vector2Int(Mathf.FloorToInt(c.position.x), Mathf.FloorToInt(c.position.z)))));
-
-			//var extents = cells.Aggregate(
-			//	new RectInt(0, 0, iMap.Width, iMap.Height),
-			//	(r, c) =>
-			//	{
-			//		var x = Mathf.FloorToInt(c.position.x);
-			//		var z = Mathf.FloorToInt(c.position.z);
-
-			//		r.xMin = Math.Min(r.xMin, x);
-			//		r.yMin = Math.Min(r.yMin, z);
-			//		r.xMax = Math.Max(r.xMax, x + 1);
-			//		r.yMax = Math.Max(r.yMax, z + 1);
-
-			//		return r;
-			//	});
-
 			var gridPoints = cells.Select(c => new Vector2Int(Mathf.FloorToInt(c.position.x),Mathf.FloorToInt(c.position.z)));
 			var extents = GeomUtils.GetBoundingRect(gridPoints, new RectInt(0, 0, iMap.Width, iMap.Height));
 
 			if (!Map.ValidExtents(extents))
 			{
 				//reset selection to current map positions
-				foreach (var cell in cells) cell.position = cell.origin;
-				selection = selection?.ToArray();//restore selection state
-				UpdateRotateGizmo();
+				foreach (var cell in cells)
+				{
+					cell.position = cell.origin;
+					cell.OnUpdate(this);
+				}
 				return;
 			}
 
@@ -355,9 +335,7 @@ namespace ClassicTilestorm
 			//restore selection
 			selection = copy.OfType<ISelectable>().ToArray();//restore selection before bounding map
 			iMap.ResizeMap(iMap.ContentBounds());
-			selection = selection?.ToArray();//restore selection state
-
-			UpdateRotateGizmo();//temporary workaround for rotate gizmo - for now do not allow in multiselect mode
+			selection = selection?.ToArray();//restore selection state - required because we have been using 'copy'
 		}
 
 		private bool SelectTile(Vector3 worldPos, bool combine = false)
@@ -373,21 +351,7 @@ namespace ClassicTilestorm
 			{
 				// Already selected → toggle behavior only when combine is true
 				if (combine)
-				{
-					// Remove it (deselect)
-					selection = selection.Where(s => !(s is Cell c && iMap.VectorToIndex(c.origin) == index)).ToArray();
-
-					// Optional: if selection became empty, you might want to clean up
-					if (selection.Length == 0)
-						selection = null; // or keep empty array — your choice
-
-					UpdateRotateGizmo();
-				}
-				//else
-				//{
-				//	// combine = false + already selected → do nothing / or reselect just this one
-				//	// (your original code returned true here without changing anything)
-				//}
+					selection = selection.Where(s => s is not Cell c || iMap.VectorToIndex(c.origin) != index).ToArray();
 				return true;
 			}
 
@@ -395,20 +359,9 @@ namespace ClassicTilestorm
 			// Not previously selected → normal selection logic
 			// ───────────────────────────────────────────────
 
-			if (!combine)
-			{
-				ClearSelection();
-				selection = new[] { new Cell(iMap, worldPos) };
-			}
-			else
-			{
-				// combine = true → append
-				var newCell = new Cell(iMap, worldPos);
-				selection = selection == null ? new[] { newCell } : selection.Append(newCell).ToArray();
-			}
-
-			UpdateRotateGizmo(); // temporary workaround comment still applies
-
+			if (!combine) ClearSelection();
+			var newCell = new Cell(iMap, worldPos);
+			selection = selection == null ? new[] { newCell } : selection.Append(newCell).ToArray();
 			return true;
 		}
 
@@ -417,18 +370,17 @@ namespace ClassicTilestorm
 		private void EvaluateAttachments()
 		{
 			var cursorTile = iMap.VectorToIndex(beginWorld = currentWorld);
-			var attachmentsOnTile = iMap.GetAttachments(tileIndex: cursorTile);
+			var attachmentsOnTile = GetAttachmentsAsSelectables(tileIndex: cursorTile);
 			if (EditorAttachmentUI.EvaluateSelection(attachmentsOnTile, cursorTile))
 				SelectAttachments(attachmentsOnTile);
 			MapUtils.RebuildMarkers(iMap, selection);
-			UpdateViewGizmo();//temporary workaround for rotate gizmo - for now do not allow in multiselect mode
 		}
 
 		private bool StartAttachmentDrag()
 		{
 			var cursorTile = iMap.VectorToIndex(beginWorld = currentWorld);
 			if (selection == null || selection.Length == 0 || (selection[0] is MapAttachment ma && ma.tile != cursorTile))
-				SelectAttachments(iMap.GetAttachments(tileIndex: cursorTile));
+				SelectAttachments(GetAttachmentsAsSelectables(tileIndex: cursorTile));
 			return selection?.Length > 0;
 		}
 
@@ -441,10 +393,9 @@ namespace ClassicTilestorm
 			foreach (var att in attSelection) 
 				att.tile = cursorTile;
 			if (selection?.Length == 1)
-				selection[0].OnUpdate(iMap, _camera);
+				selection[0].OnUpdate(this);
 			iMap.RefreshAttachments(attSelection);
 			MapUtils.RebuildMarkers(iMap, selection);
-			UpdateViewGizmo();//temporary workaround for rotate gizmo - for now do not allow in multiselect mode
 		}
 
 		private bool CancelAttachmentMode()
@@ -455,7 +406,7 @@ namespace ClassicTilestorm
 				MapUtils.RebuildMarkers(iMap, selection);
 				return false;
 			}
-			SelectAttachments(iMap.GetAttachments(tileIndex: iMap.VectorToIndex(beginWorld = currentWorld)));
+			SelectAttachments(GetAttachmentsAsSelectables(tileIndex: iMap.VectorToIndex(beginWorld = currentWorld)));
 			if (selection?.Length > 0)
 			{
 				EditorAttachmentUI.RequestDelete();
@@ -469,7 +420,6 @@ namespace ClassicTilestorm
 		{
 			selection = value;
 			MapUtils.RebuildMarkers(iMap, selection);
-			UpdateViewGizmo();//temporary workaround for rotate gizmo - for now do not allow in multiselect mode
 		}
 	}
 }

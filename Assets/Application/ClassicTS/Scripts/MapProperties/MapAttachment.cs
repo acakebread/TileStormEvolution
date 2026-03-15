@@ -4,19 +4,12 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Linq;
-using UnityEngine;
 
 namespace ClassicTilestorm
 {
-	internal interface ITransformableAttachment
-	{
-		Vector3 Position { get; }
-		Quaternion Rotation { get; }
-	}
-
 	[Serializable]
 	[JsonConverter(typeof(MapAttachmentConverter))]
-	public abstract class MapAttachment : ISelectable
+	public abstract class MapAttachment
 	{
 		[JsonProperty(Order = 1)] public string type;
 		[JsonProperty(Order = 2)] public string name;

@@ -17,7 +17,7 @@ namespace ClassicTilestorm
 			var renderPos = Map.WorldToRender(cell.position);
 
 			cell.highlightMesh = EditorSelectionUtil.Create(cell.variant, renderPos);
-			EditorSelectionUtil.Update( cell.highlightMesh, iMap, cell.position, cell.variant, isSelectedOrDragging: true);
+			EditorSelectionUtil.Update(cell.highlightMesh, iMap, cell.position, cell.variant, isSelectedOrDragging: true);
 
 			var rotation = Quaternion.AngleAxis(cell.variant.angle, Vector3.up);
 			EditorDirectionUtil.ShowAt(renderPos, rotation, camera);
@@ -32,10 +32,11 @@ namespace ClassicTilestorm
 
 			iMap.UpdateTileAt(cell.position, cell.variant);
 
-			cell.DestroyHighlight();
+			//cell.DestroyHighlight();
+			EditorSelectionUtil.Destroy(cell.highlightMesh);
+			cell.highlightMesh = null;
 
 			EditorDirectionUtil.Hide();
-			//cell.origin = cell.position;
 		}
 
 		public bool OnGizmoInput(IMapEdit iMap, Camera camera, ISelectable selection)

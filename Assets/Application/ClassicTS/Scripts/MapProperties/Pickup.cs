@@ -3,7 +3,7 @@ using Newtonsoft.Json;
 namespace ClassicTilestorm
 {
 	[System.Serializable]
-	public sealed class Pickup : MapAttachment
+	public sealed partial class Pickup : MapAttachment
 	{
 		public Pickup() { type = "Pickup"; }
 

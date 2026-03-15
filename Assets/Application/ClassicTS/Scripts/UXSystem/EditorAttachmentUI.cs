@@ -137,11 +137,11 @@ namespace ClassicTilestorm
 
 			var items = new List<PopupItem>
 			{
-				new($"Waypoint [WP{waypoints?.Length:00}]", () => onCreateAndSelect(WaypointAttachmentHandler.Create(iMap, tile)), colorOverride: Color.lightSteelBlue),
-				new("Emitter [flame]", () => onCreateAndSelect(EmitterAttachmentHandler.Create(iMap, tile, "flame")), colorOverride: Color.cyan),
-				new("Emitter [spark]", () => onCreateAndSelect(EmitterAttachmentHandler.Create(iMap, tile, "spark")), colorOverride: Color.cyan),
-				new("View",            () => onCreateAndSelect(ViewAttachmentHandler.Create(iMap, tile)),            colorOverride: Color.cyan),
-				new("Pickup",          () => onCreateAndSelect(PickupAttachmentHandler.Create(iMap, tile)),          colorOverride: Color.cyan),
+				new($"Waypoint [WP{waypoints?.Length:00}]", () => onCreateAndSelect(Waypoint.Create(iMap, tile)), colorOverride: Color.lightSteelBlue),
+				new("Emitter [flame]", () => onCreateAndSelect(Emitter.Create(iMap, tile, "flame")), colorOverride: Color.cyan),
+				new("Emitter [spark]", () => onCreateAndSelect(Emitter.Create(iMap, tile, "spark")), colorOverride: Color.cyan),
+				new("View",            () => onCreateAndSelect(View.Create(iMap, tile)),            colorOverride: Color.cyan),
+				new("Pickup",          () => onCreateAndSelect(Pickup.Create(iMap, tile)),          colorOverride: Color.cyan),
 				PopupItem.Spacer(),
 				new("Cancel", () => { }, colorOverride: Color.yellow)
 			};
@@ -226,7 +226,7 @@ namespace ClassicTilestorm
 			return result == PopupResult.StillOpen;
 		}
 
-		public static bool EvaluateSelection(ISelectable[] selection, int tile)
+		internal static bool EvaluateSelection(ISelectable[] selection, int tile)
 		{
 			var atts = selection?.OfType<MapAttachment>().ToArray();
 			if (atts == null || atts.Length == 0)
@@ -246,7 +246,7 @@ namespace ClassicTilestorm
 			return false;
 		}
 
-		public static void UpdateGUI(IMapEdit iMap, ISelectable[] selection, int tileIndex, Action<ISelectable[]> onSelect)
+		internal static void UpdateGUI(IMapEdit iMap, ISelectable[] selection, int tileIndex, Action<ISelectable[]> onSelect)
 		{
 			var currentSelection = selection?.OfType<MapAttachment>().ToArray();
 
@@ -261,7 +261,7 @@ namespace ClassicTilestorm
 				else
 				{
 					DrawSidePanelAttachment(iMap, currentSelection,
-						att => onSelect(new ISelectable[] { att }));
+						att => onSelect(new ISelectable[] { att as ISelectable }));
 				}
 			}
 			else
@@ -272,7 +272,7 @@ namespace ClassicTilestorm
 
 			// Popups ── wrap/unwrap the array
 			bool stillOpen =
-				DrawAddPopup(iMap, tileIndex, created => onSelect(new ISelectable[] { created })) ||
+				DrawAddPopup(iMap, tileIndex, created => onSelect(new ISelectable[] { created as ISelectable })) ||
 				DrawDeletePopup(iMap, tileIndex, atts => onSelect(atts?.Cast<ISelectable>().ToArray())) ||
 				DrawSelectPopup(iMap, tileIndex, atts => onSelect(atts?.Cast<ISelectable>().ToArray()));
 
