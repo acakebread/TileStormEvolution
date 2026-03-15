@@ -18,7 +18,7 @@ namespace ClassicTilestorm
 		private ISelectable[] selection
 		{
 			get => _selection;
-			set { Array.ForEach(_selection ?? Array.Empty<ISelectable>(), item => item.OnDeselect(iMap, _camera)); Array.ForEach(value ?? Array.Empty<ISelectable>(), item => item.OnSelect(iMap, _camera)); _selection = value; }
+			set { Array.ForEach(_selection ?? Array.Empty<ISelectable>(), item => item.OnDeselect(iMap, _camera)); Array.ForEach(value ?? Array.Empty<ISelectable>(), item => item.OnSelect(iMap, _camera)); _selection = value; UpdateRotateGizmo(); }//UpdateRotateGizmo - temporary workaround for rotate gizmo - for now do not allow in multiselect mode
 		}
 		private float editAltitude = 0f;
 		private Variant atlasVariant = default;
@@ -177,10 +177,7 @@ namespace ClassicTilestorm
 					if (InputX.GetMouseButtonDown(0))
 					{
 						if (StartTileDrag(Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)))
-						{
 							SetMode(ControllerMode.DragTile);
-							UpdateRotateGizmo();//temporary workaround for rotate gizmo - for now do not allow in multiselect mode
-						}
 						else
 							EditorCameraMovement.StartPanning(currentWorld);
 					}
@@ -258,20 +255,20 @@ namespace ClassicTilestorm
 				cell.origin += originDelta;
 				cell.position += originDelta;
 			}
+			selection = selection?.ToArray();//restore selection state
 		}
-
-		private void UpdateRotateGizmo() { if (selection?.Length > 1) EditorDirectionUtil.Hide(); }//temporary workaround for rotate gizmo - for now do not allow in multiselect mode
-		private void UpdateViewGizmo() { if (selection?.Length > 1) { ViewPreviewUtil.Hide(); EditorTransformUtil.Hide(); EditorFrustumUtil.Hide(); } }//temporary workaround for preview system - for now do not allow in multiselect mode
 
 		private void UpdateSelectionAltitude(float value)
 		{
+			if (0f == value) return;
 			foreach (var cell in selection?.OfType<Cell>() ?? Array.Empty<Cell>())
 				cell.position.y = value;
 
 			selection = selection?.ToArray();//restore selection state
-
-			UpdateRotateGizmo();//temporary workaround for rotate gizmo - for now do not allow in multiselect mode
 		}
+
+		private void UpdateRotateGizmo() { if (selection?.Length > 1) EditorDirectionUtil.Hide(); }//temporary workaround for rotate gizmo - for now do not allow in multiselect mode
+		private void UpdateViewGizmo() { if (selection?.Length > 1) { ViewPreviewUtil.Hide(); EditorTransformUtil.Hide(); EditorFrustumUtil.Hide(); } }//temporary workaround for preview system - for now do not allow in multiselect mode
 
 		private bool StartTileDrag(bool combine = false) => SelectTile(beginWorld = currentWorld, combine);
 
@@ -303,7 +300,6 @@ namespace ClassicTilestorm
 				//reset selection to current map positions
 				foreach (var cell in cells) cell.position = cell.origin;
 				selection = selection?.ToArray();//restore selection state
-				UpdateRotateGizmo();
 				return;
 			}
 
@@ -328,9 +324,6 @@ namespace ClassicTilestorm
 			//restore selection
 			selection = copy.OfType<ISelectable>().ToArray();//restore selection before bounding map
 			iMap.ResizeMap(iMap.ContentBounds());
-			selection = selection?.ToArray();//restore selection state
-
-			UpdateRotateGizmo();//temporary workaround for rotate gizmo - for now do not allow in multiselect mode
 		}
 
 		private bool SelectTile(Vector3 worldPos, bool combine = false)
@@ -350,7 +343,6 @@ namespace ClassicTilestorm
 					// Remove it (deselect)
 					selection = selection.Where(s => !(s is Cell c && iMap.VectorToIndex(c.origin) == index)).ToArray();
 					if (selection.Length == 0) selection = null;
-					UpdateRotateGizmo();
 				}
 				return true;
 			}
@@ -359,19 +351,9 @@ namespace ClassicTilestorm
 			// Not previously selected → normal selection logic
 			// ───────────────────────────────────────────────
 
-			if (!combine)
-			{
-				ClearSelection();
-				selection = new[] { new Cell(iMap, worldPos) };
-			}
-			else
-			{
-				// combine = true → append
-				var newCell = new Cell(iMap, worldPos);
-				selection = selection == null ? new[] { newCell } : selection.Append(newCell).ToArray();
-			}
-
-			UpdateRotateGizmo(); // temporary workaround comment still applies
+			if (!combine) ClearSelection();
+			var newCell = new Cell(iMap, worldPos);
+			selection = selection == null ? new[] { newCell } : selection.Append(newCell).ToArray();
 			return true;
 		}
 

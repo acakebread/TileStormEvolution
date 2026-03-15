@@ -1,7 +1,7 @@
 namespace ClassicTilestorm
 {
 	// Editor-only fake attachment that represents one waypoint
-	public class Waypoint : MapAttachment
+	public partial class Waypoint : MapAttachment
 	{
 		public int waypointIndex; // which position in the waypoints array this represents
 

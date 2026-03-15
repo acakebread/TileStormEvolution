@@ -137,11 +137,11 @@ namespace ClassicTilestorm
 
 			var items = new List<PopupItem>
 			{
-				new($"Waypoint [WP{waypoints?.Length:00}]", () => onCreateAndSelect(WaypointAttachmentHandler.Create(iMap, tile)), colorOverride: Color.lightSteelBlue),
-				new("Emitter [flame]", () => onCreateAndSelect(EmitterAttachmentHandler.Create(iMap, tile, "flame")), colorOverride: Color.cyan),
-				new("Emitter [spark]", () => onCreateAndSelect(EmitterAttachmentHandler.Create(iMap, tile, "spark")), colorOverride: Color.cyan),
-				new("View",            () => onCreateAndSelect(ViewAttachmentHandler.Create(iMap, tile)),            colorOverride: Color.cyan),
-				new("Pickup",          () => onCreateAndSelect(PickupAttachmentHandler.Create(iMap, tile)),          colorOverride: Color.cyan),
+				new($"Waypoint [WP{waypoints?.Length:00}]", () => onCreateAndSelect(Waypoint.Create(iMap, tile)), colorOverride: Color.lightSteelBlue),
+				new("Emitter [flame]", () => onCreateAndSelect(Emitter.Create(iMap, tile, "flame")), colorOverride: Color.cyan),
+				new("Emitter [spark]", () => onCreateAndSelect(Emitter.Create(iMap, tile, "spark")), colorOverride: Color.cyan),
+				new("View",            () => onCreateAndSelect(View.Create(iMap, tile)),            colorOverride: Color.cyan),
+				new("Pickup",          () => onCreateAndSelect(Pickup.Create(iMap, tile)),          colorOverride: Color.cyan),
 				PopupItem.Spacer(),
 				new("Cancel", () => { }, colorOverride: Color.yellow)
 			};

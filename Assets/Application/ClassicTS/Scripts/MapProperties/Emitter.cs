@@ -6,7 +6,7 @@ using MassiveHadronLtd;
 namespace ClassicTilestorm
 {
 	[System.Serializable]
-	public sealed class Emitter : MapAttachment, ITransformableAttachment
+	public sealed partial class Emitter : MapAttachment, ITransformableAttachment
 	{
 		public Emitter()
 		{
