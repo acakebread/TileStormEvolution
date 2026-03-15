@@ -5,7 +5,6 @@ using UnityEngine;
 
 namespace ClassicTilestorm
 {
-	
 	public static class MapUtils
 	{
 		public static Variant NextVariantOnMap(IMapEdit map, Vector3 worldPos, Variant variant, bool cycleHeight = false)
@@ -29,7 +28,7 @@ namespace ClassicTilestorm
 			return variant;
 		}
 
-		public static void RebuildMarkers(IMapEdit iMap, ISelectable[] selection)
+		internal static void RebuildMarkers(IMapEdit iMap, ISelectable[] selection)
 		{
 			var tiles = iMap?.GetAttachments()?.Select(a => a.tile)?.Distinct()?.ToArray() ?? Array.Empty<int>();
 			var positions = new Vector3[tiles.Length];

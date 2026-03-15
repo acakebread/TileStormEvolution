@@ -1,6 +1,6 @@
 namespace ClassicTilestorm
 {
-	partial class Waypoint
+	partial class Waypoint : ISelectable
 	{
 		public static Waypoint Create(IMapEdit map, int tile)
 		{

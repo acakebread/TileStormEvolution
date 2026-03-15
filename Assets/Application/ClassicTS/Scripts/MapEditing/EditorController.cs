@@ -35,6 +35,9 @@ namespace ClassicTilestorm
 			DragAttachment
 		}
 
+		private ISelectable[] GetAttachmentsAsSelectables(int? tileIndex = null, Type[] filterTypes = null)
+			=> iMap.GetAttachments(tileIndex, filterTypes).Cast<ISelectable>().ToArray();
+
 		private ControllerMode mode = ControllerMode.Idle;
 		private void SetMode(ControllerMode value) => mode = value;
 
@@ -324,6 +327,7 @@ namespace ClassicTilestorm
 			//restore selection
 			selection = copy.OfType<ISelectable>().ToArray();//restore selection before bounding map
 			iMap.ResizeMap(iMap.ContentBounds());
+			selection = selection?.ToArray();//restore selection state
 		}
 
 		private bool SelectTile(Vector3 worldPos, bool combine = false)
@@ -362,7 +366,7 @@ namespace ClassicTilestorm
 		private void EvaluateAttachments()
 		{
 			var cursorTile = iMap.VectorToIndex(beginWorld = currentWorld);
-			var attachmentsOnTile = iMap.GetAttachments(tileIndex: cursorTile);
+			var attachmentsOnTile = GetAttachmentsAsSelectables(tileIndex: cursorTile);
 			if (EditorAttachmentUI.EvaluateSelection(attachmentsOnTile, cursorTile))
 				SelectAttachments(attachmentsOnTile);
 			MapUtils.RebuildMarkers(iMap, selection);
@@ -373,7 +377,7 @@ namespace ClassicTilestorm
 		{
 			var cursorTile = iMap.VectorToIndex(beginWorld = currentWorld);
 			if (selection == null || selection.Length == 0 || (selection[0] is MapAttachment ma && ma.tile != cursorTile))
-				SelectAttachments(iMap.GetAttachments(tileIndex: cursorTile));
+				SelectAttachments(GetAttachmentsAsSelectables(tileIndex: cursorTile));
 			return selection?.Length > 0;
 		}
 
@@ -400,7 +404,7 @@ namespace ClassicTilestorm
 				MapUtils.RebuildMarkers(iMap, selection);
 				return false;
 			}
-			SelectAttachments(iMap.GetAttachments(tileIndex: iMap.VectorToIndex(beginWorld = currentWorld)));
+			SelectAttachments(GetAttachmentsAsSelectables(tileIndex: iMap.VectorToIndex(beginWorld = currentWorld)));
 			if (selection?.Length > 0)
 			{
 				EditorAttachmentUI.RequestDelete();
