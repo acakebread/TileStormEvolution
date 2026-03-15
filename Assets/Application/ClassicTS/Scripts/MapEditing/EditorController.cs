@@ -335,6 +335,7 @@ namespace ClassicTilestorm
 			//restore selection
 			selection = copy.OfType<ISelectable>().ToArray();//restore selection before bounding map
 			iMap.ResizeMap(iMap.ContentBounds());
+			selection = selection?.ToArray();//restore selection state - required because we have been using 'copy'
 		}
 
 		private bool SelectTile(Vector3 worldPos, bool combine = false)
