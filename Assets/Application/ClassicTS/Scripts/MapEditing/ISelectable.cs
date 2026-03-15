@@ -4,10 +4,10 @@ namespace ClassicTilestorm
 {
 	internal interface ISelectable
 	{
-		void OnSelect(IMapEdit map, Camera camera) { } // Default: do nothing
-		void OnDeselect(IMapEdit iMap, Camera camera) { } // Default: do nothing
-		void OnUpdate(IMapEdit map, Camera camera) { } // Default: do nothing
-		bool OnGizmoInput(IMapEdit map, Camera camera) => false; // Default: return false
+		void OnSelect(EditorController controller) { }
+		void OnDeselect(EditorController controller) { }
+		void OnUpdate(EditorController controller) { }
+		bool OnGizmoInput(EditorController controller) => false;
 	}
 
 	internal interface ITransformableAttachment

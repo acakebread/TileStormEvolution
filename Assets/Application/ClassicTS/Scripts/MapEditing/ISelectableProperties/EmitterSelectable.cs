@@ -5,39 +5,41 @@ namespace ClassicTilestorm
 {
 	partial class Emitter : ISelectable, ITransformableAttachment
 	{
-		public void OnSelect(IMapEdit iMap, Camera camera)
-		{
-			var worldPos = iMap.WorldPosition(tile, Position);
-			EditorTransformUtil.UpdateTransform(worldPos, Rotation, camera);
-			EditorPrimitiveUtil.UpdateCone(worldPos, Rotation, Distance, Apex);
-		}
+        public void OnSelect(EditorController controller)
+        {
+            var worldPos = controller.iMap.WorldPosition(tile, Position);
+            EditorTransformUtil.UpdateTransform(worldPos, Rotation, controller._camera);
+            EditorPrimitiveUtil.UpdateCone(worldPos, Rotation, Distance, Apex);
+        }
 
-		public void OnDeselect(IMapEdit iMap, Camera camera)
-		{
-			EditorTransformUtil.Hide();
-			EditorPrimitiveUtil.Hide();
-		}
+        public void OnDeselect(EditorController controller)
+        {
+            EditorTransformUtil.Hide();
+            EditorPrimitiveUtil.Hide();
+        }
 
-		public bool OnGizmoInput(IMapEdit iMap, Camera camera)
-		{
-			if (!EditorTransformUtil.HandleInput(camera, out Vector3 newWorldPos, out Quaternion newWorldRot))
-				return false;
-			EditorTransformUtil.UpdateTransformGizmoVisuals(camera);
+        public bool OnGizmoInput(EditorController controller)
+        {
+            if (!EditorTransformUtil.HandleInput(controller._camera, out Vector3 newWorldPos, out Quaternion newWorldRot))
+                return false;
 
-			Position = iMap.LocalPosition(tile, newWorldPos);
-			Rotation = iMap.LocalRotation(tile, newWorldRot);
-			iMap.RefreshAttachment(this);
-			EditorPrimitiveUtil.UpdateCone(newWorldPos, Rotation, Distance, Apex);
-			return true;
-		}
+            EditorTransformUtil.UpdateTransformGizmoVisuals(controller._camera);
 
-		public void OnUpdate(IMapEdit iMap, Camera camera)
-		{
-			var worldPos = iMap.WorldPosition(tile, Position);
-			var worldRot = iMap.WorldRotation(tile, Rotation);
-			EditorTransformUtil.ShowAt(worldPos, worldRot, camera);
-			EditorPrimitiveUtil.UpdateCone(worldPos, Rotation, Distance, Apex);
-		}
+            Position = controller.iMap.LocalPosition(tile, newWorldPos);
+            Rotation = controller.iMap.LocalRotation(tile, newWorldRot);
+            controller.iMap.RefreshAttachment(this);
+
+            EditorPrimitiveUtil.UpdateCone(newWorldPos, Rotation, Distance, Apex);
+            return true;
+        }
+
+        public void OnUpdate(EditorController controller)
+        {
+            var worldPos = controller.iMap.WorldPosition(tile, Position);
+            var worldRot = controller.iMap.WorldRotation(tile, Rotation);
+            EditorTransformUtil.ShowAt(worldPos, worldRot, controller._camera);
+            EditorPrimitiveUtil.UpdateCone(worldPos, Rotation, Distance, Apex);
+        }
 
 		public static Emitter Create(IMapEdit iMap, int tile, string variant)
 		{

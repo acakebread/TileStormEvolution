@@ -15,8 +15,8 @@ namespace ClassicTilestorm
 				float[] angles = { 0f, 90f, 180f, 270f };
 				float[] deltas = { 0f, 0.25f, 0.5f, 0.75f, 1f };
 
-				int dIdx = System.Array.IndexOf(deltas, current.delta.y); if (dIdx < 0) dIdx = 0;
-				int aIdx = System.Array.IndexOf(angles, current.angle); if (aIdx < 0) aIdx = 0;
+				int dIdx = Array.IndexOf(deltas, current.delta.y); if (dIdx < 0) dIdx = 0;
+				int aIdx = Array.IndexOf(angles, current.angle); if (aIdx < 0) aIdx = 0;
 
 				aIdx = (aIdx + 1) % angles.Length;
 				if (aIdx == 0) dIdx = (dIdx + 1) % deltas.Length;

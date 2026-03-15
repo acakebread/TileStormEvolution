@@ -5,26 +5,29 @@ namespace ClassicTilestorm
 {
 	partial class Cell : ISelectable
 	{
-		public void OnSelect(IMapEdit iMap, Camera camera)
+		public void OnSelect(EditorController controller)
 		{
-			var originalMesh = iMap.GetTile(origin).gameObject;
+			var originalMesh = controller.iMap.GetTile(origin).gameObject;
 			if (originalMesh != null) originalMesh.SetActive(false);
 
 			var renderPos = Map.WorldToRender(position);
 
 			highlightMesh = EditorSelectionUtil.Create(variant, renderPos);
-			EditorSelectionUtil.Update(highlightMesh, iMap, position, variant, isSelectedOrDragging: true);
+			EditorSelectionUtil.Update(highlightMesh, controller.iMap, position, variant, isSelectedOrDragging: true);
 
 			var rotation = Quaternion.AngleAxis(variant.angle, Vector3.up);
-			EditorDirectionUtil.ShowAt(renderPos, rotation, camera);
+			if (controller.IsMultiSelect)
+				EditorDirectionUtil.Hide();
+			else
+				EditorDirectionUtil.ShowAt(renderPos, rotation, controller._camera);
 		}
 
-		public void OnDeselect(IMapEdit iMap, Camera camera)
+		public void OnDeselect(EditorController controller)
 		{
-			var originalMesh = iMap.GetTile(origin).gameObject;
+			var originalMesh = controller.iMap.GetTile(origin).gameObject;
 			if (originalMesh != null) originalMesh.SetActive(true);
 
-			iMap.UpdateTileAt(position, variant);
+			controller.iMap.UpdateTileAt(position, variant);
 
 			EditorSelectionUtil.Destroy(highlightMesh);
 			highlightMesh = null;
@@ -32,24 +35,33 @@ namespace ClassicTilestorm
 			EditorDirectionUtil.Hide();
 		}
 
-		public bool OnGizmoInput(IMapEdit iMap, Camera camera)
+		public bool OnGizmoInput(EditorController controller)
 		{
-			if (!EditorDirectionUtil.HandleInput(camera, out Quaternion newWorldRot))
-				return false;
+			if (!controller.IsMultiSelect)
+			{
+				if (!EditorDirectionUtil.HandleInput(controller._camera, out Quaternion newWorldRot))
+					return false;
+				variant.angle = newWorldRot.eulerAngles.y;
+			}
 
-			variant.angle = newWorldRot.eulerAngles.y;
-			EditorSelectionUtil.Update(highlightMesh, iMap, position, variant, true);
-
+			EditorSelectionUtil.Update(highlightMesh, controller.iMap, position, variant, true);
 			return true;
 		}
 
-		public void OnUpdate(IMapEdit iMap, Camera camera)
+		public void OnUpdate(EditorController controller)
 		{
-			EditorSelectionUtil.Update(highlightMesh, iMap, position, variant, true);
+			var originalMesh = controller.iMap.GetTile(origin).gameObject;
+			if (originalMesh != null) originalMesh.SetActive(false);
 
-			var renderPos = Map.WorldToRender(position);
-			var rotation = Quaternion.AngleAxis(variant.angle, Vector3.up);
-			EditorDirectionUtil.ShowAt(renderPos, rotation, camera);
+			EditorSelectionUtil.Update(highlightMesh, controller.iMap, position, variant, true);
+			if (controller.IsMultiSelect)
+				EditorDirectionUtil.Hide();
+			else
+			{
+				var renderPos = Map.WorldToRender(position);
+				var rotation = Quaternion.AngleAxis(variant.angle, Vector3.up);
+				EditorDirectionUtil.ShowAt(renderPos, rotation, controller._camera);
+			}
 		}
 	}
 }

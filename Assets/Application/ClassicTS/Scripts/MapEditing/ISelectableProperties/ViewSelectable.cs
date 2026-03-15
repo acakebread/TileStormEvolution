@@ -5,48 +5,117 @@ namespace ClassicTilestorm
 {
 	partial class View : ISelectable, ITransformableAttachment
 	{
-		public void OnSelect(IMapEdit map, Camera camera)
+		public void OnSelect(EditorController controller)
 		{
-			var worldPos = map.WorldPosition(tile, Position);
-			EditorTransformUtil.ShowAt(worldPos, Rotation, camera);
-			OnUpdate(map, camera);
+			if (controller.IsMultiSelect)
+			{
+				OnDeselect(controller);
+				return;
+			}
+			var worldPos = controller.iMap.WorldPosition(tile, Position);
+				EditorTransformUtil.ShowAt(worldPos, Rotation, controller._camera);
+			OnUpdate(controller);
 		}
 
-		public void OnDeselect(IMapEdit iMap, Camera camera)
+		public void OnDeselect(EditorController controller)
 		{
 			EditorTransformUtil.Hide();
 			EditorFrustumUtil.Hide();
 			ViewPreviewUtil.Hide();
 		}
 
-		public bool OnGizmoInput(IMapEdit map, Camera camera)
+		public bool OnGizmoInput(EditorController controller)
 		{
-			//OnUpdate(map, camera, selection);
-			HandlePreviewCameraSync(map, camera, this);
-			if (!EditorTransformUtil.HandleInput(camera, out Vector3 newWorldPos, out Quaternion newWorldRot))
-				return false;
-			EditorTransformUtil.UpdateTransformGizmoVisuals(camera);
+			HandlePreviewCameraSync(controller);
 
-			Position = map.LocalPosition(tile, newWorldPos);
-			Rotation = map.LocalRotation(tile, newWorldRot);
-			SnapViewDistanceToGround(map, this);
+			if (!EditorTransformUtil.HandleInput(controller._camera, out Vector3 newWorldPos, out Quaternion newWorldRot))
+				return false;
+
+			EditorTransformUtil.UpdateTransformGizmoVisuals(controller._camera);
+
+			Position = controller.iMap.LocalPosition(tile, newWorldPos);
+			Rotation = controller.iMap.LocalRotation(tile, newWorldRot);
+			SnapViewDistanceToGround(controller);
 
 			var previewTransform = ViewPreviewUtil.PreviewCameraTransform;
 			if (previewTransform != null)
 			{
-				previewTransform.position = map.WorldPosition(tile, Position);
-				previewTransform.rotation = map.WorldRotation(tile, Rotation);
+				previewTransform.position = controller.iMap.WorldPosition(tile, Position);
+				previewTransform.rotation = controller.iMap.WorldRotation(tile, Rotation);
 			}
 
 			ViewPreviewUtil.Update();
-			UpdateViewFrustumMarker(map, this);
+			UpdateViewFrustumMarker(controller);
 			return true;
 		}
 
-		public void OnUpdate(IMapEdit map, Camera camera)
+		public void OnUpdate(EditorController controller)
 		{
-			ViewPreviewUtil.Show(map, this);
-			UpdateViewFrustumMarker(map, this);
+			if (controller.IsMultiSelect)
+			{
+				OnDeselect(controller);
+				return;
+			}
+			ViewPreviewUtil.Show(controller.iMap, this);
+			UpdateViewFrustumMarker(controller);
+		}
+
+		// Helpers — now take controller
+		private void HandlePreviewCameraSync(EditorController controller)
+		{
+			var previewTransform = ViewPreviewUtil.PreviewCameraTransform;
+			if (previewTransform == null) return;
+
+			Position = controller.iMap.LocalPosition(tile, previewTransform.position);
+			Rotation = controller.iMap.LocalRotation(tile, previewTransform.rotation);
+			SnapViewDistanceToGround(controller);
+
+			previewTransform.position = controller.iMap.WorldPosition(tile, Position);
+			previewTransform.rotation = controller.iMap.WorldRotation(tile, Rotation);
+
+			ViewPreviewUtil.Update();
+			UpdateViewFrustumMarker(controller);
+			EditorTransformUtil.UpdateTransform(previewTransform.position, Rotation, controller._camera);
+		}
+
+		private void SnapViewDistanceToGround(EditorController controller)
+		{
+			var origin = controller.iMap.WorldPosition(tile, Position);
+			var forward = Rotation * Vector3.forward;
+			var ray = new Ray(origin, forward);
+
+			if (Map.RayToWorld(ray, out Vector3 result))
+			{
+				float distance = (result - origin).magnitude;
+				if (distance > 0.1f)
+				{
+					Distance = Mathf.Min(distance, MAX_DISTANCE);
+					return;
+				}
+			}
+
+			Distance = MAX_DISTANCE;
+		}
+
+		private bool UpdateViewFrustumMarker(EditorController controller)
+		{
+			if (data == null || data.Length < 7 || Distance < 0.02f)
+			{
+				EditorFrustumUtil.Hide();
+				return false;
+			}
+
+			Vector3 worldPos = controller.iMap.WorldPosition(tile, Position);
+			Vector3 forward = (LookAt - Position).normalized;
+			if (forward.sqrMagnitude < 0.001f) forward = Vector3.forward;
+
+			Quaternion rot = Rotation;
+			Vector3 up = Vector3.ProjectOnPlane(rot * Vector3.up, forward);
+			up = up.sqrMagnitude < 0.01f ? Vector3.up : up.normalized;
+
+			Quaternion targetRotation = Quaternion.LookRotation(forward, up);
+			EditorFrustumUtil.UpdateFrustum(worldPos, targetRotation, Distance, FOV);
+			return true;
 		}
 
 		public static View Create(IMapEdit map, int tile)
@@ -63,23 +132,6 @@ namespace ClassicTilestorm
 			SnapViewDistanceToGround(map, view);
 			map.AddAttachment(view);
 			return view;
-		}
-
-		public static void HandlePreviewCameraSync(IMapEdit map, Camera camera, View view)
-		{
-			var previewTransform = ViewPreviewUtil.PreviewCameraTransform;
-			if (previewTransform == null) return;
-
-			view.Position = map.LocalPosition(view.tile, previewTransform.position);
-			view.Rotation = map.LocalRotation(view.tile, previewTransform.rotation);
-			SnapViewDistanceToGround(map, view);
-
-			previewTransform.position = map.WorldPosition(view.tile, view.Position);
-			previewTransform.rotation = map.WorldRotation(view.tile, view.Rotation);
-
-			ViewPreviewUtil.Update();
-			UpdateViewFrustumMarker(map, view);
-			EditorTransformUtil.UpdateTransform(previewTransform.position, view.Rotation, camera);
 		}
 
 		private static void SnapViewDistanceToGround(IMapEdit map, View view)
@@ -99,28 +151,7 @@ namespace ClassicTilestorm
 				}
 			}
 
-			view.Distance = View.MAX_DISTANCE;
-		}
-
-		private static bool UpdateViewFrustumMarker(IMapEdit map, View view)
-		{
-			if (view == null || view.data == null || view.data.Length < 7 || view.Distance < 0.02f)
-			{
-				EditorFrustumUtil.Hide();
-				return false;
-			}
-
-			Vector3 worldPos = map.WorldPosition(view.tile, view.Position);
-			Vector3 forward = (view.LookAt - view.Position).normalized;
-			if (forward.sqrMagnitude < 0.001f) forward = Vector3.forward;
-
-			Quaternion rot = view.Rotation;
-			Vector3 up = Vector3.ProjectOnPlane(rot * Vector3.up, forward);
-			up = up.sqrMagnitude < 0.01f ? Vector3.up : up.normalized;
-
-			Quaternion targetRotation = Quaternion.LookRotation(forward, up);
-			EditorFrustumUtil.UpdateFrustum(worldPos, targetRotation, view.Distance, view.FOV);
-			return true;
+			view.Distance = MAX_DISTANCE;
 		}
 	}
 }
