@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace ClassicTilestorm
 {
-	public readonly struct Tile : ISelectable, IDisposable
+	public readonly struct Tile : IDisposable
 	{
 		private readonly int flags;
 		public readonly GameObject gameObject;

@@ -6,7 +6,7 @@ using MassiveHadronLtd;
 namespace ClassicTilestorm
 {
 	[System.Serializable]
-	public sealed partial class View : MapAttachment, ITransformableAttachment
+	public sealed partial class View : MapAttachment
 	{
 		public View() { type = "View"; }
 

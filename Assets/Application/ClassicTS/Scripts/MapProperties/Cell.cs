@@ -3,7 +3,7 @@ using UnityEngine;
 namespace ClassicTilestorm
 {
 	// Editor-only fake tile that represents one map cell
-	public partial class Cell : ISelectable
+	public partial class Cell
 	{
 		public string type;
 		public Variant variant;

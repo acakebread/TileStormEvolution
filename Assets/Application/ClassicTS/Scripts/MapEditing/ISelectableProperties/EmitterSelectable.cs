@@ -3,44 +3,40 @@ using MassiveHadronLtd;
 
 namespace ClassicTilestorm
 {
-	partial class Emitter
+	partial class Emitter : ISelectable, ITransformableAttachment
 	{
-		public void OnSelect(IMapEdit iMap, Camera camera, ISelectable selection)
+		public void OnSelect(IMapEdit iMap, Camera camera)
 		{
-			var emitter = (Emitter)selection;
-			var worldPos = iMap.WorldPosition(emitter.tile, emitter.Position);
-			EditorTransformUtil.UpdateTransform(worldPos, emitter.Rotation, camera);
-			EditorPrimitiveUtil.UpdateCone(worldPos, emitter.Rotation, emitter.Distance, emitter.Apex);
+			var worldPos = iMap.WorldPosition(tile, Position);
+			EditorTransformUtil.UpdateTransform(worldPos, Rotation, camera);
+			EditorPrimitiveUtil.UpdateCone(worldPos, Rotation, Distance, Apex);
 		}
 
-		public void OnDeselect(IMapEdit iMap, Camera camera, ISelectable selection)
+		public void OnDeselect(IMapEdit iMap, Camera camera)
 		{
 			EditorTransformUtil.Hide();
 			EditorPrimitiveUtil.Hide();
 		}
 
-		public bool OnGizmoInput(IMapEdit iMap, Camera camera, ISelectable selection)
+		public bool OnGizmoInput(IMapEdit iMap, Camera camera)
 		{
-			//OnUpdate(iMap, camera, selection);
 			if (!EditorTransformUtil.HandleInput(camera, out Vector3 newWorldPos, out Quaternion newWorldRot))
 				return false;
 			EditorTransformUtil.UpdateTransformGizmoVisuals(camera);
 
-			var emitter = (Emitter)selection;
-			emitter.Position = iMap.LocalPosition(emitter.tile, newWorldPos);
-			emitter.Rotation = iMap.LocalRotation(emitter.tile, newWorldRot);
-			iMap.RefreshAttachment(emitter);
-			EditorPrimitiveUtil.UpdateCone(newWorldPos, emitter.Rotation, emitter.Distance, emitter.Apex);
+			Position = iMap.LocalPosition(tile, newWorldPos);
+			Rotation = iMap.LocalRotation(tile, newWorldRot);
+			iMap.RefreshAttachment(this);
+			EditorPrimitiveUtil.UpdateCone(newWorldPos, Rotation, Distance, Apex);
 			return true;
 		}
 
-		public void OnUpdate(IMapEdit iMap, Camera camera, ISelectable selection)
+		public void OnUpdate(IMapEdit iMap, Camera camera)
 		{
-			var emitter = (Emitter)selection;
-			var worldPos = iMap.WorldPosition(emitter.tile, emitter.Position);
-			var worldRot = iMap.WorldRotation(emitter.tile, emitter.Rotation);
+			var worldPos = iMap.WorldPosition(tile, Position);
+			var worldRot = iMap.WorldRotation(tile, Rotation);
 			EditorTransformUtil.ShowAt(worldPos, worldRot, camera);
-			EditorPrimitiveUtil.UpdateCone(worldPos, emitter.Rotation, emitter.Distance, emitter.Apex);
+			EditorPrimitiveUtil.UpdateCone(worldPos, Rotation, Distance, Apex);
 		}
 
 		public static Emitter Create(IMapEdit iMap, int tile, string variant)

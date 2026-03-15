@@ -3,53 +3,50 @@ using MassiveHadronLtd;
 
 namespace ClassicTilestorm
 {
-	partial class View
+	partial class View : ISelectable, ITransformableAttachment
 	{
-		public void OnSelect(IMapEdit map, Camera camera, ISelectable selection)
+		public void OnSelect(IMapEdit map, Camera camera)
 		{
-			var view = (View)selection;
-			var worldPos = map.WorldPosition(view.tile, view.Position);
-			EditorTransformUtil.ShowAt(worldPos, view.Rotation, camera);
-			OnUpdate(map, camera, selection);
+			var worldPos = map.WorldPosition(tile, Position);
+			EditorTransformUtil.ShowAt(worldPos, Rotation, camera);
+			OnUpdate(map, camera);
 		}
 
-		public void OnDeselect(IMapEdit iMap, Camera camera, ISelectable selection)
+		public void OnDeselect(IMapEdit iMap, Camera camera)
 		{
 			EditorTransformUtil.Hide();
 			EditorFrustumUtil.Hide();
 			ViewPreviewUtil.Hide();
 		}
 
-		public bool OnGizmoInput(IMapEdit map, Camera camera, ISelectable selection)
+		public bool OnGizmoInput(IMapEdit map, Camera camera)
 		{
 			//OnUpdate(map, camera, selection);
-			HandlePreviewCameraSync(map, camera, selection);
+			HandlePreviewCameraSync(map, camera, this);
 			if (!EditorTransformUtil.HandleInput(camera, out Vector3 newWorldPos, out Quaternion newWorldRot))
 				return false;
 			EditorTransformUtil.UpdateTransformGizmoVisuals(camera);
 
-			var view = (View)selection;
-			view.Position = map.LocalPosition(view.tile, newWorldPos);
-			view.Rotation = map.LocalRotation(view.tile, newWorldRot);
-			SnapViewDistanceToGround(map, view);
+			Position = map.LocalPosition(tile, newWorldPos);
+			Rotation = map.LocalRotation(tile, newWorldRot);
+			SnapViewDistanceToGround(map, this);
 
 			var previewTransform = ViewPreviewUtil.PreviewCameraTransform;
 			if (previewTransform != null)
 			{
-				previewTransform.position = map.WorldPosition(view.tile, view.Position);
-				previewTransform.rotation = map.WorldRotation(view.tile, view.Rotation);
+				previewTransform.position = map.WorldPosition(tile, Position);
+				previewTransform.rotation = map.WorldRotation(tile, Rotation);
 			}
 
 			ViewPreviewUtil.Update();
-			UpdateViewFrustumMarker(map, view);
+			UpdateViewFrustumMarker(map, this);
 			return true;
 		}
 
-		public void OnUpdate(IMapEdit map, Camera camera, ISelectable selection)
+		public void OnUpdate(IMapEdit map, Camera camera)
 		{
-			var view = (View)selection;
-			ViewPreviewUtil.Show(map, view);
-			UpdateViewFrustumMarker(map, view);
+			ViewPreviewUtil.Show(map, this);
+			UpdateViewFrustumMarker(map, this);
 		}
 
 		public static View Create(IMapEdit map, int tile)
@@ -68,12 +65,8 @@ namespace ClassicTilestorm
 			return view;
 		}
 
-		public static void HandlePreviewCameraSync(IMapEdit map, Camera camera, ISelectable selection)
+		public static void HandlePreviewCameraSync(IMapEdit map, Camera camera, View view)
 		{
-			if (selection == null) return;
-			if (selection is not View view)
-				return;
-
 			var previewTransform = ViewPreviewUtil.PreviewCameraTransform;
 			if (previewTransform == null) return;
 

@@ -3,7 +3,7 @@ using MassiveHadronLtd;
 
 namespace ClassicTilestorm
 {
-	partial class Cell
+	partial class Cell : ISelectable
 	{
 		public void OnSelect(IMapEdit iMap, Camera camera)
 		{

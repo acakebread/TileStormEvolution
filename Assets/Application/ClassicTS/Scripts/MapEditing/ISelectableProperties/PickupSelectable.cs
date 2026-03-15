@@ -1,6 +1,6 @@
 namespace ClassicTilestorm
 {
-	partial class Pickup
+	partial class Pickup : ISelectable
 	{
 		public static Pickup Create(IMapEdit map, int tile)
 		{
