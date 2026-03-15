@@ -316,7 +316,7 @@ namespace ClassicTilestorm
 
 			iMap.ResizeMap(extents);//resize the map for the selection to apply - suppress cropping
 
-			var copy = selection.OfType<Cell>();
+			var copy = cells;
 			ClearSelection();
 
 			foreach (var cell in copy)
@@ -335,7 +335,9 @@ namespace ClassicTilestorm
 			//restore selection
 			selection = copy.OfType<ISelectable>().ToArray();//restore selection before bounding map
 			iMap.ResizeMap(iMap.ContentBounds());
-			selection = selection?.ToArray();//restore selection state - required because we have been using 'copy'
+
+			Array.ForEach(selection ?? Array.Empty<ISelectable>(), item => item.OnUpdate(this));
+			//selection = selection?.ToArray();//restore selection state - required because we have been using 'copy'
 		}
 
 		private bool SelectTile(Vector3 worldPos, bool combine = false)
