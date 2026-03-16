@@ -27,25 +27,29 @@ namespace ClassicTilestorm
 				var newItems = value ?? Array.Empty<ISelectable>();
 
 				// 1. Deselect items that are no longer wanted
-				foreach (var item in oldItems.Except(newItems))
+				var leaving = oldItems.Except(newItems).OfType<Cell>().ToList();
+
+				// Pass 1: only leaving cells → cleanup + deselect
+				foreach (var cell in leaving)
 				{
-					if (item is Cell cell)
-					{
-						if (cell.position != cell.origin)
-						{
-							iMap.RemoveTileAt(cell.origin);
-							iMap.UpdateTileAt(cell.position, cell.variant);
-						}
-					}
-					item.Deselect(this);
+					if (cell.position != cell.origin)
+						iMap.RemoveTileAt(cell.origin);
+					cell.Deselect(this);
 				}
+
+				// Pass 2: all cells that should now be visible
+				foreach (var cell in leaving)
+				{
+					if (cell.position != cell.origin)
+						iMap.UpdateTileAt(cell.position, cell.variant);
+				}
+
+				// Preserve your original null-when-empty convention
+				_selection = newItems.Length == 0 ? null : newItems;
 
 				// 2. Select newly added items
 				foreach (var item in newItems.Except(oldItems))
 					item.Select(this);
-
-				// Preserve your original null-when-empty convention
-				_selection = newItems.Length == 0 ? null : newItems;
 
 				// 3. Update items that were already selected and still are
 				foreach (var item in oldItems.Intersect(newItems))
@@ -288,19 +292,7 @@ namespace ClassicTilestorm
 
 		// ─── All helper methods ──────────────────────────────────────────────
 
-		private void ClearSelection() { ApplySelection(); selection = null; iMap.ResizeMap(iMap.ContentBounds()); }
-
-		private void ApplySelection()
-		{
-			foreach (var cell in selection?.OfType<Cell>() ?? Array.Empty<Cell>())
-			{
-				if (cell.position != cell.origin)
-					iMap.RemoveTileAt(cell.origin);
-			}
-
-			foreach (var cell in selection?.OfType<Cell>() ?? Array.Empty<Cell>())
-				iMap.UpdateTileAt(cell.position, cell.variant);
-		}
+		private void ClearSelection() { selection = null; iMap.ResizeMap(iMap.ContentBounds()); }
 
 		private void UpdateSelection(Vector3 originDelta)
 		{
