@@ -4,9 +4,13 @@ namespace ClassicTilestorm
 {
 	internal interface ISelectable
 	{
-		void OnSelect(EditorController controller) { }
-		void OnDeselect(EditorController controller) { }
-		void OnUpdate(EditorController controller) { }
+		void Apply(EditorController controller) { }
+		void Revert(EditorController controller) { }
+		void Discard(EditorController controller) { }
+
+		void Select(EditorController controller) { }
+		void Deselect(EditorController controller) { }
+		void Update(EditorController controller) { }
 		bool OnGizmoInput(EditorController controller) => false;
 	}
 

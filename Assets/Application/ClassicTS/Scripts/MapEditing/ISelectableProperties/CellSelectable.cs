@@ -5,7 +5,13 @@ namespace ClassicTilestorm
 {
 	partial class Cell : ISelectable
 	{
-		public void OnSelect(EditorController controller)
+		public void Revert(EditorController controller)
+		{
+			position = origin;
+			Update(controller);
+		}
+
+		public void Select(EditorController controller)
 		{
 			var originalMesh = controller.iMap.GetTile(origin).gameObject;
 			if (originalMesh != null) originalMesh.SetActive(false);
@@ -22,7 +28,7 @@ namespace ClassicTilestorm
 				EditorDirectionUtil.ShowAt(renderPos, rotation, controller._camera);
 		}
 
-		public void OnDeselect(EditorController controller)
+		public void Deselect(EditorController controller)
 		{
 			var originalMesh = controller.iMap.GetTile(origin).gameObject;
 			if (originalMesh != null) originalMesh.SetActive(true);
@@ -48,7 +54,7 @@ namespace ClassicTilestorm
 			return true;
 		}
 
-		public void OnUpdate(EditorController controller)
+		public void Update(EditorController controller)
 		{
 			var originalMesh = controller.iMap.GetTile(origin).gameObject;
 			if (originalMesh != null) originalMesh.SetActive(false);

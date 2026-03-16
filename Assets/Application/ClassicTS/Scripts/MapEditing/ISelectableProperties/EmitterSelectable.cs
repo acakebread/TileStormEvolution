@@ -5,14 +5,14 @@ namespace ClassicTilestorm
 {
 	partial class Emitter : ISelectable, ITransformableAttachment
 	{
-        public void OnSelect(EditorController controller)
+        public void Select(EditorController controller)
         {
             var worldPos = controller.iMap.WorldPosition(tile, Position);
             EditorTransformUtil.UpdateTransform(worldPos, Rotation, controller._camera);
             EditorPrimitiveUtil.UpdateCone(worldPos, Rotation, Distance, Apex);
         }
 
-        public void OnDeselect(EditorController controller)
+        public void Deselect(EditorController controller)
         {
             EditorTransformUtil.Hide();
             EditorPrimitiveUtil.Hide();
@@ -33,7 +33,7 @@ namespace ClassicTilestorm
             return true;
         }
 
-        public void OnUpdate(EditorController controller)
+        public void Update(EditorController controller)
         {
             var worldPos = controller.iMap.WorldPosition(tile, Position);
             var worldRot = controller.iMap.WorldRotation(tile, Rotation);

@@ -5,19 +5,19 @@ namespace ClassicTilestorm
 {
 	partial class View : ISelectable, ITransformableAttachment
 	{
-		public void OnSelect(EditorController controller)
+		public void Select(EditorController controller)
 		{
 			if (controller.IsMultiSelect)
 			{
-				OnDeselect(controller);
+				Deselect(controller);
 				return;
 			}
 			var worldPos = controller.iMap.WorldPosition(tile, Position);
 				EditorTransformUtil.ShowAt(worldPos, Rotation, controller._camera);
-			OnUpdate(controller);
+			Update(controller);
 		}
 
-		public void OnDeselect(EditorController controller)
+		public void Deselect(EditorController controller)
 		{
 			EditorTransformUtil.Hide();
 			EditorFrustumUtil.Hide();
@@ -49,11 +49,11 @@ namespace ClassicTilestorm
 			return true;
 		}
 
-		public void OnUpdate(EditorController controller)
+		public void Update(EditorController controller)
 		{
 			if (controller.IsMultiSelect)
 			{
-				OnDeselect(controller);
+				Deselect(controller);
 				return;
 			}
 			ViewPreviewUtil.Show(controller.iMap, this);

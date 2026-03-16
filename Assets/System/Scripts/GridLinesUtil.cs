@@ -14,6 +14,12 @@ namespace MassiveHadronLtd
 		private static bool enabled = true;
 		public static bool Enabled { get => enabled; set => enabled = value; }
 
+		public static void Initialise(Transform parent, Vector3 offset = default, int width = -1, int height = -1)
+		{
+			currentParent = parent;
+			currentOffset = offset;
+		}
+
 		public static void Update(Transform parent, int width, int height, Vector3 offset = default)
 		{
 			if (currentGrid != null && currentWidth == width && currentHeight == height && currentParent == parent && currentOffset == offset)

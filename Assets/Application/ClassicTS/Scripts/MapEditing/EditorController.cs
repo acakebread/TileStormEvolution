@@ -20,8 +20,8 @@ namespace ClassicTilestorm
 			get => _selection;
 			set
 			{
-				Array.ForEach(_selection ?? Array.Empty<ISelectable>(), item => item.OnDeselect(this));
-				Array.ForEach((_selection = value is { Length: 0 } ? null : value) ?? Array.Empty<ISelectable>(),item => item.OnSelect(this));
+				Array.ForEach(_selection ?? Array.Empty<ISelectable>(), item => item.Deselect(this));
+				Array.ForEach((_selection = value is { Length: 0 } ? null : value) ?? Array.Empty<ISelectable>(),item => item.Select(this));
 			}
 		}
 
@@ -67,6 +67,7 @@ namespace ClassicTilestorm
 		// ─── Unity / lifecycle ───────────────────────────────────────────────
 		public void Awake()
 		{
+			//GridLinesUtil.Initialise(transform, Vector3.zero);//not needed for now but plan to refactor GridLinesUtil
 			TryRegisterEditorScreenUI(UIController.Instance?.editorScreenUI?.GetComponent<EditorScreenUI>());
 			UIController.OnEditorScreenUIReady += TryRegisterEditorScreenUI;
 			void TryRegisterEditorScreenUI(EditorScreenUI editorScreenUI) => editorScreenUI?.Register(this);
@@ -265,7 +266,7 @@ namespace ClassicTilestorm
 			{
 				cell.origin += originDelta;
 				cell.position += originDelta;
-				cell.OnUpdate(this);
+				cell.Update(this);
 			}
 		}
 
@@ -275,7 +276,7 @@ namespace ClassicTilestorm
 			foreach (var cell in selection?.OfType<Cell>() ?? Array.Empty<Cell>())
 			{
 				cell.position.y = value;
-				cell.OnUpdate(this);
+				cell.Update(this);
 			}
 		}
 
@@ -291,7 +292,7 @@ namespace ClassicTilestorm
 				var alt = cell.position.y;
 				cell.position = cell.origin + snappedDelta;
 				cell.position.y = alt;
-				cell.OnUpdate(this);
+				cell.Update(this);
 			}
 		}
 
@@ -306,11 +307,7 @@ namespace ClassicTilestorm
 			if (!Map.ValidExtents(extents))
 			{
 				//reset selection to current map positions
-				foreach (var cell in cells)
-				{
-					cell.position = cell.origin;
-					cell.OnUpdate(this);
-				}
+				foreach (var cell in cells) cell.Revert(this);
 				return;
 			}
 
@@ -336,7 +333,7 @@ namespace ClassicTilestorm
 			selection = copy.OfType<ISelectable>().ToArray();//restore selection before bounding map
 			iMap.ResizeMap(iMap.ContentBounds());
 
-			Array.ForEach(selection ?? Array.Empty<ISelectable>(), item => item.OnUpdate(this));
+			Array.ForEach(selection ?? Array.Empty<ISelectable>(), item => item.Update(this));
 			//selection = selection?.ToArray();//restore selection state - required because we have been using 'copy'
 		}
 
@@ -395,7 +392,7 @@ namespace ClassicTilestorm
 			foreach (var att in attSelection) 
 				att.tile = cursorTile;
 			if (selection?.Length == 1)
-				selection[0].OnUpdate(this);
+				selection[0].Update(this);
 			iMap.RefreshAttachments(attSelection);
 			MapUtils.RebuildMarkers(iMap, selection);
 		}
