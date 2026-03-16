@@ -14,14 +14,32 @@ namespace ClassicTilestorm
 		// ─── input state ───────────────────────────────────────
 		private Vector3 beginWorld;
 		private Vector3 currentWorld => Map.ScreenToWorld(_camera, InputX.mousePosition, editAltitude);
+		private Vector3 lastSnap = Vector3.zero;
+
 		private ISelectable[] _selection = null;
 		private ISelectable[] selection
 		{
 			get => _selection;
+
 			set
 			{
-				Array.ForEach(_selection ?? Array.Empty<ISelectable>(), item => item.Deselect(this));
-				Array.ForEach((_selection = value is { Length: 0 } ? null : value) ?? Array.Empty<ISelectable>(),item => item.Select(this));
+				var oldItems = _selection ?? Array.Empty<ISelectable>();
+				var newItems = value ?? Array.Empty<ISelectable>();
+
+				// 1. Deselect items that are no longer wanted
+				foreach (var item in oldItems.Except(newItems))
+					item.Deselect(this);
+
+				// 2. Select newly added items
+				foreach (var item in newItems.Except(oldItems))
+					item.Select(this);
+
+				// Preserve your original null-when-empty convention
+				_selection = newItems.Length == 0 ? null : newItems;
+
+				// 3. Update items that were already selected and still are
+				foreach (var item in oldItems.Intersect(newItems))
+					item.Update(this);
 			}
 		}
 
@@ -259,6 +277,21 @@ namespace ClassicTilestorm
 		}
 
 		// ─── All helper methods ──────────────────────────────────────────────
+
+		private void ClearSelection() { ApplySelection(); iMap.ResizeMap(iMap.ContentBounds()); selection = null; }
+
+		private void ApplySelection()
+		{
+			foreach (var cell in selection?.OfType<Cell>() ?? Array.Empty<Cell>())
+			{
+				if (cell.position != cell.origin)
+					iMap.RemoveTileAt(cell.origin);
+			}
+
+			foreach (var cell in selection?.OfType<Cell>() ?? Array.Empty<Cell>())
+				iMap.UpdateTileAt(cell.position, cell.variant);
+		}
+
 		private void UpdateSelection(Vector3 originDelta)
 		{
 			if (Vector3.zero == originDelta) return;
@@ -280,20 +313,32 @@ namespace ClassicTilestorm
 			}
 		}
 
-		private bool StartTileDrag(bool combine = false) => SelectTile(beginWorld = currentWorld, combine);
+		private bool StartTileDrag(bool combine = false) { lastSnap = Vector3.zero; return SelectTile(beginWorld = currentWorld, combine); }
 
 		private void UpdateTileDrag()
 		{
-			var snappedDelta = iMap.GetVariantAt(beginWorld).HasNav ?
+			var cells = selection?.OfType<Cell>() ?? Enumerable.Empty<Cell>();
+			if (!cells.Any()) return;
+
+			var snappedDelta = selection?.Any(s => s is Cell c && c.variant.HasNav) == true ?
 				Map.FullFloorVec(currentWorld) - Map.FullFloorVec(beginWorld) : Map.HalfFloorVec(currentWorld) - Map.HalfFloorVec(beginWorld);
 
-			foreach (var cell in selection?.OfType<Cell>() ?? Array.Empty<Cell>())
+			if (Vector3LexComparer.ApproximatelyEqual(snappedDelta, lastSnap))
+				return;
+
+			var delta = snappedDelta - lastSnap;
+			lastSnap = snappedDelta;
+
+			foreach (var cell in cells)
 			{
-				var alt = cell.position.y;
-				cell.position = cell.origin + snappedDelta;
-				cell.position.y = alt;
+				cell.position += delta;
 				cell.Update(this);
 			}
+
+			var gridPoints = cells.Select(c => new Vector2Int(Mathf.FloorToInt(c.position.x), Mathf.FloorToInt(c.position.z)));
+			var extents = GeomUtils.GetBoundingRect(gridPoints, iMap.ContentBounds());
+			if (!Map.ValidExtents(extents))
+				foreach (var cell in cells) cell.Revert(this);//reset selection to current map positions
 		}
 
 		private void EndTileDrag()
@@ -301,58 +346,32 @@ namespace ClassicTilestorm
 			var cells = selection?.OfType<Cell>() ?? Enumerable.Empty<Cell>();
 			if (!cells.Any()) return;
 
-			var gridPoints = cells.Select(c => new Vector2Int(Mathf.FloorToInt(c.position.x),Mathf.FloorToInt(c.position.z)));
-			var extents = GeomUtils.GetBoundingRect(gridPoints, new RectInt(0, 0, iMap.Width, iMap.Height));
+			var gridPoints = cells.Select(c => new Vector2Int(Mathf.FloorToInt(c.position.x), Mathf.FloorToInt(c.position.z)));
+			var extents = GeomUtils.GetBoundingRect(gridPoints, iMap.ContentBounds());
 
-			if (!Map.ValidExtents(extents))
-			{
-				//reset selection to current map positions
-				foreach (var cell in cells) cell.Revert(this);
-				return;
-			}
+			iMap.ResizeMap(extents);//resize the map for the selection to apply
 
-			iMap.ResizeMap(extents);//resize the map for the selection to apply - suppress cropping
-
-			var copy = cells;
-			ClearSelection();
-
-			foreach (var cell in copy)
-			{
-				if (cell.position != cell.origin)
-					iMap.RemoveTileAt(cell.origin);
-			}
-
-			foreach (var cell in copy)
-			{
-				if (cell.position == cell.origin) continue;
-				iMap.UpdateTileAt(cell.position, cell.variant);
-				cell.origin = cell.position;
-			}
-
-			//restore selection
-			selection = copy.OfType<ISelectable>().ToArray();//restore selection before bounding map
-			iMap.ResizeMap(iMap.ContentBounds());
-
-			Array.ForEach(selection ?? Array.Empty<ISelectable>(), item => item.Update(this));
-			//selection = selection?.ToArray();//restore selection state - required because we have been using 'copy'
+			foreach (var cell in cells) cell.Update(this);
 		}
 
 		private bool SelectTile(Vector3 worldPos, bool combine = false)
 		{
-			if (iMap.GetVariantAt(worldPos).IsDefaultEquivalent) return false;
 			var index = iMap.VectorToIndex(worldPos);
 			if (index == -1) return false;
-
-			// Check if this position is already in the current selection
-			var isAlreadySelected = selection?.Any(s => s is Cell c && iMap.VectorToIndex(c.origin) == index) == true;
+			var isAlreadySelected = selection?.Any(s => s is Cell c && iMap.VectorToIndex(c.position) == index) == true;
 
 			if (isAlreadySelected)
 			{
 				// Already selected → toggle behavior only when combine is true
 				if (combine)
-					selection = selection.Where(s => s is not Cell c || iMap.VectorToIndex(c.origin) != index).ToArray();
+					selection = selection.Where(s => s is not Cell c || iMap.VectorToIndex(c.position) != index).ToArray();
 				return true;
 			}
+
+			var originalMesh = iMap.GetTile(worldPos).gameObject;//already in selection and disabled
+			if (null != originalMesh && false == originalMesh.activeSelf && !combine) return false;
+
+			if (iMap.GetVariantAt(worldPos).IsDefaultEquivalent) return false;
 
 			// ───────────────────────────────────────────────
 			// Not previously selected → normal selection logic
@@ -363,8 +382,6 @@ namespace ClassicTilestorm
 			selection = selection == null ? new[] { newCell } : selection.Append(newCell).ToArray();
 			return true;
 		}
-
-		private void ClearSelection() => selection = null;
 
 		private void EvaluateAttachments()
 		{

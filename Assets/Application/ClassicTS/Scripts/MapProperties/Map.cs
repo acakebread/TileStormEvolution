@@ -908,6 +908,7 @@ namespace ClassicTilestorm
 			// No resize/crop in this version — just update the single tile
 			var def = ResourceManager.GetDefinition(variant.hash);
 			var tableIndex = this.GetOrCreateVariantIndex(variant.hash, variant.delta, variant.angle);// Find or create variant entry
+			if (tiles[index] == tableIndex) return index;//no need to change anything variant is already valid
 			tiles[index] = tableIndex;
 			var _graph = graph;
 			_graph[index].Dispose();
@@ -1022,7 +1023,6 @@ namespace ClassicTilestorm
 
 		public Vector3 ResizeMap(RectInt extents)
 		{
-			var rect = this.GetContentBounds();
 			if (RepositionAndResize(extents))
 			{
 				RecreateTiles();
@@ -1030,10 +1030,11 @@ namespace ClassicTilestorm
 				var originDelta = new Vector3(-extents.x, 0f, -extents.y);
 				OnMapEdited?.Invoke(this, true, originDelta);
 #if VERBOSE
-				Debug.Log($"ResizeMap({extents}) → {width}×{height}  | origin delta {originDeltaWorld}");
+				Debug.Log($"ResizeMap({extents}) → {width}×{height}  | origin delta {originDelta}");
 #endif
 				return originDelta;
 			}
+			//OnMapEdited?.Invoke(this, false, Vector3.zero);//no need for this
 			return Vector3.zero;
 		}
 	}

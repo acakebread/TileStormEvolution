@@ -42,6 +42,20 @@ namespace MassiveHadronLtd
 			return (a - b).sqrMagnitude <= sqrEpsilon;
 		}
 
+		public static bool ApproximatelyZero(Vector3 a, float sqrEpsilon = 0.0001f)
+		{
+			// Fast path: exact match
+			if (a == Vector3.zero) return true;
+
+			// Use Mathf.Approximately on each component first (good for angles & normalized values)
+			if (!Mathf.Approximately(a.x, 0f)) return false;
+			if (!Mathf.Approximately(a.y, 0f)) return false;
+			if (!Mathf.Approximately(a.z, 0f)) return false;
+
+			// Fallback: allow very small accumulated error
+			return a.sqrMagnitude <= sqrEpsilon;
+		}
+
 		///// <summary>
 		///// Variant with custom per-component epsilon (rarely needed).
 		///// </summary>

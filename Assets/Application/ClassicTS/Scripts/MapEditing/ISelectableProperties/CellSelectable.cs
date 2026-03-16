@@ -7,33 +7,19 @@ namespace ClassicTilestorm
 	{
 		public void Revert(EditorController controller)
 		{
-			position = origin;
+			position = origin + offset;
 			Update(controller);
 		}
 
 		public void Select(EditorController controller)
 		{
-			var originalMesh = controller.iMap.GetTile(origin).gameObject;
-			if (originalMesh != null) originalMesh.SetActive(false);
-
-			var renderPos = Map.WorldToRender(position);
-
-			highlightMesh = EditorSelectionUtil.Create(variant, renderPos);
-			EditorSelectionUtil.Update(highlightMesh, controller.iMap, position, variant, isSelectedOrDragging: true);
-
-			var rotation = Quaternion.AngleAxis(variant.angle, Vector3.up);
-			if (controller.IsMultiSelect)
-				EditorDirectionUtil.Hide();
-			else
-				EditorDirectionUtil.ShowAt(renderPos, rotation, controller._camera);
+			Update(controller);
 		}
 
 		public void Deselect(EditorController controller)
 		{
 			var originalMesh = controller.iMap.GetTile(origin).gameObject;
 			if (originalMesh != null) originalMesh.SetActive(true);
-
-			controller.iMap.UpdateTileAt(position, variant);
 
 			EditorSelectionUtil.Destroy(highlightMesh);
 			highlightMesh = null;
@@ -59,12 +45,15 @@ namespace ClassicTilestorm
 			var originalMesh = controller.iMap.GetTile(origin).gameObject;
 			if (originalMesh != null) originalMesh.SetActive(false);
 
+			var renderPos = Map.WorldToRender(position);
+			if (null == highlightMesh)
+				highlightMesh = EditorSelectionUtil.Create(variant, renderPos);
+
 			EditorSelectionUtil.Update(highlightMesh, controller.iMap, position, variant, true);
 			if (controller.IsMultiSelect)
 				EditorDirectionUtil.Hide();
 			else
 			{
-				var renderPos = Map.WorldToRender(position);
 				var rotation = Quaternion.AngleAxis(variant.angle, Vector3.up);
 				EditorDirectionUtil.ShowAt(renderPos, rotation, controller._camera);
 			}
