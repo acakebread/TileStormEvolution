@@ -305,7 +305,6 @@ namespace ClassicTilestorm
 
 		private void UpdateSelectionAltitude(float value)
 		{
-			if (0f == value) return;
 			foreach (var cell in selection?.OfType<Cell>() ?? Array.Empty<Cell>())
 			{
 				cell.position.y = value;
