@@ -908,6 +908,7 @@ namespace ClassicTilestorm
 			// No resize/crop in this version — just update the single tile
 			var def = ResourceManager.GetDefinition(variant.hash);
 			var tableIndex = this.GetOrCreateVariantIndex(variant.hash, variant.delta, variant.angle);// Find or create variant entry
+			if (tiles[index] == tableIndex) return index;//no need to change anything variant is already valid
 			tiles[index] = tableIndex;
 			var _graph = graph;
 			_graph[index].Dispose();

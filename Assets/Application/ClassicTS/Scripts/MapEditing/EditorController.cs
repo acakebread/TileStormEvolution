@@ -294,6 +294,14 @@ namespace ClassicTilestorm
 				cell.position.y = alt;
 				cell.Update(this);
 			}
+
+			var cells = selection?.OfType<Cell>() ?? Enumerable.Empty<Cell>();
+			if (!cells.Any()) return;
+
+			var gridPoints = cells.Select(c => new Vector2Int(Mathf.FloorToInt(c.position.x), Mathf.FloorToInt(c.position.z)));
+			var extents = GeomUtils.GetBoundingRect(gridPoints, new RectInt(0, 0, iMap.Width, iMap.Height));
+			if (!Map.ValidExtents(extents))
+				foreach (var cell in cells) cell.Revert(this);//reset selection to current map positions
 		}
 
 		private void EndTileDrag()
@@ -303,13 +311,6 @@ namespace ClassicTilestorm
 
 			var gridPoints = cells.Select(c => new Vector2Int(Mathf.FloorToInt(c.position.x),Mathf.FloorToInt(c.position.z)));
 			var extents = GeomUtils.GetBoundingRect(gridPoints, new RectInt(0, 0, iMap.Width, iMap.Height));
-
-			if (!Map.ValidExtents(extents))
-			{
-				//reset selection to current map positions
-				foreach (var cell in cells) cell.Revert(this);
-				return;
-			}
 
 			iMap.ResizeMap(extents);//resize the map for the selection to apply
 
@@ -323,18 +324,14 @@ namespace ClassicTilestorm
 			}
 
 			foreach (var cell in copy)
-			{
-				if (cell.position == cell.origin) continue;
 				iMap.UpdateTileAt(cell.position, cell.variant);
-				cell.origin = cell.position;
-			}
 
-			//restore selection
-			selection = copy.OfType<ISelectable>().ToArray();//restore selection before bounding map
-			iMap.ResizeMap(iMap.ContentBounds());
+			var originDelta = iMap.ResizeMap(iMap.ContentBounds());
 
-			Array.ForEach(selection, item => item.Update(this));//restore selection state - required because we have been using 'copy'
-			//selection = selection.ToArray();//restore selection state - required because we have been using 'copy'
+			foreach (var cell in copy)
+				cell.origin = cell.position = cell.position + originDelta;
+
+			selection = copy.OfType<ISelectable>().ToArray();//restore selection
 		}
 
 		private bool SelectTile(Vector3 worldPos, bool combine = false)
