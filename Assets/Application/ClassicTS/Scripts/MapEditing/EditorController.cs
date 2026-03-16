@@ -288,7 +288,7 @@ namespace ClassicTilestorm
 
 		// ─── All helper methods ──────────────────────────────────────────────
 
-		private void ClearSelection() { ApplySelection(); iMap.ResizeMap(iMap.ContentBounds()); selection = null; }
+		private void ClearSelection() { ApplySelection(); selection = null; iMap.ResizeMap(iMap.ContentBounds()); }
 
 		private void ApplySelection()
 		{
@@ -373,7 +373,10 @@ namespace ClassicTilestorm
 			{
 				// Already selected → toggle behavior only when combine is true
 				if (combine)
+				{
 					selection = selection.Where(s => s is not Cell c || iMap.VectorToIndex(c.position) != index).ToArray();
+					return false;
+				}
 				return true;
 			}
 
