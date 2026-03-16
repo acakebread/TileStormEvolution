@@ -1022,7 +1022,6 @@ namespace ClassicTilestorm
 
 		public Vector3 ResizeMap(RectInt extents)
 		{
-			var rect = this.GetContentBounds();
 			if (RepositionAndResize(extents))
 			{
 				RecreateTiles();
@@ -1030,10 +1029,11 @@ namespace ClassicTilestorm
 				var originDelta = new Vector3(-extents.x, 0f, -extents.y);
 				OnMapEdited?.Invoke(this, true, originDelta);
 #if VERBOSE
-				Debug.Log($"ResizeMap({extents}) → {width}×{height}  | origin delta {originDeltaWorld}");
+				Debug.Log($"ResizeMap({extents}) → {width}×{height}  | origin delta {originDelta}");
 #endif
 				return originDelta;
 			}
+			//OnMapEdited?.Invoke(this, false, Vector3.zero);//no need for this
 			return Vector3.zero;
 		}
 	}

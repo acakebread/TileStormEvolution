@@ -20,7 +20,7 @@ namespace ClassicTilestorm
 			get => _selection;
 			set
 			{
-				Array.ForEach(_selection ?? Array.Empty<ISelectable>(), item => item.Deselect(this));
+				Array.ForEach(_selection ?? Array.Empty<ISelectable>(), item => { item.Deselect(this); if (item is Cell cell) iMap.UpdateTileAt(cell.position, cell.variant); });
 				Array.ForEach((_selection = value is { Length: 0 } ? null : value) ?? Array.Empty<ISelectable>(),item => item.Select(this));
 			}
 		}
@@ -311,7 +311,7 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			iMap.ResizeMap(extents);//resize the map for the selection to apply - suppress cropping
+			iMap.ResizeMap(extents);//resize the map for the selection to apply
 
 			var copy = cells;
 			ClearSelection();
@@ -333,8 +333,8 @@ namespace ClassicTilestorm
 			selection = copy.OfType<ISelectable>().ToArray();//restore selection before bounding map
 			iMap.ResizeMap(iMap.ContentBounds());
 
-			Array.ForEach(selection ?? Array.Empty<ISelectable>(), item => item.Update(this));
-			//selection = selection?.ToArray();//restore selection state - required because we have been using 'copy'
+			Array.ForEach(selection, item => item.Update(this));//restore selection state - required because we have been using 'copy'
+			//selection = selection.ToArray();//restore selection state - required because we have been using 'copy'
 		}
 
 		private bool SelectTile(Vector3 worldPos, bool combine = false)
