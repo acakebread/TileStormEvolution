@@ -322,7 +322,40 @@ namespace ClassicTilestorm
 			}
 		}
 
-		private bool StartTileDrag(bool combine = false) { lastSnap = Vector3.zero; return SelectTile(beginWorld = currentWorld, combine); }
+		private bool StartTileDrag(bool combine = false) 
+		{ 
+			lastSnap = Vector3.zero;
+			beginWorld = currentWorld;
+
+			var index = iMap.VectorToIndex(currentWorld);
+			if (index == -1) return false;
+			var isAlreadySelected = selection?.Any(s => s is Cell c && iMap.VectorToIndex(c.position) == index) == true;
+
+			if (isAlreadySelected)
+			{
+				// Already selected → toggle behavior only when combine is true
+				if (combine)
+				{
+					selection = selection.Where(s => s is not Cell c || iMap.VectorToIndex(c.position) != index).ToArray();
+					return false;
+				}
+				return true;
+			}
+
+			var originalMesh = iMap.GetTile(currentWorld).gameObject;//already in selection and disabled
+			if (null != originalMesh && false == originalMesh.activeSelf && !combine) return false;
+
+			if (iMap.GetVariantAt(currentWorld).IsDefaultEquivalent) return false;
+
+			// ───────────────────────────────────────────────
+			// Not previously selected → normal selection logic
+			// ───────────────────────────────────────────────
+
+			if (!combine) ClearSelection();
+			var newCell = new Cell(iMap, currentWorld);
+			selection = selection == null ? new[] { newCell } : selection.Append(newCell).ToArray();
+			return true;
+		}
 
 		private void UpdateTileDrag()
 		{
@@ -361,38 +394,6 @@ namespace ClassicTilestorm
 			iMap.ResizeMap(extents);//resize the map for the selection to apply
 
 			foreach (var cell in cells) cell.Update(this);
-		}
-
-		private bool SelectTile(Vector3 worldPos, bool combine = false)
-		{
-			var index = iMap.VectorToIndex(worldPos);
-			if (index == -1) return false;
-			var isAlreadySelected = selection?.Any(s => s is Cell c && iMap.VectorToIndex(c.position) == index) == true;
-
-			if (isAlreadySelected)
-			{
-				// Already selected → toggle behavior only when combine is true
-				if (combine)
-				{
-					selection = selection.Where(s => s is not Cell c || iMap.VectorToIndex(c.position) != index).ToArray();
-					return false;
-				}
-				return true;
-			}
-
-			var originalMesh = iMap.GetTile(worldPos).gameObject;//already in selection and disabled
-			if (null != originalMesh && false == originalMesh.activeSelf && !combine) return false;
-
-			if (iMap.GetVariantAt(worldPos).IsDefaultEquivalent) return false;
-
-			// ───────────────────────────────────────────────
-			// Not previously selected → normal selection logic
-			// ───────────────────────────────────────────────
-
-			if (!combine) ClearSelection();
-			var newCell = new Cell(iMap, worldPos);
-			selection = selection == null ? new[] { newCell } : selection.Append(newCell).ToArray();
-			return true;
 		}
 
 		private void EvaluateAttachments()
