@@ -18,7 +18,7 @@ namespace ClassicTilestorm
 			var originalMesh = controller.iMap.GetTile(origin).gameObject;
 			if (originalMesh != null) originalMesh.SetActive(true);
 
-			controller.iMap.UpdateTileAt(position, variant);
+			//controller.iMap.UpdateTileAt(position, variant);
 
 			EditorSelectionUtil.Destroy(highlightMesh);
 			highlightMesh = null;

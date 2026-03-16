@@ -20,8 +20,9 @@ namespace ClassicTilestorm
 			get => _selection;
 			set
 			{
-				Array.ForEach(_selection ?? Array.Empty<ISelectable>(), item => { item.Deselect(this); if (item is Cell cell) iMap.UpdateTileAt(cell.position, cell.variant); });
-				Array.ForEach((_selection = value is { Length: 0 } ? null : value) ?? Array.Empty<ISelectable>(),item => item.Select(this));
+				Array.ForEach(_selection ?? Array.Empty<ISelectable>(), item => item.Deselect(this));
+				ApplySelection(_selection);
+				Array.ForEach((_selection = value is { Length: 0 } ? null : value) ?? Array.Empty<ISelectable>(), item => item.Select(this));
 			}
 		}
 
@@ -259,6 +260,37 @@ namespace ClassicTilestorm
 		}
 
 		// ─── All helper methods ──────────────────────────────────────────────
+		private void ApplySelection(ISelectable[] value)
+		{
+			Array.ForEach(value ?? Array.Empty<ISelectable>(), item =>
+			{
+				if (item is Cell cell)
+					iMap.UpdateTileAt(cell.position, cell.variant);
+			});
+
+			//var cells = value?.OfType<Cell>() ?? Enumerable.Empty<Cell>();
+			//if (cells.Any())
+			//{
+			//	var gridPoints = cells.Select(c => new Vector2Int(Mathf.FloorToInt(c.position.x), Mathf.FloorToInt(c.position.z)));
+			//	var extents = GeomUtils.GetBoundingRect(gridPoints, new RectInt(0, 0, iMap.Width, iMap.Height));
+
+			//	iMap.ResizeMap(extents);//resize the map for the selection to apply
+
+			//	cells = value?.OfType<Cell>() ?? Enumerable.Empty<Cell>();
+			//	foreach (var cell in cells)
+			//	{
+			//		if (cell.position != cell.origin)
+			//			iMap.RemoveTileAt(cell.origin);
+			//	}
+
+			//	cells = value?.OfType<Cell>() ?? Enumerable.Empty<Cell>();
+			//	foreach (var cell in cells)
+			//		iMap.UpdateTileAt(cell.position, cell.variant);
+
+			//	iMap.ResizeMap(iMap.ContentBounds());
+			//}
+		}
+
 		private void UpdateSelection(Vector3 originDelta)
 		{
 			if (Vector3.zero == originDelta) return;
@@ -309,7 +341,7 @@ namespace ClassicTilestorm
 			var cells = selection?.OfType<Cell>() ?? Enumerable.Empty<Cell>();
 			if (!cells.Any()) return;
 
-			var gridPoints = cells.Select(c => new Vector2Int(Mathf.FloorToInt(c.position.x),Mathf.FloorToInt(c.position.z)));
+			var gridPoints = cells.Select(c => new Vector2Int(Mathf.FloorToInt(c.position.x), Mathf.FloorToInt(c.position.z)));
 			var extents = GeomUtils.GetBoundingRect(gridPoints, new RectInt(0, 0, iMap.Width, iMap.Height));
 
 			iMap.ResizeMap(extents);//resize the map for the selection to apply
@@ -338,14 +370,19 @@ namespace ClassicTilestorm
 			var index = iMap.VectorToIndex(worldPos);
 			if (index == -1) return false;
 
+			//var originalMesh = iMap.GetTile(worldPos).gameObject;
+			//if (null != originalMesh && false == originalMesh.activeSelf && !combine) return false;
+
 			// Check if this position is already in the current selection
 			var isAlreadySelected = selection?.Any(s => s is Cell c && iMap.VectorToIndex(c.origin) == index) == true;
+			//var isAlreadySelected = selection?.Any(s => s is Cell c && iMap.VectorToIndex(c.position) == index) == true;
 
 			if (isAlreadySelected)
 			{
 				// Already selected → toggle behavior only when combine is true
 				if (combine)
 					selection = selection.Where(s => s is not Cell c || iMap.VectorToIndex(c.origin) != index).ToArray();
+					//selection = selection.Where(s => s is not Cell c || iMap.VectorToIndex(c.position) != index).ToArray();
 				return true;
 			}
 
@@ -360,6 +397,7 @@ namespace ClassicTilestorm
 		}
 
 		private void ClearSelection() => selection = null;
+		//private void ClearSelection() { ApplySelection(selection); selection = null; }
 
 		private void EvaluateAttachments()
 		{
