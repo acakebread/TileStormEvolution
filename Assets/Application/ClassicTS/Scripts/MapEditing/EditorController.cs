@@ -260,24 +260,18 @@ namespace ClassicTilestorm
 
 		// ─── All helper methods ──────────────────────────────────────────────
 
-		private void ClearSelection() { ApplySelection(selection); selection = null; }
+		private void ClearSelection() { ApplySelection(); iMap.ResizeMap(iMap.ContentBounds()); selection = null; }
 
-		private void ApplySelection(ISelectable[] value)
+		private void ApplySelection()
 		{
-			var cells = value?.OfType<Cell>() ?? Enumerable.Empty<Cell>();
-			if (cells.Any())
+			foreach (var cell in selection?.OfType<Cell>() ?? Array.Empty<Cell>())
 			{
-				foreach (var cell in cells)
-				{
-					if (cell.position != cell.origin)
-						iMap.RemoveTileAt(cell.origin);
-				}
-
-				foreach (var cell in cells)
-					iMap.UpdateTileAt(cell.position, cell.variant);
-
-				iMap.ResizeMap(iMap.ContentBounds());
+				if (cell.position != cell.origin)
+					iMap.RemoveTileAt(cell.origin);
 			}
+
+			foreach (var cell in selection?.OfType<Cell>() ?? Array.Empty<Cell>())
+				iMap.UpdateTileAt(cell.position, cell.variant);
 		}
 
 		private void UpdateSelection(Vector3 originDelta)
@@ -308,7 +302,7 @@ namespace ClassicTilestorm
 			var cells = selection?.OfType<Cell>() ?? Enumerable.Empty<Cell>();
 			if (!cells.Any()) return;
 
-			var snappedDelta = iMap.GetVariantAt(beginWorld).HasNav ?
+			var snappedDelta = selection?.Any(s => s is Cell c && c.variant.HasNav) == true ?
 				Map.FullFloorVec(currentWorld) - Map.FullFloorVec(beginWorld) : Map.HalfFloorVec(currentWorld) - Map.HalfFloorVec(beginWorld);
 
 			foreach (var cell in cells)
