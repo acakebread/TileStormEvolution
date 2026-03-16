@@ -20,10 +20,26 @@ namespace ClassicTilestorm
 		private ISelectable[] selection
 		{
 			get => _selection;
+
 			set
 			{
-				Array.ForEach(_selection ?? Array.Empty<ISelectable>(), item => item.Deselect(this));
-				Array.ForEach((_selection = value is { Length: 0 } ? null : value) ?? Array.Empty<ISelectable>(), item => item.Select(this));
+				var oldItems = _selection ?? Array.Empty<ISelectable>();
+				var newItems = value ?? Array.Empty<ISelectable>();
+
+				// 1. Deselect items that are no longer wanted
+				foreach (var item in oldItems.Except(newItems))
+					item.Deselect(this);
+
+				// 2. Select newly added items
+				foreach (var item in newItems.Except(oldItems))
+					item.Select(this);
+
+				// Preserve your original null-when-empty convention
+				_selection = newItems.Length == 0 ? null : newItems;
+
+				// 3. Update items that were already selected and still are
+				foreach (var item in oldItems.Intersect(newItems))
+					item.Update(this);
 			}
 		}
 
