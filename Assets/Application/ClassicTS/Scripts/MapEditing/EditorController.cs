@@ -314,24 +314,22 @@ namespace ClassicTilestorm
 
 			iMap.ResizeMap(extents);//resize the map for the selection to apply
 
-			var copy = cells;
-			ClearSelection();
-
-			foreach (var cell in copy)
+			foreach (var cell in cells)
 			{
 				if (cell.position != cell.origin)
 					iMap.RemoveTileAt(cell.origin);
 			}
 
-			foreach (var cell in copy)
+			foreach (var cell in cells)
 				iMap.UpdateTileAt(cell.position, cell.variant);
 
-			var originDelta = iMap.ResizeMap(iMap.ContentBounds());
+			iMap.ResizeMap(iMap.ContentBounds());
 
-			foreach (var cell in copy)
-				cell.origin = cell.position = cell.position + originDelta;
-
-			selection = copy.OfType<ISelectable>().ToArray();//restore selection
+			foreach (var cell in cells)
+			{
+				cell.origin = cell.position;
+				cell.Update(this);
+			}
 		}
 
 		private bool SelectTile(Vector3 worldPos, bool combine = false)
