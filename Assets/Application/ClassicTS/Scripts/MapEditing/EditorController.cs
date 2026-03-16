@@ -14,6 +14,8 @@ namespace ClassicTilestorm
 		// ─── input state ───────────────────────────────────────
 		private Vector3 beginWorld;
 		private Vector3 currentWorld => Map.ScreenToWorld(_camera, InputX.mousePosition, editAltitude);
+		private Vector3 lastSnap = Vector3.zero;
+
 		private ISelectable[] _selection = null;
 		private ISelectable[] selection
 		{
@@ -295,7 +297,7 @@ namespace ClassicTilestorm
 			}
 		}
 
-		private bool StartTileDrag(bool combine = false) => SelectTile(beginWorld = currentWorld, combine);
+		private bool StartTileDrag(bool combine = false) { lastSnap = Vector3.zero; return SelectTile(beginWorld = currentWorld, combine); }
 
 		private void UpdateTileDrag()
 		{
@@ -305,11 +307,13 @@ namespace ClassicTilestorm
 			var snappedDelta = selection?.Any(s => s is Cell c && c.variant.HasNav) == true ?
 				Map.FullFloorVec(currentWorld) - Map.FullFloorVec(beginWorld) : Map.HalfFloorVec(currentWorld) - Map.HalfFloorVec(beginWorld);
 
+			var delta = snappedDelta - lastSnap;
+			if (delta!=Vector3.zero)
+				lastSnap = snappedDelta;
+
 			foreach (var cell in cells)
 			{
-				var alt = cell.position.y;
-				cell.position = cell.origin + cell.offset + snappedDelta;
-				cell.position.y = alt;
+				cell.position += delta;
 				cell.Update(this);
 			}
 
@@ -329,11 +333,7 @@ namespace ClassicTilestorm
 
 			iMap.ResizeMap(extents);//resize the map for the selection to apply
 
-			foreach (var cell in cells)
-			{
-				cell.offset = cell.position - cell.origin;
-				cell.Update(this);
-			}
+			foreach (var cell in cells) cell.Update(this);
 		}
 
 		private bool SelectTile(Vector3 worldPos, bool combine = false)
