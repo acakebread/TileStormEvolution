@@ -320,7 +320,7 @@ namespace ClassicTilestorm
 			}
 
 			var gridPoints = cells.Select(c => new Vector2Int(Mathf.FloorToInt(c.position.x), Mathf.FloorToInt(c.position.z)));
-			var extents = GeomUtils.GetBoundingRect(gridPoints, new RectInt(0, 0, iMap.Width, iMap.Height));
+			var extents = GeomUtils.GetBoundingRect(gridPoints, iMap.ContentBounds());
 			if (!Map.ValidExtents(extents))
 				foreach (var cell in cells) cell.Revert(this);//reset selection to current map positions
 		}
@@ -331,7 +331,7 @@ namespace ClassicTilestorm
 			if (!cells.Any()) return;
 
 			var gridPoints = cells.Select(c => new Vector2Int(Mathf.FloorToInt(c.position.x), Mathf.FloorToInt(c.position.z)));
-			var extents = GeomUtils.GetBoundingRect(gridPoints, new RectInt(0, 0, iMap.Width, iMap.Height));
+			var extents = GeomUtils.GetBoundingRect(gridPoints, iMap.ContentBounds());
 
 			iMap.ResizeMap(extents);//resize the map for the selection to apply
 
