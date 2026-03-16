@@ -28,7 +28,17 @@ namespace ClassicTilestorm
 
 				// 1. Deselect items that are no longer wanted
 				foreach (var item in oldItems.Except(newItems))
+				{
+					if (item is Cell cell)
+					{
+						if (cell.position != cell.origin)
+						{
+							iMap.RemoveTileAt(cell.origin);
+							iMap.UpdateTileAt(cell.position, cell.variant);
+						}
+					}
 					item.Deselect(this);
+				}
 
 				// 2. Select newly added items
 				foreach (var item in newItems.Except(oldItems))
