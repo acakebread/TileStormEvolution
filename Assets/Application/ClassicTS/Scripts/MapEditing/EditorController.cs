@@ -21,7 +21,6 @@ namespace ClassicTilestorm
 			set
 			{
 				Array.ForEach(_selection ?? Array.Empty<ISelectable>(), item => item.Deselect(this));
-				ApplySelection(_selection);
 				Array.ForEach((_selection = value is { Length: 0 } ? null : value) ?? Array.Empty<ISelectable>(), item => item.Select(this));
 			}
 		}
@@ -260,35 +259,25 @@ namespace ClassicTilestorm
 		}
 
 		// ─── All helper methods ──────────────────────────────────────────────
+
+		private void ClearSelection() { ApplySelection(selection); selection = null; }
+
 		private void ApplySelection(ISelectable[] value)
 		{
-			Array.ForEach(value ?? Array.Empty<ISelectable>(), item =>
+			var cells = value?.OfType<Cell>() ?? Enumerable.Empty<Cell>();
+			if (cells.Any())
 			{
-				if (item is Cell cell)
+				foreach (var cell in cells)
+				{
+					if (cell.position != cell.origin)
+						iMap.RemoveTileAt(cell.origin);
+				}
+
+				foreach (var cell in cells)
 					iMap.UpdateTileAt(cell.position, cell.variant);
-			});
 
-			//var cells = value?.OfType<Cell>() ?? Enumerable.Empty<Cell>();
-			//if (cells.Any())
-			//{
-			//	var gridPoints = cells.Select(c => new Vector2Int(Mathf.FloorToInt(c.position.x), Mathf.FloorToInt(c.position.z)));
-			//	var extents = GeomUtils.GetBoundingRect(gridPoints, new RectInt(0, 0, iMap.Width, iMap.Height));
-
-			//	iMap.ResizeMap(extents);//resize the map for the selection to apply
-
-			//	cells = value?.OfType<Cell>() ?? Enumerable.Empty<Cell>();
-			//	foreach (var cell in cells)
-			//	{
-			//		if (cell.position != cell.origin)
-			//			iMap.RemoveTileAt(cell.origin);
-			//	}
-
-			//	cells = value?.OfType<Cell>() ?? Enumerable.Empty<Cell>();
-			//	foreach (var cell in cells)
-			//		iMap.UpdateTileAt(cell.position, cell.variant);
-
-			//	iMap.ResizeMap(iMap.ContentBounds());
-			//}
+				iMap.ResizeMap(iMap.ContentBounds());
+			}
 		}
 
 		private void UpdateSelection(Vector3 originDelta)
@@ -325,7 +314,7 @@ namespace ClassicTilestorm
 			foreach (var cell in cells)
 			{
 				var alt = cell.position.y;
-				cell.position = cell.origin + snappedDelta;
+				cell.position = cell.origin + cell.offset + snappedDelta;
 				cell.position.y = alt;
 				cell.Update(this);
 			}
@@ -348,43 +337,29 @@ namespace ClassicTilestorm
 
 			foreach (var cell in cells)
 			{
-				if (cell.position != cell.origin)
-					iMap.RemoveTileAt(cell.origin);
-			}
-
-			foreach (var cell in cells)
-				iMap.UpdateTileAt(cell.position, cell.variant);
-
-			iMap.ResizeMap(iMap.ContentBounds());
-
-			foreach (var cell in cells)
-			{
-				cell.origin = cell.position;
+				cell.offset = cell.position - cell.origin;
 				cell.Update(this);
 			}
 		}
 
 		private bool SelectTile(Vector3 worldPos, bool combine = false)
 		{
-			if (iMap.GetVariantAt(worldPos).IsDefaultEquivalent) return false;
 			var index = iMap.VectorToIndex(worldPos);
 			if (index == -1) return false;
-
-			//var originalMesh = iMap.GetTile(worldPos).gameObject;
-			//if (null != originalMesh && false == originalMesh.activeSelf && !combine) return false;
-
-			// Check if this position is already in the current selection
-			var isAlreadySelected = selection?.Any(s => s is Cell c && iMap.VectorToIndex(c.origin) == index) == true;
-			//var isAlreadySelected = selection?.Any(s => s is Cell c && iMap.VectorToIndex(c.position) == index) == true;
+			var isAlreadySelected = selection?.Any(s => s is Cell c && iMap.VectorToIndex(c.position) == index) == true;
 
 			if (isAlreadySelected)
 			{
 				// Already selected → toggle behavior only when combine is true
 				if (combine)
-					selection = selection.Where(s => s is not Cell c || iMap.VectorToIndex(c.origin) != index).ToArray();
-					//selection = selection.Where(s => s is not Cell c || iMap.VectorToIndex(c.position) != index).ToArray();
+					selection = selection.Where(s => s is not Cell c || iMap.VectorToIndex(c.position) != index).ToArray();
 				return true;
 			}
+
+			var originalMesh = iMap.GetTile(worldPos).gameObject;//already in selection and disabled
+			if (null != originalMesh && false == originalMesh.activeSelf && !combine) return false;
+
+			if (iMap.GetVariantAt(worldPos).IsDefaultEquivalent) return false;
 
 			// ───────────────────────────────────────────────
 			// Not previously selected → normal selection logic
@@ -395,9 +370,6 @@ namespace ClassicTilestorm
 			selection = selection == null ? new[] { newCell } : selection.Append(newCell).ToArray();
 			return true;
 		}
-
-		private void ClearSelection() => selection = null;
-		//private void ClearSelection() { ApplySelection(selection); selection = null; }
 
 		private void EvaluateAttachments()
 		{

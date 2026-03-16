@@ -7,11 +7,14 @@ namespace ClassicTilestorm
 	{
 		public void Revert(EditorController controller)
 		{
-			position = origin;
+			position = origin + offset;
 			Update(controller);
 		}
 
-		public void Select(EditorController controller) => Update(controller);
+		public void Select(EditorController controller)
+		{
+			Update(controller);
+		}
 
 		public void Deselect(EditorController controller)
 		{
