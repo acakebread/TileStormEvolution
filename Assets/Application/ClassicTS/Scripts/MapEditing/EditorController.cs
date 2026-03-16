@@ -284,19 +284,19 @@ namespace ClassicTilestorm
 
 		private void UpdateTileDrag()
 		{
+			var cells = selection?.OfType<Cell>() ?? Enumerable.Empty<Cell>();
+			if (!cells.Any()) return;
+
 			var snappedDelta = iMap.GetVariantAt(beginWorld).HasNav ?
 				Map.FullFloorVec(currentWorld) - Map.FullFloorVec(beginWorld) : Map.HalfFloorVec(currentWorld) - Map.HalfFloorVec(beginWorld);
 
-			foreach (var cell in selection?.OfType<Cell>() ?? Array.Empty<Cell>())
+			foreach (var cell in cells)
 			{
 				var alt = cell.position.y;
 				cell.position = cell.origin + snappedDelta;
 				cell.position.y = alt;
 				cell.Update(this);
 			}
-
-			var cells = selection?.OfType<Cell>() ?? Enumerable.Empty<Cell>();
-			if (!cells.Any()) return;
 
 			var gridPoints = cells.Select(c => new Vector2Int(Mathf.FloorToInt(c.position.x), Mathf.FloorToInt(c.position.z)));
 			var extents = GeomUtils.GetBoundingRect(gridPoints, new RectInt(0, 0, iMap.Width, iMap.Height));
