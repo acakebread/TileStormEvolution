@@ -307,9 +307,11 @@ namespace ClassicTilestorm
 			var snappedDelta = selection?.Any(s => s is Cell c && c.variant.HasNav) == true ?
 				Map.FullFloorVec(currentWorld) - Map.FullFloorVec(beginWorld) : Map.HalfFloorVec(currentWorld) - Map.HalfFloorVec(beginWorld);
 
+			if (Vector3LexComparer.ApproximatelyEqual(snappedDelta, lastSnap))
+				return;
+
 			var delta = snappedDelta - lastSnap;
-			if (delta!=Vector3.zero)
-				lastSnap = snappedDelta;
+			lastSnap = snappedDelta;
 
 			foreach (var cell in cells)
 			{
