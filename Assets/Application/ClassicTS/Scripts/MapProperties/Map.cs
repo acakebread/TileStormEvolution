@@ -518,7 +518,7 @@ namespace ClassicTilestorm
 		public static bool ValidExtents(RectInt extents) => extents.width <= MAP_MAX_SIZE && extents.height <= MAP_MAX_SIZE;
 
 		public int VectorToIndex(Vector3 vec) => vec.x < 0 || vec.x >= width || vec.z < 0 || vec.z >= height ? -1 : Mathf.FloorToInt(vec.z) * width + Mathf.FloorToInt(vec.x);
-		public Vector3 IndexToVector(int index) => new(index % width, 0f, index / width);
+		public Vector3 IndexToVector(int index) => width > 0 ? new(index % width, 0f, index / width) : Vector3.zero;//protection against divide by zero
 		public Vector3 TileRenderPosition(int index) => WorldToRender(IndexToVector(index));
 
 		public int CameraHitTile(Camera camera, Vector3 position) => VectorToIndex(ScreenToWorld(camera, position));
