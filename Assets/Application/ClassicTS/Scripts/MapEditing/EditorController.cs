@@ -40,7 +40,7 @@ namespace ClassicTilestorm
 				// Pass 2: all cells that should now be visible
 				foreach (var iter in leaving)
 				{
-					if (iter is Cell cell && cell.position != cell.origin)
+					if (iter is Cell cell)
 						iMap.UpdateTileAt(cell.position, cell.variant);
 				}
 
