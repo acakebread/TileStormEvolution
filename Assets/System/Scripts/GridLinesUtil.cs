@@ -35,8 +35,15 @@ namespace MassiveHadronLtd
 
 		public static void UpdateSize(int width, int height)
 		{
-			if (false == enabled || null == currentGrid || (width == currentWidth && height == currentHeight))
+			if (false == enabled || (width == currentWidth && height == currentHeight))
 				return;
+
+			if (null == currentGrid)
+			{
+				currentWidth = width;
+				currentHeight = height;
+				Show();
+			}
 
 			Update(currentGrid.transform.parent, width, height, currentGrid.transform.localPosition);
 			Show();
