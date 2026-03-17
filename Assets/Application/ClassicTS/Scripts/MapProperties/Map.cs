@@ -52,7 +52,7 @@ namespace ClassicTilestorm
 		int InsertTileAt(Vector3 pos, Variant variant);
 
 		RectInt ContentBounds();
-		Vector3 ResizeMap(RectInt extents);
+		RectInt ResizeMap(RectInt extents);
 		bool CropToContent(bool consolidate = false, Action<Vector2Int> onOriginDelta = null);
 
 		bool RemoveTileAt(Vector3 pos);//does not affect bounds
@@ -925,9 +925,12 @@ namespace ClassicTilestorm
 		{
 			var extents = GeomUtils.GetBoundingRect(new Vector2Int(Mathf.FloorToInt(pos.x), Mathf.FloorToInt(pos.z)), new RectInt(0, 0, width, height));
 			if (!ValidExtents(extents)) return -1;
-			pos += ResizeMap(extents);
+			ResizeMap(extents);
+			pos -= new Vector3(extents.x, 0f, extents.y);
 			if (-1 == UpdateTileAt(pos, variant)) return -1;
-			pos += ResizeMap(this.GetContentBounds());
+			extents = this.GetContentBounds();
+			ResizeMap(extents);
+			pos -= new Vector3(extents.x, 0f, extents.y);
 			return VectorToIndex(pos);
 		}
 
@@ -1021,21 +1024,22 @@ namespace ClassicTilestorm
 
 		public RectInt MapExtents() => new(0, 0, width - 1, height - 1);
 
-		public Vector3 ResizeMap(RectInt extents)
+		public RectInt ResizeMap(RectInt extents)
 		{
+			var w = width;
+			var h = height;
 			if (RepositionAndResize(extents))
 			{
 				RecreateTiles();
 				RefreshAttachments(GetAttachments());
-				var originDelta = new Vector3(-extents.x, 0f, -extents.y);
-				OnMapEdited?.Invoke(this, true, originDelta);
+				OnMapEdited?.Invoke(this, true, new Vector3(-extents.x, 0f, -extents.y));
 #if VERBOSE
-				Debug.Log($"ResizeMap({extents}) → {width}×{height}  | origin delta {originDelta}");
+				Debug.Log($"ResizeMap({extents}) → {width}×{height}  | origin and size delta {new RectInt(Mathf.FloorToInt(-extents.x), Mathf.FloorToInt(-extents.y), width - w, height - h)}");
 #endif
-				return originDelta;
+				return new RectInt(Mathf.FloorToInt(-extents.x), Mathf.FloorToInt(-extents.y), width - w, height - h);
 			}
 			//OnMapEdited?.Invoke(this, false, Vector3.zero);//no need for this
-			return Vector3.zero;
+			return RectInt.zero;
 		}
 	}
 }
