@@ -229,7 +229,7 @@ namespace ClassicTilestorm
 					{
 						if (InputX.GetMouseButtonUp(1))
 						{
-							ClearSelection();
+							ClearSelection(true);
 							SetMode(ControllerMode.Idle);
 						}
 					}
@@ -289,7 +289,7 @@ namespace ClassicTilestorm
 
 		// ─── All helper methods ──────────────────────────────────────────────
 
-		private void ClearSelection() { selection = null; iMap.ResizeMap(iMap.ContentBounds()); }
+		private void ClearSelection(bool crop = false) { selection = null; if (crop) iMap.ResizeMap(iMap.ContentBounds()); }
 
 		private void AdjustSelectionOrigin(Vector3 delta)
 		{
