@@ -359,6 +359,9 @@ namespace ClassicTilestorm
 			var delta = snappedDelta - lastSnap;
 			lastSnap = snappedDelta;
 
+			var oldGridPoints = cells.Select(c => new Vector2Int(Mathf.FloorToInt(c.position.x), Mathf.FloorToInt(c.position.z)));
+			var oldExtents = GeomUtils.GetBoundingRect(oldGridPoints, iMap.ContentBounds());
+
 			foreach (var cell in cells)
 			{
 				cell.position += delta;
@@ -369,8 +372,10 @@ namespace ClassicTilestorm
 			var extents = GeomUtils.GetBoundingRect(gridPoints, iMap.ContentBounds());
 			if (Map.ValidExtents(extents))
 			{
-				lastSnap += iMap.ResizeMap(extents);//resize the map for the selection to apply
-				foreach (var cell in cells) cell.Update(this);
+				iMap.ResizeMap(extents);//resize the map for the selection to apply
+				lastSnap -= new Vector3(extents.x, 0f, extents.y);
+				if(extents != oldExtents)
+					foreach (var cell in cells) cell.Update(this);
 			}
 			else
 				foreach (var cell in cells) cell.Revert(this);//reset selection to current map positions
