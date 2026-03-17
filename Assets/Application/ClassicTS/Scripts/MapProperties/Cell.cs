@@ -8,7 +8,12 @@ namespace ClassicTilestorm
 		public string type;
 		public Variant variant;
 		public Vector3 origin;
-		public Vector3 position;
+		private Vector3 offset;
+		public Vector3 position 
+		{ 
+			get => origin + offset;
+			set => offset = value - origin;
+		}
 
 		public GameObject originalMesh;
 		public GameObject highlightMesh;
@@ -20,7 +25,8 @@ namespace ClassicTilestorm
 
 			var snapped = Map.FullFloorVec(pos);
 			variant.delta.y = 0f;//clear the cached delta altitude
-			origin = position = snapped + variant.delta;
+			origin = snapped + variant.delta;
+			offset = Vector3.zero;
 		}
 
 		public string TypeName => "Cell";// Optional: give it a nice name in the side panel

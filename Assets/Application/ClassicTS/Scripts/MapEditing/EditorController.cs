@@ -114,7 +114,7 @@ namespace ClassicTilestorm
 				if (resized)
 				{
 					GridLinesUtil.UpdateSize(map.width, map.height);
-					UpdateSelection(originDelta);
+					AdjustSelectionOrigin(originDelta);
 				}
 			};
 
@@ -291,13 +291,12 @@ namespace ClassicTilestorm
 
 		private void ClearSelection() { selection = null; iMap.ResizeMap(iMap.ContentBounds()); }
 
-		private void UpdateSelection(Vector3 originDelta)
+		private void AdjustSelectionOrigin(Vector3 delta)
 		{
-			if (Vector3.zero == originDelta) return;
+			if (Vector3.zero == delta) return;
 			foreach (var cell in selection?.OfType<Cell>() ?? Array.Empty<Cell>())
 			{
-				cell.origin += originDelta;
-				cell.position += originDelta;
+				cell.origin += delta;
 				cell.Update(this);
 			}
 		}
@@ -306,7 +305,7 @@ namespace ClassicTilestorm
 		{
 			foreach (var cell in selection?.OfType<Cell>() ?? Array.Empty<Cell>())
 			{
-				cell.position.y = value;
+				cell.position = new Vector3(cell.position.x, value, cell.position.z);
 				cell.Update(this);
 			}
 		}
