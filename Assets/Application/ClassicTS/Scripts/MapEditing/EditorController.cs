@@ -48,12 +48,12 @@ namespace ClassicTilestorm
 				_selection = newItems.Length == 0 ? null : newItems;
 
 				// 2. Select newly added items
-				foreach (var item in newItems.Except(oldItems))
-					item.Select(this);
+				foreach (var iter in newItems.Except(oldItems))
+					iter.Select(this);
 
 				// 3. Update items that were already selected and still are (to activate or deactivate gizmos)
-				foreach (var item in oldItems.Intersect(newItems))
-					item.Update(this);
+				foreach (var iter in oldItems.Intersect(newItems))
+					iter.Update(this);
 			}
 		}
 
@@ -239,10 +239,7 @@ namespace ClassicTilestorm
 					if (InputX.GetMouseButton(0))
 						UpdateTileDrag();
 					if (InputX.GetMouseButtonUp(0))
-					{
-						EndTileDrag();
 						SetMode(ControllerMode.SelectTile);
-					}
 					break;
 
 				case ControllerMode.SelectAttachment:
@@ -371,21 +368,13 @@ namespace ClassicTilestorm
 
 			var gridPoints = cells.Select(c => new Vector2Int(Mathf.FloorToInt(c.position.x), Mathf.FloorToInt(c.position.z)));
 			var extents = GeomUtils.GetBoundingRect(gridPoints, iMap.ContentBounds());
-			if (!Map.ValidExtents(extents))
+			if (Map.ValidExtents(extents))
+			{
+				lastSnap += iMap.ResizeMap(extents);//resize the map for the selection to apply
+				foreach (var cell in cells) cell.Update(this);
+			}
+			else
 				foreach (var cell in cells) cell.Revert(this);//reset selection to current map positions
-		}
-
-		private void EndTileDrag()
-		{
-			var cells = selection?.OfType<Cell>() ?? Enumerable.Empty<Cell>();
-			if (!cells.Any()) return;
-
-			var gridPoints = cells.Select(c => new Vector2Int(Mathf.FloorToInt(c.position.x), Mathf.FloorToInt(c.position.z)));
-			var extents = GeomUtils.GetBoundingRect(gridPoints, iMap.ContentBounds());
-
-			iMap.ResizeMap(extents);//resize the map for the selection to apply
-
-			foreach (var cell in cells) cell.Update(this);
 		}
 
 		private void EvaluateAttachments()
