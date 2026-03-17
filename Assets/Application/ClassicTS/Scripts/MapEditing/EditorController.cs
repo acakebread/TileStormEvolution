@@ -51,9 +51,9 @@ namespace ClassicTilestorm
 				foreach (var item in newItems.Except(oldItems))
 					item.Select(this);
 
-				// 3. Update items that were already selected and still are
-				foreach (var item in oldItems.Intersect(newItems))
-					item.Update(this);
+				//// 3. Update items that were already selected and still are - no longer need to do this
+				//foreach (var item in oldItems.Intersect(newItems))
+				//	item.Update(this);
 			}
 		}
 

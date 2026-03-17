@@ -7,7 +7,7 @@ namespace ClassicTilestorm
 	{
 		public void Revert(EditorController controller)
 		{
-			position = origin + offset;
+			position = origin;
 			Update(controller);
 		}
 
