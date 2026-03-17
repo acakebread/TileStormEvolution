@@ -151,6 +151,8 @@ namespace ClassicTilestorm
 					subtractiveShadowColor: RenderSettings.subtractiveShadowColor);
 
 			yield return null;//workaround for shader problem in command buffer
+			yield return null;//workaround for shader problem in command buffer
+			yield return null;//workaround for shader problem in command buffer - seems to need three in some situations - partucularly when game starts in play mode and then scene view selected in unity editor before opening atlas
 			//renderCam.enabled = false;
 
 			filteredDefs = ResourceManager.Definitions
