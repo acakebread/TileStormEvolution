@@ -7,7 +7,12 @@ namespace ClassicTilestorm
 	{
         public void Select(EditorController controller)
         {
-            var worldPos = controller.iMap.WorldPosition(tile, Position);
+			if (controller.IsMultiSelect)
+			{
+				Deselect(controller);
+				return;
+			}
+			var worldPos = controller.iMap.WorldPosition(tile, Position);
             EditorTransformUtil.UpdateTransform(worldPos, Rotation, controller._camera);
             EditorPrimitiveUtil.UpdateCone(worldPos, Rotation, Distance, Apex);
         }
@@ -35,7 +40,12 @@ namespace ClassicTilestorm
 
         public void Update(EditorController controller)
         {
-            var worldPos = controller.iMap.WorldPosition(tile, Position);
+			if (controller.IsMultiSelect)
+			{
+				Deselect(controller);
+				return;
+			}
+			var worldPos = controller.iMap.WorldPosition(tile, Position);
             var worldRot = controller.iMap.WorldRotation(tile, Rotation);
             EditorTransformUtil.ShowAt(worldPos, worldRot, controller._camera);
             EditorPrimitiveUtil.UpdateCone(worldPos, Rotation, Distance, Apex);

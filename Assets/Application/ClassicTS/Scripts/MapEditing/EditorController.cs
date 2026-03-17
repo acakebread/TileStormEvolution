@@ -27,33 +27,33 @@ namespace ClassicTilestorm
 				var newItems = value ?? Array.Empty<ISelectable>();
 
 				// 1. Deselect items that are no longer wanted
-				var leaving = oldItems.Except(newItems).OfType<Cell>().ToList();
+				var leaving = oldItems.Except(newItems).ToList();
 
 				// Pass 1: only leaving cells → cleanup + deselect
-				foreach (var cell in leaving)
+				foreach (var iter in leaving)
 				{
-					if (cell.position != cell.origin)
+					if (iter is Cell cell && cell.position != cell.origin)
 						iMap.RemoveTileAt(cell.origin);
-					cell.Deselect(this);
+					iter.Deselect(this);
 				}
 
 				// Pass 2: all cells that should now be visible
-				foreach (var cell in leaving)
+				foreach (var iter in leaving)
 				{
-					if (cell.position != cell.origin)
+					if (iter is Cell cell && cell.position != cell.origin)
 						iMap.UpdateTileAt(cell.position, cell.variant);
 				}
 
-				// Preserve your original null-when-empty convention
+				// Preserve original null-when-empty convention
 				_selection = newItems.Length == 0 ? null : newItems;
 
 				// 2. Select newly added items
 				foreach (var item in newItems.Except(oldItems))
 					item.Select(this);
 
-				//// 3. Update items that were already selected and still are - no longer need to do this
-				//foreach (var item in oldItems.Intersect(newItems))
-				//	item.Update(this);
+				// 3. Update items that were already selected and still are (to activate or deactivate gizmos)
+				foreach (var item in oldItems.Intersect(newItems))
+					item.Update(this);
 			}
 		}
 
@@ -409,13 +409,15 @@ namespace ClassicTilestorm
 		{
 			var cursorTile = iMap.VectorToIndex(beginWorld = currentWorld);
 			if (-1 == cursorTile) return;
-			var attSelection = selection.OfType<MapAttachment>().ToArray();
-			if (attSelection?.Length >= 1 && attSelection[0].tile == cursorTile) return;
-			foreach (var att in attSelection) 
-				att.tile = cursorTile;
-			if (selection?.Length == 1)
-				selection[0].Update(this);
-			iMap.RefreshAttachments(attSelection);
+
+			if (selection?.Length >= 1 && selection[0] is MapAttachment first && first.tile == cursorTile) return;
+			foreach (var iter in selection ?? Array.Empty<ISelectable>())
+			{
+				if (iter is MapAttachment att) att.tile = cursorTile;
+				iter.Update(this);
+			}
+
+			iMap.RefreshAttachments(selection.Cast<MapAttachment>().ToArray());
 			MapUtils.RebuildMarkers(iMap, selection);
 		}
 
