@@ -287,19 +287,13 @@ namespace ClassicTilestorm
 		{
 			if (Vector3.zero == delta) return;
 			foreach (var cell in selection?.OfType<Cell>() ?? Array.Empty<Cell>())
-			{
-				cell.origin += delta;
-				cell.Update(this);
-			}
+				cell.ApplyDelta(this, delta, true);
 		}
 
 		private void UpdateSelectionAltitude(float value)
 		{
 			foreach (var cell in selection?.OfType<Cell>() ?? Array.Empty<Cell>())
-			{
-				cell.position = new Vector3(cell.position.x, value, cell.position.z);
-				cell.Update(this);
-			}
+				cell.ApplyDelta(this, Vector3.up * (value - cell.position.y));
 		}
 
 		private bool StartTileDrag(bool combine = false) 
@@ -355,10 +349,7 @@ namespace ClassicTilestorm
 			var oldExtents = GeomUtils.GetBoundingRect(oldGridPoints, iMap.ContentBounds());
 
 			foreach (var cell in cells)
-			{
-				cell.position += delta;
-				cell.Update(this);
-			}
+				cell.ApplyDelta(this, delta);
 
 			var gridPoints = cells.Select(c => new Vector2Int(Mathf.FloorToInt(c.position.x), Mathf.FloorToInt(c.position.z)));
 			var extents = GeomUtils.GetBoundingRect(gridPoints, iMap.ContentBounds());
@@ -366,7 +357,7 @@ namespace ClassicTilestorm
 			{
 				iMap.ResizeMap(extents);//resize the map for the selection to apply
 				lastSnap -= new Vector3(extents.x, 0f, extents.y);
-				if(extents != oldExtents)
+				if (extents != oldExtents)
 					foreach (var cell in cells) cell.Update(this);
 			}
 			else

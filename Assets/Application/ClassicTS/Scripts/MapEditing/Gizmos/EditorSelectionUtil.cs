@@ -18,9 +18,7 @@ namespace ClassicTilestorm
 			s_selectedMaterial = MaterialUtils.CreateAlwaysOnTopUnlitMaterial(new Color(1.4f, 1.25f, 0.85f, 0.6f));
 
 			if (s_validMaterial == null || s_invalidMaterial == null || s_selectedMaterial == null)
-			{
 				Debug.LogError("EditorSelectionUtil: Failed to create ghost materials.");
-			}
 		}
 
 		/// <summary>
@@ -67,9 +65,7 @@ namespace ClassicTilestorm
 			if (highlightMesh == null) return;
 			EnsureMaterials();
 
-			highlightMesh.transform.SetPositionAndRotation(
-				renderPosition,
-				Quaternion.Euler(0f, variant.angle, 0f));
+			highlightMesh.transform.SetPositionAndRotation(renderPosition, Quaternion.Euler(0f, variant.angle, 0f));
 
 			Material mat = outOfBounds
 				? s_invalidMaterial
@@ -83,8 +79,8 @@ namespace ClassicTilestorm
 		/// Convenience: full update using IMapEdit + world position
 		/// </summary>
 		public static void Update(
-			GameObject highlightMesh,
 			IMapEdit map,
+			GameObject highlightMesh,
 			Vector3 worldPos,
 			Variant variant,
 			bool isSelectedOrDragging = true)

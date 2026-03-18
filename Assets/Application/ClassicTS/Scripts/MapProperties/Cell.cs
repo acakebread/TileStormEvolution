@@ -30,5 +30,14 @@ namespace ClassicTilestorm
 		}
 
 		public string TypeName => "Cell";// Optional: give it a nice name in the side panel
+
+		public void ApplyDelta(EditorController controller, Vector3 delta, bool global = false)
+		{
+			if (global)
+				origin += delta;
+			else
+				position += delta;
+			Update(controller);
+		}
 	}
 }
