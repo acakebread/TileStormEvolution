@@ -402,7 +402,7 @@ namespace ClassicTilestorm
 			if (selection?.Length > 0)
 			{
 				selection = null;
-				MapUtils.RebuildMarkers(iMap, selection);
+				EditorMarkerUtil.ClearMapMarkers();
 				return false;
 			}
 			SelectAttachments(GetAttachmentsAsSelectables(tileIndex: iMap.VectorToIndex(beginWorld = currentWorld)));

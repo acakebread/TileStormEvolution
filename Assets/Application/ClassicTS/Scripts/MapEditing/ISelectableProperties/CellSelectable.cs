@@ -36,7 +36,7 @@ namespace ClassicTilestorm
 				variant.angle = newWorldRot.eulerAngles.y;
 			}
 
-			EditorSelectionUtil.Update(highlightMesh, controller.iMap, position, variant, true);
+			EditorSelectionUtil.Update(controller.iMap, highlightMesh, position, variant, true);
 			return true;
 		}
 
@@ -49,7 +49,7 @@ namespace ClassicTilestorm
 			if (null == highlightMesh)
 				highlightMesh = EditorSelectionUtil.Create(variant, renderPos);
 
-			EditorSelectionUtil.Update(highlightMesh, controller.iMap, position, variant, true);
+			EditorSelectionUtil.Update(controller.iMap, highlightMesh, position, variant, true);
 			if (controller.IsMultiSelect)
 				EditorDirectionUtil.Hide();
 			else
