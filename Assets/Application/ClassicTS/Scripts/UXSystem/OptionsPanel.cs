@@ -1,4 +1,6 @@
-﻿using TMPro;
+﻿using MassiveHadronLtd;
+using System;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -22,6 +24,9 @@ namespace ClassicTilestorm
 		[SerializeField] private TMP_Text detailLevelLabel;
 
 		[SerializeField] private Toggle remapAssetsToggle;
+
+		public static bool gridlinesEnabled => PlayerPrefsX.GetBool("EditorGridLines", true);
+		public static Action<bool> onGridlinesToggle;
 
 		protected override void Awake()
 		{
@@ -66,8 +71,8 @@ namespace ClassicTilestorm
 			{
 				if (null != gridLinesToggle)
 				{
-					gridLinesToggle.isOn = MassiveHadronLtd.GridLinesUtil.Enabled;
-					gridLinesToggle.onValueChanged.AddListener(isOn => { MassiveHadronLtd.GridLinesUtil.Enabled = isOn; if (editorController.isActiveAndEnabled) { if (isOn) MassiveHadronLtd.GridLinesUtil.Show(); else MassiveHadronLtd.GridLinesUtil.Hide(); } });
+					gridLinesToggle.isOn = PlayerPrefsX.GetBool("EditorGridLines", true);
+					gridLinesToggle.onValueChanged.AddListener(value => { PlayerPrefsX.SetBool("EditorGridLines", value); onGridlinesToggle?.Invoke(value); });
 				}
 
 				// ─────────────── New detail level slider logic ───────────────

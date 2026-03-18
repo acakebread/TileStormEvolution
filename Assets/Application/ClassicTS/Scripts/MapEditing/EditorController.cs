@@ -92,17 +92,18 @@ namespace ClassicTilestorm
 		{
 			editAltitude = value;
 			UpdateSelectionAltitude(value);
-			GridLinesUtil.Update(transform, iMap?.Width ?? 32, iMap?.Height ?? 32, null != iMap ? iMap.TileRenderPosition(0) + new Vector3(-0.5f, editAltitude, -0.5f) : Vector3.zero);
-			GridLinesUtil.Show();
+			GridLinesUtil.UpdateOffset(Map.WorldToRender(Vector3.zero) + new Vector3(-0.5f, editAltitude, -0.5f));
 		}
 
 		// ─── Unity / lifecycle ───────────────────────────────────────────────
 		public void Awake()
 		{
-			//GridLinesUtil.Initialise(transform, Vector3.zero);//not needed for now but plan to refactor GridLinesUtil
+			GridLinesUtil.Initialise(transform, offset : Map.WorldToRender(Vector3.zero) + new Vector3(-0.5f, editAltitude, -0.5f));
 			TryRegisterEditorScreenUI(UIController.Instance?.editorScreenUI?.GetComponent<EditorScreenUI>());
 			UIController.OnEditorScreenUIReady += TryRegisterEditorScreenUI;
 			void TryRegisterEditorScreenUI(EditorScreenUI editorScreenUI) => editorScreenUI?.Register(this);
+
+			OptionsPanel.onGridlinesToggle += value => GridLinesUtil.Enabled = value & isActiveAndEnabled;
 		}
 
 		public void Initialise(IMapEdit iMap)
@@ -118,9 +119,9 @@ namespace ClassicTilestorm
 				}
 			};
 
-			GridLinesUtil.Update(transform, iMap?.Width ?? 32, iMap?.Height ?? 32, null != iMap ? iMap.TileRenderPosition(0) + new Vector3(-0.5f, editAltitude, -0.5f) : Vector3.zero);
+			GridLinesUtil.UpdateSize(iMap?.Width ?? 32, iMap?.Height ?? 32);
+			GridLinesUtil.Enabled = OptionsPanel.gridlinesEnabled & isActiveAndEnabled;
 			if (!isActiveAndEnabled) return;
-			GridLinesUtil.Show();
 			ClearSelection();
 			EditorAttachmentUI.ClearPending();
 			EditorMarkerUtil.ClearMapMarkers();
@@ -137,7 +138,7 @@ namespace ClassicTilestorm
 			}
 
 			if (null != UIController.Instance?.editorScreenUI) UIController.Instance.editorScreenUI.SetActive(true);
-			GridLinesUtil.Show();
+			GridLinesUtil.Enabled = OptionsPanel.gridlinesEnabled & isActiveAndEnabled;
 			SetMode(ControllerMode.Idle);
 		}
 
@@ -145,7 +146,7 @@ namespace ClassicTilestorm
 		{
 			if (null != UIController.Instance?.editorScreenUI) UIController.Instance.editorScreenUI.SetActive(false);
 			ClearSelection();
-			GridLinesUtil.Hide();
+			GridLinesUtil.Enabled = false;
 			EditorAttachmentUI.ClearPending();
 			EditorMarkerUtil.ClearMapMarkers();
 		}

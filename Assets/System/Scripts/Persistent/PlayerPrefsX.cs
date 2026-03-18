@@ -17,5 +17,7 @@ namespace MassiveHadronLtd
 		public static void SetString(string name, string value) => PlayerPrefs.SetString(name, value);
 		public static void SetString(string name, string value, bool save = false) { SetString(name, value); Save(save); }
 		public static string GetString(string name, string defaultValue = "") => PlayerPrefs.GetString(name, defaultValue);
+
+		public static bool HasKey(string value) => PlayerPrefs.HasKey(value);
 	}
 }

@@ -12,50 +12,55 @@ namespace MassiveHadronLtd
 		private const int Extension = 16;
 
 		private static bool enabled = true;
-		public static bool Enabled { get => enabled; set => enabled = value; }
+		public static bool Enabled 
+		{ 
+			get => enabled;
+			set
+			{
+				var changed = enabled != value;
+				enabled = value;
+				if (changed || (null == currentGrid && value))
+				{
+					if (value)
+						Show();
+					else
+						Hide();
+				}
+			}
+		}
 
-		public static void Initialise(Transform parent, Vector3 offset = default, int width = -1, int height = -1)
+		public static void Initialise(Transform parent, int width = -1, int height = -1, Vector3 offset = default)
 		{
 			currentParent = parent;
 			currentOffset = offset;
 		}
 
-		public static void Update(Transform parent, int width, int height, Vector3 offset = default)
+		public static void Update(int width = 32, int height = 32, Vector3 offset = default)
 		{
-			if (currentGrid != null && currentWidth == width && currentHeight == height && currentParent == parent && currentOffset == offset)
+			if (currentWidth == width && currentHeight == height && currentOffset == offset)
 				return;
 
+			var parent = currentParent;
 			Destroy();
 			//cache settings ready for reinstantiation
+			currentParent = parent;
 			currentWidth = width;
 			currentHeight = height;
-			currentParent = parent;
 			currentOffset = offset;
+			Show();
 		}
 
 		public static void UpdateSize(int width, int height)
 		{
-			if (false == enabled || (width == currentWidth && height == currentHeight))
-				return;
-
-			if (null == currentGrid)
-			{
-				currentWidth = width;
-				currentHeight = height;
-				Show();
-			}
-
-			Update(currentGrid.transform.parent, width, height, currentGrid.transform.localPosition);
-			Show();
+			if (width != currentWidth || height != currentHeight)
+				Update(width, height, currentOffset);
 		}
 
-		public static void SetVisible(bool visible)
+		public static void UpdateOffset(Vector3 value)
 		{
-			if (currentGrid != null)
-				currentGrid.SetActive(visible);
+			if (value != currentOffset)
+				Update(currentWidth, currentHeight, value);
 		}
-
-		public static bool IsVisible => currentGrid != null && currentGrid.activeSelf;
 
 		public static void Destroy()
 		{
@@ -74,7 +79,7 @@ namespace MassiveHadronLtd
 			currentParent = null;
 		}
 
-		public static void Show()
+		private static void Show()
 		{
 			if (false == enabled || currentParent == null || currentWidth <= 0 || currentHeight <= 0)
 				return;
@@ -89,6 +94,15 @@ namespace MassiveHadronLtd
 			if (null != currentGrid)
 				currentGrid.SetActive(true);
 		}
-		public static void Hide() => currentGrid?.SetActive(false);
+		private static void Hide() => currentGrid?.SetActive(false);
+
+
+		//public static void SetVisible(bool visible)
+		//{
+		//	if (currentGrid != null)
+		//		currentGrid.SetActive(visible);
+		//}
+
+		//public static bool IsVisible => currentGrid != null && currentGrid.activeSelf;
 	}
 }
