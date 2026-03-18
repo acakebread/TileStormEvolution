@@ -92,7 +92,7 @@ namespace ClassicTilestorm
 		{
 			editAltitude = value;
 			UpdateSelectionAltitude(value);
-			GridLinesUtil.UpdateOffset(Map.WorldToRender(Vector3.zero) + new Vector3(-0.5f, editAltitude, -0.5f));
+			GridLinesUtil.UpdateOffset(Map.ORIGIN + Vector3.up * editAltitude);
 		}
 
 		// ─── Unity / lifecycle ───────────────────────────────────────────────
@@ -102,7 +102,7 @@ namespace ClassicTilestorm
 			UIController.OnEditorScreenUIReady += TryRegisterEditorScreenUI;
 			void TryRegisterEditorScreenUI(EditorScreenUI editorScreenUI) => editorScreenUI?.Register(this);
 
-			GridLinesUtil.Initialise(transform, offset : Map.WorldToRender(Vector3.zero) + new Vector3(-0.5f, editAltitude, -0.5f));
+			GridLinesUtil.Initialise(transform, offset : Map.ORIGIN + Vector3.up * editAltitude);
 			OptionsPanel.onGridlinesToggle += value => GridLinesUtil.Enabled = value & isActiveAndEnabled;
 		}
 

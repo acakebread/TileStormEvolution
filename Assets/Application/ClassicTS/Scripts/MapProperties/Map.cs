@@ -468,12 +468,14 @@ namespace ClassicTilestorm
 
 		private static readonly Vector3 HALF_TILE = new(0.5f, 0f, 0.5f);
 #if UNITY_EDITOR
-		public static Vector3 WorldToRender(Vector3 value) => value + HALF_TILE;
-		public static Vector3 RenderToWorld(Vector3 value) => value - HALF_TILE;
+		private static readonly Vector3 OFFSET = HALF_TILE;
 #else
-		public static Vector3 WorldToRender(Vector3 value) => value;
-		public static Vector3 RenderToWorld(Vector3 value) => value;
+		private static readonly Vector3 OFFSET = Vector3.zero;
 #endif
+		public static readonly Vector3 ORIGIN = OFFSET - HALF_TILE;
+
+		public static Vector3 WorldToRender(Vector3 value) => value + OFFSET;
+		public static Vector3 RenderToWorld(Vector3 value) => value - OFFSET;
 
 		public static bool RayToWorld(Ray ray, out Vector3 point)
 		{
@@ -481,7 +483,7 @@ namespace ClassicTilestorm
 			var plane = new Plane(Vector3.up, Vector3.zero);
 			if (plane.Raycast(ray, out float d))
 			{
-				point = RenderToWorld(ray.GetPoint(d) + HALF_TILE);
+				point = ray.GetPoint(d) - ORIGIN;
 				return true;
 			}
 			return false;
@@ -492,7 +494,7 @@ namespace ClassicTilestorm
 			point = Vector3.zero;
 			if (plane.Raycast(ray, out float d))
 			{
-				point = RenderToWorld(ray.GetPoint(d) + HALF_TILE);
+				point = ray.GetPoint(d) - ORIGIN;
 				return true;
 			}
 			return false;
