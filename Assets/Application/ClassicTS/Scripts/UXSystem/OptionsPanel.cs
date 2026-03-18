@@ -25,7 +25,7 @@ namespace ClassicTilestorm
 
 		[SerializeField] private Toggle remapAssetsToggle;
 
-		public static bool gridlinesEnabled => PlayerPrefsX.GetBool("EditorGridLines", true);
+		//public static bool gridlinesEnabled => ApplicationSettings.ShowEditorGrid;
 		public static Action<bool> onGridlinesToggle;
 
 		protected override void Awake()
@@ -71,8 +71,8 @@ namespace ClassicTilestorm
 			{
 				if (null != gridLinesToggle)
 				{
-					gridLinesToggle.isOn = PlayerPrefsX.GetBool("EditorGridLines", true);
-					gridLinesToggle.onValueChanged.AddListener(value => { PlayerPrefsX.SetBool("EditorGridLines", value); onGridlinesToggle?.Invoke(value); });
+					gridLinesToggle.isOn = ApplicationSettings.ShowEditorGrid;
+					gridLinesToggle.onValueChanged.AddListener(value => { ApplicationSettings.ShowEditorGrid = value; onGridlinesToggle?.Invoke(value); });
 				}
 
 				// ─────────────── New detail level slider logic ───────────────

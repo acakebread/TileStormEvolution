@@ -56,6 +56,21 @@ namespace ClassicTilestorm
 		[SerializeField] private bool difficulty = false;
 		public static bool Difficulty => instance.difficulty;
 
+		[Header("editor grid enable")]
+		[SerializeField] private bool showEditorGrid = true;
+		public static bool ShowEditorGrid
+		{
+			get => PlayerPrefsX.GetBool("ShowEditorGrid", instance.showEditorGrid);
+			set
+			{
+				if (instance != null)
+				{
+					instance.showEditorGrid = value;
+					PlayerPrefsX.SetBool("ShowEditorGrid", value, true);
+				}
+			}
+		}
+
 		[Header("hidden tiles")]
 		[SerializeField] private bool showHiddenTiles = false;
 		public static bool ShowHiddenTiles => instance.showHiddenTiles;
@@ -107,7 +122,7 @@ namespace ClassicTilestorm
 		// ─────── Editor button helper (only thing that needs the path) ───────
 #if UNITY_EDITOR
 		[CustomEditor(typeof(ApplicationSettings))]
-		private class PreviewSettingsEditor : UnityEditor.Editor
+		private class PreviewSettingsEditor : Editor
 		{
 			public override void OnInspectorGUI()
 			{
