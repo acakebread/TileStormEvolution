@@ -129,12 +129,7 @@ namespace ClassicTilestorm
 
 		private void OnEnable()
 		{
-			var mainCameraController = GetComponent<MainCameraController>();
-			if (null != mainCameraController)
-			{
-				mainCameraController.SetCameraSystem(CameraModeRegistry.Editor, false);
-				mainCameraController.UpdateGestureControllerState();
-			}
+			GetComponent<MainCameraController>()?.SelectCameraSystem(CameraModeRegistry.Editor, false);
 
 			if (null != UIController.Instance?.editorScreenUI) UIController.Instance.editorScreenUI.SetActive(true);
 			GridLinesUtil.Enabled = OptionsPanel.gridlinesEnabled & isActiveAndEnabled;

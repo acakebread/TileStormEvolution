@@ -29,6 +29,12 @@ namespace ClassicTilestorm
 
 		private CameraBase cameraSystem => activeSystem;
 
+		public void SelectCameraSystem(string system, bool background = false)
+		{
+			SetCameraSystem(system, background);
+			UpdateGestureControllerState();
+		}
+
 		public string PreviewModeToCameraMode(ApplicationMode mode) => mode switch
 		{
 			ApplicationMode.Editor => CameraModeRegistry.Editor,
