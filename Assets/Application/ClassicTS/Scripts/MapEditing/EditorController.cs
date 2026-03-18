@@ -98,11 +98,11 @@ namespace ClassicTilestorm
 		// ─── Unity / lifecycle ───────────────────────────────────────────────
 		public void Awake()
 		{
-			GridLinesUtil.Initialise(transform, offset : Map.WorldToRender(Vector3.zero) + new Vector3(-0.5f, editAltitude, -0.5f));
 			TryRegisterEditorScreenUI(UIController.Instance?.editorScreenUI?.GetComponent<EditorScreenUI>());
 			UIController.OnEditorScreenUIReady += TryRegisterEditorScreenUI;
 			void TryRegisterEditorScreenUI(EditorScreenUI editorScreenUI) => editorScreenUI?.Register(this);
 
+			GridLinesUtil.Initialise(transform, offset : Map.WorldToRender(Vector3.zero) + new Vector3(-0.5f, editAltitude, -0.5f));
 			OptionsPanel.onGridlinesToggle += value => GridLinesUtil.Enabled = value & isActiveAndEnabled;
 		}
 
@@ -120,7 +120,6 @@ namespace ClassicTilestorm
 			};
 
 			GridLinesUtil.UpdateSize(iMap?.Width ?? 32, iMap?.Height ?? 32);
-			GridLinesUtil.Enabled = OptionsPanel.gridlinesEnabled & isActiveAndEnabled;
 			if (!isActiveAndEnabled) return;
 			ClearSelection();
 			EditorAttachmentUI.ClearPending();
