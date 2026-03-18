@@ -98,10 +98,13 @@ namespace ClassicTilestorm
 		// ─── Unity / lifecycle ───────────────────────────────────────────────
 		public void Awake()
 		{
-			UIController.RegisterForEditorScreenUI(editorUI => editorUI?.Register(this));
+			//UIController.RegisterForEditorScreenUI(editorUI => editorUI?.Register(this));
+			ReadyCallbackRegistry.Register(ui => ui?.Register(this), () => UIController.Instance?.editorScreenUI?.GetComponent<EditorScreenUI>(), this);// ← dies with this MonoBehaviour
 			GridLinesUtil.Initialise(transform, offset : Map.ORIGIN + Vector3.up * editAltitude);
 			OptionsPanel.onGridlinesToggle += value => GridLinesUtil.Enabled = value & isActiveAndEnabled;
 		}
+
+		//public void OnDestroy() => ReadyCallbackRegistry.Unregister<EditorScreenUI>(OnEditorUIReady); // Or named method style (easier to unregister later) private void OnEditorUIReady(EditorScreenUI ui) => ui?.Register(this);
 
 		public void Initialise(IMapEdit iMap)
 		{

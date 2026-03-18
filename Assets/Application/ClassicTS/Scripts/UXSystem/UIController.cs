@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using System;
 using System.Collections.Generic;
+using MassiveHadronLtd;
 
 namespace ClassicTilestorm
 {
@@ -16,29 +17,6 @@ namespace ClassicTilestorm
 
 		[SerializeField] private GameObject editorScreenUIPrefab;
 		[HideInInspector] public GameObject editorScreenUI;
-
-		public static event Action<EditorScreenUI> OnEditorScreenUIReady;
-		public static void RegisterForEditorScreenUI(Action<EditorScreenUI> callback)
-		{
-			if (Instance == null)
-			{
-				Debug.LogWarning("UIController not ready yet – registration ignored.");
-				return;
-			}
-
-			// Immediate case
-			if (Instance.editorScreenUI != null)
-			{
-				var component = Instance.editorScreenUI.GetComponent<EditorScreenUI>();
-				if (component != null)
-				{
-					callback.Invoke(component);
-				}
-			}
-
-			// Future case (even if invoked immediately, this is harmless)
-			OnEditorScreenUIReady += callback;
-		}
 
 		private readonly Dictionary<Type, GameObject> prefabByType = new();
 
@@ -85,7 +63,8 @@ namespace ClassicTilestorm
 			editorScreenUI = Instantiate(editorScreenUIPrefab, mainCanvas.transform);
 			editorScreenUI.SetActive(false);
 
-			OnEditorScreenUIReady?.Invoke(editorScreenUI.GetComponent<EditorScreenUI>());
+			var editorComp = editorScreenUI.GetComponent<EditorScreenUI>();
+			if (null != editorComp) ReadyCallbackRegistry.Raise(editorComp);// This broadcasts to all who registered for EditorScreenUI
 		}
 
 		// ── Public API ────────────────────────────────────────────────────────
