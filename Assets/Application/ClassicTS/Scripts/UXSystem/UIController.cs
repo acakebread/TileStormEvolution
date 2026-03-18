@@ -12,15 +12,33 @@ namespace ClassicTilestorm
 		[SerializeField] private Canvas mainCanvas; // Drag your Screen Space - Overlay canvas here
 
 		[Header("Panel Prefabs – drag prefabs here (must have UIPanel component)")]
-		[SerializeField] private List<GameObject> panelPrefabs = new List<GameObject>();
+		[SerializeField] private List<GameObject> panelPrefabs = new();
 
 		[SerializeField] private GameObject editorScreenUIPrefab;
 		[HideInInspector] public GameObject editorScreenUI;
-		public static event Action<EditorScreenUI> OnEditorScreenUIReady;
 
-		//[SerializeField] private GameObject tileSelectorPrefab;
-		//[HideInInspector] public GameObject tileSelector;
-		//public static event Action<TileSelector> OnTileSelectorReady;
+		public static event Action<EditorScreenUI> OnEditorScreenUIReady;
+		public static void RegisterForEditorScreenUI(Action<EditorScreenUI> callback)
+		{
+			if (Instance == null)
+			{
+				Debug.LogWarning("UIController not ready yet – registration ignored.");
+				return;
+			}
+
+			// Immediate case
+			if (Instance.editorScreenUI != null)
+			{
+				var component = Instance.editorScreenUI.GetComponent<EditorScreenUI>();
+				if (component != null)
+				{
+					callback.Invoke(component);
+				}
+			}
+
+			// Future case (even if invoked immediately, this is harmless)
+			OnEditorScreenUIReady += callback;
+		}
 
 		private readonly Dictionary<Type, GameObject> prefabByType = new();
 
@@ -66,11 +84,8 @@ namespace ClassicTilestorm
 
 			editorScreenUI = Instantiate(editorScreenUIPrefab, mainCanvas.transform);
 			editorScreenUI.SetActive(false);
-			OnEditorScreenUIReady?.Invoke(editorScreenUI.GetComponent<EditorScreenUI>());
 
-			//tileSelector = Instantiate(tileSelectorPrefab, mainCanvas.transform);
-			//tileSelector.SetActive(false);
-			//OnTileSelectorReady?.Invoke(tileSelector.GetComponent<TileSelector>());
+			OnEditorScreenUIReady?.Invoke(editorScreenUI.GetComponent<EditorScreenUI>());
 		}
 
 		// ── Public API ────────────────────────────────────────────────────────
