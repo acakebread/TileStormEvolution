@@ -6,7 +6,7 @@ using MassiveHadronLtd;
 
 namespace ClassicTilestorm
 {
-	public class EditorController : MonoBehaviour, IEditorScreenUI, ITileSelector, IReadyHandler
+	public class EditorController : MonoBehaviour, IEditorScreenUI, ITileSelector
 	{
 		public IMapEdit iMap;
 		public Camera _camera => GetComponent<MainCameraController>()?.activeSystem?.camera;
@@ -95,29 +95,11 @@ namespace ClassicTilestorm
 			GridLinesUtil.UpdateOffset(Map.ORIGIN + Vector3.up * editAltitude);
 		}
 
-		public void OnReady(object target)
-		{
-			switch (target)
-			{
-				case EditorScreenUI editorUI:
-					editorUI.Receiver = this;
-					break;
-
-				case TileSelector selector:
-					selector.Receiver = this;
-					break;
-
-				default:
-					Debug.LogWarning($"EditorController received unknown ready type: {target?.GetType().Name}");
-					break;
-			}
-		}
-
 		// ─── Unity / lifecycle ───────────────────────────────────────────────
 		private void Awake()
 		{
-			ReadyCallbackRegistry.RegisterFor<EditorScreenUI>(this);
-			ReadyCallbackRegistry.RegisterFor<TileSelector>(this);
+			ReadyCallbackRegistry.RegisterFor<EditorScreenUI>(ui => ui.Receiver = this);
+			ReadyCallbackRegistry.RegisterFor<TileSelector>(sel => sel.Receiver = this);
 			GridLinesUtil.Initialise(transform, offset : Map.ORIGIN + Vector3.up * editAltitude);
 			OptionsPanel.onGridlinesToggle += value => GridLinesUtil.Enabled = value & isActiveAndEnabled;
 		}

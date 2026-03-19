@@ -5,58 +5,60 @@ namespace MassiveHadronLtd
 {
 	public static class ReadyCallbackRegistry
 	{
-		private static readonly Dictionary<Type, object> _currentInstances = new(); // new!
-		private static readonly Dictionary<Type, List<WeakReference>> _waitList = new();
+		private static readonly Dictionary<Type, object> _currentInstances = new();
 
-		public static void RegisterFor<T>(IReadyHandler handler) where T : class
+		// Store List<Action<T>> strongly — simple, reliable
+		private static readonly Dictionary<Type, List<Delegate>> _waitList = new();
+
+		public static void RegisterFor<T>(Action<T> onReady) where T : class
 		{
-			if (handler == null) return;
+			if (onReady == null) return;
 
 			var type = typeof(T);
 
-			// Immediate call if instance already exists
+			// Immediate
 			if (_currentInstances.TryGetValue(type, out var existing) && existing is T instance)
 			{
-				handler.OnReady(instance);
-				return; // optional: return early if you don't want persistent
+				onReady(instance);
+				return;
 			}
 
-			// Subscribe for future Raise
 			if (!_waitList.TryGetValue(type, out var list))
 			{
-				list = new List<WeakReference>();
+				list = new List<Delegate>();
 				_waitList[type] = list;
 			}
 
-			list.Add(new WeakReference(handler));
+			list.Add(onReady);
 		}
 
-		public static void Raise<T>(T instance) where T : class
+		public static void Raise<T>(T instance, bool clearAfter = true) where T : class
 		{
 			if (instance == null) return;
 
 			var type = typeof(T);
-
-			// Remember current instance for late joiners
 			_currentInstances[type] = instance;
 
 			if (!_waitList.TryGetValue(type, out var list) || list.Count == 0)
 				return;
 
-			for (int i = list.Count - 1; i >= 0; i--)
+			foreach (var del in list)
 			{
-				if (list[i].Target is IReadyHandler handler)
+				if (del is Action<T> action)
 				{
-					handler.OnReady(instance);
-				}
-				else
-				{
-					list.RemoveAt(i);
+					try
+					{
+						action(instance);
+					}
+					catch (Exception ex)
+					{
+						UnityEngine.Debug.LogException(ex);
+					}
 				}
 			}
 
-			// Do NOT remove the list anymore — keep for late registrations
-			// _waitList.Remove(type); ← DELETE THIS LINE
+			if (clearAfter)
+				_waitList.Remove(type);
 		}
 
 		public static void Clear<T>() where T : class
@@ -64,10 +66,5 @@ namespace MassiveHadronLtd
 			_waitList.Remove(typeof(T));
 			_currentInstances.Remove(typeof(T));
 		}
-	}
-
-	public interface IReadyHandler
-	{
-		void OnReady(object target);
 	}
 }

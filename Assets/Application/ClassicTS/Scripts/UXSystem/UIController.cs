@@ -1,7 +1,6 @@
 ﻿using UnityEngine;
 using System;
 using System.Collections.Generic;
-using MassiveHadronLtd;
 
 namespace ClassicTilestorm
 {
@@ -62,9 +61,6 @@ namespace ClassicTilestorm
 
 			editorScreenUI = Instantiate(editorScreenUIPrefab, mainCanvas.transform);
 			editorScreenUI.SetActive(false);
-
-			var editorComp = editorScreenUI.GetComponent<EditorScreenUI>();
-			if (null != editorComp) ReadyCallbackRegistry.Raise(editorComp);// This broadcasts to all who registered for EditorScreenUI
 		}
 
 		// ── Public API ────────────────────────────────────────────────────────
