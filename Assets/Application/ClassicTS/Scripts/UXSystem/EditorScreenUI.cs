@@ -33,9 +33,12 @@ namespace ClassicTilestorm
 		public void Awake()
 		{
 			if (null != tileSelector) tileSelector.Register(this);// we don't really need the register system in TileSelector any more but leave for now
+
 			else Debug.LogError("tileSelector not set in inspector");
 
 			altitudeSlider?.onValueChanged.AddListener((value) => _handler?.OnAltitudeChanged(value * 0.2f));
+
+			ReadyCallbackRegistry.Raise(this);
 		}
 
 		public bool CanOpenPalette() => _handler == null || _handler.CanOpenPalette();

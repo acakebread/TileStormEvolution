@@ -6,7 +6,7 @@ using MassiveHadronLtd;
 
 namespace ClassicTilestorm
 {
-	public class EditorController : MonoBehaviour, IEditorScreenUI
+	public class EditorController : MonoBehaviour, IEditorScreenUI, IReadyHandler
 	{
 		public IMapEdit iMap;
 		public Camera _camera => GetComponent<MainCameraController>()?.activeSystem?.camera;
@@ -59,6 +59,7 @@ namespace ClassicTilestorm
 
 		public bool IsMultiSelect => selection?.Length > 1;
 		public bool HasSelection => selection?.Length > 0;
+		private Cell[] selectedCells => selection?.OfType<Cell>().ToArray() ?? Array.Empty<Cell>();
 
 		private float editAltitude = 0f;
 		private Variant atlasVariant = default;
@@ -75,8 +76,7 @@ namespace ClassicTilestorm
 			DragAttachment
 		}
 
-		private ISelectable[] GetAttachmentsAsSelectables(int? tileIndex = null, Type[] filterTypes = null)
-			=> iMap.GetAttachments(tileIndex, filterTypes).Cast<ISelectable>().ToArray();
+		private ISelectable[] GetAttachmentsAsSelectables(int index, Type[] filter = null) => iMap.GetAttachments(index, filter).Cast<ISelectable>().ToArray();
 
 		private ControllerMode mode = ControllerMode.Idle;
 		private void SetMode(ControllerMode value) => mode = value;
@@ -95,10 +95,14 @@ namespace ClassicTilestorm
 			GridLinesUtil.UpdateOffset(Map.ORIGIN + Vector3.up * editAltitude);
 		}
 
+		// Simple one-liner since you're only handling EditorScreenUI for now
+		public void OnReady(object target) => (target as EditorScreenUI)?.Register(this);
+
 		// ─── Unity / lifecycle ───────────────────────────────────────────────
-		public void Awake()
+		private void Awake()
 		{
-			ReadyCallbackRegistry.Register(ui => ui?.Register(this), () => UIController.Instance?.editorScreenUI?.GetComponent<EditorScreenUI>(), this);// ← dies with this MonoBehaviour
+			//ReadyCallbackRegistry.Register(ui => ui?.Register(this), () => UIController.Instance?.editorScreenUI?.GetComponent<EditorScreenUI>(), this);// ← dies with this MonoBehaviour
+			ReadyCallbackRegistry.RegisterFor<EditorScreenUI>(this);
 			GridLinesUtil.Initialise(transform, offset : Map.ORIGIN + Vector3.up * editAltitude);
 			OptionsPanel.onGridlinesToggle += value => GridLinesUtil.Enabled = value & isActiveAndEnabled;
 		}
@@ -285,14 +289,14 @@ namespace ClassicTilestorm
 
 		private void AdjustSelectionOrigin(Vector3 delta)
 		{
-			if (Vector3.zero == delta) return;
-			foreach (var cell in selection?.OfType<Cell>() ?? Array.Empty<Cell>())
+			if (delta == Vector3.zero) return;
+			foreach (var cell in selectedCells)
 				cell.ApplyDelta(this, delta, true);
 		}
 
 		private void UpdateSelectionAltitude(float value)
 		{
-			foreach (var cell in selection?.OfType<Cell>() ?? Array.Empty<Cell>())
+			foreach (var cell in selectedCells)
 				cell.ApplyDelta(this, Vector3.up * (value - cell.position.y));
 		}
 
@@ -333,8 +337,8 @@ namespace ClassicTilestorm
 
 		private void UpdateTileDrag()
 		{
-			var cells = selection?.OfType<Cell>() ?? Enumerable.Empty<Cell>();
-			if (!cells.Any()) return;
+			var cells = selectedCells;
+			if (0 == cells.Length) return;
 
 			var snappedDelta = selection?.Any(s => s is Cell c && c.variant.HasNav) == true ?
 				Map.FullFloorVec(currentWorld) - Map.FullFloorVec(beginWorld) : Map.HalfFloorVec(currentWorld) - Map.HalfFloorVec(beginWorld);
@@ -367,7 +371,7 @@ namespace ClassicTilestorm
 		private void EvaluateAttachments()
 		{
 			var cursorTile = iMap.VectorToIndex(beginWorld = currentWorld);
-			var attachmentsOnTile = GetAttachmentsAsSelectables(tileIndex: cursorTile);
+			var attachmentsOnTile = GetAttachmentsAsSelectables(index: cursorTile);
 			if (EditorAttachmentUI.EvaluateSelection(attachmentsOnTile, cursorTile))
 				SelectAttachments(attachmentsOnTile);
 			MapUtils.RebuildMarkers(iMap, selection);
@@ -377,7 +381,7 @@ namespace ClassicTilestorm
 		{
 			var cursorTile = iMap.VectorToIndex(beginWorld = currentWorld);
 			if (selection == null || selection.Length == 0 || (selection[0] is MapAttachment ma && ma.tile != cursorTile))
-				SelectAttachments(GetAttachmentsAsSelectables(tileIndex: cursorTile));
+				SelectAttachments(GetAttachmentsAsSelectables(index: cursorTile));
 			return selection?.Length > 0;
 		}
 
@@ -405,7 +409,7 @@ namespace ClassicTilestorm
 				EditorMarkerUtil.ClearMapMarkers();
 				return false;
 			}
-			SelectAttachments(GetAttachmentsAsSelectables(tileIndex: iMap.VectorToIndex(beginWorld = currentWorld)));
+			SelectAttachments(GetAttachmentsAsSelectables(index: iMap.VectorToIndex(beginWorld = currentWorld)));
 			if (selection?.Length > 0)
 			{
 				EditorAttachmentUI.RequestDelete();
