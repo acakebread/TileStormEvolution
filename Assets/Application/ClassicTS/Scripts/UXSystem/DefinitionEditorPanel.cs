@@ -147,6 +147,9 @@ namespace ClassicTilestorm
 
 		protected override void OnDisable()
 		{
+			var mainController = FindAnyObjectByType<MainController>(FindObjectsInactive.Include);
+			if (null != mainController) mainController.RebuildAtlas();
+
 			CleanupPreview();
 			ClearDefinitionListItems();
 			base.OnDisable();

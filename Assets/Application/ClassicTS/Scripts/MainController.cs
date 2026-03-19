@@ -299,5 +299,11 @@ namespace ClassicTilestorm
 			Debug.Log("Export currently only available in Unity Editor");
 #endif
 		}
+
+		public void RebuildAtlas()
+		{
+			var tileSelector = FindAnyObjectByType<TileSelector>(FindObjectsInactive.Include);
+			if (null != tileSelector) StartCoroutine(tileSelector.Rebuild());
+		}
 	}
 }
