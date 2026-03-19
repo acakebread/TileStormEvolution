@@ -5,43 +5,26 @@ namespace ClassicTilestorm
 {
     public interface IEditorScreenUI
     {
-		void OnTileSelected(HashId selectedHash);
-		bool CanOpenPalette();
 		void OnAltitudeChanged(float value);
 	}
 
-	public class EditorScreenUI : MonoBehaviour, ITileSelectorHandler
+	public class EditorScreenUI : MonoBehaviour
 	{
-		private IEditorScreenUI _handler;// Only one active handler at a time
+		private IEditorScreenUI _receiver;
 
-		public void Register(IEditorScreenUI handler)
+		internal IEditorScreenUI Receiver
 		{
-			if (_handler != null && _handler != handler)
-				Debug.LogWarning($"IEditorScreenUI: replacing previous handler {handler}");
-			_handler = handler;
+			get => _receiver;
+			set => _receiver = value;
 		}
 
-		public void Unregister(IEditorScreenUI handler)
-		{
-			if (_handler == handler)
-				_handler = null;
-		}
-
-		[SerializeField] private TileSelector tileSelector;
 		[SerializeField] private UnityEngine.UI.Slider altitudeSlider;
 
 		public void Awake()
 		{
-			if (null != tileSelector) tileSelector.Register(this);// we don't really need the register system in TileSelector any more but leave for now
-
-			else Debug.LogError("tileSelector not set in inspector");
-
-			altitudeSlider?.onValueChanged.AddListener((value) => _handler?.OnAltitudeChanged(value * 0.2f));
+			altitudeSlider?.onValueChanged.AddListener(value => _receiver?.OnAltitudeChanged(value * 0.2f));
 
 			ReadyCallbackRegistry.Raise(this);
 		}
-
-		public bool CanOpenPalette() => _handler == null || _handler.CanOpenPalette();
-		public void OnTileSelected(HashId newHash) => _handler?.OnTileSelected(newHash);
 	}
 }

@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
@@ -10,7 +9,7 @@ using System.Collections;
 namespace ClassicTilestorm
 {
 	// 1. Define a clean, minimal interface
-	public interface ITileSelectorHandler
+	public interface ITileSelector
 	{
 		// TileSelector will call this when user picks a tile
 		void OnTileSelected(HashId selectedHash);
@@ -76,34 +75,21 @@ namespace ClassicTilestorm
 		[SerializeField] private float wobbleFrequency = 12f;
 
 		// Only one active handler at a time (editor use-case → simplest)
-		private ITileSelectorHandler _handler;
-
-		public void Register(ITileSelectorHandler handler)
+		private ITileSelector _receiver;
+		internal ITileSelector Receiver
 		{
-			if (_handler != null && _handler != handler)
-			{
-				Debug.LogWarning($"TileSelector: replacing previous handler {handler}");
-			}
-			_handler = handler;
+			get => _receiver;
+			set => _receiver = value;
 		}
 
-		public void Unregister(ITileSelectorHandler handler)
-		{
-			if (_handler == handler)
-				_handler = null;
-		}
-
-		// In Update / selection logic, instead of:
-		// OnTileSelected?.Invoke(newHash);
-		// Use:
 		private void NotifyTileSelected(HashId newHash)
 		{
-			_handler?.OnTileSelected(newHash);
+			_receiver?.OnTileSelected(newHash);
 			SelectedHashId = newHash;   // keep your internal state
 		}
 
 		// Optional: expose for debugging / fallback
-		public ITileSelectorHandler CurrentHandler => _handler;
+		public ITileSelector CurrentHandler => _receiver;
 
 		private void Awake()
 		{
@@ -180,6 +166,7 @@ namespace ClassicTilestorm
 			RecalculateLayout();
 			panelY = panelTargetY = -panelHeight;
 
+			ReadyCallbackRegistry.Raise(this);
 			yield break;
 		}
 
@@ -235,7 +222,7 @@ namespace ClassicTilestorm
 			bool mouseOverPanel = !allowHideDespiteMouseOverPanel &&
 								  InputX.mousePosition.y <= (panelY + panelHeight);
 
-			bool allowedToOpen = _handler == null || _handler.CanOpenPalette();
+			bool allowedToOpen = _receiver == null || _receiver.CanOpenPalette();
 
 			bool wantsVisible =
 				allowedToOpen &&

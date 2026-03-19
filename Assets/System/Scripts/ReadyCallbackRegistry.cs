@@ -5,6 +5,7 @@ namespace MassiveHadronLtd
 {
 	public static class ReadyCallbackRegistry
 	{
+		private static readonly Dictionary<Type, object> _currentInstances = new(); // new!
 		private static readonly Dictionary<Type, List<WeakReference>> _waitList = new();
 
 		public static void RegisterFor<T>(IReadyHandler handler) where T : class
@@ -13,6 +14,14 @@ namespace MassiveHadronLtd
 
 			var type = typeof(T);
 
+			// Immediate call if instance already exists
+			if (_currentInstances.TryGetValue(type, out var existing) && existing is T instance)
+			{
+				handler.OnReady(instance);
+				return; // optional: return early if you don't want persistent
+			}
+
+			// Subscribe for future Raise
 			if (!_waitList.TryGetValue(type, out var list))
 			{
 				list = new List<WeakReference>();
@@ -27,6 +36,10 @@ namespace MassiveHadronLtd
 			if (instance == null) return;
 
 			var type = typeof(T);
+
+			// Remember current instance for late joiners
+			_currentInstances[type] = instance;
+
 			if (!_waitList.TryGetValue(type, out var list) || list.Count == 0)
 				return;
 
@@ -42,12 +55,14 @@ namespace MassiveHadronLtd
 				}
 			}
 
-			_waitList.Remove(type);
+			// Do NOT remove the list anymore — keep for late registrations
+			// _waitList.Remove(type); ← DELETE THIS LINE
 		}
 
 		public static void Clear<T>() where T : class
 		{
 			_waitList.Remove(typeof(T));
+			_currentInstances.Remove(typeof(T));
 		}
 	}
 
