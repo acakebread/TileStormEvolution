@@ -57,6 +57,7 @@ namespace ClassicTilestorm
 			}
 		}
 
+		public bool IsSingleSelect => selection?.Length == 1;
 		public bool IsMultiSelect => selection?.Length > 1;
 		public bool HasSelection => selection?.Length > 0;
 		private Cell[] selectedCells => selection?.OfType<Cell>().ToArray() ?? Array.Empty<Cell>();
@@ -153,7 +154,7 @@ namespace ClassicTilestorm
 			ViewPreviewUtil.Update();
 			EditorCameraMovement.UpdateCamera(ViewPreviewUtil.IsInFocus ? ViewPreviewUtil.PreviewCamera : _camera, currentWorld, inFocus: !mouseOverGUI);
 			if (!ViewPreviewUtil.IsInFocus && mouseOverGUI) return;
-			if (selection?.Length == 1 && selection[0].OnGizmoInput(this)) return;
+			if (IsSingleSelect && selection[0].OnGizmoInput(this)) return;
 			if (ViewPreviewUtil.IsInFocus) return;
 
 			switch (mode)
@@ -377,9 +378,9 @@ namespace ClassicTilestorm
 		private bool StartAttachmentDrag()
 		{
 			var cursorTile = iMap.VectorToIndex(beginWorld = currentWorld);
-			if (selection == null || selection.Length == 0 || (selection[0] is MapAttachment ma && ma.tile != cursorTile))
+			if (!HasSelection || (selection[0] is MapAttachment ma && ma.tile != cursorTile))
 				SelectAttachments(GetAttachmentsAsSelectables(index: cursorTile));
-			return selection?.Length > 0;
+			return HasSelection;
 		}
 
 		private void UpdateAttachmentDrag()
@@ -387,7 +388,7 @@ namespace ClassicTilestorm
 			var cursorTile = iMap.VectorToIndex(beginWorld = currentWorld);
 			if (-1 == cursorTile) return;
 
-			if (selection?.Length >= 1 && selection[0] is MapAttachment first && first.tile == cursorTile) return;
+			if (HasSelection && selection[0] is MapAttachment first && first.tile == cursorTile) return;
 			foreach (var iter in selection ?? Array.Empty<ISelectable>())
 			{
 				if (iter is MapAttachment att) att.tile = cursorTile;
@@ -400,14 +401,14 @@ namespace ClassicTilestorm
 
 		private bool CancelAttachmentMode()
 		{
-			if (selection?.Length > 0)
+			if (HasSelection)
 			{
-				selection = null;
+				ClearSelection();
 				EditorMarkerUtil.ClearMapMarkers();
 				return false;
 			}
 			SelectAttachments(GetAttachmentsAsSelectables(index: iMap.VectorToIndex(beginWorld = currentWorld)));
-			if (selection?.Length > 0)
+			if (HasSelection)
 			{
 				EditorAttachmentUI.RequestDelete();
 				return false;
