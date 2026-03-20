@@ -117,9 +117,22 @@ namespace ClassicTilestorm
 			}
 		}
 
-		public void Start() => StartCoroutine(Rebuild());
+		public void Start() => Rebuild();
 
-		public IEnumerator Rebuild()
+		private void OnEnable()
+		{
+			if (null == _atlas) Rebuild();
+		}
+
+		private void OnDisable() { }
+
+		public void Rebuild()
+		{
+			_atlas = null;
+			StartCoroutine(RebuildAtlas());
+		}
+
+		private IEnumerator RebuildAtlas()
 		{
 			//var unityRenderSettings = UnityRenderSettings.CaptureCurrent();
 			//var cam = Camera.main;
@@ -138,10 +151,8 @@ namespace ClassicTilestorm
 					ambientProbe: default,
 					subtractiveShadowColor: RenderSettings.subtractiveShadowColor);
 
-			yield return null;//workaround for shader problem in command buffer
-			yield return null;//workaround for shader problem in command buffer
-			yield return null;//workaround for shader problem in command buffer - seems to need three in some situations - partucularly when game starts in play mode and then scene view selected in unity editor before opening atlas
-							  //renderCam.enabled = false;
+			yield return this.WaitFrames(10);//workaround for shader problem in command buffer - seems to need three in some situations - partucularly when game starts in play mode and then scene view selected in unity editor before opening atlas
+			//renderCam.enabled = false;
 
 			filteredDefs = ResourceManager.Definitions
 				.Where(d => !d.IsDefaultEquivalent())
