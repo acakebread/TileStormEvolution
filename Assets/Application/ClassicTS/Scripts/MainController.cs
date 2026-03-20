@@ -94,7 +94,7 @@ namespace ClassicTilestorm
 			// ─── Load & initialise ────────────────────────────────────────
 
 			CurrentMap = currentMap;
-			currentMap.Initialise(MapRoot);
+			currentMap.Initialise(MapRoot, !ApplicationSettings.Scrambled);
 
 			// Eggbot
 			if (eggbotController != null)

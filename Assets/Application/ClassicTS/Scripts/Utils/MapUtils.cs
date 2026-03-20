@@ -108,15 +108,12 @@ namespace ClassicTilestorm
 				previewMap.RefreshAttachments(previewMap.GetAttachments());
 
 				PreviewRenderLayers.SetLayerRecursively(previewRoot, PreviewRenderLayers.LAYER_PREVIEW);
-				PreviewRenderLayers.SetPreviewLayersToChildren(previewRoot.transform);
 
 				var particleControllers = previewRoot.GetComponentsInChildren<ParticleController>(true);
 				foreach (var particleController in particleControllers)
 					particleController.gameObject.layer = PreviewRenderLayers.previewTransparentLayer;
 
-				var lights = previewRoot.GetComponentsInChildren<Light>(true);
-				foreach (var light in lights)
-					PreviewRenderLayers.SetPreviewLayers(light, false);
+				PreviewRenderLayers.SetPreviewLayersToChildLights(previewRoot.transform);
 
 				return previewRoot;
 			}

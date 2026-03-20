@@ -56,19 +56,19 @@ namespace MassiveHadronLtd
 		// LIGHTS
 		// =========================================================
 
-		public static void SetPreviewLayers(Light light, bool withTransparent = true)
+		public static void SetPreviewLayersToLight(Light light, bool withTransparent = true)
 		{
 			if (!light) return;
 			light.cullingMask = withTransparent ? previewFullMask : previewMask;
 		}
 
-		public static void AddPreviewLayers(Light light, bool withTransparent = true)
+		public static void AddPreviewLayersToLight(Light light, bool withTransparent = true)
 		{
 			if (!light) return;
 			light.cullingMask |= withTransparent ? previewFullMask : previewMask;
 		}
 
-		public static void RemovePreviewLayers(Light light, bool withTransparent = true)
+		public static void RemovePreviewLayersFromLight(Light light, bool withTransparent = true)
 		{
 			if (!light) return;
 			light.cullingMask &= ~(withTransparent ? previewFullMask : previewMask);
@@ -76,25 +76,25 @@ namespace MassiveHadronLtd
 
 		// Bulk helpers
 
-		public static void SetPreviewLayersToChildren(Transform root, bool withTransparent = true)
+		public static void SetPreviewLayersToChildLights(Transform root, bool withTransparent = true)
 		{
 			var lights = root.GetComponentsInChildren<Light>(true);
 			foreach (var l in lights)
-				SetPreviewLayers(l, withTransparent);
+				SetPreviewLayersToLight(l, withTransparent);
 		}
 
-		public static void AddPreviewLayersToChildren(Transform root, bool withTransparent = true)
+		public static void AddPreviewLayersToChildLights(Transform root, bool withTransparent = true)
 		{
 			var lights = root.GetComponentsInChildren<Light>(true);
 			foreach (var l in lights)
-				AddPreviewLayers(l, withTransparent);
+				AddPreviewLayersToLight(l, withTransparent);
 		}
 
-		public static void RemovePreviewLayersFromChildren(Transform root, bool withTransparent = true)
+		public static void RemovePreviewLayersFromChildLights(Transform root, bool withTransparent = true)
 		{
 			var lights = root.GetComponentsInChildren<Light>(true);
 			foreach (var l in lights)
-				RemovePreviewLayers(l, withTransparent);
+				RemovePreviewLayersFromLight(l, withTransparent);
 		}
 
 		// =========================================================

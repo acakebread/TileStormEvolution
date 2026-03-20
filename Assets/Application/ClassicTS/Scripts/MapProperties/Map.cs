@@ -435,30 +435,26 @@ namespace ClassicTilestorm
 			ambientProbe: default,
 			subtractiveShadowColor: UnityEngine.RenderSettings.subtractiveShadowColor);
 
-		public void Initialise(Transform parent = null)
+		public bool Initialise(Transform parent = null, bool solved = false)
 		{
 			this.parent = parent;
 
-			if (graphCount == 0)
+			if (!InitialiseGraph())
 			{
 				Debug.LogError("Failed to create runtime tiles — map data invalid.");
-				return;
+				UnityEngine.Object.DestroyImmediate(parent);
+				return false;
 			}
 
-			if (ApplicationSettings.Scrambled) Preset();
-			else Solve();
-
-			InitializeWindController();
+			if (solved) Solve();
+			else Preset();
 
 			RefreshAttachments(GetAttachments());
+			PreviewRenderLayers.RemovePreviewLayersFromChildLights(parent);
 
-			var lights = parent.GetComponentsInChildren<Light>(true);
-			foreach (var light in lights)
-				PreviewRenderLayers.RemovePreviewLayers(light);
-
-			PreviewRenderLayers.RemovePreviewLayersFromChildren(parent);
-
+			InitializeWindController();
 			SetupWaypoints();
+			return true;
 		}
 
 		private Tile CreateTile(Variant variant, Transform parent, Vector3 renderPosition) => new Tile(variant, parent, renderPosition);
