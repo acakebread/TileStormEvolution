@@ -367,7 +367,7 @@ namespace ClassicTilestorm
 			solve = new int[tileCount];     // all zeros = identity permutation
 
 			// Runtime state starts as identity
-			state = Enumerable.Range(0, tileCount).ToArray();
+			state = Enumerable.Range(0, tileCount).ToArray();//start at 'preset' i.e. not solved
 
 			// Clear / null out optional arrays
 			attachments = null;
@@ -442,7 +442,6 @@ namespace ClassicTilestorm
 			if (!InitialiseGraph())
 			{
 				Debug.LogError("Failed to create runtime tiles — map data invalid.");
-				UnityEngine.Object.DestroyImmediate(parent);
 				return false;
 			}
 

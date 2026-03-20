@@ -80,20 +80,14 @@ namespace ClassicTilestorm
 			return maxX >= 0 ? new RectInt(minX, minZ, maxX - minX + 1, maxZ - minZ + 1) : new RectInt(0, 0, 0, 0);
 		}
 
-		public static GameObject BuildPreviewGeometry(Map map, Transform previewParent)
+		public static bool BuildPreviewGeometry(Map map, Transform parent)
 		{
 			if (map.width <= 0 || map.height <= 0 || map.tiles == null || map.variants == null)
-				return null;
+				return false;
 
 			// CRITICAL: Work on a CLONE so we don't corrupt the original map's runtime state
 			var previewMap = map.Clone();
-
-			var previewRoot = new GameObject($"Preview_{map.name ?? "Map"}");
-			previewRoot.transform.SetParent(previewParent, false);
-			previewRoot.transform.localPosition = Vector3.zero;
-
-			var originalParent = previewMap.parent;
-			previewMap.parent = previewRoot.transform;
+			previewMap.parent = parent;
 
 			try
 			{
@@ -101,32 +95,28 @@ namespace ClassicTilestorm
 				if (false == previewMap.InitialiseGraph())
 				{
 					Debug.LogWarning("Preview graph creation failed on clone");
-					UnityEngine.Object.DestroyImmediate(previewRoot);
-					return null;
+					return false;
 				}
 
 				previewMap.RefreshAttachments(previewMap.GetAttachments());
 
-				PreviewRenderLayers.SetLayerRecursively(previewRoot, PreviewRenderLayers.LAYER_PREVIEW);
+				PreviewRenderLayers.SetLayerRecursively(parent.gameObject, PreviewRenderLayers.LAYER_PREVIEW);
 
-				var particleControllers = previewRoot.GetComponentsInChildren<ParticleController>(true);
+				var particleControllers = parent.gameObject.GetComponentsInChildren<ParticleController>(true);
 				foreach (var particleController in particleControllers)
 					particleController.gameObject.layer = PreviewRenderLayers.previewTransparentLayer;
 
-				PreviewRenderLayers.SetPreviewLayersToChildLights(previewRoot.transform);
+				PreviewRenderLayers.SetPreviewLayersToChildLights(parent);
 
-				return previewRoot;
+				return true;
 			}
 			catch (Exception e)
 			{
 				Debug.LogError($"Preview build failed: {e.Message}");
-				UnityEngine.Object.DestroyImmediate(previewRoot);
-				return null;
+				return false;
 			}
 			finally
 			{
-				// Restore original parent on clone (not needed, but clean)
-				previewMap.parent = originalParent;
 			}
 		}
 

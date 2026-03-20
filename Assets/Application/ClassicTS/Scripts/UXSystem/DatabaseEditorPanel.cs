@@ -84,7 +84,7 @@ namespace ClassicTilestorm
 				? ResourceManager.Maps[lastSelectedMapIndex]
 				: null;
 
-		private GameObject currentPreviewInstance;
+		private GameObject currentPreviewRoot;
 
 		// Gimbal orbit controller (replaces old auto-orbit)
 		private GimbalOrbitController orbitController;
@@ -173,23 +173,10 @@ namespace ClassicTilestorm
 
 			ClearMapListItems();
 
-			if (currentPreviewInstance != null)
-			{
-				DestroyImmediate(currentPreviewInstance);
-				currentPreviewInstance = null;
-			}
-
 			if (currentPreviewRoot != null)
 			{
 				DestroyImmediate(currentPreviewRoot);
 				currentPreviewRoot = null;
-			}
-
-			if (currentPreviewInstance != null)
-			{
-				// usually already destroyed via currentPreviewRoot, but safe
-				DestroyImmediate(currentPreviewInstance);
-				currentPreviewInstance = null;
 			}
 
 			ScenePreviewUtil.Cleanup();
@@ -674,8 +661,6 @@ namespace ClassicTilestorm
 		//   Preview Utilities
 		// ────────────────────────────────────────────────────────────────────────────────
 
-		private GameObject currentPreviewRoot;
-
 		private void UpdateMapPreview()
 		{
 			if (ScenePreviewUtil.PreviewCamera == null || previewImage == null) return;
@@ -709,21 +694,18 @@ namespace ClassicTilestorm
 			// Build under our owned root
 			var geometry = MapUtils.BuildPreviewGeometry(map, currentPreviewRoot.transform);//, PreviewRenderLayers.previewMask
 
-			if (geometry == null)
+			if (geometry == false)
 			{
 				previewImage.color = new Color(1f, 0.3f, 0.3f, 0.7f);
 				orbitController?.ResetView(false);
 				return;
 			}
 
-			// currentPreviewInstance can stay if you still need direct ref to the returned object
-			currentPreviewInstance = geometry;
-
 			// bounds calculation + reframing (unchanged)
 			var bounds = new Bounds();
 			bool hasRenderers = false;
 
-			foreach (var rend in currentPreviewInstance.GetComponentsInChildren<Renderer>())
+			foreach (var rend in currentPreviewRoot.GetComponentsInChildren<Renderer>())
 			{
 				if (!hasRenderers) { bounds = rend.bounds; hasRenderers = true; }
 				else bounds.Encapsulate(rend.bounds);
