@@ -151,6 +151,7 @@ namespace ClassicTilestorm
 
 			list.Insert(index, newDef);
 			_db.definitions = list.ToArray();
+			OnDefininionsModified?.Invoke();
 		}
 
 		public static void InsertDefinitionAtIndex(int index, Definition newDef)
@@ -162,6 +163,7 @@ namespace ClassicTilestorm
 
 			list.Insert(index, newDef);
 			_db.definitions = list.ToArray();
+			OnDefininionsModified?.Invoke();
 		}
 
 		public static void DeleteDefinitionId(HashId id)
@@ -170,6 +172,7 @@ namespace ClassicTilestorm
 			var list = _db.definitions.ToList();
 			list.RemoveAll(d => d.HashID == id);
 			_db.definitions = list.ToArray();
+			OnDefininionsModified?.Invoke();
 		}
 
 		public static void MoveDefinitionIdUp(HashId id)
@@ -180,6 +183,7 @@ namespace ClassicTilestorm
 			if (idx <= 0) return;
 			(list[idx - 1], list[idx]) = (list[idx], list[idx - 1]);
 			_db.definitions = list.ToArray();
+			OnDefininionsModified?.Invoke();
 		}
 
 		public static void MoveDefinitionIdDown(HashId id)
@@ -190,33 +194,34 @@ namespace ClassicTilestorm
 			if (idx < 0 || idx >= list.Count - 1) return;
 			(list[idx + 1], list[idx]) = (list[idx], list[idx + 1]);
 			_db.definitions = list.ToArray();
+			OnDefininionsModified?.Invoke();
 		}
 
 		public static void DeleteDefinitionAt(int index)
 		{
 			if (_db?.definitions == null || index < 0 || index >= _db.definitions.Length) return;
-
 			var list = _db.definitions.ToList();
 			list.RemoveAt(index);
 			_db.definitions = list.ToArray();
+			OnDefininionsModified?.Invoke();
 		}
 
 		public static void MoveDefinitionUp(int index)
 		{
 			if (_db?.definitions == null || index <= 0 || index >= _db.definitions.Length) return;
-
 			var list = _db.definitions.ToList();
 			(list[index - 1], list[index]) = (list[index], list[index - 1]);
 			_db.definitions = list.ToArray();
+			OnDefininionsModified?.Invoke();
 		}
 
 		public static void MoveDefinitionDown(int index)
 		{
 			if (_db?.definitions == null || index < 0 || index >= _db.definitions.Length - 1) return;
-
 			var list = _db.definitions.ToList();
 			(list[index + 1], list[index]) = (list[index], list[index + 1]);
 			_db.definitions = list.ToArray();
+			OnDefininionsModified?.Invoke();
 		}
 
 		public static bool RenameMapName(int index, string value)
@@ -282,5 +287,7 @@ namespace ClassicTilestorm
 			Debug.LogWarning($"Missing or invalid definition hash '{hashId}' — falling back to default tile.");
 			return FindOrCreateDefaultTile();
 		}
+
+		public static Action OnDefininionsModified;
 	}
 }

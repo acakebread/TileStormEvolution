@@ -147,9 +147,7 @@ namespace ClassicTilestorm
 
 		protected override void OnDisable()
 		{
-			var tileSelector = FindAnyObjectByType<TileSelector>(FindObjectsInactive.Include);
-			if (null != tileSelector) tileSelector.Rebuild();
-
+			ResourceManager.OnDefininionsModified?.Invoke();//workaround for resource manager not currently responding to properties modified
 			CleanupPreview();
 			ClearDefinitionListItems();
 			base.OnDisable();

@@ -5,6 +5,8 @@ using UnityEngine.UI;
 using TMPro;
 using MassiveHadronLtd;
 using System.Collections;
+using System.Threading;
+using System;
 
 namespace ClassicTilestorm
 {
@@ -115,67 +117,105 @@ namespace ClassicTilestorm
 				// Set pivot to center once (so scale happens from middle)
 				_focusOverlay.rectTransform.pivot = new Vector2(0.5f, 0.5f);
 			}
+
+			ResourceManager.OnDefininionsModified += () => Rebuild();
 		}
 
 		//public void Start() { }
 		private void OnEnable() { if (null == _atlas) Rebuild(); }
 		//private void OnDisable() { }
 
+		private CancellationTokenSource _rebuildCts;   // null when no rebuild is active
 		public void Rebuild()
 		{
-			_atlas = null;
-			StartCoroutine(RebuildAtlas());
+			// Cancel and clean up any previous rebuild attempt
+			_rebuildCts?.Cancel();
+			_rebuildCts?.Dispose();           // Important: dispose old source
+			_rebuildCts = null;
+
+			// Start fresh
+			_rebuildCts = new CancellationTokenSource();
+			_ = RebuildAtlasAsync(_rebuildCts.Token);
 		}
 
-		private IEnumerator RebuildAtlas()
+		private async Awaitable RebuildAtlasAsync(CancellationToken ct)
 		{
-			//var unityRenderSettings = UnityRenderSettings.CaptureCurrent();
-			//var cam = Camera.main;
-			//cam.enabled = false;
+			GameObject stateCamera = null;
 
-			// all this to force the render state into the graphics hardware - unity requires a display render for command buffer to work
-			var stateCamera = new GameObject("RenderStateCamera");
-			var renderCam = stateCamera.AddComponent<Camera>();
-			renderCam.pixelRect = new Rect(0, 0, 4, 4);  // 4×4 pixels — small but reliably non-zero
+			try
+			{
+				ct.ThrowIfCancellationRequested();   // early exit if already cancelled
 
-			var cameraRenderSettingsOverride = stateCamera.AddComponent<CameraRenderSettingsOverride>();
-			cameraRenderSettingsOverride.OverrideSettings = new(ambientMode: UnityEngine.Rendering.AmbientMode.Flat,
+				stateCamera = new GameObject("RenderStateCamera");
+				var renderCam = stateCamera.AddComponent<Camera>();
+				renderCam.pixelRect = new Rect(0, 0, 4, 4);
+
+				var cameraRenderSettingsOverride = stateCamera.AddComponent<CameraRenderSettingsOverride>();
+				cameraRenderSettingsOverride.OverrideSettings = new(
+					ambientMode: UnityEngine.Rendering.AmbientMode.Flat,
 					ambientLight: Color.white * 1.2f,
-					ambientIntensity: 0f,//has no effect but ambient light colour can be premultiplies with intensity for same effect
+					ambientIntensity: 0f,
 					skybox: null,
 					ambientProbe: default,
-					subtractiveShadowColor: RenderSettings.subtractiveShadowColor);
+					subtractiveShadowColor: RenderSettings.subtractiveShadowColor
+				);
 
-			yield return this.WaitFrames(10);//workaround for shader problem in command buffer - seems to need many in some situations - particularly when game starts in play mode and then scene view selected in unity editor before opening atlas
-			//renderCam.enabled = false;
+				// Wait with cancellation support
+				await AsyncExtensions.WaitFramesAsync(10, ct);
 
-			filteredDefs = ResourceManager.Definitions
-				.Where(d => !d.IsDefaultEquivalent())
-				.ToList();
+				ct.ThrowIfCancellationRequested();
 
-			_atlas = new IconAtlas(
-				ICON_SIZE,
-				COLUMNS,
-				filteredDefs,
-				includeGround: false,
-				background: null,
-				yaw: 35f,
-				pitch: 30f);
+				filteredDefs = ResourceManager.Definitions
+					.Where(d => !d.IsDefaultEquivalent())
+					.ToList();
 
-			if (_atlas == null)
-				Debug.LogWarning("Failed to generate icon atlas — palette empty.");
+				ct.ThrowIfCancellationRequested();
 
-			Destroy(stateCamera);
-			//cam.enabled = true;
-			//UnityRenderSettings.Apply(unityRenderSettings);
+				_atlas = new IconAtlas(
+					ICON_SIZE,
+					COLUMNS,
+					filteredDefs,
+					includeGround: false,
+					background: null,
+					yaw: 35f,
+					pitch: 30f);
 
-			SelectedHashId = ResourceManager.DefaultHash;
+				if (_atlas == null)
+					Debug.LogWarning("Failed to generate icon atlas — palette empty.");
 
-			RecalculateLayout();
-			panelY = panelTargetY = -panelHeight;
+				ct.ThrowIfCancellationRequested();
 
-			ReadyCallbackRegistry.Raise(this);
-			yield break;
+				SelectedHashId = ResourceManager.DefaultHash;
+
+				RecalculateLayout();
+				panelY = panelTargetY = -panelHeight;
+
+				ReadyCallbackRegistry.Raise(this);
+			}
+			catch (OperationCanceledException)
+			{
+				// Optional: log or handle cancellation specifically
+				// Debug.Log("Rebuild cancelled");
+			}
+			catch (Exception ex)
+			{
+				Debug.LogException(ex);
+			}
+			finally
+			{
+				if (stateCamera != null)
+				{
+					UnityEngine.Object.Destroy(stateCamera);
+				}
+
+				// Optional: clear reference only if this is still the active CTS
+				// (helps avoid race if very rapid calls)
+				if (_rebuildCts != null && _rebuildCts.Token == ct)
+				{
+					_rebuildCts.Dispose();
+					_rebuildCts = null;
+				}
+			}
 		}
 
 		private void Update()
