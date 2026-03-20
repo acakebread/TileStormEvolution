@@ -16,6 +16,7 @@ namespace MassiveHadronLtd
 		private static int _lastColumns = -1;
 		private static int _lastRows = -1;
 		private static int _lastCellSize = -1;
+		private static Texture2D _lastAtlasTexture = null;
 
 		private const float FOCUS_FACTOR = 5f;
 		private const float DELTA_TRANS_RATIO = 0.375f;
@@ -205,8 +206,9 @@ namespace MassiveHadronLtd
 		private static void CreateMaterialIfNeeded(IGridAtlas atlas)
 		{
 			// Material setup (unchanged)
-			if (null == _atlasMaterial)
+			if (null == _atlasMaterial || _lastAtlasTexture != atlas.Texture)
 			{
+				_lastAtlasTexture = atlas.Texture;
 				var shader = Shader.Find("Sprites/Default");
 				_atlasMaterial = new Material(shader)
 				{
