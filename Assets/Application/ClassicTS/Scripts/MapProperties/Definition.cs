@@ -159,7 +159,7 @@ namespace ClassicTilestorm
             writer.WriteStartObject();
 
             writer.WritePropertyName("id");
-            writer.WriteValue(HTB50.EncodeFixed(def.HashID, length: HTB50Settings.FixedLength, padChar: '0', appendFlavor: false));
+            writer.WriteValue(HTB50Settings.ToString(def.HashID));
 
             if (!string.IsNullOrEmpty(def.name))    { writer.WritePropertyName("name");    serializer.Serialize(writer, def.name); }
             if (!string.IsNullOrEmpty(def.model))   { writer.WritePropertyName("model");   serializer.Serialize(writer, def.model); }

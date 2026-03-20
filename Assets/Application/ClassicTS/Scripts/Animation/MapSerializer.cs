@@ -303,14 +303,7 @@ namespace ClassicTilestorm
 					continue;
 				}
 
-				string hashStr = HTB50.EncodeFixed(
-					v.hash,
-					length: HTB50Settings.FixedLength,
-					padChar: '0',
-					appendFlavor: false
-				);
-
-				var parts = new List<string> { hashStr };
+				var parts = new List<string> { HTB50Settings.ToString(v.hash) };
 
 				if (Math.Abs(v.angle) > 0.001f)
 					parts.Add($"angle:{v.angle:F1}");

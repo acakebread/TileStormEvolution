@@ -404,10 +404,8 @@ namespace ClassicTilestorm
 			var label = go.GetComponentInChildren<TMP_Text>();
 			if (label != null)
 			{
-				int usage = ResourceManager.DefinitionUsageCount(def.HashID);
-
-				string hashDisplay = 0 == def.HashID ? "(no hashid)" : $"hash: {HTB50.EncodeFixed(def.HashID, HTB50Settings.FixedLength, padChar: '0', appendFlavor: false)}";
-
+				var usage = ResourceManager.DefinitionUsageCount(def.HashID);
+				var hashDisplay = 0 == def.HashID ? "(no hashid)" : $"hash: {HTB50Settings.ToString(def.HashID)}";
 				label.text = $"{def?.name ?? "???"}  [{usage}]  ({hashDisplay})";
 			}
 		}

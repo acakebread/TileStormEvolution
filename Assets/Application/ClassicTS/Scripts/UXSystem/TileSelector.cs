@@ -117,7 +117,7 @@ namespace ClassicTilestorm
 			}
 		}
 
-		public void Start() => Rebuild();
+		//public void Start() => Rebuild();
 
 		private void OnEnable()
 		{

@@ -9,8 +9,7 @@ namespace ClassicTilestorm
 	public static class HTB50Settings
 	{
 		public const int FixedLength = 6;
-		//public const int Radix = 50;//no longer used
-		//public const long Modulus = 15625000000L;  // 50^6//no longer used
+		public static string ToString(int value, int length = -1, bool appendFlavor = false, char padChar = '0') => HTB50.EncodeFixed(value, length != -1 ? length : FixedLength, appendFlavor, padChar);
 	}
 
 	[Serializable]
@@ -110,7 +109,7 @@ namespace ClassicTilestorm
 
 					// Full-range 32-bit hash
 					int hash32 = RadixHash.GetStableHash32(legacyName);
-					_defaultTileHash = HTB50.EncodeFixed(hash32, HTB50Settings.FixedLength, padChar: '0', appendFlavor: false);
+					_defaultTileHash = HTB50Settings.ToString(hash32);
 				}
 				return _defaultTileHash;
 			}
