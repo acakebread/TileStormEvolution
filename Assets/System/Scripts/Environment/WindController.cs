@@ -28,12 +28,11 @@ namespace MassiveHadronLtd
 		private void Awake()
 		{
 			swayComponents.Clear();
-
-			//foreach (var iter in GetComponentsInChildren<MorphGeomSway>())
-			//	AddSway(iter, iter.transform.position);
+			foreach (var iter in GetComponentsInChildren<MorphGeomSway>())
+				AddSway(iter, iter.transform.position);
 		}
 
-		public void AddSway(MorphGeomSway sway, Vector3 position)
+		private void AddSway(MorphGeomSway sway, Vector3 position)
 		{
 			swayComponents.Add((sway, position));
 			sway.SetSwayVector(Vector3.zero); // Reset to ensure external control
