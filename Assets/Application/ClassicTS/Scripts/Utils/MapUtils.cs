@@ -88,36 +88,20 @@ namespace ClassicTilestorm
 			// CRITICAL: Work on a CLONE so we don't corrupt the original map's runtime state
 			var previewMap = map.Clone();
 			previewMap.parent = parent;
-
-			try
+			if (!previewMap.InitialiseGraph())
 			{
-				previewMap.Preset();
-				if (false == previewMap.InitialiseGraph())
-				{
-					Debug.LogWarning("Preview graph creation failed on clone");
-					return false;
-				}
-
-				previewMap.RefreshAttachments(previewMap.GetAttachments());
-
-				PreviewRenderLayers.SetLayerRecursively(parent.gameObject, PreviewRenderLayers.LAYER_PREVIEW);
-
-				var particleControllers = parent.gameObject.GetComponentsInChildren<ParticleController>(true);
-				foreach (var particleController in particleControllers)
-					particleController.gameObject.layer = PreviewRenderLayers.previewTransparentLayer;
-
-				PreviewRenderLayers.SetPreviewLayersToChildLights(parent);
-
-				return true;
-			}
-			catch (Exception e)
-			{
-				Debug.LogError($"Preview build failed: {e.Message}");
+				Debug.LogWarning("Preview graph creation failed on clone");
 				return false;
 			}
-			finally
-			{
-			}
+
+			previewMap.Preset();
+			previewMap.RefreshAttachments(previewMap.GetAttachments());
+
+			PreviewRenderLayers.SetLayerRecursively(parent.gameObject, PreviewRenderLayers.LAYER_PREVIEW);
+			var particleControllers = parent.gameObject.GetComponentsInChildren<ParticleController>(true);
+			foreach (var particleController in particleControllers) particleController.gameObject.layer = PreviewRenderLayers.previewTransparentLayer;
+			PreviewRenderLayers.SetPreviewLayersToChildLights(parent);
+			return true;
 		}
 
 		public static bool Optimise(this Map map)

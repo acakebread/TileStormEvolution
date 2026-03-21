@@ -25,8 +25,8 @@ namespace ClassicTilestorm
 		int VectorToIndex(Vector3 _);
 		Vector3 TileRenderPosition(int _);
 
-		Tile GetTile(int _);
-		Tile GetTile(Vector3 _);
+		Tile GetTile(int _, bool active = true);
+		Tile GetTile(Vector3 _, bool active = true);
 
 		int GetStartTile();
 		int GetEndTile();
@@ -319,19 +319,8 @@ namespace ClassicTilestorm
 
 		private void InitializeWindController()
 		{
-			WindController windController = null;
-
-			for (var n = 0; n < graphCount; ++n)
-			{
-				var go = GetGraphTile(n).gameObject;
-				if (go == null) continue;
-
-				var sway = go.GetComponent<MorphGeomSway>();
-				if (sway == null) continue;
-
-				windController = windController ?? parent.gameObject.AddComponent<WindController>();
-				windController.AddSway(sway, TileRenderPosition(n));
-			}
+			if (!parent.gameObject.GetComponent<WindController>())
+				parent.gameObject.AddComponent<WindController>();
 		}
 
 		public Map()
@@ -438,7 +427,6 @@ namespace ClassicTilestorm
 		public bool Initialise(Transform parent = null, bool solved = false)
 		{
 			this.parent = parent;
-
 			if (!InitialiseGraph())
 			{
 				Debug.LogError("Failed to create runtime tiles — map data invalid.");
@@ -447,10 +435,9 @@ namespace ClassicTilestorm
 
 			if (solved) Solve();
 			else Preset();
-
 			RefreshAttachments(GetAttachments());
-			PreviewRenderLayers.RemovePreviewLayersFromChildLights(parent);
 
+			PreviewRenderLayers.RemovePreviewLayersFromChildLights(parent);
 			InitializeWindController();
 			SetupWaypoints();
 			return true;
@@ -472,13 +459,12 @@ namespace ClassicTilestorm
 		public static Vector3 WorldToRender(Vector3 value) => value + OFFSET;
 		public static Vector3 RenderToWorld(Vector3 value) => value - OFFSET;
 
-		public static bool RayToWorld(Ray ray, out Vector3 point)
+		public static bool RayToWorld(Ray ray, out Vector3 point)//special case with fixed plane at y=0
 		{
 			point = Vector3.zero;
-			var plane = new Plane(Vector3.up, Vector3.zero);
-			if (plane.Raycast(ray, out float d))
+			if (RayToPlane(ray, new Plane(Vector3.up, Vector3.zero), out Vector3 result))
 			{
-				point = ray.GetPoint(d) - ORIGIN;
+				point = result;
 				return true;
 			}
 			return false;
@@ -489,7 +475,7 @@ namespace ClassicTilestorm
 			point = Vector3.zero;
 			if (plane.Raycast(ray, out float d))
 			{
-				point = ray.GetPoint(d) - ORIGIN;
+				point = (ray.GetPoint(d) - ORIGIN).Rounded(2);
 				return true;
 			}
 			return false;
@@ -540,9 +526,8 @@ namespace ClassicTilestorm
 			return 0;
 		}
 
-		public Tile GetTile(int index) => state == null || index < 0 || index >= state.Length ? default : GetGraphTile(state[index]);
-		public Tile GetTile(Vector3 pos) => GetTile(VectorToIndex(pos));
-
+		public Tile GetTile(Vector3 pos, bool active = true) => GetTile(VectorToIndex(pos), active);//active state or seed state
+		public Tile GetTile(int index, bool active = true) => state == null || index < 0 || index >= state.Length ? default : GetGraphTile(active ? state[index] : index);//active state or seed state
 		private Tile GetGraphTile(int graphIndex) => _graph == null || graphIndex < 0 || graphIndex >= _graph.Length ? default : _graph[graphIndex];
 
 		private void DestroyAllTiles()

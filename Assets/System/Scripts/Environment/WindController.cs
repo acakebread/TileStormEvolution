@@ -25,7 +25,13 @@ namespace MassiveHadronLtd
 		private List<(MorphGeomSway sway, Vector3 position)> swayComponents = new();
 		public List<(MorphGeomSway sway, Vector3 position)> SwayComponents { get => swayComponents; }
 
-		private void Awake() => swayComponents.Clear();
+		private void Awake()
+		{
+			swayComponents.Clear();
+
+			//foreach (var iter in GetComponentsInChildren<MorphGeomSway>())
+			//	AddSway(iter, iter.transform.position);
+		}
 
 		public void AddSway(MorphGeomSway sway, Vector3 position)
 		{
