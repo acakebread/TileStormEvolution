@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System.Collections.Generic;
+using UnityEngine;
 
 namespace ClassicTilestorm
 {
@@ -112,6 +113,43 @@ namespace ClassicTilestorm
 		//		if (src == dst) break;
 		//	}
 		//	return length;
+		//}
+
+		//public static int[] GenerateWaypoints(IMapPlay map)
+		//{
+		//	var generated = new List<int>();
+		//	var start = map.GetStartTile();
+		//	var end = map.GetEndTile();
+
+		//	if (start == -1 || end == -1)
+		//		return generated.ToArray();
+
+		//	generated.Add(start);
+
+		//	var cur = start;
+		//	var dir = NavToDest(map, cur, end);
+		//	if (dir != 0)
+		//	{
+		//		while (cur != end)
+		//		{
+		//			if (map.FindAdjacentConsole(cur) != -1)
+		//				generated.Add(cur);
+
+		//			var next = GetAdjacentTile(map, cur, dir);
+		//			if (next == -1 || next == start) break;
+
+		//			var nextTile = map.GetTile(next);
+		//			if (nextTile.Nav == 0) break;
+
+		//			dir = CalculateNav(dir, nextTile.Nav);
+		//			if (dir == 0) break;
+
+		//			cur = next;
+		//		}
+		//	}
+
+		//	generated.Add(end);
+		//	return generated.ToArray();
 		//}
 	}
 }

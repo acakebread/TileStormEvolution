@@ -91,9 +91,16 @@ namespace ClassicTilestorm
 
 		public void OnAltitudeChanged(float value)
 		{
+			AdjustSelectionOrigin(Vector3.up * (value - editAltitude));
 			editAltitude = value;
-			UpdateSelectionAltitude(value);
 			GridLinesUtil.UpdateOffset(Map.ORIGIN + Vector3.up * editAltitude);
+		}
+
+		private void AdjustSelectionOrigin(Vector3 delta)
+		{
+			if (delta == Vector3.zero) return;
+			foreach (var cell in selectedCells)
+				cell.ApplyDelta(this, delta, true);
 		}
 
 		// ─── Unity / lifecycle ───────────────────────────────────────────────
@@ -284,19 +291,6 @@ namespace ClassicTilestorm
 		// ─── All helper methods ──────────────────────────────────────────────
 
 		private void ClearSelection(bool crop = false) { selection = null; if (crop) iMap.ResizeMap(iMap.ContentBounds()); }
-
-		private void AdjustSelectionOrigin(Vector3 delta)
-		{
-			if (delta == Vector3.zero) return;
-			foreach (var cell in selectedCells)
-				cell.ApplyDelta(this, delta, true);
-		}
-
-		private void UpdateSelectionAltitude(float value)
-		{
-			foreach (var cell in selectedCells)
-				cell.ApplyDelta(this, Vector3.up * (value - cell.position.y));
-		}
 
 		private bool StartTileDrag(bool combine = false) 
 		{ 

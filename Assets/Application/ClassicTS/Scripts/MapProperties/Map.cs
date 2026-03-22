@@ -147,7 +147,7 @@ namespace ClassicTilestorm
 			set
 			{
 				variants = value ?? Array.Empty<Variant>();
-				_graph = null;
+				DestroyAllGraphTiles();
 			}
 		}
 
@@ -157,10 +157,7 @@ namespace ClassicTilestorm
 				return new Variant(0);
 
 			var tableIdx = tiles[mapIndex];
-			if (tableIdx >= 0 && tableIdx < variants.Length)
-				return variants[tableIdx];
-
-			return new Variant(0);
+			return tableIdx <= 0 || tableIdx >= variants.Length ? new Variant(0) : variants[tableIdx];
 		}
 
 		public Variant GetVariantAt(Vector3 pos) => GetVariantAt(VectorToIndex(pos));
@@ -170,9 +167,7 @@ namespace ClassicTilestorm
 				return new Variant(0);
 
 			// Apply current permutation (scrambled/solved state)
-			var logicalIndex = state[mapIndex];
-
-			return GetVariantForIndex(logicalIndex);
+			return GetVariantForIndex(state[mapIndex]);
 		}
 
 		public Definition GetDefinitionAt(int mapIndex)
@@ -181,9 +176,7 @@ namespace ClassicTilestorm
 				return null;
 
 			// Apply current permutation (scrambled/solved state)
-			int logicalIndex = state[mapIndex];
-
-			return ResourceManager.GetDefinition(GetVariantForIndex(logicalIndex).hash);
+			return ResourceManager.GetDefinition(GetVariantForIndex(state[mapIndex]).hash);
 		}
 
 		// ─────────────────────────────────────────────
@@ -213,7 +206,7 @@ namespace ClassicTilestorm
 				Debug.Log($"Rebuilding graph | state first 8: [{string.Join(", ", tiles.Take(8))}]");                                                                                                    
 #endif
 
-				for (int visualIndex = 0; visualIndex < _graph.Length; visualIndex++)
+				for (var visualIndex = 0; visualIndex < _graph.Length; visualIndex++)
 				{
 					Debug.Assert(tiles[visualIndex] >= 0 && tiles[visualIndex] < variants.Length, "variant index out of bounds");
 					_graph[visualIndex] = CreateTile(variants[tiles[visualIndex]], parent, TileRenderPosition(visualIndex));
@@ -223,6 +216,12 @@ namespace ClassicTilestorm
 				}
 
 				return _graph;
+			}
+
+			set 
+			{
+				if (null != _graph) foreach (var iter in _graph) iter.Dispose();
+				_graph = value;
 			}
 		}
 
@@ -251,16 +250,12 @@ namespace ClassicTilestorm
 			}
 		}
 
-		internal bool InitialiseGraph()
-		{
-			var _ = graph;// force tile creation on clone
-			return _graph != null && 0 != _graph.Length;
-		}
+		internal bool InitialiseGraph() => graph?.Length > 0;// force tile creation on clone
 
-		internal void InvalidateGraphCache()
-		{
-			_graph = null;
-		}
+		internal void InvalidateGraphCache() => DestroyAllGraphTiles();
+
+		private Tile GetGraphTile(int graphIndex) => _graph == null || graphIndex < 0 || graphIndex >= _graph.Length ? default : _graph[graphIndex];
+		private void DestroyAllGraphTiles() => graph = null;
 
 		private void UpdateGraphTileInfo(int index)
 		{
@@ -271,65 +266,7 @@ namespace ClassicTilestorm
 			go.name = $"{def?.name ?? "??"} ({go.transform.position.x:F1},{go.transform.position.z:F1})+{variant.delta:F2}@{variant.angle:F1}°";
 		}
 
-		private void SetupWaypoints()
-		{
-			if (waypoints != null && waypoints.Length > 0)
-				return;
-
-			var generated = new List<int>();
-			var start = GetStartTile();
-			var end = GetEndTile();
-
-			if (start == -1 || end == -1)
-			{
-				waypoints = generated.ToArray();
-				return;
-			}
-
-			generated.Add(start);
-
-			var cur = start;
-			var dir = Navigation.NavToDest(this, cur, end);
-			if (dir != 0)
-			{
-				while (cur != end)
-				{
-					if (FindAdjacentConsole(cur) != -1)
-						generated.Add(cur);
-
-					var next = Navigation.GetAdjacentTile(this, cur, dir);
-					if (next == -1 || next == start) break;
-
-					var nextTile = GetTile(next);
-					if (nextTile.Nav == 0) break;
-
-					dir = Navigation.CalculateNav(dir, nextTile.Nav);
-					if (dir == 0) break;
-
-					cur = next;
-				}
-			}
-
-			generated.Add(end);
-
-			waypoints = generated.ToArray();
-
-			Debug.Log($"Generated {waypoints.Length} waypoints.");
-		}
-
-		private void InitializeWindController()
-		{
-			if (!parent.gameObject.GetComponent<WindController>())
-				parent.gameObject.AddComponent<WindController>();
-		}
-
-		public Map()
-		{
-			// Optionally initialize minimal safe state here
-			variants = Array.Empty<Variant>();
-			tiles = Array.Empty<int>();
-			// state, attachments, etc. can stay null or empty
-		}
+		public Map() { } //{ //variants = Array.Empty<Variant>(); //tiles = Array.Empty<int>(); }
 
 		public Map(int width = 16, int height = 16, string mapName = "New Map")
 		{
@@ -345,7 +282,7 @@ namespace ClassicTilestorm
 			var defaultHash = defaultDef.HashID;
 
 			// Minimal variant table: just the default tile (angle=0, delta=0)
-			variants = new Variant[] { new Variant(defaultHash, Vector3.zero, 0f) };
+			variants = new Variant[] { new (defaultHash) };
 
 			// Every position in the grid points to variant index 0
 			var tileCount = width * height;
@@ -368,7 +305,7 @@ namespace ClassicTilestorm
 		}
 
 		// Alternative: static factory method (sometimes cleaner to call)
-		public static Map CreateEmpty(int width = 16, int height = 16, string name = null) => new Map(width, height, name ?? $"Map {width}×{height}");
+		public static Map CreateEmpty(int width = 16, int height = 16, string name = null) => new (width, height, name ?? $"Map {width}×{height}");
 
 		public Map Clone() => new()
 		{
@@ -394,7 +331,7 @@ namespace ClassicTilestorm
 		{
 			OnMapEdited = null;
 
-			DestroyAllTiles();
+			DestroyAllGraphTiles();
 
 			CleanupAttachmentInstances();
 
@@ -438,8 +375,11 @@ namespace ClassicTilestorm
 			RefreshAttachments(GetAttachments());
 
 			PreviewRenderLayers.RemovePreviewLayersFromChildLights(parent);
-			InitializeWindController();
-			SetupWaypoints();
+
+			if (null == waypoints || 0 == waypoints.Length)
+				waypoints = this.GenerateWaypoints();
+			parent.gameObject.GetOrAddComponent<WindController>();
+
 			return true;
 		}
 
@@ -526,20 +466,8 @@ namespace ClassicTilestorm
 			return 0;
 		}
 
-		public Tile GetTile(Vector3 pos, bool active = true) => GetTile(VectorToIndex(pos), active);//active state or seed state
-		public Tile GetTile(int index, bool active = true) => state == null || index < 0 || index >= state.Length ? default : GetGraphTile(active ? state[index] : index);//active state or seed state
-		private Tile GetGraphTile(int graphIndex) => _graph == null || graphIndex < 0 || graphIndex >= _graph.Length ? default : _graph[graphIndex];
-
-		private void DestroyAllTiles()
-		{
-			if (_graph == null)
-				return;
-
-			foreach (var tile in _graph)
-				tile.Dispose();
-
-			_graph = null;
-		}
+		public Tile GetTile(Vector3 pos, bool logicalIndex = true) => GetTile(VectorToIndex(pos), logicalIndex);//active state or seed state
+		public Tile GetTile(int index, bool logicalIndex = true) => state == null || index < 0 || index >= state.Length ? default : GetGraphTile(logicalIndex ? state[index] : index);//active state or seed state
 
 		public void Preset()
 		{
@@ -571,8 +499,8 @@ namespace ClassicTilestorm
 
 		private void RecreateTiles()
 		{
-			DestroyAllTiles();
-			var _ = graph;
+			DestroyAllGraphTiles();
+			InitialiseGraph();
 		}
 
 		public void RefreshGeometry()
