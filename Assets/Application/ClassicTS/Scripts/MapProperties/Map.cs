@@ -157,7 +157,7 @@ namespace ClassicTilestorm
 				return new Variant(0);
 
 			var tableIdx = tiles[mapIndex];
-			return tableIdx <= 0 || tableIdx >= variants.Length ? new Variant(0) : variants[tableIdx];
+			return tableIdx < 0 || tableIdx >= variants.Length ? new Variant(0) : variants[tableIdx];
 		}
 
 		public Variant GetVariantAt(Vector3 pos) => GetVariantAt(VectorToIndex(pos));
