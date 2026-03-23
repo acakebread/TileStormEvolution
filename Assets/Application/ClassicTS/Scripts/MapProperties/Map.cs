@@ -366,7 +366,7 @@ namespace ClassicTilestorm
 			this.parent = parent;
 			if (!InitialiseGraph())
 			{
-				Debug.LogError("Failed to create runtime tiles — map data invalid.");
+				Debug.LogWarning("Failed to create runtime tiles — map data invalid.");
 				return false;
 			}
 

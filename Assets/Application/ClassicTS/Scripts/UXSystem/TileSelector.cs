@@ -141,6 +141,7 @@ namespace ClassicTilestorm
 		private async Awaitable RebuildAtlasAsync(CancellationToken ct)
 		{
 			GameObject stateCamera = null;
+			GameObject cube = null;
 
 			try
 			{
@@ -160,8 +161,12 @@ namespace ClassicTilestorm
 					subtractiveShadowColor: RenderSettings.subtractiveShadowColor
 				);
 
+				cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+				cube.transform.position = Vector3.forward * 100f;
+				cube.GetComponent<Renderer>().material = new Material(Shader.Find("Universal Render Pipeline/Simple Lit")) { color = Color.black };
+
 				// Wait with cancellation support
-				await AsyncExtensions.WaitFramesAsync(10, ct);
+				await AsyncExtensions.WaitFramesAsync(3, ct);
 
 				ct.ThrowIfCancellationRequested();
 
@@ -205,7 +210,7 @@ namespace ClassicTilestorm
 			{
 				if (stateCamera != null)
 				{
-					UnityEngine.Object.Destroy(stateCamera);
+					Destroy(stateCamera);
 				}
 
 				// Optional: clear reference only if this is still the active CTS
@@ -215,6 +220,9 @@ namespace ClassicTilestorm
 					_rebuildCts.Dispose();
 					_rebuildCts = null;
 				}
+
+				if (cube != null)
+					Destroy(cube);
 			}
 		}
 
