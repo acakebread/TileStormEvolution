@@ -163,7 +163,7 @@ namespace MassiveHadronLtd
 		private float timeSeed;
 
 		private CameraRenderSettingsOverride renderSettingsOverride => gameObject.GetComponent<CameraRenderSettingsOverride>();
-		private Texture skyboxTexture => SkyboxUtility.GetSkyboxTexture(null == RenderSettings.skybox || renderSettingsOverride ? renderSettingsOverride?.OverrideSettings.skybox : RenderSettings.skybox);
+		private Texture skyboxTexture => GetTintedSkyboxTexture();// SkyboxUtility.GetSkyboxTexture(null == RenderSettings.skybox || renderSettingsOverride ? renderSettingsOverride?.OverrideSettings.skybox : RenderSettings.skybox);
 
 		// Already there
 		private bool isRenderToTextureMode = false;
@@ -692,6 +692,14 @@ namespace MassiveHadronLtd
 				textureCamera = null;
 			}
 			SafeReleaseAndNull(ref outputRenderTexture);
+
+			if (tintedSkyboxCubemap != null)
+			{
+				DestroyImmediate(tintedSkyboxCubemap);
+				tintedSkyboxCubemap = null;
+			}
+			lastSkyboxMaterial = null;
+			lastSkyTint = Color.white;
 		}
 
 		void OnDestroy()
@@ -707,6 +715,14 @@ namespace MassiveHadronLtd
 			if (isTextureDynamic && noiseTexture != null) DestroyImmediate(noiseTexture);
 			if (null != reflectionCamera) DestroyImmediate(reflectionCamera.gameObject);
 			if (null != textureCamera) DestroyImmediate(textureCamera.gameObject);
+
+			if (tintedSkyboxCubemap != null)
+			{
+				DestroyImmediate(tintedSkyboxCubemap);
+				tintedSkyboxCubemap = null;
+			}
+			lastSkyboxMaterial = null;
+			lastSkyTint = Color.white;
 		}
 
 		// Returns the enum value that best matches the stored string
@@ -754,6 +770,81 @@ namespace MassiveHadronLtd
 				EffectMode.OceanEffect => "Ocean",
 				_ => null
 			};
+		}
+
+		private Cubemap tintedSkyboxCubemap;
+		private Material lastSkyboxMaterial;
+		private Color lastSkyTint = Color.white;
+
+		private Cubemap GetTintedSkyboxTexture()
+		{
+			Material skyMat = (null == RenderSettings.skybox || renderSettingsOverride)
+				? renderSettingsOverride?.OverrideSettings.skybox
+				: RenderSettings.skybox;
+
+			if (skyMat == null) return null;
+
+			// Cache check: rebuild only if sky material changed
+			if (tintedSkyboxCubemap != null && lastSkyboxMaterial == skyMat)
+				return tintedSkyboxCubemap;
+
+			// Clean old one
+			if (tintedSkyboxCubemap != null)
+			{
+				DestroyImmediate(tintedSkyboxCubemap);
+				tintedSkyboxCubemap = null;
+			}
+
+			// Typical skybox resolution — adjust if your sky is higher/lower
+			const int cubemapSize = 512;  // 256–1024 common; higher = better quality but slower
+
+			tintedSkyboxCubemap = new Cubemap(cubemapSize, TextureFormat.RGBA32, true)
+			{
+				filterMode = FilterMode.Bilinear,
+				wrapMode = TextureWrapMode.Clamp,
+				name = "TintedSkyReflection"
+			};
+
+			// Create temp camera to render skybox only
+			var tempGo = new GameObject("SkyboxBaker") { hideFlags = HideFlags.HideAndDontSave };
+			var bakerCam = tempGo.AddComponent<Camera>();
+			bakerCam.clearFlags = CameraClearFlags.Skybox;
+			bakerCam.cullingMask = 0;                   // No scene geometry
+			bakerCam.farClipPlane = 1000f;
+			bakerCam.allowHDR = true;                   // Match main cam if HDR sky
+			bakerCam.backgroundColor = Color.black;     // Just in case
+
+			// Force it to use current skybox (overrides any per-camera stuff)
+			bakerCam.RenderToCubemap(tintedSkyboxCubemap);
+
+			// Cleanup
+			DestroyImmediate(tempGo);
+
+			lastSkyboxMaterial = skyMat;  // For change detection
+
+			return tintedSkyboxCubemap;
+		}
+
+		private Color GetSkyboxTintColor(Material skyMat)
+		{
+			if (skyMat == null) return Color.white;
+
+			Color tint = Color.white;
+
+			if (skyMat.HasProperty("_Tint")) tint = skyMat.GetColor("_Tint");
+			else if (skyMat.HasProperty("_SkyTint")) tint = skyMat.GetColor("_SkyTint");
+			else if (skyMat.HasProperty("_Color")) tint = skyMat.GetColor("_Color");
+
+			// Most skyboxes also have exposure – we include it so it matches exactly
+			if (skyMat.HasProperty("_Exposure"))
+			{
+				float exp = skyMat.GetFloat("_Exposure");
+				tint.r *= exp;
+				tint.g *= exp;
+				tint.b *= exp;
+			}
+
+			return tint;
 		}
 	}
 }
