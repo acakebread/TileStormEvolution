@@ -1,4 +1,4 @@
-Shader "Unlit/URPWaterOpaque"
+ï»¿Shader "Unlit/URPWaterOpaque"
 {
     Properties
     {
@@ -13,8 +13,8 @@ Shader "Unlit/URPWaterOpaque"
         _ReflectionStrength ("Reflection Strength", Range(0, 1)) = 0.25
         _Skybox ("Skybox", Cube) = "" {}
         _NormalScale ("Normal Scale", Range(0, 5)) = 2.0
-        _FresnelPower ("Fresnel Power", Range(1, 5)) = 2.0
-    }
+        _FresnelPower ("Fresnel Exponent - use 15â€“30 for stylized water (reflection mostly at very grazing angles)", Range(1, 40)) = 12 }
+
     SubShader
     {
         Tags
@@ -107,10 +107,10 @@ Shader "Unlit/URPWaterOpaque"
                 float2 uv = input.uv;
 
                 // Four waves at 45-degree angles
-                float2 wave1Dir = normalize(float2(cos(0.0), sin(0.0))); // 0°
-                float2 wave2Dir = normalize(float2(cos(0.785398), sin(0.785398))); // 45°
-                float2 wave3Dir = normalize(float2(cos(1.570796), sin(1.570796))); // 90°
-                float2 wave4Dir = normalize(float2(cos(2.356194), sin(2.356194))); // 135°
+                float2 wave1Dir = normalize(float2(cos(0.0), sin(0.0))); // 0Â°
+                float2 wave2Dir = normalize(float2(cos(0.785398), sin(0.785398))); // 45Â°
+                float2 wave3Dir = normalize(float2(cos(1.570796), sin(1.570796))); // 90Â°
+                float2 wave4Dir = normalize(float2(cos(2.356194), sin(2.356194))); // 135Â°
 
                 // Seeds with UV and phase offsets
                 float seed1 = dot(uv, wave1Dir) * frequency + time + _RippleOffset * 0.0;
@@ -155,8 +155,8 @@ Shader "Unlit/URPWaterOpaque"
                 // Sample skybox with reflection vector
                 half4 reflectionColor = SAMPLE_TEXTURECUBE(_Skybox, sampler_Skybox, reflectDir);
 
-                // Compute reflection intensity using Fresnel effect
-                float fresnelTerm = pow(1.0 - saturate(dot(viewDirWS, reflectionNormal)), _FresnelPower);
+                float cosTheta = saturate(dot(viewDirWS, reflectionNormal));
+                float fresnelTerm = pow(1.0 - cosTheta, _FresnelPower);
                 float reflectionIntensity = fresnelTerm * _ReflectionStrength;
 
                 #if !defined(SHADER_API_GLES) && !defined(SHADER_API_GLES3) // Non-WebGL

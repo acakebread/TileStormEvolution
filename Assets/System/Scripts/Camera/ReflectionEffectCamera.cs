@@ -57,12 +57,12 @@ namespace MassiveHadronLtd
 
 		public static WaterDefaults Get() => new()
 		{
-			tint = new Color(0.05f, 0.05f, 0.05f, 0.6f),
+			tint = new Color(0.05f, 0.05f, 0.05f, 0.25f),
 			rippleSpeed = 0.2f,
 			rippleAmplitude = 0.075f,
 			rippleFrequency = 0.35f,
 			rippleOffset = 0f,
-			reflectionStrength = 0.8f,
+			reflectionStrength = 0.95f,
 		};
 	}
 
