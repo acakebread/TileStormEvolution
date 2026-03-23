@@ -387,5 +387,41 @@ namespace MassiveHadronLtd
 
 			return tex;
 		}
+
+		public static Color[] GetPixels(this RenderTexture src)
+		{
+			Texture2D clone = new Texture2D(src.width, src.height);
+			RenderTexture active = RenderTexture.active;
+			RenderTexture.active = src;
+			clone.ReadPixels(new Rect(0, 0, src.width, src.height), 0, 0);
+			clone.Apply();
+			RenderTexture.active = active;
+			Color[] data = clone.GetPixels();
+			GameObject.Destroy(clone);
+			return data;
+		}
+
+		//replaces flash histogram
+		public static float GetAlphaHistogram(this RenderTexture src, Rect[] rect = null)//normalised rects passed in
+		{
+			if (null == src) return 0;
+			if (null == rect) rect = new Rect[] { new Rect(0, 0, 1, 1) };//src.width,src.height)};//default to full size rect
+
+			Color[] data = src.GetPixels();
+			float fAlpha = 0;
+			float count = 0;
+			for (int n = 0; n < rect.Length; n++)
+			{
+				for (int y = (int)(rect[n].yMin * src.height); y < (int)(rect[n].yMax * src.height); y++)
+				{
+					for (int x = (int)(rect[n].xMin * src.width); x < (int)(rect[n].xMax * src.width); x++)
+					{
+						fAlpha += data[Mathf.Clamp(y * src.width + x, 0, data.Length - 1)].a;
+						count++;
+					}
+				}
+			}
+			return 0 < count ? fAlpha / count : 0;
+		}
 	}
 }
