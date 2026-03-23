@@ -125,6 +125,8 @@ namespace ClassicTilestorm
 			// Initialize FOV
 			fieldOfView = FovMin;
 			currentFovMax = UnityEngine.Random.value < 0.2f ? 60f : FovMax;
+
+			EnablePostProcessing = PostProcessingEnabled;
 		}
 
 		public override void Update()
