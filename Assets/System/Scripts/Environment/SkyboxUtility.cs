@@ -13,6 +13,9 @@ namespace MassiveHadronLtd
 		private static Cubemap reusableSixSidedCubemap = null;
 		private static int lastCubemapSize = 0;
 
+		private static Cubemap lastTintedCubemap = null;
+		private static Material lastTintedSourceMaterial = null;
+
 		static SkyboxUtility()
 		{
 			defaultSkyboxMaterial = RenderSettings.skybox;
@@ -207,6 +210,76 @@ namespace MassiveHadronLtd
 			RenderTexture.active = prev;
 			RenderTexture.ReleaseTemporary(rt);
 			Object.DestroyImmediate(readable);
+		}
+
+		/// <summary>
+		/// Gets a cubemap with the current skybox rendered including tint, exposure, rotation, etc.
+		/// Uses a temporary camera to bake the skybox appearance.
+		/// Caches the result until the skybox material changes.
+		/// </summary>
+		/// <param name="overrideSkybox">Optional override material (e.g. from CameraRenderSettingsOverride). If null, uses RenderSettings.skybox.</param>
+		/// <param name="resolution">Cubemap resolution (power of two recommended: 256, 512, 1024). Higher = better quality, slower bake.</param>
+		/// <returns>Tinted/baked cubemap or null if no skybox available</returns>
+		public static Cubemap GetTintedSkyboxCubemap(Material overrideSkybox = null, int resolution = 512)
+		{
+			Material skyMat = overrideSkybox ?? RenderSettings.skybox;
+			if (skyMat == null) return null;
+
+			// Cache hit: same source material → reuse
+			if (lastTintedCubemap != null && lastTintedSourceMaterial == skyMat)
+			{
+				return lastTintedCubemap;
+			}
+
+			// Clean up old one if exists
+			if (lastTintedCubemap != null)
+			{
+				Object.DestroyImmediate(lastTintedCubemap);
+				lastTintedCubemap = null;
+			}
+
+			// Create new cubemap
+			Cubemap tintedCubemap = new Cubemap(resolution, TextureFormat.RGBA32, true)
+			{
+				filterMode = FilterMode.Bilinear,
+				wrapMode = TextureWrapMode.Clamp,
+				name = "TintedSkyReflection_" + (skyMat.name ?? "Unnamed")
+			};
+
+			// Temporary camera to render only the skybox
+			var tempGo = new GameObject("SkyboxBaker") { hideFlags = HideFlags.HideAndDontSave };
+			var bakerCam = tempGo.AddComponent<Camera>();
+
+			bakerCam.clearFlags = CameraClearFlags.Skybox;
+			bakerCam.cullingMask = 0;                    // No scene objects
+			bakerCam.farClipPlane = 1000f;
+			bakerCam.allowHDR = true;                 // Preserve HDR if sky is HDR
+			bakerCam.backgroundColor = Color.black;          // Safety fallback
+
+			// Important: force this camera to use the desired skybox material
+			RenderSettings.skybox = skyMat;                  // Temporarily set (will be restored later if needed)
+			bakerCam.RenderToCubemap(tintedCubemap);
+			// Note: if you have per-camera sky overrides in URP, you might need to copy more settings here
+
+			// Cleanup temp objects
+			Object.DestroyImmediate(tempGo);
+
+			// Cache result
+			lastTintedCubemap = tintedCubemap;
+			lastTintedSourceMaterial = skyMat;
+
+			return tintedCubemap;
+		}
+
+		// Optional: call this when you know the skybox changed dramatically (day/night cycle, manual change)
+		public static void InvalidateTintedCache()
+		{
+			if (lastTintedCubemap != null)
+			{
+				Object.DestroyImmediate(lastTintedCubemap);
+				lastTintedCubemap = null;
+			}
+			lastTintedSourceMaterial = null;
 		}
 	}
 }
