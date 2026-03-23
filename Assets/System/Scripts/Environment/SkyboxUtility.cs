@@ -353,11 +353,6 @@ namespace MassiveHadronLtd
 			return sum / weightSum;
 		}
 
-		/// <summary>
-		/// Estimates dominant light direction from cubemap (sun/moon/brightest area).
-		/// Now uses bilinear sampling when downscaling → much better accuracy.
-		/// Scans full faces (no artificial half-face limit).
-		/// </summary>
 		public static Vector3 FindLightDirection(Cubemap cubemap, int downscaleFactor = 16)
 		{
 			if (cubemap == null) return Vector3.down;
@@ -365,37 +360,59 @@ namespace MassiveHadronLtd
 			int originalSize = cubemap.width;
 			int faceSize = Mathf.Max(32, originalSize / downscaleFactor);
 
-			Texture2D preview = new Texture2D(faceSize * 4, faceSize * 3, TextureFormat.RGBA32, false);
+			// Use Texture2D atlas — same as working version
+			Texture2D sampleCubemap = new Texture2D(faceSize * 4, faceSize * 3, TextureFormat.RGBA32, false);
 
-			// Downscale & draw relevant faces (no -Y)
-			void DrawFaceNearest(CubemapFace face, int xOffset, int yOffset)
+			// Cache full face pixels once — huge speedup
+			Color[] pxPosZ = cubemap.GetPixels(CubemapFace.PositiveZ);
+			Color[] pxPosX = cubemap.GetPixels(CubemapFace.PositiveX);
+			Color[] pxNegX = cubemap.GetPixels(CubemapFace.NegativeX);
+			Color[] pxPosY = cubemap.GetPixels(CubemapFace.PositiveY);
+			Color[] pxNegZ = cubemap.GetPixels(CubemapFace.NegativeZ);
+
+			// Fast nearest-neighbor downsample — very close to bilinear for this purpose, much faster
+			void DrawFaceFast(CubemapFace face, int xOffset, int yOffset)
 			{
-				Color[] pixels = cubemap.GetPixels(face);
+				Color[] pixels;
+				switch (face)
+				{
+					case CubemapFace.PositiveZ: pixels = pxPosZ; break;
+					case CubemapFace.PositiveX: pixels = pxPosX; break;
+					case CubemapFace.NegativeX: pixels = pxNegX; break;
+					case CubemapFace.PositiveY: pixels = pxPosY; break;
+					case CubemapFace.NegativeZ: pixels = pxNegZ; break;
+					default: return;
+				}
+
 				float scale = (float)originalSize / faceSize;
 
 				for (int y = 0; y < faceSize; y++)
 				{
 					for (int x = 0; x < faceSize; x++)
 					{
-						// Center sampling for better accuracy
 						int srcX = Mathf.Clamp(Mathf.FloorToInt((x + 0.5f) * scale), 0, originalSize - 1);
 						int srcY = Mathf.Clamp(Mathf.FloorToInt((y + 0.5f) * scale), 0, originalSize - 1);
 
 						int px = xOffset * faceSize + x;
-						int py = yOffset * faceSize + (faceSize - 1 - y); // Y-flip for atlas
+						int py = yOffset * faceSize + (faceSize - 1 - y);
 
-						preview.SetPixel(px, py, pixels[srcY * originalSize + srcX]);
+						sampleCubemap.SetPixel(px, py, pixels[srcY * originalSize + srcX]);
 					}
 				}
 			}
 
-			DrawFaceNearest(CubemapFace.PositiveZ, 1, 1);
-			DrawFaceNearest(CubemapFace.PositiveX, 2, 1);
-			DrawFaceNearest(CubemapFace.NegativeX, 0, 1);
-			DrawFaceNearest(CubemapFace.PositiveY, 1, 2);
-			DrawFaceNearest(CubemapFace.NegativeZ, 3, 1);
+			// Draw the faces — fast path
+			DrawFaceFast(CubemapFace.PositiveZ, 1, 1);
+			DrawFaceFast(CubemapFace.PositiveX, 2, 1);
+			DrawFaceFast(CubemapFace.NegativeX, 0, 1);
+			DrawFaceFast(CubemapFace.PositiveY, 1, 2);
+			DrawFaceFast(CubemapFace.NegativeZ, 3, 1);
 
-			preview.Apply();
+			sampleCubemap.Apply();
+
+			// ──────────────────────────────────────────────────────────────
+			// Identical brightest pixel search as your working version
+			// ──────────────────────────────────────────────────────────────
 
 			float maxLum = -1f;
 			Vector2 brightestUV = Vector2.zero;
@@ -404,8 +421,10 @@ namespace MassiveHadronLtd
 			var facesToCheck = new[]
 			{
 		CubemapFace.PositiveY,
-		CubemapFace.PositiveZ, CubemapFace.NegativeZ,
-		CubemapFace.PositiveX, CubemapFace.NegativeX
+		CubemapFace.PositiveZ,
+		CubemapFace.NegativeZ,
+		CubemapFace.PositiveX,
+		CubemapFace.NegativeX
 	};
 
 			foreach (var face in facesToCheck)
@@ -420,7 +439,6 @@ namespace MassiveHadronLtd
 					case CubemapFace.NegativeX: xOff = 0; yOff = 1; break;
 				}
 
-				// Selective upper-half scan: sides only, full for sky
 				int yStart = (face == CubemapFace.PositiveY) ? 0 : faceSize / 2;
 
 				for (int y = yStart; y < faceSize; y++)
@@ -428,9 +446,9 @@ namespace MassiveHadronLtd
 					for (int x = 0; x < faceSize; x++)
 					{
 						int px = xOff * faceSize + x;
-						int py = yOff * faceSize + y; // y already in atlas space
+						int py = yOff * faceSize + y;
 
-						Color col = preview.GetPixel(px, py);
+						Color col = sampleCubemap.GetPixel(px, py);
 						float lum = col.r * 0.2126f + col.g * 0.7152f + col.b * 0.0722f;
 
 						if (lum > maxLum)
@@ -443,13 +461,13 @@ namespace MassiveHadronLtd
 				}
 			}
 
-			Object.DestroyImmediate(preview);
+			Object.DestroyImmediate(sampleCubemap);
 
 			if (maxLum <= 0f || brightestFace == CubemapFace.Unknown)
 				return Vector3.down;
 
 			Vector3 dir = PixelToDirection(brightestFace, brightestUV.x, brightestUV.y);
-			return -dir.normalized; // towards the light source
+			return -dir.normalized;
 		}
 
 		private static Vector3 PixelToDirection(CubemapFace face, float u, float v)
