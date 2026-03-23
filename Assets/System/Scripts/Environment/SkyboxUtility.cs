@@ -277,26 +277,73 @@ namespace MassiveHadronLtd
 
 		public static Color ComputeBrightRegionColor(Cubemap cubemap, float thresholdRatio)
 		{
-			int faceSize = cubemap.width;
+			if (cubemap == null) return Color.white;
 
-			if (lastCubemapPreviewTexture == null || lastCubemapPreviewTexture.width != faceSize * 4)
+			// Use same downscale resolution as FindLightDirection for consistency
+			int originalSize = cubemap.width;
+			int downscaleFactor = 16; // ← you can expose this as parameter if needed
+			int faceSize = Mathf.Max(32, originalSize / downscaleFactor);
+
+			Texture2D sampleCubemap = new Texture2D(faceSize * 4, faceSize * 3, TextureFormat.RGBA32, false);
+
+			// Cache face pixels once (same speedup as in direction function)
+			Color[] pxPosZ = cubemap.GetPixels(CubemapFace.PositiveZ);
+			Color[] pxPosX = cubemap.GetPixels(CubemapFace.PositiveX);
+			Color[] pxNegX = cubemap.GetPixels(CubemapFace.NegativeX);
+			Color[] pxPosY = cubemap.GetPixels(CubemapFace.PositiveY);
+			Color[] pxNegY = cubemap.GetPixels(CubemapFace.NegativeY); // we need -Y now
+			Color[] pxNegZ = cubemap.GetPixels(CubemapFace.NegativeZ);
+
+			// Same fast drawing function (nearest with centering)
+			void DrawFaceFast(CubemapFace face, int xOffset, int yOffset)
 			{
-				lastCubemapPreviewTexture = new Texture2D(faceSize * 4, faceSize * 3, TextureFormat.RGBA32, false);
+				Color[] pixels;
+				switch (face)
+				{
+					case CubemapFace.PositiveZ: pixels = pxPosZ; break;
+					case CubemapFace.PositiveX: pixels = pxPosX; break;
+					case CubemapFace.NegativeX: pixels = pxNegX; break;
+					case CubemapFace.PositiveY: pixels = pxPosY; break;
+					case CubemapFace.NegativeY: pixels = pxNegY; break;
+					case CubemapFace.NegativeZ: pixels = pxNegZ; break;
+					default: return;
+				}
+
+				float scale = (float)originalSize / faceSize;
+
+				for (int y = 0; y < faceSize; y++)
+				{
+					for (int x = 0; x < faceSize; x++)
+					{
+						int srcX = Mathf.Clamp(Mathf.FloorToInt((x + 0.5f) * scale), 0, originalSize - 1);
+						int srcY = Mathf.Clamp(Mathf.FloorToInt((y + 0.5f) * scale), 0, originalSize - 1);
+
+						int px = xOffset * faceSize + x;
+						int py = yOffset * faceSize + (faceSize - 1 - y);
+
+						sampleCubemap.SetPixel(px, py, pixels[srcY * originalSize + srcX]);
+					}
+				}
 			}
 
-			DrawFace(cubemap, CubemapFace.PositiveZ, 1, 1);
-			DrawFace(cubemap, CubemapFace.PositiveX, 2, 1);
-			DrawFace(cubemap, CubemapFace.NegativeX, 0, 1);
-			DrawFace(cubemap, CubemapFace.PositiveY, 1, 2);
-			DrawFace(cubemap, CubemapFace.NegativeY, 1, 0);
-			DrawFace(cubemap, CubemapFace.NegativeZ, 3, 1);
+			// Draw all six faces — same layout as your original ComputeBrightRegionColor
+			DrawFaceFast(CubemapFace.PositiveZ, 1, 1);
+			DrawFaceFast(CubemapFace.PositiveX, 2, 1);
+			DrawFaceFast(CubemapFace.NegativeX, 0, 1);
+			DrawFaceFast(CubemapFace.PositiveY, 1, 2);
+			DrawFaceFast(CubemapFace.NegativeY, 1, 0);
+			DrawFaceFast(CubemapFace.NegativeZ, 3, 1);
 
-			lastCubemapPreviewTexture.Apply();
+			sampleCubemap.Apply();
+
+			// ──────────────────────────────────────────────────────────────
+			// Now sample only the downscaled pixels — same logic, much fewer iterations
+			// ──────────────────────────────────────────────────────────────
 
 			float maxLum = 0f;
 
-			List<Color> cols = new List<Color>(faceSize * faceSize * 6);
-			List<float> lums = new List<float>(faceSize * faceSize * 6);
+			List<Color> cols = new List<Color>();
+			List<float> lums = new List<float>();
 
 			void SampleFace(int xOffset, int yOffset)
 			{
@@ -307,15 +354,14 @@ namespace MassiveHadronLtd
 						int px = xOffset * faceSize + x;
 						int py = yOffset * faceSize + y;
 
-						Color col = lastCubemapPreviewTexture.GetPixel(px, py);
+						Color col = sampleCubemap.GetPixel(px, py);
 
 						float lum = col.r * 0.2126f + col.g * 0.7152f + col.b * 0.0722f;
 
 						cols.Add(col);
 						lums.Add(lum);
 
-						if (lum > maxLum)
-							maxLum = lum;
+						if (lum > maxLum) maxLum = lum;
 					}
 				}
 			}
@@ -327,6 +373,8 @@ namespace MassiveHadronLtd
 			SampleFace(1, 0);
 			SampleFace(3, 1);
 
+			Object.DestroyImmediate(sampleCubemap);
+
 			if (maxLum <= 0f || cols.Count == 0)
 				return Color.white;
 
@@ -334,7 +382,6 @@ namespace MassiveHadronLtd
 
 			Color sum = Color.black;
 			float weightSum = 0f;
-			int count = 0;
 
 			for (int i = 0; i < cols.Count; i++)
 			{
@@ -343,7 +390,6 @@ namespace MassiveHadronLtd
 					float weight = lums[i];
 					sum += cols[i] * weight;
 					weightSum += weight;
-					count++;
 				}
 			}
 
@@ -358,7 +404,7 @@ namespace MassiveHadronLtd
 			if (cubemap == null) return Vector3.down;
 
 			int originalSize = cubemap.width;
-			int faceSize = Mathf.Max(32, originalSize / downscaleFactor);
+			int faceSize = Mathf.Max(64, originalSize / downscaleFactor);
 
 			// Use Texture2D atlas — same as working version
 			Texture2D sampleCubemap = new Texture2D(faceSize * 4, faceSize * 3, TextureFormat.RGBA32, false);

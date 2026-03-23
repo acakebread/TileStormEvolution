@@ -531,7 +531,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MassiveHadronLtd.DirectionalLightUtility
   topPercent: 0.15
-  intensityMultiplier: 1
+  intensityMultiplier: 1.25
   minIntensity: 0.2
 --- !u!1 &1027007944
 GameObject:
