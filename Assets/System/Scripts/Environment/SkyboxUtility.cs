@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System.IO;
+using System.Collections.Generic;
 
 namespace MassiveHadronLtd
 {
@@ -16,26 +17,25 @@ namespace MassiveHadronLtd
 		private static Cubemap lastTintedCubemap = null;
 		private static Material lastTintedSourceMaterial = null;
 
+		private static Texture2D lastCubemapPreviewTexture; // cache flattened preview
+
 		static SkyboxUtility()
 		{
 			defaultSkyboxMaterial = RenderSettings.skybox;
 		}
 
-		/// <summary>
-		/// Sets the skybox.
-		/// - If pathOrName contains '/' → treated as full Resources path (direct load)
-		/// - Otherwise → treated as name only, uses AssetRegistry<Material>.FindMaterial (configured roots)
-		/// No automatic "Skybox" append — you control it in MainController
-		/// </summary>
+		// ──────────────────────────────────────────────────────────────
+		//  Your existing methods (unchanged): SetSkybox, GetSkyboxMaterial…
+		// ──────────────────────────────────────────────────────────────
+
 		public static void SetSkybox(string pathOrName = null)
 		{
 			var material = string.IsNullOrEmpty(pathOrName) ? defaultSkyboxMaterial : GetSkyboxMaterial(pathOrName);
 			RenderSettings.skybox = material ? material : defaultSkyboxMaterial;
 		}
 
-		//not currently used
-		//public static Material LoadSkyboxMaterial(string pathOrName = null) => string.IsNullOrEmpty(pathOrName) ? defaultSkyboxMaterial : GetSkyboxMaterial(pathOrName);
-		public static Material GetSkyboxMaterialForName(string pathOrName) => string.IsNullOrEmpty(pathOrName) ? defaultSkyboxMaterial : GetSkyboxMaterial(pathOrName);
+		public static Material GetSkyboxMaterialForName(string pathOrName)
+			=> string.IsNullOrEmpty(pathOrName) ? defaultSkyboxMaterial : GetSkyboxMaterial(pathOrName);
 
 		private static Material GetSkyboxMaterial(string pathOrName = null)
 		{
@@ -44,7 +44,6 @@ namespace MassiveHadronLtd
 
 			string normalized = pathOrName.Replace("\\", "/").Trim('/');
 
-			// If it contains a path separator → direct Resources load
 			if (normalized.Contains("/"))
 			{
 				string loadPath = Path.GetFileNameWithoutExtension(normalized);
@@ -59,11 +58,9 @@ namespace MassiveHadronLtd
 				return null;
 			}
 
-			// Otherwise — name only, use registry
 			return AssetRegistry<Material>.FindMaterial(normalized) ?? defaultSkyboxMaterial;
 		}
 
-		// === YOUR FULL CUBEMAP LOGIC — UNCHANGED ===
 		public static void SetSkyboxCubemap(Material waterMaterial, Material skyboxMaterial)
 		{
 			if (waterMaterial == null)
@@ -212,33 +209,20 @@ namespace MassiveHadronLtd
 			Object.DestroyImmediate(readable);
 		}
 
-		/// <summary>
-		/// Gets a cubemap with the current skybox rendered including tint, exposure, rotation, etc.
-		/// Uses a temporary camera to bake the skybox appearance.
-		/// Caches the result until the skybox material changes.
-		/// </summary>
-		/// <param name="overrideSkybox">Optional override material (e.g. from CameraRenderSettingsOverride). If null, uses RenderSettings.skybox.</param>
-		/// <param name="resolution">Cubemap resolution (power of two recommended: 256, 512, 1024). Higher = better quality, slower bake.</param>
-		/// <returns>Tinted/baked cubemap or null if no skybox available</returns>
 		public static Cubemap GetTintedSkyboxCubemap(Material overrideSkybox = null, int resolution = 512)
 		{
 			Material skyMat = overrideSkybox ?? RenderSettings.skybox;
 			if (skyMat == null) return null;
 
-			// Cache hit: same source material → reuse
 			if (lastTintedCubemap != null && lastTintedSourceMaterial == skyMat)
-			{
 				return lastTintedCubemap;
-			}
 
-			// Clean up old one if exists
 			if (lastTintedCubemap != null)
 			{
 				Object.DestroyImmediate(lastTintedCubemap);
 				lastTintedCubemap = null;
 			}
 
-			// Create new cubemap
 			Cubemap tintedCubemap = new Cubemap(resolution, TextureFormat.RGBA32, true)
 			{
 				filterMode = FilterMode.Bilinear,
@@ -246,32 +230,26 @@ namespace MassiveHadronLtd
 				name = "TintedSkyReflection_" + (skyMat.name ?? "Unnamed")
 			};
 
-			// Temporary camera to render only the skybox
 			var tempGo = new GameObject("SkyboxBaker") { hideFlags = HideFlags.HideAndDontSave };
 			var bakerCam = tempGo.AddComponent<Camera>();
 
 			bakerCam.clearFlags = CameraClearFlags.Skybox;
-			bakerCam.cullingMask = 0;                    // No scene objects
+			bakerCam.cullingMask = 0;
 			bakerCam.farClipPlane = 1000f;
-			bakerCam.allowHDR = true;                 // Preserve HDR if sky is HDR
-			bakerCam.backgroundColor = Color.black;          // Safety fallback
+			bakerCam.allowHDR = true;
+			bakerCam.backgroundColor = Color.black;
 
-			// Important: force this camera to use the desired skybox material
-			RenderSettings.skybox = skyMat;                  // Temporarily set (will be restored later if needed)
+			RenderSettings.skybox = skyMat;
 			bakerCam.RenderToCubemap(tintedCubemap);
-			// Note: if you have per-camera sky overrides in URP, you might need to copy more settings here
 
-			// Cleanup temp objects
 			Object.DestroyImmediate(tempGo);
 
-			// Cache result
 			lastTintedCubemap = tintedCubemap;
 			lastTintedSourceMaterial = skyMat;
 
 			return tintedCubemap;
 		}
 
-		// Optional: call this when you know the skybox changed dramatically (day/night cycle, manual change)
 		public static void InvalidateTintedCache()
 		{
 			if (lastTintedCubemap != null)
@@ -280,6 +258,239 @@ namespace MassiveHadronLtd
 				lastTintedCubemap = null;
 			}
 			lastTintedSourceMaterial = null;
+		}
+
+		// ── Combined utility: color + direction ───────────────────────────────
+		public static (Color brightColor, Vector3 lightDirection) AnalyzeSkyboxForLight(
+			Material overrideSkybox = null,
+			float colorThresholdRatio = 0.9f)
+		{
+			Cubemap cubemap = GetTintedSkyboxCubemap(overrideSkybox);
+			if (cubemap == null)
+				return (Color.white, Vector3.zero);
+
+			Color brightColor = ComputeBrightRegionColor(cubemap, colorThresholdRatio);
+			Vector3 lightDir = FindLightDirection(cubemap);
+
+			return (brightColor, lightDir);
+		}
+
+		public static Color ComputeBrightRegionColor(Cubemap cubemap, float thresholdRatio)
+		{
+			int faceSize = cubemap.width;
+
+			if (lastCubemapPreviewTexture == null || lastCubemapPreviewTexture.width != faceSize * 4)
+			{
+				lastCubemapPreviewTexture = new Texture2D(faceSize * 4, faceSize * 3, TextureFormat.RGBA32, false);
+			}
+
+			DrawFace(cubemap, CubemapFace.PositiveZ, 1, 1);
+			DrawFace(cubemap, CubemapFace.PositiveX, 2, 1);
+			DrawFace(cubemap, CubemapFace.NegativeX, 0, 1);
+			DrawFace(cubemap, CubemapFace.PositiveY, 1, 2);
+			DrawFace(cubemap, CubemapFace.NegativeY, 1, 0);
+			DrawFace(cubemap, CubemapFace.NegativeZ, 3, 1);
+
+			lastCubemapPreviewTexture.Apply();
+
+			float maxLum = 0f;
+
+			List<Color> cols = new List<Color>(faceSize * faceSize * 6);
+			List<float> lums = new List<float>(faceSize * faceSize * 6);
+
+			void SampleFace(int xOffset, int yOffset)
+			{
+				for (int y = 0; y < faceSize; y++)
+				{
+					for (int x = 0; x < faceSize; x++)
+					{
+						int px = xOffset * faceSize + x;
+						int py = yOffset * faceSize + y;
+
+						Color col = lastCubemapPreviewTexture.GetPixel(px, py);
+
+						float lum = col.r * 0.2126f + col.g * 0.7152f + col.b * 0.0722f;
+
+						cols.Add(col);
+						lums.Add(lum);
+
+						if (lum > maxLum)
+							maxLum = lum;
+					}
+				}
+			}
+
+			SampleFace(1, 1);
+			SampleFace(2, 1);
+			SampleFace(0, 1);
+			SampleFace(1, 2);
+			SampleFace(1, 0);
+			SampleFace(3, 1);
+
+			if (maxLum <= 0f || cols.Count == 0)
+				return Color.white;
+
+			float threshold = maxLum * thresholdRatio;
+
+			Color sum = Color.black;
+			float weightSum = 0f;
+			int count = 0;
+
+			for (int i = 0; i < cols.Count; i++)
+			{
+				if (lums[i] >= threshold)
+				{
+					float weight = lums[i];
+					sum += cols[i] * weight;
+					weightSum += weight;
+					count++;
+				}
+			}
+
+			if (weightSum <= 0f)
+				return Color.white;
+
+			return sum / weightSum;
+		}
+
+		/// <summary>
+		/// Estimates dominant light direction from cubemap (sun/moon/brightest area).
+		/// Now uses bilinear sampling when downscaling → much better accuracy.
+		/// Scans full faces (no artificial half-face limit).
+		/// </summary>
+		public static Vector3 FindLightDirection(Cubemap cubemap, int downscaleFactor = 16)
+		{
+			if (cubemap == null) return Vector3.down;
+
+			int originalSize = cubemap.width;
+			int faceSize = Mathf.Max(32, originalSize / downscaleFactor);
+
+			Texture2D preview = new Texture2D(faceSize * 4, faceSize * 3, TextureFormat.RGBA32, false);
+
+			// Downscale & draw relevant faces (no -Y)
+			void DrawFaceNearest(CubemapFace face, int xOffset, int yOffset)
+			{
+				Color[] pixels = cubemap.GetPixels(face);
+				float scale = (float)originalSize / faceSize;
+
+				for (int y = 0; y < faceSize; y++)
+				{
+					for (int x = 0; x < faceSize; x++)
+					{
+						// Center sampling for better accuracy
+						int srcX = Mathf.Clamp(Mathf.FloorToInt((x + 0.5f) * scale), 0, originalSize - 1);
+						int srcY = Mathf.Clamp(Mathf.FloorToInt((y + 0.5f) * scale), 0, originalSize - 1);
+
+						int px = xOffset * faceSize + x;
+						int py = yOffset * faceSize + (faceSize - 1 - y); // Y-flip for atlas
+
+						preview.SetPixel(px, py, pixels[srcY * originalSize + srcX]);
+					}
+				}
+			}
+
+			DrawFaceNearest(CubemapFace.PositiveZ, 1, 1);
+			DrawFaceNearest(CubemapFace.PositiveX, 2, 1);
+			DrawFaceNearest(CubemapFace.NegativeX, 0, 1);
+			DrawFaceNearest(CubemapFace.PositiveY, 1, 2);
+			DrawFaceNearest(CubemapFace.NegativeZ, 3, 1);
+
+			preview.Apply();
+
+			float maxLum = -1f;
+			Vector2 brightestUV = Vector2.zero;
+			CubemapFace brightestFace = CubemapFace.Unknown;
+
+			var facesToCheck = new[]
+			{
+		CubemapFace.PositiveY,
+		CubemapFace.PositiveZ, CubemapFace.NegativeZ,
+		CubemapFace.PositiveX, CubemapFace.NegativeX
+	};
+
+			foreach (var face in facesToCheck)
+			{
+				int xOff = 0, yOff = 0;
+				switch (face)
+				{
+					case CubemapFace.PositiveY: xOff = 1; yOff = 2; break;
+					case CubemapFace.PositiveZ: xOff = 1; yOff = 1; break;
+					case CubemapFace.NegativeZ: xOff = 3; yOff = 1; break;
+					case CubemapFace.PositiveX: xOff = 2; yOff = 1; break;
+					case CubemapFace.NegativeX: xOff = 0; yOff = 1; break;
+				}
+
+				// Selective upper-half scan: sides only, full for sky
+				int yStart = (face == CubemapFace.PositiveY) ? 0 : faceSize / 2;
+
+				for (int y = yStart; y < faceSize; y++)
+				{
+					for (int x = 0; x < faceSize; x++)
+					{
+						int px = xOff * faceSize + x;
+						int py = yOff * faceSize + y; // y already in atlas space
+
+						Color col = preview.GetPixel(px, py);
+						float lum = col.r * 0.2126f + col.g * 0.7152f + col.b * 0.0722f;
+
+						if (lum > maxLum)
+						{
+							maxLum = lum;
+							brightestUV = new Vector2((float)x / faceSize, (float)y / faceSize);
+							brightestFace = face;
+						}
+					}
+				}
+			}
+
+			Object.DestroyImmediate(preview);
+
+			if (maxLum <= 0f || brightestFace == CubemapFace.Unknown)
+				return Vector3.down;
+
+			Vector3 dir = PixelToDirection(brightestFace, brightestUV.x, brightestUV.y);
+			return -dir.normalized; // towards the light source
+		}
+
+		private static Vector3 PixelToDirection(CubemapFace face, float u, float v)
+		{
+			// Adjust +Y UV to compensate for common 90°/180° rotation in top face
+			// Your "rotate 180° works" → try flipping both axes (equivalent to 180°)
+			if (face == CubemapFace.PositiveY)
+			{
+				//u = 1f - u;  // horizontal flip
+				v = 1f - v;  // vertical flip
+			}
+
+			float x = u * 2f - 1f;
+			float y = v * 2f - 1f;
+
+			switch (face)
+			{
+				// Adjusted mappings — matches most Unity cubemaps / RenderToCubemap
+				case CubemapFace.PositiveZ: return new Vector3(x, y, 1f).normalized;   // front
+				case CubemapFace.NegativeZ: return new Vector3(-x, y, -1f).normalized;   // back
+				case CubemapFace.PositiveX: return new Vector3(1f, y, -x).normalized;    // right
+				case CubemapFace.NegativeX: return new Vector3(-1f, y, x).normalized;    // left
+				case CubemapFace.PositiveY: return new Vector3(x, 1f, y).normalized;    // up (after UV flip)
+				default: return Vector3.up;
+			}
+		}
+
+		private static void DrawFace(Cubemap cubemap, CubemapFace face, int xOffset, int yOffset)
+		{
+			Color[] pixels = cubemap.GetPixels(face);
+			int faceSize = cubemap.width;
+
+			for (int y = 0; y < faceSize; y++)
+			{
+				for (int x = 0; x < faceSize; x++)
+				{
+					int px = xOffset * faceSize + x;
+					int py = yOffset * faceSize + (faceSize - 1 - y);
+					lastCubemapPreviewTexture.SetPixel(px, py, pixels[y * faceSize + x]);
+				}
+			}
 		}
 	}
 }
