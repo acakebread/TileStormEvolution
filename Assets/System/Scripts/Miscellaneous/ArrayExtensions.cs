@@ -130,17 +130,9 @@ namespace MassiveHadronLtd
 			if (encoded == null || encoded.Length == 0)
 				return Array.Empty<int>();
 
-			// Try as RLE: must be even length + all counts > 0
 			if (encoded.Length % 2 == 0 && IsValidRlePairs(encoded))
-			{
-				var decoded = RleDecodeInternal(encoded);
+				return RleDecodeInternal(encoded);
 
-				// Extra safety: if decoded length is wildly wrong, fall back
-				if (decoded.Length > 0 && Math.Abs(decoded.Length - encoded.Length * 10) < encoded.Length * 20)
-					return decoded;
-			}
-
-			// Not valid RLE → treat as plain array
 			return (int[])encoded.Clone();
 		}
 
