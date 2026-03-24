@@ -382,6 +382,7 @@ namespace ClassicTilestorm
 			if (newSkybox != CurrentMap.Skybox)
 			{
 				CurrentMap.Skybox = newSkybox;
+				if (CurrentMap.name == MainController.CurrentMap.name) SkyboxUtility.SetSkybox(CurrentMap.skybox);
 				UpdatePreview();
 			}
 		}

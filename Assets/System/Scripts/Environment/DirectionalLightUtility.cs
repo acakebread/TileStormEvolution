@@ -30,22 +30,22 @@ namespace MassiveHadronLtd
 		private void Awake()
 		{
 			directionalLight = GetComponent<Light>();
-			SkyboxUtility.OnSkyboxChanged += value => UpdateFromSkybox();
+			SkyboxUtility.OnSkyboxChanged += value => UpdateFromSkybox(value);
 		}
 
-		private void Update()
-		{
-			Cubemap current = SkyboxUtility.GetTintedSkyboxCubemap();
-			if (current != lastCubemap)
-			{
-				lastCubemap = current;
-				UpdateFromSkybox();
-			}
-		}
+		//private void Update()
+		//{
+		//	Cubemap current = SkyboxUtility.GetTintedSkyboxCubemap();
+		//	if (current != lastCubemap)
+		//	{
+		//		lastCubemap = current;
+		//		UpdateFromSkybox();
+		//	}
+		//}
 
-		public void UpdateFromSkybox()
+		public void UpdateFromSkybox(Material skybox = null)
 		{
-			Cubemap cubemap = SkyboxUtility.GetTintedSkyboxCubemap();
+			Cubemap cubemap = SkyboxUtility.GetTintedSkyboxCubemap(skybox);
 			if (cubemap == null)
 			{
 				directionalLight.color = Color.white;
