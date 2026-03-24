@@ -530,6 +530,20 @@ namespace MassiveHadronLtd
 			UpdateMaterialProperties();
 		}
 
+		//ToDo simplify this
+		public void OnSkyboxChanged(Material value)
+		{
+			UnityRenderSettings renderSettings = new(
+				currentRenderSettings.ambientMode,
+				currentRenderSettings.ambientLight,
+				currentRenderSettings.ambientIntensity,
+				value,//new skybox
+				currentRenderSettings.ambientProbe,
+				currentRenderSettings.subtractiveShadowColor);
+
+			UpdateRenderSettings(renderSettings);
+		}
+
 		private EffectMode lastAppliedMode = EffectMode.Null;  // track last successfully applied
 
 		public void SetExternalOutputTexture(RenderTexture externalRT)

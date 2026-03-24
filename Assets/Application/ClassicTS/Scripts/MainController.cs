@@ -26,6 +26,9 @@ namespace ClassicTilestorm
 			if (cam != null && cam.GetComponent<CameraShaderPrimer>() == null)
 				cam.gameObject.AddComponent<CameraShaderPrimer>();
 
+			var mainReflection = cam?.GetComponent<ReflectionEffectCamera>();
+			if (null != mainReflection) SkyboxUtility.OnSkyboxChanged += mainReflection.OnSkyboxChanged;
+
 			// === ADD AUDIO MANAGER AUTOMATICALLY ===
 			gameObject.AddComponent<AudioManager>(); //audioManager = gameObject.AddComponent<AudioManager>();
 			AssetConfiguration.Initialize(); // Sets initial remapper + roots
@@ -116,17 +119,16 @@ namespace ClassicTilestorm
 			if (null == AssetRegistry<Material>.FindMaterial(currentMap.skybox))
 				currentMap.skybox = null;
 
-			SkyboxUtility.SetSkybox(currentMap.skybox);
-			RenderSettings.ambientLight = currentMap.Light;
-
 			var mainReflection = Camera.main?.GetComponent<ReflectionEffectCamera>();
 			if (mainReflection != null)
 			{
 				mainReflection.SetEffectMode(currentMap.Effect);
 				mainReflection.SetOffset(-0.2f);
 				mainReflection.UpdateRenderSettings(currentMap.RenderSettings);
-				mainReflection.UpdateMaterialProperties();//invoke due to skybox loaded
 			}
+
+			RenderSettings.ambientLight = currentMap.Light;
+			SkyboxUtility.SetSkybox(currentMap.skybox);
 
 			//var mainReflection = Camera.main?.GetComponent<ReflectionEffectCamera>();
 			//if (mainReflection != null)
