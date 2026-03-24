@@ -133,6 +133,11 @@ namespace ClassicTilestorm
 			SetMode(ControllerMode.Idle);
 		}
 
+		public void Reset()
+		{
+			ClearSelection();
+		}
+
 		private void OnEnable()
 		{
 			GetComponent<MainCameraController>()?.SelectCameraSystem(CameraModeRegistry.Editor, false);
