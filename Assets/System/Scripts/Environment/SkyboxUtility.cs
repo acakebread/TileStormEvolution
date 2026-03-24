@@ -17,16 +17,10 @@ namespace MassiveHadronLtd
 		private static Cubemap lastTintedCubemap = null;
 		private static Material lastTintedSourceMaterial = null;
 
-		private static Texture2D lastCubemapPreviewTexture; // cache flattened preview
-
 		static SkyboxUtility()
 		{
 			defaultSkyboxMaterial = RenderSettings.skybox;
 		}
-
-		// ──────────────────────────────────────────────────────────────
-		//  Your existing methods (unchanged): SetSkybox, GetSkyboxMaterial…
-		// ──────────────────────────────────────────────────────────────
 
 		public static void SetSkybox(string pathOrName = null)
 		{
@@ -258,21 +252,6 @@ namespace MassiveHadronLtd
 				lastTintedCubemap = null;
 			}
 			lastTintedSourceMaterial = null;
-		}
-
-		// ── Combined utility: color + direction ───────────────────────────────
-		public static (Color brightColor, Vector3 lightDirection) AnalyzeSkyboxForLight(
-			Material overrideSkybox = null,
-			float colorThresholdRatio = 0.9f)
-		{
-			Cubemap cubemap = GetTintedSkyboxCubemap(overrideSkybox);
-			if (cubemap == null)
-				return (Color.white, Vector3.zero);
-
-			Color brightColor = ComputeBrightRegionColor(cubemap, colorThresholdRatio);
-			Vector3 lightDir = FindLightDirection(cubemap);
-
-			return (brightColor, lightDir);
 		}
 
 		public static Color ComputeBrightRegionColor(Cubemap cubemap, float thresholdRatio)
@@ -538,22 +517,6 @@ namespace MassiveHadronLtd
 				case CubemapFace.NegativeX: return new Vector3(-1f, y, x).normalized;    // left
 				case CubemapFace.PositiveY: return new Vector3(x, 1f, y).normalized;    // up (after UV flip)
 				default: return Vector3.up;
-			}
-		}
-
-		private static void DrawFace(Cubemap cubemap, CubemapFace face, int xOffset, int yOffset)
-		{
-			Color[] pixels = cubemap.GetPixels(face);
-			int faceSize = cubemap.width;
-
-			for (int y = 0; y < faceSize; y++)
-			{
-				for (int x = 0; x < faceSize; x++)
-				{
-					int px = xOffset * faceSize + x;
-					int py = yOffset * faceSize + (faceSize - 1 - y);
-					lastCubemapPreviewTexture.SetPixel(px, py, pixels[y * faceSize + x]);
-				}
 			}
 		}
 	}
