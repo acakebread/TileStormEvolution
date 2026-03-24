@@ -382,6 +382,8 @@ namespace ClassicTilestorm
 			if (newSkybox != CurrentMap.Skybox)
 			{
 				CurrentMap.Skybox = newSkybox;
+				var directionalLightUtility = currentPreviewRoot.GetComponentInChildren<DirectionalLightUtility>(true);
+				if (directionalLightUtility != null) directionalLightUtility.UpdateFromSkybox(SkyboxUtility.GetSkyboxMaterialForName(CurrentMap.Skybox));
 				if (CurrentMap.name == MainController.CurrentMap.name) SkyboxUtility.SetSkybox(CurrentMap.skybox);
 				UpdatePreview();
 			}
@@ -717,8 +719,10 @@ namespace ClassicTilestorm
 
 			ScenePreviewUtil.UpdateEffect(map.Effect);
 			ScenePreviewUtil.UpdateRenderSettings(map.RenderSettings);
-			var directionalLightUtility = FindAnyObjectByType<DirectionalLightUtility>(FindObjectsInactive.Include);
-			if (directionalLightUtility != null) directionalLightUtility.UpdateFromSkybox();
+
+			//var directionalLightUtility = FindAnyObjectByType<DirectionalLightUtility>(FindObjectsInactive.Include);
+			var directionalLightUtility = currentPreviewRoot.GetComponentInChildren<DirectionalLightUtility>(true);
+			if (directionalLightUtility != null) directionalLightUtility.UpdateFromSkybox(SkyboxUtility.GetSkyboxMaterialForName(CurrentMap.Skybox));
 		}
 
 		private void UpdatePreview()

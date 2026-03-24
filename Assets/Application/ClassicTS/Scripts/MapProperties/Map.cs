@@ -125,6 +125,8 @@ namespace ClassicTilestorm
 			set => light = value.ToHexString(includeAlpha: true);
 		}
 
+		[JsonIgnore] private DirectionalLightUtility directionalLight;
+
 		[JsonIgnore] public Material SkyboxMaterial => SkyboxUtility.GetSkyboxMaterialForName(Skybox);
 
 		// ─────────────────────────────────────────────
@@ -266,6 +268,14 @@ namespace ClassicTilestorm
 			go.name = $"{def?.name ?? "??"} ({go.transform.position.x:F1},{go.transform.position.z:F1})+{variant.delta:F2}@{variant.angle:F1}°";
 		}
 
+		[JsonIgnore] public UnityRenderSettings RenderSettings => new(
+			ambientMode: UnityEngine.Rendering.AmbientMode.Flat,
+			ambientLight: Light,
+			ambientIntensity: 1f,
+			skybox: SkyboxMaterial,
+			ambientProbe: default,
+			subtractiveShadowColor: UnityEngine.RenderSettings.subtractiveShadowColor);
+
 		public Map() { } //{ //variants = Array.Empty<Variant>(); //tiles = Array.Empty<int>(); }
 
 		public Map(int width = 16, int height = 16, string mapName = "New Map")
@@ -327,6 +337,29 @@ namespace ClassicTilestorm
 			variants = variants != null ? variants.Select(v => new Variant(v.hash, v.delta, v.angle)).ToArray() : Array.Empty<Variant>()
 		};
 
+		public bool Initialise(Transform parent = null, bool solved = false)
+		{
+			this.parent = parent;
+			if (!InitialiseGraph())
+			{
+				Debug.LogWarning("Failed to create runtime tiles — map data invalid.");
+				return false;
+			}
+			directionalLight = DirectionalLightUtility.Instantiate(parent);
+
+			if (solved) Solve();
+			else Preset();
+			RefreshAttachments(GetAttachments());
+
+			PreviewRenderLayers.RemovePreviewLayersFromChildLights(parent);
+
+			if (null == waypoints || 0 == waypoints.Length)
+				waypoints = this.GenerateWaypoints();
+			parent.gameObject.GetOrAddComponent<WindController>();
+
+			return true;
+		}
+
 		public void Destroy()
 		{
 			OnMapEdited = null;
@@ -347,40 +380,19 @@ namespace ClassicTilestorm
 				}
 			}
 
+			if (null!= directionalLight)
+			{
+				if (Application.isPlaying)
+					UnityEngine.Object.Destroy(directionalLight);
+				else
+					UnityEngine.Object.DestroyImmediate(directionalLight);
+				directionalLight = null;
+			}
+
 			state = null;
 
 			if (parent != null)
 				parent = null;
-		}
-
-		[JsonIgnore] public UnityRenderSettings RenderSettings => new(
-			ambientMode: UnityEngine.Rendering.AmbientMode.Flat,
-			ambientLight: Light,
-			ambientIntensity: 1f,
-			skybox: SkyboxMaterial,
-			ambientProbe: default,
-			subtractiveShadowColor: UnityEngine.RenderSettings.subtractiveShadowColor);
-
-		public bool Initialise(Transform parent = null, bool solved = false)
-		{
-			this.parent = parent;
-			if (!InitialiseGraph())
-			{
-				Debug.LogWarning("Failed to create runtime tiles — map data invalid.");
-				return false;
-			}
-
-			if (solved) Solve();
-			else Preset();
-			RefreshAttachments(GetAttachments());
-
-			PreviewRenderLayers.RemovePreviewLayersFromChildLights(parent);
-
-			if (null == waypoints || 0 == waypoints.Length)
-				waypoints = this.GenerateWaypoints();
-			parent.gameObject.GetOrAddComponent<WindController>();
-
-			return true;
 		}
 
 		private Tile CreateTile(Variant variant, Transform parent, Vector3 renderPosition) => new Tile(variant, parent, renderPosition);

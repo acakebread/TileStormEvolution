@@ -94,6 +94,8 @@ namespace ClassicTilestorm
 				return false;
 			}
 
+			var directionalLight = DirectionalLightUtility.Instantiate(parent);
+
 			previewMap.Preset();
 			previewMap.RefreshAttachments(previewMap.GetAttachments());
 

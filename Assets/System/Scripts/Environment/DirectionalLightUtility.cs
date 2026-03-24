@@ -30,7 +30,7 @@ namespace MassiveHadronLtd
 		private void Awake()
 		{
 			directionalLight = GetComponent<Light>();
-			SkyboxUtility.OnSkyboxChanged += value => UpdateFromSkybox(value);
+			SkyboxUtility.OnSkyboxChanged += UpdateFromSkybox;
 		}
 
 		//private void Update()
@@ -133,6 +133,21 @@ namespace MassiveHadronLtd
 		{
 			if (cubemapPreviewTexture != null)
 				Destroy(cubemapPreviewTexture);
+
+			SkyboxUtility.OnSkyboxChanged -= UpdateFromSkybox;
+		}
+
+		public static DirectionalLightUtility Instantiate(Transform parent = null)
+		{
+			var instance = new GameObject("DirectionalLight", typeof (DirectionalLightUtility));//var instance = new GameObject($"DirectionalLight: {}");
+			instance.transform.parent = parent;
+
+			var util = instance.GetComponent<DirectionalLightUtility>();
+			var light = util.GetComponent<Light>();
+			light.lightmapBakeType = LightmapBakeType.Baked;
+			light.type = LightType.Directional;
+			light.shadows = LightShadows.Soft;
+			return util;
 		}
 	}
 }
