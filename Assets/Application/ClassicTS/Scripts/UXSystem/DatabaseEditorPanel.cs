@@ -382,7 +382,7 @@ namespace ClassicTilestorm
 			if (newSkybox != CurrentMap.Skybox)
 			{
 				CurrentMap.Skybox = newSkybox;
-				var directionalLightUtility = currentPreviewRoot.GetComponentInChildren<DirectionalLightUtility>(true);
+				var directionalLightUtility = currentPreviewRoot?.GetComponentInChildren<DirectionalLightUtility>(true);
 				if (directionalLightUtility != null) directionalLightUtility.UpdateFromSkybox(SkyboxUtility.GetSkyboxMaterialForName(CurrentMap.Skybox));
 				if (CurrentMap.name == MainController.CurrentMap.name) SkyboxUtility.SetSkybox(CurrentMap.skybox);
 				UpdatePreview();
