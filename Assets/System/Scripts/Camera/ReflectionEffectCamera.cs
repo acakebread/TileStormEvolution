@@ -521,9 +521,7 @@ namespace MassiveHadronLtd
 		{
 			foreach (var childCam in GetComponentsInChildren<Camera>(true))
 			{
-				var overrideComp = childCam.gameObject.GetComponent<CameraRenderSettingsOverride>();
-				if (null == overrideComp)
-					overrideComp = childCam.gameObject.AddComponent<CameraRenderSettingsOverride>();
+				var overrideComp = childCam.gameObject.GetOrAddComponent<CameraRenderSettingsOverride>();
 				overrideComp.OverrideSettings = renderSettings;
 			}
 			currentRenderSettings = renderSettings;
