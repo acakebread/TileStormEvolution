@@ -53,10 +53,10 @@ namespace MassiveHadronLtd
 			}
 
 			// Color with your dynamic threshold
-			Color brightColor = SkyboxUtility.ComputeBrightRegionColor(cubemap, 1f - topPercent);
+			Color brightColor = CubemapUtility.ComputeBrightRegionColor(cubemap, 1f - topPercent);
 
 			// Direction using the cubemap directly
-			Vector3 lightDir = SkyboxUtility.FindLightDirection(cubemap);
+			Vector3 lightDir = CubemapUtility.FindLightDirection(cubemap);
 
 			directionalLight.color = brightColor;
 
