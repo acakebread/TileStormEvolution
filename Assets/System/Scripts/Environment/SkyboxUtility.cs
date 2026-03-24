@@ -254,7 +254,7 @@ namespace MassiveHadronLtd
 			lastTintedSourceMaterial = null;
 		}
 
-		public static Color ComputeBrightRegionColor(Cubemap cubemap, float thresholdRatio)
+		public static Color ComputeBrightRegionColor(Cubemap cubemap, float thresholdRatio = 0.85f)
 		{
 			if (cubemap == null) return Color.white;
 
@@ -445,12 +445,12 @@ namespace MassiveHadronLtd
 
 			var facesToCheck = new[]
 			{
-		CubemapFace.PositiveY,
-		CubemapFace.PositiveZ,
-		CubemapFace.NegativeZ,
-		CubemapFace.PositiveX,
-		CubemapFace.NegativeX
-	};
+				CubemapFace.PositiveY,
+				CubemapFace.PositiveZ,
+				CubemapFace.NegativeZ,
+				CubemapFace.PositiveX,
+				CubemapFace.NegativeX
+			};
 
 			foreach (var face in facesToCheck)
 			{
@@ -493,30 +493,30 @@ namespace MassiveHadronLtd
 
 			Vector3 dir = PixelToDirection(brightestFace, brightestUV.x, brightestUV.y);
 			return -dir.normalized;
-		}
 
-		private static Vector3 PixelToDirection(CubemapFace face, float u, float v)
-		{
-			// Adjust +Y UV to compensate for common 90°/180° rotation in top face
-			// Your "rotate 180° works" → try flipping both axes (equivalent to 180°)
-			if (face == CubemapFace.PositiveY)
+			Vector3 PixelToDirection(CubemapFace face, float u, float v)
 			{
-				//u = 1f - u;  // horizontal flip
-				v = 1f - v;  // vertical flip
-			}
+				// Adjust +Y UV to compensate for common 90°/180° rotation in top face
+				// Your "rotate 180° works" → try flipping both axes (equivalent to 180°)
+				if (face == CubemapFace.PositiveY)
+				{
+					//u = 1f - u;  // horizontal flip
+					v = 1f - v;  // vertical flip
+				}
 
-			float x = u * 2f - 1f;
-			float y = v * 2f - 1f;
+				float x = u * 2f - 1f;
+				float y = v * 2f - 1f;
 
-			switch (face)
-			{
-				// Adjusted mappings — matches most Unity cubemaps / RenderToCubemap
-				case CubemapFace.PositiveZ: return new Vector3(x, y, 1f).normalized;   // front
-				case CubemapFace.NegativeZ: return new Vector3(-x, y, -1f).normalized;   // back
-				case CubemapFace.PositiveX: return new Vector3(1f, y, -x).normalized;    // right
-				case CubemapFace.NegativeX: return new Vector3(-1f, y, x).normalized;    // left
-				case CubemapFace.PositiveY: return new Vector3(x, 1f, y).normalized;    // up (after UV flip)
-				default: return Vector3.up;
+				switch (face)
+				{
+					// Adjusted mappings — matches most Unity cubemaps / RenderToCubemap
+					case CubemapFace.PositiveZ: return new Vector3(x, y, 1f).normalized;   // front
+					case CubemapFace.NegativeZ: return new Vector3(-x, y, -1f).normalized;   // back
+					case CubemapFace.PositiveX: return new Vector3(1f, y, -x).normalized;    // right
+					case CubemapFace.NegativeX: return new Vector3(-1f, y, x).normalized;    // left
+					case CubemapFace.PositiveY: return new Vector3(x, 1f, y).normalized;    // up (after UV flip)
+					default: return Vector3.up;
+				}
 			}
 		}
 	}
