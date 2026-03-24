@@ -386,6 +386,23 @@ namespace ClassicTilestorm
 				CurrentMap.Skybox = newSkybox;
 				ScenePreviewUtil.UpdateEffect(CurrentMap.Effect);
 				ScenePreviewUtil.UpdateRenderSettings(CurrentMap.RenderSettings);
+
+				if (CurrentMap.name == MainController.CurrentMap.name)
+				{
+					SkyboxUtility.SetSkybox(newSkybox);
+
+					var mainReflection = Camera.main?.GetComponent<ReflectionEffectCamera>();
+					if (mainReflection != null)
+					{
+						mainReflection.SetEffectMode(CurrentMap.Effect);
+						mainReflection.SetOffset(-0.2f);
+						mainReflection.UpdateRenderSettings(CurrentMap.RenderSettings);
+						mainReflection.UpdateMaterialProperties();//invoke due to skybox loaded
+					}
+
+					var directionalLightUtility = FindAnyObjectByType<DirectionalLightUtility>(FindObjectsInactive.Include);
+					if (directionalLightUtility != null) directionalLightUtility.UpdateFromSkybox();
+				}
 			}
 		}
 

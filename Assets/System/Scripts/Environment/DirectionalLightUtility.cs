@@ -42,7 +42,7 @@ namespace MassiveHadronLtd
 			}
 		}
 
-		private void UpdateFromSkybox()
+		public void UpdateFromSkybox()
 		{
 			Cubemap cubemap = SkyboxUtility.GetTintedSkyboxCubemap();
 			if (cubemap == null)
