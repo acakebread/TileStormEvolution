@@ -146,8 +146,7 @@ namespace ClassicTilestorm
 			if (previewImage != null)
 				ScenePreviewUtil.SetPreviewUI(previewImage);
 
-			ScenePreviewUtil.UpdateEffect(CurrentMap.Effect);
-			ScenePreviewUtil.UpdateRenderSettings(CurrentMap.RenderSettings);
+			UpdatePreview();
 			UpdateMapPreview();
 		}
 
@@ -287,8 +286,7 @@ namespace ClassicTilestorm
 				swatchImage.color = final;
 
 			CurrentMap.Light = final;
-			ScenePreviewUtil.UpdateEffect(CurrentMap.Effect);
-			ScenePreviewUtil.UpdateRenderSettings(CurrentMap.RenderSettings);
+			UpdatePreview();
 		}
 
 		private void UpdateValueSlider()
@@ -384,16 +382,7 @@ namespace ClassicTilestorm
 			if (newSkybox != CurrentMap.Skybox)
 			{
 				CurrentMap.Skybox = newSkybox;
-				ScenePreviewUtil.UpdateEffect(CurrentMap.Effect);
-				ScenePreviewUtil.UpdateRenderSettings(CurrentMap.RenderSettings);
-
-				if (CurrentMap.name == MainController.CurrentMap.name)
-				{
-					SkyboxUtility.SetSkybox(newSkybox);
-
-					var directionalLightUtility = FindAnyObjectByType<DirectionalLightUtility>(FindObjectsInactive.Include);
-					if (directionalLightUtility != null) directionalLightUtility.UpdateFromSkybox();
-				}
+				UpdatePreview();
 			}
 		}
 
@@ -426,8 +415,7 @@ namespace ClassicTilestorm
 			if (newEffectMode != CurrentMap.Effect)
 				CurrentMap.Effect = newEffectMode;
 
-			ScenePreviewUtil.UpdateEffect(CurrentMap.Effect);
-			ScenePreviewUtil.UpdateRenderSettings(CurrentMap.RenderSettings);
+			UpdatePreview();
 		}
 
 		private void RefreshMapList()
@@ -505,8 +493,6 @@ namespace ClassicTilestorm
 			SyncCharacterDropdown();
 			SyncEffectDropdown();
 
-			ScenePreviewUtil.UpdateEffect(CurrentMap.Effect);
-			ScenePreviewUtil.UpdateRenderSettings(CurrentMap.RenderSettings);
 			UpdateMapPreview();
 		}
 
@@ -727,6 +713,29 @@ namespace ClassicTilestorm
 
 			ScenePreviewUtil.Update();
 			orbitController?.Reframe(bounds, distanceMultiplier: 1f);
+
+			ScenePreviewUtil.UpdateEffect(map.Effect);
+			ScenePreviewUtil.UpdateRenderSettings(map.RenderSettings);
+			var directionalLightUtility = FindAnyObjectByType<DirectionalLightUtility>(FindObjectsInactive.Include);
+			if (directionalLightUtility != null) directionalLightUtility.UpdateFromSkybox();
+		}
+
+		private void UpdatePreview()
+		{
+			ScenePreviewUtil.UpdateEffect(CurrentMap.Effect);
+			ScenePreviewUtil.UpdateRenderSettings(CurrentMap.RenderSettings);
+
+			if (CurrentMap.name == MainController.CurrentMap.name)
+			{
+				//SkyboxUtility.SetSkybox(CurrentMap.skybox);
+				//var directionalLightUtility = FindAnyObjectByType<DirectionalLightUtility>(FindObjectsInactive.Include);
+				//if (directionalLightUtility != null) directionalLightUtility.UpdateFromSkybox();
+
+				//ToDo move to events
+				var mainReflection = Camera.main?.GetComponent<ReflectionEffectCamera>();
+				if (null != mainReflection)
+					mainReflection.UpdateRenderSettings(CurrentMap.RenderSettings);
+			}
 		}
 	}
 }

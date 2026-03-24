@@ -30,6 +30,7 @@ namespace MassiveHadronLtd
 		private void Awake()
 		{
 			directionalLight = GetComponent<Light>();
+			SkyboxUtility.OnSkyboxChanged += value => UpdateFromSkybox();
 		}
 
 		private void Update()
