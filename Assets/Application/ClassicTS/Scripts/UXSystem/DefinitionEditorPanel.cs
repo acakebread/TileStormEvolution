@@ -147,7 +147,8 @@ namespace ClassicTilestorm
 
 		protected override void OnDisable()
 		{
-			ResourceManager.OnDefininionsModified?.Invoke();//workaround for resource manager not currently responding to properties modified
+			if (!ApplicationQuit.IsQuitting)
+				ResourceManager.OnDefininionsModified?.Invoke();//workaround for resource manager not currently responding to properties modified
 			CleanupPreview();
 			ClearDefinitionListItems();
 			base.OnDisable();
