@@ -548,7 +548,7 @@ namespace MassiveHadronLtd
 			return material;
 		}
 
-		public static Color GetEmissionLikeColor(Material mat, Color fallback = default)
+		public static Color EmissiiveColour(Material mat, Color fallback = default)
 		{
 			if (mat == null) return fallback;
 

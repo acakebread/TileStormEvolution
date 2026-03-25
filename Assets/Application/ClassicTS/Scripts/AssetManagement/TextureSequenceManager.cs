@@ -45,5 +45,11 @@ namespace ClassicTilestorm
 		}
 
 		public static void ClearCache() => _cache.Clear();
+
+		public static UnityEngine.Texture2D GetFrameZero(string id)
+		{
+			var sequence = GetTextureSequence(id);
+			return null != sequence && sequence.ResolvedFrames.Length > 0 ? sequence.ResolvedFrames[0].texture : null;
+		}
 	}
 }
