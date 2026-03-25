@@ -7,7 +7,7 @@ namespace MassiveHadronLtd
 {
 	public class PreviewSceneController : IDisposable
 	{
-		// Configuration - defaults are just fallbacks, expect override
+		// Configuration
 		public Vector2 DefaultResolution { get; set; } = new Vector2(320, 200);
 		public Color BackgroundColor { get; set; } = new Color(0.129f, 0.698f, 0.882f); // #21B2E1
 		public float FieldOfView { get; set; } = 60f;
@@ -23,11 +23,9 @@ namespace MassiveHadronLtd
 			{
 				if (Mathf.Approximately(_groundY, value)) return;
 				_groundY = value;
+
 				if (isInitialized)
-				{
-					RecreateGroundPlane();
-					UpdateActiveModels();   // make sure scene sees the new ground
-				}
+					UpdateGroundPosition();
 			}
 		}
 
@@ -41,20 +39,20 @@ namespace MassiveHadronLtd
 		public CommandRenderModelData CurrentModelData { get; private set; }
 		public RenderTexture RenderTexture { get; private set; }
 
+		// Direct references for simple cleanup
+		private Mesh _groundMesh;
+		private Material _groundMaterial;
+
 		private readonly RawImage targetRawImage;
 		private readonly RectTransform previewRect;
 		private Vector2 lastKnownSize = Vector2.zero;
 		private bool isInitialized;
 
-		public PreviewSceneController(
-			RawImage targetImage,
-			RectTransform imageRectTransform)
+		public PreviewSceneController(RawImage targetImage, RectTransform imageRectTransform)
 		{
 			targetRawImage = targetImage ?? throw new ArgumentNullException(nameof(targetImage));
 			previewRect = imageRectTransform ?? throw new ArgumentNullException(nameof(imageRectTransform));
 		}
-
-		// ── Lazy Initialization ──────────────────────────────────────────────
 
 		private void EnsureInitialized()
 		{
@@ -65,11 +63,11 @@ namespace MassiveHadronLtd
 			Scene = new CommandRenderScene();
 			Camera.AssignCommandProvider(Scene);
 
-			RecreateGroundPlane();              // ← changed name for clarity
+			CreateGroundPlane();
+			UpdateActiveModels();
+
 			UpdateRenderTextureSizeIfNeeded();
 		}
-
-		// Public API methods – all call EnsureInitialized first
 
 		public void SetModel(CommandRenderModelData modelData)
 		{
@@ -130,6 +128,7 @@ namespace MassiveHadronLtd
 			targetRawImage.texture = RenderTexture;
 		}
 
+		// Restored method
 		public void ApplyExternalCameraTransform(Vector3 position, Quaternion rotation)
 		{
 			if (Camera == null) return;
@@ -137,30 +136,13 @@ namespace MassiveHadronLtd
 			Camera.rotation = rotation;
 		}
 
-		private void RecreateGroundPlane()
+		// ── Ground Plane ─────────────────────────────────────────────────────
+
+		private void CreateGroundPlane()
 		{
-			// Clean up previous ground if it exists
-			if (GroundModelData != null)
-			{
-				foreach (var inst in GroundModelData.meshInstances)
-				{
-					if (inst.mesh != null && inst.mesh.name.Contains("PreviewGroundMesh"))
-						UnityEngine.Object.DestroyImmediate(inst.mesh);
+			if (GroundModelData != null) return;
 
-					if (inst.materials != null)
-					{
-						foreach (var m in inst.materials)
-						{
-							if (m != null && m.name == "PreviewGroundMat")
-								UnityEngine.Object.DestroyImmediate(m);
-						}
-					}
-				}
-				GroundModelData = null;
-			}
-
-			// Create new ground
-			var mesh = MeshUtils.GenerateQuadXZ(GroundSize, GroundUVScale, "PreviewGroundMesh");
+			_groundMesh = MeshUtils.GenerateQuadXZ(GroundSize, GroundUVScale, "PreviewGroundMesh");
 
 			var tex = GroundOverrideTexture != null
 				? GroundOverrideTexture
@@ -173,20 +155,37 @@ namespace MassiveHadronLtd
 				return;
 			}
 
-			var mat = new Material(shader)
+			_groundMaterial = new Material(shader)
 			{
 				name = "PreviewGroundMat",
 				hideFlags = HideFlags.HideAndDontSave
 			};
 
-			mat.SetFloat("_Surface", 0f);
-			mat.SetTexture("_BaseMap", tex);
-			mat.SetColor("_BaseColor", GroundColor);
+			_groundMaterial.SetFloat("_Surface", 0f);
+			_groundMaterial.SetTexture("_BaseMap", tex);
+			_groundMaterial.SetColor("_BaseColor", GroundColor);
 
 			GroundModelData = new CommandRenderModelData(
-				mesh,
-				new[] { mat },
-				Matrix4x4.Translate(Vector3.up * GroundY));
+				_groundMesh,
+				new[] { _groundMaterial },
+				Matrix4x4.Translate(Vector3.up * _groundY));
+		}
+
+		private void UpdateGroundPosition()
+		{
+			if (GroundModelData == null || GroundModelData.meshInstances.Count == 0)
+				return;
+
+			var oldInfo = GroundModelData.meshInstances[0];
+
+			var newInfo = new MeshInstanceInfo(
+				oldInfo.mesh,
+				oldInfo.materials,
+				Matrix4x4.Translate(Vector3.up * _groundY),
+				oldInfo.layer
+			);
+
+			GroundModelData.meshInstances[0] = newInfo;
 		}
 
 		private void UpdateActiveModels()
@@ -216,25 +215,20 @@ namespace MassiveHadronLtd
 			Scene?.Destroy();
 			Scene = null;
 
-			// Ground cleanup (already safe to call multiple times)
-			if (GroundModelData != null)
+			// Simple direct cleanup
+			if (_groundMesh != null)
 			{
-				foreach (var inst in GroundModelData.meshInstances)
-				{
-					if (inst.mesh != null && inst.mesh.name.Contains("PreviewGroundMesh"))
-						UnityEngine.Object.DestroyImmediate(inst.mesh);
-
-					if (inst.materials != null)
-					{
-						foreach (var m in inst.materials)
-						{
-							if (m != null && m.name == "PreviewGroundMat")
-								UnityEngine.Object.DestroyImmediate(m);
-						}
-					}
-				}
+				UnityEngine.Object.DestroyImmediate(_groundMesh);
+				_groundMesh = null;
 			}
 
+			if (_groundMaterial != null)
+			{
+				UnityEngine.Object.DestroyImmediate(_groundMaterial);
+				_groundMaterial = null;
+			}
+
+			GroundModelData = null;
 			targetRawImage.texture = null;
 		}
 
