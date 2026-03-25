@@ -155,13 +155,6 @@ namespace MassiveHadronLtd
 
 		private static Vector3 PixelToDirection(CubemapFace face, float u, float v)
 		{
-			// Exactly the same +Y adjustment as your original working version
-			if (face == CubemapFace.PositiveY)
-			{
-				//u = 1f - u;        // commented out (as in your code)
-				v = 1f - v;           // vertical flip — this was active
-			}
-
 			float x = u * 2f - 1f;
 			float y = v * 2f - 1f;
 
@@ -171,7 +164,7 @@ namespace MassiveHadronLtd
 				case CubemapFace.NegativeZ: return new Vector3(-x, y, -1f).normalized;
 				case CubemapFace.PositiveX: return new Vector3(1f, y, -x).normalized;
 				case CubemapFace.NegativeX: return new Vector3(-1f, y, x).normalized;
-				case CubemapFace.PositiveY: return new Vector3(x, 1f, y).normalized;
+				case CubemapFace.PositiveY: return new Vector3(x, 1f, -y).normalized;
 				default: return Vector3.up;
 			}
 		}
