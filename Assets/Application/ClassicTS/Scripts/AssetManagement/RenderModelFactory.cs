@@ -56,8 +56,6 @@ namespace ClassicTilestorm
 			if (!isHD && !string.IsNullOrEmpty(def.texture))
 				sequence = TextureSequenceManager.GetTextureSequence(def.texture);
 
-			int added = 0;
-
 			// Process MeshRenderers
 			foreach (var renderer in meshRenderers)
 			{
@@ -80,7 +78,7 @@ namespace ClassicTilestorm
 							var copy = new Material(mats[m]);
 							copy.mainTexture = firstTex;
 							if (replacement != null && MaterialUtils.IsEmissive(replacement))
-								copy.color = GetEmissionLikeColor(replacement, Color.white * 1.2f);
+								copy.color = MaterialUtils.GetEmissionLikeColor(replacement, Color.white * 1.2f);
 							overrideMats[m] = copy;
 						}
 						mats = overrideMats;
@@ -88,7 +86,6 @@ namespace ClassicTilestorm
 				}
 
 				target.AddMeshInstance(filter.sharedMesh, mats, worldMatrix);
-				added++;
 			}
 
 			// Process SkinnedMeshRenderers
@@ -112,7 +109,7 @@ namespace ClassicTilestorm
 							var copy = new Material(mats[m]);
 							copy.mainTexture = firstTex;
 							if (replacement != null && MaterialUtils.IsEmissive(replacement))
-								copy.color = GetEmissionLikeColor(replacement, Color.white * 1.2f);
+								copy.color = MaterialUtils.GetEmissionLikeColor(replacement, Color.white * 1.2f);
 							overrideMats[m] = copy;
 						}
 						mats = overrideMats;
@@ -120,31 +117,7 @@ namespace ClassicTilestorm
 				}
 
 				target.AddMeshInstance(skinned.sharedMesh, mats, worldMatrix);
-				added++;
 			}
-
-			//Debug.Log($"Added {added} instances from {prefabRoot.name}");
-		}
-
-		private static Color GetEmissionLikeColor(Material mat, Color fallback = default)
-		{
-			if (mat == null) return fallback;
-
-			// Most common emission color names in order of probability
-			string[] candidates = { "_EmissionColor", "_EmissiveColor", "_TintColor", "_Color" };
-
-			foreach (var prop in candidates)
-			{
-				if (mat.HasProperty(prop))
-				{
-					var c = mat.GetColor(prop);
-					// Very small values usually aren't intended to glow
-					if (c.maxColorComponent > 0.02f)
-						return c;
-				}
-			}
-
-			return fallback;
 		}
 	}
 }

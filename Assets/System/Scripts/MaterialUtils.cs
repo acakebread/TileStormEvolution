@@ -541,12 +541,32 @@ namespace MassiveHadronLtd
 
 		public static Material CreateEmissiveMaterial(Color color)
 		{
-
 			var material = new Material(Shader.Find("Universal Render Pipeline/Lit"));
 			material.SetColor("_BaseColor", new Color(0f, 0f, 0f, 1f));
 			material.EnableKeyword("_EMISSION");
 			material.SetColor("_EmissionColor", color);
 			return material;
+		}
+
+		public static Color GetEmissionLikeColor(Material mat, Color fallback = default)
+		{
+			if (mat == null) return fallback;
+
+			// Most common emission color names in order of probability
+			string[] candidates = { "_EmissionColor", "_EmissiveColor", "_TintColor", "_Color" };
+
+			foreach (var prop in candidates)
+			{
+				if (mat.HasProperty(prop))
+				{
+					var c = mat.GetColor(prop);
+					// Very small values usually aren't intended to glow
+					if (c.maxColorComponent > 0.02f)
+						return c;
+				}
+			}
+
+			return fallback;
 		}
 
 		// Check if this material is intended to be emissive
