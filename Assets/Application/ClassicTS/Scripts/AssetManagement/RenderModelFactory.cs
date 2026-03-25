@@ -46,10 +46,8 @@ namespace ClassicTilestorm
 			}
 
 			//temporary provision to suppress texture replacement on loaded HD models
-			var isHD = (meshRenderers.Length == 1 && meshRenderers[0].sharedMaterials.Length >= 2) || meshRenderers.Length >= 2;
-			var firstTex = isHD ? null : TextureSequenceManager.GetFrameZero(def.texture);
-
-			var replacement = string.IsNullOrEmpty(def.material) ? null : MaterialAssets.Find(def.material);
+			var texture = IsHD(prefabRoot) ? null : TextureSequenceManager.GetFrameZero(def.texture);
+			var material = MaterialAssets.Find(def.material);
 
 			// Process MeshRenderers
 			foreach (var renderer in meshRenderers)
@@ -59,7 +57,7 @@ namespace ClassicTilestorm
 
 				var worldMatrix = rootMatrix * filter.transform.localToWorldMatrix;
 				var mats = renderer.sharedMaterials;
-				target.AddMeshInstance(filter.sharedMesh, ReplacementMaterials(mats, firstTex, replacement), worldMatrix);
+				target.AddMeshInstance(filter.sharedMesh, ReplacementMaterials(mats, texture, material), worldMatrix);
 			}
 
 			// Process SkinnedMeshRenderers
@@ -69,7 +67,7 @@ namespace ClassicTilestorm
 
 				var worldMatrix = rootMatrix * skinned.transform.localToWorldMatrix;
 				var mats = skinned.sharedMaterials;
-				target.AddMeshInstance(skinned.sharedMesh, ReplacementMaterials(mats, firstTex, replacement), worldMatrix);
+				target.AddMeshInstance(skinned.sharedMesh, ReplacementMaterials(mats, texture, material), worldMatrix);
 			}
 
 			static Material[] ReplacementMaterials(Material[] mats, Texture2D texture, Material material)
@@ -88,6 +86,13 @@ namespace ClassicTilestorm
 				}
 				return result;
 			}
+		}
+
+		//temporary provision to suppress texture replacement on loaded HD models
+		private static bool IsHD(GameObject gameObject)
+		{
+			var meshRenderers = gameObject.GetComponentsInChildren<MeshRenderer>(true);
+			return null != meshRenderers && ((meshRenderers.Length == 1 && meshRenderers[0].sharedMaterials.Length >= 2) || meshRenderers.Length >= 2);
 		}
 	}
 }
