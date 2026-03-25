@@ -153,15 +153,15 @@ namespace MassiveHadronLtd
 				float x = u * 2f - 1f;
 				float y = v * 2f - 1f;
 
-				switch (face)
+				return face switch
 				{
-					case CubemapFace.PositiveZ: return new Vector3(x, y, 1f).normalized;
-					case CubemapFace.NegativeZ: return new Vector3(-x, y, -1f).normalized;
-					case CubemapFace.PositiveX: return new Vector3(1f, y, -x).normalized;
-					case CubemapFace.NegativeX: return new Vector3(-1f, y, x).normalized;
-					case CubemapFace.PositiveY: return new Vector3(x, 1f, -y).normalized;
-					default: return Vector3.up;
-				}
+					CubemapFace.PositiveZ => new Vector3(x, y, 1f).normalized,
+					CubemapFace.NegativeZ => new Vector3(-x, y, -1f).normalized,
+					CubemapFace.PositiveX => new Vector3(1f, y, -x).normalized,
+					CubemapFace.NegativeX => new Vector3(-1f, y, x).normalized,
+					CubemapFace.PositiveY => new Vector3(x, 1f, -y).normalized,
+					_ => Vector3.up,
+				};
 			}
 		}
 
