@@ -185,19 +185,18 @@ namespace MassiveHadronLtd
 			// Apply 180° rotation to the whole controls container
 			container.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
 			container.transform.localPosition = Vector3.up * 0.2f;
-			container.transform.localScale = new Vector3(1f, 0.25f, 1f);
+			//container.transform.localScale = new Vector3(1f, 0.25f, 1f);
 
 			// ────────────────────────────────────────────────
 			// Original X-axis arrows (now flipped by 180°)
 			// ────────────────────────────────────────────────
-			//var cwPrefab = Resources.Load<GameObject>("Geometry/arrow_ccw");
-			//var ccwPrefab = Resources.Load<GameObject>("Geometry/arrow_cw");
+			//var cwPrefab = Resources.Load<GameObject>("Geometry/ArrowCW");
+			//var ccwPrefab = Resources.Load<GameObject>("Geometry/ArrowCCW");
+			var cwPrefab = Resources.Load<GameObject>("Geometry/arrow_cw");
+			var ccwPrefab = Resources.Load<GameObject>("Geometry/arrow_ccw");
 
-			var cwPrefab = Resources.Load<GameObject>("Geometry/ArrowCW");
-			var ccwPrefab = Resources.Load<GameObject>("Geometry/ArrowCCW");
-
-			if (cwPrefab == null) Debug.LogError("Missing: Resources/Geometry/arrow_ccw");
-			if (ccwPrefab == null) Debug.LogError("Missing: Resources/Geometry/arrow_cw");
+			if (cwPrefab == null) Debug.LogError("Missing: Resources/Geometry/arrow_cw");
+			if (ccwPrefab == null) Debug.LogError("Missing: Resources/Geometry/arrow_ccw");
 
 			// After 180° container rotation + your "swap CCW to CW" intent:
 			// Put CW prefab where CCW used to be (and vice versa)
