@@ -1,80 +1,51 @@
 ﻿using UnityEngine;
-using System.Collections.Generic;
 
 namespace MassiveHadronLtd
 {
 	public static class CubemapUtility
 	{
-		public static Color ComputeBrightRegionColor(Cubemap cubemap, float thresholdRatio = 0.85f)
+		public static Color ComputeBrightColor(Cubemap cubemap, float cutoff = 0.85f)
 		{
 			if (cubemap == null)
 				return Color.white;
 
-			int originalSize = cubemap.width;
-			int faceSize = Mathf.Max(32, originalSize / 16);
-
-			// Cache all six faces
-			Color[] pxPosZ = cubemap.GetPixels(CubemapFace.PositiveZ);
-			Color[] pxPosX = cubemap.GetPixels(CubemapFace.PositiveX);
-			Color[] pxNegX = cubemap.GetPixels(CubemapFace.NegativeX);
-			Color[] pxPosY = cubemap.GetPixels(CubemapFace.PositiveY);
-			Color[] pxNegY = cubemap.GetPixels(CubemapFace.NegativeY);
-			Color[] pxNegZ = cubemap.GetPixels(CubemapFace.NegativeZ);
-
 			float maxLum = 0f;
-			var brightColors = new List<Color>(faceSize * faceSize * 6);
-			var brightLums = new List<float>(faceSize * faceSize * 6);
 
-			// Process every face with identical simple downsampling - no flips, no atlas
-			ProcessFace(pxPosZ);
-			ProcessFace(pxPosX);
-			ProcessFace(pxNegX);
-			ProcessFace(pxPosY);
-			ProcessFace(pxNegY);
-			ProcessFace(pxNegZ);
+			// Pass 1: Find the brightest pixel
+			for (int i = 0; i < 6; i++)
+			{
+				CubemapFace face = (CubemapFace)i;   // 0 to 5 = the 6 valid faces only
+				foreach (var col in cubemap.GetPixels(face))
+				{
+					float lum = col.r * 0.2126f + col.g * 0.7152f + col.b * 0.0722f;
+					if (lum > maxLum) maxLum = lum;
+				}
+			}
 
-			if (maxLum <= 0f || brightColors.Count == 0)
+			if (maxLum <= 0f)
 				return Color.white;
 
-			float threshold = maxLum * thresholdRatio;
+			float threshold = maxLum * cutoff;
 
 			Color sum = Color.black;
 			float weightSum = 0f;
 
-			for (int i = 0; i < brightColors.Count; i++)
+			// Pass 2: Weighted average of only bright pixels
+			for (int i = 0; i < 6; i++)
 			{
-				if (brightLums[i] >= threshold)
+				CubemapFace face = (CubemapFace)i;
+				foreach (var col in cubemap.GetPixels(face))
 				{
-					float weight = brightLums[i];
-					sum += brightColors[i] * weight;
-					weightSum += weight;
+					float lum = col.r * 0.2126f + col.g * 0.7152f + col.b * 0.0722f;
+					if (lum >= threshold)
+					{
+						sum += col * lum;
+						weightSum += lum;
+					}
 				}
 			}
 
 			return weightSum > 0f ? (sum / weightSum) : Color.white;
-
-			void ProcessFace(Color[] pixels)
-			{
-				float scale = (float)originalSize / faceSize;
-
-				for (int y = 0; y < faceSize; y++)
-				{
-					for (int x = 0; x < faceSize; x++)
-					{
-						int srcX = Mathf.Clamp(Mathf.FloorToInt((x + 0.5f) * scale), 0, originalSize - 1);
-						int srcY = Mathf.Clamp(Mathf.FloorToInt((y + 0.5f) * scale), 0, originalSize - 1);
-
-						Color col = pixels[srcY * originalSize + srcX];
-						float lum = col.r * 0.2126f + col.g * 0.7152f + col.b * 0.0722f;
-
-						brightColors.Add(col);
-						brightLums.Add(lum);
-
-						if (lum > maxLum)
-							maxLum = lum;
-					}
-				}
-			}
 		}
 
 		public static Vector3 FindLightDirection(Cubemap cubemap, int downscaleFactor = 16)

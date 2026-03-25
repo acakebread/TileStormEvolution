@@ -54,7 +54,7 @@ namespace MassiveHadronLtd
 			}
 
 			// Color with your dynamic threshold
-			Color brightColor = CubemapUtility.ComputeBrightRegionColor(cubemap, 1f - topPercent);
+			Color brightColor = CubemapUtility.ComputeBrightColor(cubemap, 1f - topPercent);
 
 			// Direction using the cubemap directly
 			Vector3 lightDir = CubemapUtility.FindLightDirection(cubemap);
