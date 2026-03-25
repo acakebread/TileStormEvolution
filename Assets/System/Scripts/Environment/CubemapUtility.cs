@@ -111,7 +111,6 @@ namespace MassiveHadronLtd
 			Vector3 dir = PixelToDirection(best.face, best.uv.x, best.uv.y);
 			return -dir.normalized;
 
-
 			// ====================== Local Helper ======================
 			void ProcessFace(CubemapFace face, Color[] fullFacePixels, int targetSize, ref Candidate globalBest)
 			{
@@ -119,18 +118,15 @@ namespace MassiveHadronLtd
 
 				float localMaxLum = -1f;
 				int bestSrcX = 0;
-				int bestSrcY = 0;   // we track source Y because of the flip
+				int bestSrcY = 0;
 
-				int yStart = (face == CubemapFace.PositiveY) ? 0 : targetSize / 2;
-
-				for (int y = yStart; y < targetSize; y++)
+				int yCount = (face == CubemapFace.PositiveY) ? targetSize : targetSize / 2;
+				for (int y = 0; y < yCount; y++)
 				{
+					int srcY = Mathf.Clamp(Mathf.FloorToInt((y + 0.5f) * scale), 0, originalSize - 1);
 					for (int x = 0; x < targetSize; x++)
 					{
 						int srcX = Mathf.Clamp(Mathf.FloorToInt((x + 0.5f) * scale), 0, originalSize - 1);
-
-						// Important: match the vertical flip that DrawFaceFast applied
-						int srcY = Mathf.Clamp(Mathf.FloorToInt(((targetSize - 1 - y) + 0.5f) * scale), 0, originalSize - 1);
 
 						Color col = fullFacePixels[srcY * originalSize + srcX];
 						float lum = col.r * 0.2126f + col.g * 0.7152f + col.b * 0.0722f;
@@ -139,7 +135,7 @@ namespace MassiveHadronLtd
 						{
 							localMaxLum = lum;
 							bestSrcX = x;
-							bestSrcY = y;   // this is the y in the *flipped* coordinate space
+							bestSrcY = y;
 						}
 					}
 				}
@@ -147,25 +143,25 @@ namespace MassiveHadronLtd
 				if (localMaxLum > globalBest.luminance)
 				{
 					globalBest.luminance = localMaxLum;
-					globalBest.uv = new Vector2((float)bestSrcX / targetSize, (float)bestSrcY / targetSize);
+					globalBest.uv = new Vector2((float)bestSrcX / targetSize, 1f - (float)bestSrcY / targetSize);
 					globalBest.face = face;
 				}
 			}
-		}
 
-		private static Vector3 PixelToDirection(CubemapFace face, float u, float v)
-		{
-			float x = u * 2f - 1f;
-			float y = v * 2f - 1f;
-
-			switch (face)
+			static Vector3 PixelToDirection(CubemapFace face, float u, float v)
 			{
-				case CubemapFace.PositiveZ: return new Vector3(x, y, 1f).normalized;
-				case CubemapFace.NegativeZ: return new Vector3(-x, y, -1f).normalized;
-				case CubemapFace.PositiveX: return new Vector3(1f, y, -x).normalized;
-				case CubemapFace.NegativeX: return new Vector3(-1f, y, x).normalized;
-				case CubemapFace.PositiveY: return new Vector3(x, 1f, -y).normalized;
-				default: return Vector3.up;
+				float x = u * 2f - 1f;
+				float y = v * 2f - 1f;
+
+				switch (face)
+				{
+					case CubemapFace.PositiveZ: return new Vector3(x, y, 1f).normalized;
+					case CubemapFace.NegativeZ: return new Vector3(-x, y, -1f).normalized;
+					case CubemapFace.PositiveX: return new Vector3(1f, y, -x).normalized;
+					case CubemapFace.NegativeX: return new Vector3(-1f, y, x).normalized;
+					case CubemapFace.PositiveY: return new Vector3(x, 1f, -y).normalized;
+					default: return Vector3.up;
+				}
 			}
 		}
 
