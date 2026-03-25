@@ -8,54 +8,44 @@ namespace ClassicTilestorm
 	{
 		public static CommandRenderModelData Create(Definition definition, Vector3 position = default, Quaternion rotation = default, Vector3 scale = default)
 		{
-			var data = new CommandRenderModelData();
-
-			if (definition == null || string.IsNullOrEmpty(definition.model))
-				return data;
-
-			scale = scale == default ? Vector3.one : scale;
-
-			// Get the base model (same logic as DefinitionFactory)
-			var modelPrefab = ModelAssets.Find(definition.model);
-			if (modelPrefab == null)
+			var prefab = ModelAssets.Find(definition?.model);
+			if (null == prefab)
 			{
 				Debug.LogWarning($"RenderModelFactory: Model not found: {definition.model}");
-				return data;
-			}
-
-			// We need the mesh(es) and materials from the prefab
-			// This is the tricky part — we have to traverse the prefab hierarchy without instantiating
-			CollectMeshRenderers(modelPrefab, definition, position, rotation, scale, data);
-
-			return data;
-		}
-
-		private static void CollectMeshRenderers(GameObject prefabRoot, Definition def,
-			Vector3 rootPos, Quaternion rootRot, Vector3 rootScale, CommandRenderModelData target)
-		{
-			var rootMatrix = Matrix4x4.TRS(rootPos, rootRot, rootScale);
-
-			// Collect both types
-			var meshRenderers = prefabRoot.GetComponentsInChildren<MeshRenderer>(true);
-			var skinnedRenderers = prefabRoot.GetComponentsInChildren<SkinnedMeshRenderer>(true);
-
-			if (meshRenderers.Length == 0 && skinnedRenderers.Length == 0)
-			{
-				Debug.LogWarning($"No renderers found on prefab: {prefabRoot.name}");
-				return;
+				return null;
 			}
 
 			//temporary provision to suppress texture replacement on loaded HD models
-			var texture = IsHD(prefabRoot) ? null : TextureSequenceManager.GetFrameZero(def.texture);
-			var material = MaterialAssets.Find(def.material);
+			var texture = DefinitionFactory.IsHD(prefab) ? null : TextureSequenceManager.GetFrameZero(definition.texture);
+			var material = MaterialAssets.Find(definition.material);
+			var matrix = Matrix4x4.TRS(position, rotation, scale == default ? Vector3.one : scale);
 
+			return CollectMeshRenderers(prefab, texture, material, matrix);
+		}
+
+		private static CommandRenderModelData CollectMeshRenderers(GameObject prefab, Texture2D texture, Material material, Matrix4x4 matrix)
+		{
+			// We need the mesh(es) and materials from the prefab
+			// This is the tricky part — we have to traverse the prefab hierarchy without instantiating
+
+			// Collect both types
+			var meshRenderers = prefab.GetComponentsInChildren<MeshRenderer>(true);
+			var skinnedRenderers = prefab.GetComponentsInChildren<SkinnedMeshRenderer>(true);
+
+			if (meshRenderers.Length == 0 && skinnedRenderers.Length == 0)
+			{
+				Debug.LogWarning($"No renderers found on prefab: {prefab.name}");
+				return null;
+			}
+
+			var target = new CommandRenderModelData();
 			// Process MeshRenderers
 			foreach (var renderer in meshRenderers)
 			{
 				var filter = renderer.GetComponent<MeshFilter>();
 				if (filter == null || filter.sharedMesh == null) continue;
 
-				var worldMatrix = rootMatrix * filter.transform.localToWorldMatrix;
+				var worldMatrix = matrix * filter.transform.localToWorldMatrix;
 				var mats = renderer.sharedMaterials;
 				target.AddMeshInstance(filter.sharedMesh, ReplacementMaterials(mats, texture, material), worldMatrix);
 			}
@@ -65,10 +55,12 @@ namespace ClassicTilestorm
 			{
 				if (skinned.sharedMesh == null) continue;
 
-				var worldMatrix = rootMatrix * skinned.transform.localToWorldMatrix;
+				var worldMatrix = matrix * skinned.transform.localToWorldMatrix;
 				var mats = skinned.sharedMaterials;
 				target.AddMeshInstance(skinned.sharedMesh, ReplacementMaterials(mats, texture, material), worldMatrix);
 			}
+
+			return target;
 
 			static Material[] ReplacementMaterials(Material[] mats, Texture2D texture, Material material)
 			{
@@ -86,13 +78,6 @@ namespace ClassicTilestorm
 				}
 				return result;
 			}
-		}
-
-		//temporary provision to suppress texture replacement on loaded HD models
-		private static bool IsHD(GameObject gameObject)
-		{
-			var meshRenderers = gameObject.GetComponentsInChildren<MeshRenderer>(true);
-			return null != meshRenderers && ((meshRenderers.Length == 1 && meshRenderers[0].sharedMaterials.Length >= 2) || meshRenderers.Length >= 2);
 		}
 	}
 }

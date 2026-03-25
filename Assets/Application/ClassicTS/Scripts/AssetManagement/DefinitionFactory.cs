@@ -25,14 +25,13 @@ namespace ClassicTilestorm
 
 			//temporary provision to suppress texture replacement on loaded HD models
 			var renderers = gameObject.GetComponentsInChildren<MeshRenderer>(true);
-			var isHD = (renderers.Length == 1 && renderers[0].sharedMaterials.Length >= 2) || renderers.Length >= 2;//gameObject.CompareTag("Respawn");//HD flag!
 
 			//Apply Definition Properties
 			var replacement = MaterialAssets.Find(definition.material);
 
 			// Apply texture animation and / or material replacement
 			var textureAnimator = gameObject.AddComponent<TextureSetAnimator>();
-			if (!isHD)
+			if (!IsHD(gameObject))
 			{
 				var sequence = TextureSequenceManager.GetTextureSequence(definition.texture);
 				textureAnimator.Initialize(sequence, replacement);
@@ -63,5 +62,12 @@ namespace ClassicTilestorm
 #if DEBUG
 		private class RTTI : MonoBehaviour { public Definition definition; }//debug class so Definition data can be seen in the inspector
 #endif
+
+		//temporary provision to suppress texture replacement on loaded HD models
+		public static bool IsHD(GameObject gameObject)
+		{
+			var meshRenderers = gameObject.GetComponentsInChildren<MeshRenderer>(true);
+			return null != meshRenderers && ((meshRenderers.Length == 1 && meshRenderers[0].sharedMaterials.Length >= 2) || meshRenderers.Length >= 2);
+		}
 	}
 }
