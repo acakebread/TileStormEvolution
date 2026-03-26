@@ -17,17 +17,15 @@ namespace MassiveHadronLtd
 
 			// === Build one large array containing ALL pixels from all 6 faces ===
 			var faceSize = cubemap.width;
-			var allPixels = new Color[faceSize * faceSize * 6];//totalPixels
-			var offset = 0;
+			var pixels = new Color[faceSize * faceSize * 6];//totalPixels
 
 			for (var i = 0; i < 6; i++)
 			{
 				var face = cubemap.GetPixels((CubemapFace)i);
-				System.Array.Copy(face, 0, allPixels, offset, face.Length);
-				offset += face.Length;
+				System.Array.Copy(face, 0, pixels, faceSize * faceSize * i, face.Length);
 			}
 
-			return ColourUtils.ThresholdColour(allPixels, threshold);
+			return ColourUtils.ThresholdColour(pixels, threshold);
 		}
 
 		public static Vector3 FindLightDirection(Cubemap cubemap, int downscaleFactor = 16)
