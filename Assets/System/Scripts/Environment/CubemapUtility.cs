@@ -4,48 +4,30 @@ namespace MassiveHadronLtd
 {
 	public static class CubemapUtility
 	{
-		public static Color ComputeBrightColor(Cubemap cubemap, float cutoff = 0.85f)
+		public static Color ComputeBrightColor(Cubemap cubemap, float threshold = 0.85f)
 		{
 			if (cubemap == null)
 				return Color.white;
 
-			float maxLum = 0f;
-
-			// Pass 1: Find the brightest pixel
-			for (int i = 0; i < 6; i++)
+			if (!cubemap.isReadable)
 			{
-				CubemapFace face = (CubemapFace)i;   // 0 to 5 = the 6 valid faces only
-				foreach (var col in cubemap.GetPixels(face))
-				{
-					float lum = col.r * 0.2126f + col.g * 0.7152f + col.b * 0.0722f;
-					if (lum > maxLum) maxLum = lum;
-				}
-			}
-
-			if (maxLum <= 0f)
+				Debug.LogWarning($"Cubemap '{cubemap.name}' is not readable.");
 				return Color.white;
-
-			float threshold = maxLum * cutoff;
-
-			Color sum = Color.black;
-			float weightSum = 0f;
-
-			// Pass 2: Weighted average of only bright pixels
-			for (int i = 0; i < 6; i++)
-			{
-				CubemapFace face = (CubemapFace)i;
-				foreach (var col in cubemap.GetPixels(face))
-				{
-					float lum = col.r * 0.2126f + col.g * 0.7152f + col.b * 0.0722f;
-					if (lum >= threshold)
-					{
-						sum += col * lum;
-						weightSum += lum;
-					}
-				}
 			}
 
-			return weightSum > 0f ? (sum / weightSum) : Color.white;
+			// === Build one large array containing ALL pixels from all 6 faces ===
+			var faceSize = cubemap.width;
+			var allPixels = new Color[faceSize * faceSize * 6];//totalPixels
+			var offset = 0;
+
+			for (var i = 0; i < 6; i++)
+			{
+				var face = cubemap.GetPixels((CubemapFace)i);
+				System.Array.Copy(face, 0, allPixels, offset, face.Length);
+				offset += face.Length;
+			}
+
+			return ColourUtils.ThresholdColour(allPixels, threshold);
 		}
 
 		public static Vector3 FindLightDirection(Cubemap cubemap, int downscaleFactor = 16)
