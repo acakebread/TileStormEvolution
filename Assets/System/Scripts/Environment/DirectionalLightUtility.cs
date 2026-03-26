@@ -71,6 +71,7 @@ namespace MassiveHadronLtd
 			else
 			{
 				transform.rotation = Quaternion.LookRotation(new Vector3(0.5f, -1f, 0.5f).normalized);
+				Debug.LogWarning("no light direction determined - resorting to default");
 			}
 
 			Debug.Log($"Sky updated: BrightColor={brightColor}, Lum={lum:F3}, LightDir={lightDir}, Intensity={directionalLight.intensity:F2}");
