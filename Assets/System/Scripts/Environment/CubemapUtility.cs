@@ -33,21 +33,21 @@ namespace MassiveHadronLtd
 			if (cubemap == null)
 				return Vector3.down;
 
-			int originalSize = cubemap.width;
-			int faceSize = Mathf.Max(64, originalSize / downscaleFactor);
+			var originalSize = cubemap.width;
+			var faceSize = Mathf.Max(64, originalSize / downscaleFactor);
 
-			Candidate best = new Candidate
+			var best = new Candidate
 			{
 				luminance = -1f,
 				face = CubemapFace.Unknown
 			};
 
 			// Cache full face pixels once (same as original)
-			Color[] pxPosY = cubemap.GetPixels(CubemapFace.PositiveY);
-			Color[] pxPosX = cubemap.GetPixels(CubemapFace.PositiveX);
-			Color[] pxNegX = cubemap.GetPixels(CubemapFace.NegativeX);
-			Color[] pxPosZ = cubemap.GetPixels(CubemapFace.PositiveZ);
-			Color[] pxNegZ = cubemap.GetPixels(CubemapFace.NegativeZ);
+			var pxPosY = cubemap.GetPixels(CubemapFace.PositiveY);
+			var pxPosX = cubemap.GetPixels(CubemapFace.PositiveX);
+			var pxNegX = cubemap.GetPixels(CubemapFace.NegativeX);
+			var pxPosZ = cubemap.GetPixels(CubemapFace.PositiveZ);
+			var pxNegZ = cubemap.GetPixels(CubemapFace.NegativeZ);
 
 			// Process each face with the same sampling logic as the original
 			ProcessFace(CubemapFace.PositiveY, pxPosY, faceSize, ref best);
@@ -59,28 +59,28 @@ namespace MassiveHadronLtd
 			if (best.luminance <= 0f || best.face == CubemapFace.Unknown)
 				return Vector3.down;
 
-			Vector3 dir = PixelToDirection(best.face, best.uv.x, best.uv.y);
+			var dir = PixelToDirection(best.face, best.uv.x, best.uv.y);
 			return -dir.normalized;
 
 			// ====================== Local Helper ======================
 			void ProcessFace(CubemapFace face, Color[] fullFacePixels, int targetSize, ref Candidate globalBest)
 			{
-				float scale = (float)originalSize / targetSize;
+				var scale = (float)originalSize / targetSize;
 
-				float localMaxLum = -1f;
-				int bestSrcX = 0;
-				int bestSrcY = 0;
+				var localMaxLum = -1f;
+				var bestSrcX = 0;
+				var bestSrcY = 0;
 
-				int yCount = (face == CubemapFace.PositiveY) ? targetSize : targetSize / 2;
-				for (int y = 0; y < yCount; y++)
+				int yCount = (face == CubemapFace.PositiveY) ? targetSize : targetSize / 2;//only test top halves of NSEW skycube - full test of top, ignore bottom
+				for (var y = 0; y < yCount; y++)
 				{
-					int srcY = Mathf.Clamp(Mathf.FloorToInt((y + 0.5f) * scale), 0, originalSize - 1);
-					for (int x = 0; x < targetSize; x++)
+					var srcY = Mathf.Clamp(Mathf.FloorToInt((y + 0.5f) * scale), 0, originalSize - 1);
+					for (var x = 0; x < targetSize; x++)
 					{
-						int srcX = Mathf.Clamp(Mathf.FloorToInt((x + 0.5f) * scale), 0, originalSize - 1);
+						var srcX = Mathf.Clamp(Mathf.FloorToInt((x + 0.5f) * scale), 0, originalSize - 1);
 
-						Color col = fullFacePixels[srcY * originalSize + srcX];
-						float lum = col.r * 0.2126f + col.g * 0.7152f + col.b * 0.0722f;
+						var col = fullFacePixels[srcY * originalSize + srcX];
+						var lum = col.Luminance();
 
 						if (lum > localMaxLum)
 						{
@@ -101,8 +101,8 @@ namespace MassiveHadronLtd
 
 			static Vector3 PixelToDirection(CubemapFace face, float u, float v)
 			{
-				float x = u * 2f - 1f;
-				float y = v * 2f - 1f;
+				var x = u * 2f - 1f;
+				var y = v * 2f - 1f;
 
 				return face switch
 				{
