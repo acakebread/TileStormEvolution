@@ -423,5 +423,19 @@ namespace MassiveHadronLtd
 			}
 			return 0 < count ? fAlpha / count : 0;
 		}
+
+		public static Texture2D FlipVertically(this Texture2D source)
+		{
+			if (source == null) return null;
+			Texture2D flipped = new Texture2D(source.width, source.height, source.format, false);
+			Color[] p = source.GetPixels();
+			Color[] fp = new Color[p.Length];
+			int w = source.width, h = source.height;
+			for (int y = 0; y < h; y++)
+				System.Array.Copy(p, y * w, fp, (h - 1 - y) * w, w);
+			flipped.SetPixels(fp);
+			flipped.Apply();
+			return flipped;
+		}
 	}
 }
