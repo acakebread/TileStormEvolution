@@ -28,99 +28,123 @@ namespace MassiveHadronLtd
 			return ColourUtils.ThresholdColour(pixels, threshold);
 		}
 
-		public static Vector3 FindLightDirection(Cubemap cubemap, int downscaleFactor = 16)
+		//public static Color SampleCubemap(Cubemap cubemap, Vector3 dir)
+		//{
+		//	dir.Normalize();
+
+		//	float absX = Mathf.Abs(dir.x);
+		//	float absY = Mathf.Abs(dir.y);
+		//	float absZ = Mathf.Abs(dir.z);
+
+		//	CubemapFace face;
+		//	float u, v;
+
+		//	if (absX >= absY && absX >= absZ)
+		//	{
+		//		// ±X faces
+		//		if (dir.x > 0)
+		//		{
+		//			face = CubemapFace.PositiveX;
+		//			u = -dir.z / absX;
+		//			v = -dir.y / absX;
+		//		}
+		//		else
+		//		{
+		//			face = CubemapFace.NegativeX;
+		//			u = dir.z / absX;
+		//			v = -dir.y / absX;
+		//		}
+		//	}
+		//	else if (absY >= absX && absY >= absZ)
+		//	{
+		//		// ±Y faces (different orientation!)
+		//		if (dir.y > 0)
+		//		{
+		//			face = CubemapFace.PositiveY;
+		//			u = dir.x / absY;
+		//			v = dir.z / absY;
+		//		}
+		//		else
+		//		{
+		//			face = CubemapFace.NegativeY;
+		//			u = dir.x / absY;
+		//			v = -dir.z / absY;
+		//		}
+		//	}
+		//	else
+		//	{
+		//		// ±Z faces
+		//		if (dir.z > 0)
+		//		{
+		//			face = CubemapFace.PositiveZ;
+		//			u = dir.x / absZ;
+		//			v = -dir.y / absZ;
+		//		}
+		//		else
+		//		{
+		//			face = CubemapFace.NegativeZ;
+		//			u = -dir.x / absZ;
+		//			v = -dir.y / absZ;
+		//		}
+		//	}
+
+		//	// Map [-1,1] → [0,1]
+		//	u = 0.5f * (u + 1f);
+		//	v = 0.5f * (v + 1f);
+
+		//	int size = cubemap.width;
+		//	int px = Mathf.Clamp((int)(u * (size - 1)), 0, size - 1);
+		//	int py = Mathf.Clamp((int)(v * (size - 1)), 0, size - 1);
+
+		//	return cubemap.GetPixel(face, px, py);
+		//}
+
+		//possibly better version to be tested
+		public static Color SampleCubemap(Cubemap cubemap, Vector3 dir)
 		{
-			if (cubemap == null)
-				return Vector3.down;
+			dir.Normalize();   // safe, in case of floating point drift
 
-			var originalSize = cubemap.width;
-			var faceSize = Mathf.Max(64, originalSize / downscaleFactor);
+			float absX = Mathf.Abs(dir.x);
+			float absY = Mathf.Abs(dir.y);
+			float absZ = Mathf.Abs(dir.z);
 
-			var best = new Candidate
+			CubemapFace face;
+			float u, v;
+
+			if (absX >= absY && absX >= absZ)
 			{
-				luminance = -1f,
-				face = CubemapFace.Unknown
-			};
-
-			// Cache full face pixels once (same as original)
-			var pxPosY = cubemap.GetPixels(CubemapFace.PositiveY);
-			var pxPosX = cubemap.GetPixels(CubemapFace.PositiveX);
-			var pxNegX = cubemap.GetPixels(CubemapFace.NegativeX);
-			var pxPosZ = cubemap.GetPixels(CubemapFace.PositiveZ);
-			var pxNegZ = cubemap.GetPixels(CubemapFace.NegativeZ);
-
-			// Process each face with the same sampling logic as the original
-			ProcessFace(CubemapFace.PositiveY, pxPosY, faceSize, ref best);
-			ProcessFace(CubemapFace.PositiveX, pxPosX, faceSize, ref best);
-			ProcessFace(CubemapFace.NegativeX, pxNegX, faceSize, ref best);
-			ProcessFace(CubemapFace.PositiveZ, pxPosZ, faceSize, ref best);
-			ProcessFace(CubemapFace.NegativeZ, pxNegZ, faceSize, ref best);
-
-			if (best.luminance <= 0f || best.face == CubemapFace.Unknown)
-				return Vector3.down;
-
-			var dir = PixelToDirection(best.face, best.uv.x, best.uv.y);
-			return -dir.normalized;
-
-			// ====================== Local Helper ======================
-			void ProcessFace(CubemapFace face, Color[] fullFacePixels, int targetSize, ref Candidate globalBest)
+				face = dir.x > 0 ? CubemapFace.PositiveX : CubemapFace.NegativeX;
+				u = dir.x > 0 ? -dir.z : dir.z;
+				v = -dir.y;
+				float abs = absX;
+				u /= abs; v /= abs;
+			}
+			else if (absY >= absX && absY >= absZ)
 			{
-				var scale = (float)originalSize / targetSize;
-
-				var localMaxLum = -1f;
-				var bestSrcX = 0;
-				var bestSrcY = 0;
-
-				int yCount = (face == CubemapFace.PositiveY) ? targetSize : targetSize / 2;//only test top halves of NSEW skycube - full test of top, ignore bottom
-				for (var y = 0; y < yCount; y++)
-				{
-					var srcY = Mathf.Clamp(Mathf.FloorToInt((y + 0.5f) * scale), 0, originalSize - 1);
-					for (var x = 0; x < targetSize; x++)
-					{
-						var srcX = Mathf.Clamp(Mathf.FloorToInt((x + 0.5f) * scale), 0, originalSize - 1);
-
-						var col = fullFacePixels[srcY * originalSize + srcX];
-						var lum = col.Luminance();
-
-						if (lum > localMaxLum)
-						{
-							localMaxLum = lum;
-							bestSrcX = x;
-							bestSrcY = y;
-						}
-					}
-				}
-
-				if (localMaxLum > globalBest.luminance)
-				{
-					globalBest.luminance = localMaxLum;
-					globalBest.uv = new Vector2((float)bestSrcX / targetSize, 1f - (float)bestSrcY / targetSize);
-					globalBest.face = face;
-				}
+				face = dir.y > 0 ? CubemapFace.PositiveY : CubemapFace.NegativeY;
+				u = dir.x;
+				v = dir.y > 0 ? dir.z : -dir.z;
+				float abs = absY;
+				u /= abs; v /= abs;
+			}
+			else
+			{
+				face = dir.z > 0 ? CubemapFace.PositiveZ : CubemapFace.NegativeZ;
+				u = dir.z > 0 ? dir.x : -dir.x;
+				v = -dir.y;
+				float abs = absZ;
+				u /= abs; v /= abs;
 			}
 
-			static Vector3 PixelToDirection(CubemapFace face, float u, float v)
-			{
-				var x = u * 2f - 1f;
-				var y = v * 2f - 1f;
+			u = 0.5f * (u + 1f);
+			v = 0.5f * (v + 1f);
 
-				return face switch
-				{
-					CubemapFace.PositiveZ => new Vector3(x, y, 1f).normalized,
-					CubemapFace.NegativeZ => new Vector3(-x, y, -1f).normalized,
-					CubemapFace.PositiveX => new Vector3(1f, y, -x).normalized,
-					CubemapFace.NegativeX => new Vector3(-1f, y, x).normalized,
-					CubemapFace.PositiveY => new Vector3(x, 1f, -y).normalized,
-					_ => Vector3.up,
-				};
-			}
-		}
+			int size = cubemap.width;
+			int px = Mathf.Clamp((int)(u * (size - 1)), 0, size - 1);
+			int py = Mathf.Clamp((int)(v * (size - 1)), 0, size - 1);
 
-		private struct Candidate
-		{
-			public float luminance;
-			public Vector2 uv;
-			public CubemapFace face;
+			return cubemap.GetPixel(face, px, py);
 		}
 	}
 }
+
