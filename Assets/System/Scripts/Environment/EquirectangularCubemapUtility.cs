@@ -69,7 +69,7 @@ namespace MassiveHadronLtd
 			var v = uv.y;
 
 			var longitude = (u - 0.5f) * Mathf.PI * 2f;
-			var latitude = (v - 0.5f) * Mathf.PI;
+			var latitude = (v - 0.5f) * Mathf.PI * -1f;
 
 			var cosLat = Mathf.Cos(latitude);
 
@@ -96,7 +96,7 @@ namespace MassiveHadronLtd
 
 			// Map angles to [0,1] range
 			var u = (longitude / (Mathf.PI * 2f)) + 0.5f;
-			var v = (latitude / Mathf.PI) + 0.5f;
+			var v = (latitude / Mathf.PI * -1f) + 0.5f;
 
 			return new Vector2(u, v);
 		}

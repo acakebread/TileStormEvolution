@@ -95,9 +95,9 @@ namespace MassiveHadronLtd
 			// vx: -1 = left, +1 = right
 			float vx = uv.x * 2f - 1f;
 
-			// vy: top of texture (uv.y = 0) → vy = -1 (sky)
-			// bottom of texture (uv.y = 1) → vy = +1 (ground)
-			float vy = 1f - uv.y * 2f;
+			// vy: top of texture (uv.y = 1) → vy = +1 (sky)
+			// bottom of texture (uv.y = 0) → vy = -1 (ground)
+			float vy = uv.y * 2f - 1f;
 
 			float theta = vy * Mathf.PI * 0.5f;
 			float cosTheta = Mathf.Cos(theta);
@@ -106,10 +106,9 @@ namespace MassiveHadronLtd
 			// Positive pitch for sky at top
 			float pitchRadians = vy * Mathf.PI * 0.5f;
 
-			// Yaw (this matches your working version)
+			// Yaw
 			float yawRadians = vx * scalar * Mathf.PI;
 
-			// Use Vector3.back to match your successful result
 			return Quaternion.Euler(pitchRadians * Mathf.Rad2Deg, yawRadians * Mathf.Rad2Deg, 0f)
 				   * Vector3.forward;
 		}
@@ -124,7 +123,7 @@ namespace MassiveHadronLtd
 
 			// Recover vy from the Y component (vy = +1 at sky/top, vy = -1 at ground/bottom)
 			float pitchRadians = Mathf.Asin(dir.y);
-			float vy = pitchRadians / (Mathf.PI * 0.5f);
+			float vy = pitchRadians / (Mathf.PI * -0.5f);
 
 			float theta = vy * Mathf.PI * 0.5f;
 			float cosTheta = Mathf.Cos(theta);
@@ -159,12 +158,12 @@ namespace MassiveHadronLtd
 				return Vector3.up;
 
 			var uv = ImageProcessing.FindSunUV(linearrect, scanAboveHorizonOnly: true);
-			//return -UVToDirection(uv);
+			return -UVToDirection(uv);
 
-			//test
-			var dir = UVToDirection(uv);
-			var uv2 = DirectionToUV(dir);
-			return -UVToDirection(uv2);
+			////test
+			//var dir = UVToDirection(uv);
+			//var uv2 = DirectionToUV(dir);
+			//return -UVToDirection(uv2);
 		}
 	}
 }

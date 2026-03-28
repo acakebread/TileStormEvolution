@@ -100,7 +100,7 @@ namespace MassiveHadronLtd
 				// Draw sun marker - Y is inverted for GUI coordinate system
 				Vector2 markerPos = new Vector2(
 					previewRect.xMin + sunUV.x * previewRect.width,
-					previewRect.yMin + (1f - sunUV.y) * previewRect.height   // ← This is the fix
+					previewRect.yMin + sunUV.y * previewRect.height
 				);
 
 				GUI.color = Color.yellow;
