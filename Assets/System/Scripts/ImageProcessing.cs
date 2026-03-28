@@ -108,7 +108,8 @@ namespace MassiveHadronLtd
 			int bestX = width / 2;
 			int bestY = height * 3 / 4;   // bias toward sky (bottom half)
 
-			for (int y = startY; y < endY; y++)
+			//for (int y = startY; y < endY; y++)
+			for (int y = endY - 1; y > startY; y--)//for now invert the search because the old method search from sky to horizon and favoured higher light sources
 			{
 				for (int x = 0; x < width; x++)
 				{
@@ -147,7 +148,7 @@ namespace MassiveHadronLtd
 					Color c = pixels[y * width + x];
 					float lum = Luminance(c);
 
-					float w = lum * lum;                    // square weight emphasizes brighter pixels
+					float w = lum * lum;// square weight emphasizes brighter pixels
 					sumX += x * w;
 					sumY += y * w;
 					totalWeight += w;

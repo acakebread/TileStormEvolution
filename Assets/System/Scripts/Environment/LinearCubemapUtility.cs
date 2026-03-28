@@ -150,8 +150,8 @@ namespace MassiveHadronLtd
 		/// </summary>
 		public static Vector3 FindLightDirection(Cubemap cubemap)
 		{
-			const int w = 512;
-			const int h = 256;
+			const int w = 256;
+			const int h = 128;
 
 			var linearrect = Create(cubemap, w, h);
 			if (linearrect == null)
