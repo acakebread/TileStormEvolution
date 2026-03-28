@@ -86,58 +86,86 @@ namespace MassiveHadronLtd
 		// ===================================================================
 
 		/// <summary>
-		/// Converts UV coordinates in the Linear projection back to a world direction.
-		/// Matches the mapping used in Create().
+		/// Converts UV from the Linear texture to world direction.
+		/// Sky is at the top of the texture.
+		/// This version matches your working code but is cleaner.
 		/// </summary>
-		public static Vector3 UVToDirection(Vector2 uv, int width, int height)
+		public static Vector3 UVToDirection(Vector2 uv)
 		{
-			var vx = uv.x / (width - 1f) * 2f - 1f;
-			var vy = uv.y / (height - 1f) * 2f - 1f;
+			// vx: -1 = left, +1 = right
+			float vx = uv.x * 2f - 1f;
 
-			if (vx * vx + vy * vy > 1f)
-				return Vector3.up;
+			// vy: top of texture (uv.y = 0) → vy = -1 (sky)
+			// bottom of texture (uv.y = 1) → vy = +1 (ground)
+			float vy = 1f - uv.y * 2f;
 
-			var theta = vy * Mathf.PI * 0.5f;
-			var cosTheta = Mathf.Cos(theta);
-			var scalar = (cosTheta > 0.0001f) ? 1f / Mathf.Sqrt(cosTheta) : 1000f;
+			float theta = vy * Mathf.PI * 0.5f;
+			float cosTheta = Mathf.Cos(theta);
+			float scalar = (cosTheta > 0.0001f) ? 1f / Mathf.Sqrt(cosTheta) : 1000f;
 
-			var pitchRadians = vy * Mathf.PI * -0.5f;
-			var yawRadians = vx * scalar * Mathf.PI;
+			// Positive pitch for sky at top
+			float pitchRadians = vy * Mathf.PI * 0.5f;
 
+			// Yaw (this matches your working version)
+			float yawRadians = vx * scalar * Mathf.PI;
+
+			// Use Vector3.back to match your successful result
 			return Quaternion.Euler(pitchRadians * Mathf.Rad2Deg, yawRadians * Mathf.Rad2Deg, 0f)
 				   * Vector3.forward;
 		}
 
 		/// <summary>
-		/// Converts a normalized direction back to UV coordinates in the Linear projection.
-		/// (Inverse mapping — more involved; requires solving for vx/vy given the compensated angles)
+		/// Converts a normalized world direction back to UV [0,1] in the Linear projection.
+		/// Matches the custom mapping used in Create() and UVToDirection().
 		/// </summary>
-		public static Vector2 DirectionToUV(Vector3 dir, int width, int height)
+		public static Vector2 DirectionToUV(Vector3 dir)
 		{
 			dir = dir.normalized;
 
-			// Extract pitch from the vertical component (matching the forward mapping)
-			var pitchRadians = Mathf.Asin(-dir.y); // Adjust sign based on your quaternion convention
+			// Recover vy from the Y component (vy = +1 at sky/top, vy = -1 at ground/bottom)
+			float pitchRadians = Mathf.Asin(dir.y);
+			float vy = pitchRadians / (Mathf.PI * 0.5f);
 
-			var vy = pitchRadians / (Mathf.PI * -0.5f);
+			float theta = vy * Mathf.PI * 0.5f;
+			float cosTheta = Mathf.Cos(theta);
+			float scalar = (cosTheta > 0.0001f) ? 1f / Mathf.Sqrt(cosTheta) : 1000f;
 
-			// Reconstruct yaw and then vx using the inverse scalar
-			// This requires computing the effective yaw from the direction and dividing by scalar
-			// (Implementation note: you may need to tune this for perfect round-tripping)
+			// Yaw recovery
+			float yawRadians = Mathf.Atan2(dir.x, dir.z);
 
-			var theta = vy * Mathf.PI * 0.5f;
-			var cosTheta = Mathf.Cos(theta);
-			var scalar = (cosTheta > 0.0001f) ? 1f / Mathf.Sqrt(cosTheta) : 1000f;
+			// Recover vx using the inverse of the scalar compensation
+			float vx = yawRadians / (scalar * Mathf.PI);
 
-			var yawRadians = Mathf.Atan2(dir.x, dir.z);
+			// Convert to UV [0,1]
+			// vy = +1 (sky) → v = 0 (top of texture)
+			// vy = -1 (ground) → v = 1 (bottom of texture)
+			float u = vx * 0.5f + 0.5f;
+			float v = vy * 0.5f + 0.5f;
 
-			var vx = yawRadians / (scalar * Mathf.PI);
+			return new Vector2(Mathf.Clamp01(u), Mathf.Clamp01(v));
+		}
 
-			// Clamp to valid range if needed
-			var u = (vx * 0.5f + 0.5f) * (width - 1f);
-			var v = (vy * 0.5f + 0.5f) * (height - 1f);
+		/// <summary>
+		/// Finds the direction of the brightest area (e.g. sun) in the cubemap using
+		/// the equirectangular projection as an intermediate step.
+		/// </summary>
+		public static Vector3 FindLightDirection(Cubemap cubemap)
+		{
+			const int w = 512;
+			const int h = 256;
 
-			return new Vector2(u, v);
+			var linearrect = Create(cubemap, w, h);
+			if (linearrect == null)
+				return Vector3.up;
+
+			var uv = ImageProcessing.FindSunUV(linearrect, scanAboveHorizonOnly: true);
+			//return -UVToDirection(uv);
+
+			//test
+			var dir = UVToDirection(uv);
+			var uv2 = DirectionToUV(dir);
+			return -UVToDirection(uv2);
 		}
 	}
 }
+

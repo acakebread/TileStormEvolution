@@ -58,8 +58,9 @@ namespace MassiveHadronLtd
 			Color brightColor = CubemapUtility.ComputeBrightColor(cubemap, threshold);
 
 			// Light direction
-			Vector3 lightDir = AtlasCubemapUtility.FindLightDirection(cubemap);
-			//Vector3 lightDir = EquirectangularCubemapUtility.FindSunDirection(cubemap);
+			//Vector3 lightDir = AtlasCubemapUtility.FindLightDirection(cubemap);
+			//Vector3 lightDir = EquirectangularCubemapUtility.FindLightDirection(cubemap);
+			Vector3 lightDir = LinearCubemapUtility.FindLightDirection(cubemap);
 
 			// Apply to light
 			directionalLight.color = brightColor;

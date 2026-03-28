@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using System.Collections.Generic;
 
 namespace MassiveHadronLtd
@@ -83,64 +83,84 @@ namespace MassiveHadronLtd
 		}
 
 		/// <summary>
-		/// Convenience overload for flattened cubemap Texture2D.
+		/// Finds the UV of the brightest area (sun / dominant light source).
+		/// Works on both bright day skies and low-luminance night skies.
+		/// No hard threshold — always returns the brightest region found.
 		/// </summary>
-		public static Color ComputeBrightColorWithHistogram(
-			Texture2D flattenedCubemap,
-			out List<float> luminanceHistogram,
-			out float maxLuminance,
-			out int brightPixelCount,
-			float threshold = 0f,
-			int binCount = 64)
+		public static Vector2 FindSunUV(
+			Texture2D tex,
+			bool scanAboveHorizonOnly = true,
+			float searchRadiusFactor = 0.08f)
 		{
-			if (flattenedCubemap == null)
-			{
-				luminanceHistogram = new List<float>();
-				maxLuminance = 0f;
-				brightPixelCount = 0;
-				return Color.white;
-			}
+			if (tex == null)
+				return new Vector2(0.5f, 0.5f);
 
-			return ComputeBrightColorWithHistogram(
-				flattenedCubemap.GetPixels(),
-				out luminanceHistogram,
-				out maxLuminance,
-				out brightPixelCount,
-				threshold,
-				binCount);
-		}
-
-		public static Vector2 FindSunUV(Texture2D tex, float threshold = 0.85f)
-		{
 			int width = tex.width;
 			int height = tex.height;
-
-			float totalWeight = 0f;
-			Vector2 weightedSum = Vector2.zero;
-
 			var pixels = tex.GetPixels();
 
-			for (int y = height / 2; y < height; y++)
+			// Based on your inspector tests: sky is in the BOTTOM half of the pixel array
+			int startY = scanAboveHorizonOnly ? height / 2 : 0;
+			int endY = height;
+
+			// Pass 1: Find the single brightest pixel in the allowed region
+			float maxLum = -1f;
+			int bestX = width / 2;
+			int bestY = height * 3 / 4;   // bias toward sky (bottom half)
+
+			for (int y = startY; y < endY; y++)
 			{
 				for (int x = 0; x < width; x++)
 				{
 					Color c = pixels[y * width + x];
+					if (c.r == 0f && c.g == 0f && c.b == 0f) continue;
+
+					float lum = Luminance(c);
+					if (lum > maxLum)
+					{
+						maxLum = lum;
+						bestX = x;
+						bestY = y;
+					}
+				}
+			}
+
+			// If nothing found (completely black texture), fallback
+			if (maxLum <= 0f)
+				return new Vector2(0.5f, 0.75f);
+
+			// Pass 2: Local weighted centroid around the brightest pixel (handles small extended sources)
+			float radius = Mathf.Max(3, (int)(Mathf.Min(width, height) * searchRadiusFactor));
+			float totalWeight = 0f;
+			float sumX = 0f;
+			float sumY = 0f;
+
+			int minX = Mathf.Max(0, bestX - (int)radius);
+			int maxX = Mathf.Min(width - 1, bestX + (int)radius);
+			int minY = Mathf.Max(startY, bestY - (int)radius);
+			int maxY = Mathf.Min(endY - 1, bestY + (int)radius);
+
+			for (int y = minY; y <= maxY; y++)
+			{
+				for (int x = minX; x <= maxX; x++)
+				{
+					Color c = pixels[y * width + x];
 					float lum = Luminance(c);
 
-					if (lum < threshold)
-						continue;
-
-					float w = lum; // weight by brightness
-					weightedSum += new Vector2(x, y) * w;
+					float w = lum * lum;                    // square weight emphasizes brighter pixels
+					sumX += x * w;
+					sumY += y * w;
 					totalWeight += w;
 				}
 			}
 
-			if (totalWeight == 0f)
-				return new Vector2(0.5f, 0.5f); // fallback
+			float finalX = totalWeight > 0f ? sumX / totalWeight : bestX;
+			float finalY = totalWeight > 0f ? sumY / totalWeight : bestY;
 
-			Vector2 pixelPos = weightedSum / totalWeight;
-			return new Vector2(pixelPos.x / width, 1f - pixelPos.y / height); // normalized UV
+			return new Vector2(
+				finalX / (width - 1f),
+				finalY / (height - 1f)
+			);
 		}
 
 		private static float Luminance(Color c)
