@@ -8,11 +8,11 @@ namespace MassiveHadronLtd
 		[Header("SkyCube Debug")]
 		[SerializeField] private bool showDebugPanel = true;
 
-		[SerializeField, Range(512, 2048)]
-		private int panoramaWidth = 1024;
+		[SerializeField, Range(256, 2048)]
+		private int panoramaWidth = 512;
 
-		[SerializeField, Range(256, 1024)]
-		private int panoramaHeight = 512;
+		[SerializeField, Range(128, 1024)]
+		private int panoramaHeight = 256;
 
 		public Texture2D panoramaTexture;
 		private List<float> lumHistogram = new List<float>();
@@ -64,8 +64,9 @@ namespace MassiveHadronLtd
 			if (panoramaTexture != null)
 				Destroy(panoramaTexture);
 
+			//panoramaTexture = AtlasCubemapUtility.FlattenCubemap(cubemap);
 			//panoramaTexture = EquirectangularCubemapUtility.Create(cubemap, panoramaWidth, panoramaHeight);
-			panoramaTexture = AtlasCubemapUtility.FlattenCubemap(cubemap);
+			panoramaTexture = LinearCubemapUtility.Create(cubemap, panoramaWidth, panoramaHeight);
 
 			brightColor = ImageProcessing.ComputeBrightColorWithHistogram(
 				panoramaTexture,
@@ -74,8 +75,8 @@ namespace MassiveHadronLtd
 				out brightPixelCount,
 				threshold: 0.85f);
 
-			//sunUV = ImageProcessing.FindSunUV(panoramaTexture);
-			lightDir = AtlasCubemapUtility.FindLightDirection(cubemap);
+			sunUV = ImageProcessing.FindSunUV(panoramaTexture, 0.95f);
+			//lightDir = AtlasCubemapUtility.FindLightDirection(cubemap);
 		}
 
 		private void OnGUI()
@@ -105,17 +106,18 @@ namespace MassiveHadronLtd
 
 			if (panoramaTexture != null)
 			{
-				GUI.DrawTexture(previewRect, panoramaTexture, ScaleMode.ScaleToFit);
+				//GUI.DrawTexture(previewRect, panoramaTexture, ScaleMode.StretchToFill);
+				GUI.DrawTexture(previewRect, panoramaTexture, ScaleMode.StretchToFill);
 
 				//Vector3 testDir = GetTestSunDirection();
 				//Vector2 markerPos = GetOvalMarkerPosition(previewRect, testDir);
 
-				//var markerPos = new Vector2(previewRect.xMin + sunUV.x * previewRect.width, previewRect.yMin + sunUV.y * previewRect.height);
+				var markerPos = new Vector2(previewRect.xMin + sunUV.x * previewRect.width, previewRect.yMin + sunUV.y * previewRect.height);
 
-				//GUI.color = Color.yellow;
-				//GUI.DrawTexture(new Rect(markerPos.x - 12, markerPos.y - 1, 24, 2), Texture2D.whiteTexture);
-				//GUI.DrawTexture(new Rect(markerPos.x - 1, markerPos.y - 12, 2, 24), Texture2D.whiteTexture);
-				//GUI.color = Color.white;
+				GUI.color = Color.yellow;
+				GUI.DrawTexture(new Rect(markerPos.x - 12, markerPos.y - 1, 24, 2), Texture2D.whiteTexture);
+				GUI.DrawTexture(new Rect(markerPos.x - 1, markerPos.y - 12, 2, 24), Texture2D.whiteTexture);
+				GUI.color = Color.white;
 			}
 
 			GUILayout.Space(8);

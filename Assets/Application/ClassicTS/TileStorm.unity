@@ -149,8 +149,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MassiveHadronLtd.SkyCubeDebugUtil
   showDebugPanel: 1
-  panoramaWidth: 1024
-  panoramaHeight: 512
+  panoramaWidth: 512
+  panoramaHeight: 256
   panoramaTexture: {fileID: 0}
 --- !u!4 &210296784
 Transform:
