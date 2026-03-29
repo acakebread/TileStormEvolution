@@ -15,8 +15,8 @@ namespace ClassicTilestorm
 		private GestureController gestureController;
 		private PostProcessingCameraController postProcessingController;
 
-		private int postProcessingLevel = 1; 
-		public int PostProcessingLevel { get => postProcessingLevel; set => postProcessingLevel= value; }
+		//private int postProcessingLevel = 1; 
+		//public int PostProcessingLevel { get => postProcessingLevel; set => postProcessingLevel= value; }
 
 		private const int MaxFocusPoints = 50;
 		private const float MinDistanceForNewFocusPoint = 3f;
@@ -49,7 +49,8 @@ namespace ClassicTilestorm
 			gestureController = GetComponent<GestureController>();
 			OnWaypointReachedForGestures += OnWaypointGesturesEnable;
 			gestureController.OnMapUpdated += CheckDisableDrag;
-			PostProcessingLevel = 1;
+			//PostProcessingLevel = ApplicationSettings.DetailLevel;
+			OptionsPanel.onDetailLevelChanged += value => UpdatePostProcessingLevel(value);
 		}
 
 		private void CheckDisableDrag(IMapPlay imap)
@@ -188,11 +189,11 @@ namespace ClassicTilestorm
 
 			var (srcPos, dstPos) = GetInitialCameraPositions();
 
-			RegisterCamera(new GameCameraEditor(camera) { iorigin = srcPos, itarget = dstPos, PostProcessingEnabled = PostProcessingLevel >= 2 }, CameraModeRegistry.Editor);
-			RegisterCamera(new GameCameraFollow(camera) { iorigin = srcPos, itarget = GetTargetPosition().Invoke(), targetFn = GetTargetPosition(), PostProcessingEnabled = PostProcessingLevel >= 1 }, CameraModeRegistry.Follow);
-			RegisterCamera(new GameCameraPreset(camera) { iorigin = srcPos, itarget = dstPos, originFn = () => srcPos, targetFn = GetTargetPosition(), PostProcessingEnabled = PostProcessingLevel >= 1 }, CameraModeRegistry.Preset);
-			RegisterCamera(new GameCameraOrbit(camera) { iorigin = srcPos, itarget = dstPos, targetFn = GetTargetPosition(), PostProcessingEnabled = PostProcessingLevel >= 1 }, CameraModeRegistry.Orbit);
-			RegisterCamera(new GameCameraPath(camera) { iorigin = srcPos, itarget = dstPos, pointsFn = GetFocusPoints(), targetFn = GetTargetPosition(), PostProcessingEnabled = PostProcessingLevel >= 1 }, CameraModeRegistry.Path);
+			RegisterCamera(new GameCameraEditor(camera) { iorigin = srcPos, itarget = dstPos, PostProcessingEnabled = ApplicationSettings.DetailLevel >= 2 }, CameraModeRegistry.Editor);
+			RegisterCamera(new GameCameraFollow(camera) { iorigin = srcPos, itarget = GetTargetPosition().Invoke(), targetFn = GetTargetPosition(), PostProcessingEnabled = ApplicationSettings.DetailLevel >= 1 }, CameraModeRegistry.Follow);
+			RegisterCamera(new GameCameraPreset(camera) { iorigin = srcPos, itarget = dstPos, originFn = () => srcPos, targetFn = GetTargetPosition(), PostProcessingEnabled = ApplicationSettings.DetailLevel >= 1 }, CameraModeRegistry.Preset);
+			RegisterCamera(new GameCameraOrbit(camera) { iorigin = srcPos, itarget = dstPos, targetFn = GetTargetPosition(), PostProcessingEnabled = ApplicationSettings.DetailLevel >= 1 }, CameraModeRegistry.Orbit);
+			RegisterCamera(new GameCameraPath(camera) { iorigin = srcPos, itarget = dstPos, pointsFn = GetFocusPoints(), targetFn = GetTargetPosition(), PostProcessingEnabled = ApplicationSettings.DetailLevel >= 1 }, CameraModeRegistry.Path);
 
 			GameModes.RegisterAllModes(RegisterMode);
 		}
@@ -266,13 +267,36 @@ namespace ClassicTilestorm
 		}
 
 		//utils
-		public void EnableEditorPostProcessing()
+		//public void EnableEditorPostProcessing()
+		//{
+		//	var gameCameraEditor = activeSystem is GameCameraEditor editor ? editor : null;
+		//	if (gameCameraEditor != null)
+		//	{
+		//		var enabled = ApplicationSettings.DetailLevel > 1;
+		//		var volume = getVolume(gameCameraEditor.controller.gameObject);
+		//		volume.enabled = enabled;
+		//		VolumeUtils.EnableDepthOfField(volume, enabled);
+		//		VolumeUtils.SetDepthOfFieldDistance(volume, 8f);
+		//	}
+		//	static UnityEngine.Rendering.Volume getVolume(GameObject root) => root.GetComponentInChildren<UnityEngine.Rendering.Volume>(true);
+		//}
+
+
+		public void UpdatePostProcessingLevel(int value)
 		{
 			var gameCameraEditor = activeSystem is GameCameraEditor editor ? editor : null;
 			if (gameCameraEditor != null)
 			{
-				var enabled = postProcessingLevel > 1;
+				var enabled = value > 1;
 				var volume = getVolume(gameCameraEditor.controller.gameObject);
+				volume.enabled = enabled;
+				VolumeUtils.EnableDepthOfField(volume, enabled);
+				VolumeUtils.SetDepthOfFieldDistance(volume, 8f);
+			}
+			else if (activeSystem is not GameCameraEditor && null != activeSystem)
+			{
+				var enabled = value > 0;
+				var volume = getVolume(activeSystem.controller.gameObject);
 				volume.enabled = enabled;
 				VolumeUtils.EnableDepthOfField(volume, enabled);
 				VolumeUtils.SetDepthOfFieldDistance(volume, 8f);
@@ -280,7 +304,7 @@ namespace ClassicTilestorm
 			static UnityEngine.Rendering.Volume getVolume(GameObject root) => root.GetComponentInChildren<UnityEngine.Rendering.Volume>(true);
 		}
 
-		public void UpdateEditorPostProcessing()
+		private void UpdateEditorPostProcessing()
 		{
 			var gameCameraEditor = activeSystem is GameCameraEditor editor ? editor : null;
 			if (gameCameraEditor != null)

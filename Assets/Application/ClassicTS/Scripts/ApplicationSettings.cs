@@ -71,6 +71,21 @@ namespace ClassicTilestorm
 			}
 		}
 
+		[Header("detail level")]
+		[SerializeField] private int detailLevel = 1;// Default to Game Only
+		public static int DetailLevel
+		{
+			get => PlayerPrefsX.GetInt("DetailLevel", instance.detailLevel);
+			set
+			{
+				if (instance != null)
+				{
+					instance.detailLevel = value;
+					PlayerPrefsX.SetInt("DetailLevel", value, true);
+				}
+			}
+		}
+
 		[Header("hidden tiles")]
 		[SerializeField] private bool showHiddenTiles = false;
 		public static bool ShowHiddenTiles => instance.showHiddenTiles;

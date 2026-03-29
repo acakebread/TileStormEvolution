@@ -25,8 +25,8 @@ namespace ClassicTilestorm
 
 		[SerializeField] private Toggle remapAssetsToggle;
 
-		//public static bool gridlinesEnabled => ApplicationSettings.ShowEditorGrid;
 		public static Action<bool> onGridlinesToggle;
+		public static Action<int> onDetailLevelChanged;
 
 		protected override void Awake()
 		{
@@ -83,10 +83,10 @@ namespace ClassicTilestorm
 					detailLevelSlider.wholeNumbers = true;
 
 					// Load initial value
-					int initialValue = 1;// Default to Game Only
-					var cameraController = FindAnyObjectByType<MainCameraController>(FindObjectsInactive.Include);
-					if (null != cameraController)
-						initialValue = cameraController.PostProcessingLevel;
+					int initialValue = ApplicationSettings.DetailLevel;
+					//var cameraController = FindAnyObjectByType<MainCameraController>(FindObjectsInactive.Include);
+					//if (null != cameraController)
+					//	initialValue = cameraController.PostProcessingLevel;
 
 					detailLevelSlider.value = initialValue;
 
@@ -111,12 +111,14 @@ namespace ClassicTilestorm
 		private void OnDetailLevelChanged(float value)
 		{
 			int mode = Mathf.RoundToInt(value);
+			ApplicationSettings.DetailLevel = mode;
 
-			var cameraController = FindAnyObjectByType<MainCameraController>(FindObjectsInactive.Include);
-			if (null != cameraController)
-				cameraController.PostProcessingLevel = mode;
+			//var cameraController = FindAnyObjectByType<MainCameraController>(FindObjectsInactive.Include);
+			//if (null != cameraController)
+			//	cameraController.PostProcessingLevel = mode;
 
 			UpdateDetailLabel(mode);
+			onDetailLevelChanged?.Invoke(mode);
 		}
 
 		private void UpdateDetailLabel(int mode)
