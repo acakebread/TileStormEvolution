@@ -120,6 +120,9 @@ namespace ClassicTilestorm
 			if (null == AssetRegistry<Material>.FindMaterial(currentMap.skybox))
 				currentMap.skybox = null;
 
+			RenderSettings.ambientLight = currentMap.Light;
+			SkyboxUtility.SetSkybox(currentMap.skybox);
+
 			var mainReflection = Camera.main?.GetComponent<ReflectionEffectCamera>();
 			if (mainReflection != null)
 			{
@@ -127,9 +130,6 @@ namespace ClassicTilestorm
 				mainReflection.SetOffset(-0.2f);
 				mainReflection.UpdateRenderSettings(currentMap.RenderSettings);
 			}
-
-			RenderSettings.ambientLight = currentMap.Light;
-			SkyboxUtility.SetSkybox(currentMap.skybox);
 
 			//var mainReflection = Camera.main?.GetComponent<ReflectionEffectCamera>();
 			//if (mainReflection != null)

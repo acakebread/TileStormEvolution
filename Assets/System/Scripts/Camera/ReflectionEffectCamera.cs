@@ -163,7 +163,6 @@ namespace MassiveHadronLtd
 		private float timeSeed;
 
 		private CameraRenderSettingsOverride renderSettingsOverride => gameObject.GetComponent<CameraRenderSettingsOverride>();
-		//private Texture skyboxTexture => GetTintedSkyboxTexture();// SkyboxUtility.GetSkyboxTexture(null == RenderSettings.skybox || renderSettingsOverride ? renderSettingsOverride?.OverrideSettings.skybox : RenderSettings.skybox);
 		private Texture skyboxTexture => SkyboxUtility.GetTintedSkyboxCubemap(renderSettingsOverride ? renderSettingsOverride.OverrideSettings.skybox : null);
 
 		private bool isRenderToTextureMode = false;
@@ -435,6 +434,7 @@ namespace MassiveHadronLtd
 
 				case EffectMode.Water:
 					effectMaterial.SetColor("_BaseColor", mirrorTint);
+					effectMaterial.SetTexture("_MainTex", renderTexture);
 					effectMaterial.SetFloat("_RippleSpeed", rippleSpeed);
 					effectMaterial.SetFloat("_RippleAmplitude", rippleAmplitude);
 					effectMaterial.SetFloat("_RippleFrequency", rippleFrequency);
@@ -445,6 +445,7 @@ namespace MassiveHadronLtd
 
 				case EffectMode.OceanEffect:
 					effectMaterial.SetColor("_BaseColor", mirrorTint);
+					effectMaterial.SetTexture("_MainTex", renderTexture);
 					effectMaterial.SetFloat("_RippleSpeed", rippleSpeed);
 					effectMaterial.SetFloat("_RippleAmplitude", rippleAmplitude);
 					effectMaterial.SetFloat("_RippleFrequency", rippleFrequency);

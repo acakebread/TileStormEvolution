@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System;
+using System.Collections.Generic;
 using MassiveHadronLtd;
 using MassiveHadronLtd.UI;
 
@@ -9,6 +10,7 @@ namespace ClassicTilestorm
 	{
 		public event Action<ApplicationMode> OnModeChanged;
 		public event Action<int> OnChangeMapRequested; // delta or 0 for reload
+
 		public event Action OnPresetRequested;
 		public event Action OnScrambleRequested;
 		public event Action OnSolveRequested;
@@ -40,29 +42,39 @@ namespace ClassicTilestorm
 
 		private Texture2D panelTexture;
 
+		// === NEW: Queue for safe processing of map changes ===
+		private readonly Queue<int> mapChangeQueue = new Queue<int>();
+		private int guard = 0;
+
 		private void Awake() => panelTexture = TextureUtils.MakeTex(1, 1, panelColor);
 
-		public static int PanelBottomY => 40; // guiRect.height;
+		public static int PanelBottomY => 40;
 
-		private int guard = 0;//temporary workaround for double events from ongui (due to camera stack) - hopefully this will go away when full ui is implemented
 		private void onChangeMapRequested(int value)
 		{
 			if (++guard > 1) return;
-			OnChangeMapRequested?.Invoke(value);
+			mapChangeQueue.Enqueue(value);   // Queue instead of immediate invoke
 		}
+
+		//private void LateUpdate() => guard = 0;
 
 		private void Update()
 		{
 			guard = 0;
-			// Handle arrow key navigation
-			// ← only process - / = if no UI has keyboard focus
+			while (mapChangeQueue.Count > 0)
+			{
+				int delta = mapChangeQueue.Dequeue();
+				OnChangeMapRequested?.Invoke(delta);
+			}
+
+			// Arrow keys remain in Update() — safe and responsive
 			if (!UIFocusManager.AnyUIHasKeyboardFocus())
 			{
 				if (InputUtility.GetKeyRepeat(KeyCode.LeftArrow)) onChangeMapRequested(-1);
 				if (InputUtility.GetKeyRepeat(KeyCode.RightArrow)) onChangeMapRequested(1);
 			}
 
-			// Always visible in Editor mode
+			// Visibility / animation logic unchanged
 			if (ApplicationSettings.CurrentMode == ApplicationMode.Editor)
 			{
 				targetY = panelGap;
@@ -92,21 +104,17 @@ namespace ClassicTilestorm
 				}
 			}
 
-			// Animate panel
 			float newY = Mathf.MoveTowards(guiRect.y, targetY, animationSpeed * Time.deltaTime);
 			guiRect.y = newY;
 		}
 
 		public float GetPanelBottomY() => guiRect.height + (guiRect.y >= 0 ? guiRect.y : 0);
 
-		public static bool IsMouseOverGui() => new Rect(0, 0, Screen.width, 40).Contains(new Vector3(InputX.mousePosition.x, Screen.height - InputX.mousePosition.y, InputX.mousePosition.z));//GUIManager.IsMouseOverGui();//  
+		public static bool IsMouseOverGui() => new Rect(0, 0, Screen.width, 40)
+			.Contains(new Vector3(InputX.mousePosition.x, Screen.height - InputX.mousePosition.y, InputX.mousePosition.z));
 
 		private void OnGUI()
 		{
-			//// ALWAYS run this setup — needed for input handling
-			//GUIManager.RegisterGuiRect(new Rect(0, guiRect.y - panelGap, Screen.width, guiRect.height + 2 * panelGap));
-
-			// Visibility check first (safe and cheap)
 			if (guiRect.y < -90 && !isGuiVisible)
 				return;
 
@@ -118,13 +126,13 @@ namespace ClassicTilestorm
 			float panelHeight = buttonHeight + (2 * panelGap);
 			float panelY = y - panelGap;
 
-			// Draw background EVERY Repaint — no conditional, no flag
-			GUI.Box(new Rect(0, panelY, Screen.width, panelHeight), "", new GUIStyle(GUI.skin.box) { normal = { background = panelTexture } });
+			GUI.Box(new Rect(0, panelY, Screen.width, panelHeight), "",
+				new GUIStyle(GUI.skin.box) { normal = { background = panelTexture } });
 
-			//invisble button to open options panel
-			GuiUtils.ColoredButton(new Rect(currentX, y, labelWidth + mapNameWidth, buttonHeight), "", new Color(0f, 0f, 0f, 0f), () => UIController.OpenPanel<OptionsPanel>());
+			// Invisible options button
+			GuiUtils.ColoredButton(new Rect(currentX, y, labelWidth + mapNameWidth, buttonHeight), "",
+				new Color(0f, 0f, 0f, 0f), () => UIController.OpenPanel<OptionsPanel>());
 
-			// ALWAYS draw all buttons and labels — critical for input + visuals
 			GUI.Label(new Rect(currentX, y, labelWidth, buttonHeight), "Map:");
 			currentX += labelWidth;
 
@@ -140,22 +148,29 @@ namespace ClassicTilestorm
 
 			currentX += 20;
 
-			GuiUtils.ColoredRepeatButton(new Rect(currentX, y, buttonWidth, buttonHeight), "<< Level", new Color(0.3f, 0.6f, 1f), () => onChangeMapRequested(-1), initialDelay: 0.35f);
+			// Map change buttons — now queue safely
+			GuiUtils.ColoredRepeatButton(new Rect(currentX, y, buttonWidth, buttonHeight), "<< Level",
+				new Color(0.3f, 0.6f, 1f), () => onChangeMapRequested(-1), initialDelay: 0.35f);
 			currentX += buttonWidth + spacing;
 
-			GuiUtils.ColoredRepeatButton(new Rect(currentX, y, buttonWidth, buttonHeight), "Level >>", new Color(0.3f, 0.6f, 1f), () => onChangeMapRequested(1), initialDelay: 0.35f);
+			GuiUtils.ColoredRepeatButton(new Rect(currentX, y, buttonWidth, buttonHeight), "Level >>",
+				new Color(0.3f, 0.6f, 1f), () => onChangeMapRequested(1), initialDelay: 0.35f);
 			currentX += buttonWidth + spacing;
 
-			GuiUtils.ColoredButton(new Rect(currentX, y, buttonWidth, buttonHeight), "Reload", new Color(0.6f, 0.6f, 0.2f), () => onChangeMapRequested(0));
+			GuiUtils.ColoredButton(new Rect(currentX, y, buttonWidth, buttonHeight), "Reload",
+				new Color(0.6f, 0.6f, 0.2f), () => onChangeMapRequested(0));
 			currentX += buttonWidth + spacing;
 
-			GuiUtils.ColoredButton(new Rect(currentX, y, buttonWidth, buttonHeight), "Preset", new Color(0.2f, 0.8f, 0.2f), () => OnPresetRequested?.Invoke());
+			GuiUtils.ColoredButton(new Rect(currentX, y, buttonWidth, buttonHeight), "Preset",
+				new Color(0.2f, 0.8f, 0.2f), () => OnPresetRequested?.Invoke());
 			currentX += buttonWidth + spacing;
 
-			GuiUtils.ColoredRepeatButton(new Rect(currentX, y, buttonWidth, buttonHeight), "Scramble", new Color(0.8f, 0.6f, 0.2f), () => OnScrambleRequested?.Invoke(), initialDelay: 0.1f, repeatInterval: 0f);
+			GuiUtils.ColoredRepeatButton(new Rect(currentX, y, buttonWidth, buttonHeight), "Scramble",
+				new Color(0.8f, 0.6f, 0.2f), () => OnScrambleRequested?.Invoke(), initialDelay: 0.1f, repeatInterval: 0f);
 			currentX += buttonWidth + spacing;
 
-			GuiUtils.ColoredButton(new Rect(currentX, y, buttonWidth, buttonHeight), "Solve", new Color(0.8f, 0.2f, 0.2f), () => OnSolveRequested?.Invoke());
+			GuiUtils.ColoredButton(new Rect(currentX, y, buttonWidth, buttonHeight), "Solve",
+				new Color(0.8f, 0.2f, 0.2f), () => OnSolveRequested?.Invoke());
 
 			guiRect.height = panelHeight;
 
@@ -165,20 +180,17 @@ namespace ClassicTilestorm
 				Color buttonColor = isSelected ? modeSelectedBg : modeUnselectedBg;
 				Color textColor = isSelected ? selectedTextColor : unselectedTextColor;
 
-				Color prevContent = GUI.contentColor;
+				Color prev = GUI.contentColor;
 				GUI.contentColor = textColor;
 
-				GuiUtils.ColoredButton(
-					new Rect(cx, cy, buttonWidth, buttonHeight),
-					label,
-					buttonColor,
+				GuiUtils.ColoredButton(new Rect(cx, cy, buttonWidth, buttonHeight), label, buttonColor,
 					() =>
 					{
 						ApplicationSettings.CurrentMode = mode;
 						OnModeChanged?.Invoke(mode);
 					});
 
-				GUI.contentColor = prevContent;
+				GUI.contentColor = prev;
 			}
 		}
 	}

@@ -102,6 +102,7 @@ namespace MassiveHadronLtd
 				GUI.color = overlay;
 				GUI.DrawTexture(rect, Texture2D.whiteTexture);
 				GUI.color = Color.white;
+				result = true;
 			}
 
 			// === INPUT LOGIC ===
@@ -113,25 +114,27 @@ namespace MassiveHadronLtd
 				state.nextFireTime = Time.time + initialDelay;
 				e.Use();
 			}
-
-			if (state.isPressed && GUIUtility.hotControl == id)
+			else
 			{
-#if UNITY_EDITOR
-				bool isEditorPaused = UnityEditor.EditorApplication.isPaused;
-				if (!isEditorPaused && Time.time >= state.nextFireTime)
+				if (state.isPressed && GUIUtility.hotControl == id)
 				{
-					result = true;
-					onRepeat?.Invoke();
-					state.nextFireTime = Time.time + repeatInterval;
-				}
+#if UNITY_EDITOR
+					bool isEditorPaused = UnityEditor.EditorApplication.isPaused;
+					if (!isEditorPaused && Time.time >= state.nextFireTime)
+					{
+						result = true;
+						onRepeat?.Invoke();
+						state.nextFireTime = Time.time + repeatInterval;
+					}
 #else
-        if (Time.time >= state.nextFireTime)
-        {
-            result = true;
-            onRepeat?.Invoke();
-            state.nextFireTime = Time.time + repeatInterval;
-        }
+					if (Time.time >= state.nextFireTime)
+					{
+						result = true;
+						onRepeat?.Invoke();
+						state.nextFireTime = Time.time + repeatInterval;
+					}
 #endif
+				}
 			}
 
 			if (mouseUp)
