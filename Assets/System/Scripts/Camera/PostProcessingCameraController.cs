@@ -6,7 +6,7 @@ namespace MassiveHadronLtd
 {
 	public class PostProcessingCameraController : MonoBehaviour
 	{
-		public Transform dofTarget { get; set; } // for DepthOfField
+		public Vector3 dofTarget { get; set; } // for DepthOfField
 
 		[Header("Bokeh Focus Distance Compensation")]
 		public float focusDistanceMultiplier = 1f;
@@ -35,7 +35,7 @@ namespace MassiveHadronLtd
 			{
 				if (null != dofTarget)
 				{
-					var worldDistance = (dofTarget.position - transform.position).magnitude;
+					var worldDistance = (dofTarget - transform.position).magnitude;
 					VolumeUtils.SetDepthOfFieldDistance(volume, worldDistance * focusDistanceMultiplier);
 				}
 				yield return null;
