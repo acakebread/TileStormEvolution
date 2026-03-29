@@ -285,13 +285,13 @@ namespace ClassicTilestorm
 			var gameCameraEditor = activeSystem is GameCameraEditor editor ? editor : null;
 			if (gameCameraEditor != null)
 			{
-				var volume = getVolume(gameCameraEditor.controller.gameObject);
 				var distance = (gameCameraEditor.controller.transform.position - Map.CameraToWorld(gameCameraEditor.camera)).magnitude;
+				//var volume = getVolume(gameCameraEditor.controller.gameObject);
 				//VolumeUtils.SetDepthOfFieldDistance(volume, Mathf.Max(Mathf.Min(distance, gameCameraEditor.controller.transform.position.y * 3f), 1f));
 				if (postProcessingController)
 					postProcessingController.dofTarget = gameCameraEditor.controller.transform.position + gameCameraEditor.controller.transform.forward * distance;
 			}
-			static  UnityEngine.Rendering.Volume getVolume(GameObject root) => root.GetComponentInChildren<UnityEngine.Rendering.Volume>(true);
+			//static  UnityEngine.Rendering.Volume getVolume(GameObject root) => root.GetComponentInChildren<UnityEngine.Rendering.Volume>(true);
 		}
 	}
 }
