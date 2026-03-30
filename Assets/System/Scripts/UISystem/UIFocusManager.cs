@@ -175,6 +175,7 @@ namespace MassiveHadronLtd.UI
 				   currentFocus.GetComponent<Dropdown>() != null ||
 				   currentFocus.GetComponent<TMP_InputField>()?.isFocused == true ||
 				   currentFocus.GetComponent<InputField>()?.isFocused == true ||
+				   currentFocus.GetComponent<TMP_InputField>()?.isFocused == true ||
 				   currentFocus.GetComponentInParent<ScrollRect>() != null; // optional: block when scroll view has focus
 		}
 	}
