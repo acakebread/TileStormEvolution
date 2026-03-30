@@ -220,8 +220,8 @@ namespace ClassicTilestorm
 			if (null != directionalColourButton)
 			{
 				var skybox = SkyboxUtility.GetSkyboxMaterialForName(CurrentMap.skybox);
-				//directionalColourButton.GetComponent<Image>().color = CurrentMap.AutoSunlight ? CubemapUtility.ComputeBrightColor(SkyboxUtility.GetTintedSkyboxCubemap(skybox), 0.85f) : CurrentMap.Sunlight;
-				directionalColourButton.GetComponent<Image>().color = CurrentMap.Sunlight;
+				directionalColourButton.GetComponent<Image>().color = CurrentMap.AutoSunlight ? CubemapUtility.ComputeBrightColor(SkyboxUtility.GetTintedSkyboxCubemap(skybox), 0.85f) : CurrentMap.Sunlight;
+				//directionalColourButton.GetComponent<Image>().color = CurrentMap.Sunlight;
 			}
 		}
 
@@ -230,13 +230,13 @@ namespace ClassicTilestorm
 			if (src == ambientColourAutoToggle)
 			{
 				CurrentMap.AutoAmbient = src.isOn;
-				//if (!src.isOn) CurrentMap.AmbientLight = CurrentMap.AmbientLight;
+				if (!src.isOn) CurrentMap.AmbientLight = CurrentMap.AmbientLight;
 			}
 
 			if (src == directionalColourAutoToggle)
 			{
 				CurrentMap.AutoSunlight = src.isOn;
-				//if (!src.isOn) CurrentMap.Sunlight = CurrentMap.Sunlight;
+				if (!src.isOn) CurrentMap.Sunlight = CurrentMap.Sunlight;
 			}
 
 			SyncColorButtonsToCurrentMap();
