@@ -1,10 +1,9 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 using UnityEngine.UI;
-using TMPro;
-//using UnityEngine.EventSystems;
-using System;
 using System.Collections.Generic;
 using System.Linq;
+using TMPro;
 using MassiveHadronLtd;
 
 namespace ClassicTilestorm
@@ -42,10 +41,6 @@ namespace ClassicTilestorm
 		[SerializeField] private string noneMusicOptionText = "— Default —";
 
 		[Header("Colour Pickers")]
-		//[SerializeField] private RawImage colourPickerImage;     // rainbow hue + saturation square
-		//[SerializeField] private RawImage brightnessPickerImage; // value/brightness slider
-		//[SerializeField] private RawImage swatchImage;           // ← the preview swatch that shows the final color
-
 		[SerializeField] private Button ambientColourButton;
 		[SerializeField] private Button directionalColourButton;
 
@@ -72,15 +67,6 @@ namespace ClassicTilestorm
 
 		#endregion
 
-		//// Color picker state
-		//private Texture2D colorTexture;
-		//private Texture2D valueTexture;
-		//private float currentHue = 0f;
-		//private float currentSaturation = 0.8f;
-		//private float currentValue = 1f;
-		//private UIDragHandler colorDrag;
-		//private UIDragHandler valueDrag;
-
 		private readonly List<Toggle> spawnedMapToggles = new List<Toggle>();
 		private ToggleGroup toggleGroup;
 		private static int lastSelectedMapIndex = 0;
@@ -105,35 +91,6 @@ namespace ClassicTilestorm
 		{
 			base.OnEnable();
 
-			//// ── Color picker drag wiring ───────────────────────────────────────
-			//colorDrag = colourPickerImage?.GetComponent<UIDragHandler>();
-			//valueDrag = brightnessPickerImage?.GetComponent<UIDragHandler>();
-
-			//if (colorDrag != null)
-			//{
-			//	colorDrag.OnPointerDownEvent += OnColorPointer;
-			//	colorDrag.OnDragEvent += OnColorPointer;
-			//}
-
-			//if (valueDrag != null)
-			//{
-			//	valueDrag.OnPointerDownEvent += OnValuePointer;
-			//	valueDrag.OnDragEvent += OnValuePointer;
-			//}
-
-			//// recreate & assign color picker textures
-			//if (colourPickerImage != null && brightnessPickerImage != null)
-			//{
-			//	colorTexture = ColorPickerSquareUtility.CreateColorPickerTexture(
-			//		size: 256,
-			//		style: ColorPickerSquareUtility.PickerStyle.HueSaturation_FullValue
-			//	);
-			//	colourPickerImage.texture = colorTexture;
-
-			//	UpdateValueSlider();  // creates brightness slider based on initial hue/sat
-			//}
-
-			// ── Rest of your OnEnable ──────────────────────────────────────────
 			InitializeOrbitController();
 			SetupPreviewInput();
 
@@ -143,7 +100,7 @@ namespace ClassicTilestorm
 			PopulateMusicDropdown();
 			PopulateEffectDropdown();
 
-			SyncColorPickerToCurrentMap();
+			SyncColorButtonsToCurrentMap();
 			SyncSkyboxDropdown();
 			SyncCharacterDropdown();
 			SyncEffectDropdown();
@@ -159,18 +116,6 @@ namespace ClassicTilestorm
 
 		protected override void OnDisable()
 		{
-			//if (colorDrag != null)
-			//{
-			//	colorDrag.OnPointerDownEvent -= OnColorPointer;
-			//	colorDrag.OnDragEvent -= OnColorPointer;
-			//}
-
-			//if (valueDrag != null)
-			//{
-			//	valueDrag.OnPointerDownEvent -= OnValuePointer;
-			//	valueDrag.OnDragEvent -= OnValuePointer;
-			//}
-
 			if (orbitController != null)
 			{
 				orbitController.OnTransformChanged -= ApplyOrbitToPreviewCamera;
@@ -189,9 +134,6 @@ namespace ClassicTilestorm
 
 			if (previewImage != null)
 				previewImage.texture = null;
-
-			//if (colorTexture != null) Destroy(colorTexture);
-			//if (valueTexture != null) Destroy(valueTexture);
 
 			base.OnDisable();
 		}
@@ -255,78 +197,10 @@ namespace ClassicTilestorm
 			cam.fieldOfView = fieldOfView;
 		}
 
-		// ────────────────────────────────────────────────────────────────────────────────
-		//   Color Picker (unchanged)
-		// ────────────────────────────────────────────────────────────────────────────────
-
-		//private void OnColorPointer(UIDragHandler sender, PointerEventData eventData)
-		//{
-		//	UpdateColorFromPointer(eventData, colourPickerImage.rectTransform, colorTexture, true);
-		//}
-
-		//private void OnValuePointer(UIDragHandler sender, PointerEventData eventData)
-		//{
-		//	UpdateColorFromPointer(eventData, brightnessPickerImage.rectTransform, valueTexture, false);
-		//}
-
-		//private void UpdateColorFromPointer(PointerEventData eventData, RectTransform rt, Texture2D tex, bool isColorSquare)
-		//{
-		//	if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(rt, eventData.position, eventData.pressEventCamera, out Vector2 localPos))
-		//		return;
-
-		//	Color picked = ColorPickerSquareUtility.GetColorFromLocalPoint(tex, localPos, rt);
-
-		//	if (isColorSquare)
-		//	{
-		//		Color.RGBToHSV(picked, out currentHue, out currentSaturation, out _);
-		//		UpdateValueSlider();
-		//	}
-		//	else
-		//	{
-		//		Color.RGBToHSV(picked, out _, out _, out currentValue);
-		//	}
-
-		//	Color final = Color.HSVToRGB(currentHue, currentSaturation, currentValue);
-
-		//	if (swatchImage != null)
-		//		swatchImage.color = final;
-
-		//	CurrentMap.Light = final;
-
-		//	UpdateMapPreview();
-		//}
-
-		//private void UpdateValueSlider()
-		//{
-		//	if (valueTexture != null) Destroy(valueTexture);
-		//	valueTexture = ColorPickerSquareUtility.CreateValueSliderTexture(
-		//		height: 256,
-		//		hue: currentHue,
-		//		saturation: currentSaturation
-		//	);
-		//	brightnessPickerImage.texture = valueTexture;
-		//}
-
-		private void SyncColorPickerToCurrentMap()
+		private void SyncColorButtonsToCurrentMap()
 		{
 			if (CurrentMap == null)
-			{
-				//currentHue = 0f;
-				//currentSaturation = 0.8f;
-				//currentValue = 1f;
-				//UpdateValueSlider();
-				//if (swatchImage != null) swatchImage.color = Color.white;
 				return;
-			}
-
-			//Color lightColor = CurrentMap.Light;
-			//Color.RGBToHSV(lightColor, out currentHue, out currentSaturation, out currentValue);
-			//UpdateValueSlider();
-
-			//if (swatchImage != null)
-			//	swatchImage.color = lightColor;
-
-			//if (null != colourButton) colourButton.GetComponent<Image>().color = lightColor;
 
 			if (null != ambientColourButton) ambientColourButton.GetComponent<Image>().color = CurrentMap.Light;
 			if (null != directionalColourButton)
@@ -430,7 +304,7 @@ namespace ClassicTilestorm
 				if (CurrentMap.name == MainController.CurrentMap.name) SkyboxUtility.SetSkybox(CurrentMap.skybox);
 				UpdateMapPreview();
 			}
-			SyncColorPickerToCurrentMap();
+			SyncColorButtonsToCurrentMap();
 		}
 
 		private void OnCharacterDropdownValueChanged(int index)
@@ -549,7 +423,7 @@ namespace ClassicTilestorm
 			if (index >= 0 && index < spawnedMapToggles.Count)
 				spawnedMapToggles[index].SetIsOnWithoutNotify(true);
 
-			SyncColorPickerToCurrentMap();
+			SyncColorButtonsToCurrentMap();
 			SyncSkyboxDropdown();
 			SyncCharacterDropdown();
 			SyncMusicDropdown();
