@@ -9,18 +9,16 @@ namespace ClassicTilestorm
 		public static UIController Instance { get; private set; }
 
 		[Header("UI Setup")]
-		[SerializeField] private Canvas mainCanvas; // Drag your Screen Space - Overlay canvas here
+		[SerializeField] private Canvas mainCanvas;
 
-		[Header("Panel Prefabs – drag prefabs here (must have UIPanel component)")]
+		[Header("Panel Prefabs – drag all panel prefabs here (including EditorScreenUI)")]
 		[SerializeField] private List<GameObject> panelPrefabs = new();
-
-		[SerializeField] private GameObject editorScreenUIPrefab;
-		[HideInInspector] public GameObject editorScreenUI;
 
 		private readonly Dictionary<Type, GameObject> prefabByType = new();
 
-		private GameObject currentPanel;
-		private UIPanel currentPanelScript; // Cached reference to the UIPanel component
+		// Supports multiple open panels at the same time
+		private readonly List<GameObject> activePanels = new List<GameObject>();
+		private UIPanel currentTopPanel;
 
 		private void Awake()
 		{
@@ -33,7 +31,7 @@ namespace ClassicTilestorm
 			Instance = this;
 			DontDestroyOnLoad(gameObject);
 
-			// Automatically build lookup table from prefabs
+			// Build prefab lookup table
 			prefabByType.Clear();
 			foreach (var prefab in panelPrefabs)
 			{
@@ -58,98 +56,214 @@ namespace ClassicTilestorm
 
 			if (prefabByType.Count == 0)
 				Debug.LogWarning("UIController: No valid panel prefabs assigned!");
-
-			editorScreenUI = Instantiate(editorScreenUIPrefab, mainCanvas.transform);
-			editorScreenUI.SetActive(false);
 		}
 
 		// ── Public API ────────────────────────────────────────────────────────
 
-		public static void OpenPanel<T>() where T : UIPanel
+		/// <summary>
+		/// Opens a panel and returns the panel instance.
+		/// - closeOthers = true (default): Closes other managed panels.
+		/// - closeOthers = false: Keeps all other panels open and brings this one to front.
+		/// 
+		/// Note: If the panel being opened has managedByUIController = false, 
+		///       closeOthers is automatically ignored.
+		/// </summary>
+		public static T OpenPanel<T>(bool closeOthers = true) where T : UIPanel
 		{
 			if (Instance == null)
 			{
 				Debug.LogError("UIController instance not found!");
-				return;
+				return null;
 			}
 
-			Instance.OpenPanelInternal(typeof(T));
+			return Instance.OpenPanelInternal<T>(typeof(T), closeOthers);
+		}
+
+		/// <summary>
+		/// Returns the currently open panel of type T, or null if none is open.
+		/// </summary>
+		public static T GetOpenPanel<T>() where T : UIPanel
+		{
+			if (Instance == null) return null;
+			return Instance.GetOpenPanelInternal<T>();
 		}
 
 		public static void CloseCurrent()
 		{
-			if (Instance == null) return;
-			Instance.CloseCurrentInternal();
+			Instance?.CloseTopPanelInternal();
+		}
+
+		public static void ClosePanel<T>() where T : UIPanel
+		{
+			Instance?.ClosePanelInternal(typeof(T));
 		}
 
 		// ── Internal logic ────────────────────────────────────────────────────
 
-		private void OpenPanelInternal(Type panelType)
+		private T OpenPanelInternal<T>(Type panelType, bool requestedCloseOthers) where T : UIPanel
 		{
-			// Case 1: Same panel type already exists → just reactivate (state preserved)
-			if (currentPanel != null && currentPanel.TryGetComponent(panelType, out var existingPanel))
+			// Determine effective closeOthers behavior
+			bool effectiveCloseOthers = requestedCloseOthers;
+
+			// If the panel we are opening is NOT managed, never close other panels
+			if (!IsPanelTypeManaged(panelType))
 			{
-				currentPanel.SetActive(true);
-				currentPanelScript = (UIPanel)existingPanel;
-				currentPanelScript.OnPanelOpened();
-				return;
+				effectiveCloseOthers = false;
 			}
 
-			// Case 2: Different panel → clean up old one first
-			CloseCurrentInternal();
+			if (effectiveCloseOthers)
+			{
+				CloseManagedPanelsInternal();
+			}
+
+			// Check if this panel type is already open
+			GameObject existing = activePanels.Find(p =>
+				p != null && p.TryGetComponent(panelType, out Component comp) && comp is UIPanel);
+
+			if (existing != null)
+			{
+				existing.SetActive(true);
+				BringToFront(existing);
+				var panelScript = existing.GetComponent<T>();
+				currentTopPanel = panelScript;
+				panelScript?.OnPanelOpened();
+				return panelScript;
+			}
 
 			// Instantiate new panel
 			if (!prefabByType.TryGetValue(panelType, out var prefab) || prefab == null)
 			{
 				Debug.LogError($"No prefab registered for panel type: {panelType.Name}");
-				return;
+				return null;
 			}
 
-			currentPanel = Instantiate(prefab, mainCanvas.transform);
-			currentPanel.name = panelType.Name;
-			currentPanel.SetActive(true);
+			GameObject newPanelObj = Instantiate(prefab, mainCanvas.transform);
+			newPanelObj.name = panelType.Name;
+			newPanelObj.SetActive(true);
 
-			currentPanelScript = currentPanel.GetComponent<UIPanel>();
-			if (currentPanelScript != null)
-				currentPanelScript.OnPanelOpened();
+			BringToFront(newPanelObj);
+
+			var newPanelScript = newPanelObj.GetComponent<T>();
+			if (newPanelScript != null)
+				newPanelScript.OnPanelOpened();
+
+			activePanels.Add(newPanelObj);
+			currentTopPanel = newPanelScript;
+
+			return newPanelScript;
 		}
 
-		private void CloseCurrentInternal()
+		private T GetOpenPanelInternal<T>() where T : UIPanel
 		{
-			if (currentPanel == null) return;
-
-			if (currentPanelScript != null)
-				currentPanelScript.OnPanelClosed();
-
-			Destroy(currentPanel);
-			currentPanel = null;
-			currentPanelScript = null;
+			foreach (var panelObj in activePanels)
+			{
+				if (panelObj != null && panelObj.TryGetComponent(out T panel))
+					return panel;
+			}
+			return null;
 		}
 
-		// ── Called by UIPanel base class when deactivated/destroyed ──────────
+		/// <summary>
+		/// Checks whether a panel type is managed (i.e. should be closed when closeOthers = true)
+		/// </summary>
+		private bool IsPanelTypeManaged(Type panelType)
+		{
+			if (!prefabByType.TryGetValue(panelType, out var prefab) || prefab == null)
+				return true; // default to managed if unknown
+
+			var panelScript = prefab.GetComponent<UIPanel>();
+			return panelScript != null && panelScript.IsManagedByUIController;
+		}
+
+		private void BringToFront(GameObject panel)
+		{
+			panel?.transform.SetAsLastSibling();
+		}
+
+		/// <summary>
+		/// Closes only panels that have managedByUIController = true.
+		/// Non-managed panels are left untouched.
+		/// </summary>
+		private void CloseManagedPanelsInternal()
+		{
+			for (int i = activePanels.Count - 1; i >= 0; i--)
+			{
+				var panelObj = activePanels[i];
+				if (panelObj == null) continue;
+
+				var panelScript = panelObj.GetComponent<UIPanel>();
+				if (panelScript == null || !panelScript.IsManagedByUIController)
+					continue;
+
+				panelScript.OnPanelClosed();
+				Destroy(panelObj);
+				activePanels.RemoveAt(i);
+			}
+
+			currentTopPanel = activePanels.Count > 0
+				? activePanels[^1].GetComponent<UIPanel>()
+				: null;
+		}
+
+		private void CloseTopPanelInternal()
+		{
+			if (currentTopPanel == null) return;
+
+			currentTopPanel.OnPanelClosed();
+
+			activePanels.Remove(currentTopPanel.gameObject);
+			Destroy(currentTopPanel.gameObject);
+
+			currentTopPanel = activePanels.Count > 0
+				? activePanels[^1].GetComponent<UIPanel>()
+				: null;
+		}
+
+		private void ClosePanelInternal(Type panelType)
+		{
+			for (int i = activePanels.Count - 1; i >= 0; i--)
+			{
+				var panelObj = activePanels[i];
+				if (panelObj == null) continue;
+
+				if (panelObj.TryGetComponent(panelType, out Component component))
+				{
+					UIPanel script = component as UIPanel;
+					if (script == null) continue;
+
+					script.OnPanelClosed();
+					activePanels.RemoveAt(i);
+					Destroy(panelObj);
+
+					if (currentTopPanel == script)
+					{
+						currentTopPanel = activePanels.Count > 0
+							? activePanels[^1].GetComponent<UIPanel>()
+							: null;
+					}
+					return;
+				}
+			}
+		}
+
+		// ── Notifications from UIPanel ─────────────────────────────────────
 
 		public bool IsThisPanelCurrent(UIPanel panel)
 		{
-			return currentPanelScript == panel;
+			return currentTopPanel == panel;
 		}
 
-		public void NotifyPanelDeactivated(UIPanel panel)
-		{
-			if (currentPanelScript == panel)
-			{
-				// We keep the instance alive but mark it as no longer "current"
-				// → allows reactivation with preserved state next time
-				currentPanelScript = null;
-				// Note: we do NOT destroy here — destruction happens when switching panels
-			}
-		}
+		public void NotifyPanelDeactivated(UIPanel panel) { }
 
 		public void NotifyPanelDestroyed(UIPanel panel)
 		{
-			if (currentPanelScript == panel)
+			activePanels.RemoveAll(p => p == null || p.GetComponent<UIPanel>() == panel);
+
+			if (currentTopPanel == panel)
 			{
-				currentPanel = null;
-				currentPanelScript = null;
+				currentTopPanel = activePanels.Count > 0
+					? activePanels[^1].GetComponent<UIPanel>()
+					: null;
 			}
 		}
 	}

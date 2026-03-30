@@ -27,6 +27,20 @@ namespace ClassicTilestorm
 
 		public Action<Color> onValueChanged;
 
+		public void SetInitialColor(Color color)
+		{
+			currentHue = 0f;
+			currentSaturation = 0f;
+			currentValue = 0f;
+			currentAlpha = color.a;
+
+			Color.RGBToHSV(color, out currentHue, out currentSaturation, out currentValue);
+
+			UpdateValueSlider();
+			UpdateSwatchAndNotify(color);
+			UpdateHexInput();
+		}
+
 		protected override void OnEnable()
 		{
 			base.OnEnable();

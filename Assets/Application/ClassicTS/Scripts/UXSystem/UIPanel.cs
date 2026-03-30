@@ -7,6 +7,11 @@ namespace ClassicTilestorm
 {
 	public abstract class UIPanel : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IDragHandler
 	{
+		[Header("UI Controller Management")]
+		[SerializeField, Tooltip("If true (default), this panel will be closed when OpenPanel(..., closeOthers: true) is called. " +
+								 "Set to false for persistent panels like EditorScreenUI.")]
+		private bool managedByUIController = true;
+
 		[Header("Drag & Resize")]
 		[SerializeField] private bool draggable = true;
 		[SerializeField] private bool resizable = true;
@@ -35,6 +40,9 @@ namespace ClassicTilestorm
 			Bottom = 8,
 			All = Left | Right | Top | Bottom
 		}
+
+		// Add this public property so UIController can read it
+		public bool IsManagedByUIController => managedByUIController;
 
 		private void EnsureInit()
 		{

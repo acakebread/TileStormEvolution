@@ -410,7 +410,9 @@ MonoBehaviour:
   remapGeometry: 1
   scrambled: 1
   difficulty: 1
+  music: 1
   showEditorGrid: 1
+  detailLevel: 1
   showHiddenTiles: 0
   showTileSelection: 0
   databaseJsonFile: {fileID: 4900000, guid: 96c40ca8617a15a4590b9728c168e29a, type: 3}
@@ -553,13 +555,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ClassicTilestorm.UIController
   mainCanvas: {fileID: 1027007947}
   panelPrefabs:
+  - {fileID: 8119239224014383716, guid: 0cc412b9ee4395940b83e7bc3c20701e, type: 3}
   - {fileID: 4695226594433876902, guid: ed34c90972540be42a54339edf746755, type: 3}
   - {fileID: 4695226594433876902, guid: 4792715285cc0984fa49bff4bb56ce2e, type: 3}
   - {fileID: 4695226594433876902, guid: 81d0ade3e8f8df14fbbd2500e09a8d95, type: 3}
   - {fileID: 4695226594433876902, guid: d164df16686cd7b47b4dd970ba3f74bf, type: 3}
-  - {fileID: 4695226594433876902, guid: 13c21ca6cd78bfb459cc9a0428dac147, type: 3}
-  editorScreenUIPrefab: {fileID: 8119239224014383716, guid: 0cc412b9ee4395940b83e7bc3c20701e, type: 3}
-  editorScreenUI: {fileID: 0}
+  - {fileID: 4695226594433876902, guid: a7555e1569b55a04b9907c21fc39335b, type: 3}
 --- !u!1 &1146321623
 GameObject:
   m_ObjectHideFlags: 0

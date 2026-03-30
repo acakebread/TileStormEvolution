@@ -446,7 +446,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 54b40b47cf13da248aaf7bbc8fb96232, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EditorScreenUI
-  tileSelector: {fileID: 7089492679886840515}
+  managedByUIController: 0
+  draggable: 0
+  resizable: 0
+  resizeBorder: 16
+  minSize: {x: 600, y: 400}
   altitudeSlider: {fileID: 5054156065522176130}
 --- !u!1001 &5079245807596310430
 PrefabInstance:
@@ -545,17 +549,6 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 10fac602bc9675542afce42c56c6587f, type: 3}
---- !u!114 &7089492679886840515 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 2603057638736964957, guid: 10fac602bc9675542afce42c56c6587f, type: 3}
-  m_PrefabInstance: {fileID: 5079245807596310430}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5a3d2f788243213408b375c676ad1ee8, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ClassicTilestorm.TileSelector
 --- !u!224 &7419273460619617704 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 2345133790660962870, guid: 10fac602bc9675542afce42c56c6587f, type: 3}
