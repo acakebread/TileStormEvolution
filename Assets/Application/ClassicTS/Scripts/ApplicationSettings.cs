@@ -53,8 +53,34 @@ namespace ClassicTilestorm
 		public static bool Scrambled => instance.scrambled;
 
 		[Header("enable or disable easy mode")]
-		[SerializeField] private bool difficulty = false;
-		public static bool Difficulty => instance.difficulty;
+		[SerializeField] private bool difficulty = true;
+		public static bool Difficulty
+		{
+			get => PlayerPrefsX.GetBool("Difficulty", instance.difficulty);
+			set
+			{
+				if (instance != null)
+				{
+					instance.difficulty = value;
+					PlayerPrefsX.SetBool("Difficulty", value, true);
+				}
+			}
+		}
+
+		[Header("enable or disable music")]
+		[SerializeField] private bool music = true;
+		public static bool Music
+		{
+			get => PlayerPrefsX.GetBool("Music", instance.music);
+			set
+			{
+				if (instance != null)
+				{
+					instance.music = value;
+					PlayerPrefsX.SetBool("Music", value, true);
+				}
+			}
+		}
 
 		[Header("editor grid enable")]
 		[SerializeField] private bool showEditorGrid = true;

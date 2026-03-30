@@ -234,6 +234,12 @@ namespace ClassicTilestorm.Assets
 				AssetPath.SkycubesPath?.Trim('/') ?? ""
 			}), forceRefresh);
 
+		public static IReadOnlyList<string> GetMusicNames(bool forceRefresh = false)
+			=> GetNames<AudioClip>(() => GetAssetNamesFromRoots<AudioClip>(new[]
+			{
+				AssetPath.MusicPath?.Trim('/') ?? ""
+			}), forceRefresh);
+
 		// Add more when needed, e.g.:
 		// public static IReadOnlyList<string> GetSoundNames(bool forceRefresh = false) { ... }
 

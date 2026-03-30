@@ -17,6 +17,8 @@ namespace ClassicTilestorm
 		[SerializeField] private Button ImportMapButton;
 		[SerializeField] private Button ExportMapButton;
 
+		[SerializeField] private Toggle difficultyToggle;
+		[SerializeField] private Toggle musicToggle;
 		[SerializeField] private Toggle gridLinesToggle;
 		[SerializeField] private Toggle postProcessingToggle;
 
@@ -25,6 +27,8 @@ namespace ClassicTilestorm
 
 		[SerializeField] private Toggle remapAssetsToggle;
 
+		public static Action<bool> onDifficultyToggle;
+		public static Action<bool> onMusicToggle;
 		public static Action<bool> onGridlinesToggle;
 		public static Action<int> onDetailLevelChanged;
 
@@ -69,6 +73,18 @@ namespace ClassicTilestorm
 			var editorController = FindAnyObjectByType<EditorController>(FindObjectsInactive.Include);
 			if (null != editorController)
 			{
+				if (null != difficultyToggle)
+				{
+					difficultyToggle.isOn = ApplicationSettings.Difficulty;
+					difficultyToggle.onValueChanged.AddListener(value => { ApplicationSettings.Difficulty = value; onDifficultyToggle?.Invoke(value); });
+				}
+
+				if (null != musicToggle)
+				{
+					musicToggle.isOn = ApplicationSettings.Music;
+					musicToggle.onValueChanged.AddListener(value => { ApplicationSettings.Music = value; onMusicToggle?.Invoke(value); });
+				}
+
 				if (null != gridLinesToggle)
 				{
 					gridLinesToggle.isOn = ApplicationSettings.ShowEditorGrid;

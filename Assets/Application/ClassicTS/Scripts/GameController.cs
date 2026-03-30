@@ -18,6 +18,8 @@ namespace ClassicTilestorm
 			placeholderUI.OnPresetRequested += () => mainController.Preset();
 			placeholderUI.OnScrambleRequested += () => mainController.Scramble();
 			placeholderUI.OnSolveRequested += () => mainController.Solve();
+
+			OptionsPanel.onMusicToggle += value => PlayMusic(value);
 		}
 
 		private void HandleModeChanged(ApplicationMode mode)
@@ -30,7 +32,7 @@ namespace ClassicTilestorm
 
 		public void Initialise(IMapEdit iMap)
 		{
-			if (isActiveAndEnabled) AudioManager.PlayMusic(iMap.Music, loop: true);
+			if (isActiveAndEnabled && ApplicationSettings.Music) AudioManager.PlayMusic(iMap.Music, loop: true);
 			if (!TryGetComponent<MainCameraController>(out var controller)) return;
 			controller.SetCameraSystem(CameraModeRegistry.Follow, true);
 			controller.SetCameraSystem(CameraModeRegistry.Path, true);
@@ -47,7 +49,7 @@ namespace ClassicTilestorm
 
 		private void OnMapEdited(IMapEdit iMap, bool resized, Vector3 delta)
 		{
-			if (isActiveAndEnabled) AudioManager.StopMusic();
+			if (!isActiveAndEnabled) AudioManager.StopMusic();
 		}
 
 		void OnEnable()
@@ -56,14 +58,23 @@ namespace ClassicTilestorm
 				controller.UpdateGestureControllerState();
 
 			// Music
-			AudioManager.PlayMusic(MainController.CurrentMap?.Music, loop: true);
+			//AudioManager.PlayMusic(MainController.CurrentMap?.Music, loop: true);
 			//AudioManager.PlayMusic(MusicAssets.Find(currentMap.music));
 
+			PlayMusic(ApplicationSettings.Music);
 
 			//possibly move here
 			//if (null != eggbotController) DestroyImmediate(eggbotController.gameObject);
 			//eggbotController = EggbotController.Instantiate(currentMap.character, transform);
 			//if (null != eggbotController) eggbotController.Initialise(mapManager);
+		}
+
+		private void PlayMusic(bool value)
+		{
+			if (value && isActiveAndEnabled)
+				AudioManager.PlayMusic(MainController.CurrentMap?.Music, loop: true);
+			else
+				AudioManager.StopMusic();
 		}
 
 		void OnDisable() => AudioManager.StopMusic();

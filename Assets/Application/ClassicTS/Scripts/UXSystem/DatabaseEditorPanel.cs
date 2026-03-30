@@ -38,6 +38,9 @@ namespace ClassicTilestorm
 		[SerializeField] private TMP_Dropdown characterDropdown;
 		[SerializeField] private string noneCharacterOptionText = "— Default —";
 
+		[SerializeField] private TMP_Dropdown musicDropdown;
+		[SerializeField] private string noneMusicOptionText = "— Default —";
+
 		[Header("Colour Pickers")]
 		[SerializeField] private RawImage colourPickerImage;     // rainbow hue + saturation square
 		[SerializeField] private RawImage brightnessPickerImage; // value/brightness slider
@@ -134,6 +137,7 @@ namespace ClassicTilestorm
 			RefreshMapList();
 			PopulateSkyboxDropdown();
 			PopulateCharacterDropdown();
+			PopulateMusicDropdown();
 			PopulateEffectDropdown();
 
 			SyncColorPickerToCurrentMap();
@@ -349,6 +353,9 @@ namespace ClassicTilestorm
 			if (characterDropdown != null)
 				characterDropdown.onValueChanged.AddListener(OnCharacterDropdownValueChanged);
 
+			if (musicDropdown != null)
+				musicDropdown.onValueChanged.AddListener(OnMusicDropdownValueChanged);
+
 			if (effectDropdown != null)
 				effectDropdown.onValueChanged.AddListener(OnEffectDropdownValueChanged);
 		}
@@ -401,6 +408,20 @@ namespace ClassicTilestorm
 
 			if (newCharacter != CurrentMap.character)
 				CurrentMap.character = newCharacter;
+		}
+
+		private void OnMusicDropdownValueChanged(int index)
+		{
+			if (CurrentMap == null) return;
+
+			string selected = index >= 0 && index < musicDropdown.options.Count
+				? musicDropdown.options[index].text
+				: null;
+
+			string newMusic = (selected == noneMusicOptionText) ? null : selected;
+
+			if (newMusic != CurrentMap.music)
+				CurrentMap.music = newMusic;
 		}
 
 		private void OnEffectDropdownValueChanged(int index)
@@ -494,6 +515,7 @@ namespace ClassicTilestorm
 			SyncColorPickerToCurrentMap();
 			SyncSkyboxDropdown();
 			SyncCharacterDropdown();
+			SyncMusicDropdown();
 			SyncEffectDropdown();
 
 			InitialiseMapPreview();
@@ -549,6 +571,19 @@ namespace ClassicTilestorm
 			PopulateDropdown(characterDropdown, characterNames, noneCharacterOptionText);
 		}
 
+		//private void PopulateMusicDropdown()
+		//{
+		//	var musicNames = new List<string>
+		//	{
+		//		"Eggbot Default", "Eggbot Industrial", "Eggbot Egypt",
+		//		"Eggbot Medieval", "Eggbot Jungle",
+		//	};
+		//	PopulateDropdown(musicDropdown, musicNames, noneMusicOptionText);
+		//}
+
+		private void PopulateMusicDropdown() =>
+			PopulateDropdown(musicDropdown, Assets.ProjectAssets.GetMusicNames(), noneMusicOptionText);
+
 		private void PopulateEffectDropdown()
 		{
 			if (effectDropdown == null) return;
@@ -564,6 +599,9 @@ namespace ClassicTilestorm
 
 		private void SyncCharacterDropdown() =>
 			SyncDropdown(characterDropdown, CurrentMap?.character, noneCharacterOptionText);
+
+		private void SyncMusicDropdown() =>
+			SyncDropdown(musicDropdown, CurrentMap?.music, noneMusicOptionText);
 
 		private void SyncEffectDropdown()
 		{
