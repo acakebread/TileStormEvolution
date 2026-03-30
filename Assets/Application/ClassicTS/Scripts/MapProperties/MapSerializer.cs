@@ -274,13 +274,16 @@ namespace ClassicTilestorm
 			if (jo["solve"]?.Type == JTokenType.Array)
 			{
 				var data = jo["solve"].ToObject<int[]>(serializer);
-				((Map)map).solve = data?.SmartRleDecode() ?? Array.Empty<int>();
+				map.solve = data?.SmartRleDecode() ?? Array.Empty<int>();
 			}
 
 			if (tableArray != null)
 			{
 				((Map.IVariantAccess)map).Variants = ParseTableToVariants(tableArray);
 			}
+
+			map.AutoAmbient = null == jo["ambient"];
+			map.AutoSunlight = null == jo["sunlight"];
 
 			return map;
 		}
@@ -423,12 +426,32 @@ namespace ClassicTilestorm
 					continue;
 				}
 
-				if (name == "light")
+				if (name == "ambient")
 				{
-					writer.WritePropertyName("light");
+					if (true == map.AutoAmbient)
+						continue;
+
+					writer.WritePropertyName("ambient");
 
 					// Use the Color property instead of the string field
-					Color color = map.Light;   // ← assuming Light is a public property on Map
+					Color color = map.AmbientLight;
+
+					// Decide if you want alpha always or only when < 1
+					string hex = color.ToHexString(includeAlpha: true);   // or false
+
+					writer.WriteValue(hex);
+					continue;
+				}
+
+				if (name == "sunlight")
+				{
+					if (true == map.AutoSunlight)
+						continue;
+
+					writer.WritePropertyName("sunlight");
+
+					// Use the Color property instead of the string field
+					Color color = map.Sunlight;
 
 					// Decide if you want alpha always or only when < 1
 					string hex = color.ToHexString(includeAlpha: true);   // or false

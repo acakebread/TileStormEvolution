@@ -78,10 +78,11 @@ namespace ClassicTilestorm
 		[JsonProperty(Order = 1)] public string name;
 		[JsonProperty(Order = 2)] public string character;
 		[JsonProperty(Order = 3)] public string music;
-		[JsonProperty(Order = 4)] public string light;
-		[JsonProperty(Order = 5)] public string skybox;
-		[JsonProperty(Order = 6)] public string effect;
-		[JsonProperty(Order = 7)] public string button;
+		[JsonProperty(Order = 4)] public string ambient;
+		[JsonProperty(Order = 5)] public string sunlight;
+		[JsonProperty(Order = 6)] public string skybox;
+		[JsonProperty(Order = 7)] public string effect;
+		[JsonProperty(Order = 8)] public string button;
 
 		// ─────────────────────────────────────────────
 		// Dimensions
@@ -97,7 +98,7 @@ namespace ClassicTilestorm
 		[JsonProperty(Order = 30)] public MapAttachment[] attachments;
 
 		// Conditional serialization
-		public bool ShouldSerializelight() => !string.IsNullOrEmpty(light);
+		public bool ShouldSerializeambient() => !string.IsNullOrEmpty(ambient);
 		public bool ShouldSerializeskybox() => !string.IsNullOrEmpty(skybox);
 		public bool ShouldSerializeeffect() => !string.IsNullOrEmpty(effect);
 		public bool ShouldSerializesolve() => solve != null && solve.Length > 0;
@@ -119,10 +120,19 @@ namespace ClassicTilestorm
 			set => effect = ReflectionEffectCamera.EffectModeToString(value);
 		}
 
-		[JsonIgnore] public Color Light
+		[JsonIgnore] public bool AutoAmbient = true;
+		[JsonIgnore] public Color AmbientLight
 		{
-			get => StringUtil.FromHexString(light, defaultColor: Color.white);
-			set => light = value.ToHexString(includeAlpha: true);
+			get => StringUtil.FromHexString(ambient, defaultColor: Color.white);
+			set { ambient = value.ToHexString(includeAlpha: true); AutoAmbient = false; }
+		}
+
+
+		[JsonIgnore] public bool AutoSunlight = true;
+		[JsonIgnore] public Color Sunlight
+		{
+			get => StringUtil.FromHexString(sunlight, defaultColor: Color.white);
+			set { sunlight = value.ToHexString(includeAlpha: true); AutoSunlight = false; }
 		}
 
 		[JsonIgnore] private DirectionalLightUtility directionalLight;
@@ -270,7 +280,7 @@ namespace ClassicTilestorm
 
 		[JsonIgnore] public UnityRenderSettings RenderSettings => new(
 			ambientMode: UnityEngine.Rendering.AmbientMode.Flat,
-			ambientLight: Light,
+			ambientLight: AmbientLight,
 			ambientIntensity: 1f,
 			skybox: SkyboxMaterial,
 			ambientProbe: default,
@@ -322,7 +332,8 @@ namespace ClassicTilestorm
 			name = name,
 			character = character,
 			music = music,
-			light = light,
+			ambient = ambient,
+			sunlight = sunlight,
 			skybox = skybox,
 			effect = effect,
 			button = button,
@@ -334,7 +345,10 @@ namespace ClassicTilestorm
 			solve = solve != null ? (int[])solve.Clone() : null,
 
 			attachments = attachments != null ? attachments.Select(a => a.ShallowClone()).ToArray() : Array.Empty<MapAttachment>(),
-			variants = variants != null ? variants.Select(v => new Variant(v.hash, v.delta, v.angle)).ToArray() : Array.Empty<Variant>()
+			variants = variants != null ? variants.Select(v => new Variant(v.hash, v.delta, v.angle)).ToArray() : Array.Empty<Variant>(),
+
+			AutoAmbient = AutoAmbient,
+			AutoSunlight = AutoSunlight
 		};
 
 		public bool Initialise(Transform parent = null, bool solved = false)

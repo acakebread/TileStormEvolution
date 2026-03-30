@@ -42,7 +42,9 @@ namespace ClassicTilestorm
 
 		[Header("Colour Pickers")]
 		[SerializeField] private Button ambientColourButton;
+		[SerializeField] private Toggle ambientColourAutoToggle;
 		[SerializeField] private Button directionalColourButton;
+		[SerializeField] private Toggle directionalColourAutoToggle;
 
 		[Header("Ground Plane")]
 		[SerializeField] private TMP_Dropdown effectDropdown;
@@ -100,6 +102,7 @@ namespace ClassicTilestorm
 			PopulateMusicDropdown();
 			PopulateEffectDropdown();
 
+			SyncColorTogglesToCurrentMap();
 			SyncColorButtonsToCurrentMap();
 			SyncSkyboxDropdown();
 			SyncCharacterDropdown();
@@ -134,6 +137,8 @@ namespace ClassicTilestorm
 
 			if (previewImage != null)
 				previewImage.texture = null;
+
+			UIController.ClosePanel<ColourSelectorPanel>();
 
 			base.OnDisable();
 		}
@@ -197,22 +202,59 @@ namespace ClassicTilestorm
 			cam.fieldOfView = fieldOfView;
 		}
 
+		private void SyncColorTogglesToCurrentMap()
+		{
+			if (CurrentMap == null)
+				return;
+
+			if (null != ambientColourAutoToggle) ambientColourAutoToggle.isOn = CurrentMap.AutoAmbient;
+			if (null != directionalColourAutoToggle) directionalColourAutoToggle.isOn = CurrentMap.AutoSunlight;
+		}
+
 		private void SyncColorButtonsToCurrentMap()
 		{
 			if (CurrentMap == null)
 				return;
 
-			if (null != ambientColourButton) ambientColourButton.GetComponent<Image>().color = CurrentMap.Light;
+			if (null != ambientColourButton) ambientColourButton.GetComponent<Image>().color = CurrentMap.AmbientLight;
 			if (null != directionalColourButton)
 			{
 				var skybox = SkyboxUtility.GetSkyboxMaterialForName(CurrentMap.skybox);
-				directionalColourButton.GetComponent<Image>().color = CubemapUtility.ComputeBrightColor(SkyboxUtility.GetTintedSkyboxCubemap(skybox), 0.85f);//Color.white;//CurrentMap.Light;
+				//directionalColourButton.GetComponent<Image>().color = CurrentMap.AutoSunlight ? CubemapUtility.ComputeBrightColor(SkyboxUtility.GetTintedSkyboxCubemap(skybox), 0.85f) : CurrentMap.Sunlight;
+				directionalColourButton.GetComponent<Image>().color = CurrentMap.Sunlight;
 			}
+		}
+
+		public void OnColourTogglePressed(Toggle src)
+		{
+			if (src == ambientColourAutoToggle)
+			{
+				CurrentMap.AutoAmbient = src.isOn;
+				//if (!src.isOn) CurrentMap.AmbientLight = CurrentMap.AmbientLight;
+			}
+
+			if (src == directionalColourAutoToggle)
+			{
+				CurrentMap.AutoSunlight = src.isOn;
+				//if (!src.isOn) CurrentMap.Sunlight = CurrentMap.Sunlight;
+			}
+
+			SyncColorButtonsToCurrentMap();
+			// Optional: update preview
+			UpdateMapPreview();
 		}
 
 		public void OnColourButtonPressed(Button src)
 		{
+			//do not open colour panel if override is off
+			if (src == ambientColourButton && null != ambientColourAutoToggle && ambientColourAutoToggle.isOn)
+				return;
+
+			if (src == directionalColourButton && null != directionalColourAutoToggle && directionalColourAutoToggle.isOn)
+				return;
+
 			// Open the panel and get reference to it in one line
+			UIController.ClosePanel<ColourSelectorPanel>();
 			ColourSelectorPanel colourPanel = UIController.OpenPanel<ColourSelectorPanel>(closeOthers: false);
 
 			if (colourPanel != null)
@@ -226,7 +268,11 @@ namespace ClassicTilestorm
 				colourPanel.onValueChanged = (selectedColor) =>
 				{
 					src.GetComponent<Image>().color = selectedColor;
-					CurrentMap.Light = selectedColor;
+					if (src == ambientColourButton)
+						CurrentMap.AmbientLight = selectedColor;
+
+					if (src == directionalColourButton)
+						CurrentMap.Sunlight = selectedColor;
 
 					// Optional: update preview
 					UpdateMapPreview();
@@ -304,6 +350,7 @@ namespace ClassicTilestorm
 				if (CurrentMap.name == MainController.CurrentMap.name) SkyboxUtility.SetSkybox(CurrentMap.skybox);
 				UpdateMapPreview();
 			}
+			SyncColorTogglesToCurrentMap();
 			SyncColorButtonsToCurrentMap();
 		}
 
@@ -423,6 +470,7 @@ namespace ClassicTilestorm
 			if (index >= 0 && index < spawnedMapToggles.Count)
 				spawnedMapToggles[index].SetIsOnWithoutNotify(true);
 
+			SyncColorTogglesToCurrentMap();
 			SyncColorButtonsToCurrentMap();
 			SyncSkyboxDropdown();
 			SyncCharacterDropdown();
