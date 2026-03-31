@@ -360,6 +360,7 @@ namespace ClassicTilestorm
 				return false;
 			}
 			directionalLight = DirectionalLightUtility.Instantiate(parent);
+			UpdateDirectionalLighting(directionalLight);
 
 			if (solved) Solve();
 			else Preset();
@@ -371,7 +372,8 @@ namespace ClassicTilestorm
 				waypoints = this.GenerateWaypoints();
 			parent.gameObject.GetOrAddComponent<WindController>();
 
-			SkyboxUtility.OnSkyboxChanged += directionalLight.UpdateFromSkybox;
+			//SkyboxUtility.OnSkyboxChanged += directionalLight.UpdateFromSkybox;
+			SkyboxUtility.OnSkyboxChanged += OnSkyboxChanged;
 
 			return true;
 		}
@@ -380,7 +382,8 @@ namespace ClassicTilestorm
 		{
 			OnMapEdited = null;
 
-			SkyboxUtility.OnSkyboxChanged -= directionalLight.UpdateFromSkybox;
+			//SkyboxUtility.OnSkyboxChanged -= directionalLight.UpdateFromSkybox;
+			SkyboxUtility.OnSkyboxChanged -= OnSkyboxChanged;
 
 			DestroyAllGraphTiles();
 
@@ -980,6 +983,23 @@ namespace ClassicTilestorm
 			}
 			//OnMapEdited?.Invoke(this, false, Vector3.zero);//no need for this
 			return RectInt.zero;
+		}
+
+		// lighting
+		private void OnSkyboxChanged(Material skybox = null)
+		{
+			UpdateDirectionalLighting(directionalLight);
+		}
+
+		public void UpdateDirectionalLighting(DirectionalLightUtility value = null)
+		{
+			value ??= directionalLight;
+			if (null == value) return;
+
+			if (AutoSunlight)
+				value.UpdateFromSkybox(SkyboxUtility.GetSkyboxMaterialForName(Skybox));
+			else
+				value.UpdateFromSettings(Sunlight);
 		}
 	}
 }

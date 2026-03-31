@@ -78,6 +78,7 @@ namespace ClassicTilestorm
 				? ResourceManager.Maps[lastSelectedMapIndex]
 				: null;
 
+		private Map currentClone;
 		private GameObject currentPreviewRoot;
 
 		// Gimbal orbit controller (replaces old auto-orbit)
@@ -207,8 +208,8 @@ namespace ClassicTilestorm
 			if (CurrentMap == null)
 				return;
 
-			if (null != ambientColourAutoToggle) ambientColourAutoToggle.isOn = CurrentMap.AutoAmbient;
-			if (null != directionalColourAutoToggle) directionalColourAutoToggle.isOn = CurrentMap.AutoSunlight;
+			if (null != ambientColourAutoToggle) ambientColourAutoToggle.SetIsOnWithoutNotify(CurrentMap.AutoAmbient);
+			if (null != directionalColourAutoToggle) directionalColourAutoToggle.SetIsOnWithoutNotify(CurrentMap.AutoSunlight);
 		}
 
 		private void SyncColorButtonsToCurrentMap()
@@ -216,12 +217,15 @@ namespace ClassicTilestorm
 			if (CurrentMap == null)
 				return;
 
-			if (null != ambientColourButton) ambientColourButton.GetComponent<Image>().color = CurrentMap.AmbientLight;
+			if (null != ambientColourButton)
+			{
+				var skybox = SkyboxUtility.GetSkyboxMaterialForName(CurrentMap.skybox);
+				ambientColourButton.GetComponent<Image>().color = CurrentMap.AutoAmbient ? CubemapUtility.ComputeBrightColor(SkyboxUtility.GetTintedSkyboxCubemap(skybox), 0f) : CurrentMap.AmbientLight;
+			}
 			if (null != directionalColourButton)
 			{
 				var skybox = SkyboxUtility.GetSkyboxMaterialForName(CurrentMap.skybox);
 				directionalColourButton.GetComponent<Image>().color = CurrentMap.AutoSunlight ? CubemapUtility.ComputeBrightColor(SkyboxUtility.GetTintedSkyboxCubemap(skybox), 0.85f) : CurrentMap.Sunlight;
-				//directionalColourButton.GetComponent<Image>().color = CurrentMap.Sunlight;
 			}
 		}
 
@@ -345,8 +349,9 @@ namespace ClassicTilestorm
 			if (newSkybox != CurrentMap.Skybox)
 			{
 				CurrentMap.Skybox = newSkybox;
-				var directionalLightUtility = currentPreviewRoot?.GetComponentInChildren<DirectionalLightUtility>(true);
-				if (directionalLightUtility != null) directionalLightUtility.UpdateFromSkybox(SkyboxUtility.GetSkyboxMaterialForName(CurrentMap.Skybox));
+				//var directionalLightUtility = currentPreviewRoot?.GetComponentInChildren<DirectionalLightUtility>(true);
+				//if (directionalLightUtility != null) directionalLightUtility.UpdateFromSkybox(SkyboxUtility.GetSkyboxMaterialForName(CurrentMap.Skybox));
+				CurrentMap.UpdateDirectionalLighting();
 				if (CurrentMap.name == MainController.CurrentMap.name) SkyboxUtility.SetSkybox(CurrentMap.skybox);
 				UpdateMapPreview();
 			}
@@ -649,6 +654,12 @@ namespace ClassicTilestorm
 		{
 			if (ScenePreviewUtil.PreviewCamera == null || previewImage == null) return;
 
+			if (null != currentClone)
+			{
+				currentClone.Destroy();
+				currentClone = null; 
+			}
+
 			var map = CurrentMap;
 
 			// Destroy previous preview (clean, fast, zero scanning)
@@ -676,9 +687,9 @@ namespace ClassicTilestorm
 			currentPreviewRoot.transform.localRotation = Quaternion.identity;
 
 			// Build under our owned root
-			var geometry = MapUtils.BuildPreviewGeometry(map, currentPreviewRoot.transform);//, PreviewRenderLayers.previewMask
+			currentClone = MapUtils.BuildPreviewGeometry(map, currentPreviewRoot.transform);//, PreviewRenderLayers.previewMask
 
-			if (geometry == false)
+			if (null == currentClone)
 			{
 				previewImage.color = new Color(1f, 0.3f, 0.3f, 0.7f);
 				orbitController?.ResetView(false);
@@ -707,17 +718,27 @@ namespace ClassicTilestorm
 			ScenePreviewUtil.UpdateEffect(map.Effect);
 			ScenePreviewUtil.UpdateRenderSettings(map.RenderSettings);
 
-			var directionalLightUtility = currentPreviewRoot.GetComponentInChildren<DirectionalLightUtility>(true);
-			if (directionalLightUtility != null) directionalLightUtility.UpdateFromSkybox(SkyboxUtility.GetSkyboxMaterialForName(CurrentMap.Skybox));
+			currentClone.UpdateDirectionalLighting();
+
+			//var directionalLightUtility = currentPreviewRoot.GetComponentInChildren<DirectionalLightUtility>(true);
+			//if (directionalLightUtility != null) directionalLightUtility.UpdateFromSkybox(SkyboxUtility.GetSkyboxMaterialForName(CurrentMap.Skybox));
 		}
 
 		private void UpdateMapPreview()
 		{
+			if (null != currentClone)
+			{
+				currentClone.Sunlight = CurrentMap.Sunlight;
+				currentClone.AutoSunlight = CurrentMap.AutoSunlight;
+				currentClone.UpdateDirectionalLighting(currentPreviewRoot.GetComponentInChildren<DirectionalLightUtility>(true));
+			}
+
 			ScenePreviewUtil.UpdateEffect(CurrentMap.Effect);
 			ScenePreviewUtil.UpdateRenderSettings(CurrentMap.RenderSettings);
 
 			if (CurrentMap.name == MainController.CurrentMap.name)
 			{
+				CurrentMap.UpdateDirectionalLighting();
 				var mainReflection = Camera.main?.GetComponent<ReflectionEffectCamera>();
 				if (null != mainReflection)
 					mainReflection.UpdateRenderSettings(CurrentMap.RenderSettings);

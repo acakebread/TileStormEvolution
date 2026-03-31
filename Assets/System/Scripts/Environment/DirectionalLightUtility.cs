@@ -13,7 +13,7 @@ namespace MassiveHadronLtd
 		[SerializeField] private float intensityMultiplier = 1f;
 
 		[Range(0f, 3f)]
-		[SerializeField] private float minIntensity = 0.2f;
+		[SerializeField] private float minIntensity = 0f;
 
 		private Light directionalLight => GetComponent<Light>();
 
@@ -41,6 +41,12 @@ namespace MassiveHadronLtd
 		private void OnDestroy()
 		{
 			//SkyboxUtility.OnSkyboxChanged -= UpdateFromSkybox;
+		}
+
+		public void UpdateFromSettings(Color value, float intentisty = 1f)
+		{
+			directionalLight.color = value;
+			directionalLight.intensity = intentisty;
 		}
 
 		public void UpdateFromSkybox(Material skybox = null)

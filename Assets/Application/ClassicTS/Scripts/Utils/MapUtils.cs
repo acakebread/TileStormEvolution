@@ -80,10 +80,10 @@ namespace ClassicTilestorm
 			return maxX >= 0 ? new RectInt(minX, minZ, maxX - minX + 1, maxZ - minZ + 1) : new RectInt(0, 0, 0, 0);
 		}
 
-		public static bool BuildPreviewGeometry(Map map, Transform parent)
+		public static Map BuildPreviewGeometry(Map map, Transform parent)
 		{
 			if (map.width <= 0 || map.height <= 0 || map.tiles == null || map.variants == null)
-				return false;
+				return null;
 
 			// CRITICAL: Work on a CLONE so we don't corrupt the original map's runtime state
 			var previewMap = map.Clone();
@@ -91,10 +91,11 @@ namespace ClassicTilestorm
 			if (!previewMap.InitialiseGraph())
 			{
 				Debug.LogWarning("Preview graph creation failed on clone");
-				return false;
+				return null;
 			}
 
 			var directionalLight = DirectionalLightUtility.Instantiate(parent);
+			previewMap.UpdateDirectionalLighting(directionalLight);
 
 			previewMap.Preset();
 			previewMap.RefreshAttachments(previewMap.GetAttachments());
@@ -103,7 +104,7 @@ namespace ClassicTilestorm
 			var particleControllers = parent.gameObject.GetComponentsInChildren<ParticleController>(true);
 			foreach (var particleController in particleControllers) particleController.gameObject.layer = PreviewRenderLayers.previewTransparentLayer;
 			PreviewRenderLayers.SetPreviewLayersToChildLights(parent);
-			return true;
+			return previewMap;
 		}
 
 		public static bool Optimise(this Map map)
