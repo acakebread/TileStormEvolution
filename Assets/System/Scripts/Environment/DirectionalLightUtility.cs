@@ -35,6 +35,7 @@ namespace MassiveHadronLtd
 
 		private void Awake()
 		{
+			transform.rotation = Quaternion.Euler(75f, 60f, 0f);//default
 			//SkyboxUtility.OnSkyboxChanged += UpdateFromSkybox;
 		}
 

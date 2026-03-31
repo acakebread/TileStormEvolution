@@ -219,13 +219,13 @@ namespace ClassicTilestorm
 
 			if (null != ambientColourButton)
 			{
-				var skybox = SkyboxUtility.GetSkyboxMaterialForName(CurrentMap.skybox);
-				ambientColourButton.GetComponent<Image>().color = CurrentMap.AutoAmbient ? CubemapUtility.ComputeBrightColor(SkyboxUtility.GetTintedSkyboxCubemap(skybox), 0f) : CurrentMap.AmbientLight;
+				//var skybox = SkyboxUtility.GetSkyboxMaterialForName(CurrentMap.skybox);
+				ambientColourButton.GetComponent<Image>().color = CurrentMap.AmbientLight;//.GetAmbientLight();//  CurrentMap.AutoAmbient ? CubemapUtility.ComputeBrightColor(SkyboxUtility.GetTintedSkyboxCubemap(skybox), 0f) : CurrentMap.AmbientLight;
 			}
 			if (null != directionalColourButton)
 			{
-				var skybox = SkyboxUtility.GetSkyboxMaterialForName(CurrentMap.skybox);
-				directionalColourButton.GetComponent<Image>().color = CurrentMap.AutoSunlight ? CubemapUtility.ComputeBrightColor(SkyboxUtility.GetTintedSkyboxCubemap(skybox), 0.85f) : CurrentMap.Sunlight;
+				//var skybox = SkyboxUtility.GetSkyboxMaterialForName(CurrentMap.skybox);
+				directionalColourButton.GetComponent<Image>().color = CurrentMap.Sunlight;//  .GetSunlight();//  CurrentMap.AutoSunlight ? CubemapUtility.ComputeBrightColor(SkyboxUtility.GetTintedSkyboxCubemap(skybox), 0.85f) : CurrentMap.Sunlight;
 			}
 		}
 
@@ -234,13 +234,15 @@ namespace ClassicTilestorm
 			if (src == ambientColourAutoToggle)
 			{
 				CurrentMap.AutoAmbient = src.isOn;
-				if (!src.isOn) CurrentMap.AmbientLight = CurrentMap.AmbientLight;
+				//if (!src.isOn) CurrentMap.AmbientLight = CurrentMap.AmbientLight;
+				CurrentMap.AmbientLight = CurrentMap.GetAmbientLight();
 			}
 
 			if (src == directionalColourAutoToggle)
 			{
 				CurrentMap.AutoSunlight = src.isOn;
-				if (!src.isOn) CurrentMap.Sunlight = CurrentMap.Sunlight;
+				//if (!src.isOn) CurrentMap.Sunlight = CurrentMap.Sunlight;
+				CurrentMap.Sunlight = CurrentMap.GetSunlight();
 			}
 
 			SyncColorButtonsToCurrentMap();
@@ -351,6 +353,7 @@ namespace ClassicTilestorm
 				CurrentMap.Skybox = newSkybox;
 				//var directionalLightUtility = currentPreviewRoot?.GetComponentInChildren<DirectionalLightUtility>(true);
 				//if (directionalLightUtility != null) directionalLightUtility.UpdateFromSkybox(SkyboxUtility.GetSkyboxMaterialForName(CurrentMap.Skybox));
+				CurrentMap.UpdateAmbientLighting();
 				CurrentMap.UpdateDirectionalLighting();
 				if (CurrentMap.name == MainController.CurrentMap.name) SkyboxUtility.SetSkybox(CurrentMap.skybox);
 				UpdateMapPreview();
@@ -475,14 +478,14 @@ namespace ClassicTilestorm
 			if (index >= 0 && index < spawnedMapToggles.Count)
 				spawnedMapToggles[index].SetIsOnWithoutNotify(true);
 
+			InitialiseMapPreview();
+
 			SyncColorTogglesToCurrentMap();
 			SyncColorButtonsToCurrentMap();
 			SyncSkyboxDropdown();
 			SyncCharacterDropdown();
 			SyncMusicDropdown();
 			SyncEffectDropdown();
-
-			InitialiseMapPreview();
 		}
 
 		private void UpdateDeleteButtonState()
@@ -661,6 +664,8 @@ namespace ClassicTilestorm
 			}
 
 			var map = CurrentMap;
+			CurrentMap.AmbientLight = CurrentMap.GetAmbientLight();
+			CurrentMap.Sunlight = CurrentMap.GetSunlight();
 
 			// Destroy previous preview (clean, fast, zero scanning)
 			if (currentPreviewRoot != null)
@@ -696,6 +701,8 @@ namespace ClassicTilestorm
 				return;
 			}
 
+
+
 			// bounds calculation + reframing (unchanged)
 			var bounds = new Bounds();
 			bool hasRenderers = false;
@@ -728,8 +735,12 @@ namespace ClassicTilestorm
 		{
 			if (null != currentClone)
 			{
+				currentClone.AmbientLight = CurrentMap.AmbientLight;
+				currentClone.AutoAmbient = CurrentMap.AutoAmbient;
+
 				currentClone.Sunlight = CurrentMap.Sunlight;
 				currentClone.AutoSunlight = CurrentMap.AutoSunlight;
+
 				currentClone.UpdateDirectionalLighting(currentPreviewRoot.GetComponentInChildren<DirectionalLightUtility>(true));
 			}
 

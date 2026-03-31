@@ -124,16 +124,19 @@ namespace ClassicTilestorm
 		[JsonIgnore] public Color AmbientLight
 		{
 			get => StringUtil.FromHexString(ambient, defaultColor: Color.white);
-			set { ambient = value.ToHexString(includeAlpha: true); AutoAmbient = false; }
+			set => ambient = value.ToHexString(includeAlpha: true);//set { ambient = value.ToHexString(includeAlpha: true); AutoAmbient = false; }
 		}
+		[HideInInspector] public Color GetAmbientLight() => AutoAmbient? CubemapUtility.ComputeBrightColor(SkyboxUtility.GetTintedSkyboxCubemap(SkyboxMaterial), 0f) : AmbientLight;
 
 
 		[JsonIgnore] public bool AutoSunlight = true;
 		[JsonIgnore] public Color Sunlight
 		{
 			get => StringUtil.FromHexString(sunlight, defaultColor: Color.white);
-			set { sunlight = value.ToHexString(includeAlpha: true); AutoSunlight = false; }
+			set => sunlight = value.ToHexString(includeAlpha: true);//set { sunlight = value.ToHexString(includeAlpha: true); AutoSunlight = false; }
 		}
+		[HideInInspector] public Color GetSunlight() => AutoSunlight ? CubemapUtility.ComputeBrightColor(SkyboxUtility.GetTintedSkyboxCubemap(SkyboxMaterial), 0.85f) : Sunlight;
+
 
 		[JsonIgnore] private DirectionalLightUtility directionalLight;
 
@@ -359,6 +362,7 @@ namespace ClassicTilestorm
 				Debug.LogWarning("Failed to create runtime tiles — map data invalid.");
 				return false;
 			}
+			UpdateAmbientLighting();
 			directionalLight = DirectionalLightUtility.Instantiate(parent);
 			UpdateDirectionalLighting(directionalLight);
 
@@ -986,6 +990,12 @@ namespace ClassicTilestorm
 		}
 
 		// lighting
+
+		public void UpdateAmbientLighting()
+		{
+			AmbientLight = GetAmbientLight();
+		}
+
 		private void OnSkyboxChanged(Material skybox = null)
 		{
 			UpdateDirectionalLighting(directionalLight);
