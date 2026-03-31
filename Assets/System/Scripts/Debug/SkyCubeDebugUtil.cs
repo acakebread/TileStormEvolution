@@ -19,7 +19,16 @@ namespace MassiveHadronLtd
 		private Color brightColor = Color.gray;
 		private float maxLum = 0f;
 		private int brightPixelCount = 0;
-		private Cubemap lastCubemap;
+		//private Cubemap lastCubemap;
+
+
+		private Cubemap _lastCubemap;
+
+		private Cubemap lastCubemap
+		{
+			set => _lastCubemap = value;
+			get => _lastCubemap;
+		}
 
 		private Vector2 sunUV;
 

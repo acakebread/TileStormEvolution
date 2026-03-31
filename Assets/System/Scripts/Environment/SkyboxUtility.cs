@@ -8,8 +8,8 @@ namespace MassiveHadronLtd
 		public static System.Action<Material> OnSkyboxChanged;
 
 		private static Material defaultSkyboxMaterial;
-		private static Cubemap lastTintedCubemap = null;
-		private static Material lastTintedSourceMaterial = null;
+		//private static Cubemap lastTintedCubemap = null;
+		//private static Material lastTintedSourceMaterial = null;
 
 		static SkyboxUtility() => defaultSkyboxMaterial = RenderSettings.skybox;
 
@@ -53,14 +53,14 @@ namespace MassiveHadronLtd
 			Material skyMat = overrideSkybox ?? RenderSettings.skybox;
 			if (skyMat == null) return null;
 
-			if (lastTintedCubemap != null && lastTintedSourceMaterial == skyMat)
-				return lastTintedCubemap;
+			//if (lastTintedCubemap != null && lastTintedSourceMaterial == skyMat)
+			//	return lastTintedCubemap;
 
-			if (lastTintedCubemap != null)
-			{
-				Object.DestroyImmediate(lastTintedCubemap);
-				lastTintedCubemap = null;
-			}
+			//if (lastTintedCubemap != null)
+			//{
+			//	Object.DestroyImmediate(lastTintedCubemap);
+			//	lastTintedCubemap = null;
+			//}
 
 			Cubemap tintedCubemap = new Cubemap(resolution, TextureFormat.RGBA32, true)
 			{
@@ -78,26 +78,28 @@ namespace MassiveHadronLtd
 			bakerCam.allowHDR = true;
 			bakerCam.backgroundColor = Color.black;
 
+			var currentSky = RenderSettings.skybox;
 			RenderSettings.skybox = skyMat;
 			bakerCam.RenderToCubemap(tintedCubemap);
+			RenderSettings.skybox = currentSky;
 
 			Object.DestroyImmediate(bakerCam);
 			Object.DestroyImmediate(tempGo);
 
-			lastTintedCubemap = tintedCubemap;
-			lastTintedSourceMaterial = skyMat;
+			//lastTintedCubemap = tintedCubemap;
+			//lastTintedSourceMaterial = skyMat;
 
 			return tintedCubemap;
 		}
 
-		public static void InvalidateTintedCache()
-		{
-			if (lastTintedCubemap != null)
-			{
-				Object.DestroyImmediate(lastTintedCubemap);
-				lastTintedCubemap = null;
-			}
-			lastTintedSourceMaterial = null;
-		}
+		//public static void InvalidateTintedCache()
+		//{
+		//	if (lastTintedCubemap != null)
+		//	{
+		//		Object.DestroyImmediate(lastTintedCubemap);
+		//		lastTintedCubemap = null;
+		//	}
+		//	lastTintedSourceMaterial = null;
+		//}
 	}
 }

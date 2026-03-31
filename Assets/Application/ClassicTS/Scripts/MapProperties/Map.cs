@@ -371,12 +371,16 @@ namespace ClassicTilestorm
 				waypoints = this.GenerateWaypoints();
 			parent.gameObject.GetOrAddComponent<WindController>();
 
+			SkyboxUtility.OnSkyboxChanged += directionalLight.UpdateFromSkybox;
+
 			return true;
 		}
 
 		public void Destroy()
 		{
 			OnMapEdited = null;
+
+			SkyboxUtility.OnSkyboxChanged -= directionalLight.UpdateFromSkybox;
 
 			DestroyAllGraphTiles();
 

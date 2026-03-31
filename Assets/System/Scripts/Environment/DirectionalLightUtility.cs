@@ -35,12 +35,12 @@ namespace MassiveHadronLtd
 
 		private void Awake()
 		{
-			SkyboxUtility.OnSkyboxChanged += UpdateFromSkybox;
+			//SkyboxUtility.OnSkyboxChanged += UpdateFromSkybox;
 		}
 
 		private void OnDestroy()
 		{
-			SkyboxUtility.OnSkyboxChanged -= UpdateFromSkybox;
+			//SkyboxUtility.OnSkyboxChanged -= UpdateFromSkybox;
 		}
 
 		public void UpdateFromSkybox(Material skybox = null)
