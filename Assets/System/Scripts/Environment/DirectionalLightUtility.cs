@@ -10,7 +10,7 @@ namespace MassiveHadronLtd
 		[SerializeField] private float threshold = 0.85f;
 
 		[Range(1f, 20f)]
-		[SerializeField] private float intensityMultiplier = 1f;
+		[SerializeField] private float intensityMultiplier = 1.5f;
 
 		[Range(0f, 3f)]
 		[SerializeField] private float minIntensity = 0f;
@@ -48,27 +48,26 @@ namespace MassiveHadronLtd
 		{
 			directionalLight.color = value;
 			directionalLight.intensity = intentisty;
-			//directionalLight.color = Color.white;
 		}
 
-		public void UpdateFromSkybox(Material skybox = null)
+		public Color UpdateFromSkybox(Material skybox = null)
 		{
 			Cubemap cubemap = SkyboxUtility.GetTintedSkyboxCubemap(skybox);
 
 			if (cubemap == null)
 			{
 				directionalLight.color = Color.white;
-				directionalLight.intensity = 1f;
-				return;
+				directionalLight.intensity = intensityMultiplier;
+				return directionalLight.color;
 			}
 
 			// Bright color using your existing utility
-			Color brightColor = CubemapUtility.ComputeBrightColor(cubemap, threshold);//Color.white;//
+			Color brightColor = CubemapUtility.ComputeBrightColor(cubemap, threshold);
 
 			// Light direction
 			//Vector3 lightDir = AtlasCubemapUtility.FindLightDirection(cubemap);
 			//Vector3 lightDir = EquirectangularCubemapUtility.FindLightDirection(cubemap);
-			Vector3 lightDir = LinearCubemapUtility.FindLightDirection(cubemap);//Vector3.down;// 
+			Vector3 lightDir = LinearCubemapUtility.FindLightDirection(cubemap);
 
 			// Apply to light
 			directionalLight.color = brightColor;
@@ -87,9 +86,9 @@ namespace MassiveHadronLtd
 				Debug.LogWarning("No light direction determined - resorting to default");
 			}
 
-			// Optional production log (remove or wrap in #if UNITY_EDITOR later)
 			Debug.Log($"Sky updated: BrightColor={brightColor}, Lum={lum:F3}, Intensity={directionalLight.intensity:F2}");
-			//directionalLight.color = Color.white;
+
+			return directionalLight.color;
 		}
 	}
 }

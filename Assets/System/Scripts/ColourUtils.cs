@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using System.Linq;
 
 namespace MassiveHadronLtd
@@ -84,6 +84,51 @@ namespace MassiveHadronLtd
 				return (-1f, luminances);
 
 			return (maxLum * threshold, luminances);
+		}
+
+		/// <summary>
+		/// Computes a luminance power-weighted average colour.
+		/// Brighter pixels dominate the result (exactly what you asked for).
+		/// Perfect for ambient light from a skybox.
+		/// </summary>
+		/// <param name="power">1.0 = normal average, 1.5–2.5 = bright pixels pull much harder</param>
+		public static Color ComputeAmbientColor(Color[] colours, float power = 1.1f)
+		{
+			if (colours == null || colours.Length == 0)
+				return new Color(0.25f, 0.25f, 0.35f); // soft neutral fallback
+
+			Color weightedSum = Color.black;
+			float totalWeight = 0f;
+
+			for (int i = 0; i < colours.Length; i++)
+			{
+				Color c = colours[i];
+				float lum = c.Luminance();
+
+				if (lum < 0.001f) continue; // ignore pure black / near-black noise
+
+				float weight = Mathf.Pow(lum, power);   // ← this is the key line
+
+				weightedSum += c * weight;
+				totalWeight += weight;
+			}
+
+			if (totalWeight < 0.0001f)
+				return new Color(0.25f, 0.25f, 0.35f);
+
+			Color ambient = weightedSum / totalWeight;
+
+			// Post-process for nicer "ambient fill" feel in AmbientMode.Flat
+			float avgLum = ambient.Luminance();
+			ambient = Color.Lerp(ambient, new Color(avgLum, avgLum, avgLum), 0.30f); // mild desaturation
+			ambient *= 1.15f;                                                       // gentle lift
+
+			ambient.r = Mathf.Clamp01(ambient.r);
+			ambient.g = Mathf.Clamp01(ambient.g);
+			ambient.b = Mathf.Clamp01(ambient.b);
+			ambient.a = 1f;
+
+			return ambient;
 		}
 	}
 }
