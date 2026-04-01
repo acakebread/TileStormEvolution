@@ -119,6 +119,8 @@ namespace ClassicTilestorm
 			}
 
 			ResourceManager.OnDefininionsModified += () => Rebuild();
+
+			ReadyCallbackRegistry.Raise(this);
 		}
 
 		//public void Start() { }
