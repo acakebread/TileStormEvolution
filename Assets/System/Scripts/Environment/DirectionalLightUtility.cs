@@ -48,6 +48,7 @@ namespace MassiveHadronLtd
 		{
 			directionalLight.color = value;
 			directionalLight.intensity = intentisty;
+			//directionalLight.color = Color.white;
 		}
 
 		public void UpdateFromSkybox(Material skybox = null)
@@ -88,6 +89,7 @@ namespace MassiveHadronLtd
 
 			// Optional production log (remove or wrap in #if UNITY_EDITOR later)
 			Debug.Log($"Sky updated: BrightColor={brightColor}, Lum={lum:F3}, Intensity={directionalLight.intensity:F2}");
+			//directionalLight.color = Color.white;
 		}
 	}
 }

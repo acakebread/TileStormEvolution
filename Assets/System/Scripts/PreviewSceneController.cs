@@ -201,6 +201,39 @@ namespace MassiveHadronLtd
 			Scene.SetModels(active.ToArray());
 		}
 
+		// Call this to make the light come from the camera's current view direction
+		public void SetLightToCameraDirection()
+		{
+			if (Scene == null || Camera == null) return;
+			Scene.MainLightDirection = Camera.rotation * Vector3.back;   // light shines toward the model from camera
+		}
+
+		// Full control - call this whenever you want to change lighting
+		public void SetLighting(
+			Vector3? mainLightDirection = null,
+			Color? mainLightColor = null,
+			float? mainLightIntensity = null,
+			Color? ambientColor = null,
+			float? ambientIntensity = null)
+		{
+			if (Scene == null) return;
+
+			if (mainLightDirection.HasValue)
+				Scene.MainLightDirection = mainLightDirection.Value;
+
+			if (mainLightColor.HasValue)
+				Scene.MainLightColor = mainLightColor.Value;
+
+			if (mainLightIntensity.HasValue)
+				Scene.MainLightIntensity = mainLightIntensity.Value;
+
+			if (ambientColor.HasValue)
+				Scene.AmbientColor = ambientColor.Value;
+
+			if (ambientIntensity.HasValue)
+				Scene.AmbientIntensity = ambientIntensity.Value;
+		}
+
 		public void Cleanup()
 		{
 			if (RenderTexture != null)

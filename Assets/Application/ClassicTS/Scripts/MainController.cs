@@ -128,7 +128,7 @@ namespace ClassicTilestorm
 				mainReflection.UpdateRenderSettings(currentMap.RenderSettings);
 			}
 
-			RenderSettings.ambientLight = currentMap.AmbientLight;
+			RenderSettings.ambientLight = Color.white; //currentMap.AmbientLight;
 			SkyboxUtility.SetSkybox(currentMap.skybox);//must set skybox after effect mode is set for now
 
 

@@ -104,17 +104,11 @@ namespace MassiveHadronLtd
 				}
 				else
 				{
-					SetFallbackPixels(x, y, cellSize);
+					Debug.LogError("no icon to copy");
+					//SetFallbackPixels(x, y, cellSize);
 				}
 
-				_entries.Add(new AtlasEntry
-				{
-					RectNormalized = new Rect(
-						(float)x / w,
-						(float)y / h,
-						(float)cellSize / w,
-						(float)cellSize / h)
-				});
+				_entries.Add(new AtlasEntry { RectNormalized = new((float)x / w, (float)y / h, (float)cellSize / w, (float)cellSize / h) });
 			}
 
 			Texture.Apply(true, false);
@@ -126,32 +120,32 @@ namespace MassiveHadronLtd
 
 		protected abstract Texture2D GenerateIcon(IDisposable renderer, object item, int index);
 
-		protected virtual void SetFallbackPixels(int x, int y, int size)
-		{
-			var pixels = new Color32[size * size];
-			int margin = size / 4;
-			int thick = size / 16;
-			var color = new Color32(51, 128, 255, 255); // blue-ish
+		//private void SetFallbackPixels(int x, int y, int size)
+		//{
+		//	var pixels = new Color32[size * size];
+		//	int margin = size / 4;
+		//	int thick = size / 16;
+		//	var color = new Color32(51, 128, 255, 255); // blue-ish
 
-			for (int py = 0; py < size; py++)
-				for (int px = 0; px < size; px++)
-				{
-					bool inH = px >= margin && px < size - margin;
-					bool inV = py >= margin && py < size - margin;
-					if (!inH || !inV) continue;
+		//	for (int py = 0; py < size; py++)
+		//		for (int px = 0; px < size; px++)
+		//		{
+		//			bool inH = px >= margin && px < size - margin;
+		//			bool inV = py >= margin && py < size - margin;
+		//			if (!inH || !inV) continue;
 
-					bool onEdge =
-						(py >= margin && py < margin + thick) ||
-						(py >= size - margin - thick && py < size - margin) ||
-						(px >= margin && px < margin + thick) ||
-						(px >= size - margin - thick && px < size - margin);
+		//			bool onEdge =
+		//				(py >= margin && py < margin + thick) ||
+		//				(py >= size - margin - thick && py < size - margin) ||
+		//				(px >= margin && px < margin + thick) ||
+		//				(px >= size - margin - thick && px < size - margin);
 
-					if (onEdge)
-						pixels[py * size + px] = color;
-				}
+		//			if (onEdge)
+		//				pixels[py * size + px] = color;
+		//		}
 
-			Texture.SetPixels32(x, y, size, size, pixels);
-		}
+		//	Texture.SetPixels32(x, y, size, size, pixels);
+		//}
 
 		public bool TryGetUVRect(int index, out Rect uvRect)
 		{

@@ -515,6 +515,53 @@ namespace ClassicTilestorm
 			);
 		}
 
+		// ====================== LIGHTING CONTROL ======================
+
+		/// <summary>
+		/// Makes the main light shine from the current camera direction (recommended for preview)
+		/// </summary>
+		private void SyncLightingToCamera()
+		{
+			if (previewCtrl?.Scene == null) return;
+
+			// Light comes from the camera toward the model
+			previewCtrl.Scene.MainLightDirection = previewCtrl.Camera.rotation * Vector3.back;
+
+			previewCtrl.Scene.MainLightColor = new Color(1.12f, 1.08f, 1.02f);  // slightly warm
+			previewCtrl.Scene.MainLightIntensity = 1.5f;                        // adjust brightness here
+
+			previewCtrl.Scene.AmbientColor = new Color(0.28f, 0.28f, 0.32f);
+			previewCtrl.Scene.AmbientIntensity = 0.9f;
+		}
+
+		/// <summary>
+		/// Full manual control over lighting (call this whenever you want to change settings)
+		/// </summary>
+		private void SetPreviewLighting(
+			Vector3? lightDirection = null,
+			Color? lightColor = null,
+			float? lightIntensity = null,
+			Color? ambientColor = null,
+			float? ambientIntensity = null)
+		{
+			if (previewCtrl?.Scene == null) return;
+
+			if (lightDirection.HasValue)
+				previewCtrl.Scene.MainLightDirection = lightDirection.Value;
+
+			if (lightColor.HasValue)
+				previewCtrl.Scene.MainLightColor = lightColor.Value;
+
+			if (lightIntensity.HasValue)
+				previewCtrl.Scene.MainLightIntensity = lightIntensity.Value;
+
+			if (ambientColor.HasValue)
+				previewCtrl.Scene.AmbientColor = ambientColor.Value;
+
+			if (ambientIntensity.HasValue)
+				previewCtrl.Scene.AmbientIntensity = ambientIntensity.Value;
+		}
+
 		private void UpdatePreview(int index)
 		{
 			if (previewCtrl == null)
@@ -553,6 +600,8 @@ namespace ClassicTilestorm
 				previewCtrl.GroundY = groundY;
 				orbitController.ResetView(false);
 			}
+
+			SyncLightingToCamera();
 		}
 
 		private void ApplyCameraTransform()
@@ -560,6 +609,7 @@ namespace ClassicTilestorm
 			if (previewCtrl?.Camera == null) return;
 			var (pos, rot) = orbitController.GetCameraTransform();
 			previewCtrl.ApplyExternalCameraTransform(pos, rot);
+			SyncLightingToCamera();
 		}
 
 		private void CleanupPreview()

@@ -22,17 +22,16 @@ namespace MassiveHadronLtd
 		public Color backgroundColor { get => Camera.backgroundColor; set => Camera.backgroundColor = value; }
 		public float aspect { get => Camera.aspect; set => Camera.aspect = value; }
 		public RenderTexture targetTexture { get => Camera.targetTexture; set => Camera.targetTexture = value; }
-		////public CameraRenderSettingsOverride cameraRenderSettingsOverride => Camera.gameObject.GetComponent<CameraRenderSettingsOverride>();
-		//public UnityRenderSettings overrideSettings 
-		//{ 
-		//	set 
-		//	{
-		//		var overrideComp = Camera.gameObject.GetComponent<CameraRenderSettingsOverride>();
-		//		if (null == overrideComp)
-		//			overrideComp = Camera.gameObject.AddComponent<CameraRenderSettingsOverride>();
-		//		overrideComp.OverrideSettings = value;
-		//	} 
-		//}
+		//private CameraRenderSettingsOverride cameraRenderSettingsOverride => Camera.gameObject.GetComponent<CameraRenderSettingsOverride>();
+		public UnityRenderSettings overrideSettings
+		{
+			set
+			{
+				var overrideComp = Camera.gameObject.GetOrAddComponent<CameraRenderSettingsOverride>();
+				if (null == overrideComp) return;
+				overrideComp.OverrideSettings = value;
+			}
+		}
 
 		public CommandRenderCamera(
 			string name,

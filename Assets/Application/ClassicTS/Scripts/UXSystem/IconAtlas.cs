@@ -70,166 +70,202 @@ namespace ClassicTilestorm
 		}
 	}
 
-	public class ReusableIconRenderer : IDisposable
-	{
-		private readonly GameObject _root;
-		private readonly CommandRenderCamera _cameraWrapper;
-		private readonly RenderTexture _rt;
-		private readonly CommandRenderScene _scene;
-		private readonly Light _iconLight;
+	//public class ReusableIconRenderer : IDisposable
+	//{
+	//	private readonly GameObject _root;
+	//	private readonly CommandRenderCamera _cameraWrapper;
+	//	private readonly RenderTexture _rt;
+	//	private readonly CommandRenderScene _scene;
+	//	private readonly Light _iconLight;
 
-		private CommandRenderModelData _groundModel;
+	//	private CommandRenderModelData _groundModel;
 
-		public ReusableIconRenderer(
-			int size = 128,
-			Color background = default,
-			bool includeGround = false,
-			float initialYaw = 35f,
-			float initialPitch = 30f)
-		{
-			if (size <= 0) throw new ArgumentException("Size must be > 0");
+	//	public ReusableIconRenderer(
+	//		int size = 128,
+	//		Color background = default,
+	//		bool includeGround = false,
+	//		float initialYaw = 35f,
+	//		float initialPitch = 30f)
+	//	{
+	//		if (size <= 0) throw new ArgumentException("Size must be > 0");
 
-			_root = new GameObject("ReusableIconRenderer") { hideFlags = HideFlags.HideAndDontSave };
+	//		_root = new GameObject("ReusableIconRenderer") { hideFlags = HideFlags.HideAndDontSave };
 
-			var lightObj = new GameObject("IconLight") { hideFlags = HideFlags.HideAndDontSave };
-			lightObj.transform.SetParent(_root.transform, false);
-			_iconLight = lightObj.AddComponent<Light>();
-			_iconLight.type = LightType.Directional;
-			_iconLight.intensity = 1.2f;//overwritten later so ignore this value
-			_iconLight.color = new Color(1f, 0.98f, 0.95f);
-			_iconLight.shadows = LightShadows.None;
-			_iconLight.enabled = false;
+	//		_rt = new RenderTexture(size, size, 24, RenderTextureFormat.ARGB32)
+	//		{
+	//			antiAliasing = 4,
+	//			filterMode = FilterMode.Bilinear,
+	//			autoGenerateMips = false,
+	//			name = "SharedIconRT"
+	//		};
+	//		_rt.Create();
 
-			_rt = new RenderTexture(size, size, 24, RenderTextureFormat.ARGB32)
-			{
-				antiAliasing = 4,
-				filterMode = FilterMode.Bilinear,
-				autoGenerateMips = false,
-				name = "SharedIconRT"
-			};
-			_rt.Create();
+	//		_cameraWrapper = new CommandRenderCamera(
+	//			name: "SharedIconCamera",
+	//			targetRT: _rt,
+	//			background: background == default ? new Color(0, 0, 0, 0) : background,
+	//			fov: 50f,
+	//			desiredParent: _root.transform
+	//		);
 
-			_cameraWrapper = new CommandRenderCamera(
-				name: "SharedIconCamera",
-				targetRT: _rt,
-				background: background == default ? new Color(0, 0, 0, 0) : background,
-				fov: 50f,
-				desiredParent: _root.transform
-			);
+	//		//var lightObj = new GameObject("IconLight") { hideFlags = HideFlags.HideAndDontSave };
+	//		////lightObj.transform.SetParent(_root.transform, false);
+	//		//_iconLight = lightObj.AddComponent<Light>();
+	//		//_iconLight.type = LightType.Directional;
+	//		//_iconLight.intensity = 1.2f;//overwritten later so ignore this value
+	//		//_iconLight.color = new Color(1f, 0.98f, 0.95f);
+	//		//_iconLight.shadows = LightShadows.None;
+	//		//_iconLight.enabled = false;
+	//		//_iconLight.range = 999f;
+	//		//_iconLight.lightmapBakeType = LightmapBakeType.Baked;
 
-			//doesn't work yet!!!
-			//_cameraWrapper.overrideSettings = new(
-			//ambientMode: UnityEngine.Rendering.AmbientMode.Flat,
-			//ambientLight: Color.purple,
-			//ambientIntensity: 1f,
-			//skybox: RenderSettings.skybox,
-			//ambientProbe: default,
-			//subtractiveShadowColor: RenderSettings.subtractiveShadowColor);
+	//		////doesn't work yet!!!
+	//		//var overrideComp = _cameraWrapper.transform.gameObject.AddComponent<CameraRenderSettingsOverride>();
+	//		//overrideComp.OverrideSettings = new(
+	//		//ambientMode: UnityEngine.Rendering.AmbientMode.Flat,
+	//		//ambientLight: Color.purple,
+	//		//ambientIntensity: 1f,
+	//		//skybox: RenderSettings.skybox,
+	//		//ambientProbe: default,
+	//		//subtractiveShadowColor: RenderSettings.subtractiveShadowColor);
 
-			_scene = new CommandRenderScene();
-			_cameraWrapper.AssignCommandProvider(_scene);
+	//		_cameraWrapper.overrideSettings = new(
+	//			ambientMode: UnityEngine.Rendering.AmbientMode.Flat,
+	//			ambientLight: Color.purple,
+	//			ambientIntensity: 1f,
+	//			skybox: RenderSettings.skybox,
+	//			ambientProbe: default,
+	//			subtractiveShadowColor: RenderSettings.subtractiveShadowColor);
 
-			if (includeGround)
-			{
-				var quadMesh = MeshUtils.GenerateQuadXZ(3f, 1f, "SharedIconGround");
-				var groundMat = new Material(Shader.Find("Universal Render Pipeline/Unlit"))
-				{
-					hideFlags = HideFlags.HideAndDontSave,
-					color = Color.white
-				};
-				groundMat.SetTexture("_BaseMap", Texture2D.whiteTexture);
+	//		_scene = new CommandRenderScene();
+	//		_cameraWrapper.AssignCommandProvider(_scene);
 
-				_groundModel = new CommandRenderModelData(quadMesh, new[] { groundMat }, Matrix4x4.identity, 0);
-			}
+	//		if (includeGround)
+	//		{
+	//			var quadMesh = MeshUtils.GenerateQuadXZ(3f, 1f, "SharedIconGround");
+	//			var groundMat = new Material(Shader.Find("Universal Render Pipeline/Unlit"))
+	//			{
+	//				hideFlags = HideFlags.HideAndDontSave,
+	//				color = Color.white
+	//			};
+	//			groundMat.SetTexture("_BaseMap", Texture2D.whiteTexture);
 
-			SetCameraRotation(initialYaw, initialPitch);
-		}
+	//			_groundModel = new CommandRenderModelData(quadMesh, new[] { groundMat }, Matrix4x4.identity, 0);
+	//		}
 
-		public void SetCameraRotation(float yaw, float pitch)
-		{
-			var rot = Quaternion.Euler(pitch, yaw, 0f);
-			_cameraWrapper.rotation = rot;
-		}
+	//		SetCameraRotation(initialYaw, initialPitch);
+	//	}
 
-		public Texture2D RenderIcon(Definition def, float yaw = -1f, float pitch = -1f)
-		{
-			if (def == null || string.IsNullOrEmpty(def.model))
-				return null;
+	//	public void SetCameraRotation(float yaw, float pitch)
+	//	{
+	//		var rot = Quaternion.Euler(pitch, yaw, 0f);
+	//		_cameraWrapper.rotation = rot;
+	//	}
 
-			if (yaw >= 0 || pitch >= 0)
-			{
-				SetCameraRotation(yaw >= 0 ? yaw : 35f, pitch >= 0 ? pitch : 30f);
-			}
+	//	public Texture2D RenderIcon(Definition def, float yaw = -1f, float pitch = -1f)
+	//	{
+	//		// Readback from the final render
+	//		var tex = new Texture2D(_rt.width, _rt.height, TextureFormat.RGBA32, false)
+	//		{
+	//			filterMode = FilterMode.Bilinear,
+	//			wrapMode = TextureWrapMode.Clamp,
+	//			name = $"Icon_{def.name ?? "unnamed"}"
+	//		};
 
-			var modelData = RenderModelFactory.Create(def, Vector3.zero, Quaternion.identity, Vector3.one);
-			if (modelData == null || modelData.meshInstances.Count == 0)
-			{
-				Debug.LogWarning($"No mesh instances for {def.name}");
-				return null;
-			}
+	//		if (def == null || string.IsNullOrEmpty(def.model))
+	//		{
+	//			RenderMissingModelIcon(tex);
+	//			return tex;// null;
+	//		}
 
-			CommandRenderModelData[] modelsToRender;
-			if (_groundModel != null)
-			{
-				float lowestY = modelData.bounds.min.y;
-				var adjustedGround = new CommandRenderModelData(
-					_groundModel.meshInstances[0].mesh,
-					_groundModel.meshInstances[0].materials,
-					Matrix4x4.Translate(Vector3.up * (lowestY - 0.02f)),
-					0);
+	//		if (yaw >= 0 || pitch >= 0)
+	//		{
+	//			SetCameraRotation(yaw >= 0 ? yaw : 35f, pitch >= 0 ? pitch : 30f);
+	//		}
 
-				modelsToRender = new[] { adjustedGround, modelData };
-			}
-			else
-			{
-				modelsToRender = new[] { modelData };
-			}
+	//		var modelData = RenderModelFactory.Create(def, Vector3.zero, Quaternion.identity, Vector3.one);
+	//		if (modelData == null || modelData.meshInstances.Count == 0)
+	//		{
+	//			Debug.LogWarning($"No mesh instances for {def.name}");
+	//			return null;
+	//		}
 
-			_scene.SetModels(modelsToRender);
+	//		CommandRenderModelData[] modelsToRender;
+	//		if (_groundModel != null)
+	//		{
+	//			float lowestY = modelData.bounds.min.y;
+	//			var adjustedGround = new CommandRenderModelData(
+	//				_groundModel.meshInstances[0].mesh,
+	//				_groundModel.meshInstances[0].materials,
+	//				Matrix4x4.Translate(Vector3.up * (lowestY - 0.02f)),
+	//				0);
 
-			var center = modelData.bounds.center;
-			var radius = modelData.bounds.extents.magnitude * 1.2f;
-			var dist = radius / Mathf.Tan(_cameraWrapper.fieldOfView * 0.5f * Mathf.Deg2Rad);
+	//			modelsToRender = new[] { adjustedGround, modelData };
+	//		}
+	//		else
+	//		{
+	//			modelsToRender = new[] { modelData };
+	//		}
 
-			_cameraWrapper.position = center - _cameraWrapper.rotation * Vector3.forward * dist;
+	//		_scene.SetModels(modelsToRender);
 
-			_iconLight.transform.rotation = _cameraWrapper.rotation * Quaternion.Euler(-35f, 45f, 0f);
-			_iconLight.intensity = 10f;// doesn't seem to have any effect
-			_iconLight.enabled = true;
+	//		var center = modelData.bounds.center;
+	//		var radius = modelData.bounds.extents.magnitude * 1.2f;
+	//		var dist = radius / Mathf.Tan(_cameraWrapper.fieldOfView * 0.5f * Mathf.Deg2Rad);
 
-			_cameraWrapper.Render();
+	//		_cameraWrapper.position = center - _cameraWrapper.rotation * Vector3.forward * dist;
 
-			_iconLight.enabled = false;
+	//		//_iconLight.transform.rotation = _cameraWrapper.rotation * Quaternion.Euler(-35f, 45f, 0f);
+	//		//_iconLight.intensity = 10f;// doesn't seem to have any effect
+	//		//_iconLight.enabled = true;
 
-			// Readback from the final render
-			var tex = new Texture2D(_rt.width, _rt.height, TextureFormat.RGBA32, false)
-			{
-				filterMode = FilterMode.Bilinear,
-				wrapMode = TextureWrapMode.Clamp,
-				name = $"Icon_{def.name ?? "unnamed"}"
-			};
+	//		_cameraWrapper.Render();
 
-			var prevActive = RenderTexture.active;
-			RenderTexture.active = _rt;
-			tex.ReadPixels(new Rect(0, 0, _rt.width, _rt.height), 0, 0);
-			tex.Apply();
-			RenderTexture.active = prevActive;
+	//		//_iconLight.enabled = false;
 
-			return tex;
-		}
+	//		var prevActive = RenderTexture.active;
+	//		RenderTexture.active = _rt;
+	//		tex.ReadPixels(new Rect(0, 0, _rt.width, _rt.height), 0, 0);
+	//		tex.Apply();
+	//		RenderTexture.active = prevActive;
 
-		public void Dispose()
-		{
-			if (_rt != null)
-			{
-				_rt.Release();
-			}
+	//		return tex;
+	//	}
 
-			_cameraWrapper?.Destroy();
-			if (_root != null)
-			{
-				UnityEngine.Object.DestroyImmediate(_root);
-			}
-		}
-	}
+	//	private void RenderMissingModelIcon(Texture2D dst)
+	//	{
+	//		var pixels = new Color32[dst.width * dst.height];
+	//		var margin = dst.width / 4;
+	//		var thick = dst.width / 16;
+	//		var color = new Color32(51, 128, 255, 255); // blue-ish
+
+	//		for (var py = 0; py < dst.height; py++)
+	//			for (var px = 0; px < dst.width; px++)
+	//			{
+	//				var inH = px >= margin && px < dst.width - margin;
+	//				var inV = py >= margin && py < dst.height - margin;
+	//				if (!inH || !inV) continue;
+
+	//				if ((px < margin + thick) || (px >= dst.width - margin - thick && px < dst.width - margin) ||
+	//					(py < margin + thick) || (py >= dst.height - margin - thick && py < dst.height - margin))
+	//					pixels[py * dst.width + px] = color;
+	//			}
+
+	//		dst.SetPixels32(0, 0, dst.width, dst.height, pixels);
+	//	}
+
+	//	public void Dispose()
+	//	{
+	//		if (_rt != null)
+	//		{
+	//			_rt.Release();
+	//		}
+
+	//		_cameraWrapper?.Destroy();
+	//		if (_root != null)
+	//		{
+	//			UnityEngine.Object.DestroyImmediate(_root);
+	//		}
+	//	}
+	//}
 }

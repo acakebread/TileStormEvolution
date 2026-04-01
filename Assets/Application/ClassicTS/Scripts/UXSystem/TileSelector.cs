@@ -142,20 +142,30 @@ namespace ClassicTilestorm
 		{
 			GameObject stateCamera = null;
 			GameObject cube = null;
+			//GameObject lightObj = null;
 
 			try
 			{
+				//await AsyncExtensions.WaitFramesAsync(3, ct);
 				ct.ThrowIfCancellationRequested();   // early exit if already cancelled
 
 				stateCamera = new GameObject("RenderStateCamera");
 				var renderCam = stateCamera.AddComponent<Camera>();
 				renderCam.pixelRect = new Rect(0, 0, 4, 4);
+				//renderCam.pixelRect = new Rect(0, 0, 64, 64);
+
+				//RenderSettings.ambientMode = overrideSettings.ambientMode;
+				//RenderSettings.ambientLight = Color.white;
+				//RenderSettings.ambientIntensity = 1f;
+				//RenderSettings.skybox = overrideSettings.skybox;
+				//RenderSettings.ambientProbe = overrideSettings.ambientProbe;
+				//RenderSettings.subtractiveShadowColor = overrideSettings.subtractiveShadowColor;
 
 				var cameraRenderSettingsOverride = stateCamera.AddComponent<CameraRenderSettingsOverride>();
 				cameraRenderSettingsOverride.OverrideSettings = new(
 					ambientMode: UnityEngine.Rendering.AmbientMode.Flat,
 					ambientLight: Color.white * 1.2f,
-					ambientIntensity: 0f,
+					ambientIntensity: 1f,
 					skybox: null,
 					ambientProbe: default,
 					subtractiveShadowColor: RenderSettings.subtractiveShadowColor
@@ -165,9 +175,22 @@ namespace ClassicTilestorm
 				cube.transform.position = Vector3.forward * 100f;
 				cube.GetComponent<Renderer>().material = new Material(Shader.Find("Universal Render Pipeline/Simple Lit")) { color = Color.black };
 
+
+				//lightObj = new GameObject("IconLight");// { hideFlags = HideFlags.HideAndDontSave };
+
+				//lightObj.transform.rotation = Quaternion.Euler(90, 0, 0);
+				////lightObj.transform.SetParent(_root.transform, false);
+				//var _iconLight = lightObj.AddComponent<Light>();
+				//_iconLight.type = LightType.Directional;
+				//_iconLight.intensity = 1.2f;//overwritten later so ignore this value
+				//_iconLight.color = new Color(1f, 0.98f, 0.95f);
+				//_iconLight.shadows = LightShadows.None;
+				////_iconLight.enabled = false;
+				//_iconLight.range = 999f;
+				//_iconLight.lightmapBakeType = LightmapBakeType.Baked;
+
 				// Wait with cancellation support
 				await AsyncExtensions.WaitFramesAsync(3, ct);
-
 				ct.ThrowIfCancellationRequested();
 
 				filteredDefs = ResourceManager.Definitions
@@ -182,11 +205,23 @@ namespace ClassicTilestorm
 					filteredDefs,
 					includeGround: false,
 					background: null,
-					yaw: 35f,
+					yaw: 215f,
 					pitch: 30f);
 
 				if (_atlas == null)
 					Debug.LogWarning("Failed to generate icon atlas — palette empty.");
+
+				//await AsyncExtensions.WaitFramesAsync(3, ct);
+				//ct.ThrowIfCancellationRequested();
+
+				//_atlas = new IconAtlas(
+				//	ICON_SIZE,
+				//	COLUMNS,
+				//	filteredDefs,
+				//	includeGround: false,
+				//	background: null,
+				//	yaw: 35f,
+				//	pitch: 30f);
 
 				ct.ThrowIfCancellationRequested();
 
@@ -200,7 +235,7 @@ namespace ClassicTilestorm
 			catch (OperationCanceledException)
 			{
 				// Optional: log or handle cancellation specifically
-				// Debug.Log("Rebuild cancelled");
+				Debug.Log("Rebuild cancelled");
 			}
 			catch (Exception ex)
 			{
@@ -223,6 +258,9 @@ namespace ClassicTilestorm
 
 				if (cube != null)
 					Destroy(cube);
+
+				//if (lightObj != null)
+				//	Destroy(lightObj);
 			}
 		}
 
@@ -397,7 +435,7 @@ namespace ClassicTilestorm
 			yield return new WaitForSeconds(wobbleDecayTime + 0.2f);
 
 			SelectedHashId = newHash;
-			NotifyTileSelected(newHash);     // ← this calls _handler.OnTileSelected()
+			NotifyTileSelected(newHash);
 
 			panelTargetY = -panelHeight;
 			hideTimer = hideDelay;
