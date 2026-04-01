@@ -126,7 +126,6 @@ namespace ClassicTilestorm
 			get => StringUtil.FromHexString(ambient, defaultColor: Color.white);
 			set => ambient = value.ToHexString(includeAlpha: true);//set { ambient = value.ToHexString(includeAlpha: true); AutoAmbient = false; }
 		}
-		//[HideInInspector] public Color GetAmbientLight() => AutoAmbient? CubemapUtility.ComputeBrightColor(SkyboxUtility.GetTintedSkyboxCubemap(SkyboxMaterial), 0.2f) : AmbientLight;
 		[HideInInspector] public Color GetAmbientLight() => AutoAmbient ? CubemapUtility.ComputeAmbientColor(SkyboxUtility.GetTintedSkyboxCubemap(SkyboxMaterial), 1.1f) : AmbientLight;
 
 		[JsonIgnore] public bool AutoSunlight = true;
