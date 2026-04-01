@@ -150,20 +150,20 @@ namespace MassiveHadronLtd
 		/// </summary>
 		public static Vector3 FindLightDirection(Cubemap cubemap)
 		{
-			const int w = 256;
-			const int h = 128;
+			const int w = 512;
+			const int h = 256;
 
 			var linearrect = Create(cubemap, w, h);
 			if (linearrect == null)
 				return Vector3.up;
 
 			var uv = ImageProcessing.FindSunUV(linearrect, scanAboveHorizonOnly: true);
-			return -UVToDirection(uv);
+			//return -UVToDirection(uv);
 
-			////test
-			//var dir = UVToDirection(uv);
-			//var uv2 = DirectionToUV(dir);
-			//return -UVToDirection(uv2);
+			//test
+			var dir = UVToDirection(uv);
+			var uv2 = DirectionToUV(dir);
+			return -UVToDirection(uv2);
 		}
 	}
 }
