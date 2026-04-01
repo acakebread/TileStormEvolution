@@ -158,12 +158,12 @@ namespace MassiveHadronLtd
 				return Vector3.up;
 
 			var uv = ImageProcessing.FindSunUV(linearrect, scanAboveHorizonOnly: true);
-			//return -UVToDirection(uv);
+			return -UVToDirection(uv);
 
-			//test
-			var dir = UVToDirection(uv);
-			var uv2 = DirectionToUV(dir);
-			return -UVToDirection(uv2);
+			////test
+			//var dir = UVToDirection(uv);
+			//var uv2 = DirectionToUV(dir);
+			//return -UVToDirection(uv2);
 		}
 	}
 }

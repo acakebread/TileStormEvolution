@@ -287,6 +287,7 @@ namespace ClassicTilestorm
 			var gameCameraEditor = activeSystem is GameCameraEditor editor ? editor : null;
 			if (gameCameraEditor != null)
 			{
+				gameCameraEditor.PostProcessingEnabled = value > 1;
 				var enabled = value > 1;
 				var volume = getVolume(gameCameraEditor.controller.gameObject);
 				volume.enabled = enabled;
@@ -295,6 +296,7 @@ namespace ClassicTilestorm
 			}
 			else if (activeSystem is not GameCameraEditor && null != activeSystem)
 			{
+				activeSystem.PostProcessingEnabled = value > 0;
 				var enabled = value > 0;
 				var volume = getVolume(activeSystem.controller.gameObject);
 				volume.enabled = enabled;
