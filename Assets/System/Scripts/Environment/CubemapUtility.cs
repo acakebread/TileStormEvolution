@@ -33,7 +33,7 @@ namespace MassiveHadronLtd
 		/// Computes a good ambient colour from the skybox cubemap using luminance-weighted averaging.
 		/// Brighter areas (clouds, sun, sky) contribute much more than dark areas.
 		/// </summary>
-		public static Color ComputeAmbientColor(Cubemap cubemap, float power = 1.1f)
+		public static Color ComputeAmbientColor(Cubemap cubemap, float power = 1f)
 		{
 			if (cubemap == null)
 				return new Color(0.25f, 0.25f, 0.35f);

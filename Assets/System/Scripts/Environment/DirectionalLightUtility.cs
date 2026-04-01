@@ -10,7 +10,7 @@ namespace MassiveHadronLtd
 		[SerializeField] private float threshold = 0.85f;
 
 		[Range(1f, 20f)]
-		[SerializeField] private float intensityMultiplier = 1.5f;
+		[SerializeField] private float intensityMultiplier = 1.2f;
 
 		[Range(0f, 3f)]
 		[SerializeField] private float minIntensity = 0f;

@@ -39,6 +39,11 @@ namespace MassiveHadronLtd
 			pendingReselectIndex = lastSelectedIndex;
 			//var found = FindObjectsByType<DropdownKeyboardNavigator>(FindObjectsSortMode.None);
 			//dropdownNavigators.AddRange(found);
+
+			if (selectables.Count == 0 && scrollRect?.content?.childCount > 0)
+			{
+				StartCoroutine(RebuildAfterFrame());
+			}
 		}
 
 		private void Update()
@@ -51,10 +56,10 @@ namespace MassiveHadronLtd
 			CleanupDestroyedItems();
 
 			// Auto-recover if content has items but selectables is empty
-			if (selectables.Count == 0 && scrollRect?.content?.childCount > 0)
-			{
-				StartCoroutine(RebuildAfterFrame());
-			}
+			//if (selectables.Count == 0 && scrollRect?.content?.childCount > 0)
+			//{
+			//	StartCoroutine(RebuildAfterFrame());
+			//}
 
 			// Apply pending re-selection
 			if (pendingReselectIndex > -2)
