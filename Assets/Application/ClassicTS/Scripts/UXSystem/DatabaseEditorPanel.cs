@@ -735,6 +735,8 @@ namespace ClassicTilestorm
 		{
 			if (null != currentClone)
 			{
+				currentClone.Skybox = CurrentMap.Skybox;
+
 				currentClone.AmbientLight = CurrentMap.AmbientLight;
 				currentClone.AutoAmbient = CurrentMap.AutoAmbient;
 
