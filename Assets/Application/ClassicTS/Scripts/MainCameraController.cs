@@ -15,9 +15,6 @@ namespace ClassicTilestorm
 		private GestureController gestureController;
 		public PostProcessingCameraController postProcessingController { get; private set; }
 
-		//private int postProcessingLevel = 1; 
-		//public int PostProcessingLevel { get => postProcessingLevel; set => postProcessingLevel= value; }
-
 		private const int MaxFocusPoints = 50;
 		private const float MinDistanceForNewFocusPoint = 3f;
 		private const float CinemaTimeoutDuration = 5f;
@@ -49,7 +46,6 @@ namespace ClassicTilestorm
 			gestureController = GetComponent<GestureController>();
 			OnWaypointReachedForGestures += OnWaypointGesturesEnable;
 			gestureController.OnMapUpdated += CheckDisableDrag;
-			//PostProcessingLevel = ApplicationSettings.DetailLevel;
 			OptionsPanel.onDetailLevelChanged += value => UpdatePostProcessingLevel(value);
 		}
 
@@ -276,40 +272,26 @@ namespace ClassicTilestorm
 		}
 
 		//utils
-		//public void EnableEditorPostProcessing()
-		//{
-		//	var gameCameraEditor = activeSystem is GameCameraEditor editor ? editor : null;
-		//	if (gameCameraEditor != null)
-		//	{
-		//		var enabled = ApplicationSettings.DetailLevel > 1;
-		//		var volume = getVolume(gameCameraEditor.controller.gameObject);
-		//		volume.enabled = enabled;
-		//		VolumeUtils.EnableDepthOfField(volume, enabled);
-		//		VolumeUtils.SetDepthOfFieldDistance(volume, 8f);
-		//	}
-		//	static UnityEngine.Rendering.Volume getVolume(GameObject root) => root.GetComponentInChildren<UnityEngine.Rendering.Volume>(true);
-		//}
-
-
 		public void UpdatePostProcessingLevel(int value)
 		{
-			var gameCameraEditor = activeSystem is GameCameraEditor editor ? editor : null;
-			if (gameCameraEditor != null)
+			if (null == activeSystem)
+				return;
+
+			if (activeSystem is GameCameraEditor)
 			{
-				gameCameraEditor.PostProcessingEnabled = value > 1;
-				var enabled = value > 1;
-				var volume = getVolume(gameCameraEditor.controller.gameObject);
-				volume.enabled = enabled;
-				VolumeUtils.EnableDepthOfField(volume, enabled);
+				activeSystem.PostProcessingEnabled = value > 1;
+				var volume = getVolume(activeSystem.controller.gameObject);
+				volume.enabled = value > 1;
+				VolumeUtils.EnableDepthOfField(volume, value > 1);
 				VolumeUtils.SetDepthOfFieldDistance(volume, 8f);
+				return;
 			}
-			else if (activeSystem is not GameCameraEditor && null != activeSystem)
+			else if (activeSystem is not GameCameraEditor)
 			{
 				activeSystem.PostProcessingEnabled = value > 0;
-				var enabled = value > 0;
 				var volume = getVolume(activeSystem.controller.gameObject);
-				volume.enabled = enabled;
-				VolumeUtils.EnableDepthOfField(volume, enabled);
+				volume.enabled = value > 0;
+				VolumeUtils.EnableDepthOfField(volume, value > 0);
 				VolumeUtils.SetDepthOfFieldDistance(volume, 8f);
 			}
 			static UnityEngine.Rendering.Volume getVolume(GameObject root) => root.GetComponentInChildren<UnityEngine.Rendering.Volume>(true);
@@ -317,20 +299,25 @@ namespace ClassicTilestorm
 
 		private void UpdateEditorPostProcessing()
 		{
-			var gameCameraEditor = activeSystem is GameCameraEditor editor ? editor : null;
-			if (gameCameraEditor != null)
+			if (activeSystem is GameCameraEditor)
 			{
-				var distance = (gameCameraEditor.controller.transform.position - Map.CameraToWorld(gameCameraEditor.camera)).magnitude;
-				//var volume = getVolume(gameCameraEditor.controller.gameObject);
-				//VolumeUtils.SetDepthOfFieldDistance(volume, Mathf.Max(Mathf.Min(distance, gameCameraEditor.controller.transform.position.y * 3f), 1f));
-
-				//if (postProcessingController)
-				//	postProcessingController.dofTarget = gameCameraEditor.controller.transform.position + gameCameraEditor.controller.transform.forward * distance;
-
 				if (postProcessingController)
-					postProcessingController.distance = distance;
+					postProcessingController.distance = (activeSystem.controller.transform.position - Map.CameraToWorld(activeSystem.camera)).magnitude;
 			}
-			//static  UnityEngine.Rendering.Volume getVolume(GameObject root) => root.GetComponentInChildren<UnityEngine.Rendering.Volume>(true);
 		}
 	}
 }
+
+//public void EnableEditorPostProcessing()
+//{
+//	var gameCameraEditor = activeSystem is GameCameraEditor editor ? editor : null;
+//	if (gameCameraEditor != null)
+//	{
+//		var enabled = ApplicationSettings.DetailLevel > 1;
+//		var volume = getVolume(gameCameraEditor.controller.gameObject);
+//		volume.enabled = enabled;
+//		VolumeUtils.EnableDepthOfField(volume, enabled);
+//		VolumeUtils.SetDepthOfFieldDistance(volume, 8f);
+//	}
+//	static UnityEngine.Rendering.Volume getVolume(GameObject root) => root.GetComponentInChildren<UnityEngine.Rendering.Volume>(true);
+//}
