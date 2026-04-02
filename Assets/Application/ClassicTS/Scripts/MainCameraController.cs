@@ -87,7 +87,7 @@ namespace ClassicTilestorm
 			UpdateGestureControllerState();
 
 			if (postProcessingController != null && eggbotController != null)
-				postProcessingController.dofTarget = eggbotController.transform.position;
+				postProcessingController.dofTarget = eggbotController.transform;
 
 			map.OnMapEdited += OnMapEdited;
 			_unsubscribeMapAction = () => map.OnMapEdited -= OnMapEdited;
@@ -314,8 +314,12 @@ namespace ClassicTilestorm
 				var distance = (gameCameraEditor.controller.transform.position - Map.CameraToWorld(gameCameraEditor.camera)).magnitude;
 				//var volume = getVolume(gameCameraEditor.controller.gameObject);
 				//VolumeUtils.SetDepthOfFieldDistance(volume, Mathf.Max(Mathf.Min(distance, gameCameraEditor.controller.transform.position.y * 3f), 1f));
+
+				//if (postProcessingController)
+				//	postProcessingController.dofTarget = gameCameraEditor.controller.transform.position + gameCameraEditor.controller.transform.forward * distance;
+
 				if (postProcessingController)
-					postProcessingController.dofTarget = gameCameraEditor.controller.transform.position + gameCameraEditor.controller.transform.forward * distance;
+					postProcessingController.distance = distance;
 			}
 			//static  UnityEngine.Rendering.Volume getVolume(GameObject root) => root.GetComponentInChildren<UnityEngine.Rendering.Volume>(true);
 		}
