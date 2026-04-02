@@ -7,7 +7,8 @@ namespace MassiveHadronLtd
 	public class PostProcessingCameraController : MonoBehaviour
 	{
 		public Transform dofTarget { get; set; } // for DepthOfField
-		public float distance = 1f;//use distance if no target
+		private float _distance = 1f;
+		public float distance { get => _distance; set { _distance = value; dofTarget = null; } }//use distance if no target
 
 		[Header("Bokeh Focus Distance Compensation")]
 		public float focusDistanceMultiplier = 1f;

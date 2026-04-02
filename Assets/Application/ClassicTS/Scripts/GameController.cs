@@ -55,7 +55,10 @@ namespace ClassicTilestorm
 		void OnEnable()
 		{
 			if (TryGetComponent<MainCameraController>(out var controller))
+			{
 				controller.UpdateGestureControllerState();
+				controller.EnableEggbotTracking = true;
+			}
 
 			// Music
 			//AudioManager.PlayMusic(MainController.CurrentMap?.Music, loop: true);

@@ -13,7 +13,7 @@ namespace ClassicTilestorm
 		private EggbotController eggbotController;
 		private SpatialBucketSystem spatialSystem;
 		private GestureController gestureController;
-		private PostProcessingCameraController postProcessingController;
+		public PostProcessingCameraController postProcessingController { get; private set; }
 
 		//private int postProcessingLevel = 1; 
 		//public int PostProcessingLevel { get => postProcessingLevel; set => postProcessingLevel= value; }
@@ -64,6 +64,15 @@ namespace ClassicTilestorm
 		private bool GestureControllerEnabled { set { gestureControllerEnabled = value; UpdateGestureControllerState(); } }
 
 		public void UpdateGestureControllerState() => gestureController.enabled = gestureControllerEnabled && ApplicationMode.Player == ApplicationSettings.CurrentMode;
+
+		public bool EnableEggbotTracking
+		{
+			set
+			{
+				if (null != postProcessingController)
+					postProcessingController.dofTarget = value && null != eggbotController ? eggbotController.transform : null;
+			}
+		}
 
 		private void OnWaypointGesturesEnable(bool value) => GestureControllerEnabled = value;
 
