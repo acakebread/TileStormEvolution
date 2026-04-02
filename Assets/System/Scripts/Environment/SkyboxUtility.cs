@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using ClassicTilestorm.Assets;
+using System.IO;
 using UnityEngine;
 
 namespace MassiveHadronLtd
@@ -26,26 +27,29 @@ namespace MassiveHadronLtd
 
 		private static Material GetSkyboxMaterial(string pathOrName = null)
 		{
-			if (string.IsNullOrEmpty(pathOrName))
-				return defaultSkyboxMaterial;
+			//if (string.IsNullOrEmpty(pathOrName))
+			//	return defaultSkyboxMaterial;
 
-			string normalized = pathOrName.Replace("\\", "/").Trim('/');
+			//string normalized = pathOrName.Replace("\\", "/").Trim('/');
 
-			if (normalized.Contains("/"))
-			{
-				string loadPath = Path.GetFileNameWithoutExtension(normalized);
-				string directory = Path.GetDirectoryName(normalized)?.Replace("\\", "/").Trim('/') ?? "";
-				string fullPath = string.IsNullOrEmpty(directory) ? loadPath : directory + "/" + loadPath;
+			//if (normalized.Contains("/"))
+			//{
+			//	string loadPath = Path.GetFileNameWithoutExtension(normalized);
+			//	string directory = Path.GetDirectoryName(normalized)?.Replace("\\", "/").Trim('/') ?? "";
+			//	string fullPath = string.IsNullOrEmpty(directory) ? loadPath : directory + "/" + loadPath;
 
-				Material direct = Resources.Load<Material>(fullPath);
-				if (direct != null)
-					return direct;
+			//	Material direct = Resources.Load<Material>(fullPath);
+			//	if (direct != null)
+			//		return direct;
 
-				Debug.LogWarning($"SkyboxUtility: Direct load failed for '{fullPath}'");
-				return null;
-			}
+			//	Debug.LogWarning($"SkyboxUtility: Direct load failed for '{fullPath}'");
+			//	return null;
+			//}
 
-			return AssetRegistry<Material>.FindSkybox(normalized) ?? defaultSkyboxMaterial;
+			//return AssetRegistry<Material>.FindSkybox(normalized) ?? defaultSkyboxMaterial;
+
+
+			return SkyboxAssets.Find(pathOrName) ?? defaultSkyboxMaterial;
 		}
 
 		public static Cubemap GetTintedSkyboxCubemap(Material overrideSkybox = null, int resolution = 512)
