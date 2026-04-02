@@ -125,8 +125,8 @@ namespace ClassicTilestorm.Assets
 	/// </summary>
 	public static class SkyboxAssets
 	{
-		public static void RegisterRoot(string root) => AssetRegistry<Material>.RegisterMaterialRoot(root);
-		public static void ClearCache() => AssetRegistry<Material>.ClearMaterialCache();
+		public static void RegisterRoot(string root) => AssetRegistry<Material>.RegisterSkyboxRoot(root);
+		public static void ClearCache() => AssetRegistry<Material>.ClearSkyboxCache();
 		public static Material Find(string skyboxName) => AssetRegistry<Material>.FindSkybox(skyboxName);
 	}
 
@@ -153,19 +153,24 @@ namespace ClassicTilestorm.Assets
 
 namespace ClassicTilestorm.Assets
 {
-	public static partial class ProjectAssets
+	public static class ProjectAssets
 	{
 		// ──────────────────────────────────────────────────────────────
 		//  Cached name listings for all asset types (loaded only once)
 		// ──────────────────────────────────────────────────────────────
 
-		private static readonly Dictionary<Type, (List<string> Names, bool Cached)> NameCaches
-			= new Dictionary<Type, (List<string>, bool)>();
+		// CHANGED: now keyed by (Type + Category) so Material vs Skybox don't collide
+		private static readonly Dictionary<(Type Type, string Category), (List<string> Names, bool Cached)> NameCaches
+			= new Dictionary<(Type, string), (List<string>, bool)>();
 
-		private static void EnsureCached<T>(Func<IEnumerable<string>> loadFunc) where T : UnityEngine.Object
+		private static (Type Type, string Category) GetCacheKey<T>(string category = null) where T : UnityEngine.Object
+			=> (typeof(T), category ?? string.Empty);
+
+		private static void EnsureCached<T>(Func<IEnumerable<string>> loadFunc, string category = null) where T : UnityEngine.Object
 		{
-			var t = typeof(T);
-			if (!NameCaches.TryGetValue(t, out var entry) || !entry.Cached)
+			var key = GetCacheKey<T>(category);
+
+			if (!NameCaches.TryGetValue(key, out var entry) || !entry.Cached)
 			{
 				var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -175,26 +180,29 @@ namespace ClassicTilestorm.Assets
 						names.Add(name);
 				}
 
-				NameCaches[t] = (
+				NameCaches[key] = (
 					names.OrderBy(n => n, StringComparer.OrdinalIgnoreCase).ToList(),
 					true
 				);
 			}
 		}
 
-		private static IReadOnlyList<string> GetNames<T>(Func<IEnumerable<string>> loadFunc, bool forceRefresh = false)
+		private static IReadOnlyList<string> GetNames<T>(Func<IEnumerable<string>> loadFunc, bool forceRefresh = false, string category = null)
 			where T : UnityEngine.Object
 		{
+			var key = GetCacheKey<T>(category);
+
 			if (forceRefresh)
 			{
-				NameCaches[typeof(T)] = (null, false);
+				NameCaches.Remove(key);   // safe even if the key didn't exist
 			}
 
-			EnsureCached<T>(loadFunc);
-			return NameCaches[typeof(T)].Names ?? new List<string>();
+			EnsureCached<T>(loadFunc, category);
+			return NameCaches.TryGetValue(key, out var entry) ? entry.Names ?? new List<string>() : new List<string>();
 		}
 
 		// ── Public API for each major type ────────────────────────────────
+		// (only the two Material-based ones changed – all others are identical to before)
 
 		public static IReadOnlyList<string> GetModelNames(bool forceRefresh = false)
 			=> GetNames<GameObject>(() => GetAssetNamesFromRoots<GameObject>(new[]
@@ -226,13 +234,13 @@ namespace ClassicTilestorm.Assets
 			=> GetNames<Material>(() => GetAssetNamesFromRoots<Material>(new[]
 			{
 				AssetPath.MaterialPath?.Trim('/') ?? ""
-			}), forceRefresh);
+			}), forceRefresh, "Material");
 
 		public static IReadOnlyList<string> GetSkycubeNames(bool forceRefresh = false)
 			=> GetNames<Material>(() => GetAssetNamesFromRoots<Material>(new[]
 			{
 				AssetPath.SkycubesPath?.Trim('/') ?? ""
-			}), forceRefresh);
+			}), forceRefresh, "Skycube");
 
 		public static IReadOnlyList<string> GetMusicNames(bool forceRefresh = false)
 			=> GetNames<AudioClip>(() => GetAssetNamesFromRoots<AudioClip>(new[]
@@ -240,10 +248,13 @@ namespace ClassicTilestorm.Assets
 				AssetPath.MusicPath?.Trim('/') ?? ""
 			}), forceRefresh);
 
-		// Add more when needed, e.g.:
-		// public static IReadOnlyList<string> GetSoundNames(bool forceRefresh = false) { ... }
+		public static IReadOnlyList<string> GetSoundNames(bool forceRefresh = false)
+			=> GetNames<AudioClip>(() => GetAssetNamesFromRoots<AudioClip>(new[]
+			{
+				AssetPath.SoundPath?.Trim('/') ?? ""   // or whatever your sound root is
+			}), forceRefresh, "Sound");
 
-		// ── Core loading helper ─────────────────────────────────────────────
+		// ── Core loading helper ───────────────────────────────────────────── (unchanged)
 
 		private static IEnumerable<string> GetAssetNamesFromRoots<T>(string[] roots)
 			where T : UnityEngine.Object
@@ -264,7 +275,7 @@ namespace ClassicTilestorm.Assets
 		/// </summary>
 		public static void RefreshAllNameCaches()
 		{
-			NameCaches.Clear();
+			NameCaches.Clear();   // still works perfectly
 		}
 	}
 }

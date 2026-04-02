@@ -117,7 +117,7 @@ namespace ClassicTilestorm
 			if (string.IsNullOrEmpty(currentMap.skybox))
 				currentMap.skybox = $"{currentMap.music}Skybox";
 
-			if (null == AssetRegistry<Material>.FindMaterial(currentMap.skybox))
+			if (null == AssetRegistry<Material>.FindSkybox(currentMap.skybox))
 				currentMap.skybox = null;
 
 			var mainReflection = Camera.main?.GetComponent<ReflectionEffectCamera>();

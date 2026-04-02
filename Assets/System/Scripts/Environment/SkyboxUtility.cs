@@ -45,7 +45,7 @@ namespace MassiveHadronLtd
 				return null;
 			}
 
-			return AssetRegistry<Material>.FindMaterial(normalized) ?? defaultSkyboxMaterial;
+			return AssetRegistry<Material>.FindSkybox(normalized) ?? defaultSkyboxMaterial;
 		}
 
 		public static Cubemap GetTintedSkyboxCubemap(Material overrideSkybox = null, int resolution = 512)

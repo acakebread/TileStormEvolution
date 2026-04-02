@@ -13,6 +13,7 @@ namespace MassiveHadronLtd
 		private static readonly HashSet<string> MaterialRoots = new(StringComparer.OrdinalIgnoreCase);
 		private static readonly HashSet<string> Texture2DRoots = new(StringComparer.OrdinalIgnoreCase);
 
+		private static readonly HashSet<string> SkyboxRoots = new(StringComparer.OrdinalIgnoreCase);
 		private static readonly HashSet<string> SoundRoots = new(StringComparer.OrdinalIgnoreCase);
 		private static readonly HashSet<string> MusicRoots = new(StringComparer.OrdinalIgnoreCase);
 
@@ -23,6 +24,7 @@ namespace MassiveHadronLtd
 		private static readonly Dictionary<string, T> MaterialCache = new(StringComparer.OrdinalIgnoreCase);
 		private static readonly Dictionary<string, T> Texture2DCache = new(StringComparer.OrdinalIgnoreCase);
 
+		private static readonly Dictionary<string, T> SkyboxCache = new(StringComparer.OrdinalIgnoreCase);
 		private static readonly Dictionary<string, T> SoundCache = new(StringComparer.OrdinalIgnoreCase);
 		private static readonly Dictionary<string, T> MusicCache = new(StringComparer.OrdinalIgnoreCase);
 
@@ -59,6 +61,12 @@ namespace MassiveHadronLtd
 				MaterialRoots.Add(root.Trim('/'));
 		}
 
+		public static void RegisterSkyboxRoot(string root)
+		{
+			if (!string.IsNullOrWhiteSpace(root))
+				SkyboxRoots.Add(root.Trim('/'));
+		}
+
 		public static void RegisterSoundRoot(string root)
 		{
 			if (!string.IsNullOrWhiteSpace(root))
@@ -77,6 +85,7 @@ namespace MassiveHadronLtd
 		public static void ClearTextureCache() => TextureCache.Clear();
 		public static void ClearMaterialCache() => MaterialCache.Clear();
 		public static void ClearTexture2DCache() => Texture2DCache.Clear();
+		public static void ClearSkyboxCache() => SkyboxCache.Clear();
 		public static void ClearSoundCache() => SoundCache.Clear();
 		public static void ClearMusicCache() => MusicCache.Clear();
 
@@ -86,11 +95,9 @@ namespace MassiveHadronLtd
 		public static T FindTexture(string assetName) => Find(assetName, TextureCache, TextureRoots);
 		public static T FindTexture2D(string assetName) => Find(assetName, Texture2DCache, Texture2DRoots);
 		public static T FindMaterial(string assetName) => Find(assetName, MaterialCache, MaterialRoots);
-		public static T FindSkybox(string assetName) => Find(assetName, MaterialCache, MaterialRoots);
-
-		// Non-generic Find methods for AudioClip
-		public static T FindSound(string clipName) => Find(clipName, SoundCache, SoundRoots);
+		public static T FindSkybox(string assetName) => Find(assetName, SkyboxCache, SkyboxRoots);
 		public static T FindMusic(string clipName) => Find(clipName, MusicCache, MusicRoots);
+		public static T FindSound(string clipName) => Find(clipName, SoundCache, SoundRoots);
 
 		private static T Find(string assetName, Dictionary<string, T> cache, HashSet<string> roots)
 		{
