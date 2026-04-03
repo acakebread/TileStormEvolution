@@ -26,7 +26,6 @@ namespace MassiveHadronLtd
 			var util = instance.GetComponent<DirectionalLightUtility>();
 			var light = util.GetComponent<Light>();
 
-			//light.lightmapBakeType = LightmapBakeType.Baked;
 			light.type = LightType.Directional;
 			light.shadows = LightShadows.Soft;
 
@@ -94,7 +93,7 @@ namespace MassiveHadronLtd
 			return directionalLight.color;
 		}
 
-		public void UpdateFromOther(DirectionalLightUtility other)
+		public void CopyFrom(DirectionalLightUtility other)
 		{
 			var otherLight = other.GetComponent<Light>();
 

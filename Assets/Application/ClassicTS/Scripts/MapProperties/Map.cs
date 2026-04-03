@@ -1022,33 +1022,7 @@ namespace ClassicTilestorm
 		}
 
 		// lighting
-
-		private void OnSkyboxChanged(Material skymat = null)
-		{
-			UpdateLighting(skymat);
-		}
-
-		//public void UpdateLighting(Material skymat = null)
-		//{
-		//	Cubemap tinted = null;
-		//	if (AutoAmbient || AutoSunlight)
-		//		tinted = SkyboxUtility.GetTintedSkyboxCubemap(SkyboxMaterial);
-
-		//	if (AutoAmbient)
-		//		autoAmbientColour = CubemapUtility.ComputeAmbientColor(tinted, 2f);
-
-		//	if (AutoSunlight)
-		//		autoSunlightColour = CubemapUtility.ComputeBrightColor(tinted, 0.85f);
-
-		//	if (null == directionalLight)
-		//		directionalLight = DirectionalLightUtility.Instantiate(parent);
-		//	if (null == directionalLight) return;
-
-		//	if (AutoSunlight)
-		//		directionalLight.UpdateFromTintendCubemap(tinted);
-		//	else
-		//		directionalLight.UpdateFromSettings(Sunlight);
-		//}
+		private void OnSkyboxChanged(Material skymat = null) => UpdateLighting(skymat);
 
 		public void UpdateLighting(Material skymat = null)
 		{
@@ -1069,24 +1043,27 @@ namespace ClassicTilestorm
 				directionalLight.UpdateFromSettings(Sunlight);
 		}
 
-		public void UpdateFromOther(Map other)
+		public void CopyFrom(Map other)
 		{
 			if (null == other)
 				return;
 
+			//directional lighting
 			sunlight = other.sunlight;
-			directionalLight.UpdateFromOther(other.directionalLight);
+			directionalLight.CopyFrom(other.directionalLight);
 
 			//render settings
+			var updateRenderSettings = ambient != other.ambient || skybox != other.skybox;
 			ambient = other.ambient;
 			if (skybox != other.skybox)
 			{
 				skybox = other.skybox;
 				SkyboxUtility.SetSkybox(other.skybox);
 			}
+			if (updateRenderSettings)
+				OnRenderSettingsChanged?.Invoke(RenderSettings);
 
-			OnRenderSettingsChanged?.Invoke(RenderSettings);
-
+			//effect
 			effect = other.effect;
 			OnEffectChanged?.Invoke(Effect);
 		}

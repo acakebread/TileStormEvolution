@@ -163,7 +163,7 @@ namespace MassiveHadronLtd
 		private float timeSeed;
 
 		private CameraRenderSettingsOverride renderSettingsOverride => gameObject.GetComponent<CameraRenderSettingsOverride>();
-		private Texture skyboxTexture => SkyboxUtility.GetTintedSkyboxCubemap(renderSettingsOverride ? renderSettingsOverride.OverrideSettings.skybox : null);
+		private Texture tintedSkyboxTexture => SkyboxUtility.GetTintedSkyboxCubemap(renderSettingsOverride ? renderSettingsOverride.OverrideSettings.skybox : null);
 
 		private bool isRenderToTextureMode = false;
 		private RenderTexture outputRenderTexture;
@@ -434,7 +434,7 @@ namespace MassiveHadronLtd
 					effectMaterial.SetFloat("_RippleFrequency", rippleFrequency);
 					effectMaterial.SetFloat("_RippleOffset", rippleOffset);
 					effectMaterial.SetFloat("_ReflectionStrength", reflectionStrength);
-					effectMaterial.SetTexture("_Skybox", skyboxTexture);
+					effectMaterial.SetTexture("_Skybox", tintedSkyboxTexture);
 					break;
 
 				case EffectMode.OceanEffect:
@@ -450,7 +450,7 @@ namespace MassiveHadronLtd
 					effectMaterial.SetFloat("_FrostThreshold", frostThreshold);
 					effectMaterial.SetFloat("_FrostFadeRange", frostFadeRange);
 					effectMaterial.SetTexture("_NoiseTex", noiseTexture);
-					effectMaterial.SetTexture("_Skybox", skyboxTexture);
+					effectMaterial.SetTexture("_Skybox", tintedSkyboxTexture);
 					break;
 			}
 		}
@@ -526,15 +526,18 @@ namespace MassiveHadronLtd
 		//ToDo simplify this
 		public void OnSkyboxChanged(Material value)
 		{
-			UnityRenderSettings renderSettings = new(
-				currentRenderSettings.ambientMode,
-				currentRenderSettings.ambientLight,
-				currentRenderSettings.ambientIntensity,
-				value,//new skybox
-				currentRenderSettings.ambientProbe,
-				currentRenderSettings.subtractiveShadowColor);
+			//UnityRenderSettings newRenderSettings = new(
+			//	currentRenderSettings.ambientMode,
+			//	currentRenderSettings.ambientLight,
+			//	currentRenderSettings.ambientIntensity,
+			//	value,//new skybox
+			//	currentRenderSettings.ambientProbe,
+			//	currentRenderSettings.subtractiveShadowColor);
 
-			OnRenderSettingsChanged(renderSettings);
+			//OnRenderSettingsChanged(newRenderSettings);
+
+			var newRenderSettings = currentRenderSettings.ReplaceSkybox(value);
+			OnRenderSettingsChanged(newRenderSettings);
 		}
 
 		private EffectMode lastAppliedMode = EffectMode.Null;  // track last successfully applied
@@ -597,10 +600,7 @@ namespace MassiveHadronLtd
 			targetHeight = Mathf.Max(16, targetHeight);
 
 			// ── Reflection texture (always exists) ─────────────────────────────────
-			bool reflectionNeedsResize = renderTexture == null ||
-										 renderTexture.width != targetWidth ||
-										 renderTexture.height != targetHeight;
-
+			var reflectionNeedsResize = renderTexture == null || renderTexture.width != targetWidth || renderTexture.height != targetHeight;
 			if (reflectionNeedsResize)
 			{
 				RenderTexture.active = null;
@@ -634,10 +634,7 @@ namespace MassiveHadronLtd
 			// ── Output texture (only in render-to-texture mode) ─────────────────────
 			if (isRenderToTextureMode)
 			{
-				bool outputNeedsResize = outputRenderTexture == null ||
-										 outputRenderTexture.width != targetWidth ||
-										 outputRenderTexture.height != targetHeight;
-
+				var outputNeedsResize = outputRenderTexture == null || outputRenderTexture.width != targetWidth || outputRenderTexture.height != targetHeight;
 				if (outputNeedsResize)
 				{
 					if (mainCamera) mainCamera.targetTexture = null;
@@ -651,6 +648,8 @@ namespace MassiveHadronLtd
 					outputRenderTexture = new RenderTexture(targetWidth, targetHeight, 24, RenderTextureFormat.ARGB32)
 					{
 						name = $"Output_{effectMode}",
+						useMipMap = false,
+						autoGenerateMips = false,
 						filterMode = FilterMode.Bilinear,
 						useDynamicScale = true
 					};
@@ -735,13 +734,14 @@ namespace MassiveHadronLtd
 			{
 				"debug" => EffectMode.Debug,
 				"mirror" => EffectMode.PerfectMirror,
-				"film" => EffectMode.SurfaceFilm,
-				"frost" => EffectMode.FrostEffect,
-				"water" => EffectMode.Water,
-				"ocean" => EffectMode.OceanEffect,
 				"perfectmirror" => EffectMode.PerfectMirror,
+				"film" => EffectMode.SurfaceFilm,
 				"surfacefilm" => EffectMode.SurfaceFilm,
+				"frost" => EffectMode.FrostEffect,
+				"frosteffect" => EffectMode.FrostEffect,
+				"water" => EffectMode.Water,
 				"watereffect" => EffectMode.Water,
+				"ocean" => EffectMode.OceanEffect,
 				"oceaneffect" => EffectMode.OceanEffect,
 				_ => EffectMode.Null   // or EffectMode.Debug as fallback
 			};

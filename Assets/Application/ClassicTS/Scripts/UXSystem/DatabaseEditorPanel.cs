@@ -782,7 +782,7 @@ namespace ClassicTilestorm
 		{
 			if (CurrentMap.name != MainController.CurrentMap.name) return;
 
-			CurrentMap.UpdateFromOther(currentClone);
+			CurrentMap.CopyFrom(currentClone);
 
 			//CurrentMap.ambient = currentClone.ambient;
 			//CurrentMap.sunlight = currentClone.sunlight;

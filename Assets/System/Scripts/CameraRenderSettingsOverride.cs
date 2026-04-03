@@ -26,7 +26,7 @@ namespace MassiveHadronLtd
 			if (cam != GetComponent<Camera>()) return;
 
 			// Save current global render settings
-			originalSettings = UnityRenderSettings.Clone();
+			originalSettings = UnityRenderSettings.CaptureCurrent();
 
 			// Apply the override values
 			RenderSettings.ambientMode = overrideSettings.ambientMode;
