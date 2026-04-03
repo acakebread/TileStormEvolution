@@ -326,60 +326,53 @@ namespace MassiveHadronLtd
 			{
 				case EffectMode.PerfectMirror:
 					renderTexture.name = "RenderTexture";
-					effectMesh = new Mesh();
 					effectMaterial = MaterialUtils.CreatePerfectMirrorOpaqueMaterial(renderTexture, mirrorTint);
 					isMaterialDynamic = true;
-					SetupTextureCamera();
-					reflectionCamera.targetTexture = renderTexture;
 					break;
 
 				case EffectMode.SurfaceFilm:
 					renderTexture.name = "MirrorWithFilmRT";
-					effectMesh = new Mesh();
 					noiseTexture = WangTileGenerator.GenerateWangTileAtlas();
 					isTextureDynamic = true;
 					effectMaterial = MaterialUtils.CreatePerlinWangOpaque(renderTexture, mirrorTint, noiseTexture, mirrorTint.a, noiseScale);
 					isMaterialDynamic = true;
-					SetupTextureCamera();
-					reflectionCamera.targetTexture = renderTexture;
 					break;
 
 				case EffectMode.FrostEffect:
 					renderTexture.name = "RenderTexture";
-					effectMesh = new Mesh();
 					noiseTexture = WangTileGenerator.GenerateWangTileAtlas();
 					isTextureDynamic = true;
 					effectMaterial = MaterialUtils.CreateFrostOpaqueMaterial(mirrorTint, frostDepth, renderTexture, noiseTexture, noiseStrength);
 					isMaterialDynamic = true;
-					SetupTextureCamera();
-					reflectionCamera.targetTexture = renderTexture;
 					break;
 
 				case EffectMode.Water:
 					renderTexture.name = "WaterRenderTexture";
-					effectMesh = new Mesh();
-					effectMaterial = MaterialUtils.CreateWaterMaterialOpaque(mirrorTint, renderTexture, rippleSpeed, rippleAmplitude, rippleFrequency, rippleOffset, reflectionStrength, skyboxTexture);
+					effectMaterial = MaterialUtils.CreateWaterMaterialOpaque(mirrorTint, renderTexture, rippleSpeed, rippleAmplitude, rippleFrequency, rippleOffset, reflectionStrength, null);
 					isMaterialDynamic = true;
-					SetupTextureCamera();
-					reflectionCamera.targetTexture = renderTexture;
 					break;
 
 				case EffectMode.OceanEffect:
 					renderTexture.name = "OceanRenderTexture";
-					effectMesh = new Mesh();
 					noiseTexture = WangTileGenerator.GenerateWangTileAtlas();
 					isTextureDynamic = true;
 					effectMaterial = MaterialUtils.CreateOceanOpaqueMaterial(mirrorTint, rippleSpeed, rippleAmplitude, rippleFrequency, rippleOffset, frostDepth, noiseStrength, frostThreshold, frostFadeRange, null, noiseTexture);
 					isMaterialDynamic = true;
-					SetupTextureCamera();
-					reflectionCamera.targetTexture = renderTexture;
 					break;
 
 				default:
+					effectMaterial = null;
 					var defaultData = mainCamera.gameObject.GetComponent<UniversalAdditionalCameraData>();
 					defaultData.cameraStack.Clear();
 					defaultData.cameraStack.Add(reflectionCamera);
 					break;
+			}
+
+			if (effectMaterial)
+			{
+				effectMesh = new Mesh();
+				SetupTextureCamera();
+				reflectionCamera.targetTexture = renderTexture;
 			}
 
 			UpdateMaterialProperties();
@@ -409,18 +402,16 @@ namespace MassiveHadronLtd
 
 		public void UpdateMaterialProperties()
 		{
-			if (effectMaterial == null) return;
-
-			// Lazy one-time assignment of reflection RT to material (after RT is created & camera is rendering)
-			if (renderTexture != null && effectMaterial.HasProperty("_MainTex") && effectMaterial.GetTexture("_MainTex") == null)
-				effectMaterial.SetTexture("_MainTex", renderTexture);
+			if (null == effectMaterial) return;
 
 			switch (effectMode)
 			{
 				case EffectMode.PerfectMirror:
+					effectMaterial.SetTexture("_MainTex", renderTexture);
 					effectMaterial.SetColor("_DimColor", mirrorTint);
 					break;
 				case EffectMode.SurfaceFilm:
+					effectMaterial.SetTexture("_MainTex", renderTexture); 
 					effectMaterial.SetColor("_DimColor", mirrorTint);
 					effectMaterial.SetFloat("_FilmIntensity", mirrorTint.a);
 					effectMaterial.SetFloat("_NoiseScale", noiseScale);
@@ -428,6 +419,7 @@ namespace MassiveHadronLtd
 					break;
 
 				case EffectMode.FrostEffect:
+					effectMaterial.SetTexture("_MainTex", renderTexture);
 					effectMaterial.SetColor("_BaseColor", mirrorTint);
 					effectMaterial.SetFloat("_Depth", frostDepth);
 					effectMaterial.SetFloat("_NoiseStrength", noiseStrength);
@@ -435,8 +427,8 @@ namespace MassiveHadronLtd
 					break;
 
 				case EffectMode.Water:
-					effectMaterial.SetColor("_BaseColor", mirrorTint);
 					effectMaterial.SetTexture("_MainTex", renderTexture);
+					effectMaterial.SetColor("_BaseColor", mirrorTint);
 					effectMaterial.SetFloat("_RippleSpeed", rippleSpeed);
 					effectMaterial.SetFloat("_RippleAmplitude", rippleAmplitude);
 					effectMaterial.SetFloat("_RippleFrequency", rippleFrequency);
@@ -446,8 +438,8 @@ namespace MassiveHadronLtd
 					break;
 
 				case EffectMode.OceanEffect:
-					effectMaterial.SetColor("_BaseColor", mirrorTint);
 					effectMaterial.SetTexture("_MainTex", renderTexture);
+					effectMaterial.SetColor("_BaseColor", mirrorTint);
 					effectMaterial.SetFloat("_RippleSpeed", rippleSpeed);
 					effectMaterial.SetFloat("_RippleAmplitude", rippleAmplitude);
 					effectMaterial.SetFloat("_RippleFrequency", rippleFrequency);

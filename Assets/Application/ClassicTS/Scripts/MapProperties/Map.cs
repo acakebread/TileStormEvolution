@@ -120,6 +120,8 @@ namespace ClassicTilestorm
 			set => effect = ReflectionEffectCamera.EffectModeToString(value);
 		}
 
+		public Action<ReflectionEffectCamera.EffectMode> OnEffectChanged;
+
 		//[JsonIgnore] public bool AutoAmbient = true;
 		[JsonIgnore] public bool AutoAmbient
 		{
@@ -407,6 +409,8 @@ namespace ClassicTilestorm
 			parent.gameObject.GetOrAddComponent<WindController>();
 
 			SkyboxUtility.OnSkyboxChanged += OnSkyboxChanged;
+
+			OnRenderSettingsChanged?.Invoke(RenderSettings);
 
 			return true;
 		}
@@ -1024,21 +1028,43 @@ namespace ClassicTilestorm
 			UpdateLighting(skymat);
 		}
 
+		//public void UpdateLighting(Material skymat = null)
+		//{
+		//	Cubemap tinted = null;
+		//	if (AutoAmbient || AutoSunlight)
+		//		tinted = SkyboxUtility.GetTintedSkyboxCubemap(SkyboxMaterial);
+
+		//	if (AutoAmbient)
+		//		autoAmbientColour = CubemapUtility.ComputeAmbientColor(tinted, 2f);
+
+		//	if (AutoSunlight)
+		//		autoSunlightColour = CubemapUtility.ComputeBrightColor(tinted, 0.85f);
+
+		//	if (null == directionalLight)
+		//		directionalLight = DirectionalLightUtility.Instantiate(parent);
+		//	if (null == directionalLight) return;
+
+		//	if (AutoSunlight)
+		//		directionalLight.UpdateFromTintendCubemap(tinted);
+		//	else
+		//		directionalLight.UpdateFromSettings(Sunlight);
+		//}
+
 		public void UpdateLighting(Material skymat = null)
 		{
-			if (AutoAmbient)
-				autoAmbientColour = CubemapUtility.ComputeAmbientColor(SkyboxUtility.GetTintedSkyboxCubemap(SkyboxMaterial), 2f);
+			Cubemap tinted = null;
+			if (AutoAmbient || AutoSunlight)
+				tinted = SkyboxUtility.GetTintedSkyboxCubemap(SkyboxMaterial);
 
-			if (AutoSunlight)
-				autoSunlightColour = CubemapUtility.ComputeBrightColor(SkyboxUtility.GetTintedSkyboxCubemap(SkyboxMaterial), 0.85f);
+			if (AutoAmbient)
+				autoAmbientColour = CubemapUtility.ComputeAmbientColor(tinted, 2f);
 
 			if (null == directionalLight)
 				directionalLight = DirectionalLightUtility.Instantiate(parent);
-
 			if (null == directionalLight) return;
 
 			if (AutoSunlight)
-				directionalLight.UpdateFromSkybox(SkyboxMaterial);
+				autoSunlightColour = directionalLight.UpdateFromTintendCubemap(tinted);
 			else
 				directionalLight.UpdateFromSettings(Sunlight);
 		}
@@ -1066,7 +1092,5 @@ namespace ClassicTilestorm
 		}
 
 		public Action<UnityRenderSettings> OnRenderSettingsChanged;
-
-		public Action<ReflectionEffectCamera.EffectMode> OnEffectChanged;
 	}
 }

@@ -367,10 +367,7 @@ namespace ClassicTilestorm
 		{
 			if (currentClone == null) return;
 
-			var selected = index >= 0 && index < skyboxDropdown.options.Count
-				? skyboxDropdown.options[index].text
-				: null;
-
+			var selected = index >= 0 && index < skyboxDropdown.options.Count ? skyboxDropdown.options[index].text : null;
 			var newSkybox = (selected == noneSkyboxOptionText) ? null : selected;
 
 			if (newSkybox != currentClone.Skybox)
@@ -387,10 +384,7 @@ namespace ClassicTilestorm
 		{
 			if (CurrentMap == null) return;
 
-			var selected = index >= 0 && index < characterDropdown.options.Count
-				? characterDropdown.options[index].text
-				: null;
-
+			var selected = index >= 0 && index < characterDropdown.options.Count ? characterDropdown.options[index].text : null;
 			var newCharacter = (selected == noneCharacterOptionText) ? null : selected;
 
 			if (newCharacter != CurrentMap.character)
@@ -401,10 +395,7 @@ namespace ClassicTilestorm
 		{
 			if (CurrentMap == null) return;
 
-			var selected = index >= 0 && index < musicDropdown.options.Count
-				? musicDropdown.options[index].text
-				: null;
-
+			var selected = index >= 0 && index < musicDropdown.options.Count ? musicDropdown.options[index].text : null;
 			var newMusic = (selected == noneMusicOptionText) ? null : selected;
 
 			if (newMusic != CurrentMap.music)
@@ -433,16 +424,9 @@ namespace ClassicTilestorm
 		{
 			if (currentClone == null) return;
 
-			var selected = index >= 0 && index < effectDropdown.options.Count
-				? effectDropdown.options[index].text
-				: null;
-
+			var selected = index >= 0 && index < effectDropdown.options.Count ? effectDropdown.options[index].text : null;
 			var newEffect = (selected == noneEffectOptionText) ? null : selected;
-
-			var newEffectMode = ReflectionEffectCamera.ParseEffectMode(newEffect);
-
-			if (newEffectMode != currentClone.Effect)
-				currentClone.Effect = newEffectMode;
+			currentClone.Effect = ReflectionEffectCamera.ParseEffectMode(newEffect);
 
 			UpdateMapPreview();
 		}

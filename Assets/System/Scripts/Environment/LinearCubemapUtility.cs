@@ -150,6 +150,8 @@ namespace MassiveHadronLtd
 		/// </summary>
 		public static Vector3 FindLightDirection(Cubemap cubemap)
 		{
+			//return Vector3.down;
+
 			const int w = 512;
 			const int h = 256;
 

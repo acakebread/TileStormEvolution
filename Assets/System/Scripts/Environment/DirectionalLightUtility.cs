@@ -53,10 +53,10 @@ namespace MassiveHadronLtd
 			SetDefaultOrientation();
 		}
 
-		public Color UpdateFromSkybox(Material skybox = null)
-		{
-			Cubemap cubemap = SkyboxUtility.GetTintedSkyboxCubemap(skybox);
+		public Color UpdateFromSkyboxMaterial(Material skybox = null) => UpdateFromTintendCubemap(SkyboxUtility.GetTintedSkyboxCubemap(skybox));
 
+		public Color UpdateFromTintendCubemap(Cubemap cubemap = null)
+		{
 			if (cubemap == null)
 			{
 				directionalLight.color = Color.white;

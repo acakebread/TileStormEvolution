@@ -78,9 +78,17 @@ namespace ClassicTilestorm
 				return;
 			}
 
+			var mainReflection = Camera.main?.GetComponent<ReflectionEffectCamera>();
+
 			// ─── Cleanup previous map ─────────────────────────────────────
 			if (CurrentMap != null)
 			{
+				if (null != mainReflection)
+				{
+					CurrentMap.OnRenderSettingsChanged -= mainReflection.OnRenderSettingsChanged;
+					CurrentMap.OnEffectChanged -= mainReflection.OnEffectChanged;
+				}
+
 				editorController?.Reset();
 				cameraController?.Reset();
 				gameController?.Reset();
@@ -96,6 +104,14 @@ namespace ClassicTilestorm
 			MapRoot = container.transform;
 
 			// ─── Load & initialise ────────────────────────────────────────
+
+			if (null != mainReflection)
+			{
+				mainReflection.SetEffectMode(currentMap.Effect);
+				mainReflection.SetOffset(-0.2f);
+				currentMap.OnRenderSettingsChanged += mainReflection.OnRenderSettingsChanged;
+				currentMap.OnEffectChanged += mainReflection.OnEffectChanged;
+			}
 
 			CurrentMap = currentMap;
 			currentMap.Initialise(MapRoot, !ApplicationSettings.Scrambled);
@@ -113,22 +129,21 @@ namespace ClassicTilestorm
 			gameController?.Initialise(CurrentMap);
 			editorController?.Initialise(CurrentMap);
 
-			// Skybox
+			// Skybox - auto fixup legacy map data
 			if (string.IsNullOrEmpty(currentMap.skybox))
 				currentMap.skybox = $"{currentMap.music}Skybox";
 
 			if (null == AssetRegistry<Material>.FindSkybox(currentMap.skybox))
 				currentMap.skybox = null;
 
-			var mainReflection = Camera.main?.GetComponent<ReflectionEffectCamera>();
-			if (mainReflection != null)
-			{
-				mainReflection.SetEffectMode(currentMap.Effect);
-				mainReflection.SetOffset(-0.2f);
-				mainReflection.OnRenderSettingsChanged(currentMap.RenderSettings);
-				currentMap.OnRenderSettingsChanged += mainReflection.OnRenderSettingsChanged;
-				currentMap.OnEffectChanged += mainReflection.OnEffectChanged;
-			}
+			//if (mainReflection != null)
+			//{
+			//	mainReflection.SetEffectMode(currentMap.Effect);
+			//	mainReflection.SetOffset(-0.2f);
+			//	mainReflection.OnRenderSettingsChanged(currentMap.RenderSettings);
+			//	currentMap.OnRenderSettingsChanged += mainReflection.OnRenderSettingsChanged;
+			//	currentMap.OnEffectChanged += mainReflection.OnEffectChanged;
+			//}
 
 			//RenderSettings.ambientLight = Color.white; //currentMap.AmbientLight;
 			//SkyboxUtility.SetSkybox(currentMap.skybox);//must set skybox after effect mode is set for now

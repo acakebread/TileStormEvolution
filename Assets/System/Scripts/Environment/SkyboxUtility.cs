@@ -73,6 +73,8 @@ namespace MassiveHadronLtd
 				name = "TintedSkyReflection_" + (skyMat.name ?? "Unnamed")
 			};
 
+			//return tintedCubemap;
+
 			var tempGo = new GameObject("SkyboxBaker") { hideFlags = HideFlags.HideAndDontSave };
 			var bakerCam = tempGo.AddComponent<Camera>();
 
