@@ -244,7 +244,7 @@ namespace ClassicTilestorm
 				currentClone.AutoSunlight = src.isOn;//CurrentMap.AutoSunlight = src.isOn;
 
 			currentClone.UpdateLighting();
-			CurrentMap.UpdateLighting();
+			//CurrentMap.UpdateLighting();
 
 			SyncColorButtonsToCurrentMap();
 			UpdateMapPreview();
@@ -281,7 +281,7 @@ namespace ClassicTilestorm
 						currentClone.Sunlight = selectedColor; //CurrentMap.Sunlight = selectedColor;
 
 					currentClone.UpdateLighting();
-					CurrentMap.UpdateLighting();
+					//CurrentMap.UpdateLighting();
 
 					// Optional: update preview
 					UpdateMapPreview();
@@ -780,9 +780,15 @@ namespace ClassicTilestorm
 
 		private void UpdateMainView()
 		{
-			if (CurrentMap.name != MainController.CurrentMap.name) return;
-
-			CurrentMap.CopyFrom(currentClone);
+			if (CurrentMap.name == MainController.CurrentMap.name)
+				CurrentMap.CopyFrom(currentClone);
+			else
+			{
+				CurrentMap.sunlight = currentClone.sunlight;
+				CurrentMap.ambient = currentClone.ambient;
+				CurrentMap.skybox = currentClone.skybox;
+				CurrentMap.effect = currentClone.effect;
+			}
 
 			//CurrentMap.ambient = currentClone.ambient;
 			//CurrentMap.sunlight = currentClone.sunlight;

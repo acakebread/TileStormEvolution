@@ -201,6 +201,9 @@ namespace MassiveHadronLtd
 					}
 				});
 
+			CreateReflectionCamera();
+			CreateTextureCamera();
+
 			lastAppliedMode = effectMode;//for invalidate to work at run time
 
 			// Intelligent initialization logic
@@ -214,22 +217,60 @@ namespace MassiveHadronLtd
 				// Already set in inspector/script → apply immediately
 				ApplyEffect(effectMode, false);
 			}
-		}
 
-		private void CheckAndApplyDefaultEffectAfterDelay()
-		{
-			if (effectMode == EffectMode.Null)
+			void CheckAndApplyDefaultEffectAfterDelay()
 			{
-				// Still null after one frame → apply default
-				effectMode = EffectMode.Debug; // or PerfectMirror, Water, whatever you prefer as fallback
-				ApplyEffect(effectMode, false);
-				Debug.Log($"Auto-applied default effect {effectMode} after one-frame delay (was Null)", this);
+				if (effectMode == EffectMode.Null)
+				{
+					// Still null after one frame → apply default
+					effectMode = EffectMode.Debug;
+					ApplyEffect(effectMode, false);
+					Debug.Log($"Auto-applied default effect {effectMode} after one-frame delay (was Null)", this);
+				}
+				else
+				{
+					// Something set it during that frame → apply now
+					ApplyEffect(effectMode, false);
+					Debug.Log($"Effect was set to {effectMode} during delay frame — applying immediately", this);
+				}
 			}
-			else
+
+			void CreateReflectionCamera()
 			{
-				// Something set it during that frame → apply now
-				ApplyEffect(effectMode, false);
-				Debug.Log($"Effect was set to {effectMode} during delay frame — applying immediately", this);
+				var obj = new GameObject("ReflectionCamera");
+				obj.transform.SetParent(transform, false);
+				reflectionCamera = obj.AddComponent<Camera>();
+				reflectionCamera.clearFlags = CameraClearFlags.Nothing;
+				reflectionCamera.cullingMask = mainCamera.cullingMask;
+				reflectionCamera.cullingMask &= ~(1 << LayerMask.NameToLayer("Editor"));
+				reflectionCamera.targetTexture = renderTexture;
+
+				var _provider = obj.AddComponent<CameraCommandProvider>();
+				_provider.RegisterCommand(RenderPassEvent.BeforeRendering, (cmd, cam) => cmd.SetInvertCulling(true));
+				_provider.RegisterCommand(RenderPassEvent.AfterRenderingOpaques, (cmd, cam) => cmd.SetInvertCulling(false));
+
+				var data = obj.AddComponent<UniversalAdditionalCameraData>();
+				data.renderType = CameraRenderType.Overlay;
+				URPCameraHelper.SetClearDepth(data, false);
+			}
+
+			void CreateTextureCamera()
+			{
+				var obj = new GameObject("TextureCamera");
+				obj.transform.SetParent(transform, false);
+				textureCamera = obj.AddComponent<Camera>();
+				textureCamera.CopyFrom(mainCamera);
+				textureCamera.clearFlags = mainCamera.clearFlags;
+				textureCamera.cullingMask = mainCamera.cullingMask;
+				textureCamera.cullingMask &= ~(1 << LayerMask.NameToLayer("TransparentFX"));
+				textureCamera.cullingMask &= ~(1 << PreviewRenderLayers.previewTransparentLayer);
+				textureCamera.cullingMask &= ~(1 << LayerMask.NameToLayer("Editor"));
+				textureCamera.targetTexture = renderTexture;
+				textureCamera.depth = mainCamera.depth - 1;
+				var data = obj.AddComponent<UniversalAdditionalCameraData>();
+				data.cameraStack.Clear();
+				data.cameraStack.Add(reflectionCamera);
+				obj.AddComponent<CameraCommandProvider>();
 			}
 		}
 
@@ -302,25 +343,9 @@ namespace MassiveHadronLtd
 			effectMode = value;
 
 			if (withReset)
-				CleanupDynamicResources();// cleans both textures + cameras etc.
+				CleanupDynamicResources();
 
 			CreateOrResizeReflectionTexture(Screen.width, Screen.height);
-
-			var obj = new GameObject("ReflectionCamera");
-			obj.transform.SetParent(transform, false);
-			reflectionCamera = obj.AddComponent<Camera>();
-			reflectionCamera.clearFlags = CameraClearFlags.Nothing;
-			reflectionCamera.cullingMask = mainCamera.cullingMask;
-			reflectionCamera.cullingMask &= ~(1 << LayerMask.NameToLayer("Editor"));
-			reflectionCamera.targetTexture = renderTexture;
-
-			var _provider = obj.AddComponent<CameraCommandProvider>();
-			_provider.RegisterCommand(RenderPassEvent.BeforeRendering, (cmd, cam) => cmd.SetInvertCulling(true));
-			_provider.RegisterCommand(RenderPassEvent.AfterRenderingOpaques, (cmd, cam) => cmd.SetInvertCulling(false));
-
-			var data = obj.AddComponent<UniversalAdditionalCameraData>();
-			data.renderType = CameraRenderType.Overlay;
-			URPCameraHelper.SetClearDepth(data, false);
 
 			switch (effectMode)
 			{
@@ -371,33 +396,46 @@ namespace MassiveHadronLtd
 			if (effectMaterial)
 			{
 				effectMesh = new Mesh();
-				SetupTextureCamera();
-				reflectionCamera.targetTexture = renderTexture;
+				//SetupTextureCamera();
+				if (textureCamera)
+				{
+					textureCamera.targetTexture = renderTexture;
+					textureCamera.enabled = true;
+				}
+				if (reflectionCamera) reflectionCamera.targetTexture = renderTexture;
+			}
+			else
+			{
+				if (textureCamera)
+				{
+					textureCamera.targetTexture = null;
+					textureCamera.enabled = false;
+				}
 			}
 
 			UpdateMaterialProperties();
 
-			void SetupTextureCamera()
-			{
-				if (textureCamera == null)
-				{
-					var obj = new GameObject("TextureCamera");
-					obj.transform.SetParent(transform, false);
-					textureCamera = obj.AddComponent<Camera>();
-					textureCamera.CopyFrom(mainCamera);
-					textureCamera.clearFlags = mainCamera.clearFlags;
-					textureCamera.cullingMask = mainCamera.cullingMask;
-					textureCamera.cullingMask &= ~(1 << LayerMask.NameToLayer("TransparentFX"));
-					textureCamera.cullingMask &= ~(1 << PreviewRenderLayers.previewTransparentLayer);
-					textureCamera.cullingMask &= ~(1 << LayerMask.NameToLayer("Editor"));
-					textureCamera.targetTexture = renderTexture;
-					textureCamera.depth = mainCamera.depth - 1;
-					var data = obj.AddComponent<UniversalAdditionalCameraData>();
-					data.cameraStack.Clear();
-					data.cameraStack.Add(reflectionCamera);
-					obj.AddComponent<CameraCommandProvider>();
-				}
-			}
+			//void SetupTextureCamera()
+			//{
+			//	if (textureCamera == null)
+			//	{
+			//		var obj = new GameObject("TextureCamera");
+			//		obj.transform.SetParent(transform, false);
+			//		textureCamera = obj.AddComponent<Camera>();
+			//		textureCamera.CopyFrom(mainCamera);
+			//		textureCamera.clearFlags = mainCamera.clearFlags;
+			//		textureCamera.cullingMask = mainCamera.cullingMask;
+			//		textureCamera.cullingMask &= ~(1 << LayerMask.NameToLayer("TransparentFX"));
+			//		textureCamera.cullingMask &= ~(1 << PreviewRenderLayers.previewTransparentLayer);
+			//		textureCamera.cullingMask &= ~(1 << LayerMask.NameToLayer("Editor"));
+			//		textureCamera.targetTexture = renderTexture;
+			//		textureCamera.depth = mainCamera.depth - 1;
+			//		var data = obj.AddComponent<UniversalAdditionalCameraData>();
+			//		data.cameraStack.Clear();
+			//		data.cameraStack.Add(reflectionCamera);
+			//		obj.AddComponent<CameraCommandProvider>();
+			//	}
+			//}
 		}
 
 		public void UpdateMaterialProperties()
@@ -523,22 +561,7 @@ namespace MassiveHadronLtd
 			UpdateMaterialProperties();
 		}
 
-		//ToDo simplify this
-		public void OnSkyboxChanged(Material value)
-		{
-			//UnityRenderSettings newRenderSettings = new(
-			//	currentRenderSettings.ambientMode,
-			//	currentRenderSettings.ambientLight,
-			//	currentRenderSettings.ambientIntensity,
-			//	value,//new skybox
-			//	currentRenderSettings.ambientProbe,
-			//	currentRenderSettings.subtractiveShadowColor);
-
-			//OnRenderSettingsChanged(newRenderSettings);
-
-			var newRenderSettings = currentRenderSettings.ReplaceSkybox(value);
-			OnRenderSettingsChanged(newRenderSettings);
-		}
+		public void OnSkyboxChanged(Material value) => OnRenderSettingsChanged(currentRenderSettings.ReplaceSkybox(value));
 
 		private EffectMode lastAppliedMode = EffectMode.Null;  // track last successfully applied
 
@@ -687,16 +710,16 @@ namespace MassiveHadronLtd
 				DestroyImmediate(renderTexture);
 				renderTexture = null;
 			}
-			if (null != reflectionCamera)
-			{
-				DestroyImmediate(reflectionCamera.gameObject);
-				reflectionCamera = null;
-			}
-			if (null != textureCamera)
-			{
-				DestroyImmediate(textureCamera.gameObject);
-				textureCamera = null;
-			}
+			//if (null != reflectionCamera)
+			//{
+			//	DestroyImmediate(reflectionCamera.gameObject);
+			//	reflectionCamera = null;
+			//}
+			//if (null != textureCamera)
+			//{
+			//	DestroyImmediate(textureCamera.gameObject);
+			//	textureCamera = null;
+			//}
 			SafeReleaseAndNull(ref outputRenderTexture);
 		}
 
