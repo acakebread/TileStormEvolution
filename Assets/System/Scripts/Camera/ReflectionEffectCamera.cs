@@ -6,7 +6,7 @@ using UnityEngine.Rendering.Universal;
 
 namespace MassiveHadronLtd
 {
-	[System.Serializable]
+	[Serializable]
 	public struct PerfectMirrorDefaults
 	{
 		public Color tint;
@@ -17,7 +17,7 @@ namespace MassiveHadronLtd
 		};
 	}
 
-	[System.Serializable]
+	[Serializable]
 	public struct SurfaceFilmDefaults
 	{
 		public Color tint;
@@ -30,7 +30,7 @@ namespace MassiveHadronLtd
 		};
 	}
 
-	[System.Serializable]
+	[Serializable]
 	public struct FrostDefaults
 	{
 		public Color tint;
@@ -45,7 +45,7 @@ namespace MassiveHadronLtd
 		};
 	}
 
-	[System.Serializable]
+	[Serializable]
 	public struct WaterDefaults
 	{
 		public Color tint;
@@ -66,7 +66,7 @@ namespace MassiveHadronLtd
 		};
 	}
 
-	[System.Serializable]
+	[Serializable]
 	public struct OceanDefaults
 	{
 		public Color tint;
@@ -232,6 +232,8 @@ namespace MassiveHadronLtd
 				Debug.Log($"Effect was set to {effectMode} during delay frame — applying immediately", this);
 			}
 		}
+
+		public void OnEffectChanged(EffectMode value) => SetEffectMode(value);
 
 		public void SetEffectMode(string value, bool useDefaults = true) => SetEffectMode(ParseEffectMode(value), useDefaults);
 
@@ -518,7 +520,7 @@ namespace MassiveHadronLtd
 		private UnityRenderSettings currentRenderSettings;
 		public UnityRenderSettings CurrentRenderSettings => currentRenderSettings;
 
-		public void UpdateRenderSettings(UnityRenderSettings renderSettings)
+		public void OnRenderSettingsChanged(UnityRenderSettings renderSettings)
 		{
 			foreach (var childCam in GetComponentsInChildren<Camera>(true))
 			{
@@ -540,7 +542,7 @@ namespace MassiveHadronLtd
 				currentRenderSettings.ambientProbe,
 				currentRenderSettings.subtractiveShadowColor);
 
-			UpdateRenderSettings(renderSettings);
+			OnRenderSettingsChanged(renderSettings);
 		}
 
 		private EffectMode lastAppliedMode = EffectMode.Null;  // track last successfully applied

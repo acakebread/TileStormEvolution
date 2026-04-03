@@ -80,7 +80,7 @@ namespace ClassicTilestorm
 			return maxX >= 0 ? new RectInt(minX, minZ, maxX - minX + 1, maxZ - minZ + 1) : new RectInt(0, 0, 0, 0);
 		}
 
-		public static Map BuildPreviewGeometry(Map map, Transform parent)
+		public static Map Clone(Map map, Transform parent)
 		{
 			if (map.width <= 0 || map.height <= 0 || map.tiles == null || map.variants == null)
 				return null;
@@ -94,8 +94,7 @@ namespace ClassicTilestorm
 				return null;
 			}
 
-			var directionalLight = DirectionalLightUtility.Instantiate(parent);
-			previewMap.UpdateDirectionalLighting(directionalLight);
+			previewMap.UpdateLighting();
 
 			previewMap.Preset();
 			previewMap.RefreshAttachments(previewMap.GetAttachments());

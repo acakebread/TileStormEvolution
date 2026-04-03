@@ -35,7 +35,7 @@ namespace MassiveHadronLtd
 
 		private void Awake()
 		{
-			transform.rotation = Quaternion.Euler(75f, 60f, 0f);//default
+			SetDefaultOrientation();
 			//SkyboxUtility.OnSkyboxChanged += UpdateFromSkybox;
 		}
 
@@ -44,10 +44,13 @@ namespace MassiveHadronLtd
 			//SkyboxUtility.OnSkyboxChanged -= UpdateFromSkybox;
 		}
 
-		public void UpdateFromSettings(Color value, float intentisty = 1f)
+		private void SetDefaultOrientation() => transform.rotation = Quaternion.Euler(75f, 60f, 0f);//default
+
+		public void UpdateFromSettings(Color value, float intensity = 1f)
 		{
 			directionalLight.color = value;
-			directionalLight.intensity = intentisty;
+			directionalLight.intensity = intensity;
+			SetDefaultOrientation();
 		}
 
 		public Color UpdateFromSkybox(Material skybox = null)
@@ -89,6 +92,15 @@ namespace MassiveHadronLtd
 			Debug.Log($"Sky updated: BrightColor={brightColor}, Lum={lum:F3}, Intensity={directionalLight.intensity:F2}");
 
 			return directionalLight.color;
+		}
+
+		public void UpdateFromOther(DirectionalLightUtility other)
+		{
+			var otherLight = other.GetComponent<Light>();
+
+			directionalLight.color = otherLight.color;
+			directionalLight.intensity = otherLight.intensity;
+			transform.rotation = other.transform.rotation;
 		}
 	}
 }

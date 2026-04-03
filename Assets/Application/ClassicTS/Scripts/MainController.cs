@@ -23,8 +23,8 @@ namespace ClassicTilestorm
 		{
 			//workaround for shader problem in command buffer
 			var cam = Camera.main;
-			if (cam != null && cam.GetComponent<CameraShaderPrimer>() == null)
-				cam.gameObject.AddComponent<CameraShaderPrimer>();
+			if (null != cam)
+				cam.gameObject.GetOrAddComponent<CameraShaderPrimer>();
 
 			var mainReflection = cam?.GetComponent<ReflectionEffectCamera>();
 			if (null != mainReflection) SkyboxUtility.OnSkyboxChanged += mainReflection.OnSkyboxChanged;
@@ -125,7 +125,9 @@ namespace ClassicTilestorm
 			{
 				mainReflection.SetEffectMode(currentMap.Effect);
 				mainReflection.SetOffset(-0.2f);
-				mainReflection.UpdateRenderSettings(currentMap.RenderSettings);
+				mainReflection.OnRenderSettingsChanged(currentMap.RenderSettings);
+				currentMap.OnRenderSettingsChanged += mainReflection.OnRenderSettingsChanged;
+				currentMap.OnEffectChanged += mainReflection.OnEffectChanged;
 			}
 
 			//RenderSettings.ambientLight = Color.white; //currentMap.AmbientLight;

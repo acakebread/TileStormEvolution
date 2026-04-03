@@ -120,21 +120,57 @@ namespace ClassicTilestorm
 			set => effect = ReflectionEffectCamera.EffectModeToString(value);
 		}
 
-		[JsonIgnore] public bool AutoAmbient = true;
+		//[JsonIgnore] public bool AutoAmbient = true;
+		[JsonIgnore] public bool AutoAmbient
+		{
+			get => null == ambient;
+			set
+			{
+				if (value)
+				{
+					ambient = null;
+					autoAmbientColour = CubemapUtility.ComputeAmbientColor(SkyboxUtility.GetTintedSkyboxCubemap(SkyboxMaterial), 2f);
+				}
+				else
+				{
+					ambient = autoAmbientColour.ToHexString(includeAlpha: true);
+				}
+			}
+		}
+		[JsonIgnore] private Color autoAmbientColour;
 		[JsonIgnore] public Color AmbientLight
 		{
-			get => StringUtil.FromHexString(ambient, defaultColor: Color.white);
+			get => AutoAmbient ? autoAmbientColour : StringUtil.FromHexString(ambient, defaultColor: Color.white);
 			set => ambient = value.ToHexString(includeAlpha: true);//set { ambient = value.ToHexString(includeAlpha: true); AutoAmbient = false; }
 		}
-		[HideInInspector] public Color GetAmbientLight() => AutoAmbient ? CubemapUtility.ComputeAmbientColor(SkyboxUtility.GetTintedSkyboxCubemap(SkyboxMaterial), 2f) : AmbientLight;
+		//[HideInInspector] public Color GetAmbientLight() => AutoAmbient ? CubemapUtility.ComputeAmbientColor(SkyboxUtility.GetTintedSkyboxCubemap(SkyboxMaterial), 2f) : AmbientLight;
+		[HideInInspector] public Color GetAmbientLight() => AmbientLight;
 
-		[JsonIgnore] public bool AutoSunlight = true;
+		//[JsonIgnore] public bool AutoSunlight = true;
+		[JsonIgnore] private Color autoSunlightColour;
+		[JsonIgnore] public bool AutoSunlight
+		{
+			get => null == sunlight;
+			set
+			{
+				if (value)
+				{
+					sunlight = null;
+					autoSunlightColour = CubemapUtility.ComputeBrightColor(SkyboxUtility.GetTintedSkyboxCubemap(SkyboxMaterial), 0.85f);
+				}
+				else
+				{
+					sunlight = autoSunlightColour.ToHexString(includeAlpha: true);
+				}
+			}
+		}
 		[JsonIgnore] public Color Sunlight
 		{
-			get => StringUtil.FromHexString(sunlight, defaultColor: Color.white);
+			get => AutoSunlight ? autoSunlightColour : StringUtil.FromHexString(sunlight, defaultColor: Color.white);
 			set => sunlight = value.ToHexString(includeAlpha: true);//set { sunlight = value.ToHexString(includeAlpha: true); AutoSunlight = false; }
 		}
-		[HideInInspector] public Color GetSunlight() => AutoSunlight ? CubemapUtility.ComputeBrightColor(SkyboxUtility.GetTintedSkyboxCubemap(SkyboxMaterial), 0.85f) : Sunlight;
+		//[HideInInspector] public Color GetSunlight() => AutoSunlight ? CubemapUtility.ComputeBrightColor(SkyboxUtility.GetTintedSkyboxCubemap(SkyboxMaterial), 0.85f) : Sunlight;
+		[HideInInspector] public Color GetSunlight() => Sunlight;
 
 
 		[JsonIgnore] private DirectionalLightUtility directionalLight;
@@ -348,9 +384,6 @@ namespace ClassicTilestorm
 
 			attachments = attachments != null ? attachments.Select(a => a.ShallowClone()).ToArray() : Array.Empty<MapAttachment>(),
 			variants = variants != null ? variants.Select(v => new Variant(v.hash, v.delta, v.angle)).ToArray() : Array.Empty<Variant>(),
-
-			AutoAmbient = AutoAmbient,
-			AutoSunlight = AutoSunlight
 		};
 
 		public bool Initialise(Transform parent = null, bool solved = false)
@@ -361,9 +394,7 @@ namespace ClassicTilestorm
 				Debug.LogWarning("Failed to create runtime tiles — map data invalid.");
 				return false;
 			}
-			UpdateAmbientLighting();
-			directionalLight = DirectionalLightUtility.Instantiate(parent);
-			UpdateDirectionalLighting(directionalLight);
+			UpdateLighting();
 
 			if (solved) Solve();
 			else Preset();
@@ -375,7 +406,6 @@ namespace ClassicTilestorm
 				waypoints = this.GenerateWaypoints();
 			parent.gameObject.GetOrAddComponent<WindController>();
 
-			//SkyboxUtility.OnSkyboxChanged += directionalLight.UpdateFromSkybox;
 			SkyboxUtility.OnSkyboxChanged += OnSkyboxChanged;
 
 			return true;
@@ -385,7 +415,6 @@ namespace ClassicTilestorm
 		{
 			OnMapEdited = null;
 
-			//SkyboxUtility.OnSkyboxChanged -= directionalLight.UpdateFromSkybox;
 			SkyboxUtility.OnSkyboxChanged -= OnSkyboxChanged;
 
 			DestroyAllGraphTiles();
@@ -990,25 +1019,54 @@ namespace ClassicTilestorm
 
 		// lighting
 
-		public void UpdateAmbientLighting()
+		private void OnSkyboxChanged(Material skymat = null)
 		{
-			AmbientLight = GetAmbientLight();
+			UpdateLighting(skymat);
 		}
 
-		private void OnSkyboxChanged(Material skybox = null)
+		public void UpdateLighting(Material skymat = null)
 		{
-			UpdateDirectionalLighting(directionalLight);
-		}
-
-		public void UpdateDirectionalLighting(DirectionalLightUtility value = null)
-		{
-			value ??= directionalLight;
-			if (null == value) return;
+			if (AutoAmbient)
+				autoAmbientColour = CubemapUtility.ComputeAmbientColor(SkyboxUtility.GetTintedSkyboxCubemap(SkyboxMaterial), 2f);
 
 			if (AutoSunlight)
-				Sunlight = value.UpdateFromSkybox(SkyboxUtility.GetSkyboxMaterialForName(Skybox));
+				autoSunlightColour = CubemapUtility.ComputeBrightColor(SkyboxUtility.GetTintedSkyboxCubemap(SkyboxMaterial), 0.85f);
+
+			if (null == directionalLight)
+				directionalLight = DirectionalLightUtility.Instantiate(parent);
+
+			if (null == directionalLight) return;
+
+			if (AutoSunlight)
+				directionalLight.UpdateFromSkybox(SkyboxMaterial);
 			else
-				value.UpdateFromSettings(Sunlight);
+				directionalLight.UpdateFromSettings(Sunlight);
 		}
+
+		public void UpdateFromOther(Map other)
+		{
+			if (null == other)
+				return;
+
+			sunlight = other.sunlight;
+			directionalLight.UpdateFromOther(other.directionalLight);
+
+			//render settings
+			ambient = other.ambient;
+			if (skybox != other.skybox)
+			{
+				skybox = other.skybox;
+				SkyboxUtility.SetSkybox(other.skybox);
+			}
+
+			OnRenderSettingsChanged?.Invoke(RenderSettings);
+
+			effect = other.effect;
+			OnEffectChanged?.Invoke(Effect);
+		}
+
+		public Action<UnityRenderSettings> OnRenderSettingsChanged;
+
+		public Action<ReflectionEffectCamera.EffectMode> OnEffectChanged;
 	}
 }

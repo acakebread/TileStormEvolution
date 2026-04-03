@@ -23,7 +23,7 @@ namespace MassiveHadronLtd
 			for (var i = 0; i < 6; i++)
 			{
 				var face = cubemap.GetPixels((CubemapFace)i);
-				System.Array.Copy(face, 0, pixels, faceSize * faceSize * i, face.Length);
+				Array.Copy(face, 0, pixels, faceSize * faceSize * i, face.Length);
 			}
 
 			return ColourUtils.ThresholdColour(pixels, threshold);
@@ -44,7 +44,7 @@ namespace MassiveHadronLtd
 				return new Color(0.25f, 0.25f, 0.35f);
 			}
 
-			var pixels = GetAllPixels(cubemap);   // reuse the helper above
+			var pixels = GetAllPixels(cubemap);
 
 			if (pixels.Length == 0)
 				return new Color(0.25f, 0.25f, 0.35f);
@@ -52,7 +52,33 @@ namespace MassiveHadronLtd
 			return ColourUtils.ComputeAmbientColor(pixels, power);
 		}
 
-		//possibly better version to be tested
+		/// <summary>
+		/// Returns a single flat array containing ALL pixels from all 6 faces of the cubemap.
+		/// Useful for full-image processing like ambient colour calculation.
+		/// </summary>
+		private static Color[] GetAllPixels(Cubemap cubemap)
+		{
+			if (cubemap == null)
+				return Array.Empty<Color>();
+
+			if (!cubemap.isReadable)
+			{
+				Debug.LogWarning($"Cubemap '{cubemap.name}' is not readable. Cannot extract pixels.");
+				return Array.Empty<Color>();
+			}
+
+			var length = cubemap.width * cubemap.height;
+			var result = new Color[length * 6];
+
+			for (var i = 0; i < 6; i++)
+			{
+				var face = cubemap.GetPixels((CubemapFace)i);
+				Array.Copy(face, 0, result, length * i, face.Length);
+			}
+
+			return result;
+		}
+
 		public static Color SampleCubemap(Cubemap cubemap, Vector3 dir)
 		{
 			dir.Normalize();   // safe, in case of floating point drift
@@ -97,34 +123,6 @@ namespace MassiveHadronLtd
 			int py = Mathf.Clamp((int)(v * (size - 1)), 0, size - 1);
 
 			return cubemap.GetPixel(face, px, py);
-		}
-
-		/// <summary>
-		/// Returns a single flat array containing ALL pixels from all 6 faces of the cubemap.
-		/// Useful for full-image processing like ambient colour calculation.
-		/// </summary>
-		public static Color[] GetAllPixels(Cubemap cubemap)
-		{
-			if (cubemap == null)
-				return Array.Empty<Color>();
-
-			if (!cubemap.isReadable)
-			{
-				Debug.LogWarning($"Cubemap '{cubemap.name}' is not readable. Cannot extract pixels.");
-				return Array.Empty<Color>();
-			}
-
-			var faceSize = cubemap.width;
-			var totalPixels = faceSize * faceSize * 6;
-			var pixels = new Color[totalPixels];
-
-			for (var i = 0; i < 6; i++)
-			{
-				var face = cubemap.GetPixels((CubemapFace)i);
-				Array.Copy(face, 0, pixels, faceSize * faceSize * i, face.Length);
-			}
-
-			return pixels;
 		}
 	}
 }

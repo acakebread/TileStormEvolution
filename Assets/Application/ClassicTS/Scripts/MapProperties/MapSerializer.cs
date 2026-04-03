@@ -282,8 +282,8 @@ namespace ClassicTilestorm
 				((Map.IVariantAccess)map).Variants = ParseTableToVariants(tableArray);
 			}
 
-			map.AutoAmbient = null == jo["ambient"];
-			map.AutoSunlight = null == jo["sunlight"];
+			//map.AutoAmbient = null == jo["ambient"];
+			//map.AutoSunlight = null == jo["sunlight"];
 
 			return map;
 		}
