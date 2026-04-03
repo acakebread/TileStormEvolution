@@ -154,7 +154,7 @@ namespace MassiveHadronLtd
 		private Camera mainCamera;
 		private Camera reflectionCamera;
 		private Camera textureCamera;
-		[SerializeField] private Camera postProcessingCamera;
+		private Camera postProcessingCamera;
 		private RenderTexture renderTexture;
 		private Mesh effectMesh;
 		private Material effectMaterial;
@@ -180,6 +180,9 @@ namespace MassiveHadronLtd
 
 			if (Camera.main == mainCamera)
 				PreviewRenderLayers.RemovePreviewLayers(mainCamera);
+
+			var ppCamera = transform.GetComponentInChildren<PostProcessingCameraController>(true);
+			if (ppCamera) postProcessingCamera = ppCamera.GetComponent<Camera>();
 
 			// Setup camera data and command provider (always needed)
 			var mainCameraData = mainCamera.gameObject.GetComponent<UniversalAdditionalCameraData>();
@@ -396,7 +399,6 @@ namespace MassiveHadronLtd
 			if (effectMaterial)
 			{
 				effectMesh = new Mesh();
-				//SetupTextureCamera();
 				if (textureCamera)
 				{
 					textureCamera.targetTexture = renderTexture;
@@ -414,28 +416,6 @@ namespace MassiveHadronLtd
 			}
 
 			UpdateMaterialProperties();
-
-			//void SetupTextureCamera()
-			//{
-			//	if (textureCamera == null)
-			//	{
-			//		var obj = new GameObject("TextureCamera");
-			//		obj.transform.SetParent(transform, false);
-			//		textureCamera = obj.AddComponent<Camera>();
-			//		textureCamera.CopyFrom(mainCamera);
-			//		textureCamera.clearFlags = mainCamera.clearFlags;
-			//		textureCamera.cullingMask = mainCamera.cullingMask;
-			//		textureCamera.cullingMask &= ~(1 << LayerMask.NameToLayer("TransparentFX"));
-			//		textureCamera.cullingMask &= ~(1 << PreviewRenderLayers.previewTransparentLayer);
-			//		textureCamera.cullingMask &= ~(1 << LayerMask.NameToLayer("Editor"));
-			//		textureCamera.targetTexture = renderTexture;
-			//		textureCamera.depth = mainCamera.depth - 1;
-			//		var data = obj.AddComponent<UniversalAdditionalCameraData>();
-			//		data.cameraStack.Clear();
-			//		data.cameraStack.Add(reflectionCamera);
-			//		obj.AddComponent<CameraCommandProvider>();
-			//	}
-			//}
 		}
 
 		public void UpdateMaterialProperties()

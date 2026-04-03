@@ -60,8 +60,8 @@ public class ReflectionEffectCameraEditor : Editor
 				break;
 		}
 
-		EditorGUILayout.LabelField("Post Processing Settings", EditorStyles.boldLabel);
-		EditorGUILayout.PropertyField(serializedObject.FindProperty("postProcessingCamera"));
+		//EditorGUILayout.LabelField("Post Processing Settings", EditorStyles.boldLabel);
+		//EditorGUILayout.PropertyField(serializedObject.FindProperty("postProcessingCamera"));
 
 		if (serializedObject.ApplyModifiedProperties())
 		{
