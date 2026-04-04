@@ -19,11 +19,8 @@ namespace MassiveHadronLtd
 		private Color brightColor = Color.gray;
 		private float maxLum = 0f;
 		private int brightPixelCount = 0;
-		//private Cubemap lastCubemap;
-
 
 		private Cubemap _lastCubemap;
-
 		private Cubemap lastCubemap
 		{
 			set => _lastCubemap = value;
@@ -45,8 +42,8 @@ namespace MassiveHadronLtd
 
 		private void UpdateFromSkybox(Material skybox = null)
 		{
-			Cubemap cubemap = SkyboxUtility.GetTintedSkyboxCubemap(skybox);
-			if (cubemap == null)
+			var cubemap = CubemapUtility.GetTintedCubemap(skybox);
+			if (null == cubemap)
 			{
 				Clear();
 				return;
@@ -54,14 +51,14 @@ namespace MassiveHadronLtd
 
 			lastCubemap = cubemap;
 
-			if (panoramaTexture != null)
+			if (null != panoramaTexture)
 				Destroy(panoramaTexture);
 
 			// Generate the Linear panorama (your current version with sky at top in preview)
 			//panoramaTexture = EquirectangularCubemapUtility.Create(cubemap, panoramaWidth, panoramaHeight);
 			panoramaTexture = LinearCubemapUtility.Create(cubemap, panoramaWidth, panoramaHeight);
 
-			if (panoramaTexture == null)
+			if (null == panoramaTexture)
 				return;
 
 			brightColor = ImageProcessing.ComputeBrightColorWithHistogram(
@@ -101,7 +98,7 @@ namespace MassiveHadronLtd
 
 			Rect previewRect = GUILayoutUtility.GetRect(580, 290);
 
-			if (panoramaTexture != null)
+			if (null != panoramaTexture)
 			{
 				// Draw the panorama without alpha blending (clean black borders)
 				GUI.DrawTexture(previewRect, panoramaTexture, ScaleMode.StretchToFill, false);

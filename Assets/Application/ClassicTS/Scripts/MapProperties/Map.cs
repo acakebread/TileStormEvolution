@@ -122,7 +122,6 @@ namespace ClassicTilestorm
 
 		public Action<ReflectionEffectCamera.EffectMode> OnEffectChanged;
 
-		//[JsonIgnore] public bool AutoAmbient = true;
 		[JsonIgnore] public bool AutoAmbient
 		{
 			get => null == ambient;
@@ -131,7 +130,7 @@ namespace ClassicTilestorm
 				if (value)
 				{
 					ambient = null;
-					autoAmbientColour = CubemapUtility.ComputeAmbientColor(SkyboxUtility.GetTintedSkyboxCubemap(SkyboxMaterial), 2f);
+					autoAmbientColour = SkyboxUtility.ComputeAmbientColor(SkyboxMaterial, 2f);
 				}
 				else
 				{
@@ -143,12 +142,10 @@ namespace ClassicTilestorm
 		[JsonIgnore] public Color AmbientLight
 		{
 			get => AutoAmbient ? autoAmbientColour : StringUtil.FromHexString(ambient, defaultColor: Color.white);
-			set => ambient = value.ToHexString(includeAlpha: true);//set { ambient = value.ToHexString(includeAlpha: true); AutoAmbient = false; }
+			set => ambient = value.ToHexString(includeAlpha: true);
 		}
-		//[HideInInspector] public Color GetAmbientLight() => AutoAmbient ? CubemapUtility.ComputeAmbientColor(SkyboxUtility.GetTintedSkyboxCubemap(SkyboxMaterial), 2f) : AmbientLight;
 		[HideInInspector] public Color GetAmbientLight() => AmbientLight;
 
-		//[JsonIgnore] public bool AutoSunlight = true;
 		[JsonIgnore] private Color autoSunlightColour;
 		[JsonIgnore] public bool AutoSunlight
 		{
@@ -158,7 +155,7 @@ namespace ClassicTilestorm
 				if (value)
 				{
 					sunlight = null;
-					autoSunlightColour = CubemapUtility.ComputeBrightColor(SkyboxUtility.GetTintedSkyboxCubemap(SkyboxMaterial), 0.85f);
+					autoSunlightColour = SkyboxUtility.ComputeBrightColor(SkyboxMaterial, 0.85f);
 				}
 				else
 				{
@@ -169,9 +166,8 @@ namespace ClassicTilestorm
 		[JsonIgnore] public Color Sunlight
 		{
 			get => AutoSunlight ? autoSunlightColour : StringUtil.FromHexString(sunlight, defaultColor: Color.white);
-			set => sunlight = value.ToHexString(includeAlpha: true);//set { sunlight = value.ToHexString(includeAlpha: true); AutoSunlight = false; }
+			set => sunlight = value.ToHexString(includeAlpha: true);
 		}
-		//[HideInInspector] public Color GetSunlight() => AutoSunlight ? CubemapUtility.ComputeBrightColor(SkyboxUtility.GetTintedSkyboxCubemap(SkyboxMaterial), 0.85f) : Sunlight;
 		[HideInInspector] public Color GetSunlight() => Sunlight;
 
 
@@ -1028,7 +1024,7 @@ namespace ClassicTilestorm
 		{
 			Cubemap tinted = null;
 			if (AutoAmbient || AutoSunlight)
-				tinted = SkyboxUtility.GetTintedSkyboxCubemap(SkyboxMaterial);
+				tinted = CubemapUtility.GetTintedCubemap(SkyboxMaterial);
 
 			if (AutoAmbient)
 				autoAmbientColour = CubemapUtility.ComputeAmbientColor(tinted, 2f);
