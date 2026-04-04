@@ -523,13 +523,13 @@ namespace MassiveHadronLtd
 				var overrideComp = childCam.gameObject.GetOrAddComponent<CameraRenderSettingsOverride>();
 				overrideComp.OverrideSettings = renderSettings;
 			}
-			currentRenderSettings = renderSettings;
+			//currentRenderSettings = renderSettings;
 			UpdateMaterialProperties();
 		}
 
-		public void OnSkyboxChanged(Material value) => OnRenderSettingsChanged(currentRenderSettings.ReplaceSkybox(value));
+		//public void OnSkyboxChanged(Material value) => OnRenderSettingsChanged(currentRenderSettings.ReplaceSkybox(value));
 
-		private UnityRenderSettings currentRenderSettings;
+		//private UnityRenderSettings currentRenderSettings;
 
 		public void SetRenderToTextureMode(bool enable)
 		{

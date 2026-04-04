@@ -44,6 +44,8 @@ namespace ClassicTilestorm
 			currentManager = manager;
 			isVisible = true;
 
+			RenderSettings.skybox = manager.SkyboxMaterial;//sync the system skybox to the current map
+
 			EnsureCreated();
 			UpdatePreviewCamera();
 		}
