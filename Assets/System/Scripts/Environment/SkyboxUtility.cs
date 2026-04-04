@@ -13,6 +13,7 @@ namespace MassiveHadronLtd
 		{
 			var material = string.IsNullOrEmpty(pathOrName) ? defaultSkyboxMaterial : GetSkyboxMaterial(pathOrName);
 			RenderSettings.skybox = material ? material : defaultSkyboxMaterial;
+			CubemapUtility.ClearCurrentCache();   // Clean everything when skybox changes
 			OnSkyboxChanged?.Invoke(RenderSettings.skybox);
 		}
 
