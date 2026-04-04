@@ -124,6 +124,8 @@ namespace ClassicTilestorm
 			// Skybox - auto fixup legacy map data - ends here
 
 			CurrentMap.Initialise(MapRoot, !ApplicationSettings.Scrambled);
+			if (null != mainReflection)
+				mainReflection.OnRenderSettingsChanged(CurrentMap.RenderSettings);
 
 			// Eggbot
 			if (eggbotController != null)

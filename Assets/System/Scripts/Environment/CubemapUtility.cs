@@ -16,6 +16,19 @@ namespace MassiveHadronLtd
 		private static Color s_CachedBrightColor = Color.white;
 		private static float s_CachedBrightThreshold = -1f;
 
+		public static Cubemap GetSkyboxAsCubemap(Material skybox = null)
+		{
+			skybox ??= RenderSettings.skybox;
+			if (null != skybox)
+			{
+				if (skybox.HasProperty("_Tex"))
+					return skybox.GetTexture("_Tex") as Cubemap;
+				if (skybox.HasProperty("_MainTex"))
+					return skybox.GetTexture("_MainTex") as Cubemap;
+			}
+			return null;
+		}
+
 		public static Color ComputeBrightColor(Cubemap cubemap, float threshold = 0.85f)
 		{
 			if (cubemap == null)

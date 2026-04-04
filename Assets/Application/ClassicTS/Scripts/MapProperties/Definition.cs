@@ -94,7 +94,7 @@ namespace ClassicTilestorm
                 flags &= ~(int)flag;
         }
 
-        public static Definition GetDefaultTile()
+        public static Definition GetDefault()
         {
             const string legacyName = "tile_empty";
             int hash32 = RadixHash.GetStableHash32(legacyName);
@@ -110,9 +110,9 @@ namespace ClassicTilestorm
             };
         }
 
-        public static Definition Default => GetDefaultTile();
+        public static Definition Default => GetDefault();
 
-        public bool IsDefault() => HashID == GetDefaultTile().HashID;
+        public bool IsDefault() => HashID == GetDefault().HashID;
 
         public bool IsDefaultEquivalent()
         {

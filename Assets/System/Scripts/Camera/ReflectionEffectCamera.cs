@@ -157,8 +157,8 @@ namespace MassiveHadronLtd
 		{
 			get
 			{
-				if (_tintedSkyboxTexture) DestroyImmediate(_tintedSkyboxTexture);
-				_tintedSkyboxTexture = CubemapUtility.GetTintedCubemap(renderSettingsOverride ? renderSettingsOverride.OverrideSettings.skybox : RenderSettings.skybox).Clone();
+				//if (_tintedSkyboxTexture) DestroyImmediate(_tintedSkyboxTexture);
+				//_tintedSkyboxTexture = CubemapUtility.GetTintedCubemap(renderSettingsOverride ? renderSettingsOverride.OverrideSettings.skybox : RenderSettings.skybox).Clone();
 				return _tintedSkyboxTexture;
 			}
 		}
@@ -197,6 +197,8 @@ namespace MassiveHadronLtd
 				Invoke(nameof(CheckAndApplyDefaultEffectAfterDelay), 0f);
 			else
 				ApplyEffect(effectMode);
+
+			_tintedSkyboxTexture = CubemapUtility.GetSkyboxAsCubemap();
 		}
 
 		private void OnBeforeRenderingTransparents(RasterCommandBuffer cmd, Camera cam)
@@ -516,6 +518,7 @@ namespace MassiveHadronLtd
 
 		private void DeferredRebuild() => ApplyEffect(effectMode);
 
+		//need to get this out of reflection camera
 		public void OnRenderSettingsChanged(UnityRenderSettings renderSettings)
 		{
 			foreach (var childCam in GetComponentsInChildren<Camera>(true))
@@ -524,6 +527,9 @@ namespace MassiveHadronLtd
 				overrideComp.OverrideSettings = renderSettings;
 			}
 			//currentRenderSettings = renderSettings;
+
+			_tintedSkyboxTexture = CubemapUtility.GetTintedCubemap(renderSettings.skybox).Clone();
+
 			UpdateMaterialProperties();
 		}
 
@@ -643,6 +649,8 @@ namespace MassiveHadronLtd
 
 			if (reflectionCamera) DestroyImmediate(reflectionCamera.gameObject);
 			if (textureCamera) DestroyImmediate(textureCamera.gameObject);
+
+			if (_tintedSkyboxTexture) DestroyImmediate(_tintedSkyboxTexture);
 		}
 
 		public static EffectMode ParseEffectMode(string effectString)

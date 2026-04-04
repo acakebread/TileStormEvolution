@@ -333,7 +333,7 @@ namespace ClassicTilestorm
 			this.height = height;
 
 			// Get (or create) the canonical default tile definition
-			var defaultDef = ResourceManager.FindOrCreateDefaultTile();
+			var defaultDef = ResourceManager.FindOrCreateDefaultDefinition();
 			var defaultHash = defaultDef.HashID;
 
 			// Minimal variant table: just the default tile (angle=0, delta=0)
@@ -405,7 +405,7 @@ namespace ClassicTilestorm
 
 			//SkyboxUtility.OnSkyboxChanged += OnSkyboxChanged;
 
-			OnRenderSettingsChanged?.Invoke(RenderSettings);
+			//OnRenderSettingsChanged?.Invoke(RenderSettings);
 
 			return true;
 		}
@@ -1050,6 +1050,8 @@ namespace ClassicTilestorm
 			//render settings
 			var updateRenderSettings = ambient != other.ambient || skybox != other.skybox;
 			ambient = other.ambient;
+			AmbientLight = other.AmbientLight;
+
 			//if (skybox != other.skybox) SkyboxUtility.SetSkybox(other.skybox);//no need for this any more 
 			skybox = other.skybox;
 			if (updateRenderSettings)

@@ -40,11 +40,11 @@ namespace ClassicTilestorm
 
 		// ── DEFINITION CREATION WITH OPTIONAL UNIQUENESS CHECK ────────────────
 
-		public static HashId DefaultHash => FindOrCreateDefaultTile().HashID;
+		public static HashId DefaultHash => FindOrCreateDefaultDefinition().HashID;
 
-		public static Definition FindOrCreateDefaultTile()
+		public static Definition FindOrCreateDefaultDefinition()
 		{
-			var prototype = Definition.GetDefaultTile();
+			var prototype = Definition.GetDefault();
 			int expectedHash = prototype.HashID;
 
 			// Only hashid matters from now on
@@ -96,23 +96,6 @@ namespace ClassicTilestorm
 			}
 
 			return def;
-		}
-
-		private static string _defaultTileHash;
-		public static string DefaultTileHash
-		{
-			get
-			{
-				if (_defaultTileHash == null)
-				{
-					const string legacyName = "tile_empty";
-
-					// Full-range 32-bit hash
-					int hash32 = RadixHash.GetStableHash32(legacyName);
-					_defaultTileHash = HTB50Settings.ToString(hash32);
-				}
-				return _defaultTileHash;
-			}
 		}
 
 		public static string GenerateUniqueNewDefinitionName(string prefix = "NAME_")
@@ -274,7 +257,7 @@ namespace ClassicTilestorm
 			{
 				hadError = true;
 				Debug.LogError("Attempted to resolve null or empty tile definition hash.");
-				return FindOrCreateDefaultTile();
+				return FindOrCreateDefaultDefinition();
 			}
 
 			var def = GetDefinition(hashId);
@@ -285,9 +268,27 @@ namespace ClassicTilestorm
 
 			hadError = true;
 			Debug.LogWarning($"Missing or invalid definition hash '{hashId}' — falling back to default tile.");
-			return FindOrCreateDefaultTile();
+			return FindOrCreateDefaultDefinition();
 		}
 
 		public static Action OnDefininionsModified;
 	}
 }
+
+
+//private static string _defaultTileHash;
+//public static string DefaultTileHash
+//{
+//	get
+//	{
+//		if (_defaultTileHash == null)
+//		{
+//			const string legacyName = "tile_empty";
+
+//			// Full-range 32-bit hash
+//			int hash32 = RadixHash.GetStableHash32(legacyName);
+//			_defaultTileHash = HTB50Settings.ToString(hash32);
+//		}
+//		return _defaultTileHash;
+//	}
+//}
