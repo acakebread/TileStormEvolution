@@ -151,7 +151,17 @@ namespace MassiveHadronLtd
 		private bool isRenderToTextureMode = false;
 
 		private CameraRenderSettingsOverride renderSettingsOverride => gameObject.GetComponent<CameraRenderSettingsOverride>();
-		private Texture tintedSkyboxTexture => CubemapUtility.GetTintedCubemap(renderSettingsOverride ? renderSettingsOverride.OverrideSettings.skybox : RenderSettings.skybox);
+
+		private Texture _tintedSkyboxTexture;
+		private Texture tintedSkyboxTexture
+		{
+			get
+			{
+				if (_tintedSkyboxTexture) DestroyImmediate(_tintedSkyboxTexture);
+				_tintedSkyboxTexture = CubemapUtility.GetTintedCubemap(renderSettingsOverride ? renderSettingsOverride.OverrideSettings.skybox : RenderSettings.skybox).Clone();
+				return _tintedSkyboxTexture;
+			}
+		}
 
 		private void Awake()
 		{
