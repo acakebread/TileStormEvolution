@@ -529,6 +529,7 @@ namespace MassiveHadronLtd
 			//currentRenderSettings = renderSettings;
 
 			_tintedSkyboxTexture = CubemapUtility.GetTintedCubemap(renderSettings.skybox).Clone();
+			//_tintedSkyboxTexture = CubemapUtility.GetSkyboxAsCubemap(renderSettings.skybox);
 
 			UpdateMaterialProperties();
 		}

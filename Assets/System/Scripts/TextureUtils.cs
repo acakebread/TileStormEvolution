@@ -490,9 +490,7 @@ namespace MassiveHadronLtd
 
 		/// <summary>
 		/// Creates a deep clone of any Texture (Texture2D, Cubemap, etc.).
-		/// Returns a new independent texture with copied pixel data.
-		/// Supports Cubemaps perfectly.
-		/// Caller is responsible for Destroy()ing the returned texture when done.
+		/// Fixed version to reduce grey borders / seam artifacts on Cubemaps.
 		/// </summary>
 		public static Texture Clone(this Texture source)
 		{
@@ -503,21 +501,17 @@ namespace MassiveHadronLtd
 			}
 
 			if (source is Texture2D tex2D)
-			{
-				return tex2D.Clone(); // Use the more optimized Texture2D version below
-			}
+				return tex2D.Clone();
 
 			if (source is Cubemap cubemap)
-			{
 				return CloneCubemap(cubemap);
-			}
 
-			// Fallback for other texture types (RenderTexture, Texture3D, etc.) using GPU copy
+			// Fallback for other types
 			return CloneViaGraphicsCopy(source);
 		}
 
 		/// <summary>
-		/// Specialized fast clone for Texture2D (kept for backward compatibility and performance).
+		/// Optimized Texture2D clone (unchanged, but kept for consistency).
 		/// </summary>
 		public static Texture2D Clone(this Texture2D source)
 		{
@@ -536,20 +530,20 @@ namespace MassiveHadronLtd
 
 			if (source.isReadable)
 			{
-				// Fast CPU path
 				clone.SetPixels(source.GetPixels());
 				clone.Apply();
 			}
 			else
 			{
-				// GPU path via temporary RenderTexture
-				RenderTexture rt = RenderTexture.GetTemporary(source.width, source.height, 0, RenderTextureFormat.Default, RenderTextureReadWrite.sRGB);
+				RenderTexture rt = RenderTexture.GetTemporary(source.width, source.height, 0,
+					RenderTextureFormat.Default, RenderTextureReadWrite.sRGB);
+
 				Graphics.Blit(source, rt);
-				RenderTexture previous = RenderTexture.active;
+				RenderTexture prev = RenderTexture.active;
 				RenderTexture.active = rt;
 				clone.ReadPixels(new Rect(0, 0, rt.width, rt.height), 0, 0);
 				clone.Apply();
-				RenderTexture.active = previous;
+				RenderTexture.active = prev;
 				RenderTexture.ReleaseTemporary(rt);
 			}
 
@@ -557,45 +551,40 @@ namespace MassiveHadronLtd
 		}
 
 		/// <summary>
-		/// Internal: Clones a Cubemap using Graphics.CopyTexture (very fast, GPU-side).
+		/// Clones a Cubemap with settings tuned to minimize grey seam borders.
 		/// </summary>
 		private static Cubemap CloneCubemap(Cubemap source)
 		{
-			Cubemap clone = new Cubemap(source.width, source.format, source.mipmapCount > 1)
+			// Important: Use the same mipmap setting as source
+			bool generateMips = source.mipmapCount > 1;
+
+			Cubemap clone = new Cubemap(source.width, source.format, generateMips)
 			{
-				wrapMode = source.wrapMode,
-				filterMode = source.filterMode,
+				// These are the key fixes for grey borders:
+				wrapMode = TextureWrapMode.Clamp,     // Prevents wrapping artifacts at edges
+				wrapModeU = TextureWrapMode.Clamp,
+				wrapModeV = TextureWrapMode.Clamp,
+				wrapModeW = TextureWrapMode.Clamp,
+
+				filterMode = source.filterMode,       // Keep original filtering (usually Bilinear/Trilinear)
 				anisoLevel = source.anisoLevel,
 				name = source.name + " (Clone)"
 			};
 
+			// Fast GPU-side copy of all 6 faces (including mipmaps if present)
 			for (int face = 0; face < 6; face++)
 			{
-				Graphics.CopyTexture(source, face, 0, clone, face, 0); // Copy all mip levels automatically if present
+				Graphics.CopyTexture(source, face, clone, face);   // Copies all mip levels
 			}
-
-			// Note: Cubemaps created at runtime are not readable by default.
-			// If you need CPU read access, you must set isReadable = true in the constructor (Unity 2021.2+).
 
 			return clone;
 		}
 
-		/// <summary>
-		/// Generic fallback using Graphics.CopyTexture for other texture types.
-		/// </summary>
 		private static Texture CloneViaGraphicsCopy(Texture source)
 		{
-			// This is a simple but effective GPU copy for most cases.
-			// For full control you can extend it per type if needed.
-			Debug.LogWarning($"Using generic clone for texture type: {source.GetType().Name}. " +
-							 "Performance may vary.");
-
-			// For now we redirect Cubemap and Texture2D to their specialized versions
+			Debug.LogWarning($"Generic clone fallback used for {source.GetType().Name}");
 			if (source is Cubemap c) return CloneCubemap(c);
 			if (source is Texture2D t2d) return t2d.Clone();
-
-			// You can add more specific cases here (e.g. Texture3D, CubemapArray...)
-
 			return null;
 		}
 	}
