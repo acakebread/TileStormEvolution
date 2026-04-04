@@ -2,6 +2,7 @@
 using UnityEngine.EventSystems;
 using System.Collections.Generic;
 using UnityEngine.UI;
+using MassiveHadronLtd.UI;
 
 namespace ClassicTilestorm
 {
@@ -43,6 +44,8 @@ namespace ClassicTilestorm
 			All = Left | Right | Top | Bottom
 		}
 
+		private UIHierarchyDelta hierarchyDelta;
+
 		public bool IsManagedByUIController => managedByUIController;
 		public bool IsAlwaysOnTop => alwaysOnTop;
 
@@ -57,72 +60,52 @@ namespace ClassicTilestorm
 		protected virtual void Awake()
 		{
 			EnsureInit();
-			SetupBringToFrontOnChildClick();
+			SetupHierarchyDelta();
+			RegisterExistingChildren();
 		}
 
-		private void SetupBringToFrontOnChildClick()
+		private void SetupHierarchyDelta()
 		{
-			var selectables = GetComponentsInChildren<Selectable>(true);
-			var scrollRects = GetComponentsInChildren<ScrollRect>(true);
-			var scrollbars = GetComponentsInChildren<Scrollbar>(true);
+			hierarchyDelta = GetComponent<UIHierarchyDelta>() ?? gameObject.AddComponent<UIHierarchyDelta>();
 
-			foreach (var item in selectables)
-			{
-				if (item == null) continue;
-				AddPointerDownListener(item.gameObject);
-			}
-			foreach (var item in scrollRects)
-			{
-				if (item == null) continue;
-				AddPointerDownListener(item.gameObject);
-			}
-			foreach (var item in scrollbars)
-			{
-				if (item == null) continue;
-				AddPointerDownListener(item.gameObject);
-			}
+			hierarchyDelta.OnItemAdded += OnUIItemAdded;
 		}
 
-		private void AddPointerDownListener(GameObject go)
+		private void OnUIItemAdded(GameObject newItem)
 		{
-			var trigger = go.GetComponent<EventTrigger>() ?? go.AddComponent<EventTrigger>();
-
-			var entry = new EventTrigger.Entry { eventID = EventTriggerType.PointerDown };
-			entry.callback.AddListener((data) =>
-			{
-				var ped = data as PointerEventData;
-				if (ped == null || ped.button != PointerEventData.InputButton.Left) return;
-
-				if (alwaysOnTop)
-				{
-					transform.SetAsLastSibling();
-				}
-				else
-				{
-					UIController.Instance?.CloseAllAlwaysOnTopPanels();
-				}
-			});
-
-			trigger.triggers.Add(entry);
+			RegisterItemAndChildren(newItem.transform);
 		}
 
-		// ====================== NEW HELPER ======================
-		/// <summary>
-		/// Call this when you dynamically create any interactable UI element 
-		/// (Toggle, Button, Dropdown, etc.) so it triggers bring-to-front logic.
-		/// </summary>
-		public void RegisterForBringToFront(GameObject uiElement)
+		private void RegisterExistingChildren()
 		{
-			if (uiElement == null) return;
-
-			var bringToFront = uiElement.GetComponent<BringToFrontOnClick>()
-							   ?? uiElement.AddComponent<BringToFrontOnClick>();
-
-			bringToFront.TargetPanel = this;
+			RegisterItemAndChildren(transform);
 		}
 
-		// ====================== BringToFrontOnClick (Internal) ======================
-		[RequireComponent(typeof(RectTransform))]
+		private void RegisterItemAndChildren(Transform root)
+		{
+			if (root == null) return;
+
+			if (root.TryGetComponent<Selectable>(out _) ||
+				root.TryGetComponent<ScrollRect>(out _) ||
+				root.TryGetComponent<Scrollbar>(out _))
+			{
+				AddBringToFrontComponent(root.gameObject);
+			}
+
+			foreach (Transform child in root)
+			{
+				RegisterItemAndChildren(child);
+			}
+		}
+
+		private void AddBringToFrontComponent(GameObject go)
+		{
+			if (go == null) return;
+
+			var component = go.GetComponent<BringToFrontOnClick>() ?? go.AddComponent<BringToFrontOnClick>();
+			component.TargetPanel = this;
+		}
+
 		private class BringToFrontOnClick : MonoBehaviour, IPointerDownHandler
 		{
 			public UIPanel TargetPanel { get; set; }
@@ -143,22 +126,17 @@ namespace ClassicTilestorm
 			}
 		}
 
-		// ====================== Original Methods (unchanged) ======================
+		// ==================== Original drag/resize code (unchanged) ====================
 		public void OnPointerDown(PointerEventData eventData)
 		{
-			if (eventData.button != PointerEventData.InputButton.Left)
-				return;
+			if (eventData.button != PointerEventData.InputButton.Left) return;
 
 			EnsureInit();
 
 			if (alwaysOnTop)
-			{
 				transform.SetAsLastSibling();
-			}
 			else
-			{
 				UIController.Instance?.CloseAllAlwaysOnTopPanels();
-			}
 
 			if (IsPointerOverInteractableUI(eventData))
 				return;
@@ -206,10 +184,7 @@ namespace ClassicTilestorm
 			isPointerDown = true;
 		}
 
-		public void OnPointerUp(PointerEventData eventData)
-		{
-			isPointerDown = false;
-		}
+		public void OnPointerUp(PointerEventData eventData) => isPointerDown = false;
 
 		public void OnDrag(PointerEventData eventData)
 		{
@@ -297,6 +272,9 @@ namespace ClassicTilestorm
 
 		protected virtual void OnDestroy()
 		{
+			if (hierarchyDelta != null)
+				hierarchyDelta.OnItemAdded -= OnUIItemAdded;
+
 			var controller = UIController.Instance;
 			if (controller != null)
 				controller.NotifyPanelDestroyed(this);
