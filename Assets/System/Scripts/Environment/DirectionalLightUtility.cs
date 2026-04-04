@@ -26,7 +26,6 @@ namespace MassiveHadronLtd
 			var util = instance.GetComponent<DirectionalLightUtility>();
 			var light = util.GetComponent<Light>();
 
-			light.lightmapBakeType = LightmapBakeType.Baked;
 			light.type = LightType.Directional;
 			light.shadows = LightShadows.Soft;
 
@@ -35,7 +34,7 @@ namespace MassiveHadronLtd
 
 		private void Awake()
 		{
-			transform.rotation = Quaternion.Euler(75f, 60f, 0f);//default
+			SetDefaultOrientation();
 			//SkyboxUtility.OnSkyboxChanged += UpdateFromSkybox;
 		}
 
@@ -44,16 +43,19 @@ namespace MassiveHadronLtd
 			//SkyboxUtility.OnSkyboxChanged -= UpdateFromSkybox;
 		}
 
-		public void UpdateFromSettings(Color value, float intentisty = 1f)
+		private void SetDefaultOrientation() => transform.rotation = Quaternion.Euler(75f, 60f, 0f);//default
+
+		public void UpdateFromSettings(Color value, float intensity = 1f)
 		{
 			directionalLight.color = value;
-			directionalLight.intensity = intentisty;
+			directionalLight.intensity = intensity;
+			SetDefaultOrientation();
 		}
 
-		public Color UpdateFromSkybox(Material skybox = null)
-		{
-			Cubemap cubemap = SkyboxUtility.GetTintedSkyboxCubemap(skybox);
+		//public Color UpdateFromSkyboxMaterial(Material skybox = null) => UpdateFromTintendCubemap(CubemapUtility.GetTintedCubemap(skybox));
 
+		public Color UpdateFromTintendCubemap(Cubemap cubemap = null)
+		{
 			if (cubemap == null)
 			{
 				directionalLight.color = Color.white;
@@ -62,17 +64,17 @@ namespace MassiveHadronLtd
 			}
 
 			// Bright color using your existing utility
-			Color brightColor = CubemapUtility.ComputeBrightColor(cubemap, threshold);
+			var brightColor = CubemapUtility.ComputeBrightColor(cubemap, threshold);
 
 			// Light direction
-			//Vector3 lightDir = AtlasCubemapUtility.FindLightDirection(cubemap);
-			//Vector3 lightDir = EquirectangularCubemapUtility.FindLightDirection(cubemap);
-			Vector3 lightDir = LinearCubemapUtility.FindLightDirection(cubemap);
+			//var lightDir = AtlasCubemapUtility.FindLightDirection(cubemap);
+			//var lightDir = EquirectangularCubemapUtility.FindLightDirection(cubemap);
+			var lightDir = LinearCubemapUtility.FindLightDirection(cubemap);
 
 			// Apply to light
 			directionalLight.color = brightColor;
 
-			float lum = brightColor.Luminance();
+			var lum = brightColor.Luminance();
 			directionalLight.intensity = Mathf.Max(minIntensity, lum * intensityMultiplier);
 
 			// Apply direction
@@ -89,6 +91,15 @@ namespace MassiveHadronLtd
 			Debug.Log($"Sky updated: BrightColor={brightColor}, Lum={lum:F3}, Intensity={directionalLight.intensity:F2}");
 
 			return directionalLight.color;
+		}
+
+		public void CopyFrom(DirectionalLightUtility other)
+		{
+			var otherLight = other.GetComponent<Light>();
+
+			directionalLight.color = otherLight.color;
+			directionalLight.intensity = otherLight.intensity;
+			transform.rotation = other.transform.rotation;
 		}
 	}
 }

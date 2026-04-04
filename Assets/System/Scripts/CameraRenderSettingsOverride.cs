@@ -8,6 +8,7 @@ namespace MassiveHadronLtd
 	{
 		private UnityRenderSettings originalSettings;
 		private UnityRenderSettings overrideSettings;   // The actual override values to apply
+		public UnityRenderSettings OverrideSettings { get => overrideSettings; set => overrideSettings = value; }
 
 		private void OnEnable()
 		{
@@ -26,14 +27,16 @@ namespace MassiveHadronLtd
 			if (cam != GetComponent<Camera>()) return;
 
 			// Save current global render settings
-			originalSettings = UnityRenderSettings.Clone();
+			originalSettings = UnityRenderSettings.CaptureCurrent();
 
 			// Apply the override values
+			RenderSettings.skybox = overrideSettings.skybox;
+
 			RenderSettings.ambientMode = overrideSettings.ambientMode;
 			RenderSettings.ambientLight = overrideSettings.ambientLight;
 			RenderSettings.ambientIntensity = overrideSettings.ambientIntensity;
-			RenderSettings.skybox = overrideSettings.skybox;
 			RenderSettings.ambientProbe = overrideSettings.ambientProbe;
+
 			RenderSettings.subtractiveShadowColor = overrideSettings.subtractiveShadowColor;
 		}
 
@@ -44,7 +47,5 @@ namespace MassiveHadronLtd
 			// Restore original settings
 			UnityRenderSettings.Restore(originalSettings);
 		}
-
-		public UnityRenderSettings OverrideSettings { get => overrideSettings; set => overrideSettings = value; }
 	}
 }

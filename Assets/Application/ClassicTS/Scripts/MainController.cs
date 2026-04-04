@@ -23,8 +23,8 @@ namespace ClassicTilestorm
 		{
 			//workaround for shader problem in command buffer
 			var cam = Camera.main;
-			if (cam != null && cam.GetComponent<CameraShaderPrimer>() == null)
-				cam.gameObject.AddComponent<CameraShaderPrimer>();
+			if (null != cam)
+				cam.gameObject.GetOrAddComponent<CameraShaderPrimer>();
 
 			var mainReflection = cam?.GetComponent<ReflectionEffectCamera>();
 			if (null != mainReflection) SkyboxUtility.OnSkyboxChanged += mainReflection.OnSkyboxChanged;
@@ -69,18 +69,26 @@ namespace ClassicTilestorm
 			if (string.IsNullOrEmpty(mapName ??= ApplicationSettings.LoadMapName))
 				return;
 
-			var currentMap = ResourceManager.Maps.FirstOrDefault(m => m.name == mapName)
+			var newMap = ResourceManager.Maps.FirstOrDefault(m => m.name == mapName)
 						  ?? ResourceManager.Maps.FirstOrDefault();
 
-			if (currentMap == null)
+			if (newMap == null)
 			{
 				Debug.LogError($"No map found for '{mapName}'! Available: {string.Join(", ", ResourceManager.Maps.Select(m => m.name))}");
 				return;
 			}
 
+			var mainReflection = Camera.main?.GetComponent<ReflectionEffectCamera>();
+
 			// ─── Cleanup previous map ─────────────────────────────────────
 			if (CurrentMap != null)
 			{
+				if (null != mainReflection)
+				{
+					CurrentMap.OnRenderSettingsChanged -= mainReflection.OnRenderSettingsChanged;
+					CurrentMap.OnEffectChanged -= mainReflection.OnEffectChanged;
+				}
+
 				editorController?.Reset();
 				cameraController?.Reset();
 				gameController?.Reset();
@@ -91,20 +99,37 @@ namespace ClassicTilestorm
 				DestroyImmediate(MapRoot.gameObject);
 
 			// ─── Create new container GameObject ──────────────────────────
-			var container = new GameObject($"Map: {currentMap.name}");
+			var container = new GameObject($"Map: {newMap.name}");
 			container.transform.SetParent(transform, false);
 			MapRoot = container.transform;
 
 			// ─── Load & initialise ────────────────────────────────────────
 
-			CurrentMap = currentMap;
-			currentMap.Initialise(MapRoot, !ApplicationSettings.Scrambled);
+			CurrentMap = newMap;
+
+			if (null != mainReflection)
+			{
+				mainReflection.SetEffectMode(CurrentMap.Effect);
+				mainReflection.SetOffset(-0.2f);
+				CurrentMap.OnRenderSettingsChanged += mainReflection.OnRenderSettingsChanged;
+				CurrentMap.OnEffectChanged += mainReflection.OnEffectChanged;
+			}
+
+			// Skybox - auto fixup legacy map data - will be removed soon
+			if (string.IsNullOrEmpty(CurrentMap.skybox))
+				CurrentMap.skybox = $"{CurrentMap.music}Skybox";
+
+			if (null == AssetRegistry<Material>.FindSkybox(CurrentMap.skybox))
+				CurrentMap.skybox = null;
+			// Skybox - auto fixup legacy map data - ends here
+
+			CurrentMap.Initialise(MapRoot, !ApplicationSettings.Scrambled);
 
 			// Eggbot
 			if (eggbotController != null)
 				DestroyImmediate(eggbotController.gameObject);
 
-			eggbotController = EggbotController.Instantiate(currentMap.character, transform);
+			eggbotController = EggbotController.Instantiate(CurrentMap.character, transform);
 			eggbotController?.Initialise(CurrentMap);
 			eggbotController.gameObject.SetActive(ApplicationSettings.CurrentMode != ApplicationMode.Editor);
 
@@ -112,39 +137,6 @@ namespace ClassicTilestorm
 			cameraController?.Initialise(CurrentMap, eggbotController);
 			gameController?.Initialise(CurrentMap);
 			editorController?.Initialise(CurrentMap);
-
-			// Skybox
-			if (string.IsNullOrEmpty(currentMap.skybox))
-				currentMap.skybox = $"{currentMap.music}Skybox";
-
-			if (null == AssetRegistry<Material>.FindSkybox(currentMap.skybox))
-				currentMap.skybox = null;
-
-			var mainReflection = Camera.main?.GetComponent<ReflectionEffectCamera>();
-			if (mainReflection != null)
-			{
-				mainReflection.SetEffectMode(currentMap.Effect);
-				mainReflection.SetOffset(-0.2f);
-				mainReflection.UpdateRenderSettings(currentMap.RenderSettings);
-			}
-
-			//RenderSettings.ambientLight = Color.white; //currentMap.AmbientLight;
-			//SkyboxUtility.SetSkybox(currentMap.skybox);//must set skybox after effect mode is set for now
-
-
-			//var mainReflection = Camera.main?.GetComponent<ReflectionEffectCamera>();
-			//if (mainReflection != null)
-			//{
-			//	string skyName = string.IsNullOrEmpty(currentMap.skybox)
-			//		? $"{currentMap.music}Skybox"
-			//		: currentMap.skybox;
-
-			//	Material mainSkyMat = SkyboxUtility.GetSkyboxMaterialForName(skyName);
-			//	if (mainSkyMat != null)
-			//	{
-			//		mainReflection.SetSkyboxOverride(mainSkyMat);
-			//	}
-			//}
 		}
 
 		//public void ReloadCurrentMap() { if (null != mapManager && null != mapManager.CurrentMap) LoadMap(mapManager.CurrentMap.name); }

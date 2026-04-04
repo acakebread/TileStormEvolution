@@ -62,7 +62,7 @@ namespace MassiveHadronLtd
 		{
 			if (null == previewCam) return;
 			var reflectionEffect = previewCam.GetComponent<ReflectionEffectCamera>();
-			reflectionEffect?.UpdateRenderSettings(renderSettings);
+			reflectionEffect?.OnRenderSettingsChanged(renderSettings);
 		}
 
 		public static void UpdateEffect(ReflectionEffectCamera.EffectMode effectMode = ReflectionEffectCamera.EffectMode.Null)

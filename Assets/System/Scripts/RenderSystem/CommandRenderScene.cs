@@ -30,7 +30,7 @@ namespace MassiveHadronLtd
 			cmd.SetGlobalColor("_MainLightColor", MainLightColor * MainLightIntensity);
 
 			cmd.SetGlobalFloat("_MainLightShadowStrength", 0f);
-			cmd.SetGlobalFloat("_AdditionalLightsCount", 0f);
+			//cmd.SetGlobalFloat("_AdditionalLightsCount", 0f);
 
 			cmd.SetGlobalColor("_AmbientLight", AmbientColor * AmbientIntensity);
 

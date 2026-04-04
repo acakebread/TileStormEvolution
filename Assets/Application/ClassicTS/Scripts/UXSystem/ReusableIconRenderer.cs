@@ -66,6 +66,8 @@ namespace ClassicTilestorm
 
 		public Texture2D RenderIcon(Definition def, float yaw = -1f, float pitch = -1f)
 		{
+			//Shader.SetGlobalInt("_AdditionalLightsCount", 0);
+
 			// ====================== PRIME THE SCENE HERE ======================
 			if (yaw >= 0 || pitch >= 0)
 				SetCameraRotation(yaw >= 0 ? yaw : 35f, pitch >= 0 ? pitch : 30f);

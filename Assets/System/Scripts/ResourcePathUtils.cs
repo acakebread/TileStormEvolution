@@ -19,10 +19,14 @@ namespace MassiveHadronLtd
 			if (string.IsNullOrEmpty(fullPath))
 				return string.Empty;
 
-			string normalized = fullPath.Replace('\\', '/');
+			var normalized = fullPath.Replace('\\', '/');
+			var directory = Path.GetDirectoryName(normalized)?.Replace('\\', '/');
 
-			string directory = Path.GetDirectoryName(normalized)?.Replace('\\', '/');
-			string fileName = Path.GetFileNameWithoutExtension(normalized);
+			//possibly add the trailing trim - needs testing
+			//var normalized = fullPath.Replace('\\', '/').Trim('/'); ;
+			//var directory = Path.GetDirectoryName(normalized)?.Replace('\\', '/').Trim('/'); ;
+
+			var fileName = Path.GetFileNameWithoutExtension(normalized);
 
 			string lowerExtension;
 			while (!string.IsNullOrEmpty(fileName) &&

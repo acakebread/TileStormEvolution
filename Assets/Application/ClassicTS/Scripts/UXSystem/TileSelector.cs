@@ -124,7 +124,18 @@ namespace ClassicTilestorm
 		}
 
 		//public void Start() { }
-		private void OnEnable() { if (null == _atlas) Rebuild(); }
+		//private void OnEnable() { if (null == _atlas) Rebuild(); }
+		private void OnEnable()
+		{
+			StartCoroutine(DelayRebuild());
+			IEnumerator DelayRebuild()
+			{
+				yield return null;
+				yield return null;
+				Rebuild();
+			}
+		}
+
 		//private void OnDisable() { }
 
 		//private CancellationTokenSource _rebuildCts;   // null when no rebuild is active
