@@ -478,6 +478,8 @@ namespace ClassicTilestorm
 
 				label.text = display;
 			}
+
+			RegisterForBringToFront(go);
 		}
 
 		private void ClearMapListItems()
