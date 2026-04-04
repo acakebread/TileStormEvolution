@@ -1052,19 +1052,16 @@ namespace ClassicTilestorm
 			var updateRenderSettings = ambient != other.ambient || skybox != other.skybox;
 			ambient = other.ambient;
 			if (skybox != other.skybox)
-			{
-				skybox = other.skybox;
-				//SkyboxUtility.SetSkybox(other.skybox);
-				//UpdateLighting(SkyboxMaterial);
-			}
+				skybox = other.skybox;//no need for this any more //SkyboxUtility.SetSkybox(other.skybox);
+
 			if (updateRenderSettings)
-				OnRenderSettingsChanged?.Invoke(RenderSettings);
+				OnRenderSettingsChanged?.Invoke(RenderSettings);// for reflection effect camera connected to this map
 
 			//effect
 			effect = other.effect;
 			OnEffectChanged?.Invoke(Effect);
 		}
 
-		public Action<UnityRenderSettings> OnRenderSettingsChanged;
+		public Action<UnityRenderSettings> OnRenderSettingsChanged;// for reflection effect camera connected to this map
 	}
 }
