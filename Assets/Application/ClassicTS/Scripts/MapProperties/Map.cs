@@ -404,7 +404,7 @@ namespace ClassicTilestorm
 				waypoints = this.GenerateWaypoints();
 			parent.gameObject.GetOrAddComponent<WindController>();
 
-			SkyboxUtility.OnSkyboxChanged += OnSkyboxChanged;
+			//SkyboxUtility.OnSkyboxChanged += OnSkyboxChanged;
 
 			OnRenderSettingsChanged?.Invoke(RenderSettings);
 
@@ -415,7 +415,7 @@ namespace ClassicTilestorm
 		{
 			OnMapEdited = null;
 
-			SkyboxUtility.OnSkyboxChanged -= OnSkyboxChanged;
+			// SkyboxUtility.OnSkyboxChanged -= OnSkyboxChanged;
 
 			DestroyAllGraphTiles();
 
@@ -1054,7 +1054,8 @@ namespace ClassicTilestorm
 			if (skybox != other.skybox)
 			{
 				skybox = other.skybox;
-				SkyboxUtility.SetSkybox(other.skybox);
+				//SkyboxUtility.SetSkybox(other.skybox);
+				//UpdateLighting(SkyboxMaterial);
 			}
 			if (updateRenderSettings)
 				OnRenderSettingsChanged?.Invoke(RenderSettings);

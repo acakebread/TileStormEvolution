@@ -26,8 +26,8 @@ namespace ClassicTilestorm
 			if (null != cam)
 				cam.gameObject.GetOrAddComponent<CameraShaderPrimer>();
 
-			var mainReflection = cam?.GetComponent<ReflectionEffectCamera>();
-			if (null != mainReflection) SkyboxUtility.OnSkyboxChanged += mainReflection.OnSkyboxChanged;
+			//var mainReflection = cam?.GetComponent<ReflectionEffectCamera>();
+			//if (null != mainReflection) SkyboxUtility.OnSkyboxChanged += mainReflection.OnSkyboxChanged;
 
 			// === ADD AUDIO MANAGER AUTOMATICALLY ===
 			gameObject.AddComponent<AudioManager>(); //audioManager = gameObject.AddComponent<AudioManager>();

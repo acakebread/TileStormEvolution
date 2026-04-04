@@ -783,7 +783,11 @@ namespace ClassicTilestorm
 		private void UpdateMainView()
 		{
 			if (CurrentMap.name == MainController.CurrentMap.name)
+			{
 				CurrentMap.CopyFrom(currentClone);
+
+				//MainController.CurrentMap.UpdateLighting();
+			}
 			else
 			{
 				CurrentMap.sunlight = currentClone.sunlight;
