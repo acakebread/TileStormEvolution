@@ -76,8 +76,10 @@ namespace MassiveHadronLtd
 		private bool isTextureDynamic;
 		private float timeSeed;
 
-		private EffectMode lastAppliedMode = EffectMode.Null;
 		private Texture tintedSkyboxTexture;
+
+		// Private field used only for internal change detection (replaces lastAppliedMode)
+		private EffectMode _currentBuiltMode = EffectMode.Null;
 
 		private void Awake()
 		{
@@ -95,6 +97,7 @@ namespace MassiveHadronLtd
 			var ppCamera = transform.GetComponentInChildren<PostProcessingCameraController>(true);
 			if (ppCamera) postProcessingCamera = ppCamera.GetComponent<Camera>();
 
+			// Main camera command provider
 			var provider = mainCamera.gameObject.GetOrAddComponent<CameraCommandProvider>();
 			provider.RegisterCommand(RenderPassEvent.BeforeRenderingTransparents, OnBeforeRenderingTransparents);
 
@@ -104,15 +107,17 @@ namespace MassiveHadronLtd
 			CreateReflectionCamera();
 			CreateTextureCamera();
 
-			effectMesh = new Mesh();
+			effectMesh = new Mesh(); // reused for all modes
 
+			// CRITICAL ORDER FIX: create the render texture BEFORE the first material build
+			CreateOrResizeReflectionTexture(Screen.width, Screen.height);
+			tintedSkyboxTexture = CubemapUtility.GetSkyboxAsCubemap().Clone();
+
+			// Now safe to build the effect (renderTexture exists)
 			if (effectMode == EffectMode.Null)
 				Invoke(nameof(CheckAndApplyDefaultEffectAfterDelay), 0f);
 			else
 				UpdateEffect(effectMode);
-
-			CreateOrResizeReflectionTexture(Screen.width, Screen.height);
-			tintedSkyboxTexture = CubemapUtility.GetSkyboxAsCubemap().Clone();
 		}
 
 		private void OnBeforeRenderingTransparents(RasterCommandBuffer cmd, Camera cam)
@@ -229,14 +234,15 @@ namespace MassiveHadronLtd
 		}
 
 		// ===================================================================
-		// UpdateEffect - Now the single unified method (material + properties)
+		// UpdateEffect - Single unified method (material creation + properties)
 		// ===================================================================
 		private void UpdateEffect(EffectMode value)
 		{
 			if (value == EffectMode.Null)
 				value = EffectMode.Debug;
 
-			bool modeChanged = (effectMode != value) || (effectMaterial == null) || (lastAppliedMode != value);
+			// Only rebuild the material when the mode actually changed or we have no material yet
+			bool modeChanged = (_currentBuiltMode != value) || (effectMaterial == null);
 
 			effectMode = value;
 
@@ -244,7 +250,7 @@ namespace MassiveHadronLtd
 			{
 				Debug.Log($"[ReflectionEffectCamera] Rebuilding material for mode: {effectMode}", this);
 
-				// Cleanup previous dynamic resources
+				// Explicit cleanup of dynamic resources from previous mode
 				if (effectMaterial != null && isMaterialDynamic)
 				{
 					DestroyImmediate(effectMaterial);
@@ -258,7 +264,7 @@ namespace MassiveHadronLtd
 				}
 				isMaterialDynamic = false;
 
-				// Create new material based on mode
+				// Mode-specific material creation
 				switch (effectMode)
 				{
 					case EffectMode.PerfectMirror:
@@ -303,7 +309,7 @@ namespace MassiveHadronLtd
 						break;
 				}
 
-				// Camera setup
+				// Final camera setup
 				if (effectMaterial != null)
 				{
 					if (textureCamera)
@@ -323,10 +329,10 @@ namespace MassiveHadronLtd
 					if (reflectionCamera) reflectionCamera.targetTexture = null;
 				}
 
-				lastAppliedMode = effectMode;
+				_currentBuiltMode = effectMode; // remember what we just built
 			}
 
-			// === Property updates (always executed, but very cheap when mode unchanged) ===
+			// === Property updates (always executed – very cheap when mode is unchanged) ===
 			if (effectMaterial == null) return;
 
 			switch (effectMode)
@@ -335,7 +341,6 @@ namespace MassiveHadronLtd
 					effectMaterial.SetTexture("_MainTex", renderTexture);
 					effectMaterial.SetColor("_DimColor", mirrorTint);
 					break;
-
 				case EffectMode.SurfaceFilm:
 					effectMaterial.SetTexture("_MainTex", renderTexture);
 					effectMaterial.SetColor("_DimColor", mirrorTint);
@@ -343,7 +348,6 @@ namespace MassiveHadronLtd
 					effectMaterial.SetFloat("_NoiseScale", noiseScale);
 					if (noiseTexture != null) effectMaterial.SetTexture("_NoiseTex", noiseTexture);
 					break;
-
 				case EffectMode.FrostEffect:
 					effectMaterial.SetTexture("_MainTex", renderTexture);
 					effectMaterial.SetColor("_BaseColor", mirrorTint);
@@ -351,7 +355,6 @@ namespace MassiveHadronLtd
 					effectMaterial.SetFloat("_NoiseStrength", noiseStrength);
 					if (noiseTexture != null) effectMaterial.SetTexture("_NoiseTex", noiseTexture);
 					break;
-
 				case EffectMode.Water:
 					effectMaterial.SetTexture("_MainTex", renderTexture);
 					effectMaterial.SetColor("_BaseColor", mirrorTint);
@@ -362,7 +365,6 @@ namespace MassiveHadronLtd
 					effectMaterial.SetFloat("_ReflectionStrength", reflectionStrength);
 					if (tintedSkyboxTexture != null) effectMaterial.SetTexture("_Skybox", tintedSkyboxTexture);
 					break;
-
 				case EffectMode.OceanEffect:
 					effectMaterial.SetTexture("_MainTex", renderTexture);
 					effectMaterial.SetColor("_BaseColor", mirrorTint);
@@ -414,25 +416,13 @@ namespace MassiveHadronLtd
 			}
 		}
 
+		// Minimal OnValidate – only needed for Inspector changes in Play Mode.
+		// The script works perfectly at runtime without it.
 		public void OnValidate()
 		{
-			if (!isActiveAndEnabled) return;
-
-			if (Application.isPlaying && lastAppliedMode == effectMode)
-			{
-				// Mode unchanged → just update properties (very cheap)
-				UpdateEffect(effectMode);
-			}
-			else
-			{
-				ApplyDefaults(effectMode);
-				Invoke(nameof(DeferredRebuild), 0f);
-			}
-
-			lastAppliedMode = effectMode;
+			if (!isActiveAndEnabled || !Application.isPlaying) return;
+			UpdateEffect(effectMode);
 		}
-
-		private void DeferredRebuild() => UpdateEffect(effectMode);
 
 		public void OnRenderSettingsChanged(UnityRenderSettings renderSettings)
 		{
@@ -442,7 +432,7 @@ namespace MassiveHadronLtd
 				overrideComp.OverrideSettings = renderSettings;
 			}
 			tintedSkyboxTexture = CubemapUtility.GetTintedCubemap(renderSettings.skybox).Clone();
-			UpdateEffect(effectMode);   // Updated call
+			UpdateEffect(effectMode);
 		}
 
 		public void SetExternalOutputTexture(RenderTexture value)

@@ -60,13 +60,12 @@ public class ReflectionEffectCameraEditor : Editor
 				break;
 		}
 
-		//EditorGUILayout.LabelField("Post Processing Settings", EditorStyles.boldLabel);
-		//EditorGUILayout.PropertyField(serializedObject.FindProperty("postProcessingCamera"));
-
+		// Apply changes and trigger UpdateEffect in Play Mode
 		if (serializedObject.ApplyModifiedProperties())
 		{
 			var targetScript = (ReflectionEffectCamera)target;
-			targetScript.OnValidate();
+			if (Application.isPlaying)
+				targetScript.OnValidate();   // This now safely calls UpdateEffect
 		}
 	}
 }
