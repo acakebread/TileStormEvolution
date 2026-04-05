@@ -108,12 +108,6 @@ namespace ClassicTilestorm
 			PopulateEffectDropdown();
 			RefreshMapList();
 
-			//SyncColorTogglesToCurrentMap();
-			//SyncColorButtonsToCurrentMap();
-			//SyncSkyboxDropdown();
-			//SyncCharacterDropdown();
-			//SyncEffectDropdown();
-
 			if (InitialiseMapPreview())
 			{
 				UpdateMapPreview();

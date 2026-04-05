@@ -72,66 +72,90 @@ namespace MassiveHadronLtd
 			var reflectionEffect = previewCam.GetComponent<ReflectionEffectCamera>();
 			if (reflectionEffect == null) return;
 			reflectionEffect.SetEffectMode(effectMode, useDefaults: true);
-			// Keep the default offset behavior (you can later make this more flexible)
-			reflectionEffect.SetOffset(-0.2f);
+			reflectionEffect.SetOffset(-0.2f);// default offset
 			SetPreviewUI(targetRawImage);
 		}
 
 		public static void Update()
 		{
-			if (targetRawImage == null || previewCam == null) return;
-
-			var rectTransform = targetRawImage.rectTransform;
-			Vector2 currentSize = rectTransform.rect.size;
-
-			if (currentSize.x <= 0 || currentSize.y <= 0) return;
-			if (currentSize == lastKnownSize) return;
-			if (currentSize.x < 16 || currentSize.y < 16) return;
-
-			lastKnownSize = currentSize;
-
-			int w = Mathf.RoundToInt(currentSize.x);
-			int h = Mathf.RoundToInt(currentSize.y);
-
-			previewCam.aspect = (float)w / h;
+			if (!targetRawImage || !previewCam) return;
 
 			var reflectionEffect = previewCam.GetComponent<ReflectionEffectCamera>();
-			if (reflectionEffect != null)
-			{
-				reflectionEffect.CreateOrResizeReflectionTexture(w, h);
+			if (!reflectionEffect) return;
 
-				targetRawImage.texture = reflectionEffect.GetOutputTexture();
-				targetRawImage.color = Color.white;
+			var rectTransform = targetRawImage.rectTransform;
+			var currentSize = rectTransform.rect.size;
+
+			if (currentSize.x <= 0 || currentSize.y <= 0)
+			{
+				targetRawImage.color = Color.red;//indicates error
+				targetRawImage.enabled = false;
+				reflectionEffect.gameObject.SetActive(false);
+				return;
 			}
+			if (currentSize == lastKnownSize) return;
+			lastKnownSize = currentSize;
+
+			targetRawImage.color = Color.white;
+			targetRawImage.enabled = true;
+			reflectionEffect.gameObject.SetActive(true);
+
+			var w = Mathf.RoundToInt(currentSize.x);
+			var h = Mathf.RoundToInt(currentSize.y);
+
+			previewCam.aspect = (float)w / h;
+			var outputTexture = UpdateRenderTexture(w, h);
+
+			reflectionEffect.SetExternalOutputTexture(outputTexture);
+
+			targetRawImage.texture = outputTexture;
 		}
 
 		public static void SetPreviewUI(RawImage rawImage = null)
 		{
-			var reflectionEffect = previewCam.GetComponent<ReflectionEffectCamera>();
-			if (null == reflectionEffect) return;
-			reflectionEffect.SetRenderToTextureMode(null != rawImage);
-			if (null == rawImage) return;
-
+			if (!rawImage) return;
 			targetRawImage = rawImage;
-
-			if (rawImage != null && previewCam != null)
-			{
-				rawImage.texture = reflectionEffect.GetOutputTexture();
-				rawImage.color = Color.white;
-			}
-
 			Update();
 		}
 
 		public static void Cleanup()
 		{
-			if (root != null)
+			if (root)
 				Object.DestroyImmediate(root);
-
 			root = null;
+
+			if (outputRenderTexture)
+				Object.DestroyImmediate(outputRenderTexture);
+			outputRenderTexture = null;
+
 			previewCam = null;
 			targetRawImage = null;
 			lastKnownSize = Vector2.zero;
+		}
+
+		private static RenderTexture outputRenderTexture;
+		private static RenderTexture UpdateRenderTexture(int targetWidth, int targetHeight)
+		{
+			var outputNeedsResize = outputRenderTexture == null || outputRenderTexture.width != targetWidth || outputRenderTexture.height != targetHeight;
+			if (outputNeedsResize)
+			{
+				if (outputRenderTexture != null)
+				{
+					Object.DestroyImmediate(outputRenderTexture);
+					outputRenderTexture = null;
+				}
+
+				outputRenderTexture = new RenderTexture(targetWidth, targetHeight, 24, RenderTextureFormat.ARGB32)
+				{
+					name = "preview render texture",//  "$"Output_{effectMode}",
+					useMipMap = false,
+					autoGenerateMips = false,
+					filterMode = FilterMode.Bilinear,
+					useDynamicScale = true
+				};
+				outputRenderTexture.Create();
+			}
+			return outputRenderTexture;
 		}
 	}
 }

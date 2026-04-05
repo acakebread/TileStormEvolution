@@ -21,10 +21,10 @@ namespace ClassicTilestorm
 
 		private void Awake()
 		{
-			//workaround for shader problem in command buffer
-			var cam = Camera.main;
-			if (null != cam)
-				cam.gameObject.GetOrAddComponent<CameraShaderPrimer>();
+			//workaround for shader problem in command buffer - doesn't appear to be needed any more - comment out for now
+			//var cam = Camera.main;
+			//if (null != cam)
+			//	cam.gameObject.GetOrAddComponent<CameraShaderPrimer>();
 
 			//var mainReflection = cam?.GetComponent<ReflectionEffectCamera>();
 			//if (null != mainReflection) SkyboxUtility.OnSkyboxChanged += mainReflection.OnSkyboxChanged;
