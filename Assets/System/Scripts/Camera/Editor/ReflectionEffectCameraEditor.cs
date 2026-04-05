@@ -15,9 +15,11 @@ public class ReflectionEffectCameraEditor : Editor
 
 		EditorGUILayout.Space();
 		EditorGUILayout.LabelField("Reflection Effects", EditorStyles.boldLabel);
+
 		var effectModeProp = serializedObject.FindProperty("effectMode");
 		EditorGUILayout.PropertyField(effectModeProp);
 
+		// Show only relevant properties based on current mode
 		switch ((ReflectionEffectCamera.EffectMode)effectModeProp.enumValueIndex)
 		{
 			case ReflectionEffectCamera.EffectMode.PerfectMirror:
@@ -60,12 +62,6 @@ public class ReflectionEffectCameraEditor : Editor
 				break;
 		}
 
-		// Apply changes and trigger UpdateEffect in Play Mode
-		if (serializedObject.ApplyModifiedProperties())
-		{
-			var targetScript = (ReflectionEffectCamera)target;
-			if (Application.isPlaying)
-				targetScript.OnValidate();   // This now safely calls UpdateEffect
-		}
+		serializedObject.ApplyModifiedProperties();
 	}
 }

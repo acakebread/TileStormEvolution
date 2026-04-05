@@ -72,7 +72,6 @@ namespace MassiveHadronLtd
 
 		private Mesh effectMesh;
 		private Material effectMaterial;
-		private bool isMaterialDynamic;
 		private bool isTextureDynamic;
 		private float timeSeed;
 
@@ -107,16 +106,15 @@ namespace MassiveHadronLtd
 
 			tintedSkyboxTexture = CubemapUtility.GetSkyboxAsCubemap().Clone();
 
-			// Force initial build by treating it as a mode change
+			// Force initial build
 			EffectMode startMode = effectMode;
-			effectMode = EffectMode.Null;                    // Force rebuild on first UpdateEffect
+			effectMode = EffectMode.Null;   // Force rebuild on first call
 
 			if (startMode == EffectMode.Null)
 				Invoke(nameof(CheckAndApplyDefaultEffectAfterDelay), 0f);
 			else
 				UpdateEffect(startMode);
 
-			// Create initial render texture
 			CreateOrResizeReflectionTexture(Screen.width, Screen.height);
 		}
 
@@ -133,14 +131,11 @@ namespace MassiveHadronLtd
 
 		private void CheckAndApplyDefaultEffectAfterDelay()
 		{
-			if (effectMode != EffectMode.Null)
-				Debug.Log($"Effect was set to {effectMode} during delay frame — applying immediately", this);
-			else
-			{
-				effectMode = EffectMode.Debug;
-				Debug.Log($"Auto-applied default effect {effectMode} after one-frame delay (was Null)", this);
-			}
-			UpdateEffect(effectMode);
+			EffectMode modeToApply = effectMode != EffectMode.Null ? effectMode : EffectMode.Debug;
+			if (effectMode == EffectMode.Null)
+				Debug.Log($"Auto-applied default effect {modeToApply} after one-frame delay (was Null)", this);
+
+			UpdateEffect(modeToApply);
 		}
 
 		private void CreateReflectionCamera()
@@ -185,7 +180,6 @@ namespace MassiveHadronLtd
 
 		public void SetEffectMode(EffectMode value, bool useDefaults = true)
 		{
-			// No early return - let UpdateEffect decide whether to rebuild
 			if (useDefaults) ApplyDefaults(value);
 			UpdateEffect(value);
 		}
@@ -237,15 +231,14 @@ namespace MassiveHadronLtd
 			if (value == EffectMode.Null)
 				value = EffectMode.Debug;
 
-			// Rebuild only if mode actually changed or we have no material yet
-			bool modeChanged = (effectMode != value) || (effectMaterial == null);
+			bool modeChanged = effectMode != value || effectMaterial == null;
 
 			if (modeChanged)
 			{
 				Debug.Log($"[ReflectionEffectCamera] Rebuilding material for mode: {value}", this);
 
-				// Cleanup previous dynamic resources
-				if (effectMaterial != null && isMaterialDynamic)
+				// Cleanup previous material and dynamic texture
+				if (effectMaterial != null)
 				{
 					DestroyImmediate(effectMaterial);
 					effectMaterial = null;
@@ -256,40 +249,34 @@ namespace MassiveHadronLtd
 					noiseTexture = null;
 					isTextureDynamic = false;
 				}
-				isMaterialDynamic = false;
 
-				// Create material for the new mode
+				// Create new material
 				switch (value)
 				{
 					case EffectMode.PerfectMirror:
 						effectMaterial = MaterialUtils.CreatePerfectMirrorOpaqueMaterial(renderTexture, mirrorTint);
-						isMaterialDynamic = true;
 						break;
 
 					case EffectMode.SurfaceFilm:
 						noiseTexture = WangTileGenerator.GenerateWangTileAtlas();
 						isTextureDynamic = true;
 						effectMaterial = MaterialUtils.CreatePerlinWangOpaque(renderTexture, mirrorTint, noiseTexture, mirrorTint.a, noiseScale);
-						isMaterialDynamic = true;
 						break;
 
 					case EffectMode.FrostEffect:
 						noiseTexture = WangTileGenerator.GenerateWangTileAtlas();
 						isTextureDynamic = true;
 						effectMaterial = MaterialUtils.CreateFrostOpaqueMaterial(mirrorTint, frostDepth, renderTexture, noiseTexture, noiseStrength);
-						isMaterialDynamic = true;
 						break;
 
 					case EffectMode.Water:
 						effectMaterial = MaterialUtils.CreateWaterMaterialOpaque(mirrorTint, renderTexture, rippleSpeed, rippleAmplitude, rippleFrequency, rippleOffset, reflectionStrength, null);
-						isMaterialDynamic = true;
 						break;
 
 					case EffectMode.OceanEffect:
 						noiseTexture = WangTileGenerator.GenerateWangTileAtlas();
 						isTextureDynamic = true;
 						effectMaterial = MaterialUtils.CreateOceanOpaqueMaterial(mirrorTint, rippleSpeed, rippleAmplitude, rippleFrequency, rippleOffset, frostDepth, noiseStrength, frostThreshold, frostFadeRange, null, noiseTexture);
-						isMaterialDynamic = true;
 						break;
 
 					default:
@@ -303,7 +290,7 @@ namespace MassiveHadronLtd
 						break;
 				}
 
-				// Camera setup
+				// Setup cameras
 				if (effectMaterial != null)
 				{
 					if (textureCamera)
@@ -323,11 +310,10 @@ namespace MassiveHadronLtd
 					if (reflectionCamera) reflectionCamera.targetTexture = null;
 				}
 
-				// Only now commit the new mode
-				effectMode = value;
+				effectMode = value;   // Commit the new mode only after successful rebuild
 			}
 
-			// === Property updates (always run - very cheap) ===
+			// Always update properties (cheap)
 			if (effectMaterial == null) return;
 
 			switch (effectMode)
@@ -433,8 +419,21 @@ namespace MassiveHadronLtd
 
 		public void OnValidate()
 		{
-			if (!isActiveAndEnabled || !Application.isPlaying) return;
-			UpdateEffect(effectMode);
+			if (!isActiveAndEnabled) return;
+
+			// In Play Mode: treat mode change as a full SetEffectMode equivalent
+			if (Application.isPlaying)
+			{
+				// Force rebuild if mode changed (we temporarily set to Null to guarantee rebuild)
+				EffectMode modeToApply = effectMode;
+				effectMode = EffectMode.Null;           // Force modeChanged = true in UpdateEffect
+				UpdateEffect(modeToApply);
+			}
+			else
+			{
+				// In Editor: just apply defaults when mode changes (no heavy rebuild)
+				ApplyDefaults(effectMode);
+			}
 		}
 
 		public void OnRenderSettingsChanged(UnityRenderSettings renderSettings)
@@ -507,7 +506,7 @@ namespace MassiveHadronLtd
 			if (reflectionCamera) reflectionCamera.targetTexture = null;
 			if (textureCamera) textureCamera.targetTexture = null;
 
-			if (effectMaterial != null && isMaterialDynamic) DestroyImmediate(effectMaterial);
+			if (effectMaterial != null) DestroyImmediate(effectMaterial);
 			if (effectMesh != null) DestroyImmediate(effectMesh);
 			if (renderTexture != null) DestroyImmediate(renderTexture);
 			if (isTextureDynamic && noiseTexture != null) DestroyImmediate(noiseTexture);
