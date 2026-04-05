@@ -43,6 +43,8 @@ namespace ClassicTilestorm
 			}
 		}
 
+		// ====================== Existing Public API ======================
+
 		public static T OpenPanel<T>(bool closeOthers = true) where T : UIPanel
 		{
 			if (Instance == null) return null;
@@ -57,6 +59,123 @@ namespace ClassicTilestorm
 
 		public static void CloseCurrent() => Instance?.CloseTopPanelInternal();
 		public static void ClosePanel<T>() where T : UIPanel => Instance?.ClosePanelInternal(typeof(T));
+
+		// ====================== NEW Public API for Hide/Show ======================
+
+		/// <summary>
+		/// Shows a panel. If it already exists (even if hidden), it will be re-activated.
+		/// If it doesn't exist, it will be instantiated.
+		/// </summary>
+		public static T ShowPanel<T>(bool closeOthers = true) where T : UIPanel
+		{
+			if (Instance == null) return null;
+			return Instance.ShowPanelInternal<T>(typeof(T), closeOthers);
+		}
+
+		/// <summary>
+		/// Hides a panel by deactivating it (SetActive(false)) instead of destroying it.
+		/// The panel remains in memory and can be shown again quickly with ShowPanel.
+		/// </summary>
+		public static void HidePanel<T>() where T : UIPanel
+			=> Instance?.HidePanelInternal(typeof(T));
+
+		/// <summary>
+		/// Hides the currently top panel without destroying it.
+		/// </summary>
+		public static void HideCurrent()
+			=> Instance?.HideTopPanelInternal();
+
+		/// <summary>
+		/// Hides all managed panels (useful when entering/exiting editor modes).
+		/// </summary>
+		public static void HideAllManagedPanels()
+			=> Instance?.HideManagedPanelsInternal();
+
+		// ====================== Internal Methods ======================
+
+		private T ShowPanelInternal<T>(Type panelType, bool requestedCloseOthers) where T : UIPanel
+		{
+			var effectiveCloseOthers = requestedCloseOthers && IsPanelTypeManaged(panelType);
+
+			if (effectiveCloseOthers)
+				HideManagedPanelsInternal();
+
+			// Check if panel already exists (active or hidden)
+			var existing = activePanels.Find(p => p != null && p.TryGetComponent(panelType, out _));
+
+			if (existing != null)
+			{
+				existing.SetActive(true);
+				BringToFront(existing);
+
+				var panelScript = existing.GetComponent<T>();
+				currentTopPanel = panelScript;
+				panelScript?.OnPanelOpened();
+				return panelScript;
+			}
+
+			// First time - create it
+			return OpenPanelInternal<T>(panelType, false);
+		}
+
+		private void HideTopPanelInternal()
+		{
+			if (currentTopPanel == null) return;
+
+			currentTopPanel.OnPanelClosed();
+			currentTopPanel.gameObject.SetActive(false);
+			// Note: We do NOT remove it from activePanels or destroy it
+
+			currentTopPanel = activePanels.Count > 0
+				? activePanels[^1].GetComponent<UIPanel>()
+				: null;
+		}
+
+		private void HidePanelInternal(Type panelType)
+		{
+			for (var i = activePanels.Count - 1; i >= 0; i--)
+			{
+				var panelObj = activePanels[i];
+				if (panelObj == null) continue;
+
+				if (panelObj.TryGetComponent(panelType, out Component comp))
+				{
+					var script = comp as UIPanel;
+					if (script == null) continue;
+
+					script.OnPanelClosed();
+					panelObj.SetActive(false);        // Hide instead of Destroy
+
+					if (currentTopPanel == script)
+						currentTopPanel = activePanels.Count > 0
+							? activePanels[^1].GetComponent<UIPanel>()
+							: null;
+
+					return;
+				}
+			}
+		}
+
+		private void HideManagedPanelsInternal()
+		{
+			for (var i = activePanels.Count - 1; i >= 0; i--)
+			{
+				var panelObj = activePanels[i];
+				if (panelObj == null) continue;
+
+				var script = panelObj.GetComponent<UIPanel>();
+				if (script == null || !script.IsManagedByUIController) continue;
+
+				script.OnPanelClosed();
+				panelObj.SetActive(false);            // Hide, don't destroy
+			}
+
+			currentTopPanel = activePanels.Count > 0
+				? activePanels[^1].GetComponent<UIPanel>()
+				: null;
+		}
+
+		// ====================== Original Internal Methods (mostly unchanged) ======================
 
 		private T OpenPanelInternal<T>(Type panelType, bool requestedCloseOthers) where T : UIPanel
 		{
@@ -212,7 +331,6 @@ namespace ClassicTilestorm
 				activePanels.RemoveAt(i);
 			}
 
-			// Update current top panel
 			currentTopPanel = activePanels.Count > 0 ? activePanels[^1].GetComponent<UIPanel>() : null;
 		}
 	}

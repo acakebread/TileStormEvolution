@@ -143,7 +143,7 @@ namespace ClassicTilestorm
 			GetComponent<MainCameraController>()?.SelectCameraSystem(CameraModeRegistry.Editor, false);
 
 			// Open the EditorScreenUI panel (non-managed, so it won't close other panels)
-			UIController.OpenPanel<EditorScreenUI>();
+			UIController.OpenPanel<EditorScreenUI>();//open or enable if disabled
 
 			GridLinesUtil.Enabled = ApplicationSettings.ShowEditorGrid & isActiveAndEnabled;
 			SetMode(ControllerMode.Idle);
@@ -152,7 +152,7 @@ namespace ClassicTilestorm
 		private void OnDisable()
 		{
 			// Close only the EditorScreenUI panel
-			UIController.ClosePanel<EditorScreenUI>();
+			UIController.HidePanel<EditorScreenUI>(); //UIController.ClosePanel<EditorScreenUI>();//replace with disable or hide panel
 
 			ClearSelection();
 			GridLinesUtil.Enabled = false;
