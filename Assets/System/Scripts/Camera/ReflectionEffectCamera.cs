@@ -112,8 +112,9 @@ namespace MassiveHadronLtd
 			if (effectMode == EffectMode.Null)
 				Invoke(nameof(CheckAndApplyDefaultEffectAfterDelay), 0f);
 			else
-				ApplyEffect(effectMode);
+				UpdateEffect(effectMode);
 
+			CreateOrResizeReflectionTexture(Screen.width, Screen.height);
 			tintedSkyboxTexture = CubemapUtility.GetSkyboxAsCubemap().Clone();
 		}
 
@@ -137,7 +138,7 @@ namespace MassiveHadronLtd
 				effectMode = EffectMode.Debug;
 				Debug.Log($"Auto-applied default effect {effectMode} after one-frame delay (was Null)", this);
 			}
-			ApplyEffect(effectMode);
+			UpdateEffect(effectMode);
 		}
 
 		private void CreateReflectionCamera()
@@ -185,7 +186,7 @@ namespace MassiveHadronLtd
 			if (effectMode == value) return;
 			effectMode = value;
 			if (useDefaults) ApplyDefaults(value);
-			ApplyEffect(value);
+			UpdateEffect(value);
 		}
 
 		public void ApplyDefaults(EffectMode value)
@@ -231,9 +232,9 @@ namespace MassiveHadronLtd
 		}
 
 		// ===================================================================
-		// Refactored ApplyEffect - no withReset flag, explicit cleanup
+		// UpdateEffect
 		// ===================================================================
-		private void ApplyEffect(EffectMode value)
+		private void UpdateEffect(EffectMode value)
 		{
 			effectMode = value;
 
@@ -251,20 +252,15 @@ namespace MassiveHadronLtd
 			}
 			isMaterialDynamic = false;
 
-			// Always resize the main reflection texture
-			CreateOrResizeReflectionTexture(Screen.width, Screen.height);
-
 			// Mode-specific material creation
 			switch (effectMode)
 			{
 				case EffectMode.PerfectMirror:
-					renderTexture.name = "RenderTexture";
 					effectMaterial = MaterialUtils.CreatePerfectMirrorOpaqueMaterial(renderTexture, mirrorTint);
 					isMaterialDynamic = true;
 					break;
 
 				case EffectMode.SurfaceFilm:
-					renderTexture.name = "MirrorWithFilmRT";
 					noiseTexture = WangTileGenerator.GenerateWangTileAtlas();
 					isTextureDynamic = true;
 					effectMaterial = MaterialUtils.CreatePerlinWangOpaque(renderTexture, mirrorTint, noiseTexture, mirrorTint.a, noiseScale);
@@ -272,7 +268,6 @@ namespace MassiveHadronLtd
 					break;
 
 				case EffectMode.FrostEffect:
-					renderTexture.name = "RenderTexture";
 					noiseTexture = WangTileGenerator.GenerateWangTileAtlas();
 					isTextureDynamic = true;
 					effectMaterial = MaterialUtils.CreateFrostOpaqueMaterial(mirrorTint, frostDepth, renderTexture, noiseTexture, noiseStrength);
@@ -280,13 +275,11 @@ namespace MassiveHadronLtd
 					break;
 
 				case EffectMode.Water:
-					renderTexture.name = "WaterRenderTexture";
 					effectMaterial = MaterialUtils.CreateWaterMaterialOpaque(mirrorTint, renderTexture, rippleSpeed, rippleAmplitude, rippleFrequency, rippleOffset, reflectionStrength, null);
 					isMaterialDynamic = true;
 					break;
 
 				case EffectMode.OceanEffect:
-					renderTexture.name = "OceanRenderTexture";
 					noiseTexture = WangTileGenerator.GenerateWangTileAtlas();
 					isTextureDynamic = true;
 					effectMaterial = MaterialUtils.CreateOceanOpaqueMaterial(mirrorTint, rippleSpeed, rippleAmplitude, rippleFrequency, rippleOffset, frostDepth, noiseStrength, frostThreshold, frostFadeRange, null, noiseTexture);
@@ -425,9 +418,9 @@ namespace MassiveHadronLtd
 				Invoke(nameof(DeferredRebuild), 0f);
 
 			lastAppliedMode = effectMode;
-		}
 
-		private void DeferredRebuild() => ApplyEffect(effectMode);
+			void DeferredRebuild() => UpdateEffect(effectMode);
+		}
 
 		//need to get this out of reflection camera
 		public void OnRenderSettingsChanged(UnityRenderSettings renderSettings)
