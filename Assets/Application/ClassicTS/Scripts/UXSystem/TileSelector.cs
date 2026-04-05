@@ -5,8 +5,6 @@ using UnityEngine.UI;
 using TMPro;
 using MassiveHadronLtd;
 using System.Collections;
-using System.Threading;
-using System;
 
 namespace ClassicTilestorm
 {
@@ -198,15 +196,9 @@ namespace ClassicTilestorm
 				}
 			}
 
-			var mouseOverPanel = !allowHideDespiteMouseOverPanel &&
-								  InputX.mousePosition.y <= (panelY + panelHeight);
-
+			var mouseOverPanel = !allowHideDespiteMouseOverPanel && InputX.mousePosition.y <= (panelY + panelHeight);
 			var allowedToOpen = _receiver == null || _receiver.CanOpenPalette();
-
-			var wantsVisible =
-				allowedToOpen &&
-				!allowHideDespiteMouseOverPanel &&
-				(justEnteredCleanly || (panelWasShownByValidHover && mouseOverPanel));
+			var wantsVisible = allowedToOpen && !allowHideDespiteMouseOverPanel && (justEnteredCleanly || (panelWasShownByValidHover && mouseOverPanel));
 
 			if (wantsVisible)
 			{
@@ -357,8 +349,7 @@ namespace ClassicTilestorm
 
 		private void UpdatePanelVisuals()
 		{
-			//if (allowHideDespiteMouseOverPanel || Rows <= 0 || _panelImage == null) return;
-			if (Rows <= 0 || _panelImage == null) return;
+			if (Rows <= 0 || _panelImage == null) return;//if (allowHideDespiteMouseOverPanel || Rows <= 0 || _panelImage == null) return;
 
 			var uiScale = 1f;
 			if (_scaler && _scaler.uiScaleMode == CanvasScaler.ScaleMode.ScaleWithScreenSize)
@@ -418,21 +409,17 @@ namespace ClassicTilestorm
 
 			if (info.IsValid)
 			{
-				if (target == _focusOverlay)
-				{
-					// Center position for focus
-					float cx = info.ScreenRect.x + info.ScreenRect.width * 0.5f;
-					float cy = info.ScreenRect.y + info.ScreenRect.height * 0.5f;
-
-					rt.anchoredPosition = new Vector2(cx * inv, cy * inv);
-				}
+				if (target != _focusOverlay)
+					rt.anchoredPosition = new Vector2(info.ScreenRect.x * inv, info.ScreenRect.y * inv);
 				else
 				{
-					rt.anchoredPosition = new Vector2(info.ScreenRect.x * inv, info.ScreenRect.y * inv);
+					// Center position for focus
+					var cx = info.ScreenRect.x + info.ScreenRect.width * 0.5f;
+					var cy = info.ScreenRect.y + info.ScreenRect.height * 0.5f;
+					rt.anchoredPosition = new Vector2(cx * inv, cy * inv);
 				}
 
 				rt.sizeDelta = new Vector2(info.ScreenRect.width * inv, info.ScreenRect.height * inv);
-
 				target.texture = info.Texture;
 				target.enabled = true;
 			}
