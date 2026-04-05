@@ -118,13 +118,18 @@ namespace ClassicTilestorm
 				_focusOverlay.rectTransform.pivot = new Vector2(0.5f, 0.5f);
 			}
 
-			ResourceManager.OnDefininionsModified += () => Rebuild();
+			ResourceManager.OnDefininionsModified += () => RebuildAtlas();
 
 			ReadyCallbackRegistry.Raise(this);
 		}
 
-		//public void Start() { }
-		//private void OnEnable() { if (null == _atlas) Rebuild(); }
+		//private IEnumerator Start()
+		//{
+		//	yield return null;
+		//	yield return null;
+		//	RebuildAtlas();
+		//}
+
 		private void OnEnable()
 		{
 			StartCoroutine(DelayRebuild());
@@ -132,154 +137,11 @@ namespace ClassicTilestorm
 			{
 				yield return null;
 				yield return null;
-				Rebuild();
+				RebuildAtlas();
 			}
 		}
 
-		//private void OnDisable() { }
-
-		//private CancellationTokenSource _rebuildCts;   // null when no rebuild is active
-		public void Rebuild()
-		{
-			//// Cancel and clean up any previous rebuild attempt
-			//_rebuildCts?.Cancel();
-			//_rebuildCts?.Dispose();           // Important: dispose old source
-			//_rebuildCts = null;
-
-			//// Start fresh
-			//_rebuildCts = new CancellationTokenSource();
-			//_ = RebuildAtlasAsync(_rebuildCts.Token);
-
-			RebuildAtlas();
-		}
-
-		//private async Awaitable RebuildAtlasAsync(CancellationToken ct)
-		//{
-		//	GameObject stateCamera = null;
-		//	GameObject cube = null;
-		//	//GameObject lightObj = null;
-
-		//	try
-		//	{
-		//		//await AsyncExtensions.WaitFramesAsync(3, ct);
-		//		ct.ThrowIfCancellationRequested();   // early exit if already cancelled
-
-		//		stateCamera = new GameObject("RenderStateCamera");
-		//		var renderCam = stateCamera.AddComponent<Camera>();
-		//		renderCam.pixelRect = new Rect(0, 0, 4, 4);
-		//		//renderCam.pixelRect = new Rect(0, 0, 64, 64);
-
-		//		//RenderSettings.ambientMode = overrideSettings.ambientMode;
-		//		//RenderSettings.ambientLight = Color.white;
-		//		//RenderSettings.ambientIntensity = 1f;
-		//		//RenderSettings.skybox = overrideSettings.skybox;
-		//		//RenderSettings.ambientProbe = overrideSettings.ambientProbe;
-		//		//RenderSettings.subtractiveShadowColor = overrideSettings.subtractiveShadowColor;
-
-		//		var cameraRenderSettingsOverride = stateCamera.AddComponent<CameraRenderSettingsOverride>();
-		//		cameraRenderSettingsOverride.OverrideSettings = new(
-		//			ambientMode: UnityEngine.Rendering.AmbientMode.Flat,
-		//			ambientLight: Color.white * 1.2f,
-		//			ambientIntensity: 1f,
-		//			skybox: null,
-		//			ambientProbe: default,
-		//			subtractiveShadowColor: RenderSettings.subtractiveShadowColor
-		//		);
-
-		//		cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
-		//		cube.transform.position = Vector3.forward * 100f;
-		//		cube.GetComponent<Renderer>().material = new Material(Shader.Find("Universal Render Pipeline/Simple Lit")) { color = Color.black };
-
-
-		//		//lightObj = new GameObject("IconLight");// { hideFlags = HideFlags.HideAndDontSave };
-
-		//		//lightObj.transform.rotation = Quaternion.Euler(90, 0, 0);
-		//		////lightObj.transform.SetParent(_root.transform, false);
-		//		//var _iconLight = lightObj.AddComponent<Light>();
-		//		//_iconLight.type = LightType.Directional;
-		//		//_iconLight.intensity = 1.2f;//overwritten later so ignore this value
-		//		//_iconLight.color = new Color(1f, 0.98f, 0.95f);
-		//		//_iconLight.shadows = LightShadows.None;
-		//		////_iconLight.enabled = false;
-		//		//_iconLight.range = 999f;
-		//		//_iconLight.lightmapBakeType = LightmapBakeType.Baked;
-
-		//		// Wait with cancellation support
-		//		await AsyncExtensions.WaitFramesAsync(3, ct);
-		//		ct.ThrowIfCancellationRequested();
-
-		//		filteredDefs = ResourceManager.Definitions
-		//			.Where(d => !d.IsDefaultEquivalent())
-		//			.ToList();
-
-		//		ct.ThrowIfCancellationRequested();
-
-		//		_atlas = new IconAtlas(
-		//			ICON_SIZE,
-		//			COLUMNS,
-		//			filteredDefs,
-		//			includeGround: false,
-		//			background: null,
-		//			yaw: 215f,
-		//			pitch: 30f);
-
-		//		if (_atlas == null)
-		//			Debug.LogWarning("Failed to generate icon atlas — palette empty.");
-
-		//		//await AsyncExtensions.WaitFramesAsync(3, ct);
-		//		//ct.ThrowIfCancellationRequested();
-
-		//		//_atlas = new IconAtlas(
-		//		//	ICON_SIZE,
-		//		//	COLUMNS,
-		//		//	filteredDefs,
-		//		//	includeGround: false,
-		//		//	background: null,
-		//		//	yaw: 35f,
-		//		//	pitch: 30f);
-
-		//		ct.ThrowIfCancellationRequested();
-
-		//		SelectedHashId = ResourceManager.DefaultHash;
-
-		//		RecalculateLayout();
-		//		panelY = panelTargetY = -panelHeight;
-
-		//		ReadyCallbackRegistry.Raise(this);
-		//	}
-		//	catch (OperationCanceledException)
-		//	{
-		//		// Optional: log or handle cancellation specifically
-		//		Debug.Log("Rebuild cancelled");
-		//	}
-		//	catch (Exception ex)
-		//	{
-		//		Debug.LogException(ex);
-		//	}
-		//	finally
-		//	{
-		//		if (stateCamera != null)
-		//		{
-		//			Destroy(stateCamera);
-		//		}
-
-		//		// Optional: clear reference only if this is still the active CTS
-		//		// (helps avoid race if very rapid calls)
-		//		if (_rebuildCts != null && _rebuildCts.Token == ct)
-		//		{
-		//			_rebuildCts.Dispose();
-		//			_rebuildCts = null;
-		//		}
-
-		//		if (cube != null)
-		//			Destroy(cube);
-
-		//		//if (lightObj != null)
-		//		//	Destroy(lightObj);
-		//	}
-		//}
-
-		private void RebuildAtlas()
+		public void RebuildAtlas()
 		{
 			filteredDefs = ResourceManager.Definitions
 				.Where(d => !d.IsDefaultEquivalent())
@@ -301,7 +163,6 @@ namespace ClassicTilestorm
 
 			RecalculateLayout();
 			panelY = panelTargetY = -panelHeight;
-
 		}
 
 		private void Update()
@@ -311,10 +172,10 @@ namespace ClassicTilestorm
 			RecalculateLayout();
 
 			// ─── Panel visibility ────────────────────────────────────────────────
-			bool mouseInTrigger = InputX.mouseInsideWindow && InputX.mousePosition.y <= triggerZoneHeight;
+			var mouseInTrigger = InputX.mouseInsideWindow && InputX.mousePosition.y <= triggerZoneHeight;
 
-			bool justEnteredCleanly = false;
-			Vector2 mousePos = InputX.mousePosition;
+			var justEnteredCleanly = false;
+			var mousePos = InputX.mousePosition;
 
 			// Start attempt on entry OR if no attempt active
 			if (!triggerAttemptActive && mouseInTrigger)
@@ -333,7 +194,7 @@ namespace ClassicTilestorm
 			// If attempting
 			if (triggerAttemptActive)
 			{
-				float moveDist = Vector2.Distance(mousePos, triggerEnterPos);
+				var moveDist = Vector2.Distance(mousePos, triggerEnterPos);
 
 				// Cancel if moved too much
 				if (moveDist > triggerMoveTolerance)
@@ -353,12 +214,12 @@ namespace ClassicTilestorm
 				}
 			}
 
-			bool mouseOverPanel = !allowHideDespiteMouseOverPanel &&
+			var mouseOverPanel = !allowHideDespiteMouseOverPanel &&
 								  InputX.mousePosition.y <= (panelY + panelHeight);
 
-			bool allowedToOpen = _receiver == null || _receiver.CanOpenPalette();
+			var allowedToOpen = _receiver == null || _receiver.CanOpenPalette();
 
-			bool wantsVisible =
+			var wantsVisible =
 				allowedToOpen &&
 				!allowHideDespiteMouseOverPanel &&
 				(justEnteredCleanly || (panelWasShownByValidHover && mouseOverPanel));
@@ -391,7 +252,7 @@ namespace ClassicTilestorm
 				return;
 
 			// ─── Wobble trigger on mouse DOWN ────────────────────────────────────
-			bool mouseOverGrid = gridScreenRect.Contains(InputX.mousePosition);
+			var mouseOverGrid = gridScreenRect.Contains(InputX.mousePosition);
 			if (InputX.GetMouseButtonDown(0) && mouseOverGrid && wobbleStartTime < 0f) // ← only start if no wobble active
 			{
 				Vector2 uv = gridScreenRect.NormalisedPoint(InputX.mousePosition);
@@ -409,7 +270,7 @@ namespace ClassicTilestorm
 			if (InputX.GetMouseButtonUp(0) && pressedIndex >= 0)
 			{
 				var resetWobble = false;
-				Vector2 uv = gridScreenRect.NormalisedPoint(InputX.mousePosition);
+				var uv = gridScreenRect.NormalisedPoint(InputX.mousePosition);
 				if (_atlas.TryGetIndex(uv, out int releaseIdx) && releaseIdx == pressedIndex)
 					resetWobble = !TrySelectTile(releaseIdx);
 				if (resetWobble)
@@ -431,7 +292,7 @@ namespace ClassicTilestorm
 		{
 			if (wobbleStartTime < 0f || !_focusOverlay) return;
 
-			float elapsed = Time.time - wobbleStartTime;
+			var elapsed = Time.time - wobbleStartTime;
 
 			// Stop exactly after wobbleDecayTime
 			if (elapsed >= wobbleDecayTime)
@@ -442,15 +303,15 @@ namespace ClassicTilestorm
 			}
 
 			// Normalized progress (0 → 1 over wobbleDecayTime)
-			float t = elapsed / wobbleDecayTime;
+			var t = elapsed / wobbleDecayTime;
 
 			// Simple linear decay of amplitude (optional)
-			float amplitude = wobbleMaxAmplitude * (1f - t); // optional, or just wobbleMaxAmplitude
+			var amplitude = wobbleMaxAmplitude * (1f - t); // optional, or just wobbleMaxAmplitude
 
 			// Sine wobble
-			float wobble = Mathf.Sin(elapsed * wobbleFrequency * Mathf.PI * 2f) * amplitude;
+			var wobble = Mathf.Sin(elapsed * wobbleFrequency * Mathf.PI * 2f) * amplitude;
 
-			float scale = 1f + wobble;
+			var scale = 1f + wobble;
 			_focusOverlay.transform.localScale = new Vector3(scale, scale, 1f);
 		}
 
@@ -493,20 +354,20 @@ namespace ClassicTilestorm
 			}
 
 			var tex = _atlas.Texture;
-			float totalW = tex.width;
-			float totalH = tex.height;
+			var totalW = tex.width;
+			var totalH = tex.height;
 
-			float margin = PANEL_BORDER;
-			float availW = Screen.width - 2f * margin;
-			float scale = Mathf.Min(1f, availW / totalW);
+			var margin = PANEL_BORDER;
+			var availW = Screen.width - 2f * margin;
+			var scale = Mathf.Min(1f, availW / totalW);
 
-			float drawW = totalW * scale;
-			float drawH = totalH * scale;
+			var drawW = totalW * scale;
+			var drawH = totalH * scale;
 
 			panelHeight = drawH + 2f * margin;
 
-			float x = (Screen.width - drawW) * 0.5f;
-			float gridBottom = panelY + margin;
+			var x = (Screen.width - drawW) * 0.5f;
+			var gridBottom = panelY + margin;
 			gridScreenRect = new Rect(x, gridBottom, drawW, drawH);
 		}
 
@@ -515,14 +376,14 @@ namespace ClassicTilestorm
 			//if (allowHideDespiteMouseOverPanel || Rows <= 0 || _panelImage == null) return;
 			if (Rows <= 0 || _panelImage == null) return;
 
-			float uiScale = 1f;
+			var uiScale = 1f;
 			if (_scaler && _scaler.uiScaleMode == CanvasScaler.ScaleMode.ScaleWithScreenSize)
 			{
-				float sx = Screen.width / _scaler.referenceResolution.x;
-				float sy = Screen.height / _scaler.referenceResolution.y;
+				var sx = Screen.width / _scaler.referenceResolution.x;
+				var sy = Screen.height / _scaler.referenceResolution.y;
 				uiScale = Mathf.Lerp(sx, sy, _scaler.matchWidthOrHeight);
 			}
-			float inv = 1f / uiScale;
+			var inv = 1f / uiScale;
 
 			var panelRT = _panelImage.rectTransform;
 			panelRT.anchorMin = new Vector2(0, 0);
@@ -531,10 +392,10 @@ namespace ClassicTilestorm
 			panelRT.anchoredPosition = new Vector2(0, panelY * inv);
 			panelRT.sizeDelta = new Vector2(0, panelHeight * inv);
 
-			bool fullyHidden = Mathf.Approximately(panelY, panelTargetY) && panelTargetY < 0f;
+			var fullyHidden = Mathf.Approximately(panelY, panelTargetY) && panelTargetY < 0f;
 			_panelImage.enabled = !fullyHidden;
 
-			bool showContent = !fullyHidden && _atlas != null;
+			var showContent = !fullyHidden && _atlas != null;
 
 			if (_statusText)
 			{
@@ -550,7 +411,7 @@ namespace ClassicTilestorm
 				return;
 			}
 
-			Vector2 mouseUV = gridScreenRect.NormalisedPoint(InputX.mousePosition);
+			var mouseUV = gridScreenRect.NormalisedPoint(InputX.mousePosition);
 			var gridInfo = ScreenSpaceUtil.GetGridRenderInfo(_atlas, gridScreenRect, mouseUV);
 			var focusInfo = ScreenSpaceUtil.GetFocusRenderInfo(_atlas, gridScreenRect, mouseUV);
 
@@ -600,20 +461,20 @@ namespace ClassicTilestorm
 		private string GetStatusMessage()
 		{
 			// Quick exit if panel is fully hidden
-			bool panelVisible = !Mathf.Approximately(panelY, panelTargetY) || panelTargetY >= 0f;
+			var panelVisible = !Mathf.Approximately(panelY, panelTargetY) || panelTargetY >= 0f;
 			if (!panelVisible)
 				return "Hover near bottom of screen to open tile palette";
 
-			bool mouseOverGrid = gridScreenRect.Contains(InputX.mousePosition);
-			Vector2 uv = gridScreenRect.NormalisedPoint(InputX.mousePosition);
+			var mouseOverGrid = gridScreenRect.Contains(InputX.mousePosition);
+			var uv = gridScreenRect.NormalisedPoint(InputX.mousePosition);
 
 			// Case 1: Mouse over a valid tile in grid → show its info
 			if (mouseOverGrid && _atlas != null && _atlas.TryGetIndex(uv, out int idx) && idx >= 0 && idx < filteredDefs.Count)
 			{
 				var def = filteredDefs[idx];
-				string name = def.name ?? "Unnamed Tile";
+				var name = def.name ?? "Unnamed Tile";
 
-				string directions = "";
+				var directions = "";
 				if (def.North || def.South || def.East || def.West)
 				{
 					var dirs = new List<string>();
@@ -636,9 +497,9 @@ namespace ClassicTilestorm
 				if (def.Sway) flagsList.Add("Sway");
 				if (def.Wash) flagsList.Add("Wash");
 
-				string flagsStr = flagsList.Count > 0 ? $"<color=#88FFAA> • {string.Join(", ", flagsList)}</color>" : "";
+				var flagsStr = flagsList.Count > 0 ? $"<color=#88FFAA> • {string.Join(", ", flagsList)}</color>" : "";
 
-				string message = $"<b><color=#FFD700>{name}</color></b>{directions}{flagsStr}";
+				var message = $"<b><color=#FFD700>{name}</color></b>{directions}{flagsStr}";
 
 				var secondary = new List<string>();
 				if (!string.IsNullOrEmpty(def.model)) secondary.Add($"M:{def.model}");
@@ -655,9 +516,9 @@ namespace ClassicTilestorm
 			if (gridScreenRect.Contains(InputX.mousePosition) && SelectedHashId != ResourceManager.DefaultHash)
 			{
 				var def = ResourceManager.GetDefinition(SelectedHashId);
-				string selName = def?.name ?? "Unknown";
+				var selName = def?.name ?? "Unknown";
 
-				string directions = "";
+				var directions = "";
 				if (def?.North ?? false) directions += "N";
 				if (def?.South ?? false) directions += (directions.Length > 0 ? "-" : "") + "S";
 				if (def?.East ?? false) directions += (directions.Length > 0 ? "-" : "") + "E";
@@ -676,7 +537,7 @@ namespace ClassicTilestorm
 				if (def?.Sway ?? false) flagsList.Add("Sway");
 				if (def?.Wash ?? false) flagsList.Add("Wash");
 
-				string flagsStr = flagsList.Count > 0 ? $"<color=#88FFAA> • {string.Join(", ", flagsList)}</color>" : "";
+				var flagsStr = flagsList.Count > 0 ? $"<color=#88FFAA> • {string.Join(", ", flagsList)}</color>" : "";
 
 				return $"<color=#88FF88>Selected:</color> <b><color=#FFD700>{selName}</color></b>{directions}{flagsStr}";
 			}
@@ -684,48 +545,5 @@ namespace ClassicTilestorm
 			// Case 3: Mouse outside grid (or no selection) → default prompt
 			return "Hover over a tile";
 		}
-
-		//private void OnEnable()
-		//{
-		//	UnityEngine.Rendering.RenderPipelineManager.beginCameraRendering += OnBeginRender;
-		//	//UnityEngine.Rendering.RenderPipelineManager.endCameraRendering += OnEndRender;
-		//}
-
-		//private void OnDisable()
-		//{
-		//	UnityEngine.Rendering.RenderPipelineManager.beginCameraRendering -= OnBeginRender;
-		//	//UnityEngine.Rendering.RenderPipelineManager.endCameraRendering -= OnEndRender;
-		//}
-
-		//private UnityRenderSettings originalSettings;
-
-		//private void OnBeginRender(UnityEngine.Rendering.ScriptableRenderContext context, Camera cam)
-		//{
-		//	//if (cam != GetComponent<Camera>()) return;
-
-		//	// Save current global render settings
-		//	originalSettings = UnityRenderSettings.Clone();
-
-		//	//// Apply the override values
-		//	//RenderSettings.ambientMode = overrideSettings.ambientMode;
-		//	////RenderSettings.ambientLight = overrideSettings.ambientLight;
-		//	//RenderSettings.ambientIntensity = overrideSettings.ambientIntensity;
-		//	//RenderSettings.skybox = overrideSettings.skybox;
-		//	//RenderSettings.ambientProbe = overrideSettings.ambientProbe;
-		//	//RenderSettings.subtractiveShadowColor = overrideSettings.subtractiveShadowColor;
-
-		//	RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
-		//	RenderSettings.ambientLight = Color.white;
-		//	RenderSettings.ambientIntensity = 10;
-		//	RenderSettings.skybox = null;
-		//}
-
-		//private void OnEndRender(UnityEngine.Rendering.ScriptableRenderContext context, Camera cam)
-		//{
-		//	if (cam != GetComponent<Camera>()) return;
-
-		//	// Restore original settings
-		//	UnityRenderSettings.Restore(originalSettings);
-		//}
 	}
 }
