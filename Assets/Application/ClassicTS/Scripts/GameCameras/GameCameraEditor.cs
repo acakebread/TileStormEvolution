@@ -9,13 +9,21 @@ namespace ClassicTilestorm
 
 		public override void OnEnable()
 		{
-			camera.fieldOfView = 60f;
 			EnablePostProcessing = PostProcessingEnabled;
+			camera.fieldOfView = 60f;
 			camera.transform.position = iorigin;
 			var direction = itarget - iorigin;
 			if (direction.sqrMagnitude > Mathf.Epsilon)
 				camera.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
 		}
+
+		public override void Update()
+		{
+			iorigin = camera.transform.position;
+			itarget = iorigin + camera.transform.forward;
+		}
+
+		public override void CopyFrom(CameraBase other) { }//do not copy position from game cameras - leave everything intact
 
 		public override void OnMapOriginShift(Vector3 delta)
 		{

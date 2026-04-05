@@ -16,6 +16,7 @@ namespace MassiveHadronLtd
 		private Dictionary<string, CameraBase> cameraSystems = new();
 		private Dictionary<string, string[]> modes = new();
 		private Dictionary<string, string> modeSystems = new();
+		private HashSet<string> startedSystems = new();
 
 		protected virtual void Awake()
 		{
@@ -83,7 +84,11 @@ namespace MassiveHadronLtd
 			activeSystem?.OnDisable();
 			currentSystem = system;
 			activeSystem?.CopyFrom(cameraSystems.ContainsKey(modeSystem) ? cameraSystems[modeSystem] : null);
-			activeSystem?.Start();
+			if (!startedSystems.Contains(system))
+			{
+				activeSystem?.Start();
+				startedSystems.Add(system);
+			}
 			activeSystem?.OnEnable();
 
 			bool AreSystemsInSameMode(string system1, string system2) => modes.Any(mode => mode.Value.Contains(system1) && mode.Value.Contains(system2));
