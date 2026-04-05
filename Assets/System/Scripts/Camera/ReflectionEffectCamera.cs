@@ -78,9 +78,6 @@ namespace MassiveHadronLtd
 
 		private Texture tintedSkyboxTexture;
 
-		// Private field used only for internal change detection (replaces lastAppliedMode)
-		private EffectMode _currentBuiltMode = EffectMode.Null;
-
 		private void Awake()
 		{
 			mainCamera = GetComponent<Camera>();
@@ -97,7 +94,6 @@ namespace MassiveHadronLtd
 			var ppCamera = transform.GetComponentInChildren<PostProcessingCameraController>(true);
 			if (ppCamera) postProcessingCamera = ppCamera.GetComponent<Camera>();
 
-			// Main camera command provider
 			var provider = mainCamera.gameObject.GetOrAddComponent<CameraCommandProvider>();
 			provider.RegisterCommand(RenderPassEvent.BeforeRenderingTransparents, OnBeforeRenderingTransparents);
 
@@ -107,17 +103,21 @@ namespace MassiveHadronLtd
 			CreateReflectionCamera();
 			CreateTextureCamera();
 
-			effectMesh = new Mesh(); // reused for all modes
+			effectMesh = new Mesh();
 
-			// CRITICAL ORDER FIX: create the render texture BEFORE the first material build
-			CreateOrResizeReflectionTexture(Screen.width, Screen.height);
 			tintedSkyboxTexture = CubemapUtility.GetSkyboxAsCubemap().Clone();
 
-			// Now safe to build the effect (renderTexture exists)
-			if (effectMode == EffectMode.Null)
+			// Force initial build by treating it as a mode change
+			EffectMode startMode = effectMode;
+			effectMode = EffectMode.Null;                    // Force rebuild on first UpdateEffect
+
+			if (startMode == EffectMode.Null)
 				Invoke(nameof(CheckAndApplyDefaultEffectAfterDelay), 0f);
 			else
-				UpdateEffect(effectMode);
+				UpdateEffect(startMode);
+
+			// Create initial render texture
+			CreateOrResizeReflectionTexture(Screen.width, Screen.height);
 		}
 
 		private void OnBeforeRenderingTransparents(RasterCommandBuffer cmd, Camera cam)
@@ -185,8 +185,7 @@ namespace MassiveHadronLtd
 
 		public void SetEffectMode(EffectMode value, bool useDefaults = true)
 		{
-			if (effectMode == value) return;
-			effectMode = value;
+			// No early return - let UpdateEffect decide whether to rebuild
 			if (useDefaults) ApplyDefaults(value);
 			UpdateEffect(value);
 		}
@@ -233,24 +232,19 @@ namespace MassiveHadronLtd
 			}
 		}
 
-		// ===================================================================
-		// UpdateEffect - Single unified method (material creation + properties)
-		// ===================================================================
 		private void UpdateEffect(EffectMode value)
 		{
 			if (value == EffectMode.Null)
 				value = EffectMode.Debug;
 
-			// Only rebuild the material when the mode actually changed or we have no material yet
-			bool modeChanged = (_currentBuiltMode != value) || (effectMaterial == null);
-
-			effectMode = value;
+			// Rebuild only if mode actually changed or we have no material yet
+			bool modeChanged = (effectMode != value) || (effectMaterial == null);
 
 			if (modeChanged)
 			{
-				Debug.Log($"[ReflectionEffectCamera] Rebuilding material for mode: {effectMode}", this);
+				Debug.Log($"[ReflectionEffectCamera] Rebuilding material for mode: {value}", this);
 
-				// Explicit cleanup of dynamic resources from previous mode
+				// Cleanup previous dynamic resources
 				if (effectMaterial != null && isMaterialDynamic)
 				{
 					DestroyImmediate(effectMaterial);
@@ -264,8 +258,8 @@ namespace MassiveHadronLtd
 				}
 				isMaterialDynamic = false;
 
-				// Mode-specific material creation
-				switch (effectMode)
+				// Create material for the new mode
+				switch (value)
 				{
 					case EffectMode.PerfectMirror:
 						effectMaterial = MaterialUtils.CreatePerfectMirrorOpaqueMaterial(renderTexture, mirrorTint);
@@ -309,7 +303,7 @@ namespace MassiveHadronLtd
 						break;
 				}
 
-				// Final camera setup
+				// Camera setup
 				if (effectMaterial != null)
 				{
 					if (textureCamera)
@@ -329,10 +323,11 @@ namespace MassiveHadronLtd
 					if (reflectionCamera) reflectionCamera.targetTexture = null;
 				}
 
-				_currentBuiltMode = effectMode; // remember what we just built
+				// Only now commit the new mode
+				effectMode = value;
 			}
 
-			// === Property updates (always executed – very cheap when mode is unchanged) ===
+			// === Property updates (always run - very cheap) ===
 			if (effectMaterial == null) return;
 
 			switch (effectMode)
@@ -388,6 +383,26 @@ namespace MassiveHadronLtd
 			timeSeed += Time.deltaTime;
 			if (effectMaterial != null && effectMaterial.HasFloat("_TimeSeed"))
 				effectMaterial.SetFloat("_TimeSeed", timeSeed);
+
+			if (mainCamera != null && mainCamera.targetTexture == null)
+				CheckForScreenResize();
+		}
+
+		private void CheckForScreenResize()
+		{
+			if (renderTexture == null) return;
+
+			int currentWidth = Screen.width;
+			int currentHeight = Screen.height;
+
+			if (currentWidth != renderTexture.width || currentHeight != renderTexture.height)
+			{
+				if (currentWidth > 0 && currentHeight > 0)
+				{
+					Debug.Log($"[ReflectionEffectCamera] Screen resized from {renderTexture.width}×{renderTexture.height} → {currentWidth}×{currentHeight}");
+					CreateOrResizeReflectionTexture(currentWidth, currentHeight);
+				}
+			}
 		}
 
 		private void LateUpdate()
@@ -416,8 +431,6 @@ namespace MassiveHadronLtd
 			}
 		}
 
-		// Minimal OnValidate – only needed for Inspector changes in Play Mode.
-		// The script works perfectly at runtime without it.
 		public void OnValidate()
 		{
 			if (!isActiveAndEnabled || !Application.isPlaying) return;
@@ -438,8 +451,13 @@ namespace MassiveHadronLtd
 		public void SetExternalOutputTexture(RenderTexture value)
 		{
 			if (!mainCamera) return;
+
 			mainCamera.targetTexture = value;
-			CreateOrResizeReflectionTexture(value.width, value.height);
+
+			if (value != null)
+				CreateOrResizeReflectionTexture(value.width, value.height);
+			else
+				CreateOrResizeReflectionTexture(Screen.width, Screen.height);
 		}
 
 		private void CreateOrResizeReflectionTexture(int targetWidth, int targetHeight)
@@ -447,35 +465,39 @@ namespace MassiveHadronLtd
 			targetWidth = Mathf.Max(16, targetWidth);
 			targetHeight = Mathf.Max(16, targetHeight);
 
-			var needsResize = renderTexture == null || renderTexture.width != targetWidth || renderTexture.height != targetHeight;
-			if (needsResize)
+			bool needsResize = renderTexture == null || renderTexture.width != targetWidth || renderTexture.height != targetHeight;
+			if (!needsResize) return;
+
+			RenderTexture.active = null;
+
+			if (reflectionCamera) reflectionCamera.targetTexture = null;
+			if (textureCamera) textureCamera.targetTexture = null;
+
+			if (renderTexture != null)
 			{
-				RenderTexture.active = null;
-				if (reflectionCamera) reflectionCamera.targetTexture = null;
-				if (textureCamera) textureCamera.targetTexture = null;
-
-				if (renderTexture != null)
-				{
-					DestroyImmediate(renderTexture);
-					renderTexture = null;
-				}
-
-				renderTexture = new RenderTexture(targetWidth, targetHeight, 24, RenderTextureFormat.ARGB32)
-				{
-					name = $"Reflection_{effectMode}",
-					useMipMap = false,
-					autoGenerateMips = false,
-					filterMode = FilterMode.Bilinear,
-					useDynamicScale = true
-				};
-				renderTexture.Create();
-
-				if (reflectionCamera) reflectionCamera.targetTexture = renderTexture;
-				if (textureCamera) textureCamera.targetTexture = renderTexture;
-
-				if (effectMaterial != null && effectMaterial.HasProperty("_MainTex"))
-					effectMaterial.SetTexture("_MainTex", renderTexture);
+				DestroyImmediate(renderTexture);
+				renderTexture = null;
 			}
+
+			renderTexture = new RenderTexture(targetWidth, targetHeight, 24, RenderTextureFormat.ARGB32)
+			{
+				name = $"Reflection_{effectMode}",
+				useMipMap = false,
+				autoGenerateMips = false,
+				filterMode = FilterMode.Bilinear,
+				useDynamicScale = true
+			};
+			renderTexture.Create();
+
+			if (reflectionCamera) reflectionCamera.targetTexture = renderTexture;
+			if (textureCamera)
+			{
+				textureCamera.targetTexture = renderTexture;
+				textureCamera.enabled = effectMaterial != null;
+			}
+
+			if (effectMaterial != null && effectMaterial.HasProperty("_MainTex"))
+				effectMaterial.SetTexture("_MainTex", renderTexture);
 		}
 
 		void OnDestroy()
