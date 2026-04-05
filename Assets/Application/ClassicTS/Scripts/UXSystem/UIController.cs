@@ -15,7 +15,7 @@ namespace ClassicTilestorm
 		[SerializeField] private List<GameObject> panelPrefabs = new();
 
 		private readonly Dictionary<Type, GameObject> prefabByType = new();
-		private readonly List<GameObject> activePanels = new List<GameObject>();
+		private readonly List<GameObject> activePanels = new();
 		private UIPanel currentTopPanel;
 
 		private void Awake()
@@ -65,7 +65,7 @@ namespace ClassicTilestorm
 			if (effectiveCloseOthers)
 				CloseManagedPanelsInternal();
 
-			GameObject existing = activePanels.Find(p => p != null && p.TryGetComponent(panelType, out _));
+			var existing = activePanels.Find(p => p != null && p.TryGetComponent(panelType, out _));
 
 			if (existing != null)
 			{
@@ -134,7 +134,7 @@ namespace ClassicTilestorm
 
 		private void CloseManagedPanelsInternal()
 		{
-			for (int i = activePanels.Count - 1; i >= 0; i--)
+			for (var i = activePanels.Count - 1; i >= 0; i--)
 			{
 				var panelObj = activePanels[i];
 				if (panelObj == null) continue;
@@ -163,7 +163,7 @@ namespace ClassicTilestorm
 
 		private void ClosePanelInternal(Type panelType)
 		{
-			for (int i = activePanels.Count - 1; i >= 0; i--)
+			for (var i = activePanels.Count - 1; i >= 0; i--)
 			{
 				var panelObj = activePanels[i];
 				if (panelObj == null) continue;
