@@ -31,10 +31,11 @@ namespace MassiveHadronLtd
 			targetCamera.fieldOfView = referenceCamera.fieldOfView;
 			targetCamera.nearClipPlane = referenceCamera.nearClipPlane;
 			targetCamera.farClipPlane = referenceCamera.farClipPlane;
-			targetCamera.projectionMatrix = referenceCamera.projectionMatrix; // Syncs projection type (Perspective/Orthographic) and FOV
 			targetCamera.orthographic = referenceCamera.orthographic;
 			targetCamera.orthographicSize = referenceCamera.orthographicSize; // For orthographic cameras
 			targetCamera.aspect = referenceCamera.aspect;
+
+			targetCamera.projectionMatrix = referenceCamera.projectionMatrix; // Syncs projection type (Perspective/Orthographic) and FOV
 
 			// Optional: Sync additional properties if needed
 			// targetCamera.rect = referenceCamera.rect; // Viewport rect

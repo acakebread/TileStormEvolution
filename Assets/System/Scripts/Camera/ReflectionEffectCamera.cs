@@ -6,76 +6,6 @@ using UnityEngine.Rendering.Universal;
 
 namespace MassiveHadronLtd
 {
-	[Serializable]
-	public struct PerfectMirrorDefaults
-	{
-		public Color tint;
-		public static PerfectMirrorDefaults Get() => new() { tint = new Color(0.5f, 0.5f, 0.5f, 1f) };
-	}
-
-	[Serializable]
-	public struct SurfaceFilmDefaults
-	{
-		public Color tint;
-		public float noiseScale;
-		public static SurfaceFilmDefaults Get() => new() { tint = new Color(0.5f, 0.5f, 0.5f, 0.5f), noiseScale = 1f };
-	}
-
-	[Serializable]
-	public struct FrostDefaults
-	{
-		public Color tint;
-		public float depth;
-		public float noiseStrength;
-		public static FrostDefaults Get() => new() { tint = new Color(1f, 1f, 1f, 0.1f), depth = 0.05f, noiseStrength = 0.2f };
-	}
-
-	[Serializable]
-	public struct WaterDefaults
-	{
-		public Color tint;
-		public float rippleSpeed;
-		public float rippleAmplitude;
-		public float rippleFrequency;
-		public float rippleOffset;
-		public float reflectionStrength;
-		public static WaterDefaults Get() => new()
-		{
-			tint = new Color(0.05f, 0.05f, 0.05f, 0.25f),
-			rippleSpeed = 0.2f,
-			rippleAmplitude = 0.075f,
-			rippleFrequency = 0.35f,
-			rippleOffset = 0f,
-			reflectionStrength = 0.95f
-		};
-	}
-
-	[Serializable]
-	public struct OceanDefaults
-	{
-		public Color tint;
-		public float rippleSpeed;
-		public float rippleAmplitude;
-		public float rippleFrequency;
-		public float rippleOffset;
-		public float frostDepth;
-		public float noiseStrength;
-		public float frostThreshold;
-		public float frostFadeRange;
-		public static OceanDefaults Get() => new()
-		{
-			tint = new Color(0.5f, 0.5f, 0.5f, 0.5f),
-			rippleSpeed = 0.05f,
-			rippleAmplitude = 0.05f,
-			rippleFrequency = 0.015f,
-			rippleOffset = 0f,
-			frostDepth = 0.15f,
-			noiseStrength = 0.15f,
-			frostThreshold = 0.65f,
-			frostFadeRange = 0.065f
-		};
-	}
-
 	[RequireComponent(typeof(Camera))]
 	public class ReflectionEffectCamera : MonoBehaviour
 	{
@@ -139,29 +69,15 @@ namespace MassiveHadronLtd
 		private Camera textureCamera;
 		private Camera postProcessingCamera;
 		private RenderTexture renderTexture;
-		//private RenderTexture outputRenderTexture;
 
-		private Mesh effectMesh;                    // created once, reused
+		private Mesh effectMesh;
 		private Material effectMaterial;
 		private bool isMaterialDynamic;
 		private bool isTextureDynamic;
 		private float timeSeed;
 
 		private EffectMode lastAppliedMode = EffectMode.Null;
-		private bool isRenderToTextureMode = false;
-
-		private CameraRenderSettingsOverride renderSettingsOverride => gameObject.GetComponent<CameraRenderSettingsOverride>();
-
-		private Texture _tintedSkyboxTexture;
-		private Texture tintedSkyboxTexture
-		{
-			get
-			{
-				//if (_tintedSkyboxTexture) DestroyImmediate(_tintedSkyboxTexture);
-				//_tintedSkyboxTexture = CubemapUtility.GetTintedCubemap(renderSettingsOverride ? renderSettingsOverride.OverrideSettings.skybox : RenderSettings.skybox).Clone();
-				return _tintedSkyboxTexture;
-			}
-		}
+		private Texture tintedSkyboxTexture;
 
 		private void Awake()
 		{
@@ -198,7 +114,7 @@ namespace MassiveHadronLtd
 			else
 				ApplyEffect(effectMode);
 
-			_tintedSkyboxTexture = CubemapUtility.GetSkyboxAsCubemap();
+			tintedSkyboxTexture = CubemapUtility.GetSkyboxAsCubemap().Clone();
 		}
 
 		private void OnBeforeRenderingTransparents(RasterCommandBuffer cmd, Camera cam)
@@ -214,17 +130,14 @@ namespace MassiveHadronLtd
 
 		private void CheckAndApplyDefaultEffectAfterDelay()
 		{
-			if (effectMode == EffectMode.Null)
-			{
-				effectMode = EffectMode.Debug;
-				ApplyEffect(effectMode);
-				Debug.Log($"Auto-applied default effect {effectMode} after one-frame delay (was Null)", this);
-			}
+			if (effectMode != EffectMode.Null)
+				Debug.Log($"Effect was set to {effectMode} during delay frame — applying immediately", this);
 			else
 			{
-				ApplyEffect(effectMode);
-				Debug.Log($"Effect was set to {effectMode} during delay frame — applying immediately", this);
+				effectMode = EffectMode.Debug;
+				Debug.Log($"Auto-applied default effect {effectMode} after one-frame delay (was Null)", this);
 			}
+			ApplyEffect(effectMode);
 		}
 
 		private void CreateReflectionCamera()
@@ -252,8 +165,8 @@ namespace MassiveHadronLtd
 			textureCamera.CopyFrom(mainCamera);
 			textureCamera.clearFlags = mainCamera.clearFlags;
 			textureCamera.cullingMask = mainCamera.cullingMask
-				& ~(1 << LayerMask.NameToLayer("TransparentFX"))
 				& ~(1 << PreviewRenderLayers.previewTransparentLayer)
+				& ~(1 << LayerMask.NameToLayer("TransparentFX"))
 				& ~(1 << LayerMask.NameToLayer("Editor"));
 			textureCamera.depth = mainCamera.depth - 1;
 
@@ -275,28 +188,26 @@ namespace MassiveHadronLtd
 			ApplyEffect(value);
 		}
 
-		public EffectMode CurrentEffectMode => effectMode;
-
 		public void ApplyDefaults(EffectMode value)
 		{
 			switch (value)
 			{
 				case EffectMode.PerfectMirror:
-					mirrorTint = PerfectMirrorDefaults.Get().tint;
+					mirrorTint = MaterialUtils.PerfectMirrorDefaults.Get().tint;
 					break;
 				case EffectMode.SurfaceFilm:
-					var sf = SurfaceFilmDefaults.Get();
+					var sf = MaterialUtils.SurfaceFilmDefaults.Get();
 					mirrorTint = sf.tint;
 					noiseScale = sf.noiseScale;
 					break;
 				case EffectMode.FrostEffect:
-					var fr = FrostDefaults.Get();
+					var fr = MaterialUtils.FrostDefaults.Get();
 					mirrorTint = fr.tint;
 					frostDepth = fr.depth;
 					noiseStrength = fr.noiseStrength;
 					break;
 				case EffectMode.Water:
-					var w = WaterDefaults.Get();
+					var w = MaterialUtils.WaterDefaults.Get();
 					mirrorTint = w.tint;
 					rippleSpeed = w.rippleSpeed;
 					rippleAmplitude = w.rippleAmplitude;
@@ -305,7 +216,7 @@ namespace MassiveHadronLtd
 					reflectionStrength = w.reflectionStrength;
 					break;
 				case EffectMode.OceanEffect:
-					var o = OceanDefaults.Get();
+					var o = MaterialUtils.OceanDefaults.Get();
 					mirrorTint = o.tint;
 					rippleSpeed = o.rippleSpeed;
 					rippleAmplitude = o.rippleAmplitude;
@@ -469,33 +380,33 @@ namespace MassiveHadronLtd
 		private void Update()
 		{
 			timeSeed += Time.deltaTime;
-			if (effectMaterial != null && (effectMode == EffectMode.Water || effectMode == EffectMode.OceanEffect))
+			if (effectMaterial != null && effectMaterial.HasFloat("_TimeSeed"))
 				effectMaterial.SetFloat("_TimeSeed", timeSeed);
 		}
 
 		private void LateUpdate()
 		{
-			if (reflectionCamera != null)
+			if (reflectionCamera)
 			{
-				reflectionCamera.fieldOfView = mainCamera.fieldOfView;
-				reflectionCamera.nearClipPlane = mainCamera.nearClipPlane;
-				reflectionCamera.farClipPlane = mainCamera.farClipPlane;
-				reflectionCamera.aspect = mainCamera.aspect;
-				reflectionCamera.clearFlags = CameraClearFlags.Nothing;
+				CopyCameraProjection(reflectionCamera, mainCamera);
 
+				reflectionCamera.clearFlags = CameraClearFlags.Nothing;
 				var reflectionMat = MatrixUtils.GetReflectionMatrix(planeNormal, offset);
 				reflectionCamera.worldToCameraMatrix = mainCamera.worldToCameraMatrix * reflectionMat;
 				reflectionCamera.projectionMatrix = mainCamera.projectionMatrix;
 			}
 
-			if (textureCamera != null)
+			if (textureCamera)
+				CopyCameraProjection(textureCamera, mainCamera);
+
+			static void CopyCameraProjection(Camera dst, Camera src)
 			{
-				textureCamera.fieldOfView = mainCamera.fieldOfView;
-				textureCamera.nearClipPlane = mainCamera.nearClipPlane;
-				textureCamera.farClipPlane = mainCamera.farClipPlane;
-				textureCamera.aspect = mainCamera.aspect;
-				textureCamera.orthographic = mainCamera.orthographic;
-				textureCamera.orthographicSize = mainCamera.orthographicSize;
+				dst.fieldOfView = src.fieldOfView;
+				dst.nearClipPlane = src.nearClipPlane;
+				dst.farClipPlane = src.farClipPlane;
+				dst.orthographic = src.orthographic;
+				dst.orthographicSize = src.orthographicSize;
+				dst.aspect = src.aspect;
 			}
 		}
 
@@ -526,11 +437,7 @@ namespace MassiveHadronLtd
 				var overrideComp = childCam.gameObject.GetOrAddComponent<CameraRenderSettingsOverride>();
 				overrideComp.OverrideSettings = renderSettings;
 			}
-			//currentRenderSettings = renderSettings;
-
-			_tintedSkyboxTexture = CubemapUtility.GetTintedCubemap(renderSettings.skybox).Clone();
-			//_tintedSkyboxTexture = CubemapUtility.GetSkyboxAsCubemap(renderSettings.skybox);
-
+			tintedSkyboxTexture = CubemapUtility.GetTintedCubemap(renderSettings.skybox).Clone();//tintedSkyboxTexture = CubemapUtility.GetSkyboxAsCubemap(renderSettings.skybox).Clone(); - debug
 			UpdateMaterialProperties();
 		}
 
@@ -592,7 +499,7 @@ namespace MassiveHadronLtd
 			if (reflectionCamera) DestroyImmediate(reflectionCamera.gameObject);
 			if (textureCamera) DestroyImmediate(textureCamera.gameObject);
 
-			if (_tintedSkyboxTexture) DestroyImmediate(_tintedSkyboxTexture);
+			if (tintedSkyboxTexture) DestroyImmediate(tintedSkyboxTexture);
 		}
 
 		public static EffectMode ParseEffectMode(string effectString)

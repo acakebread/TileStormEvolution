@@ -1,10 +1,81 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 using UnityEngine.Rendering;
 
 namespace MassiveHadronLtd
 {
 	public static class MaterialUtils
 	{
+		[Serializable]
+		public struct PerfectMirrorDefaults
+		{
+			public Color tint;
+			public static PerfectMirrorDefaults Get() => new() { tint = new Color(0.5f, 0.5f, 0.5f, 1f) };
+		}
+
+		[Serializable]
+		public struct SurfaceFilmDefaults
+		{
+			public Color tint;
+			public float noiseScale;
+			public static SurfaceFilmDefaults Get() => new() { tint = new Color(0.5f, 0.5f, 0.5f, 0.5f), noiseScale = 1f };
+		}
+
+		[Serializable]
+		public struct FrostDefaults
+		{
+			public Color tint;
+			public float depth;
+			public float noiseStrength;
+			public static FrostDefaults Get() => new() { tint = new Color(1f, 1f, 1f, 0.1f), depth = 0.05f, noiseStrength = 0.2f };
+		}
+
+		[Serializable]
+		public struct WaterDefaults
+		{
+			public Color tint;
+			public float rippleSpeed;
+			public float rippleAmplitude;
+			public float rippleFrequency;
+			public float rippleOffset;
+			public float reflectionStrength;
+			public static WaterDefaults Get() => new()
+			{
+				tint = new Color(0.05f, 0.05f, 0.05f, 0.25f),
+				rippleSpeed = 0.2f,
+				rippleAmplitude = 0.075f,
+				rippleFrequency = 0.35f,
+				rippleOffset = 0f,
+				reflectionStrength = 0.95f
+			};
+		}
+
+		[Serializable]
+		public struct OceanDefaults
+		{
+			public Color tint;
+			public float rippleSpeed;
+			public float rippleAmplitude;
+			public float rippleFrequency;
+			public float rippleOffset;
+			public float frostDepth;
+			public float noiseStrength;
+			public float frostThreshold;
+			public float frostFadeRange;
+			public static OceanDefaults Get() => new()
+			{
+				tint = new Color(0.5f, 0.5f, 0.5f, 0.5f),
+				rippleSpeed = 0.05f,
+				rippleAmplitude = 0.05f,
+				rippleFrequency = 0.015f,
+				rippleOffset = 0f,
+				frostDepth = 0.15f,
+				noiseStrength = 0.15f,
+				frostThreshold = 0.65f,
+				frostFadeRange = 0.065f
+			};
+		}
+
 		public static Material CreateSurfaceFilmMaterial(Color baseColor, Texture2D noiseTexture, float filmIntensity = 0.2f, float noiseScale = 1f)
 		{
 			var surfaceFilmShader = Shader.Find("Unlit/URPSurfaceFilm");
@@ -490,13 +561,13 @@ namespace MassiveHadronLtd
 
 			mat.SetColor("_Color", color);
 			mat.SetInt("_ZWrite", 0);
-			mat.SetInt("_Cull", (int)UnityEngine.Rendering.CullMode.Off);
+			mat.SetInt("_Cull", (int)CullMode.Off);
 			mat.EnableKeyword("_ALPHATEST_ON"); // optional: better edge behavior
 			mat.SetOverrideTag("RenderType", "Transparent");
 			mat.SetFloat("_Surface", 1f);
-			mat.SetFloat("_BlendOp", (float)UnityEngine.Rendering.BlendOp.Add);
-			mat.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
-			mat.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+			mat.SetFloat("_BlendOp", (float)BlendOp.Add);
+			mat.SetFloat("_SrcBlend", (float)BlendMode.SrcAlpha);
+			mat.SetFloat("_DstBlend", (float)BlendMode.OneMinusSrcAlpha);
 
 			return mat;
 		}
@@ -518,13 +589,13 @@ namespace MassiveHadronLtd
 			material.SetColor("_BaseColor", color);
 
 			// Additive blending
-			material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-			material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.One);
+			material.SetInt("_SrcBlend", (int)BlendMode.SrcAlpha);
+			material.SetInt("_DstBlend", (int)BlendMode.One);
 
 			material.SetInt("_ZWrite", 0);
-			material.SetInt("_ZTest", (int)UnityEngine.Rendering.CompareFunction.Always); // ← fixed
+			material.SetInt("_ZTest", (int)CompareFunction.Always); // ← fixed
 
-			material.SetInt("_Cull", (int)UnityEngine.Rendering.CullMode.Off);
+			material.SetInt("_Cull", (int)CullMode.Off);
 
 			// URP keywords
 			material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
